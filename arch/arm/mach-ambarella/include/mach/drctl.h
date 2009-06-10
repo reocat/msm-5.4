@@ -1,0 +1,362 @@
+/*
+ * arch/arm/mach-ambarella/include/mach/drctl.h
+ *
+ * History:
+ *	2007/01/27 - [Charles Chiou] created file
+ *      2008/02/19 - [Allen Wang] changed to use capabilities and chip ID      
+ *	2008/05/13 - [Allen Wang] added capabilities of A2S and A2M silicons 
+ *
+ * Copyright (C) 2004-2009, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
+#ifndef __ASM_ARCH_HARDWARE_H
+#error "include <mach/hardware.h> instead"
+#endif
+
+#ifndef __ASM_ARCH_DRCTL_H
+#define __ASM_ARCH_DRCTL_H
+
+/****************************************************/
+/* Capabilities based on chip revision              */
+/****************************************************/
+
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || 		\
+    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) 
+#define DRAM_ARB_SUPPORT_THROTTLE_DL	0	
+#else
+#define DRAM_ARB_SUPPORT_THROTTLE_DL	1
+#endif
+
+/****************************************************/
+/* Controller registers definitions                 */
+/****************************************************/
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || 		\
+    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||\
+    (CHIP_REV == A3)
+#define DRAM_CFG_OFFSET			0x00
+#define DRAM_TIMING_OFFSET		0x04
+#define DRAM_TIMING2_OFFSET		0x08
+#define DRAM_PRE_CTL_OFFSET		0x0c
+#define DRAM_MODE_OFFSET		0x10
+#define DRAM_EXT_MODE_OFFSET		0x14
+#define DRAM_EXT_MODE_2_OFFSET		0x18
+#define DRAM_EXT_MODE_3_OFFSET		0x1c
+#define DRAM_REF_CTL_OFFSET		0x20
+#define DRAM_DLL_CTL_OFFSET		0x24
+#define DRAM_DQS_CTL_OFFSET		0x28
+
+#define DRAM_CFG_REG			DRAM_REG(0x00)
+#define DRAM_TIMING_REG			DRAM_REG(0x04)
+#define DRAM_TIMING2_REG		DRAM_REG(0x08)
+#define DRAM_PRE_CTL_REG		DRAM_REG(0x0c)
+#define DRAM_MODE_REG			DRAM_REG(0x10)
+#define DRAM_EXT_MODE_REG		DRAM_REG(0x14)
+#define DRAM_EXT_MODE_2_REG		DRAM_REG(0x18)
+#define DRAM_EXT_MODE_3_REG		DRAM_REG(0x1c)
+#define DRAM_REF_CTL_REG		DRAM_REG(0x20)
+#define DRAM_DLL_CTL_REG		DRAM_REG(0x24)
+#define DRAM_DQS_CTL_REG		DRAM_REG(0x28)
+
+/* DRAM_CFG_REG */
+#define DRAM_CFG_EN			0x80000000
+#define DRAM_CFG_SRL			0x40000000
+#define DRAM_CFG_CKE			0x20000000
+#define DRAM_CFG_PWDEN			0x10000000
+#define DRAM_CFG_ODT_150OHM		0x00000010
+#define DRAM_CFG_ODT_75OHM		0x00000008
+#define DRAM_CFG_ODT_DISABLED		0x00000000
+#define DRAM_CFG_BUS_8BIT		0x00000004
+#define DRAM_CFG_BUS_16BIT		0x00000000
+#define DRAM_CFG_SIZE_2GBIT		0x00000003
+#define DRAM_CFG_SIZE_1GBIT		0x00000002
+#define DRAM_CFG_SIZE_512MBIT		0x00000001
+#define DRAM_CFG_SIZE_256MBIT		0x00000000
+
+/* DRAM_TIMING_REG */
+#define DRAM_TIMING_T_RFC(x)		((x) << 25)
+#define DRAM_TIMING_T_WTR(x)		((x) << 22)
+#define DRAM_TIMING_T_WR(x)		((x) << 19)
+#define DRAM_TIMING_T_RP(x)		((x) << 16)
+#define DRAM_TIMING_T_RC(x)		((x) << 11)
+#define DRAM_TIMING_T_RAS(x)		((x) << 7)
+#define DRAM_TIMING_T_RCD(x)		((x) << 4)
+#define DRAM_TIMING_T_RRD(x)		((x) << 2)
+#define DRAM_TIMING_T_CL5		0x2
+#define DRAM_TIMING_T_CL4		0x1
+#define DRAM_TIMING_T_CL3		0x0
+
+/* DRAM_TIMING2_REG */
+#define DRAM_TIMING2_T_FAW(x)		(x)
+
+/* DRAM_PRE_CTL_REG */
+#define DRAM_PRE_CTL_PRE_BUSY		0x80000000
+
+/* DRAM_MODE_REG */
+#define DRAM_MODE_BUSY			0x80000000
+#define DRAM_MODE_PD			0x00001000
+#define DRAM_MODE_WR(x)			((x) << 9)
+#define DRAM_MODE_DLL			0x00000100
+#define DRAM_MODE_TM			0x00000080
+#define DRAM_MODE_CAS_LATENCY(x)	((x) << 4)
+#define DRAM_MODE_BT			0x00000008
+#define DRAM_MODE_BURST_LEN(x)		(x)
+
+/* DRAM_EXT_MODE_REG */
+#define DRAM_EXT_MODE_BUSY		0x80000000
+#define DRAM_EXT_MODE_OUT		0x00001000
+#define DRAM_EXT_MODE_RDQS		0x00000800
+#define DRAM_EXT_MODE_DQS		0x00000400
+#define DRAM_EXT_MODE_OCD_PROG(x)	((x) << 7)
+#define DRAM_EXT_MODE_OCD_EXIT		0x00000380
+#define DRAM_EXT_MODE_OCD_PROG_DEF	0x00000000
+#define DRAM_EXT_MODE_POSTED_CAS(x)	((x) << 3)
+#define DRAM_EXT_MODE_RTT3		0x00000044
+#define DRAM_EXT_MODE_RTT2		0x00000040
+#define DRAM_EXT_MODE_RTT1		0x00000004
+#define DRAM_EXT_MODE_RTT0		0x00000000
+#define DRAM_EXT_MODE_ODS		0x00000002
+#define DRAM_EXT_MODE_DLL		0x00000001
+
+/* DRAM_EXT_MODE_2_REG */
+#define DRAM_EXT_MODE_2_BUSY		0x80000000
+
+/* DRAM_EXT_MODE_3_REG */
+#define DRAM_EXT_MODE_3_BUSY		0x80000000
+
+/* DRAM_REF_CTL_REG */
+#define DRAM_REF_CTL_IMM_REF_EN		0x80000000
+#define DRAM_REF_AR_CREDIT(x)		((x) << 12)
+#define DRAM_REF_T_REFI(x)		((x) << 1)
+#define DRAM_REF_PRD_AR_EN		0x00000001
+
+/* DRAM_DLL_CTL_REG */
+#define DRAM_DLL_CTL_DLL_RST_EN		0x00000001
+
+/* DRAM_DQS_CTL_REG */
+#define DRAM_DQS_CTL_GET_RTT_EN		0x00000001
+
+/* DRAM_DSP_BASE_REG */
+/* DRAM_ERROR_REG */
+
+/* DRAM_ARB_CFG_REG */
+#define DRAM_ARB_THROTTLE_INT(x)	((x) << 16)
+#define DRAM_ARB_THROTTLE_CNT(x)	(((x) & 0xffff) << 1)
+#define DRAM_ARB_THROTTLE_BELOW		0x00000001
+
+#else
+
+#define DRAM_CTL_OFFSET			0x00
+#define DRAM_CFG_OFFSET			0x04
+#define DRAM_TIMING1_OFFSET		0x08
+#define DRAM_TIMING2_OFFSET		0x0c
+#define DRAM_INIT_CTL_OFFSET		0x10
+#define DRAM_EXT_MODE0_OFFSET		0x14
+#define DRAM_EXT_MODE1_OFFSET		0x18
+#define DRAM_EXT_MODE2_OFFSET		0x1c
+#define DRAM_EXT_MODE3_OFFSET		0x20
+#define DRAM_DQS_SYNC_OFFSET		0x24
+
+#define DRAM_CTL_REG			DRAM_REG(0x00)
+#define DRAM_CFG_REG			DRAM_REG(0x04)
+#define DRAM_TIMING1_REG		DRAM_REG(0x08)
+#define DRAM_TIMING2_REG		DRAM_REG(0x0c)
+#define DRAM_INIT_CTL_REG		DRAM_REG(0x10)
+#define DRAM_EXT_MODE0_REG		DRAM_REG(0x14)
+#define DRAM_EXT_MODE1_REG		DRAM_REG(0x18)
+#define DRAM_EXT_MODE2_REG		DRAM_REG(0x1c)
+#define DRAM_EXT_MODE3_REG		DRAM_REG(0x20)
+#define DRAM_DQS_SYNC_REG		DRAM_REG(0x24)
+
+/* DRAM_CTL_REG */
+#define DRAM_CONTROL_RESET		0x00000008
+#define DRAM_CONTROL_CKE		0x00000004
+#define DRAM_CONTROL_AUTO_REG_EN	0x00000002
+#define DRAM_CONTROL_ENABLE		0x00000001
+
+/* DRAM_CFG_REG */
+#define DRAM_CONFIG_ZQCS_SEL		0x00400000
+#define DRAM_CONFIG_ZQ_CLBR(x)		((x) << 19)
+#define DRAM_CONFIG_ZQ_CLBR_DIS		0x00280000
+#define DRAM_CONFIG_ZQ_CLBR_4		0x00200000
+#define DRAM_CONFIG_ZQ_CLBR_3		0x00180000
+#define DRAM_CONFIG_ZQ_CLBR_2		0x00100000
+#define DRAM_CONFIG_ZQ_CLBR_1		0x00080000
+#define DRAM_CONFIG_ZQ_CLBR_0		0x00000000
+#define DRAM_CONFIG_DQS_SYNC(x)		((x) << 16)
+#define DRAM_CONFIG_DQS_SYNC_DIS	0x00050000
+#define DRAM_CONFIG_DQS_SYNC_16		0x00040000
+#define DRAM_CONFIG_DQS_SYNC_8		0x00030000
+#define DRAM_CONFIG_DQS_SYNC_4		0x00020000
+#define DRAM_CONFIG_DQS_SYNC_2		0x00010000
+#define DRAM_CONFIG_DQS_SYNC_1		0x00000000
+#define DRAM_CONFIG_POSTED_REF_C(x)	((x) << 12)
+#define DRAM_CONFIG_SERIAL_MODE		0x00000800
+#define DRAM_CONFIG_PWRDN_EN		0x00000400
+#define DRAM_CONFIG_DQS_IEN_EN		0x00000200
+#define DRAM_CONFIG_IDDQ_TST_EN		0x00000100
+#define DRAM_CONFIG_ODT_RZQ_DIV_8	0x000000a0
+#define DRAM_CONFIG_ODT_RZQ_DIV_12	0x00000080
+#define DRAM_CONFIG_ODT_RZQ_DIV_6	0x00000060
+#define DRAM_CONFIG_ODT_RZQ_DIV_2	0x00000040
+#define DRAM_CONFIG_ODT_RZQ_DIV_4	0x00000020
+#define DRAM_CONFIG_ODT_DISABLE		0x00000000
+#define DRAM_CONFIG_DQ_BUS_32BIT	0x00000000
+#define DRAM_CONFIG_DQ_BUS_16BIT	0x00000010
+#define DRAM_CONFIG_SIZE_8GBIT		0x0000000a
+#define DRAM_CONFIG_SIZE_4GBIT		0x00000008
+#define DRAM_CONFIG_SIZE_2GBIT		0x00000006
+#define DRAM_CONFIG_SIZE_1GBIT		0x00000004
+#define DRAM_CONFIG_SIZE_512MBIT	0x00000002
+#define DRAM_CONFIG_SIZE_256MBIT	0x00000000
+#define DRAM_CONFIG_TYPE_DDR3		0x00000001
+#define DRAM_CONFIG_TYPE_DDR2		0x00000000
+
+/* DRAM_TIMING1_REG */
+#define DRAM_TIMING1_T_WTR(x)		((x) << 28)
+#define DRAM_TIMING1_T_WR(x)		((x) << 24)
+#define DRAM_TIMING1_T_RAS(x)		((x) << 19)
+#define DRAM_TIMING1_T_RC(x)		((x) << 14)
+#define DRAM_TIMING1_T_RP(x)		((x) << 11)
+#define DRAM_TIMING1_T_RCD(x)		((x) << 8)
+#define DRAM_TIMING1_T_RRD(x)		((x) << 5)
+#define DRAM_TIMING1_T_CWL(x)		(((x) - 5) << 3)
+#define DRAM_TIMING1_T_CL(x)		((x) - 3)
+
+/* DRAM_TIMING2_REG */
+#define DRAM_TIMING2_T_REFI(x)		((x) << 19)
+#define DRAM_TIMING2_T_RFC(x)		((x) << 11)
+#define DRAM_TIMING2_T_XP(x)		((x) << 8)
+#define DRAM_TIMING2_T_FAW(x)		((x) << 3)
+#define DRAM_TIMING2_T_RTP(x)		(x)
+
+/* DRAM_INIT_CTL_REG */
+#define DRAM_INIT_CTL_ZQ_CLB_EN		0x00000010
+#define DRAM_INIT_CTL_DLL_RST_EN	0x00000008
+#define DRAM_INIT_CTL_GET_RTT_EN	0x00000004
+#define DRAM_INIT_CTL_IMM_REF_EN	0x00000002
+#define DRAM_INIT_CTL_PRE_ALL_EN	0x00000001
+
+/* DRAM_EXT_MODE0_REG */
+#define DRAM_EXT_MODE0_BUSY		0x80000000
+#define DRAM_EXT_MODE0_PD		0x00001000
+#define DRAM_EXT_MODE0_WR(x)		((x) << 9)
+#define DRAM_EXT_MODE0_DLL		0x00000100
+#define DRAM_EXT_MODE0_TM		0x00000080
+#define DRAM_EXT_MODE0_CAS_LATENCY(x)	((x) << 4)
+#define DRAM_EXT_MODE0_BT		0x00000008
+#define DRAM_EXT_MODE0_BURST_LEN(x)	(x)
+
+/* DRAM_EXT_MODE1_REG */
+#define DRAM_EXT_MODE1_BUSY		0x80000000
+#define DRAM_EXT_MODE1_OUT		0x00001000
+#define DRAM_EXT_MODE1_RDQS		0x00000800
+#define DRAM_EXT_MODE1_DQS		0x00000400
+#define DRAM_EXT_MODE1_OCD_PROG(x)	((x) << 7)
+#define DRAM_EXT_MODE1_OCD_EXIT		0x00000380
+#define DRAM_EXT_MODE1_OCD_PROG_DEF	0x00000000
+#define DRAM_EXT_MODE1_POSTED_CAS(x)	((x) << 3)
+#define DRAM_EXT_MODE1_RTT3		0x00000044
+#define DRAM_EXT_MODE1_RTT2		0x00000040
+#define DRAM_EXT_MODE1_RTT1		0x00000004
+#define DRAM_EXT_MODE1_RTT0		0x00000000
+#define DRAM_EXT_MODE1_ODS		0x00000002
+#define DRAM_EXT_MODE1_DLL		0x00000001
+
+/* DRAM_EXT_MODE2_REG */
+#define DRAM_EXT_MODE2_BUSY		0x80000000
+
+/* DRAM_EXT_MODE3_REG */
+#define DRAM_EXT_MODE3_BUSY		0x80000000
+
+/* DRAM_DQS_SYNC_REG */
+#define DRAM_DQS_SYNC_SW_CTL(x)		((x) < 28)
+#define DRAM_DQS_SYNC_SW_EN		0x08000000
+#define DRAM_DQS_SYNC_DDRIO_DQS3	0x00020000
+#define DRAM_DQS_SYNC_DDRIO_DQS2	0x00010000
+#define DRAM_DQS_SYNC_DDRIO_DQS1	0x00008000
+#define DRAM_DQS_SYNC_DDRIO_DQS0	0x00004000
+#define DRAM_DQS_SYNC_CLK0_DQS3		0x00002000
+#define DRAM_DQS_SYNC_CLK90_DQS3	0x00001000
+#define DRAM_DQS_SYNC_CLK0_DQS2		0x00000800
+#define DRAM_DQS_SYNC_CLK90_DQS2	0x00000400
+#define DRAM_DQS_SYNC_CLK0_DQS1		0x00000200
+#define DRAM_DQS_SYNC_CLK90_DQS1	0x00000100
+#define DRAM_DQS_SYNC_CLK0_DQS0		0x00000080
+#define DRAM_DQS_SYNC_CLK90_DQS0	0x00000040
+#define DRAM_DQS_SYNC_ROUND_TRIP(x)	(x)
+
+#endif
+
+#if (DRAM_ARB_SUPPORT_THROTTLE_DL == 0)
+#define DRAM_DSP_BASE_OFFSET		0x2c
+#define DRAM_ERROR_OFFSET		0x30
+#define DRAM_ARB_CFG_OFFSET		0x34
+#endif
+
+#if (DRAM_ARB_SUPPORT_THROTTLE_DL == 1)
+#define DRAM_ERROR_OFFSET		0x2c
+#define DRAM_DDRC_REQ_CREDIT_OFFSET	0x30
+#define DRAM_ARB_THROTTLE_DL_OFFSET	0x3c
+#define DRAM_ARB_SMM_TRANS_0_OFFSET	0x40
+#define DRAM_ARB_SMM_TRANS_1_OFFSET	0x44
+#define DRAM_ARB_SMM_TRANS_2_OFFSET	0x48
+#define DRAM_ARB_SMM_TRANS_3_OFFSET	0x4C
+#define DRAM_ARB_SMM_TRANS_4_OFFSET	0x50
+#define DRAM_ARB_SMM_TRANS_5_OFFSET	0x54
+#define DRAM_ARB_SMM_TRANS_6_OFFSET	0x58
+#define DRAM_ARB_SMM_TRANS_7_OFFSET	0x5c
+#define DRAM_ARB_SMM_TRANS_8_OFFSET	0x60
+#define DRAM_ARB_SMM_TRANS_9_OFFSET	0x64
+#define DRAM_ARB_SMM_TRANS_10_OFFSET	0x68
+#define DRAM_ARB_SMM_TRANS_11_OFFSET	0x6c
+#define DRAM_ARB_SMM_TRANS_12_OFFSET	0x70
+#define DRAM_ARB_SMM_TRANS_13_OFFSET	0x74
+#define DRAM_ARB_SMM_TRANS_14_OFFSET	0x78
+#define DRAM_ARB_SMM_TRANS_15_OFFSET	0x7c
+#endif
+
+#if (DRAM_ARB_SUPPORT_THROTTLE_DL == 0)
+#define DRAM_DSP_BASE_REG		DRAM_REG(0x2c)
+#define DRAM_ERROR_REG			DRAM_REG(0x30)
+#define DRAM_ARB_CFG_REG		DRAM_REG(0x34)
+#endif
+
+#if (DRAM_ARB_SUPPORT_THROTTLE_DL == 1)
+#define DRAM_ERROR_REG			DRAM_REG(0x2c)
+#define DRAM_DDRC_REQ_CREDIT_REG	DRAM_REG(0x30)
+#define DRAM_ARB_THROTTLE_DL_REG	DRAM_REG(0x3C)
+#define DRAM_ARB_SMM_TRANS_0		DRAM_REG(0x40)
+#define DRAM_ARB_SMM_TRANS_1		DRAM_REG(0x44)
+#define DRAM_ARB_SMM_TRANS_2		DRAM_REG(0x48)
+#define DRAM_ARB_SMM_TRANS_3		DRAM_REG(0x4C)
+#define DRAM_ARB_SMM_TRANS_4		DRAM_REG(0x50)
+#define DRAM_ARB_SMM_TRANS_5		DRAM_REG(0x54)
+#define DRAM_ARB_SMM_TRANS_6		DRAM_REG(0x58)
+#define DRAM_ARB_SMM_TRANS_7		DRAM_REG(0x5C)
+#define DRAM_ARB_SMM_TRANS_8		DRAM_REG(0x60)
+#define DRAM_ARB_SMM_TRANS_9		DRAM_REG(0x64)
+#define DRAM_ARB_SMM_TRANS_10		DRAM_REG(0x68)
+#define DRAM_ARB_SMM_TRANS_11		DRAM_REG(0x6C)
+#define DRAM_ARB_SMM_TRANS_12		DRAM_REG(0x70)
+#define DRAM_ARB_SMM_TRANS_13		DRAM_REG(0x74)
+#define DRAM_ARB_SMM_TRANS_14		DRAM_REG(0x78)
+#define DRAM_ARB_SMM_TRANS_15		DRAM_REG(0x7C)
+#endif
+
+#endif /* __ASM_ARCH_DRCTL_H */
+

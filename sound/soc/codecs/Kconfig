@@ -149,3 +149,13 @@ config SND_SOC_WM9712
 
 config SND_SOC_WM9713
 	tristate
+
+config SND_SOC_AMBARELLA_A2AUC
+	tristate
+
+config SND_SOC_ADAV803
+	tristate
+
+config SND_SOC_AMBARELLA_DUMMY
+	tristate
+

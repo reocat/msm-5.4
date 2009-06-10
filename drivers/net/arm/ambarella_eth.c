@@ -1,0 +1,1911 @@
+/*
+ * drivers/net/ambarella_eth.c
+ *
+ * History:
+ *	2007/10/30 - [Grady Chen] created file
+ *	2007/12/29 - [Jay Zhang] fixed a few bugs
+ *	2008/04/14 - [Louis Sun] changed it to transmit multi packets
+ *	    in one irq also removed memcpy in transmit    
+ *	2008/05/13 - [Louis Sun] port NAPI for receive
+ *	2008/06/11 - [Louis Sun] add multicast receive with DA filtering,
+ *	    add ethernet stop implementation
+ *	2008/10/23 - [Louis Sun] added Realtek 8201 PHY driver to support
+ *	    detection link mode and speed enable MAC config in linux.
+ *	2009/01/04 - [Anthony Ginger] Port to 2.6.28
+ *
+ * Copyright (C) 2004-2009, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/io.h>
+#include <linux/ioport.h>
+#include <linux/interrupt.h>
+#include <linux/platform_device.h>
+#include <linux/delay.h>
+#include <linux/dma-mapping.h>
+#include <asm/dma.h>
+
+#include <linux/netdevice.h>
+#include <linux/etherdevice.h>
+#include <linux/skbuff.h>
+#include <linux/spinlock.h>
+#include <linux/crc32.h>
+#include <linux/time.h>
+#include <linux/mii.h>
+#include <linux/phy.h>
+
+#include <mach/hardware.h>
+
+#define AMBETH_TX_TIMEOUT	(2 * HZ)
+#define AMBETH_TX_RING_SIZE	(32)
+#define AMBETH_RX_RING_SIZE	(512)
+#define AMBETH_PACKET_MAXFRAME	(1536)
+#define AMBETH_RX_COPYBREAK	(1518)
+#define AMBETH_MULTICAST_LIMIT	(1000)
+#define AMBETH_MULTICAST_PF	(15)
+
+#define AMBETH_MAC_FLOW_CTR_FDX	(ETH_MAC_FLOW_CTR_RFE | ETH_MAC_FLOW_CTR_TFE)
+#define AMBETH_DMA_BUS_MODE	(ETH_DMA_BUS_MODE_FB | \
+				ETH_DMA_BUS_MODE_PBL_32 | \
+				ETH_DMA_BUS_MODE_DA_RX)
+#define AMBETH_DMA_INT_RXPOLL	(ETH_DMA_STATUS_RI | ETH_DMA_STATUS_RU | \
+				ETH_DMA_STATUS_RPS | ETH_DMA_STATUS_RWT | \
+				ETH_DMA_STATUS_OVF | ETH_DMA_STATUS_ERI)
+#define AMBETH_DMA_INT_ENABLE	(ETH_DMA_STATUS_NIS | ETH_DMA_STATUS_AIS | \
+				ETH_DMA_STATUS_FBI | ETH_DMA_STATUS_RWT | \
+				ETH_DMA_STATUS_RU | ETH_DMA_STATUS_RI | \
+				ETH_DMA_STATUS_UNF | ETH_DMA_STATUS_OVF | \
+				ETH_DMA_STATUS_TJT | ETH_DMA_STATUS_TI | \
+				ETH_DMA_STATUS_ERI)
+
+#define AMBETH_MII_RETRY_LIMIT	(200)
+#define AMBETH_MII_RETRY_TMO	(10)
+
+#define AMBETH_MAC_SUPPORTED	(SUPPORTED_10baseT_Half | \
+				SUPPORTED_10baseT_Full | \
+				SUPPORTED_100baseT_Half | \
+				SUPPORTED_100baseT_Full | \
+				SUPPORTED_Autoneg | \
+				SUPPORTED_MII)
+
+struct ambeth_desc {
+	u32					status;
+	u32					length;
+	u32					buffer1;
+	u32					buffer2;
+} __attribute((packed));
+
+struct ambeth_buffmng_info {
+	struct sk_buff				*skb;
+	dma_addr_t				mapping;
+};
+
+struct ambeth_tx_rngmng {
+	unsigned int				cur_tx;
+	unsigned int				dirty_tx;
+	struct ambeth_buffmng_info		rng[AMBETH_TX_RING_SIZE];
+	struct ambeth_desc			*desc;
+};
+
+struct ambeth_rx_rngmng {
+	unsigned int				cur_rx;
+	unsigned int				dirty_rx;
+	struct ambeth_buffmng_info		rng[AMBETH_RX_RING_SIZE];
+	struct ambeth_desc			*desc;
+};
+
+struct ambeth_info {
+	struct ambeth_rx_rngmng			rx;
+	struct ambeth_tx_rngmng			tx;
+	dma_addr_t				rx_dma_desc;
+	dma_addr_t				tx_dma_desc;
+	spinlock_t				lock;
+	int					oldspeed;
+	int					oldduplex;
+	int					oldlink;
+
+	struct net_device_stats			stats;
+	struct timer_list			oom_timer;
+	struct napi_struct			napi;
+	struct net_device			*ndev;
+	struct mii_bus				new_bus;
+	struct phy_device			*phydev;
+	uint32_t				msg_enable;
+
+	unsigned char __iomem			*regbase;
+	unsigned char __iomem			*dmabase;
+	struct ambarella_eth_platform_info	platform_info;
+	unsigned int				mc_filter[2];
+};
+
+static int msg_level = -1;
+module_param (msg_level, int, 0);
+MODULE_PARM_DESC (msg_level, "Override default message level");
+
+/* ==========================================================================*/
+static inline int ambhw_dma_reset(struct ambeth_info *lp)
+{
+	int					errorCode = 0;
+	u32					counter = 0;
+
+	amba_setbits(lp->dmabase + ETH_DMA_BUS_MODE_OFFSET,
+		ETH_DMA_BUS_MODE_SWR);
+	do {
+		if (counter++ > 10) {
+			errorCode = -EIO;
+			break;
+		}
+		msleep(1);
+	} while (amba_tstbits(lp->dmabase + ETH_DMA_BUS_MODE_OFFSET,
+		ETH_DMA_BUS_MODE_SWR));
+
+	return errorCode;
+}
+
+static inline void ambhw_dma_int_enable(struct ambeth_info *lp)
+{
+	amba_writel(lp->dmabase + ETH_DMA_INTEN_OFFSET, AMBETH_DMA_INT_ENABLE);
+}
+
+static inline void ambhw_dma_int_disable(struct ambeth_info *lp)
+{
+	amba_writel(lp->dmabase + ETH_DMA_INTEN_OFFSET, 0);
+}
+
+static inline void ambhw_dma_rx_start(struct ambeth_info *lp)
+{
+	amba_test_and_set_mask(lp->dmabase + ETH_DMA_OPMODE_OFFSET,
+		ETH_DMA_OPMODE_SR);
+}
+
+static inline void ambhw_dma_tx_start(struct ambeth_info *lp)
+{
+	amba_test_and_set_mask(lp->dmabase + ETH_DMA_OPMODE_OFFSET,
+		ETH_DMA_OPMODE_ST);
+}
+
+static inline void ambhw_dma_stop_rxtx(struct ambeth_info *lp)
+{
+	unsigned int				irq_status;
+	unsigned int				i = 1300 / 10;        
+
+	irq_status = amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET);
+	/* is Transmit or Receive is still On */
+	/* TS bit 22:20, RS bit 19:17, so TS | RS is 22:17 */
+	if ((irq_status >> 17) & 0x3F) {
+		amba_clrbits(lp->dmabase + ETH_DMA_OPMODE_OFFSET,
+			(ETH_DMA_OPMODE_ST | ETH_DMA_OPMODE_SR));
+		barrier();
+		/* wait until in-flight frame completes.
+		* Max time @ 10BT: 1500*8b/10Mbps == 1200us (+ 100us margin)
+		* Typically expect this loop to end in < 50 us on 100BT.
+		*/
+		irq_status =
+			amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET);
+		while (((irq_status >> 17) & 0x3F) && --i) {
+			udelay(10);
+			irq_status =
+				amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET);
+		}
+
+		if (unlikely(i == 0)) {
+			dev_err(&lp->ndev->dev,
+				"%s: status reg 0x%x, opmode reg 0x%x, fail!\n",
+				__func__,
+				amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET),
+				amba_readl(lp->dmabase + ETH_DMA_OPMODE_OFFSET)
+				);
+		}
+	}
+}
+
+static inline void ambhw_set_dma_desc(struct ambeth_info *lp)
+{
+	amba_writel(lp->dmabase + ETH_DMA_RX_DESC_LIST_OFFSET,
+		lp->rx_dma_desc);
+	amba_writel(lp->dmabase + ETH_DMA_TX_DESC_LIST_OFFSET,
+		lp->tx_dma_desc);
+}
+
+static inline phy_interface_t ambhw_get_interface(struct ambeth_info *lp)
+{
+	return amba_tstbits(lp->regbase + ETH_MAC_CFG_OFFSET,
+		ETH_MAC_CFG_PS) ? PHY_INTERFACE_MODE_MII :
+		PHY_INTERFACE_MODE_GMII;
+}
+
+static inline void ambhw_set_hwaddr(struct ambeth_info *lp, u8 *hwaddr)
+{
+	u32					val;
+
+	val = (hwaddr[5] << 8) | hwaddr[4];
+	amba_writel(lp->regbase + ETH_MAC_MAC0_HI_OFFSET, val);
+	udelay(4);
+
+	val = (hwaddr[3] << 24) | (hwaddr[2] << 16) |
+		(hwaddr[1] <<  8) |  hwaddr[0];
+	amba_writel(lp->regbase + ETH_MAC_MAC0_LO_OFFSET, val);
+}
+
+static inline void ambhw_get_hwaddr(struct ambeth_info *lp, u8 *hwaddr)
+{
+	u32					hval;
+	u32					lval;
+
+	hval = amba_readl(lp->regbase + ETH_MAC_MAC0_HI_OFFSET);
+	lval = amba_readl(lp->regbase + ETH_MAC_MAC0_LO_OFFSET);
+
+	hwaddr[5] = ((hval >> 8) & 0xff);
+	hwaddr[4] = ((hval >> 0) & 0xff);
+	hwaddr[3] = ((lval >> 24) & 0xff);
+	hwaddr[2] = ((lval >> 16) & 0xff);
+	hwaddr[1] = ((lval >> 8) & 0xff);
+	hwaddr[0] = ((lval >> 0) & 0xff);
+}
+
+static inline int ambhw_set_hwaddr_perfect_filtering(struct ambeth_info *lp,
+	u8 *hwaddr, u8 index, int enable)
+{
+	int					errorCode = 0;
+	u32 val;
+
+	if (unlikely((index == 0) || (index >
+		AMBETH_MULTICAST_PF))) {
+		dev_err(&lp->ndev->dev,
+			"%s: index[%d] is wrong for perfect filtering!\n",
+			__func__, index);
+		errorCode = -EPERM;
+		goto ambhw_set_hwaddr_perfect_filtering_exit;
+	}
+
+	val = (hwaddr[5] << 8) | hwaddr[4] | (enable << 31);
+	amba_writel(lp->regbase + ETH_MAC_MAC0_HI_OFFSET + (index << 3), val);
+	udelay(4);
+	val = (hwaddr[3] << 24) | (hwaddr[2] << 16) |
+		(hwaddr[1] <<  8) |  hwaddr[0];
+	amba_writel(lp->regbase + ETH_MAC_MAC0_LO_OFFSET + (index << 3), val);
+
+ambhw_set_hwaddr_perfect_filtering_exit:
+	return 0;
+}
+
+static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
+{
+	u32					val;
+
+	val = amba_readl(lp->regbase + ETH_MAC_CFG_OFFSET);
+
+	switch (lp->oldspeed) {
+	case SPEED_100:
+		val |= ETH_MAC_CFG_FES;
+	case SPEED_10:
+	default:
+		val &= ~(ETH_MAC_CFG_FES);
+		break;
+	}
+
+	//Leave ETH_MAC_CFG_PS auto
+	val |= (ETH_MAC_CFG_BE | ETH_MAC_CFG_TE | ETH_MAC_CFG_RE);
+
+	if (lp->oldduplex) {
+		val &= ~(ETH_MAC_CFG_DO);
+		val |= ETH_MAC_CFG_DM;
+	} else {
+		val &= ~(ETH_MAC_CFG_DM);
+		val |= ETH_MAC_CFG_DO;
+	}
+
+	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET, val);
+}
+
+static inline void ambhw_init(struct ambeth_info *lp)
+{
+	u32					val;
+
+	val = AMBETH_DMA_BUS_MODE;
+	amba_writel(lp->dmabase + ETH_DMA_BUS_MODE_OFFSET, val);
+
+	val = 0;
+	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, val);
+
+	/* @@ why   RTC 64 , can we try RTC 96 or 128 ?  CHECKPOINT,
+ 	   why ETH_DMA_OPMODE_FUF?  may try to disable FUF		
+ 	   we may also try ETH_DMA_OPMODE_SF, since it starts
+ 	   transfer when there is a full frame, 
+	*/
+	val = (ETH_DMA_OPMODE_TTC_256 |
+		ETH_DMA_OPMODE_RTC_96 |
+		ETH_DMA_OPMODE_FUF);
+	amba_writel(lp->dmabase + ETH_DMA_OPMODE_OFFSET, val);
+
+	val = AMBETH_MAC_FLOW_CTR_FDX;
+	amba_writel(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET, val);
+
+	val = amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET);
+	amba_writel(lp->dmabase + ETH_DMA_STATUS_OFFSET, val);
+
+	/* Set RX poll demand register */
+	val = 0x1;
+	amba_writel(lp->dmabase + ETH_DMA_RX_POLL_DMD_OFFSET, val);
+}
+
+/* ==========================================================================*/
+static int ambhw_mdio_read(struct mii_bus *bus,
+	int mii_id, int regnum)
+{
+	struct ambeth_info			*lp;
+	int					val;
+	int					limit = 0;
+
+	lp = (struct ambeth_info *)bus->priv;
+
+	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
+		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+			ETH_MAC_GMII_ADDR_GB))
+			break;
+		udelay(AMBETH_MII_RETRY_TMO);
+	}
+	if (!limit) {
+		dev_err(&lp->ndev->dev, "%s: time out 0!\n", __func__);
+		val = 0xFFFFFFFF;
+		goto ambhw_mdio_read_exit;
+	}
+
+	val = ETH_MAC_GMII_ADDR_PA(mii_id) |
+		ETH_MAC_GMII_ADDR_GR(regnum) |
+		ETH_MAC_GMII_ADDR_CR_60_100MHZ;
+	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+		(val | ETH_MAC_GMII_ADDR_GB));
+
+	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
+		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+			ETH_MAC_GMII_ADDR_GB))
+			break;
+		udelay(AMBETH_MII_RETRY_TMO);
+	}
+	if (!limit) {
+		dev_err(&lp->ndev->dev, "%s: time out 1!\n", __func__);
+		val = 0xFFFFFFFF;
+		goto ambhw_mdio_read_exit;
+	}
+
+	val = amba_readl(lp->regbase + ETH_MAC_GMII_DATA_OFFSET);
+
+ambhw_mdio_read_exit:
+	if (netif_msg_hw(lp))
+		dev_info(&lp->ndev->dev,
+			"%s: mii_id[0x%x], regnum[0x%x], val[0x%x]!\n",
+			__func__, mii_id, regnum, val);
+
+	return val;
+}
+
+static int ambhw_mdio_write(struct mii_bus *bus,
+	int mii_id, int regnum, u16 value)
+{
+	int					errorCode = 0;
+	struct ambeth_info			*lp;
+	int					val;
+	int					limit = 0;
+
+	lp = (struct ambeth_info *)bus->priv;
+
+	if (netif_msg_hw(lp))
+		dev_info(&lp->ndev->dev,
+			"%s: mii_id[0x%x], regnum[0x%x], value[0x%x]!\n",
+			__func__, mii_id, regnum, value);
+
+	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
+		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+			ETH_MAC_GMII_ADDR_GB))
+			break;
+		udelay(AMBETH_MII_RETRY_TMO);
+	}
+	if (!limit) {
+		dev_err(&lp->ndev->dev, "%s: time out 0!\n", __func__);
+		errorCode = -EIO;
+		goto ambhw_mdio_write_exit;
+	}
+
+	val = value;
+	amba_writel(lp->regbase + ETH_MAC_GMII_DATA_OFFSET, val);
+	val = ETH_MAC_GMII_ADDR_PA(mii_id) |
+		ETH_MAC_GMII_ADDR_GR(regnum) |
+		ETH_MAC_GMII_ADDR_GW |
+		ETH_MAC_GMII_ADDR_CR_60_100MHZ;
+	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+		(val | ETH_MAC_GMII_ADDR_GB));
+
+	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
+		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+			ETH_MAC_GMII_ADDR_GB))
+			break;
+		udelay(AMBETH_MII_RETRY_TMO);
+	}
+	if (!limit) {
+		dev_err(&lp->ndev->dev, "%s: time out 1!\n", __func__);
+		errorCode = -EIO;
+		goto ambhw_mdio_write_exit;
+	}
+
+ambhw_mdio_write_exit:
+	return errorCode;
+}
+
+static int ambhw_mdio_reset(struct mii_bus *bus)
+{
+	int					errorCode = 0;
+	struct ambeth_info			*lp;
+
+	lp = (struct ambeth_info *)bus->priv;
+
+	if (netif_msg_hw(lp))
+		dev_info(&lp->ndev->dev, "%s: ...!\n", __func__);
+
+	ambarella_set_gpio_power(&lp->platform_info.mii_power, 0);
+	ambarella_set_gpio_power(&lp->platform_info.mii_power, 1);
+
+	ambarella_set_gpio_reset(&lp->platform_info.mii_reset);
+
+	return errorCode;
+}
+
+/* ==========================================================================*/
+static void ambeth_adjust_link(struct net_device *ndev)
+{
+	struct ambeth_info			*lp;
+	unsigned long				flags;
+	struct phy_device			*phydev;
+	int					need_update = 0;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	spin_lock_irqsave(&lp->lock, flags);
+
+	phydev = lp->phydev;
+	if (phydev->link) {
+		if (phydev->duplex != lp->oldduplex) {
+			need_update = 1;
+			lp->oldduplex = phydev->duplex;
+		}
+
+		if (phydev->speed != lp->oldspeed) {
+			switch (phydev->speed) {
+			case SPEED_100:
+			case SPEED_10:
+				need_update = 1;
+				lp->oldspeed = phydev->speed;
+				break;
+			default:
+				if (netif_msg_link(lp))
+					dev_warn(&lp->ndev->dev, "%s: "
+						"Speed(%d) is not 10/100!\n",
+						__func__, phydev->speed);
+				break;
+			}
+		}
+
+		if (!lp->oldlink) {
+			need_update = 1;
+			lp->oldlink = 1;
+		}
+	} else if (lp->oldlink) {
+			need_update = 1;
+			lp->oldlink = PHY_DOWN;
+			lp->oldspeed = 0;
+			lp->oldduplex = -1;
+	}
+
+	if (need_update && netif_msg_link(lp))
+		phy_print_status(phydev);
+
+	if (need_update)
+		ambhw_set_link_mode_speed(lp);
+
+	spin_unlock_irqrestore(&lp->lock, flags);
+}
+
+static int ambeth_init_phy(struct ambeth_info *lp)
+{
+	int					errorCode = 0;
+	struct phy_device			*phydev = NULL;
+	phy_interface_t				interface;
+	struct net_device			*ndev;
+	int					phy_addr;
+
+	ndev = lp->ndev;
+	lp->oldlink = PHY_DOWN;
+	lp->oldspeed = 0;
+	lp->oldduplex = -1;
+
+	if ((lp->platform_info.mii_id >= 0) &&
+		(lp->platform_info.mii_id < PHY_MAX_ADDR)) {
+		phy_addr = lp->platform_info.mii_id;
+		if (lp->new_bus.phy_map[phy_addr]) {
+			phydev = lp->new_bus.phy_map[phy_addr];
+			if (phydev->phy_id == lp->platform_info.phy_id) {
+				dev_dbg(&lp->ndev->dev,
+					"%s: Find default PHY in %d!\n",
+					__func__, phy_addr);
+				goto ambeth_init_phy_connect;
+			}
+		}
+		dev_notice(&lp->ndev->dev,
+			"%s: Could not find default PHY in %d.\n",
+			__func__, phy_addr);
+	}
+	for (phy_addr = 0; phy_addr < PHY_MAX_ADDR; phy_addr++) {
+		if (lp->new_bus.phy_map[phy_addr]) {
+			phydev = lp->new_bus.phy_map[phy_addr];
+			if (phydev->phy_id == lp->platform_info.phy_id)
+				goto ambeth_init_phy_connect;
+		}
+	}
+	if (!phydev) {
+		dev_err(&lp->ndev->dev, "%s: no PHY found\n", __func__);
+		errorCode = -ENODEV;
+		goto ambeth_init_phy_exit;
+	} else {
+		dev_dbg(&lp->ndev->dev, "%s: Try PHY%d whose id is 0x%08x!\n",
+			__func__, phy_addr, phydev->phy_id);
+	}
+
+ambeth_init_phy_connect:
+	interface = ambhw_get_interface(lp);
+	phydev = phy_connect(ndev, phydev->dev.bus_id,
+		&ambeth_adjust_link, 0, interface);
+	if (IS_ERR(phydev)) {
+		dev_err(&lp->ndev->dev,
+			"%s: Could not attach to PHY!\n", __func__);
+		errorCode = PTR_ERR(phydev);
+		goto ambeth_init_phy_exit;
+	}
+
+	phydev->supported &= AMBETH_MAC_SUPPORTED;
+	phydev->advertising = phydev->supported;
+
+	lp->phydev = phydev;
+
+ambeth_init_phy_exit:
+	return errorCode;
+}
+
+static inline int ambeth_rx_rngmng_init(struct ambeth_info *lp)
+{
+	int					errorCode = 0;
+	struct ambeth_rx_rngmng			*rx;
+	int					i;
+	dma_addr_t				mapping;
+	struct sk_buff				*skb;
+
+	rx = &lp->rx; 
+	rx->cur_rx = 0;
+	rx->dirty_rx = 0;
+
+	memset(rx->rng, 0,
+		(sizeof(struct ambeth_buffmng_info) * AMBETH_RX_RING_SIZE));
+	memset(rx->desc, 0,
+		(sizeof(struct ambeth_desc) * AMBETH_RX_RING_SIZE));
+
+	for (i = 0; i < AMBETH_RX_RING_SIZE; i++) {
+		skb = dev_alloc_skb(AMBETH_PACKET_MAXFRAME);
+		if (skb == NULL) {
+			dev_err(&lp->ndev->dev,
+				"%s: dev_alloc_skb fail!\n", __func__);
+			errorCode = -ENOMEM;
+			goto ambeth_rx_rngmng_init_exit;
+		}
+		skb->dev = lp->ndev;
+
+		rx->rng[i].skb = skb;
+		mapping = dma_map_single(&lp->ndev->dev, skb->data,
+			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+		rx->rng[i].mapping = mapping;
+		rx->desc[i].status = ETH_RDES0_OWN;
+		rx->desc[i].length = ETH_RDES1_RCH | AMBETH_PACKET_MAXFRAME;  
+		rx->desc[i].buffer1 = mapping;
+		rx->desc[i].buffer2 = (u32)lp->rx_dma_desc +
+			((i + 1) * sizeof(struct ambeth_desc));
+	}
+
+	/* Mark the last entry as wrapping the ring. */
+	rx->desc[AMBETH_RX_RING_SIZE - 1].length |= ETH_RDES1_RER;
+	rx->desc[AMBETH_RX_RING_SIZE - 1].buffer2 = (u32)lp->rx_dma_desc;
+
+ambeth_rx_rngmng_init_exit:
+	return errorCode;
+}
+
+static inline int ambeth_rx_refill(struct ambeth_info *lp)
+{
+	int					refilled = 0;
+	int					entry;
+	struct ambeth_rx_rngmng			*rx;
+	struct sk_buff				*skb;
+	dma_addr_t				mapping;
+
+	rx = &lp->rx; 
+
+	dev_dbg(&lp->ndev->dev,
+		"%s: cur_rx %d, dirty_rx %d.\n",
+		__func__, rx->cur_rx, rx->dirty_rx);
+
+	for (; (rx->cur_rx - rx->dirty_rx) > 0; rx->dirty_rx++) {
+		entry = rx->dirty_rx % AMBETH_RX_RING_SIZE;
+
+		if (rx->rng[entry].skb == NULL) {
+			skb = dev_alloc_skb(AMBETH_PACKET_MAXFRAME);
+			if (skb == NULL) {
+				dev_err(&lp->ndev->dev,
+					"%s: dev_alloc_skb fail!\n", __func__);
+				goto ambeth_rx_refill_exit;
+			}
+			skb->dev = lp->ndev;
+
+			rx->rng[entry].skb = skb;
+			mapping = dma_map_single(&lp->ndev->dev, skb->data,
+				AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+			rx->rng[entry].mapping = mapping;
+			rx->desc[entry].buffer1 = mapping;
+			refilled++;
+		}
+		rx->desc[entry].status = ETH_RDES0_OWN;
+	}
+
+ambeth_rx_refill_exit:
+	return refilled;
+}
+
+static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
+{
+	int					i;
+	dma_addr_t				mapping;
+	struct sk_buff				*skb;
+	struct ambeth_rx_rngmng			*rx;
+
+	rx = &lp->rx; 
+	for (i = 0; i < AMBETH_RX_RING_SIZE; i++) {
+		skb =rx->rng[i].skb;
+		mapping = rx->rng[i].mapping;
+
+		rx->rng[i].skb = NULL;
+		rx->rng[i].mapping = 0;
+
+		rx->desc[i].status = 0;
+		rx->desc[i].length = 0;
+		rx->desc[i].buffer1 = 0xBADF00D0;
+		rx->desc[i].buffer2 = 0xBADF00D0;
+
+		if (skb != NULL) {
+			dma_unmap_single(&lp->ndev->dev, mapping,
+				skb->len, DMA_FROM_DEVICE);
+			dev_kfree_skb(skb);
+		}
+	}
+}
+
+static inline int ambeth_tx_rngmng_init(struct ambeth_info *lp)
+{
+	int					errorCode = 0;
+	struct ambeth_tx_rngmng			*tx;
+	int					i;
+
+	tx = &lp->tx;
+	tx->cur_tx = 0;
+	tx->dirty_tx = 0;
+
+	memset(tx->rng, 0,
+		(sizeof(struct ambeth_buffmng_info) * AMBETH_TX_RING_SIZE));
+	memset(tx->desc, 0,
+		(sizeof(struct ambeth_desc) * AMBETH_TX_RING_SIZE));
+
+	for (i = 0; i < AMBETH_TX_RING_SIZE; i++) {
+		tx->rng[i].mapping = 0 ;
+		tx->desc[i].length = (ETH_TDES1_LS |
+			ETH_TDES1_FS | ETH_TDES1_TCH); 
+		tx->desc[i].buffer1 = 0;
+		tx->desc[i].buffer2 = (u32)lp->tx_dma_desc +
+			((i + 1) * sizeof(struct ambeth_desc));
+	}
+
+	/* Mark the last entry as wrapping the ring. */
+	tx->desc[AMBETH_TX_RING_SIZE - 1].length |= ETH_TDES1_TER;
+	tx->desc[AMBETH_TX_RING_SIZE - 1].buffer2 = (u32)lp->tx_dma_desc;
+
+	return errorCode;
+}
+
+static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
+{
+	int					i;
+	dma_addr_t				mapping;
+	struct sk_buff				*skb;
+	struct ambeth_tx_rngmng			*tx;
+        unsigned int				dirty_tx;
+	int					entry;
+	int					status;
+
+	tx = &lp->tx;
+
+	for (dirty_tx = tx->dirty_tx; (tx->cur_tx - dirty_tx) > 0; dirty_tx++) {
+		entry = dirty_tx % AMBETH_TX_RING_SIZE;
+		status = tx->desc[entry].status;
+
+		if (status & ETH_RDES0_OWN) {
+			lp->stats.tx_errors++;	/* It wasn't Txed */
+		}
+	}
+
+	for (i = 0; i < AMBETH_TX_RING_SIZE; i++) {
+		skb = tx->rng[i].skb; 
+		mapping = tx->rng[i].mapping;
+
+		tx->rng[i].skb = NULL;
+		tx->rng[i].mapping = 0;
+
+		tx->desc[i].status = 0;
+		tx->desc[i].length = 0;
+		tx->desc[i].buffer1 = 0xBADF00D0;
+		tx->desc[i].buffer2 = 0xBADF00D0;
+
+		if (skb != NULL) {
+			dma_unmap_single(&lp->ndev->dev, mapping,
+				skb->len, DMA_TO_DEVICE);
+			dev_kfree_skb(skb);
+		}
+	}
+}
+
+static inline void ambeth_restart_rxtx(struct ambeth_info *lp)
+{
+	dev_err(&lp->ndev->dev,	"%s: enter!\n", __func__);
+
+	ambhw_dma_stop_rxtx(lp);
+	udelay(5);
+
+	ambhw_dma_rx_start(lp);
+	ambhw_dma_tx_start(lp);
+
+	dev_err(&lp->ndev->dev,	"%s: exit!\n", __func__);
+}
+
+static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
+{
+	struct net_device			*ndev;
+	struct ambeth_info			*lp;
+	u32					irq_status;
+	int					tx_count = 0; 
+	int					work_count;
+	int					rxd = 0;
+	struct ambeth_tx_rngmng			*tx;
+	int					entry;
+	int					status;
+	unsigned int				dirty_tx;
+	unsigned int				dirty_to_tx;
+	u32					miss_ov_reg;
+
+	ndev = (struct net_device *)dev_id;
+	lp = netdev_priv(ndev);
+	irq_status = amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET);
+	work_count = lp->platform_info.max_work_count;
+
+	if (unlikely((irq_status &
+		(ETH_DMA_STATUS_NIS | ETH_DMA_STATUS_AIS)) == 0))
+		goto ambeth_interrupt_exit;
+
+	do {
+		if (!rxd && (irq_status & (ETH_DMA_STATUS_RI |
+			ETH_DMA_STATUS_RU | ETH_DMA_STATUS_ERI))) {
+			dev_dbg(&lp->ndev->dev,	"%s: RX IRQ[0x%x]!\n",
+				__func__, irq_status);
+			rxd++;  
+
+			amba_writel(lp->dmabase + ETH_DMA_INTEN_OFFSET,
+				AMBETH_DMA_INT_ENABLE & (~AMBETH_DMA_INT_RXPOLL));
+			amba_writel(lp->dmabase + ETH_DMA_STATUS_OFFSET,
+				ETH_DMA_STATUS_RI | ETH_DMA_STATUS_ERI |
+				ETH_DMA_STATUS_RU);
+
+			netif_rx_schedule(&lp->napi);
+
+			if (!(irq_status & (~(ETH_DMA_STATUS_NIS |
+				ETH_DMA_STATUS_AIS | AMBETH_DMA_INT_RXPOLL |
+				ETH_DMA_STATUS_OVF)))) {
+				dev_dbg(&lp->ndev->dev,
+					"%s: No Intr except Rx 0x%x!\n",
+					__func__, irq_status);
+				break;
+			}
+		}
+
+		if (likely(irq_status & (ETH_DMA_STATUS_TI |
+			ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TPS))) {
+			tx = &lp->tx;
+
+			dev_dbg(&lp->ndev->dev, "%s: gap %d, irq 0x%x.\n",
+				__func__, tx->cur_tx - tx->dirty_tx,
+				irq_status);
+
+			for (dirty_tx = tx->dirty_tx;
+				tx->cur_tx - dirty_tx > 0; dirty_tx++) {
+				entry = dirty_tx % AMBETH_TX_RING_SIZE;
+				status = tx->desc[entry].status;
+
+				if (status & ETH_RDES0_OWN) {
+					dev_dbg(&lp->ndev->dev,
+						"%s: frame not transmitted yet"
+						", entry %d, irq 0x%x,"
+						" Tx status 0x%x\n",
+						__func__, entry,
+						irq_status, status);
+					break;
+				}
+
+				if (unlikely(tx->rng[entry].skb == NULL)) {
+					dev_err(&lp->ndev->dev,
+						"%s: NULL skb in ring!\n",
+						__func__);
+					continue;
+				}
+
+				/* if there was an major error, log it. */
+				if (unlikely(status & ETH_TDES0_ES)) {
+					dev_err(&lp->ndev->dev,
+						"%s: Transmit error, entry %d,"
+						" irq 0x%x, Tx status 0x%x\n",
+						__func__, entry,
+						irq_status, status);
+					lp->stats.tx_errors++;
+					if (status & (ETH_TDES0_JT |
+						ETH_TDES0_EC | ETH_TDES0_ED))
+						lp->stats.tx_aborted_errors++;
+					if (status & (ETH_TDES0_LCA |
+						ETH_TDES0_NC))
+						lp->stats.tx_carrier_errors++;
+					if (status & ETH_TDES0_LCO)
+						lp->stats.tx_window_errors++;
+					if (status & ETH_TDES0_UF)
+						lp->stats.tx_fifo_errors++;
+					if ((status & ETH_TDES0_VF) &&
+						lp->oldduplex == 0)
+						lp->stats.tx_heartbeat_errors++;
+				} else {
+					lp->stats.tx_bytes +=
+						tx->rng[entry].skb->len;
+					lp->stats.collisions +=
+						ETH_TDES0_CC(status);
+					lp->stats.tx_packets++;
+				}
+
+				if (unlikely(tx->rng[entry].mapping == 0)) {
+					dev_err(&lp->ndev->dev,
+						"%s: null mapping!\n",
+						__func__);
+				} else { 
+					dma_unmap_single(&lp->ndev->dev,
+						tx->rng[entry].mapping, 
+						tx->rng[entry].skb->len, 
+						DMA_TO_DEVICE);
+				}
+
+				dev_kfree_skb_irq(tx->rng[entry].skb);
+				tx->rng[entry].skb = NULL;
+				tx->rng[entry].mapping = 0;
+				tx_count++;
+			}
+
+			dirty_to_tx = tx->cur_tx - dirty_tx;
+			/* if dirty_tx (to be transferred by DMA and
+			* then freed) cannot catch cur_tx,
+			* there must be some error, so try to catch up 
+			*/
+			if (unlikely(dirty_to_tx > AMBETH_TX_RING_SIZE)) {
+				dev_err(&lp->ndev->dev,
+					"%s: Out-of-sync 0x%x vs. 0x%x.\n",
+					__func__, dirty_tx, tx->cur_tx);
+				dirty_tx += AMBETH_TX_RING_SIZE;
+			}
+
+			/* if dirty_tx can catch cur_tx within a AMBETH_TX_RING_SIZE,
+			* then wake up netif
+			*/
+			if (likely(dirty_to_tx < (AMBETH_TX_RING_SIZE - 2))) {
+				dev_dbg(&lp->ndev->dev,
+					"%s: Now gap %d, wakeup.\n",
+					__func__, dirty_to_tx);
+				netif_wake_queue(ndev);
+			}
+			tx->dirty_tx = dirty_tx;
+
+			if (unlikely(irq_status & ETH_DMA_STATUS_TPS)) {
+				dev_err(&lp->ndev->dev,
+					"%s: transmission stopped and may "
+					"need restart, irq status 0x%x.\n",
+					__func__, irq_status);
+				ambeth_restart_rxtx(lp);
+			}
+
+			dev_dbg(&lp->ndev->dev,	"%s: tx count %d.\n",
+				__func__, tx_count);
+		}
+
+		if (unlikely(irq_status & ETH_DMA_STATUS_AIS)) {
+			dev_dbg(&lp->ndev->dev, "%s: Abnormal: 0x%x\n",
+				__func__, irq_status);
+
+			if (irq_status & ETH_DMA_STATUS_TJT) {
+				dev_err(&lp->ndev->dev,
+					"%s: ETH_DMA_STATUS_TJT 0x%x\n",
+					__func__, irq_status);
+				lp->stats.tx_errors++;
+			}
+			if (irq_status & ETH_DMA_STATUS_UNF) {
+				dev_err(&lp->ndev->dev,
+					"%s: TxUnderFlow 0x%x\n",
+					__func__, irq_status);
+				ambeth_restart_rxtx(lp);
+			}
+			if (irq_status & ETH_DMA_STATUS_RU) {
+				dev_err(&lp->ndev->dev,
+					"%s: ETH_DMA_STATUS_RU 0x%x\n",
+					__func__, irq_status);
+			}
+			if (irq_status & (ETH_DMA_STATUS_RPS |
+				ETH_DMA_STATUS_OVF)) {
+				dev_dbg(&lp->ndev->dev,
+					"%s: ETH_DMA_STATUS_RPS or "
+					"ETH_DMA_STATUS_OVF 0x%x\n",
+					__func__, irq_status);
+				miss_ov_reg = amba_readl(lp->dmabase +
+					ETH_DMA_MISS_FRAME_BOCNT_OFFSET);
+				if (miss_ov_reg &
+					ETH_DMA_MISS_FRAME_BOCNT_FRAME) {
+					lp->stats.rx_missed_errors +=
+						ETH_DMA_MISS_FRAME_BOCNT_HOST(
+						miss_ov_reg);
+				}
+				if (miss_ov_reg &
+					ETH_DMA_MISS_FRAME_BOCNT_FIFO) {
+					lp->stats.rx_fifo_errors +=
+						ETH_DMA_MISS_FRAME_BOCNT_APP(
+						miss_ov_reg);
+				}
+				lp->stats.rx_errors++;
+
+				amba_writel(lp->dmabase +
+					ETH_DMA_MISS_FRAME_BOCNT_OFFSET, 0);
+				if (irq_status & ETH_DMA_STATUS_RPS)
+					ambeth_restart_rxtx(lp);
+			}
+			if (irq_status & ETH_DMA_STATUS_FBI) {
+				dev_err(&lp->ndev->dev,
+					"%s: ETH_DMA_STATUS_FBI 0x%x\n",
+					__func__, irq_status);
+			}
+
+			amba_writel(lp->dmabase + ETH_DMA_STATUS_OFFSET,
+				(ETH_DMA_STATUS_AIS | ETH_DMA_STATUS_TPS |
+				ETH_DMA_STATUS_TJT | ETH_DMA_STATUS_OVF |
+				ETH_DMA_STATUS_UNF | ETH_DMA_STATUS_RU |
+				ETH_DMA_STATUS_RPS | ETH_DMA_STATUS_RWT |
+				ETH_DMA_STATUS_ETI | ETH_DMA_STATUS_FBI));
+		}
+
+		work_count--;
+		if (work_count == 0)			
+			break;
+
+		irq_status = amba_readl(lp->dmabase + ETH_DMA_STATUS_OFFSET);
+		if (rxd) {
+			irq_status &= ~AMBETH_DMA_INT_RXPOLL;   
+		}
+	} while ((irq_status & (ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TPS |
+		ETH_DMA_STATUS_TI | ETH_DMA_STATUS_RPS | ETH_DMA_STATUS_UNF |
+		ETH_DMA_STATUS_TJT | ETH_DMA_STATUS_FBI)) != 0);
+
+	amba_writel(lp->dmabase + ETH_DMA_STATUS_OFFSET, irq_status);
+
+ambeth_interrupt_exit:
+	return IRQ_HANDLED;
+}
+
+static void ambeth_oom_timer(unsigned long data)
+{
+	struct net_device			*ndev;
+	struct ambeth_info			*lp;
+
+	ndev = (struct net_device *)data;
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	dev_dbg(&lp->ndev->dev, "%s: netif_rx_schedule.\n", __func__);
+	netif_rx_schedule(&lp->napi);
+}
+
+static int ambeth_open(struct net_device *ndev)
+{
+	int					errorCode = 0;
+	struct ambeth_info			*lp;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	errorCode = request_irq(ndev->irq, ambeth_interrupt,
+		IRQF_SHARED | IRQF_TRIGGER_HIGH,
+		ndev->name, ndev);
+	if (errorCode) {
+		dev_err(&lp->ndev->dev,
+			"%s: request_irq[%d] fail.\n",
+			__func__, ndev->irq);
+		goto ambeth_open_exit;
+	}
+
+	lp->rx.desc = dma_alloc_coherent(&lp->ndev->dev,
+		(sizeof(struct ambeth_desc) * AMBETH_RX_RING_SIZE),
+		&lp->rx_dma_desc, GFP_KERNEL);
+	if (lp->rx.desc == NULL) {
+		dev_err(&lp->ndev->dev,
+			"%s: dma_alloc_coherent rx.desc fail.\n",
+			__func__);
+		goto ambeth_open_free_irq;
+	}
+
+	lp->tx.desc = dma_alloc_coherent(&lp->ndev->dev,
+		(sizeof(struct ambeth_desc) * AMBETH_TX_RING_SIZE),
+		&lp->tx_dma_desc, GFP_KERNEL);
+	if (lp->tx.desc == NULL) {
+		dev_err(&lp->ndev->dev,
+			"%s: dma_alloc_coherent tx.desc fail.\n",
+			__func__);
+		goto ambeth_open_free_rx_desc;
+	}
+	dev_dbg(&lp->ndev->dev,
+		"%s: rx.desc = 0x%08x, rx_dma_desc = 0x%08x.\n",
+		__func__, (u32)lp->rx.desc, (u32)lp->rx_dma_desc);
+	dev_dbg(&lp->ndev->dev,
+		"%s: tx.desc = 0x%08x, tx_dma_desc = 0x%08x.\n",
+		__func__, (u32)lp->tx.desc, (u32)lp->tx_dma_desc);
+
+	errorCode = ambeth_rx_rngmng_init(lp);
+	if (errorCode) {
+		dev_err(&lp->ndev->dev,
+			"%s: ambeth_rx_rngmng_init fail%d.\n",
+			__func__, errorCode);
+		goto ambeth_open_free_tx_desc;
+	}
+
+	errorCode = ambeth_tx_rngmng_init(lp);
+	if (errorCode) {
+		dev_err(&lp->ndev->dev,
+			"%s: ambeth_tx_rngmng_init fail%d.\n",
+			__func__, errorCode);
+		goto ambeth_open_free_rx_rngmng;
+	}
+
+	ambhw_set_dma_desc(lp);
+
+        lp->mc_filter[0] = 0;
+        lp->mc_filter[1] = 0;
+
+	ambhw_init(lp);
+	errorCode = ambeth_init_phy(lp);
+	if (errorCode) {
+		//if (netif_msg_ifup(lp))
+			dev_err(&lp->ndev->dev,
+				"%s: Cannot initialize PHY %d.\n",
+				__func__, errorCode);
+		goto ambeth_open_free_tx_rngmng;
+	}
+	phy_start(lp->phydev);
+
+	ambhw_dma_rx_start(lp);
+	ambhw_dma_tx_start(lp);
+
+	init_timer(&lp->oom_timer);
+	lp->oom_timer.data = (unsigned long)ndev;
+	lp->oom_timer.function = ambeth_oom_timer;
+	napi_enable(&lp->napi);
+
+	netif_start_queue(ndev);
+	ambhw_dma_int_enable(lp);
+
+	goto ambeth_open_exit;
+
+ambeth_open_free_tx_rngmng:
+	ambeth_tx_rngmng_del(lp);
+
+ambeth_open_free_rx_rngmng:
+	ambeth_rx_rngmng_del(lp);
+
+ambeth_open_free_tx_desc:
+	dma_free_coherent(&lp->ndev->dev,
+		(sizeof(struct ambeth_desc) * AMBETH_TX_RING_SIZE),
+		lp->tx.desc, lp->tx_dma_desc);
+
+ambeth_open_free_rx_desc:
+	dma_free_coherent(&lp->ndev->dev,
+		(sizeof(struct ambeth_desc) * AMBETH_RX_RING_SIZE),
+		lp->rx.desc, lp->rx_dma_desc);
+
+ambeth_open_free_irq:
+	free_irq(ndev->irq, ndev);
+
+ambeth_open_exit:
+	return errorCode;
+}
+
+static int ambeth_stop(struct net_device *ndev)
+{
+	int					errorCode = 0;
+	struct ambeth_info			*lp;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+        ambhw_dma_int_disable(lp);
+	free_irq(ndev->irq, ndev);
+
+	netif_stop_queue(ndev);
+	napi_disable(&lp->napi);
+        flush_scheduled_work();
+	del_timer_sync(&lp->oom_timer);
+
+	if (lp->phydev) {
+		phy_stop(lp->phydev);
+		phy_disconnect(lp->phydev);
+		lp->phydev = NULL;
+	}
+
+	ambhw_dma_stop_rxtx(lp);
+	ambeth_tx_rngmng_del(lp);
+	ambeth_rx_rngmng_del(lp);
+
+	dma_free_coherent(&lp->ndev->dev,
+		(sizeof(struct ambeth_desc) * AMBETH_TX_RING_SIZE),
+		lp->tx.desc, lp->tx_dma_desc);
+	dma_free_coherent(&lp->ndev->dev,
+		(sizeof(struct ambeth_desc) * AMBETH_RX_RING_SIZE),
+		lp->rx.desc, lp->rx_dma_desc);
+
+	dev_dbg(&lp->ndev->dev, "%s: exit %d.\n", __func__, errorCode);
+
+	return errorCode;
+}
+
+static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+{
+	struct ambeth_info			*lp;
+	dma_addr_t				mapping;
+	struct ambeth_tx_rngmng			*tx;
+	int					entry;
+	int					tx_flag;
+	unsigned long				flags;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+	tx = &lp->tx;
+
+	spin_lock_irqsave(&lp->lock, flags);
+
+	entry = tx->cur_tx % AMBETH_TX_RING_SIZE;
+
+	dev_dbg(&lp->ndev->dev,
+		"%s: cur_tx[%d], dirty_tx[%d], entry[%d], skb.len[%d].\n",
+		__func__, tx->cur_tx, tx->dirty_tx, entry, skb->len);
+
+	tx->rng[entry].skb = skb;
+	mapping = dma_map_single(&lp->ndev->dev, skb->data,
+		skb->len, DMA_TO_DEVICE);
+	tx->rng[entry].mapping = mapping;    
+	tx->desc[entry].buffer1 = mapping;
+
+	if ((tx->cur_tx - tx->dirty_tx) < (AMBETH_TX_RING_SIZE / 2)) {
+		tx_flag = ETH_TDES1_LS | ETH_TDES1_FS;
+	} else if ((tx->cur_tx - tx->dirty_tx) == (AMBETH_TX_RING_SIZE / 2)) {
+		tx_flag = ETH_TDES1_IC | ETH_TDES1_LS | ETH_TDES1_FS;
+	} else if ((tx->cur_tx - tx->dirty_tx) < (AMBETH_TX_RING_SIZE - 2)) {  
+		tx_flag = ETH_TDES1_LS | ETH_TDES1_FS;
+	} else {
+		tx_flag = ETH_TDES1_IC | ETH_TDES1_LS | ETH_TDES1_FS;
+		netif_stop_queue(ndev);
+	}
+
+	if (entry == (AMBETH_TX_RING_SIZE - 1))		
+		tx_flag = ETH_TDES1_IC | ETH_TDES1_LS |
+			ETH_TDES1_FS | ETH_TDES1_TER;
+
+	tx->desc[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
+	tx->desc[entry].status = ETH_TDES0_OWN;
+	wmb();	
+	tx->cur_tx++;	
+
+	amba_writel(lp->dmabase + ETH_DMA_TX_POLL_DMD_OFFSET, 0x01);
+
+	spin_unlock_irqrestore(&lp->lock, flags);
+
+	ndev->trans_start = jiffies;
+
+	return 0;
+}
+
+static void ambeth_timeout(struct net_device *ndev)
+{
+	struct ambeth_info			*lp;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	if (netif_msg_timer(lp))
+		dev_info(&lp->ndev->dev, "%s: ...\n", __func__);
+
+	netif_wake_queue(ndev);
+}
+
+static struct net_device_stats *ambeth_get_stats(struct net_device *ndev)
+{
+	struct ambeth_info *lp = netdev_priv(ndev);
+
+	return &lp->stats;
+}
+
+static inline void ambeth_poll_error_status(struct ambeth_info *lp,
+	unsigned int status)
+{
+	if ((status & 0x38000300) != 0x0300) {
+		if (!(status & 0xffff)) {
+			dev_dbg(&lp->ndev->dev, "%s: 802.3 frame size %d "
+			"spanned multi buffer, status %8.8x.\n",
+			__func__, ETH_RDES0_FL(status),	status);
+		} else if ((status & 0xffff) !=	0x7fff) {
+			dev_dbg(&lp->ndev->dev, "%s: Ethernet frame size %d"
+			" spanned multi buffer, status %8.8x.\n",
+			__func__, ETH_RDES0_FL(status), status);
+			//lp->stats.rx_length_errors++;
+		}
+	} else if (status & ETH_RDES0_ES) {
+		dev_dbg(&lp->ndev->dev,
+			"%s: Receive error, Rx status 0x%8.8x.\n",
+			__func__, status);
+		lp->stats.rx_errors++;
+
+		if (status & ETH_RDES0_DE) {
+			dev_err(&lp->ndev->dev, "%s: rx descriptor error.\n",
+				__func__);
+		}
+		if (status & ETH_RDES0_SAF) {
+			dev_err(&lp->ndev->dev, "%s: rx SA filter fail.\n",
+				__func__);
+		}
+		if (status & ETH_RDES0_LC) {
+			dev_err(&lp->ndev->dev, "%s: rx collison error.\n",
+				__func__);
+			lp->stats.collisions++; 
+		}
+		if(status & ETH_RDES0_CE ) {
+			lp->stats.rx_crc_errors++;
+			dev_err(&lp->ndev->dev, "%s: rx crc error.\n",
+				__func__);
+		}
+		if(status & ETH_RDES0_DBE ) {						
+			lp->stats.rx_frame_errors++;
+			dev_err(&lp->ndev->dev, "%s: rx dribbling error.\n",
+				__func__);
+		}
+		if(status & ETH_RDES0_LE) {
+			lp->stats.rx_length_errors++;
+			dev_err(&lp->ndev->dev, "%s: rx length error.\n",
+				__func__);
+		}					
+		if (status & ETH_RDES0_OE) {
+			dev_dbg(&lp->ndev->dev,
+				"%s: rx damage frame because of overflow.\n",
+				__func__);
+		}
+		if (status & ETH_RDES0_IPC) {
+			dev_err(&lp->ndev->dev,
+				"%s: rx Long frame error.\n",
+				__func__);
+		}
+		if (status & ETH_RDES0_RWT) {						
+			dev_err(&lp->ndev->dev,
+				"%s: rx watchdog timeout.\n",
+				__func__);
+		}
+		if (status & ETH_RDES0_RE) { 
+			dev_err(&lp->ndev->dev,
+				"%s: rx receive error by mii.\n",
+				__func__);
+		}
+	}
+}
+
+static inline void ambeth_poll_status(struct ambeth_info *lp,
+	unsigned int status, int entry)
+{
+	short					pkt_len;
+	struct sk_buff				*skb;
+	char					*temp;
+	struct net_device			*ndev;
+
+	ndev = lp->ndev;
+	pkt_len = ETH_RDES0_FL(status) - 4;
+
+	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
+		dev_warn(&lp->ndev->dev,
+			"%s: Bogus packet size of %d.\n",
+			__func__, pkt_len);
+		pkt_len = AMBETH_RX_COPYBREAK;
+		lp->stats.rx_length_errors++;
+	}
+
+	temp = skb_put(skb = lp->rx.rng[entry].skb, pkt_len);
+	if (unlikely(lp->rx.rng[entry].mapping != lp->rx.desc[entry].buffer1)) {
+		dev_warn(&lp->ndev->dev,
+			"%s: The skbuff addresses do not match "
+			"0x%08x vs 0x%08x %p %p.\n",
+			__func__, lp->rx.desc[entry].buffer1,
+			(u32)lp->rx.rng[entry].mapping,
+			skb->head, temp);
+	}
+	dma_unmap_single(&lp->ndev->dev, lp->rx.rng[entry].mapping,
+		lp->rx.rng[entry].skb->len, DMA_FROM_DEVICE);
+	lp->rx.rng[entry].skb = NULL;
+	lp->rx.rng[entry].mapping = 0;
+
+	skb->dev = ndev;
+	skb->protocol = eth_type_trans(skb, ndev);
+
+	netif_receive_skb(skb);
+
+	ndev->last_rx = jiffies;
+	lp->stats.rx_packets++;
+	lp->stats.rx_bytes += pkt_len;
+}
+
+int ambeth_poll(struct napi_struct *napi, int budget)
+{
+	struct ambeth_info			*lp;
+	struct net_device			*ndev;
+	int					entry;
+	int					rx_work_limit;
+	int					received = 0;
+	int					rx_intr = 0;
+	int					loop_count = 0;
+	unsigned int				status;
+
+	lp = container_of(napi, struct ambeth_info, napi);
+	ndev = lp->ndev;
+	entry = lp->rx.cur_rx % AMBETH_RX_RING_SIZE;
+	rx_work_limit = budget;
+
+	if (unlikely(!netif_running(ndev)))
+		goto ambeth_poll_exit;
+
+	if (unlikely(rx_work_limit >= AMBETH_RX_RING_SIZE)) {
+		dev_info(&lp->ndev->dev,
+			"%s: reset rx_work_limit[%d] to"
+			"AMBETH_RX_RING_SIZE[%d].\n",
+			__func__, rx_work_limit, AMBETH_RX_RING_SIZE - 1);
+		rx_work_limit = AMBETH_RX_RING_SIZE - 1;
+	}
+
+	do {
+		while(1) {
+			status = lp->rx.desc[entry].status;			
+			if (status & ETH_RDES0_OWN)
+				break;		
+
+			if (unlikely((lp->rx.dirty_rx + AMBETH_RX_RING_SIZE) ==
+				lp->rx.cur_rx)) {
+				dev_info(&lp->ndev->dev,
+					"%s: not filled,"
+					" dirty_rx[%d], cur_rx[%d].\n",
+					__func__,
+					lp->rx.dirty_rx, lp->rx.cur_rx);
+				break;
+			}                
+
+			if (--rx_work_limit < 0)
+				goto ambeth_poll_not_done;
+
+			if (unlikely((status & 0x38008300) != 0x0300)) {
+				ambeth_poll_error_status(lp, status);
+			} else {
+				ambeth_poll_status(lp, status, entry);
+			}
+			received++;
+
+			entry = (++lp->rx.cur_rx) % AMBETH_RX_RING_SIZE;
+
+			if (unlikely((lp->rx.cur_rx - lp->rx.dirty_rx) >
+				(AMBETH_RX_RING_SIZE / 4))) {
+				dev_info(&lp->ndev->dev,
+					"%s: 1/4 RX RING USED, refill.\n",
+					__func__);
+				ambeth_rx_refill(lp);
+			}
+		}
+
+		rx_intr = amba_test_and_set_mask(
+			lp->dmabase + ETH_DMA_STATUS_OFFSET,
+			ETH_DMA_STATUS_RI);
+
+		loop_count++;
+		if (loop_count > 1) {
+			dev_vdbg(&lp->ndev->dev,
+				"%s: multi rx_intr in poll.\n",
+				__func__);
+		}
+	} while(rx_intr);
+
+ambeth_poll_exit:
+	ambeth_rx_refill(lp);
+
+	if (unlikely(lp->rx.rng[lp->rx.dirty_rx % AMBETH_RX_RING_SIZE].skb ==
+		NULL)) {
+		dev_info(&lp->ndev->dev, "%s: Out of memory.\n", __func__);
+		goto ambeth_poll_out_of_memory;
+	}
+
+	netif_rx_complete(&lp->napi);
+
+	ambhw_dma_int_enable(lp);
+
+	return received;
+
+ambeth_poll_not_done:
+	if (!received) {
+		dev_info(&lp->ndev->dev, "%s: received is zero.\n", __func__);
+	}
+
+	ambeth_rx_refill(lp);
+
+	dev_info(&lp->ndev->dev, "%s: ambeth_poll_not_done.\n", __func__);
+	if (unlikely(lp->rx.rng[lp->rx.dirty_rx % AMBETH_RX_RING_SIZE].skb ==
+		NULL)) {
+		dev_info(&lp->ndev->dev, "%s: Out of memory.\n", __func__);
+		goto ambeth_poll_out_of_memory;
+	}
+
+	return 0;
+
+ambeth_poll_out_of_memory:
+	dev_info(&lp->ndev->dev, "%s: ambeth_poll_out_of_memory.\n", __func__);
+
+	mod_timer(&lp->oom_timer, jiffies + 1);
+
+	netif_rx_complete(&lp->napi);
+
+	return 0;
+}
+
+static void ambeth_set_multicast_list(struct net_device *ndev)
+{
+	struct ambeth_info			*lp;
+	unsigned int				mac_filter_reg; 
+	DECLARE_MAC_BUF(mac);
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	mac_filter_reg = amba_readl(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
+	dev_dbg(&lp->ndev->dev, "%s: mac_filter 0x%x.\n",
+		__func__, mac_filter_reg);
+        mac_filter_reg &= ~(ETH_MAC_FRAME_FILTER_PM | ETH_MAC_FRAME_FILTER_PR |
+		ETH_MAC_FRAME_FILTER_HMC | ETH_MAC_FRAME_FILTER_RA);
+	dev_dbg(&lp->ndev->dev, "%s: flags 0x%x.\n",
+		__func__, ndev->flags);
+	dev_dbg(&lp->ndev->dev, "%s: mc_count 0x%x.\n",
+		__func__, ndev->mc_count);
+
+	if (ndev->flags & IFF_PROMISC) {
+		dev_dbg(&lp->ndev->dev, "%s: Promiscuous mode.\n", __func__);
+		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+			mac_filter_reg | ETH_MAC_FRAME_FILTER_PR);
+	} else if ((ndev->mc_count > AMBETH_MULTICAST_LIMIT) ||
+		(ndev->flags & IFF_ALLMULTI)) {
+		if (ndev->mc_count > AMBETH_MULTICAST_LIMIT) {
+			dev_dbg(&lp->ndev->dev,
+				"%s: too many in multicast, accept all.\n",
+				__func__);
+		}
+
+		if (ndev->flags & IFF_ALLMULTI) {
+			dev_dbg(&lp->ndev->dev,
+				"%s: IFF_ALLLMULTI flag set, accept all.\n",
+				__func__);
+		}
+		dev_dbg(&lp->ndev->dev,
+			"%s: Accept All Multi %d.\n",
+			__func__, ndev->mc_count);
+		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+			mac_filter_reg | ETH_MAC_FRAME_FILTER_PM);
+	} else if ((ndev->mc_count <= AMBETH_MULTICAST_PF)) {
+		int				i;
+		int				filtered;
+		unsigned char			zeromacbuf[6];
+		struct dev_mc_list		*mclist;
+
+		dev_dbg(&lp->ndev->dev,
+			"%s: use perfect filtering %d.\n",
+			__func__, ndev->mc_count);
+		mac_filter_reg &= ~(ETH_MAC_FRAME_FILTER_HMC |
+			ETH_MAC_FRAME_FILTER_PM);                             
+
+		for (i = 0, mclist = ndev->mc_list;
+			mclist && i < ndev->mc_count;
+			i++, mclist = mclist->next) {
+			if (!(mclist->dmi_addr[0] & 1)) {
+				dev_err(&lp->ndev->dev,
+					"%s: Not a multicast addr 0x%x.\n",
+					__func__, mclist->dmi_addr[0]);
+				continue;
+			}
+			ambhw_set_hwaddr_perfect_filtering(lp,
+				mclist->dmi_addr, i + 1, 1);
+			dev_dbg(&lp->ndev->dev,
+				"%s: Added perfect filtering[%s].\n",
+				__func__, print_mac(mac, mclist->dmi_addr));
+		}
+
+		filtered = i;
+		dev_dbg(&lp->ndev->dev,
+			"%s: Disable the rest %d MAC for perfect filtering.\n",
+			__func__, AMBETH_MULTICAST_PF - filtered);
+		memset(zeromacbuf, 0, sizeof(zeromacbuf));
+		for (i = 0; i < AMBETH_MULTICAST_PF - filtered; i++) {                        
+			ambhw_set_hwaddr_perfect_filtering(lp, zeromacbuf,
+				filtered + i + 1, 0);
+		}
+		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+			mac_filter_reg);
+        } else {
+#ifdef ENABLE_HASH_MULTI
+		struct dev_mc_list		*mclist;
+		int				i;
+		u32				mc_filter[2] = {0, 0};
+		int				filterbit;
+
+		dev_dbg(&lp->ndev->dev, "%s: handling HASH MULTI.\n", __func__);
+
+		for (i = 0, mclist = ndev->mc_list;
+			mclist && i < ndev->mc_count;
+			i++, mclist = mclist->next) {
+			if (!(mclist->dmi_addr[0] & 1)) {
+				dev_err(&lp->ndev->dev,
+					"%s: Not a multicast addr 0x%x.\n",
+					__func__, mclist->dmi_addr[0]);
+				continue;
+			}
+
+			filterbit = ether_crc(ETH_ALEN, mclist->dmi_addr);
+			filterbit >>= 26;
+			filterbit &= 0x3F;
+
+			mc_filter[filterbit >> 5] |= 1 << (filterbit & 31);
+
+			dev_dbg(&lp->ndev->dev,
+				"%s: Added filter for[%s], hash:0x%8x.\n",
+				__func__, print_mac(mac, mclist->dmi_addr),
+				filterbit);
+		}
+
+		if ((mc_filter[0] == lp->mc_filter[0]) &&
+			(mc_filter[1] == lp->mc_filter[1])) {
+			/* No change. */
+		} else {
+			dev_dbg(&lp->ndev->dev,
+				"%s: Update HASH, HI[0x%x], LO[0x%x].\n",
+				__func__, mc_filter[1], mc_filter[0]);
+
+			amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+				mac_filter_reg | ETH_MAC_FRAME_FILTER_HMC);
+			amba_writel(lp->regbase + ETH_MAC_HASH_LO_OFFSET,
+				mc_filter[0]);
+			amba_writel(lp->regbase + ETH_MAC_HASH_HI_OFFSET,
+				mc_filter[1]);
+		}
+		lp->mc_filter[0] = mc_filter[0];
+		lp->mc_filter[1] = mc_filter[1];
+#else
+		dev_dbg(&lp->ndev->dev, "%s: Accept All Multi %d.\n",
+			__func__, ndev->mc_count);
+		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+			mac_filter_reg | ETH_MAC_FRAME_FILTER_PM);
+#endif
+	}
+}
+
+static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
+{
+	struct sockaddr				*saddr;
+	struct ambeth_info			*lp;
+	DECLARE_MAC_BUF(mac);
+
+	saddr = (struct sockaddr *)(addr);
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	if (netif_running(ndev))
+		return -EBUSY;
+
+	if (!is_valid_ether_addr(saddr->sa_data))
+		return -EADDRNOTAVAIL;
+
+	dev_dbg(&lp->ndev->dev, "%s: MAC address[%s].\n",
+		__func__, print_mac(mac, saddr->sa_data));
+
+	memcpy(ndev->dev_addr, saddr->sa_data, ndev->addr_len);
+	ambhw_set_hwaddr(lp, ndev->dev_addr);
+	ambhw_get_hwaddr(lp, ndev->dev_addr);
+
+	return 0;
+}
+
+/****************************************************************************/
+static int ambeth_drv_probe(struct platform_device *pdev)
+{
+	int					errorCode = 0;
+	struct net_device			*ndev;
+	struct ambeth_info			*lp;
+	struct ambarella_eth_platform_info	*platform_info;
+	struct resource				*reg_res;
+	struct resource				*dma_res;
+	struct resource				*irq_res;
+	int					i;
+	DECLARE_MAC_BUF(mac);
+
+	platform_info =
+		(struct ambarella_eth_platform_info *)pdev->dev.platform_data;
+	if (platform_info == NULL) {
+		dev_err(&pdev->dev, "%s: Can't get platform_data!\n", __func__);
+		errorCode = - EPERM;
+		goto ambeth_drv_probe_exit;
+	}
+	if (platform_info->is_enabled) {
+		if (!platform_info->is_enabled()) {
+			dev_err(&pdev->dev,
+				"%s: Not enabled, check HW config!\n",
+				__func__);
+			errorCode = -EPERM;
+			goto ambeth_drv_probe_exit;
+		}
+	}
+
+	reg_res = platform_get_resource_byname(pdev,
+		IORESOURCE_MEM, "registers");
+	if (reg_res == NULL) {
+		dev_err(&pdev->dev, "%s: Get reg_res failed!\n", __func__);
+		errorCode = -ENXIO;
+		goto ambeth_drv_probe_exit;
+	}
+
+	dma_res = platform_get_resource_byname(pdev,
+		IORESOURCE_MEM, "dma");
+	if (dma_res == NULL) {
+		dev_err(&pdev->dev, "%s: Get dma_res failed!\n", __func__);
+		errorCode = -ENXIO;
+		goto ambeth_drv_probe_exit;
+	}
+
+	irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (irq_res == NULL) {
+		dev_err(&pdev->dev, "%s: Get irq_res failed!\n", __func__);
+		errorCode = -ENXIO;
+		goto ambeth_drv_probe_exit;
+	}
+
+	ndev = alloc_etherdev(sizeof(struct ambeth_info));
+	if (ndev == NULL) {
+		dev_err(&pdev->dev, "%s: alloc_etherdev fail.\n", __func__);
+		errorCode = -ENOMEM;
+		goto ambeth_drv_probe_exit;
+	}
+	SET_NETDEV_DEV(ndev, &pdev->dev);
+	ndev->dev.dma_mask = pdev->dev.dma_mask;
+	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
+	ndev->irq = irq_res->start;
+
+	lp = netdev_priv(ndev);
+	spin_lock_init(&lp->lock);
+	lp->ndev = ndev;
+	lp->regbase = (unsigned char __iomem *)reg_res->start;
+	lp->dmabase = (unsigned char __iomem *)dma_res->start;
+	memcpy(&lp->platform_info, platform_info,
+		sizeof(struct ambarella_eth_platform_info));
+	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV |
+		NETIF_MSG_PROBE | NETIF_MSG_LINK);
+
+	gpio_request(lp->platform_info.mii_power.power_gpio, pdev->name);
+	gpio_request(lp->platform_info.mii_reset.reset_gpio, pdev->name);
+
+	lp->new_bus.name = "Ambarella MII Bus",
+	lp->new_bus.read = &ambhw_mdio_read,
+	lp->new_bus.write = &ambhw_mdio_write,
+	lp->new_bus.reset = &ambhw_mdio_reset,
+	snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%x", pdev->id);
+	lp->new_bus.priv = lp;
+	lp->new_bus.irq = kmalloc(sizeof(int)*PHY_MAX_ADDR, GFP_KERNEL);
+	if (lp->new_bus.irq == NULL) {
+		dev_err(&pdev->dev, "%s: alloc new_bus.irq fail.\n", __func__);
+		errorCode = -ENOMEM;
+		goto ambeth_drv_probe_free_netdev;
+	}
+	for(i = 0; i < PHY_MAX_ADDR; ++i)
+		lp->new_bus.irq[i] = PHY_POLL;
+	lp->new_bus.parent = &pdev->dev;
+	lp->new_bus.state = MDIOBUS_ALLOCATED;
+
+	errorCode = mdiobus_register(&lp->new_bus);
+	if (errorCode) {
+		dev_err(&pdev->dev,
+			"%s: mdiobus_register fail%d.\n",
+			__func__, errorCode);
+		goto ambeth_drv_probe_kfree_mdiobus;
+	}
+
+	errorCode = ambhw_dma_reset(lp);
+	if (errorCode) {
+		dev_err(&pdev->dev,
+			"%s: ambhw_dma_reset fail%d.\n",
+			__func__, errorCode);
+		goto ambeth_drv_probe_unregister_mdiobus;
+	}
+
+	ether_setup(ndev);
+	ndev->open = ambeth_open;
+	ndev->stop = ambeth_stop;
+	ndev->hard_start_xmit = ambeth_hard_start_xmit;
+	ndev->tx_timeout = ambeth_timeout;
+	ndev->watchdog_timeo = AMBETH_TX_TIMEOUT;
+	ndev->get_stats = ambeth_get_stats;
+	ndev->set_multicast_list = ambeth_set_multicast_list;
+	netif_napi_add(ndev, &lp->napi, ambeth_poll,
+		lp->platform_info.napi_weight);
+        ndev->set_mac_address = ambeth_set_mac_address;
+	
+	if (memcmp(lp->platform_info.mac_addr, "\0\0\0\0\0\0",
+		AMBETH_MAC_SIZE)) {
+		memcpy(ndev->dev_addr, lp->platform_info.mac_addr,
+			AMBETH_MAC_SIZE);
+	} else {
+		memcpy(ndev->dev_addr, "\0\1\2\3\4\5",
+			AMBETH_MAC_SIZE);
+	}
+
+	ambhw_set_hwaddr(lp, ndev->dev_addr);
+	ambhw_get_hwaddr(lp, ndev->dev_addr);
+	dev_info(&pdev->dev,
+		"%s: MAC Address[%s].\n",
+		__func__, print_mac(mac, ndev->dev_addr));
+
+	errorCode = register_netdev(ndev);
+	if (errorCode) {
+		dev_err(&pdev->dev,
+			"%s: register_netdev fail%d.\n",
+			__func__, errorCode);
+		goto ambeth_drv_probe_netif_napi_del;
+	}
+
+	platform_set_drvdata(pdev, ndev);
+
+	goto ambeth_drv_probe_exit;
+
+ambeth_drv_probe_netif_napi_del:
+	netif_napi_del(&lp->napi);
+
+ambeth_drv_probe_unregister_mdiobus:
+	mdiobus_unregister(&lp->new_bus);
+
+ambeth_drv_probe_kfree_mdiobus:
+	kfree(lp->new_bus.irq);
+
+ambeth_drv_probe_free_netdev:
+	free_netdev(ndev);
+
+ambeth_drv_probe_exit:
+	return errorCode;
+}
+
+static int __devexit ambeth_drv_remove(struct platform_device *pdev)
+{
+	struct net_device			*ndev;
+	struct ambeth_info			*lp;
+
+	ndev = platform_get_drvdata(pdev);
+
+	if (ndev) {
+		lp = (struct ambeth_info *)netdev_priv(ndev);
+
+		platform_set_drvdata(pdev, NULL);
+		unregister_netdev(ndev);
+		netif_napi_del(&lp->napi);
+		gpio_free(lp->platform_info.mii_power.power_gpio);
+		gpio_free(lp->platform_info.mii_reset.reset_gpio);
+		mdiobus_unregister(&lp->new_bus);
+		kfree(lp->new_bus.irq);
+		free_netdev(ndev);
+	}
+
+	dev_info(&pdev->dev, "%s: exit.\n", __func__);
+
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	int					errorCode = 0;
+	struct net_device			*ndev;
+
+	ndev = platform_get_drvdata(pdev);
+
+	if (ndev) {
+		if (netif_running(ndev)) {
+			netif_device_detach(ndev);
+		}
+	}
+	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+		__func__, errorCode, state.event);
+
+	return errorCode;
+}
+
+static int ambeth_drv_resume(struct platform_device *pdev)
+{
+	int					errorCode = 0;
+	struct net_device			*ndev;
+
+	ndev = platform_get_drvdata(pdev);
+
+	if (ndev) {
+		if (netif_running(ndev)) {
+			netif_device_attach(ndev);
+		}
+	}
+	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+
+	return errorCode;
+}
+#endif
+
+static struct platform_driver ambeth_driver = {
+	.probe		= ambeth_drv_probe,
+	.remove		= __devexit_p(ambeth_drv_remove),
+#ifdef CONFIG_PM
+	.suspend        = ambeth_drv_suspend,
+	.resume		= ambeth_drv_resume,
+#endif
+	.driver = {
+		.name	= "ambarella-eth",
+		.owner	= THIS_MODULE,
+	},
+};
+
+static int __init ambeth_init(void)
+{
+	return platform_driver_register(&ambeth_driver);
+}
+
+static void __exit ambeth_exit(void)
+{
+	platform_driver_unregister(&ambeth_driver);
+}
+
+module_init(ambeth_init);
+module_exit(ambeth_exit);
+
+MODULE_AUTHOR("Grady Chen & Shanghai Team");
+MODULE_DESCRIPTION("Ambarella Media Processor Ethernet Driver");
+MODULE_LICENSE("GPL");
+

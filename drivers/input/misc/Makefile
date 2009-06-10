@@ -22,3 +22,7 @@ obj-$(CONFIG_INPUT_UINPUT)		+= uinput.o
 obj-$(CONFIG_INPUT_APANEL)		+= apanel.o
 obj-$(CONFIG_INPUT_SGI_BTNS)		+= sgi_btns.o
 obj-$(CONFIG_INPUT_PCF50633_PMU)	+= pcf50633-input.o
+
+ambarella_general_input-objs		:= ambarella_input.o ambarella_ir_nec.o ambarella_ir_sony.o ambarella_ir_philips.o ambarella_ir_panasonic.o
+obj-$(CONFIG_INPUT_AMBARELLA)		+= ambarella_general_input.o
+

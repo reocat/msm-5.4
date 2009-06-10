@@ -21,6 +21,7 @@ obj-$(CONFIG_USB_FSL_USB2)	+= fsl_usb2_udc.o
 obj-$(CONFIG_USB_M66592)	+= m66592-udc.o
 obj-$(CONFIG_USB_FSL_QE)	+= fsl_qe_udc.o
 obj-$(CONFIG_USB_CI13XXX)	+= ci13xxx_udc.o
+obj-$(CONFIG_USB_AMBARELLA)	+= ambarella_udc.o
 
 #
 # USB gadget drivers
@@ -33,6 +34,7 @@ gadgetfs-objs			:= inode.o
 g_file_storage-objs		:= file_storage.o
 g_printer-objs			:= printer.o
 g_cdc-objs			:= cdc2.o
+g_amb_stream-objs		:= amb_stream.o usbstring.o config.o epautoconf.o
 
 obj-$(CONFIG_USB_ZERO)		+= g_zero.o
 obj-$(CONFIG_USB_ETH)		+= g_ether.o
@@ -42,4 +44,5 @@ obj-$(CONFIG_USB_G_SERIAL)	+= g_serial.o
 obj-$(CONFIG_USB_G_PRINTER)	+= g_printer.o
 obj-$(CONFIG_USB_MIDI_GADGET)	+= g_midi.o
 obj-$(CONFIG_USB_CDC_COMPOSITE) += g_cdc.o
+obj-$(CONFIG_USB_AMB_STREAM)	+= g_amb_stream.o
 

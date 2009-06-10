@@ -799,6 +799,14 @@ void __init reserve_node_zero(pg_data_t *pgdat)
 				BOOTMEM_DEFAULT);
 	}
 
+	if (machine_is_ambarella()) {
+		printk("Ambarella: Reserve MEM=0x%x,0x%x\n",
+			RESERVE_MEM_P_START, RESERVE_MEM_SIZE);
+		reserve_bootmem_node(pgdat,
+			RESERVE_MEM_P_START, RESERVE_MEM_SIZE,
+			BOOTMEM_DEFAULT);
+	}
+
 #ifdef CONFIG_SA1111
 	/*
 	 * Because of the SA1111 DMA bug, we want to preserve our

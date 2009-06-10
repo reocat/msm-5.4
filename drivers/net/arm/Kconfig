@@ -63,3 +63,12 @@ config IXP4XX_ETH
 	help
 	  Say Y here if you want to use built-in Ethernet ports
 	  on IXP4xx processor.
+
+config AMBARELLA_ETH
+	tristate "Ambarella Media Soc Ethernet support"
+	depends on ARM && ARCH_AMBARELLA
+	select CRC32
+	select MII
+	help
+	  Support for Ambarella Media Soc ethernet.
+

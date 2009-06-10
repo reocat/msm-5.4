@@ -1,0 +1,1043 @@
+/*
+ * sound/soc/codecs/ambarella_auc.c
+ *
+ * History:
+ *	2008/03/03 - [Eric Lee] created file
+ *	2008/03/27 - [Cao Rongrong] Fix the pga regsister setup bug
+ *	2008/04/16 - [Eric Lee] Removed the compiling warning
+ *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
+ *	2008/03/05 - [Cao Rongrong] Added widgets and controls
+ *
+ * Copyright (C) 2004-2009, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/io.h>
+#include <linux/ioport.h>
+#include <linux/interrupt.h>
+#include <linux/platform_device.h>
+#include <linux/delay.h>
+#include <linux/dma-mapping.h>
+#include <asm/dma.h>
+
+#include <sound/core.h>
+#include <sound/pcm.h>
+#include <sound/pcm_params.h>
+#include <sound/initval.h>
+#include <sound/soc.h>
+#include <sound/soc-dapm.h>
+
+#include <mach/hardware.h>
+
+#include "ambarella_auc.h"
+
+
+a2aucctrl_reg_t a2auc_reg;
+static u32 a2auc_pga_gain_table[Gain_Table_Size];
+static void a2auc_volume_control(u8 volume);
+
+int a2auc_snd_soc_info_volsw(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 90;
+	return 0;
+}
+
+int a2auc_snd_soc_put_volsw(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	unsigned char val, change = 0;
+
+	val = Gain_Table_Size - 1 - ucontrol->value.integer.value[0];
+
+	if (val >= Gain_Table_Size)
+		val = Gain_Table_Size - 1;
+
+	if(a2auc_pga_gain_table[val] != a2auc_reg.reg_10){
+		change = 1;
+		a2auc_volume_control(val);
+	}
+
+	return change;
+}
+
+int a2auc_snd_soc_get_volsw(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int i;
+
+	for(i = 0; i < Gain_Table_Size; i++){
+		if(a2auc_reg.reg_10 == a2auc_pga_gain_table[i])
+			break;
+	}
+
+	ucontrol->value.integer.value[0] = Gain_Table_Size - 1 - i;
+
+	return 0;
+}
+
+#define A2AUC_SOC_SINGLE(xname) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
+	.info = a2auc_snd_soc_info_volsw, .get = a2auc_snd_soc_get_volsw,\
+	.put = a2auc_snd_soc_put_volsw \
+}
+
+static const struct snd_kcontrol_new a2auc_snd_controls[] = {
+	SOC_SINGLE("Capture Volume", 0x38, 0, 31, 0),
+	SOC_SINGLE("ADC Capture Switch", 0x34, 2, 1, 1),
+	A2AUC_SOC_SINGLE("Speaker Playback Volume"),
+};
+
+/* add non dapm controls */
+static int a2auc_add_controls(struct snd_soc_codec *codec)
+{
+	int err, i;
+
+	for (i = 0; i < ARRAY_SIZE(a2auc_snd_controls); i++) {
+		if ((err = snd_ctl_add(codec->card,
+				snd_soc_cnew(&a2auc_snd_controls[i],codec, NULL))) < 0)
+			return err;
+	}
+
+	return 0;
+}
+
+static const struct snd_soc_dapm_widget a2auc_dapm_widgets[] = {
+	SND_SOC_DAPM_DAC("DAC", "Playback", 0x3c, 6, 1),
+	SND_SOC_DAPM_OUTPUT("LLOUT"),
+	SND_SOC_DAPM_OUTPUT("RLOUT"),
+	SND_SOC_DAPM_OUTPUT("LHPOUT"),
+	SND_SOC_DAPM_OUTPUT("RHPOUT"),
+	SND_SOC_DAPM_OUTPUT("SPOUT"),
+
+	SND_SOC_DAPM_ADC("ADC", "Capture", 0x34, 0, 1),
+	SND_SOC_DAPM_INPUT("LLIN"),
+	SND_SOC_DAPM_INPUT("RLIN"),
+};
+
+static const struct snd_soc_dapm_route intercon[] = {
+	/* outputs */
+	{"LLOUT", NULL, "DAC"},
+	{"RLOUT", NULL, "DAC"},
+	{"LHPOUT", NULL, "DAC"},
+	{"RHPOUT", NULL, "DAC"},
+	{"SPOUT", NULL, "DAC"},
+
+	/* inputs */
+	{"ADC", NULL, "LLIN"},
+	{"ADC", NULL, "RLIN"},
+};
+
+static int a2auc_add_widgets(struct snd_soc_codec *codec)
+{
+	snd_soc_dapm_new_controls(codec, a2auc_dapm_widgets,
+				  ARRAY_SIZE(a2auc_dapm_widgets));
+
+	/* set up audio path interconnects */
+	snd_soc_dapm_add_routes(codec, intercon, ARRAY_SIZE(intercon));
+
+
+	snd_soc_dapm_new_widgets(codec);
+	return 0;
+}
+
+static u32 a2auc_pga_gain_table[Gain_Table_Size] = {
+	/* 6dB */
+	(AUC_DAC_GAIN_PGA1_6|AUC_DAC_GAIN_PGA2_0),
+	/* 5dB ~ 0dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_0),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_0),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_0),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_0),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_0),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_0),
+	/* -1dB ~ -6dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_1),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_1),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_1),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_1),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_1),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_1),
+	/* -7dB ~ -12dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_2),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_2),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_2),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_2),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_2),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_2),
+	/* -13dB ~ -18dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_3),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_3),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_3),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_3),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_3),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_3),
+	/* -19dB ~ -24dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_4),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_4),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_4),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_4),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_4),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_4),
+	/* -25dB ~ -30dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_5),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_5),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_5),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_5),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_5),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_5),
+	/* -31dB ~ -36dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_6),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_6),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_6),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_6),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_6),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_6),
+	/* -37dB ~ -42dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_7),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_7),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_7),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_7),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_7),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_7),
+	/* -43dB ~ -48dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_8),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_8),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_8),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_8),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_8),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_8),
+	/* -49dB ~ -54dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_9),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_9),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_9),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_9),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_9),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_9),
+	/* -55dB ~ -60dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_a),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_a),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_a),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_a),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_a),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_a),
+	/* -61dB ~ -66dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_b),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_b),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_b),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_b),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_b),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_b),
+	/* -67dB ~ -72dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_c),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_c),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_c),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_c),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_c),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_c),
+	/* -73dB ~ -78dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_d),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_d),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_d),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_d),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_d),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_d),
+	/* -79dB ~ -84dB */
+	(AUC_DAC_GAIN_PGA1_5|AUC_DAC_GAIN_PGA2_e),(AUC_DAC_GAIN_PGA1_4|AUC_DAC_GAIN_PGA2_e),
+	(AUC_DAC_GAIN_PGA1_3|AUC_DAC_GAIN_PGA2_e),(AUC_DAC_GAIN_PGA1_2|AUC_DAC_GAIN_PGA2_e),
+	(AUC_DAC_GAIN_PGA1_1|AUC_DAC_GAIN_PGA2_e),(AUC_DAC_GAIN_PGA1_0|AUC_DAC_GAIN_PGA2_e)
+};
+
+#if 0
+static u32 a2auc_adc_cic_mult_table[ADC_CIC_MULT_LEVEL+1] = 
+{
+		0x00000000, 0x00002000, 0x00004000, 0x00006000, 0x00008000, 0x0000a000, 0x0000c000, 0x0000e000,
+		0x00010000, 0x00012000, 0x00014000, 0x00016000, 0x00018000, 0x0001a000, 0x0001c000, 0x0001e000,
+		0x00020000, 0x00022000, 0x00024000, 0x00026000, 0x00028000, 0x0002a000, 0x0002c000, 0x0002e000,
+		0x00030000, 0x00032000, 0x00034000, 0x00036000, 0x00038000, 0x0003a000, 0x0003c000, 0x0003e000,
+		0x00040000, 0x00042000, 0x00044000, 0x00046000, 0x00048000, 0x0004a000, 0x0004c000, 0x0004e000,
+		0x00050000, 0x00052000, 0x00054000, 0x00056000, 0x00058000, 0x0005a000, 0x0005c000, 0x0005e000,
+		0x00060000, 0x00062000, 0x00064000, 0x00066000, 0x00068000, 0x0006a000, 0x0006c000, 0x0006e000,
+		0x00070000, 0x00072000, 0x00074000, 0x00076000, 0x00078000, 0x0007a000, 0x0007c000, 0x0007e000,
+		0x00080000
+};
+#endif
+
+static u32 a2auc_droopcompensationfilter_table[DroopCompensationFilter_Size] =
+{
+	0x000FF48B, 0x00003491, 0x000FD8CB, 0x000F2780, 0x000232A9, 0x00054811
+};
+
+static u32 a2auc_imagesuppressionfilter_table[ImageSuppressionFilter_Size] =
+{
+	0x00000225, 0x00000981, 0x00001B3B, 0x00003C53, 0x00006D24,
+	0x0000A94E, 0x0000E4D1, 0x000110D5, 0x00012165
+};
+
+static u32 a2auc_periodicfilter_table[PeriodicFilter_Size] =
+{
+	0x000FFFE4, 0x000FFE04, 0x000FFF85, 0x000004C5, 0x00000262,
+	0x000FF5B8, 0x000FF9D3, 0x000012F6, 0x00000D8E, 0x000FDFDB,
+	0x000FE59E, 0x00003310, 0x0000302B, 0x000FB207, 0x000FAA5B,
+	0x00007501, 0x00009C96, 0x000F4E62, 0x000EB810, 0x00010D9E,
+	0x00043FF0
+};
+
+#ifdef AUC_USE_DC_REMOVAL_FILTER
+static u32 a2auc_dcremovalfilter_table[DCRemovalFilter_Size] =
+{
+	/* Stage 1 */
+	0x00000000, 0x00000040, 0x000007f1, 0x000003c0, 0x00000000,
+	0x00000000, 0x03c0d13b, 0x000003c0, 0x00000000, 0x00000000,
+	/* Stage 2 */
+	0x00000000, 0x00000040, 0x0000142e, 0x00000380, 0x000007f0,
+	0x00000040, 0x0346d3bc, 0x00000380, 0xfcb9798f, 0x0000003f
+};
+#endif
+
+static u32 a2auc_windnoisefilter_table[WindNoiseFilter_Size] =
+{
+	/* Stage 1 */
+	0x00000000, 0x00000040, 0x00000010, 0x000003c0, 0x00000000,
+	0x00000000, 0x4ae797e1, 0x000003c0, 0x00000000, 0x00000000,
+	/* Stage 2 */
+	0x00000000, 0x00000040, 0x002beeea, 0x00000380, 0x0000000f,
+	0x00000040, 0x41daabd4, 0x00000380, 0xbe9ddf98, 0x0000003f
+};
+
+static u32 a2auc_deemphasisfilter_table[DeEmphasisFilter_Size] =
+{
+	/* Stage 1 */
+	0x00000000, 0x00000040, 0xdd7e6059, 0x000003f1, 0x6ecab8f7, 0x000003d7
+};
+
+/* codec private data */
+//struct wm8731_priv {
+//	unsigned int sysclk;
+//};
+
+a2aucctrl_reg_t a2auc_reg={
+	AUC_ENABLE_REG_VAL,
+	AUC_DP_RESET_REG_VAL,
+	AUC_OSR_REG_VAL,
+	AUC_CONTROL_REG_VAL,
+	AUC_STATUS_REG_VAL,
+	AUC_CIC_REG_VAL,
+	AUC_I2S_REG_VAL,
+	0x00000000,	//Clock Latch, Unused
+	AUC_DSM_GAIN_REG_VAL,
+	AUC_EMA_REG_VAL,
+	0x00000000,	//Unused
+	0x00000000,	//Unused
+	0x00000000,	//BG Control, Unused
+	AUC_ADC_CONTROL_REG_VAL,
+	AUC_ADC_VGA_GAIN_REG_VAL,
+	AUC_DAC_CONTROL_REG_VAL,
+	AUC_DAC_GAIN_REG_VAL
+};
+
+static u32 a2auc_check_state(void)
+{
+	u32 retval;
+	retval = a2auc_read(AUC_ENABLE_REG);
+	if(retval==(u32)0xBEEFBABE)
+		return (AUC_RESET_STATE);
+	else if(retval==(u32)0x00000000)
+		return (AUC_IDLE_STATE);
+	else
+		return (AUC_NORMAL_STATE);
+}
+
+static void a2auc_set_droopcompensationfilter(void)
+{
+	int i;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		for(i=0 ; i<DroopCompensationFilter_Size ; i++)
+		{
+		a2auc_write(AUC_COEFF_START_DC_REG+(i<<2), a2auc_droopcompensationfilter_table[i]);
+		a2auc_read(AUC_COEFF_START_DC_REG+(i<<2));
+		}
+	}
+}
+
+static void a2auc_set_imagesuppressionfilter(void)
+{
+	int i;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		for(i=0 ; i<ImageSuppressionFilter_Size ; i++)
+		{
+		a2auc_write(AUC_COEFF_START_IS_REG+(i<<2), a2auc_imagesuppressionfilter_table[i]);
+		a2auc_read(AUC_COEFF_START_IS_REG+(i<<2));
+		}
+	}
+}
+
+void a2auc_set_periodicfilter(void)
+{
+	int i;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		for(i=0 ; i<PeriodicFilter_Size ; i++)
+		{
+		a2auc_write(AUC_COEFF_START_PD_REG+(i<<2), a2auc_periodicfilter_table[i]);
+		a2auc_read(AUC_COEFF_START_PD_REG+(i<<2));
+		}
+	}
+}
+
+#ifdef AUC_USE_DC_REMOVAL_FILTER
+static void a2auc_set_dcremovalfilter(void)
+{
+	int i;
+	if (a2auc_check_state() != AUC_RESET_STATE) {
+		for(i=0 ; i<DCRemovalFilter_Size ; i++) {
+			a2auc_write(AUC_COEFF_START_HP_REG+(i<<2), a2auc_dcremovalfilter_table[i]);
+			a2auc_read(AUC_COEFF_START_HP_REG+(i<<2));
+		}
+	}
+}
+#endif
+
+static void a2auc_set_windnoisefilter(void)
+{
+	int i;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		for(i=0 ; i<WindNoiseFilter_Size ; i++)
+		{
+		#if 1
+		a2auc_write(AUC_COEFF_START_WN_REG+(i<<2), a2auc_windnoisefilter_table[i]);
+		#else
+		a2auc_write(AUC_COEFF_START_WN_REG+(i<<2), a2auc_windnoisefilter_table[19][i]);
+		#endif
+		a2auc_read(AUC_COEFF_START_WN_REG+(i<<2));
+		}
+	}
+}
+
+static void a2auc_set_deemphasisfilter(void)
+{
+	int i;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		for(i=0 ; i<DeEmphasisFilter_Size ; i++)
+		{
+		a2auc_write(AUC_COEFF_START_DE_REG+(i<<2), a2auc_deemphasisfilter_table[i]);
+		a2auc_read(AUC_COEFF_START_DE_REG+(i<<2));
+		}
+	}
+}
+
+
+static void a2auc_init_fiter(void)
+{
+	a2auc_set_droopcompensationfilter();
+	a2auc_set_imagesuppressionfilter();
+	a2auc_set_periodicfilter();
+#ifdef AUC_USE_DC_REMOVAL_FILTER
+	a2auc_set_dcremovalfilter();
+#else
+	a2auc_set_windnoisefilter();
+#endif
+	a2auc_set_deemphasisfilter();
+}
+
+static void a2auc_adc_on(void)
+{
+	//a2auc_reg.reg_00 = a2auc_read(AUC_ENABLE_REG);
+	a2auc_reg.reg_00 = a2auc_reg.reg_00|AUC_ADC_ENABLE;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ENABLE_REG, a2auc_reg.reg_00);
+	a2auc_read(AUC_ENABLE_REG);
+	}
+}
+
+static void a2auc_adc_off(void)
+{
+	//a2auc_reg.reg_00 = a2auc_read(AUC_ENABLE_REG);
+	a2auc_reg.reg_00 = a2auc_reg.reg_00&(~((u32)AUC_ADC_ENABLE));
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ENABLE_REG, a2auc_reg.reg_00);
+	a2auc_read(AUC_ENABLE_REG);
+	}
+}
+
+static void a2auc_adc_power_on(void)
+{
+	//a2auc_reg.reg_0d = (u32) a2auc_read(AUC_ADC_CONTROL_REG);
+	a2auc_reg.reg_0d = a2auc_reg.reg_0d & (~((u32)AUC_ADC_CONTROL_ADC_PD)) ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ADC_CONTROL_REG, a2auc_reg.reg_0d);
+	a2auc_read(AUC_ADC_CONTROL_REG);
+	}
+}
+
+static void a2auc_adc_power_down(void)
+{
+	//a2auc_reg.reg_0d = (u32) a2auc_read(AUC_ADC_CONTROL_REG);
+	a2auc_reg.reg_0d = a2auc_reg.reg_0d |AUC_ADC_CONTROL_ADC_PD;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ADC_CONTROL_REG, a2auc_reg.reg_0d);
+	a2auc_read(AUC_ADC_CONTROL_REG);
+	}
+}
+
+static void a2auc_adc_mute_on(void)
+{
+	//a2auc_reg.reg_0d = (u32) a2auc_read(AUC_ADC_CONTROL_REG);
+	a2auc_reg.reg_0d = a2auc_reg.reg_0d |AUC_ADC_CONTROL_ADC_MUTE;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ADC_CONTROL_REG, a2auc_reg.reg_0d);
+	a2auc_read(AUC_ADC_CONTROL_REG);
+	}
+}
+
+static void a2auc_adc_mute_off(void)
+{
+	//a2auc_reg.reg_0d = (u32) a2auc_read(AUC_ADC_CONTROL_REG);
+	a2auc_reg.reg_0d = a2auc_reg.reg_0d & (~((u32)AUC_ADC_CONTROL_ADC_MUTE)) ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ADC_CONTROL_REG, a2auc_reg.reg_0d);
+	a2auc_read(AUC_ADC_CONTROL_REG);
+	}
+}
+
+#if 0
+static void a2auc_adc_dp_reset(void)
+{
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_DP_RESET_REG, AUC_DP_RESET_ADC);
+	a2auc_read(AUC_DP_RESET_REG);
+	}
+}
+#endif
+
+static void a2auc_dac_on(void)
+{
+	//a2auc_reg.reg_00 = a2auc_read(AUC_ENABLE_REG);
+	a2auc_reg.reg_00 = a2auc_reg.reg_00|AUC_DAC_ENABLE;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ENABLE_REG, a2auc_reg.reg_00);
+	a2auc_read(AUC_ENABLE_REG);
+	}
+}
+
+static void a2auc_dac_off(void)
+{
+	//a2auc_reg.reg_00 = a2auc_read(AUC_ENABLE_REG);
+	a2auc_reg.reg_00 = a2auc_reg.reg_00&(~((u32)AUC_DAC_ENABLE));
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_ENABLE_REG, a2auc_reg.reg_00);
+	a2auc_read(AUC_ENABLE_REG);
+	}
+}
+
+static void a2auc_dac_power_on(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f & (~((u32)AUC_DAC_CONTROL_DAC_PD_ALL)) ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+	a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+
+static void a2auc_dac_power_down(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f= a2auc_reg.reg_0f | AUC_DAC_CONTROL_DAC_PD_ALL ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+	a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+
+static void a2auc_dac_mute_on(void)
+{
+	a2auc_reg.reg_06 = AUC_I2S_GAIN_0_1;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+ 	a2auc_write(AUC_I2S_REG,a2auc_reg.reg_06);
+ 	a2auc_read(AUC_I2S_REG);
+ 	}
+}
+
+static void a2auc_dac_mute_off(void)
+{
+	a2auc_reg.reg_06 = AUC_I2S_GAIN_1_1;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+ 	a2auc_write(AUC_I2S_REG,a2auc_reg.reg_06);
+ 	a2auc_read(AUC_I2S_REG);
+ 	}
+}
+
+#if 0
+static void a2auc_dac_dp_reset(void)
+{
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+	a2auc_write(AUC_DP_RESET_REG, AUC_DP_RESET_DAC);
+	a2auc_read(AUC_DP_RESET_REG);
+	}
+}
+#endif
+
+static void a2auc_volume_control(u8 volume)
+{
+	if (volume >= Gain_Table_Size) volume = Gain_Table_Size - 1;
+
+	//a2auc_reg.reg_10 = (u32) a2auc_read(AUC_DAC_GAIN_REG);
+	//a2auc_reg.reg_10 = a2auc_reg.reg_10 & (0xffffff00);
+	//a2auc_reg.reg_10 = a2auc_reg.reg_10 | a2auc_pga_gain_table[volume];
+	a2auc_reg.reg_10 = a2auc_pga_gain_table[volume];
+	if (a2auc_check_state() != AUC_RESET_STATE) {
+		a2auc_write(AUC_DAC_GAIN_REG, a2auc_reg.reg_10);
+		a2auc_read(AUC_DAC_GAIN_REG);
+	}
+}
+
+static void a2auc_line_power_on(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f & (~((u32)AUC_DAC_CONTROL_LINE_PD)) ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+		a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+#if 0
+static void a2auc_line_power_down(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f | AUC_DAC_CONTROL_LINE_PD ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+		a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+#endif
+static void a2auc_hp_power_on(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f & (~((u32)AUC_DAC_CONTROL_HP_PD)) ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+		a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+#if 0
+static void a2auc_hp_power_down(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f | AUC_DAC_CONTROL_HP_PD ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+		a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+#endif
+static void a2auc_sp_power_on(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f & (~((u32)AUC_DAC_CONTROL_SP_PD)) ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+		a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+#if 0
+static void a2auc_sp_power_down(void)
+{
+	//a2auc_reg.reg_0f = (u32) a2auc_read(AUC_DAC_CONTROL_REG);
+	a2auc_reg.reg_0f = a2auc_reg.reg_0f | AUC_DAC_CONTROL_SP_PD ;
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_write(AUC_DAC_CONTROL_REG, a2auc_reg.reg_0f);
+		a2auc_read(AUC_DAC_CONTROL_REG);
+	}
+}
+#endif
+
+
+static void a2auc_set_adc_pga(u8 adc_pga)
+{
+	if (adc_pga > 0x1f ) 
+	{
+		printk("ADC PGA Setting Overflow, Maximum value is selected.");
+		adc_pga = 0x1f;
+	}
+
+	if(a2auc_check_state()!=AUC_RESET_STATE)
+	{
+		a2auc_reg.reg_0e = (a2auc_reg.reg_0e&0xffe0) | adc_pga;
+		a2auc_write(AUC_ADC_VGA_GAIN_REG, a2auc_reg.reg_0e);
+		a2auc_read(AUC_ADC_VGA_GAIN_REG);
+	}
+}
+
+static void a2auc_pwr_on(void)
+{
+	a2auc_adc_power_on();
+	a2auc_adc_on();
+	a2auc_dac_power_on();
+	a2auc_dac_on();
+}
+
+static void a2auc_pwr_down(void)
+{
+	a2auc_adc_off();
+	a2auc_adc_power_down();
+	a2auc_dac_off();
+	a2auc_dac_power_down();
+}
+
+static void a2auc_codec_init(void)
+{
+	/* Determine over sample rate */
+	//a2auc_sfreq_conf();
+
+	/* Enable De-Emphasis Filter */
+	//a2auc_reg.reg_03 = (u32) a2auc_read(AUC_CONTROL_REG);
+	//a2auc_reg.reg_03 = a2auc_reg.reg_03 | AUC_CONTROL_DEEMPHASIS_ON;
+	//a2auc_write(AUC_CONTROL_REG, a2auc_reg.reg_03);
+	a2auc_write(AUC_ENABLE_REG,0x0);
+	a2auc_read(AUC_ENABLE_REG);
+
+	a2auc_adc_off();
+	a2auc_adc_power_down();
+	a2auc_dac_off();
+	a2auc_dac_power_down();
+	a2auc_init_fiter();
+
+	//a2auc_reg.reg_0d = a2auc_read(AUC_ADC_CONTROL_REG);
+	a2auc_reg.reg_0d = (a2auc_reg.reg_0d | AUC_ADC_CONTROL_REG_OPT);
+	a2auc_write(AUC_ADC_CONTROL_REG, a2auc_reg.reg_0d);
+	a2auc_read(AUC_ADC_CONTROL_REG);
+
+	a2auc_reg.reg_0e = AUC_ADC_VGA_GAIN_REG_OPT;
+	a2auc_set_adc_pga(AUC_ADC_VGA_GAIN_REG_OPT);
+
+	a2auc_volume_control(DAC_PGA_GAIN_0db);
+	a2auc_dac_mute_on();
+	a2auc_adc_mute_on();
+
+	a2auc_dac_mute_off();
+	a2auc_adc_mute_off();
+
+	if(a2auc_read(AUC_ADC_CONTROL_REG)!=a2auc_reg.reg_0d)
+	{
+		printk("ERROR: AUC Initial Fail, Audio PLL Configuration Error\n");
+//		A2AUC_ASSERT(0x1==0x0);
+	}
+	/* Enable Audio Codec ADC/DAC*/
+}
+
+static unsigned int a2auc_codec_read(struct snd_soc_codec *codec,
+	unsigned int _reg)
+{
+	u32 reg = AUC_REG(_reg);	
+	return a2auc_read(reg);
+}
+
+static int a2auc_codec_write(struct snd_soc_codec *codec, unsigned int _reg,
+	unsigned int value)
+{
+	u32 reg = AUC_REG(_reg);	
+	a2auc_write(reg, value);
+
+	return 0;
+}
+
+static int a2auc_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	switch (params_rate(params)) {
+	case 48000:
+	case 44100:	
+	case 32000:
+	case 22050:
+	case 16000:
+		a2auc_reg.reg_02 = AUC_OSR_256x;
+		break;
+	case 12000:
+	case 11025:
+	case 8000:
+		a2auc_reg.reg_02 = AUC_OSR_512x;
+		break;
+	}
+	if (a2auc_check_state() != AUC_RESET_STATE) {
+		a2auc_write(AUC_OSR_REG, a2auc_reg.reg_02);
+		a2auc_read(AUC_OSR_REG);
+	}
+
+	return 0;
+}
+
+static int a2auc_startup(struct snd_pcm_substream *substream)
+{
+	a2auc_pwr_on();
+
+	return 0;
+}
+
+static void a2auc_shutdown(struct snd_pcm_substream *substream)
+{
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		a2auc_adc_off();
+		a2auc_adc_power_down();
+	} else {
+		a2auc_dac_off();
+		a2auc_dac_power_down();
+	}
+}
+
+static int a2auc_digital_mute(struct snd_soc_dai *dai, int mute)
+{
+	if (mute)
+		a2auc_dac_mute_on();
+	else
+		a2auc_dac_mute_off();
+
+	return 0;
+}
+
+static int a2auc_set_sysclk(struct snd_soc_dai *dai,
+	int clk_id, unsigned int freq, int dir)
+{
+	int ret = 0;
+
+	if (freq > 12288000)
+		ret = -EINVAL;
+
+	return ret;
+}
+
+static int a2auc_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
+{
+	int ret = 0;
+
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	case SND_SOC_DAIFMT_NB_NF:
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+static int a2auc_set_bias_level(struct snd_soc_codec *codec,
+				 enum snd_soc_bias_level level)
+{
+	switch (level) {
+	case SND_SOC_BIAS_ON: /* full On */
+		a2auc_pwr_on();
+		a2auc_adc_mute_off();
+		a2auc_dac_mute_off();
+		break;
+	case SND_SOC_BIAS_PREPARE:
+		break;
+	case SND_SOC_BIAS_STANDBY: /* Off, with power */
+		a2auc_pwr_on();
+		break;
+	case SND_SOC_BIAS_OFF: /* Off, without power */
+		/* everything off, dac mute, inactive */
+		a2auc_dac_mute_on();
+		a2auc_adc_mute_on();
+		a2auc_pwr_down();
+		break;
+	}
+	codec->bias_level = level;
+	return 0;
+}
+
+struct snd_soc_dai ambarella_a2auc_dai = {
+	.name = "A2AUC",
+	.playback = {
+		.stream_name = "Playback",
+		.channels_min = 2,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000_48000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	},
+	.capture = {
+		.stream_name = "Capture",
+		.channels_min = 2,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000_48000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	},
+	.ops = {
+		.startup = a2auc_startup,
+		.shutdown = a2auc_shutdown,
+		.hw_params = a2auc_hw_params,
+	},
+	.dai_ops = {
+		.digital_mute = a2auc_digital_mute,
+		.set_sysclk = a2auc_set_sysclk,
+		.set_fmt = a2auc_set_fmt,
+	}
+};
+EXPORT_SYMBOL(ambarella_a2auc_dai);
+
+static int a2auc_probe(struct platform_device *pdev)
+{
+	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+	struct snd_soc_codec *codec;
+	int ret = 0;
+
+	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
+	if (codec == NULL) {
+		ret = -ENOMEM;
+		goto a2auc_probe_exit;
+	}
+
+	socdev->codec = codec;
+	mutex_init(&codec->mutex);
+
+	codec->reg_cache = kmemdup(&a2auc_reg, sizeof(a2auc_reg), GFP_KERNEL);
+	if (codec->reg_cache == NULL) {
+		ret = -ENOMEM;
+		goto a2auc_probe_cache_err;
+	}
+	codec->reg_cache_size = sizeof(a2auc_reg);
+	codec->reg_cache_step = 4;
+
+	codec->name = "A2AUC";
+	codec->owner = THIS_MODULE;
+	codec->dai = &ambarella_a2auc_dai;
+	codec->num_dai = 1;
+	codec->write = a2auc_codec_write;
+	codec->read = a2auc_codec_read;
+	codec->set_bias_level = a2auc_set_bias_level;
+	INIT_LIST_HEAD(&codec->dapm_widgets);
+	INIT_LIST_HEAD(&codec->dapm_paths);
+
+	//set_audio_pll();
+
+	ret = snd_soc_new_pcms(socdev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1);
+	if (ret < 0) {
+		printk(KERN_ERR "%s: snd_soc_new_pcms fail %d\n",
+			__func__, ret);
+		goto a2auc_probe_reg_cache_err;
+	}
+
+	a2auc_codec_init();
+
+	/* power on device */
+	a2auc_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+	a2auc_line_power_on();
+	a2auc_sp_power_on();
+	a2auc_hp_power_on();
+
+	a2auc_add_controls(codec);
+	a2auc_add_widgets(codec);
+
+	ret = snd_soc_register_card(socdev);
+	if (ret < 0) {
+		printk(KERN_ERR "%s: snd_soc_register_card fail %d\n",
+			__func__, ret);
+		goto a2auc_probe_pcm_err;
+	}
+
+	printk(KERN_INFO "%s: Ambarella A2AUC\n", __func__);
+	goto a2auc_probe_exit;
+
+a2auc_probe_pcm_err:
+	snd_soc_free_pcms(socdev);
+
+a2auc_probe_reg_cache_err:
+	kfree(codec->reg_cache);
+
+a2auc_probe_cache_err:
+	kfree(socdev->codec);
+	socdev->codec = NULL;
+
+a2auc_probe_exit:
+	return ret;
+}
+
+static int a2auc_remove(struct platform_device *pdev)
+{
+	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+	struct snd_soc_codec *codec = socdev->codec;
+
+	if (codec == NULL)
+		return 0;
+
+	a2auc_set_bias_level(codec, SND_SOC_BIAS_OFF);
+
+	snd_soc_free_pcms(socdev);
+	snd_soc_dapm_free(socdev);
+	kfree(codec->reg_cache);
+	kfree(codec);
+
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int a2auc_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+	struct snd_soc_codec *codec = socdev->codec;
+
+	a2auc_set_bias_level(codec, SND_SOC_BIAS_OFF);
+
+	return 0;
+}
+
+static int a2auc_resume(struct platform_device *pdev)
+{
+	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+	struct snd_soc_codec *codec = socdev->codec;
+
+#if 0 // FIXME recover all register? 
+	int i;
+	u8 data[2];
+	u16 *cache = codec->reg_cache;
+
+	/* Sync reg_cache with the hardware */
+	for (i = 0; i < ARRAY_SIZE(a2auc_reg); i++) {
+		data[0] = (i << 1) | ((cache[i] >> 8) & 0x0001);
+		data[1] = cache[i] & 0x00ff;
+		codec->hw_write(codec->control_data, data, 2);
+	}
+#endif
+	a2auc_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	a2auc_set_bias_level(codec, codec->suspend_bias_level);
+
+	return 0;
+}
+
+#else
+#define a2auc_suspend NULL
+#define a2auc_resume NULL
+#endif
+
+struct snd_soc_codec_device ambarella_a2auc_codec_device = {
+	.probe = a2auc_probe,
+	.remove = a2auc_remove,
+	.suspend = a2auc_suspend,
+	.resume = a2auc_resume,
+};
+EXPORT_SYMBOL(ambarella_a2auc_codec_device);
+
+MODULE_DESCRIPTION("Ambarella A2AUC driver");
+MODULE_AUTHOR("Eric Lee");
+MODULE_LICENSE("GPL");
+

@@ -227,4 +227,10 @@ config INPUT_PCF50633_PMU
 	 Say Y to include support for delivering  PMU events via  input
 	 layer on NXP PCF50633.
 
+config INPUT_AMBARELLA
+	tristate "Ambarella genreal input"
+	depends on ARM && ARCH_AMBARELLA
+	default n
+	help
+	  Ambarella genreal input. It can support IR, ADC and GPIO.
 endif
