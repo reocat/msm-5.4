@@ -52,20 +52,20 @@ static inline int ambdummy_codec_write(struct snd_soc_codec *codec, unsigned int
 }
 
 static int ambdummy_hw_params(struct snd_pcm_substream *substream,
-	struct snd_pcm_hw_params *params)
+			struct snd_pcm_hw_params *params,
+			struct snd_soc_dai *dai)
 {
-
-
 	return 0;
 }
 
-static void ambdummy_shutdown(struct snd_pcm_substream *substream)
+static void ambdummy_shutdown(struct snd_pcm_substream *substream,
+			struct snd_soc_dai *dai)
 {
+
 }
 
 static int ambdummy_mute(struct snd_soc_dai *dai, int mute)
 {
-
 	return 0;
 }
 
@@ -73,7 +73,6 @@ static int ambdummy_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		int clk_id, unsigned int freq, int dir)
 {
 	//struct snd_soc_codec *codec = codec_dai->codec;
-
 
 	if (freq <= 12288000)
 		return 0;
@@ -153,12 +152,10 @@ struct snd_soc_dai ambdummy_dai = {
 	.ops = {
 		.hw_params = ambdummy_hw_params,
 		.shutdown = ambdummy_shutdown,
-	},
-	.dai_ops = {
 		.digital_mute = ambdummy_mute,
 		.set_sysclk = ambdummy_set_dai_sysclk,
 		.set_fmt = ambdummy_set_dai_fmt,
-	}
+	},
 };
 EXPORT_SYMBOL(ambdummy_dai);
 
@@ -230,7 +227,7 @@ static int ambdummy_init(struct snd_soc_device *socdev)
 	/* power on device */
 	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
-	ret = snd_soc_register_card(socdev);
+	ret = snd_soc_init_card(socdev);
 	if (ret < 0) {
 		printk(KERN_ERR "ambarella dummy codec: failed to register card\n");
 		snd_soc_free_pcms(socdev);

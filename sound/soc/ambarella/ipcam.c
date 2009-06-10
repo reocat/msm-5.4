@@ -350,15 +350,15 @@ static struct snd_soc_dai_link ipcam_dai_link = {
 	.ops = &ipcam_board_ops,
 };
 
-static struct snd_soc_machine snd_soc_machine_ipcam = {
+static struct snd_soc_card snd_soc_card_ipcam = {
 	.name = "IPcam",
+	.platform = &ambarella_soc_platform,
 	.dai_link = &ipcam_dai_link,
 	.num_links = 1,
 };
 
 static struct snd_soc_device ipcam_snd_devdata = {
-	.machine = &snd_soc_machine_ipcam,
-	.platform = &ambarella_soc_platform,
+	.card = &snd_soc_card_ipcam,
 	.codec_dev = &ambarella_a2auc_codec_device,
 };
 

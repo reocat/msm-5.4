@@ -137,15 +137,15 @@ static struct snd_soc_dai_link ambarella_dummy_dai_link = {
 	.ops = &ambarella_dummy_board_ops,
 };
 
-static struct snd_soc_machine snd_soc_machine_ambarella_dummy = {
+static struct snd_soc_card snd_soc_card_ambarella_dummy = {
 	.name = "ambarella_dummy",
+	.platform = &ambarella_soc_platform,
 	.dai_link = &ambarella_dummy_dai_link,
 	.num_links = 1,
 };
 
 static struct snd_soc_device ambarella_dummy_snd_devdata = {
-	.machine = &snd_soc_machine_ambarella_dummy,
-	.platform = &ambarella_soc_platform,
+	.card = &snd_soc_card_ambarella_dummy,
 	.codec_dev = &soc_codec_dev_ambdummy,
 };
 

@@ -730,14 +730,14 @@ static void a2auc_codec_init(void)
 }
 
 static unsigned int a2auc_codec_read(struct snd_soc_codec *codec,
-	unsigned int _reg)
+			unsigned int _reg)
 {
 	u32 reg = AUC_REG(_reg);	
 	return a2auc_read(reg);
 }
 
 static int a2auc_codec_write(struct snd_soc_codec *codec, unsigned int _reg,
-	unsigned int value)
+			unsigned int value)
 {
 	u32 reg = AUC_REG(_reg);	
 	a2auc_write(reg, value);
@@ -746,7 +746,8 @@ static int a2auc_codec_write(struct snd_soc_codec *codec, unsigned int _reg,
 }
 
 static int a2auc_hw_params(struct snd_pcm_substream *substream,
-	struct snd_pcm_hw_params *params)
+			struct snd_pcm_hw_params *params,
+			struct snd_soc_dai *dai)
 {
 	switch (params_rate(params)) {
 	case 48000:
@@ -770,14 +771,16 @@ static int a2auc_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int a2auc_startup(struct snd_pcm_substream *substream)
+static int a2auc_startup(struct snd_pcm_substream *substream,
+			struct snd_soc_dai *dai)
 {
 	a2auc_pwr_on();
 
 	return 0;
 }
 
-static void a2auc_shutdown(struct snd_pcm_substream *substream)
+static void a2auc_shutdown(struct snd_pcm_substream *substream,
+			struct snd_soc_dai *dai)
 {
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		a2auc_adc_off();
@@ -885,12 +888,10 @@ struct snd_soc_dai ambarella_a2auc_dai = {
 		.startup = a2auc_startup,
 		.shutdown = a2auc_shutdown,
 		.hw_params = a2auc_hw_params,
-	},
-	.dai_ops = {
 		.digital_mute = a2auc_digital_mute,
 		.set_sysclk = a2auc_set_sysclk,
 		.set_fmt = a2auc_set_fmt,
-	}
+	},
 };
 EXPORT_SYMBOL(ambarella_a2auc_dai);
 
@@ -948,7 +949,7 @@ static int a2auc_probe(struct platform_device *pdev)
 	a2auc_add_controls(codec);
 	a2auc_add_widgets(codec);
 
-	ret = snd_soc_register_card(socdev);
+	ret = snd_soc_init_card(socdev);
 	if (ret < 0) {
 		printk(KERN_ERR "%s: snd_soc_register_card fail %d\n",
 			__func__, ret);

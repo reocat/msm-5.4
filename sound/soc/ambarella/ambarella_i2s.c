@@ -39,7 +39,6 @@
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
-#include <sound/initval.h>
 #include <sound/soc.h>
 
 #include <mach/hardware.h>
@@ -121,7 +120,8 @@ static inline void dai_fifo_rst(void)
 }
 
 static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
-				struct snd_pcm_hw_params *params)
+				struct snd_pcm_hw_params *params,
+				struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
@@ -214,15 +214,16 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int ambarella_i2s_prepare(struct snd_pcm_substream *substream)
+static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
+			struct snd_soc_dai *dai)
 {
 	if(substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		dai_fifo_rst();
 	return 0;
 }
 
-
-static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd)
+static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
+			struct snd_soc_dai *dai)
 {
 	int ret = 0;
 
@@ -333,7 +334,6 @@ static int ambarella_i2s_probe(struct platform_device *pdev,
 struct snd_soc_dai ambarella_i2s_dai = {
 	.name = "ambarella-i2s",
 	.id = 0,
-	.type = SND_SOC_DAI_I2S,
 	.probe = ambarella_i2s_probe,
 	.playback = {
 		.channels_min = 2,
@@ -351,8 +351,6 @@ struct snd_soc_dai ambarella_i2s_dai = {
 		.prepare = ambarella_i2s_prepare,
 		.trigger = ambarella_i2s_trigger,
 		.hw_params = ambarella_i2s_hw_params,
-	},
-	.dai_ops = {
 		.set_fmt = ambarella_i2s_set_fmt,
 	},
 };
