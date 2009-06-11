@@ -190,6 +190,10 @@ struct ambarella_idc_platform_info {
 	module_param_call(idc##id##_clk_limit, param_set_int, param_get_int, &(arg.clk_limit), perm); \
 	module_param_call(idc##id##_bulk_write_num, param_set_int, param_get_int, &(arg.bulk_write_num), perm)
 
+struct ambarella_i2s_controller {
+	void					(*aucodec_digitalio)(void);
+};
+
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
 
 #endif /* __ASSEMBLER__ */

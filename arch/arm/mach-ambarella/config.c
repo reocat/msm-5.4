@@ -937,13 +937,28 @@ static struct resource ambarella_i2s0_resources[] = {
 	},
 };
 
+static void aucodec_digitalio_on(void)
+{
+#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
+	/* aucodec_digitalio_on */
+	amba_setbits(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
+#elif (CHIP_REV == A2)
+	/* aucodec_digitalio_on */
+	amba_setbits(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
+#endif
+}
+
+static struct ambarella_i2s_controller ambarella_platform_i2s_controller0 = {
+	.aucodec_digitalio = aucodec_digitalio_on,
+};
+
 struct platform_device ambarella_i2s0 = {
 	.name		= "ambarella-i2s",
 	.id		= 0,
 	.resource	= ambarella_i2s0_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_i2s0_resources),
 	.dev		= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_platform_i2s_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}

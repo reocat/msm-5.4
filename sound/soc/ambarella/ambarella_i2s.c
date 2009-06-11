@@ -47,13 +47,6 @@
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
 
-#define AMBARELLA_I2S_DEBUG 0
-#if AMBARELLA_I2S_DEBUG
-#define DBG(x...) printk(x) //printk(KERN_DEBUG x)
-#else
-#define DBG(x...)
-#endif
-
 static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = { 
 	{ 1, 0 }, // 128xfs 
 	{ 3, 1 }, // 256xfs
@@ -70,6 +63,7 @@ struct amb_i2s_priv {
 	u32 mode;
 	u16 clock;
 	u8 mclk;
+	struct ambarella_i2s_controller controller_info;
 };
 
 
@@ -293,27 +287,13 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	struct snd_soc_dai *dai)
 {
-	struct amb_i2s_priv *priv_data;
 	u32 clock_divider;
+	struct amb_i2s_priv *priv_data = dai->private_data;
 
-	DBG("DBG: I2S probe, set PLL, DAI init here ! \n");
-
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
 	/* aucodec_digitalio_on */
-	amba_setbits(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
-#endif
+	if (priv_data->controller_info.aucodec_digitalio)
+		priv_data->controller_info.aucodec_digitalio();
 
-#if (CHIP_REV == A2)
-	/* aucodec_digitalio_on */
-	amba_setbits(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
-#endif
-
-	priv_data = kzalloc(sizeof(struct amb_i2s_priv), GFP_KERNEL);
-	if (priv_data == NULL)
-		return -ENOMEM;
-
-	dai->private_data = priv_data;
-	
 #if !(defined(CONFIG_SND_SOC_AMBARELLA_A2AUC) || defined(CONFIG_SND_SOC_AMBARELLA_A2AUC_MODULE))
 	/*Switch to external I2S Input */
 	priv_data->clock = 0x1<<10;
@@ -359,7 +339,19 @@ EXPORT_SYMBOL(ambarella_i2s_dai);
 
 static int ambarella_i2s_probe(struct platform_device *pdev)
 {
+	struct amb_i2s_priv *priv_data;
+
+	priv_data = kzalloc(sizeof(struct amb_i2s_priv), GFP_KERNEL);
+	if (priv_data == NULL)
+		return -ENOMEM;
+	ambarella_i2s_dai.private_data = priv_data;
+
+	/* aucodec_digitalio_on */
+	memcpy(&priv_data->controller_info, pdev->dev.platform_data,
+		sizeof(struct ambarella_i2s_controller));
+
 	ambarella_i2s_dai.dev = &pdev->dev;
+
 	return snd_soc_register_dai(&ambarella_i2s_dai);
 }
 
