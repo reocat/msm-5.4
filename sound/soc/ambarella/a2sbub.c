@@ -5,6 +5,7 @@
  *
  * History:
  *	2009/03/05 - [Cao Rongrong] Created file
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -153,8 +154,9 @@ static struct snd_soc_dai_link a2sbub_dai_link = {
 };
 
 /* a2sbub audio machine driver */
-static struct snd_soc_machine snd_soc_machine_a2sbub = {
+static struct snd_soc_card snd_soc_card_a2sbub = {
 	.name = "A2SBUB",
+	.platform = &ambarella_soc_platform,
 	.dai_link = &a2sbub_dai_link,
 	.num_links = 1,
 };
@@ -167,8 +169,7 @@ static struct adav803_setup_data a2sbub_adav803_setup = {
 
 /* a2sbub audio subsystem */
 static struct snd_soc_device a2sbub_snd_devdata = {
-	.machine = &snd_soc_machine_a2sbub,
-	.platform = &ambarella_soc_platform,
+	.card = &snd_soc_card_a2sbub,
 	.codec_dev = &soc_codec_dev_adav803,
 	.codec_data = &a2sbub_adav803_setup,
 };

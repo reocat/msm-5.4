@@ -3,7 +3,8 @@
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  * History:
- *	2009/03/12  - [Cao Rongrong] Created file
+ *	2009/03/12 - [Cao Rongrong] Created file
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *

@@ -6,6 +6,7 @@
  *	2008/04/16 - [Eric Lee] Removed the compiling warning
  *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
  *	2009/03/05 - [Cao Rongrong] Update from 2.6.22.10
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -295,6 +296,8 @@ static int ambarella_i2s_probe(struct platform_device *pdev,
 	struct amb_i2s_priv *priv_data;
 	u32 clock_divider;
 
+	printk("%s 1\n", __func__);
+
 	DBG("DBG: I2S probe, set PLL, DAI init here ! \n");
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M)
@@ -328,6 +331,8 @@ static int ambarella_i2s_probe(struct platform_device *pdev,
 
 	set_audio_sfreq(48000);
 
+	printk("%s 2\n", __func__);
+
 	return 0;
 }
 
@@ -355,6 +360,22 @@ struct snd_soc_dai ambarella_i2s_dai = {
 	},
 };
 EXPORT_SYMBOL(ambarella_i2s_dai);
+
+static int __init ambarella_i2s_init(void)
+{
+	printk("%s\n", __func__);
+	return snd_soc_register_dai(&ambarella_i2s_dai);
+}
+module_init(ambarella_i2s_init);
+
+static void __exit ambarella_i2s_exit(void)
+{
+	snd_soc_unregister_dai(&ambarella_i2s_dai);
+}
+module_exit(ambarella_i2s_exit);
+
+MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
+MODULE_DESCRIPTION("Ambarella Soc I2S Interface");
 
 MODULE_LICENSE("GPL");
 

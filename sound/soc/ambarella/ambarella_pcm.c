@@ -8,6 +8,7 @@
  *	2008/11/14 - [Cao Rongrong] Support pause and resume
  *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
  *	2009/03/05 - [Cao Rongrong] Update from 2.6.22.10
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -524,6 +525,8 @@ static int ambarella_pcm_new(struct snd_card *card,
 {
 	int ret = 0;
 
+	printk("%s\n", __func__);
+
 	card->dev->dma_mask = &ambarella_dmamask;
 	card->dev->coherent_dma_mask = ambarella_dmamask;
 
@@ -551,6 +554,22 @@ struct snd_soc_platform ambarella_soc_platform = {
 	.pcm_ops	= &ambarella_pcm_ops,
 };
 EXPORT_SYMBOL(ambarella_soc_platform);
+
+static int __init ambarella_soc_platform_init(void)
+{
+	printk("%s\n", __func__);
+	return snd_soc_register_platform(&ambarella_soc_platform);
+}
+module_init(ambarella_soc_platform_init);
+
+static void __exit ambarella_soc_platform_exit(void)
+{
+	snd_soc_unregister_platform(&ambarella_soc_platform);
+}
+module_exit(ambarella_soc_platform_exit);
+
+MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
+MODULE_DESCRIPTION("Ambarella Soc PCM DMA module");
 
 MODULE_LICENSE("GPL");
 

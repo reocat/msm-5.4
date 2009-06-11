@@ -7,6 +7,7 @@
  *	2008/04/16 - [Eric Lee] Removed the compiling warning
  *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
  *	2008/03/05 - [Cao Rongrong] Added widgets and controls
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -901,6 +902,8 @@ static int a2auc_probe(struct platform_device *pdev)
 	struct snd_soc_codec *codec;
 	int ret = 0;
 
+	printk("%s 1\n", __func__);
+
 	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
 	if (codec == NULL) {
 		ret = -ENOMEM;
@@ -957,6 +960,7 @@ static int a2auc_probe(struct platform_device *pdev)
 	}
 
 	printk(KERN_INFO "%s: Ambarella A2AUC\n", __func__);
+	printk("%s 2\n", __func__);
 	goto a2auc_probe_exit;
 
 a2auc_probe_pcm_err:
@@ -1038,7 +1042,21 @@ struct snd_soc_codec_device ambarella_a2auc_codec_device = {
 };
 EXPORT_SYMBOL(ambarella_a2auc_codec_device);
 
+static int __init ambarella_a2auc_init(void)
+{
+	printk("%s\n", __func__);
+	return snd_soc_register_dai(&ambarella_a2auc_dai);
+}
+module_init(ambarella_a2auc_init);
+
+static void __exit ambarella_a2auc_exit(void)
+{
+	snd_soc_unregister_dai(&ambarella_a2auc_dai);
+}
+module_exit(ambarella_a2auc_exit);
+
+
 MODULE_DESCRIPTION("Ambarella A2AUC driver");
-MODULE_AUTHOR("Eric Lee");
+MODULE_AUTHOR("Eric Lee & Cao Rongrong");
 MODULE_LICENSE("GPL");
 

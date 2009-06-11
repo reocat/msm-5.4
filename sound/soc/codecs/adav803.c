@@ -5,6 +5,7 @@
  *
  * History:
  *	2009/03/05 - [Cao Rongrong] Created file
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  * 
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -286,7 +287,8 @@ void adav803_get_clock_info(u32 sfreq, audiocodec_clk_info_t *clkinfo)
 
 
 static int adav803_hw_params(struct snd_pcm_substream *substream,
-	struct snd_pcm_hw_params *params)
+			struct snd_pcm_hw_params *params,
+			struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_device *socdev = rtd->socdev;
@@ -509,21 +511,21 @@ struct snd_soc_dai adav803_dai = {
 		.channels_min = 1,
 		.channels_max = 2,
 		.rates = ADAV803_RATES,
-		.formats = ADAV803_FORMATS,},
+		.formats = ADAV803_FORMATS,
+	},
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
 		.channels_max = 2,
 		.rates = ADAV803_RATES,
-		.formats = ADAV803_FORMATS,},
+		.formats = ADAV803_FORMATS,
+	},
 	.ops = {
 		.hw_params = adav803_hw_params,
-	},
-	.dai_ops = {
 		.digital_mute = adav803_mute,
 		.set_sysclk = adav803_set_dai_sysclk,
 		.set_fmt = adav803_set_dai_fmt,
-	}
+	},
 };
 EXPORT_SYMBOL_GPL(adav803_dai);
 
@@ -695,7 +697,7 @@ static int adav803_init(struct snd_soc_device *socdev)
 	adav803_add_controls(codec);
 	adav803_add_widgets(codec);
 
-	ret = snd_soc_register_card(socdev);
+	ret = snd_soc_init_card(socdev);
 	if (ret < 0) {
 		printk(KERN_ERR "adav803: failed to register card\n");
 		goto card_err;

@@ -6,6 +6,7 @@
  *	2008/xx/xx  - [Anthony Ginger] Created file
  *	2009/03/05 - [Cao Rongrong] Correct and Add Controls,
  *				      Modify function and variable names
+ *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -308,8 +309,8 @@ static int ipcam_a2auc_init(struct snd_soc_codec *codec)
 {
 	int errorCode = 0, i;
 
-	snd_soc_dapm_disable_pin(codec, "LHPOUT");
-	snd_soc_dapm_disable_pin(codec, "RHPOUT");
+	snd_soc_dapm_nc_pin(codec, "LHPOUT");
+	snd_soc_dapm_nc_pin(codec, "RHPOUT");
 
 	/* Add IPcam specific controls */
 	for (i = 0; i < ARRAY_SIZE(a2auc_ipcam_controls); i++) {
@@ -368,6 +369,8 @@ static int __init ipcam_board_init(void)
 {
 	int errorCode = 0;
 
+	printk("%s 1\n", __func__);
+
 	ipcam_snd_device =
 		platform_device_alloc("soc-audio", -1);
 	if (!ipcam_snd_device) {
@@ -375,10 +378,14 @@ static int __init ipcam_board_init(void)
 		goto ipcam_board_init_exit;
 	}
 
+	
+
 	platform_set_drvdata(ipcam_snd_device,
 		&ipcam_snd_devdata);
 	ipcam_snd_devdata.dev =
 		&ipcam_snd_device->dev;
+
+	dev_dbg(ipcam_snd_devdata.dev, "dev_dbg\n");
 
 	errorCode = platform_device_add(ipcam_snd_device);
 	if (errorCode) {
@@ -399,6 +406,8 @@ static int __init ipcam_board_init(void)
 		gpio_free(mic_gpio);
 		goto ipcam_board_init_exit;
 	}
+
+	printk("%s 2\n", __func__);
 
 ipcam_board_init_exit:
 	return errorCode;
