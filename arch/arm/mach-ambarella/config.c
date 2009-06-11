@@ -924,6 +924,32 @@ void __init ambarella_register_spi_device(void)
 }
 
 /* ==========================================================================*/
+static struct resource ambarella_i2s0_resources[] = {
+	[0] = {
+		.start	= I2S_BASE,
+		.end	= I2S_BASE + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= I2STX_IRQ,
+		.end	= I2SRX_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device ambarella_i2s0 = {
+	.name		= "ambarella-i2s",
+	.id		= 0,
+	.resource	= ambarella_i2s0_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_i2s0_resources),
+	.dev		= {
+		.platform_data		= NULL,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+/* ==========================================================================*/
 struct platform_device ambarella_rtc0 = {
 	.name		= "ambarella-rtc",
 	.id		= 0,

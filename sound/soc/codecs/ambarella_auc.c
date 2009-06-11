@@ -902,8 +902,6 @@ static int a2auc_probe(struct platform_device *pdev)
 	struct snd_soc_codec *codec;
 	int ret = 0;
 
-	printk("%s 1\n", __func__);
-
 	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
 	if (codec == NULL) {
 		ret = -ENOMEM;
@@ -960,7 +958,6 @@ static int a2auc_probe(struct platform_device *pdev)
 	}
 
 	printk(KERN_INFO "%s: Ambarella A2AUC\n", __func__);
-	printk("%s 2\n", __func__);
 	goto a2auc_probe_exit;
 
 a2auc_probe_pcm_err:
@@ -1044,7 +1041,6 @@ EXPORT_SYMBOL(ambarella_a2auc_codec_device);
 
 static int __init ambarella_a2auc_init(void)
 {
-	printk("%s\n", __func__);
 	return snd_soc_register_dai(&ambarella_a2auc_dai);
 }
 module_init(ambarella_a2auc_init);

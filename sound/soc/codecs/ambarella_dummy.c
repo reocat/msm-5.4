@@ -297,5 +297,17 @@ struct snd_soc_codec_device soc_codec_dev_ambdummy = {
 
 EXPORT_SYMBOL(soc_codec_dev_ambdummy);
 
+static int __init ambarella_dummy_codec_init(void)
+{
+	return snd_soc_register_dai(&ambdummy_dai);
+}
+module_init(ambarella_dummy_codec_init);
+
+static void __exit ambarella_dummy_codec_exit(void)
+{
+	snd_soc_unregister_dai(&ambdummy_dai);
+}
+module_exit(ambarella_dummy_codec_exit);
+
 MODULE_LICENSE("GPL");
 

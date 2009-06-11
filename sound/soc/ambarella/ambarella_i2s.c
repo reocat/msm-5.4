@@ -290,13 +290,11 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int ambarella_i2s_probe(struct platform_device *pdev,
+static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data;
 	u32 clock_divider;
-
-	printk("%s 1\n", __func__);
 
 	DBG("DBG: I2S probe, set PLL, DAI init here ! \n");
 
@@ -331,15 +329,13 @@ static int ambarella_i2s_probe(struct platform_device *pdev,
 
 	set_audio_sfreq(48000);
 
-	printk("%s 2\n", __func__);
-
 	return 0;
 }
 
 struct snd_soc_dai ambarella_i2s_dai = {
-	.name = "ambarella-i2s",
+	.name = "ambarella-i2s0",
 	.id = 0,
-	.probe = ambarella_i2s_probe,
+	.probe = ambarella_i2s_dai_probe,
 	.playback = {
 		.channels_min = 2,
 		.channels_max = 2,
@@ -361,16 +357,38 @@ struct snd_soc_dai ambarella_i2s_dai = {
 };
 EXPORT_SYMBOL(ambarella_i2s_dai);
 
+static int ambarella_i2s_probe(struct platform_device *pdev)
+{
+	ambarella_i2s_dai.dev = &pdev->dev;
+	return snd_soc_register_dai(&ambarella_i2s_dai);
+}
+
+static int __devexit ambarella_i2s_remove(struct platform_device *pdev)
+{
+	snd_soc_unregister_dai(&ambarella_i2s_dai);
+	return 0;
+}
+
+static struct platform_driver ambarella_i2s_driver = {
+	.probe = ambarella_i2s_probe,
+	.remove = __devexit_p(ambarella_i2s_remove),
+
+	.driver = {
+		.name = "ambarella-i2s",
+		.owner = THIS_MODULE,
+	},
+};
+
+
 static int __init ambarella_i2s_init(void)
 {
-	printk("%s\n", __func__);
-	return snd_soc_register_dai(&ambarella_i2s_dai);
+	return platform_driver_register(&ambarella_i2s_driver);
 }
 module_init(ambarella_i2s_init);
 
 static void __exit ambarella_i2s_exit(void)
 {
-	snd_soc_unregister_dai(&ambarella_i2s_dai);
+	platform_driver_unregister(&ambarella_i2s_driver);
 }
 module_exit(ambarella_i2s_exit);
 

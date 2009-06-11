@@ -34,6 +34,7 @@ extern struct platform_device ambarella_sd1;
 extern struct platform_device ambarella_idc0;
 extern struct platform_device ambarella_spi0;
 extern struct platform_device ambarella_spi1;
+extern struct platform_device ambarella_i2s0;
 extern struct platform_device ambarella_rtc0;
 extern struct platform_device ambarella_wdt0;
 extern struct platform_device ambarella_eth0;

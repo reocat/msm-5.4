@@ -875,6 +875,18 @@ struct snd_soc_codec_device soc_codec_dev_adav803 = {
 };
 EXPORT_SYMBOL_GPL(soc_codec_dev_adav803);
 
+static int __init ambarella_adav803_init(void)
+{
+	return snd_soc_register_dai(&adav803_dai);
+}
+module_init(ambarella_adav803_init);
+
+static void __exit ambarella_adav803_exit(void)
+{
+	snd_soc_unregister_dai(&adav803_dai);
+}
+module_exit(ambarella_adav803_exit);
+
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("ASoC ADAV803 driver");
 MODULE_LICENSE("GPL");

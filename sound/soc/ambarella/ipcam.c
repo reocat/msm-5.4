@@ -369,8 +369,6 @@ static int __init ipcam_board_init(void)
 {
 	int errorCode = 0;
 
-	printk("%s 1\n", __func__);
-
 	ipcam_snd_device =
 		platform_device_alloc("soc-audio", -1);
 	if (!ipcam_snd_device) {
@@ -378,14 +376,10 @@ static int __init ipcam_board_init(void)
 		goto ipcam_board_init_exit;
 	}
 
-	
-
 	platform_set_drvdata(ipcam_snd_device,
 		&ipcam_snd_devdata);
 	ipcam_snd_devdata.dev =
 		&ipcam_snd_device->dev;
-
-	dev_dbg(ipcam_snd_devdata.dev, "dev_dbg\n");
 
 	errorCode = platform_device_add(ipcam_snd_device);
 	if (errorCode) {
@@ -406,8 +400,6 @@ static int __init ipcam_board_init(void)
 		gpio_free(mic_gpio);
 		goto ipcam_board_init_exit;
 	}
-
-	printk("%s 2\n", __func__);
 
 ipcam_board_init_exit:
 	return errorCode;

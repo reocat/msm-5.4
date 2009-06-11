@@ -525,8 +525,6 @@ static int ambarella_pcm_new(struct snd_card *card,
 {
 	int ret = 0;
 
-	printk("%s\n", __func__);
-
 	card->dev->dma_mask = &ambarella_dmamask;
 	card->dev->coherent_dma_mask = ambarella_dmamask;
 
@@ -557,7 +555,6 @@ EXPORT_SYMBOL(ambarella_soc_platform);
 
 static int __init ambarella_soc_platform_init(void)
 {
-	printk("%s\n", __func__);
 	return snd_soc_register_platform(&ambarella_soc_platform);
 }
 module_init(ambarella_soc_platform_init);
