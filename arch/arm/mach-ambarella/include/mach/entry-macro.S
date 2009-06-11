@@ -5,6 +5,7 @@
  *	2006/12/27 - [Charles Chiou] created file
  *	2007/12/27 - [Grady Chen] Added VIC2, GPIO0, GPIO1, GPIO2
  *	2009/01/07 - [Anthony Ginger] Move GPIO support to irq.c.
+ *	2009/06/11 - [Anthony Ginger] Optimize with clz.
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -40,26 +41,21 @@
 		mov     \base, #AHB_BASE
 		orr	\tmp, \base, #VIC_OFFSET
 		ldr     \irqstat, [\tmp, #VIC_IRQ_STA_OFFSET]
-		mov     \irqnr, #VIC_INT_VEC_OFFSET
-1001:
-		tst     \irqstat, #1
-		addeq   \irqnr, \irqnr, #1
-		moveq   \irqstat, \irqstat, lsr #1
-		tsteq   \irqnr, #NR_VIC_IRQ_SIZE
-		beq     1001b
+		rsbs    \tmp, \irqstat, #0
+		and     \irqnr, \tmp, \irqstat
+		clzcc   \irqnr, \irqnr
+		rsc     \irqnr, \irqnr, #NR_VIC_IRQ_SIZE
 		teq     \irqnr, #NR_VIC_IRQ_SIZE
 #if (VIC_INSTANCES >= 2)
 		bne	1003f
 		orr	\tmp, \base, #VIC2_OFFSET
 		ldr	\irqstat, [\tmp, #VIC_IRQ_STA_OFFSET]
-/*		mov	\irqnr, #VIC2_INT_VEC_OFFSET	//Omit, irqnr is continus */
-1002:
-		tst     \irqstat, #1
-		addeq   \irqnr, \irqnr, #1
-		moveq   \irqstat, \irqstat, lsr #1
-		tsteq   \irqnr, #GPIO_INT_VEC_OFFSET
-		beq     1002b
-		teq     \irqnr, #GPIO_INT_VEC_OFFSET
+		rsbs    \tmp, \irqstat, #0
+		and     \irqnr, \tmp, \irqstat
+		clzcc   \irqnr, \irqnr
+		rsc     \irqnr, \irqnr, #NR_VIC_IRQ_SIZE
+		teq     \irqnr, #NR_VIC_IRQ_SIZE
+		addne   \irqnr, \irqnr, #VIC2_INT_VEC_OFFSET
 #endif
 1003:
 		.endm

@@ -324,7 +324,7 @@ static inline int amb_req_dma_fios(ambarella_dma_req_t * req, int chan)
 		ctr &= ~DMA_CHANX_CTR_D;
 		ctr |= DMA_CHANX_CTR_EN;
 	} else {/* Descriptor mode */
-		amba_writel(DMA_FIOS_CHAN_DA_REG(chan), req);
+		amba_writel(DMA_FIOS_CHAN_DA_REG(chan), (u32)req);
 
 		ctr |= DMA_CHANX_CTR_D;
 		ctr |= DMA_CHANX_CTR_EN;
