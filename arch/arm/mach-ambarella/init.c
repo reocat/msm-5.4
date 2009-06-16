@@ -109,6 +109,9 @@ static void __init ambarella_init(void)
 	errorCode = ambarella_init_nand(NULL);
 	BUG_ON(errorCode != 0);
 
+	errorCode = ambarella_init_audio();
+	BUG_ON(errorCode != 0);
+
 	ambarella_register_spi_device();
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));

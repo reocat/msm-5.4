@@ -287,8 +287,10 @@ extern void rct_audio_pll_alan_zhu_magic_init(void);
 extern void rct_set_pll_frac_mode(void);
 extern void rct_set_aud_ctrl2_reg(void);
 extern u32 get_audio_freq_hz(void);
-extern void set_audio_sfreq(u32);
-extern u32 get_audio_sfreq(void);
+extern void ambarella_audio_notify_transition(
+	struct ambarella_i2s_interface *data, unsigned int type);
+extern int ambarella_audio_register_notifier(struct notifier_block *nb);
+extern int ambarella_audio_unregister_notifier(struct notifier_block *nb);
 extern u32 alsa_tx_enable_flag;
 extern void rct_alan_zhu_magic_loop(int clk_chk);
 

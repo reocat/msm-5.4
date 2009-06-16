@@ -56,6 +56,9 @@ typedef struct dai_set_s{
 	audiopll_t *audiopll;
 }dai_set_t;
 
+
+#define DAI_CLOCK_MASK 0x0400
+
 enum AudioCodec_MCLK {
 	AudioCodec_18_432M = 0,
 	AudioCodec_16_9344M = 1,
@@ -74,20 +77,20 @@ enum AudioCodec_MCLK {
 	AudioCodec_2_048M = 14
 };
 
-#define MAX_OVERSAMPLE_IDX_NUM	9
-enum AudioCodec_OverSample {
-	AudioCodec_128xfs = 0,
-	AudioCodec_256xfs = 1,
-	AudioCodec_384xfs = 2,
-	AudioCodec_512xfs = 3,
-	AudioCodec_768xfs = 4,
-	AudioCodec_1024xfs = 5,
-	AudioCodec_1152xfs = 6,
-	AudioCodec_1536xfs = 7,
-	AudioCodec_2304xfs = 8
+enum audio_in_freq_e
+{
+	AUDIO_SF_reserved = 0,
+	AUDIO_SF_96000,
+	AUDIO_SF_48000,
+	AUDIO_SF_44100,
+	AUDIO_SF_32000,
+	AUDIO_SF_24000,
+	AUDIO_SF_22050,
+	AUDIO_SF_16000,
+	AUDIO_SF_12000,
+	AUDIO_SF_11025,
+	AUDIO_SF_8000,
 };
-
-#define DAI_CLOCK_MASK 0x0400
 
 enum DAI_INIT_CTL
 {
@@ -96,30 +99,6 @@ enum DAI_INIT_CTL
 	DAI_TX_EN = 4
 };
 
-enum DAI_Mode
-{
-	DAI_leftJustified_Mode = 0,
-	DAI_rightJustified_Mode = 1,
-	DAI_MSBExtend_Mode = 2,
-	DAI_I2S_Mode = 4,
-	DAI_DSP_Mode = 6
-};
-
-enum DAI_resolution
-{
-	DAI_16bits = 0,
-	DAI_18bits = 1,
-	DAI_20bits = 2,
-	DAI_24bits = 3,
-	DAI_32bits = 4
-
-};
-
-enum DAI_ifunion
-{
-	DAI_union = 0,
-	DAI_nonunion = 1
-};
 
 #define DAI_32slots	32
 #define DAI_64slots	64

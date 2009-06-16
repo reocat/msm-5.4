@@ -15,6 +15,8 @@
 
 extern u32 get_spclk_freq_hz(void);
 
+static struct srcu_notifier_head audio_notifier_list;
+
 /**
  * Configure audio clock
  */
@@ -23,24 +25,23 @@ static const u8 audiopll_ref_table[3][2] = {
 };
 
 static u32 aud_sysclk = 12288000;
-static u32 aud_sfreq = 48000;
 
 static const u32 mclk_table[MAX_MCLK_IDX_NUM] = {
 	18432000,
 	16934400,
 	12288000,
 	11289600,
-	  9216000,
-	  8467200,
-	  8192000,
-	  6144000,
-	  5644800,
-	  4608000,
-	  4233600,
-	  4096000,
-	  3072000,
-	  2822400,
-	  2048000
+	9216000,
+	8467200,
+	8192000,
+	6144000,
+	5644800,
+	4608000,
+	4233600,
+	4096000,
+	3072000,
+	2822400,
+	2048000
 };
 
 static void rct_set_audio_freq_hz(u32 aud_clk)
@@ -53,15 +54,6 @@ u32 get_audio_freq_hz(void)
 	return aud_sysclk;
 }
 
-void set_audio_sfreq(u32 sfreq)
-{
-	aud_sfreq = sfreq;
-}
-
-u32 get_audio_sfreq(void)
-{
-	return aud_sfreq;
-}
 
 #if (RCT_AUDIO_PLL_CONF_MODE == 2)
 static void rct_audio_pll_single_init(void)
@@ -937,5 +929,30 @@ void rct_set_audio_pll_fs(u8 op_mode)
 	unl_cpu();
 #endif
 }
+
 #endif
+
+
+void ambarella_audio_notify_transition (
+	struct ambarella_i2s_interface *data, unsigned int type)
+{
+	srcu_notifier_call_chain(&audio_notifier_list, type, data);
+}
+
+int ambarella_audio_register_notifier(struct notifier_block *nb)
+{
+	return srcu_notifier_chain_register( &audio_notifier_list, nb);
+}
+
+int ambarella_audio_unregister_notifier(struct notifier_block *nb)
+{
+	return srcu_notifier_chain_unregister(&audio_notifier_list, nb);
+}
+
+int __init ambarella_init_audio (void)
+{
+	srcu_init_notifier_head(&audio_notifier_list);
+	return 0;
+}
+
 

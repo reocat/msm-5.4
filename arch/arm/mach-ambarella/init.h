@@ -67,6 +67,7 @@ extern int ambarella_init_pwm(void);
 extern int ambarella_init_fb(void);
 extern int ambarella_init_pm(void);
 extern int ambarella_init_tm(void);
+extern int ambarella_init_audio(void);
 
 extern void ambarella_gpio_set_valid(unsigned pin, int valid);
 extern void ambarella_register_spi_device(void);
