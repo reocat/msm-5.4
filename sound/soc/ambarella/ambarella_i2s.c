@@ -331,10 +331,21 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	return 0;
 }
 
+static void ambarella_i2s_dai_remove(struct platform_device *pdev,
+	struct snd_soc_dai *dai)
+{
+	struct amb_i2s_priv *priv_data = dai->private_data;
+
+	/* Notify that the audio interface is removed */
+	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf,
+		AUDIO_NOTIFY_REMOVE);
+}
+
 struct snd_soc_dai ambarella_i2s_dai = {
 	.name = "ambarella-i2s0",
 	.id = 0,
 	.probe = ambarella_i2s_dai_probe,
+	.remove = ambarella_i2s_dai_remove,
 	.playback = {
 		.channels_min = 2,
 		.channels_max = 2,

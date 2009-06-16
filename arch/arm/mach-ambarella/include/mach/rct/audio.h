@@ -35,6 +35,7 @@
 struct notifier_block;
 
 struct ambarella_i2s_interface {
+	u8 state;
 	u8 mode;
 	u8 sfreq;
 	u8 mclk;
@@ -58,8 +59,10 @@ enum AudioCodec_OverSample {
 
 enum Audio_Notify_Type
 {
+	AUDIO_NOTIFY_UNKNOWN,
 	AUDIO_NOTIFY_INIT,
-	AUDIO_NOTIFY_SETHWPARAMS
+	AUDIO_NOTIFY_SETHWPARAMS,
+	AUDIO_NOTIFY_REMOVE
 };
 
 enum DAI_Mode

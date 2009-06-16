@@ -17,7 +17,7 @@ extern u32 get_spclk_freq_hz(void);
 
 static struct srcu_notifier_head audio_notifier_list;
 static struct notifier_block audio_notify;
-static struct ambarella_i2s_interface *amb_i2s_intf = NULL;
+static struct ambarella_i2s_interface audio_i2s_intf;
 
 /**
  * Configure audio clock
@@ -935,15 +935,34 @@ void rct_set_audio_pll_fs(u8 op_mode)
 #endif
 
 
-struct ambarella_i2s_interface * get_audio_i2s_interface(void)
+struct ambarella_i2s_interface get_audio_i2s_interface(void)
 {
-	return amb_i2s_intf;
+	return audio_i2s_intf;
 }
 
 static int audio_notify_transition(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
-	amb_i2s_intf = data;
+	switch(val) {
+	case AUDIO_NOTIFY_INIT:
+		audio_i2s_intf.state = AUDIO_NOTIFY_INIT;
+		memcpy(&audio_i2s_intf, data, sizeof(struct ambarella_i2s_interface));
+		break;
+
+	case AUDIO_NOTIFY_SETHWPARAMS:
+		audio_i2s_intf.state = AUDIO_NOTIFY_SETHWPARAMS;
+		memcpy(&audio_i2s_intf, data, sizeof(struct ambarella_i2s_interface));
+		break;
+
+	case AUDIO_NOTIFY_REMOVE:
+		memset(&audio_i2s_intf, 0, sizeof(struct ambarella_i2s_interface));
+		audio_i2s_intf.state = AUDIO_NOTIFY_REMOVE;
+		break;
+	default:
+		audio_i2s_intf.state = AUDIO_NOTIFY_UNKNOWN;
+		break;
+	}
+
 	return 0;
 }
 
@@ -968,6 +987,9 @@ int __init ambarella_init_audio (void)
 	int errorCode = 0;
 
 	srcu_init_notifier_head(&audio_notifier_list);
+
+	memset(&audio_i2s_intf, 0, sizeof(struct ambarella_i2s_interface));
+	audio_i2s_intf.state = AUDIO_NOTIFY_UNKNOWN;
 
 	audio_notify.notifier_call = audio_notify_transition;
 	errorCode = ambarella_audio_register_notifier(&audio_notify);
