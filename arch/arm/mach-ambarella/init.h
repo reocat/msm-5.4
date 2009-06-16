@@ -30,10 +30,17 @@ extern void ambarella_init_irq(void);
 extern struct sys_timer ambarella_timer;
 
 extern struct platform_device ambarella_sd0;
+#if (SD_INSTANCES >= 2)
 extern struct platform_device ambarella_sd1;
+#endif
 extern struct platform_device ambarella_idc0;
+#if (IDC_INSTANCES >= 2)
+extern struct platform_device ambarella_idc1;
+#endif
 extern struct platform_device ambarella_spi0;
+#if (SPI_INSTANCES >= 2)
 extern struct platform_device ambarella_spi1;
+#endif
 extern struct platform_device ambarella_i2s0;
 extern struct platform_device ambarella_rtc0;
 extern struct platform_device ambarella_wdt0;

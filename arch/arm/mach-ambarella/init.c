@@ -41,8 +41,11 @@ static struct platform_device *devices[] __initdata = {
 	&ambarella_sd1,
 #endif
 	&ambarella_idc0,
+#if (IDC_INSTANCES >= 2)
+	&ambarella_idc1,
+#endif
 	&ambarella_spi0,
-#if (SPI_INSTANCES >= 2)	
+#if (SPI_INSTANCES >= 2)
 	&ambarella_spi1,
 #endif
 	&ambarella_i2s0,
