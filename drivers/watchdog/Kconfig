@@ -67,10 +67,10 @@ config WM8350_WATCHDOG
 # ARM Architecture
 
 config AMBARELLA_WATCHDOG
-	tristate "AMBARELLA watchdog"
+	tristate "Ambarella watchdog"
 	depends on ARCH_AMBARELLA
 	help
-	  Watchdog timer embedded into AMBARELLA chips. This will reboot your
+	  Watchdog timer embedded into Ambarella chips. This will reboot your
 	  system when the timeout is reached.
 
 config AT91RM9200_WATCHDOG

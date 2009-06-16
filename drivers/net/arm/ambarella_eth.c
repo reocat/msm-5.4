@@ -957,7 +957,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 				lp->stats.tx_errors++;
 			}
 			if (irq_status & ETH_DMA_STATUS_UNF) {
-				dev_err(&lp->ndev->dev,
+				dev_dbg(&lp->ndev->dev,
 					"%s: TxUnderFlow 0x%x\n",
 					__func__, irq_status);
 				ambeth_restart_rxtx(lp);
