@@ -16,6 +16,8 @@
 extern u32 get_spclk_freq_hz(void);
 
 static struct srcu_notifier_head audio_notifier_list;
+static struct notifier_block audio_notify;
+static struct ambarella_i2s_interface *amb_i2s_intf = NULL;
 
 /**
  * Configure audio clock
@@ -933,6 +935,18 @@ void rct_set_audio_pll_fs(u8 op_mode)
 #endif
 
 
+struct ambarella_i2s_interface * get_audio_i2s_interface(void)
+{
+	return amb_i2s_intf;
+}
+
+static int audio_notify_transition(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	amb_i2s_intf = data;
+	return 0;
+}
+
 void ambarella_audio_notify_transition (
 	struct ambarella_i2s_interface *data, unsigned int type)
 {
@@ -951,8 +965,14 @@ int ambarella_audio_unregister_notifier(struct notifier_block *nb)
 
 int __init ambarella_init_audio (void)
 {
+	int errorCode = 0;
+
 	srcu_init_notifier_head(&audio_notifier_list);
-	return 0;
+
+	audio_notify.notifier_call = audio_notify_transition;
+	errorCode = ambarella_audio_register_notifier(&audio_notify);
+
+	return errorCode;
 }
 
 

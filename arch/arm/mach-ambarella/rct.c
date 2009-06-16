@@ -152,6 +152,7 @@ EXPORT_SYMBOL(ambarella_audio_notify_transition);
 EXPORT_SYMBOL(ambarella_audio_register_notifier);
 EXPORT_SYMBOL(ambarella_audio_unregister_notifier);
 EXPORT_SYMBOL(get_audio_freq_hz);
+EXPORT_SYMBOL(get_audio_i2s_interface);
 EXPORT_SYMBOL(rct_alan_zhu_magic_loop);
 EXPORT_SYMBOL(rct_set_usb_ana_on);
 EXPORT_SYMBOL(rct_suspend_usb);
