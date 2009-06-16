@@ -184,7 +184,8 @@ struct ambarella_eth_platform_info {
 struct ambarella_idc_platform_info {
 	int					clk_limit;	//Hz
 	int					bulk_write_num;
-	unsigned int				class;
+	unsigned int				i2c_class;
+	void					(*set_pin_muxing)(u32 on);
 };
 #define AMBA_IDC_PARAM_CALL(id, arg, perm) \
 	module_param_call(idc##id##_clk_limit, param_set_int, param_get_int, &(arg.clk_limit), perm); \

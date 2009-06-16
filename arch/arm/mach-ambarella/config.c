@@ -795,6 +795,8 @@ AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1, 0644);
 #endif
 
 /* ==========================================================================*/
+#define DEFAULT_I2C_CLASS	(I2C_CLASS_HWMON | I2C_CLASS_TV_ANALOG | I2C_CLASS_TV_DIGITAL | I2C_CLASS_SPD)
+
 static struct resource ambarella_idc0_resources[] = {
 	[0] = {
 		.start	= IDC_BASE,
@@ -808,11 +810,26 @@ static struct resource ambarella_idc0_resources[] = {
 	},
 };
 
+#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
+static void ambarella_idc_set_pin_muxing(u32 on)
+{
+	if (on)
+		ambarella_gpio_config(IDC_BUS_HDMI, GPIO_FUNC_HW);
+	else
+		ambarella_gpio_config(IDC_BUS_HDMI, GPIO_FUNC_SW_OUTPUT);
+}
+#endif
+
 static struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 	.clk_limit	= 100000,
 	.bulk_write_num	= 60,
-	.class		= (I2C_CLASS_HWMON | I2C_CLASS_TV_ANALOG |
-			I2C_CLASS_TV_DIGITAL | I2C_CLASS_DDC | I2C_CLASS_SPD),
+#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
+	.i2c_class	= DEFAULT_I2C_CLASS | I2C_CLASS_DDC,
+	.set_pin_muxing	= ambarella_idc_set_pin_muxing,
+#else
+	.i2c_class	= DEFAULT_I2C_CLASS,
+	.set_pin_muxing	= NULL,
+#endif
 };
 AMBA_IDC_PARAM_CALL(0, ambarella_idc0_platform_info, 0644);
 
@@ -827,6 +844,41 @@ struct platform_device ambarella_idc0 = {
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
+
+#if (IDC_INSTANCES >= 2)
+static struct resource ambarella_idc1_resources[] = {
+	[0] = {
+		.start	= IDC2_BASE,
+		.end	= IDC2_BASE + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IDC2_IRQ,
+		.end	= IDC2_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
+	.clk_limit	= 100000,
+	.bulk_write_num	= 60,
+	.i2c_class	= I2C_CLASS_DDC,
+	.set_pin_muxing	= NULL,
+};
+AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);
+
+struct platform_device ambarella_idc1 = {
+	.name		= "ambarella-i2c",
+	.id		= 1,
+	.resource	= ambarella_idc1_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_idc1_resources),
+	.dev		= {
+		.platform_data		= &ambarella_idc1_platform_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+#endif
 
 /* ==========================================================================*/
 static struct resource ambarella_spi0_resources[] = {

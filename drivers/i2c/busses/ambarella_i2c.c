@@ -80,7 +80,7 @@ struct ambarella_i2c_dev_info {
 	unsigned int				msg_index;
 
 	__u32					dev_en_reg;
-	struct ambarella_idc_platform_info	platform_info;
+	struct ambarella_idc_platform_info	*platform_info;
 
 #ifdef CONFIG_CPU_FREQ
 	struct notifier_block	i2c_freq_transition;
@@ -111,7 +111,7 @@ static int ambi2c_freq_transition(struct notifier_block *nb,
 
 		amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 
-		idc_prescale = (apb_clk / pinfo->platform_info.clk_limit) >> 2;
+		idc_prescale = (apb_clk / pinfo->platform_info->clk_limit) >> 2;
 
 		amba_writeb(pinfo->regbase + IDC_PSLL_OFFSET,
 			(idc_prescale & 0xff));
@@ -137,11 +137,11 @@ static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 
-	if ((pinfo->platform_info.clk_limit < 1) ||
-		(pinfo->platform_info.clk_limit > 400000))
-		pinfo->platform_info.clk_limit = 100000;
+	if ((pinfo->platform_info->clk_limit < 1) ||
+		(pinfo->platform_info->clk_limit > 400000))
+		pinfo->platform_info->clk_limit = 100000;
 
-	idc_prescale = (apb_clk / pinfo->platform_info.clk_limit) >> 2;
+	idc_prescale = (apb_clk / pinfo->platform_info->clk_limit) >> 2;
 
 	dev_dbg(pinfo->dev, "apb_clk[%dHz]\n", apb_clk);
 	dev_dbg(pinfo->dev, "idc_prescale[%d]\n", idc_prescale);
@@ -225,12 +225,9 @@ static inline void ambarella_i2c_start_current_msg(
 	pinfo->msg_index = 0;
 	pinfo->msg_addr = (pinfo->msgs->addr << 1);
 
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	if (pinfo->msgs->flags & I2C_M_PIN_MUXING)
-		ambarella_gpio_config(IDC_BUS_HDMI, GPIO_FUNC_HW);
-	else
-		ambarella_gpio_config(IDC_BUS_HDMI, GPIO_FUNC_SW_OUTPUT);
-#endif
+	if (pinfo->platform_info->set_pin_muxing)
+		pinfo->platform_info->set_pin_muxing(
+			pinfo->msgs->flags & I2C_M_PIN_MUXING);
 
 	if (pinfo->msgs->flags & I2C_M_RD)
 		pinfo->msg_addr |= 1;
@@ -240,7 +237,7 @@ static inline void ambarella_i2c_start_current_msg(
 
 	if (pinfo->msgs->flags & I2C_M_RD) {
 		ambarella_i2c_start_single_msg(pinfo);
-	} else if (pinfo->msgs->len > pinfo->platform_info.bulk_write_num) {
+	} else if (pinfo->msgs->len > pinfo->platform_info->bulk_write_num) {
 		ambarella_i2c_start_bulk_msg_write(pinfo);
 	} else {
 		ambarella_i2c_start_single_msg(pinfo);
@@ -539,8 +536,7 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 	pinfo->dev = &pdev->dev;
 	pinfo->irq = irq->start;
 	init_waitqueue_head(&pinfo->msg_wait);
-	memcpy(&pinfo->platform_info, platform_info,
-		sizeof(struct ambarella_idc_platform_info));
+	pinfo->platform_info = platform_info;
 
 	ambarella_i2c_hw_init(pinfo);
 
@@ -556,7 +552,7 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 	adap = &pinfo->adap;
 	i2c_set_adapdata(adap, pinfo);
 	adap->owner = THIS_MODULE;
-	adap->class = platform_info->class;
+	adap->class = platform_info->i2c_class;
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 	adap->algo = &ambarella_i2c_algo;
 	adap->dev.parent = &pdev->dev;
