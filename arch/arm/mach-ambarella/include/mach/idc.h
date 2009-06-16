@@ -81,8 +81,6 @@
 #define IDC2_FMDATA_REG			IDC2_REG(0x1c)
 #endif
 
-#define IDC_MEM_REGION_SIZE	(0x20)
-
 #define IDC_ENR_REG_ENABLE	(0x01)
 #define IDC_ENR_REG_DISABLE	(0x00)
 

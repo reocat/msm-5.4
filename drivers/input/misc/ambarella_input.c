@@ -863,7 +863,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	if (!pinfo->workqueue) {
 		errorCode = -ENOMEM;
 		dev_err(&pdev->dev, "Setup key map failed!\n");
-		goto ir_errorCode_free_input_dev;
+		goto ir_errorCode_free_mem_region;
 	}
 	INIT_DELAYED_WORK(&pinfo->detect_adc, ambarella_scan_adc);
 
@@ -922,10 +922,12 @@ ir_errorCode_free_keymap:
 ir_errorCode_free_platform:
 	platform_set_drvdata(pdev, NULL);
 
+ir_errorCode_free_mem_region:
+	release_mem_region(mem->start, (mem->end - mem->start) + 1);
+
 ir_errorCode_free_input_dev:
 	input_free_device(input_dev);
 	destroy_workqueue(pinfo->workqueue);
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
 
 ir_errorCode_pinfo:
 	kfree(pinfo);
