@@ -390,6 +390,14 @@
 #define GPIO127_INT_VEC			GPIO_INT_VEC(127)
 #endif
 
+#if (GPIO_INSTANCES >= 4)
+#define GPIO_IRQ_MASK			(0xbbfff3ff)
+#elif (GPIO_INSTANCES >= 3)
+#define GPIO_IRQ_MASK			(0xbffff3ff)
+#else
+#define GPIO_IRQ_MASK			(0xfffff3ff)
+#endif
+
 #ifndef __ASSEMBLER__
 
 static inline int gpio_to_irq(unsigned gpio)

@@ -4,8 +4,7 @@
  * History:
  *	2006/12/27 - [Charles Chiou] created file
  *	2007/12/27 - [Grady Chen] Added VIC2, GPIO0, GPIO1, GPIO2
- *	2009/01/07 - [Anthony Ginger] Move GPIO support to irq.c.
- *	2009/06/11 - [Anthony Ginger] Optimize with clz.
+ *	2009/06/15 - [Anthony Ginger] Optimize with clz.
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -28,7 +27,15 @@
 #include <mach/hardware.h>
 #include <asm/irq.h>
 
-		.macro  disable_fiq
+		.macro	stat2nr, stat, nr, tmp
+		rsbs	\tmp, \stat, #0
+		and	\nr, \tmp, \stat
+		clzcc	\nr, \nr
+		rsc	\nr, \nr, #32
+		teq	\nr, #32
+		.endm
+
+		.macro	disable_fiq
 		.endm
 
 		.macro	get_irqnr_preamble, base, tmp
@@ -37,26 +44,21 @@
 		.macro	arch_ret_to_user, tmp1, tmp2
 		.endm
 
-		.macro  get_irqnr_and_base, irqnr, irqstat, base, tmp
-		mov     \base, #AHB_BASE
-		orr	\tmp, \base, #VIC_OFFSET
-		ldr     \irqstat, [\tmp, #VIC_IRQ_STA_OFFSET]
-		rsbs    \tmp, \irqstat, #0
-		and     \irqnr, \tmp, \irqstat
-		clzcc   \irqnr, \irqnr
-		rsc     \irqnr, \irqnr, #NR_VIC_IRQ_SIZE
-		teq     \irqnr, #NR_VIC_IRQ_SIZE
+		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
+		ldr	\base, =(VIC_BASE)
+		ldr	\tmp, =(GPIO_IRQ_MASK)
+		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
+		and	\base, \irqstat, \tmp
+		stat2nr	\base, \irqnr, \tmp
+		bne	1000f
 #if (VIC_INSTANCES >= 2)
-		bne	1003f
-		orr	\tmp, \base, #VIC2_OFFSET
-		ldr	\irqstat, [\tmp, #VIC_IRQ_STA_OFFSET]
-		rsbs    \tmp, \irqstat, #0
-		and     \irqnr, \tmp, \irqstat
-		clzcc   \irqnr, \irqnr
-		rsc     \irqnr, \irqnr, #NR_VIC_IRQ_SIZE
-		teq     \irqnr, #NR_VIC_IRQ_SIZE
-		addne   \irqnr, \irqnr, #VIC2_INT_VEC_OFFSET
+		ldr	\base, =(VIC2_BASE)
+		ldr	\irqnr, [\base, #VIC_IRQ_STA_OFFSET]
+		stat2nr	\irqnr, \irqnr, \tmp
+		addne	\irqnr, \irqnr, #VIC2_INT_VEC_OFFSET
+		bne	1000f
 #endif
-1003:
+		stat2nr	\irqstat, \irqnr, \tmp
+1000:
 		.endm
 

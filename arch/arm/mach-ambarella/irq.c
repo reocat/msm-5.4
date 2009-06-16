@@ -501,60 +501,67 @@ static struct irq_chip ambarella_irq_chip = {
 	.set_type	= ambarella_irq_set_type,
 };
 
+static inline u32 ambarella_irq_stat2nr(u32 stat)
+{
+	u32					tmp;
+	u32					nr;
+
+	__asm__ __volatile__
+		("rsbs	%[tmp], %[stat], #0" :
+		[tmp] "=r" (tmp) : [stat] "r" (stat));
+	__asm__ __volatile__
+		("and	%[nr], %[tmp], %[stat]" :
+		[nr] "=r" (nr) : [tmp] "r" (tmp), [stat] "r" (stat));
+	__asm__ __volatile__
+		("clzcc	%[nr], %[nr]" :
+		[nr] "+r" (nr));
+	__asm__ __volatile__
+		("rsc	%[nr], %[nr], #32" :
+		[nr] "+r" (nr));
+
+	return nr;
+}
+
 static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
-	u32					status = 0;
-	int					i;
+	u32					nr;
 
-#if 0
-	ambarella_mask_irq(irq);
-	ambarella_ack_irq(irq);
-#endif
 	switch (irq) {
 	case GPIO0_IRQ:
-		status = amba_readl(GPIO0_MIS_REG);
-		for (i = 0; i < 32; i++) {
-			if (status & (1 << i)) {
-				generic_handle_irq(GPIO0_INT_VEC_OFFSET + i);
-			}
-		}
+		nr = ambarella_irq_stat2nr(amba_readl(GPIO0_MIS_REG));
+		if (nr < 32)
+			generic_handle_irq(GPIO0_INT_VEC_OFFSET + nr);
 		break;
+
 	case GPIO1_IRQ:
-		status = amba_readl(GPIO1_MIS_REG);
-		for (i = 0; i < 32; i++) {
-			if (status & (1 << i)) {
-				generic_handle_irq(GPIO1_INT_VEC_OFFSET + i);
-			}
+		nr = ambarella_irq_stat2nr(amba_readl(GPIO1_MIS_REG));
+		if (nr < 32) {
+			generic_handle_irq(GPIO1_INT_VEC_OFFSET + nr);
+			break;
 		}
+
 #if (GPIO_INSTANCES >= 3)
 #if (GPIO2_IRQ != GPIO1_IRQ)
 		break;
 	case GPIO2_IRQ:
 #endif
-		status = amba_readl(GPIO2_MIS_REG);
-		for (i = 0; i < 32; i++) {
-			if (status & (1 << i)) {
-				generic_handle_irq(GPIO2_INT_VEC_OFFSET + i);
-			}
-		}
+		nr = ambarella_irq_stat2nr(amba_readl(GPIO2_MIS_REG));
+		if (nr < 32)
+			generic_handle_irq(GPIO2_INT_VEC_OFFSET + nr);
 #endif
 		break;
+
 #if (GPIO_INSTANCES >= 4)
 	case GPIO3_IRQ:
-		status = amba_readl(GPIO3_MIS_REG);
-		for (i = 0; i < 32; i++) {
-			if (status & (1 << i)) {
-				generic_handle_irq(GPIO3_INT_VEC_OFFSET + i);
-			}
-		}
+		nr = ambarella_irq_stat2nr(amba_readl(GPIO3_MIS_REG));
+		if (nr < 32)
+			generic_handle_irq(GPIO3_INT_VEC_OFFSET + nr);
 		break;
 #endif
+
 	default:
 		break;
 	}
-#if 0
-	ambarella_unmask_irq(irq);
-#endif
 }
 
 void __init ambarella_init_irq(void)
