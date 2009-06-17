@@ -1653,6 +1653,18 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 }
 
 /****************************************************************************/
+static const struct net_device_ops ambeth_netdev_ops = {
+	.ndo_open		= ambeth_open,
+	.ndo_stop		= ambeth_stop,
+	.ndo_start_xmit		= ambeth_hard_start_xmit,
+	.ndo_set_multicast_list	= ambeth_set_multicast_list,
+	.ndo_set_mac_address 	= ambeth_set_mac_address,
+	.ndo_validate_addr	= eth_validate_addr,
+	.ndo_change_mtu		= eth_change_mtu,
+	.ndo_tx_timeout		= ambeth_timeout,
+	.ndo_get_stats		= ambeth_get_stats,
+};
+
 static int ambeth_drv_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
@@ -1763,17 +1775,10 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	}
 
 	ether_setup(ndev);
-	ndev->open = ambeth_open;
-	ndev->stop = ambeth_stop;
-	ndev->hard_start_xmit = ambeth_hard_start_xmit;
-	ndev->tx_timeout = ambeth_timeout;
+	ndev->netdev_ops = &ambeth_netdev_ops;
 	ndev->watchdog_timeo = AMBETH_TX_TIMEOUT;
-	ndev->get_stats = ambeth_get_stats;
-	ndev->set_multicast_list = ambeth_set_multicast_list;
 	netif_napi_add(ndev, &lp->napi, ambeth_poll,
-		lp->platform_info.napi_weight);
-        ndev->set_mac_address = ambeth_set_mac_address;
-	
+		lp->platform_info.napi_weight);	
 	if (memcmp(lp->platform_info.mac_addr, "\0\0\0\0\0\0",
 		AMBETH_MAC_SIZE)) {
 		memcpy(ndev->dev_addr, lp->platform_info.mac_addr,
@@ -1782,12 +1787,10 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		memcpy(ndev->dev_addr, "\0\1\2\3\4\5",
 			AMBETH_MAC_SIZE);
 	}
-
 	ambhw_set_hwaddr(lp, ndev->dev_addr);
 	ambhw_get_hwaddr(lp, ndev->dev_addr);
-	dev_info(&pdev->dev,
-		"%s: MAC Address[%s].\n",
-		__func__, print_mac(mac, ndev->dev_addr));
+	dev_info(&pdev->dev, "MAC Address[%s].\n",
+		print_mac(mac, ndev->dev_addr));
 
 	errorCode = register_netdev(ndev);
 	if (errorCode) {
