@@ -147,5 +147,24 @@
 #define RECV_BUF_SIZ			1500
 #define SEND_BUF_SIZ			1500
 
+/* UART[x]_MC_REG */
+#define UART_MC_SIRE			0x40
+#define UART_MC_AFCE			0x20
+#define UART_MC_LOOPBACK		0x10
+#define UART_MC_OUT2			0x08
+#define UART_MC_OUT1			0x04
+#define UART_MC_RTS			0x02
+#define UART_MC_DTR			0x01
+
+/* UART[x]_MS_REG */
+#define UART_MS_DCD			0x80
+#define UART_MS_RI			0x40
+#define UART_MS_DSR			0x20
+#define UART_MS_CTS			0x10
+#define UART_MS_DDCD			0x08
+#define UART_MS_TERI			0x04
+#define UART_MS_DDSR			0x02
+#define UART_MS_DCTS			0x01
+
 #endif
 

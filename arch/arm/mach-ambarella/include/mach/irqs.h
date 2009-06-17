@@ -85,6 +85,7 @@
 #define SD2_IRQ			25
 #endif
 #define ETH0_IRQ		25
+#define UART1_IRQ		25
 
 #define SDCD_IRQ		26
 #define GPIO3_IRQ		26	/* A5 */

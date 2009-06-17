@@ -609,6 +609,20 @@ struct platform_device ambarella_uart = {
 	}
 };
 
+#if (UART_PORT_MAX >= 2)
+struct platform_device ambarella_uart1 = {
+	.name		= "ambarella-uart",
+	.id		= 1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &ambarella_uart_ports,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+#endif
+
 /* ==========================================================================*/
 static struct resource ambarella_sd0_resources[] = {
 	[0] = {

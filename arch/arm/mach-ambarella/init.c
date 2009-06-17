@@ -35,6 +35,9 @@
 /* ==========================================================================*/
 static struct platform_device *devices[] __initdata = {
 	&ambarella_uart,
+#if (UART_PORT_MAX >= 2)
+	&ambarella_uart1,
+#endif
 	&ambarella_nand,
 	&ambarella_sd0,
 #if (SD_INSTANCES >= 2)
