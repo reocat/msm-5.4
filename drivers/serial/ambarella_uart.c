@@ -450,6 +450,51 @@ static const char *serial_ambarella_type(struct uart_port *port)
 	return port_info->name;
 }
 
+static inline void wait_for_tx(struct uart_port *port)
+{
+	u8					ls;
+
+	ls = amba_readb(port->membase + UART0_LS_OFFSET);
+	while ((ls & UART_LS_TEMT) != UART_LS_TEMT) {
+		cpu_relax();
+		ls = amba_readb(port->membase + UART0_LS_OFFSET);
+	}
+}
+
+static inline void wait_for_rx(struct uart_port *port)
+{
+	u8					ls;
+
+	ls = amba_readb(port->membase + UART0_LS_OFFSET);
+	while ((ls & UART_LS_DR) != UART_LS_DR) {
+		cpu_relax();
+		ls = amba_readb(port->membase + UART0_LS_OFFSET);
+	}
+}
+
+#ifdef CONFIG_CONSOLE_POLL
+static void serial_ambarella_poll_put_char(struct uart_port *port,
+	unsigned char chr)
+{
+	struct ambarella_uart_port_info		*port_info;
+
+	port_info = (struct ambarella_uart_port_info *)(port->private_data);
+
+	wait_for_tx(port);
+	amba_writeb(port->membase + UART0_TH_OFFSET, chr);
+}
+
+static int serial_ambarella_poll_get_char(struct uart_port *port)
+{
+	struct ambarella_uart_port_info		*port_info;
+
+	port_info = (struct ambarella_uart_port_info *)(port->private_data);
+
+	wait_for_rx(port);
+	return amba_readl(port->membase + UART0_RB_OFFSET);
+}
+#endif
+
 struct uart_ops serial_ambarella_pops = {
 	.tx_empty	= serial_ambarella_tx_empty,
 	.set_mctrl	= serial_ambarella_set_mctrl,
@@ -468,25 +513,14 @@ struct uart_ops serial_ambarella_pops = {
 	.request_port	= serial_ambarella_request_port,
 	.config_port	= serial_ambarella_config_port,
 	.verify_port	= serial_ambarella_verify_port,
+#ifdef CONFIG_CONSOLE_POLL
+	.poll_put_char	= serial_ambarella_poll_put_char,
+	.poll_get_char	= serial_ambarella_poll_get_char,
+#endif
 };
 
 #if defined(CONFIG_SERIAL_AMBARELLA_CONSOLE) && defined(CONFIG_SERIAL_AMBARELLA)
 static struct uart_driver serial_ambarella_reg;
-
-static inline void wait_for_tx(struct uart_port *port)
-{
-	u32					tmout = 10000;
-	u8					ls;
-
-	/* Wait up to 10ms for the character(s) to be sent. */
-	ls = amba_readb(port->membase + UART0_LS_OFFSET);
-	while ((ls & UART_LS_TEMT) != UART_LS_TEMT) {
-		if (--tmout == 0)
-			break;
-		udelay(1);
-		ls = amba_readb(port->membase + UART0_LS_OFFSET);
-	}
-}
 
 static void serial_ambarella_console_putchar(struct uart_port *port, int ch)
 {
