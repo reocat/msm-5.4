@@ -46,6 +46,10 @@
 
 #include <mach/hardware.h>
 
+#include <linux/i2c/tsc2007.h>
+
+#include "init.h"
+
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_32BIT_MASK;
 EXPORT_SYMBOL(ambarella_dmamask);
@@ -1234,4 +1238,68 @@ struct proc_dir_entry *get_ambarella_proc_dir(void)
 	return ambarella_proc_dir;
 }
 EXPORT_SYMBOL(get_ambarella_proc_dir);
+
+/* ==========================================================================*/
+#ifdef CONFIG_I2C_AMBARELLA_TSC2007
+
+#define TS_GPIO		56
+
+static int ambarella_tsc2007_get_pendown_state(void)
+{	
+	if (ambarella_gpio_get(TS_GPIO))
+		return 0;
+	else
+		return 1;
+}
+
+static void ambarella_tsc2007_clear_penirq(void)
+{
+	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
+}
+
+static int ambarella_tsc2007_init_platform_hw(void)
+{
+	ambarella_gpio_config(TS_GPIO, GPIO_FUNC_SW_INPUT);
+
+	return set_irq_type(gpio_to_irq(TS_GPIO), IRQF_TRIGGER_FALLING);
+}
+
+static void ambarella_tsc2007_exit_platform_hw(void)
+{
+}
+
+static struct tsc2007_platform_data ambarella_tsc2007_pdata = {
+	.model = 2007,
+	.x_plate_ohms = 6,
+	.fix = {
+		.x_invert = 1,
+		.y_invert = 0,
+		.x_rescale = 1,
+		.y_rescale = 1,
+		.x_min = 220,
+		.x_max = 3836,
+		.y_min = 150,
+		.y_max = 3768,
+	},
+	.get_pendown_state = ambarella_tsc2007_get_pendown_state,
+        .clear_penirq = ambarella_tsc2007_clear_penirq,
+        .init_platform_hw = ambarella_tsc2007_init_platform_hw,
+        .exit_platform_hw = ambarella_tsc2007_exit_platform_hw
+};
+
+static struct i2c_board_info ambarella_tsc2007_board_info = {
+	.type = "tsc2007",
+	.addr = 0x90 >> 1,
+	.platform_data = &ambarella_tsc2007_pdata,
+};
+
+#endif
+
+void __init ambarella_register_i2c_device(void)
+{
+#ifdef CONFIG_I2C_AMBARELLA_TSC2007
+	ambarella_tsc2007_board_info.irq = gpio_to_irq(TS_GPIO);
+	i2c_register_board_info(0, &ambarella_tsc2007_board_info, 1);
+#endif
+}
 

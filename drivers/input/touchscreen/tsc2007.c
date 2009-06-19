@@ -51,7 +51,8 @@
 #define TSC2007_12BIT			(0x0 << 1)
 #define TSC2007_8BIT			(0x1 << 1)
 
-#define	MAX_12BIT			((1 << 12) - 1)
+#define	VAL_12BIT			(1 << 12)
+#define	MAX_12BIT			(VAL_12BIT - 1)
 
 #define ADC_ON_12BIT	(TSC2007_12BIT | TSC2007_ADC_ON_IRQ_DIS0)
 
@@ -73,12 +74,16 @@ struct tsc2007 {
 	struct hrtimer		timer;
 	struct ts_event		tc;
 
+	struct workqueue_struct *workqueue;
+	struct work_struct	report_worker;
+
 	struct i2c_client	*client;
 
 	spinlock_t		lock;
 
 	u16			model;
 	u16			x_plate_ohms;
+	struct tsc2007_fix_data	fix;
 
 	unsigned		pendown;
 	int			irq;
@@ -113,7 +118,7 @@ static void tsc2007_send_event(void *tsc)
 {
 	struct tsc2007	*ts = tsc;
 	u32		rt;
-	u16		x, y, z1, z2;
+	u32		x, y, z1, z2;
 
 	x = ts->tc.x;
 	y = ts->tc.y;
@@ -121,7 +126,7 @@ static void tsc2007_send_event(void *tsc)
 	z2 = ts->tc.z2;
 
 	/* range filtering */
-	if (x == MAX_12BIT)
+	if (x >= MAX_12BIT)
 		x = 0;
 
 	if (likely(x && z1)) {
@@ -142,8 +147,6 @@ static void tsc2007_send_event(void *tsc)
 	if (rt > MAX_12BIT) {
 		dev_dbg(&ts->client->dev, "ignored pressure %d\n", rt);
 
-		hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_PERIOD),
-			      HRTIMER_MODE_REL);
 		return;
 	}
 
@@ -165,18 +168,38 @@ static void tsc2007_send_event(void *tsc)
 			ts->pendown = 1;
 		}
 
+		if (ts->fix.x_rescale) {
+			x = (x > ts->fix.x_min) ? (x - ts->fix.x_min) : 0;
+			x *= VAL_12BIT;
+			x /= (ts->fix.x_max - ts->fix.x_min);
+			if (x >= MAX_12BIT)
+				x = MAX_12BIT;
+		}
+
+		if (ts->fix.y_rescale) {
+			y = (y > ts->fix.y_min) ? (y - ts->fix.y_min) : 0;
+			y *= VAL_12BIT;
+			y /= (ts->fix.y_max - ts->fix.y_min);
+			if (y >= MAX_12BIT)
+				y = MAX_12BIT;
+		}
+
+		if (ts->fix.x_invert)
+			x = (MAX_12BIT - x);
+
+		if (ts->fix.y_invert)
+			y = (MAX_12BIT - y);
+
 		input_report_abs(input, ABS_X, x);
 		input_report_abs(input, ABS_Y, y);
 		input_report_abs(input, ABS_PRESSURE, rt);
 
 		input_sync(input);
 
-		dev_dbg(&ts->client->dev, "point(%4d,%4d), pressure (%4u)\n",
-			x, y, rt);
+		dev_dbg(&ts->client->dev,
+			"point(%4d,%4d), pressure (%4u), real(%4d,%4d)\n",
+			x, y, rt, ts->tc.x, ts->tc.y);
 	}
-
-	hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_PERIOD),
-			HRTIMER_MODE_REL);
 }
 
 static int tsc2007_read_values(struct tsc2007 *tsc)
@@ -201,7 +224,29 @@ static enum hrtimer_restart tsc2007_timer(struct hrtimer *handle)
 {
 	struct tsc2007 *ts = container_of(handle, struct tsc2007, timer);
 
-	spin_lock_irq(&ts->lock);
+	queue_work(ts->workqueue, &ts->report_worker);
+
+	return HRTIMER_NORESTART;
+}
+
+static irqreturn_t tsc2007_irq(int irq, void *handle)
+{
+	struct tsc2007 *ts = handle;
+
+	if (likely(ts->get_pendown_state())) {
+		disable_irq(ts->irq);
+		hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_DELAY),
+			HRTIMER_MODE_REL);
+	}
+
+	return IRQ_HANDLED;
+}
+
+static void tsc2007_report_worker(struct work_struct *work)
+{
+	struct tsc2007 *ts;
+
+	ts = container_of(work, struct tsc2007, report_worker);
 
 	if (unlikely(!ts->get_pendown_state() && ts->pendown)) {
 		struct input_dev *input = ts->input;
@@ -213,6 +258,9 @@ static enum hrtimer_restart tsc2007_timer(struct hrtimer *handle)
 		input_sync(input);
 
 		ts->pendown = 0;
+
+		if (ts->clear_penirq)
+			ts->clear_penirq();
 		enable_irq(ts->irq);
 	} else {
 		/* pen is still down, continue with the measurement */
@@ -220,32 +268,10 @@ static enum hrtimer_restart tsc2007_timer(struct hrtimer *handle)
 
 		tsc2007_read_values(ts);
 		tsc2007_send_event(ts);
+
+		hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_PERIOD),
+			HRTIMER_MODE_REL);
 	}
-
-	spin_unlock_irq(&ts->lock);
-
-	return HRTIMER_NORESTART;
-}
-
-static irqreturn_t tsc2007_irq(int irq, void *handle)
-{
-	struct tsc2007 *ts = handle;
-	unsigned long flags;
-
-	spin_lock_irqsave(&ts->lock, flags);
-
-	if (likely(ts->get_pendown_state())) {
-		disable_irq(ts->irq);
-		hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_DELAY),
-					HRTIMER_MODE_REL);
-	}
-
-	if (ts->clear_penirq)
-		ts->clear_penirq();
-
-	spin_unlock_irqrestore(&ts->lock, flags);
-
-	return IRQ_HANDLED;
 }
 
 static int tsc2007_probe(struct i2c_client *client,
@@ -284,6 +310,7 @@ static int tsc2007_probe(struct i2c_client *client,
 
 	ts->model             = pdata->model;
 	ts->x_plate_ohms      = pdata->x_plate_ohms;
+	ts->fix               = pdata->fix;
 	ts->get_pendown_state = pdata->get_pendown_state;
 	ts->clear_penirq      = pdata->clear_penirq;
 
@@ -305,6 +332,8 @@ static int tsc2007_probe(struct i2c_client *client,
 
 	tsc2007_read_values(ts);
 
+	ts->workqueue = create_singlethread_workqueue("tsc2007");
+	INIT_WORK(&ts->report_worker, tsc2007_report_worker);
 	ts->irq = client->irq;
 
 	err = request_irq(ts->irq, tsc2007_irq, 0,
@@ -339,6 +368,7 @@ static int tsc2007_remove(struct i2c_client *client)
 	pdata = client->dev.platform_data;
 	pdata->exit_platform_hw();
 
+	destroy_workqueue(ts->workqueue);
 	free_irq(ts->irq, ts);
 	hrtimer_cancel(&ts->timer);
 	input_unregister_device(ts->input);

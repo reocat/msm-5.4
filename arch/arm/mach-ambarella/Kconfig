@@ -171,6 +171,17 @@ config SPI_AMBARELLA_SPIDEV_SSI1_EN0
 
 endmenu
 
+menu "I2C Configuration"
+
+config I2C_AMBARELLA_TSC2007
+	bool "Suport TSC2007"
+	default n
+	help
+
+	  If you are not sure, say N here.
+
+endmenu
+
 endmenu
 
 menu "Proc file system support"

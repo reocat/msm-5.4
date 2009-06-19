@@ -81,6 +81,12 @@ extern int ambarella_init_audio(void);
 
 extern void ambarella_gpio_set_valid(unsigned pin, int valid);
 extern void ambarella_register_spi_device(void);
+extern void ambarella_register_i2c_device(void);
+
+extern void ambarella_gpio_ack_irq(unsigned int irq);
+extern void ambarella_gpio_mask_irq(unsigned int irq);
+extern void ambarella_gpio_unmask_irq(unsigned int irq);
+extern int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type);
 
 #endif
 

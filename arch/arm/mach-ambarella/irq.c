@@ -33,7 +33,7 @@
 
 #include <mach/hardware.h>
 
-static void ambarella_gpio_ack_irq(unsigned int irq)
+void ambarella_gpio_ack_irq(unsigned int irq)
 {
 	unsigned int				girq;
 	u32					gpio_base;
@@ -64,7 +64,7 @@ static void ambarella_gpio_ack_irq(unsigned int irq)
 	amba_writel(gpio_base + GPIO_IC_OFFSET, (0x1 << girq));
 }
 
-static void ambarella_gpio_mask_irq(unsigned int irq)
+void ambarella_gpio_mask_irq(unsigned int irq)
 {
 	unsigned int				girq;
 	u32					gpio_base;
@@ -98,7 +98,7 @@ static void ambarella_gpio_mask_irq(unsigned int irq)
 	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
 }
 
-static void ambarella_gpio_unmask_irq(unsigned int irq)
+void ambarella_gpio_unmask_irq(unsigned int irq)
 {
 	unsigned int				girq;
 	u32					gpio_base;
@@ -132,7 +132,7 @@ static void ambarella_gpio_unmask_irq(unsigned int irq)
 	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
 }
 
-static int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
+int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 {
 	u32					base_addr;
 	u32					mask;

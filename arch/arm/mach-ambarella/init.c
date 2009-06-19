@@ -119,6 +119,7 @@ static void __init ambarella_init(void)
 	BUG_ON(errorCode != 0);
 
 	ambarella_register_spi_device();
+	ambarella_register_i2c_device();
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 }
