@@ -867,7 +867,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 
 				/* if there was an major error, log it. */
 				if (unlikely(status & ETH_TDES0_ES)) {
-					dev_err(&lp->ndev->dev,
+					dev_dbg(&lp->ndev->dev,
 						"%s: Transmit error, entry %d,"
 						" irq 0x%x, Tx status 0x%x\n",
 						__func__, entry,

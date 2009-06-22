@@ -1270,7 +1270,7 @@ static void ambarella_tsc2007_exit_platform_hw(void)
 
 static struct tsc2007_platform_data ambarella_tsc2007_pdata = {
 	.model = 2007,
-	.x_plate_ohms = 6,
+	.x_plate_ohms = 310,
 	.fix = {
 		.x_invert = 1,
 		.y_invert = 0,
