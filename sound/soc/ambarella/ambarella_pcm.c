@@ -161,15 +161,17 @@ static void dai_dma_handler(void *dev_id)
 			/* dai_tx_disable() */
 			amba_clrbits(I2S_INIT_REG, 0x4);
 			/* dai_fifo_rst() */
-			amba_setbits(I2S_INIT_REG, 0x1);
+			if(!amba_tstbits(I2S_INIT_REG, 0x6))
+				amba_setbits(I2S_INIT_REG, 0x1);
 		} else {
 			/* dai_rx_disable() */
 			amba_clrbits(I2S_INIT_REG, 0x2);
 			/* dai_fifo_rst() */
-			amba_setbits(I2S_INIT_REG, 0x1);
+			if(!amba_tstbits(I2S_INIT_REG, 0x6))
+				amba_setbits(I2S_INIT_REG, 0x1);
 		}
 
-		wake_up_interruptible(&prtd->wq);
+		wake_up(&prtd->wq);
 	}
 
 	//if (*rpt & 0x08000000)  /* Descriptor DMA operation done */
@@ -217,16 +219,20 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 				dai_tx_dma_handler, substream);
 		if (ret < 0)
 			return ret;
-		ambarella_dma_enable_irq(I2S_TX_DMA_CHAN, 
+		ret = ambarella_dma_enable_irq(I2S_TX_DMA_CHAN, 
 				dai_tx_dma_handler);
+		if (ret < 0)
+			return ret;
 		
 	} else {
 		ret = ambarella_dma_request_irq(I2S_RX_DMA_CHAN, 
 				dai_rx_dma_handler, substream);
 		if (ret < 0)
 			return ret;
-		ambarella_dma_enable_irq(I2S_RX_DMA_CHAN, 
+		ret = ambarella_dma_enable_irq(I2S_RX_DMA_CHAN, 
 				dai_rx_dma_handler);
+		if (ret < 0)
+			return ret;
 	}
 
 	spin_lock_irq(&prtd->lock);
@@ -281,7 +287,9 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 
 	if (prtd->dma_data) {
-		wait_event_interruptible_timeout(prtd->wq, (prtd->working == 0), 5 * HZ);
+		/* Wait DMA stop before disable DMA irq */
+		wait_event_timeout(prtd->wq, (prtd->working == 0), 3 * HZ);
+		/* Disable and free DMA irq */
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			ambarella_dma_disable_irq(I2S_TX_DMA_CHAN, 
 					dai_tx_dma_handler);
@@ -319,7 +327,7 @@ static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
 	dai_dma_stop(prtd);
 	spin_unlock_irq(&prtd->lock);
 	
-	wait_event_interruptible_timeout(prtd->wq, (prtd->working == 0), 5 * HZ);
+	wait_event_interruptible_timeout(prtd->wq, (prtd->working == 0), 3 * HZ);
 
 	return ret;
 }
