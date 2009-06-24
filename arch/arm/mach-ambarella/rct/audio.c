@@ -56,7 +56,6 @@ u32 get_audio_freq_hz(void)
 	return aud_sysclk;
 }
 
-
 #if (RCT_AUDIO_PLL_CONF_MODE == 2)
 static void rct_audio_pll_single_init(void)
 {
@@ -400,7 +399,25 @@ static const u32 audiopll_config_table[AUC_PLL_CLKRATE_NUM][MAX_MCLK_IDX_NUM][4]
 		{0x0001002c,	0x00010001,	0x78a86b73,	0x03051108},	//3.0720MHz
 		{0x00010029,	0x00010001,	0x77469dcb,	0x03061108},	//2.8224MHz
 		{0x0001002c,	0x00010001,	0x78a86b73,	0x03081108}	//2.048MHz
-	}
+	},
+
+	{	// SP_CLK PLL REFERENCE   =  65/1.001MHz, VCO = 800~850MHz
+		{0x0001000b,	0x00010001,	0x3ea8b3be,	0x05031108},	//18.432MHz
+		{0x00010010,	0x00010001,	0x42412464,	0x05021108},	//16.9344MHz
+		{0x00010016,	0x00010001,	0x3ea8b3be,	0x05021108},	//12.288MHz
+		{0x00010018,	0x00010001,	0x424ad4bc,	0x05021108},	//11.2896MHz
+		{0x00010016,	0x00010001,	0x3ea8b3be,	0x05031108},	//9.2160MHz
+		{0x00010018,	0x00010001,	0x424ad4bc,	0x05031108},	//8.4672MHz
+		{0x00010021,	0x00010001,	0x3ea8b3be,	0x05021108},	//8.192MHz
+		{0x00010021,	0x00010001,	0x3ea8b3be,	0x05031108},	//6.1440MHz
+		{0x00010024,	0x00010001,	0x424ad4bc,	0x05031108},	//5.6448MHz
+		{0x0001002c,	0x00010001,	0x3ea8b3be,	0x05031108},	//4.608MHz
+		{0x00010030,	0x00010001,	0x424ad4bc,	0x05031108},	//4.2336MHz
+		{0x00010021,	0x00010001,	0x3ea8b3be,	0x05051108},	//4.096MHz
+		{0x0001002c,	0x00010001,	0x3ea8b3be,	0x05051108},	//3.0720MHz
+		{0x00010029,	0x00010001,	0x3cba9237,	0x05061108},	//2.8224MHz
+		{0x0001002c,	0x00010001,	0x3ea8b3be,	0x05081108}	//2.048MHz
+	}	
 };
 
 static u32 get_audio_pll_fs_index(u32 pll_fs)
@@ -421,6 +438,7 @@ static u32 get_audio_pll_fs_index(u32 pll_fs)
 		case AUC_PLL_CLKRATE_1485:      return 12;
 		case AUC_PLL_CLKRATE_9069_D1:   return 13;
 		case AUC_PLL_CLKRATE_9069:      return 14;
+		case AUC_PLL_CLKRATE_6500_D1: return 15; 
 	}
 	printk("Unsupport Audio PLL Source CLK Rate");
 //	K_ASSERT(((0x1)==(0x0)));
@@ -841,7 +859,27 @@ static const u32 audiopll_config_table[AUC_PLL_CLKRATE_NUM][MAX_MCLK_IDX_NUM][4]
 	  	{0x00000038, 0x00000002, 0x0F01F102, 0x00002CE6},//3.0720MHz
 	  	{0x00000038, 0x00000002, 0x0D01F102, 0x0000F140},//2.8224MHz
 	  	{0x00000054, 0x00000002, 0x0F01F102, 0x00002CE6} //2.048MHz
-	}
+	},
+
+		// SP_CLK PLL REFERENCE = 65/1.001MHz
+	{
+		//VCO = 774.144~632.2176M, REFCLK_AU = 65/1.001MHz
+	  	{0x0000000A, 0x00000001, 0x0B01F102, 0x00005AA7},//18.432MHz
+	  	{0x0000000A, 0x00000001, 0x0A01F102, 0x00006E7D},//16.9344MHz
+	  	{0x0000000E, 0x00000001, 0x0A01F102, 0x000098E0},//12.288MHz
+	  	{0x0000000E, 0x00000001, 0x0901F102, 0x0000BC74},//11.2896MHz
+	  	{0x00000014, 0x00000001, 0x0B01F102, 0x00005AA7},//9.2160MHz
+	  	{0x00000014, 0x00000001, 0x0A01F102, 0x00006E7D},//8.4672MHz
+	  	{0x00000015, 0x00000001, 0x0A01F102, 0x000098E0},//8.192MHz
+	  	{0x0000001C, 0x00000001, 0x0A01F102, 0x000098E0},//6.1440MHz
+	  	{0x0000001C, 0x00000001, 0x0901F102, 0x0000BC74},//5.6448MHz
+	  	{0x0000002A, 0x00000001, 0x0B01F102, 0x0000EBFC},//4.608MHz
+	  	{0x0000002A, 0x00000001, 0x0A01F102, 0x0000F403},//4.2336MHz
+	  	{0x0000002A, 0x00000001, 0x0A01F102, 0x000098E0},//4.096MHz
+	  	{0x00000038, 0x00000001, 0x0A01F102, 0x000098E0},//3.0720MHz
+	  	{0x00000038, 0x00000001, 0x0901F102, 0x0000BC74},//2.8224MHz
+	  	{0x00000054, 0x00000001, 0x0A01F102, 0x000098E0} //2.048MHz
+	}	
 };
 
 static u32 get_audio_pll_fs_index(u32 pll_fs)
@@ -862,6 +900,7 @@ static u32 get_audio_pll_fs_index(u32 pll_fs)
 		case AUC_PLL_CLKRATE_1485:      return 12;
 		case AUC_PLL_CLKRATE_9069_D1:   return 13;
 		case AUC_PLL_CLKRATE_9069:      return 14;
+		case AUC_PLL_CLKRATE_6500_D1: return 15;
 	}
 	printk("Unsupport Audio PLL Source CLK Rate");
 //	K_ASSERT(((0x1)==(0x0)));
@@ -931,7 +970,6 @@ void rct_set_audio_pll_fs(u8 op_mode)
 	unl_cpu();
 #endif
 }
-
 #endif
 
 
@@ -996,5 +1034,4 @@ int __init ambarella_init_audio (void)
 
 	return errorCode;
 }
-
 

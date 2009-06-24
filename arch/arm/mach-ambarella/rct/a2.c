@@ -89,40 +89,14 @@ u32 get_core_bus_freq_hz(void)
 #endif
 }
 
-u32 get_bus_freq_hz(u32 pll_ctrl_reg)
-{
-	u32 n = readl(pll_ctrl_reg);
-	u32 x = (n & 0x00030000) >> 16;
-	u32 y = (n & 0x0000c000) >> 8;
-	u32 m = readl(SCALER_CORE_PRE_REG);
-
-	n = (n & 0xff000000) >> 24;
-
-	switch (x) {
-	case 0x0: x = 8; break;
-	case 0x1: x = 4; break;
-	case 0x2: x = 2; break;
-	case 0x3: x = 1; break;
-	}
-
-	switch (y) {
-	case 0x00: y = 8; break;
-	case 0x40: y = 4; break;
-	case 0x80: y = 2; break;
-	case 0xc0: y = 1; break;
-	}
-
-	return PLL_FREQ_HZ * n / 2 / x * y / m;
-}
-
 u32 get_dram_freq_hz(void)
 {
-	return get_bus_freq_hz(PLL_DDR_CTRL_REG);
+	return get_core_bus_freq_hz();
 }
 
 u32 get_idsp_freq_hz(void)
 {
-	return get_bus_freq_hz(PLL_IDSP_CTRL_REG);
+	return get_core_bus_freq_hz();
 }
 
 u32 get_vout_freq_hz(void)
@@ -281,9 +255,12 @@ u32 rct_boot_from(void)
 			rval |= BOOT_FROM_NAND;
 	} else {
 		/* USB boot */
-		rval |= BOOT_FROM_USB;
+
 		/* Force enabling flash access on USB boot */
-		rval |= BOOT_FROM_FLASH;
+		if ((val & SYS_CONFIG_BOOTMEDIA) != 0x0)
+			rval |= BOOT_FROM_NOR;
+		else
+			rval |= BOOT_FROM_NAND;
 	}
 
 	if ((val & SYS_CONFIG_BOOT_BYPASS) != 0x0) {
@@ -556,7 +533,11 @@ static struct vout_rct_obj_s G_vout_rct[] = {
 	{PLL_CLK_13_5MHZ,  	0x10019c0a, 0x0,    0x1, 0x10, 0x1},
 	{PLL_CLK_24_54MHZ,	0x0e019c02, 0x8ba2, 0x1, 0x8,  0x1},
 	{PLL_CLK_27D1001MHZ,  	0x0f02d902, 0xfbe9, 0x1, 0x8,  0x1},
-        {PLL_CLK_27MHZ,  	0x10019c0a, 0x0,    0x1, 0x8,  0x1},
+        {PLL_CLK_27MHZ,  	0x10019c0a, 0x0,    0x1, 0x8,  0x1},        
+	{PLL_CLK_26_9485MHZ,	0x0f00e902, 0xf832, 0x1, 0x2,  0x1}, /* - 1 LN at 60hz */
+	{PLL_CLK_26_9568MHZ,	0x0f00e902, 0xf972, 0x1, 0x2,  0x1}, /* - 1 LN at 50hz */
+	{PLL_CLK_27_0432MHZ,	0x1000e902, 0x068e, 0x1, 0x2,  0x1}, /* + 1 LN at 50hz */
+	{PLL_CLK_27_0514MHZ,  	0x1000e902, 0x07cc, 0x1, 0x2,  0x1}, /* + 1 LN at 60hz */	
         {PLL_CLK_27M1001MHZ,  	0x1000e902, 0x0418, 0x1, 0x2,  0x1}, /* 27*1.001 MHz */
         {PLL_CLK_54MHZ,  	0x1001d90a, 0x0,    0x1, 0x2,  0x2},
         {PLL_CLK_74_25D1001MHZ, 0x1503fa02, 0xfa60, 0x1, 0x8,  0x1}, /* 74.25/1.001 MHz */
@@ -1313,6 +1294,16 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
 
         clk     = get_so_freq_hz() / freq_hz;
         writel(CG_PWM_REG, (clk));
+}
+
+void rct_set_usbp_ctrl_bits(u32 value)
+{
+	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) | value);	
+}
+
+void rct_clear_usbp_ctrl_bits(u32 value)
+{
+	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) & ~value);
 }
 
 void rct_set_usb_ana_on(void)

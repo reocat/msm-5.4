@@ -58,16 +58,10 @@
 #define VIN_SUPPORT_SLVS_MLVS		0
 #endif
 
-#if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
-#define VIN_SUPPORT_LVDS_LVCMOS		1
-#else
-#define VIN_SUPPORT_LVDS_LVCMOS		0
-#endif
-
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
-#if (VIN_SUPPORT_LVDS_LVCMOS == 0)
+#if (VIN_DIRECT_DSP_INTERFACE == 0)
 
 #define S_CTRL_OFFSET			0x00
 #define S_STATUS_OFFSET			0x08

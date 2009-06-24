@@ -32,20 +32,78 @@
 #define __mem_pci(a)		(a)
 
 #ifndef __ASSEMBLER__
-// We do not lock IRQ in following func and they are not atomic
+
+#ifndef CONFIG_AMBARELLA_DEBUG_IO_ACCESS
 #define amba_readb(v)		__raw_readb(v)
 #define amba_readw(v)		__raw_readw(v)
 #define amba_readl(v)		__raw_readl(v)
 #define amba_writeb(v,d)	__raw_writeb(d,v)
 #define amba_writew(v,d)	__raw_writew(d,v)
 #define amba_writel(v,d)	__raw_writel(d,v)
+#else
+#include <linux/kernel.h>
+static inline u8 amba_readb_printk(const volatile void __iomem *vaddress)
+{
+	u8					data;
 
-#define amba_inb(p)		__raw_readb(io_p2v(p))
-#define amba_inw(p)		__raw_readw(io_p2v(p))
-#define amba_inl(p)		__raw_readl(io_p2v(p))
-#define amba_outb(p,d)		__raw_writeb(d,io_p2v(p))
-#define amba_outw(p,d)		__raw_writew(d,io_p2v(p))
-#define amba_outl(p,d)		__raw_writel(d,io_p2v(p))
+	data = __raw_readb(vaddress);
+	printk("%s: %p=0x%02x\n", __func__, vaddress, data);
+
+	return data;
+}
+static inline u16 amba_readw_printk(const volatile void __iomem *vaddress)
+{
+	u16					data;
+
+	data = __raw_readw(vaddress);
+	printk("%s: %p=0x%04x\n", __func__, vaddress, data);
+
+	return data;
+}
+static inline u32 amba_readl_printk(const volatile void __iomem *vaddress)
+{
+	u32					data;
+
+	data = __raw_readl(vaddress);
+	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
+
+	return data;
+}
+
+static inline void amba_writeb_printk(
+	const volatile void __iomem *vaddress, u8 data)
+{
+	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
+	__raw_writeb(data, vaddress);
+}
+static inline void amba_writew_printk(
+	const volatile void __iomem *vaddress, u16 data)
+{
+	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
+	__raw_writew(data, vaddress);
+}
+static inline void amba_writel_printk(
+	const volatile void __iomem *vaddress, u32 data)
+{
+	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
+	__raw_writel(data, vaddress);
+}
+
+#define amba_readb(v)		amba_readb_printk((const volatile void __iomem *)v)
+#define amba_readw(v)		amba_readw_printk((const volatile void __iomem *)v)
+#define amba_readl(v)		amba_readl_printk((const volatile void __iomem *)v)
+#define amba_writeb(v,d)	amba_writeb_printk((const volatile void __iomem *)v, d)
+#define amba_writew(v,d)	amba_writew_printk((const volatile void __iomem *)v, d)
+#define amba_writel(v,d)	amba_writel_printk((const volatile void __iomem *)v, d)
+
+#endif
+
+#define amba_inb(p)		amba_readb(io_p2v(p))
+#define amba_inw(p)		amba_readw(io_p2v(p))
+#define amba_inl(p)		amba_readl(io_p2v(p))
+#define amba_outb(p,d)		amba_writeb(io_p2v(p),d)
+#define amba_outw(p,d)		amba_writew(io_p2v(p),d)
+#define amba_outl(p,d)		amba_writel(io_p2v(p),d)
 
 #define amba_setbits(v, mask)	amba_writel((v),(amba_readl(v) | (mask)))
 #define amba_clrbits(v, mask)	amba_writel((v),(amba_readl(v) & ~(mask)))

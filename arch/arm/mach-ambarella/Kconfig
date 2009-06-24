@@ -69,6 +69,12 @@ config ARCH_AMBARELLA_A3
 	select ARCH_AMBARELLA_CPU_ARM9
 	default n
 
+config ARCH_AMBARELLA_A5
+	bool
+	select MACH_AMBARELLA
+	select ARCH_AMBARELLA_CPU_ARM9
+	default n
+
 config ARCH_AMBARELLA_A5M
 	bool
 	select MACH_AMBARELLA
@@ -117,6 +123,16 @@ config AMBARELLA_CHIP_A3
 	select GENERIC_CLOCKEVENTS
 	help
 	  Say Y here if you are using Ambarella A3.
+
+config AMBARELLA_CHIP_A5
+	bool "Ambarella A5"
+	select ARCH_AMBARELLA_A5
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
+	select GENERIC_TIME
+	select GENERIC_CLOCKEVENTS
+	help
+	  Say Y here if you are using Ambarella A5.
 
 config AMBARELLA_CHIP_A5M
 	bool "Ambarella A5M"

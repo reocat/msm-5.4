@@ -21,13 +21,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y += rct.o fio.o config.o irq.o timer.o gpio.o dma.o adc.o pwm.o fb.o pm.o
+obj-y						+= rct.o fio.o irq.o timer.o
+obj-y						+= gpio.o dma.o adc.o pwm.o pm.o
+obj-y						+= init.o config.o fb.o
 
 obj-$(CONFIG_CPU_FREQ_AMBARELLA)		+= cpu-ambarella.o
-
-# Create your own init.c if necessary
-obj-$(CONFIG_AMBARELLA_CHIP_A2)			+= init.o
-obj-$(CONFIG_AMBARELLA_CHIP_A2S)		+= init.o
-obj-$(CONFIG_AMBARELLA_CHIP_A2M)		+= init.o
-obj-$(CONFIG_AMBARELLA_CHIP_A3)			+= init.o
 

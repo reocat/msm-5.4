@@ -76,8 +76,6 @@
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
-#define GPIO_BANK_SIZE			32
-#define ARCH_NR_GPIOS			(GPIO_INSTANCES * GPIO_BANK_SIZE)
 
 #define GPIO_DATA_OFFSET		0x00
 #define GPIO_DIR_OFFSET			0x04
@@ -317,10 +315,11 @@
 /* (CHIP_REV == A2S/A2M) */
 #define IDC_BUS_HDMI	GPIO(87)
 
-#ifndef __ASSEMBLER__
+#define GPIO_BANK_SIZE			32
+#define ARCH_NR_GPIOS			(GPIO_INSTANCES * GPIO_BANK_SIZE)
 
+#ifndef __ASSEMBLER__
 #include <asm-generic/gpio.h>
-#include <mach/irqs.h>
 
 #define gpio_get_value	__gpio_get_value
 #define gpio_set_value	__gpio_set_value

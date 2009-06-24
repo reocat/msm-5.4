@@ -31,11 +31,18 @@
 
 #define A1	1000
 #define A2	2000
+
 #define A2S	2100
 #define A2M	2200
 #define A2Q	2300
 #define A3	3000
+
 #define A5	5000
+#define A530	5030
+#define A550	5050
+#define A570	5070
+#define A580	5080
+
 #define A5M	5100
 #define A6	6000
 
