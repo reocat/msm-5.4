@@ -1,8 +1,9 @@
 /**
- * system/src/peripheral/rct/a2s.c
+ * system/src/peripheral/rct/a5.c
  *
  * History:
- *    2008/05/13 - [Allen Wang] created file
+ *    2005/07/25 - [Charles Chiou] created file
+ *    2008/02/19 - [Allen Wang] changed to use capabilities and chip ID
  *
  * Copyright (C) 2004-2008, Ambarella, Inc.
  *
@@ -15,7 +16,7 @@
 //#define VOUT_PLL_DEBUG
 #ifdef VOUT_PLL_DEBUG
 static int sp_retry = 0;
-static int a2_retry = 0;
+static int a5_retry = 0;
 #endif
 
 #define PLL_VIDEO               0
@@ -44,6 +45,46 @@ void rct_pll_init(void)
 {
 	u32 val;
 
+	/* Initialized PLL setting */
+	/* PLL CTRL3 */
+	amba_outl(0x70170104, 0x00068300);
+	amba_outl(0x7017010c, 0x00068300);
+	amba_outl(0x70170114, 0x00068300);
+	amba_outl(0x70170120, 0x00068300);
+/*	amba_outl(0x7017012c, 0x00068300); */
+	amba_outl(0x70170134, 0x00068300);
+	amba_outl(0x70170140, 0x00068300);
+	amba_outl(0x7017014c, 0x00068300);
+	amba_outl(0x70170154, 0x00068300);
+	amba_outl(0x701701bc, 0x00068300);
+
+	/* PLL CTRL2 */
+	amba_outl(0x70170100, 0x3f710000);
+	amba_outl(0x70170108, 0x3f710000);
+	amba_outl(0x70170110, 0x3f710000);
+	amba_outl(0x7017011c, 0x3f710000);
+/*	amba_outl(0x70170124, 0x3f710000); */
+/*	amba_outl(0x70170130, 0x3f710000); */
+/*	amba_outl(0x7017013c, 0x3f710000); */
+	amba_outl(0x70170144, 0x3f710000);
+	amba_outl(0x70170150, 0x3f710000);
+	amba_outl(0x701701b8, 0x3f710000);
+
+	/* IDSP pll ctrl reg */
+
+	/* If the constant is 0xffffffff, then we use the POWER_ON_CONFIG
+	   default */
+	if ((EXPECT_PLL_IDSP_VAL != 0xffffffff) &&
+	/* Check if the PLL_IDSP_CTR register value equals to the constant
+	   that we expect. If not, then we program it with the desired
+	   value and trigger a chip reset */
+	    ((amba_inl(0x701700e4) & 0xfffffffe) !=
+	     (EXPECT_PLL_IDSP_VAL & 0xfffffffe))) {
+		amba_outl(0x701700e4, (EXPECT_PLL_IDSP_VAL & 0xfffffffe));
+		do_some_delay();
+		amba_outl(0x701700e4, (EXPECT_PLL_IDSP_VAL | 0x00000001));
+	}
+
 	/*
 	 * hacked video PLL
 	 */
@@ -61,42 +102,100 @@ void rct_pll_init(void)
 
 	/* pll ctrl reg (int, sdiv, sout) */
 	amba_outl(0x70170014, 0x0a130104);
+	do_some_delay();
 	amba_outl(0x70170014, 0x0a130105);
 	do_some_delay();
 
+	/* Check video clock is locked or not */
+	val = amba_inl(0x60008800);
+
 	/*
-	 * hacked sensor PLL
+	 * hacked video  (2) PLL
 	 */
-	/* sensor ctrl2 */
-	amba_outl(0x7017011c, 0x3f770000);
+	/* video ctrl2 */
+	amba_outl(0x7017013c, 0x3f770000);
 
 	/* scalers */
-	amba_outl(0x70170030, 0x00010005);
-	amba_outl(0x70170030, 0x00010004);
+	amba_outl(0x701700c8, 0x00010002);
+	amba_outl(0x701700c8, 0x00010001);
 
-	/* post-scalers, write a value different than default(0x10001),
-	   then write back */
-	amba_outl(0x7017004c, 0x10002);
-	amba_outl(0x7017004c, 0x10001);
+	/* pll ctrl reg (int, sdiv, sout) */
+	amba_outl(0x701700c0, 0x0a130104);
+	do_some_delay();
+	amba_outl(0x701700c0, 0x0a130105);
+	do_some_delay();
+
+	/* Check video clock is locked or not */
+	val = amba_inl(0x60011800);
+
+	/* gclk_hdmi = 10 * gclk_vo when 0x7017008 bit-0 = 0*/
+        writel(PLL_HDMI_CTRL_REG,    0x09011100);
+        writel(PLL_HDMI_FRAC_REG,    0x0);
+	writel(SCALER_HDMI_POST_REG, 0x0010001);
+	writel(PLL_HDMI_CTRL_REG,    0x09011101);
+	writel(SCALER_HDMI_PRE_REG,  0x0010001);
+
+	/* gclk_vin init */
+	writel(PLL_VIN_CTRL_REG,    0x17053100);
+        writel(PLL_VIN_FRAC_REG,    0x0);
+	writel(SCALER_VIN_PRE_REG,  0x0010010);
+	writel(PLL_VIN_CTRL_REG,    0x17053101);
+	writel(SCALER_VIN_POST_REG, 0x0010002);
+
+	/*
+	 * Settings for 12.288MHz audio clock
+	 */
+ 	/* prescalers */
+	amba_outl(0x70170060, 0x00010002);
+	amba_outl(0x70170060, 0x00010001);
+
+	/* ctrl2 & ctrl3 */
+	amba_outl(0x70170124, 0x3f770000);
+	amba_outl(0x7017012c, 0x00069300);
+
+	/* pll ctrl reg (int, sdiv & sout) */
+	amba_outl(0x70170054, 0x13031118);
+
+	/* frac reg */
+	amba_outl(0x70170058, 0x65f1e43);
+	do_some_delay();
+
+	amba_outl(0x70170054, 0x13031108);
+	do_some_delay();
+
+	/* postscalers */
+	amba_outl(0x7017005c, 0x00010011);//fake
+	do_some_delay();
+	amba_outl(0x7017005c, 0x00010016);
+	do_some_delay();
+
+	amba_outl(0x70170054, 0x13031109);
+
+	amba_outl(0x70180094, 0x80000000);  /* Reset AORC */
 
 	/*
 	 * Miscellaneous...
 	 */
+	amba_outl(0x7017004c, 0x10002);  /* SO PLL prescaler */
+  	amba_outl(0x7017004c, 0x10001);
 	amba_outl(0x70170030, 0x10003);
   	amba_outl(0x70170030, 0x10006);
   	amba_outl(0x70170024, 0x0b031100);
   	do_some_delay();
   	amba_outl(0x70170024, 0x0b031101);
 
-	/* Check video clock is locked or not */
-	val = amba_inl(0x60008800);
+	/* Power control */
+	amba_outl(0x70170098, 0x20);      	/* Sensor PAD */
 
-	/*
-	 * init ms PLL
-	 */
-	writel(SCALER_MS_REG,
-	       (readl(SCALER_MS_REG) & 0xffff0000) | 0x1);
-	writel(CG_DVEN_REG, 0);
+	amba_outl(0x7011801c, 0xff);
+
+	/* Init SD pll */
+	writel(SCALER_SD48_REG,
+	       (readl(SCALER_SD48_REG) & 0xffff0000) | (0x1));
+
+	/* Margin registers to have correct speed selection of vDSP' SRAM. */
+	amba_outl(0x70150108, 0x01000000);
+	amba_outl(0x70160100, 0x01000000);
 }
 
 /**
@@ -104,11 +203,11 @@ void rct_pll_init(void)
  */
 void rct_alan_zhu_magic_loop(int clk_chk)
 {
-	u8 reg = readb(PLL_LOCK_REG) & clk_chk;
+	u16 reg = readw(PLL_LOCK_REG) & clk_chk;
 	register u32 loop_cnt = (get_core_bus_freq_hz() / 500);
 
 	while ((reg == 0) && loop_cnt) {
-                reg = readb(PLL_LOCK_REG) & clk_chk;
+                reg = readw(PLL_LOCK_REG) & clk_chk;
                 loop_cnt--;
 	}
 
@@ -134,14 +233,61 @@ u32 get_ahb_bus_freq_hz(void)
 #endif
 }
 
-static u32 get_core_pll_freq(u32 z, u32 f, u32 c)
+u32 get_core_bus_freq_hz(void)
 {
-	u32 intprog, sout, sdiv;
+#if     defined(__FPGA__)
+	return 48000000;
+#else
+
+#if 0	/* A5-A0 */
+	u32 z = (readl(PLL_CORE_CTRL3_REG) & 0x40) >> 6;
+	u32 f = readl(PLL_CORE_FRAC_REG);
+	u32 c = readl(PLL_CORE_CTRL_REG);
+	u32 s = readl(SCALER_CORE_PRE_REG);
+#else	/* A5-A1 */
+	/* 0, 3 and 6 bit are reserved */
+	u32 z = (readl(PLL_CORE_CTRL3_REG) & 0x40) >> 6;
+	u32 f = readl(PLL_CORE_FRAC_REG);
+	/* 12 ~ 19 bit are reserved */
+	u32 c = (readl(PLL_CORE_CTRL_REG) & 0xfff00fff);
+#endif	/* A5-Ax */
+
+	u32 intprog;
+
+	f = PLL_FRAC_VAL(f);
+	intprog = PLL_CTRL_INTPROG(c);
+
+	if (f != 0) {
+		/* If fraction part, return 0 to be a warning. */
+		return 0;
+	}
+
+	intprog += 1 + z;
+
+	/*
+	 * PLL_FREQ_HZ * intprog * sdiv /sout / 2
+	 * sdiv = 1
+	 * sout = 2
+	 */
+	return PLL_FREQ_HZ * intprog / 2 / 2;
+#endif
+}
+
+static u32 get_idsp_dram_pll_freq(u32 z, u32 f, u32 c, u32 s)
+{
+	u32 intprog, sout, sdiv, p, n;
 
 	f = PLL_FRAC_VAL(f);
 	intprog = PLL_CTRL_INTPROG(c);
 	sout = PLL_CTRL_SOUT(c);
 	sdiv = PLL_CTRL_SDIV(c);
+	p = SCALER_PRE_P(s);
+	n = SCALER_PRE_N(s);
+
+	if (p != 1 && p != 2 && p != 3 && p != 5 && p != 7 &&
+	    p != 9 && p != 11 && p != 13 && p != 17 && p != 19 &&
+	    p != 23 && p != 29 && p != 32)
+		p = 2;
 
 	if (f != 0) {
 		/* If fraction part, return 0 to be a warning. */
@@ -152,30 +298,27 @@ static u32 get_core_pll_freq(u32 z, u32 f, u32 c)
 	sdiv++;
 	sout++;
 
-	return PLL_FREQ_HZ * intprog * sdiv / sout / 2;
-}
-
-u32 get_core_bus_freq_hz(void)
-{
-#if     defined(__FPGA__)
-	return 48000000;
-#else
-	u32 z = (readl(PLL_CORE_CTRL3_REG) & 0x40) >> 6;
-	u32 f = readl(PLL_CORE_FRAC_REG);
-	u32 c = readl(PLL_CORE_CTRL_REG);
-
-	return get_core_pll_freq(z, f, c);
-#endif
+	return PLL_FREQ_HZ * intprog * sdiv / sout / p / n / 2;
 }
 
 u32 get_dram_freq_hz(void)
 {
-	return get_core_bus_freq_hz();
+	u32 z = (readl(PLL_DDR_CTRL3_REG) & 0x40) >> 6;
+	u32 f = readl(PLL_DDR_FRAC_REG);
+	u32 c = readl(PLL_DDR_CTRL_REG);
+	u32 s = readl(SCALER_CORE_PRE_REG);
+
+	return get_idsp_dram_pll_freq(z, f, c, s);
 }
 
 u32 get_idsp_freq_hz(void)
 {
-	return get_core_bus_freq_hz();
+	u32 z = (readl(PLL_IDSP_CTRL3_REG) & 0x40) >> 6;
+	u32 f = readl(PLL_IDSP_FRAC_REG);
+	u32 c = readl(PLL_IDSP_CTRL_REG);
+	u32 s = readl(SCALER_CORE_PRE_REG);
+
+	return get_idsp_dram_pll_freq(z, f, c, s);
 }
 
 u32 get_vout_freq_hz(void)
@@ -229,7 +372,7 @@ u32 get_ssi_freq_hz(void)
 #if	defined(__FPGA__)
 	return get_apb_bus_freq_hz();
 #else
-	return (get_apb_bus_freq_hz() / readl(CG_SSI_REG));
+	return (get_apb_bus_freq_hz() / (readl(CG_SSI_REG)));
 #endif
 }
 
@@ -265,7 +408,7 @@ u32 get_host_freq_hz(void)
 #if	defined(__FPGA__)
 	return get_apb_bus_freq_hz();
 #else
-	return get_apb_bus_freq_hz();
+	return (get_apb_bus_freq_hz() / readl(CG_HOST_REG));
 #endif
 }
 
@@ -277,17 +420,6 @@ u32 get_sd_freq_hz(void)
 	u32 scaler = readl(SCALER_SD48_REG) & SD48_INTEGER_DIV;
 	return (get_core_bus_freq_hz() * 2 / scaler);
 #endif
-}
-
-u32 get_sd_scaler(void)
-{
-	return (readl(SCALER_SD48_REG))& 0x0000ffff;
-}
-
-u32 get_ms_freq_hz(void)
-{
-	u32 scaler = readl(SCALER_MS_REG) & MS_INTEGER_DIV;
-	return (get_core_bus_freq_hz() * 2 / scaler);
 }
 
 /**
@@ -312,17 +444,26 @@ u32 get_spclk_freq_hz(void)
 
 void get_stepping_info(int *chip, int *major, int *minor)
 {
-	*chip  = 0x2;
-	*major = 0x1;
-	*minor = 0x0;
-}
+#if	!defined(__FPGA__)
+	u32 val = readl(HOST_AHB_EARLY_TERMINATION_INFO);
+	writel(HOST_AHB_EARLY_TERMINATION_INFO, 0x0);
 
-/* FIRMWARE_CONTAINER_TYPE */
-#define SDMMC_TYPE_AUTO		0x0
-#define SDMMC_TYPE_SD		0x1
-#define SDMMC_TYPE_SDHC		0x2
-#define SDMMC_TYPE_MMC		0x3
-#define SDMMC_TYPE_MOVINAND	0x4
+	if (val == readl(HOST_AHB_EARLY_TERMINATION_INFO)) {
+		*chip  = (val         & 0xff);
+		*major = ((val >>  8) & 0xff);
+		*minor = ((val >> 16) & 0xff);
+	} else {
+		writel(HOST_AHB_EARLY_TERMINATION_INFO, val);
+		*chip  = 0x1;
+		*major = 0x0;
+		*minor = 0x0;
+	}
+#else
+	*chip  = 0x0;
+	*major = 0x0;
+	*minor = 0x0;
+#endif
+}
 
 u32 rct_boot_from(void)
 {
@@ -334,68 +475,12 @@ u32 rct_boot_from(void)
 			rval |= BOOT_FROM_NOR;
 		else
 			rval |= BOOT_FROM_NAND;
-	}
-
-	if ((val & SYS_CONFIG_SPI_BOOT) != 0x0) {
-		rval |= BOOT_FROM_SPI;
-#if defined(FIRMWARE_CONTAINER_TYPE)
-#if (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SD)
-		rval |= BOOT_FROM_SD;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SDHC)
-		rval |= BOOT_FROM_SDHC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MMC)
-		rval |= BOOT_FROM_MMC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MOVINAND)
-		rval |= BOOT_FROM_MOVINAND;
-#else
-		if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-		    ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_MOVINAND;
-		else if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) == 0x0))
-			rval |= BOOT_FROM_SD;
-		else if (((val & SYS_CONFIG_RDY_PL)   == 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_SDHC;
-		else
-			rval |= BOOT_FROM_MMC;
-#endif	/* FIRMWARE_CONTAINER_TYPE */
-#endif	/* FIRMWARE_CONTAINER_TYPE */
-	}
-
-	if (((val & SYS_CONFIG_FLASH_BOOT) == 0x0) &&
-		((val & SYS_CONFIG_SPI_BOOT) == 0x0)) {
-		/* USB boot */
-
+	} else {
 		/* Force enabling flash access on USB boot */
-#if defined(FIRMWARE_CONTAINER)
-#if (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SD)
-		rval |= BOOT_FROM_SD;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SDHC)
-		rval |= BOOT_FROM_SDHC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MMC)
-		rval |= BOOT_FROM_MMC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MOVINAND)
-		rval |= BOOT_FROM_MOVINAND;
-#else
-		if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-		    ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_MOVINAND;
-		else if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) == 0x0))
-			rval |= BOOT_FROM_SD;
-		else if (((val & SYS_CONFIG_RDY_PL)   == 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_SDHC;
-		else
-			rval |= BOOT_FROM_MMC;
-#endif	/* FIRMWARE_CONTAINER_TYPE */
-#else
 		if ((val & SYS_CONFIG_BOOTMEDIA) != 0x0)
 			rval |= BOOT_FROM_NOR;
 		else
 			rval |= BOOT_FROM_NAND;
-#endif	/* FIRMWARE_CONTAINER */
 	}
 
 	if ((val & SYS_CONFIG_BOOT_BYPASS) != 0x0) {
@@ -543,21 +628,25 @@ void rct_set_sd_pll(void)
 		writel(SCALER_SD48_REG,
 			(readl(SCALER_SD48_REG) & 0xffff0000) |
 			(DUTY_CYCLE_CONTRL_ENABLE | 0x8));
-	} else if (clk >= 135000000) {
-		/* Core == 135MHz */
-		/* For example: Sdclk = 135 * 2 / 5 = 54 Mhz */
+	} else if (clk >= 121500000) {
+		/* Sdclk = core_freq * 2 / Int_div */
+		/* For example: Sdclk = 121.5 * 2 / 6 = 40.5 Mhz */
 		writel(SCALER_SD48_REG,
 			(readl(SCALER_SD48_REG) & 0xffff0000) |
 			(DUTY_CYCLE_CONTRL_ENABLE | 0x6));
 	} else {
-		/* Core below or equal to 135MHz */
+		/* Core below 121.5 MHz */
 		/* Sdclk = core_freq * 2 / Int_div */
 		/* For example: Sdclk = 108 * 2 / 5 = 43.2 Mhz */
-		/* For example: Sdclk = 121.5 * 2 / 5 = 48.6 Mhz */
 		writel(SCALER_SD48_REG,
 			(readl(SCALER_SD48_REG) & 0xffff0000) |
 			(DUTY_CYCLE_CONTRL_ENABLE | 0x5));
 	}
+}
+
+u32 get_sd_scaler()
+{
+	return (readl(SCALER_SD48_REG))& 0x0000ffff;
 }
 
 int rct_change_sd_pll(u32 scaler)
@@ -588,85 +677,21 @@ void rct_set_ssi_pll(void)
 	writel(CG_SSI_REG, get_apb_bus_freq_hz() / 13500000);
 }
 
-void rct_set_ms_pll(void)
+u32 get_ssi2_freq_hz(void)
 {
-#define DUTY_CYCLE_CONTRL_ENABLE	0x01000000 /* Duty cycle correction */
-
-	register u32 clk;
-
-	/* Program the MS clock generator */
-	clk = get_core_bus_freq_hz();
-
-	if (clk >= 243000000) {
-		/* Core == 243MHz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0x18));
-	} else if (clk >= 216000000) {
-		/* Core == 216MHz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0x16));
-	} else if (clk >= 135000000) {
-		/* Core == 135MHz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0xb));
-	} else {
-		/* Core below or equal to 135MHz */
-		/* msclk = core_freq * 2 / Int_div */
-		/* For example: msclk = 108 * 2 / 16 = 13.5 Mhz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0x10));
-	}
+	return (get_apb_bus_freq_hz() / (readl(CG_SSI2_REG) & 0xffffff));
 }
 
-void rct_enable_ms(void)
+void rct_set_ssi2_pll(void)
 {
-	writel(MS_EN_REG, 0x1);
+	/* 25 bits, bit-24 = 1 enable ssi2_clk */
+	writel(CG_SSI2_REG,
+	       ((0x1 << 24)  | (get_apb_bus_freq_hz() / 13500000)));
 }
 
-void rct_disable_ms(void)
+void rct_set_host_pll(u8 clk_div)
 {
-	writel(MS_EN_REG, 0x0);
-}
-
-void rct_set_ms_delay(void)
-{
-	u8 ms_dly_ctr = readl(MS_DELAY_REG);
-
-#ifdef MS_READ_TIME_ADJUST
-	ms_dly_ctr &= 0x0fffffff
-	ms_dly_ctr |= (MS_READ_TIME_ADJUST << 30);
-#endif
-
-#ifdef MS_DATA_OUTPUT_DELAY
-	ms_dly_ctr &= 0xf0ffffff
-	ms_dly_ctr |= (MS_DATA_OUTPUT_DELAY << 25);
-#endif
-
-#ifdef MS_DATA_INPUT_DELAY
-	ms_dly_ctr &= 0xfff0ffff
-	ms_dly_ctr |= (MS_DATA_INPUT_DELAY << 17);
-#endif
-
-#ifdef MS_SCLK_OUTPUT_DELAY
-	ms_dly_ctr &= 0xfffff0ff
-	ms_dly_ctr |= (MS_SCLK_OUTPUT_DELAY << 9);
-#endif
-
-	writel(MS_DELAY_REG, ms_dly_ctr);
-}
-
-void rct_set_dven_clk(u32 freq_hz)
-{
-	u32 ref_clk = 27000000;
-	u32 val;
-
-	val = ref_clk / freq_hz;
-
-	writel(CG_DVEN_REG, val);
+	writel(CG_HOST_REG, clk_div);
 }
 
 /**
@@ -678,37 +703,38 @@ struct so_rct_obj_s {
 	u32    	sensor_frac;
 	u32    	scaler_pre;
 	u32    	scaler_post;
+	u32	frac_100khz; 	/* Frac PLL change for 100KHz */
 };
 
 /**
  * RCT register settings for SO with Fref = 27MHz
  */
 static struct so_rct_obj_s G_so_rct[] = {
-	/* Freq     		Ctrl 	    FRAC    PRE  POST */
-        {PLL_CLK_27MHZ,  	 0x09111100, 0x0,        0x10001, 0x1000a},
-	{PLL_CLK_10MHZ, 	 0x13111100, 0x00000000, 0x10001, 0x10036},
-	{PLL_CLK_13D1001MHZ,	 0x16020108, 0x1688AE5D, 0x10001, 0x10010},
-	{PLL_CLK_13MHZ,		 0x16020108, 0x1C71C71D, 0x10001, 0x10010},
+	/* Freq     		 Ctrl 	     FRAC    	 PRE  	  
+						POST 	FRAC_100KHZ */
+        {PLL_CLK_27MHZ,  	 0x0b131100, 0x0,        0x10001, 0x10006},
+	{PLL_CLK_10D1001MHZ, 	 0x0e121108, 0xfae296e3, 0x10001, 0x1001b},
+	{PLL_CLK_10MHZ, 	 0x09111100, 0x00000000, 0x10001, 0x1001b},
         {PLL_CLK_13_5D1001MHZ, 	 0x0f131108, 0xfbe878b8, 0x10001, 0x10010},
 	{PLL_CLK_13_5MHZ,  	 0x0f131100, 0x0,    	 0x10001, 0x10010},
 	{PLL_CLK_22_5MHZ,  	 0x09153100, 0x0, 	 0x10001, 0x10008},
  	{PLL_CLK_24D1001MHZ,  	 0x0d131108, 0x35406b4d, 0x10001, 0x10008},
-	{PLL_CLK_24MHZ,  	 0x1f110100, 0x0, 	 0x10001, 0x10012},
+	{PLL_CLK_24MHZ,  	 0x0f111100, 0x0, 	 0x10001, 0x10012},
+	{PLL_CLK_24M1001MHZ, 	 0x0f111108, 0x04189375, 0x10001, 0x10012},
 	{PLL_CLK_24_3MHZ,  	 0x0d131108, 0x66666667, 0x10001, 0x10008},
         {PLL_CLK_25MHZ,  	 0x0e131108, 0xd097b425, 0x10001, 0x10008},
-	{PLL_CLK_27D1001MHZ,  	 0x0f110108, 0xfbe878b6, 0x10001, 0x10008},
-	{PLL_CLK_26_9485MHZ,	 0x09111108, 0xfb1f0a87, 0x10001, 0x1000a}, /* - 1 LN at 60hz */
-	{PLL_CLK_26_9568MHZ,	 0x09111108, 0xfbe76c8b, 0x10001, 0x1000a}, /* - 1 LN at 50hz */
-	{PLL_CLK_27_0432MHZ,	 0x09111108, 0x04189375, 0x10001, 0x1000a}, /* + 1 LN at 50hz */
-	{PLL_CLK_27_0514MHZ,  	 0x09111108, 0x04dfa5ee, 0x10001, 0x1000a}, /* + 1 LN at 60hz */
-	{PLL_CLK_27M1001MHZ,  	 0x09111108, 0x04189375, 0x10001, 0x1000a}, /* 27*1.001 MHz */
+	{PLL_CLK_27D1001MHZ,  	 0x0f131108, 0xfbe878b6, 0x10001, 0x10008},
+        {PLL_CLK_27M1001MHZ,  	 0x0f131108, 0x04189375, 0x10001, 0x10008}, /* 27*1.001 MHz */
+        {PLL_CLK_30MHZ,		 0x09113108, 0x0, 	 0x10001, 0x10012},
         {PLL_CLK_36D1001MHZ, 	 0x14131108, 0x4fe0a0f3, 0x10001, 0x10008}, /* 36/1.001 MHz */
         {PLL_CLK_36MHZ,  	 0x0b122100, 0x0, 	 0x10001, 0x10009},
+        {PLL_CLK_36_20MHZ,       0x0b122108, 0x10e10cf6, 0x10001, 0x10009},        
+        {PLL_CLK_36_23MHZ,       0x0b122108, 0x13f7ceda, 0x10001, 0x10009},
         {PLL_CLK_37_125D1001MHZ, 0x0b122108, 0x5cd5cd5d, 0x10001, 0x10009},
         {PLL_CLK_37_125MHZ,  	 0x0a152100, 0x0,        0x10001, 0x10004},
-	{PLL_CLK_42D1001MHZ,  	 0x0d121108, 0xfc6b699f, 0x10001, 0x10006},
-	{PLL_CLK_42MHZ,  	 0x0d121100, 0x0, 	 0x10001, 0x10006},
-	{PLL_CLK_48D1001MHZ,  	 0x1f110108, 0xf7d0f16c, 0x10001, 0x10009},
+        {PLL_CLK_42D1001MHZ,  	 0x0d121108, 0xfc6b699f, 0x10001, 0x10006},
+        {PLL_CLK_42MHZ,  	 0x0d121100, 0x0, 	 0x10001, 0x10006},
+        {PLL_CLK_48D1001MHZ,  	 0x1f110108, 0xf7d0f16c, 0x10001, 0x10009},
         {PLL_CLK_48MHZ,  	 0x1f110100, 0x0, 	 0x10001, 0x10009},
         {PLL_CLK_48_6MHZ,  	 0x1f110108, 0x66666667, 0x10001, 0x10009},
         {PLL_CLK_49_5D1001MHZ,   0x20110108, 0xf78f78f7, 0x10001, 0x10009}, /* 49.5/1.001 MHz */
@@ -717,6 +743,12 @@ static struct so_rct_obj_s G_so_rct[] = {
         {PLL_CLK_54M1001MHZ,  	 0x0f111108, 0x04189375, 0x10001, 0x10008}, /* 54*1.001 MHz */
         {PLL_CLK_60MHZ,		 0x09113100, 0x0, 	 0x10001, 0x10009},
         {PLL_CLK_60M1001MHZ,	 0x09113108, 0x028f5c29, 0x10001, 0x10009}, /* 60*1.001 MHz */
+        {PLL_CLK_60_05MHz,	 0x09113108, 0x0253c6e0, 0x10001, 0x10009},
+        {PLL_CLK_60_16MHZ,	 0x09113108, 0x07087088, 0x10001, 0x10009},
+        {PLL_CLK_60_29MHZ,       0x09113108, 0x0c31a1f2, 0x10001, 0x10009},
+        {PLL_CLK_60_33MHZ,	 0x09113108, 0x0e10e023, 0x10001, 0x10009},                
+        {PLL_CLK_60_35MHZ,	 0x09113108, 0x0ec41dd2, 0x10001, 0x10009},
+        {PLL_CLK_60_39MHZ,	 0x09113108, 0x10a3d70b, 0x10001, 0x10009},
 	{PLL_CLK_64D1001MHZ,  	 0x0a113108, 0xa7f05079, 0x10001, 0x10009}, /* 64/1.001 MHz */
 	{PLL_CLK_64MHZ,    	 0x0a113108, 0xaaaaaaaa, 0x10001, 0x10009},
         {PLL_CLK_74_25D1001MHZ,  0x0a133108, 0xfd2fd2fd, 0x10001, 0x10004}, /* 74.25/1.001 MHz */
@@ -747,6 +779,7 @@ struct vout_rct_obj_s {
 	u32    	scaler_pre;
 	u32    	scaler_post;
 	u32     os_ratio;
+	u32	frac_100khz; /* Frac PLL change for 100KHz */
 };
 
 /**
@@ -754,24 +787,29 @@ struct vout_rct_obj_s {
  */
 static struct vout_rct_obj_s G_vout_rct[] = {
 
-	/* Freq     		Ctrl 	    FRAC        PRE  POST  0S_RATIO*/
-	/* VCO = 10* Fvout for HDMI */
-        {PLL_CLK_27MHZ,  	0x09111100, 0x0,        0x10001, 0x1000a, 0x10001},
-	{PLL_CLK_13_5D1001MHZ, 	0x0e110108, 0xfbe878b7, 0x10001, 0x10010, 0x10001},
-	{PLL_CLK_13_5MHZ,  	0x0b111100, 0x0,    	0x10001, 0x10018, 0x10001},
+	/* Freq     		Ctrl 	    FRAC        PRE  	 POST  	  0
+						S_RATIO 	FRAC_100KHZ */
+        {PLL_CLK_27MHZ,  	0x0b131100, 0x0,        0x10001, 0x10006, 0x10001},
+	{PLL_CLK_13_5D1001MHZ, 	0x0f131108, 0xfbe878b8, 0x10001, 0x10010, 0x10001},
+	{PLL_CLK_13_5MHZ,  	0x0f131100, 0x0,    	0x10001, 0x10010, 0x10001},
+	{PLL_CLK_18_44MHz,	0x0a011108, 0xed6a9264,	0x10001, 0x10010, 0x10001},
 	{PLL_CLK_24_54MHZ,	0x0e131108, 0x8ba1f4b2, 0x10001, 0x10008, 0x10001},
-	{PLL_CLK_27D1001MHZ,  	0x09111108, 0xfbe878b7, 0x10001, 0x1000a, 0x10001},
-        {PLL_CLK_27M1001MHZ,  	0x09111108, 0x04189375, 0x10001, 0x1000a, 0x10001}, /* 27*1.001 MHz */
-        {PLL_CLK_54MHZ,  	0x17100100, 0x0,        0x10001, 0x1000c, 0x10002},
-        {PLL_CLK_74_25D1001MHZ, 0x0a114108, 0xfd2fd2fd, 0x10001, 0x1000a, 0x10001}, /* 74.25/1.001 MHz */
-        {PLL_CLK_74_25MHZ,  	0x0a114100, 0x0,        0x10001, 0x1000a, 0x10001},
-        {PLL_CLK_108MHZ,  	0x17100100, 0x0,    	0x10001, 0x10006, 0x10001},
-        {PLL_CLK_148_5D1001MHZ,	0x14110108, 0xfa5fa5fb, 0x10001, 0x10002, 0x10001},
-        {PLL_CLK_148_5MHZ, 	0x15110100, 0x0,    	0x10001, 0x10002, 0x10001}, /* Decrease VCO1 stress value */
-        {0x0, 	    		0x17100100, 0x0,        0x10001, 0x10018, 0x10001}  /* 27MHz as default */
+	{PLL_CLK_27D1001MHZ,  	0x0f131108, 0xfbe878b6, 0x10001, 0x10008, 0x10001},
+	{PLL_CLK_26_9485MHZ,	0x0b131108, 0xf831aa72, 0x10001, 0x10008, 0x10001}, /* - 1 LN at 60hz */
+	{PLL_CLK_26_9568MHZ,	0x0b131108, 0xf9724745, 0x10001, 0x10008, 0x10001}, /* - 1 LN at 50hz */
+	{PLL_CLK_27_0432MHZ,	0x0f131108, 0x068db8bb, 0x10001, 0x10008, 0x10001}, /* + 1 LN at 50hz */
+	{PLL_CLK_27_0514MHZ,  	0x0f131108, 0x07cc3cb0, 0x10001, 0x10008, 0x10001}, /* + 1 LN at 60hz */
+        {PLL_CLK_27M1001MHZ,  	0x0f131108, 0x04189375, 0x10001, 0x10008, 0x10001}, /* 27*1.001 MHz */
+        {PLL_CLK_54MHZ,  	0x0b131100, 0x0,        0x10001, 0x10003, 0x10002},
+        {PLL_CLK_74_25D1001MHZ, 0x0a133108, 0xfd2fd2fd, 0x10001, 0x10004, 0x10001}, /* 74.25/1.001 MHz */
+        {PLL_CLK_74_25MHZ,  	0x0a133100, 0x0,        0x10001, 0x10004, 0x10001},
+        {PLL_CLK_108MHZ,  	0x0b133100, 0x0,        0x10001, 0x10003, 0x10004},
+        {PLL_CLK_148_5D1001MHZ,	0x20100108, 0xf78f78f7, 0x10001, 0x10006, 0x10001},
+        {PLL_CLK_148_5MHZ, 	0x20100100, 0x0,    	0x10001, 0x10006, 0x10001}, /* Decrease VCO1 stress value */
+        {0x0, 	    		0x17100104, 0x0,        0x10001, 0x10018, 0x10001}  /* 27MHz as default */
 };
 
-static int so_freq_index 	= 0;
+static int so_freq_index 	= 0;	/* Default freq = 27 MHz */
 static int vout_freq_index[2] 	= {0};
 
 /**
@@ -779,8 +817,9 @@ static int vout_freq_index[2] 	= {0};
  */
 void rct_set_so_freq_hz(u32 freq_hz)
 {
+
 	int i;
-	u32 ctrl = 0;
+	u32 ctrl;
 	int sw_int_frac = 0;
 
 	for (i = 0; ;i++) {
@@ -789,17 +828,15 @@ void rct_set_so_freq_hz(u32 freq_hz)
 	}
 
 	/* Check if the PLL mode is changed bet INT and FRAC modes */
-	if (((G_so_rct[so_freq_index].sensor_frac != 0) 	&&
-	     (G_so_rct[i].sensor_frac == 0)) 			||
-	     ((G_so_rct[so_freq_index].sensor_frac == 0) 	&&
-	     (G_so_rct[i].sensor_frac != 0))) {
+	ctrl = readl(PLL_SENSOR_CTRL_REG) & 0x8; /* Check if INT mode */
+	if (ctrl != (G_so_rct[i].sensor_ctrl & 0x8)) {
 	    	sw_int_frac = 1;
 	}
 
 	so_freq_index = i;
 
 	if (G_so_rct[i].sensor_frac != 0x00) {
-		amba_outl(0x7017011c, 0x00f10000);
+		amba_outl(0x7017011c, 0x3ff10000);
 		amba_outl(0x70170120, 0x00069300);
 	} else {
 		amba_outl(0x7017011c, 0x3f770000);
@@ -819,10 +856,12 @@ void rct_set_so_freq_hz(u32 freq_hz)
 		/* 2. change the pll_we(bit[0]) to disable(0) */
 		ctrl &= ~0x01;
 		writel(PLL_SENSOR_CTRL_REG, ctrl);
+
 		/* 3. assert pll reset(bit[4]), 1ms */
 		ctrl |= 0x10;
 		writel(PLL_SENSOR_CTRL_REG, ctrl);
 		dly_tsk(1);
+
 		/* 4. deassert pll reset(bit[4]) */
 	}
 
@@ -878,7 +917,7 @@ void rct_set_vout_clk_src(u32 clk_src)
 /* Configure video clock out with 27 MHz crystal clock */
 static void rct_set_vout_pll_onchip(int vo_id, u32 freq_hz)
 {
-        int i;
+	int i;
 	u32 ctrl = 0;
 	int sw_int_frac = 0;
 
@@ -889,54 +928,99 @@ static void rct_set_vout_pll_onchip(int vo_id, u32 freq_hz)
 	}
 
 	/* Check if the PLL mode is changed bet INT and FRAC modes */
-	if (((G_vout_rct[vout_freq_index[vo_id]].video_frac != 0) 	&&
-	     (G_vout_rct[i].video_frac == 0)) 				||
-	     ((G_vout_rct[vout_freq_index[vo_id]].video_frac == 0) 	&&
-	     (G_vout_rct[i].video_frac != 0))) {
+	if (vo_id == PLL_VIDEO) {
+		ctrl = readl(PLL_VIDEO_CTRL_REG) & 0x8; /* Check if INT mode */
+	} else {
+                ctrl = readl(PLL_VIDEO2_CTRL_REG) & 0x8; /* Check if INT mode */
+	}
+
+	if (ctrl != (G_vout_rct[i].video_ctrl & 0x8)) {
 	    	sw_int_frac = 1;
 	}
 
 	vout_freq_index[vo_id] = i;
 
-	ctrl = readl(PLL_VIDEO_CTRL_REG);
-	if (G_vout_rct[i].video_frac != 0x00) {
-		amba_outl(0x70170130, 0x00f10000);
-		amba_outl(0x70170134, 0x00069300);
-	} else {
-		amba_outl(0x70170130, 0x3f770000);
-		amba_outl(0x70170134, 0x00068300);
-	}
-
-	if (sw_int_frac) {
-		ctrl = readl(PLL_VIDEO_CTRL_REG);
+	if (vo_id == PLL_VIDEO) {
 		if (G_vout_rct[i].video_frac != 0x00) {
-			/* 1. change Frac Mode(1) */
-			ctrl |= 0x00000008;
+			amba_outl(0x70170130, 0x3ff10000);
+			amba_outl(0x70170134, 0x00069300);
 		} else {
-			/* 1. change Int Mode(0) */
-			ctrl &= ~0x00000008;
+			amba_outl(0x70170130, 0x3f770000);
+			amba_outl(0x70170134, 0x00068300);
 		}
 
-		/* 2. change the pll_we(bit[0]) to disable(0) */
-		ctrl &= ~0x01;
-		writel(PLL_VIDEO_CTRL_REG, ctrl);
+		if (sw_int_frac) {
+			ctrl = readl(PLL_VIDEO_CTRL_REG);
+			if (G_vout_rct[i].video_frac != 0x00) {
+				/* 1. change Frac Mode(1) */
+				ctrl |= 0x00000008;
+			} else {
+				/* 1. change Int Mode(0) */
+				ctrl &= ~0x00000008;
+			}
 
-		/* 3. assert pll reset(bit[4]), 1ms */
-		ctrl |= 0x10;
-		writel(PLL_VIDEO_CTRL_REG, ctrl);
+			/* 2. change the pll_we(bit[0]) to disable(0) */
+			ctrl &= ~0x01;
+			writel(PLL_VIDEO_CTRL_REG, ctrl);
+
+			/* 3. assert pll reset(bit[4]), 1ms */
+			ctrl |= 0x10;
+			writel(PLL_VIDEO_CTRL_REG, ctrl);
+			dly_tsk(1);
+
+			/* 4. deassert pll reset(bit[4]) */
+		}
+
+		/* Configure sensor clock out. The reference clock = 27 MHz */
+		writel(PLL_VIDEO_CTRL_REG, G_vout_rct[i].video_ctrl & (~0x10));
+		writel(PLL_VIDEO_FRAC_REG, G_vout_rct[i].video_frac);
+		writel(SCALER_VIDEO_POST_REG, G_vout_rct[i].scaler_post);
+		writel(SCALER_VIDEO_OS_RATION_REG, G_vout_rct[i].os_ratio);
 		dly_tsk(1);
+		writel(PLL_VIDEO_CTRL_REG, G_vout_rct[i].video_ctrl | 0x01);
+		writel(SCALER_VIDEO_REG, G_vout_rct[i].scaler_pre);
+		vo_clk_freq_hz = G_vout_rct[i].freq;
 
-		/* 4. deassert pll reset(bit[4]) */
+	} else {
+		if (G_vout_rct[i].video_frac != 0x00) {
+			amba_outl(0x7017013c, 0x3ff10000);
+			amba_outl(0x70170140, 0x00069300);
+		} else {
+			amba_outl(0x7017013c, 0x3f770000);
+			amba_outl(0x70170140, 0x00068300);
+		}
+
+		if (sw_int_frac) {
+			ctrl = readl(PLL_VIDEO2_CTRL_REG);
+			if (G_vout_rct[i].video_frac != 0x00) {
+				/* 1. change to Frac Mode(1) */
+				ctrl |= 0x00000008;
+			} else {
+				/* 1. change to Int Mode(0) */
+				ctrl &= ~0x00000008;
+			}
+
+			/* 2. change the pll_we(bit[0]) to disable(0) */
+			ctrl &= ~0x01;
+			writel(PLL_VIDEO2_CTRL_REG, ctrl);
+
+			/* 3. assert pll reset(bit[4]), 1ms */
+			ctrl |= 0x10;
+			writel(PLL_VIDEO2_CTRL_REG, ctrl);
+			dly_tsk(1);
+
+			/* 4. deassert pll reset(bit[4]) */
+		}
+
+		writel(PLL_VIDEO2_CTRL_REG, G_vout_rct[i].video_ctrl & (~0x10));
+		writel(PLL_VIDEO2_FRAC_REG, G_vout_rct[i].video_frac);
+		writel(SCALER_VIDEO2_POST_REG, G_vout_rct[i].scaler_post);
+		dly_tsk(1);
+		writel(PLL_VIDEO2_CTRL_REG, G_vout_rct[i].video_ctrl | 0x01);
+		writel(SCALER_VIDEO2_REG, G_vout_rct[i].scaler_pre);
+        	vo2_clk_freq_hz = G_vout_rct[i].freq;
+
 	}
-
-	/* Configure sensor clock out. The reference clock = 27 MHz */
-	writel(PLL_VIDEO_CTRL_REG, G_vout_rct[i].video_ctrl & (~0x10));
-        writel(PLL_VIDEO_FRAC_REG, G_vout_rct[i].video_frac);
-	writel(SCALER_VIDEO_POST_REG, G_vout_rct[i].scaler_post);
-	dly_tsk(1);
-	writel(PLL_VIDEO_CTRL_REG, G_vout_rct[i].video_ctrl | 0x01);
-	writel(SCALER_VIDEO_REG, G_vout_rct[i].scaler_pre);
-	vo_clk_freq_hz = G_vout_rct[i].freq;
 }
 
 /**
@@ -950,6 +1034,7 @@ struct vout_rct_pclk_obj_s {
 	u32    	scaler_pre;
 	u32    	scaler_post;
 	u32     os_ratio;
+	u32	frac_100khz; /* Frac PLL change for 100KHz */
 };
 
 /**
@@ -960,296 +1045,93 @@ static struct vout_rct_pclk_obj_s G_vout_rct_pclk[] = {
 		Ctrl        	FRAC   	PRE  	POST  	0S_RATIO*/
         /* Fref = 13.5 MHz */
         {PLL_CLK_13_5MHZ, 	PLL_CLK_27D1001MHZ,
-		0x0f019c02, 	0xfbe8,	0x1001,	0x1004,	0x1001},
+		0x0c013108, 	0xfcace213, 	0x10001, 0x1000d},
 	{PLL_CLK_13_5MHZ,  	PLL_CLK_27MHZ,
-		0x10019c0a, 	0x0, 	0x1001, 0x1004, 0x1001},
+		0x0f012100, 	0x0, 		0x10001, 0x1000c},
 	{PLL_CLK_13_5MHZ,  	PLL_CLK_27M1001MHZ,
-		0x1000e902, 	0x0419,	0x1001, 0x1001,  0x1},
+		0x0f012108, 	0x04189375,	0x10001, 0x1000c},
+	{PLL_CLK_13_5MHZ,  	PLL_CLK_74_25D1001MHZ,
+		0x0d013108, 	0xbc7bc7bc, 	0x10001, 0x10005},
+	{PLL_CLK_13_5MHZ,  	PLL_CLK_74_25MHZ,
+		0x0d013108, 	0xc0000000, 	0x10001, 0x10005},
 
         /* Fref = 27 * 1.001 MHz */
 	{PLL_CLK_27M1001MHZ,  	PLL_CLK_27MHZ,
-		0x0f00e902, 	0xfbe8, 0x1001,	0x02,  	0x1},
+		0x0B011108, 	0xfcee5a88, 	0x10001, 0x1000c},
 	{PLL_CLK_27M1001MHZ,  	PLL_CLK_27M1001MHZ,
-		0x1000e90a, 	0x0,	0x1001,	0x02,  	0x1},
+		0x0B011100, 	0x0, 		0x10001, 0x1000c},
 	{PLL_CLK_27M1001MHZ,  	PLL_CLK_74_25D1001MHZ,
-		0x05017a02, 	0x7d30, 0x1001, 	0x02, 	0x1},
+		0x0D011108, 	0xb8f875b2, 	0x10001, 0x10005},
 	{PLL_CLK_27M1001MHZ,  	PLL_CLK_74_25MHZ,
-		0x05017a02, 	0x7e97, 0x1001, 	0x02,  	0x1},
+		0x0D011108, 	0xbc7bc7bc, 	0x10001, 0x10005},
         {PLL_CLK_27M1001MHZ,  	PLL_CLK_148_5D1001MHZ,
-		0x05017a02, 	0x7d30, 0x1001, 	0x01, 	0x1},
+		0x0D001108, 	0xb8f875b2, 	0x10001, 0x10005},
 	{PLL_CLK_27M1001MHZ,  	PLL_CLK_148_5MHZ,
-		0x05017a02, 	0x7e97, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 48 MHz */
-	{PLL_CLK_48MHZ,  	PLL_CLK_27MHZ,
-		0x0902dc0a, 	0x0,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_48MHZ,  	PLL_CLK_27M1001MHZ,
-		0x0900fa02, 	0x024d,	0x1001, 	0x01,  	0x2},
-	{PLL_CLK_48MHZ,  	PLL_CLK_74_25D1001MHZ,
-		0x0c03d902, 	0x5cd6,	0x1001, 	0x08,  	0x1},
-	{PLL_CLK_48MHZ,  	PLL_CLK_74_25MHZ,
-		0x0c03d902, 	0x6000,	0x1001, 	0x08,  	0x1},
-        {PLL_CLK_48MHZ,  	PLL_CLK_148_5D1001MHZ,
-		0x0c03d902, 	0x5cd6,	0x1001, 	0x04,  	0x1},
-	{PLL_CLK_48MHZ,  	PLL_CLK_148_5MHZ,
-		0x0c03d902, 	0x6000,	0x1001, 	0x04,  	0x1},
-
-        /* Fref = 49.5 MHz */
-        {PLL_CLK_49_5MHZ,  	PLL_CLK_27MHZ,
-		0x06015a0a, 	0x0,	0x1001, 	0x0b,  	0x1},
-	{PLL_CLK_49_5MHZ,  	PLL_CLK_27M1001MHZ,
-		0x06015a02, 	0x0189,	0x1001, 	0x0b,  	0x1},
-	{PLL_CLK_49_5MHZ,  	PLL_CLK_74_25D1001MHZ,
-		0x05005a02, 	0xfe77,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_49_5MHZ,  	PLL_CLK_74_25MHZ,
-		0x06005a0a, 	0x0,	0x1001, 	0x02,  	0x1},
-        {PLL_CLK_49_5MHZ,  	PLL_CLK_148_5D1001MHZ,
-		0x05005a02, 	0xfe77,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_49_5MHZ,  	PLL_CLK_148_5MHZ,
-		0x06005a0a, 	0x0,	0x1001, 	0x01,  	0x1},
+		0x0D001108, 	0xbc7bc7bc, 	0x10001, 0x10005},
 
         /* Fref = 74.25/1.001 MHz */
         {PLL_CLK_74_25D1001MHZ, PLL_CLK_27D1001MHZ,
-		0x0803dc0a, 	0x0,	0x1001, 	0x0b,  	0x2},
+        	0x08020108,  	0xba2e8ba2, 	0x10001, 0x10008},
 	{PLL_CLK_74_25D1001MHZ, PLL_CLK_27MHZ,
-		0x0803d902, 	0x020c, 0x1001, 	0x0b,  	0x2},
+		0x08020108,  	0xbc6a7ef9, 	0x10001, 0x10008},
 	{PLL_CLK_74_25D1001MHZ, PLL_CLK_27M1001MHZ,
-        	0x0802cc02, 	0x0419,	0x1001, 	0x0b,  	0x1},
+        	0x08020108,  	0xbea704bc, 	0x10001, 0x10008},
         {PLL_CLK_74_25D1001MHZ, PLL_CLK_74_25D1001MHZ,
-		0x0803cc0a, 	0x0,	0x1001, 	0x08,  	0x1},
+		0x08000100,  	0x0, 		0x10001, 0x10009},
 	{PLL_CLK_74_25D1001MHZ, PLL_CLK_74_25MHZ,
-		0x0803cc02, 	0x020c,	0x1001, 	0x08,  	0x1},
+		0x08000108,  	0x024dd2f2, 	0x10001, 0x10009},
         {PLL_CLK_74_25D1001MHZ, PLL_CLK_148_5D1001MHZ,
-		0x0803cc0a, 	0x0,	0x1001, 	0x04,  	0x1},
+		0x07000100,  	0x0, 		0x10001, 0x10004},
 	{PLL_CLK_74_25D1001MHZ, PLL_CLK_148_5MHZ,
-		0x0803cc02, 	0x020c,	0x1001, 	0x04,  	0x1},
+		0x07000108,  	0x020c49bb, 	0x10001, 0x10004},
 
         /* Fref = 74.25 MHz */
+         {PLL_CLK_74_25MHZ, 	PLL_CLK_27D1001MHZ,
+        	0x08020108,  	0xb7f32a91, 	0x10001, 0x10008},
         {PLL_CLK_74_25MHZ, 	PLL_CLK_27MHZ,
-		0x0803dc0a, 	0x0,	0x1001, 	0x0b,  	0x2},
+		0x08020108,  	0xba2e8ba2, 	0x10001, 0x10008},
 	{PLL_CLK_74_25MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0802fa02, 	0x020c,	0x1001, 	0x0b,  	0x1},
+		0x08020108,  	0xbc6a7ef9, 	0x10001, 0x10008},
 	{PLL_CLK_74_25MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1001, 	0x08,  	0x1},
+		0x08000108,  	0xfdb2c3e6, 	0x10001, 0x10009},
 	{PLL_CLK_74_25MHZ, 	PLL_CLK_74_25MHZ,
-		0x0803cc0a, 	0x0,	0x1001, 	0x08,  	0x1},
+		0x08000100,  	0x0, 		0x10001, 0x10009},
         {PLL_CLK_74_25MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1001, 	0x04,  	0x1},
+		0x07000108,  	0xfdf43c5b, 	0x10001, 0x10004},
 	{PLL_CLK_74_25MHZ, 	PLL_CLK_148_5MHZ,
-		0x0803cc0a, 	0x0,	0x1001, 	0x04,  	0x1},
-
-        /* Fref = 90615840/1.001 MHz */
-        {PLL_CLK_90_62D1001MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0xc5ab,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_90_62D1001MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0xc6e4,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_90_62D1001MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601cc02, 	0x8e1e,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_90_62D1001MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x8fcc, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_90_62D1001MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601cc02, 	0x8e1e,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_90_62D1001MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x8fcc, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 90615840 MHz */
-        {PLL_CLK_90_62MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0xc473,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_90_62MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0xc5ab,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_90_62MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601cc02, 	0x8c71,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_90_62MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x8e1e, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_90_62MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601cc02, 	0x8c71,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_90_62MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x8e1e, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 90687360/1.001 MHz */
-        {PLL_CLK_90_69D1001MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0xc4b5,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_90_69D1001MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0xc5ed,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_90_69D1001MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601cc02, 	0x8ccb,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_90_69D1001MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x8e78, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_90_69D1001MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601cc02, 	0x8ccb,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_90_69D1001MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x8e78, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 90687360 MHz */
-        {PLL_CLK_90_69MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0xc37d,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_90_69MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0xc4b5,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_90_69MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601cc02, 	0x8b1e,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_90_69MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x8ccb, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_90_69MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601cc02, 	0x8b1e,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_90_69MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x8ccb, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 95992800/1.001 MHz */
-        {PLL_CLK_95_993D1001MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0x813d,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_95_993D1001MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0x8264,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_95_993D1001MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601cc02, 	0x301e,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_95_993D1001MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x31b4, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_95_993D1001MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601cc02, 	0x301e,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_95_993D1001MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x31b4, 0x1001, 	0x01,  	0x1},
-
-	/* Fref = 96/1.001 MHz */
-        {PLL_CLK_96D1001MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0x8127,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_96D1001MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0x824e,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_96D1001MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601fa02, 	0x3000,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_96D1001MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x3196, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_96D1001MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601cc02, 	0x3000,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_96D1001MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x3196, 0x1001, 	0x01,  	0x1},
-
-	/* Fref = 96 MHz */
-        {PLL_CLK_96MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0x8000,	0x1001, 	0x04,  	0x2},
-	{PLL_CLK_96MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401fa02, 	0x8126,	0x1001, 	0x02,  	0x2},
-	{PLL_CLK_96MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601fa02, 	0x2e6b,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_96MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601fa02, 	0x3000, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_96MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601fa02, 	0x2e6b,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_96MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601fa02, 	0x3000, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 99/1.001 MHz */
-        {PLL_CLK_99D1001MHZ, 	PLL_CLK_27MHZ,
-		0x0602da02, 	0x0189,	0x1001, 	0x0b,  	0x1},
-	{PLL_CLK_99D1001MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0602da02, 	0x0312,	0x1001, 	0x0b,  	0x1},
-	{PLL_CLK_99D1001MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0601da0a, 	0x0,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_99D1001MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601da02, 	0x0189, 0x1001, 	0x02,  	0x1},
-        {PLL_CLK_99D1001MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0601da0a, 	0x0,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_99D1001MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601da02, 	0x0189, 0x1001, 	0x01,  	0x1},
-
-        /* Fref = 99 MHz */
-        {PLL_CLK_99MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0x5c2d, 0x1001, 	0x04,  	0x2},
-	{PLL_CLK_99MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0602da02, 	0x0189,	0x1001, 	0x0b,  	0x1},
-	{PLL_CLK_99MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0501de02, 	0xfe77,	0x1001, 	0x02,  	0x1},
-	{PLL_CLK_99MHZ, 	PLL_CLK_74_25MHZ,
-		0x0601da0a, 	0x0,	0x1001, 	0x02,  	0x1},
-        {PLL_CLK_99MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0501de02, 	0xfe77,	0x1001, 	0x01,  	0x1},
-	{PLL_CLK_99MHZ, 	PLL_CLK_148_5MHZ,
-		0x0601da0a, 	0x0,	0x1001, 	0x01,  	0x1},
-
-        /* Fref = 99.18 /1.001 MHz */
-        {PLL_CLK_99_18D1001MHZ,	PLL_CLK_27MHZ,
-		0x0402d902, 	0x5c2d,	0x1, 	0x04,  	0x2},
-	{PLL_CLK_99_18D1001MHZ,	PLL_CLK_27M1001MHZ,
-		0x0401da02, 	0x5d4a,	0x1, 	0x02,  	0x2},
-	{PLL_CLK_99_18D1001MHZ,	PLL_CLK_74_25D1001MHZ,
-		0x0502de02, 	0xfd34,	0x1, 	0x02,  	0x2},
-	{PLL_CLK_99_18D1001MHZ,	PLL_CLK_74_25MHZ,
-		0x0502da02, 	0xfebd, 0x1, 	0x02,  	0x2},
-        {PLL_CLK_99_18D1001MHZ,	PLL_CLK_148_5D1001MHZ,
-		0x0502da02, 	0xfd34,	0x1, 	0x02,  	0x1},
-	{PLL_CLK_99_18D1001MHZ,	PLL_CLK_148_5MHZ,
-		0x0502da02, 	0xfebd, 0x1, 	0x02,  	0x1},
-
-	/* Fref = 99.18 MHz */
-        {PLL_CLK_99_18MHZ, 	PLL_CLK_27MHZ,
-		0x0402d902, 	0x5b0f,	0x1, 	0x04,  	0x2},
-	{PLL_CLK_99_18MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0401da02, 	0x5c2c,	0x1, 	0x02,  	0x2},
-	{PLL_CLK_99_18MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0501de02, 	0xfbac,	0x1, 	0x02,  	0x1},
-	{PLL_CLK_99_18MHZ, 	PLL_CLK_74_25MHZ,
-		0x0501da02, 	0xfd34, 0x1, 	0x02,  	0x1},
-        {PLL_CLK_99_18MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0501de02, 	0xfbab,	0x1, 	0x01,  	0x1},
-	{PLL_CLK_99_18MHZ, 	PLL_CLK_148_5MHZ,
-		0x0501da02, 	0xfd34, 0x1, 	0x01,  	0x1},
-
-        /* Fref = 108 MHz, TBD */
-        {PLL_CLK_108MHZ, 	PLL_CLK_27MHZ,
-		0x0803dc0a, 	0x0,	0x1, 	0x0b,  	0x4},
-	{PLL_CLK_108MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0802fa02, 	0x020c,	0x1, 	0x0b,  	0x2},
-	{PLL_CLK_108MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1, 	0x08,  	0x2},
-	{PLL_CLK_108MHZ, 	PLL_CLK_74_25MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x2},
-        {PLL_CLK_108MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1, 	0x08,  	0x1},
-	{PLL_CLK_108MHZ, 	PLL_CLK_148_5MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x1},
-
+		0x07000100,  	0x0, 		0x10001, 0x10004},
 
         /* Fref = 148.5/1.001 MHz */
         {PLL_CLK_148_5D1001MHZ, PLL_CLK_27D1001MHZ,
-		0x0803dc0a, 	0x0,	0x1, 	0x0b,  	0x4},
+		0x04020108,  	0x5d1745d1, 	0x10001, 0x10008},
 	{PLL_CLK_148_5D1001MHZ, PLL_CLK_27MHZ,
-		0x0803d902, 	0x020c, 0x1, 	0x0b,  	0x4},
+		0x04020108,  	0x5e353f7c, 	0x10001, 0x10008},
 	{PLL_CLK_148_5D1001MHZ, PLL_CLK_27M1001MHZ,
-        	0x0802cc02, 	0x0419,	0x1, 	0x0b,  	0x2},
+        	0x04020108,  	0x5f53825e, 	0x10001, 0x10008},
         {PLL_CLK_148_5D1001MHZ, PLL_CLK_74_25D1001MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x2},
+		0x04000108,  	0x80000000, 	0x10001, 0x10009},
 	{PLL_CLK_148_5D1001MHZ, PLL_CLK_74_25MHZ,
-		0x0803cc02, 	0x020c,	0x1, 	0x08,  	0x2},
+		0x04000108,  	0x8126E978, 	0x10001, 0x10009},
         {PLL_CLK_148_5D1001MHZ, PLL_CLK_148_5D1001MHZ,
-		0x0403cc0a, 	0x0,	0x1, 	0x02,  	0x2},
+		0x04000100,  	0x0, 		0x10001, 0x10004},
 	{PLL_CLK_148_5D1001MHZ, PLL_CLK_148_5MHZ,
-		0x0403cc02, 	0x0106,	0x1, 	0x02,  	0x2},
+		0x04000108,  	0x010624dd, 	0x10001, 0x10004},
 
         /* Fref = 148.5 MHz */
+        {PLL_CLK_148_5MHZ, 	PLL_CLK_27D1001MHZ,
+		0x03020108,  	0x5bf99549, 	0x10001, 0x10008},
         {PLL_CLK_148_5MHZ, 	PLL_CLK_27MHZ,
-		0x0803dc0a, 	0x0,	0x1, 	0x0b,  	0x4},
+		0x03020108,  	0x5d1745d2, 	0x10001, 0x10008},
 	{PLL_CLK_148_5MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0802fa02, 	0x020c,	0x1, 	0x0b,  	0x2},
+		0x03020108,  	0x5e353f7d, 	0x10001, 0x10008},
 	{PLL_CLK_148_5MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1, 	0x08,  	0x2},
+		0x03000108,  	0x7ed961f4, 	0x10001, 0x10009},
 	{PLL_CLK_148_5MHZ, 	PLL_CLK_74_25MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x2},
+		0x03000108,  	0x80000000, 	0x10001, 0x10009},
         {PLL_CLK_148_5MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1, 	0x08,  	0x1},
+		0x03000108,  	0xfefa1e2d, 	0x10001, 0x10004},
 	{PLL_CLK_148_5MHZ, 	PLL_CLK_148_5MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x1},
-
-        /* Fref = 216 MHz, TBD*/
-        {PLL_CLK_216MHZ, 	PLL_CLK_27MHZ,
-		0x0803dc0a, 	0x0,	0x1, 	0x0b,  	0x4},
-	{PLL_CLK_216MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0802fa02, 	0x020c,	0x1, 	0x0b,  	0x2},
-	{PLL_CLK_216MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1, 	0x08,  	0x2},
-	{PLL_CLK_216MHZ, 	PLL_CLK_74_25MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x2},
-        {PLL_CLK_216MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0703cc02, 	0xfdf4,	0x1, 	0x08,  	0x1},
-	{PLL_CLK_216MHZ, 	PLL_CLK_148_5MHZ,
-		0x0803cc0a, 	0x0,	0x1, 	0x08,  	0x1},
+		0x03000100,  	0x0, 		0x10001, 0x10004},
 
         /* 27MHz as default */
         {0x0, 	    		0,
@@ -1267,61 +1149,88 @@ int rct_rescale_pll(int id, u32 scale)
 	u32 frac_sign = 0, index;
         u32 rescale_frac = 0;
 	u32 pllfrac = 0;
-	int pllctrl = 0, pll_int = 0;
+	int pllctrl = 0, pll_int = 0, pll_ctrl_changed = 0;
 	u32 cur_clk_src = 0, pllfrac_reg = 0, pllctrl_reg = 0;
-
-        if (id == PLL_VIDEO) {
-                cur_clk_src 	= vo_clk_src;
-		pllfrac_reg	= PLL_VIDEO_FRAC_REG;
-		pllctrl_reg 	= PLL_VIDEO_CTRL_REG;
-	} else if (id == PLL_SO) {
-		cur_clk_src 	= 0;
-		pllfrac_reg	= PLL_SENSOR_FRAC_REG;
-		pllctrl_reg 	= PLL_SENSOR_CTRL_REG;
-	}
+	int pllctrl2 = 0, pllctrl3 = 0;
 
         if  (cur_clk_src == VO_CLK_EXTERNAL) {
  		printk("Not supported for the external cloc");
 		return -1;
 	}
 
+        if (id == PLL_VIDEO) {
+                cur_clk_src 	= vo_clk_src;
+		pllfrac_reg	= PLL_VIDEO_FRAC_REG;
+		pllctrl_reg 	= PLL_VIDEO_CTRL_REG;
+		pllctrl2 	= 0x70170130;
+		pllctrl3 	= 0x70170134;
+	} else if (id == PLL_VIDEO2) {
+                cur_clk_src 	= vo_clk_src;
+		pllfrac_reg	= PLL_VIDEO2_FRAC_REG;
+		pllctrl_reg 	= PLL_VIDEO2_CTRL_REG;
+		pllctrl2 	= 0x7017013c;
+		pllctrl3 	= 0x70170140;
+	} else if (id == PLL_SO) {
+		cur_clk_src 	= 0;
+		pllfrac_reg	= PLL_SENSOR_FRAC_REG;
+		pllctrl_reg 	= PLL_SENSOR_CTRL_REG;
+		pllctrl2 	= 0x7017011c;
+		pllctrl3 	= 0x70170120;
+	}
 
-	if (id == PLL_VIDEO) {
+	writel(pllctrl2, 0x3ff10000);
+	writel(pllctrl3, 0x00069300);
+
+	if ((id == PLL_VIDEO) || (id == PLL_VIDEO2)) {
 		index = vout_freq_index[id];
 	        if ((cur_clk_src == VO_CLK_ONCHIP_PLL_CLK_SI) ||
 	            (cur_clk_src == VO_CLK_ONCHIP_PLL_SP_CLK) ) {
 	              	pllfrac 	= (G_vout_rct_pclk[index].video_frac &
-			      		  0x7fffffff);
+			      		  			0x7fffffff);
 	              	frac_sign	= G_vout_rct_pclk[index].video_frac >> 31;
 	               	pllctrl 	= G_vout_rct_pclk[index].video_ctrl &
 			       					0x00ffffff;
 	               	pll_int 	= G_vout_rct_pclk[index].video_ctrl >> 24;
 		} else {
 		       	pllfrac 	= (G_vout_rct[index].video_frac &
-			       		   0x7fffffff);
+			       		   			0x7fffffff);
 		       	frac_sign 	= G_vout_rct[index].video_frac >> 31;
-				pllctrl = G_vout_rct[index].video_ctrl &
+			pllctrl 	= G_vout_rct[index].video_ctrl &
 					   			0x00ffffff;
 	               	pll_int 	= G_vout_rct[index].video_ctrl >> 24;
 		}
 	} else if (id == PLL_SO) {
 		pllfrac 	= (G_so_rct[so_freq_index].sensor_frac &
-			   	   0x7fffffff);
+			   	   				0x7fffffff);
 		frac_sign 	= G_so_rct[so_freq_index].sensor_frac >> 31;
 		pllctrl 	= G_so_rct[so_freq_index].sensor_ctrl &
 								0x00ffffff;
 		pll_int 	= G_so_rct[so_freq_index].sensor_ctrl >> 24;
 	}
 
+	if ((readl(pllctrl_reg) & 0x8) == 0) { /* Check if it's on INT mode */
+		/* 1. change to Frac Mode(1) */
+		pllctrl |= 0x00000008;
+
+		/* 2. change the pll_we(bit[0]) to disable(0) */
+		pllctrl &= ~0x01;
+		writel(pllctrl_reg, pllctrl);
+
+		/* 3. assert pll reset(bit[4]), 1ms */
+		pllctrl |= 0x10;
+		writel(pllctrl_reg, pllctrl);
+
+		/* 4. deassert pll reset(bit[4]) */
+		pllctrl &= ~0x10;
+	}
+
 	rescale_frac 	= (scale & 0x7fffffff); /* # of microsteps */
 	if (sign) {     /* Decrement */
   	        if (pllfrac >= rescale_frac) {
-  		        rescale_frac = pllfrac - rescale_frac;
+  		        rescale_frac 	= pllfrac - rescale_frac;
   		} else {
-                        rescale_frac = pllfrac +
-				       (0xffffffff - rescale_frac + 1);
-                        pll_int--;
-			K_ASSERT(pllctrl >= 0);
+                        rescale_frac 	= 0x80000000 - rescale_frac + pllfrac;
+                        frac_sign    	= 1;
 		}
 	} else {        /* Increment */
                 rescale_frac += pllfrac; /* # of microsteps */
@@ -1331,23 +1240,34 @@ int rct_rescale_pll(int id, u32 scale)
 		/* 0.5 <= frac < 1 */
 		if (frac_sign == 0) {
 			pll_int++;
-			frac_sign 	= 1;
-		} else {
-			frac_sign 	= 0;
+			frac_sign 		= 1;
+			pll_ctrl_changed 	= 1;
+		} else if (rescale_frac > PLL_FRAC_MAX_VALUE) {
+		        pll_int--;
+			frac_sign 		= 0;
+			pll_ctrl_changed 	= 1;
 		}
-		rescale_frac   -= PLL_FRAC_MAX_VALUE;
+
+		if (pll_ctrl_changed)
+			rescale_frac = (0xffffffff - rescale_frac + 1) &
+								0x7fffffff;
 	}
 
+	/* PLL is on FRAC mode when the tuneup of clock rate is turned on */
+	/* Frac PLL reg > 0x0 for Frac mode */
+	if (rescale_frac == 0)
+		rescale_frac = 0x1;
+
 	rescale_frac += (frac_sign << 31);
-	writel(pllfrac_reg, rescale_frac);
-	if (rescale_frac)
-        	pllctrl    |= (0x1 << 3);   	/* INTMOD = 1 */
-	else
-	        pllctrl    &= ~(0x1 << 3);   	/* INTMOD = 0 */
+
+	pllctrl |= (0x1 << 3);   	/* INTMOD = 1 */
 
 	pllctrl += (pll_int << 24);
-        writel(pllctrl_reg, pllctrl);
-	writel(pllctrl_reg, pllctrl | 0x1);
+	writel(pllctrl_reg, pllctrl);
+
+	writel(pllfrac_reg, rescale_frac);
+	//printk("PLL rescale = 0x%x, 0x%x", rescale_frac, readl(pllfrac_reg));
+        writel(pllctrl_reg, pllctrl | 0x1);
 
 	return 0;
 }
@@ -1381,7 +1301,7 @@ static void rct_set_vout_pll_spclk(int vo_id, u32 freq_hz)
 				       G_vout_rct_pclk[i].os_ratio);
 
 				if (G_vout_rct_pclk[i].video_frac != 0x0) {
-					amba_outl(0x70170130, 0x00f10000);
+					amba_outl(0x70170130, 0x3ff10000);
 					amba_outl(0x70170134, 0x00069300);
 				}
 				writel(PLL_VIDEO_CTRL_REG,
@@ -1392,6 +1312,26 @@ static void rct_set_vout_pll_spclk(int vo_id, u32 freq_hz)
 			       		G_vout_rct_pclk[i].scaler_pre);
 
 				vo_clk_freq_hz = G_vout_rct_pclk[i].freq;
+			} else {
+                                writel(PLL_VIDEO2_CTRL_REG,
+			       		G_vout_rct_pclk[i].video_ctrl);
+	        		writel(PLL_VIDEO2_FRAC_REG,
+			       		G_vout_rct_pclk[i].video_frac);
+		        	writel(SCALER_VIDEO2_POST_REG,
+				       G_vout_rct_pclk[i].scaler_post);
+
+				if (G_vout_rct_pclk[i].video_frac != 0x0) {
+					amba_outl(0x7017013c, 0x3ff10000);
+					amba_outl(0x70170140, 0x00069300);
+				}
+
+				writel(PLL_VIDEO2_CTRL_REG,
+			       		G_vout_rct_pclk[i].video_ctrl);
+				writel(PLL_VIDEO2_CTRL_REG,
+			       		G_vout_rct_pclk[i].video_ctrl | 0x01);
+				writel(SCALER_VIDEO2_REG,
+			       		G_vout_rct_pclk[i].scaler_pre);
+				vo2_clk_freq_hz = G_vout_rct_pclk[i].freq;
 			}
 	        } else {
 	                /* Fref = 27MHz as default */
@@ -1443,13 +1383,17 @@ static void rct_config_vout_pll_reg (int vo_id, u32 freq_hz)
 	u32 use_clk_si_inp	= USE_CLK_SI_INPUT_MODE_REG;
 	u32 pll_ctrl		= PLL_VIDEO_CTRL_REG;
 	u32 clk_src		= vo_clk_src;
-
-#if (VOUT_DISPLAY_SECTIONS == 1)
 	u32 vd_ctrl_reg		= VOUT_CTL_CONTROL_REG;
-#endif
-#if (VOUT_DISPLAY_SECTIONS == 2)
-	u32 vd_ctrl_reg		= VOUT_DB_CONTROL_REG;
-#endif
+
+	if (vo_id == PLL_VIDEO2) {
+		use_ext_clk 	= USE_EXTERNAL_VD2_CLK_REG;
+		clk_ref_ext 	= CLK_REF_VIDEO2_EXTERNAL_REG;
+		use_clk_si	= USE_CLK_SI_4_VO2_REG;
+		use_clk_si_inp	= USE_CLK_SI_INPUT_MODE_REG;
+		pll_ctrl	= PLL_VIDEO2_CTRL_REG;
+		clk_src		= vo2_clk_src;
+		vd_ctrl_reg	= VOUT2_CTL_CONTROL_REG;
+	}
 
         switch (clk_src) {
 	case VO_CLK_ONCHIP_PLL_CLK_SI:
@@ -1463,7 +1407,10 @@ static void rct_config_vout_pll_reg (int vo_id, u32 freq_hz)
 	        	/* SI clock input mode */
 	        	writeb(use_clk_si_inp, 1);
 
-			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			if (vo_id == PLL_VIDEO)
+        			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			else
+				rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO2);
 
                         if (readl(vd_ctrl_reg) != 0)
                                 break;
@@ -1484,7 +1431,10 @@ static void rct_config_vout_pll_reg (int vo_id, u32 freq_hz)
 	        	writeb(use_clk_si, 0x0);
 	        	writeb(use_clk_si_inp, 0); /* SI clock input mode */
 
-			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			if (vo_id == PLL_VIDEO)
+        			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			else
+				rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO2);
 
                         if (readl(vd_ctrl_reg) != 0)
                                 break;
@@ -1503,7 +1453,10 @@ static void rct_config_vout_pll_reg (int vo_id, u32 freq_hz)
 	        	ctrl = readl(pll_ctrl);
 			writeb(use_ext_clk, 0x1);
 
-			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			if (vo_id == PLL_VIDEO)
+        			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			else
+				rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO2);
 
                         if (readl(vd_ctrl_reg) != 0)
                                 break;
@@ -1531,15 +1484,18 @@ static void rct_config_vout_pll_reg (int vo_id, u32 freq_hz)
 	        	writeb(use_clk_si, 0x0);
 	        	writeb(use_clk_si_inp, 0); /* SI clock output mode */
 
-			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			if (vo_id == PLL_VIDEO)
+        			rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO);
+			else
+				rct_alan_zhu_magic_loop(PLL_LOCK_VIDEO2);
 
                         if (readl(vd_ctrl_reg) != 0)
                                 break;
 			else {
 			        retry--;
 #ifdef VOUT_PLL_DEBUG
-			        a2_retry++;
-			        printk("Onchip : %d Retry(%d)", a2_retry, retry);
+			        a5_retry++;
+			        printk("Onchip : %d Retry(%d)", a5_retry, retry);
 #endif
 			}
 		} while (retry);
@@ -1558,6 +1514,11 @@ static void rct_config_vout_pll_reg (int vo_id, u32 freq_hz)
  */
 void rct_set_vout2_freq_hz(u32 freq_hz)
 {
+#if 0
+	amba_outl(0x7017013c, 0x3f770000);
+	amba_outl(0x70170140, 0x00068300);
+#endif
+        rct_config_vout_pll_reg(PLL_VIDEO2, freq_hz);
 }
 
 /**
@@ -1566,6 +1527,8 @@ void rct_set_vout2_freq_hz(u32 freq_hz)
  */
 void rct_rescale_vout2_clk_freq_hz(u32 scale)
 {
+	vo2_clk_scaling = scale;
+ 	rct_rescale_vout_pll(PLL_VIDEO2, scale);
 }
 
 /**
@@ -1582,8 +1545,10 @@ u32 get_vout2_clk_rescale_value(void)
  */
 void rct_set_vout_freq_hz(u32 freq_hz)
 {
-	amba_outl(0x70170130, 0x00770000);
+#if 0
+	amba_outl(0x70170130, 0x3f770000);
 	amba_outl(0x70170134, 0x00068300);
+#endif
 	rct_config_vout_pll_reg (PLL_VIDEO, freq_hz);
 
 }
@@ -1612,7 +1577,7 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
 
 void rct_set_usbp_ctrl_bits(u32 value)
 {
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) | value);	
+	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) | value);
 }
 
 void rct_clear_usbp_ctrl_bits(u32 value)
@@ -1622,6 +1587,8 @@ void rct_clear_usbp_ctrl_bits(u32 value)
 
 void rct_set_usb_ana_on(void)
 {
+	writel(PLL_USB_CTRL_REG, 0x07081100);
+	writel(PLL_USB_CTRL_REG, 0x07081101);
 	writel(ANA_PWR_REG, readl(ANA_PWR_REG) | 6);
 }
 
@@ -1654,6 +1621,7 @@ void rct_ena_usb_int_clk(void)
 
 void rct_set_usb_debounce(void)
 {
+
 }
 
 void rct_turn_off_usb_pll(void)
@@ -1678,8 +1646,10 @@ u32 read_usb_reg_setting(void)
 /* called by prusb driver */
 void _init_usb_pll(void)
 {
+	register int i;
+
 	rct_set_usb_ana_on();
-	udelay(150);
+	for(i = 0; i < 0x10000; i++); /* wait at least 150 us */
 }
 
 u32 read_pll_so_reg(void)
@@ -1752,6 +1722,12 @@ static struct clk_rct_refclk_obj_s G_vin_rct_spclk[] = {
 		0x0f017100, 	0x0,	0x00010030,	0x00010001},
 	{PLL_CLK_240MHZ,  	PLL_CLK_384MHZ,
 		0x0f01f100, 	0x0, 	0x00010050,	0x00010001},
+	{PLL_CLK_240MHZ,  	PLL_CLK_192MHZ,
+		0x0f03f100, 	0x0, 	0x00010050,	0x00010001},
+	{PLL_CLK_240MHZ, 	PLL_CLK_160MHZ,
+		0x17053100, 	0x0,	0x00010018,	0x00010001},
+	{PLL_CLK_120MHZ,  	PLL_CLK_80MHZ,
+		0x17053100, 	0x0, 	0x00010018,	0x00010001},
 
         /* 27MHz as default */
         {0x0, 	    		0,
@@ -1774,22 +1750,22 @@ void rct_set_vin_freq_hz(u32 ref_freq_hz, u32 freq_hz)
 			break;
 	}
 
-
-
 	if (G_vin_rct_spclk[i].fref == 0)
-		i = 1; /* 27MHz */
+		i = 0;
 
 	amba_outl(0x701701b8, 0x3f770000);
 	amba_outl(0x701701bc, 0x00068300);
 
-	writel(SCALER_VIN_PRE_REG,  0x0010003);
+	writel(SCALER_VIN_PRE_REG,  0x0010010);
 	writel(SCALER_VIN_PRE_REG,  G_vin_rct_spclk[i].scaler_pre);
-	writel(PLL_VIN_FRAC_REG,    G_vin_rct_spclk[i].frac);
 	writel(PLL_VIN_CTRL_REG,    G_vin_rct_spclk[i].ctrl);
 	writel(PLL_VIN_CTRL_REG,    G_vin_rct_spclk[i].ctrl | 0x1);
+	writel(PLL_VIN_FRAC_REG,    G_vin_rct_spclk[i].frac);
 	dly_tsk(1);
 	writel(SCALER_VIN_POST_REG, 0x0010002);
 	writel(SCALER_VIN_POST_REG, G_vin_rct_spclk[i].scaler_post);
+
+	rct_alan_zhu_magic_loop(PLL_LOCK_VIN);
 
 	vin_clk_freq_hz = G_vin_rct_spclk[i].freq;
 }
@@ -1878,6 +1854,44 @@ static struct clk_rct_refclk_obj_s G_hdmi_phy_rct_vdclk[] = {
 
 void rct_set_hdmi_phy_freq_hz(u32 freq_hz)
 {
+#if 0
+	int i;
+
+	for (i = 0; ;i++) {
+	        if ((G_hdmi_phy_rct_vdclk[i].fref == 0) ||
+		    ((G_hdmi_phy_rct_vdclk[i].fref == vo_clk_freq_hz) &&
+		     (G_hdmi_phy_rct_vdclk[i].freq == freq_hz)) )
+			break;
+	}
+
+	amba_outl(0x70170154, 0x00068300);
+	if (G_hdmi_phy_rct_vdclk[i].fref == 0)
+		i = 0; /* 27MHz */
+
+        writel(PLL_HDMI_CTRL_REG,    G_hdmi_phy_rct_vdclk[i].ctrl);
+        writel(PLL_HDMI_FRAC_REG,    G_hdmi_phy_rct_vdclk[i].frac);
+	writel(SCALER_HDMI_POST_REG, G_hdmi_phy_rct_vdclk[i].scaler_post);
+
+	writel(PLL_HDMI_CTRL_REG,    G_hdmi_phy_rct_vdclk[i].ctrl | 0x1);
+
+	if (G_hdmi_phy_rct_vdclk[i].frac != 0x00) {
+		amba_outl(0x70170154, 0x00069300);
+		amba_outl(0x70170150, 0x3ff10000);
+	}
+	writel(SCALER_HDMI_PRE_REG,  G_hdmi_phy_rct_vdclk[i].scaler_pre);
+#endif
+
+	amba_outl(0x70170150, 0x3f770000);
+	amba_outl(0x70170154, 0x00068300);
+
+	/* gclk_hdmi = 10 * gclk_vo when 0x7017008 bit-0 = 0*/
+        writel(PLL_HDMI_CTRL_REG,    0x09011100);
+        writel(PLL_HDMI_FRAC_REG,    0x0);
+	writel(SCALER_HDMI_POST_REG, 0x0010001);
+	writel(PLL_HDMI_CTRL_REG,    0x09011101);
+	writel(SCALER_HDMI_PRE_REG,  0x0010001);
+
+	rct_alan_zhu_magic_loop(PLL_LOCK_HDMI);
 }
 
 u32 get_hdmi_phy_freq_hz(void)
@@ -1900,5 +1914,21 @@ void rct_set_ssi_clk_src(int src)
  */
 void rct_set_vin_lvds_pad(int mode)
 {
-}
+	switch (mode) {
+	case VIN_LVDS_PAD_MODE_LVDS:
+		writel(LVDS_LVCMOS_REG, readl(LVDS_LVCMOS_REG) & ~(0xfffff));
 
+		/* Set bit mode = 1 */
+		writel(LVDS_ASYNC_REG, readl(LVDS_ASYNC_REG) | (0xf400000));
+		break;
+	case VIN_LVDS_PAD_MODE_SLVS:
+		writel(LVDS_LVCMOS_REG, readl(LVDS_LVCMOS_REG) & ~(0xfffff));
+
+		/* Clr bit mode */
+		writel(LVDS_ASYNC_REG, readl(LVDS_ASYNC_REG) & ~(0xf000000));
+		break;
+	default: /* VIN_LVDS_PAD_MODE_LVCMOS */
+		writel(LVDS_LVCMOS_REG, readl(LVDS_LVCMOS_REG) | 0xfffff);
+		writel(LVDS_ASYNC_REG, 0x00000000);
+	}
+}

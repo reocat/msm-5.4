@@ -1077,20 +1077,13 @@ struct platform_device ambarella_wdt0 = {
 static struct resource ambarella_eth0_resources[] = {
 	[0] = {
 		.start	= ETH_BASE,
-		.end	= ETH_BASE + 0x0FFF,
-		.name	= "registers",
+		.end	= ETH_BASE + 0x1FFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
 		.start	= ETH_IRQ,
 		.end	= ETH_IRQ,
 		.flags	= IORESOURCE_IRQ,
-	},
-	[2] = {
-		.start	= ETH_DMA_BASE,
-		.end	= ETH_DMA_BASE + 0x0FFF,
-		.name	= "dma",
-		.flags	= IORESOURCE_MEM,
 	},
 };
 

@@ -140,8 +140,6 @@
 #define VOUT_SUPPORT_8BIT_SD_DOUT	0
 #endif
 
-#define VOUT_CEC_SUPPORT_ADV_CTL	0
-
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -1139,6 +1137,7 @@
 
 
 /* HDMI_INT_ENABLE_REG */
+#define HDMI_INT_ENABLE_PHY_RX_SENSE_REMOVE_EN	0x02000000
 #define HDMI_INT_ENABLE_HDMISE_IDLE_EN		0x01000000
 #define HDMI_INT_ENABLE_P2P_EXCEED_UB_EN	0x00800000
 #define HDMI_INT_ENABLE_P2P_BELOW_LB_EN		0x00400000
@@ -1166,6 +1165,7 @@
 #define HDMI_INT_ENABLE_VSYNC_ACTIVE_DETECT_EN	0x00000001
 
 /* HDMI_INT_STS_REG */
+#define HDMI_INT_STS_PHY_RX_SENSE_REMOVE	0x02000000
 #define HDMI_INT_STS_HDMISE_IDLE		0x01000000
 #define HDMI_INT_STS_P2P_EXCEED_UB		0x00800000
 #define HDMI_INT_STS_P2P_BELOW_LB		0x00400000
@@ -1207,7 +1207,8 @@
 #define HDMI_HDMISE_SOFT_RESET			0x0
 
 /* HDMI_HDMISE_STS_REG */
-#define HDMI_STS_HPD_HI				0x2
+#define HDMI_STS_RX_SENSE			0x2000
+#define HDMI_STS_HPD_HI				0x0002
 
 /* AUNIT_MCLK_REG */
 #define HDMI_AUNIT_MCLK_INPUT_FREQ(x)		((x) & 0x07)
@@ -1648,7 +1649,8 @@
 #define HDMI_I2S_RX_CLOCK_DAI_CLOCK_DIV(x)	((x) & 0x1f)
 
 /* I2S_INIT_REG */
-#define HDMI_I2S_INIT_RX_EN			(0x1 << 1)
+#define HDMI_I2S_INIT_RX_ENABLE			(0x1 << 1)
+#define HDMI_I2S_INIT_RX_DISABLE		0x00
 #define HDMI_I2S_INIT_DAI_RESET(x)		((x) & 0x01)
 
 /* I2S_RX_DATA0_REG */
@@ -1967,14 +1969,15 @@
 #define CEC_INTERRUPT_TX_OK		0x10
 #define CEC_INTERRUPT_TX_FAIL		0x80
 
-#if (VOUT_CEC_SUPPORT_ADV_CTL == 0)
+#if (VOUT_CEC_SUPPORT_CTL_TYPE == 1)
 /* CEC_CTRL_REG */
 #define CEC_CTRL_RESET				(0x01UL << 31)
 #define CEC_CTRL_TX_EN				(0x01 << 30)
 #define CEC_CTRL_TX_BLOCK_NO(x)			(((x) & 0x0f) << 26)
 #define CEC_CTRL_RX_BLOCK_NO(x)			(((x) & 0x03c00000) >> 22)
-#else
-/* CEC_CTRL1_REG */
+#endif
+
+#if (VOUT_CEC_SUPPORT_CTL_TYPE == 2)
 #define CEC_CTRL1_RESET				(0x01 << 31)
 #define CEC_CTRL1_TX_EN				(0x01 << 30)
 #define CEC_CTRL1_TX_BLOCK_NO(x)		(((x) & 0x0f) << 26)
