@@ -48,6 +48,7 @@
 #include "rct/a1.c"
 #endif
 #if (CHIP_REV == A2)
+#define A2_METAL_REV_A1
 #include "rct/a2.c"
 #endif
 #if (CHIP_REV == A2M) || (CHIP_REV == A2S)
