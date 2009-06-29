@@ -181,6 +181,12 @@ struct ambarella_eth_platform_info {
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
 
+struct ambarella_spi_platform_info {
+        int                                     use_interrupt;
+        int                                     cs_num;
+        int                                     *cs_pins;
+};
+
 struct ambarella_idc_platform_info {
 	int					clk_limit;	//Hz
 	int					bulk_write_num;

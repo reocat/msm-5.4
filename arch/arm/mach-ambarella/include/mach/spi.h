@@ -3,7 +3,7 @@
  *
  * History:
  *	2006/12/27 - [Charles Chiou] created file
- *	2008/02/19 - [Allen Wang] changed to use capabilities and chip ID	 
+ *	2008/02/19 - [Allen Wang] changed to use capabilities and chip ID
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -31,7 +31,7 @@
 #define __ASM_ARCH_SPI_H
 
 /****************************************************/
-/* Capabilities based on chip revision              */
+/* Capabilities based on chip revision	      */
 /****************************************************/
 #if (CHIP_REV == A1)
 #define SPI_MAX_SLAVE_ID 			3
@@ -41,7 +41,7 @@
 
 #if (CHIP_REV == A1)
 #define SPI_SUPPORT_TISSP_NSM			0
-#else     	
+#else
 #define SPI_SUPPORT_TISSP_NSM			1
 #endif
 
@@ -52,7 +52,7 @@
 #endif
 
 #if ((CHIP_REV == A1) || (CHIP_REV == A2) || 		\
-     (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) ) 
+     (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) )
 #define SPI_EN2_EN3_ENABLED_BY_HOST_ENA_REG	1
 #else
 #define SPI_EN2_EN3_ENABLED_BY_HOST_ENA_REG	0
@@ -64,8 +64,63 @@
 #define SPI_EN2_ENABLED_BY_GPIO2_AFSEL_REG	0
 #endif
 
+
 /****************************************************/
-/* Controller registers definitions                 */
+/*	       Kernel Space Driver		*/
+/****************************************************/
+#ifndef __ASSEMBLER__
+typedef struct {
+	u8	spi_mode;
+	u8	cfs_dfs;
+	u8	lsb_first;
+	u8	cs_change;
+	u32	baud_rate;
+} amba_spi_cfg_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*buffer;
+	u16	n_size;
+} amba_spi_write_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*buffer;
+	u16	n_size;
+} amba_spi_read_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*w_buffer;
+	u8	*r_buffer;
+	u16	w_size;
+	u16	r_size;
+} amba_spi_write_then_read_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*w_buffer;
+	u8	*r_buffer;
+	u16	n_size;
+} amba_spi_write_and_read_t;
+
+extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,
+	amba_spi_write_t *spi_write);
+extern int ambarella_spi_read(amba_spi_cfg_t *spi_cfg,
+	amba_spi_read_t *spi_read);
+extern int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
+	amba_spi_write_then_read_t *spi_write_then_read);
+extern int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
+	amba_spi_write_and_read_t *spi_write_and_read);
+#endif
+
+
+/****************************************************/
+/* Controller registers definitions		 */
 /****************************************************/
 
 #define SPI_CTRLR0_OFFSET		0x00

@@ -912,13 +912,20 @@ static struct resource ambarella_spi0_resources[] = {
 	},
 };
 
+static int ambarella_spi0_cs_pins[] = {SSI0_EN0, SSI0_EN1, SSIO_EN2, SSIO_EN3};
+static struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
+        .use_interrupt  = 1,
+        .cs_num         = 4,
+        .cs_pins        = ambarella_spi0_cs_pins,
+};
+
 struct platform_device ambarella_spi0 = {
 	.name		= "ambarella-spi",
 	.id		= 0,
 	.resource	= ambarella_spi0_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_spi0_resources),
 	.dev		= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_spi0_platform_info,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
@@ -938,13 +945,20 @@ static struct resource ambarella_spi1_resources[] = {
 	},
 };
 
+static int ambarella_spi1_cs_pins[] = {SSI_4_N};
+static struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
+        .use_interrupt  = 1,
+        .cs_num         = 1,
+        .cs_pins        = ambarella_spi1_cs_pins,
+};
+
 struct platform_device ambarella_spi1 = {
 	.name		= "ambarella-spi",
 	.id		= 1,
 	.resource	= ambarella_spi1_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_spi1_resources),
 	.dev		= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_spi1_platform_info,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
