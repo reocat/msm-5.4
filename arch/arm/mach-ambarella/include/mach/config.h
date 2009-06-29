@@ -199,6 +199,7 @@ struct ambarella_idc_platform_info {
 
 struct ambarella_i2s_controller {
 	void					(*aucodec_digitalio)(void);
+	void					(*channel_select)(u32);
 };
 
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);

@@ -52,9 +52,6 @@
 
 static int a2sbub_board_startup(struct snd_pcm_substream *substream)
 {
-//	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-//	struct snd_soc_codec *codec = rtd->socdev->codec;
-
 	return 0;
 }
 
@@ -64,33 +61,92 @@ static int a2sbub_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	int rval = 0;
+	int errorCode = 0, mclk, oversample;
 
-	/* set codec DAI configuration */
-	rval = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
+	switch (params_rate(params)) {
+	case 8000:
+		mclk = AudioCodec_2_048M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 11025:
+		mclk = AudioCodec_2_8224M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 12000:
+		mclk = AudioCodec_3_072M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 16000:
+		mclk = AudioCodec_4_096M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 22050:
+		mclk = AudioCodec_5_6448M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 24000:
+		mclk = AudioCodec_6_144;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 32000:
+		mclk = AudioCodec_8_192M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 44100:
+		mclk = AudioCodec_11_2896M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 48000:
+		mclk = AudioCodec_12_288M;
+		oversample = AudioCodec_256xfs;
+		break;
+	default:
+		errorCode = -EINVAL;
+		goto hw_params_exit;
+	}
+
+	/* set the I2S system data format*/
+	errorCode = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
 		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (rval < 0) {
+	if (errorCode < 0) {
 		printk(KERN_ERR "can't set codec DAI configuration\n");
 		goto hw_params_exit;
 	}
 
-	/* set cpu DAI configuration */
-	rval = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
+	errorCode = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
 		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (rval < 0) {
+	if (errorCode < 0) {
 		printk(KERN_ERR "can't set cpu DAI configuration\n");
 		goto hw_params_exit;
 	}
 
-	/* set the codec system clock for DAC and ADC */
-	rval = snd_soc_dai_set_sysclk(codec_dai, 0, 0, SND_SOC_CLOCK_IN);
-	if (rval < 0){
-		printk(KERN_ERR "can't set codec DAI clock\n");
+	/* set the I2S system clock*/
+	errorCode = snd_soc_dai_set_sysclk(codec_dai, ADAV803_SYSCLK, mclk, 0);
+	if (errorCode < 0) {
+		printk(KERN_ERR "can't set cpu MCLK configuration\n");
+		goto hw_params_exit;
+	}
+
+	errorCode = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, mclk, 0);
+	if (errorCode < 0) {
+		printk(KERN_ERR "can't set cpu MCLK configuration\n");
+		goto hw_params_exit;
+	}
+
+	errorCode = snd_soc_dai_set_clkdiv(codec_dai, ADAV803_CLKDIV_LRCLK, oversample);
+	if (errorCode < 0) {
+		printk(KERN_ERR "can't set codec MCLK/SF ratio\n");
+		goto hw_params_exit;
+	}
+
+	errorCode = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, oversample);
+	if (errorCode < 0) {
+		printk(KERN_ERR "can't set cpu MCLK/SF ratio\n");
 		goto hw_params_exit;
 	}
 
 hw_params_exit:
-	return rval;
+	return errorCode;
 }
 
 

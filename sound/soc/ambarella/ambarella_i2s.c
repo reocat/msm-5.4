@@ -7,6 +7,7 @@
  *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
  *	2009/03/05 - [Cao Rongrong] Update from 2.6.22.10
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
+ *	2009/06/29 - [Cao Rongrong] To support more mclk and fs
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -120,88 +121,82 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
 	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
-	u8 slots;
-	u32 clock_divider;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+	u8 slots, rx_enabled = 0, tx_enabled = 0;
+	u32 clock_divider, channels;
+	
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		cpu_dai->dma_data = &ambarella_i2s_pcm_stereo_out;
-	else
+		/* Disable tx/rx before initializing */
+		dai_tx_disable();
+		if(amba_tstbits(I2S_INIT_REG, 0x02)) {
+			rx_enabled = 1;
+			dai_rx_disable();
+		}
+		amba_writel(I2S_TX_CTRL_REG, 0x28);
+		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
+	} else {
 		cpu_dai->dma_data = &ambarella_i2s_pcm_stereo_in;
+		/* Disable tx/rx before initializing */
+		dai_rx_disable();
+		if(amba_tstbits(I2S_INIT_REG, 0x04)) {
+			tx_enabled = 1;
+			dai_tx_disable();
+		}
+		amba_writel(I2S_RX_CTRL_REG, 0x02);
+		amba_writel(I2S_RX_FIFO_GTH_REG, 0x40);
+	}
+
+	/* Set channels */
+	channels = params_channels(params);
+	if (priv_data->controller_info->channel_select)
+		priv_data->controller_info->channel_select(channels);
 
 	/* Set format */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-		slots = DAI_64slots;	
+		slots = DAI_32slots;
 		amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
-		amba_writel(I2S_WLEN_REG, 0x0F);
-		amba_writel(I2S_WPOS_REG, 0xf);
+		amba_writel(I2S_WLEN_REG, 0x0f);
+		amba_writel(I2S_WPOS_REG, 0);
 		amba_writel(I2S_SLOT_REG, 0);
 		amba_writel(I2S_24BITMUX_MODE_REG, 0);
+		priv_data->amb_i2s_intf.slots = slots;
 		priv_data->amb_i2s_intf.word_len = DAI_16bits;
+		priv_data->amb_i2s_intf.word_pos = 0;
+		priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
 		break;
 	default:
 		return -EINVAL;
 	}
-	
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-	{
-		/* Disable tx/rx before initializing */
-		dai_tx_disable();
-		amba_writel(I2S_TX_CTRL_REG, 0x28);
-		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
-	} else {
-		/* Disable tx/rx before initializing */
-		dai_rx_disable();
-		amba_writel(I2S_RX_CTRL_REG, 0x02);
-		amba_writel(I2S_RX_FIFO_GTH_REG, 0x40);
-	}
-	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
 
-	/* Set clock */
 	switch (params_rate(params)) {
 	case 8000:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_4_096M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_512xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
-		/* FIXME, A2AUC only, will be replced by other way */
 		break;
 	case 11025:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_5_6448M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_512xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_11025;
-		/* FIXME, A2AUC only, will be replced by other way */
 		break;
 	case 16000:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_4_096M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_16000;
 		break;
 	case 22050:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_5_6448M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_22050;
 		break;
 	case 32000:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_8_192M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_32000;
 		break;
 	case 44100:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_11_2896M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_44100;
 		break;
 	case 48000:
-		priv_data->amb_i2s_intf.mclk = AudioCodec_12_288M;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
 		break;
 	default:
 		return -EINVAL;
 	}
 
+	/* Set clock */
 	set_audio_pll(priv_data->amb_i2s_intf.mclk);
-	/* Dai smapling rate, polarity configuration*/
 	clock_divider = DAI_Clock_Divide_Table[priv_data->amb_i2s_intf.oversample][slots >> 6];
 	clock_divider |= 0x3C0 ;
 	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
@@ -210,6 +205,11 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	if(!amba_tstbits(I2S_INIT_REG, 0x6))
 		dai_fifo_rst();
+
+	if(rx_enabled)
+		dai_rx_enable();
+	if(tx_enabled)
+		dai_tx_enable();
 
 	msleep(1);
 
@@ -295,6 +295,39 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
+static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
+		int clk_id, unsigned int freq, int dir)
+{
+	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+
+	switch (clk_id) {
+	case AMBARELLA_CLKSRC_ONCHIP:
+		priv_data->amb_i2s_intf.mclk = freq;
+		break;
+	default:
+		printk("CLK SOURCE (%d) is not supported yet\n", clk_id);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
+		int div_id, int div)
+{
+	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+
+	switch (div_id) {
+	case AMBARELLA_CLKDIV_LRCLK:
+		priv_data->amb_i2s_intf.oversample = div;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	struct snd_soc_dai *dai)
 {
@@ -312,7 +345,7 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	set_audio_pll(AudioCodec_12_288M);
 
 	/* Dai default smapling rate, polarity configuration*/
-	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_64slots >> 6];
+	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
 	clock_divider |= 0x3C0 ;
 	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
 	priv_data->clock_reg |= clock_divider;
@@ -324,6 +357,8 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
 	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
 	priv_data->amb_i2s_intf.word_len = DAI_16bits;
+	priv_data->amb_i2s_intf.word_pos = 0;
+	priv_data->amb_i2s_intf.slots = DAI_32slots;
 
 	/* Notify HDMI that the audio interface is initialized */
 	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf, AUDIO_NOTIFY_INIT);
@@ -363,6 +398,8 @@ struct snd_soc_dai ambarella_i2s_dai = {
 		.trigger = ambarella_i2s_trigger,
 		.hw_params = ambarella_i2s_hw_params,
 		.set_fmt = ambarella_i2s_set_fmt,
+		.set_sysclk = ambarella_i2s_set_sysclk,
+		.set_clkdiv = ambarella_i2s_set_clkdiv,
 	},
 };
 EXPORT_SYMBOL(ambarella_i2s_dai);

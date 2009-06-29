@@ -78,7 +78,8 @@ enum AudioCodec_OverSample {
 
 /* codec private data */
 struct adav803_priv {
-	unsigned int sysclk;
+	unsigned int mclk;
+	unsigned int oversample;
 	unsigned int fmt_dir;
 };
 
@@ -238,54 +239,6 @@ static int adav803_add_widgets(struct snd_soc_codec *codec)
 	return 0;
 }
 
-
-void adav803_get_clock_info(u32 sfreq, audiocodec_clk_info_t *clkinfo)
-{
-	switch(sfreq){
-	case 48000:
-		clkinfo->mclk_idx = AudioCodec_12_288M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 44100:
-		clkinfo->mclk_idx = AudioCodec_11_2896M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 32000:
-		clkinfo->mclk_idx = AudioCodec_8_192M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 24000:
-		clkinfo->mclk_idx = AudioCodec_6_144;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 22050:
-		clkinfo->mclk_idx = AudioCodec_5_6448M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 16000:
-		clkinfo->mclk_idx = AudioCodec_4_096M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 12000:
-		clkinfo->mclk_idx = AudioCodec_3_072M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 11025:
-		clkinfo->mclk_idx = AudioCodec_2_8224M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	case 8000:
-		clkinfo->mclk_idx = AudioCodec_2_048M;
-		clkinfo->oversample_idx = AudioCodec_256xfs;
-		break;
-	default:
-		clkinfo->mclk_idx = 0xff;
-		clkinfo->oversample_idx = 0xff;
-		break;
-	}	
-}
-
-
 static int adav803_hw_params(struct snd_pcm_substream *substream,
 			struct snd_pcm_hw_params *params,
 			struct snd_soc_dai *dai)
@@ -296,12 +249,10 @@ static int adav803_hw_params(struct snd_pcm_substream *substream,
 	struct adav803_priv *adav803 = codec->private_data;
 
 	u32 sfreq = params_rate(params);
-	audiocodec_clk_info_t clk_info;
 	u8 oversample_idx, data;
 	u8 data1, data2, data3, data4;
 
-	adav803_get_clock_info(sfreq, &clk_info);
-	oversample_idx = clk_info.oversample_idx;
+	oversample_idx = adav803->oversample;
 	if (oversample_idx >= 5) {
 		oversample_idx = AudioCodec_256xfs;
 	}
@@ -414,18 +365,28 @@ static int adav803_mute(struct snd_soc_dai *dai, int mute)
 static int adav803_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		int clk_id, unsigned int freq, int dir)
 {
-	int ret = 0;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct adav803_priv *adav803 = codec->private_data;
 
-	if (freq > 12288000)
-		ret = -EINVAL;
+	switch (clk_id) {
+	case ADAV803_SYSCLK:
+		adav803->mclk = freq;
+		break;
+	default:
+		printk("CLK SOURCE (%d) is not supported yet\n", clk_id);
+		return -EINVAL;
+	}
 
-	return ret;
+	return 0;
 }
 
 
 static int adav803_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct adav803_priv *adav803 = codec->private_data;
+
 	/* set master/slave audio interface */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
@@ -434,7 +395,31 @@ static int adav803_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 	}
 
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_LEFT_J:
+	case SND_SOC_DAIFMT_RIGHT_J:
+	case SND_SOC_DAIFMT_I2S:
+		adav803->fmt_dir = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	return 0;
+}
+
+static int adav803_set_clkdiv(struct snd_soc_dai *codec_dai, int div_id, int div)
+{
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct adav803_priv *adav803 = codec->private_data;
+
+	/* a2auc_sfreq_conf */
+	if(likely(div_id == ADAV803_CLKDIV_LRCLK)) {
+		adav803->oversample = div;
+		return 0;
+	}
+
+	return -EINVAL;
 }
 
 static int adav803_set_bias_level(struct snd_soc_codec *codec,
@@ -525,6 +510,7 @@ struct snd_soc_dai adav803_dai = {
 		.digital_mute = adav803_mute,
 		.set_sysclk = adav803_set_dai_sysclk,
 		.set_fmt = adav803_set_dai_fmt,
+		.set_clkdiv = adav803_set_clkdiv,
 	},
 };
 EXPORT_SYMBOL_GPL(adav803_dai);

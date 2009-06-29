@@ -746,32 +746,6 @@ static int a2auc_codec_write(struct snd_soc_codec *codec, unsigned int _reg,
 	return 0;
 }
 
-static int a2auc_hw_params(struct snd_pcm_substream *substream,
-			struct snd_pcm_hw_params *params,
-			struct snd_soc_dai *dai)
-{
-	switch (params_rate(params)) {
-	case 48000:
-	case 44100:	
-	case 32000:
-	case 22050:
-	case 16000:
-		a2auc_reg.reg_02 = AUC_OSR_256x;
-		break;
-	case 12000:
-	case 11025:
-	case 8000:
-		a2auc_reg.reg_02 = AUC_OSR_512x;
-		break;
-	}
-	if (a2auc_check_state() != AUC_RESET_STATE) {
-		a2auc_write(AUC_OSR_REG, a2auc_reg.reg_02);
-		a2auc_read(AUC_OSR_REG);
-	}
-
-	return 0;
-}
-
 static int a2auc_startup(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
@@ -800,17 +774,6 @@ static int a2auc_digital_mute(struct snd_soc_dai *dai, int mute)
 		a2auc_dac_mute_off();
 
 	return 0;
-}
-
-static int a2auc_set_sysclk(struct snd_soc_dai *dai,
-	int clk_id, unsigned int freq, int dir)
-{
-	int ret = 0;
-
-	if (freq > 12288000)
-		ret = -EINVAL;
-
-	return ret;
 }
 
 static int a2auc_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
@@ -842,6 +805,38 @@ static int a2auc_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	}
 
 	return ret;
+}
+
+static int a2auc_set_clkdiv(struct snd_soc_dai *codec_dai, int div_id, int div)
+{
+	/* a2auc_sfreq_conf */
+	if(likely(div_id == A2AUC_CLKDIV_LRCLK)) {
+		switch (div) {
+		case AudioCodec_128xfs:
+			a2auc_reg.reg_02 = AUC_OSR_128x;
+			break;
+		case AudioCodec_256xfs:
+			a2auc_reg.reg_02 = AUC_OSR_256x;
+			break;
+		case AudioCodec_384xfs:
+			a2auc_reg.reg_02 = AUC_OSR_384x;
+			break;
+		case AudioCodec_512xfs:
+			a2auc_reg.reg_02 = AUC_OSR_512x;
+			break;
+		default:
+			return -EINVAL;
+		}
+	} else {
+		return -EINVAL;
+	}
+
+	if(a2auc_check_state()!=AUC_RESET_STATE) {
+		a2auc_write(AUC_OSR_REG, a2auc_reg.reg_02);
+		a2auc_read(AUC_OSR_REG);
+	}
+
+	return 0;
 }
 
 static int a2auc_set_bias_level(struct snd_soc_codec *codec,
@@ -888,10 +883,9 @@ struct snd_soc_dai ambarella_a2auc_dai = {
 	.ops = {
 		.startup = a2auc_startup,
 		.shutdown = a2auc_shutdown,
-		.hw_params = a2auc_hw_params,
 		.digital_mute = a2auc_digital_mute,
-		.set_sysclk = a2auc_set_sysclk,
 		.set_fmt = a2auc_set_fmt,
+		.set_clkdiv = a2auc_set_clkdiv,
 	},
 };
 EXPORT_SYMBOL(ambarella_a2auc_dai);

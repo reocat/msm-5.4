@@ -202,6 +202,9 @@ typedef struct a2aucctrl_reg {
 	u32 reg_10;
 } a2aucctrl_reg_t;
 
+#define A2AUC_SYSCLK_MCLK	0
+#define A2AUC_CLKDIV_LRCLK	0
+
 extern struct snd_soc_dai ambarella_a2auc_dai;
 extern struct snd_soc_codec_device ambarella_a2auc_codec_device;
 

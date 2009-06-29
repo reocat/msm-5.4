@@ -29,6 +29,12 @@
 
 #define PLL_LOCK_AUDIO  	(0x1 << 7)
 
+#if (CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M)
+#define DAI_CLOCK_MASK		0x0400
+#else
+#define DAI_CLOCK_MASK		0x0000
+#endif
+
 
 #ifndef __ASSEMBLER__
 
@@ -42,6 +48,8 @@ struct ambarella_i2s_interface {
 	u8 oversample;
 	u8 word_order;
 	u8 word_len;
+	u8 word_pos;
+	u8 slots;
 };
 
 #define MAX_OVERSAMPLE_IDX_NUM	9

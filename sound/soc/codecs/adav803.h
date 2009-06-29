@@ -392,15 +392,13 @@
 
 #define ADAV803_u7a_DIRIN_PWR_Down	(1 << 5)
 
-typedef struct audiocodec_clk_info_s {
-	u8 mclk_idx;			/**refer to AudioCodec_MCLK*/
-	u8 oversample_idx;	/**refer to AudioCodec_OverSample*/
-} audiocodec_clk_info_t;
-
 struct adav803_setup_data {
 	int i2c_bus;
 	unsigned short i2c_address;
 };
+
+#define ADAV803_SYSCLK	0
+#define ADAV803_CLKDIV_LRCLK	0
 
 extern struct snd_soc_dai adav803_dai;
 extern struct snd_soc_codec_device soc_codec_dev_adav803;

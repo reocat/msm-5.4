@@ -56,9 +56,6 @@ typedef struct dai_set_s{
 	audiopll_t *audiopll;
 }dai_set_t;
 
-
-#define DAI_CLOCK_MASK 0x0400
-
 enum AudioCodec_MCLK {
 	AudioCodec_18_432M = 0,
 	AudioCodec_16_9344M = 1,
@@ -103,6 +100,9 @@ enum DAI_INIT_CTL
 #define DAI_32slots	32
 #define DAI_64slots	64
 #define DAI_48slots	48
+
+#define AMBARELLA_CLKSRC_ONCHIP	AUC_CLK_ONCHIP_PLL_27MHZ
+#define AMBARELLA_CLKDIV_LRCLK	0
 
 extern struct snd_soc_dai ambarella_i2s_dai;
 

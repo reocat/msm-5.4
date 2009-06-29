@@ -1023,17 +1023,43 @@ static struct resource ambarella_i2s0_resources[] = {
 
 static void aucodec_digitalio_on(void)
 {
+	/* aucodec_digitalio_on */
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M)
-	/* aucodec_digitalio_on */
 	amba_setbits(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
+
 #elif (CHIP_REV == A2)
-	/* aucodec_digitalio_on */
 	amba_setbits(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
+
+#elif (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
+	amba_clrbits(GPIO1_AFSEL_REG, 0x10000000);
+	/* GPIO77~GPIO85 program as hardware mode */
+	amba_setbits(GPIO2_AFSEL_REG, 0x003fe000);
+#endif
+}
+
+static void i2s_channel_select(u32 ch)
+{
+#if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
+	switch (ch) {
+	case 2:
+		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_2CHANNELS_ENB);
+		break;
+	case 4:
+		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_4CHANNELS_ENB);
+		break;
+	case 6:
+		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_6CHANNELS_ENB);
+		break;
+	default:
+		printk("Don't support %d channels\n", ch);
+		break;
+	}
 #endif
 }
 
 static struct ambarella_i2s_controller ambarella_platform_i2s_controller0 = {
 	.aucodec_digitalio = aucodec_digitalio_on,
+	.channel_select = i2s_channel_select,
 };
 
 struct platform_device ambarella_i2s0 = {

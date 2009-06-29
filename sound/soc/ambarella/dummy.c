@@ -53,21 +53,61 @@ static int ambarella_dummy_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	int errorCode = 0;
+	int errorCode = 0, mclk, oversample;
 
-	errorCode = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (errorCode < 0) {
-		printk(KERN_ERR "can't set codec DAI configuration\n");
+	switch (params_rate(params)) {
+	case 8000:
+		mclk = AudioCodec_4_096M;
+		oversample = AudioCodec_512xfs;
+		break;
+	case 11025:
+		mclk = AudioCodec_5_6448M;
+		oversample = AudioCodec_512xfs;
+		break;
+	case 16000:
+		mclk = AudioCodec_4_096M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 22050:
+		mclk = AudioCodec_5_6448M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 32000:
+		mclk = AudioCodec_8_192M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 44100:
+		mclk = AudioCodec_11_2896M;
+		oversample = AudioCodec_256xfs;
+		break;
+	case 48000:
+		mclk = AudioCodec_12_288M;
+		oversample = AudioCodec_256xfs;
+		break;
+	default:
+		errorCode = -EINVAL;
 		goto hw_params_exit;
 	}
 
+	/* set the I2S system data format*/
 	errorCode = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
 		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		printk(KERN_ERR "can't set cpu DAI configuration\n");
+		goto hw_params_exit;
+	}
+
+	/* set the I2S system clock*/
+	errorCode = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, mclk, 0);
+	if (errorCode < 0) {
+		printk(KERN_ERR "can't set cpu MCLK configuration\n");
+		goto hw_params_exit;
+	}
+
+	errorCode = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, oversample);
+	if (errorCode < 0) {
+		printk(KERN_ERR "can't set cpu MCLK/SF ratio\n");
 		goto hw_params_exit;
 	}
 
