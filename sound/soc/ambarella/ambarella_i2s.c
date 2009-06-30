@@ -123,7 +123,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
 	u8 slots, rx_enabled = 0, tx_enabled = 0;
 	u32 clock_divider, channels;
-	
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		cpu_dai->dma_data = &ambarella_i2s_pcm_stereo_out;
 		/* Disable tx/rx before initializing */

@@ -9,6 +9,7 @@
  *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
  *	2009/03/05 - [Cao Rongrong] Update from 2.6.22.10
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
+ *	2009/06/30 - [Cao Rongrong] Fix last_desc bug
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -62,7 +63,7 @@ struct ambarella_runtime_data {
 	dma_addr_t dma_desc_array_phys;
 	int channel;		/* Physical DMA channel */
 	int ndescr;		/* Number of descriptors */
-	int last_descr;	/* Record lastest DMA done descriptor number */
+	int last_descr;		/* Record lastest DMA done descriptor number */
 
 	u32 *dma_rpt_buf;
 	dma_addr_t dma_rpt_phys;
@@ -108,7 +109,8 @@ static int ambarella_dai_dma_xfr(struct ambarella_runtime_data *prtd)
 	for(i = 0; i < prtd->ndescr; i++)
 		prtd->dma_desc_array[i].attr &= ~DMA_DESC_EOC;
 
-	retval = ambarella_dma_desc_xfr(prtd->dma_desc_array_phys,
+	retval = ambarella_dma_desc_xfr(
+		prtd->dma_desc_array_phys + sizeof(ambarella_dma_req_t) * prtd->last_descr,
 		prtd->channel);
 
 	prtd->working = 1;
@@ -123,9 +125,9 @@ static int ambarella_dai_dma_xfr(struct ambarella_runtime_data *prtd)
  */
 int dai_dma_stop(struct ambarella_runtime_data *prtd)
 {
-	int descr = 0, i;
+	int descr, i;
 
-	for(i = 1; i <= 3; i++){
+	for(i = 2; i <= 4; i++){
 		descr = (prtd->last_descr + i) % prtd->ndescr;
 		prtd->dma_desc_array[descr].attr |= DMA_DESC_EOC;
 	}
@@ -154,9 +156,7 @@ static void dai_dma_handler(void *dev_id)
 	rpt = &prtd->dma_rpt_buf[cur_descr];
 	if (*rpt & 0x10000000) { /* Descriptor chain done */
 		prtd->working = 0;
-		prtd->last_descr = 0;
 		*rpt &= (~0x10000000);
-		//mdelay(1);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			/* dai_tx_disable() */
 			amba_clrbits(I2S_INIT_REG, 0x4);
@@ -215,6 +215,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->working = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		prtd->channel = I2S_TX_DMA_CHAN;
 		ret = ambarella_dma_request_irq(I2S_TX_DMA_CHAN, 
 				dai_tx_dma_handler, substream);
 		if (ret < 0)
@@ -225,6 +226,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 		
 	} else {
+		prtd->channel = I2S_RX_DMA_CHAN;
 		ret = ambarella_dma_request_irq(I2S_RX_DMA_CHAN, 
 				dai_rx_dma_handler, substream);
 		if (ret < 0)
@@ -243,6 +245,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	dma_buff_phys = runtime->dma_addr;
 
 	prtd->ndescr = 0;
+	prtd->last_descr = 0;
 	do {
 		next_desc_phys += sizeof(ambarella_dma_req_t);
 		dma_desc->next = (struct ambarella_dma_req_s *) next_desc_phys;
@@ -302,6 +305,8 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 					dai_rx_dma_handler);
 		}
 		prtd->dma_data = NULL;
+		prtd->ndescr = 0;
+		prtd->last_descr = 0;
 	}
 
 	/* TODO - do we need to ensure DMA flushed */
@@ -316,14 +321,6 @@ static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
 	int ret = 0;
 
 	spin_lock_irq(&prtd->lock);
-	
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		prtd->channel = I2S_TX_DMA_CHAN;
-	else 
-		prtd->channel = I2S_RX_DMA_CHAN;
-
-	prtd->last_descr = 0;
-	
 	dai_dma_stop(prtd);
 	spin_unlock_irq(&prtd->lock);
 	
