@@ -186,6 +186,15 @@ struct ambarella_spi_platform_info {
         int                                     cs_num;
         int                                     *cs_pins;
 };
+#define AMBA_SPI_PARAM_CALL(id, arg, perm) \
+	module_param_call(spi##id##_cs0, param_set_int, param_get_int, &(arg[0]), perm); \
+	module_param_call(spi##id##_cs1, param_set_int, param_get_int, &(arg[1]), perm); \
+	module_param_call(spi##id##_cs2, param_set_int, param_get_int, &(arg[2]), perm); \
+	module_param_call(spi##id##_cs3, param_set_int, param_get_int, &(arg[3]), perm); \
+	module_param_call(spi##id##_cs4, param_set_int, param_get_int, &(arg[4]), perm); \
+	module_param_call(spi##id##_cs5, param_set_int, param_get_int, &(arg[5]), perm); \
+	module_param_call(spi##id##_cs6, param_set_int, param_get_int, &(arg[6]), perm); \
+	module_param_call(spi##id##_cs7, param_set_int, param_get_int, &(arg[7]), perm)
 
 struct ambarella_idc_platform_info {
 	int					clk_limit;	//Hz

@@ -524,7 +524,7 @@ static int ambarella_spi_transfer(struct spi_device *spi, struct spi_message *ms
 		if (!xfer->tx_buf && !xfer->rx_buf)
 			return -EINVAL;
 
-		if (as->bpw > 8 && (xfer->len & 0x1))
+		if (spi->bits_per_word > 8 && (xfer->len & 0x1))
 			return -EINVAL;
 	}
 
@@ -786,6 +786,7 @@ static void ambarella_spi_complete(void *arg)
 int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_write)
 {
 	u8				bus_id, cs_id, cs_num;
+	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
 	struct spi_message		msg;
@@ -836,19 +837,21 @@ int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_write)
 
 	/* Wait */
 	spin_lock_irq(&ps[cs_id].lock);
-	spi->master->transfer(spi, &msg);
+	errorCode = spi->master->transfer(spi, &msg);
 	spin_unlock_irq(&ps[cs_id].lock);
-	wait_for_completion(&done);
+	if (!errorCode)
+		wait_for_completion(&done);
 
 	mutex_unlock(&ps[cs_id].mtx);
 
-	return 0;
+	return errorCode;
 }
 EXPORT_SYMBOL(ambarella_spi_write);
 
 int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_read)
 {
 	u8				bus_id, cs_id, cs_num;
+	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
 	struct spi_message		msg;
@@ -899,13 +902,14 @@ int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_read)
 
 	/* Wait */
 	spin_lock_irq(&ps[cs_id].lock);
-	spi->master->transfer(spi, &msg);
+	errorCode = spi->master->transfer(spi, &msg);
 	spin_unlock_irq(&ps[cs_id].lock);
-	wait_for_completion(&done);
+	if (!errorCode)
+		wait_for_completion(&done);
 
 	mutex_unlock(&ps[cs_id].mtx);
 
-	return 0;
+	return errorCode;
 }
 EXPORT_SYMBOL(ambarella_spi_read);
 
@@ -914,6 +918,7 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 {
 	u8				bus_id, cs_id, cs_num, *buf;
 	u16				size;
+	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
 	struct spi_message		msg;
@@ -976,9 +981,10 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 
 	/* Wait */
 	spin_lock_irq(&ps[cs_id].lock);
-	spi->master->transfer(spi, &msg);
+	errorCode = spi->master->transfer(spi, &msg);
 	spin_unlock_irq(&ps[cs_id].lock);
-	wait_for_completion(&done);
+	if (!errorCode)
+		wait_for_completion(&done);
 
 	mutex_unlock(&ps[cs_id].mtx);
 
@@ -987,7 +993,7 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 		spi_write_then_read->r_size);
 	kfree(buf);
 
-	return 0;
+	return errorCode;
 }
 EXPORT_SYMBOL(ambarella_spi_write_then_read);
 
@@ -995,6 +1001,7 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 	amba_spi_write_and_read_t *spi_write_and_read)
 {
 	u8				bus_id, cs_id, cs_num;
+	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
 	struct spi_message		msg;
@@ -1047,13 +1054,14 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 
 	/* Wait */
 	spin_lock_irq(&ps[cs_id].lock);
-	spi->master->transfer(spi, &msg);
+	errorCode = spi->master->transfer(spi, &msg);
 	spin_unlock_irq(&ps[cs_id].lock);
-	wait_for_completion(&done);
+	if (!errorCode)
+		wait_for_completion(&done);
 
 	mutex_unlock(&ps[cs_id].mtx);
 
-	return 0;
+	return errorCode;
 }
 EXPORT_SYMBOL(ambarella_spi_write_and_read);
 
