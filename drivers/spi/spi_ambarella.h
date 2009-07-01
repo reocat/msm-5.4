@@ -37,7 +37,6 @@
 /* SPI Parameters */
 #define SPI_FIFO_LENGTH		16L
 #define SPI_DUMMY_DATA		0xffff
-#define SPI0_CS2_CS3_EN		0x00000002
 #define MAX_QUERY_TIMES		10
 
 /* Default SPI settings */

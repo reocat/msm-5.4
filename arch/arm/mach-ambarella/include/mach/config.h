@@ -181,10 +181,20 @@ struct ambarella_eth_platform_info {
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
 
+#define SPI0_CS2_CS3_EN				0x00000002
+struct ambarella_spi_cs_config {
+	u8					bus_id;
+	u8					cs_id;
+	u8					cs_num;
+	u8					cs_change;
+	int					*cs_pins;
+};
 struct ambarella_spi_platform_info {
-        int                                     use_interrupt;
-        int                                     cs_num;
-        int                                     *cs_pins;
+	int				     use_interrupt;
+	int				     cs_num;
+	int				     *cs_pins;
+	void    				(*cs_activate)  (struct ambarella_spi_cs_config *);
+	void    				(*cs_deactivate)(struct ambarella_spi_cs_config *);
 };
 #define AMBA_SPI_PARAM_CALL(id, arg, perm) \
 	module_param_call(spi##id##_cs0, param_set_int, param_get_int, &(arg[0]), perm); \

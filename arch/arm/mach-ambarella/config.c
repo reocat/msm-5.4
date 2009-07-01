@@ -253,7 +253,7 @@ static int __init parse_mem_tag_dsp(const struct tag *tag)
 		return -EINVAL;
 	}
 
-	ambarella_io_desc[2].io_desc.virtual = 
+	ambarella_io_desc[2].io_desc.virtual =
 		(tag->u.mem.start - PHYS_OFFSET) + NOLINUX_MEM_V_START;
 	ambarella_io_desc[2].io_desc.pfn = __phys_to_pfn(tag->u.mem.start);
 	ambarella_io_desc[2].io_desc.length = tag->u.mem.size;
@@ -301,7 +301,7 @@ static int __init parse_mem_tag_bsb(const struct tag *tag)
 		return -EINVAL;
 	}
 
-	ambarella_io_desc[3].io_desc.virtual = 
+	ambarella_io_desc[3].io_desc.virtual =
 		(tag->u.mem.start - PHYS_OFFSET) + NOLINUX_MEM_V_START;
 	ambarella_io_desc[3].io_desc.pfn = __phys_to_pfn(tag->u.mem.start);
 	ambarella_io_desc[3].io_desc.length = tag->u.mem.size;
@@ -371,7 +371,7 @@ static struct ambarella_nand_timing ambarella_nand_default_timing = {
 
 static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.nr_sets    	= 1,
-	.sets	        = &ambarella_nand_default_set,
+	.sets		= &ambarella_nand_default_set,
 	.timing		= &ambarella_nand_default_timing,
 };
 
@@ -899,6 +899,40 @@ struct platform_device ambarella_idc1 = {
 #endif
 
 /* ==========================================================================*/
+static void ambarella_spi_cs_activate(struct ambarella_spi_cs_config *cs_config)
+{
+	u8			cs_pin;
+
+	if (cs_config->bus_id >= SPI_INSTANCES || cs_config->cs_id >= cs_config->cs_num)
+		return;
+
+	cs_pin = cs_config->cs_pins[cs_config->cs_id];
+	if (cs_config->cs_change) {
+		if (cs_config->bus_id == 0 && (cs_config->cs_id == 2 || cs_config->cs_id == 3))
+			amba_writel(HOST_ENABLE_REG, amba_readl(HOST_ENABLE_REG) | SPI0_CS2_CS3_EN);
+		ambarella_gpio_config(cs_pin, GPIO_FUNC_HW);
+	} else {
+		if (cs_config->bus_id == 0 && (cs_config->cs_id == 2 || cs_config->cs_id == 3))
+			amba_writel(HOST_ENABLE_REG, amba_readl(HOST_ENABLE_REG) & ~SPI0_CS2_CS3_EN);
+		ambarella_gpio_config(cs_pin, GPIO_FUNC_SW_OUTPUT);
+		ambarella_gpio_set(cs_pin, 0);
+	}
+}
+
+static void ambarella_spi_cs_deactivate(struct ambarella_spi_cs_config *cs_config)
+{
+	u8			cs_pin;
+
+	if (cs_config->bus_id >= SPI_INSTANCES || cs_config->cs_id >= cs_config->cs_num)
+		return;
+
+	cs_pin = cs_config->cs_pins[cs_config->cs_id];
+	if (cs_config->cs_change)
+		return;
+	else
+		ambarella_gpio_set(cs_pin, 1);
+}
+
 static struct resource ambarella_spi0_resources[] = {
 	[0] = {
 		.start	= SPI_BASE,
@@ -915,9 +949,11 @@ static struct resource ambarella_spi0_resources[] = {
 static int ambarella_spi0_cs_pins[] = {SSI0_EN0, SSI0_EN1, SSIO_EN2, SSIO_EN3, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(0, ambarella_spi0_cs_pins, 0644);
 static struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
-        .use_interrupt  = 1,
-        .cs_num         = ARRAY_SIZE(ambarella_spi0_cs_pins),
-        .cs_pins        = ambarella_spi0_cs_pins,
+	.use_interrupt  = 1,
+	.cs_num	 = ARRAY_SIZE(ambarella_spi0_cs_pins),
+	.cs_pins	= ambarella_spi0_cs_pins,
+	.cs_activate	= ambarella_spi_cs_activate,
+	.cs_deactivate	= ambarella_spi_cs_deactivate,
 };
 
 struct platform_device ambarella_spi0 = {
@@ -949,9 +985,11 @@ static struct resource ambarella_spi1_resources[] = {
 static int ambarella_spi1_cs_pins[] = {SSI_4_N, -1, -1, -1, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 static struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
-        .use_interrupt  = 1,
-        .cs_num         = ARRAY_SIZE(ambarella_spi1_cs_pins),
-        .cs_pins        = ambarella_spi1_cs_pins,
+	.use_interrupt  = 1,
+	.cs_num	 = ARRAY_SIZE(ambarella_spi1_cs_pins),
+	.cs_pins	= ambarella_spi1_cs_pins,
+	.cs_activate	= ambarella_spi_cs_activate,
+	.cs_deactivate	= ambarella_spi_cs_deactivate,
 };
 
 struct platform_device ambarella_spi1 = {
@@ -1280,7 +1318,7 @@ EXPORT_SYMBOL(get_ambarella_proc_dir);
 #define TS_GPIO		56
 
 static int ambarella_tsc2007_get_pendown_state(void)
-{	
+{
 	if (ambarella_gpio_get(TS_GPIO))
 		return 0;
 	else
@@ -1317,9 +1355,9 @@ static struct tsc2007_platform_data ambarella_tsc2007_pdata = {
 		.y_max = 3768,
 	},
 	.get_pendown_state = ambarella_tsc2007_get_pendown_state,
-        .clear_penirq = ambarella_tsc2007_clear_penirq,
-        .init_platform_hw = ambarella_tsc2007_init_platform_hw,
-        .exit_platform_hw = ambarella_tsc2007_exit_platform_hw
+	.clear_penirq = ambarella_tsc2007_clear_penirq,
+	.init_platform_hw = ambarella_tsc2007_init_platform_hw,
+	.exit_platform_hw = ambarella_tsc2007_exit_platform_hw
 };
 
 static struct i2c_board_info ambarella_tsc2007_board_info = {
