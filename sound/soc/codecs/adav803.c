@@ -154,7 +154,7 @@ static int adav803_write(struct snd_soc_codec *codec, unsigned int reg,
 	if (cache[reg] != value) {
 		struct i2c_client *client = codec->control_data;
 		if (i2c_smbus_write_byte_data(client, reg << 1, value)) {
-			printk(KERN_ERR "cs4270: I2C write failed\n");
+			printk(KERN_ERR "adav803: I2C write failed\n");
 			return -EIO;
 		}
 

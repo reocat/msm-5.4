@@ -430,10 +430,8 @@ static int __init ipcam_board_init(void)
 		goto ipcam_board_init_exit;
 	}
 
-	platform_set_drvdata(ipcam_snd_device,
-		&ipcam_snd_devdata);
-	ipcam_snd_devdata.dev =
-		&ipcam_snd_device->dev;
+	platform_set_drvdata(ipcam_snd_device, &ipcam_snd_devdata);
+	ipcam_snd_devdata.dev = &ipcam_snd_device->dev;
 
 	errorCode = platform_device_add(ipcam_snd_device);
 	if (errorCode) {

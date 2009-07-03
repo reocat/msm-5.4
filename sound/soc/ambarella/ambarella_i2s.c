@@ -333,15 +333,16 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 {
 	u32 clock_divider;
 	struct amb_i2s_priv *priv_data = dai->private_data;
+	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
 
 	/* aucodec_digitalio_on */
 	if (priv_data->controller_info->aucodec_digitalio)
 		priv_data->controller_info->aucodec_digitalio();
 
-#if !(defined(CONFIG_SND_SOC_AMBARELLA_A2AUC) || defined(CONFIG_SND_SOC_AMBARELLA_A2AUC_MODULE))
-	/*Switch to external I2S Input */
-	priv_data->clock_reg = 0x1<<10;
-#endif
+	/* Switch to external I2S Input except  IPcam Board */
+	if (strcmp(socdev->card->name, "IPcam"))
+		priv_data->clock_reg = 0x1<<10;
+
 	set_audio_pll(AudioCodec_12_288M);
 
 	/* Dai default smapling rate, polarity configuration*/

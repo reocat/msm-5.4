@@ -27,6 +27,7 @@ snd-soc-wm9712-objs := wm9712.o
 snd-soc-wm9713-objs := wm9713.o
 snd-soc-a2auc-objs := ambarella_auc.o
 snd-soc-adav803-objs := adav803.o
+snd-soc-cs24l51-objs := cs24l51.o
 snd-soc-ambdummy-objs := ambarella_dummy.o
 
 obj-$(CONFIG_SND_SOC_AC97_CODEC)	+= snd-soc-ac97.o
@@ -58,5 +59,6 @@ obj-$(CONFIG_SND_SOC_WM9712)	+= snd-soc-wm9712.o
 obj-$(CONFIG_SND_SOC_WM9713)	+= snd-soc-wm9713.o
 obj-$(CONFIG_SND_SOC_AMBARELLA_A2AUC)	+= snd-soc-a2auc.o
 obj-$(CONFIG_SND_SOC_ADAV803)	+= snd-soc-adav803.o
+obj-$(CONFIG_SND_SOC_CS24L51)	+= snd-soc-cs24l51.o
 obj-$(CONFIG_SND_SOC_AMBARELLA_DUMMY)	+= snd-soc-ambdummy.o
 
