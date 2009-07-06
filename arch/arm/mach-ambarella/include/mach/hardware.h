@@ -59,9 +59,6 @@
 
 #define DEFAULT_ATAG_START	(PHYS_OFFSET + 0x000C0000)
 
-#define io_p2v(x)		(((x) >= APB_START) ? ((x) - APB_START + APB_BASE) : ((x) - AHB_START + AHB_BASE))
-#define io_v2p(x)		(((x) >= APB_BASE) ? ((x) - APB_BASE + APB_START) : ((x) - AHB_BASE + AHB_START))
-
 #include <mach/chip.h>
 #include <mach/busaddr.h>
 

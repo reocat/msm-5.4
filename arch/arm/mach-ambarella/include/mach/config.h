@@ -32,6 +32,7 @@
 
 #define ATAG_AMBARELLA_DSP		0x44000110
 #define ATAG_AMBARELLA_BSB		0x44000044
+#define ATAG_AMBARELLA_REVMEM		0x44001111
 
 #define ATAG_AMBARELLA_NAND_BST		0x44040400
 #define ATAG_AMBARELLA_NAND_BLD		0x44040401
@@ -73,6 +74,9 @@
 #define AMBARELLA_BOARD_TYPE(v)		(((v) >> 8) & 0xFF)
 #define AMBARELLA_BOARD_REV(v)		(((v) >> 0) & 0xFF)
 
+#define MEMORY_RESERVE_MAX_NR		(16)
+#define MEMORY_RESERVE_CHECK_MASK	(PAGE_SIZE - 1)
+
 #ifndef __ASSEMBLER__
 
 extern u32 get_ambarella_dspmem_phys(void);
@@ -82,6 +86,19 @@ extern u32 get_ambarella_dspmem_size(void);
 extern u32 get_ambarella_bsbmem_phys(void);
 extern u32 get_ambarella_bsbmem_virt(void);
 extern u32 get_ambarella_bsbmem_size(void);
+
+extern u32 ambarella_phys_to_virt(u32 paddr);
+extern u32 ambarella_virt_to_phys(u32 vaddr);
+
+struct ambarella_mem_rev_desc {
+	unsigned long physaddr;
+	unsigned long size;
+};
+struct ambarella_mem_rev_info {
+	u32 counter;
+	struct ambarella_mem_rev_desc desc[MEMORY_RESERVE_MAX_NR];
+};
+extern u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo);
 
 extern u64 ambarella_dmamask;
 extern u32 ambarella_debug_level;

@@ -35,9 +35,8 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode)
 {
-	amba_writel(SOFT_RESET_REG, 0x00);
-	amba_writel(SOFT_RESET_REG, 0x01);
-	cpu_reset(0);
+	rct_reset_chip();
+	cpu_reset(0xC0108000);
 }
 
 #endif

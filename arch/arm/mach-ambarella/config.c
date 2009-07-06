@@ -346,6 +346,132 @@ u32 get_ambarella_bsbmem_size(void)
 }
 EXPORT_SYMBOL(get_ambarella_bsbmem_size);
 
+u32 ambarella_phys_to_virt(u32 paddr)
+{
+	int					i;
+	u32					phystart;
+	u32					phylength;
+	u32					phyoffset;
+	u32					vstart;
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
+		phystart = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
+		phylength = ambarella_io_desc[i].io_desc.length;
+		vstart = ambarella_io_desc[i].io_desc.virtual;
+		if ((paddr >= phystart) && (paddr < (phystart + phylength))) {
+			phyoffset = paddr - phystart;
+			return (vstart + phyoffset);
+		}
+	}
+
+	return __phys_to_virt(paddr);
+}
+EXPORT_SYMBOL(ambarella_phys_to_virt);
+
+u32 ambarella_virt_to_phys(u32 vaddr)
+{
+	int					i;
+	u32					phystart;
+	u32					vlength;
+	u32					voffset;
+	u32					vstart;
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
+		phystart = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
+		vlength = ambarella_io_desc[i].io_desc.length;
+		vstart = ambarella_io_desc[i].io_desc.virtual;
+		if ((vaddr >= vstart) && (vaddr < (vstart + vlength))) {
+			voffset = vaddr - vstart;
+			return (phystart + voffset);
+		}
+	}
+
+	return __virt_to_phys(vaddr);
+}
+EXPORT_SYMBOL(ambarella_virt_to_phys);
+
+/* ==========================================================================*/
+static struct ambarella_mem_rev_info ambarella_reserve_mem_info = {
+	.counter			= 1,
+	.desc				= {
+		[0]			= {
+			.physaddr	= RESERVE_MEM_P_START,
+			.size		= RESERVE_MEM_SIZE,
+		},
+	},
+};
+
+static void __init early_revmem(char **p)
+{
+	unsigned long		start = 0;
+	unsigned long		size = 0;
+	u32			index;
+
+	start = memparse(*p, p);
+	if (**p == ',')
+		size = memparse((*p) + 1, p);
+
+	if ((start & MEMORY_RESERVE_CHECK_MASK) || (start < PHYS_OFFSET)) {
+		pr_err("Ambarella: Bad revmem start 0x%lx\n", start);
+		return;
+	}
+
+	if (size & MEMORY_RESERVE_CHECK_MASK) {
+		pr_err("Ambarella: Bad revmem size 0x%lx\n", size);
+		return;
+	}
+
+	index = ambarella_reserve_mem_info.counter;
+	if (index < MEMORY_RESERVE_MAX_NR) {
+		ambarella_reserve_mem_info.desc[index].physaddr = start;
+		ambarella_reserve_mem_info.desc[index].size = size;
+		ambarella_reserve_mem_info.counter++;
+	} else {
+		pr_err("Ambarella: too much revmem %d!\n",
+			MEMORY_RESERVE_MAX_NR);
+	}
+}
+__early_param("revmem=", early_revmem);
+
+static int __init parse_mem_tag_revmem(const struct tag *tag)
+{
+	u32			index;
+
+	if ((tag->u.mem.start & MEMORY_RESERVE_CHECK_MASK) ||
+		(tag->u.mem.start < PHYS_OFFSET)) {
+		pr_err("Ambarella: Bad revmem start 0x%x\n", tag->u.mem.start);
+		return -EINVAL;
+	}
+
+	if (tag->u.mem.size & MEMORY_RESERVE_CHECK_MASK) {
+		pr_err("Ambarella: Bad revmem size 0x%x\n", tag->u.mem.size);
+		return -EINVAL;
+	}
+
+	index = ambarella_reserve_mem_info.counter;
+	if (index < MEMORY_RESERVE_MAX_NR) {
+		ambarella_reserve_mem_info.desc[index].physaddr =
+			tag->u.mem.start;
+		ambarella_reserve_mem_info.desc[index].size = tag->u.mem.size;
+		ambarella_reserve_mem_info.counter++;
+	} else {
+		pr_err("Ambarella: too much revmem %d!\n",
+			MEMORY_RESERVE_MAX_NR);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_REVMEM, parse_mem_tag_revmem);
+
+u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
+{
+	*pinfo = ambarella_reserve_mem_info;
+
+	return 0;
+}
+EXPORT_SYMBOL(get_ambarella_mem_rev_info);
+
 /* ==========================================================================*/
 static char ambarella_nand_default_partition_name[MAX_AMBOOT_PARTITION_NR][MAX_AMBOOT_PARTITION_NANE_SIZE];
 static struct mtd_partition ambarella_nand_default_partition[MAX_AMBOOT_PARTITION_NR];

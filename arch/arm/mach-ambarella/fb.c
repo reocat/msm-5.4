@@ -74,7 +74,9 @@ static struct ambarella_platform_fb ambarella_platform_fb0 = {
 		.ypanstep	= 1,
 		.ywrapstep	= 1,
 		.accel		= FB_ACCEL_NONE,
-		.line_length	= 1024,
+		.line_length	= 0,
+		.smem_start	= 0,
+		.smem_len	= 0,
 	},
 	.dsp_status		= AMBA_DSP_UNKNOWN_MODE,
 	.fb_status		= AMBAFB_UNKNOWN_MODE,
@@ -372,11 +374,14 @@ static struct ambarella_platform_fb ambarella_platform_fb0 = {
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
 	.x_multiplication	= 1,
 	.y_multiplication	= 1,
+	.use_prealloc		= 0,
+	.prealloc_line_length	= 0,
 
 	.pan_display		= NULL,
 	.setcmap		= NULL,
 	.check_var		= NULL,
 	.set_par		= NULL,
+	.set_blank		= NULL,
 
 	.proc_fb_info		= NULL,
 	.proc_file		= NULL,
@@ -428,7 +433,9 @@ static struct ambarella_platform_fb ambarella_platform_fb1 = {
 		.ypanstep	= 1,
 		.ywrapstep	= 1,
 		.accel		= FB_ACCEL_NONE,
-		.line_length	= 1024,
+		.line_length	= 0,
+		.smem_start	= 0,
+		.smem_len	= 0,
 	},
 	.dsp_status		= AMBA_DSP_UNKNOWN_MODE,
 	.fb_status		= AMBAFB_UNKNOWN_MODE,
@@ -726,11 +733,14 @@ static struct ambarella_platform_fb ambarella_platform_fb1 = {
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
 	.x_multiplication	= 1,
 	.y_multiplication	= 1,
+	.use_prealloc		= 0,
+	.prealloc_line_length	= 0,
 
 	.pan_display		= NULL,
 	.setcmap		= NULL,
 	.check_var		= NULL,
 	.set_par		= NULL,
+	.set_blank		= NULL,
 
 	.proc_fb_info		= NULL,
 	.proc_file		= NULL,
@@ -773,10 +783,11 @@ static int __init parse_videolfb(const struct tag *tag)
 	ambarella_platform_fb0.screen_var.bits_per_pixel = tag->u.videolfb.lfb_depth;
 	ambarella_platform_fb0.screen_fix.line_length = tag->u.videolfb.lfb_linelength;
 
-	//tag->u.videolfb.lfb_base = 0xc3800000;
-	//tag->u.videolfb.lfb_size = 0x00001000;
+	ambarella_platform_fb0.screen_fix.smem_start = tag->u.videolfb.lfb_base;
+	ambarella_platform_fb0.screen_fix.smem_len = tag->u.videolfb.lfb_size;
 
 	ambarella_platform_fb0.dsp_status = AMBA_DSP_QUICKLOGO_MODE;
+	ambarella_platform_fb0.prealloc_line_length = tag->u.videolfb.lfb_linelength;
 #endif
 
 #ifdef CONFIG_AMBARELLA_FB1
@@ -801,10 +812,11 @@ static int __init parse_videolfb(const struct tag *tag)
 	ambarella_platform_fb1.screen_var.bits_per_pixel = tag->u.videolfb.lfb_depth;
 	ambarella_platform_fb1.screen_fix.line_length = tag->u.videolfb.lfb_linelength;
 
-	//tag->u.videolfb.lfb_base = 0xc3800000;
-	//tag->u.videolfb.lfb_size = 0x00001000;
+	ambarella_platform_fb1.screen_fix.smem_start = tag->u.videolfb.lfb_base;
+	ambarella_platform_fb1.screen_fix.smem_len = tag->u.videolfb.lfb_size;
 
 	ambarella_platform_fb1.dsp_status = AMBA_DSP_QUICKLOGO_MODE;
+	ambarella_platform_fb1.prealloc_line_length = tag->u.videolfb.lfb_linelength;
 #endif
 
 	return 0;

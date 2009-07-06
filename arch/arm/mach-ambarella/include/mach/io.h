@@ -31,6 +31,9 @@
 #define __io(a)			((void __iomem *)(a))
 #define __mem_pci(a)		(a)
 
+#define io_p2v(x)		(((x) >= APB_START) ? ((x) - APB_START + APB_BASE) : ((x) - AHB_START + AHB_BASE))
+#define io_v2p(x)		(((x) >= APB_BASE) ? ((x) - APB_BASE + APB_START) : ((x) - AHB_BASE + AHB_START))
+
 #ifndef __ASSEMBLER__
 
 #ifndef CONFIG_AMBARELLA_DEBUG_IO_ACCESS

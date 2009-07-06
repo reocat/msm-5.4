@@ -61,6 +61,8 @@ typedef int (*ambarella_fb_check_var_fn)(struct fb_var_screeninfo *var,
 	struct fb_info *info, struct ambarella_fb_info *);
 typedef int (*ambarella_fb_set_par_fn)(struct fb_info *info,
 	struct ambarella_fb_info *);
+typedef int (*ambarella_fb_blank_fn)(int blank_mode, struct fb_info *info,
+	struct ambarella_fb_info *);
 
 struct ambarella_fb_iav_info {
 	struct fb_var_screeninfo screen_var;
@@ -71,6 +73,7 @@ struct ambarella_fb_iav_info {
 	ambarella_fb_setcmap_fn setcmap;
 	ambarella_fb_check_var_fn check_var;
 	ambarella_fb_set_par_fn set_par;
+	ambarella_fb_blank_fn set_blank;
 };
 
 struct ambarella_platform_fb {
@@ -84,11 +87,14 @@ struct ambarella_platform_fb {
 	enum ambarella_fb_color_format color_format;
 	u32 x_multiplication;
 	u32 y_multiplication;
+	u32 use_prealloc;
+	u32 prealloc_line_length;
 
 	ambarella_fb_pan_display_fn pan_display;
 	ambarella_fb_setcmap_fn setcmap;
 	ambarella_fb_check_var_fn check_var;
 	ambarella_fb_set_par_fn set_par;
+	ambarella_fb_blank_fn set_blank;
 
 	struct fb_info *proc_fb_info;
 	struct proc_dir_entry *proc_file;
