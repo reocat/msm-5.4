@@ -42,7 +42,6 @@
 
 #include "cs24l51.h"
 
-
 /* codec private data */
 struct cs24l51_priv {
 	unsigned int mode;
@@ -143,6 +142,19 @@ static int cs24l51_clrbits(struct snd_soc_codec *codec,
 	value &= (~mask);
 
 	return snd_soc_write(codec, reg, value);
+}
+
+static void cs24l51_dump_reg(struct snd_soc_codec *codec)
+{
+	int i, val;
+
+	for(i = 1; i < CS24L51_NUMREGS; i++) {
+		val = cs24l51_read_reg_cache(codec, i);
+		pr_debug("0x%02x:0x%02x    ", i, val);
+		if(i % 8 == 0)
+			printk("\n");
+	}
+
 }
 
 
@@ -274,6 +286,8 @@ static int cs24l51_hw_params(struct snd_pcm_substream *substream,
 	/*De-freeze register setting now */
 	cs24l51_clrbits(codec, CS24L51_DAC_CTL_REG, CS24L51_FREEZE_ENABLE);
 
+	cs24l51_dump_reg(codec);
+
 	return 0;
 }
 
@@ -338,35 +352,6 @@ static int cs24l51_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	return 0;
 }
 
-static int cs24l51_pcm_prepare(struct snd_pcm_substream *substream,
-			       struct snd_soc_dai *codec_dai)
-{
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct i2c_client *client = codec->control_data;
-	int i, val;
-
-	for(i = 1; i < CS24L51_NUMREGS; i++) {
-		printk("0x%02x:0x%02x    ", i, cs24l51_read_reg_cache(codec, i));
-		if(i % 8 == 0)
-			printk("\n");
-	}
-
-	printk("\n\n");
-
-	for(i = 1; i < CS24L51_NUMREGS; i++) {
-		val = i2c_smbus_read_byte_data(client, i);
-		if(val < 0){
-			pr_err("CS24L51: I2C read error: address = 0x%x\n", i);
-			return -EIO;
-		}
-		printk("0x%02x:0x%02x    ", i, val);
-		if(i % 8 == 0)
-			printk("\n");
-	}
-
-	return 0;
-}
-
 static int cs24l51_set_bias_level(struct snd_soc_codec *codec,
 				 enum snd_soc_bias_level level)
 {
@@ -417,7 +402,6 @@ struct snd_soc_dai cs24l51_dai = {
 		.digital_mute = cs24l51_mute,
 		.set_sysclk = cs24l51_set_dai_sysclk,
 		.set_fmt = cs24l51_set_dai_fmt,
-		.prepare = cs24l51_pcm_prepare,
 	},
 };
 EXPORT_SYMBOL_GPL(cs24l51_dai);
