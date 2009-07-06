@@ -42,6 +42,9 @@ struct ambarella_spi {
 	u32			regbase;
 	int			use_interrupt, irq;
 	int			*cs_pins;
+	void    		(*cs_activate)  (struct ambarella_spi_cs_config *);
+	void    		(*cs_deactivate)(struct ambarella_spi_cs_config *);
+
 	struct tasklet_struct	tasklet;
 	spinlock_t		lock;
 
@@ -105,48 +108,6 @@ static void ambarella_spi_do_xfer(struct spi_master *master);
 
 
 /*============================SPI Bus Driver==================================*/
-
-static void ambarella_spi_cs_activate(struct spi_device *spi, int *cs_pins,
-	u8 cs_change)
-{
-	u8			bus_id, cs_id, cs_pin;
-
-	bus_id = spi->master->bus_num;
-	cs_id  = spi->chip_select;
-
-	if (bus_id >= SPI_INSTANCES || cs_id >= spi->master->num_chipselect)
-		return;
-
-	cs_pin = cs_pins[cs_id];
-	if (cs_change) {
-		if (bus_id == 0 && (cs_id == 2 || cs_id == 3))
-			amba_writel(HOST_ENABLE_REG, amba_readl(HOST_ENABLE_REG) | SPI0_CS2_CS3_EN);
-		ambarella_gpio_config(cs_pin, GPIO_FUNC_HW);
-	} else {
-		if (bus_id == 0 && (cs_id == 2 || cs_id == 3))
-			amba_writel(HOST_ENABLE_REG, amba_readl(HOST_ENABLE_REG) & ~SPI0_CS2_CS3_EN);
-		ambarella_gpio_config(cs_pin, GPIO_FUNC_SW_OUTPUT);
-		ambarella_gpio_set(cs_pin, 0);
-	}
-}
-
-static void ambarella_spi_cs_deactivate(struct spi_device *spi, int *cs_pins,
-	u8 cs_change)
-{
-	u8			bus_id, cs_id, cs_pin;
-
-	bus_id = spi->master->bus_num;
-	cs_id  = spi->chip_select;
-
-	if (bus_id >= SPI_INSTANCES || cs_id >= spi->master->num_chipselect)
-		return;
-
-	cs_pin = cs_pins[cs_id];
-	if (cs_change)
-		return;
-	else
-		ambarella_gpio_set(cs_pin, 1);
-}
 
 static int ambarella_spi_disable(struct spi_master *master)
 {
@@ -394,6 +355,7 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 	struct ambarella_spi		*as = spi_master_get_devdata(master);
 	struct spi_message		*msg;
 	struct spi_transfer		*xfer;
+	struct ambarella_spi_cs_config  cs_config;
 	u32				ctrlr0;
 	void				*wbuf, *rbuf;
 
@@ -401,7 +363,14 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 
 	if (list_empty(&msg->transfers)) {
 
-		ambarella_spi_cs_deactivate(msg->spi, as->cs_pins, as->c_xfer->cs_change);
+		if (as->cs_deactivate) {
+			cs_config.bus_id = master->bus_num;
+			cs_config.cs_id = msg->spi->chip_select;
+			cs_config.cs_num = master->num_chipselect;
+			cs_config.cs_pins = as->cs_pins;
+			cs_config.cs_change = as->c_xfer->cs_change;
+			as->cs_deactivate(&cs_config);
+		}
 		ambarella_spi_disable(as->c_dev->master);
 
 		msg->actual_length = as->c_xfer->len;
@@ -450,7 +419,14 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 
 	amba_writel(as->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
-	ambarella_spi_cs_activate(as->c_dev, as->cs_pins, as->c_xfer->cs_change);
+	if (as->cs_activate) {
+		cs_config.bus_id = master->bus_num;
+		cs_config.cs_id = as->c_dev->chip_select;
+		cs_config.cs_num = master->num_chipselect;
+		cs_config.cs_pins = as->cs_pins;
+		cs_config.cs_change = as->c_xfer->cs_change;
+		as->cs_activate(&cs_config);
+	}
 	if (as->use_interrupt) {
 		disable_irq(as->irq);
 		amba_writel(as->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
@@ -623,6 +599,10 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 		errorCode = -EINVAL;
 		goto ambarella_spi_probe_exit3;
 	}
+	if (!pinfo->cs_activate || !pinfo->cs_deactivate) {
+		errorCode = -EINVAL;
+		goto ambarella_spi_probe_exit3;
+	}
 
 	/* Get Base Address */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -650,6 +630,8 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	as->use_interrupt = pinfo->use_interrupt;
 	as->irq = irq;
 	as->cs_pins = pinfo->cs_pins;
+	as->cs_activate = pinfo->cs_activate;
+	as->cs_deactivate = pinfo->cs_deactivate;
 	tasklet_init(&as->tasklet, ambarella_spi_tasklet, (unsigned long)master);
 	INIT_LIST_HEAD(&as->queue);
 	as->c_xfer = NULL;
@@ -658,15 +640,9 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	as->bpw = 16;
 
 	/* Request IRQ */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
-	vic_set_type(irq, VIRQ_LEVEL_HIGH);
-	errorCode = request_irq(irq, ambarella_spi_isr, 0,
-			pdev->dev.bus_id, master);
-#else
 	errorCode = request_irq(irq, ambarella_spi_isr, IRQF_TRIGGER_HIGH,
 			pdev->dev.bus_id, master);
 
-#endif
 	if (errorCode)
 		goto ambarella_spi_probe_exit2;
 	else
