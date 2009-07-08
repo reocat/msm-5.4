@@ -173,7 +173,6 @@ struct amb_notify g_port = {
 
 /* big enough to hold our biggest descriptor */
 #define USB_BUFSIZ	256
-#define Q_DEPTH		5
 
 struct amb_dev {
 	spinlock_t		lock;
@@ -200,6 +199,7 @@ struct amb_dev {
 	struct mutex		mtx;
 
 	int			open_count;
+	int			error;
 };
 
 struct amb_dev *ag_device;
@@ -209,9 +209,13 @@ static DECLARE_WORK(notify_work, notify_worker);
 
 /*-------------------------------------------------------------------------*/
 
-static unsigned int buflen = (64*1024);
+static unsigned int buflen = (48*1024);
 module_param (buflen, uint, S_IRUGO);
-MODULE_PARM_DESC(buflen, "buffer length, default=32K");
+MODULE_PARM_DESC(buflen, "buffer length, default=48K");
+
+static unsigned int qdepth = 5;
+module_param (qdepth, uint, S_IRUGO);
+MODULE_PARM_DESC(qdepth, "bulk transfer queue depth, default=5");
 
 static unsigned int use_notify = 1;
 module_param(use_notify, uint, S_IRUGO);
@@ -568,7 +572,7 @@ static int ag_open(struct inode *inode, struct file *filp)
 
 	/* gadget have not been configured */
 	if(dev->config == 0){
-		rval = -ENODEV;
+		rval = -ENOTCONN;
 		goto exit;
 	}
 
@@ -578,6 +582,7 @@ static int ag_open(struct inode *inode, struct file *filp)
 	}
 
 	dev->open_count++;
+	dev->error = 0;
 exit:
 	mutex_unlock(&dev->mtx);
 	return rval;
@@ -614,9 +619,15 @@ static int ag_read(struct file *file, char __user *buf,
 	mutex_lock(&dev->mtx);
 
 	while(count > 0){
-		if(wait_event_interruptible(dev->wq, !list_empty(&dev->out_req_list))){
+		if(wait_event_interruptible(dev->wq,
+			!list_empty(&dev->out_req_list) || dev->error)){
 			mutex_unlock(&dev->mtx);
 			return -ERESTARTSYS;
+		}
+
+		if(dev->error){
+			mutex_unlock(&dev->mtx);
+			return -EIO;
 		}
 
 		spin_lock_irq(&dev->lock);
@@ -654,8 +665,7 @@ static int ag_read(struct file *file, char __user *buf,
 static int ag_write(struct file *file, const char __user *buf,
 	size_t count, loff_t *ppos)
 {
-	int rval = 0;
-	int size, len = 0;
+	int rval, size, len = 0;
 	struct amb_dev *dev = ag_device;
 	struct usb_request *req = NULL;
 
@@ -664,9 +674,15 @@ static int ag_write(struct file *file, const char __user *buf,
 	mutex_lock(&dev->mtx);
 
 	while(count > 0) {
-		if(wait_event_interruptible(dev->wq, !list_empty(&dev->in_req_list))){
+		if(wait_event_interruptible(dev->wq,
+			!list_empty(&dev->in_req_list) || dev->error)){
 			mutex_unlock(&dev->mtx);
 			return -ERESTARTSYS;
+		}
+
+		if(dev->error){
+			mutex_unlock(&dev->mtx);
+			return -EIO;
 		}
 
 		spin_lock_irq(&dev->lock);
@@ -681,6 +697,9 @@ static int ag_write(struct file *file, const char __user *buf,
 		}
 
 		req->length = size;
+		if ((count - size == 0) && (size % dev->in_ep->maxpacket == 0))
+			req->zero = 1;
+
 		rval = usb_ep_queue(dev->in_ep, req, GFP_ATOMIC);
 		if (rval != 0) {
 			ERROR(dev, "%s: cannot queue bulk in request, "
@@ -830,25 +849,26 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 	int 		rval = 0;
 
 	switch (status) {
-
 	case 0: 			/* normal completion? */
 		spin_lock_irq(&dev->lock);
+		dev->error = 0;
 		list_add_tail(&req->list, &dev->in_req_list);
-		wake_up_interruptible(&dev->wq);
 		spin_unlock_irq(&dev->lock);
 		break;
 
 	/* this endpoint is normally active while we're configured */
 	case -ECONNRESET:		/* request dequeued */
+		dev->error = 1;
 		usb_ep_fifo_flush(ep);
 	case -ESHUTDOWN:		/* disconnect from host */
 		VDBG (dev, "%s gone (%d), %d/%d\n", ep->name, status,
 				req->actual, req->length);
 		amb_free_buf_req (ep, req);
-		return;
+		break;
 	default:
 		DBG (dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
+		dev->error = 1;
 		/* queue request again */
 		rval = usb_ep_queue(dev->in_ep, req, GFP_ATOMIC);
 		if (rval != 0) {
@@ -857,6 +877,8 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 		}
 		break;
 	}
+
+	wake_up_interruptible(&dev->wq);
 }
 
 
@@ -873,14 +895,14 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 	switch (status) {
 	case 0: 			/* normal completion */
 		spin_lock_irq(&dev->lock);
+		dev->error = 0;
 		list_add_tail(&req->list, &dev->out_req_list);
-		wake_up_interruptible(&dev->wq);
 		spin_unlock_irq(&dev->lock);
-
 		break;
 
 	/* this endpoint is normally active while we're configured */
 	case -ECONNRESET:		/* request dequeued */
+		dev->error = 1;
 		usb_ep_fifo_flush(ep);
 	case -ESHUTDOWN:		/* disconnect from host */
 		VDBG (dev, "%s gone (%d), %d/%d\n", ep->name, status,
@@ -890,6 +912,7 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 	default:
 		DBG (dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
+		dev->error = 1;
 		/* queue request again */
 		rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
 		if (rval != 0) {
@@ -898,6 +921,8 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 		}
 		break;
 	}
+
+	wake_up_interruptible(&dev->wq);
 }
 
 
@@ -957,6 +982,7 @@ static void amb_start_notify (struct amb_dev *dev)
 	event->bNotifyType = __constant_cpu_to_le16(PORT_NOTIFY_IDLE);
 	event->port_id = __constant_cpu_to_le16 (0);
 	event->value = __constant_cpu_to_le32 (0);
+	event->status = DEVICE_NOT_OPEN;
 
 	req->length = AG_NOTIFY_MAXPACKET;
 	req->complete = amb_notify_complete;
@@ -1050,7 +1076,7 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 
 	/* allocate and queue read requests */
 	ep = dev->out_ep;
-	for (i = 0; i < Q_DEPTH && result == 0; i++) {
+	for (i = 0; i < qdepth && result == 0; i++) {
 		req = amb_alloc_buf_req(ep, buflen, GFP_ATOMIC);
 		if (req) {
 			req->complete = amb_bulk_out_complete;
@@ -1064,7 +1090,7 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 
 	/* allocate write requests, and put on free list */
 	ep = dev->in_ep;
-	for (i = 0; i < Q_DEPTH; i++) {
+	for (i = 0; i < qdepth; i++) {
 		req = amb_alloc_buf_req(ep, buflen, GFP_ATOMIC);
 		if (req) {
 			req->complete = amb_bulk_in_complete;
@@ -1402,6 +1428,8 @@ static int __init amb_bind (struct usb_gadget *gadget)
 	INIT_LIST_HEAD(&dev->in_req_list);
 	INIT_LIST_HEAD(&dev->out_req_list);
 	dev->gadget = gadget;
+	dev->config = 0;
+	dev->error = 0;
 	ag_device = dev;
 	set_gadget_data (gadget, dev);
 
@@ -1553,14 +1581,20 @@ static int __init amb_gadget_init (void)
 	if (rval) {
 		printk(KERN_ERR "amb_gadget_init: cannot register gadget driver, "
 			"rval=%d\n", rval);
-		goto out;
+		goto out0;
+	}
+
+	if (buflen >= 65536) {
+		printk(KERN_ERR "amb_gadget_init: buflen is too large\n");
+		rval = -EINVAL;
+		goto out1;
 	}
 
 	dev_id = MKDEV(AMB_GADGET_MAJOR, AMB_GADGET_MINOR_START);
 	rval = register_chrdev_region(dev_id, 1, "amb_gadget");
 	if(rval < 0){
 		printk(KERN_ERR "amb_gadget_init: register devcie number error!\n");
-		goto out;
+		goto out1;
 	}
 
 	cdev_init(&ag_cdev, &ag_fops);
@@ -1569,13 +1603,13 @@ static int __init amb_gadget_init (void)
 	if (rval) {
 		printk(KERN_ERR "amb_gadget_init: cdev_add failed\n");
 		unregister_chrdev_region(dev_id, 1);
-		goto out;
+		goto out1;
 	}
 
-out:
+out1:
 	if(rval)
 		usb_gadget_unregister_driver(&amb_gadget_driver);
-
+out0:
 	return rval;
 }
 module_init (amb_gadget_init);

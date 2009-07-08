@@ -1934,7 +1934,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
 	struct ambarella_udc *udc = the_controller;
 
-	dprintk(DEBUG_NORMAL,"usb_gadget_register_driver() '%s'\n",
+	dprintk(DEBUG_NORMAL,"usb_gadget_unregister_driver() '%s'\n",
 		driver->driver.name);
 
 	if (!udc)
