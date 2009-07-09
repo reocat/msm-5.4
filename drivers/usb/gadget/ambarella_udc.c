@@ -1520,37 +1520,27 @@ finish:
 static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 {
 	struct ambarella_ep	*ep = to_ambarella_ep(_ep);
-	struct ambarella_request	*req = NULL;
-	int			retval = -EINVAL;
+	struct ambarella_request	*req;
+	unsigned int		halted = ep->halted;
 	unsigned long		flags;
-	unsigned		halted;
 
 	if (!the_controller->driver)
 		return -ESHUTDOWN;
 
 	if (!_ep || !_req)
-		return retval;
+		return -EINVAL;
 
 	local_irq_save (flags);
 
-	halted = ep->halted;
-	ep->halted = 1;
-
+	/* make sure the request is actually queued on this endpoint */
 	list_for_each_entry (req, &ep->queue, queue) {
-		if (&req->req == _req) {
-			list_del_init (&req->queue);
-			_req->status = -ECONNRESET;
-			retval = 0;
+		if (&req->req == _req)
 			break;
-		}
 	}
-
-	if (retval != 0)
-		goto out;
-
-	dprintk(DEBUG_VERBOSE,
-		"dequeued req %p from %s, len %d buf %p\n",
-		req, _ep->name, _req->length, _req->buf);
+	if (&req->req != _req) {
+		local_irq_restore (flags);
+		return -EINVAL;
+	}
 
 	/* request in processing */
 	if(ep->data_desc == req->data_desc) {
@@ -1561,13 +1551,13 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 		}
 	}
 
+	ep->halted = 1;
 	ambarella_udc_done(ep, req, -ECONNRESET);
-	
-out:
+
 	ep->halted = halted;
 	local_irq_restore (flags);
 
-	return retval;
+	return 0;
 }
 
 /*
