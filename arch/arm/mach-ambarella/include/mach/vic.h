@@ -33,7 +33,8 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
+#if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) || \
+    (CHIP_REV ==A5S)
 #define VIC_INSTANCES	2
 #else
 #define VIC_INSTANCES	1

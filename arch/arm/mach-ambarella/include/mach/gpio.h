@@ -37,7 +37,8 @@
 #if 	(CHIP_REV == A5) || (CHIP_REV == A6)
 #define GPIO_INSTANCES	4
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) || 		\
-	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
+	(CHIP_REV == A5S)
 #define GPIO_INSTANCES	3
 #else
 #define GPIO_INSTANCES	2
@@ -47,9 +48,9 @@
 #define GPIO_MAX_LINES			58
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define GPIO_MAX_LINES			81
-#elif 	(CHIP_REV == A3)
+#elif 	(CHIP_REV == A3) || (CHIP_REV == A5S)
 #define GPIO_MAX_LINES			96
-#elif 	(CHIP_REV == A5) || (CHIP_REV == A6) 
+#elif 	(CHIP_REV == A5) || (CHIP_REV == A6)
 #define GPIO_MAX_LINES			128
 #else
 #define GPIO_MAX_LINES			128
@@ -72,6 +73,11 @@
 #define GPIO_FUNC_SW_INPUT		0
 #define GPIO_FUNC_SW_OUTPUT		1
 #define GPIO_FUNC_HW			2
+
+/* GPIO 50~53 INTERNAL MUXER (A5S)*/
+#define ENABLE_STEPPERC			1
+#define ENABLE_SPI_SLAVE		2
+#define ENABLE_UART1			3
 
 /****************************************************/
 /* Controller registers definitions                 */
@@ -116,7 +122,7 @@
 #define GPIO1_MASK_REG			GPIO1_REG(0x28)
 #define GPIO1_ENABLE_REG		GPIO1_REG(0x2c)
 
-#if	(GPIO_INSTANCES >= 3) 
+#if	(GPIO_INSTANCES >= 3)
 #define GPIO2_DATA_REG			GPIO2_REG(0x00)
 #define GPIO2_DIR_REG			GPIO2_REG(0x04)
 #define GPIO2_IS_REG			GPIO2_REG(0x08)
@@ -131,7 +137,7 @@
 #define GPIO2_ENABLE_REG		GPIO2_REG(0x2c)
 #endif
 
-#if 	(GPIO_INSTANCES >= 4) 
+#if 	(GPIO_INSTANCES >= 4)
 #define GPIO3_DATA_REG			GPIO3_REG(0x00)
 #define GPIO3_DIR_REG			GPIO3_REG(0x04)
 #define GPIO3_IS_REG			GPIO3_REG(0x08)
@@ -295,10 +301,42 @@
 #define PJY_TXER_O  	GPIO(99)
 #define PHY_TXD_O_0	GPIO(100)
 #define PHY_TXD_O_1   	GPIO(101)
-#define PHY_TXD_O_2	GPIO(102)
-#define PHY_TXD_O_3	GPIO(103)
 #define CLK_TX_I	GPIO(104)
 #define CLK_RX_I	GPIO(105)
+#define NAND_FLASH_CE1 	GPIO(114)
+#define NAND_FLASH_CE2	GPIO(115)
+#define NAND_FLASH_CE3	GPIO(116)
+
+/*------------------------------------------------------------------------*/
+/* (CHIP_REV == A2S/A2M) */
+#define IDC_BUS_HDMI	GPIO(87)
+
+/*------------------------------------------------------------------------*/
+#if (CHIP_REV == A5S)
+/* (CHIP_REV == A5S)*/
+#define IDC3_BUS_MUX	GPIO(36)
+#define PHY_TXD_O_2	GPIO(18)
+#define PHY_TXD_O_3	GPIO(19)
+#define PHY_RXDV_I	GPIO(40)
+#define PHY_RXER_I	GPIO(41)
+#define PHY_CRS_I	GPIO(42)
+#define PHY_COL_I	GPIO(43)
+#define PHY_RXD_I_0	GPIO(44)
+#define PHY_RXD_I_1	GPIO(47)
+#define PHY_RXD_I_2	GPIO(48)
+#define PHY_RXD_I_3	GPIO(49)
+#define UART1_TX	GPIO(50)
+#define UART1_RTS	GPIO(51)
+#define UART1_RX	GPIO(52)
+#define UART1_CTS	GPIO(53)
+#define SSI_SLAVE_MISO	GPIO(50)
+#define SSI_SLAVE_EN	GPIO(51)
+#define SSI_SLAVE_MOSI	GPIO(52)
+#define SSI_SLAVE_CLK	GPIO(53)
+#else
+/* (CHIP_REV == A5) and later */
+#define PHY_TXD_O_2	GPIO(102)
+#define PHY_TXD_O_3	GPIO(103)
 #define PHY_RXDV_I	GPIO(106)
 #define PHY_RXER_I	GPIO(107)
 #define PHY_CRS_I	GPIO(108)
@@ -307,13 +345,16 @@
 #define PHY_RXD_I_1	GPIO(111)
 #define PHY_RXD_I_2	GPIO(112)
 #define PHY_RXD_I_3	GPIO(113)
-#define NAND_FLASH_CE1 	GPIO(114)
-#define NAND_FLASH_CE2	GPIO(115)
-#define NAND_FLASH_CE3	GPIO(116)
+#endif
 
-/*------------------------------------------------------------------------*/
-/* (CHIP_REV == A2S/A2M) */
-#define IDC_BUS_HDMI	GPIO(87)
+#define VD1_OUT20	GPIO(28)
+#define VD1_OUT21	GPIO(29)
+#define VD1_OUT22	GPIO(30)
+#define VD1_OUT23	GPIO(31)
+#define VD1_OUT15	GPIO(92)
+#define VD1_OUT16	GPIO(93)
+#define VD1_OUT17	GPIO(94)
+#define VD1_OUT18	GPIO(95)
 
 #define GPIO_BANK_SIZE			32
 #define ARCH_NR_GPIOS			(GPIO_INSTANCES * GPIO_BANK_SIZE)

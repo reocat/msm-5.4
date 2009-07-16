@@ -69,14 +69,30 @@
 
 #endif
 
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M)  
+#if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A5S)
 #define MS_DMA_CHAN		3
-#elif (CHIP_REV == 6)
+#elif (CHIP_REV == A6)
 #define MS_DMA_CHAN		5
 #define MS_PAGE_BUF_DMA_CHAN	6
 #else
 /* No AHB MS controller */
 #define MS_DMA_CHAN		0
+#endif
+
+#if (DMA_SUPPORT_DMA_FIOS == 1)
+/* Max number of channel */
+#define NUM_DMA_FIOS_CHANNELS 	1
+#else
+/* Max number of channel */
+#define NUM_DMA_FIOS_CHANNELS 	0
+#endif
+
+#if (CHIP_REV == A6)
+#define NUM_DMA_CHANNELS 	7
+#elif (CHIP_REV == A5S)
+#define NUM_DMA_CHANNELS 	4
+#else
+#define NUM_DMA_CHANNELS 	5
 #endif
 
 /****************************************************/

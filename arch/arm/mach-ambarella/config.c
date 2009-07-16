@@ -696,7 +696,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.fifosize	= UART_FIFO_SIZE,
 		.line		= 0,
 	},
-#if (UART_PORT_MAX >= 2)
+#if (UART_INSTANCE >= 2)
 	[1] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
@@ -710,6 +710,13 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 #endif
 };
 
+#if (CHIP_REV == A5S)
+u32 get_uart_freq_hz_a5s(void)
+{
+	return 1846153;
+}
+#endif
+
 struct ambarella_uart_platform_info ambarella_uart_ports = {
 	.total_port_num		= ARRAY_SIZE(ambarella_uart_port_resource),
 	.registed_port_num	= 0,
@@ -718,12 +725,18 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.name		= "ambarella-uart0",
 		.flow_control	= 0,
 	},
-#if (UART_PORT_MAX >= 2)
+#if (UART_INSTANCE >= 2)
 	.amba_port[1]		= {
 		.port		= &ambarella_uart_port_resource[1],
 		.name		= "ambarella-uart1",
 		.flow_control	= 1,
 	},
+#endif
+	.set_pll		= rct_set_uart_pll,
+#if (CHIP_REV == A5S)
+	.get_pll		= get_uart_freq_hz_a5s,
+#else
+	.get_pll		= get_uart_freq_hz,
 #endif
 };
 
@@ -739,7 +752,7 @@ struct platform_device ambarella_uart = {
 	}
 };
 
-#if (UART_PORT_MAX >= 2)
+#if (UART_INSTANCE >= 2)
 struct platform_device ambarella_uart1 = {
 	.name		= "ambarella-uart",
 	.id		= 1,
@@ -754,6 +767,15 @@ struct platform_device ambarella_uart1 = {
 #endif
 
 /* ==========================================================================*/
+static u32 sd_pll_enabled = 0;
+void set_sd_pll(void)
+{
+	if (!sd_pll_enabled) {
+		sd_pll_enabled = 1;
+		rct_set_sd_pll(48000000);
+	}
+}
+
 static struct resource ambarella_sd0_resources[] = {
 	[0] = {
 		.start	= SD_BASE,
@@ -845,6 +867,8 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #endif
 	.clk_limit		= 12500000,
 	.wait_tmo		= (5 * HZ),
+	.set_pll		= set_sd_pll,
+	.get_pll		= get_sd_freq_hz,
 };
 
 struct platform_device ambarella_sd0 = {
@@ -914,6 +938,8 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
 	.wait_tmo		= (5 * HZ),
+	.set_pll		= set_sd_pll,
+	.get_pll		= get_sd_freq_hz,
 };
 
 struct platform_device ambarella_sd1 = {
@@ -1385,13 +1411,18 @@ struct resource ambarella_ir_resources[] = {
 	},
 };
 
+static struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
+	.set_pll		= rct_set_ir_pll,
+	.get_pll		= get_ir_freq_hz,
+};
+
 struct platform_device ambarella_ir0 = {
 	.name		= "ambarella-ir",
 	.id		= 0,
 	.resource	= ambarella_ir_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_ir_resources),
 	.dev			= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_platform_ir_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}

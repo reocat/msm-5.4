@@ -13,38 +13,21 @@
  * without the prior consent of Ambarella, Inc.
  */
 
+#if (RCT_AUDIO_PLL_USE_HAL_API == 1)
+#include <mach/hal/hal.h>
+
+u32 get_audio_freq_hz(void)
+{
+	return  (u32) amb_get_audio_clock_frequency(HAL_BASE_VP);
+}
+#else
+extern void rct_alan_zhu_magic_loop(int clk_chk);
 extern u32 get_spclk_freq_hz(void);
 
-static struct srcu_notifier_head audio_notifier_list;
-static struct notifier_block audio_notify;
-static struct ambarella_i2s_interface audio_i2s_intf;
-
-/**
- * Configure audio clock
- */
 static const u8 audiopll_ref_table[3][2] = {
 	{0x00, 0x00}, {0x01, 0x00}, {0x01, 0x01}
 };
-
 static u32 aud_sysclk = 12288000;
-
-static const u32 mclk_table[MAX_MCLK_IDX_NUM] = {
-	18432000,
-	16934400,
-	12288000,
-	11289600,
-	9216000,
-	8467200,
-	8192000,
-	6144000,
-	5644800,
-	4608000,
-	4233600,
-	4096000,
-	3072000,
-	2822400,
-	2048000
-};
 
 static void rct_set_audio_freq_hz(u32 aud_clk)
 {
@@ -56,67 +39,11 @@ u32 get_audio_freq_hz(void)
 	return aud_sysclk;
 }
 
-#if (RCT_AUDIO_PLL_CONF_MODE == 2)
-static void rct_audio_pll_single_init(void)
-{
-	int i;
-	//1st step 
-	writel(SCALER_AUDIO_PRE_REG, 0x00010002);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
-	for(i=0;i<1000;i++);
-	writel(SCALER_AUDIO_PRE_REG, 0x00010001);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
-	for(i=0;i<1000;i++);
-  
-	//2nd, 3rd step
-	rct_set_audio_pll_reset();
- 	dly_tsk(5);
-   
-	//4th step
-	writel(SCALER_AUDIO_REG, 0x0001002c);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
-	for(i=0;i<1000;i++);
-	writel(SCALER_AUDIO_REG, 0x0001002d);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
-	for(i=0;i<1000;i++);
-	writel(SCALER_AUDIO_REG, 0x0001002e);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
-	for(i=0;i<1000;i++);
-	writel(SCALER_AUDIO_REG, 0x0001002f);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
-	for(i=0;i<1000;i++);
-	writel(SCALER_AUDIO_REG, 0x0001002c);
-	for(i=0;i<1000;i++);
-}
-#endif
-
-void rct_audio_pll_alan_zhu_magic_init(void)
-{
-#if (RCT_AUDIO_PLL_CONF_MODE == 2)
-	int i;
-	u32 tmp;
-
-	rct_audio_pll_single_init();
-	for(i=0;i<1000;i++){
-		tmp = readl(PLL_LOCK_REG);
-		tmp >>= 7;
-		tmp &= 0x00000001;
-		if(tmp == 0)
-			rct_audio_pll_single_init();
-		else
-			break;	
-	}
-	
-	if(i == 1000)
-		printk("audio PLL lock fail!!!!!!!!!!!!!!!");
-#endif
-}
-
 void rct_set_pll_frac_mode(void)
 {
 #if (RCT_AUDIO_PLL_CONF_MODE == 2)
 	/* set audio PLL ctrl3 register */
-	writel(PLL_AUDIO_CTRL3_REG, 0x00069300); //need set this register to enable fractional mode by a5/a2s/a2m pm
+	writel(0x7017012c, 0x00069300); //need set this register to enable fractional mode by a5/a2s/a2m pm
 #endif	
 }
 
@@ -124,11 +51,92 @@ void rct_set_aud_ctrl2_reg(void)
 {
 #if (RCT_AUDIO_PLL_CONF_MODE == 2)
 	/* set audio PLL ctrl2 register */
-	writel(PLL_AUDIO_CTRL2_REG, 0x3f770000); //set as program manual comment
+	writel(0x70170124, 0x3f770000); //set as program manual comment
 #endif
 }
+#endif
 
-#if (RCT_AUDIO_PLL_CONF_MODE == 2)
+static const u32 mclk_table[MAX_MCLK_IDX_NUM] = {
+	18432000,
+	16934400,
+	12288000,
+	11289600,
+	  9216000,
+	  8467200,
+	  8192000,
+	  6144000,
+	  5644800,
+	  4608000,
+	  4233600,
+	  4096000,
+	  3072000,
+	  2822400,
+	  2048000
+};
+
+#if (RCT_AUDIO_PLL_USE_HAL_API == 1)
+void rct_set_audio_pll_hal(u8 op_mode, amb_clock_frequency_t set_freq)
+{
+	int chk_count = 0;
+	amb_hal_success_t success;	
+	amb_clock_source_t clk_src_sel;
+	
+	switch (op_mode) {
+		case AUC_CLK_ONCHIP_PLL_SP_CLK:
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_SP_CLK;
+			break;
+		case AUC_CLK_ONCHIP_PLL_CLK_SI:
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI;
+			break;
+		case AUC_CLK_ONCHIP_PLL_LVDS_IDSP_SCLK:
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
+			break;
+		case AUC_CLK_EXTERNAL:
+			clk_src_sel = AMB_EXTERNAL_CLOCK_SOURCE;
+			break;
+		default:
+		case AUC_CLK_ONCHIP_PLL_27MHZ:
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF;
+			break;
+	}
+		
+	if (clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI || 
+		clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK) {
+		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, set_freq);
+	} else {
+		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, 0);
+	}
+	
+	if (success == AMB_HAL_SUCCESS) {
+		if(clk_src_sel != AMB_EXTERNAL_CLOCK_SOURCE) {			
+			success = amb_set_audio_clock_frequency(HAL_BASE_VP, set_freq);
+			while (success == AMB_HAL_RETRY) {
+				// do something else or sleep
+				dly_tsk(1);
+				chk_count ++;
+				success = amb_set_audio_clock_frequency(HAL_BASE_VP, set_freq);
+				if (chk_count == 100) {
+					printk("a previous audio pll frequency change request is still outstanding");
+					break;
+				}	
+			};
+			if (success == AMB_HAL_FAIL)
+				printk("new audio pll frequency requested is not supported");
+		}
+	} else {
+		printk("new audio pll reference clock source is not supported");
+	}
+
+}
+
+void rct_set_audio_pll_fs(u8 op_mode, u8 mclk_idx)
+{
+	amb_clock_frequency_t set_freq;
+	set_freq = (amb_clock_frequency_t) mclk_table[mclk_idx];
+	rct_set_audio_pll_hal(op_mode, set_freq);	
+}
+
+#elif (RCT_AUDIO_PLL_CONF_MODE == 2)
 static const u32 audiopll_config_table[AUC_PLL_CLKRATE_NUM][MAX_MCLK_IDX_NUM][4] =
 {
 	{	// SP_CLK PLL REFERENCE   =  13.5MHz, VCO = 800MHz~850MHz
@@ -544,31 +552,31 @@ void rct_set_audio_pll_fs(u8 op_mode, u8 mclk_idx)
 			writeb(USE_CLK_SI_4_AU_REG, 	audiopll_ref_table[op_mode][1]);
 			writeb(CLK_REF_AU_EXTERNAL_REG,	audiopll_ref_table[op_mode][0]);
 			writeb(USE_EXTERNAL_CLK_AU_REG,	0x0);
-		}		
+		}
+
+
+		for (i = 0; i < 2000; i++) {
+			aud_lock = readl(PLL_LOCK_REG);
+			aud_lock >>= 7;
+			aud_lock &= 0x00000001;
+			if(aud_lock == 0)
+				rct_set_audio_pll_fs_basic(clk_ref,mclk_idx);
+			else
+				break;
+				
+			aud_lock_cnt ++;
+		}
+		
+		//printk("reprogram audio pll lock %d times",aud_lock_cnt);
+		if(i == 2000 && aud_lock == 0){
+			printk("audio pll lock fail!!!!!!!!!!!");
+		}
+		
 	} else { //External Audio Clock Source
 		writeb(USE_EXTERNAL_CLK_AU_REG,	0x1);
 	}
-
-	for(i=0;i<2000;i++)
-	{
-		aud_lock = readl(PLL_LOCK_REG);
-		aud_lock >>= 7;
-		aud_lock &= 0x00000001;
-		if(aud_lock == 0)
-			rct_set_audio_pll_fs_basic(clk_ref,mclk_idx);
-		else
-			break;
-			
-		aud_lock_cnt ++;
-	}
-	
-	//printk("reprogram audio pll lock %d times",aud_lock_cnt);
-	if(i == 2000 && aud_lock == 0){
-		printk("audio pll lock fail!!!!!!!!!!!");
-	}
 	
 	rct_set_audio_freq_hz(mclk_table[mclk_idx]);
-	//rct_alan_zhu_magic_loop(PLL_LOCK_AUDIO);
 }
 
 #elif (RCT_AUDIO_PLL_CONF_MODE == 1)
@@ -972,6 +980,9 @@ void rct_set_audio_pll_fs(u8 op_mode)
 }
 #endif
 
+static struct srcu_notifier_head audio_notifier_list;
+static struct notifier_block audio_notify;
+static struct ambarella_i2s_interface audio_i2s_intf;
 
 struct ambarella_i2s_interface get_audio_i2s_interface(void)
 {

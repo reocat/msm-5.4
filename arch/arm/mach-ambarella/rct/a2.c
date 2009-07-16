@@ -125,7 +125,7 @@ u32 get_adc_freq_hz(void)
 #endif
 }
 
-void rct_set_adc_clk(int src)
+void rct_set_adc_clk_src(int src)
 {
 }
 
@@ -369,12 +369,22 @@ void rct_reset_dma(void)
 	for (c = 0; c < 0xffff; c++);	/* Small busy-wait loop */
 }
 
-void rct_set_uart_pll(u32 div)
+void rct_set_uart_pll(void)
 {
-	writel(CG_UART_REG, div);
+
+#if	defined(PRK_UART_38400) || \
+	defined(PRK_UART_57600) || \
+	defined(PRK_UART_115200)
+	/* Program UART RCT divider value to generate higher clock */
+	writel(CG_UART_REG, 0x2);
+#else
+	/* Program UART RCT divider value to generate lower clock */
+	writel(CG_UART_REG, 0x8);
+#endif
+
 }
 
-void rct_set_sd_pll(void)
+void rct_set_sd_pll(u32 freq_hz)
 {
 	register u32 clk;
 
@@ -402,24 +412,6 @@ void rct_set_sd_pll(void)
 	}
 }
 
-u32 get_sd_scaler()
-{
-	return (readl(SCALER_SD48_REG))& 0x0000ffff;
-}
-
-int rct_change_sd_pll(u32 scaler)
-{
-	return -1;
-}
-
-void rct_enable_sd_pll(void)
-{
-}
-
-void rct_disable_sd_pll(void)
-{
-}
-
 void rct_set_ir_pll(void)
 {
 	writew(CG_IR_REG, 0x800);
@@ -445,8 +437,11 @@ void rct_set_ssi2_pll(void)
 {
 }
 
-void rct_set_host_pll(u8 clk_div)
+void rct_set_host_clk_freq_hz(u32 freq_hz)
 {
+	register u32 clk_div;
+
+        clk_div  = get_apb_bus_freq_hz() / freq_hz;
 	writel(CG_HOST_REG, clk_div);
 }
 
@@ -533,11 +528,11 @@ static struct vout_rct_obj_s G_vout_rct[] = {
 	{PLL_CLK_13_5MHZ,  	0x10019c0a, 0x0,    0x1, 0x10, 0x1},
 	{PLL_CLK_24_54MHZ,	0x0e019c02, 0x8ba2, 0x1, 0x8,  0x1},
 	{PLL_CLK_27D1001MHZ,  	0x0f02d902, 0xfbe9, 0x1, 0x8,  0x1},
-        {PLL_CLK_27MHZ,  	0x10019c0a, 0x0,    0x1, 0x8,  0x1},        
+        {PLL_CLK_27MHZ,  	0x10019c0a, 0x0,    0x1, 0x8,  0x1},
 	{PLL_CLK_26_9485MHZ,	0x0f00e902, 0xf832, 0x1, 0x2,  0x1}, /* - 1 LN at 60hz */
 	{PLL_CLK_26_9568MHZ,	0x0f00e902, 0xf972, 0x1, 0x2,  0x1}, /* - 1 LN at 50hz */
 	{PLL_CLK_27_0432MHZ,	0x1000e902, 0x068e, 0x1, 0x2,  0x1}, /* + 1 LN at 50hz */
-	{PLL_CLK_27_0514MHZ,  	0x1000e902, 0x07cc, 0x1, 0x2,  0x1}, /* + 1 LN at 60hz */	
+	{PLL_CLK_27_0514MHZ,  	0x1000e902, 0x07cc, 0x1, 0x2,  0x1}, /* + 1 LN at 60hz */
         {PLL_CLK_27M1001MHZ,  	0x1000e902, 0x0418, 0x1, 0x2,  0x1}, /* 27*1.001 MHz */
         {PLL_CLK_54MHZ,  	0x1001d90a, 0x0,    0x1, 0x2,  0x2},
         {PLL_CLK_74_25D1001MHZ, 0x1503fa02, 0xfa60, 0x1, 0x8,  0x1}, /* 74.25/1.001 MHz */
@@ -1296,16 +1291,6 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
         writel(CG_PWM_REG, (clk));
 }
 
-void rct_set_usbp_ctrl_bits(u32 value)
-{
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) | value);	
-}
-
-void rct_clear_usbp_ctrl_bits(u32 value)
-{
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) & ~value);
-}
-
 void rct_set_usb_ana_on(void)
 {
 	writel(PLL_USB_CTRL_REG, 0x1003FA0A); /* better jitter */
@@ -1365,81 +1350,10 @@ void _init_usb_pll(void)
 	udelay(150);
 }
 
-u32 read_pll_so_reg(void)
+void rct_set_adc_clk_freq_hz(u32 freq_hz)
 {
-	return 0;
-}
+	register u32 clk_div;
 
-u32 read_cg_so_reg(void)
-{
-	return 0;
-}
-
-void write_pll_so_reg(u32 value)
-{
-}
-
-void write_cg_so_reg(u32 value)
-{
-}
-
-/**
- * Select HDMI clock source
- */
-void rct_set_hdmi_clk_src(u32 clk_src)
-{
-}
-
-/**
- * Scale the HDMI reference clock from gclk_vo
- */
-void rct_set_gclk_vo_hdmi(u8 scalar)
-{
-}
-
-/**
- * Get the reference clock of HDMI CEC
- */
-u32 get_hdmi_cec_freq_hz(void)
-{
-	return PLL_FREQ_HZ;
-}
-
-u32 rct_cal_vin_freq_hz_slvs(u32 dclk, u32 act_lanes, u32 pel_width, u32 ddr)
-{
-	return 0;
-}
-
-void rct_set_vin_freq_hz(u32 ref_freq_hz, u32 freq_hz)
-{
-}
-
-u32 get_vin_freq_hz(void)
-{
-	return 0;
-}
-
-void rct_set_hdmi_phy_freq_hz(u32 freq_hz)
-{
-}
-
-u32 get_hdmi_phy_freq_hz(void)
-{
-	return 0;
-}
-
-int get_ssi_clk_src(void)
-{
-	return -1;
-}
-
-void rct_set_ssi_clk_src(int src)
-{
-}
-
-/*
- * Config the mode of LVDS I/O pads
- */
-void rct_set_vin_lvds_pad(int mode)
-{
+        clk_div     = PLL_FREQ_HZ / freq_hz;
+	writel(SCALER_ADC_REG, clk_div);
 }

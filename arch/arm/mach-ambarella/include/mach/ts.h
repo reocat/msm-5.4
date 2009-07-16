@@ -29,6 +29,16 @@
 #ifndef __ASM_ARCH_TS_H__
 #define __ASM_ARCH_TS_H__
 
+/****************************************************/
+/* Capabilities based on chip revision              */
+/****************************************************/
+#if 	(CHIP_REV == A6)
+//#define TS_ESC_DEAD_LOCK	1
+#define TS_ESC_DEAD_LOCK	0
+#else
+#define TS_ESC_DEAD_LOCK	0
+#endif
+
 #define TS_TX_MAX_CHANS		2
 #define TS_RX_MAX_CHANS		2
 #define TS_MAX_CHANS		(TS_TX_MAX_CHANS + TS_RX_MAX_CHANS)
@@ -136,7 +146,7 @@
 #define TS_TX_CTR_CLK_EN			0x00004000
 #define TS_TX_CTR_SRC_EXT			0x00001000
 #define TS_TX_CTR_SRC_CORE			0x00000000
-#define TS_TX_CTR_DIV(x)			((x & 0x1f) << 7)
+#define TS_TX_CTR_DIV(x)			(((x) & 0x1f) << 7)
 #define TS_TX_CTR_CLK_POL_NE			0x00000040
 #define TS_TX_CTR_CLK_POL_PE			0x00000000
 #define TS_TX_CTR_START				0x00000020
@@ -152,20 +162,20 @@
 #define TS_TX_STS_FIFO_UNDER_ERR		0x00000001
 
 /* TS_CHX_TX_PKT_INFO_REG */
-#define TS_TX_PKT_INFO_LEN(x)			((x & 0x3ff) << 16)
-#define TS_TX_PKT_INFO_VALID_LEN(x)		(x & 0x3ff)
+#define TS_TX_PKT_INFO_LEN(x)			(((x) & 0x3ff) << 16)
+#define TS_TX_PKT_INFO_VALID_LEN(x)		((x) & 0x3ff)
 
 /* TS_CHX_TX_DMA_BASE_REG */
-#define TS_TX_DMA_BASE(x)			(x & 0xffffff00)
+#define TS_TX_DMA_BASE(x)			((x) & 0xffffff00)
 
 /* TS_CHX_TX_DMA_LIMIT_REG */
-#define TS_TX_DMA_LIMIT(x)			(x & 0xffffff00)
+#define TS_TX_DMA_LIMIT(x)			((x) & 0xffffff00)
 
 /* TS_CHX_TX_DMA_RPTR_REG */
 /* Read only */
 
 /* TS_CHX_TX_DMA_STOP_REG */
-#define TS_TX_DMA_STOP(x)			(x & 0xffffff00)
+#define TS_TX_DMA_STOP(x)			((x) & 0xffffff00)
 
 
 /***************************/
@@ -173,7 +183,7 @@
 /***************************/
 /* TS_CHX_RX_CTR_REG */
 #define TS_RX_CTR_CLK_EN			0x02000000
-#define TS_RX_CTR_TIMEOUT(x)			((x & 0xffff) << 8)
+#define TS_RX_CTR_TIMEOUT(x)			(((x) & 0xffff) << 8)
 #define TS_RX_CTR_PKT_LEN_ERR_EN		0x00000080
 #define TS_RX_CTR_CLK_POL_NE			0x00000040
 #define TS_RX_CTR_CLK_POL_PE			0x00000000
@@ -199,20 +209,20 @@
 #define TS_RX_TEST_CTR_LOOPBACK_EN		0x00000001
 
 /* TS_CHX_RX_PKT_INFO_REG */
-#define TS_RX_PKT_INFO_LEN(x)			((x & 0x3ff) << 16)
-#define TS_RX_PKT_INFO_VALID_LEN(x)		(x & 0x3ff)
+#define TS_RX_PKT_INFO_LEN(x)			(((x) & 0x3ff) << 16)
+#define TS_RX_PKT_INFO_VALID_LEN(x)		((x) & 0x3ff)
 
 /* TS_CHX_RX_DMA_BASE_REG */
-#define TS_RX_DMA_BASE(x)			(x & 0xffffff00)
+#define TS_RX_DMA_BASE(x)			((x) & 0xffffff00)
 
 /* TS_CHX_RX_DMA_LIMIT_REG */
-#define TS_RX_DMA_LIMIT(x)			(x & 0xffffff00)
+#define TS_RX_DMA_LIMIT(x)			((x) & 0xffffff00)
 
 /* TS_CHX_RX_DMA_WPTR_REG */
 /* Read only */
 
 /* TS_CHX_RX_DMA_STOP_REG */
-#define TS_RX_DMA_STOP(x)			(x & 0xffffff00)
+#define TS_RX_DMA_STOP(x)			((x) & 0xffffff00)
 
 #endif
 

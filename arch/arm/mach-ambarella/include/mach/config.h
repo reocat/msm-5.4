@@ -153,7 +153,10 @@ struct ambarella_uart_port_info {
 struct ambarella_uart_platform_info {
 	const int				total_port_num;
 	int					registed_port_num;
-	struct ambarella_uart_port_info		amba_port[UART_PORT_MAX];
+	struct ambarella_uart_port_info		amba_port[PORTMAX];
+
+	void					(*set_pll)(void);
+	u32					(*get_pll)(void);
 };
 extern struct ambarella_uart_platform_info ambarella_uart_ports;
 
@@ -171,6 +174,9 @@ struct ambarella_sd_controller {
 	struct ambarella_sd_slot		slot[SD_MAX_SLOT_NUM];
 	u32					clk_limit;
 	u32					wait_tmo;
+
+	void					(*set_pll)(void);
+	u32					(*get_pll)(void);
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, perm) \
 	module_param_call(sd##controller_id##_slot##slot_id##_use_bounce_buffer, param_set_int, param_get_int, &(arg.slot[slot_id].bounce_buffer), perm); \
@@ -207,9 +213,9 @@ struct ambarella_spi_cs_config {
 	int					*cs_pins;
 };
 struct ambarella_spi_platform_info {
-	int				     use_interrupt;
-	int				     cs_num;
-	int				     *cs_pins;
+	int					use_interrupt;
+	int					cs_num;
+	int					*cs_pins;
 	void    				(*cs_activate)  (struct ambarella_spi_cs_config *);
 	void    				(*cs_deactivate)(struct ambarella_spi_cs_config *);
 };
@@ -240,6 +246,10 @@ struct ambarella_i2s_controller {
 
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
 
+struct ambarella_ir_controller {
+	void					(*set_pll)(void);
+	u32					(*get_pll)(void);
+};
 #endif /* __ASSEMBLER__ */
 
 #define	AMBA_DEBUG_NULL			(0)

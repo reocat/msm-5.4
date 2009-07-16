@@ -37,13 +37,24 @@
 
 #if 	(CHIP_REV == A1) || (CHIP_REV == A2) ||		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
-#define	I2S_SUPPORT_CATE_SHIFT		0
+#define	I2S_SUPPORT_GATE_SHIFT	0
 #define	I2S_MAX_CHANNELS		2
-#else
-#define	I2S_SUPPORT_CATE_SHIFT		1
+#define	I2S_AMBA_IP				0
+#elif (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
+#define	I2S_SUPPORT_GATE_SHIFT	1
 #define	I2S_MAX_CHANNELS		6
+#define	I2S_AMBA_IP				0
+#else
+#define	I2S_SUPPORT_GATE_SHIFT	1
+#define	I2S_MAX_CHANNELS		6
+#define	I2S_AMBA_IP				1
 #endif
 
+#if	(CHIP_REV == A5S)
+#define I2S_24BITMUX_MODE_REG_BITS	4
+#else
+#define I2S_24BITMUX_MODE_REG_BITS	1
+#endif
 
 /****************************************************/
 /* Controller registers definitions                 */
@@ -94,7 +105,7 @@
 #define I2S_RX_INT_ENABLE_REG		I2S_REG(0x48)
 #define I2S_RX_ECHO_REG			I2S_REG(0x4c)
 #define I2S_24BITMUX_MODE_REG		I2S_REG(0x50)
-#if 	(I2S_SUPPORT_CATE_SHIFT == 1)
+#if (I2S_SUPPORT_GATE_SHIFT == 1)
 #define I2S_GATEOFF_REG			I2S_REG(0x54)
 #endif
 #if 	(I2S_MAX_CHANNELS == 6)
@@ -103,6 +114,10 @@
 #define I2S_RX_DATA_DMA_REG		I2S_REG(0x80)
 #define I2S_TX_LEFT_DATA_DMA_REG	I2S_REG(0xc0)
 
+#if	(I2S_AMBA_IP == 1)
+#define I2S_TX_FIFO_RESET_BIT	(1 << 4)
+#define I2S_RX_FIFO_RESET_BIT	(1 << 3)
+#endif
 #define I2S_TX_ENABLE_BIT		(1 << 2)
 #define I2S_RX_ENABLE_BIT		(1 << 1)
 #define I2S_FIFO_RESET_BIT		(1 << 0)
@@ -116,11 +131,29 @@
 #define I2S_TX_ORDER_BIT		(1 << 6)
 #define I2S_TX_WS_MST_BIT		(1 << 5)
 #define I2S_TX_WS_INV_BIT		(1 << 4)
-#define I2S_TX_TX_MONO_BITS		(3 << 0)
+#define I2S_TX_UNISON_BIT		(1 << 3)
+#define I2S_TX_MUTE_BIT			(1 << 2)
+#define I2S_TX_MONO_MASK		0xfffffffc
+#define I2S_TX_MONO_RIGHT		(1 << 1)
+#define I2S_TX_MONO_LEFT		(1 << 0)
 
-#if 	(I2S_SUPPORT_CATE_SHIFT == 1)
+#define I2S_CLK_WS_OUT_EN		(1 << 9)
+#define I2S_CLK_BCLK_OUT_EN		(1 << 8)
+#define I2S_CLK_BCLK_OUTPUT		(1 << 7)
+#define I2S_CLK_MASTER_MODE		(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN | \
+								I2S_CLK_BCLK_OUTPUT)
+#define I2S_CLK_TX_PO_FALL		(1 << 6)
+#define I2S_CLK_RX_PO_FALL		(1 << 5)
+#define I2S_CLK_DIV_MASK		0xffffffe0
+
+#if (I2S_SUPPORT_GATE_SHIFT == 1)
+#if	(I2S_AMBA_IP == 0)
 #define I2S_RX_SHIFT_ENB		(1 << 2)
 #define I2S_TX_SHIFT_ENB		(1 << 1)
+#else
+#define I2S_RX_SHIFT_ENB		(1 << 1)
+#define I2S_TX_SHIFT_ENB		(1 << 0)
+#endif
 #endif
 
 #if 	(I2S_MAX_CHANNELS == 6)
@@ -133,5 +166,13 @@
 #define I2S_FIFO_FULL_INTRPT		0x02
 #define I2S_FIFO_EMPTY_INTRPT		0x01
 
+#endif
+
+/* I2S_24BITMUX_MODE_REG */
+#define I2S_24BITMUX_MODE_ENABLE		0x1
+#if	(I2S_24BITMUX_MODE_REG_BITS == 4)
+#define I2S_24BITMUX_MODE_FDMA_BURST_DIS	0x2
+#define I2S_24BITMUX_MODE_RST_CHAN0		0x4
+#define I2S_24BITMUX_MODE_DMA_BOOTSEL		0x8
 #endif
 

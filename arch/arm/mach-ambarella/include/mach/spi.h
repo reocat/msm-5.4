@@ -35,24 +35,29 @@
 /****************************************************/
 #if (CHIP_REV == A1)
 #define SPI_MAX_SLAVE_ID 			3
+#elif (CHIP_REV == A5S)
+#define SPI_MAX_SLAVE_ID			6
 #else
 #define SPI_MAX_SLAVE_ID 			7
 #endif
 
 #if (CHIP_REV == A1)
 #define SPI_SUPPORT_TISSP_NSM			0
-#else
+#else     	
 #define SPI_SUPPORT_TISSP_NSM			1
 #endif
 
-#if ((CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6))
+#if ((CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) || \
+     (CHIP_REV == A5S))
 #define SPI_INSTANCES				2
+#define SPI_SUPPORT_TSSI_MODE			1
 #else
 #define SPI_INSTANCES				1
+#define SPI_SUPPORT_TSSI_MODE			0
 #endif
 
 #if ((CHIP_REV == A1) || (CHIP_REV == A2) || 		\
-     (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) )
+     (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6))
 #define SPI_EN2_EN3_ENABLED_BY_HOST_ENA_REG	1
 #else
 #define SPI_EN2_EN3_ENABLED_BY_HOST_ENA_REG	0
@@ -64,63 +69,16 @@
 #define SPI_EN2_ENABLED_BY_GPIO2_AFSEL_REG	0
 #endif
 
-
-/****************************************************/
-/*	       Kernel Space Driver		*/
-/****************************************************/
-#ifndef __ASSEMBLER__
-typedef struct {
-	u8	spi_mode;
-	u8	cfs_dfs;
-	u8	lsb_first;
-	u8	cs_change;
-	u32	baud_rate;
-} amba_spi_cfg_t;
-
-typedef struct {
-	u8	bus_id;
-	u8	cs_id;
-	u8	*buffer;
-	u16	n_size;
-} amba_spi_write_t;
-
-typedef struct {
-	u8	bus_id;
-	u8	cs_id;
-	u8	*buffer;
-	u16	n_size;
-} amba_spi_read_t;
-
-typedef struct {
-	u8	bus_id;
-	u8	cs_id;
-	u8	*w_buffer;
-	u8	*r_buffer;
-	u16	w_size;
-	u16	r_size;
-} amba_spi_write_then_read_t;
-
-typedef struct {
-	u8	bus_id;
-	u8	cs_id;
-	u8	*w_buffer;
-	u8	*r_buffer;
-	u16	n_size;
-} amba_spi_write_and_read_t;
-
-extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,
-	amba_spi_write_t *spi_write);
-extern int ambarella_spi_read(amba_spi_cfg_t *spi_cfg,
-	amba_spi_read_t *spi_read);
-extern int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
-	amba_spi_write_then_read_t *spi_write_then_read);
-extern int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
-	amba_spi_write_and_read_t *spi_write_and_read);
+#if (CHIP_REV == A5S)
+#define SPI_SLAVE_INSTANCES			1
+#define SPI_SUPPORT_ENA_PIN_REVERSIBLE_POLARITY	1
+#else     	
+#define SPI_SLAVE_INSTANCES			0
+#define SPI_SUPPORT_ENA_PIN_REVERSIBLE_POLARITY	0
 #endif
 
-
 /****************************************************/
-/* Controller registers definitions		 */
+/* Controller registers definitions                 */
 /****************************************************/
 
 #define SPI_CTRLR0_OFFSET		0x00
@@ -193,5 +151,83 @@ extern int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 #define SPI2_DR_REG			SPI2_REG(0x60)
 #endif
 
+#if (SPI_SLAVE_INSTANCES == 1)
+#define SPI_SLAVE_CTRLR0_REG		SPI_SLAVE_REG(0x00)
+#define SPI_SLAVE_CTRLR1_REG		SPI_SLAVE_REG(0x04)
+#define SPI_SLAVE_SSIENR_REG		SPI_SLAVE_REG(0x08)
+#define SPI_SLAVE_MWCR_REG		SPI_SLAVE_REG(0x0c)
+#define SPI_SLAVE_SER_REG		SPI_SLAVE_REG(0x10)
+#define SPI_SLAVE_BAUDR_REG		SPI_SLAVE_REG(0x14)
+#define SPI_SLAVE_TXFTLR_REG		SPI_SLAVE_REG(0x18)
+#define SPI_SLAVE_RXFTLR_REG		SPI_SLAVE_REG(0x1c)
+#define SPI_SLAVE_TXFLR_REG		SPI_SLAVE_REG(0x20)
+#define SPI_SLAVE_RXFLR_REG		SPI_SLAVE_REG(0x24)
+#define SPI_SLAVE_SR_REG		SPI_SLAVE_REG(0x28)
+#define SPI_SLAVE_IMR_REG		SPI_SLAVE_REG(0x2c)
+#define SPI_SLAVE_ISR_REG		SPI_SLAVE_REG(0x30)
+#define SPI_SLAVE_RISR_REG		SPI_SLAVE_REG(0x34)
+#define SPI_SLAVE_TXOICR_REG		SPI_SLAVE_REG(0x38)
+#define SPI_SLAVE_RXOICR_REG		SPI_SLAVE_REG(0x3c)
+#define SPI_SLAVE_RXUICR_REG		SPI_SLAVE_REG(0x40)
+#define SPI_SLAVE_MSTICR_REG		SPI_SLAVE_REG(0x44)
+#define SPI_SLAVE_ICR_REG		SPI_SLAVE_REG(0x48)
+#define SPI_SLAVE_IDR_REG		SPI_SLAVE_REG(0x58)
+#define SPI_SLAVE_VERSION_ID_REG	SPI_SLAVE_REG(0x5c)
+#define SPI_SLAVE_DR_REG		SPI_SLAVE_REG(0x60)
 #endif
 
+
+/****************************************************/
+/*	       Kernel Space Driver		*/
+/****************************************************/
+#ifndef __ASSEMBLER__
+typedef struct {
+	u8	spi_mode;
+	u8	cfs_dfs;
+	u8	lsb_first;
+	u8	cs_change;
+	u32	baud_rate;
+} amba_spi_cfg_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*buffer;
+	u16	n_size;
+} amba_spi_write_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*buffer;
+	u16	n_size;
+} amba_spi_read_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*w_buffer;
+	u8	*r_buffer;
+	u16	w_size;
+	u16	r_size;
+} amba_spi_write_then_read_t;
+
+typedef struct {
+	u8	bus_id;
+	u8	cs_id;
+	u8	*w_buffer;
+	u8	*r_buffer;
+	u16	n_size;
+} amba_spi_write_and_read_t;
+
+extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,
+	amba_spi_write_t *spi_write);
+extern int ambarella_spi_read(amba_spi_cfg_t *spi_cfg,
+	amba_spi_read_t *spi_read);
+extern int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
+	amba_spi_write_then_read_t *spi_write_then_read);
+extern int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
+	amba_spi_write_and_read_t *spi_write_and_read);
+#endif
+
+#endif

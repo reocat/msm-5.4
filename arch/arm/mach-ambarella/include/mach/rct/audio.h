@@ -21,10 +21,18 @@
 
 #if (CHIP_REV == A1)
 #define RCT_AUDIO_PLL_CONF_MODE		0
+#define RCT_AUDIO_PLL_USE_HAL_API	0
 #elif (CHIP_REV == A2) || (CHIP_REV == A3)
 #define RCT_AUDIO_PLL_CONF_MODE		1
+#define RCT_AUDIO_PLL_USE_HAL_API	0
+#elif (CHIP_REV == A5) || (CHIP_REV == A2S) || \
+	(CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+	(CHIP_REV == A6)
+#define RCT_AUDIO_PLL_CONF_MODE		2
+#define RCT_AUDIO_PLL_USE_HAL_API	0
 #else
-#define RCT_AUDIO_PLL_CONF_MODE         2
+#define RCT_AUDIO_PLL_CONF_MODE		2
+#define RCT_AUDIO_PLL_USE_HAL_API	1
 #endif
 
 #define PLL_LOCK_AUDIO  	(0x1 << 7)

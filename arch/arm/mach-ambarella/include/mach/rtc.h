@@ -39,6 +39,12 @@
 #define RTC_SUPPORT_ONCHIP_INSTANCE	1
 #endif
 
+#if (CHIP_REV == A5S)
+#define RTC_SUPPORT_EXTRA_WAKEUP_PINS	1
+#else
+#define RTC_SUPPORT_EXTRA_WAKEUP_PINS	0
+#endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -53,6 +59,7 @@
 #define RTC_ALAT_OFFSET			0x38
 #define RTC_STATUS_OFFSET		0x3c
 #define RTC_RESET_OFFSET		0x40
+#define RTC_WO_OFFSET			0x7c /* only for A5S */
 
 #define RTC_POS0_REG			RTC_REG(0x20)
 #define RTC_POS1_REG			RTC_REG(0x24)
@@ -63,6 +70,7 @@
 #define RTC_ALAT_REG			RTC_REG(0x38)
 #define RTC_STATUS_REG			RTC_REG(0x3c)
 #define RTC_RESET_REG			RTC_REG(0x40)
+#define RTC_WO_REG			RTC_REG(0x7c) /* only for A5S */
 
 /* RTC_STATUS_REG */
 #define RTC_STATUS_WKUP			0x8

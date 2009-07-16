@@ -48,6 +48,8 @@
 #include <mach/rct/a3.h>
 #elif (CHIP_REV == A5)
 #include <mach/rct/a5.h>
+#elif (CHIP_REV == A5S)
+#include <mach/rct/a5s.h>
 #elif (CHIP_REV == A6)
 #include <mach/rct/a6.h>
 #endif
@@ -61,10 +63,10 @@
 /* and anything else that involves the RCT module. */
 /***************************************************/
 extern void rct_pll_init(void);
-
 extern u32 get_apb_bus_freq_hz(void);
 extern u32 get_ahb_bus_freq_hz(void);
 extern u32 get_core_bus_freq_hz(void);
+extern u32 get_arm_bus_freq_hz(void);
 extern u32 get_dram_freq_hz(void);
 extern u32 get_idsp_freq_hz(void);
 extern u32 get_adc_freq_hz(void);
@@ -75,20 +77,17 @@ extern u32 get_pwm_freq_hz(void);
 extern u32 get_ir_freq_hz(void);
 extern u32 get_host_freq_hz(void);
 extern u32 get_sd_freq_hz(void);
-extern u32 get_sd_scaler(void);
 extern u32 get_so_freq_hz(void);
 extern u32 get_vout_freq_hz(void);
 extern u32 get_vout2_freq_hz(void);
 extern void get_stepping_info(int *chip, int *major, int *minor);
 extern u32 get_ssi2_freq_hz(void);
-extern u32 get_hdmi_phy_freq_hz(void);
-extern u32 get_hdmi_cec_freq_hz(void);
-extern u32 get_vin_freq_hz(void);
 extern int get_ssi_clk_src(void);
 extern u32 get_vout_clk_rescale_value(void);
 extern u32 get_vout2_clk_rescale_value(void);
 extern u32 rct_boot_from(void);
 #define BOOT_FROM_BYPASS	0x00008000
+#define BOOT_FROM_HIF		0x00004000
 #define BOOT_FROM_NAND		0x00000001
 #define BOOT_FROM_NOR		0x00000002
 #define BOOT_FROM_FLASH		(BOOT_FROM_NAND | BOOT_FROM_NOR)
@@ -110,25 +109,24 @@ extern void rct_reset_cf(void);
 extern void rct_reset_xd(void);
 extern void rct_reset_flash(void);
 extern void rct_reset_dma(void);
-extern void rct_set_uart_pll(u32 div);
-extern void rct_set_sd_pll(void);
-extern void rct_enable_sd_pll(void);
-extern void rct_disable_sd_pll(void);
-extern int rct_change_sd_pll(u32);
+extern void rct_set_uart_pll(void);
+extern void rct_set_sd_pll(u32 freq_hz);
 extern void rct_set_ir_pll(void);
 extern void rct_set_motor_freq_hz(u32 freq_hz);
 extern void rct_set_pwm_freq_hz(u32 freq_hz);
 extern void rct_set_ssi_pll(void);
 extern void rct_set_ssi2_pll(void);
-extern void rct_set_host_pll(u8 clk_div);
+extern void rct_set_host_clk_freq_hz(u32 freq_hz);
 extern void rct_set_so_freq_hz(u32 freq_hz);
 extern void rct_set_vout_freq_hz(u32 freq_hz);
 extern void rct_set_hdmi_phy_freq_hz(u32 freq_hz);
-extern void rct_set_ms_pll(void);
+extern void rct_set_ms_pll(u32 freq_hz);
 extern u32 get_ms_freq_hz(void);
 extern void rct_enable_ms(void);
 extern void rct_disable_ms(void);
+extern void rct_set_ms_delay(void);
 extern void rct_set_dven_clk(u32 freq_hz);
+extern void rct_set_adc_clk_freq_hz(u32 freq_hz);
 
 /**
  * Set the VIN PLL
@@ -151,7 +149,7 @@ extern u32  rct_cal_vin_freq_hz_slvs(u32 dclk, u32 act_lanes,
  * 	0 - ref_clk / value of SCALER_ADC_REG
  * 	1 ¡V clk_au
  */
-extern void rct_set_adc_clk(int src);
+extern void rct_set_adc_clk_src(int src);
 
 /**
  * Select the clock reference of SSI0
@@ -196,6 +194,7 @@ extern u32 get_vout_clk_rescale_value(void);
 #define VO_CLK_ONCHIP_PLL_SP_CLK  	0x1
 #define VO_CLK_ONCHIP_PLL_CLK_SI  	0x2
 #define VO_CLK_EXTERNAL    	  	0x3
+#define VO_CLK_ONCHIP_PLL_IDSP_SCLK	0x4
 extern void rct_set_vout_clk_src(u32 clk_src);
 
 /**
@@ -216,6 +215,7 @@ extern void rct_set_vout2_freq_hz(u32 freq_hz);
  *		VO_CLK_ONCHIP_PLL_CLK_SI,	On-chip PLL using CLK_SI
  *		VO_CLK_EXTERNAL,		External video clock source
  */
+#define VO2_CLK_SHARE_VOUT		0x5
 extern void rct_set_vout2_clk_src(u32 clk_src);
 
 /**
@@ -248,10 +248,16 @@ extern void rct_set_hdmi_clk_src(u32 clk_src);
 extern void rct_set_vin_lvds_pad(int mode);
 
 #if (RCT_AUDIO_PLL_CONF_MODE > 0)
-#define AUC_CLK_ONCHIP_PLL_27MHZ   	0x0    	/* Default setting */
-#define AUC_CLK_ONCHIP_PLL_SP_CLK  	0x1
-#define AUC_CLK_ONCHIP_PLL_CLK_SI  	0x2
-#define AUC_CLK_EXTERNAL    	  	0x3
+#if (RCT_AUDIO_PLL_USE_HAL_API == 0)
+extern void rct_set_pll_frac_mode(void);
+extern void rct_set_aud_ctrl2_reg(void);
+extern void rct_set_audio_pll_reset(void);
+#endif
+#define AUC_CLK_ONCHIP_PLL_27MHZ				0x0 /* Default setting */
+#define AUC_CLK_ONCHIP_PLL_SP_CLK				0x1
+#define AUC_CLK_ONCHIP_PLL_CLK_SI				0x2
+#define AUC_CLK_EXTERNAL						0x3
+#define AUC_CLK_ONCHIP_PLL_LVDS_IDSP_SCLK	0x4
 
 #define AUC_PLL_CLKRATE_NUM	16
 #define AUC_PLL_CLKRATE_1350   	  	PLL_CLK_13_5MHZ
@@ -270,8 +276,6 @@ extern void rct_set_vin_lvds_pad(int mode);
 #define AUC_PLL_CLKRATE_1485_D1		PLL_CLK_148_5D1001MHZ
 #define AUC_PLL_CLKRATE_1485		PLL_CLK_148_5MHZ
 #define AUC_PLL_CLKRATE_6500_D1	PLL_CLK_65D1001MHZ
-
-extern void rct_set_audio_pll_reset(void);
 extern void rct_set_audio_pll_fs(u8, u8);
 #else
 extern void rct_set_audio_pll_fs(u8);
@@ -297,10 +301,6 @@ extern void rct_set_usb_debounce(void);
 extern void rct_turn_off_usb_pll(void);
 extern void rct_ena_usb_int_clk(void);
 extern u32 read_usb_reg_setting(void);
-extern u32 read_pll_so_reg(void);
-extern u32 read_cg_so_reg(void);
-extern void write_pll_so_reg(u32 value);
-extern void write_cg_so_reg(u32 value);
 
 /******************************************/
 /* PLL clock frequencies for SO and VOUT  */

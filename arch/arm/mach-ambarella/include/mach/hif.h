@@ -43,15 +43,23 @@
 #define HOST_USE_APB_BUS_CLK		1
 #endif
 
-#if (CHIP_REV == A1) || (CHIP_REV == A2) ||	\
-    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+#if (CHIP_REV == A1) || (CHIP_REV == A2)
 #define HOST_MAX_AHB_CLK_EN_BITS	8
+#define HOST_MAX_MODES			5
+#elif  (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+	(CHIP_REV == A5S)
+#define HOST_MAX_AHB_CLK_EN_BITS	0
 #define HOST_MAX_MODES			5
 #else
 #define HOST_MAX_AHB_CLK_EN_BITS	10
 #define HOST_MAX_MODES			6
 #endif
 
+#if (CHIP_REV == A5S)
+#define HOST_SUPPORT_SYNC_MODE		1
+#else
+#define HOST_SUPPORT_SYNC_MODE		0
+#endif
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/

@@ -1,8 +1,8 @@
 /*
- * arch/arm/mach-ambarella/include/mach/ahb.h
+ * arch/arm/mach-ambarella/include/mach/hal/hal.h
  *
  * History:
- *	2006/12/27 - [Charles Chiou] created file
+ *    2007/11/29 - [Charles Chiou] created file
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -22,27 +22,32 @@
  *
  */
 
-#ifndef __ASM_ARCH_HARDWARE_H
-#error "include <mach/hardware.h> instead"
+#ifndef __HAL_H__
+#define __HAL_H__
+
+#ifndef	__ASM__
+
+#include <mach/hal/header.h>
+
+#if	(CHIP_REV == A5S)
+#include <mach/hal/ambhal.h>
+#include <mach/hal/ambhalmini.h>
 #endif
 
-#ifndef __ASM_ARCH_AHB_H__
-#define __ASM_ARCH_AHB_H__
+extern int hal_init(void);
+extern int hal_call_name(int, char **);
+extern int hal_call_fid(u32, u32, u32, u32, u32);
+extern u32 g_haladdr;
 
-#include <mach/fio.h>
-#include <mach/nand.h>
-#include <mach/sd.h>
-#include <mach/vic.h>
-#include <mach/drctl.h>
-#include <mach/dma_def.h>
-#include <mach/usbdc.h>
-#include <mach/vout.h>
-#include <mach/vin.h>
-#include <mach/i2s.h>
-#include <mach/hif.h>
-#include <mach/eth.h>
-#include <mach/ts.h>
-#include <mach/gdma.h>
-#include <mach/crypto.h>
+#define IS_HAL_INIT()	(g_haladdr == HAL_BASE)
+
+#endif	/* __ASM__ */
+
+#define HAL_BASE	0xc00a0000
+#define HAL_BASE_VP	((void *) 0xc00a0000)
+
+#if	(CHIP_REV == A5S)
+#define	USE_HAL		1
 #endif
 
+#endif

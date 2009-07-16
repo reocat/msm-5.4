@@ -104,7 +104,7 @@ u32 get_core_bus_freq_hz(void)
 #endif
 }
 
-u32 get_bus_freq_hz(u32 pll_ctrl_reg)
+static u32 get_bus_freq_hz(u32 pll_ctrl_reg)
 {
 	u32 n = readl(pll_ctrl_reg);
 	u32 x = (n & 0x00030000) >> 16;
@@ -168,7 +168,7 @@ u32 get_adc_freq_hz(void)
 #endif
 }
 
-void rct_set_adc_clk(int src)
+void rct_set_adc_clk_src(int src)
 {
 }
 
@@ -405,12 +405,22 @@ void rct_reset_dma(void)
 	for (c = 0; c < 0xffff; c++);	/* Small busy-wait loop */
 }
 
-void rct_set_uart_pll(u32 div)
+void rct_set_uart_pll(void)
 {
-	writel(CG_UART_REG, div);
+
+#if	defined(PRK_UART_38400) || \
+	defined(PRK_UART_57600) || \
+	defined(PRK_UART_115200)
+	/* Program UART RCT divider value to generate higher clock */
+	writel(CG_UART_REG, 0x2);
+#else
+	/* Program UART RCT divider value to generate lower clock */
+	writel(CG_UART_REG, 0x8);
+#endif
+
 }
 
-void rct_set_sd_pll(void)
+void rct_set_sd_pll(u32 freq_hz)
 {
 	register u32 clk;
 
@@ -436,24 +446,6 @@ void rct_set_sd_pll(void)
 		/* Core below or equal to 135MHz */
 		writeb(SCALER_SD48_REG, 0x6);
 	}
-}
-
-u32 get_sd_scaler()
-{
-	return (readl(SCALER_SD48_REG))& 0x0000ffff;
-}
-
-int rct_change_sd_pll(u32 scaler)
-{
-	return -1;
-}
-
-void rct_enable_sd_pll(void)
-{
-}
-
-void rct_disable_sd_pll(void)
-{
 }
 
 void rct_set_ir_pll(void)
@@ -483,8 +475,11 @@ void rct_set_ssi2_pll(void)
 	writel(CG_HOST_REG, get_apb_bus_freq_hz() / 13500000);
 }
 
-void rct_set_host_pll(u8 clk_div)
+void rct_set_host_clk_freq_hz(u32 freq_hz)
 {
+	register u32 clk_div;
+
+        clk_div  = get_apb_bus_freq_hz() / freq_hz;
 	writel(CG_HOST_REG, clk_div);
 }
 
@@ -1117,7 +1112,7 @@ static int rct_rescale_vout_pll(int vo_id, u32 scale)
 		video_ctrl_reg 	= PLL_VIDEO2_CTRL_REG;
 
 	}
-	
+
         if  (cur_clk_src == VO_CLK_EXTERNAL) {
  		printk("Not supported for the external cloc");
 		return -1;
@@ -1397,16 +1392,6 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
         writel(CG_PWM_REG, (clk));
 }
 
-void rct_set_usbp_ctrl_bits(u32 value)
-{
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) | value);	
-}
-
-void rct_clear_usbp_ctrl_bits(u32 value)
-{
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) & ~value);
-}
-
 void rct_set_usb_ana_on(void)
 {
 	writel(PLL_USB_CTRL_REG, 0x1003FA0A); /* better jitter */
@@ -1466,86 +1451,27 @@ void _init_usb_pll(void)
 	udelay(150);
 }
 
-u32 read_pll_so_reg(void)
-{
-	return 0;
-}
-
-u32 read_cg_so_reg(void)
-{
-	return 0;
-}
-
-void write_pll_so_reg(u32 value)
-{
-}
-
-void write_cg_so_reg(u32 value)
-{
-}
-
 /**
  * Select HDMI clock source
  */
 void rct_set_hdmi_clk_src(u32 clk_src)
 {
+	/* Not supported */
 }
-
-/**
- * Get the reference clock of HDMI CEC
- */
-u32 get_hdmi_cec_freq_hz(void)
-{
-	return PLL_FREQ_HZ;
-}
-
-
-u32 rct_cal_vin_freq_hz_slvs(u32 dclk, u32 act_lanes, u32 pel_width, u32 ddr)
-{
-	return 0;
-}
-
-void rct_set_vin_freq_hz(u32 ref_freq_hz, u32 freq_hz)
-{
-}
-
-u32 get_vin_freq_hz(void)
-{
-	return 0;
-}
-
 
 void rct_set_hdmi_phy_freq_hz(u32 freq_hz)
 {
-
+	/* Not supported */
 }
 
-u32 get_hdmi_phy_freq_hz(void)
-{
-	return 0;
-}
-
-int get_ssi_clk_src(void)
-{
-	return 0;
-}
-
-void rct_set_ssi_clk_src(int src)
-{
-}
-
-/*
- * Config the mode of LVDS I/O pads
- */
 void rct_set_vin_lvds_pad(int mode)
 {
-	switch (mode) {
-	case VIN_LVDS_PAD_MODE_LVDS:
-		writel(LVDS_LVCMOS_REG, 0x00000000);
-		writel(LVDS_ASYNC_REG, 0x00080000);
-		break;
-	default: /* VIN_LVDS_PAD_MODE_LVCMOS */
-		writel(LVDS_LVCMOS_REG, 0x0003ffff);
-		writel(LVDS_ASYNC_REG, 0x000bffff);
-	}
+}
+
+void rct_set_adc_clk_freq_hz(u32 freq_hz)
+{
+	register u32 clk_div;
+
+        clk_div     = PLL_FREQ_HZ / freq_hz;
+	writel(SCALER_ADC_REG, clk_div);
 }

@@ -32,16 +32,33 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-
-#if (CHIP_REV == A1 || CHIP_REV == A2S || CHIP_REV == A2M || CHIP_REV == A6)
-#define	PWM_SUPPRT_2_FIELDS	0
+#if (CHIP_REV == A1 || CHIP_REV == A2 || CHIP_REV == A3 || \
+     CHIP_REV == A2S || CHIP_REV == A2M || CHIP_REV == A6)
+#define	PWM_SUPPRT_2_FIELDS		0
 #else
-#define	PWM_SUPPRT_2_FIELDS	1
+#define	PWM_SUPPRT_2_FIELDS		1
 #endif
 
-/* None so far */
-#define PWM_MAX_INSTANCES	4
+#if (CHIP_REV == A1 || CHIP_REV == A2 || CHIP_REV == A3)
+#define	PWM_1_4_SUPPORT_DIV1		0
+#else
+#define	PWM_1_4_SUPPORT_DIV1		1
+#endif
 
+#if (CHIP_REV == A2S || CHIP_REV == A2M || CHIP_REV == A2Q || \
+     CHIP_REV == A6)
+#define	PWM_1_4_SUPPORT_DIV2		0
+#define PWM_SUPPORT_DUAL_BANK 		0
+#else
+#define	PWM_1_4_SUPPORT_DIV2		1
+#define PWM_SUPPORT_DUAL_BANK 		1
+#endif
+
+#if (CHIP_REV == A5S)
+#define PWM_1_AND_3_DUAL_CLK_SRC	1
+#else
+#define PWM_1_AND_3_DUAL_CLK_SRC	0
+#endif
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -103,6 +120,8 @@
 #define PWM_B1_DATA1_REG		PWM_ST_REG(0x324)
 #define PWM_C1_DATA1_REG		PWM_ST_REG(0x32c) 
 #endif
+
+#define PWM_MAX_INSTANCES	4
 
 #endif
 

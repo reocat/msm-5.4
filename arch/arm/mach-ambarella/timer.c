@@ -37,7 +37,11 @@
 
 #include <mach/hardware.h>
 
+#if (CHIP_REV == A5S)
+#define AMBARELLA_TIMER_FREQ	(60000000)
+#else
 #define AMBARELLA_TIMER_FREQ	(get_apb_bus_freq_hz())
+#endif
 #define AMBARELLA_TIMER_RATING	(300)
 
 static inline void ambarella_timer1_disable(void)
@@ -215,7 +219,7 @@ int ambtm_freq_transition(struct notifier_block *nb,
 			AMBARELLA_TIMER_FREQ, ambarella_timer2_clksrc.shift);
 
 		/* Program the timer to start ticking */
-		cnt = get_apb_bus_freq_hz() / CLOCK_TICK_RATE;
+		cnt = AMBARELLA_TIMER_FREQ / CLOCK_TICK_RATE;
 		amba_writel(TIMER1_STATUS_REG, cnt);
 		amba_writel(TIMER1_RELOAD_REG, cnt);
 

@@ -43,8 +43,9 @@
 #define A570	5070
 #define A580	5080
 
-#define A5M	5100
+#define A5S	5100
 #define A6	6000
+#define A7	7000
 
 #if	defined(CONFIG_AMBARELLA_CHIP_A1)
 #define CHIP_REV	A1
@@ -60,13 +61,16 @@
 #define CHIP_REV	A3
 #elif	defined(CONFIG_AMBARELLA_CHIP_A5)
 #define CHIP_REV	A5
-#elif	defined(CONFIG_AMBARELLA_CHIP_A5M)
-#define CHIP_REV	A5M
+#elif	defined(CONFIG_AMBARELLA_CHIP_A5S)
+#define CHIP_REV	A5S
 #elif	defined(CONFIG_AMBARELLA_CHIP_A6)
 #define CHIP_REV	A6
 #else
 #error "Undefined CHIP_REV"
 #endif
 
+#if (CHIP_REV == A5S)
+#define	BROKEN_UNALIGNED_ACCESS_SUPPORT		1
 #endif
 
+#endif

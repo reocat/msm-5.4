@@ -44,7 +44,7 @@
 #define	ADC_MAX_RESOLUTION	16
 #endif
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6)
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S)
 #define ADC_MAX_INSTANCES	8
 #else
 #define ADC_MAX_INSTANCES	4

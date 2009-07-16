@@ -30,8 +30,6 @@ static u32 vo_clk_freq_hz 	= PLL_CLK_27MHZ;
 static u32 vo2_clk_freq_hz 	= PLL_CLK_27MHZ;
 static u32 vo_clk_scaling 	= 0;
 static u32 vo2_clk_scaling 	= 0;
-static u32 vin_clk_freq_hz	= PLL_CLK_27MHZ;
-static u32 hdmi_clk_freq_hz	= PLL_CLK_27MHZ;
 static u32 vo_clk_src         	= VO_CLK_ONCHIP_PLL_27MHZ;
 static u32 vo2_clk_src        	= VO_CLK_ONCHIP_PLL_27MHZ;
 static u32 hdmi_clk_src         = HDMI_CLK_ONCHIP_PLL;
@@ -50,34 +48,27 @@ void rct_pll_init(void)
 	/* video ctrl2 */
 	amba_outl(0x70170130, 0x3f770000);
 
-	/* scalers */
-	amba_outl(0x7017001c, 0x00010002);
-	amba_outl(0x7017001c, 0x00010001);
+	/* Check if vout controller is running */
+	if (readl(VOUT_CTL_CONTROL_REG) & 0xc0000000) {
 
-	/* post-scalers, write a value different than default(0x10001),
-	   then write back */
-	amba_outl(0x701700a0, 0x10002);
-	amba_outl(0x701700a0, 0x10001);
+		/* scalers */
+		amba_outl(0x7017001c, 0x00010002);
+		amba_outl(0x7017001c, 0x00010001);
 
-	/* pll ctrl reg (int, sdiv, sout) */
-	amba_outl(0x70170014, 0x0a130104);
-	amba_outl(0x70170014, 0x0a130105);
-	do_some_delay();
+		/* post-scalers, write a value different than default(0x10001),
+		   then write back */
+		amba_outl(0x701700a0, 0x10002);
+		amba_outl(0x701700a0, 0x10001);
 
-	/*
-	 * hacked sensor PLL
-	 */
-	/* sensor ctrl2 */
-	amba_outl(0x7017011c, 0x3f770000);
+		/* pll ctrl reg (int, sdiv, sout) */
+		amba_outl(0x70170014, 0x0a130104);
+		amba_outl(0x70170014, 0x0a130105);
+		do_some_delay();
 
-	/* scalers */
-	amba_outl(0x70170030, 0x00010005);
-	amba_outl(0x70170030, 0x00010004);
+		/* Check video clock is locked or not */
+		val = readl(VOUT_CTL_CLUT_REG);
 
-	/* post-scalers, write a value different than default(0x10001),
-	   then write back */
-	amba_outl(0x7017004c, 0x10002);
-	amba_outl(0x7017004c, 0x10001);
+	}
 
 	/*
 	 * Miscellaneous...
@@ -87,9 +78,6 @@ void rct_pll_init(void)
   	amba_outl(0x70170024, 0x0b031100);
   	do_some_delay();
   	amba_outl(0x70170024, 0x0b031101);
-
-	/* Check video clock is locked or not */
-	val = amba_inl(0x60008800);
 
 	/*
 	 * init ms PLL
@@ -210,7 +198,7 @@ u32 get_adc_freq_hz(void)
 #endif
 }
 
-void rct_set_adc_clk(int src)
+void rct_set_adc_clk_src(int src)
 {
 	writel(ADC16_CTRL_REG, (src & 0x01));
 }
@@ -279,11 +267,6 @@ u32 get_sd_freq_hz(void)
 #endif
 }
 
-u32 get_sd_scaler(void)
-{
-	return (readl(SCALER_SD48_REG))& 0x0000ffff;
-}
-
 u32 get_ms_freq_hz(void)
 {
 	u32 scaler = readl(SCALER_MS_REG) & MS_INTEGER_DIV;
@@ -324,6 +307,26 @@ void get_stepping_info(int *chip, int *major, int *minor)
 #define SDMMC_TYPE_MMC		0x3
 #define SDMMC_TYPE_MOVINAND	0x4
 
+static u32 get_sm_boot_device(void)
+{
+	u32 rval = 0x0;
+
+#if defined(FIRMWARE_CONTAINER_TYPE)
+#if (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SD)
+		rval |= BOOT_FROM_SD;
+#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SDHC)
+		rval |= BOOT_FROM_SDHC;
+#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MMC)
+		rval |= BOOT_FROM_MMC;
+#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MOVINAND)
+		rval |= BOOT_FROM_MOVINAND;
+#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_AUTO)
+		rval |= BOOT_FROM_SDMMC;
+#endif
+#endif
+		return rval;
+}
+
 u32 rct_boot_from(void)
 {
 	u32 rval = 0x0;
@@ -338,29 +341,7 @@ u32 rct_boot_from(void)
 
 	if ((val & SYS_CONFIG_SPI_BOOT) != 0x0) {
 		rval |= BOOT_FROM_SPI;
-#if defined(FIRMWARE_CONTAINER_TYPE)
-#if (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SD)
-		rval |= BOOT_FROM_SD;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SDHC)
-		rval |= BOOT_FROM_SDHC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MMC)
-		rval |= BOOT_FROM_MMC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MOVINAND)
-		rval |= BOOT_FROM_MOVINAND;
-#else
-		if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-		    ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_MOVINAND;
-		else if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) == 0x0))
-			rval |= BOOT_FROM_SD;
-		else if (((val & SYS_CONFIG_RDY_PL)   == 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_SDHC;
-		else
-			rval |= BOOT_FROM_MMC;
-#endif	/* FIRMWARE_CONTAINER_TYPE */
-#endif	/* FIRMWARE_CONTAINER_TYPE */
+		rval |= get_sm_boot_device();
 	}
 
 	if (((val & SYS_CONFIG_FLASH_BOOT) == 0x0) &&
@@ -369,27 +350,8 @@ u32 rct_boot_from(void)
 
 		/* Force enabling flash access on USB boot */
 #if defined(FIRMWARE_CONTAINER)
-#if (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SD)
-		rval |= BOOT_FROM_SD;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_SDHC)
-		rval |= BOOT_FROM_SDHC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MMC)
-		rval |= BOOT_FROM_MMC;
-#elif (FIRMWARE_CONTAINER_TYPE == SDMMC_TYPE_MOVINAND)
-		rval |= BOOT_FROM_MOVINAND;
-#else
-		if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-		    ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_MOVINAND;
-		else if (((val & SYS_CONFIG_RDY_PL)   != 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) == 0x0))
-			rval |= BOOT_FROM_SD;
-		else if (((val & SYS_CONFIG_RDY_PL)   == 0x0) &&
-			 ((val & SYS_CONFIG_HIF_TYPE) != 0x0))
-			rval |= BOOT_FROM_SDHC;
-		else
-			rval |= BOOT_FROM_MMC;
-#endif	/* FIRMWARE_CONTAINER_TYPE */
+		rval |= BOOT_FROM_SPI;
+		rval |= get_sm_boot_device();
 #else
 		if ((val & SYS_CONFIG_BOOTMEDIA) != 0x0)
 			rval |= BOOT_FROM_NOR;
@@ -489,93 +451,44 @@ void rct_reset_xd(void)
 
 void rct_reset_dma(void)
 {
-	u32 val;
-	register int c;
-
-	val = readl(HOST_AHB_CLK_ENABLE_REG);
-	val |= HOST_AHB_DMA_CHAN0_RST;
-	writel(HOST_AHB_CLK_ENABLE_REG, val);
-
-	for (c = 0; c < 0xffff; c++);	/* Small busy-wait loop */
-
-	val &= ~HOST_AHB_DMA_CHAN0_RST;
-	writel(HOST_AHB_CLK_ENABLE_REG, val);
-
-	for (c = 0; c < 0xffff; c++);	/* Small busy-wait loop */
+	/* Not support in A2S. */
 }
 
-void rct_set_uart_pll(u32 div)
+void rct_set_uart_pll(void)
 {
-	writel(CG_UART_REG, div);
+
+#if	defined(PRK_UART_38400) || \
+	defined(PRK_UART_57600) || \
+	defined(PRK_UART_115200)
+	/* Program UART RCT divider value to generate higher clock */
+	writel(CG_UART_REG, 0x2);
+#else
+	/* Program UART RCT divider value to generate lower clock */
+	writel(CG_UART_REG, 0x8);
+#endif
+
 }
 
-void rct_set_sd_pll(void)
+void rct_set_sd_pll(u32 freq_hz)
 {
 #define DUTY_CYCLE_CONTRL_ENABLE	0x01000000 /* Duty cycle correction */
+	u32 scaler;
+	u32 core_freq;
 
-	register u32 clk;
+	K_ASSERT(freq_hz != 0);
 
-	/* Program the SD clock generator */
-	clk = get_core_bus_freq_hz();
+	/* Scaler = core_freq *2 / desired_freq */
+	core_freq = get_core_bus_freq_hz();
+	scaler = ((core_freq << 1) / freq_hz) + 1;
 
-	if (clk >= 270000000) {
-		/* Core == { 273MHz, 283MHz } */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0xc));
-	} else if (clk >= 243000000) {
-		/* Core == { 243MHz, 256Mhz } */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0xb));
-	} else if (clk >= 230000000) {
-		/* Core == 230MHz */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0xa));
-	} else if (clk >= 216000000) {
-		/* Core == 216MHz */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0x9));
-	} else if (clk >= 182250000) {
-		/* Core == 182.25MHz */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0x8));
-	} else if (clk >= 135000000) {
-		/* Core == 135MHz */
-		/* For example: Sdclk = 135 * 2 / 5 = 54 Mhz */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0x6));
-	} else {
-		/* Core below or equal to 135MHz */
-		/* Sdclk = core_freq * 2 / Int_div */
-		/* For example: Sdclk = 108 * 2 / 5 = 43.2 Mhz */
-		/* For example: Sdclk = 121.5 * 2 / 5 = 48.6 Mhz */
-		writel(SCALER_SD48_REG,
-			(readl(SCALER_SD48_REG) & 0xffff0000) |
-			(DUTY_CYCLE_CONTRL_ENABLE | 0x5));
-	}
-}
+	/* Sdclk = core_freq * 2 / Int_div */
+	/* For example: Sdclk = 108 * 2 / 5 = 43.2 Mhz */
+	/* For example: Sdclk = 121.5 * 2 / 5 = 48.6 Mhz */
+	writel(SCALER_SD48_REG,
+		(readl(SCALER_SD48_REG) & 0xffff0000) |
+		(DUTY_CYCLE_CONTRL_ENABLE | scaler));
 
-int rct_change_sd_pll(u32 scaler)
-{
-	/* Program the SD clock generator */
-	if (scaler != 0)
-		writel(SCALER_SD48_REG,
-		       (readl(SCALER_SD48_REG) & 0xffff0000) | scaler);
-
-	return 0;
-}
-
-void rct_enable_sd_pll(void)
-{
-}
-
-void rct_disable_sd_pll(void)
-{
+	DEBUG_MSG("SD Freq = %dhz, Set SCALER_SD48_REG 0x%x", freq_hz, scaler);
 }
 
 void rct_set_ir_pll(void)
@@ -588,38 +501,23 @@ void rct_set_ssi_pll(void)
 	writel(CG_SSI_REG, get_apb_bus_freq_hz() / 13500000);
 }
 
-void rct_set_ms_pll(void)
+void rct_set_ms_pll(u32 freq_hz)
 {
 #define DUTY_CYCLE_CONTRL_ENABLE	0x01000000 /* Duty cycle correction */
 
-	register u32 clk;
+	u32 scaler;
+	u32 core_clk;
 
-	/* Program the MS clock generator */
-	clk = get_core_bus_freq_hz();
+	core_clk = get_core_bus_freq_hz();
+	scaler = ((core_clk << 1) / freq_hz) + 1;
 
-	if (clk >= 243000000) {
-		/* Core == 243MHz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0x18));
-	} else if (clk >= 216000000) {
-		/* Core == 216MHz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0x16));
-	} else if (clk >= 135000000) {
-		/* Core == 135MHz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0xb));
-	} else {
-		/* Core below or equal to 135MHz */
-		/* msclk = core_freq * 2 / Int_div */
-		/* For example: msclk = 108 * 2 / 16 = 13.5 Mhz */
-		writel(SCALER_MS_REG,
-		       (readl(SCALER_MS_REG) & 0xffff0000) |
-		       (DUTY_CYCLE_CONTRL_ENABLE | 0x10));
-	}
+	/* msclk = core_freq * 2 / Int_div */
+	/* For example: msclk = 108 * 2 / 16 = 13.5 Mhz */
+	writel(SCALER_MS_REG,
+	       (readl(SCALER_MS_REG) & 0xffff0000) |
+	       (DUTY_CYCLE_CONTRL_ENABLE | scaler));
+
+	DEBUG_MSG("MS Freq = %dhz, Set SCALER_MS_REG 0x%x", freq_hz, scaler);
 }
 
 void rct_enable_ms(void)
@@ -634,29 +532,29 @@ void rct_disable_ms(void)
 
 void rct_set_ms_delay(void)
 {
-	u8 ms_dly_ctr = readl(MS_DELAY_REG);
+	u32 ms_dly_ctr = readl(MS_DELAY_CTRL_REG);
 
 #ifdef MS_READ_TIME_ADJUST
-	ms_dly_ctr &= 0x0fffffff
-	ms_dly_ctr |= (MS_READ_TIME_ADJUST << 30);
+	ms_dly_ctr &= 0x0fffffff;
+	ms_dly_ctr |= (MS_READ_TIME_ADJUST << 28);
 #endif
 
 #ifdef MS_DATA_OUTPUT_DELAY
-	ms_dly_ctr &= 0xf0ffffff
-	ms_dly_ctr |= (MS_DATA_OUTPUT_DELAY << 25);
+	ms_dly_ctr &= 0xf0ffffff;
+	ms_dly_ctr |= (MS_DATA_OUTPUT_DELAY << 24);
 #endif
 
 #ifdef MS_DATA_INPUT_DELAY
-	ms_dly_ctr &= 0xfff0ffff
-	ms_dly_ctr |= (MS_DATA_INPUT_DELAY << 17);
+	ms_dly_ctr &= 0xfff0ffff;
+	ms_dly_ctr |= (MS_DATA_INPUT_DELAY << 16);
 #endif
 
 #ifdef MS_SCLK_OUTPUT_DELAY
-	ms_dly_ctr &= 0xfffff0ff
-	ms_dly_ctr |= (MS_SCLK_OUTPUT_DELAY << 9);
+	ms_dly_ctr &= 0xfffff0ff;
+	ms_dly_ctr |= (MS_SCLK_OUTPUT_DELAY << 8);
 #endif
 
-	writel(MS_DELAY_REG, ms_dly_ctr);
+	writel(MS_DELAY_CTRL_REG, ms_dly_ctr);
 }
 
 void rct_set_dven_clk(u32 freq_hz)
@@ -708,6 +606,7 @@ static struct so_rct_obj_s G_so_rct[] = {
         {PLL_CLK_37_125MHZ,  	 0x0a152100, 0x0,        0x10001, 0x10004},
 	{PLL_CLK_42D1001MHZ,  	 0x0d121108, 0xfc6b699f, 0x10001, 0x10006},
 	{PLL_CLK_42MHZ,  	 0x0d121100, 0x0, 	 0x10001, 0x10006},
+	{PLL_CLK_45MHZ,  	 0x09122100, 0x0, 	 0x10001, 0x10006},
 	{PLL_CLK_48D1001MHZ,  	 0x1f110108, 0xf7d0f16c, 0x10001, 0x10009},
         {PLL_CLK_48MHZ,  	 0x1f110100, 0x0, 	 0x10001, 0x10009},
         {PLL_CLK_48_6MHZ,  	 0x1f110108, 0x66666667, 0x10001, 0x10009},
@@ -761,6 +660,10 @@ static struct vout_rct_obj_s G_vout_rct[] = {
 	{PLL_CLK_13_5MHZ,  	0x0b111100, 0x0,    	0x10001, 0x10018, 0x10001},
 	{PLL_CLK_24_54MHZ,	0x0e131108, 0x8ba1f4b2, 0x10001, 0x10008, 0x10001},
 	{PLL_CLK_27D1001MHZ,  	0x09111108, 0xfbe878b7, 0x10001, 0x1000a, 0x10001},
+	{PLL_CLK_26_9485MHZ,	0x09111108, 0xfb1f0a87, 0x10001, 0x1000a, 0x10001}, /* - 1 LN at 60hz */
+	{PLL_CLK_26_9568MHZ,	0x09111108, 0xfbe76c8b, 0x10001, 0x1000a, 0x10001}, /* - 1 LN at 50hz */
+	{PLL_CLK_27_0432MHZ,	0x09111108, 0x04189375, 0x10001, 0x1000a, 0x10001}, /* + 1 LN at 50hz */
+	{PLL_CLK_27_0514MHZ,  	0x09111108, 0x04dfa5ee, 0x10001, 0x1000a, 0x10001}, /* + 1 LN at 60hz */
         {PLL_CLK_27M1001MHZ,  	0x09111108, 0x04189375, 0x10001, 0x1000a, 0x10001}, /* 27*1.001 MHz */
         {PLL_CLK_54MHZ,  	0x17100100, 0x0,        0x10001, 0x1000c, 0x10002},
         {PLL_CLK_74_25D1001MHZ, 0x0a114108, 0xfd2fd2fd, 0x10001, 0x1000a, 0x10001}, /* 74.25/1.001 MHz */
@@ -1610,16 +1513,6 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
         writel(CG_PWM_REG, (clk));
 }
 
-void rct_set_usbp_ctrl_bits(u32 value)
-{
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) | value);	
-}
-
-void rct_clear_usbp_ctrl_bits(u32 value)
-{
-	writel(USB_REFCLK_REG, readl(USB_REFCLK_REG) & ~value);
-}
-
 void rct_set_usb_ana_on(void)
 {
 	writel(ANA_PWR_REG, readl(ANA_PWR_REG) | 6);
@@ -1654,6 +1547,7 @@ void rct_ena_usb_int_clk(void)
 
 void rct_set_usb_debounce(void)
 {
+
 }
 
 void rct_turn_off_usb_pll(void)
@@ -1675,29 +1569,48 @@ u32 read_usb_reg_setting(void)
 	return 0;
 }
 
+void rct_set_usb_phy_pll(void)
+{
+	register u32 clk;
+
+	/* Program the USB phy clock generator */
+	clk = get_core_bus_freq_hz();
+
+	if (clk == 216000000) {
+		/* Core == 216MHz, */
+		writel(USB_REFCLK_REG,readl(USB_REFCLK_REG) | 0x01 );
+		writel(SCALER_USB_REG,
+			(readl(SCALER_USB_REG) & 0xffe0ff00) |
+			 0x00100012
+			);
+	}
+	else if (clk == 162000000){
+		/* Core == 162MHz, */
+		writel(USB_REFCLK_REG,readl(USB_REFCLK_REG) | 0x01 );
+		writel(SCALER_USB_REG,
+			(readl(SCALER_USB_REG) & 0xffe0ff00) |
+			 0x0001001b
+			);
+	}
+	else
+	{
+		printk("need external clock for usb phy");
+		/* set Core == 216MHz, */
+		writel(USB_REFCLK_REG,readl(USB_REFCLK_REG) | 0x01 );
+		writel(SCALER_USB_REG,
+			(readl(SCALER_USB_REG) & 0xffe0ff00) |
+			 0x00100012
+			);
+	}
+
+}
+
 /* called by prusb driver */
 void _init_usb_pll(void)
 {
+	rct_set_usb_phy_pll();
 	rct_set_usb_ana_on();
 	udelay(150);
-}
-
-u32 read_pll_so_reg(void)
-{
-	return 0;
-}
-
-u32 read_cg_so_reg(void)
-{
-	return 0;
-}
-
-void write_pll_so_reg(u32 value)
-{
-}
-
-void write_cg_so_reg(u32 value)
-{
 }
 
 /**
@@ -1719,14 +1632,6 @@ void rct_set_hdmi_clk_src(u32 clk_src)
 	default: /* HDMI_CLK_PHY_CLK_VO, default setting */
 	        writeb(HDMI_CTRL_REG, readb(HDMI_CTRL_REG) | 0x4);
 	}
-}
-
-/**
- * Get the reference clock of HDMI CEC
- */
-u32 get_hdmi_cec_freq_hz(void)
-{
-	return PLL_FREQ_HZ;
 }
 
 /**
@@ -1790,99 +1695,10 @@ void rct_set_vin_freq_hz(u32 ref_freq_hz, u32 freq_hz)
 	dly_tsk(1);
 	writel(SCALER_VIN_POST_REG, 0x0010002);
 	writel(SCALER_VIN_POST_REG, G_vin_rct_spclk[i].scaler_post);
-
-	vin_clk_freq_hz = G_vin_rct_spclk[i].freq;
 }
-
-u32 get_vin_freq_hz(void)
-{
-	return vin_clk_freq_hz;
-}
-
-#if 0 /* (RCT_SUPPORT_PLL_HDMI == 1) */
-
-/**
- * RCT register settings for HDMI PHY with VOUT PLL Freq
- */
-static struct clk_rct_refclk_obj_s G_hdmi_phy_rct_vdclk[] = {
-	/* Fref			Freq
-		Ctrl        	FRAC   	PRE  	POST */
-	/* Fref = 27 MHz */
-	/* FIXME */
- 	{PLL_CLK_27MHZ,  	PLL_CLK_27D1001MHZ,
-		0x0e01010a, 	0xfbe878b7,	0x0010001,	0x0010001}, /* FIXME: */
-	{PLL_CLK_27MHZ,  	PLL_CLK_27MHZ,
-		0x09000101, 	0x0,        	0x0010001, 	0x0010001},
-	{PLL_CLK_27MHZ,  	PLL_CLK_74_25D1001MHZ,
-		0x0a030108, 	0xfd2fd2fd, 	0x0010001, 	0x0010001}, /* FIXME: */
-	{PLL_CLK_27MHZ,  	PLL_CLK_74_25MHZ,
-		0x0a010100, 	0x0,        	0x0010001, 	0x0010002},
-        {PLL_CLK_27MHZ,  	PLL_CLK_148_5D1001MHZ,
-		0x1401010a, 	0xfa5fa5fb,	0x0010001,	0x0010001}, /* FIXME: */
-	{PLL_CLK_27MHZ,  	PLL_CLK_148_5MHZ,
-		0x15010102, 	0x0,		0x0010001,	0x0010001},
-
-	/* FIXME: */
-        /* Fref = 27 * 1.001 MHz */
-	{PLL_CLK_27M1001MHZ,  	PLL_CLK_27MHZ,
-		0x0e01010a, 	0xfbe878b7, 	0x1, 	0x08},
-	{PLL_CLK_27M1001MHZ,  	PLL_CLK_27M1001MHZ,
-		0x09000100, 	0x0,        	0x0010001, 	0x0010001},
-	{PLL_CLK_27M1001MHZ,  	PLL_CLK_74_25D1001MHZ,
-		0x1401010a, 	0xf4c0bc52, 	0x2, 	0x02},
-	{PLL_CLK_27M1001MHZ,  	PLL_CLK_74_25MHZ,
-		0x1401010a, 	0xfa5fa5fb, 	0x1, 	0x04},
-        {PLL_CLK_27M1001MHZ,  	PLL_CLK_148_5D1001MHZ,
-		0x1401010a, 	0xf4c0bc52, 	0x1, 	0x02},
-	{PLL_CLK_27M1001MHZ,  	PLL_CLK_148_5MHZ,
-		0x1401010a, 	0xfa5fa5fb, 	0x1, 	0x02},
-
-	/* FIXME: */
-        /* Fref = 74.25/1.001 MHz */
-        {PLL_CLK_74_25D1001MHZ, PLL_CLK_27D1001MHZ,
-		0x0a01010a, 	0xa2e8ba2f,	0x2, 	0x08},
-	{PLL_CLK_74_25D1001MHZ, PLL_CLK_27MHZ,
-		0x0a01010a, 	0xa5e353f8, 	0x2, 	0x08},
-	{PLL_CLK_74_25D1001MHZ, PLL_CLK_27M1001MHZ,
-        	0x0a01010a, 	0xa8deb0fb,	0x2, 	0x08},
-        {PLL_CLK_74_25D1001MHZ, PLL_CLK_74_25D1001MHZ,
-		0x09000100, 	0x0,        	0x0010001, 	0x0010001},
-	{PLL_CLK_74_25D1001MHZ, PLL_CLK_74_25MHZ,
-		0x0f01010a, 	0x04189375,	0x2, 	0x04},
-        {PLL_CLK_74_25D1001MHZ, PLL_CLK_148_5D1001MHZ,
-		0x0f010102, 	0x0,		0x2, 	0x02},
-	{PLL_CLK_74_25D1001MHZ, PLL_CLK_148_5MHZ,
-		0x0f01010a, 	0x04189375,	0x2, 	0x02},
-
-	/* FIXME: */
-        /* Fref = 74.25 MHz */
-        {PLL_CLK_74_25MHZ, 	PLL_CLK_27MHZ,
-		0x0a01010a, 	0xa2e8ba2f,	0x2, 	0x08},
-	{PLL_CLK_74_25MHZ, 	PLL_CLK_27M1001MHZ,
-		0x0a01010a, 	0xa5e353f8,	0x2, 	0x08},
-	{PLL_CLK_74_25MHZ, 	PLL_CLK_74_25D1001MHZ,
-		0x0e01010a, 	0xfbe878b7,	0x2, 	0x04},
-	{PLL_CLK_74_25MHZ, 	PLL_CLK_74_25MHZ,
-		0x09000100, 	0x0,        	0x0010001, 	0x0010001},
-        {PLL_CLK_74_25MHZ, 	PLL_CLK_148_5D1001MHZ,
-		0x0e01010a, 	0xfbe878b7,	0x2, 	0x02},
-	{PLL_CLK_74_25MHZ, 	PLL_CLK_148_5MHZ,
-		0x11000100, 	0x0,        	0x0010001, 	0x0010001},
-
-
-        /* 27MHz as default */
-        {0x0, 	    		0,
-		0x0,   		0x0,	0x0, 	0x0}
-};
-#endif
 
 void rct_set_hdmi_phy_freq_hz(u32 freq_hz)
 {
-}
-
-u32 get_hdmi_phy_freq_hz(void)
-{
-	return hdmi_clk_freq_hz;
 }
 
 int get_ssi_clk_src(void)
@@ -1902,3 +1718,10 @@ void rct_set_vin_lvds_pad(int mode)
 {
 }
 
+void rct_set_adc_clk_freq_hz(u32 freq_hz)
+{
+	register u32 clk_div;
+
+        clk_div     = PLL_FREQ_HZ / freq_hz;
+	writel(SCALER_ADC_REG, 0x0010000 | clk_div);
+}

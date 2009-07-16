@@ -28,15 +28,6 @@
 
 #include <mach/hardware.h>
 
-#if (DMA_SUPPORT_DMA_FIOS == 1)
-/* Max number of channel */
-#define NUM_DMA_CHANNELS 	5
-#define NUM_DMA_FIOS_CHANNELS 	1
-#else
-/* Max number of channel */
-#define NUM_DMA_CHANNELS 	5
-#endif
-
 /* Max number of DMA channel IRQ handlers */
 #define MAX_DMA_CHANNEL_IRQ_HANDLERS	4
 

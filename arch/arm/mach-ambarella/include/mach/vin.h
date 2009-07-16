@@ -52,10 +52,16 @@
 #define VIN_SMEM_PREVIEW_INSTANCES	2
 #endif
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6)
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S)
 #define VIN_SUPPORT_SLVS_MLVS		1
 #else
 #define VIN_SUPPORT_SLVS_MLVS		0
+#endif
+
+#if (CHIP_REV == A5S)
+#define VIN_SUPPORT_MIPI		1
+#else
+#define VIN_SUPPORT_MIPI		0
 #endif
 
 /****************************************************/

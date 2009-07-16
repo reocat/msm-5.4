@@ -31,9 +31,9 @@
 
 /* The following IRQ numbers are common for all ARCH */
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6)
+#if (CHIP_REV == A5) || (CHIP_REV == A6) 
 #define MAX_IRQ_NUMBER		192 /* VIC1:32 + VIC2:32 + GPIO: 128 = 192 */
-#elif (CHIP_REV == A3) 
+#elif (CHIP_REV == A3) || (CHIP_REV == A5S)
 #define MAX_IRQ_NUMBER		160 /* VIC1:32 + VIC2:32 + GPIO: 96 = 160 */
 #else
 #define MAX_IRQ_NUMBER		128
@@ -41,7 +41,8 @@
 
 #if (CHIP_REV == A1) || (CHIP_REV == A2) 
 #define GPIO_VICINT_INSTANCES		2	
-#elif (CHIP_REV == A3) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+#elif (CHIP_REV == A3) || (CHIP_REV == A2S) || (CHIP_REV == A2M) ||	\
+      (CHIP_REV == A2Q) || (CHIP_REV == A5S)
 #define GPIO_VICINT_INSTANCES		3
 #else
 #define GPIO_VICINT_INSTANCES		4
@@ -51,6 +52,7 @@
 
 #define USBVBUS_IRQ	 	0
 #define VOUT_IRQ	 	1
+#define ORC_VOUT1_IRQ		1	/* A5S */
 #define VIN_IRQ		 	2
 #define VDSP_IRQ	 	3
 #define USBC_IRQ	 	4
@@ -85,10 +87,11 @@
 #define SD2_IRQ			25
 #endif
 #define ETH0_IRQ		25
-#define UART1_IRQ		25
 
+#define UART1_IRQ		25
 #define SDCD_IRQ		26
 #define GPIO3_IRQ		26	/* A5 */
+#define SSI_SLAVE_IRQ		26
 
 #if (CHIP_REV == A2)
 #define ETH_IRQ			 4	/* Shared with USBC_IRQ */
@@ -140,16 +143,24 @@
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define MS_IRQ	 		5	/* A2S, A2M */
+#elif (CHIP_REV == A5S)
+#define MS_IRQ	 		(32 + 15)
 #else
-#define MS_IRQ	 		(32 + 22)	
+#define MS_IRQ	 		(32 + 22)
 #endif
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define MOTOR_IRQ		25	/* A2S, A2M */
+#elif (CHIP_REV == A5S)
+#define MOTOR_IRQ		(32 + 17)
 #else
 #define MOTOR_IRQ		(32 + 23)
 #endif
 
+#define ORC_VOUT0_IRQ		(32 + 12)
+#define AES_IRQ			(32 + 13)
+#define DES_IRQ			(32 + 14)
+#define GDMA_IRQ		(32 + 16)
 
 #define GPIO_IRQ(x)		((x) + VIC_INSTANCES * 32)
 
@@ -177,11 +188,11 @@
 /******************************************/
 #define USBVBUS_INT_VEC	 		0
 #define VOUT_INT_VEC	 		1
+#define ORC_VOUT1_INT_VEC		1	/* A5S */
 #define VIN_INT_VEC	 		2
 #define VDSP_INT_VEC	 		3
 #define USBC_INT_VEC	 		4
 #define HOSTTX_INT_VEC	 		5
-#define MS_INT_VEC	 		5	/* A2S, A2M */
 #define HOSTRX_INT_VEC	 		6
 #define HIF_ARM1_INT_VEC 		6	/* A2S, A2M */
 #define I2STX_INT_VEC	 		7
@@ -212,9 +223,9 @@
 #define SD2_INT_VEC			25
 #endif
 
-#define MOTOR_INT_VEC			25	/* A2S, A2M */
 #define SDCD_INT_VEC			26	
 #define GPIO3_INT_VEC			26	/* A5 */
+#define SSI_SLAVE_INT_VEC		26
 
 #if (CHIP_REV == A2)
 #define ETH_INT_VEC			4	/* Shared with USBC_INT_VEC */
@@ -225,6 +236,8 @@
 #define IDSP_ERROR_INT_VEC		28
 #define VOUT_SYNC_MISSED_INT_VEC 	29
 #define HIF_ARM2_INT_VEC		29	/* A2S, A2M */
+
+#define UART1_INT_VEC			25	/* A5S */
 
 #if (CHIP_REV == A2)
 #define GPIO2_INT_VEC			11	/* Shared with GPIO1_INT_VEC */
@@ -254,6 +267,37 @@
 #define SSI2_INT_VEC 			VIC2_INT_VEC(9)
 #define VOUT_TV_SYNC_INT_VEC 		VIC2_INT_VEC(10)
 #define VOUT_LCD_SYNC_INT_VEC 		VIC2_INT_VEC(11)
+#define HIF_ARM_INT2_VEC 		VIC2_INT_VEC(12)
+#define HIF_ARM_INT1_VEC 		VIC2_INT_VEC(13)
+#define CODE_VOUT_B_INT_VEC 		VIC2_INT_VEC(14)
+#define CODE_VDSP_3_INT_VEC 		VIC2_INT_VEC(15)
+#define CODE_VDSP_2_INT_VEC 		VIC2_INT_VEC(16)
+#define CODE_VDSP_1_INT_VEC 		VIC2_INT_VEC(17)
+#define TS_CH0_TX_INT_VEC 		VIC2_INT_VEC(18)
+#define TS_CH1_TX_INT_VEC 		VIC2_INT_VEC(19)
+#define TS_CH0_RX_INT_VEC 		VIC2_INT_VEC(20)
+#define TS_CH1_RX_INT_VEC 		VIC2_INT_VEC(21)
+
+#define ORC_VOUT0_INT_VEC		VIC2_INT_VEC(12)
+#define AES_INT_VEC			VIC2_INT_VEC(13)
+#define DES_INT_VEC			VIC2_INT_VEC(14)
+#define GDMA_INT_VEC			VIC2_INT_VEC(16)
+
+#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
+#define MS_INT_VEC	 		5	/* A2S, A2M */
+#elif (CHIP_REV == A5S)
+#define MS_INT_VEC	 		VIC2_INT_VEC(15)	/* A5S */
+#else
+#define MS_INT_VEC	 		VIC2_INT_VEC(22)	/* A6 */
+#endif 
+
+#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
+#define MOTOR_INT_VEC			25	/* A2S, A2M */
+#elif (CHIP_REV == A5S)
+#define MOTOR_INT_VEC			VIC2_INT_VEC(17)	/* A5S */
+#else
+#define MOTOR_INT_VEC			VIC2_INT_VEC(23)	/* A6 */
+#endif
 
 #define GPIO_INT_VEC(x) 		((x) + GPIO_INT_VEC_OFFSET)
 #define GPIO00_INT_VEC			GPIO_INT_VEC(0)

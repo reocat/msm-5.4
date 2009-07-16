@@ -169,6 +169,8 @@ struct ambarella_ir_info {
 	u32				last_adc_key[ADC_MAX_INSTANCES];
 	u32				last_ir_uid;
 	u32				last_ir_flag;
+
+	struct ambarella_ir_controller	*pcontroller_info;
 };
 
 int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid);

@@ -47,12 +47,16 @@
 
 #if (CHIP_REV == A6)
 #define MS_OFFSET			0x17000
+#elif (CHIP_REV == A5S)
+#define MS_OFFSET			0x16000
 #else
 #define MS_OFFSET			0xc000
 #endif
 
 #if (CHIP_REV == A6)
 #define HIF_OFFSET			0x14000
+#elif (CHIP_REV == A5S)
+#define HIF_OFFSET			0xb000
 #else
 #define HIF_OFFSET			0xd000
 #endif
@@ -70,6 +74,9 @@
 #define HDMI_OFFSET			0x13000
 #endif
 
+
+#define CRYPT_UNIT_OFFSET		0x14000
+#define GRAPHICS_DMA_OFFSET		0x15000
 #define TS_OFFSET			0x15000
 #define SPIB_OFFSET			0x16000
 
@@ -99,6 +106,8 @@
 #define HDMI_BASE			(AHB_BASE + HDMI_OFFSET)
 #define TS_BASE				(AHB_BASE + TS_OFFSET)
 #define SPIB_BASE			(AHB_BASE + SPIB_OFFSET)
+#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#define GRAPHICS_DMA_BASE		(AHB_BASE + GRAPHICS_DMA_OFFSET)
 
 /* AHB slave registers */
 
@@ -126,6 +135,8 @@
 #define HDMI_REG(x)			(HDMI_BASE + (x))
 #define TS_REG(x)			(TS_BASE + (x))
 #define SPIB_REG(x)			(SPIB_BASE + (x))
+#define CRYPT_UNIT_REG(x)		(CRYPT_UNIT_BASE + (x))
+#define GRAPHICS_DMA_REG(x)		(GRAPHICS_DMA_BASE + (x))
 
 /*----------------------------------------------------------------------------*/
 
@@ -149,6 +160,9 @@
 #define GPIO2_OFFSET			0xe000
 #define SPI2_OFFSET			0xf000
 #define GPIO3_OFFSET			0x1f000
+#define SPI_SLAVE_OFFSET		0x1e000
+#define UART1_OFFSET			0x1f000
+
 #if	defined(__A1_FPGA__)
 #define RCT_OFFSET			0xf000
 #else
@@ -178,6 +192,8 @@
 #define GPIO3_BASE			(APB_BASE + GPIO3_OFFSET)
 #define RCT_BASE			(APB_BASE + RCT_OFFSET)
 #define AUC_BASE			(APB_BASE + AUC_OFFSET)
+#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
+#define UART1_BASE			(APB_BASE + UART1_OFFSET)
 
 /* APB slave registers */
 
@@ -188,7 +204,6 @@
 #define ST_REG(x)			(STEPPER_BASE + (x))
 #define UART_REG(x)			(UART_BASE + (x))
 #define UART0_REG(x)			(UART_BASE + (x))
-#define UART1_REG(x)			(UART_BASE + 0x00010000 + (x))
 #define IR_REG(x)			(IR_BASE + (x))
 #define IDC2_REG(x)			(IDC2_BASE + (x))
 #define PWM_REG(x)			(PWM_BASE + (x))
@@ -203,6 +218,8 @@
 #define GPIO3_REG(x)			(GPIO3_BASE + (x))
 #define RCT_REG(x)			(RCT_BASE + (x))
 #define AUC_REG(x)			(AUC_BASE + (x))
+#define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
+#define UART1_REG(x)			(UART1_BASE + (x))
 
 /* DSP Debug ports */
 

@@ -32,36 +32,37 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
+#if (CHIP_REV == A5S)
+#define UART_SUPPORT_FLOW_CTRL		1
+#else
+#define UART_SUPPORT_FLOW_CTRL		0
+#endif
 
-/* None so far */
+#if (CHIP_REV == A5S)
+#define	UART_INSTANCE			2
+#else
+#define	UART_INSTANCE			1
+#endif
 
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
-#if (CHIP_REV == A5M)
-#define UART_PORT_MAX			2
-#else
-#define UART_PORT_MAX			1
-#endif
+#define PORTMAX				2
 
-#define UART_FIFO_SIZE			(16)
-#define UART_REG_MEM_SIZE		(0x20)
+#define UART0_BASE			UART_BASE
 
-#define UART0_BASE			UART0_REG(0)
-#define UART1_BASE			UART1_REG(0)
-
-#define UART0_RB_OFFSET			0x00
-#define UART0_TH_OFFSET			0x00
-#define UART0_DLL_OFFSET		0x00
-#define UART0_IE_OFFSET			0x04
-#define UART0_DLH_OFFSET		0x04
-#define UART0_II_OFFSET			0x08
-#define UART0_FC_OFFSET			0x08
-#define UART0_LC_OFFSET			0x0c
-#define UART0_MC_OFFSET			0x10
-#define UART0_LS_OFFSET			0x14
-#define UART0_MS_OFFSET			0x18
-#define UART0_SC_OFFSET			0x1c
+#define UART_RB_OFFSET			0x00
+#define UART_TH_OFFSET			0x00
+#define UART_DLL_OFFSET			0x00
+#define UART_IE_OFFSET			0x04
+#define UART_DLH_OFFSET			0x04
+#define UART_II_OFFSET			0x08
+#define UART_FC_OFFSET			0x08
+#define UART_LC_OFFSET			0x0c
+#define UART_MC_OFFSET			0x10
+#define UART_LS_OFFSET			0x14
+#define UART_MS_OFFSET			0x18
+#define UART_SC_OFFSET			0x1c
 
 #define UART0_RB_REG			UART0_REG(0x00)
 #define UART0_TH_REG			UART0_REG(0x00)
@@ -75,6 +76,21 @@
 #define UART0_LS_REG			UART0_REG(0x14)
 #define UART0_MS_REG			UART0_REG(0x18)
 #define UART0_SC_REG			UART0_REG(0x1c)
+
+#define UART1_RB_REG			UART1_REG(0x00)
+#define UART1_TH_REG			UART1_REG(0x00)
+#define UART1_DLL_REG			UART1_REG(0x00)
+#define UART1_IE_REG			UART1_REG(0x04)
+#define UART1_DLH_REG			UART1_REG(0x04)
+#define UART1_II_REG			UART1_REG(0x08)
+#define UART1_FC_REG			UART1_REG(0x08)
+#define UART1_LC_REG			UART1_REG(0x0c)
+#define UART1_MC_REG			UART1_REG(0x10)
+#define UART1_LS_REG			UART1_REG(0x14)
+#define UART1_MS_REG			UART1_REG(0x18)
+#define UART1_SC_REG			UART1_REG(0x1c)
+
+
 
 #define UARTX_RB_REG(x)			(UART_BASE + ((x) << 16))
 #define UARTX_TH_REG(x)			(UART_BASE + ((x) << 16))
@@ -130,8 +146,17 @@
 #define UART_LC_CLS_6_BITS		0x01
 #define UART_LC_CLS_5_BITS		0x00
 /*	quick defs */
-#	define	UART_LC_8N1		0x03
-#	define	UART_LC_7E1		0x0a
+#define	UART_LC_8N1			0x03
+#define	UART_LC_7E1			0x0a
+
+/* UART[x]_MC_REG */
+#define UART_MC_SIRE			0x40
+#define UART_MC_AFCE			0x20
+#define UART_MC_LB			0x10
+#define UART_MC_OUT2			0x08
+#define UART_MC_OUT1			0x04
+#define UART_MC_RTS			0x02
+#define UART_MC_DTR			0x01
 
 /* UART[x]_LS_REG */
 #define UART_LS_FERR			0x80
@@ -147,15 +172,6 @@
 #define RECV_BUF_SIZ			1500
 #define SEND_BUF_SIZ			1500
 
-/* UART[x]_MC_REG */
-#define UART_MC_SIRE			0x40
-#define UART_MC_AFCE			0x20
-#define UART_MC_LOOPBACK		0x10
-#define UART_MC_OUT2			0x08
-#define UART_MC_OUT1			0x04
-#define UART_MC_RTS			0x02
-#define UART_MC_DTR			0x01
-
 /* UART[x]_MS_REG */
 #define UART_MS_DCD			0x80
 #define UART_MS_RI			0x40
@@ -165,6 +181,8 @@
 #define UART_MS_TERI			0x04
 #define UART_MS_DDSR			0x02
 #define UART_MS_DCTS			0x01
+
+#define UART_FIFO_SIZE			(16)
 
 #endif
 

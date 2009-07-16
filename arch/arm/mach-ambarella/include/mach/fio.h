@@ -37,7 +37,6 @@
 
 #if 	(CHIP_REV == A1)
 
-#define FIO_SUPPORT_AHB_CLK_ENA			0
 #define CF_NAND_XD_CONCURR_WA			1
 #define CF_SUPPORT_ATAPI			0
 #define CF_SUPPORT_XFER_UTIL			0
@@ -52,7 +51,6 @@
 
 #else
 
-#define FIO_SUPPORT_AHB_CLK_ENA			1
 #define CF_NAND_XD_CONCURR_WA			0
 #define CF_SUPPORT_ATAPI			1
 #define CF_SUPPORT_XFER_UTIL			1
@@ -67,10 +65,20 @@
 
 #endif
 
+#if 	(CHIP_REV == A1) || \
+	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+	(CHIP_REV == A5S)
+#define FIO_SUPPORT_AHB_CLK_ENA			0
+#else
+#define FIO_SUPPORT_AHB_CLK_ENA			1
+#endif
+
+
 #if 	(CHIP_REV == A1)
 #define NAND_XD_SUPPORT_WAS			0
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) ||		\
-	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) 
+	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
+	(CHIP_REV == A5S)
 #define NAND_XD_SUPPORT_WAS			1
 #else
 #define NAND_XD_SUPPORT_WAS			2
@@ -82,7 +90,7 @@
 #define CF_PULL_CTL_POLARITY			0
 #endif
 
-#if 	(CHIP_REV == A6)
+#if 	(CHIP_REV == A6) || (CHIP_REV == A5S)
 #define CFC_SUPPORT_HW_LBA48			1
 #define NAND_SUPPORT_INTLVE			1
 #define NAND_SUPPORT_SPARE_BURST_READ		1
@@ -92,6 +100,12 @@
 #define NAND_SUPPORT_INTLVE			0
 #define NAND_SUPPORT_SPARE_BURST_READ		0
 #define NAND_SUPPORT_EDC_STATUS_READ		0
+#endif
+
+#if 	(CHIP_REV == A5S)
+#define	NAND_DUMMY_XFER				1
+#else
+#define	NAND_DUMMY_XFER				0
 #endif
 
 /****************************************************/

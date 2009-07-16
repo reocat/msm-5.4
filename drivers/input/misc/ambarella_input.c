@@ -581,7 +581,7 @@ void ambarella_ir_init(struct ambarella_ir_info *pinfo)
 {
 	ambarella_ir_disable(pinfo);
 
-	rct_set_ir_pll();
+	pinfo->pcontroller_info->set_pll();
 
 	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_HW);
 
@@ -794,6 +794,16 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to allocate pinfo!\n");
 		errorCode = -ENOMEM;
 		goto ir_errorCode_na;
+	}
+
+	pinfo->pcontroller_info =
+		(struct ambarella_ir_controller *)pdev->dev.platform_data;
+	if ((pinfo->pcontroller_info == NULL) ||
+		(pinfo->pcontroller_info->set_pll == NULL) ||
+		(pinfo->pcontroller_info->get_pll == NULL) ) {
+		dev_err(&pdev->dev, "Platform data is NULL!\n");
+		errorCode = -ENXIO;
+		goto ir_errorCode_pinfo;
 	}
 
 	input_dev = input_allocate_device();

@@ -35,9 +35,9 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if 	(CHIP_REV == A1) || (CHIP_REV == A2) || 		\
-	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
-#define IDC_INSTANCES		1	
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || 		\
+    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+#define IDC_INSTANCES		1
 #else
 #define IDC_INSTANCES		2
 #endif
@@ -46,6 +46,12 @@
 #define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         1
 #else
 #define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         0
+#endif
+
+#if (CHIP_REV == A5S)
+#define IDC_SUPPORT_INTERNAL_MUX	1
+#else
+#define IDC_SUPPORT_INTERNAL_MUX	0
 #endif
 
 /****************************************************/
@@ -70,7 +76,7 @@
 #define IDC_FMCTRL_REG			IDC_REG(0x18)
 #define IDC_FMDATA_REG			IDC_REG(0x1c)
 
-#if 	(IDC_INSTANCES == 2)
+#if 	(IDC_INSTANCES >= 2)
 #define IDC2_ENR_REG			IDC2_REG(0x00)
 #define IDC2_CTRL_REG			IDC2_REG(0x04)
 #define IDC2_DATA_REG			IDC2_REG(0x08)

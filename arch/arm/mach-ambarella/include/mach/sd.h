@@ -36,7 +36,8 @@
 /****************************************************/
 
 #if ((CHIP_REV == A1) || (CHIP_REV == A5) || (CHIP_REV == A6) ||	\
-     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q))
+     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
+     (CHIP_REV == A5S))
 #define SD_INSTANCES			1
 #else
 #define SD_INSTANCES			2
@@ -51,11 +52,27 @@
 #define SD_PWR_BIT_FIELD_TYPE		1
 #endif
 
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6)
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || (CHIP_REV == A3)
+#define SD_SUPPORT_PLL_SCALER		0
+#else
+#define SD_SUPPORT_PLL_SCALER     	1
+#endif
+
+#if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) ||	\
+    (CHIP_REV == A5S)
 #define SD_HAS_INTERNAL_MUXER      	1
 #else
 #define SD_HAS_INTERNAL_MUXER           0
 #endif
+
+#if (CHIP_REV == A5S)
+/* There is no dedicated irq for 2nd CD pin. */
+/* So it does not work in A5S and use GPIO instead. */
+#define SD_HAS_INTERNAL_2ND_CDWP	0
+#else
+#define SD_HAS_INTERNAL_2ND_CDWP	0
+#endif
+
 
 /****************************************************/
 /* Controller registers definitions                 */
