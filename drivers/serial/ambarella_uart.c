@@ -438,7 +438,16 @@ static void serial_ambarella_config_port(struct uart_port *port, int flags)
 static int serial_ambarella_verify_port(struct uart_port *port,
 					struct serial_struct *ser)
 {
-	return -EINVAL;
+	int					errorCode = 0;
+
+	if (ser->type != PORT_UNKNOWN && ser->type != PORT_UART00)
+		errorCode = -EINVAL;
+	if (port->irq != ser->irq)
+		errorCode = -EINVAL;
+	if (ser->io_type != SERIAL_IO_MEM)
+		errorCode = -EINVAL;
+
+	return errorCode;
 }
 
 static const char *serial_ambarella_type(struct uart_port *port)

@@ -50,6 +50,10 @@
 
 #include "init.h"
 
+#if (CHIP_REV == A5S)
+#include <mach/hal/hal.h>
+#endif
+
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_32BIT_MASK;
 EXPORT_SYMBOL(ambarella_dmamask);
@@ -200,6 +204,14 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 void __init ambarella_map_io(void)
 {
 	int					i;
+
+#if (CHIP_REV == A5S)
+	amb_hal_success_t			errorCode;
+
+	errorCode = amb_set_peripherals_base_address(HAL_BASE_VP,
+		(void *)APB_BASE, (void *)AHB_BASE);
+	BUG_ON(errorCode != AMB_HAL_SUCCESS);
+#endif
 
 	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
 		if (ambarella_io_desc[i].io_desc.length > 0) {
@@ -710,13 +722,6 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 #endif
 };
 
-#if (CHIP_REV == A5S)
-u32 get_uart_freq_hz_a5s(void)
-{
-	return 1846153;
-}
-#endif
-
 struct ambarella_uart_platform_info ambarella_uart_ports = {
 	.total_port_num		= ARRAY_SIZE(ambarella_uart_port_resource),
 	.registed_port_num	= 0,
@@ -733,11 +738,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 	},
 #endif
 	.set_pll		= rct_set_uart_pll,
-#if (CHIP_REV == A5S)
-	.get_pll		= get_uart_freq_hz_a5s,
-#else
 	.get_pll		= get_uart_freq_hz,
-#endif
 };
 
 struct platform_device ambarella_uart = {

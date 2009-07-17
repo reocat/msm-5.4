@@ -37,11 +37,7 @@
 
 #include <mach/hardware.h>
 
-#if (CHIP_REV == A5S)
-#define AMBARELLA_TIMER_FREQ	(60000000)
-#else
 #define AMBARELLA_TIMER_FREQ	(get_apb_bus_freq_hz())
-#endif
 #define AMBARELLA_TIMER_RATING	(300)
 
 static inline void ambarella_timer1_disable(void)

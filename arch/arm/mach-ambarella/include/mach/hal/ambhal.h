@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 87441
+ * @version 87504
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -342,6 +342,7 @@ AMB_HAL_FUNCTION_INFO_GET_ARM_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_HDMI_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
+AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
 
@@ -2905,6 +2906,28 @@ static INLINE amb_sensor_clock_pad_mode_t amb_get_sensor_clock_pad_mode (void *a
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_sensor_clock_pad_mode_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Change the base address of the apb and ahb peripherals.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_apb_peripherals_base_address Virtual address of peripherals (corresponding to
+ * physical address 0x70000000)
+ * @param[in] amb_ahb_peripherals_base_address Virtual address of peripherals (corresponding to
+ * physical address 0x60000000)
+ *
+ * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
+ *
+ * @retval ::AMB_HAL_FAIL ambhal system failure
+ *
+ * @ingroup init_group
+ */
+
+static INLINE amb_hal_success_t amb_set_peripherals_base_address (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, amb_hal_unused, amb_hal_unused) ;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_

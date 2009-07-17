@@ -103,7 +103,8 @@ u32 get_ahb_bus_freq_hz(void)
 
 u32 get_core_bus_freq_hz(void)
 {
-	return (u32) amb_get_core_clock_frequency(HAL_BASE_VP);
+//	return (u32) amb_get_core_clock_frequency(HAL_BASE_VP);
+	return 120000000;
 }
 
 /* arm clock is 2x or 4x times of idsp. */
