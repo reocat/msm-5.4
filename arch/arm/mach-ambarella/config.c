@@ -526,9 +526,12 @@ __tagtable(ATAG_AMBARELLA_REVMEM, parse_mem_tag_revmem);
 u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 {
 	int					i;
-	int					bhal_reserved = 0;
 	u32					halp, hals;
 	u32					revp, revs;
+#if (CHIP_REV == A5S)
+	u32					index;
+	int					bhal_reserved = 0;
+#endif
 
 	pr_info("Ambarella Reserve Memory:\n");
 
@@ -538,15 +541,16 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 		revp = ambarella_reserve_mem_info.desc[i].physaddr;
 		revs = ambarella_reserve_mem_info.desc[i].size;
 		pr_info("\t%02d:\t0x%08x[0x%08x]\tNormal\n", i, revp, revs);
+#if (CHIP_REV == A5S)
 		if ((halp >= revp) && ((halp + hals) <= (revp + revs))) {
 			bhal_reserved = 1;
 			pr_info("\t--:\t0x%08x[0x%08x]\tHAL\n", halp, hals);
 		}
+#endif
 	}
 
 #if (CHIP_REV == A5S)
 	if (!bhal_reserved) {
-		u32 index;
 		index = ambarella_reserve_mem_info.counter;
 		hals = ((hals + (PAGE_SIZE - 1)) & PAGE_MASK);
 		if (index < MEMORY_RESERVE_MAX_NR) {
