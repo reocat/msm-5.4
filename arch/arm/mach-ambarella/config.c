@@ -1482,15 +1482,8 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
-static void set_usb_pll(void)
-{
-	rct_set_usb_debounce();
-	rct_set_usb_ana_on();
-}
-
-
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
-	.set_pll	= set_usb_pll,
+	.set_pll	= rct_set_usb_ana_on,
 };
 
 struct platform_device ambarella_udc0 = {
