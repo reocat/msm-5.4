@@ -102,12 +102,10 @@ static void ambarella_timer1_set_mode(enum clock_event_mode mode,
 static int ambarella_timer1_set_next_event(unsigned long delta,
 	struct clock_event_device *dev)
 {
-	if (delta == 0)
+	if ((delta == 0) || (delta > 0xFFFFFFFF))
 		return -ETIME;
 
-	ambarella_timer1_disable();
-	ambarella_timer1_set_oneshot(delta);
-	ambarella_timer1_enable();
+	amba_writel(TIMER1_STATUS_REG, delta);
 
 	return 0;
 }

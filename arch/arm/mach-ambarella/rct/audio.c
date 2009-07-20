@@ -14,7 +14,6 @@
  */
 
 #if (RCT_AUDIO_PLL_USE_HAL_API == 1)
-#include <mach/hal/hal.h>
 
 u32 get_audio_freq_hz(void)
 {

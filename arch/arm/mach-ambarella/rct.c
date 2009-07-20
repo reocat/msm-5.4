@@ -44,6 +44,8 @@
 #define writel(v,d)		amba_writel(v,d)
 #define dly_tsk(x)		mdelay(10 * (x))
 
+#define K_ASSERT(x)		BUG_ON(!(x))
+
 #if (CHIP_REV == A2)
 #define A2_METAL_REV_A1
 #include "rct/a2.c"

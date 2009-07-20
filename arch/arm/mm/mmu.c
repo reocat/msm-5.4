@@ -799,16 +799,13 @@ void __init reserve_node_zero(pg_data_t *pgdat)
 				BOOTMEM_DEFAULT);
 	}
 
+#ifdef CONFIG_MACH_AMBARELLA
 	if (machine_is_ambarella()) {
 		struct ambarella_mem_rev_info	rev_info;
 		int				i;
 
 		if (!get_ambarella_mem_rev_info(&rev_info)) {
 			for (i = 0; i < rev_info.counter; i++) {
-				pr_info("Ambarella: Reserve MEM="
-					"0x%08lx,0x%08lx\n",
-					rev_info.desc[i].physaddr,
-					rev_info.desc[i].size);
 				reserve_bootmem_node(pgdat,
 					rev_info.desc[i].physaddr,
 					rev_info.desc[i].size,
@@ -816,6 +813,7 @@ void __init reserve_node_zero(pg_data_t *pgdat)
 			}
 		}
 	}
+#endif
 
 #ifdef CONFIG_SA1111
 	/*

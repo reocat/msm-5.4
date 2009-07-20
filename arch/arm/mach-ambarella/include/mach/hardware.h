@@ -28,8 +28,6 @@
 #include <linux/types.h>
 #endif  /* __ASSEMBLER__ */
 
-#define K_ASSERT(x)		BUG_ON(!(x))
-
 /*
  *			Phisical			Virtual
  * --------------------------------------------------------------------------
@@ -58,6 +56,9 @@
 #define RESERVE_MEM_SIZE	(0x00100000)
 
 #define DEFAULT_ATAG_START	(PHYS_OFFSET + 0x000C0000)
+#define DEFAULT_HAL_BASE	(PHYS_OFFSET + 0x000A0000)
+#define DEFAULT_HAL_SIZE	(DEFAULT_ATAG_START - DEFAULT_HAL_BASE)
+#define HAL_BASE_VP		(get_ambarella_hal_vp())
 
 #include <mach/chip.h>
 #include <mach/busaddr.h>
@@ -66,6 +67,16 @@
 #include <mach/apb.h>
 
 #include <mach/config.h>
+
+#ifndef __ASSEMBLER__
+#include <mach/hal/header.h>
+
+#if	(CHIP_REV == A5S)
+#include <mach/hal/ambhal.h>
+#include <mach/hal/ambhalmini.h>
+#endif
+
+#endif  /* __ASSEMBLER__ */
 
 #endif
 

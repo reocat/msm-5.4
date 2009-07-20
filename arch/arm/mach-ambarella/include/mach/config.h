@@ -33,6 +33,7 @@
 #define ATAG_AMBARELLA_DSP		0x44000110
 #define ATAG_AMBARELLA_BSB		0x44000044
 #define ATAG_AMBARELLA_REVMEM		0x44001111
+#define ATAG_AMBARELLA_HAL		0x44000722
 
 #define ATAG_AMBARELLA_NAND_BST		0x44040400
 #define ATAG_AMBARELLA_NAND_BLD		0x44040401
@@ -99,6 +100,13 @@ struct ambarella_mem_rev_info {
 	struct ambarella_mem_rev_desc desc[MEMORY_RESERVE_MAX_NR];
 };
 extern u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo);
+
+struct ambarella_mem_hal_desc {
+	unsigned long physaddr;
+	unsigned long size;
+	unsigned long virtual;
+};
+extern void *get_ambarella_hal_vp(void);
 
 extern u64 ambarella_dmamask;
 extern u32 ambarella_debug_level;

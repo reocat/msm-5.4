@@ -441,8 +441,8 @@ int ambarella_ir_move_read_ptr(struct ambarella_ir_info *pinfo, int offset)
 static inline void ambarella_ir_write_data(struct ambarella_ir_info *pinfo,
 	u16 val)
 {
-	K_ASSERT(pinfo->ir_pwrite >= 0);
-	K_ASSERT(pinfo->ir_pwrite < MAX_IR_BUFFER);
+	BUG_ON(pinfo->ir_pwrite < 0);
+	BUG_ON(pinfo->ir_pwrite >= MAX_IR_BUFFER);
 
 	pinfo->tick_buf[pinfo->ir_pwrite] = val;
 
@@ -454,8 +454,8 @@ static inline void ambarella_ir_write_data(struct ambarella_ir_info *pinfo,
 
 u16 ambarella_ir_read_data(struct ambarella_ir_info *pinfo, int pointer)
 {
-	K_ASSERT(pointer >= 0);
-	K_ASSERT(pointer < MAX_IR_BUFFER);
+	BUG_ON(pointer < 0);
+	BUG_ON(pointer >= MAX_IR_BUFFER);
 
 	if (pointer == pinfo->ir_pwrite)
 		return 0;
@@ -475,8 +475,8 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 
 	pinfo = (struct ambarella_ir_info *)devid;
 
-	K_ASSERT(pinfo->ir_pread >= 0);
-	K_ASSERT(pinfo->ir_pread < MAX_IR_BUFFER);
+	BUG_ON(pinfo->ir_pread < 0);
+	BUG_ON(pinfo->ir_pread >= MAX_IR_BUFFER);
 
 	if (amba_readl(pinfo->regbase + IR_CONTROL_OFFSET) &
 		IR_CONTROL_FIFO_OV) {

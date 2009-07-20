@@ -50,10 +50,6 @@
 
 #include "init.h"
 
-#if (CHIP_REV == A5S)
-#include <mach/hal/hal.h>
-#endif
-
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_32BIT_MASK;
 EXPORT_SYMBOL(ambarella_dmamask);
@@ -228,8 +224,8 @@ void __init ambarella_map_io(void)
 
 static void __init early_dsp(char **p)
 {
-	unsigned long		start = 0;
-	unsigned long		size = 0;
+	unsigned long				start = 0;
+	unsigned long				size = 0;
 
 	start = memparse(*p, p);
 	if (**p == ',')
@@ -276,8 +272,8 @@ __tagtable(ATAG_AMBARELLA_DSP, parse_mem_tag_dsp);
 
 static void __init early_bsb(char **p)
 {
-	unsigned long		start = 0;
-	unsigned long		size = 0;
+	unsigned long				start = 0;
+	unsigned long				size = 0;
 
 	start = memparse(*p, p);
 	if (**p == ',')
@@ -403,6 +399,57 @@ u32 ambarella_virt_to_phys(u32 vaddr)
 EXPORT_SYMBOL(ambarella_virt_to_phys);
 
 /* ==========================================================================*/
+static struct ambarella_mem_hal_desc ambarella_hal_info = {
+	.physaddr			= DEFAULT_HAL_BASE,
+	.size				= DEFAULT_HAL_SIZE,
+	.virtual			= __phys_to_virt(DEFAULT_HAL_BASE),
+};
+
+static void __init early_hal(char **p)
+{
+	unsigned long				start = 0;
+	unsigned long				size = 0;
+
+	start = memparse(*p, p);
+	if (**p == ',')
+		size = memparse((*p) + 1, p);
+
+	if ((start & MEMORY_RESERVE_CHECK_MASK) || (start < PHYS_OFFSET)) {
+		pr_err("Ambarella: Bad HAL start 0x%lx\n", start);
+		return;
+	}
+
+	ambarella_hal_info.physaddr = start;
+	ambarella_hal_info.size = size;
+	ambarella_hal_info.virtual =
+		__phys_to_virt(ambarella_hal_info.physaddr);
+}
+__early_param("hal=", early_hal);
+
+static int __init parse_mem_tag_hal(const struct tag *tag)
+{
+	if ((tag->u.mem.start & MEMORY_RESERVE_CHECK_MASK) ||
+		(tag->u.mem.start < PHYS_OFFSET)) {
+		pr_err("Ambarella: Bad HAL start 0x%x\n", tag->u.mem.start);
+		return -EINVAL;
+	}
+
+	ambarella_hal_info.physaddr = tag->u.mem.start;
+	ambarella_hal_info.size = tag->u.mem.size;
+	ambarella_hal_info.virtual =
+		__phys_to_virt(ambarella_hal_info.physaddr);
+
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_HAL, parse_mem_tag_hal);
+
+void *get_ambarella_hal_vp(void)
+{
+	return (void *)ambarella_hal_info.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_hal_vp);
+
+/* ==========================================================================*/
 static struct ambarella_mem_rev_info ambarella_reserve_mem_info = {
 	.counter			= 1,
 	.desc				= {
@@ -415,9 +462,9 @@ static struct ambarella_mem_rev_info ambarella_reserve_mem_info = {
 
 static void __init early_revmem(char **p)
 {
-	unsigned long		start = 0;
-	unsigned long		size = 0;
-	u32			index;
+	unsigned long				start = 0;
+	unsigned long				size = 0;
+	u32					index;
 
 	start = memparse(*p, p);
 	if (**p == ',')
@@ -447,7 +494,7 @@ __early_param("revmem=", early_revmem);
 
 static int __init parse_mem_tag_revmem(const struct tag *tag)
 {
-	u32			index;
+	u32					index;
 
 	if ((tag->u.mem.start & MEMORY_RESERVE_CHECK_MASK) ||
 		(tag->u.mem.start < PHYS_OFFSET)) {
@@ -478,6 +525,43 @@ __tagtable(ATAG_AMBARELLA_REVMEM, parse_mem_tag_revmem);
 
 u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 {
+	int					i;
+	int					bhal_reserved = 0;
+	u32					halp, hals;
+	u32					revp, revs;
+	u32					index;
+
+	pr_info("Ambarella Reserve Memory:\n");
+
+	halp = ambarella_hal_info.physaddr;
+	hals = ambarella_hal_info.size;
+	for (i = 0; i < ambarella_reserve_mem_info.counter; i++) {
+		revp = ambarella_reserve_mem_info.desc[i].physaddr;
+		revs = ambarella_reserve_mem_info.desc[i].size;
+		pr_info("\t%02d:\t0x%08x[0x%08x]\tNormal\n", i, revp, revs);
+		if ((halp >= revp) && ((halp + hals) <= (revp + revs))) {
+			bhal_reserved = 1;
+			pr_info("\t--:\t0x%08x[0x%08x]\tHAL\n", halp, hals);
+		}
+	}
+
+#if (CHIP_REV == A5S)
+	if (!bhal_reserved) {
+		index = ambarella_reserve_mem_info.counter;
+		hals = ((hals + (PAGE_SIZE - 1)) & PAGE_MASK);
+		if (index < MEMORY_RESERVE_MAX_NR) {
+			ambarella_reserve_mem_info.desc[index].physaddr = halp;
+			ambarella_reserve_mem_info.desc[index].size = hals;
+			pr_info("\t%02d:\t0x%08x[0x%08x]\tHAL\n",
+				ambarella_reserve_mem_info.counter, halp, hals);
+			ambarella_reserve_mem_info.counter++;
+		} else {
+			pr_err("Ambarella: Can't add HAL MEM into revmem!\n");
+			return -EINVAL;
+		}
+	}
+#endif
+
 	*pinfo = ambarella_reserve_mem_info;
 
 	return 0;
@@ -517,9 +601,10 @@ static int __init ambarella_add_partition(const struct tag *tag,
 	char *name,
 	u32 check_size)
 {
-	int nr_partitions = ambarella_nand_default_set.nr_partitions;
-	int errCode = 0;
+	int					errCode = 0;
+	int					nr_partitions;
 
+	nr_partitions = ambarella_nand_default_set.nr_partitions;
 	if (nr_partitions < MAX_AMBOOT_PARTITION_NR) {
 		if (check_size && (tag->u.ramdisk.size == 0)) {
 			errCode = -1;
