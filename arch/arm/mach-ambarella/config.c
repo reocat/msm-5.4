@@ -529,7 +529,6 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 	int					bhal_reserved = 0;
 	u32					halp, hals;
 	u32					revp, revs;
-	u32					index;
 
 	pr_info("Ambarella Reserve Memory:\n");
 
@@ -547,6 +546,7 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 
 #if (CHIP_REV == A5S)
 	if (!bhal_reserved) {
+		u32 index;
 		index = ambarella_reserve_mem_info.counter;
 		hals = ((hals + (PAGE_SIZE - 1)) & PAGE_MASK);
 		if (index < MEMORY_RESERVE_MAX_NR) {
@@ -1339,9 +1339,17 @@ static void i2s_channel_select(u32 ch)
 #endif
 }
 
+static void set_audio_pll(u8 mclk)
+{
+	rct_set_aud_ctrl2_reg();
+	rct_set_pll_frac_mode();
+	rct_set_audio_pll_fs(AUC_CLK_ONCHIP_PLL_27MHZ, mclk);
+}
+
 static struct ambarella_i2s_controller ambarella_platform_i2s_controller0 = {
-	.aucodec_digitalio = aucodec_digitalio_on,
-	.channel_select = i2s_channel_select,
+	.aucodec_digitalio	= aucodec_digitalio_on,
+	.channel_select		= i2s_channel_select,
+	.set_audio_pll		= set_audio_pll,
 };
 
 struct platform_device ambarella_i2s0 = {
@@ -1470,13 +1478,24 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
+static void set_usb_pll(void)
+{
+	rct_set_usb_debounce();
+	rct_set_usb_ana_on();
+}
+
+
+static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
+	.set_pll	= set_usb_pll,
+};
+
 struct platform_device ambarella_udc0 = {
 	.name		= "ambarella-udc",
 	.id		= 0,
 	.resource	= ambarella_udc_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_udc_resources),
 	.dev		= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_platform_udc_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}

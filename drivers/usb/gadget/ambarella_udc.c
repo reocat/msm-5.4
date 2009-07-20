@@ -1959,10 +1959,6 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 
 	dprintk(DEBUG_NORMAL, "%s()\n", __func__);
 
-	/* Initial USB PLL */
-	rct_set_usb_debounce();
-	rct_set_usb_ana_on();
-
 	udc = kzalloc(sizeof(struct ambarella_udc), GFP_KERNEL);
 	if (!udc) {
 		retval = -ENOMEM;
@@ -1970,6 +1966,11 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 	}
 	the_controller = udc;
 	platform_set_drvdata(pdev, udc);
+
+	udc->controller_info = pdev->dev.platform_data;
+	/* Initial USB PLL */
+	if(udc->controller_info->set_pll)
+		udc->controller_info->set_pll();
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);

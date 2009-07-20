@@ -118,6 +118,7 @@ struct ambarella_udc {
 
 	spinlock_t		lock;
 
+	struct ambarella_udc_controller	*controller_info;
 	struct usb_gadget	gadget;
 	struct usb_gadget_driver	*driver;
 

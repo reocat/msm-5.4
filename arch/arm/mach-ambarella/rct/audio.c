@@ -38,11 +38,14 @@ u32 get_audio_freq_hz(void)
 	return aud_sysclk;
 }
 
+
+#endif
+
 void rct_set_pll_frac_mode(void)
 {
 #if (RCT_AUDIO_PLL_CONF_MODE == 2)
 	/* set audio PLL ctrl3 register */
-	writel(0x7017012c, 0x00069300); //need set this register to enable fractional mode by a5/a2s/a2m pm
+	writel(PLL_AUDIO_CTRL3_REG, 0x00069300); //need set this register to enable fractional mode by a5/a2s/a2m pm
 #endif	
 }
 
@@ -50,10 +53,9 @@ void rct_set_aud_ctrl2_reg(void)
 {
 #if (RCT_AUDIO_PLL_CONF_MODE == 2)
 	/* set audio PLL ctrl2 register */
-	writel(0x70170124, 0x3f770000); //set as program manual comment
+	writel(PLL_AUDIO_CTRL2_REG, 0x3f770000); //set as program manual comment
 #endif
 }
-#endif
 
 static const u32 mclk_table[MAX_MCLK_IDX_NUM] = {
 	18432000,

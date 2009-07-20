@@ -78,13 +78,6 @@ static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_in = {
 	.dev_addr		= io_v2p(I2S_RX_DATA_DMA_REG),
 };
 
-void set_audio_pll(u8 mclk)
-{
-	rct_set_aud_ctrl2_reg();
-	rct_set_pll_frac_mode();
-	rct_set_audio_pll_fs(AUC_CLK_ONCHIP_PLL_27MHZ, mclk);
-}
-
 static inline void dai_tx_enable(void)
 {
 	amba_setbits(I2S_INIT_REG, DAI_TX_EN);
@@ -196,7 +189,8 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* Set clock */
-	set_audio_pll(priv_data->amb_i2s_intf.mclk);
+	if (priv_data->controller_info->set_audio_pll)
+		priv_data->controller_info->set_audio_pll(priv_data->amb_i2s_intf.mclk);
 	clock_divider = DAI_Clock_Divide_Table[priv_data->amb_i2s_intf.oversample][slots >> 6];
 	clock_divider |= 0x3C0 ;
 	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
@@ -343,7 +337,8 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	if (strcmp(socdev->card->name, "IPcam"))
 		priv_data->clock_reg = 0x1<<10;
 
-	set_audio_pll(AudioCodec_12_288M);
+	if (priv_data->controller_info->set_audio_pll)
+		priv_data->controller_info->set_audio_pll(AudioCodec_12_288M);
 
 	/* Dai default smapling rate, polarity configuration*/
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
