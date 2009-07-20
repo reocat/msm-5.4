@@ -12,6 +12,12 @@
  * without the prior consent of Ambarella, Inc.
  */
 
+#ifdef ENABLE_DEBUG_MSG_RCT
+#define DEBUG_MSG		printk
+#else
+#define DEBUG_MSG(...)
+#endif
+
 //#define VOUT_PLL_DEBUG
 #ifdef VOUT_PLL_DEBUG
 static int sp_retry = 0;

@@ -39,33 +39,31 @@
 /*============================Global Variables================================*/
 
 struct ambarella_spi {
-	u32			regbase;
-	int			use_interrupt, irq;
-	int			*cs_pins;
-	void    		(*cs_activate)  (struct ambarella_spi_cs_config *);
-	void    		(*cs_deactivate)(struct ambarella_spi_cs_config *);
+	u32					regbase;
+	int					irq;
+	struct ambarella_spi_platform_info	*pinfo;
 
-	struct tasklet_struct	tasklet;
-	spinlock_t		lock;
+	struct tasklet_struct			tasklet;
+	spinlock_t				lock;
 
-	struct list_head	queue;
-	struct spi_transfer	*c_xfer;
-	u32			shutdown;
+	struct list_head			queue;
+	struct spi_transfer			*c_xfer;
+	u32					shutdown;
 
-	struct spi_device	*c_dev;
-	u8			rw_mode, bpw;
-	u32			ridx, widx, len;
+	struct spi_device			*c_dev;
+	u8					rw_mode, bpw;
+	u32					ridx, widx, len;
 };
 
 struct ambarella_spi_private {
-	struct spi_device	*spi;
-	struct mutex		mtx;
-	spinlock_t		lock;
+	struct spi_device			*spi;
+	struct mutex				mtx;
+	spinlock_t				lock;
 };
 
 static struct {
-	int				cs_num;
-	struct ambarella_spi_private	*data;
+	int					cs_num;
+	struct ambarella_spi_private		*data;
 } ambarella_spi_private_devices[SPI_INSTANCES];
 
 const static u8 ambarella_spi_reverse_table[256] = {
@@ -331,14 +329,14 @@ static void ambarella_spi_tasklet(unsigned long data)
 
 finish_transfer:
 	ambarella_spi_do_xfer(master);
-	if (as->use_interrupt)
+	if (as->pinfo->use_interrupt)
 		enable_irq(as->irq);
 	return;
 
 continue_transfer:
 	as->widx = widx;
 	as->ridx = ridx;
-	if (as->use_interrupt) {
+	if (as->pinfo->use_interrupt) {
 		enable_irq(as->irq);
 	} else {
 		do {
@@ -363,13 +361,13 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 
 	if (list_empty(&msg->transfers)) {
 
-		if (as->cs_deactivate) {
+		if (as->pinfo->cs_deactivate) {
 			cs_config.bus_id = master->bus_num;
 			cs_config.cs_id = msg->spi->chip_select;
 			cs_config.cs_num = master->num_chipselect;
-			cs_config.cs_pins = as->cs_pins;
+			cs_config.cs_pins = as->pinfo->cs_pins;
 			cs_config.cs_change = as->c_xfer->cs_change;
-			as->cs_deactivate(&cs_config);
+			as->pinfo->cs_deactivate(&cs_config);
 		}
 		ambarella_spi_disable(as->c_dev->master);
 
@@ -419,15 +417,15 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 
 	amba_writel(as->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
-	if (as->cs_activate) {
+	if (as->pinfo->cs_activate) {
 		cs_config.bus_id = master->bus_num;
 		cs_config.cs_id = as->c_dev->chip_select;
 		cs_config.cs_num = master->num_chipselect;
-		cs_config.cs_pins = as->cs_pins;
+		cs_config.cs_pins = as->pinfo->cs_pins;
 		cs_config.cs_change = as->c_xfer->cs_change;
-		as->cs_activate(&cs_config);
+		as->pinfo->cs_activate(&cs_config);
 	}
-	if (as->use_interrupt) {
+	if (as->pinfo->use_interrupt) {
 		disable_irq(as->irq);
 		amba_writel(as->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
 	} else {
@@ -471,7 +469,7 @@ static void ambarella_spi_do_message(struct spi_master *master)
 	}
 	amba_writel(as->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
-	ssi_clk = get_ssi_freq_hz();
+	ssi_clk = as->pinfo->get_ssi_freq_hz();
 	if(msg->spi->max_speed_hz == 0 || msg->spi->max_speed_hz > ssi_clk / 2)
 	    msg->spi->max_speed_hz = ssi_clk / 2;
 	sckdv = (u16)(((ssi_clk / msg->spi->max_speed_hz) + 0x01) & 0xfffe);
@@ -533,10 +531,8 @@ static int ambarella_spi_inithw(struct spi_master *master)
 	struct ambarella_spi 	*as = spi_master_get_devdata(master);
 
 	/* Set PLL */
-	if (master->bus_num == 0)
-		rct_set_ssi_pll();
-	else
-		rct_set_ssi2_pll();
+	if (as->pinfo->rct_set_ssi_pll)
+		as->pinfo->rct_set_ssi_pll();
 
 	/* Disable SPI */
 	ambarella_spi_disable(master);
@@ -547,7 +543,9 @@ static int ambarella_spi_inithw(struct spi_master *master)
 	      );
 	amba_writel(as->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
-	ssi_freq = get_ssi_freq_hz();
+	ssi_freq = 54000000;
+	if (as->pinfo->get_ssi_freq_hz)
+		ssi_freq = as->pinfo->get_ssi_freq_hz();
 	sckdv =	(u16)(((ssi_freq / SPI_BAUD_RATE) + 0x01) & 0xfffe);
 	amba_writel(as->regbase + SPI_BAUDR_OFFSET, sckdv);
 
@@ -603,6 +601,10 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 		errorCode = -EINVAL;
 		goto ambarella_spi_probe_exit3;
 	}
+	if (!pinfo->rct_set_ssi_pll || !pinfo->get_ssi_freq_hz) {
+		errorCode = -EINVAL;
+		goto ambarella_spi_probe_exit3;
+	}
 
 	/* Get Base Address */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -627,11 +629,8 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, master);
 	as = spi_master_get_devdata(master);
 	as->regbase = (u32)res->start;
-	as->use_interrupt = pinfo->use_interrupt;
 	as->irq = irq;
-	as->cs_pins = pinfo->cs_pins;
-	as->cs_activate = pinfo->cs_activate;
-	as->cs_deactivate = pinfo->cs_deactivate;
+	as->pinfo = pinfo;
 	tasklet_init(&as->tasklet, ambarella_spi_tasklet, (unsigned long)master);
 	INIT_LIST_HEAD(&as->queue);
 	as->c_xfer = NULL;

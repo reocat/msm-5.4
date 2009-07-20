@@ -1102,11 +1102,13 @@ static struct resource ambarella_spi0_resources[] = {
 static int ambarella_spi0_cs_pins[] = {SSI0_EN0, SSI0_EN1, SSIO_EN2, SSIO_EN3, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(0, ambarella_spi0_cs_pins, 0644);
 static struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
-	.use_interrupt  = 1,
-	.cs_num	 = ARRAY_SIZE(ambarella_spi0_cs_pins),
-	.cs_pins	= ambarella_spi0_cs_pins,
-	.cs_activate	= ambarella_spi_cs_activate,
-	.cs_deactivate	= ambarella_spi_cs_deactivate,
+	.use_interrupt		= 1,
+	.cs_num			= ARRAY_SIZE(ambarella_spi0_cs_pins),
+	.cs_pins		= ambarella_spi0_cs_pins,
+	.cs_activate		= ambarella_spi_cs_activate,
+	.cs_deactivate		= ambarella_spi_cs_deactivate,
+	.rct_set_ssi_pll	= rct_set_ssi_pll,
+	.get_ssi_freq_hz	= get_ssi_freq_hz
 };
 
 struct platform_device ambarella_spi0 = {
@@ -1138,11 +1140,13 @@ static struct resource ambarella_spi1_resources[] = {
 static int ambarella_spi1_cs_pins[] = {SSI_4_N, -1, -1, -1, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 static struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
-	.use_interrupt  = 1,
-	.cs_num	 = ARRAY_SIZE(ambarella_spi1_cs_pins),
-	.cs_pins	= ambarella_spi1_cs_pins,
-	.cs_activate	= ambarella_spi_cs_activate,
-	.cs_deactivate	= ambarella_spi_cs_deactivate,
+	.use_interrupt		= 1,
+	.cs_num			= ARRAY_SIZE(ambarella_spi1_cs_pins),
+	.cs_pins		= ambarella_spi1_cs_pins,
+	.cs_activate		= ambarella_spi_cs_activate,
+	.cs_deactivate		= ambarella_spi_cs_deactivate,
+	.rct_set_ssi_pll	= rct_set_ssi2_pll,
+	.get_ssi_freq_hz	= get_ssi2_freq_hz
 };
 
 struct platform_device ambarella_spi1 = {
