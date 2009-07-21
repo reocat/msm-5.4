@@ -152,7 +152,7 @@ static cycle_t ambarella_timer2_read(void)
 
 static struct clocksource ambarella_timer2_clksrc = {
 	.name		= "ambarella-timer2",
-	.shift		= 28,
+	.shift		= 21,
 	.rating		= AMBARELLA_TIMER_RATING,
 	.read		= ambarella_timer2_read,
 	.mask		= CLOCKSOURCE_MASK(32),

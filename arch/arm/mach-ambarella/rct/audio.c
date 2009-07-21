@@ -989,6 +989,7 @@ struct ambarella_i2s_interface get_audio_i2s_interface(void)
 {
 	return audio_i2s_intf;
 }
+EXPORT_SYMBOL(get_audio_i2s_interface);
 
 static int audio_notify_transition(struct notifier_block *nb,
 		unsigned long val, void *data)

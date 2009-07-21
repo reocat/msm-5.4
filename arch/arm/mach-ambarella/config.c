@@ -526,17 +526,25 @@ __tagtable(ATAG_AMBARELLA_REVMEM, parse_mem_tag_revmem);
 u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 {
 	int					i;
-	u32					halp, hals;
 	u32					revp, revs;
 #if (CHIP_REV == A5S)
+	u32					halp, hals;
 	u32					index;
 	int					bhal_reserved = 0;
+	int					version;
+	amb_hal_success_t			errorCode;
 #endif
 
 	pr_info("Ambarella Reserve Memory:\n");
 
+#if (CHIP_REV == A5S)
 	halp = ambarella_hal_info.physaddr;
 	hals = ambarella_hal_info.size;
+
+	errorCode = amb_get_version(HAL_BASE_VP, &version);
+	BUG_ON(errorCode != AMB_HAL_SUCCESS);
+#endif
+
 	for (i = 0; i < ambarella_reserve_mem_info.counter; i++) {
 		revp = ambarella_reserve_mem_info.desc[i].physaddr;
 		revs = ambarella_reserve_mem_info.desc[i].size;
@@ -544,7 +552,8 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 #if (CHIP_REV == A5S)
 		if ((halp >= revp) && ((halp + hals) <= (revp + revs))) {
 			bhal_reserved = 1;
-			pr_info("\t--:\t0x%08x[0x%08x]\tHAL\n", halp, hals);
+			pr_info("\t--:\t0x%08x[0x%08x]\tHAL[v%d]\n",
+				halp, hals, version);
 		}
 #endif
 	}
@@ -556,8 +565,9 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 		if (index < MEMORY_RESERVE_MAX_NR) {
 			ambarella_reserve_mem_info.desc[index].physaddr = halp;
 			ambarella_reserve_mem_info.desc[index].size = hals;
-			pr_info("\t%02d:\t0x%08x[0x%08x]\tHAL\n",
-				ambarella_reserve_mem_info.counter, halp, hals);
+			pr_info("\t%02d:\t0x%08x[0x%08x]\tHAL[v%d]\n",
+				ambarella_reserve_mem_info.counter,
+				halp, hals, version);
 			ambarella_reserve_mem_info.counter++;
 		} else {
 			pr_err("Ambarella: Can't add HAL MEM into revmem!\n");
