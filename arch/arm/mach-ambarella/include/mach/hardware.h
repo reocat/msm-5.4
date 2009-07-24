@@ -28,6 +28,8 @@
 #include <linux/types.h>
 #endif  /* __ASSEMBLER__ */
 
+#include <mach/chip.h>
+
 /*
  *			Phisical			Virtual
  * --------------------------------------------------------------------------
@@ -60,7 +62,6 @@
 #define DEFAULT_HAL_SIZE	(DEFAULT_ATAG_START - DEFAULT_HAL_BASE)
 #define HAL_BASE_VP		(get_ambarella_hal_vp())
 
-#include <mach/chip.h>
 #include <mach/busaddr.h>
 
 #include <mach/ahb.h>

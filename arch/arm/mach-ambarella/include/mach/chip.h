@@ -69,8 +69,5 @@
 #error "Undefined CHIP_REV"
 #endif
 
-#if (CHIP_REV == A5S)
-#define	BROKEN_UNALIGNED_ACCESS_SUPPORT		1
 #endif
 
-#endif

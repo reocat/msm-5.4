@@ -72,10 +72,27 @@ static void __init ambarella_init(void)
 {
 	int					errorCode = 0;
 
-	pr_info("ambarella_init:\n");
-	pr_info("\t\tchip id: %d\n", AMBARELLA_BOARD_CHIP(system_rev));
-	pr_info("\t\tboard type: %d\n", AMBARELLA_BOARD_TYPE(system_rev));
-	pr_info("\t\tboard revision: %d\n", AMBARELLA_BOARD_REV(system_rev));
+#if (CHIP_REV == A5S)
+	char					*pname;
+
+	errorCode = amb_get_chip_name(HAL_BASE_VP, &pname);
+	BUG_ON(errorCode != AMB_HAL_SUCCESS);
+#endif
+	pr_info("Ambarella:\n");
+	pr_info("\tchip id:\t\t%d\n", AMBARELLA_BOARD_CHIP(system_rev));
+	pr_info("\tboard type:\t\t%d\n", AMBARELLA_BOARD_TYPE(system_rev));
+	pr_info("\tboard revision:\t\t%d\n", AMBARELLA_BOARD_REV(system_rev));
+#if (CHIP_REV == A5S)
+	pr_info("\tchip name:\t\t%s\n", pname);
+	pr_info("\treference clock:\t%d\n",
+		amb_get_reference_clock_frequency(HAL_BASE_VP));
+	pr_info("\tsystem configuration:\t0x%08x\n",
+		amb_get_system_configuration(HAL_BASE_VP));
+	pr_info("\tboot type:\t\t0x%08x\n",
+		amb_get_boot_type(HAL_BASE_VP));
+	pr_info("\thif type:\t\t0x%08x\n",
+		amb_get_hif_type(HAL_BASE_VP));
+#endif
 
 	//Check chip ID
 	if (AMBARELLA_BOARD_CHIP(system_rev) != AMBARELLA_BOARD_CHIP_AUTO)
