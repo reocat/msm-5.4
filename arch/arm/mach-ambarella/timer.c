@@ -180,7 +180,7 @@ struct sys_timer ambarella_timer = {
 	.init		= ambarella_timer_init,
 };
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 struct notifier_block				tm_freq_transition;
 
 int ambtm_freq_transition(struct notifier_block *nb,
@@ -235,10 +235,9 @@ int __init ambarella_init_tm(void)
 {
 	int					errCode = 0;
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	tm_freq_transition.notifier_call = ambtm_freq_transition;
-	cpufreq_register_notifier(&tm_freq_transition,
-		CPUFREQ_TRANSITION_NOTIFIER);
+	errCode = ambarella_register_freqnotifier(&tm_freq_transition);
 #endif
 
 	return errCode;

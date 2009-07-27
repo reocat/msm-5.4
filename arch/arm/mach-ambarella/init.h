@@ -74,6 +74,7 @@ extern int ambarella_init_dma(void);
 extern int ambarella_init_eth0(unsigned int high, unsigned int low);
 extern int ambarella_init_adc(void);
 extern int ambarella_init_pwm(void);
+extern int ambarella_init_pll(void);
 extern int ambarella_init_fb(void);
 extern int ambarella_init_pm(void);
 extern int ambarella_init_tm(void);

@@ -114,7 +114,7 @@ struct ambarella_sd_controller_info {
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
 	struct mmc_ios			controller_ios;
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	struct notifier_block		sd_freq_transition;
 #endif
 };
@@ -1502,7 +1502,7 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
 };
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 static int ambsd_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -1825,10 +1825,9 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pinfo);
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	pinfo->sd_freq_transition.notifier_call = ambsd_freq_transition;
-	cpufreq_register_notifier(&pinfo->sd_freq_transition,
-		CPUFREQ_TRANSITION_NOTIFIER);
+	ambarella_register_freqnotifier(&pinfo->sd_freq_transition);
 #endif
 
 	dev_notice(&pdev->dev,

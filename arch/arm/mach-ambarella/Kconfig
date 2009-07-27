@@ -234,6 +234,14 @@ config AMBARELLA_DMA_PROC
 
 	  If you are not sure, say N here.
 
+config AMBARELLA_PLL_PROC
+	bool "Ambarella PLL proc support"
+	default n
+	---help---
+	  Adds /proc/ambarella/pll for Ambarella PLL access.
+
+	  If you are not sure, say N here.
+
 endmenu
 
 menu "Framebuffer Configuration"

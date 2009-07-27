@@ -101,6 +101,9 @@ static void __init ambarella_init(void)
 	errorCode = ambarella_create_proc_dir();
 	BUG_ON(errorCode != 0);
 
+	errorCode = ambarella_init_pll();
+	BUG_ON(errorCode != 0);
+
 	errorCode = ambarella_init_tm();
 	BUG_ON(errorCode != 0);
 

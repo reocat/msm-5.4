@@ -82,12 +82,12 @@ struct ambarella_i2c_dev_info {
 	__u32					dev_en_reg;
 	struct ambarella_idc_platform_info	*platform_info;
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	struct notifier_block	i2c_freq_transition;
 #endif
 };
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 static int ambi2c_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -565,10 +565,9 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 		goto i2c_errorCode_free_irq;
 	}
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	pinfo->i2c_freq_transition.notifier_call = ambi2c_freq_transition;
-	cpufreq_register_notifier(&pinfo->i2c_freq_transition,
-				CPUFREQ_TRANSITION_NOTIFIER);
+	ambarella_register_freqnotifier(&pinfo->i2c_freq_transition);
 #endif
 
 	dev_notice(&pdev->dev,

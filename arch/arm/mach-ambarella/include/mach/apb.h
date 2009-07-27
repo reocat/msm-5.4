@@ -42,6 +42,7 @@
 #include <mach/rtc.h>
 #include <mach/rct.h>
 #include <mach/audio.h>
+#include <mach/pll.h>
 
 #endif
 

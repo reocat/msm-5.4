@@ -108,7 +108,7 @@ struct ambarella_nand_info {
 	int				wp_gpio;
 	unsigned char __iomem		*regbase;
 	u32				dmabase;
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	u32				origin_clk;	/* in Khz */
 	struct ambarella_nand_timing	*origin_timing;
 	struct notifier_block	nand_freq_transition;
@@ -180,7 +180,7 @@ static inline struct ambarella_nand_info *amb_nand_info_by_nxact(
 /* ==========================================================================*/
 
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 
 //#define CPUFREQ_DBG
 #ifdef CPUFREQ_DBG
@@ -1672,12 +1672,11 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	}
 	platform_set_drvdata(pdev, nand_info);
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_AMBARELLA_PLL_PROC
 	nand_info->origin_clk = get_ahb_bus_freq_hz() / 1000; /* in Khz */
 	nand_info->origin_timing = plat_nand->timing;
 	nand_info->nand_freq_transition.notifier_call = ambnand_freq_transition;
-	cpufreq_register_notifier(&nand_info->nand_freq_transition,
-		CPUFREQ_TRANSITION_NOTIFIER);
+	ambarella_register_freqnotifier(&nand_info->nand_freq_transition);
 #endif
 
 	goto ambarella_nand_probe_exit;
