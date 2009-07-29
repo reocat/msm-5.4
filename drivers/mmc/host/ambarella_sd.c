@@ -114,9 +114,8 @@ struct ambarella_sd_controller_info {
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
 	struct mmc_ios			controller_ios;
-#ifdef CONFIG_AMBARELLA_PLL_PROC
+ 
 	struct notifier_block		sd_freq_transition;
-#endif
 };
 
 static void ambarella_sd_show_info(struct ambarella_sd_mmc_info *pslotinfo)
@@ -1502,7 +1501,6 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
 };
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 static int ambsd_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -1519,11 +1517,11 @@ static int ambsd_freq_transition(struct notifier_block *nb,
 	local_irq_save(flags);
 
 	switch (val) {
-	case CPUFREQ_PRECHANGE:
+	case AMB_CPUFREQ_PRECHANGE:
 		printk("%s[%d]: Pre Change\n", __func__, pdev->id);
 		break;
 
-	case CPUFREQ_POSTCHANGE:
+	case AMB_CPUFREQ_POSTCHANGE:
 		printk("%s[%d]: Post Change\n", __func__, pdev->id);
 		memset(&pinfo->controller_ios, 0, sizeof(struct mmc_ios));
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
@@ -1537,7 +1535,6 @@ static int ambsd_freq_transition(struct notifier_block *nb,
 
 	return 0;
 }
-#endif
 
 static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 {
@@ -1825,10 +1822,8 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pinfo);
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 	pinfo->sd_freq_transition.notifier_call = ambsd_freq_transition;
 	ambarella_register_freqnotifier(&pinfo->sd_freq_transition);
-#endif
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor SD/MMC[%d] probed %d slots!\n",

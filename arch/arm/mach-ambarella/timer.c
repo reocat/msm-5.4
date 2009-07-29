@@ -180,7 +180,7 @@ struct sys_timer ambarella_timer = {
 	.init		= ambarella_timer_init,
 };
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
+
 struct notifier_block				tm_freq_transition;
 
 int ambtm_freq_transition(struct notifier_block *nb,
@@ -193,10 +193,10 @@ int ambtm_freq_transition(struct notifier_block *nb,
 	local_irq_save(flags);
 
 	switch (val) {
-	case CPUFREQ_PRECHANGE:
+	case AMB_CPUFREQ_PRECHANGE:
 		pr_info("%s: Pre Change\n", __func__);
 		break;
-	case CPUFREQ_POSTCHANGE:
+	case AMB_CPUFREQ_POSTCHANGE:
 		pr_info("%s: Post Change\n", __func__);
 		/* Reset timer */
 		save = amba_readl(TIMER_CTR_REG);
@@ -227,18 +227,14 @@ int ambtm_freq_transition(struct notifier_block *nb,
 	local_irq_restore(flags);
 
 	return 0;
-}
-
-#endif
+} 
 
 int __init ambarella_init_tm(void)
 {
 	int					errCode = 0;
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 	tm_freq_transition.notifier_call = ambtm_freq_transition;
-	errCode = ambarella_register_freqnotifier(&tm_freq_transition);
-#endif
+	errCode = ambarella_register_freqnotifier(&tm_freq_transition); 
 
 	return errCode;
 }

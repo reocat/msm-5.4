@@ -82,12 +82,9 @@ struct ambarella_i2c_dev_info {
 	__u32					dev_en_reg;
 	struct ambarella_idc_platform_info	*platform_info;
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 	struct notifier_block	i2c_freq_transition;
-#endif
 };
-
-#ifdef CONFIG_AMBARELLA_PLL_PROC
+ 
 static int ambi2c_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -101,11 +98,11 @@ static int ambi2c_freq_transition(struct notifier_block *nb,
 	local_irq_save(flags);
 
 	switch (val) {
-	case CPUFREQ_PRECHANGE:
+	case AMB_CPUFREQ_PRECHANGE:
 		printk("%s: Pre Change\n", __func__);
 		break;
 
-	case CPUFREQ_POSTCHANGE:
+	case AMB_CPUFREQ_POSTCHANGE:
 		printk("%s: Post Change\n", __func__);
 		apb_clk = get_apb_bus_freq_hz();
 
@@ -125,8 +122,7 @@ static int ambi2c_freq_transition(struct notifier_block *nb,
 	local_irq_restore(flags);
 
 	return 0;
-}
-#endif
+} 
 
 static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 {
@@ -565,10 +561,8 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 		goto i2c_errorCode_free_irq;
 	}
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 	pinfo->i2c_freq_transition.notifier_call = ambi2c_freq_transition;
 	ambarella_register_freqnotifier(&pinfo->i2c_freq_transition);
-#endif
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor I2C adapter[%s] probed!\n",

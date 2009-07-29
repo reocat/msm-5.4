@@ -108,12 +108,11 @@ struct ambarella_nand_info {
 	int				wp_gpio;
 	unsigned char __iomem		*regbase;
 	u32				dmabase;
-#ifdef CONFIG_AMBARELLA_PLL_PROC
+
 	u32				origin_clk;	/* in Khz */
 	struct ambarella_nand_timing	*origin_timing;
 	struct notifier_block	nand_freq_transition;
 	struct notifier_block	nand_freq_policy;
-#endif
 };
 
 static struct nand_ecclayout amb_oobinfo_512 = {
@@ -179,8 +178,6 @@ static inline struct ambarella_nand_info *amb_nand_info_by_nxact(
 
 /* ==========================================================================*/
 
-
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 
 //#define CPUFREQ_DBG
 #ifdef CPUFREQ_DBG
@@ -367,11 +364,11 @@ static int ambnand_freq_transition(struct notifier_block *nb,
 	local_irq_save(flags);
 
 	switch (val) {
-	case CPUFREQ_PRECHANGE:
+	case AMB_CPUFREQ_PRECHANGE:
 		printk("%s: Pre Change\n", __func__);
 		break;
 
-	case CPUFREQ_POSTCHANGE:
+	case AMB_CPUFREQ_POSTCHANGE:
 		printk("%s: Post Change\n", __func__);
 		timing.timing0 = ambnand_calc_timing(nand_info, 0);
 		timing.timing1 = ambnand_calc_timing(nand_info, 1);
@@ -399,9 +396,7 @@ static int ambnand_freq_transition(struct notifier_block *nb,
 	local_irq_restore(flags);
 
 	return 0;
-}
-
-#endif
+} 
 
 static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 {
@@ -1672,12 +1667,10 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	}
 	platform_set_drvdata(pdev, nand_info);
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 	nand_info->origin_clk = get_ahb_bus_freq_hz() / 1000; /* in Khz */
 	nand_info->origin_timing = plat_nand->timing;
 	nand_info->nand_freq_transition.notifier_call = ambnand_freq_transition;
 	ambarella_register_freqnotifier(&nand_info->nand_freq_transition);
-#endif
 
 	goto ambarella_nand_probe_exit;
 
