@@ -33,7 +33,7 @@
 #include <asm/uaccess.h>
 #include <mach/hardware.h>
 
-#define MAX_CMD_LENGTH	128
+#define MAX_CMD_LENGTH	32
 
 static struct srcu_notifier_head pll_notifier_list;
 
@@ -41,6 +41,42 @@ struct proc_dir_entry *pll_dir = NULL;
 struct proc_dir_entry *freq_file = NULL;
 struct proc_dir_entry *mode_file = NULL;
 struct proc_dir_entry *performance_file = NULL;
+
+static inline unsigned long ambarella_cpufreq_scale(unsigned long old,
+	u_int div, u_int mult)
+{
+#if BITS_PER_LONG == 32
+
+	u64 result = ((u64) old) * ((u64) mult);
+	do_div(result, div);
+	return (unsigned long) result;
+
+#elif BITS_PER_LONG == 64
+
+	unsigned long result = old * ((u64) mult);
+	result /= div;
+	return result;
+
+#endif
+};
+
+static unsigned long l_p_j_ref;
+static unsigned int  l_p_j_ref_freq;
+
+static void ambarella_adjust_jiffies(unsigned long val,
+	unsigned int oldfreq, unsigned int newfreq)
+{
+	if (!l_p_j_ref_freq) {
+		l_p_j_ref = loops_per_jiffy;
+		l_p_j_ref_freq = oldfreq;
+	}
+	if ((val == AMB_CPUFREQ_PRECHANGE  && oldfreq < newfreq) ||
+	    (val == AMB_CPUFREQ_POSTCHANGE && oldfreq > newfreq)) {
+		loops_per_jiffy = ambarella_cpufreq_scale(l_p_j_ref,
+			l_p_j_ref_freq, newfreq);
+	}
+}
+
 
 #if (CHIP_REV == A5S)
 
@@ -111,6 +147,8 @@ static int ambarella_mode_proc_write(struct file *file,
 	struct ambarella_pll_info *pll_info;
 	char str[MAX_CMD_LENGTH];
 	int errorCode = 0, mode;
+	unsigned int oldfreq, newfreq;
+	unsigned long flags;
 
 	pll_info = (struct ambarella_pll_info *)data;
 
@@ -127,8 +165,17 @@ static int ambarella_mode_proc_write(struct file *file,
 		goto pll_mode_proc_write_exit;
 	}
 
+	pr_debug("%s: mode (%d)\n", __func__, mode);
+
 	errorCode = count;
 
+	/* Tell everyone what we're about to do... */
+	fio_select_lock(SELECT_FIO_HOLD, 1);	/* Hold the FIO bus first */
+	srcu_notifier_call_chain(&pll_notifier_list, AMB_CPUFREQ_PRECHANGE, NULL);
+	oldfreq = get_arm_bus_freq_hz();
+	/*  FIXME: need to adjust jiffies ? */
+
+	local_irq_save(flags);
 	pll_info->operating_mode.mode = mode;
 	result = amb_set_operating_mode(HAL_BASE_VP, &pll_info->operating_mode);
 	if(result != AMB_HAL_SUCCESS){
@@ -136,8 +183,13 @@ static int ambarella_mode_proc_write(struct file *file,
 		errorCode = -EPERM;
 		goto pll_mode_proc_write_exit;
 	}
+	local_irq_restore(flags);
 
-	pr_debug("%s: mode (%d)\n", __func__, mode);
+	newfreq = get_arm_bus_freq_hz();
+	ambarella_adjust_jiffies(AMB_CPUFREQ_POSTCHANGE, oldfreq, newfreq);
+	/* Tell everyone what we've just done... */
+	srcu_notifier_call_chain(&pll_notifier_list, AMB_CPUFREQ_POSTCHANGE, NULL);
+	fio_unlock(SELECT_FIO_HOLD, 1);	/* Release the FIO bus */
 
 pll_mode_proc_write_exit:
 	return errorCode;
@@ -150,6 +202,8 @@ static int ambarella_performance_proc_write(struct file *file,
 	struct ambarella_pll_info *pll_info;
 	char str[MAX_CMD_LENGTH];
 	int errorCode = 0, performance;
+	unsigned int oldfreq, newfreq;
+	unsigned long flags;
 
 	pll_info = (struct ambarella_pll_info *)data;
 
@@ -166,8 +220,17 @@ static int ambarella_performance_proc_write(struct file *file,
 		goto pll_performance_proc_write_exit;
 	}
 
+	pr_debug("%s: performance (%d)\n", __func__, performance);
+
 	errorCode = count;
 
+	/* Tell everyone what we're about to do... */
+	fio_select_lock(SELECT_FIO_HOLD, 1);	/* Hold the FIO bus first */
+	srcu_notifier_call_chain(&pll_notifier_list, AMB_CPUFREQ_PRECHANGE, NULL);
+	oldfreq = get_arm_bus_freq_hz();
+	/*  FIXME: need to adjust jiffies ? */
+
+	local_irq_save(flags);
 	pll_info->operating_mode.performance = performance;
 	result = amb_set_operating_mode(HAL_BASE_VP, &pll_info->operating_mode);
 	if(result != AMB_HAL_SUCCESS){
@@ -175,8 +238,13 @@ static int ambarella_performance_proc_write(struct file *file,
 		errorCode = -EPERM;
 		goto pll_performance_proc_write_exit;
 	}
+	local_irq_restore(flags);
 
-	pr_debug("%s: performance (%d)\n", __func__, performance);
+	newfreq = get_arm_bus_freq_hz();
+	ambarella_adjust_jiffies(AMB_CPUFREQ_POSTCHANGE, oldfreq, newfreq);
+	/* Tell everyone what we've just done... */
+	srcu_notifier_call_chain(&pll_notifier_list, AMB_CPUFREQ_POSTCHANGE, NULL);
+	fio_unlock(SELECT_FIO_HOLD, 1);	/* Release the FIO bus */
 
 pll_performance_proc_write_exit:
 	return errorCode;
@@ -211,8 +279,6 @@ static int ambarella_init_pll_a5s(void)
 		goto pll_a5s_exit;
 	}
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
-
 	pll_dir = proc_mkdir("pll", get_ambarella_proc_dir());
 	if (!pll_dir){
 		errorCode = -ENOMEM;
@@ -232,8 +298,7 @@ static int ambarella_init_pll_a5s(void)
 		mode_file->owner = THIS_MODULE;
 	}
 
-	performance_file = create_proc_entry("performance",
-		S_IRUGO | S_IWUSR, pll_dir);
+	performance_file = create_proc_entry("performance", S_IRUGO | S_IWUSR, pll_dir);
 	if (performance_file == NULL) {
 		errorCode = -ENOMEM;
 		pr_err("%s: create proc file (performance) fail!\n", __func__);
@@ -245,8 +310,6 @@ static int ambarella_init_pll_a5s(void)
 		performance_file->owner = THIS_MODULE;
 	}
 
-#endif
-
 pll_a5s_exit:
 	return errorCode;
 }
@@ -257,44 +320,6 @@ pll_a5s_exit:
 struct ambarella_pll_info {
 	unsigned int armfreq;
 };
-
-
-#ifdef CONFIG_AMBARELLA_PLL_PROC
-
-static inline unsigned long ambarella_cpufreq_scale(unsigned long old,
-	u_int div, u_int mult)
-{
-#if BITS_PER_LONG == 32
-
-	u64 result = ((u64) old) * ((u64) mult);
-	do_div(result, div);
-	return (unsigned long) result;
-
-#elif BITS_PER_LONG == 64
-
-	unsigned long result = old * ((u64) mult);
-	result /= div;
-	return result;
-
-#endif
-};
-
-static unsigned long l_p_j_ref;
-static unsigned int  l_p_j_ref_freq;
-
-static void ambarella_adjust_jiffies(unsigned long val,
-	unsigned int oldfreq, unsigned int newfreq)
-{
-	if (!l_p_j_ref_freq) {
-		l_p_j_ref = loops_per_jiffy;
-		l_p_j_ref_freq = oldfreq;
-	}
-	if ((val == AMB_CPUFREQ_PRECHANGE  && oldfreq < newfreq) ||
-	    (val == AMB_CPUFREQ_POSTCHANGE && oldfreq > newfreq)) {
-		loops_per_jiffy = ambarella_cpufreq_scale(l_p_j_ref,
-			l_p_j_ref_freq, newfreq);
-	}
-}
 
 static int ambarella_freq_proc_read(char *page, char **start,
 	off_t off, int count, int *eof, void *data)
@@ -428,8 +453,6 @@ ambarella_pll_proc_write_exit:
 	return errorCode;
 }
 
-#endif  /* End for #ifdef CONFIG_AMBARELLA_PLL_PROC */
-
 static int ambarella_init_pll_general(void)
 {
 	int					errorCode = 0;
@@ -445,7 +468,6 @@ static int ambarella_init_pll_general(void)
 	/* initial pll_info */
 	pll_info->armfreq = get_core_bus_freq_hz() / 1000;
 
-#ifdef CONFIG_AMBARELLA_PLL_PROC
 	pll_dir = proc_mkdir("pll", get_ambarella_proc_dir());
 	if (!pll_dir){
 		errorCode = -ENOMEM;
@@ -464,7 +486,6 @@ static int ambarella_init_pll_general(void)
 		freq_file->data = pll_info;
 		freq_file->owner = THIS_MODULE;
 	}
-#endif
 
 pll_general_exit:
 	return errorCode;
