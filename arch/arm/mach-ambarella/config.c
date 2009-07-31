@@ -1088,6 +1088,14 @@ static void ambarella_idc_set_pin_muxing(u32 on)
 	else
 		ambarella_gpio_config(IDC_BUS_HDMI, GPIO_FUNC_SW_OUTPUT);
 }
+#elif (IDC_SUPPORT_INTERNAL_MUX == 1)
+static void ambarella_idc_set_pin_muxing(u32 on)
+{
+	if (on)
+		ambarella_gpio_config(IDC3_BUS_MUX, GPIO_FUNC_HW);
+	else
+		ambarella_gpio_config(IDC3_BUS_MUX, GPIO_FUNC_SW_INPUT);
+}
 #endif
 
 static struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
@@ -1095,6 +1103,9 @@ static struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 	.bulk_write_num	= 60,
 #if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
 	.i2c_class	= DEFAULT_I2C_CLASS | I2C_CLASS_DDC,
+	.set_pin_muxing	= ambarella_idc_set_pin_muxing,
+#elif (IDC_SUPPORT_INTERNAL_MUX == 1)
+	.i2c_class	= DEFAULT_I2C_CLASS,
 	.set_pin_muxing	= ambarella_idc_set_pin_muxing,
 #else
 	.i2c_class	= DEFAULT_I2C_CLASS,
