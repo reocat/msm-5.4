@@ -1360,9 +1360,14 @@ static int ambarella_sd_get_ro(struct mmc_host *mmc)
 
 	ambarella_sd_request_bus(mmc);
 
-	wpspl = amb_sd_readl(pinfo->regbase + SD_STA_OFFSET);
-	dev_dbg(pinfo->dev, "SD/MMC RD[0x%x].\n", wpspl);
-	wpspl &= SD_STA_WPS_PL;
+	if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+		wpspl = !ambarella_get_gpio_input(
+				&pslotinfo->slot_info.gpio_wp);
+	} else {
+		wpspl = amb_sd_readl(pinfo->regbase + SD_STA_OFFSET);
+		dev_dbg(pinfo->dev, "SD/MMC RD[0x%x].\n", wpspl);
+		wpspl &= SD_STA_WPS_PL;
+	}
 
 	ambarella_sd_release_bus(mmc);
 
@@ -1768,6 +1773,18 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			}
 		}
 
+		if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+			errorCode = gpio_request(
+				pslotinfo->slot_info.gpio_wp.input_gpio,
+				pdev->name);
+			if (errorCode < 0) {
+				dev_err(&pdev->dev,
+				"Could not get WP GPIO %d\n",
+				pslotinfo->slot_info.gpio_wp.input_gpio);
+				goto sd_errorCode_free_host;
+			}
+		}
+
 		if (ambarella_is_valid_gpio_irq(
 			&pslotinfo->slot_info.gpio_cd)) {
 			errorCode = gpio_request(
@@ -1849,6 +1866,10 @@ sd_errorCode_free_host:
 			free_irq(pslotinfo->slot_info.gpio_cd.irq_line,
 				pslotinfo);
 			gpio_free(pslotinfo->slot_info.gpio_cd.irq_gpio);
+		}
+
+		if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+			gpio_free(pslotinfo->slot_info.gpio_wp.input_gpio);
 		}
 
 		if (pslotinfo->slot_info.ext_power.power_gpio != -1) {

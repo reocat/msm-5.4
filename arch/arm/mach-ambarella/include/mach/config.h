@@ -123,6 +123,17 @@ struct ambarella_gpio_power_info {
 	module_param_call(name_prefix##power_delay, param_set_int, param_get_int, &(arg.power_delay), perm)
 extern void ambarella_set_gpio_power(struct ambarella_gpio_power_info *pinfo, u32 poweron);
 
+struct ambarella_gpio_input_info {
+	int	input_gpio;
+	int	input_level;
+	int	input_delay;		//ms
+};
+#define AMBA_GPIO_INPUT_MODULE_PARAM_CALL(name_prefix, arg, perm) \
+	module_param_call(name_prefix##input_gpio, param_set_int, param_get_int, &(arg.input_gpio), perm); \
+	module_param_call(name_prefix##input_level, param_set_int, param_get_int, &(arg.input_level), perm); \
+	module_param_call(name_prefix##input_delay, param_set_int, param_get_int, &(arg.input_delay), perm)
+extern u32 ambarella_get_gpio_input(struct ambarella_gpio_input_info *pinfo);
+
 struct ambarella_gpio_reset_info {
 	int	reset_gpio;
 	int	reset_level;
@@ -176,6 +187,7 @@ struct ambarella_sd_slot {
 	u32					bounce_buffer;
 	struct ambarella_gpio_irq_info		gpio_cd;
 	int					cd_delay;	//jiffies
+	struct ambarella_gpio_input_info	gpio_wp;
 };
 struct ambarella_sd_controller {
 	u32					num_slots;
@@ -190,7 +202,8 @@ struct ambarella_sd_controller {
 	module_param_call(sd##controller_id##_slot##slot_id##_use_bounce_buffer, param_set_int, param_get_int, &(arg.slot[slot_id].bounce_buffer), perm); \
 	module_param_call(sd##controller_id##_slot##slot_id##_cd_delay, param_set_int, param_get_int, &(arg.slot[slot_id].cd_delay), perm); \
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_, arg.slot[slot_id].ext_power, perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_cd_, arg.slot[slot_id].gpio_cd, perm)
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_cd_, arg.slot[slot_id].gpio_cd, perm); \
+	AMBA_GPIO_INPUT_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_wp_, arg.slot[slot_id].gpio_wp, perm)
 
 #define AMBETH_MAC_SIZE				(6)
 struct ambarella_eth_platform_info {

@@ -89,6 +89,30 @@ void ambarella_set_gpio_power(struct ambarella_gpio_power_info *pinfo,
 }
 EXPORT_SYMBOL(ambarella_set_gpio_power);
 
+u32 ambarella_get_gpio_input(struct ambarella_gpio_input_info *pinfo)
+{
+	u32					gpio_value;
+
+	if (pinfo == NULL) {
+		pr_err("%s: pinfo is NULL.\n", __func__);
+		return 0;
+	}
+
+	gpio_direction_input(pinfo->input_gpio);
+	msleep(pinfo->input_delay);
+	gpio_value = gpio_get_value(pinfo->input_gpio);
+
+	pr_debug("%s: {gpio[%d], level[%s], delay[%dms]} get[%d].\n",
+		__func__,
+		pinfo->input_gpio,
+		pinfo->input_level ? "HIGH" : "LOW",
+		pinfo->input_delay,
+		gpio_value);
+
+	return (gpio_value == pinfo->input_level) ? 1 : 0;
+}
+EXPORT_SYMBOL(ambarella_get_gpio_input);
+
 void ambarella_set_gpio_reset(struct ambarella_gpio_reset_info *pinfo)
 {
 	if (pinfo == NULL) {
@@ -940,6 +964,11 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 #endif
 		.cd_delay	= 50,
+		.gpio_wp	= {
+			.input_gpio	= -1,
+			.input_level	= GPIO_LOW,
+			.input_delay	= 1,
+		},
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
@@ -960,6 +989,11 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
 		.cd_delay	= 50,
+		.gpio_wp	= {
+			.input_gpio	= -1,
+			.input_level	= GPIO_LOW,
+			.input_delay	= 1,
+		},
 	},
 	.num_slots		= 2,
 #else
@@ -1034,6 +1068,11 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
 		.cd_delay	= 50,
+		.gpio_wp	= {
+			.input_gpio	= -1,
+			.input_level	= GPIO_LOW,
+			.input_delay	= 1,
+		},
 	},
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
