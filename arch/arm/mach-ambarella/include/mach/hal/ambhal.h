@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 87504
+ * @version 88113
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -277,6 +277,7 @@ AMB_HAL_FUNCTION_INFO_GET_AUDIO_PLL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_AUDIO_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_AUDIO_PLL_LOCK_STATUS,
 AMB_HAL_FUNCTION_INFO_ENABLE_AUDIO_CLOCK_OBSERVATION,
+AMB_HAL_FUNCTION_INFO_USB_SUBSYSTEM_SOFT_RESET,
 AMB_HAL_FUNCTION_INFO_SET_USB_INTERFACE_STATE,
 AMB_HAL_FUNCTION_INFO_GET_USB_INTERFACE_STATE,
 AMB_HAL_FUNCTION_INFO_SET_USB_CLOCK_SOURCE,
@@ -1336,6 +1337,25 @@ static INLINE amb_hal_success_t amb_enable_sensor_clock_observation (void *amb_h
  * USB
  *
  */
+
+/**
+ * Apply the usb phy and usb device controller soft reset sequence
+ *
+ * @note This function triggers a soft reset sequence for the usb phy and
+ * device controller
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::AMB_HAL_SUCCESS reset sequence has completed
+ *
+ * @ingroup usb_group
+ */
+
+static INLINE amb_hal_success_t amb_usb_subsystem_soft_reset (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_USB_SUBSYSTEM_SOFT_RESET, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
 
 /**
  * Turn USB Interface On/Off
