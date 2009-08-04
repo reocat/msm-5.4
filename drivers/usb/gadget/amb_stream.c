@@ -709,7 +709,6 @@ static int ag_write(struct file *file, const char __user *buf,
 	struct usb_request *req = NULL;
 
 	DBG(dev, "%s: Enter\n", __func__);
-	printk("%s(%d)\n", __func__, count);
 
 	mutex_lock(&dev->mtx);
 
@@ -891,8 +890,6 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 	struct amb_dev	*dev = ep->driver_data;
 	int		status = req->status;
 	int 		rval = 0;
-
-	printk("%s\n", __func__);
 
 	switch (status) {
 	case 0: 			/* normal completion? */

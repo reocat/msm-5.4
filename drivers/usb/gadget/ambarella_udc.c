@@ -328,7 +328,6 @@ static int init_null_pkt_desc(struct ambarella_udc *udc)
 	return 0;
 }
 
-
 static void init_ep0(struct ambarella_udc *udc)
 {
 	struct ambarella_ep_reg *ep_reg;
@@ -347,6 +346,10 @@ static void init_ep0(struct ambarella_udc *udc)
 
 	/* This should be set after gadget->bind */
 	udc->ep[CTRL_OUT].ep.driver_data = udc->ep[CTRL_IN].ep.driver_data;
+
+	/* FIXME: For A5S, this bit must be set,
+	  * or USB_UDC_REG can't be read or write */
+	amba_setbits(UDC_CTRL_REG, UDC_CTRL_RES);
 
 	/* setup CSR */
 	amba_clrbits(USB_UDC_REG(CTRL_IN), 0x7ff << 19);
