@@ -76,6 +76,7 @@ EXPORT_SYMBOL(rct_set_so_clk_src);
 EXPORT_SYMBOL(rct_set_so_freq_hz);
 EXPORT_SYMBOL(rct_rescale_so_pclk_freq_hz);
 EXPORT_SYMBOL(rct_set_so_pclk_freq_hz);
+EXPORT_SYMBOL(rct_set_vin_lvds_pad);
 
 EXPORT_SYMBOL(get_vout_freq_hz);
 EXPORT_SYMBOL(get_vout_clk_rescale_value);
