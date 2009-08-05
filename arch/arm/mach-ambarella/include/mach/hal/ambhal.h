@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 88113
+ * @version 88220
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -52,7 +52,6 @@
  * - @ref uart_group
  * - @ref usb_group
  * - @ref vout_group
- * - @ref watchdog_group
  *
  * @defgroup init_group Initialization
  * @defgroup status_group Command Status
@@ -83,7 +82,6 @@
  * @defgroup uart_group UART
  * @defgroup usb_group USB
  * @defgroup vout_group Video Out
- * @defgroup watchdog_group Watchdog Timer
  *
  */
 
@@ -2441,7 +2439,7 @@ static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address)
  *
  */
 
-/**
+/*
  * Reset the watchdog timer
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
@@ -2449,13 +2447,14 @@ static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address)
  * @retval ::AMB_HAL_SUCCESS always returns success.
  *
  * @ingroup watchdog_group
- */
 
 static INLINE amb_hal_success_t amb_reset_watchdog (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_WATCHDOG, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
+*/
+
 
 /**
  * Reset the chip.
