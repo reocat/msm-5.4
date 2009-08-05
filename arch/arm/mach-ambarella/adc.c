@@ -99,7 +99,8 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	while ((amba_readl(ADC_CONTROL_REG) & ADC_CONTROL_STATUS) == 0) {
 		counter++;
 		if (counter > CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT) {
-			pr_warning("%s: Wait ADC_CONTROL_STATUS timeout!\n",
+			pr_warning("%s: Wait ADC_CONTROL_STATUS timeout!\n"
+				"Try: echo 1 > /proc/ambarella/adc\n",
 				__func__);
 			return;
 		}
@@ -146,6 +147,7 @@ void ambarella_adc_stop(void)
 EXPORT_SYMBOL(ambarella_adc_stop);
 
 #ifdef CONFIG_AMBARELLA_ADC_PROC
+#define AMBARELLA_ADC_PROC_READ_SIZE		(13)
 static const char adc_proc_name[] = "adc";
 static struct proc_dir_entry *adc_file;
 
@@ -157,11 +159,12 @@ static int ambarella_adc_proc_write(struct file *file,
 
 	if (copy_from_user(&cmd, buffer, 1)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
+		read_counter = -EFAULT;
 		goto ambarella_adc_proc_write_exit;
 	}
-	read_counter = 1;
+	read_counter = count;
 
-	if (cmd) {
+	if (cmd == '1') {
 		ambarella_adc_start();
 	} else {
 		ambarella_adc_stop();
@@ -180,21 +183,29 @@ static int ambarella_adc_proc_read(char *page, char **start,
 	int					adc_size;
 
 	adc_size = ambarella_adc_get_instances();
-	if (count > (adc_size * 13)) {
-		count = (adc_size * 13);
-	}
 
-	if (off + count > (adc_size * 13)) {
+	if (off > (adc_size * AMBARELLA_ADC_PROC_READ_SIZE)) {
 		*eof = 1;
 		return 0;
 	}
 
 	*start = page + off;
-	adc_size = count / 13;
+
+	if (count > (adc_size * AMBARELLA_ADC_PROC_READ_SIZE)) {
+		count = (adc_size * AMBARELLA_ADC_PROC_READ_SIZE);
+		*eof = 1;
+	}
+
+	if ((off + count) > (adc_size * AMBARELLA_ADC_PROC_READ_SIZE)) {
+		count = (adc_size * AMBARELLA_ADC_PROC_READ_SIZE) - off;
+		*eof = 1;
+	}
+
+	adc_size = count / AMBARELLA_ADC_PROC_READ_SIZE;
 	ambarella_adc_get_array(adc_data, &adc_size);
-	for (i = off / 13; i < adc_size; i++)
-		len += sprintf(page + off + len,
-			"adc%d = 0x%03x\n", i, adc_data[i]);
+	for (i = off / AMBARELLA_ADC_PROC_READ_SIZE; i < adc_size; i++)
+		len += sprintf(*start + len, "adc%d = 0x%03x\n",
+			i, adc_data[i]);
 
 	return len;
 }

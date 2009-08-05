@@ -79,52 +79,12 @@ struct ambarella_i2c_dev_info {
 	wait_queue_head_t			msg_wait;
 	unsigned int				msg_index;
 
-	__u32					dev_en_reg;
 	struct ambarella_idc_platform_info	*platform_info;
 
-	struct notifier_block	i2c_freq_transition;
+	struct notifier_block			i2c_freq_transition;
 };
- 
-static int ambi2c_freq_transition(struct notifier_block *nb,
-	unsigned long val, void *data)
-{
-	struct ambarella_i2c_dev_info		*pinfo;
-	unsigned int				apb_clk;
-	__u32					idc_prescale;
-	unsigned long				flags;
 
-	pinfo = container_of(nb,struct ambarella_i2c_dev_info,i2c_freq_transition);
-
-	local_irq_save(flags);
-
-	switch (val) {
-	case AMB_CPUFREQ_PRECHANGE:
-		printk("%s: Pre Change\n", __func__);
-		break;
-
-	case AMB_CPUFREQ_POSTCHANGE:
-		printk("%s: Post Change\n", __func__);
-		apb_clk = get_apb_bus_freq_hz();
-
-		amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
-
-		idc_prescale = (apb_clk / pinfo->platform_info->clk_limit) >> 2;
-
-		amba_writeb(pinfo->regbase + IDC_PSLL_OFFSET,
-			(idc_prescale & 0xff));
-		amba_writeb(pinfo->regbase + IDC_PSLH_OFFSET,
-			((idc_prescale & 0xff00) >> 8));
-
-		amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_ENABLE);
-		break;
-	}
-
-	local_irq_restore(flags);
-
-	return 0;
-} 
-
-static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
+static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 {
 	unsigned int				apb_clk;
 	__u32					idc_prescale;
@@ -133,7 +93,7 @@ static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 
-	if ((pinfo->platform_info->clk_limit < 1) ||
+	if ((pinfo->platform_info->clk_limit < 1000) ||
 		(pinfo->platform_info->clk_limit > 400000))
 		pinfo->platform_info->clk_limit = 100000;
 
@@ -150,11 +110,48 @@ static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 		((idc_prescale & 0xff00) >> 8));
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_ENABLE);
+}
+
+static int ambi2c_freq_transition(struct notifier_block *nb,
+	unsigned long val, void *data)
+{
+	struct platform_device			*pdev;
+	struct ambarella_i2c_dev_info		*pinfo;
+	unsigned long				flags;
+
+	pinfo = container_of(nb, struct ambarella_i2c_dev_info,
+		i2c_freq_transition);
+	pdev = to_platform_device(pinfo->dev);
+
+	local_irq_save(flags);
+
+	switch (val) {
+	case AMB_CPUFREQ_PRECHANGE:
+		pr_debug("%s[%d]: Pre Change\n", __func__, pdev->id);
+		break;
+
+	case AMB_CPUFREQ_POSTCHANGE:
+		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
+		ambarella_i2c_set_clk(pinfo);
+		break;
+
+	default:
+		pr_err("%s: %ld\n", __func__, val);
+		break;
+	}
+
+	local_irq_restore(flags);
+
+	return 0;
+} 
+
+static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
+{
+	ambarella_i2c_set_clk(pinfo);
 
 	pinfo->msgs = NULL;
 	pinfo->msg_num = 0;
 	pinfo->state = AMBA_I2C_STATE_IDLE;
-	pinfo->dev_en_reg = IDC_ENR_REG_ENABLE;
 }
 
 static inline void ambarella_i2c_start_single_msg(
@@ -616,27 +613,16 @@ static int ambarella_i2c_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int				errorCode = 0;
-	struct ambarella_i2c_dev_info	*pinfo;
-
-	pinfo = platform_get_drvdata(pdev);
-
-	pinfo->dev_en_reg = amba_readl(pinfo->regbase + IDC_ENR_OFFSET);
-
-	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
+
 	return errorCode;
 }
 
 static int ambarella_i2c_resume(struct platform_device *pdev)
 {
 	int				errorCode = 0;
-	struct ambarella_i2c_dev_info	*pinfo;
-
-	pinfo = platform_get_drvdata(pdev);
-
-	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, pinfo->dev_en_reg);
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

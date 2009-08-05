@@ -40,6 +40,9 @@
 #define AMBARELLA_TIMER_FREQ	(get_apb_bus_freq_hz())
 #define AMBARELLA_TIMER_RATING	(300)
 
+static enum clock_event_mode ambarella_timer1_mode = CLOCK_EVT_MODE_UNUSED;
+static struct notifier_block tm_freq_transition;
+
 static inline void ambarella_timer1_disable(void)
 {
 	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_EN1);
@@ -97,6 +100,7 @@ static void ambarella_timer1_set_mode(enum clock_event_mode mode,
 		ambarella_timer1_enable();
 		break;
 	}
+	ambarella_timer1_mode = mode;
 }
 
 static int ambarella_timer1_set_next_event(unsigned long delta,
@@ -180,9 +184,6 @@ struct sys_timer ambarella_timer = {
 	.init		= ambarella_timer_init,
 };
 
-
-struct notifier_block				tm_freq_transition;
-
 int ambtm_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -194,10 +195,11 @@ int ambtm_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		pr_info("%s: Pre Change\n", __func__);
+		pr_debug("%s: Pre Change\n", __func__);
 		break;
+
 	case AMB_CPUFREQ_POSTCHANGE:
-		pr_info("%s: Post Change\n", __func__);
+		pr_debug("%s: Post Change\n", __func__);
 		/* Reset timer */
 		save = amba_readl(TIMER_CTR_REG);
 		amba_writel(TIMER_CTR_REG, 0x0);
@@ -214,13 +216,25 @@ int ambtm_freq_transition(struct notifier_block *nb,
 
 		/* Program the timer to start ticking */
 		cnt = AMBARELLA_TIMER_FREQ / CLOCK_TICK_RATE;
-		amba_writel(TIMER1_STATUS_REG, cnt);
-		amba_writel(TIMER1_RELOAD_REG, cnt);
+		switch (ambarella_timer1_mode) {
+		case CLOCK_EVT_MODE_PERIODIC:
+			amba_writel(TIMER1_STATUS_REG, cnt);
+			amba_writel(TIMER1_RELOAD_REG, cnt);
+			break;
+		case CLOCK_EVT_MODE_ONESHOT:
+			amba_writel(TIMER1_STATUS_REG, cnt);
+			break;
+		case CLOCK_EVT_MODE_UNUSED:
+		case CLOCK_EVT_MODE_SHUTDOWN:
+		case CLOCK_EVT_MODE_RESUME:
+			break;
+		}
 
 		amba_writel(TIMER_CTR_REG, save);
 		break;
+
 	default:
-		pr_info("%s: %ld\n", __func__, val);
+		pr_err("%s: %ld\n", __func__, val);
 		break;
 	}
 

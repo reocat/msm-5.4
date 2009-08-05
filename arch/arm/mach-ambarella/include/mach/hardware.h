@@ -70,11 +70,11 @@
 #include <mach/config.h>
 
 #ifndef __ASSEMBLER__
-#include <mach/hal/header.h>
 
 #if	(CHIP_REV == A5S)
 #include <mach/hal/ambhal.h>
 #include <mach/hal/ambhalmini.h>
+#include <mach/hal/header.h>
 #endif
 
 #endif  /* __ASSEMBLER__ */

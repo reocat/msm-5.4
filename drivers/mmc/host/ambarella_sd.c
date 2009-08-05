@@ -1245,7 +1245,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		clk_div |= SD_CLK_EN;
 		amb_sd_writew(clk_div, pinfo->regbase + SD_CLK_OFFSET);
 		// Wait stable
-		msleep(5);
+		mdelay(5);
 	}
 }
 
@@ -1523,16 +1523,19 @@ static int ambsd_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		printk("%s[%d]: Pre Change\n", __func__, pdev->id);
+		pr_debug("%s[%d]: Pre Change\n", __func__, pdev->id);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
-		printk("%s[%d]: Post Change\n", __func__, pdev->id);
-		memset(&pinfo->controller_ios, 0, sizeof(struct mmc_ios));
+		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			mmc = pinfo->pslotinfo[i]->mmc;
-			ambarella_sd_check_ios(mmc, &pinfo->controller_ios);
+			ambarella_sd_set_clk(mmc, pinfo->controller_ios.clock);
 		}
+		break;
+
+	default:
+		pr_err("%s: %ld\n", __func__, val);
 		break;
 	}
 

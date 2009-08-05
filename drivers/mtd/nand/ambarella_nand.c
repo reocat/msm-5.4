@@ -365,11 +365,11 @@ static int ambnand_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		printk("%s: Pre Change\n", __func__);
+		pr_debug("%s: Pre Change\n", __func__);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
-		printk("%s: Post Change\n", __func__);
+		pr_debug("%s: Post Change\n", __func__);
 		timing.timing0 = ambnand_calc_timing(nand_info, 0);
 		timing.timing1 = ambnand_calc_timing(nand_info, 1);
 		timing.timing2 = ambnand_calc_timing(nand_info, 2);
@@ -378,7 +378,8 @@ static int ambnand_freq_transition(struct notifier_block *nb,
 		timing.timing5 = ambnand_calc_timing(nand_info, 5);
 		amb_nand_set_timing(nand_info, &timing);
 
-		cpufreq_dbg("origin reg:\t0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n", 
+		cpufreq_dbg("origin reg:\t0x%08x 0x%08x"
+			" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
 			nand_info->origin_timing->timing0, 
 			nand_info->origin_timing->timing1, 
 			nand_info->origin_timing->timing2,
@@ -386,10 +387,15 @@ static int ambnand_freq_transition(struct notifier_block *nb,
 			nand_info->origin_timing->timing4, 
 			nand_info->origin_timing->timing5);
 
-		cpufreq_dbg("new reg:\t0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n", 
+		cpufreq_dbg("new reg:\t0x%08x 0x%08x"
+			" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
 			timing.timing0, timing.timing1, timing.timing2,
 			timing.timing3, timing.timing4, timing.timing5);
 		
+		break;
+
+	default:
+		pr_err("%s: %ld\n", __func__, val);
 		break;
 	}
 
