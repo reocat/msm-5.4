@@ -1357,3 +1357,8 @@ void rct_set_adc_clk_freq_hz(u32 freq_hz)
         clk_div     = PLL_FREQ_HZ / freq_hz;
 	writel(SCALER_ADC_REG, clk_div);
 }
+
+void rct_set_vin_lvds_pad(int mode)
+{
+}
+

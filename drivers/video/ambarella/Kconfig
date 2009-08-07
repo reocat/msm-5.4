@@ -5,6 +5,7 @@ config FB_AMBARELLA
 	select FB_SYS_COPYAREA
 	select FB_SYS_IMAGEBLIT
 	select FB_SYS_FOPS
+	select FB_DEFERRED_IO
 	help
           Frame buffer driver for Ambarella chips.
 

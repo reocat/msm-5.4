@@ -1093,7 +1093,7 @@ endmenu
 
 menu "CPU Power Management"
 
-if (ARCH_SA1100 || ARCH_INTEGRATOR || ARCH_OMAP || ARCH_IMX || ARCH_PXA || ARCH_AMBARELLA)
+if (ARCH_SA1100 || ARCH_INTEGRATOR || ARCH_OMAP || ARCH_IMX || ARCH_PXA)
 
 source "drivers/cpufreq/Kconfig"
 
@@ -1132,11 +1132,6 @@ config CPU_FREQ_PXA
 	depends on CPU_FREQ && ARCH_PXA && PXA25x
 	default y
 	select CPU_FREQ_DEFAULT_GOV_USERSPACE
-
-config CPU_FREQ_AMBARELLA
-	bool
-	depends on CPU_FREQ && ARCH_AMBARELLA
-	default y
 
 endif
 
