@@ -278,6 +278,10 @@ struct ambarella_ir_controller {
 	void					(*set_pll)(void);
 	u32					(*get_pll)(void);
 };
+
+struct ambarella_wdt_controller {
+	u32					(*get_pll)(void);
+};
 #endif /* __ASSEMBLER__ */
 
 #define	AMBA_DEBUG_NULL			(0)

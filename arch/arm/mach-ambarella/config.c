@@ -1455,13 +1455,17 @@ static struct resource ambarella_wdt0_resources[] = {
 	},
 };
 
+static struct ambarella_wdt_controller ambarella_platform_wdt_controller0 = {
+	.get_pll		= get_apb_bus_freq_hz,
+};
+
 struct platform_device ambarella_wdt0 = {
 	.name		= "ambarella-wdt",
 	.id		= 0,
 	.resource	= ambarella_wdt0_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_wdt0_resources),
 	.dev		= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_platform_wdt_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}

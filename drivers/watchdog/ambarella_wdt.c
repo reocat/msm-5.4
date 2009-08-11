@@ -26,9 +26,13 @@
 #define CONFIG_WDT_AMBARELLA_TIMEOUT		(15)
 
 static int init_tmo = CONFIG_WDT_AMBARELLA_TIMEOUT;
-module_param(init_tmo, int, 0);
+module_param(init_tmo, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(init_tmo, "Watchdog timeout in seconds. default=" \
 __MODULE_STRING(CONFIG_WDT_AMBARELLA_TIMEOUT) ")");
+
+static int init_mode = WDOG_CTR_RST_EN;	//WDOG_CTR_INT_EN | WDOG_CTR_RST_EN
+module_param(init_mode, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(init_mode, "Watchdog mode: 0x2=reset, 0x4=irq");
 
 enum ambarella_wdt_state {
 	AMBA_WDT_CLOSE_STATE_DISABLE,
@@ -49,98 +53,143 @@ struct ambarella_wdt_info {
 	u32				boot_tmo;
 
 	struct miscdevice		wdt_dev;
+	struct ambarella_wdt_controller	*pcontroller;
+
+	u32				ctl_reg;
+	u32				init_mode;
 };
-static struct ambarella_wdt_info wdt_info;
+static struct ambarella_wdt_info *pwdtinfo = NULL;
 
-static void ambarella_wdt_keepalive(void)
+static void ambarella_wdt_keepalive(struct ambarella_wdt_info *pinfo)
 {
-	__raw_writel(wdt_info.tmo, wdt_info.regbase + WDOG_RELOAD_OFFSET);
-	__raw_writel(0x4755, wdt_info.regbase + WDOG_RESTART_OFFSET);
+	amba_writel(pinfo->regbase + WDOG_RELOAD_OFFSET, pinfo->tmo);
+	amba_writel(pinfo->regbase + WDOG_RESTART_OFFSET, 0x4755);
 }
 
-static void ambarella_wdt_stop(void)
+static void ambarella_wdt_stop(struct ambarella_wdt_info *pinfo)
 {
-	__raw_writel(0, wdt_info.regbase + WDOG_CONTROL_OFFSET);
-	while (__raw_readl(wdt_info.regbase + WDOG_CONTROL_OFFSET) != 0);
+	amba_writel(pinfo->regbase + WDOG_CONTROL_OFFSET, 0);
+	while(amba_readl(pinfo->regbase + WDOG_CONTROL_OFFSET) != 0);
 }
 
-static void ambarella_wdt_start(void)
+static void ambarella_wdt_start(struct ambarella_wdt_info *pinfo, u32 ctl_reg)
 {
-	u32				cnt_reg;
+	if (!ctl_reg)
+		ctl_reg = pinfo->init_mode | WDOG_CTR_EN;
 
-	ambarella_wdt_stop();
-	ambarella_wdt_keepalive();
-
-	cnt_reg = WDOG_CTR_INT_EN | WDOG_CTR_EN | WDOG_CTR_RST_EN;
-	__raw_writel(cnt_reg, wdt_info.regbase + WDOG_CONTROL_OFFSET);
-	while ((__raw_readl(wdt_info.regbase + WDOG_CONTROL_OFFSET) & cnt_reg) != cnt_reg);
+	amba_writel(pinfo->regbase + WDOG_CONTROL_OFFSET, ctl_reg);
+	while(amba_tstbits(pinfo->regbase + WDOG_CONTROL_OFFSET,
+		ctl_reg) != ctl_reg);
 }
 
-static int ambarella_wdt_set_heartbeat(u32 timeout)
+static int ambarella_wdt_set_heartbeat(struct ambarella_wdt_info *pinfo,
+	u32 timeout)
 {
-	u32				freq = get_apb_bus_freq_hz();
-	u32				max_tmo;
+	int					errorCode = 0;
+	u32					freq;
+	u32					max_tmo;
 
-	max_tmo = 0xFFFFFFFF / freq;
-
-	if (timeout > max_tmo) {
-		dev_err(wdt_info.dev, "max_tmo is %d.\n", max_tmo);
-		return -EINVAL;
+	freq = pinfo->pcontroller->get_pll();
+	if (freq)
+		max_tmo = 0xFFFFFFFF / freq;
+	else {
+		dev_err(pinfo->dev, "freq == 0 !\n");
+		errorCode = -EPERM;
+		goto ambarella_wdt_set_heartbeat_exit;
 	}
 
-	wdt_info.tmo = timeout * freq;
-	ambarella_wdt_keepalive();
+	if (timeout > max_tmo) {
+		dev_err(pinfo->dev, "max_tmo is %d, not %d.\n",
+			max_tmo, timeout);
+		errorCode = -EINVAL;
+		goto ambarella_wdt_set_heartbeat_exit;
+	}
 
+	pinfo->tmo = timeout * freq;
+	ambarella_wdt_keepalive(pinfo);
+
+ambarella_wdt_set_heartbeat_exit:
 	return 0;
 }
 
 static int ambarella_wdt_open(struct inode *inode, struct file *file)
 {
-	if(down_trylock(&wdt_info.wdt_mutex))
-		return -EBUSY;
+	int					errorCode = -EBUSY;
+	struct ambarella_wdt_info		*pinfo;
 
-	wdt_info.state = AMBA_WDT_CLOSE_STATE_DISABLE;
+	pinfo = pwdtinfo;
 
-	ambarella_wdt_start();
+	if (pinfo) {
+		file->private_data = pinfo;
 
-	return nonseekable_open(inode, file);
+		if(down_trylock(&pinfo->wdt_mutex)) {
+			errorCode = -EBUSY;
+			goto ambarella_wdt_open_exit;
+		}
+
+		pinfo->state = AMBA_WDT_CLOSE_STATE_DISABLE;
+
+		ambarella_wdt_stop(pinfo);
+		ambarella_wdt_keepalive(pinfo);
+		ambarella_wdt_start(pinfo, 0);
+		errorCode = nonseekable_open(inode, file);
+	}
+
+ambarella_wdt_open_exit:
+	return errorCode;
 }
 
 static int ambarella_wdt_release(struct inode *inode, struct file *file)
 {
-	if (wdt_info.state == AMBA_WDT_CLOSE_STATE_ALLOW) {
-		ambarella_wdt_stop();
-	} else {
-		printk(KERN_CRIT "Not stopping watchdog, V first!\n");
-		ambarella_wdt_keepalive();
+	int					errorCode = -EBUSY;
+	struct ambarella_wdt_info		*pinfo;
+
+	pinfo = (struct ambarella_wdt_info *)file->private_data;
+
+	if (pinfo) {
+		if (pinfo->state == AMBA_WDT_CLOSE_STATE_ALLOW) {
+			ambarella_wdt_stop(pinfo);
+		} else {
+			dev_notice(pinfo->dev,
+				"Not stopping watchdog, V first!\n");
+			ambarella_wdt_keepalive(pinfo);
+		}
+
+		pinfo->state = AMBA_WDT_CLOSE_STATE_DISABLE;
+		up(&pinfo->wdt_mutex);
+		errorCode = 0;
 	}
 
-	wdt_info.state = AMBA_WDT_CLOSE_STATE_DISABLE;
-	up(&wdt_info.wdt_mutex);
-
-	return 0;
+	return errorCode;
 }
 
 static ssize_t ambarella_wdt_write(struct file *file, const char __user *data,
-				size_t len, loff_t *ppos)
+	size_t len, loff_t *ppos)
 {
-	if(len) {
-		size_t i;
+	int					errorCode = -EBUSY;
+	struct ambarella_wdt_info		*pinfo;
+	size_t					i;
+	char					c;
 
+	pinfo = (struct ambarella_wdt_info *)file->private_data;
+
+	if (pinfo && len) {
 		for (i = 0; i < len; i++) {
-			char c;
-
-			if (get_user(c, data + i))
-				return -EFAULT;
+			if (get_user(c, data + i)) {
+				errorCode = -EFAULT;
+				goto ambarella_wdt_write_exit;
+			}
 
 			if (c == 'V')
-				wdt_info.state = AMBA_WDT_CLOSE_STATE_ALLOW;
+				pinfo->state = AMBA_WDT_CLOSE_STATE_ALLOW;
 		}
 
-		ambarella_wdt_keepalive();
+		ambarella_wdt_keepalive(pinfo);
+		errorCode = len;
 	}
 
-	return len;
+ambarella_wdt_write_exit:
+	return errorCode;
 }
 
 static struct watchdog_info ambarella_wdt_ident = {
@@ -152,12 +201,16 @@ static struct watchdog_info ambarella_wdt_ident = {
 static int ambarella_wdt_ioctl(struct inode *inode, struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
-	int				errorCode = 0;
-	void __user			*argp = (void __user *)arg;
-	u32 __user			*p = argp;
-	u32				new_tmo;
+	int					errorCode = -EBUSY;
+	struct ambarella_wdt_info		*pinfo;
+	void __user				*argp = (void __user *)arg;
+	u32 __user				*p = argp;
+	u32					new_tmo;
 
-	switch (cmd) {
+	pinfo = (struct ambarella_wdt_info *)file->private_data;
+
+	if (pinfo) {
+		switch (cmd) {
 		case WDIOC_GETSUPPORT:
 			errorCode = copy_to_user(argp, &ambarella_wdt_ident,
 				sizeof(ambarella_wdt_ident)) ? -EFAULT : 0;
@@ -168,40 +221,38 @@ static int ambarella_wdt_ioctl(struct inode *inode, struct file *file,
 			break;
 
 		case WDIOC_GETBOOTSTATUS:
-			errorCode = put_user(wdt_info.boot_tmo, p);
+			errorCode = put_user(pinfo->boot_tmo, p);
 			break;
 
 		case WDIOC_KEEPALIVE:
-			ambarella_wdt_keepalive();
+			ambarella_wdt_keepalive(pinfo);
+			errorCode = 0;
 			break;
 
 		case WDIOC_SETTIMEOUT:
-			if (get_user(new_tmo, p)) {
-				errorCode = -EFAULT;
+			errorCode = get_user(new_tmo, p);
+			if (errorCode)
 				break;
-			}
 
-			if (ambarella_wdt_set_heartbeat(new_tmo)) {
-				errorCode = -EFAULT;
+			errorCode = ambarella_wdt_set_heartbeat(pinfo, new_tmo);
+			if (errorCode)
 				break;
-			}
 
-			ambarella_wdt_keepalive();
-			errorCode = put_user(wdt_info.tmo, p);
+			ambarella_wdt_keepalive(pinfo);
+			errorCode = put_user(pinfo->tmo, p);
 			break;
 
 		case WDIOC_GETTIMEOUT:
-			errorCode = put_user(wdt_info.tmo, p);
+			errorCode = put_user(pinfo->tmo, p);
 			break;
 
 		default:
 			return -ENOTTY;
+		}
 	}
 
 	return errorCode;
 }
-
-/* kernel interface */
 
 static const struct file_operations ambarella_wdt_fops = {
 	.owner		= THIS_MODULE,
@@ -212,22 +263,27 @@ static const struct file_operations ambarella_wdt_fops = {
 	.release	= ambarella_wdt_release,
 };
 
-static irqreturn_t ambarella_wdt_irq(int irqno, void *param)
+static irqreturn_t ambarella_wdt_irq(int irq, void *devid)
 {
-	printk(KERN_INFO "Watchdog timer expired!\n");
+	struct ambarella_wdt_info		*pinfo;
 
-	__raw_writel(0x01, wdt_info.regbase + WDOG_CLR_TMO_OFFSET);
+	pinfo = (struct ambarella_wdt_info *)devid;
+
+	amba_writel(pinfo->regbase + WDOG_CLR_TMO_OFFSET, 0x01);
+
+	dev_info(pinfo->dev, "Watchdog timer expired!\n");
 
 	return IRQ_HANDLED;
 }
 
 static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 {
-	int				errorCode;
-	struct resource 		*irq;
-	struct resource 		*mem;
-	struct resource 		*ioarea;
-	
+	int					errorCode = 0;
+	struct resource 			*irq;
+	struct resource 			*mem;
+	struct resource 			*ioarea;
+	struct ambarella_wdt_info		*pinfo;
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
 		dev_err(&pdev->dev, "Get WDT mem resource failed!\n");
@@ -250,46 +306,69 @@ static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 		goto ambarella_wdt_na;
 	}
 
-	wdt_info.regbase = (unsigned char __iomem *)mem->start;
-	wdt_info.mem = mem;
-	wdt_info.dev = &pdev->dev;
-	wdt_info.irq = irq->start;
-	init_MUTEX(&wdt_info.wdt_mutex);
-	wdt_info.state = AMBA_WDT_CLOSE_STATE_DISABLE;
-	wdt_info.wdt_dev.minor = WATCHDOG_MINOR,
-	wdt_info.wdt_dev.name = "watchdog",
-	wdt_info.wdt_dev.fops = &ambarella_wdt_fops,
-	wdt_info.boot_tmo = __raw_readl(wdt_info.regbase + WDOG_TIMEOUT_OFFSET);
-	platform_set_drvdata(pdev, &wdt_info);
-
-	errorCode = ambarella_wdt_set_heartbeat(init_tmo);
-	if (errorCode)
-		ambarella_wdt_set_heartbeat(CONFIG_WDT_AMBARELLA_TIMEOUT);
-
-	errorCode = misc_register(&wdt_info.wdt_dev);
-	if (errorCode) {
-		dev_err(&pdev->dev, "cannot register miscdev minor=%d (%d)\n",
-			WATCHDOG_MINOR, errorCode);
+	pinfo = kzalloc(sizeof(struct ambarella_wdt_info),
+		GFP_KERNEL);
+	if (pinfo == NULL) {
+		dev_err(&pdev->dev, "Out of memory!\n");
+		errorCode = -ENOMEM;
 		goto ambarella_wdt_ioarea;
 	}
 
-	ambarella_wdt_stop();
+	pinfo->pcontroller =
+		(struct ambarella_wdt_controller *)pdev->dev.platform_data;
+	if ((pinfo->pcontroller == NULL) ||
+		(pinfo->pcontroller->get_pll == NULL)) {
+		dev_err(&pdev->dev, "Need WDT controller info!\n");
+		errorCode = -EPERM;
+		goto ambarella_wdt_free_pinfo;
+	}
 
-	errorCode = request_irq(wdt_info.irq, ambarella_wdt_irq,
-		IRQF_TRIGGER_RISING, pdev->name, &wdt_info);
+	pinfo->regbase = (unsigned char __iomem *)mem->start;
+	pinfo->mem = mem;
+	pinfo->dev = &pdev->dev;
+	pinfo->irq = irq->start;
+	init_MUTEX(&pinfo->wdt_mutex);
+	pinfo->state = AMBA_WDT_CLOSE_STATE_DISABLE;
+	pinfo->wdt_dev.minor = WATCHDOG_MINOR,
+	pinfo->wdt_dev.name = "watchdog",
+	pinfo->wdt_dev.fops = &ambarella_wdt_fops,
+	pinfo->boot_tmo = amba_readl(pinfo->regbase + WDOG_TIMEOUT_OFFSET);
+	pinfo->init_mode = init_mode;
+	platform_set_drvdata(pdev, pinfo);
+	pwdtinfo = pinfo;
+
+	errorCode = ambarella_wdt_set_heartbeat(pinfo, init_tmo);
+	if (errorCode)
+		ambarella_wdt_set_heartbeat(pinfo,
+			CONFIG_WDT_AMBARELLA_TIMEOUT);
+
+	errorCode = misc_register(&pinfo->wdt_dev);
+	if (errorCode) {
+		dev_err(&pdev->dev, "cannot register miscdev minor=%d (%d)\n",
+			WATCHDOG_MINOR, errorCode);
+		goto ambarella_wdt_free_pinfo;
+	}
+
+	ambarella_wdt_stop(pinfo);
+
+	errorCode = request_irq(pinfo->irq, ambarella_wdt_irq,
+		IRQF_TRIGGER_RISING, pdev->name, pinfo);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Request IRQ failed!\n");
 		goto ambarella_wdt_deregister;
 	}
 
 	dev_notice(&pdev->dev,
-		"Probe Ambarella Media Processor Watch Dog Timer[%s] [%d].\n",
-		wdt_info.dev->bus_id, errorCode);
+		"Ambarella Media Processor Watch Dog Timer[%s].\n",
+		pinfo->dev->bus_id);
 
 	goto ambarella_wdt_na;
 
 ambarella_wdt_deregister:
-	errorCode = misc_deregister(&wdt_info.wdt_dev);
+	errorCode = misc_deregister(&pinfo->wdt_dev);
+
+ambarella_wdt_free_pinfo:
+	kfree(pinfo);
 
 ambarella_wdt_ioarea:
 	release_mem_region(mem->start, (mem->end - mem->start) + 1);
@@ -300,58 +379,99 @@ ambarella_wdt_na:
 
 static int __devexit ambarella_wdt_remove(struct platform_device *pdev)
 {
-	struct ambarella_i2c_dev_info	*pinfo;
-	int				errorCode = 0;
+	struct ambarella_wdt_info		*pinfo;
+	int					errorCode = 0;
 
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
-		ambarella_wdt_stop();
-
-		errorCode = misc_deregister(&wdt_info.wdt_dev);
-
-		free_irq(wdt_info.irq, pinfo);
-
+		down(&pinfo->wdt_mutex);
+		errorCode = misc_deregister(&pinfo->wdt_dev);
+		ambarella_wdt_stop(pinfo);
+		free_irq(pinfo->irq, pinfo);
 		platform_set_drvdata(pdev, NULL);
-
-		release_mem_region(wdt_info.mem->start,
-			(wdt_info.mem->end - wdt_info.mem->start) + 1);
+		pwdtinfo = NULL;
+		release_mem_region(pinfo->mem->start,
+			(pinfo->mem->end - pinfo->mem->start) + 1);
+		kfree(pinfo);
 	}
 
 	dev_notice(&pdev->dev,
 		"Remove Ambarella Media Processor Watch Dog Timer[%s] [%d].\n",
-		wdt_info.dev->bus_id, errorCode);
+		pdev->dev.bus_id, errorCode);
 
 	return errorCode;
 }
 
-static void ambarella_wdt_shutdown(struct platform_device *dev)
+static void ambarella_wdt_shutdown(struct platform_device *pdev)
 {
-	ambarella_wdt_stop();	
+	struct ambarella_wdt_info		*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (pinfo)
+		ambarella_wdt_stop(pinfo);
+	else
+		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
+
+	dev_info(&pdev->dev, "%s exit.\n", __func__);
 }
 
 #ifdef CONFIG_PM
-static int ambarella_wdt_suspend(struct platform_device *dev, pm_message_t state)
+static int ambarella_wdt_suspend(struct platform_device *pdev,
+	pm_message_t state)
 {
-	return 0;
+	struct ambarella_wdt_info		*pinfo;
+	int					errorCode = 0;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (pinfo) {
+		pinfo->ctl_reg =
+			amba_readl(pinfo->regbase + WDOG_CONTROL_OFFSET);
+		ambarella_wdt_stop(pinfo);
+	} else {
+		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
+		errorCode = -ENXIO;
+	}
+
+	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+		__func__, errorCode, state.event);
+
+	return errorCode;
 }
 
-static int ambarella_wdt_resume(struct platform_device *dev)
+static int ambarella_wdt_resume(struct platform_device *pdev)
 {
-	return 0;
-}
-#else
-#define ambarella_wdt_suspend NULL
-#define ambarella_wdt_resume  NULL
-#endif /* CONFIG_PM */
+	struct ambarella_wdt_info		*pinfo;
+	int					errorCode = 0;
 
+	pinfo = platform_get_drvdata(pdev);
+
+	if (pinfo) {
+		if (pinfo->ctl_reg) {
+			ambarella_wdt_keepalive(pinfo);
+			ambarella_wdt_start(pinfo, pinfo->ctl_reg);
+		}
+	} else {
+		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
+		errorCode = -ENXIO;
+	}
+
+	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+
+	return errorCode;
+}
+#endif
 
 static struct platform_driver ambarella_wdt_driver = {
 	.probe		= ambarella_wdt_probe,
 	.remove		= ambarella_wdt_remove,
 	.shutdown	= ambarella_wdt_shutdown,
+#ifdef CONFIG_PM
 	.suspend	= ambarella_wdt_suspend,
 	.resume		= ambarella_wdt_resume,
+#endif
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= "ambarella-wdt",

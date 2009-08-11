@@ -1838,13 +1838,16 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	int					errorCode = 0;
 	struct net_device			*ndev;
+	struct ambeth_info			*lp;
 
 	ndev = platform_get_drvdata(pdev);
 
 	if (ndev) {
-		if (netif_running(ndev)) {
-			netif_device_detach(ndev);
-		}
+		lp = (struct ambeth_info *)netdev_priv(ndev);
+		if (lp->phydev)
+			phy_stop(lp->phydev);
+
+		netif_device_detach(ndev);
 	}
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -1856,13 +1859,16 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct net_device			*ndev;
+	struct ambeth_info			*lp;
 
 	ndev = platform_get_drvdata(pdev);
 
 	if (ndev) {
-		if (netif_running(ndev)) {
-			netif_device_attach(ndev);
-		}
+		netif_device_attach(ndev);
+
+		lp = (struct ambeth_info *)netdev_priv(ndev);
+		if (lp->phydev)
+			phy_start(lp->phydev);
 	}
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

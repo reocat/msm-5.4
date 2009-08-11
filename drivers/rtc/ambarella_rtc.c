@@ -107,6 +107,7 @@ int __ambrtc_dev_set_time(struct rtc_time *tm)
 		tm->tm_year, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec);
 
+	amba_writel(RTC_PWC_ALAT_REG, 0x0);
 	amba_writel(RTC_PWC_CURT_REG, 0x0);
 	amba_writel(RTC_RESET_REG, 0x01);
 	mdelay(1);
@@ -162,6 +163,13 @@ int __ambrtc_dev_set_alarm(struct rtc_wkalrm *alrm)
 	} else
 		tm2epoch_diff = 0;
 
+	amba_writel(RTC_PWC_CURT_REG, amba_readl(RTC_CURT_REG));
+	amba_writel(RTC_PWC_ALAT_REG, 0x0);
+	amba_writel(RTC_RESET_REG, 0x01);
+	mdelay(1);
+	amba_writel(RTC_RESET_REG, 0x00);
+	mdelay(1);
+
 	amba_writel(RTC_PWC_ALAT_REG, tm2epoch_diff);
 	amba_writel(RTC_RESET_REG, 0x01);
 	mdelay(1);
@@ -186,7 +194,7 @@ int __ambrtc_dev_get_alarm(struct rtc_wkalrm *alrm)
 
 	alrm->enabled = (alrm_time > time);
 	alrm->pending = !!(rtc_status & RTC_STATUS_ALA_WK);
-	rtc_time_to_tm(time, &(alrm->time));
+	rtc_time_to_tm(alrm_time, &(alrm->time));
 
 	return 0;
 }

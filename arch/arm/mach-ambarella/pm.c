@@ -85,7 +85,7 @@ struct platform_device ambarella_power_supply = {
 static int ambarella_pm_enter(suspend_state_t state)
 {
 	pr_info("%s: enter with state[%d]\n", __func__, state);
-	mdelay(60000);
+	mdelay(10000);
 	pr_info("%s: exit with state[%d]\n", __func__, state);
 
 	return 0;
@@ -95,7 +95,7 @@ static int ambarella_pm_valid(suspend_state_t state)
 {
 	pr_info("%s: called with state[%d]\n", __func__, state);
 
-	return 0;
+	return 1;
 }
 
 static struct platform_suspend_ops ambarella_pm_ops = {

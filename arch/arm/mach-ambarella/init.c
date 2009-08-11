@@ -33,7 +33,7 @@
 #include "init.h"
 
 /* ==========================================================================*/
-static struct platform_device *devices[] __initdata = {
+static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_uart,
 #if (UART_INSTANCE >= 2)
 	&ambarella_uart1,
@@ -71,6 +71,7 @@ static struct platform_device *devices[] __initdata = {
 static void __init ambarella_init(void)
 {
 	int					errorCode = 0;
+	int					i;
 
 #if (CHIP_REV == A5S)
 	char					*pname;
@@ -141,7 +142,9 @@ static void __init ambarella_init(void)
 	ambarella_register_spi_device();
 	ambarella_register_i2c_device();
 
-	platform_add_devices(devices, ARRAY_SIZE(devices));
+	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
+	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++)
+		device_init_wakeup(&ambarella_devices[i]->dev, 1);
 }
 
 /* ==========================================================================*/
