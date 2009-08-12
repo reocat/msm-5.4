@@ -1524,7 +1524,6 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 {
 	struct ambarella_ep	*ep = to_ambarella_ep(_ep);
 	struct ambarella_request	*req;
-	unsigned int		halted = ep->halted;
 	unsigned long		flags;
 
 	if (!the_controller->driver)
@@ -1547,17 +1546,29 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 
 	/* request in processing */
 	if(ep->data_desc == req->data_desc) {
-		amba_setbits(ep->ep_reg.ctrl_reg, UDC_EP_CTRL_SNAK);
-		if(ep->dir == USB_DIR_IN) {
-			amba_clrbits(ep->ep_reg.ctrl_reg, UDC_EP_CTRL_POLL);
-			ambarella_ep_fifo_flush(ep);
-		}
+		local_irq_restore (flags);
+		return 0;
 	}
 
-	ep->halted = 1;
-	ambarella_udc_done(ep, req, -ECONNRESET);
+	list_del_init(&req->queue);
+	ambarella_free_descriptor(ep, req);
 
-	ep->halted = halted;
+	if (req->mapped) {
+		dma_unmap_single(ep->udc->gadget.dev.parent,
+			req->req.dma, req->req.length,
+			(ep->dir & USB_DIR_IN)
+				? DMA_TO_DEVICE
+				: DMA_FROM_DEVICE);
+		req->req.dma = DMA_ADDR_INVALID;
+		req->mapped = 0;
+	} else {
+		dma_sync_single_for_cpu(ep->udc->gadget.dev.parent,
+			req->req.dma, req->req.length,
+			(ep->dir & USB_DIR_IN)
+				? DMA_TO_DEVICE
+				: DMA_FROM_DEVICE);
+	}
+
 	local_irq_restore (flags);
 
 	return 0;

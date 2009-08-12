@@ -620,7 +620,7 @@ static int ag_release(struct inode *inode, struct file *filp)
 	/* dequeue the bulk-in request */
 	while (!list_empty(&dev->in_queue_list)) {
 		spin_lock_irq(&dev->lock);
-		req = list_entry(dev->in_queue_list.next, struct usb_request, list);
+		req = list_entry(dev->in_queue_list.prev, struct usb_request, list);
 		list_move_tail(&req->list, &dev->in_idle_list);
 		spin_unlock_irq(&dev->lock);
 
@@ -661,7 +661,7 @@ static int ag_read(struct file *file, char __user *buf,
 		if(wait_event_interruptible(dev->wq,
 			!list_empty(&dev->out_req_list) || dev->error)){
 			mutex_unlock(&dev->mtx);
-			return -ERESTARTSYS;
+			return -EINTR;
 		}
 
 		if(dev->error){
