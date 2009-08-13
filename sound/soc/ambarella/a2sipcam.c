@@ -37,7 +37,7 @@
 
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
-#include "../codecs/cs24l51.h"
+#include "../codecs/cs42l51.h"
 
 
 #define CODEC_RESET_PIN	52
@@ -123,7 +123,7 @@ static int a2sipcam_board_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* set the I2S system clock*/
-	errorCode = snd_soc_dai_set_sysclk(codec_dai, CS24L51_SYSCLK, mclk, 0);
+	errorCode = snd_soc_dai_set_sysclk(codec_dai, CS42L51_SYSCLK, mclk, 0);
 	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK configuration\n");
 		goto hw_params_exit;
@@ -157,7 +157,7 @@ static const struct snd_soc_dapm_widget a2sipcam_dapm_widgets[] = {
 	SND_SOC_DAPM_LINE("Line Out", NULL),
 };
 
-/* a2sipcam machine audio map (connections to cs24l51 pins) */
+/* a2sipcam machine audio map (connections to cs42l51 pins) */
 static const struct snd_soc_dapm_route a2sipcam_audio_map[] = {
 	/* Line Out is connected to LLOUT, RLOUT */
 	{"Line Out", NULL, "LLOUT"},
@@ -169,7 +169,7 @@ static const struct snd_soc_dapm_route a2sipcam_audio_map[] = {
 };
 
 
-static int a2sipcam_cs24l51_init(struct snd_soc_codec *codec)
+static int a2sipcam_cs42l51_init(struct snd_soc_codec *codec)
 {
 	int errorCode = 0;
 
@@ -197,11 +197,11 @@ init_exit:
 
 /* a2sipcam digital audio interface glue - connects codec <--> A2S */
 static struct snd_soc_dai_link a2sipcam_dai_link = {
-	.name = "CS24L51-DAI-LINK",
-	.stream_name = "CS24L51-STREAM",
+	.name = "CS42L51-DAI-LINK",
+	.stream_name = "CS42L51-STREAM",
 	.cpu_dai = &ambarella_i2s_dai,
-	.codec_dai = &cs24l51_dai,
-	.init = a2sipcam_cs24l51_init,
+	.codec_dai = &cs42l51_dai,
+	.init = a2sipcam_cs42l51_init,
 	.ops = &a2sipcam_board_ops,
 };
 
@@ -214,7 +214,7 @@ static struct snd_soc_card snd_soc_card_a2sipcam = {
 };
 
 /* a2sipcam audio private data */
-static struct cs24l51_setup_data a2sipcam_cs24l51_setup = {
+static struct cs42l51_setup_data a2sipcam_cs42l51_setup = {
 	.i2c_bus	= 0,
 	.i2c_address	= 0x4a,
 	.rst_pin		= CODEC_RESET_PIN,
@@ -224,8 +224,8 @@ static struct cs24l51_setup_data a2sipcam_cs24l51_setup = {
 /* a2sipcam audio subsystem */
 static struct snd_soc_device a2sipcam_snd_devdata = {
 	.card = &snd_soc_card_a2sipcam,
-	.codec_dev = &soc_codec_dev_cs24l51,
-	.codec_data = &a2sipcam_cs24l51_setup,
+	.codec_dev = &soc_codec_dev_cs42l51,
+	.codec_data = &a2sipcam_cs42l51_setup,
 };
 
 static struct platform_device *a2sipcam_snd_device;
@@ -262,6 +262,6 @@ module_init(a2sipcam_board_init);
 module_exit(a2sipcam_board_exit);
 
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
-MODULE_DESCRIPTION("Amabrella A2SIPCAM Board with CS24L51 Codec for ALSA");
+MODULE_DESCRIPTION("Amabrella A2SIPCAM Board with CS42L51 Codec for ALSA");
 MODULE_LICENSE("GPL");
 

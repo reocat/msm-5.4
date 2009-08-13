@@ -450,7 +450,7 @@ static int ambarella_freq_proc_write(struct file *file,
 	} while ((new_freq_cpu > pll_info->armfreq && cur_freq_cpu < new_freq_cpu) ||
 		 (new_freq_cpu < pll_info->armfreq && cur_freq_cpu > new_freq_cpu));
 
-#elif ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||
+#elif ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
 	(CHIP_REV == A5) || (CHIP_REV == A6))
 
 	do {
