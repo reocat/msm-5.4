@@ -995,19 +995,15 @@ static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 		ambarella_gpio_config(pslotinfo->slot_info.gpio_cd.irq_gpio,
 			pslotinfo->slot_info.gpio_cd.irq_gpio_mode);
 
-		if (val != pslotinfo->slot_info.gpio_cd.irq_gpio_val) {
-			dev_dbg(pinfo->dev, "card ejection\n");
-			mmc_detect_change(pslotinfo->mmc, 0);
+		dev_dbg(pinfo->dev, "%s:%d\n",
+			(val == pslotinfo->slot_info.gpio_cd.irq_gpio_val) ?
+			"card insert" : "card eject",
+			pslotinfo->slot_info.cd_delay);
+		if (pslotinfo->slot_info.cd_delay > 0) {
+			mmc_detect_change(pslotinfo->mmc,
+				pslotinfo->slot_info.cd_delay);
 		} else {
-			if (pslotinfo->slot_info.cd_delay > 0) {
-				mmc_detect_change(pslotinfo->mmc,
-					pslotinfo->slot_info.cd_delay);
-				dev_dbg(pinfo->dev, "card insert %d...\n",
-					pslotinfo->slot_info.cd_delay);
-			} else {
-				mmc_detect_change(pslotinfo->mmc, 5);
-				dev_dbg(pinfo->dev, "card insert...\n");
-			}
+			mmc_detect_change(pslotinfo->mmc, 5);
 		}
 	}
 
