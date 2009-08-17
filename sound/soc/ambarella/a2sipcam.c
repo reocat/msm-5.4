@@ -153,25 +153,31 @@ static struct snd_soc_ops a2sipcam_board_ops = {
 
 /* a2sipcam machine dapm widgets */
 static const struct snd_soc_dapm_widget a2sipcam_dapm_widgets[] = {
+	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
 };
 
 /* a2sipcam machine audio map (connections to cs42l51 pins) */
 static const struct snd_soc_dapm_route a2sipcam_audio_map[] = {
-	/* Line Out is connected to LLOUT, RLOUT */
-	{"Line Out", NULL, "LLOUT"},
-	{"Line Out", NULL, "RLOUT"},
+	/* Line In is connected to LLIN1, RLIN1 */
+	{"MICIN1", NULL, "Mic Jack"},
+	{"LLIN1", NULL, "Line In"},
+	{"RLIN1", NULL, "Line In"},
 
-	/* Line In is connected to LLIN, RLIN */
-	{"LLIN", NULL, "Line In"},
-	{"RLIN", NULL, "Line In"},
+	/* Line Out is connected to LLOUT, RLOUT */
+	{"Line Out", NULL, "LHPOUT"},
+	{"Line Out", NULL, "RHPOUT"},
 };
 
 
 static int a2sipcam_cs42l51_init(struct snd_soc_codec *codec)
 {
 	int errorCode = 0;
+
+	/* not connected */
+	snd_soc_dapm_nc_pin(codec, "LLIN2");
+	snd_soc_dapm_nc_pin(codec, "RLIN2");
 
 	/* Add a2sipcam specific widgets */
 	errorCode = snd_soc_dapm_new_controls(codec,
