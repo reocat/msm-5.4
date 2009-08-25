@@ -1377,9 +1377,14 @@ static void aucodec_digitalio_on(void)
 	amba_setbits(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
 
 #elif (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
-	amba_clrbits(GPIO1_AFSEL_REG, 0x10000000);
+	amba_clrbits(GPIO1_AFSEL_REG, 0x80000000);
 	/* GPIO77~GPIO85 program as hardware mode */
 	amba_setbits(GPIO2_AFSEL_REG, 0x003fe000);
+#elif (CHIP_REV == A5S)
+	amba_clrbits(GPIO1_AFSEL_REG, 0x80000000);
+	amba_setbits(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
+#else
+	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
 #endif
 }
 

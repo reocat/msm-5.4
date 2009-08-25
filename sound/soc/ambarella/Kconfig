@@ -44,6 +44,15 @@ config A2SIPCAM_BOARD
 	  Say Y if you want to add cs42l51 audio codec support for
 	  SoC audio on Ambarella A2SIPCAM Board.
 
+config A5SSDK_BOARD
+	tristate "A5SSDK Board [With AK4642 Codec]"
+	depends on SND_AMBARELLA_SOC && ARCH_AMBARELLA_A5S
+	select SND_AMBARELLA_SOC_I2S
+	select SND_SOC_AK4642
+	help
+	  Say Y if you want to add ak4642 audio codec support for
+	  SoC audio on Ambarella A5SSDK Board.
+
 config AMBARELLA_DUMMY_BOARD
 	tristate "Ambarella Dummy Board [With Dummy Codec]"
 	select SND_AMBARELLA_SOC_I2S

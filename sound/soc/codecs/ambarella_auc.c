@@ -923,8 +923,6 @@ static int a2auc_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&codec->dapm_widgets);
 	INIT_LIST_HEAD(&codec->dapm_paths);
 
-	//set_audio_pll();
-
 	ret = snd_soc_new_pcms(socdev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1);
 	if (ret < 0) {
 		printk(KERN_ERR "%s: snd_soc_new_pcms fail %d\n",

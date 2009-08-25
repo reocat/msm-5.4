@@ -39,6 +39,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_AMBARELLA_A2AUC
 	select SND_SOC_ADAV803 if I2C
 	select SND_SOC_CS42L51 if I2C
+	select SND_SOC_AK4642 if I2C
 	select SND_SOC_AMBARELLA_DUMMY
         help
           Normally ASoC codec drivers are only built if a machine driver which
@@ -161,6 +162,9 @@ config SND_SOC_ADAV803
 	tristate
 
 config SND_SOC_CS42L51
+	tristate
+
+config SND_SOC_AK4642
 	tristate
 
 config SND_SOC_AMBARELLA_DUMMY

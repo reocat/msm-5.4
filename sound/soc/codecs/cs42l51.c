@@ -115,7 +115,6 @@ static int cs42l51_write(struct snd_soc_codec *codec,
 			pr_err("CS42L51: I2C write failed\n");
 			return -EIO;
 		}
-
 		/* We've written to the hardware, so update the cache */
 		cache[reg] = value;
 	}
@@ -831,17 +830,17 @@ static int cs42l51_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&codec->dapm_widgets);
 	INIT_LIST_HEAD(&codec->dapm_paths);
 
-	ret = -ENODEV;
 	if (setup->rst_pin == 0)
-		goto gpio_requst_err;
+		goto gpio_request_err;
 
-	ret = gpio_request(setup->rst_pin, "codec-reset");
+	ret = gpio_request(setup->rst_pin, "cs42l51-reset");
 	if (ret < 0) {
 		pr_err("Request codec-reset GPIO(%d) failed\n", setup->rst_pin);
-		goto gpio_requst_err;
+		goto gpio_request_err;
 	}
 
 	cs42l51_socdev = socdev;
+	ret = -ENODEV;
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
 	if (setup->i2c_address) {
@@ -855,11 +854,14 @@ static int cs42l51_probe(struct platform_device *pdev)
 	/* Add other interfaces here */
 #endif
 
+	if(ret != 0)
+		goto add_i2c_err;
+
 	return 0;
 
 add_i2c_err:
 	gpio_free(setup->rst_pin);
-gpio_requst_err:
+gpio_request_err:
 	kfree(codec->private_data);
 priv_alloc_err:
 	kfree(codec);
