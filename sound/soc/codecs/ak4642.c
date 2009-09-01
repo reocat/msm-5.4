@@ -125,50 +125,235 @@ static int ak4642_clrbits(struct snd_soc_codec *codec,
 }
 
 
-static const char *ak4642_mono_gain[] = {"+6dB", "-17dB"};
-static const char *ak4642_mono_out[] = {"(L + R)/2", "Hi-Z"};
-static const char *ak4642_hp_out[] = {"Stereo", "Mono"};
-static const char *ak4642_deemp[] = {"44.1kHz", "Off", "48kHz", "32kHz"};
 
+/****************   ALSA Controls and widgets   **************/
+
+static int ak4642_get_mic_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	unsigned short val, val1, val2;
+
+	val1 = snd_soc_read(codec, AK4642_SIG1);
+	val2 = snd_soc_read(codec, AK4642_SIG2);
+	val = (val2 & 0x20) >> 4 | (val1 & 0x01);
+
+	ucontrol->value.integer.value[0] = val;
+	return 0;
+}
+
+static int ak4642_set_mic_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	unsigned short val, val1, val2;
+
+	val1 = snd_soc_read(codec, AK4642_SIG1);
+	val2 = snd_soc_read(codec, AK4642_SIG2);
+	val = (val2 & 0x20) >> 4 | (val1 & 0x01);
+
+	if (val == ucontrol->value.integer.value[0])
+		return 0;
+
+	val = ucontrol->value.integer.value[0];
+	val1 &= 0xfe;
+	val1 |= (val & 0x01);
+	snd_soc_write(codec, AK4642_SIG1, val1);
+	val2 &= 0xdf;
+	val2 |= ((val & 0x02) << 4);
+	snd_soc_write(codec, AK4642_SIG2, val2);
+
+	return 1;
+}
+
+static int ak4642_get_alc_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	unsigned short val, val1, val2;
+
+	val1 = snd_soc_read(codec, AK4642_ALC1);
+	val2 = snd_soc_read(codec, AK4642_ALC3);
+	val = (val2 & 0x80) >> 6 | (val1 & 0x02) >> 1;
+
+	ucontrol->value.integer.value[0] = val;
+	return 0;
+}
+
+static int ak4642_set_alc_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	unsigned short val, val1, val2;
+
+	val1 = snd_soc_read(codec, AK4642_ALC1);
+	val2 = snd_soc_read(codec, AK4642_ALC3);
+	val = (val2 & 0x80) >> 6 | (val1 & 0x02) >> 1;
+
+	if (val == ucontrol->value.integer.value[0])
+		return 0;
+
+	val = ucontrol->value.integer.value[0];
+	val1 &= 0xfd;
+	val1 |= ((val & 0x01) << 1);
+	snd_soc_write(codec, AK4642_ALC1, val1);
+	val2 &= 0x7f;
+	val2 |= ((val & 0x02) << 6);
+	snd_soc_write(codec, AK4642_ALC3, val2);
+
+	return 1;
+}
+
+static int ak4642_get_input_mux(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	unsigned short val, val1, val2;
+
+	val1 = snd_soc_read(codec, AK4642_PM3);
+	val2 = snd_soc_read(codec, AK4642_SIG1);
+
+	if(((val1 & 0x1e) == 0x06) && ((val2 & 0x04) == 0x00))
+		val = AK4642_LINE_IN_ON;
+	else if(((val1 & 0x18) == 0x18) && ((val2 & 0x04) == 0x04))
+		val = AK4642_BOTH_MIC_ON;
+	else
+		val = AK4642_INPUT_UNKNOWN;
+
+	ucontrol->value.integer.value[0] = val;
+	return 0;
+}
+
+static int ak4642_set_input_mux(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	unsigned short val, val1, val2;
+
+	val1 = snd_soc_read(codec, AK4642_PM3);
+	val2 = snd_soc_read(codec, AK4642_SIG1);
+
+	if(((val1 & 0x1e) == 0x06) && ((val2 & 0x04) == 0x00))
+		val = AK4642_LINE_IN_ON;
+	else if(((val1 & 0x18) == 0x18) && ((val2 & 0x04) == 0x04))
+		val = AK4642_BOTH_MIC_ON;
+	else
+		val = AK4642_INPUT_UNKNOWN;
+
+	if (val == ucontrol->value.integer.value[0])
+		return 0;
+
+	val = ucontrol->value.integer.value[0];
+
+	switch(val){
+	case AK4642_LINE_IN_ON:
+		ak4642_clrbits(codec, AK4642_PM3, 0x18);
+		ak4642_setbits(codec, AK4642_PM3, 0x06);
+		ak4642_clrbits(codec, AK4642_SIG1, 0x04);
+		ak4642_clrbits(codec, AK4642_SIG1, 0x01);
+		ak4642_clrbits(codec, AK4642_SIG2, 0x20);
+		break;
+	case AK4642_BOTH_MIC_ON:
+		ak4642_setbits(codec, AK4642_PM3, 0x18);
+		ak4642_setbits(codec, AK4642_SIG1, 0x04);
+		ak4642_setbits(codec, AK4642_SIG1, 0x01);
+		ak4642_setbits(codec, AK4642_SIG2, 0x20);
+		break;
+	case AK4642_INPUT_UNKNOWN:
+		return 0;
+	}
+
+	return 1;
+}
+
+
+static const char *ak4642_lo_gain[] = {"+0db", "+2db"};
+static const char *ak4642_hp_gain[] = {"+0db", "+3.6db"};
+static const char *ak4642_sp_gain[] = {"+4.43db", "+6.43db", "+10.65db", "+12.65db"};
+static const char *ak4642_vol_ctrl[] = {"Independent", "Dependent"};
+static const char *ak4642_deemp[] = {"44.1kHz", "Off", "48kHz", "32kHz"};
+static const char *ak4642_hp_out[] = {"Stereo", "Mono"};
 static const char *ak4642_lsrc[] = {"LIN1", "LIN2"};
 static const char *ak4642_rsrc[] = {"RIN1", "RIN2"};
+static const char *ak4642_eq_gain[] = {"+0db", "+12db", "+24db"};
+static const char *ak4642_fil_sel[] = {"HPF", "LPF"};
+static const char *ak4642_mic_gain[] = {"0db", "+20db", "+26db", "+32db"};
+static const char *ak4642_alc_gain[] = {"0.375db", "0.750db", "1.125db", "1.500db"};
+static const char *ak4642_input_mux[] = {"Line-in", "Both Mic", "Unknown"};
 
 static const struct soc_enum ak4642_enum[] = {
-	SOC_ENUM_SINGLE(AK4642_SIG1, 7, 2, ak4642_mono_gain),
-	SOC_ENUM_SINGLE(AK4642_SIG1, 6, 2, ak4642_mono_out),
-	SOC_ENUM_SINGLE(AK4642_MODE2, 2, 2, ak4642_hp_out),
-	SOC_ENUM_SINGLE(AK4642_DAC, 0, 4, ak4642_deemp),
-
+	SOC_ENUM_SINGLE(AK4642_SIG2, 7, 2, ak4642_lo_gain),
+	SOC_ENUM_SINGLE(AK4642_SIG2, 3, 4, ak4642_sp_gain),
+	SOC_ENUM_SINGLE(AK4642_MODE3, 4, 2, ak4642_vol_ctrl),
+	SOC_ENUM_SINGLE(AK4642_MODE3, 0, 4, ak4642_deemp),
+	SOC_ENUM_SINGLE(AK4642_MODE4, 3, 2, ak4642_vol_ctrl),
+	SOC_ENUM_SINGLE(AK4642_MODE4, 2, 2, ak4642_hp_out),
+	SOC_ENUM_SINGLE(AK4642_PM3, 5, 2, ak4642_hp_gain),
 	SOC_ENUM_SINGLE(AK4642_PM3, 1, 2, ak4642_lsrc),
 	SOC_ENUM_SINGLE(AK4642_PM3, 2, 2, ak4642_rsrc),
+	SOC_ENUM_SINGLE(AK4642_FSEL, 6, 3, ak4642_eq_gain),
+	SOC_ENUM_SINGLE(AK4642_F3EF1, 7, 2, ak4642_fil_sel),
+	SOC_ENUM_SINGLE(AK4642_E1EF1, 7, 2, ak4642_fil_sel),
+	SOC_ENUM_SINGLE_EXT(4, ak4642_mic_gain),
+	SOC_ENUM_SINGLE_EXT(4, ak4642_alc_gain),
+	SOC_ENUM_SINGLE_EXT(3, ak4642_input_mux),
 };
 
 static const struct snd_kcontrol_new ak4642_snd_controls[] = {
+	SOC_SINGLE("HP Mute Switch", AK4642_PM2, 6, 1, 0),
+	SOC_ENUM("Line Out Gain", ak4642_enum[0]),
+	SOC_ENUM("Speaker Gain", ak4642_enum[1]),
+	SOC_ENUM("Headphone Output Mode", ak4642_enum[5]),
+	SOC_ENUM("Headphone Gain", ak4642_enum[6]),
+
+	SOC_SINGLE("ALC Switch", AK4642_ALC1, 5, 1, 0),
+	SOC_SINGLE("ALC ZC Time", AK4642_TIMER, 4, 3, 0),
+	SOC_SINGLE("ALC Recovery Time", AK4642_TIMER, 2, 3, 0),
+	SOC_SINGLE("ALC ZC Detection Switch", AK4642_ALC1, 4, 1, 1),
+	SOC_SINGLE("ALC ATT Step", AK4642_TIMER, 2, 3, 0),
+	SOC_SINGLE("ALC Volume", AK4642_ALC2, 0, 255, 0),
+
+	SOC_SINGLE("Left Capture Volume", AK4642_LIVOL, 0, 255, 0),
+	SOC_SINGLE("Right Capture Volume", AK4642_RIVOL, 0, 255, 0),
+	SOC_SINGLE("Left Playback Volume", AK4642_LDVOL, 0, 255, 1),
+	SOC_SINGLE("Right Playback Volume", AK4642_RDVOL, 0, 255, 1),
+	SOC_ENUM("Playback Volume Control Mode", ak4642_enum[2]),
+	SOC_ENUM("Capture Volume Control Mode", ak4642_enum[4]),
+	SOC_SINGLE("Bass Boost Volume", AK4642_MODE3, 2, 3, 0),
+	SOC_ENUM("Playback Deemphasis", ak4642_enum[3]),
+
 	SOC_SINGLE("Left Differential Swtich", AK4642_PM3, 3, 1, 0),
 	SOC_SINGLE("Right Differential Swtich", AK4642_PM3, 4, 1, 0),
 	/* ADC Source Selector is only available when differential switch is off */
-	SOC_ENUM("Left ADC Source", ak4642_enum[4]),
-	SOC_ENUM("Right ADC Source", ak4642_enum[5]),
-#if 0
-	SOC_SINGLE("ALC2 Switch", AK4642_SIG1, 1, 1, 0),
-	SOC_ENUM("Mono 1 Output", ak4642_enum[1]),
-	SOC_ENUM("Mono 1 Gain", ak4642_enum[0]),
-	SOC_ENUM("Headphone Output", ak4642_enum[2]),
-	SOC_ENUM("Playback Deemphasis", ak4642_enum[3]),
-	SOC_SINGLE("Bass Volume", AK4642_DAC, 2, 3, 0),
-	SOC_SINGLE("Mic Boost (+20dB) Switch", AK4642_MIC, 0, 1, 0),
-	SOC_SINGLE("ALC Operation Time", AK4642_TIMER, 0, 3, 0),
-	SOC_SINGLE("ALC Recovery Time", AK4642_TIMER, 2, 3, 0),
-	SOC_SINGLE("ALC ZC Time", AK4642_TIMER, 4, 3, 0),
-	SOC_SINGLE("ALC 1 Switch", AK4642_ALC1, 5, 1, 0),
-	SOC_SINGLE("ALC 2 Switch", AK4642_ALC1, 6, 1, 0),
-	SOC_SINGLE("ALC Volume", AK4642_ALC2, 0, 127, 0),
-	SOC_SINGLE("Capture Volume", AK4642_PGA, 0, 127, 0),
-	SOC_SINGLE("Left Playback Volume", AK4642_LATT, 0, 127, 1),
-	SOC_SINGLE("Right Playback Volume", AK4642_RATT, 0, 127, 1),
-	SOC_SINGLE("AUX Bypass Volume", AK4642_VOL, 0, 15, 0),
-	SOC_SINGLE("Mic Sidetone Volume", AK4642_VOL, 4, 7, 0),
-#endif
+	SOC_ENUM("Left ADC Source", ak4642_enum[7]),
+	SOC_ENUM("Right ADC Source", ak4642_enum[8]),
+	SOC_ENUM_EXT("Input Mux", ak4642_enum[14],
+		ak4642_get_input_mux, ak4642_set_input_mux),
+
+	SOC_ENUM("EQ Gain Select", ak4642_enum[9]),
+	SOC_SINGLE("Emphasis Filter Switch", AK4642_FSEL, 2, 1, 0),
+	SOC_ENUM("Emphasis Filter Select", ak4642_enum[10]),
+	SOC_SINGLE("Gain Compensation Filter Switch", AK4642_FSEL, 3, 1, 0),
+	SOC_SINGLE("Wind-noise Filter Switch", AK4642_FSEL, 4, 1, 0),
+	SOC_ENUM("Wind-noise Filter Select", ak4642_enum[11]),
+	SOC_SINGLE("Emphasis Filter 1 low Coeff", AK4642_F3EF0, 0, 255, 0),
+	SOC_SINGLE("Emphasis Filter 1 high Coeff", AK4642_F3EF1, 0, 63, 0),
+	SOC_SINGLE("Emphasis Filter 2 low Coeff", AK4642_F3EF2, 0, 255, 0),
+	SOC_SINGLE("Emphasis Filter 2 high Coeff", AK4642_F3EF3, 0, 63, 0),
+	SOC_SINGLE("Gain Compensation Filter 1 low Coeff", AK4642_EQEF0, 0, 255, 0),
+	SOC_SINGLE("Gain Compensation Filter 1 high Coeff", AK4642_EQEF1, 0, 255, 0),
+	SOC_SINGLE("Gain Compensation Filter 2 low Coeff", AK4642_EQEF2, 0, 255, 0),
+	SOC_SINGLE("Gain Compensation Filter 2 high Coeff", AK4642_EQEF3, 0, 63, 0),
+	SOC_SINGLE("Gain Compensation Filter 3 low Coeff", AK4642_EQEF4, 0, 255, 0),
+	SOC_SINGLE("Gain Compensation Filter 3 high Coeff", AK4642_EQEF5, 0, 255, 0),
+	SOC_SINGLE("Wind-noise Filter 1 low Coeff", AK4642_F3EF0, 0, 255, 0),
+	SOC_SINGLE("Wind-noise Filter 1 high Coeff", AK4642_F3EF1, 0, 63, 0),
+	SOC_SINGLE("Wind-noise Filter 2 low Coeff", AK4642_F3EF2, 0, 255, 0),
+	SOC_SINGLE("Wind-noise Filter 2 high Coeff", AK4642_F3EF3, 0, 63, 0),
+	SOC_ENUM_EXT("Mic Gain", ak4642_enum[12],
+		ak4642_get_mic_gain, ak4642_set_mic_gain),
+	SOC_ENUM_EXT("ALC Recovery Gain", ak4642_enum[13],
+		ak4642_get_alc_gain, ak4642_set_alc_gain),
 };
 
 /* add non dapm controls */
@@ -204,6 +389,13 @@ static const struct snd_kcontrol_new ak4642_sp_mixer_controls[] = {
 	SOC_DAPM_SINGLE("MIN SP Switch", AK4642_SIG1, 6, 1, 0),
 };
 
+/* line out switch */
+static const struct snd_kcontrol_new ak4642_lo_control =
+	SOC_DAPM_SINGLE("Switch", AK4642_PM1, 3, 1, 0);
+/* speaker switch */
+static const struct snd_kcontrol_new ak4642_sp_control =
+	SOC_DAPM_SINGLE("Switch", AK4642_SIG1, 7, 1, 0);
+
 /* ak4642 dapm widgets */
 static const struct snd_soc_dapm_widget ak4642_dapm_widgets[] = {
 	/* OUTPUT */
@@ -221,7 +413,11 @@ static const struct snd_soc_dapm_widget ak4642_dapm_widgets[] = {
 	SND_SOC_DAPM_PGA("Spk Amp", AK4642_PM1, 4, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("HP L Amp", AK4642_PM2, 5, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("HP R Amp", AK4642_PM2, 4, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("Line Out Pga", AK4642_PM1, 3, 0, NULL, 0),
+	SND_SOC_DAPM_PGA("Line Out Pga", AK4642_SIG2, 6, 1, NULL, 0),
+	SND_SOC_DAPM_SWITCH("Speaker Enable", SND_SOC_NOPM, 0, 0,
+			&ak4642_sp_control),
+	SND_SOC_DAPM_SWITCH("Line Out Enable", SND_SOC_NOPM, 0, 0,
+			&ak4642_lo_control),
 	SND_SOC_DAPM_OUTPUT("LOUT"),
 	SND_SOC_DAPM_OUTPUT("ROUT"),
 	SND_SOC_DAPM_OUTPUT("HPL"),
@@ -256,22 +452,24 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"Speaker Mixer", "MIN SP Switch", "MIN Input"},
 
 	/* line out */
-	{"LOUT", NULL, "Line Out Pga"},
-	{"ROUT", NULL, "Line Out Pga"},
 	{"Line Out Pga", NULL, "Line Out Mixer"},
+	{"Line Out Enable", "Switch", "Line Out Pga"},
+	{"LOUT", NULL, "Line Out Enable"},
+	{"ROUT", NULL, "Line Out Enable"},
 
 	/* left headphone */
-	{"HPL", NULL, "HP L Amp"},
 	{"HP L Amp", NULL, "Headphone Mixer"},
+	{"HPL", NULL, "HP L Amp"},
 
 	/* right headphone */
-	{"HPR", NULL, "HP R Amp"},
 	{"HP R Amp", NULL, "Headphone Mixer"},
+	{"HPR", NULL, "HP R Amp"},
 
 	/* speaker */
-	{"SPP", NULL, "Spk Amp"},
-	{"SPN", NULL, "Spk Amp"},
 	{"Spk Amp", NULL, "Speaker Mixer"},
+	{"Speaker Enable", "Switch", "Spk Amp"},
+	{"SPP", NULL, "Speaker Enable"},
+	{"SPN", NULL, "Speaker Enable"},
 
 	/* INPUT */
 	{"MIN Input", NULL, "MIN"},
@@ -369,10 +567,14 @@ static int ak4642_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
 
-	if (mute)
+	if (mute){
 		ak4642_setbits(codec, AK4642_MODE3, 0x20);
-	else
+		ak4642_clrbits(codec, AK4642_PM2, 0x40);
+	}
+	else{
 		ak4642_clrbits(codec, AK4642_MODE3, 0x20);
+		ak4642_setbits(codec, AK4642_PM2, 0x40);
+	}
 
 	return 0;
 }
@@ -382,23 +584,22 @@ static int ak4642_set_bias_level(struct snd_soc_codec *codec,
 {
 	switch (level) {
 	case SND_SOC_BIAS_ON:
-		ak4642_setbits(codec, AK4642_PM1, 0x3d);
-		ak4642_setbits(codec, AK4642_PM2, 0x30);
-		ak4642_mute(codec->dai, 0);
+		/* Everything is ON */
 		break;
 	case SND_SOC_BIAS_PREPARE:
-		ak4642_mute(codec->dai, 1);
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		ak4642_setbits(codec, AK4642_PM1, 0x40);
 		break;
 	case SND_SOC_BIAS_OFF:
+		/* Everything is OFF */
 		ak4642_clrbits(codec, AK4642_PM1, 0x40);
 		break;
 	}
 	codec->bias_level = level;
 	return 0;
 }
+
 
 #define AK4642_RATES		SNDRV_PCM_RATE_8000_48000
 #define AK4642_FORMATS	SNDRV_PCM_FMTBIT_S16_LE
@@ -484,9 +685,14 @@ static int ak4642_init(struct snd_soc_device *socdev)
 	ak4642_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	/* Initial some register */
-	ak4642_setbits(codec, AK4642_PM3, 0x06);
-	ak4642_setbits(codec, AK4642_SIG1, 0x10);
-	ak4642_clrbits(codec, AK4642_SIG2, 0x40);
+	ak4642_setbits(codec, AK4642_PM3, 0x06);	/* Select Input to ADC */
+	ak4642_setbits(codec, AK4642_SIG1, 0x10);	/* Open DAC to Line-Out */
+	ak4642_setbits(codec, AK4642_MODE4, 0x01);	/* Open DAC to Headphone */
+	ak4642_setbits(codec, AK4642_PM1, 0x08);	/* Open Line-Out Switch */
+	ak4642_write(codec, AK4642_LIVOL, 0x91);	/* Input 0db */
+	ak4642_write(codec, AK4642_RIVOL, 0x91);	/* Input 0db */
+	ak4642_clrbits(codec, AK4642_SIG1, 0x01);	/* Mic-Amp 0db */
+	ak4642_clrbits(codec, AK4642_SIG2, 0x20);	/* Mic-Amp 0db */
 
 	ak4642_add_controls(codec);
 	ak4642_add_widgets(codec);

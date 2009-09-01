@@ -5,8 +5,6 @@
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
- * Based on ak4535.c by Richard Purdie
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -23,7 +21,7 @@
 #define AK4642_SIG2		0x03
 #define AK4642_MODE1		0x04
 #define AK4642_MODE2		0x05
-#define AK4642_TMSEL		0x06
+#define AK4642_TIMER		0x06
 #define AK4642_ALC1		0x07
 #define AK4642_ALC2		0x08
 #define AK4642_LIVOL		0x09
@@ -50,19 +48,6 @@
 #define AK4642_E1EF2		0x1e
 #define AK4642_E1EF3		0x1f
 
-#if 1
-
-#define AK4642_DAC		0x6
-#define AK4642_MIC		0x7
-#define AK4642_TIMER		0x8
-#define AK4642_PGA		0xb
-#define AK4642_LATT		0xc
-#define AK4642_RATT		0xd
-#define AK4642_VOL		0xe
-#define AK4642_STATUS		0xf
-
-#endif
-
 #define AK4642_CACHEREGNUM 	0x20
 
 struct ak4642_setup_data {
@@ -73,6 +58,10 @@ struct ak4642_setup_data {
 };
 
 #define AK4642_SYSCLK	0
+
+#define AK4642_LINE_IN_ON	0
+#define AK4642_BOTH_MIC_ON	1
+#define AK4642_INPUT_UNKNOWN	2
 
 extern struct snd_soc_dai ak4642_dai;
 extern struct snd_soc_codec_device soc_codec_dev_ak4642;

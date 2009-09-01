@@ -156,6 +156,7 @@ static const struct snd_soc_dapm_widget a5ssdk_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
+	SND_SOC_DAPM_HP("HP Jack", NULL),
 };
 
 /* a5ssdk machine audio map (connections to ak4642 pins) */
@@ -169,6 +170,8 @@ static const struct snd_soc_dapm_route a5ssdk_audio_map[] = {
 	/* Line Out is connected to LLOUT, RLOUT */
 	{"Line Out", NULL, "LOUT"},
 	{"Line Out", NULL, "ROUT"},
+	{"HP Jack", NULL, "HPL"},
+	{"HP Jack", NULL, "HPR"},
 };
 
 
@@ -177,8 +180,9 @@ static int a5ssdk_ak4642_init(struct snd_soc_codec *codec)
 	int errorCode = 0;
 
 	/* not connected */
-//	snd_soc_dapm_nc_pin(codec, "LLIN2");
-//	snd_soc_dapm_nc_pin(codec, "RLIN2");
+	snd_soc_dapm_nc_pin(codec, "SPP");
+	snd_soc_dapm_nc_pin(codec, "SPN");
+	snd_soc_dapm_nc_pin(codec, "MIN");
 
 	/* Add a5ssdk specific widgets */
 	errorCode = snd_soc_dapm_new_controls(codec,
