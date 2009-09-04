@@ -23,4 +23,5 @@
 
 zreladdr-y		:= 0xC0108000
 params_phys-y		:= 0xC00C0000
+initrd_phys-y		:= 0xC0800000
 

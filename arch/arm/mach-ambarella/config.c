@@ -57,7 +57,7 @@ EXPORT_SYMBOL(ambarella_dmamask);
 u32 ambarella_debug_level = AMBA_DEBUG_NULL;
 EXPORT_SYMBOL(ambarella_debug_level);
 
-u32 ambarella_debug_info[32];
+u32 ambarella_debug_info = DEFAULT_DEBUG_BASE;
 EXPORT_SYMBOL(ambarella_debug_info);
 
 u32 alsa_tx_enable_flag = 0;

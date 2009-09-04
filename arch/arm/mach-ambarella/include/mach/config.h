@@ -110,7 +110,7 @@ extern void *get_ambarella_hal_vp(void);
 
 extern u64 ambarella_dmamask;
 extern u32 ambarella_debug_level;
-extern u32 ambarella_debug_info[32];
+extern u32 ambarella_debug_info;
 
 struct ambarella_gpio_power_info {
 	int	power_gpio;
