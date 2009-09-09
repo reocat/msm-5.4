@@ -408,4 +408,15 @@ config TOUCHSCREEN_TSC2007
 	  To compile this driver as a module, choose M here: the
 	  module will be called tsc2007.
 
+config TOUCHSCREEN_AK4183
+        tristate "AK4183 based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a AK4183 based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called ak4183.
+
 endif
