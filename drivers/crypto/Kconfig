@@ -200,4 +200,15 @@ config CRYPTO_DEV_IXP4XX
 	help
 	  Driver for the IXP4xx NPE crypto engine.
 
+config CRYPTO_DEV_AMBARELLA_AES
+	tristate "ambarella soc driver for AES algorithm"
+	depends on ARM && ARCH_AMBARELLA
+	select CRYPTO_BLKCIPHER
+	select CRYPTO_AES
+	help
+		Use ambarella soc HW cryptography engine for AES algorithm.
+
+		Available in A5S
+
+
 endif # CRYPTO_HW
