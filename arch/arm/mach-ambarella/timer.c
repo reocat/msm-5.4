@@ -195,11 +195,12 @@ int ambtm_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		pr_debug("%s: Pre Change\n", __func__);
+		pr_info("%s: Pre Change\n", __func__);
+		disable_irq(TIMER1_IRQ);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
-		pr_debug("%s: Post Change\n", __func__);
+		pr_info("%s: Post Change\n", __func__);
 		/* Reset timer */
 		save = amba_readl(TIMER_CTR_REG);
 		amba_writel(TIMER_CTR_REG, 0x0);
@@ -231,6 +232,7 @@ int ambtm_freq_transition(struct notifier_block *nb,
 		}
 
 		amba_writel(TIMER_CTR_REG, save);
+		enable_irq(TIMER1_IRQ);
 		break;
 
 	default:

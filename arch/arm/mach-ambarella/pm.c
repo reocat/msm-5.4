@@ -84,11 +84,31 @@ struct platform_device ambarella_power_supply = {
 /* ==========================================================================*/
 static int ambarella_pm_enter(suspend_state_t state)
 {
+	int					errorCode = 0;
+#if (CHIP_REV == A5S)
+	amb_hal_success_t			result;
+	amb_operating_mode_t			operating_mode;
+
+	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
+	if(result != AMB_HAL_SUCCESS){
+		pr_err("%s: amb_get_operating_mode failed(%d)\n",
+			__func__, result);
+		errorCode = -EPERM;
+	}
+
+	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
+	errorCode = ambarella_set_operating_mode(&operating_mode);
+	if (errorCode) {
+		pr_err("%s: amb_set_operating_mode failed(%d)\n",
+			__func__, errorCode);
+	}
+#else
 	pr_info("%s: enter with state[%d]\n", __func__, state);
 	mdelay(10000);
 	pr_info("%s: exit with state[%d]\n", __func__, state);
+#endif
 
-	return 0;
+	return errorCode;
 }
 
 static int ambarella_pm_valid(suspend_state_t state)

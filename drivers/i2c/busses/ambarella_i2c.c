@@ -35,8 +35,6 @@
 #include <linux/i2c.h>
 #include <linux/i2c-id.h>
 
-#include <linux/cpufreq.h>
-
 #include <mach/hardware.h>
 
 #ifndef CONFIG_I2C_AMBARELLA_RETRIES
@@ -112,7 +110,7 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_ENABLE);
 }
 
-static int ambi2c_freq_transition(struct notifier_block *nb,
+static int ambarella_i2c_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
 	struct platform_device			*pdev;
@@ -127,12 +125,14 @@ static int ambi2c_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		pr_debug("%s[%d]: Pre Change\n", __func__, pdev->id);
+		pr_info("%s[%d]: Pre Change\n", __func__, pdev->id);
+		disable_irq(pinfo->irq);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
-		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
+		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
 		ambarella_i2c_set_clk(pinfo);
+		enable_irq(pinfo->irq);
 		break;
 
 	default:
@@ -558,7 +558,8 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 		goto i2c_errorCode_free_irq;
 	}
 
-	pinfo->i2c_freq_transition.notifier_call = ambi2c_freq_transition;
+	pinfo->i2c_freq_transition.notifier_call =
+		ambarella_i2c_freq_transition;
 	ambarella_register_freqnotifier(&pinfo->i2c_freq_transition);
 
 	dev_notice(&pdev->dev,

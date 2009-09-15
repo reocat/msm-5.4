@@ -118,19 +118,23 @@ static struct ambarella_pll_performance_info performance_list[] = {
 static int ambarella_pll_proc_read(char *page, char **start,
 	off_t off, int count, int *eof, void *data)
 {
-	amb_hal_success_t result;
-	amb_operating_mode_t operating_mode;
-	int retlen = 0;
-	int i;
+	amb_hal_success_t			result;
+	amb_operating_mode_t			operating_mode;
+	int					retlen = 0;
+	int					i;
 
 	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
 	if(result != AMB_HAL_SUCCESS){
-		pr_err("%s: get operating mode failed(%d)\n",__func__, result);
-		return -EPERM;
+		pr_err("%s: amb_get_operating_mode failed(%d)\n",
+			__func__, result);
+		retlen = -EPERM;
+		goto ambarella_pll_proc_read_exit;
 	}
 
-	if (off != 0)
-		return 0;
+	if (off != 0) {
+		retlen = 0;
+		goto ambarella_pll_proc_read_exit;
+	}
 
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPossible Mode:\n");
@@ -167,15 +171,16 @@ static int ambarella_pll_proc_read(char *page, char **start,
 
 	*eof = 1;
 
+ambarella_pll_proc_read_exit:
 	return retlen;
 }
 
 int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 {
-	int errorCode = 0;
-	amb_hal_success_t result;
-	unsigned int oldfreq, newfreq;
-	unsigned long flags;
+	int					errorCode = 0;
+	amb_hal_success_t			result = AMB_HAL_SUCCESS;
+	unsigned int				oldfreq, newfreq;
+	unsigned long				flags;
 
 	fio_select_lock(SELECT_FIO_HOLD, 1);	/* Hold the FIO bus first */
 
@@ -216,10 +221,11 @@ EXPORT_SYMBOL(ambarella_set_operating_mode);
 static int ambarella_mode_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	int errorCode = 0;
-	struct ambarella_pll_info *pll_info;
-	char str[MAX_CMD_LENGTH];
-	int mode, i;
+	int					errorCode = 0;
+	struct ambarella_pll_info		*pll_info;
+	char					str[MAX_CMD_LENGTH];
+	int					mode, i;
+	amb_hal_success_t			result;
 
 	pll_info = (struct ambarella_pll_info *)data;
 
@@ -244,6 +250,14 @@ static int ambarella_mode_proc_write(struct file *file,
 		goto pll_mode_proc_write_exit;
 	}
 
+	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info->operating_mode);
+	if(result != AMB_HAL_SUCCESS){
+		pr_err("%s: amb_get_operating_mode failed(%d)\n",
+			__func__, result);
+		errorCode = -EPERM;
+		goto pll_mode_proc_write_exit;
+	}
+
 	pll_info->operating_mode.mode = mode;
 	errorCode = ambarella_set_operating_mode(&pll_info->operating_mode);
 	if (!errorCode)
@@ -256,10 +270,11 @@ pll_mode_proc_write_exit:
 static int ambarella_performance_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	int errorCode = 0;
-	struct ambarella_pll_info *pll_info;
-	char str[MAX_CMD_LENGTH];
-	int performance, i;
+	int					errorCode = 0;
+	struct ambarella_pll_info		*pll_info;
+	char					str[MAX_CMD_LENGTH];
+	int					performance, i;
+	amb_hal_success_t			result;
 
 	pll_info = (struct ambarella_pll_info *)data;
 
@@ -281,6 +296,14 @@ static int ambarella_performance_proc_write(struct file *file,
 	if (performance > AMB_PERFORMANCE_2160P60){
 		pr_err("%s: invalid performance (%s)!\n", __func__, str);
 		errorCode = -EINVAL;
+		goto pll_performance_proc_write_exit;
+	}
+
+	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info->operating_mode);
+	if(result != AMB_HAL_SUCCESS){
+		pr_err("%s: amb_get_operating_mode failed(%d)\n",
+			__func__, result);
+		errorCode = -EPERM;
 		goto pll_performance_proc_write_exit;
 	}
 
@@ -360,7 +383,7 @@ struct ambarella_pll_info {
 static int ambarella_freq_proc_read(char *page, char **start,
 	off_t off, int count, int *eof, void *data)
 {
-	int retlen;
+	int					retlen = 0;
 
 	if (off != 0)
 		return 0;
@@ -386,12 +409,12 @@ static int ambarella_freq_proc_read(char *page, char **start,
 static int ambarella_freq_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	struct ambarella_pll_info *pll_info;
-	char str[MAX_CMD_LENGTH];
-	int errorCode = 0;
-	unsigned long flags;
-	unsigned int new_freq_cpu, cur_freq_cpu;
-	unsigned int i;
+	struct ambarella_pll_info		*pll_info;
+	char					str[MAX_CMD_LENGTH];
+	int					errorCode = 0;
+	unsigned long				flags;
+	unsigned int				new_freq_cpu, cur_freq_cpu;
+	unsigned int				i;
 
 	pll_info = (struct ambarella_pll_info *)data;
 

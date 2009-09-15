@@ -334,11 +334,20 @@ int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 	return 0;
 }
 
+static int ambarella_gpio_irq_set_wake(unsigned int irq, unsigned int state)
+{
+	pr_info("%s: set irq %d = %d\n", __func__, irq, state);
+
+	return 0;
+}
+
 static struct irq_chip ambarella_gpio_irq_chip = {
+	.name		= "ambarella gpio irq",
 	.ack		= ambarella_gpio_ack_irq,
 	.mask		= ambarella_gpio_mask_irq,
 	.unmask		= ambarella_gpio_unmask_irq,
 	.set_type	= ambarella_gpio_irq_set_type,
+	.set_wake	= ambarella_gpio_irq_set_wake,
 };
 
 static void ambarella_ack_irq(unsigned int irq)
@@ -494,11 +503,20 @@ static int ambarella_irq_set_type(unsigned int irq, unsigned int type)
 	return 0;
 }
 
+static int ambarella_irq_set_wake(unsigned int irq, unsigned int state)
+{
+	pr_info("%s: set irq %d = %d\n", __func__, irq, state);
+
+	return 0;
+}
+
 static struct irq_chip ambarella_irq_chip = {
+	.name		= "ambarella onchip irq",
 	.ack		= ambarella_ack_irq,
 	.mask		= ambarella_mask_irq,
 	.unmask		= ambarella_unmask_irq,
 	.set_type	= ambarella_irq_set_type,
+	.set_wake	= ambarella_irq_set_wake,
 };
 
 static inline u32 ambarella_irq_stat2nr(u32 stat)
