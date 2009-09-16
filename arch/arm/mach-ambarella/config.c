@@ -1435,13 +1435,55 @@ struct platform_device ambarella_i2s0 = {
 };
 
 /* ==========================================================================*/
+static int rtc_check_capacity(u32 tm)
+{
+	int					errCode = 0;
+#if (CHIP_REV == A5S)
+	if (tm & 0x40000000)
+		errCode = 0;
+	else
+		errCode = -EINVAL;
+
+#endif
+	return errCode;
+}
+
+static u32 rtc_read_reg(u32 reg)
+{
+	u32 val;
+
+	val = amba_readl(reg);
+#if (CHIP_REV == A5S)
+	val |= 0x40000000;
+#endif
+	return val;
+}
+
+static void rtc_write_reg(u32 reg, u32 tm)
+{
+	u32 val;
+
+#if (CHIP_REV == A5S)
+	val = (tm & 0x3fffffff) | (amba_readl(reg) & 0xc0000000);
+	amba_writel(reg, val);
+#else
+	amba_writel(reg, tm);
+#endif
+}
+
+static struct ambarella_rtc_controller ambarella_platform_rtc_controller0 = {
+	.check_capacity	= rtc_check_capacity,
+	.rtc_read	= rtc_read_reg,
+	.rtc_write	= rtc_write_reg,
+};
+
 struct platform_device ambarella_rtc0 = {
 	.name		= "ambarella-rtc",
 	.id		= 0,
 	.resource	= NULL,
 	.num_resources	= 0,
 	.dev		= {
-		.platform_data		= NULL,
+		.platform_data		= &ambarella_platform_rtc_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}

@@ -96,9 +96,12 @@ u32 __ambrtc_dev_check_status(void)
 	return rtc_status;
 }
 
-int __ambrtc_dev_set_time(struct rtc_time *tm)
+int __ambrtc_dev_set_time(struct device *dev, struct rtc_time *tm)
 {
+	int ret = 0;
 	u32 tm2epoch_diff;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
 
 	if (tm == NULL)
 		return -EPERM;
@@ -107,15 +110,22 @@ int __ambrtc_dev_set_time(struct rtc_time *tm)
 		tm->tm_year, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-	amba_writel(RTC_PWC_ALAT_REG, 0x0);
-	amba_writel(RTC_PWC_CURT_REG, 0x0);
+	tm2epoch_diff = __ambrtc_tm2epoch_diff(tm);
+	ret = pinfo->check_capacity(tm2epoch_diff);
+	if(ret < 0){
+		pr_err("%s: Invalid date (at least 2005.1.1) (0x%08x)\n",
+			__func__, tm2epoch_diff);
+		return ret;
+	}
+
+	pinfo->rtc_write(RTC_PWC_ALAT_REG, 0x0);
+	pinfo->rtc_write(RTC_PWC_CURT_REG, 0x0);
 	amba_writel(RTC_RESET_REG, 0x01);
 	mdelay(1);
 	amba_writel(RTC_RESET_REG, 0x00);
 	mdelay(1);
 
-	tm2epoch_diff = __ambrtc_tm2epoch_diff(tm);
-	amba_writel(RTC_PWC_CURT_REG, tm2epoch_diff);
+	pinfo->rtc_write(RTC_PWC_CURT_REG, tm2epoch_diff);
 	amba_writel(RTC_RESET_REG, 0x01);
 	mdelay(1);
 	amba_writel(RTC_RESET_REG, 0x00);
@@ -124,16 +134,18 @@ int __ambrtc_dev_set_time(struct rtc_time *tm)
 	return 0;
 }
 
-int __ambrtc_dev_get_time(struct rtc_time *tm)
+int __ambrtc_dev_get_time(struct device *dev, struct rtc_time *tm)
 {
 	u32 time;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
 
 	if (tm == NULL)
 		return -EPERM;
 
 	__ambrtc_dev_check_status();
 
-	time = amba_readl(RTC_CURT_REG);
+	time = pinfo->rtc_read(RTC_CURT_REG);
 	rtc_time_to_tm(time, tm);
 
 	pr_debug("%s: 0x%x\n", __func__, time);
@@ -144,9 +156,12 @@ int __ambrtc_dev_get_time(struct rtc_time *tm)
 	return 0;
 }
 
-int __ambrtc_dev_set_alarm(struct rtc_wkalrm *alrm)
+int __ambrtc_dev_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
+	int ret = 0;
 	u32 tm2epoch_diff;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
 
 	if (alrm == NULL)
 		return -EPERM;
@@ -160,17 +175,23 @@ int __ambrtc_dev_set_alarm(struct rtc_wkalrm *alrm)
 			alrm->time.tm_mday, alrm->time.tm_hour,
 			alrm->time.tm_min, alrm->time.tm_sec);
 		tm2epoch_diff = __ambrtc_tm2epoch_diff(&(alrm->time));
+		ret = pinfo->check_capacity(tm2epoch_diff);
+		if(ret < 0){
+			pr_err("%s: Invalid date (at least 2005.1.1) (0x%08x)\n",
+				__func__, tm2epoch_diff);
+			return ret;
+		}
 	} else
 		tm2epoch_diff = 0;
 
-	amba_writel(RTC_PWC_CURT_REG, amba_readl(RTC_CURT_REG));
-	amba_writel(RTC_PWC_ALAT_REG, 0x0);
+	pinfo->rtc_write(RTC_PWC_CURT_REG, amba_readl(RTC_CURT_REG));
+	pinfo->rtc_write(RTC_PWC_ALAT_REG, 0x0);
 	amba_writel(RTC_RESET_REG, 0x01);
 	mdelay(1);
 	amba_writel(RTC_RESET_REG, 0x00);
 	mdelay(1);
 
-	amba_writel(RTC_PWC_ALAT_REG, tm2epoch_diff);
+	pinfo->rtc_write(RTC_PWC_ALAT_REG, tm2epoch_diff);
 	amba_writel(RTC_RESET_REG, 0x01);
 	mdelay(1);
 	amba_writel(RTC_RESET_REG, 0x00);
@@ -179,17 +200,18 @@ int __ambrtc_dev_set_alarm(struct rtc_wkalrm *alrm)
 	return 0;
 }
 
-int __ambrtc_dev_get_alarm(struct rtc_wkalrm *alrm)
+int __ambrtc_dev_get_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	u32 rtc_status;
-	u32 time;
-	u32 alrm_time;
+	u32 time, alrm_time;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
 
 	if (alrm == NULL)
 		return -EPERM;
 
 	rtc_status = __ambrtc_dev_check_status();
-	alrm_time = amba_readl(RTC_ALAT_REG);
+	alrm_time = pinfo->rtc_read(RTC_CURT_REG);
 	time = amba_readl(RTC_CURT_REG);
 
 	alrm->enabled = (alrm_time > time);
@@ -204,7 +226,7 @@ static int ambrtc_gettime(struct device *dev, struct rtc_time *tm)
 {
 	int rval;
 
-	rval = __ambrtc_dev_get_time(tm);
+	rval = __ambrtc_dev_get_time(dev, tm);
 	if (rval < 0)
 		dev_err(dev,"%s: fail %d.\n", __func__, rval);
 
@@ -215,7 +237,7 @@ static int ambrtc_settime(struct device *dev, struct rtc_time *tm)
 {
 	int rval;
 
-	rval = __ambrtc_dev_set_time(tm);
+	rval = __ambrtc_dev_set_time(dev, tm);
 	if (rval < 0)
 		dev_err(dev,"%s: fail %d.\n", __func__, rval);
 
@@ -226,7 +248,7 @@ static int ambrtc_getalarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	int rval;
 
-	rval = __ambrtc_dev_get_alarm(alrm);
+	rval = __ambrtc_dev_get_alarm(dev, alrm);
 	if (rval < 0)
 		dev_err(dev,"%s: fail %d.\n", __func__, rval);
 
@@ -237,7 +259,7 @@ static int ambrtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	int rval;
 
-	rval = __ambrtc_dev_set_alarm(alrm);
+	rval = __ambrtc_dev_set_alarm(dev, alrm);
 	if (rval < 0)
 		dev_err(dev,"%s: fail %d.\n", __func__, rval);
 

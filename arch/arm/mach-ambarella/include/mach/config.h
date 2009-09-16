@@ -279,6 +279,12 @@ struct ambarella_ir_controller {
 	u32					(*get_pll)(void);
 };
 
+struct ambarella_rtc_controller {
+	int					(*check_capacity)(u32);
+	u32					(*rtc_read)(u32);
+	void					(*rtc_write)(u32, u32);
+};
+
 struct ambarella_wdt_controller {
 	u32					(*get_pll)(void);
 };
