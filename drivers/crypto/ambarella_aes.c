@@ -27,7 +27,6 @@
 #include <linux/init.h>
 #include <linux/types.h>
 #include <linux/errno.h>
-#include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
 
@@ -43,45 +42,45 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 
 	switch (ctx->key_length) {
 	case 16:
-		amba_writew(CRYPT_A_128_0_REG,   ctx->key_enc[0]);
-		amba_writew(CRYPT_A_128_32_REG,  ctx->key_enc[1]);
-		amba_writew(CRYPT_A_128_64_REG,  ctx->key_enc[2]);
-		amba_writew(CRYPT_A_128_96_REG,  ctx->key_enc[3]);
+		amba_writel(CRYPT_A_128_96_REG,  ctx->key_enc[0]);
+		amba_writel(CRYPT_A_128_64_REG,  ctx->key_enc[1]);
+		amba_writel(CRYPT_A_128_32_REG,  ctx->key_enc[2]);
+		amba_writel(CRYPT_A_128_0_REG,   ctx->key_enc[3]);
 		break;
 	case 24:
-		amba_writew(CRYPT_A_192_0_REG,   ctx->key_enc[0]);
-		amba_writew(CRYPT_A_192_32_REG,  ctx->key_enc[1]);
-		amba_writew(CRYPT_A_192_64_REG,  ctx->key_enc[2]);
-		amba_writew(CRYPT_A_192_96_REG,  ctx->key_enc[3]);
-		amba_writew(CRYPT_A_192_128_REG, ctx->key_enc[4]);
-		amba_writew(CRYPT_A_192_160_REG, ctx->key_enc[5]);
+		amba_writel(CRYPT_A_192_160_REG, ctx->key_enc[0]);
+		amba_writel(CRYPT_A_192_128_REG, ctx->key_enc[1]);
+		amba_writel(CRYPT_A_192_96_REG,  ctx->key_enc[2]);
+		amba_writel(CRYPT_A_192_64_REG,  ctx->key_enc[3]);
+		amba_writel(CRYPT_A_192_32_REG,  ctx->key_enc[4]);
+		amba_writel(CRYPT_A_192_0_REG,   ctx->key_enc[5]);
 		break;
 	case 32:
-		amba_writew(CRYPT_A_256_0_REG,   ctx->key_enc[0]);
-		amba_writew(CRYPT_A_256_32_REG,  ctx->key_enc[1]);
-		amba_writew(CRYPT_A_256_64_REG,  ctx->key_enc[2]);
-		amba_writew(CRYPT_A_256_96_REG,  ctx->key_enc[3]);
-		amba_writew(CRYPT_A_256_128_REG, ctx->key_enc[4]);
-		amba_writew(CRYPT_A_256_160_REG, ctx->key_enc[5]);
-		amba_writew(CRYPT_A_256_192_REG, ctx->key_enc[6]);
-		amba_writew(CRYPT_A_256_224_REG, ctx->key_enc[7]);
+		amba_writel(CRYPT_A_256_224_REG, ctx->key_enc[0]);
+		amba_writel(CRYPT_A_256_192_REG, ctx->key_enc[1]);
+		amba_writel(CRYPT_A_256_160_REG, ctx->key_enc[2]);
+		amba_writel(CRYPT_A_256_128_REG, ctx->key_enc[3]);
+		amba_writel(CRYPT_A_256_96_REG,  ctx->key_enc[4]);
+		amba_writel(CRYPT_A_256_64_REG,  ctx->key_enc[5]);
+		amba_writel(CRYPT_A_256_32_REG,  ctx->key_enc[6]);
+		amba_writel(CRYPT_A_256_0_REG,   ctx->key_enc[7]);
 		break;
 	}
-	amba_writew(CRYPT_A_OPCODE_REG, AMBA_HW_ENCRYPT_CMD);
+	amba_writel(CRYPT_A_OPCODE_REG, AMBA_HW_ENCRYPT_CMD);
 
-	amba_writew(CRYPT_A_INPUT_0_REG, src[0]);
-	amba_writew(CRYPT_A_INPUT_32_REG, src[0]);
-	amba_writew(CRYPT_A_INPUT_64_REG, src[0]);
-	amba_writew(CRYPT_A_INPUT_96_REG, src[0]);
+	amba_writel(CRYPT_A_INPUT_96_REG, src[0]);
+	amba_writel(CRYPT_A_INPUT_64_REG, src[1]);
+	amba_writel(CRYPT_A_INPUT_32_REG, src[2]);
+	amba_writel(CRYPT_A_INPUT_0_REG,  src[3]);
 
 	do{
-		ready = amba_readw(CRYPT_A_OUTPUT_READY_REG);
+		ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
 	}while(ready != 1);
 
-	dst[0] = amba_readw(CRYPT_A_OUTPUT_0_REG);
-	dst[1] = amba_readw(CRYPT_A_OUTPUT_32_REG);
-	dst[2] = amba_readw(CRYPT_A_OUTPUT_64_REG);
-	dst[3] = amba_readw(CRYPT_A_OUTPUT_96_REG);
+	dst[0] = amba_readl(CRYPT_A_OUTPUT_96_REG);
+	dst[1] = amba_readl(CRYPT_A_OUTPUT_64_REG);
+	dst[2] = amba_readl(CRYPT_A_OUTPUT_32_REG);
+	dst[3] = amba_readl(CRYPT_A_OUTPUT_0_REG);
 
 }
 
@@ -94,46 +93,45 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 
 	switch (ctx->key_length) {
 	case 16:
-		amba_writew(CRYPT_A_128_0_REG,   ctx->key_dec[0]);
-		amba_writew(CRYPT_A_128_32_REG,  ctx->key_dec[1]);
-		amba_writew(CRYPT_A_128_64_REG,  ctx->key_dec[2]);
-		amba_writew(CRYPT_A_128_96_REG,  ctx->key_dec[3]);
+		amba_writel(CRYPT_A_128_96_REG,  ctx->key_enc[0]);
+		amba_writel(CRYPT_A_128_64_REG,  ctx->key_enc[1]);
+		amba_writel(CRYPT_A_128_32_REG,  ctx->key_enc[2]);
+		amba_writel(CRYPT_A_128_0_REG,   ctx->key_enc[3]);
 		break;
 	case 24:
-		amba_writew(CRYPT_A_192_0_REG,   ctx->key_dec[0]);
-		amba_writew(CRYPT_A_192_32_REG,  ctx->key_dec[1]);
-		amba_writew(CRYPT_A_192_64_REG,  ctx->key_dec[2]);
-		amba_writew(CRYPT_A_192_96_REG,  ctx->key_dec[3]);
-		amba_writew(CRYPT_A_192_128_REG, ctx->key_dec[4]);
-		amba_writew(CRYPT_A_192_160_REG, ctx->key_dec[5]);
+		amba_writel(CRYPT_A_192_160_REG, ctx->key_enc[0]);
+		amba_writel(CRYPT_A_192_128_REG, ctx->key_enc[1]);
+		amba_writel(CRYPT_A_192_96_REG,  ctx->key_enc[2]);
+		amba_writel(CRYPT_A_192_64_REG,  ctx->key_enc[3]);
+		amba_writel(CRYPT_A_192_32_REG,  ctx->key_enc[4]);
+		amba_writel(CRYPT_A_192_0_REG,   ctx->key_enc[5]);
 		break;
 	case 32:
-		amba_writew(CRYPT_A_256_0_REG,   ctx->key_dec[0]);
-		amba_writew(CRYPT_A_256_32_REG,  ctx->key_dec[1]);
-		amba_writew(CRYPT_A_256_64_REG,  ctx->key_dec[2]);
-		amba_writew(CRYPT_A_256_96_REG,  ctx->key_dec[3]);
-		amba_writew(CRYPT_A_256_128_REG, ctx->key_dec[4]);
-		amba_writew(CRYPT_A_256_160_REG, ctx->key_dec[5]);
-		amba_writew(CRYPT_A_256_192_REG, ctx->key_dec[6]);
-		amba_writew(CRYPT_A_256_224_REG, ctx->key_dec[7]);
+		amba_writel(CRYPT_A_256_224_REG, ctx->key_enc[0]);
+		amba_writel(CRYPT_A_256_192_REG, ctx->key_enc[1]);
+		amba_writel(CRYPT_A_256_160_REG, ctx->key_enc[2]);
+		amba_writel(CRYPT_A_256_128_REG, ctx->key_enc[3]);
+		amba_writel(CRYPT_A_256_96_REG,  ctx->key_enc[4]);
+		amba_writel(CRYPT_A_256_64_REG,  ctx->key_enc[5]);
+		amba_writel(CRYPT_A_256_32_REG,  ctx->key_enc[6]);
+		amba_writel(CRYPT_A_256_0_REG,   ctx->key_enc[7]);
 		break;
 	}
-	amba_writew(CRYPT_A_OPCODE_REG, AMBA_HW_DECRYPT_CMD);
+	amba_writel(CRYPT_A_OPCODE_REG, AMBA_HW_DECRYPT_CMD);
 
-	amba_writew(CRYPT_A_INPUT_0_REG, src[0]);
-	amba_writew(CRYPT_A_INPUT_32_REG, src[0]);
-	amba_writew(CRYPT_A_INPUT_64_REG, src[0]);
-	amba_writew(CRYPT_A_INPUT_96_REG, src[0]);
+	amba_writel(CRYPT_A_INPUT_96_REG, src[0]);
+	amba_writel(CRYPT_A_INPUT_64_REG, src[1]);
+	amba_writel(CRYPT_A_INPUT_32_REG, src[2]);
+	amba_writel(CRYPT_A_INPUT_0_REG,  src[3]);
 
 	do{
-		ready = amba_readw(CRYPT_A_OUTPUT_READY_REG);
+		ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
 	}while(ready != 1);
 
-	dst[0] = amba_readw(CRYPT_A_OUTPUT_0_REG);
-	dst[1] = amba_readw(CRYPT_A_OUTPUT_32_REG);
-	dst[2] = amba_readw(CRYPT_A_OUTPUT_64_REG);
-	dst[3] = amba_readw(CRYPT_A_OUTPUT_96_REG);
-
+	dst[0] = amba_readl(CRYPT_A_OUTPUT_96_REG);
+	dst[1] = amba_readl(CRYPT_A_OUTPUT_64_REG);
+	dst[2] = amba_readl(CRYPT_A_OUTPUT_32_REG);
+	dst[3] = amba_readl(CRYPT_A_OUTPUT_0_REG);
 }
 
 static struct crypto_alg aes_alg = {
