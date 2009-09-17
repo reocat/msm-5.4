@@ -126,13 +126,11 @@ static int ambarella_i2c_freq_transition(struct notifier_block *nb,
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
 		pr_info("%s[%d]: Pre Change\n", __func__, pdev->id);
-		disable_irq(pinfo->irq);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
 		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
 		ambarella_i2c_set_clk(pinfo);
-		enable_irq(pinfo->irq);
 		break;
 
 	default:
@@ -614,9 +612,13 @@ static int ambarella_i2c_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int				errorCode = 0;
+	struct ambarella_i2c_dev_info	*pinfo;
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
+
+	pinfo = platform_get_drvdata(pdev);
+	disable_irq(pinfo->irq);
 
 	return errorCode;
 }
@@ -624,8 +626,12 @@ static int ambarella_i2c_suspend(struct platform_device *pdev,
 static int ambarella_i2c_resume(struct platform_device *pdev)
 {
 	int				errorCode = 0;
+	struct ambarella_i2c_dev_info	*pinfo;
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+
+	pinfo = platform_get_drvdata(pdev);
+	enable_irq(pinfo->irq);
 
 	return errorCode;
 }

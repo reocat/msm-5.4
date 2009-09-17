@@ -1519,11 +1519,11 @@ static int ambsd_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		pr_debug("%s[%d]: Pre Change\n", __func__, pdev->id);
+		pr_info("%s[%d]: Pre Change\n", __func__, pdev->id);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
-		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
+		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			mmc = pinfo->pslotinfo[i]->mmc;
 			ambarella_sd_set_clk(mmc, pinfo->controller_ios.clock);
@@ -1973,6 +1973,10 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int					errorCode = 0;
+	struct ambarella_sd_controller_info	*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+	disable_irq(pinfo->irq);
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -1982,6 +1986,10 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 static int ambarella_sd_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
+	struct ambarella_sd_controller_info	*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+	enable_irq(pinfo->irq);
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

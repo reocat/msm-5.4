@@ -351,7 +351,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 	return timing_reg;
 }
 
-static int ambnand_freq_transition(struct notifier_block *nb,
+static int ambarella_nand_freq_transition(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
 	struct ambarella_nand_timing timing;
@@ -365,11 +365,11 @@ static int ambnand_freq_transition(struct notifier_block *nb,
 
 	switch (val) {
 	case AMB_CPUFREQ_PRECHANGE:
-		pr_debug("%s: Pre Change\n", __func__);
+		pr_info("%s: Pre Change\n", __func__);
 		break;
 
 	case AMB_CPUFREQ_POSTCHANGE:
-		pr_debug("%s: Post Change\n", __func__);
+		pr_info("%s: Post Change\n", __func__);
 		timing.timing0 = ambnand_calc_timing(nand_info, 0);
 		timing.timing1 = ambnand_calc_timing(nand_info, 1);
 		timing.timing2 = ambnand_calc_timing(nand_info, 2);
@@ -1675,7 +1675,8 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 	nand_info->origin_clk = get_ahb_bus_freq_hz() / 1000; /* in Khz */
 	nand_info->origin_timing = plat_nand->timing;
-	nand_info->nand_freq_transition.notifier_call = ambnand_freq_transition;
+	nand_info->nand_freq_transition.notifier_call =
+		ambarella_nand_freq_transition;
 	ambarella_register_freqnotifier(&nand_info->nand_freq_transition);
 
 	goto ambarella_nand_probe_exit;
@@ -1761,6 +1762,8 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 1;
+	disable_irq(nand_info->dma_irq);
+	disable_irq(nand_info->cmd_irq);
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -1775,6 +1778,8 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 0;
+	enable_irq(nand_info->dma_irq);
+	enable_irq(nand_info->cmd_irq);
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
