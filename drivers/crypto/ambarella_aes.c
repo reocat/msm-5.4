@@ -29,9 +29,28 @@
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
+#include <linux/interrupt.h>
+#include <linux/completion.h>
+#include <linux/platform_device.h>
 
 #include <mach/hardware.h>
 #include "ambarella_aes.h"
+
+static DECLARE_COMPLETION(g_crypto_irq_wait);
+
+static int config_polling_mode = 0;
+module_param(config_polling_mode, int, S_IRUGO);
+
+struct ambarella_crypto_dev_info {
+	unsigned char __iomem 		*regbase;
+
+	struct device				*dev;
+	struct resource				*mem;
+	unsigned int				aes_irq;
+	unsigned int				des_irq;
+
+	struct ambarella_platform_crypto_info *platform_info;
+};
 
 static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 {
@@ -73,9 +92,13 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	amba_writel(CRYPT_A_INPUT_32_REG, src[2]);
 	amba_writel(CRYPT_A_INPUT_0_REG,  src[3]);
 
-	do{
-		ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
-	}while(ready != 1);
+	if(likely(config_polling_mode == 0)) {
+		wait_for_completion_interruptible(&g_crypto_irq_wait);
+	}else{
+		do{
+			ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
+		}while(ready != 1);
+	}
 
 	dst[0] = amba_readl(CRYPT_A_OUTPUT_96_REG);
 	dst[1] = amba_readl(CRYPT_A_OUTPUT_64_REG);
@@ -124,9 +147,13 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	amba_writel(CRYPT_A_INPUT_32_REG, src[2]);
 	amba_writel(CRYPT_A_INPUT_0_REG,  src[3]);
 
-	do{
-		ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
-	}while(ready != 1);
+	if(likely(config_polling_mode == 0)) {
+		wait_for_completion_interruptible(&g_crypto_irq_wait);
+	}else{
+		do{
+			ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
+		}while(ready != 1);
+	}
 
 	dst[0] = amba_readl(CRYPT_A_OUTPUT_96_REG);
 	dst[1] = amba_readl(CRYPT_A_OUTPUT_64_REG);
@@ -233,32 +260,162 @@ static struct crypto_alg cbc_aes_alg = {
 	}
 };
 
-static int __init ambarella_init(void)
+static irqreturn_t ambarella_aes_irq(int irqno, void *dev_id)
 {
-	int ret;
+	complete(&g_crypto_irq_wait);
 
-	if ((ret = crypto_register_alg(&aes_alg)))
-		goto aes_err;
-	printk(KERN_NOTICE PFX "Using Ambarella hw engine for AES algorithm.\n");
+	return IRQ_HANDLED;
+}
+static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
+{
+	int	errCode;
+	int	aes_irq;
+	struct resource	*mem = 0;
+	struct resource	*ioarea;
+	struct ambarella_crypto_dev_info *pinfo = 0;
+	struct ambarella_platform_crypto_info *platform_info;
 
-out:
-	return ret;
-aes_err:
-	printk(KERN_ERR PFX "Ambarella engine AES initialization failed.\n");
-	goto out;
+	if(likely(config_polling_mode == 0)) {
+
+		platform_info = (struct ambarella_platform_crypto_info *)pdev->dev.platform_data;
+		if (platform_info == NULL) {
+			dev_err(&pdev->dev, "%s: Can't get platform_data!\n", __func__);
+			errCode = - EPERM;
+			goto crypto_errCode_na;
+		}
+
+		mem = platform_get_resource_byname(pdev, IORESOURCE_MEM, "registers");
+		if (mem == NULL) {
+			dev_err(&pdev->dev, "Get crypto mem resource failed!\n");
+			errCode = -ENXIO;
+			goto crypto_errCode_na;
+		}
+
+		aes_irq = platform_get_irq_byname(pdev,"aes-irq");
+		if (aes_irq == -ENXIO) {
+			dev_err(&pdev->dev, "Get crypto aes irq resource failed!\n");
+			errCode = -ENXIO;
+			goto crypto_errCode_na;
+		}
+
+		ioarea = request_mem_region(mem->start, (mem->end - mem->start) + 1, pdev->name);
+		if (ioarea == NULL) {
+			dev_err(&pdev->dev, "Request crypto ioarea failed!\n");
+			errCode = -EBUSY;
+			goto crypto_errCode_na;
+		}
+
+		pinfo = kzalloc(sizeof(struct ambarella_crypto_dev_info), GFP_KERNEL);
+		if (pinfo == NULL) {
+			dev_err(&pdev->dev, "Out of memory!\n");
+			errCode = -ENOMEM;
+			goto crypto_errCode_ioarea;
+		}
+
+		pinfo->regbase = (unsigned char __iomem *)mem->start;
+		pinfo->mem = mem;
+		pinfo->dev = &pdev->dev;
+		pinfo->aes_irq = aes_irq;
+		pinfo->platform_info = platform_info;
+
+		platform_set_drvdata(pdev, pinfo);
+
+		amba_writel(CRYPT_A_INT_EN_REG, 0x0001);
+
+		errCode = request_irq(pinfo->aes_irq,
+			ambarella_aes_irq, IRQF_TRIGGER_RISING, pdev->name, pinfo);
+		if (errCode) {
+			dev_err(&pdev->dev, "%s: Request IRQ failed!\n", __func__);
+			goto crypto_errCode_kzalloc;
+		}
+	}
+
+	if ((errCode = crypto_register_alg(&aes_alg))) {
+		printk(KERN_ERR PFX "hw crypto engine initialization failed.\n");
+		if(likely(config_polling_mode == 0)) {
+			goto crypto_errCode_free_irq;
+		} else {
+			goto crypto_errCode_na;
+		}
+	}
+
+	if(likely(config_polling_mode == 0))
+		printk(KERN_NOTICE PFX "Using hw engine for AES algorithm, interrupt mode.\n");
+	else
+		printk(KERN_NOTICE PFX "Using hw engine for AES algorithm, polling mode.\n");
+
+	goto crypto_errCode_na;
+
+crypto_errCode_free_irq:
+	free_irq(pinfo->aes_irq, pinfo);
+
+crypto_errCode_kzalloc:
+	platform_set_drvdata(pdev, NULL);
+	kfree(pinfo);
+
+crypto_errCode_ioarea:
+	release_mem_region(mem->start, (mem->end - mem->start) + 1);
+
+crypto_errCode_na:
+	return errCode;
 }
 
-static void __exit ambarella_fini(void)
+static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 {
+	int errCode = 0;
+	struct ambarella_crypto_dev_info *pinfo;
+
 	crypto_unregister_alg(&aes_alg);
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (pinfo && config_polling_mode == 0) {
+		free_irq(pinfo->aes_irq, pinfo);
+
+		platform_set_drvdata(pdev, NULL);
+
+		release_mem_region(pinfo->mem->start, (pinfo->mem->end - pinfo->mem->start) + 1);
+
+		kfree(pinfo);
+	}
+
+	dev_notice(&pdev->dev, "Remove Ambarella Media Processor CRYPTO.\n");
+
+	return errCode;
 }
 
-module_init(ambarella_init);
-module_exit(ambarella_fini);
+static const char ambarella_crypto_name[] = "ambarella-crypto";
 
-MODULE_DESCRIPTION("Ambarella HW AES algorithm support");
+static struct platform_driver ambarella_crypto_driver = {
+	.probe		= ambarella_crypto_probe,
+	.remove		= __devexit_p(ambarella_crypto_remove),
+#ifdef CONFIG_PM
+	.suspend	= NULL,
+	.resume		= NULL,
+#endif
+	.driver		= {
+		.name	= ambarella_crypto_name,
+		.owner	= THIS_MODULE,
+	},
+};
+
+static int __init ambarella_crypto_init(void)
+{
+	return platform_driver_register(&ambarella_crypto_driver);
+}
+
+static void __exit ambarella_crypto_exit(void)
+{
+	platform_driver_unregister(&ambarella_crypto_driver);
+}
+
+
+module_init(ambarella_crypto_init);
+module_exit(ambarella_crypto_exit);
+
+MODULE_DESCRIPTION("Ambarella HW AES/DES algorithm support");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Qiao Wang");
 
-MODULE_ALIAS("aes-all");
+MODULE_ALIAS("crypo-all");
 

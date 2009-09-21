@@ -67,6 +67,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_ir0,
 	&ambarella_ide0,
 	&ambarella_power_supply,
+#ifdef CONFIG_CRYPTO_DEV_AMBARELLA_AES_MODULE
+	&ambarella_crypto,
+#endif
 };
 
 /* ==========================================================================*/
