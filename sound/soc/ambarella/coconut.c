@@ -1,5 +1,5 @@
 /*
- * sound/soc/a5ssdk.c
+ * sound/soc/coconut.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
@@ -43,12 +43,12 @@
 #define AK4642_RESET_PIN	12
 #define AK4642_RESET_DELAY	1
 
-static int a5ssdk_board_startup(struct snd_pcm_substream *substream)
+static int coconut_board_startup(struct snd_pcm_substream *substream)
 {
 	return 0;
 }
 
-static int a5ssdk_board_hw_params(struct snd_pcm_substream *substream,
+static int coconut_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -146,21 +146,21 @@ hw_params_exit:
 }
 
 
-static struct snd_soc_ops a5ssdk_board_ops = {
-	.startup = a5ssdk_board_startup,
-	.hw_params = a5ssdk_board_hw_params,
+static struct snd_soc_ops coconut_board_ops = {
+	.startup = coconut_board_startup,
+	.hw_params = coconut_board_hw_params,
 };
 
-/* a5ssdk machine dapm widgets */
-static const struct snd_soc_dapm_widget a5ssdk_dapm_widgets[] = {
+/* coconut machine dapm widgets */
+static const struct snd_soc_dapm_widget coconut_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
 	SND_SOC_DAPM_HP("HP Jack", NULL),
 };
 
-/* a5ssdk machine audio map (connections to ak4642 pins) */
-static const struct snd_soc_dapm_route a5ssdk_audio_map[] = {
+/* coconut machine audio map (connections to ak4642 pins) */
+static const struct snd_soc_dapm_route coconut_audio_map[] = {
 	/* Line In is connected to LLIN1, RLIN1 */
 	{"LIN1", NULL, "Mic Jack"},
 	{"RIN1", NULL, "Mic Jack"},
@@ -175,7 +175,7 @@ static const struct snd_soc_dapm_route a5ssdk_audio_map[] = {
 };
 
 
-static int a5ssdk_ak4642_init(struct snd_soc_codec *codec)
+static int coconut_ak4642_init(struct snd_soc_codec *codec)
 {
 	int errorCode = 0;
 
@@ -184,18 +184,18 @@ static int a5ssdk_ak4642_init(struct snd_soc_codec *codec)
 	snd_soc_dapm_nc_pin(codec, "SPN");
 	snd_soc_dapm_nc_pin(codec, "MIN");
 
-	/* Add a5ssdk specific widgets */
+	/* Add coconut specific widgets */
 	errorCode = snd_soc_dapm_new_controls(codec,
-		a5ssdk_dapm_widgets,
-		ARRAY_SIZE(a5ssdk_dapm_widgets));
+		coconut_dapm_widgets,
+		ARRAY_SIZE(coconut_dapm_widgets));
 	if (errorCode) {
 		goto init_exit;
 	}
 
-	/* Set up a5ssdk specific audio path a5ssdk_audio_map */
+	/* Set up coconut specific audio path coconut_audio_map */
 	errorCode = snd_soc_dapm_add_routes(codec,
-		a5ssdk_audio_map,
-		ARRAY_SIZE(a5ssdk_audio_map));
+		coconut_audio_map,
+		ARRAY_SIZE(coconut_audio_map));
 	if (errorCode) {
 		goto init_exit;
 	}
@@ -206,73 +206,73 @@ init_exit:
 	return errorCode;
 }
 
-/* a5ssdk digital audio interface glue - connects codec <--> A2S */
-static struct snd_soc_dai_link a5ssdk_dai_link = {
+/* coconut digital audio interface glue - connects codec <--> A2S */
+static struct snd_soc_dai_link coconut_dai_link = {
 	.name = "AK4642-DAI-LINK",
 	.stream_name = "AK4642-STREAM",
 	.cpu_dai = &ambarella_i2s_dai,
 	.codec_dai = &ak4642_dai,
-	.init = a5ssdk_ak4642_init,
-	.ops = &a5ssdk_board_ops,
+	.init = coconut_ak4642_init,
+	.ops = &coconut_board_ops,
 };
 
-/* a5ssdk audio machine driver */
-static struct snd_soc_card snd_soc_card_a5ssdk = {
-	.name = "A5SSDK",
+/* coconut audio machine driver */
+static struct snd_soc_card snd_soc_card_coconut = {
+	.name = "COCONUT",
 	.platform = &ambarella_soc_platform,
-	.dai_link = &a5ssdk_dai_link,
+	.dai_link = &coconut_dai_link,
 	.num_links = 1,
 };
 
-/* a5ssdk audio private data */
-static struct ak4642_setup_data a5ssdk_ak4642_setup = {
+/* coconut audio private data */
+static struct ak4642_setup_data coconut_ak4642_setup = {
 	.i2c_bus	= 0,
 	.i2c_address	= 0x12,
 	.rst_pin		= AK4642_RESET_PIN,
 	.rst_delay	= AK4642_RESET_DELAY,
 };
 
-/* a5ssdk audio subsystem */
-static struct snd_soc_device a5ssdk_snd_devdata = {
-	.card = &snd_soc_card_a5ssdk,
+/* coconut audio subsystem */
+static struct snd_soc_device coconut_snd_devdata = {
+	.card = &snd_soc_card_coconut,
 	.codec_dev = &soc_codec_dev_ak4642,
-	.codec_data = &a5ssdk_ak4642_setup,
+	.codec_data = &coconut_ak4642_setup,
 };
 
-static struct platform_device *a5ssdk_snd_device;
+static struct platform_device *coconut_snd_device;
 
-static int __init a5ssdk_board_init(void)
+static int __init coconut_board_init(void)
 {
 	int errorCode = 0;
 
-	a5ssdk_snd_device = platform_device_alloc("soc-audio", -1);
-	if (!a5ssdk_snd_device)
+	coconut_snd_device = platform_device_alloc("soc-audio", -1);
+	if (!coconut_snd_device)
 		return -ENOMEM;
 
-	platform_set_drvdata(a5ssdk_snd_device, &a5ssdk_snd_devdata);
-	a5ssdk_snd_devdata.dev = &a5ssdk_snd_device->dev;
+	platform_set_drvdata(coconut_snd_device, &coconut_snd_devdata);
+	coconut_snd_devdata.dev = &coconut_snd_device->dev;
 
-	errorCode = platform_device_add(a5ssdk_snd_device);
+	errorCode = platform_device_add(coconut_snd_device);
 	if (errorCode) {
-		goto a5ssdk_board_init_exit;
+		goto coconut_board_init_exit;
 	}
 
 	return 0;
 
-a5ssdk_board_init_exit:
-	platform_device_put(a5ssdk_snd_device);
+coconut_board_init_exit:
+	platform_device_put(coconut_snd_device);
 	return errorCode;
 }
 
-static void __exit a5ssdk_board_exit(void)
+static void __exit coconut_board_exit(void)
 {
-	platform_device_unregister(a5ssdk_snd_device);
+	platform_device_unregister(coconut_snd_device);
 }
 
-module_init(a5ssdk_board_init);
-module_exit(a5ssdk_board_exit);
+module_init(coconut_board_init);
+module_exit(coconut_board_exit);
 
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
-MODULE_DESCRIPTION("Amabrella A5SSDK Board with AK4642 Codec for ALSA");
+MODULE_DESCRIPTION("Amabrella Coconut Board with AK4642 Codec for ALSA");
 MODULE_LICENSE("GPL");
 
