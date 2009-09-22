@@ -288,6 +288,9 @@ struct ambarella_rtc_controller {
 struct ambarella_wdt_controller {
 	u32					(*get_pll)(void);
 };
+struct ambarella_platform_crypto_info{
+	u32	reserved;
+};
 #endif /* __ASSEMBLER__ */
 
 #define	AMBA_DEBUG_NULL			(0)

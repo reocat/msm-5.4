@@ -1811,3 +1811,44 @@ void __init ambarella_register_i2c_device(void)
 #endif
 }
 
+#ifdef CONFIG_CRYPTO_DEV_AMBARELLA_AES_MODULE
+/* ==========================================================================*/
+
+static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
+	.reserved = 0,
+};
+
+static struct resource ambarella_crypto_resources[] = {
+	[0] = {
+		.start	= CRYPT_UNIT_BASE,
+		.end	= CRYPT_UNIT_BASE + 0x0FFF,
+		.name	= "registers",
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= AES_IRQ,
+		.end	= AES_IRQ,
+		.name	= "aes-irq",
+		.flags	= IORESOURCE_IRQ,
+	},
+	[2] = {
+		.start	= DES_IRQ,
+		.end	= DES_IRQ,
+		.name	= "des-irq",
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device ambarella_crypto = {
+	.name		= "ambarella-crypto",
+	.id		= -1,
+	.resource	= ambarella_crypto_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_crypto_resources),
+	.dev		= {
+		.platform_data		= &ambarella_platform_crypto,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+#endif
+
