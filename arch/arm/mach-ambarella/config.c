@@ -1811,7 +1811,7 @@ void __init ambarella_register_i2c_device(void)
 #endif
 }
 
-#ifdef CONFIG_CRYPTO_DEV_AMBARELLA_AES_MODULE
+#ifdef CONFIG_ARCH_AMBARELLA_A5S
 /* ==========================================================================*/
 
 static struct ambarella_platform_crypto_info ambarella_platform_crypto = {

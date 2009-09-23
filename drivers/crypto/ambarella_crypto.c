@@ -1,5 +1,5 @@
 /*
- * ambarella_aes.c
+ * ambarella_crypto.c
  *
  * History:
  *	2009/09/07 - [Qiao Wang]
@@ -23,6 +23,7 @@
  */
 #include <crypto/algapi.h>
 #include <crypto/aes.h>
+#include <crypto/des.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/types.h>
@@ -34,17 +35,22 @@
 #include <linux/platform_device.h>
 
 #include <mach/hardware.h>
-#include "ambarella_aes.h"
+#include "ambarella_crypto.h"
 
-static DECLARE_COMPLETION(g_crypto_irq_wait);
+static DECLARE_COMPLETION(g_aes_irq_wait);
+static DECLARE_COMPLETION(g_des_irq_wait);
 
 static int config_polling_mode = 0;
 module_param(config_polling_mode, int, S_IRUGO);
 
+struct des_ctx {
+	u32 expkey[DES_EXPKEY_WORDS];
+};
+
 struct ambarella_crypto_dev_info {
 	unsigned char __iomem 		*regbase;
 
-	struct device				*dev;
+	struct platform_device		*pdev;
 	struct resource				*mem;
 	unsigned int				aes_irq;
 	unsigned int				des_irq;
@@ -93,7 +99,7 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	amba_writel(CRYPT_A_INPUT_0_REG,  src[3]);
 
 	if(likely(config_polling_mode == 0)) {
-		wait_for_completion_interruptible(&g_crypto_irq_wait);
+		wait_for_completion_interruptible(&g_aes_irq_wait);
 	}else{
 		do{
 			ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
@@ -148,7 +154,7 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	amba_writel(CRYPT_A_INPUT_0_REG,  src[3]);
 
 	if(likely(config_polling_mode == 0)) {
-		wait_for_completion_interruptible(&g_crypto_irq_wait);
+		wait_for_completion_interruptible(&g_aes_irq_wait);
 	}else{
 		do{
 			ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
@@ -178,6 +184,103 @@ static struct crypto_alg aes_alg = {
 			.cia_setkey	   		= 	crypto_aes_set_key,
 			.cia_encrypt	 	=	aes_encrypt,
 			.cia_decrypt	  	=	aes_decrypt,
+		}
+	}
+};
+
+static int des_setkey(struct crypto_tfm *tfm, const u8 *key,
+		      unsigned int keylen)
+{
+	struct des_ctx *dctx = crypto_tfm_ctx(tfm);
+	u32 *flags = &tfm->crt_flags;
+	u32 tmp[DES_EXPKEY_WORDS];
+	int ret;
+
+	/* Expand to tmp */
+	ret = des_ekey(tmp, key);
+
+	if (unlikely(ret == 0) && (*flags & CRYPTO_TFM_REQ_WEAK_KEY)) {
+		*flags |= CRYPTO_TFM_RES_WEAK_KEY;
+		return -EINVAL;
+	}
+
+	/* Copy to output */
+	memcpy(dctx->expkey, key, keylen);
+
+	return 0;
+}
+
+static void des_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+{
+	struct des_ctx *ctx = crypto_tfm_ctx(tfm);
+	const __le32 *src = (const __le32 *)in;
+	__le32 *dst = (__le32 *)out;
+	u32 ready;
+
+	amba_writel(CRYPT_D_HI_REG,  ctx->expkey[0]);
+	amba_writel(CRYPT_D_LO_REG,  ctx->expkey[1]);
+
+	amba_writel(CRYPT_D_OPCODE_REG, AMBA_HW_ENCRYPT_CMD);
+
+	amba_writel(CRYPT_D_INPUT_HI_REG, src[0]);
+	amba_writel(CRYPT_D_INPUT_LO_REG, src[1]);
+
+	if(likely(config_polling_mode == 0)) {
+		wait_for_completion_interruptible(&g_des_irq_wait);
+	}else{
+		do{
+			ready = amba_readl(CRYPT_D_OUTPUT_READY_REG);
+		}while(ready != 1);
+	}
+
+	dst[0] = amba_readl(CRYPT_D_OUTPUT_HI_REG);
+	dst[1] = amba_readl(CRYPT_D_OUTPUT_LO_REG);
+}
+
+static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+{
+	struct des_ctx *ctx = crypto_tfm_ctx(tfm);
+	const __le32 *src = (const __le32 *)in;
+	__le32 *dst = (__le32 *)out;
+	u32 ready;
+
+	amba_writel(CRYPT_D_HI_REG,  ctx->expkey[0]);
+	amba_writel(CRYPT_D_LO_REG,  ctx->expkey[1]);
+
+	amba_writel(CRYPT_D_OPCODE_REG, AMBA_HW_DECRYPT_CMD);
+
+	amba_writel(CRYPT_D_INPUT_HI_REG, src[0]);
+	amba_writel(CRYPT_D_INPUT_LO_REG, src[1]);
+
+	if(likely(config_polling_mode == 0)) {
+		wait_for_completion_interruptible(&g_des_irq_wait);
+	}else{
+		do{
+			ready = amba_readl(CRYPT_D_OUTPUT_READY_REG);
+		}while(ready != 1);
+	}
+
+	dst[0] = amba_readl(CRYPT_D_OUTPUT_HI_REG);
+	dst[1] = amba_readl(CRYPT_D_OUTPUT_LO_REG);
+}
+
+
+static struct crypto_alg des_alg = {
+	.cra_name		=	"des",
+	.cra_driver_name	=	"des-ambarella",
+	.cra_priority		=	AMBARELLA_CRA_PRIORITY,
+	.cra_flags		=	CRYPTO_ALG_TYPE_CIPHER,
+	.cra_blocksize		=	DES_BLOCK_SIZE,
+	.cra_ctxsize		=	sizeof(struct des_ctx),
+	.cra_module		=	THIS_MODULE,
+	.cra_list		=	LIST_HEAD_INIT(des_alg.cra_list),
+	.cra_u			=	{
+		.cipher = {
+			.cia_min_keysize	=	DES_KEY_SIZE,
+			.cia_max_keysize	=	DES_KEY_SIZE,
+			.cia_setkey		=	des_setkey,
+			.cia_encrypt		=	des_encrypt,
+			.cia_decrypt		=	des_decrypt
 		}
 	}
 };
@@ -262,14 +365,20 @@ static struct crypto_alg cbc_aes_alg = {
 
 static irqreturn_t ambarella_aes_irq(int irqno, void *dev_id)
 {
-	complete(&g_crypto_irq_wait);
+	complete(&g_aes_irq_wait);
+
+	return IRQ_HANDLED;
+}
+static irqreturn_t ambarella_des_irq(int irqno, void *dev_id)
+{
+	complete(&g_des_irq_wait);
 
 	return IRQ_HANDLED;
 }
 static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 {
 	int	errCode;
-	int	aes_irq;
+	int	aes_irq, des_irq;
 	struct resource	*mem = 0;
 	struct resource	*ioarea;
 	struct ambarella_crypto_dev_info *pinfo = 0;
@@ -298,6 +407,13 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 			goto crypto_errCode_na;
 		}
 
+		des_irq = platform_get_irq_byname(pdev,"des-irq");
+		if (des_irq == -ENXIO) {
+			dev_err(&pdev->dev, "Get crypto des irq resource failed!\n");
+			errCode = -ENXIO;
+			goto crypto_errCode_na;
+		}
+
 		ioarea = request_mem_region(mem->start, (mem->end - mem->start) + 1, pdev->name);
 		if (ioarea == NULL) {
 			dev_err(&pdev->dev, "Request crypto ioarea failed!\n");
@@ -314,39 +430,65 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 
 		pinfo->regbase = (unsigned char __iomem *)mem->start;
 		pinfo->mem = mem;
-		pinfo->dev = &pdev->dev;
+		pinfo->pdev = pdev;
 		pinfo->aes_irq = aes_irq;
+		pinfo->des_irq = des_irq;
 		pinfo->platform_info = platform_info;
 
 		platform_set_drvdata(pdev, pinfo);
 
 		amba_writel(CRYPT_A_INT_EN_REG, 0x0001);
+		amba_writel(CRYPT_D_INT_EN_REG, 0x0001);
 
 		errCode = request_irq(pinfo->aes_irq,
-			ambarella_aes_irq, IRQF_TRIGGER_RISING, pdev->name, pinfo);
+			ambarella_aes_irq, IRQF_TRIGGER_RISING, "ambarella-aes", pinfo);
 		if (errCode) {
-			dev_err(&pdev->dev, "%s: Request IRQ failed!\n", __func__);
+			dev_err(&pdev->dev, "%s: Request aes IRQ failed!\n", __func__);
 			goto crypto_errCode_kzalloc;
+		}
+
+		errCode = request_irq(pinfo->des_irq,
+			ambarella_des_irq, IRQF_TRIGGER_RISING, "ambarella-des", pinfo);
+		if (errCode) {
+			dev_err(&pdev->dev, "%s: Request des IRQ failed!\n", __func__);
+			goto crypto_errCode_free_aes_irq;
 		}
 	}
 
 	if ((errCode = crypto_register_alg(&aes_alg))) {
-		printk(KERN_ERR PFX "hw crypto engine initialization failed.\n");
+		dev_err(&pdev->dev, "reigster aes_alg  failed.\n");
 		if(likely(config_polling_mode == 0)) {
-			goto crypto_errCode_free_irq;
+			goto crypto_errCode_free_des_irq;
+		} else {
+			goto crypto_errCode_na;
+		}
+	}
+
+	if ((errCode = crypto_register_alg(&des_alg))) {
+		dev_err(&pdev->dev, "reigster des_alg failed.\n");
+
+		crypto_unregister_alg(&aes_alg);
+
+		if(likely(config_polling_mode == 0)) {
+			goto crypto_errCode_free_des_irq;
 		} else {
 			goto crypto_errCode_na;
 		}
 	}
 
 	if(likely(config_polling_mode == 0))
-		printk(KERN_NOTICE PFX "Using hw engine for AES algorithm, interrupt mode.\n");
+		dev_notice(&pdev->dev,
+			"Ambarella Media Processor crypto eningine probed(interrupt mode)\n");
 	else
-		printk(KERN_NOTICE PFX "Using hw engine for AES algorithm, polling mode.\n");
+		dev_notice(&pdev->dev,
+			"Ambarella Media Processor crypto eningine probed(polling mode)\n");
 
 	goto crypto_errCode_na;
 
-crypto_errCode_free_irq:
+crypto_errCode_free_des_irq:
+	free_irq(pinfo->des_irq, pinfo);
+
+crypto_errCode_free_aes_irq:
 	free_irq(pinfo->aes_irq, pinfo);
 
 crypto_errCode_kzalloc:
@@ -366,11 +508,13 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 	struct ambarella_crypto_dev_info *pinfo;
 
 	crypto_unregister_alg(&aes_alg);
+	crypto_unregister_alg(&des_alg);
 
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo && config_polling_mode == 0) {
 		free_irq(pinfo->aes_irq, pinfo);
+		free_irq(pinfo->des_irq, pinfo);
 
 		platform_set_drvdata(pdev, NULL);
 
@@ -387,8 +531,7 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 static const char ambarella_crypto_name[] = "ambarella-crypto";
 
 static struct platform_driver ambarella_crypto_driver = {
-	.probe		= ambarella_crypto_probe,
-	.remove		= __devexit_p(ambarella_crypto_remove),
+	.remove		= __exit_p(ambarella_crypto_remove),
 #ifdef CONFIG_PM
 	.suspend	= NULL,
 	.resume		= NULL,
@@ -401,7 +544,7 @@ static struct platform_driver ambarella_crypto_driver = {
 
 static int __init ambarella_crypto_init(void)
 {
-	return platform_driver_register(&ambarella_crypto_driver);
+	return platform_driver_probe(&ambarella_crypto_driver, ambarella_crypto_probe);
 }
 
 static void __exit ambarella_crypto_exit(void)

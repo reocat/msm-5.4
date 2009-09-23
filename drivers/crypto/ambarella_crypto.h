@@ -1,5 +1,5 @@
 /*
-* ambarella_aes.h
+* ambarella_crypto.h
 *
 * History:
 *      2009/09/07 - [Qiao Wang]
