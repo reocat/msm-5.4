@@ -64,7 +64,7 @@ extern struct platform_device ambarella_power_supply;
 extern struct ambarella_gpio_power_info system_power_gpio_info;
 extern struct ambarella_gpio_power_info sound_input_gpio_info;
 extern struct ambarella_gpio_power_info sound_output_gpio_info;
-#ifdef CONFIG_CRYPTO_DEV_AMBARELLA_AES_MODULE
+#ifdef CONFIG_ARCH_AMBARELLA_A5S
 extern struct platform_device ambarella_crypto;
 #endif
 extern int ambarella_create_proc_dir(void);
