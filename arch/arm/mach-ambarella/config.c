@@ -946,7 +946,7 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.power_level	= GPIO_LOW,
 			.power_delay	= 1,
 		},
-		.bounce_buffer	= 1,
+		.bounce_buffer	= 0,
 #if (SD_HAS_INTERNAL_MUXER == 1)
 		.gpio_cd	= {
 			.irq_gpio	= SD1_CD,

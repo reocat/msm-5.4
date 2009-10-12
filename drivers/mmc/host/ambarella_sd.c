@@ -1926,6 +1926,11 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				pslotinfo->slot_info.ext_power.power_gpio);
 			}
 
+			if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+				gpio_free(
+				pslotinfo->slot_info.gpio_wp.input_gpio);
+			}
+
 			if (pslotinfo->buf_paddress) {
 				dma_unmap_single(pinfo->dev,
 					pslotinfo->buf_paddress,
