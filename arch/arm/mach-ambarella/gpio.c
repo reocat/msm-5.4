@@ -46,16 +46,16 @@ static inline int ambarella_gpio_inline_config(u32 base, u32 offset, int func)
 	int					errorCode = 0;
 
 	if (func == GPIO_FUNC_HW) {
-		amba_setbits(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
-		amba_clrbits(base + GPIO_MASK_OFFSET, (0x1 << offset));
+		amba_setbitsl(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
+		amba_clrbitsl(base + GPIO_MASK_OFFSET, (0x1 << offset));
 	} else if (func == GPIO_FUNC_SW_INPUT) {
-		amba_clrbits(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
-		amba_setbits(base + GPIO_MASK_OFFSET, (0x1 << offset));
-		amba_clrbits(base + GPIO_DIR_OFFSET, (0x1 << offset));
+		amba_clrbitsl(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
+		amba_setbitsl(base + GPIO_MASK_OFFSET, (0x1 << offset));
+		amba_clrbitsl(base + GPIO_DIR_OFFSET, (0x1 << offset));
 	} else if (func == GPIO_FUNC_SW_OUTPUT) {
-		amba_clrbits(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
-		amba_setbits(base + GPIO_MASK_OFFSET, (0x1 << offset));
-		amba_setbits(base + GPIO_DIR_OFFSET, (0x1 << offset));
+		amba_clrbitsl(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
+		amba_setbitsl(base + GPIO_MASK_OFFSET, (0x1 << offset));
+		amba_setbitsl(base + GPIO_DIR_OFFSET, (0x1 << offset));
 	} else {
 		pr_err("%s: invalid GPIO func %d for 0x%x:0x%x.\n",
 			__func__, func, base, offset);
@@ -68,9 +68,9 @@ static inline int ambarella_gpio_inline_config(u32 base, u32 offset, int func)
 static inline void ambarella_gpio_inline_set(u32 base, u32 offset, int value)
 {
 	if (value == GPIO_LOW) {
-		amba_clrbits(base + GPIO_DATA_OFFSET, (0x1 << offset));
+		amba_clrbitsl(base + GPIO_DATA_OFFSET, (0x1 << offset));
 	} else {
-		amba_setbits(base + GPIO_DATA_OFFSET, (0x1 << offset));
+		amba_setbitsl(base + GPIO_DATA_OFFSET, (0x1 << offset));
 	}
 }
 

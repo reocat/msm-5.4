@@ -416,7 +416,7 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 	val = amba_readl(nand_info->regbase + FIO_STA_OFFSET);
 
 	if (val & FIO_STA_FI) {
-		amba_clrbits(nand_info->regbase + FIO_CTR_OFFSET,
+		amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET,
 			(FIO_CTR_RS | FIO_CTR_SE | FIO_CTR_CO));
 
 		amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0x0);

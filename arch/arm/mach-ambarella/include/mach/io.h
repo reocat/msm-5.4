@@ -108,9 +108,18 @@ static inline void amba_writel_printk(
 #define amba_outw(p,d)		amba_writew(io_p2v(p),d)
 #define amba_outl(p,d)		amba_writel(io_p2v(p),d)
 
-#define amba_setbits(v, mask)	amba_writel((v),(amba_readl(v) | (mask)))
-#define amba_clrbits(v, mask)	amba_writel((v),(amba_readl(v) & ~(mask)))
-#define amba_tstbits(v, mask)	(amba_readl(v) & (mask))
+#define amba_setbitsb(v, mask)	amba_writeb((v),(amba_readb(v) | (mask)))
+#define amba_setbitsw(v, mask)	amba_writew((v),(amba_readw(v) | (mask)))
+#define amba_setbitsl(v, mask)	amba_writel((v),(amba_readl(v) | (mask)))
+
+#define amba_clrbitsb(v, mask)	amba_writeb((v),(amba_readb(v) & ~(mask)))
+#define amba_clrbitsw(v, mask)	amba_writew((v),(amba_readw(v) & ~(mask)))
+#define amba_clrbitsl(v, mask)	amba_writel((v),(amba_readl(v) & ~(mask)))
+
+#define amba_tstbitsb(v, mask)	(amba_readb(v) & (mask))
+#define amba_tstbitsb(v, mask)	(amba_readb(v) & (mask))
+#define amba_tstbitsl(v, mask)	(amba_readl(v) & (mask))
+
 static inline void amba_change_bit(
 	const volatile void __iomem *vaddress,
 	unsigned int bit)

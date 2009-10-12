@@ -1057,13 +1057,14 @@
 #define NAND_NUM_PAGES(x)		(x)
 #define NAND_STAT_CMD(x)		((x) << 8)
 
+#define SELECT_FIO_FREE	(-1)
 #define SELECT_FIO_FL	0
 #define SELECT_FIO_XD	1
 #define SELECT_FIO_CF	2
 #define SELECT_FIO_SD	3
 #define SELECT_FIO_SDIO	4
 #define SELECT_FIO_SD2	5
-#define SELECT_FIO_HOLD	255
+#define SELECT_FIO_HOLD	254
 
 /**
  * Define for FIO error codes

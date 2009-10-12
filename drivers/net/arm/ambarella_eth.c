@@ -144,7 +144,7 @@ static inline int ambhw_dma_reset(struct ambeth_info *lp)
 	int					errorCode = 0;
 	u32					counter = 0;
 
-	amba_setbits(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
+	amba_setbitsl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		ETH_DMA_BUS_MODE_SWR);
 	do {
 		if (counter++ > 10) {
@@ -152,7 +152,7 @@ static inline int ambhw_dma_reset(struct ambeth_info *lp)
 			break;
 		}
 		msleep(1);
-	} while (amba_tstbits(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
+	} while (amba_tstbitsl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		ETH_DMA_BUS_MODE_SWR));
 
 	return errorCode;
@@ -189,7 +189,7 @@ static inline void ambhw_dma_stop_rxtx(struct ambeth_info *lp)
 	/* is Transmit or Receive is still On */
 	/* TS bit 22:20, RS bit 19:17, so TS | RS is 22:17 */
 	if ((irq_status >> 17) & 0x3F) {
-		amba_clrbits(lp->regbase + ETH_DMA_OPMODE_OFFSET,
+		amba_clrbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 			(ETH_DMA_OPMODE_ST | ETH_DMA_OPMODE_SR));
 		barrier();
 		/* wait until in-flight frame completes.
@@ -225,7 +225,7 @@ static inline void ambhw_set_dma_desc(struct ambeth_info *lp)
 
 static inline phy_interface_t ambhw_get_interface(struct ambeth_info *lp)
 {
-	return amba_tstbits(lp->regbase + ETH_MAC_CFG_OFFSET,
+	return amba_tstbitsl(lp->regbase + ETH_MAC_CFG_OFFSET,
 		ETH_MAC_CFG_PS) ? PHY_INTERFACE_MODE_MII :
 		PHY_INTERFACE_MODE_GMII;
 }
@@ -356,7 +356,7 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 	lp = (struct ambeth_info *)bus->priv;
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
-		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
@@ -374,7 +374,7 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 		(val | ETH_MAC_GMII_ADDR_GB));
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
-		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
@@ -412,7 +412,7 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 			__func__, mii_id, regnum, value);
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
-		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
@@ -433,7 +433,7 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 		(val | ETH_MAC_GMII_ADDR_GB));
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
-		if (!amba_tstbits(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
+		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);

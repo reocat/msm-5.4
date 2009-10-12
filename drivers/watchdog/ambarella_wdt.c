@@ -78,7 +78,7 @@ static void ambarella_wdt_start(struct ambarella_wdt_info *pinfo, u32 ctl_reg)
 		ctl_reg = pinfo->init_mode | WDOG_CTR_EN;
 
 	amba_writel(pinfo->regbase + WDOG_CONTROL_OFFSET, ctl_reg);
-	while(amba_tstbits(pinfo->regbase + WDOG_CONTROL_OFFSET,
+	while(amba_tstbitsl(pinfo->regbase + WDOG_CONTROL_OFFSET,
 		ctl_reg) != ctl_reg);
 }
 

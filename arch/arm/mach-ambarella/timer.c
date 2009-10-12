@@ -45,12 +45,12 @@ static struct notifier_block tm_freq_transition;
 
 static inline void ambarella_timer1_disable(void)
 {
-	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_EN1);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 }
 
 static inline void ambarella_timer1_enable(void)
 {
-	amba_setbits(TIMER_CTR_REG, TIMER_CTR_EN1);
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 }
 
 static inline void ambarella_timer1_set_periodic(void)
@@ -62,8 +62,8 @@ static inline void ambarella_timer1_set_periodic(void)
 	amba_writel(TIMER1_RELOAD_REG, cnt);
 	amba_writel(TIMER1_MATCH1_REG, 0x0);
 	amba_writel(TIMER1_MATCH2_REG, 0x0);
-	amba_setbits(TIMER_CTR_REG, TIMER_CTR_OF1);
-	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_CSL1);
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
 }
 
 static inline void ambarella_timer1_set_oneshot(u32 cnt)
@@ -74,8 +74,8 @@ static inline void ambarella_timer1_set_oneshot(u32 cnt)
 	amba_writel(TIMER1_RELOAD_REG, 0x0);
 	amba_writel(TIMER1_MATCH1_REG, 0x0);
 	amba_writel(TIMER1_MATCH2_REG, 0x0);
-	amba_setbits(TIMER_CTR_REG, TIMER_CTR_OF1);
-	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_CSL1);
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
 }
 
 static void ambarella_timer1_set_mode(enum clock_event_mode mode,
@@ -139,14 +139,14 @@ static struct irqaction ambarella_timer1_irq = {
 
 static inline void ambarella_timer2_init_for_clocksource(void)
 {
-	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_EN2);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN2);
 	amba_writel(TIMER2_STATUS_REG, 0xffffffff);
 	amba_writel(TIMER2_RELOAD_REG, 0xffffffff);
 	amba_writel(TIMER2_MATCH1_REG, 0x0);
 	amba_writel(TIMER2_MATCH2_REG, 0x0);
-	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_OF2);
-	amba_clrbits(TIMER_CTR_REG, TIMER_CTR_CSL2);
-	amba_setbits(TIMER_CTR_REG, TIMER_CTR_EN2);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_OF2);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL2);
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN2);
 }
 
 static cycle_t ambarella_timer2_read(void)

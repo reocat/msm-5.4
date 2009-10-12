@@ -80,29 +80,29 @@ static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_in = {
 
 static inline void dai_tx_enable(void)
 {
-	amba_setbits(I2S_INIT_REG, DAI_TX_EN);
+	amba_setbitsl(I2S_INIT_REG, DAI_TX_EN);
 }
 
 static inline void dai_rx_enable(void)
 {
-	amba_setbits(I2S_INIT_REG, DAI_RX_EN);
+	amba_setbitsl(I2S_INIT_REG, DAI_RX_EN);
 }
 
 static inline void dai_tx_disable(void)
 {
-	amba_clrbits(I2S_INIT_REG, DAI_TX_EN);
+	amba_clrbitsl(I2S_INIT_REG, DAI_TX_EN);
 }
 
 static inline void dai_rx_disable(void)
 {
-	amba_clrbits(I2S_INIT_REG, DAI_RX_EN);
+	amba_clrbitsl(I2S_INIT_REG, DAI_RX_EN);
 }
 
 static inline void dai_fifo_rst(void)
 {
-	amba_setbits(I2S_INIT_REG, DAI_FIFO_RST);
+	amba_setbitsl(I2S_INIT_REG, DAI_FIFO_RST);
 	msleep(1);
-	if (amba_tstbits(I2S_INIT_REG, DAI_FIFO_RST)) {
+	if (amba_tstbitsl(I2S_INIT_REG, DAI_FIFO_RST)) {
 		printk("DAI_FIFO_RST fail!\n");
 	}
 }
@@ -121,7 +121,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		cpu_dai->dma_data = &ambarella_i2s_pcm_stereo_out;
 		/* Disable tx/rx before initializing */
 		dai_tx_disable();
-		if(amba_tstbits(I2S_INIT_REG, 0x02)) {
+		if(amba_tstbitsl(I2S_INIT_REG, 0x02)) {
 			rx_enabled = 1;
 			dai_rx_disable();
 		}
@@ -131,7 +131,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		cpu_dai->dma_data = &ambarella_i2s_pcm_stereo_in;
 		/* Disable tx/rx before initializing */
 		dai_rx_disable();
-		if(amba_tstbits(I2S_INIT_REG, 0x04)) {
+		if(amba_tstbitsl(I2S_INIT_REG, 0x04)) {
 			tx_enabled = 1;
 			dai_tx_disable();
 		}
@@ -197,7 +197,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	priv_data->clock_reg |= clock_divider;
 	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
 
-	if(!amba_tstbits(I2S_INIT_REG, 0x6))
+	if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
 		dai_fifo_rst();
 
 	if(rx_enabled)

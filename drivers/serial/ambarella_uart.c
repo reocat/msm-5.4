@@ -51,27 +51,27 @@
 
 static void serial_ambarella_enable_ms(struct uart_port *port)
 {
-	amba_setbits(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
+	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
 }
 
 static void serial_ambarella_disable_ms(struct uart_port *port)
 {
-	amba_clrbits(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
+	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
 }
 
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
-	amba_setbits(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
 }
 
 static void serial_ambarella_stop_tx(struct uart_port *port)
 {
-	amba_clrbits(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
 }
 
 static void serial_ambarella_stop_rx(struct uart_port *port)
 {
-	amba_clrbits(port->membase + UART_IE_OFFSET, UART_IE_ERBFI);
+	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ERBFI);
 }
 
 static inline void receive_chars(struct uart_port *port, u32 *status)
@@ -227,7 +227,7 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 
 static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
 {
-	return amba_tstbits(port->membase + UART_LS_OFFSET, UART_LS_TEMT) ?
+	return amba_tstbitsl(port->membase + UART_LS_OFFSET, UART_LS_TEMT) ?
 		TIOCSER_TEMT : 0;
 }
 
@@ -301,9 +301,9 @@ static void serial_ambarella_set_mctrl(struct uart_port *port,
 static void serial_ambarella_break_ctl(struct uart_port *port, int break_state)
 {
 	if (break_state != 0)
-		amba_setbits(port->membase + UART_LC_OFFSET, UART_LC_BRK);
+		amba_setbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
 	else
-		amba_clrbits(port->membase + UART_LC_OFFSET, UART_LC_BRK);
+		amba_clrbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
 }
 
 static int serial_ambarella_startup(struct uart_port *port)
@@ -322,7 +322,7 @@ static int serial_ambarella_startup(struct uart_port *port)
 	if (errorCode)
 		goto serial_ambarella_startup_exit;
 
-	amba_setbits(port->membase + UART_IE_OFFSET,
+	amba_setbitsl(port->membase + UART_IE_OFFSET,
 		(UART_IE_ELSI | UART_IE_ETBEI | UART_IE_ERBFI));
 
 serial_ambarella_startup_exit:

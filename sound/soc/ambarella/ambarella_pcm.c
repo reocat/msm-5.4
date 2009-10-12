@@ -159,16 +159,16 @@ static void dai_dma_handler(void *dev_id)
 		*rpt &= (~0x10000000);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			/* dai_tx_disable() */
-			amba_clrbits(I2S_INIT_REG, 0x4);
+			amba_clrbitsl(I2S_INIT_REG, 0x4);
 			/* dai_fifo_rst() */
-			if(!amba_tstbits(I2S_INIT_REG, 0x6))
-				amba_setbits(I2S_INIT_REG, 0x1);
+			if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
+				amba_setbitsl(I2S_INIT_REG, 0x1);
 		} else {
 			/* dai_rx_disable() */
-			amba_clrbits(I2S_INIT_REG, 0x2);
+			amba_clrbitsl(I2S_INIT_REG, 0x2);
 			/* dai_fifo_rst() */
-			if(!amba_tstbits(I2S_INIT_REG, 0x6))
-				amba_setbits(I2S_INIT_REG, 0x1);
+			if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
+				amba_setbitsl(I2S_INIT_REG, 0x1);
 		}
 
 		wake_up(&prtd->wq);

@@ -23,28 +23,36 @@
  *
  */
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/irq.h>
+#include <linux/delay.h>
+#include <linux/wait.h>
+#include <linux/interrupt.h>
 
 #include <asm/io.h>
 
 #include <mach/hardware.h>
 
-static DEFINE_MUTEX(fio_lock);
+/* ==========================================================================*/
+static DECLARE_WAIT_QUEUE_HEAD(fio_lock);
+static int fio_select_sdio_as_default = 0;
+static int fio_owner = SELECT_FIO_FREE;
 
-/**
- * Select the active FIO module and optionally obtain an exclusive lock
- * to prevent concurrent access.
- *
- */
+module_param_call(fio_select_sdio_as_default, param_set_int, param_get_int,
+	&fio_select_sdio_as_default, 0644);
+
+/* ==========================================================================*/
 int fio_select_lock(int module, int lock)
 {
 	u32 fio_ctr;
 	u32 fio_dmactr;
 
 	if (lock) {
-		mutex_lock(&fio_lock);
+		wait_event_interruptible(fio_lock, ((fio_owner == module) ||
+			(fio_owner == SELECT_FIO_FREE)));
+		fio_owner = module;
 	}
 
 	fio_ctr = amba_readl(FIO_CTR_REG);
@@ -110,11 +118,7 @@ void fio_unlock(int module, int lock)
 	u32 fio_ctr;
 	u32 fio_dmactr;
 
-	//Give FIO bus for SDIO devices.
-	switch (module) {
-	case SELECT_FIO_FL:
-	case SELECT_FIO_XD:
-	case SELECT_FIO_CF:
+	if (fio_select_sdio_as_default) {
 		fio_ctr = amba_readl(FIO_CTR_REG);
 		fio_dmactr = amba_readl(FIO_DMACTR_REG);
 
@@ -123,20 +127,12 @@ void fio_unlock(int module, int lock)
 
 		amba_writel(FIO_CTR_REG, fio_ctr);
 		amba_writel(FIO_DMACTR_REG, fio_dmactr);
-
-		break;
-
-	//Can't support coexist SDIO and SD when SD_HAS_INTERNAL_MUXER = 1, so skip.
-	case SELECT_FIO_SD:
-	case SELECT_FIO_SDIO:
-	case SELECT_FIO_SD2:
-	default:
-		break;
 	}
 #endif
 
-	if (lock){
-		mutex_unlock(&fio_lock);
+	if (lock && (fio_owner == module)){
+		fio_owner = SELECT_FIO_FREE;
+		wake_up(&fio_lock);
 	}
 }
 EXPORT_SYMBOL(fio_unlock);
@@ -195,60 +191,60 @@ EXPORT_SYMBOL(fio_dma_parse_error);
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 void fio_amb_fl_enable(void)
 {
-	amba_setbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
+	amba_setbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
 }
 
 void fio_amb_fl_disable(void)
 {
-	amba_clrbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
+	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
 }
 
 int fio_amb_fl_is_enable(void)
 {
-	return amba_tstbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
+	return amba_tstbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
 }
 
 void fio_amb_cf_enable(void)
 {
-	amba_setbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
+	amba_setbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
 }
 
 void fio_amb_cf_disable(void)
 {
-	amba_clrbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
+	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
 }
 
 int fio_amb_cf_is_enable(void)
 {
-	return amba_tstbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
+	return amba_tstbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
 }
 
 void fio_amb_sd2_enable(void)
 {
-	amba_setbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
+	amba_setbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
 }
 
 void fio_amb_sd2_disable(void)
 {
-	amba_clrbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
+	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
 }
 
 int fio_amb_sd2_is_enable(void)
 {
-	return amba_tstbits(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
+	return amba_tstbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
 }
 
 #endif
 
 void fio_amb_exit_random_mode(void)
 {
-	amba_clrbits(FIO_CTR_REG, FIO_CTR_RR);
+	amba_clrbitsl(FIO_CTR_REG, FIO_CTR_RR);
 }
 
 int __init ambarella_init_fio(void)
 {
 #if (HOST_MAX_AHB_CLK_EN_BITS == 10)
-	amba_clrbits(HOST_AHB_CLK_ENABLE_REG,
+	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG,
 		(HOST_AHB_BOOT_SEL | HOST_AHB_FDMA_BURST_DIS));
 #endif
 
