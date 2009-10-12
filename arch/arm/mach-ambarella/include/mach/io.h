@@ -117,7 +117,7 @@ static inline void amba_writel_printk(
 #define amba_clrbitsl(v, mask)	amba_writel((v),(amba_readl(v) & ~(mask)))
 
 #define amba_tstbitsb(v, mask)	(amba_readb(v) & (mask))
-#define amba_tstbitsb(v, mask)	(amba_readb(v) & (mask))
+#define amba_tstbitsw(v, mask)	(amba_readw(v) & (mask))
 #define amba_tstbitsl(v, mask)	(amba_readl(v) & (mask))
 
 static inline void amba_change_bit(
