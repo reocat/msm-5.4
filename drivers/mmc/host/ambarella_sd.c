@@ -1713,20 +1713,15 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			mmc->max_req_size = mmc->max_seg_size;
 			mmc->max_blk_count = 0xFFFF;
 
-			pslotinfo->buf_vaddress = kmalloc(mmc->max_seg_size,
-					GFP_NOIO | GFP_DMA |
-					__GFP_REPEAT | __GFP_NOWARN);
+			pslotinfo->buf_vaddress = dma_alloc_coherent(
+				pinfo->dev, mmc->max_seg_size,
+				&pslotinfo->buf_paddress, GFP_KERNEL);
 			if (!pslotinfo->buf_vaddress) {
 				dev_err(&pdev->dev,
 					"Can't malloc dma memory!\n");
 				errorCode = -ENOMEM;
 				goto sd_errorCode_free_host;
 			}
-
-			pslotinfo->buf_paddress = dma_map_single(pinfo->dev,
-				pslotinfo->buf_vaddress,
-				mmc->max_seg_size,
-				DMA_BIDIRECTIONAL);
 
 			if (ambarella_sd_check_dma_boundary(pslotinfo,
 				pslotinfo->buf_paddress,
@@ -1862,17 +1857,13 @@ sd_errorCode_free_host:
 			gpio_free(pslotinfo->slot_info.ext_power.power_gpio);
 		}
 
-		if (pslotinfo->buf_paddress) {
-			dma_unmap_single(pinfo->dev,
-				pslotinfo->buf_paddress,
-				pslotinfo->mmc->max_seg_size,
-				DMA_BIDIRECTIONAL);
-			pslotinfo->buf_paddress = (dma_addr_t)NULL;
-		}
-
 		if (pslotinfo->buf_vaddress) {
-			kfree(pslotinfo->buf_vaddress);
+			dma_free_coherent(pinfo->dev,
+				pslotinfo->mmc->max_seg_size,
+				pslotinfo->buf_vaddress,
+				pslotinfo->buf_paddress);
 			pslotinfo->buf_vaddress = NULL;
+			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 		}
 
 		if (pslotinfo->mmc);
@@ -1931,17 +1922,13 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				pslotinfo->slot_info.gpio_wp.input_gpio);
 			}
 
-			if (pslotinfo->buf_paddress) {
-				dma_unmap_single(pinfo->dev,
-					pslotinfo->buf_paddress,
-					pslotinfo->mmc->max_seg_size,
-					DMA_BIDIRECTIONAL);
-				pslotinfo->buf_paddress = (dma_addr_t)NULL;
-			}
-
 			if (pslotinfo->buf_vaddress) {
-				kfree(pslotinfo->buf_vaddress);
+				dma_free_coherent(pinfo->dev,
+					pslotinfo->mmc->max_seg_size,
+					pslotinfo->buf_vaddress,
+					pslotinfo->buf_paddress);
 				pslotinfo->buf_vaddress = NULL;
+				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
 
 			if (pslotinfo->mmc);
