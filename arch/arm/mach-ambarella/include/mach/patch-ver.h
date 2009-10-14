@@ -1,5 +1,5 @@
 /*
- * include/asm-arm/arch-ambarella/patch-ver.h
+ * arch/arm/mach-ambarella/include/mach/patch-ver.h
  *
  * History:
  *    2009/08/17 - [Cao Rongrong] created file
@@ -10,7 +10,7 @@
 #ifndef __ASM_ARCH_PATCH_VER_H
 #define __ASM_ARCH_PATCH_VER_H
 
-#define	Ambarella_Patch_Version		"0001(2009-08-17)"
+#define	Ambarella_Patch_Version		"0001(2009-10-14)(2.6.29.6)"
 
 #endif
 
