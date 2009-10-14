@@ -93,6 +93,7 @@ struct ambarella_sd_mmc_info {
 	u32				slot_id;
 	void				*pinfo;
 	u32				valid;
+	u16				nisen;
 };
 
 struct ambarella_sd_controller_info {
@@ -101,7 +102,6 @@ struct ambarella_sd_controller_info {
 	struct resource			*mem;
 	unsigned int			irq;
 	spinlock_t			lock;
-	u16				nisen;
 
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
@@ -312,9 +312,6 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 				memcpy(dmabuf, sgbuf, current_sg[i].length);
 				dmabuf += current_sg[i].length;
 			}
-			dma_sync_single_for_cpu(pinfo->dev,
-				pslotinfo->buf_paddress, pslotinfo->dma_size,
-				DMA_TO_DEVICE);
 			pslotinfo->dma_address = pslotinfo->buf_paddress;
 			pslotinfo->dma_left = pslotinfo->dma_size;
 			pslotinfo->sg_index = pslotinfo->sg_len;
@@ -500,11 +497,6 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 	current_sg = pslotinfo->sg;
 	dmabuf = pslotinfo->buf_vaddress;
 
-	if (pslotinfo->dma_need_fill)
-		dma_sync_single_for_cpu(pinfo->dev,
-			pslotinfo->buf_paddress, pslotinfo->dma_size,
-			DMA_FROM_DEVICE);
-
 	for (i = 0; i < pslotinfo->sg_len; i++) {
 		dma_unmap_page(pinfo->dev, current_sg[i].dma_address,
 				current_sg[i].length, DMA_FROM_DEVICE);
@@ -546,7 +538,7 @@ static void ambarella_sd_enable_normal_int(struct mmc_host *mmc, u16 ints)
 	int_flag = amba_readw(pinfo->regbase + SD_NISEN_OFFSET);
 	int_flag |= ints;
 	amba_writew(pinfo->regbase + SD_NISEN_OFFSET, int_flag);
-	pinfo->nisen = int_flag;
+	pslotinfo->nisen = int_flag;
 
 	int_flag = amba_readw(pinfo->regbase + SD_NIXEN_OFFSET);
 	int_flag |= ints;
@@ -569,7 +561,7 @@ static void ambarella_sd_disable_normal_int(struct mmc_host *mmc, u16 ints)
 	int_flag = amba_readw(pinfo->regbase + SD_NISEN_OFFSET);
 	int_flag &= ~ints;
 	amba_writew(pinfo->regbase + SD_NISEN_OFFSET, int_flag);
-	pinfo->nisen = int_flag;
+	pslotinfo->nisen = int_flag;
 
 	int_flag = amba_readw(pinfo->regbase + SD_NIXEN_OFFSET);
 	int_flag &= ~ints;
@@ -901,10 +893,10 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 
 	//Check false DAT[1] SD_NIS_CARD IRQ & card generated interrupt
 	if (enabled) {
-		if (pinfo->nisen != nisen)
+		if (pslotinfo->nisen != nisen)
 			amba_writew(pinfo->regbase + SD_NISEN_OFFSET,
-				pinfo->nisen);
-		if (nis & SD_NIS_CARD) {
+				pslotinfo->nisen);
+		if ((nis & SD_NIS_CARD) && (pslotinfo->nisen & SD_NISEN_CARD)) {
 			dev_dbg(pinfo->dev, "SD_NIS_CARD\n");
 			mmc_signal_sdio_irq(pslotinfo->mmc);
 		}
@@ -1575,7 +1567,6 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	pinfo->mem = mem;
 	pinfo->irq = irq->start;
 	spin_lock_init(&pinfo->lock);
-	pinfo->nisen = 0;
 	pinfo->pcontroller =
 		(struct ambarella_sd_controller *)pdev->dev.platform_data;
 	if ((pinfo->pcontroller == NULL) ||
@@ -1627,6 +1618,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		memcpy(&pslotinfo->slot_info, &pinfo->pcontroller->slot[i],
 			sizeof(struct ambarella_sd_slot));
 		pslotinfo->slot_id = i;
+		pslotinfo->nisen = 0;
 		pslotinfo->pinfo = pinfo;
 
 		ambarella_sd_request_bus(mmc);
@@ -1732,6 +1724,11 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				errorCode = -ENOMEM;
 				goto sd_errorCode_free_host;
 			}
+			dev_info(&pdev->dev, "Slot%d bounce buffer DMA MEM "
+				"0x%p<->0x%08X, size=%d\n", pslotinfo->slot_id,
+				pslotinfo->buf_vaddress,
+				pslotinfo->buf_paddress,
+				mmc->max_seg_size);
 		} else {
 			mmc->max_hw_segs = 1;
 			mmc->max_phys_segs = 1;
