@@ -77,6 +77,11 @@
 #define NEC_LEADER_HIGH_UPBOUND		63	/* default 4.2ms */
 #define NEC_LEADER_HIGH_LOWBOUND	52
 
+#define SAM_LEADER_LOW_UPBOUND		64	/* default 4.5ms */
+#define SAM_LEADER_LOW_LOWBOUND		50
+#define SAM_LEADER_HIGH_UPBOUND		64	/* default 4.5ms */
+#define SAM_LEADER_HIGH_LOWBOUND	50
+
 #define NEC_REPEAT_LOW_UPBOUND		123	/* default 9ms   */
 #define NEC_REPEAT_LOW_LOWBOUND		113
 #define NEC_REPEAT_HIGH_UPBOUND		33	/* default 2.2ms */
@@ -94,12 +99,19 @@
  */
 static int ambarella_ir_pulse_leader_code(struct ambarella_ir_info *pinfo)
 {
+	int				check_sam = 0;
+
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
 	if ((val < NEC_LEADER_LOW_UPBOUND)  &&
 	    (val > NEC_LEADER_LOW_LOWBOUND)) {
 	} else {
-		return 0;
+		if ((val < SAM_LEADER_LOW_UPBOUND)  &&
+		    (val > SAM_LEADER_LOW_LOWBOUND)) {
+		    check_sam = 1;
+		} else {
+			return 0;
+		}
 	}
 
 	if ((pinfo->ir_pread + 1) >= MAX_IR_BUFFER) {
@@ -108,11 +120,19 @@ static int ambarella_ir_pulse_leader_code(struct ambarella_ir_info *pinfo)
 		val = ambarella_ir_read_data(pinfo, pinfo->ir_pread + 1);
 	}
 
-	if ((val < NEC_LEADER_HIGH_UPBOUND) &&
-	    (val > NEC_LEADER_HIGH_LOWBOUND) )
-		return 1;
-	else
-		return 0;
+	if (check_sam) {
+		if ((val < SAM_LEADER_HIGH_UPBOUND) &&
+		    (val > SAM_LEADER_HIGH_LOWBOUND) )
+			return 1;
+		else
+			return 0;
+	} else {
+		if ((val < NEC_LEADER_HIGH_UPBOUND) &&
+		    (val > NEC_LEADER_HIGH_LOWBOUND) )
+			return 1;
+		else
+			return 0;
+	}
 }
 
 /**

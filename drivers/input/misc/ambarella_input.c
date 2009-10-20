@@ -67,8 +67,7 @@ MODULE_PARM_DESC(adc_scan_delay, "Ambarella ADC scan (jiffies)");
 static char *keymap_name = NULL;
 MODULE_PARM_DESC(keymap_name, "Ambarella Input's key map");
 
-static int enable_input = 1;
-MODULE_PARM_DESC(enable_input, "Enable Ambarella Input driver");
+static struct ambarella_ir_info	*local_info = NULL;
 
 /* ========================================================================= */
 static struct ambarella_key_table \
@@ -463,10 +462,24 @@ u16 ambarella_ir_read_data(struct ambarella_ir_info *pinfo, int pointer)
 	return pinfo->tick_buf[pointer];
 }
 
+static inline int ambarella_ir_update_buffer(struct ambarella_ir_info *pinfo)
+{
+	int				count;
+	int				size;
+
+	count = amba_readl(pinfo->regbase + IR_STATUS_OFFSET);
+	for (; count > 0; count--) {
+		ambarella_ir_write_data(pinfo, 
+			amba_readl(pinfo->regbase + IR_DATA_OFFSET));
+	}
+	size = ambarella_ir_get_tick_size(pinfo);
+
+	return size;
+}
+
 static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 {
 	struct ambarella_ir_info	*pinfo;
-	int				count;
 	int				size;
 	int				cur_ptr;
 	int				temp_ptr;
@@ -487,19 +500,9 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		goto ambarella_ir_irq_exit;
 	}
 
-	count = amba_readl(pinfo->regbase + IR_STATUS_OFFSET);
-	if (count == 0)
-		goto ambarella_ir_irq_exit;
-
-	for (; count > 0; count--) {
-		ambarella_ir_write_data(pinfo, 
-			amba_readl(pinfo->regbase + IR_DATA_OFFSET));
-	}
-
-	size = ambarella_ir_get_tick_size(pinfo);
-
 	cur_ptr = pinfo->ir_pread;
 
+	size = ambarella_ir_update_buffer(pinfo);
 	for (; size > 0; size--) {
 		temp_ptr = pinfo->ir_pread;
 
@@ -520,7 +523,7 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		temp_ptr = pinfo->ir_pread;
 		cur_ptr  = pinfo->ir_pread;
 
-		size = ambarella_ir_get_tick_size(pinfo);
+		size = ambarella_ir_update_buffer(pinfo);
 	}
 
 	pinfo->ir_pread = cur_ptr;
@@ -537,11 +540,8 @@ ambarella_ir_irq_exit:
 void ambarella_ir_enable(struct ambarella_ir_info *pinfo)
 {
 	amba_writel(pinfo->regbase + IR_CONTROL_OFFSET, IR_CONTROL_RESET);
-	amba_writel(pinfo->regbase + IR_CONTROL_OFFSET,
-		(amba_readl((pinfo->regbase + IR_CONTROL_OFFSET))	|
-		IR_CONTROL_ENB		|
-		IR_CONTROL_INTLEV(24)	|
-		IR_CONTROL_INTENB));
+	amba_setbitsl(pinfo->regbase + IR_CONTROL_OFFSET,
+		IR_CONTROL_ENB | IR_CONTROL_INTLEV(24) | IR_CONTROL_INTENB);
 
 	enable_irq(pinfo->irq);
 }
@@ -560,18 +560,23 @@ void ambarella_ir_set_protocol(struct ambarella_ir_info *pinfo,
 
 	switch (protocol_id) {
 	case AMBA_IR_PROTOCOL_NEC:
+		ambi_notice("Protocol NEC[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_nec_parse;
 		break;
 	case AMBA_IR_PROTOCOL_PANASONIC:
+		ambi_notice("Protocol PANASONIC[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_panasonic_parse;
 		break;
 	case AMBA_IR_PROTOCOL_SONY:
+		ambi_notice("Protocol SONY[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_sony_parse;
 		break;
 	case AMBA_IR_PROTOCOL_PHILIPS:
+		ambi_notice("Protocol PHILIPS[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_philips_parse;
 		break;
 	default:
+		ambi_notice("Protocol default NEC[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_nec_parse;
 		break;
 	}
@@ -886,7 +891,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	}
 
 	errorCode = request_irq(pinfo->irq,
-		ambarella_ir_irq, IRQF_DISABLED | IRQF_TRIGGER_HIGH,
+		ambarella_ir_irq, IRQF_TRIGGER_HIGH,
 		pdev->name, pinfo);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Request IRQ failed!\n");
@@ -914,6 +919,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 		input_file->data = pinfo;
 	}
 
+	local_info = pinfo;
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor IR Host Controller %d probed!\n",
 		pdev->id);
@@ -952,6 +958,7 @@ static int __devexit ambarella_ir_remove(struct platform_device *pdev)
 	int				errorCode = 0;
 
 	pinfo = platform_get_drvdata(pdev);
+	local_info = NULL;
 
 	if (pinfo) {
 		remove_proc_entry(dev_name(&pdev->dev),
@@ -1007,7 +1014,20 @@ static struct platform_driver ambarella_ir_driver = {
 	},
 };
 
-static int ambarella_input_register(void)
+static int ambarella_input_set_ir_protocol(const char *val,
+	struct kernel_param *kp)
+{
+	int				errorCode = 0;
+
+	errorCode = param_set_int(val, kp);
+
+	if (local_info)
+		ambarella_ir_init(local_info);
+
+	return errorCode;
+}
+
+static int __init ambarella_input_init(void)
 {
 	int				errorCode = 0;
 
@@ -1018,45 +1038,9 @@ static int ambarella_input_register(void)
 	return errorCode;
 }
 
-static void ambarella_input_unregister(void)
-{
-	platform_driver_unregister(&ambarella_ir_driver);
-}
-
-static int ambarella_input_set_enable(const char *val, struct kernel_param *kp)
-{
-	int				errorCode = 0;
-	int				tmp = enable_input;
-
-	errorCode = param_set_int(val, kp);
-	if (enable_input)
-		enable_input = 1;
-	if ((tmp == 0) && (enable_input == 1)) {
-		errorCode = ambarella_input_register();
-	} else
-	if ((tmp == 1) && (enable_input == 0)) {
-		ambarella_input_unregister();
-	}
-
-	return errorCode;
-}
-
-static int __init ambarella_input_init(void)
-{
-	int				errorCode = 0;
-
-	if (enable_input) {
-		enable_input = 1;
-		errorCode = ambarella_input_register();
-	}
-
-	return errorCode;
-}
-
 static void __exit ambarella_input_exit(void)
 {
-	if (enable_input)
-		ambarella_input_unregister();
+	platform_driver_unregister(&ambarella_ir_driver);
 }
 
 module_init(ambarella_input_init);
@@ -1067,7 +1051,8 @@ MODULE_AUTHOR("Anthony Ginger, <hfjiang@ambarella.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("ambai");
 
-module_param(ir_protocol, int, 0644);
+module_param_call(ir_protocol, ambarella_input_set_ir_protocol,
+	param_get_int, &ir_protocol, 0644);
 module_param(print_keycode, int, 0644);
 module_param(abx_max_x, int, 0644);
 module_param(abx_max_y, int, 0644);
@@ -1075,6 +1060,4 @@ module_param(abx_max_pressure, int, 0644);
 module_param(abx_max_width, int, 0644);
 module_param(adc_scan_delay, int, 0644);
 module_param(keymap_name, charp, 0644);
-module_param_call(enable_input, ambarella_input_set_enable,
-	param_get_int, &enable_input, 0644);
 
