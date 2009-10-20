@@ -1664,7 +1664,7 @@ static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_get_stats		= ambeth_get_stats,
 };
 
-static int ambeth_drv_probe(struct platform_device *pdev)
+static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct net_device			*ndev;

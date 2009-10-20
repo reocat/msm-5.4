@@ -620,7 +620,7 @@ static struct uart_driver serial_ambarella_reg = {
 	.cons		= AMBARELLA_CONSOLE,
 };
 
-static int serial_ambarella_probe(struct platform_device *pdev)
+static int __devinit serial_ambarella_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_uart_platform_info	*pinfo;
@@ -679,7 +679,7 @@ serial_ambarella_probe_exit:
 	return errorCode;
 }
 
-static int serial_ambarella_remove(struct platform_device *pdev)
+static int __devexit serial_ambarella_remove(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_uart_platform_info	*pinfo;
@@ -748,7 +748,7 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 
 static struct platform_driver serial_ambarella_driver = {
 	.probe		= serial_ambarella_probe,
-	.remove		= serial_ambarella_remove,
+	.remove		= __devexit_p(serial_ambarella_remove),
 #ifdef CONFIG_PM
 	.suspend	= serial_ambarella_suspend,
 	.resume		= serial_ambarella_resume,

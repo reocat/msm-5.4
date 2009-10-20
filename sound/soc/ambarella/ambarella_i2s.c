@@ -400,7 +400,7 @@ struct snd_soc_dai ambarella_i2s_dai = {
 };
 EXPORT_SYMBOL(ambarella_i2s_dai);
 
-static int ambarella_i2s_probe(struct platform_device *pdev)
+static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 {
 	struct amb_i2s_priv *priv_data;
 

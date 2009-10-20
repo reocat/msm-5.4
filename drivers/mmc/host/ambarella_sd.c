@@ -1167,8 +1167,6 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 	mmc->f_max = pinfo->pcontroller->clk_limit;
 	mmc->f_min = pinfo->pcontroller->get_pll() >> 8;
 
-	msleep(10);
-
 	if (clk == 0) {
 		amba_writew(pinfo->regbase + SD_CLK_OFFSET, 0);
 #if 0
@@ -1221,8 +1219,6 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		}
 		amba_setbitsw(pinfo->regbase + SD_CLK_OFFSET, SD_CLK_EN);
 	}
-
-	msleep(10);
 }
 
 static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
@@ -1307,8 +1303,10 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 
 	if (pinfo->controller_ios.clock != ios->clock) {
+		msleep(10);
 		ambarella_sd_set_clk(mmc, ios->clock);
 		pinfo->controller_ios.clock = ios->clock;
+		msleep(10);
 	}
 
 	if ((pinfo->controller_ios.bus_width != ios->bus_width) ||
@@ -1506,7 +1504,9 @@ static int ambsd_freq_transition(struct notifier_block *nb,
 		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			mmc = pinfo->pslotinfo[i]->mmc;
+			mdelay(10);
 			ambarella_sd_set_clk(mmc, pinfo->controller_ios.clock);
+			mdelay(10);
 		}
 		break;
 
@@ -1887,6 +1887,8 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
+		ambarella_unregister_freqnotifier(&pinfo->sd_freq_transition);
+
 		platform_set_drvdata(pdev, NULL);
 
 		free_irq(pinfo->irq, pinfo);

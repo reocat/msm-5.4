@@ -1724,6 +1724,9 @@ static int __devexit ambarella_nand_remove(struct platform_device *pdev)
 	nand_info = (struct ambarella_nand_info *)platform_get_drvdata(pdev);
 
 	if (nand_info) {
+		ambarella_unregister_freqnotifier(
+			&nand_info->nand_freq_transition);
+
 		platform_set_drvdata(pdev, NULL);
 
 		errorCode = ambarella_dma_disable_irq(FIO_DMA_CHAN,
@@ -1789,7 +1792,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 static struct platform_driver amb_nand_driver = {
 	.probe		= ambarella_nand_probe,
-	.remove		= ambarella_nand_remove,
+	.remove		= __devexit_p(ambarella_nand_remove),
 #ifdef CONFIG_PM
 	.suspend	= ambarella_nand_suspend,
 	.resume		= ambarella_nand_resume,

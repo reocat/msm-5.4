@@ -588,6 +588,8 @@ static int __devexit ambarella_i2c_remove(struct platform_device *pdev)
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
+		ambarella_unregister_freqnotifier(&pinfo->i2c_freq_transition);
+
 		errorCode = i2c_del_adapter(&pinfo->adap);
 
 		free_irq(pinfo->irq, pinfo);

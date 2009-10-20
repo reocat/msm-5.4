@@ -466,7 +466,7 @@ static int ambarella_wdt_resume(struct platform_device *pdev)
 
 static struct platform_driver ambarella_wdt_driver = {
 	.probe		= ambarella_wdt_probe,
-	.remove		= ambarella_wdt_remove,
+	.remove		= __devexit_p(ambarella_wdt_remove),
 	.shutdown	= ambarella_wdt_shutdown,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_wdt_suspend,
