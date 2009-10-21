@@ -985,6 +985,14 @@ static int ambarella_ir_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int					errorCode = 0;
+	struct ambarella_ir_info		*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (!pinfo->pcontroller_info->can_wakeup) {
+		amba_clrbitsl(pinfo->regbase + IR_CONTROL_OFFSET,IR_CONTROL_INTENB);
+		disable_irq(pinfo->irq);
+	}
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -994,6 +1002,14 @@ static int ambarella_ir_suspend(struct platform_device *pdev,
 static int ambarella_ir_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
+	struct ambarella_ir_info		*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (!pinfo->pcontroller_info->can_wakeup) {
+		amba_setbitsl(pinfo->regbase + IR_CONTROL_OFFSET,IR_CONTROL_INTENB);
+		ambarella_ir_enable(pinfo);
+	}
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
