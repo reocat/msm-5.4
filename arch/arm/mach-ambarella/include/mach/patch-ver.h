@@ -10,7 +10,7 @@
 #ifndef __ASM_ARCH_PATCH_VER_H
 #define __ASM_ARCH_PATCH_VER_H
 
-#define	Ambarella_Patch_Version		"0001(2009-10-14)(2.6.29.6)"
+#define	Ambarella_Patch_Version		"0002(2009-10-21)(2.6.29.6)"
 
 #endif
 
