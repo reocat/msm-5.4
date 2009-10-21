@@ -1839,11 +1839,17 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 	int					errorCode = 0;
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
+	struct ambarella_eth_platform_info	*platform_info;
 
 	ndev = platform_get_drvdata(pdev);
+	platform_info = (struct ambarella_eth_platform_info *)pdev->dev.platform_data;
 
 	if (ndev) {
 		lp = (struct ambeth_info *)netdev_priv(ndev);
+		if (!platform_info->can_wakeup) {
+		        ambhw_dma_int_disable(lp);
+			disable_irq(ndev->irq);
+		}
 		if (lp->phydev)
 			phy_stop(lp->phydev);
 
@@ -1860,8 +1866,10 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	int					errorCode = 0;
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
+	struct ambarella_eth_platform_info	*platform_info;
 
 	ndev = platform_get_drvdata(pdev);
+	platform_info = (struct ambarella_eth_platform_info *)pdev->dev.platform_data;
 
 	if (ndev) {
 		netif_device_attach(ndev);
@@ -1869,6 +1877,11 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		lp = (struct ambeth_info *)netdev_priv(ndev);
 		if (lp->phydev)
 			phy_start(lp->phydev);
+		if (!platform_info->can_wakeup) {
+			enable_irq(ndev->irq);
+		        ambhw_dma_int_enable(lp);
+		}
+
 	}
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
