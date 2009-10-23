@@ -999,7 +999,7 @@ static int ambarella_ir_suspend(struct platform_device *pdev,
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!device_can_wakeup(&pdev->dev)) {
+	if (!device_may_wakeup(&pdev->dev)) {
 		amba_clrbitsl(pinfo->regbase + IR_CONTROL_OFFSET,
 			IR_CONTROL_INTENB);
 		disable_irq(pinfo->irq);
@@ -1017,7 +1017,7 @@ static int ambarella_ir_resume(struct platform_device *pdev)
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!device_can_wakeup(&pdev->dev)) {
+	if (!device_may_wakeup(&pdev->dev)) {
 		amba_setbitsl(pinfo->regbase + IR_CONTROL_OFFSET,
 			IR_CONTROL_INTENB);
 		ambarella_ir_enable(pinfo);
