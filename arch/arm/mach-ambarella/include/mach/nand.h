@@ -86,7 +86,6 @@ struct ambarella_platform_nand
 
 	int				nr_sets;
 	struct ambarella_nand_set	*sets;
-	u32				can_wakeup;
 };
 #endif //__ASSEMBLER__
 

@@ -176,11 +176,8 @@ struct ambarella_uart_platform_info {
 
 	void					(*set_pll)(void);
 	u32					(*get_pll)(void);
-	u32					can_wakeup;
 };
 extern struct ambarella_uart_platform_info ambarella_uart_ports;
-#define AMBA_UART_PARAM_CALL(id, arg, perm) \
-	module_param_call(uart##id##_can_wakeup, param_set_int, param_get_int, &(arg.can_wakeup), perm)
 
 struct ambarella_sd_slot {
 	int					(*check_owner)(void);
@@ -200,7 +197,6 @@ struct ambarella_sd_controller {
 
 	void					(*set_pll)(void);
 	u32					(*get_pll)(void);
-	u32					can_wakeup;
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, perm) \
 	module_param_call(sd##controller_id##_slot##slot_id##_use_bounce_buffer, param_set_int, param_get_int, &(arg.slot[slot_id].bounce_buffer), perm); \
@@ -220,7 +216,6 @@ struct ambarella_eth_platform_info {
 	struct ambarella_gpio_reset_info	mii_reset;
 
 	int					(*is_enabled)(void);
-	u32					can_wakeup;
 };
 #define AMBA_ETH_PARAM_CALL(id, arg, perm) \
 	module_param_call(eth##id##_napi_weight, param_set_int, param_get_int, &(arg.napi_weight), perm); \
@@ -229,7 +224,6 @@ struct ambarella_eth_platform_info {
 	module_param_call(eth##id##_phy_id, param_set_uint, param_get_uint, &(arg.phy_id), perm); \
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm);\
-	module_param_call(eth##id##_can_wakeup, param_set_uint, param_get_uint, &(arg.can_wakeup), perm)
 
 #define SPI0_CS2_CS3_EN				0x00000002
 struct ambarella_spi_cs_config {
@@ -247,7 +241,6 @@ struct ambarella_spi_platform_info {
 	void    				(*cs_deactivate)(struct ambarella_spi_cs_config *);
 	void					(*rct_set_ssi_pll)(void);
 	u32					(*get_ssi_freq_hz)(void);
-	u32					can_wakeup;
 };
 #define AMBA_SPI_PARAM_CALL(id, arg, perm) \
 	module_param_call(spi##id##_cs0, param_set_int, param_get_int, &(arg[0]), perm); \
@@ -264,7 +257,6 @@ struct ambarella_idc_platform_info {
 	int					bulk_write_num;
 	unsigned int				i2c_class;
 	void					(*set_pin_muxing)(u32 on);
-	u32					can_wakeup;
 };
 #define AMBA_IDC_PARAM_CALL(id, arg, perm) \
 	module_param_call(idc##id##_clk_limit, param_set_int, param_get_int, &(arg.clk_limit), perm); \
@@ -278,7 +270,6 @@ struct ambarella_i2s_controller {
 
 struct ambarella_udc_controller {
 	void					(*set_pll)(void);
-	u32					can_wakeup;
 };
 
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
@@ -286,7 +277,6 @@ extern struct proc_dir_entry *get_ambarella_proc_dir(void);
 struct ambarella_ir_controller {
 	void					(*set_pll)(void);
 	u32					(*get_pll)(void);
-	u32					can_wakeup;
 };
 
 struct ambarella_rtc_controller {
@@ -297,7 +287,6 @@ struct ambarella_rtc_controller {
 
 struct ambarella_wdt_controller {
 	u32					(*get_pll)(void);
-	u32					can_wakeup;
 };
 struct ambarella_platform_crypto_info{
 	u32	reserved;

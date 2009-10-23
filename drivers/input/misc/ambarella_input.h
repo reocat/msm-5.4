@@ -103,21 +103,21 @@ struct ambarella_key_table {
 	struct {
 		u32				key_code;
 		u32				avtive_val;
-		u16				reserve;
+		u16				can_wakeup;
 		u8				id;
 		u8				irq_mode;
 	} gpio_key;
 	struct {
 		u32				key_code;
 		s32				rel_step;
-		u16				reserve;
+		u16				can_wakeup;
 		u8				id;
 		u8				irq_mode;
 	} gpio_rel;
 	struct {
 		s32				abs_x;
 		s32				abs_y;
-		u16				reserve;
+		u16				can_wakeup;
 		u8				id;
 		u8				irq_mode;
 	} gpio_abs;

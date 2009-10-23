@@ -634,7 +634,6 @@ static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.nr_sets    	= 1,
 	.sets		= &ambarella_nand_default_set,
 	.timing		= &ambarella_nand_default_timing,
-	.can_wakeup	= 0,
 };
 
 static int __init ambarella_add_partition(const struct tag *tag,
@@ -864,9 +863,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 #endif
 	.set_pll		= rct_set_uart_pll,
 	.get_pll		= get_uart_freq_hz,
-	.can_wakeup		= 0,
 };
-AMBA_UART_PARAM_CALL(0, ambarella_uart_ports, 0644);
 
 struct platform_device ambarella_uart = {
 	.name		= "ambarella-uart",
@@ -1007,7 +1004,6 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.wait_tmo		= (5 * HZ),
 	.set_pll		= set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
-	.can_wakeup		= 0,
 };
 
 struct platform_device ambarella_sd0 = {
@@ -1155,7 +1151,6 @@ static struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 	.i2c_class	= DEFAULT_I2C_CLASS,
 	.set_pin_muxing	= NULL,
 #endif
-	.can_wakeup	= 0,
 };
 AMBA_IDC_PARAM_CALL(0, ambarella_idc0_platform_info, 0644);
 
@@ -1190,7 +1185,6 @@ static struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
 	.bulk_write_num	= 60,
 	.i2c_class	= I2C_CLASS_DDC,
 	.set_pin_muxing	= NULL,
-	.can_wakeup	= 0,
 };
 AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);
 
@@ -1265,7 +1259,6 @@ static struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
 	.rct_set_ssi_pll	= rct_set_ssi_pll,
 	.get_ssi_freq_hz	= get_ssi_freq_hz,
-	.can_wakeup		= 0
 };
 struct platform_device ambarella_spi0 = {
 	.name		= "ambarella-spi",
@@ -1511,7 +1504,6 @@ static struct resource ambarella_wdt0_resources[] = {
 
 static struct ambarella_wdt_controller ambarella_platform_wdt_controller0 = {
 	.get_pll		= get_apb_bus_freq_hz,
-	.can_wakeup		= 0,
 };
 
 struct platform_device ambarella_wdt0 = {
@@ -1558,7 +1550,6 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 		.resume_delay	= 1,
 	},
 	.is_enabled	= rct_is_eth_enabled,
-	.can_wakeup  = 0,
 };
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
 
@@ -1604,7 +1595,6 @@ struct resource ambarella_udc_resources[] = {
 
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 	.set_pll	= rct_set_usb_ana_on,
-	.can_wakeup	= 0,
 };
 
 struct platform_device ambarella_udc0 = {
@@ -1618,8 +1608,7 @@ struct platform_device ambarella_udc0 = {
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
-module_param_call(udc0_can_wakeup, param_set_int, param_get_int,
-	&(ambarella_platform_udc_controller0.can_wakeup), 0644);
+
 /* ==========================================================================*/
 struct resource ambarella_ir_resources[] = {
 	[0] = {
@@ -1642,7 +1631,6 @@ struct resource ambarella_ir_resources[] = {
 static struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
 	.set_pll		= rct_set_ir_pll,
 	.get_pll		= get_ir_freq_hz,
-	.can_wakeup		= 0
 };
 
 struct platform_device ambarella_ir0 = {
@@ -1656,8 +1644,6 @@ struct platform_device ambarella_ir0 = {
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
-module_param_call(ir0_can_wakeup, param_set_int, param_get_int,
-	&(ambarella_platform_ir_controller0.can_wakeup), 0644);
 
 /* ==========================================================================*/
 struct resource ide0_resources[] = {

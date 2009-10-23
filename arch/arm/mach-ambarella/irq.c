@@ -33,12 +33,17 @@
 
 #include <mach/hardware.h>
 
+/* ==========================================================================*/
+static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
+static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
+
+/* ==========================================================================*/
 void ambarella_gpio_ack_irq(unsigned int irq)
 {
 	unsigned int				girq;
 	u32					gpio_base;
 
-	girq = irq - NR_VIC_IRQS;
+	girq = irq - GPIO_INT_VEC_OFFSET;
 	gpio_base = GPIO0_BASE;
 	if (girq >= NR_VIC_IRQ_SIZE) {
 		girq -= NR_VIC_IRQ_SIZE;
@@ -64,72 +69,86 @@ void ambarella_gpio_ack_irq(unsigned int irq)
 	amba_writel(gpio_base + GPIO_IC_OFFSET, (0x1 << girq));
 }
 
-void ambarella_gpio_mask_irq(unsigned int irq)
+void inline __ambarella_gpio_mask_irq(unsigned int irq)
 {
-	unsigned int				girq;
 	u32					gpio_base;
 	u32					val;
 
-	girq = irq - NR_VIC_IRQS;
 	gpio_base = GPIO0_BASE;
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
+	if (irq >= NR_VIC_IRQ_SIZE) {
+		irq -= NR_VIC_IRQ_SIZE;
 		gpio_base = GPIO1_BASE;
 	}
 #if (GPIO_INSTANCES >= 3)
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
+	if (irq >= NR_VIC_IRQ_SIZE) {
+		irq -= NR_VIC_IRQ_SIZE;
 		gpio_base = GPIO2_BASE;
 	}
 #endif
 #if (GPIO_INSTANCES >= 4)
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
+	if (irq >= NR_VIC_IRQ_SIZE) {
+		irq -= NR_VIC_IRQ_SIZE;
 		gpio_base = GPIO3_BASE;
 	}
 #endif
-	if (unlikely(girq >= NR_VIC_IRQ_SIZE)) {
-		pr_err("%s: err girq %d!\n", __func__, girq);
+	val = amba_readl(gpio_base + GPIO_IE_OFFSET);
+	val &= ~(0x1 << irq);
+	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
+}
+
+void ambarella_gpio_mask_irq(unsigned int irq)
+{
+	unsigned int				girq;
+
+	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
+		(irq >= MAX_IRQ_NUMBER))) {
+		pr_err("irq %d out of range for GPIO!\n", irq);
 		return;
 	}
 
+	girq = irq - GPIO_INT_VEC_OFFSET;
+	__ambarella_gpio_mask_irq(girq);
+	__clear_bit(girq, ambarella_gpio_irq_bit);
+}
+
+void inline __ambarella_gpio_unmask_irq(unsigned int irq)
+{
+	u32					gpio_base;
+	u32					val;
+
+	gpio_base = GPIO0_BASE;
+	if (irq >= NR_VIC_IRQ_SIZE) {
+		irq -= NR_VIC_IRQ_SIZE;
+		gpio_base = GPIO1_BASE;
+	}
+#if (GPIO_INSTANCES >= 3)
+	if (irq >= NR_VIC_IRQ_SIZE) {
+		irq -= NR_VIC_IRQ_SIZE;
+		gpio_base = GPIO2_BASE;
+	}
+#endif
+#if (GPIO_INSTANCES >= 4)
+	if (irq >= NR_VIC_IRQ_SIZE) {
+		irq -= NR_VIC_IRQ_SIZE;
+		gpio_base = GPIO3_BASE;
+	}
+#endif
+
 	val = amba_readl(gpio_base + GPIO_IE_OFFSET);
-	val &= ~(0x1 << girq);
+	val |= (0x1 << irq);
 	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
 }
 
 void ambarella_gpio_unmask_irq(unsigned int irq)
 {
-	unsigned int				girq;
-	u32					gpio_base;
-	u32					val;
-
-	girq = irq - NR_VIC_IRQS;
-	gpio_base = GPIO0_BASE;
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO1_BASE;
+	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
+		(irq >= MAX_IRQ_NUMBER))) {
+		pr_err("irq %d out of range for GPIO!\n", irq);
+	} else {
+		irq -= GPIO_INT_VEC_OFFSET;
+		__ambarella_gpio_unmask_irq(irq);
+		__set_bit(irq, ambarella_gpio_irq_bit);
 	}
-#if (GPIO_INSTANCES >= 3)
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO2_BASE;
-	}
-#endif
-#if (GPIO_INSTANCES >= 4)
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO3_BASE;
-	}
-#endif
-	if (unlikely(girq >= NR_VIC_IRQ_SIZE)) {
-		pr_err("%s: err girq %d!\n", __func__, girq);
-		return;
-	}
-
-	val = amba_readl(gpio_base + GPIO_IE_OFFSET);
-	val |= (0x1 << girq);
-	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
 }
 
 int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
@@ -338,6 +357,18 @@ static int ambarella_gpio_irq_set_wake(unsigned int irq, unsigned int state)
 {
 	pr_info("%s: set irq %d = %d\n", __func__, irq, state);
 
+	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
+		(irq >= MAX_IRQ_NUMBER))) {
+		pr_err("irq %d out of range for GPIO!\n", irq);
+		return -EINVAL;
+	}
+
+	irq -= GPIO0_INT_VEC_OFFSET;
+	if (state)
+		__set_bit(irq, ambarella_gpio_wakeup_bit);
+	else
+		__clear_bit(irq, ambarella_gpio_wakeup_bit);
+
 	return 0;
 }
 
@@ -350,6 +381,7 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 	.set_wake	= ambarella_gpio_irq_set_wake,
 };
 
+/* ==========================================================================*/
 static void ambarella_ack_irq(unsigned int irq)
 {
 	u32					vic_base = VIC_BASE;
@@ -519,6 +551,7 @@ static struct irq_chip ambarella_irq_chip = {
 	.set_wake	= ambarella_irq_set_wake,
 };
 
+/* ==========================================================================*/
 static inline u32 ambarella_irq_stat2nr(u32 stat)
 {
 	u32					tmp;
@@ -582,6 +615,7 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 	}
 }
 
+/* ==========================================================================*/
 void __init ambarella_init_irq(void)
 {
 	u32					i;
@@ -613,7 +647,7 @@ void __init ambarella_init_irq(void)
 	ambarella_irq_set_type(USBVBUS_IRQ, IRQ_TYPE_LEVEL_HIGH);
 
 	/* Setup VIC IRQs */
-	for (i = 0; i < NR_VIC_IRQS; i++) {
+	for (i = VIC_INT_VEC_OFFSET; i < NR_VIC_IRQS; i++) {
 		set_irq_chip(i, &ambarella_irq_chip);
 
 		if (i == VOUT_IRQ ||
@@ -647,10 +681,12 @@ void __init ambarella_init_irq(void)
 	}
 
 	/* Setup GPIO IRQs */
-	for (i = NR_VIC_IRQS; i < NR_IRQS; i++) {
+	for (i = GPIO_INT_VEC_OFFSET; i < NR_IRQS; i++) {
 		set_irq_chip(i, &ambarella_gpio_irq_chip);
 		set_irq_handler(i, handle_level_irq);
 		set_irq_flags(i, IRQF_VALID);
+		__clear_bit((i - GPIO_INT_VEC_OFFSET),
+			ambarella_gpio_wakeup_bit);
 	}
 	set_irq_chained_handler(GPIO0_IRQ, ambarella_gpio_irq_handler);
 	set_irq_chained_handler(GPIO1_IRQ, ambarella_gpio_irq_handler);
@@ -661,6 +697,66 @@ void __init ambarella_init_irq(void)
 #endif
 #if (GPIO_INSTANCES >= 4)
 	set_irq_chained_handler(GPIO3_IRQ, ambarella_gpio_irq_handler);
+#endif
+}
+
+void ambarella_irq_suspend(void)
+{
+	u32					i;
+
+	pr_info("%s: VIC_INTEN_REG = 0x%08X\n",
+		__func__, amba_readl(VIC_INTEN_REG));
+	pr_info("%s: VIC2_INTEN_REG = 0x%08X\n",
+		__func__, amba_readl(VIC2_INTEN_REG));
+
+	for (i = 0; i < NR_GPIO_IRQS; i++) {
+		if (test_bit(i, ambarella_gpio_wakeup_bit)) {
+			__ambarella_gpio_unmask_irq(i);
+		} else {
+			__ambarella_gpio_mask_irq(i);
+		}
+	}
+	pr_info("%s: GPIO0_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO0_IE_REG));
+	pr_info("%s: GPIO1_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO1_IE_REG));
+#if (GPIO_INSTANCES >= 3)
+	pr_info("%s: GPIO2_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO2_IE_REG));
+#endif
+#if (GPIO_INSTANCES >= 4)
+	pr_info("%s: GPIO3_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO3_IE_REG));
+#endif
+}
+
+void ambarella_irq_resume(void)
+{
+	u32					i;
+
+	pr_info("%s: VIC_INTEN_REG = 0x%08X\n",
+		__func__, amba_readl(VIC_INTEN_REG));
+	pr_info("%s: VIC2_INTEN_REG = 0x%08X\n",
+		__func__, amba_readl(VIC2_INTEN_REG));
+
+	for (i = 0; i < NR_GPIO_IRQS; i++) {
+		if (test_bit(i, ambarella_gpio_irq_bit)) {
+			__ambarella_gpio_unmask_irq(i);
+		} else {
+			__ambarella_gpio_mask_irq(i);
+		}
+	}
+	pr_info("%s: GPIO0_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO0_IE_REG));
+	pr_info("%s: GPIO1_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO1_IE_REG));
+#if (GPIO_INSTANCES >= 3)
+	pr_info("%s: GPIO2_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO2_IE_REG));
+#endif
+#if (GPIO_INSTANCES >= 4)
+	pr_info("%s: GPIO3_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO3_IE_REG));
 #endif
 }
 

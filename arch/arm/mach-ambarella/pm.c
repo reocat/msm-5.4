@@ -33,6 +33,8 @@
 
 #include <mach/hardware.h>
 
+#include "init.h"
+
 /* ==========================================================================*/
 struct ambarella_gpio_power_info system_power_gpio_info = {
 	.power_gpio	= -1,
@@ -88,7 +90,11 @@ static int ambarella_pm_enter(suspend_state_t state)
 #if (CHIP_REV == A5S)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
+#endif
 
+	ambarella_irq_suspend();
+
+#if (CHIP_REV == A5S)
 	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
 	if(result != AMB_HAL_SUCCESS){
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
@@ -107,6 +113,8 @@ static int ambarella_pm_enter(suspend_state_t state)
 	mdelay(10000);
 	pr_info("%s: exit with state[%d]\n", __func__, state);
 #endif
+
+	ambarella_irq_resume();
 
 	return errorCode;
 }

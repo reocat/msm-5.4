@@ -172,12 +172,11 @@ static int __devinit ambarella_setup_keymap(struct ambarella_ir_info *pinfo)
 	int				vi_enabled = 0;
 	int				errorCode;
 	const struct firmware		*ext_key_map;
-	int				ret;
 
 	if (keymap_name != NULL) {
-		ret = request_firmware(&ext_key_map,
+		errorCode = request_firmware(&ext_key_map,
 			keymap_name, pinfo->dev->dev.parent);
-		if (ret) {
+		if (errorCode) {
 			ambi_err("Can't load firmware, use default\n");
 			goto ambarella_setup_keymap_init;
 		}
@@ -224,6 +223,14 @@ ambarella_setup_keymap_init:
 			if (errorCode)
 				ambi_err("Request GPIO%d IRQ failed!\n",
 					pinfo->pkeymap[i].gpio_key.id);
+			if (pinfo->pkeymap[i].gpio_key.can_wakeup) {
+				errorCode = set_irq_wake(GPIO_INT_VEC(
+					pinfo->pkeymap[i].gpio_key.id), 1);
+				if (errorCode)
+					ambi_err("set_irq_wake %d failed!\n",
+						pinfo->pkeymap[i].gpio_key.id);
+			}
+			errorCode = 0;	//Continue with error...
 			break;
 
 		case AMBA_INPUT_SOURCE_VI:
@@ -285,7 +292,7 @@ ambarella_setup_keymap_init:
 		for (i = 0; i < 0x100; i++)
 			set_bit(i, pinfo->dev->keybit);
 
-	return 0;
+	return errorCode;
 }
 
 static void ambarella_free_keymap(struct ambarella_ir_info *pinfo)
@@ -312,6 +319,9 @@ static void ambarella_free_keymap(struct ambarella_ir_info *pinfo)
 			break;
 
 		case AMBA_INPUT_SOURCE_GPIO:
+			if (pinfo->pkeymap[i].gpio_key.can_wakeup)
+				set_irq_wake(GPIO_INT_VEC(
+					pinfo->pkeymap[i].gpio_key.id), 0);
 			free_irq(GPIO_INT_VEC(pinfo->pkeymap[i].gpio_key.id),
 				pinfo);
 			break;
@@ -989,8 +999,9 @@ static int ambarella_ir_suspend(struct platform_device *pdev,
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!pinfo->pcontroller_info->can_wakeup) {
-		amba_clrbitsl(pinfo->regbase + IR_CONTROL_OFFSET,IR_CONTROL_INTENB);
+	if (!device_can_wakeup(&pdev->dev)) {
+		amba_clrbitsl(pinfo->regbase + IR_CONTROL_OFFSET,
+			IR_CONTROL_INTENB);
 		disable_irq(pinfo->irq);
 	}
 
@@ -1006,8 +1017,9 @@ static int ambarella_ir_resume(struct platform_device *pdev)
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!pinfo->pcontroller_info->can_wakeup) {
-		amba_setbitsl(pinfo->regbase + IR_CONTROL_OFFSET,IR_CONTROL_INTENB);
+	if (!device_can_wakeup(&pdev->dev)) {
+		amba_setbitsl(pinfo->regbase + IR_CONTROL_OFFSET,
+			IR_CONTROL_INTENB);
 		ambarella_ir_enable(pinfo);
 	}
 

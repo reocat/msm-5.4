@@ -152,7 +152,7 @@ static void __init ambarella_init(void)
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++)
-		device_init_wakeup(&ambarella_devices[i]->dev, 1);
+		device_init_wakeup(&ambarella_devices[i]->dev, 0);
 }
 
 /* ==========================================================================*/

@@ -24,11 +24,10 @@
 #ifndef __ARCH_AMBARELLA_INIT_H
 #define __ARCH_AMBARELLA_INIT_H
 
-extern void ambarella_map_io(void);
-extern void ambarella_init_irq(void);
-
+/* ==========================================================================*/
 extern struct sys_timer ambarella_timer;
 
+/* ==========================================================================*/
 extern struct platform_device ambarella_sd0;
 #if (SD_INSTANCES >= 2)
 extern struct platform_device ambarella_sd1;
@@ -61,12 +60,18 @@ extern struct platform_device ambarella_uart1;
 extern struct platform_device ambarella_nand;
 extern struct platform_device ambarella_power_supply;
 
-extern struct ambarella_gpio_power_info system_power_gpio_info;
-extern struct ambarella_gpio_power_info sound_input_gpio_info;
-extern struct ambarella_gpio_power_info sound_output_gpio_info;
 #ifdef CONFIG_ARCH_AMBARELLA_A5S
 extern struct platform_device ambarella_crypto;
 #endif
+
+/* ==========================================================================*/
+extern struct ambarella_gpio_power_info system_power_gpio_info;
+extern struct ambarella_gpio_power_info sound_input_gpio_info;
+extern struct ambarella_gpio_power_info sound_output_gpio_info;
+
+/* ==========================================================================*/
+extern void ambarella_map_io(void);
+
 extern int ambarella_create_proc_dir(void);
 
 extern int ambarella_init_nand(void *);
@@ -86,10 +91,10 @@ extern void ambarella_gpio_set_valid(unsigned pin, int valid);
 extern void ambarella_register_spi_device(void);
 extern void ambarella_register_i2c_device(void);
 
+extern void ambarella_init_irq(void);
+extern void ambarella_irq_suspend(void);
+extern void ambarella_irq_resume(void);
 extern void ambarella_gpio_ack_irq(unsigned int irq);
-extern void ambarella_gpio_mask_irq(unsigned int irq);
-extern void ambarella_gpio_unmask_irq(unsigned int irq);
-extern int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type);
 
 #endif
 
