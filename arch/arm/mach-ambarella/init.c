@@ -30,8 +30,6 @@
 
 #include <mach/hardware.h>
 
-#include <mach/patch-ver.h>
-
 #include "init.h"
 
 /* ==========================================================================*/
@@ -84,7 +82,6 @@ static void __init ambarella_init(void)
 	errorCode = amb_get_chip_name(HAL_BASE_VP, &pname);
 	BUG_ON(errorCode != AMB_HAL_SUCCESS);
 #endif
-	pr_info("Ambarella Patch Version: %s\n", Ambarella_Patch_Version);
 	pr_info("Ambarella:\n");
 	pr_info("\tchip id:\t\t%d\n", AMBARELLA_BOARD_CHIP(system_rev));
 	pr_info("\tboard type:\t\t%d\n", AMBARELLA_BOARD_TYPE(system_rev));
