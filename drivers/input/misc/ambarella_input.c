@@ -663,22 +663,22 @@ void ambarella_scan_adc(struct work_struct *work)
 			adc_data[adc_index]))
 			continue;
 
+		/* scan the key and stop when the first key action is detected. If you want to
+		   monitor multi-key in different ADC channels, remove "break" */
 		if (pinfo->pkeymap[i].type == AMBA_INPUT_ADC_KEY) {
-			if (pinfo->last_adc_key[adc_index] != KEY_RESERVED) {
+			if (pinfo->adc_key_pressed[adc_index] != AMBA_ADC_NO_KEY_PRESSED
+				&& pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
 				ambarella_report_key(pinfo,
-					pinfo->last_adc_key[adc_index], 0);
-				ambi_dbg("Key %d release & %d\n",
-					pinfo->last_adc_key[adc_index],
-					adc_data[adc_index]);
-			}
-			pinfo->last_adc_key[adc_index] = 
-				pinfo->pkeymap[i].adc_key.key_code;
-			if (pinfo->last_adc_key[adc_index] != KEY_RESERVED) {
+					pinfo->adc_key_pressed[adc_index], 0);//key relase
+				pinfo->adc_key_pressed[adc_index] = AMBA_ADC_NO_KEY_PRESSED;
+				ambi_dbg("key released\n");
+				break;
+			} else if (pinfo->adc_key_pressed[adc_index] == AMBA_ADC_NO_KEY_PRESSED
+				&& pinfo->pkeymap[i].adc_key.key_code != KEY_RESERVED) {
 				ambarella_report_key(pinfo,
-					pinfo->last_adc_key[adc_index], 1);
-				ambi_dbg("Key %d press & %d\n",
-					pinfo->last_adc_key[adc_index],
-					adc_data[adc_index]);
+					pinfo->pkeymap[i].adc_key.key_code, 1);// key press
+				pinfo->adc_key_pressed[adc_index] = pinfo->pkeymap[i].adc_key.key_code;
+				ambi_dbg("key pressed\n");
 				break;
 			}
 		}
@@ -880,7 +880,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	pinfo->irq = irq->start;
 	pinfo->gpio_id = io->start;
 	pinfo->init_adc = 1;
-	memset(pinfo->last_adc_key, KEY_RESERVED, sizeof(pinfo->last_adc_key));
+	memset(pinfo->adc_key_pressed, 0, sizeof(pinfo->adc_key_pressed));
 	pinfo->last_ir_uid = 0;
 	pinfo->last_ir_flag = 0;
 

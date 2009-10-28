@@ -51,6 +51,8 @@
 
 #define	AMBA_INPUT_END			(0xFFFFFFFF)
 
+#define	AMBA_ADC_NO_KEY_PRESSED		0
+
 enum ambarella_ir_protocol {
 	AMBA_IR_PROTOCOL_NEC = 0,
 	AMBA_IR_PROTOCOL_PANASONIC = 1,
@@ -166,7 +168,7 @@ struct ambarella_ir_info {
 
 	u32				init_adc;
 	struct delayed_work		detect_adc;
-	u32				last_adc_key[ADC_MAX_INSTANCES];
+	u32				adc_key_pressed[ADC_MAX_INSTANCES];
 	u32				last_ir_uid;
 	u32				last_ir_flag;
 
