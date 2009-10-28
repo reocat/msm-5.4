@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/fio_amb.c
+ * arch/arm/mach-ambarella/fio.c
  *
  * History:
  *	2008/03/05 - [Chien-Yang Chen] created file
@@ -39,103 +39,113 @@
 static DECLARE_WAIT_QUEUE_HEAD(fio_lock);
 static int fio_select_sdio_as_default = 0;
 static int fio_owner = SELECT_FIO_FREE;
+static int fio_owner_counter = 0;
 
 module_param_call(fio_select_sdio_as_default, param_set_int, param_get_int,
 	&fio_select_sdio_as_default, 0644);
 
 /* ==========================================================================*/
-int fio_select_lock(int module, int lock)
+void fio_select_lock(int module)
 {
 	u32 fio_ctr;
 	u32 fio_dmactr;
 
-	if (lock) {
-		wait_event_interruptible(fio_lock, ((fio_owner == module) ||
-			(fio_owner == SELECT_FIO_FREE)));
+	wait_event_interruptible(fio_lock, ((fio_owner == module) ||
+		(fio_owner == SELECT_FIO_FREE)));
+	fio_owner_counter++;
+
+	if (fio_owner != module) {
 		fio_owner = module;
-	}
 
-	fio_ctr = amba_readl(FIO_CTR_REG);
-	fio_dmactr = amba_readl(FIO_DMACTR_REG);
-
-	switch (module) {
-	case SELECT_FIO_FL:
-		/* In A2..., a proper boot config is needed for nand boot */
-		/* with xD card inserted. */
-		fio_ctr &= ~FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_FL;
-		break;
-
-	case SELECT_FIO_XD:
-		fio_ctr |= FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_XD;
-		break;
-
-	case SELECT_FIO_CF:
-		fio_ctr &= ~FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_CF;
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-#ifdef CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS
-		fio_amb_sd2_disable();	//Disable SD2 in CF BUS mode(PC Mem or PC IO)
-#endif
-		fio_amb_cf_enable();
-#endif
-		break;
-
-	case SELECT_FIO_SD:
-		fio_ctr &= ~FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-		break;
-
-	case SELECT_FIO_SDIO:
-		fio_ctr |= FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-		break;
-
-	case SELECT_FIO_SD2:
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-#ifdef CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS
-		fio_amb_cf_disable();	//Disable CF in CF BUS mode(PC Mem or PC IO)
-#endif
-		fio_amb_sd2_enable();
-#endif
-		break;
-
-	default:	// SELECT_FIO_HOLD: used to hold the fio bus
-		break;
-	}
-
-	amba_writel(FIO_CTR_REG, fio_ctr);
-	amba_writel(FIO_DMACTR_REG, fio_dmactr);
-
-	return 0;
-}
-EXPORT_SYMBOL(fio_select_lock);
-
-void fio_unlock(int module, int lock)
-{
-#if (SD_HAS_INTERNAL_MUXER == 1) && !defined(CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS)
-	u32 fio_ctr;
-	u32 fio_dmactr;
-
-	if (fio_select_sdio_as_default) {
 		fio_ctr = amba_readl(FIO_CTR_REG);
 		fio_dmactr = amba_readl(FIO_DMACTR_REG);
 
-		fio_ctr |= FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+		switch (module) {
+		case SELECT_FIO_FL:
+			fio_ctr &= ~FIO_CTR_XD;
+			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_FL;
+			break;
+
+		case SELECT_FIO_XD:
+			fio_ctr |= FIO_CTR_XD;
+			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_XD;
+			break;
+
+		case SELECT_FIO_CF:
+			fio_ctr &= ~FIO_CTR_XD;
+			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_CF;
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+#ifdef CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS
+			//Disable SD2 in CF BUS mode(PC Mem or PC IO)
+			fio_amb_sd2_disable();
+#endif
+			fio_amb_cf_enable();
+#endif
+			break;
+
+		case SELECT_FIO_SD:
+			fio_ctr &= ~FIO_CTR_XD;
+			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+			break;
+
+		case SELECT_FIO_SDIO:
+			fio_ctr |= FIO_CTR_XD;
+			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+			break;
+
+		case SELECT_FIO_SD2:
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+#ifdef CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS
+			//Disable CF in CF BUS mode(PC Mem or PC IO)
+			fio_amb_cf_disable();
+#endif
+			fio_amb_sd2_enable();
+#endif
+			break;
+
+		default:	// SELECT_FIO_HOLD: used to hold the fio bus
+			break;
+		}
 
 		amba_writel(FIO_CTR_REG, fio_ctr);
 		amba_writel(FIO_DMACTR_REG, fio_dmactr);
 	}
+}
+
+void fio_unlock(int module)
+{
+#if (SD_HAS_INTERNAL_MUXER == 1) && !defined(CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS)
+	u32 fio_ctr;
+	u32 fio_dmactr;
 #endif
 
-	if (lock && (fio_owner == module)){
-		fio_owner = SELECT_FIO_FREE;
-		wake_up(&fio_lock);
+	if (fio_owner == module) {
+		if (fio_owner_counter > 0)
+			fio_owner_counter--;
+		else
+			pr_err("%s: fio_owner[%d] counter is 0!.\n",
+				__func__, module);
+
+#if (SD_HAS_INTERNAL_MUXER == 1) && !defined(CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS)
+		if ((fio_select_sdio_as_default) && (fio_owner_counter == 0) &&
+			(fio_owner != SELECT_FIO_SDIO)) {
+			fio_ctr = amba_readl(FIO_CTR_REG);
+			fio_dmactr = amba_readl(FIO_DMACTR_REG);
+
+			fio_ctr |= FIO_CTR_XD;
+			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+
+			amba_writel(FIO_CTR_REG, fio_ctr);
+			amba_writel(FIO_DMACTR_REG, fio_dmactr);
+		}
+#endif
+
+		if (fio_owner_counter == 0) {
+			fio_owner = SELECT_FIO_FREE;
+			wake_up(&fio_lock);
+		}
 	}
 }
-EXPORT_SYMBOL(fio_unlock);
 
 int fio_amb_sd0_is_enable(void)
 {
@@ -186,7 +196,6 @@ int fio_dma_parse_error(u32 reg)
 done:
 	return rval;
 }
-EXPORT_SYMBOL(fio_dma_parse_error);
 
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 void fio_amb_fl_enable(void)

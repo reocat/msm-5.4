@@ -1094,8 +1094,8 @@ extern int fio_amb_sd2_is_enable(void);
  */
 extern int fio_dma_parse_error(u32 reg);
 
-extern int fio_select_lock(int module, int lock);
-extern void fio_unlock(int module, int lock);
+extern void fio_select_lock(int module);
+extern void fio_unlock(int module);
 
 #endif  /* __ASSEMBLER__ */
 

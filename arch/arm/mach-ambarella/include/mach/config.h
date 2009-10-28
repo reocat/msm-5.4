@@ -223,7 +223,7 @@ struct ambarella_eth_platform_info {
 	module_param_call(eth##id##_mii_id, param_set_int, param_get_int, &(arg.mii_id), perm); \
 	module_param_call(eth##id##_phy_id, param_set_uint, param_get_uint, &(arg.phy_id), perm); \
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm);\
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
 
 #define SPI0_CS2_CS3_EN				0x00000002
 struct ambarella_spi_cs_config {

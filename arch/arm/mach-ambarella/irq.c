@@ -706,8 +706,10 @@ void ambarella_irq_suspend(void)
 
 	pr_info("%s: VIC_INTEN_REG = 0x%08X\n",
 		__func__, amba_readl(VIC_INTEN_REG));
+#if (VIC_INSTANCES >= 2)
 	pr_info("%s: VIC2_INTEN_REG = 0x%08X\n",
 		__func__, amba_readl(VIC2_INTEN_REG));
+#endif
 
 	for (i = 0; i < NR_GPIO_IRQS; i++) {
 		if (test_bit(i, ambarella_gpio_wakeup_bit)) {
@@ -736,8 +738,10 @@ void ambarella_irq_resume(void)
 
 	pr_info("%s: VIC_INTEN_REG = 0x%08X\n",
 		__func__, amba_readl(VIC_INTEN_REG));
+#if (VIC_INSTANCES >= 2)
 	pr_info("%s: VIC2_INTEN_REG = 0x%08X\n",
 		__func__, amba_readl(VIC2_INTEN_REG));
+#endif
 
 	for (i = 0; i < NR_GPIO_IRQS; i++) {
 		if (test_bit(i, ambarella_gpio_irq_bit)) {

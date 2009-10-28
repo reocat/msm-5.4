@@ -196,6 +196,13 @@ config I2C_AMBARELLA_TSC2007
 
 	  If you are not sure, say N here.
 
+config I2C_AMBARELLA_AK4183
+        bool "Suport AK4183"
+        default n
+        help
+
+          If you are not sure, say N here.
+
 endmenu
 
 endmenu

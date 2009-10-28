@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/adc.c.c
+ * arch/arm/mach-ambarella/adc.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

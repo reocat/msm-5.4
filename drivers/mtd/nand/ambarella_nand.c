@@ -576,7 +576,7 @@ static int nand_amb_request(struct nand_amb_s *amb_nand)
 
 	nand_ctr_reg = amb_nand->control | NAND_CTR_WAS; 
 
-	fio_select_lock(SELECT_FIO_FL, 1);
+	nand_info->plat_nand->request();
 
 #ifdef AMBARELLA_NAND_WP
 	if ((cmd == NAND_AMB_CMD_ERASE ||
@@ -735,7 +735,8 @@ static int nand_amb_request(struct nand_amb_s *amb_nand)
 		}
 
 		if(errorCode != -1) {
-			errorCode = fio_dma_parse_error(nxact->fio_dma_sta);
+			errorCode = nand_info->plat_nand->parse_error(
+				nxact->fio_dma_sta);
 			if (errorCode) {
 				dev_err(nand_info->dev,
 					"%s: cmd=%d, bank=0x%x, addr_hi=0x%x, "
@@ -781,7 +782,7 @@ nand_amb_request_exit:
 		gpio_direction_output(nand_info->wp_gpio, GPIO_LOW);
 #endif
 
-	fio_unlock(SELECT_FIO_FL, 1);
+	nand_info->plat_nand->release();
 
 	return errorCode;
 }
@@ -1517,8 +1518,11 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	struct resource				*dma_res;
 
 	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
-	if (plat_nand == NULL) {
-		dev_err(&pdev->dev, "Can't get platform_data!\n");
+	if ((plat_nand == NULL) ||
+		(plat_nand->request == NULL) ||
+		(plat_nand->release == NULL) ||
+		(plat_nand->parse_error == NULL)) {
+		dev_err(&pdev->dev, "Platform_data Error!\n");
 		errorCode = - EPERM;
 		goto ambarella_nand_probe_exit;
 	}

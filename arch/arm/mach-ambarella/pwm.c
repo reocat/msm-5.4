@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/adc.c.c
+ * arch/arm/mach-ambarella/pwm.c
  *
  * Author: Jay Zhang, <jzhang@ambarella.com>
  *

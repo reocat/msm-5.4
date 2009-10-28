@@ -86,6 +86,10 @@ struct ambarella_platform_nand
 
 	int				nr_sets;
 	struct ambarella_nand_set	*sets;
+
+	int				(*parse_error)(u32 reg);
+	void				(*request)(void);
+	void				(*release)(void);
 };
 #endif //__ASSEMBLER__
 

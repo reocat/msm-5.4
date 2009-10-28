@@ -1847,7 +1847,7 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 	if (ndev) {
 		lp = (struct ambeth_info *)netdev_priv(ndev);
 		if (!device_may_wakeup(&pdev->dev)) {
-		        ambhw_dma_int_disable(lp);
+			ambhw_dma_int_disable(lp);
 			disable_irq(ndev->irq);
 		}
 		if (lp->phydev)
@@ -1879,7 +1879,7 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 			phy_start(lp->phydev);
 		if (!device_may_wakeup(&pdev->dev)) {
 			enable_irq(ndev->irq);
-		        ambhw_dma_int_enable(lp);
+			ambhw_dma_int_enable(lp);
 		}
 
 	}

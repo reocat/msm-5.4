@@ -182,7 +182,8 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	unsigned int				oldfreq, newfreq;
 	unsigned long				flags;
 
-	fio_select_lock(SELECT_FIO_HOLD, 1);	/* Hold the FIO bus first */
+	/* Hold the FIO bus first */
+	fio_select_lock(SELECT_FIO_HOLD);
 
 	/* Tell everyone what we're about to do... */
 	srcu_notifier_call_chain(&pll_notifier_list,
@@ -212,7 +213,8 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 		errorCode = -EPERM;
 	}
 
-	fio_unlock(SELECT_FIO_HOLD, 1);	/* Release the FIO bus */
+	/* Release the FIO bus */
+	fio_unlock(SELECT_FIO_HOLD);
 
 	return errorCode;
 }
@@ -447,7 +449,8 @@ static int ambarella_freq_proc_write(struct file *file,
 	if(new_freq_cpu == pll_info->armfreq)
 		goto ambarella_pll_proc_write_exit;
 
-	fio_select_lock(SELECT_FIO_HOLD, 1);	/* Hold the FIO bus first */
+	/* Hold the FIO bus first */
+	fio_select_lock(SELECT_FIO_HOLD);
 
 	/* Tell everyone what we're about to do... */
 	srcu_notifier_call_chain(&pll_notifier_list,
@@ -513,7 +516,8 @@ static int ambarella_freq_proc_write(struct file *file,
 
 	pll_info->armfreq = get_core_bus_freq_hz();
 
-	fio_unlock(SELECT_FIO_HOLD, 1);	/* Release the FIO bus */
+	/* Release the FIO bus */
+	fio_unlock(SELECT_FIO_HOLD);
 
 ambarella_pll_proc_write_exit:
 	return errorCode;

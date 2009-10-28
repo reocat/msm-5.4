@@ -630,10 +630,29 @@ static struct ambarella_nand_timing ambarella_nand_default_timing = {
 	.timing5	= 0x00070702,
 };
 
+static void fio_amb_nand_request(void)
+{
+	fio_select_lock(SELECT_FIO_FL);
+}
+
+static void fio_amb_nand_release(void)
+{
+	fio_unlock(SELECT_FIO_FL);
+}
+
+static int fio_amb_nand_parse_error(u32 reg)
+{
+	return fio_dma_parse_error(reg);
+}
+
 static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.nr_sets    	= 1,
 	.sets		= &ambarella_nand_default_set,
 	.timing		= &ambarella_nand_default_timing,
+
+	.parse_error	= fio_amb_nand_parse_error,
+	.request	= fio_amb_nand_request,
+	.release	= fio_amb_nand_release,
 };
 
 static int __init ambarella_add_partition(const struct tag *tag,
@@ -916,23 +935,23 @@ static struct resource ambarella_sd0_resources[] = {
 
 static void fio_amb_sd0_slot1_request(void)
 {
-	fio_select_lock(SELECT_FIO_SD, 1);
+	fio_select_lock(SELECT_FIO_SD);
 }
 
 static void fio_amb_sd0_slot1_release(void)
 {
-	fio_unlock(SELECT_FIO_SD, 1);
+	fio_unlock(SELECT_FIO_SD);
 }
 
 #if (SD_HAS_INTERNAL_MUXER == 1)
 static void fio_amb_sd0_slot2_request(void)
 {
-	fio_select_lock(SELECT_FIO_SDIO, 1);
+	fio_select_lock(SELECT_FIO_SDIO);
 }
 
 static void fio_amb_sd0_slot2_release(void)
 {
-	fio_unlock(SELECT_FIO_SDIO, 1);
+	fio_unlock(SELECT_FIO_SDIO);
 }
 #endif
 
@@ -1042,12 +1061,12 @@ static struct resource ambarella_sd1_resources[] = {
 
 static void fio_amb_sd2_request(void)
 {
-	fio_select_lock(SELECT_FIO_SD2, 1);
+	fio_select_lock(SELECT_FIO_SD2);
 }
 
 static void fio_amb_sd2_release(void)
 {
-	fio_unlock(SELECT_FIO_SD2, 1);
+	fio_unlock(SELECT_FIO_SD2);
 }
 
 static struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
@@ -1260,6 +1279,7 @@ static struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
 	.rct_set_ssi_pll	= rct_set_ssi_pll,
 	.get_ssi_freq_hz	= get_ssi_freq_hz,
 };
+
 struct platform_device ambarella_spi0 = {
 	.name		= "ambarella-spi",
 	.id		= 0,
@@ -1295,7 +1315,7 @@ static struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
 	.rct_set_ssi_pll	= rct_set_ssi2_pll,
-	.get_ssi_freq_hz	= get_ssi2_freq_hz
+	.get_ssi_freq_hz	= get_ssi2_freq_hz,
 };
 
 struct platform_device ambarella_spi1 = {
