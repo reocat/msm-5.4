@@ -291,6 +291,14 @@ struct ambarella_wdt_controller {
 struct ambarella_platform_crypto_info{
 	u32	reserved;
 };
+
+struct ambarella_adc_controller {
+	void					(*read_channels)(u32*, u32*);
+	u32					(*is_irq_supported)(void);
+	void					(*set_irq_threshold)(u32, u32, u32);
+	void					(*reset)(void);
+};
+
 #endif /* __ASSEMBLER__ */
 
 #define	AMBA_DEBUG_NULL			(0)

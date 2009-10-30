@@ -68,6 +68,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_ARCH_AMBARELLA_A5S
 	&ambarella_crypto,
 #endif
+	&ambarella_adc0,
 };
 
 /* ==========================================================================*/

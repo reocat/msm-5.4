@@ -49,7 +49,20 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	u32					adc_data = 0;
 
 	switch(channel_id) {
-#if ((ADC_MAX_INSTANCES == 4) || (ADC_MAX_INSTANCES == 8))
+#if (CHIP_REV == A5S)
+	case 0:
+		adc_data = amba_readl(ADC_DATA3_REG);
+		break;
+	case 1:
+		adc_data = amba_readl(ADC_DATA0_REG);
+		break;
+	case 2:
+		adc_data = amba_readl(ADC_DATA1_REG);
+		break;
+	case 3:
+		adc_data = amba_readl(ADC_DATA2_REG);
+		break;
+#else
 	case 0:
 		adc_data = amba_readl(ADC_DATA0_REG);
 		break;
@@ -132,7 +145,9 @@ EXPORT_SYMBOL(ambarella_adc_get_channel);
 
 void ambarella_adc_start(void)
 {
+#if (CHIP_REV != A5S)
 	amba_writel(ADC_RESET_REG, 0x01);
+#endif
 	amba_writel(ADC_ENABLE_REG, 0x01);
 	msleep(3);
 	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START | ADC_CONTROL_MODE);
@@ -230,4 +245,48 @@ int __init ambarella_init_adc(void)
 
 	return errorCode;
 }
+
+u32 adc_is_irq_supported(void)
+{
+	#if (CHIP_REV == A5S)
+		return 1;
+	#else
+		return 0;
+	#endif
+}
+EXPORT_SYMBOL(adc_is_irq_supported);
+
+
+/*
+ * set the related channal's interrupt trigger and threshold
+ */
+void adc_set_irq_threshold(u32 ch, u32 h_level,u32 l_level)
+{
+#if (CHIP_REV == A5S)
+	u32 irq_control_address = 0;
+	u32 value = ((!!h_level)<<31) | ((!!l_level)<<30)
+		| ((h_level&0x3ff)<<15) | (l_level&0x3ff);
+
+	switch (ch) {
+	case 0:
+		irq_control_address = ADC_CHAN3_INTR_REG;
+		break;
+	case 1:
+		irq_control_address = ADC_CHAN0_INTR_REG;
+		break;
+	case 2:
+		irq_control_address = ADC_CHAN1_INTR_REG;
+		break;
+	case 3:
+		irq_control_address = ADC_CHAN2_INTR_REG;
+		break;
+	default:
+		printk("Don't support %d channels\n", ch);
+		break;
+	}
+	amba_writel(irq_control_address, value);
+#else
+#endif
+}
+EXPORT_SYMBOL(adc_set_irq_threshold);
 

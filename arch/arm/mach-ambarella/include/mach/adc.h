@@ -44,7 +44,7 @@
 #define	ADC_MAX_RESOLUTION	16
 #endif
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S)
+#if (CHIP_REV == A5) || (CHIP_REV == A6)
 #define ADC_MAX_INSTANCES	8
 #else
 #define ADC_MAX_INSTANCES	4
@@ -105,6 +105,8 @@ extern void ambarella_adc_get_array(u32 *adc_data, u32 *array_size);
 extern u32 ambarella_adc_get_channel(u32 channel_id);
 extern void ambarella_adc_start(void);
 extern void ambarella_adc_stop(void);
+extern u32 adc_is_irq_supported(void);
+extern void adc_set_irq_threshold(u32 ch, u32 h_level,u32 l_level);
 #endif /* __ASSEMBLER__ */
 
 #endif

@@ -63,6 +63,7 @@ extern struct platform_device ambarella_power_supply;
 #ifdef CONFIG_ARCH_AMBARELLA_A5S
 extern struct platform_device ambarella_crypto;
 #endif
+extern struct platform_device ambarella_adc0;
 
 /* ==========================================================================*/
 extern struct ambarella_gpio_power_info system_power_gpio_info;

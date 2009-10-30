@@ -228,9 +228,22 @@ config INPUT_PCF50633_PMU
 	 layer on NXP PCF50633.
 
 config INPUT_AMBARELLA
-	tristate "Ambarella genreal input"
+	tristate "Ambarella general input"
 	depends on ARM && ARCH_AMBARELLA
 	default n
 	help
-	  Ambarella genreal input. It can support IR, ADC and GPIO.
+	  Ambarella general input. It can support IR, ADC and GPIO. GPIO is
+	  default, IR and ADC need be selected.
+config INPUT_AMBARELLA_IR
+	tristate "Ambarella ir input"
+	depends on ARM && ARCH_AMBARELLA && INPUT_AMBARELLA
+	default n
+	help
+	  Ambarella ir input.
+config INPUT_AMBARELLA_ADC
+	tristate "Ambarella adc input"
+	depends on ARM && ARCH_AMBARELLA && INPUT_AMBARELLA
+	default n
+	help
+	  Ambarella adc input.
 endif

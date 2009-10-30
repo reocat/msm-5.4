@@ -60,7 +60,10 @@ enum ambarella_ir_protocol {
 	AMBA_IR_PROTOCOL_PHILIPS = 3,
 	AMBA_IR_PROTOCOL_END
 };
-
+enum ambarella_adc_mode{
+	AMBA_ADC_IRQ_MODE,
+	AMBA_ADC_POL_MODE
+};
 struct ambarella_key_table {
 	u32					type;
 	union {
@@ -164,15 +167,30 @@ struct ambarella_ir_info {
 	u16				tick_buf[MAX_IR_BUFFER];
 	struct ambarella_key_table	*pkeymap;
 
-	struct workqueue_struct		*workqueue;
-
-	u32				init_adc;
-	struct delayed_work		detect_adc;
-	u32				adc_key_pressed[ADC_MAX_INSTANCES];
 	u32				last_ir_uid;
 	u32				last_ir_flag;
 
+	u32				adc_channel_used[ADC_MAX_INSTANCES];
 	struct ambarella_ir_controller	*pcontroller_info;
+};
+
+struct ambarella_adc_info {
+	unsigned char __iomem 		*regbase;
+
+	u32				id;
+	struct resource			*mem;
+	unsigned int			support_irq;
+	unsigned int			work_mode;
+	unsigned int			irq;
+
+	struct ambarella_key_table	*pkeymap;
+
+	struct workqueue_struct		*workqueue;
+
+	struct delayed_work		detect_adc;
+	u32				adc_key_pressed[ADC_MAX_INSTANCES];
+
+	struct ambarella_adc_controller	*pcontroller_info;
 };
 
 int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid);
@@ -183,6 +201,10 @@ int ambarella_ir_philips_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 int ambarella_ir_inc_read_ptr(struct ambarella_ir_info *pinfo);
 int ambarella_ir_move_read_ptr(struct ambarella_ir_info *pinfo, int offset);
 u16 ambarella_ir_read_data(struct ambarella_ir_info *pinfo, int pointer);
+irqreturn_t ambarella_gpio_irq(int irq, void *devid);
+int ambarella_vi_proc_write(struct file *file,
+	const char __user *buffer, unsigned long count, void *data);
+
 
 #ifdef CONFIG_INPUT_AMBARELLA_DEBUG
 #define ambi_dbg(format, arg...)		\
@@ -196,20 +218,20 @@ ambi_dbg(const char * fmt, ...)
 #endif
 
 #define ambi_err(format, arg...)		\
-	dev_printk(KERN_ERR , pinfo->dev->dev.parent , format , ## arg)
+	dev_printk(KERN_ERR , local_info->dev->dev.parent , format , ## arg)
 #define ambi_info(format, arg...)		\
-	dev_printk(KERN_INFO , pinfo->dev->dev.parent , format , ## arg)
+	dev_printk(KERN_INFO , local_info->dev->dev.parent , format , ## arg)
 #define ambi_warn(format, arg...)		\
-	dev_printk(KERN_WARNING , pinfo->dev->dev.parent , format , ## arg)
+	dev_printk(KERN_WARNING , local_info->dev->dev.parent , format , ## arg)
 #define ambi_notice(format, arg...)		\
-	dev_printk(KERN_NOTICE , pinfo->dev->dev.parent , format , ## arg)
+	dev_printk(KERN_NOTICE , local_info->dev->dev.parent , format , ## arg)
 
 #ifdef CONFIG_AMBARELLA_INPUT_KEY_SYNC_SUPPORT
-#define AMBI_CAN_SYNC()		(input_sync(pinfo->dev))
+#define AMBI_CAN_SYNC()		(input_sync(local_info->dev))
 #else
 #define AMBI_CAN_SYNC()
 #endif
-#define AMBI_MUST_SYNC()	(input_sync(pinfo->dev))
+#define AMBI_MUST_SYNC()	(input_sync(local_info->dev))
 
 #endif	//__KERNEL__
 

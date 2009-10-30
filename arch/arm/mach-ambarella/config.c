@@ -1480,9 +1480,8 @@ static u32 rtc_read_reg(u32 reg)
 
 static void rtc_write_reg(u32 reg, u32 tm)
 {
-	u32 val;
-
 #if (CHIP_REV == A5S)
+	u32 val;
 	val = (tm & 0x3fffffff) | (amba_readl(reg) & 0xc0000000);
 	amba_writel(reg, val);
 #else
@@ -1870,4 +1869,42 @@ struct platform_device ambarella_crypto = {
 	}
 };
 #endif
+
+
+static struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
+
+	.read_channels = ambarella_adc_get_array,
+	.is_irq_supported = adc_is_irq_supported,
+	.set_irq_threshold = adc_set_irq_threshold,
+	.reset = ambarella_adc_start,
+};
+
+static struct resource ambarella_adc_resources[] = {
+	[0] = {
+		.start	= ADC_BASE,
+		.end	= ADC_BASE + 0x0FFF,
+		.name	= "registers",
+		.flags	= IORESOURCE_MEM,
+	},
+#if (CHIP_REV == A5S)
+	[1] = {
+		.start	= ADC_LEVEL_IRQ,
+		.end	= ADC_LEVEL_IRQ,
+		.name	= "adc-level-irq",
+		.flags	= IORESOURCE_IRQ,
+	},
+#endif
+};
+
+struct platform_device ambarella_adc0 = {
+	.name		= "ambarella-adc",
+	.id		= 0,
+	.resource	= ambarella_adc_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_adc_resources),
+	.dev		= {
+		.platform_data		= &ambarella_platform_adc_controller0,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
 
