@@ -371,6 +371,7 @@ static struct ambarella_platform_fb ambarella_platform_fb0 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
+	.vout_id		= 0,
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
 	.x_multiplication	= 1,
 	.y_multiplication	= 1,
@@ -730,6 +731,7 @@ static struct ambarella_platform_fb ambarella_platform_fb1 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
+	.vout_id		= 1,
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
 	.x_multiplication	= 1,
 	.y_multiplication	= 1,
@@ -848,7 +850,7 @@ int ambarella_fb_get_platform_info(u32 fb_id,
 		status = 0;
 #endif
 	}
-	
+
 
 	return status;
 }

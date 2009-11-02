@@ -165,6 +165,7 @@ static int ambafb_pan_display(struct fb_var_screeninfo *var,
 	wake_up(&(ambafb_data->proc_wait));
 	mutex_lock(&ambafb_data->lock);
 	if (ambafb_data->pan_display) {
+		ambafb_info.vout_id = ambafb_data->vout_id;
 		ambafb_info.color_format = ambafb_data->color_format;
 		errorCode =
 			ambafb_data->pan_display(var, info, &ambafb_info);
@@ -435,7 +436,7 @@ static int __devexit ambafb_remove(struct platform_device *pdev)
 	struct ambarella_platform_fb		*ambafb_data = NULL;
 
 	info = platform_get_drvdata(pdev);
-	if (info) {		
+	if (info) {
 		remove_proc_entry(dev_name(&pdev->dev),
 			get_ambarella_proc_dir());
 		unregister_framebuffer(info);
