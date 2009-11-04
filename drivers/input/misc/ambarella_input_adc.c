@@ -26,10 +26,6 @@
 /* ========================================================================= */
 static int adc_scan_delay = 20;
 MODULE_PARM_DESC(adc_scan_delay, "Ambarella ADC scan (jiffies)");
-static int adc_high_trig = 920; //default for A5S&A2 ipcam board
-MODULE_PARM_DESC(adc_high_trig, "Ambarella ADC irq high trigger");
-static int adc_low_trig = 0;
-MODULE_PARM_DESC(adc_low_trig, "Ambarella ADC irq low trigger");
 
 /*
  * scan all the adc channel, and report the key to IR event channel
@@ -189,7 +185,7 @@ static int __devinit ambarella_adc_probe(struct platform_device *pdev)
 	int				irq;
 	struct resource 		*mem;
 	struct resource 		*ioarea;
-	int				i, flags;
+	int				i, flags = 0;
 
 	pinfo = kmalloc(sizeof(struct ambarella_adc_info), GFP_KERNEL);
 	if (!pinfo) {
@@ -226,12 +222,17 @@ static int __devinit ambarella_adc_probe(struct platform_device *pdev)
 
 	pinfo->support_irq = pinfo->pcontroller_info->is_irq_supported();
 	if (pinfo->support_irq) {
-
 		for (i = 0; i < ADC_MAX_INSTANCES; i++) {
 			if (local_info->adc_channel_used[i]) {
 				pinfo->pcontroller_info->set_irq_threshold(i,
-						adc_high_trig, adc_low_trig);
+					local_info->adc_high_trig[i],
+					local_info->adc_low_trig[i]);
 				ambi_dbg(" adc channel %d is used\n", i);
+				ambi_dbg(" adc_high_trig [%d], adc_low_trig [%d]\n",
+					local_info->adc_high_trig[i], local_info->adc_low_trig[i]);
+				/* here, we suppose that all the channel use the same trigger */
+				flags = (!!local_info->adc_high_trig[i]) * IRQF_TRIGGER_HIGH
+					+ (!!local_info->adc_low_trig[i]) * IRQF_TRIGGER_LOW;
 			}
 		}
 
@@ -266,8 +267,6 @@ static int __devinit ambarella_adc_probe(struct platform_device *pdev)
 
 	if (pinfo->support_irq) {// irq mode
 		pinfo->work_mode = AMBA_ADC_IRQ_MODE;
-		flags = (!!adc_high_trig) * IRQF_TRIGGER_HIGH
-			+  (!!adc_low_trig) * IRQF_TRIGGER_LOW;
 		errorCode = request_irq(pinfo->irq,
 			ambarella_adc_irq, flags, pdev->name, pinfo);
 
@@ -325,12 +324,51 @@ static int __devexit ambarella_adc_remove(struct platform_device *pdev)
 	return errorCode;
 }
 
+#if (defined CONFIG_PM)
+static int ambarella_adc_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	int					errorCode = 0;
+	struct ambarella_adc_info		*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (!device_may_wakeup(&pdev->dev) ) {
+		ambarella_adc_stop();
+		if (pinfo->support_irq)
+			disable_irq(pinfo->irq);
+	}
+
+	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+		__func__, errorCode, state.event);
+	return errorCode;
+}
+
+static int ambarella_adc_resume(struct platform_device *pdev)
+{
+	int					errorCode = 0;
+	struct ambarella_adc_info		*pinfo;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	if (!device_may_wakeup(&pdev->dev)) {
+		if (pinfo->support_irq)
+			enable_irq(pinfo->irq);
+	}
+
+	pinfo->pcontroller_info->reset();
+	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+
+	return errorCode;
+}
+#endif
+
 static struct platform_driver ambarella_adc_driver = {
 	.probe		= ambarella_adc_probe,
 	.remove		= __devexit_p(ambarella_adc_remove),
 #ifdef CONFIG_PM
-	.suspend	= NULL,
-	.resume		= NULL,
+	.suspend	= ambarella_adc_suspend,
+	.resume		= ambarella_adc_resume,
 #endif
 	.driver		= {
 		.name	= "ambarella-adc",
@@ -338,6 +376,5 @@ static struct platform_driver ambarella_adc_driver = {
 	},
 };
 module_param(adc_scan_delay, int, 0644);
-module_param(adc_high_trig, int, 0644);
-module_param(adc_low_trig, int, 0644);
+
 

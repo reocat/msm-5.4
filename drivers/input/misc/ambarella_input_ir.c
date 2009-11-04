@@ -58,6 +58,8 @@ static int __devinit ambarella_setup_keymap(struct ambarella_ir_info *pinfo)
 
 	for (i = 0; i < ADC_MAX_INSTANCES; i++) {
 		pinfo->adc_channel_used[i] = 0;
+		pinfo->adc_high_trig[i] = 0;
+		pinfo->adc_low_trig[i] = 0;
 	}
 
 ambarella_setup_keymap_init:
@@ -75,6 +77,22 @@ ambarella_setup_keymap_init:
 			/* here, we record the adc channels that we will */
 			if (pinfo->pkeymap[i].adc_key.chan < ADC_MAX_INSTANCES)
 				pinfo->adc_channel_used[pinfo->pkeymap[i].adc_key.chan] = 1;
+			else
+				ambi_err("The adc channel [%d] is not exist\n",
+					pinfo->pkeymap[i].adc_key.chan);
+
+			if (pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
+				if (pinfo->pkeymap[i].adc_key.irq_trig)
+					pinfo->adc_high_trig[pinfo->pkeymap[i].adc_key.chan]
+						= pinfo->pkeymap[i].adc_key.low_level;
+				else
+					pinfo->adc_low_trig[pinfo->pkeymap[i].adc_key.chan]
+						= pinfo->pkeymap[i].adc_key.high_level;
+				ambi_dbg(" adc_high_trig [%d], adc_low_trig [%d]\n",
+					pinfo->adc_high_trig[pinfo->pkeymap[i].adc_key.chan],
+					pinfo->adc_low_trig[pinfo->pkeymap[i].adc_key.chan]);
+			}
+
 			break;
 
 		case AMBA_INPUT_SOURCE_GPIO:

@@ -156,7 +156,9 @@ EXPORT_SYMBOL(ambarella_adc_start);
 
 void ambarella_adc_stop(void)
 {
+#if (CHIP_REV != A5S)
 	amba_writel(ADC_RESET_REG, 0x01);
+#endif
 	amba_writel(ADC_ENABLE_REG, 0x00);
 }
 EXPORT_SYMBOL(ambarella_adc_stop);
@@ -254,7 +256,6 @@ u32 adc_is_irq_supported(void)
 		return 0;
 	#endif
 }
-EXPORT_SYMBOL(adc_is_irq_supported);
 
 
 /*
@@ -288,5 +289,4 @@ void adc_set_irq_threshold(u32 ch, u32 h_level,u32 l_level)
 #else
 #endif
 }
-EXPORT_SYMBOL(adc_set_irq_threshold);
 

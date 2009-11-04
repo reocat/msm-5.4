@@ -84,7 +84,7 @@ struct ambarella_key_table {
 	} ir_abs;
 	struct {
 		u32				key_code;
-		u16				reserve;
+		u16				irq_trig;// 0 low trigger, 1 high trigger
 		u16				chan;
 		u16				low_level;
 		u16				high_level;
@@ -92,7 +92,7 @@ struct ambarella_key_table {
 	struct {
 		u16				key_code;
 		s16				rel_step;
-		u16				reserve;
+		u16				irq_trig;// 0 low trigger, 1 high trigger
 		u16				chan;
 		u16				low_level;
 		u16				high_level;
@@ -100,7 +100,7 @@ struct ambarella_key_table {
 	struct {
 		s16				abs_x;
 		s16				abs_y;
-		u16				reserve;
+		u16				irq_trig;// 0 low trigger, 1 high trigger
 		u16				chan;
 		u16				low_level;
 		u16				high_level;
@@ -171,6 +171,9 @@ struct ambarella_ir_info {
 	u32				last_ir_flag;
 
 	u32				adc_channel_used[ADC_MAX_INSTANCES];
+	u32 				adc_high_trig[ADC_MAX_INSTANCES];
+	u32 				adc_low_trig[ADC_MAX_INSTANCES];
+
 	struct ambarella_ir_controller	*pcontroller_info;
 };
 
