@@ -25,6 +25,30 @@
 #define __ARCH_AMBARELLA_INIT_H
 
 /* ==========================================================================*/
+#define NOLINUX_MEM_V_START	(0xE0000000)
+#define DEFAULT_BSB_MEM_OFFSET	(0x01600000)
+#define DEFAULT_DSP_MEM_OFFSET	(0x01800000)
+#define DEFAULT_DSP_MEM_SIZE	(0x02800000)
+
+#define DEFAULT_DEBUG_START	(0xC00F8000)
+#define DEFAULT_DEBUG_BASE	(0xE00F8000)
+#define DEFAULT_DEBUG_SIZE	(0x00008000)
+
+#define DEFAULT_HAL_START	(0xC00A0000)
+#define DEFAULT_HAL_BASE	(0xFEEA0000)
+#define DEFAULT_HAL_SIZE	(0x00030000)
+#if	(CHIP_REV == A5S)
+#include <mach/hal/ambhal.h>
+#include <mach/hal/ambhalmini.h>
+#include <mach/hal/header.h>
+#endif
+
+#ifdef SYSTEM_SUPPORT_HAL
+#define HAL_BASE_VP		(get_ambarella_hal_vp())
+extern void *get_ambarella_hal_vp(void);
+#endif
+
+/* ==========================================================================*/
 extern struct sys_timer ambarella_timer;
 
 /* ==========================================================================*/

@@ -33,6 +33,8 @@
 #include <asm/uaccess.h>
 #include <mach/hardware.h>
 
+#include "init.h"
+
 #define MAX_CMD_LENGTH				(32)
 
 static struct srcu_notifier_head pll_notifier_list;
@@ -323,14 +325,6 @@ static int ambarella_init_pll_a5s(void)
 	amb_hal_success_t			result;
 	struct ambarella_pll_info		*pll_info;
 	int					errorCode = 0;
-
-	/* initial HAL */
-	result = amb_hal_init(HAL_BASE_VP, (void *)APB_BASE, (void *)AHB_BASE);
-	if(result != AMB_HAL_SUCCESS){
-		pr_err("%s: initial HAL failed (%d)\n", __func__, result);
-		errorCode = -ENOMEM;
-		goto pll_a5s_exit;
-	}
 
 	pll_info = kmalloc(sizeof(struct ambarella_pll_info), GFP_KERNEL);
 	if (!pll_info) {

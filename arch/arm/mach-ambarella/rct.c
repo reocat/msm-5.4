@@ -30,6 +30,8 @@
 
 #include <mach/hardware.h>
 
+#include "init.h"
+
 #undef readb
 #undef readw
 #undef readl

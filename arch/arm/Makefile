@@ -96,8 +96,7 @@ head-y		:= arch/arm/kernel/head$(MMUEXT).o arch/arm/kernel/init_task.o
 textofs-y	:= 0x00008000
 
  machine-$(CONFIG_ARCH_AMBARELLA)  := ambarella
- # DRAM address within 1st MB offset has special usage
- textofs-$(CONFIG_ARCH_AMBARELLA)  := 0x00108000
+ textofs-$(CONFIG_ARCH_AMBARELLA)  := $(CONFIG_AMBARELLA_TEXTOFS)
 
  machine-$(CONFIG_ARCH_RPC)	   := rpc
  machine-$(CONFIG_ARCH_EBSA110)	   := ebsa110

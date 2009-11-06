@@ -25,12 +25,13 @@
 #ifndef __ASM_ARCH_MEMORY_H
 #define __ASM_ARCH_MEMORY_H
 
-#define PHYS_OFFSET		UL(0xc0000000)
+#define DEFAULT_MEM_START	(0xC0000000)
+#define PHYS_OFFSET		(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
 
 #define __virt_to_bus(x)	__virt_to_phys(x)
 #define __bus_to_virt(x)	__phys_to_virt(x)
 
-#define CONSISTENT_DMA_SIZE SZ_8M
+#define CONSISTENT_DMA_SIZE	SZ_8M
 
 #endif
 
