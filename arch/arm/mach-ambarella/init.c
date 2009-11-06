@@ -79,16 +79,21 @@ static void __init ambarella_init(void)
 
 #if (CHIP_REV == A5S)
 	char					*pname;
+	int					version;
 
 	errorCode = amb_get_chip_name(HAL_BASE_VP, &pname);
 	BUG_ON(errorCode != AMB_HAL_SUCCESS);
+	errorCode = amb_get_version(HAL_BASE_VP, &version);
+	BUG_ON(errorCode != AMB_HAL_SUCCESS);
 #endif
+
 	pr_info("Ambarella:\n");
 	pr_info("\tchip id:\t\t%d\n", AMBARELLA_BOARD_CHIP(system_rev));
 	pr_info("\tboard type:\t\t%d\n", AMBARELLA_BOARD_TYPE(system_rev));
 	pr_info("\tboard revision:\t\t%d\n", AMBARELLA_BOARD_REV(system_rev));
 #if (CHIP_REV == A5S)
 	pr_info("\tchip name:\t\t%s\n", pname);
+	pr_info("\tHAL version:\t\t%d\n", version);
 	pr_info("\treference clock:\t%d\n",
 		amb_get_reference_clock_frequency(HAL_BASE_VP));
 	pr_info("\tsystem configuration:\t0x%08x\n",
@@ -163,6 +168,6 @@ MACHINE_START(AMBARELLA, "Ambarella Media SoC")
 	.init_irq	= ambarella_init_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init,
-	.boot_params	= DEFAULT_ATAG_START,
+	.boot_params	= CONFIG_AMBARELLA_PARAMS_PHYS,
 MACHINE_END
 

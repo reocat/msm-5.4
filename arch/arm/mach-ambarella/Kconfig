@@ -267,6 +267,52 @@ config AMBARELLA_FB1
 
 endmenu
 
+choice
+	prompt "PPM Size"
+	default AMBARELLA_PPM_00200000
+	help
+	  Private Physical Memory.
+	  Address aligned to 2MB.
+	  For PPM size 0MB, make sure boot won't overlap with Kernel,
+	  or change AMBARELLA_TEXTOFS.
+	  If you are not absolutely sure what you are doing, leave this
+	  option alone!
+
+	config AMBARELLA_PPM_00000000
+		bool "0MB"
+	config AMBARELLA_PPM_00200000
+		bool "2MB"
+	config AMBARELLA_PPM_01000000
+		bool "16MB"
+endchoice
+
+config AMBARELLA_PPM_SIZE
+	hex
+	default 0x01000000 if AMBARELLA_PPM_01000000
+	default 0x00200000 if AMBARELLA_PPM_00200000
+	default 0x00000000
+
+config AMBARELLA_ZRELADDR
+	hex
+	default 0xC1008000 if AMBARELLA_PPM_01000000
+	default 0xC0208000 if AMBARELLA_PPM_00200000
+	default 0xC0008000
+
+config AMBARELLA_TEXTOFS
+	hex
+	default 0x00008000
+
+config AMBARELLA_PARAMS_PHYS
+	hex
+	default 0xC1001000 if AMBARELLA_PPM_01000000
+	default 0xC0201000 if AMBARELLA_PPM_00200000
+	default 0xC0001000
+
+config AMBARELLA_INITRD_PHYS
+	hex
+	default 0xC1800000 if AMBARELLA_PPM_01000000
+	default 0xC0800000
+
 endmenu
 
 endif

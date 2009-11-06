@@ -36,7 +36,7 @@ static inline void arch_idle(void)
 static inline void arch_reset(char mode)
 {
 	rct_reset_chip();
-	cpu_reset(0xC0108000);
+	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);
 }
 
 #endif

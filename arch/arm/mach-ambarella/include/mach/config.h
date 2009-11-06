@@ -28,7 +28,7 @@
 #ifndef __ASM_ARCH_CONFIG_H
 #define __ASM_ARCH_CONFIG_H
 
-#define MEM_MAP_CHECK_MASK		((1024 * 1024) - 1)
+#define MEM_MAP_CHECK_MASK		(PAGE_SIZE - 1)
 
 #define ATAG_AMBARELLA_DSP		0x44000110
 #define ATAG_AMBARELLA_BSB		0x44000044
@@ -76,17 +76,20 @@
 #define AMBARELLA_BOARD_REV(v)		(((v) >> 0) & 0xFF)
 
 #define MEMORY_RESERVE_MAX_NR		(16)
-#define MEMORY_RESERVE_CHECK_MASK	(PAGE_SIZE - 1)
 
 #ifndef __ASSEMBLER__
 
-extern u32 get_ambarella_dspmem_phys(void);
-extern u32 get_ambarella_dspmem_virt(void);
-extern u32 get_ambarella_dspmem_size(void);
+extern u32 get_ambarella_ppm_phys(void);
+extern u32 get_ambarella_ppm_virt(void);
+extern u32 get_ambarella_ppm_size(void);
 
 extern u32 get_ambarella_bsbmem_phys(void);
 extern u32 get_ambarella_bsbmem_virt(void);
 extern u32 get_ambarella_bsbmem_size(void);
+
+extern u32 get_ambarella_dspmem_phys(void);
+extern u32 get_ambarella_dspmem_virt(void);
+extern u32 get_ambarella_dspmem_size(void);
 
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
@@ -102,11 +105,12 @@ struct ambarella_mem_rev_info {
 extern u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo);
 
 struct ambarella_mem_hal_desc {
-	unsigned long physaddr;
-	unsigned long size;
-	unsigned long virtual;
+	u32 physaddr;
+	u32 size;
+	u32 virtual;
+	u32 remapped;
+	u32 inited;
 };
-extern void *get_ambarella_hal_vp(void);
 
 extern u64 ambarella_dmamask;
 extern u32 ambarella_debug_level;
@@ -161,8 +165,6 @@ struct ambarella_gpio_irq_info {
 	module_param_call(name_prefix##irq_gpio_val, param_set_int, param_get_int, &(arg.irq_gpio_val), perm); \
 	module_param_call(name_prefix##irq_gpio_mode, param_set_int, param_get_int, &(arg.irq_gpio_mode), perm)
 extern int ambarella_is_valid_gpio_irq(struct ambarella_gpio_irq_info *pgpio_irq);
-
-extern void ambarella_sound_set_gpio_power(u32 poweron);
 
 struct ambarella_uart_port_info {
 	void					*port;	//struct uart_port *

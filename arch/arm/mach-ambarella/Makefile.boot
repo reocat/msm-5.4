@@ -21,7 +21,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-zreladdr-y		:= 0xC0108000
-params_phys-y		:= 0xC00C0000
-initrd_phys-y		:= 0xC0800000
+zreladdr-y		:= $(CONFIG_AMBARELLA_ZRELADDR)
+params_phys-y		:= $(CONFIG_AMBARELLA_PARAMS_PHYS)
+initrd_phys-y		:= $(CONFIG_AMBARELLA_INITRD_PHYS)
 
