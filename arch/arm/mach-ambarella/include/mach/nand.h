@@ -84,7 +84,6 @@ struct ambarella_platform_nand
 {
 	struct ambarella_nand_timing	*timing;
 
-	int				nr_sets;
 	struct ambarella_nand_set	*sets;
 
 	int				(*parse_error)(u32 reg);

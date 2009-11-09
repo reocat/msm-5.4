@@ -679,7 +679,6 @@ static int fio_amb_nand_parse_error(u32 reg)
 }
 
 static struct ambarella_platform_nand ambarella_platform_default_nand = {
-	.nr_sets    	= 1,
 	.sets		= &ambarella_nand_default_set,
 	.timing		= &ambarella_nand_default_timing,
 
