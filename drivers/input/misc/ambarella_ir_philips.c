@@ -107,6 +107,26 @@ static int ambarella_ir_shift_leader_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
+static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+{
+	int i, val = 0;
+
+	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
+
+	while(i--) {
+		if(ambarella_ir_shift_leader_code(pinfo)) {
+			ambi_dbg("find leader code, i [%d]\n", i);
+			val = 1;
+			break;
+		} else {
+			ambi_dbg("didn't  find leader code, i [%d]\n", i);
+			ambarella_ir_move_read_ptr(pinfo, 1);
+		}
+	}
+
+	return val ;
+}
+
 static int ambarella_ir_shift_invert_code(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
@@ -120,15 +140,11 @@ static int ambarella_ir_shift_invert_code(struct ambarella_ir_info *pinfo)
 
 static int ambarella_ir_shift_repeat_code(struct ambarella_ir_info *pinfo)
 {
-        int rval;
-
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
 	if ((val < PHILIPS_SHC_SIG_CYC_UPBOUND) &&
 	    (val > PHILIPS_SHC_SIG_CYC_LOWBOUND)) {
-		rval = ambarella_ir_inc_read_ptr(pinfo);
-		if (rval < 0)
-			return rval;
+		ambarella_ir_inc_read_ptr(pinfo);
 
 		val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 		if ((val < PHILIPS_SHC_SIG_CYC_UPBOUND) &&
@@ -142,12 +158,10 @@ static int ambarella_ir_shift_repeat_code(struct ambarella_ir_info *pinfo)
 
 static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 {
-	int i, val = 0, rval;
+	int i, val = 0;
 	u8 addr = 0, data = 0;
 
-	rval = ambarella_ir_move_read_ptr(pinfo, 3);
-	if (rval < 0)
-	       return rval;
+	ambarella_ir_move_read_ptr(pinfo, 3);
 
 	/* Get toggle code and Initialize start value */
 	if (ambarella_ir_shift_invert_code(pinfo))
@@ -163,11 +177,6 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 	/* address */
 	for (i = 0; i < 5; i++) {
-
-		rval = ambarella_ir_inc_read_ptr(pinfo);
-		if (rval < 0)
-		      return rval;    /* data is poor */
-
 		if (ambarella_ir_shift_invert_code(pinfo)) {
 			val = 1 - val;
 		} else if (ambarella_ir_shift_repeat_code(pinfo)) {
@@ -176,15 +185,11 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 			return (-1);
 		}
 		addr = (addr << 1) | val;
+		ambarella_ir_inc_read_ptr(pinfo);
 	}
 
 	/* data */
 	for (i = 0; i < 6; i++) {
-
-		rval = ambarella_ir_inc_read_ptr(pinfo);
-		if (rval < 0)
-		      return rval;    /* data is poor */
-
 		if (ambarella_ir_shift_invert_code(pinfo)) {
 			val = 1 - val;
 		} else if (ambarella_ir_shift_repeat_code(pinfo)) {
@@ -193,6 +198,7 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 			return (-1);
 		}
 		data = (data << 1) | val;
+		ambarella_ir_inc_read_ptr(pinfo);
 	}
 
 	*uid = (addr << 16) | data;
@@ -202,19 +208,33 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 int ambarella_ir_philips_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 {
-	int rval;
+	int				rval;
+	int				cur_ptr = pinfo->ir_pread;
 
-	if (ambarella_ir_shift_leader_code(pinfo)) {
-		ambi_dbg("%d  find leader code", pinfo->ir_pread);
+	if (ambarella_ir_find_head(pinfo)
+		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
+		+ pinfo->frame_info.frame_head_size) {
 
+		ambi_dbg("go to decode statge\n");
+		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
 		rval = ambarella_ir_shift_decode(pinfo, uid);
-
-		if (rval >= 0)
-			return 0;
+	} else {
+		return -1;
 	}
 
-	*uid = 0xff;
+	if (rval >= 0) {
+		ambi_dbg("buffer[%d]-->mornal key\n", cur_ptr);
+		return 0;
+	}
 
 	return (-1);
+}
+
+void ambarella_ir_get_philips_info(struct ambarella_ir_frame_info *pframe_info)
+{
+	pframe_info->frame_head_size 	= 6;
+	pframe_info->frame_data_size 	= 22;
+	pframe_info->frame_end_size	= 1;
+	pframe_info->frame_repeat_head_size	= 0;
 }
 

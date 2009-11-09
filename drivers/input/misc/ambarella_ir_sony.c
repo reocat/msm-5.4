@@ -41,7 +41,7 @@
  *          0     0      1       1
  */
 
-/* Sony */
+/* Sony 12-bit, 15-bit and 20-bit versions of the protocol exist (12-bit processed here) */
 #define SONY_DEFAULT_FREQUENCY		36000	/* 36KHz */
 #define SONY_DEFAULT_SMALLER_TIME	600	/* T, 600 microseconds. */
 
@@ -60,9 +60,9 @@
  */
 
 /** start [1800us]
- *      ---+                              +---
- *         |                              |
  *         +------------------------------+
+ *         |                              |
+ *   ------+                              +-----------
  *                   -3T(1800us)
  */
 
@@ -93,6 +93,26 @@ static int ambarella_ir_space_leader_code(struct ambarella_ir_info *pinfo)
 		return 1;	/* leader code */
 	else
 		return 0;
+}
+
+static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+{
+	int i, val = 0;
+
+	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
+
+	while(i--) {
+		if(ambarella_ir_space_leader_code(pinfo)) {
+			printk("find leader code, i [%d]\n", i);
+			val = 1;
+			break;
+		} else {
+			ambi_dbg("didn't  find leader code, i [%d]\n", i);
+			ambarella_ir_move_read_ptr(pinfo, 1);
+		}
+	}
+
+	return val ;
 }
 
 /**
@@ -169,7 +189,7 @@ static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 	   B8 to B11 form the 5 bits for the Device Address.
 	*/
 
-	int i, rval;
+	int i;
 
 	u8 addr = 0, data = 0;
 
@@ -183,9 +203,7 @@ static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 		else {
 			ambi_dbg("%d ERROR, the waveform can't match", i);
 		}
-		rval = ambarella_ir_move_read_ptr(pinfo, 2);
-		if (rval < 0)
-                        return rval;   /* data is poor */
+		ambarella_ir_move_read_ptr(pinfo, 2);
 	}
 
 	/* device address - 5 bits */
@@ -198,9 +216,7 @@ static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 		else {
 			ambi_dbg("%d ERROR, the waveform can't match", i);
 		}
-		rval = ambarella_ir_move_read_ptr(pinfo, 2);
-		if (rval < 0)
-		      return rval;    /* data is poor */
+		ambarella_ir_move_read_ptr(pinfo, 2);
 	}
 
 	*uid = (addr << 16) | data;
@@ -210,22 +226,33 @@ static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 int ambarella_ir_sony_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 {
-	int rval;
+	int				rval;
+	int				cur_ptr = pinfo->ir_pread;
 
-	if (ambarella_ir_space_leader_code(pinfo)) {
-		ambi_dbg("%d  find leader code", pinfo->ir_pread);
+	if (ambarella_ir_find_head(pinfo)
+		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
+		+ pinfo->frame_info.frame_head_size) {
 
-		rval = ambarella_ir_inc_read_ptr(pinfo);
-		if (rval < 0)
-		      return rval;
-
+		ambi_dbg("go to decode statge\n");
+		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
 		rval = ambarella_ir_space_decode(pinfo, uid);
-		if (rval >= 0)
-			return 0;
+	} else {
+		return -1;
 	}
 
-	*uid = 0xff;
+	if (rval >= 0) {
+		ambi_dbg("buffer[%d]-->mornal key\n", cur_ptr);
+		return 0;
+	}
 
 	return (-1);
+}
+
+void ambarella_ir_get_sony_info(struct ambarella_ir_frame_info *pframe_info)
+{
+	pframe_info->frame_head_size 	= 1;
+	pframe_info->frame_data_size 	= 24;
+	pframe_info->frame_end_size	= 1;
+	pframe_info->frame_repeat_head_size	= 0;
 }
 

@@ -65,7 +65,7 @@
  *                     -16T(9ms)              +7.5T(4.2ms)
  */
 
-/** REPEAT Frame [11.3ms]
+/** Subsequent Frame [11.3ms]
  *      ---+                                +--------+  +---
  *         |                                |        |  |
  *         +--------------------------------+        +--+
@@ -135,10 +135,29 @@ static int ambarella_ir_pulse_leader_code(struct ambarella_ir_info *pinfo)
 	}
 }
 
+static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+{
+	int i, val = 0;
+
+	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
+
+	while(i--) {
+		if(ambarella_ir_pulse_leader_code(pinfo)) {
+			ambi_dbg("find leader code, i [%d]\n", i);
+			val = 1;
+			break;
+		} else {
+			ambi_dbg("didn't  find leader code, i [%d]\n", i);
+			ambarella_ir_move_read_ptr(pinfo, 1);
+		}
+	}
+
+	return val ;
+}
 /**
- * Check the waveform data is repeat code or not.
+ * Check the waveform data is subsequent code or not.
  */
-static int ambarella_ir_pulse_repeat_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_pulse_subsequent_code(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
@@ -159,6 +178,26 @@ static int ambarella_ir_pulse_repeat_code(struct ambarella_ir_info *pinfo)
 		return 1;
 	else
 		return 0;
+}
+
+static int ambarella_ir_find_subsequent(struct ambarella_ir_info *pinfo)
+{
+	int i, val = 0;
+
+	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
+
+	while(i--) {
+		if(ambarella_ir_pulse_subsequent_code(pinfo)) {
+			ambi_dbg("find leader code, i [%d]\n", i);
+			val = 1;
+			break;
+		} else {
+			//printk("didn't  find leader code, i [%d]\n", i);
+			ambarella_ir_move_read_ptr(pinfo, 1);
+		}
+	}
+
+	return val ;
 }
 
 /**
@@ -214,25 +253,19 @@ static int ambarella_ir_pulse_code_1(struct ambarella_ir_info *pinfo)
 
 static int ambarella_ir_pulse_data_translate(struct ambarella_ir_info *pinfo, u8 * data)
 {
-	int i, rval;
-
+	int i;
 	*data = 0;
 
 	for (i = 7; i >= 0; i--) {
-		rval = ambarella_ir_move_read_ptr(pinfo, 2);
-		if (rval < 0) {
-		      return rval;
-		}
-
 		if (ambarella_ir_pulse_code_0(pinfo)) {
 
 		} else if (ambarella_ir_pulse_code_1(pinfo)) {
 			*data |= 1 << i;
 		} else {
 			ambi_dbg("%d ERROR, the waveform can't match\n", i);
-
 			return -1;
 		}
+		ambarella_ir_move_read_ptr(pinfo, 2);
 	}
 
 	return 0;
@@ -278,30 +311,30 @@ int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	int				rval;
 	int				cur_ptr = pinfo->ir_pread;
 
-	if (ambarella_ir_pulse_leader_code(pinfo)) {
-		ambi_dbg("%d  find leader code\n", cur_ptr);
+	if ((ambarella_ir_find_head(pinfo) || (ambarella_ir_find_subsequent(pinfo)))
+		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
+		+ pinfo->frame_info.frame_head_size) {
 
+		ambi_dbg("go to decode statge\n");
+		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
 		rval = ambarella_ir_pulse_decode(pinfo, uid);
-
-		if (rval >= 0) {
-			ambi_dbg("%d  mornal key\n", cur_ptr);
-
-			ambarella_ir_move_read_ptr(pinfo, 2);
-
-			return 0;
-		}
-	} else if (ambarella_ir_pulse_repeat_code(pinfo)) {
-		*uid = 0x00;
-
-		ambi_dbg("%d  continuous key\n", cur_ptr);
-
-		ambarella_ir_move_read_ptr(pinfo, 2);
-
-		return 1;
+	} else {
+		return -1;
 	}
 
-	*uid = 0xff;
+	if (rval >= 0) {
+		ambi_dbg("buffer[%d]-->mornal key\n", cur_ptr);
+		return 0;
+	}
 
 	return (-1);
+}
+
+void ambarella_ir_get_nec_info(struct ambarella_ir_frame_info *pframe_info)
+{
+	pframe_info->frame_head_size 	= 2;
+	pframe_info->frame_data_size 	= 64;
+	pframe_info->frame_end_size	= 1;
+	pframe_info->frame_repeat_head_size	= 4;
 }
 

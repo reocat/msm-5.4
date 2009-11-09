@@ -100,7 +100,7 @@
 #define ADC_CONTROL_STATUS		0x01
 
 #ifndef __ASSEMBLER__
-extern int ambarella_adc_get_instances(void);
+extern u32 ambarella_adc_get_instances(void);
 extern void ambarella_adc_get_array(u32 *adc_data, u32 *array_size);
 extern u32 ambarella_adc_get_channel(u32 channel_id);
 extern void ambarella_adc_start(void);

@@ -148,36 +148,40 @@ struct ambarella_key_table {
 
 #define CONFIG_AMBARELLA_INPUT_STR_SIZE	(32)
 #define MAX_IR_BUFFER			(512)
+#define HW_FIFO_BUFFER			(48)
+
+/* the size in ambarella_ir_frame_info means the count of both rising and falling edges */
+struct ambarella_ir_frame_info {
+	u32		frame_head_size;
+	u32		frame_data_size;
+	u32		frame_end_size;
+	u32		frame_repeat_head_size;
+};
 struct ambarella_ir_info {
+	struct input_dev		*dev;
 	unsigned char __iomem 		*regbase;
 
 	u32				id;
-	struct input_dev		*dev;
 	struct resource			*mem;
 	unsigned int			irq;
 	unsigned int			gpio_id;
-
-	char				name[CONFIG_AMBARELLA_INPUT_STR_SIZE];
-	char				phys[CONFIG_AMBARELLA_INPUT_STR_SIZE];
-	char				uniq[CONFIG_AMBARELLA_INPUT_STR_SIZE];
 
 	int				(*ir_parse)(struct ambarella_ir_info *pinfo, u32 *uid);
 	int				ir_pread;
 	int				ir_pwrite;
 	u16				tick_buf[MAX_IR_BUFFER];
-	struct ambarella_key_table	*pkeymap;
+	struct ambarella_ir_frame_info 	frame_info;
+	u32				frame_data_to_received;
 
 	u32				last_ir_uid;
 	u32				last_ir_flag;
 
-	u32				adc_channel_used[ADC_MAX_INSTANCES];
-	u32 				adc_high_trig[ADC_MAX_INSTANCES];
-	u32 				adc_low_trig[ADC_MAX_INSTANCES];
-
+	struct ambarella_key_table	*pkeymap;
 	struct ambarella_ir_controller	*pcontroller_info;
 };
 
 struct ambarella_adc_info {
+	struct input_dev		*dev;
 	unsigned char __iomem 		*regbase;
 
 	u32				id;
@@ -186,24 +190,50 @@ struct ambarella_adc_info {
 	unsigned int			work_mode;
 	unsigned int			irq;
 
-	struct ambarella_key_table	*pkeymap;
-
 	struct workqueue_struct		*workqueue;
 
 	struct delayed_work		detect_adc;
-	u32				adc_key_pressed[ADC_MAX_INSTANCES];
+	u32				*adc_key_pressed;
+	u32				*adc_data;
 
+	struct ambarella_key_table	*pkeymap;
 	struct ambarella_adc_controller	*pcontroller_info;
 };
 
+struct ambarella_adc_channel_info{
+	u32				adc_channel_used;
+	u32 				adc_high_trig;
+	u32 				adc_low_trig;
+};
+struct ambarella_input_info {
+	struct input_dev		*dev;
+
+	struct ambarella_ir_info       	*pir_info;
+	struct ambarella_adc_info       *padc_info;
+	struct ambarella_key_table	*pkeymap;
+
+	u32				adc_channel_num;
+
+	struct ambarella_adc_channel_info *channel;
+};
+
+#if (defined CONFIG_INPUT_AMBARELLA_IR_MODULE) || (defined CONFIG_INPUT_AMBARELLA_IR)
 int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 int ambarella_ir_panasonic_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 int ambarella_ir_sony_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 int ambarella_ir_philips_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 
-int ambarella_ir_inc_read_ptr(struct ambarella_ir_info *pinfo);
-int ambarella_ir_move_read_ptr(struct ambarella_ir_info *pinfo, int offset);
+void ambarella_ir_get_nec_info(struct ambarella_ir_frame_info *pframe_info);
+void ambarella_ir_get_panasonic_info(struct ambarella_ir_frame_info *pframe_info);
+void ambarella_ir_get_sony_info(struct ambarella_ir_frame_info *pframe_info);
+void ambarella_ir_get_philips_info(struct ambarella_ir_frame_info *pframe_info);
+
+
+void ambarella_ir_inc_read_ptr(struct ambarella_ir_info *pinfo);
+void ambarella_ir_move_read_ptr(struct ambarella_ir_info *pinfo, int offset);
 u16 ambarella_ir_read_data(struct ambarella_ir_info *pinfo, int pointer);
+int ambarella_ir_get_tick_size(struct ambarella_ir_info *pinfo);
+#endif
 irqreturn_t ambarella_gpio_irq(int irq, void *devid);
 int ambarella_vi_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data);
@@ -211,7 +241,7 @@ int ambarella_vi_proc_write(struct file *file,
 
 #ifdef CONFIG_INPUT_AMBARELLA_DEBUG
 #define ambi_dbg(format, arg...)		\
-	dev_printk(KERN_DEBUG , pinfo->dev->dev.parent , format , ## arg)
+	printk(KERN_DEBUG format , ## arg)
 #else
 static inline int __attribute__ ((format (printf, 1, 2)))
 ambi_dbg(const char * fmt, ...)
@@ -220,21 +250,7 @@ ambi_dbg(const char * fmt, ...)
 }
 #endif
 
-#define ambi_err(format, arg...)		\
-	dev_printk(KERN_ERR , local_info->dev->dev.parent , format , ## arg)
-#define ambi_info(format, arg...)		\
-	dev_printk(KERN_INFO , local_info->dev->dev.parent , format , ## arg)
-#define ambi_warn(format, arg...)		\
-	dev_printk(KERN_WARNING , local_info->dev->dev.parent , format , ## arg)
-#define ambi_notice(format, arg...)		\
-	dev_printk(KERN_NOTICE , local_info->dev->dev.parent , format , ## arg)
-
-#ifdef CONFIG_AMBARELLA_INPUT_KEY_SYNC_SUPPORT
-#define AMBI_CAN_SYNC()		(input_sync(local_info->dev))
-#else
-#define AMBI_CAN_SYNC()
-#endif
-#define AMBI_MUST_SYNC()	(input_sync(local_info->dev))
+#define AMBI_MUST_SYNC()	(input_sync(amba_input_dev->dev))
 
 #endif	//__KERNEL__
 

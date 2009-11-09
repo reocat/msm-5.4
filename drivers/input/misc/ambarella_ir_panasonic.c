@@ -102,6 +102,26 @@ static int ambarella_ir_pulse_leader_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
+static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+{
+	int i, val = 0;
+
+	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
+
+	while(i--) {
+		if(ambarella_ir_pulse_leader_code(pinfo)) {
+			ambi_dbg("find leader code, i [%d]\n", i);
+			val = 1;
+			break;
+		} else {
+			ambi_dbg("didn't  find leader code, i [%d]\n", i);
+			ambarella_ir_move_read_ptr(pinfo, 1);
+		}
+	}
+
+	return val ;
+}
+
 static int ambarella_ir_pulse_code_0(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
@@ -149,16 +169,11 @@ static int ambarella_ir_pulse_code_1(struct ambarella_ir_info *pinfo)
 
 static int ambarella_ir_pulse_data_translate(struct ambarella_ir_info *pinfo, u8 * data)
 {
-	int i, rval;
+	int i;
 
 	*data = 0;
 
 	for (i = 7; i >= 0; i--) {
-		rval = ambarella_ir_move_read_ptr(pinfo, 2);
-		if (rval < 0) {
-		      return rval;
-		}
-
 		if (ambarella_ir_pulse_code_0(pinfo)) {
 
 		} else if (ambarella_ir_pulse_code_1(pinfo)) {
@@ -168,6 +183,7 @@ static int ambarella_ir_pulse_data_translate(struct ambarella_ir_info *pinfo, u8
 				  pinfo->ir_pread);
 			return -1;
 		}
+		ambarella_ir_move_read_ptr(pinfo, 2);
 	}
 
 	return 0;
@@ -224,22 +240,30 @@ int ambarella_ir_panasonic_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	int				rval;
 	int				cur_ptr = pinfo->ir_pread;
 
-	if (ambarella_ir_pulse_leader_code(pinfo)) {
-		ambi_dbg("%d  find leader code", cur_ptr);
+	if (ambarella_ir_find_head(pinfo)
+		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
+		+ pinfo->frame_info.frame_head_size) {
 
+		ambi_dbg("go to decode statge\n");
+		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
 		rval = ambarella_ir_pulse_decode(pinfo, uid);
-
-		if (rval >= 0) {
-			ambi_dbg("%d  mornal key", cur_ptr);
-
-			ambarella_ir_move_read_ptr(pinfo, 2);
-
-			return 0;
-		}
+	} else {
+		return -1;
 	}
 
-	*uid = 0xff;
+	if (rval >= 0) {
+		ambi_dbg("buffer[%d]-->mornal key\n", cur_ptr);
+		return 0;
+	}
 
 	return (-1);
+}
+
+void ambarella_ir_get_panasonic_info(struct ambarella_ir_frame_info *pframe_info)
+{
+	pframe_info->frame_head_size 	= 2;
+	pframe_info->frame_data_size 	= 96;
+	pframe_info->frame_end_size	= 1;
+	pframe_info->frame_repeat_head_size	= 0;
 }
 

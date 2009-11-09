@@ -1910,6 +1910,7 @@ static struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
 	.is_irq_supported = adc_is_irq_supported,
 	.set_irq_threshold = adc_set_irq_threshold,
 	.reset = ambarella_adc_start,
+	.get_channel_num = ambarella_adc_get_instances,
 };
 
 static struct resource ambarella_adc_resources[] = {

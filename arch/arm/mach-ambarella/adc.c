@@ -38,7 +38,7 @@
 #define CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT	(100000)
 #endif
 
-int ambarella_adc_get_instances(void)
+u32 ambarella_adc_get_instances(void)
 {
 	return ADC_MAX_INSTANCES;
 }
