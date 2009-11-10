@@ -702,7 +702,7 @@ static int nand_amb_request(struct ambarella_nand_controller *amb_controller)
 			errorCode = fio_dma_parse_error(amb_controller->fio_dma_sta);
 			if (errorCode) {
 				dev_err(nand_info->dev,
-					"%s: cmd=%d, addr_hi=0x%x, "
+					"%s: cmd=0x%x, addr_hi=0x%x, "
 					"addr=0x%x, dst=0x%x, buf=0x%x, "
 					"len=0x%x, area=0x%x, ecc=0x%x, "
 					"control_reg=0x%x:0x%x!\n",
@@ -825,7 +825,7 @@ int nand_amb_read_data(struct ambarella_nand_info *nand_info,
 		break;
 	case MAIN_ECC:
 		ecc = EC_MESD;
-		len = nand_info->mtd.writesize + nand_info->mtd.oobsize;
+		len = nand_info->mtd.writesize;
 		break;
 	case SPARE_ONLY:
 		ecc = EC_MDSD;
@@ -1066,6 +1066,8 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 	case NAND_CMD_READ0:
 		nand_amb_read_data(nand_info, page_addr,
 			(u8 *)amb_controller->dmaaddr, MAIN_ECC);
+		nand_amb_read_data(nand_info, page_addr,
+			(u8 *)amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
 		break;
 	case NAND_CMD_SEQIN:
 		amb_controller->seqin_column = column;
@@ -1075,13 +1077,16 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		if (amb_controller->seqin_column < mtd->writesize) {
 			nand_amb_write_data(nand_info, amb_controller->seqin_page_addr,
 				(u8 *)amb_controller->dmaaddr, MAIN_ECC);
+			nand_amb_write_data(nand_info, amb_controller->seqin_page_addr,
+				(u8 *)amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
 		} else {
 			nand_amb_write_data(nand_info, amb_controller->seqin_page_addr,
 				(u8 *)amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
 		}
 		break;
 	default:
-		printk("%s: 0x%x, %d, %d\n", __func__, command, column, page_addr);
+		dev_err(nand_info->dev, "%s: 0x%x, %d, %d\n",
+				__func__, command, column, page_addr);
 		BUG();
 		break;
 	}
@@ -1094,6 +1099,13 @@ static void amb_nand_hwctl(struct mtd_info *mtd, int mode)
 static int amb_nand_caculate_ecc(struct mtd_info *mtd,
 	const u_char *dat, u_char *ecc_code)
 {
+	ecc_code[0] = 0xff;
+	ecc_code[1] = 0xff;
+	ecc_code[2] = 0xff;
+	ecc_code[3] = 0xff;
+	ecc_code[4] = 0xff;
+	ecc_code[5] = 0xff;
+
 	return 0;
 }
 
@@ -1166,7 +1178,7 @@ static int __devinit ambarella_nand_init_chipecc(
 
 	chip->ecc.mode = NAND_ECC_HW;
 	chip->ecc.size = 512;
-	chip->ecc.bytes = 3;
+	chip->ecc.bytes = 6;
 	chip->ecc.hwctl = amb_nand_hwctl;
 	chip->ecc.calculate = amb_nand_caculate_ecc;
 	chip->ecc.correct = amb_nand_correct_data;
