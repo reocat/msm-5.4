@@ -1434,7 +1434,11 @@ static void aucodec_digitalio_on(void)
 	amba_setbitsl(GPIO2_AFSEL_REG, 0x003fe000);
 #elif (CHIP_REV == A5S)
 	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+#ifdef CONFIG_I2C_AMBARELLA_AK4183
+	amba_setbitsl(GPIO2_AFSEL_REG, (0xf << 13));
+#else
 	amba_setbitsl(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
+#endif
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
 #endif
@@ -1795,7 +1799,7 @@ static struct i2c_board_info ambarella_tsc2007_board_info = {
 
 #ifdef CONFIG_I2C_AMBARELLA_AK4183
 
-#define TS_GPIO		45
+#define TS_GPIO		84
 
 static int ambarella_ak4183_get_pendown_state(void)
 {
