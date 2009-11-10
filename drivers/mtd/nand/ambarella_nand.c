@@ -1121,6 +1121,46 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *dat,
 	return amb_nand_info_by_minfo(mtd)->amb_controller.err_code;
 }
 
+static int amb_nand_write_oob_std(struct mtd_info *mtd,
+	struct nand_chip *chip, int page)
+{
+	int					i, status;
+
+	/* Our nand controller will write the generated ECC code into spare
+	  * area automatically, so we should mark the ECC code which located
+	  * in the eccpos.
+	  */
+	for (i = 0; i < chip->ecc.total; i++)
+		chip->oob_poi[chip->ecc.layout->eccpos[i]] = 0xFF;
+
+	chip->cmdfunc(mtd, NAND_CMD_SEQIN, mtd->writesize, page);
+	chip->write_buf(mtd, chip->oob_poi, mtd->oobsize);
+	chip->cmdfunc(mtd, NAND_CMD_PAGEPROG, -1, -1);
+	status = chip->waitfunc(mtd, chip);
+
+	return status & NAND_STATUS_FAIL ? -EIO : 0;
+}
+
+static int amb_nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
+{
+	struct ambarella_nand_info		*nand_info;
+	struct ambarella_nand_controller		*amb_controller;
+	int					page;
+
+	nand_info = amb_nand_info_by_minfo(mtd);
+	amb_controller = &nand_info->amb_controller;
+
+	page = (int)(ofs >> nand_info->chip.page_shift);
+	dev_info(nand_info->dev, "%s: page = 0x%x\n", __func__, page);
+	page &=  nand_info->chip.pagemask;
+	dev_info(nand_info->dev, "%s: real page = 0x%x\n", __func__, page);
+
+	memset(amb_controller->dmabuf, 0, mtd->oobsize);
+
+	return nand_amb_write_data(nand_info, page,
+		(u8 *)amb_controller->dmaaddr, SPARE_ONLY);
+}
+
 /* ==========================================================================*/
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 	struct ambarella_nand_timing *timing)
@@ -1150,6 +1190,7 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 
 	chip->options = NAND_NO_AUTOINCR; 
 	chip->controller = &nand_info->controller;
+	chip->block_markbad = amb_nand_block_markbad; 
 
 	nand_info->mtd.priv = chip;
 	nand_info->mtd.owner = THIS_MODULE;
@@ -1182,6 +1223,7 @@ static int __devinit ambarella_nand_init_chipecc(
 	chip->ecc.hwctl = amb_nand_hwctl;
 	chip->ecc.calculate = amb_nand_caculate_ecc;
 	chip->ecc.correct = amb_nand_correct_data;
+	chip->ecc.write_oob = amb_nand_write_oob_std;
 
 	return 0;
 }
