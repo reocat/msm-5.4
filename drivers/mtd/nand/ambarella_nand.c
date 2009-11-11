@@ -69,7 +69,7 @@ struct ambarella_nand_controller
 	u32				addr_hi;
 	u32				addr;
 	u32				dst;
-	u8				*buf;
+	dma_addr_t			buf_phys;
 	u32				len;
 	u32				area;
 	u32				ecc;
@@ -437,21 +437,17 @@ static void nand_dma_isr_handler(void *dev_id, u32 dma_status)
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_controller *amb_controller)
 {
 	u32					val;
-	u8					*dst;
-	int					len;
 	ambarella_dma_req_t			dma_req;
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = amb_nand_info_by_amb_nand(amb_controller);
-	dst = amb_controller->buf;
-	len = amb_controller->len;
 
 	dma_req.src = io_v2p(nand_info->dmabase);
-	dma_req.dst = (u32) dst;
+	dma_req.dst = amb_controller->buf_phys;
 	dma_req.next = NULL;
 	dma_req.rpt = (u32) NULL;
-	dma_req.xfr_count = len;
-	if (len > 16) {
+	dma_req.xfr_count = amb_controller->len;
+	if (amb_controller->len > 16) {
 		dma_req.attr = DMA_CHANX_CTR_WM |
 			DMA_CHANX_CTR_NI |
 			DMA_NODC_MN_BURST_SIZE;
@@ -464,16 +460,16 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_controller *amb_cont
 	ambarella_dma_xfr(&dma_req, FIO_DMA_CHAN);
 
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, amb_controller->addr);
-	if (len > 16) {
+	if (amb_controller->len > 16) {
 		val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_MN_BURST_SIZE |
-			len;
+			amb_controller->len;
 	} else {
 		val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_SP_BURST_SIZE |
-			len;
+			amb_controller->len;
 	}
 	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, val);
 }
@@ -481,21 +477,17 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_controller *amb_cont
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_controller *amb_controller)
 {
 	u32					val;
-	u8					*src;
-	int					len;
 	ambarella_dma_req_t			dma_req;
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = amb_nand_info_by_amb_nand(amb_controller);
-	src = amb_controller->buf;
-	len = amb_controller->len;
 
-	dma_req.src = (u32) src;
+	dma_req.src = amb_controller->buf_phys;
 	dma_req.dst = io_v2p(nand_info->dmabase);
 	dma_req.next = NULL;
 	dma_req.rpt = (u32) NULL;
-	dma_req.xfr_count = len;
-	if (len > 16) {
+	dma_req.xfr_count = amb_controller->len;
+	if (amb_controller->len > 16) {
 		dma_req.attr = DMA_CHANX_CTR_RM |
 			DMA_CHANX_CTR_NI |
 			DMA_NODC_MN_BURST_SIZE;
@@ -509,18 +501,18 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_controller *amb_cont
 
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, amb_controller->addr);
 
-	if (len > 16) {
+	if (amb_controller->len > 16) {
 		val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_MN_BURST_SIZE |
 			FIO_DMACTR_RM |
-			len;
+			amb_controller->len;
 	} else {
 		val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_SP_BURST_SIZE |
 			FIO_DMACTR_RM |
-			len;
+			amb_controller->len;
 	}
 
 	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, val);
@@ -710,7 +702,7 @@ static int nand_amb_request(struct ambarella_nand_controller *amb_controller)
 					amb_controller->addr_hi,
 					amb_controller->addr,
 					amb_controller->dst,
-					(u32)amb_controller->buf,
+					amb_controller->buf_phys,
 					amb_controller->len,
 					amb_controller->area,
 					amb_controller->ecc,
@@ -803,7 +795,7 @@ int nand_amb_erase(struct ambarella_nand_info *nand_info, u32 page_addr)
 }
 
 int nand_amb_read_data(struct ambarella_nand_info *nand_info,
-	u32 page_addr, u8 *buf, u8 area)
+	u32 page_addr, dma_addr_t buf_dma, u8 area)
 {
 	int					errorCode = 0;
 	struct ambarella_nand_controller		*amb_controller;
@@ -845,7 +837,7 @@ int nand_amb_read_data(struct ambarella_nand_info *nand_info,
 	amb_controller->cmd = NAND_AMB_CMD_READ;
 	amb_controller->addr_hi = addr_hi;
 	amb_controller->addr = addr;
-	amb_controller->buf = buf;
+	amb_controller->buf_phys = buf_dma;
 	amb_controller->len = len;
 	amb_controller->area = area;
 	amb_controller->ecc = ecc;
@@ -857,7 +849,7 @@ nand_amb_read_page_exit:
 }
 
 int nand_amb_write_data(struct ambarella_nand_info *nand_info,
-	u32 page_addr, u8 *buf, u8 area)
+	u32 page_addr, dma_addr_t buf_dma, u8 area)
 {
 	int					errorCode = 0;
 	struct ambarella_nand_controller		*amb_controller;
@@ -899,7 +891,7 @@ int nand_amb_write_data(struct ambarella_nand_info *nand_info,
 	amb_controller->cmd = NAND_AMB_CMD_PROGRAM;
 	amb_controller->addr_hi = addr_hi;
 	amb_controller->addr = addr;
-	amb_controller->buf = buf;
+	amb_controller->buf_phys = buf_dma;
 	amb_controller->len = len;
 	amb_controller->area = area;
 	amb_controller->ecc = ecc;
@@ -1061,13 +1053,13 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		break;
 	case NAND_CMD_READOOB:
 		nand_amb_read_data(nand_info, page_addr,
-			(u8 *)amb_controller->dmaaddr, SPARE_ONLY);
+			amb_controller->dmaaddr, SPARE_ONLY);
 		break;
 	case NAND_CMD_READ0:
 		nand_amb_read_data(nand_info, page_addr,
-			(u8 *)amb_controller->dmaaddr, MAIN_ECC);
+			amb_controller->dmaaddr, MAIN_ECC);
 		nand_amb_read_data(nand_info, page_addr,
-			(u8 *)amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
+			amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
 		break;
 	case NAND_CMD_SEQIN:
 		amb_controller->seqin_column = column;
@@ -1076,12 +1068,12 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 	case NAND_CMD_PAGEPROG:
 		if (amb_controller->seqin_column < mtd->writesize) {
 			nand_amb_write_data(nand_info, amb_controller->seqin_page_addr,
-				(u8 *)amb_controller->dmaaddr, MAIN_ECC);
+				amb_controller->dmaaddr, MAIN_ECC);
 			nand_amb_write_data(nand_info, amb_controller->seqin_page_addr,
-				(u8 *)amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
+				amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
 		} else {
 			nand_amb_write_data(nand_info, amb_controller->seqin_page_addr,
-				(u8 *)amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
+				amb_controller->dmaaddr + mtd->writesize, SPARE_ONLY);
 		}
 		break;
 	default:
@@ -1146,6 +1138,7 @@ static int amb_nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	struct ambarella_nand_info		*nand_info;
 	struct ambarella_nand_controller		*amb_controller;
 	int					page;
+	int					errorCode;
 
 	nand_info = amb_nand_info_by_minfo(mtd);
 	amb_controller = &nand_info->amb_controller;
@@ -1157,8 +1150,10 @@ static int amb_nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 
 	memset(amb_controller->dmabuf, 0, mtd->oobsize);
 
-	return nand_amb_write_data(nand_info, page,
-		(u8 *)amb_controller->dmaaddr, SPARE_ONLY);
+	errorCode = nand_amb_write_data(nand_info, page,
+				amb_controller->dmaaddr, SPARE_ONLY);
+
+	return errorCode;
 }
 
 /* ==========================================================================*/
