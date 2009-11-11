@@ -48,6 +48,17 @@
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
 
+/*
+  * The I2S ports are mux with the GPIOs. 
+  * A3, A5, A5S and A6 support 5.1(6) channels, so we need to 
+  * select the proper port to used and free the unused pins (GPIOs)
+  * for other usage.
+  */
+static unsigned int used_port = AMB_I2S_PORT_0;
+module_param(used_port, uint, S_IRUGO);
+MODULE_PARM_DESC(used_port, "Select the I2S port.");
+
+
 struct amb_i2s_priv {
 	u32 clock_reg;
 	struct ambarella_i2s_controller *controller_info;
@@ -329,9 +340,24 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	struct amb_i2s_priv *priv_data = dai->private_data;
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
 
+	if ((used_port & AMB_I2S_PORT_MASK) == 0) {
+		printk("%s: Need to select proper I2S port.\n", __func__);
+		return -EINVAL;
+	}
+
 	/* aucodec_digitalio_on */
-	if (priv_data->controller_info->aucodec_digitalio)
-		priv_data->controller_info->aucodec_digitalio();
+	if ((used_port & AMB_I2S_PORT_0)) {
+		if (priv_data->controller_info->aucodec_digitalio_0)
+			priv_data->controller_info->aucodec_digitalio_0();
+	}
+	if ((used_port & AMB_I2S_PORT_1)) {
+		if (priv_data->controller_info->aucodec_digitalio_1)
+			priv_data->controller_info->aucodec_digitalio_1();
+	}
+	if ((used_port & AMB_I2S_PORT_2)) {
+		if (priv_data->controller_info->aucodec_digitalio_2)
+			priv_data->controller_info->aucodec_digitalio_2();
+	}
 
 	/* Switch to external I2S Input except  IPcam Board */
 	if (strcmp(socdev->card->name, "IPcam"))

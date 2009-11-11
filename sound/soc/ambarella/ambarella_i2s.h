@@ -96,6 +96,10 @@ enum DAI_INIT_CTL
 	DAI_TX_EN = 4
 };
 
+#define AMB_I2S_PORT_0	(1 << 0)
+#define AMB_I2S_PORT_1	(1 << 1)
+#define AMB_I2S_PORT_2	(1 << 2)
+#define AMB_I2S_PORT_MASK	(AMB_I2S_PORT_0 | AMB_I2S_PORT_1 | AMB_I2S_PORT_2)
 
 #define DAI_32slots	32
 #define DAI_64slots	64

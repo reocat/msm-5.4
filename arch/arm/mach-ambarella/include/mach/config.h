@@ -265,7 +265,9 @@ struct ambarella_idc_platform_info {
 	module_param_call(idc##id##_bulk_write_num, param_set_int, param_get_int, &(arg.bulk_write_num), perm)
 
 struct ambarella_i2s_controller {
-	void					(*aucodec_digitalio)(void);
+	void					(*aucodec_digitalio_0)(void);
+	void					(*aucodec_digitalio_1)(void);
+	void					(*aucodec_digitalio_2)(void);
 	void					(*channel_select)(u32);
 	void					(*set_audio_pll)(u8);
 };
