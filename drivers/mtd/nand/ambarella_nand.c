@@ -48,6 +48,11 @@
 //nand_check_wp will be checked before write, so wait MTD fix
 #undef AMBARELLA_NAND_WP
 
+#ifdef CONFIG_MTD_CMDLINE_PARTS
+static const char *part_probes[] = { "cmdlinepart", NULL };
+#endif
+
+
 struct ambarella_nand_controller
 {
 	wait_queue_head_t		wq;
@@ -1223,38 +1228,23 @@ static int __devinit ambarella_nand_init_chipecc(
 	return 0;
 }
 
-#ifdef CONFIG_MTD_PARTITIONS
-static int __devinit ambarella_nand_add_partition(
-	struct ambarella_nand_info *nand_info,
-	struct ambarella_nand_set *set)
-{
-	if (set == NULL)
-		return add_mtd_device(&nand_info->mtd);
-
-	if (set->nr_partitions > 0 && set->partitions != NULL)
-		return add_mtd_partitions(&nand_info->mtd,
-			set->partitions, set->nr_partitions);
-
-	return add_mtd_device(&nand_info->mtd);
-}
-#else
-static int __devinit ambarella_nand_add_partition(
-	struct ambarella_nand_info *nand_info,
-	struct ambarella_nand_set *set)
-{
-	return add_mtd_device(&nand_info->mtd);
-}
-#endif
-
 static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
-	struct ambarella_platform_nand		*plat_nand;
 	struct ambarella_nand_info		*nand_info;
+	struct ambarella_platform_nand		*plat_nand;
 	struct ambarella_nand_controller		*amb_controller;
 	struct resource				*wp_res;
 	struct resource				*reg_res;
 	struct resource				*dma_res;
+
+#ifdef CONFIG_MTD_CMDLINE_PARTS
+	struct mtd_partition			*cmd_partitions = NULL;
+	struct mtd_partition			*amb_partitions = NULL;
+	int					cmd_nr_partitions = 0;
+	int					amb_nr_partitions = 0;
+	int					i;
+#endif
 
 	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
 	if (plat_nand == NULL) {
@@ -1393,7 +1383,67 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
 
-	ambarella_nand_add_partition(nand_info, plat_nand->sets);
+#ifdef CONFIG_MTD_PARTITIONS
+	if (plat_nand->sets && plat_nand->sets->nr_partitions > 0 &&
+			plat_nand->sets->partitions != NULL) {
+#ifdef CONFIG_MTD_CMDLINE_PARTS
+		nand_info->mtd.name = "ambnand";
+		/* get partitions definition from cmdline */
+		cmd_nr_partitions = parse_mtd_partitions(&nand_info->mtd,
+					part_probes, &cmd_partitions, 0);
+		if (cmd_nr_partitions <= 0)
+			goto ambarella_add_partitions;
+
+		/* modify the offset if no offset defined in cmdline. */
+		if (cmd_partitions->offset == 0) {
+			uint64_t offset = 0;
+			struct mtd_partition *tmp_partitions = cmd_partitions;
+			/* find the last partition getting from amboot */
+			for (i = 0; i < plat_nand->sets->nr_partitions; i++) {
+				if ((plat_nand->sets->partitions + i)->offset > offset) {
+					offset = (plat_nand->sets->partitions + i)->offset;
+					amb_partitions = plat_nand->sets->partitions + i;
+				}
+			}
+			for (i = 0; i < cmd_nr_partitions; i++) {
+				if (i != 0) {
+					amb_partitions = cmd_partitions + i - 1;
+				}
+				tmp_partitions->offset = amb_partitions->offset + amb_partitions->size;
+				if (tmp_partitions->offset + tmp_partitions->size > nand_info->mtd.size) {
+					tmp_partitions->size = nand_info->mtd.size - tmp_partitions->offset;
+					dev_info(nand_info->dev,
+						"partitioning exceeds flash size, truncating\n");
+					cmd_nr_partitions = i + 1;
+					printk("%s: %d\n", __func__, cmd_nr_partitions);
+					break;
+				}
+				tmp_partitions++;
+			}
+		}
+
+		/* append the cmdline partitions to partitions from amboot. */
+		amb_partitions = plat_nand->sets->partitions;
+		amb_nr_partitions = plat_nand->sets->nr_partitions;
+		for (i = 0; i < cmd_nr_partitions; i++) {
+			if (plat_nand->sets->nr_partitions >= MAX_AMBOOT_PARTITION_NR)
+				break;
+			memcpy(amb_partitions + amb_nr_partitions + i,
+				cmd_partitions++, sizeof(struct mtd_partition));
+			plat_nand->sets->nr_partitions++;
+		}
+
+ambarella_add_partitions:
+#endif
+		add_mtd_partitions(&nand_info->mtd,
+			plat_nand->sets->partitions,
+			plat_nand->sets->nr_partitions);
+	} else {
+		add_mtd_device(&nand_info->mtd);
+	}
+#else
+	add_mtd_device(&nand_info->mtd);
+#endif
 
 	platform_set_drvdata(pdev, nand_info);
 
