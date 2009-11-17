@@ -19,10 +19,28 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/moduleparam.h>
+#include <linux/platform_device.h>
+#include <linux/interrupt.h>
+#include <linux/delay.h>
+#include <linux/proc_fs.h>
+#include <linux/input.h>
+
+#include <asm/irq.h>
+#include <asm/io.h>
+#include <asm/uaccess.h>
+#include <asm/mach-types.h>
+
+#include <mach/hardware.h>
+#include "ambarella_input.h"
 
 /* ========================================================================= */
 static int ir_protocol = AMBA_IR_PROTOCOL_NEC;
 MODULE_PARM_DESC(ir_protocol, "Ambarella IR Protocol ID");
+static int print_ir_keycode = 0;
+MODULE_PARM_DESC(print_ir_keycode, "Print Key Code");
 /* ========================================================================= */
 
 static int ambarella_input_report_ir(struct ambarella_ir_info *pinfo, u32 uid)
@@ -65,7 +83,7 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pinfo, u32 uid)
 					pinfo->pkeymap[i].ir_rel.rel_step);
 				input_report_rel(pinfo->dev,
 					REL_Y, 0);
-				AMBI_MUST_SYNC();
+				input_sync(pinfo->input_center->dev);
 				ambi_dbg("IR_REL X[%d]:Y[%d]\n",
 					pinfo->pkeymap[i].ir_rel.rel_step, 0);
 			} else
@@ -75,7 +93,7 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pinfo, u32 uid)
 				input_report_rel(pinfo->dev,
 					REL_Y,
 					pinfo->pkeymap[i].ir_rel.rel_step);
-				AMBI_MUST_SYNC();
+				input_sync(pinfo->input_center->dev);
 				ambi_dbg("IR_REL X[%d]:Y[%d]\n", 0,
 					pinfo->pkeymap[i].ir_rel.rel_step);
 			}
@@ -89,7 +107,7 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pinfo, u32 uid)
 				ABS_X, pinfo->pkeymap[i].ir_abs.abs_x);
 			input_report_abs(pinfo->dev,
 				ABS_Y, pinfo->pkeymap[i].ir_abs.abs_y);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->input_center->dev);
 			ambi_dbg("IR_ABS X[%d]:Y[%d]\n",
 				pinfo->pkeymap[i].ir_abs.abs_x,
 				pinfo->pkeymap[i].ir_abs.abs_y);
@@ -185,7 +203,7 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		while (amba_readl(pinfo->regbase + IR_STATUS_OFFSET) > 0) {
 			amba_readl(pinfo->regbase + IR_DATA_OFFSET);
 		}
-		printk("IR_CONTROL_FIFO_OV overflow\n");
+		dev_err(&pinfo->input_center->dev->dev, "IR_CONTROL_FIFO_OV overflow\n");
 
 		goto ambarella_ir_irq_exit;
 	}
@@ -194,8 +212,8 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 
 	rval = pinfo->ir_parse(pinfo, &uid);
 	if (rval == 0) {// yes, we find the key
-		if (print_keycode)
-			printk("uid = 0x%08x\n", uid);
+		if(print_ir_keycode)
+			printk(KERN_NOTICE "uid = 0x%08x\n", uid);
 		ambarella_input_report_ir(pinfo, uid);
 	}
 
@@ -261,27 +279,27 @@ void ambarella_ir_set_protocol(struct ambarella_ir_info *pinfo,
 
 	switch (protocol_id) {
 	case AMBA_IR_PROTOCOL_NEC:
-		printk(KERN_NOTICE"Protocol NEC[%d]\n", protocol_id);
+		dev_notice(&pinfo->input_center->dev->dev, "Protocol NEC[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_nec_parse;
 		ambarella_ir_get_nec_info(&pinfo->frame_info);
 		break;
 	case AMBA_IR_PROTOCOL_PANASONIC:
-		printk(KERN_NOTICE"Protocol PANASONIC[%d]\n", protocol_id);
+		dev_notice(&pinfo->input_center->dev->dev, "Protocol PANASONIC[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_panasonic_parse;
 		ambarella_ir_get_panasonic_info(&pinfo->frame_info);
 		break;
 	case AMBA_IR_PROTOCOL_SONY:
-		printk(KERN_NOTICE"Protocol SONY[%d]\n", protocol_id);
+		dev_notice(&pinfo->input_center->dev->dev, "Protocol SONY[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_sony_parse;
 		ambarella_ir_get_sony_info(&pinfo->frame_info);
 		break;
 	case AMBA_IR_PROTOCOL_PHILIPS:
-		printk(KERN_NOTICE"Protocol PHILIPS[%d]\n", protocol_id);
+		dev_notice(&pinfo->input_center->dev->dev, "Protocol PHILIPS[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_philips_parse;
 		ambarella_ir_get_philips_info(&pinfo->frame_info);
 		break;
 	default:
-		printk(KERN_NOTICE"Protocol default NEC[%d]\n", protocol_id);
+		dev_notice(&pinfo->input_center->dev->dev, "Protocol default NEC[%d]\n", protocol_id);
 		pinfo->ir_parse = ambarella_ir_nec_parse;
 		ambarella_ir_get_nec_info(&pinfo->frame_info);
 		break;
@@ -316,6 +334,14 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 		errorCode = -ENOMEM;
 		goto ir_errorCode_na;
 	}
+
+	pinfo->input_center = amba_input_dev;
+	if (!pinfo->input_center){
+		dev_err(&pdev->dev, "input_center not registered!\n");
+		errorCode = -ENOMEM;
+		goto ir_errorCode_pinfo;
+	}
+
 	pinfo->pcontroller_info =
 		(struct ambarella_ir_controller *)pdev->dev.platform_data;
 	if ((pinfo->pcontroller_info == NULL) ||
@@ -388,9 +414,9 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 		input_file->data = pinfo;
 	}
 
-	amba_input_dev->pir_info = pinfo;// register to input centre
-	pinfo->dev = amba_input_dev->dev;// register input certre to ir info
-	pinfo->pkeymap = amba_input_dev->pkeymap;
+	pinfo->input_center->pir_info = pinfo;// register to input centre
+	pinfo->dev = pinfo->input_center->dev;// register input certre to ir info
+	pinfo->pkeymap = pinfo->input_center->pkeymap;
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor IR Host Controller %d probed!\n",
@@ -486,19 +512,37 @@ static struct platform_driver ambarella_ir_driver = {
 	},
 };
 
+int platform_driver_register_ir(void)
+{
+	return platform_driver_register(&ambarella_ir_driver);
+}
+
+void platform_driver_unregister_ir(void)
+{
+	platform_driver_unregister(&ambarella_ir_driver);
+}
+
 static int ambarella_input_set_ir_protocol(const char *val,
 	struct kernel_param *kp)
 {
 	int				errorCode = 0;
+	struct ambarella_input_info	*input_center;
+
+	input_center = amba_input_dev;
+	if (!input_center){
+		printk(KERN_ERR "input_center not registered!\n");
+		return-ENOMEM;
+	}
 
 	errorCode = param_set_int(val, kp);
 
-	if (amba_input_dev->pir_info)
-		ambarella_ir_init(amba_input_dev->pir_info);
+	if (input_center->pir_info)
+		ambarella_ir_init(input_center->pir_info);
 
 	return errorCode;
 }
 
 module_param_call(ir_protocol, ambarella_input_set_ir_protocol,
 	param_get_int, &ir_protocol, 0644);
+module_param(print_ir_keycode, int, 0644);
 

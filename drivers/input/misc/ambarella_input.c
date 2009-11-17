@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-#include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/firmware.h>
 #include <linux/delay.h>
@@ -39,14 +38,11 @@
 #include <mach/hardware.h>
 #include "ambarella_input.h"
 
-static struct ambarella_input_info *amba_input_dev = NULL;
+struct ambarella_input_info *amba_input_dev = NULL;
 
 /* ========================================================================= */
 #define CONFIG_AMBARELLA_VI_BUFFER		(32)
 /* ========================================================================= */
-static int print_keycode = 0;
-MODULE_PARM_DESC(print_keycode, "Print Key Code");
-
 static int abx_max_x = 720;
 MODULE_PARM_DESC(abx_max_x, "Ambarella input max x");
 
@@ -73,13 +69,6 @@ static struct ambarella_key_table \
 };
 
 /* ========================================================================= */
-
-#if (defined CONFIG_INPUT_AMBARELLA_IR_MODULE) || (defined CONFIG_INPUT_AMBARELLA_IR)
-#include "ambarella_input_ir.c"
-#endif
-#if (defined CONFIG_INPUT_AMBARELLA_ADC_MODULE) || (defined CONFIG_INPUT_AMBARELLA_ADC)
-#include "ambarella_input_adc.c"
-#endif
 
 irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 {
@@ -123,7 +112,7 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 					pinfo->pkeymap[i].gpio_rel.rel_step);
 				input_report_rel(pinfo->dev,
 					REL_Y, 0);
-				AMBI_MUST_SYNC();
+				input_sync(pinfo->dev);
 				ambi_dbg("report REL_X %d @ %d:%d\n",
 					pinfo->pkeymap[i].gpio_rel.rel_step,
 					gpio_id, level);
@@ -134,7 +123,7 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 				input_report_rel(pinfo->dev,
 					REL_Y,
 					pinfo->pkeymap[i].gpio_rel.rel_step);
-				AMBI_MUST_SYNC();
+				input_sync(pinfo->dev);
 				ambi_dbg("report REL_Y %d @ %d:%d\n",
 					pinfo->pkeymap[i].gpio_rel.rel_step,
 					gpio_id, level);
@@ -147,7 +136,7 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 				ABS_X, pinfo->pkeymap[i].gpio_abs.abs_x);
 			input_report_abs(pinfo->dev,
 				ABS_Y, pinfo->pkeymap[i].gpio_abs.abs_y);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 			ambi_dbg("report ABS %d:%d @ %d:%d\n",
 				pinfo->pkeymap[i].gpio_abs.abs_x,
 				pinfo->pkeymap[i].gpio_abs.abs_y,
@@ -176,9 +165,7 @@ int ambarella_vi_proc_write(struct file *file,
 
 		key_num = sscanf(key_buffer, "%*s %d:%d", &value1, &value2);
 
-		if (print_keycode)
-			printk("Get %d data[%s : %d:%d]\n",
-				key_num, key_buffer, value1, value2);
+		ambi_dbg("Get %d data[%s : %d:%d]\n", key_num, key_buffer, value1, value2);
 #if 0
 		if (key_num < 2)
 			return -EINVAL;
@@ -189,30 +176,30 @@ int ambarella_vi_proc_write(struct file *file,
 		if (memcmp(key_buffer, "rel", 3) == 0) 	{
 			input_report_rel(pinfo->dev, REL_X, value1);
 			input_report_rel(pinfo->dev, REL_Y, value2);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "abs", 3) == 0) 	{
 			input_report_abs(pinfo->dev, ABS_X, value1);
 			input_report_abs(pinfo->dev, ABS_Y, value2);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "ton", 3) == 0) 	{
 			input_report_key(pinfo->dev, BTN_TOUCH, 1);
 			input_report_abs(pinfo->dev, ABS_X, value1);
 			input_report_abs(pinfo->dev, ABS_Y, value2);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "tof", 3) == 0) 	{
 			input_report_key(pinfo->dev, BTN_TOUCH, 0);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "pre", 3) == 0) 	{
 			input_report_key(pinfo->dev, ABS_PRESSURE, value1);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "wid", 3) == 0) 	{
 			input_report_key(pinfo->dev, ABS_TOOL_WIDTH, value1);
-			AMBI_MUST_SYNC();
+			input_sync(pinfo->dev);
 		}
 	}
 
@@ -230,10 +217,10 @@ static int __devinit ambarella_setup_keymap(struct ambarella_input_info *pinfo)
 		errorCode = request_firmware(&ext_key_map,
 			keymap_name, &pinfo->dev->dev);
 		if (errorCode) {
-			printk(KERN_ERR"Can't load firmware, use default\n");
+			dev_err(&pinfo->dev->dev, "Can't load firmware, use default\n");
 			goto ambarella_setup_keymap_init;
 		}
-		printk(KERN_NOTICE"Load %s, size = %d\n",
+		dev_notice(&pinfo->dev->dev, "Load %s, size = %d\n",
 			keymap_name, ext_key_map->size);
 		memset(default_ambarella_key_table, AMBA_INPUT_END,
 			sizeof(default_ambarella_key_table));
@@ -249,38 +236,16 @@ ambarella_setup_keymap_init:
 			break;
 
 		switch (pinfo->pkeymap[i].type & AMBA_INPUT_SOURCE_MASK) {
+
 		case AMBA_INPUT_SOURCE_IR:
 			break;
 
-#if (defined CONFIG_INPUT_AMBARELLA_ADC_MODULE) || (defined CONFIG_INPUT_AMBARELLA_ADC)
 		case AMBA_INPUT_SOURCE_ADC:
-			/* here, we record the adc channels that we will use */
-			if (pinfo->pkeymap[i].adc_key.chan < pinfo->adc_channel_num) {
-				pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_channel_used = 1;
+			if (ambarella_setup_adc_keymap(pinfo, i) == 0) {
+				break;
 			} else {
-				printk(KERN_ERR"The adc channel [%d] is not exist\n",
-					pinfo->pkeymap[i].adc_key.chan);
 				return errorCode;
 			}
-
-			if (pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
-				if (pinfo->pkeymap[i].adc_key.irq_trig) {
-					pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_high_trig
-						= pinfo->pkeymap[i].adc_key.low_level;
-					pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_low_trig
-						= 0;
-				} else {
-					pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_low_trig
-						= pinfo->pkeymap[i].adc_key.high_level;
-					pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_high_trig
-						= 0;
-					ambi_dbg(" adc_high_trig [%d], adc_low_trig [%d]\n",
-					pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_high_trig,
-					pinfo->channel[pinfo->pkeymap[i].adc_key.chan].adc_low_trig);
-				}
-			}
-			break;
-#endif
 		case AMBA_INPUT_SOURCE_GPIO:
 			ambarella_gpio_config(pinfo->pkeymap[i].gpio_key.id, GPIO_FUNC_SW_INPUT);
 			errorCode = request_irq(
@@ -289,13 +254,13 @@ ambarella_setup_keymap_init:
 				pinfo->pkeymap[i].gpio_key.irq_mode,
 				"ambarella_input_gpio", pinfo);
 			if (errorCode)
-				printk(KERN_ERR"Request GPIO%d IRQ failed!\n",
+				dev_err(&pinfo->dev->dev, "Request GPIO%d IRQ failed!\n",
 					pinfo->pkeymap[i].gpio_key.id);
 			if (pinfo->pkeymap[i].gpio_key.can_wakeup) {
 				errorCode = set_irq_wake(GPIO_INT_VEC(
 					pinfo->pkeymap[i].gpio_key.id), 1);
 				if (errorCode)
-					printk(KERN_ERR"set_irq_wake %d failed!\n",
+					dev_err(&pinfo->dev->dev, "set_irq_wake %d failed!\n",
 						pinfo->pkeymap[i].gpio_key.id);
 			}
 			errorCode = 0;	//Continue with error...
@@ -306,7 +271,7 @@ ambarella_setup_keymap_init:
 			break;
 
 		default:
-			printk(KERN_WARNING"Unknown AMBA_INPUT_SOURCE %d\n",
+			dev_warn(&pinfo->dev->dev, "Unknown AMBA_INPUT_SOURCE %d\n",
 				(pinfo->pkeymap[i].type &
 				AMBA_INPUT_SOURCE_MASK));
 			break;
@@ -349,7 +314,7 @@ ambarella_setup_keymap_init:
 			break;
 
 		default:
-			printk(KERN_WARNING"Unknown AMBA_INPUT_TYPE %d\n",
+			dev_warn(&pinfo->dev->dev, "Unknown AMBA_INPUT_TYPE %d\n",
 				(pinfo->pkeymap[i].type &
 				AMBA_INPUT_TYPE_MASK));
 			break;
@@ -381,6 +346,9 @@ static void ambarella_free_keymap(struct ambarella_input_info *pinfo)
 		case AMBA_INPUT_SOURCE_ADC:
 			break;
 
+		case AMBA_INPUT_SOURCE_VI:
+			break;
+
 		case AMBA_INPUT_SOURCE_GPIO:
 			if (pinfo->pkeymap[i].gpio_key.can_wakeup)
 				set_irq_wake(GPIO_INT_VEC( pinfo->pkeymap[i].gpio_key.id), 0);
@@ -388,7 +356,7 @@ static void ambarella_free_keymap(struct ambarella_input_info *pinfo)
 			break;
 
 		default:
-			printk(KERN_WARNING"Unknown AMBA_INPUT_SOURCE %d\n",
+			dev_warn(&pinfo->dev->dev, "Unknown AMBA_INPUT_SOURCE %d\n",
 				(pinfo->pkeymap[i].type &
 				AMBA_INPUT_SOURCE_MASK));
 			break;
@@ -405,7 +373,7 @@ static int __devinit ambarella_input_center_init(void)
 
 	pinfo = kmalloc(sizeof(struct ambarella_input_info), GFP_KERNEL);
 	if (!pinfo) {
-		printk(KERN_ERR "Amba: unable to allocate pinfo\n");
+		printk(KERN_INFO "Amba: unable to allocate pinfo\n");
 		errorCode = -ENOMEM;
 		goto input_errorCode_na;
 	}
@@ -425,14 +393,14 @@ static int __devinit ambarella_input_center_init(void)
 
 	errorCode = input_register_device(pdev);
 	if (errorCode) {
-		printk(KERN_ERR"Register input_dev failed!\n");
+		dev_err(&pinfo->dev->dev, "Register input_dev failed!\n");
 		goto input_errorCode_free_input_dev;
 	}
 
 	input_file = create_proc_entry(dev_name(&pdev->dev),
 		S_IRUGO | S_IWUSR, get_ambarella_proc_dir());
 	if (input_file == NULL) {
-		printk(KERN_ERR"Register %s failed!\n",
+		dev_err(&pinfo->dev->dev, "Register %s failed!\n",
 			dev_name(&pdev->dev));
 		errorCode = -ENOMEM;
 		goto input_errorCode_unregister_device;
@@ -442,17 +410,20 @@ static int __devinit ambarella_input_center_init(void)
 		input_file->data = pinfo;
 	}
 
-#if (defined CONFIG_INPUT_AMBARELLA_ADC_MODULE) || (defined CONFIG_INPUT_AMBARELLA_ADC)
-/* here, we get the ADC channel number, and allocate memory, which setup_keymap will use */
+#ifdef CONFIG_INPUT_AMBARELLA_ADC
+	/*
+	 * here, we get the ADC channel number,
+	 * and allocate memory, which setup_keymap will use
+	 */
 	pinfo->adc_channel_num = ambarella_adc_get_instances();
 	ambi_dbg("adc has %d channels\n", pinfo->adc_channel_num);
 	if (pinfo->adc_channel_num > 32)
 		goto input_errorCode_unregister_device;
 
-	amba_input_dev->channel = kzalloc(sizeof(struct ambarella_adc_channel_info)
-			* amba_input_dev->adc_channel_num, GFP_KERNEL);
-	if (!amba_input_dev->channel) {
-		printk(KERN_ERR"Fail to malloc channel info\n");
+	pinfo->channel = kzalloc(sizeof(struct ambarella_adc_channel_info)
+			* pinfo->adc_channel_num, GFP_KERNEL);
+	if (!pinfo->channel) {
+		dev_err(&pinfo->dev->dev, "Fail to malloc channel info\n");
 		goto input_errorCode_unregister_device;
 	}
 #endif
@@ -460,14 +431,12 @@ static int __devinit ambarella_input_center_init(void)
 	if (errorCode)
 		goto input_errorCode_setup_keymap;
 
-	printk(KERN_NOTICE "Ambarella Media Processor Input Center probed!\n" );
+	dev_notice(&pdev->dev, "Ambarella Media Processor Input Center probed!\n" );
 
 	goto input_errorCode_na;
 
 input_errorCode_setup_keymap:
-#if (defined CONFIG_INPUT_AMBARELLA_ADC_MODULE) || (defined CONFIG_INPUT_AMBARELLA_ADC)
-	kfree(amba_input_dev->channel);
-#endif
+	kfree(pinfo->channel);
 input_errorCode_unregister_device:
 	input_unregister_device(pinfo->dev);
 
@@ -491,7 +460,7 @@ static int __devexit ambarella_input_center_remove(struct ambarella_input_info *
 		kfree(pinfo);
 	}
 
-	printk(KERN_NOTICE "Ambarella Media Processor Input Center removed!\n" );
+	dev_notice(&pinfo->dev->dev, "Ambarella Media Processor Input Center removed!\n" );
 
 	return 0;
 }
@@ -502,43 +471,45 @@ static int __init ambarella_input_init(void)
 
 	errorCode = ambarella_input_center_init();
 	if (errorCode) {
-		printk(KERN_ERR "Register ambarella_input_driver failed!\n");
-		return errorCode;
+		dev_err(&amba_input_dev->dev->dev, "Register ambarella_input_driver failed!\n");
+		goto input_err_init;
 	}
 
-#if (defined CONFIG_INPUT_AMBARELLA_IR_MODULE) || (defined CONFIG_INPUT_AMBARELLA_IR)
-	errorCode = platform_driver_register(&ambarella_ir_driver);
+#ifdef CONFIG_INPUT_AMBARELLA_IR
+	errorCode = platform_driver_register_ir();
 	if (errorCode) {
-		printk(KERN_ERR "Register ambarella_ir_driver failed!\n");
-		ambarella_input_center_remove(amba_input_dev);
-		return errorCode;
+		dev_err(&amba_input_dev->dev->dev, "Register ambarella_ir_driver failed!\n");
+		goto input_err_ir;
 	}
 #endif
-
-#if (defined CONFIG_INPUT_AMBARELLA_ADC_MODULE) || (defined CONFIG_INPUT_AMBARELLA_ADC)
-	errorCode = platform_driver_register(&ambarella_adc_driver);
+#ifdef CONFIG_INPUT_AMBARELLA_ADC
+	errorCode = platform_driver_register_adc();
 	if (errorCode) {
-		printk(KERN_ERR "Register ambarella_adc_driver failed!\n");
-#if (defined CONFIG_INPUT_AMBARELLA_IR_MODULE) || (defined CONFIG_INPUT_AMBARELLA_IR)
-		platform_driver_unregister(&ambarella_ir_driver);
-#endif
-		ambarella_input_center_remove(amba_input_dev);
-		return errorCode;
+		dev_err(&amba_input_dev->dev->dev, "Register ambarella_adc_driver failed!\n");
+		goto input_err_adc;
 	}
 #endif
-
+	goto input_err_init;
+#ifdef CONFIG_INPUT_AMBARELLA_ADC
+input_err_adc:
+#endif
+#ifdef CONFIG_INPUT_AMBARELLA_IR
+		platform_driver_unregister_ir();
+input_err_ir:
+#endif
+		ambarella_input_center_remove(amba_input_dev);
+input_err_init:
 	return errorCode;
 }
 
 static void __exit ambarella_input_exit(void)
 {
 
-#if (defined CONFIG_INPUT_AMBARELLA_ADC_MODULE) || (defined CONFIG_INPUT_AMBARELLA_ADC)
-	platform_driver_unregister(&ambarella_adc_driver);
+#ifdef CONFIG_INPUT_AMBARELLA_ADC
+	platform_driver_unregister_adc();
 #endif
-
-#if (defined CONFIG_INPUT_AMBARELLA_IR_MODULE) || (defined CONFIG_INPUT_AMBARELLA_IR)
-	platform_driver_unregister(&ambarella_ir_driver);
+#ifdef CONFIG_INPUT_AMBARELLA_IR
+	platform_driver_unregister_ir();
 #endif
 	ambarella_input_center_remove(amba_input_dev);
 
@@ -552,7 +523,6 @@ MODULE_AUTHOR("Anthony Ginger, <hfjiang@ambarella.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("ambai");
 
-module_param(print_keycode, int, 0644);
 module_param(abx_max_x, int, 0644);
 module_param(abx_max_y, int, 0644);
 module_param(abx_max_pressure, int, 0644);
