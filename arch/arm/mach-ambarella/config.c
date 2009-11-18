@@ -651,16 +651,15 @@ static struct ambarella_nand_set ambarella_nand_default_set = {
 	.partitions	= ambarella_nand_default_partition,
 };
 
-// Based on st128w3a
 static struct ambarella_nand_timing ambarella_nand_default_timing = {
-	.control	= 0x00200110,
-	.size		= 0x00004000,
-	.timing0	= 0x01010105,
-	.timing1	= 0x03030303,
-	.timing2	= 0x07041805,
-	.timing3	= 0x07041803,
-	.timing4	= 0x08030f01,
-	.timing5	= 0x00070702,
+	.control	= 0,
+	.size		= 0,
+	.timing0	= 0x20202020,
+	.timing1	= 0x20202020,
+	.timing2	= 0x20202020,
+	.timing3	= 0x20202020,
+	.timing4	= 0x20202020,
+	.timing5	= 0x00202020,
 };
 
 static void fio_amb_nand_request(void)

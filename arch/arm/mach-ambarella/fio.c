@@ -258,11 +258,11 @@ int __init ambarella_init_fio(void)
 #endif
 
 	/* Following should be handled by the bootloader... */
-	//rct_reset_fio();
-	//fio_amb_exit_random_mode();
-	//amba_writel(FLASH_INT_REG, 0x0);
-	//amba_writel(XD_INT_REG, 0x0);
-	//amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
+	rct_reset_fio();
+	fio_amb_exit_random_mode();
+	amba_writel(FLASH_INT_REG, 0x0);
+	amba_writel(XD_INT_REG, 0x0);
+	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
 
 	return 0;
 }
