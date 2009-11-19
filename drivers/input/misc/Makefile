@@ -23,15 +23,14 @@ obj-$(CONFIG_INPUT_APANEL)		+= apanel.o
 obj-$(CONFIG_INPUT_SGI_BTNS)		+= sgi_btns.o
 obj-$(CONFIG_INPUT_PCF50633_PMU)	+= pcf50633-input.o
 
-ifeq ($(CONFIG_INPUT_AMBARELLA_IR), y)
-ambarella_general_input-objs		:= ambarella_input.o ambarella_ir_nec.o ambarella_ir_sony.o ambarella_ir_philips.o ambarella_ir_panasonic.o
-else
-ifeq ($(CONFIG_INPUT_AMBARELLA_IR), m)
-ambarella_general_input-objs		:= ambarella_input.o ambarella_ir_nec.o ambarella_ir_sony.o ambarella_ir_philips.o ambarella_ir_panasonic.o
-else
 ambarella_general_input-objs		:= ambarella_input.o
+
+ifeq ($(CONFIG_INPUT_AMBARELLA_IR), y)
+ambarella_general_input-objs		+= ambarella_input_ir.o ambarella_ir_nec.o ambarella_ir_sony.o ambarella_ir_philips.o ambarella_ir_panasonic.o
 endif
+ifeq ($(CONFIG_INPUT_AMBARELLA_ADC), y)
+ambarella_general_input-objs		+= ambarella_input_adc.o
 endif
 
-obj-$(CONFIG_INPUT_AMBARELLA)		+= ambarella_general_input.o
+obj-$(CONFIG_INPUT_AMBARELLA)		:= ambarella_general_input.o
 

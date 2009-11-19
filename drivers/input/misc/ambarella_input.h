@@ -178,6 +178,7 @@ struct ambarella_ir_info {
 
 	struct ambarella_key_table	*pkeymap;
 	struct ambarella_ir_controller	*pcontroller_info;
+	struct ambarella_input_info	*input_center;
 };
 
 struct ambarella_adc_info {
@@ -198,6 +199,7 @@ struct ambarella_adc_info {
 
 	struct ambarella_key_table	*pkeymap;
 	struct ambarella_adc_controller	*pcontroller_info;
+	struct ambarella_input_info	*input_center;
 };
 
 struct ambarella_adc_channel_info{
@@ -217,7 +219,9 @@ struct ambarella_input_info {
 	struct ambarella_adc_channel_info *channel;
 };
 
-#if (defined CONFIG_INPUT_AMBARELLA_IR_MODULE) || (defined CONFIG_INPUT_AMBARELLA_IR)
+extern struct ambarella_input_info *amba_input_dev;
+
+#if (defined CONFIG_INPUT_AMBARELLA_IR)
 int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 int ambarella_ir_panasonic_parse(struct ambarella_ir_info *pinfo, u32 *uid);
 int ambarella_ir_sony_parse(struct ambarella_ir_info *pinfo, u32 *uid);
@@ -233,7 +237,16 @@ void ambarella_ir_inc_read_ptr(struct ambarella_ir_info *pinfo);
 void ambarella_ir_move_read_ptr(struct ambarella_ir_info *pinfo, int offset);
 u16 ambarella_ir_read_data(struct ambarella_ir_info *pinfo, int pointer);
 int ambarella_ir_get_tick_size(struct ambarella_ir_info *pinfo);
+int platform_driver_register_ir(void);
+void platform_driver_unregister_ir(void);
 #endif
+
+#if (defined CONFIG_INPUT_AMBARELLA_ADC)
+int platform_driver_register_adc(void);
+void platform_driver_unregister_adc(void);
+int ambarella_setup_adc_keymap(struct ambarella_input_info *pinfo, int i);
+#endif
+
 irqreturn_t ambarella_gpio_irq(int irq, void *devid);
 int ambarella_vi_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data);
@@ -249,8 +262,6 @@ ambi_dbg(const char * fmt, ...)
 	return 0;
 }
 #endif
-
-#define AMBI_MUST_SYNC()	(input_sync(amba_input_dev->dev))
 
 #endif	//__KERNEL__
 
