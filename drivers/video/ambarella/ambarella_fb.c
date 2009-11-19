@@ -48,6 +48,15 @@
 #include <mach/fb.h>
 
 /* video=ambafb:double_x:double_y,rgb565*/
+static int x_multiplication = 1;
+static int y_multiplication = 1;
+static int color_mode = AMBAFB_COLOR_AUTO;
+static int use_prealloc = 0;
+
+module_param(x_multiplication, int, 0444);
+module_param(y_multiplication, int, 0444);
+module_param(color_mode, int, 0444);
+module_param(use_prealloc, int, 0444);
 
 /* ========================================================================== */
 static int ambarella_fb_proc_read(char *page, char **start,
@@ -236,26 +245,32 @@ static int __init ambafb_setup(char *options,
 	char					*this_opt;
 
 	if (!options || !*options)
-		return 1;
+		goto ambafb_setup_exit;
 
 	while ((this_opt = strsep(&options, ",")) != NULL) {
 		if (!*this_opt)
 			continue;
 		if (strcmp(this_opt, "double_x") == 0) {
-			ambafb_data->x_multiplication = 2;
+			x_multiplication = 2;
 		} else
 		if (strcmp(this_opt, "double_y") == 0) {
-			ambafb_data->y_multiplication = 2;
+			y_multiplication = 2;
 		} else
 		if (strcmp(this_opt, "rgb565") == 0) {
-			ambafb_data->color_format = AMBAFB_COLOR_RGB565;
+			color_mode = AMBAFB_COLOR_RGB565;
 		} else
 		if (strcmp(this_opt, "use_prealloc") == 0) {
-			ambafb_data->use_prealloc = 1;
+			use_prealloc = 1;
 		} else {
 			//mode_option = this_opt;
 		}
 	}
+
+ambafb_setup_exit:
+	ambafb_data->x_multiplication = x_multiplication;
+	ambafb_data->y_multiplication = y_multiplication;
+	ambafb_data->color_format = color_mode;
+	ambafb_data->use_prealloc = use_prealloc;
 
 	return 1;
 }
