@@ -158,6 +158,9 @@ static void __init ambarella_init(void)
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
+
+	errorCode = ambarella_init_toss();
+	BUG_ON(errorCode != 0);
 }
 
 /* ==========================================================================*/

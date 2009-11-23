@@ -243,7 +243,7 @@ static struct mem_type mem_types[] = {
 		.prot_sect = PMD_TYPE_SECT,
 		.domain    = DOMAIN_KERNEL,
 	},
-	[MT_HAL] = {
+	[MT_SMALL_PAGE] = {
 		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY |
 				L_PTE_USER | L_PTE_EXEC,
 		.prot_sect = PMD_TYPE_SECT | PMD_SECT_AP_WRITE,

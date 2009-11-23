@@ -212,40 +212,63 @@ menu "Proc file system support"
 config AMBARELLA_GPIO_PROC
 	bool "Ambarella GPIO proc support"
 	default n
+	depends on PROC_FS
 	---help---
-	  Adds /proc/ambarella/gpio for Ambarella GPIO access.
+	  Add /proc/ambarella/gpio for Ambarella GPIO access.
 
 	  If you are not sure, say N here.
 
 config AMBARELLA_ADC_PROC
 	bool "Ambarella ADC proc support"
 	default n
+	depends on PROC_FS
 	---help---
-	  Adds /proc/ambarella/adc for Ambarella ADC access.
+	  Add /proc/ambarella/adc for Ambarella ADC access.
 
 	  If you are not sure, say N here.
 
 config AMBARELLA_PWM_PROC
 	bool "Ambarella PWM proc support"
 	default n
+	depends on PROC_FS
 	---help---
-	  Adds /proc/ambarella/pwm for Ambarella PWM access.
+	  Add /proc/ambarella/pwm for Ambarella PWM access.
 
 	  If you are not sure, say N here.
 
 config AMBARELLA_DMA_PROC
 	bool "Ambarella DMA proc support"
 	default n
+	depends on PROC_FS
 	---help---
-	  Adds /proc/ambarella/dma for Ambarella DMA debug.
+	  Add /proc/ambarella/dma for Ambarella DMA debug.
 
 	  If you are not sure, say N here.
 
 config AMBARELLA_PLL_PROC
 	bool "Ambarella PLL proc support"
 	default n
+	depends on PROC_FS
 	---help---
-	  Adds /proc/ambarella/pll for Ambarella PLL access.
+	  Add /proc/ambarella/pll for Ambarella PLL access.
+
+	  If you are not sure, say N here.
+
+config AMBARELLA_TOSS_PROC
+	bool "Ambarella TOSS proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/toss for Ambarella TOSS.
+
+	  If you are not sure, say N here.
+
+config AMBARELLA_HOTBOOT_PROC
+	bool "Ambarella Hotboot proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/hotboot.
 
 	  If you are not sure, say N here.
 
@@ -267,51 +290,40 @@ config AMBARELLA_FB1
 
 endmenu
 
-choice
-	prompt "PPM Size"
-	default AMBARELLA_PPM_00200000
-	help
-	  Private Physical Memory.
-	  Address aligned to 2MB.
-	  For PPM size 0MB, make sure boot won't overlap with Kernel,
-	  or change AMBARELLA_TEXTOFS.
-	  If you are not absolutely sure what you are doing, leave this
-	  option alone!
-
-	config AMBARELLA_PPM_00000000
-		bool "0MB"
-	config AMBARELLA_PPM_00200000
-		bool "2MB"
-	config AMBARELLA_PPM_01000000
-		bool "16MB"
-endchoice
+menu "PPM Configuration"
 
 config AMBARELLA_PPM_SIZE
-	hex
-	default 0x01000000 if AMBARELLA_PPM_01000000
-	default 0x00200000 if AMBARELLA_PPM_00200000
-	default 0x00000000
+	hex "PPM SIZE"
+	help
+	default 0x00200000
+	help
+	  Specify the size from the start of physical DRAM address to reserve.
 
 config AMBARELLA_ZRELADDR
-	hex
-	default 0xC1008000 if AMBARELLA_PPM_01000000
-	default 0xC0208000 if AMBARELLA_PPM_00200000
-	default 0xC0008000
+	hex "PPM_ZRELADDR"
+	default 0xC0208000
+	help
+	  Specify the kernel entry point start physical address.
 
 config AMBARELLA_TEXTOFS
-	hex
+	hex "PPM_TEXTOFS"
 	default 0x00008000
+	help
+	  Speicify the relative text offset.
 
 config AMBARELLA_PARAMS_PHYS
-	hex
-	default 0xC1001000 if AMBARELLA_PPM_01000000
-	default 0xC0201000 if AMBARELLA_PPM_00200000
-	default 0xC0001000
+	hex "PPM PHYS"
+	default 0xC0201000
+	help
+	  Specify the physical address for kernel parameters.
 
 config AMBARELLA_INITRD_PHYS
-	hex
-	default 0xC1800000 if AMBARELLA_PPM_01000000
+	hex "PPM_INITRD_PHYS"
 	default 0xC0800000
+	help
+	  Specify the physical address for initrd.
+
+endmenu
 
 endmenu
 

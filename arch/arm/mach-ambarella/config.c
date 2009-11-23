@@ -229,6 +229,15 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_DEVICE,
 			},
 	},
+	[5] = {
+		.name		= "TOSS",
+		.io_desc	= {
+			.virtual= (DEFAULT_TOSS_BASE),
+			.pfn	= __phys_to_pfn(DEFAULT_TOSS_START),
+			.length	= DEFAULT_TOSS_SIZE,
+			.type	= MT_SMALL_PAGE,
+			},
+	},
 };
 
 #ifdef SYSTEM_SUPPORT_HAL
@@ -279,7 +288,7 @@ void __init ambarella_map_io(void)
 		hal_desc.virtual = halv;
 		hal_desc.pfn = __phys_to_pfn(halp);
 		hal_desc.length = hals;
-		hal_desc.type = MT_HAL;
+		hal_desc.type = MT_SMALL_PAGE;
 		iotable_init(&hal_desc, 1);
 		bhal_mapped = 1;
 		hal_type = hal_desc.type;
@@ -390,6 +399,55 @@ static int __init parse_mem_tag_bsb(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
 
+static void __init early_toss(char **p)
+{
+	unsigned long				pstart = 0;
+	unsigned long				vstart = 0;
+	unsigned long				size = 0;
+
+	pstart = memparse(*p, p);
+	if (**p == ',')
+		vstart = memparse((*p) + 1, p);
+	if (**p == ',')
+		size = memparse((*p) + 1, p);
+
+	if ((pstart & MEM_MAP_CHECK_MASK) || (pstart < DEFAULT_MEM_START)) {
+		pr_err("Ambarella: Bad TOSS pstart 0x%lx\n", pstart);
+		return;
+	}
+
+	if (vstart & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad TOSS vstart 0x%lx\n", vstart);
+		return;
+	}
+
+	ambarella_io_desc[5].io_desc.virtual = vstart;
+	ambarella_io_desc[5].io_desc.pfn = __phys_to_pfn(pstart);
+	ambarella_io_desc[5].io_desc.length = size;
+}
+__early_param("toss=", early_toss);
+
+static int __init parse_mem_tag_toss(const struct tag *tag)
+{
+	if ((tag->u.ramdisk.start & MEM_MAP_CHECK_MASK) ||
+		(tag->u.ramdisk.start < DEFAULT_MEM_START)) {
+		pr_err("Ambarella: Bad TOSS pstart 0x%x\n", tag->u.ramdisk.start);
+		return -EINVAL;
+	}
+
+	if (tag->u.ramdisk.flags & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad TOSS vstart 0x%x\n", tag->u.ramdisk.flags);
+		return -EINVAL;
+	}
+
+	ambarella_io_desc[5].io_desc.virtual = tag->u.ramdisk.flags;
+	ambarella_io_desc[5].io_desc.pfn = __phys_to_pfn(tag->u.ramdisk.start);
+	ambarella_io_desc[5].io_desc.length = tag->u.ramdisk.size;
+
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_TOSS, parse_mem_tag_toss);
+
 u32 get_ambarella_ppm_phys(void)
 {
 	return __pfn_to_phys(ambarella_io_desc[2].io_desc.pfn);
@@ -443,6 +501,24 @@ u32 get_ambarella_dspmem_size(void)
 	return ambarella_io_desc[4].io_desc.length;
 }
 EXPORT_SYMBOL(get_ambarella_dspmem_size);
+
+u32 get_ambarella_toss_phys(void)
+{
+	return __pfn_to_phys(ambarella_io_desc[5].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_toss_phys);
+
+u32 get_ambarella_toss_virt(void)
+{
+	return ambarella_io_desc[5].io_desc.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_toss_virt);
+
+u32 get_ambarella_toss_size(void)
+{
+	return ambarella_io_desc[5].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_toss_size);
 
 u32 ambarella_phys_to_virt(u32 paddr)
 {
@@ -590,9 +666,13 @@ static void __init early_hal(char **p)
 	if (**p == ',')
 		size = memparse((*p) + 1, p);
 
-	if ((pstart & MEM_MAP_CHECK_MASK) || (vstart & MEM_MAP_CHECK_MASK) ||
-		(pstart < DEFAULT_MEM_START)) {
+	if ((pstart & MEM_MAP_CHECK_MASK) || (pstart < DEFAULT_MEM_START)) {
 		pr_err("Ambarella: Bad HAL pstart 0x%lx\n", pstart);
+		return;
+	}
+
+	if (vstart & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad HAL vstart 0x%lx\n", vstart);
 		return;
 	}
 
@@ -604,10 +684,14 @@ __early_param("hal=", early_hal);
 
 static int __init parse_mem_tag_hal(const struct tag *tag)
 {
-	if ((tag->u.ramdisk.start & MEM_MAP_CHECK_MASK) ||
-		(tag->u.ramdisk.flags & MEM_MAP_CHECK_MASK) ||
+ 	if ((tag->u.ramdisk.start & MEM_MAP_CHECK_MASK) ||
 		(tag->u.ramdisk.start < DEFAULT_MEM_START)) {
-		pr_err("Ambarella: Bad HAL start 0x%x\n", tag->u.ramdisk.start);
+		pr_err("Ambarella: Bad HAL pstart 0x%x\n", tag->u.ramdisk.start);
+		return -EINVAL;
+	}
+
+	if (tag->u.ramdisk.flags & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad HAL vstart 0x%x\n", tag->u.ramdisk.start);
 		return -EINVAL;
 	}
 

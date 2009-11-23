@@ -35,13 +35,17 @@
 #define DEFAULT_DEBUG_SIZE	(0x00008000)
 
 #define DEFAULT_HAL_START	(0xC00A0000)
-#define DEFAULT_HAL_BASE	(0xFEEA0000)
+#define DEFAULT_HAL_BASE	(0xFEE00000)
 #define DEFAULT_HAL_SIZE	(0x00030000)
 #if	(CHIP_REV == A5S)
 #include <mach/hal/ambhal.h>
 #include <mach/hal/ambhalmini.h>
 #include <mach/hal/header.h>
 #endif
+
+#define DEFAULT_TOSS_START	(0x00000000)
+#define DEFAULT_TOSS_BASE	(0x00000000)
+#define DEFAULT_TOSS_SIZE	(0x00000000)
 
 #ifdef SYSTEM_SUPPORT_HAL
 #define HAL_BASE_VP		(get_ambarella_hal_vp())
@@ -99,6 +103,7 @@ extern void ambarella_map_io(void);
 
 extern int ambarella_create_proc_dir(void);
 
+extern int ambarella_init_toss(void);
 extern int ambarella_init_nand(void *);
 extern int ambarella_init_gpio(void);
 extern int ambarella_init_fio(void);
