@@ -22,9 +22,9 @@
 
 #include <toss.h>
 
-#define HOTBOOT_MEM_ADDR	0xc007fff0
-#define HOTBOOT_MAGIC0		0x14cd78a0
-#define HOTBOOT_MAGIC1		0x319837fb
+#define HOTBOOT_MEM_ADDR	(ambarella_phys_to_virt(0xC007FFF0))
+#define HOTBOOT_MAGIC0		(0x14cd78a0)
+#define HOTBOOT_MAGIC1		(0x319837fb)
 
 /* ==========================================================================*/
 struct toss_s *toss = NULL;
@@ -40,13 +40,13 @@ int toss_switch(unsigned int personality)
 	struct toss_personality_s *os_this, *os_that;
 
 	if (toss == NULL) {
-		printk("toss: inactive!\n");
+		pr_err("toss: inactive!\n");
 		rval = -EINVAL;
 		goto done;
 	}
 
 	if (personality >= MAX_TOSS_PERSONALITY) {
-		printk("toss: invalid personality requested (%d)!\n",
+		pr_err("toss: invalid personality requested (%d)!\n",
 		       personality);
 		rval = -EINVAL;
 		goto done;
@@ -58,20 +58,20 @@ int toss_switch(unsigned int personality)
 	os_that = &toss->personalities[idx_that];
 
 	if (personality == toss->active) {
-		printk("toss: attempting to switch to self (%d)!\n",
+		pr_err("toss: attempting to switch to self (%d)!\n",
 		       personality);
 		rval = -EINVAL;
 		goto done;
 	}
 
 	if (os_that->init_pc == 0x0) {
-		printk("toss: personality (%d) is not ready!\n",
+		pr_err("toss: personality (%d) is not ready!\n",
 		       personality);
 		rval = -EINVAL;
 		goto done;
 	}
 
-	printk("toss: handing off from linux\n");
+	pr_notice("toss: handing off from linux\n");
 
 	local_irq_disable();
 
@@ -82,7 +82,7 @@ int toss_switch(unsigned int personality)
 
 	local_irq_enable();
 
-	printk("toss: linux resumes control\n");	
+	pr_notice("toss: linux resumes control\n");	
 
 done:
 
@@ -95,19 +95,18 @@ done:
 void hotboot(unsigned int pattern)
 {
 
-	printk("hotboot to 0x%.8x ...\n\n", pattern);
+	pr_notice("hotboot to 0x%.8x ...\n\n", pattern);
 
 	local_irq_disable();
 
 	/* Write pattern to memory */
-	__raw_writel(HOTBOOT_MAGIC0,	HOTBOOT_MEM_ADDR + 0x0);
-	__raw_writel(pattern,		HOTBOOT_MEM_ADDR + 0x4);
-	__raw_writel(0x0,		HOTBOOT_MEM_ADDR + 0x8);
-	__raw_writel(HOTBOOT_MAGIC1,	HOTBOOT_MEM_ADDR + 0xc);
+	amba_writel(HOTBOOT_MEM_ADDR + 0x0, HOTBOOT_MAGIC0);
+	amba_writel(HOTBOOT_MEM_ADDR + 0x4, pattern);
+	amba_writel(HOTBOOT_MEM_ADDR + 0x8, 0x0);
+	amba_writel(HOTBOOT_MEM_ADDR + 0xC, HOTBOOT_MAGIC1);
 
 	/* Reset chip */
-	__raw_writel(0x0, SOFT_RESET_REG);
-	__raw_writel(0x1, SOFT_RESET_REG);
+	rct_reset_chip();
 
 	local_irq_enable();
 }
@@ -270,9 +269,9 @@ int __init ambarella_init_toss(void)
 	if (my_chksum->toss_h != root_chksum->toss_h) {
 		pr_err("toss: toss_h checksum mismatch (0x%.8x != 0x%.8x)!\n",
 		       my_chksum->toss_h, root_chksum->toss_h);
-		pr_err("toss: driver NOT installed!\n");
-		errorCode = -EINVAL;
-		goto ambarella_init_toss_exit;
+		//pr_err("toss: driver NOT installed!\n");
+		//errorCode = -EINVAL;
+		//goto ambarella_init_toss_exit;
 	}
 	if (my_chksum->toss_hwctx_h != root_chksum->toss_hwctx_h)
 		pr_warning("toss: toss_hwctx.h out of date (0x%.8x != 0x%.8x)!\n",

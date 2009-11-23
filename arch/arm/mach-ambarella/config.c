@@ -214,18 +214,18 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 	[3] = {
 		.name		= "BSB",	/*Bit Stream Buffer*/
 		.io_desc	= {
-			.virtual= (NOLINUX_MEM_V_START + DEFAULT_BSB_MEM_OFFSET),
-			.pfn	= __phys_to_pfn(DEFAULT_MEM_START + DEFAULT_BSB_MEM_OFFSET),
-			.length	= (DEFAULT_DSP_MEM_OFFSET - DEFAULT_BSB_MEM_OFFSET),
+			.virtual= (DEFAULT_BSB_BASE),
+			.pfn	= __phys_to_pfn(DEFAULT_BSB_START),
+			.length	= (DEFAULT_BSB_SIZE),
 			.type	= MT_DEVICE_CACHED,
 			},
 	},
 	[4] = {
 		.name		= "DSP",
 		.io_desc	= {
-			.virtual= (NOLINUX_MEM_V_START + DEFAULT_DSP_MEM_OFFSET),
-			.pfn	= __phys_to_pfn(DEFAULT_MEM_START + DEFAULT_DSP_MEM_OFFSET),
-			.length	= DEFAULT_DSP_MEM_SIZE,
+			.virtual= (DEFAULT_DSP_BASE),
+			.pfn	= __phys_to_pfn(DEFAULT_DSP_START),
+			.length	= DEFAULT_DSP_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},

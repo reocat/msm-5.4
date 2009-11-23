@@ -12,7 +12,9 @@
 #ifndef __TOSS_H__
 #define __TOSS_H__
 
-#define MAX_TOSS_PERSONALITY 2UL
+#define MAX_TOSS_PERSONALITY 		2UL
+#define TOSS_PERSONALITY_ITRON		0
+#define TOSS_PERSONALITY_LINUX		1
 
 #if defined(__GNUC__)
 /* GNU Compiler Setting */
@@ -100,7 +102,7 @@ __ARMCC_PACK__ struct toss_s
 	unsigned char vtext[4096 * VTEXT_PAGES];
 
 	unsigned int active;		/* The active personality */
-	void (*vtext_toss_handoff)(unsigned int, unsigned int);	
+	void (*vtext_toss_handoff)(unsigned int, unsigned int);
 	unsigned char pad0[248];
 
 	/* Checksum versioning */
@@ -117,5 +119,14 @@ __ARMCC_PACK__ struct toss_s
 	/* The devctx is a container for device (off-chip/logical) context */
 	struct toss_devctx_s devctx[MAX_TOSS_PERSONALITY];
 } __ATTRIB_PACK__;
+
+
+/*********************/
+/* Export functions. */
+/*********************/
+
+//extern void toss_switch(unsigned int personality);
+//extern const struct toss_s *toss_get_info(void);
+//extern void toss_start(void);
 
 #endif

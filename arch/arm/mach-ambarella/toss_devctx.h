@@ -12,6 +12,7 @@
 #ifndef __TOSS_DEVCTX_H__
 #define __TOSS_DEVCTX_H__
 
+
 /*
  * Time.
  */
@@ -34,6 +35,20 @@ __ARMCC_PACK__ struct toss_devctx_sd_card_s
 	} __ATTRIB_PACK__ card[MAX_TOSS_DEVCTX_SD_BUS][MAX_TOSS_DEVCTX_SD_SLOT];
 } __ATTRIB_PACK__;
 
+
+__ARMCC_PACK__ struct toss_devctx_dsp_s
+{
+#define DSP_CMD_SIZE			128
+#define MAX_TOSS_DEVCTX_DSP_CMDS	20
+	__ARMCC_PACK__ struct dsp_cmd_s
+	{
+		u32	code;
+		u8	param[DSP_CMD_SIZE - 4];
+	} __ATTRIB_PACK__ cmd[MAX_TOSS_DEVCTX_DSP_CMDS];
+
+	int	filtered_cmds;	/* number of cmds are filtered. */
+} __ATTRIB_PACK__;
+
 /*
  * Device context of each personality.
  */
@@ -41,6 +56,7 @@ __ARMCC_PACK__ struct toss_devctx_s
 {
 	struct toss_devctx_time_s	time;
 	struct toss_devctx_sd_card_s	sd_card;
+	struct toss_devctx_dsp_s	dsp;
 } __ATTRIB_PACK__;
 
 #endif

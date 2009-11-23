@@ -108,6 +108,7 @@ static void __init ambarella_init(void)
 	if (AMBARELLA_BOARD_CHIP(system_rev) != AMBARELLA_BOARD_CHIP_AUTO)
 		BUG_ON(AMBARELLA_BOARD_CHIP(system_rev) != CHIP_REV);
 
+	ambarella_debug_info = ambarella_phys_to_virt(DEFAULT_DEBUG_START);
 	memset((void *)ambarella_debug_info, 0, DEFAULT_DEBUG_SIZE);
 
 	errorCode = ambarella_create_proc_dir();
