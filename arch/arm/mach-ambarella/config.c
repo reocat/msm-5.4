@@ -401,6 +401,7 @@ __tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
 
 static void __init early_toss(char **p)
 {
+	extern void *toss;
 	unsigned long				pstart = 0;
 	unsigned long				vstart = 0;
 	unsigned long				size = 0;
@@ -424,6 +425,8 @@ static void __init early_toss(char **p)
 	ambarella_io_desc[5].io_desc.virtual = vstart;
 	ambarella_io_desc[5].io_desc.pfn = __phys_to_pfn(pstart);
 	ambarella_io_desc[5].io_desc.length = size;
+
+	toss = (void *) vstart;  /* Setup valid pointer to global var 'toss' */
 }
 __early_param("toss=", early_toss);
 
@@ -501,24 +504,6 @@ u32 get_ambarella_dspmem_size(void)
 	return ambarella_io_desc[4].io_desc.length;
 }
 EXPORT_SYMBOL(get_ambarella_dspmem_size);
-
-u32 get_ambarella_toss_phys(void)
-{
-	return __pfn_to_phys(ambarella_io_desc[5].io_desc.pfn);
-}
-EXPORT_SYMBOL(get_ambarella_toss_phys);
-
-u32 get_ambarella_toss_virt(void)
-{
-	return ambarella_io_desc[5].io_desc.virtual;
-}
-EXPORT_SYMBOL(get_ambarella_toss_virt);
-
-u32 get_ambarella_toss_size(void)
-{
-	return ambarella_io_desc[5].io_desc.length;
-}
-EXPORT_SYMBOL(get_ambarella_toss_size);
 
 u32 ambarella_phys_to_virt(u32 paddr)
 {

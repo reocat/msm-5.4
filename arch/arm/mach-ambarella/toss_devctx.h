@@ -12,7 +12,6 @@
 #ifndef __TOSS_DEVCTX_H__
 #define __TOSS_DEVCTX_H__
 
-
 /*
  * Time.
  */
@@ -42,8 +41,8 @@ __ARMCC_PACK__ struct toss_devctx_dsp_s
 #define MAX_TOSS_DEVCTX_DSP_CMDS	20
 	__ARMCC_PACK__ struct dsp_cmd_s
 	{
-		u32	code;
-		u8	param[DSP_CMD_SIZE - 4];
+		unsigned int	code;
+		unsigned char	param[DSP_CMD_SIZE - 4];
 	} __ATTRIB_PACK__ cmd[MAX_TOSS_DEVCTX_DSP_CMDS];
 
 	int	filtered_cmds;	/* number of cmds are filtered. */

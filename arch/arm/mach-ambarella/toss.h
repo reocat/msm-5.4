@@ -13,8 +13,6 @@
 #define __TOSS_H__
 
 #define MAX_TOSS_PERSONALITY 		2UL
-#define TOSS_PERSONALITY_ITRON		0
-#define TOSS_PERSONALITY_LINUX		1
 
 #if defined(__GNUC__)
 /* GNU Compiler Setting */
@@ -119,14 +117,5 @@ __ARMCC_PACK__ struct toss_s
 	/* The devctx is a container for device (off-chip/logical) context */
 	struct toss_devctx_s devctx[MAX_TOSS_PERSONALITY];
 } __ATTRIB_PACK__;
-
-
-/*********************/
-/* Export functions. */
-/*********************/
-
-//extern void toss_switch(unsigned int personality);
-//extern const struct toss_s *toss_get_info(void);
-//extern void toss_start(void);
 
 #endif

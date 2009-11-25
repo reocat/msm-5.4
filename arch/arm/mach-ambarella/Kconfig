@@ -254,24 +254,6 @@ config AMBARELLA_PLL_PROC
 
 	  If you are not sure, say N here.
 
-config AMBARELLA_TOSS_PROC
-	bool "Ambarella TOSS proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/toss for Ambarella TOSS.
-
-	  If you are not sure, say N here.
-
-config AMBARELLA_HOTBOOT_PROC
-	bool "Ambarella Hotboot proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/hotboot.
-
-	  If you are not sure, say N here.
-
 endmenu
 
 menu "Framebuffer Configuration"

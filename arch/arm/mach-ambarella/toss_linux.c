@@ -22,14 +22,13 @@
 
 #include <toss.h>
 
-#define HOTBOOT_MEM_ADDR	(ambarella_phys_to_virt(0xC007FFF0))
+#define HOTBOOT_MEM_ADDR	(ambarella_phys_to_virt(0xc007fff0))
 #define HOTBOOT_MAGIC0		(0x14cd78a0)
 #define HOTBOOT_MAGIC1		(0x319837fb)
 
-/* ==========================================================================*/
 struct toss_s *toss = NULL;
+EXPORT_SYMBOL(toss);
 
-/* ==========================================================================*/
 /*
  * Switch to another OS.
  */
@@ -88,6 +87,7 @@ done:
 
 	return rval;
 }
+EXPORT_SYMBOL(toss_switch);
 
 /*
  * Hotboot to the boot loader.
@@ -111,7 +111,8 @@ void hotboot(unsigned int pattern)
 	local_irq_enable();
 }
 
-#ifdef CONFIG_AMBARELLA_TOSS_PROC
+#if defined(CONFIG_PROC_FS)
+
 static int toss_read_proc(char *page, char **start, off_t off,
 			  int count, int *eof, void *data)
 {
@@ -196,9 +197,7 @@ done:
 
 	return rval < 0 ? rval : count;
 }
-#endif  /* CONFIG_AMBARELLA_TOSS_PROC */
 
-#ifdef CONFIG_AMBARELLA_HOTBOOT_PROC
 static int hotboot_read_proc(char *page, char **start, off_t off,
 			     int count, int *eof, void *data)
 {
@@ -232,36 +231,31 @@ done:
 
 	return rval < 0 ? rval : count;
 }
-#endif  /* CONFIG_AMBARELLA_HOTBOOT_PROC */
+
+#endif  /* CONFIG_PROC_FS */
 
 /*
  * Entry function.
  */
 int __init ambarella_init_toss(void)
 {
-	int errorCode = 0;
+	int rval = 0;
 	struct toss_header_chksum_s *root_chksum, *my_chksum;
 	struct toss_personality_s *personality;
-#ifdef CONFIG_AMBARELLA_TOSS_PROC
+#if defined(CONFIG_PROC_FS)
 	struct proc_dir_entry *pde_toss;
-#endif
-#ifdef CONFIG_AMBARELLA_HOTBOOT_PROC
 	struct proc_dir_entry *pde_hb;
 #endif
 
-	if ((get_ambarella_toss_virt() == 0x0) ||
-		(get_ambarella_toss_size() == 0x0)){
-		pr_notice("toss: Not enabled!\n");
-		errorCode = 0;
+	if (toss == NULL) {
+		pr_info("toss: inactive!\n");
 		goto ambarella_init_toss_exit;
 	}
-
-	toss = (struct toss_s *)get_ambarella_toss_virt();
 
 	root_chksum = &toss->header_chksum[0];
 
 	/* Set the checksums */
-	my_chksum = &toss->header_chksum[1];
+	my_chksum = &toss->header_chksum[toss->active];
 	my_chksum->toss_h = TOSS_H_CHKSUM;
 	my_chksum->toss_hwctx_h = TOSS_HWCTX_H_CHKSUM;
 	my_chksum->toss_devctx_h = TOSS_DEVCTX_H_CHKSUM;
@@ -269,9 +263,9 @@ int __init ambarella_init_toss(void)
 	if (my_chksum->toss_h != root_chksum->toss_h) {
 		pr_err("toss: toss_h checksum mismatch (0x%.8x != 0x%.8x)!\n",
 		       my_chksum->toss_h, root_chksum->toss_h);
-		//pr_err("toss: driver NOT installed!\n");
-		//errorCode = -EINVAL;
-		//goto ambarella_init_toss_exit;
+		pr_err("toss: driver NOT installed!\n");
+		rval = -EINVAL;
+		goto ambarella_init_toss_exit;
 	}
 	if (my_chksum->toss_hwctx_h != root_chksum->toss_hwctx_h)
 		pr_warning("toss: toss_hwctx.h out of date (0x%.8x != 0x%.8x)!\n",
@@ -281,23 +275,21 @@ int __init ambarella_init_toss(void)
 		       my_chksum->toss_devctx_h, root_chksum->toss_devctx_h);
 
 	/* Setup my own personality */
-	personality = &toss->personalities[1];
+	personality = &toss->personalities[toss->active];
 	snprintf(personality->name, sizeof(personality->name), "Linux");
 
-#ifdef CONFIG_AMBARELLA_TOSS_PROC
+#if defined(CONFIG_PROC_FS)
 	pde_toss = create_proc_entry("toss", S_IRUGO | S_IWUSR,
-		get_ambarella_proc_dir());
+				     get_ambarella_proc_dir());
 	if (pde_toss == NULL)
 		return -ENOMEM;
 
 	pde_toss->read_proc = toss_read_proc;
 	pde_toss->write_proc = toss_write_proc;
 	pde_toss->owner = THIS_MODULE;
-#endif
 
-#ifdef CONFIG_AMBARELLA_HOTBOOT_PROC
 	pde_hb = create_proc_entry("hotboot", S_IRUGO | S_IWUSR,
-		get_ambarella_proc_dir());
+				   get_ambarella_proc_dir());
 	if (pde_hb == NULL)
 		return -ENOMEM;
 
@@ -307,11 +299,5 @@ int __init ambarella_init_toss(void)
 #endif
 
 ambarella_init_toss_exit:
-	return errorCode;
+	return rval;
 }
-
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Charles Chiou <cchiou@ambarella.com>");
-MODULE_DESCRIPTION("TOSS");
-MODULE_SUPPORTED_DEVICE("Ambarella");
-

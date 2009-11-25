@@ -27,4 +27,4 @@ obj-y	+= init.o config.o fb.o
 obj-y	+= toss_linux.o
 CFLAGS_toss_linux.o = \
   -I$(src) \
-  -DTOSS_H_CHKSUM=$(word 1,$(shell sum arch/arm/mach-ambarella/toss.h)) -DTOSS_HWCTX_H_CHKSUM=$(word 1,$(shell sum arch/arm/mach-ambarella/toss_hwctx.h)) -DTOSS_DEVCTX_H_CHKSUM=$(word 1,$(shell sum arch/arm/mach-ambarella/toss_devctx.h))
+  -DTOSS_H_CHKSUM=$(word 1,$(shell cksum arch/arm/mach-ambarella/toss.h))UL -DTOSS_HWCTX_H_CHKSUM=$(word 1,$(shell cksum arch/arm/mach-ambarella/toss_hwctx.h))UL -DTOSS_DEVCTX_H_CHKSUM=$(word 1,$(shell cksum arch/arm/mach-ambarella/toss_devctx.h))UL
