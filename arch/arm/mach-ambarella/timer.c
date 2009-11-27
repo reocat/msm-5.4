@@ -40,8 +40,8 @@
 #define AMBARELLA_TIMER_FREQ	(get_apb_bus_freq_hz())
 #define AMBARELLA_TIMER_RATING	(300)
 
-static enum clock_event_mode ambarella_timer1_mode = CLOCK_EVT_MODE_UNUSED;
-static struct notifier_block tm_freq_transition;
+static struct notifier_block ambarella_timer_notifier;
+static struct notifier_block ambarella_timer1_clockevents_notifier;
 
 static inline void ambarella_timer1_disable(void)
 {
@@ -100,7 +100,6 @@ static void ambarella_timer1_set_mode(enum clock_event_mode mode,
 		ambarella_timer1_enable();
 		break;
 	}
-	ambarella_timer1_mode = mode;
 }
 
 static int ambarella_timer1_set_next_event(unsigned long delta,
@@ -122,6 +121,7 @@ static struct clock_event_device ambarella_clkevt = {
 	.cpumask	= cpu_all_mask,
 	.set_next_event	= ambarella_timer1_set_next_event,
 	.set_mode	= ambarella_timer1_set_mode,
+	.mode		= CLOCK_EVT_MODE_UNUSED,
 };
 
 static irqreturn_t ambarella_timer1_interrupt(int irq, void *dev_id)
@@ -184,22 +184,19 @@ struct sys_timer ambarella_timer = {
 	.init		= ambarella_timer_init,
 };
 
-int ambtm_freq_transition(struct notifier_block *nb,
+int ambarella_timer_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
-	unsigned long flags;
-	int cnt, save;
-	/* TODO struct cpufreq_freqs *f = data; */
-
-	local_irq_save(flags);
+	int					errorCode = NOTIFY_OK;
+	int					cnt;
+	int					save;
 
 	switch (val) {
-	case AMB_CPUFREQ_PRECHANGE:
+	case AMBA_EVENT_PRE_CPUFREQ:
 		pr_info("%s: Pre Change\n", __func__);
-		disable_irq(TIMER1_IRQ);
 		break;
 
-	case AMB_CPUFREQ_POSTCHANGE:
+	case AMBA_EVENT_POST_CPUFREQ:
 		pr_info("%s: Post Change\n", __func__);
 		/* Reset timer */
 		save = amba_readl(TIMER_CTR_REG);
@@ -217,7 +214,7 @@ int ambtm_freq_transition(struct notifier_block *nb,
 
 		/* Program the timer to start ticking */
 		cnt = AMBARELLA_TIMER_FREQ / CLOCK_TICK_RATE;
-		switch (ambarella_timer1_mode) {
+		switch (ambarella_clkevt.mode) {
 		case CLOCK_EVT_MODE_PERIODIC:
 			amba_writel(TIMER1_STATUS_REG, cnt);
 			amba_writel(TIMER1_RELOAD_REG, cnt);
@@ -232,25 +229,51 @@ int ambtm_freq_transition(struct notifier_block *nb,
 		}
 
 		amba_writel(TIMER_CTR_REG, save);
+		break;
+
+	case AMBA_EVENT_PRE_PM:
+	case AMBA_EVENT_POST_PM:
+		break;
+
+	default:
+		pr_warning("%s: unknown event %ld\n", __func__, val);
+		break;
+	}
+
+	return errorCode;
+} 
+
+static int ambarella_timer1_clockevents(struct notifier_block *nb,
+	unsigned long reason, void *dev)
+{
+	switch (reason) {
+	case CLOCK_EVT_NOTIFY_SUSPEND:
+		pr_info("%s: CLOCK_EVT_NOTIFY_SUSPEND\n", __func__);
+		disable_irq(TIMER1_IRQ);
+		break;
+
+	case CLOCK_EVT_NOTIFY_RESUME:
+		pr_info("%s: CLOCK_EVT_NOTIFY_RESUME\n", __func__);
 		enable_irq(TIMER1_IRQ);
 		break;
 
 	default:
-		pr_err("%s: %ld\n", __func__, val);
 		break;
 	}
 
-	local_irq_restore(flags);
-
-	return 0;
-} 
+	return NOTIFY_OK;
+}
 
 int __init ambarella_init_tm(void)
 {
 	int					errCode = 0;
 
-	tm_freq_transition.notifier_call = ambtm_freq_transition;
-	errCode = ambarella_register_freqnotifier(&tm_freq_transition); 
+	ambarella_timer_notifier.notifier_call = ambarella_timer_system_event;
+	errCode = ambarella_register_event_notifier(&ambarella_timer_notifier); 
+
+	ambarella_timer1_clockevents_notifier.notifier_call =
+		ambarella_timer1_clockevents;
+	clockevents_register_notifier(&ambarella_timer1_clockevents_notifier);
 
 	return errCode;
 }

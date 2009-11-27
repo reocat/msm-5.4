@@ -114,6 +114,9 @@ struct ambarella_sd_mmc_info {
 	void				*pinfo;
 	u32				valid;
 	u16				nisen;
+
+	struct notifier_block		system_event;
+	struct semaphore		system_event_sem;
 };
 
 struct ambarella_sd_controller_info {
@@ -126,8 +129,6 @@ struct ambarella_sd_controller_info {
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
 	struct mmc_ios			controller_ios;
- 
-	struct notifier_block		sd_freq_transition;
 };
 
 /* ==========================================================================*/
@@ -524,6 +525,8 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
 
+	down(&pslotinfo->system_event_sem);
+
 	if (pslotinfo->slot_info.request)
 		pslotinfo->slot_info.request();
 }
@@ -534,6 +537,8 @@ static void ambarella_sd_release_bus(struct mmc_host *mmc)
 
 	if (pslotinfo->slot_info.release)
 		pslotinfo->slot_info.release();
+
+	up(&pslotinfo->system_event_sem);
 }
 
 static void ambarella_sd_enable_normal_int(struct mmc_host *mmc, u16 ints)
@@ -1469,44 +1474,42 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
 };
 
-static int ambsd_freq_transition(struct notifier_block *nb,
+static int ambarella_sd_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
-	struct platform_device			*pdev;
+	int					errorCode = NOTIFY_OK;
+	struct ambarella_sd_mmc_info		*pslotinfo;
 	struct ambarella_sd_controller_info	*pinfo;
-	struct mmc_host				*mmc;
-	unsigned long				flags;
-	u32					i;
 
-	pinfo = container_of(nb,struct ambarella_sd_controller_info,
-			sd_freq_transition);
-	pdev = to_platform_device(pinfo->dev);
-
-	local_irq_save(flags);
+	pslotinfo = container_of(nb, struct ambarella_sd_mmc_info,
+		system_event);
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	switch (val) {
-	case AMB_CPUFREQ_PRECHANGE:
-		pr_info("%s[%d]: Pre Change\n", __func__, pdev->id);
+	case AMBA_EVENT_PRE_CPUFREQ:
+		pr_info("%s[%d]: Pre Change\n", __func__, pslotinfo->slot_id);
+		down(&pslotinfo->system_event_sem);
 		break;
 
-	case AMB_CPUFREQ_POSTCHANGE:
-		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
-		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
-			mmc = pinfo->pslotinfo[i]->mmc;
-			mdelay(10);
-			ambarella_sd_set_clk(mmc, pinfo->controller_ios.clock);
-			mdelay(10);
-		}
+	case AMBA_EVENT_POST_CPUFREQ:
+		pr_info("%s[%d]: Post Change\n", __func__, pslotinfo->slot_id);
+		msleep(10);
+		ambarella_sd_set_clk(pslotinfo->mmc,
+			pinfo->controller_ios.clock);
+		msleep(10);
+		up(&pslotinfo->system_event_sem);
+		break;
+
+	case AMBA_EVENT_PRE_PM:
+	case AMBA_EVENT_POST_PM:
 		break;
 
 	default:
-		pr_err("%s: %ld\n", __func__, val);
+		pr_warning("%s: unknown event %ld\n", __func__, val);
 		break;
 	}
 
-	local_irq_restore(flags);
-
-	return 0;
+	return errorCode;
 }
 
 /* ==========================================================================*/
@@ -1610,6 +1613,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		pslotinfo->slot_id = i;
 		pslotinfo->nisen = 0;
 		pslotinfo->pinfo = pinfo;
+		sema_init(&pslotinfo->system_event_sem, 1);
 
 		ambarella_sd_request_bus(mmc);
 
@@ -1798,12 +1802,13 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			goto sd_errorCode_remove_host;
 		}
 		pslotinfo->valid = 1;
+		pslotinfo->system_event.notifier_call =
+			ambarella_sd_system_event;
+		ambarella_register_event_notifier(&pslotinfo->system_event);
 	}
 
 	platform_set_drvdata(pdev, pinfo);
 
-	pinfo->sd_freq_transition.notifier_call = ambsd_freq_transition;
-	ambarella_register_freqnotifier(&pinfo->sd_freq_transition);
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor SD/MMC[%d] probed %d slots!\n",
@@ -1872,14 +1877,15 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
-		ambarella_unregister_freqnotifier(&pinfo->sd_freq_transition);
-
 		platform_set_drvdata(pdev, NULL);
 
 		free_irq(pinfo->irq, pinfo);
 
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
+
+			ambarella_unregister_event_notifier(
+				&pslotinfo->system_event);
 
 			if (ambarella_is_valid_gpio_irq(
 				&pslotinfo->slot_info.gpio_cd)) {
@@ -1937,9 +1943,21 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 {
 	int					errorCode = 0;
 	struct ambarella_sd_controller_info	*pinfo;
+	struct ambarella_sd_mmc_info		*pslotinfo;
+	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
-	disable_irq(pinfo->irq);
+	if (!device_may_wakeup(&pdev->dev)) {
+		disable_irq(pinfo->irq);
+		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+			pslotinfo = pinfo->pslotinfo[i];
+			if (ambarella_is_valid_gpio_irq(
+				&pslotinfo->slot_info.gpio_cd)) {
+				disable_irq(
+					pslotinfo->slot_info.gpio_cd.irq_line);
+			}
+		}
+	}
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -1950,9 +1968,21 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_sd_controller_info	*pinfo;
+	struct ambarella_sd_mmc_info		*pslotinfo;
+	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
-	enable_irq(pinfo->irq);
+	if (!device_may_wakeup(&pdev->dev)) {
+		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+			pslotinfo = pinfo->pslotinfo[i];
+			if (ambarella_is_valid_gpio_irq(
+				&pslotinfo->slot_info.gpio_cd)) {
+				enable_irq(
+					pslotinfo->slot_info.gpio_cd.irq_line);
+			}
+		}
+		enable_irq(pinfo->irq);
+	}
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

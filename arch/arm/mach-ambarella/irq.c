@@ -38,122 +38,106 @@ static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 
 /* ==========================================================================*/
+#define AMBARELLA_GPIO_IRQ2GIRQ()	do { \
+	irq -= GPIO_INT_VEC_OFFSET; \
+	} while (0)
+
+#if (GPIO_INSTANCES == 2)
+#define AMBARELLA_GPIO_IRQ2BASE()	do { \
+	gpio_base = GPIO0_BASE; \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO1_BASE; \
+	} \
+	} while (0)
+#elif (GPIO_INSTANCES == 3)
+#define AMBARELLA_GPIO_IRQ2BASE()	do { \
+	gpio_base = GPIO0_BASE; \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO1_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO2_BASE; \
+	} \
+	} while (0)
+#elif (GPIO_INSTANCES == 4)
+#define AMBARELLA_GPIO_IRQ2BASE()	do { \
+	gpio_base = GPIO0_BASE; \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO1_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO2_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO3_BASE; \
+	} \
+	} while (0)
+#endif
+
 void ambarella_gpio_ack_irq(unsigned int irq)
 {
-	unsigned int				girq;
 	u32					gpio_base;
 
-	girq = irq - GPIO_INT_VEC_OFFSET;
-	gpio_base = GPIO0_BASE;
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO1_BASE;
-	}
-#if (GPIO_INSTANCES >= 3)
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO2_BASE;
-	}
-#endif
-#if (GPIO_INSTANCES >= 4)
-	if (girq >= NR_VIC_IRQ_SIZE) {
-		girq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO3_BASE;
-	}
-#endif
-	if (unlikely(girq >= NR_VIC_IRQ_SIZE)) {
-		pr_err("%s: err girq %d!\n", __func__, girq);
-		return;
-	}
+	AMBARELLA_GPIO_IRQ2GIRQ();
+	AMBARELLA_GPIO_IRQ2BASE();
 
-	amba_writel(gpio_base + GPIO_IC_OFFSET, (0x1 << girq));
+	amba_writel(gpio_base + GPIO_IC_OFFSET, (0x1 << irq));
 }
 
-void inline __ambarella_gpio_mask_irq(unsigned int irq)
+void inline __ambarella_gpio_disable_irq(unsigned int irq)
 {
 	u32					gpio_base;
-	u32					val;
 
-	gpio_base = GPIO0_BASE;
-	if (irq >= NR_VIC_IRQ_SIZE) {
-		irq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO1_BASE;
-	}
-#if (GPIO_INSTANCES >= 3)
-	if (irq >= NR_VIC_IRQ_SIZE) {
-		irq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO2_BASE;
-	}
-#endif
-#if (GPIO_INSTANCES >= 4)
-	if (irq >= NR_VIC_IRQ_SIZE) {
-		irq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO3_BASE;
-	}
-#endif
-	val = amba_readl(gpio_base + GPIO_IE_OFFSET);
-	val &= ~(0x1 << irq);
-	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
+	AMBARELLA_GPIO_IRQ2BASE();
+
+	amba_clrbitsl(gpio_base + GPIO_IE_OFFSET, (0x1 << irq));
 }
 
-void ambarella_gpio_mask_irq(unsigned int irq)
+void ambarella_gpio_disable_irq(unsigned int irq)
 {
-	unsigned int				girq;
+	AMBARELLA_GPIO_IRQ2GIRQ();
 
-	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
-		(irq >= MAX_IRQ_NUMBER))) {
-		pr_err("irq %d out of range for GPIO!\n", irq);
-		return;
-	}
-
-	girq = irq - GPIO_INT_VEC_OFFSET;
-	__ambarella_gpio_mask_irq(girq);
-	__clear_bit(girq, ambarella_gpio_irq_bit);
+	__ambarella_gpio_disable_irq(irq);
+	__clear_bit(irq, ambarella_gpio_irq_bit);
 }
 
-void inline __ambarella_gpio_unmask_irq(unsigned int irq)
+void inline __ambarella_gpio_enable_irq(unsigned int irq)
 {
 	u32					gpio_base;
-	u32					val;
 
-	gpio_base = GPIO0_BASE;
-	if (irq >= NR_VIC_IRQ_SIZE) {
-		irq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO1_BASE;
-	}
-#if (GPIO_INSTANCES >= 3)
-	if (irq >= NR_VIC_IRQ_SIZE) {
-		irq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO2_BASE;
-	}
-#endif
-#if (GPIO_INSTANCES >= 4)
-	if (irq >= NR_VIC_IRQ_SIZE) {
-		irq -= NR_VIC_IRQ_SIZE;
-		gpio_base = GPIO3_BASE;
-	}
-#endif
+	AMBARELLA_GPIO_IRQ2BASE();
 
-	val = amba_readl(gpio_base + GPIO_IE_OFFSET);
-	val |= (0x1 << irq);
-	amba_writel(gpio_base + GPIO_IE_OFFSET, val);
+	amba_setbitsl(gpio_base + GPIO_IE_OFFSET, (0x1 << irq));
 }
 
-void ambarella_gpio_unmask_irq(unsigned int irq)
+void ambarella_gpio_enable_irq(unsigned int irq)
 {
-	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
-		(irq >= MAX_IRQ_NUMBER))) {
-		pr_err("irq %d out of range for GPIO!\n", irq);
-	} else {
-		irq -= GPIO_INT_VEC_OFFSET;
-		__ambarella_gpio_unmask_irq(irq);
-		__set_bit(irq, ambarella_gpio_irq_bit);
-	}
+	AMBARELLA_GPIO_IRQ2GIRQ();
+
+	__ambarella_gpio_enable_irq(irq);
+	__set_bit(irq, ambarella_gpio_irq_bit);
+}
+
+void ambarella_gpio_mask_ack_irq(unsigned int irq)
+{
+	u32					gpio_base;
+
+	AMBARELLA_GPIO_IRQ2GIRQ();
+	AMBARELLA_GPIO_IRQ2BASE();
+
+	amba_clrbitsl(gpio_base + GPIO_IE_OFFSET, (0x1 << irq));
+	amba_writel(gpio_base + GPIO_IC_OFFSET, (0x1 << irq));
 }
 
 int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 {
-	u32					base_addr;
+	u32					gpio_base;
 	u32					mask;
 	u32					bit;
 	u32					sense;
@@ -162,193 +146,50 @@ int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 
 	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, type);
 
-	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
-		(irq >= MAX_IRQ_NUMBER))) {
-		pr_err("irq %d out of range for GPIO!\n", irq);
+	AMBARELLA_GPIO_IRQ2GIRQ();
+	AMBARELLA_GPIO_IRQ2BASE();
+
+	mask = ~(0x1 << irq);
+	bit = (0x1 << irq);
+	sense = amba_readl(gpio_base + GPIO_IS_OFFSET);
+	bothedges = amba_readl(gpio_base + GPIO_IBE_OFFSET);
+	event = amba_readl(gpio_base + GPIO_IEV_OFFSET);
+
+	switch (type) {
+	case IRQ_TYPE_EDGE_RISING:
+		sense &= mask;
+		bothedges &= mask;
+		event |= bit;
+		break;
+	case IRQ_TYPE_EDGE_FALLING:
+		sense &= mask;
+		bothedges &= mask;
+		event &= mask;
+		break;
+	case IRQ_TYPE_EDGE_BOTH:
+		sense &= mask;
+		bothedges |= bit;
+		event &= mask;
+		break;
+	case IRQ_TYPE_LEVEL_HIGH:
+		sense |= bit;
+		bothedges &= mask;
+		event |= bit;
+		break;
+	case IRQ_TYPE_LEVEL_LOW:
+		sense |= bit;
+		bothedges &= mask;
+		event &= mask;
+		break;
+	default:
+		pr_err("%s: can't set irq type %d for irq 0x%08x@%d\n",
+			__func__, type, gpio_base, irq);
 		return -EINVAL;
 	}
 
-	if (irq < GPIO1_INT_VEC_OFFSET) {
-		base_addr = GPIO0_BASE;
-		mask = ~(0x1 << (irq - GPIO0_INT_VEC_OFFSET));
-		bit = (0x1 << (irq - GPIO0_INT_VEC_OFFSET));
-
-		sense = amba_readl(base_addr + GPIO_IS_OFFSET);
-		bothedges = amba_readl(base_addr + GPIO_IBE_OFFSET);
-		event = amba_readl(base_addr + GPIO_IEV_OFFSET);
-
-		switch (type) {
-		case IRQ_TYPE_EDGE_RISING:
-			sense &= mask;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_EDGE_FALLING:
-			sense &= mask;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		case IRQ_TYPE_EDGE_BOTH:
-			sense &= mask;
-			bothedges |= bit;
-			event &= mask;
-			break;
-		case IRQ_TYPE_LEVEL_HIGH:
-			sense |= bit;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_LEVEL_LOW:
-			sense |= bit;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		default:
-			pr_err("failed to set GPIO0 irq type %d for irq %d\n",
-				type, irq);
-			return -EINVAL;
-		}
-
-		amba_writel(base_addr + GPIO_IS_OFFSET, sense);
-		amba_writel(base_addr + GPIO_IBE_OFFSET, bothedges);
-		amba_writel(base_addr + GPIO_IEV_OFFSET, event);
-	} else if (irq < GPIO2_INT_VEC_OFFSET) {
-		base_addr = GPIO1_BASE;
-		mask = ~(0x1 << (irq - GPIO1_INT_VEC_OFFSET));
-		bit = (0x1 << (irq - GPIO1_INT_VEC_OFFSET));
-
-		sense = amba_readl(base_addr + GPIO_IS_OFFSET);
-		bothedges = amba_readl(base_addr + GPIO_IBE_OFFSET);
-		event = amba_readl(base_addr + GPIO_IEV_OFFSET);
-
-		switch (type) {
-		case IRQ_TYPE_EDGE_RISING:
-			sense &= mask;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_EDGE_FALLING:
-			sense &= mask;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		case IRQ_TYPE_EDGE_BOTH:
-			sense &= mask;
-			bothedges |= bit;
-			event &= mask;
-			break;
-		case IRQ_TYPE_LEVEL_HIGH:
-			sense |= bit;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_LEVEL_LOW:
-			sense |= bit;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		default:
-			pr_err("failed to set GPIO1 irq type %d for irq %d\n",
-				type, irq);
-			return -EINVAL;
-		}
-
-		amba_writel(base_addr + GPIO_IS_OFFSET, sense);
-		amba_writel(base_addr + GPIO_IBE_OFFSET, bothedges);
-		amba_writel(base_addr + GPIO_IEV_OFFSET, event);
-#if (GPIO_INSTANCES >= 3)
-	} else if (irq < GPIO3_INT_VEC_OFFSET) {
-		base_addr = GPIO2_BASE;
-		mask = ~(0x1 << (irq - GPIO2_INT_VEC_OFFSET));
-		bit = (0x1 << (irq - GPIO2_INT_VEC_OFFSET));
-
-		sense = amba_readl(base_addr + GPIO_IS_OFFSET);
-		bothedges = amba_readl(base_addr + GPIO_IBE_OFFSET);
-		event = amba_readl(base_addr + GPIO_IEV_OFFSET);
-
-		switch (type) {
-		case IRQ_TYPE_EDGE_RISING:
-			sense &= mask;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_EDGE_FALLING:
-			sense &= mask;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		case IRQ_TYPE_EDGE_BOTH:
-			sense &= mask;
-			bothedges |= bit;
-			event &= mask;
-			break;
-		case IRQ_TYPE_LEVEL_HIGH:
-			sense |= bit;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_LEVEL_LOW:
-			sense |= bit;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		default:
-			pr_err("failed to set GPIO2 irq type %d for irq %d\n",
-				type, irq);
-			return -EINVAL;
-		}
-
-		amba_writel(base_addr + GPIO_IS_OFFSET, sense);
-		amba_writel(base_addr + GPIO_IBE_OFFSET, bothedges);
-		amba_writel(base_addr + GPIO_IEV_OFFSET, event);
-#endif  /* GPIO_INSTANCES >= 3 */
-#if (GPIO_INSTANCES >= 4)
-	} else {
-		base_addr = GPIO3_BASE;
-		mask = ~(0x1 << (irq - GPIO3_INT_VEC_OFFSET));
-		bit = (0x1 << (irq - GPIO3_INT_VEC_OFFSET));
-
-		sense = amba_readl(base_addr + GPIO_IS_OFFSET);
-		bothedges = amba_readl(base_addr + GPIO_IBE_OFFSET);
-		event = amba_readl(base_addr + GPIO_IEV_OFFSET);
-
-		switch (type) {
-		case IRQ_TYPE_EDGE_RISING:
-			sense &= mask;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_EDGE_FALLING:
-			sense &= mask;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		case IRQ_TYPE_EDGE_BOTH:
-			sense &= mask;
-			bothedges |= bit;
-			event &= mask;
-			break;
-		case IRQ_TYPE_LEVEL_HIGH:
-			sense |= bit;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_LEVEL_LOW:
-			sense |= bit;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		default:
-			pr_err("failed to set GPIO3 irq type %d for irq %d\n",
-				type, irq);
-			return -EINVAL;
-		}
-
-		amba_writel(base_addr + GPIO_IS_OFFSET, sense);
-		amba_writel(base_addr + GPIO_IBE_OFFSET, bothedges);
-		amba_writel(base_addr + GPIO_IEV_OFFSET, event);
-#endif  /* GPIO_INSTANCES >= 4 */
-	}
+	amba_writel(gpio_base + GPIO_IS_OFFSET, sense);
+	amba_writel(gpio_base + GPIO_IBE_OFFSET, bothedges);
+	amba_writel(gpio_base + GPIO_IEV_OFFSET, event);
 
 	return 0;
 }
@@ -357,13 +198,8 @@ static int ambarella_gpio_irq_set_wake(unsigned int irq, unsigned int state)
 {
 	pr_info("%s: set irq %d = %d\n", __func__, irq, state);
 
-	if (unlikely((irq < GPIO0_INT_VEC_OFFSET) ||
-		(irq >= MAX_IRQ_NUMBER))) {
-		pr_err("irq %d out of range for GPIO!\n", irq);
-		return -EINVAL;
-	}
+	AMBARELLA_GPIO_IRQ2GIRQ();
 
-	irq -= GPIO0_INT_VEC_OFFSET;
 	if (state)
 		__set_bit(irq, ambarella_gpio_wakeup_bit);
 	else
@@ -374,59 +210,68 @@ static int ambarella_gpio_irq_set_wake(unsigned int irq, unsigned int state)
 
 static struct irq_chip ambarella_gpio_irq_chip = {
 	.name		= "ambarella gpio irq",
+	.enable		= ambarella_gpio_enable_irq,
+	.disable	= ambarella_gpio_disable_irq,
 	.ack		= ambarella_gpio_ack_irq,
-	.mask		= ambarella_gpio_mask_irq,
-	.unmask		= ambarella_gpio_unmask_irq,
+	.mask_ack	= ambarella_gpio_mask_ack_irq,
+	.mask		= ambarella_gpio_disable_irq,
+	.unmask		= ambarella_gpio_enable_irq,
 	.set_type	= ambarella_gpio_irq_set_type,
 	.set_wake	= ambarella_gpio_irq_set_wake,
 };
 
 /* ==========================================================================*/
+#if (VIC_INSTANCES == 1)
+#define AMBARELLA_VIC_IRQ2BASE()	do { } while (0)
+#elif (VIC_INSTANCES == 2)
+#define AMBARELLA_VIC_IRQ2BASE()	do { \
+	if (irq >= VIC2_INT_VEC_OFFSET) { \
+		irq -= VIC2_INT_VEC_OFFSET; \
+		vic_base = VIC2_BASE; \
+	} \
+	} while (0)
+#endif
+
 static void ambarella_ack_irq(unsigned int irq)
 {
 	u32					vic_base = VIC_BASE;
 
-#if (VIC_INSTANCES >= 2)
-	if (irq >= VIC2_INT_VEC_OFFSET) {
-		irq -= VIC2_INT_VEC_OFFSET;
-		vic_base = VIC2_BASE;
-	}
-#endif
+	AMBARELLA_VIC_IRQ2BASE();
 
 	amba_writel(vic_base + VIC_EDGE_CLR_OFFSET, 0x1 << irq);
 }
 
-static void ambarella_mask_irq(unsigned int irq)
+static void ambarella_disable_irq(unsigned int irq)
 {
 	u32					vic_base = VIC_BASE;
 
-#if (VIC_INSTANCES >= 2)
-	if (irq >= VIC2_INT_VEC_OFFSET) {
-		irq -= VIC2_INT_VEC_OFFSET;
-		vic_base = VIC2_BASE;
-	}
-#endif
+	AMBARELLA_VIC_IRQ2BASE();
 
 	amba_writel(vic_base + VIC_INTEN_CLR_OFFSET, 0x1 << irq);
 }
 
-static void ambarella_unmask_irq(unsigned int irq)
+static void ambarella_enable_irq(unsigned int irq)
 {
 	u32					vic_base = VIC_BASE;
 
-#if (VIC_INSTANCES >= 2)
-	if (irq >= VIC2_INT_VEC_OFFSET) {
-		irq -= VIC2_INT_VEC_OFFSET;
-		vic_base = VIC2_BASE;
-	}
-#endif
+	AMBARELLA_VIC_IRQ2BASE();
 
 	amba_writel(vic_base + VIC_INTEN_OFFSET, 0x1 << irq);
 }
 
+static void ambarella_mask_ack_irq(unsigned int irq)
+{
+	u32					vic_base = VIC_BASE;
+
+	AMBARELLA_VIC_IRQ2BASE();
+
+	amba_writel(vic_base + VIC_INTEN_CLR_OFFSET, 0x1 << irq);
+	amba_writel(vic_base + VIC_EDGE_CLR_OFFSET, 0x1 << irq);
+}
+
 static int ambarella_irq_set_type(unsigned int irq, unsigned int type)
 {
-	u32					base_addr;
+	u32					vic_base = VIC_BASE;
 	u32					mask;
 	u32					bit;
 	u32					sense;
@@ -435,102 +280,49 @@ static int ambarella_irq_set_type(unsigned int irq, unsigned int type)
 
 	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, type);
 
-	if (unlikely(irq >= GPIO_INT_VEC_OFFSET)) {
-		pr_err("irq %d out of range for VIC!\n", irq);
+	AMBARELLA_VIC_IRQ2BASE();
+
+	mask = ~(0x1 << irq);
+	bit = (0x1 << irq);
+	sense = amba_readl(vic_base + VIC_SENSE_OFFSET);
+	bothedges = amba_readl(vic_base + VIC_BOTHEDGE_OFFSET);
+	event = amba_readl(vic_base + VIC_EVENT_OFFSET);
+
+	switch (type) {
+	case IRQ_TYPE_EDGE_RISING:
+		sense &= mask;
+		bothedges &= mask;
+		event |= bit;
+		break;
+	case IRQ_TYPE_EDGE_FALLING:
+		sense &= mask;
+		bothedges &= mask;
+		event &= mask;
+		break;
+	case IRQ_TYPE_EDGE_BOTH:
+		sense &= mask;
+		bothedges |= bit;
+		event &= mask;
+		break;
+	case IRQ_TYPE_LEVEL_HIGH:
+		sense |= bit;
+		bothedges &= mask;
+		event |= bit;
+		break;
+	case IRQ_TYPE_LEVEL_LOW:
+		sense |= bit;
+		bothedges &= mask;
+		event &= mask;
+		break;
+	default:
+		pr_err("%s: can't set irq type %d for irq 0x%08x@%d\n",
+			__func__, type, vic_base, irq);
 		return -EINVAL;
 	}
 
-	if (irq < VIC2_INT_VEC_OFFSET) {
-		base_addr = VIC_BASE;
-		mask = ~(0x1 << irq);
-		bit = (0x1 << irq);
-
-		sense = amba_readl(base_addr + VIC_SENSE_OFFSET);
-		bothedges = amba_readl(base_addr + VIC_BOTHEDGE_OFFSET);
-		event = amba_readl(base_addr + VIC_EVENT_OFFSET);
-
-		switch (type) {
-		case IRQ_TYPE_EDGE_RISING:
-			sense &= mask;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_EDGE_FALLING:
-			sense &= mask;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		case IRQ_TYPE_EDGE_BOTH:
-			sense &= mask;
-			bothedges |= bit;
-			event &= mask;
-			break;
-		case IRQ_TYPE_LEVEL_HIGH:
-			sense |= bit;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_LEVEL_LOW:
-			sense |= bit;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		default:
-			pr_err("failed to set VIC irq type %d for irq %d\n",
-				type, irq);
-			return -EINVAL;
-		}
-
-		amba_writel(base_addr + VIC_SENSE_OFFSET, sense);
-		amba_writel(base_addr + VIC_BOTHEDGE_OFFSET, bothedges);
-		amba_writel(base_addr + VIC_EVENT_OFFSET, event);
-#if (VIC_INSTANCES >= 2)
-	} else {
-		base_addr = VIC2_BASE;
-		mask = ~(0x1 << (irq - VIC2_INT_VEC_OFFSET));
-		bit = (0x1 << (irq - VIC2_INT_VEC_OFFSET));
-
-		sense = amba_readl(base_addr + VIC_SENSE_OFFSET);
-		bothedges = amba_readl(base_addr + VIC_BOTHEDGE_OFFSET);
-		event = amba_readl(base_addr + VIC_EVENT_OFFSET);
-
-		switch (type) {
-		case IRQ_TYPE_EDGE_RISING:
-			sense &= mask;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_EDGE_FALLING:
-			sense &= mask;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		case IRQ_TYPE_EDGE_BOTH:
-			sense &= mask;
-			bothedges |= bit;
-			event &= mask;
-			break;
-		case IRQ_TYPE_LEVEL_HIGH:
-			sense |= bit;
-			bothedges &= mask;
-			event |= bit;
-			break;
-		case IRQ_TYPE_LEVEL_LOW:
-			sense |= bit;
-			bothedges &= mask;
-			event &= mask;
-			break;
-		default:
-			pr_err("failed to set VIC2 irq type %d for irq %d\n",
-				type, irq);
-			return -EINVAL;
-		}
-
-		amba_writel(base_addr + VIC_SENSE_OFFSET, sense);
-		amba_writel(base_addr + VIC_BOTHEDGE_OFFSET, bothedges);
-		amba_writel(base_addr + VIC_EVENT_OFFSET, event);
-#endif  /* VIC_INSTANCES >= 2 */
-	}
+	amba_writel(vic_base + VIC_SENSE_OFFSET, sense);
+	amba_writel(vic_base + VIC_BOTHEDGE_OFFSET, bothedges);
+	amba_writel(vic_base + VIC_EVENT_OFFSET, event);
 
 	return 0;
 }
@@ -544,9 +336,12 @@ static int ambarella_irq_set_wake(unsigned int irq, unsigned int state)
 
 static struct irq_chip ambarella_irq_chip = {
 	.name		= "ambarella onchip irq",
+	.enable		= ambarella_enable_irq,
+	.disable	= ambarella_disable_irq,
 	.ack		= ambarella_ack_irq,
-	.mask		= ambarella_mask_irq,
-	.unmask		= ambarella_unmask_irq,
+	.mask_ack	= ambarella_mask_ack_irq,
+	.mask		= ambarella_disable_irq,
+	.unmask		= ambarella_enable_irq,
 	.set_type	= ambarella_irq_set_type,
 	.set_wake	= ambarella_irq_set_wake,
 };
@@ -713,9 +508,9 @@ void ambarella_irq_suspend(void)
 
 	for (i = 0; i < NR_GPIO_IRQS; i++) {
 		if (test_bit(i, ambarella_gpio_wakeup_bit)) {
-			__ambarella_gpio_unmask_irq(i);
+			__ambarella_gpio_enable_irq(i);
 		} else {
-			__ambarella_gpio_mask_irq(i);
+			__ambarella_gpio_disable_irq(i);
 		}
 	}
 	pr_info("%s: GPIO0_IE_REG = 0x%08X\n",
@@ -745,9 +540,9 @@ void ambarella_irq_resume(void)
 
 	for (i = 0; i < NR_GPIO_IRQS; i++) {
 		if (test_bit(i, ambarella_gpio_irq_bit)) {
-			__ambarella_gpio_unmask_irq(i);
+			__ambarella_gpio_enable_irq(i);
 		} else {
-			__ambarella_gpio_mask_irq(i);
+			__ambarella_gpio_disable_irq(i);
 		}
 	}
 	pr_info("%s: GPIO0_IE_REG = 0x%08X\n",

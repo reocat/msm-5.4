@@ -38,7 +38,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #if (UART_INSTANCE >= 2)
 	&ambarella_uart1,
 #endif
-	&ambarella_nand,
 	&ambarella_sd0,
 #if (SD_INSTANCES >= 2)
 	&ambarella_sd1,
@@ -54,7 +53,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_i2s0,
 	&ambarella_rtc0,
 	&ambarella_wdt0,
-	&ambarella_eth0,
 	&ambarella_udc0,
 #ifdef CONFIG_AMBARELLA_FB0
 	&ambarella_fb0,
@@ -63,7 +61,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb1,
 #endif
 	&ambarella_ir0,
-	&ambarella_ide0,
 	&ambarella_power_supply,
 #ifdef CONFIG_ARCH_AMBARELLA_A5S
 	&ambarella_crypto,
@@ -76,6 +73,7 @@ static void __init ambarella_init(void)
 {
 	int					errorCode = 0;
 	int					i;
+	u32 					boot_from;
 
 #if (CHIP_REV == A5S)
 	char					*pname;
@@ -141,18 +139,35 @@ static void __init ambarella_init(void)
 	errorCode = ambarella_init_pm();
 	BUG_ON(errorCode != 0);
 
-	errorCode = ambarella_init_eth0(system_serial_high,
-		system_serial_low);
-	BUG_ON(errorCode != 0);
-
-	errorCode = ambarella_init_nand(NULL);
-	BUG_ON(errorCode != 0);
-
 	errorCode = ambarella_init_audio();
 	BUG_ON(errorCode != 0);
 
 	ambarella_register_spi_device();
 	ambarella_register_i2c_device();
+
+	boot_from = rct_boot_from();
+	if ((boot_from & BOOT_FROM_NAND) == BOOT_FROM_NAND) {
+		errorCode = ambarella_init_nand(NULL);
+		BUG_ON(errorCode != 0);
+
+		platform_device_register(&ambarella_nand);
+		device_set_wakeup_capable(&ambarella_nand.dev, 1);
+		device_set_wakeup_enable(&ambarella_nand.dev, 0);
+	}
+	if ((boot_from & BOOT_FROM_NOR) == BOOT_FROM_NOR) {
+		platform_device_register(&ambarella_nor);
+		device_set_wakeup_capable(&ambarella_nor.dev, 1);
+		device_set_wakeup_enable(&ambarella_nor.dev, 0);
+	}
+	if (rct_is_eth_enabled()) {
+		errorCode = ambarella_init_eth0(system_serial_high,
+			system_serial_low);
+		BUG_ON(errorCode != 0);
+
+		platform_device_register(&ambarella_eth0);
+		device_set_wakeup_capable(&ambarella_eth0.dev, 1);
+		device_set_wakeup_enable(&ambarella_eth0.dev, 0);
+	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {

@@ -84,13 +84,20 @@ struct platform_device ambarella_power_supply = {
 };
 
 /* ==========================================================================*/
-static int ambarella_pm_enter(suspend_state_t state)
+static int ambarella_pm_enter_standby(void)
 {
 	int					errorCode = 0;
 #if (CHIP_REV == A5S)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
 #endif
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_PRE_PM, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, errorCode);
+	}
 
 	ambarella_irq_suspend();
 
@@ -103,27 +110,89 @@ static int ambarella_pm_enter(suspend_state_t state)
 	}
 
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
-	errorCode = ambarella_set_operating_mode(&operating_mode);
-	if (errorCode) {
+	local_irq_disable();
+	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
+	local_irq_enable();
+	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
-			__func__, errorCode);
+			__func__, result);
+		errorCode = -EPERM;
 	}
 #else
-	pr_info("%s: enter with state[%d]\n", __func__, state);
-	mdelay(10000);
-	pr_info("%s: exit with state[%d]\n", __func__, state);
+	pr_err("%s: Can't support standby\n", __func__);
 #endif
 
 	ambarella_irq_resume();
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_POST_PM, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, errorCode);
+	}
+
+	return errorCode;
+}
+
+static int ambarella_pm_enter_mem(void)
+{
+	return toss_switch(0);
+}
+
+static int ambarella_pm_enter(suspend_state_t state)
+{
+	int					errorCode = 0;
+
+	pr_info("%s: enter with state[%d]\n", __func__, state);
+
+	switch (state) {
+	case PM_SUSPEND_ON:
+		break;
+
+	case PM_SUSPEND_STANDBY:
+		errorCode = ambarella_pm_enter_standby();
+		break;
+
+	case PM_SUSPEND_MEM:
+		errorCode = ambarella_pm_enter_mem();
+		break;
+
+	default:
+		break;
+	}
+
+	pr_info("%s: exit state[%d] with %d\n", __func__, state, errorCode);
 
 	return errorCode;
 }
 
 static int ambarella_pm_valid(suspend_state_t state)
 {
-	pr_info("%s: called with state[%d]\n", __func__, state);
+	int					valid = 0;
 
-	return 1;
+	switch (state) {
+	case PM_SUSPEND_ON:
+		valid = 1;
+		break;
+
+	case PM_SUSPEND_STANDBY:
+#if (CHIP_REV == A5S)
+		valid = 1;
+#endif
+		break;
+
+	case PM_SUSPEND_MEM:
+		if (toss != NULL)
+			valid = 1;
+		break;
+
+	default:
+		break;
+	}
+
+	pr_info("%s: state[%d]=%d\n", __func__, state, valid);
+
+	return valid;
 }
 
 static struct platform_suspend_ops ambarella_pm_ops = {

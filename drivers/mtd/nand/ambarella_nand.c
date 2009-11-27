@@ -93,8 +93,9 @@ struct ambarella_nand_info {
 
 	u32				origin_clk;	/* in Khz */
 	struct ambarella_nand_timing	*origin_timing;
-	struct notifier_block	nand_freq_transition;
-	struct notifier_block	nand_freq_policy;
+
+	struct notifier_block		system_event;
+	struct semaphore		system_event_sem;
 };
 
 static struct nand_ecclayout amb_oobinfo_512 = {
@@ -132,13 +133,92 @@ static struct nand_bbt_descr amb_2048_bbt_descr = {
 
 /* ==========================================================================*/
 
+#define FLDEV_CMD_LINE_SIZE	1024
+typedef struct fldev_s
+{
+	char	sn[32];		/**< Serial number */
+	u8	usbdl_mode;	/**< USB download mode */
+	u8	auto_boot;	/**< Automatic boot */
+	char	cmdline[FLDEV_CMD_LINE_SIZE];	/**< Boot command line options */
+	u8	rsv[2];
+	u32	splash_id;
 
-//#define CPUFREQ_DBG
-#ifdef CPUFREQ_DBG
-#define cpufreq_dbg(format, arg...)	printk(format, ##arg)
-#else
-#define cpufreq_dbg(format, arg...)
-#endif
+	/* This section contains networking related settings */
+	u8	eth_mac[6];	/**< Ethernet MAC */
+	u32	lan_ip;		/**< Boot loader's LAN IP */
+	u32	lan_mask;	/**< Boot loader's LAN mask */
+	u32	lan_gw;		/**< Boot loader's LAN gateway */
+	u8	auto_dl;	/**< Automatic download? */
+	u32	tftpd;		/**< Boot loader's TFTP server */
+	u32	pri_addr;	/**< RTOS download address */
+	char	pri_file[32];	/**< RTOS file name */
+	u8	pri_comp;	/**< RTOS compressed? */
+	u32	rmd_addr;	/**< Ramdisk download address */
+	char	rmd_file[32];	/**< Ramdisk file name */
+	u8	rmd_comp;	/**< Ramdisk compressed? */
+	u32	dsp_addr;	/**< DSP download address */
+	char	dsp_file[32];	/**< DSP file name */
+	u8	dsp_comp;	/**< DSP compressed? */
+	u8	rsv2[2];
+
+	u32	magic;		/**< Magic number */
+} __attribute__((packed)) fldev_t;
+
+typedef struct flpart_s
+{
+	u32	crc32;		/**< CRC32 checksum of image */
+	u32	ver_num;	/**< Version number */
+	u32	ver_date;	/**< Version date */
+	u32	img_len;	/**< Lengh of image in the partition */
+	u32	mem_addr;	/**< Starting address to copy to RAM */
+	u32	flag;		/**< Special properties of this partition */
+	u32	magic;		/**< Magic number */
+} __attribute__((packed)) flpart_t;
+
+
+#define PART_MAX_WITH_RSV	32
+#define PTB_SIZE		4096
+#define PTB_PAD_SIZE		\
+	(PTB_SIZE - PART_MAX_WITH_RSV * sizeof(flpart_t) - sizeof(fldev_t))
+
+typedef struct flpart_table_s
+{
+	flpart_t	part[PART_MAX_WITH_RSV];/** Partitions */
+	/* ------------------------------------------ */
+	fldev_t		dev;			/**< Device properties */
+	u8		rsv[PTB_PAD_SIZE];	/**< Padding to 2048 bytes */
+} __attribute__((packed)) flpart_table_t;
+
+
+/**
+ * The meta data table is a region in flash after partition table.
+ * The data need by dual boot are stored.
+ */
+#define PART_MAX			20
+#define CMDLINE_PART_MAX		8
+#define PART_NAME_LEN		8
+#define PTB_META_MAGIC		0x33219fbd
+#define PTB_META_SIZE			2048
+#define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN) * \
+						 PART_MAX + sizeof(u32))
+#define PTB_META_PAD_SIZE		(PTB_META_SIZE - PTB_META_ACTURAL_LEN)
+typedef struct flpart_meta_s
+{
+	struct {
+		u32	sblk;
+		u32	nblk;
+		char	name[PART_NAME_LEN];
+	} part_info[PART_MAX];
+	u32	magic;				/**< Magic number */
+	u8 	rsv[PTB_META_PAD_SIZE - 4];
+	/* This meta crc32 doesn't include itself. */
+	/* It's only calc data before this field.  */
+	u32 	crc32;
+} __attribute__((packed)) flpart_meta_t;
+
+
+/* ==========================================================================*/
+
 
 #define NAND_TIMING_RSHIFT24BIT(x)	(((x) & 0xff000000) >> 24)
 #define NAND_TIMING_RSHIFT16BIT(x)	(((x) & 0x00ff0000) >> 16)
@@ -304,64 +384,63 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 	return timing_reg;
 }
 
-static int ambarella_nand_freq_transition(struct notifier_block *nb,
+static int ambarella_nand_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
-	struct ambarella_nand_timing timing;
-	struct ambarella_nand_info *nand_info = container_of(nb,
-		struct ambarella_nand_info, nand_freq_transition);
-	unsigned long flags;
+	int					errorCode = NOTIFY_OK;
+	struct ambarella_nand_timing		timing;
+	struct ambarella_nand_info		*nand_info;
 
-	/* TODO struct cpufreq_freqs *f = data; */
-
-	local_irq_save(flags);
-
-	/* The timming register is default value, it's big enough to operate
-	  * with NAND, so no need to change it. */
-	if (nand_info->origin_timing->control == 0)
-		goto ambarella_freq_transition_exit;
+	nand_info = container_of(nb, struct ambarella_nand_info, system_event);
 
 	switch (val) {
-	case AMB_CPUFREQ_PRECHANGE:
+	case AMBA_EVENT_PRE_CPUFREQ:
 		pr_info("%s: Pre Change\n", __func__);
+		down(&nand_info->system_event_sem);
 		break;
 
-	case AMB_CPUFREQ_POSTCHANGE:
+	case AMBA_EVENT_POST_CPUFREQ:
 		pr_info("%s: Post Change\n", __func__);
-		timing.timing0 = ambnand_calc_timing(nand_info, 0);
-		timing.timing1 = ambnand_calc_timing(nand_info, 1);
-		timing.timing2 = ambnand_calc_timing(nand_info, 2);
-		timing.timing3 = ambnand_calc_timing(nand_info, 3);
-		timing.timing4 = ambnand_calc_timing(nand_info, 4);
-		timing.timing5 = ambnand_calc_timing(nand_info, 5);
-		amb_nand_set_timing(nand_info, &timing);
+		/* The timming register is default value,
+		 * it's big enough to operate
+		 * with NAND, so no need to change it. */
+		if (nand_info->origin_timing->control != 0) {
+			timing.timing0 = ambnand_calc_timing(nand_info, 0);
+			timing.timing1 = ambnand_calc_timing(nand_info, 1);
+			timing.timing2 = ambnand_calc_timing(nand_info, 2);
+			timing.timing3 = ambnand_calc_timing(nand_info, 3);
+			timing.timing4 = ambnand_calc_timing(nand_info, 4);
+			timing.timing5 = ambnand_calc_timing(nand_info, 5);
+			amb_nand_set_timing(nand_info, &timing);
 
-		cpufreq_dbg("origin reg:\t0x%08x 0x%08x"
-			" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
-			nand_info->origin_timing->timing0, 
-			nand_info->origin_timing->timing1, 
-			nand_info->origin_timing->timing2,
-			nand_info->origin_timing->timing3, 
-			nand_info->origin_timing->timing4, 
-			nand_info->origin_timing->timing5);
+			pr_debug("origin reg:\t0x%08x 0x%08x"
+				" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
+				nand_info->origin_timing->timing0, 
+				nand_info->origin_timing->timing1, 
+				nand_info->origin_timing->timing2,
+				nand_info->origin_timing->timing3, 
+				nand_info->origin_timing->timing4, 
+				nand_info->origin_timing->timing5);
 
-		cpufreq_dbg("new reg:\t0x%08x 0x%08x"
-			" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
-			timing.timing0, timing.timing1, timing.timing2,
-			timing.timing3, timing.timing4, timing.timing5);
-		
+			pr_debug("new reg:\t0x%08x 0x%08x"
+				" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
+				timing.timing0, timing.timing1, timing.timing2,
+				timing.timing3, timing.timing4, timing.timing5);
+		}
+		up(&nand_info->system_event_sem);
+		break;
+
+	case AMBA_EVENT_PRE_PM:
+	case AMBA_EVENT_POST_PM:
 		break;
 
 	default:
-		pr_err("%s: %ld\n", __func__, val);
+		pr_warning("%s: unknown event %ld\n", __func__, val);
 		break;
 	}
 
-ambarella_freq_transition_exit:
-	local_irq_restore(flags);
-
-	return 0;
-} 
+	return errorCode;
+}
 
 static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 {
@@ -1268,17 +1347,22 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_nand_info		*nand_info;
+	struct mtd_info				*mtd;
 	struct ambarella_platform_nand		*plat_nand;
 	struct resource				*wp_res;
 	struct resource				*reg_res;
 	struct resource				*dma_res;
 
+#ifdef CONFIG_MTD_PARTITIONS
+	struct mtd_partition			amboot_partitions[PART_MAX + CMDLINE_PART_MAX];
+	char 					part_name[PART_MAX][PART_NAME_LEN];
+	flpart_meta_t				meta_table;
+	int					meta_numpages, meta_offpage;
+	int					from, retlen, found, i;
 #ifdef CONFIG_MTD_CMDLINE_PARTS
 	struct mtd_partition			*cmd_partitions = NULL;
-	struct mtd_partition			*amb_partitions = NULL;
 	int					cmd_nr_partitions = 0;
-	int					amb_nr_partitions = 0;
-	int					i;
+#endif
 #endif
 
 	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
@@ -1355,6 +1439,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	spin_lock_init(&nand_info->controller.lock);
 	init_waitqueue_head(&nand_info->controller.wq);
 	init_waitqueue_head(&nand_info->wq);
+	sema_init(&nand_info->system_event_sem, 1);
 
 	nand_info->dmabuf = dma_alloc_coherent(nand_info->dev,
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,
@@ -1401,7 +1486,8 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 	ambarella_nand_init_chip(nand_info);
 
-	errorCode = nand_scan_ident(&nand_info->mtd, plat_nand->sets->nr_chips);
+	mtd = &nand_info->mtd;
+	errorCode = nand_scan_ident(mtd, plat_nand->sets->nr_chips);
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
 
@@ -1413,67 +1499,123 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
 
-	errorCode = nand_scan_tail(&nand_info->mtd);
+	errorCode = nand_scan_tail(mtd);
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
 
 #ifdef CONFIG_MTD_PARTITIONS
-	if (plat_nand->sets && plat_nand->sets->nr_partitions > 0 &&
-			plat_nand->sets->partitions != NULL) {
-#ifdef CONFIG_MTD_CMDLINE_PARTS
-		nand_info->mtd.name = "ambnand";
-		/* get partitions definition from cmdline */
-		cmd_nr_partitions = parse_mtd_partitions(&nand_info->mtd,
-					part_probes, &cmd_partitions, 0);
-		if (cmd_nr_partitions <= 0)
-			goto ambarella_add_partitions;
+	meta_offpage = sizeof(flpart_table_t) / mtd->writesize;
+	meta_numpages = sizeof(flpart_meta_t) / mtd->writesize;
+	if (sizeof(flpart_meta_t) % mtd->writesize)
+		meta_numpages++;
 
-		/* modify the offset if no offset defined in cmdline. */
-		if (cmd_partitions->offset == 0) {
-			uint64_t offset = 0;
-			struct mtd_partition *tmp_partitions = cmd_partitions;
-			/* find the last partition getting from amboot */
-			for (i = 0; i < plat_nand->sets->nr_partitions; i++) {
-				if ((plat_nand->sets->partitions + i)->offset > offset) {
-					offset = (plat_nand->sets->partitions + i)->offset;
-					amb_partitions = plat_nand->sets->partitions + i;
-				}
-			}
-			for (i = 0; i < cmd_nr_partitions; i++) {
-				if (i != 0) {
-					amb_partitions = cmd_partitions + i - 1;
-				}
-				tmp_partitions->offset = amb_partitions->offset + amb_partitions->size;
-				if (tmp_partitions->offset + tmp_partitions->size > nand_info->mtd.size) {
-					tmp_partitions->size = nand_info->mtd.size - tmp_partitions->offset;
-					dev_info(nand_info->dev,
-						"partitioning exceeds flash size, truncating\n");
-					cmd_nr_partitions = i + 1;
-					break;
-				}
-				tmp_partitions++;
-			}
-		}
-
-		/* append the cmdline partitions to partitions from amboot. */
-		amb_partitions = plat_nand->sets->partitions;
-		amb_nr_partitions = plat_nand->sets->nr_partitions;
-		for (i = 0; i < cmd_nr_partitions; i++) {
-			if (plat_nand->sets->nr_partitions >= MAX_AMBOOT_PARTITION_NR)
-				break;
-			memcpy(amb_partitions + amb_nr_partitions + i,
-				cmd_partitions++, sizeof(struct mtd_partition));
-			plat_nand->sets->nr_partitions++;
-		}
-
-ambarella_add_partitions:
-#endif
-		add_mtd_partitions(&nand_info->mtd,
-			plat_nand->sets->partitions,
-			plat_nand->sets->nr_partitions);
-	} else {
-		add_mtd_device(&nand_info->mtd);
+	if (meta_numpages * mtd->writesize > AMBARELLA_NAND_DMA_BUFFER_SIZE) {
+		dev_err(nand_info->dev,
+			"%s: The size of meta data is too large\n", __func__);
+		errorCode = -ENOMEM;
+		goto ambarella_nand_probe_mtd_error;
 	}
+
+	/* find the meta data which contains the partition info, 
+	  * start from the second block 
+	  */
+	found = 0;
+	for (from = mtd->erasesize; from < mtd->size; from += mtd->erasesize) {
+		if (mtd->block_isbad(mtd, from)) {
+			continue;
+		}
+
+		errorCode = mtd->read(mtd,
+			from + meta_offpage * mtd->writesize,
+			meta_numpages * mtd->writesize,
+			&retlen, (u8 *)&meta_table);
+		if (errorCode < 0) {
+			dev_info(nand_info->dev,
+				"%s: Can't meta data!\n", __func__);
+			goto ambarella_nand_probe_mtd_error;
+		}
+
+		if (meta_table.magic == PTB_META_MAGIC) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (found == 0) {
+		dev_err(nand_info->dev, "%s: meta appears damaged...\n", __func__);
+		errorCode = -EINVAL;
+		goto ambarella_nand_probe_mtd_error;
+	}
+
+	dev_info(nand_info->dev, "%s: Partition infomation found!\n", __func__);
+	memset(amboot_partitions, 0, sizeof(amboot_partitions));
+	for (i = 0; i < PART_MAX; i++) {
+		strcpy(part_name[i], meta_table.part_info[i].name);
+		amboot_partitions[i].name = part_name[i];
+		amboot_partitions[i].offset = meta_table.part_info[i].sblk * mtd->erasesize;
+		amboot_partitions[i].size = meta_table.part_info[i].nblk * mtd->erasesize;
+	}
+
+#ifdef CONFIG_MTD_CMDLINE_PARTS
+	nand_info->mtd.name = "ambnand";
+	/* get partitions definition from cmdline */
+	cmd_nr_partitions = parse_mtd_partitions(&nand_info->mtd,
+				part_probes, &cmd_partitions, 0);
+	if (cmd_nr_partitions <= 0)
+		goto ambarella_nand_probe_add_partitions;
+
+	if (cmd_nr_partitions > CMDLINE_PART_MAX) {
+		dev_info(nand_info->dev, "Too many partitionings, truncating\n");
+		cmd_nr_partitions = CMDLINE_PART_MAX;
+	}
+
+	/* if cmdline don't define the partition offset, we should modify the 
+	  * offset to make it append to the existent partitions
+	  */
+	if (cmd_partitions->offset == 0) {
+		uint64_t offset = 0;
+		struct mtd_partition *p_cmdpart = cmd_partitions;
+		struct mtd_partition *p_ambpart = NULL;
+		/* find the last partition getting from amboot */
+		for (i = 0; i < PART_MAX; i++) {
+			if (amboot_partitions[i].offset > offset) {
+				offset = amboot_partitions[i].offset;
+				p_ambpart = &amboot_partitions[i];
+			}
+		}
+
+		for (i = 0; i < cmd_nr_partitions; i++) {
+			if (i > 0)
+				p_ambpart = cmd_partitions + i - 1;
+
+			p_cmdpart->offset = p_ambpart->offset + p_ambpart->size;
+
+			if (p_cmdpart->offset + p_cmdpart->size >
+					nand_info->mtd.size) {
+				p_cmdpart->size =
+					nand_info->mtd.size - p_cmdpart->offset;
+				dev_info(nand_info->dev,
+					"partitioning exceeds flash size, truncating\n");
+				cmd_nr_partitions = i + 1;
+				break;
+			}
+
+			p_cmdpart++;
+		}
+	}
+
+	/* append the cmdline partitions to partitions from amboot. */
+	for (i = 0; i < cmd_nr_partitions; i++) {
+		memcpy(&amboot_partitions[PART_MAX+i],
+			cmd_partitions++, sizeof(struct mtd_partition));
+	}
+
+ambarella_nand_probe_add_partitions:
+#endif
+	i = 0;
+	if (cmd_nr_partitions >= 0)
+		i = cmd_nr_partitions;
+	add_mtd_partitions(mtd, amboot_partitions, PART_MAX + i);
 #else
 	add_mtd_device(&nand_info->mtd);
 #endif
@@ -1482,9 +1624,9 @@ ambarella_add_partitions:
 
 	nand_info->origin_clk = get_ahb_bus_freq_hz() / 1000; /* in Khz */
 	nand_info->origin_timing = plat_nand->timing;
-	nand_info->nand_freq_transition.notifier_call =
-		ambarella_nand_freq_transition;
-	ambarella_register_freqnotifier(&nand_info->nand_freq_transition);
+
+	nand_info->system_event.notifier_call =	ambarella_nand_system_event;
+	ambarella_register_event_notifier(&nand_info->system_event);
 
 	goto ambarella_nand_probe_exit;
 
@@ -1525,8 +1667,7 @@ static int __devexit ambarella_nand_remove(struct platform_device *pdev)
 	nand_info = (struct ambarella_nand_info *)platform_get_drvdata(pdev);
 
 	if (nand_info) {
-		ambarella_unregister_freqnotifier(
-			&nand_info->nand_freq_transition);
+		ambarella_unregister_event_notifier(&nand_info->system_event);
 
 		platform_set_drvdata(pdev, NULL);
 
@@ -1561,8 +1702,10 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 1;
-	disable_irq(nand_info->dma_irq);
-	disable_irq(nand_info->cmd_irq);
+	if (!device_may_wakeup(&pdev->dev)) {
+		disable_irq(nand_info->dma_irq);
+		disable_irq(nand_info->cmd_irq);
+	}
 
 	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -1577,8 +1720,10 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 0;
-	enable_irq(nand_info->dma_irq);
-	enable_irq(nand_info->cmd_irq);
+	if (!device_may_wakeup(&pdev->dev)) {
+		enable_irq(nand_info->dma_irq);
+		enable_irq(nand_info->cmd_irq);
+	}
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

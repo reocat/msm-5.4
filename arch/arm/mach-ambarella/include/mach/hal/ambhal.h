@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 88220
+ * @version 96233
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -492,7 +492,9 @@ AMB_OPERATING_MODE_DISPLAY_AND_ARM,
 /** Low power mode */
 AMB_OPERATING_MODE_STANDBY,
 /** LCD off */
-AMB_OPERATING_MODE_LCD_BYPASS
+AMB_OPERATING_MODE_LCD_BYPASS,
+/** Still picture preview */
+AMB_OPERATING_MODE_STILL_PREVIEW
 } amb_mode_t ;
 
 /**
@@ -547,6 +549,19 @@ AMB_HDMI_ON
 } amb_hdmi_interface_state_t ;
 
 /**
+ * Dual Stream state
+ * 
+ * @ingroup mode_group
+ */
+
+typedef enum {
+/** Dual Stream is off */
+AMB_DUAL_STREAM_OFF,
+/** Dual Stream is on */
+AMB_DUAL_STREAM_ON
+} amb_dual_stream_state_t ;
+
+/**
  * Operating mode
  *
  * @ingroup mode_group
@@ -561,6 +576,8 @@ unsigned int mode ;
 unsigned int usb_state ;
 /** HDMI state ::amb_hdmi_interface_state_t */
 unsigned int hdmi_state ;
+/** Dual Stream state ::amb_dual_stream_state_t */
+unsigned int dual_stream_state ;
 } amb_operating_mode_t ;
 
 /**

@@ -103,7 +103,7 @@ void fio_select_lock(int module)
 #endif
 			break;
 
-		default:	// SELECT_FIO_HOLD: used to hold the fio bus
+		default:
 			break;
 		}
 

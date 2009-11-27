@@ -79,7 +79,8 @@ struct ambarella_i2c_dev_info {
 
 	struct ambarella_idc_platform_info	*platform_info;
 
-	struct notifier_block			i2c_freq_transition;
+	struct notifier_block			system_event;
+	struct semaphore			system_event_sem;
 };
 
 static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
@@ -110,37 +111,38 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_ENABLE);
 }
 
-static int ambarella_i2c_freq_transition(struct notifier_block *nb,
+static int ambarella_i2c_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
+	int					errorCode = NOTIFY_OK;
 	struct platform_device			*pdev;
 	struct ambarella_i2c_dev_info		*pinfo;
-	unsigned long				flags;
 
-	pinfo = container_of(nb, struct ambarella_i2c_dev_info,
-		i2c_freq_transition);
+	pinfo = container_of(nb, struct ambarella_i2c_dev_info, system_event);
 	pdev = to_platform_device(pinfo->dev);
 
-	local_irq_save(flags);
-
 	switch (val) {
-	case AMB_CPUFREQ_PRECHANGE:
+	case AMBA_EVENT_PRE_CPUFREQ:
 		pr_info("%s[%d]: Pre Change\n", __func__, pdev->id);
+		down(&pinfo->system_event_sem);
 		break;
 
-	case AMB_CPUFREQ_POSTCHANGE:
+	case AMBA_EVENT_POST_CPUFREQ:
 		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
 		ambarella_i2c_set_clk(pinfo);
+		up(&pinfo->system_event_sem);
+		break;
+
+	case AMBA_EVENT_PRE_PM:
+	case AMBA_EVENT_POST_PM:
 		break;
 
 	default:
-		pr_err("%s: %ld\n", __func__, val);
+		pr_warning("%s: unknown event %ld\n", __func__, val);
 		break;
 	}
 
-	local_irq_restore(flags);
-
-	return 0;
+	return errorCode;
 } 
 
 static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
@@ -424,6 +426,8 @@ static int ambarella_i2c_xfer(
 
 	pinfo = (struct ambarella_i2c_dev_info *)i2c_get_adapdata(adap);
 
+	down(&pinfo->system_event_sem);
+
 	for (retryCount = 0; retryCount < adap->retries; retryCount++) {
 		errorCode = 0;
 
@@ -458,6 +462,8 @@ static int ambarella_i2c_xfer(
 			break;
 		}
 	}
+
+	up(&pinfo->system_event_sem);
 
 	if (errorCode)
 		return errorCode;
@@ -527,6 +533,7 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 	pinfo->dev = &pdev->dev;
 	pinfo->irq = irq->start;
 	init_waitqueue_head(&pinfo->msg_wait);
+	sema_init(&pinfo->system_event_sem, 1);
 	pinfo->platform_info = platform_info;
 
 	ambarella_i2c_hw_init(pinfo);
@@ -556,9 +563,8 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 		goto i2c_errorCode_free_irq;
 	}
 
-	pinfo->i2c_freq_transition.notifier_call =
-		ambarella_i2c_freq_transition;
-	ambarella_register_freqnotifier(&pinfo->i2c_freq_transition);
+	pinfo->system_event.notifier_call = ambarella_i2c_system_event;
+	ambarella_register_event_notifier(&pinfo->system_event);
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor I2C adapter[%s] probed!\n",
@@ -588,7 +594,7 @@ static int __devexit ambarella_i2c_remove(struct platform_device *pdev)
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
-		ambarella_unregister_freqnotifier(&pinfo->i2c_freq_transition);
+		ambarella_unregister_event_notifier(&pinfo->system_event);
 
 		errorCode = i2c_del_adapter(&pinfo->adap);
 
@@ -620,7 +626,8 @@ static int ambarella_i2c_suspend(struct platform_device *pdev,
 		__func__, errorCode, state.event);
 
 	pinfo = platform_get_drvdata(pdev);
-	disable_irq(pinfo->irq);
+	if (!device_may_wakeup(&pdev->dev))
+		disable_irq(pinfo->irq);
 
 	return errorCode;
 }
@@ -633,7 +640,8 @@ static int ambarella_i2c_resume(struct platform_device *pdev)
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	pinfo = platform_get_drvdata(pdev);
-	enable_irq(pinfo->irq);
+	if (!device_may_wakeup(&pdev->dev))
+		enable_irq(pinfo->irq);
 
 	return errorCode;
 }

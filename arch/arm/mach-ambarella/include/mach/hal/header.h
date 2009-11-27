@@ -19,7 +19,5 @@ typedef struct amb_hal_function_info_s {
 	const char* name ;
 } amb_hal_function_info_t ;
 
-extern int ambarella_set_operating_mode(amb_operating_mode_t *popmode);
-
 #endif // ifndef _HEADER_H_INCLUDED_
 

@@ -713,21 +713,61 @@ static int __devexit ambarella_spi_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int ambarella_spi_suspend(struct platform_device *pdev, pm_message_t mesg)
+#ifdef CONFIG_PM
+static int ambarella_spi_suspend(struct platform_device *pdev,
+	pm_message_t state)
 {
-	return 0;
+	int				errorCode = 0;
+	struct spi_master		*master;
+	struct ambarella_spi		*pinfo;
+
+	master = platform_get_drvdata(pdev);
+	pinfo = spi_master_get_devdata(master);
+
+	if (pinfo) {
+		if (!device_may_wakeup(&pdev->dev))
+			disable_irq(pinfo->irq);
+	} else {
+		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
+		errorCode = -ENXIO;
+	}
+
+	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+		__func__, errorCode, state.event);
+
+	return errorCode;
 }
 
 static int ambarella_spi_resume(struct platform_device *pdev)
 {
-	return 0;
+	int				errorCode = 0;
+	struct spi_master		*master;
+	struct ambarella_spi		*pinfo;
+
+	master = platform_get_drvdata(pdev);
+	pinfo = spi_master_get_devdata(master);
+
+	if (pinfo) {
+		if (!device_may_wakeup(&pdev->dev))
+			enable_irq(pinfo->irq);
+	} else {
+		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
+		errorCode = -ENXIO;
+	}
+
+	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+
+	return errorCode;
 }
+#endif
 
 static struct platform_driver ambarella_spi_driver = {
 	.probe		= ambarella_spi_probe,
 	.remove		= __devexit_p(ambarella_spi_remove),
+#ifdef CONFIG_PM
 	.suspend	= ambarella_spi_suspend,
 	.resume		= ambarella_spi_resume,
+#endif
 	.driver		= {
 		.name	= "ambarella-spi",
 		.owner	= THIS_MODULE,

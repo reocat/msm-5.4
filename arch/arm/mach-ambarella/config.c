@@ -401,7 +401,6 @@ __tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
 
 static void __init early_toss(char **p)
 {
-	extern void *toss;
 	unsigned long				pstart = 0;
 	unsigned long				vstart = 0;
 	unsigned long				size = 0;
@@ -426,7 +425,7 @@ static void __init early_toss(char **p)
 	ambarella_io_desc[5].io_desc.pfn = __phys_to_pfn(pstart);
 	ambarella_io_desc[5].io_desc.length = size;
 
-	toss = (void *) vstart;  /* Setup valid pointer to global var 'toss' */
+	toss = (void *)vstart;
 }
 __early_param("toss=", early_toss);
 
@@ -884,7 +883,7 @@ static int __init parse_nand_tag_t2(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_NAND_T2, parse_nand_tag_t2);
 
-static struct resource ambarella_nand_resources[] = {
+static struct resource ambarella_fio_resources[] = {
 	[0] = {
 		.start	= FIO_BASE,
 		.end	= FIO_BASE + 0x0FFF,
@@ -920,10 +919,21 @@ static struct resource ambarella_nand_resources[] = {
 struct platform_device ambarella_nand = {
 	.name		= "ambarella-nand",
 	.id		= -1,
-	.resource	= ambarella_nand_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_nand_resources),
+	.resource	= ambarella_fio_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_fio_resources),
 	.dev		= {
 		.platform_data		= &ambarella_platform_default_nand,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+struct platform_device ambarella_nor = {
+	.name		= "ambarella-nor",
+	.id		= -1,
+	.resource	= ambarella_fio_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_fio_resources),
+	.dev		= {
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
@@ -1321,6 +1331,7 @@ struct platform_device ambarella_idc1 = {
 #endif
 
 /* ==========================================================================*/
+#define SPI0_CS2_CS3_EN				0x00000002
 static void ambarella_spi_cs_activate(struct ambarella_spi_cs_config *cs_config)
 {
 	u8			cs_pin;
@@ -1800,27 +1811,6 @@ struct platform_device ambarella_ir0 = {
 };
 
 /* ==========================================================================*/
-struct resource ide0_resources[] = {
-	[0] = {
-		.start	= FIO_BASE,
-		.end	= FIO_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
-struct platform_device ambarella_ide0 = {
-	.name		= "ambarella-ide",
-	.id		= 0,
-	.num_resources	= ARRAY_SIZE(ide0_resources),
-	.resource	= ide0_resources,
-	.dev			= {
-		.platform_data		= NULL,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
-	}
-};
-
-/* ==========================================================================*/
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
 
 int __init ambarella_create_proc_dir(void)
@@ -2043,4 +2033,26 @@ struct platform_device ambarella_adc0 = {
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
+
+/* ==========================================================================*/
+static BLOCKING_NOTIFIER_HEAD(event_notifier_list);
+
+/* ==========================================================================*/
+int ambarella_register_event_notifier(void *nb)
+{
+	return blocking_notifier_chain_register(&event_notifier_list, nb);
+}
+EXPORT_SYMBOL(ambarella_register_event_notifier);
+
+int ambarella_unregister_event_notifier(void *nb)
+{
+	return blocking_notifier_chain_unregister(&event_notifier_list, nb);
+}
+EXPORT_SYMBOL(ambarella_unregister_event_notifier);
+
+int ambarella_set_event(unsigned long val, void *v)
+{
+	return blocking_notifier_call_chain(&event_notifier_list, val, v);
+}
+EXPORT_SYMBOL(ambarella_set_event);
 

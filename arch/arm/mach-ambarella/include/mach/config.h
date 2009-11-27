@@ -99,6 +99,10 @@ extern u32 get_ambarella_toss_size(void);
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
 
+extern int ambarella_register_event_notifier(void *nb);
+extern int ambarella_unregister_event_notifier(void *nb);
+extern int ambarella_set_event(unsigned long val, void *v);
+
 struct ambarella_mem_rev_desc {
 	unsigned long physaddr;
 	unsigned long size;
@@ -232,7 +236,6 @@ struct ambarella_eth_platform_info {
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
 
-#define SPI0_CS2_CS3_EN				0x00000002
 struct ambarella_spi_cs_config {
 	u8					bus_id;
 	u8					cs_id;
@@ -321,6 +324,11 @@ struct ambarella_adc_controller {
 #define	AMBA_DEV_MAJOR			(248)
 #define	AMBA_DEV_MINOR_PUBLIC_START	(128)
 #define	AMBA_DEV_MINOR_PUBLIC_END	(240)
+
+#define AMBA_EVENT_PRE_CPUFREQ		(0)
+#define AMBA_EVENT_POST_CPUFREQ		(1)
+#define AMBA_EVENT_PRE_PM		(2)
+#define AMBA_EVENT_POST_PM		(3)
 
 #endif
 

@@ -302,9 +302,6 @@ extern void rct_turn_off_usb_pll(void);
 extern void rct_ena_usb_int_clk(void);
 extern u32 read_usb_reg_setting(void);
 
-extern int ambarella_register_freqnotifier(struct notifier_block *nb);
-extern int ambarella_unregister_freqnotifier(struct notifier_block *nb);
-
 /******************************************/
 /* PLL clock frequencies for SO and VOUT  */
 /******************************************/

@@ -409,7 +409,7 @@ static int ambarella_adc_suspend(struct platform_device *pdev,
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!device_may_wakeup(&pdev->dev) ) {
+	if (!device_may_wakeup(&pdev->dev)) {
 		ambarella_adc_stop();
 		if (pinfo->support_irq)
 			disable_irq(pinfo->irq);

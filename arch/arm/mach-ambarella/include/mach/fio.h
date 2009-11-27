@@ -1064,7 +1064,6 @@
 #define SELECT_FIO_SD	3
 #define SELECT_FIO_SDIO	4
 #define SELECT_FIO_SD2	5
-#define SELECT_FIO_HOLD	254
 
 /**
  * Define for FIO error codes

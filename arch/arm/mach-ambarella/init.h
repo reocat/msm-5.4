@@ -85,12 +85,12 @@ extern struct platform_device ambarella_fb0;
 extern struct platform_device ambarella_fb1;
 #endif
 extern struct platform_device ambarella_ir0;
-extern struct platform_device ambarella_ide0;
 extern struct platform_device ambarella_uart;
 #if (UART_INSTANCE >= 2)
 extern struct platform_device ambarella_uart1;
 #endif
 extern struct platform_device ambarella_nand;
+extern struct platform_device ambarella_nor;
 extern struct platform_device ambarella_power_supply;
 
 #ifdef CONFIG_ARCH_AMBARELLA_A5S
@@ -130,6 +130,11 @@ extern void ambarella_init_irq(void);
 extern void ambarella_irq_suspend(void);
 extern void ambarella_irq_resume(void);
 extern void ambarella_gpio_ack_irq(unsigned int irq);
+
+/* ==========================================================================*/
+extern struct toss_s *toss;
+extern int toss_switch(unsigned int personality);
+/* ==========================================================================*/
 
 #endif
 

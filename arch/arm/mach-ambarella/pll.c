@@ -37,8 +37,6 @@
 
 #define MAX_CMD_LENGTH				(32)
 
-static struct srcu_notifier_head pll_notifier_list;
-
 #if (CHIP_REV == A5S)
 static struct proc_dir_entry *mode_file = NULL;
 static struct proc_dir_entry *performance_file = NULL;
@@ -74,8 +72,8 @@ static void ambarella_adjust_jiffies(unsigned long val,
 		l_p_j_ref = loops_per_jiffy;
 		l_p_j_ref_freq = oldfreq;
 	}
-	if ((val == AMB_CPUFREQ_PRECHANGE  && oldfreq < newfreq) ||
-	    (val == AMB_CPUFREQ_POSTCHANGE && oldfreq > newfreq)) {
+	if ((val == AMBA_EVENT_PRE_CPUFREQ  && oldfreq < newfreq) ||
+	    (val == AMBA_EVENT_POST_CPUFREQ && oldfreq > newfreq)) {
 		loops_per_jiffy = ambarella_cpufreq_scale(l_p_j_ref,
 			l_p_j_ref_freq, newfreq);
 	}
@@ -104,7 +102,8 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"playback", AMB_OPERATING_MODE_PLAYBACK},
 	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
 	{"standby", AMB_OPERATING_MODE_STANDBY},
-//	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
+	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
+	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
 };
 
 static struct ambarella_pll_performance_info performance_list[] = {
@@ -182,31 +181,34 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	int					errorCode = 0;
 	amb_hal_success_t			result = AMB_HAL_SUCCESS;
 	unsigned int				oldfreq, newfreq;
-	unsigned long				flags;
 
-	/* Hold the FIO bus first */
-	fio_select_lock(SELECT_FIO_HOLD);
-
-	/* Tell everyone what we're about to do... */
-	srcu_notifier_call_chain(&pll_notifier_list,
-		AMB_CPUFREQ_PRECHANGE, NULL);
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
 
 	oldfreq = get_arm_bus_freq_hz();
-	/*  FIXME: need to adjust jiffies ? */
-	local_irq_save(flags);
+
+	local_irq_disable();
 	result = amb_set_operating_mode(HAL_BASE_VP, popmode);
+	local_irq_enable();
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
 			__func__, result);
 		errorCode = -EPERM;
 	}
-	local_irq_restore(flags);
-	newfreq = get_arm_bus_freq_hz();
-	ambarella_adjust_jiffies(AMB_CPUFREQ_POSTCHANGE, oldfreq, newfreq);
 
-	/* Tell everyone what we've just done... */
-	srcu_notifier_call_chain(&pll_notifier_list,
-		AMB_CPUFREQ_POSTCHANGE, NULL);
+	newfreq = get_arm_bus_freq_hz();
+	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
 
 	result = amb_get_operating_mode(HAL_BASE_VP, popmode);
 	if (result != AMB_HAL_SUCCESS) {
@@ -215,12 +217,8 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 		errorCode = -EPERM;
 	}
 
-	/* Release the FIO bus */
-	fio_unlock(SELECT_FIO_HOLD);
-
 	return errorCode;
 }
-EXPORT_SYMBOL(ambarella_set_operating_mode);
 
 static int ambarella_mode_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
@@ -408,7 +406,6 @@ static int ambarella_freq_proc_write(struct file *file,
 	struct ambarella_pll_info		*pll_info;
 	char					str[MAX_CMD_LENGTH];
 	int					errorCode = 0;
-	unsigned long				flags;
 	unsigned int				new_freq_cpu, cur_freq_cpu;
 	unsigned int				i;
 
@@ -443,17 +440,17 @@ static int ambarella_freq_proc_write(struct file *file,
 	if(new_freq_cpu == pll_info->armfreq)
 		goto ambarella_pll_proc_write_exit;
 
-	/* Hold the FIO bus first */
-	fio_select_lock(SELECT_FIO_HOLD);
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
 
-	/* Tell everyone what we're about to do... */
-	srcu_notifier_call_chain(&pll_notifier_list,
-		AMB_CPUFREQ_PRECHANGE, &new_freq_cpu);
-	ambarella_adjust_jiffies(AMB_CPUFREQ_PRECHANGE,
+	ambarella_adjust_jiffies(AMBA_EVENT_PRE_CPUFREQ,
 		pll_info->armfreq, new_freq_cpu);
 
-	local_irq_save(flags);
-
+	local_irq_disable();
 #if ((CHIP_REV == A2) || (CHIP_REV == A3))
 
 	do {
@@ -500,18 +497,19 @@ static int ambarella_freq_proc_write(struct file *file,
 	} while ((new_freq_cpu > pll_info->armfreq && cur_freq_cpu < new_freq_cpu) ||
 		(new_freq_cpu < pll_info->armfreq && cur_freq_cpu > new_freq_cpu));
 #endif
+	local_irq_enable();
 
-	local_irq_restore(flags);
-
-	ambarella_adjust_jiffies(AMB_CPUFREQ_POSTCHANGE,
+	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ,
 		pll_info->armfreq, new_freq_cpu);
-	srcu_notifier_call_chain(&pll_notifier_list,
-				AMB_CPUFREQ_POSTCHANGE, &new_freq_cpu);
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
 
 	pll_info->armfreq = get_core_bus_freq_hz();
-
-	/* Release the FIO bus */
-	fio_unlock(SELECT_FIO_HOLD);
 
 ambarella_pll_proc_write_exit:
 	return errorCode;
@@ -551,23 +549,9 @@ pll_general_exit:
 
 #endif	/* End for #if (CHIP_REV == A5S) */
 
-int ambarella_register_freqnotifier(struct notifier_block *nb)
-{
-	return srcu_notifier_chain_register(&pll_notifier_list, nb);
-}
-EXPORT_SYMBOL(ambarella_register_freqnotifier);
-
-int ambarella_unregister_freqnotifier(struct notifier_block *nb)
-{
-	return srcu_notifier_chain_unregister(&pll_notifier_list, nb);
-}
-EXPORT_SYMBOL(ambarella_unregister_freqnotifier);
-
 int __init ambarella_init_pll(void)
 {
 	int					errorCode = 0;
-
-	srcu_init_notifier_head(&pll_notifier_list);
 
 #if (CHIP_REV == A5S)
 	errorCode = ambarella_init_pll_a5s();
