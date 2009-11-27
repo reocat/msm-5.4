@@ -241,11 +241,15 @@ ambarella_setup_keymap_init:
 			break;
 
 		case AMBA_INPUT_SOURCE_ADC:
-			if (ambarella_setup_adc_keymap(pinfo, i) == 0) {
-				break;
-			} else {
-				return errorCode;
-			}
+#if defined (CONFIG_INPUT_AMBARELLA_ADC)
+			errorCode = ambarella_setup_adc_keymap(pinfo, i);
+			if (errorCode)
+				dev_err(&pinfo->dev->dev,
+				"ambarella_setup_adc_keymap return %d!\n",
+					errorCode);
+#endif
+			break;
+
 		case AMBA_INPUT_SOURCE_GPIO:
 			ambarella_gpio_config(pinfo->pkeymap[i].gpio_key.id, GPIO_FUNC_SW_INPUT);
 			errorCode = request_irq(

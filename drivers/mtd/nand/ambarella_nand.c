@@ -132,6 +132,7 @@ static struct nand_bbt_descr amb_2048_bbt_descr = {
 
 
 /* ==========================================================================*/
+#ifdef CONFIG_MTD_PARTITIONS
 
 #define FLDEV_CMD_LINE_SIZE	1024
 typedef struct fldev_s
@@ -216,10 +217,10 @@ typedef struct flpart_meta_s
 	u32 	crc32;
 } __attribute__((packed)) flpart_meta_t;
 
+static char part_name[PART_MAX][PART_NAME_LEN];
+#endif
 
 /* ==========================================================================*/
-
-
 #define NAND_TIMING_RSHIFT24BIT(x)	(((x) & 0xff000000) >> 24)
 #define NAND_TIMING_RSHIFT16BIT(x)	(((x) & 0x00ff0000) >> 16)
 #define NAND_TIMING_RSHIFT8BIT(x)	(((x) & 0x0000ff00) >> 8)
@@ -1355,7 +1356,6 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition			amboot_partitions[PART_MAX + CMDLINE_PART_MAX];
-	char 					part_name[PART_MAX][PART_NAME_LEN];
 	flpart_meta_t				meta_table;
 	int					meta_numpages, meta_offpage;
 	int					from, retlen, found, i;
