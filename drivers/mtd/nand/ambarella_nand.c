@@ -1356,6 +1356,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition			amboot_partitions[PART_MAX + CMDLINE_PART_MAX];
+	int					amboot_nr_partitions = 0;
 	flpart_meta_t				meta_table;
 	int					meta_numpages, meta_offpage;
 	int					from, retlen, found, i;
@@ -1504,6 +1505,11 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_mtd_error;
 
 #ifdef CONFIG_MTD_PARTITIONS
+	/* struct  flpart_table_t contains the meta data which contains the
+	  * partition info.
+	  * meta_offpage indicate the offset from each block
+	  * meta_numpages indicate the size of the meta data
+	  */
 	meta_offpage = sizeof(flpart_table_t) / mtd->writesize;
 	meta_numpages = sizeof(flpart_meta_t) / mtd->writesize;
 	if (sizeof(flpart_meta_t) % mtd->writesize)
@@ -1516,9 +1522,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_mtd_error;
 	}
 
-	/* find the meta data which contains the partition info, 
-	  * start from the second block 
-	  */
+	/* find the meta data, start from the second block */
 	found = 0;
 	for (from = mtd->erasesize; from < mtd->size; from += mtd->erasesize) {
 		if (mtd->block_isbad(mtd, from)) {
@@ -1549,11 +1553,40 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 	dev_info(nand_info->dev, "%s: Partition infomation found!\n", __func__);
 	memset(amboot_partitions, 0, sizeof(amboot_partitions));
+
+	/*
+	  * found swp partition, and with it as a benchmark to adjust each
+	  * partitions's offset
+	  * adjust rules:
+	  * 1. if before swp partition,
+	  *	if the partition's nblk (size) is 0, make its sblk and nblk
+	  *	equal to the previous one;
+	  * 2. if after swp partition,
+	  *	if the partition's nblk (size) is 0, skip the partition;
+	  */
+	amboot_nr_partitions = 0;
+	found = 0;
 	for (i = 0; i < PART_MAX; i++) {
+		if (!found && !strncmp(meta_table.part_info[i].name, "swp", 3)) {
+			found = 1;
+		}
+		if (found) {
+			if (meta_table.part_info[i].nblk == 0)
+				continue;
+		} else {
+			/* bst partition should be always exist */
+			if (i > 0 && meta_table.part_info[i].nblk == 0) {
+				meta_table.part_info[i].sblk =
+					meta_table.part_info[i-1].sblk;
+				meta_table.part_info[i].nblk =
+					meta_table.part_info[i-1].nblk;
+			}
+		}
 		strcpy(part_name[i], meta_table.part_info[i].name);
-		amboot_partitions[i].name = part_name[i];
-		amboot_partitions[i].offset = meta_table.part_info[i].sblk * mtd->erasesize;
-		amboot_partitions[i].size = meta_table.part_info[i].nblk * mtd->erasesize;
+		amboot_partitions[amboot_nr_partitions].name = part_name[i];
+		amboot_partitions[amboot_nr_partitions].offset = meta_table.part_info[i].sblk * mtd->erasesize;
+		amboot_partitions[amboot_nr_partitions].size = meta_table.part_info[i].nblk * mtd->erasesize;
+		amboot_nr_partitions++;
 	}
 
 #ifdef CONFIG_MTD_CMDLINE_PARTS
@@ -1573,13 +1606,11 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	  * offset to make it append to the existent partitions
 	  */
 	if (cmd_partitions->offset == 0) {
-		uint64_t offset = 0;
 		struct mtd_partition *p_cmdpart = cmd_partitions;
-		struct mtd_partition *p_ambpart = NULL;
+		struct mtd_partition *p_ambpart = amboot_partitions;
 		/* find the last partition getting from amboot */
-		for (i = 0; i < PART_MAX; i++) {
-			if (amboot_partitions[i].offset > offset) {
-				offset = amboot_partitions[i].offset;
+		for (i = 1; i < amboot_nr_partitions; i++) {
+			if (amboot_partitions[i].offset > p_ambpart->offset) {
 				p_ambpart = &amboot_partitions[i];
 			}
 		}
@@ -1606,7 +1637,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 	/* append the cmdline partitions to partitions from amboot. */
 	for (i = 0; i < cmd_nr_partitions; i++) {
-		memcpy(&amboot_partitions[PART_MAX+i],
+		memcpy(&amboot_partitions[amboot_nr_partitions + i],
 			cmd_partitions++, sizeof(struct mtd_partition));
 	}
 
@@ -1615,7 +1646,7 @@ ambarella_nand_probe_add_partitions:
 	i = 0;
 	if (cmd_nr_partitions >= 0)
 		i = cmd_nr_partitions;
-	add_mtd_partitions(mtd, amboot_partitions, PART_MAX + i);
+	add_mtd_partitions(mtd, amboot_partitions, amboot_nr_partitions + i);
 #else
 	add_mtd_device(&nand_info->mtd);
 #endif
