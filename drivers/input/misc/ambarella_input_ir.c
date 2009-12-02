@@ -193,6 +193,7 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 	int				rval;
 	u32				uid;
 	u32				edges;
+	int				count;
 
 	pinfo = (struct ambarella_ir_info *)devid;
 
@@ -203,6 +204,10 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		while (amba_readl(pinfo->regbase + IR_STATUS_OFFSET) > 0) {
 			amba_readl(pinfo->regbase + IR_DATA_OFFSET);
 		}
+		amba_writel(pinfo->regbase + IR_CONTROL_OFFSET,
+			(amba_readl(pinfo->regbase + IR_CONTROL_OFFSET) |
+		IR_CONTROL_FIFO_OV));
+
 		dev_err(&pinfo->input_center->dev->dev, "IR_CONTROL_FIFO_OV overflow\n");
 
 		goto ambarella_ir_irq_exit;
@@ -210,7 +215,11 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 
 	size = ambarella_ir_update_buffer(pinfo);
 
+	if(!pinfo->ir_parse)
+		goto ambarella_ir_irq_exit;
+
 	rval = pinfo->ir_parse(pinfo, &uid);
+
 	if (rval == 0) {// yes, we find the key
 		if(print_ir_keycode)
 			printk(KERN_NOTICE "uid = 0x%08x\n", uid);
@@ -328,7 +337,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	struct resource 		*ioarea;
 	struct proc_dir_entry		*input_file;
 
-	pinfo = kmalloc(sizeof(struct ambarella_ir_info), GFP_KERNEL);
+	pinfo = kzalloc(sizeof(struct ambarella_ir_info), GFP_KERNEL);
 	if (!pinfo) {
 		dev_err(&pdev->dev, "Failed to allocate pinfo!\n");
 		errorCode = -ENOMEM;
