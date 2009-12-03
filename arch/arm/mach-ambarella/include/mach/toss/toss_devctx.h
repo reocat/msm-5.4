@@ -27,11 +27,16 @@ __ARMCC_PACK__ struct toss_devctx_time_s
  */
 __ARMCC_PACK__ struct toss_devctx_sd_card_s
 {
-#define MAX_TOSS_DEVCTX_SD_BUS	2
-#define MAX_TOSS_DEVCTX_SD_SLOT	2
+#define MAX_TOSS_DEVCTX_SD_HOST		2
+#define MAX_TOSS_DEVCTX_SD_CARD		2
 	__ARMCC_PACK__ struct {
-		unsigned int changed;	/* Insert/eject event occured */
-	} __ATTRIB_PACK__ card[MAX_TOSS_DEVCTX_SD_BUS][MAX_TOSS_DEVCTX_SD_SLOT];
+		unsigned int state;
+#define TOSS_SDCTX_CHANGE	0x1	/* card state change event */
+					/* Set this bit to validate the reamin bits fields. */
+#define TOSS_SDCTX_INSERT	0x2	/* card eject event */
+#define TOSS_SDCTX_EJECT	0x4	/* card insert event */
+#define TOSS_SDCTX_WRITE	0x8	/* card write event */
+	} __ATTRIB_PACK__ card[MAX_TOSS_DEVCTX_SD_HOST][MAX_TOSS_DEVCTX_SD_CARD];
 } __ATTRIB_PACK__;
 
 
@@ -54,7 +59,7 @@ __ARMCC_PACK__ struct toss_devctx_dsp_s
 __ARMCC_PACK__ struct toss_devctx_s
 {
 	struct toss_devctx_time_s	time;
-	struct toss_devctx_sd_card_s	sd_card;
+	struct toss_devctx_sd_card_s	sd;
 	struct toss_devctx_dsp_s	dsp;
 } __ATTRIB_PACK__;
 

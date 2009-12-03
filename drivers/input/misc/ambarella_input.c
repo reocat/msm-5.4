@@ -218,6 +218,7 @@ static int __devinit ambarella_setup_keymap(struct ambarella_input_info *pinfo)
 			keymap_name, &pinfo->dev->dev);
 		if (errorCode) {
 			dev_err(&pinfo->dev->dev, "Can't load firmware, use default\n");
+			errorCode = 0;
 			goto ambarella_setup_keymap_init;
 		}
 		dev_notice(&pinfo->dev->dev, "Load %s, size = %d\n",
