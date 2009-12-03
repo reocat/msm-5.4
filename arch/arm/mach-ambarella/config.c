@@ -893,15 +893,6 @@ struct platform_device ambarella_uart1 = {
 #endif
 
 /* ==========================================================================*/
-static u32 sd_pll_enabled = 0;
-void set_sd_pll(void)
-{
-	if (!sd_pll_enabled) {
-		sd_pll_enabled = 1;
-		rct_set_sd_pll(48000000);
-	}
-}
-
 static struct resource ambarella_sd0_resources[] = {
 	[0] = {
 		.start	= SD_BASE,
@@ -1003,8 +994,14 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #endif
 	.clk_limit		= 12500000,
 	.wait_tmo		= (5 * HZ),
-	.set_pll		= set_sd_pll,
+	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
+#if (SD_SUPPORT_PLL_SCALER == 1)
+	.support_pll_scaler	= 1,
+#else
+	.support_pll_scaler	= 0,
+#endif
+	.max_clk		= 48000000,
 };
 
 struct platform_device ambarella_sd0 = {
@@ -1079,8 +1076,14 @@ static struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
 	.wait_tmo		= (5 * HZ),
-	.set_pll		= set_sd_pll,
+	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
+#if (SD_SUPPORT_PLL_SCALER == 1)
+	.support_pll_scaler	= 1,
+#else
+	.support_pll_scaler	= 0,
+#endif
+	.max_clk		= 48000000,
 };
 
 struct platform_device ambarella_sd1 = {

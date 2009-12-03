@@ -1143,7 +1143,7 @@ static void ambarella_sd_send_cmd(
 static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u16					clk_div;
+	u16					clk_div = 0x00;
 	u16					clkreg;
 	u32					sd_clk;
 	u32					desired_clk;
@@ -1152,10 +1152,8 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	pinfo->pcontroller->clk_limit = min(pinfo->pcontroller->get_pll(),
-		pinfo->pcontroller->clk_limit);
-	mmc->f_max = pinfo->pcontroller->clk_limit;
-	mmc->f_min = pinfo->pcontroller->get_pll() >> 8;
+	if (pinfo->pcontroller->clk_limit > pinfo->pcontroller->max_clk)
+		pinfo->pcontroller->clk_limit = pinfo->pcontroller->max_clk;
 
 	if (clk == 0) {
 		amba_writew(pinfo->regbase + SD_CLK_OFFSET, 0);
@@ -1174,26 +1172,43 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		pslotinfo->dma_r_counter = 0;
 #endif
 	} else {
-		sd_clk = pinfo->pcontroller->get_pll();
-		ambsd_dbg(pslotinfo, "sd_clk = %d.\n", sd_clk);
-
 		desired_clk = clk;
-		for (clk_div = 0x0; clk_div <= 0x80;) {
-			if (clk_div == 0)
-				actual_clk = sd_clk;
-			else
-				actual_clk = sd_clk / (clk_div << 1);
+		if (desired_clk > pinfo->pcontroller->clk_limit)
+			desired_clk = pinfo->pcontroller->clk_limit;
 
-			if (actual_clk <= desired_clk)
-				break;
+		if (pinfo->pcontroller->support_pll_scaler) {
+			if (desired_clk < 10000000) {
+				/* Below 10Mhz, divide by sd controller */
+				pinfo->pcontroller->set_pll(
+					pinfo->pcontroller->clk_limit);
+				clk_div = 0x80;
+				actual_clk = pinfo->pcontroller->get_pll();
+				actual_clk /= 256;
+			} else {
+				pinfo->pcontroller->set_pll(desired_clk);
+				actual_clk = pinfo->pcontroller->get_pll();
+			}
+		} else {
+			pinfo->pcontroller->set_pll(48000000);
+			sd_clk = pinfo->pcontroller->get_pll();
+			for (clk_div = 0x0; clk_div <= 0x80;) {
+				if (clk_div == 0)
+					actual_clk = sd_clk;
+				else
+					actual_clk = sd_clk / (clk_div << 1);
 
-			if (clk_div >= 0x80)
-				break;
+				if (actual_clk <= desired_clk)
+					break;
 
-			if (clk_div == 0x0)
-				clk_div = 0x1;
-			else
-				clk_div <<= 1;
+				if (clk_div >= 0x80)
+					break;
+
+				if (clk_div == 0x0)
+					clk_div = 0x1;
+				else
+					clk_div <<= 1;
+			}
+			ambsd_dbg(pslotinfo, "sd_clk = %d.\n", sd_clk);
 		}
 		ambsd_dbg(pslotinfo, "desired_clk = %d.\n", desired_clk);
 		ambsd_dbg(pslotinfo, "actual_clk = %d.\n", actual_clk);
@@ -1455,7 +1470,7 @@ ambarella_sd_request_need_reset:
 				pslotinfo->state, mrq->cmd->opcode,
 				card_sta, error_id);
 
-		//ambarella_sd_reset_all(pslotinfo->mmc);
+		ambarella_sd_reset_all(pslotinfo->mmc);
 		ambarella_sd_reset_cmd_line(pslotinfo->mmc);
 		ambarella_sd_reset_data_line(pslotinfo->mmc);
 	}
@@ -1564,7 +1579,6 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		errorCode = -EPERM;
 		goto sd_errorCode_free_pinfo;
 	}
-	pinfo->pcontroller->set_pll();
 
 	if (pinfo->pcontroller->wait_tmo <
 		CONFIG_SD_AMBARELLA_WAIT_TIMEOUT) {
@@ -1575,6 +1589,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			CONFIG_SD_AMBARELLA_WAIT_TIMEOUT;
 	}
 
+	pinfo->pcontroller->set_pll(pinfo->pcontroller->max_clk);
 	clock_min = pinfo->pcontroller->get_pll() >> 8;
 	if (pinfo->pcontroller->clk_limit < clock_min) {
 		dev_dbg(&pdev->dev,
@@ -1625,7 +1640,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				SD_CAP_TOCLK_FREQ(hc_cap));
 
 		mmc->f_min = clock_min;
-		mmc->f_max = pinfo->pcontroller->clk_limit;
+		mmc->f_max = pinfo->pcontroller->max_clk;
 		dev_dbg(&pdev->dev,
 			"SD Clock: base[%dMHz], min[%dHz], max[%dHz].\n",
 			SD_CAP_BASE_FREQ(hc_cap),
@@ -1916,8 +1931,12 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
 
-			if (pslotinfo->mmc);
+			if (pslotinfo->mmc) {
+				ambarella_sd_reset_all(pslotinfo->mmc);
+				ambarella_sd_reset_cmd_line(pslotinfo->mmc);
+				ambarella_sd_reset_data_line(pslotinfo->mmc);
 				mmc_free_host(pslotinfo->mmc);
+			}
 		}
 
 		release_mem_region(pinfo->mem->start,
