@@ -87,6 +87,7 @@ struct platform_device ambarella_power_supply = {
 static int ambarella_pm_enter_standby(void)
 {
 	int					errorCode = 0;
+	unsigned long				flags;
 #if (CHIP_REV == A5S)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
@@ -99,7 +100,16 @@ static int ambarella_pm_enter_standby(void)
 			__func__, errorCode);
 	}
 
+	local_irq_save(flags);
+
 	ambarella_irq_suspend();
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, errorCode);
+	}
 
 #if (CHIP_REV == A5S)
 	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
@@ -108,11 +118,9 @@ static int ambarella_pm_enter_standby(void)
 			__func__, result);
 		errorCode = -EPERM;
 	}
-
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
-	local_irq_disable();
+
 	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
-	local_irq_enable();
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
 			__func__, result);
@@ -122,7 +130,16 @@ static int ambarella_pm_enter_standby(void)
 	pr_err("%s: Can't support standby\n", __func__);
 #endif
 
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_POST_PM, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, errorCode);
+	}
+
 	ambarella_irq_resume();
+
+	local_irq_restore(flags);
 
 	errorCode = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_POST_PM, NULL));

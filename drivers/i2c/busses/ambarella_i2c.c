@@ -123,22 +123,17 @@ static int ambarella_i2c_system_event(struct notifier_block *nb,
 
 	switch (val) {
 	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_info("%s[%d]: Pre Change\n", __func__, pdev->id);
+		pr_debug("%s[%d]: Pre Change\n", __func__, pdev->id);
 		down(&pinfo->system_event_sem);
 		break;
 
 	case AMBA_EVENT_POST_CPUFREQ:
-		pr_info("%s[%d]: Post Change\n", __func__, pdev->id);
+		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
 		ambarella_i2c_set_clk(pinfo);
 		up(&pinfo->system_event_sem);
 		break;
 
-	case AMBA_EVENT_PRE_PM:
-	case AMBA_EVENT_POST_PM:
-		break;
-
 	default:
-		pr_warning("%s: unknown event %ld\n", __func__, val);
 		break;
 	}
 

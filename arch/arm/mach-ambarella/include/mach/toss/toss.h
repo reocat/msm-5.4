@@ -76,8 +76,13 @@ __ARMCC_PACK__ struct toss_personality_s
 	struct toss_arm_state_s state;	/* ARM state */
 } __ATTRIB_PACK__;
 
+#if defined(__PRKERNEL_AMB__)
 #include <toss_hwctx.h>
 #include <toss_devctx.h>
+#else
+#include <mach/toss/toss_hwctx.h>
+#include <mach/toss/toss_devctx.h>
+#endif
 
 /*
  * Data structure versioning checksum;
@@ -100,8 +105,9 @@ __ARMCC_PACK__ struct toss_s
 	unsigned char vtext[4096 * VTEXT_PAGES];
 
 	unsigned int active;		/* The active personality */
+	unsigned int oldctx;		/* The old personality */
 	void (*vtext_toss_handoff)(unsigned int, unsigned int);
-	unsigned char pad0[248];
+	unsigned char pad0[244];
 
 	/* Checksum versioning */
 	struct toss_header_chksum_s header_chksum[MAX_TOSS_PERSONALITY];

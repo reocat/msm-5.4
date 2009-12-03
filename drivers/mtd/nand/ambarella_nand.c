@@ -396,12 +396,12 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 
 	switch (val) {
 	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_info("%s: Pre Change\n", __func__);
+		pr_debug("%s: Pre Change\n", __func__);
 		down(&nand_info->system_event_sem);
 		break;
 
 	case AMBA_EVENT_POST_CPUFREQ:
-		pr_info("%s: Post Change\n", __func__);
+		pr_debug("%s: Post Change\n", __func__);
 		/* The timming register is default value,
 		 * it's big enough to operate
 		 * with NAND, so no need to change it. */
@@ -431,12 +431,7 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 		up(&nand_info->system_event_sem);
 		break;
 
-	case AMBA_EVENT_PRE_PM:
-	case AMBA_EVENT_POST_PM:
-		break;
-
 	default:
-		pr_warning("%s: unknown event %ld\n", __func__, val);
 		break;
 	}
 

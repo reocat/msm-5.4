@@ -132,7 +132,6 @@ extern void ambarella_irq_resume(void);
 extern void ambarella_gpio_ack_irq(unsigned int irq);
 
 /* ==========================================================================*/
-extern struct toss_s *toss;
 extern int toss_switch(unsigned int personality);
 /* ==========================================================================*/
 
