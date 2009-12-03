@@ -2035,24 +2035,43 @@ struct platform_device ambarella_adc0 = {
 };
 
 /* ==========================================================================*/
-static BLOCKING_NOTIFIER_HEAD(event_notifier_list);
+static BLOCKING_NOTIFIER_HEAD(blocking_event_list);
+static RAW_NOTIFIER_HEAD(raw_event_list);
 
 /* ==========================================================================*/
 int ambarella_register_event_notifier(void *nb)
 {
-	return blocking_notifier_chain_register(&event_notifier_list, nb);
+	return blocking_notifier_chain_register(&blocking_event_list, nb);
 }
 EXPORT_SYMBOL(ambarella_register_event_notifier);
 
 int ambarella_unregister_event_notifier(void *nb)
 {
-	return blocking_notifier_chain_unregister(&event_notifier_list, nb);
+	return blocking_notifier_chain_unregister(&blocking_event_list, nb);
 }
 EXPORT_SYMBOL(ambarella_unregister_event_notifier);
 
 int ambarella_set_event(unsigned long val, void *v)
 {
-	return blocking_notifier_call_chain(&event_notifier_list, val, v);
+	return blocking_notifier_call_chain(&blocking_event_list, val, v);
 }
 EXPORT_SYMBOL(ambarella_set_event);
+
+int ambarella_register_raw_event_notifier(void *nb)
+{
+	return raw_notifier_chain_register(&raw_event_list, nb);
+}
+EXPORT_SYMBOL(ambarella_register_raw_event_notifier);
+
+int ambarella_unregister_raw_event_notifier(void *nb)
+{
+	return raw_notifier_chain_unregister(&raw_event_list, nb);
+}
+EXPORT_SYMBOL(ambarella_unregister_raw_event_notifier);
+
+int ambarella_set_raw_event(unsigned long val, void *v)
+{
+	return raw_notifier_call_chain(&raw_event_list, val, v);
+}
+EXPORT_SYMBOL(ambarella_set_raw_event);
 

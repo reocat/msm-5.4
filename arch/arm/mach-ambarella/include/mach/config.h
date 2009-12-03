@@ -102,6 +102,9 @@ extern u32 ambarella_virt_to_phys(u32 vaddr);
 extern int ambarella_register_event_notifier(void *nb);
 extern int ambarella_unregister_event_notifier(void *nb);
 extern int ambarella_set_event(unsigned long val, void *v);
+extern int ambarella_register_raw_event_notifier(void *nb);
+extern int ambarella_unregister_raw_event_notifier(void *nb);
+extern int ambarella_set_raw_event(unsigned long val, void *v);
 
 struct ambarella_mem_rev_desc {
 	unsigned long physaddr;
@@ -124,6 +127,7 @@ struct ambarella_mem_hal_desc {
 extern u64 ambarella_dmamask;
 extern u32 ambarella_debug_level;
 extern u32 ambarella_debug_info;
+extern struct toss_s *toss;
 
 struct ambarella_gpio_power_info {
 	int	power_gpio;
@@ -329,6 +333,8 @@ struct ambarella_adc_controller {
 #define AMBA_EVENT_POST_CPUFREQ		(1)
 #define AMBA_EVENT_PRE_PM		(2)
 #define AMBA_EVENT_POST_PM		(3)
+#define AMBA_EVENT_PRE_TOSS		(4)
+#define AMBA_EVENT_POST_TOSS		(5)
 
 #endif
 

@@ -20,7 +20,7 @@
 #include <asm/setup.h>
 #include <asm/mach/map.h>
 
-#include <toss.h>
+#include <mach/toss/toss.h>
 
 #define HOTBOOT_MEM_ADDR	(ambarella_phys_to_virt(0xc007fff0))
 #define HOTBOOT_MAGIC0		(0x14cd78a0)
@@ -37,6 +37,7 @@ int toss_switch(unsigned int personality)
 	int rval = 0;
 	unsigned int idx_this, idx_that;
 	struct toss_personality_s *os_this, *os_that;
+	unsigned long flags;
 
 	if (toss == NULL) {
 		pr_err("toss: inactive!\n");
@@ -72,16 +73,45 @@ int toss_switch(unsigned int personality)
 
 	pr_notice("toss: handing off from linux\n");
 
-	local_irq_disable();
+	rval = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_PRE_TOSS, NULL));
+	if (rval) {
+		pr_err("%s: AMBA_EVENT_PRE_TOSS failed(%d)\n",
+			__func__, rval);
+	}
 
+	local_irq_save(flags);
+
+	rval = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_PRE_TOSS, NULL));
+	if (rval) {
+		pr_err("%s: AMBA_EVENT_PRE_TOSS failed(%d)\n",
+			__func__, rval);
+	}
+
+	toss->oldctx = toss->active;
 	toss->active = personality;
 	os_that->activated++;
 	toss->vtext_toss_handoff((unsigned int) &os_this->state,
 				 (unsigned int) &os_that->state);
 
-	local_irq_enable();
+	rval = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_POST_TOSS, NULL));
+	if (rval) {
+		pr_err("%s: AMBA_EVENT_POST_TOSS failed(%d)\n",
+			__func__, rval);
+	}
 
-	pr_notice("toss: linux resumes control\n");	
+	local_irq_restore(flags);
+
+	rval = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_POST_TOSS, NULL));
+	if (rval) {
+		pr_err("%s: AMBA_EVENT_POST_TOSS failed(%d)\n",
+			__func__, rval);
+	}
+
+	pr_notice("toss: linux resumes control\n");
 
 done:
 

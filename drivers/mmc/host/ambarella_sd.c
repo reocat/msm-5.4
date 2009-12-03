@@ -1487,12 +1487,12 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 
 	switch (val) {
 	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_info("%s[%d]: Pre Change\n", __func__, pslotinfo->slot_id);
+		pr_debug("%s[%d]: Pre Change\n", __func__, pslotinfo->slot_id);
 		down(&pslotinfo->system_event_sem);
 		break;
 
 	case AMBA_EVENT_POST_CPUFREQ:
-		pr_info("%s[%d]: Post Change\n", __func__, pslotinfo->slot_id);
+		pr_debug("%s[%d]: Post Change\n", __func__, pslotinfo->slot_id);
 		msleep(10);
 		ambarella_sd_set_clk(pslotinfo->mmc,
 			pinfo->controller_ios.clock);
@@ -1500,12 +1500,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 		up(&pslotinfo->system_event_sem);
 		break;
 
-	case AMBA_EVENT_PRE_PM:
-	case AMBA_EVENT_POST_PM:
-		break;
-
 	default:
-		pr_warning("%s: unknown event %ld\n", __func__, val);
 		break;
 	}
 

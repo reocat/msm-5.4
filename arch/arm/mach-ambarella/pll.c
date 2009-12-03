@@ -181,6 +181,7 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	int					errorCode = 0;
 	amb_hal_success_t			result = AMB_HAL_SUCCESS;
 	unsigned int				oldfreq, newfreq;
+	unsigned long				flags;
 
 	errorCode = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
@@ -191,14 +192,31 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 
 	oldfreq = get_arm_bus_freq_hz();
 
-	local_irq_disable();
+	local_irq_save(flags);
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
+
 	result = amb_set_operating_mode(HAL_BASE_VP, popmode);
-	local_irq_enable();
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
+
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
 			__func__, result);
 		errorCode = -EPERM;
 	}
+
+	local_irq_restore(flags);
 
 	newfreq = get_arm_bus_freq_hz();
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
@@ -408,6 +426,7 @@ static int ambarella_freq_proc_write(struct file *file,
 	int					errorCode = 0;
 	unsigned int				new_freq_cpu, cur_freq_cpu;
 	unsigned int				i;
+	unsigned long				flags;
 
 	pll_info = (struct ambarella_pll_info *)data;
 
@@ -450,7 +469,15 @@ static int ambarella_freq_proc_write(struct file *file,
 	ambarella_adjust_jiffies(AMBA_EVENT_PRE_CPUFREQ,
 		pll_info->armfreq, new_freq_cpu);
 
-	local_irq_disable();
+	local_irq_save(flags);
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
+
 #if ((CHIP_REV == A2) || (CHIP_REV == A3))
 
 	do {
@@ -497,7 +524,14 @@ static int ambarella_freq_proc_write(struct file *file,
 	} while ((new_freq_cpu > pll_info->armfreq && cur_freq_cpu < new_freq_cpu) ||
 		(new_freq_cpu < pll_info->armfreq && cur_freq_cpu > new_freq_cpu));
 #endif
-	local_irq_enable();
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
+
+	local_irq_restore(flags);
 
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ,
 		pll_info->armfreq, new_freq_cpu);
