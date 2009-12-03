@@ -77,7 +77,6 @@ struct ambarella_nand_set
 	int				nr_partitions;
 	char				*name;
 	int				*nr_map;
-	struct mtd_partition		*partitions;
 };
 
 struct ambarella_platform_nand 

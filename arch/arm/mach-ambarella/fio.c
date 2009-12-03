@@ -75,10 +75,7 @@ void fio_select_lock(int module)
 			fio_ctr &= ~FIO_CTR_XD;
 			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_CF;
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-#ifdef CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS
-			//Disable SD2 in CF BUS mode(PC Mem or PC IO)
 			fio_amb_sd2_disable();
-#endif
 			fio_amb_cf_enable();
 #endif
 			break;
@@ -95,10 +92,7 @@ void fio_select_lock(int module)
 
 		case SELECT_FIO_SD2:
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-#ifdef CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS
-			//Disable CF in CF BUS mode(PC Mem or PC IO)
 			fio_amb_cf_disable();
-#endif
 			fio_amb_sd2_enable();
 #endif
 			break;
@@ -114,7 +108,7 @@ void fio_select_lock(int module)
 
 void fio_unlock(int module)
 {
-#if (SD_HAS_INTERNAL_MUXER == 1) && !defined(CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS)
+#if (SD_HAS_INTERNAL_MUXER == 1)
 	u32 fio_ctr;
 	u32 fio_dmactr;
 #endif
@@ -126,7 +120,7 @@ void fio_unlock(int module)
 			pr_err("%s: fio_owner[%d] counter is 0!.\n",
 				__func__, module);
 
-#if (SD_HAS_INTERNAL_MUXER == 1) && !defined(CONFIG_BLK_DEV_IDE_AMBARELLA_FULL_CF_BUS)
+#if (SD_HAS_INTERNAL_MUXER == 1)
 		if ((fio_select_sdio_as_default) && (fio_owner_counter == 0) &&
 			(fio_owner != SELECT_FIO_SDIO)) {
 			fio_ctr = amba_readl(FIO_CTR_REG);
@@ -137,6 +131,13 @@ void fio_unlock(int module)
 
 			amba_writel(FIO_CTR_REG, fio_ctr);
 			amba_writel(FIO_DMACTR_REG, fio_dmactr);
+		}
+#endif
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+		if ((fio_select_sdio_as_default) && (fio_owner_counter == 0) &&
+			(fio_owner == SELECT_FIO_CF)) {
+			fio_amb_cf_disable();
+			fio_amb_sd2_enable();
 		}
 #endif
 

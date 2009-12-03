@@ -109,7 +109,6 @@ extern void ambarella_map_io(void);
 extern int ambarella_create_proc_dir(void);
 
 extern int ambarella_init_toss(void);
-extern int ambarella_init_nand(void *);
 extern int ambarella_init_gpio(void);
 extern int ambarella_init_fio(void);
 extern int ambarella_init_dma(void);

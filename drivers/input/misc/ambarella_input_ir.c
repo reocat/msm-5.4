@@ -193,7 +193,6 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 	int				rval;
 	u32				uid;
 	u32				edges;
-	int				count;
 
 	pinfo = (struct ambarella_ir_info *)devid;
 
@@ -225,7 +224,6 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 			printk(KERN_NOTICE "uid = 0x%08x\n", uid);
 		ambarella_input_report_ir(pinfo, uid);
 	}
-
 
 	pinfo->frame_data_to_received = pinfo->frame_info.frame_data_size +
 		pinfo->frame_info.frame_head_size;

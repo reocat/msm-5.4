@@ -429,27 +429,6 @@ static void __init early_toss(char **p)
 }
 __early_param("toss=", early_toss);
 
-static int __init parse_mem_tag_toss(const struct tag *tag)
-{
-	if ((tag->u.ramdisk.start & MEM_MAP_CHECK_MASK) ||
-		(tag->u.ramdisk.start < DEFAULT_MEM_START)) {
-		pr_err("Ambarella: Bad TOSS pstart 0x%x\n", tag->u.ramdisk.start);
-		return -EINVAL;
-	}
-
-	if (tag->u.ramdisk.flags & MEM_MAP_CHECK_MASK) {
-		pr_err("Ambarella: Bad TOSS vstart 0x%x\n", tag->u.ramdisk.flags);
-		return -EINVAL;
-	}
-
-	ambarella_io_desc[5].io_desc.virtual = tag->u.ramdisk.flags;
-	ambarella_io_desc[5].io_desc.pfn = __phys_to_pfn(tag->u.ramdisk.start);
-	ambarella_io_desc[5].io_desc.length = tag->u.ramdisk.size;
-
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_TOSS, parse_mem_tag_toss);
-
 u32 get_ambarella_ppm_phys(void)
 {
 	return __pfn_to_phys(ambarella_io_desc[2].io_desc.pfn);
@@ -709,14 +688,10 @@ void *get_ambarella_hal_vp(void)
 #endif
 
 /* ==========================================================================*/
-static char ambarella_nand_default_partition_name[MAX_AMBOOT_PARTITION_NR][MAX_AMBOOT_PARTITION_NANE_SIZE];
-static struct mtd_partition ambarella_nand_default_partition[MAX_AMBOOT_PARTITION_NR];
-
 static struct ambarella_nand_set ambarella_nand_default_set = {
 	.name		= "ambarella_nand_set",
 	.nr_chips	= 1,
 	.nr_partitions	= 0,
-	.partitions	= ambarella_nand_default_partition,
 };
 
 static struct ambarella_nand_timing ambarella_nand_default_timing = {
@@ -753,99 +728,6 @@ static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.request	= fio_amb_nand_request,
 	.release	= fio_amb_nand_release,
 };
-
-static int __init ambarella_add_partition(const struct tag *tag,
-	char *name,
-	u32 check_size)
-{
-	int					errCode = 0;
-	int					nr_partitions;
-
-	nr_partitions = ambarella_nand_default_set.nr_partitions;
-	if (nr_partitions < MAX_AMBOOT_PARTITION_NR) {
-		if (check_size && (tag->u.ramdisk.size == 0)) {
-			errCode = -1;
-			goto ambarella_add_partition_exit;
-		}
-		snprintf(ambarella_nand_default_partition_name[nr_partitions],
-			MAX_AMBOOT_PARTITION_NANE_SIZE,
-			"%s@%d",
-			name, nr_partitions);
-		ambarella_nand_default_partition[nr_partitions].name =
-			ambarella_nand_default_partition_name[nr_partitions];
-		ambarella_nand_default_partition[nr_partitions].offset =
-			tag->u.ramdisk.start;
-		ambarella_nand_default_partition[nr_partitions].size =
-			tag->u.ramdisk.size;
-		ambarella_nand_default_partition[nr_partitions].mask_flags =
-			tag->u.ramdisk.flags;
-		ambarella_nand_default_set.nr_partitions++;
-	}
-
-ambarella_add_partition_exit:
-
-	return errCode;
-}
-
-static int __init parse_partition_tag_bst(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "BST", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_BST, parse_partition_tag_bst);
-
-static int __init parse_partition_tag_ptb(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "PTB", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_PTB, parse_partition_tag_ptb);
-
-static int __init parse_partition_tag_bld(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "BLD", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_BLD, parse_partition_tag_bld);
-
-static int __init parse_partition_tag_pri(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "PRI", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_PRI, parse_partition_tag_pri);
-
-static int __init parse_partition_tag_rom(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "ROM", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_ROM, parse_partition_tag_rom);
-
-static int __init parse_partition_tag_ram(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "RAM", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_RAM, parse_partition_tag_ram);
-
-static int __init parse_partition_tag_bak(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "BAK", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_BAK, parse_partition_tag_bak);
-
-static int __init parse_partition_tag_pba(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "PBA", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_PBA, parse_partition_tag_pba);
-
-static int __init parse_partition_tag_dsp(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "DSP", 1);
-}
-__tagtable(ATAG_AMBARELLA_NAND_DSP, parse_partition_tag_dsp);
-
-static int __init parse_partition_tag_nftl(const struct tag *tag)
-{
-	return ambarella_add_partition(tag, "UserFS", 0);
-}
-__tagtable(ATAG_AMBARELLA_NAND_NFTL, parse_partition_tag_nftl);
 
 static int __init parse_nand_tag_cs(const struct tag *tag)
 {
@@ -938,16 +820,6 @@ struct platform_device ambarella_nor = {
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
-
-int __init ambarella_init_nand(void *nand_info)
-{
-	int					errCode = 0;
-
-	if (nand_info)
-		ambarella_nand.dev.platform_data = nand_info;
-
-	return errCode;
-}
 
 /* ==========================================================================*/
 static struct uart_port	ambarella_uart_port_resource[] = {

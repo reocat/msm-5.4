@@ -147,9 +147,6 @@ static void __init ambarella_init(void)
 
 	boot_from = rct_boot_from();
 	if ((boot_from & BOOT_FROM_NAND) == BOOT_FROM_NAND) {
-		errorCode = ambarella_init_nand(NULL);
-		BUG_ON(errorCode != 0);
-
 		platform_device_register(&ambarella_nand);
 		device_set_wakeup_capable(&ambarella_nand.dev, 1);
 		device_set_wakeup_enable(&ambarella_nand.dev, 0);

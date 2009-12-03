@@ -34,7 +34,6 @@
 #define ATAG_AMBARELLA_BSB		0x44000044
 #define ATAG_AMBARELLA_REVMEM		0x44001111
 #define ATAG_AMBARELLA_HAL		0x44000722
-#define ATAG_AMBARELLA_TOSS		0x44001120
 
 #define ATAG_AMBARELLA_NAND_BST		0x44040400
 #define ATAG_AMBARELLA_NAND_BLD		0x44040401
@@ -91,10 +90,6 @@ extern u32 get_ambarella_bsbmem_size(void);
 extern u32 get_ambarella_dspmem_phys(void);
 extern u32 get_ambarella_dspmem_virt(void);
 extern u32 get_ambarella_dspmem_size(void);
-
-extern u32 get_ambarella_toss_phys(void);
-extern u32 get_ambarella_toss_virt(void);
-extern u32 get_ambarella_toss_size(void);
 
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
