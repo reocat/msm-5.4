@@ -1961,6 +1961,16 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
+	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+		pslotinfo = pinfo->pslotinfo[i];
+		if (pslotinfo->mmc) {
+			errorCode = mmc_suspend_host(pslotinfo->mmc, state);
+			if (errorCode)
+				ambsd_err(pslotinfo,
+					"Can't mmc_suspend_host!\n");
+		}
+	}
+
 	if (!device_may_wakeup(&pdev->dev)) {
 		disable_irq(pinfo->irq);
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
@@ -1996,6 +2006,16 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 			}
 		}
 		enable_irq(pinfo->irq);
+	}
+
+	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+		pslotinfo = pinfo->pslotinfo[i];
+		if (pslotinfo->mmc) {
+			errorCode = mmc_resume_host(pslotinfo->mmc);
+			if (errorCode)
+				ambsd_err(pslotinfo,
+					"Can't mmc_resume_host!\n");
+		}
 	}
 
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
