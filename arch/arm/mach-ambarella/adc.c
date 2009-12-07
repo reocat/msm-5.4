@@ -121,7 +121,6 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	for (i = 0; i < *array_size; i++)
 		adc_data[i] = ambarella_adc_get_channel_inline(i);
 }
-EXPORT_SYMBOL(ambarella_adc_get_array);
 
 u32 ambarella_adc_get_channel(u32 channel_id)
 {
@@ -141,7 +140,6 @@ u32 ambarella_adc_get_channel(u32 channel_id)
 ambarella_adc_get_channel_exit:
 	return adc_data;
 }
-EXPORT_SYMBOL(ambarella_adc_get_channel);
 
 void ambarella_adc_start(void)
 {
@@ -151,8 +149,12 @@ void ambarella_adc_start(void)
 	amba_writel(ADC_ENABLE_REG, 0x01);
 	msleep(3);
 	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START | ADC_CONTROL_MODE);
+        while(amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0)
+		;
+        amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START | ADC_CONTROL_MODE);
+        while(amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0)
+		;
 }
-EXPORT_SYMBOL(ambarella_adc_start);
 
 void ambarella_adc_stop(void)
 {
@@ -161,7 +163,6 @@ void ambarella_adc_stop(void)
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x00);
 }
-EXPORT_SYMBOL(ambarella_adc_stop);
 
 #ifdef CONFIG_AMBARELLA_ADC_PROC
 #define AMBARELLA_ADC_PROC_READ_SIZE		(13)

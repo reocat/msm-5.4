@@ -310,6 +310,7 @@ struct ambarella_adc_controller {
 	u32					(*is_irq_supported)(void);
 	void					(*set_irq_threshold)(u32, u32, u32);
 	void					(*reset)(void);
+	void					(*stop)(void);
 	u32					(*get_channel_num)(void);
 };
 

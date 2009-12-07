@@ -269,6 +269,7 @@ static int __devinit ambarella_adc_probe(struct platform_device *pdev)
 		(pinfo->pcontroller_info->read_channels == NULL) ||
 		(pinfo->pcontroller_info->is_irq_supported == NULL) ||
 		(pinfo->pcontroller_info->set_irq_threshold == NULL) ||
+		(pinfo->pcontroller_info->stop == NULL) ||
 		(pinfo->pcontroller_info->reset == NULL) ) {
 		dev_err(&pdev->dev, "Platform data is NULL!\n");
 		errorCode = -ENXIO;
@@ -410,7 +411,7 @@ static int ambarella_adc_suspend(struct platform_device *pdev,
 	pinfo = platform_get_drvdata(pdev);
 
 	if (!device_may_wakeup(&pdev->dev)) {
-		ambarella_adc_stop();
+		pinfo->pcontroller_info->stop();
 		if (pinfo->support_irq)
 			disable_irq(pinfo->irq);
 	}
