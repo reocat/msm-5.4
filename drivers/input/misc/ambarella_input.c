@@ -69,7 +69,6 @@ static struct ambarella_key_table \
 };
 
 /* ========================================================================= */
-
 irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 {
 	int				i;

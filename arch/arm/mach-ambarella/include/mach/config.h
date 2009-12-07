@@ -122,6 +122,8 @@ struct ambarella_mem_hal_desc {
 extern u64 ambarella_dmamask;
 extern u32 ambarella_debug_level;
 extern u32 ambarella_debug_info;
+
+extern int toss_switch(unsigned int personality);
 extern struct toss_s *toss;
 
 struct ambarella_gpio_power_info {
