@@ -143,15 +143,29 @@ ambarella_adc_get_channel_exit:
 
 void ambarella_adc_start(void)
 {
+	u32				counter;
+
 #if (CHIP_REV != A5S)
 	amba_writel(ADC_RESET_REG, 0x01);
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x01);
 	msleep(3);
+
 	amba_writel(ADC_CONTROL_REG, 0);
-	while(amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
+	counter = 0;
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
+		counter++;
+		if (counter > 10000)
+			break;
+	}
+
 	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START | ADC_CONTROL_MODE);
-	while(amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
+	counter = 0;
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
+		counter++;
+		if (counter > 10000)
+			break;
+	}
 }
 
 void ambarella_adc_stop(void)
