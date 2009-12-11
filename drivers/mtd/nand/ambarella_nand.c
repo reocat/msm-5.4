@@ -73,7 +73,7 @@ struct ambarella_nand_info {
 	int				dma_bufpos;
 	u32				dma_status;
 	u32				fio_dma_sta;
-	int				irq_flag;
+	atomic_t			irq_flag;
 
 	/* saved column/page_addr during CMD_SEQIN */
 	int				seqin_column;
@@ -453,8 +453,8 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 
 		amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0x0);
 
-		nand_info->irq_flag |= 0x1;
-		wake_up_interruptible(&nand_info->wq);
+		atomic_clear_mask(0x1, (unsigned long *)&nand_info->irq_flag);
+		wake_up(&nand_info->wq);
 
 		return IRQ_HANDLED;
 	}
@@ -478,8 +478,8 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 
 		amba_writel(nand_info->regbase + FIO_DMASTA_OFFSET, 0x0);
 
-		nand_info->irq_flag |= 0x2;
-		wake_up_interruptible(&nand_info->wq);
+		atomic_clear_mask(0x2, (unsigned long *)&nand_info->irq_flag);
+		wake_up(&nand_info->wq);
 
 		return IRQ_HANDLED;
 	}
@@ -494,8 +494,8 @@ static void nand_dma_isr_handler(void *dev_id, u32 dma_status)
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
 	nand_info->dma_status = dma_status;
-	nand_info->irq_flag |= 0x4;
-	wake_up_interruptible(&nand_info->wq);
+	atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
+	wake_up(&nand_info->wq);
 }
 
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
@@ -583,6 +583,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	u32					nand_ctr_reg = 0;
 	u32					nand_cmd_reg = 0;
 	u32					fio_ctr_reg = 0;
+	long					timeout;
 
 	cmd = nand_info->cmd;
 
@@ -734,8 +735,15 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	}
 
 	if (cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM) {
-		wait_event_interruptible_timeout(nand_info->wq,
-			(nand_info->irq_flag == 0x7), 5 * HZ);
+		timeout = wait_event_timeout(nand_info->wq,
+			atomic_read(&nand_info->irq_flag) == 0x0, 1 * HZ);
+		if (timeout <= 0) {
+			errorCode = -EBUSY;
+			dev_err(nand_info->dev, "%s: cmd=0x%x timeout 0x%08x\n",
+				__func__, cmd, atomic_read(&nand_info->irq_flag));
+		} else {
+			dev_dbg(nand_info->dev, "%ld jiffies left.\n", timeout);
+		}
 
 		if (nand_info->dma_status & (DMA_CHANX_STA_OE | DMA_CHANX_STA_ME |
 			DMA_CHANX_STA_BE | DMA_CHANX_STA_RWE |
@@ -743,52 +751,64 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			dev_err(nand_info->dev,
 				"%s: Errors happend in DMA transaction %d!\n",
 				__func__, nand_info->dma_status);
-			errorCode = -1;
+			errorCode = -EIO;
+			goto nand_amb_request_exit;
 		}
 
-		if(errorCode != -1) {
-			errorCode = fio_dma_parse_error(nand_info->fio_dma_sta);
-			if (errorCode) {
-				u32 block_addr;
-				block_addr = nand_info->addr /
-						nand_info->mtd.erasesize *
-						nand_info->mtd.erasesize;
-				dev_err(nand_info->dev,
-					"%s: cmd=0x%x, addr_hi=0x%x, "
-					"addr=0x%x, dst=0x%x, buf=0x%x, "
-					"len=0x%x, area=0x%x, ecc=0x%x, "
-					"block addr=0x%x!\n",
-					__func__, cmd,
-					nand_info->addr_hi,
-					nand_info->addr,
-					nand_info->dst,
-					nand_info->buf_phys,
-					nand_info->len,
-					nand_info->area,
-					nand_info->ecc,
-					block_addr);
-			}
+		errorCode = fio_dma_parse_error(nand_info->fio_dma_sta);
+		if (errorCode) {
+			u32 block_addr;
+			block_addr = nand_info->addr /
+					nand_info->mtd.erasesize *
+					nand_info->mtd.erasesize;
+			dev_err(nand_info->dev,
+				"%s: cmd=0x%x, addr_hi=0x%x, "
+				"addr=0x%x, dst=0x%x, buf=0x%x, "
+				"len=0x%x, area=0x%x, ecc=0x%x, "
+				"block addr=0x%x!\n",
+				__func__, cmd,
+				nand_info->addr_hi,
+				nand_info->addr,
+				nand_info->dst,
+				nand_info->buf_phys,
+				nand_info->len,
+				nand_info->area,
+				nand_info->ecc,
+				block_addr);
+			goto nand_amb_request_exit;
 		}
-		nand_info->err_code = errorCode;
 	} else {
-		wait_event_interruptible_timeout(nand_info->wq,
-			(nand_info->irq_flag == 0x1), 5 * HZ);
-		if (cmd == NAND_AMB_CMD_READID) {
-			u32 id = amba_readl(nand_info->regbase +
-				FLASH_ID_OFFSET);
-			nand_info->dmabuf[0] = (unsigned char) (id >> 24);
-			nand_info->dmabuf[1] = (unsigned char) (id >> 16);
-			nand_info->dmabuf[2] = (unsigned char) (id >> 8);
-			nand_info->dmabuf[3] = (unsigned char) id;
-		} else if (cmd == NAND_AMB_CMD_READSTATUS) {
-			*nand_info->dmabuf = amba_readl(nand_info->regbase +
-				FLASH_STA_OFFSET);
+		/* just wait cmd irq, no care about both DMA irqs */
+		timeout = wait_event_timeout(nand_info->wq,
+			atomic_read(&nand_info->irq_flag) == 0x6, 1 * HZ);
+		if (timeout <= 0) {
+			errorCode = -EBUSY;
+			dev_err(nand_info->dev, "%s: cmd=0x%x timeout 0x%08x\n",
+				__func__, cmd, atomic_read(&nand_info->irq_flag));
+			goto nand_amb_request_exit;
+		} else {
+			dev_dbg(nand_info->dev, "%ld jiffies left.\n", timeout);
+
+			if (cmd == NAND_AMB_CMD_READID) {
+				u32 id = amba_readl(nand_info->regbase +
+					FLASH_ID_OFFSET);
+				nand_info->dmabuf[0] = (unsigned char) (id >> 24);
+				nand_info->dmabuf[1] = (unsigned char) (id >> 16);
+				nand_info->dmabuf[2] = (unsigned char) (id >> 8);
+				nand_info->dmabuf[3] = (unsigned char) id;
+			} else if (cmd == NAND_AMB_CMD_READSTATUS) {
+				*nand_info->dmabuf = amba_readl(nand_info->regbase +
+					FLASH_STA_OFFSET);
+			}
 		}
 	}
 
-	nand_info->irq_flag = 0x0;
 
 nand_amb_request_exit:
+	atomic_set(&nand_info->irq_flag, 0x7);
+	nand_info->dma_status = 0;
+	nand_info->err_code = errorCode;
+
 #ifdef AMBARELLA_NAND_WP
 	if ((cmd == NAND_AMB_CMD_ERASE ||
 		cmd == NAND_AMB_CMD_COPYBACK ||
@@ -1436,6 +1456,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	init_waitqueue_head(&nand_info->controller.wq);
 	init_waitqueue_head(&nand_info->wq);
 	sema_init(&nand_info->system_event_sem, 1);
+	atomic_set(&nand_info->irq_flag, 0x7);
 
 	nand_info->dmabuf = dma_alloc_coherent(nand_info->dev,
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,

@@ -97,7 +97,7 @@ static irqreturn_t ambarella_dma_fios_int_handler(int irq, void *dev_id)
 
 	ireg = amba_readl(DMA_FIOS_INT_REG);
 	if (ireg & DMA_INT_CHAN0) {
-		dma->chan[0].status =
+		dma->chan[FIO_DMA_CHAN].status =
 			amba_readl(DMA_FIOS_CHAN_STA_REG(FIO_DMA_CHAN));
 		amba_writel(DMA_FIOS_CHAN_STA_REG(FIO_DMA_CHAN), 0);
 

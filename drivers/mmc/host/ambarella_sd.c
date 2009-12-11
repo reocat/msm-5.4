@@ -72,12 +72,14 @@ enum ambarella_sd_state {
 	AMBA_SD_STATE_IDLE,
 	AMBA_SD_STATE_CMD,
 	AMBA_SD_STATE_DATA,
+	AMBA_SD_STATE_RESET,
 	AMBA_SD_STATE_ERR
 };
 
 struct ambarella_sd_mmc_info {
 	struct mmc_host			*mmc;
 	struct mmc_request		*mrq;
+	struct mmc_command		*active_cmd;
 
 	wait_queue_head_t		wait;
 
@@ -663,13 +665,11 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 		msleep(1);
 	}
 
-	pslotinfo->state = AMBA_SD_STATE_IDLE;
-
 	amba_writeb(pinfo->regbase + SD_TMO_OFFSET,
 		CONFIG_SD_AMBARELLA_TIMEOUT_VAL);
 
-	//int_flag = SD_NISEN_CARD;
-	int_flag = SD_NISEN_REMOVAL	|
+	int_flag = pslotinfo->nisen	|
+		SD_NISEN_REMOVAL	|
 		SD_NISEN_INSERT		|
 		SD_NISEN_DMA		|
 		SD_NISEN_BLOCK_GAP	|
@@ -687,6 +687,8 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 		SD_EISEN_CMD_CRC_ERR	|
 		SD_EISEN_CMD_TMOUT_ERR;
 	ambarella_sd_enable_error_int(mmc, int_flag);
+
+	pslotinfo->state = AMBA_SD_STATE_RESET;
 
 	ambsd_dbg(pslotinfo, "Exit %s with counter %d\n", __func__, counter);
 }
@@ -762,44 +764,48 @@ static void ambarella_sd_data_done(
 	u16 nis, 
 	u16 eis)
 {
-	struct mmc_data				*data;
+	struct mmc_data				*data = NULL;
 	struct ambarella_sd_controller_info	*pinfo;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (pslotinfo->state == AMBA_SD_STATE_DATA) {
-		if (pslotinfo->mrq)
-			data = pslotinfo->mrq->data;
-		else {
-			ambsd_err(pslotinfo, "%s pslotinfo->mrq is NULL\n",
-				__func__);
-			return;
-		}
-
-		if (!(data)) {
-			ambsd_err(pslotinfo, "%s data is NULL\n", __func__);
-			return;
-		}
-
-		if (eis != 0x0) {
-			if (eis & SD_EIS_CMD_BIT_ERR) {
-				data->error = -EILSEQ;
-			} else if (eis & SD_EIS_CMD_CRC_ERR) {
-				data->error = -EILSEQ;
-			} else if (eis & SD_EIS_CMD_TMOUT_ERR) {
-				data->error = -ETIMEDOUT;
-			} else {
-				data->error = -EILSEQ;
-			}
-			ambarella_sd_reset_data_line(pslotinfo->mmc);
-		} else {
-			data->bytes_xfered = pslotinfo->dma_size;
-		}
-
-		pslotinfo->post_dma(pslotinfo);
-		pslotinfo->state = AMBA_SD_STATE_IDLE;
-		wake_up(&pslotinfo->wait);
+	if (pslotinfo->active_cmd)
+		data = pslotinfo->active_cmd->data;
+	else {
+		ambsd_err(pslotinfo, "%s active_cmd is NULL\n", __func__);
+		return;
 	}
+
+	if (pslotinfo->state != AMBA_SD_STATE_DATA) {
+		ambsd_dbg(pslotinfo, "%s wrong cmd%d state%d, 0x%08X 0x%08X\n",
+			__func__, pslotinfo->active_cmd->opcode,
+			pslotinfo->state, nis, eis);
+		return;
+	}
+
+	if (data == NULL) {
+		ambsd_err(pslotinfo, "%s data is NULL\n", __func__);
+		return;
+	}
+
+	if (eis != 0x0) {
+		if (eis & SD_EIS_CMD_BIT_ERR) {
+			data->error = -EILSEQ;
+		} else if (eis & SD_EIS_CMD_CRC_ERR) {
+			data->error = -EILSEQ;
+		} else if (eis & SD_EIS_CMD_TMOUT_ERR) {
+			data->error = -ETIMEDOUT;
+		} else {
+			data->error = -EILSEQ;
+		}
+		ambarella_sd_reset_data_line(pslotinfo->mmc);
+	} else {
+		data->bytes_xfered = pslotinfo->dma_size;
+	}
+
+	pslotinfo->post_dma(pslotinfo);
+	pslotinfo->state = AMBA_SD_STATE_IDLE;
+	wake_up(&pslotinfo->wait);
 }
 
 static void ambarella_sd_cmd_done(
@@ -807,21 +813,16 @@ static void ambarella_sd_cmd_done(
 	u16 nis,
 	u16 eis)
 {
-	struct mmc_command			*cmd;
+	struct mmc_command			*cmd = NULL;
 	u32					rsp0, rsp1, rsp2, rsp3;
 	struct ambarella_sd_controller_info	*pinfo;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (pslotinfo->mrq)
-		cmd = pslotinfo->mrq->cmd;
+	if (pslotinfo->active_cmd)
+		cmd = pslotinfo->active_cmd;
 	else {
-		ambsd_err(pslotinfo, "%s pslotinfo->mrq is NULL\n", __func__);
-		return;
-	}
-
-	if (!(cmd)) {
-		ambsd_err(pslotinfo, "%s cmd is NULL\n", __func__);
+		ambsd_err(pslotinfo, "%s active_cmd is NULL\n", __func__);
 		return;
 	}
 
@@ -990,7 +991,7 @@ static void ambarella_sd_send_cmd(
 	struct ambarella_sd_mmc_info *pslotinfo,
 	struct mmc_command *cmd)
 {
-	struct mmc_data				*data = cmd->data;
+	struct mmc_data				*data;
 	u32					counter = 0;
 	u32					tmpreg;
 	struct ambarella_sd_controller_info	*pinfo;
@@ -998,6 +999,9 @@ static void ambarella_sd_send_cmd(
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	pslotinfo->state = AMBA_SD_STATE_CMD;
+	pslotinfo->active_cmd = cmd;
+	data = pslotinfo->active_cmd->data;
+
 	pslotinfo->sg_len = 0;
 	pslotinfo->sg_index = 0;
 	pslotinfo->sg = NULL;
@@ -1149,6 +1153,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 	u32					desired_clk;
 	u32					actual_clk;
 	struct ambarella_sd_controller_info	*pinfo;
+	u32					counter = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
@@ -1221,6 +1226,12 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 			clkreg = amba_readw(pinfo->regbase + SD_CLK_OFFSET);
 			if (clkreg & SD_CLK_ICLK_STABLE)
 				break;
+			counter++;
+			if (counter > CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT) {
+				ambsd_warn(pslotinfo,
+					"Wait SD_CLK_ICLK_STABLE...\n");
+				break;
+			}
 		}
 		amba_setbitsw(pinfo->regbase + SD_CLK_OFFSET, SD_CLK_EN);
 	}
@@ -1302,13 +1313,15 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	if ((pinfo->controller_ios.power_mode != ios->power_mode) ||
-		(pinfo->controller_ios.vdd != ios->vdd)){
+		(pinfo->controller_ios.vdd != ios->vdd) ||
+		(pslotinfo->state == AMBA_SD_STATE_RESET)){
 		ambarella_sd_set_pwr(mmc, ios->power_mode, ios->vdd);
 		pinfo->controller_ios.power_mode = ios->power_mode;
 		pinfo->controller_ios.vdd = ios->vdd;
 	}
 
-	if (pinfo->controller_ios.clock != ios->clock) {
+	if ((pinfo->controller_ios.clock != ios->clock) ||
+		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
 		msleep(10);
 		ambarella_sd_set_clk(mmc, ios->clock);
 		pinfo->controller_ios.clock = ios->clock;
@@ -1316,11 +1329,14 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 
 	if ((pinfo->controller_ios.bus_width != ios->bus_width) ||
-		(pinfo->controller_ios.timing != ios->timing)){
+		(pinfo->controller_ios.timing != ios->timing) ||
+		(pslotinfo->state == AMBA_SD_STATE_RESET)){
 		ambarella_sd_set_bus(mmc, ios->bus_width, ios->timing);
 		pinfo->controller_ios.bus_width = ios->bus_width;
 		pinfo->controller_ios.timing = ios->timing;
 	}
+
+	pslotinfo->state = AMBA_SD_STATE_IDLE;
 }
 
 static void ambarella_sd_ios(struct mmc_host *mmc, struct mmc_ios *ios)
@@ -1380,21 +1396,26 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 				(pslotinfo->state == AMBA_SD_STATE_IDLE),
 				pinfo->pcontroller->wait_tmo);
 			if (timeout <= 0) {
-				ambsd_err(pslotinfo, "%s cmd%d timeout %d@%d\n",
+				ambsd_err(pslotinfo, "%s cmd%d timeout "
+					"%d@%d, retries=%d\n",
 					__func__, mrq->cmd->opcode,
 					pslotinfo->state,
-					pinfo->pcontroller->wait_tmo);
-				need_reset = 1;
+					pinfo->pcontroller->wait_tmo,
+					mrq->cmd->retries);
 				goto ambarella_sd_request_need_reset;
 			}
 			ambsd_dbg(pslotinfo, "%ld jiffies left.\n", timeout);
 			if (mrq->cmd->error) {
-				need_reset = 1;
+				ambsd_dbg(pslotinfo, "%s cmd%d error %d\n",
+					__func__, mrq->cmd->opcode,
+					mrq->cmd->error);
 				goto ambarella_sd_request_need_reset;
 			}
 			if ((mrq->cmd->data) &&
 				(mrq->cmd->data->error)) {
-				need_reset = 1;
+				ambsd_dbg(pslotinfo, "%s cmd%d data error %d\n",
+					__func__, mrq->cmd->opcode,
+					mrq->cmd->data->error);
 				goto ambarella_sd_request_need_reset;
 			}
 		} else {
@@ -1411,17 +1432,19 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 					pinfo->pcontroller->wait_tmo);
 				if (timeout <= 0) {
 					ambsd_err(pslotinfo,
-						"%s %d stop %d timeout %d!\n",
+						"%s stop%d timeout %d@%d!\n",
 						__func__, mrq->stop->opcode,
 						pslotinfo->state,
 						pinfo->pcontroller->wait_tmo);
-					need_reset = 1;
 					goto ambarella_sd_request_need_reset;
 				}
 				ambsd_dbg(pslotinfo, "%ld jiffies left.\n",
 					timeout);
 				if (mrq->stop->error) {
-					need_reset = 1;
+					ambsd_dbg(pslotinfo,
+						"%s stop%d error %d!\n",
+						__func__, mrq->stop->opcode,
+						mrq->stop->error);
 					goto ambarella_sd_request_need_reset;
 				}
 			} else {
@@ -1433,10 +1456,11 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		ambsd_dbg(pslotinfo, "card_sta 0x%x.\n", card_sta);
 		mrq->cmd->error = error_id;
 	}
+
+ambarella_sd_request_need_reset:
 	if (pslotinfo->state != AMBA_SD_STATE_IDLE)
 		need_reset = 1;
 
-ambarella_sd_request_need_reset:
 	if (need_reset) {
 		if (mrq->stop) {
 			if (mrq->stop->error) {
@@ -1471,8 +1495,7 @@ ambarella_sd_request_need_reset:
 				card_sta, error_id);
 
 		ambarella_sd_reset_all(pslotinfo->mmc);
-		ambarella_sd_reset_cmd_line(pslotinfo->mmc);
-		ambarella_sd_reset_data_line(pslotinfo->mmc);
+		ambarella_sd_check_ios(mmc, &mmc->ios);
 	}
 
 	pslotinfo->mrq = NULL;
@@ -1513,6 +1536,30 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 			pinfo->controller_ios.clock);
 		msleep(10);
 		up(&pslotinfo->system_event_sem);
+		break;
+
+	case AMBA_EVENT_PRE_TOSS:
+		pr_debug("%s[%d]: AMBA_EVENT_PRE_TOSS\n",
+			__func__, pslotinfo->slot_id);
+		if (pslotinfo->mmc) {
+			pm_message_t state;
+			state.event = 2;
+			errorCode = mmc_suspend_host(pslotinfo->mmc, state);
+			if (errorCode)
+				ambsd_err(pslotinfo,
+					"Can't mmc_suspend_host!\n");
+		}
+		break;
+
+	case AMBA_EVENT_POST_TOSS:
+		pr_debug("%s[%d]: AMBA_EVENT_POST_TOSS\n",
+			__func__, pslotinfo->slot_id);
+		if (pslotinfo->mmc) {
+			errorCode = mmc_resume_host(pslotinfo->mmc);
+			if (errorCode)
+				ambsd_err(pslotinfo,
+					"Can't mmc_suspend_host!\n");
+		}
 		break;
 
 	default:
@@ -1931,12 +1978,8 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
 
-			if (pslotinfo->mmc) {
-				ambarella_sd_reset_all(pslotinfo->mmc);
-				ambarella_sd_reset_cmd_line(pslotinfo->mmc);
-				ambarella_sd_reset_data_line(pslotinfo->mmc);
+			if (pslotinfo->mmc)
 				mmc_free_host(pslotinfo->mmc);
-			}
 		}
 
 		release_mem_region(pinfo->mem->start,

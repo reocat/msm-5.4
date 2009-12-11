@@ -38,11 +38,11 @@
 /* ==========================================================================*/
 static DECLARE_WAIT_QUEUE_HEAD(fio_lock);
 static int fio_select_sdio_as_default = 0;
-static int fio_owner = SELECT_FIO_FREE;
-static int fio_owner_counter = 0;
+static atomic_t fio_owner = ATOMIC_INIT(SELECT_FIO_FREE);
 
 module_param_call(fio_select_sdio_as_default, param_set_int, param_get_int,
 	&fio_select_sdio_as_default, 0644);
+module_param_call(fio_owner, param_set_int, param_get_int, &fio_owner, 0644);
 
 /* ==========================================================================*/
 void fio_select_lock(int module)
@@ -50,60 +50,59 @@ void fio_select_lock(int module)
 	u32 fio_ctr;
 	u32 fio_dmactr;
 
-	wait_event_interruptible(fio_lock, ((fio_owner == module) ||
-		(fio_owner == SELECT_FIO_FREE)));
-	fio_owner_counter++;
-
-	if (fio_owner != module) {
-		fio_owner = module;
-
-		fio_ctr = amba_readl(FIO_CTR_REG);
-		fio_dmactr = amba_readl(FIO_DMACTR_REG);
-
-		switch (module) {
-		case SELECT_FIO_FL:
-			fio_ctr &= ~FIO_CTR_XD;
-			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_FL;
-			break;
-
-		case SELECT_FIO_XD:
-			fio_ctr |= FIO_CTR_XD;
-			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_XD;
-			break;
-
-		case SELECT_FIO_CF:
-			fio_ctr &= ~FIO_CTR_XD;
-			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_CF;
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-			fio_amb_sd2_disable();
-			fio_amb_cf_enable();
-#endif
-			break;
-
-		case SELECT_FIO_SD:
-			fio_ctr &= ~FIO_CTR_XD;
-			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-			break;
-
-		case SELECT_FIO_SDIO:
-			fio_ctr |= FIO_CTR_XD;
-			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-			break;
-
-		case SELECT_FIO_SD2:
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-			fio_amb_cf_disable();
-			fio_amb_sd2_enable();
-#endif
-			break;
-
-		default:
-			break;
-		}
-
-		amba_writel(FIO_CTR_REG, fio_ctr);
-		amba_writel(FIO_DMACTR_REG, fio_dmactr);
+	if (atomic_read(&fio_owner) != module) {
+		wait_event(fio_lock, (atomic_cmpxchg(&fio_owner,
+			SELECT_FIO_FREE, module) == SELECT_FIO_FREE));
+	} else {
+		pr_warning("%s: module[%d] reentry!\n", __func__, module);
 	}
+
+	fio_ctr = amba_readl(FIO_CTR_REG);
+	fio_dmactr = amba_readl(FIO_DMACTR_REG);
+
+	switch (module) {
+	case SELECT_FIO_FL:
+		fio_ctr &= ~FIO_CTR_XD;
+		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_FL;
+		break;
+
+	case SELECT_FIO_XD:
+		fio_ctr |= FIO_CTR_XD;
+		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_XD;
+		break;
+
+	case SELECT_FIO_CF:
+		fio_ctr &= ~FIO_CTR_XD;
+		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_CF;
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+		fio_amb_sd2_disable();
+		fio_amb_cf_enable();
+#endif
+		break;
+
+	case SELECT_FIO_SD:
+		fio_ctr &= ~FIO_CTR_XD;
+		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+		break;
+
+	case SELECT_FIO_SDIO:
+		fio_ctr |= FIO_CTR_XD;
+		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+		break;
+
+	case SELECT_FIO_SD2:
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+		fio_amb_cf_disable();
+		fio_amb_sd2_enable();
+#endif
+		break;
+
+	default:
+		break;
+	}
+
+	amba_writel(FIO_CTR_REG, fio_ctr);
+	amba_writel(FIO_DMACTR_REG, fio_dmactr);
 }
 
 void fio_unlock(int module)
@@ -113,16 +112,9 @@ void fio_unlock(int module)
 	u32 fio_dmactr;
 #endif
 
-	if (fio_owner == module) {
-		if (fio_owner_counter > 0)
-			fio_owner_counter--;
-		else
-			pr_err("%s: fio_owner[%d] counter is 0!.\n",
-				__func__, module);
-
+	if (atomic_read(&fio_owner) == module) {
 #if (SD_HAS_INTERNAL_MUXER == 1)
-		if ((fio_select_sdio_as_default) && (fio_owner_counter == 0) &&
-			(fio_owner != SELECT_FIO_SDIO)) {
+		if (fio_select_sdio_as_default && (module != SELECT_FIO_SDIO)) {
 			fio_ctr = amba_readl(FIO_CTR_REG);
 			fio_dmactr = amba_readl(FIO_DMACTR_REG);
 
@@ -134,17 +126,18 @@ void fio_unlock(int module)
 		}
 #endif
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-		if ((fio_select_sdio_as_default) && (fio_owner_counter == 0) &&
-			(fio_owner == SELECT_FIO_CF)) {
+		if (fio_select_sdio_as_default && (module == SELECT_FIO_CF)) {
 			fio_amb_cf_disable();
 			fio_amb_sd2_enable();
 		}
 #endif
+	}
 
-		if (fio_owner_counter == 0) {
-			fio_owner = SELECT_FIO_FREE;
-			wake_up(&fio_lock);
-		}
+	if (atomic_cmpxchg(&fio_owner, module, SELECT_FIO_FREE) == module) {
+		wake_up(&fio_lock);
+	} else {
+		pr_err("%s: fio_owner[%d] != module[%d]!.\n",
+			__func__, atomic_read(&fio_owner), module);
 	}
 }
 
@@ -246,6 +239,56 @@ int fio_amb_sd2_is_enable(void)
 
 #endif
 
+#if (NAND_DUMMY_XFER == 1)
+void nand_dummy_xfer(void)
+{
+	amba_writel(FIO_CTR_REG, 0x15);
+	amba_writel(NAND_CTR_REG, 0x4080110);
+
+	amba_writel(DMA_FIOS_CHAN0_STA_REG, 0x0);
+	amba_writel(DMA_FIOS_CHAN0_SRC_REG, 0x60000000);
+	amba_writel(DMA_FIOS_CHAN0_DST_REG, 0xc0000000);
+	amba_writel(DMA_FIOS_CHAN0_CTR_REG, 0xae800020);
+
+	amba_writel(FIO_DMAADR_REG, 0x0);
+	amba_writel(FIO_DMACTR_REG, 0x86800020);
+
+	while ((amba_readl(DMA_FIOS_INT_REG) & 0x1) != 0x1);
+	amba_writel(DMA_FIOS_CHAN0_STA_REG, 0x0);
+
+	while ((amba_readl(FIO_STA_REG) & 0x1) != 0x1);
+	amba_writel(FIO_CTR_REG, 0x1);
+	amba_writel(NAND_INT_REG, 0x0);
+
+	while ((amba_readl(FIO_DMASTA_REG) & 0x1000000) != 0x1000000);
+	amba_writel(FIO_DMASTA_REG, 0x0);
+}
+#endif
+
+void enable_fio_dma(void)
+{
+	u32 val;
+
+#if (HOST_MAX_AHB_CLK_EN_BITS == 10)
+	/* Disable boot-select */
+	val = amba_readl(HOST_AHB_CLK_ENABLE_REG);
+	val &= ~(HOST_AHB_BOOT_SEL);
+	val &= ~(HOST_AHB_FDMA_BURST_DIS);
+	amba_writel(HOST_AHB_CLK_ENABLE_REG, val);
+#endif
+
+#if (I2S_24BITMUX_MODE_REG_BITS == 4)
+	val = amba_readl(I2S_24BITMUX_MODE_REG);
+	val &= ~(I2S_24BITMUX_MODE_DMA_BOOTSEL);
+	val &= ~(I2S_24BITMUX_MODE_FDMA_BURST_DIS);
+	amba_writel(I2S_24BITMUX_MODE_REG, val);
+#endif
+
+#if (NAND_DUMMY_XFER == 1)
+	nand_dummy_xfer();
+#endif
+}
+
 void fio_amb_exit_random_mode(void)
 {
 	amba_clrbitsl(FIO_CTR_REG, FIO_CTR_RR);
@@ -261,6 +304,7 @@ int __init ambarella_init_fio(void)
 	/* Following should be handled by the bootloader... */
 	rct_reset_fio();
 	fio_amb_exit_random_mode();
+	enable_fio_dma();
 	amba_writel(FLASH_INT_REG, 0x0);
 	amba_writel(XD_INT_REG, 0x0);
 	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
