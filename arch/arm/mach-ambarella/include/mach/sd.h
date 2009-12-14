@@ -106,6 +106,9 @@
 #define SD_AC12ES_OFFSET		0x03c	/* Half word */
 #define SD_CAP_OFFSET			0x040
 #define SD_CUR_OFFSET			0x048
+#define SD_XC_CTR_OFFSET		0x060
+#define SD_DELAY_OFFSET			0x070
+#define SD_VOL_SW_OFFSET		0x07c
 #define SD_SIST_OFFSET			0x0fc	/* Half word */
 #define SD_VER_OFFSET			0x0fe	/* Half word */
 
@@ -137,6 +140,9 @@
 #define SD_AC12ES_REG			SD_REG(0x03c)	/* Half word */
 #define SD_CAP_REG			SD_REG(0x040)
 #define SD_CUR_REG			SD_REG(0x048)
+#define SD_XC_CTR_REG			SD_REG(0x060)
+#define SD_DELAY_REG			SD_REG(0x070)
+#define SD_VOL_SW_REG			SD_REG(0x07c)
 #define SD_SIST_REG			SD_REG(0x0fc)	/* Half word */
 #define SD_VER_REG			SD_REG(0x0fe)	/* Half word */
 
@@ -371,6 +377,23 @@
 #define SD_CAP_TOCLK_KHZ		0x00000000
 #define SD_CAP_TOCLK_MHZ		0x00000080
 #define SD_CAP_TOCLK_FREQ(x)		(((x) & 0x3f))
+
+/* SD_XC_CTR_REG */
+#define SD_XC_CTR_DDR_EN		0x00008000
+#define SD_XC_CTR_VOL_1_8V		0x00000001
+#define SD_XC_CTR_VOL_3_3V		0x00000000
+
+/* SD_DELAY_REG */
+#define SD_DELAY_OUTPUT_SIGNAL(x)	(((x) & 0x7) >> 24)
+#define SD_DELAY_INPUT_SIGNAL(x)	(((x) & 0x7) >> 16)
+#define SD_DELAY_EXTRA_OUTPUT_SDCLK(x)	(((x) & 0x3) >> 12)
+#define SD_DELAY_OUTPUT_SDCLK(x)	(((x) & 0x7) >> 8)
+#define SD_DELAY_EXTRA_INPUT_SDCLK(x)	(((x) & 0x3) >> 4)
+#define SD_DELAY_INPUT_SDCLK(x)		(((x) & 0x7))
+
+/* SD_VOL_SW_REG */
+#define SD_VOL_SW_CMD_STAT_H		0x00010000
+#define SD_VOL_SW_DAT_STAT_H		0x00000007
 
 /* SD_VER_REG */
 #define SD_VER_VENDOR(x)		((x) >> 8)

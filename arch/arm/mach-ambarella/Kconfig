@@ -282,25 +282,25 @@ config AMBARELLA_PPM_SIZE
 	  Specify the size from the start of physical DRAM address to reserve.
 
 config AMBARELLA_ZRELADDR
-	hex "PPM_ZRELADDR"
+	hex "ZRELADDR"
 	default 0xC0208000
 	help
 	  Specify the kernel entry point start physical address.
 
 config AMBARELLA_TEXTOFS
-	hex "PPM_TEXTOFS"
+	hex "TEXTOFS"
 	default 0x00008000
 	help
 	  Speicify the relative text offset.
 
 config AMBARELLA_PARAMS_PHYS
-	hex "PPM PHYS"
+	hex "PARAMS PHYS"
 	default 0xC0201000
 	help
 	  Specify the physical address for kernel parameters.
 
 config AMBARELLA_INITRD_PHYS
-	hex "PPM_INITRD_PHYS"
+	hex "INITRD PHYS"
 	default 0xC0800000
 	help
 	  Specify the physical address for initrd.

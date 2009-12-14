@@ -34,7 +34,7 @@
 /****************************************************/
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) || \
-    (CHIP_REV ==A5S)
+    (CHIP_REV ==A5S) || (CHIP_REV == A7) 
 #define VIC_INSTANCES	2
 #else
 #define VIC_INSTANCES	1

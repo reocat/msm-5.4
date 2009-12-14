@@ -34,21 +34,27 @@
 /****************************************************/
 
 #if (CHIP_REV == A1)
-#define RTC_SUPPORT_ONCHIP_INSTANCE	0 
+#define RTC_SUPPORT_ONCHIP_INSTANCES		0 
 #else
-#define RTC_SUPPORT_ONCHIP_INSTANCE	1
+#define RTC_SUPPORT_ONCHIP_INSTANCES		1
 #endif
 
 #if (CHIP_REV == A5S)
-#define RTC_SUPPORT_EXTRA_WAKEUP_PINS	1
+#define RTC_SUPPORT_EXTRA_WAKEUP_PINS		1
 #else
-#define RTC_SUPPORT_EXTRA_WAKEUP_PINS	0
+#define RTC_SUPPORT_EXTRA_WAKEUP_PINS		0
+#endif
+
+#if (CHIP_REV == A5S)
+#define RTC_SUPPORT_30BITS_PASSED_SECONDS	1
+#else
+#define RTC_SUPPORT_30BITS_PASSED_SECONDS	0
 #endif
 
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
-#if (RTC_SUPPORT_ONCHIP_INSTANCE == 1)
+#if (RTC_SUPPORT_ONCHIP_INSTANCES == 1)
 
 #define RTC_POS0_OFFSET			0x20
 #define RTC_POS1_OFFSET			0x24

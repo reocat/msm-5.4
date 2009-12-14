@@ -55,9 +55,9 @@
 #endif
 
 #if (CHIP_REV == A5S)
-#define PWM_1_AND_3_DUAL_CLK_SRC	1
+#define PWM_SUPPORT_BANK_CLK_SRC_SEL	1
 #else
-#define PWM_1_AND_3_DUAL_CLK_SRC	0
+#define PWM_SUPPORT_BANK_CLK_SRC_SEL	0
 #endif
 /****************************************************/
 /* Controller registers definitions                 */

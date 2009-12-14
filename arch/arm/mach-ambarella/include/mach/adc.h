@@ -38,16 +38,17 @@
 #if (CHIP_REV == A1)
 #define	ADC_MAX_RESOLUTION	8
 #elif (CHIP_REV == A2) || (CHIP_REV == A3) ||	\
-      (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) 
+      (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+      (CHIP_REV == A5S)
 #define	ADC_MAX_RESOLUTION	10
 #else
 #define	ADC_MAX_RESOLUTION	16
 #endif
 
 #if (CHIP_REV == A5) || (CHIP_REV == A6)
-#define ADC_MAX_INSTANCES	8
+#define ADC_NUM_CHANNELS	8
 #else
-#define ADC_MAX_INSTANCES	4
+#define ADC_NUM_CHANNELS	4
 #endif
 
 /****************************************************/
@@ -55,10 +56,17 @@
 /****************************************************/
 
 #define ADC_CONTROL_OFFSET		0x00
+#if (CHIP_REV == A5S)
+#define ADC_DATA0_OFFSET		0x10
+#define ADC_DATA1_OFFSET		0x0c
+#define ADC_DATA2_OFFSET		0x08
+#define ADC_DATA3_OFFSET		0x04
+#else 
 #define ADC_DATA0_OFFSET		0x04
 #define ADC_DATA1_OFFSET		0x08
 #define ADC_DATA2_OFFSET		0x0c
 #define ADC_DATA3_OFFSET		0x10
+#endif
 #define ADC_RESET_OFFSET		0x14
 #define ADC_ENABLE_OFFSET		0x18
 #define ADC_CHAN0_INTR_OFFSET		0x44
@@ -75,10 +83,17 @@
 #define ADC_CHAN7_INTR_OFFSET		0x70
 
 #define ADC_CONTROL_REG			ADC_REG(0x00)
+#if (CHIP_REV == A5S)
+#define ADC_DATA0_REG			ADC_REG(0x10)
+#define ADC_DATA1_REG			ADC_REG(0x04)
+#define ADC_DATA2_REG			ADC_REG(0x08)
+#define ADC_DATA3_REG			ADC_REG(0x0c)
+#else
 #define ADC_DATA0_REG			ADC_REG(0x04)
 #define ADC_DATA1_REG			ADC_REG(0x08)
 #define ADC_DATA2_REG			ADC_REG(0x0c)
 #define ADC_DATA3_REG			ADC_REG(0x10)
+#endif
 #define ADC_RESET_REG			ADC_REG(0x14)
 #define ADC_ENABLE_REG			ADC_REG(0x18)
 #define ADC_CHAN0_INTR_REG		ADC_REG(0x44)

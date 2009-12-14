@@ -98,7 +98,7 @@ void ambarella_scan_adc(struct work_struct *work)
 				"ambarella_scan_adc ADC_CONTROL_STATUS Timeout!\n");
 			goto ambarella_scan_adc_exit;
 		}
-	};
+	}
 
 	if (!pinfo->pcontroller_info->get_channel_num) {
 		ambi_dbg("pinfo->pcontroller_info->get_channel_num is null");

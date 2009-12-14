@@ -40,7 +40,7 @@
 
 u32 ambarella_adc_get_instances(void)
 {
-	return ADC_MAX_INSTANCES;
+	return ADC_NUM_CHANNELS;
 }
 EXPORT_SYMBOL(ambarella_adc_get_instances);
 
@@ -49,20 +49,6 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	u32					adc_data = 0;
 
 	switch(channel_id) {
-#if (CHIP_REV == A5S)
-	case 0:
-		adc_data = amba_readl(ADC_DATA3_REG);
-		break;
-	case 1:
-		adc_data = amba_readl(ADC_DATA0_REG);
-		break;
-	case 2:
-		adc_data = amba_readl(ADC_DATA1_REG);
-		break;
-	case 3:
-		adc_data = amba_readl(ADC_DATA2_REG);
-		break;
-#else
 	case 0:
 		adc_data = amba_readl(ADC_DATA0_REG);
 		break;
@@ -75,8 +61,7 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	case 3:
 		adc_data = amba_readl(ADC_DATA3_REG);
 		break;
-#endif
-#if (ADC_MAX_INSTANCES == 8)
+#if (ADC_NUM_CHANNELS == 8)
 	case 4:
 		adc_data = amba_readl(ADC_DATA4_REG);
 		break;
@@ -104,10 +89,10 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	int					i;
 	u32					counter = 0;
 
-	if (unlikely(*array_size > ADC_MAX_INSTANCES)) {
+	if (unlikely(*array_size > ADC_NUM_CHANNELS)) {
 		pr_warning("%s: Limit array_size form %d to %d!\n",
-			__func__, *array_size, ADC_MAX_INSTANCES);
-		*array_size = ADC_MAX_INSTANCES;
+			__func__, *array_size, ADC_NUM_CHANNELS);
+		*array_size = ADC_NUM_CHANNELS;
 	}
 	while ((amba_readl(ADC_CONTROL_REG) & ADC_CONTROL_STATUS) == 0) {
 		counter++;
@@ -209,7 +194,7 @@ static int ambarella_adc_proc_read(char *page, char **start,
 {
 	int					len = 0;
 	int					i;
-	u32					adc_data[ADC_MAX_INSTANCES];
+	u32					adc_data[ADC_NUM_CHANNELS];
 	int					adc_size;
 
 	adc_size = ambarella_adc_get_instances();

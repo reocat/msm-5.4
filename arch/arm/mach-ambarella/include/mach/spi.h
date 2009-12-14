@@ -31,7 +31,7 @@
 #define __ASM_ARCH_SPI_H
 
 /****************************************************/
-/* Capabilities based on chip revision	      */
+/* Capabilities based on chip revision              */
 /****************************************************/
 #if (CHIP_REV == A1)
 #define SPI_MAX_SLAVE_ID 			3
@@ -84,6 +84,7 @@
 #define SPI_CTRLR0_OFFSET		0x00
 #define SPI_CTRLR1_OFFSET		0x04
 #define SPI_SSIENR_OFFSET		0x08
+#define SPI_MWCR_OFFSET			0x0c
 #define SPI_SER_OFFSET			0x10
 #define SPI_BAUDR_OFFSET		0x14
 #define SPI_TXFTLR_OFFSET		0x18
@@ -102,6 +103,12 @@
 #define SPI_IDR_OFFSET			0x58
 #define SPI_VERSION_ID_OFFSET		0x5c
 #define SPI_DR_OFFSET			0x60
+
+#define TSSI_CTRL_OFFSET		0x00
+#define TSSI_SSR_OFFSET			0x04
+#define TSSI_INDEX_OFFSET		0x08
+#define TSSI_DATA_OFFSET		0x0c
+#define TSSI_POLARITY_INVERT		0x10
 
 #define SPI_CTRLR0_REG			SPI_REG(0x00)
 #define SPI_CTRLR1_REG			SPI_REG(0x04)
@@ -126,7 +133,7 @@
 #define SPI_VERSION_ID_REG		SPI_REG(0x5c)
 #define SPI_DR_REG			SPI_REG(0x60)
 
-#if (SPI_INSTANCES == 2)
+#if (SPI_INSTANCES >= 2)
 #define SPI2_CTRLR0_REG			SPI2_REG(0x00)
 #define SPI2_CTRLR1_REG			SPI2_REG(0x04)
 #define SPI2_SSIENR_REG			SPI2_REG(0x08)
@@ -151,7 +158,7 @@
 #define SPI2_DR_REG			SPI2_REG(0x60)
 #endif
 
-#if (SPI_SLAVE_INSTANCES == 1)
+#if (SPI_SLAVE_INSTANCES >= 1)
 #define SPI_SLAVE_CTRLR0_REG		SPI_SLAVE_REG(0x00)
 #define SPI_SLAVE_CTRLR1_REG		SPI_SLAVE_REG(0x04)
 #define SPI_SLAVE_SSIENR_REG		SPI_SLAVE_REG(0x08)
@@ -176,6 +183,11 @@
 #define SPI_SLAVE_DR_REG		SPI_SLAVE_REG(0x60)
 #endif
 
+#define TSSI_CTRL_REG			TSSI_REG(0x00)
+#define TSSI_SSR_REG			TSSI_REG(0x04)
+#define TSSI_INDEX_REG			TSSI_REG(0x08)
+#define TSSI_DATA_REG			TSSI_REG(0x0c)
+#define TSSI_POLARITY_INVERT_REG	TSSI_REG(0x10)
 
 /****************************************************/
 /*	       Kernel Space Driver		*/

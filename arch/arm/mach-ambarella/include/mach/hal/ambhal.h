@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 96233
+ * @version 99162
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -353,7 +353,7 @@ AMB_HAL_FUNCTION_INFO_NULL
 
 typedef enum {
 /** function succeeded. */
-AMB_HAL_SUCCESS = 0x0,
+AMB_HAL_SUCCESS = 0x00000000,
 /** function failed - check arguments. */
 AMB_HAL_FAIL = 0xffffffff,
 /** function cannot complete right now - try again. */
@@ -469,6 +469,10 @@ AMB_PERFORMANCE_1080P30,
 AMB_PERFORMANCE_1080P60,
 /** 2160p60 */
 AMB_PERFORMANCE_2160P60,
+/*
+ * Do not remove this !! - it is a workaround for compilers that might use
+ * a byte for this enum
+ */
 AMB_PERFORMANCE_RESERVED=0xffffffff
 } amb_performance_t ;
 

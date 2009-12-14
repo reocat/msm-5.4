@@ -86,7 +86,7 @@ extern struct platform_device ambarella_fb1;
 #endif
 extern struct platform_device ambarella_ir0;
 extern struct platform_device ambarella_uart;
-#if (UART_INSTANCE >= 2)
+#if (UART_INSTANCES >= 2)
 extern struct platform_device ambarella_uart1;
 #endif
 extern struct platform_device ambarella_nand;

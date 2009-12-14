@@ -42,6 +42,12 @@
 #define DRAM_ARB_SUPPORT_THROTTLE_DL	1
 #endif
 
+#if (CHIP_REV == A6)
+#define DRAM_ARM_SUPPORT_TSDMA_HIGH_PRIORITY 1
+#else
+#define DRAM_ARM_SUPPORT_TSDMA_HIGH_PRIORITY 0
+#endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -358,5 +364,9 @@
 #define DRAM_ARB_SMM_TRANS_15		DRAM_REG(0x7C)
 #endif
 
-#endif /* __ASM_ARCH_DRCTL_H */
+#if (DRAM_ARM_SUPPORT_TSDMA_HIGH_PRIORITY == 1)
+#define DRAM_CFG_TSDMA_HP		DRAM_REG(0x180)
+#endif
+
+#endif /* __AMBHW__DRCTRL_H__ */
 
