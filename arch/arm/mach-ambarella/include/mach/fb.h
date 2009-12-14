@@ -69,6 +69,8 @@ struct ambarella_fb_iav_info {
 	struct fb_var_screeninfo screen_var;
 	struct fb_fix_screeninfo screen_fix;
 	enum ambarella_dsp_status dsp_status;
+	u8 clut_table[AMBARELLA_CLUT_TABLE_SIZE];
+	u8 blend_table[AMBARELLA_BLEND_TABLE_SIZE];
 
 	ambarella_fb_pan_display_fn pan_display;
 	ambarella_fb_setcmap_fn setcmap;
