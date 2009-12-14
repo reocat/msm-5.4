@@ -33,8 +33,7 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 #if 	(CHIP_REV == A6)
-//#define TS_ESC_DEAD_LOCK	1
-#define TS_ESC_DEAD_LOCK	0
+#define TS_ESC_DEAD_LOCK	1
 #else
 #define TS_ESC_DEAD_LOCK	0
 #endif

@@ -54,6 +54,8 @@
 #define IDC_SUPPORT_INTERNAL_MUX	0
 #endif
 
+#define IDCS_INSTANCES			0
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -66,6 +68,20 @@
 #define IDC_PSLH_OFFSET			0x14
 #define IDC_FMCTRL_OFFSET		0x18
 #define IDC_FMDATA_OFFSET		0x1c
+
+#if	(IDCS_INSTANCES >= 1)
+#define IDCS_ENR_OFFSET			0x00
+#define IDCS_CTRL_OFFSET		0x04
+#define IDCS_DATE_OFFSET		0x08
+#define IDCS_STS_OFFSET			0x0c
+#define IDCS_FIFO_CNT_OFFSET		0x10
+#define IDCS_RX_CNT_OFFSET		0x14
+#define IDCS_TX_CNT_OFFSET		0x18
+#define IDCS_HOLD_TIME_OFFSET		0x1c
+#define IDCS_SLAVE_ADDR_OFFSET		0x20
+#define	IDCS_SCL_TIMER_OFFSET		0x24
+#define IDCS_TIMEOUT_STS_OFFSET		0x28
+#endif
 
 #define IDC_ENR_REG			IDC_REG(0x00)
 #define IDC_CTRL_REG			IDC_REG(0x04)
@@ -85,6 +101,20 @@
 #define IDC2_PSLH_REG			IDC2_REG(0x14)
 #define IDC2_FMCTRL_REG			IDC2_REG(0x18)
 #define IDC2_FMDATA_REG			IDC2_REG(0x1c)
+#endif
+
+#if	(IDCS_INSTANCES >= 1)
+#define IDCS_ENR_REG			IDCS_REG(0x00)
+#define IDCS_CTRL_REG			IDCS_REG(0x04)
+#define IDCS_DATA_REG			IDCS_REG(0x08)
+#define IDCS_STS_REG			IDCS_REG(0x0c)
+#define IDCS_FIFO_CNT_REG		IDCS_REG(0x10)
+#define IDCS_RX_CNT_REG			IDCS_REG(0x14)
+#define IDCS_TX_CNT_REG			IDCS_REG(0x18)
+#define IDCS_HOLD_TIME_REG		IDCS_REG(0x1c)
+#define IDCS_SLAVE_ADDR_REG		IDCS_REG(0x20)
+#define	IDCS_SCL_TIMER_REG		IDCS_REG(0x24)
+#define IDCS_TIMEOUT_STS_REG		IDCS_REG(0x28)
 #endif
 
 #define IDC_ENR_REG_ENABLE	(0x01)

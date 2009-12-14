@@ -199,6 +199,10 @@ int ambarella_vi_proc_write(struct file *file,
 		if (memcmp(key_buffer, "wid", 3) == 0) 	{
 			input_report_key(pinfo->dev, ABS_TOOL_WIDTH, value1);
 			input_sync(pinfo->dev);
+		}else
+		if (memcmp(key_buffer, "swt", 3) == 0) {
+			input_report_switch(pinfo->dev, value1, value2);
+			input_sync(pinfo->dev);
 		}
 	}
 
@@ -325,9 +329,19 @@ ambarella_setup_keymap_init:
 		}
 	}
 
-	if (vi_enabled)
-		for (i = 0; i < 0x100; i++)
+	if (vi_enabled) {
+		for (i = 0; i < 0x100; i++) {
+			set_bit(i, pinfo->dev->evbit);
 			set_bit(i, pinfo->dev->keybit);
+			set_bit(i, pinfo->dev->relbit);
+			set_bit(i, pinfo->dev->absbit);
+			set_bit(i, pinfo->dev->mscbit);
+			set_bit(i, pinfo->dev->ledbit);
+			set_bit(i, pinfo->dev->sndbit);
+			set_bit(i, pinfo->dev->ffbit);
+			set_bit(i, pinfo->dev->swbit);
+		}
+	}
 
 	return errorCode;
 }

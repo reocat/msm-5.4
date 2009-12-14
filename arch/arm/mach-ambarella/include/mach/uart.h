@@ -39,9 +39,9 @@
 #endif
 
 #if (CHIP_REV == A5S)
-#define	UART_INSTANCE			2
+#define	UART_INSTANCES			2
 #else
-#define	UART_INSTANCE			1
+#define	UART_INSTANCES			1
 #endif
 
 /****************************************************/
@@ -62,7 +62,7 @@
 #define UART_MC_OFFSET			0x10
 #define UART_LS_OFFSET			0x14
 #define UART_MS_OFFSET			0x18
-#define UART_SC_OFFSET			0x1c
+#define UART_SC_OFFSET			0x1c	/* Byte */
 
 #define UART0_RB_REG			UART0_REG(0x00)
 #define UART0_TH_REG			UART0_REG(0x00)
@@ -75,7 +75,9 @@
 #define UART0_MC_REG			UART0_REG(0x10)
 #define UART0_LS_REG			UART0_REG(0x14)
 #define UART0_MS_REG			UART0_REG(0x18)
-#define UART0_SC_REG			UART0_REG(0x1c)
+#define UART0_SC_REG			UART0_REG(0x1c)	/* Byte */
+
+#if (UART_INSTANCES >= 2)
 
 #define UART1_RB_REG			UART1_REG(0x00)
 #define UART1_TH_REG			UART1_REG(0x00)
@@ -88,9 +90,9 @@
 #define UART1_MC_REG			UART1_REG(0x10)
 #define UART1_LS_REG			UART1_REG(0x14)
 #define UART1_MS_REG			UART1_REG(0x18)
-#define UART1_SC_REG			UART1_REG(0x1c)
+#define UART1_SC_REG			UART1_REG(0x1c)	/* Byte */
 
-
+#endif  /* UART_INSTANCES >= 2 */
 
 #define UARTX_RB_REG(x)			(UART_BASE + ((x) << 16))
 #define UARTX_TH_REG(x)			(UART_BASE + ((x) << 16))
@@ -103,7 +105,7 @@
 #define UARTX_MC_REG(x)			(UART_BASE + ((x) << 16) + 0x10)
 #define UARTX_LS_REG(x)			(UART_BASE + ((x) << 16) + 0x14)
 #define UARTX_MS_REG(x)			(UART_BASE + ((x) << 16) + 0x18)
-#define UARTX_SC_REG(x)			(UART_BASE + ((x) << 16) + 0x1c)
+#define UARTX_SC_REG(x)			(UART_BASE + ((x) << 16) + 0x1c)	/* Byte */
 
 /* UART[x]_IE_REG */
 #define UART_IE_PTIME			0x80
@@ -167,10 +169,6 @@
 #define UART_LS_PE			0x04
 #define UART_LS_OE			0x02
 #define UART_LS_DR			0x01
-
-/* Other defs for UART */
-#define RECV_BUF_SIZ			1500
-#define SEND_BUF_SIZ			1500
 
 /* UART[x]_MS_REG */
 #define UART_MS_DCD			0x80

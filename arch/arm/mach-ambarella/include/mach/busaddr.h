@@ -159,9 +159,10 @@
 #define RTC_OFFSET			0xd000
 #define GPIO2_OFFSET			0xe000
 #define SPI2_OFFSET			0xf000
-#define GPIO3_OFFSET			0x1f000
+#define IDCS_OFFSET			0x12000
 #define SPI_SLAVE_OFFSET		0x1e000
 #define UART1_OFFSET			0x1f000
+#define GPIO3_OFFSET			0x1f000		/* <- Resolve this! */
 
 #if	defined(__A1_FPGA__)
 #define RCT_OFFSET			0xf000
@@ -194,6 +195,7 @@
 #define AUC_BASE			(APB_BASE + AUC_OFFSET)
 #define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
 #define UART1_BASE			(APB_BASE + UART1_OFFSET)
+#define IDCS_BASE			(APB_BASE + IDCS_OFFSET)
 
 /* APB slave registers */
 
@@ -220,6 +222,7 @@
 #define AUC_REG(x)			(AUC_BASE + (x))
 #define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
 #define UART1_REG(x)			(UART1_BASE + (x))
+#define IDCS_REG(x)			(IDCS_BASE + (x))
 
 /* DSP Debug ports */
 

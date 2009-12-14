@@ -282,6 +282,11 @@ int rct_is_eth_enabled(void)
 
 void rct_power_down(void)
 {
+#if 1
+	/* This should be removed after standby mode is ready.*/
+	/* ToDo: Remove this hack*/
+	writel(ANA_PWR_REG, readl(ANA_PWR_REG) | ANA_PWR_POWER_DOWN);
+#else
 	amb_operating_mode_t amb_op_mode;
 
 	amb_op_mode.performance	= AMB_PERFORMANCE_720P30;
@@ -293,6 +298,7 @@ void rct_power_down(void)
 						AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_operating_mode() failed");
 	}
+#endif
 }
 
 void rct_reset_chip(void)
@@ -340,7 +346,7 @@ void rct_reset_xd(void)
 void rct_reset_dma(void)
 {
 	u32 val;
-	register int c;
+	volatile int c;
 
 	val = readl(I2S_24BITMUX_MODE_REG);
 	val |= I2S_24BITMUX_MODE_RST_CHAN0;
@@ -356,7 +362,8 @@ void rct_reset_dma(void)
 
 void rct_set_uart_pll(void)
 {
-	if (amb_set_uart_clock_frequency(HAL_BASE_VP, 1800000) !=
+	/* set CG_UART = 1 that CLK_FRE = 24Mhz */
+	if (amb_set_uart_clock_frequency(HAL_BASE_VP, 24000000) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_uart_clock_frequency() failed");
 	}
@@ -748,10 +755,17 @@ u32 read_usb_reg_setting(void)
 /* called by prusb driver */
 void _init_usb_pll(void)
 {
-	register int i;
+	volatile int i;
 
 	rct_set_usb_ana_on();
 	for(i = 0; i < 0x10000; i++); /* wait at least 150 us */
+}
+
+void rct_usb_reset(void)
+{
+	if (amb_usb_subsystem_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_usb_subsystem_soft_reset() failed\r\n");
+	}
 }
 
 /**
@@ -789,10 +803,12 @@ void rct_set_vin_lvds_pad(int mode)
 	if (mode == VIN_LVDS_PAD_MODE_LVCMOS) {
 		rval = amb_set_lvds_pad_mode(HAL_BASE_VP,
 		 		        AMB_LVDS_PAD_MODE_LVCMOS);
-    	} else if ((mode == VIN_LVDS_PAD_MODE_LVDS) ||
-	           (mode == VIN_LVDS_PAD_MODE_SLVS)) {
-    		rval = amb_set_lvds_pad_mode(HAL_BASE_VP,
+    	} else if (mode == VIN_LVDS_PAD_MODE_LVDS) {
+		rval = amb_set_lvds_pad_mode(HAL_BASE_VP,
 		 		      	     AMB_LVDS_PAD_MODE_LVDS);
+	} else if (mode == VIN_LVDS_PAD_MODE_SLVS) {
+    		rval = amb_set_lvds_pad_mode(HAL_BASE_VP,
+		 		      	     AMB_LVDS_PAD_MODE_SLVS);
     	} else {
     		DEBUG_MSG("rct_set_vin_lvds_pad: mode %d not supported", mode);
 	}

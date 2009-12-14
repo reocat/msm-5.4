@@ -38,16 +38,20 @@
 #if 	(CHIP_REV == A1) || (CHIP_REV == A2) ||		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define	I2S_SUPPORT_GATE_SHIFT	0
-#define	I2S_MAX_CHANNELS		2
-#define	I2S_AMBA_IP				0
+#define	I2S_MAX_CHANNELS	2
+#define	I2S_AMBA_IP		0
 #elif (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
 #define	I2S_SUPPORT_GATE_SHIFT	1
-#define	I2S_MAX_CHANNELS		6
-#define	I2S_AMBA_IP				0
+#define	I2S_MAX_CHANNELS	6
+#define	I2S_AMBA_IP		0
+#elif (CHIP_REV == A5S)
+#define	I2S_SUPPORT_GATE_SHIFT	1
+#define	I2S_MAX_CHANNELS	6
+#define	I2S_AMBA_IP		1
 #else
 #define	I2S_SUPPORT_GATE_SHIFT	1
-#define	I2S_MAX_CHANNELS		6
-#define	I2S_AMBA_IP				1
+#define	I2S_MAX_CHANNELS	6
+#define	I2S_AMBA_IP		1
 #endif
 
 #if	(CHIP_REV == A5S)
@@ -140,8 +144,9 @@
 #define I2S_CLK_WS_OUT_EN		(1 << 9)
 #define I2S_CLK_BCLK_OUT_EN		(1 << 8)
 #define I2S_CLK_BCLK_OUTPUT		(1 << 7)
-#define I2S_CLK_MASTER_MODE		(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN | \
-								I2S_CLK_BCLK_OUTPUT)
+#define I2S_CLK_MASTER_MODE		(I2S_CLK_WS_OUT_EN	|	\
+					 I2S_CLK_BCLK_OUT_EN	|	\
+					 I2S_CLK_BCLK_OUTPUT)
 #define I2S_CLK_TX_PO_FALL		(1 << 6)
 #define I2S_CLK_RX_PO_FALL		(1 << 5)
 #define I2S_CLK_DIV_MASK		0xffffffe0

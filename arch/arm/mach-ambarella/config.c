@@ -833,7 +833,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.fifosize	= UART_FIFO_SIZE,
 		.line		= 0,
 	},
-#if (UART_INSTANCE >= 2)
+#if (UART_INSTANCES >= 2)
 	[1] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
@@ -855,7 +855,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.name		= "ambarella-uart0",
 		.flow_control	= 0,
 	},
-#if (UART_INSTANCE >= 2)
+#if (UART_INSTANCES >= 2)
 	.amba_port[1]		= {
 		.port		= &ambarella_uart_port_resource[1],
 		.name		= "ambarella-uart1",
@@ -878,7 +878,7 @@ struct platform_device ambarella_uart = {
 	}
 };
 
-#if (UART_INSTANCE >= 2)
+#if (UART_INSTANCES >= 2)
 struct platform_device ambarella_uart1 = {
 	.name		= "ambarella-uart",
 	.id		= 1,

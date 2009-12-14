@@ -55,10 +55,7 @@
 #define IR_CONTROL_FIFO_OV		0x00000008
 #define IR_CONTROL_INTENB		0x00000004
 
-#if (CHIP_REV == 2)
 #define IR_STATUS_COUNT(x)		((x) & 0x3f)
 #define IR_DATA_DATA(x)			((x) & 0xffff)
-#endif
 
 #endif
-
