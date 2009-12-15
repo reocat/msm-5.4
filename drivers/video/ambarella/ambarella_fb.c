@@ -3,6 +3,7 @@
  *
  *	2008/07/22 - [linnsong] Create
  *	2009/03/03 - [Anthony Ginger] Port to 2.6.28
+ *	2009/12/15 - [Zhenwu Xue] Change fb_setcmap
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -95,19 +96,49 @@ static int ambafb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	int					errorCode = 0;
 	struct ambarella_platform_fb		*ambafb_data;
 	struct ambarella_fb_info		ambafb_info;
+	int					pos;
+	u16					*r, *g, *b, *t;
+	u8					*pclut_table, *pblend_table;
+
+	if (cmap == &info->cmap) {
+		errorCode = 0;
+		goto ambafb_setcmap_exit;
+	}
+
+	if (cmap->start != 0 || cmap->len != 256) {
+		dev_dbg(info->device, "%s: Incorrect parameters: start = %d, len = %d\n",
+			__func__, cmap->start, cmap->len);
+		errorCode = -1;
+		goto ambafb_setcmap_exit;
+	}
 
 	ambafb_data = (struct ambarella_platform_fb *)info->par;
 
 	mutex_lock(&ambafb_data->lock);
+
+	r = cmap->red;
+	g = cmap->green;
+	b = cmap->blue;
+	t = cmap->transp;
+	pclut_table = ambafb_data->clut_table;
+	pblend_table = ambafb_data->blend_table;
+	for (pos = 0; pos < 256; pos++) {
+		*pclut_table++ = *r++;
+		*pclut_table++ = *g++;
+		*pclut_table++ = *b++;
+		*pblend_table++ = *t++;
+	}
+
 	if (ambafb_data->setcmap) {
 		ambafb_info.color_format = ambafb_data->color_format;
 		errorCode =
 			ambafb_data->setcmap(cmap, info, &ambafb_info);
 	}
+
 	mutex_unlock(&ambafb_data->lock);
 
+ambafb_setcmap_exit:
 	dev_dbg(info->device, "%s:%d %d.\n", __func__, __LINE__, errorCode);
-
 	return errorCode;
 }
 
