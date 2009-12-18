@@ -333,7 +333,6 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	struct resource 		*mem;
 	struct resource 		*io;
 	struct resource 		*ioarea;
-	struct proc_dir_entry		*input_file;
 
 	pinfo = kzalloc(sizeof(struct ambarella_ir_info), GFP_KERNEL);
 	if (!pinfo) {
@@ -408,21 +407,8 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 
 	ambarella_ir_init(pinfo);
 
-	input_file = create_proc_entry(dev_name(&pdev->dev),
-		S_IRUGO | S_IWUSR, get_ambarella_proc_dir());
-	if (input_file == NULL) {
-		dev_err(&pdev->dev, "Register %s failed!\n",
-			dev_name(&pdev->dev));
-		errorCode = -ENOMEM;
-		goto ir_errorCode_free_irq;
-	} else {
-		input_file->write_proc = ambarella_vi_proc_write;
-		input_file->owner = THIS_MODULE;
-		input_file->data = pinfo;
-	}
-
-	pinfo->input_center->pir_info = pinfo;// register to input centre
-	pinfo->dev = pinfo->input_center->dev;// register input certre to ir info
+	pinfo->input_center->pir_info = pinfo;
+	pinfo->dev = pinfo->input_center->dev;
 	pinfo->pkeymap = pinfo->input_center->pkeymap;
 
 	dev_notice(&pdev->dev,
@@ -430,9 +416,6 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 		pdev->id);
 
 	goto ir_errorCode_na;
-
-ir_errorCode_free_irq:
-	free_irq(pinfo->irq, pinfo);
 
 ir_errorCode_free_platform:
 	platform_set_drvdata(pdev, NULL);
@@ -452,8 +435,6 @@ static int __devexit ambarella_ir_remove(struct platform_device *pdev)
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
-		remove_proc_entry(dev_name(&pdev->dev),
-			get_ambarella_proc_dir());
 		free_irq(pinfo->irq, pinfo);
 		platform_set_drvdata(pdev, NULL);
 		release_mem_region(pinfo->mem->start,

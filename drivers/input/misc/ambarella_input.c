@@ -42,6 +42,8 @@ struct ambarella_input_info *amba_input_dev = NULL;
 
 /* ========================================================================= */
 #define CONFIG_AMBARELLA_VI_BUFFER		(32)
+#define CONFIG_AMBARELLA_VI_NAME		"ambvi"
+
 /* ========================================================================= */
 static int abx_max_x = 720;
 MODULE_PARM_DESC(abx_max_x, "Ambarella input max x");
@@ -415,7 +417,7 @@ static int __devinit ambarella_input_center_init(void)
 		goto input_errorCode_free_input_dev;
 	}
 
-	input_file = create_proc_entry(dev_name(&pdev->dev),
+	input_file = create_proc_entry(CONFIG_AMBARELLA_VI_NAME,
 		S_IRUGO | S_IWUSR, get_ambarella_proc_dir());
 	if (input_file == NULL) {
 		dev_err(&pinfo->dev->dev, "Register %s failed!\n",
@@ -449,7 +451,8 @@ static int __devinit ambarella_input_center_init(void)
 	if (errorCode)
 		goto input_errorCode_setup_keymap;
 
-	dev_notice(&pdev->dev, "Ambarella Media Processor Input Center probed!\n" );
+	dev_notice(&pdev->dev,
+		"Ambarella Media Processor Input Center probed!\n");
 
 	goto input_errorCode_na;
 
@@ -468,17 +471,20 @@ input_errorCode_na:
 	return errorCode;
 }
 
-static int __devexit ambarella_input_center_remove(struct ambarella_input_info *pinfo)
+static int __devexit ambarella_input_center_remove(
+	struct ambarella_input_info *pinfo)
 {
 	if (pinfo && pinfo->dev) {
 		ambarella_free_keymap(pinfo);
-		remove_proc_entry(dev_name(&pinfo->dev->dev), get_ambarella_proc_dir());
+		remove_proc_entry(CONFIG_AMBARELLA_VI_NAME,
+			get_ambarella_proc_dir());
 		input_unregister_device(pinfo->dev);
 		input_free_device(pinfo->dev);
 		kfree(pinfo);
 	}
 
-	dev_notice(&pinfo->dev->dev, "Ambarella Media Processor Input Center removed!\n" );
+	dev_notice(&pinfo->dev->dev,
+		"Ambarella Media Processor Input Center removed!\n" );
 
 	return 0;
 }
@@ -489,40 +495,42 @@ static int __init ambarella_input_init(void)
 
 	errorCode = ambarella_input_center_init();
 	if (errorCode) {
-		dev_err(&amba_input_dev->dev->dev, "Register ambarella_input_driver failed!\n");
+		dev_err(&amba_input_dev->dev->dev,
+			"Register ambarella_input_driver failed!\n");
 		goto input_err_init;
 	}
-
 #ifdef CONFIG_INPUT_AMBARELLA_IR
 	errorCode = platform_driver_register_ir();
 	if (errorCode) {
-		dev_err(&amba_input_dev->dev->dev, "Register ambarella_ir_driver failed!\n");
+		dev_err(&amba_input_dev->dev->dev,
+			"Register ambarella_ir_driver failed!\n");
 		goto input_err_ir;
 	}
 #endif
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
 	errorCode = platform_driver_register_adc();
 	if (errorCode) {
-		dev_err(&amba_input_dev->dev->dev, "Register ambarella_adc_driver failed!\n");
+		dev_err(&amba_input_dev->dev->dev,
+			"Register ambarella_adc_driver failed!\n");
 		goto input_err_adc;
 	}
 #endif
-	goto input_err_init;
+
+goto input_err_init;
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
 input_err_adc:
 #endif
 #ifdef CONFIG_INPUT_AMBARELLA_IR
-		platform_driver_unregister_ir();
+	platform_driver_unregister_ir();
 input_err_ir:
 #endif
-		ambarella_input_center_remove(amba_input_dev);
+	ambarella_input_center_remove(amba_input_dev);
 input_err_init:
 	return errorCode;
 }
 
 static void __exit ambarella_input_exit(void)
 {
-
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
 	platform_driver_unregister_adc();
 #endif
