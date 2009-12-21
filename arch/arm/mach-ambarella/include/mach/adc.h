@@ -117,7 +117,6 @@
 #ifndef __ASSEMBLER__
 extern u32 ambarella_adc_get_instances(void);
 extern void ambarella_adc_get_array(u32 *adc_data, u32 *array_size);
-extern u32 ambarella_adc_get_channel(u32 channel_id);
 extern void ambarella_adc_start(void);
 extern void ambarella_adc_stop(void);
 extern u32 adc_is_irq_supported(void);

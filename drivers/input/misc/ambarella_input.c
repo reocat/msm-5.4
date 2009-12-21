@@ -247,13 +247,6 @@ ambarella_setup_keymap_init:
 			break;
 
 		case AMBA_INPUT_SOURCE_ADC:
-#if defined (CONFIG_INPUT_AMBARELLA_ADC)
-			errorCode = ambarella_setup_adc_keymap(pinfo, i);
-			if (errorCode)
-				dev_err(&pinfo->dev->dev,
-				"ambarella_setup_adc_keymap return %d!\n",
-					errorCode);
-#endif
 			break;
 
 		case AMBA_INPUT_SOURCE_GPIO:
@@ -430,34 +423,15 @@ static int __devinit ambarella_input_center_init(void)
 		input_file->data = pinfo;
 	}
 
-#ifdef CONFIG_INPUT_AMBARELLA_ADC
-	/*
-	 * here, we get the ADC channel number,
-	 * and allocate memory, which setup_keymap will use
-	 */
-	pinfo->adc_channel_num = ambarella_adc_get_instances();
-	ambi_dbg("adc has %d channels\n", pinfo->adc_channel_num);
-	if (pinfo->adc_channel_num > 32)
-		goto input_errorCode_unregister_device;
-
-	pinfo->channel = kzalloc(sizeof(struct ambarella_adc_channel_info)
-			* pinfo->adc_channel_num, GFP_KERNEL);
-	if (!pinfo->channel) {
-		dev_err(&pinfo->dev->dev, "Fail to malloc channel info\n");
-		goto input_errorCode_unregister_device;
-	}
-#endif
 	errorCode = ambarella_setup_keymap(pinfo);
 	if (errorCode)
-		goto input_errorCode_setup_keymap;
+		goto input_errorCode_unregister_device;
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor Input Center probed!\n");
 
 	goto input_errorCode_na;
 
-input_errorCode_setup_keymap:
-	kfree(pinfo->channel);
 input_errorCode_unregister_device:
 	input_unregister_device(pinfo->dev);
 
@@ -515,8 +489,7 @@ static int __init ambarella_input_init(void)
 		goto input_err_adc;
 	}
 #endif
-
-goto input_err_init;
+	goto input_err_init;
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
 input_err_adc:
 #endif

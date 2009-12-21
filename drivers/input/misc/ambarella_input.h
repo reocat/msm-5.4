@@ -181,6 +181,12 @@ struct ambarella_ir_info {
 	struct ambarella_input_info	*input_center;
 };
 
+struct ambarella_adc_channel_info{
+	u32				adc_channel_used;
+	u32 				adc_high_trig;
+	u32 				adc_low_trig;
+};
+
 struct ambarella_adc_info {
 	struct input_dev		*dev;
 	unsigned char __iomem 		*regbase;
@@ -188,6 +194,7 @@ struct ambarella_adc_info {
 	u32				id;
 	struct resource			*mem;
 	unsigned int			support_irq;
+	unsigned long			irqflags;
 	unsigned int			work_mode;
 	unsigned int			irq;
 
@@ -200,23 +207,17 @@ struct ambarella_adc_info {
 	struct ambarella_key_table	*pkeymap;
 	struct ambarella_adc_controller	*pcontroller_info;
 	struct ambarella_input_info	*input_center;
+
+	u32				adc_channel_num;
+	struct ambarella_adc_channel_info	*adc_channel_info;
 };
 
-struct ambarella_adc_channel_info{
-	u32				adc_channel_used;
-	u32 				adc_high_trig;
-	u32 				adc_low_trig;
-};
 struct ambarella_input_info {
 	struct input_dev		*dev;
 
 	struct ambarella_ir_info       	*pir_info;
 	struct ambarella_adc_info       *padc_info;
 	struct ambarella_key_table	*pkeymap;
-
-	u32				adc_channel_num;
-
-	struct ambarella_adc_channel_info *channel;
 };
 
 extern struct ambarella_input_info *amba_input_dev;
@@ -244,7 +245,6 @@ void platform_driver_unregister_ir(void);
 #if (defined CONFIG_INPUT_AMBARELLA_ADC)
 int platform_driver_register_adc(void);
 void platform_driver_unregister_adc(void);
-int ambarella_setup_adc_keymap(struct ambarella_input_info *pinfo, int i);
 #endif
 
 irqreturn_t ambarella_gpio_irq(int irq, void *devid);

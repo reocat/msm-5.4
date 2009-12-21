@@ -120,6 +120,7 @@ static int ambarella_pm_enter_standby(void)
 	}
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
 
+#if 0
 	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
@@ -127,7 +128,10 @@ static int ambarella_pm_enter_standby(void)
 		errorCode = -EPERM;
 	}
 #else
-	pr_err("%s: Can't support standby\n", __func__);
+	__asm__ __volatile__ (
+		"mcr	p15, 0, %[result], c7, c0, 4" :
+		[result] "+r" (result));
+#endif
 #endif
 
 	errorCode = notifier_to_errno(

@@ -34,6 +34,8 @@
 
 #include <mach/hardware.h>
 
+#define ADC_ONE_SHOT		1
+
 #ifndef CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT
 #define CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT	(100000)
 #endif
@@ -42,7 +44,6 @@ u32 ambarella_adc_get_instances(void)
 {
 	return ADC_NUM_CHANNELS;
 }
-EXPORT_SYMBOL(ambarella_adc_get_instances);
 
 static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 {
@@ -87,74 +88,50 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 {
 	int					i;
-	u32					counter = 0;
 
 	if (unlikely(*array_size > ADC_NUM_CHANNELS)) {
 		pr_warning("%s: Limit array_size form %d to %d!\n",
 			__func__, *array_size, ADC_NUM_CHANNELS);
 		*array_size = ADC_NUM_CHANNELS;
 	}
-	while ((amba_readl(ADC_CONTROL_REG) & ADC_CONTROL_STATUS) == 0) {
-		counter++;
-		if (counter > CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT) {
-			pr_warning("%s: Wait ADC_CONTROL_STATUS timeout!\n"
-				"Try: echo 1 > /proc/ambarella/adc\n",
-				__func__);
-			return;
-		}
-	};
+
+#if (ADC_ONE_SHOT == 1)
+	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START);
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
+#endif
 	for (i = 0; i < *array_size; i++)
 		adc_data[i] = ambarella_adc_get_channel_inline(i);
 }
 
-u32 ambarella_adc_get_channel(u32 channel_id)
-{
-	u32					adc_data = 0;
-	u32					counter = 0;
-
-	while ((amba_readl(ADC_CONTROL_REG) & ADC_CONTROL_STATUS) == 0) {
-		counter++;
-		if (counter > CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT) {
-			pr_warning("%s: Wait ADC_CONTROL_STATUS timeout!\n",
-				__func__);
-			goto ambarella_adc_get_channel_exit;
-		}
-	};
-	adc_data = ambarella_adc_get_channel_inline(channel_id);
-
-ambarella_adc_get_channel_exit:
-	return adc_data;
-}
-
 void ambarella_adc_start(void)
 {
-	u32				counter;
-
 #if (CHIP_REV != A5S)
 	amba_writel(ADC_RESET_REG, 0x01);
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x01);
-	msleep(3);
 
-	amba_writel(ADC_CONTROL_REG, 0);
-	counter = 0;
-	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
-		counter++;
-		if (counter > 10000)
-			break;
+	if (amba_tstbitsl(ADC_CONTROL_REG,
+		~(ADC_CONTROL_START | ADC_CONTROL_STATUS)) != 0) {
+		amba_writel(ADC_CONTROL_REG, 0);
+		while (amba_tstbitsl(ADC_CONTROL_REG,
+			ADC_CONTROL_STATUS) == 0x0);
 	}
 
+#if (ADC_ONE_SHOT == 0)
 	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START | ADC_CONTROL_MODE);
-	counter = 0;
-	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
-		counter++;
-		if (counter > 10000)
-			break;
-	}
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
+#endif
 }
 
 void ambarella_adc_stop(void)
 {
+	if ((amba_tstbitsl(ADC_ENABLE_REG, 0x01) != 0) &&
+		(amba_tstbitsl(ADC_CONTROL_REG, ~ADC_CONTROL_STATUS) != 0)) {
+		amba_writel(ADC_CONTROL_REG, 0);
+		while (amba_tstbitsl(ADC_CONTROL_REG,
+			ADC_CONTROL_STATUS) == 0x0);
+	}
+
 #if (CHIP_REV != A5S)
 	amba_writel(ADC_RESET_REG, 0x01);
 #endif
@@ -248,23 +225,19 @@ int __init ambarella_init_adc(void)
 
 u32 adc_is_irq_supported(void)
 {
-	#if (CHIP_REV == A5S)
-		return 1;
-	#else
-		return 0;
-	#endif
+#if (ADC_ONE_SHOT == 0)
+	return 1;
+#else
+	return 0;
+#endif
 }
 
-
-/*
- * set the related channal's interrupt trigger and threshold
- */
-void adc_set_irq_threshold(u32 ch, u32 h_level,u32 l_level)
+void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 {
-#if (CHIP_REV == A5S)
+#if (ADC_ONE_SHOT == 0)
 	u32 irq_control_address = 0;
-	u32 value = ((!!h_level)<<31) | ((!!l_level)<<30)
-		| ((h_level&0x3ff)<<15) | (l_level&0x3ff);
+	u32 value = ((!!h_level) << 31) | ((!!l_level) << 30)
+		| ((h_level & 0x3ff) << 15) | (l_level & 0x3ff);
 
 	switch (ch) {
 	case 0:
