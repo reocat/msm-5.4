@@ -1004,7 +1004,9 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		}
 	} /* ENUM COMPLETE */
 	else {
-		printk(KERN_ERR "Unknown Interrupt\n");
+		printk(KERN_ERR "Unknown Interrupt:0x%08x\n", int_value);
+		/* Ack the Unknown interrupt */
+		amba_writel(UDC_INTR_REG, int_value);
 	}
 }
 
