@@ -302,6 +302,7 @@ static const struct snd_kcontrol_new ak4642_snd_controls[] = {
 	SOC_ENUM("Speaker Gain", ak4642_enum[1]),
 	SOC_ENUM("Headphone Output Mode", ak4642_enum[5]),
 	SOC_ENUM("Headphone Gain", ak4642_enum[6]),
+	SOC_SINGLE("Mic Mute Switch", AK4642_SIG1, 2, 1, 1),
 
 	SOC_SINGLE("ALC Switch", AK4642_ALC1, 5, 1, 0),
 	SOC_SINGLE("ALC ZC Time", AK4642_TIMER, 4, 3, 0),
