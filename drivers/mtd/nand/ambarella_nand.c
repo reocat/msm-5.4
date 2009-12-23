@@ -755,7 +755,8 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			goto nand_amb_request_exit;
 		}
 
-		errorCode = fio_dma_parse_error(nand_info->fio_dma_sta);
+		errorCode = nand_info->plat_nand->parse_error(
+			nand_info->fio_dma_sta);
 		if (errorCode) {
 			u32 block_addr;
 			block_addr = nand_info->addr /
@@ -1368,7 +1369,6 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	struct resource				*wp_res;
 	struct resource				*reg_res;
 	struct resource				*dma_res;
-
 #ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition			amboot_partitions[PART_MAX + CMDLINE_PART_MAX];
 	int					amboot_nr_partitions = 0;
@@ -1382,7 +1382,9 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 #endif
 
 	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
-	if (plat_nand == NULL || plat_nand->timing == NULL) {
+	if ((plat_nand == NULL) || (plat_nand->timing == NULL) ||
+		(plat_nand->sets == NULL) || (plat_nand->parse_error == NULL) ||
+		(plat_nand->request == NULL) || (plat_nand->release == NULL)) {
 		dev_err(&pdev->dev, "Can't get platform_data!\n");
 		errorCode = - EPERM;
 		goto ambarella_nand_probe_exit;
@@ -1658,10 +1660,12 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	}
 
 ambarella_nand_probe_add_partitions:
-#endif
 	i = 0;
 	if (cmd_nr_partitions >= 0)
 		i = cmd_nr_partitions;
+#else
+	i = 0;
+#endif
 	add_mtd_partitions(mtd, amboot_partitions, amboot_nr_partitions + i);
 #else
 	add_mtd_device(&nand_info->mtd);
