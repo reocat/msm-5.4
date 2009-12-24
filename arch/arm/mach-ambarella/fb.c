@@ -41,7 +41,7 @@
 #include <mach/fb.h>
 
 /* ==========================================================================*/
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 static struct ambarella_platform_fb ambarella_platform_fb0 = {
 	.screen_var		= {
 		.xres		= 720,
@@ -371,7 +371,6 @@ static struct ambarella_platform_fb ambarella_platform_fb0 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
-	.vout_id		= 0,
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
 	.x_multiplication	= 1,
 	.y_multiplication	= 1,
@@ -401,7 +400,7 @@ struct platform_device ambarella_fb0 = {
 };
 #endif
 
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 static struct ambarella_platform_fb ambarella_platform_fb1 = {
 	.screen_var		= {
 		.xres		= 720,
@@ -731,7 +730,6 @@ static struct ambarella_platform_fb ambarella_platform_fb1 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
-	.vout_id		= 1,
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
 	.x_multiplication	= 1,
 	.y_multiplication	= 1,
@@ -763,7 +761,7 @@ struct platform_device ambarella_fb1 = {
 
 static int __init parse_videolfb(const struct tag *tag)
 {
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 	ambarella_platform_fb0.screen_var.xres = tag->u.videolfb.lfb_width;
 	ambarella_platform_fb0.screen_var.xres_virtual = tag->u.videolfb.lfb_width;
 	ambarella_platform_fb0.screen_var.yres = tag->u.videolfb.lfb_height;
@@ -792,7 +790,7 @@ static int __init parse_videolfb(const struct tag *tag)
 	ambarella_platform_fb0.prealloc_line_length = tag->u.videolfb.lfb_linelength;
 #endif
 
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 	ambarella_platform_fb1.screen_var.xres = tag->u.videolfb.lfb_width;
 	ambarella_platform_fb1.screen_var.xres_virtual = tag->u.videolfb.lfb_width;
 	ambarella_platform_fb1.screen_var.yres = tag->u.videolfb.lfb_height;
@@ -831,7 +829,7 @@ int ambarella_fb_get_platform_info(u32 fb_id,
 	u32					status = -EPERM;
 
 	if (fb_id == 0) {
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 		mutex_lock(&ambarella_platform_fb0.lock);
 		memcpy(platform_info, &ambarella_platform_fb0,
 			sizeof(struct ambarella_platform_fb));
@@ -841,7 +839,7 @@ int ambarella_fb_get_platform_info(u32 fb_id,
 #endif
 	} else
 	if (fb_id == 1) {
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 		mutex_lock(&ambarella_platform_fb1.lock);
 		memcpy(platform_info, &ambarella_platform_fb1,
 			sizeof(struct ambarella_platform_fb));
@@ -861,7 +859,7 @@ int ambarella_fb_set_iav_info(u32 fb_id, struct ambarella_fb_iav_info *iav)
 	u32					status = -EPERM;
 
 	if (fb_id == 0) {
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 		mutex_lock(&ambarella_platform_fb0.lock);
 		ambarella_platform_fb0.screen_var = iav->screen_var;
 		ambarella_platform_fb0.screen_fix = iav->screen_fix;
@@ -876,7 +874,7 @@ int ambarella_fb_set_iav_info(u32 fb_id, struct ambarella_fb_iav_info *iav)
 #endif
 	} else
 	if (fb_id == 1) {
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 		mutex_lock(&ambarella_platform_fb1.lock);
 		ambarella_platform_fb1.screen_var = iav->screen_var;
 		ambarella_platform_fb1.screen_fix = iav->screen_fix;
@@ -899,12 +897,12 @@ int __init ambarella_init_fb(void)
 {
 	int					errorCode = 0;
 
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 	mutex_init(&ambarella_platform_fb0.lock);
 	init_waitqueue_head(&ambarella_platform_fb0.proc_wait);
 #endif
 
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 	mutex_init(&ambarella_platform_fb1.lock);
 	init_waitqueue_head(&ambarella_platform_fb1.proc_wait);
 #endif

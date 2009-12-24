@@ -54,10 +54,10 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rtc0,
 	&ambarella_wdt0,
 	&ambarella_udc0,
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 	&ambarella_fb0,
 #endif
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 	&ambarella_fb1,
 #endif
 	&ambarella_ir0,

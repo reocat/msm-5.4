@@ -78,10 +78,10 @@ extern struct platform_device ambarella_rtc0;
 extern struct platform_device ambarella_wdt0;
 extern struct platform_device ambarella_eth0;
 extern struct platform_device ambarella_udc0;
-#ifdef CONFIG_AMBARELLA_FB0
+#if (CONFIG_AMBARELLA_FB_NUM >= 1)
 extern struct platform_device ambarella_fb0;
 #endif
-#ifdef CONFIG_AMBARELLA_FB1
+#if (CONFIG_AMBARELLA_FB_NUM >= 2)
 extern struct platform_device ambarella_fb1;
 #endif
 extern struct platform_device ambarella_ir0;
