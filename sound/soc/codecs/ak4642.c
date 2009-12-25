@@ -73,11 +73,11 @@ static int ak4642_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
 {
 	u8 *cache = codec->reg_cache;
+	struct i2c_client *client = codec->control_data;
 
 	if (reg >= AK4642_CACHEREGNUM)
 		return -EIO;
 
-	struct i2c_client *client = codec->control_data;
 	if (i2c_smbus_write_byte_data(client, reg, value)) {
 		pr_err("AK4642: I2C write failed\n");
 		return -EIO;

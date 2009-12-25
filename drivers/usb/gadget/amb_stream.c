@@ -426,33 +426,89 @@ static struct usb_gadget_strings	stringtab = {
 };
 
 /*-------------------------------------------------------------------------*/
+
+/* add a request to the tail of a list */
+void req_put(struct amb_dev *dev,
+		struct list_head *head, struct usb_request *req)
+{
+	spin_lock_irq(&dev->lock);
+	list_add_tail(&req->list, head);
+	spin_unlock_irq(&dev->lock);
+}
+
+/* get a request and remove it from the head of a list */
+struct usb_request *req_get(struct amb_dev *dev, struct list_head *head)
+{
+	struct usb_request *req;
+
+	spin_lock_irq(&dev->lock);
+	if (list_empty(head)) {
+		req = NULL;
+	} else {
+		req = list_first_entry(head, struct usb_request, list);
+		list_del(&req->list);
+	}
+	spin_unlock_irq(&dev->lock);
+	return req;
+}
+
+/* get a request and move it from the head of "from" list
+  * to the head of "to" list
+  */
+struct usb_request *req_move(struct amb_dev *dev,
+		struct list_head *from, struct list_head *to)
+{
+	struct usb_request *req;
+
+	spin_lock_irq(&dev->lock);
+	if (list_empty(from)) {
+		req = NULL;
+	} else {
+		req = list_first_entry(from, struct usb_request, list);
+		list_move_tail(&req->list, to);
+	}
+	spin_unlock_irq(&dev->lock);
+	return req;
+}
+
 static int amb_send(u8 *buf, u32 len)
 {
 	struct amb_dev *dev = ag_device;
 	struct usb_request *req = NULL;
 	int rval = 0;
 
-	if(wait_event_interruptible(dev->wq, !list_empty(&dev->in_idle_list))){
-		rval = -ERESTARTSYS;
+	if (buf == NULL || len > buflen)
+		return -EFAULT;
+
+	if(wait_event_interruptible(dev->wq,
+		(req = req_move(dev, &dev->in_idle_list, &dev->in_queue_list))
+		|| dev->error)){
+		rval = -EINTR;
 		goto exit;
 	}
 
-	spin_lock_irq(&dev->lock);
-	req = list_entry(dev->in_idle_list.next,	struct usb_request, list);
-	list_del_init(&req->list);
-	spin_unlock_irq(&dev->lock);
+	if(dev->error) {
+		ERROR(dev, "%s: device error", __func__);
+		spin_lock_irq(&dev->lock);
+		if (req)
+			list_move_tail(&req->list, &dev->in_idle_list);
+		spin_unlock_irq(&dev->lock);
+		rval = -EIO;
+		goto exit;
+	}
 
-	if(buf)
-		memcpy(req->buf, buf, len);
+	memcpy(req->buf, buf, len);
 
 	req->length = len;
 	rval = usb_ep_queue(dev->in_ep, req, GFP_ATOMIC);
 	if (rval != 0) {
 		ERROR(dev, "%s: cannot queue bulk in request, "
 			"rval=%d\n", __func__, rval);
+		spin_lock_irq(&dev->lock);
+		list_move_tail(&req->list, &dev->in_idle_list);
+		spin_unlock_irq(&dev->lock);
 		goto exit;
 	}
-	list_add_tail(&req->list, &dev->in_queue_list);
 
 exit:
 	return rval;
@@ -464,22 +520,27 @@ static int amb_recv(u8 *buf, u32 len)
 	struct usb_request *req = NULL;
 	int rval = 0;
 
-	if(wait_event_interruptible(dev->wq, !list_empty(&dev->out_req_list))){
-		return -ERESTARTSYS;
+	if (buf == NULL || len > buflen)
+		return -EFAULT;
+
+	if(wait_event_interruptible(dev->wq,
+		(req = req_get(dev, &dev->out_req_list)) || dev->error)){
+		return -EINTR;
 	}
 
-	spin_lock_irq(&dev->lock);
-	req = list_entry(dev->out_req_list.next, struct usb_request, list);
-	list_del_init(&req->list);
-	spin_unlock_irq(&dev->lock);
-
-	if(buf)
+	if (req) {
 		memcpy(buf, req->buf, req->actual);
 
-	req->length = buflen;
-	if ((rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC))) {
-		ERROR(dev, "%s: can't queue bulk out request, "
-			"rval = %d\n", __func__, rval);
+		req->length = buflen;
+		if ((rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC))) {
+			ERROR(dev, "%s: can't queue bulk out request, "
+				"rval = %d\n", __func__, rval);
+		}
+	}
+
+	if(dev->error) {
+		ERROR(dev, "%s: device error", __func__);
+		rval = -EIO;
 	}
 
 	return rval;
@@ -571,7 +632,7 @@ static int ag_ioctl(struct inode *inode, struct file *filp,
 static int ag_open(struct inode *inode, struct file *filp)
 {
 	struct amb_dev *dev = ag_device;
-	struct usb_request *req;
+	struct usb_request *req = NULL;
 	int rval = 0;
 
 	mutex_lock(&dev->mtx);
@@ -591,11 +652,7 @@ static int ag_open(struct inode *inode, struct file *filp)
 	dev->error = 0;
 
 	/* throw away the data received on last connection */
-	while (!list_empty(&dev->out_req_list)) {
-		spin_lock_irq(&dev->lock);
-		req = list_entry(dev->out_req_list.next, struct usb_request, list);
-		list_del_init(&req->list);
-		spin_unlock_irq(&dev->lock);
+	while ((req = req_get(dev, &dev->out_req_list))) {
 		/* re-use the req again */
 		req->length = buflen;
 		if ((rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC))) {
@@ -618,12 +675,7 @@ static int ag_release(struct inode *inode, struct file *filp)
 	mutex_lock(&dev->mtx);
 
 	/* dequeue the bulk-in request */
-	while (!list_empty(&dev->in_queue_list)) {
-		spin_lock_irq(&dev->lock);
-		req = list_entry(dev->in_queue_list.prev, struct usb_request, list);
-		list_move_tail(&req->list, &dev->in_idle_list);
-		spin_unlock_irq(&dev->lock);
-
+	while ((req = req_move(dev, &dev->in_queue_list, &dev->in_idle_list))) {
 		rval = usb_ep_dequeue(dev->in_ep, req);
 		if (rval != 0) {
 			ERROR(dev, "%s: cannot dequeue bulk in request, "
@@ -653,26 +705,28 @@ static int ag_read(struct file *file, char __user *buf,
 	struct usb_request *req = NULL;
 	int len = 0, rval = 0;
 
-	DBG(dev, "%s: Enter\n", __func__);
-
 	mutex_lock(&dev->mtx);
 
 	while(count > 0){
 		if(wait_event_interruptible(dev->wq,
-			!list_empty(&dev->out_req_list) || dev->error)){
+			(req = req_get(dev, &dev->out_req_list)) || dev->error)){
 			mutex_unlock(&dev->mtx);
 			return -EINTR;
 		}
 
 		if(dev->error){
+			ERROR(dev, "%s: device error", __func__);
+			if (req) {
+				req->length = buflen;
+				rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
+				if (rval)
+					ERROR(dev, "%s: "
+						"can't queue bulk out request, "
+						"rval = %d\n", __func__, rval);
+			}
 			mutex_unlock(&dev->mtx);
 			return -EIO;
 		}
-
-		spin_lock_irq(&dev->lock);
-		req = list_entry(dev->out_req_list.next, struct usb_request, list);
-		list_del_init(&req->list);
-		spin_unlock_irq(&dev->lock);
 
 		if(copy_to_user(buf + len, req->buf, req->actual)){
 			printk("len = %d, actual = %d\n", len, req->actual);
@@ -696,8 +750,6 @@ static int ag_read(struct file *file, char __user *buf,
 
 	mutex_unlock(&dev->mtx);
 
-	DBG(dev, "%s: Exit\n", __func__);
-
 	return len;
 }
 
@@ -708,26 +760,25 @@ static int ag_write(struct file *file, const char __user *buf,
 	struct amb_dev *dev = ag_device;
 	struct usb_request *req = NULL;
 
-	DBG(dev, "%s: Enter\n", __func__);
-
 	mutex_lock(&dev->mtx);
 
 	while(count > 0) {
 		if(wait_event_interruptible(dev->wq,
-			!list_empty(&dev->in_idle_list) || dev->error)){
+			(req = req_move(dev, &dev->in_idle_list, &dev->in_queue_list))
+			|| dev->error)){
 			mutex_unlock(&dev->mtx);
-			return -ERESTARTSYS;
+			return -EINTR;
 		}
 
 		if(dev->error){
+			ERROR(dev, "%s: device error", __func__);
+			spin_lock_irq(&dev->lock);
+			if (req)
+				list_move_tail(&req->list, &dev->in_idle_list);
+			spin_unlock_irq(&dev->lock);
 			mutex_unlock(&dev->mtx);
 			return -EIO;
 		}
-
-		spin_lock_irq(&dev->lock);
-		req = list_entry(dev->in_idle_list.next, struct usb_request, list);
-		list_move_tail(&req->list, &dev->in_queue_list);
-		spin_unlock_irq(&dev->lock);
 
 		size = count < buflen ? count : buflen;
 		if(copy_from_user(req->buf, buf + len, size)){
@@ -872,11 +923,13 @@ amb_alloc_buf_req (struct usb_ep *ep, unsigned length, gfp_t kmalloc_flags)
 
 static void amb_free_buf_req (struct usb_ep *ep, struct usb_request *req)
 {
-	if (req->buf){
-		kfree(req->buf);
-		req->buf = NULL;
+	if(req){
+		if (req->buf){
+			kfree(req->buf);
+			req->buf = NULL;
+		}
+		usb_ep_free_request (ep, req);
 	}
-	usb_ep_free_request (ep, req);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -908,7 +961,7 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		DBG (dev, "%s complete --> %d, %d/%d\n", ep->name,
+		ERROR (dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		dev->error = 1;
 		/* queue request again */
@@ -1004,8 +1057,6 @@ static void amb_start_notify (struct amb_dev *dev)
 	struct amb_notify *event;
 	int value;
 
-	DBG (dev, "%s, flush old status first\n", __func__);
-
 	/* flush old status
 	 *
 	 * FIXME ugly idiom, maybe we'd be better with just
@@ -1050,15 +1101,24 @@ static void amb_reset_config (struct amb_dev *dev)
 		return;
 	dev->config = 0;
 
+	spin_lock_irq(&dev->lock);
+
 	/* free write requests on the free list */
 	while(!list_empty(&dev->in_idle_list)) {
 		req = list_entry(dev->in_idle_list.next,
 				struct usb_request, list);
-		list_del(&req->list);
+		list_del_init(&req->list);
 		req->length = buflen;
 		amb_free_buf_req(dev->in_ep, req);
 	}
-
+	while(!list_empty(&dev->in_queue_list)) {
+		req = list_entry(dev->in_queue_list.prev,
+				struct usb_request, list);
+		list_del_init(&req->list);
+		req->length = buflen;
+		amb_free_buf_req(dev->in_ep, req);
+	}
+	spin_unlock_irq(&dev->lock);
 	/* just disable endpoints, forcing completion of pending i/o.
 	 * all our completion handlers free their requests in this case.
 	 */
@@ -1134,7 +1194,7 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 		req = amb_alloc_buf_req(ep, buflen, GFP_ATOMIC);
 		if (req) {
 			req->complete = amb_bulk_in_complete;
-			list_add(&req->list, &dev->in_idle_list);
+			req_put(dev, &dev->in_idle_list, req);
 		} else {
 			ERROR(dev, "%s: can't allocate bulk in requests\n", __func__);
 			result = -ENOMEM;
@@ -1406,14 +1466,12 @@ static void amb_disconnect (struct usb_gadget *gadget)
 {
 	struct amb_dev		*dev = get_gadget_data (gadget);
 
-	spin_lock (&dev->lock);
 	amb_reset_config (dev);
 
 	/* a more significant application might have some non-usb
 	 * activities to quiesce here, saving resources like power
 	 * or pushing the notification up a network stack.
 	 */
-	spin_unlock (&dev->lock);
 
 	/* next we may get setup() calls to enumerate new connections;
 	 * or an unbind() during shutdown (including removing module).

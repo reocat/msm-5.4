@@ -417,10 +417,9 @@ ambarella_get_last_desc(struct ambarella_ep *ep)
  * Description:
  *	Check if transfer error occurred for specified endpoint.
  */
-static u32 ambarella_check_error (struct ambarella_ep *ep)
+static u32 ambarella_check_error1 (struct ambarella_ep *ep)
 {
 	u32	ep_sts, retval = 0;
-	u32	sts_tmp1, sts_tmp2;
 
 	ep_sts = amba_readl(ep->ep_reg.sts_reg);
 
@@ -436,6 +435,18 @@ static u32 ambarella_check_error (struct ambarella_ep *ep)
 		amba_writel(ep->ep_reg.sts_reg, UDC_EP_STS_HOST_ERR);
 		retval = 1;
 	}
+
+	return retval;
+}
+
+/*
+ * Name: ambarella_check_error2
+ * Description:
+ *	Check if transfer error occurred during DMA.
+ */
+static u32 ambarella_check_error2 (struct ambarella_ep *ep)
+{
+	u32	retval = 0, sts_tmp1, sts_tmp2;
 
 	if(ep->last_data_desc){
 		sts_tmp1 = ep->last_data_desc->status & USB_DMA_BUF_STS;
@@ -540,6 +551,8 @@ static void ambarella_clr_ep_nak(struct ambarella_ep *ep)
 	if (amba_readl(ep_reg->ctrl_reg) & UDC_EP_CTRL_NAK) {
 		/* can't clear NAK, let somebody clear it after Rx DMA is done. */
 		ep->need_cnak = 1;
+	}else{
+		ep->need_cnak = 0;
 	}
 }
 
@@ -704,8 +717,6 @@ static void ambarella_handle_data_in(struct ambarella_ep *ep)
 	struct ambarella_request	*req = NULL;
 	struct ambarella_udc *udc = ep->udc;
 
-	dprintk(DEBUG_BULK_IN, "Enter\n");
-
 	/* get request */
 	if (list_empty(&ep->queue)) {
 		printk(KERN_DEBUG "%s: req NULL\n", __func__);
@@ -716,7 +727,7 @@ static void ambarella_handle_data_in(struct ambarella_ep *ep)
 			struct ambarella_request,queue);
 
 	/* If error happened, issue the request again */
-	if (ambarella_check_error(ep))
+	if (ambarella_check_error2(ep))
 		req->req.status = -EPROTO;
 	else {
 		/* No error happened, so all the data has been sent to host */
@@ -731,8 +742,6 @@ static void ambarella_handle_data_in(struct ambarella_ep *ep)
 		udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 		ambarella_set_rx_dma(&udc->ep[CTRL_OUT], NULL);
 	}
-
-	dprintk(DEBUG_BULK_IN, "Exit\n");
 }
 
 
@@ -748,8 +757,6 @@ static int ambarella_handle_data_out(struct ambarella_ep *ep)
 	struct ambarella_udc *udc = ep->udc;
 	u32 recv_size = 0, req_size;
 
-	dprintk(DEBUG_BULK_OUT, "Enter\n");
-
 	/* get request */
 	if (list_empty(&ep->queue)) {
 		printk(KERN_DEBUG "%s: req NULL\n", __func__);
@@ -759,7 +766,7 @@ static int ambarella_handle_data_out(struct ambarella_ep *ep)
 	req = list_entry(ep->queue.next,	struct ambarella_request, queue);
 
 	/* If error happened, issue the request again */
-	if (ambarella_check_error(ep))
+	if (ambarella_check_error2(ep))
 		req->req.status = -EPROTO;
 
 	recv_size = ep->last_data_desc->status & USB_DMA_RXTX_BYTES;
@@ -785,8 +792,6 @@ static int ambarella_handle_data_out(struct ambarella_ep *ep)
 		/* Re-enable Rx DMA to receive next setup packet */
 		ambarella_enable_rx_dma();
 	}
-
-	dprintk(DEBUG_BULK_OUT, "Exit\n");
 
 	return 0;
 }
@@ -1024,6 +1029,14 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 	ep_status = amba_readl(ep->ep_reg.sts_reg);
 
+	if (ambarella_check_error1(ep) && !list_empty(&ep->queue)) {
+		struct ambarella_request	*req = NULL;
+		req = list_entry(ep->queue.next, struct ambarella_request,queue);
+		req->req.status = -EPROTO;
+		ambarella_udc_done(ep, req, 0);
+		return;
+	}
+
 	if (ep_status & UDC_EP_STS_TX_DMA_CMPL) {
 		if(ep->halted || list_empty(&ep->queue))
 			return;
@@ -1034,12 +1047,8 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 			BUG();
 			return;
 		}
-
 		ambarella_handle_data_in(&udc->ep[ep_id]);
-	}
-
-	if((ep_status & UDC_EP_STS_IN_TOKEN) && !(ep_status & UDC_EP_STS_TX_DMA_CMPL))
-	{
+	} else if(ep_status & UDC_EP_STS_IN_TOKEN) {
 		if(!list_empty(&ep->queue)){
 			req = list_entry(ep->queue.next,
 				struct ambarella_request, queue);
@@ -1088,8 +1097,19 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 			return;
 		}
 
-		if(ep->halted || list_empty(&ep->queue))
+		if(ep->halted || list_empty(&ep->queue)) {
+			amba_writel(ep->ep_reg.sts_reg, ep_status);
 			return;
+		}
+
+		if(ambarella_check_error1(ep) && !list_empty(&ep->queue)) {
+			struct ambarella_request *req = NULL;
+			req = list_entry(ep->queue.next,
+				struct ambarella_request, queue);
+			req->req.status = -EPROTO;
+			ambarella_udc_done(ep, req, 0);
+			return;
+		}
 
 		ep->last_data_desc = ambarella_get_last_desc(ep);
 		if(ep->last_data_desc == NULL){
