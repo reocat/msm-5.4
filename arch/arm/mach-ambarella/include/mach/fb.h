@@ -50,7 +50,6 @@ enum ambarella_fb_status {
 };
 
 struct ambarella_fb_info {
-	int vout_id;
 	enum ambarella_fb_color_format color_format;
 };
 
@@ -85,7 +84,6 @@ struct ambarella_platform_fb {
 	enum ambarella_fb_status fb_status;
 	u8 clut_table[AMBARELLA_CLUT_TABLE_SIZE];
 	u8 blend_table[AMBARELLA_BLEND_TABLE_SIZE];
-	int vout_id;
 	enum ambarella_fb_color_format color_format;
 	u32 x_multiplication;
 	u32 y_multiplication;
