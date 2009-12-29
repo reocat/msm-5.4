@@ -765,6 +765,12 @@ static int __init parse_nand_tag_t2(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_NAND_T2, parse_nand_tag_t2);
 
+void __init ambarella_init_nand_hotboot(
+	struct ambarella_nand_timing *hot_nand_timing)
+{
+	ambarella_nand_default_timing = *hot_nand_timing;
+}
+
 static struct resource ambarella_fio_resources[] = {
 	[0] = {
 		.start	= FIO_BASE,

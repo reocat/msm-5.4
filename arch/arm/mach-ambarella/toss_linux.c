@@ -21,6 +21,7 @@
 #include <asm/mach/map.h>
 
 #include <mach/toss/toss.h>
+#include "init.h"
 
 #define HOTBOOT_MEM_ADDR	(ambarella_phys_to_virt(0xc007fff0))
 #define HOTBOOT_MAGIC0		(0x14cd78a0)
@@ -276,6 +277,7 @@ int __init ambarella_init_toss(void)
 	struct proc_dir_entry *pde_toss;
 	struct proc_dir_entry *pde_hb;
 #endif
+	struct ambarella_nand_timing nand_timing;
 
 	if (toss == NULL) {
 		pr_info("toss: inactive!\n");
@@ -327,6 +329,15 @@ int __init ambarella_init_toss(void)
 	pde_hb->write_proc = hotboot_write_proc;
 	pde_hb->owner = THIS_MODULE;
 #endif
+
+	nand_timing.control = toss->hwctx[toss->oldctx].fios.flash_ctr_reg;
+	nand_timing.timing0 = toss->hwctx[toss->oldctx].fios.flash_tim0_reg;
+	nand_timing.timing1 = toss->hwctx[toss->oldctx].fios.flash_tim1_reg;
+	nand_timing.timing2 = toss->hwctx[toss->oldctx].fios.flash_tim2_reg;
+	nand_timing.timing3 = toss->hwctx[toss->oldctx].fios.flash_tim3_reg;
+	nand_timing.timing4 = toss->hwctx[toss->oldctx].fios.flash_tim4_reg;
+	nand_timing.timing5 = toss->hwctx[toss->oldctx].fios.flash_tim5_reg;
+	ambarella_init_nand_hotboot(&nand_timing);
 
 ambarella_init_toss_exit:
 	return rval;
