@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.29
-# Fri Jan  1 02:30:12 2010
+# Sat Jan  2 17:48:42 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -597,12 +597,8 @@ CONFIG_AMBARELLA_ETH=y
 # Wireless LAN
 #
 # CONFIG_WLAN_PRE80211 is not set
-CONFIG_WLAN_80211=y
-CONFIG_LIBERTAS=m
-CONFIG_LIBERTAS_SDIO=m
-# CONFIG_LIBERTAS_DEBUG is not set
+# CONFIG_WLAN_80211 is not set
 # CONFIG_IWLWIFI_LEDS is not set
-# CONFIG_HOSTAP is not set
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers
