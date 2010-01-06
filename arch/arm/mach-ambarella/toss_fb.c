@@ -4,6 +4,9 @@
  * Copyright (C) 2008-2009, Ambarella Inc.
  */
 
+#include <mach/toss/toss.h>
+#include <mach/toss/toss_osd.h>
+
 /*
  * Aggregate the objects to save time on the linear traversal of dspctx.
  */
@@ -246,10 +249,6 @@ static int try_tossed_video_setup(void)
 		pfb->prealloc_line_length = osd_buf_setup->osd_buf_pitch;
 
 		/* --- osd_clut_setup --- */
-		if (osd_setup->src == 0 && osd_clut_setup != NULL) {
-			pfb->clut_table = (u8 *) ambarella_phys_to_virt(
-				osd_clut_setup->clut_dram_addr);
-		}
 
 		pfb->pan_display = toss_fb_pan_display;
 		pfb->setcmap = toss_fb_setcmap;
