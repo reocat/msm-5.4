@@ -1,5 +1,5 @@
 /*
- * toss/toss.h
+ * system/src/toss/toss.h
  *
  * Terminal Operating Systerm Scheduler
  *
