@@ -1639,8 +1639,17 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
+static void ambarella_usb_init_pll(void) 
+{
+#if (CHIP_REV == A2S)
+	rct_set_usb_phy_pll();
+#endif
+	rct_set_usb_ana_on();
+	udelay(150);
+}
+
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
-	.set_pll	= rct_set_usb_ana_on,
+	.init_pll	= ambarella_usb_init_pll,
 };
 
 struct platform_device ambarella_udc0 = {

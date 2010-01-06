@@ -284,7 +284,7 @@ struct ambarella_i2s_controller {
 };
 
 struct ambarella_udc_controller {
-	void					(*set_pll)(void);
+	void					(*init_pll)(void);
 };
 
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);

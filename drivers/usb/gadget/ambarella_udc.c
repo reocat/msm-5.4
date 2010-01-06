@@ -107,7 +107,7 @@ static inline struct ambarella_request *to_ambarella_req(struct usb_request *req
 static const char proc_node_name[] = "driver/udc";
 
 static int
-ambarella_proc_udc_read(char *page, char **start, off_t off, int count,
+ambarella_debugfs_udc_read(char *page, char **start, off_t off, int count,
 	      int *eof, void *_dev)
 {
 	char *buf = page;
@@ -156,7 +156,7 @@ ambarella_proc_udc_read(char *page, char **start, off_t off, int count,
 	return count - size;
 }
 
-#define create_proc_files() 	create_proc_read_entry(proc_node_name, 0, NULL, ambarella_proc_udc_read, udc)
+#define create_proc_files() 	create_proc_read_entry(proc_node_name, 0, NULL, ambarella_debugfs_udc_read, udc)
 #define remove_proc_files() 	remove_proc_entry(proc_node_name, NULL)
 
 #else	/* !CONFIG_USB_GADGET_DEBUG_FILES */
@@ -583,6 +583,7 @@ static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr);
 	/* set Poll command to transfer data to Tx FIFO */
 	amba_setbitsl(ep_reg->ctrl_reg, UDC_EP_CTRL_POLL);
+	ep->dma_enabled = 1;
 
 	/* re-enable usb interrupt */
 	local_irq_restore(flags);
@@ -723,8 +724,7 @@ static void ambarella_handle_data_in(struct ambarella_ep *ep)
 		return ;
 	}
 
-	req = list_entry(ep->queue.next,
-			struct ambarella_request,queue);
+	req = list_first_entry(&ep->queue, struct ambarella_request,queue);
 
 	/* If error happened, issue the request again */
 	if (ambarella_check_error2(ep))
@@ -763,7 +763,7 @@ static int ambarella_handle_data_out(struct ambarella_ep *ep)
 		return -EINVAL;
 	}
 
-	req = list_entry(ep->queue.next,	struct ambarella_request, queue);
+	req = list_first_entry(&ep->queue, struct ambarella_request,queue);
 
 	/* If error happened, issue the request again */
 	if (ambarella_check_error2(ep))
@@ -842,9 +842,8 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 	ep->halted = halted_tmp;
 
 	if(need_queue){
-		next_req = list_entry (ep->queue.next,
-			 struct ambarella_request,
-			 queue);
+		next_req = list_first_entry (&ep->queue,
+			 struct ambarella_request, queue);
 
 		switch(ep->dir) {
 		case USB_DIR_IN:
@@ -867,9 +866,8 @@ static void ambarella_ep_nuke(struct ambarella_ep *ep, int status)
 
 	while (!list_empty (&ep->queue)) {
 		struct ambarella_request *req;
-		req = list_entry (ep->queue.next,
-				 struct ambarella_request,
-				 queue);
+		req = list_first_entry(&ep->queue,
+			struct ambarella_request, queue);
 		ambarella_udc_done(ep, req, status);
 	}
 }
@@ -1031,15 +1029,23 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 	if (ambarella_check_error1(ep) && !list_empty(&ep->queue)) {
 		struct ambarella_request	*req = NULL;
-		req = list_entry(ep->queue.next, struct ambarella_request,queue);
+		req = list_first_entry(&ep->queue, struct ambarella_request,queue);
 		req->req.status = -EPROTO;
 		ambarella_udc_done(ep, req, 0);
 		return;
 	}
 
 	if (ep_status & UDC_EP_STS_TX_DMA_CMPL) {
-		if(ep->halted || list_empty(&ep->queue))
+		if(ep->halted || list_empty(&ep->queue) || ep->dma_enabled == 0) {
+			ep_status &= (UDC_EP_STS_IN_TOKEN |
+				UDC_EP_STS_TX_DMA_CMPL |
+				USB_EP_STS_CLR_STALL);
+			amba_writel(ep->ep_reg.sts_reg, ep_status);
 			return;
+		}
+
+		ep->dma_enabled = 0;
+		ep->need_cnak = 0;
 
 		ep->last_data_desc = ambarella_get_last_desc(ep);
 		if(ep->last_data_desc == NULL){
@@ -1050,13 +1056,16 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		ambarella_handle_data_in(&udc->ep[ep_id]);
 	} else if(ep_status & UDC_EP_STS_IN_TOKEN) {
 		if(!list_empty(&ep->queue)){
-			req = list_entry(ep->queue.next,
+			req = list_first_entry(&ep->queue,
 				struct ambarella_request, queue);
 			ambarella_set_tx_dma(ep, req);
+		} else if (ep->dma_enabled == 0) {
+			amba_setbitsl(ep->ep_reg.ctrl_reg, UDC_EP_CTRL_SNAK);
 		}
 	}
 
-	ep_status &= (UDC_EP_STS_IN_TOKEN | UDC_EP_STS_TX_DMA_CMPL);
+//	ep_status &= (UDC_EP_STS_IN_TOKEN | UDC_EP_STS_TX_DMA_CMPL);
+	ep_status &= (UDC_EP_STS_IN_TOKEN | UDC_EP_STS_TX_DMA_CMPL | USB_EP_STS_CLR_STALL);
 	amba_writel(ep->ep_reg.sts_reg, ep_status);
 }
 
@@ -1074,6 +1083,11 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 	/* check the status bits for what kind of packets in */
 	ep_status = amba_readl(ep->ep_reg.sts_reg);
+
+	if (ep_status & USB_EP_STS_CLR_STALL) {
+		amba_writel(ep->ep_reg.sts_reg, USB_EP_STS_CLR_STALL);
+		return;
+	}
 
 	if(ep_id == CTRL_OUT) {
 		/* Cope with setup-data packet  */
@@ -1104,7 +1118,7 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 		if(ambarella_check_error1(ep) && !list_empty(&ep->queue)) {
 			struct ambarella_request *req = NULL;
-			req = list_entry(ep->queue.next,
+			req = list_first_entry(&ep->queue,
 				struct ambarella_request, queue);
 			req->req.status = -EPROTO;
 			ambarella_udc_done(ep, req, 0);
@@ -1113,7 +1127,7 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 		ep->last_data_desc = ambarella_get_last_desc(ep);
 		if(ep->last_data_desc == NULL){
-			printk(KERN_ERR "%s: last_data_desc is NULL\n",
+			dprintk(DEBUG_ERR, "%s: last_data_desc is NULL\n",
 				ep->ep.name);
 			BUG();
 			return;
@@ -1295,6 +1309,7 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	ep->data_desc = NULL;
 	ep->last_data_desc = NULL;
 	ep->ctrl_sts_phase = 0;
+	ep->dma_enabled = 0;
 
 	if(ep->dir == USB_DIR_IN){
 		idx = ep->id;
@@ -1541,7 +1556,6 @@ finish:
 	return 0;
 }
 
-
 static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 {
 	struct ambarella_ep	*ep = to_ambarella_ep(_ep);
@@ -1568,10 +1582,16 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 
 	/* request in processing */
 	if(ep->data_desc == req->data_desc) {
-		local_irq_restore (flags);
-		return 0;
+		struct ambarella_data_desc *last_data_desc;
+		last_data_desc = ambarella_get_last_desc(ep);
+		/* flush fifo until DMA done. */
+		while((last_data_desc->status & USB_DMA_BUF_STS) !=
+				USB_DMA_BUF_DMA_DONE) {
+			ambarella_ep_fifo_flush(ep);
+		}
 	}
 
+	ep->dma_enabled = 0;
 	list_del_init(&req->queue);
 	ambarella_free_descriptor(ep, req);
 
@@ -1840,7 +1860,7 @@ static void ambarella_udc_enable(struct ambarella_udc *udc)
  */
 static void ambarella_udc_disable(struct ambarella_udc *udc)
 {
-	dprintk(DEBUG_NORMAL, "%s() Enter.\n", __func__);
+	dprintk(DEBUG_NORMAL, "Enter.\n");
 
 	/* Disable all interrupts and Clear the interrupt registers */
 	ambarella_disable_all_intr();
@@ -1853,7 +1873,7 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 
 	udc->gadget.speed = USB_SPEED_UNKNOWN;
 
-	dprintk(DEBUG_NORMAL, "%s() Exit.\n", __func__);
+	dprintk(DEBUG_NORMAL, "Exit.\n");
 }
 
 
@@ -2005,8 +2025,8 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	udc->controller_info = pdev->dev.platform_data;
 	/* Initial USB PLL */
-	if(udc->controller_info->set_pll)
-		udc->controller_info->set_pll();
+	if(udc->controller_info->init_pll)
+		udc->controller_info->init_pll();
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);

@@ -41,6 +41,7 @@ USB device controller on Ambarella processors
 #define UDC_DMA_MAXPACKET		65536
 
 
+#define USB_EP_STS_CLR_STALL    0x02000000
 
 //-------------------------------------
 // Structure definition
@@ -111,6 +112,7 @@ struct ambarella_ep {
 	unsigned		halted : 1;
 	unsigned		need_cnak : 1;
 	unsigned		ctrl_sts_phase : 1;
+	unsigned                dma_enabled : 1;
 
 };
 
