@@ -40,9 +40,6 @@ USB device controller on Ambarella processors
 
 #define UDC_DMA_MAXPACKET		65536
 
-
-#define USB_EP_STS_CLR_STALL    0x02000000
-
 //-------------------------------------
 // Structure definition
 //-------------------------------------
