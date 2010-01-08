@@ -223,11 +223,6 @@ static struct platform_suspend_ops ambarella_pm_ops = {
 
 int __init ambarella_init_pm(void)
 {
-	/* power on sequence */
-	amba_writel(RTC_POS0_REG, 0x50);
-	amba_writel(RTC_POS1_REG, 0x50);
-	amba_writel(RTC_POS2_REG, 0x50);
-
 	pm_power_off = ambarella_power_off;
 
 	suspend_set_ops(&ambarella_pm_ops);

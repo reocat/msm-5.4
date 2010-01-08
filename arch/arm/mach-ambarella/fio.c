@@ -296,18 +296,19 @@ void fio_amb_exit_random_mode(void)
 
 int __init ambarella_init_fio(void)
 {
+#ifndef CONFIG_AMBARELLA_QUICK_INIT
+	/* Following should be handled by the bootloader... */
 #if (HOST_MAX_AHB_CLK_EN_BITS == 10)
 	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG,
 		(HOST_AHB_BOOT_SEL | HOST_AHB_FDMA_BURST_DIS));
 #endif
-
-	/* Following should be handled by the bootloader... */
 	rct_reset_fio();
 	fio_amb_exit_random_mode();
 	enable_fio_dma();
 	amba_writel(FLASH_INT_REG, 0x0);
 	amba_writel(XD_INT_REG, 0x0);
 	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
+#endif
 
 	return 0;
 }

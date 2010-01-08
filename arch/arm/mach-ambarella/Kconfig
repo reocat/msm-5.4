@@ -146,7 +146,7 @@ config AMBARELLA_CHIP_A5S
 
 endchoice
 
-menu "Misc Peripheral Configuration"
+menu "Misc Configuration"
 
 config MMC_AMBARELLA_SDIO
 	bool "Suport SDIO"
@@ -205,6 +205,12 @@ config I2C_AMBARELLA_AK4183
 
 endmenu
 
+config AMBARELLA_QUICK_INIT
+	bool "Suport quick init"
+	default y
+	help
+	  If you are not sure, say Y here.
+
 endmenu
 
 menu "Proc file system support"
@@ -261,6 +267,7 @@ menu "Framebuffer Configuration"
 config AMBARELLA_FB_NUM
         int "FB Number"
         default 1
+        range 0 2
         help
           Specify the number of framebuffers
 
