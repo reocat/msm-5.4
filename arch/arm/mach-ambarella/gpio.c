@@ -462,9 +462,11 @@ int __init ambarella_init_gpio(void)
 	set_irq_type(GPIO3_IRQ, IRQ_TYPE_LEVEL_HIGH);
 #endif
 
-	for (i = 0; i < GPIO_MAX_LINES; i++) {
-		ambarella_gpio_set_valid(i, 1);
-		__set_bit(i, ambarella_gpio_freeflag);
+	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
+	memset(ambarella_gpio_freeflag, 0xff, sizeof(ambarella_gpio_freeflag));
+	for (i = GPIO_MAX_LINES + 1; i < ARCH_NR_GPIOS; i++) {
+		ambarella_gpio_set_valid(i, 0);
+		__clear_bit(i, ambarella_gpio_freeflag);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(ambarella_gpio_banks); i++) {

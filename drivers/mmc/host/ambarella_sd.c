@@ -1509,6 +1509,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 	case AMBA_EVENT_PRE_TOSS:
 		pr_debug("%s[%d]: AMBA_EVENT_PRE_TOSS\n",
 			__func__, pslotinfo->slot_id);
+#ifdef CONFIG_PM
 		if (pslotinfo->mmc) {
 			pm_message_t state;
 			state.event = 2;
@@ -1517,17 +1518,20 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 				ambsd_err(pslotinfo,
 					"Can't mmc_suspend_host!\n");
 		}
+#endif
 		break;
 
 	case AMBA_EVENT_POST_TOSS:
 		pr_debug("%s[%d]: AMBA_EVENT_POST_TOSS\n",
 			__func__, pslotinfo->slot_id);
+#ifdef CONFIG_PM
 		if (pslotinfo->mmc) {
 			errorCode = mmc_resume_host(pslotinfo->mmc);
 			if (errorCode)
 				ambsd_err(pslotinfo,
-					"Can't mmc_suspend_host!\n");
+					"Can't mmc_resume_host!\n");
 		}
+#endif
 		break;
 
 	default:
