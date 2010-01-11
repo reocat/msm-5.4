@@ -31,6 +31,41 @@ struct toss_s *toss = NULL;
 EXPORT_SYMBOL(toss);
 
 /*
+ * User-space script path.
+ */
+static char toss_script_path[256] = "/etc/toss/toss.event.sh";
+
+/*
+ * Incoming script invocation argv.
+ */
+static char *toss_incoming_argv[] =
+{
+	toss_script_path,
+	"incoming",
+	NULL,
+};
+
+/*
+ * Outgoing script invocation argv.
+ */
+static char *toss_outgoing_argv[] =
+{
+	toss_script_path,
+	"outgoing",
+	NULL,
+};
+
+/*
+ * Minimal script envp to get things going.
+ */
+static char *toss_script_envp[] = {
+	"HOME=/",
+	"TERM=linux",
+	"PATH=/sbin:/bin:/usr/bin:/usr/sbin:",
+	NULL,
+};
+
+/*
  * Switch to another OS.
  */
 int toss_switch(unsigned int personality)
@@ -74,6 +109,12 @@ int toss_switch(unsigned int personality)
 
 	pr_notice("toss: handing off from linux\n");
 
+	/* Invoke user-space script to handle incoming OS switch */
+	call_usermodehelper(toss_script_path,
+			    toss_incoming_argv,
+			    toss_script_envp,
+			    UMH_WAIT_PROC);
+
 	rval = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_PRE_TOSS, NULL));
 	if (rval) {
@@ -90,6 +131,7 @@ int toss_switch(unsigned int personality)
 			__func__, rval);
 	}
 
+	/* Update the context of TOSS and jump to the other OS */
 	toss->oldctx = toss->active;
 	toss->active = personality;
 	os_that->activated++;
@@ -111,6 +153,12 @@ int toss_switch(unsigned int personality)
 		pr_err("%s: AMBA_EVENT_POST_TOSS failed(%d)\n",
 			__func__, rval);
 	}
+
+	/* Invoke user-space script to handle outgoing OS switch */
+	call_usermodehelper(toss_script_path,
+			    toss_outgoing_argv,
+			    toss_script_envp,
+			    UMH_WAIT_PROC);
 
 	pr_notice("toss: linux resumes control\n");
 
