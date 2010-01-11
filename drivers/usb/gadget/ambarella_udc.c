@@ -1062,11 +1062,20 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		} else if (ep->dma_enabled == 0) {
 			amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_SET_NAK);
 		}
+	} else if (ep_status & USB_EP_RCV_CLR_STALL) {
+
+	} else if (ep_status != 0){
+		dprintk(DEBUG_ERR, "%s: Unknown int source(0x%08x)\n",
+			ep->ep.name, ep_status);
+		amba_writel(ep->ep_reg.sts_reg, ep_status);
+		return;
 	}
 
-//	ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL);
-	ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_RCV_CLR_STALL);
-	amba_writel(ep->ep_reg.sts_reg, ep_status);
+	if (ep_status != 0) {
+		//ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL);
+		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_RCV_CLR_STALL);
+		amba_writel(ep->ep_reg.sts_reg, ep_status);
+	}
 }
 
 
@@ -1581,7 +1590,7 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	}
 
 	/* request in processing */
-	if(ep->data_desc == req->data_desc) {
+	if(ep->data_desc == req->data_desc && ep->dir = USB_DIR_IN) {
 		struct ambarella_data_desc *last_data_desc;
 		last_data_desc = ambarella_get_last_desc(ep);
 		/* flush fifo until DMA done. */
