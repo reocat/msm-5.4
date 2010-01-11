@@ -292,6 +292,7 @@ extern int ambarella_audio_unregister_notifier(struct notifier_block *nb);
 extern u32 alsa_tx_enable_flag;
 extern void rct_alan_zhu_magic_loop(int clk_chk);
 
+extern void rct_set_usb_phy_pll(void);
 extern void rct_set_usb_ana_on(void);
 extern void rct_suspend_usb(void);
 extern void rct_set_usb_clk(void);
