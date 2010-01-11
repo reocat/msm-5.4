@@ -138,7 +138,7 @@ static int ambarella_i2c_system_event(struct notifier_block *nb,
 	}
 
 	return errorCode;
-} 
+}
 
 static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 {
@@ -308,6 +308,8 @@ static irqreturn_t ambarella_i2c_irq(int irqno, void *dev_id)
 		if (ambarella_i2c_check_ack(pinfo, &control_reg,
 			0) == IDC_CTRL_ACK) {
 			if (pinfo->msgs->flags & I2C_M_RD) {
+				if (pinfo->msgs->len == 1)
+					ack_control |= IDC_CTRL_ACK;
 				pinfo->state = AMBA_I2C_STATE_READ;
 			} else {
 				pinfo->state = AMBA_I2C_STATE_WRITE;
@@ -326,6 +328,10 @@ amba_i2c_irq_start_new:
 		goto amba_i2c_irq_exit;
 		break;
 	case AMBA_I2C_STATE_READ_STOP:
+		pinfo->msgs->buf[pinfo->msg_index] =
+			amba_readb(pinfo->regbase + IDC_DATA_OFFSET);
+		pinfo->msg_index++;
+amba_i2c_irq_read_stop:
 		ambarella_i2c_stop(pinfo, AMBA_I2C_STATE_IDLE, &ack_control);
 		break;
 	case AMBA_I2C_STATE_READ:
@@ -333,14 +339,18 @@ amba_i2c_irq_start_new:
 			amba_readb(pinfo->regbase + IDC_DATA_OFFSET);
 		pinfo->msg_index++;
 
-		if (pinfo->msg_index >= pinfo->msgs->len) {
+		if (pinfo->msg_index >= pinfo->msgs->len - 1) {
 			if (pinfo->msg_num > 1) {
 				pinfo->msgs++;
 				pinfo->state = AMBA_I2C_STATE_START_NEW;
 				pinfo->msg_num--;
 			} else {
-				pinfo->state = AMBA_I2C_STATE_READ_STOP;
-				ack_control |= IDC_CTRL_ACK;
+				if (pinfo->msg_index > pinfo->msgs->len - 1) {
+					goto amba_i2c_irq_read_stop;
+				} else {
+					pinfo->state = AMBA_I2C_STATE_READ_STOP;
+					ack_control |= IDC_CTRL_ACK;
+				}
 			}
 		}
 		break;
@@ -435,6 +445,7 @@ static int ambarella_i2c_xfer(
 
 		pinfo->msgs = msgs;
 		pinfo->msg_num = num;
+
 		ambarella_i2c_start_current_msg(pinfo);
 
 		timeout = wait_event_timeout(pinfo->msg_wait,
