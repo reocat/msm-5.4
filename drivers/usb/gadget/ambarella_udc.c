@@ -1065,8 +1065,10 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 	} else if (ep_status & USB_EP_RCV_CLR_STALL) {
 
 	} else if (ep_status != 0){
-		dprintk(DEBUG_ERR, "%s: Unknown int source(0x%08x)\n",
-			ep->ep.name, ep_status);
+		if (ep_status != 0x08000000) {
+			dprintk(DEBUG_ERR, "%s: Unknown int source(0x%08x)\n",
+				ep->ep.name, ep_status);
+		}
 		amba_writel(ep->ep_reg.sts_reg, ep_status);
 		return;
 	}

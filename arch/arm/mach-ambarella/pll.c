@@ -551,7 +551,6 @@ static int ambarella_init_pll_general(void)
 	} else {
 		freq_file->read_proc = ambarella_freq_proc_read;
 		freq_file->write_proc = ambarella_freq_proc_write;
-		freq_file->data = pll_info;
 		freq_file->owner = THIS_MODULE;
 	}
 
