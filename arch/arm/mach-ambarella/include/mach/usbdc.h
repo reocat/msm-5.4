@@ -45,7 +45,7 @@
 #define USB_IRQ		4		// irq number of usb device
 #define INT_USB		USB_IRQ
 #define PUD_INT_USB	USB_IRQ
-	
+
 //-------------------------------------
 // USB RxFIFO and TxFIFO depth (single or multiple)
 //-------------------------------------
@@ -114,12 +114,12 @@
 #define USB_EP_TYPE_ISO			0x00000010		// 00 (RW)
 #define USB_EP_TYPE_BULK		0x00000020		// 00 (RW)
 #define USB_EP_TYPE_INTR		0x00000030		// 00 (RW)
-#define USB_EP_NAK_STS			0x00000040		// 0 (RO) - set by UDC after SETUP and STALL 
+#define USB_EP_NAK_STS			0x00000040		// 0 (RO) - set by UDC after SETUP and STALL
 #define USB_EP_SET_NAK			0x00000080		// 0 (WO)
 #define USB_EP_CLR_NAK			0x00000100		// 0 (WO)
 #define USB_EP_RCV_RDY			0x00000200		// 0 (RW)(D) - set by APP when APP is ready for DMA
 														//			   clear by UDC when end of each packet if USB_DEV_DESC_UPD is set
-														//			   clear by UDC when end of payload if USB_DEV_DESC_UPD is clear	
+														//			   clear by UDC when end of payload if USB_DEV_DESC_UPD is clear
 
 // for USB_EP_IN_STS_REG(n) and USB_EP_OUT_STS_REG(n)
 #define USB_EP_OUT_PKT_MSK		0x00000030		// 00 (R/WC) - 01 for OUT and 10 for SETUP - for OUT EP only
@@ -132,7 +132,7 @@
 #define USB_EP_TRN_DMA_CMPL		0x00000400		// 0 (R/WC)(D) - set by DMA when DMA is completed
 #define USB_EP_RCV_CLR_STALL            0x02000000              // 0 (R/WC) - Received Clear Stall indication
 														//				 clear by APP when interrupt is serviced
-#define USB_EP_RCV_SET_STALL            0x04000000		// 0 (R/WC) - Received Set Stall indication														
+#define USB_EP_RCV_SET_STALL            0x04000000		// 0 (R/WC) - Received Set Stall indication
 #define USB_EP_RX_PKT_SZ		0x007ff800		// bit mask (RW) - receive packet size in RxFIFO (e.g. SETUP=64, BULK=512)
 
 // for USB_EP_IN_BUF_SZ_REG(n) and USB_EP_OUT_PKT_FRM_NUM_REG(n)
@@ -157,13 +157,13 @@
 #define USB_DEV_BUS_POWER		0x00000000		// 0 (RW)
 #define USB_DEV_SELF_POWER		0x00000008		// 0 (RW)
 
-#define USB_DEV_SYNC_FRM_EN		0x00000010		// 0 (RW) 
+#define USB_DEV_SYNC_FRM_EN		0x00000010		// 0 (RW)
 
 #define USB_DEV_PHY_16BIT		0x00000000		// 0 (RW)
 #define USB_DEV_PHY_8BIT		0x00000020		// 0 (RW)
 
 #define USB_DEV_UTMI_DIR_UNI		0x00000000		// 0 (RW) - UDC20 reserved to 0
-#define USB_DEV_UTMI_DIR_BI		0x00000040		// 0 (RW) 		 
+#define USB_DEV_UTMI_DIR_BI		0x00000040		// 0 (RW) 
 
 #define USB_DEV_STS_OUT_NONZERO		0x00000180		// bit mask (RW)
 
@@ -222,7 +222,7 @@
 #define USB_DEV_ENUM_SPD_HI		0x00000000		// 00 (RO)
 #define USB_DEV_ENUM_SPD_FU		0x00002000		// 00 (RO)
 #define USB_DEV_ENUM_SPD_LO		0x00004000		// 00 (RO)
-#define USB_DEV_ENUM_SPD_FU48		0x00006000		// 00 (RO)	
+#define USB_DEV_ENUM_SPD_FU48		0x00006000		// 00 (RO)
 
 #define USB_DEV_RXFIFO_EMPTY_STS	0x00008000		// bit mask (RO)
 #define USB_DEV_PHY_ERR_STS		0x00010000		// bit mask (RO)
