@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 99162
+ * @version 100416
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -119,21 +119,9 @@
  * The operating mode is defined using the structure ::amb_operating_mode_t.
  * @par Mode Switch
  * When the operating mode is changed the status of the hardware under the
- * control of hal is changed. For example in ::AMB_OPERATING_MODE_PLAYBACK the
- * sensor clock, sensor interface and idsp clocks are shut off. Similarly
- * changing the encoding performance changes the pll settings to
- * increase/decrease clock frequencies to meet the required new performance
- * setting.
- * @par
- * After an operating mode change is requested the function
- * amb_get_operating_mode_status() must be called to verify that the operating
- * mode succeeded. This is because PLLs require a non-negligible finite amount
- * of time to change frequency or to power up.
- * @par
- * Software should be written so that some useful work can be done while
- * waiting for the operating mode change to take place. For example new
- * microcode could be loaded up from nand flash into main memory while the
- * mode is switching.
+ * control of hal is changed. For example changing the performance changes
+ * the pll settings to increase/decrease clock frequencies to meet the
+ * required new performance setting.
  * @par
  * An operating mode switch is performed by using the following sequence.
  *
@@ -149,6 +137,17 @@
  *
  * @endcode
  *
+ * @par
+ * See also @subpage operating_mode_settings
+ *
+ */
+
+/**
+ * @page operating_mode_settings Operating Mode Settings.
+ *
+ * @copydoc operating_mode_parameters.c
+ *
+ * @include operating_mode_parameters.c
  */
 
 /**
@@ -449,7 +448,7 @@ unsigned int delay ;
 typedef unsigned int amb_clock_frequency_t ;
 
 /**
- * Encoding performance.
+ * Performance.
  *
  * @ingroup mode_group
  */
@@ -477,7 +476,7 @@ AMB_PERFORMANCE_RESERVED=0xffffffff
 } amb_performance_t ;
 
 /**
- * Operating mode.
+ * Operating Mode.
  *
  * @ingroup mode_group
  */
@@ -502,7 +501,7 @@ AMB_OPERATING_MODE_STILL_PREVIEW
 } amb_mode_t ;
 
 /**
- * USB Interface state settings
+ * USB Interface State Settings.
  *
  * @ingroup usb_group
  */
@@ -540,7 +539,7 @@ AMB_USB_CLK_CRYSTAL_12MHZ
 } amb_usb_clock_source_t ;
 
 /**
- * State of HDMI interface
+ * State of HDMI Interface
  * 
  * @ingroup hdmi_group
  */
