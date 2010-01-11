@@ -111,7 +111,7 @@ int toss_switch(unsigned int personality)
 
 	/* Invoke user-space script to handle incoming OS switch */
 	call_usermodehelper(toss_script_path,
-			    toss_incoming_argv,
+			    toss_outgoing_argv,
 			    toss_script_envp,
 			    UMH_WAIT_PROC);
 
@@ -156,7 +156,7 @@ int toss_switch(unsigned int personality)
 
 	/* Invoke user-space script to handle outgoing OS switch */
 	call_usermodehelper(toss_script_path,
-			    toss_outgoing_argv,
+			    toss_incoming_argv,
 			    toss_script_envp,
 			    UMH_WAIT_PROC);
 
