@@ -112,6 +112,13 @@ static int ambafb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		goto ambafb_setcmap_exit;
 	}
 
+	if (!cmap->red || !cmap->green || !cmap->blue) {
+		dev_dbg(info->device, "%s: Incorrect rgb pointers!\n",
+			__func__);
+		errorCode = -1;
+		goto ambafb_setcmap_exit;
+	}
+
 	ambafb_data = (struct ambarella_platform_fb *)info->par;
 
 	mutex_lock(&ambafb_data->lock);
@@ -126,7 +133,7 @@ static int ambafb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		*pclut_table++ = *r++;
 		*pclut_table++ = *g++;
 		*pclut_table++ = *b++;
-		*pblend_table++ = *t++;
+		if (t)	*pblend_table++ = *t++;
 	}
 
 	if (ambafb_data->setcmap) {
