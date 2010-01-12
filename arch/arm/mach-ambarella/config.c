@@ -1639,7 +1639,7 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
-static void ambarella_usb_init_pll(void) 
+static void ambarella_usb_init_pll(void)
 {
 #if (CHIP_REV == A2S)
 	rct_set_usb_phy_pll();
@@ -1808,14 +1808,14 @@ static struct ak4183_platform_data ambarella_ak4183_pdata = {
 	.model = 4183,
 	.x_plate_ohms = 310,
 	.fix = {
-		.x_invert = 1,
+		.x_invert = 0,
 		.y_invert = 0,
 		.x_rescale = 1,
 		.y_rescale = 1,
-		.x_min = 374,
-		.x_max = 3716,
-		.y_min = 185,
-		.y_max = 3748,
+		.x_min = 216,
+		.x_max = 3744,
+		.y_min = 177,
+		.y_max = 3641,
 	},
 	.get_pendown_state = ambarella_ak4183_get_pendown_state,
 	.clear_penirq = ambarella_ak4183_clear_penirq,
