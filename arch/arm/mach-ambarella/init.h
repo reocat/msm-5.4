@@ -57,7 +57,7 @@
 extern void *get_ambarella_hal_vp(void);
 #endif
 
-#define DEFAULT_SSS_START	(0xC00F0000)
+#define DEFAULT_SSS_START	(0xC00F7000)
 #define DEFAULT_SSS_MAGIC0	(0x19790110)
 #define DEFAULT_SSS_MAGIC1	(0x19450107)
 #define DEFAULT_SSS_MAGIC2	(0x19531110)
