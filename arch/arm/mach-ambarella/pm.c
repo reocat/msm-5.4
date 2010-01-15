@@ -245,8 +245,6 @@ static int ambarella_pm_enter(suspend_state_t state)
 			errorCode = ambarella_pm_enter_sss();
 		break;
 
-		break;
-
 	default:
 		break;
 	}
