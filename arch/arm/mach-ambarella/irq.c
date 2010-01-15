@@ -37,6 +37,20 @@
 static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 
+struct ambarella_vic_pm_info {
+	u32 vic_int_sel_reg;
+	u32 vic_inten_reg;
+	u32 vic_soften_reg;
+	u32 vic_proten_reg;
+	u32 vic_sense_reg;
+	u32 vic_bothedge_reg;
+	u32 vic_event_reg;
+};
+
+struct ambarella_vic_pm_info ambarella_vic_pm;
+#if (VIC_INSTANCES >= 2)
+struct ambarella_vic_pm_info ambarella_vic2_pm;
+#endif
 /* ==========================================================================*/
 #define AMBARELLA_GPIO_IRQ2GIRQ()	do { \
 	irq -= GPIO_INT_VEC_OFFSET; \
@@ -499,11 +513,21 @@ void ambarella_irq_suspend(void)
 {
 	u32					i;
 
-	pr_info("%s: VIC_INTEN_REG = 0x%08X\n",
-		__func__, amba_readl(VIC_INTEN_REG));
+	ambarella_vic_pm.vic_int_sel_reg = amba_readl(VIC_INT_SEL_REG);
+	ambarella_vic_pm.vic_inten_reg = amba_readl(VIC_INTEN_REG);
+	ambarella_vic_pm.vic_soften_reg = amba_readl(VIC_SOFTEN_REG);
+	ambarella_vic_pm.vic_proten_reg = amba_readl(VIC_PROTEN_REG);
+	ambarella_vic_pm.vic_sense_reg = amba_readl(VIC_SENSE_REG);
+	ambarella_vic_pm.vic_bothedge_reg = amba_readl(VIC_BOTHEDGE_REG);
+	ambarella_vic_pm.vic_event_reg = amba_readl(VIC_EVENT_REG);
 #if (VIC_INSTANCES >= 2)
-	pr_info("%s: VIC2_INTEN_REG = 0x%08X\n",
-		__func__, amba_readl(VIC2_INTEN_REG));
+	ambarella_vic2_pm.vic_int_sel_reg = amba_readl(VIC2_INT_SEL_REG);
+	ambarella_vic2_pm.vic_inten_reg = amba_readl(VIC2_INTEN_REG);
+	ambarella_vic2_pm.vic_soften_reg = amba_readl(VIC2_SOFTEN_REG);
+	ambarella_vic2_pm.vic_proten_reg = amba_readl(VIC2_PROTEN_REG);
+	ambarella_vic2_pm.vic_sense_reg = amba_readl(VIC2_SENSE_REG);
+	ambarella_vic2_pm.vic_bothedge_reg = amba_readl(VIC2_BOTHEDGE_REG);
+	ambarella_vic2_pm.vic_event_reg = amba_readl(VIC2_EVENT_REG);
 #endif
 
 	for (i = 0; i < NR_GPIO_IRQS; i++) {
@@ -531,11 +555,25 @@ void ambarella_irq_resume(void)
 {
 	u32					i;
 
-	pr_info("%s: VIC_INTEN_REG = 0x%08X\n",
-		__func__, amba_readl(VIC_INTEN_REG));
+	amba_writel(VIC_INT_SEL_REG, ambarella_vic_pm.vic_int_sel_reg);
+	amba_writel(VIC_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC_INTEN_REG, ambarella_vic_pm.vic_inten_reg);
+	amba_writel(VIC_SOFTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC_SOFTEN_REG, ambarella_vic_pm.vic_soften_reg);
+	amba_writel(VIC_PROTEN_REG, ambarella_vic_pm.vic_proten_reg);
+	amba_writel(VIC_SENSE_REG, ambarella_vic_pm.vic_sense_reg);
+	amba_writel(VIC_BOTHEDGE_REG, ambarella_vic_pm.vic_bothedge_reg);
+	amba_writel(VIC_EVENT_REG, ambarella_vic_pm.vic_event_reg);
 #if (VIC_INSTANCES >= 2)
-	pr_info("%s: VIC2_INTEN_REG = 0x%08X\n",
-		__func__, amba_readl(VIC2_INTEN_REG));
+	amba_writel(VIC2_INT_SEL_REG, ambarella_vic2_pm.vic_int_sel_reg);
+	amba_writel(VIC2_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC2_INTEN_REG, ambarella_vic2_pm.vic_inten_reg);
+	amba_writel(VIC2_SOFTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC2_SOFTEN_REG, ambarella_vic2_pm.vic_soften_reg);
+	amba_writel(VIC2_PROTEN_REG, ambarella_vic2_pm.vic_proten_reg);
+	amba_writel(VIC2_SENSE_REG, ambarella_vic2_pm.vic_sense_reg);
+	amba_writel(VIC2_BOTHEDGE_REG, ambarella_vic2_pm.vic_bothedge_reg);
+	amba_writel(VIC2_EVENT_REG, ambarella_vic2_pm.vic_event_reg);
 #endif
 
 	for (i = 0; i < NR_GPIO_IRQS; i++) {

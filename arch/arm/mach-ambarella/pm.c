@@ -84,6 +84,81 @@ struct platform_device ambarella_power_supply = {
 };
 
 /* ==========================================================================*/
+static int ambarella_pm_pre(unsigned long *irqflag)
+{
+	int					errorCode = 0;
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_PRE_PM, NULL));
+	if (errorCode) {
+		pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, __LINE__, errorCode);
+	}
+
+	local_irq_save(*irqflag);
+
+	ambarella_timer_suspend();
+	ambarella_irq_suspend();
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
+	if (errorCode) {
+		pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, __LINE__, errorCode);
+	}
+
+	return errorCode;
+}
+
+static int ambarella_pm_post(unsigned long *irqflag)
+{
+	int					errorCode = 0;
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_POST_PM, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, errorCode);
+	}
+
+	ambarella_irq_resume();
+	ambarella_timer_resume();
+
+	local_irq_restore(*irqflag);
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_POST_PM, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+			__func__, errorCode);
+	}
+
+	return errorCode;
+}
+
+static int ambarella_pm_check(suspend_state_t state)
+{
+	int					errorCode = 0;
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_CHECK_PM, &state));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_CHECK_PM failed(%d)\n",
+			__func__, errorCode);
+		goto ambarella_pm_check_exit;
+	}
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_CHECK_PM, &state));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_CHECK_PM failed(%d)\n",
+			__func__, errorCode);
+	}
+
+ambarella_pm_check_exit:
+	return errorCode;
+}
+
 static int ambarella_pm_enter_standby(void)
 {
 	int					errorCode = 0;
@@ -93,23 +168,8 @@ static int ambarella_pm_enter_standby(void)
 	amb_operating_mode_t			operating_mode;
 #endif
 
-	errorCode = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_PRE_PM, NULL));
-	if (errorCode) {
-		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, errorCode);
-	}
-
-	local_irq_save(flags);
-
-	ambarella_irq_suspend();
-
-	errorCode = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
-	if (errorCode) {
-		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, errorCode);
-	}
+	if (ambarella_pm_pre(&flags))
+		BUG();
 
 #if (CHIP_REV == A5S)
 	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
@@ -117,6 +177,7 @@ static int ambarella_pm_enter_standby(void)
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
 			__func__, result);
 		errorCode = -EPERM;
+		goto ambarella_pm_enter_standby_exit_pm;
 	}
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
 
@@ -134,30 +195,33 @@ static int ambarella_pm_enter_standby(void)
 #endif
 #endif
 
-	errorCode = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_POST_PM, NULL));
-	if (errorCode) {
-		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, errorCode);
-	}
-
-	ambarella_irq_resume();
-
-	local_irq_restore(flags);
-
-	errorCode = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_POST_PM, NULL));
-	if (errorCode) {
-		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, errorCode);
-	}
+ambarella_pm_enter_standby_exit_pm:
+	if (ambarella_pm_post(&flags))
+		BUG();
 
 	return errorCode;
 }
 
-static int ambarella_pm_enter_mem(void)
+typedef unsigned int (*amba_snapshot_suspend_t)(u32);
+
+static int ambarella_pm_enter_sss(void)
 {
-	return toss_switch(0);
+	int					errorCode = 0;
+	amba_snapshot_suspend_t			sss_entry;
+	unsigned long				flags;
+
+	sss_entry = (amba_snapshot_suspend_t)get_ambarella_sss_entry_virt();
+
+	if (ambarella_pm_pre(&flags))
+		BUG();
+
+	errorCode = sss_entry(get_ambarella_sss_virt());
+	set_ambarella_hal_invalid();
+
+	if (ambarella_pm_post(&flags))
+		BUG();
+
+	return errorCode;
 }
 
 static int ambarella_pm_enter(suspend_state_t state)
@@ -175,7 +239,12 @@ static int ambarella_pm_enter(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
-		errorCode = ambarella_pm_enter_mem();
+		if (toss != NULL)
+			errorCode = toss_switch(0);
+		else if (get_ambarella_sss_entry_virt())
+			errorCode = ambarella_pm_enter_sss();
+		break;
+
 		break;
 
 	default:
@@ -189,7 +258,12 @@ static int ambarella_pm_enter(suspend_state_t state)
 
 static int ambarella_pm_valid(suspend_state_t state)
 {
+	int					errorCode = 0;
 	int					valid = 0;
+
+	errorCode = ambarella_pm_check(state);
+	if (errorCode)
+		goto ambarella_pm_valid_exit;
 
 	switch (state) {
 	case PM_SUSPEND_ON:
@@ -205,12 +279,15 @@ static int ambarella_pm_valid(suspend_state_t state)
 	case PM_SUSPEND_MEM:
 		if (toss != NULL)
 			valid = 1;
+		else if (get_ambarella_sss_entry_virt())
+			valid = 1;
 		break;
 
 	default:
 		break;
 	}
 
+ambarella_pm_valid_exit:
 	pr_info("%s: state[%d]=%d\n", __func__, state, valid);
 
 	return valid;

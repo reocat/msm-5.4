@@ -57,6 +57,11 @@
 extern void *get_ambarella_hal_vp(void);
 #endif
 
+#define DEFAULT_SSS_START	(0xC00F0000)
+#define DEFAULT_SSS_MAGIC0	(0x19790110)
+#define DEFAULT_SSS_MAGIC1	(0x19450107)
+#define DEFAULT_SSS_MAGIC2	(0x19531110)
+
 /* ==========================================================================*/
 extern struct sys_timer ambarella_timer;
 
@@ -132,6 +137,13 @@ extern void ambarella_init_irq(void);
 extern void ambarella_irq_suspend(void);
 extern void ambarella_irq_resume(void);
 extern void ambarella_gpio_ack_irq(unsigned int irq);
+
+extern u32 get_ambarella_sss_virt(void);
+extern u32 get_ambarella_sss_entry_virt(void);
+extern void set_ambarella_hal_invalid(void);
+
+extern void ambarella_timer_suspend(void);
+extern void ambarella_timer_resume(void);
 
 /* ==========================================================================*/
 

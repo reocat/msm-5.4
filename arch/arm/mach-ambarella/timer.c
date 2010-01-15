@@ -40,7 +40,6 @@
 #define AMBARELLA_TIMER_FREQ	(get_apb_bus_freq_hz())
 #define AMBARELLA_TIMER_RATING	(300)
 
-static struct notifier_block ambarella_timer_notifier;
 static struct notifier_block ambarella_timer1_clockevents_notifier;
 
 static inline void ambarella_timer1_disable(void)
@@ -184,59 +183,30 @@ struct sys_timer ambarella_timer = {
 	.init		= ambarella_timer_init,
 };
 
-int ambarella_timer_system_event(struct notifier_block *nb,
-	unsigned long val, void *data)
+void ambarella_timer_suspend(void)
 {
-	int					errorCode = NOTIFY_OK;
-	int					cnt;
-	int					save;
+	disable_irq(TIMER1_IRQ);
+}
 
-	switch (val) {
-	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_debug("%s: Pre Change\n", __func__);
-		break;
+void ambarella_timer_resume(void)
+{
+	amba_writel(TIMER_CTR_REG, 0x0);
 
-	case AMBA_EVENT_POST_CPUFREQ:
-		pr_debug("%s: Post Change\n", __func__);
-		/* Reset timer */
-		save = amba_readl(TIMER_CTR_REG);
-		amba_writel(TIMER_CTR_REG, 0x0);
+	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
+		NSEC_PER_SEC, ambarella_clkevt.shift);
+	ambarella_clkevt.max_delta_ns =
+		clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
+	ambarella_clkevt.min_delta_ns =
+		clockevent_delta2ns(1, &ambarella_clkevt);
 
-		ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
-			NSEC_PER_SEC, ambarella_clkevt.shift);
-		ambarella_clkevt.max_delta_ns =
-			clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
-		ambarella_clkevt.min_delta_ns =
-			clockevent_delta2ns(1, &ambarella_clkevt);
+	ambarella_timer2_init_for_clocksource();
+	ambarella_timer2_clksrc.mult = clocksource_hz2mult(
+		AMBARELLA_TIMER_FREQ, ambarella_timer2_clksrc.shift);
 
-		ambarella_timer2_clksrc.mult = clocksource_hz2mult(
-			AMBARELLA_TIMER_FREQ, ambarella_timer2_clksrc.shift);
-
-		/* Program the timer to start ticking */
-		cnt = AMBARELLA_TIMER_FREQ / CLOCK_TICK_RATE;
-		switch (ambarella_clkevt.mode) {
-		case CLOCK_EVT_MODE_PERIODIC:
-			amba_writel(TIMER1_STATUS_REG, cnt);
-			amba_writel(TIMER1_RELOAD_REG, cnt);
-			break;
-		case CLOCK_EVT_MODE_ONESHOT:
-			amba_writel(TIMER1_STATUS_REG, cnt);
-			break;
-		case CLOCK_EVT_MODE_UNUSED:
-		case CLOCK_EVT_MODE_SHUTDOWN:
-		case CLOCK_EVT_MODE_RESUME:
-			break;
-		}
-
-		amba_writel(TIMER_CTR_REG, save);
-		break;
-
-	default:
-		break;
-	}
-
-	return errorCode;
-} 
+	ambarella_timer1_set_mode(ambarella_clkevt.mode,
+		&ambarella_clkevt);
+	enable_irq(TIMER1_IRQ);
+}
 
 static int ambarella_timer1_clockevents(struct notifier_block *nb,
 	unsigned long reason, void *dev)
@@ -263,12 +233,10 @@ int __init ambarella_init_tm(void)
 {
 	int					errCode = 0;
 
-	ambarella_timer_notifier.notifier_call = ambarella_timer_system_event;
-	errCode = ambarella_register_event_notifier(&ambarella_timer_notifier); 
-
 	ambarella_timer1_clockevents_notifier.notifier_call =
 		ambarella_timer1_clockevents;
-	clockevents_register_notifier(&ambarella_timer1_clockevents_notifier);
+	errCode = clockevents_register_notifier(
+		&ambarella_timer1_clockevents_notifier);
 
 	return errCode;
 }

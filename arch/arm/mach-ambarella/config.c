@@ -527,6 +527,32 @@ u32 ambarella_virt_to_phys(u32 vaddr)
 }
 EXPORT_SYMBOL(ambarella_virt_to_phys);
 
+u32 get_ambarella_sss_virt(void)
+{
+	u32					vsss_start;
+	u32					*tmp_sss;
+
+	vsss_start = ambarella_phys_to_virt(DEFAULT_SSS_START);
+	tmp_sss = (u32 *)vsss_start;
+	if ((tmp_sss[1] != DEFAULT_SSS_MAGIC0) ||
+		(tmp_sss[2] != DEFAULT_SSS_MAGIC1) ||
+		(tmp_sss[3] != DEFAULT_SSS_MAGIC2))
+		vsss_start = 0;
+
+	return vsss_start;
+}
+
+u32 get_ambarella_sss_entry_virt(void)
+{
+	u32					vsss_start;
+
+	vsss_start = get_ambarella_sss_virt();
+	if (vsss_start == 0)
+		return 0;
+
+	return ambarella_phys_to_virt(*(u32 *)vsss_start);
+}
+
 /* ==========================================================================*/
 static struct ambarella_mem_rev_info ambarella_reserve_mem_info = {
 	.counter			= 0,
@@ -684,6 +710,11 @@ void *get_ambarella_hal_vp(void)
 	}
 
 	return (void *)ambarella_hal_info.virtual;
+}
+
+void set_ambarella_hal_invalid(void)
+{
+	ambarella_hal_info.inited = 0;
 }
 #endif
 

@@ -155,16 +155,22 @@ static int ambarella_pll_proc_read(char *page, char **start,
 
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPLL Information:\n"
-			"\tPerformance: %s\n"
-			"\tMode:\t%s\n"
-			"\tARM:\t%d Hz\n"
-			"\tDram:\t%d Hz\n"
-			"\tiDSP:\t%d Hz\n"
-			"\tCore:\t%d Hz\n"
-			"\tAHB:\t%d Hz\n"
-			"\tAPB:\t%d Hz\n\n",
+			"\tPerformance:\t%s\n"
+			"\tMode:\t\t%s\n"
+			"\tUSB:\t\t%s\n"
+			"\tHDMI:\t\t%s\n"
+			"\tDualStream:\t%s\n"
+			"\tARM:\t\t%d Hz\n"
+			"\tDram:\t\t%d Hz\n"
+			"\tiDSP:\t\t%d Hz\n"
+			"\tCore:\t\t%d Hz\n"
+			"\tAHB:\t\t%d Hz\n"
+			"\tAPB:\t\t%d Hz\n\n",
 			performance_list[operating_mode.performance].name,
 			mode_list[operating_mode.mode].name,
+			operating_mode.usb_state ? "On" : "Off",
+			operating_mode.hdmi_state ? "On" : "Off",
+			operating_mode.dual_stream_state ? "On" : "Off",
 			get_arm_bus_freq_hz(),
 			get_dram_freq_hz(),
 			get_idsp_freq_hz(),
