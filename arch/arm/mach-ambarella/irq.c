@@ -37,20 +37,6 @@
 static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 
-struct ambarella_vic_pm_info {
-	u32 vic_int_sel_reg;
-	u32 vic_inten_reg;
-	u32 vic_soften_reg;
-	u32 vic_proten_reg;
-	u32 vic_sense_reg;
-	u32 vic_bothedge_reg;
-	u32 vic_event_reg;
-};
-
-struct ambarella_vic_pm_info ambarella_vic_pm;
-#if (VIC_INSTANCES >= 2)
-struct ambarella_vic_pm_info ambarella_vic2_pm;
-#endif
 /* ==========================================================================*/
 #define AMBARELLA_GPIO_IRQ2GIRQ()	do { \
 	irq -= GPIO_INT_VEC_OFFSET; \
@@ -509,7 +495,23 @@ void __init ambarella_init_irq(void)
 #endif
 }
 
-void ambarella_irq_suspend(void)
+/* ==========================================================================*/
+struct ambarella_vic_pm_info {
+	u32 vic_int_sel_reg;
+	u32 vic_inten_reg;
+	u32 vic_soften_reg;
+	u32 vic_proten_reg;
+	u32 vic_sense_reg;
+	u32 vic_bothedge_reg;
+	u32 vic_event_reg;
+};
+
+struct ambarella_vic_pm_info ambarella_vic_pm;
+#if (VIC_INSTANCES >= 2)
+struct ambarella_vic_pm_info ambarella_vic2_pm;
+#endif
+
+u32 ambarella_irq_suspend(u32 level)
 {
 	u32					i;
 
@@ -549,9 +551,11 @@ void ambarella_irq_suspend(void)
 	pr_info("%s: GPIO3_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO3_IE_REG));
 #endif
+
+	return 0;
 }
 
-void ambarella_irq_resume(void)
+u32 ambarella_irq_resume(u32 level)
 {
 	u32					i;
 
@@ -595,5 +599,7 @@ void ambarella_irq_resume(void)
 	pr_info("%s: GPIO3_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO3_IE_REG));
 #endif
+
+	return 0;
 }
 

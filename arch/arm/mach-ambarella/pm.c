@@ -97,8 +97,11 @@ static int ambarella_pm_pre(unsigned long *irqflag)
 
 	local_irq_save(*irqflag);
 
-	ambarella_timer_suspend();
-	ambarella_irq_suspend();
+	ambarella_adc_suspend(1);
+	ambarella_timer_suspend(1);
+	ambarella_irq_suspend(1);
+	ambarella_gpio_suspend(1);
+	ambarella_pll_suspend(1);
 
 	errorCode = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
@@ -121,8 +124,11 @@ static int ambarella_pm_post(unsigned long *irqflag)
 			__func__, errorCode);
 	}
 
-	ambarella_irq_resume();
-	ambarella_timer_resume();
+	ambarella_pll_resume(1);
+	ambarella_adc_resume(1);
+	ambarella_gpio_resume(1);
+	ambarella_timer_resume(1);
+	ambarella_irq_resume(1);
 
 	local_irq_restore(*irqflag);
 

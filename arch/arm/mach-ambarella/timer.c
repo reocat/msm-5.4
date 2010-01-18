@@ -183,12 +183,14 @@ struct sys_timer ambarella_timer = {
 	.init		= ambarella_timer_init,
 };
 
-void ambarella_timer_suspend(void)
+u32 ambarella_timer_suspend(u32 level)
 {
 	disable_irq(TIMER1_IRQ);
+
+	return 0;
 }
 
-void ambarella_timer_resume(void)
+u32 ambarella_timer_resume(u32 level)
 {
 	amba_writel(TIMER_CTR_REG, 0x0);
 
@@ -206,6 +208,8 @@ void ambarella_timer_resume(void)
 	ambarella_timer1_set_mode(ambarella_clkevt.mode,
 		&ambarella_clkevt);
 	enable_irq(TIMER1_IRQ);
+
+	return 0;
 }
 
 static int ambarella_timer1_clockevents(struct notifier_block *nb,

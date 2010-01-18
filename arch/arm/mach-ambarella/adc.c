@@ -261,3 +261,68 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 #endif
 }
 
+/* ==========================================================================*/
+struct ambarella_adc_pm_info {
+	u32 adc_control_reg;
+	u32 adc_enable_reg;
+	u32 adc_chan0_intr_reg;
+	u32 adc_chan1_intr_reg;
+	u32 adc_chan2_intr_reg;
+	u32 adc_chan3_intr_reg;
+#if (ADC_NUM_CHANNELS == 8)
+	u32 adc_chan4_intr_reg;
+	u32 adc_chan5_intr_reg;
+	u32 adc_chan6_intr_reg;
+	u32 adc_chan7_intr_reg;
+#endif
+};
+
+struct ambarella_adc_pm_info ambarella_adc_pm;
+
+u32 ambarella_adc_suspend(u32 level)
+{
+	ambarella_adc_pm.adc_control_reg = amba_readl(ADC_CONTROL_REG);
+	ambarella_adc_pm.adc_enable_reg = amba_readl(ADC_ENABLE_REG);
+	ambarella_adc_pm.adc_chan0_intr_reg = amba_readl(ADC_CHAN0_INTR_REG);
+	ambarella_adc_pm.adc_chan1_intr_reg = amba_readl(ADC_CHAN1_INTR_REG);
+	ambarella_adc_pm.adc_chan2_intr_reg = amba_readl(ADC_CHAN2_INTR_REG);
+	ambarella_adc_pm.adc_chan3_intr_reg = amba_readl(ADC_CHAN3_INTR_REG);
+#if (ADC_NUM_CHANNELS == 8)
+	ambarella_adc_pm.adc_chan4_intr_reg = amba_readl(ADC_CHAN4_INTR_REG);
+	ambarella_adc_pm.adc_chan5_intr_reg = amba_readl(ADC_CHAN5_INTR_REG);
+	ambarella_adc_pm.adc_chan6_intr_reg = amba_readl(ADC_CHAN6_INTR_REG);
+	ambarella_adc_pm.adc_chan7_intr_reg = amba_readl(ADC_CHAN7_INTR_REG);
+#endif
+
+	return 0;
+}
+
+u32 ambarella_adc_resume(u32 level)
+{
+	if (ambarella_adc_pm.adc_enable_reg & 0x01) {
+		amba_writel(ADC_ENABLE_REG, ambarella_adc_pm.adc_enable_reg);
+
+		if ((amba_readl(ADC_CONTROL_REG) & 0xfffffffc) != 0) {
+			amba_writel(ADC_CONTROL_REG, 0x0);
+			while ((amba_readl(ADC_CONTROL_REG) & ADC_CONTROL_STATUS) == 0x0);
+		}
+		if ((ambarella_adc_pm.adc_control_reg & 0xfffffffe) != 0) {
+			amba_writel(ADC_CONTROL_REG, ambarella_adc_pm.adc_control_reg & 0xfffffffe);
+			while ((amba_readl(ADC_CONTROL_REG) & ADC_CONTROL_STATUS) == 0x0);
+		}
+
+		amba_writel(ADC_CHAN0_INTR_REG, ambarella_adc_pm.adc_chan0_intr_reg);
+		amba_writel(ADC_CHAN1_INTR_REG, ambarella_adc_pm.adc_chan1_intr_reg);
+		amba_writel(ADC_CHAN2_INTR_REG, ambarella_adc_pm.adc_chan2_intr_reg);
+		amba_writel(ADC_CHAN3_INTR_REG, ambarella_adc_pm.adc_chan3_intr_reg);
+#if (ADC_NUM_CHANNELS == 8)
+		amba_writel(ADC_CHAN4_INTR_REG, ambarella_adc_pm.adc_chan4_intr_reg);
+		amba_writel(ADC_CHAN5_INTR_REG, ambarella_adc_pm.adc_chan5_intr_reg);
+		amba_writel(ADC_CHAN6_INTR_REG, ambarella_adc_pm.adc_chan6_intr_reg);
+		amba_writel(ADC_CHAN7_INTR_REG, ambarella_adc_pm.adc_chan7_intr_reg);
+#endif
+	}
+
+	return 0;
+}
+

@@ -497,3 +497,115 @@ int __init ambarella_init_gpio(void)
 	return errorCode;
 }
 
+/* ==========================================================================*/
+struct ambarella_gpio_pm_info {
+	u32 data_reg;
+	u32 dir_reg;
+	u32 is_reg;
+	u32 ibe_reg;
+	u32 iev_reg;
+	u32 ie_reg;
+	u32 afsel_reg;
+	u32 mask_reg;
+};
+
+struct ambarella_gpio_pm_info ambarella_gpio0_pm;
+struct ambarella_gpio_pm_info ambarella_gpio1_pm;
+#if (GPIO_INSTANCES >= 3)
+struct ambarella_gpio_pm_info ambarella_gpio2_pm;
+#endif
+
+#if (GPIO_INSTANCES >= 4)
+struct ambarella_gpio_pm_info ambarella_gpio3_pm;
+#endif
+
+u32 ambarella_gpio_suspend(u32 level)
+{
+	ambarella_gpio0_pm.data_reg   = amba_readl(GPIO0_DATA_REG);
+	ambarella_gpio0_pm.dir_reg    = amba_readl(GPIO0_DIR_REG);
+	ambarella_gpio0_pm.is_reg     = amba_readl(GPIO0_IS_REG);
+	ambarella_gpio0_pm.ibe_reg    = amba_readl(GPIO0_IBE_REG);
+	ambarella_gpio0_pm.iev_reg    = amba_readl(GPIO0_IEV_REG);
+	ambarella_gpio0_pm.ie_reg     = amba_readl(GPIO0_IE_REG);
+	ambarella_gpio0_pm.afsel_reg  = amba_readl(GPIO0_AFSEL_REG);
+	ambarella_gpio0_pm.mask_reg   = amba_readl(GPIO0_MASK_REG);
+
+	ambarella_gpio1_pm.data_reg   = amba_readl(GPIO1_DATA_REG);
+	ambarella_gpio1_pm.dir_reg    = amba_readl(GPIO1_DIR_REG);
+	ambarella_gpio1_pm.is_reg     = amba_readl(GPIO1_IS_REG);
+	ambarella_gpio1_pm.ibe_reg    = amba_readl(GPIO1_IBE_REG);
+	ambarella_gpio1_pm.iev_reg    = amba_readl(GPIO1_IEV_REG);
+	ambarella_gpio1_pm.ie_reg     = amba_readl(GPIO1_IE_REG);
+	ambarella_gpio1_pm.afsel_reg  = amba_readl(GPIO1_AFSEL_REG);
+	ambarella_gpio1_pm.mask_reg   = amba_readl(GPIO1_MASK_REG);
+
+#if (GPIO_INSTANCES >= 3)
+	ambarella_gpio2_pm.data_reg   = amba_readl(GPIO2_DATA_REG);
+	ambarella_gpio2_pm.dir_reg    = amba_readl(GPIO2_DIR_REG);
+	ambarella_gpio2_pm.is_reg     = amba_readl(GPIO2_IS_REG);
+	ambarella_gpio2_pm.ibe_reg    = amba_readl(GPIO2_IBE_REG);
+	ambarella_gpio2_pm.iev_reg    = amba_readl(GPIO2_IEV_REG);
+	ambarella_gpio2_pm.ie_reg     = amba_readl(GPIO2_IE_REG);
+	ambarella_gpio2_pm.afsel_reg  = amba_readl(GPIO2_AFSEL_REG);
+	ambarella_gpio2_pm.mask_reg   = amba_readl(GPIO2_MASK_REG);
+#endif
+
+#if (GPIO_INSTANCES >= 4)
+	ambarella_gpio3_pm.data_reg   = amba_readl(GPIO3_DATA_REG);
+	ambarella_gpio3_pm.dir_reg    = amba_readl(GPIO3_DIR_REG);
+	ambarella_gpio3_pm.is_reg     = amba_readl(GPIO3_IS_REG);
+	ambarella_gpio3_pm.ibe_reg    = amba_readl(GPIO3_IBE_REG);
+	ambarella_gpio3_pm.iev_reg    = amba_readl(GPIO3_IEV_REG);
+	ambarella_gpio3_pm.ie_reg     = amba_readl(GPIO3_IE_REG);
+	ambarella_gpio3_pm.afsel_reg  = amba_readl(GPIO3_AFSEL_REG);
+	ambarella_gpio3_pm.mask_reg   = amba_readl(GPIO3_MASK_REG);
+#endif
+
+	return 0;
+}
+
+u32 ambarella_gpio_resume(u32 level)
+{
+	amba_writel(GPIO0_AFSEL_REG,  ambarella_gpio0_pm.afsel_reg);
+	amba_writel(GPIO0_MASK_REG,   ambarella_gpio0_pm.mask_reg);
+	amba_writel(GPIO0_DIR_REG,    ambarella_gpio0_pm.dir_reg);
+	amba_writel(GPIO0_DATA_REG,   ambarella_gpio0_pm.data_reg);
+	amba_writel(GPIO0_IS_REG,     ambarella_gpio0_pm.is_reg);
+	amba_writel(GPIO0_IBE_REG,    ambarella_gpio0_pm.ibe_reg);
+	amba_writel(GPIO0_IEV_REG,    ambarella_gpio0_pm.iev_reg);
+	amba_writel(GPIO0_IE_REG,     ambarella_gpio0_pm.ie_reg);
+
+	amba_writel(GPIO1_AFSEL_REG,  ambarella_gpio1_pm.afsel_reg);
+	amba_writel(GPIO1_MASK_REG,   ambarella_gpio1_pm.mask_reg);
+	amba_writel(GPIO1_DIR_REG,    ambarella_gpio1_pm.dir_reg);
+	amba_writel(GPIO1_DATA_REG,   ambarella_gpio1_pm.data_reg);
+	amba_writel(GPIO1_IS_REG,     ambarella_gpio1_pm.is_reg);
+	amba_writel(GPIO1_IBE_REG,    ambarella_gpio1_pm.ibe_reg);
+	amba_writel(GPIO1_IEV_REG,    ambarella_gpio1_pm.iev_reg);
+	amba_writel(GPIO1_IE_REG,     ambarella_gpio1_pm.ie_reg);
+
+#if (GPIO_INSTANCES >= 3)
+	amba_writel(GPIO2_AFSEL_REG,  ambarella_gpio2_pm.afsel_reg);
+	amba_writel(GPIO2_MASK_REG,   ambarella_gpio2_pm.mask_reg);
+	amba_writel(GPIO2_DIR_REG,    ambarella_gpio2_pm.dir_reg);
+	amba_writel(GPIO2_DATA_REG,   ambarella_gpio2_pm.data_reg);
+	amba_writel(GPIO2_IS_REG,     ambarella_gpio2_pm.is_reg);
+	amba_writel(GPIO2_IBE_REG,    ambarella_gpio2_pm.ibe_reg);
+	amba_writel(GPIO2_IEV_REG,    ambarella_gpio2_pm.iev_reg);
+	amba_writel(GPIO2_IE_REG,     ambarella_gpio2_pm.ie_reg);
+#endif
+
+#if (GPIO_INSTANCES >= 4)
+	amba_writel(GPIO3_AFSEL_REG,  ambarella_gpio3_pm.afsel_reg);
+	amba_writel(GPIO3_MASK_REG,   ambarella_gpio3_pm.mask_reg);
+	amba_writel(GPIO3_DIR_REG,    ambarella_gpio3_pm.dir_reg);
+	amba_writel(GPIO3_DATA_REG,   ambarella_gpio3_pm.data_reg);
+	amba_writel(GPIO3_IS_REG,     ambarella_gpio3_pm.is_reg);
+	amba_writel(GPIO3_IBE_REG,    ambarella_gpio3_pm.ibe_reg);
+	amba_writel(GPIO3_IEV_REG,    ambarella_gpio3_pm.iev_reg);
+	amba_writel(GPIO3_IE_REG,     ambarella_gpio3_pm.ie_reg);
+#endif
+
+	return 0;
+}
+

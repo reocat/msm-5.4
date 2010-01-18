@@ -134,16 +134,22 @@ extern void ambarella_register_spi_device(void);
 extern void ambarella_register_i2c_device(void);
 
 extern void ambarella_init_irq(void);
-extern void ambarella_irq_suspend(void);
-extern void ambarella_irq_resume(void);
 extern void ambarella_gpio_ack_irq(unsigned int irq);
 
 extern u32 get_ambarella_sss_virt(void);
 extern u32 get_ambarella_sss_entry_virt(void);
 extern void set_ambarella_hal_invalid(void);
 
-extern void ambarella_timer_suspend(void);
-extern void ambarella_timer_resume(void);
+extern u32 ambarella_adc_suspend(u32 level);
+extern u32 ambarella_adc_resume(u32 level);
+extern u32 ambarella_gpio_suspend(u32 level);
+extern u32 ambarella_gpio_resume(u32 level);
+extern u32 ambarella_pll_suspend(u32 level);
+extern u32 ambarella_pll_resume(u32 level);
+extern u32 ambarella_timer_suspend(u32 level);
+extern u32 ambarella_timer_resume(u32 level);
+extern u32 ambarella_irq_suspend(u32 level);
+extern u32 ambarella_irq_resume(u32 level);
 
 /* ==========================================================================*/
 

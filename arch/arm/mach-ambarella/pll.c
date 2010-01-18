@@ -413,65 +413,11 @@ static int ambarella_freq_proc_read(char *page, char **start,
 	return retlen;
 }
 
-static int ambarella_freq_proc_write(struct file *file,
-	const char __user *buffer, unsigned long count, void *data)
+static void ambarella_freq_set_pll(void)
 {
-	char					str[MAX_CMD_LENGTH];
-	int					errorCode = 0;
 	unsigned int				new_freq_cpu, cur_freq_cpu;
-	unsigned int				i;
-	unsigned long				flags;
-
-	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
-	if (copy_from_user(str, buffer, i)) {
-		pr_err("%s: copy_from_user fail!\n", __func__);
-		errorCode = -EFAULT;
-		goto ambarella_pll_proc_write_exit;
-	}
-	str[MAX_CMD_LENGTH - 1] = 0;
-
-	errorCode = sscanf(str, "%d", &new_freq_cpu);
-	if (errorCode != 1) {
-		pr_err("%s: convert sting fail %d!\n", __func__, errorCode);
-		errorCode = -EINVAL;
-		goto ambarella_pll_proc_write_exit;
-	}
-
-	if (new_freq_cpu > 243000000 || new_freq_cpu < 135000000) {
-		pr_err("%s:\n\tinvalid frequency (%d)\n",
-			__func__, new_freq_cpu);
-		pr_info("\tfrequency should be 135000 ~ 243000 (in KHz)\n");
-		errorCode = -EINVAL;
-		goto ambarella_pll_proc_write_exit;
-	}
-
-	pr_debug("%s: %ld %d\n", __func__, count, new_freq_cpu);
-	errorCode = count;
-
-	if(new_freq_cpu == pll_info.armfreq)
-		goto ambarella_pll_proc_write_exit;
-
-	errorCode = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (errorCode) {
-		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
-	}
-
-	ambarella_adjust_jiffies(AMBA_EVENT_PRE_CPUFREQ,
-		pll_info.armfreq, new_freq_cpu);
-
-	local_irq_save(flags);
-
-	errorCode = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (errorCode) {
-		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
-	}
 
 #if ((CHIP_REV == A2) || (CHIP_REV == A3))
-
 	do {
 		cur_freq_cpu = amba_readl(PLL_CORE_CTRL_REG) & 0xfff00000;
 		if (new_freq_cpu > pll_info.armfreq) {
@@ -485,10 +431,8 @@ static int ambarella_freq_proc_write(struct file *file,
 		cur_freq_cpu = get_core_bus_freq_hz();
 	} while ((new_freq_cpu > pll_info.armfreq && cur_freq_cpu < new_freq_cpu) ||
 		 (new_freq_cpu < pll_info.armfreq && cur_freq_cpu > new_freq_cpu));
-
 #elif ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
 	(CHIP_REV == A5) || (CHIP_REV == A6))
-
 	do {
 		u32 reg, intprog, sdiv, sout, valwe;
 
@@ -516,6 +460,66 @@ static int ambarella_freq_proc_write(struct file *file,
 	} while ((new_freq_cpu > pll_info.armfreq && cur_freq_cpu < new_freq_cpu) ||
 		(new_freq_cpu < pll_info.armfreq && cur_freq_cpu > new_freq_cpu));
 #endif
+}
+
+static int ambarella_freq_proc_write(struct file *file,
+	const char __user *buffer, unsigned long count, void *data)
+{
+	char					str[MAX_CMD_LENGTH];
+	int					errorCode = 0;
+	unsigned int				i;
+	unsigned long				flags;
+
+	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
+	if (copy_from_user(str, buffer, i)) {
+		pr_err("%s: copy_from_user fail!\n", __func__);
+		errorCode = -EFAULT;
+		goto ambarella_pll_proc_write_exit;
+	}
+	str[MAX_CMD_LENGTH - 1] = 0;
+
+	errorCode = sscanf(str, "%d", &i);
+	if (errorCode != 1) {
+		pr_err("%s: convert sting fail %d!\n", __func__, errorCode);
+		errorCode = -EINVAL;
+		goto ambarella_pll_proc_write_exit;
+	}
+
+	if (i > 243000000 || i < 135000000) {
+		pr_err("%s:\n\tinvalid frequency (%d)\n",
+			__func__, i);
+		pr_info("\tfrequency should be 135000 ~ 243000 (in KHz)\n");
+		errorCode = -EINVAL;
+		goto ambarella_pll_proc_write_exit;
+	}
+
+	pr_debug("%s: %ld %d\n", __func__, count, i);
+	errorCode = count;
+
+	if(i == pll_info.armfreq)
+		goto ambarella_pll_proc_write_exit;
+
+	errorCode = notifier_to_errno(
+		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
+
+	ambarella_adjust_jiffies(AMBA_EVENT_PRE_CPUFREQ,
+		pll_info.armfreq, i);
+
+	local_irq_save(flags);
+
+	errorCode = notifier_to_errno(
+		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
+	if (errorCode) {
+		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
+			__func__, errorCode);
+	}
+
+	ambarella_freq_set_pll();
+
 	errorCode = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
 	if (errorCode) {
@@ -526,7 +530,7 @@ static int ambarella_freq_proc_write(struct file *file,
 	local_irq_restore(flags);
 
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ,
-		pll_info.armfreq, new_freq_cpu);
+		pll_info.armfreq, i);
 
 	errorCode = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
@@ -577,5 +581,22 @@ int __init ambarella_init_pll(void)
 #endif
 
 	return errorCode;
+}
+
+/* ==========================================================================*/
+u32 ambarella_pll_suspend(u32 level)
+{
+	return 0;
+}
+
+u32 ambarella_pll_resume(u32 level)
+{
+
+#if (CHIP_REV == A5S)
+	amb_set_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
+#else
+	ambarella_freq_set_pll();
+#endif
+	return 0;
 }
 
