@@ -781,7 +781,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	} else {
 		/* just wait cmd irq, no care about both DMA irqs */
 		timeout = wait_event_timeout(nand_info->wq,
-			atomic_read(&nand_info->irq_flag) == 0x6, 1 * HZ);
+			(atomic_read(&nand_info->irq_flag) & 0x1) == 0x0, 1 * HZ);
 		if (timeout <= 0) {
 			errorCode = -EBUSY;
 			dev_err(nand_info->dev, "%s: cmd=0x%x timeout 0x%08x\n",
@@ -1757,6 +1757,7 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 1;
+
 	if (!device_may_wakeup(&pdev->dev)) {
 		disable_irq(nand_info->dma_irq);
 		disable_irq(nand_info->cmd_irq);
@@ -1775,6 +1776,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 0;
+
 	if (!device_may_wakeup(&pdev->dev)) {
 		enable_irq(nand_info->dma_irq);
 		enable_irq(nand_info->cmd_irq);
