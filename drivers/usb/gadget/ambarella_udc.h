@@ -40,6 +40,8 @@ USB device controller on Ambarella processors
 
 #define UDC_DMA_MAXPACKET		65536
 
+#define UDC_STATE_MAX_LENGTH	32
+
 //-------------------------------------
 // Structure definition
 //-------------------------------------
@@ -116,6 +118,8 @@ struct ambarella_ep {
 struct ambarella_udc {
 
 	spinlock_t		lock;
+	struct proc_dir_entry	*proc_file;
+	char			udc_state[UDC_STATE_MAX_LENGTH];
 
 	struct ambarella_udc_controller	*controller_info;
 	struct usb_gadget	gadget;
