@@ -75,7 +75,7 @@ static void __init ambarella_init(void)
 	int					i;
 	u32 					boot_from;
 
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 	char					*pname;
 	int					version;
 
@@ -89,7 +89,7 @@ static void __init ambarella_init(void)
 	pr_info("\tchip id:\t\t%d\n", AMBARELLA_BOARD_CHIP(system_rev));
 	pr_info("\tboard type:\t\t%d\n", AMBARELLA_BOARD_TYPE(system_rev));
 	pr_info("\tboard revision:\t\t%d\n", AMBARELLA_BOARD_REV(system_rev));
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 	pr_info("\tchip name:\t\t%s\n", pname);
 	pr_info("\tHAL version:\t\t%d\n", version);
 	pr_info("\treference clock:\t%d\n",

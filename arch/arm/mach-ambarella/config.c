@@ -240,7 +240,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 	},
 };
 
-#ifdef SYSTEM_SUPPORT_HAL
+#if (SYSTEM_SUPPORT_HAL == 1)
 static struct ambarella_mem_hal_desc ambarella_hal_info = {
 	.physaddr			= DEFAULT_HAL_START,
 	.size				= DEFAULT_HAL_SIZE,
@@ -254,7 +254,7 @@ void __init ambarella_map_io(void)
 {
 	int					i;
 	u32					iop, ios, iov;
-#ifdef SYSTEM_SUPPORT_HAL
+#if (SYSTEM_SUPPORT_HAL == 1)
 	u32					halp, hals, halv;
 	unsigned int				hal_type = 0;
 	int					bhal_mapped = 0;
@@ -274,7 +274,7 @@ void __init ambarella_map_io(void)
 				ambarella_io_desc[i].name, iop, iov, ios,
 				ambarella_io_desc[i].io_desc.type);
 			iotable_init(&(ambarella_io_desc[i].io_desc), 1);
-#ifdef SYSTEM_SUPPORT_HAL
+#if (SYSTEM_SUPPORT_HAL == 1)
 			if ((halv >= iov) && ((halv + hals) <= (iov + ios))) {
 				bhal_mapped = 1;
 				hal_type = ambarella_io_desc[i].io_desc.type;
@@ -283,7 +283,7 @@ void __init ambarella_map_io(void)
 		}
 	}
 
-#ifdef SYSTEM_SUPPORT_HAL
+#if (SYSTEM_SUPPORT_HAL == 1)
 	if (!bhal_mapped) {
 		hal_desc.virtual = halv;
 		hal_desc.pfn = __phys_to_pfn(halp);
@@ -642,7 +642,7 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 EXPORT_SYMBOL(get_ambarella_mem_rev_info);
 
 /* ==========================================================================*/
-#ifdef SYSTEM_SUPPORT_HAL
+#if (SYSTEM_SUPPORT_HAL == 1)
 static void __init early_hal(char **p)
 {
 	unsigned long				pstart = 0;

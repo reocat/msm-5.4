@@ -267,7 +267,9 @@ void nand_dummy_xfer(void)
 
 void enable_fio_dma(void)
 {
+#if ((HOST_MAX_AHB_CLK_EN_BITS == 10) || (I2S_24BITMUX_MODE_REG_BITS == 4))
 	u32 val;
+#endif
 
 #if (HOST_MAX_AHB_CLK_EN_BITS == 10)
 	/* Disable boot-select */

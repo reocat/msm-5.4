@@ -646,6 +646,9 @@ static int ambarella_i2c_resume(struct platform_device *pdev)
 	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	pinfo = platform_get_drvdata(pdev);
+
+	ambarella_i2c_hw_init(pinfo);
+
 	if (!device_may_wakeup(&pdev->dev))
 		enable_irq(pinfo->irq);
 

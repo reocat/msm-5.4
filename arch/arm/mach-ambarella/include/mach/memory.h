@@ -33,5 +33,8 @@
 
 #define CONSISTENT_DMA_SIZE	SZ_8M
 
+#define MAX_PHYSMEM_BITS	32
+#define SECTION_SIZE_BITS	24
+
 #endif
 

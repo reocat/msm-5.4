@@ -1,8 +1,6 @@
 #ifndef _HEADER_H_INCLUDED_
 #define _HEADER_H_INCLUDED_
 
-#define SYSTEM_SUPPORT_HAL		1
-
 typedef struct amb_hal_header_s {
 	char magic[16] ;
 	unsigned int major_version ;

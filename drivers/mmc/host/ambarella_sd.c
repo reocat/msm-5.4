@@ -2011,9 +2011,13 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
+
+	pinfo->pcontroller->set_pll(pinfo->pcontroller->max_clk);
+
 	if (!device_may_wakeup(&pdev->dev)) {
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
+			ambarella_sd_reset_all(pslotinfo->mmc);
 			if (ambarella_is_valid_gpio_irq(
 				&pslotinfo->slot_info.gpio_cd)) {
 				enable_irq(

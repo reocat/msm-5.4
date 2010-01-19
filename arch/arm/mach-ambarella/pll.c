@@ -37,7 +37,7 @@
 
 #define MAX_CMD_LENGTH				(32)
 
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 static struct proc_dir_entry *mode_file = NULL;
 static struct proc_dir_entry *performance_file = NULL;
 #else
@@ -79,7 +79,7 @@ static void ambarella_adjust_jiffies(unsigned long val,
 	}
 }
 
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 
 struct ambarella_pll_info {
 	amb_operating_mode_t operating_mode;
@@ -413,9 +413,9 @@ static int ambarella_freq_proc_read(char *page, char **start,
 	return retlen;
 }
 
-static void ambarella_freq_set_pll(void)
+static void ambarella_freq_set_pll(unsigned int new_freq_cpu)
 {
-	unsigned int				new_freq_cpu, cur_freq_cpu;
+	unsigned int				cur_freq_cpu;
 
 #if ((CHIP_REV == A2) || (CHIP_REV == A3))
 	do {
@@ -518,7 +518,7 @@ static int ambarella_freq_proc_write(struct file *file,
 			__func__, errorCode);
 	}
 
-	ambarella_freq_set_pll();
+	ambarella_freq_set_pll(i);
 
 	errorCode = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
@@ -568,13 +568,13 @@ pll_general_exit:
 	return errorCode;
 }
 
-#endif	/* End for #if (CHIP_REV == A5S) */
+#endif	/* End for #if (SYSTEM_SUPPORT_HAL == 1) */
 
 int __init ambarella_init_pll(void)
 {
 	int					errorCode = 0;
 
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 	errorCode = ambarella_init_pll_a5s();
 #else
 	errorCode = ambarella_init_pll_general();
@@ -592,10 +592,10 @@ u32 ambarella_pll_suspend(u32 level)
 u32 ambarella_pll_resume(u32 level)
 {
 
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 	amb_set_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
 #else
-	ambarella_freq_set_pll();
+	ambarella_freq_set_pll(pll_info.armfreq);
 #endif
 	return 0;
 }

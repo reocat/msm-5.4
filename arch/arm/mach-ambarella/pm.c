@@ -169,7 +169,7 @@ static int ambarella_pm_enter_standby(void)
 {
 	int					errorCode = 0;
 	unsigned long				flags;
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
 #endif
@@ -177,14 +177,9 @@ static int ambarella_pm_enter_standby(void)
 	if (ambarella_pm_pre(&flags))
 		BUG();
 
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
-	if(result != AMB_HAL_SUCCESS){
-		pr_err("%s: amb_get_operating_mode failed(%d)\n",
-			__func__, result);
-		errorCode = -EPERM;
-		goto ambarella_pm_enter_standby_exit_pm;
-	}
+	BUG_ON(result != AMB_HAL_SUCCESS);
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
 
 #if 0
@@ -201,7 +196,6 @@ static int ambarella_pm_enter_standby(void)
 #endif
 #endif
 
-ambarella_pm_enter_standby_exit_pm:
 	if (ambarella_pm_post(&flags))
 		BUG();
 
@@ -222,7 +216,9 @@ static int ambarella_pm_enter_sss(void)
 		BUG();
 
 	errorCode = sss_entry(get_ambarella_sss_virt());
+#if (SYSTEM_SUPPORT_HAL == 1)
 	set_ambarella_hal_invalid();
+#endif
 
 	if (ambarella_pm_post(&flags))
 		BUG();
@@ -275,7 +271,7 @@ static int ambarella_pm_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_STANDBY:
-#if (CHIP_REV == A5S)
+#if (SYSTEM_SUPPORT_HAL == 1)
 		valid = 1;
 #endif
 		break;
