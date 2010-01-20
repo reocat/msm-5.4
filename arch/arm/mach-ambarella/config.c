@@ -335,10 +335,14 @@ static void __init early_dsp(char **p)
 		return;
 	}
 
+#if 0
 	ambarella_io_desc[4].io_desc.virtual =
 		(start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
 	ambarella_io_desc[4].io_desc.pfn = __phys_to_pfn(start);
 	ambarella_io_desc[4].io_desc.length = size;
+	ambarella_io_desc[4].io_desc.length = 0;
+#endif
+
 }
 __early_param("dsp=", early_dsp);
 
