@@ -1513,6 +1513,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 		if (pslotinfo->mmc) {
 			pm_message_t state;
 			state.event = 2;
+			pslotinfo->state = AMBA_SD_STATE_RESET;
 			errorCode = mmc_suspend_host(pslotinfo->mmc, state);
 			if (errorCode)
 				ambsd_err(pslotinfo,
@@ -1979,6 +1980,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
 		if (pslotinfo->mmc) {
+			pslotinfo->state = AMBA_SD_STATE_RESET;
 			errorCode = mmc_suspend_host(pslotinfo->mmc, state);
 			if (errorCode)
 				ambsd_err(pslotinfo,
