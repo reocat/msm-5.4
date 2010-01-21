@@ -211,6 +211,15 @@ config AMBARELLA_QUICK_INIT
 	help
 	  If you are not sure, say Y here.
 
+config AMBARELLA_SUPPORT_SPARSEMEM
+	bool "Suport SPARSEMEM"
+	default n
+	select ARCH_SPARSEMEM_ENABLE
+	select ARCH_ENABLE_MEMORY_HOTPLUG
+	select ARCH_MEMORY_PROBE
+	help
+	  If you are not sure, say N here.
+
 endmenu
 
 menu "Proc file system support"

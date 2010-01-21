@@ -457,7 +457,7 @@ static void __init build_mem_type_table(void)
 
 #define vectors_base()	(vectors_high() ? 0xffff0000 : 0)
 
-static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
+static void __meminit alloc_init_pte(pmd_t *pmd, unsigned long addr,
 				  unsigned long end, unsigned long pfn,
 				  const struct mem_type *type)
 {
@@ -475,7 +475,7 @@ static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
 	} while (pte++, addr += PAGE_SIZE, addr != end);
 }
 
-static void __init alloc_init_section(pgd_t *pgd, unsigned long addr,
+static void __meminit alloc_init_section(pgd_t *pgd, unsigned long addr,
 				      unsigned long end, unsigned long phys,
 				      const struct mem_type *type)
 {
@@ -573,7 +573,7 @@ static void __init create_36bit_mapping(struct map_desc *md,
  * offsets, and we take full advantage of sections and
  * supersections.
  */
-void __init create_mapping(struct map_desc *md)
+void __meminit create_mapping(struct map_desc *md)
 {
 	unsigned long phys, addr, length, end;
 	const struct mem_type *type;
@@ -973,3 +973,28 @@ void setup_mm_for_reboot(char mode)
 		flush_pmd_entry(pmd);
 	}
 }
+
+#ifdef CONFIG_MEMORY_HOTPLUG
+int arch_add_memory(int nid, u64 start, u64 size)
+{
+	unsigned long start_pfn = start >> PAGE_SHIFT;
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+	struct map_desc map;
+	struct pglist_data *pgdata;
+	struct zone *zone;
+
+	map.pfn = start_pfn;
+	map.virtual = __phys_to_virt(start);
+	map.length = size;
+	map.type = MT_MEMORY;
+	create_mapping(&map);
+	local_flush_tlb_all();
+	flush_cache_all();
+
+	pgdata = NODE_DATA(nid);
+	zone = pgdata->node_zones + ZONE_NORMAL;
+
+	return __add_pages(nid, zone, start_pfn, nr_pages);
+}
+#endif /* CONFIG_MEMORY_HOTPLUG */
+

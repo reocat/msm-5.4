@@ -374,6 +374,8 @@ static void __init early_bsb(char **p)
 		(start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
 	ambarella_io_desc[3].io_desc.pfn = __phys_to_pfn(start);
 	ambarella_io_desc[3].io_desc.length = size;
+
+	high_memory = __va(__pfn_to_phys(__phys_to_pfn(start)));
 }
 __early_param("bsb=", early_bsb);
 
@@ -394,6 +396,8 @@ static int __init parse_mem_tag_bsb(const struct tag *tag)
 		(tag->u.mem.start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
 	ambarella_io_desc[3].io_desc.pfn = __phys_to_pfn(tag->u.mem.start);
 	ambarella_io_desc[3].io_desc.length = tag->u.mem.size;
+
+	high_memory = __va(__pfn_to_phys(__phys_to_pfn(tag->u.mem.start)));
 
 	return 0;
 }

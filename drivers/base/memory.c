@@ -72,7 +72,8 @@ int register_memory(struct memory_block *memory, struct mem_section *section)
 	int error;
 
 	memory->sysdev.cls = &memory_sysdev_class;
-	memory->sysdev.id = __section_nr(section);
+	memory->sysdev.id =
+		pfn_to_section_nr(section_nr_to_pfn(__section_nr(section)));
 
 	error = sysdev_register(&memory->sysdev);
 	return error;
@@ -82,7 +83,8 @@ static void
 unregister_memory(struct memory_block *memory, struct mem_section *section)
 {
 	BUG_ON(memory->sysdev.cls != &memory_sysdev_class);
-	BUG_ON(memory->sysdev.id != __section_nr(section));
+	BUG_ON(memory->sysdev.id !=
+		pfn_to_section_nr(section_nr_to_pfn(__section_nr(section))));
 
 	/* drop the ref. we got in remove_memory_block() */
 	kobject_put(&memory->sysdev.kobj);
@@ -172,7 +174,7 @@ memory_block_action(struct memory_block *mem, unsigned long action)
 	int old_state = mem->state;
 
 	psection = mem->phys_index;
-	first_page = pfn_to_page(psection << PFN_SECTION_SHIFT);
+	first_page = pfn_to_page(section_nr_to_pfn(psection));
 
 	/*
 	 * The probe routines leave the pages reserved, just
@@ -244,7 +246,7 @@ store_mem_state(struct sys_device *dev,
 	int ret = -EINVAL;
 
 	mem = container_of(dev, struct memory_block, sysdev);
-	phys_section_nr = mem->phys_index;
+	phys_section_nr = pfn_to_section_nr(section_nr_to_pfn(mem->phys_index));
 
 	if (!present_section_nr(phys_section_nr))
 		goto out;
@@ -398,7 +400,8 @@ struct memory_block *find_memory_block(struct mem_section *section)
 	 * This only works because we know that section == sysdev->id
 	 * slightly redundant with sysdev_register()
 	 */
-	sprintf(&name[0], "%s%d", MEMORY_CLASS_NAME, __section_nr(section));
+	sprintf(&name[0], "%s%d", MEMORY_CLASS_NAME,
+		pfn_to_section_nr(section_nr_to_pfn(__section_nr(section))));
 
 	kobj = kset_find_obj(&memory_sysdev_class.kset, name);
 	if (!kobj)
