@@ -1283,9 +1283,6 @@ static int __devinit ambarella_nand_config_flash(
 		break;
 	}
 
-	printk("%s: 0x%08x, 0x%08x\n", __func__,
-		nand_info->plat_nand->timing->control, nand_info->control_reg);
-
 	return errorCode;
 }
 
