@@ -1866,6 +1866,59 @@ static struct i2c_board_info ambarella_ak4183_board_info = {
 
 #endif
 
+#ifdef CONFIG_I2C_AMBARELLA_CY8CTMG
+
+#define TS_GPIO		84
+#define TS_RESET	31
+
+static void ambarella_cy8ctmg_clear_penirq(void)
+{
+	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
+}
+
+static int ambarella_cy8ctmg_init_platform_hw(void)
+{
+	ambarella_gpio_config(TS_GPIO, GPIO_FUNC_SW_INPUT);
+	set_irq_type(gpio_to_irq(TS_GPIO), IRQF_TRIGGER_FALLING);
+	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
+
+	ambarella_gpio_config(TS_RESET, GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(TS_RESET, GPIO_HIGH);
+	msleep(10);
+	ambarella_gpio_set(TS_RESET, GPIO_LOW);
+	msleep(100);
+
+	return 0;
+}
+
+static void ambarella_cy8ctmg_exit_platform_hw(void)
+{
+}
+
+static struct cy8ctmg_platform_data ambarella_cy8ctmg_pdata = {
+	.fix = {
+		.x_invert = 0,
+		.y_invert = 1,
+		.x_rescale = 0,
+		.y_rescale = 0,
+		.x_min = 2,
+		.x_max = 318,
+		.y_min = 1,
+		.y_max = 469,
+	},
+	.clear_penirq = ambarella_cy8ctmg_clear_penirq,
+	.init_platform_hw = ambarella_cy8ctmg_init_platform_hw,
+	.exit_platform_hw = ambarella_cy8ctmg_exit_platform_hw
+};
+
+static struct i2c_board_info ambarella_cy8ctmg_board_info = {
+	.type = "cy8ctmg",
+	.addr = 0x18,
+	.platform_data = &ambarella_cy8ctmg_pdata,
+};
+
+#endif
+
 void __init ambarella_register_i2c_device(void)
 {
 #ifdef CONFIG_I2C_AMBARELLA_TSC2007
@@ -1876,6 +1929,11 @@ void __init ambarella_register_i2c_device(void)
 #ifdef CONFIG_I2C_AMBARELLA_AK4183
 	ambarella_ak4183_board_info.irq = gpio_to_irq(TS_GPIO);
 	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
+#endif
+
+#ifdef CONFIG_I2C_AMBARELLA_CY8CTMG
+	ambarella_cy8ctmg_board_info.irq = gpio_to_irq(TS_GPIO);
+	i2c_register_board_info(0, &ambarella_cy8ctmg_board_info, 1);
 #endif
 }
 
