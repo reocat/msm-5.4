@@ -328,14 +328,18 @@ ambarella_setup_keymap_init:
 		for (i = 0; i < 0x100; i++) {
 			set_bit(i, pinfo->dev->evbit);
 			set_bit(i, pinfo->dev->keybit);
-			set_bit(i, pinfo->dev->relbit);
-			set_bit(i, pinfo->dev->absbit);
-			set_bit(i, pinfo->dev->mscbit);
-			set_bit(i, pinfo->dev->ledbit);
-			set_bit(i, pinfo->dev->sndbit);
-			set_bit(i, pinfo->dev->ffbit);
 			set_bit(i, pinfo->dev->swbit);
 		}
+		set_bit(ABS_X, pinfo->dev->absbit);
+		set_bit(ABS_Y, pinfo->dev->absbit);
+		set_bit(ABS_PRESSURE, pinfo->dev->absbit);
+		set_bit(ABS_TOOL_WIDTH, pinfo->dev->absbit);
+		input_set_abs_params(pinfo->dev, ABS_X, 0, abx_max_x, 0, 0);
+		input_set_abs_params(pinfo->dev, ABS_Y, 0, abx_max_y, 0, 0);
+		input_set_abs_params(pinfo->dev, ABS_PRESSURE,
+			0, abx_max_pressure, 0, 0);
+		input_set_abs_params(pinfo->dev, ABS_TOOL_WIDTH,
+			0, abx_max_width, 0, 0);
 	}
 
 	return errorCode;
