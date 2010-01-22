@@ -203,6 +203,13 @@ config I2C_AMBARELLA_AK4183
 
           If you are not sure, say N here.
 
+config I2C_AMBARELLA_CY8CTMG
+        bool "Suport CY8CTMG"
+        default n
+        help
+
+          If you are not sure, say N here.
+
 endmenu
 
 config AMBARELLA_QUICK_INIT

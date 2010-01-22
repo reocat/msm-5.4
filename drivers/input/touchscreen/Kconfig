@@ -419,4 +419,15 @@ config TOUCHSCREEN_AK4183
           To compile this driver as a module, choose M here: the
           module will be called ak4183.
 
+config TOUCHSCREEN_CY8CTMG
+        tristate "CY8CTMG based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a CY8CTMG based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called cy8ctmg.
+
 endif
