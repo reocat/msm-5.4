@@ -182,7 +182,7 @@ static int ambarella_pm_enter_standby(void)
 	BUG_ON(result != AMB_HAL_SUCCESS);
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
 
-#if 0
+#if 1
 	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",

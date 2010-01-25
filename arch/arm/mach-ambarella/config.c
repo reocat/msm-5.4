@@ -285,15 +285,19 @@ void __init ambarella_map_io(void)
 
 #if (SYSTEM_SUPPORT_HAL == 1)
 	if (!bhal_mapped) {
-		hal_desc.virtual = halv;
-		hal_desc.pfn = __phys_to_pfn(halp);
-		hal_desc.length = hals;
-		hal_desc.type = MT_SMALL_PAGE;
-		iotable_init(&hal_desc, 1);
-		bhal_mapped = 1;
-		hal_type = hal_desc.type;
+		if (!ambarella_hal_info.remapped) {
+			hal_desc.virtual = halv;
+			hal_desc.pfn = __phys_to_pfn(halp);
+			hal_desc.length = hals;
+			hal_desc.type = MT_SMALL_PAGE;
+			iotable_init(&hal_desc, 1);
+			bhal_mapped = 1;
+			hal_type = hal_desc.type;
+			ambarella_hal_info.remapped = bhal_mapped;
+		} else {
+			hal_type = MT_MEMORY;
+		}
 	}
-	ambarella_hal_info.remapped = bhal_mapped;
 	if (ambarella_hal_info.remapped)
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x %d\n",
 			halp, halv, hals, hal_type);
@@ -301,6 +305,14 @@ void __init ambarella_map_io(void)
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x Map Fail!\n",
 			halp, halv, hals);
 #endif
+
+	if (ambarella_io_desc[2].io_desc.length == 0) {
+		ambarella_io_desc[2].io_desc.virtual =
+			__phys_to_virt(DEFAULT_MEM_START);
+		ambarella_io_desc[2].io_desc.pfn =
+			__phys_to_pfn(DEFAULT_MEM_START);
+		ambarella_io_desc[2].io_desc.length = SZ_1M;
+	}
 }
 
 static void __init early_dsp(char **p)
@@ -629,6 +641,13 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 {
 	int					i;
 	u32					revp, revs;
+#if (SYSTEM_SUPPORT_HAL == 1)
+	u32					halp, hals, halv;
+
+	halp = ambarella_hal_info.physaddr;
+	hals = ambarella_hal_info.size;
+	halv = ambarella_hal_info.virtual;
+#endif
 
 	if (ambarella_reserve_mem_info.counter)
 		pr_info("Ambarella Reserve Memory:\n");
@@ -637,6 +656,10 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 		revp = ambarella_reserve_mem_info.desc[i].physaddr;
 		revs = ambarella_reserve_mem_info.desc[i].size;
 		pr_info("\t%02d:\t0x%08x[0x%08x]\tNormal\n", i, revp, revs);
+#if (SYSTEM_SUPPORT_HAL == 1)
+		if ((halp >= revp) && ((halp + hals) <= (revp + revs)))
+			ambarella_hal_info.remapped = 1;
+#endif
 	}
 
 	*pinfo = ambarella_reserve_mem_info;
