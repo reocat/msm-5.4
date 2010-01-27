@@ -295,10 +295,21 @@ struct ambarella_ir_controller {
 };
 
 struct ambarella_rtc_controller {
+	u8					pos0;
+	u8					pos1;
+	u8					pos2;
 	int					(*check_capacity)(u32);
-	u32					(*rtc_read)(u32);
-	void					(*rtc_write)(u32, u32);
+	u32					(*check_status)(void);
+	void					(*set_curt_time)(u32);
+	u32					(*get_curt_time)(void);
+	void					(*set_alat_time)(u32);
+	u32					(*get_alat_time)(void);
 };
+#define AMBA_RTC_PARAM_CALL(id, arg, perm, setpos) \
+	module_param_call(rtc##id##_pos0, param_set_byte, param_get_byte, &(arg.pos0), perm); \
+	module_param_call(rtc##id##_pos1, param_set_byte, param_get_byte, &(arg.pos1), perm); \
+	module_param_call(rtc##id##_pos2, param_set_byte, param_get_byte, &(arg.pos2), perm); \
+	module_param_call(rtc##id##_setpos, setpos, NULL, NULL, 0200)
 
 struct ambarella_wdt_controller {
 	u32					(*get_pll)(void);

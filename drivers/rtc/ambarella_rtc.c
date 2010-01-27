@@ -68,84 +68,52 @@ u32 __ambrtc_tm2epoch_diff(struct rtc_time *current_tm)
 }
 
 /* ==========================================================================*/
-u32 __ambrtc_dev_check_status(void)
-{
-	u32 rtc_status;
-	u32 need_clear = 0;;
-
-	rtc_status = amba_readl(RTC_STATUS_REG);
-
-	if ((rtc_status & RTC_STATUS_PC_RST) != RTC_STATUS_PC_RST) {
-		need_clear = 1;
-		pr_warning("=====RTC ever lost power=====\n");
-	}
-
-	if ((rtc_status & RTC_STATUS_WKUP) == RTC_STATUS_WKUP)
-		pr_debug("=====RTC wake up=====\n");
-
-	if ((rtc_status & RTC_STATUS_ALA_WK) == RTC_STATUS_PC_RST)
-		pr_info("=====RTC alarm wake up=====\n");
-
-	if (need_clear) {
-		amba_writel(RTC_RESET_REG, 0x01);
-		mdelay(1);
-		amba_writel(RTC_RESET_REG, 0x00);
-		mdelay(1);
-	}
-
-	return rtc_status;
-}
-
 int __ambrtc_dev_set_time(struct device *dev, struct rtc_time *tm)
 {
-	int ret = 0;
-	u32 tm2epoch_diff;
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
+	int					ret = 0;
+	struct platform_device			*pdev;
+	struct ambarella_rtc_controller		*pinfo;
+	u32					tm2epoch_diff;
 
-	if (tm == NULL)
-		return -EPERM;
+	if (tm == NULL) {
+		ret = -EPERM;
+		goto __ambrtc_dev_set_time_exit;
+	}
 
 	pr_debug("%s: %d.%d.%d - %d:%d:%d\n", __func__,
 		tm->tm_year, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec);
 
+	pdev = to_platform_device(dev);
+	pinfo = (struct ambarella_rtc_controller *)(pdev->dev.platform_data);
+
 	tm2epoch_diff = __ambrtc_tm2epoch_diff(tm);
 	ret = pinfo->check_capacity(tm2epoch_diff);
-	if(ret < 0){
-		pr_err("%s: Invalid date (at least 2005.1.1) (0x%08x)\n",
-			__func__, tm2epoch_diff);
-		return ret;
-	}
+	if (!ret)
+		goto __ambrtc_dev_set_time_exit;
 
-	pinfo->rtc_write(RTC_PWC_ALAT_REG, 0x0);
-	pinfo->rtc_write(RTC_PWC_CURT_REG, 0x0);
-	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
-	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	pinfo->set_curt_time(tm2epoch_diff);
 
-	pinfo->rtc_write(RTC_PWC_CURT_REG, tm2epoch_diff);
-	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
-	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
-
-	return 0;
+__ambrtc_dev_set_time_exit:
+	return ret;
 }
 
 int __ambrtc_dev_get_time(struct device *dev, struct rtc_time *tm)
 {
-	u32 time;
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
+	int					ret = 0;
+	struct platform_device			*pdev;
+	struct ambarella_rtc_controller		*pinfo;
+	u32					time;
 
-	if (tm == NULL)
-		return -EPERM;
+	if (tm == NULL) {
+		ret = -EPERM;
+		goto __ambrtc_dev_get_time_exit;
+	}
 
-	__ambrtc_dev_check_status();
+	pdev = to_platform_device(dev);
+	pinfo = (struct ambarella_rtc_controller *)(pdev->dev.platform_data);
 
-	time = pinfo->rtc_read(RTC_CURT_REG);
+	time = pinfo->get_curt_time();
 	rtc_time_to_tm(time, tm);
 
 	pr_debug("%s: 0x%x\n", __func__, time);
@@ -153,72 +121,74 @@ int __ambrtc_dev_get_time(struct device *dev, struct rtc_time *tm)
 		tm->tm_year, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-	return 0;
+__ambrtc_dev_get_time_exit:
+	return ret;
 }
 
 int __ambrtc_dev_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
-	int ret = 0;
-	u32 tm2epoch_diff;
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
+	int					ret = 0;
+	struct platform_device			*pdev;
+	struct ambarella_rtc_controller		*pinfo;
+	u32					tm2epoch_diff;
 
-	if (alrm == NULL)
-		return -EPERM;
+	if (alrm == NULL) {
+		ret = -EPERM;
+		goto __ambrtc_dev_set_alarm_exit;
+	}
 
-	pr_debug("%s: enabled = %d pending = %d.\n", __func__,
-		alrm->enabled, alrm->pending);
+	pr_debug("%s %d: %d.%d.%d - %d:%d:%d\n", __func__, alrm->enabled,
+		alrm->time.tm_year, alrm->time.tm_mon, alrm->time.tm_mday,
+		alrm->time.tm_hour, alrm->time.tm_min, alrm->time.tm_sec);
+
+	pdev = to_platform_device(dev);
+	pinfo = (struct ambarella_rtc_controller *)(pdev->dev.platform_data);
 
 	if (alrm->enabled) {
-		pr_debug("%s: %d.%d.%d - %d:%d:%d\n", __func__,
-			alrm->time.tm_year, alrm->time.tm_mon,
-			alrm->time.tm_mday, alrm->time.tm_hour,
-			alrm->time.tm_min, alrm->time.tm_sec);
 		tm2epoch_diff = __ambrtc_tm2epoch_diff(&(alrm->time));
 		ret = pinfo->check_capacity(tm2epoch_diff);
-		if(ret < 0){
-			pr_err("%s: Invalid date (at least 2005.1.1) (0x%08x)\n",
-				__func__, tm2epoch_diff);
-			return ret;
-		}
+		if (!ret)
+			goto __ambrtc_dev_set_alarm_exit;
 	} else
 		tm2epoch_diff = 0;
 
-	pinfo->rtc_write(RTC_PWC_CURT_REG, amba_readl(RTC_CURT_REG));
-	pinfo->rtc_write(RTC_PWC_ALAT_REG, 0x0);
-	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
-	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	pinfo->set_alat_time(tm2epoch_diff);
 
-	pinfo->rtc_write(RTC_PWC_ALAT_REG, tm2epoch_diff);
-	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
-	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
-
-	return 0;
+__ambrtc_dev_set_alarm_exit:
+	return ret;
 }
 
 int __ambrtc_dev_get_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
-	u32 rtc_status;
-	u32 time, alrm_time;
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ambarella_rtc_controller *pinfo = pdev->dev.platform_data;
+	int					ret = 0;
+	struct platform_device			*pdev;
+	struct ambarella_rtc_controller		*pinfo;
+	u32					rtc_status;
+	u32					time, alrm_time;
 
-	if (alrm == NULL)
-		return -EPERM;
+	if (alrm == NULL) {
+		ret = -EPERM;
+		goto __ambrtc_dev_get_alarm_exit;
+	}
 
-	rtc_status = __ambrtc_dev_check_status();
-	alrm_time = pinfo->rtc_read(RTC_CURT_REG);
-	time = amba_readl(RTC_CURT_REG);
+	pdev = to_platform_device(dev);
+	pinfo = (struct ambarella_rtc_controller *)(pdev->dev.platform_data);
+
+	rtc_status = pinfo->check_status();
+	alrm_time = pinfo->get_alat_time();
+	time = pinfo->get_curt_time();
 
 	alrm->enabled = (alrm_time > time);
 	alrm->pending = !!(rtc_status & RTC_STATUS_ALA_WK);
 	rtc_time_to_tm(alrm_time, &(alrm->time));
 
-	return 0;
+	pr_debug("%s %d: %d.%d.%d - %d:%d:%d [%d]\n", __func__, alrm->enabled,
+		alrm->time.tm_year, alrm->time.tm_mon, alrm->time.tm_mday,
+		alrm->time.tm_hour, alrm->time.tm_min, alrm->time.tm_sec,
+		alrm->pending);
+
+__ambrtc_dev_get_alarm_exit:
+	return ret;
 }
 
 /* ==========================================================================*/
