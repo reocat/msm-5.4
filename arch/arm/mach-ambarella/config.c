@@ -1690,6 +1690,8 @@ static int rtc_set_pos(const char *s, struct kernel_param *kp)
 	mdelay(1);
 	amba_writel(RTC_RESET_REG, 0x00);
 	mdelay(1);
+
+	return 0;
 }
 
 static struct ambarella_rtc_controller ambarella_platform_rtc_controller0 = {

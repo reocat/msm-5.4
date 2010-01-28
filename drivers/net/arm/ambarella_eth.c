@@ -386,6 +386,8 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 	}
 
 	val = amba_readl(lp->regbase + ETH_MAC_GMII_DATA_OFFSET);
+	dev_dbg(&lp->ndev->dev, "%s: 0x%X 0x%X 0x%X!\n",
+		__func__, mii_id, regnum, val);
 
 ambhw_mdio_read_exit:
 	if (netif_msg_hw(lp))
