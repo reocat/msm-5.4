@@ -209,7 +209,9 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 			__func__, errorCode);
 	}
 
+	ambarella_timer_suspend(1);
 	result = amb_set_operating_mode(HAL_BASE_VP, popmode);
+	ambarella_timer_resume(1);
 
 	errorCode = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
@@ -518,7 +520,9 @@ static int ambarella_freq_proc_write(struct file *file,
 			__func__, errorCode);
 	}
 
+	ambarella_timer_suspend(1);
 	ambarella_freq_set_pll(i);
+	ambarella_timer_resume(1);
 
 	errorCode = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));

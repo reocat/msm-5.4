@@ -204,6 +204,9 @@ u32 ambarella_timer_resume(u32 level)
 	ambarella_timer2_init_for_clocksource();
 	ambarella_timer2_clksrc.mult = clocksource_hz2mult(
 		AMBARELLA_TIMER_FREQ, ambarella_timer2_clksrc.shift);
+	ambarella_timer2_clksrc.mult_orig = ambarella_timer2_clksrc.mult;
+	clocksource_calculate_interval(&ambarella_timer2_clksrc,
+		NTP_INTERVAL_LENGTH);
 
 	ambarella_timer1_set_mode(ambarella_clkevt.mode,
 		&ambarella_clkevt);
