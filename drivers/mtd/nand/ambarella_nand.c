@@ -38,8 +38,6 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
 
-#include <linux/cpufreq.h>
-
 #include <mach/hardware.h>
 #include <mach/dma.h>
 
@@ -1282,6 +1280,9 @@ static int __devinit ambarella_nand_config_flash(
 		errorCode = -ENXIO;
 		break;
 	}
+
+	printk("%s: 0x%08x, 0x%08x\n", __func__,
+		nand_info->plat_nand->timing->control, nand_info->control_reg);
 
 	return errorCode;
 }

@@ -325,7 +325,7 @@ static inline void ambhw_init(struct ambeth_info *lp)
 	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, val);
 
 	/* @@ why   RTC 64 , can we try RTC 96 or 128 ?  CHECKPOINT,
-	why ETH_DMA_OPMODE_FUF?  may try to disable FUF		
+	why ETH_DMA_OPMODE_FUF?  may try to disable FUF
 	we may also try ETH_DMA_OPMODE_SF, since it starts
 	transfer when there is a full frame, 
 	*/

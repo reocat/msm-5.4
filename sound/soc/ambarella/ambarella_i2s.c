@@ -49,8 +49,8 @@
 #include "ambarella_i2s.h"
 
 /*
-  * The I2S ports are mux with the GPIOs. 
-  * A3, A5, A5S and A6 support 5.1(6) channels, so we need to 
+  * The I2S ports are mux with the GPIOs.
+  * A3, A5, A5S and A6 support 5.1(6) channels, so we need to
   * select the proper port to used and free the unused pins (GPIOs)
   * for other usage.
   */

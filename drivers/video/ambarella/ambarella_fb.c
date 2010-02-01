@@ -133,7 +133,7 @@ static int ambafb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		*pclut_table++ = *r++;
 		*pclut_table++ = *g++;
 		*pclut_table++ = *b++;
-		if (t)	*pblend_table++ = *t++;
+		if (t) *pblend_table++ = *t++;
 	}
 
 	if (ambafb_data->setcmap) {

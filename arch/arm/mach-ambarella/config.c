@@ -48,6 +48,7 @@
 
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/ak4183.h>
+#include <linux/i2c/cy8ctmg.h>
 
 #include "init.h"
 

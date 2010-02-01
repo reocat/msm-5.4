@@ -33,7 +33,6 @@
 
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
-#include <linux/cpufreq.h>
 
 #include <mach/hardware.h>
 
