@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 100416
+ * @version 103903
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -497,7 +497,11 @@ AMB_OPERATING_MODE_STANDBY,
 /** LCD off */
 AMB_OPERATING_MODE_LCD_BYPASS,
 /** Still picture preview */
-AMB_OPERATING_MODE_STILL_PREVIEW
+AMB_OPERATING_MODE_STILL_PREVIEW,
+/** Low power */
+AMB_OPERATING_MODE_LOW_POWER,
+/** IP Cam */
+AMB_OPERATING_MODE_IP_CAM
 } amb_mode_t ;
 
 /**
@@ -801,7 +805,11 @@ typedef unsigned int (*amb_hal_function_t) (unsigned int, unsigned int, unsigned
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
+#ifdef _HAL_DEBUG_
+  amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + 0) ;
+#else
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
+#endif
 
   return amb_hal_function (arg0, arg1, arg2, arg3) ;
 }

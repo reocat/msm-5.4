@@ -95,6 +95,7 @@ struct ambarella_pll_performance_info {
 	unsigned int performance;
 };
 
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
@@ -104,6 +105,8 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"standby", AMB_OPERATING_MODE_STANDBY},
 	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
 	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
+	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
 
 static struct ambarella_pll_performance_info performance_list[] = {
@@ -264,14 +267,14 @@ static int ambarella_mode_proc_write(struct file *file,
 	}
 	str[MAX_CMD_LENGTH - 1] = 0;
 
-	mode = AMB_OPERATING_MODE_LCD_BYPASS + 1;
+	mode = AMB_OPERATING_MODE_END;
 	for (i = 0; i < ARRAY_SIZE(mode_list); i++) {
 		if (strstr(str, mode_list[i].name) != NULL) {
 			mode = mode_list[i].mode;
 		}
 	}
 
-	if (mode > AMB_OPERATING_MODE_LCD_BYPASS) {
+	if (mode >= AMB_OPERATING_MODE_END) {
 		pr_err("%s: invalid mode (%s)!\n", __func__, str);
 		errorCode = -EINVAL;
 		goto pll_mode_proc_write_exit;
