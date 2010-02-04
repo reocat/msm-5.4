@@ -89,9 +89,10 @@ int __ambrtc_dev_set_time(struct device *dev, struct rtc_time *tm)
 
 	tm2epoch_diff = __ambrtc_tm2epoch_diff(tm);
 	ret = pinfo->check_capacity(tm2epoch_diff);
-	if (!ret)
+	if (ret)
 		goto __ambrtc_dev_set_time_exit;
 
+	pr_debug("%s: 0x%x\n", __func__, tm2epoch_diff);
 	pinfo->set_curt_time(tm2epoch_diff);
 
 __ambrtc_dev_set_time_exit:

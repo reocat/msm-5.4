@@ -304,6 +304,7 @@ struct ambarella_rtc_controller {
 	u32					(*get_curt_time)(void);
 	void					(*set_alat_time)(u32);
 	u32					(*get_alat_time)(void);
+	u32					reset_delay;
 };
 #define AMBA_RTC_PARAM_CALL(id, arg, perm, setpos) \
 	module_param_call(rtc##id##_pos0, param_set_byte, param_get_byte, &(arg.pos0), perm); \

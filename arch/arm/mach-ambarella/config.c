@@ -1557,10 +1557,10 @@ static int rtc_check_capacity(u32 tm)
 	return errCode;
 }
 
-static inline u32 rtc_time_write_fix(u32 reg, u32 tm)
+static inline u32 rtc_time_write_fix(u32 tm)
 {
 #if (RTC_SUPPORT_30BITS_PASSED_SECONDS == 1)
-	return ((tm & 0x3fffffff) | (amba_readl(reg) & 0xc0000000));
+	return (tm & 0x3fffffff);
 #else
 	return tm;
 #endif
@@ -1583,18 +1583,16 @@ static void rtc_set_curt_time(u32 tm)
 	amba_writel(RTC_PWC_ALAT_REG, 0x0);
 	amba_writel(RTC_PWC_CURT_REG, 0x0);
 	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
-	amba_writel(RTC_PWC_CURT_REG,
-		rtc_time_write_fix(RTC_PWC_CURT_REG, tm));
-	amba_writel(RTC_PWC_ALAT_REG,
-		rtc_time_write_fix(RTC_PWC_ALAT_REG, bak_alat));
+	amba_writel(RTC_PWC_CURT_REG, rtc_time_write_fix(tm));
+	amba_writel(RTC_PWC_ALAT_REG, rtc_time_write_fix(bak_alat));
 	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 }
 
 static u32 rtc_check_status(void)
@@ -1642,18 +1640,16 @@ static void rtc_set_alat_time(u32 tm)
 	amba_writel(RTC_PWC_ALAT_REG, 0x0);
 	amba_writel(RTC_PWC_CURT_REG, 0x0);
 	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
-	amba_writel(RTC_PWC_CURT_REG,
-		rtc_time_write_fix(RTC_PWC_CURT_REG, bak_curt));
-	amba_writel(RTC_PWC_ALAT_REG,
-		rtc_time_write_fix(RTC_PWC_ALAT_REG, tm));
+	amba_writel(RTC_PWC_CURT_REG, rtc_time_write_fix(bak_curt));
+	amba_writel(RTC_PWC_ALAT_REG, rtc_time_write_fix(tm));
 	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 }
 
 static u32 rtc_get_alat_time(void)
@@ -1679,18 +1675,16 @@ static int rtc_set_pos(const char *s, struct kernel_param *kp)
 	amba_writel(RTC_PWC_ALAT_REG, 0x0);
 	amba_writel(RTC_PWC_CURT_REG, 0x0);
 	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
-	amba_writel(RTC_PWC_CURT_REG,
-		rtc_time_write_fix(RTC_PWC_CURT_REG, bak_curt));
-	amba_writel(RTC_PWC_ALAT_REG,
-		rtc_time_write_fix(RTC_PWC_ALAT_REG, bak_alat));
+	amba_writel(RTC_PWC_CURT_REG, rtc_time_write_fix(bak_curt));
+	amba_writel(RTC_PWC_ALAT_REG, rtc_time_write_fix(bak_alat));
 	amba_writel(RTC_RESET_REG, 0x01);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 	amba_writel(RTC_RESET_REG, 0x00);
-	mdelay(1);
+	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
 	return 0;
 }
@@ -1705,6 +1699,11 @@ static struct ambarella_rtc_controller ambarella_platform_rtc_controller0 = {
 	.get_curt_time	= rtc_get_curt_time,
 	.set_alat_time	= rtc_set_alat_time,
 	.get_alat_time	= rtc_get_alat_time,
+#if	(CHIP_REV == A5S)
+	.reset_delay	= 3,
+#else
+	.reset_delay	= 1,
+#endif
 };
 AMBA_RTC_PARAM_CALL(0, ambarella_platform_rtc_controller0, 0644, rtc_set_pos);
 
