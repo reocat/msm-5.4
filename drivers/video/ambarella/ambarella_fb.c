@@ -59,6 +59,543 @@ module_param(y_multiplication, int, 0444);
 module_param(color_mode, int, 0444);
 module_param(use_prealloc, int, 0444);
 
+static const struct ambarella_fb_color_table_s {
+	enum ambarella_fb_color_format	color_format;
+	int				bits_per_pixel;
+	struct fb_bitfield		red;
+	struct fb_bitfield		green;
+	struct fb_bitfield		blue;
+	struct fb_bitfield		transp;
+} ambarella_fb_color_format_table[] =
+{
+	{
+		.color_format = AMBAFB_COLOR_CLUT_8BPP,
+		.bits_per_pixel = 8,
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_RGB565,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 11,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 5,
+				.length = 6,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_BGR565,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 5,
+				.length = 6,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 11,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_AGBR4444,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 8,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 4,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 12,
+				.length = 4,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_RGBA4444,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 12,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 8,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 4,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 4,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_BGRA4444,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 4,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 8,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 12,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 4,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_ABGR4444,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 4,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 8,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 12,
+				.length = 4,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_ARGB4444,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 8,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 4,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 0,
+				.length = 4,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 12,
+				.length = 4,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_AGBR1555,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 10,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 5,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 15,
+				.length = 1,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_GBR1555,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 10,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 5,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_RGBA5551,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 11,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 6,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 1,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 1,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_BGRA5551,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 1,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 6,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 11,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 1,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_ABGR1555,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 5,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 10,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 15,
+				.length = 1,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_ARGB1555,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 10,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 5,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 15,
+				.length = 1,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_AGBR8888,
+		.bits_per_pixel = 32,
+		.red =
+			{
+				.offset = 0,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 16,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 8,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 24,
+				.length = 8,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_RGBA8888,
+		.bits_per_pixel = 32,
+		.red =
+			{
+				.offset = 24,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 16,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 8,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 8,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_BGRA8888,
+		.bits_per_pixel = 32,
+		.red =
+			{
+				.offset = 8,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 16,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 24,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 8,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_ABGR8888,
+		.bits_per_pixel = 32,
+		.red =
+			{
+				.offset = 0,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 8,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 16,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 24,
+				.length = 8,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBAFB_COLOR_ARGB8888,
+		.bits_per_pixel = 32,
+		.red =
+			{
+				.offset = 16,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 8,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 0,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 24,
+				.length = 8,
+				.msb_right = 0,
+		},
+	},
+};
+
 /* ========================================================================== */
 static int ambarella_fb_proc_read(char *page, char **start,
 	off_t off, int count, int *eof, void *data)
@@ -180,20 +717,87 @@ static int ambafb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 
 static int ambafb_set_par(struct fb_info *info)
 {
-	int					errorCode = 0;
+	int					errorCode = 0, i;
 	struct ambarella_platform_fb		*ambafb_data;
+	struct fb_var_screeninfo		*pvar;
 	struct ambarella_fb_info		ambafb_info;
+	static struct fb_var_screeninfo		*cur_var;
+	int					res_changed = 0;
+	int					color_format_changed = 0;
+	enum ambarella_fb_color_format		new_color_format;
+	const struct ambarella_fb_color_table_s	*pTable;
 
 	ambafb_data = (struct ambarella_platform_fb *)info->par;
-
 	mutex_lock(&ambafb_data->lock);
-	if (ambafb_data->set_par) {
-		ambafb_info.color_format = ambafb_data->color_format;
-		errorCode =
-			ambafb_data->set_par(info, &ambafb_info);
+	cur_var = &ambafb_data->screen_var;
+	pvar = &info->var;
+
+	if (!ambafb_data->set_par)
+		goto ambafb_set_par_quick_exit;
+
+	/* Resolution changed */
+	if (pvar->xres != cur_var->xres || pvar->yres != cur_var->yres) {
+		res_changed = 1;
 	}
+
+	/* Color format changed */
+	if (pvar->bits_per_pixel != cur_var->bits_per_pixel ||
+		pvar->red.offset != cur_var->red.offset ||
+		pvar->red.length != cur_var->red.length ||
+		pvar->red.msb_right != cur_var->red.msb_right ||
+		pvar->green.offset != cur_var->green.offset ||
+		pvar->green.length != cur_var->green.length ||
+		pvar->green.msb_right != cur_var->green.msb_right ||
+		pvar->blue.offset != cur_var->blue.offset ||
+		pvar->blue.length != cur_var->blue.length ||
+		pvar->blue.msb_right != cur_var->blue.msb_right ||
+		pvar->transp.offset != cur_var->transp.offset ||
+		pvar->transp.length != cur_var->transp.length ||
+		pvar->transp.msb_right != cur_var->transp.msb_right) {
+
+		color_format_changed = 1;
+	}
+
+	if (!res_changed && !color_format_changed)
+		goto ambafb_set_par_quick_exit;
+
+	/* Find color format */
+	new_color_format = ambafb_data->color_format;
+	pTable = ambarella_fb_color_format_table;
+	for (i = 0; i < ARRAY_SIZE(ambarella_fb_color_format_table); i++) {
+		if (pTable->bits_per_pixel == pvar->bits_per_pixel &&
+			pTable->red.offset == pvar->red.offset &&
+			pTable->red.length == pvar->red.length &&
+			pTable->red.msb_right == pvar->red.msb_right &&
+			pTable->green.offset == pvar->green.offset &&
+			pTable->green.length == pvar->green.length &&
+			pTable->green.msb_right == pvar->green.msb_right &&
+			pTable->blue.offset == pvar->blue.offset &&
+			pTable->blue.length == pvar->blue.length &&
+			pTable->blue.msb_right == pvar->blue.msb_right &&
+			pTable->transp.offset == pvar->transp.offset &&
+			pTable->transp.length == pvar->transp.length &&
+			pTable->transp.msb_right == pvar->transp.msb_right) {
+
+			new_color_format = pTable->color_format;
+			break;
+		}
+		pTable++;
+	}
+
+	ambafb_info.color_format = new_color_format;
+	ambafb_data->color_format = new_color_format;
+	memcpy(cur_var, pvar, sizeof(*pvar));
 	mutex_unlock(&ambafb_data->lock);
 
+	errorCode = ambafb_data->set_par(info, &ambafb_info);
+	goto ambafb_set_par_normal_exit;
+
+ambafb_set_par_quick_exit:
+	memcpy(cur_var, pvar, sizeof(*pvar));
+	mutex_unlock(&ambafb_data->lock);
+
+ambafb_set_par_normal_exit:
 	dev_dbg(info->device, "%s:%d %d.\n", __func__, __LINE__, errorCode);
 
 	return errorCode;
