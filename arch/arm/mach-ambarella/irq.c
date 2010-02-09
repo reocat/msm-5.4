@@ -539,16 +539,16 @@ u32 ambarella_irq_suspend(u32 level)
 			__ambarella_gpio_disable_irq(i);
 		}
 	}
-	pr_info("%s: GPIO0_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO0_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO0_IE_REG));
-	pr_info("%s: GPIO1_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO1_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO1_IE_REG));
 #if (GPIO_INSTANCES >= 3)
-	pr_info("%s: GPIO2_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO2_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO2_IE_REG));
 #endif
 #if (GPIO_INSTANCES >= 4)
-	pr_info("%s: GPIO3_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO3_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO3_IE_REG));
 #endif
 
@@ -587,16 +587,16 @@ u32 ambarella_irq_resume(u32 level)
 			__ambarella_gpio_disable_irq(i);
 		}
 	}
-	pr_info("%s: GPIO0_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO0_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO0_IE_REG));
-	pr_info("%s: GPIO1_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO1_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO1_IE_REG));
 #if (GPIO_INSTANCES >= 3)
-	pr_info("%s: GPIO2_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO2_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO2_IE_REG));
 #endif
 #if (GPIO_INSTANCES >= 4)
-	pr_info("%s: GPIO3_IE_REG = 0x%08X\n",
+	pr_debug("%s: GPIO3_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO3_IE_REG));
 #endif
 

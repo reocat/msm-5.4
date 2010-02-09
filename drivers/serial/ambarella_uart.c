@@ -722,7 +722,7 @@ static int serial_ambarella_suspend(struct platform_device *pdev,
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
 		errorCode = uart_suspend_port(&serial_ambarella_reg, port);
 	}
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 
 	return errorCode;
@@ -740,7 +740,7 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
 		errorCode = uart_resume_port(&serial_ambarella_reg, port);
 	}
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }

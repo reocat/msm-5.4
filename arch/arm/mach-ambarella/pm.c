@@ -125,10 +125,10 @@ static int ambarella_pm_post(unsigned long *irqflag)
 	}
 
 	ambarella_pll_resume(1);
-	ambarella_adc_resume(1);
 	ambarella_gpio_resume(1);
-	ambarella_timer_resume(1);
 	ambarella_irq_resume(1);
+	ambarella_timer_resume(1);
+	ambarella_adc_resume(1);
 
 	local_irq_restore(*irqflag);
 
@@ -182,7 +182,7 @@ static int ambarella_pm_enter_standby(void)
 	BUG_ON(result != AMB_HAL_SUCCESS);
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
 
-#if 1
+#if 0
 	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
@@ -230,7 +230,7 @@ static int ambarella_pm_enter(suspend_state_t state)
 {
 	int					errorCode = 0;
 
-	pr_info("%s: enter with state[%d]\n", __func__, state);
+	pr_debug("%s: enter with state[%d]\n", __func__, state);
 
 	switch (state) {
 	case PM_SUSPEND_ON:
@@ -251,7 +251,7 @@ static int ambarella_pm_enter(suspend_state_t state)
 		break;
 	}
 
-	pr_info("%s: exit state[%d] with %d\n", __func__, state, errorCode);
+	pr_debug("%s: exit state[%d] with %d\n", __func__, state, errorCode);
 
 	return errorCode;
 }
@@ -288,7 +288,7 @@ static int ambarella_pm_valid(suspend_state_t state)
 	}
 
 ambarella_pm_valid_exit:
-	pr_info("%s: state[%d]=%d\n", __func__, state, valid);
+	pr_debug("%s: state[%d]=%d\n", __func__, state, valid);
 
 	return valid;
 }

@@ -249,7 +249,7 @@ void ambarella_scan_adc(struct work_struct *work)
 		enable_irq(pinfo->irq);
 }
 
-static irqreturn_t ambarella_adc_irq(int irq, void *devid)
+static irqreturn_t ambarella_input_adc_irq(int irq, void *devid)
 {
 	struct ambarella_adc_info	*pinfo;
 
@@ -263,7 +263,7 @@ static irqreturn_t ambarella_adc_irq(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
-static int __devinit ambarella_adc_probe(struct platform_device *pdev)
+static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 {
 	int				errorCode = 0;
 	struct ambarella_adc_info	*pinfo;
@@ -350,7 +350,7 @@ static int __devinit ambarella_adc_probe(struct platform_device *pdev)
 
 	if (pinfo->support_irq) {// irq mode
 		pinfo->work_mode = AMBA_ADC_IRQ_MODE;
-		errorCode = request_irq(pinfo->irq, ambarella_adc_irq,
+		errorCode = request_irq(pinfo->irq, ambarella_input_adc_irq,
 			pinfo->irqflags, pdev->name, pinfo);
 		if (errorCode) {
 			dev_err(&pdev->dev, "Request IRQ failed!\n");
@@ -383,7 +383,7 @@ adc_errorCode_na:
 	return errorCode;
 }
 
-static int __devexit ambarella_adc_remove(struct platform_device *pdev)
+static int __devexit ambarella_input_adc_remove(struct platform_device *pdev)
 {
 	struct ambarella_adc_info	*pinfo;
 	int				errorCode = 0;
@@ -410,7 +410,7 @@ static int __devexit ambarella_adc_remove(struct platform_device *pdev)
 }
 
 #if (defined CONFIG_PM)
-static int ambarella_adc_suspend(struct platform_device *pdev,
+static int ambarella_input_adc_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int					errorCode = 0;
@@ -424,12 +424,12 @@ static int ambarella_adc_suspend(struct platform_device *pdev,
 			disable_irq(pinfo->irq);
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 	return errorCode;
 }
 
-static int ambarella_adc_resume(struct platform_device *pdev)
+static int ambarella_input_adc_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_adc_info		*pinfo;
@@ -441,19 +441,18 @@ static int ambarella_adc_resume(struct platform_device *pdev)
 			enable_irq(pinfo->irq);
 	}
 
-	pinfo->pcontroller_info->reset();
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }
 #endif
 
 static struct platform_driver ambarella_adc_driver = {
-	.probe		= ambarella_adc_probe,
-	.remove		= __devexit_p(ambarella_adc_remove),
+	.probe		= ambarella_input_adc_probe,
+	.remove		= __devexit_p(ambarella_input_adc_remove),
 #ifdef CONFIG_PM
-	.suspend	= ambarella_adc_suspend,
-	.resume		= ambarella_adc_resume,
+	.suspend	= ambarella_input_adc_suspend,
+	.resume		= ambarella_input_adc_resume,
 #endif
 	.driver		= {
 		.name	= "ambarella-adc",

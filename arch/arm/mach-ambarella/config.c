@@ -218,7 +218,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= (DEFAULT_BSB_BASE),
 			.pfn	= __phys_to_pfn(DEFAULT_BSB_START),
 			.length	= (DEFAULT_BSB_SIZE),
-			.type	= MT_DEVICE_CACHED,
+			.type	= MT_SMALL_PAGE,
 			},
 	},
 	[4] = {
@@ -227,7 +227,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= (DEFAULT_DSP_BASE),
 			.pfn	= __phys_to_pfn(DEFAULT_DSP_START),
 			.length	= DEFAULT_DSP_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_SMALL_PAGE,
 			},
 	},
 	[5] = {

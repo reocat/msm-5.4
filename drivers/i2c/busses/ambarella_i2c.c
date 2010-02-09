@@ -628,7 +628,7 @@ static int ambarella_i2c_suspend(struct platform_device *pdev,
 	int				errorCode = 0;
 	struct ambarella_i2c_dev_info	*pinfo;
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 
 	pinfo = platform_get_drvdata(pdev);
@@ -643,7 +643,6 @@ static int ambarella_i2c_resume(struct platform_device *pdev)
 	int				errorCode = 0;
 	struct ambarella_i2c_dev_info	*pinfo;
 
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	pinfo = platform_get_drvdata(pdev);
 
@@ -651,6 +650,8 @@ static int ambarella_i2c_resume(struct platform_device *pdev)
 
 	if (!device_may_wakeup(&pdev->dev))
 		enable_irq(pinfo->irq);
+
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }

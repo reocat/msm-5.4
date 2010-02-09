@@ -463,7 +463,7 @@ static int ambarella_ir_suspend(struct platform_device *pdev,
 		disable_irq(pinfo->irq);
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 	return errorCode;
 }
@@ -481,7 +481,7 @@ static int ambarella_ir_resume(struct platform_device *pdev)
 		ambarella_ir_enable(pinfo);
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }

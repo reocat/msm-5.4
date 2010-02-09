@@ -732,7 +732,7 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 		errorCode = -ENXIO;
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 
 	return errorCode;
@@ -755,7 +755,7 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 		errorCode = -ENXIO;
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }

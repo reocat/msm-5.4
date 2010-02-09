@@ -22,9 +22,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  * Default clock is from APB.
- * Timer 1 is used as clock_event_device, while Timer 2 is
- * used as free-running clocksource.
- * Timer 3 is unused.
+ * Timer 2 is used as clock_event_device.
+ * Timer 3 is used as free-running clocksource.
+ * Timer 1 is not used.
  */
 
 #include <linux/interrupt.h>
@@ -36,77 +36,104 @@
 
 #include <mach/hardware.h>
 
+/* ==========================================================================*/
 #define AMBARELLA_TIMER_FREQ	(get_apb_bus_freq_hz())
 #define AMBARELLA_TIMER_RATING	(300)
 
-static struct notifier_block ambarella_timer1_clockevents_notifier;
+struct ambarella_timer_pm_info {
+	u32 timer1_status_reg;
+	u32 timer1_reload_reg;
+	u32 timer1_match1_reg;
+	u32 timer1_match2_reg;
+	u32 timer2_status_reg;
+	u32 timer2_reload_reg;
+	u32 timer2_match1_reg;
+	u32 timer2_match2_reg;
+	u32 timer3_status_reg;
+	u32 timer3_reload_reg;
+	u32 timer3_match1_reg;
+	u32 timer3_match2_reg;
+	u32 timer_ctr_reg;
+	u32 timer_clk;
+};
+struct ambarella_timer_pm_info ambarella_timer_pm;
 
-static inline void ambarella_timer1_disable(void)
+/* ==========================================================================*/
+#define AMBARELLA_CE_TIMER_STATUS_REG	TIMER2_STATUS_REG
+#define AMBARELLA_CE_TIMER_RELOAD_REG	TIMER2_RELOAD_REG
+#define AMBARELLA_CE_TIMER_MATCH1_REG	TIMER2_MATCH1_REG
+#define AMBARELLA_CE_TIMER_MATCH2_REG	TIMER2_MATCH2_REG
+#define AMBARELLA_CE_TIMER_IRQ		TIMER2_IRQ
+
+static inline void ambarella_ce_timer_disable(void)
 {
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN2);
 }
 
-static inline void ambarella_timer1_enable(void)
+static inline void ambarella_ce_timer_enable(void)
 {
-	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN2);
 }
 
-static inline void ambarella_timer1_set_periodic(void)
+static inline void ambarella_ce_timer_misc(void)
+{
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF2);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL2);
+}
+
+static inline void ambarella_ce_timer_set_periodic(void)
 {
 	u32					cnt;
 
 	cnt = AMBARELLA_TIMER_FREQ / HZ;
-	amba_writel(TIMER1_STATUS_REG, cnt);
-	amba_writel(TIMER1_RELOAD_REG, cnt);
-	amba_writel(TIMER1_MATCH1_REG, 0x0);
-	amba_writel(TIMER1_MATCH2_REG, 0x0);
-	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
+	amba_writel(AMBARELLA_CE_TIMER_STATUS_REG, cnt);
+	amba_writel(AMBARELLA_CE_TIMER_RELOAD_REG, cnt);
+	amba_writel(AMBARELLA_CE_TIMER_MATCH1_REG, 0x0);
+	amba_writel(AMBARELLA_CE_TIMER_MATCH2_REG, 0x0);
+	ambarella_ce_timer_misc();
 }
 
-static inline void ambarella_timer1_set_oneshot(u32 cnt)
+static inline void ambarella_ce_timer_set_oneshot(u32 cnt)
 {
-	if (!cnt)
-		cnt = AMBARELLA_TIMER_FREQ / HZ;
-	amba_writel(TIMER1_STATUS_REG, cnt);
-	amba_writel(TIMER1_RELOAD_REG, 0x0);
-	amba_writel(TIMER1_MATCH1_REG, 0x0);
-	amba_writel(TIMER1_MATCH2_REG, 0x0);
-	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
+	BUG_ON(cnt == 0);
+	amba_writel(AMBARELLA_CE_TIMER_STATUS_REG, cnt);
+	amba_writel(AMBARELLA_CE_TIMER_RELOAD_REG, 0x0);
+	amba_writel(AMBARELLA_CE_TIMER_MATCH1_REG, 0x0);
+	amba_writel(AMBARELLA_CE_TIMER_MATCH2_REG, 0x0);
+	ambarella_ce_timer_misc();
 }
 
-static void ambarella_timer1_set_mode(enum clock_event_mode mode,
+static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 	struct clock_event_device *evt)
 {
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
-		ambarella_timer1_disable();
-		ambarella_timer1_set_periodic();
-		ambarella_timer1_enable();
+		ambarella_ce_timer_disable();
+		ambarella_ce_timer_set_periodic();
+		ambarella_ce_timer_enable();
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
-		ambarella_timer1_disable();
-		ambarella_timer1_set_oneshot(0);
-		ambarella_timer1_enable();
+		ambarella_ce_timer_disable();
+		ambarella_ce_timer_set_oneshot(AMBARELLA_TIMER_FREQ / HZ);
+		ambarella_ce_timer_enable();
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
-		ambarella_timer1_disable();
+		ambarella_ce_timer_disable();
 		break;
 	case CLOCK_EVT_MODE_RESUME:
-		ambarella_timer1_enable();
+		ambarella_ce_timer_enable();
 		break;
 	}
 }
 
-static int ambarella_timer1_set_next_event(unsigned long delta,
+static int ambarella_ce_timer_set_next_event(unsigned long delta,
 	struct clock_event_device *dev)
 {
 	if ((delta == 0) || (delta > 0xFFFFFFFF))
 		return -ETIME;
 
-	amba_writel(TIMER1_STATUS_REG, delta);
+	amba_writel(AMBARELLA_CE_TIMER_STATUS_REG, delta);
 
 	return 0;
 }
@@ -117,58 +144,65 @@ static struct clock_event_device ambarella_clkevt = {
 	.shift		= 32,
 	.rating		= AMBARELLA_TIMER_RATING,
 	.cpumask	= cpu_all_mask,
-	.set_next_event	= ambarella_timer1_set_next_event,
-	.set_mode	= ambarella_timer1_set_mode,
+	.set_next_event	= ambarella_ce_timer_set_next_event,
+	.set_mode	= ambarella_ce_timer_set_mode,
 	.mode		= CLOCK_EVT_MODE_UNUSED,
 };
 
-static irqreturn_t ambarella_timer1_interrupt(int irq, void *dev_id)
+static irqreturn_t ambarella_ce_timer_interrupt(int irq, void *dev_id)
 {
 	ambarella_clkevt.event_handler(&ambarella_clkevt);
 
 	return IRQ_HANDLED;
 }
 
-static struct irqaction ambarella_timer1_irq = {
-	.name		= "ambarella-timer1",
+static struct irqaction ambarella_ce_timer_irq = {
+	.name		= "ambarella-ce-timer",
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_TRIGGER_RISING,
-	.handler	= ambarella_timer1_interrupt,
+	.handler	= ambarella_ce_timer_interrupt,
 };
 
-static inline void ambarella_timer2_init_for_clocksource(void)
+/* ==========================================================================*/
+#define AMBARELLA_CS_TIMER_STATUS_REG	TIMER3_STATUS_REG
+#define AMBARELLA_CS_TIMER_RELOAD_REG	TIMER3_RELOAD_REG
+#define AMBARELLA_CS_TIMER_MATCH1_REG	TIMER3_MATCH1_REG
+#define AMBARELLA_CS_TIMER_MATCH2_REG	TIMER3_MATCH2_REG
+
+static inline void ambarella_cs_timer_init(void)
 {
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN2);
-	amba_writel(TIMER2_STATUS_REG, 0xffffffff);
-	amba_writel(TIMER2_RELOAD_REG, 0xffffffff);
-	amba_writel(TIMER2_MATCH1_REG, 0x0);
-	amba_writel(TIMER2_MATCH2_REG, 0x0);
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_OF2);
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL2);
-	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN2);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN3);
+	amba_writel(AMBARELLA_CS_TIMER_STATUS_REG, 0xffffffff);
+	amba_writel(AMBARELLA_CS_TIMER_RELOAD_REG, 0xffffffff);
+	amba_writel(AMBARELLA_CS_TIMER_MATCH1_REG, 0x0);
+	amba_writel(AMBARELLA_CS_TIMER_MATCH2_REG, 0x0);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_OF3);
+	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL3);
+	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN3);
 }
 
-static cycle_t ambarella_timer2_read(void)
+static cycle_t ambarella_cs_timer_read(void)
 {
-	return 0xffffffff - amba_readl(TIMER2_STATUS_REG);
+	return 0xffffffff - amba_readl(AMBARELLA_CS_TIMER_STATUS_REG);
 }
 
-static struct clocksource ambarella_timer2_clksrc = {
-	.name		= "ambarella-timer2",
+static struct clocksource ambarella_cs_timer_clksrc = {
+	.name		= "ambarella-cs-timer",
 	.shift		= 21,
 	.rating		= AMBARELLA_TIMER_RATING,
-	.read		= ambarella_timer2_read,
+	.read		= ambarella_cs_timer_read,
 	.mask		= CLOCKSOURCE_MASK(32),
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
+/* ==========================================================================*/
 static void ambarella_timer_init(void)
 {
-	ambarella_timer2_init_for_clocksource();
-	ambarella_timer2_clksrc.mult = clocksource_hz2mult(
-		AMBARELLA_TIMER_FREQ, ambarella_timer2_clksrc.shift);
-	clocksource_register(&ambarella_timer2_clksrc);
+	ambarella_cs_timer_init();
+	ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
+		AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);
+	clocksource_register(&ambarella_cs_timer_clksrc);
 
-	setup_irq(TIMER1_IRQ, &ambarella_timer1_irq);
+	setup_irq(AMBARELLA_CE_TIMER_IRQ, &ambarella_ce_timer_irq);
 	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
 		NSEC_PER_SEC, ambarella_clkevt.shift);
 	ambarella_clkevt.max_delta_ns =
@@ -184,65 +218,89 @@ struct sys_timer ambarella_timer = {
 
 u32 ambarella_timer_suspend(u32 level)
 {
-	disable_irq(TIMER1_IRQ);
+	disable_irq(AMBARELLA_CE_TIMER_IRQ);
+	ambarella_timer_pm.timer_ctr_reg = amba_readl(TIMER_CTR_REG);
+	amba_writel(TIMER_CTR_REG,
+		(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF00F));
+
+	ambarella_timer_pm.timer1_status_reg = amba_readl(TIMER1_STATUS_REG);
+	ambarella_timer_pm.timer1_reload_reg = amba_readl(TIMER1_RELOAD_REG);
+	ambarella_timer_pm.timer1_match1_reg = amba_readl(TIMER1_MATCH1_REG);
+	ambarella_timer_pm.timer1_match2_reg = amba_readl(TIMER1_MATCH2_REG);
+	ambarella_timer_pm.timer2_status_reg = amba_readl(TIMER2_STATUS_REG);
+	ambarella_timer_pm.timer2_reload_reg = amba_readl(TIMER2_RELOAD_REG);
+	ambarella_timer_pm.timer2_match1_reg = amba_readl(TIMER2_MATCH1_REG);
+	ambarella_timer_pm.timer2_match2_reg = amba_readl(TIMER2_MATCH2_REG);
+	ambarella_timer_pm.timer3_status_reg = amba_readl(TIMER3_STATUS_REG);
+	ambarella_timer_pm.timer3_reload_reg = amba_readl(TIMER3_RELOAD_REG);
+	ambarella_timer_pm.timer3_match1_reg = amba_readl(TIMER3_MATCH1_REG);
+	ambarella_timer_pm.timer3_match2_reg = amba_readl(TIMER3_MATCH2_REG);
+	ambarella_timer_pm.timer_clk = AMBARELLA_TIMER_FREQ;
 
 	return 0;
 }
 
 u32 ambarella_timer_resume(u32 level)
 {
-	amba_writel(TIMER_CTR_REG, 0x0);
+#if 0
+	amba_writel(TIMER1_STATUS_REG, ambarella_timer_pm.timer1_status_reg);
+	amba_writel(TIMER1_RELOAD_REG, ambarella_timer_pm.timer1_reload_reg);
+	amba_writel(TIMER1_MATCH1_REG, ambarella_timer_pm.timer1_match1_reg);
+	amba_writel(TIMER1_MATCH2_REG, ambarella_timer_pm.timer1_match2_reg);
+#endif
+	if ((ambarella_timer_pm.timer2_status_reg == 0) &&
+		(ambarella_timer_pm.timer2_reload_reg == 0)){
+		amba_writel(TIMER2_STATUS_REG, AMBARELLA_TIMER_FREQ / HZ);
+		WARN(1, KERN_WARNING "%s: Invalid clkevt value...\n", __func__);
+	} else {
+		amba_writel(TIMER2_STATUS_REG,
+			ambarella_timer_pm.timer2_status_reg);
+	}
+	amba_writel(TIMER2_RELOAD_REG, ambarella_timer_pm.timer2_reload_reg);
+	amba_writel(TIMER2_MATCH1_REG, ambarella_timer_pm.timer2_match1_reg);
+	amba_writel(TIMER2_MATCH2_REG, ambarella_timer_pm.timer2_match2_reg);
+	amba_writel(TIMER3_STATUS_REG, ambarella_timer_pm.timer3_status_reg);
+	amba_writel(TIMER3_RELOAD_REG, ambarella_timer_pm.timer3_reload_reg);
+	amba_writel(TIMER3_MATCH1_REG, ambarella_timer_pm.timer3_match1_reg);
+	amba_writel(TIMER3_MATCH2_REG, ambarella_timer_pm.timer3_match2_reg);
 
-	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
-		NSEC_PER_SEC, ambarella_clkevt.shift);
-	ambarella_clkevt.max_delta_ns =
-		clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
-	ambarella_clkevt.min_delta_ns =
-		clockevent_delta2ns(1, &ambarella_clkevt);
+	if (ambarella_timer_pm.timer_clk != AMBARELLA_TIMER_FREQ) {
+		ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
+			NSEC_PER_SEC, ambarella_clkevt.shift);
+		ambarella_clkevt.max_delta_ns =
+			clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
+		ambarella_clkevt.min_delta_ns =
+			clockevent_delta2ns(1, &ambarella_clkevt);
+		switch (ambarella_clkevt.mode) {
+		case CLOCK_EVT_MODE_PERIODIC:
+			ambarella_ce_timer_set_periodic();
+			break;
+		case CLOCK_EVT_MODE_ONESHOT:
+		case CLOCK_EVT_MODE_UNUSED:
+		case CLOCK_EVT_MODE_SHUTDOWN:
+		case CLOCK_EVT_MODE_RESUME:
+			break;
+		}
 
-	ambarella_timer2_init_for_clocksource();
-	ambarella_timer2_clksrc.mult = clocksource_hz2mult(
-		AMBARELLA_TIMER_FREQ, ambarella_timer2_clksrc.shift);
-	ambarella_timer2_clksrc.mult_orig = ambarella_timer2_clksrc.mult;
-	clocksource_calculate_interval(&ambarella_timer2_clksrc,
-		NTP_INTERVAL_LENGTH);
-
-	ambarella_timer1_set_mode(ambarella_clkevt.mode,
-		&ambarella_clkevt);
-	enable_irq(TIMER1_IRQ);
-
-	return 0;
-}
-
-static int ambarella_timer1_clockevents(struct notifier_block *nb,
-	unsigned long reason, void *dev)
-{
-	switch (reason) {
-	case CLOCK_EVT_NOTIFY_SUSPEND:
-		pr_info("%s: CLOCK_EVT_NOTIFY_SUSPEND\n", __func__);
-		disable_irq(TIMER1_IRQ);
-		break;
-
-	case CLOCK_EVT_NOTIFY_RESUME:
-		pr_info("%s: CLOCK_EVT_NOTIFY_RESUME\n", __func__);
-		enable_irq(TIMER1_IRQ);
-		break;
-
-	default:
-		break;
+		ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
+			AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);
+		ambarella_cs_timer_clksrc.mult_orig =
+			ambarella_cs_timer_clksrc.mult;
+		clocksource_calculate_interval(&ambarella_cs_timer_clksrc,
+			NTP_INTERVAL_LENGTH);
 	}
 
-	return NOTIFY_OK;
+	amba_writel(TIMER_CTR_REG,
+		((ambarella_timer_pm.timer_ctr_reg & 0x00000FF0) |
+		(amba_readl(TIMER_CTR_REG) & 0xFFFFF00F)));
+	enable_irq(AMBARELLA_CE_TIMER_IRQ);
+
+	return 0;
 }
 
 int __init ambarella_init_tm(void)
 {
 	int					errCode = 0;
-
-	ambarella_timer1_clockevents_notifier.notifier_call =
-		ambarella_timer1_clockevents;
-	errCode = clockevents_register_notifier(
-		&ambarella_timer1_clockevents_notifier);
 
 	return errCode;
 }

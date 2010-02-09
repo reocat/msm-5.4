@@ -2000,7 +2000,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 		}
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 	return errorCode;
 }
@@ -2039,7 +2039,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 		}
 	}
 
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }

@@ -324,7 +324,7 @@ static int ambrtc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	int					errorCode = 0;
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 
 	return errorCode;
@@ -334,7 +334,7 @@ static int ambrtc_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;
 }
