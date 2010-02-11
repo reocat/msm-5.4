@@ -79,6 +79,7 @@ config ARCH_AMBARELLA_A5S
 	bool
 	select MACH_AMBARELLA
 	select ARCH_AMBARELLA_CPU_ARM11
+	select CPU_32v6K
 	default n
 
 choice
@@ -226,6 +227,12 @@ config AMBARELLA_SUPPORT_SPARSEMEM
 	select ARCH_MEMORY_PROBE
 	help
 	  If you are not sure, say N here.
+
+config AMBARELLA_SUPPORT_CLOCKSOURCE
+	bool "Suport clocksource"
+	default y
+	help
+	  If you are not sure, say Y here.
 
 endmenu
 
