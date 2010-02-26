@@ -243,7 +243,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 	struct ambarella_nand_timing *timing);
 
 static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
-{ 
+{
 	u32 origin_clk = nand_info->origin_clk;
 	u32 new_clk = get_ahb_bus_freq_hz() / 1000;
 	u32 origin_timing, timing_reg = 0;
@@ -270,7 +270,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 		tcs = NAND_TIMING_CALC_NEW(tcs, new_clk, origin_clk);
 		tds = NAND_TIMING_CALC_NEW(tds, new_clk, origin_clk);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(tcls) | 
+		timing_reg = NAND_TIMING_LSHIFT24BIT(tcls) |
 			NAND_TIMING_LSHIFT16BIT(tals) |
 			NAND_TIMING_LSHIFT8BIT(tcs) |
 			NAND_TIMING_LSHIFT0BIT(tds);
@@ -290,7 +290,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 		tch = NAND_TIMING_CALC_NEW(tch, new_clk, origin_clk);
 		tdh = NAND_TIMING_CALC_NEW(tdh, new_clk, origin_clk);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(tclh) | 
+		timing_reg = NAND_TIMING_LSHIFT24BIT(tclh) |
 			NAND_TIMING_LSHIFT16BIT(talh) |
 			NAND_TIMING_LSHIFT8BIT(tch) |
 			NAND_TIMING_LSHIFT0BIT(tdh);
@@ -311,7 +311,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 		twb = (twb - 1) ? (twb - 1) : 1;
 		trr = NAND_TIMING_CALC_NEW(trr, new_clk, origin_clk);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(twp) | 
+		timing_reg = NAND_TIMING_LSHIFT24BIT(twp) |
 			NAND_TIMING_LSHIFT16BIT(twh) |
 			NAND_TIMING_LSHIFT8BIT(twb) |
 			NAND_TIMING_LSHIFT0BIT(trr);
@@ -333,7 +333,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 		tceh = NAND_TIMING_CALC_NEW(tceh, new_clk, origin_clk);
 		tceh = (tceh - 1) ? (tceh - 1) : 1;
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(trp) | 
+		timing_reg = NAND_TIMING_LSHIFT24BIT(trp) |
 			NAND_TIMING_LSHIFT16BIT(treh) |
 			NAND_TIMING_LSHIFT8BIT(trb) |
 			NAND_TIMING_LSHIFT0BIT(tceh);
@@ -354,7 +354,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 		twhr = NAND_TIMING_CALC_NEW(twhr, new_clk, origin_clk);
 		tir = NAND_TIMING_CALC_NEW(tir, new_clk, origin_clk);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(trdelay) | 
+		timing_reg = NAND_TIMING_LSHIFT24BIT(trdelay) |
 			NAND_TIMING_LSHIFT16BIT(tclr) |
 			NAND_TIMING_LSHIFT8BIT(twhr) |
 			NAND_TIMING_LSHIFT0BIT(tir);
@@ -378,7 +378,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 			NAND_TIMING_LSHIFT8BIT(trhz) |
 			NAND_TIMING_LSHIFT0BIT(tar);
 		break;
-	}	
+	}
 
 	return timing_reg;
 }
@@ -413,16 +413,16 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 			amb_nand_set_timing(nand_info, &timing);
 
 			pr_debug("origin reg:\t0x%08x 0x%08x"
-				" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
-				nand_info->origin_timing->timing0, 
-				nand_info->origin_timing->timing1, 
+				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				nand_info->origin_timing->timing0,
+				nand_info->origin_timing->timing1,
 				nand_info->origin_timing->timing2,
-				nand_info->origin_timing->timing3, 
-				nand_info->origin_timing->timing4, 
+				nand_info->origin_timing->timing3,
+				nand_info->origin_timing->timing4,
 				nand_info->origin_timing->timing5);
 
 			pr_debug("new reg:\t0x%08x 0x%08x"
-				" 0x%08x 0x%08x 0x%08x 0x%08x\n", 
+				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
 				timing.timing0, timing.timing1, timing.timing2,
 				timing.timing3, timing.timing4, timing.timing5);
 		}
@@ -1318,7 +1318,7 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 	chip->waitfunc = amb_nand_waitfunc;
 	chip->cmdfunc = amb_nand_cmdfunc;
 
-	chip->options = NAND_NO_AUTOINCR; 
+	chip->options = NAND_NO_AUTOINCR;
 	chip->controller = &nand_info->controller;
 	chip->block_markbad = amb_nand_block_markbad;
 
@@ -1621,7 +1621,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		cmd_nr_partitions = CMDLINE_PART_MAX;
 	}
 
-	/* if cmdline don't define the partition offset, we should modify the 
+	/* if cmdline don't define the partition offset, we should modify the
 	  * offset to make it append to the existent partitions
 	  */
 	if (cmd_partitions->offset == 0) {
