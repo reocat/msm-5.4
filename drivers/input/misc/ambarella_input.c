@@ -45,13 +45,13 @@ struct ambarella_input_info *amba_input_dev = NULL;
 #define CONFIG_AMBARELLA_VI_NAME		"ambvi"
 
 /* ========================================================================= */
-static int abx_max_x = 720;
+static int abx_max_x = 4095;
 MODULE_PARM_DESC(abx_max_x, "Ambarella input max x");
 
-static int abx_max_y = 480;
+static int abx_max_y = 4095;
 MODULE_PARM_DESC(abx_max_y, "Ambarella input max y");
 
-static int abx_max_pressure = 512;
+static int abx_max_pressure = 4095;
 MODULE_PARM_DESC(abx_max_pressure, "Ambarella input max pressure");
 
 static int abx_max_width = 16;
@@ -66,9 +66,11 @@ static struct ambarella_key_table \
 	{AMBA_INPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBA_INPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
 	{AMBA_INPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
+	{AMBA_INPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
-	{AMBA_INPUT_END}
+	{AMBA_INPUT_END},
 };
+static int abx_active_pressure = 0;
 
 /* ========================================================================= */
 irqreturn_t ambarella_gpio_irq(int irq, void *devid)
@@ -102,6 +104,15 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 				pinfo->pkeymap[i].gpio_key.key_code, level);
 			ambi_dbg("GPIO %d is @ %d:%d\n",
 				pinfo->pkeymap[i].gpio_key.key_code,
+				gpio_id, level);
+			break;
+		}
+
+		if (pinfo->pkeymap[i].type == AMBA_INPUT_GPIO_SW) {
+			input_report_switch(pinfo->dev,
+				pinfo->pkeymap[i].gpio_sw.key_code, level);
+			ambi_dbg("GPIO %d is @ %d:%d\n",
+				pinfo->pkeymap[i].gpio_sw.key_code,
 				gpio_id, level);
 			break;
 		}
@@ -155,22 +166,25 @@ int ambarella_vi_proc_write(struct file *file,
 {
 	struct ambarella_input_info	*pinfo = data;
 	u32				key_num;
+	char				cmd_buffer[CONFIG_AMBARELLA_VI_BUFFER];
 	char				key_buffer[CONFIG_AMBARELLA_VI_BUFFER];
 	u32				value1;
 	u32				value2;
+	int				i;
 
 	memset(key_buffer, 0, CONFIG_AMBARELLA_VI_BUFFER);
 	if (count < CONFIG_AMBARELLA_VI_BUFFER) {
-		if (copy_from_user(key_buffer, buffer, count))
+		if (copy_from_user(cmd_buffer, buffer, count))
 			return -EINVAL;
 
-		key_num = sscanf(key_buffer, "%*s %d:%d", &value1, &value2);
-
-		ambi_dbg("Get %d data[%s : %d:%d]\n", key_num, key_buffer, value1, value2);
-#if 0
-		if (key_num < 2)
+		key_num = sscanf(cmd_buffer, "%s %d:%d",
+			key_buffer, &value1, &value2);
+		if (key_num != 3) {
+			printk(KERN_WARNING "Get %d data[%s %d:%d]\n",
+				key_num, key_buffer, value1, value2);
 			return -EINVAL;
-#endif
+		}
+
 		if (memcmp(key_buffer, "key", 3) == 0) 	{
 			input_report_key(pinfo->dev, value1, value2);
 		}else
@@ -188,18 +202,24 @@ int ambarella_vi_proc_write(struct file *file,
 			input_report_key(pinfo->dev, BTN_TOUCH, 1);
 			input_report_abs(pinfo->dev, ABS_X, value1);
 			input_report_abs(pinfo->dev, ABS_Y, value2);
+			if (abx_active_pressure == 0)
+				abx_active_pressure = abx_max_pressure / 2;
+			input_report_abs(pinfo->dev, ABS_PRESSURE,
+				abx_active_pressure);
 			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "tof", 3) == 0) 	{
 			input_report_key(pinfo->dev, BTN_TOUCH, 0);
+			input_report_abs(pinfo->dev, ABS_PRESSURE, 0);
 			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "pre", 3) == 0) 	{
-			input_report_key(pinfo->dev, ABS_PRESSURE, value1);
+			abx_active_pressure = value1;
+			input_report_abs(pinfo->dev, ABS_PRESSURE, value1);
 			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "wid", 3) == 0) 	{
-			input_report_key(pinfo->dev, ABS_TOOL_WIDTH, value1);
+			input_report_abs(pinfo->dev, ABS_TOOL_WIDTH, value1);
 			input_sync(pinfo->dev);
 		}else
 		if (memcmp(key_buffer, "swt", 3) == 0) {
@@ -213,8 +233,10 @@ int ambarella_vi_proc_write(struct file *file,
 
 static int __devinit ambarella_setup_keymap(struct ambarella_input_info *pinfo)
 {
-	int				i;
+	int				i, j;
 	int				vi_enabled = 0;
+	int				vi_key_set = 0;
+	int				vi_sw_set = 0;
 	int				errorCode;
 	const struct firmware		*ext_key_map;
 
@@ -242,7 +264,6 @@ ambarella_setup_keymap_init:
 			break;
 
 		switch (pinfo->pkeymap[i].type & AMBA_INPUT_SOURCE_MASK) {
-
 		case AMBA_INPUT_SOURCE_IR:
 			break;
 
@@ -285,6 +306,12 @@ ambarella_setup_keymap_init:
 			set_bit(EV_KEY, pinfo->dev->evbit);
 			set_bit(pinfo->pkeymap[i].ir_key.key_code,
 				pinfo->dev->keybit);
+			if (vi_enabled && !vi_key_set) {
+				for (j = 0; j < KEY_CNT; j++) {
+					set_bit(j, pinfo->dev->keybit);
+				}
+				vi_key_set = 1;
+			}
 			break;
 
 		case AMBA_INPUT_TYPE_REL:
@@ -316,30 +343,24 @@ ambarella_setup_keymap_init:
 				0, abx_max_width, 0, 0);
 			break;
 
+		case AMBA_INPUT_TYPE_SW:
+			set_bit(EV_SW, pinfo->dev->evbit);
+			set_bit(pinfo->pkeymap[i].ir_key.key_code,
+				pinfo->dev->swbit);
+			if (vi_enabled && !vi_sw_set) {
+				for (j = 0; j < SW_CNT; j++) {
+					set_bit(j, pinfo->dev->swbit);
+				}
+				vi_sw_set = 1;
+			}
+			break;
+
 		default:
 			dev_warn(&pinfo->dev->dev, "Unknown AMBA_INPUT_TYPE %d\n",
 				(pinfo->pkeymap[i].type &
 				AMBA_INPUT_TYPE_MASK));
 			break;
 		}
-	}
-
-	if (vi_enabled) {
-		for (i = 0; i < 0x100; i++) {
-			set_bit(i, pinfo->dev->evbit);
-			set_bit(i, pinfo->dev->keybit);
-			set_bit(i, pinfo->dev->swbit);
-		}
-		set_bit(ABS_X, pinfo->dev->absbit);
-		set_bit(ABS_Y, pinfo->dev->absbit);
-		set_bit(ABS_PRESSURE, pinfo->dev->absbit);
-		set_bit(ABS_TOOL_WIDTH, pinfo->dev->absbit);
-		input_set_abs_params(pinfo->dev, ABS_X, 0, abx_max_x, 0, 0);
-		input_set_abs_params(pinfo->dev, ABS_Y, 0, abx_max_y, 0, 0);
-		input_set_abs_params(pinfo->dev, ABS_PRESSURE,
-			0, abx_max_pressure, 0, 0);
-		input_set_abs_params(pinfo->dev, ABS_TOOL_WIDTH,
-			0, abx_max_width, 0, 0);
 	}
 
 	return errorCode;

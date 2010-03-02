@@ -35,6 +35,7 @@
 #define AMBA_INPUT_TYPE_KEY	(0x10)
 #define AMBA_INPUT_TYPE_REL	(0x20)
 #define AMBA_INPUT_TYPE_ABS	(0x40)
+#define AMBA_INPUT_TYPE_SW	(0x80)
 
 #define	AMBA_INPUT_IR_KEY	(AMBA_INPUT_SOURCE_IR | AMBA_INPUT_TYPE_KEY)
 #define	AMBA_INPUT_IR_REL	(AMBA_INPUT_SOURCE_IR | AMBA_INPUT_TYPE_REL)
@@ -45,9 +46,11 @@
 #define	AMBA_INPUT_GPIO_KEY	(AMBA_INPUT_SOURCE_GPIO | AMBA_INPUT_TYPE_KEY)
 #define	AMBA_INPUT_GPIO_REL	(AMBA_INPUT_SOURCE_GPIO | AMBA_INPUT_TYPE_REL)
 #define	AMBA_INPUT_GPIO_ABS	(AMBA_INPUT_SOURCE_GPIO | AMBA_INPUT_TYPE_ABS)
+#define	AMBA_INPUT_GPIO_SW	(AMBA_INPUT_SOURCE_GPIO | AMBA_INPUT_TYPE_SW)
 #define	AMBA_INPUT_VI_KEY	(AMBA_INPUT_SOURCE_VI | AMBA_INPUT_TYPE_KEY)
 #define	AMBA_INPUT_VI_REL	(AMBA_INPUT_SOURCE_VI | AMBA_INPUT_TYPE_REL)
 #define	AMBA_INPUT_VI_ABS	(AMBA_INPUT_SOURCE_VI | AMBA_INPUT_TYPE_ABS)
+#define	AMBA_INPUT_VI_SW	(AMBA_INPUT_SOURCE_VI | AMBA_INPUT_TYPE_SW)
 
 #define	AMBA_INPUT_END			(0xFFFFFFFF)
 
@@ -127,6 +130,13 @@ struct ambarella_key_table {
 		u8				irq_mode;
 	} gpio_abs;
 	struct {
+		u32				key_code;
+		u32				avtive_val;
+		u16				can_wakeup;
+		u8				id;
+		u8				irq_mode;
+	} gpio_sw;
+	struct {
 		u32				reserve;
 		u32				reserve0;
 		u32				reserve1;
@@ -141,6 +151,11 @@ struct ambarella_key_table {
 		u32				reserve0;
 		u32				reserve1;
 	} vi_abs;
+	struct {
+		u32				reserve;
+		u32				reserve0;
+		u32				reserve1;
+	} vi_sw;
 	};
 };
 
