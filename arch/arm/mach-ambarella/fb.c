@@ -372,9 +372,6 @@ static struct ambarella_platform_fb ambarella_platform_fb0 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
-	.x_multiplication	= 1,
-	.y_multiplication	= 1,
-	.use_prealloc		= 0,
 	.prealloc_line_length	= 0,
 
 	.pan_display		= NULL,
@@ -731,9 +728,6 @@ static struct ambarella_platform_fb ambarella_platform_fb1 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
-	.x_multiplication	= 1,
-	.y_multiplication	= 1,
-	.use_prealloc		= 0,
 	.prealloc_line_length	= 0,
 
 	.pan_display		= NULL,

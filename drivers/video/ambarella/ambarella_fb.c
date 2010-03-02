@@ -48,16 +48,11 @@
 
 #include <mach/fb.h>
 
-/* video=ambafb:double_x:double_y,rgb565*/
-static int x_multiplication = 1;
-static int y_multiplication = 1;
-static int color_mode = AMBAFB_COLOR_AUTO;
-static int use_prealloc = 0;
-
-module_param(x_multiplication, int, 0444);
-module_param(y_multiplication, int, 0444);
-module_param(color_mode, int, 0444);
-module_param(use_prealloc, int, 0444);
+/* video=ambafb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,<color_format>[,<prealloc_start>,<prealloc_length>] */
+static int use_command_line_options = 0;
+static int cl_xres = -1, cl_yres = -1, cl_xvirtual = -1, cl_yvirtual = -1;
+static int cl_format = -1;
+static unsigned int cl_prealloc_start = 0, cl_prealloc_length = 0;
 
 static const struct ambarella_fb_color_table_s {
 	enum ambarella_fb_color_format	color_format;
@@ -883,37 +878,17 @@ static struct fb_ops ambafb_ops = {
 static int __init ambafb_setup(char *options,
 	struct ambarella_platform_fb *ambafb_data)
 {
-	char					*this_opt;
+	if (!options || !*options) return -1;
 
-	if (!options || !*options)
-		goto ambafb_setup_exit;
-
-	while ((this_opt = strsep(&options, ",")) != NULL) {
-		if (!*this_opt)
-			continue;
-		if (strcmp(this_opt, "double_x") == 0) {
-			x_multiplication = 2;
-		} else
-		if (strcmp(this_opt, "double_y") == 0) {
-			y_multiplication = 2;
-		} else
-		if (strcmp(this_opt, "rgb565") == 0) {
-			color_mode = AMBAFB_COLOR_RGB565;
-		} else
-		if (strcmp(this_opt, "use_prealloc") == 0) {
-			use_prealloc = 1;
-		} else {
-			//mode_option = this_opt;
-		}
+	sscanf(options, "%dx%d,%dx%d,%d,%x,%x", &cl_xres, &cl_yres,
+		&cl_xvirtual, &cl_yvirtual, &cl_format,
+		&cl_prealloc_start, &cl_prealloc_length);
+	if (cl_xres > 0 && cl_yres > 0 && cl_xvirtual > 0 && cl_yvirtual > 0
+		&& cl_format >= 0) {
+		use_command_line_options = 1;
 	}
 
-ambafb_setup_exit:
-	ambafb_data->x_multiplication = x_multiplication;
-	ambafb_data->y_multiplication = y_multiplication;
-	ambafb_data->color_format = color_mode;
-	ambafb_data->use_prealloc = use_prealloc;
-
-	return 1;
+	return 0;
 }
 
 static int __init ambafb_probe(struct platform_device *pdev)
@@ -933,6 +908,7 @@ static int __init ambafb_probe(struct platform_device *pdev)
 		goto ambafb_probe_exit;
 	}
 
+	/* Get Command Line Options */
 	if (fb_get_options("ambafb", &option)) {
 		errorCode = -ENODEV;
 		goto ambafb_probe_exit;
@@ -954,28 +930,31 @@ static int __init ambafb_probe(struct platform_device *pdev)
 	info->fix = ambafb_data->screen_fix;
 	info->flags = FBINFO_FLAG_DEFAULT;
 
-	info->var.xres_virtual = info->var.xres * ambafb_data->x_multiplication;
-	info->var.yres_virtual = info->var.yres * ambafb_data->y_multiplication;
-	if (ambafb_data->color_format == AMBAFB_COLOR_RGB565) {
-		info->var.bits_per_pixel = 16;
-		info->var.red.offset = 11;
-		info->var.red.length = 5;
-		info->var.green.offset = 5;
-		info->var.green.length = 6;
-		info->var.blue.offset = 0;
-		info->var.blue.length = 5;
-	} else {
-		info->var.bits_per_pixel = 8;
-		info->var.red.offset = 0;
-		info->var.red.length = 8;
-		info->var.green.offset = 0;
-		info->var.green.length = 8;
-		info->var.blue.offset = 0;
-		info->var.blue.length = 8;
+	if (use_command_line_options) {
+		info->var.xres = cl_xres;
+		info->var.yres = cl_yres;
+		info->var.xres_virtual = cl_xvirtual;
+		info->var.yres_virtual = cl_yvirtual;
+		ambafb_data->color_format = cl_format;
 	}
+
+	/* Fill Color-related Variables */
+	for (i = 0; i < ARRAY_SIZE(ambarella_fb_color_format_table); i++) {
+		if (ambarella_fb_color_format_table[i].color_format == ambafb_data->color_format)
+			break;
+	}
+	if (i < ARRAY_SIZE(ambarella_fb_color_format_table)) {
+		info->var.bits_per_pixel = ambarella_fb_color_format_table[i].bits_per_pixel;
+		info->var.red = ambarella_fb_color_format_table[i].red;
+		info->var.green = ambarella_fb_color_format_table[i].green;
+		info->var.blue = ambarella_fb_color_format_table[i].blue;
+		info->var.transp = ambarella_fb_color_format_table[i].transp;
+	}
+
+	/* Malloc Framebuffer Memory */
 	line_length = (info->var.xres_virtual *
 		(info->var.bits_per_pixel / 8) + 31) & 0xffffffe0;
-	if (ambafb_data->use_prealloc == 0) {
+	if (cl_prealloc_length <= 0) {
 		info->fix.line_length = line_length;
 	} else {
 		info->fix.line_length =
@@ -988,7 +967,7 @@ static int __init ambafb_probe(struct platform_device *pdev)
 		framesize++;
 		framesize *= PAGE_SIZE;
 	}
-	if (ambafb_data->use_prealloc == 0) {
+	if (cl_prealloc_length <= 0) {
 		info->screen_base = kzalloc(framesize, GFP_KERNEL);
 		if (info->screen_base == NULL) {
 			dev_err(&pdev->dev, "%s: Can't get fbmem!\n", __func__);
@@ -998,6 +977,8 @@ static int __init ambafb_probe(struct platform_device *pdev)
 		info->fix.smem_start = virt_to_phys(info->screen_base);
 		info->fix.smem_len = framesize;
 	} else {
+		info->fix.smem_start = cl_prealloc_start;
+		info->fix.smem_len = cl_prealloc_length;
 		if ((info->fix.smem_start == 0) ||
 			(info->fix.smem_len < framesize)) {
 			dev_err(&pdev->dev, "%s: prealloc[0x%08x < 0x%08x]!\n",
@@ -1101,7 +1082,7 @@ static int __devexit ambafb_remove(struct platform_device *pdev)
 		mutex_lock(&ambafb_data->lock);
 		ambafb_data->fb_status = AMBAFB_STOP_MODE;
 		fb_dealloc_cmap(&info->cmap);
-		if ((ambafb_data->use_prealloc == 0) &&
+		if ((cl_prealloc_length <= 0) &&
 			(info->screen_base != NULL)) {
 			kfree(info->screen_base);
 		}
