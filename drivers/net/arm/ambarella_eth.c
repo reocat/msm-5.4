@@ -1410,7 +1410,7 @@ int ambeth_poll(struct napi_struct *napi, int budget)
 			lp->rx.cur_rx++;
 			entry = lp->rx.cur_rx % AMBETH_RX_RING_SIZE;
 			if (rx_work_limit <= 0)
-				goto ambeth_poll_complete;
+				goto ambeth_poll_exit;
 		}
 
 		rx_intr = amba_test_and_set_mask(
