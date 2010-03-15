@@ -25,7 +25,11 @@
 #define __ARCH_AMBARELLA_INIT_H
 
 /* ==========================================================================*/
+#ifdef CONFIG_VMSPLIT_3G
 #define NOLINUX_MEM_V_START	(0xE0000000)
+#else
+#define NOLINUX_MEM_V_START	(0xC0000000)
+#endif
 
 #define DEFAULT_BSB_START	(0x00000000)
 #define DEFAULT_BSB_BASE	(0x00000000)
@@ -36,7 +40,11 @@
 #define DEFAULT_DSP_SIZE	(0x00000000)
 
 #define DEFAULT_DEBUG_START	(0xC00F8000)
+#ifdef CONFIG_VMSPLIT_3G
 #define DEFAULT_DEBUG_BASE	(0xE00F8000)
+#else
+#define DEFAULT_DEBUG_BASE	(0xC00F8000)
+#endif
 #define DEFAULT_DEBUG_SIZE	(0x00008000)
 
 #define DEFAULT_HAL_START	(0xC00A0000)

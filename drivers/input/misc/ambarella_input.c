@@ -170,7 +170,6 @@ int ambarella_vi_proc_write(struct file *file,
 	char				key_buffer[CONFIG_AMBARELLA_VI_BUFFER];
 	u32				value1;
 	u32				value2;
-	int				i;
 
 	memset(key_buffer, 0, CONFIG_AMBARELLA_VI_BUFFER);
 	if (count < CONFIG_AMBARELLA_VI_BUFFER) {
