@@ -161,7 +161,12 @@ static int try_tossed_video_setup(void)
 				flag++;
 				pr_warning("fb: osd_setup missing!\n");
 			}
-			if (osd_buf_setup == NULL) {
+			if (osd_buf_setup == NULL &&
+			    !(osd_setup != NULL &&
+			      osd_setup->osd_buf_info_dram_addr != 0x0)) {
+				/* 0x7005 might be missing for a valid */
+				/* reason that 0x7004 already uses */
+				/* 'OSD_buf_info_dram_addr' */
 				flag++;
 				pr_warning("fb: osd_buf_setup missing!\n");
 			}
@@ -239,14 +244,28 @@ static int try_tossed_video_setup(void)
 		pr_info("toss-fb: width = %d height = %d\n",
 			osd_setup->win_width, osd_setup->win_height);
 
-		/* --- osd_buf_setup --- */
-		pfb->screen_fix.smem_start = osd_buf_setup->osd_buf_dram_addr;
-		pr_info("toss-fb: smem = 0x%.8x\n",
-			(unsigned int) pfb->screen_fix.smem_start);
-		pfb->screen_fix.smem_len =
-			(osd_buf_setup->osd_buf_pitch * osd_setup->win_height);
-		pfb->use_prealloc = 1;
-		pfb->prealloc_line_length = osd_buf_setup->osd_buf_pitch;
+		/* --- osd_buf_setup or osd_setup with dynamic update --- */
+		if (osd_setup != NULL &&
+		    osd_setup->osd_buf_info_dram_addr != 0x0) {
+			unsigned int x;
+			x = osd_setup->osd_buf_info_dram_addr;
+			x = ambarella_phys_to_virt(x);
+			x = readl(x);
+			pfb->screen_fix.smem_start = x;
+			pfb->screen_fix.smem_len =
+				(osd_setup->osd_buf_pitch * osd_setup->win_height);
+			pfb->use_prealloc = 1;
+			pfb->prealloc_line_length = osd_setup->osd_buf_pitch;
+		} else {
+			pfb->screen_fix.smem_start =
+				osd_buf_setup->osd_buf_dram_addr;
+			pr_info("toss-fb: smem = 0x%.8x\n",
+				(unsigned int) pfb->screen_fix.smem_start);
+			pfb->screen_fix.smem_len =
+				(osd_buf_setup->osd_buf_pitch * osd_setup->win_height);
+			pfb->use_prealloc = 1;
+			pfb->prealloc_line_length = osd_buf_setup->osd_buf_pitch;
+		}
 
 		/* --- osd_clut_setup --- */
 
