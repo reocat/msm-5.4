@@ -52,7 +52,7 @@ enum ambarella_fb_color_format {
 	AMBAFB_COLOR_ABGR8888,
 	AMBAFB_COLOR_ARGB8888,
 
-	AMBAFB_COLOR_YUV565,	//Reserved only, not supported
+	AMBAFB_COLOR_UNSUPPORTED,  //Reserved only, not supported
 };
 
 enum ambarella_dsp_status {

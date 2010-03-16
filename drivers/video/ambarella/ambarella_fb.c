@@ -66,6 +66,30 @@ static const struct ambarella_fb_color_table_s {
 	{
 		.color_format = AMBAFB_COLOR_CLUT_8BPP,
 		.bits_per_pixel = 8,
+		.red =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+		},
 	},
 
 	{
@@ -670,11 +694,12 @@ static int ambafb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 
 	if (ambafb_data->setcmap) {
 		ambafb_info.color_format = ambafb_data->color_format;
+		mutex_unlock(&ambafb_data->lock);
 		errorCode =
 			ambafb_data->setcmap(cmap, info, &ambafb_info);
+	} else {
+		mutex_unlock(&ambafb_data->lock);
 	}
-
-	mutex_unlock(&ambafb_data->lock);
 
 ambafb_setcmap_exit:
 	dev_dbg(info->device, "%s:%d %d.\n", __func__, __LINE__, errorCode);
@@ -913,6 +938,8 @@ static int __init ambafb_probe(struct platform_device *pdev)
 		errorCode = -ENODEV;
 		goto ambafb_probe_exit;
 	}
+	if (!option)
+		option = "1280x720,1280x720,1";
 	ambafb_setup(option, ambafb_data);
 
 	info = framebuffer_alloc(sizeof(ambafb_data), &pdev->dev);
