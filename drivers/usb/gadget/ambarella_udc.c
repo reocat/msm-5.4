@@ -368,6 +368,10 @@ static void init_ep0(struct ambarella_udc *udc)
 	/* This should be set after gadget->bind */
 	udc->ep[CTRL_OUT].ep.driver_data = udc->ep[CTRL_IN].ep.driver_data;
 
+	/* FIXME: For A5S, this bit must be set,
+	  * or USB_UDC_REG can't be read or write */
+	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
+
 	/* setup CSR */
 	amba_clrbitsl(USB_UDC_REG(CTRL_IN), 0x7ff << 19);
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), USB_EP_CTRL_MAX_PKT_SZ << 19);
