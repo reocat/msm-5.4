@@ -368,10 +368,6 @@ static void init_ep0(struct ambarella_udc *udc)
 	/* This should be set after gadget->bind */
 	udc->ep[CTRL_OUT].ep.driver_data = udc->ep[CTRL_IN].ep.driver_data;
 
-	/* FIXME: For A5S, this bit must be set,
-	  * or USB_UDC_REG can't be read or write */
-	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
-
 	/* setup CSR */
 	amba_clrbitsl(USB_UDC_REG(CTRL_IN), 0x7ff << 19);
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), USB_EP_CTRL_MAX_PKT_SZ << 19);
@@ -715,10 +711,10 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 
 	if (crq->bRequestType & USB_DIR_IN)
 		udc->gadget.ep0 = &udc->ep[CTRL_IN].ep;
-	
+
 	else
 		udc->gadget.ep0 = &udc->ep[CTRL_OUT].ep;
-	
+
 
 	ret = udc->driver->setup(&udc->gadget, crq);
 
@@ -1699,7 +1695,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 	}
 
 	ep->halted = value ? 1 : 0;
-	
+
 	local_irq_restore (flags);
 
 	dprintk(DEBUG_NORMAL, "Exit\n");
@@ -1735,7 +1731,7 @@ static int ambarella_udc_wakeup(struct usb_gadget *_gadget)
 {
 	struct ambarella_udc *udc = to_ambarella_udc(_gadget);
 	u32 tmp;
-	
+
 	dprintk(DEBUG_VERBOSE, "Enter\n");
 
 	tmp = amba_readl(USB_DEV_CFG_REG);
@@ -1747,7 +1743,7 @@ static int ambarella_udc_wakeup(struct usb_gadget *_gadget)
 	/* not suspended? */
 	if (!(tmp & USB_DEV_SUSP_STS))
 		return 0;
-	
+
 	/* trigger force resume */
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
 
@@ -1854,12 +1850,12 @@ static void ambarella_init_gadget(struct ambarella_udc *udc,
  */
 static void ambarella_udc_enable(struct ambarella_udc *udc)
 {
-	udc->gadget.speed = USB_SPEED_UNKNOWN; 
+	udc->gadget.speed = USB_SPEED_UNKNOWN;
 
 	/* Disable Tx and Rx DMA */
 	amba_clrbitsl(USB_DEV_CTRL_REG,
 		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
-	
+
 	/* flush all of dma fifo */
 	ambarella_udc_fifo_flush();
 

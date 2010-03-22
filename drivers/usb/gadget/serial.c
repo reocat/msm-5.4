@@ -252,7 +252,7 @@ static int __init init(void)
 	 */
 	if (use_acm) {
 		serial_config_driver.label = "CDC ACM config";
-		serial_config_driver.bConfigurationValue = 2;
+		serial_config_driver.bConfigurationValue = 1;
 		device_desc.bDeviceClass = USB_CLASS_COMM;
 		device_desc.idProduct =
 				__constant_cpu_to_le16(GS_CDC_PRODUCT_ID);
@@ -264,7 +264,7 @@ static int __init init(void)
 			__constant_cpu_to_le16(GS_CDC_OBEX_PRODUCT_ID);
 	} else {
 		serial_config_driver.label = "Generic Serial config";
-		serial_config_driver.bConfigurationValue = 1;
+		serial_config_driver.bConfigurationValue = 2;
 		device_desc.bDeviceClass = USB_CLASS_VENDOR_SPEC;
 		device_desc.idProduct =
 				__constant_cpu_to_le16(GS_PRODUCT_ID);
