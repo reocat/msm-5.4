@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 103903
+ * @version 106453
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -460,6 +460,8 @@ AMB_PERFORMANCE_480P30,
 AMB_PERFORMANCE_720P30,
 /** 720p60 */
 AMB_PERFORMANCE_720P60,
+/** 1080i low power */
+AMB_PERFORMANCE_1080I60_LP,
 /** 1080i */
 AMB_PERFORMANCE_1080I60,
 /** 1080p30 */
@@ -805,7 +807,7 @@ typedef unsigned int (*amb_hal_function_t) (unsigned int, unsigned int, unsigned
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
-#ifdef _HAL_DEBUG_
+#ifdef _HAL_MMU_REMAP_
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + 0) ;
 #else
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;

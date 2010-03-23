@@ -113,6 +113,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
 	{"720P60", AMB_PERFORMANCE_720P60},
+	{"1080I60_LowPower", AMB_PERFORMANCE_1080I60_LP},
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
@@ -168,7 +169,10 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tiDSP:\t\t%d Hz\n"
 			"\tCore:\t\t%d Hz\n"
 			"\tAHB:\t\t%d Hz\n"
-			"\tAPB:\t\t%d Hz\n\n",
+			"\tAPB:\t\t%d Hz\n"
+			"\tVOUT:\t\t%d Hz\n"
+			"\tVOUT2:\t\t%d Hz\n"
+			"\tVIN:\t\t%d Hz\n\n",
 			performance_list[operating_mode.performance].name,
 			mode_list[operating_mode.mode].name,
 			operating_mode.usb_state ? "On" : "Off",
@@ -179,7 +183,10 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			get_idsp_freq_hz(),
 			get_core_bus_freq_hz(),
 			get_ahb_bus_freq_hz(),
-			get_apb_bus_freq_hz());
+			get_apb_bus_freq_hz(),
+			get_vout_freq_hz(),
+			get_vout2_freq_hz(),
+			get_so_freq_hz());
 
 	*eof = 1;
 
