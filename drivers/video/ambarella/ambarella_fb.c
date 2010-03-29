@@ -941,6 +941,10 @@ static int __init ambafb_probe(struct platform_device *pdev)
 	if (!option)
 		option = "1280x720,1280x720,1";
 	ambafb_setup(option, ambafb_data);
+	if (ambafb_data->use_prealloc == 1) {
+		cl_prealloc_start = ambafb_data->screen_fix.smem_start;
+		cl_prealloc_length = ambafb_data->screen_fix.smem_len;
+	}
 
 	info = framebuffer_alloc(sizeof(ambafb_data), &pdev->dev);
 	if (info == NULL) {

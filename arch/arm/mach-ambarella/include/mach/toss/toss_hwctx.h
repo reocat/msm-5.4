@@ -1,5 +1,5 @@
 /*
- * system/src/toss/toss_hwctx.h
+ * toss/toss_hwctx.h
  *
  * Terminal Operating Systerm Scheduler
  *

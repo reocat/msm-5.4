@@ -109,6 +109,7 @@ struct ambarella_platform_fb {
 	u8 clut_table[AMBARELLA_CLUT_TABLE_SIZE];
 	u8 blend_table[AMBARELLA_BLEND_TABLE_SIZE];
 	enum ambarella_fb_color_format color_format;
+	u32 use_prealloc;
 	u32 prealloc_line_length;
 
 	ambarella_fb_pan_display_fn pan_display;

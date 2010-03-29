@@ -372,6 +372,7 @@ static struct ambarella_platform_fb ambarella_platform_fb0 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
+	.use_prealloc		= 0,
 	.prealloc_line_length	= 0,
 
 	.pan_display		= NULL,
@@ -728,6 +729,7 @@ static struct ambarella_platform_fb ambarella_platform_fb1 = {
 		12,  12, 12, 12, 12, 12, 12, 12,
 	},
 	.color_format		= AMBAFB_COLOR_CLUT_8BPP,
+	.use_prealloc		= 0,
 	.prealloc_line_length	= 0,
 
 	.pan_display		= NULL,
@@ -752,70 +754,6 @@ struct platform_device ambarella_fb1 = {
 	}
 };
 #endif
-
-static int __init parse_videolfb(const struct tag *tag)
-{
-#if (CONFIG_AMBARELLA_FB_NUM >= 1)
-	ambarella_platform_fb0.screen_var.xres = tag->u.videolfb.lfb_width;
-	ambarella_platform_fb0.screen_var.xres_virtual = tag->u.videolfb.lfb_width;
-	ambarella_platform_fb0.screen_var.yres = tag->u.videolfb.lfb_height;
-	ambarella_platform_fb0.screen_var.yres_virtual = tag->u.videolfb.lfb_height;
-
-	ambarella_platform_fb0.screen_var.red.offset = tag->u.videolfb.red_pos;
-	ambarella_platform_fb0.screen_var.green.offset = tag->u.videolfb.green_pos;
-	ambarella_platform_fb0.screen_var.blue.offset = tag->u.videolfb.blue_pos;
-	ambarella_platform_fb0.screen_var.red.length = tag->u.videolfb.red_size;
-	ambarella_platform_fb0.screen_var.green.length = tag->u.videolfb.green_size;
-	ambarella_platform_fb0.screen_var.blue.length = tag->u.videolfb.blue_size;
-	ambarella_platform_fb0.screen_var.red.msb_right = 0;
-	ambarella_platform_fb0.screen_var.green.msb_right = 0;
-	ambarella_platform_fb0.screen_var.blue.msb_right = 0;
-	ambarella_platform_fb0.screen_var.transp.offset = tag->u.videolfb.rsvd_pos;
-	ambarella_platform_fb0.screen_var.transp.length = tag->u.videolfb.rsvd_size;
-	ambarella_platform_fb0.screen_var.transp.msb_right = 0;
-
-	ambarella_platform_fb0.screen_var.bits_per_pixel = tag->u.videolfb.lfb_depth;
-	ambarella_platform_fb0.screen_fix.line_length = tag->u.videolfb.lfb_linelength;
-
-	ambarella_platform_fb0.screen_fix.smem_start = tag->u.videolfb.lfb_base;
-	ambarella_platform_fb0.screen_fix.smem_len = tag->u.videolfb.lfb_size;
-
-	ambarella_platform_fb0.dsp_status = AMBA_DSP_QUICKLOGO_MODE;
-	ambarella_platform_fb0.prealloc_line_length = tag->u.videolfb.lfb_linelength;
-#endif
-
-#if (CONFIG_AMBARELLA_FB_NUM >= 2)
-	ambarella_platform_fb1.screen_var.xres = tag->u.videolfb.lfb_width;
-	ambarella_platform_fb1.screen_var.xres_virtual = tag->u.videolfb.lfb_width;
-	ambarella_platform_fb1.screen_var.yres = tag->u.videolfb.lfb_height;
-	ambarella_platform_fb1.screen_var.yres_virtual = tag->u.videolfb.lfb_height;
-
-	ambarella_platform_fb1.screen_var.red.offset = tag->u.videolfb.red_pos;
-	ambarella_platform_fb1.screen_var.green.offset = tag->u.videolfb.green_pos;
-	ambarella_platform_fb1.screen_var.blue.offset = tag->u.videolfb.blue_pos;
-	ambarella_platform_fb1.screen_var.red.length = tag->u.videolfb.red_size;
-	ambarella_platform_fb1.screen_var.green.length = tag->u.videolfb.green_size;
-	ambarella_platform_fb1.screen_var.blue.length = tag->u.videolfb.blue_size;
-	ambarella_platform_fb1.screen_var.red.msb_right = 0;
-	ambarella_platform_fb1.screen_var.green.msb_right = 0;
-	ambarella_platform_fb1.screen_var.blue.msb_right = 0;
-	ambarella_platform_fb1.screen_var.transp.offset = tag->u.videolfb.rsvd_pos;
-	ambarella_platform_fb1.screen_var.transp.length = tag->u.videolfb.rsvd_size;
-	ambarella_platform_fb1.screen_var.transp.msb_right = 0;
-
-	ambarella_platform_fb1.screen_var.bits_per_pixel = tag->u.videolfb.lfb_depth;
-	ambarella_platform_fb1.screen_fix.line_length = tag->u.videolfb.lfb_linelength;
-
-	ambarella_platform_fb1.screen_fix.smem_start = tag->u.videolfb.lfb_base;
-	ambarella_platform_fb1.screen_fix.smem_len = tag->u.videolfb.lfb_size;
-
-	ambarella_platform_fb1.dsp_status = AMBA_DSP_QUICKLOGO_MODE;
-	ambarella_platform_fb1.prealloc_line_length = tag->u.videolfb.lfb_linelength;
-#endif
-
-	return 0;
-}
-__tagtable(ATAG_VIDEOLFB, parse_videolfb);
 
 int ambarella_fb_get_platform_info(u32 fb_id,
 	struct ambarella_platform_fb *platform_info)
