@@ -26,6 +26,10 @@
 *.bin
 *.gz
 
+# chameleon
+*.idb
+*.stf
+
 #
 # Top-level generic files
 #
