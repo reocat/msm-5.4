@@ -50,6 +50,7 @@
 #include <linux/time.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
+#include <linux/ethtool.h>
 
 #include <mach/hardware.h>
 
@@ -183,35 +184,26 @@ static inline void ambhw_dma_tx_start(struct ambeth_info *lp)
 static inline void ambhw_dma_stop_rxtx(struct ambeth_info *lp)
 {
 	unsigned int				irq_status;
-	unsigned int				i = 1300 / 10;
+	/* wait until in-flight frame completes.
+	* Max time @ 10BT: 1500*8b/10Mbps == 1200us (+ 100us margin)
+	* Typically expect this loop to end in < 50 us on 100BT.
+	*/
+	int					i = 1300 / 10;
 
-	irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
+	amba_clrbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
+		(ETH_DMA_OPMODE_ST | ETH_DMA_OPMODE_SR));
 	/* is Transmit or Receive is still On */
 	/* TS bit 22:20, RS bit 19:17, so TS | RS is 22:17 */
-	if ((irq_status >> 17) & 0x3F) {
-		amba_clrbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-			(ETH_DMA_OPMODE_ST | ETH_DMA_OPMODE_SR));
-		barrier();
-		/* wait until in-flight frame completes.
-		* Max time @ 10BT: 1500*8b/10Mbps == 1200us (+ 100us margin)
-		* Typically expect this loop to end in < 50 us on 100BT.
-		*/
-		irq_status =
-			amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
-		while (((irq_status >> 17) & 0x3F) && --i) {
-			udelay(10);
-			irq_status =
-				amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
-		}
+	do {
+		udelay(10);
+		irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
+	} while (((irq_status >> 17) & 0x3F) && --i);
 
-		if (unlikely(i == 0)) {
-			dev_err(&lp->ndev->dev,
-				"%s: status reg 0x%x, opmode reg 0x%x, fail!\n",
-				__func__,
-				amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET),
-				amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET)
-				);
-		}
+	if ((i <= 0) && netif_msg_hw(lp)) {
+		dev_err(&lp->ndev->dev, "%s: status=0x%x, opmode=0x%x fail.\n",
+			__func__,
+			amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET),
+			amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET));
 	}
 }
 
@@ -265,11 +257,9 @@ static inline int ambhw_set_hwaddr_perfect_filtering(struct ambeth_info *lp,
 	int					errorCode = 0;
 	u32 val;
 
-	if (unlikely((index == 0) || (index >
-		AMBETH_MULTICAST_PF))) {
+	if (unlikely((index == 0) || (index > AMBETH_MULTICAST_PF))) {
 		dev_err(&lp->ndev->dev,
-			"%s: index[%d] is wrong for perfect filtering!\n",
-			__func__, index);
+			"%s: wrong index[%d]!\n", __func__, index);
 		errorCode = -EPERM;
 		goto ambhw_set_hwaddr_perfect_filtering_exit;
 	}
@@ -282,7 +272,7 @@ static inline int ambhw_set_hwaddr_perfect_filtering(struct ambeth_info *lp,
 	amba_writel(lp->regbase + ETH_MAC_MAC0_LO_OFFSET + (index << 3), val);
 
 ambhw_set_hwaddr_perfect_filtering_exit:
-	return 0;
+	return errorCode;
 }
 
 static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
@@ -351,7 +341,7 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 {
 	struct ambeth_info			*lp;
 	int					val;
-	int					limit = 0;
+	int					limit;
 
 	lp = (struct ambeth_info *)bus->priv;
 
@@ -361,17 +351,15 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
 	}
-	if (!limit) {
-		dev_err(&lp->ndev->dev, "%s: time out 0!\n", __func__);
+	if ((limit <= 0) && netif_msg_hw(lp)) {
+		dev_err(&lp->ndev->dev, "%s: preread time out!\n", __func__);
 		val = 0xFFFFFFFF;
 		goto ambhw_mdio_read_exit;
 	}
 
-	val = ETH_MAC_GMII_ADDR_PA(mii_id) |
-		ETH_MAC_GMII_ADDR_GR(regnum) |
-		ETH_MAC_GMII_ADDR_CR_60_100MHZ;
-	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
-		(val | ETH_MAC_GMII_ADDR_GB));
+	val = ETH_MAC_GMII_ADDR_PA(mii_id) | ETH_MAC_GMII_ADDR_GR(regnum);
+	val |= ETH_MAC_GMII_ADDR_CR_60_100MHZ | ETH_MAC_GMII_ADDR_GB;
+	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET, val);
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
 		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
@@ -379,8 +367,8 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
 	}
-	if (!limit) {
-		dev_err(&lp->ndev->dev, "%s: time out 1!\n", __func__);
+	if ((limit <= 0) && netif_msg_hw(lp)) {
+		dev_err(&lp->ndev->dev, "%s: postread time out!\n", __func__);
 		val = 0xFFFFFFFF;
 		goto ambhw_mdio_read_exit;
 	}
@@ -417,20 +405,18 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
 	}
-	if (!limit) {
-		dev_err(&lp->ndev->dev, "%s: time out 0!\n", __func__);
+	if ((limit <= 0) && netif_msg_hw(lp)) {
+		dev_err(&lp->ndev->dev, "%s: prewrite time out!\n", __func__);
 		errorCode = -EIO;
 		goto ambhw_mdio_write_exit;
 	}
 
 	val = value;
 	amba_writel(lp->regbase + ETH_MAC_GMII_DATA_OFFSET, val);
-	val = ETH_MAC_GMII_ADDR_PA(mii_id) |
-		ETH_MAC_GMII_ADDR_GR(regnum) |
-		ETH_MAC_GMII_ADDR_GW |
-		ETH_MAC_GMII_ADDR_CR_60_100MHZ;
-	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
-		(val | ETH_MAC_GMII_ADDR_GB));
+	val = ETH_MAC_GMII_ADDR_PA(mii_id) | ETH_MAC_GMII_ADDR_GR(regnum);
+	val |= ETH_MAC_GMII_ADDR_CR_60_100MHZ | ETH_MAC_GMII_ADDR_GW |
+		ETH_MAC_GMII_ADDR_GB;
+	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET, val);
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
 		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
@@ -438,8 +424,8 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 			break;
 		udelay(AMBETH_MII_RETRY_TMO);
 	}
-	if (!limit) {
-		dev_err(&lp->ndev->dev, "%s: time out 1!\n", __func__);
+	if ((limit <= 0) && netif_msg_hw(lp)) {
+		dev_err(&lp->ndev->dev, "%s: postwrite time out!\n", __func__);
 		errorCode = -EIO;
 		goto ambhw_mdio_write_exit;
 	}
@@ -752,7 +738,7 @@ static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
 		entry = dirty_tx % AMBETH_TX_RING_SIZE;
 		status = tx->desc[entry].status;
 
-		if (status & ETH_RDES0_OWN) {
+		if (status & ETH_TDES0_OWN) {
 			lp->stats.tx_errors++;	/* It wasn't Txed */
 		}
 	}
@@ -779,15 +765,11 @@ static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
 
 static inline void ambeth_restart_rxtx(struct ambeth_info *lp)
 {
-	dev_err(&lp->ndev->dev,	"%s: enter!\n", __func__);
-
 	ambhw_dma_stop_rxtx(lp);
 	udelay(5);
 
 	ambhw_dma_rx_start(lp);
 	ambhw_dma_tx_start(lp);
-
-	dev_err(&lp->ndev->dev,	"%s: exit!\n", __func__);
 }
 
 static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
@@ -852,7 +834,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 				entry = dirty_tx % AMBETH_TX_RING_SIZE;
 				status = tx->desc[entry].status;
 
-				if (status & ETH_RDES0_OWN) {
+				if (status & ETH_TDES0_OWN) {
 					dev_dbg(&lp->ndev->dev,
 						"%s: frame not transmitted yet"
 						", entry %d, irq 0x%x,"
@@ -961,7 +943,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 				lp->stats.tx_errors++;
 			}
 			if (irq_status & ETH_DMA_STATUS_UNF) {
-				dev_dbg(&lp->ndev->dev,
+				dev_err(&lp->ndev->dev,
 					"%s: TxUnderFlow 0x%x\n",
 					__func__, irq_status);
 				ambeth_restart_rxtx(lp);
@@ -995,8 +977,12 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 
 				amba_writel(lp->regbase +
 					ETH_DMA_MISS_FRAME_BOCNT_OFFSET, 0);
-				if (irq_status & ETH_DMA_STATUS_RPS)
+				if (irq_status & ETH_DMA_STATUS_RPS) {
+					dev_err(&lp->ndev->dev, "%s: Recieve "
+						"Process Stopped 0x%x\n",
+						__func__, irq_status);
 					ambeth_restart_rxtx(lp);
+				}
 			}
 			if (irq_status & ETH_DMA_STATUS_FBI) {
 				dev_err(&lp->ndev->dev,
@@ -1220,7 +1206,6 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	tx->desc[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
 	tx->desc[entry].status = ETH_TDES0_OWN;
-	wmb();	
 	tx->cur_tx++;	
 
 	amba_writel(lp->regbase + ETH_DMA_TX_POLL_DMD_OFFSET, 0x01);
@@ -1601,6 +1586,24 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 	return 0;
 }
 
+static int ambeth_get_settings(struct net_device *ndev, struct ethtool_cmd *ecmd)
+{
+	struct ambeth_info *lp;
+
+	lp = netdev_priv(ndev);
+
+	return phy_ethtool_gset(lp->phydev, ecmd);
+}
+
+static int ambeth_set_settings(struct net_device *ndev, struct ethtool_cmd *ecmd)
+{
+	struct ambeth_info *lp;
+
+	lp = netdev_priv(ndev);
+
+	return phy_ethtool_sset(lp->phydev, ecmd);
+}
+
 /****************************************************************************/
 static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_open		= ambeth_open,
@@ -1612,6 +1615,12 @@ static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_change_mtu		= eth_change_mtu,
 	.ndo_tx_timeout		= ambeth_timeout,
 	.ndo_get_stats		= ambeth_get_stats,
+};
+
+static const struct ethtool_ops ambeth_ethtool_ops = {
+	.get_settings	= ambeth_get_settings,
+	.set_settings	= ambeth_set_settings,
+	.get_link	= ethtool_op_get_link,
 };
 
 static int __devinit ambeth_drv_probe(struct platform_device *pdev)
@@ -1674,7 +1683,8 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	memcpy(&lp->platform_info, platform_info,
 		sizeof(struct ambarella_eth_platform_info));
 	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV |
-		NETIF_MSG_PROBE | NETIF_MSG_LINK);
+		NETIF_MSG_PROBE | NETIF_MSG_LINK |
+		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR);
 
 	gpio_request(lp->platform_info.mii_power.power_gpio, pdev->name);
 	gpio_request(lp->platform_info.mii_reset.reset_gpio, pdev->name);
@@ -1736,6 +1746,8 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	ambhw_get_hwaddr(lp, ndev->dev_addr);
 	dev_info(&pdev->dev, "MAC Address[%s].\n",
 		print_mac(mac, ndev->dev_addr));
+
+	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
 
 	errorCode = register_netdev(ndev);
 	if (errorCode) {
