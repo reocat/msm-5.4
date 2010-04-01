@@ -351,7 +351,7 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 	if (pinfo->support_irq) {// irq mode
 		pinfo->work_mode = AMBA_ADC_IRQ_MODE;
 		errorCode = request_irq(pinfo->irq, ambarella_input_adc_irq,
-			pinfo->irqflags, pdev->name, pinfo);
+			pinfo->irqflags, dev_name(&pdev->dev), pinfo);
 		if (errorCode) {
 			dev_err(&pdev->dev, "Request IRQ failed!\n");
 			goto adc_errorCode_free_queue;

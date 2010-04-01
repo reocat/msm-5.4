@@ -275,7 +275,7 @@ ambarella_setup_keymap_init:
 				GPIO_INT_VEC(pinfo->pkeymap[i].gpio_key.id),
 				ambarella_gpio_irq,
 				pinfo->pkeymap[i].gpio_key.irq_mode,
-				"ambarella_input_gpio", pinfo);
+				pinfo->dev->name, pinfo);
 			if (errorCode)
 				dev_err(&pinfo->dev->dev, "Request GPIO%d IRQ failed!\n",
 					pinfo->pkeymap[i].gpio_key.id);

@@ -2099,7 +2099,8 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	/* irq setup after old hardware state is cleaned up */
 	retval = request_irq(USBC_IRQ, ambarella_udc_irq,
-			IRQF_SHARED | IRQF_TRIGGER_HIGH, gadget_name, udc);
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			dev_name(&pdev->dev), udc);
 	if (retval != 0) {
 		dprintk(DEBUG_NORMAL, "cannot get irq %i, err %d\n", USBC_IRQ, retval);
 		goto err_out4;
@@ -2107,7 +2108,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 #if 0
 	retval = request_irq(USBVBUS_IRQ, ambarella_udc_vbus_irq,
-			0, gadget_name, udc);
+			0, dev_name(&pdev->dev), udc);
 	if (retval != 0) {
 		dprintk(DEBUG_NORMAL, "can't get vbus irq %i, err %d\n",
 			USBVBUS_IRQ, retval);

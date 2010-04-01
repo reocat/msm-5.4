@@ -1469,7 +1469,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
-			pdev->name, nand_info);
+			dev_name(&pdev->dev), nand_info);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Could not register IRQ %d!\n",
 			nand_info->cmd_irq);
@@ -1478,7 +1478,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 	errorCode = request_irq(nand_info->dma_irq, nand_fiodma_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
-			pdev->name, nand_info);
+			dev_name(&pdev->dev), nand_info);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Could not register IRQ %d!\n",
 			nand_info->dma_irq);

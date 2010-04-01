@@ -352,7 +352,7 @@ static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 	ambarella_wdt_stop(pinfo);
 
 	errorCode = request_irq(pinfo->irq, ambarella_wdt_irq,
-		IRQF_TRIGGER_RISING, pdev->name, pinfo);
+		IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Request IRQ failed!\n");
 		goto ambarella_wdt_deregister;

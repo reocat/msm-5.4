@@ -640,8 +640,7 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 
 	/* Request IRQ */
 	errorCode = request_irq(irq, ambarella_spi_isr, IRQF_TRIGGER_HIGH,
-			pdev->dev.bus_id, master);
-
+			dev_name(&pdev->dev), master);
 	if (errorCode)
 		goto ambarella_spi_probe_exit2;
 	else

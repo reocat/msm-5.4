@@ -1709,7 +1709,7 @@ AMBA_RTC_PARAM_CALL(0, ambarella_platform_rtc_controller0, 0644, rtc_set_pos);
 
 struct platform_device ambarella_rtc0 = {
 	.name		= "ambarella-rtc",
-	.id		= 0,
+	.id		= -1,
 	.resource	= NULL,
 	.num_resources	= 0,
 	.dev		= {
@@ -1739,7 +1739,7 @@ static struct ambarella_wdt_controller ambarella_platform_wdt_controller0 = {
 
 struct platform_device ambarella_wdt0 = {
 	.name		= "ambarella-wdt",
-	.id		= 0,
+	.id		= -1,
 	.resource	= ambarella_wdt0_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_wdt0_resources),
 	.dev		= {
@@ -1839,7 +1839,7 @@ static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 
 struct platform_device ambarella_udc0 = {
 	.name		= "ambarella-udc",
-	.id		= 0,
+	.id		= -1,
 	.resource	= ambarella_udc_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_udc_resources),
 	.dev		= {
@@ -1875,7 +1875,7 @@ static struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
 
 struct platform_device ambarella_ir0 = {
 	.name		= "ambarella-ir",
-	.id		= 0,
+	.id		= -1,
 	.resource	= ambarella_ir_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_ir_resources),
 	.dev			= {
@@ -2158,7 +2158,7 @@ static struct resource ambarella_adc_resources[] = {
 
 struct platform_device ambarella_adc0 = {
 	.name		= "ambarella-adc",
-	.id		= 0,
+	.id		= -1,
 	.resource	= ambarella_adc_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_adc_resources),
 	.dev		= {

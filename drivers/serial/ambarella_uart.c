@@ -318,7 +318,7 @@ static int serial_ambarella_startup(struct uart_port *port)
 		UART_FC_XMITR | UART_FC_RCVRR));
 
 	errorCode = request_irq(port->irq, serial_ambarella_irq,
-		IRQF_TRIGGER_HIGH, port_info->name, port);
+		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
 	if (errorCode)
 		goto serial_ambarella_startup_exit;
 

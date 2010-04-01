@@ -441,14 +441,14 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 		amba_writel(CRYPT_D_INT_EN_REG, 0x0001);
 
 		errCode = request_irq(pinfo->aes_irq,
-			ambarella_aes_irq, IRQF_TRIGGER_RISING, "ambarella-aes", pinfo);
+			ambarella_aes_irq, IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 		if (errCode) {
 			dev_err(&pdev->dev, "%s: Request aes IRQ failed!\n", __func__);
 			goto crypto_errCode_kzalloc;
 		}
 
 		errCode = request_irq(pinfo->des_irq,
-			ambarella_des_irq, IRQF_TRIGGER_RISING, "ambarella-des", pinfo);
+			ambarella_des_irq, IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 		if (errCode) {
 			dev_err(&pdev->dev, "%s: Request des IRQ failed!\n", __func__);
 			goto crypto_errCode_free_aes_irq;

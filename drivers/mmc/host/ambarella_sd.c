@@ -1790,7 +1790,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	errorCode = request_irq(pinfo->irq,
 		ambarella_sd_irq,
 		IRQF_SHARED | IRQF_TRIGGER_HIGH,
-		pdev->name, pinfo);
+		dev_name(&pdev->dev), pinfo);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Can't Request IRQ%d!\n", pinfo->irq);
 		goto sd_errorCode_free_host;
@@ -1826,7 +1826,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				pslotinfo->slot_info.gpio_cd.irq_line,
 				ambarella_sd_gpio_cd_irq,
 				pslotinfo->slot_info.gpio_cd.irq_type,
-				pdev->name, pslotinfo);
+				dev_name(&pdev->dev), pslotinfo);
 			if (errorCode) {
 				ambsd_err(pslotinfo,
 					"Can't Request GPIO(%d) CD IRQ(%d)!\n",

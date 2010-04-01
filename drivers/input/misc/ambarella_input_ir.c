@@ -399,7 +399,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 
 	errorCode = request_irq(pinfo->irq,
 		ambarella_ir_irq, IRQF_TRIGGER_HIGH,
-		pdev->name, pinfo);
+		dev_name(&pdev->dev), pinfo);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Request IRQ failed!\n");
 		goto ir_errorCode_free_platform;
