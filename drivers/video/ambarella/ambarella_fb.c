@@ -903,11 +903,21 @@ static struct fb_ops ambafb_ops = {
 static int __init ambafb_setup(char *options,
 	struct ambarella_platform_fb *ambafb_data)
 {
-	if (!options || !*options) return -1;
+	cl_xres = -1;
+	cl_yres = -1;
+	cl_xvirtual = -1;
+	cl_yvirtual = -1;
+	cl_format = -1;
+	use_command_line_options = 0;
+
+	if (!options || !*options) {
+		return -1;
+	}
 
 	sscanf(options, "%dx%d,%dx%d,%d,%x,%x", &cl_xres, &cl_yres,
 		&cl_xvirtual, &cl_yvirtual, &cl_format,
 		&cl_prealloc_start, &cl_prealloc_length);
+
 	if (cl_xres > 0 && cl_yres > 0 && cl_xvirtual > 0 && cl_yvirtual > 0
 		&& cl_format >= 0) {
 		use_command_line_options = 1;
@@ -920,6 +930,7 @@ static int __init ambafb_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct fb_info				*info;
+	char					*fb_name;
 	char					*option;
 	struct ambarella_platform_fb		*ambafb_data = NULL;
 	u32					i;
@@ -934,17 +945,16 @@ static int __init ambafb_probe(struct platform_device *pdev)
 	}
 
 	/* Get Command Line Options */
-	if (fb_get_options("ambafb", &option)) {
+	if (pdev->id == 0) {
+		fb_name = "firstfb";
+	} else {
+		fb_name = "secondfb";
+	}
+	if (fb_get_options(fb_name, &option)) {
 		errorCode = -ENODEV;
 		goto ambafb_probe_exit;
 	}
-	if (!option)
-		option = "1280x720,1280x720,1";
 	ambafb_setup(option, ambafb_data);
-	if (ambafb_data->use_prealloc == 1) {
-		cl_prealloc_start = ambafb_data->screen_fix.smem_start;
-		cl_prealloc_length = ambafb_data->screen_fix.smem_len;
-	}
 
 	info = framebuffer_alloc(sizeof(ambafb_data), &pdev->dev);
 	if (info == NULL) {
