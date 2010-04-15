@@ -23,7 +23,7 @@
 
 obj-y	+= rct.o fio.o irq.o timer.o
 obj-y	+= gpio.o dma.o adc.o pwm.o pm.o pll.o
-obj-y	+= init.o config.o fb.o
+obj-y	+= init.o config.o fb.o sync_proc.o
 obj-y	+= toss_linux.o
 CFLAGS_toss_linux.o = \
 	-I$(src) \
