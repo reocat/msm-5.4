@@ -411,9 +411,7 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	pinfo->dev = pinfo->input_center->dev;
 	pinfo->pkeymap = pinfo->input_center->pkeymap;
 
-	dev_notice(&pdev->dev,
-		"Ambarella Media Processor IR Host Controller %d probed!\n",
-		pdev->id);
+	dev_notice(&pdev->dev, "IR Host Controller probed!\n");
 
 	goto ir_errorCode_na;
 

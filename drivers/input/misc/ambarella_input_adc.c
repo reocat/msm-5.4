@@ -362,8 +362,7 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, pinfo);
-	dev_notice(&pdev->dev, "Ambarella Media Processor ADC Host Controller"
-		" %d probed %s mode\n", pdev->id,
+	dev_notice(&pdev->dev, "ADC Host Controller [%s mode] probed!\n",
 		(pinfo->support_irq) ? "interrupt" : "polling");
 
 	goto adc_errorCode_na;
