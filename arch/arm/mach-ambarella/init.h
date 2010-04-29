@@ -115,11 +115,6 @@ extern struct platform_device ambarella_crypto;
 extern struct platform_device ambarella_adc0;
 
 /* ==========================================================================*/
-extern struct ambarella_gpio_power_info system_power_gpio_info;
-extern struct ambarella_gpio_power_info sound_input_gpio_info;
-extern struct ambarella_gpio_power_info sound_output_gpio_info;
-
-/* ==========================================================================*/
 extern void ambarella_map_io(void);
 
 extern int ambarella_create_proc_dir(void);

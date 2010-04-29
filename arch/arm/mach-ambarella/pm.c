@@ -36,30 +36,11 @@
 #include "init.h"
 
 /* ==========================================================================*/
-struct ambarella_gpio_power_info system_power_gpio_info = {
-	.power_gpio	= -1,
-	.power_level	= GPIO_HIGH,
-	.power_delay	= 0,
-};
-module_param_call(system_power_gpio, param_set_int, param_get_int,
-	&system_power_gpio_info.power_gpio, 0644);
-MODULE_PARM_DESC(system_power_gpio,
-	"The power on gpio id of system, if you have.");
-
-module_param_call(system_power_level, param_set_int, param_get_int,
-	&system_power_gpio_info.power_level, 0644);
-MODULE_PARM_DESC(system_power_level,
-	"The gpio power on level, if you set power on gpio id.");
-
-module_param_call(system_power_delay, param_set_int, param_get_int,
-	&system_power_gpio_info.power_delay, 0644);
-MODULE_PARM_DESC(system_power_delay,
-	"The gpio power on delay(ms), if you set power on gpio id.");
-
 void ambarella_power_off(void)
 {
-	if (system_power_gpio_info.power_gpio >= 0) {
-		ambarella_set_gpio_power(&system_power_gpio_info, 0);
+	if (ambarella_board_generic.power_control.power_gpio >= 0) {
+		ambarella_set_gpio_power(
+			&ambarella_board_generic.power_control, 0);
 	} else {
 		rct_power_down();
 	}

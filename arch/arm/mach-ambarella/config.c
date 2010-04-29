@@ -46,7 +46,6 @@
 
 #include <mach/hardware.h>
 
-#include <linux/i2c/tsc2007.h>
 #include <linux/i2c/ak4183.h>
 #include <linux/i2c/cy8ctmg.h>
 
@@ -1906,68 +1905,11 @@ struct proc_dir_entry *get_ambarella_proc_dir(void)
 EXPORT_SYMBOL(get_ambarella_proc_dir);
 
 /* ==========================================================================*/
-#ifdef CONFIG_I2C_AMBARELLA_TSC2007
-
-#define TS_GPIO		56
-
-static int ambarella_tsc2007_get_pendown_state(void)
-{
-	if (ambarella_gpio_get(TS_GPIO))
-		return 0;
-	else
-		return 1;
-}
-
-static void ambarella_tsc2007_clear_penirq(void)
-{
-	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
-}
-
-static int ambarella_tsc2007_init_platform_hw(void)
-{
-	ambarella_gpio_config(TS_GPIO, GPIO_FUNC_SW_INPUT);
-
-	return set_irq_type(gpio_to_irq(TS_GPIO), IRQF_TRIGGER_FALLING);
-}
-
-static void ambarella_tsc2007_exit_platform_hw(void)
-{
-}
-
-static struct tsc2007_platform_data ambarella_tsc2007_pdata = {
-	.model = 2007,
-	.x_plate_ohms = 310,
-	.fix = {
-		.x_invert = 1,
-		.y_invert = 0,
-		.x_rescale = 1,
-		.y_rescale = 1,
-		.x_min = 220,
-		.x_max = 3836,
-		.y_min = 150,
-		.y_max = 3768,
-	},
-	.get_pendown_state = ambarella_tsc2007_get_pendown_state,
-	.clear_penirq = ambarella_tsc2007_clear_penirq,
-	.init_platform_hw = ambarella_tsc2007_init_platform_hw,
-	.exit_platform_hw = ambarella_tsc2007_exit_platform_hw
-};
-
-static struct i2c_board_info ambarella_tsc2007_board_info = {
-	.type = "tsc2007",
-	.addr = 0x90 >> 1,
-	.platform_data = &ambarella_tsc2007_pdata,
-};
-
-#endif
-
-#ifdef CONFIG_I2C_AMBARELLA_AK4183
-
-#define TS_GPIO		84
+#define AK4183_IRQ		84
 
 static int ambarella_ak4183_get_pendown_state(void)
 {
-	if (ambarella_gpio_get(TS_GPIO))
+	if (ambarella_gpio_get(AK4183_IRQ))
 		return 0;
 	else
 		return 1;
@@ -1975,14 +1917,14 @@ static int ambarella_ak4183_get_pendown_state(void)
 
 static void ambarella_ak4183_clear_penirq(void)
 {
-	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
+	ambarella_gpio_ack_irq(gpio_to_irq(AK4183_IRQ));
 }
 
 static int ambarella_ak4183_init_platform_hw(void)
 {
-	ambarella_gpio_config(TS_GPIO, GPIO_FUNC_SW_INPUT);
+	ambarella_gpio_config(AK4183_IRQ, GPIO_FUNC_SW_INPUT);
 
-	return set_irq_type(gpio_to_irq(TS_GPIO), IRQF_TRIGGER_FALLING);
+	return set_irq_type(gpio_to_irq(AK4183_IRQ), IRQF_TRIGGER_FALLING);
 }
 
 static void ambarella_ak4183_exit_platform_hw(void)
@@ -2014,28 +1956,24 @@ static struct i2c_board_info ambarella_ak4183_board_info = {
 	.platform_data = &ambarella_ak4183_pdata,
 };
 
-#endif
-
-#ifdef CONFIG_I2C_AMBARELLA_CY8CTMG
-
-#define TS_GPIO		84
-#define TS_RESET	31
+#define CY8CTMG_IRQ	84
+#define CY8CTMG_RESET	31
 
 static void ambarella_cy8ctmg_clear_penirq(void)
 {
-	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
+	ambarella_gpio_ack_irq(gpio_to_irq(CY8CTMG_IRQ));
 }
 
 static int ambarella_cy8ctmg_init_platform_hw(void)
 {
-	ambarella_gpio_config(TS_GPIO, GPIO_FUNC_SW_INPUT);
-	set_irq_type(gpio_to_irq(TS_GPIO), IRQF_TRIGGER_FALLING);
-	ambarella_gpio_ack_irq(gpio_to_irq(TS_GPIO));
+	ambarella_gpio_config(CY8CTMG_IRQ, GPIO_FUNC_SW_INPUT);
+	set_irq_type(gpio_to_irq(CY8CTMG_IRQ), IRQF_TRIGGER_FALLING);
+	ambarella_gpio_ack_irq(gpio_to_irq(CY8CTMG_IRQ));
 
-	ambarella_gpio_config(TS_RESET, GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_set(TS_RESET, GPIO_HIGH);
+	ambarella_gpio_config(CY8CTMG_RESET, GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(CY8CTMG_RESET, GPIO_HIGH);
 	msleep(10);
-	ambarella_gpio_set(TS_RESET, GPIO_LOW);
+	ambarella_gpio_set(CY8CTMG_RESET, GPIO_LOW);
 	msleep(100);
 
 	return 0;
@@ -2067,24 +2005,13 @@ static struct i2c_board_info ambarella_cy8ctmg_board_info = {
 	.platform_data = &ambarella_cy8ctmg_pdata,
 };
 
-#endif
-
 void __init ambarella_register_i2c_device(void)
 {
-#ifdef CONFIG_I2C_AMBARELLA_TSC2007
-	ambarella_tsc2007_board_info.irq = gpio_to_irq(TS_GPIO);
-	i2c_register_board_info(0, &ambarella_tsc2007_board_info, 1);
-#endif
-
-#ifdef CONFIG_I2C_AMBARELLA_AK4183
-	ambarella_ak4183_board_info.irq = gpio_to_irq(TS_GPIO);
+	ambarella_ak4183_board_info.irq = gpio_to_irq(AK4183_IRQ);
 	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
-#endif
 
-#ifdef CONFIG_I2C_AMBARELLA_CY8CTMG
-	ambarella_cy8ctmg_board_info.irq = gpio_to_irq(TS_GPIO);
+	ambarella_cy8ctmg_board_info.irq = gpio_to_irq(CY8CTMG_IRQ);
 	i2c_register_board_info(0, &ambarella_cy8ctmg_board_info, 1);
-#endif
 }
 
 #ifdef CONFIG_ARCH_AMBARELLA_A5S
@@ -2167,6 +2094,96 @@ struct platform_device ambarella_adc0 = {
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
+
+struct ambarella_board_info ambarella_board_generic = {
+	.power_detect	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.power_control	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.debug_led0	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.rs485		= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.audio_codec	= {
+		.reset_gpio	= -1,
+		.reset_level	= GPIO_LOW,
+		.reset_delay	= 1,
+		.resume_delay	= 1,
+	},
+	.audio_speaker	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.audio_headphone	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.audio_microphone	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.tp_irq		= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.tp_reset	= {
+		.reset_gpio	= -1,
+		.reset_level	= GPIO_LOW,
+		.reset_delay	= 1,
+		.resume_delay	= 1,
+	},
+	.lcd_backlight	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.vin_vsync	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.flash_charge_ready	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.flash_trigger	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+	.flash_enable	= {
+		.power_gpio	= -1,
+		.power_level	= GPIO_LOW,
+		.power_delay	= 1,
+	},
+};
+AMBA_BOARD_CALL(ambarella_board_generic, 0644);
+EXPORT_SYMBOL(ambarella_board_generic);
 
 /* ==========================================================================*/
 static BLOCKING_NOTIFIER_HEAD(blocking_event_list);

@@ -190,27 +190,6 @@ endmenu
 
 menu "I2C Configuration"
 
-config I2C_AMBARELLA_TSC2007
-	bool "Suport TSC2007"
-	default n
-	help
-
-	  If you are not sure, say N here.
-
-config I2C_AMBARELLA_AK4183
-        bool "Suport AK4183"
-        default n
-        help
-
-          If you are not sure, say N here.
-
-config I2C_AMBARELLA_CY8CTMG
-        bool "Suport CY8CTMG"
-        default n
-        help
-
-          If you are not sure, say N here.
-
 endmenu
 
 config AMBARELLA_QUICK_INIT
