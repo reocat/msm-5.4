@@ -2005,6 +2005,15 @@ static struct i2c_board_info ambarella_cy8ctmg_board_info = {
 	.platform_data = &ambarella_cy8ctmg_pdata,
 };
 
+
+
+static struct i2c_board_info ambarella_isl12022m_board_info = {
+      .type = "isl12022m",
+      .addr = 0xde >> 1,
+      .platform_data = NULL,
+ };
+
+
 void __init ambarella_register_i2c_device(void)
 {
 	ambarella_ak4183_board_info.irq = gpio_to_irq(AK4183_IRQ);
@@ -2012,6 +2021,9 @@ void __init ambarella_register_i2c_device(void)
 
 	ambarella_cy8ctmg_board_info.irq = gpio_to_irq(CY8CTMG_IRQ);
 	i2c_register_board_info(0, &ambarella_cy8ctmg_board_info, 1);
+
+
+	i2c_register_board_info(0, &ambarella_isl12022m_board_info, 1);
 }
 
 #ifdef CONFIG_ARCH_AMBARELLA_A5S

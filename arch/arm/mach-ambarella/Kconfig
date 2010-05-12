@@ -189,6 +189,13 @@ config SPI_AMBARELLA_SPIDEV_SSI1_EN0
 endmenu
 
 menu "I2C Configuration"
+config I2C_AMBARELLA_ISL12022M
+	bool "Suport User mode SSI1_EN0"
+	depends on ARCH_AMBARELLA_A3
+	default y
+	help
+	  If you are not sure, say Y here.
+
 
 endmenu
 
