@@ -48,6 +48,7 @@
 #include <linux/serial_core.h>
 
 #include <mach/hardware.h>
+#include <plat/uart.h>
 
 static void serial_ambarella_enable_ms(struct uart_port *port)
 {

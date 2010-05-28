@@ -681,6 +681,7 @@ source "arch/arm/mach-msm/Kconfig"
 
 source "arch/arm/mach-w90x900/Kconfig"
 
+source "arch/arm/plat-ambarella/Kconfig"
 source "arch/arm/mach-ambarella/Kconfig"
 
 # Definitions to make life easier

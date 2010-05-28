@@ -39,6 +39,7 @@
 #include <linux/mmc/mmc.h>
 
 #include <mach/hardware.h>
+#include <plat/sd.h>
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)

@@ -32,6 +32,8 @@
 #include <linux/usb/gadget.h>
 #include <linux/proc_fs.h>
 
+#include <mach/hardware.h>
+#include <plat/udc.h>
 #include "ambarella_udc.h"
 
 #define DRIVER_DESC	"Ambarella USB Device Controller Gadget"

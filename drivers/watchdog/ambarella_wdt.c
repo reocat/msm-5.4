@@ -23,6 +23,8 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 
+#include <plat/wdt.h>
+
 #define CONFIG_WDT_AMBARELLA_TIMEOUT		(15)
 
 static int init_tmo = CONFIG_WDT_AMBARELLA_TIMEOUT;

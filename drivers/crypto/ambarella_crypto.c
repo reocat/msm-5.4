@@ -35,7 +35,7 @@
 #include <linux/platform_device.h>
 
 #include <mach/hardware.h>
-#include "ambarella_crypto.h"
+#include <plat/crypto.h>
 
 static DECLARE_COMPLETION(g_aes_irq_wait);
 static DECLARE_COMPLETION(g_des_irq_wait);
@@ -174,7 +174,7 @@ static struct crypto_alg aes_alg = {
 	.cra_flags		=	CRYPTO_ALG_TYPE_CIPHER,
 	.cra_blocksize		=	AES_BLOCK_SIZE,
 	.cra_ctxsize		=	sizeof(struct crypto_aes_ctx),
-	.cra_alignmask		=	AMBARELLA_ALIGNMENT - 1,
+	.cra_alignmask		=	AMBARELLA_CRYPTO_ALIGNMENT - 1,
 	.cra_module		=	THIS_MODULE,
 	.cra_list		=	LIST_HEAD_INIT(aes_alg.cra_list),
 	.cra_u			=	{
@@ -307,7 +307,7 @@ static struct crypto_alg ecb_aes_alg = {
 	.cra_flags		=	CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		=	AES_BLOCK_SIZE,
 	.cra_ctxsize		=	sizeof(struct crypto_aes_ctx),
-	.cra_alignmask		=	AMBARELLA_ALIGNMENT - 1,
+	.cra_alignmask		=	AMBARELLA_CRYPTO_ALIGNMENT - 1,
 	.cra_type		=	&crypto_blkcipher_type,
 	.cra_module		=	THIS_MODULE,
 	.cra_list		=	LIST_HEAD_INIT(ecb_aes_alg.cra_list),
@@ -347,7 +347,7 @@ static struct crypto_alg cbc_aes_alg = {
 	.cra_flags		=	CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		=	AES_BLOCK_SIZE,
 	.cra_ctxsize		=	sizeof(struct crypto_aes_ctx),
-	.cra_alignmask		=	AMBARELLA_ALIGNMENT - 1,
+	.cra_alignmask		=	AMBARELLA_CRYPTO_ALIGNMENT - 1,
 	.cra_type		=	&crypto_blkcipher_type,
 	.cra_module		=	THIS_MODULE,
 	.cra_list		=	LIST_HEAD_INIT(cbc_aes_alg.cra_list),

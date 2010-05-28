@@ -97,6 +97,7 @@ textofs-y	:= 0x00008000
 
  machine-$(CONFIG_ARCH_AMBARELLA)  := ambarella
  textofs-$(CONFIG_ARCH_AMBARELLA)  := $(CONFIG_AMBARELLA_TEXTOFS)
+    plat-$(CONFIG_PLAT_AMBARELLA)  := ambarella
 
  machine-$(CONFIG_ARCH_RPC)	   := rpc
  machine-$(CONFIG_ARCH_EBSA110)	   := ebsa110

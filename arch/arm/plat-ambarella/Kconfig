@@ -1,0 +1,196 @@
+#
+# arch/arm/plat-ambarella/Kconfig
+#
+# History:
+#	2010/05/25 - [Anthony Ginger] created file
+#
+# Copyright (C) 2004-2010, Ambarella, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+#
+
+config PLAT_AMBARELLA
+	bool
+	depends on ARCH_AMBARELLA
+	default y
+	help
+	  Base platform code for any Ambarella device
+
+if PLAT_AMBARELLA
+comment "Ambarella Platform"
+
+config PLAT_AMBARELLA_GENERIC
+	bool
+	default n
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
+	select GENERIC_TIME
+	select GENERIC_CLOCKEVENTS
+
+config PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	bool
+	default n
+
+config PLAT_AMBARELLA_SUPPORT_HAL
+	bool
+	default n
+
+choice
+	prompt "Chip REV"
+
+config PLAT_AMBARELLA_A2
+	bool "Ambarella A2"
+	select CPU_ARM926T
+	select PLAT_AMBARELLA_GENERIC
+	help
+	  Say Y here if you are using Ambarella A2.
+
+config PLAT_AMBARELLA_A2S
+	bool "Ambarella A2S"
+	select CPU_ARM926T
+	select PLAT_AMBARELLA_GENERIC
+	help
+	  Say Y here if you are using Ambarella A2S.
+
+config PLAT_AMBARELLA_A3
+	bool "Ambarella A3"
+	select CPU_ARM926T
+	select PLAT_AMBARELLA_GENERIC
+	help
+	  Say Y here if you are using Ambarella A3.
+
+config PLAT_AMBARELLA_A5S
+	bool "Ambarella A5S"
+	select CPU_V6
+	select CPU_32v6K
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	help
+	  Say Y here if you are using Ambarella A5S.
+
+endchoice
+
+menu "Generic Platform Configuration"
+depends on PLAT_AMBARELLA_GENERIC
+
+config AMBARELLA_QUICK_INIT
+	bool "Suport quick init"
+	default y
+	help
+	  If you are not sure, say Y here.
+
+config AMBARELLA_SUPPORT_SPARSEMEM
+	bool "Suport SPARSEMEM"
+	default n
+	select ARCH_SPARSEMEM_ENABLE
+	select ARCH_ENABLE_MEMORY_HOTPLUG
+	select ARCH_MEMORY_PROBE
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SUPPORT_CLOCKSOURCE
+	bool "Suport clocksource"
+	default y
+	help
+	  If you are not sure, say Y here.
+
+menu "Proc file system support"
+
+config AMBARELLA_GPIO_PROC
+	bool "Ambarella GPIO proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/gpio for Ambarella GPIO access.
+
+	  If you are not sure, say N here.
+
+config AMBARELLA_ADC_PROC
+	bool "Ambarella ADC proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/adc for Ambarella ADC access.
+
+	  If you are not sure, say N here.
+
+config AMBARELLA_PWM_PROC
+	bool "Ambarella PWM proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/pwm for Ambarella PWM access.
+
+	  If you are not sure, say N here.
+
+config AMBARELLA_DMA_PROC
+	bool "Ambarella DMA proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/dma for Ambarella DMA debug.
+
+	  If you are not sure, say N here.
+
+config AMBARELLA_PLL_PROC
+	bool "Ambarella PLL proc support"
+	default n
+	depends on PROC_FS
+	---help---
+	  Add /proc/ambarella/pll for Ambarella PLL access.
+
+	  If you are not sure, say N here.
+
+endmenu
+
+menu "PPM Configuration"
+
+config AMBARELLA_PPM_SIZE
+	hex "PPM SIZE"
+	default 0x00200000
+	help
+	  Specify the size from the start of physical DRAM address to reserve.
+
+config AMBARELLA_ZRELADDR
+	hex "ZRELADDR"
+	default 0xC0208000
+	help
+	  Specify the kernel entry point start physical address.
+
+config AMBARELLA_TEXTOFS
+	hex "TEXTOFS"
+	default 0x00008000
+	help
+	  Speicify the relative text offset.
+
+config AMBARELLA_PARAMS_PHYS
+	hex "PARAMS PHYS"
+	default 0xC0201000
+	help
+	  Specify the physical address for kernel parameters.
+
+config AMBARELLA_INITRD_PHYS
+	hex "INITRD PHYS"
+	default 0xC0800000
+	help
+	  Specify the physical address for initrd.
+
+endmenu
+
+endmenu
+
+endif
+

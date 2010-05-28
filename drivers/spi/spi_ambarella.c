@@ -34,7 +34,8 @@
 #include <linux/spi/spidev.h>
 #include <asm/io.h>
 #include <mach/io.h>
-#include "spi_ambarella.h"
+
+#include <plat/spi.h>
 
 /*============================Global Variables================================*/
 

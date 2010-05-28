@@ -53,6 +53,7 @@
 #include <linux/ethtool.h>
 
 #include <mach/hardware.h>
+#include <plat/eth.h>
 
 #define AMBETH_TX_TIMEOUT	(2 * HZ)
 #define AMBETH_TX_RING_SIZE	(32)

@@ -21,136 +21,35 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-if ARCH_AMBARELLA
+if PLAT_AMBARELLA
 
-menu "Ambarella Implementations"
+comment "Ambarella Board"
 
 config MACH_AMBARELLA
-	bool
-	default n
-
-config ARCH_AMBARELLA_CPU_ARM9
-	bool
-	default n
-	select CPU_ARM926T
-
-config ARCH_AMBARELLA_CPU_ARM11
-	bool
-	default n
-	select CPU_V6
-
-config ARCH_AMBARELLA_A1
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM9
-	default n
-
-config ARCH_AMBARELLA_A2
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM9
-	default n
-
-config ARCH_AMBARELLA_A2S
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM9
-	default n
-
-config ARCH_AMBARELLA_A2M
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM9
-	default n
-
-config ARCH_AMBARELLA_A3
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM9
-	default n
-
-config ARCH_AMBARELLA_A5
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM9
-	default n
-
-config ARCH_AMBARELLA_A5S
-	bool
-	select MACH_AMBARELLA
-	select ARCH_AMBARELLA_CPU_ARM11
-	select CPU_32v6K
-	default n
-
-choice
-	prompt "Chip REV"
-
-config AMBARELLA_CHIP_A2
-	bool "Ambarella A2"
-	select ARCH_AMBARELLA_A2
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
+	bool "Generic"
+	default y
 	help
-	  Say Y here if you are using Ambarella A2.
+	  Say Y here if you can't find suitable Board Name.
 
-config AMBARELLA_CHIP_A2S
-	bool "Ambarella A2S"
-	select ARCH_AMBARELLA_A2S
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
+config MACH_COCONUT
+	bool "Coconut"
+	depends on PLAT_AMBARELLA_A5S
+	default n
 	help
-	  Say Y here if you are using Ambarella A2S.
+	  Say Y here if you are using A5S Coconut.
 
-config AMBARELLA_CHIP_A2M
-	bool "Ambarella A2M"
-	select ARCH_AMBARELLA_A2M
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
+config MACH_DURIAN
+	bool "Durian"
+	depends on PLAT_AMBARELLA_A5S
+	default n
 	help
-	  Say Y here if you are using Ambarella A2M.
-
-config AMBARELLA_CHIP_A3
-	bool "Ambarella A3"
-	select ARCH_AMBARELLA_A3
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
-	help
-	  Say Y here if you are using Ambarella A3.
-
-config AMBARELLA_CHIP_A5
-	bool "Ambarella A5"
-	select ARCH_AMBARELLA_A5
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
-	help
-	  Say Y here if you are using Ambarella A5.
-
-config AMBARELLA_CHIP_A5S
-	bool "Ambarella A5S"
-	select ARCH_AMBARELLA_A5S
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
-	help
-	  Say Y here if you are using Ambarella A5S.
-
-endchoice
+	  Say Y here if you are using A5S Durian.
 
 menu "Misc Configuration"
 
 config MMC_AMBARELLA_SDIO
 	bool "Suport SDIO"
+	depends on MACH_AMBARELLA
 	default y
 	help
 	  If enabled, SDIO interface will be reported as "ambarella-sd",
@@ -158,164 +57,6 @@ config MMC_AMBARELLA_SDIO
 	  If disabled, you can provide your driver for "ambarella-sdio".
 
 	  If you are not sure, say Y here.
-
-menu "SPI Configuration"
-
-config SPI_AMBARELLA_SPIDEV_SSI0_EN0
-	bool "Suport User mode SSI0_EN0"
-	default y
-	help
-	  If you are not sure, say Y here.
-
-config SPI_AMBARELLA_SPIDEV_SSI0_EN1
-	bool "Suport User mode SSI0_EN1"
-	default y
-	help
-	  If you are not sure, say Y here.
-
-config SPI_AMBARELLA_SPIDEV_SSI0_EN2_3
-	bool "Suport User mode SSI0_EN2_3"
-	default y
-	help
-	  If you are not sure, say Y here.
-
-config SPI_AMBARELLA_SPIDEV_SSI1_EN0
-	bool "Suport User mode SSI1_EN0"
-	depends on ARCH_AMBARELLA_A3
-	default y
-	help
-	  If you are not sure, say Y here.
-
-endmenu
-
-menu "I2C Configuration"
-config I2C_AMBARELLA_ISL12022M
-	bool "Suport User mode SSI1_EN0"
-	depends on ARCH_AMBARELLA_A3
-	default y
-	help
-	  If you are not sure, say Y here.
-
-
-endmenu
-
-config AMBARELLA_QUICK_INIT
-	bool "Suport quick init"
-	default y
-	help
-	  If you are not sure, say Y here.
-
-config AMBARELLA_SUPPORT_SPARSEMEM
-	bool "Suport SPARSEMEM"
-	default n
-	select ARCH_SPARSEMEM_ENABLE
-	select ARCH_ENABLE_MEMORY_HOTPLUG
-	select ARCH_MEMORY_PROBE
-	help
-	  If you are not sure, say N here.
-
-config AMBARELLA_SUPPORT_CLOCKSOURCE
-	bool "Suport clocksource"
-	default y
-	help
-	  If you are not sure, say Y here.
-
-endmenu
-
-menu "Proc file system support"
-
-config AMBARELLA_GPIO_PROC
-	bool "Ambarella GPIO proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/gpio for Ambarella GPIO access.
-
-	  If you are not sure, say N here.
-
-config AMBARELLA_ADC_PROC
-	bool "Ambarella ADC proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/adc for Ambarella ADC access.
-
-	  If you are not sure, say N here.
-
-config AMBARELLA_PWM_PROC
-	bool "Ambarella PWM proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/pwm for Ambarella PWM access.
-
-	  If you are not sure, say N here.
-
-config AMBARELLA_DMA_PROC
-	bool "Ambarella DMA proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/dma for Ambarella DMA debug.
-
-	  If you are not sure, say N here.
-
-config AMBARELLA_PLL_PROC
-	bool "Ambarella PLL proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/pll for Ambarella PLL access.
-
-	  If you are not sure, say N here.
-
-endmenu
-
-menu "Framebuffer Configuration"
-
-config AMBARELLA_FB_NUM
-        int "FB Number"
-        default 1
-        range 0 2
-        help
-          Specify the number of framebuffers
-
-endmenu
-
-menu "PPM Configuration"
-
-config AMBARELLA_PPM_SIZE
-	hex "PPM SIZE"
-	help
-	default 0x00200000
-	help
-	  Specify the size from the start of physical DRAM address to reserve.
-
-config AMBARELLA_ZRELADDR
-	hex "ZRELADDR"
-	default 0xC0208000
-	help
-	  Specify the kernel entry point start physical address.
-
-config AMBARELLA_TEXTOFS
-	hex "TEXTOFS"
-	default 0x00008000
-	help
-	  Speicify the relative text offset.
-
-config AMBARELLA_PARAMS_PHYS
-	hex "PARAMS PHYS"
-	default 0xC0201000
-	help
-	  Specify the physical address for kernel parameters.
-
-config AMBARELLA_INITRD_PHYS
-	hex "INITRD PHYS"
-	default 0xC0800000
-	help
-	  Specify the physical address for initrd.
-
-endmenu
 
 endmenu
 

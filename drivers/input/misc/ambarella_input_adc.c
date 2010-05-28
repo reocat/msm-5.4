@@ -33,6 +33,8 @@
 #include <asm/mach-types.h>
 
 #include <mach/hardware.h>
+#include <plat/adc.h>
+
 #include "ambarella_input.h"
 
 /* ========================================================================= */

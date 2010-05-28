@@ -44,6 +44,7 @@
 #include <sound/soc.h>
 
 #include <mach/hardware.h>
+#include <plat/audio.h>
 
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"

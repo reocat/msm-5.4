@@ -1,0 +1,332 @@
+/*
+ * ambhw/stepper.h
+ *
+ * History:
+ *	2006/12/27 - [Charles Chiou] created file
+ *
+ * Copyright (C) 2006-2007, Ambarella, Inc.
+ */
+
+#ifndef __AMBHW__STEPPTER_H__
+#define __AMBHW__STEPPTER_H__
+
+#include <ambhw/chip.h>
+#include <ambhw/busaddr.h>
+
+/****************************************************/
+/* Capabilities based on chip revision              */
+/****************************************************/
+#if (CHIP_REV == A5 || CHIP_REV == A2S || CHIP_REV == A6 || \
+     CHIP_REV == A5S || CHIP_REV == A7 || CHIP_REV == A5L)
+#define ST_CONFIG_LAST_POL	1
+#define	ST_SUPPORT_PRECOUNT	1
+#define	ST_SUPPORT_ACC_MODE	1
+#else
+#define ST_CONFIG_LAST_POL	0
+#define	ST_SUPPORT_PRECOUNT	0
+#define	ST_SUPPORT_ACC_MODE	0
+#endif
+
+#if (CHIP_REV == A7)
+#define ST_INSTANCES		4
+#elif (CHIP_REV == A5L)
+#define ST_INSTANCES		2
+#else
+#define ST_INSTANCES		3
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) 
+#define	ST_SUPPORT_MICROST	1
+#else
+#define	ST_SUPPORT_MICROST	0
+#endif
+
+#define ST_TOTAL_PIN		5
+/****************************************************/
+/* Controller registers definitions                 */
+/****************************************************/
+
+#if (ST_INSTANCES >= 2)
+#define	ST_CONTROL_A_OFFSET		0x000
+#define ST_PATTERN0_0A_OFFSET		0x004
+#define ST_PATTERN1_0A_OFFSET		0x008
+#define ST_PATTERN0_1A_OFFSET		0x00c
+#define ST_PATTERN1_1A_OFFSET		0x010
+#define ST_PATTERN0_2A_OFFSET		0x014
+#define ST_PATTERN1_2A_OFFSET		0x018
+#define ST_PATTERN0_3A_OFFSET		0x01c
+#define ST_PATTERN1_3A_OFFSET		0x020
+#define ST_PATTERN0_4A_OFFSET		0x024
+#define ST_PATTERN1_4A_OFFSET		0x028
+#define ST_COUNT_A_OFFSET		0x02c
+#define ST_STATUS_A_OFFSET		0x030
+#define ST_ACC_COUNT_A_OFFSET		0x034
+#define ST_ACC_CLKDIV_0A_OFFSET		0x038
+#define ST_ACC_CLKDIV_1A_OFFSET		0x03c
+#define ST_PRE_COUNTER_A_OFFSET		0x040
+#define ST_CONTROL_B_OFFSET		0x080
+#define ST_PATTERN0_0B_OFFSET		0x084
+#define ST_PATTERN1_0B_OFFSET		0x088
+#define ST_PATTERN0_1B_OFFSET		0x08c
+#define ST_PATTERN1_1B_OFFSET		0x090
+#define ST_PATTERN0_2B_OFFSET		0x094
+#define ST_PATTERN1_2B_OFFSET		0x098
+#define ST_PATTERN0_3B_OFFSET		0x09c
+#define ST_PATTERN1_3B_OFFSET		0x0a0
+#define ST_PATTERN0_4B_OFFSET		0x0a4
+#define ST_PATTERN1_4B_OFFSET		0x0a8
+#define ST_COUNT_B_OFFSET		0x0ac
+#define ST_STATUS_B_OFFSET		0x0b0
+#define ST_ACC_COUNT_B_OFFSET		0x0b4
+#define ST_ACC_CLKDIV_0B_OFFSET		0x0b8
+#define ST_ACC_CLKDIV_1B_OFFSET		0x0bc
+#define ST_PRE_COUNTER_B_OFFSET		0x0c0
+#endif
+
+#if (ST_INSTANCES >= 3)
+#define ST_CONTROL_C_OFFSET		0x100
+#define ST_PATTERN0_0C_OFFSET		0x104
+#define ST_PATTERN1_0C_OFFSET		0x108
+#define ST_PATTERN0_1C_OFFSET		0x10c
+#define ST_PATTERN1_1C_OFFSET		0x110
+#define ST_PATTERN0_2C_OFFSET		0x114
+#define ST_PATTERN1_2C_OFFSET		0x118
+#define ST_PATTERN0_3C_OFFSET		0x11c
+#define ST_PATTERN1_3C_OFFSET		0x120
+#define ST_PATTERN0_4C_OFFSET		0x124
+#define ST_PATTERN1_4C_OFFSET		0x128
+#define ST_COUNT_C_OFFSET		0x12c
+#define ST_STATUS_C_OFFSET		0x130
+#define ST_ACC_COUNT_C_OFFSET		0x134
+#define ST_ACC_CLKDIV_0C_OFFSET		0x138
+#define ST_ACC_CLKDIV_1C_OFFSET		0x13c
+#define ST_PRE_COUNTER_C_OFFSET		0x140
+#endif 
+
+#if (ST_INSTANCES >= 4)
+#define ST_CONTROL_D_OFFSET		0x180
+#define ST_PATTERN0_0D_OFFSET		0x184
+#define ST_PATTERN1_0D_OFFSET		0x188
+#define ST_PATTERN0_1D_OFFSET		0x18c
+#define ST_PATTERN1_1D_OFFSET		0x190
+#define ST_PATTERN0_2D_OFFSET		0x194
+#define ST_PATTERN1_2D_OFFSET		0x198
+#define ST_PATTERN0_3D_OFFSET		0x19c
+#define ST_PATTERN1_3D_OFFSET		0x1a0
+#define ST_PATTERN0_4D_OFFSET		0x1a4
+#define ST_PATTERN1_4D_OFFSET		0x1a8
+#define ST_COUNT_D_OFFSET		0x1ac
+#define ST_STATUS_D_OFFSET		0x1b0
+#define ST_ACC_COUNT_D_OFFSET		0x1b4
+#define ST_ACC_CLKDIV_0D_OFFSET		0x1b8
+#define ST_ACC_CLKDIV_1D_OFFSET		0x1bc
+#define ST_PRE_COUNTER_D_OFFSET		0x1c0
+#endif
+
+#define ST_INTERRUPT_OFFSET		0x280
+#define ST_INTERRUPT_EN_OFFSET		0x284
+
+#if (ST_INSTANCES >= 2)
+#define MST_CONTROL_A_OFFSET		0x400
+#define MST_PWM_A_OFFSET		0x404
+#define MST_COUNT0_A_OFFSET		0x408
+#define MST_COUNT1_A_OFFSET		0x40c
+#define MST_STATUS_A_OFFSET		0x410
+#define MST_PRE_COUNT_A_OFFSET		0x414
+#define MST_CONTROL_B_OFFSET		0x500
+#define MST_PWM_B_OFFSET		0x504
+#define MST_COUNT0_B_OFFSET		0x508
+#define MST_COUNT1_B_OFFSET		0x50c
+#define MST_STATUS_B_OFFSET		0x510
+#define MST_PRE_COUNT_B_OFFSET		0x514
+#endif
+
+#if (ST_INSTANCES >= 3)
+#define MST_CONTROL_C_OFFSET		0x600
+#define MST_PWM_C_OFFSET		0x604
+#define MST_COUNT0_C_OFFSET		0x608
+#define MST_COUNT1_C_OFFSET		0x60c
+#define MST_STATUS_C_OFFSET		0x610
+#define MST_PRE_COUNT_C_OFFSET		0x614
+#endif
+
+#if (ST_INSTANCES >= 4)
+#define MST_CONTROL_D_OFFSET		0x700
+#define MST_PWM_D_OFFSET		0x704
+#define MST_COUNT0_D_OFFSET		0x708
+#define MST_COUNT1_D_OFFSET		0x70c
+#define MST_STATUS_D_OFFSET		0x710
+#define MST_PRE_COUNT_D_OFFSET		0x714
+#endif
+
+#if (ST_INSTANCES >= 2)
+#define MST_WAVE_A1_OFFSET		0x800
+#define MST_WAVE_A2_OFFSET		0x880
+#define MST_WAVE_A3_OFFSET		0x900
+#define MST_WAVE_A4_OFFSET		0x980
+#define MST_WAVE_B1_OFFSET		0xa00
+#define MST_WAVE_B2_OFFSET		0xa80
+#define MST_WAVE_B3_OFFSET		0xb00
+#define MST_WAVE_B4_OFFSET		0xb80
+#endif
+
+#if (ST_INSTANCES >= 3)
+#define MST_WAVE_C1_OFFSET		0xc00
+#define MST_WAVE_C2_OFFSET		0xc80
+#define MST_WAVE_C3_OFFSET		0xd00
+#define MST_WAVE_C4_OFFSET		0xd80
+#endif
+
+#if (ST_INSTANCES >= 4)
+#define MST_WAVE_D1_OFFSET		0xe00
+#define MST_WAVE_D2_OFFSET		0xe80
+#define MST_WAVE_D3_OFFSET		0xf00
+#define MST_WAVE_D4_OFFSET		0xf80
+#endif
+
+#if (ST_INSTANCES >= 2)
+#define	ST_CONTROL_A_REG		ST_REG(0x000)
+#define ST_PATTERN0_0A_REG		ST_REG(0x004)
+#define ST_PATTERN1_0A_REG		ST_REG(0x008)
+#define ST_PATTERN0_1A_REG		ST_REG(0x00c)
+#define ST_PATTERN1_1A_REG		ST_REG(0x010)
+#define ST_PATTERN0_2A_REG		ST_REG(0x014)
+#define ST_PATTERN1_2A_REG		ST_REG(0x018)
+#define ST_PATTERN0_3A_REG		ST_REG(0x01c)
+#define ST_PATTERN1_3A_REG		ST_REG(0x020)
+#define ST_PATTERN0_4A_REG		ST_REG(0x024)
+#define ST_PATTERN1_4A_REG		ST_REG(0x028)
+#define ST_COUNT_A_REG			ST_REG(0x02c)
+#define ST_STATUS_A_REG			ST_REG(0x030)
+#define ST_ACC_COUNT_A_REG		ST_REG(0x034)
+#define ST_ACC_CLKDIV_0A_REG		ST_REG(0x038)
+#define ST_ACC_CLKDIV_1A_REG		ST_REG(0x03c)
+#define ST_PRE_COUNTER_A_REG		ST_REG(0x040)
+
+#define ST_CONTROL_B_REG		ST_REG(0x080)
+#define ST_PATTERN0_0B_REG		ST_REG(0x084)
+#define ST_PATTERN1_0B_REG		ST_REG(0x088)
+#define ST_PATTERN0_1B_REG		ST_REG(0x08c)
+#define ST_PATTERN1_1B_REG		ST_REG(0x090)
+#define ST_PATTERN0_2B_REG		ST_REG(0x094)
+#define ST_PATTERN1_2B_REG		ST_REG(0x098)
+#define ST_PATTERN0_3B_REG		ST_REG(0x09c)
+#define ST_PATTERN1_3B_REG		ST_REG(0x0a0)
+#define ST_PATTERN0_4B_REG		ST_REG(0x0a4)
+#define ST_PATTERN1_4B_REG		ST_REG(0x0a8)
+#define ST_COUNT_B_REG			ST_REG(0x0ac)
+#define ST_STATUS_B_REG			ST_REG(0x0b0)
+#define ST_ACC_COUNT_B_REG		ST_REG(0x0b4)
+#define ST_ACC_CLKDIV_0B_REG		ST_REG(0x0b8)
+#define ST_ACC_CLKDIV_1B_REG		ST_REG(0x0bc)
+#define ST_PRE_COUNTER_B_REG		ST_REG(0x0b0)
+#endif
+
+#if (ST_INSTANCES >= 3)
+#define ST_CONTROL_C_REG		ST_REG(0x100)
+#define ST_PATTERN0_0C_REG		ST_REG(0x104)
+#define ST_PATTERN1_0C_REG		ST_REG(0x108)
+#define ST_PATTERN0_1C_REG		ST_REG(0x10c)
+#define ST_PATTERN1_1C_REG		ST_REG(0x110)
+#define ST_PATTERN0_2C_REG		ST_REG(0x114)
+#define ST_PATTERN1_2C_REG		ST_REG(0x118)
+#define ST_PATTERN0_3C_REG		ST_REG(0x11c)
+#define ST_PATTERN1_3C_REG		ST_REG(0x120)
+#define ST_PATTERN0_4C_REG		ST_REG(0x124)
+#define ST_PATTERN1_4C_REG		ST_REG(0x128)
+#define ST_COUNT_C_REG			ST_REG(0x12c)
+#define ST_STATUS_C_REG			ST_REG(0x130)
+#define ST_ACC_COUNT_C_REG		ST_REG(0x134)
+#define ST_ACC_CLKDIV_0C_REG		ST_REG(0x138)
+#define ST_ACC_CLKDIV_1C_REG		ST_REG(0x13c)
+#define ST_PRE_COUNTER_C_REG		ST_REG(0x140)
+#endif
+
+#if (ST_INSTANCES >= 4)
+#define ST_CONTROL_D_REG		ST_REG(0x180)
+#define ST_PATTERN0_0D_REG		ST_REG(0x184)
+#define ST_PATTERN1_0D_REG		ST_REG(0x188)
+#define ST_PATTERN0_1D_REG		ST_REG(0x18c)
+#define ST_PATTERN1_1D_REG		ST_REG(0x190)
+#define ST_PATTERN0_2D_REG		ST_REG(0x194)
+#define ST_PATTERN1_2D_REG		ST_REG(0x198)
+#define ST_PATTERN0_3D_REG		ST_REG(0x19c)
+#define ST_PATTERN1_3D_REG		ST_REG(0x1a0)
+#define ST_PATTERN0_4D_REG		ST_REG(0x1a4)
+#define ST_PATTERN1_4D_REG		ST_REG(0x1a8)
+#define ST_COUNT_D_REG			ST_REG(0x1ac)
+#define ST_STATUS_D_REG			ST_REG(0x1b0)
+#define ST_ACC_COUNT_D_REG		ST_REG(0x1b4)
+#define ST_ACC_CLKDIV_0D_REG		ST_REG(0x1b8)
+#define ST_ACC_CLKDIV_1D_REG		ST_REG(0x1bc)
+#define ST_PRE_COUNTER_D_REG		ST_REG(0x1c0)
+#endif
+
+#define ST_INTERRUPT_REG		ST_REG(0x280)
+#define ST_INTERRUPT_EN_REG		ST_REG(0x284)
+
+#if (ST_INSTANCES >= 2)
+#define MST_CONTROL_A_REG		ST_REG(0x400)
+#define MST_PWM_A_REG			ST_REG(0x404)
+#define MST_COUNT0_A_REG		ST_REG(0x408)
+#define MST_COUNT1_A_REG		ST_REG(0x40c)
+#define MST_STATUS_A_REG		ST_REG(0x410)
+#define MST_PRE_COUNT_A_REG		ST_REG(0x414)
+#define MST_CONTROL_B_REG		ST_REG(0x500)
+#define MST_PWM_B_REG			ST_REG(0x504)
+#define MST_COUNT0_B_REG		ST_REG(0x508)
+#define MST_COUNT1_B_REG		ST_REG(0x50c)
+#define MST_STATUS_B_REG		ST_REG(0x510)
+#define MST_PRE_COUNT_B_REG		ST_REG(0x514)
+#endif
+
+#if (ST_INSTANCES >= 3)
+#define MST_CONTROL_C_REG		ST_REG(0x600)
+#define MST_PWM_C_REG			ST_REG(0x604)
+#define MST_COUNT0_C_REG		ST_REG(0x608)
+#define MST_COUNT1_C_REG		ST_REG(0x60c)
+#define MST_STATUS_C_REG		ST_REG(0x610)
+#define MST_PRE_COUNT_C_REG		ST_REG(0x614)
+#endif
+
+#if (ST_INSTANCES >= 4)
+#define MST_CONTROL_D_REG		ST_REG(0x700)
+#define MST_PWM_D_REG			ST_REG(0x704)
+#define MST_COUNT0_D_REG		ST_REG(0x708)
+#define MST_COUNT1_D_REG		ST_REG(0x70c)
+#define MST_STATUS_D_REG		ST_REG(0x710)
+#define MST_PRE_COUNT_D_REG		ST_REG(0x714)
+#endif
+
+#if (ST_INSTANCES >= 2)
+#define MST_WAVE_A1_REG			ST_REG(0x800)
+#define MST_WAVE_A2_REG			ST_REG(0x880)
+#define MST_WAVE_A3_REG			ST_REG(0x900)
+#define MST_WAVE_A4_REG			ST_REG(0x980)
+#define MST_WAVE_B1_REG			ST_REG(0xa00)
+#define MST_WAVE_B2_REG			ST_REG(0xa80)
+#define MST_WAVE_B3_REG			ST_REG(0xb00)
+#define MST_WAVE_B4_REG			ST_REG(0xb80)
+#endif
+
+#if (ST_INSTANCES >= 3)
+#define MST_WAVE_C1_REG			ST_REG(0xc00)
+#define MST_WAVE_C2_REG			ST_REG(0xc80)
+#define MST_WAVE_C3_REG			ST_REG(0xd00)
+#define MST_WAVE_C4_REG			ST_REG(0xd80)
+#endif
+
+#if (ST_INSTANCES >= 4)
+#define MST_WAVE_D1_REG			ST_REG(0xe00)
+#define MST_WAVE_D2_REG			ST_REG(0xe80)
+#define MST_WAVE_D3_REG			ST_REG(0xf00)
+#define MST_WAVE_D4_REG			ST_REG(0xf80)
+#endif
+
+#if (CHIP_REV == A7)
+#define ST_MOTOR_ID_OFFSET(x)		((u32) ((x) << 7))
+#else
+#define ST_MOTOR_ID_OFFSET(x)		((u32) ((x) << 8))
+#endif
+#define MST_MOTOR_ID_OFFSET(x)		((u32) ((x) << 8))
+#endif

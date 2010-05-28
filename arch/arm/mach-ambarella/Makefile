@@ -1,5 +1,5 @@
 #
-# arch/arm/mach-ambarella/Kconfig
+# arch/arm/mach-ambarella/Makefile
 #
 # History:
 #	2006/12/18 - [Charles Chiou] created file
@@ -21,12 +21,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y	+= rct.o fio.o irq.o timer.o
-obj-y	+= gpio.o dma.o adc.o pwm.o pm.o pll.o
-obj-y	+= init.o config.o fb.o sync_proc.o
-obj-y	+= toss_linux.o
-CFLAGS_toss_linux.o = \
-	-I$(src) \
-	-DTOSS_H_CHKSUM=$(word 1,$(shell cksum arch/arm/mach-ambarella/include/mach/toss/toss.h))UL \
-	-DTOSS_HWCTX_H_CHKSUM=$(word 1,$(shell cksum arch/arm/mach-ambarella/include/mach/toss/toss_hwctx.h))UL \
-	-DTOSS_DEVCTX_H_CHKSUM=$(word 1,$(shell cksum arch/arm/mach-ambarella/include/mach/toss/toss_devctx.h))UL
+obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
+obj-$(CONFIG_MACH_COCONUT)	+= init-coconut.o
+obj-$(CONFIG_MACH_DURIAN)	+= init-durian.o
+
+obj-y				+= touch-ak4183.o
+obj-y				+= rtc-is112022m.o
+

@@ -1,0 +1,140 @@
+/*
+ * ambhw/adc.h
+ *
+ * History:
+ *	2006/12/27 - [Charles Chiou] created file
+ *
+ * Copyright (C) 2006-2008, Ambarella, Inc.
+ */
+
+#ifndef __AMBHW__ADC__
+#define __AMBHW__ADC__
+
+#include <ambhw/chip.h>
+#include <ambhw/busaddr.h>
+
+/****************************************************/
+/* Capabilities based on chip revision              */
+/****************************************************/
+
+#if (CHIP_REV == A1)
+#define	ADC_MAX_RESOLUTION	8
+#elif (CHIP_REV == A2) || (CHIP_REV == A3) ||	\
+      (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+      (CHIP_REV == A5S) || (CHIP_REV == A5L)
+#define	ADC_MAX_RESOLUTION	10
+#elif (CHIP_REV == A7)
+#define	ADC_MAX_RESOLUTION	12
+#else
+#define	ADC_MAX_RESOLUTION	16
+#endif
+
+#if (CHIP_REV == A5) || (CHIP_REV == A6)
+#define ADC_NUM_CHANNELS	8
+#elif (CHIP_REV == A7)
+#define ADC_NUM_CHANNELS	6
+#else
+#define ADC_NUM_CHANNELS	4
+#endif
+
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
+    (CHIP_REV == A7)	
+#define ADC_SUPPORT_THRESHOLD_INT	1
+#else
+#define ADC_SUPPORT_THRESHOLD_INT	0
+#endif
+
+#if (CHIP_REV == A7)
+#define ADC_SUPPORT_GYRO_MODE		1
+#else
+#define ADC_SUPPORT_GYRO_MODE		0
+#endif
+
+/****************************************************/
+/* Controller registers definitions                 */
+/****************************************************/
+
+#define ADC_CONTROL_OFFSET		0x00
+#if (CHIP_REV == A5S)
+#define ADC_DATA0_OFFSET		0x10
+#define ADC_DATA1_OFFSET		0x0c
+#define ADC_DATA2_OFFSET		0x08
+#define ADC_DATA3_OFFSET		0x04
+#else 
+#define ADC_DATA0_OFFSET		0x04
+#define ADC_DATA1_OFFSET		0x08
+#define ADC_DATA2_OFFSET		0x0c
+#define ADC_DATA3_OFFSET		0x10
+#endif
+#define ADC_RESET_OFFSET		0x14
+#define ADC_COUNTER_OFFSET		0x14	/* A7 */
+#define ADC_ENABLE_OFFSET		0x18
+#define ADC_CHAN0_INTR_OFFSET		0x44
+#define ADC_CHAN1_INTR_OFFSET		0x48
+#define ADC_CHAN2_INTR_OFFSET		0x4c
+#define ADC_CHAN3_INTR_OFFSET		0x50
+#define ADC_DATA4_OFFSET		0x54
+#define ADC_DATA5_OFFSET		0x58
+#define ADC_DATA6_OFFSET		0x5c
+#define ADC_DATA7_OFFSET		0x60
+#define ADC_CHAN4_INTR_OFFSET		0x64
+#define ADC_CHAN5_INTR_OFFSET		0x68
+#define ADC_CHAN6_INTR_OFFSET		0x6c
+#define ADC_CHAN7_INTR_OFFSET		0x70
+
+/* A7 */
+#define ADC_DATA4_SAMPLE0_OFFSET	0x60
+#define ADC_DATA4_SAMPLE1_OFFSET	0x64
+#define ADC_DATA4_SAMPLE2_OFFSET	0x68
+#define ADC_DATA4_SAMPLE3_OFFSET	0x6c
+#define ADC_DATA5_SAMPLE0_OFFSET	0x70
+#define ADC_DATA5_SAMPLE1_OFFSET	0x74
+#define ADC_DATA5_SAMPLE2_OFFSET	0x78
+#define ADC_DATA5_SAMPLE3_OFFSET	0x5c
+
+
+#define ADC_CONTROL_REG			ADC_REG(0x00)
+#if (CHIP_REV == A5S)
+#define ADC_DATA0_REG			ADC_REG(0x10)
+#define ADC_DATA1_REG			ADC_REG(0x04)
+#define ADC_DATA2_REG			ADC_REG(0x08)
+#define ADC_DATA3_REG			ADC_REG(0x0c)
+#else
+#define ADC_DATA0_REG			ADC_REG(0x04)
+#define ADC_DATA1_REG			ADC_REG(0x08)
+#define ADC_DATA2_REG			ADC_REG(0x0c)
+#define ADC_DATA3_REG			ADC_REG(0x10)
+#endif
+#define ADC_RESET_REG			ADC_REG(0x14)
+#define ADC_COUNTER_REG			ADC_REG(0x14) /* A7 */
+#define ADC_ENABLE_REG			ADC_REG(0x18)
+#define ADC_CHAN0_INTR_REG		ADC_REG(0x44)
+#define ADC_CHAN1_INTR_REG		ADC_REG(0x48)
+#define ADC_CHAN2_INTR_REG		ADC_REG(0x4c)
+#define ADC_CHAN3_INTR_REG		ADC_REG(0x50)
+#define ADC_DATA4_REG			ADC_REG(0x54)
+#define ADC_DATA5_REG			ADC_REG(0x58)
+#define ADC_DATA6_REG			ADC_REG(0x5c)
+#define ADC_DATA7_REG			ADC_REG(0x60)
+#define ADC_CHAN4_INTR_REG		ADC_REG(0x64)
+#define ADC_CHAN5_INTR_REG		ADC_REG(0x68)
+#define ADC_CHAN6_INTR_REG		ADC_REG(0x6c)
+#define ADC_CHAN7_INTR_REG		ADC_REG(0x70)
+
+#define ADC_DATA4_SAMPLE0_REG		ADC_REG(0x60)
+#define ADC_DATA4_SAMPLE1_REG		ADC_REG(0x64)
+#define ADC_DATA4_SAMPLE2_REG		ADC_REG(0x68)
+#define ADC_DATA4_SAMPLE3_REG		ADC_REG(0x6c)
+#define ADC_DATA5_SAMPLE0_REG		ADC_REG(0x70)
+#define ADC_DATA5_SAMPLE1_REG		ADC_REG(0x74)
+#define ADC_DATA5_SAMPLE2_REG		ADC_REG(0x78)
+#define ADC_DATA5_SAMPLE3_REG		ADC_REG(0x5c)
+
+/* ADC_CONTROL_REG */
+#define ADC_CONTROL_GYRO_OVERSAMPLE(x)	(((x) & 0x3) << 4)
+#define ADC_CONTROL_GYRO_SAMPLE_MODE	0x08
+#define ADC_CONTROL_MODE		0x04
+#define ADC_CONTROL_START		0x02
+#define ADC_CONTROL_STATUS		0x01
+
+#endif

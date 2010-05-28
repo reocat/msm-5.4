@@ -38,6 +38,7 @@
 #include <asm/uaccess.h>
 
 #include <mach/hardware.h>
+#include <plat/rtc.h>
 
 /* ==========================================================================*/
 static unsigned long epoch = 1970;

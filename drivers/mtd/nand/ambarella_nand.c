@@ -40,6 +40,7 @@
 
 #include <mach/hardware.h>
 #include <mach/dma.h>
+#include <plat/nand.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 

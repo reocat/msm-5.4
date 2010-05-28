@@ -1,0 +1,178 @@
+/*
+ * ambhw/vin.h
+ *
+ * History:
+ *	2007/01/27 - [Charles Chiou] created file
+ *	2008/02/19 - [Allen Wang] changed to use capabilities and chip ID
+ *	2008/05/13 - [Allen Wang] added capabilities of A2S and A2M silicons
+ *
+ * Copyright (C) 2006-2008, Ambarella, Inc.
+ */
+
+#ifndef __AMBHW_VIN_H__
+#define __AMBHW_VIN_H__
+
+#include <ambhw/chip.h>
+#include <ambhw/busaddr.h>
+
+/****************************************************/
+/* Capabilities based on chip revision              */
+/****************************************************/
+
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || 		\
+    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+    (CHIP_REV == A5L)
+#define VIN_DIRECT_DSP_INTERFACE	0
+#define VIN_SUPPORT_BLC			1
+#else
+#define VIN_DIRECT_DSP_INTERFACE	1
+#define VIN_SUPPORT_BLC			0
+#endif
+
+#if (CHIP_REV == A1)
+#define VIN_SMEM_PREVIEW_INSTANCES	0
+#elif (CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+#define VIN_SMEM_PREVIEW_INSTANCES	1
+#else
+#define VIN_SMEM_PREVIEW_INSTANCES	2
+#endif
+
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7)
+#define VIN_SUPPORT_SLVS_MLVS		1
+#else
+#define VIN_SUPPORT_SLVS_MLVS		0
+#endif
+
+#if (CHIP_REV == A7)
+#define VIN_SPPORT_SEPARATE_SLVS_MLVS		1
+#define VIN_SLVS_LANES_MAX			12
+#else
+#define VIN_SPPORT_SEPARATE_SLVS_MLVS		0
+#endif
+
+#if (CHIP_REV == A5S)
+#define VIN_SUPPORT_MIPI		1
+#else
+#define VIN_SUPPORT_MIPI		0
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#define VIN_SUPPORT_HAL			1
+#else
+#define VIN_SUPPORT_HAL			0
+#endif
+
+/****************************************************/
+/* Controller registers definitions                 */
+/****************************************************/
+
+#if (VIN_DIRECT_DSP_INTERFACE == 0)
+
+#define S_CTRL_OFFSET			0x00
+#define S_STATUS_OFFSET			0x08
+#define S_HV_WIDTH_OFFSET               0x0c
+#define S_H_OFFSET_OFFSET               0x10
+#define S_HV_OFFSET                     0x14
+#define S_MIN_HV_OFFSET			0x18
+#define S_TRIGGER0_OFFSET		0x1c
+#define S_TRIGGER1_OFFSET		0x20
+#define S_BLHW_AVGV_OFFSET		0x24
+
+#if (VIN_SMEM_PREVIEW_INSTANCES == 1)
+#define S_VOUT_START_OFFSET		0x28
+#endif
+
+#define S_CAP_START_OFFSET		0x2c
+#define S_CAP_END_OFFSET		0x30
+#define S_BLHW_CTRL_OFFSET		0x34
+#define S_BLHW_AVGH_OFFSET		0x38
+#define S_BLHWOO_OFFSET			0x3c
+#define S_BLHWOE_OFFSET			0x40
+#define S_BLHWEO_OFFSET			0x44
+#define S_BLHWEE_OFFSET			0x48
+#define S_BLSWOO_OFFSET			0x4c
+#define S_BLSWOE_OFFSET			0x50
+#define S_BLSWEO_OFFSET			0x54
+#define S_BLSWEE_OFFSET			0x58
+#define S_DEBUG_FIFO_COUNT_OFFSET	0x64
+#define S_DEBUG_FIFO_DATA_OFFSET	0x80
+
+#define S_CTRL_REG			VIN_REG(S_CTRL_OFFSET)
+#define S_STATUS_REG			VIN_REG(S_STATUS_OFFSET)
+#define S_HV_WIDTH                      VIN_REG(S_HV_WIDTH_OFFSET)
+#define S_H_OFFSET                      VIN_REG(S_H_OFFSET_OFFSET)
+#define S_HV                            VIN_REG(S_HV_OFFSET)
+#define S_MIN_HV_REG			VIN_REG(S_MIN_HV_OFFSET)
+#define S_TRIGGER0_REG			VIN_REG(S_TRIGGER0_OFFSET)
+#define S_TRIGGER1_REG			VIN_REG(S_TRIGGER1_OFFSET)
+#define S_BLHW_AVGV_REG 		VIN_REG(S_BLHW_AVGV_OFFSET)
+
+#if (VIN_SMEM_PREVIEW_INSTANCES == 1)
+#define S_VOUT_START_REG		VIN_REG(S_VOUT_START_OFFSET)
+#endif
+
+#define S_CAP_START_REG			VIN_REG(S_CAP_START_OFFSET)
+#define S_CAP_END_REG			VIN_REG(S_CAP_END_OFFSET)
+#define S_BLHW_CTRL_REG			VIN_REG(S_BLHW_CTRL_OFFSET)
+#define S_BLHW_AVGH_REG			VIN_REG(S_BLHW_AVGH_OFFSET)
+#define S_BLHWOO_REG			VIN_REG(S_BLHWOO_OFFSET)
+#define S_BLHWOE_REG			VIN_REG(S_BLHWOE_OFFSET)
+#define S_BLHWEO_REG			VIN_REG(S_BLHWEO_OFFSET)
+#define S_BLHWEE_REG			VIN_REG(S_BLHWEE_OFFSET)
+#define S_BLSWOO_REG			VIN_REG(S_BLSWOO_OFFSET)
+#define S_BLSWOE_REG			VIN_REG(S_BLSWOE_OFFSET)
+#define S_BLSWEO_REG			VIN_REG(S_BLSWEO_OFFSET)
+#define S_BLSWEE_REG			VIN_REG(S_BLSWEE_OFFSET)
+#define S_DEBUG_FIFO_COUNT_REG		VIN_REG(S_DEBUG_FIFO_COUNT_OFFSET)
+#define S_DEBUG_FIFO_DATA_REG		VIN_REG(S_DEBUG_FIFO_DATA_OFFSET)
+
+#endif
+
+#if (VIN_DIRECT_DSP_INTERFACE == 1)
+#define S_CTRL_OFFSET			0x00
+#define S_INPUTCFG_OFFSET		0x04
+#define S_STATUS_OFFSET			0x08
+#define S_VWIDTH_OFFSET			0x0c
+#define S_HWIDTH_OFFSET			0x10
+#define S_V_OFFSET			0x1c
+#define S_H_OFFSET			0x20
+#define S_MINV_OFFSET			0x24
+#define S_MINH_OFFSET			0x28
+#define S_CAPSTARTV_OFFSET		0x44
+#define S_CAPSTARTH_OFFSET		0x48
+#define S_CAPENDV_OFFSET		0x50
+#define S_CAPENDH_OFFSET		0x54
+
+#define S_CTRL_REG			DSP_VIN_DEBUG_REG(S_CTRL_OFFSET)
+#define S_INPUTCFG_REG			DSP_VIN_DEBUG_REG(S_INPUTCFG_OFFSET)
+#define S_STATUS_REG			DSP_VIN_DEBUG_REG(S_STATUS_OFFSET)
+#define S_VWIDTH_REG			DSP_VIN_DEBUG_REG(S_VWIDTH_OFFSET)
+#define S_HWIDTH_REG			DSP_VIN_DEBUG_REG(S_HWIDTH_OFFSET)
+#define S_V_REG				DSP_VIN_DEBUG_REG(S_V_OFFSET)
+#define S_H_REG				DSP_VIN_DEBUG_REG(S_H_OFFSET)
+#define S_MINV_REG			DSP_VIN_DEBUG_REG(S_MINV_OFFSET)
+#define S_MINH_REG			DSP_VIN_DEBUG_REG(S_MINH_OFFSET)
+#define S_CAPSTARTV_REG			DSP_VIN_DEBUG_REG(S_CAPSTARTV_OFFSET)
+#define S_CAPSTARTH_REG			DSP_VIN_DEBUG_REG(S_CAPSTARTH_OFFSET)
+#define S_CAPENDV_REG			DSP_VIN_DEBUG_REG(S_CAPENDV_OFFSET)
+#define S_CAPENDH_REG			DSP_VIN_DEBUG_REG(S_CAPENDH_OFFSET)
+
+#if (VIN_SUPPORT_MIPI == 1)
+#define S_MIPI_CTRL1_OFFSET		0x68
+#define S_MIPI_CTRL2_OFFSET		0x6c
+#define S_MIPI_B_DPHYCTRL_OFFSET	0x70
+#define S_MIPI_S_DPHYCTRL_OFFSET	0x74
+#define S_MIPI_ERROR_STATUS_OFFSET	0x78
+#define S_MIPI_CRC_ERROR_FRM_OFFSET	0x7c
+
+#define S_MIPI_CTRL1_REG		DSP_VIN_DEBUG_REG(S_MIPI_CTRL1_OFFSET)
+#define S_MIPI_CTRL2_REG		DSP_VIN_DEBUG_REG(S_MIPI_CTRL2_OFFSET)
+#define S_MIPI_B_DPHYCTRL_REG		DSP_VIN_DEBUG_REG(S_MIPI_B_DPHYCTRL_OFFSET)
+#define S_MIPI_S_DPHYCTRL_REG		DSP_VIN_DEBUG_REG(S_MIPI_S_DPHYCTRL_OFFSET)
+#define S_MIPI_ERROR_STATUS_REG		DSP_VIN_DEBUG_REG(S_MIPI_ERROR_STATUS_OFFSET)
+#define S_MIPI_CRC_ERROR_FRM_REG	DSP_VIN_DEBUG_REG(S_MIPI_CRC_ERROR_FRM_OFFSET)
+#endif
+
+#endif
+
+#endif
