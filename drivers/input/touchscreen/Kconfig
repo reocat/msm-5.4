@@ -430,4 +430,15 @@ config TOUCHSCREEN_CY8CTMG
           To compile this driver as a module, choose M here: the
           module will be called cy8ctmg.
 
+config TOUCHSCREEN_CHACHA_MT4D
+        tristate "CHACHA_MT4D based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a CHACHA_MT4D based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called chacha_mt4d.
+
 endif

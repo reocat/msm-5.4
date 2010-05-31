@@ -26,5 +26,6 @@ obj-$(CONFIG_MACH_COCONUT)	+= init-coconut.o
 obj-$(CONFIG_MACH_DURIAN)	+= init-durian.o
 
 obj-y				+= touch-ak4183.o
+obj-y				+= touch-chacha_mt4d.o
 obj-y				+= rtc-is112022m.o
 

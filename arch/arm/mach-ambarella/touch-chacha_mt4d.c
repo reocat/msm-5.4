@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/init.c
+ * arch/arm/mach-ambarella/chacha_mt4d.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -33,15 +33,14 @@
 #include <mach/board.h>
 
 #include <linux/i2c.h>
-#include <linux/i2c/ak4183.h>
+#include <linux/i2c/chacha_mt4d.h>
 
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
 /* ==========================================================================*/
-/* FIXIT: check ambarella_board_generic.tp_irq.irq_line valid!!!!*/
-int ambarella_ak4183_get_pendown_state(void)
+static int ambarella_chacha_mt4d_get_pendown_state(void)
 {
 	if (ambarella_gpio_get(ambarella_board_generic.tp_irq.irq_gpio))
 		return 0;
@@ -49,46 +48,55 @@ int ambarella_ak4183_get_pendown_state(void)
 		return 1;
 }
 
-void ambarella_ak4183_clear_penirq(void)
+static void ambarella_chacha_mt4d_clear_penirq(void)
 {
 	ambarella_gpio_ack_irq(ambarella_board_generic.tp_irq.irq_line);
 }
 
-int ambarella_ak4183_init_platform_hw(void)
+static int ambarella_chacha_mt4d_init_platform_hw(void)
 {
 	ambarella_gpio_config(ambarella_board_generic.tp_irq.irq_gpio,
 		ambarella_board_generic.tp_irq.irq_gpio_mode);
-
-	return set_irq_type(ambarella_board_generic.tp_irq.irq_line,
+	set_irq_type(ambarella_board_generic.tp_irq.irq_line,
 		ambarella_board_generic.tp_irq.irq_type);
+	ambarella_gpio_ack_irq(ambarella_board_generic.tp_irq.irq_line);
+
+	ambarella_gpio_config(ambarella_board_generic.tp_reset.reset_gpio,
+		GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(ambarella_board_generic.tp_reset.reset_gpio,
+		ambarella_board_generic.tp_reset.reset_level);
+	msleep(ambarella_board_generic.tp_reset.reset_delay);
+	ambarella_gpio_set(ambarella_board_generic.tp_reset.reset_gpio,
+		~ambarella_board_generic.tp_reset.reset_level);
+	msleep(ambarella_board_generic.tp_reset.reset_delay);
+
+	return 0;
 }
 
-void ambarella_ak4183_exit_platform_hw(void)
+static void ambarella_chacha_mt4d_exit_platform_hw(void)
 {
 }
 
-struct ak4183_platform_data ambarella_ak4183_pdata = {
-	.model = 4183,
-	.x_plate_ohms = 310,
+static struct chacha_mt4d_platform_data ambarella_chacha_mt4d_pdata = {
 	.fix = {
-		.x_invert = 1,
-		.y_invert = 0,
-		.x_rescale = 1,
-		.y_rescale = 1,
-		.x_min = 374,
-		.x_max = 3716,
-		.y_min = 185,
-		.y_max = 3748,
+		.x_invert = 0,
+		.y_invert = 1,
+		.x_rescale = 0,
+		.y_rescale = 0,
+		.x_min = 2,
+		.x_max = 318,
+		.y_min = 1,
+		.y_max = 469,
 	},
-	.get_pendown_state = ambarella_ak4183_get_pendown_state,
-	.clear_penirq = ambarella_ak4183_clear_penirq,
-	.init_platform_hw = ambarella_ak4183_init_platform_hw,
-	.exit_platform_hw = ambarella_ak4183_exit_platform_hw
+	.get_pendown_state = ambarella_chacha_mt4d_get_pendown_state,
+	.clear_penirq = ambarella_chacha_mt4d_clear_penirq,
+	.init_platform_hw = ambarella_chacha_mt4d_init_platform_hw,
+	.exit_platform_hw = ambarella_chacha_mt4d_exit_platform_hw
 };
 
-struct i2c_board_info ambarella_ak4183_board_info = {
-	.type		= "ak4183",
-	.addr		= 0x90 >> 1,
-	.platform_data	= &ambarella_ak4183_pdata,
+struct i2c_board_info ambarella_chacha_mt4d_board_info = {
+	.type = "chacha_mt4d",
+	.addr = 0x40,
+	.platform_data = &ambarella_chacha_mt4d_pdata,
 };
 
