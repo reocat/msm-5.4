@@ -26,7 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 
-#include "ambarella_input.h"
+#include <plat/ambinput.h>
 
 /**
  * Space-Coded Signals (REC-80) vary the length of the spaces between pulses
@@ -84,7 +84,7 @@
 /**
  * Check the waveform data is leader code or not.
  */
-static int ambarella_ir_space_leader_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_sony_space_leader_code(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
@@ -95,14 +95,14 @@ static int ambarella_ir_space_leader_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
-static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_sony_find_head(struct ambarella_ir_info *pinfo)
 {
 	int i, val = 0;
 
 	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
 
 	while(i--) {
-		if(ambarella_ir_space_leader_code(pinfo)) {
+		if(ambarella_ir_sony_space_leader_code(pinfo)) {
 			printk("find leader code, i [%d]\n", i);
 			val = 1;
 			break;
@@ -118,7 +118,7 @@ static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
 /**
  * Check the waveform data is 0 bit or not.
  */
-static int ambarella_ir_space_code_0(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_sony_space_code_0(struct ambarella_ir_info *pinfo)
 {
 	/* 500us of Silence + 700us of IR for bits ZERO, */
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
@@ -149,7 +149,7 @@ static int ambarella_ir_space_code_0(struct ambarella_ir_info *pinfo)
 /**
  * Check the waveform data is 1 bit or not.
  */
-static int ambarella_ir_space_code_1(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_sony_space_code_1(struct ambarella_ir_info *pinfo)
 {
 	/* 500us of Silence + 1300us of IR for bits ONE. */
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
@@ -180,7 +180,7 @@ static int ambarella_ir_space_code_1(struct ambarella_ir_info *pinfo)
 /**
  * Translate waveform data to useful message.
  */
-static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
+static int ambarella_ir_sony_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 {
 	/* Following the header you will find straight 12 bits.
 	   The first immediate bit after the START is the LSB of the 12 bits.
@@ -195,9 +195,9 @@ static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 	/* command - 7 bits*/
 	for (i = 0; i < 7; i++) {
-		if (ambarella_ir_space_code_0(pinfo)) {
+		if (ambarella_ir_sony_space_code_0(pinfo)) {
 		}
-		else if (ambarella_ir_space_code_1(pinfo)) {
+		else if (ambarella_ir_sony_space_code_1(pinfo)) {
 			data |= 1 << i;
 		}
 		else {
@@ -208,9 +208,9 @@ static int ambarella_ir_space_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 	/* device address - 5 bits */
 	for (i = 0; i < 5; i++) {
-		if (ambarella_ir_space_code_0(pinfo)) {
+		if (ambarella_ir_sony_space_code_0(pinfo)) {
 		}
-		else if (ambarella_ir_space_code_1(pinfo)) {
+		else if (ambarella_ir_sony_space_code_1(pinfo)) {
 			addr |= 1 << i;
 		}
 		else {
@@ -229,13 +229,13 @@ int ambarella_ir_sony_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	int				rval;
 	int				cur_ptr = pinfo->ir_pread;
 
-	if (ambarella_ir_find_head(pinfo)
+	if (ambarella_ir_sony_find_head(pinfo)
 		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
 		+ pinfo->frame_info.frame_head_size) {
 
 		ambi_dbg("go to decode statge\n");
 		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
-		rval = ambarella_ir_space_decode(pinfo, uid);
+		rval = ambarella_ir_sony_space_decode(pinfo, uid);
 	} else {
 		return -1;
 	}

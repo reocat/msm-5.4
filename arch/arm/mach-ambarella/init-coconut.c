@@ -24,6 +24,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -42,6 +43,9 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
+
+#include <linux/input.h>
+#include <plat/ambinput.h>
 
 #include "board-device.h"
 
@@ -115,21 +119,71 @@ static struct spi_board_info ambarella_spi_devices[] = {
 };
 
 /* ==========================================================================*/
+static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
+	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
+	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
+	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
+	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
+
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,1,	0,	983,	1023}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {14,		1,	0,	880,	920,}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_END,	1,	0,	780,	820,}}},	//DEL
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {127,		1,	0,	690,	730,}}},	//MENU
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_OK,	1,	0,	620,	640,}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RIGHT,	1,	0,	490,	530,}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_LEFT,	1,	0,	360,	400,}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,	1,	0,	250,	300,}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,	1,	0,	120,	160,}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,	1,	0,	0,	40,}}},		//S1
+
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,1,	1,	983,	1023}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {228,		1,	1,	880,	920,}}},	//POUND
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PHONE,	1,	1,	780,	820,}}},	//S13
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {227,		1,	1,	690,	730,}}},	//STAR
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,	1,	1,	620,	640,}}},	//S11
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PLAY,	1,	1,	490,	530,}}},	//S10
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_POWER,	1,	1,	360,	400,}}},	//HOME	WAKE
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VIDEO,	1,	1,	250,	300,}}},	//S15
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HP,	1,	1,	120,	160,}}},	//FOCUS
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	1,	1,	0,	40,}}},		//CAMERA
+
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {125,		0,	0,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	0,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+
+	{AMBINPUT_END}
+};
+
+static struct ambarella_input_board_info coconut_board_input_info = {
+	.pkeymap		= coconut_keymap,
+	.pinput_dev		= NULL,
+	.pdev			= NULL,
+
+	.abx_max_x		= 4095,
+	.abx_max_y		= 4095,
+	.abx_max_pressure	= 4095,
+	.abx_max_width		= 16,
+};
+
+struct platform_device coconut_board_input = {
+	.name		= "ambarella-input",
+	.id		= -1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &coconut_board_input_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+/* ==========================================================================*/
 static void __init ambarella_init_coconut(void)
 {
 	int					i;
 
 	ambarella_init_machine("Coconut");
 
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
-	}
-
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
-
+	/* Config Board*/
 	ambarella_board_generic.power_detect.irq_gpio = GPIO(11);
 	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(11);
 	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_FALLING;
@@ -176,6 +230,11 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.tp_reset.reset_delay = 1;
 	ambarella_board_generic.tp_reset.resume_delay = 1;
 
+	ambarella_board_generic.lcd_reset.reset_gpio = -1;
+	ambarella_board_generic.lcd_reset.reset_level = GPIO_LOW;
+	ambarella_board_generic.lcd_reset.reset_delay = 1;
+	ambarella_board_generic.lcd_reset.resume_delay = 1;
+
 	if (AMBARELLA_BOARD_REV(system_rev) > 10) {
 		ambarella_board_generic.lcd_backlight.power_gpio = GPIO(85);
 	} else {
@@ -204,6 +263,33 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.flash_enable.power_level = GPIO_LOW;
 	ambarella_board_generic.flash_enable.power_delay = 1;
 
+	/* Config ETH*/
+	ambarella_eth0_platform_info.mii_reset.reset_gpio = GPIO(7);
+
+	/* Config SD*/
+	fio_select_sdio_as_default = 1;
+	ambarella_platform_sd_controller0.clk_limit = 25000000;
+	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[0].bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[1].ext_power.power_gpio = GPIO(54);
+	ambarella_platform_sd_controller0.slot[1].ext_power.power_level = GPIO_HIGH;
+	ambarella_platform_sd_controller0.slot[1].ext_power.power_delay = 300;
+	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[1].gpio_wp.input_gpio = GPIO(76);
+
+	/* Register devices*/
+	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
+	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
+		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
+		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+	}
+
+	spi_register_board_info(ambarella_spi_devices,
+		ARRAY_SIZE(ambarella_spi_devices));
+
 	ambarella_ak4183_board_info.irq =
 		ambarella_board_generic.tp_irq.irq_line;
 	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
@@ -211,6 +297,8 @@ static void __init ambarella_init_coconut(void)
 	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
 		i2c_register_board_info(0, &ambarella_isl12022m_board_info, 1);
 	}
+
+	platform_device_register(&coconut_board_input);
 }
 
 /* ==========================================================================*/

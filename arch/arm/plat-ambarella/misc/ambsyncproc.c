@@ -33,9 +33,9 @@
 #include <asm/page.h>
 #include <asm/atomic.h>
 
-#include <plat/sync_proc.h>
+#include <plat/ambsyncproc.h>
 
-int amba_sync_proc_hinit(struct amba_sync_proc_hinfo *hinfo)
+int ambsync_proc_hinit(struct ambsync_proc_hinfo *hinfo)
 {
 	hinfo->maxid = AMBA_SYNC_PROC_MAX_ID;
 	init_waitqueue_head(&hinfo->sync_proc_head);
@@ -46,55 +46,55 @@ int amba_sync_proc_hinit(struct amba_sync_proc_hinfo *hinfo)
 
 	return 0;
 }
-EXPORT_SYMBOL(amba_sync_proc_hinit);
+EXPORT_SYMBOL(ambsync_proc_hinit);
 
-int amba_sync_proc_open(struct inode *inode, struct file *file)
+int ambsync_proc_open(struct inode *inode, struct file *file)
 {
 	int				retval = 0;
-	struct amba_sync_proc_pinfo	*pinfo = file->private_data;
+	struct ambsync_proc_pinfo	*pinfo = file->private_data;
 	struct proc_dir_entry		*dp;
-	struct amba_sync_proc_hinfo	*hinfo;
+	struct ambsync_proc_hinfo	*hinfo;
 	int				id;
 
 	dp = PDE(inode);
-	hinfo = (struct amba_sync_proc_hinfo *)dp->data;
+	hinfo = (struct ambsync_proc_hinfo *)dp->data;
 	if (!hinfo) {
 		retval = -EPERM;
-		goto amba_sync_proc_open_exit;
+		goto ambsync_proc_open_exit;
 	}
 	if (hinfo->maxid > AMBA_SYNC_PROC_MAX_ID) {
 		retval = -EPERM;
-		goto amba_sync_proc_open_exit;
+		goto ambsync_proc_open_exit;
 	}
 
 	if (pinfo) {
 		retval = -EPERM;
-		goto amba_sync_proc_open_exit;
+		goto ambsync_proc_open_exit;
 	}
 	pinfo = kmalloc(sizeof(*pinfo), GFP_KERNEL);
 	if (!pinfo) {
 		retval = -ENOMEM;
-		goto amba_sync_proc_open_exit;
+		goto ambsync_proc_open_exit;
 	}
 	memset(pinfo, 0, sizeof(*pinfo));
 
 	if (idr_pre_get(&hinfo->sync_proc_idr, GFP_KERNEL) == 0) {
 		retval = -ENOMEM;
-		goto amba_sync_proc_open_kfree_p;
+		goto ambsync_proc_open_kfree_p;
 	}
 	mutex_lock(&hinfo->sync_proc_lock);
 	retval = idr_get_new_above(&hinfo->sync_proc_idr, pinfo, 0, &id);
 	mutex_unlock(&hinfo->sync_proc_lock);
 	if (retval != 0)
-		goto amba_sync_proc_open_kfree_p;
+		goto ambsync_proc_open_kfree_p;
 	if (id > 31) {
 		retval = -ENOMEM;
-		goto amba_sync_proc_open_remove_id;
+		goto ambsync_proc_open_remove_id;
 	}
 
 	if (!(pinfo->page = (char*) __get_free_page(GFP_KERNEL))) {
 		retval = -ENOMEM;
-		goto amba_sync_proc_open_remove_id;
+		goto ambsync_proc_open_remove_id;
 	}
 	pinfo->id = id;
 	pinfo->mask = (0x01 << id);
@@ -103,38 +103,38 @@ int amba_sync_proc_open(struct inode *inode, struct file *file)
 	file->f_version = 0;
 	file->f_mode &= ~FMODE_PWRITE;
 
-	goto amba_sync_proc_open_exit;
+	goto ambsync_proc_open_exit;
 
-amba_sync_proc_open_remove_id:
+ambsync_proc_open_remove_id:
 	mutex_lock(&hinfo->sync_proc_lock);
 	idr_remove(&hinfo->sync_proc_idr, id);
 	mutex_unlock(&hinfo->sync_proc_lock);
 
-amba_sync_proc_open_kfree_p:
+ambsync_proc_open_kfree_p:
 	kfree(pinfo);
 
-amba_sync_proc_open_exit:
+ambsync_proc_open_exit:
 	return retval;
 }
-EXPORT_SYMBOL(amba_sync_proc_open);
+EXPORT_SYMBOL(ambsync_proc_open);
 
-int amba_sync_proc_release(struct inode *inode, struct file *file)
+int ambsync_proc_release(struct inode *inode, struct file *file)
 {
 	int				retval = 0;
-	struct amba_sync_proc_pinfo	*pinfo = file->private_data;
+	struct ambsync_proc_pinfo	*pinfo = file->private_data;
 	struct proc_dir_entry		*dp;
-	struct amba_sync_proc_hinfo	*hinfo;
+	struct ambsync_proc_hinfo	*hinfo;
 
 	dp = PDE(inode);
-	hinfo = (struct amba_sync_proc_hinfo *)dp->data;
+	hinfo = (struct ambsync_proc_hinfo *)dp->data;
 	if (!hinfo) {
 		retval = -EPERM;
-		goto amba_sync_proc_release_exit;
+		goto ambsync_proc_release_exit;
 	}
 
 	if (!pinfo) {
 		retval = -ENOMEM;
-		goto amba_sync_proc_release_exit;
+		goto ambsync_proc_release_exit;
 	}
 
 	mutex_lock(&hinfo->sync_proc_lock);
@@ -145,38 +145,38 @@ int amba_sync_proc_release(struct inode *inode, struct file *file)
 	kfree(pinfo);
 	file->private_data = NULL;
 
-amba_sync_proc_release_exit:
+ambsync_proc_release_exit:
 	return retval;
 }
-EXPORT_SYMBOL(amba_sync_proc_release);
+EXPORT_SYMBOL(ambsync_proc_release);
 
 /* Note: ignore ppos*/
-ssize_t amba_sync_proc_read(struct file *file, char __user *buf,
+ssize_t ambsync_proc_read(struct file *file, char __user *buf,
 	size_t size, loff_t *ppos)
 {
 	int				retval = 0;
-	struct amba_sync_proc_pinfo	*pinfo = file->private_data;
+	struct ambsync_proc_pinfo	*pinfo = file->private_data;
 	struct proc_dir_entry		*dp;
-	struct amba_sync_proc_hinfo	*hinfo;
+	struct ambsync_proc_hinfo	*hinfo;
 	struct inode			*inode = file->f_path.dentry->d_inode;
 	char				*start;
 	int				len;
 	size_t				count;
 
 	dp = PDE(inode);
-	hinfo = (struct amba_sync_proc_hinfo *)dp->data;
+	hinfo = (struct ambsync_proc_hinfo *)dp->data;
 	if (!hinfo) {
 		retval = -EPERM;
-		goto amba_sync_proc_read_exit;
+		goto ambsync_proc_read_exit;
 	}
 	if (!hinfo->sync_read_proc) {
 		retval = -EPERM;
-		goto amba_sync_proc_read_exit;
+		goto ambsync_proc_read_exit;
 	}
 
 	if (!pinfo) {
 		retval = -ENOMEM;
-		goto amba_sync_proc_read_exit;
+		goto ambsync_proc_read_exit;
 	}
 
 	count = min_t(size_t, AMBA_SYNC_PROC_PAGE_SIZE, size);
@@ -211,8 +211,8 @@ ssize_t amba_sync_proc_read(struct file *file, char __user *buf,
 		}
 	}
 
-amba_sync_proc_read_exit:
+ambsync_proc_read_exit:
 	return retval;
 }
-EXPORT_SYMBOL(amba_sync_proc_read);
+EXPORT_SYMBOL(ambsync_proc_read);
 

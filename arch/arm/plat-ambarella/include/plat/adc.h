@@ -29,6 +29,11 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+enum ambarella_adc_mode{
+	AMBA_ADC_IRQ_MODE,
+	AMBA_ADC_POL_MODE
+};
+
 struct ambarella_adc_controller {
 	void				(*read_channels)(u32*, u32*);
 	u32				(*is_irq_supported)(void);
@@ -36,7 +41,11 @@ struct ambarella_adc_controller {
 	void				(*reset)(void);
 	void				(*stop)(void);
 	u32				(*get_channel_num)(void);
+
+	u32				scan_delay;
 };
+#define AMBA_ADC_PARAM_CALL(arg, perm) \
+	module_param_call(adc_scan_delay, param_set_int, param_get_int, &arg.scan_delay, perm)
 
 /* ==========================================================================*/
 extern struct platform_device		ambarella_adc0;

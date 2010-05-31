@@ -110,6 +110,12 @@ struct ambarella_board_info ambarella_board_generic = {
 		.reset_delay	= 1,
 		.resume_delay	= 1,
 	},
+	.lcd_reset	= {
+		.reset_gpio	= -1,
+		.reset_level	= GPIO_LOW,
+		.reset_delay	= 1,
+		.resume_delay	= 1,
+	},
 	.lcd_backlight	= {
 		.power_gpio	= -1,
 		.power_level	= GPIO_LOW,

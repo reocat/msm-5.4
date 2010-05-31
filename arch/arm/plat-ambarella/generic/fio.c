@@ -38,13 +38,13 @@
 
 /* ==========================================================================*/
 static DECLARE_WAIT_QUEUE_HEAD(fio_lock);
-static int fio_select_sdio_as_default = 0;
-static atomic_t fio_owner = ATOMIC_INIT(SELECT_FIO_FREE);
 
-module_param_call(fio_select_sdio_as_default, param_set_int, param_get_int,
-	&fio_select_sdio_as_default, 0644);
+static atomic_t fio_owner = ATOMIC_INIT(SELECT_FIO_FREE);
 module_param_call(fio_owner, param_set_int, param_get_int, &fio_owner, 0644);
 
+int fio_select_sdio_as_default = 0;
+module_param_call(fio_select_sdio_as_default, param_set_int, param_get_int,
+	&fio_select_sdio_as_default, 0644);
 /* ==========================================================================*/
 void fio_select_lock(int module)
 {

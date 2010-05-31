@@ -29,10 +29,24 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+enum ambarella_ir_protocol {
+	AMBA_IR_PROTOCOL_NEC = 0,
+	AMBA_IR_PROTOCOL_PANASONIC = 1,
+	AMBA_IR_PROTOCOL_SONY = 2,
+	AMBA_IR_PROTOCOL_PHILIPS = 3,
+	AMBA_IR_PROTOCOL_END
+};
+
 struct ambarella_ir_controller {
 	void					(*set_pll)(void);
 	u32					(*get_pll)(void);
+
+	int					protocol;
+	int					debug;
 };
+#define AMBA_IR_PARAM_CALL(arg, perm) \
+	module_param_call(ir_protocol, param_set_int, param_get_int, &arg.protocol, perm); \
+	module_param_call(ir_debug, param_set_int, param_get_int, &arg.debug, perm)
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_ir0;

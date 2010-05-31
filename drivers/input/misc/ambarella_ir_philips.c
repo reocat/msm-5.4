@@ -26,7 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 
-#include "ambarella_input.h"
+#include <plat/ambinput.h>
 
 /**
  * Shift-Coded Signals (RC-5)vary the order of pulse space to code the
@@ -64,7 +64,7 @@
 #define PHILIPS_SHC_DOB_CYC_UPBOUND	25	/* default 12~ 23 */
 #define PHILIPS_SHC_DOB_CYC_LOWBOUND	20
 
-static int ambarella_ir_shift_leader_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_philips_shift_leader_code(struct ambarella_ir_info *pinfo)
 {
 /**       |                 |                 |
  *     ---|--------+        +--------+        |
@@ -107,14 +107,14 @@ static int ambarella_ir_shift_leader_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
-static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_philips_find_head(struct ambarella_ir_info *pinfo)
 {
 	int i, val = 0;
 
 	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
 
 	while(i--) {
-		if(ambarella_ir_shift_leader_code(pinfo)) {
+		if(ambarella_ir_philips_shift_leader_code(pinfo)) {
 			ambi_dbg("find leader code, i [%d]\n", i);
 			val = 1;
 			break;
@@ -127,7 +127,7 @@ static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
 	return val ;
 }
 
-static int ambarella_ir_shift_invert_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_philips_shift_invert_code(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
@@ -138,7 +138,7 @@ static int ambarella_ir_shift_invert_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
-static int ambarella_ir_shift_repeat_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_philips_shift_repeat_code(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
@@ -156,7 +156,7 @@ static int ambarella_ir_shift_repeat_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
-static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
+static int ambarella_ir_philips_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 {
 	int i, val = 0;
 	u8 addr = 0, data = 0;
@@ -164,9 +164,9 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 	ambarella_ir_move_read_ptr(pinfo, 3);
 
 	/* Get toggle code and Initialize start value */
-	if (ambarella_ir_shift_invert_code(pinfo))
+	if (ambarella_ir_philips_shift_invert_code(pinfo))
 		val = 1;
-	else if (ambarella_ir_shift_repeat_code(pinfo))
+	else if (ambarella_ir_philips_shift_repeat_code(pinfo))
 		val = 0;
 	else {
 		ambi_dbg("Err->toggle code doesn't match");
@@ -177,9 +177,9 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 	/* address */
 	for (i = 0; i < 5; i++) {
-		if (ambarella_ir_shift_invert_code(pinfo)) {
+		if (ambarella_ir_philips_shift_invert_code(pinfo)) {
 			val = 1 - val;
-		} else if (ambarella_ir_shift_repeat_code(pinfo)) {
+		} else if (ambarella_ir_philips_shift_repeat_code(pinfo)) {
 		}else {
 			ambi_dbg("Err->addr code(%d) doesn't match", i);
 			return (-1);
@@ -190,9 +190,9 @@ static int ambarella_ir_shift_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 
 	/* data */
 	for (i = 0; i < 6; i++) {
-		if (ambarella_ir_shift_invert_code(pinfo)) {
+		if (ambarella_ir_philips_shift_invert_code(pinfo)) {
 			val = 1 - val;
-		} else if (ambarella_ir_shift_repeat_code(pinfo)) {
+		} else if (ambarella_ir_philips_shift_repeat_code(pinfo)) {
 		}else {
 			ambi_dbg("Err->data code(%d) doesn't match", i);
 			return (-1);
@@ -211,13 +211,13 @@ int ambarella_ir_philips_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	int				rval;
 	int				cur_ptr = pinfo->ir_pread;
 
-	if (ambarella_ir_find_head(pinfo)
+	if (ambarella_ir_philips_find_head(pinfo)
 		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
 		+ pinfo->frame_info.frame_head_size) {
 
 		ambi_dbg("go to decode statge\n");
 		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
-		rval = ambarella_ir_shift_decode(pinfo, uid);
+		rval = ambarella_ir_philips_shift_decode(pinfo, uid);
 	} else {
 		return -1;
 	}

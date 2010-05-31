@@ -26,7 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 
-#include "ambarella_input.h"
+#include <plat/ambinput.h>
 
 /**
  * Pulse-Width-Coded Signals vary the length of pulses to code the information.
@@ -97,7 +97,7 @@
 /**
  * Check the waveform data is leader code or not.
  */
-static int ambarella_ir_pulse_leader_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_nec_pulse_leader_code(struct ambarella_ir_info *pinfo)
 {
 	int				check_sam = 0;
 
@@ -135,14 +135,14 @@ static int ambarella_ir_pulse_leader_code(struct ambarella_ir_info *pinfo)
 	}
 }
 
-static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_nec_find_head(struct ambarella_ir_info *pinfo)
 {
 	int i, val = 0;
 
 	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
 
 	while(i--) {
-		if(ambarella_ir_pulse_leader_code(pinfo)) {
+		if(ambarella_ir_nec_pulse_leader_code(pinfo)) {
 			ambi_dbg("find leader code, i [%d]\n", i);
 			val = 1;
 			break;
@@ -157,7 +157,7 @@ static int ambarella_ir_find_head(struct ambarella_ir_info *pinfo)
 /**
  * Check the waveform data is subsequent code or not.
  */
-static int ambarella_ir_pulse_subsequent_code(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_nec_pulse_subsequent_code(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
@@ -180,14 +180,14 @@ static int ambarella_ir_pulse_subsequent_code(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
-static int ambarella_ir_find_subsequent(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_nec_find_subsequent(struct ambarella_ir_info *pinfo)
 {
 	int i, val = 0;
 
 	i = ambarella_ir_get_tick_size(pinfo) - pinfo->frame_info.frame_head_size + 1;
 
 	while(i--) {
-		if(ambarella_ir_pulse_subsequent_code(pinfo)) {
+		if(ambarella_ir_nec_pulse_subsequent_code(pinfo)) {
 			ambi_dbg("find leader code, i [%d]\n", i);
 			val = 1;
 			break;
@@ -203,7 +203,7 @@ static int ambarella_ir_find_subsequent(struct ambarella_ir_info *pinfo)
 /**
  * Check the waveform data is 0 bit or not.
  */
-static int ambarella_ir_pulse_code_0(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_nec_pulse_code_0(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 	if ((val < NEC_DATA_LOW_UPBOUND)  &&
@@ -228,7 +228,7 @@ static int ambarella_ir_pulse_code_0(struct ambarella_ir_info *pinfo)
 /**
  * Check the waveform data is 1 bit or not.
  */
-static int ambarella_ir_pulse_code_1(struct ambarella_ir_info *pinfo)
+static int ambarella_ir_nec_pulse_code_1(struct ambarella_ir_info *pinfo)
 {
 	u16 val = ambarella_ir_read_data(pinfo, pinfo->ir_pread);
 
@@ -251,15 +251,15 @@ static int ambarella_ir_pulse_code_1(struct ambarella_ir_info *pinfo)
 		return 0;
 }
 
-static int ambarella_ir_pulse_data_translate(struct ambarella_ir_info *pinfo, u8 * data)
+static int ambarella_ir_nec_pulse_data_translate(struct ambarella_ir_info *pinfo, u8 * data)
 {
 	int i;
 	*data = 0;
 
 	for (i = 7; i >= 0; i--) {
-		if (ambarella_ir_pulse_code_0(pinfo)) {
+		if (ambarella_ir_nec_pulse_code_0(pinfo)) {
 
-		} else if (ambarella_ir_pulse_code_1(pinfo)) {
+		} else if (ambarella_ir_nec_pulse_code_1(pinfo)) {
 			*data |= 1 << i;
 		} else {
 			ambi_dbg("%d ERROR, the waveform can't match\n", i);
@@ -271,7 +271,7 @@ static int ambarella_ir_pulse_data_translate(struct ambarella_ir_info *pinfo, u8
 	return 0;
 }
 
-static int ambarella_ir_pulse_decode(struct ambarella_ir_info *pinfo, u32 *uid)
+static int ambarella_ir_nec_pulse_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 {
 	u8 addr = 0, inv_addr = 0, data = 0, inv_data = 0;
 	int rval;
@@ -279,22 +279,22 @@ static int ambarella_ir_pulse_decode(struct ambarella_ir_info *pinfo, u32 *uid)
 	/* Then follows 32 bits of data, broken down in 4 bytes of 8 bits. */
 
 	/* The first 8 bits is the Address. */
-	rval = ambarella_ir_pulse_data_translate(pinfo, &addr);
+	rval = ambarella_ir_nec_pulse_data_translate(pinfo, &addr);
 	if (rval < 0)
 		return rval;
 
 	/* The second 8 bits is the Address Complement. */
-	rval = ambarella_ir_pulse_data_translate(pinfo, &inv_addr);
+	rval = ambarella_ir_nec_pulse_data_translate(pinfo, &inv_addr);
 	if (rval < 0)
 		return rval;
 
 	/* The third 8 bits is the data. */
-	rval = ambarella_ir_pulse_data_translate(pinfo, &data);
+	rval = ambarella_ir_nec_pulse_data_translate(pinfo, &data);
 	if (rval < 0)
 		return rval;
 
 	/* The fourth 8 bits is the data Complement. */
-	rval = ambarella_ir_pulse_data_translate(pinfo, &inv_data);
+	rval = ambarella_ir_nec_pulse_data_translate(pinfo, &inv_data);
 	if (rval < 0)
 		return rval;
 
@@ -311,13 +311,13 @@ int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	int				rval;
 	int				cur_ptr = pinfo->ir_pread;
 
-	if ((ambarella_ir_find_head(pinfo) || (ambarella_ir_find_subsequent(pinfo)))
+	if ((ambarella_ir_nec_find_head(pinfo) || (ambarella_ir_nec_find_subsequent(pinfo)))
 		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
 		+ pinfo->frame_info.frame_head_size) {
 
 		ambi_dbg("go to decode statge\n");
 		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
-		rval = ambarella_ir_pulse_decode(pinfo, uid);
+		rval = ambarella_ir_nec_pulse_decode(pinfo, uid);
 	} else {
 		return -1;
 	}
@@ -332,9 +332,9 @@ int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 
 void ambarella_ir_get_nec_info(struct ambarella_ir_frame_info *pframe_info)
 {
-	pframe_info->frame_head_size 	= 2;
-	pframe_info->frame_data_size 	= 64;
-	pframe_info->frame_end_size	= 1;
-	pframe_info->frame_repeat_head_size	= 4;
+	pframe_info->frame_head_size = 2;
+	pframe_info->frame_data_size = 64;
+	pframe_info->frame_end_size = 1;
+	pframe_info->frame_repeat_head_size = 4;
 }
 
