@@ -42,6 +42,7 @@ struct ambarella_board_info {
 
 	struct ambarella_gpio_irq_info		tp_irq;
 	struct ambarella_gpio_reset_info	tp_reset;
+	struct ambarella_gpio_reset_info	lcd_reset;
 	struct ambarella_gpio_power_info	lcd_backlight;
 
 	struct ambarella_gpio_irq_info		vin_vsync;
@@ -61,6 +62,7 @@ struct ambarella_board_info {
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##audio_microphone_, arg.audio_microphone, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##touch_panel_, arg.tp_irq, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##touch_panel_, arg.tp_reset, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##lcd_, arg.tp_reset, perm); \
 	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##lcd_backlight_, arg.lcd_backlight, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_vsync_, arg.vin_vsync, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##flash_charge_ready_, arg.flash_charge_ready, perm); \

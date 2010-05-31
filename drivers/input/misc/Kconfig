@@ -227,23 +227,23 @@ config INPUT_PCF50633_PMU
 	 Say Y to include support for delivering  PMU events via  input
 	 layer on NXP PCF50633.
 
-menuconfig INPUT_AMBARELLA
-	tristate "Ambarella general input"
-	depends on ARM && ARCH_AMBARELLA
+config INPUT_AMBARELLA
+	tristate "Ambarella Input"
+	depends on ARM && PLAT_AMBARELLA
 	default n
 	help
-	  Ambarella general input. It can support IR, ADC and GPIO. GPIO is
-	  default, IR and ADC need be selected.
+	  Ambarella general input. It can support Virtual input from proc,
+	  IR, ADC and GPIO. ambvi is default, GPIO, IR and ADC need config.
 
 config INPUT_AMBARELLA_IR
-	bool "Ambarella ir input"
+	bool "Support Ambarella Soc IR"
 	depends on INPUT_AMBARELLA
 	default n
 	help
 	  Ambarella ir input.
 
 config INPUT_AMBARELLA_ADC
-	bool "Ambarella adc input"
+	bool "Support Ambarella Soc ADC"
 	depends on INPUT_AMBARELLA
 	default n
 	help

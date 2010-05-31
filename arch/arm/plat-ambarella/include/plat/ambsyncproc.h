@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/include/plat/sync_proc.h
+ * arch/arm/plat-ambarella/include/plat/ambync_proc.h
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -31,31 +31,31 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-typedef	int(sync_read_proc_t)(char *start, void *data);
+typedef	int(ambsync_read_proc_t)(char *start, void *data);
 
-struct amba_sync_proc_pinfo {
+struct ambsync_proc_pinfo {
 	u32					id;
 	u32					mask;
 	char					*page;
 };
 
-struct amba_sync_proc_hinfo {
+struct ambsync_proc_hinfo {
 	u32					maxid;
 	wait_queue_head_t			sync_proc_head;
 	atomic_t				sync_proc_flag;
 	struct idr				sync_proc_idr;
 	struct mutex				sync_proc_lock;
-	sync_read_proc_t			*sync_read_proc;
+	ambsync_read_proc_t			*sync_read_proc;
 	void					*sync_read_data;
 };
 
 /* ==========================================================================*/
 
 /* ==========================================================================*/
-extern int amba_sync_proc_hinit(struct amba_sync_proc_hinfo *hinfo);
-extern int amba_sync_proc_open(struct inode *inode, struct file *file);
-extern int amba_sync_proc_release(struct inode *inode, struct file *file);
-extern ssize_t amba_sync_proc_read(struct file *file, char __user *buf, size_t size, loff_t *ppos);
+extern int ambsync_proc_hinit(struct ambsync_proc_hinfo *hinfo);
+extern int ambsync_proc_open(struct inode *inode, struct file *file);
+extern int ambsync_proc_release(struct inode *inode, struct file *file);
+extern ssize_t ambsync_proc_read(struct file *file, char __user *buf, size_t size, loff_t *ppos);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

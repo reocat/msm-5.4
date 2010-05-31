@@ -61,3 +61,7 @@ AMBA_SPI_PARAM_CALL(0, ambarella_spi0_cs_pins, 0644);
 AMBA_SPI_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 #endif
 
+AMBA_IR_PARAM_CALL(ambarella_platform_ir_controller0, 0644);
+
+AMBA_ADC_PARAM_CALL(ambarella_platform_adc_controller0, 0644);
+

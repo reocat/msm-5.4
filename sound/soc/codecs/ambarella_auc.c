@@ -46,6 +46,7 @@
 #include <sound/soc-dapm.h>
 
 #include <mach/hardware.h>
+#include <plat/audio.h>
 
 #include "ambarella_auc.h"
 

@@ -70,3 +70,9 @@ extern struct ambarella_sd_controller ambarella_platform_sd_controller1;
 extern int ambarella_spi0_cs_pins[];
 extern int ambarella_spi1_cs_pins[];
 
+extern int fio_select_sdio_as_default;
+
+extern struct ambarella_ir_controller ambarella_platform_ir_controller0;
+
+extern struct ambarella_adc_controller ambarella_platform_adc_controller0;
+

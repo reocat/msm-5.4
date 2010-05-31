@@ -47,15 +47,6 @@ obj-y	+= generic/uart.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO)	+= generic/crypto.o
 endif
 
-
-
-
-
-
-
-
-
-
-
 obj-y	+= video/ambfb.o
-obj-y	+= misc/sync_proc.o
+obj-y	+= misc/ambsyncproc.o
+

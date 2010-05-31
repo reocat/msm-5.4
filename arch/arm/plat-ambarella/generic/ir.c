@@ -48,9 +48,12 @@ struct resource ambarella_ir_resources[] = {
 	},
 };
 
-static struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
+struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
 	.set_pll		= rct_set_ir_pll,
 	.get_pll		= get_ir_freq_hz,
+
+	.protocol		= AMBA_IR_PROTOCOL_NEC,
+	.debug			= 0,
 };
 
 struct platform_device ambarella_ir0 = {

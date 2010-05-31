@@ -330,16 +330,18 @@ u32 ambarella_adc_resume(u32 level)
 }
 
 /* ==========================================================================*/
-static struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
-	.read_channels = ambarella_adc_get_array,
-	.is_irq_supported = adc_is_irq_supported,
-	.set_irq_threshold = adc_set_irq_threshold,
-	.reset = ambarella_adc_start,
-	.stop = ambarella_adc_stop,
-	.get_channel_num = ambarella_adc_get_instances,
+struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
+	.read_channels		= ambarella_adc_get_array,
+	.is_irq_supported	= adc_is_irq_supported,
+	.set_irq_threshold	= adc_set_irq_threshold,
+	.reset			= ambarella_adc_start,
+	.stop			= ambarella_adc_stop,
+	.get_channel_num	= ambarella_adc_get_instances,
+
+	.scan_delay		= 20,
 };
 
-static struct resource ambarella_adc_resources[] = {
+struct resource ambarella_adc_resources[] = {
 	[0] = {
 		.start	= ADC_BASE,
 		.end	= ADC_BASE + 0x0FFF,
