@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.29
-# Wed May 26 11:05:05 2010
+# Tue Jun  1 17:19:28 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -206,7 +206,7 @@ CONFIG_AMBARELLA_INITRD_PHYS=0xC0A00000
 #
 CONFIG_MACH_AMBARELLA=y
 CONFIG_MACH_COCONUT=y
-# CONFIG_MACH_DURIAN is not set
+CONFIG_MACH_DURIAN=y
 
 #
 # Misc Configuration
@@ -762,7 +762,6 @@ CONFIG_I2C_AMBARELLA=y
 # CONFIG_DS1682 is not set
 # CONFIG_SENSORS_PCF8574 is not set
 # CONFIG_PCF8575 is not set
-# CONFIG_SENSORS_PCA9539 is not set
 # CONFIG_SENSORS_PCF8591 is not set
 # CONFIG_SENSORS_MAX6875 is not set
 # CONFIG_SENSORS_TSL2550 is not set

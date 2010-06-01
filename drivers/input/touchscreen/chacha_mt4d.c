@@ -66,7 +66,7 @@ static inline int chacha_mt4d_calibrate(struct chacha_mt4d *cm)
 	u8			buf[4];
 
 	msg.addr = cm->client->addr;
-	msg.flags = 0;
+	msg.flags = cm->client->flags;
 	msg.len = 4;
 	buf[0] = 0x13;
 	buf[1] = 0x01;
@@ -89,7 +89,7 @@ static inline int chacha_mt4d_read_all(struct chacha_mt4d *cm)
 	int			errorCode;
 
 	msg.addr = cm->client->addr;
-	msg.flags = I2C_M_RD;
+	msg.flags = I2C_M_RD | cm->client->flags;
 	msg.len = NUM_DATA;
 	msg.buf = cm->reg_data;
 

@@ -119,7 +119,7 @@ static struct spi_board_info ambarella_spi_devices[] = {
 };
 
 /* ==========================================================================*/
-static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
+static struct ambarella_key_table durian_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
@@ -153,8 +153,8 @@ static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_END}
 };
 
-static struct ambarella_input_board_info coconut_board_input_info = {
-	.pkeymap		= coconut_keymap,
+static struct ambarella_input_board_info durian_board_input_info = {
+	.pkeymap		= durian_keymap,
 	.pinput_dev		= NULL,
 	.pdev			= NULL,
 
@@ -164,24 +164,24 @@ static struct ambarella_input_board_info coconut_board_input_info = {
 	.abx_max_width		= 16,
 };
 
-static struct platform_device coconut_board_input = {
+static struct platform_device durian_board_input = {
 	.name		= "ambarella-input",
 	.id		= -1,
 	.resource	= NULL,
 	.num_resources	= 0,
 	.dev		= {
-		.platform_data		= &coconut_board_input_info,
+		.platform_data		= &durian_board_input_info,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_32BIT_MASK,
 	}
 };
 
 /* ==========================================================================*/
-static void __init ambarella_init_coconut(void)
+static void __init ambarella_init_durian(void)
 {
 	int					i;
 
-	ambarella_init_machine("Coconut");
+	ambarella_init_machine("Durian");
 
 	/* Config Board*/
 	ambarella_board_generic.power_detect.irq_gpio = GPIO(11);
@@ -202,7 +202,7 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.rs485.active_level = GPIO_LOW;
 	ambarella_board_generic.rs485.active_delay = 1;
 
-	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
+	ambarella_board_generic.audio_reset.gpio_id = -1;
 	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.audio_reset.active_delay = 1;
 
@@ -218,8 +218,8 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.audio_microphone.active_level = GPIO_LOW;
 	ambarella_board_generic.audio_microphone.active_delay = 1;
 
-	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
-	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
+	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(12);
+	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(12);
 	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
@@ -228,15 +228,15 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.touch_panel_reset.active_delay = 1;
 
-	ambarella_board_generic.lcd_reset.gpio_id = -1;
+	ambarella_board_generic.lcd_reset.gpio_id = GPIO(28);
 	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.lcd_reset.active_delay = 1;
 
-	if (AMBARELLA_BOARD_REV(system_rev) > 10) {
-		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
-	} else {
-		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(45);
-	}
+	ambarella_board_generic.lcd_power.gpio_id = GPIO(38);
+	ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
+	ambarella_board_generic.lcd_power.active_delay = 1;
+
+	ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
 	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
 	ambarella_board_generic.lcd_backlight.active_delay = 1;
 
@@ -287,30 +287,22 @@ static void __init ambarella_init_coconut(void)
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
-	ambarella_ak4183_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
-
 	ambarella_chacha_mt4d_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_chacha_mt4d_board_info.flags = 0;
+	ambarella_chacha_mt4d_board_info.flags = I2C_M_PIN_MUXING;
 	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
 
-	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
-		i2c_register_board_info(0, &ambarella_isl12022m_board_info, 1);
-	}
-
-	platform_device_register(&coconut_board_input);
+	platform_device_register(&durian_board_input);
 }
 
 /* ==========================================================================*/
-MACHINE_START(COCONUT, "Ambarella Coconut")
+MACHINE_START(DURIAN, "Ambarella Durian")
 	.phys_io	= AHB_START,
 	.io_pg_offst	= ((AHB_BASE) >> 18) & 0xfffc,
 	.map_io		= ambarella_map_io,
 	.init_irq	= ambarella_init_irq,
 	.timer		= &ambarella_timer,
-	.init_machine	= ambarella_init_coconut,
+	.init_machine	= ambarella_init_durian,
 	.boot_params	= CONFIG_AMBARELLA_PARAMS_PHYS,
 MACHINE_END
 
