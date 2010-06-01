@@ -42,7 +42,8 @@
 /* ==========================================================================*/
 static int ambarella_chacha_mt4d_get_pendown_state(void)
 {
-	if (ambarella_gpio_get(ambarella_board_generic.tp_irq.irq_gpio))
+	if (ambarella_gpio_get(
+		ambarella_board_generic.touch_panel_irq.irq_gpio))
 		return 0;
 	else
 		return 1;
@@ -50,25 +51,20 @@ static int ambarella_chacha_mt4d_get_pendown_state(void)
 
 static void ambarella_chacha_mt4d_clear_penirq(void)
 {
-	ambarella_gpio_ack_irq(ambarella_board_generic.tp_irq.irq_line);
+	ambarella_gpio_ack_irq(
+		ambarella_board_generic.touch_panel_irq.irq_line);
 }
 
 static int ambarella_chacha_mt4d_init_platform_hw(void)
 {
-	ambarella_gpio_config(ambarella_board_generic.tp_irq.irq_gpio,
-		ambarella_board_generic.tp_irq.irq_gpio_mode);
-	set_irq_type(ambarella_board_generic.tp_irq.irq_line,
-		ambarella_board_generic.tp_irq.irq_type);
-	ambarella_gpio_ack_irq(ambarella_board_generic.tp_irq.irq_line);
+	ambarella_gpio_config(ambarella_board_generic.touch_panel_irq.irq_gpio,
+		ambarella_board_generic.touch_panel_irq.irq_gpio_mode);
+	set_irq_type(ambarella_board_generic.touch_panel_irq.irq_line,
+		ambarella_board_generic.touch_panel_irq.irq_type);
+	ambarella_gpio_ack_irq(
+		ambarella_board_generic.touch_panel_irq.irq_line);
 
-	ambarella_gpio_config(ambarella_board_generic.tp_reset.reset_gpio,
-		GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_set(ambarella_board_generic.tp_reset.reset_gpio,
-		ambarella_board_generic.tp_reset.reset_level);
-	msleep(ambarella_board_generic.tp_reset.reset_delay);
-	ambarella_gpio_set(ambarella_board_generic.tp_reset.reset_gpio,
-		~ambarella_board_generic.tp_reset.reset_level);
-	msleep(ambarella_board_generic.tp_reset.reset_delay);
+	ambarella_set_gpio_reset(&ambarella_board_generic.touch_panel_reset);
 
 	return 0;
 }

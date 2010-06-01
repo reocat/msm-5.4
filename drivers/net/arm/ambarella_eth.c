@@ -445,11 +445,11 @@ static int ambhw_mdio_reset(struct mii_bus *bus)
 	if (netif_msg_hw(lp))
 		dev_info(&lp->ndev->dev, "%s: power gpio = %d, "
 		"reset gpio = %d, !\n", __func__,
-		lp->platform_info.mii_power.power_gpio,
-		lp->platform_info.mii_reset.reset_gpio);
+		lp->platform_info.mii_power.gpio_id,
+		lp->platform_info.mii_reset.gpio_id);
 
-	ambarella_set_gpio_power(&lp->platform_info.mii_power, 0);
-	ambarella_set_gpio_power(&lp->platform_info.mii_power, 1);
+	ambarella_set_gpio_output(&lp->platform_info.mii_power, 0);
+	ambarella_set_gpio_output(&lp->platform_info.mii_power, 1);
 
 	ambarella_set_gpio_reset(&lp->platform_info.mii_reset);
 
@@ -1687,8 +1687,8 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 		NETIF_MSG_PROBE | NETIF_MSG_LINK |
 		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR);
 
-	gpio_request(lp->platform_info.mii_power.power_gpio, pdev->name);
-	gpio_request(lp->platform_info.mii_reset.reset_gpio, pdev->name);
+	gpio_request(lp->platform_info.mii_power.gpio_id, pdev->name);
+	gpio_request(lp->platform_info.mii_reset.gpio_id, pdev->name);
 
 	lp->new_bus.name = "Ambarella MII Bus",
 	lp->new_bus.read = &ambhw_mdio_read,
@@ -1795,8 +1795,8 @@ static int __devexit ambeth_drv_remove(struct platform_device *pdev)
 
 		unregister_netdev(ndev);
 		netif_napi_del(&lp->napi);
-		gpio_free(lp->platform_info.mii_power.power_gpio);
-		gpio_free(lp->platform_info.mii_reset.reset_gpio);
+		gpio_free(lp->platform_info.mii_power.gpio_id);
+		gpio_free(lp->platform_info.mii_reset.gpio_id);
 		mdiobus_unregister(&lp->new_bus);
 		kfree(lp->new_bus.irq);
 		free_netdev(ndev);

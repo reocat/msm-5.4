@@ -190,58 +190,55 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
 	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-	ambarella_board_generic.power_control.power_gpio = -1;
-	ambarella_board_generic.power_control.power_level = GPIO_LOW;
-	ambarella_board_generic.power_control.power_delay = 1;
+	ambarella_board_generic.power_control.gpio_id = -1;
+	ambarella_board_generic.power_control.active_level = GPIO_LOW;
+	ambarella_board_generic.power_control.active_delay = 1;
 
-	ambarella_board_generic.debug_led0.power_gpio = GPIO(83);
-	ambarella_board_generic.debug_led0.power_level = GPIO_LOW;
-	ambarella_board_generic.debug_led0.power_delay = 0;
+	ambarella_board_generic.debug_led0.gpio_id = GPIO(83);
+	ambarella_board_generic.debug_led0.active_level = GPIO_LOW;
+	ambarella_board_generic.debug_led0.active_delay = 0;
 
-	ambarella_board_generic.rs485.power_gpio = GPIO(31);
-	ambarella_board_generic.rs485.power_level = GPIO_LOW;
-	ambarella_board_generic.rs485.power_delay = 1;
+	ambarella_board_generic.rs485.gpio_id = GPIO(31);
+	ambarella_board_generic.rs485.active_level = GPIO_LOW;
+	ambarella_board_generic.rs485.active_delay = 1;
 
-	ambarella_board_generic.audio_codec.reset_gpio = GPIO(12);
-	ambarella_board_generic.audio_codec.reset_level = GPIO_LOW;
-	ambarella_board_generic.audio_codec.reset_delay = 1;
-	ambarella_board_generic.audio_codec.resume_delay = 1;
+	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
+	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.audio_reset.active_delay = 1;
 
-	ambarella_board_generic.audio_speaker.power_gpio = -1;
-	ambarella_board_generic.audio_speaker.power_level = GPIO_LOW;
-	ambarella_board_generic.audio_speaker.power_delay = 1;
+	ambarella_board_generic.audio_speaker.gpio_id = -1;
+	ambarella_board_generic.audio_speaker.active_level = GPIO_LOW;
+	ambarella_board_generic.audio_speaker.active_delay = 1;
 
-	ambarella_board_generic.audio_headphone.power_gpio = -1;
-	ambarella_board_generic.audio_headphone.power_level = GPIO_LOW;
-	ambarella_board_generic.audio_headphone.power_delay = 1;
+	ambarella_board_generic.audio_headphone.gpio_id = -1;
+	ambarella_board_generic.audio_headphone.active_level = GPIO_LOW;
+	ambarella_board_generic.audio_headphone.active_delay = 1;
 
-	ambarella_board_generic.audio_microphone.power_gpio = -1;
-	ambarella_board_generic.audio_microphone.power_level = GPIO_LOW;
-	ambarella_board_generic.audio_microphone.power_delay = 1;
+	ambarella_board_generic.audio_microphone.gpio_id = -1;
+	ambarella_board_generic.audio_microphone.active_level = GPIO_LOW;
+	ambarella_board_generic.audio_microphone.active_delay = 1;
 
-	ambarella_board_generic.tp_irq.irq_gpio = GPIO(84);
-	ambarella_board_generic.tp_irq.irq_line = gpio_to_irq(84);
-	ambarella_board_generic.tp_irq.irq_type = IRQF_TRIGGER_FALLING;
-	ambarella_board_generic.tp_irq.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.tp_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
+	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
+	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-	ambarella_board_generic.tp_reset.reset_gpio = -1;
-	ambarella_board_generic.tp_reset.reset_level = GPIO_LOW;
-	ambarella_board_generic.tp_reset.reset_delay = 1;
-	ambarella_board_generic.tp_reset.resume_delay = 1;
+	ambarella_board_generic.touch_panel_reset.gpio_id = -1;
+	ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.touch_panel_reset.active_delay = 1;
 
-	ambarella_board_generic.lcd_reset.reset_gpio = -1;
-	ambarella_board_generic.lcd_reset.reset_level = GPIO_LOW;
-	ambarella_board_generic.lcd_reset.reset_delay = 1;
-	ambarella_board_generic.lcd_reset.resume_delay = 1;
+	ambarella_board_generic.lcd_reset.gpio_id = -1;
+	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.lcd_reset.active_delay = 1;
 
 	if (AMBARELLA_BOARD_REV(system_rev) > 10) {
-		ambarella_board_generic.lcd_backlight.power_gpio = GPIO(85);
+		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
 	} else {
-		ambarella_board_generic.lcd_backlight.power_gpio = GPIO(45);
+		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(45);
 	}
-	ambarella_board_generic.lcd_backlight.power_level = GPIO_HIGH;
-	ambarella_board_generic.lcd_backlight.power_delay = 1;
+	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
+	ambarella_board_generic.lcd_backlight.active_delay = 1;
 
 	ambarella_board_generic.vin_vsync.irq_gpio = GPIO(95);
 	ambarella_board_generic.vin_vsync.irq_line = gpio_to_irq(95);
@@ -255,30 +252,30 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.flash_charge_ready.irq_gpio_val = GPIO_HIGH;
 	ambarella_board_generic.flash_charge_ready.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-	ambarella_board_generic.flash_trigger.power_gpio = GPIO(46);
-	ambarella_board_generic.flash_trigger.power_level = GPIO_LOW;
-	ambarella_board_generic.flash_trigger.power_delay = 1;
+	ambarella_board_generic.flash_trigger.gpio_id = GPIO(46);
+	ambarella_board_generic.flash_trigger.active_level = GPIO_LOW;
+	ambarella_board_generic.flash_trigger.active_delay = 1;
 
-	ambarella_board_generic.flash_enable.power_gpio = GPIO(82);
-	ambarella_board_generic.flash_enable.power_level = GPIO_LOW;
-	ambarella_board_generic.flash_enable.power_delay = 1;
+	ambarella_board_generic.flash_enable.gpio_id = GPIO(82);
+	ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
+	ambarella_board_generic.flash_enable.active_delay = 1;
 
 	/* Config ETH*/
-	ambarella_eth0_platform_info.mii_reset.reset_gpio = GPIO(7);
+	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
 
 	/* Config SD*/
 	fio_select_sdio_as_default = 1;
 	ambarella_platform_sd_controller0.clk_limit = 25000000;
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[0].bounce_buffer = 1;
-	ambarella_platform_sd_controller0.slot[1].ext_power.power_gpio = GPIO(54);
-	ambarella_platform_sd_controller0.slot[1].ext_power.power_level = GPIO_HIGH;
-	ambarella_platform_sd_controller0.slot[1].ext_power.power_delay = 300;
+	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
+	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
 	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.input_gpio = GPIO(76);
+	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
 
 	/* Register devices*/
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
@@ -291,7 +288,7 @@ static void __init ambarella_init_coconut(void)
 		ARRAY_SIZE(ambarella_spi_devices));
 
 	ambarella_ak4183_board_info.irq =
-		ambarella_board_generic.tp_irq.irq_line;
+		ambarella_board_generic.touch_panel_irq.irq_line;
 	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
 
 	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {

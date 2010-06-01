@@ -73,9 +73,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.request	= fio_amb_sd0_slot1_request,
 		.release	= fio_amb_sd0_slot1_release,
 		.ext_power	= {
-			.power_gpio	= -1,
-			.power_level	= GPIO_LOW,
-			.power_delay	= 1,
+			.gpio_id	= -1,
+			.active_level	= GPIO_LOW,
+			.active_delay	= 1,
 		},
 		.bounce_buffer	= 0,
 #if (SD_HAS_INTERNAL_MUXER == 1)
@@ -97,9 +97,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #endif
 		.cd_delay	= 50,
 		.gpio_wp	= {
-			.input_gpio	= -1,
-			.input_level	= GPIO_LOW,
-			.input_delay	= 1,
+			.gpio_id	= -1,
+			.active_level	= GPIO_LOW,
+			.active_delay	= 1,
 		},
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
@@ -108,9 +108,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.request	= fio_amb_sd0_slot2_request,
 		.release	= fio_amb_sd0_slot2_release,
 		.ext_power	= {
-			.power_gpio	= -1,
-			.power_level	= GPIO_LOW,
-			.power_delay	= 1,
+			.gpio_id	= -1,
+			.active_level	= GPIO_LOW,
+			.active_delay	= 1,
 		},
 		.bounce_buffer	= 0,
 		.gpio_cd	= {
@@ -122,9 +122,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 		.cd_delay	= 50,
 		.gpio_wp	= {
-			.input_gpio	= -1,
-			.input_level	= GPIO_LOW,
-			.input_delay	= 1,
+			.gpio_id	= -1,
+			.active_level	= GPIO_LOW,
+			.active_delay	= 1,
 		},
 	},
 	.num_slots		= 2,
@@ -185,9 +185,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		.request	= fio_amb_sd2_request,
 		.release	= fio_amb_sd2_release,
 		.ext_power	= {
-			.power_gpio	= -1,
-			.power_level	= GPIO_LOW,
-			.power_delay	= 1,
+			.gpio_id	= -1,
+			.active_level	= GPIO_LOW,
+			.active_delay	= 1,
 		},
 		.bounce_buffer	= 0,
 		.gpio_cd	= {
@@ -199,9 +199,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		},
 		.cd_delay	= 50,
 		.gpio_wp	= {
-			.input_gpio	= -1,
-			.input_level	= GPIO_LOW,
-			.input_delay	= 1,
+			.gpio_id	= -1,
+			.active_level	= GPIO_LOW,
+			.active_delay	= 1,
 		},
 	},
 	.num_slots		= 1,

@@ -26,6 +26,7 @@
 #ifndef __ASM_ARCH_GPIO_H
 #define __ASM_ARCH_GPIO_H
 
+#include <mach/hardware.h>
 #include <plat/gpio.h>
 
 #endif

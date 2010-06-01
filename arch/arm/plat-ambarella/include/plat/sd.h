@@ -34,11 +34,11 @@ struct ambarella_sd_slot {
 	int					(*check_owner)(void);
 	void					(*request)(void);
 	void					(*release)(void);
-	struct ambarella_gpio_power_info	ext_power;
+	struct ambarella_gpio_io_info		ext_power;
 	u32					bounce_buffer;
 	struct ambarella_gpio_irq_info		gpio_cd;
 	int					cd_delay;	//jiffies
-	struct ambarella_gpio_input_info	gpio_wp;
+	struct ambarella_gpio_io_info		gpio_wp;
 };
 
 struct ambarella_sd_controller {
@@ -55,9 +55,9 @@ struct ambarella_sd_controller {
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, perm) \
 	module_param_call(sd##controller_id##_slot##slot_id##_use_bounce_buffer, param_set_int, param_get_int, &(arg.slot[slot_id].bounce_buffer), perm); \
 	module_param_call(sd##controller_id##_slot##slot_id##_cd_delay, param_set_int, param_get_int, &(arg.slot[slot_id].cd_delay), perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_, arg.slot[slot_id].ext_power, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_, arg.slot[slot_id].ext_power, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_cd_, arg.slot[slot_id].gpio_cd, perm); \
-	AMBA_GPIO_INPUT_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_wp_, arg.slot[slot_id].gpio_wp, perm)
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_wp_, arg.slot[slot_id].gpio_wp, perm)
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_sd0;

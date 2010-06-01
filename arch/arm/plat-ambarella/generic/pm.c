@@ -37,8 +37,8 @@
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
-	if (ambarella_board_generic.power_control.power_gpio >= 0) {
-		ambarella_set_gpio_power(
+	if (ambarella_board_generic.power_control.gpio_id >= 0) {
+		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 0);
 	} else {
 		rct_power_down();

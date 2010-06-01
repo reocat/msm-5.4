@@ -31,43 +31,107 @@
 
 struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		power_detect;
-	struct ambarella_gpio_power_info	power_control;
-	struct ambarella_gpio_power_info	debug_led0;
-	struct ambarella_gpio_power_info	rs485;
+	struct ambarella_gpio_io_info		power_control;
+	struct ambarella_gpio_io_info		debug_led0;
+	struct ambarella_gpio_io_info		rs485;
 
-	struct ambarella_gpio_reset_info	audio_codec;
-	struct ambarella_gpio_power_info	audio_speaker;
-	struct ambarella_gpio_power_info	audio_headphone;
-	struct ambarella_gpio_power_info	audio_microphone;
+	struct ambarella_gpio_irq_info		audio_irq;
+	struct ambarella_gpio_io_info		audio_power;
+	struct ambarella_gpio_io_info		audio_reset;
+	struct ambarella_gpio_io_info		audio_speaker;
+	struct ambarella_gpio_io_info		audio_headphone;
+	struct ambarella_gpio_io_info		audio_microphone;
 
-	struct ambarella_gpio_irq_info		tp_irq;
-	struct ambarella_gpio_reset_info	tp_reset;
-	struct ambarella_gpio_reset_info	lcd_reset;
-	struct ambarella_gpio_power_info	lcd_backlight;
+	struct ambarella_gpio_irq_info		touch_panel_irq;
+	struct ambarella_gpio_io_info		touch_panel_power;
+	struct ambarella_gpio_io_info		touch_panel_reset;
+
+	struct ambarella_gpio_irq_info		lcd_irq;
+	struct ambarella_gpio_io_info		lcd_power;
+	struct ambarella_gpio_io_info		lcd_reset;
+	struct ambarella_gpio_io_info		lcd_backlight;
 
 	struct ambarella_gpio_irq_info		vin_vsync;
+	struct ambarella_gpio_io_info		vin_power;
+	struct ambarella_gpio_io_info		vin_reset;
+	struct ambarella_gpio_io_info		vin_trigger;
+	struct ambarella_gpio_io_info		vin_strobe;
 
 	struct ambarella_gpio_irq_info		flash_charge_ready;
-	struct ambarella_gpio_power_info	flash_trigger;
-	struct ambarella_gpio_power_info	flash_enable;
+	struct ambarella_gpio_io_info		flash_enable;
+	struct ambarella_gpio_io_info		flash_trigger;
+
+	struct ambarella_gpio_irq_info		avplug_detect;
+
+	struct ambarella_gpio_io_info		hdmi_extpower;
+
+	struct ambarella_gpio_irq_info		gps_irq;
+	struct ambarella_gpio_io_info		gps_power;
+	struct ambarella_gpio_io_info		gps_reset;
+	struct ambarella_gpio_io_info		gps_wakeup;
+
+	struct ambarella_gpio_irq_info		lens_irq;
+	struct ambarella_gpio_io_info		lens_power;
+	struct ambarella_gpio_io_info		lens_reset;
+
+	struct ambarella_gpio_irq_info		gyro_irq;
+	struct ambarella_gpio_io_info		gyro_power;
+	struct ambarella_gpio_io_info		gyro_reset;
+	struct ambarella_gpio_io_info		gyro_hps;
+
+	struct ambarella_gpio_irq_info		fm_irq;
+	struct ambarella_gpio_io_info		fm_power;
+	struct ambarella_gpio_io_info		fm_reset;
+
+	struct ambarella_gpio_irq_info		gsensor_irq;
+	struct ambarella_gpio_io_info		gsensor_power;
+	struct ambarella_gpio_io_info		gsensor_reset;
 };
 #define AMBA_BOARD_CALL(arg, perm) \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect_, arg.power_detect, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##power_control_, arg.power_control, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##debug_led0_, arg.debug_led0, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##rs485_, arg.rs485, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##audio_codec_, arg.audio_codec, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##audio_speaker_, arg.audio_speaker, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##audio_headphone_, arg.audio_headphone, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##audio_microphone_, arg.audio_microphone, perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##touch_panel_, arg.tp_irq, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##touch_panel_, arg.tp_reset, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##lcd_, arg.tp_reset, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##lcd_backlight_, arg.lcd_backlight, perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_vsync_, arg.vin_vsync, perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##flash_charge_ready_, arg.flash_charge_ready, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##flash_trigger_, arg.flash_trigger, perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(board_##flash_enable_, arg.flash_enable, perm)
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect##_, arg.power_detect, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##power_control##_, arg.power_control, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##debug_led0##_, arg.debug_led0, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##rs485##_, arg.rs485, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##audio_irq##_, arg.audio_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##audio_power##_, arg.audio_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##audio_reset##_, arg.audio_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##audio_speaker##_, arg.audio_speaker, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##audio_headphone##_, arg.audio_headphone, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##audio_microphone##_, arg.audio_microphone, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##touch_panel_irq##_, arg.touch_panel_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##touch_panel_power##_, arg.touch_panel_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##touch_panel_reset##_, arg.touch_panel_reset, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##lcd_irq##_, arg.lcd_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##lcd_power##_, arg.lcd_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##lcd_reset##_, arg.lcd_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##lcd_backlight##_, arg.lcd_backlight, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_vsync##_, arg.vin_vsync, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_power##_, arg.vin_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##vin_reset##_, arg.vin_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_trigger##_, arg.vin_trigger, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_strobe##_, arg.vin_strobe, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##flash_charge_ready##_, arg.flash_charge_ready, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##flash_enable##_, arg.flash_enable, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##flash_trigger##_, arg.flash_trigger, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##avplug_detect##_, arg.avplug_detect, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##hdmi_extpower##_, arg.hdmi_extpower, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##gps_irq##_, arg.gps_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##gps_power##_, arg.gps_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##gps_reset##_, arg.gps_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##gps_wakeup##_, arg.gps_wakeup, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##lens_irq##_, arg.lens_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##lens_power##_, arg.lens_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##lens_reset##_, arg.lens_reset, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##gyro_irq##_, arg.gyro_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##gyro_power##_, arg.gyro_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##gyro_reset##_, arg.gyro_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##gyro_hps##_, arg.gyro_hps, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##fm_irq##_, arg.fm_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##fm_power##_, arg.fm_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##fm_reset##_, arg.fm_reset, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##gsensor_irq##_, arg.gsensor_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##gsensor_power##_, arg.gsensor_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##gsensor_reset##_, arg.gsensor_reset, perm)
 
 /* ==========================================================================*/
 extern struct ambarella_board_info ambarella_board_generic;

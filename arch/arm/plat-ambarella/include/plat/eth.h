@@ -36,8 +36,8 @@ struct ambarella_eth_platform_info {
 	int					max_work_count;
 	int					mii_id;
 	u32					phy_id;
-	struct ambarella_gpio_power_info	mii_power;
-	struct ambarella_gpio_reset_info	mii_reset;
+	struct ambarella_gpio_io_info		mii_power;
+	struct ambarella_gpio_io_info		mii_reset;
 
 	int					(*is_enabled)(void);
 };
@@ -46,7 +46,7 @@ struct ambarella_eth_platform_info {
 	module_param_call(eth##id##_max_work_count, param_set_int, param_get_int, &(arg.max_work_count), perm); \
 	module_param_call(eth##id##_mii_id, param_set_int, param_get_int, &(arg.mii_id), perm); \
 	module_param_call(eth##id##_phy_id, param_set_uint, param_get_uint, &(arg.phy_id), perm); \
-	AMBA_GPIO_POWER_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
 
 /* ==========================================================================*/

@@ -1272,9 +1272,9 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 
 	if (pwr_mode == MMC_POWER_OFF) {
 		amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
-		ambarella_set_gpio_power(&pslotinfo->slot_info.ext_power, 0);
+		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_power, 0);
 	} else if (pwr_mode == MMC_POWER_UP) {
-		ambarella_set_gpio_power(&pslotinfo->slot_info.ext_power, 1);
+		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_power, 1);
 	}
 
 	if ((pwr_mode == MMC_POWER_ON) || (pwr_mode == MMC_POWER_UP)) {
@@ -1381,7 +1381,7 @@ static int ambarella_sd_get_ro(struct mmc_host *mmc)
 
 	ambarella_sd_request_bus(mmc);
 
-	if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+	if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
 		wpspl = !ambarella_get_gpio_input(
 			&pslotinfo->slot_info.gpio_wp);
 	} else {
@@ -1763,24 +1763,24 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			pslotinfo->buf_vaddress = NULL;
 		}
 
-		if (pslotinfo->slot_info.ext_power.power_gpio != -1) {
+		if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
 			errorCode = gpio_request(
-				pslotinfo->slot_info.ext_power.power_gpio,
+				pslotinfo->slot_info.ext_power.gpio_id,
 				pdev->name);
 			if (errorCode < 0) {
 				ambsd_err(pslotinfo, "Can't get Power GPIO%d\n",
-				pslotinfo->slot_info.ext_power.power_gpio);
+				pslotinfo->slot_info.ext_power.gpio_id);
 				goto sd_errorCode_free_host;
 			}
 		}
 
-		if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+		if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
 			errorCode = gpio_request(
-				pslotinfo->slot_info.gpio_wp.input_gpio,
+				pslotinfo->slot_info.gpio_wp.gpio_id,
 				pdev->name);
 			if (errorCode < 0) {
 				ambsd_err(pslotinfo, "Can't get WP GPIO%d\n",
-				pslotinfo->slot_info.gpio_wp.input_gpio);
+				pslotinfo->slot_info.gpio_wp.gpio_id);
 				goto sd_errorCode_free_host;
 			}
 		}
@@ -1867,12 +1867,12 @@ sd_errorCode_free_host:
 			gpio_free(pslotinfo->slot_info.gpio_cd.irq_gpio);
 		}
 
-		if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
-			gpio_free(pslotinfo->slot_info.gpio_wp.input_gpio);
+		if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
+			gpio_free(pslotinfo->slot_info.gpio_wp.gpio_id);
 		}
 
-		if (pslotinfo->slot_info.ext_power.power_gpio != -1) {
-			gpio_free(pslotinfo->slot_info.ext_power.power_gpio);
+		if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
+			gpio_free(pslotinfo->slot_info.ext_power.gpio_id);
 		}
 
 		if (pslotinfo->buf_vaddress) {
@@ -1933,14 +1933,14 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
 
-			if (pslotinfo->slot_info.ext_power.power_gpio != -1) {
+			if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
 				gpio_free(
-				pslotinfo->slot_info.ext_power.power_gpio);
+				pslotinfo->slot_info.ext_power.gpio_id);
 			}
 
-			if (pslotinfo->slot_info.gpio_wp.input_gpio != -1) {
+			if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
 				gpio_free(
-				pslotinfo->slot_info.gpio_wp.input_gpio);
+				pslotinfo->slot_info.gpio_wp.gpio_id);
 			}
 
 			if (pslotinfo->buf_vaddress) {

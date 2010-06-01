@@ -37,40 +37,23 @@
 #define gpio_cansleep	__gpio_cansleep
 
 /* ==========================================================================*/
-struct ambarella_gpio_power_info {
-	int	power_gpio;
-	int	power_level;
-	int	power_delay;		//ms
+struct ambarella_gpio_io_info {
+	int	gpio_id;
+	int	active_level;
+	int	active_delay;		//ms
 };
-#define AMBA_GPIO_POWER_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_call(name_prefix##power_gpio, param_set_int, param_get_int, &(arg.power_gpio), perm); \
-	module_param_call(name_prefix##power_level, param_set_int, param_get_int, &(arg.power_level), perm); \
-	module_param_call(name_prefix##power_delay, param_set_int, param_get_int, &(arg.power_delay), perm)
-extern void ambarella_set_gpio_power(struct ambarella_gpio_power_info *pinfo, u32 poweron);
-
-struct ambarella_gpio_input_info {
-	int	input_gpio;
-	int	input_level;
-	int	input_delay;		//ms
-};
-#define AMBA_GPIO_INPUT_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_call(name_prefix##input_gpio, param_set_int, param_get_int, &(arg.input_gpio), perm); \
-	module_param_call(name_prefix##input_level, param_set_int, param_get_int, &(arg.input_level), perm); \
-	module_param_call(name_prefix##input_delay, param_set_int, param_get_int, &(arg.input_delay), perm)
-extern u32 ambarella_get_gpio_input(struct ambarella_gpio_input_info *pinfo);
-
-struct ambarella_gpio_reset_info {
-	int	reset_gpio;
-	int	reset_level;
-	int	reset_delay;		//ms
-	int	resume_delay;		//ms
-};
+#define AMBA_GPIO_IO_MODULE_PARAM_CALL(name_prefix, arg, perm) \
+	module_param_call(name_prefix##gpio_id, param_set_int, param_get_int, &(arg.gpio_id), perm); \
+	module_param_call(name_prefix##active_level, param_set_int, param_get_int, &(arg.active_level), perm); \
+	module_param_call(name_prefix##active_delay, param_set_int, param_get_int, &(arg.active_delay), perm)
 #define AMBA_GPIO_RESET_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_call(name_prefix##reset_gpio, param_set_int, param_get_int, &(arg.reset_gpio), perm); \
-	module_param_call(name_prefix##reset_level, param_set_int, param_get_int, &(arg.reset_level), perm); \
-	module_param_call(name_prefix##reset_delay, param_set_int, param_get_int, &(arg.reset_delay), perm); \
-	module_param_call(name_prefix##resume_delay, param_set_int, param_get_int, &(arg.resume_delay), perm)
-extern void ambarella_set_gpio_reset(struct ambarella_gpio_reset_info *pinfo);
+	module_param_call(name_prefix##gpio_id, param_set_int, param_get_int, &(arg.gpio_id), perm); \
+	module_param_call(name_prefix##active_level, param_set_int, param_get_int, &(arg.active_level), perm); \
+	module_param_call(name_prefix##active_delay, param_set_int, param_get_int, &(arg.active_delay), perm)
+
+extern void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 poweron);
+extern u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo);
+extern void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo);
 
 struct ambarella_gpio_irq_info {
 	int	irq_gpio;

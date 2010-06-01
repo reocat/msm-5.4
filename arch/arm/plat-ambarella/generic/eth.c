@@ -50,15 +50,14 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	.mii_id		= -1,
 	.phy_id		= 0x00008201,
 	.mii_power	= {
-		.power_gpio	= -1,
-		.power_level	= GPIO_LOW,
-		.power_delay	= 1,
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
 	},
 	.mii_reset	= {
-		.reset_gpio	= -1,
-		.reset_level	= GPIO_LOW,
-		.reset_delay	= 1,
-		.resume_delay	= 1,
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
 	},
 	.is_enabled	= rct_is_eth_enabled,
 };

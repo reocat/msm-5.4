@@ -611,7 +611,7 @@ u32 ambarella_gpio_resume(u32 level)
 }
 
 /* ==========================================================================*/
-void ambarella_set_gpio_power(struct ambarella_gpio_power_info *pinfo,
+void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo,
 	u32 poweron)
 {
 	if (pinfo == NULL) {
@@ -622,22 +622,22 @@ void ambarella_set_gpio_power(struct ambarella_gpio_power_info *pinfo,
 	pr_debug("%s: Power %s gpio[%d], level[%s], delay[%dms].\n",
 		__func__,
 		poweron ? "ON" : "OFF",
-		pinfo->power_gpio,
-		pinfo->power_level ? "HIGH" : "LOW",
-		pinfo->power_delay);
+		pinfo->gpio_id,
+		pinfo->active_level ? "HIGH" : "LOW",
+		pinfo->active_delay);
 
-	if ((pinfo->power_gpio < 0 ) || (pinfo->power_gpio >= ARCH_NR_GPIOS))
+	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
 		return;
 
 	if (poweron)
-		gpio_direction_output(pinfo->power_gpio, pinfo->power_level);
+		gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
 	else
-		gpio_direction_output(pinfo->power_gpio, !pinfo->power_level);
-	msleep(pinfo->power_delay);
+		gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
+	msleep(pinfo->active_delay);
 }
-EXPORT_SYMBOL(ambarella_set_gpio_power);
+EXPORT_SYMBOL(ambarella_set_gpio_output);
 
-u32 ambarella_get_gpio_input(struct ambarella_gpio_input_info *pinfo)
+u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 {
 	u32					gpio_value;
 
@@ -646,42 +646,41 @@ u32 ambarella_get_gpio_input(struct ambarella_gpio_input_info *pinfo)
 		return 0;
 	}
 
-	gpio_direction_input(pinfo->input_gpio);
-	msleep(pinfo->input_delay);
-	gpio_value = gpio_get_value(pinfo->input_gpio);
+	gpio_direction_input(pinfo->gpio_id);
+	msleep(pinfo->active_delay);
+	gpio_value = gpio_get_value(pinfo->gpio_id);
 
 	pr_debug("%s: {gpio[%d], level[%s], delay[%dms]} get[%d].\n",
 		__func__,
-		pinfo->input_gpio,
-		pinfo->input_level ? "HIGH" : "LOW",
-		pinfo->input_delay,
+		pinfo->gpio_id,
+		pinfo->active_level ? "HIGH" : "LOW",
+		pinfo->active_delay,
 		gpio_value);
 
-	return (gpio_value == pinfo->input_level) ? 1 : 0;
+	return (gpio_value == pinfo->active_level) ? 1 : 0;
 }
 EXPORT_SYMBOL(ambarella_get_gpio_input);
 
-void ambarella_set_gpio_reset(struct ambarella_gpio_reset_info *pinfo)
+void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 {
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
 		return;
 	}
 
-	pr_debug("%s: Reset gpio[%d], level[%s], delay[%dms], resume[%dms].\n",
+	pr_debug("%s: Reset gpio[%d], level[%s], delay[%dms].\n",
 		__func__,
-		pinfo->reset_gpio,
-		pinfo->reset_level ? "HIGH" : "LOW",
-		pinfo->reset_delay,
-		pinfo->resume_delay);
+		pinfo->gpio_id,
+		pinfo->active_level ? "HIGH" : "LOW",
+		pinfo->active_delay);
 
-	if ((pinfo->reset_gpio < 0 ) || (pinfo->reset_gpio >= ARCH_NR_GPIOS))
+	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
 		return;
 
-	gpio_direction_output(pinfo->reset_gpio, pinfo->reset_level);
-	msleep(pinfo->reset_delay);
-	gpio_direction_output(pinfo->reset_gpio, !pinfo->reset_level);
-	msleep(pinfo->resume_delay);
+	gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
+	msleep(pinfo->active_delay);
+	gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
+	msleep(pinfo->active_delay);
 }
 EXPORT_SYMBOL(ambarella_set_gpio_reset);
 
