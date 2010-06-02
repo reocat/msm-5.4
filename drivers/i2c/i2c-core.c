@@ -1990,7 +1990,7 @@ s32 i2c_smbus_xfer(struct i2c_adapter * adapter, u16 addr, unsigned short flags,
 {
 	s32 res;
 
-	flags &= I2C_M_TEN | I2C_CLIENT_PEC;
+	flags &= I2C_M_TEN | I2C_CLIENT_PEC | I2C_M_PIN_MUXING;
 
 	if (adapter->algo->smbus_xfer) {
 		mutex_lock(&adapter->bus_lock);

@@ -133,6 +133,4 @@
 #define IDC_FMCTRL_START		(0x04)
 #define IDC_FMCTRL_IF			(0x02)
 
-#define I2C_M_PIN_MUXING		(0x8000)
-
 #endif

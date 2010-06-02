@@ -190,10 +190,6 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
 	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-	ambarella_board_generic.power_control.gpio_id = -1;
-	ambarella_board_generic.power_control.active_level = GPIO_LOW;
-	ambarella_board_generic.power_control.active_delay = 1;
-
 	ambarella_board_generic.debug_led0.gpio_id = GPIO(83);
 	ambarella_board_generic.debug_led0.active_level = GPIO_LOW;
 	ambarella_board_generic.debug_led0.active_delay = 0;
@@ -202,35 +198,11 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.rs485.active_level = GPIO_LOW;
 	ambarella_board_generic.rs485.active_delay = 1;
 
-	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
-	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.audio_reset.active_delay = 1;
-
-	ambarella_board_generic.audio_speaker.gpio_id = -1;
-	ambarella_board_generic.audio_speaker.active_level = GPIO_LOW;
-	ambarella_board_generic.audio_speaker.active_delay = 1;
-
-	ambarella_board_generic.audio_headphone.gpio_id = -1;
-	ambarella_board_generic.audio_headphone.active_level = GPIO_LOW;
-	ambarella_board_generic.audio_headphone.active_delay = 1;
-
-	ambarella_board_generic.audio_microphone.gpio_id = -1;
-	ambarella_board_generic.audio_microphone.active_level = GPIO_LOW;
-	ambarella_board_generic.audio_microphone.active_delay = 1;
-
 	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
 	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
 	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	ambarella_board_generic.touch_panel_reset.gpio_id = -1;
-	ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.touch_panel_reset.active_delay = 1;
-
-	ambarella_board_generic.lcd_reset.gpio_id = -1;
-	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.lcd_reset.active_delay = 1;
 
 	if (AMBARELLA_BOARD_REV(system_rev) > 10) {
 		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);

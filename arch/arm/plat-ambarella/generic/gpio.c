@@ -181,8 +181,8 @@ struct ambarella_gpio_chip {
 #define to_ambarella_gpio_chip(c) container_of(c, struct ambarella_gpio_chip, chip)
 
 static DEFINE_MUTEX(ambarella_gpio_lock);
-static unsigned long ambarella_gpio_valid[BITS_TO_LONGS(ARCH_NR_GPIOS)];
-static unsigned long ambarella_gpio_freeflag[BITS_TO_LONGS(ARCH_NR_GPIOS)];
+static unsigned long ambarella_gpio_valid[BITS_TO_LONGS(AMBGPIO_SIZE)];
+static unsigned long ambarella_gpio_freeflag[BITS_TO_LONGS(AMBGPIO_SIZE)];
 
 static int ambarella_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
@@ -439,7 +439,7 @@ ambarella_gpio_write_exit:
 /* ==========================================================================*/
 void __init ambarella_gpio_set_valid(unsigned pin, int valid)
 {
-	if (likely(pin >=0 && pin < ARCH_NR_GPIOS)) {
+	if (likely(pin >=0 && pin < AMBGPIO_SIZE)) {
 		if (valid)
 			__set_bit(pin, ambarella_gpio_valid);
 		else
@@ -465,7 +465,7 @@ int __init ambarella_init_gpio(void)
 
 	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
 	memset(ambarella_gpio_freeflag, 0xff, sizeof(ambarella_gpio_freeflag));
-	for (i = GPIO_MAX_LINES + 1; i < ARCH_NR_GPIOS; i++) {
+	for (i = GPIO_MAX_LINES + 1; i < AMBGPIO_SIZE; i++) {
 		ambarella_gpio_set_valid(i, 0);
 		__clear_bit(i, ambarella_gpio_freeflag);
 	}
@@ -611,29 +611,30 @@ u32 ambarella_gpio_resume(u32 level)
 }
 
 /* ==========================================================================*/
-void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo,
-	u32 poweron)
+void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 {
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
 		return;
 	}
 
-	pr_debug("%s: Power %s gpio[%d], level[%s], delay[%dms].\n",
+	pr_debug("%s: Gpio[%d] %s, level[%s], delay[%dms].\n",
 		__func__,
-		poweron ? "ON" : "OFF",
 		pinfo->gpio_id,
+		on ? "ON" : "OFF",
 		pinfo->active_level ? "HIGH" : "LOW",
 		pinfo->active_delay);
 
 	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
 		return;
 
-	if (poweron)
+	if (on)
 		gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
 	else
 		gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
-	msleep(pinfo->active_delay);
+
+	if (pinfo->active_delay)
+		msleep(pinfo->active_delay);
 }
 EXPORT_SYMBOL(ambarella_set_gpio_output);
 
@@ -647,7 +648,8 @@ u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 	}
 
 	gpio_direction_input(pinfo->gpio_id);
-	msleep(pinfo->active_delay);
+	if (pinfo->active_delay)
+		msleep(pinfo->active_delay);
 	gpio_value = gpio_get_value(pinfo->gpio_id);
 
 	pr_debug("%s: {gpio[%d], level[%s], delay[%dms]} get[%d].\n",
@@ -678,9 +680,11 @@ void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 		return;
 
 	gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
-	msleep(pinfo->active_delay);
+	if (pinfo->active_delay)
+		msleep(pinfo->active_delay);
 	gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
-	msleep(pinfo->active_delay);
+	if (pinfo->active_delay)
+		msleep(pinfo->active_delay);
 }
 EXPORT_SYMBOL(ambarella_set_gpio_reset);
 

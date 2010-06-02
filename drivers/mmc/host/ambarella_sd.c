@@ -1272,9 +1272,11 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 
 	if (pwr_mode == MMC_POWER_OFF) {
 		amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
+		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_reset, 1);
 		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_power, 0);
 	} else if (pwr_mode == MMC_POWER_UP) {
 		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_power, 1);
+		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_reset, 0);
 	}
 
 	if ((pwr_mode == MMC_POWER_ON) || (pwr_mode == MMC_POWER_UP)) {
@@ -1774,6 +1776,17 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			}
 		}
 
+		if (pslotinfo->slot_info.ext_reset.gpio_id != -1) {
+			errorCode = gpio_request(
+				pslotinfo->slot_info.ext_reset.gpio_id,
+				pdev->name);
+			if (errorCode < 0) {
+				ambsd_err(pslotinfo, "Can't get Reset GPIO%d\n",
+				pslotinfo->slot_info.ext_reset.gpio_id);
+				goto sd_errorCode_free_host;
+			}
+		}
+
 		if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
 			errorCode = gpio_request(
 				pslotinfo->slot_info.gpio_wp.gpio_id,
@@ -1875,6 +1888,10 @@ sd_errorCode_free_host:
 			gpio_free(pslotinfo->slot_info.ext_power.gpio_id);
 		}
 
+		if (pslotinfo->slot_info.ext_reset.gpio_id != -1) {
+			gpio_free(pslotinfo->slot_info.ext_reset.gpio_id);
+		}
+
 		if (pslotinfo->buf_vaddress) {
 			dma_free_coherent(pinfo->dev,
 				pslotinfo->mmc->max_seg_size,
@@ -1936,6 +1953,11 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 			if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
 				gpio_free(
 				pslotinfo->slot_info.ext_power.gpio_id);
+			}
+
+			if (pslotinfo->slot_info.ext_reset.gpio_id != -1) {
+				gpio_free(
+				pslotinfo->slot_info.ext_reset.gpio_id);
 			}
 
 			if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {

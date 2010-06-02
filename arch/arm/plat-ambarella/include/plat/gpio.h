@@ -26,7 +26,14 @@
 
 /* ==========================================================================*/
 #define GPIO_BANK_SIZE			32
-#define ARCH_NR_GPIOS			(GPIO_INSTANCES * GPIO_BANK_SIZE)
+#define AMBGPIO_SIZE			(GPIO_INSTANCES * GPIO_BANK_SIZE)
+
+#ifndef CONFIG_AMBGPIO_EXT_SIZE
+#define CONFIG_AMBGPIO_EXT_SIZE		(32)
+#endif
+#define EXT_GPIO(x)			(AMBGPIO_SIZE + x)
+
+#define ARCH_NR_GPIOS			(AMBGPIO_SIZE + CONFIG_AMBGPIO_EXT_SIZE)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -51,7 +58,7 @@ struct ambarella_gpio_io_info {
 	module_param_call(name_prefix##active_level, param_set_int, param_get_int, &(arg.active_level), perm); \
 	module_param_call(name_prefix##active_delay, param_set_int, param_get_int, &(arg.active_delay), perm)
 
-extern void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 poweron);
+extern void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on);
 extern u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo);
 extern void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo);
 
