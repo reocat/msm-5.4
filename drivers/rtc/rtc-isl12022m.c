@@ -116,9 +116,9 @@ isl12022m_i2c_read_regs(struct i2c_client *client, u8 reg, u8 buf[],
 {
 	u8 reg_addr[1] = { reg };
 	struct i2c_msg msgs[2] = {
-		{client->addr, I2C_M_IGNORE_NAK | I2C_M_PIN_MUXING, sizeof(reg_addr), reg_addr}
+		{client->addr, I2C_M_IGNORE_NAK | client->flags, sizeof(reg_addr), reg_addr}
 		,
-		{client->addr, I2C_M_RD | I2C_M_PIN_MUXING, len, buf}
+		{client->addr, I2C_M_RD |  client->flags, len, buf}
 	};
 	int ret;
 
@@ -132,7 +132,6 @@ isl12022m_i2c_read_regs(struct i2c_client *client, u8 reg, u8 buf[],
 	return ret;
 }
 
-
 /* block write */
 static int
 isl12022m_i2c_set_regs(struct i2c_client *client, u8 reg, u8 const buf[],
@@ -140,7 +139,7 @@ isl12022m_i2c_set_regs(struct i2c_client *client, u8 reg, u8 const buf[],
 {
 	u8 i2c_buf[ISL12022M_REG_GPM2 + 2];
 	struct i2c_msg msgs[1] = {
-		{client->addr, I2C_M_IGNORE_NAK | I2C_M_PIN_MUXING, len + 1, i2c_buf}
+		{client->addr, I2C_M_IGNORE_NAK |  client->flags, len + 1, i2c_buf}
 	};
 	int ret;
 
@@ -166,7 +165,6 @@ isl12022m_i2c_validate_client(struct i2c_client *client)
 	};
 	int i;
 	int ret;
-
 	ret = isl12022m_i2c_read_regs(client, 0, regs, ISL12022M_RTC_SECTION_LEN);
 
 	if (ret < 0)
@@ -185,8 +183,8 @@ static int
 isl12022m_i2c_get_sr(struct i2c_client *client)
 {
 	int sr = -1;
-	  int buf[1]={0};
-	isl12022m_i2c_read_regs(client, ISL12022M_REG_SR, &buf, 1);
+	u8 buf[1]={-1};
+	isl12022m_i2c_read_regs(client, ISL12022M_REG_SR, buf, 1);
 	sr=buf[0];
 	if (sr < 0)
 		return -EIO;
@@ -198,66 +196,19 @@ static int
 isl12022m_i2c_get_int(struct i2c_client *client)
 {
 	int r_int = -1;
-
-	isl12022m_i2c_read_regs(client, ISL12022M_REG_INT, &r_int, 1);
-
+	u8 buf[1]={-1};
+	isl12022m_i2c_read_regs(client, ISL12022M_REG_INT, buf, 1);
+	r_int=buf[0];
 	if (r_int < 0)
 		return -EIO;
-
 	return r_int;
 }
-
-
-static int
-isl12022m_i2c_get_atr(struct i2c_client *client)
-{
-	int atr = -1;
-
-	isl12022m_i2c_read_regs(client, ISL12022M_REG_FATR, &atr, 1);
-
-	if (atr < 0)
-		return atr;
-
-	/* The 6bit value in the ATR register controls the load
-	 * capacitance C_load * in steps of 0.25pF
-	 *
-	 * bit (1<<5) of the ATR register is inverted
-	 *
-	 * C_load(ATR=0x20) =  4.50pF
-	 * C_load(ATR=0x00) = 12.50pF
-	 * C_load(ATR=0x1f) = 20.25pF
-	 *
-	 */
-
-	atr &= 0x3f;		/* mask out lsb */
-	atr ^= 1 << 5;		/* invert 6th bit */
-	atr += 2 * 9;		/* add offset of 4.5pF; unit[atr] = 0.25pF */
-
-	return atr;
-}
-
-static int
-isl12022m_i2c_get_dtr(struct i2c_client *client)
-{
-	int dtr =-1;
-
-	isl12022m_i2c_read_regs(client, ISL12022M_REG_FDTR, &dtr, 1);
-	if (dtr < 0)
-		return -EIO;
-
-	/* dtr encodes adjustments of {-60,-40,-20,0,20,40,60} ppm */
-	dtr = ((dtr & 0x3) * 20) * (dtr & (1 << 2) ? -1 : 1);
-
-	return dtr;
-}
-
 
 static int
 isl12022m_i2c_read_time(struct i2c_client *client, struct rtc_time *tm)
 {
 	int sr;
 	u8 regs[ISL12022M_RTC_SECTION_LEN] = { 0, };
-
 	sr = isl12022m_i2c_get_sr(client);
 	if (sr < 0) {
 		dev_err(&client->dev, "%s: reading SR failed\n", __func__);
@@ -297,56 +248,18 @@ isl12022m_i2c_read_time(struct i2c_client *client, struct rtc_time *tm)
 
 
 static int
-isl12022m_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
-{
-	struct rtc_time *const tm = &alarm->time;
-	u8 regs[ISL12022M_ALARM_SECTION_LEN] = { 0, };
-	int sr;
-
-	sr = isl12022m_i2c_get_sr(client);
-	if (sr < 0) {
-		dev_err(&client->dev, "%s: reading SR failed\n", __func__);
-		return sr;
-	}
-
-	sr = isl12022m_i2c_read_regs(client, ISL12022M_REG_SCA0, regs,
-				   ISL12022M_ALARM_SECTION_LEN);
-	if (sr < 0) {
-		dev_err(&client->dev, "%s: reading alarm section failed\n",
-			__func__);
-		return sr;
-	}
-
-	/* MSB of each alarm register is an enable bit */
-	tm->tm_sec = bcd2bin(regs[ISL12022M_REG_SCA0 -ISL12022M_REG_SCA0] & 0x7f);
-	tm->tm_min = bcd2bin(regs[ISL12022M_REG_MNA0 - ISL12022M_REG_SCA0] & 0x7f);
-	tm->tm_hour = bcd2bin(regs[ISL12022M_REG_HRA0 - ISL12022M_REG_SCA0] & 0x3f);
-	tm->tm_mday = bcd2bin(regs[ISL12022M_REG_DTA0 - ISL12022M_REG_SCA0] & 0x3f);
-	tm->tm_mon =
-		bcd2bin(regs[ISL12022M_REG_MOA0 - ISL12022M_REG_SCA0] & 0x1f) - 1;
-	tm->tm_wday = bcd2bin(regs[ISL12022M_REG_DWA0 - ISL12022M_REG_SCA0] & 0x03);
-
-	return 0;
-}
-
-
-static int
 isl12022m_rtc_read_time(struct device *dev, struct rtc_time *tm)
 {
 	return isl12022m_i2c_read_time(to_i2c_client(dev), tm);
 }
 
 static int
-isl12022m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alarm)
-{
-	return isl12022m_i2c_read_alarm(to_i2c_client(dev), alarm);
-}
-
-static int
 isl12022m_i2c_set_time(struct i2c_client *client, struct rtc_time const *tm)
 {
 	int sr;
+	int r_int;
 	u8 regs[ISL12022M_RTC_SECTION_LEN] = { 0, };
+	u8 buf[1]={0};
 
 	/* The clock has an 8 bit wide bcd-coded register (they never learn)
 	 * for the year. tm_year is an offset from 1900 and we are interested
@@ -376,11 +289,10 @@ isl12022m_i2c_set_time(struct i2c_client *client, struct rtc_time const *tm)
 
 	/* set WRTC */
 
-	int r_int=isl12022m_i2c_get_int(client);
-
+	r_int=isl12022m_i2c_get_int(client);
 	r_int |= ISL12022M_REG_INT_WRTC;
-
-	sr=isl12022m_i2c_set_regs(client,ISL12022M_REG_INT,&r_int,1);
+	buf[0]=r_int;
+	sr=isl12022m_i2c_set_regs(client,ISL12022M_REG_INT,buf,1);
 
 		if (sr< 0) {
 		dev_err(&client->dev, "%s: writing INT failed\n", __func__);
@@ -399,7 +311,8 @@ isl12022m_i2c_set_time(struct i2c_client *client, struct rtc_time const *tm)
 	/* clear WRTC again */
 
 	r_int &= ~ISL12022M_REG_INT_WRTC;
-	r_int=isl12022m_i2c_set_regs(client,ISL12022M_REG_INT,&r_int,1);
+	buf[0]=r_int;
+	r_int=isl12022m_i2c_set_regs(client,ISL12022M_REG_INT,buf,1);
 
 	if (sr < 0) {
 		dev_err(&client->dev, "%s: writing INT failed\n", __func__);
@@ -436,7 +349,6 @@ static int
 isl12022m_sysfs_unregister(struct device *dev)
 {
 
-
 	return 0;
 }
 
@@ -446,16 +358,11 @@ isl12022m_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int rc = 0;
 	struct rtc_device *rtc;
 
-
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -ENODEV;
 
 	if (isl12022m_i2c_validate_client(client) < 0)
 		return -ENODEV;
-
-	dev_info(&client->dev,
-		 "chip found, driver version " DRV_VERSION "\n");
-
 
 	rtc = rtc_device_register(isl12022m_driver.driver.name,
 				  &client->dev, &isl12022m_rtc_ops,
@@ -466,13 +373,11 @@ isl12022m_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	i2c_set_clientdata(client, rtc);
 
-
 	rc = isl12022m_i2c_get_sr(client);
 	if (rc < 0) {
 		dev_err(&client->dev, "reading status failed\n");
 		goto exit_unregister;
 	}
-
 	if (rc & ISL12022M_REG_SR_RTCF)
 		dev_warn(&client->dev, "rtc power failure detected, "
 			 "please set clock.\n");
@@ -517,15 +422,14 @@ static struct i2c_driver isl12022m_driver = {
 static int __init
 isl12022m_init(void)
 {
-	printk("%s: %d\n", __func__, __LINE__);
 	return i2c_add_driver(&isl12022m_driver);
-}//done
+}
 
 static void __exit
 isl12022m_exit(void)
 {
 	i2c_del_driver(&isl12022m_driver);
-}//done
+}
 
 MODULE_AUTHOR("Wang Zhangkai <zkwang@ambarella.com>");
 MODULE_DESCRIPTION("Intersil ISL12022M RTC driver");
