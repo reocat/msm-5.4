@@ -47,6 +47,10 @@ snd-soc-wm-hubs-objs := wm_hubs.o
 
 # Amp
 snd-soc-max9877-objs := max9877.o
+snd-soc-a2auc-objs := ambarella_auc.o
+snd-soc-adav803-objs := adav803.o
+snd-soc-cs42l51-objs := cs42l51.o
+snd-soc-ambdummy-objs := ambarella_dummy.o
 
 obj-$(CONFIG_SND_SOC_AC97_CODEC)	+= snd-soc-ac97.o
 obj-$(CONFIG_SND_SOC_AD1836)	+= snd-soc-ad1836.o
@@ -97,3 +101,8 @@ obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
 
 # Amp
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
+obj-$(CONFIG_SND_SOC_AMBARELLA_A2AUC)	+= snd-soc-a2auc.o
+obj-$(CONFIG_SND_SOC_ADAV803)	+= snd-soc-adav803.o
+obj-$(CONFIG_SND_SOC_CS42L51)	+= snd-soc-cs42l51.o
+obj-$(CONFIG_SND_SOC_AMBARELLA_DUMMY)	+= snd-soc-ambdummy.o
+

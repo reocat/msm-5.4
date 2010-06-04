@@ -55,6 +55,10 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM9705 if SND_SOC_AC97_BUS
 	select SND_SOC_WM9712 if SND_SOC_AC97_BUS
 	select SND_SOC_WM9713 if SND_SOC_AC97_BUS
+	select SND_SOC_AMBARELLA_A2AUC
+	select SND_SOC_ADAV803 if I2C
+	select SND_SOC_CS42L51 if I2C
+	select SND_SOC_AMBARELLA_DUMMY
         help
           Normally ASoC codec drivers are only built if a machine driver which
           uses them is also built since they are only usable with a machine
@@ -220,3 +224,16 @@ config SND_SOC_WM9713
 # Amp
 config SND_SOC_MAX9877
 	tristate
+
+config SND_SOC_AMBARELLA_A2AUC
+	tristate
+
+config SND_SOC_ADAV803
+	tristate
+
+config SND_SOC_CS42L51
+	tristate
+
+config SND_SOC_AMBARELLA_DUMMY
+	tristate
+

@@ -257,6 +257,13 @@ static struct mem_type mem_types[] = {
 		.prot_sect = PMD_TYPE_SECT | PMD_SECT_AP_WRITE,
 		.domain    = DOMAIN_KERNEL,
 	},
+	[MT_AMBMEMORY] = {
+		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY |
+				L_PTE_USER | L_PTE_EXEC,
+		.prot_sect = PMD_TYPE_SECT | PMD_SECT_AP_WRITE,
+		.prot_l1   = PMD_TYPE_TABLE,
+		.domain    = DOMAIN_KERNEL,
+	},
 };
 
 const struct mem_type *get_mem_type(unsigned int type)
@@ -891,6 +898,22 @@ void __init reserve_node_zero(pg_data_t *pgdat)
 	if (machine_is_palmt5())
 		reserve_bootmem_node(pgdat, 0xa0200000, 0x1000,
 				BOOTMEM_EXCLUSIVE);
+
+#ifdef CONFIG_PLAT_AMBARELLA
+	{
+		struct ambarella_mem_rev_info	rev_info;
+		int				i;
+
+		if (!get_ambarella_mem_rev_info(&rev_info)) {
+			for (i = 0; i < rev_info.counter; i++) {
+				reserve_bootmem_node(pgdat,
+					rev_info.desc[i].physaddr,
+					rev_info.desc[i].size,
+					BOOTMEM_DEFAULT);
+			}
+		}
+	}
+#endif
 
 	/*
 	 * U300 - This platform family can share physical memory

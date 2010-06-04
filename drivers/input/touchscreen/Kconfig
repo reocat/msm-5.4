@@ -512,6 +512,39 @@ config TOUCHSCREEN_TSC2007
 	  To compile this driver as a module, choose M here: the
 	  module will be called tsc2007.
 
+config TOUCHSCREEN_AK4183
+        tristate "AK4183 based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a AK4183 based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called ak4183.
+
+config TOUCHSCREEN_CY8CTMG
+        tristate "CY8CTMG based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a CY8CTMG based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called cy8ctmg.
+
+config TOUCHSCREEN_CHACHA_MT4D
+        tristate "CHACHA_MT4D based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a CHACHA_MT4D based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called chacha_mt4d.
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK

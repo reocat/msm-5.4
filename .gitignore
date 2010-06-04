@@ -30,6 +30,10 @@
 *.patch
 *.gcno
 
+# chameleon
+*.idb
+*.stf
+
 #
 # Top-level generic files
 #

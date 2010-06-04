@@ -4,6 +4,16 @@
 
 # Each configuration option enables a list of files.
 
+ambarella_general_input-objs		:= ambarella_input.o
+
+ifeq ($(CONFIG_INPUT_AMBARELLA_IR), y)
+ambarella_general_input-objs		+= ambarella_input_ir.o
+endif
+ifeq ($(CONFIG_INPUT_AMBARELLA_ADC), y)
+ambarella_general_input-objs		+= ambarella_input_adc.o
+endif
+
+obj-$(CONFIG_INPUT_AMBARELLA)		:= ambarella_general_input.o
 obj-$(CONFIG_INPUT_APANEL)		+= apanel.o
 obj-$(CONFIG_INPUT_ATI_REMOTE)		+= ati_remote.o
 obj-$(CONFIG_INPUT_ATI_REMOTE2)		+= ati_remote2.o

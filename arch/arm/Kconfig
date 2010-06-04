@@ -206,6 +206,11 @@ choice
 	prompt "ARM system type"
 	default ARCH_VERSATILE
 
+config ARCH_AMBARELLA
+	bool "Ambarella"
+	help
+	  Support for Ambarella Media Processor.
+
 config ARCH_AAEC2000
 	bool "Agilent AAEC-2000 based"
 	select CPU_ARM920T
@@ -804,6 +809,9 @@ source "arch/arm/mach-w90x900/Kconfig"
 
 source "arch/arm/mach-bcmring/Kconfig"
 
+source "arch/arm/plat-ambarella/Kconfig"
+source "arch/arm/mach-ambarella/Kconfig"
+
 # Definitions to make life easier
 config ARCH_ACORN
 	bool
@@ -1108,6 +1116,12 @@ config ARCH_SPARSEMEM_DEFAULT
 
 config ARCH_SELECT_MEMORY_MODEL
 	def_bool ARCH_DISCONTIGMEM_ENABLE && ARCH_SPARSEMEM_ENABLE
+
+config ARCH_ENABLE_MEMORY_HOTPLUG
+	bool
+
+config ARCH_MEMORY_PROBE
+	bool
 
 config NODES_SHIFT
 	int
