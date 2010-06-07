@@ -50,6 +50,10 @@ static int ambdummy_set_bias_level(struct snd_soc_codec *codec,
 
 #define AMBDUMMY_FORMATS SNDRV_PCM_FMTBIT_S16_LE
 
+static struct snd_soc_dai_ops ambdummy_dai_ops = {
+	.digital_mute = ambdummy_mute,
+};
+
 struct snd_soc_dai ambdummy_dai = {
 	.name = "AMBARELLA_DUMMY_CODEC",
 	.playback = {
@@ -64,30 +68,28 @@ struct snd_soc_dai ambdummy_dai = {
 		.channels_max = 2,
 		.rates = AMBDUMMY_RATES,
 		.formats = AMBDUMMY_FORMATS,},
-	.ops = {
-		.digital_mute = ambdummy_mute,
-	},
+	.ops = &ambdummy_dai_ops,
 };
 EXPORT_SYMBOL(ambdummy_dai);
 
 static int ambdummy_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	ambdummy_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	
+
 	return 0;
 }
 
 static int ambdummy_resume(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);	
+	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	ambdummy_set_bias_level(codec, codec->suspend_bias_level);
-	
+
 	return 0;
 }
 /*
@@ -96,7 +98,7 @@ static int ambdummy_resume(struct platform_device *pdev)
  */
 static int ambdummy_init(struct snd_soc_device *socdev)
 {
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	int ret = 0;
 
 	codec->name = "AMBARELLA_DUMMY_CODEC";
@@ -145,8 +147,8 @@ static int ambdummy_probe(struct platform_device *pdev)
 	if (codec == NULL)
 		return -ENOMEM;
 
-	
-	socdev->codec = codec;
+
+	socdev->card->codec = codec;
 	mutex_init(&codec->mutex);
 	INIT_LIST_HEAD(&codec->dapm_widgets);
 	INIT_LIST_HEAD(&codec->dapm_paths);
@@ -164,7 +166,7 @@ static int ambdummy_probe(struct platform_device *pdev)
 static int ambdummy_remove(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	if (codec->control_data)
 		ambdummy_set_bias_level(codec, SND_SOC_BIAS_OFF);

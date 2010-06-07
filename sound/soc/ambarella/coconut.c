@@ -38,7 +38,7 @@
 
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
-#include "../codecs/ak4642.h"
+#include "../codecs/ak4642_amb.h"
 
 
 #define AK4642_RESET_PIN	12

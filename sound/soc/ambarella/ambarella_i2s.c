@@ -66,8 +66,8 @@ struct amb_i2s_priv {
 	struct ambarella_i2s_interface amb_i2s_intf;
 };
 
-static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = { 
-	{ 1, 0 }, // 128xfs 
+static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
+	{ 1, 0 }, // 128xfs
 	{ 3, 1 }, // 256xfs
 	{ 5, 2 }, // 384xfs
 	{ 7, 3 }, // 512xfs
@@ -248,7 +248,7 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		} else {
 			if(alsa_tx_enable_flag == 0)
 				dai_tx_enable();
-		}	
+		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -257,9 +257,9 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 			//dai_rx_disable();
 			//Stop by DMA EOC
 		} else {
-			//dai_tx_disable();	
+			//dai_tx_disable();
 			//Stop by DMA EOC
-		}	
+		}
 		break;
 	default:
 		ret = -EINVAL;
@@ -277,7 +277,7 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 {
 	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
 
-	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {	
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
 		break;
 	default:
@@ -290,7 +290,7 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
 		priv_data->amb_i2s_intf.mode = DAI_rightJustified_Mode;
-		break;	
+		break;
 	case SND_SOC_DAIFMT_I2S:
 		priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
 		break;
@@ -399,6 +399,15 @@ static void ambarella_i2s_dai_remove(struct platform_device *pdev,
 		AUDIO_NOTIFY_REMOVE);
 }
 
+static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
+		.prepare = ambarella_i2s_prepare,
+		.trigger = ambarella_i2s_trigger,
+		.hw_params = ambarella_i2s_hw_params,
+		.set_fmt = ambarella_i2s_set_fmt,
+		.set_sysclk = ambarella_i2s_set_sysclk,
+		.set_clkdiv = ambarella_i2s_set_clkdiv,
+};
+
 struct snd_soc_dai ambarella_i2s_dai = {
 	.name = "ambarella-i2s0",
 	.id = 0,
@@ -416,14 +425,7 @@ struct snd_soc_dai ambarella_i2s_dai = {
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
-	.ops = {
-		.prepare = ambarella_i2s_prepare,
-		.trigger = ambarella_i2s_trigger,
-		.hw_params = ambarella_i2s_hw_params,
-		.set_fmt = ambarella_i2s_set_fmt,
-		.set_sysclk = ambarella_i2s_set_sysclk,
-		.set_clkdiv = ambarella_i2s_set_clkdiv,
-	},
+	.ops = &ambarella_i2s_dai_ops,
 };
 EXPORT_SYMBOL(ambarella_i2s_dai);
 
