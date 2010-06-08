@@ -261,7 +261,7 @@ static irqreturn_t ambarella_input_adc_irq(int irq, void *devid)
 
 	ambi_dbg("%s:%d\n", __func__, __LINE__);
 
-	disable_irq(pinfo->irq);
+	disable_irq_nosync(pinfo->irq);
 	queue_delayed_work(pinfo->workqueue, &pinfo->detect_adc, 0);
 
 	return IRQ_HANDLED;

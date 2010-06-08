@@ -427,7 +427,7 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 		as->pinfo->cs_activate(&cs_config);
 	}
 	if (as->pinfo->use_interrupt) {
-		disable_irq(as->irq);
+		disable_irq_nosync(as->irq);
 		amba_writel(as->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
 	} else {
 		amba_writel(as->regbase + SPI_IMR_OFFSET, 0);
@@ -564,7 +564,7 @@ static irqreturn_t ambarella_spi_isr(int irq, void *dev_id)
 	if (amba_readl(as->regbase + SPI_ISR_OFFSET) == 0)
 		return IRQ_HANDLED;
 
-	disable_irq(as->irq);
+	disable_irq_nosync(as->irq);
 	amba_writel(as->regbase + SPI_ISR_OFFSET, 0);
 	ambarella_spi_tasklet((unsigned long)master);
 
@@ -726,7 +726,7 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 
 	if (pinfo) {
 		if (!device_may_wakeup(&pdev->dev))
-			disable_irq(pinfo->irq);
+			disable_irq_nosync(pinfo->irq);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;

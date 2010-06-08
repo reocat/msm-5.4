@@ -182,7 +182,7 @@ static irqreturn_t chacha_mt4d_irq(int irq, void *handle)
 	if (cm->get_pendown_state && !cm->get_pendown_state())
 		goto chacha_mt4d_irq_exit;
 
-	disable_irq(irq);
+	disable_irq_nosync(irq);
 	queue_work(cm->workqueue, &cm->report_worker);
 
 chacha_mt4d_irq_exit:

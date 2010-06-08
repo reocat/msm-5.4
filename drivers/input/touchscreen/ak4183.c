@@ -214,7 +214,7 @@ static irqreturn_t ak4183_irq(int irq, void *handle)
 	struct ak4183 *ts = handle;
 
 	if (likely(ts->get_pendown_state())) {
-		disable_irq(ts->irq);
+		disable_irq_nosync(ts->irq);
 		hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_DELAY),
 			HRTIMER_MODE_REL);
 	}
