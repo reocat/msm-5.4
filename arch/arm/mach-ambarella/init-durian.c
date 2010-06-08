@@ -173,6 +173,16 @@ static struct i2c_board_info durian_board_ext_gpio_info = {
 	.platform_data	= &durian_board_ext_gpio0,
 };
 
+static struct i2c_board_info ambarella_vin_board_info = {
+	.type = "amb_vin",
+	.addr = 0x00,
+};
+
+static struct i2c_board_info ambarella_hdmi_board_info = {
+	.type = "ambhdmi ddc",
+	.addr = 0x01,
+};
+
 /* ==========================================================================*/
 static void __init ambarella_init_durian(void)
 {
@@ -337,6 +347,8 @@ static void __init ambarella_init_durian(void)
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	ambarella_chacha_mt4d_board_info.flags = I2C_M_PIN_MUXING;
 	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
+	i2c_register_board_info(0, &ambarella_vin_board_info, 1);
+	i2c_register_board_info(1, &ambarella_hdmi_board_info, 1);
 
 	i2c_register_board_info(0, &durian_board_ext_gpio_info, 1);
 
