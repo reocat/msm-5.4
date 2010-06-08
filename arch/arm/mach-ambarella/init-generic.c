@@ -109,6 +109,20 @@ static struct spi_board_info ambarella_spi_devices[] = {
 };
 
 /* ==========================================================================*/
+static struct i2c_board_info ambarella_vin_board_info = {
+	.type = "amb_vin",
+	.addr = 0x00,
+};
+
+static struct i2c_board_info ambarella_hdmi_board_info = {
+	.type = "ambhdmi ddc",
+	.addr = 0x01,
+#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
+	.flags = I2C_M_PIN_MUXING,
+#endif
+};
+
+/* ==========================================================================*/
 static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
@@ -156,6 +170,14 @@ static void __init ambarella_init_generic(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
+
+	i2c_register_board_info(0, &ambarella_vin_board_info, 1);
+
+#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
+	i2c_register_board_info(0, &ambarella_hdmi_board_info, 1);
+#else
+	i2c_register_board_info(1, &ambarella_hdmi_board_info, 1);
+#endif
 
 	platform_device_register(&generic_board_input);
 }
