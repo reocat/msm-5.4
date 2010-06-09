@@ -1594,10 +1594,8 @@ u32 read_usb_reg_setting(void)
 /* called by prusb driver */
 void _init_usb_pll(void)
 {
-	register int i;
-
 	rct_set_usb_ana_on();
-	for(i = 0; i < 0x10000; i++); /* wait at least 150 us */
+	udelay(150);
 }
 
 /**

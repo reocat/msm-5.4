@@ -292,7 +292,7 @@ static void __init ambarella_init_coconut(void)
 
 /* ==========================================================================*/
 MACHINE_START(COCONUT, "Ambarella Coconut")
-	.phys_io	= AHB_START,
+	.phys_io	= AHB_PHYS_BASE,
 	.io_pg_offst	= ((AHB_BASE) >> 18) & 0xfffc,
 	.map_io		= ambarella_map_io,
 	.init_irq	= ambarella_init_irq,

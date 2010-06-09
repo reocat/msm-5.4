@@ -31,8 +31,8 @@
 #define __io(a)			((void __iomem *)(a))
 #define __mem_pci(a)		(a)
 
-#define io_p2v(x)		(((x) >= APB_START) ? ((x) - APB_START + APB_BASE) : ((x) - AHB_START + AHB_BASE))
-#define io_v2p(x)		(((x) >= APB_BASE) ? ((x) - APB_BASE + APB_START) : ((x) - AHB_BASE + AHB_START))
+#define io_p2v(x)		(((x) >= APB_PHYS_BASE) ? ((x) - APB_PHYS_BASE + APB_BASE) : ((x) - AHB_PHYS_BASE + AHB_BASE))
+#define io_v2p(x)		(((x) >= APB_BASE) ? ((x) - APB_BASE + APB_PHYS_BASE) : ((x) - AHB_BASE + AHB_PHYS_BASE))
 
 #ifndef __ASSEMBLER__
 

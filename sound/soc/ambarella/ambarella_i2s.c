@@ -82,12 +82,12 @@ static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
 /* FIXME HERE for PCM interface */
 static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_out = {
 	.name			= "I2S PCM Stereo out",
-	.dev_addr		= io_v2p(I2S_TX_LEFT_DATA_DMA_REG),
+	.dev_addr		= I2S_TX_LEFT_DATA_DMA_REG,
 };
 
 static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_in = {
 	.name			= "I2S PCM Stereo in",
-	.dev_addr		= io_v2p(I2S_RX_DATA_DMA_REG),
+	.dev_addr		= I2S_RX_DATA_DMA_REG,
 };
 
 static inline void dai_tx_enable(void)
