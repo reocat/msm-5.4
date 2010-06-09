@@ -141,8 +141,8 @@ err_exit:
 static int ipcam_board_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->socdev->codec;
-	
+	struct snd_soc_codec *codec = rtd->socdev->card->codec;
+
 	ipcam_ext_control(codec);
 
 	return 0;
@@ -278,7 +278,7 @@ static int ipcam_spk_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *k, int event)
 {
 	int errorCode = 0;
-	
+
 	if (SND_SOC_DAPM_EVENT_ON(event)){
 		errorCode = gpio_direction_output(spk_gpio, !!spk_level);
 		if (errorCode < 0) {
@@ -462,7 +462,7 @@ static void __exit ipcam_board_exit(void)
 {
 	gpio_free(spk_gpio);
 	gpio_free(mic_gpio);
-	
+
 	platform_device_unregister(ipcam_snd_device);
 }
 

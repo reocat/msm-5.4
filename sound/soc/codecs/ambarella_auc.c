@@ -229,7 +229,7 @@ static u32 a2auc_pga_gain_table[Gain_Table_Size] = {
 };
 
 #if 0
-static u32 a2auc_adc_cic_mult_table[ADC_CIC_MULT_LEVEL+1] = 
+static u32 a2auc_adc_cic_mult_table[ADC_CIC_MULT_LEVEL+1] =
 {
 		0x00000000, 0x00002000, 0x00004000, 0x00006000, 0x00008000, 0x0000a000, 0x0000c000, 0x0000e000,
 		0x00010000, 0x00012000, 0x00014000, 0x00016000, 0x00018000, 0x0001a000, 0x0001c000, 0x0001e000,
@@ -660,7 +660,7 @@ static void a2auc_sp_power_down(void)
 
 static void a2auc_set_adc_pga(u8 adc_pga)
 {
-	if (adc_pga > 0x1f ) 
+	if (adc_pga > 0x1f )
 	{
 		printk("ADC PGA Setting Overflow, Maximum value is selected.");
 		adc_pga = 0x1f;
@@ -734,14 +734,14 @@ static void a2auc_codec_init(void)
 static unsigned int a2auc_codec_read(struct snd_soc_codec *codec,
 			unsigned int _reg)
 {
-	u32 reg = AUC_REG(_reg);	
+	u32 reg = AUC_REG(_reg);
 	return a2auc_read(reg);
 }
 
 static int a2auc_codec_write(struct snd_soc_codec *codec, unsigned int _reg,
 			unsigned int value)
 {
-	u32 reg = AUC_REG(_reg);	
+	u32 reg = AUC_REG(_reg);
 	a2auc_write(reg, value);
 
 	return 0;
@@ -865,6 +865,14 @@ static int a2auc_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
+static struct snd_soc_dai_ops ambarella_a2auc_dai_ops = {
+	.startup = a2auc_startup,
+	.shutdown = a2auc_shutdown,
+	.digital_mute = a2auc_digital_mute,
+	.set_fmt = a2auc_set_fmt,
+	.set_clkdiv = a2auc_set_clkdiv,
+};
+
 struct snd_soc_dai ambarella_a2auc_dai = {
 	.name = "A2AUC",
 	.playback = {
@@ -881,13 +889,7 @@ struct snd_soc_dai ambarella_a2auc_dai = {
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
-	.ops = {
-		.startup = a2auc_startup,
-		.shutdown = a2auc_shutdown,
-		.digital_mute = a2auc_digital_mute,
-		.set_fmt = a2auc_set_fmt,
-		.set_clkdiv = a2auc_set_clkdiv,
-	},
+	.ops = &ambarella_a2auc_dai_ops,
 };
 EXPORT_SYMBOL(ambarella_a2auc_dai);
 
@@ -903,7 +905,7 @@ static int a2auc_probe(struct platform_device *pdev)
 		goto a2auc_probe_exit;
 	}
 
-	socdev->codec = codec;
+	socdev->card->codec = codec;
 	mutex_init(&codec->mutex);
 
 	codec->reg_cache = kmemdup(&a2auc_reg, sizeof(a2auc_reg), GFP_KERNEL);
@@ -960,8 +962,8 @@ a2auc_probe_reg_cache_err:
 	kfree(codec->reg_cache);
 
 a2auc_probe_cache_err:
-	kfree(socdev->codec);
-	socdev->codec = NULL;
+	kfree(socdev->card->codec);
+	socdev->card->codec = NULL;
 
 a2auc_probe_exit:
 	return ret;
@@ -970,7 +972,7 @@ a2auc_probe_exit:
 static int a2auc_remove(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	if (codec == NULL)
 		return 0;
@@ -989,7 +991,7 @@ static int a2auc_remove(struct platform_device *pdev)
 static int a2auc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	a2auc_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
@@ -999,9 +1001,9 @@ static int a2auc_suspend(struct platform_device *pdev, pm_message_t state)
 static int a2auc_resume(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
-#if 0 // FIXME recover all register? 
+#if 0 // FIXME recover all register?
 	int i;
 	u8 data[2];
 	u16 *cache = codec->reg_cache;

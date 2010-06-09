@@ -6,7 +6,7 @@
  * History:
  *	2009/03/05 - [Cao Rongrong] Created file
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
- * 
+ *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
  *
@@ -59,7 +59,7 @@ enum AudioCodec_MCLK {
 	AudioCodec_4_2336M = 10,
 	AudioCodec_4_096M = 11,
 	AudioCodec_3_072M = 12,
-	AudioCodec_2_8224M = 13,	
+	AudioCodec_2_8224M = 13,
 	AudioCodec_2_048M = 14
 };
 
@@ -83,7 +83,7 @@ struct adav803_priv {
 	unsigned int fmt_dir;
 };
 
-static u8 adav803_mclk_table[5] = { 
+static u8 adav803_mclk_table[5] = {
 	(ADAV803_u65_MCLK | ADAV803_u65_4X ),	/* 128 x fs */
 	(ADAV803_u65_MCLK  | ADAV803_u65_8X ),	/* 256 x fs */
 	(ADAV803_u65_MCLK32 | ADAV803_u65_8X ),	/* 384 x fs */
@@ -107,7 +107,7 @@ static int adav803_fill_cache(struct snd_soc_codec *codec)
 			pr_err("I2C read error: address = 0x%x\n", i);
 			return -EIO;
 		}
-		
+
 		cache[i] = val;
 	}
 
@@ -245,7 +245,7 @@ static int adav803_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_device *socdev = rtd->socdev;
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	struct adav803_priv *adav803 = codec->private_data;
 
 	u32 sfreq = params_rate(params);
@@ -328,7 +328,7 @@ static int adav803_hw_params(struct snd_pcm_substream *substream,
 			data4 |= ((ADAV803_u07_24Bit<< 2) | ADAV803_u07_RightJustified);
 			break;
 		}
-		break;	
+		break;
 	case SND_SOC_DAIFMT_I2S:
 		data1 = data1 | ADAV803_u04_I2S;
 		data2 = data2 | ADAV803_u05_I2S;
@@ -430,7 +430,7 @@ static int adav803_set_bias_level(struct snd_soc_codec *codec,
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 		/* everything on, dac unmute */
-		
+
 		/* Power on and unmute DAC */
 		reg = adav803_read_reg_cache(codec, ADAV803_DAC_Ctrl1_Reg_Adr);
 		reg |= (ADAV803_u64_Right_UnMute & ADAV803_u64_Left_UnMute);
@@ -469,7 +469,7 @@ static int adav803_set_bias_level(struct snd_soc_codec *codec,
 
 		/* Power down PLL */
 		reg = adav803_read_reg_cache(codec, ADAV803_PLL_Ctrl1_Reg_Adr);
-		reg |= (ADAV803_PLL_Ctrl1_PLL2PD_PWR_Down | 
+		reg |= (ADAV803_PLL_Ctrl1_PLL2PD_PWR_Down |
 			ADAV803_PLL_Ctrl1_PLL1PD_PWR_Down |
 			ADAV803_PLL_Ctrl1_XTAL_PWR_Down);
 		adav803_write(codec, ADAV803_PLL_Ctrl1_Reg_Adr, reg);
@@ -489,6 +489,14 @@ static int adav803_set_bias_level(struct snd_soc_codec *codec,
 
 #define ADAV803_FORMATS SNDRV_PCM_FMTBIT_S16_LE
 
+static struct snd_soc_dai_ops adav803_dai_ops = {
+	.hw_params = adav803_hw_params,
+	.digital_mute = adav803_mute,
+	.set_sysclk = adav803_set_dai_sysclk,
+	.set_fmt = adav803_set_dai_fmt,
+	.set_clkdiv = adav803_set_clkdiv,
+};
+
 struct snd_soc_dai adav803_dai = {
 	.name = "ADAV803",
 	.playback = {
@@ -505,20 +513,14 @@ struct snd_soc_dai adav803_dai = {
 		.rates = ADAV803_RATES,
 		.formats = ADAV803_FORMATS,
 	},
-	.ops = {
-		.hw_params = adav803_hw_params,
-		.digital_mute = adav803_mute,
-		.set_sysclk = adav803_set_dai_sysclk,
-		.set_fmt = adav803_set_dai_fmt,
-		.set_clkdiv = adav803_set_clkdiv,
-	},
+	.ops = &adav803_dai_ops,
 };
 EXPORT_SYMBOL_GPL(adav803_dai);
 
 static int adav803_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	adav803_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
@@ -527,7 +529,7 @@ static int adav803_suspend(struct platform_device *pdev, pm_message_t state)
 static int adav803_resume(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	u8 *cache = codec->reg_cache;
 	int i;
 
@@ -547,7 +549,7 @@ static int adav803_resume(struct platform_device *pdev)
  */
 static int adav803_init(struct snd_soc_device *socdev)
 {
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	int ret = 0;
 	u8 data;
 
@@ -710,7 +712,7 @@ static int adav803_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
 	struct snd_soc_device *socdev = adav803_socdev;
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	int ret;
 
 	i2c_set_clientdata(i2c, codec);
@@ -807,7 +809,7 @@ static int adav803_probe(struct platform_device *pdev)
 	}
 
 	codec->private_data = adav803;
-	socdev->codec = codec;
+	socdev->card->codec = codec;
 	mutex_init(&codec->mutex);
 	INIT_LIST_HEAD(&codec->dapm_widgets);
 	INIT_LIST_HEAD(&codec->dapm_paths);
@@ -836,7 +838,7 @@ static int adav803_probe(struct platform_device *pdev)
 static int adav803_remove(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	if (codec->control_data)
 		adav803_set_bias_level(codec, SND_SOC_BIAS_OFF);

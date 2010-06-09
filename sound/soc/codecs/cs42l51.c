@@ -5,7 +5,7 @@
  *
  * History:
  *	2009/07/01 - [Cao Rongrong] Created file
- * 
+ *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
  *
@@ -424,7 +424,7 @@ static int cs42l51_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_device *socdev = rtd->socdev;
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	struct cs42l51_priv *cs42l51 = codec->private_data;
 	u32 sfreq;
 
@@ -585,6 +585,13 @@ static int cs42l51_set_bias_level(struct snd_soc_codec *codec,
 #define CS42L51_RATES SNDRV_PCM_RATE_8000_48000
 #define CS42L51_FORMATS SNDRV_PCM_FMTBIT_S16_LE
 
+static struct snd_soc_dai_ops cs42l51_dai_ops = {
+	.hw_params = cs42l51_hw_params,
+	.digital_mute = cs42l51_mute,
+	.set_sysclk = cs42l51_set_dai_sysclk,
+	.set_fmt = cs42l51_set_dai_fmt,
+};
+
 struct snd_soc_dai cs42l51_dai = {
 	.name = "CS42L51",
 	.playback = {
@@ -601,19 +608,14 @@ struct snd_soc_dai cs42l51_dai = {
 		.rates = CS42L51_RATES,
 		.formats = CS42L51_FORMATS,
 	},
-	.ops = {
-		.hw_params = cs42l51_hw_params,
-		.digital_mute = cs42l51_mute,
-		.set_sysclk = cs42l51_set_dai_sysclk,
-		.set_fmt = cs42l51_set_dai_fmt,
-	},
+	.ops = &cs42l51_dai_ops,
 };
 EXPORT_SYMBOL_GPL(cs42l51_dai);
 
 static int cs42l51_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 
 	cs42l51_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
@@ -622,7 +624,7 @@ static int cs42l51_suspend(struct platform_device *pdev, pm_message_t state)
 static int cs42l51_resume(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	u8 *cache = codec->reg_cache;
 	int i;
 
@@ -644,7 +646,7 @@ static int cs42l51_resume(struct platform_device *pdev)
  */
 static int cs42l51_init(struct snd_soc_device *socdev)
 {
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	struct i2c_client *client = codec->control_data;
 	struct cs42l51_setup_data *setup = socdev->codec_data;
 	int ret = -ENODEV, data;
@@ -730,7 +732,7 @@ static int cs42l51_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
 	struct snd_soc_device *socdev = cs42l51_socdev;
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	int ret;
 
 	i2c_set_clientdata(i2c, codec);
@@ -825,7 +827,7 @@ static int cs42l51_probe(struct platform_device *pdev)
 		goto priv_alloc_err;
 
 	codec->private_data = cs42l51;
-	socdev->codec = codec;
+	socdev->card->codec = codec;
 	mutex_init(&codec->mutex);
 	INIT_LIST_HEAD(&codec->dapm_widgets);
 	INIT_LIST_HEAD(&codec->dapm_paths);
@@ -873,7 +875,7 @@ exit:
 static int cs42l51_remove(struct platform_device *pdev)
 {
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->codec;
+	struct snd_soc_codec *codec = socdev->card->codec;
 	struct cs42l51_setup_data *setup = socdev->codec_data;
 
 	if (codec->control_data)
