@@ -25,6 +25,40 @@
 #define __PLAT_AMBARELLA_IDC_H
 
 /* ==========================================================================*/
+#if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || (CHIP_REV == A5L)
+#define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         1
+#else
+#define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         0
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#define IDC_SUPPORT_INTERNAL_MUX	1
+#else
+#define IDC_SUPPORT_INTERNAL_MUX	0
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == A2S) || (CHIP_REV == A2M)
+#define IDC_PORTS_USING_INTERNAL_MUX 	1
+#elif (CHIP_REV == A5L)
+#define IDC_PORTS_USING_INTERNAL_MUX	2
+#else
+#define IDC_PORTS_USING_INTERNAL_MUX 	0
+#endif
+
+#define IDC_ENR_REG_ENABLE		(0x01)
+#define IDC_ENR_REG_DISABLE		(0x00)
+
+#define IDC_CTRL_STOP			(0x08)
+#define IDC_CTRL_START			(0x04)
+#define IDC_CTRL_IF			(0x02)
+#define IDC_CTRL_ACK			(0x01)
+#define IDC_CTRL_CLS			(0x00)
+
+#define IDC_FIFO_BUF_SIZE		(63)
+
+#define IDC_FMCTRL_STOP			(0x08)
+#define IDC_FMCTRL_START		(0x04)
+#define IDC_FMCTRL_IF			(0x02)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

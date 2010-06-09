@@ -276,6 +276,7 @@ extern void rct_set_audio_pll_fs(u8);
 #endif
 extern u32 get_audio_freq_hz(void);
 
+extern void _init_usb_pll(void);
 extern void rct_set_usb_ana_on(void);
 extern void rct_suspend_usb(void);
 extern void rct_set_usb_clk(void);

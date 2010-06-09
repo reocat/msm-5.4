@@ -26,6 +26,8 @@
 
 /* ==========================================================================*/
 #include <plat/syscfg.h>
+#include <ambhw/chip.h>
+#include <ambhw/busaddr.h>
 #include <ambhw/ambhw.h>
 
 #include <plat/gpio.h>

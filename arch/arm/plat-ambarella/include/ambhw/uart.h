@@ -167,6 +167,4 @@
 #define RECV_BUF_SIZ			1500
 #define SEND_BUF_SIZ			1500
 
-#define UART_FIFO_SIZE			(16)
-
 #endif

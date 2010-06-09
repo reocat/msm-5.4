@@ -300,6 +300,7 @@
 #define NAND_CTR_WAS			0x00000400
 
 /* FLASH_CMD_REG (NAND mode) */
+#if defined(__KERNEL__)
 #define NAND_AMB_CMD_ADDR(x)		((x) << 4)
 #define NAND_AMB_CMD_NOP		0x0
 #define NAND_AMB_CMD_DMA		0x1
@@ -317,6 +318,25 @@
 #define NAND_AMB_CMD_NOP8		0xd
 #define NAND_AMB_CMD_READ		0xe
 #define NAND_AMB_CMD_PROGRAM		0xf
+#else
+#define NAND_CMD_ADDR(x)		((x) << 4)
+#define NAND_CMD_NOP			0x0
+#define NAND_CMD_DMA			0x1
+#define NAND_CMD_RESET			0x2
+#define NAND_CMD_NOP2			0x3
+#define NAND_CMD_NOP3			0x4
+#define NAND_CMD_NOP4			0x5
+#define NAND_CMD_NOP5			0x6
+#define NAND_CMD_COPYBACK		0x7
+#define NAND_CMD_NOP6			0x8
+#define NAND_CMD_ERASE			0x9
+#define NAND_CMD_READID			0xa
+#define NAND_CMD_NOP7			0xb
+#define NAND_CMD_READSTATUS		0xc
+#define NAND_CMD_NOP8			0xd
+#define NAND_CMD_READ			0xe
+#define NAND_CMD_PROGRAM		0xf
+#endif
 
 /* FLASH_TIM0_REG (NAND mode) */
 #define NAND_TIM0_TCLS(x)		((x) << 24)

@@ -43,7 +43,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		.name		= "AHB",
 		.io_desc	= {
 			.virtual= AHB_BASE,
-			.pfn	= __phys_to_pfn(AHB_START),
+			.pfn	= __phys_to_pfn(AHB_PHYS_BASE),
 			.length	= AHB_SIZE,
 			.type	= MT_DEVICE,
 			},
@@ -52,7 +52,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		.name		= "APB",
 		.io_desc	= {
 			.virtual= APB_BASE,
-			.pfn	= __phys_to_pfn(APB_START),
+			.pfn	= __phys_to_pfn(APB_PHYS_BASE),
 			.length	= APB_SIZE,
 			.type	= MT_DEVICE,
 			},

@@ -10,7 +10,6 @@
 #ifndef __AMBHW__BUSADDR_H__
 #define __AMBHW__BUSADDR_H__
 
-#if !defined(__KERNEL__)
 /*
  * The AHB physical address is at 0x60000000 but is always mapped to
  * virtual address 0xd8000000
@@ -30,7 +29,6 @@
 #define AHB_BASE	AHB_PHYS_BASE
 #undef APB_BASE
 #define APB_BASE	APB_PHYS_BASE
-#endif
 #endif
 
 /* AHB slave offsets */
@@ -100,6 +98,7 @@
 #define VOUT_BASE			(AHB_BASE + VOUT_OFFSET)
 #define VIN_BASE			(AHB_BASE + VIN_OFFSET)
 #define I2S_BASE			(AHB_BASE + I2S_OFFSET)
+#define I2S_BASE_PHYS (AHB_PHYS_BASE + I2S_OFFSET)
 #define SD2_BASE			(AHB_BASE + SD2_OFFSET)
 #define MS_BASE				(AHB_BASE + MS_OFFSET)
 #define HOST_BASE			(AHB_BASE + HOST_OFFSET)
@@ -133,6 +132,7 @@
 #define VOUT_REG(x)			(VOUT_BASE + (x))
 #define VIN_REG(x)			(VIN_BASE + (x))
 #define I2S_REG(x)			(I2S_BASE + (x))
+#define I2S_REG_PHYS(x)  (I2S_BASE_PHYS + (x))
 #define SD2_REG(x)			(SD2_BASE + (x))
 #define MS_REG(x)			(MS_BASE + (x))
 #define HOST_REG(x)			(HOST_BASE + (x))
@@ -272,16 +272,22 @@
 #define DSP_DEBUG6_BASE                 (APB_BASE + DSP_DEBUG6_OFFSET)
 #define DSP_DEBUG7_BASE                 (APB_BASE + DSP_DEBUG7_OFFSET)
 
+
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
     (CHIP_REV == A6) || (CHIP_REV == A7)
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))
+
+#else
+
+#define DSP_VIN_DEBUG_OFFSET		VIN_OFFSET
+#define DSP_VIN_DEBUG_BASE		VIN_BASE
+#define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))
 #endif
 
 /*----------------------------------------------------------------------------*/
 
-#if !defined(__KERNEL__)
 /*******************/
 /* DSP related ... */
 /*******************/
@@ -291,9 +297,9 @@
 #define ME_OFFSET			0x140000
 #define MDXF_OFFSET			0x150000
 #define CODE_OFFSET			0x160000
-#define ME_BASE				0x70140000
-#define MDXF_BASE			0x70150000
-#define CODE_BASE			0x70160000
+#define ME_BASE				(APB_BASE + 0x140000)
+#define MDXF_BASE			(APB_BASE + 0x150000)
+#define CODE_BASE			(APB_BASE + 0x160000)
 
 #define DSP_DRAM_MAIN_OFFSET		0x0008
 #define DSP_DRAM_SUB0_OFFSET		0x0008
@@ -313,8 +319,8 @@
 
 #define MEMD_OFFSET			0x150000
 #define CODE_OFFSET			0x160000
-#define MEMD_BASE			0x70150000
-#define CODE_BASE			0x70160000
+#define MEMD_BASE			(APB_BASE + 0x150000)
+#define CODE_BASE			(APB_BASE + 0x160000)
 
 #define DSP_DRAM_MAIN_OFFSET		0x0008
 #define DSP_DRAM_SUB0_OFFSET		0x0008
@@ -346,6 +352,5 @@
 
 #endif
 
-#endif
 
 #endif
