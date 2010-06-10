@@ -34,6 +34,12 @@
 #include <mach/board.h>
 #include <mach/init.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#include <hal/ambhal.h>
+#include <hal/ambhalmini.h>
+#include <hal/header.h>
+#endif
+
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {

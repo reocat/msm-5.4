@@ -33,6 +33,12 @@
 
 #include <mach/hardware.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#include <hal/ambhal.h>
+#include <hal/ambhalmini.h>
+#include <hal/header.h>
+#endif
+
 /* ==========================================================================*/
 struct ambarella_mem_map_desc {
 	char		name[32];

@@ -31,6 +31,12 @@
 #include <mach/hardware.h>
 #include <plat/audio.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#include <hal/ambhal.h>
+#include <hal/ambhalmini.h>
+#include <hal/header.h>
+#endif
+
 #undef readb
 #undef readw
 #undef readl

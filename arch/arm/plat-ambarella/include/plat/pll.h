@@ -30,10 +30,6 @@
 #ifndef __ASSEMBLER__
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#include <hal/ambhal.h>
-#include <hal/ambhalmini.h>
-#include <hal/header.h>
-
 extern void *get_ambarella_hal_vp(void);
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
 

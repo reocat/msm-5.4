@@ -34,6 +34,12 @@
 #include <mach/hardware.h>
 #include <mach/init.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#include <hal/ambhal.h>
+#include <hal/ambhalmini.h>
+#include <hal/header.h>
+#endif
+
 #define MAX_CMD_LENGTH				(32)
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)

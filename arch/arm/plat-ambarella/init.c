@@ -32,6 +32,12 @@
 #include <mach/init.h>
 #include <plat/debug.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#include <hal/ambhal.h>
+#include <hal/ambhalmini.h>
+#include <hal/header.h>
+#endif
+
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_32BIT_MASK;
 EXPORT_SYMBOL(ambarella_dmamask);
