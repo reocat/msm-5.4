@@ -18,6 +18,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/chacha_mt4d.h>
 
+//#define SINGLE_TOUCH_ONLY
 //#define DEBUG_CHACHA_MT4D
 
 #ifdef	DEBUG_CHACHA_MT4D
@@ -65,6 +66,9 @@ static inline int chacha_mt4d_calibrate(struct chacha_mt4d *cm)
 	int			errorCode;
 	u8			buf[4];
 
+	ambarella_gpio_config(irq_to_gpio(cm->irq), GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(irq_to_gpio(cm->irq), GPIO_LOW);
+
 	msg.addr = cm->client->addr;
 	msg.flags = cm->client->flags;
 	msg.len = 4;
@@ -77,9 +81,14 @@ static inline int chacha_mt4d_calibrate(struct chacha_mt4d *cm)
 	errorCode = i2c_transfer(cm->client->adapter, &msg, 1);
 	if (errorCode != 1) {
 		printk("Chacha-mt4d: Can't calibrate touch pannel.\n");
-		return -EIO;
+		errorCode = -EIO;
+		goto chacha_mt4d_calibrate_exit;
+	} else {
+		errorCode = 0;
 	}
 
+chacha_mt4d_calibrate_exit:
+	ambarella_gpio_set(irq_to_gpio(cm->irq), GPIO_HIGH);
 	return 0;
 }
 
@@ -113,14 +122,22 @@ static void chacha_mt4d_send_event(struct chacha_mt4d *cm)
 
 	/* Button Pressed */
 	if (!prev_touch && curr_touch) {
+#ifdef SINGLE_TOUCH_ONLY
 		input_report_key(input, BTN_TOUCH, 1);
+#endif
 		CHACHA_MT4D_DEBUG("Finger Pressed\n");
 	}
 
 	/* Button Released */
 	if (prev_touch && !curr_touch) {
 		event = 1;
+#ifdef SINGLE_TOUCH_ONLY
 		input_report_key(input, BTN_TOUCH, 0);
+		input_report_abs(input, ABS_PRESSURE, 0);
+#else
+		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
+		input_mt_sync(input);
+#endif
 		CHACHA_MT4D_DEBUG("Finger Released\n\n\n");
 	}
 
@@ -164,11 +181,68 @@ static void chacha_mt4d_send_event(struct chacha_mt4d *cm)
 			y1 = MAX_Y - y1;
 
 		event = 1;
+#ifdef SINGLE_TOUCH_ONLY
+		input_report_abs(input, ABS_X, x1 >> 1);
+		input_report_abs(input, ABS_Y, y1 >> 1);
 		input_report_abs(input, ABS_PRESSURE, MAX_Z);
-		input_report_abs(input, ABS_X, x1);
-		input_report_abs(input, ABS_Y, y1);
+		CHACHA_MT4D_DEBUG("Finger: (%d, %d)\n", x1, y1);
+#else
+		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
+		input_report_abs(input, ABS_MT_POSITION_X, x1);
+		input_report_abs(input, ABS_MT_POSITION_Y, y1);
+		input_mt_sync(input);
 		CHACHA_MT4D_DEBUG("Finger1: (%d, %d)\n", x1, y1);
+#endif
 	}
+
+#ifndef SINGLE_TOUCH_ONLY
+	if (curr_touch >= 2) {
+		u8 x2h, x2l, y2h, y2l;
+		u32 x2, y2;
+
+		x2h = cm->reg_data[CM_X2_HIGH];
+		x2l = cm->reg_data[CM_X2_LOW];
+		y2h = cm->reg_data[CM_Y2_HIGH];
+		y2l = cm->reg_data[CM_Y2_LOW];
+		x2 = (x2h << 8) | x2l;
+		y2 = (y2h << 8) | y2l;
+
+		if (x2 > MAX_X)
+			x2 = MAX_X;
+
+		if (y2 > MAX_Y)
+			y2 = MAX_Y;
+
+		if (cm->fix.x_rescale) {
+			x2 = (x2 > cm->fix.x_min) ? (x2 - cm->fix.x_min) : 0;
+			x2 *= MAX_X;
+			x2 /= (cm->fix.x_max - cm->fix.x_min);
+			if (x2 >= MAX_X)
+				x2 = MAX_X;
+		}
+
+		if (cm->fix.y_rescale) {
+			y2 = (y2 > cm->fix.y_min) ? (y2 - cm->fix.y_min) : 0;
+			y2 *= MAX_Y;
+			y2 /= (cm->fix.y_max - cm->fix.y_min);
+			if (y2 >= MAX_Y)
+				y2 = MAX_Y;
+		}
+
+		if (cm->fix.x_invert)
+			x2 = MAX_X - x2;
+
+		if (cm->fix.y_invert)
+			y2 = MAX_Y - y2;
+
+		event = 1;
+		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
+		input_report_abs(input, ABS_MT_POSITION_X, x2);
+		input_report_abs(input, ABS_MT_POSITION_Y, y2);
+		input_mt_sync(input);
+		CHACHA_MT4D_DEBUG("Finger2: (%d, %d)\n", x2, y2);
+	}
+#endif
 
 	if (event)
 		input_sync(input);
@@ -233,6 +307,7 @@ static int chacha_mt4d_probe(struct i2c_client *client,
 
 	cm->client = client;
 	i2c_set_clientdata(client, cm);
+	cm->irq = client->irq;
 	cm->input = input_dev;
 	cm->fix	= pdata->fix;
 	cm->get_pendown_state = pdata->get_pendown_state;
@@ -246,14 +321,22 @@ static int chacha_mt4d_probe(struct i2c_client *client,
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 
+#ifdef SINGLE_TOUCH_ONLY
+	input_set_abs_params(input_dev, ABS_X, 0, MAX_X >> 1, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y, 0, MAX_Y >> 1, 0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE, 0, MAX_Z, 0, 0);
-	input_set_abs_params(input_dev, ABS_X, 0, MAX_X, 0, 0);
-	input_set_abs_params(input_dev, ABS_Y, 0, MAX_Y, 0, 0);
+#else
+	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, MAX_Z, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0, MAX_X, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0, MAX_Y, 0, 0);
+#endif
 
 	cm->workqueue = create_singlethread_workqueue("chacha_mt4d");
 	INIT_WORK(&cm->report_worker, chacha_mt4d_report_worker);
 
-	cm->irq = client->irq;
+	chacha_mt4d_calibrate(cm);
+	pdata->init_platform_hw();
+
 	err = request_irq(cm->irq, chacha_mt4d_irq, IRQF_TRIGGER_FALLING,
 			client->dev.driver->name, cm);
 	if (err < 0) {

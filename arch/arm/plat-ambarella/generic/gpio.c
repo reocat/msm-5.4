@@ -274,7 +274,7 @@ static int ambarella_gpio_chip_direction_output(struct gpio_chip *chip,
 		ambarella_chip->mem_base,
 		offset,
 		GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_inline_set(ambarella_chip->mem_base, offset, val);	
+	ambarella_gpio_inline_set(ambarella_chip->mem_base, offset, val);
 
 	mutex_unlock(&ambarella_gpio_lock);
 
@@ -627,6 +627,9 @@ void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
 		return;
 
+	if (gpio_request(pinfo->gpio_id, __func__))
+		pr_debug("%s: Cannot request gpio%d!\n", __func__, pinfo->gpio_id);
+
 	if (on)
 		gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
 	else
@@ -634,6 +637,8 @@ void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 
 	if (pinfo->active_delay)
 		msleep(pinfo->active_delay);
+
+	gpio_free(pinfo->gpio_id);
 }
 EXPORT_SYMBOL(ambarella_set_gpio_output);
 
@@ -646,10 +651,15 @@ u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 		return 0;
 	}
 
+	if (gpio_request(pinfo->gpio_id, __func__))
+		pr_debug("%s: Cannot request gpio%d!\n", __func__, pinfo->gpio_id);
+
 	gpio_direction_input(pinfo->gpio_id);
 	if (pinfo->active_delay)
 		msleep(pinfo->active_delay);
 	gpio_value = gpio_get_value(pinfo->gpio_id);
+
+	gpio_free(pinfo->gpio_id);
 
 	pr_debug("%s: {gpio[%d], level[%s], delay[%dms]} get[%d].\n",
 		__func__,
@@ -678,12 +688,17 @@ void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
 		return;
 
+	if (gpio_request(pinfo->gpio_id, __func__))
+		pr_debug("%s: Cannot request gpio%d!\n", __func__, pinfo->gpio_id);
+
 	gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
 	if (pinfo->active_delay)
 		msleep(pinfo->active_delay);
 	gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
 	if (pinfo->active_delay)
 		msleep(pinfo->active_delay);
+
+	gpio_free(pinfo->gpio_id);
 }
 EXPORT_SYMBOL(ambarella_set_gpio_reset);
 

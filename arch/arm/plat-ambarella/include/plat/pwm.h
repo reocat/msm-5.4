@@ -30,6 +30,11 @@
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/
+extern struct platform_device ambarella_pwm_platform_device0;
+extern struct platform_device ambarella_pwm_platform_device1;
+extern struct platform_device ambarella_pwm_platform_device2;
+extern struct platform_device ambarella_pwm_platform_device3;
+extern struct platform_device ambarella_pwm_platform_device4;
 
 /* ==========================================================================*/
 extern int ambarella_init_pwm(void);

@@ -5,7 +5,7 @@
  *	2007/10/30 - [Grady Chen] created file
  *	2007/12/29 - [Jay Zhang] fixed a few bugs
  *	2008/04/14 - [Louis Sun] changed it to transmit multi packets
- *	    in one irq also removed memcpy in transmit    
+ *	    in one irq also removed memcpy in transmit
  *	2008/05/13 - [Louis Sun] port NAPI for receive
  *	2008/06/11 - [Louis Sun] add multicast receive with DA filtering,
  *	    add ethernet stop implementation
@@ -149,7 +149,7 @@ static inline int ambhw_dma_reset(struct ambeth_info *lp)
 	amba_setbitsl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		ETH_DMA_BUS_MODE_SWR);
 	do {
-		if (counter++ > 10) {
+		if (counter++ > 100) {
 			errorCode = -EIO;
 			break;
 		}
@@ -318,7 +318,7 @@ static inline void ambhw_init(struct ambeth_info *lp)
 	/* @@ why   RTC 64 , can we try RTC 96 or 128 ?  CHECKPOINT,
 	why ETH_DMA_OPMODE_FUF?  may try to disable FUF
 	we may also try ETH_DMA_OPMODE_SF, since it starts
-	transfer when there is a full frame, 
+	transfer when there is a full frame,
 	*/
 	val = (ETH_DMA_OPMODE_TTC_256 |
 		ETH_DMA_OPMODE_RTC_96 |
@@ -586,7 +586,7 @@ static inline int ambeth_rx_rngmng_init(struct ambeth_info *lp)
 	dma_addr_t				mapping;
 	struct sk_buff				*skb;
 
-	rx = &lp->rx; 
+	rx = &lp->rx;
 	rx->cur_rx = 0;
 	rx->dirty_rx = 0;
 
@@ -632,7 +632,7 @@ static inline int ambeth_rx_refill(struct ambeth_info *lp)
 	struct sk_buff				*skb;
 	dma_addr_t				mapping;
 
-	rx = &lp->rx; 
+	rx = &lp->rx;
 
 	dev_dbg(&lp->ndev->dev, "%s: cur_rx %d, dirty_rx %d.\n",
 		__func__, rx->cur_rx, rx->dirty_rx);
@@ -671,7 +671,7 @@ static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
 	struct sk_buff				*skb;
 	struct ambeth_rx_rngmng			*rx;
 
-	rx = &lp->rx; 
+	rx = &lp->rx;
 	for (i = 0; i < AMBETH_RX_RING_SIZE; i++) {
 		skb =rx->rng[i].skb;
 		mapping = rx->rng[i].mapping;
@@ -710,7 +710,7 @@ static inline int ambeth_tx_rngmng_init(struct ambeth_info *lp)
 	for (i = 0; i < AMBETH_TX_RING_SIZE; i++) {
 		tx->rng[i].mapping = 0 ;
 		tx->desc[i].length = (ETH_TDES1_LS |
-			ETH_TDES1_FS | ETH_TDES1_TCH); 
+			ETH_TDES1_FS | ETH_TDES1_TCH);
 		tx->desc[i].buffer1 = 0;
 		tx->desc[i].buffer2 = (u32)lp->tx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
@@ -745,7 +745,7 @@ static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
 	}
 
 	for (i = 0; i < AMBETH_TX_RING_SIZE; i++) {
-		skb = tx->rng[i].skb; 
+		skb = tx->rng[i].skb;
 		mapping = tx->rng[i].mapping;
 
 		tx->rng[i].skb = NULL;
@@ -778,7 +778,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
 	u32					irq_status;
-	int					tx_count = 0; 
+	int					tx_count = 0;
 	int					work_count;
 	int					rxd = 0;
 	struct ambeth_tx_rngmng			*tx;
@@ -802,7 +802,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 			ETH_DMA_STATUS_RU | ETH_DMA_STATUS_ERI))) {
 			dev_dbg(&lp->ndev->dev,	"%s: RX IRQ[0x%x]!\n",
 				__func__, irq_status);
-			rxd++;  
+			rxd++;
 
 			amba_writel(lp->regbase + ETH_DMA_INTEN_OFFSET,
 				AMBETH_DMA_INT_ENABLE & (~AMBETH_DMA_INT_RXPOLL));
@@ -885,10 +885,10 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 					dev_err(&lp->ndev->dev,
 						"%s: null mapping!\n",
 						__func__);
-				} else { 
+				} else {
 					dma_unmap_single(&lp->ndev->dev,
-						tx->rng[entry].mapping, 
-						tx->rng[entry].skb->len, 
+						tx->rng[entry].mapping,
+						tx->rng[entry].skb->len,
 						DMA_TO_DEVICE);
 				}
 
@@ -901,7 +901,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 			dirty_to_tx = tx->cur_tx - dirty_tx;
 			/* if dirty_tx (to be transferred by DMA and
 			* then freed) cannot catch cur_tx,
-			* there must be some error, so try to catch up 
+			* there must be some error, so try to catch up
 			*/
 			if (unlikely(dirty_to_tx > AMBETH_TX_RING_SIZE)) {
 				dev_err(&lp->ndev->dev,
@@ -1005,7 +1005,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 
 		irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
 		if (rxd) {
-			irq_status &= ~AMBETH_DMA_INT_RXPOLL;   
+			irq_status &= ~AMBETH_DMA_INT_RXPOLL;
 		}
 	} while ((irq_status & (ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TPS |
 		ETH_DMA_STATUS_TI | ETH_DMA_STATUS_RPS | ETH_DMA_STATUS_UNF |
@@ -1187,7 +1187,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	tx->rng[entry].skb = skb;
 	mapping = dma_map_single(&lp->ndev->dev, skb->data,
 		skb->len, DMA_TO_DEVICE);
-	tx->rng[entry].mapping = mapping;    
+	tx->rng[entry].mapping = mapping;
 	tx->desc[entry].buffer1 = mapping;
 
 	if ((tx->cur_tx - tx->dirty_tx) < (AMBETH_TX_RING_SIZE / 2)) {
@@ -1207,7 +1207,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	tx->desc[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
 	tx->desc[entry].status = ETH_TDES0_OWN;
-	tx->cur_tx++;	
+	tx->cur_tx++;
 
 	amba_writel(lp->regbase + ETH_DMA_TX_POLL_DMD_OFFSET, 0x01);
 
@@ -1268,7 +1268,7 @@ static inline void ambeth_poll_error_status(struct ambeth_info *lp,
 		if (status & ETH_RDES0_LC) {
 			dev_err(&lp->ndev->dev, "%s: rx collison error.\n",
 				__func__);
-			lp->stats.collisions++; 
+			lp->stats.collisions++;
 		}
 		if(status & ETH_RDES0_CE ) {
 			lp->stats.rx_crc_errors++;
@@ -1374,7 +1374,7 @@ int ambeth_poll(struct napi_struct *napi, int budget)
 		while (1) {
 			status = lp->rx.desc[entry].status;
 			if (status & ETH_RDES0_OWN)
-				break;		
+				break;
 
 			if (unlikely((status & 0x38008300) != 0x0300)) {
 				ambeth_poll_error_status(lp, status);
@@ -1429,7 +1429,7 @@ ambeth_poll_exit:
 static void ambeth_set_multicast_list(struct net_device *ndev)
 {
 	struct ambeth_info			*lp;
-	unsigned int				mac_filter_reg; 
+	unsigned int				mac_filter_reg;
 	DECLARE_MAC_BUF(mac);
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
@@ -1734,7 +1734,7 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	ndev->netdev_ops = &ambeth_netdev_ops;
 	ndev->watchdog_timeo = AMBETH_TX_TIMEOUT;
 	netif_napi_add(ndev, &lp->napi, ambeth_poll,
-		lp->platform_info.napi_weight);	
+		lp->platform_info.napi_weight);
 	if (memcmp(lp->platform_info.mac_addr, "\0\0\0\0\0\0",
 		AMBETH_MAC_SIZE)) {
 		memcpy(ndev->dev_addr, lp->platform_info.mac_addr,

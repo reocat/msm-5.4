@@ -28,6 +28,7 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/dma-mapping.h>
+#include <linux/pwm_backlight.h>
 
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
@@ -35,9 +36,398 @@
 #include <mach/hardware.h>
 #include <plat/pwm.h>
 
+#define PWM_1_THROUGH_4_DIVIDER	32
+
 #define PWM_CMD_SIZE		(5)
 #define PWM_MAX_INSTANCES	(4)
 #define PWM_ARRAY_SIZE		(PWM_MAX_INSTANCES * PWM_CMD_SIZE)
+
+
+/*================================ PWM Device ================================*/
+struct reg_bit_field {
+	unsigned int		addr;
+	unsigned int		msb;
+	unsigned int		lsb;
+};
+
+#define SET_REG_BIT_FILED(reg, val)	\
+{	\
+	unsigned int		_reg, _tmp, _val;	\
+	\
+	_tmp = 0x1 << ((reg).msb - (reg).lsb + 1);	\
+	_tmp = _tmp - 1;	\
+	_val = ((val) & _tmp) << (reg).lsb;	\
+	_tmp = _tmp << (reg).lsb;	\
+	_reg = amba_readl((reg).addr);	\
+	_reg &= (~_tmp);	\
+	_reg |= _val;	\
+	amba_writel((reg).addr, _reg);	\
+}
+
+typedef unsigned int (*get_pwm_clock_t)(void);
+
+struct pwm_device {
+	unsigned int		pwm_id;
+	unsigned int		gpio_id;
+	get_pwm_clock_t		get_clock;
+	struct reg_bit_field	enable;
+	struct reg_bit_field	divider;
+	struct reg_bit_field	high;
+	struct reg_bit_field	low;
+	unsigned int		use_count;
+	const char		*label;
+	struct list_head	node;
+};
+
+static DEFINE_MUTEX(pwm_lock);
+static LIST_HEAD(pwm_list);
+
+static void add_pwm_device(struct pwm_device *pwm)
+{
+	mutex_lock(&pwm_lock);
+	list_add_tail(&pwm->node, &pwm_list);
+	mutex_unlock(&pwm_lock);
+}
+
+int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
+{
+	int			errorCode = 0;
+	unsigned int		clock, on, off;
+
+	if (!pwm->get_clock) {
+		errorCode = -EINVAL;
+		printk("%s: Can not get pwm clock!\n", __func__);
+		goto pwm_config_exit;
+	}
+	clock = (pwm->get_clock() + 50000) / 100000;
+	SET_REG_BIT_FILED(pwm->divider, PWM_1_THROUGH_4_DIVIDER - 1);
+
+	on = (clock * duty_ns + 5000) / 10000;
+	off = (clock * (period_ns - duty_ns) + 5000) / 10000;
+	if (on == 0)
+		on = 1;
+	if (off == 0)
+		off = 1;
+	SET_REG_BIT_FILED(pwm->high, on - 1);
+	SET_REG_BIT_FILED(pwm->low, off - 1);
+
+pwm_config_exit:
+	return errorCode;
+}
+EXPORT_SYMBOL(pwm_config);
+
+int pwm_enable(struct pwm_device *pwm)
+{
+	SET_REG_BIT_FILED(pwm->enable, 1);
+	ambarella_gpio_config(pwm->gpio_id, GPIO_FUNC_HW);
+
+	return 0;
+}
+EXPORT_SYMBOL(pwm_enable);
+
+void pwm_disable(struct pwm_device *pwm)
+{
+	SET_REG_BIT_FILED(pwm->enable, 0);
+}
+EXPORT_SYMBOL(pwm_disable);
+
+struct pwm_device *pwm_request(int pwm_id, const char *label)
+{
+	struct pwm_device *pwm;
+	int found = 0;
+
+	mutex_lock(&pwm_lock);
+
+	list_for_each_entry(pwm, &pwm_list, node) {
+		if (pwm->pwm_id == pwm_id) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (found) {
+		if (pwm->use_count == 0) {
+			pwm->use_count++;
+			pwm->label = label;
+		} else
+			pwm = ERR_PTR(-EBUSY);
+	} else
+		pwm = ERR_PTR(-ENOENT);
+
+	mutex_unlock(&pwm_lock);
+	return pwm;
+}
+EXPORT_SYMBOL(pwm_request);
+
+void pwm_free(struct pwm_device *pwm)
+{
+	mutex_lock(&pwm_lock);
+
+	if (pwm->use_count) {
+		pwm->use_count--;
+		pwm->label = NULL;
+	} else
+		pr_warning("PWM device already freed\n");
+
+	mutex_unlock(&pwm_lock);
+}
+EXPORT_SYMBOL(pwm_free);
+
+static unsigned int get_pwm_1_through_4_clock_hz(void)
+{
+	return 13 * get_so_freq_hz() / (PWM_1_THROUGH_4_DIVIDER << 3);
+}
+
+static struct pwm_device ambarella_pwm0 = {
+	.pwm_id		= 0,
+	.gpio_id	= 16,
+	.get_clock	= get_pwm_freq_hz,
+	.enable		= {
+		.addr	= PWM_ENABLE_REG,
+		.msb	= 0,
+		.lsb	= 0,
+	},
+	.divider	= {
+		.addr	= PWM_MODE_REG,
+		.msb	= 10,
+		.lsb	= 1,
+	},
+	.high		= {
+		.addr	= PWM_CONTROL_REG,
+		.msb	= 31,
+		.lsb	= 16,
+	},
+	.low		= {
+		.addr	= PWM_CONTROL_REG,
+		.msb	= 15,
+		.lsb	= 0,
+	},
+	.use_count = 0,
+	.label = NULL,
+};
+
+static struct pwm_device ambarella_pwm1 = {
+	.pwm_id		= 1,
+	.gpio_id	= 45,
+	.get_clock	= get_pwm_1_through_4_clock_hz,
+	.enable		= {
+		.addr	= PWM_B0_ENABLE_REG,
+		.msb	= 0,
+		.lsb	= 0,
+	},
+	.divider	= {
+		.addr	= PWM_B0_ENABLE_REG,
+		.msb	= 10,
+		.lsb	= 1,
+	},
+	.high		= {
+		.addr	= PWM_B0_DATA1_REG,
+		.msb	= 19,
+		.lsb	= 10,
+	},
+	.low		= {
+		.addr	= PWM_B0_DATA1_REG,
+		.msb	= 9,
+		.lsb	= 0,
+	},
+	.use_count = 0,
+	.label = NULL,
+};
+
+static struct pwm_device ambarella_pwm2 = {
+	.pwm_id		= 2,
+	.gpio_id	= 46,
+	.get_clock	= get_pwm_1_through_4_clock_hz,
+	.enable		= {
+		.addr	= PWM_B1_ENABLE_REG,
+		.msb	= 0,
+		.lsb	= 0,
+	},
+	.divider	= {
+		.addr	= PWM_B1_ENABLE_REG,
+		.msb	= 10,
+		.lsb	= 1,
+	},
+	.high		= {
+		.addr	= PWM_B1_DATA1_REG,
+		.msb	= 19,
+		.lsb	= 10,
+	},
+	.low		= {
+		.addr	= PWM_B1_DATA1_REG,
+		.msb	= 9,
+		.lsb	= 0,
+	},
+	.use_count = 0,
+	.label = NULL,
+};
+
+static struct pwm_device ambarella_pwm3 = {
+	.pwm_id		= 3,
+	.gpio_id	= 50,
+	.get_clock	= get_pwm_1_through_4_clock_hz,
+	.enable		= {
+		.addr	= PWM_C0_ENABLE_REG,
+		.msb	= 0,
+		.lsb	= 0,
+	},
+	.divider	= {
+		.addr	= PWM_C0_ENABLE_REG,
+		.msb	= 10,
+		.lsb	= 1,
+	},
+	.high		= {
+		.addr	= PWM_C0_DATA1_REG,
+		.msb	= 19,
+		.lsb	= 10,
+	},
+	.low		= {
+		.addr	= PWM_C0_DATA1_REG,
+		.msb	= 9,
+		.lsb	= 0,
+	},
+	.use_count = 0,
+	.label = NULL,
+};
+
+static struct pwm_device ambarella_pwm4 = {
+	.pwm_id		= 4,
+	.gpio_id	= 51,
+	.get_clock	= get_pwm_1_through_4_clock_hz,
+	.enable		= {
+		.addr	= PWM_C1_ENABLE_REG,
+		.msb	= 0,
+		.lsb	= 0,
+	},
+	.divider	= {
+		.addr	= PWM_C1_ENABLE_REG,
+		.msb	= 10,
+		.lsb	= 1,
+	},
+	.high		= {
+		.addr	= PWM_C1_DATA1_REG,
+		.msb	= 19,
+		.lsb	= 10,
+	},
+	.low		= {
+		.addr	= PWM_C1_DATA1_REG,
+		.msb	= 9,
+		.lsb	= 0,
+	},
+	.use_count = 0,
+	.label = NULL,
+};
+
+/*============================= PWM Backlight Device =========================*/
+static struct platform_pwm_backlight_data amb_pwm0_pdata = {
+	.pwm_id		= 0,
+	.max_brightness	= 100,
+	.dft_brightness	= 100,
+	.pwm_period_ns	= 40000,
+	.init		= NULL,
+	.notify		= NULL,
+	.exit		= NULL,
+};
+
+struct platform_device ambarella_pwm_platform_device0 = {
+	.name		= "pwm-backlight",
+	.id		= 0,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &amb_pwm0_pdata,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+static struct platform_pwm_backlight_data amb_pwm1_pdata = {
+	.pwm_id		= 1,
+	.max_brightness	= 100,
+	.dft_brightness	= 100,
+	.pwm_period_ns	= 10000,
+	.init		= NULL,
+	.notify		= NULL,
+	.exit		= NULL,
+};
+
+struct platform_device ambarella_pwm_platform_device1 = {
+	.name		= "pwm-backlight",
+	.id		= 1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &amb_pwm1_pdata,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+static struct platform_pwm_backlight_data amb_pwm2_pdata = {
+	.pwm_id		= 2,
+	.max_brightness	= 100,
+	.dft_brightness	= 100,
+	.pwm_period_ns	= 10000,
+	.init		= NULL,
+	.notify		= NULL,
+	.exit		= NULL,
+};
+
+struct platform_device ambarella_pwm_platform_device2 = {
+	.name		= "pwm-backlight",
+	.id		= 2,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &amb_pwm2_pdata,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+static struct platform_pwm_backlight_data amb_pwm3_pdata = {
+	.pwm_id		= 3,
+	.max_brightness	= 100,
+	.dft_brightness	= 100,
+	.pwm_period_ns	= 10000,
+	.init		= NULL,
+	.notify		= NULL,
+	.exit		= NULL,
+};
+
+struct platform_device ambarella_pwm_platform_device3 = {
+	.name		= "pwm-backlight",
+	.id		= 3,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &amb_pwm3_pdata,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
+
+static struct platform_pwm_backlight_data amb_pwm4_pdata = {
+	.pwm_id		= 4,
+	.max_brightness	= 100,
+	.dft_brightness	= 100,
+	.pwm_period_ns	= 10000,
+	.init		= NULL,
+	.notify		= NULL,
+	.exit		= NULL,
+};
+
+struct platform_device ambarella_pwm_platform_device4 = {
+	.name		= "pwm-backlight",
+	.id		= 4,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &amb_pwm4_pdata,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_32BIT_MASK,
+	}
+};
 
 #ifdef CONFIG_AMBARELLA_PWM_PROC
 static u32 pwm_array[PWM_ARRAY_SIZE];
@@ -56,7 +446,7 @@ static int ambarella_pwm_proc_write(struct file *file,
 	u32					xoff;
 	u32					div;
 	u32					data_reg;
-	
+
 	if (count > sizeof(pwm_array)) {
 		pr_err("%s: count %d out of size!\n", __func__, (u32)count);
 		errorCode = -ENOSPC;
@@ -138,6 +528,12 @@ int __init ambarella_init_pwm(void)
 		pwm_file->write_proc = ambarella_pwm_proc_write;
 	}
 #endif
+
+	add_pwm_device(&ambarella_pwm0);
+	add_pwm_device(&ambarella_pwm1);
+	add_pwm_device(&ambarella_pwm2);
+	add_pwm_device(&ambarella_pwm3);
+	add_pwm_device(&ambarella_pwm4);
 
 	return errorCode;
 }

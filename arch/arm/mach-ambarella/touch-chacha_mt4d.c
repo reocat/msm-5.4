@@ -76,7 +76,7 @@ static void ambarella_chacha_mt4d_exit_platform_hw(void)
 static struct chacha_mt4d_platform_data ambarella_chacha_mt4d_pdata = {
 	.fix = {
 		.x_invert = 0,
-		.y_invert = 1,
+		.y_invert = 0,
 		.x_rescale = 0,
 		.y_rescale = 0,
 		.x_min = 2,

@@ -75,6 +75,11 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_crypto,
 #endif
 	&ambarella_adc0,
+	&ambarella_pwm_platform_device0,
+	&ambarella_pwm_platform_device1,
+	&ambarella_pwm_platform_device2,
+	&ambarella_pwm_platform_device3,
+	&ambarella_pwm_platform_device4,
 };
 
 /* ==========================================================================*/

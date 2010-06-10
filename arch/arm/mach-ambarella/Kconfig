@@ -28,6 +28,7 @@ comment "Ambarella Board"
 config MACH_AMBARELLA
 	bool "Generic"
 	default y
+	select HAVE_PWM
 	help
 	  Say Y here if you can't find suitable Board Name.
 
