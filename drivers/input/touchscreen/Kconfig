@@ -11,6 +11,24 @@ menuconfig INPUT_TOUCHSCREEN
 
 if INPUT_TOUCHSCREEN
 
+comment "Touchscreen Features"
+
+config SINGLE_TOUCH_ONLY
+        bool "Single Touch Only"
+        help
+          Say Y here if you want to support single touch only.
+
+          If unsure, say N.
+
+config DEBUG_TOUCHSCREEN
+        bool "Print Debug Information"
+        help
+          Say Y here if you want to debug touchscreens.
+
+          If unsure, say N.
+
+comment "Touchscreen Models"
+
 config TOUCHSCREEN_ADS7846
 	tristate "ADS7846/TSC2046 and ADS7843 based touchscreens"
 	depends on SPI_MASTER

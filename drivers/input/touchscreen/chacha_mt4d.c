@@ -18,10 +18,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/chacha_mt4d.h>
 
-//#define SINGLE_TOUCH_ONLY
-//#define DEBUG_CHACHA_MT4D
-
-#ifdef	DEBUG_CHACHA_MT4D
+#ifdef	CONFIG_DEBUG_TOUCHSCREEN
 #define CHACHA_MT4D_DEBUG(format, arg...)	printk(format , ## arg)
 #else
 #define CHACHA_MT4D_DEBUG(format, arg...)
@@ -122,7 +119,7 @@ static void chacha_mt4d_send_event(struct chacha_mt4d *cm)
 
 	/* Button Pressed */
 	if (!prev_touch && curr_touch) {
-#ifdef SINGLE_TOUCH_ONLY
+#ifdef CONFIG_SINGLE_TOUCH_ONLY
 		input_report_key(input, BTN_TOUCH, 1);
 #endif
 		CHACHA_MT4D_DEBUG("Finger Pressed\n");
@@ -131,7 +128,7 @@ static void chacha_mt4d_send_event(struct chacha_mt4d *cm)
 	/* Button Released */
 	if (prev_touch && !curr_touch) {
 		event = 1;
-#ifdef SINGLE_TOUCH_ONLY
+#ifdef CONFIG_SINGLE_TOUCH_ONLY
 		input_report_key(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_PRESSURE, 0);
 #else
@@ -181,7 +178,7 @@ static void chacha_mt4d_send_event(struct chacha_mt4d *cm)
 			y1 = MAX_Y - y1;
 
 		event = 1;
-#ifdef SINGLE_TOUCH_ONLY
+#ifdef CONFIG_SINGLE_TOUCH_ONLY
 		input_report_abs(input, ABS_X, x1 >> 1);
 		input_report_abs(input, ABS_Y, y1 >> 1);
 		input_report_abs(input, ABS_PRESSURE, MAX_Z);
@@ -195,7 +192,7 @@ static void chacha_mt4d_send_event(struct chacha_mt4d *cm)
 #endif
 	}
 
-#ifndef SINGLE_TOUCH_ONLY
+#ifndef CONFIG_SINGLE_TOUCH_ONLY
 	if (curr_touch >= 2) {
 		u8 x2h, x2l, y2h, y2l;
 		u32 x2, y2;
@@ -321,7 +318,7 @@ static int chacha_mt4d_probe(struct i2c_client *client,
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 
-#ifdef SINGLE_TOUCH_ONLY
+#ifdef CONFIG_SINGLE_TOUCH_ONLY
 	input_set_abs_params(input_dev, ABS_X, 0, MAX_X >> 1, 0, 0);
 	input_set_abs_params(input_dev, ABS_Y, 0, MAX_Y >> 1, 0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE, 0, MAX_Z, 0, 0);
