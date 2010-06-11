@@ -437,13 +437,6 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 {
 	int					i;
 	u32					revp, revs;
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	u32					halp, hals, halv;
-
-	halp = ambarella_hal_info.physaddr;
-	hals = ambarella_hal_info.size;
-	halv = ambarella_hal_info.virtual;
-#endif
 
 	if (ambarella_reserve_mem_info.counter)
 		pr_info("Ambarella Reserve Memory:\n");
@@ -452,10 +445,6 @@ u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
 		revp = ambarella_reserve_mem_info.desc[i].physaddr;
 		revs = ambarella_reserve_mem_info.desc[i].size;
 		pr_info("\t%02d:\t0x%08x[0x%08x]\tNormal\n", i, revp, revs);
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-		if ((halp >= revp) && ((halp + hals) <= (revp + revs)))
-			ambarella_hal_info.remapped = 1;
-#endif
 	}
 
 	*pinfo = ambarella_reserve_mem_info;
