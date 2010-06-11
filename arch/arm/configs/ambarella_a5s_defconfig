@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32
-# Thu Jun 10 18:04:44 2010
+# Fri Jun 11 15:32:22 2010
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -781,7 +781,7 @@ CONFIG_HW_RANDOM=y
 CONFIG_I2C=y
 CONFIG_I2C_BOARDINFO=y
 CONFIG_I2C_COMPAT=y
-# CONFIG_I2C_CHARDEV is not set
+CONFIG_I2C_CHARDEV=m
 # CONFIG_I2C_HELPER_AUTO is not set
 
 #
