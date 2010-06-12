@@ -32,6 +32,10 @@
 #include <linux/memcontrol.h>
 #include <linux/syscalls.h>
 
+#include <asm/tlb.h>
+#include <asm/tlbflush.h>
+#include <asm/pgtable.h>
+
 #include "internal.h"
 
 #define lru_to_page(_head) (list_entry((_head)->prev, struct page, lru))
