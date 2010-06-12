@@ -624,6 +624,7 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	/* Initalize Device Data */
 	master->bus_num = pdev->id;
 	master->num_chipselect = pinfo->cs_num;
+	master->mode_bits = SPI_CPHA | SPI_CPOL | SPI_LSB_FIRST | SPI_LOOP;
 	master->setup = ambarella_spi_setup;
 	master->transfer = ambarella_spi_transfer;
 	master->cleanup = ambarella_spi_cleanup;
