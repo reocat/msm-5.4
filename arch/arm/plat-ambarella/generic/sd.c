@@ -161,7 +161,7 @@ struct platform_device ambarella_sd0 = {
 	.dev		= {
 		.platform_data		= &ambarella_platform_sd_controller0,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -244,7 +244,7 @@ struct platform_device ambarella_sd1 = {
 	.dev		= {
 		.platform_data		= &ambarella_platform_sd_controller1,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 #endif

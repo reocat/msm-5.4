@@ -162,7 +162,7 @@ static struct platform_device durian_board_input = {
 	.dev		= {
 		.platform_data		= &durian_board_input_info,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 

@@ -1430,7 +1430,6 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 {
 	struct ambeth_info			*lp;
 	unsigned int				mac_filter_reg;
-	DECLARE_MAC_BUF(mac);
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
@@ -1490,8 +1489,8 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 			ambhw_set_hwaddr_perfect_filtering(lp,
 				mclist->dmi_addr, i + 1, 1);
 			dev_dbg(&lp->ndev->dev,
-				"%s: Added perfect filtering[%s].\n",
-				__func__, print_mac(mac, mclist->dmi_addr));
+				"%s: Added perfect filtering[%pM].\n",
+				__func__, mclist->dmi_addr);
 		}
 
 		filtered = i;
@@ -1531,9 +1530,8 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 			mc_filter[filterbit >> 5] |= 1 << (filterbit & 31);
 
 			dev_dbg(&lp->ndev->dev,
-				"%s: Added filter for[%s], hash:0x%8x.\n",
-				__func__, print_mac(mac, mclist->dmi_addr),
-				filterbit);
+				"%s: Added filter for[%pM], hash:0x%8x.\n",
+				__func__, mclist->dmi_addr, filterbit);
 		}
 
 		if ((mc_filter[0] == lp->mc_filter[0]) &&
@@ -1566,7 +1564,6 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 {
 	struct sockaddr				*saddr;
 	struct ambeth_info			*lp;
-	DECLARE_MAC_BUF(mac);
 
 	saddr = (struct sockaddr *)(addr);
 	lp = (struct ambeth_info *)netdev_priv(ndev);
@@ -1577,8 +1574,7 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 	if (!is_valid_ether_addr(saddr->sa_data))
 		return -EADDRNOTAVAIL;
 
-	dev_dbg(&lp->ndev->dev, "%s: MAC address[%s].\n",
-		__func__, print_mac(mac, saddr->sa_data));
+	dev_dbg(&lp->ndev->dev, "MAC address[%pM].\n", saddr->sa_data);
 
 	memcpy(ndev->dev_addr, saddr->sa_data, ndev->addr_len);
 	ambhw_set_hwaddr(lp, ndev->dev_addr);
@@ -1633,7 +1629,6 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	struct resource				*reg_res;
 	struct resource				*irq_res;
 	int					i;
-	DECLARE_MAC_BUF(mac);
 
 	platform_info =
 		(struct ambarella_eth_platform_info *)pdev->dev.platform_data;
@@ -1745,8 +1740,7 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	}
 	ambhw_set_hwaddr(lp, ndev->dev_addr);
 	ambhw_get_hwaddr(lp, ndev->dev_addr);
-	dev_info(&pdev->dev, "MAC Address[%s].\n",
-		print_mac(mac, ndev->dev_addr));
+	dev_info(&pdev->dev, "MAC Address[%pM].\n", ndev->dev_addr);
 
 	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
 

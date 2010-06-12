@@ -1825,7 +1825,7 @@ static void ambarella_init_gadget(struct ambarella_udc *udc,
 	udc->gadget.ep0 = &udc->ep[CTRL_IN].ep;
 	udc->gadget.dev.parent = &pdev->dev;
 	udc->gadget.dev.release = ambarella_gadget_release;
-	pdev->dev.coherent_dma_mask = DMA_32BIT_MASK;
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 
 	device_initialize(&udc->gadget.dev);
 

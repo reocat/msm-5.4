@@ -88,7 +88,7 @@ struct platform_device ambarella_idc0 = {
 	.dev		= {
 		.platform_data		= &ambarella_idc0_platform_info,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -122,7 +122,7 @@ struct platform_device ambarella_idc1 = {
 	.dev		= {
 		.platform_data		= &ambarella_idc1_platform_info,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 #endif

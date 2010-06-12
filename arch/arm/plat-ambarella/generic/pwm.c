@@ -337,7 +337,7 @@ struct platform_device ambarella_pwm_platform_device0 = {
 	.dev		= {
 		.platform_data		= &amb_pwm0_pdata,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -359,7 +359,7 @@ struct platform_device ambarella_pwm_platform_device1 = {
 	.dev		= {
 		.platform_data		= &amb_pwm1_pdata,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -381,7 +381,7 @@ struct platform_device ambarella_pwm_platform_device2 = {
 	.dev		= {
 		.platform_data		= &amb_pwm2_pdata,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -403,7 +403,7 @@ struct platform_device ambarella_pwm_platform_device3 = {
 	.dev		= {
 		.platform_data		= &amb_pwm3_pdata,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -425,7 +425,7 @@ struct platform_device ambarella_pwm_platform_device4 = {
 	.dev		= {
 		.platform_data		= &amb_pwm4_pdata,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 

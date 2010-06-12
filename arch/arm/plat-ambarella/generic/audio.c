@@ -146,7 +146,7 @@ struct platform_device ambarella_i2s0 = {
 	.dev		= {
 		.platform_data		= &ambarella_platform_i2s_controller0,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 

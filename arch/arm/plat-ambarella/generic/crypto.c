@@ -63,7 +63,7 @@ struct platform_device ambarella_crypto = {
 	.dev		= {
 		.platform_data		= &ambarella_platform_crypto,
 		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_32BIT_MASK,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
