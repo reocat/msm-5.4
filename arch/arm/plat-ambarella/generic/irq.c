@@ -78,6 +78,26 @@ static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 		gpio_base = GPIO3_BASE; \
 	} \
 	} while (0)
+#elif (GPIO_INSTANCES == 5)
+#define AMBARELLA_GPIO_IRQ2BASE()	do { \
+	gpio_base = GPIO0_BASE; \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO1_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO2_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO3_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		gpio_base = GPIO4_BASE; \
+	} \
+	} while (0)
 #endif
 
 void ambarella_gpio_ack_irq(unsigned int irq)

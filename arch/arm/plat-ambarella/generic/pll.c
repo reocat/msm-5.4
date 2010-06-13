@@ -35,9 +35,15 @@
 #include <mach/init.h>
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#include <hal/ambhal.h>
-#include <hal/ambhalmini.h>
-#include <hal/header.h>
+#if (CHIP_REV == A7)
+#include <hal/a7/ambhal.h>
+#include <hal/a7/ambhalmini.h>
+#include <hal/a7/header.h>
+#else
+#include <hal/a5s/ambhal.h>
+#include <hal/a5s/ambhalmini.h>
+#include <hal/a5s/header.h>
+#endif
 #endif
 
 #define MAX_CMD_LENGTH				(32)
@@ -100,6 +106,7 @@ struct ambarella_pll_performance_info {
 	unsigned int performance;
 };
 
+#if (CHIP_REV != A7)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
@@ -124,6 +131,29 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 //	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
+#else
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_LOW_POWER + 1)
+static struct ambarella_pll_mode_info mode_list[] = {
+	{"preview", AMB_OPERATING_MODE_PREVIEW},
+	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
+	{"capture", AMB_OPERATING_MODE_CAPTURE},
+	{"playback", AMB_OPERATING_MODE_PLAYBACK},
+	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
+	{"standby", AMB_OPERATING_MODE_STANDBY},
+	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
+	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
+	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+};
+
+static struct ambarella_pll_performance_info performance_list[] = {
+	{"480P30", AMB_PERFORMANCE_480P30},
+	{"720P30", AMB_PERFORMANCE_720P30},
+	{"720P60", AMB_PERFORMANCE_720P60},
+	{"1080I60", AMB_PERFORMANCE_1080I60},
+	{"1080P30", AMB_PERFORMANCE_1080P30},
+	{"1080P60", AMB_PERFORMANCE_1080P60},
+};
+#endif
 
 static struct ambarella_pll_info pll_info;
 

@@ -185,7 +185,7 @@
  * Some of the plls (@ref vout_group, @ref audio_group & @ref lcd_group) in the design allow the reference clock source to be changed.
  * The api to change the clock source takes the new clock source name and the new clock source frequency.
  * @par External PLL Reference Clocks
- * When the new clock source is 
+ * When the new clock source is
  * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
  * the reference clock source of the pll is being changed.
  * The api needs that reference clock frequency to be able to calculate the correct pll settings
@@ -195,7 +195,7 @@
  * based on the system configuration pins (it is either 24 MHz or 27 MHz). In this
  * case the application does not need to provide anything as the api will figure it out on its
  * own and do the pll settings calculations accordingly.
- * @par External Clock (No PLL) 
+ * @par External Clock (No PLL)
  * When the new clock source is ::AMB_EXTERNAL_CLOCK_SOURCE the pll is not used and so the api does not
  * care what the reference clock frequency is. In fact the api will power down
  * that pll when the application selects that option to save power.
@@ -546,7 +546,7 @@ AMB_USB_CLK_CRYSTAL_12MHZ
 
 /**
  * State of HDMI Interface
- * 
+ *
  * @ingroup hdmi_group
  */
 
@@ -559,7 +559,7 @@ AMB_HDMI_ON
 
 /**
  * Dual Stream state
- * 
+ *
  * @ingroup mode_group
  */
 
@@ -987,7 +987,7 @@ static INLINE amb_boot_type_t amb_get_boot_type (void *amb_hal_base_address)
 }
 
 /**
- * Get the host interface type 
+ * Get the host interface type
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1388,7 +1388,7 @@ static INLINE amb_hal_success_t amb_usb_subsystem_soft_reset (void *amb_hal_base
 /**
  * Turn USB Interface On/Off
  *
- * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified. 
+ * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_interface_state Requested State of the USB Interface
@@ -1425,7 +1425,7 @@ static INLINE amb_usb_interface_state_t amb_get_usb_interface_state (void *amb_h
 /**
  * Select USB PHY Clock Source
  *
- * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ. 
+ * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ.
  * Use this function to change the USB PHY clock source.
  * However, this function can only be called before setting amb_usb_interface_state
  * to ::AMB_USB_ON for the first time after power-on reset

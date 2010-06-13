@@ -81,6 +81,16 @@ config PLAT_AMBARELLA_A5S
 	help
 	  Say Y here if you are using Ambarella A5S.
 
+config PLAT_AMBARELLA_A7
+        bool "Ambarella A7"
+        select CPU_V6
+        select CPU_32v6K
+        select PLAT_AMBARELLA_GENERIC
+        select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+        select PLAT_AMBARELLA_SUPPORT_HAL
+        help
+          Say Y here if you are using Ambarella A7.
+
 endchoice
 
 menu "Generic Platform Configuration"

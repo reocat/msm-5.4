@@ -32,9 +32,15 @@
 #include <plat/audio.h>
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#include <hal/ambhal.h>
-#include <hal/ambhalmini.h>
-#include <hal/header.h>
+#if (CHIP_REV == A7)
+#include <hal/a7/ambhal.h>
+#include <hal/a7/ambhalmini.h>
+#include <hal/a7/header.h>
+#else
+#include <hal/a5s/ambhal.h>
+#include <hal/a5s/ambhalmini.h>
+#include <hal/a5s/header.h>
+#endif
 #endif
 
 #undef readb
@@ -64,6 +70,8 @@
 #include "rct/a5.c"
 #elif (CHIP_REV == A5S)
 #include "rct/a5s.c"
+#elif (CHIP_REV == A7)
+#include "rct/a7.c"
 #endif
 #include "rct/audio.c"
 

@@ -65,13 +65,15 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	case 3:
 		adc_data = amba_readl(ADC_DATA3_REG);
 		break;
-#if (ADC_NUM_CHANNELS == 8)
+#if (ADC_NUM_CHANNELS == 6 || ADC_NUM_CHANNELS == 8)
 	case 4:
 		adc_data = amba_readl(ADC_DATA4_REG);
 		break;
 	case 5:
 		adc_data = amba_readl(ADC_DATA5_REG);
 		break;
+#endif
+#if (ADC_NUM_CHANNELS == 8)
 	case 6:
 		adc_data = amba_readl(ADC_DATA6_REG);
 		break;
@@ -108,7 +110,7 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 
 void ambarella_adc_start(void)
 {
-#if (CHIP_REV != A5S)
+#if (CHIP_REV != A5S || CHIP_REV != A7)
 	amba_writel(ADC_RESET_REG, 0x01);
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x01);
@@ -135,7 +137,7 @@ void ambarella_adc_stop(void)
 			ADC_CONTROL_STATUS) == 0x0);
 	}
 
-#if (CHIP_REV != A5S)
+#if (CHIP_REV != A5S || CHIP_REV != A7)
 	amba_writel(ADC_RESET_REG, 0x01);
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x00);
@@ -347,7 +349,7 @@ struct resource ambarella_adc_resources[] = {
 		.name	= "registers",
 		.flags	= IORESOURCE_MEM,
 	},
-#if (CHIP_REV == A5S)
+#if (CHIP_REV == A5S || CHIP_REV == A7)
 	[1] = {
 		.start	= ADC_LEVEL_IRQ,
 		.end	= ADC_LEVEL_IRQ,
