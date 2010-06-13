@@ -25,7 +25,11 @@
 #ifndef __ASM_ARCH_VMALLOC_H
 #define __ASM_ARCH_VMALLOC_H
 
-#define VMALLOC_END       UL(0xd8000000)
+#ifdef CONFIG_VMSPLIT_1G
+#define VMALLOC_END			UL(0x60000000)
+#else
+#define VMALLOC_END			UL(0xd8000000)
+#endif
 
 #endif
 

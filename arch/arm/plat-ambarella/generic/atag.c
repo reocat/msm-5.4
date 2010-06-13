@@ -135,6 +135,18 @@ void __init ambarella_map_io(void)
 		}
 	}
 
+	if (ambarella_io_desc[2].io_desc.length == 0) {
+		iov = ambarella_io_desc[2].io_desc.virtual =
+			__phys_to_virt(DEFAULT_MEM_START);
+		ambarella_io_desc[2].io_desc.pfn =
+			__phys_to_pfn(DEFAULT_MEM_START);
+		ios = ambarella_io_desc[2].io_desc.length = SZ_1M;
+		if ((halv >= iov) && ((halv + hals) <= (iov + ios))) {
+			bhal_mapped = 1;
+			hal_type = ambarella_io_desc[2].io_desc.type;
+		}
+	}
+
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	if (!bhal_mapped) {
 		if (!ambarella_hal_info.remapped) {
@@ -149,6 +161,8 @@ void __init ambarella_map_io(void)
 		} else {
 			hal_type = MT_MEMORY;
 		}
+	} else {
+		ambarella_hal_info.remapped = bhal_mapped;
 	}
 	if (ambarella_hal_info.remapped)
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x %d\n",
@@ -157,14 +171,6 @@ void __init ambarella_map_io(void)
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x Map Fail!\n",
 			halp, halv, hals);
 #endif
-
-	if (ambarella_io_desc[2].io_desc.length == 0) {
-		ambarella_io_desc[2].io_desc.virtual =
-			__phys_to_virt(DEFAULT_MEM_START);
-		ambarella_io_desc[2].io_desc.pfn =
-			__phys_to_pfn(DEFAULT_MEM_START);
-		ambarella_io_desc[2].io_desc.length = SZ_1M;
-	}
 }
 
 static void __init early_dsp(char **p)

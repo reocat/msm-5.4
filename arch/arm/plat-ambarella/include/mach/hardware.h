@@ -25,7 +25,7 @@
 #define __ASM_ARCH_HARDWARE_H
 
 /* ==========================================================================*/
-#include <plat/syscfg.h>
+#include <mach/memory.h>
 #include <ambhw/chip.h>
 #include <ambhw/busaddr.h>
 #include <ambhw/ambhw.h>

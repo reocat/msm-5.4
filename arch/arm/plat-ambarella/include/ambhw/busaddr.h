@@ -10,6 +10,7 @@
 #ifndef __AMBHW__BUSADDR_H__
 #define __AMBHW__BUSADDR_H__
 
+#if !defined(__KERNEL__)
 /*
  * The AHB physical address is at 0x60000000 but is always mapped to
  * virtual address 0xd8000000
@@ -29,6 +30,7 @@
 #define AHB_BASE	AHB_PHYS_BASE
 #undef APB_BASE
 #define APB_BASE	APB_PHYS_BASE
+#endif
 #endif
 
 /* AHB slave offsets */

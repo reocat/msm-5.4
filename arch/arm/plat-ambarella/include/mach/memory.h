@@ -25,16 +25,77 @@
 #ifndef __ASM_ARCH_MEMORY_H
 #define __ASM_ARCH_MEMORY_H
 
-#define DEFAULT_MEM_START	(0xC0000000)
-#define PHYS_OFFSET		(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
+/*
+ * 64MB DDR Sample	Phisical			Virtual
+ * --------------------------------------------------------------------------
+ * AHB(IO)	0x60000000 - 0x60FFFFFF		0xD8000000 - 0xD8FFFFFF
+ * APB(IO)	0x70000000 - 0x70FFFFFF		0xD9000000 - 0xD9FFFFFF
+ * PPM		0xC0000000 - 0xC01FFFFF		0xE0000000 - 0xE01FFFFF
+ * Linux MEM	0xC0200000 - 0xC15FFFFF		0xC0000000 - 0xC13FFFFF
+ * BSB		0xC1600000 - 0xC17FFFFF		(NOLINUX_MEM_V_START + 0x01600000) - (NOLINUX_MEM_V_START + 0x017FFFFF)
+ * DSP		0xC1800000 - 0xC3FFFFFF		(NOLINUX_MEM_V_START + 0x01800000) - (NOLINUX_MEM_V_START + 0x03FFFFFF)
+ */
 
-#define __virt_to_bus(x)	__virt_to_phys(x)
-#define __bus_to_virt(x)	__phys_to_virt(x)
+/* ==========================================================================*/
+#ifdef CONFIG_VMSPLIT_3G
+#define NOLINUX_MEM_V_START		(0xe0000000)
+#else
+#define NOLINUX_MEM_V_START		(0xc0000000)
+#endif
 
-#define CONSISTENT_DMA_SIZE	SZ_8M
+/* ==========================================================================*/
+#define AHB_PHYS_BASE			(0x60000000)
+#define APB_PHYS_BASE			(0x70000000)
+#ifdef CONFIG_VMSPLIT_1G
+#define AHB_BASE			AHB_PHYS_BASE
+#define APB_BASE			APB_PHYS_BASE
+#else
+#define AHB_BASE			(0xd8000000)
+#define APB_BASE			(0xd9000000)
+#endif
+#define AHB_SIZE			(0x01000000)
+#define APB_SIZE			(0x01000000)
 
-#define MAX_PHYSMEM_BITS	32
-#define SECTION_SIZE_BITS	24
+/* ==========================================================================*/
+#define DEFAULT_BSB_START		(0x00000000)
+#define DEFAULT_BSB_BASE		(0x00000000)
+#define DEFAULT_BSB_SIZE		(0x00000000)
+
+#define DEFAULT_DSP_START		(0x00000000)
+#define DEFAULT_DSP_BASE		(0x00000000)
+#define DEFAULT_DSP_SIZE		(0x00000000)
+
+#define DEFAULT_DEBUG_START		(0xc00f8000)
+#define DEFAULT_DEBUG_SIZE		(0x00008000)
+
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#define DEFAULT_HAL_START		(0xc00a0000)
+#define DEFAULT_HAL_BASE		(0xfee00000)
+#define DEFAULT_HAL_SIZE		(0x00030000)
+
+#define HAL_BASE_VP			(get_ambarella_hal_vp())
+#endif
+
+#define DEFAULT_SSS_START		(0xc00f7000)
+#define DEFAULT_SSS_MAGIC0		(0x19790110)
+#define DEFAULT_SSS_MAGIC1		(0x19450107)
+#define DEFAULT_SSS_MAGIC2		(0x19531110)
+
+/* ==========================================================================*/
+#define DEFAULT_MEM_START		(0xc0000000)
+#define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
+
+/* ==========================================================================*/
+#define __virt_to_bus(x)		__virt_to_phys(x)
+#define __bus_to_virt(x)		__phys_to_virt(x)
+
+/* ==========================================================================*/
+#define CONSISTENT_DMA_SIZE		SZ_8M
+
+/* ==========================================================================*/
+#define MAX_PHYSMEM_BITS		32
+#define SECTION_SIZE_BITS		24
+/* ==========================================================================*/
 
 #endif
 
