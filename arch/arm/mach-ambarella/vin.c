@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/rtc-is112022m.c
+ * arch/arm/mach-ambarella/vin.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -25,11 +25,21 @@
 #include <linux/i2c.h>
 
 #include <mach/hardware.h>
+#include <plat/idc.h>
 
 /* ==========================================================================*/
-struct i2c_board_info ambarella_isl12022m_board_info = {
-	.type			= "isl12022m",
-	.addr			= 0xde >> 1,
-	.platform_data		= NULL,
+struct i2c_board_info ambarella_board_vin_infos[3] = {
+	[0] = {
+		.type			= "amb_vin0",
+		.addr			= 0x00,
+	},
+	[1] = {
+		.type			= "amb_vin1",
+		.addr			= 0x01,
+	},
+	[2] = {
+		.type			= "amb_vin",
+		.addr			= 0x02,
+	},
 };
 

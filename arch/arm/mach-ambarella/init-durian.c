@@ -131,14 +131,17 @@ static struct ambarella_key_table durian_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	1,	2,	345,	385,}}},	//sb1: CAMERA
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	1,	2,	607,	647,}}},	//sw3: BACK
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,	1,	2,	700,	740,}}},	//sw5: HOME
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	1,	2,	780,	820,}}},	//sw4: MENU
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,	1,	2,	845,	875,}}},	//sw6: SEARCH
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PHONE,	1,	2,	876,	910,}}},	//sw7: PHONE
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,	1,	2,	918,	953,}}},	//sw8: VOLUME -
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,	1,	2,	955,	990,}}},	//sw9: VOLUME +
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,1,	2,	983,	1023}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,	1,	2,	955,	990}}},		//sw9: VOLUME +
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,	1,	2,	918,	953}}},		//sw8: VOLUME -
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PHONE,	1,	2,	876,	910}}},		//sw7: PHONE
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,	1,	2,	845,	875}}},		//sw6: SEARCH
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	1,	2,	780,	820}}},		//sw4: MENU
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,	1,	2,	700,	740}}},		//sw5: HOME
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	1,	2,	607,	647}}},		//sw3: BACK
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	1,	2,	345,	385}}},		//sb1: CAMERA
+
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	0,	1,	GPIO(85),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 
 	{AMBINPUT_END}
 };
@@ -176,16 +179,6 @@ static struct i2c_board_info durian_board_ext_gpio_info = {
 	.addr		= 0x1f,
 	.flags		= I2C_M_PIN_MUXING,
 	.platform_data	= &durian_board_ext_gpio0,
-};
-
-static struct i2c_board_info ambarella_vin_board_info = {
-	.type = "amb_vin",
-	.addr = 0x00,
-};
-
-static struct i2c_board_info ambarella_hdmi_board_info = {
-	.type = "ambhdmi ddc",
-	.addr = 0x01,
 };
 
 /* ==========================================================================*/
@@ -352,8 +345,10 @@ static void __init ambarella_init_durian(void)
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	ambarella_chacha_mt4d_board_info.flags = I2C_M_PIN_MUXING;
 	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
-	i2c_register_board_info(0, &ambarella_vin_board_info, 1);
-	i2c_register_board_info(1, &ambarella_hdmi_board_info, 1);
+
+	i2c_register_board_info(0, ambarella_board_vin_infos,
+		ARRAY_SIZE(ambarella_board_vin_infos));
+	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
 	i2c_register_board_info(0, &durian_board_ext_gpio_info, 1);
 

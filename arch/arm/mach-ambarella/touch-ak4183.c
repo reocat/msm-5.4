@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/init.c
+ * arch/arm/mach-ambarella/touch-ak4183.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

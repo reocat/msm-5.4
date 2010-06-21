@@ -124,17 +124,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 };
 
 /* ==========================================================================*/
-static struct i2c_board_info ambarella_vin_board_info = {
-	.type = "amb_vin",
-	.addr = 0x00,
-};
-
-static struct i2c_board_info ambarella_hdmi_board_info = {
-	.type = "ambhdmi ddc",
-	.addr = 0x01,
-};
-
-/* ==========================================================================*/
 static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
@@ -284,8 +273,9 @@ static void __init ambarella_init_coconut(void)
 	ambarella_chacha_mt4d_board_info.flags = 0;
 	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
 
-	i2c_register_board_info(0, &ambarella_vin_board_info, 1);
-	i2c_register_board_info(1, &ambarella_hdmi_board_info, 1);
+	i2c_register_board_info(0, ambarella_board_vin_infos,
+		ARRAY_SIZE(ambarella_board_vin_infos));
+	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
 	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
 		ambarella_isl12022m_board_info.flags = I2C_M_PIN_MUXING;

@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/chacha_mt4d.c
+ * arch/arm/mach-ambarella/touch-chacha_mt4d.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

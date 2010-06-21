@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/rtc-is112022m.c
+ * arch/arm/mach-ambarella/vout.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -25,11 +25,14 @@
 #include <linux/i2c.h>
 
 #include <mach/hardware.h>
+#include <plat/idc.h>
 
 /* ==========================================================================*/
-struct i2c_board_info ambarella_isl12022m_board_info = {
-	.type			= "isl12022m",
-	.addr			= 0xde >> 1,
-	.platform_data		= NULL,
+struct i2c_board_info ambarella_board_hdmi_info = {
+	.type			= "ambhdmi ddc",
+	.addr			= 0x03,
+#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
+	.flags			= I2C_M_PIN_MUXING,
+#endif
 };
 
