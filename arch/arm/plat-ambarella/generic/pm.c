@@ -33,18 +33,7 @@
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/init.h>
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#if (CHIP_REV == A7)
-#include <hal/a7/ambhal.h>
-#include <hal/a7/ambhalmini.h>
-#include <hal/a7/header.h>
-#else
-#include <hal/a5s/ambhal.h>
-#include <hal/a5s/ambhalmini.h>
-#include <hal/a5s/header.h>
-#endif
-#endif
+#include <hal/hal.h>
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
