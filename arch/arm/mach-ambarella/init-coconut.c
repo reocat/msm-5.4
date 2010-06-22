@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/pwm_backlight.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -185,6 +186,7 @@ static struct platform_device coconut_board_input = {
 static void __init ambarella_init_coconut(void)
 {
 	int					i;
+	struct platform_pwm_backlight_data	*pwm_pdata;
 
 	ambarella_init_machine("Coconut");
 
@@ -236,6 +238,11 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.flash_enable.gpio_id = GPIO(82);
 	ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
 	ambarella_board_generic.flash_enable.active_delay = 1;
+
+	/* Config PWM */
+	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device0.dev.platform_data;
+	pwm_pdata->max_brightness = 1000;
+	pwm_pdata->dft_brightness = 1000;
 
 	/* Config ETH*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
