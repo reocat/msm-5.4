@@ -180,17 +180,6 @@ struct ambarella_adc_info {
 	struct ambarella_adc_channel_info	*adc_channel_info;
 };
 
-#ifdef CONFIG_INPUT_AMBARELLA_DEBUG
-#define ambi_dbg(format, arg...)		\
-	printk(KERN_DEBUG format , ## arg)
-#else
-static inline int __attribute__ ((format (printf, 1, 2)))
-ambi_dbg(const char * fmt, ...)
-{
-	return 0;
-}
-#endif
-
 /* ==========================================================================*/
 struct ambarella_input_board_info {
 	struct ambarella_key_table		*pkeymap;

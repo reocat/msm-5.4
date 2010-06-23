@@ -51,7 +51,6 @@ int ambarella_setup_adc_key(struct ambarella_adc_info *pinfo)
 	int				i;
 
 	pinfo->adc_channel_num = pinfo->pcontroller_info->get_channel_num();
-	ambi_dbg("adc has %d channels\n", pinfo->adc_channel_num);
 	if (pinfo->adc_channel_num == 0) {
 		dev_err(&pinfo->dev->dev, "Wrong adc_channel_num\n");
 		retval = -EINVAL;
@@ -99,12 +98,12 @@ int ambarella_setup_adc_key(struct ambarella_adc_info *pinfo)
 		if (pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
 			if (pinfo->pkeymap[i].adc_key.irq_trig) {
 				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_high_trig
-					= pinfo->pkeymap[i].adc_key.low_level;
+					= pinfo->pkeymap[i].adc_key.high_level;
 				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_low_trig
 					= 0;
 			} else {
 				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_low_trig
-					= pinfo->pkeymap[i].adc_key.high_level;
+					= pinfo->pkeymap[i].adc_key.low_level;
 				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_high_trig
 					= 0;
 			}
@@ -117,8 +116,8 @@ int ambarella_setup_adc_key(struct ambarella_adc_info *pinfo)
 				pinfo->pcontroller_info->set_irq_threshold(i,
 					pinfo->adc_channel_info[i].adc_high_trig,
 					pinfo->adc_channel_info[i].adc_low_trig);
-				ambi_dbg(" adc adc_channel_info %d is used\n", i);
-				ambi_dbg(" adc_high_trig [%d], adc_low_trig [%d]\n",
+				dev_dbg(&pinfo->dev->dev, "adc_channel_info %d is used\n", i);
+				dev_dbg(&pinfo->dev->dev, "adc_high_trig [%d], adc_low_trig [%d]\n",
 					pinfo->adc_channel_info[i].adc_high_trig,
 					pinfo->adc_channel_info[i].adc_low_trig);
 
@@ -153,7 +152,7 @@ void ambarella_scan_adc(struct work_struct *work)
 	pinfo = container_of(work, struct ambarella_adc_info, detect_adc.work);
 
 	if (unlikely(pinfo->pkeymap == NULL)) {
-		ambi_dbg("pinfo->pkeymap is null");
+		dev_err(&pinfo->dev->dev, "pinfo->pkeymap is null");
 		return;
 	}
 
@@ -182,7 +181,7 @@ void ambarella_scan_adc(struct work_struct *work)
 				&& pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
 				input_report_key(pinfo->dev,
 					pinfo->adc_key_pressed[adc_index], 0);//key relase
-				ambi_dbg("key[%d:%d] released %d\n", adc_index,
+				dev_dbg(&pinfo->dev->dev, "key[%d:%d] released %d\n", adc_index,
 					pinfo->adc_key_pressed[adc_index],
 					pinfo->adc_data[adc_index]);
 				pinfo->adc_key_pressed[adc_index] = AMBA_ADC_NO_KEY_PRESSED;
@@ -199,7 +198,7 @@ void ambarella_scan_adc(struct work_struct *work)
 				if (pinfo->support_irq) {
 					pinfo->work_mode = AMBA_ADC_POL_MODE;
 				}
-				ambi_dbg("key[%d:%d] pressed %d\n", adc_index,
+				dev_dbg(&pinfo->dev->dev, "key[%d:%d] pressed %d\n", adc_index,
 					pinfo->adc_key_pressed[adc_index],
 					pinfo->adc_data[adc_index]);
 				break;
@@ -214,7 +213,7 @@ void ambarella_scan_adc(struct work_struct *work)
 				input_report_rel(pinfo->dev,
 					REL_Y, 0);
 				input_sync(pinfo->dev);
-				ambi_dbg("report REL_X %d & %d\n",
+				dev_dbg(&pinfo->dev->dev, "report REL_X %d & %d\n",
 					pinfo->pkeymap[i].adc_rel.rel_step,
 					pinfo->adc_data[adc_index]);
 				break;
@@ -225,7 +224,7 @@ void ambarella_scan_adc(struct work_struct *work)
 					REL_Y,
 					pinfo->pkeymap[i].adc_rel.rel_step);
 				input_sync(pinfo->dev);
-				ambi_dbg("report REL_Y %d & %d\n",
+				dev_dbg(&pinfo->dev->dev, "report REL_Y %d & %d\n",
 					pinfo->pkeymap[i].adc_rel.rel_step,
 					pinfo->adc_data[adc_index]);
 				break;
@@ -238,7 +237,7 @@ void ambarella_scan_adc(struct work_struct *work)
 			input_report_abs(pinfo->dev,
 				ABS_Y, pinfo->pkeymap[i].adc_abs.abs_y);
 			input_sync(pinfo->dev);
-			ambi_dbg("report ABS %d:%d & %d\n",
+			dev_dbg(&pinfo->dev->dev, "report ABS %d:%d & %d\n",
 				pinfo->pkeymap[i].adc_abs.abs_x,
 				pinfo->pkeymap[i].adc_abs.abs_y,
 				pinfo->adc_data[adc_index]);
@@ -259,7 +258,7 @@ static irqreturn_t ambarella_input_adc_irq(int irq, void *devid)
 
 	pinfo = (struct ambarella_adc_info *)devid;
 
-	ambi_dbg("%s:%d\n", __func__, __LINE__);
+	dev_dbg(&pinfo->dev->dev, "%s:%d\n", __func__, __LINE__);
 
 	disable_irq_nosync(pinfo->irq);
 	queue_delayed_work(pinfo->workqueue, &pinfo->detect_adc, 0);

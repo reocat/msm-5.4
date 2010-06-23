@@ -25,6 +25,16 @@
 #define __PLAT_AMBARELLA_ADC_H
 
 /* ==========================================================================*/
+#if (CHIP_REV == A5)
+#define ADC_VAL_HI(x)			(((x) & 0x3ff) << 10)
+#define ADC_EN_HI(x)			((x) << 21)
+#define ADC_EN_LO(x)			((x) << 20)
+#else
+#define ADC_VAL_HI(x)			(((x) & 0x3ff) << 15)
+#define ADC_EN_HI(x)			((x) << 31)
+#define ADC_EN_LO(x)			((x) << 30)
+#endif
+#define ADC_VAL_LO(x)			((x) & 0x3ff)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
