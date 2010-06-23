@@ -93,7 +93,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 		if (pbinfo->pkeymap[i].type == AMBINPUT_GPIO_KEY) {
 			input_report_key(pbinfo->pinput_dev,
 				pbinfo->pkeymap[i].gpio_key.key_code, level);
-			ambi_dbg("GPIO %d is @ %d:%d\n",
+			dev_dbg(&pbinfo->pinput_dev->dev,
+				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_key.key_code,
 				gpio_id, level);
 			break;
@@ -102,7 +103,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 		if (pbinfo->pkeymap[i].type == AMBINPUT_GPIO_SW) {
 			input_report_switch(pbinfo->pinput_dev,
 				pbinfo->pkeymap[i].gpio_sw.key_code, level);
-			ambi_dbg("GPIO %d is @ %d:%d\n",
+			dev_dbg(&pbinfo->pinput_dev->dev,
+				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_sw.key_code,
 				gpio_id, level);
 			break;
@@ -116,7 +118,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 				input_report_rel(pbinfo->pinput_dev,
 					REL_Y, 0);
 				input_sync(pbinfo->pinput_dev);
-				ambi_dbg("report REL_X %d @ %d:%d\n",
+				dev_dbg(&pbinfo->pinput_dev->dev,
+					"report REL_X %d @ %d:%d\n",
 					pbinfo->pkeymap[i].gpio_rel.rel_step,
 					gpio_id, level);
 			} else
@@ -127,7 +130,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 					REL_Y,
 					pbinfo->pkeymap[i].gpio_rel.rel_step);
 				input_sync(pbinfo->pinput_dev);
-				ambi_dbg("report REL_Y %d @ %d:%d\n",
+				dev_dbg(&pbinfo->pinput_dev->dev,
+					"report REL_Y %d @ %d:%d\n",
 					pbinfo->pkeymap[i].gpio_rel.rel_step,
 					gpio_id, level);
 			}
@@ -140,7 +144,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 			input_report_abs(pbinfo->pinput_dev,
 				ABS_Y, pbinfo->pkeymap[i].gpio_abs.abs_y);
 			input_sync(pbinfo->pinput_dev);
-			ambi_dbg("report ABS %d:%d @ %d:%d\n",
+			dev_dbg(&pbinfo->pinput_dev->dev,
+				"report ABS %d:%d @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_abs.abs_x,
 				pbinfo->pkeymap[i].gpio_abs.abs_y,
 				gpio_id, level);

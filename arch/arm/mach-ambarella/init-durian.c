@@ -131,15 +131,16 @@ static struct ambarella_key_table durian_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,1,	2,	983,	1023}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,	1,	2,	955,	990}}},		//sw9: VOLUME +
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,	1,	2,	918,	953}}},		//sw8: VOLUME -
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PHONE,	1,	2,	876,	910}}},		//sw7: PHONE
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,	1,	2,	845,	875}}},		//sw6: SEARCH
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	1,	2,	780,	820}}},		//sw4: MENU
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,	1,	2,	700,	740}}},		//sw5: HOME
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	1,	2,	607,	647}}},		//sw3: BACK
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	1,	2,	345,	385}}},		//sb1: CAMERA
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,0,	2,	1000,	1023}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,0,	2,	945,	975}}},		//sw9: VOLUME_UP
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,0,	2,	900,	930}}},		//sw8: VOLUME_DOWN
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_POWER,	0,	2,	835,	885}}},		//sw7: POWER
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEND,	0,	2,	795,	845}}},		//sw6: CALL
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,	0,	2,	590,	640}}},		//sw5: HOME
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	0,	2,	700,	750}}},		//sw4: MENU
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	0,	2,	445,	495}}},		//sw3: BACK
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VIDEO,	0,	2,	270,	320}}},		//sb2: FOCUS
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	0,	2,	0,	50}}},		//sb1: CAMERA
 
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	0,	1,	GPIO(85),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 

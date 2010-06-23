@@ -148,7 +148,7 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 				pirinfo->pkeymap[i].ir_key.key_code, 1);
 			input_report_key(pirinfo->pinput_dev,
 				pirinfo->pkeymap[i].ir_key.key_code, 0);
-			ambi_dbg("IR_KEY [%d]\n",
+			dev_dbg(&pirinfo->pinput_dev->dev, "IR_KEY [%d]\n",
 				pirinfo->pkeymap[i].ir_key.key_code);
 			pirinfo->last_ir_flag =
 				pirinfo->pkeymap[i].ir_key.key_flag;
@@ -164,7 +164,8 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 				input_report_rel(pirinfo->pinput_dev,
 					REL_Y, 0);
 				input_sync(pirinfo->pinput_dev);
-				ambi_dbg("IR_REL X[%d]:Y[%d]\n",
+				dev_dbg(&pirinfo->pinput_dev->dev,
+					"IR_REL X[%d]:Y[%d]\n",
 					pirinfo->pkeymap[i].ir_rel.rel_step, 0);
 			} else
 			if (pirinfo->pkeymap[i].ir_rel.key_code == REL_Y) {
@@ -174,7 +175,8 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 					REL_Y,
 					pirinfo->pkeymap[i].ir_rel.rel_step);
 				input_sync(pirinfo->pinput_dev);
-				ambi_dbg("IR_REL X[%d]:Y[%d]\n", 0,
+				dev_dbg(&pirinfo->pinput_dev->dev,
+					"IR_REL X[%d]:Y[%d]\n", 0,
 					pirinfo->pkeymap[i].ir_rel.rel_step);
 			}
 			pirinfo->last_ir_flag = 0;
@@ -188,7 +190,8 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 			input_report_abs(pirinfo->pinput_dev,
 				ABS_Y, pirinfo->pkeymap[i].ir_abs.abs_y);
 			input_sync(pirinfo->pinput_dev);
-			ambi_dbg("IR_ABS X[%d]:Y[%d]\n",
+			dev_dbg(&pirinfo->pinput_dev->dev,
+				"IR_ABS X[%d]:Y[%d]\n",
 				pirinfo->pkeymap[i].ir_abs.abs_x,
 				pirinfo->pkeymap[i].ir_abs.abs_y);
 			pirinfo->last_ir_flag = 0;
@@ -219,7 +222,7 @@ static inline int ambarella_ir_update_buffer(struct ambarella_ir_info *pirinfo)
 	int				size;
 
 	count = amba_readl(pirinfo->regbase + IR_STATUS_OFFSET);
-	ambi_dbg("size we got is [%d]\n", count);
+	dev_dbg(&pirinfo->pinput_dev->dev, "size we got is [%d]\n", count);
 	for (; count > 0; count--) {
 		ambarella_ir_write_data(pirinfo,
 			amba_readl(pirinfo->regbase + IR_DATA_OFFSET));
@@ -282,7 +285,8 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		pirinfo->frame_data_to_received -= HW_FIFO_BUFFER;
 	}
 
-	ambi_dbg("line[%d],frame_data_to_received[%d]\n",__LINE__,edges);
+	dev_dbg(&pirinfo->pinput_dev->dev,
+		"line[%d],frame_data_to_received[%d]\n", __LINE__, edges);
 	amba_clrbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
 		IR_CONTROL_INTLEV(0x3F));
 	amba_setbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,

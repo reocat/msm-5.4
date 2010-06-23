@@ -36,7 +36,13 @@
 #include <plat/adc.h>
 
 /* ==========================================================================*/
-#define ADC_ONE_SHOT		1
+#if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) ||\
+     (CHIP_REV == A7) || (CHIP_REV == A5L))
+#undef ADC_ONE_SHOT
+#define ADC_ONE_SHOT
+#else
+#define ADC_ONE_SHOT
+#endif	/* CHIP_REV */
 
 #ifndef CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT
 #define CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT	(100000)
@@ -52,7 +58,45 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 {
 	u32					adc_data = 0;
 
+#if defined(ADC_ONE_SHOT)
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
+#if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
+     (CHIP_REV == A7) || (CHIP_REV == A5L))
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
+		msleep(1);
+	}
+#else
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
+#endif
+#endif
+
 	switch(channel_id) {
+#if (ADC_NUM_CHANNELS == 8)
+	case 0:
+		adc_data = (amba_readl(ADC_DATA0_REG) + 0x8000) & 0xffff;
+		break;
+	case 1:
+		adc_data = (amba_readl(ADC_DATA1_REG) + 0x8000) & 0xffff;
+		break;
+	case 2:
+		adc_data = (amba_readl(ADC_DATA2_REG) + 0x8000) & 0xffff;
+		break;
+	case 3:
+		adc_data = (amba_readl(ADC_DATA3_REG) + 0x8000) & 0xffff;
+		break;
+	case 4:
+		adc_data = (amba_readl(ADC_DATA4_REG) + 0x8000) & 0xffff;
+		break;
+	case 5:
+		adc_data = (amba_readl(ADC_DATA5_REG) + 0x8000) & 0xffff;
+		break;
+	case 6:
+		adc_data = (amba_readl(ADC_DATA6_REG) + 0x8000) & 0xffff;
+		break;
+	case 7:
+		adc_data = (amba_readl(ADC_DATA7_REG) + 0x8000) & 0xffff;
+		break;
+#else
 	case 0:
 		adc_data = amba_readl(ADC_DATA0_REG);
 		break;
@@ -65,7 +109,7 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	case 3:
 		adc_data = amba_readl(ADC_DATA3_REG);
 		break;
-#if (ADC_NUM_CHANNELS == 6 || ADC_NUM_CHANNELS == 8)
+#if (ADC_NUM_CHANNELS == 6)
 	case 4:
 		adc_data = amba_readl(ADC_DATA4_REG);
 		break;
@@ -73,19 +117,13 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 		adc_data = amba_readl(ADC_DATA5_REG);
 		break;
 #endif
-#if (ADC_NUM_CHANNELS == 8)
-	case 6:
-		adc_data = amba_readl(ADC_DATA6_REG);
-		break;
-	case 7:
-		adc_data = amba_readl(ADC_DATA7_REG);
-		break;
 #endif
 	default:
 		pr_warning("%s: invalid adc channel id %d!\n",
 			__func__, channel_id);
 		break;
 	}
+	pr_debug("%s: channel[%d] = %d.\n", __func__, channel_id, adc_data);
 
 	return adc_data;
 }
@@ -94,53 +132,142 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 {
 	int					i;
 
-	if (unlikely(*array_size > ADC_NUM_CHANNELS)) {
-		pr_warning("%s: Limit array_size form %d to %d!\n",
-			__func__, *array_size, ADC_NUM_CHANNELS);
-		*array_size = ADC_NUM_CHANNELS;
+	if (unlikely(*array_size != ADC_NUM_CHANNELS)) {
+		pr_err("%s: array_size should be %d!\n",
+			__func__, ADC_NUM_CHANNELS);
+		return;
 	}
 
-#if (ADC_ONE_SHOT == 1)
-	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START);
+#if defined(ADC_ONE_SHOT)
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
+#if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
+     (CHIP_REV == A7) || (CHIP_REV == A5L))
+	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
+		msleep(1);
+	}
+#else
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
 #endif
-	for (i = 0; i < *array_size; i++)
-		adc_data[i] = ambarella_adc_get_channel_inline(i);
+#endif
+
+#if (ADC_NUM_CHANNELS == 8)
+	adc_data[0] = (amba_readl(ADC_DATA0_REG) + 0x8000) & 0xffff;
+	adc_data[1] = (amba_readl(ADC_DATA1_REG) + 0x8000) & 0xffff;
+	adc_data[2] = (amba_readl(ADC_DATA2_REG) + 0x8000) & 0xffff;
+	adc_data[3] = (amba_readl(ADC_DATA3_REG) + 0x8000) & 0xffff;
+	adc_data[4] = (amba_readl(ADC_DATA4_REG) + 0x8000) & 0xffff;
+	adc_data[5] = (amba_readl(ADC_DATA5_REG) + 0x8000) & 0xffff;
+	adc_data[6] = (amba_readl(ADC_DATA6_REG) + 0x8000) & 0xffff;
+	adc_data[7] = (amba_readl(ADC_DATA7_REG) + 0x8000) & 0xffff;
+#else
+	adc_data[0] = amba_readl(ADC_DATA0_REG);
+	adc_data[1] = amba_readl(ADC_DATA1_REG);
+	adc_data[2] = amba_readl(ADC_DATA2_REG);
+	adc_data[3] = amba_readl(ADC_DATA3_REG);
+#if (ADC_NUM_CHANNELS == 6)
+	adc_data[4] = amba_readl(ADC_DATA4_REG);
+	adc_data[5] = amba_readl(ADC_DATA5_REG);
+#endif
+#endif
+
+	for (i = 0; i < ADC_NUM_CHANNELS; i++)
+		pr_debug("%s: channel[%d] = %d.\n", __func__, i, adc_data[i]);
 }
 
 void ambarella_adc_start(void)
 {
-#if (CHIP_REV != A5S || CHIP_REV != A7)
-	amba_writel(ADC_RESET_REG, 0x01);
-#endif
-	amba_writel(ADC_ENABLE_REG, 0x01);
+#if (CHIP_REV == A5L)
+	/* ADC module power on */
+	amba_writel(ADC16_CTRL_REG, 0x0 );
 
-	if (amba_tstbitsl(ADC_CONTROL_REG,
-		~(ADC_CONTROL_START | ADC_CONTROL_STATUS)) != 0) {
-		amba_writel(ADC_CONTROL_REG, 0);
-		while (amba_tstbitsl(ADC_CONTROL_REG,
-			ADC_CONTROL_STATUS) == 0x0);
+	/* stop conversion */
+	amba_writel(ADC_CONTROL_REG, 0x0);
+
+	amba_writel(ADC_DATA0_REG, 0);
+	amba_writel(ADC_DATA1_REG, 0);
+	amba_writel(ADC_DATA2_REG, 0);
+	amba_writel(ADC_DATA3_REG, 0);
+
+	amba_writel(ADC_ENABLE_REG, 0x0);
+#endif
+
+
+#if (CHIP_REV == A5 || CHIP_REV == A6)
+	/* SCALER_ADC_REG (default=4) */
+	/* clk_au = 27MHz/2 */
+	rct_set_adc_clk_freq_hz(PLL_CLK_13_5MHZ);
+
+	/* ADC Analog (lowest power) */
+	amba_writel(ADC16_CTRL_REG, 0x031cff);
+
+	/* ADC reset */
+	amba_writel(ADC_RESET_REG, 0x1);
+
+	/* Fix nonlinearity */
+	amba_writel(ADC16_CTRL_REG, 0x00031c00);
+#endif
+
+#if (CHIP_REV == A5S)
+	/* stop conversion */
+	amba_writel(ADC_CONTROL_REG, 0x0);
+
+	amba_writel(ADC_DATA0_REG, 0);
+	amba_writel(ADC_DATA1_REG, 0);
+	amba_writel(ADC_DATA2_REG, 0);
+	amba_writel(ADC_DATA3_REG, 0);
+	
+	amba_writel(ADC_ENABLE_REG, 0x0);
+#endif
+
+#if (CHIP_REV == A7)
+	/* stop conversion */
+	amba_writel(ADC_CONTROL_REG, 0x0);
+
+	amba_writel(ADC_DATA0_REG, 0);
+	amba_writel(ADC_DATA1_REG, 0);
+	amba_writel(ADC_DATA2_REG, 0);
+	amba_writel(ADC_DATA3_REG, 0);
+
+	amba_writel(ADC_ENABLE_REG, 0x1);
+	amba_writel(ADC_CONTROL_REG, 0x1);
+#endif
+
+#if (CHIP_REV != A7)
+	if (amba_readl(ADC_ENABLE_REG) != 0) {
+		pr_err("%s: ADC_ENABLE_REG] = %d.\n",
+			__func__, amba_readl(ADC_ENABLE_REG));
+		return;
 	}
 
-#if (ADC_ONE_SHOT == 0)
-	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_START | ADC_CONTROL_MODE);
+	amba_writel(ADC_ENABLE_REG, 0x1);
+#endif
+
+#ifdef ADC_ONE_SHOT
+	/* ADC control mode, single */
+	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_MODE);
+#else
+	/* ADC control mode, continuous */
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_MODE);
+
+	/* start conversion */
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
 #endif
 }
 
 void ambarella_adc_stop(void)
 {
-	if ((amba_tstbitsl(ADC_ENABLE_REG, 0x01) != 0) &&
-		(amba_tstbitsl(ADC_CONTROL_REG, ~ADC_CONTROL_STATUS) != 0)) {
-		amba_writel(ADC_CONTROL_REG, 0);
-		while (amba_tstbitsl(ADC_CONTROL_REG,
-			ADC_CONTROL_STATUS) == 0x0);
-	}
-
-#if (CHIP_REV != A5S || CHIP_REV != A7)
-	amba_writel(ADC_RESET_REG, 0x01);
+#ifndef ADC_ONE_SHOT
+	/* stop conversion */
+	amba_writel(ADC_CONTROL_REG, 0x0);
 #endif
-	amba_writel(ADC_ENABLE_REG, 0x00);
+
+	/* disable */
+	amba_writel(ADC_ENABLE_REG, 0x0);
+#if (CHIP_REV == A7)
+	/* disable */
+	amba_writel(ADC_CONTROL_REG, 0x0);
+#endif
 }
 
 #ifdef CONFIG_AMBARELLA_ADC_PROC
@@ -229,8 +356,12 @@ int __init ambarella_init_adc(void)
 
 u32 adc_is_irq_supported(void)
 {
-#if (ADC_ONE_SHOT == 0)
+#if (ADC_SUPPORT_THRESHOLD_INT == 1)
+#ifndef ADC_ONE_SHOT
 	return 1;
+#else
+	return 0;
+#endif
 #else
 	return 0;
 #endif
@@ -238,30 +369,53 @@ u32 adc_is_irq_supported(void)
 
 void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 {
-#if (ADC_ONE_SHOT == 0)
+#if (ADC_SUPPORT_THRESHOLD_INT == 1)
 	u32 irq_control_address = 0;
-	u32 value = ((!!h_level) << 31) | ((!!l_level) << 30)
-		| ((h_level & 0x3ff) << 15) | (l_level & 0x3ff);
+	u32 value = ADC_EN_HI(!!h_level) | ADC_EN_LO(!!l_level) |
+		ADC_VAL_HI(h_level) | ADC_VAL_LO(l_level);
 
 	switch (ch) {
 	case 0:
-		irq_control_address = ADC_CHAN3_INTR_REG;
-		break;
-	case 1:
 		irq_control_address = ADC_CHAN0_INTR_REG;
 		break;
-	case 2:
+	case 1:
 		irq_control_address = ADC_CHAN1_INTR_REG;
 		break;
-	case 3:
+	case 2:
 		irq_control_address = ADC_CHAN2_INTR_REG;
 		break;
+	case 3:
+		irq_control_address = ADC_CHAN3_INTR_REG;
+		break;
+#if (ADC_NUM_CHANNELS == 6)
+	case 4:
+		irq_control_address = ADC_CHAN4_INTR_REG;
+		break;
+	case 5:
+		irq_control_address = ADC_CHAN5_INTR_REG;
+		break;
+#endif
+#if (ADC_NUM_CHANNELS == 8)
+	case 4:
+		irq_control_address = ADC_CHAN4_INTR_REG;
+		break;
+	case 5:
+		irq_control_address = ADC_CHAN5_INTR_REG;
+		break;
+	case 6:
+		irq_control_address = ADC_CHAN6_INTR_REG;
+		break;
+	case 7:
+		irq_control_address = ADC_CHAN7_INTR_REG;
+		break;
+#endif
 	default:
 		printk("Don't support %d channels\n", ch);
-		break;
+		return;
 	}
 	amba_writel(irq_control_address, value);
-#else
+	pr_err("%s: set ch[%d] h[%d], l[%d], 0x%08X!\n",
+		__func__, ch, h_level, l_level, value);
 #endif
 }
 
@@ -273,6 +427,10 @@ struct ambarella_adc_pm_info {
 	u32 adc_chan1_intr_reg;
 	u32 adc_chan2_intr_reg;
 	u32 adc_chan3_intr_reg;
+#if (ADC_NUM_CHANNELS == 6)
+	u32 adc_chan4_intr_reg;
+	u32 adc_chan5_intr_reg;
+#endif
 #if (ADC_NUM_CHANNELS == 8)
 	u32 adc_chan4_intr_reg;
 	u32 adc_chan5_intr_reg;
@@ -291,6 +449,10 @@ u32 ambarella_adc_suspend(u32 level)
 	ambarella_adc_pm.adc_chan1_intr_reg = amba_readl(ADC_CHAN1_INTR_REG);
 	ambarella_adc_pm.adc_chan2_intr_reg = amba_readl(ADC_CHAN2_INTR_REG);
 	ambarella_adc_pm.adc_chan3_intr_reg = amba_readl(ADC_CHAN3_INTR_REG);
+#if (ADC_NUM_CHANNELS == 6)
+	ambarella_adc_pm.adc_chan4_intr_reg = amba_readl(ADC_CHAN4_INTR_REG);
+	ambarella_adc_pm.adc_chan5_intr_reg = amba_readl(ADC_CHAN5_INTR_REG);
+#endif
 #if (ADC_NUM_CHANNELS == 8)
 	ambarella_adc_pm.adc_chan4_intr_reg = amba_readl(ADC_CHAN4_INTR_REG);
 	ambarella_adc_pm.adc_chan5_intr_reg = amba_readl(ADC_CHAN5_INTR_REG);
@@ -319,6 +481,10 @@ u32 ambarella_adc_resume(u32 level)
 		amba_writel(ADC_CHAN1_INTR_REG, ambarella_adc_pm.adc_chan1_intr_reg);
 		amba_writel(ADC_CHAN2_INTR_REG, ambarella_adc_pm.adc_chan2_intr_reg);
 		amba_writel(ADC_CHAN3_INTR_REG, ambarella_adc_pm.adc_chan3_intr_reg);
+#if (ADC_NUM_CHANNELS == 6)
+		amba_writel(ADC_CHAN4_INTR_REG, ambarella_adc_pm.adc_chan4_intr_reg);
+		amba_writel(ADC_CHAN5_INTR_REG, ambarella_adc_pm.adc_chan5_intr_reg);
+#endif
 #if (ADC_NUM_CHANNELS == 8)
 		amba_writel(ADC_CHAN4_INTR_REG, ambarella_adc_pm.adc_chan4_intr_reg);
 		amba_writel(ADC_CHAN5_INTR_REG, ambarella_adc_pm.adc_chan5_intr_reg);
