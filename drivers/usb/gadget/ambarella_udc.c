@@ -2193,7 +2193,7 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	disable_irq(USBVBUS_IRQ);
 	disable_irq(USBC_IRQ);
 
-	dev_info(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, message.event);
 
 	ambarella_udc_set_pullup(udc, 0);
@@ -2213,7 +2213,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	enable_irq(USBC_IRQ);
 	enable_irq(USBVBUS_IRQ);
 
-	dev_info(&pdev->dev, "%s exit with %d\n", __func__, retval);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
 	ambarella_udc_set_pullup(udc, 1);
 
