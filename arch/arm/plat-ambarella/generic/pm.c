@@ -35,6 +35,9 @@
 #include <mach/init.h>
 #include <hal/hal.h>
 
+static int sss_counter = 1;
+module_param(sss_counter, int, 0644);
+
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -231,8 +234,11 @@ static int ambarella_pm_enter(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
-		if (get_ambarella_sss_entry_virt())
+		if ((get_ambarella_sss_entry_virt() != 0) &&
+			(sss_counter > 0)) {
 			errorCode = ambarella_pm_enter_sss();
+			sss_counter--;
+		}
 		break;
 
 	default:
@@ -265,7 +271,7 @@ static int ambarella_pm_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
-		if (get_ambarella_sss_entry_virt())
+		if ((get_ambarella_sss_entry_virt() != 0) && (sss_counter > 0))
 			valid = 1;
 		break;
 
