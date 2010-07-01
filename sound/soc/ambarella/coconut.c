@@ -40,6 +40,9 @@
 #include "ambarella_i2s.h"
 #include "../codecs/ak4642_amb.h"
 
+static unsigned int dai_fmt = 0;
+module_param(dai_fmt, uint, 0644);
+MODULE_PARM_DESC(dai_fmt, "DAI format.");
 
 #define AK4642_RESET_PIN	12
 #define AK4642_RESET_DELAY	1
@@ -55,7 +58,7 @@ static int coconut_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	int errorCode = 0, amb_mclk, mclk, oversample;
+	int errorCode = 0, amb_mclk, mclk, oversample, i2s_mode;
 
 	switch (params_rate(params)) {
 	case 8000:
@@ -108,16 +111,21 @@ static int coconut_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
+	if (dai_fmt == 0)
+		i2s_mode = SND_SOC_DAIFMT_I2S;
+	else
+		i2s_mode = SND_SOC_DAIFMT_DSP_A;
+
 	/* set the I2S system data format*/
-	errorCode = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	errorCode = snd_soc_dai_set_fmt(codec_dai,
+		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		pr_err("can't set codec DAI configuration\n");
 		goto hw_params_exit;
 	}
 
-	errorCode = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	errorCode = snd_soc_dai_set_fmt(cpu_dai,
+		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		pr_err("can't set cpu DAI configuration\n");
 		goto hw_params_exit;

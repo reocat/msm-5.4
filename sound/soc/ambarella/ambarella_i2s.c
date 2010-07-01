@@ -126,7 +126,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
 	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
-	u8 slots, rx_enabled = 0, tx_enabled = 0;
+	u8 slots, word_pos, rx_enabled = 0, tx_enabled = 0;
 	u32 clock_divider, channels;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -159,16 +159,25 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	/* Set format */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-		slots = DAI_32slots;
+		if (priv_data->amb_i2s_intf.mode == DAI_DSP_Mode) {
+			slots = channels - 1;
+			word_pos = 0x0f;
+			priv_data->amb_i2s_intf.slots = slots;
+		} else {
+			slots = 0;
+			word_pos = 0;
+			priv_data->amb_i2s_intf.slots = DAI_32slots;
+		}
+		priv_data->amb_i2s_intf.word_len = DAI_16bits;
+		priv_data->amb_i2s_intf.word_pos = word_pos;
+		priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
+
 		amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
 		amba_writel(I2S_WLEN_REG, 0x0f);
-		amba_writel(I2S_WPOS_REG, 0);
-		amba_writel(I2S_SLOT_REG, 0);
+		amba_writel(I2S_WPOS_REG, word_pos);
+		amba_writel(I2S_SLOT_REG, slots);
 		amba_writel(I2S_24BITMUX_MODE_REG, 0);
-		priv_data->amb_i2s_intf.slots = slots;
-		priv_data->amb_i2s_intf.word_len = DAI_16bits;
-		priv_data->amb_i2s_intf.word_pos = 0;
-		priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
+
 		break;
 	default:
 		return -EINVAL;
@@ -293,6 +302,9 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 		break;
 	case SND_SOC_DAIFMT_I2S:
 		priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		priv_data->amb_i2s_intf.mode = DAI_DSP_Mode;
 		break;
 	default:
 		return -EINVAL;

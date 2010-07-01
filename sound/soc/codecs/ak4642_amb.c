@@ -534,7 +534,7 @@ static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	u8 mode = 0;
+	u8 mode1 = 0, mode2 = 0;
 
 	/* set master/slave audio interface */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -545,10 +545,22 @@ static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 	}
 
+	mode1 = ak4642_read_reg_cache(codec, AK4642_MODE1);
+	mode2 = ak4642_read_reg_cache(codec, AK4642_MODE2);
+
 	/* interface format */
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
-		mode = 0x3;
+		mode1 |= 0x3;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		mode1 &= ~0x3;
+		mode2 &= ~0x18;
+		mode2 |= 0x10;
+		break;
+	case SND_SOC_DAIFMT_DSP_B:
+		mode1 &= ~0x3;
+		mode2 &= ~0x18;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 	case SND_SOC_DAIFMT_RIGHT_J:
@@ -557,7 +569,8 @@ static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 	}
 
-	ak4642_write(codec, AK4642_MODE1, mode);
+	ak4642_write(codec, AK4642_MODE1, mode1);
+	ak4642_write(codec, AK4642_MODE2, mode2);
 	return 0;
 }
 
