@@ -30,3 +30,6 @@ extern struct i2c_board_info ambarella_board_vin_infos[3];
 
 extern struct i2c_board_info ambarella_board_hdmi_info;
 
+extern struct i2c_board_info ambarella_mma7455l_board_info;
+
+

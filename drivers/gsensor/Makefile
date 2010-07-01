@@ -1,0 +1,1 @@
+obj-$(CONFIG_SENSORS_MMA7455L)	+= mma7455l.o

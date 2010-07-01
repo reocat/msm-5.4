@@ -351,6 +351,9 @@ static void __init ambarella_init_durian(void)
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
+	ambarella_mma7455l_board_info.flags = I2C_M_PIN_MUXING;
+	i2c_register_board_info(0, &ambarella_mma7455l_board_info, 1);
+
 	i2c_register_board_info(0, &durian_board_ext_gpio_info, 1);
 
 	platform_device_register(&durian_board_input);
