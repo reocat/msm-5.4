@@ -47,9 +47,6 @@
 #define CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT	(100000)
 #define CONFIG_SD_AMBARELLA_SLEEP_COUNTER_LIMIT	(1000)
 
-#define CONFIG_SD_AMBARELLA_MAX_DMA_SIZE	(512 * 1024)
-#define CONFIG_SD_AMBARELLA_MAX_DMA_FLAG	(SD_BLK_SZ_512KB)
-
 #define ambsd_printk(level, phcinfo, format, arg...)	\
 	printk(level "%s.%d: " format,			\
 	dev_name(((struct ambarella_sd_controller_info *)phcinfo->pinfo)->dev),\
@@ -219,9 +216,9 @@ static u32 ambarella_sd_get_dma_size(u32 address)
 	return dma_size;
 }
 
-static u32 ambarella_sd_get_dma_size_mask(u32 size)
+static u32 ambarella_sd_dma_size_to_mask(u32 size)
 {
-	u32					mask = SD_BLK_SZ_512KB;
+	u32					mask;
 
 	switch (size) {
 	case 0x80000:
@@ -249,11 +246,50 @@ static u32 ambarella_sd_get_dma_size_mask(u32 size)
 		mask = SD_BLK_SZ_4KB;
 		break;
 	default:
+		mask = 0;
 		BUG_ON(1);
 		break;
 	}
 
 	return mask;
+}
+
+static u32 ambarella_sd_dma_mask_to_size(u32 mask)
+{
+	u32					size;
+
+	switch (mask) {
+	case SD_BLK_SZ_512KB:
+		size = 0x80000;
+		break;
+	case SD_BLK_SZ_256KB:
+		size = 0x40000;
+		break;
+	case SD_BLK_SZ_128KB:
+		size = 0x20000;
+		break;
+	case SD_BLK_SZ_64KB:
+		size = 0x10000;
+		break;
+	case SD_BLK_SZ_32KB:
+		size = 0x8000;
+		break;
+	case SD_BLK_SZ_16KB:
+		size = 0x4000;
+		break;
+	case SD_BLK_SZ_8KB:
+		size = 0x2000;
+		break;
+	case SD_BLK_SZ_4KB:
+		size = 0x1000;
+		break;
+	default:
+		size = 0;
+		BUG_ON(1);
+		break;
+	}
+
+	return size;
 }
 
 static void ambarella_sd_pre_sg_to_dma(void *data)
@@ -274,7 +310,8 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 	dmabuf = pslotinfo->buf_vaddress;
 
 	if (pslotinfo->sg_index == 0) {
-		pslotinfo->dma_per_size = CONFIG_SD_AMBARELLA_MAX_DMA_SIZE;
+		pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
+			pslotinfo->slot_info.max_blk_sz);
 		pslotinfo->dma_w_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
@@ -318,8 +355,8 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 				(pslotinfo->buf_paddress == 0))
 				BUG_ON(1);
 
-			pslotinfo->dma_per_size =
-				CONFIG_SD_AMBARELLA_MAX_DMA_SIZE;
+			pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
+				pslotinfo->slot_info.max_blk_sz);
 			pslotinfo->dma_w_fill_counter++;
 
 			for (i = 0; i < pslotinfo->sg_len; i++) {
@@ -331,7 +368,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 			pslotinfo->dma_left = pslotinfo->dma_size;
 			pslotinfo->sg_index = pslotinfo->sg_len;
 			pslotinfo->blk_sz &= 0xFFF;
-			pslotinfo->blk_sz |= CONFIG_SD_AMBARELLA_MAX_DMA_FLAG;
+			pslotinfo->blk_sz |= pslotinfo->slot_info.max_blk_sz;
 		} else {
 			pslotinfo->dma_address =
 				current_sg[pslotinfo->sg_index].dma_address;
@@ -339,9 +376,8 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 				current_sg[pslotinfo->sg_index].length;
 			pslotinfo->sg_index++;
 			pslotinfo->blk_sz &= 0xFFF;
-			pslotinfo->blk_sz |=
-				ambarella_sd_get_dma_size_mask(
-					pslotinfo->dma_per_size);
+			pslotinfo->blk_sz |= ambarella_sd_dma_size_to_mask(
+				pslotinfo->dma_per_size);
 		}
 	} else if (pslotinfo->sg_index < pslotinfo->sg_len) {
 		if (pslotinfo->dma_left) {
@@ -404,7 +440,8 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 	current_sg = pslotinfo->sg;
 
 	if (pslotinfo->sg_index == 0) {
-		pslotinfo->dma_per_size = CONFIG_SD_AMBARELLA_MAX_DMA_SIZE;
+		pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
+			pslotinfo->slot_info.max_blk_sz);
 		pslotinfo->dma_r_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
@@ -449,15 +486,15 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 				(pslotinfo->buf_paddress == 0))
 				BUG_ON(1);
 
-			pslotinfo->dma_per_size =
-				CONFIG_SD_AMBARELLA_MAX_DMA_SIZE;
+			pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
+				pslotinfo->slot_info.max_blk_sz);
 			pslotinfo->dma_r_fill_counter++;
 
 			pslotinfo->dma_address = pslotinfo->buf_paddress;
 			pslotinfo->dma_left = pslotinfo->dma_size;
 			pslotinfo->sg_index = pslotinfo->sg_len;
 			pslotinfo->blk_sz &= 0xFFF;
-			pslotinfo->blk_sz |= CONFIG_SD_AMBARELLA_MAX_DMA_FLAG;
+			pslotinfo->blk_sz |= pslotinfo->slot_info.max_blk_sz;
 		} else {
 			pslotinfo->dma_address =
 				current_sg[pslotinfo->sg_index].dma_address;
@@ -466,7 +503,7 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 			pslotinfo->sg_index++;
 			pslotinfo->blk_sz &= 0xFFF;
 			pslotinfo->blk_sz |=
-				ambarella_sd_get_dma_size_mask(
+				ambarella_sd_dma_size_to_mask(
 					pslotinfo->dma_per_size);
 		}
 	} else if (pslotinfo->sg_index < pslotinfo->sg_len) {
@@ -1725,10 +1762,11 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			goto sd_errorCode_free_host;
 		}
 
-		if (pslotinfo->slot_info.bounce_buffer) {
+		if (pslotinfo->slot_info.use_bounce_buffer) {
 			mmc->max_hw_segs = 128;
 			mmc->max_phys_segs = 128;
-			mmc->max_seg_size = CONFIG_SD_AMBARELLA_MAX_DMA_SIZE;
+			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
+				pslotinfo->slot_info.max_blk_sz);
 			mmc->max_req_size = mmc->max_seg_size;
 			mmc->max_blk_count = 0xFFFF;
 
@@ -1744,20 +1782,22 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			if (ambarella_sd_check_dma_boundary(pslotinfo,
 				pslotinfo->buf_paddress,
 				mmc->max_seg_size,
-				CONFIG_SD_AMBARELLA_MAX_DMA_SIZE) == 0) {
+				ambarella_sd_dma_mask_to_size(
+				pslotinfo->slot_info.max_blk_sz)) == 0) {
 				ambsd_err(pslotinfo, "DMA boundary err!\n");
 				errorCode = -ENOMEM;
 				goto sd_errorCode_free_host;
 			}
-			dev_notice(&pdev->dev, "Slot%d bounce buffer DMA MEM "
-				"0x%p<->0x%08X, size=%d\n", pslotinfo->slot_id,
+			dev_notice(&pdev->dev, "Slot%d bounce buffer:"
+				"0x%p<->0x%08x, size=%d\n", pslotinfo->slot_id,
 				pslotinfo->buf_vaddress,
 				pslotinfo->buf_paddress,
 				mmc->max_seg_size);
 		} else {
 			mmc->max_hw_segs = 1;
 			mmc->max_phys_segs = 1;
-			mmc->max_seg_size = CONFIG_SD_AMBARELLA_MAX_DMA_SIZE;
+			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
+				pslotinfo->slot_info.max_blk_sz);
 			mmc->max_req_size = mmc->max_seg_size;
 			mmc->max_blk_count = 0xFFFF;
 
