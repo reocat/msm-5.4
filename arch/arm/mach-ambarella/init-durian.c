@@ -310,7 +310,8 @@ static void __init ambarella_init_durian(void)
 	fio_select_sdio_as_default = 1;
 	ambarella_platform_sd_controller0.clk_limit = 25000000;
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-	ambarella_platform_sd_controller0.slot[0].bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_64KB;
 	/* Disable Power control, use /sys/class/gpio to control them.
 	ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = EXT_GPIO(3);
 	ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
