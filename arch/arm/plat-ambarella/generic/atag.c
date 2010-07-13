@@ -136,10 +136,12 @@ void __init ambarella_map_io(void)
 		ambarella_io_desc[2].io_desc.pfn =
 			__phys_to_pfn(DEFAULT_MEM_START);
 		ios = ambarella_io_desc[2].io_desc.length = SZ_1M;
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 		if ((halv >= iov) && ((halv + hals) <= (iov + ios))) {
 			bhal_mapped = 1;
 			hal_type = ambarella_io_desc[2].io_desc.type;
 		}
+#endif
 	}
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
