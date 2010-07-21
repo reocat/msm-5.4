@@ -919,11 +919,12 @@ static int __init alignment_init(void)
 	 * CPUs since we spin re-faulting the instruction without
 	 * making any progress.
 	 */
-	if (cpu_architecture() >= CPU_ARCH_ARMv6 && (cr_alignment & CR_U)) {
-		cr_alignment &= ~CR_A;
-		cr_no_alignment &= ~CR_A;
-		set_cr(cr_alignment);
-		ai_usermode = UM_FIXUP;
+	if (cpu_architecture() >= CPU_ARCH_ARMv6) {
+		if (cr_alignment & CR_U) {
+			ai_usermode = UM_WARN;
+		} else {
+			ai_usermode = UM_WARN | UM_FIXUP;
+		}
 	}
 
 	hook_fault_code(1, do_alignment, SIGILL, "alignment exception");
