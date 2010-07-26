@@ -49,4 +49,6 @@ endif
 
 obj-y	+= video/ambfb.o
 obj-y	+= misc/ambsyncproc.o
+obj-y	+= misc/ambasyncproc.o
+obj-y	+= misc/ambevent.o
 
