@@ -790,6 +790,7 @@ int ambarella_fb_set_iav_info(u32 fb_id, struct ambarella_fb_iav_info *iav)
 		ambarella_platform_fb0.setcmap = iav->setcmap;
 		ambarella_platform_fb0.check_var = iav->check_var;
 		ambarella_platform_fb0.set_par = iav->set_par;
+		ambarella_platform_fb0.set_blank = iav->set_blank;
 		ambarella_platform_fb0.dsp_status = iav->dsp_status;
 		mutex_unlock(&ambarella_platform_fb0.lock);
 
@@ -803,6 +804,7 @@ int ambarella_fb_set_iav_info(u32 fb_id, struct ambarella_fb_iav_info *iav)
 		ambarella_platform_fb1.setcmap = iav->setcmap;
 		ambarella_platform_fb1.check_var = iav->check_var;
 		ambarella_platform_fb1.set_par = iav->set_par;
+		ambarella_platform_fb1.set_blank = iav->set_blank;
 		ambarella_platform_fb1.dsp_status = iav->dsp_status;
 		mutex_unlock(&ambarella_platform_fb1.lock);
 
