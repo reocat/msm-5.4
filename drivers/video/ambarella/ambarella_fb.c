@@ -48,8 +48,8 @@
 
 #include <plat/fb.h>
 
-/* video=ambfb0:<x_res>x<y_res>,<x_virtual>x<y_virtual>,
-   <color_format>[,<prealloc_start>,<prealloc_length>] */
+/* video=amb0fb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,
+   <color_format>,<conversion_buffer>[,<prealloc_start>,<prealloc_length>] */
 
 static const struct ambarella_fb_color_table_s {
 	enum ambarella_fb_color_format	color_format;
@@ -648,7 +648,6 @@ static int ambfb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 {
 	int					errorCode = 0;
 	struct ambarella_platform_fb		*ambfb_data;
-	struct ambarella_fb_info		ambfb_info;
 	int					pos;
 	u16					*r, *g, *b, *t;
 	u8					*pclut_table, *pblend_table;
@@ -691,10 +690,8 @@ static int ambfb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	}
 
 	if (ambfb_data->setcmap) {
-		ambfb_info.color_format = ambfb_data->color_format;
 		mutex_unlock(&ambfb_data->lock);
-		errorCode =
-			ambfb_data->setcmap(cmap, info, &ambfb_info);
+		errorCode = ambfb_data->setcmap(cmap, info);
 	} else {
 		mutex_unlock(&ambfb_data->lock);
 	}
@@ -708,18 +705,22 @@ static int ambfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	int					errorCode = 0;
 	struct ambarella_platform_fb		*ambfb_data;
-	struct ambarella_fb_info		ambfb_info;
 	u32					framesize = 0;
 
 	ambfb_data = (struct ambarella_platform_fb *)info->par;
 
 	mutex_lock(&ambfb_data->lock);
 	if (ambfb_data->check_var) {
-		ambfb_info.color_format = ambfb_data->color_format;
-		errorCode =
-			ambfb_data->check_var(var, info, &ambfb_info);
+		errorCode = ambfb_data->check_var(var, info);
 	}
 	mutex_unlock(&ambfb_data->lock);
+
+	if (var->xres_virtual * var->bits_per_pixel / 8 > info->fix.line_length) {
+		errorCode = -ENOMEM;
+		dev_err(info->device, "%s: xres_virtual[%d] too big [%d]!\n",
+			__func__, var->xres_virtual * var->bits_per_pixel / 8,
+			info->fix.line_length);
+	}
 
 	framesize = info->fix.line_length * var->yres_virtual;
 	if (framesize > info->fix.smem_len) {
@@ -738,7 +739,6 @@ static int ambfb_set_par(struct fb_info *info)
 	int					errorCode = 0, i;
 	struct ambarella_platform_fb		*ambfb_data;
 	struct fb_var_screeninfo		*pvar;
-	struct ambarella_fb_info		ambfb_info;
 	static struct fb_var_screeninfo		*cur_var;
 	int					res_changed = 0;
 	int					color_format_changed = 0;
@@ -803,12 +803,11 @@ static int ambfb_set_par(struct fb_info *info)
 		pTable++;
 	}
 
-	ambfb_info.color_format = new_color_format;
 	ambfb_data->color_format = new_color_format;
 	memcpy(cur_var, pvar, sizeof(*pvar));
 	mutex_unlock(&ambfb_data->lock);
 
-	errorCode = ambfb_data->set_par(info, &ambfb_info);
+	errorCode = ambfb_data->set_par(info);
 	goto ambfb_set_par_normal_exit;
 
 ambfb_set_par_quick_exit:
@@ -826,7 +825,6 @@ static int ambfb_pan_display(struct fb_var_screeninfo *var,
 {
 	int					errorCode = 0;
 	struct ambarella_platform_fb		*ambfb_data;
-	struct ambarella_fb_info		ambfb_info;
 
 	ambfb_data = (struct ambarella_platform_fb *)info->par;
 
@@ -834,9 +832,7 @@ static int ambfb_pan_display(struct fb_var_screeninfo *var,
 	wake_up(&(ambfb_data->proc_wait));
 	mutex_lock(&ambfb_data->lock);
 	if (ambfb_data->pan_display) {
-		ambfb_info.color_format = ambfb_data->color_format;
-		errorCode =
-			ambfb_data->pan_display(var, info, &ambfb_info);
+		errorCode = ambfb_data->pan_display(var, info);
 	}
 	mutex_unlock(&ambfb_data->lock);
 
@@ -868,15 +864,12 @@ static int ambfb_blank(int blank_mode, struct fb_info *info)
 {
 	int					errorCode = 0;
 	struct ambarella_platform_fb		*ambfb_data;
-	struct ambarella_fb_info		ambfb_info;
 
 	ambfb_data = (struct ambarella_platform_fb *)info->par;
 
 	mutex_lock(&ambfb_data->lock);
 	if (ambfb_data->set_blank) {
-		ambfb_info.color_format = ambfb_data->color_format;
-		errorCode =
-			ambfb_data->set_blank(blank_mode, info, &ambfb_info);
+		errorCode = ambfb_data->set_blank(blank_mode, info);
 	}
 	mutex_unlock(&ambfb_data->lock);
 
@@ -908,6 +901,7 @@ static int __init ambfb_setup(struct device *dev, char *options,
 	int					cl_xvirtual;
 	int					cl_yvirtual;
 	int					cl_format;
+	int					cl_cvs_buf;
 	unsigned int				cl_prealloc_start;
 	unsigned int				cl_prealloc_length;
 
@@ -921,30 +915,32 @@ static int __init ambfb_setup(struct device *dev, char *options,
 		goto ambfb_setup_exit;
 	}
 
-	ssret = sscanf(options, "%dx%d,%dx%d,%d,%x,%x", &cl_xres, &cl_yres,
-		&cl_xvirtual, &cl_yvirtual, &cl_format,
+	ssret = sscanf(options, "%dx%d,%dx%d,%d,%d,%x,%x", &cl_xres, &cl_yres,
+		&cl_xvirtual, &cl_yvirtual, &cl_format, &cl_cvs_buf,
 		&cl_prealloc_start, &cl_prealloc_length);
-	if (ssret == 5) {
+	if (ssret == 6) {
 		ambfb_data->screen_var.xres = cl_xres;
 		ambfb_data->screen_var.yres = cl_yres;
 		ambfb_data->screen_var.xres_virtual = cl_xvirtual;
 		ambfb_data->screen_var.yres_virtual = cl_yvirtual;
 		ambfb_data->color_format = cl_format;
-		dev_dbg(dev, "%dx%d,%dx%d,%d\n", cl_xres, cl_yres,
-			cl_xvirtual, cl_yvirtual, cl_format);
+		ambfb_data->conversion_buf.available = cl_cvs_buf;
+		dev_dbg(dev, "%dx%d,%dx%d,%d,%d\n", cl_xres, cl_yres,
+			cl_xvirtual, cl_yvirtual, cl_format, cl_cvs_buf);
 		retval = 0;
 	} else
-	if (ssret == 7) {
+	if (ssret == 8) {
 		ambfb_data->screen_var.xres = cl_xres;
 		ambfb_data->screen_var.yres = cl_yres;
 		ambfb_data->screen_var.xres_virtual = cl_xvirtual;
 		ambfb_data->screen_var.yres_virtual = cl_yvirtual;
 		ambfb_data->color_format = cl_format;
+		ambfb_data->conversion_buf.available = cl_cvs_buf;
 
 		ambfb_data->screen_fix.smem_start = cl_prealloc_start;
 		ambfb_data->screen_fix.smem_len = cl_prealloc_length;
-		dev_dbg(dev, "%dx%d,%dx%d,%d,%x,%x\n", cl_xres, cl_yres,
-			cl_xvirtual, cl_yvirtual, cl_format,
+		dev_dbg(dev, "%dx%d,%dx%d,%d,%d,%x,%x\n", cl_xres, cl_yres,
+			cl_xvirtual, cl_yvirtual, cl_format, cl_cvs_buf,
 			cl_prealloc_start, cl_prealloc_length);
 		retval = 0;
 	} else {
@@ -1032,9 +1028,37 @@ static int __init ambfb_probe(struct platform_device *pdev)
 	if (ambfb_data->use_prealloc == 0) {
 		info->screen_base = kzalloc(framesize, GFP_KERNEL);
 		if (info->screen_base == NULL) {
-			dev_err(&pdev->dev, "%s: Can't get fbmem!\n", __func__);
+			dev_err(&pdev->dev, "%s(%d): Can't get fbmem!\n",
+				__func__, __LINE__);
 			errorCode = -ENOMEM;
 			goto ambfb_probe_release_framebuffer;
+		}
+		if (ambfb_data->conversion_buf.available) {
+			ambfb_data->conversion_buf.ping_buf =
+				kzalloc(framesize, GFP_KERNEL);
+			if (ambfb_data->conversion_buf.ping_buf == NULL) {
+				ambfb_data->conversion_buf.available = 0;
+				dev_err(&pdev->dev, "%s(%d): Can't get fbmem!\n",
+					__func__, __LINE__);
+				errorCode = -ENOMEM;
+				goto ambfb_probe_release_framebuffer;
+			} else {
+				ambfb_data->conversion_buf.ping_buf_size
+					= framesize;
+			}
+
+			ambfb_data->conversion_buf.pong_buf =
+				kzalloc(framesize, GFP_KERNEL);
+			if (ambfb_data->conversion_buf.pong_buf == NULL) {
+				ambfb_data->conversion_buf.available = 0;
+				dev_err(&pdev->dev, "%s(%d): Can't get fbmem!\n",
+					__func__, __LINE__);
+				errorCode = -ENOMEM;
+				goto ambfb_probe_release_framebuffer;
+			} else {
+				ambfb_data->conversion_buf.pong_buf_size
+					= framesize;
+			}
 		}
 		info->fix.smem_start = virt_to_phys(info->screen_base);
 		info->fix.smem_len = framesize;
@@ -1046,8 +1070,30 @@ static int __init ambfb_probe(struct platform_device *pdev)
 			errorCode = -ENOMEM;
 			goto ambfb_probe_release_framebuffer;
 		}
+
 		info->screen_base = (char __iomem *)
 			ambarella_phys_to_virt(info->fix.smem_start);
+
+		if (ambfb_data->conversion_buf.available) {
+			if (info->fix.smem_len < 3 * framesize) {
+				ambfb_data->conversion_buf.available = 0;
+				dev_err(&pdev->dev, "%s: prealloc[0x%08x < 0x%08x]!\n",
+					__func__, info->fix.smem_len, 3 * framesize);
+				errorCode = -ENOMEM;
+				goto ambfb_probe_release_framebuffer;
+			} else {
+				ambfb_data->conversion_buf.ping_buf =
+					info->screen_base + framesize;
+				ambfb_data->conversion_buf.ping_buf_size =
+					framesize;
+				ambfb_data->conversion_buf.ping_buf =
+					info->screen_base + framesize;
+				ambfb_data->conversion_buf.ping_buf_size =
+					framesize;
+			}
+		}
+
+		info->fix.smem_len = framesize;
 	}
 
 	errorCode = fb_alloc_cmap(&info->cmap, 256, 1);
@@ -1104,9 +1150,10 @@ static int __init ambfb_probe(struct platform_device *pdev)
 	mutex_unlock(&ambfb_data->lock);
 
 	dev_info(&pdev->dev,
-		"probe p[%dx%d] v[%dx%d] c[%d] l[%d] @ [0x%08lx:0x%08x]!\n",
+		"probe p[%dx%d] v[%dx%d] c[%d] b[%d] l[%d] @ [0x%08lx:0x%08x]!\n",
 		info->var.xres, info->var.yres, info->var.xres_virtual,
 		info->var.yres_virtual, ambfb_data->color_format,
+		ambfb_data->conversion_buf.available,
 		info->fix.line_length,
 		info->fix.smem_start, info->fix.smem_len);
 	goto ambfb_probe_exit;
@@ -1141,9 +1188,19 @@ static int __devexit ambfb_remove(struct platform_device *pdev)
 		mutex_lock(&ambfb_data->lock);
 		ambfb_data->fb_status = AMBFB_STOP_MODE;
 		fb_dealloc_cmap(&info->cmap);
-		if ((ambfb_data->use_prealloc == 0) &&
-			(info->screen_base != NULL)) {
-			kfree(info->screen_base);
+		if (ambfb_data->use_prealloc == 0) {
+			if (info->screen_base) {
+				kfree(info->screen_base);
+			}
+
+			if (ambfb_data->conversion_buf.available) {
+				if (ambfb_data->conversion_buf.ping_buf) {
+					kfree(ambfb_data->conversion_buf.ping_buf);
+				}
+				if (ambfb_data->conversion_buf.pong_buf) {
+					kfree(ambfb_data->conversion_buf.pong_buf);
+				}
+			}
 		}
 		ambfb_data->screen_fix.smem_start = 0;
 		ambfb_data->screen_fix.smem_len = 0;

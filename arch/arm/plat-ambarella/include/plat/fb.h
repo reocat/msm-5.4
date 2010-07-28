@@ -77,55 +77,58 @@ enum ambarella_fb_status {
 	AMBFB_STOP_MODE,
 };
 
-struct ambarella_fb_info {
-	enum ambarella_fb_color_format color_format;
+typedef int (*ambarella_fb_pan_display_fn)(struct fb_var_screeninfo *var,
+	struct fb_info *info);
+typedef int (*ambarella_fb_setcmap_fn)(struct fb_cmap *cmap,
+	struct fb_info *info);
+typedef int (*ambarella_fb_check_var_fn)(struct fb_var_screeninfo *var,
+	struct fb_info *info);
+typedef int (*ambarella_fb_set_par_fn)(struct fb_info *info);
+typedef int (*ambarella_fb_blank_fn)(int blank_mode, struct fb_info *info);
+
+struct ambarella_fb_cvs_buf {		//Conversion Buffer
+	int				available;
+	u8				*ping_buf;
+	u32				ping_buf_size;
+	u8				*pong_buf;
+	u32				pong_buf_size;
 };
 
-typedef int (*ambarella_fb_pan_display_fn)(struct fb_var_screeninfo *var,
-	struct fb_info *info, struct ambarella_fb_info *);
-typedef int (*ambarella_fb_setcmap_fn)(struct fb_cmap *cmap,
-	struct fb_info *info, struct ambarella_fb_info *);
-typedef int (*ambarella_fb_check_var_fn)(struct fb_var_screeninfo *var,
-	struct fb_info *info, struct ambarella_fb_info *);
-typedef int (*ambarella_fb_set_par_fn)(struct fb_info *info,
-	struct ambarella_fb_info *);
-typedef int (*ambarella_fb_blank_fn)(int blank_mode, struct fb_info *info,
-	struct ambarella_fb_info *);
-
 struct ambarella_fb_iav_info {
-	struct fb_var_screeninfo screen_var;
-	struct fb_fix_screeninfo screen_fix;
-	enum ambarella_dsp_status dsp_status;
+	struct fb_var_screeninfo	screen_var;
+	struct fb_fix_screeninfo	screen_fix;
+	enum ambarella_dsp_status	dsp_status;
 
-	ambarella_fb_pan_display_fn pan_display;
-	ambarella_fb_setcmap_fn setcmap;
-	ambarella_fb_check_var_fn check_var;
-	ambarella_fb_set_par_fn set_par;
-	ambarella_fb_blank_fn set_blank;
+	ambarella_fb_pan_display_fn	pan_display;
+	ambarella_fb_setcmap_fn		setcmap;
+	ambarella_fb_check_var_fn	check_var;
+	ambarella_fb_set_par_fn		set_par;
+	ambarella_fb_blank_fn		set_blank;
 };
 
 struct ambarella_platform_fb {
-	struct mutex lock;
-	struct fb_var_screeninfo screen_var;
-	struct fb_fix_screeninfo screen_fix;
-	enum ambarella_dsp_status dsp_status;
-	enum ambarella_fb_status fb_status;
-	u8 clut_table[AMBARELLA_CLUT_TABLE_SIZE];
-	u8 blend_table[AMBARELLA_BLEND_TABLE_SIZE];
-	enum ambarella_fb_color_format color_format;
-	u32 use_prealloc;
-	u32 prealloc_line_length;
+	struct mutex			lock;
+	struct fb_var_screeninfo	screen_var;
+	struct fb_fix_screeninfo	screen_fix;
+	enum ambarella_dsp_status	dsp_status;
+	enum ambarella_fb_status	fb_status;
+	u8				clut_table[AMBARELLA_CLUT_TABLE_SIZE];
+	u8				blend_table[AMBARELLA_BLEND_TABLE_SIZE];
+	enum ambarella_fb_color_format	color_format;
+	struct ambarella_fb_cvs_buf	conversion_buf;
+	u32				use_prealloc;
+	u32				prealloc_line_length;
 
-	ambarella_fb_pan_display_fn pan_display;
-	ambarella_fb_setcmap_fn setcmap;
-	ambarella_fb_check_var_fn check_var;
-	ambarella_fb_set_par_fn set_par;
-	ambarella_fb_blank_fn set_blank;
+	ambarella_fb_pan_display_fn	pan_display;
+	ambarella_fb_setcmap_fn		setcmap;
+	ambarella_fb_check_var_fn	check_var;
+	ambarella_fb_set_par_fn		set_par;
+	ambarella_fb_blank_fn		set_blank;
 
-	struct fb_info *proc_fb_info;
-	struct proc_dir_entry *proc_file;
-	wait_queue_head_t proc_wait;
-	u32 proc_wait_flag;
+	struct fb_info			*proc_fb_info;
+	struct proc_dir_entry		*proc_file;
+	wait_queue_head_t		proc_wait;
+	u32				proc_wait_flag;
 };
 
 /* ==========================================================================*/
