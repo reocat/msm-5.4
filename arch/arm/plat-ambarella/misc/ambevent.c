@@ -38,19 +38,20 @@ int amb_event_pool_init(struct amb_event_pool *pool)
 EXPORT_SYMBOL(amb_event_pool_init);
 
 int amb_event_pool_affuse(struct amb_event_pool *pool,
-	enum amb_event_type ev_type)
+	struct amb_event event)
 {
 	if (!pool)
 		return -EINVAL;
 
-	if (ev_type == AMB_EV_NONE)
+	if (event.type == AMB_EV_NONE)
 		return 0;
 
 	mutex_lock(&pool->op_mutex);
 	pool->ev_sno++;
 	pool->events[pool->ev_index].sno = pool->ev_sno;
 	pool->events[pool->ev_index].time_code = 0;		//FIX ME
-	pool->events[pool->ev_index].type = ev_type;
+	pool->events[pool->ev_index].type = event.type;
+	memcpy(pool->events[pool->ev_index].data, event.data, sizeof(event.data));
 	pool->ev_index++;
 	mutex_unlock(&pool->op_mutex);
 

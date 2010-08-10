@@ -35,12 +35,16 @@ enum amb_event_type {
 	AMB_EV_VOUT_YPBPR_REMOVE,
 	AMB_EV_VOUT_HDMI_PLUG,
 	AMB_EV_VOUT_HDMI_REMOVE,
+
+	/* G_SENSOR Output Event*/
+	AMB_EV_GSENSOR_OUTPUT			= 0x00030000,
 };
 
 struct amb_event {
-	unsigned int		sno;		//sequential number
-	unsigned int		time_code;
+	u32			sno;		//sequential number
+	u32			time_code;
 	enum amb_event_type	type;
+	u8			data[32];
 };
 
 struct amb_event_pool {
@@ -52,7 +56,7 @@ struct amb_event_pool {
 
 extern int amb_event_pool_init(struct amb_event_pool *pool);
 extern int amb_event_pool_affuse(struct amb_event_pool *pool,
-	enum amb_event_type ev_type);
+	struct amb_event event);
 extern int amb_event_pool_query_index(struct amb_event_pool *pool);
 extern int amb_event_pool_query_event(struct amb_event_pool *pool,
 	struct amb_event *event, unsigned char index);
