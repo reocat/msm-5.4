@@ -27,7 +27,7 @@ ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC),y)
 
 obj-y	+= generic/adc.o generic/dma.o
 obj-y	+= generic/fio.o generic/gpio.o
-obj-y	+= generic/irq.o generic/pwm.o 
+obj-y	+= generic/irq.o generic/pwm.o
 obj-y	+= generic/pll.o generic/pm.o
 obj-y	+= generic/rct.o generic/timer.o
 
@@ -43,6 +43,7 @@ obj-y	+= generic/spi.o
 obj-y	+= generic/idc.o
 obj-y	+= generic/sd.o
 obj-y	+= generic/uart.o
+obj-y	+= generic/uhc.o
 
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO)	+= generic/crypto.o
 endif
