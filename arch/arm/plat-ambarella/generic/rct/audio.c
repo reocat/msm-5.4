@@ -83,7 +83,7 @@ void rct_set_audio_pll_hal(u8 op_mode, amb_clock_frequency_t set_freq)
 	amb_clock_source_t clk_src_sel;
 
 	switch (op_mode) {
-#if (CHIP_REV != A7)
+#if (CHIP_REV == A5S)
 		case AUC_CLK_ONCHIP_PLL_SP_CLK:
 			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_SP_CLK;
 			break;

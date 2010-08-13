@@ -1,10 +1,9 @@
 /*
- * arch/arm/plat-ambarella/include/mach/uart.h
+ * arch/arm/plat-ambarella/include/plat/smp.h
  *
- * History:
- *	2006/12/27 - [Charles Chiou] created file
+ * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2004-2010, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,30 +21,21 @@
  *
  */
 
-#ifndef __ASM_ARCH_UNCOMPRESS_H
-#define __ASM_ARCH_UNCOMPRESS_H
+#ifndef __PLAT_AMBARELLA_SMP_H
+#define __PLAT_AMBARELLA_SMP_H
 
 /* ==========================================================================*/
+#define AMBARELLA_VA_SCU_BASE		(AXI_BASE + 0x00000000)
+#define AMBARELLA_VA_IC_BASE		(AXI_BASE + 0x00000100)
+#define AMBARELLA_VA_GT_BASE		(AXI_BASE + 0x00000200)
+#define AMBARELLA_VA_PT_WD_BASE		(AXI_BASE + 0x00000600)
+#define AMBARELLA_VA_ID_BASE		(AXI_BASE + 0x00001000)
+#define AMBARELLA_VA_L2CC_BASE		(AXI_BASE + 0x00002000)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/
-static inline void putc(int c)
-{
-
-}
-
-static inline void flush(void)
-{
-}
-
-static __inline__ void arch_decomp_setup(void)
-{
-
-}
-
-#define arch_decomp_wdog()
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

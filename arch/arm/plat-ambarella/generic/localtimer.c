@@ -1,11 +1,9 @@
 /*
- * arch/arm/plat-ambarella/include/mach/gpio.h
+ * arch/arm/plat-ambarella/generic/localtimer.c
  *
- * History:
- *	2006/12/27 - [Charles Chiou] created file
- *	2009/01/12 - [Anthony Ginger] Port to 2.6.28
+ * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2004-2010, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,20 +21,17 @@
  *
  */
 
-#ifndef __ASM_ARCH_GPIO_H
-#define __ASM_ARCH_GPIO_H
+#include <linux/init.h>
+#include <linux/smp.h>
+#include <linux/clockchips.h>
 
-/* ==========================================================================*/
-#include <mach/hardware.h>
-#include <plat/gpio.h>
+#include <asm/irq.h>
+#include <asm/smp_twd.h>
+#include <asm/localtimer.h>
 
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-/* ==========================================================================*/
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
-
-#endif
+void __cpuinit local_timer_setup(struct clock_event_device *evt)
+{
+	evt->irq = 29;	//TBD...
+	twd_timer_setup(evt);
+}
 

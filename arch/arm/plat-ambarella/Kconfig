@@ -47,32 +47,40 @@ config PLAT_AMBARELLA_SUPPORT_HAL
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_I1
+	bool
+	default n
+
+config PLAT_AMBARELLA_SUPPORT_SMP
+	bool
+	default n
+
 choice
 	prompt "Chip REV"
 
 config PLAT_AMBARELLA_A2
-	bool "Ambarella A2"
+	bool "A2"
 	select CPU_ARM926T
 	select PLAT_AMBARELLA_GENERIC
 	help
 	  Say Y here if you are using Ambarella A2.
 
 config PLAT_AMBARELLA_A2S
-	bool "Ambarella A2S"
+	bool "A2S"
 	select CPU_ARM926T
 	select PLAT_AMBARELLA_GENERIC
 	help
 	  Say Y here if you are using Ambarella A2S.
 
 config PLAT_AMBARELLA_A3
-	bool "Ambarella A3"
+	bool "A3"
 	select CPU_ARM926T
 	select PLAT_AMBARELLA_GENERIC
 	help
 	  Say Y here if you are using Ambarella A3.
 
 config PLAT_AMBARELLA_A5S
-	bool "Ambarella A5S"
+	bool "A5S"
 	select CPU_V6
 	select CPU_32v6K
 	select PLAT_AMBARELLA_GENERIC
@@ -82,14 +90,37 @@ config PLAT_AMBARELLA_A5S
 	  Say Y here if you are using Ambarella A5S.
 
 config PLAT_AMBARELLA_A7
-        bool "Ambarella A7"
-        select CPU_V6
-        select CPU_32v6K
-        select PLAT_AMBARELLA_GENERIC
-        select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-        select PLAT_AMBARELLA_SUPPORT_HAL
-        help
-          Say Y here if you are using Ambarella A7.
+	bool "A7"
+	select CPU_V6
+	select CPU_32v6K
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	help
+	  Say Y here if you are using Ambarella A7.
+
+config PLAT_AMBARELLA_I1_ARM11
+	bool "iOne ARM11"
+	select CPU_V6
+	select CPU_32v6K
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	select PLAT_AMBARELLA_SUPPORT_I1
+	help
+	  Say Y here if you are using Ambarella I1 ARM11.
+
+config PLAT_AMBARELLA_I1_CORTEX
+	bool "iOne Cortex"
+	select CPU_V7
+	select ARM_GIC
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	select PLAT_AMBARELLA_SUPPORT_I1
+	select PLAT_AMBARELLA_SUPPORT_SMP
+	help
+	  Say Y here if you are using Ambarella I1 Cortex.
 
 endchoice
 

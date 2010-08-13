@@ -44,6 +44,8 @@
 		.macro	arch_ret_to_user, tmp1, tmp2
 		.endm
 
+#if !defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX)
+
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\base, =(VIC_BASE)
 		ldr	\tmp, =(GPIO_IRQ_MASK)
@@ -61,4 +63,40 @@
 		stat2nr	\irqstat, \irqnr, \tmp
 1000:
 		.endm
+
+#else
+#include <asm/hardware/gic.h>
+
+#define AMBARELLA_VA_GIC_CPU_BASE	0
+
+		.macro  get_irqnr_and_base, irqnr, irqstat, base, tmp
+		ldr     \base, =AMBARELLA_VA_GIC_CPU_BASE
+		ldr     \irqstat, [\base, #GIC_CPU_INTACK]
+		ldr     \tmp, =1021
+		bic     \irqnr, \irqstat, #0x1c00
+		cmp     \irqnr, #29
+		cmpcc   \irqnr, \irqnr
+		cmpne   \irqnr, \tmp
+		cmpcs   \irqnr, \irqnr
+		.endm
+
+		.macro test_for_ipi, irqnr, irqstat, base, tmp
+		bic	\irqnr, \irqstat, #0x1c00
+		cmp	\irqnr, #16
+		it	cc
+		strcc	\irqstat, [\base, #GIC_CPU_EOI]
+		it	cs
+		cmpcs	\irqnr, \irqnr
+		.endm
+
+		.macro test_for_ltirq, irqnr, irqstat, base, tmp
+		bic	\irqnr, \irqstat, #0x1c00
+		mov 	\tmp, #0
+		cmp	\irqnr, #29
+		itt	eq
+		moveq	\tmp, #1
+		streq	\irqstat, [\base, #GIC_CPU_EOI]
+		cmp	\tmp, #0
+		.endm
+#endif
 

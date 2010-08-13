@@ -95,7 +95,7 @@ struct ambarella_pll_performance_info {
 	unsigned int performance;
 };
 
-#if (CHIP_REV != A7)
+#if (CHIP_REV == A5S)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},

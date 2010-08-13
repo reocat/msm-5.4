@@ -431,6 +431,13 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 }
 
 /* ==========================================================================*/
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SMP
+void __init ambarella_init_irq(void)
+{
+	gic_dist_init(0, __io(AMBARELLA_VA_ID_BASE), 29);
+	gic_cpu_init(0, __io(AMBARELLA_VA_IC_BASE));
+}
+#else
 void __init ambarella_init_irq(void)
 {
 	u32					i;
@@ -514,6 +521,7 @@ void __init ambarella_init_irq(void)
 	set_irq_chained_handler(GPIO3_IRQ, ambarella_gpio_irq_handler);
 #endif
 }
+#endif
 
 /* ==========================================================================*/
 struct ambarella_vic_pm_info {

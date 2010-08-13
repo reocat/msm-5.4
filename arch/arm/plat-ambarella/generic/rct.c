@@ -61,6 +61,8 @@
 #include "rct/a5s.c"
 #elif (CHIP_REV == A7)
 #include "rct/a7.c"
+#elif (CHIP_REV == I1)
+#include "rct/a7.c"
 #endif
 #include "rct/audio.c"
 

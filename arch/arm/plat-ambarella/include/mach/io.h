@@ -24,8 +24,10 @@
 #ifndef __ASM_ARCH_IO_H
 #define __ASM_ARCH_IO_H
 
+/* ==========================================================================*/
 #include <mach/hardware.h>
 
+/* ==========================================================================*/
 #define IO_SPACE_LIMIT		0xffffffff
 
 #define __io(a)			((void __iomem *)(a))
@@ -34,6 +36,7 @@
 #define io_p2v(x)		(((x) >= APB_PHYS_BASE) ? ((x) - APB_PHYS_BASE + APB_BASE) : ((x) - AHB_PHYS_BASE + AHB_BASE))
 #define io_v2p(x)		(((x) >= APB_BASE) ? ((x) - APB_BASE + APB_PHYS_BASE) : ((x) - AHB_BASE + AHB_PHYS_BASE))
 
+/* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 #ifndef CONFIG_AMBARELLA_DEBUG_IO_ACCESS
@@ -200,6 +203,7 @@ static inline int amba_test_and_clear_mask(
 	return data & mask;
 }
 #endif /* __ASSEMBLER__ */
+/* ==========================================================================*/
 
 #endif
 

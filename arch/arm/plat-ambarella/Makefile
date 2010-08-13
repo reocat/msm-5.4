@@ -46,6 +46,7 @@ obj-y	+= generic/uart.o
 obj-y	+= generic/uhc.o
 
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO)	+= generic/crypto.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SMP)	+= generic/smp.o generic/localtimer.o
 endif
 
 obj-y	+= video/ambfb.o

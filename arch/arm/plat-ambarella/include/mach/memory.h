@@ -44,17 +44,28 @@
 #endif
 
 /* ==========================================================================*/
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_I1
+#define AHB_PHYS_BASE			(0xe0000000)
+#define APB_PHYS_BASE			(0xe8000000)
+#define AXI_PHYS_BASE			(0xf0000000)
+#else
 #define AHB_PHYS_BASE			(0x60000000)
 #define APB_PHYS_BASE			(0x70000000)
+#define AXI_PHYS_BASE			(0x00000000)	//Not supported!
+#endif
+
 #ifdef CONFIG_VMSPLIT_1G
 #define AHB_BASE			AHB_PHYS_BASE
 #define APB_BASE			APB_PHYS_BASE
+#define AXI_BASE			AXI_PHYS_BASE
 #else
 #define AHB_BASE			(0xd8000000)
 #define APB_BASE			(0xd9000000)
+#define AXI_BASE			(0xda000000)
 #endif
 #define AHB_SIZE			(0x01000000)
 #define APB_SIZE			(0x01000000)
+#define AXI_SIZE			(0x01000000)
 
 /* ==========================================================================*/
 #define DEFAULT_BSB_START		(0x00000000)

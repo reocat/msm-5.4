@@ -53,6 +53,9 @@
 #elif (CHIP_REV == A7M)
 #define REF_CLK_FREQ	24000000
 #include <ambhw/rct/a7m.h>
+#elif (CHIP_REV == I1)
+#define REF_CLK_FREQ	24000000
+#include <ambhw/rct/a7.h>
 #endif
 
 #include <ambhw/rct/audio.h>

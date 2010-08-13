@@ -1,10 +1,9 @@
 /*
- * arch/arm/plat-ambarella/include/mach/uart.h
+ * arch/arm/plat-ambarella/include/mach/smp.h
  *
- * History:
- *	2006/12/27 - [Charles Chiou] created file
+ * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2004-2010, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,33 +21,33 @@
  *
  */
 
-#ifndef __ASM_ARCH_UNCOMPRESS_H
-#define __ASM_ARCH_UNCOMPRESS_H
+#ifndef __ASM_ARCH_SMP_H
+#define __ASM_ARCH_SMP_H
 
 /* ==========================================================================*/
+#include <plat/smp.h>
+#include <asm/hardware/gic.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+#define hard_smp_processor_id()			\
+	({						\
+		unsigned int cpunum;			\
+		__asm__("mrc p15, 0, %0, c0, c0, 5"	\
+			: "=r" (cpunum));		\
+		cpunum &= 0x03;				\
+	})
+
+static inline void smp_cross_call(const struct cpumask *mask)
+{
+	gic_raise_softirq(mask, 1);
+}
+
 /* ==========================================================================*/
-static inline void putc(int c)
-{
-
-}
-
-static inline void flush(void)
-{
-}
-
-static __inline__ void arch_decomp_setup(void)
-{
-
-}
-
-#define arch_decomp_wdog()
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __ASM_ARCH_SMP_H */
 

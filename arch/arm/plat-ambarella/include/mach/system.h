@@ -25,6 +25,12 @@
 #ifndef __ASM_ARCH_SYSTEM_H
 #define __ASM_ARCH_SYSTEM_H
 
+/* ==========================================================================*/
+
+/* ==========================================================================*/
+#ifndef __ASSEMBLER__
+
+/* ==========================================================================*/
 static inline void arch_idle(void)
 {
 	cpu_do_idle();
@@ -35,6 +41,9 @@ static inline void arch_reset(char mode, const char *cmd)
 	rct_reset_chip();
 	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);
 }
+
+#endif /* __ASSEMBLER__ */
+/* ==========================================================================*/
 
 #endif
 

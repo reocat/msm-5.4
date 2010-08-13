@@ -21,6 +21,10 @@
  *
  */
 
+#ifndef __ASM_ARCH_INIT_H
+#define __ASM_ARCH_INIT_H
+
+/* ==========================================================================*/
 #include <plat/adc.h>
 #include <plat/atag.h>
 #include <plat/audio.h>
@@ -46,14 +50,16 @@
 #include <plat/wdt.h>
 
 /* ==========================================================================*/
-extern struct platform_device ambarella_fb0;
-extern struct platform_device ambarella_fb1;
+#ifndef __ASSEMBLER__
 
-extern int ambarella_init_fb(void);
 /* ==========================================================================*/
 extern int ambarella_init_machine(char *board_name);
-
 extern void ambarella_map_io(void);
+
+/* ==========================================================================*/
+extern struct platform_device ambarella_fb0;
+extern struct platform_device ambarella_fb1;
+extern int ambarella_init_fb(void);
 
 /* ==========================================================================*/
 extern struct ambarella_eth_platform_info ambarella_eth0_platform_info;
@@ -75,4 +81,9 @@ extern int fio_select_sdio_as_default;
 extern struct ambarella_ir_controller ambarella_platform_ir_controller0;
 
 extern struct ambarella_adc_controller ambarella_platform_adc_controller0;
+
+#endif /* __ASSEMBLER__ */
+/* ==========================================================================*/
+
+#endif
 
