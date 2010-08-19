@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/include/plat/smp.h
+ * arch/arm/plat-ambarella/cortex/hotplug.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -21,24 +21,24 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_SMP_H
-#define __PLAT_AMBARELLA_SMP_H
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/smp.h>
+#include <linux/completion.h>
 
-/* ==========================================================================*/
-#define AMBARELLA_VA_SCU_BASE		(AXI_BASE + 0x00000000)
-#define AMBARELLA_VA_IC_BASE		(AXI_BASE + 0x00000100)
-#define AMBARELLA_VA_GT_BASE		(AXI_BASE + 0x00000200)
-#define AMBARELLA_VA_PT_WD_BASE		(AXI_BASE + 0x00000600)
-#define AMBARELLA_VA_ID_BASE		(AXI_BASE + 0x00001000)
-#define AMBARELLA_VA_L2CC_BASE		(AXI_BASE + 0x00002000)
+#include <asm/cacheflush.h>
 
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
+int platform_cpu_kill(unsigned int cpu)
+{
+	return 1;
+}
 
-/* ==========================================================================*/
+void platform_cpu_die(unsigned int cpu)
+{
+}
 
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
-
-#endif
+int mach_cpu_disable(unsigned int cpu)
+{
+	return cpu == 0 ? -EPERM : 0;
+}
 

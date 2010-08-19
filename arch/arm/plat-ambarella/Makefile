@@ -23,30 +23,39 @@
 
 obj-y	+= init.o
 
-ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC),y)
-
-obj-y	+= generic/adc.o generic/dma.o
-obj-y	+= generic/fio.o generic/gpio.o
-obj-y	+= generic/irq.o generic/pwm.o
-obj-y	+= generic/pll.o generic/pm.o
-obj-y	+= generic/rct.o generic/timer.o
-
-obj-y	+= generic/config.o generic/atag.o generic/event.o
-obj-y	+= generic/board.o
-obj-y	+= generic/ir.o
-obj-y	+= generic/udc.o
-obj-y	+= generic/eth.o
-obj-y	+= generic/wdt.o
-obj-y	+= generic/rtc.o
+ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
+obj-y	+= generic/adc.o
+obj-y	+= generic/atag.o
 obj-y	+= generic/audio.o
-obj-y	+= generic/spi.o
+obj-y	+= generic/board.o
+obj-y	+= generic/config.o
+obj-y	+= generic/crypto.o
+obj-y	+= generic/dma.o
+obj-y	+= generic/eth.o
+obj-y	+= generic/event.o
+obj-y	+= generic/fio.o
+obj-y	+= generic/gpio.o
 obj-y	+= generic/idc.o
+obj-y	+= generic/ir.o
+obj-y	+= generic/irq.o
+obj-y	+= generic/pll.o
+obj-y	+= generic/pm.o
+obj-y	+= generic/pwm.o
+obj-y	+= generic/rct.o
+obj-y	+= generic/rtc.o
 obj-y	+= generic/sd.o
+obj-y	+= generic/spi.o
+obj-y	+= generic/timer.o
 obj-y	+= generic/uart.o
+obj-y	+= generic/udc.o
 obj-y	+= generic/uhc.o
+obj-y	+= generic/wdt.o
+endif
 
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO)	+= generic/crypto.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SMP)	+= generic/smp.o generic/localtimer.o
+ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
+obj-$(CONFIG_SMP)		+= cortex/smp.o
+obj-$(CONFIG_HOTPLUG_CPU)	+= cortex/hotplug.o
+obj-$(CONFIG_LOCAL_TIMERS)	+= cortex/localtimer.o
 endif
 
 obj-y	+= video/ambfb.o

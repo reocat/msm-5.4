@@ -30,6 +30,7 @@
 #include <plat/crypto.h>
 
 /* ==========================================================================*/
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
 	.reserved = 0,
 };
@@ -66,4 +67,5 @@ struct platform_device ambarella_crypto = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+#endif
 

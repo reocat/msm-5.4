@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/localtimer.c
+ * arch/arm/plat-ambarella/cortex/localtimer.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

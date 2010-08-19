@@ -33,6 +33,11 @@
 
 #include <mach/hardware.h>
 
+#ifdef CONFIG_PLAT_AMBARELLA_CORTEX
+#include <asm/hardware/gic.h>
+#include <plat/cortex.h>
+#endif
+
 /* ==========================================================================*/
 static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
 static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
@@ -241,6 +246,7 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 };
 
 /* ==========================================================================*/
+#if !defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 #if (VIC_INSTANCES == 1)
 #define AMBARELLA_VIC_IRQ2BASE()	do { } while (0)
 #elif (VIC_INSTANCES == 2)
@@ -365,6 +371,7 @@ static struct irq_chip ambarella_irq_chip = {
 	.set_type	= ambarella_irq_set_type,
 	.set_wake	= ambarella_irq_set_wake,
 };
+#endif
 
 /* ==========================================================================*/
 static inline u32 ambarella_irq_stat2nr(u32 stat)
@@ -431,17 +438,14 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 }
 
 /* ==========================================================================*/
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SMP
-void __init ambarella_init_irq(void)
-{
-	gic_dist_init(0, __io(AMBARELLA_VA_ID_BASE), 29);
-	gic_cpu_init(0, __io(AMBARELLA_VA_IC_BASE));
-}
-#else
 void __init ambarella_init_irq(void)
 {
 	u32					i;
 
+#ifdef CONFIG_PLAT_AMBARELLA_CORTEX
+	gic_dist_init(0, __io(AMBARELLA_VA_ID_BASE), 29);
+	gic_cpu_init(0, __io(AMBARELLA_VA_IC_BASE));
+#else
 	/* Set VIC sense and event type for each entry */
 	amba_writel(VIC_SENSE_REG, 0x00000000);
 	amba_writel(VIC_BOTHEDGE_REG, 0x00000000);
@@ -501,6 +505,7 @@ void __init ambarella_init_irq(void)
 
 		set_irq_flags(i, IRQF_VALID);
 	}
+#endif
 
 	/* Setup GPIO IRQs */
 	for (i = GPIO_INT_VEC_OFFSET; i < NR_IRQS; i++) {
@@ -521,7 +526,6 @@ void __init ambarella_init_irq(void)
 	set_irq_chained_handler(GPIO3_IRQ, ambarella_gpio_irq_handler);
 #endif
 }
-#endif
 
 /* ==========================================================================*/
 struct ambarella_vic_pm_info {

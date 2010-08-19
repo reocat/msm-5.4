@@ -39,6 +39,11 @@ config PLAT_AMBARELLA_GENERIC
 	select GENERIC_TIME
 	select GENERIC_CLOCKEVENTS
 
+config PLAT_AMBARELLA_CORTEX
+	bool
+	default n
+	select ARM_GIC
+
 config PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	bool
 	default n
@@ -47,11 +52,7 @@ config PLAT_AMBARELLA_SUPPORT_HAL
 	bool
 	default n
 
-config PLAT_AMBARELLA_SUPPORT_I1
-	bool
-	default n
-
-config PLAT_AMBARELLA_SUPPORT_SMP
+config PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
 	bool
 	default n
 
@@ -113,12 +114,11 @@ config PLAT_AMBARELLA_I1_ARM11
 config PLAT_AMBARELLA_I1_CORTEX
 	bool "iOne Cortex"
 	select CPU_V7
-	select ARM_GIC
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
-	select PLAT_AMBARELLA_SUPPORT_I1
-	select PLAT_AMBARELLA_SUPPORT_SMP
+	select PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.
 

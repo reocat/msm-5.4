@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/include/mach/smp.h
+ * arch/arm/plat-ambarella/include/plat/cortex.h
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -21,33 +21,24 @@
  *
  */
 
-#ifndef __ASM_ARCH_SMP_H
-#define __ASM_ARCH_SMP_H
+#ifndef __PLAT_AMBARELLA_CORTEX_H
+#define __PLAT_AMBARELLA_CORTEX_H
 
 /* ==========================================================================*/
-#include <plat/cortex.h>
-#include <asm/hardware/gic.h>
+#define AMBARELLA_VA_SCU_BASE		(AXI_BASE + 0x00000000)
+#define AMBARELLA_VA_IC_BASE		(AXI_BASE + 0x00000100)
+#define AMBARELLA_VA_GT_BASE		(AXI_BASE + 0x00000200)
+#define AMBARELLA_VA_PT_WD_BASE		(AXI_BASE + 0x00000600)
+#define AMBARELLA_VA_ID_BASE		(AXI_BASE + 0x00001000)
+#define AMBARELLA_VA_L2CC_BASE		(AXI_BASE + 0x00002000)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
-
-#define hard_smp_processor_id()			\
-	({						\
-		unsigned int cpunum;			\
-		__asm__("mrc p15, 0, %0, c0, c0, 5"	\
-			: "=r" (cpunum));		\
-		cpunum &= 0x03;				\
-	})
-
-static inline void smp_cross_call(const struct cpumask *mask)
-{
-	gic_raise_softirq(mask, 1);
-}
 
 /* ==========================================================================*/
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif /* __ASM_ARCH_SMP_H */
+#endif
 
