@@ -244,6 +244,22 @@ static void __init ambarella_init_coconut(void)
 	pwm_pdata->max_brightness = 1000;
 	pwm_pdata->dft_brightness = 1000;
 
+	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device1.dev.platform_data;
+	pwm_pdata->max_brightness = 1000;
+	pwm_pdata->dft_brightness = 1000;
+
+	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device2.dev.platform_data;
+	pwm_pdata->max_brightness = 1000;
+	pwm_pdata->dft_brightness = 1000;
+
+	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device3.dev.platform_data;
+	pwm_pdata->max_brightness = 1000;
+	pwm_pdata->dft_brightness = 1000;
+
+	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device4.dev.platform_data;
+	pwm_pdata->max_brightness = 1000;
+	pwm_pdata->dft_brightness = 1000;
+
 	/* Config ETH*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
 
