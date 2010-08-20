@@ -107,6 +107,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
 	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"raw", AMB_OPERATING_MODE_RAW},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
 
