@@ -150,7 +150,7 @@ int fio_amb_sd0_is_enable(void)
 	fio_ctr = amba_readl(FIO_CTR_REG);
 	fio_dmactr = amba_readl(FIO_DMACTR_REG);
 
-	return (((fio_ctr & FIO_CTR_XD) == 0) && 
+	return (((fio_ctr & FIO_CTR_XD) == 0) &&
 		((fio_dmactr & FIO_DMACTR_SD) == FIO_DMACTR_SD));
 }
 
@@ -162,7 +162,7 @@ int fio_amb_sdio0_is_enable(void)
 	fio_ctr = amba_readl(FIO_CTR_REG);
 	fio_dmactr = amba_readl(FIO_DMACTR_REG);
 
-	return (((fio_ctr & FIO_CTR_XD) == FIO_CTR_XD) && 
+	return (((fio_ctr & FIO_CTR_XD) == FIO_CTR_XD) &&
 		((fio_dmactr & FIO_DMACTR_SD) == FIO_DMACTR_SD));
 }
 
@@ -334,14 +334,18 @@ static struct ambarella_nand_timing ambarella_nand_default_timing = {
 	.timing5	= 0x00202020,
 };
 
+static DEFINE_MUTEX(fio_nand_mtx);
+
 static void fio_amb_nand_request(void)
 {
+	mutex_lock(&fio_nand_mtx);
 	fio_select_lock(SELECT_FIO_FL);
 }
 
 static void fio_amb_nand_release(void)
 {
 	fio_unlock(SELECT_FIO_FL);
+	mutex_unlock(&fio_nand_mtx);
 }
 
 static int fio_amb_nand_parse_error(u32 reg)
