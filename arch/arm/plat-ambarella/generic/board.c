@@ -71,6 +71,11 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
+	.debug_switch	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
 	.rs485		= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
@@ -308,6 +313,34 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_delay	= 1,
 	},
 	.gsensor_reset	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+
+	.bb_irq	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.bb_power	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.bb_reset	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.bb_en	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.bb_switch	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,

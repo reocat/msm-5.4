@@ -33,6 +33,7 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		power_detect;
 	struct ambarella_gpio_io_info		power_control;
 	struct ambarella_gpio_io_info		debug_led0;
+	struct ambarella_gpio_io_info		debug_switch;
 	struct ambarella_gpio_io_info		rs485;
 
 	struct ambarella_gpio_irq_info		audio_irq;
@@ -86,11 +87,18 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		gsensor_irq;
 	struct ambarella_gpio_io_info		gsensor_power;
 	struct ambarella_gpio_io_info		gsensor_reset;
+
+	struct ambarella_gpio_irq_info		bb_irq;
+	struct ambarella_gpio_io_info		bb_power;
+	struct ambarella_gpio_io_info		bb_reset;
+	struct ambarella_gpio_io_info		bb_en;
+	struct ambarella_gpio_io_info		bb_switch;
 };
 #define AMBA_BOARD_CALL(arg, perm) \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect##_, arg.power_detect, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##power_control##_, arg.power_control, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##debug_led0##_, arg.debug_led0, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##debug_switch##_, arg.debug_switch, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##rs485##_, arg.rs485, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##audio_irq##_, arg.audio_irq, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##audio_power##_, arg.audio_power, perm); \
@@ -131,7 +139,12 @@ struct ambarella_board_info {
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##fm_reset##_, arg.fm_reset, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##gsensor_irq##_, arg.gsensor_irq, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##gsensor_power##_, arg.gsensor_power, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##gsensor_reset##_, arg.gsensor_reset, perm)
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##gsensor_reset##_, arg.gsensor_reset, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##bb_irq##_, arg.gsensor_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_power##_, arg.gsensor_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##bb_reset##_, arg.gsensor_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_en##_, arg.gsensor_power, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_switch##_, arg.gsensor_power, perm)
 
 /* ==========================================================================*/
 extern struct ambarella_board_info ambarella_board_generic;
