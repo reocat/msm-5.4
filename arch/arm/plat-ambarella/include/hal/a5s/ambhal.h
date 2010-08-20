@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 106453
+ * @version 118263
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -185,7 +185,7 @@
  * Some of the plls (@ref vout_group, @ref audio_group & @ref lcd_group) in the design allow the reference clock source to be changed.
  * The api to change the clock source takes the new clock source name and the new clock source frequency.
  * @par External PLL Reference Clocks
- * When the new clock source is
+ * When the new clock source is 
  * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
  * the reference clock source of the pll is being changed.
  * The api needs that reference clock frequency to be able to calculate the correct pll settings
@@ -195,7 +195,7 @@
  * based on the system configuration pins (it is either 24 MHz or 27 MHz). In this
  * case the application does not need to provide anything as the api will figure it out on its
  * own and do the pll settings calculations accordingly.
- * @par External Clock (No PLL)
+ * @par External Clock (No PLL) 
  * When the new clock source is ::AMB_EXTERNAL_CLOCK_SOURCE the pll is not used and so the api does not
  * care what the reference clock frequency is. In fact the api will power down
  * that pll when the application selects that option to save power.
@@ -341,6 +341,7 @@ AMB_HAL_FUNCTION_INFO_GET_HDMI_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
+AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
 
@@ -502,6 +503,8 @@ AMB_OPERATING_MODE_LCD_BYPASS,
 AMB_OPERATING_MODE_STILL_PREVIEW,
 /** Low power */
 AMB_OPERATING_MODE_LOW_POWER,
+/** Software based raw/yuv encoding */
+AMB_OPERATING_MODE_RAW,
 /** IP Cam */
 AMB_OPERATING_MODE_IP_CAM
 } amb_mode_t ;
@@ -518,7 +521,9 @@ AMB_USB_OFF,
 /** Enable USB interface */
 AMB_USB_ON,
 /** Force USB interface into suspend state */
-AMB_USB_SUSPEND
+AMB_USB_SUSPEND,
+/** Enable USB interface  & force USB to never suspend */
+AMB_USB_ALWAYS_ON
 } amb_usb_interface_state_t ;
 
 /**
@@ -546,7 +551,7 @@ AMB_USB_CLK_CRYSTAL_12MHZ
 
 /**
  * State of HDMI Interface
- *
+ * 
  * @ingroup hdmi_group
  */
 
@@ -559,7 +564,7 @@ AMB_HDMI_ON
 
 /**
  * Dual Stream state
- *
+ * 
  * @ingroup mode_group
  */
 
@@ -792,6 +797,25 @@ AMB_SENSOR_CLOCK_PAD_OUTPUT_MODE,
 AMB_SENSOR_CLOCK_PAD_INPUT_MODE
 } amb_sensor_clock_pad_mode_t ;
 
+/**
+ * DRAM arbiter priority
+ *
+ * @ingroup init_group
+ */
+
+typedef enum {
+/** Normal priority for dsp clients (87.5% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_NORMAL_PRIORITY,
+/** High priority for dsp clients (93.75% of total bandwidth - large arbiter throttle period) */
+AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY_HIGH_THROTTLE,
+/** High priority for dsp clients (93.75% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY,
+/** High priority for dsp clients (96.8% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_VERY_HIGH_PRIORITY,
+/** High priority for dsp clients (100% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_HIGHEST_PRIORITY
+} amb_dram_arbiter_priority_t ;
+
 /*
  *
  */
@@ -987,7 +1011,7 @@ static INLINE amb_boot_type_t amb_get_boot_type (void *amb_hal_base_address)
 }
 
 /**
- * Get the host interface type
+ * Get the host interface type 
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1012,10 +1036,10 @@ static INLINE amb_hif_type_t amb_get_hif_type (void *amb_hal_base_address)
  * @ingroup pll_group
  */
 
-static INLINE amb_hif_type_t amb_disable_clock_observation (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_disable_clock_observation (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hif_type_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_DISABLE_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_DISABLE_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
@@ -1388,7 +1412,7 @@ static INLINE amb_hal_success_t amb_usb_subsystem_soft_reset (void *amb_hal_base
 /**
  * Turn USB Interface On/Off
  *
- * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified.
+ * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified. 
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_interface_state Requested State of the USB Interface
@@ -1425,7 +1449,7 @@ static INLINE amb_usb_interface_state_t amb_get_usb_interface_state (void *amb_h
 /**
  * Select USB PHY Clock Source
  *
- * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ.
+ * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ. 
  * Use this function to change the USB PHY clock source.
  * However, this function can only be called before setting amb_usb_interface_state
  * to ::AMB_USB_ON for the first time after power-on reset
@@ -2977,6 +3001,25 @@ static INLINE amb_hal_success_t amb_set_peripherals_base_address (void *amb_hal_
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Change the priority of dsp clients in DRAM arbiter
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_dram_arbiter_priority Priority given to dsp clients by DRAM arbiter.
+ *
+ * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
+ *
+ * @retval ::AMB_HAL_FAIL The amb_dram_arbiter_priority is not defined
+ *
+ * @ingroup init_group
+ */
+
+static INLINE amb_hal_success_t amb_set_dram_arbiter_priority (void *amb_hal_base_address, amb_dram_arbiter_priority_t amb_dram_arbiter_priority)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY, (unsigned int) amb_dram_arbiter_priority, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_
