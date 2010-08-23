@@ -333,7 +333,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm0_config.max_duty;
 		data->dft_brightness	=
-			ambarella_board_generic.pwm0_config.max_duty;
+			ambarella_board_generic.pwm0_config.max_duty / 10;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm0_config.period_ns;
 		break;
@@ -342,7 +342,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm1_config.max_duty;
 		data->dft_brightness	=
-			ambarella_board_generic.pwm1_config.max_duty;
+			ambarella_board_generic.pwm1_config.max_duty / 10;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm1_config.period_ns;
 		break;
@@ -351,7 +351,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm2_config.max_duty;
 		data->dft_brightness	=
-			ambarella_board_generic.pwm2_config.max_duty;
+			ambarella_board_generic.pwm2_config.max_duty / 10;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm2_config.period_ns;
 		break;
@@ -360,7 +360,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm3_config.max_duty;
 		data->dft_brightness	=
-			ambarella_board_generic.pwm3_config.max_duty;
+			ambarella_board_generic.pwm3_config.max_duty / 10;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm3_config.period_ns;
 		break;
@@ -369,7 +369,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm4_config.max_duty;
 		data->dft_brightness	=
-			ambarella_board_generic.pwm4_config.max_duty;
+			ambarella_board_generic.pwm4_config.max_duty / 10;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm4_config.period_ns;
 		break;
