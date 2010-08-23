@@ -26,7 +26,6 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 
-#include <plat/pwm.h>
 #include <plat/debug.h>
 
 #include <mach/hardware.h>

@@ -30,8 +30,6 @@
 
 #include <asm/io.h>
 
-#include <plat/pwm.h>
-
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/init.h>
