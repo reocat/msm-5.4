@@ -26,10 +26,12 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 
+#include <plat/pwm.h>
+#include <plat/debug.h>
+
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/init.h>
-#include <plat/debug.h>
 
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
 

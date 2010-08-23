@@ -30,6 +30,15 @@
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/
+struct ambarella_pwm_info {
+	unsigned int period_ns;
+	unsigned int max_duty;
+};
+
+#define AMBA_PWM_MODULE_PARAM_CALL(name_prefix, arg, perm) \
+	module_param_call(name_prefix##period_ns, param_set_int, param_get_int, &(arg.period_ns), perm); \
+	module_param_call(name_prefix##max_duty, param_set_int, param_get_int, &(arg.max_duty), perm)
+
 extern struct platform_device ambarella_pwm_platform_device0;
 extern struct platform_device ambarella_pwm_platform_device1;
 extern struct platform_device ambarella_pwm_platform_device2;

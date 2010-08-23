@@ -25,33 +25,27 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/pwm_backlight.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/spidev.h>
+#include <linux/i2c.h>
+#include <linux/irq.h>
+#include <linux/interrupt.h>
+#include <linux/delay.h>
+#include <linux/input.h>
+#include <linux/pda_power.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+
+#include <plat/ambinput.h>
 
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
 
-#include <linux/spi/spi.h>
-#include <linux/spi/spidev.h>
-
-#include <linux/i2c.h>
-#include <linux/i2c/ak4183.h>
-#include <linux/i2c/cy8ctmg.h>
-
-#include <linux/irq.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
-
-#include <linux/input.h>
-#include <plat/ambinput.h>
-
 #include "board-device.h"
 
 /* ==========================================================================*/
-#include <linux/pda_power.h>
 static int ambarella_power_is_ac_online(void)
 {
 	return 1;
@@ -186,7 +180,6 @@ static struct platform_device coconut_board_input = {
 static void __init ambarella_init_coconut(void)
 {
 	int					i;
-	struct platform_pwm_backlight_data	*pwm_pdata;
 
 	ambarella_init_machine("Coconut");
 
@@ -238,27 +231,6 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.flash_enable.gpio_id = GPIO(82);
 	ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
 	ambarella_board_generic.flash_enable.active_delay = 1;
-
-	/* Config PWM */
-	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device0.dev.platform_data;
-	pwm_pdata->max_brightness = 1000;
-	pwm_pdata->dft_brightness = 1000;
-
-	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device1.dev.platform_data;
-	pwm_pdata->max_brightness = 1000;
-	pwm_pdata->dft_brightness = 1000;
-
-	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device2.dev.platform_data;
-	pwm_pdata->max_brightness = 1000;
-	pwm_pdata->dft_brightness = 1000;
-
-	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device3.dev.platform_data;
-	pwm_pdata->max_brightness = 1000;
-	pwm_pdata->dft_brightness = 1000;
-
-	pwm_pdata = (struct platform_pwm_backlight_data *)ambarella_pwm_platform_device4.dev.platform_data;
-	pwm_pdata->max_brightness = 1000;
-	pwm_pdata->dft_brightness = 1000;
 
 	/* Config ETH*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
