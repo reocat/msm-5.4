@@ -34,7 +34,6 @@
 #include <asm/uaccess.h>
 
 #include <mach/hardware.h>
-#include <plat/pwm.h>
 #include <mach/board.h>
 
 #define PWM_1_THROUGH_4_DIVIDER	32

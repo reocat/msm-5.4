@@ -27,7 +27,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/proc_fs.h>
 
-#include <plat/pwm.h>
 #include <plat/debug.h>
 
 #include <mach/hardware.h>
