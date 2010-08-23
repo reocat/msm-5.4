@@ -35,6 +35,7 @@
 
 #include <mach/hardware.h>
 #include <plat/pwm.h>
+#include <mach/board.h>
 
 #define PWM_1_THROUGH_4_DIVIDER	32
 
@@ -319,12 +320,75 @@ static struct pwm_device ambarella_pwm4 = {
 };
 
 /*============================= PWM Backlight Device =========================*/
+static int pwm_backlight_init(struct device *dev)
+{
+	int					errorCode = 0;
+	struct platform_device			*pdev;
+	struct platform_pwm_backlight_data	*data;
+
+	pdev = container_of(dev, struct platform_device, dev);
+	data = pdev->dev.platform_data;
+
+	switch (pdev->id) {
+	case 0:
+		data->max_brightness	=
+			ambarella_board_generic.pwm0_config.max_duty;
+		data->dft_brightness	=
+			ambarella_board_generic.pwm0_config.max_duty;
+		data->pwm_period_ns	=
+			ambarella_board_generic.pwm0_config.period_ns;
+		break;
+
+	case 1:
+		data->max_brightness	=
+			ambarella_board_generic.pwm1_config.max_duty;
+		data->dft_brightness	=
+			ambarella_board_generic.pwm1_config.max_duty;
+		data->pwm_period_ns	=
+			ambarella_board_generic.pwm1_config.period_ns;
+		break;
+
+	case 2:
+		data->max_brightness	=
+			ambarella_board_generic.pwm2_config.max_duty;
+		data->dft_brightness	=
+			ambarella_board_generic.pwm2_config.max_duty;
+		data->pwm_period_ns	=
+			ambarella_board_generic.pwm2_config.period_ns;
+		break;
+
+	case 3:
+		data->max_brightness	=
+			ambarella_board_generic.pwm3_config.max_duty;
+		data->dft_brightness	=
+			ambarella_board_generic.pwm3_config.max_duty;
+		data->pwm_period_ns	=
+			ambarella_board_generic.pwm3_config.period_ns;
+		break;
+
+	case 4:
+		data->max_brightness	=
+			ambarella_board_generic.pwm4_config.max_duty;
+		data->dft_brightness	=
+			ambarella_board_generic.pwm4_config.max_duty;
+		data->pwm_period_ns	=
+			ambarella_board_generic.pwm4_config.period_ns;
+		break;
+
+	default:
+		errorCode = -EINVAL;
+		break;
+	}
+
+	return errorCode;
+}
+
 static struct platform_pwm_backlight_data amb_pwm0_pdata = {
 	.pwm_id		= 0,
 	.max_brightness	= 100,
 	.dft_brightness	= 100,
 	.pwm_period_ns	= 40000,
-	.init		= NULL,
+	.init		= pwm_backlight_init,
 	.notify		= NULL,
 	.exit		= NULL,
 };
@@ -346,7 +410,7 @@ static struct platform_pwm_backlight_data amb_pwm1_pdata = {
 	.max_brightness	= 100,
 	.dft_brightness	= 100,
 	.pwm_period_ns	= 10000,
-	.init		= NULL,
+	.init		= pwm_backlight_init,
 	.notify		= NULL,
 	.exit		= NULL,
 };
@@ -368,7 +432,7 @@ static struct platform_pwm_backlight_data amb_pwm2_pdata = {
 	.max_brightness	= 100,
 	.dft_brightness	= 100,
 	.pwm_period_ns	= 10000,
-	.init		= NULL,
+	.init		= pwm_backlight_init,
 	.notify		= NULL,
 	.exit		= NULL,
 };
@@ -390,7 +454,7 @@ static struct platform_pwm_backlight_data amb_pwm3_pdata = {
 	.max_brightness	= 100,
 	.dft_brightness	= 100,
 	.pwm_period_ns	= 10000,
-	.init		= NULL,
+	.init		= pwm_backlight_init,
 	.notify		= NULL,
 	.exit		= NULL,
 };
@@ -412,7 +476,7 @@ static struct platform_pwm_backlight_data amb_pwm4_pdata = {
 	.max_brightness	= 100,
 	.dft_brightness	= 100,
 	.pwm_period_ns	= 10000,
-	.init		= NULL,
+	.init		= pwm_backlight_init,
 	.notify		= NULL,
 	.exit		= NULL,
 };

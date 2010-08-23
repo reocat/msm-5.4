@@ -93,6 +93,12 @@ struct ambarella_board_info {
 	struct ambarella_gpio_io_info		bb_reset;
 	struct ambarella_gpio_io_info		bb_en;
 	struct ambarella_gpio_io_info		bb_switch;
+
+	struct ambarella_pwm_info		pwm0_config;
+        struct ambarella_pwm_info		pwm1_config;
+        struct ambarella_pwm_info		pwm2_config;
+        struct ambarella_pwm_info		pwm3_config;
+        struct ambarella_pwm_info		pwm4_config;
 };
 #define AMBA_BOARD_CALL(arg, perm) \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect##_, arg.power_detect, perm); \
@@ -144,7 +150,12 @@ struct ambarella_board_info {
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_power##_, arg.gsensor_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##bb_reset##_, arg.gsensor_reset, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_en##_, arg.gsensor_power, perm); \
-	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_switch##_, arg.gsensor_power, perm)
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##bb_switch##_, arg.gsensor_power, perm); \
+	AMBA_PWM_MODULE_PARAM_CALL(board_##pwm0##_, arg.pwm0_config, perm); \
+        AMBA_PWM_MODULE_PARAM_CALL(board_##pwm1##_, arg.pwm1_config, perm); \
+        AMBA_PWM_MODULE_PARAM_CALL(board_##pwm2##_, arg.pwm2_config, perm); \
+        AMBA_PWM_MODULE_PARAM_CALL(board_##pwm3##_, arg.pwm3_config, perm); \
+        AMBA_PWM_MODULE_PARAM_CALL(board_##pwm4##_, arg.pwm4_config, perm)
 
 /* ==========================================================================*/
 extern struct ambarella_board_info ambarella_board_generic;

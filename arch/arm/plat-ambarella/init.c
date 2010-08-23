@@ -27,10 +27,13 @@
 #include <linux/dma-mapping.h>
 #include <linux/proc_fs.h>
 
+#include <plat/pwm.h>
+#include <plat/debug.h>
+
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/init.h>
-#include <plat/debug.h>
+
 #include <hal/hal.h>
 
 /* ==========================================================================*/

@@ -29,7 +29,6 @@
 #include <linux/irq.h>
 #include <linux/dma-mapping.h>
 #include <linux/proc_fs.h>
-
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
@@ -44,14 +43,12 @@
 #include <asm/setup.h>
 #include <asm/mach/map.h>
 
+#include <plat/pwm.h>
+#include <plat/debug.h>
+
 #include <mach/hardware.h>
 #include <mach/gpio.h>
-
-#include <linux/i2c/ak4183.h>
-#include <linux/i2c/cy8ctmg.h>
-
 #include <mach/board.h>
-#include <plat/debug.h>
 
 struct ambarella_board_info ambarella_board_generic = {
 	.power_detect	= {
@@ -345,6 +342,27 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
+
+	.pwm0_config = {
+                .period_ns      = 40000,
+                .max_duty       = 100,
+        },
+        .pwm1_config = {
+                .period_ns      = 10000,
+                .max_duty       = 1000,
+        },
+        .pwm2_config = {
+                .period_ns      = 10000,
+                .max_duty       = 1000,
+        },
+        .pwm3_config = {
+                .period_ns      = 10000,
+                .max_duty       = 1000,
+        },
+        .pwm4_config = {
+                .period_ns      = 10000,
+                .max_duty       = 1000,
+        },
 };
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);
 EXPORT_SYMBOL(ambarella_board_generic);
