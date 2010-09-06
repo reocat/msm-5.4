@@ -51,4 +51,4 @@ obj-y	+= video/ambfb.o
 obj-y	+= misc/ambsyncproc.o
 obj-y	+= misc/ambasyncproc.o
 obj-y	+= misc/ambevent.o
-
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= misc/gdma.o
