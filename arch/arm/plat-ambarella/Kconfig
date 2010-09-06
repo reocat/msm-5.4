@@ -50,6 +50,10 @@ config PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 config PLAT_AMBARELLA_SUPPORT_HAL
 	bool
 	default n
+	
+config PLAT_AMBARELLA_SUPPORT_GDMA
+	bool
+	default n
 
 config PLAT_AMBARELLA_SUPPORT_MMAP_OLD
 	bool
@@ -106,6 +110,7 @@ config PLAT_AMBARELLA_A5S
 	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
+	select PLAT_AMBARELLA_SUPPORT_GDMA
 	help
 	  Say Y here if you are using Ambarella A5S.
 
@@ -231,6 +236,8 @@ config AMBARELLA_PLL_PROC
 
 	  If you are not sure, say N here.
 
+ 
+	  
 endmenu
 
 menu "PPM Configuration"
