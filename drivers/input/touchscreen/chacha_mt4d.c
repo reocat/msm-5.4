@@ -17,6 +17,7 @@
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
 #include <linux/i2c/chacha_mt4d.h>
+#include <linux/timer.h>
 
 #ifdef	CONFIG_DEBUG_TOUCHSCREEN
 #define CHACHA_MT4D_DEBUG(format, arg...)	printk(format , ## arg)
@@ -49,7 +50,10 @@ struct chacha_mt4d {
 	struct input_dev		*input;
 	struct i2c_client		*client;
 	struct workqueue_struct 	*workqueue;
-	struct work_struct		report_worker;
+	struct work_struct		irq_worker;
+	struct work_struct		timer_worker;
+	struct timer_list		timer;
+	struct mutex			mtx;
 	u8				reg_data[NUM_DATA];
 	int				irq;
 	struct chacha_mt4d_fix_data	fix;
@@ -95,7 +99,7 @@ static inline int chacha_mt4d_read_all(struct chacha_mt4d *cm)
 	int			errorCode;
 
 	msg.addr = cm->client->addr;
-	msg.flags = I2C_M_RD | cm->client->flags;
+	msg.flags = I2C_M_RD | I2C_M_IGNORE_NAK | cm->client->flags;
 	msg.len = NUM_DATA;
 	msg.buf = cm->reg_data;
 
@@ -254,25 +258,51 @@ static irqreturn_t chacha_mt4d_irq(int irq, void *handle)
 		goto chacha_mt4d_irq_exit;
 
 	disable_irq_nosync(irq);
-	queue_work(cm->workqueue, &cm->report_worker);
+	queue_work(cm->workqueue, &cm->irq_worker);
 
 chacha_mt4d_irq_exit:
 	return IRQ_HANDLED;
 }
 
-static void chacha_mt4d_report_worker(struct work_struct *work)
+static void chacha_mt4d_irq_worker(struct work_struct *work)
 {
 	struct chacha_mt4d	*cm;
 
-	cm = container_of(work, struct chacha_mt4d, report_worker);
-
+	cm = container_of(work, struct chacha_mt4d, irq_worker);
+	mutex_lock(&cm->mtx);
 	chacha_mt4d_read_all(cm);
-	chacha_mt4d_send_event(cm);
+	if (cm->reg_data[CM_STATUS] == 0xff) {
+		mod_timer(&cm->timer, jiffies + (HZ >> 1));
+	} else {
+		chacha_mt4d_send_event(cm);
+	}
+	mutex_unlock(&cm->mtx);
 
 	if (cm->clear_penirq) {
 		cm->clear_penirq();
 	}
 	enable_irq(cm->irq);
+}
+
+static void chacha_mt4d_timer_handler(unsigned long arg)
+{
+	struct chacha_mt4d	*cm;
+
+	cm = (struct chacha_mt4d *)arg;
+	queue_work(cm->workqueue, &cm->timer_worker);
+}
+
+static void chacha_mt4d_timer_worker(struct work_struct *work)
+{
+	struct chacha_mt4d	*cm;
+
+	cm = container_of(work, struct chacha_mt4d, timer_worker);
+	mutex_lock(&cm->mtx);
+	if (cm->reg_data[CM_STATUS] == 0xff) {
+		cm->reg_data[CM_STATUS] = 0;
+		chacha_mt4d_send_event(cm);
+	}
+	mutex_unlock(&cm->mtx);
 }
 
 static int chacha_mt4d_probe(struct i2c_client *client,
@@ -329,7 +359,14 @@ static int chacha_mt4d_probe(struct i2c_client *client,
 #endif
 
 	cm->workqueue = create_singlethread_workqueue("chacha_mt4d");
-	INIT_WORK(&cm->report_worker, chacha_mt4d_report_worker);
+	INIT_WORK(&cm->irq_worker, chacha_mt4d_irq_worker);
+	INIT_WORK(&cm->timer_worker, chacha_mt4d_timer_worker);
+	init_timer(&cm->timer);
+        cm->timer.expires = jiffies - HZ;
+        cm->timer.function = chacha_mt4d_timer_handler;
+        cm->timer.data = (unsigned long)cm;
+        add_timer(&cm->timer);
+	mutex_init(&cm->mtx);
 
 	chacha_mt4d_calibrate(cm);
 	pdata->init_platform_hw();
@@ -352,6 +389,7 @@ static int chacha_mt4d_probe(struct i2c_client *client,
  err_free_irq:
 	free_irq(cm->irq, cm);
  err_free_mem:
+	del_timer(&cm->timer);
 	input_free_device(input_dev);
 	kfree(cm);
 	return err;
@@ -365,6 +403,7 @@ static int chacha_mt4d_remove(struct i2c_client *client)
 	pdata->exit_platform_hw();
 	destroy_workqueue(cm->workqueue);
 	free_irq(cm->irq, cm);
+	add_timer(&cm->timer);
 	input_unregister_device(cm->input);
 	kfree(cm);
 
