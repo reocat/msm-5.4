@@ -13,7 +13,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
 */
-
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
@@ -59,13 +58,13 @@ struct snd_soc_dai ambdummy_dai = {
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 2,
-		.channels_max = 2,
+		.channels_max = 6,
 		.rates = AMBDUMMY_RATES,
 		.formats = AMBDUMMY_FORMATS,},
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 2,
-		.channels_max = 2,
+		.channels_max = 6,
 		.rates = AMBDUMMY_RATES,
 		.formats = AMBDUMMY_FORMATS,},
 	.ops = &ambdummy_dai_ops,
@@ -142,11 +141,9 @@ static int ambdummy_probe(struct platform_device *pdev)
 	struct snd_soc_codec *codec;
 	int ret = 0;
 
-
 	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
 	if (codec == NULL)
 		return -ENOMEM;
-
 
 	socdev->card->codec = codec;
 	mutex_init(&codec->mutex);

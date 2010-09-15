@@ -70,7 +70,7 @@ enum AudioCodec_MCLK {
 	AudioCodec_4_2336M = 10,
 	AudioCodec_4_096M = 11,
 	AudioCodec_3_072M = 12,
-	AudioCodec_2_8224M = 13,	
+	AudioCodec_2_8224M = 13,
 	AudioCodec_2_048M = 14
 };
 
@@ -95,11 +95,6 @@ enum DAI_INIT_CTL
 	DAI_RX_EN = 2,
 	DAI_TX_EN = 4
 };
-
-#define AMB_I2S_PORT_0	(1 << 0)
-#define AMB_I2S_PORT_1	(1 << 1)
-#define AMB_I2S_PORT_2	(1 << 2)
-#define AMB_I2S_PORT_MASK	(AMB_I2S_PORT_0 | AMB_I2S_PORT_1 | AMB_I2S_PORT_2)
 
 #define DAI_32slots	32
 #define DAI_64slots	64

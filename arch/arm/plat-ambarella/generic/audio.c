@@ -104,15 +104,22 @@ static void aucodec_digitalio_on_2(void)
 static void i2s_channel_select(u32 ch)
 {
 #if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)||(CHIP_REV == A5S)
+	u32 ch_reg_num;
+
+	ch_reg_num = amba_readl(I2S_CHANNEL_SELECT_REG);
+
 	switch (ch) {
 	case 2:
-		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_2CHANNELS_ENB);
+		if (ch_reg_num != 0)
+			amba_writel(I2S_CHANNEL_SELECT_REG, I2S_2CHANNELS_ENB);
 		break;
 	case 4:
-		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_4CHANNELS_ENB);
+		if (ch_reg_num != 1)
+			amba_writel(I2S_CHANNEL_SELECT_REG, I2S_4CHANNELS_ENB);
 		break;
 	case 6:
-		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_6CHANNELS_ENB);
+		if (ch_reg_num != 2)
+			amba_writel(I2S_CHANNEL_SELECT_REG, I2S_6CHANNELS_ENB);
 		break;
 	default:
 		printk("Don't support %d channels\n", ch);

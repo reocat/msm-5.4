@@ -54,8 +54,11 @@
   * A3, A5, A5S and A6 support 5.1(6) channels, so we need to
   * select the proper port to used and free the unused pins (GPIOs)
   * for other usage.
+  * 1: 2 channels
+  * 2: 4 channels
+  * 3: 6 channels
   */
-static unsigned int used_port = AMB_I2S_PORT_0;
+unsigned int used_port = 1;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
 
@@ -155,6 +158,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	channels = params_channels(params);
 	if (priv_data->controller_info->channel_select)
 		priv_data->controller_info->channel_select(channels);
+	priv_data->amb_i2s_intf.ch = channels;
 
 	/* Set format */
 	switch (params_format(params)) {
@@ -341,23 +345,29 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	struct amb_i2s_priv *priv_data = dai->private_data;
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
 
-	if ((used_port & AMB_I2S_PORT_MASK) == 0) {
-		printk("%s: Need to select proper I2S port.\n", __func__);
-		return -EINVAL;
-	}
-
-	/* aucodec_digitalio_on */
-	if ((used_port & AMB_I2S_PORT_0)) {
-		if (priv_data->controller_info->aucodec_digitalio_0)
-			priv_data->controller_info->aucodec_digitalio_0();
-	}
-	if ((used_port & AMB_I2S_PORT_1)) {
-		if (priv_data->controller_info->aucodec_digitalio_1)
-			priv_data->controller_info->aucodec_digitalio_1();
-	}
-	if ((used_port & AMB_I2S_PORT_2)) {
+	switch(used_port) {
+	case 3:
+		ambarella_i2s_dai.playback.channels_max += 2;
+		ambarella_i2s_dai.capture.channels_max += 2;
 		if (priv_data->controller_info->aucodec_digitalio_2)
 			priv_data->controller_info->aucodec_digitalio_2();
+
+	case 2:
+		ambarella_i2s_dai.playback.channels_max += 2;
+		ambarella_i2s_dai.capture.channels_max += 2;
+		if (priv_data->controller_info->aucodec_digitalio_1)
+			priv_data->controller_info->aucodec_digitalio_1();
+
+	case 1:
+		ambarella_i2s_dai.playback.channels_max += 2;
+		ambarella_i2s_dai.capture.channels_max += 2;
+		if (priv_data->controller_info->aucodec_digitalio_0)
+			priv_data->controller_info->aucodec_digitalio_0();
+		break;
+
+	default:
+		printk("%s: Need to select proper I2S port.\n", __func__);
+		return -EINVAL;
 	}
 
 	/* Switch to external I2S Input except  IPcam Board */
@@ -382,6 +392,7 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	priv_data->amb_i2s_intf.word_len = DAI_16bits;
 	priv_data->amb_i2s_intf.word_pos = 0;
 	priv_data->amb_i2s_intf.slots = DAI_32slots;
+	priv_data->amb_i2s_intf.ch = 2;
 
 	/* Notify HDMI that the audio interface is initialized */
 	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf, AUDIO_NOTIFY_INIT);
@@ -415,13 +426,13 @@ struct snd_soc_dai ambarella_i2s_dai = {
 	.remove = ambarella_i2s_dai_remove,
 	.playback = {
 		.channels_min = 2,
-		.channels_max = 2,
+		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.capture = {
 		.channels_min = 2,
-		.channels_max = 2,
+		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
