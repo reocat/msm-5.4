@@ -49,13 +49,25 @@
 #include "ambarella_i2s.h"
 #include "../codecs/ambarella_dummy.h"
 
+static unsigned int dummy_dai_fmt = 0;
+module_param(dummy_dai_fmt, uint, 0644);
+MODULE_PARM_DESC(dummy_dai_fmt, "DAI format.");
+
+static unsigned int dummy_disable_codec = 0;
+module_param(dummy_disable_codec, uint, 0644);
+MODULE_PARM_DESC(dummy_disable_codec, "Disable External Codec.");
+
+static unsigned int dummy_pwr_pin = 12;
+module_param(dummy_pwr_pin, uint, 0644);
+MODULE_PARM_DESC(dummy_pwr_pin, "External Codec Power Pin.");
+
 
 static int ambarella_dummy_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	int errorCode = 0, mclk, oversample;
+	int errorCode = 0, mclk, oversample, i2s_mode;
 
 	switch (params_rate(params)) {
 	case 8000:
@@ -91,9 +103,14 @@ static int ambarella_dummy_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
+	if (dummy_dai_fmt == 0)
+		i2s_mode = SND_SOC_DAIFMT_I2S;
+	else
+		i2s_mode = SND_SOC_DAIFMT_DSP_A;
+
 	/* set the I2S system data format*/
-	errorCode = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	errorCode = snd_soc_dai_set_fmt(cpu_dai,
+		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		printk(KERN_ERR "can't set cpu DAI configuration\n");
 		goto hw_params_exit;
@@ -210,18 +227,34 @@ static int __init ambarella_dummy_board_init(void)
 		&ambarella_dummy_snd_device->dev;
 
 	errorCode = platform_device_add(ambarella_dummy_snd_device);
-	if (errorCode) {
-		platform_device_del(ambarella_dummy_snd_device);
-		platform_device_put(ambarella_dummy_snd_device);
+	if (errorCode)
 		goto ambarella_dummy_board_init_exit;
+
+	if (dummy_disable_codec) {
+		errorCode = gpio_request(dummy_pwr_pin, "dummy_disable_codec");
+		if (errorCode < 0) {
+			pr_err("Request dummy_disable_codec GPIO(%d) failed\n",
+				dummy_pwr_pin);
+			goto ambarella_dummy_board_init_exit;
+		}
+
+		gpio_direction_output(dummy_pwr_pin, GPIO_LOW);
 	}
 
+	return 0;
+
 ambarella_dummy_board_init_exit:
+	platform_device_del(ambarella_dummy_snd_device);
+	platform_device_put(ambarella_dummy_snd_device);
+
 	return errorCode;
 }
 
 static void __exit ambarella_dummy_board_exit(void)
-{	
+{
+	if (dummy_disable_codec)
+		gpio_free(dummy_pwr_pin);
+
 	platform_device_unregister(ambarella_dummy_snd_device);
 }
 

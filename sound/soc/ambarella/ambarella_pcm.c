@@ -83,8 +83,6 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 	.rates			= SNDRV_PCM_RATE_8000_48000,
 	.rate_min		= 8000,
 	.rate_max		= 48000,
-	.channels_min		= 2,
-	.channels_max		= 2, 
 	.period_bytes_min	= AMBA_PERIOD_BYTES_MIN,
 	.period_bytes_max	= AMBA_PERIOD_BYTES_MAX,
 	.periods_min		= AMBA_MIN_DESC_NUM,
@@ -209,36 +207,36 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	runtime->dma_bytes = totsize;
 
 	if (prtd->dma_data)
-		return 0;	
+		return 0;
 
 	prtd->dma_data = dma_data;
 	prtd->working = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		prtd->channel = I2S_TX_DMA_CHAN;
-		ret = ambarella_dma_request_irq(I2S_TX_DMA_CHAN, 
+		ret = ambarella_dma_request_irq(I2S_TX_DMA_CHAN,
 				dai_tx_dma_handler, substream);
 		if (ret < 0)
 			return ret;
-		ret = ambarella_dma_enable_irq(I2S_TX_DMA_CHAN, 
+		ret = ambarella_dma_enable_irq(I2S_TX_DMA_CHAN,
 				dai_tx_dma_handler);
 		if (ret < 0)
 			return ret;
-		
+
 	} else {
 		prtd->channel = I2S_RX_DMA_CHAN;
-		ret = ambarella_dma_request_irq(I2S_RX_DMA_CHAN, 
+		ret = ambarella_dma_request_irq(I2S_RX_DMA_CHAN,
 				dai_rx_dma_handler, substream);
 		if (ret < 0)
 			return ret;
-		ret = ambarella_dma_enable_irq(I2S_RX_DMA_CHAN, 
+		ret = ambarella_dma_enable_irq(I2S_RX_DMA_CHAN,
 				dai_rx_dma_handler);
 		if (ret < 0)
 			return ret;
 	}
 
 	spin_lock_irq(&prtd->lock);
-	
+
 	dma_desc = prtd->dma_desc_array;
 	next_desc_phys = prtd->dma_desc_array_phys;
 	next_rpt = prtd->dma_rpt_phys;
@@ -294,14 +292,14 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 		wait_event_timeout(prtd->wq, (prtd->working == 0), 3 * HZ);
 		/* Disable and free DMA irq */
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			ambarella_dma_disable_irq(I2S_TX_DMA_CHAN, 
+			ambarella_dma_disable_irq(I2S_TX_DMA_CHAN,
 					dai_tx_dma_handler);
-			ambarella_dma_free_irq(I2S_TX_DMA_CHAN, 
+			ambarella_dma_free_irq(I2S_TX_DMA_CHAN,
 					dai_tx_dma_handler);
 		} else {
-			ambarella_dma_disable_irq(I2S_RX_DMA_CHAN, 
+			ambarella_dma_disable_irq(I2S_RX_DMA_CHAN,
 					dai_rx_dma_handler);
-			ambarella_dma_free_irq(I2S_RX_DMA_CHAN, 
+			ambarella_dma_free_irq(I2S_RX_DMA_CHAN,
 					dai_rx_dma_handler);
 		}
 		prtd->dma_data = NULL;
@@ -310,7 +308,7 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 	}
 
 	/* TODO - do we need to ensure DMA flushed */
-	snd_pcm_set_runtime_buffer(substream, NULL);	
+	snd_pcm_set_runtime_buffer(substream, NULL);
 
 	return 0;
 }
@@ -323,7 +321,7 @@ static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
 	spin_lock_irq(&prtd->lock);
 	dai_dma_stop(prtd);
 	spin_unlock_irq(&prtd->lock);
-	
+
 	wait_event_interruptible_timeout(prtd->wq, (prtd->working == 0), 3 * HZ);
 
 	return ret;
@@ -336,7 +334,7 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	int ret = 0;
 
 	spin_lock_irq(&prtd->lock);
-	
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
@@ -403,7 +401,7 @@ static int ambarella_pcm_open(struct snd_pcm_substream *substream)
 		goto ambarella_pcm_open_exit;
 	}
 
-	prtd->dma_desc_array = dma_alloc_coherent(substream->pcm->card->dev, 
+	prtd->dma_desc_array = dma_alloc_coherent(substream->pcm->card->dev,
 		AMBA_MAX_DESC_NUM * sizeof(ambarella_dma_req_t),
 		&prtd->dma_desc_array_phys, GFP_KERNEL);
 	if (!prtd->dma_desc_array) {
@@ -445,7 +443,7 @@ static int ambarella_pcm_close(struct snd_pcm_substream *substream)
 
 	if(prtd){
 		if(prtd->dma_desc_array != NULL){
-			dma_free_coherent(substream->pcm->card->dev, 
+			dma_free_coherent(substream->pcm->card->dev,
 						AMBA_MAX_DESC_NUM * sizeof(ambarella_dma_req_t),
 						prtd->dma_desc_array, prtd->dma_desc_array_phys);
 			prtd->dma_desc_array = NULL;
@@ -460,7 +458,7 @@ static int ambarella_pcm_close(struct snd_pcm_substream *substream)
 
 		kfree(prtd);
 		runtime->private_data = NULL;
-	}	
+	}
 
 	return 0;
 }
@@ -525,7 +523,7 @@ static void ambarella_pcm_free_dma_buffers(struct snd_pcm *pcm)
 	}
 }
 
-static int ambarella_pcm_new(struct snd_card *card, 
+static int ambarella_pcm_new(struct snd_card *card,
 	struct snd_soc_dai *dai, struct snd_pcm *pcm)
 {
 	int ret = 0;

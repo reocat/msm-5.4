@@ -43,6 +43,7 @@ struct ambarella_i2s_interface {
 	u8 mode;
 	u8 sfreq;
 	u8 mclk;
+	u8 ch;
 	u8 oversample;
 	u8 word_order;
 	u8 word_len;
