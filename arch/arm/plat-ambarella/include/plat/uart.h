@@ -34,6 +34,7 @@ struct ambarella_uart_port_info {
 	void					*port;	//struct uart_port *
 	char					name[32];
 	u32					flow_control;
+	u32					mcr;
 };
 
 struct ambarella_uart_platform_info {

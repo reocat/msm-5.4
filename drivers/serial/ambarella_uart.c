@@ -295,6 +295,9 @@ static void serial_ambarella_set_mctrl(struct uart_port *port,
 		else
 			mcr &= ~UART_MC_LB;
 
+		mcr &= ~UART_MC_AFCE;
+		mcr |= port_info->mcr;
+
 		amba_writeb(port->membase + UART_MC_OFFSET, mcr);
 	}
 }
@@ -345,6 +348,7 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 static void serial_ambarella_set_termios(struct uart_port *port,
 	struct ktermios *termios, struct ktermios *old)
 {
+	struct ambarella_uart_port_info		*port_info;
 	unsigned long				flags;
 	unsigned int				baud, quot;
 	u8					lc = 0x0;
@@ -401,6 +405,9 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 
 	if ((termios->c_cflag & CREAD) == 0)
 		port->ignore_status_mask |= UART_LSR_DR;
+
+	port_info = (struct ambarella_uart_port_info *)(port->private_data);
+	port_info->mcr = (termios->c_cflag & CRTSCTS) ? UART_MC_AFCE : 0;
 
 	amba_writeb(port->membase + UART_LC_OFFSET, UART_LC_DLAB);
 	amba_writeb(port->membase + UART_DLL_OFFSET, quot & 0xff);

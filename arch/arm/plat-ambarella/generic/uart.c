@@ -63,12 +63,14 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.port		= &ambarella_uart_port_resource[0],
 		.name		= "ambarella-uart0",
 		.flow_control	= 0,
+		.mcr		= 0,
 	},
 #if (UART_INSTANCES >= 2)
 	.amba_port[1]		= {
 		.port		= &ambarella_uart_port_resource[1],
 		.name		= "ambarella-uart1",
 		.flow_control	= 1,
+		.mcr		= 0,
 	},
 #endif
 	.set_pll		= rct_set_uart_pll,
