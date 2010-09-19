@@ -112,6 +112,9 @@ static inline void receive_chars(struct uart_port *port, u32 *status)
 			else if ((*status & UART_LS_OE) &&
 				!(*status & UART_LS_DR))
 				flag = TTY_OVERRUN;
+
+			if (*status & UART_LS_OE)
+				dev_err(port->dev, "OVERFLOW\n");
 		}
 
 		if (likely(*status & UART_LS_DR)) {
@@ -318,7 +321,7 @@ static int serial_ambarella_startup(struct uart_port *port)
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
 	amba_writel(port->membase + UART_FC_OFFSET,
-		(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY |
+		(UART_FC_FIFOE | UART_FC_RX_HALF_FULL | UART_FC_TX_EMPTY |
 		UART_FC_XMITR | UART_FC_RCVRR));
 
 	errorCode = request_irq(port->irq, serial_ambarella_irq,
