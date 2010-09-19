@@ -44,7 +44,7 @@
 #endif
 
 /* ==========================================================================*/
-#ifdef PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
 #define AHB_PHYS_BASE			(0xe0000000)
 #define APB_PHYS_BASE			(0xe8000000)
 #define AXI_PHYS_BASE			(0xf0000000)

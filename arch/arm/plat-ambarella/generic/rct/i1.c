@@ -173,10 +173,10 @@ u32 get_ir_freq_hz(void)
 	return (u32) amb_get_ir_clock_frequency(HAL_BASE_VP);
 }
 
-/*u32 get_host_freq_hz(void)
+u32 get_host_freq_hz(void)
 {
 	return (u32) amb_get_host_clock_frequency(HAL_BASE_VP);
-}*/
+}
 
 u32 get_sd_freq_hz(void)
 {
@@ -410,7 +410,7 @@ void rct_set_ir_pll(void)
 void rct_set_ssi_pll(void)
 {
 	if (amb_set_ssi_clock_frequency(HAL_BASE_VP,
-				13500000) != AMB_HAL_SUCCESS) {
+				54000000) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_ssi_clock_frequency() failed");
 	}
 }
@@ -426,18 +426,18 @@ u32 get_ssi2_freq_hz(void)
 void rct_set_ssi2_pll(void)
 {
 	 if (amb_set_ssi2_clock_frequency(HAL_BASE_VP,
-				13500000) != AMB_HAL_SUCCESS) {
+				54000000) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_ssi2_clock_frequency() failed");
 	}
 }
 
-/*void rct_set_host_clk_freq_hz(u32 freq_hz)
+void rct_set_host_clk_freq_hz(u32 freq_hz)
 {
 	if (amb_set_host_clock_frequency(HAL_BASE_VP, freq_hz) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("rct_set_host_clk_freq_hz() failed");
 	}
-}*/
+}
 
 /**
  * Configure sensor clock out

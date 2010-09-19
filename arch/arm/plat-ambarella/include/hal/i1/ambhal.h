@@ -1,14 +1,15 @@
 /**
- * @mainpage Ambarella A7 Hardware Abstraction Layer
+ * @mainpage Ambarella A5M Hardware Abstraction Layer
  *
+ * @author Charles Chiou <cchiou@ambarella.com>
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 113152
+ * @version 118263
  *
  * @par Introduction:
- * The Ambarella A7 Hardware Abstraction Layer (ambhal) provides an API between
- * high level software and the low level hardware registers of the A7 chip.
+ * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
+ * high level software and the low level hardware registers of the A5M chip.
  *
  * @par Objectives:
  * - Ease of Use
@@ -30,13 +31,12 @@
  * - @ref pll_group
  * - @ref adc_group
  * - @ref arm_group
- * - @ref ahb_group
- * - @ref apb_group
  * - @ref audio_group
  * - @ref core_group
  * - @ref ddr_group
  * - @ref fio_group
  * - @ref hdmi_group
+ * - @ref host_group
  * - @ref ir_group
  * - @ref ioctrl_group
  * - @ref lcd_group
@@ -50,7 +50,6 @@
  * - @ref ssi_group
  * - @ref ssi2_group
  * - @ref uart_group
- * - @ref vin_group
  * - @ref usb_group
  * - @ref vout_group
  *
@@ -62,13 +61,12 @@
  * @defgroup pll_group PLL
  * @defgroup adc_group ADC
  * @defgroup arm_group ARM
- * @defgroup ahb_group AHB
- * @defgroup apb_group APB
  * @defgroup audio_group Audio
  * @defgroup core_group Core
  * @defgroup ddr_group DDR
  * @defgroup fio_group Flash IO
  * @defgroup hdmi_group HDMI
+ * @defgroup host_group Host
  * @defgroup ir_group Infrared
  * @defgroup ioctrl_group IO Pads Control
  * @defgroup lcd_group LCD
@@ -82,7 +80,6 @@
  * @defgroup ssi_group SSI
  * @defgroup ssi2_group SSI2
  * @defgroup uart_group UART
- * @defgroup vin_group VIN
  * @defgroup usb_group USB
  * @defgroup vout_group Video Out
  *
@@ -188,7 +185,7 @@
  * Some of the plls (@ref vout_group, @ref audio_group & @ref lcd_group) in the design allow the reference clock source to be changed.
  * The api to change the clock source takes the new clock source name and the new clock source frequency.
  * @par External PLL Reference Clocks
- * When the new clock source is
+ * When the new clock source is 
  * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
  * the reference clock source of the pll is being changed.
  * The api needs that reference clock frequency to be able to calculate the correct pll settings
@@ -198,7 +195,7 @@
  * based on the system configuration pins (it is either 24 MHz or 27 MHz). In this
  * case the application does not need to provide anything as the api will figure it out on its
  * own and do the pll settings calculations accordingly.
- * @par External Clock (No PLL)
+ * @par External Clock (No PLL) 
  * When the new clock source is ::AMB_EXTERNAL_CLOCK_SOURCE the pll is not used and so the api does not
  * care what the reference clock frequency is. In fact the api will power down
  * that pll when the application selects that option to save power.
@@ -206,7 +203,7 @@
 
 /**
  * @file ambhal.h
- * @brief Ambarella A7 Hardware Abstraction Layer API.
+ * @brief Ambarella A5M Hardware Abstraction Layer API.
  *
  */
 
@@ -284,8 +281,6 @@ AMB_HAL_FUNCTION_INFO_SET_USB_CLOCK_SOURCE,
 AMB_HAL_FUNCTION_INFO_SET_UART_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_UART_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_UART_INIT,
-AMB_HAL_FUNCTION_INFO_SET_VIN_CLOCK_FREQUENCY,
-AMB_HAL_FUNCTION_INFO_GET_VIN_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_MOTOR_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_MOTOR_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_IR_CLOCK_FREQUENCY,
@@ -298,6 +293,8 @@ AMB_HAL_FUNCTION_INFO_SET_PWM_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_PWM_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_ADC_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_ADC_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_SET_HOST_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_GET_HOST_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_SD_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_SD_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_MS_CLOCK_FREQUENCY,
@@ -324,18 +321,15 @@ AMB_HAL_FUNCTION_INFO_GET_MISC_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_SET_SC_IOCTRL_DRIVE_STRENGTH,
 AMB_HAL_FUNCTION_INFO_SET_SC_IOCTRL_PULLUPDOWN,
 AMB_HAL_FUNCTION_INFO_GET_SC_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SDCLK_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SDCMD_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SDWPCD_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SD_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_STRIG_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_STRIG_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_GET_STRIG_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_SMIO_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_SMIO_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_GET_SMIO_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_VD0_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_VD0_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_GET_VD0_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_DRIVE_STRENGTH,
 AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_PULLUPDOWN,
 AMB_HAL_FUNCTION_INFO_GET_VD1_IOCTRL_CONFIGURATION,
@@ -344,12 +338,10 @@ AMB_HAL_FUNCTION_INFO_SET_SENSOR_IOCTRL_PULLUPDOWN,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_ARM_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_HDMI_CLOCK_FREQUENCY,
-AMB_HAL_FUNCTION_INFO_ENABLE_HDMI_CLOCK_OBSERVATION,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
-AMB_HAL_FUNCTION_INFO_GET_AHB_CLOCK_FREQUENCY,
-AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
 
@@ -388,18 +380,16 @@ typedef unsigned int amb_pll_fractional_divisor_t ;
 typedef enum {
 /** PLL reference clock from crystal oscillator - either 24 MHz or 27 MHz */
 AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF,
-/* Use spclk_c as reference for pll */
-AMB_PLL_REFERENCE_CLOCK_SOURCE_SPCLK_C,
+/* Reserved - do not use !! */
+AMB_PLL_REFERENCE_CLOCK_SOURCE_SP_CLK,
 /** Use clk_si as reference for the pll */
 AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI,
 /** Use lvds_idsp_sclk as reference for the pll */
 AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK,
 /** Use external clock source - no pll */
 AMB_EXTERNAL_CLOCK_SOURCE,
-/** Use the vout pll clock for lcd/hdmi */
-AMB_SHARE_VOUT_CLOCK,
-/** This is illegal and it should never be returned */
-AMB_PLL_REFERENCE_CLOCK_SOURCE_ILLEGAL
+/** Use the vout pll clock for lcd */
+AMB_SHARE_VOUT_CLOCK
 } amb_clock_source_t ;
 
 /**
@@ -471,6 +461,8 @@ AMB_PERFORMANCE_480P30,
 AMB_PERFORMANCE_720P30,
 /** 720p60 */
 AMB_PERFORMANCE_720P60,
+/** 1080i low power */
+AMB_PERFORMANCE_1080I60_LP,
 /** 1080i */
 AMB_PERFORMANCE_1080I60,
 /** 1080p30 */
@@ -510,7 +502,11 @@ AMB_OPERATING_MODE_LCD_BYPASS,
 /** Still picture preview */
 AMB_OPERATING_MODE_STILL_PREVIEW,
 /** Low power */
-AMB_OPERATING_MODE_LOW_POWER
+AMB_OPERATING_MODE_LOW_POWER,
+/** Software based raw/yuv encoding */
+AMB_OPERATING_MODE_RAW,
+/** IP Cam */
+AMB_OPERATING_MODE_IP_CAM
 } amb_mode_t ;
 
 /**
@@ -525,7 +521,9 @@ AMB_USB_OFF,
 /** Enable USB interface */
 AMB_USB_ON,
 /** Force USB interface into suspend state */
-AMB_USB_SUSPEND
+AMB_USB_SUSPEND,
+/** Enable USB interface  & force USB to never suspend */
+AMB_USB_ALWAYS_ON
 } amb_usb_interface_state_t ;
 
 /**
@@ -553,7 +551,7 @@ AMB_USB_CLK_CRYSTAL_12MHZ
 
 /**
  * State of HDMI Interface
- *
+ * 
  * @ingroup hdmi_group
  */
 
@@ -566,7 +564,7 @@ AMB_HDMI_ON
 
 /**
  * Dual Stream state
- *
+ * 
  * @ingroup mode_group
  */
 
@@ -799,6 +797,25 @@ AMB_SENSOR_CLOCK_PAD_OUTPUT_MODE,
 AMB_SENSOR_CLOCK_PAD_INPUT_MODE
 } amb_sensor_clock_pad_mode_t ;
 
+/**
+ * DRAM arbiter priority
+ *
+ * @ingroup init_group
+ */
+
+typedef enum {
+/** Normal priority for dsp clients (87.5% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_NORMAL_PRIORITY,
+/** High priority for dsp clients (93.75% of total bandwidth - large arbiter throttle period) */
+AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY_HIGH_THROTTLE,
+/** High priority for dsp clients (93.75% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY,
+/** High priority for dsp clients (96.8% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_VERY_HIGH_PRIORITY,
+/** High priority for dsp clients (100% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_HIGHEST_PRIORITY
+} amb_dram_arbiter_priority_t ;
+
 /*
  *
  */
@@ -814,7 +831,7 @@ typedef unsigned int (*amb_hal_function_t) (unsigned int, unsigned int, unsigned
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
-#ifdef _HAL_DEBUG_
+#ifdef _HAL_MMU_REMAP_
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + 0) ;
 #else
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
@@ -994,7 +1011,7 @@ static INLINE amb_boot_type_t amb_get_boot_type (void *amb_hal_base_address)
 }
 
 /**
- * Get the host interface type
+ * Get the host interface type 
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1019,10 +1036,10 @@ static INLINE amb_hif_type_t amb_get_hif_type (void *amb_hal_base_address)
  * @ingroup pll_group
  */
 
-static INLINE amb_hif_type_t amb_disable_clock_observation (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_disable_clock_observation (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hif_type_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_DISABLE_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_DISABLE_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
@@ -1395,7 +1412,7 @@ static INLINE amb_hal_success_t amb_usb_subsystem_soft_reset (void *amb_hal_base
 /**
  * Turn USB Interface On/Off
  *
- * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified.
+ * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified. 
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_interface_state Requested State of the USB Interface
@@ -1432,7 +1449,7 @@ static INLINE amb_usb_interface_state_t amb_get_usb_interface_state (void *amb_h
 /**
  * Select USB PHY Clock Source
  *
- * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ.
+ * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ. 
  * Use this function to change the USB PHY clock source.
  * However, this function can only be called before setting amb_usb_interface_state
  * to ::AMB_USB_ON for the first time after power-on reset
@@ -1837,7 +1854,7 @@ static INLINE amb_hal_success_t amb_enable_audio_clock_observation (void *amb_ha
 
 /*
  *
- * UART
+ * Uart
  *
  */
 
@@ -1897,51 +1914,6 @@ static INLINE amb_hal_success_t amb_uart_init (void *amb_hal_base_address)
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return  (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_UART_INIT, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
-
-/*
- *
- * VIN
- *
- */
-
-/**
- * Set the vin clock frequency.
- *
- * @note This is not the baud rate.
- * @note The actual clock frequency is given by the reference
- * clock frequency divided by the frequency.
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] amb_clock_frequency New vin clock frequency
- *
- * @retval ::AMB_HAL_SUCCESS The frequency has been set
- * @retval ::AMB_HAL_FAIL    The new frequency is invalid and has not been set
- *
- * @ingroup vin_group
- */
-
-static INLINE amb_hal_success_t amb_set_vin_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_clock_frequency)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return  (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_VIN_CLOCK_FREQUENCY, amb_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
- * Get the frequency of the vin clock.
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- *
- * @retval ::amb_clock_frequency_t Requested clock frequency.
- *
- * @ingroup vin_group
- */
-
-static INLINE amb_clock_frequency_t amb_get_vin_clock_frequency (void *amb_hal_base_address)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return  (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_VIN_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
 
 /*
  *
@@ -2187,6 +2159,46 @@ static INLINE amb_clock_frequency_t amb_get_adc_clock_frequency (void *amb_hal_b
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return  (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_ADC_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/*
+ *
+ * HOST
+ *
+ */
+
+/**
+ * Set the clock frequency of the host.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_clock_frequency New host frequency
+ *
+ * @retval ::AMB_HAL_SUCCESS The new frequency has been set
+ * @retval ::AMB_HAL_FAIL The new requested frequency is not valid
+ *
+ * @ingroup host_group
+ */
+
+static INLINE amb_hal_success_t amb_set_host_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_clock_frequency)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return  (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_HOST_CLOCK_FREQUENCY, amb_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the frequency of the host clock.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::amb_clock_frequency_t Requested clock frequency
+ *
+ * @ingroup host_group
+ */
+
+static INLINE amb_clock_frequency_t amb_get_host_clock_frequency (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return  (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_HOST_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
@@ -2662,7 +2674,7 @@ static INLINE amb_hal_success_t amb_get_sc_ioctrl_configuration (void *amb_hal_b
 }
 
 /**
- * Set the sdclk io pad drive strength
+ * Set the strig io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2672,14 +2684,14 @@ static INLINE amb_hal_success_t amb_get_sc_ioctrl_configuration (void *amb_hal_b
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_strig_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_STRIG_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdclk io pad pullup or pulldown
+ * Set the strig io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2689,14 +2701,14 @@ static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_drive_strength (void *amb_h
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_strig_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_STRIG_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sdclk io pad configuration
+ * Get the strig io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2704,14 +2716,14 @@ static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_pullupdown (void *amb_hal_b
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdclk_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_strig_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDCLK_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_STRIG_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdcmd io pad drive strength
+ * Set the smio io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2721,14 +2733,14 @@ static INLINE amb_hal_success_t amb_get_sdclk_ioctrl_configuration (void *amb_ha
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_smio_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIO_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdcmd io pad pullup or pulldown
+ * Set the smio io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2738,14 +2750,14 @@ static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_drive_strength (void *amb_h
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_smio_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIO_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sdcmd io pad configuration
+ * Get the smio io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2753,14 +2765,14 @@ static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_pullupdown (void *amb_hal_b
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdcmd_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_smio_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDCMD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SMIO_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdwpcd io pad drive strength
+ * Set the vd0 io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2770,14 +2782,14 @@ static INLINE amb_hal_success_t amb_get_sdcmd_ioctrl_configuration (void *amb_ha
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_vd0_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_VD0_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdwpcd io pad pullup or pulldown
+ * Set the vd0 io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2787,14 +2799,14 @@ static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_drive_strength (void *amb_
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_vd0_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_VD0_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sdwpcd io pad configuration
+ * Get the vd0 io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2802,59 +2814,10 @@ static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_pullupdown (void *amb_hal_
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdwpcd_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_vd0_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDWPCD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
- * Set the sd io pad drive strength
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
- *
- * @retval ::AMB_HAL_SUCCESS The new drive strength was set.
- *
- * @ingroup ioctrl_group
- */
-
-static INLINE amb_hal_success_t amb_set_sd_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
- * Set the sd io pad pullup or pulldown
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
- *
- * @retval ::AMB_HAL_SUCCESS The new pullup/pulldown was set.
- *
- * @ingroup ioctrl_group
- */
-
-static INLINE amb_hal_success_t amb_set_sd_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
- * Get the sd io pad configuration
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[out] amb_ioctrl_configuration The current configuration of the io pad
- *
- * @ingroup ioctrl_group
- */
-
-static INLINE amb_hal_success_t amb_get_sd_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_VD0_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
@@ -2988,25 +2951,6 @@ static INLINE amb_clock_frequency_t amb_get_hdmi_clock_frequency (void *amb_hal_
 }
 
 /**
- * Enable observation of hdmi clock
- *
- * @note A divided by 16 version of the clock may be observed on the xx_clk_si
- * pin.
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- *
- * @retval ::AMB_HAL_SUCCESS Always returns success
- *
- * @ingroup hdmi_group
- */
-
-static INLINE amb_hal_success_t amb_enable_hdmi_clock_observation (void *amb_hal_base_address)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_ENABLE_HDMI_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
  * Set the direction of the sensor clock pad.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
@@ -3060,35 +3004,22 @@ static INLINE amb_hal_success_t amb_set_peripherals_base_address (void *amb_hal_
 }
 
 /**
- * Get the AHB clock frequency
+ * Change the priority of dsp clients in DRAM arbiter
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_dram_arbiter_priority Priority given to dsp clients by DRAM arbiter.
  *
- * @retval ::amb_clock_frequency_t The AHB clock frequency.
+ * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
  *
- * @ingroup ahb_group
+ * @retval ::AMB_HAL_FAIL The amb_dram_arbiter_priority is not defined
+ *
+ * @ingroup init_group
  */
 
-static INLINE amb_clock_frequency_t amb_get_ahb_clock_frequency (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_set_dram_arbiter_priority (void *amb_hal_base_address, amb_dram_arbiter_priority_t amb_dram_arbiter_priority)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_AHB_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
- * Get the APB clock frequency
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- *
- * @retval ::amb_clock_frequency_t The APB clock frequency.
- *
- * @ingroup apb_group
- */
-
-static INLINE amb_clock_frequency_t amb_get_apb_clock_frequency (void *amb_hal_base_address)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY, (unsigned int) amb_dram_arbiter_priority, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_

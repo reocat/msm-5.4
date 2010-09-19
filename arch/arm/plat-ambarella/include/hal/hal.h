@@ -31,7 +31,11 @@
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#define DEFAULT_HAL_START		(0x000a0000)
+#else
 #define DEFAULT_HAL_START		(0xc00a0000)
+#endif
 #define DEFAULT_HAL_BASE		(0xfee00000)
 #define DEFAULT_HAL_SIZE		(0x00030000)
 
@@ -45,8 +49,8 @@
 #include <hal/a5s/ambhal.h>
 #include <hal/a5s/ambhalmini.h>
 #elif (CHIP_REV == I1)
-#include <hal/a7/ambhal.h>
-#include <hal/a7/ambhalmini.h>
+#include <hal/i1/ambhal.h>
+#include <hal/i1/ambhalmini.h>
 #else
 #error "Undefined CHIP_REV, Can't support HAL!"
 #endif

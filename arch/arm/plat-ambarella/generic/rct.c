@@ -62,7 +62,7 @@
 #elif (CHIP_REV == A7)
 #include "rct/a7.c"
 #elif (CHIP_REV == I1)
-#include "rct/a7.c"
+#include "rct/i1.c"
 #endif
 #include "rct/audio.c"
 
