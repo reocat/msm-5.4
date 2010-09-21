@@ -103,6 +103,14 @@ void ambarella_gpio_config(int id, int func)
 	} else if (id < (4 * GPIO_BANK_SIZE)) {
 		base = GPIO3_BASE;
 #endif
+#if (GPIO_INSTANCES >= 5)
+	} else if (id < (5 * GPIO_BANK_SIZE)) {
+		base = GPIO4_BASE;
+#endif
+#if (GPIO_INSTANCES >= 6)
+	} else if (id < (6 * GPIO_BANK_SIZE)) {
+		base = GPIO5_BASE;
+#endif
 	}
 	if (base == 0) {
 		pr_err("%s: invalid GPIO %d for func %d.\n",
@@ -132,6 +140,14 @@ void ambarella_gpio_set(int id, int value)
 	} else if (id < (4 * GPIO_BANK_SIZE)) {
 		base = GPIO3_BASE;
 #endif
+#if (GPIO_INSTANCES >= 5)
+	} else if (id < (5 * GPIO_BANK_SIZE)) {
+		base = GPIO4_BASE;
+#endif
+#if (GPIO_INSTANCES >= 6)
+	} else if (id < (6 * GPIO_BANK_SIZE)) {
+		base = GPIO5_BASE;
+#endif
 	}
 	if (base == 0) {
 		pr_err("%s: invalid GPIO %d for value %d.\n",
@@ -160,6 +176,14 @@ int ambarella_gpio_get(int id)
 #if (GPIO_INSTANCES >= 4)
 	} else if (id < (4 * GPIO_BANK_SIZE)) {
 		base = GPIO3_BASE;
+#endif
+#if (GPIO_INSTANCES >= 5)
+	} else if (id < (5 * GPIO_BANK_SIZE)) {
+		base = GPIO4_BASE;
+#endif
+#if (GPIO_INSTANCES >= 6)
+	} else if (id < (6 * GPIO_BANK_SIZE)) {
+		base = GPIO5_BASE;
 #endif
 	}
 	if (base == 0) {
@@ -359,6 +383,12 @@ static struct ambarella_gpio_chip ambarella_gpio_banks[] = {
 #if (GPIO_INSTANCES >= 4)
 	AMBARELLA_GPIO_BANK("ambarella-gpio3", GPIO3_BASE, GPIO(3 * GPIO_BANK_SIZE)),
 #endif
+#if (GPIO_INSTANCES >= 5)
+	AMBARELLA_GPIO_BANK("ambarella-gpio4", GPIO4_BASE, GPIO(4 * GPIO_BANK_SIZE)),
+#endif
+#if (GPIO_INSTANCES >= 6)
+	AMBARELLA_GPIO_BANK("ambarella-gpio5", GPIO5_BASE, GPIO(5 * GPIO_BANK_SIZE)),
+#endif
 };
 
 /* ==========================================================================*/
@@ -462,6 +492,12 @@ int __init ambarella_init_gpio(void)
 #if (GPIO_INSTANCES >= 4)
 	set_irq_type(GPIO3_IRQ, IRQ_TYPE_LEVEL_HIGH);
 #endif
+#if (GPIO_INSTANCES >= 5)
+	set_irq_type(GPIO4_IRQ, IRQ_TYPE_LEVEL_HIGH);
+#endif
+#if (GPIO_INSTANCES >= 6)
+	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
+#endif
 
 	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
 	memset(ambarella_gpio_freeflag, 0xff, sizeof(ambarella_gpio_freeflag));
@@ -514,9 +550,14 @@ struct ambarella_gpio_pm_info ambarella_gpio1_pm;
 #if (GPIO_INSTANCES >= 3)
 struct ambarella_gpio_pm_info ambarella_gpio2_pm;
 #endif
-
 #if (GPIO_INSTANCES >= 4)
 struct ambarella_gpio_pm_info ambarella_gpio3_pm;
+#endif
+#if (GPIO_INSTANCES >= 5)
+struct ambarella_gpio_pm_info ambarella_gpio4_pm;
+#endif
+#if (GPIO_INSTANCES >= 6)
+struct ambarella_gpio_pm_info ambarella_gpio5_pm;
 #endif
 
 u32 ambarella_gpio_suspend(u32 level)
@@ -559,6 +600,28 @@ u32 ambarella_gpio_suspend(u32 level)
 	ambarella_gpio3_pm.ie_reg     = amba_readl(GPIO3_IE_REG);
 	ambarella_gpio3_pm.afsel_reg  = amba_readl(GPIO3_AFSEL_REG);
 	ambarella_gpio3_pm.mask_reg   = amba_readl(GPIO3_MASK_REG);
+#endif
+
+#if (GPIO_INSTANCES >= 5)
+	ambarella_gpio4_pm.data_reg   = amba_readl(GPIO4_DATA_REG);
+	ambarella_gpio4_pm.dir_reg    = amba_readl(GPIO4_DIR_REG);
+	ambarella_gpio4_pm.is_reg     = amba_readl(GPIO4_IS_REG);
+	ambarella_gpio4_pm.ibe_reg    = amba_readl(GPIO4_IBE_REG);
+	ambarella_gpio4_pm.iev_reg    = amba_readl(GPIO4_IEV_REG);
+	ambarella_gpio4_pm.ie_reg     = amba_readl(GPIO4_IE_REG);
+	ambarella_gpio4_pm.afsel_reg  = amba_readl(GPIO4_AFSEL_REG);
+	ambarella_gpio4_pm.mask_reg   = amba_readl(GPIO4_MASK_REG);
+#endif
+
+#if (GPIO_INSTANCES >= 6)
+	ambarella_gpio5_pm.data_reg   = amba_readl(GPIO5_DATA_REG);
+	ambarella_gpio5_pm.dir_reg    = amba_readl(GPIO5_DIR_REG);
+	ambarella_gpio5_pm.is_reg     = amba_readl(GPIO5_IS_REG);
+	ambarella_gpio5_pm.ibe_reg    = amba_readl(GPIO5_IBE_REG);
+	ambarella_gpio5_pm.iev_reg    = amba_readl(GPIO5_IEV_REG);
+	ambarella_gpio5_pm.ie_reg     = amba_readl(GPIO5_IE_REG);
+	ambarella_gpio5_pm.afsel_reg  = amba_readl(GPIO5_AFSEL_REG);
+	ambarella_gpio5_pm.mask_reg   = amba_readl(GPIO5_MASK_REG);
 #endif
 
 	return 0;
@@ -604,6 +667,28 @@ u32 ambarella_gpio_resume(u32 level)
 	amba_writel(GPIO3_IBE_REG,    ambarella_gpio3_pm.ibe_reg);
 	amba_writel(GPIO3_IEV_REG,    ambarella_gpio3_pm.iev_reg);
 	amba_writel(GPIO3_IE_REG,     ambarella_gpio3_pm.ie_reg);
+#endif
+
+#if (GPIO_INSTANCES >= 5)
+	amba_writel(GPIO4_AFSEL_REG,  ambarella_gpio4_pm.afsel_reg);
+	amba_writel(GPIO4_MASK_REG,   ambarella_gpio4_pm.mask_reg);
+	amba_writel(GPIO4_DIR_REG,    ambarella_gpio4_pm.dir_reg);
+	amba_writel(GPIO4_DATA_REG,   ambarella_gpio4_pm.data_reg);
+	amba_writel(GPIO4_IS_REG,     ambarella_gpio4_pm.is_reg);
+	amba_writel(GPIO4_IBE_REG,    ambarella_gpio4_pm.ibe_reg);
+	amba_writel(GPIO4_IEV_REG,    ambarella_gpio4_pm.iev_reg);
+	amba_writel(GPIO4_IE_REG,     ambarella_gpio4_pm.ie_reg);
+#endif
+
+#if (GPIO_INSTANCES >= 6)
+	amba_writel(GPIO5_AFSEL_REG,  ambarella_gpio5_pm.afsel_reg);
+	amba_writel(GPIO5_MASK_REG,   ambarella_gpio5_pm.mask_reg);
+	amba_writel(GPIO5_DIR_REG,    ambarella_gpio5_pm.dir_reg);
+	amba_writel(GPIO5_DATA_REG,   ambarella_gpio5_pm.data_reg);
+	amba_writel(GPIO5_IS_REG,     ambarella_gpio5_pm.is_reg);
+	amba_writel(GPIO5_IBE_REG,    ambarella_gpio5_pm.ibe_reg);
+	amba_writel(GPIO5_IEV_REG,    ambarella_gpio5_pm.iev_reg);
+	amba_writel(GPIO5_IE_REG,     ambarella_gpio5_pm.ie_reg);
 #endif
 
 	return 0;
@@ -748,8 +833,8 @@ int ambarella_is_valid_gpio_irq(struct ambarella_gpio_irq_info *pinfo)
 		goto ambarella_is_valid_gpio_irq_exit;
 
 	if ((pinfo->irq_gpio_mode != GPIO_FUNC_HW) &&
-		((pinfo->irq_line < GPIO0_INT_VEC_OFFSET ) ||
-		(pinfo->irq_line >= MAX_IRQ_NUMBER)))
+		((pinfo->irq_line < GPIO_INT_VEC(0)) ||
+		(pinfo->irq_line >= NR_IRQS)))
 		goto ambarella_is_valid_gpio_irq_exit;
 
 	bvalid = 1;

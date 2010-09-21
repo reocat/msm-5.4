@@ -26,10 +26,10 @@
 
 /* ==========================================================================*/
 #define AMBARELLA_VA_SCU_BASE		(AXI_BASE + 0x00000000)
-#define AMBARELLA_VA_IC_BASE		(AXI_BASE + 0x00000100)
+#define AMBARELLA_VA_GIC_CPU_BASE	(AXI_BASE + 0x00000100)
 #define AMBARELLA_VA_GT_BASE		(AXI_BASE + 0x00000200)
 #define AMBARELLA_VA_PT_WD_BASE		(AXI_BASE + 0x00000600)
-#define AMBARELLA_VA_ID_BASE		(AXI_BASE + 0x00001000)
+#define AMBARELLA_VA_GIC_DIST_BASE	(AXI_BASE + 0x00001000)
 #define AMBARELLA_VA_L2CC_BASE		(AXI_BASE + 0x00002000)
 
 /* ==========================================================================*/

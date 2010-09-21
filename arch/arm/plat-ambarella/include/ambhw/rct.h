@@ -55,7 +55,11 @@
 #include <ambhw/rct/a7m.h>
 #elif (CHIP_REV == I1)
 #define REF_CLK_FREQ	24000000
-//#include <ambhw/rct/a5s.h>		//FIX_IONE
+#include <ambhw/rct/a5s.h>		//FIX_IONE
+#endif
+
+#ifndef RCT_MAX_DLL_CTRL
+#define RCT_MAX_DLL_CTRL	1
 #endif
 
 #include <ambhw/rct/audio.h>

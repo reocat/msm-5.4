@@ -48,39 +48,41 @@
 
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\base, =(VIC_BASE)
-		ldr	\tmp, =(GPIO_IRQ_MASK)
 		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
-		and	\base, \irqstat, \tmp
-		stat2nr	\base, \irqnr, \tmp
-		bne	1000f
-#if (VIC_INSTANCES >= 2)
-		ldr	\base, =(VIC2_BASE)
-		ldr	\irqnr, [\base, #VIC_IRQ_STA_OFFSET]
-		stat2nr	\irqnr, \irqnr, \tmp
-		addne	\irqnr, \irqnr, #VIC2_INT_VEC_OFFSET
-		bne	1000f
-#endif
 		stat2nr	\irqstat, \irqnr, \tmp
+#if (VIC_INSTANCES >= 2)
+		bne	1000f
+		ldr	\base, =(VIC2_BASE)
+		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
+		stat2nr	\irqstat, \irqnr, \tmp
+		addne	\irqnr, \irqnr, #VIC2_INT_VEC(0)
+#endif
+#if (VIC_INSTANCES >= 3)
+		bne	1000f
+		ldr	\base, =(VIC3_BASE)
+		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
+		stat2nr	\irqstat, \irqnr, \tmp
+		addne	\irqnr, \irqnr, #VIC3_INT_VEC(0)
+#endif
 1000:
 		.endm
 
 #else
+#include <plat/cortex.h>
 #include <asm/hardware/gic.h>
 
-#define AMBARELLA_VA_GIC_CPU_BASE	0
-
-		.macro  get_irqnr_and_base, irqnr, irqstat, base, tmp
-		ldr     \base, =AMBARELLA_VA_GIC_CPU_BASE
-		ldr     \irqstat, [\base, #GIC_CPU_INTACK]
-		ldr     \tmp, =1021
-		bic     \irqnr, \irqstat, #0x1c00
-		cmp     \irqnr, #29
-		cmpcc   \irqnr, \irqnr
-		cmpne   \irqnr, \tmp
-		cmpcs   \irqnr, \irqnr
+		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
+		ldr	\base, =AMBARELLA_VA_GIC_CPU_BASE
+		ldr	\irqstat, [\base, #GIC_CPU_INTACK]
+		ldr	\tmp, =1021
+		bic	\irqnr, \irqstat, #0x1c00
+		cmp	\irqnr, #29
+		cmpcc	\irqnr, \irqnr
+		cmpne	\irqnr, \tmp
+		cmpcs	\irqnr, \irqnr
 		.endm
 
-		.macro test_for_ipi, irqnr, irqstat, base, tmp
+		.macro	test_for_ipi, irqnr, irqstat, base, tmp
 		bic	\irqnr, \irqstat, #0x1c00
 		cmp	\irqnr, #16
 		it	cc
@@ -89,9 +91,9 @@
 		cmpcs	\irqnr, \irqnr
 		.endm
 
-		.macro test_for_ltirq, irqnr, irqstat, base, tmp
+		.macro	test_for_ltirq, irqnr, irqstat, base, tmp
 		bic	\irqnr, \irqstat, #0x1c00
-		mov 	\tmp, #0
+		mov	\tmp, #0
 		cmp	\irqnr, #29
 		itt	eq
 		moveq	\tmp, #1

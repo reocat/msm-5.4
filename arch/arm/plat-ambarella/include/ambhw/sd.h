@@ -22,7 +22,11 @@
      (CHIP_REV == A5S) || (CHIP_REV == A5L)  || (CHIP_REV == A7))
 #define SD_INSTANCES			1
 #else
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
 #define SD_INSTANCES			2
+#else
+#define SD_INSTANCES			1
+#endif
 #endif
 
 #if ((CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) ||	\
@@ -34,7 +38,8 @@
 #define SD_PWR_BIT_FIELD_TYPE		1
 #endif
 
-#if (CHIP_REV == A1) || (CHIP_REV == A2) || (CHIP_REV == A3)
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || (CHIP_REV == A3) || \
+    defined(__FPGA__)
 #define SD_SUPPORT_PLL_SCALER		0
 #else
 #define SD_SUPPORT_PLL_SCALER     	1
@@ -57,6 +62,14 @@
 
 #if (CHIP_REV == A5L)
 #define SD_HAS_DELAY_CTRL		1
+#endif
+
+#if ((CHIP_REV == A1) || (CHIP_REV == A3) || (CHIP_REV == A5) || \
+     (CHIP_REV == A6) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || \
+     (CHIP_REV == A2Q))
+#define SD_BUS_SWITCH_DLY		1
+#else
+#define SD_BUS_SWITCH_DLY		0
 #endif
 
 /****************************************************/
@@ -92,7 +105,8 @@
 #define SD_CAP_OFFSET			0x040
 #define SD_CUR_OFFSET			0x048
 #define SD_XC_CTR_OFFSET		0x060
-#define SD_DELAY_OFFSET			0x070
+#define SD_BOOT_CTR_OFFSET		0x070
+#define SD_BOOT_STA_OFFSET		0x074
 #define SD_VOL_SW_OFFSET		0x07c
 #define SD_SIST_OFFSET			0x0fc	/* Half word */
 #define SD_VER_OFFSET			0x0fe	/* Half word */
@@ -126,7 +140,8 @@
 #define SD_CAP_REG			SD_REG(0x040)
 #define SD_CUR_REG			SD_REG(0x048)
 #define SD_XC_CTR_REG			SD_REG(0x060)
-#define SD_DELAY_REG			SD_REG(0x070)
+#define SD_BOOT_CTR_REG			SD_REG(0x070)
+#define SD_BOOT_STA_REG			SD_REG(0x074)
 #define SD_VOL_SW_REG			SD_REG(0x07c)
 #define SD_SIST_REG			SD_REG(0x0fc)	/* Half word */
 #define SD_VER_REG			SD_REG(0x0fe)	/* Half word */
@@ -369,13 +384,12 @@
 #define SD_XC_CTR_VOL_1_8V		0x00000001
 #define SD_XC_CTR_VOL_3_3V		0x00000000
 
-/* SD_DELAY_REG */
-#define SD_DELAY_OUTPUT_SIGNAL(x)	(((x) & 0x7) >> 24)
-#define SD_DELAY_INPUT_SIGNAL(x)	(((x) & 0x7) >> 16)
-#define SD_DELAY_EXTRA_OUTPUT_SDCLK(x)	(((x) & 0x3) >> 12)
-#define SD_DELAY_OUTPUT_SDCLK(x)	(((x) & 0x7) >> 8)
-#define SD_DELAY_EXTRA_INPUT_SDCLK(x)	(((x) & 0x3) >> 4)
-#define SD_DELAY_INPUT_SDCLK(x)		(((x) & 0x7))
+/* SD_BOOT_CTR_REG */
+#define SD_BOOT_CTR_RST_EN		0x00010000
+
+/* SD_BOOT_STA_REG */
+#define SD_BOOT_STA_END_ALT		0x01010000
+#define SD_BOOT_STA_BOOT_RDY		0x00000001
 
 /* SD_VOL_SW_REG */
 #define SD_VOL_SW_CMD_STAT_H		0x00010000

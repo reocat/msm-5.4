@@ -32,12 +32,14 @@
 #define GPIO_MAX_LINES			58
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define GPIO_MAX_LINES			81
-#elif 	(CHIP_REV == A3) || (CHIP_REV == A5S) || (CHIP_REV == A5L)
+#elif 	(CHIP_REV == A3) || (CHIP_REV == A5S)
 #define GPIO_MAX_LINES			96
+#elif	(CHIP_REV == A5L)
+#define GPIO_MAX_LINES			88
 #elif 	(CHIP_REV == A5) || (CHIP_REV == A6)
 #define GPIO_MAX_LINES			128
 #elif 	(CHIP_REV == A7)
-#define GPIO_MAX_LINES			160
+#define GPIO_MAX_LINES			144
 #else
 #define GPIO_MAX_LINES			128
 #endif
@@ -151,6 +153,21 @@
 #define GPIO4_IC_REG			GPIO4_REG(0x24)
 #define GPIO4_MASK_REG			GPIO4_REG(0x28)
 #define GPIO4_ENABLE_REG		GPIO4_REG(0x2c)
+#endif
+
+#if 	(GPIO_INSTANCES >= 6)
+#define GPIO5_DATA_REG			GPIO5_REG(0x00)
+#define GPIO5_DIR_REG			GPIO5_REG(0x04)
+#define GPIO5_IS_REG			GPIO5_REG(0x08)
+#define GPIO5_IBE_REG			GPIO5_REG(0x0c)
+#define GPIO5_IEV_REG			GPIO5_REG(0x10)
+#define GPIO5_IE_REG			GPIO5_REG(0x14)
+#define GPIO5_AFSEL_REG			GPIO5_REG(0x18)
+#define GPIO5_RIS_REG			GPIO5_REG(0x1c)
+#define GPIO5_MIS_REG			GPIO5_REG(0x20)
+#define GPIO5_IC_REG			GPIO5_REG(0x24)
+#define GPIO5_MASK_REG			GPIO5_REG(0x28)
+#define GPIO5_ENABLE_REG		GPIO5_REG(0x2c)
 #endif
 
 /************************/

@@ -56,6 +56,10 @@ config PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_USB
+	bool
+	default n
+
 choice
 	prompt "Chip REV"
 
@@ -72,13 +76,6 @@ config PLAT_AMBARELLA_A2S
 	select PLAT_AMBARELLA_GENERIC
 	help
 	  Say Y here if you are using Ambarella A2S.
-
-config PLAT_AMBARELLA_A3
-	bool "A3"
-	select CPU_ARM926T
-	select PLAT_AMBARELLA_GENERIC
-	help
-	  Say Y here if you are using Ambarella A3.
 
 config PLAT_AMBARELLA_A5S
 	bool "A5S"
@@ -108,6 +105,7 @@ config PLAT_AMBARELLA_I1_ARM11
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	#select PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
+	select PLAT_AMBARELLA_SUPPORT_USB
 	help
 	  Say Y here if you are using Ambarella I1 ARM11.
 
@@ -119,6 +117,7 @@ config PLAT_AMBARELLA_I1_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	select PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
+	select PLAT_AMBARELLA_SUPPORT_USB
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.
 

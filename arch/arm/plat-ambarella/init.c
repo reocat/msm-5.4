@@ -99,8 +99,8 @@ int __init ambarella_init_machine(char *board_name)
 #endif
 
 	//Check chip ID
-	if (AMBARELLA_BOARD_CHIP(system_rev) != AMBARELLA_BOARD_CHIP_AUTO)
-		BUG_ON(AMBARELLA_BOARD_CHIP(system_rev) != CHIP_REV);
+	//if (AMBARELLA_BOARD_CHIP(system_rev) != AMBARELLA_BOARD_CHIP_AUTO)
+		//BUG_ON(AMBARELLA_BOARD_CHIP(system_rev) != CHIP_REV);
 
 	ambarella_debug_info = ambarella_phys_to_virt(DEFAULT_DEBUG_START);
 	memset((void *)ambarella_debug_info, 0, DEFAULT_DEBUG_SIZE);

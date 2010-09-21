@@ -20,6 +20,12 @@
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) || \
     (CHIP_REV ==A5S) || (CHIP_REV == A7M) || (CHIP_REV == A7)
 #define VIC_INSTANCES	2
+#elif (CHIP_REV == I1)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#define VIC_INSTANCES	3
+#else
+#define VIC_INSTANCES	2
+#endif
 #else
 #define VIC_INSTANCES	1
 #endif
@@ -65,7 +71,7 @@
 #define VIC_EVENT_REG			VIC_REG(0x2c)
 #define VIC_EDGE_CLR_REG		VIC_REG(0x38)
 
-#if (VIC_INSTANCES == 2)
+#if (VIC_INSTANCES >= 2)
 
 #define VIC2_IRQ_STA_REG		VIC2_REG(0x00)
 #define VIC2_FIQ_STA_REG		VIC2_REG(0x04)
@@ -80,6 +86,24 @@
 #define VIC2_BOTHEDGE_REG		VIC2_REG(0x28)
 #define VIC2_EVENT_REG			VIC2_REG(0x2c)
 #define VIC2_EDGE_CLR_REG		VIC2_REG(0x38)
+
+#endif
+
+#if (VIC_INSTANCES >= 3)
+
+#define VIC3_IRQ_STA_REG		VIC3_REG(0x00)
+#define VIC3_FIQ_STA_REG		VIC3_REG(0x04)
+#define VIC3_RAW_STA_REG		VIC3_REG(0x08)
+#define VIC3_INT_SEL_REG		VIC3_REG(0x0c)
+#define VIC3_INTEN_REG			VIC3_REG(0x10)
+#define VIC3_INTEN_CLR_REG		VIC3_REG(0x14)
+#define VIC3_SOFTEN_REG			VIC3_REG(0x18)
+#define VIC3_SOFTEN_CLR_REG		VIC3_REG(0x1c)
+#define VIC3_PROTEN_REG			VIC3_REG(0x20)
+#define VIC3_SENSE_REG			VIC3_REG(0x24)
+#define VIC3_BOTHEDGE_REG		VIC3_REG(0x28)
+#define VIC3_EVENT_REG			VIC3_REG(0x2c)
+#define VIC3_EDGE_CLR_REG		VIC3_REG(0x38)
 
 #endif
 

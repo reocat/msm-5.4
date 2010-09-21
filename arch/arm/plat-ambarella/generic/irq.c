@@ -39,68 +39,92 @@
 #endif
 
 /* ==========================================================================*/
-static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
-static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(NR_GPIO_IRQS)];
+static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(AMBGPIO_SIZE)];
+static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(AMBGPIO_SIZE)];
 
 /* ==========================================================================*/
 #define AMBARELLA_GPIO_IRQ2GIRQ()	do { \
-	irq -= GPIO_INT_VEC_OFFSET; \
+	irq -= GPIO_INT_VEC(0); \
 	} while (0)
 
 #if (GPIO_INSTANCES == 2)
 #define AMBARELLA_GPIO_IRQ2BASE()	do { \
 	gpio_base = GPIO0_BASE; \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO1_BASE; \
 	} \
 	} while (0)
 #elif (GPIO_INSTANCES == 3)
 #define AMBARELLA_GPIO_IRQ2BASE()	do { \
 	gpio_base = GPIO0_BASE; \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO1_BASE; \
 	} \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO2_BASE; \
 	} \
 	} while (0)
 #elif (GPIO_INSTANCES == 4)
 #define AMBARELLA_GPIO_IRQ2BASE()	do { \
 	gpio_base = GPIO0_BASE; \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO1_BASE; \
 	} \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO2_BASE; \
 	} \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO3_BASE; \
 	} \
 	} while (0)
 #elif (GPIO_INSTANCES == 5)
 #define AMBARELLA_GPIO_IRQ2BASE()	do { \
 	gpio_base = GPIO0_BASE; \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO1_BASE; \
 	} \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO2_BASE; \
 	} \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO3_BASE; \
 	} \
-	if (irq >= NR_VIC_IRQ_SIZE) { \
-		irq -= NR_VIC_IRQ_SIZE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
 		gpio_base = GPIO4_BASE; \
+	} \
+	} while (0)
+#elif (GPIO_INSTANCES == 6)
+#define AMBARELLA_GPIO_IRQ2BASE()	do { \
+	gpio_base = GPIO0_BASE; \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
+		gpio_base = GPIO1_BASE; \
+	} \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
+		gpio_base = GPIO2_BASE; \
+	} \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
+		gpio_base = GPIO3_BASE; \
+	} \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
+		gpio_base = GPIO4_BASE; \
+	} \
+	if (irq >= GPIO_BANK_SIZE) { \
+		irq -= GPIO_BANK_SIZE; \
+		gpio_base = GPIO5_BASE; \
 	} \
 	} while (0)
 #endif
@@ -185,26 +209,31 @@ int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 		sense &= mask;
 		bothedges &= mask;
 		event |= bit;
+		set_irq_handler(irq, handle_edge_irq);
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
 		sense &= mask;
 		bothedges &= mask;
 		event &= mask;
+		set_irq_handler(irq, handle_edge_irq);
 		break;
 	case IRQ_TYPE_EDGE_BOTH:
 		sense &= mask;
 		bothedges |= bit;
 		event &= mask;
+		set_irq_handler(irq, handle_edge_irq);
 		break;
 	case IRQ_TYPE_LEVEL_HIGH:
 		sense |= bit;
 		bothedges &= mask;
 		event |= bit;
+		set_irq_handler(irq, handle_level_irq);
 		break;
 	case IRQ_TYPE_LEVEL_LOW:
 		sense |= bit;
 		bothedges &= mask;
 		event &= mask;
+		set_irq_handler(irq, handle_level_irq);
 		break;
 	default:
 		pr_err("%s: can't set irq type %d for irq 0x%08x@%d\n",
@@ -251,9 +280,20 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 #define AMBARELLA_VIC_IRQ2BASE()	do { } while (0)
 #elif (VIC_INSTANCES == 2)
 #define AMBARELLA_VIC_IRQ2BASE()	do { \
-	if (irq >= VIC2_INT_VEC_OFFSET) { \
-		irq -= VIC2_INT_VEC_OFFSET; \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
 		vic_base = VIC2_BASE; \
+	} \
+	} while (0)
+#elif (VIC_INSTANCES == 3)		//FIX_IONE
+#define AMBARELLA_VIC_IRQ2BASE()	do { \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		vic_base = VIC2_BASE; \
+	} \
+	if (irq >= NR_VIC_IRQ_SIZE) { \
+		irq -= NR_VIC_IRQ_SIZE; \
+		vic_base = VIC3_BASE; \
 	} \
 	} while (0)
 #endif
@@ -397,19 +437,19 @@ static inline u32 ambarella_irq_stat2nr(u32 stat)
 
 static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
-	u32					nr;
+	u32					nr = 0;
 
 	switch (irq) {
 	case GPIO0_IRQ:
 		nr = ambarella_irq_stat2nr(amba_readl(GPIO0_MIS_REG));
 		if (nr < 32)
-			generic_handle_irq(GPIO0_INT_VEC_OFFSET + nr);
+			generic_handle_irq(GPIO_INT_VEC(0) + nr);
 		break;
 
 	case GPIO1_IRQ:
 		nr = ambarella_irq_stat2nr(amba_readl(GPIO1_MIS_REG));
 		if (nr < 32) {
-			generic_handle_irq(GPIO1_INT_VEC_OFFSET + nr);
+			generic_handle_irq(GPIO_INT_VEC(GPIO_BANK_SIZE) + nr);
 			break;
 		}
 
@@ -420,7 +460,8 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 #endif
 		nr = ambarella_irq_stat2nr(amba_readl(GPIO2_MIS_REG));
 		if (nr < 32)
-			generic_handle_irq(GPIO2_INT_VEC_OFFSET + nr);
+			generic_handle_irq(
+				GPIO_INT_VEC(GPIO_BANK_SIZE * 2) + nr);
 #endif
 		break;
 
@@ -428,13 +469,34 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 	case GPIO3_IRQ:
 		nr = ambarella_irq_stat2nr(amba_readl(GPIO3_MIS_REG));
 		if (nr < 32)
-			generic_handle_irq(GPIO3_INT_VEC_OFFSET + nr);
+			generic_handle_irq(
+				GPIO_INT_VEC(GPIO_BANK_SIZE * 3) + nr);
+		break;
+#endif
+
+#if (GPIO_INSTANCES >= 5)
+	case GPIO4_IRQ:
+		nr = ambarella_irq_stat2nr(amba_readl(GPIO4_MIS_REG));
+		if (nr < 32)
+			generic_handle_irq(
+				GPIO_INT_VEC(GPIO_BANK_SIZE * 4) + nr);
+		break;
+#endif
+
+#if (GPIO_INSTANCES >= 6)
+	case GPIO5_IRQ:
+		nr = ambarella_irq_stat2nr(amba_readl(GPIO5_MIS_REG));
+		if (nr < 32)
+			generic_handle_irq(
+				GPIO_INT_VEC(GPIO_BANK_SIZE * 5) + nr);
 		break;
 #endif
 
 	default:
 		break;
 	}
+
+	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, nr);
 }
 
 /* ==========================================================================*/
@@ -443,8 +505,8 @@ void __init ambarella_init_irq(void)
 	u32					i;
 
 #ifdef CONFIG_PLAT_AMBARELLA_CORTEX
-	gic_dist_init(0, __io(AMBARELLA_VA_ID_BASE), 32);
-	gic_cpu_init(0, __io(AMBARELLA_VA_IC_BASE));
+	gic_dist_init(0, __io(AMBARELLA_VA_GIC_DIST_BASE), 32);
+	gic_cpu_init(0, __io(AMBARELLA_VA_GIC_CPU_BASE));
 #else
 	/* Set VIC sense and event type for each entry */
 	amba_writel(VIC_SENSE_REG, 0x00000000);
@@ -455,6 +517,12 @@ void __init ambarella_init_irq(void)
 	amba_writel(VIC2_SENSE_REG, 0x00000000);
 	amba_writel(VIC2_BOTHEDGE_REG, 0x00000000);
 	amba_writel(VIC2_EVENT_REG, 0x00000000);
+#endif
+
+#if (VIC_INSTANCES >= 3)
+	amba_writel(VIC3_SENSE_REG, 0x00000000);
+	amba_writel(VIC3_BOTHEDGE_REG, 0x00000000);
+	amba_writel(VIC3_EVENT_REG, 0x00000000);
 #endif
 
 	/* Disable all IRQ */
@@ -470,50 +538,55 @@ void __init ambarella_init_irq(void)
 	amba_writel(VIC2_EDGE_CLR_REG, 0xffffffff);
 #endif
 
-	ambarella_irq_set_type(USBVBUS_IRQ, IRQ_TYPE_LEVEL_HIGH);
-
-	/* Setup VIC IRQs */
-	for (i = VIC_INT_VEC_OFFSET; i < NR_VIC_IRQS; i++) {
-		set_irq_chip(i, &ambarella_irq_chip);
-
-		if (i == VOUT_IRQ ||
-		    i == VIN_IRQ ||
-		    i == VDSP_IRQ ||
-		    i == TIMER1_IRQ ||
-		    i == TIMER2_IRQ ||
-		    i == TIMER3_IRQ ||
-		    i == WDT_IRQ ||
-		    i == CFCD1_IRQ ||
-		    i == XDCD_IRQ)
-			set_irq_handler(i, handle_edge_irq);
-#if (VIC_INSTANCES >= 2)
-		else if (i == SDCD_IRQ ||
-			 i == IDSP_ERROR_IRQ ||
-			 i == VOUT_SYNC_MISSED_IRQ ||
-			 i == CD2ND_BIT_CD_IRQ ||
-			 i == AUDIO_ORC_IRQ ||
-			 i == VOUT1_SYNC_MISSED_IRQ ||
-			 i == IDSP_LAST_PIXEL_IRQ ||
-			 i == IDSP_VSYNC_IRQ ||
-			 i == IDSP_SENSOR_VSYNC_IRQ ||
-			 i == VOUT_TV_SYNC_IRQ ||
-			 i == VOUT_LCD_SYNC_IRQ)
-			set_irq_handler(i, handle_edge_irq);
+#if (VIC_INSTANCES >= 3)
+	amba_writel(VIC3_INT_SEL_REG, 0x00000000);
+	amba_writel(VIC3_INTEN_REG, 0x00000000);
+	amba_writel(VIC3_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC3_EDGE_CLR_REG, 0xffffffff);
 #endif
-		else
-			set_irq_handler(i, handle_level_irq);
 
-		set_irq_flags(i, IRQF_VALID);
+	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
+		set_irq_chip(VIC_INT_VEC(i), &ambarella_irq_chip);
+
+		if (VIC_LEVEL_FLAG & (0x1 << i)) {
+			set_irq_handler(VIC_INT_VEC(i), handle_level_irq);
+		} else {
+			set_irq_handler(VIC_INT_VEC(i), handle_edge_irq);
+		}
+		set_irq_flags(VIC_INT_VEC(i), IRQF_VALID);
 	}
+#if (VIC_INSTANCES >= 2)
+	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
+		set_irq_chip(VIC2_INT_VEC(i), &ambarella_irq_chip);
+
+		if (VIC2_LEVEL_FLAG & (0x1 << i)) {
+			set_irq_handler(VIC2_INT_VEC(i), handle_level_irq);
+		} else {
+			set_irq_handler(VIC2_INT_VEC(i), handle_edge_irq);
+		}
+		set_irq_flags(VIC2_INT_VEC(i), IRQF_VALID);
+	}
+#endif
+#if (VIC_INSTANCES >= 3)
+	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
+		set_irq_chip(VIC3_INT_VEC(i), &ambarella_irq_chip);
+
+		if (VIC3_LEVEL_FLAG & (0x1 << i)) {
+			set_irq_handler(VIC3_INT_VEC(i), handle_level_irq);
+		} else {
+			set_irq_handler(VIC3_INT_VEC(i), handle_edge_irq);
+		}
+		set_irq_flags(VIC3_INT_VEC(i), IRQF_VALID);
+	}
+#endif
 #endif
 
 	/* Setup GPIO IRQs */
-	for (i = GPIO_INT_VEC_OFFSET; i < NR_IRQS; i++) {
-		set_irq_chip(i, &ambarella_gpio_irq_chip);
-		set_irq_handler(i, handle_level_irq);
-		set_irq_flags(i, IRQF_VALID);
-		__clear_bit((i - GPIO_INT_VEC_OFFSET),
-			ambarella_gpio_wakeup_bit);
+	for (i = 0; i < AMBGPIO_SIZE; i++) {
+		set_irq_chip(GPIO_INT_VEC(i), &ambarella_gpio_irq_chip);
+		set_irq_handler(GPIO_INT_VEC(i), handle_level_irq);
+		__clear_bit(i, ambarella_gpio_wakeup_bit);
+		set_irq_flags(GPIO_INT_VEC(i), IRQF_VALID);
 	}
 	set_irq_chained_handler(GPIO0_IRQ, ambarella_gpio_irq_handler);
 	set_irq_chained_handler(GPIO1_IRQ, ambarella_gpio_irq_handler);
@@ -524,6 +597,12 @@ void __init ambarella_init_irq(void)
 #endif
 #if (GPIO_INSTANCES >= 4)
 	set_irq_chained_handler(GPIO3_IRQ, ambarella_gpio_irq_handler);
+#endif
+#if (GPIO_INSTANCES >= 5)
+	set_irq_chained_handler(GPIO4_IRQ, ambarella_gpio_irq_handler);
+#endif
+#if (GPIO_INSTANCES >= 6)
+	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
 #endif
 }
 
@@ -541,6 +620,9 @@ struct ambarella_vic_pm_info {
 struct ambarella_vic_pm_info ambarella_vic_pm;
 #if (VIC_INSTANCES >= 2)
 struct ambarella_vic_pm_info ambarella_vic2_pm;
+#endif
+#if (VIC_INSTANCES >= 3)
+struct ambarella_vic_pm_info ambarella_vic3_pm;
 #endif
 
 u32 ambarella_irq_suspend(u32 level)
@@ -563,8 +645,17 @@ u32 ambarella_irq_suspend(u32 level)
 	ambarella_vic2_pm.vic_bothedge_reg = amba_readl(VIC2_BOTHEDGE_REG);
 	ambarella_vic2_pm.vic_event_reg = amba_readl(VIC2_EVENT_REG);
 #endif
+#if (VIC_INSTANCES >= 3)
+	ambarella_vic3_pm.vic_int_sel_reg = amba_readl(VIC3_INT_SEL_REG);
+	ambarella_vic3_pm.vic_inten_reg = amba_readl(VIC3_INTEN_REG);
+	ambarella_vic3_pm.vic_soften_reg = amba_readl(VIC3_SOFTEN_REG);
+	ambarella_vic3_pm.vic_proten_reg = amba_readl(VIC3_PROTEN_REG);
+	ambarella_vic3_pm.vic_sense_reg = amba_readl(VIC3_SENSE_REG);
+	ambarella_vic3_pm.vic_bothedge_reg = amba_readl(VIC3_BOTHEDGE_REG);
+	ambarella_vic3_pm.vic_event_reg = amba_readl(VIC3_EVENT_REG);
+#endif
 
-	for (i = 0; i < NR_GPIO_IRQS; i++) {
+	for (i = 0; i < AMBGPIO_SIZE; i++) {
 		if (test_bit(i, ambarella_gpio_wakeup_bit)) {
 			__ambarella_gpio_enable_irq(i);
 		} else {
@@ -582,6 +673,14 @@ u32 ambarella_irq_suspend(u32 level)
 #if (GPIO_INSTANCES >= 4)
 	pr_debug("%s: GPIO3_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO3_IE_REG));
+#endif
+#if (GPIO_INSTANCES >= 5)
+	pr_debug("%s: GPIO4_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO4_IE_REG));
+#endif
+#if (GPIO_INSTANCES >= 6)
+	pr_debug("%s: GPIO5_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO5_IE_REG));
 #endif
 
 	return 0;
@@ -611,8 +710,19 @@ u32 ambarella_irq_resume(u32 level)
 	amba_writel(VIC2_BOTHEDGE_REG, ambarella_vic2_pm.vic_bothedge_reg);
 	amba_writel(VIC2_EVENT_REG, ambarella_vic2_pm.vic_event_reg);
 #endif
+#if (VIC_INSTANCES >= 3)
+	amba_writel(VIC3_INT_SEL_REG, ambarella_vic3_pm.vic_int_sel_reg);
+	amba_writel(VIC3_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC3_INTEN_REG, ambarella_vic3_pm.vic_inten_reg);
+	amba_writel(VIC3_SOFTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC3_SOFTEN_REG, ambarella_vic3_pm.vic_soften_reg);
+	amba_writel(VIC3_PROTEN_REG, ambarella_vic3_pm.vic_proten_reg);
+	amba_writel(VIC3_SENSE_REG, ambarella_vic3_pm.vic_sense_reg);
+	amba_writel(VIC3_BOTHEDGE_REG, ambarella_vic3_pm.vic_bothedge_reg);
+	amba_writel(VIC3_EVENT_REG, ambarella_vic3_pm.vic_event_reg);
+#endif
 
-	for (i = 0; i < NR_GPIO_IRQS; i++) {
+	for (i = 0; i < AMBGPIO_SIZE; i++) {
 		if (test_bit(i, ambarella_gpio_irq_bit)) {
 			__ambarella_gpio_enable_irq(i);
 		} else {
@@ -630,6 +740,14 @@ u32 ambarella_irq_resume(u32 level)
 #if (GPIO_INSTANCES >= 4)
 	pr_debug("%s: GPIO3_IE_REG = 0x%08X\n",
 		__func__, amba_readl(GPIO3_IE_REG));
+#endif
+#if (GPIO_INSTANCES >= 5)
+	pr_debug("%s: GPIO4_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO4_IE_REG));
+#endif
+#if (GPIO_INSTANCES >= 6)
+	pr_debug("%s: GPIO5_IE_REG = 0x%08X\n",
+		__func__, amba_readl(GPIO5_IE_REG));
 #endif
 
 	return 0;

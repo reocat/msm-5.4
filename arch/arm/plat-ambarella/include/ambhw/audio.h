@@ -2,7 +2,7 @@
  * ambhw/audio.h
  *
  * History:
- *	2008/02/18 - [Allen Wang] created file
+ *	2008/02/18 - [Charles Chiou] created file
  *
  * Copyright (C) 2006-2007, Ambarella, Inc.
  */
