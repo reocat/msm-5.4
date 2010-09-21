@@ -18,8 +18,6 @@
 /****************************************************/
 #if (CHIP_REV == A1)
 #define SPI_MAX_SLAVE_ID 			3
-#elif (CHIP_REV == A5S)
-#define SPI_MAX_SLAVE_ID			6
 #else
 #define SPI_MAX_SLAVE_ID 			7
 #endif
@@ -59,15 +57,9 @@
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7)
 #define SPI_SLAVE_INSTANCES			1
-#define SPI_SUPPORT_ENA_PIN_REVERSIBLE_POLARITY	1
 #define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	1
-#elif (CHIP_REV == A5L)
-#define SPI_SLAVE_INSTANCES			0
-#define SPI_SUPPORT_ENA_PIN_REVERSIBLE_POLARITY	1
-#define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	0
 #else     	
 #define SPI_SLAVE_INSTANCES			0
-#define SPI_SUPPORT_ENA_PIN_REVERSIBLE_POLARITY	0
 #define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	0
 #endif
 

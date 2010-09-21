@@ -26,14 +26,15 @@
 #define __ASM_ARCH_MEMORY_H
 
 /*
- * 64MB DDR Sample	Phisical			Virtual
+ * MAP Sample	Phisical		Virtual			Size
  * --------------------------------------------------------------------------
- * AHB(IO)	0x60000000 - 0x60FFFFFF		0xD8000000 - 0xD8FFFFFF
- * APB(IO)	0x70000000 - 0x70FFFFFF		0xD9000000 - 0xD9FFFFFF
- * PPM		0xC0000000 - 0xC01FFFFF		0xE0000000 - 0xE01FFFFF
- * Linux MEM	0xC0200000 - 0xC15FFFFF		0xC0000000 - 0xC13FFFFF
- * BSB		0xC1600000 - 0xC17FFFFF		(NOLINUX_MEM_V_START + 0x01600000) - (NOLINUX_MEM_V_START + 0x017FFFFF)
- * DSP		0xC1800000 - 0xC3FFFFFF		(NOLINUX_MEM_V_START + 0x01800000) - (NOLINUX_MEM_V_START + 0x03FFFFFF)
+ * AHB(IO)	AHB_PHYS_BASE		AHB_BASE		AHB_SIZE
+ * APB(IO)	APB_PHYS_BASE		APB_BASE		APB_BASE
+ * AXI(IO)	AXI_PHYS_BASE		AXI_BASE		AXI_SIZE
+ * PPM		DEFAULT_MEM_START	NOLINUX_MEM_V_START	CONFIG_AMBARELLA_PPM_SIZE
+ * Linux MEM	PHYS_OFFSET		CONFIG_VMSPLIT_xG	Linux MEM Size
+ * BSB		BSB_START		BSB_BASE		BSB_SIZE
+ * DSP		DSP_START		DSP_BASE		DSP_SIZE
  */
 
 /* ==========================================================================*/
@@ -85,7 +86,11 @@
 #define DEFAULT_SSS_MAGIC2		(0x19531110)
 
 /* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#define DEFAULT_MEM_START		(0x00000000)
+#else
 #define DEFAULT_MEM_START		(0xc0000000)
+#endif
 #define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
 
 /* ==========================================================================*/

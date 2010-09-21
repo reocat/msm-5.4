@@ -31,32 +31,39 @@
 
 #if (CHIP_REV == A1)
 #define VIN_SMEM_PREVIEW_INSTANCES	0
-#elif (CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+#elif (CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || \
+      (CHIP_REV == A2Q)
 #define VIN_SMEM_PREVIEW_INSTANCES	1
 #else
 #define VIN_SMEM_PREVIEW_INSTANCES	2
 #endif
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7)
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) 	|| \
+    (CHIP_REV == A7) || (CHIP_REV == I1)
 #define VIN_SUPPORT_SLVS_MLVS		1
 #else
 #define VIN_SUPPORT_SLVS_MLVS		0
 #endif
 
-#if (CHIP_REV == A7)
+#if (CHIP_REV == A7) || (CHIP_REV == I1)
 #define VIN_SPPORT_SEPARATE_SLVS_MLVS		1
-#define VIN_SLVS_LANES_MAX			12
 #else
 #define VIN_SPPORT_SEPARATE_SLVS_MLVS		0
 #endif
 
-#if (CHIP_REV == A5S)
+#if (CHIP_REV == A7)
+#define VIN_SLVS_LANES_MAX			12
+#elif (CHIP_REV == I1)
+#define VIN_SLVS_LANES_MAX			8
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 #define VIN_SUPPORT_MIPI		1
 #else
 #define VIN_SUPPORT_MIPI		0
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
 #define VIN_SUPPORT_HAL			1
 #else
 #define VIN_SUPPORT_HAL			0

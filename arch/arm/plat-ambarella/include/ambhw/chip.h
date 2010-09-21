@@ -34,9 +34,8 @@
 #define A6	6000
 #define A7	7000
 #define A7M	7100
+#define I1	7200	
 #define A7L	7500
-
-#define I1      A5S
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
@@ -124,13 +123,18 @@
 	defined(CONFIG_ARCH_A7M) ||	     \
 	defined(CONFIG_ARCH_MMP2_A7M)
 #define CHIP_REV	A7M
+#elif	defined(CONFIG_ARCH_AMBARELLA_I1) || \
+	defined(CONFIG_ARCH_I1) ||	     \
+	defined(CONFIG_ARCH_MMP2_I1)
+#define CHIP_REV	I1
 #else
 #error "Undefined CHIP_REV"
 #endif
 #endif /* CUSTOM_CHIP_REV */
 #endif /* __KERNEL__ */
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)
+#if (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) || 	\
+    (CHIP_REV == I1)
 #define	BROKEN_UNALIGNED_ACCESS_SUPPORT		1
 #endif
 

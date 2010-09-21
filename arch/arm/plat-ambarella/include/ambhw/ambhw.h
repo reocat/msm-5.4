@@ -13,7 +13,6 @@
 #if !defined(__KERNEL__)
 #include <ambhw/core.h>
 #endif
-#include <ambhw/intvec.h>
 #include <ambhw/ahb.h>
 #include <ambhw/apb.h>
 

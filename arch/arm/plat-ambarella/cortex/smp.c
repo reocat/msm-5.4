@@ -48,7 +48,7 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 {
 	trace_hardirqs_off();
 
-	gic_cpu_init(0, __io(AMBARELLA_VA_IC_BASE));
+	gic_cpu_init(0, __io(AMBARELLA_VA_GIC_CPU_BASE));
 
 	spin_lock(&boot_lock);
 	spin_unlock(&boot_lock);

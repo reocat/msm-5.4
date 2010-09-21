@@ -2190,7 +2190,6 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 
 	udc = platform_get_drvdata(pdev);
 	udc->sys_suspended = 1;
-	disable_irq(USBVBUS_IRQ);
 	disable_irq(USBC_IRQ);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
@@ -2211,7 +2210,6 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	udc = platform_get_drvdata(pdev);
 	udc->sys_suspended = 0;
 	enable_irq(USBC_IRQ);
-	enable_irq(USBVBUS_IRQ);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 

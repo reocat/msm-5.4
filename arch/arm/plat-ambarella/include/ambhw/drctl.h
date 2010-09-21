@@ -289,7 +289,7 @@
 #define DRAM_DQS_SYNC_CLK90_DQS0	0x00000040
 #define DRAM_DQS_SYNC_ROUND_TRIP(x)	(x)
 
-#elif (CHIP_REV == A7) || (CHIP_REV == A5L)
+#elif (CHIP_REV == A7) || (CHIP_REV == A5L) || (CHIP_REV == A5S)
 
 #define DRAM_CTL_OFFSET			0x00
 #define DRAM_CFG_OFFSET			0x04
@@ -398,7 +398,7 @@
 /* DRAM_MODE_REG */
 #define DRAM_MODE_BUSY			0x80000000
 #define DRAM_MODE_WR			0x01000000
-#define DRAM_MODE_ADDR			((x) << 16)
+#define DRAM_MODE_ADDR(x)		((x) << 16)
 #define DRAM_MODE_DATA(x)		((x) & 0xffff)
 
 #define DRAM_MODE_REG0_WRITE0		0x01000000
@@ -451,8 +451,8 @@
 #define DRAM_PADS_FORCE			0x00004000
 #define DRAM_PADS_FORCE_IMPP(x)		((x) << 11)
 #define DRAM_PADS_FORCE_IMPN(x)		((x) << 8)
-#define DRAM_PADS_TERM(x)		((x) << 5)
-#define DRAM_PADS_DDS(x)		((x) << 2)
+#define DRAM_PADS_TERM(x)		(((x) & 0x7) << 5)
+#define DRAM_PADS_DDS(x)		(((x) & 0x7) << 2)
 #define DRAM_PADS_GDDR3			0x00000002
 #define DRAM_PADS_NOTERM		0x00000001
 #define PAD_RESET_MASK			0xfffdffff

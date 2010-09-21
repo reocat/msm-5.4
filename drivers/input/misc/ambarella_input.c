@@ -73,7 +73,10 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 
 	pbinfo = (struct ambarella_input_board_info *)devid;
 
-	gpio_id = irq - GPIO_INT_VEC_OFFSET;
+	gpio_id = irq_to_gpio(irq);
+	if (gpio_id < 0)
+		goto ambarella_gpio_irq_exit;
+
 	level = ambarella_gpio_get(gpio_id);
 
 	if (!pbinfo->pkeymap)

@@ -68,6 +68,7 @@
 #define ETH_OFFSET			0xe000
 #define ETH_DMA_OFFSET			0xf000
 #define VIC2_OFFSET			0x10000
+#define VIC3_OFFSET			0x1c000
 #define VOUT2_OFFSET			0x11000
 #define VOUT_CLUT_OFFSET		0x11000
 #define DMA_FIOS_OFFSET			0x12000
@@ -120,6 +121,7 @@
 #define ETH2_BASE			(AHB_BASE + ETH2_OFFSET)
 #define ETH2_DMA_BASE			(AHB_BASE + ETH2_DMA_OFFSET)
 #define FACE_DETECTION_BASE		(AHB_BASE + FACE_DETECTION_OFFSET)
+#define VIC3_BASE			(AHB_BASE + VIC3_OFFSET)
 
 /* AHB slave registers */
 
@@ -154,6 +156,7 @@
 #define ETH2_REG(x)			(ETH2_BASE + (x))
 #define ETH2_DMA_REG(x)			(ETH2_DMA_BASE + (x))
 #define FACE_DETECTION_REG(x)		(FACE_DETECTION_BASE + (x))
+#define VIC3_REG(x)			(VIC3_BASE + (x))
 
 /*----------------------------------------------------------------------------*/
 
@@ -185,6 +188,7 @@
 
 #define GPIO4_OFFSET			0x11000
 #define SPI3_OFFSET			0x12000
+#define GPIO5_OFFSET			0x12000
 
 #define SPI_SLAVE_OFFSET		0x1e000
 #define UART1_OFFSET			0x1f000
@@ -224,6 +228,7 @@
 #define GPIO4_BASE			(APB_BASE + GPIO4_OFFSET)
 #define SPI3_BASE			(APB_BASE + SPI3_OFFSET)
 #define IDCS_BASE			(APB_BASE + IDCS_OFFSET)
+#define GPIO5_BASE			(APB_BASE + GPIO5_OFFSET)
 
 /* APB slave registers */
 
@@ -253,6 +258,7 @@
 #define GPIO4_REG(x)			(GPIO4_BASE + (x))
 #define SPI3_REG(x)			(SPI3_BASE + (x))
 #define IDCS_REG(x)			(IDCS_BASE + (x))
+#define GPIO5_REG(x)			(GPIO5_BASE + (x))
 
 /* DSP Debug ports */
 
