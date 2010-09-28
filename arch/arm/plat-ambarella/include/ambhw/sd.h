@@ -22,10 +22,10 @@
      (CHIP_REV == A5S) || (CHIP_REV == A5L)  || (CHIP_REV == A7))
 #define SD_INSTANCES			1
 #else
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
-#define SD_INSTANCES			2
-#else
+#if defined(PLAT_AMBARELLA_TMP_A5S_FOR_IONE)
 #define SD_INSTANCES			1
+#else
+#define SD_INSTANCES			2
 #endif
 #endif
 

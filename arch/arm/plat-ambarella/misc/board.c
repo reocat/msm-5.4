@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/board.c
+ * arch/arm/plat-ambarella/misc/board.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -49,6 +49,13 @@
 #include <mach/gpio.h>
 #include <mach/board.h>
 
+/* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 struct ambarella_board_info ambarella_board_generic = {
 	.power_detect	= {
 		.irq_gpio	= -1,

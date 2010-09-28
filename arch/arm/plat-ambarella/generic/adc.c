@@ -36,6 +36,12 @@
 #include <plat/adc.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 #if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) ||\
      (CHIP_REV == A7) || (CHIP_REV == A5L))
 #undef ADC_ONE_SHOT
@@ -507,6 +513,7 @@ struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
 
 	.scan_delay		= 20,
 };
+AMBA_ADC_PARAM_CALL(ambarella_platform_adc_controller0, 0644);
 
 struct resource ambarella_adc_resources[] = {
 	[0] = {

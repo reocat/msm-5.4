@@ -912,6 +912,14 @@ void __init reserve_node_zero(pg_data_t *pgdat)
 					BOOTMEM_DEFAULT);
 			}
 		}
+
+		if (get_ambarella_bstmem_phys() != AMB_BST_INVALID) {
+			pr_info("\t--:\t0x%08x[0x%08x]\tTemp\n",
+				get_ambarella_bstmem_phys(),
+				AMB_BST_VALID_SIZE);
+			reserve_bootmem_node(pgdat, get_ambarella_bstmem_phys(),
+				AMB_BST_VALID_SIZE, BOOTMEM_DEFAULT);
+		}
 	}
 #endif
 

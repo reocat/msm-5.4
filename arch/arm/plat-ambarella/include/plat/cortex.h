@@ -33,6 +33,24 @@
 #define AMBARELLA_VA_L2CC_BASE		(AXI_BASE + 0x00002000)
 
 /* ==========================================================================*/
+#define PROCESSOR_START_0		(0)
+#define PROCESSOR_START_1		(1)
+#define PROCESSOR_START_2		(2)
+#define PROCESSOR_START_3		(3)
+
+#define PROCESSOR_STATUS_0		(4)
+#define PROCESSOR_STATUS_1		(5)
+#define PROCESSOR_STATUS_2		(6)
+#define PROCESSOR_STATUS_3		(7)
+
+#define ICDISER0_MASK			(8)
+#define INTDIS_LOCKER			(9)
+#define INTDIS_STATUS			(10)
+
+#define MACHINE_ID			(11)
+#define ATAG_DATA			(12)
+
+/* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/

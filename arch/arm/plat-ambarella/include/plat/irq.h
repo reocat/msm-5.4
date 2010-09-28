@@ -43,6 +43,8 @@
 #else
 #define NR_VIC_IRQS			NR_SPI_IRQS
 #endif
+#define SGI_INT_VEC(x)			(x)
+#define PPI_INT_VEC(x)			(x)
 #define SPI_INT_VEC(x)			(x)
 
 #define NR_IRQS				VIC_IRQ(NR_VIC_IRQS + AMBGPIO_SIZE)
@@ -288,13 +290,13 @@
 #define ROLLERING_SHUTTER_IRQ		VIC2_INT_VEC(26)
 
 #elif (CHIP_REV == I1)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#if defined(PLAT_AMBARELLA_TMP_A5S_FOR_IONE)
+#define VIC_LEVEL_FLAG			(0x6e5f8ff1)
+#define VIC2_LEVEL_FLAG			(0x00028316)
+#else
 #define VIC_LEVEL_FLAG			(0x4e5f8ff1)
 #define VIC2_LEVEL_FLAG			(0x073a031e)
 #define VIC3_LEVEL_FLAG			(0x0ffffc02)
-#else
-#define VIC_LEVEL_FLAG			(0x6e5f8ff1)
-#define VIC2_LEVEL_FLAG			(0x00028316)
 #endif
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
@@ -383,6 +385,12 @@
 #define CODING_ORC1_IRQ			VIC2_INT_VEC(29)
 #define CODING_ORC2_IRQ			VIC2_INT_VEC(30)
 #define CODING_ORC3_IRQ			VIC2_INT_VEC(31)
+
+#define GLOBAL_TIMER_IRQ		PPI_INT_VEC(27)
+#define LEGACY_FIQ			PPI_INT_VEC(28)
+#define LOCAL_TIMER_IRQ			PPI_INT_VEC(29)
+#define LOCAL_WDOG_IRQ			PPI_INT_VEC(30)
+#define LEGACY_IRQ			PPI_INT_VEC(31)
 
 #define DDD_IRQ				SPI_INT_VEC(153)
 #define DECODE_ERROR_IRQ		SPI_INT_VEC(154)

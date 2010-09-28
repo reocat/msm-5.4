@@ -30,6 +30,12 @@
 #include <plat/spi.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 #define SPI0_CS2_CS3_EN				0x00000002
 void ambarella_spi_cs_activate(struct ambarella_spi_cs_config *cs_config)
 {
@@ -81,6 +87,7 @@ struct resource ambarella_spi0_resources[] = {
 int ambarella_spi0_cs_pins[] = {
 	SSI0_EN0, SSI0_EN1, SSIO_EN2, SSIO_EN3,
 	-1, -1, -1, -1};
+AMBA_SPI_PARAM_CALL(0, ambarella_spi0_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
 	.use_interrupt		= 1,
 	.cs_num			= ARRAY_SIZE(ambarella_spi0_cs_pins),
@@ -118,6 +125,7 @@ struct resource ambarella_spi1_resources[] = {
 };
 
 int ambarella_spi1_cs_pins[] = {SSI_4_N, -1, -1, -1, -1, -1, -1, -1};
+AMBA_SPI_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
 	.use_interrupt		= 1,
 	.cs_num			= ARRAY_SIZE(ambarella_spi1_cs_pins),

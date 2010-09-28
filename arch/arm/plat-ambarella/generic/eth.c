@@ -30,6 +30,12 @@
 #include <plat/eth.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 static struct resource ambarella_eth0_resources[] = {
 	[0] = {
 		.start	= ETH_BASE,
@@ -61,7 +67,9 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	},
 	.is_enabled	= rct_is_eth_enabled,
 };
+AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
 
+/* ==========================================================================*/
 int __init ambarella_init_eth0(unsigned int high, unsigned int low)
 {
 	int					errCode = 0;
@@ -76,6 +84,7 @@ int __init ambarella_init_eth0(unsigned int high, unsigned int low)
 	return errCode;
 }
 
+/* ==========================================================================*/
 struct platform_device ambarella_eth0 = {
 	.name		= "ambarella-eth",
 	.id		= 0,

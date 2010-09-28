@@ -30,6 +30,12 @@
 #include <plat/ir.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 struct resource ambarella_ir_resources[] = {
 	[0] = {
 		.start	= IR_BASE,
@@ -55,6 +61,7 @@ struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
 	.protocol		= AMBA_IR_PROTOCOL_NEC,
 	.debug			= 0,
 };
+AMBA_IR_PARAM_CALL(ambarella_platform_ir_controller0, 0644);
 
 struct platform_device ambarella_ir0 = {
 	.name		= "ambarella-ir",
@@ -67,5 +74,4 @@ struct platform_device ambarella_ir0 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
-
 

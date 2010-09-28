@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/atag.c
+ * arch/arm/plat-ambarella/misc/atag.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -96,6 +96,11 @@ static struct ambarella_mem_hal_desc ambarella_hal_info = {
 	.inited				= 0,
 };
 #endif
+
+static struct ambarella_mem_rev_desc ambarella_bst_info = {
+	.physaddr			= DEFAULT_BST_START,
+	.size				= DEFAULT_BST_SIZE,
+};
 
 void __init ambarella_map_io(void)
 {
@@ -270,6 +275,15 @@ static int __init parse_mem_tag_bsb(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
 
+static int __init parse_mem_tag_bst(const struct tag *tag)
+{
+	ambarella_bst_info.physaddr = tag->u.mem.start;
+	ambarella_bst_info.size = tag->u.mem.size;
+
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_BST, parse_mem_tag_bst);
+
 u32 get_ambarella_ppm_phys(void)
 {
 	return __pfn_to_phys(ambarella_io_desc[2].io_desc.pfn);
@@ -323,6 +337,44 @@ u32 get_ambarella_dspmem_size(void)
 	return ambarella_io_desc[4].io_desc.length;
 }
 EXPORT_SYMBOL(get_ambarella_dspmem_size);
+
+u32 get_ambarella_bstmem_phys(void)
+{
+	if ((ambarella_bst_info.size != AMB_BST_VALID_SIZE) ||
+		(ambarella_bst_info.physaddr < PHYS_OFFSET) ||
+		(ambarella_bst_info.physaddr >= (u32)high_memory))
+		return AMB_BST_INVALID;
+
+	return ambarella_bst_info.physaddr;
+}
+EXPORT_SYMBOL(get_ambarella_bstmem_phys);
+
+u32 *get_ambarella_bstmem_head(void)
+{
+	u32 *pstart_address = NULL;
+	u32 *phead_address = NULL;
+	u32 offset = 0;
+
+	if (ambarella_bst_info.size != AMB_BST_VALID_SIZE)
+		return NULL;
+
+	pstart_address = (u32 *)ambarella_phys_to_virt(
+		ambarella_bst_info.physaddr);
+	for (phead_address = &pstart_address[(AMB_BST_VALID_SIZE >> 2) - 1];
+		phead_address > pstart_address; phead_address--) {
+		if (*phead_address != AMB_BST_MAGIC) {
+			offset = *phead_address;
+			break;
+		}
+	}
+	if (offset == 0)
+		return NULL;
+
+	phead_address -= (offset >> 2);
+
+	return phead_address;
+}
+EXPORT_SYMBOL(get_ambarella_bstmem_head);
 
 u32 ambarella_phys_to_virt(u32 paddr)
 {

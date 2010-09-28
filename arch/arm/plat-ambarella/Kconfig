@@ -60,6 +60,10 @@ config PLAT_AMBARELLA_SUPPORT_USB
 	bool
 	default n
 
+config PLAT_AMBARELLA_TMP_A5S_FOR_IONE
+	bool
+	default n
+
 choice
 	prompt "Chip REV"
 
@@ -106,6 +110,7 @@ config PLAT_AMBARELLA_I1_ARM11
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	#select PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
 	select PLAT_AMBARELLA_SUPPORT_USB
+	select PLAT_AMBARELLA_TMP_A5S_FOR_IONE
 	help
 	  Say Y here if you are using Ambarella I1 ARM11.
 

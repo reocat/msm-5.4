@@ -31,6 +31,12 @@
 #include <plat/idc.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 #define DEFAULT_I2C_CLASS	(I2C_CLASS_HWMON | I2C_CLASS_TV_ANALOG | I2C_CLASS_TV_DIGITAL | I2C_CLASS_SPD)
 
 struct resource ambarella_idc0_resources[] = {
@@ -79,6 +85,7 @@ struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 #endif
 	.get_clock	= get_apb_bus_freq_hz,
 };
+AMBA_IDC_PARAM_CALL(0, ambarella_idc0_platform_info, 0644);
 
 struct platform_device ambarella_idc0 = {
 	.name		= "ambarella-i2c",
@@ -113,6 +120,7 @@ struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
 	.set_pin_muxing	= NULL,
 	.get_clock	= get_apb_bus_freq_hz,
 };
+AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);
 
 struct platform_device ambarella_idc1 = {
 	.name		= "ambarella-i2c",

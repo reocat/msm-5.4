@@ -32,6 +32,12 @@
 #include <plat/sd.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 struct resource ambarella_sd0_resources[] = {
 	[0] = {
 		.start	= SD_BASE,
@@ -154,6 +160,14 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #endif
 	.max_clk		= 48000000,
 };
+module_param_call(sd0_clk_limit, param_set_int, param_get_int,
+	&(ambarella_platform_sd_controller0.clk_limit), 0644);
+module_param_call(sd0_wait_timoout, param_set_int, param_get_int,
+	&(ambarella_platform_sd_controller0.wait_tmo), 0644);
+AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0, 0644);
+#if (SD_HAS_INTERNAL_MUXER == 1)
+AMBA_SD_PARAM_CALL(0, 1, ambarella_platform_sd_controller0, 0644);
+#endif
 
 struct platform_device ambarella_sd0 = {
 	.name		= "ambarella-sd",
@@ -234,6 +248,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 #endif
 	.max_clk		= 48000000,
 };
+module_param_call(sd1_clk_limit, param_set_int, param_get_int,
+	&(ambarella_platform_sd_controller1.clk_limit), 0644);
+module_param_call(sd1_wait_timoout, param_set_int, param_get_int,
+	&(ambarella_platform_sd_controller1.wait_tmo), 0644);
+AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1, 0644);
 
 struct platform_device ambarella_sd1 = {
 #ifdef CONFIG_MMC_AMBARELLA_SDIO

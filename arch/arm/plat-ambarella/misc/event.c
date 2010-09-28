@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/event.c
+ * arch/arm/plat-ambarella/misc/event.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

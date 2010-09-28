@@ -38,6 +38,14 @@
  */
 
 /* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#define DEFAULT_MEM_START		(0x00000000)
+#else
+#define DEFAULT_MEM_START		(0xc0000000)
+#endif
+#define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
+
+/* ==========================================================================*/
 #ifdef CONFIG_VMSPLIT_3G
 #define NOLINUX_MEM_V_START		(0xe0000000)
 #else
@@ -77,21 +85,19 @@
 #define DEFAULT_DSP_BASE		(0x00000000)
 #define DEFAULT_DSP_SIZE		(0x00000000)
 
-#define DEFAULT_DEBUG_START		(0xc00f8000)
+#define DEFAULT_BST_START		(DEFAULT_MEM_START + 0x00000000)
+#define DEFAULT_BST_SIZE		(0x00000000)
+#define AMB_BST_VALID_SIZE		(256)
+#define AMB_BST_MAGIC			(0xffaa5500)
+#define AMB_BST_INVALID			(0xdeadbeaf)
+
+#define DEFAULT_DEBUG_START		(DEFAULT_MEM_START + 0x000f8000)
 #define DEFAULT_DEBUG_SIZE		(0x00008000)
 
 #define DEFAULT_SSS_START		(0xc00f7000)
 #define DEFAULT_SSS_MAGIC0		(0x19790110)
 #define DEFAULT_SSS_MAGIC1		(0x19450107)
 #define DEFAULT_SSS_MAGIC2		(0x19531110)
-
-/* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
-#define DEFAULT_MEM_START		(0x00000000)
-#else
-#define DEFAULT_MEM_START		(0xc0000000)
-#endif
-#define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
 
 /* ==========================================================================*/
 #define __virt_to_bus(x)		__virt_to_phys(x)

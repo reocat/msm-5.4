@@ -24,15 +24,20 @@
 obj-y	+= init.o
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
+obj-y	+= misc/ambsyncproc.o
+obj-y	+= misc/ambasyncproc.o
+obj-y	+= misc/ambevent.o
+obj-y	+= misc/atag.o
+obj-y	+= misc/board.o
+obj-y	+= misc/event.o
+endif
+
+ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
 obj-y	+= generic/adc.o
-obj-y	+= generic/atag.o
 obj-y	+= generic/audio.o
-obj-y	+= generic/board.o
-obj-y	+= generic/config.o
 obj-y	+= generic/crypto.o
 obj-y	+= generic/dma.o
 obj-y	+= generic/eth.o
-obj-y	+= generic/event.o
 obj-y	+= generic/fio.o
 obj-y	+= generic/gpio.o
 obj-y	+= generic/idc.o
@@ -52,14 +57,14 @@ obj-y	+= generic/uhc.o
 obj-y	+= generic/wdt.o
 endif
 
+ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
+obj-y	+= video/ambfb.o
+endif
+
 ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
 obj-$(CONFIG_SMP)		+= cortex/smp.o
+obj-$(CONFIG_SMP)		+= cortex/headsmp.o
 obj-$(CONFIG_HOTPLUG_CPU)	+= cortex/hotplug.o
 obj-$(CONFIG_LOCAL_TIMERS)	+= cortex/localtimer.o
 endif
-
-obj-y	+= video/ambfb.o
-obj-y	+= misc/ambsyncproc.o
-obj-y	+= misc/ambasyncproc.o
-obj-y	+= misc/ambevent.o
 

@@ -31,6 +31,12 @@
 #include <mach/init.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 int rtc_check_capacity(u32 tm)
 {
 	int					errCode = 0;
@@ -195,6 +201,7 @@ struct ambarella_rtc_controller ambarella_platform_rtc_controller0 = {
 	.reset_delay	= 1,
 #endif
 };
+AMBA_RTC_PARAM_CALL(0, ambarella_platform_rtc_controller0, 0644, rtc_set_pos);
 
 struct platform_device ambarella_rtc0 = {
 	.name		= "ambarella-rtc",

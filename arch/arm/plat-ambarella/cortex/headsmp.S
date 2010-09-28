@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/cortex/localtimer.c
+ * arch/arm/plat-ambarella/cortex/headsmp.S
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -21,17 +21,11 @@
  *
  */
 
+#include <linux/linkage.h>
 #include <linux/init.h>
-#include <linux/smp.h>
-#include <linux/clockchips.h>
 
-#include <asm/irq.h>
-#include <asm/smp_twd.h>
-#include <asm/localtimer.h>
+	__INIT
 
-void __cpuinit local_timer_setup(struct clock_event_device *evt)
-{
-	evt->irq = LOCAL_TIMER_IRQ;
-	twd_timer_setup(evt);
-}
+ENTRY(ambarella_secondary_startup)
+	b	secondary_startup
 
