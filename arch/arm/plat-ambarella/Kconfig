@@ -208,6 +208,13 @@ config AMBARELLA_INITRD_PHYS
 
 endmenu
 
+config AMBARELLA_TIMER_HZ
+       int "Kernel HZ (jiffies per second)"
+       range 100 1000
+       default "100"
+       help
+	  Please test and figure out what you need.
+
 endmenu
 
 endif
