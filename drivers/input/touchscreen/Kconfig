@@ -563,6 +563,17 @@ config TOUCHSCREEN_CHACHA_MT4D
           To compile this driver as a module, choose M here: the
           module will be called chacha_mt4d.
 
+config TOUCHSCREEN_TM1510
+        tristate "TM1510 based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a TM1510 based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called tm1510.
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK
