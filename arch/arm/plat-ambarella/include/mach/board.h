@@ -57,6 +57,7 @@ struct ambarella_board_info {
 	struct ambarella_gpio_io_info		vin_reset;
 	struct ambarella_gpio_io_info		vin_trigger;
 	struct ambarella_gpio_irq_info		vin_strobe;
+	struct ambarella_gpio_io_info		vin_hdmi_hpd;
 
 	struct ambarella_gpio_irq_info		flash_charge_ready;
 	struct ambarella_gpio_io_info		flash_enable;
@@ -124,6 +125,7 @@ struct ambarella_board_info {
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##vin_reset##_, arg.vin_reset, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_trigger##_, arg.vin_trigger, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_strobe##_, arg.vin_strobe, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_hdmi_hpd##_, arg.vin_hdmi_hpd, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##flash_charge_ready##_, arg.flash_charge_ready, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##flash_enable##_, arg.flash_enable, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##flash_trigger##_, arg.flash_trigger, perm); \

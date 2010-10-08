@@ -181,6 +181,11 @@ struct ambarella_board_info ambarella_board_generic = {
 		.irq_gpio_val	= GPIO_LOW,
 		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	},
+	.vin_hdmi_hpd	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
 
 	.flash_charge_ready	= {
 		.irq_gpio	= -1,

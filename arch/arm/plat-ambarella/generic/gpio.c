@@ -610,13 +610,13 @@ u32 ambarella_gpio_resume(u32 level)
 }
 
 /* ==========================================================================*/
-void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
+int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 {
 	int					requested = 1;
 
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
-		return;
+		return -1;
 	}
 
 	pr_debug("%s: Gpio[%d] %s, level[%s], delay[%dms].\n",
@@ -627,7 +627,7 @@ void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 		pinfo->active_delay);
 
 	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
-		return;
+		return -1;
 
 	if (gpio_request(pinfo->gpio_id, __func__)) {
 		pr_debug("%s: Cannot request gpio%d!\n",
@@ -645,6 +645,8 @@ void ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 
 	if (requested)
 		gpio_free(pinfo->gpio_id);
+
+	return 0;
 }
 EXPORT_SYMBOL(ambarella_set_gpio_output);
 
@@ -683,13 +685,13 @@ u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 }
 EXPORT_SYMBOL(ambarella_get_gpio_input);
 
-void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
+int ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 {
 	int					requested = 1;
 
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
-		return;
+		return -1;
 	}
 
 	pr_debug("%s: Reset gpio[%d], level[%s], delay[%dms].\n",
@@ -699,7 +701,7 @@ void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 		pinfo->active_delay);
 
 	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS))
-		return;
+		return -1;
 
 	if (gpio_request(pinfo->gpio_id, __func__)) {
 		pr_debug("%s: Cannot request gpio%d!\n",
@@ -716,6 +718,8 @@ void ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 
 	if (requested)
 		gpio_free(pinfo->gpio_id);
+
+	return 0;
 }
 EXPORT_SYMBOL(ambarella_set_gpio_reset);
 
