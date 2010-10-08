@@ -270,7 +270,7 @@ static void __init ambarella_init_durian(void)
 
 	ambarella_board_generic.vin_reset.gpio_id = GPIO(7);
 	ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.vin_reset.active_delay = 1;
+	ambarella_board_generic.vin_reset.active_delay = 100;
 
 	ambarella_board_generic.vin_strobe.irq_gpio = GPIO(21);
 	ambarella_board_generic.vin_strobe.irq_line = gpio_to_irq(21);
