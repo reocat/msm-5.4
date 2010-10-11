@@ -30,6 +30,7 @@ obj-y	+= misc/ambevent.o
 obj-y	+= misc/atag.o
 obj-y	+= misc/board.o
 obj-y	+= misc/event.o
+obj-y	+= misc/ambcache.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
