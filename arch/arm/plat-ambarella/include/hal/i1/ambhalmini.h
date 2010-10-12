@@ -27,7 +27,5 @@ amb_boot_type_t amb_mini_get_boot_type (void) ;
 
 amb_system_configuration_t amb_mini_get_system_configuration (void) ;
 
-amb_hal_success_t amb_set_low_power_operating_mode_func (void) ;
-
 #endif // ifndef _AMBHALMINI_H_INCLUDED_
 

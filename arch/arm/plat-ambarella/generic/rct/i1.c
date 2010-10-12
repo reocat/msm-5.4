@@ -1,5 +1,5 @@
 /**
- * system/src/peripheral/rct/a5s.c
+ * system/src/peripheral/rct/i1.c
  *
  * History:
  *    2005/07/25 - [Charles Chiou] created file
@@ -175,7 +175,8 @@ u32 get_ir_freq_hz(void)
 
 u32 get_host_freq_hz(void)
 {
-	return (u32) amb_get_host_clock_frequency(HAL_BASE_VP);
+	//return (u32) amb_get_host_clock_frequency(HAL_BASE_VP);
+	return 0;
 }
 
 u32 get_sd_freq_hz(void)
@@ -433,10 +434,12 @@ void rct_set_ssi2_pll(void)
 
 void rct_set_host_clk_freq_hz(u32 freq_hz)
 {
+#if 0
 	if (amb_set_host_clock_frequency(HAL_BASE_VP, freq_hz) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("rct_set_host_clk_freq_hz() failed");
 	}
+#endif
 }
 
 /**
@@ -687,18 +690,22 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
 
 void rct_set_usb_ana_on(void)
 {
+#if 0
 	if (amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ON) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_interface_state() failed");
 	}
+#endif
 }
 
 void rct_suspend_usb(void)
 {
+#if 0
 	if (amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_SUSPEND) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_interface_state() failed");
 	}
+#endif
 }
 
 /*
@@ -706,27 +713,33 @@ void rct_suspend_usb(void)
  */
 void rct_set_usb_clk(void)
 {
+#if 0
 	/* FIXME, Set to internal 48MHz by default */
 	if (amb_set_usb_clock_source(HAL_BASE_VP, AMB_USB_CLK_CORE_48MHZ) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_clock_source() failed");
 	}
+#endif
 }
 
 void rct_set_usb_ext_clk(void)
 {
+#if 0
 	if (amb_set_usb_clock_source(HAL_BASE_VP, AMB_USB_CLK_EXT_48MHZ) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_clock_source() failed");
 	}
+#endif
 }
 
 void rct_ena_usb_int_clk(void)
 {
+#if 0
 	if (amb_set_usb_clock_source(HAL_BASE_VP, AMB_USB_CLK_CORE_48MHZ) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_clock_source() failed");
 	}
+#endif
 }
 
 void rct_turn_off_usbp_pll(void)
@@ -760,9 +773,11 @@ void _init_usb_pll(void)
 
 void rct_usb_reset(void)
 {
+#if 0
 	if (amb_usb_subsystem_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_usb_subsystem_soft_reset() failed\r\n");
 	}
+#endif
 }
 
 /**

@@ -21,11 +21,7 @@
     (CHIP_REV ==A5S) || (CHIP_REV == A7M) || (CHIP_REV == A7)
 #define VIC_INSTANCES	2
 #elif (CHIP_REV == I1)
-#if defined(PLAT_AMBARELLA_TMP_A5S_FOR_IONE)
-#define VIC_INSTANCES	2
-#else
 #define VIC_INSTANCES	3
-#endif
 #else
 #define VIC_INSTANCES	1
 #endif

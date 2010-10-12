@@ -290,14 +290,9 @@
 #define ROLLERING_SHUTTER_IRQ		VIC2_INT_VEC(26)
 
 #elif (CHIP_REV == I1)
-#if defined(PLAT_AMBARELLA_TMP_A5S_FOR_IONE)
-#define VIC_LEVEL_FLAG			(0x6e5f8ff1)
-#define VIC2_LEVEL_FLAG			(0x00028316)
-#else
 #define VIC_LEVEL_FLAG			(0x4e5f8ff1)
 #define VIC2_LEVEL_FLAG			(0x073a031e)
 #define VIC3_LEVEL_FLAG			(0x0ffffc02)
-#endif
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
