@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 118263
+ * @version 122757
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
