@@ -27,6 +27,8 @@
 #include <linux/platform_device.h>
 #include <linux/suspend.h>
 #include <linux/delay.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
 
 #include <asm/io.h>
 
@@ -35,8 +37,18 @@
 #include <mach/init.h>
 #include <hal/hal.h>
 
-static int sss_counter = 1;
-module_param(sss_counter, int, 0644);
+/* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
+static int pm_debug_sss_counter = 1;
+module_param(pm_debug_sss_counter, int, 0644);
+
+static int pm_debug_enable_timer_irq = 0;
+module_param(pm_debug_enable_timer_irq, int, 0644);
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
@@ -162,6 +174,7 @@ static int ambarella_pm_enter_standby(void)
 {
 	int					errorCode = 0;
 	unsigned long				flags;
+	struct irq_desc				*desc;
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
@@ -170,10 +183,30 @@ static int ambarella_pm_enter_standby(void)
 	if (ambarella_pm_pre(&flags))
 		BUG();
 
+	if (pm_debug_enable_timer_irq) {
+		desc = irq_to_desc(TIMER1_IRQ);
+		if (desc && desc->chip)
+			desc->chip->disable(TIMER1_IRQ);
+
+		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+		amba_writel(TIMER1_STATUS_REG, 0x800000);
+		amba_writel(TIMER1_RELOAD_REG, 0x800000);
+		amba_writel(TIMER1_MATCH1_REG, 0x0);
+		amba_writel(TIMER1_MATCH2_REG, 0x0);
+		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
+		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
+	}
+
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
 	BUG_ON(result != AMB_HAL_SUCCESS);
 	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
+
+	if (pm_debug_enable_timer_irq) {
+		if (desc && desc->chip)
+			desc->chip->enable(TIMER1_IRQ);
+		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+	}
 
 #if 1
 	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
@@ -187,6 +220,13 @@ static int ambarella_pm_enter_standby(void)
 		"mcr	p15, 0, %[result], c7, c0, 4" :
 		[result] "+r" (result));
 #endif
+
+	if (pm_debug_enable_timer_irq) {
+		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+		if (desc && desc->chip)
+			desc->chip->disable(TIMER1_IRQ);
+	}
+
 #endif
 
 	if (ambarella_pm_post(&flags))
@@ -235,9 +275,9 @@ static int ambarella_pm_enter(suspend_state_t state)
 
 	case PM_SUSPEND_MEM:
 		if ((get_ambarella_sss_entry_virt() != 0) &&
-			(sss_counter > 0)) {
+			(pm_debug_sss_counter > 0)) {
 			errorCode = ambarella_pm_enter_sss();
-			sss_counter--;
+			pm_debug_sss_counter--;
 		}
 		break;
 
@@ -271,7 +311,8 @@ static int ambarella_pm_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
-		if ((get_ambarella_sss_entry_virt() != 0) && (sss_counter > 0))
+		if ((get_ambarella_sss_entry_virt() != 0) &&
+			(pm_debug_sss_counter > 0))
 			valid = 1;
 		break;
 
