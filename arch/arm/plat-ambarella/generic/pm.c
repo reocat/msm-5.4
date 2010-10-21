@@ -50,6 +50,9 @@ module_param(pm_debug_sss_counter, int, 0644);
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
+static int pm_debug_hal_standby = 1;
+module_param(pm_debug_hal_standby, int, 0644);
+
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -208,18 +211,18 @@ static int ambarella_pm_enter_standby(void)
 		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 	}
 
-#if 1
-	result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
-	if (result != AMB_HAL_SUCCESS) {
-		pr_err("%s: amb_set_operating_mode failed(%d)\n",
-			__func__, result);
-		errorCode = -EPERM;
+	if (pm_debug_hal_standby) {
+		result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
+		if (result != AMB_HAL_SUCCESS) {
+			pr_err("%s: amb_set_operating_mode failed(%d)\n",
+				__func__, result);
+			errorCode = -EPERM;
+		}
+	} else {
+		__asm__ __volatile__ (
+			"mcr	p15, 0, %[result], c7, c0, 4" :
+			[result] "+r" (result));
 	}
-#else
-	__asm__ __volatile__ (
-		"mcr	p15, 0, %[result], c7, c0, 4" :
-		[result] "+r" (result));
-#endif
 
 	if (pm_debug_enable_timer_irq) {
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
