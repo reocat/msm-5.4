@@ -1,0 +1,1 @@
+obj-$(CONFIG_SENSORS_IDG2000)	+= idg2000.o
