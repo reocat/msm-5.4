@@ -951,7 +951,7 @@ ambfb_setup_exit:
 	return retval;
 }
 
-static int __init ambfb_probe(struct platform_device *pdev)
+static int __devinit ambfb_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct fb_info				*info;
