@@ -1197,6 +1197,11 @@ MODULE_LICENSE ("GPL");
 #define	PLATFORM_DRIVER		ehci_atmel_driver
 #endif
 
+#ifdef PLAT_AMBARELLA_SUPPORT_USB
+#include "ehci-ambarella.c"
+#define	PLATFORM_DRIVER		ehci_hcd_ambarella_driver
+#endif
+
 #if !defined(PCI_DRIVER) && !defined(PLATFORM_DRIVER) && \
     !defined(PS3_SYSTEM_BUS_DRIVER) && !defined(OF_PLATFORM_DRIVER) && \
     !defined(XILINX_OF_PLATFORM_DRIVER)

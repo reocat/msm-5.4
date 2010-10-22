@@ -27,6 +27,7 @@ obj-$(CONFIG_USB_R8A66597)	+= r8a66597-udc.o
 obj-$(CONFIG_USB_FSL_QE)	+= fsl_qe_udc.o
 obj-$(CONFIG_USB_CI13XXX)	+= ci13xxx_udc.o
 obj-$(CONFIG_USB_S3C_HSOTG)	+= s3c-hsotg.o
+obj-$(CONFIG_USB_AMBARELLA)	+= ambarella_udc.o
 obj-$(CONFIG_USB_LANGWELL)	+= langwell_udc.o
 
 #
@@ -42,6 +43,7 @@ g_file_storage-objs		:= file_storage.o
 g_mass_storage-objs		:= mass_storage.o
 g_printer-objs			:= printer.o
 g_cdc-objs			:= cdc2.o
+g_amb_stream-objs		:= amb_stream.o usbstring.o config.o epautoconf.o
 g_multi-objs			:= multi.o
 g_hid-objs			:= hid.o
 g_dbgp-objs			:= dbgp.o
@@ -59,6 +61,7 @@ obj-$(CONFIG_USB_G_SERIAL)	+= g_serial.o
 obj-$(CONFIG_USB_G_PRINTER)	+= g_printer.o
 obj-$(CONFIG_USB_MIDI_GADGET)	+= g_midi.o
 obj-$(CONFIG_USB_CDC_COMPOSITE) += g_cdc.o
+obj-$(CONFIG_USB_AMB_STREAM)	+= g_amb_stream.o
 obj-$(CONFIG_USB_G_HID)		+= g_hid.o
 obj-$(CONFIG_USB_G_DBGP)	+= g_dbgp.o
 obj-$(CONFIG_USB_G_MULTI)	+= g_multi.o

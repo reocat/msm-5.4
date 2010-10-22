@@ -124,9 +124,12 @@ ifeq ($(CONFIG_ARCH_SA1100),y)
 textofs-$(CONFIG_SA1111) := 0x00208000
 endif
 
+textofs-$(CONFIG_PLAT_AMBARELLA)	:= $(CONFIG_AMBARELLA_TEXTOFS)
+
 # Machine directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
 machine-$(CONFIG_ARCH_AAEC2000)		:= aaec2000
+machine-$(CONFIG_ARCH_AMBARELLA)	:= ambarella
 machine-$(CONFIG_ARCH_AT91)		:= at91
 machine-$(CONFIG_ARCH_BCMRING)		:= bcmring
 machine-$(CONFIG_ARCH_CLPS711X)		:= clps711x
@@ -198,6 +201,7 @@ machine-$(CONFIG_MACH_SPEAR600)		:= spear6xx
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
+plat-$(CONFIG_PLAT_AMBARELLA)	:= ambarella
 plat-$(CONFIG_ARCH_MXC)		:= mxc
 plat-$(CONFIG_ARCH_OMAP)	:= omap
 plat-$(CONFIG_ARCH_S3C64XX)	:= samsung

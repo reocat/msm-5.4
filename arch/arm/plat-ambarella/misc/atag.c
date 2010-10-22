@@ -1,0 +1,551 @@
+/*
+ * arch/arm/plat-ambarella/misc/atag.c
+ *
+ * Author: Anthony Ginger <hfjiang@ambarella.com>
+ *
+ * Copyright (C) 2004-2010, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/bootmem.h>
+#include <linux/dma-mapping.h>
+
+#include <asm/page.h>
+#include <asm/io.h>
+#include <asm/setup.h>
+#include <asm/mach/map.h>
+
+#include <mach/hardware.h>
+#include <hal/hal.h>
+
+/* ==========================================================================*/
+struct ambarella_mem_map_desc {
+	char		name[32];
+	struct map_desc	io_desc;
+};
+static struct ambarella_mem_map_desc ambarella_io_desc[] = {
+	[0] = {
+		.name		= "AHB",
+		.io_desc	= {
+			.virtual= AHB_BASE,
+			.pfn	= __phys_to_pfn(AHB_PHYS_BASE),
+			.length	= AHB_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+	[1] = {
+		.name		= "APB",
+		.io_desc	= {
+			.virtual= APB_BASE,
+			.pfn	= __phys_to_pfn(APB_PHYS_BASE),
+			.length	= APB_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+	[2] = {
+		.name		= "PPM",	/*Private Physical Memory*/
+		.io_desc	= {
+			.virtual= (NOLINUX_MEM_V_START),
+			.pfn	= __phys_to_pfn(DEFAULT_MEM_START),
+			.length	= CONFIG_AMBARELLA_PPM_SIZE,
+			.type	= MT_MEMORY,
+			},
+	},
+	[3] = {
+		.name		= "BSB",	/*Bit Stream Buffer*/
+		.io_desc	= {
+			.virtual= (DEFAULT_BSB_BASE),
+			.pfn	= __phys_to_pfn(DEFAULT_BSB_START),
+			.length	= (DEFAULT_BSB_SIZE),
+			.type	= MT_MEMORY_DAMB,
+			},
+	},
+	[4] = {
+		.name		= "DSP",
+		.io_desc	= {
+			.virtual= (DEFAULT_DSP_BASE),
+			.pfn	= __phys_to_pfn(DEFAULT_DSP_START),
+			.length	= DEFAULT_DSP_SIZE,
+			.type	= MT_MEMORY_DAMB,
+			},
+	},
+};
+
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+static struct ambarella_mem_hal_desc ambarella_hal_info = {
+	.physaddr			= DEFAULT_HAL_START,
+	.size				= DEFAULT_HAL_SIZE,
+	.virtual			= DEFAULT_HAL_BASE,
+	.remapped			= 0,
+	.inited				= 0,
+};
+#endif
+
+static struct ambarella_mem_rev_desc ambarella_bst_info = {
+	.physaddr			= DEFAULT_BST_START,
+	.size				= DEFAULT_BST_SIZE,
+};
+
+void __init ambarella_map_io(void)
+{
+	int					i;
+	u32					iop, ios, iov;
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	u32					halp, hals, halv;
+	unsigned int				hal_type = 0;
+	int					bhal_mapped = 0;
+	struct map_desc				hal_desc;
+
+	halp = ambarella_hal_info.physaddr;
+	hals = ambarella_hal_info.size;
+	halv = ambarella_hal_info.virtual;
+#endif
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
+		if (ambarella_io_desc[i].io_desc.length > 0) {
+			iop = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
+			ios = ambarella_io_desc[i].io_desc.length;
+			iov = ambarella_io_desc[i].io_desc.virtual;
+			pr_info("Ambarella: %s\t= 0x%08x[0x%08x],0x%08x %d\n",
+				ambarella_io_desc[i].name, iop, iov, ios,
+				ambarella_io_desc[i].io_desc.type);
+			iotable_init(&(ambarella_io_desc[i].io_desc), 1);
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+			if ((halv >= iov) && ((halv + hals) <= (iov + ios))) {
+				bhal_mapped = 1;
+				hal_type = ambarella_io_desc[i].io_desc.type;
+			}
+#endif
+		}
+	}
+
+	if (ambarella_io_desc[2].io_desc.length == 0) {
+		iov = ambarella_io_desc[2].io_desc.virtual =
+			__phys_to_virt(DEFAULT_MEM_START);
+		ambarella_io_desc[2].io_desc.pfn =
+			__phys_to_pfn(DEFAULT_MEM_START);
+		ios = ambarella_io_desc[2].io_desc.length = SZ_1M;
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+		if ((halv >= iov) && ((halv + hals) <= (iov + ios))) {
+			bhal_mapped = 1;
+			hal_type = ambarella_io_desc[2].io_desc.type;
+		}
+#endif
+	}
+
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	if (!bhal_mapped) {
+		if (!ambarella_hal_info.remapped) {
+			hal_desc.virtual = halv;
+			hal_desc.pfn = __phys_to_pfn(halp);
+			hal_desc.length = hals;
+			hal_desc.type = MT_MEMORY_IAMB;
+			iotable_init(&hal_desc, 1);
+			bhal_mapped = 1;
+			hal_type = hal_desc.type;
+			ambarella_hal_info.remapped = bhal_mapped;
+		} else {
+			hal_type = MT_MEMORY;
+		}
+	} else {
+		ambarella_hal_info.remapped = bhal_mapped;
+	}
+	if (ambarella_hal_info.remapped)
+		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x %d\n",
+			halp, halv, hals, hal_type);
+	else
+		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x Map Fail!\n",
+			halp, halv, hals);
+#endif
+}
+
+/* ==========================================================================*/
+static int __init dsp_mem_check(u32 start, u32 size)
+{
+	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
+		pr_err("Ambarella: Bad dsp mem start 0x%08x\n", start);
+		return -EINVAL;
+	}
+
+	if (size & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad dsp mem size 0x%08x\n", size);
+		return -EINVAL;
+	}
+
+	ambarella_io_desc[4].io_desc.virtual =
+		(start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
+	ambarella_io_desc[4].io_desc.pfn = __phys_to_pfn(start);
+	ambarella_io_desc[4].io_desc.length = size;
+
+	return 0;
+}
+
+static int __init early_dsp(char *p)
+{
+	unsigned long				start = 0;
+	unsigned long				size = 0;
+	char					*endp;
+
+	start = memparse(p, &endp);
+	if (*endp == ',')
+		size = memparse(endp + 1, NULL);
+
+	return dsp_mem_check(start, size);
+}
+early_param("dsp", early_dsp);
+
+static int __init parse_mem_tag_dsp(const struct tag *tag)
+{
+	return dsp_mem_check(tag->u.mem.start, tag->u.mem.size);
+}
+__tagtable(ATAG_AMBARELLA_DSP, parse_mem_tag_dsp);
+
+/* ==========================================================================*/
+static int __init bsb_mem_check(u32 start, u32 size)
+{
+	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
+		pr_err("Ambarella: Bad bsb mem start 0x%08x\n", start);
+		return -EINVAL;
+	}
+
+	if (size & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad bsb mem size 0x%08x\n", size);
+		return -EINVAL;
+	}
+
+	ambarella_io_desc[3].io_desc.virtual =
+		(start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
+	ambarella_io_desc[3].io_desc.pfn = __phys_to_pfn(start);
+	ambarella_io_desc[3].io_desc.length = size;
+
+	high_memory = __va(__pfn_to_phys(__phys_to_pfn(start)));
+
+	return 0;
+}
+
+static int __init early_bsb(char *p)
+{
+	unsigned long				start = 0;
+	unsigned long				size = 0;
+	char					*endp;
+
+	start = memparse(p, &endp);
+	if (*endp == ',')
+		size = memparse(endp + 1, NULL);
+
+	return bsb_mem_check(start, size);
+}
+early_param("bsb", early_bsb);
+
+/* ==========================================================================*/
+static int __init parse_mem_tag_bsb(const struct tag *tag)
+{
+	return dsp_mem_check(tag->u.mem.start, tag->u.mem.size);
+}
+__tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
+
+static int __init parse_mem_tag_bst(const struct tag *tag)
+{
+	ambarella_bst_info.physaddr = tag->u.mem.start;
+	ambarella_bst_info.size = tag->u.mem.size;
+
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_BST, parse_mem_tag_bst);
+
+u32 get_ambarella_ppm_phys(void)
+{
+	return __pfn_to_phys(ambarella_io_desc[2].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_ppm_phys);
+
+u32 get_ambarella_ppm_virt(void)
+{
+	return ambarella_io_desc[2].io_desc.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_ppm_virt);
+
+u32 get_ambarella_ppm_size(void)
+{
+	return ambarella_io_desc[2].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_ppm_size);
+
+u32 get_ambarella_bsbmem_phys(void)
+{
+	return __pfn_to_phys(ambarella_io_desc[3].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_bsbmem_phys);
+
+u32 get_ambarella_bsbmem_virt(void)
+{
+	return ambarella_io_desc[3].io_desc.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_bsbmem_virt);
+
+u32 get_ambarella_bsbmem_size(void)
+{
+	return ambarella_io_desc[3].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_bsbmem_size);
+
+u32 get_ambarella_dspmem_phys(void)
+{
+	return __pfn_to_phys(ambarella_io_desc[4].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_dspmem_phys);
+
+u32 get_ambarella_dspmem_virt(void)
+{
+	return ambarella_io_desc[4].io_desc.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_dspmem_virt);
+
+u32 get_ambarella_dspmem_size(void)
+{
+	return ambarella_io_desc[4].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_dspmem_size);
+
+u32 get_ambarella_bstmem_phys(void)
+{
+	if ((ambarella_bst_info.size != AMB_BST_VALID_SIZE) ||
+		(ambarella_bst_info.physaddr < PHYS_OFFSET) ||
+		(ambarella_bst_info.physaddr >= (u32)high_memory))
+		return AMB_BST_INVALID;
+
+	return ambarella_bst_info.physaddr;
+}
+EXPORT_SYMBOL(get_ambarella_bstmem_phys);
+
+u32 *get_ambarella_bstmem_head(void)
+{
+	u32 *pstart_address = NULL;
+	u32 *phead_address = NULL;
+	u32 offset = 0;
+
+	if (ambarella_bst_info.size != AMB_BST_VALID_SIZE)
+		return NULL;
+
+	pstart_address = (u32 *)ambarella_phys_to_virt(
+		ambarella_bst_info.physaddr);
+	for (phead_address = &pstart_address[(AMB_BST_VALID_SIZE >> 2) - 1];
+		phead_address > pstart_address; phead_address--) {
+		if (*phead_address != AMB_BST_MAGIC) {
+			offset = *phead_address;
+			break;
+		}
+	}
+	if (offset == 0)
+		return NULL;
+
+	phead_address -= (offset >> 2);
+
+	return phead_address;
+}
+EXPORT_SYMBOL(get_ambarella_bstmem_head);
+
+u32 ambarella_phys_to_virt(u32 paddr)
+{
+	int					i;
+	u32					phystart;
+	u32					phylength;
+	u32					phyoffset;
+	u32					vstart;
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
+		phystart = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
+		phylength = ambarella_io_desc[i].io_desc.length;
+		vstart = ambarella_io_desc[i].io_desc.virtual;
+		if ((paddr >= phystart) && (paddr < (phystart + phylength))) {
+			phyoffset = paddr - phystart;
+			return (vstart + phyoffset);
+		}
+	}
+
+	return __phys_to_virt(paddr);
+}
+EXPORT_SYMBOL(ambarella_phys_to_virt);
+
+u32 ambarella_virt_to_phys(u32 vaddr)
+{
+	int					i;
+	u32					phystart;
+	u32					vlength;
+	u32					voffset;
+	u32					vstart;
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
+		phystart = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
+		vlength = ambarella_io_desc[i].io_desc.length;
+		vstart = ambarella_io_desc[i].io_desc.virtual;
+		if ((vaddr >= vstart) && (vaddr < (vstart + vlength))) {
+			voffset = vaddr - vstart;
+			return (phystart + voffset);
+		}
+	}
+
+	return __virt_to_phys(vaddr);
+}
+EXPORT_SYMBOL(ambarella_virt_to_phys);
+
+/* ==========================================================================*/
+static struct ambarella_mem_rev_info ambarella_reserve_mem_info = {
+	.counter			= 0,
+};
+
+static int __init reserve_mem_check(u32 start, u32 size)
+{
+	u32					index;
+
+	if ((start & MEM_MAP_CHECK_MASK) || (start < PHYS_OFFSET)) {
+		pr_err("Ambarella: Bad revmem start 0x%08x\n", start);
+		return -EINVAL;
+	}
+
+	if (size & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad revmem size 0x%08x\n", size);
+		return -EINVAL;
+	}
+
+	index = ambarella_reserve_mem_info.counter;
+	if (index < MEMORY_RESERVE_MAX_NR) {
+		ambarella_reserve_mem_info.desc[index].physaddr = start;
+		ambarella_reserve_mem_info.desc[index].size = size;
+		ambarella_reserve_mem_info.counter++;
+	} else {
+		pr_err("Ambarella: too much revmem %d!\n", index);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int __init early_revmem(char *p)
+{
+	unsigned long				start = 0;
+	unsigned long				size = 0;
+	char					*endp;
+
+	start = memparse(p, &endp);
+	if (*endp == ',')
+		size = memparse(endp + 1, NULL);
+
+	return reserve_mem_check(start, size);
+}
+early_param("revmem", early_revmem);
+
+static int __init parse_mem_tag_revmem(const struct tag *tag)
+{
+	return reserve_mem_check(tag->u.mem.start, tag->u.mem.size);
+}
+__tagtable(ATAG_AMBARELLA_REVMEM, parse_mem_tag_revmem);
+
+u32 get_ambarella_mem_rev_info(struct ambarella_mem_rev_info *pinfo)
+{
+	int					i;
+	u32					revp, revs;
+
+	if (ambarella_reserve_mem_info.counter)
+		pr_info("Ambarella Reserve Memory:\n");
+
+	for (i = 0; i < ambarella_reserve_mem_info.counter; i++) {
+		revp = ambarella_reserve_mem_info.desc[i].physaddr;
+		revs = ambarella_reserve_mem_info.desc[i].size;
+		pr_info("\t%02d:\t0x%08x[0x%08x]\tNormal\n", i, revp, revs);
+	}
+
+	*pinfo = ambarella_reserve_mem_info;
+
+	return 0;
+}
+EXPORT_SYMBOL(get_ambarella_mem_rev_info);
+
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+
+static int __init hal_mem_check(u32 pstart, u32 size, u32 vstart)
+{
+	if ((pstart & MEM_MAP_CHECK_MASK) || (pstart < DEFAULT_MEM_START)) {
+		pr_err("Ambarella: Bad HAL pstart 0x%08x\n", pstart);
+		return -EINVAL;
+	}
+
+	if (vstart & MEM_MAP_CHECK_MASK) {
+		pr_err("Ambarella: Bad HAL vstart 0x%08x\n", vstart);
+		return -EINVAL;
+	}
+
+	ambarella_hal_info.physaddr = pstart;
+	ambarella_hal_info.size = size;
+	ambarella_hal_info.virtual = vstart;
+
+	return 0;
+}
+
+static int __init early_hal(char *p)
+{
+	unsigned long				pstart = 0;
+	unsigned long				size = 0;
+	unsigned long				vstart = 0;
+	char					*endp;
+
+	pstart = memparse(p, &endp);
+	if (*endp == ',')
+		vstart = memparse(endp + 1, &endp);
+	if (*endp == ',')
+		size = memparse(endp + 1, NULL);
+
+	return hal_mem_check(pstart, size, vstart);
+}
+early_param("hal", early_hal);
+
+static int __init parse_mem_tag_hal(const struct tag *tag)
+{
+	return hal_mem_check(tag->u.ramdisk.start,
+		tag->u.ramdisk.size, tag->u.ramdisk.flags);
+}
+__tagtable(ATAG_AMBARELLA_HAL, parse_mem_tag_hal);
+
+void *get_ambarella_hal_vp(void)
+{
+	if (unlikely((!ambarella_hal_info.remapped))) {
+		pr_err("%s: remap HAL first!\n", __func__);
+		BUG();
+	}
+
+	if (unlikely((!ambarella_hal_info.inited))) {
+		amb_hal_success_t		errorCode;
+
+		errorCode = amb_set_peripherals_base_address(
+			(void *)ambarella_hal_info.virtual,
+			(void *)APB_BASE, (void *)AHB_BASE);
+		BUG_ON(errorCode != AMB_HAL_SUCCESS);
+		ambarella_hal_info.inited = 1;
+	}
+
+	return (void *)ambarella_hal_info.virtual;
+}
+
+void set_ambarella_hal_invalid(void)
+{
+	ambarella_hal_info.inited = 0;
+}
+#endif
+
