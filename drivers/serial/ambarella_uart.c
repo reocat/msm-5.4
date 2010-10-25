@@ -378,7 +378,7 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 		lc |= UART_LC_STOP_1BIT;
 
 	if (termios->c_cflag & PARENB) {
-		if (!(termios->c_cflag & PARODD))
+		if (termios->c_cflag & PARODD)
 			lc |= (UART_LC_EPS | UART_LC_ODD_PARITY);
 		else
 			lc |= (UART_LC_EPS | UART_LC_EVEN_PARITY);
