@@ -26,7 +26,7 @@
 
 /*
  * Ambarella Data Streaming Gadget only needs two bulk endpoints, and it
- * supports single configurations. 
+ * supports single configurations.
  *
  * Module options include:
  *   buflen=N	default N=4096, buffer size used
@@ -548,8 +548,7 @@ static int amb_recv(u8 *buf, u32 len)
 
 
 /*-------------------------------------------------------------------------*/
-static int ag_ioctl(struct inode *inode, struct file *filp,
-	unsigned int cmd, unsigned long arg)
+static long ag_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int rval = 0;
 	struct amb_dev *dev = ag_device;
@@ -1499,7 +1498,7 @@ static void /* __init_or_exit */ amb_unbind (struct usb_gadget *gadget)
 	ag_device = NULL;
 }
 
-static int __init amb_bind (struct usb_gadget *gadget)
+static int __ref amb_bind (struct usb_gadget *gadget)
 {
 	struct amb_dev		*dev;
 	struct usb_ep		*ep;
@@ -1630,7 +1629,7 @@ static void amb_resume (struct usb_gadget *gadget)
 
 static struct file_operations ag_fops = {
 	.owner = THIS_MODULE,
-	.ioctl = ag_ioctl,
+	.unlocked_ioctl = ag_ioctl,
 	.open = ag_open,
 	.read = ag_read,
 	.write = ag_write,
