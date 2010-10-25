@@ -10,6 +10,7 @@
  *	2009/03/05 - [Cao Rongrong] Update from 2.6.22.10
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *	2009/06/30 - [Cao Rongrong] Fix last_desc bug
+ *	2010/10/25 - [Cao Rongrong] Port to 2.6.36+
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -31,13 +32,9 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/io.h>
-#include <linux/ioport.h>
-#include <linux/interrupt.h>
+#include <linux/slab.h>
 #include <linux/platform_device.h>
-#include <linux/delay.h>
 #include <linux/dma-mapping.h>
-#include <asm/dma.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -193,13 +190,14 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct ambarella_pcm_dma_params *dma_data = rtd->dai->cpu_dai->dma_data;
+	struct ambarella_pcm_dma_params *dma_data;
 	size_t totsize = params_buffer_bytes(params);
 	size_t period = params_period_bytes(params);
 	ambarella_dma_req_t *dma_desc;
 	dma_addr_t dma_buff_phys, next_desc_phys, next_rpt;
 	int ret, i;
 
+	dma_data = snd_soc_dai_get_dma_data(rtd->dai->cpu_dai, substream);
 	if (!dma_data)
 		return -ENODEV;
 

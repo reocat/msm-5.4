@@ -7,6 +7,10 @@
  *
  * Based on ak4535.c by Richard Purdie
  *
+ * History:
+ *	2009/05/29 - [Cao Rongrong] Created file
+ *	2010/10/25 - [Cao Rongrong] Port to 2.6.36+
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -16,6 +20,7 @@
 #include <linux/moduleparam.h>
 #include <linux/io.h>
 #include <linux/init.h>
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/pm.h>
 #include <linux/i2c.h>
@@ -94,33 +99,10 @@ static int ak4642_sync(struct snd_soc_codec *codec)
 	int i, r = 0;
 
 	for (i = 0; i < AK4642_CACHEREGNUM; i++)
-		r |= ak4642_write(codec, i, cache[i]);
+		r |= snd_soc_write(codec, i, cache[i]);
 
 	return r;
 };
-
-static int ak4642_setbits(struct snd_soc_codec *codec,
-		unsigned int reg, unsigned int mask)
-{
-	u8 value;
-
-	value = snd_soc_read(codec, reg);
-	value |= mask;
-
-	return snd_soc_write(codec, reg, value);
-}
-
-static int ak4642_clrbits(struct snd_soc_codec *codec,
-		unsigned int reg, unsigned int mask)
-{
-	u8 value;
-
-	value = snd_soc_read(codec, reg);
-	value &= (~mask);
-
-	return snd_soc_write(codec, reg, value);
-}
-
 
 
 /****************   ALSA Controls and widgets   **************/
@@ -244,17 +226,14 @@ static int ak4642_set_input_mux(struct snd_kcontrol *kcontrol,
 
 	switch(val){
 	case AK4642_LINE_IN_ON:
-		ak4642_clrbits(codec, AK4642_PM3, 0x18);
-		ak4642_setbits(codec, AK4642_PM3, 0x06);
-		ak4642_clrbits(codec, AK4642_SIG1, 0x04);
-		ak4642_clrbits(codec, AK4642_SIG1, 0x01);
-		ak4642_clrbits(codec, AK4642_SIG2, 0x20);
+		snd_soc_update_bits(codec, AK4642_PM3, 0x18, 0x06);
+		snd_soc_update_bits(codec, AK4642_SIG1, 0x05, 0);
+		snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0);
 		break;
 	case AK4642_BOTH_MIC_ON:
-		ak4642_setbits(codec, AK4642_PM3, 0x18);
-		ak4642_setbits(codec, AK4642_SIG1, 0x04);
-		ak4642_setbits(codec, AK4642_SIG1, 0x01);
-		ak4642_setbits(codec, AK4642_SIG2, 0x20);
+		snd_soc_update_bits(codec, AK4642_PM3, 0x18, 0x18);
+		snd_soc_update_bits(codec, AK4642_SIG1, 0x05, 0x05);
+		snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0x20);
 		break;
 	case AK4642_INPUT_UNKNOWN:
 		return 0;
@@ -492,7 +471,7 @@ static int ak4642_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 	int clk_id, unsigned int freq, int dir)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	struct ak4642_priv *ak4642 = codec->private_data;
+	struct ak4642_priv *ak4642 = snd_soc_codec_get_drvdata(codec);
 
 	ak4642->sysclk = freq;
 	return 0;
@@ -505,9 +484,9 @@ static int ak4642_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_device *socdev = rtd->socdev;
 	struct snd_soc_codec *codec = socdev->card->codec;
-	struct ak4642_priv *ak4642 = codec->private_data;
+	struct ak4642_priv *ak4642 = snd_soc_codec_get_drvdata(codec);
 	int rate = params_rate(params), fs = 256;
-	u8 mode = ak4642_read_reg_cache(codec, AK4642_MODE2) & 0xc0;
+	u8 mode = snd_soc_read(codec, AK4642_MODE2) & 0xc0;
 
 	if (rate)
 		fs = ak4642->sysclk / rate;
@@ -526,7 +505,7 @@ static int ak4642_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* set rate */
-	ak4642_write(codec, AK4642_MODE2, mode);
+	snd_soc_write(codec, AK4642_MODE2, mode);
 	return 0;
 }
 
@@ -539,14 +518,14 @@ static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	/* set master/slave audio interface */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
-		ak4642_clrbits(codec, AK4642_PM2, 0x08);
+		snd_soc_update_bits(codec, AK4642_PM2, 0x08, 0);
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	mode1 = ak4642_read_reg_cache(codec, AK4642_MODE1);
-	mode2 = ak4642_read_reg_cache(codec, AK4642_MODE2);
+	mode1 = snd_soc_read(codec, AK4642_MODE1);
+	mode2 = snd_soc_read(codec, AK4642_MODE2);
 
 	/* interface format */
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
@@ -569,8 +548,8 @@ static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 	}
 
-	ak4642_write(codec, AK4642_MODE1, mode1);
-	ak4642_write(codec, AK4642_MODE2, mode2);
+	snd_soc_write(codec, AK4642_MODE1, mode1);
+	snd_soc_write(codec, AK4642_MODE2, mode2);
 	return 0;
 }
 
@@ -579,12 +558,12 @@ static int ak4642_mute(struct snd_soc_dai *dai, int mute)
 	struct snd_soc_codec *codec = dai->codec;
 
 	if (mute){
-		ak4642_setbits(codec, AK4642_MODE3, 0x20);
-		ak4642_clrbits(codec, AK4642_PM2, 0x40);
+		snd_soc_update_bits(codec, AK4642_MODE3, 0x20, 0x20);
+		snd_soc_update_bits(codec, AK4642_PM2, 0x40, 0);
 	}
 	else{
-		ak4642_clrbits(codec, AK4642_MODE3, 0x20);
-		ak4642_setbits(codec, AK4642_PM2, 0x40);
+		snd_soc_update_bits(codec, AK4642_MODE3, 0x20, 0);
+		snd_soc_update_bits(codec, AK4642_PM2, 0x40, 0x40);
 	}
 
 	return 0;
@@ -600,11 +579,11 @@ static int ak4642_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 		break;
 	case SND_SOC_BIAS_STANDBY:
-		ak4642_setbits(codec, AK4642_PM1, 0x40);
+		snd_soc_update_bits(codec, AK4642_PM1, 0x40, 0x40);
 		break;
 	case SND_SOC_BIAS_OFF:
 		/* Everything is OFF */
-		ak4642_clrbits(codec, AK4642_PM1, 0x40);
+		snd_soc_update_bits(codec, AK4642_PM1, 0x40, 0);
 		break;
 	}
 	codec->bias_level = level;
@@ -698,28 +677,26 @@ static int ak4642_init(struct snd_soc_device *socdev)
 	ak4642_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	/* Initial some register */
-	ak4642_setbits(codec, AK4642_PM3, 0x06);	/* Select Input to ADC */
-	ak4642_setbits(codec, AK4642_SIG1, 0x10);	/* Open DAC to Line-Out */
-	ak4642_setbits(codec, AK4642_MODE4, 0x01);	/* Open DAC to Headphone */
-	ak4642_setbits(codec, AK4642_PM1, 0x08);	/* Open Line-Out Switch */
-	ak4642_write(codec, AK4642_LIVOL, 0x91);	/* Input 0db */
-	ak4642_write(codec, AK4642_RIVOL, 0x91);	/* Input 0db */
-	ak4642_clrbits(codec, AK4642_SIG1, 0x01);	/* Mic-Amp 0db */
-	ak4642_clrbits(codec, AK4642_SIG2, 0x20);	/* Mic-Amp 0db */
+	/* Select Input to ADC */
+	snd_soc_update_bits(codec, AK4642_PM3, 0x06, 0x06);
+	/* Open DAC to Line-Out */
+	snd_soc_update_bits(codec, AK4642_SIG1, 0x10, 0x10);
+	/* Open DAC to Headphone */
+	snd_soc_update_bits(codec, AK4642_MODE4, 0x01, 0x01);
+	/* Open Line-Out Switch */
+	snd_soc_update_bits(codec, AK4642_PM1, 0x08, 0x08);
+	snd_soc_write(codec, AK4642_LIVOL, 0x91);	/* Input 0db */
+	snd_soc_write(codec, AK4642_RIVOL, 0x91);	/* Input 0db */
+	/* Mic-Amp 0db */
+	snd_soc_update_bits(codec, AK4642_SIG1, 0x01, 0);
+	/* Mic-Amp 0db */
+	snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0);
 
 	ak4642_add_controls(codec);
 	ak4642_add_widgets(codec);
-	ret = snd_soc_init_card(socdev);
-	if (ret < 0) {
-		pr_err("ak4642: failed to register card\n");
-		goto card_err;
-	}
 
 	return ret;
 
-card_err:
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
 pcm_err:
 	kfree(codec->reg_cache);
 
@@ -832,7 +809,7 @@ static int ak4642_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	codec->private_data = ak4642;
+	snd_soc_codec_set_drvdata(codec, ak4642);
 	socdev->card->codec = codec;
 	mutex_init(&codec->mutex);
 	INIT_LIST_HEAD(&codec->dapm_widgets);
@@ -863,7 +840,7 @@ static int ak4642_probe(struct platform_device *pdev)
 
 	gpio_free(setup->rst_pin);
 gpio_request_err:
-	kfree(codec->private_data);
+	kfree(snd_soc_codec_get_drvdata(codec));
 	kfree(codec);
 
 	return ret;
@@ -887,7 +864,7 @@ static int ak4642_remove(struct platform_device *pdev)
 	i2c_unregister_device(codec->control_data);
 	i2c_del_driver(&ak4642_i2c_driver);
 #endif
-	kfree(codec->private_data);
+	kfree(snd_soc_codec_get_drvdata(codec));
 	kfree(codec);
 
 	return 0;

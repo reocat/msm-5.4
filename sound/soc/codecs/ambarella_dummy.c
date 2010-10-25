@@ -13,6 +13,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
 */
+#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
@@ -120,15 +121,6 @@ static int ambdummy_init(struct snd_soc_device *socdev)
 	/* power on device */
 	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
-	ret = snd_soc_init_card(socdev);
-	if (ret < 0) {
-		printk(KERN_ERR "ambarella dummy codec: failed to register card\n");
-		snd_soc_free_pcms(socdev);
-		snd_soc_dapm_free(socdev);
-		kfree(codec->reg_cache);
-		return ret;
-	}
-
 	return ret;
 
 }
@@ -171,7 +163,6 @@ static int ambdummy_remove(struct platform_device *pdev)
 	snd_soc_free_pcms(socdev);
 	snd_soc_dapm_free(socdev);
 
-	kfree(codec->private_data);
 	kfree(codec);
 
 	return 0;
