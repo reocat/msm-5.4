@@ -37,7 +37,7 @@ void platform_cpu_die(unsigned int cpu)
 {
 }
 
-int mach_cpu_disable(unsigned int cpu)
+int platform_cpu_disable(unsigned int cpu)
 {
 	return cpu == 0 ? -EPERM : 0;
 }

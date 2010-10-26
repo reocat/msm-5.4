@@ -159,7 +159,7 @@ u32 rtc_get_alat_time(void)
 #endif
 }
 
-int rtc_set_pos(const char *s, struct kernel_param *kp)
+int rtc_set_pos(const char *val, const struct kernel_param *kp)
 {
 	u32					bak_curt;
 	u32					bak_alat;

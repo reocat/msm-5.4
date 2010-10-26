@@ -208,11 +208,6 @@ choice
 	prompt "ARM system type"
 	default ARCH_VERSATILE
 
-config ARCH_AMBARELLA
-	bool "Ambarella"
-	help
-	  Support for Ambarella Media Processor.
-
 config ARCH_AAEC2000
 	bool "Agilent AAEC-2000 based"
 	select CPU_ARM920T
@@ -221,6 +216,12 @@ config ARCH_AAEC2000
 	select ARCH_USES_GETTIMEOFFSET
 	help
 	  This enables support for systems based on the Agilent AAEC-2000
+
+config ARCH_AMBARELLA
+	bool "Ambarella"
+	depends on MMU
+	help
+	  Support for Ambarella Media Processor.
 
 config ARCH_INTEGRATOR
 	bool "ARM Ltd. Integrator family"
@@ -1196,6 +1197,7 @@ config SMP
 	depends on GENERIC_CLOCKEVENTS
 	select USE_GENERIC_SMP_HELPERS
 	select HAVE_ARM_SCU if ARCH_REALVIEW || ARCH_OMAP4 || ARCH_S5PV310 ||\
+		 PLAT_AMBARELLA_CORTEX || \
 		 ARCH_TEGRA || ARCH_U8500 || ARCH_VEXPRESS_CA9X4
 	help
 	  This enables support for systems with more than one CPU. If you have
@@ -1270,6 +1272,7 @@ config LOCAL_TIMERS
 		ARCH_S5PV310 || ARCH_TEGRA || ARCH_U8500 || ARCH_VEXPRESS_CA9X4)
 	default y
 	select HAVE_ARM_TWD if ARCH_REALVIEW || ARCH_OMAP4 || ARCH_S5PV310 || \
+		PLAT_AMBARELLA_CORTEX || \
 		ARCH_TEGRA || ARCH_U8500 || ARCH_VEXPRESS
 	help
 	  Enable support for local timers on SMP platforms, rather then the

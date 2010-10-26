@@ -27,7 +27,7 @@ extern struct i2c_board_info ambarella_chacha_mt4d_board_info;
 extern struct i2c_board_info ambarella_tm1510_board_info;
 extern struct i2c_board_info ambarella_isl12022m_board_info;
 
-extern struct i2c_board_info ambarella_board_vin_infos[3];
+extern struct i2c_board_info ambarella_board_vin_infos[2];
 
 extern struct i2c_board_info ambarella_board_hdmi_info;
 

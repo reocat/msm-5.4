@@ -68,7 +68,6 @@ extern struct ambarella_eth_platform_info ambarella_eth0_platform_info;
 extern struct ambarella_idc_platform_info ambarella_idc0_platform_info;
 extern struct ambarella_idc_platform_info ambarella_idc1_platform_info;
 
-extern int rtc_set_pos(const char *s, struct kernel_param *kp);
 extern struct ambarella_rtc_controller ambarella_platform_rtc_controller0;
 
 extern struct ambarella_sd_controller ambarella_platform_sd_controller0;

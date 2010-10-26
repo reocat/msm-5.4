@@ -41,6 +41,8 @@
 
 #include <mach/hardware.h>
 
+#define CONFIG_AMBARELLA_GPIO_FORCE_LOCK	0
+
 /* ==========================================================================*/
 static inline int ambarella_gpio_inline_config(u32 base, u32 offset, int func)
 {
@@ -274,12 +276,16 @@ static int ambarella_gpio_chip_get(struct gpio_chip *chip,
 
 	ambarella_chip = to_ambarella_gpio_chip(chip);
 
+#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
 	mutex_lock(&ambarella_gpio_lock);
+#endif
 
 	errorCode = ambarella_gpio_inline_get(ambarella_chip->mem_base,
 		offset);
 
+#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
 	mutex_unlock(&ambarella_gpio_lock);
+#endif
 
 	return errorCode;
 }
@@ -312,11 +318,15 @@ static void ambarella_gpio_chip_set(struct gpio_chip *chip,
 
 	ambarella_chip = to_ambarella_gpio_chip(chip);
 
+#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
 	mutex_lock(&ambarella_gpio_lock);
+#endif
 
 	ambarella_gpio_inline_set(ambarella_chip->mem_base, offset, val);
 
+#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
 	mutex_unlock(&ambarella_gpio_lock);
+#endif
 }
 
 static int ambarella_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
@@ -360,7 +370,7 @@ static void ambarella_gpio_chip_dbg_show(struct seq_file *s,
 		.owner			= THIS_MODULE,			\
 		.request		= ambarella_gpio_request,	\
 		.free			= ambarella_gpio_free,		\
-		.direction_input	= ambarella_gpio_chip_direction_input, \
+		.direction_input	= ambarella_gpio_chip_direction_input,	\
 		.get			= ambarella_gpio_chip_get,	\
 		.direction_output	= ambarella_gpio_chip_direction_output, \
 		.set			= ambarella_gpio_chip_set,	\
@@ -368,7 +378,7 @@ static void ambarella_gpio_chip_dbg_show(struct seq_file *s,
 		.dbg_show		= ambarella_gpio_chip_dbg_show,	\
 		.base			= base_gpio,			\
 		.ngpio			= GPIO_BANK_SIZE,		\
-		.can_sleep		= 1,				\
+		.can_sleep		= CONFIG_AMBARELLA_GPIO_FORCE_LOCK,	\
 		.exported		= 0,				\
 	},								\
 	.mem_base			= reg_base,			\

@@ -28,17 +28,13 @@
 #include <plat/idc.h>
 
 /* ==========================================================================*/
-struct i2c_board_info ambarella_board_vin_infos[3] = {
+struct i2c_board_info ambarella_board_vin_infos[2] = {
 	[0] = {
-		.type			= "amb_vin0",
-		.addr			= 0x00,
+		.type			= "amb_vin",
+		.addr			= 0x01,
 	},
 	[1] = {
 		.type			= "amb_vin1",
-		.addr			= 0x01,
-	},
-	[2] = {
-		.type			= "amb_vin",
 		.addr			= 0x02,
 	},
 };
