@@ -407,9 +407,9 @@ static int ambarella_check_softdis(void)
 	return !!(amba_readl(USB_DEV_CTRL_REG) & USB_DEV_SOFT_DISCON);
 }
 
-static void ambarella_set_softdis(void)
+static void ambarella_set_softdis(int force)
 {
-	if(amba_readl(VIC_RAW_STA_REG) & 1) {
+	if(force || (amba_readl(VIC_RAW_STA_REG) & 1)) {
 		/* note don't change the order */
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_SOFT_DISCON);
 		amba_setbitsl(USB_DEV_CFG_REG, USB_DEV_REMOTE_WAKEUP_EN);
@@ -1906,7 +1906,7 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	/* Good bye, cruel world - Set soft disconnect  */
-	ambarella_set_softdis();
+	ambarella_set_softdis(1);
 
 	udc->gadget.speed = USB_SPEED_UNKNOWN;
 
@@ -2065,9 +2065,15 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, udc);
 
 	udc->controller_info = pdev->dev.platform_data;
+	if (udc->controller_info == NULL) {
+		retval = -ENODEV;
+		goto err_out1;
+	}
+
 	/* Initial USB PLL */
-	if(udc->controller_info->init_pll)
-		udc->controller_info->init_pll();
+	udc->controller_info->init_pll();
+	/* Reset USB */
+	udc->controller_info->reset_usb();
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);
@@ -2075,7 +2081,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	/*initial usb hardware, and set soft disconnect if VBUS is on */
 	ambarella_init_usb();
-	ambarella_set_softdis();
+	ambarella_set_softdis(1);
 
 	/* DMA pool create */
 	udc->desc_dma_pool = dma_pool_create("desc_dma_pool", NULL,

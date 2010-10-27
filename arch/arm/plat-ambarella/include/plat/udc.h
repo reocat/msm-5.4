@@ -160,7 +160,7 @@
 #define USB_DEV_PHY_8BIT		0x00000020		// 0 (RW)
 
 #define USB_DEV_UTMI_DIR_UNI		0x00000000		// 0 (RW) - UDC20 reserved to 0
-#define USB_DEV_UTMI_DIR_BI		0x00000040		// 0 (RW) 
+#define USB_DEV_UTMI_DIR_BI		0x00000040		// 0 (RW)
 
 #define USB_DEV_STS_OUT_NONZERO		0x00000180		// bit mask (RW)
 
@@ -314,7 +314,7 @@
 // for USB_DEV_TEST_MODE_REG
 #define USB_DEV_TEST_MD			0x00000001		// 0 (RW)
 
-// for USB_UDC_REG 
+// for USB_UDC_REG
 #define USB_UDC_EP0_NUM			0x00000000
 #define USB_UDC_EP1_NUM			0x00000001
 #define USB_UDC_EP2_NUM			0x00000002
@@ -403,6 +403,7 @@
 
 struct ambarella_udc_controller {
 	void					(*init_pll)(void);
+	void					(*reset_usb)(void);
 };
 
 /* ==========================================================================*/

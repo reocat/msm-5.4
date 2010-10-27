@@ -44,8 +44,16 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
+static void reset_usb(void)
+{
+#if (CHIP_REV == A5S)||(CHIP_REV == A7)
+	rct_usb_reset();
+#endif
+}
+
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 	.init_pll	= _init_usb_pll,
+	.reset_usb	= reset_usb,
 };
 
 struct platform_device ambarella_udc0 = {
