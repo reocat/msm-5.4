@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
+#include <linux/irq.h>
 
 #include <mach/hardware.h>
 #include <plat/udc.h>
@@ -44,6 +45,16 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
+static void init_usb(void)
+{
+	struct irq_desc *desc = irq_to_desc(TIMER1_IRQ);
+
+	if (desc && desc->chip)
+		desc->chip->set_type(USBVBUS_IRQ, IRQ_TYPE_LEVEL_HIGH);
+
+	_init_usb_pll();
+}
+
 static void reset_usb(void)
 {
 #if (CHIP_REV == A5S)||(CHIP_REV == A7)
@@ -52,7 +63,7 @@ static void reset_usb(void)
 }
 
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
-	.init_pll	= _init_usb_pll,
+	.init_pll	= init_usb,
 	.reset_usb	= reset_usb,
 };
 

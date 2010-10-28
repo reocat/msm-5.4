@@ -407,6 +407,12 @@ static int ambarella_check_softdis(void)
 	return !!(amba_readl(USB_DEV_CTRL_REG) & USB_DEV_SOFT_DISCON);
 }
 
+/*
+ * Name: ambarella_set_softdis
+ * Description:
+ *	If force = 0, set soft disconnected when USB cable inserted.
+ *	If force = 1, set soft disconnected in any case.
+ */
 static void ambarella_set_softdis(int force)
 {
 	if(force || (amba_readl(VIC_RAW_STA_REG) & 1)) {
@@ -1906,7 +1912,7 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	/* Good bye, cruel world - Set soft disconnect  */
-	ambarella_set_softdis(1);
+	ambarella_set_softdis(0);
 
 	udc->gadget.speed = USB_SPEED_UNKNOWN;
 
@@ -2081,7 +2087,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	/*initial usb hardware, and set soft disconnect if VBUS is on */
 	ambarella_init_usb();
-	ambarella_set_softdis(1);
+	ambarella_set_softdis(0);
 
 	/* DMA pool create */
 	udc->desc_dma_pool = dma_pool_create("desc_dma_pool", NULL,
