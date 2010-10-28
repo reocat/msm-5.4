@@ -51,8 +51,11 @@ static int ambarella_chacha_mt4d_get_pendown_state(void)
 
 static void ambarella_chacha_mt4d_clear_penirq(void)
 {
-	ambarella_gpio_ack_irq(
-		ambarella_board_generic.touch_panel_irq.irq_line);
+	struct irq_desc		*desc;
+
+	desc = irq_to_desc(ambarella_board_generic.touch_panel_irq.irq_line);
+	if (desc && desc->chip)
+		desc->chip->ack(ambarella_board_generic.touch_panel_irq.irq_line);
 }
 
 static int ambarella_chacha_mt4d_init_platform_hw(void)
@@ -61,9 +64,7 @@ static int ambarella_chacha_mt4d_init_platform_hw(void)
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode);
 	set_irq_type(ambarella_board_generic.touch_panel_irq.irq_line,
 		ambarella_board_generic.touch_panel_irq.irq_type);
-	ambarella_gpio_ack_irq(
-		ambarella_board_generic.touch_panel_irq.irq_line);
-
+	ambarella_chacha_mt4d_clear_penirq();
 	ambarella_set_gpio_reset(&ambarella_board_generic.touch_panel_reset);
 
 	return 0;

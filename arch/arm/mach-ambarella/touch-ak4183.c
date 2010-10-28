@@ -50,7 +50,11 @@ int ambarella_ak4183_get_pendown_state(void)
 
 void ambarella_ak4183_clear_penirq(void)
 {
-	ambarella_gpio_ack_irq(ambarella_board_generic.touch_panel_irq.irq_line);
+	struct irq_desc		*desc;
+
+	desc = irq_to_desc(ambarella_board_generic.touch_panel_irq.irq_line);
+	if (desc && desc->chip)
+		desc->chip->ack(ambarella_board_generic.touch_panel_irq.irq_line);
 }
 
 int ambarella_ak4183_init_platform_hw(void)
