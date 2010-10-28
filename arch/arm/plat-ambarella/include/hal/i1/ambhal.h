@@ -4,10 +4,10 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 121789
+ * @version 123164
  *
  * @par Introduction:
- * The Ambarella I1 Hardware Abstraction Layer (ambhal) provides an API between
+ * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
  * high level software and the low level hardware registers of the I1 chip.
  *
  * @par Objectives:
@@ -61,11 +61,11 @@
  *
  * @defgroup init_group Initialization
  *
- * Set of api calls used to setup/query HAL. See also @ref init_page.
+ * Set of api calls used to setup/query AMBHAL. See also @ref init_page.
  *
  * @defgroup status_group Command Status
  *
- * Status values returned by HAL api calls.
+ * Status values returned by AMBHAL api calls.
  *
  * @defgroup mode_group Operating Mode
  *
@@ -90,17 +90,17 @@
  * @defgroup arm_group ARM
  *
  * API calls to query the frequency of the arm clock.
- * The arm clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The arm clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup ahb_group AHB
  *
  * API calls to query the frequency of the ahb clock.
- * The ahb clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The ahb clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup apb_group APB
  *
  * API calls to query the frequency of the apb clock.
- * The apb clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The apb clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup audio_group Audio
  *
@@ -109,17 +109,17 @@
  * @defgroup axi_group AXI
  *
  * API calls to query the frequency of the axi clock.
- * The axi clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The axi clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup core_group Core
  *
  * API calls to query the frequency of the core clock.
- * The core clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The core clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup ddr_group DDR
  *
  * API calls to query the frequency of the ddr clock.
- * The ddr clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The ddr clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup sdxc_group SDXC
  *
@@ -128,12 +128,12 @@
  * @defgroup ddd_group 3D
  *
  * API calls to query the frequency of the 3d core clock.
- * The 3d core clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The 3d core clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup cortex_group Cortex
  *
  * API calls to query the frequency of the cortex clock.
- * The cortex clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The cortex clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup flash_group Flash
  *
@@ -146,7 +146,7 @@
  * @defgroup idsp_group IDSP
  *
  * API calls to query the frequency of the idsp clock.
- * The idsp clock frequency cannot be set directly. It is changed by HAL when the operating mode is changed. See also @ref mode_group.
+ * The idsp clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
  * @defgroup ir_group Infrared
  *
@@ -215,7 +215,7 @@
  */
 
 /**
- * @page init_page HAL Loading, Initialization & Usage
+ * @page init_page AMBHAL Loading, Initialization & Usage
  *
  * @par Introduction
  * The ambhal image must be loaded into a 4 byte aligned region of memory by
@@ -228,7 +228,7 @@
  * initialize the ambhal global offset table and to initialize the hardware to
  * a known state. This function must be called after the mmu has been
  * initialized.
- * @warning The HAL image must not be relocated in physical or virtual memory
+ * @warning The AMBHAL image must not be relocated in physical or virtual memory
  * after initialization. The function amb_hal_init() should only be called
  * once.
  * @par Usage
@@ -242,13 +242,13 @@
  * @page mode_page Changing Operating Mode
  *
  * @par Introduction
- * The HAL operating mode represents the current operating status of all the
+ * The AMBHAL operating mode represents the current operating status of all the
  * hardware under the control of HAL.
  * @par
  * The operating mode is defined using the structure ::amb_operating_mode_t.
  * @par Mode Switch
  * When the operating mode is changed the status of the hardware under the
- * control of HAL is changed. For example changing the performance changes
+ * control of AMBHAL is changed. For example changing the performance changes
  * the pll settings to increase/decrease clock frequencies to meet the
  * required new performance setting.
  * @par
@@ -798,7 +798,7 @@ AMB_MS_RESERVED = 0xffffffffUL
 /**
  * The mode for lvds pads
  *
- * @ingroup lvds_mode
+ * @ingroup lvds_group
  */
 
 typedef enum {
@@ -1301,7 +1301,7 @@ static INLINE amb_hal_success_t amb_enable_idsp_clock_observation (void *amb_hal
  * @param[out] amb_core_pll_configuration pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup core_group
  */
@@ -1381,7 +1381,7 @@ static INLINE amb_hal_success_t amb_enable_core_clock_observation (void *amb_hal
  * @param[out] amb_ddr_pll_configuration pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ddr_group
  */
@@ -1461,7 +1461,7 @@ static INLINE amb_hal_success_t amb_enable_ddr_clock_observation (void *amb_hal_
  * @param[out] amb_3d_pll_configuration pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ddd_group
  */
@@ -1541,7 +1541,7 @@ static INLINE amb_hal_success_t amb_enable_3d_clock_observation (void *amb_hal_b
  * @param[out] amb_cortex_pll_configuration pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup cortex_group
  */
@@ -1643,7 +1643,7 @@ static INLINE amb_hal_success_t amb_set_sensor_clock_frequency (void *amb_hal_ba
  * @param[out] amb_sensor_pll_configuration Sensor pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup sensor_group
  */
@@ -1941,7 +1941,7 @@ static INLINE amb_hal_success_t amb_set_lcd_clock_frequency (void *amb_hal_base_
  * @param[out] amb_lcd_pll_configuration Sensor pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup lcd_group
  */
@@ -2068,7 +2068,7 @@ static INLINE amb_hal_success_t amb_set_vout_clock_frequency (void *amb_hal_base
  * @param[out] amb_vout_pll_configuration Sensor pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup vout_group
  */
@@ -2194,7 +2194,7 @@ static INLINE amb_hal_success_t amb_set_audio_clock_frequency (void *amb_hal_bas
  * @param[out] amb_audio_pll_configuration Sensor pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup audio_group
  */
@@ -2320,7 +2320,7 @@ static INLINE amb_hal_success_t amb_set_sdxc_clock_frequency (void *amb_hal_base
  * @param[out] amb_sdxc_pll_configuration Sensor pll configuration information read
  * from pll registers.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup sdxc_group
  */
@@ -2822,7 +2822,7 @@ static INLINE amb_clock_frequency_t amb_get_ms_clock_frequency (void *amb_hal_ba
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ms_delay Requested delay.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ms_group
  */
@@ -2839,7 +2839,7 @@ static INLINE amb_hal_success_t amb_set_ms_sclk_delay (void *amb_hal_base_addres
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ms_delay Requested delay.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ms_group
  */
@@ -2856,7 +2856,7 @@ static INLINE amb_hal_success_t amb_set_ms_sd_input_delay (void *amb_hal_base_ad
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ms_delay Requested delay.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ms_group
  */
@@ -2873,7 +2873,7 @@ static INLINE amb_hal_success_t amb_set_ms_sd_output_delay (void *amb_hal_base_a
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ms_delay Requested delay.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ms_group
  */
@@ -2892,7 +2892,7 @@ static INLINE amb_hal_success_t amb_set_ms_read_delay (void *amb_hal_base_addres
  * @param[out] amb_ms_delay_configuration Memory stick delays read from the delay
  * configuration register.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ms_group
  */
@@ -2909,7 +2909,7 @@ static INLINE amb_hal_success_t amb_get_ms_delay_configuration (void *amb_hal_ba
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ms_status Status of the memory stick controller
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ms_group
  */
@@ -2947,7 +2947,7 @@ static INLINE amb_ms_status_t amb_get_ms_status (void *amb_hal_base_address)
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
@@ -2963,7 +2963,7 @@ static INLINE amb_hal_success_t amb_reset_flash (void *amb_hal_base_address)
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
@@ -2979,7 +2979,7 @@ static INLINE amb_hal_success_t amb_reset_xd (void *amb_hal_base_address)
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
@@ -2995,7 +2995,7 @@ static INLINE amb_hal_success_t amb_reset_cf (void *amb_hal_base_address)
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
@@ -3011,7 +3011,7 @@ static INLINE amb_hal_success_t amb_reset_fio (void *amb_hal_base_address)
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
@@ -3033,7 +3033,7 @@ static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address)
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup watchdog_group
 
@@ -3053,7 +3053,7 @@ static INLINE amb_hal_success_t amb_reset_watchdog (void *amb_hal_base_address)
  * @note This api call is implemented so that it returns ::AMB_HAL_SUCCESS but a warm reset will
  * restart the entire system and so do not expect to do anything else after this call is made.
  *
- * @retval ::AMB_HAL_SUCCESS always returns success.
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup reset_group
  */
@@ -3150,6 +3150,8 @@ static INLINE amb_hal_success_t amb_set_misc_ioctrl_pullupdown (void *amb_hal_ba
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
  *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
+ *
  * @ingroup ioctrl_group
  */
 
@@ -3198,6 +3200,8 @@ static INLINE amb_hal_success_t amb_set_sc_ioctrl_pullupdown (void *amb_hal_base
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ioctrl_group
  */
@@ -3248,6 +3252,8 @@ static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_pullupdown (void *amb_hal_b
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
  *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
+ *
  * @ingroup ioctrl_group
  */
 
@@ -3296,6 +3302,8 @@ static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_pullupdown (void *amb_hal_b
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ioctrl_group
  */
@@ -3346,6 +3354,8 @@ static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_pullupdown (void *amb_hal_
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
  *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
+ *
  * @ingroup ioctrl_group
  */
 
@@ -3394,6 +3404,8 @@ static INLINE amb_hal_success_t amb_set_sd_ioctrl_pullupdown (void *amb_hal_base
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ioctrl_group
  */
@@ -3444,6 +3456,8 @@ static INLINE amb_hal_success_t amb_set_vd1_ioctrl_pullupdown (void *amb_hal_bas
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
  *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
+ *
  * @ingroup ioctrl_group
  */
 
@@ -3492,6 +3506,8 @@ static INLINE amb_hal_success_t amb_set_sensor_ioctrl_pullupdown (void *amb_hal_
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup ioctrl_group
  */
@@ -3559,6 +3575,8 @@ static INLINE amb_hal_success_t amb_enable_hdmi_clock_observation (void *amb_hal
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_sensor_clock_pad_mode The sensor clock pad mode.
  *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
+ *
  * @ingroup sensor_group
  */
 
@@ -3594,7 +3612,6 @@ static INLINE amb_sensor_clock_pad_mode_t amb_get_sensor_clock_pad_mode (void *a
  * physical address 0x60000000)
  *
  * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
- *
  * @retval ::AMB_HAL_FAIL ambhal system failure
  *
  * @ingroup init_group
