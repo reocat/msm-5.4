@@ -34,7 +34,8 @@ struct ambarella_uhc_controller {
 };
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_uhc0;
+extern struct platform_device			ambarella_ehci0;
+extern struct platform_device			ambarella_ohci0;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

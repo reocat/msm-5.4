@@ -1197,7 +1197,7 @@ MODULE_LICENSE ("GPL");
 #define	PLATFORM_DRIVER		ehci_atmel_driver
 #endif
 
-#ifdef PLAT_AMBARELLA_SUPPORT_USB
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_USB
 #include "ehci-ambarella.c"
 #define	PLATFORM_DRIVER		ehci_hcd_ambarella_driver
 #endif

@@ -47,6 +47,7 @@
 #include <plat/timer.h>
 #include <plat/uart.h>
 #include <plat/udc.h>
+#include <plat/uhc.h>
 #include <plat/wdt.h>
 
 /* ==========================================================================*/

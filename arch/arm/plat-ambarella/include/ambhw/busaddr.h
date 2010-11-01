@@ -89,6 +89,10 @@
 #define ETH2_OFFSET			0x18000
 #define ETH2_DMA_OFFSET			0x19000
 
+#define USB_EHCI_OFFSET		0x17000	/* iONE */
+#define USB_OHCI_OFFSET		0x18000
+#define SATA_OFFSET			0x1a000
+
 
 /* AHB slave base addresses */
 #define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
@@ -122,6 +126,9 @@
 #define ETH2_DMA_BASE			(AHB_BASE + ETH2_DMA_OFFSET)
 #define FACE_DETECTION_BASE		(AHB_BASE + FACE_DETECTION_OFFSET)
 #define VIC3_BASE			(AHB_BASE + VIC3_OFFSET)
+#define USB_EHCI_BASE			(AHB_BASE + USB_EHCI_OFFSET)
+#define USB_OHCI_BASE			(AHB_BASE + USB_OHCI_OFFSET)
+#define SATA_BASE			(AHB_BASE + SATA_OFFSET)
 
 /* AHB slave registers */
 
@@ -157,6 +164,10 @@
 #define ETH2_DMA_REG(x)			(ETH2_DMA_BASE + (x))
 #define FACE_DETECTION_REG(x)		(FACE_DETECTION_BASE + (x))
 #define VIC3_REG(x)			(VIC3_BASE + (x))
+#define USB_EHCI_REG(x)		(USB_EHCI_BASE + (x))
+#define USB_OHCI_REG(x)		(USB_OHCI_BASE + (x))
+#define SATA_REG(x)			(SATA_BASE + (x))
+
 
 /*----------------------------------------------------------------------------*/
 

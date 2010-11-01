@@ -31,32 +31,59 @@
 #include <plat/uhc.h>
 
 /* ==========================================================================*/
-struct resource ambarella_uhc_resources[] = {
-#if 0
+struct resource ambarella_ehci_resources[] = {
 	[0] = {
-		.start	= USBDC_BASE,
-		.end	= USBDC_BASE + 0x1FFF,
+		.start	= USB_EHCI_BASE,
+		.end	= USB_EHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= USBC_IRQ,
-		.end	= USBC_IRQ,
+		.start	= USB_EHCI_IRQ,
+		.end	= USB_EHCI_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
-#endif
 };
 
-static struct ambarella_uhc_controller ambarella_platform_uhc_controller0 = {
+static struct ambarella_uhc_controller ambarella_platform_ehci_data = {
 	.init_pll	= NULL,
 };
 
-struct platform_device ambarella_uhc0 = {
-	.name		= "ambarella-uhc",
+struct platform_device ambarella_ehci0 = {
+	.name		= "ambarella-ehci",
 	.id		= -1,
-	.resource	= ambarella_uhc_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_uhc_resources),
+	.resource	= ambarella_ehci_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_ehci_resources),
 	.dev		= {
-		.platform_data		= &ambarella_platform_uhc_controller0,
+		.platform_data		= &ambarella_platform_ehci_data,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+struct resource ambarella_ohci_resources[] = {
+	[0] = {
+		.start	= USB_OHCI_BASE,
+		.end	= USB_OHCI_BASE + 0xFFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= USB_OHCI_IRQ,
+		.end	= USB_OHCI_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct ambarella_uhc_controller ambarella_platform_ohci_data = {
+	.init_pll	= NULL,
+};
+
+struct platform_device ambarella_ohci0 = {
+	.name		= "ambarella-ohci",
+	.id		= -1,
+	.resource	= ambarella_ohci_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_ohci_resources),
+	.dev		= {
+		.platform_data		= &ambarella_platform_ohci_data,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}

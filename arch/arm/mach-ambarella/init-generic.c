@@ -70,6 +70,10 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rtc0,
 	&ambarella_wdt0,
 	&ambarella_udc0,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_USB
+	&ambarella_ehci0,
+	&ambarella_ohci0,
+#endif
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_ir0,
