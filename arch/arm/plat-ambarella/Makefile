@@ -54,12 +54,15 @@ obj-y	+= generic/spi.o
 obj-y	+= generic/timer.o
 obj-y	+= generic/uart.o
 obj-y	+= generic/udc.o
-obj-y	+= generic/uhc.o
 obj-y	+= generic/wdt.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
 obj-y	+= video/ambfb.o
+endif
+
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_USB), y)
+obj-y	+= generic/uhc.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
