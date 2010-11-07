@@ -25,6 +25,13 @@
 #define ETH_INSTANCES	1
 #endif
 
+
+#if (CHIP_REV == I1)
+#define SUPPORT_GMII	1	// Gbit phy
+#else
+#define SUPPORT_GMII	0	// 10/100 bits phy
+#endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/

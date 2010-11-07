@@ -58,8 +58,13 @@
 #define VIN_OFFSET			0x9000
 #define I2S_OFFSET			0xa000
 #define HOST_OFFSET			0xb000
-#define SD2_OFFSET			0xc000
 #define SDIO_OFFSET			0xc000
+
+#if (CHIP_REV == I1)
+#define SD2_OFFSET			0x1b000
+#else
+#define SD2_OFFSET			0xc000
+#endif
 
 #if (CHIP_REV == A6)
 #define MS_OFFSET			0x17000
@@ -417,6 +422,12 @@
 #define DSP_TEXT_BASE_ADDR_CORE		0xf0000000
 #define DSP_TEXT_BASE_ADDR_MDXF		0xf0000000
 #define DSP_TEXT_BASE_ADDR_MEMD		0xf0000000
+
+#elif (CHIP_REV == I1)
+
+#define DSP_TEXT_BASE_ADDR_CORE		0x1900000
+#define DSP_TEXT_BASE_ADDR_MDXF		0x1600000
+#define DSP_TEXT_BASE_ADDR_MEMD		0x1300000
 
 #else
 

@@ -272,6 +272,9 @@ int rct_is_cf_trueide(void)
 
 int rct_is_eth_enabled(void)
 {
+#if 1
+	return 1;
+#else
 	amb_system_configuration_t cfg;
 
 	cfg = amb_get_system_configuration(HAL_BASE_VP);
@@ -279,6 +282,7 @@ int rct_is_eth_enabled(void)
 		return 1;
 	else
 		return 0;
+#endif
 }
 
 void rct_power_down(void)
