@@ -38,14 +38,23 @@ struct ambarella_eth_platform_info {
 	u32					phy_id;
 	struct ambarella_gpio_io_info		mii_power;
 	struct ambarella_gpio_io_info		mii_reset;
+	int					default_clk;
+	int					default_1000_clk;
+	int					default_100_clk;
+	int					default_10_clk;
 
 	int					(*is_enabled)(void);
+	int					(*is_supportclk)(void);
+	void					(*setclk)(u32 freq);
+	u32					(*getclk)(void);
+	u32					(*get_supported)(void);
 };
 #define AMBA_ETH_PARAM_CALL(id, arg, perm) \
 	module_param_cb(eth##id##_napi_weight, &param_ops_int, &(arg.napi_weight), perm); \
 	module_param_cb(eth##id##_max_work_count, &param_ops_int, &(arg.max_work_count), perm); \
 	module_param_cb(eth##id##_mii_id, &param_ops_int, &(arg.mii_id), perm); \
 	module_param_cb(eth##id##_phy_id, &param_ops_uint, &(arg.phy_id), perm); \
+	module_param_cb(eth##id##_default_clk, &param_ops_uint, &(arg.default_clk), perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
 
