@@ -16,13 +16,17 @@
 
 #define _UART_0				0
 #define _UART_1				1
+#define _UART_2				2
+#define _UART_3				3
 
 
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)  
 #define	UART_INSTANCES			2
+#elif (CHIP_REV == I1)  
+#define	UART_INSTANCES			4
 #else
 #define	UART_INSTANCES			1
 #endif
@@ -47,48 +51,83 @@
 #define UART_MS_OFFSET			0x18
 #define UART_SC_OFFSET			0x1c	/* Byte */
 
-#define UART0_RB_REG			UART0_REG(0x00)
-#define UART0_TH_REG			UART0_REG(0x00)
-#define UART0_DLL_REG			UART0_REG(0x00)
-#define UART0_IE_REG			UART0_REG(0x04)
-#define UART0_DLH_REG			UART0_REG(0x04)
-#define UART0_II_REG			UART0_REG(0x08)
-#define UART0_FC_REG			UART0_REG(0x08)
-#define UART0_LC_REG			UART0_REG(0x0c)
-#define UART0_MC_REG			UART0_REG(0x10)
-#define UART0_LS_REG			UART0_REG(0x14)
-#define UART0_MS_REG			UART0_REG(0x18)
-#define UART0_SC_REG			UART0_REG(0x1c)	/* Byte */
+#define UART0_RB_REG			UART0_REG(UART_RB_OFFSET)
+#define UART0_TH_REG			UART0_REG(UART_TH_OFFSET)
+#define UART0_DLL_REG			UART0_REG(UART_DLL_OFFSET)
+#define UART0_IE_REG			UART0_REG(UART_IE_OFFSET)
+#define UART0_DLH_REG			UART0_REG(UART_DLH_OFFSET)
+#define UART0_II_REG			UART0_REG(UART_II_OFFSET)
+#define UART0_FC_REG			UART0_REG(UART_FC_OFFSET)
+#define UART0_LC_REG			UART0_REG(UART_LC_OFFSET)
+#define UART0_MC_REG			UART0_REG(UART_MC_OFFSET)
+#define UART0_LS_REG			UART0_REG(UART_LS_OFFSET)
+#define UART0_MS_REG			UART0_REG(UART_MS_OFFSET)
+#define UART0_SC_REG			UART0_REG(UART_SC_OFFSET)	/* Byte */
 
 #if (UART_INSTANCES >= 2)
 
-#define UART1_RB_REG			UART1_REG(0x00)
-#define UART1_TH_REG			UART1_REG(0x00)
-#define UART1_DLL_REG			UART1_REG(0x00)
-#define UART1_IE_REG			UART1_REG(0x04)
-#define UART1_DLH_REG			UART1_REG(0x04)
-#define UART1_II_REG			UART1_REG(0x08)
-#define UART1_FC_REG			UART1_REG(0x08)
-#define UART1_LC_REG			UART1_REG(0x0c)
-#define UART1_MC_REG			UART1_REG(0x10)
-#define UART1_LS_REG			UART1_REG(0x14)
-#define UART1_MS_REG			UART1_REG(0x18)
-#define UART1_SC_REG			UART1_REG(0x1c)	/* Byte */
+#define UART1_RB_REG			UART1_REG(UART_RB_OFFSET)
+#define UART1_TH_REG			UART1_REG(UART_TH_OFFSET)
+#define UART1_DLL_REG			UART1_REG(UART_DLL_OFFSET)
+#define UART1_IE_REG			UART1_REG(UART_IE_OFFSET)
+#define UART1_DLH_REG			UART1_REG(UART_DLH_OFFSET)
+#define UART1_II_REG			UART1_REG(UART_II_OFFSET)
+#define UART1_FC_REG			UART1_REG(UART_FC_OFFSET)
+#define UART1_LC_REG			UART1_REG(UART_LC_OFFSET)
+#define UART1_MC_REG			UART1_REG(UART_MC_OFFSET)
+#define UART1_LS_REG			UART1_REG(UART_LS_OFFSET)
+#define UART1_MS_REG			UART1_REG(UART_MS_OFFSET)
+#define UART1_SC_REG			UART1_REG(UART_SC_OFFSET)	/* Byte */
 
 #endif  /* UART_INSTANCES >= 2 */
 
-#define UARTX_RB_REG(x)			(UART_BASE + ((x) << 16))
-#define UARTX_TH_REG(x)			(UART_BASE + ((x) << 16))
-#define UARTX_DLL_REG(x)		(UART_BASE + ((x) << 16))
-#define UARTX_IE_REG(x)			(UART_BASE + ((x) << 16) + 0x04)
-#define UARTX_DLH_REG(x)		(UART_BASE + ((x) << 16) + 0x04)
-#define UARTX_II_REG(x)			(UART_BASE + ((x) << 16) + 0x08)
-#define UARTX_FC_REG(x)			(UART_BASE + ((x) << 16) + 0x08)
-#define UARTX_LC_REG(x)			(UART_BASE + ((x) << 16) + 0x0c)
-#define UARTX_MC_REG(x)			(UART_BASE + ((x) << 16) + 0x10)
-#define UARTX_LS_REG(x)			(UART_BASE + ((x) << 16) + 0x14)
-#define UARTX_MS_REG(x)			(UART_BASE + ((x) << 16) + 0x18)
-#define UARTX_SC_REG(x)			(UART_BASE + ((x) << 16) + 0x1c)	/* Byte */
+#if (UART_INSTANCES >= 3)
+
+#define UART2_RB_REG			UART2_REG(UART_RB_OFFSET)
+#define UART2_TH_REG			UART2_REG(UART_TH_OFFSET)
+#define UART2_DLL_REG			UART2_REG(UART_DLL_OFFSET)
+#define UART2_IE_REG			UART2_REG(UART_IE_OFFSET)
+#define UART2_DLH_REG			UART2_REG(UART_DLH_OFFSET)
+#define UART2_II_REG			UART2_REG(UART_II_OFFSET)
+#define UART2_FC_REG			UART2_REG(UART_FC_OFFSET)
+#define UART2_LC_REG			UART2_REG(UART_LC_OFFSET)
+#define UART2_MC_REG			UART2_REG(UART_MC_OFFSET)
+#define UART2_LS_REG			UART2_REG(UART_LS_OFFSET)
+#define UART2_MS_REG			UART2_REG(UART_MS_OFFSET)
+#define UART2_SC_REG			UART2_REG(UART_SC_OFFSET)	/* Byte */
+
+#endif  /* UART_INSTANCES >= 3 */
+
+#if (UART_INSTANCES >= 4)
+
+#define UART3_RB_REG			UART3_REG(UART_RB_OFFSET)
+#define UART3_TH_REG			UART3_REG(UART_TH_OFFSET)
+#define UART3_DLL_REG			UART3_REG(UART_DLL_OFFSET)
+#define UART3_IE_REG			UART3_REG(UART_IE_OFFSET)
+#define UART3_DLH_REG			UART3_REG(UART_DLH_OFFSET)
+#define UART3_II_REG			UART3_REG(UART_II_OFFSET)
+#define UART3_FC_REG			UART3_REG(UART_FC_OFFSET)
+#define UART3_LC_REG			UART3_REG(UART_LC_OFFSET)
+#define UART3_MC_REG			UART3_REG(UART_MC_OFFSET)
+#define UART3_LS_REG			UART3_REG(UART_LS_OFFSET)
+#define UART3_MS_REG			UART3_REG(UART_MS_OFFSET)
+#define UART3_SC_REG			UART3_REG(UART_SC_OFFSET)	/* Byte */
+
+#endif  /* UART_INSTANCES >= 4 */
+
+
+#define UARTX_RB_REG(x)			(UART_BASE + ((x) << 16) + UART_RB_OFFSET)
+#define UARTX_TH_REG(x)			(UART_BASE + ((x) << 16) + UART_TH_OFFSET)
+#define UARTX_DLL_REG(x)		(UART_BASE + ((x) << 16) + UART_DLL_OFFSET)
+#define UARTX_IE_REG(x)			(UART_BASE + ((x) << 16) + UART_IE_OFFSET)
+#define UARTX_DLH_REG(x)		(UART_BASE + ((x) << 16) + UART_DLH_OFFSET)
+#define UARTX_II_REG(x)			(UART_BASE + ((x) << 16) + UART_II_OFFSET)
+#define UARTX_FC_REG(x)			(UART_BASE + ((x) << 16) + UART_FC_OFFSET)
+#define UARTX_LC_REG(x)			(UART_BASE + ((x) << 16) + UART_LC_OFFSET)
+#define UARTX_MC_REG(x)			(UART_BASE + ((x) << 16) + UART_MC_OFFSET)
+#define UARTX_LS_REG(x)			(UART_BASE + ((x) << 16) + UART_LS_OFFSET)
+#define UARTX_MS_REG(x)			(UART_BASE + ((x) << 16) + UART_MS_OFFSET)
+#define UARTX_SC_REG(x)			(UART_BASE + ((x) << 16) + UART_SC_OFFSET)	/* Byte */
 
 /* UART[x]_IE_REG */
 #define UART_IE_PTIME			0x80
@@ -121,8 +160,8 @@
 /* UART[x]_LC_REG */
 #define UART_LC_DLAB			0x80
 #define UART_LC_BRK			0x40
-#define UART_LC_EPS			0x08
-#define UART_LC_EVEN_PARITY		0x10
+#define UART_LC_EPS			0x10
+#define UART_LC_EVEN_PARITY		0x08
 #define UART_LC_ODD_PARITY		0x00
 #define UART_LC_STOP_2BIT		0x04
 #define UART_LC_STOP_1BIT		0x00

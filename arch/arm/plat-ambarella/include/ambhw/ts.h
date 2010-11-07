@@ -38,6 +38,9 @@
 #define TS_CH0_TX_DMA_RPTR_OFFSET		0x114
 #define TS_CH0_TX_DMA_STOP_OFFSET		0x118
 
+#define TS_CH0_TX_DMA_CTRL_OFFSET		0x124
+#define TS_CH0_TX_DMA_NOTIFY_OFFSET		0x128
+
 #define TS_CH1_TX_CTR_OFFSET			0x180
 #define TS_CH1_TX_STS_OFFSET			0x184
 #define TS_CH1_TX_PKT_INFO_OFFSET		0x188
@@ -45,6 +48,9 @@
 #define TS_CH1_TX_DMA_LIMIT_OFFSET		0x190
 #define TS_CH1_TX_DMA_RPTR_OFFSET		0x194
 #define TS_CH1_TX_DMA_STOP_OFFSET		0x198
+
+#define TS_CH1_TX_DMA_CTRL_OFFSET		0x1a4
+#define TS_CH1_TX_DMA_NOTIFY_OFFSET		0x1a8
 
 #define TS_CH0_RX_CTR_OFFSET			0x200
 #define TS_CH0_RX_STS_OFFSET			0x204
@@ -56,6 +62,9 @@
 #define TS_CH0_RX_DMA_WPTR_OFFSET		0x21c
 #define TS_CH0_RX_DMA_STOP_OFFSET		0x220
 
+#define TS_CH0_RX_DMA_CTRL_OFFSET		0x228
+#define TS_CH0_RX_DMA_NOTIFY_OFFSET		0x22c
+
 #define TS_CH1_RX_CTR_OFFSET			0x280
 #define TS_CH1_RX_STS_OFFSET			0x284
 #define TS_CH1_RX_TM_OFFSET			0x288
@@ -66,6 +75,9 @@
 #define TS_CH1_RX_DMA_WPTR_OFFSET		0x29c
 #define TS_CH1_RX_DMA_STOP_OFFSET		0x2a0
 
+#define TS_CH1_RX_DMA_CTRL_OFFSET		0x2a8
+#define TS_CH1_RX_DMA_NOTIFY_OFFSET		0x2ac
+
 /* Registers */
 #define TS_CH0_TX_CTR_REG			TS_REG(0x100)
 #define TS_CH0_TX_STS_REG			TS_REG(0x104)
@@ -75,6 +87,9 @@
 #define TS_CH0_TX_DMA_RPTR_REG			TS_REG(0x114)
 #define TS_CH0_TX_DMA_STOP_REG			TS_REG(0x118)
 
+#define TS_CH0_TX_DMA_CTRL_REG			TS_REG(0x124)
+#define TS_CH0_TX_DMA_NOTIFY_REG		TS_REG(0x128)
+
 #define TS_CH1_TX_CTR_REG			TS_REG(0x180)
 #define TS_CH1_TX_STS_REG			TS_REG(0x184)
 #define TS_CH1_TX_PKT_INFO_REG			TS_REG(0x188)
@@ -82,6 +97,9 @@
 #define TS_CH1_TX_DMA_LIMIT_REG			TS_REG(0x190)
 #define TS_CH1_TX_DMA_RPTR_REG			TS_REG(0x194)
 #define TS_CH1_TX_DMA_STOP_REG			TS_REG(0x198)
+
+#define TS_CH1_TX_DMA_CTRL_REG			TS_REG(0x1a4)
+#define TS_CH1_TX_DMA_NOTIFY_REG		TS_REG(0x1a8)
 
 #define TS_CH0_RX_CTR_REG			TS_REG(0x200)
 #define TS_CH0_RX_STS_REG			TS_REG(0x204)
@@ -93,6 +111,9 @@
 #define TS_CH0_RX_DMA_WPTR_REG			TS_REG(0x21c)
 #define TS_CH0_RX_DMA_STOP_REG			TS_REG(0x220)
 
+#define TS_CH0_RX_DMA_CTRL_REG			TS_REG(0x228)
+#define TS_CH0_RX_DMA_NOTIFY_REG		TS_REG(0x22c)
+
 #define TS_CH1_RX_CTR_REG			TS_REG(0x280)
 #define TS_CH1_RX_STS_REG			TS_REG(0x284)
 #define TS_CH1_RX_TM_REG			TS_REG(0x288)
@@ -103,6 +124,9 @@
 #define TS_CH1_RX_DMA_WPTR_REG			TS_REG(0x29c)
 #define TS_CH1_RX_DMA_STOP_REG			TS_REG(0x2a0)
 
+#define TS_CH1_RX_DMA_CTRL_REG			TS_REG(0x2a8)
+#define TS_CH1_RX_DMA_NOTIFY_REG		TS_REG(0x2ac)
+
 /* ChanX */
 #define TS_CHX_TX_CTR_REG(x)			TS_REG(0x100 + (0x80 * (x)))
 #define TS_CHX_TX_STS_REG(x)			TS_REG(0x104 + (0x80 * (x)))
@@ -111,6 +135,9 @@
 #define TS_CHX_TX_DMA_LIMIT_REG(x)		TS_REG(0x110 + (0x80 * (x)))
 #define TS_CHX_TX_DMA_RPTR_REG(x)		TS_REG(0x114 + (0x80 * (x)))
 #define TS_CHX_TX_DMA_STOP_REG(x)		TS_REG(0x118 + (0x80 * (x)))
+
+#define TS_CHX_TX_DMA_CTRL_REG(x)		TS_REG(0x124 + (0x80 * (x)))
+#define TS_CHX_TX_DMA_NOTIFY_REG(x)		TS_REG(0x128 + (0x80 * (x)))
 
 #define TS_CHX_RX_CTR_REG(x)			TS_REG(0x200 + (0x80 * (x)))
 #define TS_CHX_RX_STS_REG(x)			TS_REG(0x204 + (0x80 * (x)))
@@ -121,6 +148,9 @@
 #define TS_CHX_RX_DMA_LIMIT_REG(x)		TS_REG(0x218 + (0x80 * (x)))
 #define TS_CHX_RX_DMA_WPTR_REG(x)		TS_REG(0x21c + (0x80 * (x)))
 #define TS_CHX_RX_DMA_STOP_REG(x)		TS_REG(0x220 + (0x80 * (x)))
+
+#define TS_CHX_RX_DMA_CTRL_REG(x)		TS_REG(0x228 + (0x80 * (x)))
+#define TS_CHX_RX_DMA_NOTIFY_REG(x)		TS_REG(0x22c + (0x80 * (x)))
 
 /***************************/
 /* TX bitfileds definition */

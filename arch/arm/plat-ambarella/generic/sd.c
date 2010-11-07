@@ -195,6 +195,15 @@ struct resource ambarella_sd1_resources[] = {
 	},
 };
 
+int fio_amb_sd2_check_owner(void)
+{
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+	return fio_amb_sd2_is_enable();
+#else
+	return 1;
+#endif
+}
+
 void fio_amb_sd2_request(void)
 {
 	fio_select_lock(SELECT_FIO_SD2);
@@ -207,7 +216,7 @@ void fio_amb_sd2_release(void)
 
 struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.slot[0] = {
-		.check_owner	= fio_amb_sd2_is_enable,
+		.check_owner	= fio_amb_sd2_check_owner,
 		.request	= fio_amb_sd2_request,
 		.release	= fio_amb_sd2_release,
 		.ext_power	= {

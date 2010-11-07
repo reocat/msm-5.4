@@ -3,8 +3,6 @@
  *
  * History:
  *	2007/01/27 - [Charles Chiou] created file
- *	2008/02/19 - [Allen Wang] changed to use capabilities and chip ID
- *	2008/05/13 - [Allen Wang] added capabilities of A2S and A2M silicons
  *
  * Copyright (C) 2006-2008, Ambarella, Inc.
  */

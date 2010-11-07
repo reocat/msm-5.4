@@ -148,11 +148,6 @@ static void transmit_chars(struct uart_port *port)
 		return;
 	}
 
-	if (uart_circ_empty(xmit) || uart_tx_stopped(port)) {
-		serial_ambarella_stop_tx(port);
-		return;
-	}
-
 	count = port->fifosize;
 	while (!uart_circ_empty(xmit) && count-- > 0) {
 		amba_writeb(port->membase + UART_TH_OFFSET,
@@ -165,9 +160,6 @@ static void transmit_chars(struct uart_port *port)
 
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(port);
-
-	if (uart_circ_empty(xmit))
-		serial_ambarella_stop_tx(port);
 }
 
 static inline void check_modem_status(struct uart_port *port)
@@ -201,8 +193,10 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 	struct uart_port			*port = dev_id;
 	int					rval = IRQ_HANDLED;
 	u32					ii, ls;
+	struct circ_buf				*xmit = &port->state->xmit;
 
 	ii = amba_readl(port->membase + UART_II_OFFSET);
+serial_ambarella_irq_recheck:
 	ls = amba_readl(port->membase + UART_LS_OFFSET);
 
 	switch (ii & 0x0F) {
@@ -212,6 +206,14 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 
 	case UART_II_THR_EMPTY:
 		transmit_chars(port);
+		if (uart_circ_empty(xmit) || uart_tx_stopped(port)) {
+			amba_setbitsl(port->membase + UART_IE_OFFSET,
+				UART_IE_PTIME);
+			ii = amba_readl(port->membase + UART_II_OFFSET);
+			amba_clrbitsl(port->membase + UART_IE_OFFSET,
+				(UART_IE_PTIME | UART_IE_ETBEI));
+			goto serial_ambarella_irq_recheck;
+		}
 		break;
 
 	case UART_II_RCV_STATUS:
@@ -321,7 +323,7 @@ static int serial_ambarella_startup(struct uart_port *port)
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
 	amba_writel(port->membase + UART_FC_OFFSET,
-		(UART_FC_FIFOE | UART_FC_RX_HALF_FULL | UART_FC_TX_EMPTY |
+		(UART_FC_FIFOE | UART_FC_RX_ONECHAR | UART_FC_TX_EMPTY |
 		UART_FC_XMITR | UART_FC_RCVRR));
 
 	errorCode = request_irq(port->irq, serial_ambarella_irq,
@@ -583,6 +585,7 @@ static int __init serial_ambarella_console_setup(struct console *co,
 	if (co->index < 0 || co->index >= ambarella_uart_ports.total_port_num)
 		co->index = 0;
 	port = (struct uart_port *)(ambarella_uart_ports.amba_port[co->index].port);
+	ambarella_uart_ports.set_pll();
 	port->uartclk = ambarella_uart_ports.get_pll();
 	port->ops = &serial_ambarella_pops;
 	port->private_data = &(ambarella_uart_ports.amba_port[co->index]);
@@ -651,6 +654,7 @@ static int __devinit serial_ambarella_probe(struct platform_device *pdev)
 	}
 
 	port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
+	ambarella_uart_ports.set_pll();
 	port->uartclk = ambarella_uart_ports.get_pll();
 	port->ops = &serial_ambarella_pops;
 	port->dev = &pdev->dev;

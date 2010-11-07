@@ -17,8 +17,8 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if ((CHIP_REV == A1) || (CHIP_REV == A5) || (CHIP_REV == A6) ||	\
-     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
+#if ((CHIP_REV == A1) || (CHIP_REV == A5) || (CHIP_REV == A6) 		|| \
+     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) 	|| \
      (CHIP_REV == A5S) || (CHIP_REV == A5L)  || (CHIP_REV == A7))
 #define SD_INSTANCES			1
 #else
@@ -41,14 +41,15 @@
 #define SD_SUPPORT_PLL_SCALER     	1
 #endif
 
-#if ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) ||	\
-     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7))
+#if ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) 	|| \
+     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) 	|| \
+     (CHIP_REV == I1))
 #define SD_HAS_INTERNAL_MUXER      	1
 #else
 #define SD_HAS_INTERNAL_MUXER           0
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
 /* There is no dedicated irq for 2nd CD pin. */
 /* So it does not work in A5S and use GPIO instead. */
 #define SD_HAS_INTERNAL_2ND_CDWP	0
@@ -56,16 +57,18 @@
 #define SD_HAS_INTERNAL_2ND_CDWP	0
 #endif
 
-#if (CHIP_REV == A5L)
+#if (CHIP_REV == A5L) || (CHIP_REV == I1)
 #define SD_HAS_DELAY_CTRL		1
+#else
+#define SD_HAS_DELAY_CTRL		0
 #endif
 
-#if ((CHIP_REV == A1) || (CHIP_REV == A3) || (CHIP_REV == A5) || \
-     (CHIP_REV == A6) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || \
-     (CHIP_REV == A2Q))
-#define SD_BUS_SWITCH_DLY		1
+#if (CHIP_REV == I1)
+#define SD_HOST1_SUPPORT_XC		0
+#define SD_HOST2_SUPPORT_XC		1
 #else
-#define SD_BUS_SWITCH_DLY		0
+#define SD_HOST1_SUPPORT_XC		0
+#define SD_HOST2_SUPPORT_XC		0
 #endif
 
 /****************************************************/

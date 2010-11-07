@@ -137,6 +137,13 @@ config AMBARELLA_QUICK_INIT
 	help
 	  If you are not sure, say Y here.
 
+config AMBARELLA_RAW_BOOT
+	bool "Raw boot mode"
+	default n
+	depends on !AMBARELLA_QUICK_INIT
+	help
+	  If you are not sure, say N here.
+
 config AMBARELLA_SUPPORT_SPARSEMEM
 	bool "Suport SPARSEMEM"
 	default n

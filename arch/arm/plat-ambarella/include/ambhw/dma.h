@@ -50,6 +50,20 @@
 
 #else
 
+#if (CHIP_REV == I1)
+
+/* FIO DMA instance channel */
+#define FIO_DMA_CHAN		0	/* DMA2 */
+
+/* General DMA instance channel */
+#define NULL_DMA_CHAN		0
+#define I2S_RX_DMA_CHAN		1
+#define I2S_TX_DMA_CHAN		2
+#define MS_AHB_SSI_TX_DMA_CHAN	3
+#define SPDIF_AHB_SSI_DMA_CHAN	4
+
+#else
+
 /* FIO DMA instance channel */
 #define FIO_DMA_CHAN		0
 
@@ -62,24 +76,23 @@
 
 #endif
 
+#endif
+
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A5S) || \
     (CHIP_REV == A7)
 #define MS_DMA_CHAN		3
 #elif (CHIP_REV == A6)
 #define MS_DMA_CHAN		5
 #define MS_PAGE_BUF_DMA_CHAN	6
+#elif (CHIP_REV == I1)
+#define MS_DMA_CHAN		MS_AHB_SSI_TX_DMA_CHAN		
 #else
 /* No AHB MS controller */
 #define MS_DMA_CHAN		0
 #endif
 
-#if (DMA_SUPPORT_DMA_FIOS == 1)
 /* Max number of channel */
-#define NUM_DMA_FIOS_CHANNELS 	1
-#else
-/* Max number of channel */
-#define NUM_DMA_FIOS_CHANNELS 	0
-#endif
+#define NUM_DMA_FIOS_CHANNELS 	DMA_SUPPORT_DMA_FIOS
 
 #if (CHIP_REV == A6)
 #define NUM_DMA_CHANNELS 	7

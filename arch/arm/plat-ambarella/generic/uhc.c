@@ -33,8 +33,8 @@
 /* ==========================================================================*/
 struct resource ambarella_ehci_resources[] = {
 	[0] = {
-		.start	= USB_EHCI_BASE,
-		.end	= USB_EHCI_BASE + 0xFFF,
+		.start	= USB_HOST_CTRL_EHCI_BASE,
+		.end	= USB_HOST_CTRL_EHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -62,8 +62,8 @@ struct platform_device ambarella_ehci0 = {
 
 struct resource ambarella_ohci_resources[] = {
 	[0] = {
-		.start	= USB_OHCI_BASE,
-		.end	= USB_OHCI_BASE + 0xFFF,
+		.start	= USB_HOST_CTRL_OHCI_BASE,
+		.end	= USB_HOST_CTRL_OHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {

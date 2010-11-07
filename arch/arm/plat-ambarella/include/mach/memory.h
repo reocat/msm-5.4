@@ -74,7 +74,11 @@
 #endif
 #define AHB_SIZE			(0x01000000)
 #define APB_SIZE			(0x01000000)
+#if defined(PLAT_AMBARELLA_CORTEX)
 #define AXI_SIZE			(0x01000000)
+#else
+#define AXI_SIZE			(0x00000000)
+#endif
 
 /* ==========================================================================*/
 #define DEFAULT_BSB_START		(0x00000000)

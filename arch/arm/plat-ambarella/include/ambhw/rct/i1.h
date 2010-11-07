@@ -1,35 +1,31 @@
 /*
- * ambhw/rct/a5l.h
+ * ambhw/rct/i1.h
  *
  * History:
- *	2009/10/13 - [Allen Wang] created file
+ *	2010/06/21 - [Allen Wang] created file
  *
- * Copyright (C) 2006-2009, Ambarella, Inc.
+ * Copyright (C) 2006-2010, Ambarella, Inc.
  */
 
-#ifndef __AMBHW__RCT_A5L_H__
-#define __AMBHW__RCT_A5L_H__
+#ifndef __AMBHW__RCT_I1_H__
+#define __AMBHW__RCT_I1_H__
 
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
 #define RCT_DRAM_CLK_SRC_CORE		1
 #define RCT_IDSP_CLK_SRC_CORE		1
-#define RCT_ARM_CLK_SRC_CORE_DDR	1
+#define RCT_ARM_CLK_SRC_IDSP		1
 #define RCT_SUPPORT_PLL_DDR		1
-#define RCT_SUPPORT_PLL_IDSP		0
-#define RCT_MAX_PLL_SCALER_RESOLUTION	16
-#define RCT_MAX_DLL			2
-#define RCT_SUPPORT_ADC16_CTRL		0
-#define RCT_SUPPORT_PLL_HDMI		0
-#define RCT_SUPPORT_SCALER_ARM		1
-#define RCT_SUPPORT_SCALER_DRAM		1
-#define RCT_SUPPORT_UNL_WDT_RST_REG	1 /* Use independent register */
+#define RCT_SUPPORT_PLL_IDSP		1
+#define RCT_MAX_DLL			4
+#define RCT_SUPPORT_ADC16_CTRL		1
+#define RCT_SUPPORT_PLL_HDMI		1
+#define RCT_SUPPORT_UNL_WDT_RST_ANAPWR	1 /* Use bit-7 of ANA_PWR_REG */
 
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
-#define USE_PLL_CORE_FOR_DLL		1
 
 /*
  * Register definitions according to chip architecture
@@ -44,6 +40,7 @@
 #define CG_SSI_OFFSET			0x3c
 #define CG_MOTOR_OFFSET			0x40
 #define CG_IR_OFFSET			0x44
+#define CG_HOST_OFFSET			0x48
 #define ANA_PWR_OFFSET			0x50
 #define SOFT_RESET_OFFSET		0x68
 #define SOFT_OR_DLL_RESET_OFFSET	0X68
@@ -55,6 +52,7 @@
 #define CG_SSI_REG			RCT_REG(0x3c)
 #define CG_MOTOR_REG			RCT_REG(0x40)
 #define CG_IR_REG			RCT_REG(0x44)
+#define CG_HOST_REG			RCT_REG(0x48)
 #define ANA_PWR_REG			RCT_REG(0x50)
 #define SOFT_RESET_REG			RCT_REG(0x68)
 #define SOFT_OR_DLL_RESET_REG		RCT_REG(0x68)
@@ -66,6 +64,7 @@
 #define PLL_CORE_CTRL_OFFSET		0x00
 #define PLL_CORE_FRAC_OFFSET		0x04
 #define SCALER_SD48_OFFSET		0x0c
+#define SCALER_CORE_PRE_OFFSET		0x10
 #define PLL_VIDEO_CTRL_OFFSET		0x14
 #define PLL_VIDEO_FRAC_OFFSET		0x18
 #define SCALER_VIDEO_OFFSET             0x1c
@@ -79,6 +78,8 @@
 #define PLL_AUDIO_FRAC_OFFSET		0x58
 #define SCALER_AUDIO_OFFSET		0x5c
 #define SCALER_AUDIO_PRE_OFFSET		0x60
+#define PLL_USB_CTRL_OFFSET		0x6c
+#define PLL_USB_FRAC_OFFSET		0x70
 #define SCALER_USB_OFFSET		0x7c
 #define CG_PWM_OFFSET			0x84
 #define USB_REFCLK_OFFSET		0x88
@@ -97,9 +98,11 @@
 #define PLL_CORE_CTRL_REG		RCT_REG(0x00)
 #define PLL_CORE_FRAC_REG		RCT_REG(0x04)
 #define SCALER_SD48_REG			RCT_REG(0x0c)
+#define SCALER_CORE_PRE_REG		RCT_REG(0x10)
 #define PLL_VIDEO_CTRL_REG		RCT_REG(0x14)
 #define PLL_VIDEO_FRAC_REG		RCT_REG(0x18)
 #define SCALER_VIDEO_REG                RCT_REG(0x1c)
+#define SCALER_VIDEO_POST_REG		RCT_REG(0xa0)
 #define PLL_SENSOR_CTRL_REG		RCT_REG(0x24)
 #define PLL_SENSOR_FRAC_REG		RCT_REG(0x28)
 #define SCALER_SENSOR_POST_REG		RCT_REG(0x30)
@@ -109,6 +112,8 @@
 #define PLL_AUDIO_FRAC_REG		RCT_REG(0x58)
 #define SCALER_AUDIO_REG		RCT_REG(0x5c)
 #define SCALER_AUDIO_PRE_REG		RCT_REG(0x60)
+#define PLL_USB_CTRL_REG		RCT_REG(0x6c)
+#define PLL_USB_FRAC_REG		RCT_REG(0x70)
 #define SCALER_USB_REG			RCT_REG(0x7c)
 #define CG_PWM_REG			RCT_REG(0x84)
 #define USB_REFCLK_REG			RCT_REG(0x88)
@@ -116,7 +121,6 @@
 #define DLL0_REG			RCT_REG(0x90)
 #define DLL1_REG			RCT_REG(0x94)
 #define SCALER_ADC_REG			RCT_REG(0x9c)
-#define SCALER_VIDEO_POST_REG		RCT_REG(0xa0)
 #define CLK_REF_AU_EXTERNAL_REG		RCT_REG(0xa4)
 #define USE_EXTERNAL_CLK_AU_REG		RCT_REG(0xa8)
 #define CLK_REF_VIDEO_EXTERNAL_REG	RCT_REG(0xac)
@@ -128,7 +132,6 @@
 /* PLL_XXX_CTRL_REG */
 #define PLL_CTRL_VAL(intprog, sout, sdiv, valwe)	\
 	(((intprog & 0x7f) << 24)	|	\
-	 (PLL_FORCE_LOCK << 20)         |       \
 	 ((sout & 0xf) << 16)		| 	\
 	 ((sdiv & 0xf) << 12)		|	\
 	 (valwe & 0xfff))
@@ -151,11 +154,11 @@
 #define SCALER_PRE_N(x)		(x & 0xffff)
 #define SCALER_POST(x)		(x & 0xf)
 
-#define HDMI_CTRL_OFFSET	0x08
-#define HDMI_CTRL_REG		RCT_REG(0x08)
+#define HDMI_CTRL_OFFSET		0x08	/* A3 and later */
+#define HDMI_CTRL_REG			RCT_REG(0x08)
 
-#define PLL_LOCK_OFFSET		0x2c
-#define PLL_LOCK_REG		RCT_REG(0x2c)
+#define PLL_LOCK_OFFSET			0x2c
+#define PLL_LOCK_REG			RCT_REG(0x2c)
 
 /* PLL_LOCK_REG */
 #define PLL_LOCK_VIN	        (0x1 << 9)
@@ -181,26 +184,35 @@
 #define SENSOR_PAD_CTRL_PMEMIO_S0	0x02
 #define SENSOR_PAD_CTRL_PMEMIO_PWD	0x01
 
+#define PLL_VIDEO2_CTRL_OFFSET		0xc0
+#define PLL_VIDEO2_FRAC_OFFSET		0xc4
 #define SCALER_VIDEO2_OFFSET		0xc8
 #define SCALER_VIDEO2_POST_OFFSET	0xcc
 #define USE_CLK_SI_4_VO2_OFFSET		0xd0
 #define USE_EXTERNAL_VD2_CLK_OFFSET	0xd4
 #define CLK_REF_VIDEO2_EXTERNAL_OFFSET	0xd8
 
+#define PLL_VIDEO2_CTRL_REG		RCT_REG(0xc0)
+#define PLL_VIDEO2_FRAC_REG		RCT_REG(0xc4)
 #define SCALER_VIDEO2_REG		RCT_REG(0xc8)
 #define SCALER_VIDEO2_POST_REG		RCT_REG(0xcc)
 #define USE_CLK_SI_4_VO2_REG		RCT_REG(0xd0)
 #define USE_EXTERNAL_VD2_CLK_REG	RCT_REG(0xd4)
 #define CLK_REF_VIDEO2_EXTERNAL_REG	RCT_REG(0xd8)
 
+#define PLL_IDSP_CTRL_OFFSET		0xe4
+#define PLL_IDSP_FRAC_OFFSET		0xe8
+#define PLL_IDSP_CTRL_REG		RCT_REG(0xe4)
+#define PLL_IDSP_FRAC_REG		RCT_REG(0xe8)
+
+#define CG_SSI2_OFFSET			0xec
+#define CG_SSI2_REG			RCT_REG(0xec)
+
 #define PLL_DDR_CTRL_OFFSET		0xdc
 #define PLL_DDR_FRAC_OFFSET		0xe0
-#define DDRIO_CALIB_OFFSET		0x160
 
 #define PLL_DDR_CTRL_REG		RCT_REG(0xdc)
 #define PLL_DDR_FRAC_REG		RCT_REG(0xe0)
-#define DDRIO_CALIB_REG			RCT_REG(0x160)
-
 
 /* DLL0_REG */
 #define DLL0_VAL(madj_0,adj_0_0,adj_0_1)		\
@@ -219,8 +231,15 @@
 #define DLL2_REG			RCT_REG(0xf0)
 #define DLL3_REG			RCT_REG(0xf4)
 
+#define LVDS_LVCMOS_OFFSET		0xf8
+#define LVDS_ASYNC_OFFSET		0xfc
+#define LVDS_LVCMOS_REG			RCT_REG(0xf8)
+#define LVDS_ASYNC_REG			RCT_REG(0xfc)
+
 #define PLL_CORE_CTRL2_OFFSET		0x100
 #define PLL_CORE_CTRL3_OFFSET		0x104
+#define PLL_IDSP_CTRL2_OFFSET		0x108
+#define PLL_IDSP_CTRL3_OFFSET		0x10c
 #define PLL_DDR_CTRL2_OFFSET		0x110
 #define PLL_DDR_CTRL3_OFFSET		0x114
 #define PLL_SENSOR_CTRL2_OFFSET		0x11c
@@ -229,26 +248,63 @@
 #define PLL_AUDIO_CTRL3_OFFSET		0x12c
 #define PLL_VIDEO_CTRL2_OFFSET		0x130
 #define PLL_VIDEO_CTRL3_OFFSET		0x134
+#define PLL_VIDEO2_CTRL2_OFFSET		0x13c
+#define PLL_VIDEO2_CTRL3_OFFSET		0x140
+#define PLL_USB_CTRL2_OFFSET		0x144
+#define PLL_USB_CTRL3_OFFSET		0x14c
+#define PLL_HDMI_CTRL2_OFFSET		0x150
+#define PLL_HDMI_CTRL3_OFFSET		0x154
+#define PLL_VIN_CTRL2_OFFSET		0x1b8
+#define PLL_VIN_CTRL3_OFFSET		0x1bc
 
 #define PLL_CORE_CTRL2_REG		RCT_REG(0x100)
 #define PLL_CORE_CTRL3_REG		RCT_REG(0x104)
+#define PLL_IDSP_CTRL2_REG		RCT_REG(0x108)
+#define PLL_IDSP_CTRL3_REG		RCT_REG(0x10c)
 #define PLL_DDR_CTRL2_REG		RCT_REG(0x110)
 #define PLL_DDR_CTRL3_REG		RCT_REG(0x114)
+#define SCALER_CORE_POST_REG		RCT_REG(0x118)
 #define PLL_SENSOR_CTRL2_REG		RCT_REG(0x11c)
 #define PLL_SENSOR_CTRL3_REG		RCT_REG(0x120)
 #define PLL_AUDIO_CTRL2_REG		RCT_REG(0x124)
 #define PLL_AUDIO_CTRL3_REG		RCT_REG(0x12c)
 #define PLL_VIDEO_CTRL2_REG		RCT_REG(0x130)
 #define PLL_VIDEO_CTRL3_REG		RCT_REG(0x134)
-
-#define SCALER_CORE_POST_OFFSET		0x118
-#define SCALER_CORE_POST_REG		RCT_REG(0x118)
-
-#define CG_DDR_CALIB_OFFSET		0x148
-#define CG_DDR_CALIB_REG		RCT_REG(0x148)
+#define PLL_VIDEO2_CTRL2_REG		RCT_REG(0x13c)
+#define PLL_VIDEO2_CTRL3_REG		RCT_REG(0x140)
+#define PLL_USB_CTRL2_REG		RCT_REG(0x144)
+#define PLL_USB_CTRL3_REG		RCT_REG(0x14c)
+#define PLL_HDMI_CTRL2_REG		RCT_REG(0x150)
+#define PLL_HDMI_CTRL3_REG		RCT_REG(0x154)
+#define PLL_VIN_CTRL2_REG		RCT_REG(0x1b8)
+#define PLL_VIN_CTRL3_REG		RCT_REG(0x1bc)
 
 #define DLL_CTRL_SEL_OFFSET		0x158
+#define DLL_OCD_BITS_OFFSET		0x15c
+#define DDRIO_CALIB_OFFSET		0x160
 #define DLL_CTRL_SEL_REG		RCT_REG(0x158)
+#define DLL_OCD_BITS_REG		RCT_REG(0x15c)
+#define DDRIO_CALIB_REG			RCT_REG(0x160)
+
+#define PLL_HDMI_CTRL_OFFSET		0x164
+#define PLL_HDMI_FRAC_OFFSET		0x168
+#define SCALER_HDMI_POST_OFFSET		0x16c
+#define SCALER_HDMI_PRE_OFFSET		0x170
+
+#define PLL_HDMI_CTRL_REG		RCT_REG(0x164)
+#define PLL_HDMI_FRAC_REG		RCT_REG(0x168)
+#define SCALER_HDMI_POST_REG		RCT_REG(0x16c)
+#define SCALER_HDMI_PRE_REG		RCT_REG(0x170)
+
+#define PLL_VIN_CTRL_OFFSET		0x1a8
+#define PLL_VIN_FRAC_OFFSET		0x1ac
+#define SCALER_VIN_POST_OFFSET		0x1b0
+#define SCALER_VIN_PRE_OFFSET		0x1b4
+
+#define PLL_VIN_CTRL_REG		RCT_REG(0x1a8)
+#define PLL_VIN_FRAC_REG		RCT_REG(0x1ac)
+#define SCALER_VIN_POST_REG		RCT_REG(0x1b0)
+#define SCALER_VIN_PRE_REG		RCT_REG(0x1b4)
 
 #define ADC16_CTRL_OFFSET		0x198
 #define ADC16_CTRL_REG			RCT_REG(0x198)
@@ -256,85 +312,31 @@
 #define CLK_REF_SSI_OFFSET		0x19c
 #define CLK_REF_SSI_REG			RCT_REG(0x19c)
 
-#define USE_LVDS_CLK_4_PWM_OFFSET	0x1c4
-#define USE_LVDS_CLK_4_PWM_REG		RCT_REG(0x1c4)
+#define T2V_CTRL_OFFSET			0x1a0
+#define T2V_CTRL_REG			RCT_REG(0x1a0)
 
+#define RNG_CTRL_OFFSET			0x1a4
+#define RNG_CTRL_REG			RCT_REG(0x1a4)
+
+/* Memory stick */
+#define CG_DVEN_OFFSET			0x1c8
+#define SCALER_MS_OFFSET		0x1cc
 #define MS_DELAY_CTRL_OFFSET		0x1d0
+#define CG_DVEN_REG			RCT_REG(0x1c8)
+#define SCALER_MS_REG			RCT_REG(0x1cc)
 #define MS_DELAY_CTRL_REG		RCT_REG(0x1d0)
+
 #define MS_DELAY_CTRL_OUT_SIG		0x07000000
 #define MS_DELAY_CTRL_IN_SIG		0x00070000
 #define MS_DELAY_CTRL_OUT_CLK		0x00003000
 #define MS_DELAY_CTRL_OUT_PATH_CLK	0x00000700
 #define MS_DELAY_CTRL_IN_CLK		0x00000030
 
-#define USE_COMMON_VO_CLOCK_OFFSET	0x1d4
-#define USE_COMMON_VO_CLOCK_REG		RCT_REG(0x1d4)
-
-#define CLOCK_OBSV_OFFSET		0x1e0
-#define CLOCK_OBSV_REG			RCT_REG(0x1e0)
-
-/* CLOCK_OBSV_REG */
-#define CLK_OBSV_ENABLE(x)		(4L << (x))
-#define CLK_OBSV_PLL_OUT(x)		((x) & 0xf)
-#define CLK_OBSV_PLL_OUT_CORE		0x0
-#define CLK_OBSV_PLL_OUT_VIDEO		0x1
-#define CLK_OBSV_PLL_OUT_SENSOR		0x2
-#define CLK_OBSV_PLL_OUT_AUDIO		0x3
-#define CLK_OBSV_PLL_OUT_DDR		0x6
+#define USE_COMMON_VO_CLK_OFFSET	0x1d4
+#define USE_COMMON_VO_CLK_REG		RCT_REG(0x1d4)
 
 #define DISABLE_EXT_BYPASS_OFFSET	0x1e4
 #define DISABLE_EXT_BYPASS_REG		RCT_REG(0x1e4)
-
-#define SCALER_ARM_ASYNC_OFFSET		0x1f0
-#define SCALER_ARM_ASYNC_REG		RCT_REG(0x1f0)
-
-/* IOCTRL */
-#define IOCTRL_MISC1_OFFSET		0x1fc
-#define IOCTRL_MISC2_OFFSET		0x200
-#define IOCTRL_SD_OFFSET		0x204
-#define IOCTRL_SMIO_OFFSET		0x208
-#define IOCTRL_VD0_OFFSET		0x20c
-#define IOCTRL_SENSOR_OFFSET		0x214
-#define IOCTRL_MISC1_REG		RCT_REG(0x1fc)
-#define IOCTRL_MISC2_REG		RCT_REG(0x200)
-#define IOCTRL_SD_REG			RCT_REG(0x204)
-#define IOCTRL_SMIO_REG			RCT_REG(0x208)
-#define IOCTRL_VD0_REG			RCT_REG(0x20c)
-#define IOCTRL_SENSOR_REG		RCT_REG(0x214)
-
-#define AHB_MISC_EN_OFFSET		0x21c
-#define AHB_MISC_EN_REG			RCT_REG(0x21c)
-
-#define CG_DDR_INIT_OFFSET		0x220
-#define DDR_DIV_RST_OFFSET		0x224
-#define DDRC_IDSP_RESET_OFFSET		0x228
-#define CG_DDR_INIT_REG			RCT_REG(0x220)
-#define DDR_DIV_RST_REG			RCT_REG(0x224)
-#define DDRC_IDSP_RESET_REG		RCT_REG(0x228)
-
-#define USE_PLL_DDR_FOR_ARM_OFFSET		0x230
-#define USE_PLL_CORE_FOR_DDR_OFFSET		0x234
-#define USE_PLL_DDR_FOR_VO2_OFFSET		0x238
-#define USE_PLL_CORE_VCO_FOR_CLK_CORE_OFFSET	0x248
-
-#define USE_PLL_DDR_FOR_ARM_REG			RCT_REG(0x230)
-#define USE_PLL_CORE_FOR_DDR_REG		RCT_REG(0x234)
-#define USE_PLL_DDR_FOR_VO2_REG			RCT_REG(0x238)
-#define USE_PLL_CORE_VCO_FOR_CLK_CORE_REG	RCT_REG(0x248)
-
-#define SCALER_DDRIO_POST_OFFSET	0x23c
-#define SCALER_DDRIO_POST_REG		RCT_REG(0x23c)
-
-#define UNLOCK_WDT_RST_L_OFFSET		0x240
-#define UNLOCK_WDT_RST_L_REG		RCT_REG(0x240)
-
-#define HDMI_PHY_DIVIDER_SEL_OFFSET	0x244
-#define HDMI_PHY_DIVIDER_SEL_REG	RCT_REG(0x244)
-
-/* HDMI_PHY_DIVIDER_SEL_REG */
-#define HDMI_PHY_DIV_SEL_1X		0x0
-#define HDMI_PHY_DIV_SEL_2X		0x1
-#define HDMI_PHY_DIV_SEL_4X		0x2
 
 /* ANA_PWR_REG */
 #define ANA_PWR_DLL_POWER_DOWN		0x80
@@ -372,22 +374,35 @@
 #define CKEN_VDSP_TSFM			0x02
 #define CKEN_VDSP_MEMD			0x01
 
+
 /*
  * SYS_CONFIG_REG
  */
-#define SYS_CONFIG_SELECT_ENET		0x00008000
-#define SYS_CONFIG_EMA_SEL		0x00001000
-#define SYS_CONFIG_SD_BOOT		0x00000800
-#define SYS_CONFIG_RDY_PL		0x00002000
+#define SYS_CONFIG_USB_PHY_EXT_CRYSTAL	0x00800000
+#define SYS_CONFIG_RCT_SMEM_EFUSE_DISABLE 0x00400000
+#define SYS_CONFIG_RCT_AHB_HIF_SECURE	0x00200000
+#define SYS_CONFIG_RDY_PL		0x00100000
 	/*
 	 * sets polarity of hif_rdy signal
 	 * 0 -> hif_rdy active low
 	 * 1 -> hif_rdy active high
 	 */
-#define SYS_CONFIG_HIF_TYPE		0x00001000
+#define SYS_CONFIG_HIF_TYPE		0x00080000
+#define SYS_CONFIG_HIF_PORT_SIZE	0x00040000
+#define SYS_CONFIG_HIF_EN		0x00020000
 #define SYS_CONFIG_SPI_BOOT		0x00010000
-#define SYS_CONFIG_FLASH_BOOT		0x00000400
 
+#define SYS_CONFIG_RMII_SEL		0x00008000
+#define SYS_CONFIG_			0x00006000
+	/*
+	 * 00 - full FME address range in use
+	 * 01 - FMEM BIST clk enable forced on
+	 * 10 -only lower half of FMEM used(A6)
+	 * 11 -only upper half of FMEM used(A6)
+	 */
+#define SYS_CONFIG_EMA_SEL		0x00001000
+#define SYS_CONFIG_SD_BOOT		0x00000800
+#define SYS_CONFIG_FLASH_BOOT		0x00000400
 	/*
 	 * 0 : Boot with USB (ARM code on internal ROM).
 	 * 1 : Boot using FIO controller (NAND or NOR flash).
@@ -398,144 +413,109 @@
 	 * 0: ARM waits for FIO 2KB code fetch before execution.
 	 * 1: ARM does not wait for FIO to fetch 2KB code before execution.
 	 */
-#define SYS_CONFIG_NAND_BOOT_BYPASS	0x00000100
-#define SYS_CONFIG_RMII_SEL		0x00000080
-#define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040
-#define SYS_CONFIG_NAND_FLASH_PAGE	0x00000020	/* 0 for 512 bytes */
-#define SYS_CONFIG_CORE_283MHZ		0x0000000e
-#define SYS_CONFIG_CORE_270MHZ		0x0000000c
-#define SYS_CONFIG_CORE_256MHZ		0x0000000a
-#define SYS_CONFIG_CORE_243MHZ		0x00000008
-#define SYS_CONFIG_CORE_230MHZ		0x00000006
-#define SYS_CONFIG_CORE_182MHZ		0x00000004
-#define SYS_CONFIG_CORE_135MHZ		0x00000002
-#define SYS_CONFIG_CORE_216MHZ		0x00000000
-#define SYS_CONFIG_FLASH_NOR		0x00000001
-#define SYS_CONFIG_FLASH_NAND		0x00000000
+#define SYS_CONFIG_ENET_SEL		0x00000080 /* 0: disable, 1: enable */
+#define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040 /* 0: use, 1: doesn't use */
+#define SYS_CONFIG_NAND_FLASH_PAGE	0x00000020 /* 0: 512Byte, 1: 2K Byte */
+#define SYS_CONFIG_PLL_UNLOCK_TRIG_RESET 0x00000010
+	/*
+	 * 0: disable generating grst when core pll out of lock.(default)
+	 * 1: enable generating grst when core pll out of lock.
+	 */
+						   /* Idsp  / Core  / DDR   */
+#define SYS_CONFIG_CLOCK_CONFIG_7	0x0000000e /* 108   / 108   / 216   */
+#define SYS_CONFIG_CLOCK_CONFIG_6	0x0000000c /* 256.5 / 243   / 337.5 */
+#define SYS_CONFIG_CLOCK_CONFIG_5	0x0000000a /* 256.5 / 216   / 337.5 */
+#define SYS_CONFIG_CLOCK_CONFIG_4	0x00000008 /* 256.5 / 216   / 337.5 */
+#define SYS_CONFIG_CLOCK_CONFIG_3	0x00000006 /* 202.5 / 202.5 / 337.5 */
+#define SYS_CONFIG_CLOCK_CONFIG_2	0x00000004 /* 148.5 / 148.5 / 337.5 */
+#define SYS_CONFIG_CLOCK_CONFIG_1	0x00000002 /* 148.5 / 148.5 / 337.5 */
+#define SYS_CONFIG_CLOCK_CONFIG_0	0x00000000 /* 216   / 216   / 432   */
 #define SYS_CONFIG_BOOTMEDIA		0x00000001 /* 0: NAND, 1: NOR */
 
 /*
- * Core values
+ * Core frequency values
  */
-#define PLL_CORE_VCO_FREQ_720MHZ	720000000 	/* VCO freq = 720 MHz */
-#define PLL_CORE_VCO_FREQ_960MHZ	960000000 	/* VCO freq = 960 MHz */
-#define PLL_CORE_VCO_FREQ_1200MHZ	1200000000 	/* VCO freq = 1200 MHz */
-
-#if	defined(FIX_CORE_180MHZ)
-
-#define PLL_CORE_VCO_OUT_FREQ_HZ	PLL_CORE_VCO_FREQ_720MHZ
-
-#if (PLL_CORE_VCO_OUT_FREQ_HZ == PLL_CORE_VCO_FREQ_720MHZ)
-
-/* VCO freq = 720 MHz */
-#define PLL_CORE_180MHZ_VAL		0x09132100
-#define PLL_CORE_240MHZ_VAL		0x09122100
-#define PLL_CORE_SCALER_VAL_180MHZ	0x4
-#define PLL_CORE_SCALER_VAL_240MHZ	0x3
-#define PLL_ARM_SCALER_VAL		0x2 /* 360 MHz*/
-
-/* DDRIO post scaler */
-#if	defined(FIX_DRAM_180MHZ)
-#define RCT_DDRIO_POST_SCALER_VAL	0x2
-#endif
-
-#endif
-#endif
-
-#if	defined(FIX_CORE_240MHZ)
-
-#if	defined(FIX_DRAM_240MHZ)
-#define PLL_CORE_VCO_OUT_FREQ_HZ	PLL_CORE_VCO_FREQ_960MHZ
-#elif	defined(FIX_DRAM_300MHZ)
-#define PLL_CORE_VCO_OUT_FREQ_HZ	PLL_CORE_VCO_FREQ_1200MHZ
-#endif
-
-#if (PLL_CORE_VCO_OUT_FREQ_HZ == PLL_CORE_VCO_FREQ_960MHZ)
-
-/* VCO freq = 960 MHz */
-#define PLL_CORE_240MHZ_VAL		0x09133100
-#define PLL_CORE_SCALER_VAL_240MHZ	0x4
-#define PLL_ARM_SCALER_VAL		0x2 /* 480 MHZ */
-
-/* DDRIO post scaler */
-#if	defined(FIX_DRAM_240MHZ)
-#define RCT_DDRIO_POST_SCALER_VAL	0x2
-#else
-#define RCT_DDRIO_POST_SCALER_VAL	0x1
-#endif
-
-#endif
-
-#if (PLL_CORE_VCO_OUT_FREQ_HZ == PLL_CORE_VCO_FREQ_1200MHZ)
-
-/* VCO freq = 1200 MHz */
-#define PLL_CORE_240MHZ_VAL		0x09144100
-#define PLL_CORE_SCALER_VAL_240MHZ	0x5
-#define PLL_ARM_SCALER_VAL		0x3
-
-/* DDRIO post scaler */
-#if	defined(FIX_DRAM_300MHZ)
-#define RCT_DDRIO_POST_SCALER_VAL	0x2
-#endif
-
-#endif
-
-#endif
+#define PLL_CORE_108MHZ_VAL	0x07011100
+#define PLL_CORE_148MHZ_VAL	0x0a011100
+#define PLL_CORE_202MHZ_VAL	0x0e011100
+#define PLL_CORE_216MHZ_VAL	0x0f000100
+#define PLL_CORE_243MHZ_VAL	0x11000100
 
 #if	defined(FIX_CORE_108MHZ)
-#define	EXPECT_PLL_CORE_VAL		PLL_CORE_108MHZ_VAL
-#define PLL_CORE_SCALER_VAL		PLL_CORE_SCALER_VAL_108MHZ
-#define USE_PLL_CORE_FOR_DDR 		1
-
-#elif	defined(FIX_CORE_180MHZ)
-#define	EXPECT_PLL_CORE_VAL		PLL_CORE_180MHZ_VAL
-#define PLL_CORE_SCALER_VAL		PLL_CORE_SCALER_VAL_180MHZ
-
-#if	defined(FIX_DRAM_180MHZ)
-#define USE_PLL_CORE_FOR_DDR 		1
-#else
-#define USE_PLL_CORE_FOR_DDR 		0
-#endif
-
+#define	EXPECT_PLL_CORE_VAL	PLL_CORE_108MHZ_VAL
+#elif	defined(FIX_CORE_148MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_148MHZ_VAL
+#elif	defined(FIX_CORE_202MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_202MHZ_VAL
 #elif	defined(FIX_CORE_216MHZ)
-#define EXPECT_PLL_CORE_VAL		PLL_CORE_216MHZ_VAL
-#define PLL_CORE_SCALER_VAL		PLL_CORE_SCALER_VAL_216MHZ
-#define USE_PLL_CORE_FOR_DDR 		1
-#elif	defined(FIX_CORE_240MHZ)
-#define EXPECT_PLL_CORE_VAL		PLL_CORE_240MHZ_VAL
-#define PLL_CORE_SCALER_VAL		PLL_CORE_SCALER_VAL_240MHZ
-#define USE_PLL_CORE_FOR_DDR 		1
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_216MHZ_VAL
+#elif	defined(FIX_CORE_243MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_243MHZ_VAL
 #else
-#define EXPECT_PLL_CORE_VAL		0xffffffff
-#define PLL_CORE_SCALER_VAL 		0x2
-#define PLL_ARM_SCALER_VAL		0x2
-#define RCT_DDRIO_POST_SCALER_VAL	0x2
-#define USE_PLL_CORE_FOR_DDR 		1
+
+#if	defined(PWC_CORE_108MHZ)
+#define	EXPECT_PLL_CORE_VAL	PLL_CORE_108MHZ_VAL
+#elif	defined(PWC_CORE_148MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_148MHZ_VAL
+#elif	defined(PWC_CORE_202MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_202MHZ_VAL
+#elif	defined(PWC_CORE_216MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_216MHZ_VAL
+#elif	defined(PWC_CORE_243MHZ)
+#define EXPECT_PLL_CORE_VAL	PLL_CORE_243MHZ_VAL
+#else
+#define EXPECT_PLL_CORE_VAL	0xffffffff
 #endif
 
-/* DRAM control */
-/* cg_ddr needed only for lpddr2*/
-#define RCT_CG_DDR_INIT			0x0000010a	/* FIXME */
-#define RCT_CG_DDR_NORMAL		0x0000000a	/* FIXME */
-#define DRAM_ZQ_CALIB			0x00000061
+#endif
 
-/* DRAM control */
+/*
+ * IDSP frequency values
+ */
+#define PLL_IDSP_108MHZ_VAL	0x07011100
+#define PLL_IDSP_148MHZ_VAL	0x0a011100
+#define PLL_IDSP_202MHZ_VAL	0x0e011100
+#define PLL_IDSP_216MHZ_VAL	0x0f000100
+#define PLL_IDSP_256MHZ_VAL	0x12000100
 
-#if	defined(FIX_DRAM_162MHZ)
-#define DRAM_DDRC_REQ_CREDIT_VAL	0x04
-//#define DRAM_DDRC_REQ_CREDIT_VAL	0x0
-#elif	defined(FIX_DRAM_240MHZ)
-#define DRAM_DDRC_REQ_CREDIT_VAL	0x04
-//#define DRAM_DDRC_REQ_CREDIT_VAL	0x0
+#if	defined(FIX_IDSP_108MHZ)
+#define	EXPECT_PLL_IDSP_VAL	PLL_IDSP_108MHZ_VAL
+#elif	defined(FIX_IDSP_148MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_148MHZ_VAL
+#elif	defined(FIX_IDSP_202MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_202MHZ_VAL
+#elif	defined(FIX_IDSP_216MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_216MHZ_VAL
+#elif	defined(FIX_IDSP_256MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_256MHZ_VAL
 #else
-#define DRAM_DDRC_REQ_CREDIT_VAL	0x100
+
+#if	defined(PWC_IDSP_108MHZ)
+#define	EXPECT_PLL_IDSP_VAL	PLL_IDSP_108MHZ_VAL
+#elif	defined(PWC_IDSP_148MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_148MHZ_VAL
+#elif	defined(PWC_IDSP_202MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_202MHZ_VAL
+#elif	defined(PWC_IDSP_216MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_216MHZ_VAL
+#elif	defined(PWC_IDSP_256MHZ)
+#define EXPECT_PLL_IDSP_VAL	PLL_IDSP_256MHZ_VAL
+#else
+#define EXPECT_PLL_IDSP_VAL	0xffffffff
+#endif
+
 #endif
 
 /* SCALER_SD48_REG */
-#define SD48_DUTY_CYCLE_CTRL	0x1000000
-#define SD48_DELAY_MUX		0x0c00000
-#define SD48_PRIMARY_DIV	0x01f0000
-#define SD48_INTEGER_DIV	0x000ffff
+#define SD48_DUTY_CYCLE_CTRL	0x10000
+#define SD48_PRIMARY_DIV	0x0ff00
+#define SD48_INTEGER_DIV	0x000ff
+
+/* SCALER_MS_REG */
+#define MS_DUTY_CYCLE_CTRL	0x1000000
+#define MS_DELAY_MUX		0x0c00000
+#define MS_PRIMARY_DIV		0x01f0000
+#define MS_INTEGER_DIV		0x000ffff
 
 //#ifndef __ASSEMBLER__
 

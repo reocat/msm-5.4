@@ -29,7 +29,7 @@
 #define HOST_MAX_AHB_CLK_EN_BITS	8
 #define HOST_MAX_MODES			5
 #elif  (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
-	(CHIP_REV == A5S) || (CHIP_REV == A7)
+	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) 
 #define HOST_MAX_AHB_CLK_EN_BITS	0
 #define HOST_MAX_MODES			5
 #else

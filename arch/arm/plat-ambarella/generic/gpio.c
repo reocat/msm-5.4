@@ -540,6 +540,49 @@ int __init ambarella_init_gpio(void)
 	}
 #endif
 
+#if defined(CONFIG_AMBARELLA_RAW_BOOT)
+	amba_writel(GPIO0_AFSEL_REG, 0xFFFFFFFF);
+	amba_writel(GPIO0_DIR_REG, 0x00000000);
+	amba_writel(GPIO0_MASK_REG, 0xFFFFFFFF);
+	amba_writel(GPIO0_DATA_REG, 0x00000000);
+	amba_writel(GPIO0_ENABLE_REG, 0xFFFFFFFF);
+
+	amba_writel(GPIO1_AFSEL_REG, 0xFFFFFFFF);
+	amba_writel(GPIO1_DIR_REG, 0x00000000);
+	amba_writel(GPIO1_MASK_REG, 0xFFFFFFFF);
+	amba_writel(GPIO1_DATA_REG, 0x00000000);
+	amba_writel(GPIO1_ENABLE_REG, 0xFFFFFFFF);
+
+#if (GPIO_INSTANCES >= 3)
+	amba_writel(GPIO2_AFSEL_REG, 0xFFFFFFFF);
+	amba_writel(GPIO2_DIR_REG, 0x00000000);
+	amba_writel(GPIO2_MASK_REG, 0xFFFFFFFF);
+	amba_writel(GPIO2_DATA_REG, 0x00000000);
+	amba_writel(GPIO2_ENABLE_REG, 0xFFFFFFFF);
+#endif
+#if (GPIO_INSTANCES >= 4)
+	amba_writel(GPIO3_AFSEL_REG, 0xFFFFFFFF);
+	amba_writel(GPIO3_DIR_REG, 0x00000000);
+	amba_writel(GPIO3_MASK_REG, 0xFFFFFFFF);
+	amba_writel(GPIO3_DATA_REG, 0x00000000);
+	amba_writel(GPIO3_ENABLE_REG, 0xFFFFFFFF);
+#endif
+#if (GPIO_INSTANCES >= 5)
+	amba_writel(GPIO4_AFSEL_REG, 0xFFFFFFFF);
+	amba_writel(GPIO4_DIR_REG, 0x00000000);
+	amba_writel(GPIO4_MASK_REG, 0xFFFFFFFF);
+	amba_writel(GPIO4_DATA_REG, 0x00000000);
+	amba_writel(GPIO4_ENABLE_REG, 0xFFFFFFFF);
+#endif
+#if (GPIO_INSTANCES >= 6)
+	amba_writel(GPIO5_AFSEL_REG, 0xFFFFFFFF);
+	amba_writel(GPIO5_DIR_REG, 0x00000000);
+	amba_writel(GPIO5_MASK_REG, 0xFFFFFFFF);
+	amba_writel(GPIO5_DATA_REG, 0x00000000);
+	amba_writel(GPIO5_ENABLE_REG, 0xFFFFFFFF);
+#endif
+#endif
+
 	return errorCode;
 }
 
