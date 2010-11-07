@@ -159,6 +159,12 @@ static void __init ambarella_init_generic(void)
 
 	ambarella_init_machine("Generic");
 
+	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(45);
+	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(45);
+	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
@@ -167,6 +173,11 @@ static void __init ambarella_init_generic(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
+
+	ambarella_tm1510_board_info.irq =
+		ambarella_board_generic.touch_panel_irq.irq_line;
+	ambarella_tm1510_board_info.flags = 0;
+	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
