@@ -46,10 +46,10 @@
 #define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
 
 /* ==========================================================================*/
-#ifdef CONFIG_VMSPLIT_3G
+#if defined(CONFIG_VMSPLIT_3G)
 #define NOLINUX_MEM_V_START		(0xe0000000)
 #else
-#define NOLINUX_MEM_V_START		(0xc0000000)
+#define NOLINUX_MEM_V_START		(0xb0000000)
 #endif
 
 /* ==========================================================================*/
