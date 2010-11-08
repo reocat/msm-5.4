@@ -134,14 +134,14 @@ void __init ambarella_map_io(void)
 #endif
 
 	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
-		if (ambarella_io_desc[i].io_desc.length > 0) {
-			iop = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
-			ios = ambarella_io_desc[i].io_desc.length;
-			iov = ambarella_io_desc[i].io_desc.virtual;
+		iop = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
+		ios = ambarella_io_desc[i].io_desc.length;
+		iov = ambarella_io_desc[i].io_desc.virtual;
+		if (ios > 0) {
+			iotable_init(&(ambarella_io_desc[i].io_desc), 1);
 			pr_info("Ambarella: %s\t= 0x%08x[0x%08x],0x%08x %d\n",
 				ambarella_io_desc[i].name, iop, iov, ios,
 				ambarella_io_desc[i].io_desc.type);
-			iotable_init(&(ambarella_io_desc[i].io_desc), 1);
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 			if ((halv >= iov) && ((halv + hals) <= (iov + ios))) {
 				bhal_mapped = 1;
@@ -277,7 +277,7 @@ early_param("bsb", early_bsb);
 /* ==========================================================================*/
 static int __init parse_mem_tag_bsb(const struct tag *tag)
 {
-	return dsp_mem_check(tag->u.mem.start, tag->u.mem.size);
+	return bsb_mem_check(tag->u.mem.start, tag->u.mem.size);
 }
 __tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
 
