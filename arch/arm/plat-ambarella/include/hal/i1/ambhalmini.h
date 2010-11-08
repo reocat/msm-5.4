@@ -21,6 +21,10 @@ amb_clock_frequency_t amb_mini_get_ssi2_clock_frequency (void) ;
 
 amb_clock_frequency_t amb_mini_get_core_clock_frequency (void) ;
 
+amb_clock_frequency_t amb_mini_get_ahb_clock_frequency (void) ;
+
+amb_clock_frequency_t amb_mini_get_apb_clock_frequency (void) ;
+
 amb_hal_success_t amb_mini_reset_all (void) ;
 
 amb_boot_type_t amb_mini_get_boot_type (void) ;

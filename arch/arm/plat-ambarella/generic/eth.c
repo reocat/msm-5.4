@@ -29,6 +29,7 @@
 
 #include <mach/hardware.h>
 #include <plat/eth.h>
+#include <hal/hal.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -49,13 +50,24 @@ static int ambarella_eth0_is_supportclk(void)
 static void ambarella_eth0_setclk(u32 freq)
 {
 #if (SUPPORT_GMII == 1)
-	amba_writel(RCT_REG(0x2ac), 0x01);
+	if (amb_set_gtx_clock_frequency(HAL_BASE_VP, freq) !=
+		AMB_HAL_SUCCESS) {
+ 		pr_info("%s: amb_set_gtx_clock_frequency fail!\n", __func__);
+	}
+	if (amb_set_gtx_clock_source(HAL_BASE_VP,
+		AMB_GTX_CLOCK_SOURCE_GTX_PLL) != AMB_HAL_SUCCESS) {
+ 		pr_info("%s: amb_set_gtx_clock_source fail!\n", __func__);
+	}
 #endif
 }
 
 static u32 ambarella_eth0_getclk(void)
 {
-	return 125000000;
+#if (SUPPORT_GMII == 1)
+	return amb_get_gtx_clock_frequency(HAL_BASE_VP);
+#else
+	return 0;
+#endif
 }
 
 static u32 ambarella_eth0_get_supported(void)
