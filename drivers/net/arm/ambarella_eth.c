@@ -281,8 +281,14 @@ static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
 		if (lp->platform_info->is_supportclk()) {
 			lp->platform_info->setclk(
 				lp->platform_info->default_1000_clk);
-			WARN_ON(lp->platform_info->default_1000_clk !=
+			if (netif_msg_hw(lp) &&
+				(lp->platform_info->default_1000_clk !=
+				lp->platform_info->getclk())) {
+				dev_info(&lp->ndev->dev,
+				"%s: want [%d], but get [%d]!\n", __func__,
+				lp->platform_info->default_1000_clk,
 				lp->platform_info->getclk());
+			}
 		}
 		break;
 	case SPEED_100:
@@ -290,8 +296,14 @@ static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
 		if (lp->platform_info->is_supportclk()) {
 			lp->platform_info->setclk(
 				lp->platform_info->default_100_clk);
-			WARN_ON(lp->platform_info->default_100_clk !=
+			if (netif_msg_hw(lp) &&
+				(lp->platform_info->default_100_clk !=
+				lp->platform_info->getclk())) {
+				dev_info(&lp->ndev->dev,
+				"%s: want [%d], but get [%d]!\n", __func__,
+				lp->platform_info->default_100_clk,
 				lp->platform_info->getclk());
+			}
 		}
 		break;
 	case SPEED_10:
@@ -300,8 +312,14 @@ static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
 		if (lp->platform_info->is_supportclk()) {
 			lp->platform_info->setclk(
 				lp->platform_info->default_10_clk);
-			WARN_ON(lp->platform_info->default_10_clk !=
+			if (netif_msg_hw(lp) &&
+				(lp->platform_info->default_10_clk !=
+				lp->platform_info->getclk())) {
+				dev_info(&lp->ndev->dev,
+				"%s: want [%d], but get [%d]!\n", __func__,
+				lp->platform_info->default_10_clk,
 				lp->platform_info->getclk());
+			}
 		}
 		break;
 	}
