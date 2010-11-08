@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 123164
+ * @version 125765
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -39,6 +39,7 @@
  * - @ref ddd_group
  * - @ref cortex_group
  * - @ref flash_group
+ * - @ref gtx_group
  * - @ref hdmi_group
  * - @ref idsp_group
  * - @ref ir_group
@@ -121,9 +122,9 @@
  * API calls to query the frequency of the ddr clock.
  * The ddr clock frequency cannot be set directly. It is changed by AMBHAL when the operating mode is changed. See also @ref mode_group.
  *
- * @defgroup sdxc_group SDXC
+ * @defgroup gtx_group GTX
  *
- * API calls to change/query frequency of the SDXC pll. See also @ref pll_page and @ref clocksource_page.
+ * API calls to change/query frequency of the GTX pll. See also @ref pll_page and @ref clocksource_page.
  *
  * @defgroup ddd_group 3D
  *
@@ -183,6 +184,10 @@
  * @defgroup sd_group SD
  *
  * API calls to change/query the frequency of the SD controller.
+ *
+ * @defgroup sdxc_group SDXC
+ *
+ * API calls to change/query the frequency of the SDXC controller.
  *
  * @defgroup sensor_group Sensor
  *
@@ -456,12 +461,11 @@ AMB_HAL_FUNCTION_INFO_GET_AUDIO_PLL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_AUDIO_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_AUDIO_PLL_LOCK_STATUS,
 AMB_HAL_FUNCTION_INFO_ENABLE_AUDIO_CLOCK_OBSERVATION,
-AMB_HAL_FUNCTION_INFO_SET_SDXC_CLOCK_SOURCE,
-AMB_HAL_FUNCTION_INFO_SET_SDXC_CLOCK_FREQUENCY,
-AMB_HAL_FUNCTION_INFO_GET_SDXC_PLL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_GET_SDXC_CLOCK_FREQUENCY,
-AMB_HAL_FUNCTION_INFO_GET_SDXC_PLL_LOCK_STATUS,
-AMB_HAL_FUNCTION_INFO_ENABLE_SDXC_CLOCK_OBSERVATION,
+AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_GET_GTX_PLL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_GET_GTX_PLL_LOCK_STATUS,
+AMB_HAL_FUNCTION_INFO_ENABLE_GTX_CLOCK_OBSERVATION,
 AMB_HAL_FUNCTION_INFO_USB_DEVICE_SOFT_RESET,
 AMB_HAL_FUNCTION_INFO_SET_USB_PORT0_STATE,
 AMB_HAL_FUNCTION_INFO_GET_USB_PORT0_STATE,
@@ -489,6 +493,8 @@ AMB_HAL_FUNCTION_INFO_SET_ADC_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_ADC_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_SD_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_SD_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_SET_SDXC_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_GET_SDXC_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_MS_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_MS_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_MS_SCLK_DELAY,
@@ -540,6 +546,8 @@ AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
 AMB_HAL_FUNCTION_INFO_GET_AHB_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_AXI_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_SOURCE,
+AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_SOURCE,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
 
@@ -984,6 +992,21 @@ AMB_SENSOR_CLOCK_PAD_INPUT_MODE,
 /* Reserved */
 AMB_SENSOR_CLOCK_PAD_RESERVED_MODE = 0xffffffffUL
 } amb_sensor_clock_pad_mode_t ;
+
+/**
+ * GTX clock source
+ *
+ * @ingroup gtx_group
+ */
+
+typedef enum {
+/** External enet gtx clk pin */
+AMB_GTX_CLOCK_SOURCE_ENET_GTX_CLK,
+/** Internal gtx pll */
+AMB_GTX_CLOCK_SOURCE_GTX_PLL,
+/* Reserved */
+AMB_GTX_CLOCK_SOURCE_RESERVED = 0xffffffffUL
+} amb_gtx_clock_source_t ;
 
 /*
  *
@@ -1776,10 +1799,11 @@ static INLINE amb_usb_port_state_t amb_get_usb_port0_state (void *amb_hal_base_a
 /**
  * Select USB Port 0 PHY Clock Source
  *
- * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_24MHZ. 
- * Use this function to change the USB PHY clock source.
- * However, this function can only be called before setting amb_usb_port_state
- * to ::AMB_USB_ON for the first time after power-on reset
+ * @note 
+ * Use this function to change the USB PHY clock source. This can only be
+ * used after power-on reset before setting the usb_port_state to
+ * AMB_USB_ON for the first time.  Note that the default clock source after
+ * power-on reset is AMB_USB_CLK_CORE_24MHZ.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_clock_source Requested usbphy clock source selection
@@ -1858,10 +1882,11 @@ static INLINE amb_usb_port_state_t amb_get_usb_port1_state (void *amb_hal_base_a
 /**
  * Select USB Port 1 PHY Clock Source
  *
- * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_24MHZ. 
- * Use this function to change the USB PHY clock source.
- * However, this function can only be called before setting amb_usb_port_state
- * to ::AMB_USB_ON for the first time after power-on reset
+ * @note
+ * Use this function to change the USB PHY clock source. This can only be
+ * used after power-on reset before setting the usb_port_state to
+ * AMB_USB_ON for the first time.  Note that the default clock source after
+ * power-on reset is AMB_USB_CLK_CORE_24MHZ.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_clock_source Requested usbphy clock source selection
@@ -2263,40 +2288,15 @@ static INLINE amb_hal_success_t amb_enable_audio_clock_observation (void *amb_ha
 
 /*
  *
- * SDXC
+ * GTX
  *
  */
 
 /**
- * Set the clock source for sdxc.
+ * Set the gtx pll frequency.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] amb_clock_source the new clock source.
- * @param[in] amb_clock_frequency the clock frequency of the new source.
- *
- * @note The amb_clock_frequency only needs to be specified for the
- * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
- * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
- * an amb_clock_frequency of 0 for all other clock sources.
- * The topic @ref clocksource_page covers this in more details.
- *
- * @retval ::AMB_HAL_SUCCESS a new clock source has been set.
- * @retval ::AMB_HAL_FAIL the clock source is not supported.
- *
- * @ingroup sdxc_group
- */
-
-static INLINE amb_hal_success_t amb_set_sdxc_clock_source (void *amb_hal_base_address, amb_clock_source_t amb_clock_source, amb_clock_frequency_t amb_clock_frequency)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDXC_CLOCK_SOURCE, amb_clock_source, amb_clock_frequency, amb_hal_unused, amb_hal_unused) ;
-}
-
-/**
- * Set the sdxc pll frequency.
- *
- * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] amb_sdxc_clock_frequency The requested frequency.
+ * @param[in] amb_gtx_clock_frequency The requested frequency.
  *
  * @retval ::AMB_HAL_SUCCESS the new requested pll frequency is valid and it has
  * been programmed.
@@ -2304,53 +2304,53 @@ static INLINE amb_hal_success_t amb_set_sdxc_clock_source (void *amb_hal_base_ad
  * @retval ::AMB_HAL_RETRY a previous pll frequency change request is still
  * outstanding.
  *
- * @ingroup sdxc_group
+ * @ingroup gtx_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdxc_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_sdxc_clock_frequency)
+static INLINE amb_hal_success_t amb_set_gtx_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_gtx_clock_frequency)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDXC_CLOCK_FREQUENCY, amb_sdxc_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_FREQUENCY, amb_gtx_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the current sdxc pll configuration
+ * Get the current gtx pll configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[out] amb_sdxc_pll_configuration Sensor pll configuration information read
+ * @param[out] amb_gtx_pll_configuration Sensor pll configuration information read
  * from pll registers.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
- * @ingroup sdxc_group
+ * @ingroup gtx_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdxc_pll_configuration (void *amb_hal_base_address, amb_pll_configuration_t* amb_sdxc_pll_configuration)
+static INLINE amb_hal_success_t amb_get_gtx_pll_configuration (void *amb_hal_base_address, amb_pll_configuration_t* amb_gtx_pll_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDXC_PLL_CONFIGURATION, (unsigned int) amb_sdxc_pll_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_GTX_PLL_CONFIGURATION, (unsigned int) amb_gtx_pll_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the current sdxc pll frequency
+ * Get the current gtx pll frequency
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
  * @retval ::amb_clock_frequency_t Requested clock frequency.
  *
- * @ingroup sdxc_group
+ * @ingroup gtx_group
  */
 
-static INLINE amb_clock_frequency_t amb_get_sdxc_clock_frequency (void *amb_hal_base_address)
+static INLINE amb_clock_frequency_t amb_get_gtx_clock_frequency (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDXC_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the status of the previous requested sdxc pll frequency change
+ * Get the status of the previous requested gtx pll frequency change
  *
- * @note A new sdxc pll frequency change may be requested after this function
+ * @note A new gtx pll frequency change may be requested after this function
  * returns ::AMB_HAL_SUCCESS.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
@@ -2359,17 +2359,17 @@ static INLINE amb_clock_frequency_t amb_get_sdxc_clock_frequency (void *amb_hal_
  * @retval ::AMB_HAL_FAIL the pll lock has failed to lock in a reasonable amount of time. something is wrong.
  * @retval ::AMB_HAL_RETRY the pll has not locked yet. try again.
  *
- * @ingroup sdxc_group
+ * @ingroup gtx_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdxc_pll_lock_status (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_get_gtx_pll_lock_status (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDXC_PLL_LOCK_STATUS, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_GTX_PLL_LOCK_STATUS, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Enable observation of sdxc clock
+ * Enable observation of gtx clock
  *
  * @note A divided by 16 version of the clock may be observed on the xx_clk_si
  * pin.
@@ -2378,13 +2378,13 @@ static INLINE amb_hal_success_t amb_get_sdxc_pll_lock_status (void *amb_hal_base
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success
  *
- * @ingroup sdxc_group
+ * @ingroup gtx_group
  */
 
-static INLINE amb_hal_success_t amb_enable_sdxc_clock_observation (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_enable_gtx_clock_observation (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_ENABLE_SDXC_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_ENABLE_GTX_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
@@ -2774,6 +2774,46 @@ static INLINE amb_clock_frequency_t amb_get_sd_clock_frequency (void *amb_hal_ba
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return  (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SD_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/*
+ *
+ * SDXC
+ *
+ */
+
+/**
+ * Set the clock frequency of the sdxc controller.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_clock_frequency New sdxc frequency
+ *
+ * @retval ::AMB_HAL_SUCCESS The new frequency has been set
+ * @retval ::AMB_HAL_FAIL The new requested frequency is not valid
+ *
+ * @ingroup sdxc_group
+ */
+
+static INLINE amb_hal_success_t amb_set_sdxc_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_clock_frequency)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return  (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDXC_CLOCK_FREQUENCY, amb_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the frequency of the sdxc clock.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::amb_clock_frequency_t Requested clock frequency
+ *
+ * @ingroup sdxc_group
+ */
+
+static INLINE amb_clock_frequency_t amb_get_sdxc_clock_frequency (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return  (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDXC_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
@@ -3607,9 +3647,9 @@ static INLINE amb_sensor_clock_pad_mode_t amb_get_sensor_clock_pad_mode (void *a
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_apb_peripherals_base_address Virtual address of peripherals (corresponding to
- * physical address 0x70000000)
+ * physical address 0xe8000000)
  * @param[in] amb_ahb_peripherals_base_address Virtual address of peripherals (corresponding to
- * physical address 0x60000000)
+ * physical address 0xe0000000)
  *
  * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
  * @retval ::AMB_HAL_FAIL ambhal system failure
@@ -3669,6 +3709,39 @@ static INLINE amb_clock_frequency_t amb_get_axi_clock_frequency (void *amb_hal_b
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_AXI_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Set the GTX clock source
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_gtx_clock_source The gtx clock source.
+ *
+ * @retval ::AMB_HAL_SUCCESS Always returns success.
+ *
+ * @ingroup gtx_group
+ */
+
+static INLINE amb_hal_success_t amb_set_gtx_clock_source (void *amb_hal_base_address, amb_gtx_clock_source_t amb_gtx_clock_source)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_SOURCE, amb_gtx_clock_source, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the GTX clock source
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::amb_gtx_clock_source_t The gtx clock source.
+ *
+ * @ingroup gtx_group
+ */
+
+static INLINE amb_gtx_clock_source_t amb_get_gtx_clock_source (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_gtx_clock_source_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_SOURCE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_
