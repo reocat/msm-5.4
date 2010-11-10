@@ -42,13 +42,6 @@ static void ambarella_enable_usb_host(void)
 
 	usb_host_initialized = 1;
 
-	/*
-	 * USB port0 can't enumerate external usb devices correctly if usb
-	 * port1 isn't enabled, so we will always enable usb port1, but no care
-	 * about whether usb port1 be used as host or device.
-	 * However, if usb port1 is used as device, we will not enable usb
-	 * port1's power output.
-	 */
 	sys_config = amba_readl(SYS_CONFIG_REG);
 	if (sys_config & USB1_IS_HOST) {
 		/* GPIO8 and GPIO10 are programmed as hardware mode */
@@ -57,34 +50,50 @@ static void ambarella_enable_usb_host(void)
 	/* GPIO7 and GPIO9 are programmed as hardware mode */
 	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000280);
 
+	/*
+	 * We must enable both of the usb ports first, then we can disable
+	 * usb port1 if it is configured as device port.
+	 */
+
 	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
 	}
-	udelay(150);
 
 	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_ON)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
 	}
-	udelay(150);
+
+	if (!(sys_config & USB1_IS_HOST)) {
+		if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_OFF)
+				!= AMB_HAL_SUCCESS) {
+			pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
+		}
+	}
 }
 
 static void ambarella_disable_usb_host(void)
 {
+	u32 sys_config;
+
 	if (usb_host_initialized == 0)
 		return;
 
 	usb_host_initialized = 0;
+
+	sys_config = amba_readl(SYS_CONFIG_REG);
 
 	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_OFF)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
 	}
 
-	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_OFF)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
+	if (sys_config & USB1_IS_HOST) {
+		if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_OFF)
+				!= AMB_HAL_SUCCESS) {
+			pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
+		}
 	}
 }
 
