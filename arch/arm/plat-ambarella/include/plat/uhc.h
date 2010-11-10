@@ -30,7 +30,9 @@
 #ifndef __ASSEMBLER__
 
 struct ambarella_uhc_controller {
-	void					(*init_pll)(void);
+	void					(*enable_host)(void);
+	void					(*dedicated_io)(void);
+	void					(*disable_host)(void);
 };
 
 /* ==========================================================================*/

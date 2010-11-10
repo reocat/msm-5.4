@@ -33,8 +33,8 @@
 /* ==========================================================================*/
 struct resource ambarella_ehci_resources[] = {
 	[0] = {
-		.start	= USB_HOST_CTRL_EHCI_BASE,
-		.end	= USB_HOST_CTRL_EHCI_BASE + 0xFFF,
+		.start	= USB_EHCI_BASE,
+		.end	= USB_EHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -44,8 +44,27 @@ struct resource ambarella_ehci_resources[] = {
 	},
 };
 
+static void ambarella_enable_ehci(void)
+{
+	_init_usb_pll();
+}
+
+static void ambarella_disable_ehci(void)
+{
+	rct_suspend_usb();
+}
+
+static void ambarella_ehci_dedicated_io(void)
+{
+	/* GPIO7~GPIO10 are programmed as hardware mode */
+	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000780);
+	amba_writel(GPIO0_ENABLE_REG, 0x1);
+}
+
 static struct ambarella_uhc_controller ambarella_platform_ehci_data = {
-	.init_pll	= NULL,
+	.enable_host	= ambarella_enable_ehci,
+	.dedicated_io	= ambarella_ehci_dedicated_io,
+	.disable_host	= ambarella_disable_ehci,
 };
 
 struct platform_device ambarella_ehci0 = {
@@ -62,8 +81,8 @@ struct platform_device ambarella_ehci0 = {
 
 struct resource ambarella_ohci_resources[] = {
 	[0] = {
-		.start	= USB_HOST_CTRL_OHCI_BASE,
-		.end	= USB_HOST_CTRL_OHCI_BASE + 0xFFF,
+		.start	= USB_OHCI_BASE,
+		.end	= USB_OHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -74,7 +93,7 @@ struct resource ambarella_ohci_resources[] = {
 };
 
 static struct ambarella_uhc_controller ambarella_platform_ohci_data = {
-	.init_pll	= NULL,
+	.enable_host	= NULL,
 };
 
 struct platform_device ambarella_ohci0 = {

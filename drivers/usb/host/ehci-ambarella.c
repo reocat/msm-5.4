@@ -30,66 +30,84 @@
 
 #include <linux/platform_device.h>
 #include <mach/hardware.h>
-
-#if 0
-#define USB_HOST_CONFIG   (USB_MSR_BASE + USB_MSR_MCFG)
-#define USB_MCFG_PFEN     (1<<31)
-#define USB_MCFG_RDCOMB   (1<<30)
-#define USB_MCFG_SSDEN    (1<<23)
-#define USB_MCFG_PHYPLLEN (1<<19)
-#define USB_MCFG_UCECLKEN (1<<18)
-#define USB_MCFG_EHCCLKEN (1<<17)
-#ifdef CONFIG_DMA_COHERENT
-#define USB_MCFG_UCAM     (1<<7)
-#else
-#define USB_MCFG_UCAM     (0)
-#endif
-#define USB_MCFG_EBMEN    (1<<3)
-#define USB_MCFG_EMEMEN   (1<<2)
-
-#define USBH_ENABLE_CE	(USB_MCFG_PHYPLLEN | USB_MCFG_EHCCLKEN)
-#define USBH_ENABLE_INIT (USB_MCFG_PFEN  | USB_MCFG_RDCOMB |	\
-			  USBH_ENABLE_CE | USB_MCFG_SSDEN  |	\
-			  USB_MCFG_UCAM  | USB_MCFG_EBMEN  |	\
-			  USB_MCFG_EMEMEN)
-
-#define USBH_DISABLE      (USB_MCFG_EBMEN | USB_MCFG_EMEMEN)
-#endif
+#include <plat/uhc.h>
 
 extern int usb_disabled(void);
 
-static void ambarella_start_ehc(void)
+static void ambarella_start_ehc(struct platform_device *pdev)
 {
-#if 0
-	/* enable clock to EHCI block and HS PHY PLL*/
-	au_writel(au_readl(USB_HOST_CONFIG) | USBH_ENABLE_CE, USB_HOST_CONFIG);
-	au_sync();
-	udelay(1000);
+	struct ambarella_uhc_controller *plat_ehci;
+	printk("%s: %d\n", __func__, __LINE__);
 
-	/* enable EHCI mmio */
-	au_writel(au_readl(USB_HOST_CONFIG) | USBH_ENABLE_INIT, USB_HOST_CONFIG);
-	au_sync();
-	udelay(1000);
-#endif
+	if (pdev == NULL)
+		return;
+
+	/* enable clock to EHCI block and HS PHY PLL*/
+	plat_ehci = (struct ambarella_uhc_controller *)pdev->dev.platform_data;
+	if (plat_ehci && plat_ehci->dedicated_io)
+		plat_ehci->dedicated_io();
+	if (plat_ehci && plat_ehci->enable_host)
+		plat_ehci->enable_host();
 }
 
-static void ambarella_stop_ehc(void)
+static void ambarella_stop_ehc(struct platform_device *pdev)
 {
-#if 0
-	unsigned long c;
+	struct ambarella_uhc_controller *plat_ehci;
+	printk("%s: %d\n", __func__, __LINE__);
 
-	/* Disable mem */
-	au_writel(au_readl(USB_HOST_CONFIG) & ~USBH_DISABLE, USB_HOST_CONFIG);
-	au_sync();
-	udelay(1000);
+	if (pdev == NULL)
+		return;
 
-	/* Disable EHC clock. If the HS PHY is unused disable it too. */
-	c = au_readl(USB_HOST_CONFIG) & ~USB_MCFG_EHCCLKEN;
-	if (!(c & USB_MCFG_UCECLKEN))		/* UDC disabled? */
-		c &= ~USB_MCFG_PHYPLLEN;	/* yes: disable HS PHY PLL */
-	au_writel(c, USB_HOST_CONFIG);
-	au_sync();
-#endif
+	/* enable clock to EHCI block and HS PHY PLL*/
+	plat_ehci = (struct ambarella_uhc_controller *)pdev->dev.platform_data;
+	if (plat_ehci && plat_ehci->disable_host)
+		plat_ehci->disable_host();
+
+}
+
+static int ambarella_ehci_setup(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int retval = 0;
+
+	/* registers start at offset 0x0 */
+	ehci->caps = hcd->regs;
+	ehci->regs = hcd->regs +
+		HC_LENGTH(ehci_readl(ehci, &ehci->caps->hc_capbase));
+	dbg_hcs_params(ehci, "reset");
+	dbg_hcc_params(ehci, "reset");
+
+	/* cache this readonly data; minimize chip reads */
+	ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
+	printk("%s: hcs_params(0x%08x) = 0x%08x, hcc_params(0x%08x) = 0x%08x\n", __func__,
+		(u32)&ehci->caps->hcs_params, ehci_readl(ehci, &ehci->caps->hcs_params),
+		(u32)&ehci->caps->hcc_params, ehci_readl(ehci, &ehci->caps->hcc_params));
+
+	retval = ehci_halt(ehci);
+	if (retval)
+		return retval;
+
+	/* data structure init */
+	retval = ehci_init(hcd);
+	if (retval)
+		return retval;
+
+	ehci->sbrn = 0x20;
+
+	ehci_reset(ehci);
+	ehci_port_power(ehci, 0);
+
+	printk("%s: CF = 0x%08x, EPP0 = 0x%08x, EPP1 = 0x%08x\n", __func__,
+		ehci_readl(ehci, &ehci->regs->configured_flag),
+		ehci_readl(ehci, &ehci->regs->port_status[0]),
+		ehci_readl(ehci, &ehci->regs->port_status[1]));
+
+	printk("%s: GPIO0_AFSEL = 0x%08x, USBP0_CTRL_REG = 0x%08x,"
+		"USBP1_CTRL_REG = 0x%08x, ANA_PWR_REG = 0x%08x\n", __func__,
+		amba_readl(GPIO0_AFSEL_REG), amba_readl(USBP0_CTRL_REG),
+		amba_readl(USBP1_CTRL_REG), amba_readl(ANA_PWR_REG));
+
+	return retval;
 }
 
 static const struct hc_driver ehci_ambarella_hc_driver = {
@@ -109,7 +127,7 @@ static const struct hc_driver ehci_ambarella_hc_driver = {
 	 * FIXME -- ehci_init() doesn't do enough here.
 	 * See ehci-ppc-soc for a complete implementation.
 	 */
-	.reset			= ehci_init,
+	.reset			= ambarella_ehci_setup,
 	.start			= ehci_run,
 	.stop			= ehci_stop,
 	.shutdown		= ehci_shutdown,
@@ -143,7 +161,6 @@ static const struct hc_driver ehci_ambarella_hc_driver = {
 static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd;
-	struct ehci_hcd *ehci;
 	int ret;
 
 	if (usb_disabled())
@@ -159,40 +176,19 @@ static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 
 	hcd->rsrc_start = pdev->resource[0].start;
 	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
+	hcd->regs = (void __iomem *)pdev->resource[0].start;
 
-	if (!request_mem_region(hcd->rsrc_start, hcd->rsrc_len, hcd_name)) {
-		pr_debug("request_mem_region failed");
-		ret = -EBUSY;
-		goto err1;
-	}
+	ambarella_start_ehc(pdev);
 
-	hcd->regs = ioremap(hcd->rsrc_start, hcd->rsrc_len);
-	if (!hcd->regs) {
-		pr_debug("ioremap failed");
-		ret = -ENOMEM;
-		goto err2;
-	}
-
-	ambarella_start_ehc();
-
-	ehci = hcd_to_ehci(hcd);
-	ehci->caps = hcd->regs;
-	ehci->regs = hcd->regs + HC_LENGTH(readl(&ehci->caps->hc_capbase));
-	/* cache this readonly data; minimize chip reads */
-	ehci->hcs_params = readl(&ehci->caps->hcs_params);
-
-	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED);
+	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED | IRQF_TRIGGER_RISING);
 	if (ret == 0) {
 		platform_set_drvdata(pdev, hcd);
 		return ret;
 	}
 
-	ambarella_stop_ehc();
-	iounmap(hcd->regs);
-err2:
-	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
-err1:
+	ambarella_stop_ehc(pdev);
 	usb_put_hcd(hcd);
+
 	return ret;
 }
 
@@ -201,10 +197,8 @@ static int ehci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 
 	usb_remove_hcd(hcd);
-	iounmap(hcd->regs);
-	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
 	usb_put_hcd(hcd);
-	ambarella_stop_ehc();
+	ambarella_stop_ehc(pdev);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
@@ -217,6 +211,8 @@ static int ehci_hcd_ambarella_drv_suspend(struct device *dev)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	unsigned long flags;
 	int rc;
+
+	printk("%s: %d\n", __func__, __LINE__);
 
 	return 0;
 	rc = 0;
@@ -242,7 +238,7 @@ static int ehci_hcd_ambarella_drv_suspend(struct device *dev)
 
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 
-	ambarella_stop_ehc();
+	ambarella_stop_ehc(NULL);
 
 bail:
 	spin_unlock_irqrestore(&ehci->lock, flags);
@@ -258,7 +254,9 @@ static int ehci_hcd_ambarella_drv_resume(struct device *dev)
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 
-	ambarella_start_ehc();
+	printk("%s: %d\n", __func__, __LINE__);
+
+	ambarella_start_ehc(NULL);
 
 	// maybe restore FLADJ
 

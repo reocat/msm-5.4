@@ -287,6 +287,7 @@ extern void rct_turn_off_usb_pll(void);
 extern void rct_ena_usb_int_clk(void);
 extern u32 read_usb_reg_setting(void);
 extern void rct_usb_reset(void);
+extern void rct_usb_host_reset(void);
 extern u32 read_pll_so_reg(void);
 extern u32 read_cg_so_reg(void);
 extern void write_pll_so_reg(u32 value);

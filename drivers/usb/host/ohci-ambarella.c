@@ -166,34 +166,18 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 
 	hcd->rsrc_start = pdev->resource[0].start;
 	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
-
-	if (!request_mem_region(hcd->rsrc_start, hcd->rsrc_len, hcd_name)) {
-		pr_debug("request_mem_region failed\n");
-		ret = -EBUSY;
-		goto err1;
-	}
-
-	hcd->regs = ioremap(hcd->rsrc_start, hcd->rsrc_len);
-	if (!hcd->regs) {
-		pr_debug("ioremap failed\n");
-		ret = -ENOMEM;
-		goto err2;
-	}
+	hcd->regs = (void __iomem *)pdev->resource[0].start;
 
 	ambarella_start_ohc();
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
-	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED);
+	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED | IRQF_TRIGGER_LOW);
 	if (ret == 0) {
 		platform_set_drvdata(pdev, hcd);
 		return ret;
 	}
 
 	ambarella_stop_ohc();
-	iounmap(hcd->regs);
-err2:
-	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
-err1:
 	usb_put_hcd(hcd);
 	return ret;
 }
@@ -204,8 +188,6 @@ static int ohci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 
 	usb_remove_hcd(hcd);
 	ambarella_stop_ohc();
-	iounmap(hcd->regs);
-	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
 	usb_put_hcd(hcd);
 	platform_set_drvdata(pdev, NULL);
 

@@ -694,22 +694,28 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
 
 void rct_set_usb_ana_on(void)
 {
-#if 0
-	if (amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ON) !=
+	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON) !=
 							AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_set_usb_interface_state() failed");
+		DEBUG_MSG("amb_set_usb_port1_state() failed");
 	}
-#endif
+
+	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_ON) !=
+							AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_set_usb_port0_state() failed");
+	}
 }
 
 void rct_suspend_usb(void)
 {
-#if 0
-	if (amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_SUSPEND) !=
+	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_SUSPEND) !=
 							AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_set_usb_interface_state() failed");
+		DEBUG_MSG("amb_set_usb_port1_state() failed");
 	}
-#endif
+
+	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_SUSPEND) !=
+							AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_set_usb_port0_state() failed");
+	}
 }
 
 /*
@@ -717,13 +723,17 @@ void rct_suspend_usb(void)
  */
 void rct_set_usb_clk(void)
 {
-#if 0
 	/* FIXME, Set to internal 48MHz by default */
-	if (amb_set_usb_clock_source(HAL_BASE_VP, AMB_USB_CLK_CORE_48MHZ) !=
+	if (amb_set_usb_port1_clock_source(HAL_BASE_VP, AMB_USB_CLK_CORE_48MHZ) !=
 							AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_set_usb_clock_source() failed");
+		DEBUG_MSG("amb_set_usb_port1_clock_source() failed\n");
 	}
-#endif
+
+	/* FIXME, Set to internal 48MHz by default */
+	if (amb_set_usb_port0_clock_source(HAL_BASE_VP, AMB_USB_CLK_CORE_48MHZ) !=
+							AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_set_usb_port0_clock_source() failed\n");
+	}
 }
 
 void rct_set_usb_ext_clk(void)
@@ -772,16 +782,22 @@ u32 read_usb_reg_setting(void)
 void _init_usb_pll(void)
 {
 	rct_set_usb_ana_on();
-	udelay(150);
+	/* Fixme: do we need to reduce the delay time ? */
+	udelay(500);
 }
 
 void rct_usb_reset(void)
 {
-#if 0
-	if (amb_usb_subsystem_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_usb_subsystem_soft_reset() failed\r\n");
+	if (amb_usb_device_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_usb_device_soft_reset() failed\r\n");
 	}
-#endif
+}
+
+void rct_usb_host_reset(void)
+{
+	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_usb_host_soft_reset() failed\r\n");
+	}
 }
 
 /**

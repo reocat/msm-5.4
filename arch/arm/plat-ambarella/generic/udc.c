@@ -57,7 +57,7 @@ static void init_usb(void)
 
 static void reset_usb(void)
 {
-#if (CHIP_REV == A5S)||(CHIP_REV == A7)
+#if (CHIP_REV == A5S)||(CHIP_REV == A7)||(CHIP_REV == I1)
 	rct_usb_reset();
 #endif
 }
