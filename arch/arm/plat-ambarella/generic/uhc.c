@@ -29,12 +29,70 @@
 
 #include <mach/hardware.h>
 #include <plat/uhc.h>
+#include <hal/hal.h>
+
+static int usb_host_initialized = 0;
+
+static void ambarella_enable_usb_host(void)
+{
+	u32 sys_config;
+
+	if (usb_host_initialized == 1)
+		return;
+
+	usb_host_initialized = 1;
+
+	/*
+	 * USB port0 can't enumerate external usb devices correctly if usb
+	 * port1 isn't enabled, so we will always enable usb port1, but no care
+	 * about whether usb port1 be used as host or device.
+	 * However, if usb port1 is used as device, we will not enable usb
+	 * port1's power output.
+	 */
+	sys_config = amba_readl(SYS_CONFIG_REG);
+	if (sys_config & USB1_IS_HOST) {
+		/* GPIO8 and GPIO10 are programmed as hardware mode */
+		amba_setbitsl(GPIO0_AFSEL_REG, 0x00000500);
+	}
+	/* GPIO7 and GPIO9 are programmed as hardware mode */
+	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000280);
+
+	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON)
+			!= AMB_HAL_SUCCESS) {
+		pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
+	}
+	udelay(150);
+
+	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_ON)
+			!= AMB_HAL_SUCCESS) {
+		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
+	}
+	udelay(150);
+}
+
+static void ambarella_disable_usb_host(void)
+{
+	if (usb_host_initialized == 0)
+		return;
+
+	usb_host_initialized = 0;
+
+	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_OFF)
+			!= AMB_HAL_SUCCESS) {
+		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
+	}
+
+	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_OFF)
+			!= AMB_HAL_SUCCESS) {
+		pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
+	}
+}
 
 /* ==========================================================================*/
 struct resource ambarella_ehci_resources[] = {
 	[0] = {
-		.start	= USB_EHCI_BASE,
-		.end	= USB_EHCI_BASE + 0xFFF,
+		.start	= USB_HOST_CTRL_EHCI_BASE,
+		.end	= USB_HOST_CTRL_EHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -44,27 +102,10 @@ struct resource ambarella_ehci_resources[] = {
 	},
 };
 
-static void ambarella_enable_ehci(void)
-{
-	_init_usb_pll();
-}
-
-static void ambarella_disable_ehci(void)
-{
-	rct_suspend_usb();
-}
-
-static void ambarella_ehci_dedicated_io(void)
-{
-	/* GPIO7~GPIO10 are programmed as hardware mode */
-	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000780);
-	amba_writel(GPIO0_ENABLE_REG, 0x1);
-}
 
 static struct ambarella_uhc_controller ambarella_platform_ehci_data = {
-	.enable_host	= ambarella_enable_ehci,
-	.dedicated_io	= ambarella_ehci_dedicated_io,
-	.disable_host	= ambarella_disable_ehci,
+	.enable_host	= ambarella_enable_usb_host,
+	.disable_host	= ambarella_disable_usb_host,
 };
 
 struct platform_device ambarella_ehci0 = {
@@ -81,8 +122,8 @@ struct platform_device ambarella_ehci0 = {
 
 struct resource ambarella_ohci_resources[] = {
 	[0] = {
-		.start	= USB_OHCI_BASE,
-		.end	= USB_OHCI_BASE + 0xFFF,
+		.start	= USB_HOST_CTRL_OHCI_BASE,
+		.end	= USB_HOST_CTRL_OHCI_BASE + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -93,7 +134,8 @@ struct resource ambarella_ohci_resources[] = {
 };
 
 static struct ambarella_uhc_controller ambarella_platform_ohci_data = {
-	.enable_host	= NULL,
+	.enable_host	= ambarella_enable_usb_host,
+	.disable_host	= ambarella_disable_usb_host,
 };
 
 struct platform_device ambarella_ohci0 = {

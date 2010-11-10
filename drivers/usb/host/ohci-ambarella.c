@@ -28,62 +28,34 @@
 */
 
 #include <linux/platform_device.h>
-#include <linux/signal.h>
-
 #include <mach/hardware.h>
-
-#if 0
-#define USB_HOST_CONFIG    (USB_MSR_BASE + USB_MSR_MCFG)
-#define USB_MCFG_PFEN     (1<<31)
-#define USB_MCFG_RDCOMB   (1<<30)
-#define USB_MCFG_SSDEN    (1<<23)
-#define USB_MCFG_OHCCLKEN (1<<16)
-#ifdef CONFIG_DMA_COHERENT
-#define USB_MCFG_UCAM     (1<<7)
-#else
-#define USB_MCFG_UCAM     (0)
-#endif
-#define USB_MCFG_OBMEN    (1<<1)
-#define USB_MCFG_OMEMEN   (1<<0)
-
-#define USBH_ENABLE_CE    USB_MCFG_OHCCLKEN
-
-#define USBH_ENABLE_INIT  (USB_MCFG_PFEN  | USB_MCFG_RDCOMB 	|	\
-			   USBH_ENABLE_CE | USB_MCFG_SSDEN	|	\
-			   USB_MCFG_UCAM  |				\
-			   USB_MCFG_OBMEN | USB_MCFG_OMEMEN)
-
-#define USBH_DISABLE      (USB_MCFG_OBMEN | USB_MCFG_OMEMEN)
-#endif
+#include <plat/uhc.h>
 
 extern int usb_disabled(void);
 
-static void ambarella_start_ohc(void)
-{
-#if 0
-	/* enable host controller */
-	au_writel(au_readl(USB_HOST_CONFIG) | USBH_ENABLE_CE, USB_HOST_CONFIG);
-	au_sync();
-	udelay(1000);
+struct ohci_ambarella {
+	struct ohci_hcd ohci;
+	struct ambarella_uhc_controller *plat_ohci;
+};
 
-	au_writel(au_readl(USB_HOST_CONFIG) | USBH_ENABLE_INIT, USB_HOST_CONFIG);
-	au_sync();
-	udelay(2000);
-#endif
+
+static struct ohci_ambarella *hcd_to_ohci_ambarella(struct usb_hcd *hcd)
+{
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+
+	return container_of(ohci, struct ohci_ambarella, ohci);
 }
 
-static void ambarella_stop_ohc(void)
+static void ambarella_start_ohc(struct ohci_ambarella *amb_ohci)
 {
-#if 0
-	/* Disable mem */
-	au_writel(au_readl(USB_HOST_CONFIG) & ~USBH_DISABLE, USB_HOST_CONFIG);
-	au_sync();
-	udelay(1000);
+	if (amb_ohci && amb_ohci->plat_ohci->enable_host)
+		amb_ohci->plat_ohci->enable_host();
+}
 
-	/* Disable clock */
-	au_writel(au_readl(USB_HOST_CONFIG) & ~USBH_ENABLE_CE, USB_HOST_CONFIG);
-	au_sync();
-#endif
+static void ambarella_stop_ohc(struct ohci_ambarella *amb_ohci)
+{
+	if (amb_ohci && amb_ohci->plat_ohci->enable_host)
+		amb_ohci->plat_ohci->disable_host();
 }
 
 static int __devinit ohci_ambarella_start(struct usb_hcd *hcd)
@@ -108,7 +80,7 @@ static int __devinit ohci_ambarella_start(struct usb_hcd *hcd)
 static const struct hc_driver ohci_ambarella_hc_driver = {
 	.description =		hcd_name,
 	.product_desc =		"Ambarella OHCI",
-	.hcd_priv_size =	sizeof(struct ohci_hcd),
+	.hcd_priv_size =	sizeof(struct ohci_ambarella),
 
 	/*
 	 * generic hardware linkage
@@ -151,6 +123,7 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct usb_hcd *hcd;
+	struct ohci_ambarella *amb_ohci;
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -168,16 +141,28 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
 	hcd->regs = (void __iomem *)pdev->resource[0].start;
 
-	ambarella_start_ohc();
+	amb_ohci = hcd_to_ohci_ambarella(hcd);
+	amb_ohci->plat_ohci =
+		(struct ambarella_uhc_controller *)pdev->dev.platform_data;
+	if (amb_ohci == NULL) {
+		ret = -ENODEV;
+		goto amb_ohci_err;
+	}
+
+	ambarella_start_ohc(amb_ohci);
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
 	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED | IRQF_TRIGGER_LOW);
-	if (ret == 0) {
-		platform_set_drvdata(pdev, hcd);
-		return ret;
-	}
+	if (ret < 0)
+		goto add_hcd_err;
 
-	ambarella_stop_ohc();
+	platform_set_drvdata(pdev, hcd);
+
+	return ret;
+
+add_hcd_err:
+	ambarella_stop_ohc(amb_ohci);
+amb_ohci_err:
 	usb_put_hcd(hcd);
 	return ret;
 }
@@ -185,9 +170,10 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 static int ohci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
+	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 
 	usb_remove_hcd(hcd);
-	ambarella_stop_ohc();
+	ambarella_stop_ohc(amb_ohci);
 	usb_put_hcd(hcd);
 	platform_set_drvdata(pdev, NULL);
 
@@ -195,47 +181,17 @@ static int ohci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+
+/* Maybe just need to suspend/resume controller via HAL function. */
 static int ohci_hcd_ambarella_drv_suspend(struct device *dev)
 {
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
-	unsigned long flags;
-	int rc;
-
-	rc = 0;
-
-	/* Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible, bail out if RH has been resumed. Use
-	 * the spinlock to properly synchronize with possible pending
-	 * RH suspend or resume activity.
-	 *
-	 * This is still racy as hcd->state is manipulated outside of
-	 * any locks =P But that will be a different fix.
-	 */
-	spin_lock_irqsave(&ohci->lock, flags);
-	if (hcd->state != HC_STATE_SUSPENDED) {
-		rc = -EINVAL;
-		goto bail;
-	}
-	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
-	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
-
-	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-
-	ambarella_stop_ohc();
-bail:
-	spin_unlock_irqrestore(&ohci->lock, flags);
-
-	return rc;
+	return 0;
 }
 
 static int ohci_hcd_ambarella_drv_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 
-	ambarella_start_ohc();
-
-	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	ohci_finish_controller_resume(hcd);
 
 	return 0;

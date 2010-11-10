@@ -34,34 +34,28 @@
 
 extern int usb_disabled(void);
 
-static void ambarella_start_ehc(struct platform_device *pdev)
-{
+struct ehci_ambarella {
+	struct ehci_hcd ehci;
 	struct ambarella_uhc_controller *plat_ehci;
-	printk("%s: %d\n", __func__, __LINE__);
+};
 
-	if (pdev == NULL)
-		return;
+static struct ehci_ambarella *hcd_to_ehci_ambarella(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 
-	/* enable clock to EHCI block and HS PHY PLL*/
-	plat_ehci = (struct ambarella_uhc_controller *)pdev->dev.platform_data;
-	if (plat_ehci && plat_ehci->dedicated_io)
-		plat_ehci->dedicated_io();
-	if (plat_ehci && plat_ehci->enable_host)
-		plat_ehci->enable_host();
+	return container_of(ehci, struct ehci_ambarella, ehci);
 }
 
-static void ambarella_stop_ehc(struct platform_device *pdev)
+static void ambarella_start_ehc(struct ehci_ambarella *amb_ehci)
 {
-	struct ambarella_uhc_controller *plat_ehci;
-	printk("%s: %d\n", __func__, __LINE__);
+	if (amb_ehci && amb_ehci->plat_ehci->enable_host)
+		amb_ehci->plat_ehci->enable_host();
+}
 
-	if (pdev == NULL)
-		return;
-
-	/* enable clock to EHCI block and HS PHY PLL*/
-	plat_ehci = (struct ambarella_uhc_controller *)pdev->dev.platform_data;
-	if (plat_ehci && plat_ehci->disable_host)
-		plat_ehci->disable_host();
+static void ambarella_stop_ehc(struct ehci_ambarella *amb_ehci)
+{
+	if (amb_ehci && amb_ehci->plat_ehci->disable_host)
+		amb_ehci->plat_ehci->disable_host();
 
 }
 
@@ -79,9 +73,6 @@ static int ambarella_ehci_setup(struct usb_hcd *hcd)
 
 	/* cache this readonly data; minimize chip reads */
 	ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
-	printk("%s: hcs_params(0x%08x) = 0x%08x, hcc_params(0x%08x) = 0x%08x\n", __func__,
-		(u32)&ehci->caps->hcs_params, ehci_readl(ehci, &ehci->caps->hcs_params),
-		(u32)&ehci->caps->hcc_params, ehci_readl(ehci, &ehci->caps->hcc_params));
 
 	retval = ehci_halt(ehci);
 	if (retval)
@@ -97,23 +88,13 @@ static int ambarella_ehci_setup(struct usb_hcd *hcd)
 	ehci_reset(ehci);
 	ehci_port_power(ehci, 0);
 
-	printk("%s: CF = 0x%08x, EPP0 = 0x%08x, EPP1 = 0x%08x\n", __func__,
-		ehci_readl(ehci, &ehci->regs->configured_flag),
-		ehci_readl(ehci, &ehci->regs->port_status[0]),
-		ehci_readl(ehci, &ehci->regs->port_status[1]));
-
-	printk("%s: GPIO0_AFSEL = 0x%08x, USBP0_CTRL_REG = 0x%08x,"
-		"USBP1_CTRL_REG = 0x%08x, ANA_PWR_REG = 0x%08x\n", __func__,
-		amba_readl(GPIO0_AFSEL_REG), amba_readl(USBP0_CTRL_REG),
-		amba_readl(USBP1_CTRL_REG), amba_readl(ANA_PWR_REG));
-
 	return retval;
 }
 
 static const struct hc_driver ehci_ambarella_hc_driver = {
 	.description		= hcd_name,
 	.product_desc		= "Ambarella EHCI",
-	.hcd_priv_size		= sizeof(struct ehci_hcd),
+	.hcd_priv_size		= sizeof(struct ehci_ambarella),
 
 	/*
 	 * generic hardware linkage
@@ -123,9 +104,6 @@ static const struct hc_driver ehci_ambarella_hc_driver = {
 
 	/*
 	 * basic lifecycle operations
-	 *
-	 * FIXME -- ehci_init() doesn't do enough here.
-	 * See ehci-ppc-soc for a complete implementation.
 	 */
 	.reset			= ambarella_ehci_setup,
 	.start			= ehci_run,
@@ -161,6 +139,7 @@ static const struct hc_driver ehci_ambarella_hc_driver = {
 static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd;
+	struct ehci_ambarella *amb_ehci;
 	int ret;
 
 	if (usb_disabled())
@@ -178,132 +157,54 @@ static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
 	hcd->regs = (void __iomem *)pdev->resource[0].start;
 
-	ambarella_start_ehc(pdev);
-
-	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED | IRQF_TRIGGER_RISING);
-	if (ret == 0) {
-		platform_set_drvdata(pdev, hcd);
-		return ret;
+	amb_ehci = hcd_to_ehci_ambarella(hcd);
+	amb_ehci->plat_ehci =
+		(struct ambarella_uhc_controller *)pdev->dev.platform_data;
+	if (amb_ehci == NULL) {
+		ret = -ENODEV;
+		goto amb_ehci_err;
 	}
 
-	ambarella_stop_ehc(pdev);
-	usb_put_hcd(hcd);
+	ambarella_start_ehc(amb_ehci);
 
+	ret = usb_add_hcd(hcd, pdev->resource[1].start, IRQF_DISABLED | IRQF_TRIGGER_RISING);
+	if (ret < 0)
+		goto add_hcd_err;
+
+	platform_set_drvdata(pdev, hcd);
+
+	return ret;
+
+add_hcd_err:
+	ambarella_stop_ehc(amb_ehci);
+amb_ehci_err:
+	usb_put_hcd(hcd);
 	return ret;
 }
 
 static int ehci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
+	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
 
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
-	ambarella_stop_ehc(pdev);
+	ambarella_stop_ehc(amb_ehci);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int ehci_hcd_ambarella_drv_suspend(struct device *dev)
-{
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	unsigned long flags;
-	int rc;
 
-	printk("%s: %d\n", __func__, __LINE__);
-
-	return 0;
-	rc = 0;
-
-	if (time_before(jiffies, ehci->next_statechange))
-		msleep(10);
-
-	/* Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible, bail out if RH has been resumed. Use
-	 * the spinlock to properly synchronize with possible pending
-	 * RH suspend or resume activity.
-	 *
-	 * This is still racy as hcd->state is manipulated outside of
-	 * any locks =P But that will be a different fix.
-	 */
-	spin_lock_irqsave(&ehci->lock, flags);
-	if (hcd->state != HC_STATE_SUSPENDED) {
-		rc = -EINVAL;
-		goto bail;
-	}
-	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
-	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
-
-	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-
-	ambarella_stop_ehc(NULL);
-
-bail:
-	spin_unlock_irqrestore(&ehci->lock, flags);
-
-	// could save FLADJ in case of Vaux power loss
-	// ... we'd only use it to handle clock skew
-
-	return rc;
-}
-
+/* Maybe just need to suspend/resume controller via HAL function. */
 static int ehci_hcd_ambarella_drv_resume(struct device *dev)
 {
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	return 0;
+}
 
-	printk("%s: %d\n", __func__, __LINE__);
-
-	ambarella_start_ehc(NULL);
-
-	// maybe restore FLADJ
-
-	if (time_before(jiffies, ehci->next_statechange))
-		msleep(100);
-
-	/* Mark hardware accessible again as we are out of D3 state by now */
-	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-
-	/* If CF is still set, we maintained PCI Vaux power.
-	 * Just undo the effect of ehci_pci_suspend().
-	 */
-	if (ehci_readl(ehci, &ehci->regs->configured_flag) == FLAG_CF) {
-		int	mask = INTR_MASK;
-
-		if (!hcd->self.root_hub->do_remote_wakeup)
-			mask &= ~STS_PCD;
-		ehci_writel(ehci, mask, &ehci->regs->intr_enable);
-		ehci_readl(ehci, &ehci->regs->intr_enable);
-		return 0;
-	}
-
-	ehci_dbg(ehci, "lost power, restarting\n");
-	usb_root_hub_lost_power(hcd->self.root_hub);
-
-	/* Else reset, to cope with power loss or flush-to-storage
-	 * style "resume" having let BIOS kick in during reboot.
-	 */
-	(void) ehci_halt(ehci);
-	(void) ehci_reset(ehci);
-
-	/* emptying the schedule aborts any urbs */
-	spin_lock_irq(&ehci->lock);
-	if (ehci->reclaim)
-		end_unlink_async(ehci);
-	ehci_work(ehci);
-	spin_unlock_irq(&ehci->lock);
-
-	ehci_writel(ehci, ehci->command, &ehci->regs->command);
-	ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
-	ehci_readl(ehci, &ehci->regs->command);	/* unblock posted writes */
-
-	/* here we "know" root ports should always stay powered */
-	ehci_port_power(ehci, 1);
-
-	hcd->state = HC_STATE_SUSPENDED;
-
+static int ehci_hcd_ambarella_drv_suspend(struct device *dev)
+{
 	return 0;
 }
 
@@ -330,3 +231,4 @@ static struct platform_driver ehci_hcd_ambarella_driver = {
 };
 
 MODULE_ALIAS("platform:ambarella-ehci");
+

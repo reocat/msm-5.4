@@ -692,16 +692,12 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
 	}
 }
 
+/* This function is just for USB device controller */
 void rct_set_usb_ana_on(void)
 {
 	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_port1_state() failed");
-	}
-
-	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_ON) !=
-							AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_set_usb_port0_state() failed");
 	}
 }
 
@@ -783,20 +779,13 @@ void _init_usb_pll(void)
 {
 	rct_set_usb_ana_on();
 	/* Fixme: do we need to reduce the delay time ? */
-	udelay(500);
+	udelay(150);
 }
 
 void rct_usb_reset(void)
 {
 	if (amb_usb_device_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_usb_device_soft_reset() failed\r\n");
-	}
-}
-
-void rct_usb_host_reset(void)
-{
-	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_usb_host_soft_reset() failed\r\n");
 	}
 }
 

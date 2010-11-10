@@ -29,9 +29,10 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+#define USB1_IS_HOST	(1 << 15)
+
 struct ambarella_uhc_controller {
 	void					(*enable_host)(void);
-	void					(*dedicated_io)(void);
 	void					(*disable_host)(void);
 };
 
