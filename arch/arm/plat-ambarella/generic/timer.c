@@ -149,6 +149,7 @@ static struct clock_event_device ambarella_clkevt = {
 	.set_next_event	= ambarella_ce_timer_set_next_event,
 	.set_mode	= ambarella_ce_timer_set_mode,
 	.mode		= CLOCK_EVT_MODE_UNUSED,
+	.irq		= AMBARELLA_CE_TIMER_IRQ,
 };
 
 static irqreturn_t ambarella_ce_timer_interrupt(int irq, void *dev_id)
@@ -200,6 +201,10 @@ static struct clocksource ambarella_cs_timer_clksrc = {
 /* ==========================================================================*/
 static void ambarella_timer_init(void)
 {
+#ifdef CONFIG_LOCAL_TIMERS
+	twd_base = __io(AMBARELLA_VA_PT_WD_BASE);
+#endif
+
 #ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
 	ambarella_cs_timer_init();
 	ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
@@ -207,7 +212,7 @@ static void ambarella_timer_init(void)
 	clocksource_register(&ambarella_cs_timer_clksrc);
 #endif
 
-	setup_irq(AMBARELLA_CE_TIMER_IRQ, &ambarella_ce_timer_irq);
+	setup_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
 	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
 		NSEC_PER_SEC, ambarella_clkevt.shift);
 	ambarella_clkevt.max_delta_ns =

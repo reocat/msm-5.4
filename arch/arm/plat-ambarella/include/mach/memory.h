@@ -74,8 +74,8 @@
 #endif
 #define AHB_SIZE			(0x01000000)
 #define APB_SIZE			(0x01000000)
-#if defined(PLAT_AMBARELLA_CORTEX)
-#define AXI_SIZE			(0x01000000)
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#define AXI_SIZE			(0x00003000)
 #else
 #define AXI_SIZE			(0x00000000)
 #endif
@@ -91,7 +91,6 @@
 
 #define DEFAULT_BST_START		(DEFAULT_MEM_START + 0x00000000)
 #define DEFAULT_BST_SIZE		(0x00000000)
-#define AMB_BST_VALID_SIZE		(256)
 #define AMB_BST_MAGIC			(0xffaa5500)
 #define AMB_BST_INVALID			(0xdeadbeaf)
 

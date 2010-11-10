@@ -106,7 +106,7 @@ extern u32 get_ambarella_dspmem_size(void);
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
 
-extern u32 get_ambarella_bstmem_phys(void);
+extern u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize);
 extern u32 *get_ambarella_bstmem_head(void);
 
 #endif /* __ASSEMBLER__ */

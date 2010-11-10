@@ -505,7 +505,7 @@ void __init ambarella_init_irq(void)
 	u32					i;
 
 #ifdef CONFIG_PLAT_AMBARELLA_CORTEX
-	gic_dist_init(0, __io(AMBARELLA_VA_GIC_DIST_BASE), 32);
+	gic_dist_init(0, __io(AMBARELLA_VA_GIC_DIST_BASE), LOCAL_TIMER_IRQ);
 	gic_cpu_init(0, __io(AMBARELLA_VA_GIC_CPU_BASE));
 #else
 	/* Set VIC sense and event type for each entry */

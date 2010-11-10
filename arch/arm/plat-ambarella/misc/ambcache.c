@@ -33,6 +33,7 @@
 
 #include <plat/ambcache.h>
 #include <plat/atag.h>
+#include <plat/cortex.h>
 
 /* ==========================================================================*/
 #define CACHE_LINE_SIZE		32

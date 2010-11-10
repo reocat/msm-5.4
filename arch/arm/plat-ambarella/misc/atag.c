@@ -347,37 +347,48 @@ u32 get_ambarella_dspmem_size(void)
 }
 EXPORT_SYMBOL(get_ambarella_dspmem_size);
 
-u32 get_ambarella_bstmem_phys(void)
+u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize)
 {
-	if ((ambarella_bst_info.size != AMB_BST_VALID_SIZE) ||
+	if ((ambarella_bst_info.size == 0) ||
 		(ambarella_bst_info.physaddr < PHYS_OFFSET) ||
 		(ambarella_bst_info.physaddr >= (u32)high_memory))
 		return AMB_BST_INVALID;
 
-	return ambarella_bst_info.physaddr;
+	*bstadd = ambarella_bst_info.physaddr;
+	*bstsize = ambarella_bst_info.size;
+
+	return AMB_BST_MAGIC;
 }
-EXPORT_SYMBOL(get_ambarella_bstmem_phys);
+EXPORT_SYMBOL(get_ambarella_bstmem_info);
 
 u32 *get_ambarella_bstmem_head(void)
 {
 	u32 *pstart_address = NULL;
 	u32 *phead_address = NULL;
 	u32 offset = 0;
+	u32 valid = 0;
 
-	if (ambarella_bst_info.size != AMB_BST_VALID_SIZE)
-		return NULL;
+	if (ambarella_bst_info.size == 0)
+		return (u32 *)AMB_BST_INVALID;
 
 	pstart_address = (u32 *)ambarella_phys_to_virt(
 		ambarella_bst_info.physaddr);
-	for (phead_address = &pstart_address[(AMB_BST_VALID_SIZE >> 2) - 1];
+	for (phead_address =
+		&pstart_address[(ambarella_bst_info.size >> 2) - 1];
 		phead_address > pstart_address; phead_address--) {
+		if (*phead_address == AMB_BST_MAGIC) {
+			valid = 1;
+			break;
+		}
+	}
+	for (; phead_address > pstart_address; phead_address--) {
 		if (*phead_address != AMB_BST_MAGIC) {
 			offset = *phead_address;
 			break;
 		}
 	}
-	if (offset == 0)
-		return NULL;
+	if ((offset == 0) || (valid == 0))
+		return (u32 *)AMB_BST_INVALID;
 
 	phead_address -= (offset >> 2);
 

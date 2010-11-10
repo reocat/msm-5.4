@@ -68,9 +68,24 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 	int i;
-	u32 *phead_address = get_ambarella_bstmem_head();
+	u32 *phead_address;
+	u32 bstadd, bstsize;
+	int retval = 0;
 
 	spin_lock(&boot_lock);
+
+	if (get_ambarella_bstmem_info(&bstadd, &bstsize) != AMB_BST_MAGIC) {
+		pr_err("Can't find SMP BST!\n");
+		retval = -EPERM;
+		goto boot_secondary_exit;
+	}
+
+	phead_address = get_ambarella_bstmem_head();
+	if (phead_address == (u32 *)AMB_BST_INVALID) {
+		pr_err("Can't find SMP BST Header!\n");
+		retval = -EPERM;
+		goto boot_secondary_exit;
+	}
 
 	smp_cross_call(cpumask_of(cpu));
 	timeout = jiffies + (1 * HZ);
@@ -83,19 +98,20 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 
 	smp_rmb();
 	for (i = 0; i < smp_max_cpus; i++) {
-		if (phead_address[PROCESSOR_STATUS_0 + i] == AMB_BST_INVALID)
-			goto boot_secondary_exit;
+		if (phead_address[PROCESSOR_STATUS_0 + i] == AMB_BST_INVALID) {
+			pr_err("CPU[%d] is still dead!\n", i);
+			retval = -EAGAIN;
+		}
 	}
-	if (get_ambarella_bstmem_phys() != AMB_BST_INVALID) {
-		pr_info("Free BST Memory: 0x%08x[0x%08x]\n",
-			get_ambarella_bstmem_phys(), AMB_BST_VALID_SIZE);
-		free_bootmem(get_ambarella_bstmem_phys(), AMB_BST_VALID_SIZE);
+	if (retval == 0) {
+		pr_info("Free BST Memory: 0x%08x[0x%08x]\n", bstadd, bstsize);
+		free_bootmem(bstadd, bstsize);
 	}
 
 boot_secondary_exit:
 	spin_unlock(&boot_lock);
 
-	return 0;
+	return retval;
 }
 
 void __init smp_init_cpus(void)
@@ -135,7 +151,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 	if (max_cpus > 1) {
 		percpu_timer_setup();
 		scu_enable(scu_base);
-		if (phead_address != NULL) {
+		if (phead_address != (u32 *)AMB_BST_INVALID) {
 			for (i = 1; i < max_cpus; i++) {
 				phead_address[PROCESSOR_START_0 + i] = BSYM(
 					virt_to_phys(ambarella_secondary_startup));

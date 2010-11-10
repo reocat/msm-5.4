@@ -71,6 +71,7 @@ void __init ambarella_memblock_reserve(void)
 {
 	struct ambarella_mem_rev_info		rev_info;
 	int					i;
+	u32					bstadd, bstsize;
 
 	if (!get_ambarella_mem_rev_info(&rev_info)) {
 		for (i = 0; i < rev_info.counter; i++) {
@@ -79,11 +80,9 @@ void __init ambarella_memblock_reserve(void)
 		}
 	}
 
-	if (get_ambarella_bstmem_phys() != AMB_BST_INVALID) {
-		pr_info("\t--:\t0x%08x[0x%08x]\tTemp\n",
-			get_ambarella_bstmem_phys(), AMB_BST_VALID_SIZE);
-		memblock_reserve(get_ambarella_bstmem_phys(),
-			AMB_BST_VALID_SIZE);
+	if (get_ambarella_bstmem_info(&bstadd, &bstsize) == AMB_BST_MAGIC) {
+		pr_info("\t--:\t0x%08x[0x%08x]\tTemp\n", bstadd, bstsize);
+		memblock_reserve(bstadd, bstsize);
 	}
 }
 
