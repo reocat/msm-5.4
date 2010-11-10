@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.36
-# Tue Nov  9 15:54:39 2010
+# Tue Nov  9 21:27:49 2010
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1043,7 +1043,7 @@ CONFIG_SSB_POSSIBLE=y
 # CONFIG_DRM is not set
 # CONFIG_VGASTATE is not set
 # CONFIG_VIDEO_OUTPUT_CONTROL is not set
-CONFIG_FB=m
+CONFIG_FB=y
 # CONFIG_FIRMWARE_EDID is not set
 # CONFIG_FB_DDC is not set
 # CONFIG_FB_BOOT_VESA_SUPPORT is not set
