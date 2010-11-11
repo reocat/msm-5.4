@@ -56,7 +56,8 @@ static void aucodec_digitalio_on_0(void)
 #elif (CHIP_REV == A2)
 	amba_setbitsl(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
 
-#elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)||(CHIP_REV == A5S)
+#elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
+	(CHIP_REV == A5S)||(CHIP_REV == I1)
 	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
 	/* GPIO77~GPIO81 program as hardware mode */
 	amba_setbitsl(GPIO2_AFSEL_REG, 0x0003e000);
@@ -68,13 +69,8 @@ static void aucodec_digitalio_on_0(void)
 static void aucodec_digitalio_on_1(void)
 {
 	/* aucodec_digitalio_on */
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
-	amba_setbitsl(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
-
-#elif (CHIP_REV == A2)
-	amba_setbitsl(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
-
-#elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)||(CHIP_REV == A5S)
+#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
+	(CHIP_REV == A5S)||(CHIP_REV == I1)
 	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
 	/* GPIO77~GPIO78 and GPIO81~GPIO83 program as hardware mode */
 	amba_setbitsl(GPIO2_AFSEL_REG, 0x000e6000);
@@ -86,13 +82,8 @@ static void aucodec_digitalio_on_1(void)
 static void aucodec_digitalio_on_2(void)
 {
 	/* aucodec_digitalio_on */
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
-	amba_setbitsl(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
-
-#elif (CHIP_REV == A2)
-	amba_setbitsl(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
-
-#elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)||(CHIP_REV == A5S)
+#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
+	(CHIP_REV == A5S)||(CHIP_REV == I1)
 	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
 	/* GPIO77~GPIO78, GPIO81 and GPIO84~GPIO85 program as hardware mode */
 	amba_setbitsl(GPIO2_AFSEL_REG, 0x00326000);
@@ -103,7 +94,8 @@ static void aucodec_digitalio_on_2(void)
 
 static void i2s_channel_select(u32 ch)
 {
-#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)||(CHIP_REV == A5S)
+#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
+	(CHIP_REV == A5S)||(CHIP_REV == I1)
 	u32 ch_reg_num;
 
 	ch_reg_num = amba_readl(I2S_CHANNEL_SELECT_REG);
