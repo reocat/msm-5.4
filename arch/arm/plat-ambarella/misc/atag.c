@@ -41,6 +41,7 @@
 #define AMBARELLA_IO_DESC_BSB_ID	3
 #define AMBARELLA_IO_DESC_DSP_ID	4
 #define AMBARELLA_IO_DESC_AXI_ID	5
+#define AMBARELLA_IO_DESC_DDD_ID	6
 
 struct ambarella_mem_map_desc {
 	char		name[32];
@@ -98,6 +99,15 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= AXI_BASE,
 			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
 			.length	= AXI_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+	[AMBARELLA_IO_DESC_DDD_ID] = {
+		.name		= "DDD",
+		.io_desc	= {
+			.virtual= 0xF0020000,
+			.pfn	= __phys_to_pfn(0xF0020000),
+			.length	= 0x40000,
 			.type	= MT_DEVICE,
 			},
 	},
