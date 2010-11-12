@@ -1077,8 +1077,10 @@ static int __devinit ambfb_probe(struct platform_device *pdev)
 		if (ambfb_data->conversion_buf.available) {
 			if (info->fix.smem_len < 3 * framesize) {
 				ambfb_data->conversion_buf.available = 0;
-				dev_err(&pdev->dev, "%s: prealloc[0x%08x < 0x%08x]!\n",
-					__func__, info->fix.smem_len, 3 * framesize);
+				dev_err(&pdev->dev,
+					"%s: prealloc[0x%08x < 0x%08x]!\n",
+					__func__, info->fix.smem_len,
+					3 * framesize);
 				errorCode = -ENOMEM;
 				goto ambfb_probe_release_framebuffer;
 			} else {
@@ -1092,8 +1094,6 @@ static int __devinit ambfb_probe(struct platform_device *pdev)
 					framesize;
 			}
 		}
-
-		info->fix.smem_len = framesize;
 	}
 
 	errorCode = fb_alloc_cmap(&info->cmap, 256, 1);

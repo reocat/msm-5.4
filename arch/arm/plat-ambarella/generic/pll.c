@@ -119,9 +119,8 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
-//	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
-#else
+#elif (CHIP_REV == A7)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_LOW_POWER + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
@@ -133,6 +132,30 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
 	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+};
+
+static struct ambarella_pll_performance_info performance_list[] = {
+	{"480P30", AMB_PERFORMANCE_480P30},
+	{"720P30", AMB_PERFORMANCE_720P30},
+	{"720P60", AMB_PERFORMANCE_720P60},
+	{"1080I60", AMB_PERFORMANCE_1080I60},
+	{"1080P30", AMB_PERFORMANCE_1080P30},
+	{"1080P60", AMB_PERFORMANCE_1080P60},
+};
+#elif (CHIP_REV == I1)
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
+static struct ambarella_pll_mode_info mode_list[] = {
+	{"preview", AMB_OPERATING_MODE_PREVIEW},
+	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
+	{"capture", AMB_OPERATING_MODE_CAPTURE},
+	{"playback", AMB_OPERATING_MODE_PLAYBACK},
+	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
+	{"standby", AMB_OPERATING_MODE_STANDBY},
+	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
+	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
+	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
+	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
 
 static struct ambarella_pll_performance_info performance_list[] = {
@@ -193,6 +216,11 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tDram:\t\t%d Hz\n"
 			"\tiDSP:\t\t%d Hz\n"
 			"\tCore:\t\t%d Hz\n"
+#if (CHIP_REV == I1)
+			"\tCortex:\t\t%d Hz\n"
+			"\tAXI:\t\t%d Hz\n"
+			"\tDDD:\t\t%d Hz\n"
+#endif
 			"\tAHB:\t\t%d Hz\n"
 			"\tAPB:\t\t%d Hz\n"
 			"\tVOUT:\t\t%d Hz\n"
@@ -207,6 +235,11 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			get_dram_freq_hz(),
 			get_idsp_freq_hz(),
 			get_core_bus_freq_hz(),
+#if (CHIP_REV == I1)
+			amb_get_cortex_clock_frequency(HAL_BASE_VP),
+			amb_get_axi_clock_frequency(HAL_BASE_VP),
+			amb_get_3d_clock_frequency(HAL_BASE_VP),
+#endif
 			get_ahb_bus_freq_hz(),
 			get_apb_bus_freq_hz(),
 			get_vout_freq_hz(),
