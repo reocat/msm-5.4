@@ -105,9 +105,9 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 	[AMBARELLA_IO_DESC_DDD_ID] = {
 		.name		= "DDD",
 		.io_desc	= {
-			.virtual= 0xF0020000,
-			.pfn	= __phys_to_pfn(0xF0020000),
-			.length	= 0x40000,
+			.virtual= DDD_BASE,
+			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
+			.length	= DDD_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},
@@ -207,6 +207,8 @@ void __init ambarella_map_io(void)
 /* ==========================================================================*/
 static int __init dsp_mem_check(u32 start, u32 size)
 {
+	u32					vstart;
+
 	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
 		pr_err("Ambarella: Bad dsp mem start 0x%08x\n", start);
 		return -EINVAL;
@@ -217,8 +219,13 @@ static int __init dsp_mem_check(u32 start, u32 size)
 		return -EINVAL;
 	}
 
-	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual =
-		(start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
+	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
+	if (vstart < VMALLOC_END) {
+		pr_err("Ambarella: Bad dsp virtual 0x%08x\n", vstart);
+		return -EINVAL;
+	}
+
+	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual = vstart;
 	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.pfn =
 		__phys_to_pfn(start);
 	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.length = size;
@@ -249,6 +256,8 @@ __tagtable(ATAG_AMBARELLA_DSP, parse_mem_tag_dsp);
 /* ==========================================================================*/
 static int __init bsb_mem_check(u32 start, u32 size)
 {
+	u32					vstart;
+
 	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
 		pr_err("Ambarella: Bad bsb mem start 0x%08x\n", start);
 		return -EINVAL;
@@ -259,8 +268,13 @@ static int __init bsb_mem_check(u32 start, u32 size)
 		return -EINVAL;
 	}
 
-	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual =
-		(start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
+	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
+	if (vstart < VMALLOC_END) {
+		pr_err("Ambarella: Bad bsb virtual 0x%08x\n", vstart);
+		return -EINVAL;
+	}
+
+	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual = vstart;
 	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.pfn =
 		__phys_to_pfn(start);
 	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.length = size;
