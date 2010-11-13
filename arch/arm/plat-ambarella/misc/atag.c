@@ -464,6 +464,44 @@ u32 ambarella_virt_to_phys(u32 vaddr)
 }
 EXPORT_SYMBOL(ambarella_virt_to_phys);
 
+u32 get_ambarella_ahb_phys(void)
+{
+	return __pfn_to_phys(
+		ambarella_io_desc[AMBARELLA_IO_DESC_AHB_ID].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_ahb_phys);
+
+u32 get_ambarella_ahb_virt(void)
+{
+	return ambarella_io_desc[AMBARELLA_IO_DESC_AHB_ID].io_desc.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_ahb_virt);
+
+u32 get_ambarella_ahb_size(void)
+{
+	return ambarella_io_desc[AMBARELLA_IO_DESC_AHB_ID].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_ahb_size);
+
+u32 get_ambarella_apb_phys(void)
+{
+	return __pfn_to_phys(
+		ambarella_io_desc[AMBARELLA_IO_DESC_APB_ID].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_apb_phys);
+
+u32 get_ambarella_apb_virt(void)
+{
+	return ambarella_io_desc[AMBARELLA_IO_DESC_APB_ID].io_desc.virtual;
+}
+EXPORT_SYMBOL(get_ambarella_apb_virt);
+
+u32 get_ambarella_apb_size(void)
+{
+	return ambarella_io_desc[AMBARELLA_IO_DESC_APB_ID].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_apb_size);
+
 /* ==========================================================================*/
 static struct ambarella_mem_rev_info ambarella_reserve_mem_info = {
 	.counter			= 0,

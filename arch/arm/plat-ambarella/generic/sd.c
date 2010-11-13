@@ -206,12 +206,20 @@ int fio_amb_sd2_check_owner(void)
 
 void fio_amb_sd2_request(void)
 {
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	fio_select_lock(SELECT_FIO_SD2);
+#else
+	return;
+#endif
 }
 
 void fio_amb_sd2_release(void)
 {
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	fio_unlock(SELECT_FIO_SD2);
+#else
+	return;
+#endif
 }
 
 struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
