@@ -199,9 +199,9 @@ int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 	u32					bothedges;
 	u32					event;
 	u32					girq = irq;
+	struct irq_desc				*desc;
 
-	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, type);
-
+	desc = irq_to_desc(irq);
 	AMBARELLA_GPIO_IRQ2GIRQ();
 	AMBARELLA_GPIO_IRQ2BASE();
 
@@ -211,36 +211,38 @@ int ambarella_gpio_irq_set_type(unsigned int irq, unsigned int type)
 	bothedges = amba_readl(gpio_base + GPIO_IBE_OFFSET);
 	event = amba_readl(gpio_base + GPIO_IEV_OFFSET);
 
+	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, type);
+
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
 		sense &= mask;
 		bothedges &= mask;
 		event |= bit;
-		set_irq_handler(irq, handle_edge_irq);
+		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
 		sense &= mask;
 		bothedges &= mask;
 		event &= mask;
-		set_irq_handler(irq, handle_edge_irq);
+		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_EDGE_BOTH:
 		sense &= mask;
 		bothedges |= bit;
 		event &= mask;
-		set_irq_handler(irq, handle_edge_irq);
+		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_LEVEL_HIGH:
 		sense |= bit;
 		bothedges &= mask;
 		event |= bit;
-		set_irq_handler(irq, handle_level_irq);
+		desc->handle_irq = handle_level_irq;
 		break;
 	case IRQ_TYPE_LEVEL_LOW:
 		sense |= bit;
 		bothedges &= mask;
 		event &= mask;
-		set_irq_handler(irq, handle_level_irq);
+		desc->handle_irq = handle_level_irq;
 		break;
 	default:
 		pr_err("%s: can't set irq type %d for irq 0x%08x@%d\n",
@@ -352,10 +354,12 @@ static int ambarella_irq_set_type(unsigned int irq, unsigned int type)
 	u32					sense;
 	u32					bothedges;
 	u32					event;
+	struct irq_desc				*desc;
+
+	desc = irq_to_desc(irq);
+	AMBARELLA_VIC_IRQ2BASE();
 
 	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, type);
-
-	AMBARELLA_VIC_IRQ2BASE();
 
 	mask = ~(0x1 << irq);
 	bit = (0x1 << irq);
@@ -368,26 +372,31 @@ static int ambarella_irq_set_type(unsigned int irq, unsigned int type)
 		sense &= mask;
 		bothedges &= mask;
 		event |= bit;
+		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
 		sense &= mask;
 		bothedges &= mask;
 		event &= mask;
+		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_EDGE_BOTH:
 		sense &= mask;
 		bothedges |= bit;
 		event &= mask;
+		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_LEVEL_HIGH:
 		sense |= bit;
 		bothedges &= mask;
 		event |= bit;
+		desc->handle_irq = handle_level_irq;
 		break;
 	case IRQ_TYPE_LEVEL_LOW:
 		sense |= bit;
 		bothedges &= mask;
 		event &= mask;
+		desc->handle_irq = handle_level_irq;
 		break;
 	default:
 		pr_err("%s: can't set irq type %d for irq 0x%08x@%d\n",
@@ -448,6 +457,15 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
 	u32					nr = 0;
 
+	if (desc->chip->mask_ack)
+		desc->chip->mask_ack(irq);
+	else {
+		desc->chip->mask(irq);
+		if (desc->chip->ack)
+			desc->chip->ack(irq);
+	}
+	desc->status |= IRQ_MASKED;
+
 	switch (irq) {
 	case GPIO0_IRQ:
 		nr = ambarella_irq_stat2nr(amba_readl(GPIO0_MIS_REG));
@@ -502,7 +520,13 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 #endif
 
 	default:
+		pr_err("%s: Can't support %d\n", __func__, irq);
 		break;
+	}
+
+	if (desc->chip->unmask) {
+		desc->chip->unmask(irq);
+		desc->status &= ~IRQ_MASKED;
 	}
 }
 
@@ -554,35 +578,20 @@ void __init ambarella_init_irq(void)
 
 	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
 		set_irq_chip(VIC_INT_VEC(i), &ambarella_irq_chip);
-
-		if (VIC_LEVEL_FLAG & (0x1 << i)) {
-			set_irq_handler(VIC_INT_VEC(i), handle_level_irq);
-		} else {
-			set_irq_handler(VIC_INT_VEC(i), handle_edge_irq);
-		}
+		set_irq_handler(VIC_INT_VEC(i), handle_level_irq);
 		set_irq_flags(VIC_INT_VEC(i), IRQF_VALID);
 	}
 #if (VIC_INSTANCES >= 2)
 	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
 		set_irq_chip(VIC2_INT_VEC(i), &ambarella_irq_chip);
-
-		if (VIC2_LEVEL_FLAG & (0x1 << i)) {
-			set_irq_handler(VIC2_INT_VEC(i), handle_level_irq);
-		} else {
-			set_irq_handler(VIC2_INT_VEC(i), handle_edge_irq);
-		}
+		set_irq_handler(VIC2_INT_VEC(i), handle_level_irq);
 		set_irq_flags(VIC2_INT_VEC(i), IRQF_VALID);
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
 		set_irq_chip(VIC3_INT_VEC(i), &ambarella_irq_chip);
-
-		if (VIC3_LEVEL_FLAG & (0x1 << i)) {
-			set_irq_handler(VIC3_INT_VEC(i), handle_level_irq);
-		} else {
-			set_irq_handler(VIC3_INT_VEC(i), handle_edge_irq);
-		}
+		set_irq_handler(VIC3_INT_VEC(i), handle_level_irq);
 		set_irq_flags(VIC3_INT_VEC(i), IRQF_VALID);
 	}
 #endif

@@ -52,7 +52,6 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == A2)
-#define VIC_LEVEL_FLAG			(0x025f8ff1)
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
@@ -84,7 +83,6 @@
 #define SD1CD_IRQ			VIC_INT_VEC(24)
 
 #elif (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
-#define VIC_LEVEL_FLAG			(0xfe5f8ff1)
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
@@ -121,8 +119,6 @@
 #define CFCD2_IRQ			VIC_INT_VEC(31)
 
 #elif (CHIP_REV == A5)
-#define VIC_LEVEL_FLAG			(0x4e5f8ff1)
-#define VIC2_LEVEL_FLAG			(0x00028316)
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
@@ -171,8 +167,6 @@
 #define VOUT_LCD_SYNC_IRQ		VIC2_INT_VEC(11)
 
 #elif (CHIP_REV == A5S)
-#define VIC_LEVEL_FLAG			(0x4e5f8ff1)
-#define VIC2_LEVEL_FLAG			(0x00028316)
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
@@ -227,8 +221,6 @@
 #define MOTOR_IRQ			VIC2_INT_VEC(17)
 
 #elif (CHIP_REV == A7)
-#define VIC_LEVEL_FLAG			(0x6e5f8ff1)
-#define VIC2_LEVEL_FLAG			(0x02338316)
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
@@ -290,9 +282,6 @@
 #define ROLLERING_SHUTTER_IRQ		VIC2_INT_VEC(26)
 
 #elif (CHIP_REV == I1)
-#define VIC_LEVEL_FLAG			(0x4e5f8ff1)
-#define VIC2_LEVEL_FLAG			(0x073a031e)
-#define VIC3_LEVEL_FLAG			(0x0dfffc02)
 
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
