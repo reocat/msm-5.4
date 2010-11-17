@@ -131,6 +131,8 @@
 
 /* UART[x]_IE_REG */
 #define UART_IE_PTIME			0x80
+#define UART_IE_ETOI			0x20
+#define UART_IE_EBDI			0x10
 #define UART_IE_EDSSI			0x08
 #define UART_IE_ELSI			0x04
 #define UART_IE_ETBEI			0x02

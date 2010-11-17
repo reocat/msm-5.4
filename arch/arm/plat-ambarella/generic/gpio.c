@@ -492,23 +492,6 @@ int __init ambarella_init_gpio(void)
 	int					errorCode = 0;
 	int					i;
 
-	set_irq_type(GPIO0_IRQ, IRQ_TYPE_LEVEL_HIGH);
-	set_irq_type(GPIO1_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#if (GPIO_INSTANCES >= 3)
-#if (GPIO2_IRQ != GPIO1_IRQ)
-	set_irq_type(GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#endif
-#if (GPIO_INSTANCES >= 4)
-	set_irq_type(GPIO3_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#if (GPIO_INSTANCES >= 5)
-	set_irq_type(GPIO4_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#if (GPIO_INSTANCES >= 6)
-	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-
 	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
 	memset(ambarella_gpio_freeflag, 0xff, sizeof(ambarella_gpio_freeflag));
 	for (i = GPIO_MAX_LINES + 1; i < AMBGPIO_SIZE; i++) {

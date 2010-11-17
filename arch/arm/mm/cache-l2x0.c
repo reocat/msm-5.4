@@ -109,6 +109,11 @@ static void l2x0_cache_sync(void)
 	unsigned long flags;
 
 	spin_lock_irqsave(&l2x0_lock, flags);
+	if (!l2x0_base) {
+		spin_unlock_irqrestore(&l2x0_lock, flags);
+		return;
+	}
+
 	cache_sync();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
@@ -293,7 +298,7 @@ void l2x0_exit()
 		return;
 	}
 
-	if (!(readl_relaxed(l2x0_base + L2X0_CTRL) & 1)) {
+	if (readl_relaxed(l2x0_base + L2X0_CTRL) & 1) {
 		l2x0_clean_all();
 		writel_relaxed(0, l2x0_base + L2X0_CTRL);
 	}

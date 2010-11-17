@@ -36,12 +36,19 @@
 #include <plat/cortex.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 #define CACHE_LINE_SIZE		32
 #define CACHE_LINE_MASK		~(CACHE_LINE_SIZE - 1)
 
 /* ==========================================================================*/
 #ifdef CONFIG_OUTER_CACHE
 static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
+static u32 cortex_l2cache_status = 0;
 #endif
 
 /* ==========================================================================*/
@@ -120,6 +127,13 @@ EXPORT_SYMBOL(ambcache_flush_range);
 int ambcache_l2_enable()
 {
 #ifdef CONFIG_CACHE_L2X0
+	if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) !=
+		0x00000120) {
+		writel(0x00000120, (ambcache_l2_base +
+			L2X0_DATA_LATENCY_CTRL));
+		pr_info("DATA_LATENCY[0x%08x]\n", readl(
+			ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
+	}
 	l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
 #endif
 	return 0;
@@ -134,4 +148,30 @@ int ambcache_l2_disable()
 	return 0;
 }
 EXPORT_SYMBOL(ambcache_l2_disable);
+
+#ifdef CONFIG_OUTER_CACHE
+/* =========================Debug Only========================================*/
+int cortex_l2cache_set_status(const char *val, const struct kernel_param *kp)
+{
+	int ret;
+
+	ret = param_set_uint(val, kp);
+	if (!ret) {
+		if (cortex_l2cache_status) {
+			ret = ambcache_l2_enable();
+		} else {
+			ret = ambcache_l2_disable();
+		}
+	}
+
+	return ret;
+}
+
+static struct kernel_param_ops param_ops_cortex_l2cache = {
+	.set = cortex_l2cache_set_status,
+	.get = param_get_uint,
+};
+module_param_cb(cortex_l2_cache, &param_ops_cortex_l2cache,
+	&cortex_l2cache_status, 0644);
+#endif
 

@@ -357,9 +357,9 @@ static int ambarella_irq_set_type(unsigned int irq, unsigned int type)
 	struct irq_desc				*desc;
 
 	desc = irq_to_desc(irq);
-	AMBARELLA_VIC_IRQ2BASE();
+	pr_debug("%s: irq[%d] type[%d] desc[%p]\n", __func__, irq, type, desc);
 
-	pr_debug("%s: irq[%d] type[%d]\n", __func__, irq, type);
+	AMBARELLA_VIC_IRQ2BASE();
 
 	mask = ~(0x1 << irq);
 	bit = (0x1 << irq);
@@ -604,20 +604,26 @@ void __init ambarella_init_irq(void)
 		__clear_bit(i, ambarella_gpio_wakeup_bit);
 		set_irq_flags(GPIO_INT_VEC(i), IRQF_VALID);
 	}
+	set_irq_type(GPIO0_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO0_IRQ, ambarella_gpio_irq_handler);
+	set_irq_type(GPIO1_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO1_IRQ, ambarella_gpio_irq_handler);
 #if (GPIO_INSTANCES >= 3)
 #if (GPIO2_IRQ != GPIO1_IRQ)
+	set_irq_type(GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO2_IRQ, ambarella_gpio_irq_handler);
 #endif
 #endif
 #if (GPIO_INSTANCES >= 4)
+	set_irq_type(GPIO3_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO3_IRQ, ambarella_gpio_irq_handler);
 #endif
 #if (GPIO_INSTANCES >= 5)
+	set_irq_type(GPIO4_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO4_IRQ, ambarella_gpio_irq_handler);
 #endif
 #if (GPIO_INSTANCES >= 6)
+	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
 #endif
 }
