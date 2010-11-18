@@ -117,20 +117,20 @@ static irqreturn_t ambarella_dma_fios_int_handler(int irq, void *dev_id)
 int ambarella_dma_request_irq(int chan,
 	ambarella_dma_handler handler, void *harg)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					i;
 	unsigned long				flags;
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_request_irq_exit_na;
 	}
 
 	if (unlikely(handler == NULL)) {
 		pr_err("%s: handler is NULL!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_request_irq_exit_na;
 	}
 
@@ -141,7 +141,7 @@ int ambarella_dma_request_irq(int chan,
 			"MAX_DMA_CHANNEL_IRQ_HANDLERS[%d]!\n",
 			__func__, chan, G_dma.chan[chan].irq_count,
 			MAX_DMA_CHANNEL_IRQ_HANDLERS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_request_irq_exit;
 	}
 
@@ -159,26 +159,26 @@ ambarella_dma_request_irq_exit:
 	spin_unlock_irqrestore(&dma_lock, flags);
 
 ambarella_dma_request_irq_exit_na:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_dma_request_irq);
 
 void ambarella_dma_free_irq(int chan, ambarella_dma_handler handler)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					i;
 	unsigned long				flags;
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		return;
 	}
 
 	if (unlikely(handler == NULL)) {
 		pr_err("%s: handler is NULL!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		return;
 	}
 
@@ -189,7 +189,7 @@ void ambarella_dma_free_irq(int chan, ambarella_dma_handler handler)
 			"MAX_DMA_CHANNEL_IRQ_HANDLERS[%d]!\n",
 			__func__, chan, G_dma.chan[chan].irq_count,
 			MAX_DMA_CHANNEL_IRQ_HANDLERS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_free_irq_exit;
 	}
 
@@ -224,27 +224,27 @@ EXPORT_SYMBOL(ambarella_dma_free_irq);
 
 int ambarella_dma_enable_irq(int chan, ambarella_dma_handler handler)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					i;
 	unsigned long				flags;
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_enable_irq_na;
 	}
 
 	if (unlikely(handler == NULL)) {
 		pr_err("%s: handler is NULL!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_enable_irq_na;
 	}
 
 	spin_lock_irqsave(&dma_lock, flags);
 	for (i = 0; i < MAX_DMA_CHANNEL_IRQ_HANDLERS; i++) {
 		if (G_dma.chan[chan].irq[i].handler == NULL) {
-			errorCode = -EINVAL;
+			retval = -EINVAL;
 			pr_err("%s: can't find 0x%x!\n",
 				__func__, (u32)handler);
 			break;
@@ -258,33 +258,33 @@ int ambarella_dma_enable_irq(int chan, ambarella_dma_handler handler)
 	spin_unlock_irqrestore(&dma_lock, flags);
 
 ambarella_dma_enable_irq_na:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_dma_enable_irq);
 
 int ambarella_dma_disable_irq(int chan, ambarella_dma_handler handler)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					i;
 	unsigned long				flags;
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_disable_irq_na;
 	}
 
 	if (unlikely(handler == NULL)) {
 		pr_err("%s: handler is NULL!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_disable_irq_na;
 	}
 
 	spin_lock_irqsave(&dma_lock, flags);
 	for (i = 0; i < MAX_DMA_CHANNEL_IRQ_HANDLERS; i++) {
 		if (G_dma.chan[chan].irq[i].handler == NULL) {
-			errorCode = -EINVAL;
+			retval = -EINVAL;
 			pr_err("%s: can't find 0x%x!\n",
 				__func__, (u32)handler);
 			break;
@@ -298,20 +298,20 @@ int ambarella_dma_disable_irq(int chan, ambarella_dma_handler handler)
 	spin_unlock_irqrestore(&dma_lock, flags);
 
 ambarella_dma_disable_irq_na:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_dma_disable_irq);
 
 #if (DMA_SUPPORT_DMA_FIOS == 1)
 static inline int amb_req_dma_fios(ambarella_dma_req_t * req, int chan)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	u32					ctr = 0;
 
 	if (unlikely(req->xfr_count > 0x003fffff)) {
 		pr_err("%s: xfr_count[0x%x] out of range!\n",
 			__func__, req->xfr_count);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto amb_req_dma_fios_exit;
 	}
 
@@ -332,19 +332,19 @@ static inline int amb_req_dma_fios(ambarella_dma_req_t * req, int chan)
 	amba_writel(DMA_FIOS_CHAN_CTR_REG(chan), ctr);
 
 amb_req_dma_fios_exit:
-	return errorCode;
+	return retval;
 }
 #endif
 
 static inline int amb_req_dma(ambarella_dma_req_t * req, int chan)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	u32					ctr = 0;
 
 	if (unlikely(req->xfr_count > 0x003fffff)) {
 		pr_err("%s: xfr_count[0x%x] out of range!\n",
 			__func__, req->xfr_count);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto amb_req_dma_exit;
 	}
 
@@ -366,12 +366,12 @@ static inline int amb_req_dma(ambarella_dma_req_t * req, int chan)
 	amba_writel(DMA_CHAN_CTR_REG(chan), ctr);
 
 amb_req_dma_exit:
-	return errorCode;
+	return retval;
 }
 
 int ambarella_dma_xfr(ambarella_dma_req_t *req, int chan)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 #ifdef CHECK_DMA_CHAN_USE_FLAG
 	unsigned long				flags;
 #endif
@@ -379,13 +379,13 @@ int ambarella_dma_xfr(ambarella_dma_req_t *req, int chan)
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_xfr_exit;
 	}
 
 	if (unlikely(req == NULL)) {
 		pr_err("%s: req is NULL!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_xfr_exit;
 	}
 
@@ -397,39 +397,39 @@ int ambarella_dma_xfr(ambarella_dma_req_t *req, int chan)
 
 #if (DMA_SUPPORT_DMA_FIOS == 1)
 	if(chan == 0) {
-		errorCode = amb_req_dma_fios(req, chan);
+		retval = amb_req_dma_fios(req, chan);
 	} else {
-		errorCode = amb_req_dma(req, chan);
+		retval = amb_req_dma(req, chan);
 	}
 #else
-	errorCode = amb_req_dma(req, chan);
+	retval = amb_req_dma(req, chan);
 #endif
 
 ambarella_dma_xfr_exit:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_dma_xfr);
 
 int ambarella_dma_desc_xfr(dma_addr_t desc_addr, int chan)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 	if (unlikely(desc_addr == 0)) {
 		pr_err("%s: desc_addr is NULL!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_desc_xfr_exit;
 	}
 
 	if (unlikely((desc_addr & 0x7) != 0)) {
 		pr_err("%s: desc_addr isn't aligned!\n", __func__);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_desc_xfr_exit;
 	}
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_dma_desc_xfr_exit;
 	}
 
@@ -437,24 +437,24 @@ int ambarella_dma_desc_xfr(dma_addr_t desc_addr, int chan)
 	amba_writel(DMA_CHAN_CTR_REG(chan), DMA_CHANX_CTR_EN | DMA_CHANX_CTR_D);
 
 ambarella_dma_desc_xfr_exit:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_dma_desc_xfr);
 
 int __init ambarella_init_dma(void)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					i;
 	struct dma_s				*dma = &G_dma;
 
 	spin_lock_init(&dma_lock);
 	memset(&G_dma, 0x0, sizeof(G_dma));
 
-	errorCode = request_irq(DMA_IRQ, ambarella_dma_int_handler,
+	retval = request_irq(DMA_IRQ, ambarella_dma_int_handler,
 		IRQ_TYPE_LEVEL_HIGH, "ambarella-dma", dma);
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: request_irq %d fail %d!\n",
-			__func__, DMA_IRQ, errorCode);
+			__func__, DMA_IRQ, retval);
 		goto ambarella_init_dma_exit;
 	}
 
@@ -464,11 +464,11 @@ int __init ambarella_init_dma(void)
 	}
 
 #if (DMA_SUPPORT_DMA_FIOS == 1)
-	errorCode = request_irq(DMA_FIOS_IRQ, ambarella_dma_fios_int_handler,
+	retval = request_irq(DMA_FIOS_IRQ, ambarella_dma_fios_int_handler,
 		IRQ_TYPE_LEVEL_HIGH, "ambarella-fios-dma", dma);
-	if (errorCode){
+	if (retval){
 		pr_err("%s: request_irq %d fail %d!\n",
-			__func__, DMA_FIOS_IRQ, errorCode);
+			__func__, DMA_FIOS_IRQ, retval);
 		goto ambarella_init_dma_exit;
 	}
 	amba_writel(DMA_FIOS_CHAN_STA_REG(0), 0);
@@ -479,7 +479,7 @@ int __init ambarella_init_dma(void)
 	dma_file = create_proc_entry(dma_proc_name, S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (dma_file == NULL) {
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 		pr_err("%s: for %s fail!\n", __func__, dma_proc_name);
 	} else {
 		dma_file->read_proc = ambarella_dma_proc_read;
@@ -488,6 +488,6 @@ int __init ambarella_init_dma(void)
 #endif
 
 ambarella_init_dma_exit:
-	return errorCode;
+	return retval;
 }
 

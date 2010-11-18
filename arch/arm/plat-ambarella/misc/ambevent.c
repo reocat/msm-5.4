@@ -77,7 +77,7 @@ EXPORT_SYMBOL(amb_event_pool_query_index);
 int amb_event_pool_query_event(struct amb_event_pool *pool,
 	struct amb_event *event, unsigned char index)
 {
-	int				errorCode = 0;
+	int				retval = 0;
 
 	if (!pool || !event)
 		return -EINVAL;
@@ -85,12 +85,12 @@ int amb_event_pool_query_event(struct amb_event_pool *pool,
 	mutex_lock(&pool->op_mutex);
 
 	if (pool->events[index].type == AMB_EV_NONE) {
-		errorCode = -EAGAIN;
+		retval = -EAGAIN;
 		goto amb_event_pool_query_event_exit;
 	}
 
 	if (index == pool->ev_index) {
-		errorCode = -EAGAIN;
+		retval = -EAGAIN;
 		goto amb_event_pool_query_event_exit;
 	}
 
@@ -98,7 +98,7 @@ int amb_event_pool_query_event(struct amb_event_pool *pool,
 
 amb_event_pool_query_event_exit:
 	mutex_unlock(&pool->op_mutex);
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(amb_event_pool_query_event);
 

@@ -628,18 +628,18 @@ void *get_ambarella_hal_vp(void)
 	}
 
 	if (unlikely((!ambarella_hal_info.inited))) {
-		amb_hal_success_t		errorCode;
+		amb_hal_success_t		retval;
 
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
-		errorCode = amb_hal_init(
+		retval = amb_hal_init(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE);
-		BUG_ON(errorCode != AMB_HAL_SUCCESS);
+		BUG_ON(retval != AMB_HAL_SUCCESS);
 #else
-		errorCode = amb_set_peripherals_base_address(
+		retval = amb_set_peripherals_base_address(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE);
-		BUG_ON(errorCode != AMB_HAL_SUCCESS);
+		BUG_ON(retval != AMB_HAL_SUCCESS);
 #endif
 		ambarella_hal_info.inited = 1;
 	}

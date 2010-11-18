@@ -63,6 +63,10 @@ config PLAT_AMBARELLA_SUPPORT_SATA
 	bool
 	default n
 
+config PLAT_AMBARELLA_DISABLE_8_16_ACCESS
+	bool
+	default n
+
 choice
 	prompt "Chip REV"
 
@@ -123,6 +127,7 @@ config PLAT_AMBARELLA_I1_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP
 	select PLAT_AMBARELLA_SUPPORT_USB
 	select PLAT_AMBARELLA_SUPPORT_SATA
+	select PLAT_AMBARELLA_DISABLE_8_16_ACCESS
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.
 

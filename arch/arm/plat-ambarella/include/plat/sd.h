@@ -67,6 +67,8 @@ struct ambarella_sd_controller {
 extern struct platform_device			ambarella_sd0;
 extern struct platform_device			ambarella_sd1;
 
+extern int ambarella_init_sd(void);
+
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

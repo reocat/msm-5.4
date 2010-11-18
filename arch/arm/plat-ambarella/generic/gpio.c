@@ -46,7 +46,7 @@
 /* ==========================================================================*/
 static inline int ambarella_gpio_inline_config(u32 base, u32 offset, int func)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 	if (func == GPIO_FUNC_HW) {
 		amba_setbitsl(base + GPIO_AFSEL_OFFSET, (0x1 << offset));
@@ -62,10 +62,10 @@ static inline int ambarella_gpio_inline_config(u32 base, u32 offset, int func)
 	} else {
 		pr_err("%s: invalid GPIO func %d for 0x%x:0x%x.\n",
 			__func__, func, base, offset);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 	}
 
-	return errorCode;
+	return retval;
 }
 
 static inline void ambarella_gpio_inline_set(u32 base, u32 offset, int value)
@@ -212,7 +212,7 @@ static unsigned long ambarella_gpio_freeflag[BITS_TO_LONGS(AMBGPIO_SIZE)];
 
 static int ambarella_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_gpio_chip		*ambarella_chip;
 
 	ambarella_chip = to_ambarella_gpio_chip(chip);
@@ -224,15 +224,15 @@ static int ambarella_gpio_request(struct gpio_chip *chip, unsigned offset)
 			__clear_bit((chip->base + offset),
 				ambarella_gpio_freeflag);
 		} else {
-			errorCode = -EACCES;
+			retval = -EACCES;
 		}
 	} else {
-		errorCode = -EPERM;
+		retval = -EPERM;
 	}
 
 	mutex_unlock(&ambarella_gpio_lock);
 
-	return errorCode;
+	return retval;
 }
 
 static void ambarella_gpio_free(struct gpio_chip *chip, unsigned offset)
@@ -251,27 +251,27 @@ static void ambarella_gpio_free(struct gpio_chip *chip, unsigned offset)
 static int ambarella_gpio_chip_direction_input(struct gpio_chip *chip,
 	unsigned offset)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_gpio_chip		*ambarella_chip;
 
 	ambarella_chip = to_ambarella_gpio_chip(chip);
 
 	mutex_lock(&ambarella_gpio_lock);
 
-	errorCode = ambarella_gpio_inline_config(
+	retval = ambarella_gpio_inline_config(
 		ambarella_chip->mem_base,
 		offset,
 		GPIO_FUNC_SW_INPUT);
 
 	mutex_unlock(&ambarella_gpio_lock);
 
-	return errorCode;
+	return retval;
 }
 
 static int ambarella_gpio_chip_get(struct gpio_chip *chip,
 	unsigned offset)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_gpio_chip		*ambarella_chip;
 
 	ambarella_chip = to_ambarella_gpio_chip(chip);
@@ -280,27 +280,27 @@ static int ambarella_gpio_chip_get(struct gpio_chip *chip,
 	mutex_lock(&ambarella_gpio_lock);
 #endif
 
-	errorCode = ambarella_gpio_inline_get(ambarella_chip->mem_base,
+	retval = ambarella_gpio_inline_get(ambarella_chip->mem_base,
 		offset);
 
 #if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
 	mutex_unlock(&ambarella_gpio_lock);
 #endif
 
-	return errorCode;
+	return retval;
 }
 
 static int ambarella_gpio_chip_direction_output(struct gpio_chip *chip,
 	unsigned offset, int val)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_gpio_chip		*ambarella_chip;
 
 	ambarella_chip = to_ambarella_gpio_chip(chip);
 
 	mutex_lock(&ambarella_gpio_lock);
 
-	errorCode = ambarella_gpio_inline_config(
+	retval = ambarella_gpio_inline_config(
 		ambarella_chip->mem_base,
 		offset,
 		GPIO_FUNC_SW_OUTPUT);
@@ -308,7 +308,7 @@ static int ambarella_gpio_chip_direction_output(struct gpio_chip *chip,
 
 	mutex_unlock(&ambarella_gpio_lock);
 
-	return errorCode;
+	return retval;
 }
 
 static void ambarella_gpio_chip_set(struct gpio_chip *chip,
@@ -437,7 +437,7 @@ static int ambarella_gpio_proc_read(char *page, char **start,
 static int ambarella_gpio_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					cmd_cnt;
 	int					i;
 	int					gpio_id;
@@ -445,13 +445,13 @@ static int ambarella_gpio_proc_write(struct file *file,
 
 	if (count > sizeof(gpio_array)) {
 		pr_err("%s: count %d out of size!\n", __func__, (u32)count);
-		errorCode = -ENOSPC;
+		retval = -ENOSPC;
 		goto ambarella_gpio_write_exit;
 	}
 
 	if (copy_from_user(gpio_array, buffer, count)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
-		errorCode = -EFAULT;
+		retval = -EFAULT;
 		goto ambarella_gpio_write_exit;
 	}
 
@@ -469,10 +469,10 @@ static int ambarella_gpio_proc_write(struct file *file,
 		}
 	}
 
-	errorCode = count;
+	retval = count;
 
 ambarella_gpio_write_exit:
-	return errorCode;
+	return retval;
 }
 #endif
 
@@ -489,7 +489,7 @@ void __init ambarella_gpio_set_valid(unsigned pin, int valid)
 
 int __init ambarella_init_gpio(void)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					i;
 
 	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
@@ -500,13 +500,13 @@ int __init ambarella_init_gpio(void)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(ambarella_gpio_banks); i++) {
-		errorCode = gpiochip_add(&ambarella_gpio_banks[i].chip);
-		if (errorCode) {
+		retval = gpiochip_add(&ambarella_gpio_banks[i].chip);
+		if (retval) {
 			pr_err("%s: gpiochip_add %s fail %d.\n",
 				__func__,
 				ambarella_gpio_banks[i].chip.label,
-				errorCode);
-			errorCode = -EINVAL;
+				retval);
+			retval = -EINVAL;
 			break;
 		}
 	}
@@ -516,7 +516,7 @@ int __init ambarella_init_gpio(void)
 		get_ambarella_proc_dir());
 	if (gpio_file == NULL) {
 		pr_err("%s: %s fail!\n", __func__, gpio_proc_name);
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 	} else {
 		gpio_file->read_proc = ambarella_gpio_proc_read;
 		gpio_file->write_proc = ambarella_gpio_proc_write;
@@ -566,7 +566,7 @@ int __init ambarella_init_gpio(void)
 #endif
 #endif
 
-	return errorCode;
+	return retval;
 }
 
 /* ==========================================================================*/

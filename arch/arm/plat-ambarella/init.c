@@ -51,13 +51,13 @@ static struct proc_dir_entry *ambarella_proc_dir = NULL;
 
 int __init ambarella_create_proc_dir(void)
 {
-	int					errCode = 0;
+	int					retval = 0;
 
 	ambarella_proc_dir = proc_mkdir("ambarella", NULL);
 	if (!ambarella_proc_dir)
-		errCode = -ENOMEM;
+		retval = -ENOMEM;
 
-	return errCode;
+	return retval;
 }
 
 struct proc_dir_entry *get_ambarella_proc_dir(void)
@@ -157,6 +157,9 @@ int __init ambarella_init_machine(char *board_name)
 	BUG_ON(retval != 0);
 
 	retval = ambarella_init_audio();
+	BUG_ON(retval != 0);
+
+	retval = ambarella_init_sd();
 	BUG_ON(retval != 0);
 
 	boot_from = rct_boot_from();

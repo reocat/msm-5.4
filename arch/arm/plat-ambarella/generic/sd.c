@@ -30,6 +30,7 @@
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
+#include <hal/hal.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -222,6 +223,18 @@ void fio_amb_sd2_release(void)
 #endif
 }
 
+#if (CHIP_REV == I1)
+void ambarella_platform_sdxc_set_pll(u32 freq_hz)
+{
+	amb_set_sdxc_clock_frequency(HAL_BASE_VP, freq_hz);
+}
+
+u32 ambarella_platform_sdxc_get_pll(void)
+{
+	return (u32)amb_get_sdxc_clock_frequency(HAL_BASE_VP);
+}
+#endif
+
 struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.slot[0] = {
 		.check_owner	= fio_amb_sd2_check_owner,
@@ -256,8 +269,13 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
 	.wait_tmo		= (5 * HZ),
+#if (CHIP_REV == I1)
+	.set_pll		= ambarella_platform_sdxc_set_pll,
+	.get_pll		= ambarella_platform_sdxc_get_pll,
+#else
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
+#endif
 #if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
 #else
@@ -287,4 +305,17 @@ struct platform_device ambarella_sd1 = {
 	}
 };
 #endif
+
+int __init ambarella_init_sd(void)
+{
+	int retval = 0;
+
+#if (CHIP_REV == A7) || (CHIP_REV == I1)
+	retval = amb_set_sd_ioctrl_drive_strength(HAL_BASE_VP,
+		AMB_IOCTRL_DRIVE_STRENGTH_12MA);
+	BUG_ON(retval != AMB_HAL_SUCCESS);
+#endif
+
+	return retval;
+}
 

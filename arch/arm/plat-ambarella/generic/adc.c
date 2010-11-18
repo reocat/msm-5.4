@@ -343,13 +343,13 @@ static int ambarella_adc_proc_read(char *page, char **start,
 
 int __init ambarella_init_adc(void)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 #ifdef CONFIG_AMBARELLA_ADC_PROC
 	adc_file = create_proc_entry(adc_proc_name, S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (adc_file == NULL) {
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 		pr_err("%s: %s fail!\n", __func__, adc_proc_name);
 	} else {
 		adc_file->read_proc = ambarella_adc_proc_read;
@@ -357,7 +357,7 @@ int __init ambarella_init_adc(void)
 	}
 #endif
 
-	return errorCode;
+	return retval;
 }
 
 u32 adc_is_irq_supported(void)

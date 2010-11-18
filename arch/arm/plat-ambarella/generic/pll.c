@@ -254,44 +254,44 @@ ambarella_pll_proc_read_exit:
 
 int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	amb_hal_success_t			result = AMB_HAL_SUCCESS;
 	unsigned int				oldfreq, newfreq;
 	unsigned long				flags;
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	oldfreq = get_arm_bus_freq_hz();
 
 	local_irq_save(flags);
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	ambarella_timer_suspend(1);
 	result = amb_set_operating_mode(HAL_BASE_VP, popmode);
 	ambarella_timer_resume(1);
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",
 			__func__, result);
-		errorCode = -EPERM;
+		retval = -EPERM;
 	}
 
 	local_irq_restore(flags);
@@ -299,27 +299,27 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	newfreq = get_arm_bus_freq_hz();
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	result = amb_get_operating_mode(HAL_BASE_VP, popmode);
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
 			__func__, result);
-		errorCode = -EPERM;
+		retval = -EPERM;
 	}
 
-	return errorCode;
+	return retval;
 }
 
 static int ambarella_mode_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	char					str[MAX_CMD_LENGTH];
 	int					mode, i;
 	amb_hal_success_t			result;
@@ -327,7 +327,7 @@ static int ambarella_mode_proc_write(struct file *file,
 	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
 	if (copy_from_user(str, buffer, i)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
-		errorCode = -EFAULT;
+		retval = -EFAULT;
 		goto pll_mode_proc_write_exit;
 	}
 	str[MAX_CMD_LENGTH - 1] = 0;
@@ -341,7 +341,7 @@ static int ambarella_mode_proc_write(struct file *file,
 
 	if (mode >= AMB_OPERATING_MODE_END) {
 		pr_err("%s: invalid mode (%s)!\n", __func__, str);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto pll_mode_proc_write_exit;
 	}
 
@@ -349,23 +349,23 @@ static int ambarella_mode_proc_write(struct file *file,
 	if(result != AMB_HAL_SUCCESS){
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
 			__func__, result);
-		errorCode = -EPERM;
+		retval = -EPERM;
 		goto pll_mode_proc_write_exit;
 	}
 
 	pll_info.operating_mode.mode = mode;
-	errorCode = ambarella_set_operating_mode(&pll_info.operating_mode);
-	if (!errorCode)
-		errorCode = count;
+	retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	if (!retval)
+		retval = count;
 
 pll_mode_proc_write_exit:
-	return errorCode;
+	return retval;
 }
 
 static int ambarella_performance_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	char					str[MAX_CMD_LENGTH];
 	int					performance, i;
 	amb_hal_success_t			result;
@@ -373,7 +373,7 @@ static int ambarella_performance_proc_write(struct file *file,
 	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
 	if (copy_from_user(str, buffer, i)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
-		errorCode = -EFAULT;
+		retval = -EFAULT;
 		goto pll_performance_proc_write_exit;
 	}
 	str[MAX_CMD_LENGTH - 1] = 0;
@@ -387,7 +387,7 @@ static int ambarella_performance_proc_write(struct file *file,
 
 	if (performance > AMB_PERFORMANCE_2160P60){
 		pr_err("%s: invalid performance (%s)!\n", __func__, str);
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto pll_performance_proc_write_exit;
 	}
 
@@ -395,36 +395,36 @@ static int ambarella_performance_proc_write(struct file *file,
 	if(result != AMB_HAL_SUCCESS){
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
 			__func__, result);
-		errorCode = -EPERM;
+		retval = -EPERM;
 		goto pll_performance_proc_write_exit;
 	}
 
 	pll_info.operating_mode.performance = performance;
-	errorCode = ambarella_set_operating_mode(&pll_info.operating_mode);
-	if (!errorCode)
-		errorCode = count;
+	retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	if (!retval)
+		retval = count;
 
 pll_performance_proc_write_exit:
-	return errorCode;
+	return retval;
 }
 
 static int ambarella_init_pll_a5s(void)
 {
 	amb_hal_success_t			result;
-	int					errorCode = 0;
+	int					retval = 0;
 
 	/* initial pll_info */
 	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
 	if(result != AMB_HAL_SUCCESS){
 		pr_err("%s: get operating mode failed(%d)\n",__func__, result);
-		errorCode = -EPERM;
+		retval = -EPERM;
 		goto pll_a5s_exit;
 	}
 
 	mode_file = create_proc_entry("mode", S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (mode_file == NULL) {
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 		pr_err("%s: create proc file (mode) fail!\n", __func__);
 		goto pll_a5s_exit;
 	} else {
@@ -435,7 +435,7 @@ static int ambarella_init_pll_a5s(void)
 	performance_file = create_proc_entry("performance", S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (performance_file == NULL) {
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 		pr_err("%s: create proc file (performance) fail!\n", __func__);
 		goto pll_a5s_exit;
 	} else {
@@ -444,7 +444,7 @@ static int ambarella_init_pll_a5s(void)
 	}
 
 pll_a5s_exit:
-	return errorCode;
+	return retval;
 }
 
 #else
@@ -534,22 +534,22 @@ static int ambarella_freq_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
 	char					str[MAX_CMD_LENGTH];
-	int					errorCode = 0;
+	int					retval = 0;
 	unsigned int				i;
 	unsigned long				flags;
 
 	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
 	if (copy_from_user(str, buffer, i)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
-		errorCode = -EFAULT;
+		retval = -EFAULT;
 		goto ambarella_pll_proc_write_exit;
 	}
 	str[MAX_CMD_LENGTH - 1] = 0;
 
-	errorCode = sscanf(str, "%d", &i);
-	if (errorCode != 1) {
-		pr_err("%s: convert sting fail %d!\n", __func__, errorCode);
-		errorCode = -EINVAL;
+	retval = sscanf(str, "%d", &i);
+	if (retval != 1) {
+		pr_err("%s: convert sting fail %d!\n", __func__, retval);
+		retval = -EINVAL;
 		goto ambarella_pll_proc_write_exit;
 	}
 
@@ -557,21 +557,21 @@ static int ambarella_freq_proc_write(struct file *file,
 		pr_err("%s:\n\tinvalid frequency (%d)\n",
 			__func__, i);
 		pr_info("\tfrequency should be 135000 ~ 243000 (in KHz)\n");
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto ambarella_pll_proc_write_exit;
 	}
 
 	pr_debug("%s: %ld %d\n", __func__, count, i);
-	errorCode = count;
+	retval = count;
 
 	if(i == pll_info.armfreq)
 		goto ambarella_pll_proc_write_exit;
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	ambarella_adjust_jiffies(AMBA_EVENT_PRE_CPUFREQ,
@@ -579,22 +579,22 @@ static int ambarella_freq_proc_write(struct file *file,
 
 	local_irq_save(flags);
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	ambarella_timer_suspend(1);
 	ambarella_freq_set_pll(i);
 	ambarella_timer_resume(1);
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	local_irq_restore(flags);
@@ -602,22 +602,22 @@ static int ambarella_freq_proc_write(struct file *file,
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ,
 		pll_info.armfreq, i);
 
-	errorCode = notifier_to_errno(
+	retval = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
-	if (errorCode) {
+	if (retval) {
 		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
-			__func__, errorCode);
+			__func__, retval);
 	}
 
 	pll_info.armfreq = get_core_bus_freq_hz();
 
 ambarella_pll_proc_write_exit:
-	return errorCode;
+	return retval;
 }
 
 static int ambarella_init_pll_general(void)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 	/* initial pll_info */
 	pll_info.armfreq = get_core_bus_freq_hz();
@@ -625,7 +625,7 @@ static int ambarella_init_pll_general(void)
 	freq_file = create_proc_entry("corepll", S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (freq_file == NULL) {
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 		pr_err("%s: create proc file (freq) fail!\n", __func__);
 		goto pll_general_exit;
 	} else {
@@ -634,22 +634,22 @@ static int ambarella_init_pll_general(void)
 	}
 
 pll_general_exit:
-	return errorCode;
+	return retval;
 }
 
 #endif	/* End for #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL) */
 
 int __init ambarella_init_pll(void)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	errorCode = ambarella_init_pll_a5s();
+	retval = ambarella_init_pll_a5s();
 #else
-	errorCode = ambarella_init_pll_general();
+	retval = ambarella_init_pll_general();
 #endif
 
-	return errorCode;
+	return retval;
 }
 
 /* ==========================================================================*/

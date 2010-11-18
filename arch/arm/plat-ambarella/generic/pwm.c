@@ -91,11 +91,11 @@ static void add_pwm_device(struct pwm_device *pwm)
 
 int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 {
-	int			errorCode = 0;
+	int			retval = 0;
 	unsigned int		clock, on, off;
 
 	if (!pwm->get_clock) {
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		printk("%s: Can not get pwm clock!\n", __func__);
 		goto pwm_config_exit;
 	}
@@ -112,7 +112,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	SET_REG_BIT_FILED(pwm->low, off - 1);
 
 pwm_config_exit:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(pwm_config);
 
@@ -321,7 +321,7 @@ static struct pwm_device ambarella_pwm4 = {
 /*============================= PWM Backlight Device =========================*/
 static int pwm_backlight_init(struct device *dev)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct platform_device			*pdev;
 	struct platform_pwm_backlight_data	*data;
 
@@ -375,11 +375,11 @@ static int pwm_backlight_init(struct device *dev)
 		break;
 
 	default:
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		break;
 	}
 
-	return errorCode;
+	return retval;
 }
 
 static struct platform_pwm_backlight_data amb_pwm0_pdata = {
@@ -500,7 +500,7 @@ static struct proc_dir_entry *pwm_file;
 static int ambarella_pwm_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	int					cmd_cnt;
 	int					i;
 	u32					pwm_ch;
@@ -512,13 +512,13 @@ static int ambarella_pwm_proc_write(struct file *file,
 
 	if (count > sizeof(pwm_array)) {
 		pr_err("%s: count %d out of size!\n", __func__, (u32)count);
-		errorCode = -ENOSPC;
+		retval = -ENOSPC;
 		goto ambarella_pwm_proc_write_exit;
 	}
 
 	if (copy_from_user(pwm_array, buffer, count)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
-		errorCode = -EFAULT;
+		retval = -EFAULT;
 		goto ambarella_pwm_proc_write_exit;
 	}
 
@@ -569,22 +569,22 @@ static int ambarella_pwm_proc_write(struct file *file,
 		}
 	}
 
-	errorCode = count;
+	retval = count;
 
 ambarella_pwm_proc_write_exit:
-	return errorCode;
+	return retval;
 }
 #endif
 
 int __init ambarella_init_pwm(void)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 #ifdef CONFIG_AMBARELLA_PWM_PROC
 	pwm_file = create_proc_entry(pwm_proc_name, S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (pwm_file == NULL) {
-		errorCode = -ENOMEM;
+		retval = -ENOMEM;
 		pr_err("%s: %s fail!\n", __func__, pwm_proc_name);
 	} else {
 		pwm_file->read_proc = NULL;
@@ -598,6 +598,6 @@ int __init ambarella_init_pwm(void)
 	add_pwm_device(&ambarella_pwm3);
 	add_pwm_device(&ambarella_pwm4);
 
-	return errorCode;
+	return retval;
 }
 

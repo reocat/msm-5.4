@@ -49,40 +49,40 @@ static int amb_async_proc_open(struct inode *inode, struct file *filp)
 
 static int amb_async_proc_fasync(int fd, struct file * filp, int on)
 {
-	int				errorCode;
+	int				retval;
 	struct amb_async_proc_info	*pinfo;
 
 	pinfo = GET_PROC_DATA_FROM_FILEP(filp);
 
 	mutex_lock(&pinfo->op_mutex);
-	errorCode = fasync_helper(fd, filp, on, &pinfo->fasync_queue);
+	retval = fasync_helper(fd, filp, on, &pinfo->fasync_queue);
 	mutex_unlock(&pinfo->op_mutex);
 
-	return errorCode;
+	return retval;
 }
 
 static int amb_async_proc_release(struct inode *inode, struct file *filp)
 {
-	int				errorCode;
+	int				retval;
 	struct amb_async_proc_info	*pinfo;
 
 	pinfo = GET_PROC_DATA_FROM_FILEP(filp);
 
 	mutex_lock(&pinfo->op_mutex);
-	errorCode = fasync_helper(-1, filp, 0, &pinfo->fasync_queue);
+	retval = fasync_helper(-1, filp, 0, &pinfo->fasync_queue);
 	pinfo->use_count--;
 	mutex_unlock(&pinfo->op_mutex);
 
-	return errorCode;
+	return retval;
 }
 
 int amb_async_proc_create(struct amb_async_proc_info *pinfo)
 {
-	int				errorCode = 0;
+	int				retval = 0;
 	struct proc_dir_entry		*entry;
 
 	if (!pinfo) {
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 		goto amb_async_proc_create_exit;
 	}
 
@@ -96,25 +96,25 @@ int amb_async_proc_create(struct amb_async_proc_info *pinfo)
 	entry = proc_create_data(pinfo->proc_name, S_IRUGO,
 		get_ambarella_proc_dir(), &pinfo->fops, pinfo);
 	if (!entry) {
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 	}
 
 amb_async_proc_create_exit:
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(amb_async_proc_create);
 
 int amb_async_proc_remove(struct amb_async_proc_info *pinfo)
 {
-	int				errorCode = 0;
+	int				retval = 0;
 
 	if (!pinfo) {
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 	} else {
 		remove_proc_entry(pinfo->proc_name, get_ambarella_proc_dir());
 	}
 
-	return errorCode;
+	return retval;
 }
 EXPORT_SYMBOL(amb_async_proc_remove);
 

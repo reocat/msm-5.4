@@ -1035,9 +1035,9 @@ int ambarella_audio_unregister_notifier(struct notifier_block *nb)
 	return srcu_notifier_chain_unregister(&audio_notifier_list, nb);
 }
 
-int __init ambarella_init_audio (void)
+int __init ambarella_init_audio(void)
 {
-	int errorCode = 0;
+	int retval = 0;
 
 	srcu_init_notifier_head(&audio_notifier_list);
 
@@ -1045,8 +1045,8 @@ int __init ambarella_init_audio (void)
 	audio_i2s_intf.state = AUDIO_NOTIFY_UNKNOWN;
 
 	audio_notify.notifier_call = audio_notify_transition;
-	errorCode = ambarella_audio_register_notifier(&audio_notify);
+	retval = ambarella_audio_register_notifier(&audio_notify);
 
-	return errorCode;
+	return retval;
 }
 
