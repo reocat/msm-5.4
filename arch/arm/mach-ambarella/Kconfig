@@ -46,6 +46,13 @@ config MACH_DURIAN
 	help
 	  Say Y here if you are using A5S Durian.
 
+config MACH_ELEPHANT
+	bool "Elephant"
+	depends on PLAT_AMBARELLA_I1
+	default n
+	help
+	  Say Y here if you are using iOne Elephant.
+
 menu "Misc Configuration"
 
 config MMC_AMBARELLA_SDIO

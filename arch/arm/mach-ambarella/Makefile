@@ -21,9 +21,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
 obj-$(CONFIG_MACH_COCONUT)	+= init-coconut.o
 obj-$(CONFIG_MACH_DURIAN)	+= init-durian.o
+obj-$(CONFIG_MACH_ELEPHANT)	+= init-elephant.o
+obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
 
 obj-y				+= touch-ak4183.o
 obj-y				+= touch-chacha_mt4d.o

@@ -31,7 +31,7 @@
 #define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         0
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
 #define IDC_SUPPORT_INTERNAL_MUX	1
 #else
 #define IDC_SUPPORT_INTERNAL_MUX	0

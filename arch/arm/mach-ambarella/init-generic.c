@@ -159,43 +159,6 @@ static void __init ambarella_init_generic(void)
 
 	ambarella_init_machine("Generic");
 
-#if (CHIP_REV == I1)
-	ambarella_board_generic.lcd_reset.gpio_id = GPIO(46);
-	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.lcd_reset.active_delay = 1;
-
-	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(45);
-	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(45);
-	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
-	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	/* Config SD*/
-	fio_select_sdio_as_default = 0;
-	ambarella_platform_sd_controller0.clk_limit = 12500000;
-	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
-	ambarella_platform_sd_controller0.slot[0].cd_delay = 1000;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val	= GPIO_LOW,
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
-	ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
-	ambarella_platform_sd_controller0.slot[1].cd_delay = 1000;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_val	= GPIO_LOW,
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
-
-	ambarella_platform_sd_controller1.clk_limit = 25000000;
-	ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
-	ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
-	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
-#endif
-
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);

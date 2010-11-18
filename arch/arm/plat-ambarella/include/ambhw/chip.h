@@ -66,8 +66,7 @@
 #define CHIP_REV	A7
 #elif	defined(CONFIG_PLAT_AMBARELLA_A7M)
 #define CHIP_REV	A7M
-#elif	defined(CONFIG_PLAT_AMBARELLA_I1_ARM11) || \
-	defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX)
+#elif	defined(CONFIG_PLAT_AMBARELLA_I1)
 #define CHIP_REV	I1
 #else
 #error "Undefined CHIP_REV"
