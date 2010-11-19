@@ -412,8 +412,10 @@ CONFIG_CMDLINE=""
 # At least one emulation must be selected
 #
 # CONFIG_FPE_NWFPE is not set
-CONFIG_FPE_FASTFPE=y
-# CONFIG_VFP is not set
+# CONFIG_FPE_FASTFPE is not set
+CONFIG_VFP=y
+CONFIG_VFPv3=y
+CONFIG_NEON=y
 
 #
 # Userspace binary formats

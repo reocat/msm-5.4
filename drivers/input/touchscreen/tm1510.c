@@ -69,7 +69,7 @@ static int tm1510_config_irq(struct tm1510 *tm)
 						0x04, 0x01, 0x0b, 0x06, 0x06};
 
 	msg.addr	= tm->client->addr;
-	msg.flags	= 0;
+	msg.flags	= tm->client->flags;
 	msg.buf		= buf;
 	msg.len		= sizeof(buf);
 	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
@@ -88,7 +88,7 @@ static int tm1510_clear_irq(struct tm1510 *tm)
 	u8			buf[] = {TM_IRQ_STATUS_ABS};
 
 	msg.addr	= tm->client->addr;
-	msg.flags	= 0;
+	msg.flags	= tm->client->flags;
 	msg.buf		= buf;
 	msg.len		= sizeof(buf);
 	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
@@ -98,7 +98,7 @@ static int tm1510_clear_irq(struct tm1510 *tm)
 	}
 
 	msg.addr	= tm->client->addr;
-	msg.flags	= I2C_M_RD;
+	msg.flags	= tm->client->flags | I2C_M_RD;
 	msg.buf		= buf;
 	msg.len		= sizeof(buf);
 	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
@@ -117,7 +117,7 @@ static inline int tm1510_read_all(struct tm1510 *tm)
 	u8			buf[] = {TM_FINGER_STATE_ABS};
 
 	msg.addr	= tm->client->addr;
-	msg.flags	= 0;
+	msg.flags	= tm->client->flags;
 	msg.buf		= buf;
 	msg.len		= 1;
 	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
@@ -127,7 +127,7 @@ static inline int tm1510_read_all(struct tm1510 *tm)
 	}
 
 	msg.addr	= tm->client->addr;
-	msg.flags	= I2C_M_RD;
+	msg.flags	= tm->client->flags | I2C_M_RD;
 	msg.buf		= tm->reg_data;
 	msg.len		= NUM_DATA;
 	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
