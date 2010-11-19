@@ -646,6 +646,7 @@ void *get_ambarella_hal_vp(void)
 
 	return (void *)ambarella_hal_info.virtual;
 }
+EXPORT_SYMBOL(get_ambarella_hal_vp);
 
 void set_ambarella_hal_invalid(void)
 {
