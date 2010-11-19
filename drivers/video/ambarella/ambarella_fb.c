@@ -939,6 +939,7 @@ static int __init ambfb_setup(struct device *dev, char *options,
 
 		ambfb_data->screen_fix.smem_start = cl_prealloc_start;
 		ambfb_data->screen_fix.smem_len = cl_prealloc_length;
+		ambfb_data->use_prealloc = 1;
 		dev_dbg(dev, "%dx%d,%dx%d,%d,%d,%x,%x\n", cl_xres, cl_yres,
 			cl_xvirtual, cl_yvirtual, cl_format, cl_cvs_buf,
 			cl_prealloc_start, cl_prealloc_length);
