@@ -196,15 +196,6 @@ config SATA_DWC
 
 	  If unsure, say N.
 
-config SATA_AMBARELLA
-	tristate "Ambarella SATA support"
-	depends on PLAT_AMBARELLA_SUPPORT_SATA
-	help
-	  This option enables support for the on-chip SATA controller of the
-	  Ambarella processor iONE.
-
-	  If unsure, say N.
-
 config SATA_MV
 	tristate "Marvell SATA support"
 	help

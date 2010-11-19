@@ -65,6 +65,10 @@ ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_USB), y)
 obj-y	+= generic/uhc.o
 endif
 
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA), y)
+obj-y	+= generic/ahci.o
+endif
+
 ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
 obj-$(CONFIG_SMP)		+= cortex/smp.o
 obj-$(CONFIG_SMP)		+= cortex/headsmp.o

@@ -1,7 +1,10 @@
 /*
- * arch/arm/plat-ambarella/generic/udc.c
+ * arch/arm/plat-ambarella/generic/ahci.c
  *
- * Author: Anthony Ginger <hfjiang@ambarella.com>
+ * Author: Cao Rongrong <rrcao@ambarella.com>
+ *
+ * History:
+ *	2010/11/12 - [Cao Rongrong] Created file
  *
  * Copyright (C) 2004-2010, Ambarella, Inc.
  *
@@ -25,57 +28,52 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/delay.h>
+#include <linux/ahci_platform.h>
 #include <linux/irq.h>
 
-#include <mach/hardware.h>
-#include <plat/udc.h>
+/*
+ * AHCI: all of the initialization for SATA PHY has been done at Amboot.
+ */
+static int ambarella_ahci_init(struct device *dev, void __iomem *addr)
+{
+	int rval = 0;
+	struct irq_desc *desc = irq_to_desc(SATA_IRQ);
 
-/* ==========================================================================*/
-struct resource ambarella_udc_resources[] = {
+	if (desc && desc->chip)
+		desc->chip->set_type(SATA_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	else
+		rval = -ENODEV;
+
+	return rval;
+}
+
+static struct resource ambarella_ahci_resource[] = {
 	[0] = {
-		.start	= USBDC_BASE,
-		.end	= USBDC_BASE + 0x1FFF,
+		.start	= AHB_PHYS_BASE + SATA_OFFSET,
+		.end	= AHB_PHYS_BASE + SATA_OFFSET + 0xFFF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= USBC_IRQ,
-		.end	= USBC_IRQ,
+		.start	= SATA_IRQ,
+		.end	= SATA_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
 };
 
-static void init_usb(void)
-{
-	struct irq_desc *desc = irq_to_desc(USBVBUS_IRQ);
-
-	if (desc && desc->chip)
-		desc->chip->set_type(USBVBUS_IRQ, IRQ_TYPE_LEVEL_HIGH);
-
-	_init_usb_pll();
-}
-
-static void reset_usb(void)
-{
-#if (CHIP_REV == A5S)||(CHIP_REV == A7)||(CHIP_REV == I1)
-	rct_usb_reset();
-#endif
-}
-
-static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
-	.init_pll	= init_usb,
-	.reset_usb	= reset_usb,
+static struct ahci_platform_data ambarella_platform_ahci_controller0 = {
+	.init		= ambarella_ahci_init,
+	.exit		= NULL,
 };
 
-struct platform_device ambarella_udc0 = {
-	.name		= "ambarella-udc",
+struct platform_device ambarella_ahci0 = {
+	.name		= "ahci",
 	.id		= -1,
-	.resource	= ambarella_udc_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_udc_resources),
+	.resource	= ambarella_ahci_resource,
+	.num_resources	= ARRAY_SIZE(ambarella_ahci_resource),
 	.dev		= {
-		.platform_data		= &ambarella_platform_udc_controller0,
+		.platform_data		= &ambarella_platform_ahci_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
+	},
 };
 
