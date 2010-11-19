@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.36
-# Fri Nov 12 20:26:47 2010
+# Fri Nov 19 14:49:02 2010
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -664,9 +664,9 @@ CONFIG_HAVE_IDE=y
 #
 # SCSI device support
 #
-CONFIG_SCSI_MOD=y
+CONFIG_SCSI_MOD=m
 # CONFIG_RAID_ATTRS is not set
-CONFIG_SCSI=y
+CONFIG_SCSI=m
 CONFIG_SCSI_DMA=y
 # CONFIG_SCSI_TGT is not set
 # CONFIG_SCSI_NETLINK is not set
@@ -675,7 +675,7 @@ CONFIG_SCSI_PROC_FS=y
 #
 # SCSI support type (disk, tape, CD-ROM)
 #
-CONFIG_BLK_DEV_SD=y
+CONFIG_BLK_DEV_SD=m
 # CONFIG_CHR_DEV_ST is not set
 # CONFIG_CHR_DEV_OSST is not set
 # CONFIG_BLK_DEV_SR is not set
