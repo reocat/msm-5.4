@@ -20,11 +20,13 @@
 #define AHB_BASE	0xd8000000
 #define APB_BASE	0xd9000000
 #define CRYPT_BASE	0xdb000000
+#define DRAM_VIRT_BASE	0xfece0000
 
 /* The physical address of AHB & APB - they SHOULD NOT be used directly */
 #if (CHIP_REV == I1)
 #define AHB_PHYS_BASE	0xe0000000
 #define APB_PHYS_BASE	0xe8000000
+#define DRAM_PHYS_BASE	0xdffe0000
 #define AXI_PHYS_BASE	0xf0000000
 #define CRYPT_PHYS_BASE	0xfffef000
 #define PHY_BUS_MAP_TYPE	1
@@ -32,6 +34,7 @@
 #define AHB_PHYS_BASE	0x60000000
 #define APB_PHYS_BASE	0x70000000
 #define PHY_BUS_MAP_TYPE	0
+#define DRAM_PHYS_BASE	0xc0000000
 #endif
 
 #if defined(__BUILD_AMBOOT__) || defined(__AMBOOT__)
@@ -42,6 +45,8 @@
 #define APB_BASE	APB_PHYS_BASE
 #undef CRYPT_BASE
 #define CRYPT_BASE	CRYPT_PHYS_BASE
+#undef DRAM_VIRT_BASE
+#define DRAM_VIRT_BASE	DRAM_PHYS_BASE
 #endif
 #endif
 
@@ -149,7 +154,6 @@
 #define HDMI_BASE			(AHB_BASE + HDMI_OFFSET)
 #define TS_BASE				(AHB_BASE + TS_OFFSET)
 #define SPIB_BASE			(AHB_BASE + SPIB_OFFSET)
-#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
 #define GRAPHICS_DMA_BASE		(AHB_BASE + GRAPHICS_DMA_OFFSET)
 #define ETH2_BASE			(AHB_BASE + ETH2_OFFSET)
 #define ETH2_DMA_BASE			(AHB_BASE + ETH2_DMA_OFFSET)
@@ -164,6 +168,11 @@
 #define VIC3_BASE			(AHB_BASE + VIC3_OFFSET)
 #define SPDIF_BASE			(AHB_BASE + SPDIF_OFFSET)
 #define AHB_SECURE_BASE			(AHB_BASE + AHB_SECURE_OFFSET)
+#if defined(CRYPT_BASE)
+#define CRYPT_UNIT_BASE			(CRYPT_BASE)
+#else
+#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#endif
 
 /* AHB slave registers */
 #define FIO_REG(x)			(FIO_BASE + (x))

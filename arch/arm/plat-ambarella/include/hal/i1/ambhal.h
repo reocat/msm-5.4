@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 126011
+ * @version 126464
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -548,6 +548,7 @@ AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_AXI_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_SOURCE,
 AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_SOURCE,
+AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
 
@@ -1008,6 +1009,19 @@ AMB_GTX_CLOCK_SOURCE_GTX_PLL,
 AMB_GTX_CLOCK_SOURCE_RESERVED = 0xffffffffUL
 } amb_gtx_clock_source_t ;
 
+/**
+ * DRAM arbiter priority
+ *
+ * @ingroup init_group
+ */
+
+typedef enum {
+/** Normal/Default priority for all clients */
+AMB_DRAM_ARIBTER_NORMAL_PRIORITY,
+/* Reserved */
+AMB_DRAM_ARIBTER_RESERVED=0xffffffff
+} amb_dram_arbiter_priority_t ;
+
 /*
  *
  */
@@ -1036,9 +1050,11 @@ static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, am
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_apb_peripherals_base_address Virtual address of peripherals (corresponding to
- * physical address 0x70000000)
+ * physical address 0xe8000000)
  * @param[in] amb_ahb_peripherals_base_address Virtual address of peripherals (corresponding to
- * physical address 0x60000000)
+ * physical address 0xe0000000)
+ * @param[in] amb_dramc_base_address Virtual address of dram controller (corresponding to
+ * physical address 0xdffe0000)
  *
  * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
  *
@@ -1047,10 +1063,10 @@ static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, am
  * @ingroup init_group
  */
 
-static INLINE amb_hal_success_t amb_hal_init (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address)
+static INLINE amb_hal_success_t amb_hal_init (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address, void *amb_dramc_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_HAL_INIT, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_HAL_INIT, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, (unsigned int) amb_dramc_base_address, amb_hal_unused) ;
 }
 
 /**
@@ -3650,6 +3666,8 @@ static INLINE amb_sensor_clock_pad_mode_t amb_get_sensor_clock_pad_mode (void *a
  * physical address 0xe8000000)
  * @param[in] amb_ahb_peripherals_base_address Virtual address of peripherals (corresponding to
  * physical address 0xe0000000)
+ * @param[in] amb_dramc_base_address Virtual address of dram controller (corresponding to
+ * physical address 0xdffe0000)
  *
  * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
  * @retval ::AMB_HAL_FAIL ambhal system failure
@@ -3657,10 +3675,10 @@ static INLINE amb_sensor_clock_pad_mode_t amb_get_sensor_clock_pad_mode (void *a
  * @ingroup init_group
  */
 
-static INLINE amb_hal_success_t amb_set_peripherals_base_address (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address)
+static INLINE amb_hal_success_t amb_set_peripherals_base_address (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address, void *amb_dramc_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, (unsigned int) amb_dramc_base_address, amb_hal_unused) ;
 }
 
 /**
@@ -3743,6 +3761,24 @@ static INLINE amb_gtx_clock_source_t amb_get_gtx_clock_source (void *amb_hal_bas
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_gtx_clock_source_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_SOURCE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Change the priority of the DRAM arbiter
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_dram_arbiter_priority Priority given to clients by DRAM arbiter.
+ *
+ * @retval ::AMB_HAL_SUCCESS Changing the DRAM arbiter priority was successful.
+ * @retval ::AMB_HAL_FAIL The amb_dram_arbiter_priority is not defined.
+ *
+ * @ingroup init_group
+ */
+
+static INLINE amb_hal_success_t amb_set_dram_arbiter_priority (void *amb_hal_base_address, amb_dram_arbiter_priority_t amb_dram_arbiter_priority)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY, (unsigned int) amb_dram_arbiter_priority, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_

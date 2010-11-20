@@ -325,7 +325,7 @@
 #define MST_WAVE_D4_REG			ST_REG(MST_WAVE_D4_OFFSET)
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1)
+#if (CHIP_REV == A7)
 #define ST_MOTOR_ID_OFFSET(x)		((u32) ((x) << 7))
 #else
 #define ST_MOTOR_ID_OFFSET(x)		((u32) ((x) << 8))

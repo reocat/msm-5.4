@@ -58,6 +58,11 @@ menu "Misc Configuration"
 config MMC_AMBARELLA_SDIO
 	bool "Suport SDIO"
 	depends on MACH_AMBARELLA
+	select WEXT_CORE
+	select WEXT_PROC
+	select WEXT_SPY
+	select WEXT_PRIV
+	select WIRELESS_EXT
 	default y
 	help
 	  If enabled, SDIO interface will be reported as "ambarella-sd",

@@ -38,7 +38,7 @@
  */
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
 #define DEFAULT_MEM_START		(0x00000000)
 #else
 #define DEFAULT_MEM_START		(0xc0000000)
@@ -46,40 +46,55 @@
 #define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_NEW_MEMORY_MAP)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
 #define AHB_PHYS_BASE			(0xe0000000)
 #define APB_PHYS_BASE			(0xe8000000)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 #define AXI_PHYS_BASE			(0xf0000000)
 #define DDD_PHYS_BASE			(0xf0020000)
+#endif
+#define DRAMC_PHYS_BASE			(0xdffe0000)
+#define CRYPT_PHYS_BASE			(0xfffef000)
 #else
 #define AHB_PHYS_BASE			(0x60000000)
 #define APB_PHYS_BASE			(0x70000000)
-#define AXI_PHYS_BASE			(0x00000000)	//Not supported!
-#define DDD_PHYS_BASE			(0x00000000)	//Not supported!
 #endif
 
 #if defined(CONFIG_VMSPLIT_3G)
 #define NOLINUX_MEM_V_START		(0xd0000000)
 #define AHB_BASE			(0xf0000000)
 #define APB_BASE			(0xf1000000)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 #define AXI_BASE			(0xf2000000)
 #define DDD_BASE			(0xf3000000)
+#endif
+#define DRAMC_BASE			(0xdffe0000)
+#define CRYPT_BASE			(0xfffef000)
+#endif
 #else
 #define NOLINUX_MEM_V_START		(0xb0000000)
 #define AHB_BASE			AHB_PHYS_BASE
 #define APB_BASE			APB_PHYS_BASE
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 #define AXI_BASE			AXI_PHYS_BASE
 #define DDD_BASE			DDD_PHYS_BASE
+#endif
+#define DRAMC_BASE			DRAMC_PHYS_BASE
+#define CRYPT_BASE			CRYPT_PHYS_BASE
+#endif
 #endif
 
 #define AHB_SIZE			(0x01000000)
 #define APB_SIZE			(0x01000000)
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 #define AXI_SIZE			(0x00003000)
 #define DDD_SIZE			(0x00000e00)
-#else
-#define AXI_SIZE			(0x00000000)
-#define DDD_SIZE			(0x00000000)
+#endif
+#define DRAMC_SIZE			(0x00020000)
+#define CRYPT_SIZE			(0x00001000)
 #endif
 
 /* ==========================================================================*/

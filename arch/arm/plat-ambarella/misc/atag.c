@@ -40,8 +40,14 @@
 #define AMBARELLA_IO_DESC_PPM_ID	2
 #define AMBARELLA_IO_DESC_BSB_ID	3
 #define AMBARELLA_IO_DESC_DSP_ID	4
-#define AMBARELLA_IO_DESC_AXI_ID	5
-#define AMBARELLA_IO_DESC_DDD_ID	6
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#define AMBARELLA_IO_DESC_DRAMC_ID	(AMBARELLA_IO_DESC_DSP_ID + 1)
+#define AMBARELLA_IO_DESC_CRYPT_ID	(AMBARELLA_IO_DESC_DSP_ID + 2)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
+#define AMBARELLA_IO_DESC_AXI_ID	(AMBARELLA_IO_DESC_DSP_ID + 3)
+#define AMBARELLA_IO_DESC_DDD_ID	(AMBARELLA_IO_DESC_DSP_ID + 4)
+#endif
+#endif
 
 struct ambarella_mem_map_desc {
 	char		name[32];
@@ -93,6 +99,26 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_MEMORY_DAMB,
 			},
 	},
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+	[AMBARELLA_IO_DESC_DRAMC_ID] = {
+		.name		= "DRAMC",
+		.io_desc	= {
+			.virtual= DRAMC_BASE,
+			.pfn	= __phys_to_pfn(DRAMC_PHYS_BASE),
+			.length	= DRAMC_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+	[AMBARELLA_IO_DESC_CRYPT_ID] = {
+		.name		= "CRYPT",
+		.io_desc	= {
+			.virtual= CRYPT_BASE,
+			.pfn	= __phys_to_pfn(CRYPT_PHYS_BASE),
+			.length	= CRYPT_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 	[AMBARELLA_IO_DESC_AXI_ID] = {
 		.name		= "AXI",
 		.io_desc	= {
@@ -111,6 +137,8 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_DEVICE,
 			},
 	},
+#endif
+#endif
 };
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
@@ -630,17 +658,30 @@ void *get_ambarella_hal_vp(void)
 	if (unlikely((!ambarella_hal_info.inited))) {
 		amb_hal_success_t		retval;
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#if defined(CONFIG_AMBARELLA_RAW_BOOT)
+		retval = amb_hal_init(
+			(void *)ambarella_hal_info.virtual,
+			(void *)APB_BASE, (void *)AHB_BASE,
+			(void *)DRAMC_BASE);
+#else
+		retval = amb_set_peripherals_base_address(
+			(void *)ambarella_hal_info.virtual,
+			(void *)APB_BASE, (void *)AHB_BASE,
+			(void *)DRAMC_BASE);
+#endif
+#else
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
 		retval = amb_hal_init(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE);
-		BUG_ON(retval != AMB_HAL_SUCCESS);
 #else
 		retval = amb_set_peripherals_base_address(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE);
-		BUG_ON(retval != AMB_HAL_SUCCESS);
 #endif
+#endif
+		BUG_ON(retval != AMB_HAL_SUCCESS);
 		ambarella_hal_info.inited = 1;
 	}
 

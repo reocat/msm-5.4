@@ -67,6 +67,14 @@
 #define VIN_SUPPORT_HAL			0
 #endif
 
+#if (CHIP_REV == I1)
+#define VIN_SUPPORT_CLK_SELECTION	1
+#define VIN_SUPPORT_MIPI_PHY		1
+#else
+#define VIN_SUPPORT_CLK_SELECTION	0
+#define VIN_SUPPORT_MIPI_PHY		0
+#endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/

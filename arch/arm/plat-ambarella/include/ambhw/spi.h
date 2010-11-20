@@ -89,6 +89,12 @@
 #else
 #define SPI_EN2_EN3_ENABLED_BY_GPIO2_AFSEL_REG	0
 #endif
+
+/* SPI_FIFO_SIZE */
+#define SPI_DATA_FIFO_SIZE_16		0x10
+#define SPI_DATA_FIFO_SIZE_32		0x20
+#define SPI_DATA_FIFO_SIZE_128		0x80
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
