@@ -192,7 +192,7 @@ static int ambarella_ir_nec_find_subsequent(struct ambarella_ir_info *pinfo)
 			val = 1;
 			break;
 		} else {
-			//printk("didn't  find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->pinput_dev->dev, "didn't  find leader code, i [%d]\n", i);
 			ambarella_ir_move_read_ptr(pinfo, 1);
 		}
 	}

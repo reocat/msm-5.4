@@ -475,7 +475,7 @@ static int __devexit ambarella_input_remove(struct platform_device *pdev)
 
 	pbinfo =
 		(struct ambarella_input_board_info *)pdev->dev.platform_data;
-	if (pbinfo == NULL) {
+	if (pbinfo != NULL) {
 		ambarella_free_keymap(pbinfo);
 		remove_proc_entry(AMBVI_NAME, get_ambarella_proc_dir());
 		input_unregister_device(pbinfo->pinput_dev);

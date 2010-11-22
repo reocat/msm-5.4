@@ -103,7 +103,7 @@ static int ambarella_ir_sony_find_head(struct ambarella_ir_info *pinfo)
 
 	while(i--) {
 		if(ambarella_ir_sony_space_leader_code(pinfo)) {
-			printk("find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->pinput_dev->dev, "find leader code, i [%d]\n", i);
 			val = 1;
 			break;
 		} else {

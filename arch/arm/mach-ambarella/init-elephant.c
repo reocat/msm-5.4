@@ -134,6 +134,23 @@ static struct ambarella_key_table elephant_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_POWER,	3,	0x001a0015}}},	//POWER
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_HOME,	3,	0x001a0061}}},	//HOME
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_MENU,	3,	0x001a004d}}},	//MENU
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_ESC,	3,	0x001a0063}}},	//BACK
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_SEND,	3,	0x001a0010}}},	//CALL
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_END,	3,	0x001a0020}}},	//ENDCALL
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_HP,	3,	0x001a003d}}},	//FOCUS
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_CAMERA,	3,	0x001a0064}}},	//CAMERA
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEUP,3,	0x001a0077}}},	//VOLUME_UP
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEDOWN,3,	0x001a0078}}},	//VOLUME_DOWN
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_OK,	3,	0x001a0076}}},	//DPAD_CENTER
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_DOWN,	3,	0x001a0073}}},	//DPAD_DOWN
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_UP,	3,	0x001a0072}}},	//DPAD_UP
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_LEFT,	3,	0x001a0075}}},	//DPAD_LEFT
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_RIGHT,	3,	0x001a0074}}},	//DPAD_RIGHT
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_SEARCH,	3,	0x001a007e}}},	//SEARCH
+
 	{AMBINPUT_END},
 };
 
@@ -205,6 +222,9 @@ static void __init ambarella_init_elephant(void)
 	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+	/* Config IR*/
+	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_SONY;
 
 	/* Config SD*/
 	fio_select_sdio_as_default = 0;
