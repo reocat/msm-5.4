@@ -52,27 +52,37 @@
 
 static void serial_ambarella_enable_ms(struct uart_port *port)
 {
+	disable_irq(port->irq);
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
+	enable_irq(port->irq);
 }
 
 static void serial_ambarella_disable_ms(struct uart_port *port)
 {
+	disable_irq(port->irq);
 	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
+	enable_irq(port->irq);
 }
 
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
+	disable_irq(port->irq);
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	enable_irq(port->irq);
 }
 
 static void serial_ambarella_stop_tx(struct uart_port *port)
 {
+	disable_irq(port->irq);
 	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	enable_irq(port->irq);
 }
 
 static void serial_ambarella_stop_rx(struct uart_port *port)
 {
+	disable_irq(port->irq);
 	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ERBFI);
+	enable_irq(port->irq);
 }
 
 static inline void receive_chars(struct uart_port *port, u32 *status)
@@ -149,13 +159,16 @@ static void transmit_chars(struct uart_port *port)
 	}
 
 	count = port->fifosize;
-	while (!uart_circ_empty(xmit) && count-- > 0) {
+	while (count-- > 0) {
+		if (uart_circ_empty(xmit)) {
+			amba_clrbitsl(port->membase + UART_IE_OFFSET,
+				UART_IE_ETBEI);
+			break;
+		}
 		amba_writeb(port->membase + UART_TH_OFFSET,
 			xmit->buf[xmit->tail]);
 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
 		port->icount.tx++;
-		if (uart_circ_empty(xmit))
-			break;
 	}
 
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
@@ -193,10 +206,9 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 	struct uart_port			*port = dev_id;
 	int					rval = IRQ_HANDLED;
 	u32					ii, ls;
-	struct circ_buf				*xmit = &port->state->xmit;
 
+	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_PTIME);
 	ii = amba_readl(port->membase + UART_II_OFFSET);
-serial_ambarella_irq_recheck:
 	ls = amba_readl(port->membase + UART_LS_OFFSET);
 
 	switch (ii & 0x0F) {
@@ -206,14 +218,6 @@ serial_ambarella_irq_recheck:
 
 	case UART_II_THR_EMPTY:
 		transmit_chars(port);
-		if (uart_circ_empty(xmit) || uart_tx_stopped(port)) {
-			amba_setbitsl(port->membase + UART_IE_OFFSET,
-				UART_IE_PTIME);
-			ii = amba_readl(port->membase + UART_II_OFFSET);
-			amba_clrbitsl(port->membase + UART_IE_OFFSET,
-				(UART_IE_PTIME | UART_IE_ETBEI));
-			goto serial_ambarella_irq_recheck;
-		}
 		break;
 
 	case UART_II_RCV_STATUS:
@@ -227,6 +231,8 @@ serial_ambarella_irq_recheck:
 		rval = IRQ_NONE;
 		break;
 	}
+
+	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_PTIME);
 
 	return rval;
 }
@@ -317,7 +323,7 @@ static void serial_ambarella_break_ctl(struct uart_port *port, int break_state)
 
 static int serial_ambarella_startup(struct uart_port *port)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_uart_port_info		*port_info;
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
@@ -326,16 +332,16 @@ static int serial_ambarella_startup(struct uart_port *port)
 		(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY |
 		UART_FC_XMITR | UART_FC_RCVRR));
 
-	errorCode = request_irq(port->irq, serial_ambarella_irq,
+	retval = request_irq(port->irq, serial_ambarella_irq,
 		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
-	if (errorCode)
+	if (retval)
 		goto serial_ambarella_startup_exit;
 
 	amba_setbitsl(port->membase + UART_IE_OFFSET,
-		(UART_IE_ELSI | UART_IE_ETBEI | UART_IE_ERBFI | UART_IE_ETOI));
+		(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI));
 
 serial_ambarella_startup_exit:
-	return errorCode;
+	return retval;
 }
 
 static void serial_ambarella_shutdown(struct uart_port *port)
@@ -451,16 +457,16 @@ static void serial_ambarella_config_port(struct uart_port *port, int flags)
 static int serial_ambarella_verify_port(struct uart_port *port,
 					struct serial_struct *ser)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 
 	if (ser->type != PORT_UNKNOWN && ser->type != PORT_UART00)
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 	if (port->irq != ser->irq)
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 	if (ser->io_type != SERIAL_IO_MEM)
-		errorCode = -EINVAL;
+		retval = -EINVAL;
 
-	return errorCode;
+	return retval;
 }
 
 static const char *serial_ambarella_type(struct uart_port *port)
@@ -564,6 +570,7 @@ static void serial_ambarella_console_write(struct console *co,
 
 	port = (struct uart_port *)(ambarella_uart_ports.amba_port[co->index].port);
 
+	disable_irq(port->irq);
 	ie = amba_readl(port->membase + UART_IE_OFFSET);
 	amba_writel(port->membase + UART_IE_OFFSET, ie & ~UART_IE_ETBEI);
 
@@ -571,6 +578,7 @@ static void serial_ambarella_console_write(struct console *co,
 
 	wait_for_tx(port);
 	amba_writel(port->membase + UART_IE_OFFSET, ie);
+	enable_irq(port->irq);
 }
 
 static int __init serial_ambarella_console_setup(struct console *co,
@@ -636,20 +644,20 @@ static struct uart_driver serial_ambarella_reg = {
 
 static int __devinit serial_ambarella_probe(struct platform_device *pdev)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_uart_platform_info	*pinfo;
 	struct uart_port			*port;
 
 	pinfo = (struct ambarella_uart_platform_info *)pdev->dev.platform_data;
 	if (pinfo == NULL) {
 		dev_err(&pdev->dev, "Can't get UART platform data!\n");
-		errorCode = -ENXIO;
+		retval = -ENXIO;
 		goto serial_ambarella_probe_exit;
 	}
 
 	if ((pdev->id < 0) || (pdev->id >= pinfo->total_port_num)) {
 		dev_err(&pdev->dev, "Wrong UART ID %d!\n", pdev->id);
-		errorCode = -ENXIO;
+		retval = -ENXIO;
 		goto serial_ambarella_probe_exit;
 	}
 
@@ -665,20 +673,20 @@ static int __devinit serial_ambarella_probe(struct platform_device *pdev)
 		if (serial_ambarella_reg.nr != pinfo->total_port_num)
 			serial_ambarella_reg.nr = pinfo->total_port_num;
 
-		errorCode = uart_register_driver(&serial_ambarella_reg);
-		if (errorCode) {
+		retval = uart_register_driver(&serial_ambarella_reg);
+		if (retval) {
 			dev_err(&pdev->dev,
 				"uart_register_driver fail %d!\n",
-				errorCode);
+				retval);
 			goto serial_ambarella_probe_exit;
 		}
 	}
 
-	errorCode = uart_add_one_port(&serial_ambarella_reg, port);
-	if (errorCode) {
+	retval = uart_add_one_port(&serial_ambarella_reg, port);
+	if (retval) {
 		dev_err(&pdev->dev,
 			"uart_add_one_port %d fail %d!\n",
-			pdev->id, errorCode);
+			pdev->id, retval);
 		goto serial_ambarella_probe_unregister_driver;
 	} else {
 		pinfo->registed_port_num++;
@@ -691,12 +699,12 @@ serial_ambarella_probe_unregister_driver:
 		uart_unregister_driver(&serial_ambarella_reg);
 
 serial_ambarella_probe_exit:
-	return errorCode;
+	return retval;
 }
 
 static int __devexit serial_ambarella_remove(struct platform_device *pdev)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_uart_platform_info	*pinfo;
 	struct uart_port			*port;
 
@@ -704,11 +712,11 @@ static int __devexit serial_ambarella_remove(struct platform_device *pdev)
 
 	if (pinfo) {
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
-		errorCode = uart_remove_one_port(&serial_ambarella_reg, port);
-		if (errorCode) {
+		retval = uart_remove_one_port(&serial_ambarella_reg, port);
+		if (retval) {
 			dev_err(&pdev->dev,
 				"uart_remove_one_port %d fail %d!\n",
-				pdev->id, errorCode);
+				pdev->id, retval);
 		} else {
 			pinfo->registed_port_num--;
 		}
@@ -720,14 +728,14 @@ static int __devexit serial_ambarella_remove(struct platform_device *pdev)
 			"Remove Ambarella Media Processor UART.\n");
 	}
 
-	return errorCode;
+	return retval;
 }
 
 #ifdef CONFIG_PM
 static int serial_ambarella_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_uart_platform_info	*pinfo;
 	struct uart_port			*port;
 
@@ -735,17 +743,17 @@ static int serial_ambarella_suspend(struct platform_device *pdev,
 
 	if (pinfo) {
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
-		errorCode = uart_suspend_port(&serial_ambarella_reg, port);
+		retval = uart_suspend_port(&serial_ambarella_reg, port);
 	}
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
-		__func__, errorCode, state.event);
+		__func__, retval, state.event);
 
-	return errorCode;
+	return retval;
 }
 
 static int serial_ambarella_resume(struct platform_device *pdev)
 {
-	int					errorCode = 0;
+	int					retval = 0;
 	struct ambarella_uart_platform_info	*pinfo;
 	struct uart_port			*port;
 
@@ -753,11 +761,11 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 
 	if (pinfo) {
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
-		errorCode = uart_resume_port(&serial_ambarella_reg, port);
+		retval = uart_resume_port(&serial_ambarella_reg, port);
 	}
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
-	return errorCode;
+	return retval;
 }
 #endif
 
