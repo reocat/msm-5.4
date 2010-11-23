@@ -91,12 +91,12 @@ void rct_pll_init(void)
 
 u32 get_apb_bus_freq_hz(void)
 {
-	return get_core_bus_freq_hz() >> 1;
+	return (u32)amb_get_apb_clock_frequency(HAL_BASE_VP);
 }
 
 u32 get_ahb_bus_freq_hz(void)
 {
-	return get_core_bus_freq_hz();
+	return (u32)amb_get_ahb_clock_frequency(HAL_BASE_VP);
 }
 
 u32 get_core_bus_freq_hz(void)

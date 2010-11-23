@@ -1476,7 +1476,6 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		clk_div <<= 8;
 		clk_div |= SD_CLK_ICLK_EN;
 		amba_sd_writew(pinfo->regbase + SD_CLK_OFFSET, clk_div);
-		udelay(1000);
 		while (1) {
 			clkreg = amba_sd_readw(pinfo->regbase + SD_CLK_OFFSET);
 			if (clkreg & SD_CLK_ICLK_STABLE)
@@ -1488,7 +1487,6 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 				break;
 			}
 		}
-		udelay(1000);
 		amba_setbitsw(pinfo->regbase + SD_CLK_OFFSET, SD_CLK_EN);
 	}
 }
@@ -1696,7 +1694,7 @@ ambarella_sd_request_need_reset:
 		ambsd_dbg(pslotinfo, "need_reset %d %d 0x%x %d!\n",
 			pslotinfo->state, mrq->cmd->opcode, card_sta, error_id);
 
-		ambarella_sd_reset_all(pslotinfo->mmc);
+		//ambarella_sd_reset_all(pslotinfo->mmc);
 		ambarella_sd_check_ios(mmc, &mmc->ios);
 	}
 
