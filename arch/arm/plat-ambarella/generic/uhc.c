@@ -36,6 +36,7 @@ static int usb_host_initialized = 0;
 static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 {
 	u32 sys_config;
+	amb_usb_port_state_t state;
 
 	if (usb_host_initialized == 1)
 		return;
@@ -55,8 +56,8 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	 * We must enable both of the usb ports first, then we can disable
 	 * usb port1 if it is configured as device port.
 	 */
-
-	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON)
+	state = amb_get_usb_port1_state(HAL_BASE_VP);
+	if (state != AMB_USB_ON && amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
 	}
@@ -66,8 +67,8 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
 	}
 
-	if (!(sys_config & USB1_IS_HOST)) {
-		if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_OFF)
+	if (!(sys_config & USB1_IS_HOST) && state != AMB_USB_ON) {
+		if (amb_set_usb_port1_state(HAL_BASE_VP, state)
 				!= AMB_HAL_SUCCESS) {
 			pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
 		}
