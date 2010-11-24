@@ -49,7 +49,7 @@ static struct ohci_ambarella *hcd_to_ohci_ambarella(struct usb_hcd *hcd)
 static void ambarella_start_ohc(struct ohci_ambarella *amb_ohci)
 {
 	if (amb_ohci && amb_ohci->plat_ohci->enable_host)
-		amb_ohci->plat_ohci->enable_host();
+		amb_ohci->plat_ohci->enable_host(amb_ohci->plat_ohci);
 }
 
 static void ambarella_stop_ohc(struct ohci_ambarella *amb_ohci)
@@ -61,9 +61,16 @@ static void ambarella_stop_ohc(struct ohci_ambarella *amb_ohci)
 static int __devinit ohci_ambarella_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
+	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 	int ret;
 
 	ohci_dbg(ohci, "ohci_ambarella_start, ohci:%p", ohci);
+
+	/* OHCI will still detect 2 ports even though usb port1 is configured
+	 * as device port, so we fake the port number manually and report
+	 * it to OHCI.*/
+	if (amb_ohci->plat_ohci->usb1_is_host == 0)
+		ohci->num_ports = 1;
 
 	if ((ret = ohci_init(ohci)) < 0)
 		return ret;

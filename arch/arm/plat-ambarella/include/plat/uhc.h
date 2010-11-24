@@ -32,8 +32,9 @@
 #define USB1_IS_HOST	(1 << 15)
 
 struct ambarella_uhc_controller {
-	void					(*enable_host)(void);
-	void					(*disable_host)(void);
+	void		(*enable_host)(struct ambarella_uhc_controller *pdata);
+	void		(*disable_host)(void);
+	int		usb1_is_host;
 };
 
 /* ==========================================================================*/

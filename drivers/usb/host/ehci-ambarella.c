@@ -49,7 +49,7 @@ static struct ehci_ambarella *hcd_to_ehci_ambarella(struct usb_hcd *hcd)
 static void ambarella_start_ehc(struct ehci_ambarella *amb_ehci)
 {
 	if (amb_ehci && amb_ehci->plat_ehci->enable_host)
-		amb_ehci->plat_ehci->enable_host();
+		amb_ehci->plat_ehci->enable_host(amb_ehci->plat_ehci);
 }
 
 static void ambarella_stop_ehc(struct ehci_ambarella *amb_ehci)
@@ -62,6 +62,7 @@ static void ambarella_stop_ehc(struct ehci_ambarella *amb_ehci)
 static int ambarella_ehci_setup(struct usb_hcd *hcd)
 {
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
 	int retval = 0;
 
 	/* registers start at offset 0x0 */
@@ -73,6 +74,14 @@ static int ambarella_ehci_setup(struct usb_hcd *hcd)
 
 	/* cache this readonly data; minimize chip reads */
 	ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
+
+	/* EHCI will still detect 2 ports even though usb port1 is configured
+	 * as device port, so we fake the port number manually and report
+	 * it to EHCI.*/
+	if (amb_ehci->plat_ehci->usb1_is_host == 0) {
+		ehci->hcs_params &= ~0xf;
+		ehci->hcs_params |= 0x1;
+	}
 
 	retval = ehci_halt(ehci);
 	if (retval)

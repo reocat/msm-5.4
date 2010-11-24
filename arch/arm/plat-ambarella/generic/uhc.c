@@ -33,7 +33,7 @@
 
 static int usb_host_initialized = 0;
 
-static void ambarella_enable_usb_host(void)
+static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 {
 	u32 sys_config;
 
@@ -46,6 +46,7 @@ static void ambarella_enable_usb_host(void)
 	if (sys_config & USB1_IS_HOST) {
 		/* GPIO8 and GPIO10 are programmed as hardware mode */
 		amba_setbitsl(GPIO0_AFSEL_REG, 0x00000500);
+		pdata->usb1_is_host = 1;
 	}
 	/* GPIO7 and GPIO9 are programmed as hardware mode */
 	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000280);
@@ -115,6 +116,7 @@ struct resource ambarella_ehci_resources[] = {
 static struct ambarella_uhc_controller ambarella_platform_ehci_data = {
 	.enable_host	= ambarella_enable_usb_host,
 	.disable_host	= ambarella_disable_usb_host,
+	.usb1_is_host	= 0,
 };
 
 struct platform_device ambarella_ehci0 = {
