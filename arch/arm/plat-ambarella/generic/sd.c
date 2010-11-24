@@ -314,6 +314,15 @@ int __init ambarella_init_sd(void)
 	retval = amb_set_sd_ioctrl_drive_strength(HAL_BASE_VP,
 		AMB_IOCTRL_DRIVE_STRENGTH_12MA);
 	BUG_ON(retval != AMB_HAL_SUCCESS);
+	retval = amb_set_sdwpcd_ioctrl_drive_strength(HAL_BASE_VP,
+		AMB_IOCTRL_DRIVE_STRENGTH_12MA);
+	BUG_ON(retval != AMB_HAL_SUCCESS);
+	retval = amb_set_sdclk_ioctrl_drive_strength(HAL_BASE_VP,
+		AMB_IOCTRL_DRIVE_STRENGTH_12MA);
+	BUG_ON(retval != AMB_HAL_SUCCESS);
+	retval = amb_set_sdcmd_ioctrl_drive_strength(HAL_BASE_VP,
+		AMB_IOCTRL_DRIVE_STRENGTH_12MA);
+	BUG_ON(retval != AMB_HAL_SUCCESS);
 #endif
 
 	return retval;
