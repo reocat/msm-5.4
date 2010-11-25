@@ -39,70 +39,182 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-#ifndef CONFIG_AMBARELLA_DEBUG_IO_ACCESS
+static inline void __amba_read2w(const volatile void __iomem *address,
+	u16 *value1, u16 *value2)
+{
+	u32					tmpreg;
+	u32					index;
+	volatile void __iomem			*base;
+
+	index = (u32)address & 0x03;
+	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
+	tmpreg = __raw_readl(base);
+
+	switch (index) {
+	case 0:
+		*value1 = (u16)tmpreg;
+		*value2 = (u16)(tmpreg >> 16);
+		break;
+
+	default:
+		BUG_ON(1);
+		break;
+	}
+}
+
+static inline void __amba_write2w(const volatile void __iomem *address,
+	u16 value1, u16 value2)
+{
+	u32					tmpreg;
+	u32					index;
+	volatile void __iomem			*base;
+
+	index = (u32)address & 0x03;
+	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
+	tmpreg = value2;
+	tmpreg <<= 16;
+	tmpreg |= value1;
+	switch (index) {
+	case 0:
+		break;
+
+	default:
+		BUG_ON(1);
+		break;
+	}
+	__raw_writel(tmpreg, base);
+}
+
+#if defined(CONFIG_PLAT_AMBARELLA_DISABLE_8_16_ACCESS)
+static inline u8 __amba_readb(const volatile void __iomem *address)
+{
+	u32					tmpreg;
+	u32					index;
+	volatile void __iomem			*base;
+
+	index = (u32)address & 0x03;
+	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
+	tmpreg = __raw_readl(base);
+	switch (index) {
+	case 1:
+		tmpreg &= 0x0000FF00;
+		tmpreg >>= 8;
+		break;
+
+	case 2:
+		tmpreg &= 0x00FF0000;
+		tmpreg >>= 16;
+		break;
+
+	case 3:
+		tmpreg &= 0xFF000000;
+		tmpreg >>= 24;
+		break;
+
+	case 0:
+	default:
+		tmpreg &= 0x000000FF;
+		break;
+	}
+	return (u8)tmpreg;
+}
+
+static inline void __amba_writeb(const volatile void __iomem *address, u8 value)
+{
+	u32					tmpreg;
+	u32					index;
+	volatile void __iomem			*base;
+
+	index = (u32)address & 0x03;
+	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
+	tmpreg = __raw_readl(base);
+	switch (index) {
+	case 1:
+		tmpreg &= 0xFFFF00FF;
+		tmpreg |= ((u32)value << 8);
+		break;
+
+	case 2:
+		tmpreg &= 0xFF00FFFF;
+		tmpreg |= ((u32)value << 16);
+		break;
+
+	case 3:
+		tmpreg &= 0x00FFFFFF;
+		tmpreg |= ((u32)value << 24);
+		break;
+
+	case 0:
+	default:
+		tmpreg &= 0xFFFFFF00;
+		tmpreg |= value;
+		break;
+	}
+	__raw_writel(tmpreg, base);
+}
+
+static inline u16 __amba_readw(const volatile void __iomem *address)
+{
+	u32					tmpreg;
+	u32					index;
+	volatile void __iomem			*base;
+
+	index = (u32)address & 0x03;
+	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
+	tmpreg = __raw_readl(base);
+	switch (index) {
+	case 2:
+		tmpreg &= 0xFFFF0000;
+		tmpreg >>= 16;
+		break;
+
+	case 0:
+	default:
+		tmpreg &= 0x0000FFFF;
+		break;
+	}
+	return (u16)tmpreg;
+}
+
+static inline void __amba_writew(const volatile void __iomem *address, u16 value)
+{
+	u32					tmpreg;
+	u32					index;
+	volatile void __iomem			*base;
+
+	index = (u32)address & 0x03;
+	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
+	tmpreg = __raw_readl(base);
+	switch (index) {
+	case 2:
+		tmpreg &= 0x0000FFFF;
+		tmpreg |= ((u32)value << 16);
+		break;
+
+	case 0:
+	default:
+		tmpreg &= 0xFFFF0000;
+		tmpreg |= value;
+		break;
+	}
+	__raw_writel(tmpreg, base);
+}
+
+#define amba_readb(v)		__amba_readb((const volatile void __iomem *)v)
+#define amba_readw(v)		__amba_readw((const volatile void __iomem *)v)
+#define amba_writeb(v,d)	__amba_writeb((const volatile void __iomem *)v, d)
+#define amba_writew(v,d)	__amba_writew((const volatile void __iomem *)v, d)
+#else
 #define amba_readb(v)		__raw_readb(v)
 #define amba_readw(v)		__raw_readw(v)
-#define amba_readl(v)		__raw_readl(v)
 #define amba_writeb(v,d)	__raw_writeb(d,v)
 #define amba_writew(v,d)	__raw_writew(d,v)
-#define amba_writel(v,d)	__raw_writel(d,v)
-#else
-#include <linux/kernel.h>
-static inline u8 amba_readb_printk(const volatile void __iomem *vaddress)
-{
-	u8					data;
-
-	data = __raw_readb(vaddress);
-	printk("%s: %p=0x%02x\n", __func__, vaddress, data);
-
-	return data;
-}
-static inline u16 amba_readw_printk(const volatile void __iomem *vaddress)
-{
-	u16					data;
-
-	data = __raw_readw(vaddress);
-	printk("%s: %p=0x%04x\n", __func__, vaddress, data);
-
-	return data;
-}
-static inline u32 amba_readl_printk(const volatile void __iomem *vaddress)
-{
-	u32					data;
-
-	data = __raw_readl(vaddress);
-	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
-
-	return data;
-}
-
-static inline void amba_writeb_printk(
-	const volatile void __iomem *vaddress, u8 data)
-{
-	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
-	__raw_writeb(data, vaddress);
-}
-static inline void amba_writew_printk(
-	const volatile void __iomem *vaddress, u16 data)
-{
-	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
-	__raw_writew(data, vaddress);
-}
-static inline void amba_writel_printk(
-	const volatile void __iomem *vaddress, u32 data)
-{
-	printk("%s: %p=0x%08x\n", __func__, vaddress, data);
-	__raw_writel(data, vaddress);
-}
-
-#define amba_readb(v)		amba_readb_printk((const volatile void __iomem *)v)
-#define amba_readw(v)		amba_readw_printk((const volatile void __iomem *)v)
-#define amba_readl(v)		amba_readl_printk((const volatile void __iomem *)v)
-#define amba_writeb(v,d)	amba_writeb_printk((const volatile void __iomem *)v, d)
-#define amba_writew(v,d)	amba_writew_printk((const volatile void __iomem *)v, d)
-#define amba_writel(v,d)	amba_writel_printk((const volatile void __iomem *)v, d)
-
 #endif
+#define amba_readl(v)		__raw_readl(v)
+#define amba_writel(v,d)	__raw_writel(d,v)
+
+#define amba_read2w(v,pd1,pd2)	__amba_read2w(v,pd1,pd2)
+#define amba_write2w(v,d1,d2)	__amba_write2w(v,d1,d2)
 
 #define amba_inb(p)		amba_readb(io_p2v(p))
 #define amba_inw(p)		amba_readw(io_p2v(p))
