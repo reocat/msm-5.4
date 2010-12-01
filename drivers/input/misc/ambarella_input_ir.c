@@ -133,6 +133,7 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 		pirinfo->last_ir_flag--;
 		return 0;
 	}
+	pirinfo->last_ir_uid = uid;
 
 	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
 		if (pirinfo->pkeymap[i].type == AMBINPUT_END)
@@ -194,6 +195,18 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 				"IR_ABS X[%d]:Y[%d]\n",
 				pirinfo->pkeymap[i].ir_abs.abs_x,
 				pirinfo->pkeymap[i].ir_abs.abs_y);
+			pirinfo->last_ir_flag = 0;
+			break;
+		}
+
+		if ((pirinfo->pkeymap[i].type == AMBINPUT_IR_SW) &&
+			(pirinfo->pkeymap[i].ir_sw.raw_id == uid)) {
+			input_report_switch(pirinfo->pinput_dev,
+				pirinfo->pkeymap[i].ir_sw.key_code,
+				pirinfo->pkeymap[i].ir_sw.key_value);
+			dev_dbg(&pirinfo->pinput_dev->dev, "IR_SW [%d:%d]\n",
+				pirinfo->pkeymap[i].ir_sw.key_code,
+				pirinfo->pkeymap[i].ir_sw.key_value);
 			pirinfo->last_ir_flag = 0;
 			break;
 		}

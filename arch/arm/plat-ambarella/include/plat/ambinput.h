@@ -41,6 +41,7 @@
 #define	AMBINPUT_IR_KEY		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_KEY)
 #define	AMBINPUT_IR_REL		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_REL)
 #define	AMBINPUT_IR_ABS		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_ABS)
+#define	AMBINPUT_IR_SW		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_SW)
 #define	AMBINPUT_ADC_KEY	(AMBINPUT_SOURCE_ADC | AMBINPUT_TYPE_KEY)
 #define	AMBINPUT_ADC_REL	(AMBINPUT_SOURCE_ADC | AMBINPUT_TYPE_REL)
 #define	AMBINPUT_ADC_ABS	(AMBINPUT_SOURCE_ADC | AMBINPUT_TYPE_ABS)
@@ -76,6 +77,11 @@ struct ambarella_key_table {
 		s32				abs_y;
 		u32				raw_id;
 	} ir_abs;
+	struct {
+		u32				key_code;
+		u32				key_value;
+		u32				raw_id;
+	} ir_sw;
 	struct {
 		u32				key_code;
 		u16				irq_trig;// 0 low trigger, 1 high trigger
