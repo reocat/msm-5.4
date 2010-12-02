@@ -245,7 +245,7 @@ static void __init ambarella_init_elephant(void)
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_val	= GPIO_LOW,
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
-	ambarella_platform_sd_controller1.clk_limit = 25000000;
+	ambarella_platform_sd_controller1.clk_limit = 12500000;
 	ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
