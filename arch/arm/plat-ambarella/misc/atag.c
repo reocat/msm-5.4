@@ -60,7 +60,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= AHB_BASE,
 			.pfn	= __phys_to_pfn(AHB_PHYS_BASE),
 			.length	= AHB_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_MEMORY_IOAMB,
 			},
 	},
 	[AMBARELLA_IO_DESC_APB_ID] = {
@@ -69,7 +69,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= APB_BASE,
 			.pfn	= __phys_to_pfn(APB_PHYS_BASE),
 			.length	= APB_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_MEMORY_IOAMB,
 			},
 	},
 	[AMBARELLA_IO_DESC_PPM_ID] = {
@@ -106,7 +106,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DRAMC_BASE,
 			.pfn	= __phys_to_pfn(DRAMC_PHYS_BASE),
 			.length	= DRAMC_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_MEMORY_IOAMB,
 			},
 	},
 	[AMBARELLA_IO_DESC_CRYPT_ID] = {
@@ -115,7 +115,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= CRYPT_BASE,
 			.pfn	= __phys_to_pfn(CRYPT_PHYS_BASE),
 			.length	= CRYPT_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_MEMORY_IOAMB,
 			},
 	},
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
@@ -125,7 +125,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= AXI_BASE,
 			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
 			.length	= AXI_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_MEMORY_IOAMB,
 			},
 	},
 	[AMBARELLA_IO_DESC_DDD_ID] = {
@@ -134,7 +134,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DDD_BASE,
 			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
 			.length	= DDD_SIZE,
-			.type	= MT_DEVICE,
+			.type	= MT_MEMORY_IOAMB,
 			},
 	},
 #endif
