@@ -67,10 +67,10 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 #define AXI_BASE			(0xf2000000)
-#define DDD_BASE			(0xf3000000)
+#define DDD_BASE			(0xf2020000)
 #endif
-#define DRAMC_BASE			(0xdffe0000)
-#define CRYPT_BASE			(0xfffef000)
+#define DRAMC_BASE			(0xf2040000)
+#define CRYPT_BASE			(0xf2080000)
 #endif
 #else
 #define NOLINUX_MEM_V_START		(0xb0000000)
