@@ -1363,9 +1363,7 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			DBG (dev, "HNP needs a different root port\n");
 		else
 			VDBG (dev, "HNP inactive\n");
-		spin_lock (&dev->lock);
 		value = amb_set_config (dev, w_value, GFP_ATOMIC);
-		spin_unlock (&dev->lock);
 		break;
 	case USB_REQ_GET_CONFIGURATION:
 		if (ctrl->bRequestType != USB_DIR_IN)
@@ -1381,7 +1379,6 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	case USB_REQ_SET_INTERFACE:
 		if (ctrl->bRequestType != USB_RECIP_INTERFACE)
 			goto unknown;
-		spin_lock (&dev->lock);
 		if (dev->config && w_index == 0 && w_value == 0) {
 			u8		config = dev->config;
 
@@ -1395,7 +1392,6 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			amb_set_config (dev, config, GFP_ATOMIC);
 			value = 0;
 		}
-		spin_unlock (&dev->lock);
 		break;
 	case USB_REQ_GET_INTERFACE:
 		if (ctrl->bRequestType != (USB_DIR_IN|USB_RECIP_INTERFACE))
