@@ -1234,7 +1234,6 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		if (desired_clk > pinfo->pcontroller->clk_limit)
 			desired_clk = pinfo->pcontroller->clk_limit;
 
-#if 0
 		if (pinfo->pcontroller->support_pll_scaler) {
 			if (desired_clk < 10000000) {
 				/* Below 10Mhz, divide by sd controller */
@@ -1248,7 +1247,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		} else {
 			pinfo->pcontroller->set_pll(48000000);
 		}
-#endif
+
 		if (bneed_div) {
 			sd_clk = pinfo->pcontroller->get_pll();
 			for (clk_div = 0x0; clk_div <= 0x80;) {

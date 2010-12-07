@@ -323,6 +323,9 @@ int __init ambarella_init_sd(void)
 	retval = amb_set_sdcmd_ioctrl_drive_strength(HAL_BASE_VP,
 		AMB_IOCTRL_DRIVE_STRENGTH_12MA);
 	BUG_ON(retval != AMB_HAL_SUCCESS);
+
+	amba_writel(RCT_REG(0x2f4), 0x03);
+	amba_writel(RCT_REG(0x2f8), 0x03ff03ff);
 #endif
 
 	return retval;
