@@ -25,10 +25,9 @@
 
 #define CACHE_LINE_SIZE		32
 
-static void __iomem *l2x0_base = NULL;
+static void __iomem *l2x0_base;
 static DEFINE_SPINLOCK(l2x0_lock);
 static uint32_t l2x0_way_mask;	/* Bitmask of active ways */
-const char *l2x0_type = NULL;
 
 static inline void cache_wait(void __iomem *reg, unsigned long mask)
 {
@@ -39,35 +38,23 @@ static inline void cache_wait(void __iomem *reg, unsigned long mask)
 
 static inline void cache_sync(void)
 {
-	writel_relaxed(0, l2x0_base + L2X0_CACHE_SYNC);
-	cache_wait(l2x0_base + L2X0_CACHE_SYNC, 1);
+	void __iomem *base = l2x0_base;
+	writel_relaxed(0, base + L2X0_CACHE_SYNC);
+	cache_wait(base + L2X0_CACHE_SYNC, 1);
 }
 
 static inline void l2x0_clean_line(unsigned long addr)
 {
-	cache_wait(l2x0_base + L2X0_CLEAN_LINE_PA, 1);
-	writel_relaxed(addr, l2x0_base + L2X0_CLEAN_LINE_PA);
+	void __iomem *base = l2x0_base;
+	cache_wait(base + L2X0_CLEAN_LINE_PA, 1);
+	writel_relaxed(addr, base + L2X0_CLEAN_LINE_PA);
 }
 
 static inline void l2x0_inv_line(unsigned long addr)
 {
-	cache_wait(l2x0_base + L2X0_INV_LINE_PA, 1);
-	writel_relaxed(addr, l2x0_base + L2X0_INV_LINE_PA);
-}
-
-static inline void l2x0_inv_all(void)
-{
-	/* invalidate all ways */
-	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_INV_WAY);
-	cache_wait(l2x0_base + L2X0_INV_WAY, l2x0_way_mask);
-	cache_sync();
-}
-
-static inline void l2x0_clean_all(void)
-{
-	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_CLEAN_WAY);
-	cache_wait(l2x0_base + L2X0_CLEAN_WAY, l2x0_way_mask);
-	cache_sync();
+	void __iomem *base = l2x0_base;
+	cache_wait(base + L2X0_INV_LINE_PA, 1);
+	writel_relaxed(addr, base + L2X0_INV_LINE_PA);
 }
 
 #ifdef CONFIG_PL310_ERRATA_588369
@@ -84,11 +71,13 @@ static void debug_writel(unsigned long val)
 
 static inline void l2x0_flush_line(unsigned long addr)
 {
+	void __iomem *base = l2x0_base;
+
 	/* Clean by PA followed by Invalidate by PA */
-	cache_wait(l2x0_base + L2X0_CLEAN_LINE_PA, 1);
-	writel_relaxed(addr, l2x0_base + L2X0_CLEAN_LINE_PA);
-	cache_wait(l2x0_base + L2X0_INV_LINE_PA, 1);
-	writel_relaxed(addr, l2x0_base + L2X0_INV_LINE_PA);
+	cache_wait(base + L2X0_CLEAN_LINE_PA, 1);
+	writel_relaxed(addr, base + L2X0_CLEAN_LINE_PA);
+	cache_wait(base + L2X0_INV_LINE_PA, 1);
+	writel_relaxed(addr, base + L2X0_INV_LINE_PA);
 }
 #else
 
@@ -99,8 +88,9 @@ static inline void debug_writel(unsigned long val)
 
 static inline void l2x0_flush_line(unsigned long addr)
 {
-	cache_wait(l2x0_base + L2X0_CLEAN_INV_LINE_PA, 1);
-	writel_relaxed(addr, l2x0_base + L2X0_CLEAN_INV_LINE_PA);
+	void __iomem *base = l2x0_base;
+	cache_wait(base + L2X0_CLEAN_INV_LINE_PA, 1);
+	writel_relaxed(addr, base + L2X0_CLEAN_INV_LINE_PA);
 }
 #endif
 
@@ -109,25 +99,28 @@ static void l2x0_cache_sync(void)
 	unsigned long flags;
 
 	spin_lock_irqsave(&l2x0_lock, flags);
-	if (!l2x0_base) {
-		spin_unlock_irqrestore(&l2x0_lock, flags);
-		return;
-	}
+	cache_sync();
+	spin_unlock_irqrestore(&l2x0_lock, flags);
+}
 
+static inline void l2x0_inv_all(void)
+{
+	unsigned long flags;
+
+	/* invalidate all ways */
+	spin_lock_irqsave(&l2x0_lock, flags);
+	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_INV_WAY);
+	cache_wait(l2x0_base + L2X0_INV_WAY, l2x0_way_mask);
 	cache_sync();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
 static void l2x0_inv_range(unsigned long start, unsigned long end)
 {
+	void __iomem *base = l2x0_base;
 	unsigned long flags;
 
 	spin_lock_irqsave(&l2x0_lock, flags);
-	if (!l2x0_base) {
-		spin_unlock_irqrestore(&l2x0_lock, flags);
-		return;
-	}
-
 	if (start & (CACHE_LINE_SIZE - 1)) {
 		start &= ~(CACHE_LINE_SIZE - 1);
 		debug_writel(0x03);
@@ -156,21 +149,17 @@ static void l2x0_inv_range(unsigned long start, unsigned long end)
 			spin_lock_irqsave(&l2x0_lock, flags);
 		}
 	}
-	cache_wait(l2x0_base + L2X0_INV_LINE_PA, 1);
+	cache_wait(base + L2X0_INV_LINE_PA, 1);
 	cache_sync();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
 static void l2x0_clean_range(unsigned long start, unsigned long end)
 {
+	void __iomem *base = l2x0_base;
 	unsigned long flags;
 
 	spin_lock_irqsave(&l2x0_lock, flags);
-	if (!l2x0_base) {
-		spin_unlock_irqrestore(&l2x0_lock, flags);
-		return;
-	}
-
 	start &= ~(CACHE_LINE_SIZE - 1);
 	while (start < end) {
 		unsigned long blk_end = start + min(end - start, 4096UL);
@@ -185,21 +174,17 @@ static void l2x0_clean_range(unsigned long start, unsigned long end)
 			spin_lock_irqsave(&l2x0_lock, flags);
 		}
 	}
-	cache_wait(l2x0_base + L2X0_CLEAN_LINE_PA, 1);
+	cache_wait(base + L2X0_CLEAN_LINE_PA, 1);
 	cache_sync();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
 static void l2x0_flush_range(unsigned long start, unsigned long end)
 {
+	void __iomem *base = l2x0_base;
 	unsigned long flags;
 
 	spin_lock_irqsave(&l2x0_lock, flags);
-	if (!l2x0_base) {
-		spin_unlock_irqrestore(&l2x0_lock, flags);
-		return;
-	}
-
 	start &= ~(CACHE_LINE_SIZE - 1);
 	while (start < end) {
 		unsigned long blk_end = start + min(end - start, 4096UL);
@@ -216,19 +201,17 @@ static void l2x0_flush_range(unsigned long start, unsigned long end)
 			spin_lock_irqsave(&l2x0_lock, flags);
 		}
 	}
-	cache_wait(l2x0_base + L2X0_CLEAN_INV_LINE_PA, 1);
+	cache_wait(base + L2X0_CLEAN_INV_LINE_PA, 1);
 	cache_sync();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
-void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
+void __init l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 {
 	__u32 aux;
 	__u32 cache_id;
 	int ways;
-	unsigned long flags;
-
-	spin_lock_irqsave(&l2x0_lock, flags);
+	const char *type;
 
 	l2x0_base = base;
 
@@ -245,16 +228,16 @@ void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 			ways = 16;
 		else
 			ways = 8;
-		l2x0_type = "L310";
+		type = "L310";
 		break;
 	case L2X0_CACHE_ID_PART_L210:
 		ways = (aux >> 13) & 0xf;
-		l2x0_type = "L210";
+		type = "L210";
 		break;
 	default:
 		/* Assume unknown chips have 8 ways */
 		ways = 8;
-		l2x0_type = "L2x0 series";
+		type = "L2x0 series";
 		break;
 	}
 
@@ -276,36 +259,12 @@ void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 		writel_relaxed(1, l2x0_base + L2X0_CTRL);
 	}
 
-	spin_unlock_irqrestore(&l2x0_lock, flags);
-
 	outer_cache.inv_range = l2x0_inv_range;
 	outer_cache.clean_range = l2x0_clean_range;
 	outer_cache.flush_range = l2x0_flush_range;
 	outer_cache.sync = l2x0_cache_sync;
 
-	printk(KERN_INFO "%s cache controller enabled\n", l2x0_type);
+	printk(KERN_INFO "%s cache controller enabled\n", type);
 	printk(KERN_INFO "l2x0: %d ways, CACHE_ID 0x%08x, AUX_CTRL 0x%08x\n",
 			 ways, cache_id, aux);
 }
-
-void l2x0_exit()
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&l2x0_lock, flags);
-	if (!l2x0_base) {
-		spin_unlock_irqrestore(&l2x0_lock, flags);
-		return;
-	}
-
-	if (readl_relaxed(l2x0_base + L2X0_CTRL) & 1) {
-		l2x0_clean_all();
-		writel_relaxed(0, l2x0_base + L2X0_CTRL);
-	}
-
-	l2x0_base = NULL;
-	spin_unlock_irqrestore(&l2x0_lock, flags);
-
-	printk(KERN_INFO "%s cache controller disabled\n", l2x0_type);
-}
-
