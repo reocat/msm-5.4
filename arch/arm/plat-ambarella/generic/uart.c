@@ -54,6 +54,28 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.line		= 0,
 	},
 #endif
+#if (UART_INSTANCES >= 4)
+	[2] = {
+		.type		= PORT_UART00,
+		.iotype		= UPIO_MEM,
+		.membase	= (void *)UART2_BASE,
+		.mapbase	= (unsigned long)io_v2p(UART2_BASE),
+		.irq		= UART2_IRQ,
+		.uartclk	= 27000000,
+		.fifosize	= UART_FIFO_SIZE,
+		.line		= 0,
+	},
+	[3] = {
+		.type		= PORT_UART00,
+		.iotype		= UPIO_MEM,
+		.membase	= (void *)UART3_BASE,
+		.mapbase	= (unsigned long)io_v2p(UART3_BASE),
+		.irq		= UART3_IRQ,
+		.uartclk	= 27000000,
+		.fifosize	= UART_FIFO_SIZE,
+		.line		= 0,
+	},
+#endif
 };
 
 struct ambarella_uart_platform_info ambarella_uart_ports = {
@@ -69,6 +91,20 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 	.amba_port[1]		= {
 		.port		= &ambarella_uart_port_resource[1],
 		.name		= "ambarella-uart1",
+		.flow_control	= 1,
+		.mcr		= 0,
+	},
+#endif
+#if (UART_INSTANCES >= 4)
+	.amba_port[2]		= {
+		.port		= &ambarella_uart_port_resource[2],
+		.name		= "ambarella-uart2",
+		.flow_control	= 1,
+		.mcr		= 0,
+	},
+	.amba_port[3]		= {
+		.port		= &ambarella_uart_port_resource[3],
+		.name		= "ambarella-uart3",
 		.flow_control	= 1,
 		.mcr		= 0,
 	},
@@ -93,6 +129,30 @@ struct platform_device ambarella_uart = {
 struct platform_device ambarella_uart1 = {
 	.name		= "ambarella-uart",
 	.id		= 1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &ambarella_uart_ports,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+#endif
+#if (UART_INSTANCES >= 4)
+struct platform_device ambarella_uart2 = {
+	.name		= "ambarella-uart",
+	.id		= 2,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &ambarella_uart_ports,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+struct platform_device ambarella_uart3 = {
+	.name		= "ambarella-uart",
+	.id		= 3,
 	.resource	= NULL,
 	.num_resources	= 0,
 	.dev		= {
