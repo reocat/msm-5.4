@@ -133,8 +133,10 @@ int ambcache_l2_enable()
 			L2X0_DATA_LATENCY_CTRL));
 		pr_info("DATA_LATENCY[0x%08x]\n", readl(
 			ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
+		l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
+	} else {
+		outer_enable();
 	}
-	l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
 #endif
 	return 0;
 }
@@ -143,7 +145,9 @@ EXPORT_SYMBOL(ambcache_l2_enable);
 int ambcache_l2_disable()
 {
 #ifdef CONFIG_CACHE_L2X0
-	l2x0_exit();
+	outer_flush_all();
+	outer_disable();
+	outer_inv_all();
 #endif
 	return 0;
 }
