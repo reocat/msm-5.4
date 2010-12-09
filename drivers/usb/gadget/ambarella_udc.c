@@ -729,6 +729,8 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 
 
 	ret = udc->driver->setup(&udc->gadget, crq);
+	if (ret < 0)
+		dprintk(DEBUG_ERR, "SETUP request failed (%d)\n", ret);
 
 	dprintk(DEBUG_NORMAL, "Exit\n");
 
