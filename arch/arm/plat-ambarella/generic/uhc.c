@@ -38,17 +38,19 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	u32 sys_config;
 	amb_usb_port_state_t state;
 
+	sys_config = amba_readl(SYS_CONFIG_REG);
+
+	if (sys_config & USB1_IS_HOST)
+		pdata->usb1_is_host = 1;
+
 	if (usb_host_initialized == 1)
 		return;
 
 	usb_host_initialized = 1;
 
-	sys_config = amba_readl(SYS_CONFIG_REG);
-	if (sys_config & USB1_IS_HOST) {
-		/* GPIO8 and GPIO10 are programmed as hardware mode */
+	/* GPIO8 and GPIO10 are programmed as hardware mode */
+	if (sys_config & USB1_IS_HOST)
 		amba_setbitsl(GPIO0_AFSEL_REG, 0x00000500);
-		pdata->usb1_is_host = 1;
-	}
 	/* GPIO7 and GPIO9 are programmed as hardware mode */
 	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000280);
 
