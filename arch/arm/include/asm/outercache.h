@@ -25,8 +25,9 @@ struct outer_cache_fns {
 	void (*inv_range)(unsigned long, unsigned long);
 	void (*clean_range)(unsigned long, unsigned long);
 	void (*flush_range)(unsigned long, unsigned long);
-	void (*flush_all)(void);
 	void (*inv_all)(void);
+	void (*clean_all)(void);
+	void (*flush_all)(void);
 	void (*enable)(void);
 	void (*disable)(void);
 #ifdef CONFIG_OUTER_CACHE_SYNC
@@ -64,6 +65,12 @@ static inline void outer_inv_all(void)
 {
 	if (outer_cache.inv_all)
 		outer_cache.inv_all();
+}
+
+static inline void outer_clean_all(void)
+{
+	if (outer_cache.clean_all)
+		outer_cache.clean_all();
 }
 
 static inline void outer_enable(void)
