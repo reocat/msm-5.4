@@ -32,18 +32,21 @@
 
 struct ambarella_uart_port_info {
 	void					*port;	//struct uart_port *
-	char					name[32];
 	u32					flow_control;
 	u32					mcr;
+	u32					fcr;
+	u32					ier;
+	u32					tx_fifo_fix;
+
+	void					(*isr_fix)(unsigned char __iomem *membase, u32 on);
+	void					(*set_pll)(void);
+	u32					(*get_pll)(void);
 };
 
 struct ambarella_uart_platform_info {
 	const int				total_port_num;
 	int					registed_port_num;
 	struct ambarella_uart_port_info		amba_port[UART_INSTANCES];
-
-	void					(*set_pll)(void);
-	u32					(*get_pll)(void);
 };
 
 /* ==========================================================================*/

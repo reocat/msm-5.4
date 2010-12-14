@@ -587,7 +587,7 @@ static int ambeth_init_phy(struct ambeth_info *lp)
 	} else {
 		dev_notice(&lp->ndev->dev,
 			"%s: Try PHY%d whose id is 0x%08x!\n",
-			__func__, phy_addr, phydev->phy_id);
+			__func__, phydev->addr, phydev->phy_id);
 	}
 
 ambeth_init_phy_connect:

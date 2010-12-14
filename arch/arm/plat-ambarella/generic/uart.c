@@ -31,6 +31,12 @@
 #include <plat/uart.h>
 
 /* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 static struct uart_port	ambarella_uart_port_resource[] = {
 	[0] = {
 		.type		= PORT_UART00,
@@ -54,7 +60,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.line		= 0,
 	},
 #endif
-#if (UART_INSTANCES >= 4)
+#if (UART_INSTANCES >= 3)
 	[2] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
@@ -65,6 +71,8 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.fifosize	= UART_FIFO_SIZE,
 		.line		= 0,
 	},
+#endif
+#if (UART_INSTANCES >= 4)
 	[3] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
@@ -78,43 +86,77 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 #endif
 };
 
+#define DEFAULT_AMBARELLA_UART_MCR	(0)
+#define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI)
+#if (CHIP_REV == I1)
+#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_ONECHAR | UART_FC_TX_EMPTY)
+static void ambarella_uart_isr_fix(unsigned char __iomem *membase, u32 on)
+{
+	if (on)
+		amba_setbitsl(membase + UART_IE_OFFSET, UART_IE_PTIME);
+	else
+		amba_clrbitsl(membase + UART_IE_OFFSET, UART_IE_PTIME);
+}
+#else
+#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
+#define ambarella_uart_isr_fix		NULL
+#endif
+
 struct ambarella_uart_platform_info ambarella_uart_ports = {
 	.total_port_num		= ARRAY_SIZE(ambarella_uart_port_resource),
 	.registed_port_num	= 0,
 	.amba_port[0]		= {
 		.port		= &ambarella_uart_port_resource[0],
-		.name		= "ambarella-uart0",
 		.flow_control	= 0,
-		.mcr		= 0,
+		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
+		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
+		.ier		= DEFAULT_AMBARELLA_UART_IER,
+		.isr_fix	= ambarella_uart_isr_fix,
+		.set_pll	= rct_set_uart_pll,
+		.get_pll	= get_uart_freq_hz,
 	},
 #if (UART_INSTANCES >= 2)
 	.amba_port[1]		= {
 		.port		= &ambarella_uart_port_resource[1],
-		.name		= "ambarella-uart1",
 		.flow_control	= 1,
-		.mcr		= 0,
+		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
+		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
+		.ier		= DEFAULT_AMBARELLA_UART_IER,
+		.isr_fix	= ambarella_uart_isr_fix,
+		.set_pll	= rct_set_uart_pll,
+		.get_pll	= get_uart_freq_hz,
+	},
+#endif
+#if (UART_INSTANCES >= 3)
+	.amba_port[2]		= {
+		.port		= &ambarella_uart_port_resource[2],
+		.flow_control	= 1,
+		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
+		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
+		.ier		= DEFAULT_AMBARELLA_UART_IER,
+		.isr_fix	= ambarella_uart_isr_fix,
+		.set_pll	= rct_set_uart_pll,
+		.get_pll	= get_uart_freq_hz,
 	},
 #endif
 #if (UART_INSTANCES >= 4)
-	.amba_port[2]		= {
-		.port		= &ambarella_uart_port_resource[2],
-		.name		= "ambarella-uart2",
-		.flow_control	= 1,
-		.mcr		= 0,
-	},
 	.amba_port[3]		= {
 		.port		= &ambarella_uart_port_resource[3],
-		.name		= "ambarella-uart3",
 		.flow_control	= 1,
-		.mcr		= 0,
+		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
+		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
+		.ier		= DEFAULT_AMBARELLA_UART_IER,
+		.isr_fix	= ambarella_uart_isr_fix,
+		.set_pll	= rct_set_uart_pll,
+		.get_pll	= get_uart_freq_hz,
 	},
 #endif
-	.set_pll		= rct_set_uart_pll,
-	.get_pll		= get_uart_freq_hz,
 };
 
+static const char ambarella_uart_platform_device_name[] = "ambarella-uart";
+
 struct platform_device ambarella_uart = {
-	.name		= "ambarella-uart",
+	.name		= ambarella_uart_platform_device_name,
 	.id		= 0,
 	.resource	= NULL,
 	.num_resources	= 0,
@@ -124,10 +166,9 @@ struct platform_device ambarella_uart = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
-
 #if (UART_INSTANCES >= 2)
 struct platform_device ambarella_uart1 = {
-	.name		= "ambarella-uart",
+	.name		= ambarella_uart_platform_device_name,
 	.id		= 1,
 	.resource	= NULL,
 	.num_resources	= 0,
@@ -138,9 +179,9 @@ struct platform_device ambarella_uart1 = {
 	}
 };
 #endif
-#if (UART_INSTANCES >= 4)
+#if (UART_INSTANCES >= 3)
 struct platform_device ambarella_uart2 = {
-	.name		= "ambarella-uart",
+	.name		= ambarella_uart_platform_device_name,
 	.id		= 2,
 	.resource	= NULL,
 	.num_resources	= 0,
@@ -150,8 +191,10 @@ struct platform_device ambarella_uart2 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+#endif
+#if (UART_INSTANCES >= 4)
 struct platform_device ambarella_uart3 = {
-	.name		= "ambarella-uart",
+	.name		= ambarella_uart_platform_device_name,
 	.id		= 3,
 	.resource	= NULL,
 	.num_resources	= 0,
