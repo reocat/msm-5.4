@@ -134,7 +134,7 @@ static int pre_set_idg2000(void)
 
 }
 
-static int get_gyro(u16 *xdata, u16 *ydata)
+int get_gyro(u16 *xdata, u16 *ydata)
 {
 	int errorCode = 0;
 	u8 a[2];
@@ -149,8 +149,7 @@ static int get_gyro(u16 *xdata, u16 *ydata)
 
 	return errorCode;
 }
-
-
+EXPORT_SYMBOL(get_gyro);
 /*
  * SysFS support
  */
