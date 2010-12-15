@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_SPI_H
 #define __PLAT_AMBARELLA_SPI_H
 
+#define SPI_MASTER_INSTANCES	(SPI_INSTANCES + SPI_AHB_INSTANCES)
+
 /* ==========================================================================*/
 /* SPI rw mode */
 #define SPI_WRITE_READ		0
@@ -119,6 +121,9 @@ struct ambarella_spi_platform_info {
 /* ==========================================================================*/
 extern struct platform_device			ambarella_spi0;
 extern struct platform_device			ambarella_spi1;
+extern struct platform_device			ambarella_spi2;
+extern struct platform_device			ambarella_spi3;
+extern struct platform_device			ambarella_spi4;
 
 /* ==========================================================================*/
 extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,

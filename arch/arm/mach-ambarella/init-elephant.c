@@ -86,6 +86,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_sd1,
 	&ambarella_spi0,
 	&ambarella_spi1,
+	&ambarella_spi2,
+	&ambarella_spi3,
+	&ambarella_spi4,
 	&ambarella_uart,
 	&ambarella_uart1,
 	&ambarella_uart2,
@@ -124,9 +127,79 @@ static struct spi_board_info ambarella_spi_devices[] = {
 	},
 	{
 		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	}
+		.bus_num	= 0,
+		.chip_select	= 4,
+	},
+	{
+                .modalias       = "spidev",
+                .bus_num        = 0,
+                .chip_select    = 5,
+        },
+	{
+                .modalias       = "spidev",
+                .bus_num        = 0,
+                .chip_select    = 6,
+        },
+	{
+                .modalias       = "spidev",
+                .bus_num        = 0,
+                .chip_select    = 7,
+        },
+	{
+                .modalias       = "spidev",
+                .bus_num        = 1,
+                .chip_select    = 0,
+        },
+	{
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 0,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 1,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 2,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 3,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 4,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 5,
+        },
+	{
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 6,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 2,
+                .chip_select    = 7,
+        },
+        {
+                .modalias       = "spidev",
+                .bus_num        = 3,
+                .chip_select    = 0,
+        },
+	{
+                .modalias       = "spidev",
+                .bus_num        = 4,
+                .chip_select    = 0,
+        }
 };
 
 /* ==========================================================================*/

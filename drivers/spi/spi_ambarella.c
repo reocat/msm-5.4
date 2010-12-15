@@ -65,7 +65,7 @@ struct ambarella_spi_private {
 static struct {
 	int					cs_num;
 	struct ambarella_spi_private		*data;
-} ambarella_spi_private_devices[SPI_INSTANCES];
+} ambarella_spi_private_devices[SPI_MASTER_INSTANCES];
 
 const static u8 ambarella_spi_reverse_table[256] = {
 	0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
@@ -819,7 +819,7 @@ int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_write)
 	cs_num = ambarella_spi_private_devices[bus_id].cs_num;
 	ps = ambarella_spi_private_devices[bus_id].data;
 
-	if (bus_id >= SPI_INSTANCES	|| cs_id >= cs_num
+	if (bus_id >= SPI_MASTER_INSTANCES	|| cs_id >= cs_num
 		|| !spi_write->buffer	|| !spi_write->n_size)
 		return -EINVAL;
 
@@ -884,7 +884,7 @@ int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_read)
 	cs_num = ambarella_spi_private_devices[bus_id].cs_num;
 	ps = ambarella_spi_private_devices[bus_id].data;
 
-	if (bus_id >= SPI_INSTANCES	|| cs_id >= cs_num
+	if (bus_id >= SPI_MASTER_INSTANCES	|| cs_id >= cs_num
 		|| !spi_read->buffer	|| !spi_read->n_size)
 		return -EINVAL;
 
@@ -951,7 +951,7 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 	cs_num = ambarella_spi_private_devices[bus_id].cs_num;
 	ps = ambarella_spi_private_devices[bus_id].data;
 
-	if (bus_id >= SPI_INSTANCES		  || cs_id >= cs_num
+	if (bus_id >= SPI_MASTER_INSTANCES		  || cs_id >= cs_num
 		|| !spi_write_then_read->w_buffer || !spi_write_then_read->w_size
 		|| !spi_write_then_read->r_buffer || !spi_write_then_read->r_size)
 		return -EINVAL;
@@ -1034,7 +1034,7 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 	cs_num = ambarella_spi_private_devices[bus_id].cs_num;
 	ps = ambarella_spi_private_devices[bus_id].data;
 
-	if (bus_id >= SPI_INSTANCES		|| cs_id >= cs_num
+	if (bus_id >= SPI_MASTER_INSTANCES		|| cs_id >= cs_num
 		|| !spi_write_and_read->w_buffer|| !spi_write_and_read->r_buffer
 		|| !spi_write_and_read->n_size)
 		return -EINVAL;
