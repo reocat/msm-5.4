@@ -86,20 +86,45 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 #endif
 };
 
-#define DEFAULT_AMBARELLA_UART_MCR	(0)
-#define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI)
 #if (CHIP_REV == I1)
-#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_ONECHAR | UART_FC_TX_EMPTY)
-static void ambarella_uart_isr_fix(unsigned char __iomem *membase, u32 on)
+static void ambarella_uart_stop_tx(unsigned char __iomem *membase)
 {
-	if (on)
-		amba_setbitsl(membase + UART_IE_OFFSET, UART_IE_PTIME);
-	else
-		amba_clrbitsl(membase + UART_IE_OFFSET, UART_IE_PTIME);
+	u32					ier;
+	u32					iir;
+
+	ier = amba_readl(membase + UART_IE_OFFSET);
+	if ((ier & UART_IE_PTIME) != UART_IE_PTIME)
+		amba_writel(membase + UART_IE_OFFSET,
+			ier | (UART_IE_PTIME | UART_IE_ETBEI));
+	iir = amba_readl(membase + UART_II_OFFSET);
+	amba_writel(membase + UART_IE_OFFSET,
+		ier & ~(UART_IE_PTIME | UART_IE_ETBEI));
+}
+
+static u32 ambarella_uart_read_ms(unsigned char __iomem *membase)
+{
+	u32					ier;
+	u32					ms;
+
+	ier = amba_readl(membase + UART_IE_OFFSET);
+	if ((ier & UART_IE_EDSSI) != UART_IE_EDSSI)
+		amba_writel(membase + UART_IE_OFFSET, ier | UART_IE_EDSSI);
+	ms = amba_readl(membase + UART_MS_OFFSET);
+	if ((ier & UART_IE_EDSSI) != UART_IE_EDSSI)
+		amba_writel(membase + UART_IE_OFFSET, ier);
+
+	return ms;
 }
 #else
-#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
-#define ambarella_uart_isr_fix		NULL
+static void ambarella_uart_stop_tx(unsigned char __iomem *membase)
+{
+	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+}
+
+static u32 ambarella_uart_read_ms(unsigned char __iomem *membase)
+{
+	return amba_readl(membase + UART_MS_OFFSET);
+}
 #endif
 
 struct ambarella_uart_platform_info ambarella_uart_ports = {
@@ -107,48 +132,48 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 	.registed_port_num	= 0,
 	.amba_port[0]		= {
 		.port		= &ambarella_uart_port_resource[0],
-		.flow_control	= 0,
 		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
-		.isr_fix	= ambarella_uart_isr_fix,
+		.stop_tx	= ambarella_uart_stop_tx,
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
+		.get_ms		= NULL,
 	},
 #if (UART_INSTANCES >= 2)
 	.amba_port[1]		= {
 		.port		= &ambarella_uart_port_resource[1],
-		.flow_control	= 1,
 		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
-		.isr_fix	= ambarella_uart_isr_fix,
+		.stop_tx	= ambarella_uart_stop_tx,
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
+		.get_ms		= ambarella_uart_read_ms,
 	},
 #endif
 #if (UART_INSTANCES >= 3)
 	.amba_port[2]		= {
 		.port		= &ambarella_uart_port_resource[2],
-		.flow_control	= 1,
 		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
-		.isr_fix	= ambarella_uart_isr_fix,
+		.stop_tx	= ambarella_uart_stop_tx,
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
+		.get_ms		= ambarella_uart_read_ms,
 	},
 #endif
 #if (UART_INSTANCES >= 4)
 	.amba_port[3]		= {
 		.port		= &ambarella_uart_port_resource[3],
-		.flow_control	= 1,
 		.mcr		= DEFAULT_AMBARELLA_UART_MCR,
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
-		.isr_fix	= ambarella_uart_isr_fix,
+		.stop_tx	= ambarella_uart_stop_tx,
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
+		.get_ms		= ambarella_uart_read_ms,
 	},
 #endif
 };

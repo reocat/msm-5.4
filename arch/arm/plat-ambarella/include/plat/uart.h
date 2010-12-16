@@ -27,20 +27,27 @@
 /* ==========================================================================*/
 #define UART_FIFO_SIZE			(16)
 
+#define DEFAULT_AMBARELLA_UART_MCR	(0)
+#define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI)
+#if (CHIP_REV == I1)
+#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_ONECHAR | UART_FC_TX_EMPTY)
+#else
+#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
+#endif
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 struct ambarella_uart_port_info {
 	void					*port;	//struct uart_port *
-	u32					flow_control;
 	u32					mcr;
 	u32					fcr;
 	u32					ier;
 	u32					tx_fifo_fix;
 
-	void					(*isr_fix)(unsigned char __iomem *membase, u32 on);
+	void					(*stop_tx)(unsigned char __iomem *membase);
 	void					(*set_pll)(void);
 	u32					(*get_pll)(void);
+	u32					(*get_ms)(unsigned char __iomem *membase);
 };
 
 struct ambarella_uart_platform_info {

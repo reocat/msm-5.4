@@ -67,7 +67,11 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 
 static void serial_ambarella_stop_tx(struct uart_port *port)
 {
-	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	struct ambarella_uart_port_info		*port_info;
+
+	port_info = (struct ambarella_uart_port_info *)(port->private_data);
+
+	port_info->stop_tx(port->membase);
 }
 
 static void serial_ambarella_stop_rx(struct uart_port *port)
@@ -114,6 +118,10 @@ static inline void receive_chars(struct uart_port *port)
 				flag = TTY_PARITY;
 			else if (ls & UART_LS_OE)
 				flag = TTY_OVERRUN;
+
+			if (ls & UART_LS_OE) {
+				printk("OVERFLOW\n");
+			}
 		}
 
 		if (likely(ls & UART_LS_DR)) {
@@ -137,6 +145,9 @@ static void transmit_chars(struct uart_port *port)
 {
 	struct circ_buf				*xmit = &port->state->xmit;
 	int					count;
+	struct ambarella_uart_port_info		*port_info;
+
+	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
 	if (port->x_char) {
 		amba_writel(port->membase + UART_TH_OFFSET, port->x_char);
@@ -145,7 +156,7 @@ static void transmit_chars(struct uart_port *port)
 		return;
 	}
 	if (uart_tx_stopped(port) || uart_circ_empty(xmit)) {
-		serial_ambarella_stop_tx(port);
+		port_info->stop_tx(port->membase);
 		return;
 	}
 
@@ -161,7 +172,7 @@ static void transmit_chars(struct uart_port *port)
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(port);
 	if (uart_circ_empty(xmit))
-		serial_ambarella_stop_tx(port);
+		port_info->stop_tx(port->membase);
 }
 
 static inline void check_modem_status(struct uart_port *port)
@@ -171,8 +182,8 @@ static inline void check_modem_status(struct uart_port *port)
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
-	if (port_info->flow_control) {
-		ms = amba_readl(port->membase + UART_MS_OFFSET);
+	if (port_info->get_ms) {
+		ms = port_info->get_ms(port->membase);
 
 		if (ms & UART_MS_RI)
 			port->icount.rng++;
@@ -199,9 +210,6 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
-	if (port_info->isr_fix)
-		port_info->isr_fix(port->membase, 1);
-
 	ii = amba_readl(port->membase + UART_II_OFFSET);
 
 	switch (ii & 0x0F) {
@@ -225,9 +233,6 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 		break;
 	}
 
-	if (port_info->isr_fix)
-		port_info->isr_fix(port->membase, 0);
-
 	return rval;
 }
 
@@ -245,8 +250,8 @@ static unsigned int serial_ambarella_get_mctrl(struct uart_port *port)
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
-	if (port_info->flow_control) {
-		ms = amba_readl(port->membase + UART_MS_OFFSET);
+	if (port_info->get_ms) {
+		ms = port_info->get_ms(port->membase);
 
 		if (ms & UART_MS_CTS)
 			mctrl |= TIOCM_CTS;
@@ -272,7 +277,7 @@ static void serial_ambarella_set_mctrl(struct uart_port *port,
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
-	if (port_info->flow_control) {
+	if (port_info->get_ms) {
 		mcr = amba_readl(port->membase + UART_MC_OFFSET);
 		mcr &= ~UART_MC_AFCE;
 		amba_writel(port->membase + UART_MC_OFFSET, mcr);
@@ -322,11 +327,13 @@ static int serial_ambarella_startup(struct uart_port *port)
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
-	amba_setbitsl(port->membase + UART_IE_OFFSET, port_info->ier);
+	amba_writel(port->membase + UART_IE_OFFSET, port_info->ier |
+		UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET, (port_info->fcr |
 		UART_FC_XMITR | UART_FC_RCVRR));
 	retval = request_irq(port->irq, serial_ambarella_irq,
 		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
+	amba_writel(port->membase + UART_IE_OFFSET, port_info->ier);
 
 	return retval;
 }
