@@ -34,6 +34,7 @@
 #define A6	6000
 #define A7	7000
 #define A7M	7100
+#define I1	7200
 #define A7L	7500
 
 #define CHIP_ID(x)	((x / 1000))
