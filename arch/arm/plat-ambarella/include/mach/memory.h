@@ -61,7 +61,11 @@
 #endif
 
 #if defined(CONFIG_VMSPLIT_3G)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
 #define NOLINUX_MEM_V_START		(0xd0000000)
+#else
+#define NOLINUX_MEM_V_START		(0xe0000000)
+#endif
 #define AHB_BASE			(0xf0000000)
 #define APB_BASE			(0xf1000000)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)

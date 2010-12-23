@@ -147,7 +147,6 @@ int ambcache_l2_disable()
 #ifdef CONFIG_CACHE_L2X0
 	outer_flush_all();
 	outer_disable();
-	outer_inv_all();
 #endif
 	return 0;
 }

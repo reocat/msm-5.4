@@ -118,7 +118,7 @@ static u32 ambarella_uart_read_ms(unsigned char __iomem *membase)
 #else
 static void ambarella_uart_stop_tx(unsigned char __iomem *membase)
 {
-	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	amba_clrbitsl(membase + UART_IE_OFFSET, UART_IE_ETBEI);
 }
 
 static u32 ambarella_uart_read_ms(unsigned char __iomem *membase)
