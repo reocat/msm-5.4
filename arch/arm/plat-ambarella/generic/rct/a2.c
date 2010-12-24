@@ -368,7 +368,7 @@ void rct_reset_dma(void)
 
 void rct_set_uart_pll(void)
 {
-
+#if 0
 #if	defined(PRK_UART_38400) || \
 	defined(PRK_UART_57600) || \
 	defined(PRK_UART_115200)
@@ -378,7 +378,9 @@ void rct_set_uart_pll(void)
 	/* Program UART RCT divider value to generate lower clock */
 	writel(CG_UART_REG, 0x8);
 #endif
-
+#else
+	writel(CG_UART_REG, 0x1);
+#endif
 }
 
 void rct_set_sd_pll(u32 freq_hz)

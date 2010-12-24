@@ -504,7 +504,7 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 	u32					val;
 	ambarella_dma_req_t			dma_req;
 
-	dma_req.src = io_v2p(nand_info->dmabase);
+	dma_req.src = nand_info->dmabase;
 	dma_req.dst = nand_info->buf_phys;
 	dma_req.next = NULL;
 	dma_req.rpt = (u32) NULL;
@@ -543,7 +543,7 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 	ambarella_dma_req_t			dma_req;
 
 	dma_req.src = nand_info->buf_phys;
-	dma_req.dst = io_v2p(nand_info->dmabase);
+	dma_req.dst = nand_info->dmabase;
 	dma_req.next = NULL;
 	dma_req.rpt = (u32) NULL;
 	dma_req.xfr_count = nand_info->len;
@@ -1414,7 +1414,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		errorCode = -ENXIO;
 		goto ambarella_nand_probe_free_info;
 	}
-	nand_info->dmabase = dma_res->start;
+	nand_info->dmabase = ambarella_virt_to_phys(dma_res->start);
 
 	wp_res = platform_get_resource_byname(pdev,
 		IORESOURCE_IO, "wp_gpio");

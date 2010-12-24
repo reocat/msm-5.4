@@ -33,9 +33,6 @@
 #define __io(a)			((void __iomem *)(a))
 #define __mem_pci(a)		(a)
 
-#define io_p2v(x)		(((x) >= APB_PHYS_BASE) ? ((x) - APB_PHYS_BASE + APB_BASE) : ((x) - AHB_PHYS_BASE + AHB_BASE))
-#define io_v2p(x)		(((x) >= APB_BASE) ? ((x) - APB_BASE + APB_PHYS_BASE) : ((x) - AHB_BASE + AHB_PHYS_BASE))
-
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -215,13 +212,6 @@ static inline void __amba_writew(const volatile void __iomem *address, u16 value
 
 #define amba_read2w(v,pd1,pd2)	__amba_read2w(v,pd1,pd2)
 #define amba_write2w(v,d1,d2)	__amba_write2w(v,d1,d2)
-
-#define amba_inb(p)		amba_readb(io_p2v(p))
-#define amba_inw(p)		amba_readw(io_p2v(p))
-#define amba_inl(p)		amba_readl(io_p2v(p))
-#define amba_outb(p,d)		amba_writeb(io_p2v(p),d)
-#define amba_outw(p,d)		amba_writew(io_p2v(p),d)
-#define amba_outl(p,d)		amba_writel(io_p2v(p),d)
 
 #define amba_setbitsb(v, mask)	amba_writeb((v),(amba_readb(v) | (mask)))
 #define amba_setbitsw(v, mask)	amba_writew((v),(amba_readw(v) | (mask)))

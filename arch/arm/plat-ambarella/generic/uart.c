@@ -42,7 +42,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART0_BASE,
-		.mapbase	= (unsigned long)io_v2p(UART0_BASE),
+		.mapbase	= (unsigned long)(UART0_BASE - APB_BASE + APB_PHYS_BASE),
 		.irq		= UART0_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -53,7 +53,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART1_BASE,
-		.mapbase	= (unsigned long)io_v2p(UART1_BASE),
+		.mapbase	= (unsigned long)(UART1_BASE - APB_BASE + APB_PHYS_BASE),
 		.irq		= UART1_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -65,7 +65,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART2_BASE,
-		.mapbase	= (unsigned long)io_v2p(UART2_BASE),
+		.mapbase	= (unsigned long)(UART2_BASE - APB_BASE + APB_PHYS_BASE),
 		.irq		= UART2_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -77,7 +77,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART3_BASE,
-		.mapbase	= (unsigned long)io_v2p(UART3_BASE),
+		.mapbase	= (unsigned long)(UART3_BASE - APB_BASE + APB_PHYS_BASE),
 		.irq		= UART3_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -121,10 +121,12 @@ static void ambarella_uart_stop_tx(unsigned char __iomem *membase)
 	amba_clrbitsl(membase + UART_IE_OFFSET, UART_IE_ETBEI);
 }
 
+#if (UART_INSTANCES >= 2)
 static u32 ambarella_uart_read_ms(unsigned char __iomem *membase)
 {
 	return amba_readl(membase + UART_MS_OFFSET);
 }
+#endif
 #endif
 
 struct ambarella_uart_platform_info ambarella_uart_ports = {
