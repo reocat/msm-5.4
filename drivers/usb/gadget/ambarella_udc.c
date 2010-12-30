@@ -1477,6 +1477,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	struct ambarella_request	*req = NULL;
 	struct ambarella_ep	*ep = NULL;
 	struct ambarella_udc	*udc;
+	unsigned long flags;
 
 	if (unlikely (!_ep)) {
 		dprintk(DEBUG_ERR, "_ep is NULL\n");
@@ -1545,7 +1546,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	}
 
 	/* disable IRQ handler's bottom-half  */
-	spin_lock_irq(&udc->lock);
+	spin_lock_irqsave(&udc->lock, flags);
 
 	_req->status = -EINPROGRESS;
 	_req->actual = 0;
@@ -1561,7 +1562,9 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 		  * is zero. */
 		if(req->req.length == 0) {
 			if(ep->id == CTRL_OUT) {
+				spin_unlock(&udc->lock);
 				ambarella_udc_done(ep, req, 0);
+				spin_lock(&udc->lock);
 				/* told UDC the configuration is done, and to ack HOST */
 				//amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_CSR_DONE);
 				//udelay(150);
@@ -1596,7 +1599,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 
 finish:
 	/* enable IRQ handler's bottom-half  */
-	spin_unlock_irq(&udc->lock);
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	return 0;
 }

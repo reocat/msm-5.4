@@ -695,7 +695,7 @@ void rct_set_pwm_freq_hz(u32 freq_hz)
 /* This function is just for USB device controller */
 void rct_set_usb_ana_on(void)
 {
-	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON) !=
+	if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ALWAYS_ON) !=
 							AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_port1_state() failed");
 	}
