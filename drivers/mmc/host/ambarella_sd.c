@@ -1329,7 +1329,10 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 				__func__, vdd);
 			break;
 		}
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
+		if (amba_readb(pinfo->regbase + SD_PWR_OFFSET) != pwr) {
+			amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
+			msleep(pslotinfo->slot_info.ext_power.active_delay);
+		}
 	}
 
 	ambsd_dbg(pslotinfo, "pwr = 0x%x.\n", pwr);

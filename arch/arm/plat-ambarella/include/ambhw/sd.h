@@ -26,7 +26,7 @@
 #endif
 
 #if ((CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) ||	\
-    (CHIP_REV == A2Q) || (CHIP_REV == A5L))
+    (CHIP_REV == A2Q) || (CHIP_REV == A5L) || (CHIP_REV == I1))
 #define SD_AC12ES_BIT_FIELD_TYPE	0
 #define SD_PWR_BIT_FIELD_TYPE		0
 #else

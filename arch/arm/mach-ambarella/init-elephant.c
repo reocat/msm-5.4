@@ -226,6 +226,11 @@ static struct ambarella_key_table elephant_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_D,	3,	0x001a0074}}},	//D
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_SEARCH,	3,	0x001a007e}}},	//SEARCH
 
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_HOME,	0,	1,	GPIO(120),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_MENU,	0,	1,	GPIO(121),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	0,	1,	GPIO(122),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_SEARCH,	0,	1,	GPIO(123),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+
 	{AMBINPUT_END},
 };
 
@@ -303,7 +308,7 @@ static void __init ambarella_init_elephant(void)
 
 	/* Config SD*/
 	fio_select_sdio_as_default = 1;
-	ambarella_platform_sd_controller0.clk_limit = 12500000;
+	ambarella_platform_sd_controller0.clk_limit = 25000000;
 	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 1000;
@@ -313,6 +318,8 @@ static void __init ambarella_init_elephant(void)
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val	= GPIO_LOW,
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+	ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
 	ambarella_platform_sd_controller0.slot[1].cd_delay = 1000;
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
@@ -324,6 +331,9 @@ static void __init ambarella_init_elephant(void)
 	ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(106);
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
