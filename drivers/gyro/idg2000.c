@@ -137,19 +137,57 @@ static int pre_set_idg2000(void)
 int get_gyro(u16 *xdata, u16 *ydata)
 {
 	int errorCode = 0;
+	s16 temp;
 	u8 a[2];
 
 	errorCode = idg2000_read_reg(GYRO_XOUT_H,&a[0]);
 	errorCode = idg2000_read_reg(GYRO_XOUT_L,&a[1]);
-	*xdata = (a[0]<<8)|a[1];
-
+	temp = (a[0]<<8)|a[1];
+	temp += 32768;
+	*xdata = (u16)temp;
 	errorCode = idg2000_read_reg(GYRO_YOUT_H,&a[0]);
 	errorCode = idg2000_read_reg(GYRO_YOUT_L,&a[1]);
-	*ydata = (a[0]<<8)|a[1];
-
+	temp = (a[0]<<8)|a[1];
+	temp += 32768;
+	*ydata = (u16)temp;
 	return errorCode;
 }
 EXPORT_SYMBOL(get_gyro);
+
+typedef struct gyro_info_s 
+{
+	u8 gyro_id;                // gyro sensor id
+//	u8 sensor_interface;       // gyro sensor interface
+//	u8 gyro_pwr_gpio;          // GPIO number controls gyro sensor power
+//	u8 gyro_hps_gpio;          // GPIO number controls gyro sensor hps
+//	u8 gyro_x_chan;		// gyro sensor x adc channel
+//	u8 gyro_y_chan;		// gyro sensor y adc channel
+//	s8 gyro_x_polar;		// gyro sensor x polarity
+//	s8 gyro_y_polar;		// gyro sensor y polarity
+	u8 vol_div_num;		// numerator of voltage divider
+	u8 vol_div_den;		// denominator of voltage divider
+	u8 max_rms_noise;		// gyro sensor rms noise level
+	u16 	max_bias;		// max gyro sensor bias
+	u16 	min_bias;		// min gyro sensor bias
+	u16 	max_sense;		// max gyro sensor sensitivity
+	u16 	min_sense;		// min gyro sensor sensitivity
+	u16 	start_up_time;		// gyro sensor start-up time
+	u16 	full_scale_range;	// gyro full scale range
+} gyro_info_t;
+
+void gyro_get_info(gyro_info_t *gyroinfo){
+	gyroinfo->gyro_id = GYRO_INVENSENSE_IDG2000_ID;
+	gyroinfo->vol_div_num = 1;
+	gyroinfo->vol_div_den = 1;
+	gyroinfo->max_sense = 144; // LSB/(deg/sec)
+	gyroinfo->min_sense = 118; // LSB/(deg/sec)
+	gyroinfo->max_bias = 38008; //5240;	// LSB
+	gyroinfo->min_bias = 27528;//-5240;// LSB
+	gyroinfo->max_rms_noise 	= 20; // LSB OK
+	gyroinfo->start_up_time = 50; // ms OK
+	gyroinfo->full_scale_range = 250; // deg/sec OK
+}
+EXPORT_SYMBOL(gyro_get_info);
 /*
  * SysFS support
  */
