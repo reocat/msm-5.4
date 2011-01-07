@@ -1617,6 +1617,17 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 	return 0;
 }
 
+#ifdef CONFIG_NET_POLL_CONTROLLER
+static void ambeth_poll_controller(struct net_device *ndev)
+{
+	unsigned long				flags;
+
+	local_irq_save(flags);
+	ambeth_interrupt(ndev->irq, ndev);
+	local_irq_restore(flags);
+}
+#endif
+
 static int ambeth_get_settings(struct net_device *ndev, struct ethtool_cmd *ecmd)
 {
 	struct ambeth_info *lp;
@@ -1646,6 +1657,9 @@ static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_change_mtu		= eth_change_mtu,
 	.ndo_tx_timeout		= ambeth_timeout,
 	.ndo_get_stats		= ambeth_get_stats,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_poll_controller	= ambeth_poll_controller,
+#endif
 };
 
 static const struct ethtool_ops ambeth_ethtool_ops = {
