@@ -657,7 +657,7 @@ static int ambfb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		goto ambfb_setcmap_exit;
 	}
 
-	if (cmap->start != 0 || cmap->len != 256) {
+	if (cmap->start + cmap->len > 256) {
 		dev_dbg(info->device,
 			"%s: Incorrect parameters: start = %d, len = %d\n",
 			__func__, cmap->start, cmap->len);
@@ -680,9 +680,9 @@ static int ambfb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	g = cmap->green;
 	b = cmap->blue;
 	t = cmap->transp;
-	pclut_table = ambfb_data->clut_table;
-	pblend_table = ambfb_data->blend_table;
-	for (pos = 0; pos < 256; pos++) {
+	pclut_table = ambfb_data->clut_table + cmap->start;
+	pblend_table = ambfb_data->blend_table + cmap->start;
+	for (pos = 0; pos < cmap->len; pos++) {
 		*pclut_table++ = *r++;
 		*pclut_table++ = *g++;
 		*pclut_table++ = *b++;
