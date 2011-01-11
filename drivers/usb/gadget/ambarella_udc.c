@@ -606,7 +606,7 @@ static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 
 	/* disable usb interrupt to avoid flood-in interrupts of
 	   IN packets due to completion interrupt of tx dma enabled */
-	local_irq_save(flags);
+	spin_lock_irqsave(&ep->udc->lock, flags);
 
 	ep->data_desc = req->data_desc;
 	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr);
@@ -615,7 +615,7 @@ static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	ep->dma_enabled = 1;
 
 	/* re-enable usb interrupt */
-	local_irq_restore(flags);
+	spin_unlock_irqrestore(&ep->udc->lock, flags);
 
 	dprintk(DEBUG_NORMAL, "Exit\n");
 }
@@ -1347,7 +1347,7 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 
 	max_packet = le16_to_cpu(desc->wMaxPacketSize) & 0x7ff;
 
-	local_irq_save (flags);
+	spin_lock_irqsave(&udc->lock, flags);
 	ep->ep.maxpacket = max_packet;
 	ep->desc = desc;
 	ep->halted = 0;
@@ -1384,7 +1384,7 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	dprintk (DEBUG_NORMAL, "enable %s, address = 0x%02x, max_packet = 0x%02x\n",
 			ep->ep.name, desc->bEndpointAddress, max_packet);
 
-	local_irq_restore (flags);
+	spin_unlock_irqrestore(&udc->lock, flags);
 	ambarella_udc_set_halt(_ep, 0);
 
 	return 0;
@@ -1404,7 +1404,7 @@ static int ambarella_udc_ep_disable(struct usb_ep *_ep)
 		return -EINVAL;
 	}
 
-	local_irq_save(flags);
+	spin_lock_irqsave(&ep->udc->lock, flags);
 
 	ep->desc = NULL;
 	ep->halted = 1;
@@ -1424,7 +1424,7 @@ static int ambarella_udc_ep_disable(struct usb_ep *_ep)
 	/* disable irqs */
 	amba_setbitsl(USB_DEV_EP_INTR_MSK_REG, 1 << ep->id);
 
-	local_irq_restore(flags);
+	spin_unlock_irqrestore(&ep->udc->lock, flags);
 
 	dprintk(DEBUG_NORMAL, "%s disabled\n", _ep->name);
 
@@ -1613,7 +1613,7 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	if (!_ep || !_req)
 		return -EINVAL;
 
-	local_irq_save (flags);
+	spin_lock_irqsave(&ep->udc->lock, flags);
 
 	/* make sure the request is actually queued on this endpoint */
 	list_for_each_entry (req, &ep->queue, queue) {
@@ -1621,7 +1621,7 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 			break;
 	}
 	if (&req->req != _req) {
-		local_irq_restore (flags);
+		spin_unlock_irqrestore(&ep->udc->lock, flags);
 		return -EINVAL;
 	}
 
@@ -1656,7 +1656,7 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 				: DMA_FROM_DEVICE);
 	}
 
-	local_irq_restore (flags);
+	spin_unlock_irqrestore(&ep->udc->lock, flags);
 
 	return 0;
 }
@@ -1685,7 +1685,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 		return -EINVAL;
 	}
 
-	local_irq_save (flags);
+	spin_lock_irqsave(&ep->udc->lock, flags);
 
 	/* set/clear, then synch memory views with the device */
 	if (value) { /* stall endpoint */
@@ -1710,7 +1710,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 
 	ep->halted = value ? 1 : 0;
 
-	local_irq_restore (flags);
+	spin_unlock_irqrestore(&ep->udc->lock, flags);
 
 	dprintk(DEBUG_NORMAL, "Exit\n");
 
@@ -1784,12 +1784,12 @@ static int ambarella_udc_vbus_session(struct usb_gadget *gadget, int is_active)
 {
 	unsigned long	flags;
 
-	local_irq_save(flags);
+	spin_lock_irqsave(&the_controller->lock, flags);
 	if (the_controller->driver)
 		ambarella_udc_set_pullup(the_controller, is_active);
 	else
 		ambarella_udc_set_pullup(the_controller, 0);
-	local_irq_restore(flags);
+	spin_unlock_irqrestore(&the_controller->lock, flags);
 
 	return 0;
 }
