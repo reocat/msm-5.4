@@ -310,35 +310,35 @@ void rct_reset_chip(void)
 
 void rct_reset_fio(void)
 {
-	if (amb_reset_all(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+	if (amb_reset_all(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_fio() failed");
 	}
 }
 
 void rct_reset_fio_only(void)
 {
-	if (amb_reset_fio(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+	if (amb_reset_fio(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_fio() failed");
 	}
 }
 
 void rct_reset_cf(void)
 {
-	if (amb_reset_cf(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+	if (amb_reset_cf(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_cf() failed");
 	}
 }
 
 void rct_reset_flash(void)
 {
-	if (amb_reset_flash(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+	if (amb_reset_flash(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_flash() failed");
 	}
 }
 
 void rct_reset_xd(void)
 {
-	if (amb_reset_xd(HAL_BASE_VP) != AMB_HAL_SUCCESS) {
+	if (amb_reset_xd(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_xd() failed");
 	}
 }

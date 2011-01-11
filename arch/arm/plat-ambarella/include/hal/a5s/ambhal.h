@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 122757
+ * @version 131870
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -361,17 +361,6 @@ AMB_HAL_RETRY = 0xfffffffe
 } amb_hal_success_t ;
 
 /**
- * PLL fractional frequency setting.
- *
- * @note This value is limited so that only a fractional change of up to ~50 KHz may be
- * requested.
- *
- * @ingroup pll_group
- */
-
-typedef unsigned int amb_pll_fractional_divisor_t ;
-
-/**
  * PLL Reference Clock Source
  *
  * @ingroup pll_group
@@ -389,7 +378,9 @@ AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK,
 /** Use external clock source - no pll */
 AMB_EXTERNAL_CLOCK_SOURCE,
 /** Use the vout pll clock for lcd */
-AMB_SHARE_VOUT_CLOCK
+AMB_SHARE_VOUT_CLOCK,
+/* Reserved */
+AMB_PLL_REFERENCE_CLOCK_SOURCE_RESERVED = 0xffffffff
 } amb_clock_source_t ;
 
 /**
@@ -435,7 +426,7 @@ unsigned int prescaler ;
 /** 16 bit output divider */
 unsigned int postscaler ;
 /** clock source for the block ::amb_clock_source_t */
-unsigned int clock_source ;
+amb_clock_source_t clock_source ;
 /* Reserved */
 unsigned int delay ;
 } amb_pll_configuration_t ;
@@ -471,10 +462,7 @@ AMB_PERFORMANCE_1080P30,
 AMB_PERFORMANCE_1080P60,
 /** 2160p60 */
 AMB_PERFORMANCE_2160P60,
-/*
- * Do not remove this !! - it is a workaround for compilers that might use
- * a byte for this enum
- */
+/* Reserved */
 AMB_PERFORMANCE_RESERVED=0xffffffff
 } amb_performance_t ;
 
@@ -506,7 +494,9 @@ AMB_OPERATING_MODE_LOW_POWER,
 /** Software based raw/yuv encoding */
 AMB_OPERATING_MODE_RAW,
 /** IP Cam */
-AMB_OPERATING_MODE_IP_CAM
+AMB_OPERATING_MODE_IP_CAM,
+/* Reserved */
+AMB_OPERATING_MODE_RESERVED=0xffffffff
 } amb_mode_t ;
 
 /**
@@ -523,7 +513,9 @@ AMB_USB_ON,
 /** Force USB interface into suspend state */
 AMB_USB_SUSPEND,
 /** Enable USB interface  & force USB to never suspend */
-AMB_USB_ALWAYS_ON
+AMB_USB_ALWAYS_ON,
+/* Reserved */
+AMB_USB_RESERVED=0xffffffff
 } amb_usb_interface_state_t ;
 
 /**
@@ -546,7 +538,9 @@ AMB_USB_CLK_EXT_24MHZ,
 /** Use external (off-chip) 48MHz clock source (2.5V) on xx_xout_usb pin */
 AMB_USB_CLK_EXT_48MHZ,
 /** Use external 12MHz crystal clock source on xx_xout_usb pin */
-AMB_USB_CLK_CRYSTAL_12MHZ
+AMB_USB_CLK_CRYSTAL_12MHZ,
+/* Reserved */
+AMB_USB_CLK_RESERVED=0xffffffff
 } amb_usb_clock_source_t ;
 
 /**
@@ -559,7 +553,9 @@ typedef enum {
 /** HDMI phy is off */
 AMB_HDMI_OFF,
 /** HDMI phy is on */
-AMB_HDMI_ON
+AMB_HDMI_ON,
+/* Reserved */
+AMB_HDMI_RESERVED=0xffffffff
 } amb_hdmi_interface_state_t ;
 
 /**
@@ -572,8 +568,26 @@ typedef enum {
 /** Dual Stream is off */
 AMB_DUAL_STREAM_OFF,
 /** Dual Stream is on */
-AMB_DUAL_STREAM_ON
+AMB_DUAL_STREAM_ON,
+/* Reserved */
+AMB_DUAL_STREAM_RESERVED=0xffffffff
 } amb_dual_stream_state_t ;
+
+
+/**
+ * HD preview state
+ * 
+ * @ingroup mode_group
+ */
+
+typedef enum {
+/** HD preview is on */
+AMB_HD_PREVIEW_ON = 0x0,
+/** HD preview is off */
+AMB_HD_PREVIEW_OFF,
+/* Reserved */
+AMB_HD_PREVIEW_RESERVED=0xffffffff
+} amb_hd_preview_state_t ;
 
 /**
  * Operating mode
@@ -583,15 +597,17 @@ AMB_DUAL_STREAM_ON
 
 typedef struct {
 /** Sensor resolution (capture)/Output resolution (playback) ::amb_performance_t */
-unsigned int performance ;
+amb_performance_t performance ;
 /** Operating mode ::amb_mode_t */
-unsigned int mode ;
-/** USB state ::amb_usb_clock_source_t */
-unsigned int usb_state ;
+amb_mode_t mode ;
+/** USB state ::amb_usb_interface_state_t */
+amb_usb_interface_state_t usb_state ;
 /** HDMI state ::amb_hdmi_interface_state_t */
-unsigned int hdmi_state ;
+amb_hdmi_interface_state_t hdmi_state ;
 /** Dual Stream state ::amb_dual_stream_state_t */
-unsigned int dual_stream_state ;
+amb_dual_stream_state_t dual_stream_state ;
+/** HD Preview state ::amb_hd_preview_state_t */
+amb_hd_preview_state_t hd_preview_state ;
 } amb_operating_mode_t ;
 
 /**
@@ -621,7 +637,9 @@ typedef enum {
 /** Memory Stick controller disabled */
 AMB_MS_DISABLE,
 /** Memory Stick controller enabled */
-AMB_MS_ENABLE
+AMB_MS_ENABLE,
+/* Reserved */
+AMB_MS_RESERVED=0xffffffff
 } amb_ms_status_t ;
 
 /**
@@ -636,8 +654,9 @@ AMB_LVDS_PAD_MODE_LVDS,
 /** LVDS pads configured for SLVS */
 AMB_LVDS_PAD_MODE_SLVS,
 /** LVDS pads configured for LVCMOS */
-AMB_LVDS_PAD_MODE_LVCMOS
-
+AMB_LVDS_PAD_MODE_LVCMOS,
+/* Reserved */
+AMB_LVDS_PAD_MODE_RESERVED=0xffffffff
 } amb_lvds_pad_mode_t ;
 
 /**
@@ -665,6 +684,8 @@ AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED = 0x80,
 AMB_SYSTEM_CONFIGURATION_RMII_SELECTED = 0x8000,
 /** Host Interface Secure Mode */
 AMB_SYSTEM_CONFIGURATION_HIF_SECURE_MODE = 0x200000,
+/* Reserved */
+AMB_SYSTEM_CONFIGURATION_RESERVED=0xffffffff
 } amb_system_configuration_t ;
 
 /**
@@ -687,7 +708,9 @@ AMB_SSI_BOOT,
 /** Host Interface Boot */
 AMB_HIF_BOOT,
 /** XIP Boot */
-AMB_XIP_BOOT
+AMB_XIP_BOOT,
+/* Reserved */
+AMB_RESERVED_BOOT=0xffffffff
 } amb_boot_type_t ;
 
 /**
@@ -706,7 +729,9 @@ AMB_INTEL_READY_ACTIVE_LOW,
 /** Motorola Data Acknowledge Asserted High */
 AMB_MOTOROLA_DACK_ACTIVE_HIGH,
 /** Motorola Data Acknowledge Asserted Low */
-AMB_MOTOROLA_DACK_ACTIVE_LOW
+AMB_MOTOROLA_DACK_ACTIVE_LOW,
+/* Reserved */
+AMB_HIF_RESERVED=0xffffffff
 } amb_hif_type_t ;
 
 /**
@@ -723,7 +748,9 @@ AMB_IOCTRL_DRIVE_STRENGTH_8MA,
 /** 4 mA Driver */
 AMB_IOCTRL_DRIVE_STRENGTH_4MA,
 /** 12 mA Driver */
-AMB_IOCTRL_DRIVE_STRENGTH_12MA
+AMB_IOCTRL_DRIVE_STRENGTH_12MA,
+/* Reserved */
+AMB_IOCTRL_RESERVED=0xffffffff
 } amb_ioctrl_drive_strength_t ;
 
 /**
@@ -738,7 +765,9 @@ AMB_IOCTRL_PULLUPDOWN_DISABLED,
 /** Pullup enabled */
 AMB_IOCTRL_PULLUP_ENABLED,
 /** Pulldown enabled */
-AMB_IOCTRL_PULLDOWN_ENABLED
+AMB_IOCTRL_PULLDOWN_ENABLED,
+/* Reserved */
+AMB_IOCTRL_PULLUPDOWN_RESERVED=0xffffffff
 } amb_ioctrl_pullupdown_t ;
 
 /**
@@ -751,7 +780,9 @@ typedef enum {
 /** cmos input pad */
 AMB_IOCTRL_CMOS_INPUT_TYPE,
 /** schmitt trigger input pad */
-AMB_IOCTRL_SCHMITT_INPUT_TYPE
+AMB_IOCTRL_SCHMITT_INPUT_TYPE,
+/* Reserved */
+AMB_IOCTRL_RESERVED_INPUT_TYPE=0xffffffff
 } amb_ioctrl_input_type_t ;
 
 /**
@@ -764,7 +795,9 @@ typedef enum {
 /** fast slew rate */
 AMB_IOCTRL_FAST_SLEW_RATE,
 /** slow slew rate */
-AMB_IOCTRL_SLOW_SLEW_RATE
+AMB_IOCTRL_SLOW_SLEW_RATE,
+/* Reserved */
+AMB_IOCTRL_RESERVED_SLEW_RATE=0xffffffff
 } amb_ioctrl_slew_rate_t ;
 
 /**
@@ -775,13 +808,13 @@ AMB_IOCTRL_SLOW_SLEW_RATE
 
 typedef struct {
 /** pad drive strength ::amb_ioctrl_drive_strength_t */
-unsigned int drive_strength ;
+amb_ioctrl_drive_strength_t drive_strength ;
 /** pad pullup/pulldown enabled ::amb_ioctrl_pullupdown_t */
-unsigned int pullupdown ;
+amb_ioctrl_pullupdown_t pullupdown ;
 /** type of input pad ::amb_ioctrl_input_type_t */
-unsigned int input_type ;
+amb_ioctrl_input_type_t input_type ;
 /** slew rate ::amb_ioctrl_slew_rate_t */
-unsigned int slew_rate ;
+amb_ioctrl_slew_rate_t slew_rate ;
 } amb_ioctrl_configuration_t ;
 
 /**
@@ -794,7 +827,9 @@ typedef enum {
 /** Sensor clock pad is an output */
 AMB_SENSOR_CLOCK_PAD_OUTPUT_MODE,
 /** Sensor clock pad is an input */
-AMB_SENSOR_CLOCK_PAD_INPUT_MODE
+AMB_SENSOR_CLOCK_PAD_INPUT_MODE,
+/* Reserved */
+AMB_SENSOR_CLOCK_PAD_RESERVED_MODE=0xffffffff
 } amb_sensor_clock_pad_mode_t ;
 
 /**
@@ -804,6 +839,10 @@ AMB_SENSOR_CLOCK_PAD_INPUT_MODE
  */
 
 typedef enum {
+/** Low priority for dsp clients (75 of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_VERY_LOW_PRIORITY,
+/** Low priority for dsp clients (81.25% of total bandwidth) */
+AMB_DRAM_ARIBTER_DSP_LOW_PRIORITY,
 /** Normal priority for dsp clients (87.5% of total bandwidth) */
 AMB_DRAM_ARIBTER_DSP_NORMAL_PRIORITY,
 /** High priority for dsp clients (93.75% of total bandwidth - large arbiter throttle period) */
@@ -813,8 +852,25 @@ AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY,
 /** High priority for dsp clients (96.8% of total bandwidth) */
 AMB_DRAM_ARIBTER_DSP_VERY_HIGH_PRIORITY,
 /** High priority for dsp clients (100% of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_HIGHEST_PRIORITY
+AMB_DRAM_ARIBTER_DSP_HIGHEST_PRIORITY,
+/* Reserved */
+AMB_DRAM_ARIBTER_DSP_RESERVED=0xffffffff
 } amb_dram_arbiter_priority_t ;
+
+/**
+ * FIO reset delay length
+ *
+ * @ingroup fio_mode
+ */
+
+typedef enum {
+/** FIO is reset for a long period */
+AMB_FIO_RESET_SLOW,
+/** FIO is reset for a short period */
+AMB_FIO_RESET_FAST,
+/* Reserved */
+AMB_FIO_RESET_RESERVED=0xffffffff
+} amb_fio_reset_period_t ;
 
 /*
  *
@@ -831,11 +887,7 @@ typedef unsigned int (*amb_hal_function_t) (unsigned int, unsigned int, unsigned
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
-#ifdef _HAL_MMU_REMAP_
-  amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + 0) ;
-#else
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
-#endif
 
   return amb_hal_function (arg0, arg1, arg2, arg3) ;
 }
@@ -2411,80 +2463,85 @@ static INLINE amb_ms_status_t amb_get_ms_status (void *amb_hal_base_address)
  * Reset the flash controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_flash_reset_period Length of flash reset.
  *
  * @retval ::AMB_HAL_SUCCESS always returns success.
  *
  * @ingroup fio_group
  */
 
-static INLINE amb_hal_success_t amb_reset_flash (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_flash (void *amb_hal_base_address, amb_fio_reset_period_t amb_flash_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FLASH, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FLASH, amb_flash_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the xd controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_xd_reset_period Length of xd reset.
  *
  * @retval ::AMB_HAL_SUCCESS always returns success.
  *
  * @ingroup fio_group
  */
 
-static INLINE amb_hal_success_t amb_reset_xd (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_xd (void *amb_hal_base_address, amb_fio_reset_period_t amb_xd_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_XD, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_XD, amb_xd_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the cf controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_cf_reset_period Length of cf reset.
  *
  * @retval ::AMB_HAL_SUCCESS always returns success.
  *
  * @ingroup fio_group
  */
 
-static INLINE amb_hal_success_t amb_reset_cf (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_cf (void *amb_hal_base_address, amb_fio_reset_period_t amb_cf_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_CF, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_CF, amb_cf_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the fio controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_fio_reset_period Length of fio controller reset.
  *
  * @retval ::AMB_HAL_SUCCESS always returns success.
  *
  * @ingroup fio_group
  */
 
-static INLINE amb_hal_success_t amb_reset_fio (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_fio (void *amb_hal_base_address, amb_fio_reset_period_t amb_fio_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FIO, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FIO, amb_fio_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the fio, cf, xd & flash controller all at once
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_all_reset_period Length of reset.
  *
  * @retval ::AMB_HAL_SUCCESS always returns success.
  *
  * @ingroup fio_group
  */
 
-static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address, amb_fio_reset_period_t amb_all_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_ALL, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_ALL, amb_all_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
