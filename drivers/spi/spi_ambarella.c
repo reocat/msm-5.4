@@ -640,6 +640,9 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	spin_lock_init(&as->lock);
 	as->bpw = 16;
 
+	/* Inittialize Hardware*/
+	ambarella_spi_inithw(master);
+
 	/* Request IRQ */
 	errorCode = request_irq(irq, ambarella_spi_isr, IRQF_TRIGGER_HIGH,
 			dev_name(&pdev->dev), master);
@@ -677,8 +680,6 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	ambarella_spi_private_devices[master->bus_num].cs_num = master->num_chipselect;
 	ambarella_spi_private_devices[master->bus_num].data = ps;
 
-	/* Inittialize Hardware*/
-	ambarella_spi_inithw(master);
 	goto ambarella_spi_probe_exit3;
 
 ambarella_spi_probe_exit1:
