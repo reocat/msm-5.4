@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 121764
+ * @version 133245
  *
  * @par Introduction:
  * The Ambarella A7 Hardware Abstraction Layer (ambhal) provides an API between
@@ -398,8 +398,8 @@ AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK,
 AMB_EXTERNAL_CLOCK_SOURCE,
 /** Use the vout pll clock for lcd/hdmi */
 AMB_SHARE_VOUT_CLOCK,
-/** This is illegal and it should never be returned */
-AMB_PLL_REFERENCE_CLOCK_SOURCE_ILLEGAL
+/* Reserved */
+AMB_PLL_REFERENCE_CLOCK_SOURCE_RESERVED = 0xffffffff
 } amb_clock_source_t ;
 
 /**
@@ -479,10 +479,7 @@ AMB_PERFORMANCE_1080P30,
 AMB_PERFORMANCE_1080P60,
 /** 2160p60 */
 AMB_PERFORMANCE_2160P60,
-/*
- * Do not remove this !! - it is a workaround for compilers that might use
- * a byte for this enum
- */
+/* Reserved */
 AMB_PERFORMANCE_RESERVED=0xffffffff
 } amb_performance_t ;
 
@@ -510,7 +507,11 @@ AMB_OPERATING_MODE_LCD_BYPASS,
 /** Still picture preview */
 AMB_OPERATING_MODE_STILL_PREVIEW,
 /** Low power */
-AMB_OPERATING_MODE_LOW_POWER
+AMB_OPERATING_MODE_LOW_POWER,
+/** IP Cam */
+AMB_OPERATING_MODE_IP_CAM,
+/* Reserved */
+AMB_OPERATING_MODE_RESERVED=0xffffffff
 } amb_mode_t ;
 
 /**
@@ -527,7 +528,9 @@ AMB_USB_ON,
 /** Force USB interface into suspend state */
 AMB_USB_SUSPEND,
 /** Enable USB interface  & force USB to never suspend */
-AMB_USB_ALWAYS_ON
+AMB_USB_ALWAYS_ON,
+/* Reserved */
+AMB_USB_RESERVED=0xffffffff
 } amb_usb_interface_state_t ;
 
 /**
@@ -550,7 +553,9 @@ AMB_USB_CLK_EXT_24MHZ,
 /** Use external (off-chip) 48MHz clock source (2.5V) on xx_xout_usb pin */
 AMB_USB_CLK_EXT_48MHZ,
 /** Use external 12MHz crystal clock source on xx_xout_usb pin */
-AMB_USB_CLK_CRYSTAL_12MHZ
+AMB_USB_CLK_CRYSTAL_12MHZ,
+/* Reserved */
+AMB_USB_CLK_RESERVED=0xffffffff
 } amb_usb_clock_source_t ;
 
 /**
@@ -563,7 +568,9 @@ typedef enum {
 /** HDMI phy is off */
 AMB_HDMI_OFF,
 /** HDMI phy is on */
-AMB_HDMI_ON
+AMB_HDMI_ON,
+/* Reserved */
+AMB_HDMI_RESERVED=0xffffffff
 } amb_hdmi_interface_state_t ;
 
 /**
@@ -576,7 +583,9 @@ typedef enum {
 /** Dual Stream is off */
 AMB_DUAL_STREAM_OFF,
 /** Dual Stream is on */
-AMB_DUAL_STREAM_ON
+AMB_DUAL_STREAM_ON,
+/* Reserved */
+AMB_DUAL_STREAM_RESERVED=0xffffffff
 } amb_dual_stream_state_t ;
 
 /**
@@ -625,7 +634,9 @@ typedef enum {
 /** Memory Stick controller disabled */
 AMB_MS_DISABLE,
 /** Memory Stick controller enabled */
-AMB_MS_ENABLE
+AMB_MS_ENABLE,
+/* Reserved */
+AMB_MS_RESERVED=0xffffffff
 } amb_ms_status_t ;
 
 /**
@@ -640,8 +651,9 @@ AMB_LVDS_PAD_MODE_LVDS,
 /** LVDS pads configured for SLVS */
 AMB_LVDS_PAD_MODE_SLVS,
 /** LVDS pads configured for LVCMOS */
-AMB_LVDS_PAD_MODE_LVCMOS
-
+AMB_LVDS_PAD_MODE_LVCMOS,
+/* Reserved */
+AMB_LVDS_PAD_MODE_RESERVED=0xffffffff
 } amb_lvds_pad_mode_t ;
 
 /**
@@ -669,6 +681,8 @@ AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED = 0x80,
 AMB_SYSTEM_CONFIGURATION_RMII_SELECTED = 0x8000,
 /** Host Interface Secure Mode */
 AMB_SYSTEM_CONFIGURATION_HIF_SECURE_MODE = 0x200000,
+/* Reserved */
+AMB_SYSTEM_CONFIGURATION_RESERVED=0xffffffff
 } amb_system_configuration_t ;
 
 /**
@@ -691,7 +705,9 @@ AMB_SSI_BOOT,
 /** Host Interface Boot */
 AMB_HIF_BOOT,
 /** XIP Boot */
-AMB_XIP_BOOT
+AMB_XIP_BOOT,
+/* Reserved */
+AMB_RESERVED_BOOT=0xffffffff
 } amb_boot_type_t ;
 
 /**
@@ -710,7 +726,9 @@ AMB_INTEL_READY_ACTIVE_LOW,
 /** Motorola Data Acknowledge Asserted High */
 AMB_MOTOROLA_DACK_ACTIVE_HIGH,
 /** Motorola Data Acknowledge Asserted Low */
-AMB_MOTOROLA_DACK_ACTIVE_LOW
+AMB_MOTOROLA_DACK_ACTIVE_LOW,
+/* Reserved */
+AMB_HIF_RESERVED=0xffffffff
 } amb_hif_type_t ;
 
 /**
@@ -727,7 +745,9 @@ AMB_IOCTRL_DRIVE_STRENGTH_8MA,
 /** 4 mA Driver */
 AMB_IOCTRL_DRIVE_STRENGTH_4MA,
 /** 12 mA Driver */
-AMB_IOCTRL_DRIVE_STRENGTH_12MA
+AMB_IOCTRL_DRIVE_STRENGTH_12MA,
+/* Reserved */
+AMB_IOCTRL_RESERVED=0xffffffff
 } amb_ioctrl_drive_strength_t ;
 
 /**
@@ -742,7 +762,9 @@ AMB_IOCTRL_PULLUPDOWN_DISABLED,
 /** Pullup enabled */
 AMB_IOCTRL_PULLUP_ENABLED,
 /** Pulldown enabled */
-AMB_IOCTRL_PULLDOWN_ENABLED
+AMB_IOCTRL_PULLDOWN_ENABLED,
+/* Reserved */
+AMB_IOCTRL_PULLUPDOWN_RESERVED=0xffffffff
 } amb_ioctrl_pullupdown_t ;
 
 /**
@@ -755,7 +777,9 @@ typedef enum {
 /** cmos input pad */
 AMB_IOCTRL_CMOS_INPUT_TYPE,
 /** schmitt trigger input pad */
-AMB_IOCTRL_SCHMITT_INPUT_TYPE
+AMB_IOCTRL_SCHMITT_INPUT_TYPE,
+/* Reserved */
+AMB_IOCTRL_RESERVED_INPUT_TYPE=0xffffffff
 } amb_ioctrl_input_type_t ;
 
 /**
@@ -768,7 +792,9 @@ typedef enum {
 /** fast slew rate */
 AMB_IOCTRL_FAST_SLEW_RATE,
 /** slow slew rate */
-AMB_IOCTRL_SLOW_SLEW_RATE
+AMB_IOCTRL_SLOW_SLEW_RATE,
+/* Reserved */
+AMB_IOCTRL_RESERVED_SLEW_RATE=0xffffffff
 } amb_ioctrl_slew_rate_t ;
 
 /**
@@ -798,7 +824,9 @@ typedef enum {
 /** Sensor clock pad is an output */
 AMB_SENSOR_CLOCK_PAD_OUTPUT_MODE,
 /** Sensor clock pad is an input */
-AMB_SENSOR_CLOCK_PAD_INPUT_MODE
+AMB_SENSOR_CLOCK_PAD_INPUT_MODE,
+/* Reserved */
+AMB_SENSOR_CLOCK_PAD_RESERVED_MODE=0xffffffff
 } amb_sensor_clock_pad_mode_t ;
 
 /*
