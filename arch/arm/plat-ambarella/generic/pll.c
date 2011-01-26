@@ -121,7 +121,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 };
 #elif (CHIP_REV == A7)
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_LOW_POWER + 1)
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
