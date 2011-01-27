@@ -135,6 +135,8 @@ static struct nand_bbt_descr amb_2048_bbt_descr = {
 /* ==========================================================================*/
 #ifdef CONFIG_MTD_PARTITIONS
 
+#define BOOT_DEV_NAND		0x1
+
 #define FLDEV_CMD_LINE_SIZE	1024
 typedef struct fldev_s
 {
@@ -200,10 +202,13 @@ typedef struct flpart_table_s
 #define CMDLINE_PART_MAX		8
 #define PART_NAME_LEN		8
 #define PTB_META_MAGIC		0x33219fbd
-#define PTB_META_SIZE			2048
-#define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN) * \
-						 PART_MAX + sizeof(u32))
-#define PTB_META_PAD_SIZE		(PTB_META_SIZE - PTB_META_ACTURAL_LEN)
+#define FW_MODEL_NAME_SIZE	128
+#define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN + sizeof(u32)) * \
+				 PART_MAX + sizeof(u32) + sizeof(u32) + \
+				 FW_MODEL_NAME_SIZE)
+#define PTB_META_SIZE		2048
+#define PTB_META_PAD_SIZE	(PTB_META_SIZE - PTB_META_ACTURAL_LEN)
+
 typedef struct flpart_meta_s
 {
 	struct {
@@ -211,12 +216,15 @@ typedef struct flpart_meta_s
 		u32	nblk;
 		char	name[PART_NAME_LEN];
 	} part_info[PART_MAX];
+	u32	part_dev[PART_MAX];
 	u32	magic;				/**< Magic number */
-	u8 	rsv[PTB_META_PAD_SIZE - 4];
+	u8	model_name[FW_MODEL_NAME_SIZE];
 	/* This meta crc32 doesn't include itself. */
 	/* It's only calc data before this field.  */
 	u32 	crc32;
+	u8 	rsv[PTB_META_PAD_SIZE];
 } __attribute__((packed)) flpart_meta_t;
+
 
 static char part_name[PART_MAX][PART_NAME_LEN];
 #endif
@@ -1575,6 +1583,12 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	amboot_partitions =
 		kzalloc((PART_MAX+CMDLINE_PART_MAX)*sizeof(struct mtd_partition),
 		GFP_KERNEL);
+
+	/* if this partition isn't located in NAND, fake its nblk to 0. */
+	for (i = 0; i < PART_MAX; i++) {
+		if (meta_table->part_dev[i] != BOOT_DEV_NAND)
+			meta_table->part_info[i].nblk = 0;
+	}
 
 	/*
 	  * found swp partition, and with it as a benchmark to adjust each
