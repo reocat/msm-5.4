@@ -99,7 +99,7 @@
 #endif
 
 #if 	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
-#define	NAND_DUMMY_XFER				1
+#define	NAND_DUMMY_XFER				0
 #else
 #define	NAND_DUMMY_XFER				0
 #endif

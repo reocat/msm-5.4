@@ -18,11 +18,10 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 #if (CHIP_REV == A1) || (CHIP_REV == A2) ||	\
-    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
-    (CHIP_REV == A5L)
+    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define VOUT_SUPPORT_DIGITAL_1080P	0
 #define VOUT_LCD_COLOR_SEQ_OUT_WA	0
-#elif (CHIP_REV == A5S)
+#elif (CHIP_REV == A5S) || (CHIP_REV == A5L)
 #define VOUT_SUPPORT_DIGITAL_1080P	0
 #define VOUT_LCD_COLOR_SEQ_OUT_WA	1
 #else
@@ -94,6 +93,12 @@
 #define VOUT_SUPPORT_DUAL_VOUT_SYNC		0
 #define VOUT_SUPPORT_CONFIG_DIGI_FMT656		0
 #define VOUT_SUPPORT_OUTPUT_INTERN_DIVIDED_CLK  0
+#endif
+
+#if (CHIP_REV == A6)
+#define VOUT_SUPPORT_601_8_BIT_CBYCRY	0
+#else
+#define VOUT_SUPPORT_601_8_BIT_CBYCRY	1
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || 	\

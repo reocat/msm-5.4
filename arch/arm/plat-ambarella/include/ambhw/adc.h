@@ -64,11 +64,11 @@
 
 #define ADC_CONTROL_OFFSET		0x00
 
-#if (CHIP_REV == A5S)
+#if (CHIP_REV == A5S) || (CHIP_REV == A5L)
 #define ADC_DATA0_OFFSET		0x10
-#define ADC_DATA1_OFFSET		0x0c
+#define ADC_DATA1_OFFSET		0x04
 #define ADC_DATA2_OFFSET		0x08
-#define ADC_DATA3_OFFSET		0x04
+#define ADC_DATA3_OFFSET		0x0c
 #else 
 #define ADC_DATA0_OFFSET		0x04
 #define ADC_DATA1_OFFSET		0x08

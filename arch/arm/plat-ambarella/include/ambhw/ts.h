@@ -156,6 +156,9 @@
 /* TX bitfileds definition */
 /***************************/
 /* TS_CHX_TX_CTR_REG */
+#define TS_TX_CTR_INVALID_CLK_DIS		0x00020000
+#define TS_TX_CTR_DMA_NOTIFY_EN			0x00010000
+#define TS_TX_CTR_STOP				0x00008000
 #define TS_TX_CTR_CLK_EN			0x00004000
 #define TS_TX_CTR_SRC_EXT			0x00001000
 #define TS_TX_CTR_SRC_CORE			0x00000000
@@ -171,6 +174,8 @@
 #define TS_TX_CTR_FIFO_UNDER_ERR_EN		0x00000001
 
 /* TS_CHX_TX_STS_REG */
+#define TS_TX_STS_DMA_NOTIFY			0x00000400
+#define TS_TX_STS_FIFO_WM(x)			(((x) & 0x3f3) >> 2)
 #define TS_TX_STS_FINISH_INT			0x00000002
 #define TS_TX_STS_FIFO_UNDER_ERR		0x00000001
 
@@ -178,23 +183,19 @@
 #define TS_TX_PKT_INFO_LEN(x)			(((x) & 0x3ff) << 16)
 #define TS_TX_PKT_INFO_VALID_LEN(x)		((x) & 0x3ff)
 
-/* TS_CHX_TX_DMA_BASE_REG */
-#define TS_TX_DMA_BASE(x)			((x) & 0xffffff00)
-
-/* TS_CHX_TX_DMA_LIMIT_REG */
-#define TS_TX_DMA_LIMIT(x)			((x) & 0xffffff00)
-
-/* TS_CHX_TX_DMA_RPTR_REG */
-/* Read only */
-
-/* TS_CHX_TX_DMA_STOP_REG */
-#define TS_TX_DMA_STOP(x)			((x) & 0xffffff00)
-
+/* TS_CHX_TX_DMA_CTRL_REG */
+#define TS_TX_DMA_CTRL_ADDR_MODE(x)		(((x) & 0x1) << 4)
+#define TS_TX_DMA_CTRL_FIFO_TH(x)		((x) & 0x3)
 
 /***************************/
 /* RX bitfileds definition */
 /***************************/
 /* TS_CHX_RX_CTR_REG */
+#define TS_TX_CTR_STRICT_PKT_ERR		0x20000000
+#define TS_RX_CTR_CLK_SEL_RX			0x00000000
+#define TS_RX_CTR_CLK_SEL_HCLK			0x10000000
+#define TS_RX_CTR_DMA_NOTIFY_EN			0x08000000
+#define TS_RX_CTR_STOP				0x04000000
 #define TS_RX_CTR_CLK_EN			0x02000000
 #define TS_RX_CTR_TIMEOUT(x)			(((x) & 0xffff) << 8)
 #define TS_RX_CTR_PKT_LEN_ERR_EN		0x00000080
@@ -211,6 +212,8 @@
 #define TS_RX_CTR_FIFO_OVER_ERR_EN		0x00000001
 
 /* TS_CHX_RX_STS_REG */
+#define TS_RX_STS_DMA_NOTIFY			0x00010000
+#define TS_RX_STS_FIFO_WM(x)			(((x) & 0xff00) >> 8)
 #define TS_RX_STS_PKT_LEN_ERR			0x00000080
 #define TS_RX_STS_FINISH_INT			0x00000002
 #define TS_RX_STS_FIFO_OVER_ERR			0x00000001
@@ -225,16 +228,7 @@
 #define TS_RX_PKT_INFO_LEN(x)			(((x) & 0x3ff) << 16)
 #define TS_RX_PKT_INFO_VALID_LEN(x)		((x) & 0x3ff)
 
-/* TS_CHX_RX_DMA_BASE_REG */
-#define TS_RX_DMA_BASE(x)			((x) & 0xffffff00)
-
-/* TS_CHX_RX_DMA_LIMIT_REG */
-#define TS_RX_DMA_LIMIT(x)			((x) & 0xffffff00)
-
-/* TS_CHX_RX_DMA_WPTR_REG */
-/* Read only */
-
-/* TS_CHX_RX_DMA_STOP_REG */
-#define TS_RX_DMA_STOP(x)			((x) & 0xffffff00)
+/* TS_CHX_RX_DMA_CTRL_REG */
+#define TS_RX_DMA_CTRL_ADDR_MODE(x)		(((x) & 0x1) << 4)
 
 #endif

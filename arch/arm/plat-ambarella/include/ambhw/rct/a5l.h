@@ -20,6 +20,7 @@
 #define RCT_SUPPORT_PLL_IDSP		0
 #define RCT_MAX_PLL_SCALER_RESOLUTION	16
 #define RCT_MAX_DLL			2
+#define RCT_MAX_DLL_CTRL		1
 #define RCT_SUPPORT_ADC16_CTRL		0
 #define RCT_SUPPORT_PLL_HDMI		0
 #define RCT_SUPPORT_SCALER_ARM		1
@@ -437,6 +438,8 @@
 /* DDRIO post scaler */
 #if	defined(FIX_DRAM_180MHZ)
 #define RCT_DDRIO_POST_SCALER_VAL	0x2
+#else
+#define RCT_DDRIO_POST_SCALER_VAL	0x1
 #endif
 
 #endif
@@ -444,7 +447,7 @@
 
 #if	defined(FIX_CORE_240MHZ)
 
-#if	defined(FIX_DRAM_240MHZ)
+#if	defined(FIX_DRAM_240MHZ) || defined(FIX_DRAM_270MHZ)
 #define PLL_CORE_VCO_OUT_FREQ_HZ	PLL_CORE_VCO_FREQ_960MHZ
 #elif	defined(FIX_DRAM_300MHZ)
 #define PLL_CORE_VCO_OUT_FREQ_HZ	PLL_CORE_VCO_FREQ_1200MHZ
@@ -476,11 +479,46 @@
 /* DDRIO post scaler */
 #if	defined(FIX_DRAM_300MHZ)
 #define RCT_DDRIO_POST_SCALER_VAL	0x2
+#else
+#define RCT_DDRIO_POST_SCALER_VAL	0x1
 #endif
 
 #endif
 
+#endif	/* FIX_CORE_240MHZ */
+
+#if	defined(FIX_CORE_MAXMHZ)
+#define	PLL_CORE_VCO_FREQ_1272MHZ	1272000000 	/* VCO freq = 1272 = 24 * 53 */
+#define PLL_CORE_VCO_FREQ_1248MHZ	1248000000	/* VCO freq = 1248 = 24 * 52 */
+#define PLL_CORE_VCO_FREQ_1224MHZ	1224000000	/* VCO freq = 1224 = 24 * 51 */
+
+#define PLL_CORE_VCO_OUT_FREQ_HZ	PLL_CORE_VCO_FREQ_1248MHZ
+
+#if (PLL_CORE_VCO_OUT_FREQ_HZ == PLL_CORE_VCO_FREQ_1272MHZ)
+#define PLL_CORE_MAXMHZ_VAL		0x34100100
+/* core = 1272 / 5 = 254.4 */
+/* arm = 1272 / 3 = 424 */
+/* ddrio = 1272 / 2 = 636 */
+/* ddr = 636 / 2 = 318 */
+#elif (PLL_CORE_VCO_OUT_FREQ_HZ == PLL_CORE_VCO_FREQ_1248MHZ)
+#define PLL_CORE_MAXMHZ_VAL		0x0c133100
+/* core = 1248 / 5 = 249.6 */
+/* arm = 1248 / 3 = 416 */
+/* ddrio = 1248 / 2 = 624 */
+/* ddr = 624 / 2 = 312 */
+#elif (PLL_CORE_VCO_OUT_FREQ_HZ == PLL_CORE_VCO_FREQ_1224MHZ)
+#define PLL_CORE_MAXMHZ_VAL		0x10122100
+/* core = 1224 / 5 = 244.8 */
+/* arm = 1224 / 3 = 408 */
+/* ddrio = 1224 / 2 = 612 */
+/* ddr = 612 / 2 = 306 */
 #endif
+
+#define PLL_CORE_SCALER_VAL_MAXMHZ	0x5
+#define PLL_ARM_SCALER_VAL		0x3
+#define RCT_DDRIO_POST_SCALER_VAL	0x2
+#endif	/* FIX_CORE_MAXMHZ */
+
 
 #if	defined(FIX_CORE_108MHZ)
 #define	EXPECT_PLL_CORE_VAL		PLL_CORE_108MHZ_VAL
@@ -494,6 +532,7 @@
 #if	defined(FIX_DRAM_180MHZ)
 #define USE_PLL_CORE_FOR_DDR 		1
 #else
+// For DRAM 162MHz
 #define USE_PLL_CORE_FOR_DDR 		0
 #endif
 
@@ -504,6 +543,17 @@
 #elif	defined(FIX_CORE_240MHZ)
 #define EXPECT_PLL_CORE_VAL		PLL_CORE_240MHZ_VAL
 #define PLL_CORE_SCALER_VAL		PLL_CORE_SCALER_VAL_240MHZ
+
+#if	defined(FIX_DRAM_270MHZ)
+#define USE_PLL_CORE_FOR_DDR 		0
+#else
+// For DRAM 240, 300 MHz
+#define USE_PLL_CORE_FOR_DDR 		1
+#endif
+
+#elif	defined(FIX_CORE_MAXMHZ)
+#define EXPECT_PLL_CORE_VAL		PLL_CORE_MAXMHZ_VAL
+#define PLL_CORE_SCALER_VAL		PLL_CORE_SCALER_VAL_MAXMHZ
 #define USE_PLL_CORE_FOR_DDR 		1
 #else
 #define EXPECT_PLL_CORE_VAL		0xffffffff

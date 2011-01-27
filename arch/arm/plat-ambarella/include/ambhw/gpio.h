@@ -16,7 +16,7 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-#if 	(CHIP_REV == A5) || (CHIP_REV == A6)
+#if 	(CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L)
 #define GPIO_INSTANCES	4
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) || 		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
@@ -345,7 +345,7 @@
 #define IDC_BUS_HDMI	GPIO(87)
 #endif
 /*------------------------------------------------------------------------*/
-#if (CHIP_REV == A5S)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7L)
 /* (CHIP_REV == A5S)*/
 #define IDC3_BUS_MUX	GPIO(36)
 

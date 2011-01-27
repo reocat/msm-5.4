@@ -1,5 +1,5 @@
 /*
- * ambhw/rct/a5s.h
+ * ambhw/rct/a7l.h
  *
  * History:
  *	2006/12/27 - [Charles Chiou] created file
@@ -7,8 +7,8 @@
  * Copyright (C) 2006-2008, Ambarella, Inc.
  */
 
-#ifndef __AMBHW__RCT_A5S_H__
-#define __AMBHW__RCT_A5S_H__
+#ifndef __AMBHW__RCT_A7L_H__
+#define __AMBHW__RCT_A7L_H__
 
 /****************************************************/
 /* Capabilities based on chip revision              */

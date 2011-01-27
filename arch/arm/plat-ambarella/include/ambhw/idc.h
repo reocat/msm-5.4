@@ -32,7 +32,7 @@
 #endif
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) || \
-    (CHIP_REV == I1) 
+    (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define IDC_INTERNAL_DELAY_CLK		2
 #else
 #define IDC_INTERNAL_DELAY_CLK		0

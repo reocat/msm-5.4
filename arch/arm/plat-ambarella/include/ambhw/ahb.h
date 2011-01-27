@@ -24,5 +24,6 @@
 #include <ambhw/ts.h>
 #include <ambhw/gdma.h>
 #include <ambhw/crypto.h>
+#include <ambhw/spdif.h>
 
 #endif

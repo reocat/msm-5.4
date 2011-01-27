@@ -66,7 +66,8 @@
 #define SPI_EN2_ENABLED_BY_GPIO2_AFSEL_REG	0
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)  
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
+    (CHIP_REV == A7L)
 #define SPI_SLAVE_INSTANCES			1
 #define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	1
 #else     	
