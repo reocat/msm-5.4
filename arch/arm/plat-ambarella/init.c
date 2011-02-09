@@ -163,15 +163,14 @@ int __init ambarella_init_machine(char *board_name)
 	BUG_ON(retval != 0);
 
 	boot_from = rct_boot_from();
-	if ((boot_from & BOOT_FROM_NAND) == BOOT_FROM_NAND) {
-		platform_device_register(&ambarella_nand);
-		device_set_wakeup_capable(&ambarella_nand.dev, 1);
-		device_set_wakeup_enable(&ambarella_nand.dev, 0);
-	}
 	if ((boot_from & BOOT_FROM_NOR) == BOOT_FROM_NOR) {
 		platform_device_register(&ambarella_nor);
 		device_set_wakeup_capable(&ambarella_nor.dev, 1);
 		device_set_wakeup_enable(&ambarella_nor.dev, 0);
+	} else {
+		platform_device_register(&ambarella_nand);
+		device_set_wakeup_capable(&ambarella_nand.dev, 1);
+		device_set_wakeup_enable(&ambarella_nand.dev, 0);
 	}
 	if (rct_is_eth_enabled()) {
 		retval = ambarella_init_eth0(system_serial_high,

@@ -1590,6 +1590,10 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 			meta_table->part_info[i].nblk = 0;
 	}
 
+	amboot_nr_partitions = 0;
+	found = 0;
+	for (i = 0; i < PART_MAX; i++) {
+#ifdef CONFIG_MTD_NAND_AMBARELLA_ENABLE_FULL_PTB
 	/*
 	  * found swp partition, and with it as a benchmark to adjust each
 	  * partitions's offset
@@ -1600,9 +1604,6 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	  * 2. if after swp partition,
 	  *	if the partition's nblk (size) is 0, skip the partition;
 	  */
-	amboot_nr_partitions = 0;
-	found = 0;
-	for (i = 0; i < PART_MAX; i++) {
 		if (!found && !strncmp(meta_table->part_info[i].name, "swp", 3)) {
 			found = 1;
 		}
@@ -1618,6 +1619,10 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 					meta_table->part_info[i-1].nblk;
 			}
 		}
+#else
+		if (meta_table->part_info[i].nblk == 0)
+			continue;
+#endif
 		strcpy(part_name[i], meta_table->part_info[i].name);
 		amboot_partitions[amboot_nr_partitions].name = part_name[i];
 		amboot_partitions[amboot_nr_partitions].offset = meta_table->part_info[i].sblk * mtd->erasesize;
