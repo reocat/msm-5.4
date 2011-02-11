@@ -31,6 +31,7 @@
 #ifndef __ASSEMBLER__
 
 struct ambarella_sd_slot {
+	struct mmc_host				*pmmc_host;
 	int					(*check_owner)(void);
 	void					(*request)(void);
 	void					(*release)(void);
@@ -38,8 +39,10 @@ struct ambarella_sd_slot {
 	struct ambarella_gpio_io_info		ext_reset;
 	u32					max_blk_sz;
 	u32					use_bounce_buffer;
+	int					fixed_cd;
 	struct ambarella_gpio_irq_info		gpio_cd;
-	int					cd_delay;	//jiffies
+	u32					cd_delay;	//jiffies
+	int					fixed_wp;
 	struct ambarella_gpio_io_info		gpio_wp;
 };
 
@@ -54,10 +57,12 @@ struct ambarella_sd_controller {
 	u32					support_pll_scaler;
 	u32					max_clk;
 };
-#define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, perm) \
-	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_int, &(arg.slot[slot_id].use_bounce_buffer), perm); \
-	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_int, &(arg.slot[slot_id].max_blk_sz), perm); \
-	module_param_cb(sd##controller_id##_slot##slot_id##_cd_delay, &param_ops_int, &(arg.slot[slot_id].cd_delay), perm); \
+#define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
+	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bounce_buffer), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_uint, &(arg.slot[slot_id].max_blk_sz), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_cd_delay, &param_ops_uint, &(arg.slot[slot_id].cd_delay), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_cd, cdpos, &(arg.slot[slot_id].fixed_cd), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_wp, &param_ops_int, &(arg.slot[slot_id].fixed_wp), perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_power_, arg.slot[slot_id].ext_power, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_reset_, arg.slot[slot_id].ext_reset, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(sd##controller_id##_slot##slot_id##_cd_, arg.slot[slot_id].gpio_cd, perm); \

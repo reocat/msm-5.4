@@ -27,6 +27,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/irq.h>
 
+#include <linux/mmc/host.h>
+
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
@@ -37,6 +39,24 @@
 #undef MODULE_PARAM_PREFIX
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
+int ambarella_sd_set_fixed_cd(const char *val, const struct kernel_param *kp)
+{
+#if defined(CONFIG_MMC)
+	struct ambarella_sd_slot		*pslotinfo;
+
+	pslotinfo = container_of(kp->arg, struct ambarella_sd_slot, fixed_cd);
+	if (pslotinfo && pslotinfo->pmmc_host)
+		mmc_detect_change(pslotinfo->pmmc_host, pslotinfo->cd_delay);
+#endif
+	return param_set_int(val, kp);
+}
+
+static struct kernel_param_ops param_ops_ambarella_sd_cdpos = {
+	.set = ambarella_sd_set_fixed_cd,
+	.get = param_get_int,
+};
 
 /* ==========================================================================*/
 struct resource ambarella_sd0_resources[] = {
@@ -76,6 +96,7 @@ void fio_amb_sd0_slot2_release(void)
 
 struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.slot[0] = {
+		.pmmc_host	= NULL,
 		.check_owner	= fio_amb_sd0_is_enable,
 		.request	= fio_amb_sd0_slot1_request,
 		.release	= fio_amb_sd0_slot1_release,
@@ -91,6 +112,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 		.use_bounce_buffer	= 0,
 		.max_blk_sz		= SD_BLK_SZ_512KB,
+		.fixed_cd		= -1,
 #if (SD_HAS_INTERNAL_MUXER == 1)
 		.gpio_cd	= {
 			.irq_gpio	= SD1_CD,
@@ -109,6 +131,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 #endif
 		.cd_delay	= 50,
+		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
 			.active_level	= GPIO_LOW,
@@ -117,6 +140,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
+		.pmmc_host	= NULL,
 		.check_owner	= fio_amb_sdio0_is_enable,
 		.request	= fio_amb_sd0_slot2_request,
 		.release	= fio_amb_sd0_slot2_release,
@@ -132,6 +156,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 		.use_bounce_buffer	= 0,
 		.max_blk_sz		= SD_BLK_SZ_512KB,
+		.fixed_cd		= -1,
 		.gpio_cd	= {
 			.irq_gpio	= -1,
 			.irq_line	= -1,
@@ -140,6 +165,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
 		.cd_delay	= 50,
+		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
 			.active_level	= GPIO_LOW,
@@ -165,9 +191,11 @@ module_param_cb(sd0_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller0.clk_limit), 0644);
 module_param_cb(sd0_wait_timoout, &param_ops_int,
 	&(ambarella_platform_sd_controller0.wait_tmo), 0644);
-AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0, 0644);
+AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0,
+	&param_ops_ambarella_sd_cdpos, 0644);
 #if (SD_HAS_INTERNAL_MUXER == 1)
-AMBA_SD_PARAM_CALL(0, 1, ambarella_platform_sd_controller0, 0644);
+AMBA_SD_PARAM_CALL(0, 1, ambarella_platform_sd_controller0,
+	&param_ops_ambarella_sd_cdpos, 0644);
 #endif
 
 struct platform_device ambarella_sd0 = {
@@ -237,6 +265,7 @@ u32 ambarella_platform_sdxc_get_pll(void)
 
 struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.slot[0] = {
+		.pmmc_host	= NULL,
 		.check_owner	= fio_amb_sd2_check_owner,
 		.request	= fio_amb_sd2_request,
 		.release	= fio_amb_sd2_release,
@@ -252,6 +281,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		},
 		.use_bounce_buffer	= 0,
 		.max_blk_sz		= SD_BLK_SZ_512KB,
+		.fixed_cd		= -1,
 		.gpio_cd	= {
 			.irq_gpio	= -1,
 			.irq_line	= -1,
@@ -260,6 +290,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
 		.cd_delay	= 50,
+		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
 			.active_level	= GPIO_LOW,
@@ -287,7 +318,8 @@ module_param_cb(sd1_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller1.clk_limit), 0644);
 module_param_cb(sd1_wait_timoout, &param_ops_int,
 	&(ambarella_platform_sd_controller1.wait_tmo), 0644);
-AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1, 0644);
+AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1,
+	&param_ops_ambarella_sd_cdpos, 0644);
 
 struct platform_device ambarella_sd1 = {
 #ifdef CONFIG_MMC_AMBARELLA_SDIO

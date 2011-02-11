@@ -108,11 +108,12 @@ struct ambarella_sd_mmc_info {
 	void				(*pre_dma)(void *data);
 	void				(*post_dma)(void *data);
 
-	struct ambarella_sd_slot	slot_info;
+	struct ambarella_sd_slot	*plat_info;
 	u32				slot_id;
 	void				*pinfo;
 	u32				valid;
 	u16				nisen;
+	u32				max_blk_sz;
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
@@ -311,7 +312,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 
 	if (pslotinfo->sg_index == 0) {
 		pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
-			pslotinfo->slot_info.max_blk_sz);
+			pslotinfo->max_blk_sz);
 		pslotinfo->dma_w_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
@@ -356,7 +357,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 				BUG_ON(1);
 
 			pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
-				pslotinfo->slot_info.max_blk_sz);
+				pslotinfo->max_blk_sz);
 			pslotinfo->dma_w_fill_counter++;
 
 			for (i = 0; i < pslotinfo->sg_len; i++) {
@@ -368,7 +369,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 			pslotinfo->dma_left = pslotinfo->dma_size;
 			pslotinfo->sg_index = pslotinfo->sg_len;
 			pslotinfo->blk_sz &= 0xFFF;
-			pslotinfo->blk_sz |= pslotinfo->slot_info.max_blk_sz;
+			pslotinfo->blk_sz |= pslotinfo->max_blk_sz;
 		} else {
 			pslotinfo->dma_address =
 				current_sg[pslotinfo->sg_index].dma_address;
@@ -441,7 +442,7 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 
 	if (pslotinfo->sg_index == 0) {
 		pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
-			pslotinfo->slot_info.max_blk_sz);
+			pslotinfo->max_blk_sz);
 		pslotinfo->dma_r_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
@@ -487,14 +488,14 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 				BUG_ON(1);
 
 			pslotinfo->dma_per_size = ambarella_sd_dma_mask_to_size(
-				pslotinfo->slot_info.max_blk_sz);
+				pslotinfo->max_blk_sz);
 			pslotinfo->dma_r_fill_counter++;
 
 			pslotinfo->dma_address = pslotinfo->buf_paddress;
 			pslotinfo->dma_left = pslotinfo->dma_size;
 			pslotinfo->sg_index = pslotinfo->sg_len;
 			pslotinfo->blk_sz &= 0xFFF;
-			pslotinfo->blk_sz |= pslotinfo->slot_info.max_blk_sz;
+			pslotinfo->blk_sz |= pslotinfo->max_blk_sz;
 		} else {
 			pslotinfo->dma_address =
 				current_sg[pslotinfo->sg_index].dma_address;
@@ -566,16 +567,16 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 
 	down(&pslotinfo->system_event_sem);
 
-	if (pslotinfo->slot_info.request)
-		pslotinfo->slot_info.request();
+	if (pslotinfo->plat_info->request)
+		pslotinfo->plat_info->request();
 }
 
 static void ambarella_sd_release_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
 
-	if (pslotinfo->slot_info.release)
-		pslotinfo->slot_info.release();
+	if (pslotinfo->plat_info->release)
+		pslotinfo->plat_info->release();
 
 	up(&pslotinfo->system_event_sem);
 }
@@ -934,8 +935,8 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
-		if (pslotinfo->slot_info.check_owner)
-			enabled = pslotinfo->slot_info.check_owner();
+		if (pslotinfo->plat_info->check_owner)
+			enabled = pslotinfo->plat_info->check_owner();
 		if (enabled)
 			break;
 	}
@@ -947,20 +948,16 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		nis, eis, pslotinfo->state, enabled);
 
 	/* Check for card detection interrupt */
-	if (!ambarella_is_valid_gpio_irq(&pslotinfo->slot_info.gpio_cd)) {
+	if (!ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd) &&
+		(pslotinfo->plat_info->fixed_cd == -1)) {
 		if (nis & SD_NIS_REMOVAL) {
 			ambsd_dbg(pslotinfo, "SD_NIS_REMOVAL\n");
 			mmc_detect_change(pslotinfo->mmc, 0);
 		} else if (nis & SD_NIS_INSERT) {
-			if (pslotinfo->slot_info.cd_delay > 0) {
-				mmc_detect_change(pslotinfo->mmc,
-					pslotinfo->slot_info.cd_delay);
-				ambsd_dbg(pslotinfo, "SD_NIS_INSERT %d...\n",
-					pslotinfo->slot_info.cd_delay);
-			} else {
-				mmc_detect_change(pslotinfo->mmc, 5);
-				ambsd_dbg(pslotinfo, "SD_NIS_INSERT...\n");
-			}
+			mmc_detect_change(pslotinfo->mmc,
+				pslotinfo->plat_info->cd_delay);
+			ambsd_dbg(pslotinfo, "SD_NIS_INSERT %d...\n",
+				pslotinfo->plat_info->cd_delay);
 		}
 	}
 
@@ -1009,23 +1006,23 @@ static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 	pslotinfo = (struct ambarella_sd_mmc_info *)devid;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (pslotinfo->valid &&
-		ambarella_is_valid_gpio_irq(&pslotinfo->slot_info.gpio_cd)) {
-		ambarella_gpio_config(pslotinfo->slot_info.gpio_cd.irq_gpio,
+	if (pslotinfo->valid && (pslotinfo->plat_info->fixed_cd == -1) &&
+		ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
+		ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
 			GPIO_FUNC_SW_INPUT);
-		val = ambarella_gpio_get(pslotinfo->slot_info.gpio_cd.irq_gpio);
-		ambarella_gpio_config(pslotinfo->slot_info.gpio_cd.irq_gpio,
-			pslotinfo->slot_info.gpio_cd.irq_gpio_mode);
-
+		val = ambarella_gpio_get(
+			pslotinfo->plat_info->gpio_cd.irq_gpio);
+		ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
+			pslotinfo->plat_info->gpio_cd.irq_gpio_mode);
 		ambsd_dbg(pslotinfo, "%s:%d\n",
-			(val == pslotinfo->slot_info.gpio_cd.irq_gpio_val) ?
+			(val == pslotinfo->plat_info->gpio_cd.irq_gpio_val) ?
 			"card insert" : "card eject",
-			pslotinfo->slot_info.cd_delay);
-		if (pslotinfo->slot_info.cd_delay > 0) {
+			pslotinfo->plat_info->cd_delay);
+		if (val == pslotinfo->plat_info->gpio_cd.irq_gpio_val) {
 			mmc_detect_change(pslotinfo->mmc,
-				pslotinfo->slot_info.cd_delay);
+				pslotinfo->plat_info->cd_delay);
 		} else {
-			mmc_detect_change(pslotinfo->mmc, 5);
+			mmc_detect_change(pslotinfo->mmc, 0);
 		}
 	}
 
@@ -1302,11 +1299,11 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 
 	if (pwr_mode == MMC_POWER_OFF) {
 		amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
-		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_reset, 1);
-		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_power, 0);
+		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_reset, 1);
+		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_power, 0);
 	} else if (pwr_mode == MMC_POWER_UP) {
-		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_power, 1);
-		ambarella_set_gpio_output(&pslotinfo->slot_info.ext_reset, 0);
+		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_power, 1);
+		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_reset, 0);
 	}
 
 	if ((pwr_mode == MMC_POWER_ON) || (pwr_mode == MMC_POWER_UP)) {
@@ -1331,7 +1328,7 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 		}
 		if (amba_readb(pinfo->regbase + SD_PWR_OFFSET) != pwr) {
 			amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
-			msleep(pslotinfo->slot_info.ext_power.active_delay);
+			msleep(pslotinfo->plat_info->ext_power.active_delay);
 		}
 	}
 
@@ -1416,13 +1413,17 @@ static int ambarella_sd_get_ro(struct mmc_host *mmc)
 
 	ambarella_sd_request_bus(mmc);
 
-	if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
-		wpspl = !ambarella_get_gpio_input(
-			&pslotinfo->slot_info.gpio_wp);
+	if (pslotinfo->plat_info->fixed_wp == -1) {
+		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
+			wpspl = !ambarella_get_gpio_input(
+				&pslotinfo->plat_info->gpio_wp);
+		} else {
+			wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			ambsd_dbg(pslotinfo, "SD/MMC RD[0x%x].\n", wpspl);
+			wpspl &= SD_STA_WPS_PL;
+		}
 	} else {
-		wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-		ambsd_dbg(pslotinfo, "SD/MMC RD[0x%x].\n", wpspl);
-		wpspl &= SD_STA_WPS_PL;
+		wpspl =	pslotinfo->plat_info->fixed_wp;
 	}
 
 	ambarella_sd_release_bus(mmc);
@@ -1449,7 +1450,7 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	card_sta = amba_readl(pinfo->regbase + SD_STA_OFFSET);
 
 	if ((card_sta & SD_STA_CARD_INSERTED) ||
-		ambarella_is_valid_gpio_irq(&pslotinfo->slot_info.gpio_cd)) {
+		ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
 		ambarella_sd_send_cmd(pslotinfo, mrq->cmd, mrq->stop);
 		if (pslotinfo->state != AMBA_SD_STATE_ERR) {
 			timeout = wait_event_timeout(pslotinfo->wait,
@@ -1672,8 +1673,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		pslotinfo->dma_w_counter = 0;
 		pslotinfo->dma_r_fill_counter = 0;
 		pslotinfo->dma_r_counter = 0;
-		memcpy(&pslotinfo->slot_info, &pinfo->pcontroller->slot[i],
-			sizeof(struct ambarella_sd_slot));
+		pslotinfo->plat_info = &(pinfo->pcontroller->slot[i]);
 		pslotinfo->slot_id = i;
 		pslotinfo->nisen = 0;
 		pslotinfo->pinfo = pinfo;
@@ -1756,11 +1756,12 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			goto sd_errorCode_free_host;
 		}
 
-		if (pslotinfo->slot_info.use_bounce_buffer) {
+		pslotinfo->max_blk_sz = pslotinfo->plat_info->max_blk_sz;
+		if (pslotinfo->plat_info->use_bounce_buffer) {
 			mmc->max_hw_segs = 128;
 			mmc->max_phys_segs = 128;
 			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
-				pslotinfo->slot_info.max_blk_sz);
+				pslotinfo->max_blk_sz);
 			mmc->max_req_size = mmc->max_seg_size;
 			mmc->max_blk_count = 0xFFFF;
 
@@ -1777,7 +1778,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				pslotinfo->buf_paddress,
 				mmc->max_seg_size,
 				ambarella_sd_dma_mask_to_size(
-				pslotinfo->slot_info.max_blk_sz)) == 0) {
+				pslotinfo->max_blk_sz)) == 0) {
 				ambsd_err(pslotinfo, "DMA boundary err!\n");
 				errorCode = -ENOMEM;
 				goto sd_errorCode_free_host;
@@ -1791,7 +1792,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			mmc->max_hw_segs = 1;
 			mmc->max_phys_segs = 1;
 			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
-				pslotinfo->slot_info.max_blk_sz);
+				pslotinfo->max_blk_sz);
 			mmc->max_req_size = mmc->max_seg_size;
 			mmc->max_blk_count = 0xFFFF;
 
@@ -1799,35 +1800,35 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			pslotinfo->buf_vaddress = NULL;
 		}
 
-		if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
+		if (pslotinfo->plat_info->ext_power.gpio_id != -1) {
 			errorCode = gpio_request(
-				pslotinfo->slot_info.ext_power.gpio_id,
+				pslotinfo->plat_info->ext_power.gpio_id,
 				pdev->name);
 			if (errorCode < 0) {
 				ambsd_err(pslotinfo, "Can't get Power GPIO%d\n",
-				pslotinfo->slot_info.ext_power.gpio_id);
+				pslotinfo->plat_info->ext_power.gpio_id);
 				goto sd_errorCode_free_host;
 			}
 		}
 
-		if (pslotinfo->slot_info.ext_reset.gpio_id != -1) {
+		if (pslotinfo->plat_info->ext_reset.gpio_id != -1) {
 			errorCode = gpio_request(
-				pslotinfo->slot_info.ext_reset.gpio_id,
+				pslotinfo->plat_info->ext_reset.gpio_id,
 				pdev->name);
 			if (errorCode < 0) {
 				ambsd_err(pslotinfo, "Can't get Reset GPIO%d\n",
-				pslotinfo->slot_info.ext_reset.gpio_id);
+				pslotinfo->plat_info->ext_reset.gpio_id);
 				goto sd_errorCode_free_host;
 			}
 		}
 
-		if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
+		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
 			errorCode = gpio_request(
-				pslotinfo->slot_info.gpio_wp.gpio_id,
+				pslotinfo->plat_info->gpio_wp.gpio_id,
 				pdev->name);
 			if (errorCode < 0) {
 				ambsd_err(pslotinfo, "Can't get WP GPIO%d\n",
-				pslotinfo->slot_info.gpio_wp.gpio_id);
+				pslotinfo->plat_info->gpio_wp.gpio_id);
 				goto sd_errorCode_free_host;
 			}
 		}
@@ -1857,29 +1858,29 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		ambarella_register_event_notifier(&pslotinfo->system_event);
 
 		if (ambarella_is_valid_gpio_irq(
-			&pslotinfo->slot_info.gpio_cd)) {
+			&pslotinfo->plat_info->gpio_cd)) {
 			errorCode = gpio_request(
-				pslotinfo->slot_info.gpio_cd.irq_gpio,
+				pslotinfo->plat_info->gpio_cd.irq_gpio,
 				pdev->name);
 			if (errorCode < 0) {
 				ambsd_err(pslotinfo, "Can't get CD GPIO%d\n",
-					pslotinfo->slot_info.gpio_cd.irq_gpio);
+				pslotinfo->plat_info->gpio_cd.irq_gpio);
 				goto sd_errorCode_free_host;
 			}
 
 			ambarella_gpio_config(
-				pslotinfo->slot_info.gpio_cd.irq_gpio,
-				pslotinfo->slot_info.gpio_cd.irq_gpio_mode);
+				pslotinfo->plat_info->gpio_cd.irq_gpio,
+				pslotinfo->plat_info->gpio_cd.irq_gpio_mode);
 			errorCode = request_irq(
-				pslotinfo->slot_info.gpio_cd.irq_line,
+				pslotinfo->plat_info->gpio_cd.irq_line,
 				ambarella_sd_gpio_cd_irq,
-				pslotinfo->slot_info.gpio_cd.irq_type,
+				pslotinfo->plat_info->gpio_cd.irq_type,
 				dev_name(&pdev->dev), pslotinfo);
 			if (errorCode) {
 				ambsd_err(pslotinfo,
-					"Can't Request GPIO(%d) CD IRQ(%d)!\n",
-					pslotinfo->slot_info.gpio_cd.irq_gpio,
-					pslotinfo->slot_info.gpio_cd.irq_line);
+				"Can't Request GPIO(%d) CD IRQ(%d)!\n",
+				pslotinfo->plat_info->gpio_cd.irq_gpio,
+				pslotinfo->plat_info->gpio_cd.irq_line);
 				goto sd_errorCode_free_host;
 			}
 		}
@@ -1887,6 +1888,10 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pinfo);
 
+	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+		pslotinfo = pinfo->pslotinfo[i];
+		pslotinfo->plat_info->pmmc_host = pslotinfo->mmc;
+	}
 
 	dev_notice(&pdev->dev,
 		"Ambarella Media Processor SD/MMC[%d] probed %d slots!\n",
@@ -1897,6 +1902,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 sd_errorCode_remove_host:
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
+		pslotinfo->plat_info->pmmc_host = NULL;
 		if ((pslotinfo->mmc) && (pslotinfo->valid == 1))
 			mmc_remove_host(pslotinfo->mmc);
 	}
@@ -1906,26 +1912,16 @@ sd_errorCode_remove_host:
 sd_errorCode_free_host:
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
-
-		if (ambarella_is_valid_gpio_irq(
-			&pslotinfo->slot_info.gpio_cd)) {
-			free_irq(pslotinfo->slot_info.gpio_cd.irq_line,
-				pslotinfo);
-			gpio_free(pslotinfo->slot_info.gpio_cd.irq_gpio);
+		if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
+			free_irq(pslotinfo->plat_info->gpio_cd.irq_line, pslotinfo);
+			gpio_free(pslotinfo->plat_info->gpio_cd.irq_gpio);
 		}
-
-		if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
-			gpio_free(pslotinfo->slot_info.gpio_wp.gpio_id);
-		}
-
-		if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
-			gpio_free(pslotinfo->slot_info.ext_power.gpio_id);
-		}
-
-		if (pslotinfo->slot_info.ext_reset.gpio_id != -1) {
-			gpio_free(pslotinfo->slot_info.ext_reset.gpio_id);
-		}
-
+		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1)
+			gpio_free(pslotinfo->plat_info->gpio_wp.gpio_id);
+		if (pslotinfo->plat_info->ext_power.gpio_id != -1)
+			gpio_free(pslotinfo->plat_info->ext_power.gpio_id);
+		if (pslotinfo->plat_info->ext_reset.gpio_id != -1)
+			gpio_free(pslotinfo->plat_info->ext_reset.gpio_id);
 		if (pslotinfo->buf_vaddress) {
 			dma_free_coherent(pinfo->dev,
 				pslotinfo->mmc->max_seg_size,
@@ -1934,7 +1930,6 @@ sd_errorCode_free_host:
 			pslotinfo->buf_vaddress = NULL;
 			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 		}
-
 		if (pslotinfo->mmc);
 			mmc_free_host(pslotinfo->mmc);
 	}
@@ -1965,40 +1960,24 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
-
-			ambarella_unregister_event_notifier(
-				&pslotinfo->system_event);
-
-			if (ambarella_is_valid_gpio_irq(
-				&pslotinfo->slot_info.gpio_cd)) {
-				free_irq(pslotinfo->slot_info.gpio_cd.irq_line,
-					pslotinfo);
-				gpio_free(
-					pslotinfo->slot_info.gpio_cd.irq_gpio);
+			pslotinfo->plat_info->pmmc_host = NULL;
+			ambarella_unregister_event_notifier(&pslotinfo->system_event);
+			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
+				free_irq(pslotinfo->plat_info->gpio_cd.irq_line, pslotinfo);
+				gpio_free(pslotinfo->plat_info->gpio_cd.irq_gpio);
 			}
-
 			if (pslotinfo->mmc)
 				mmc_remove_host(pslotinfo->mmc);
 		}
 
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
-
-			if (pslotinfo->slot_info.ext_power.gpio_id != -1) {
-				gpio_free(
-				pslotinfo->slot_info.ext_power.gpio_id);
-			}
-
-			if (pslotinfo->slot_info.ext_reset.gpio_id != -1) {
-				gpio_free(
-				pslotinfo->slot_info.ext_reset.gpio_id);
-			}
-
-			if (pslotinfo->slot_info.gpio_wp.gpio_id != -1) {
-				gpio_free(
-				pslotinfo->slot_info.gpio_wp.gpio_id);
-			}
-
+			if (pslotinfo->plat_info->ext_power.gpio_id != -1)
+				gpio_free(pslotinfo->plat_info->ext_power.gpio_id);
+			if (pslotinfo->plat_info->ext_reset.gpio_id != -1)
+				gpio_free(pslotinfo->plat_info->ext_reset.gpio_id);
+			if (pslotinfo->plat_info->gpio_wp.gpio_id != -1)
+				gpio_free(pslotinfo->plat_info->gpio_wp.gpio_id);
 			if (pslotinfo->buf_vaddress) {
 				dma_free_coherent(pinfo->dev,
 					pslotinfo->mmc->max_seg_size,
@@ -2007,14 +1986,11 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				pslotinfo->buf_vaddress = NULL;
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
-
 			if (pslotinfo->mmc)
 				mmc_free_host(pslotinfo->mmc);
 		}
-
 		release_mem_region(pinfo->mem->start,
 			(pinfo->mem->end - pinfo->mem->start) + 1);
-
 		kfree(pinfo);
 	}
 
@@ -2040,8 +2016,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 			pslotinfo->state = AMBA_SD_STATE_RESET;
 			errorCode = mmc_suspend_host(pslotinfo->mmc);
 			if (errorCode)
-				ambsd_err(pslotinfo,
-					"Can't mmc_suspend_host!\n");
+				ambsd_err(pslotinfo, "Can't mmc_suspend_host!\n");
 		}
 	}
 
@@ -2049,11 +2024,8 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 		disable_irq(pinfo->irq);
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
-			if (ambarella_is_valid_gpio_irq(
-				&pslotinfo->slot_info.gpio_cd)) {
-				disable_irq(
-					pslotinfo->slot_info.gpio_cd.irq_line);
-			}
+			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
+				disable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
 		}
 	}
 
@@ -2077,11 +2049,8 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
 			ambarella_sd_reset_all(pslotinfo->mmc);
-			if (ambarella_is_valid_gpio_irq(
-				&pslotinfo->slot_info.gpio_cd)) {
-				enable_irq(
-					pslotinfo->slot_info.gpio_cd.irq_line);
-			}
+			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
+				enable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
 		}
 		enable_irq(pinfo->irq);
 	}
@@ -2091,8 +2060,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 		if (pslotinfo->mmc) {
 			errorCode = mmc_resume_host(pslotinfo->mmc);
 			if (errorCode)
-				ambsd_err(pslotinfo,
-					"Can't mmc_resume_host!\n");
+				ambsd_err(pslotinfo, "Can't mmc_resume_host!\n");
 		}
 	}
 
@@ -2121,8 +2089,7 @@ static int __init ambarella_sd_init(void)
 
 	errorCode = platform_driver_register(&ambarella_sd_driver);
 	if (errorCode)
-		printk(KERN_ERR "Register ambarella_sd_driver failed %d!\n",
-			errorCode);
+		printk(KERN_ERR "Register ambarella_sd_driver failed %d!\n", errorCode);
 
 	return errorCode;
 }
