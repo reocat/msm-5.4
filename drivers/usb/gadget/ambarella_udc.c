@@ -599,14 +599,13 @@ static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	struct ambarella_request * req)
 {
 	struct ambarella_ep_reg *ep_reg = &ep->ep_reg;
-
-	unsigned long flags;
+//	unsigned long flags;
 
 	dprintk(DEBUG_NORMAL, "Enter. %s Tx DMA\n", ep->ep.name);
 
 	/* disable usb interrupt to avoid flood-in interrupts of
 	   IN packets due to completion interrupt of tx dma enabled */
-	spin_lock_irqsave(&ep->udc->lock, flags);
+//	spin_lock_irqsave(&ep->udc->lock, flags);
 
 	ep->data_desc = req->data_desc;
 	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr);
@@ -615,7 +614,7 @@ static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	ep->dma_enabled = 1;
 
 	/* re-enable usb interrupt */
-	spin_unlock_irqrestore(&ep->udc->lock, flags);
+//	spin_unlock_irqrestore(&ep->udc->lock, flags);
 
 	dprintk(DEBUG_NORMAL, "Exit\n");
 }
@@ -727,8 +726,9 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 	else
 		udc->gadget.ep0 = &udc->ep[CTRL_OUT].ep;
 
-
+	spin_unlock(&udc->lock);
 	ret = udc->driver->setup(&udc->gadget, crq);
+	spin_lock(&udc->lock);
 	if (ret < 0)
 		dprintk(DEBUG_ERR, "SETUP request failed (%d)\n", ret);
 
@@ -1203,6 +1203,8 @@ static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 {
 	struct ambarella_udc *udc = _dev;
 	u32 value, handled = 0, i, ep_irq;
+	unsigned long flags;
+
 
 	/* If gadget driver is not connected, do not handle the interrupt  */
 	if (!udc->driver) {
@@ -1237,10 +1239,12 @@ static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 			amba_writel(USB_DEV_EP_INTR_REG, ep_irq);
 
 			/* irq for out ep ? */
+			spin_lock_irqsave(&udc->lock, flags);
 			if (i >= EP_IN_NUM)
 				udc_epout_interrupt(udc, i);
 			else
 				udc_epin_interrupt(udc, i);
+			spin_unlock_irqrestore(&udc->lock, flags);
 
 			value &= ~ep_irq;
 			if(value == 0)
