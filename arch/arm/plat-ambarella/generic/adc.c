@@ -182,11 +182,11 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 
 void ambarella_adc_start(void)
 {
-#if (CHIP_REV == A5L)
-	/* ADC module power on */
-	amba_writel(ADC16_CTRL_REG, 0x0 );
+#if defined(ADC16_CTRL_REG)
+	amba_clrbitsl(ADC16_CTRL_REG, 0x2);
+#endif
 
-	/* stop conversion */
+#if (CHIP_REV == A5L)
 	amba_writel(ADC_CONTROL_REG, 0x0);
 
 	amba_writel(ADC_DATA0_REG, 0);
@@ -196,7 +196,6 @@ void ambarella_adc_start(void)
 
 	amba_writel(ADC_ENABLE_REG, 0x0);
 #endif
-
 
 #if (CHIP_REV == A5 || CHIP_REV == A6)
 	/* SCALER_ADC_REG (default=4) */
@@ -264,15 +263,14 @@ void ambarella_adc_start(void)
 void ambarella_adc_stop(void)
 {
 #ifndef ADC_ONE_SHOT
-	/* stop conversion */
 	amba_writel(ADC_CONTROL_REG, 0x0);
 #endif
-
-	/* disable */
 	amba_writel(ADC_ENABLE_REG, 0x0);
 #if (CHIP_REV == A7)
-	/* disable */
 	amba_writel(ADC_CONTROL_REG, 0x0);
+#endif
+#if defined(ADC16_CTRL_REG)
+	amba_setbitsl(ADC16_CTRL_REG, 0x2);
 #endif
 }
 
@@ -427,6 +425,9 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 
 /* ==========================================================================*/
 struct ambarella_adc_pm_info {
+#if defined(ADC16_CTRL_REG)
+	u32 adc_rct_reg;
+#endif
 	u32 adc_control_reg;
 	u32 adc_enable_reg;
 	u32 adc_chan0_intr_reg;
@@ -449,6 +450,9 @@ struct ambarella_adc_pm_info ambarella_adc_pm;
 
 u32 ambarella_adc_suspend(u32 level)
 {
+#if defined(ADC16_CTRL_REG)
+	ambarella_adc_pm.adc_rct_reg = amba_readl(ADC16_CTRL_REG);
+#endif
 	ambarella_adc_pm.adc_control_reg = amba_readl(ADC_CONTROL_REG);
 	ambarella_adc_pm.adc_enable_reg = amba_readl(ADC_ENABLE_REG);
 	ambarella_adc_pm.adc_chan0_intr_reg = amba_readl(ADC_CHAN0_INTR_REG);
@@ -471,6 +475,9 @@ u32 ambarella_adc_suspend(u32 level)
 
 u32 ambarella_adc_resume(u32 level)
 {
+#if defined(ADC16_CTRL_REG)
+	amba_writel(ADC16_CTRL_REG, ambarella_adc_pm.adc_rct_reg);
+#endif
 	if (ambarella_adc_pm.adc_enable_reg & 0x01) {
 		amba_writel(ADC_ENABLE_REG, ambarella_adc_pm.adc_enable_reg);
 

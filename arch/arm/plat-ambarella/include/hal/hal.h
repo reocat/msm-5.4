@@ -44,13 +44,10 @@
 #include <hal/header.h>
 #if (CHIP_REV == A7)
 #include <hal/a7/ambhal.h>
-#include <hal/a7/ambhalmini.h>
 #elif (CHIP_REV == A5S)
 #include <hal/a5s/ambhal.h>
-#include <hal/a5s/ambhalmini.h>
 #elif (CHIP_REV == I1)
 #include <hal/i1/ambhal.h>
-#include <hal/i1/ambhalmini.h>
 #else
 #error "Undefined CHIP_REV, Can't support HAL!"
 #endif
