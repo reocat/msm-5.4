@@ -44,14 +44,13 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-static int pm_debug_sss_counter = 1;
-module_param(pm_debug_sss_counter, int, 0644);
-
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
 static int pm_debug_hal_standby = 1;
 module_param(pm_debug_hal_standby, int, 0644);
+
+static unsigned long ambarella_pm_lrq_flags;
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
@@ -65,33 +64,6 @@ void ambarella_power_off(void)
 }
 
 /* ==========================================================================*/
-u32 get_ambarella_sss_virt(void)
-{
-	u32					vsss_start;
-	u32					*tmp_sss;
-
-	vsss_start = ambarella_phys_to_virt(DEFAULT_SSS_START);
-	tmp_sss = (u32 *)vsss_start;
-	if ((tmp_sss[1] != DEFAULT_SSS_MAGIC0) ||
-		(tmp_sss[2] != DEFAULT_SSS_MAGIC1) ||
-		(tmp_sss[3] != DEFAULT_SSS_MAGIC2))
-		vsss_start = 0;
-
-	return vsss_start;
-}
-
-u32 get_ambarella_sss_entry_virt(void)
-{
-	u32					vsss_start;
-
-	vsss_start = get_ambarella_sss_virt();
-	if (vsss_start == 0)
-		return 0;
-
-	return ambarella_phys_to_virt(*(u32 *)vsss_start);
-}
-
-/* ==========================================================================*/
 static int ambarella_pm_pre(unsigned long *irqflag)
 {
 	int					retval = 0;
@@ -102,7 +74,6 @@ static int ambarella_pm_pre(unsigned long *irqflag)
 		pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
 			__func__, __LINE__, retval);
 	}
-
 	local_irq_save(*irqflag);
 
 	ambarella_adc_suspend(1);
@@ -176,14 +147,13 @@ ambarella_pm_check_exit:
 static int ambarella_pm_enter_standby(void)
 {
 	int					retval = 0;
-	unsigned long				flags;
 	struct irq_desc				*desc;
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
 #endif
 
-	if (ambarella_pm_pre(&flags))
+	if (ambarella_pm_pre(&ambarella_pm_lrq_flags))
 		BUG();
 
 	if (pm_debug_enable_timer_irq) {
@@ -232,37 +202,13 @@ static int ambarella_pm_enter_standby(void)
 
 #endif
 
-	if (ambarella_pm_post(&flags))
+	if (ambarella_pm_post(&ambarella_pm_lrq_flags))
 		BUG();
 
 	return retval;
 }
 
-typedef unsigned int (*amba_snapshot_suspend_t)(u32);
-
-static int ambarella_pm_enter_sss(void)
-{
-	int					retval = 0;
-	amba_snapshot_suspend_t			sss_entry;
-	unsigned long				flags;
-
-	sss_entry = (amba_snapshot_suspend_t)get_ambarella_sss_entry_virt();
-
-	if (ambarella_pm_pre(&flags))
-		BUG();
-
-	retval = sss_entry(get_ambarella_sss_virt());
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	set_ambarella_hal_invalid();
-#endif
-
-	if (ambarella_pm_post(&flags))
-		BUG();
-
-	return retval;
-}
-
-static int ambarella_pm_enter(suspend_state_t state)
+static int ambarella_pm_suspend_enter(suspend_state_t state)
 {
 	int					retval = 0;
 
@@ -277,11 +223,6 @@ static int ambarella_pm_enter(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
-		if ((get_ambarella_sss_entry_virt() != 0) &&
-			(pm_debug_sss_counter > 0)) {
-			retval = ambarella_pm_enter_sss();
-			pm_debug_sss_counter--;
-		}
 		break;
 
 	default:
@@ -293,7 +234,7 @@ static int ambarella_pm_enter(suspend_state_t state)
 	return retval;
 }
 
-static int ambarella_pm_valid(suspend_state_t state)
+static int ambarella_pm_suspend_valid(suspend_state_t state)
 {
 	int					retval = 0;
 	int					valid = 0;
@@ -314,9 +255,6 @@ static int ambarella_pm_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
-		if ((get_ambarella_sss_entry_virt() != 0) &&
-			(pm_debug_sss_counter > 0))
-			valid = 1;
 		break;
 
 	default:
@@ -329,16 +267,106 @@ ambarella_pm_valid_exit:
 	return valid;
 }
 
-static struct platform_suspend_ops ambarella_pm_ops = {
-	.valid		= ambarella_pm_valid,
-	.enter		= ambarella_pm_enter,
+static struct platform_suspend_ops ambarella_pm_suspend_ops = {
+	.valid		= ambarella_pm_suspend_valid,
+	.enter		= ambarella_pm_suspend_enter,
+};
+
+static int ambarella_pm_hibernation_begin(void)
+{
+	int					retval = 0;
+
+	return retval;
+}
+
+static void ambarella_pm_hibernation_end(void)
+{
+}
+
+static int ambarella_pm_hibernation_pre_snapshot(void)
+{
+	int					retval = 0;
+
+	local_irq_save(ambarella_pm_lrq_flags);
+	ambarella_adc_suspend(1);
+	ambarella_timer_suspend(0);
+	ambarella_irq_suspend(1);
+	ambarella_gpio_suspend(1);
+	//ambarella_pll_suspend(1);
+
+	//ambarella_pll_resume(1);
+	ambarella_gpio_resume(1);
+	ambarella_irq_resume(1);
+	ambarella_timer_resume(0);
+	ambarella_adc_resume(1);
+	local_irq_restore(ambarella_pm_lrq_flags);
+
+	return retval;
+}
+
+static void ambarella_pm_hibernation_finish(void)
+{
+}
+
+static int ambarella_pm_hibernation_prepare(void)
+{
+	int					retval = 0;
+
+	return retval;
+}
+
+static int ambarella_pm_hibernation_enter(void)
+{
+	int					retval = 0;
+
+	ambarella_power_off();
+
+	return retval;
+}
+
+static void ambarella_pm_hibernation_leave(void)
+{
+	//ambarella_pll_resume(1);
+	ambarella_gpio_resume(1);
+	ambarella_irq_resume(1);
+	ambarella_timer_resume(0);
+	ambarella_adc_resume(1);
+}
+
+static int ambarella_pm_hibernation_pre_restore(void)
+{
+	int					retval = 0;
+
+	return retval;
+}
+
+static void ambarella_pm_hibernation_restore_cleanup(void)
+{
+}
+
+static void ambarella_pm_hibernation_restore_recover(void)
+{
+}
+
+static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
+	.begin = ambarella_pm_hibernation_begin,
+	.end = ambarella_pm_hibernation_end,
+	.pre_snapshot = ambarella_pm_hibernation_pre_snapshot,
+	.finish = ambarella_pm_hibernation_finish,
+	.prepare = ambarella_pm_hibernation_prepare,
+	.enter = ambarella_pm_hibernation_enter,
+	.leave = ambarella_pm_hibernation_leave,
+	.pre_restore = ambarella_pm_hibernation_pre_restore,
+	.restore_cleanup = ambarella_pm_hibernation_restore_cleanup,
+	.recover = ambarella_pm_hibernation_restore_recover,
 };
 
 int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
 
-	suspend_set_ops(&ambarella_pm_ops);
+	suspend_set_ops(&ambarella_pm_suspend_ops);
+	hibernation_set_ops(&ambarella_pm_hibernation_ops);
 
 	return 0;
 }

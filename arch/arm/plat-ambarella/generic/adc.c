@@ -138,9 +138,9 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 {
 	int					i;
 
-	if (unlikely(*array_size != ADC_NUM_CHANNELS)) {
-		pr_err("%s: array_size should be %d!\n",
-			__func__, ADC_NUM_CHANNELS);
+	if (unlikely(*array_size > ADC_NUM_CHANNELS)) {
+		pr_err("%s: array_size should be %d, not %d!\n",
+			__func__, ADC_NUM_CHANNELS, *array_size);
 		return;
 	}
 

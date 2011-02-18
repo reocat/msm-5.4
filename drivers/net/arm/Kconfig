@@ -68,6 +68,7 @@ config AMBARELLA_ETH
 	tristate "Ambarella Media Soc Ethernet support"
 	depends on PLAT_AMBARELLA
 	select CRC32
+	select PHYLIB
 	select MII
 	help
 	  Support for Ambarella Media Soc ethernet.

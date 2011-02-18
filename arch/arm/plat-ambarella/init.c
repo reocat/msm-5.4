@@ -28,8 +28,6 @@
 #include <linux/proc_fs.h>
 #include <linux/memblock.h>
 
-#include <plat/debug.h>
-
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/init.h>
@@ -39,12 +37,6 @@
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
 EXPORT_SYMBOL(ambarella_dmamask);
-
-u32 ambarella_debug_level = AMBA_DEBUG_NULL;
-EXPORT_SYMBOL(ambarella_debug_level);
-
-u32 ambarella_debug_info = 0;
-EXPORT_SYMBOL(ambarella_debug_info);
 
 /* ==========================================================================*/
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
@@ -81,7 +73,7 @@ void __init ambarella_memblock_reserve(void)
 	}
 
 	if (get_ambarella_bstmem_info(&bstadd, &bstsize) == AMB_BST_MAGIC) {
-		pr_info("\t--:\t0x%08x[0x%08x]\tTemp\n", bstadd, bstsize);
+		pr_info("\t--:\t0x%08x[0x%08x]\tBST\n", bstadd, bstsize);
 		memblock_reserve(bstadd, bstsize);
 	}
 }
@@ -122,9 +114,6 @@ int __init ambarella_init_machine(char *board_name)
 	//Check chip ID
 	//if (AMBARELLA_BOARD_CHIP(system_rev) != AMBARELLA_BOARD_CHIP_AUTO)
 		//BUG_ON(AMBARELLA_BOARD_CHIP(system_rev) != CHIP_REV);
-
-	ambarella_debug_info = ambarella_phys_to_virt(DEFAULT_DEBUG_START);
-	memset((void *)ambarella_debug_info, 0, DEFAULT_DEBUG_SIZE);
 
 	retval = ambarella_create_proc_dir();
 	BUG_ON(retval != 0);

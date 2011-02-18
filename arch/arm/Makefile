@@ -258,6 +258,8 @@ core-$(CONFIG_VFP)		+= arch/arm/vfp/
 
 drivers-$(CONFIG_OPROFILE)      += arch/arm/oprofile/
 
+drivers-$(CONFIG_PM)		+= arch/arm/power/
+
 libs-y				:= arch/arm/lib/ $(libs-y)
 
 # Default target when executing plain make

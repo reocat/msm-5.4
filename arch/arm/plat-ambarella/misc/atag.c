@@ -32,7 +32,15 @@
 #include <asm/mach/map.h>
 
 #include <mach/hardware.h>
+#include <plat/debug.h>
 #include <hal/hal.h>
+
+/* ==========================================================================*/
+u32 ambarella_debug_level = AMBA_DEBUG_NULL;
+EXPORT_SYMBOL(ambarella_debug_level);
+
+u32 ambarella_debug_info = 0;
+EXPORT_SYMBOL(ambarella_debug_info);
 
 /* ==========================================================================*/
 #define AMBARELLA_IO_DESC_AHB_ID	0
@@ -205,6 +213,10 @@ void __init ambarella_map_io(void)
 		}
 #endif
 	}
+	ambarella_debug_info =
+		(ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.virtual +
+		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length -
+		DEFAULT_DEBUG_SIZE);
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	if (!bhal_mapped) {
@@ -694,4 +706,18 @@ void set_ambarella_hal_invalid(void)
 	ambarella_hal_info.inited = 0;
 }
 #endif
+
+int arch_pfn_is_nosave(unsigned long pfn)
+{
+	unsigned long nosave_begin_pfn;
+	unsigned long nosave_end_pfn;
+
+	nosave_begin_pfn =
+		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.pfn;
+	nosave_end_pfn = PFN_PHYS(nosave_begin_pfn) +
+		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length;
+	nosave_end_pfn = PFN_UP(nosave_end_pfn);
+
+	return (pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn);
+}
 

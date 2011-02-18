@@ -43,8 +43,6 @@
 #include <asm/setup.h>
 #include <asm/mach/map.h>
 
-#include <plat/debug.h>
-
 #include <mach/hardware.h>
 #include <mach/gpio.h>
 #include <mach/board.h>

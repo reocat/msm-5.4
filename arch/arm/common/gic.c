@@ -158,13 +158,17 @@ static int gic_set_cpu(unsigned int irq, const struct cpumask *mask_val)
 {
 	void __iomem *reg = gic_dist_base(irq) + GIC_DIST_TARGET + (gic_irq(irq) & ~3);
 	unsigned int shift = (irq % 4) * 8;
-	unsigned int cpu = cpumask_first(mask_val);
-	u32 val;
+	unsigned int cpu;
+	u32 val, cpu_mask = 0;
 
+	for_each_cpu_and(cpu, mask_val, cpu_online_mask)
+		cpu_mask |= 0x1 << cpu;
+	cpu_mask &= 0xff;
+	cpu = cpumask_first(mask_val);
 	spin_lock(&irq_controller_lock);
 	irq_desc[irq].node = cpu;
 	val = readl(reg) & ~(0xff << shift);
-	val |= 1 << (cpu + shift);
+	val |= (cpu_mask << shift);
 	writel(val, reg);
 	spin_unlock(&irq_controller_lock);
 

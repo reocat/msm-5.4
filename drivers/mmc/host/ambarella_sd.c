@@ -2005,6 +2005,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int					errorCode = 0;
+#ifndef CONFIG_MMC_UNSAFE_RESUME
 	struct ambarella_sd_controller_info	*pinfo;
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
@@ -2028,6 +2029,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 				disable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
 		}
 	}
+#endif
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -2037,6 +2039,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 static int ambarella_sd_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
+#ifndef CONFIG_MMC_UNSAFE_RESUME
 	struct ambarella_sd_controller_info	*pinfo;
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
@@ -2063,6 +2066,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 				ambsd_err(pslotinfo, "Can't mmc_resume_host!\n");
 		}
 	}
+#endif
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
@@ -2099,7 +2103,11 @@ static void __exit ambarella_sd_exit(void)
 	platform_driver_unregister(&ambarella_sd_driver);
 }
 
+#ifndef CONFIG_MMC_UNSAFE_RESUME
 module_init(ambarella_sd_init);
+#else
+fs_initcall(ambarella_sd_init);
+#endif
 module_exit(ambarella_sd_exit);
 
 MODULE_DESCRIPTION("Ambarella Media Processor SD/MMC Host Controller");

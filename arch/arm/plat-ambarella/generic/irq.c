@@ -629,7 +629,7 @@ void __init ambarella_init_irq(void)
 }
 
 /* ==========================================================================*/
-#if defined(CONFIG_ARM_GIC)
+#if !defined(CONFIG_ARM_GIC)
 struct ambarella_vic_pm_info {
 	u32 vic_int_sel_reg;
 	u32 vic_inten_reg;
@@ -653,7 +653,7 @@ u32 ambarella_irq_suspend(u32 level)
 {
 	u32					i;
 
-#if defined(CONFIG_ARM_GIC)
+#if !defined(CONFIG_ARM_GIC)
 	ambarella_vic_pm.vic_int_sel_reg = amba_readl(VIC_INT_SEL_REG);
 	ambarella_vic_pm.vic_inten_reg = amba_readl(VIC_INTEN_REG);
 	ambarella_vic_pm.vic_soften_reg = amba_readl(VIC_SOFTEN_REG);
@@ -716,7 +716,7 @@ u32 ambarella_irq_resume(u32 level)
 {
 	u32					i;
 
-#if defined(CONFIG_ARM_GIC)
+#if !defined(CONFIG_ARM_GIC)
 	amba_writel(VIC_INT_SEL_REG, ambarella_vic_pm.vic_int_sel_reg);
 	amba_writel(VIC_INTEN_CLR_REG, 0xffffffff);
 	amba_writel(VIC_INTEN_REG, ambarella_vic_pm.vic_inten_reg);

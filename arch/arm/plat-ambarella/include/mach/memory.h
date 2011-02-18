@@ -118,11 +118,6 @@
 #define DEFAULT_DEBUG_START		(DEFAULT_MEM_START + 0x000f8000)
 #define DEFAULT_DEBUG_SIZE		(0x00008000)
 
-#define DEFAULT_SSS_START		(DEFAULT_MEM_START + 0x000f7000)
-#define DEFAULT_SSS_MAGIC0		(0x19790110)
-#define DEFAULT_SSS_MAGIC1		(0x19450107)
-#define DEFAULT_SSS_MAGIC2		(0x19531110)
-
 /* ==========================================================================*/
 #define __virt_to_bus(x)		__virt_to_phys(x)
 #define __bus_to_virt(x)		__phys_to_virt(x)

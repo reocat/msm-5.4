@@ -228,7 +228,8 @@ struct sys_timer ambarella_timer = {
 
 u32 ambarella_timer_suspend(u32 level)
 {
-	disable_irq(AMBARELLA_CE_TIMER_IRQ);
+	if (level)
+		disable_irq(AMBARELLA_CE_TIMER_IRQ);
 	ambarella_timer_pm.timer_ctr_reg = amba_readl(TIMER_CTR_REG);
 #ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
 	amba_writel(TIMER_CTR_REG,
@@ -318,7 +319,8 @@ u32 ambarella_timer_resume(u32 level)
 		((ambarella_timer_pm.timer_ctr_reg & 0x00000F00) |
 		(amba_readl(TIMER_CTR_REG) & 0xFFFFF0FF)));
 #endif
-	enable_irq(AMBARELLA_CE_TIMER_IRQ);
+	if (level)
+		enable_irq(AMBARELLA_CE_TIMER_IRQ);
 
 	return 0;
 }

@@ -358,6 +358,7 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
+	port->uartclk = port_info->get_pll();
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
 		lc |= UART_LC_CLS_5_BITS;
@@ -431,7 +432,6 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 static void serial_ambarella_pm(struct uart_port *port,
 	unsigned int state, unsigned int oldstate)
 {
-	/* TODO: Use RCT to turn off or scale back UART PLL */
 }
 
 static void serial_ambarella_release_port(struct uart_port *port)
@@ -496,9 +496,10 @@ static void serial_ambarella_poll_put_char(struct uart_port *port,
 	struct ambarella_uart_port_info		*port_info;
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
-
-	wait_for_tx(port);
-	amba_writel(port->membase + UART_TH_OFFSET, chr);
+	if (!port->suspended) {
+		wait_for_tx(port);
+		amba_writel(port->membase + UART_TH_OFFSET, chr);
+	}
 }
 
 static int serial_ambarella_poll_get_char(struct uart_port *port)
@@ -506,9 +507,11 @@ static int serial_ambarella_poll_get_char(struct uart_port *port)
 	struct ambarella_uart_port_info		*port_info;
 
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
-
-	wait_for_rx(port);
-	return amba_readl(port->membase + UART_RB_OFFSET);
+	if (!port->suspended) {
+		wait_for_rx(port);
+		return amba_readl(port->membase + UART_RB_OFFSET);
+	}
+	return 0;
 }
 #endif
 
@@ -536,7 +539,7 @@ struct uart_ops serial_ambarella_pops = {
 #endif
 };
 
-#if defined(CONFIG_SERIAL_AMBARELLA_CONSOLE) && defined(CONFIG_SERIAL_AMBARELLA)
+#if defined(CONFIG_SERIAL_AMBARELLA_CONSOLE)
 static struct uart_driver serial_ambarella_reg;
 
 static void serial_ambarella_console_putchar(struct uart_port *port, int ch)
@@ -559,15 +562,17 @@ static void serial_ambarella_console_write(struct console *co,
 
 	port = (struct uart_port *)(ambarella_uart_ports.amba_port[co->index].port);
 
-	disable_irq(port->irq);
-	ie = amba_readl(port->membase + UART_IE_OFFSET);
-	amba_writel(port->membase + UART_IE_OFFSET, ie & ~UART_IE_ETBEI);
+	if (!port->suspended) {
+		disable_irq(port->irq);
+		ie = amba_readl(port->membase + UART_IE_OFFSET);
+		amba_writel(port->membase + UART_IE_OFFSET, ie & ~UART_IE_ETBEI);
 
-	uart_console_write(port, s, count, serial_ambarella_console_putchar);
+		uart_console_write(port, s, count, serial_ambarella_console_putchar);
 
-	wait_for_tx(port);
-	amba_writel(port->membase + UART_IE_OFFSET, ie);
-	enable_irq(port->irq);
+		wait_for_tx(port);
+		amba_writel(port->membase + UART_IE_OFFSET, ie);
+		enable_irq(port->irq);
+	}
 }
 
 static int __init serial_ambarella_console_setup(struct console *co,
@@ -729,7 +734,6 @@ static int serial_ambarella_suspend(struct platform_device *pdev,
 	struct uart_port			*port;
 
 	pinfo = (struct ambarella_uart_platform_info *)pdev->dev.platform_data;
-
 	if (pinfo) {
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
 		retval = uart_suspend_port(&serial_ambarella_reg, port);
@@ -747,7 +751,6 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 	struct uart_port			*port;
 
 	pinfo = (struct ambarella_uart_platform_info *)pdev->dev.platform_data;
-
 	if (pinfo) {
 		port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
 		retval = uart_resume_port(&serial_ambarella_reg, port);
