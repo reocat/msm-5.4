@@ -163,8 +163,10 @@ static void l2x0_inv_all(void)
 
 	/* invalidate all ways */
 	spin_lock_irqsave(&l2x0_lock, flags);
-	/* Invalidating when L2 is enabled is a nono */
-	BUG_ON(readl(l2x0_base + L2X0_CTRL) & 1);
+	if (!(readl_relaxed(l2x0_base + L2X0_CTRL) & 1)) {
+		spin_unlock_irqrestore(&l2x0_lock, flags);
+		return;
+	}
 	__l2x0_inv_all();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
@@ -381,6 +383,8 @@ void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 
 	printk(KERN_INFO "%s cache controller enabled\n", l2x0_type);
-	printk(KERN_INFO "l2x0: %d ways, CACHE_ID 0x%08x, AUX_CTRL 0x%08x, Cache size: %d B\n",
-			ways, cache_id, aux, l2x0_size);
+	printk(KERN_INFO "l2x0: %d ways, CACHE_ID 0x%08x,"
+		" AUX_CTRL 0x%08x, Cache size: %d B\n",
+		ways, cache_id, aux, l2x0_size);
 }
+

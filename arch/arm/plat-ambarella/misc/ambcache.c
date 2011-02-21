@@ -26,7 +26,7 @@
 #include <linux/module.h>
 
 #include <asm/cacheflush.h>
-#ifdef CONFIG_CACHE_L2X0
+#ifdef CONFIG_CACHE_PL310
 #include <asm/hardware/cache-l2x0.h>
 #endif
 #include <asm/io.h>
@@ -46,7 +46,7 @@
 #define CACHE_LINE_MASK		~(CACHE_LINE_SIZE - 1)
 
 /* ==========================================================================*/
-#ifdef CONFIG_OUTER_CACHE
+#ifdef CONFIG_CACHE_PL310
 static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 static u32 cortex_l2cache_status = 0;
 #endif
@@ -126,7 +126,8 @@ EXPORT_SYMBOL(ambcache_flush_range);
 
 int ambcache_l2_enable()
 {
-#ifdef CONFIG_CACHE_L2X0
+#ifdef CONFIG_OUTER_CACHE
+#ifdef CONFIG_CACHE_PL310
 	if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) !=
 		0x00000120) {
 		writel(0x00000120, (ambcache_l2_base +
@@ -134,9 +135,9 @@ int ambcache_l2_enable()
 		pr_info("DATA_LATENCY[0x%08x]\n", readl(
 			ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
 		l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
-	} else {
+	} else
+#endif
 		outer_enable();
-	}
 #endif
 	return 0;
 }
@@ -144,9 +145,14 @@ EXPORT_SYMBOL(ambcache_l2_enable);
 
 int ambcache_l2_disable()
 {
-#ifdef CONFIG_CACHE_L2X0
+#ifdef CONFIG_OUTER_CACHE
+	unsigned long flags;
+
+	local_irq_save(flags);
+	flush_cache_all();
 	outer_flush_all();
 	outer_disable();
+	local_irq_restore(flags);
 #endif
 	return 0;
 }
