@@ -659,6 +659,17 @@ config TOUCHSCREEN_TM1510
           To compile this driver as a module, choose M here: the
           module will be called tm1510.
 
+config TOUCHSCREEN_NT11001
+        tristate "NT11001 based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a NT11001 based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called nt11001.
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK
