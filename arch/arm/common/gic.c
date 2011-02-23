@@ -164,9 +164,7 @@ static int gic_set_cpu(unsigned int irq, const struct cpumask *mask_val)
 	for_each_cpu_and(cpu, mask_val, cpu_online_mask)
 		cpu_mask |= 0x1 << cpu;
 	cpu_mask &= 0xff;
-	cpu = cpumask_first(mask_val);
 	spin_lock(&irq_controller_lock);
-	irq_desc[irq].node = cpu;
 	val = readl(reg) & ~(0xff << shift);
 	val |= (cpu_mask << shift);
 	writel(val, reg);
