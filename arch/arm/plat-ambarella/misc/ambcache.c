@@ -24,6 +24,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/cpu.h>
 
 #include <asm/cacheflush.h>
 #ifdef CONFIG_CACHE_PL310
@@ -127,19 +128,21 @@ EXPORT_SYMBOL(ambcache_flush_range);
 int ambcache_l2_enable()
 {
 #ifdef CONFIG_OUTER_CACHE
+	if (!outer_is_enabled()) {
 #ifdef CONFIG_CACHE_PL310
-	if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) !=
-		0x00000120) {
-		writel(0x00000120, (ambcache_l2_base +
-			L2X0_DATA_LATENCY_CTRL));
-		pr_info("DATA_LATENCY[0x%08x]\n", readl(
-			ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
-		l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
-	} else
+		if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) !=
+			0x00000120) {
+			writel(0x00000120, (ambcache_l2_base +
+				L2X0_DATA_LATENCY_CTRL));
+			pr_info("DATA_LATENCY[0x%08x]\n", readl(
+				ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
+			l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
+		} else
 #endif
-		outer_enable();
+			outer_enable();
+	}
 #endif
-	return 0;
+	return outer_is_enabled() ? 0 : -1;
 }
 EXPORT_SYMBOL(ambcache_l2_enable);
 
@@ -148,13 +151,17 @@ int ambcache_l2_disable()
 #ifdef CONFIG_OUTER_CACHE
 	unsigned long flags;
 
-	local_irq_save(flags);
-	flush_cache_all();
-	outer_flush_all();
-	outer_disable();
-	local_irq_restore(flags);
+	if (outer_is_enabled()) {
+		disable_nonboot_cpus();
+		local_irq_save(flags);
+		flush_cache_all();
+		outer_flush_all();
+		outer_disable();
+		local_irq_restore(flags);
+		enable_nonboot_cpus();
+	}
 #endif
-	return 0;
+	return outer_is_enabled() ? -1 : 0;
 }
 EXPORT_SYMBOL(ambcache_l2_disable);
 
