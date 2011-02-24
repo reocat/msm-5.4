@@ -38,6 +38,7 @@
 #include <plat/pm.h>
 #include <plat/pwm.h>
 #include <plat/rct.h>
+#include <plat/ambreglock.h>
 
 /* ==========================================================================*/
 #define	AMBA_DEV_MAJOR			(248)

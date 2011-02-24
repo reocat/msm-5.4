@@ -50,7 +50,7 @@ config PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 config PLAT_AMBARELLA_SUPPORT_HAL
 	bool
 	default n
-	
+
 config PLAT_AMBARELLA_SUPPORT_GDMA
 	bool
 	default n
@@ -76,6 +76,10 @@ config PLAT_AMBARELLA_SUPPORT_SATA
 	default n
 
 config PLAT_AMBARELLA_DISABLE_8_16_ACCESS
+	bool
+	default n
+
+config PLAT_AMBARELLA_ADD_REGISTER_LOCK
 	bool
 	default n
 
@@ -152,6 +156,7 @@ config PLAT_AMBARELLA_I1_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_USB
 	select PLAT_AMBARELLA_SUPPORT_SATA
 	select PLAT_AMBARELLA_DISABLE_8_16_ACCESS
+	select PLAT_AMBARELLA_ADD_REGISTER_LOCK
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.
 
@@ -236,8 +241,8 @@ config AMBARELLA_PLL_PROC
 
 	  If you are not sure, say N here.
 
- 
-	  
+
+
 endmenu
 
 menu "PPM Configuration"

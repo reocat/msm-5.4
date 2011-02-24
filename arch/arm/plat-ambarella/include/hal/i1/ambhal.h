@@ -314,7 +314,7 @@
  * amb_clock_frequency_t amb_clock_frequency ;
  * amb_clock_frequency = amb_get_sensor_clock_frequency (void *amb_hal_base_address) ;
  * @endcode
- * 
+ *
  * @par
  * See also @subpage pll_subpage.
  */
@@ -364,7 +364,7 @@
  * Some of the plls (@ref vout_group, @ref audio_group & @ref lcd_group) in the design allow the reference clock source to be changed.
  * The api to change the clock source takes the new clock source name and the new clock source frequency.
  * @par External PLL Reference Clocks
- * When the new clock source is 
+ * When the new clock source is
  * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
  * the reference clock source of the pll is being changed.
  * The api needs that reference clock frequency to be able to calculate the correct pll settings
@@ -374,7 +374,7 @@
  * based on the system configuration pins (it is either 24 MHz or 27 MHz). In this
  * case the application does not need to provide anything as the api will figure it out on its
  * own and do the pll settings calculations accordingly.
- * @par External Clock (No PLL) 
+ * @par External Clock (No PLL)
  * When the new clock source is ::AMB_EXTERNAL_CLOCK_SOURCE the pll is not used and so the api does not
  * care what the reference clock frequency is. In fact the api will power down
  * that pll when the application selects that option to save power.
@@ -725,7 +725,7 @@ AMB_USB_CLK_RESERVED = 0xffffffffUL
 
 /**
  * State of HDMI Interface
- * 
+ *
  * @ingroup hdmi_group
  */
 
@@ -740,7 +740,7 @@ AMB_HDMI_RESERVED = 0xffffffffUL
 
 /**
  * Dual Stream state
- * 
+ *
  * @ingroup mode_group
  */
 
@@ -1038,9 +1038,14 @@ typedef unsigned int (*amb_hal_function_thunk_t) (unsigned int, unsigned int, un
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
+  unsigned int rval;
   amb_hal_function_thunk_t amb_hal_function_thunk = (amb_hal_function_thunk_t) ((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32)) ;
+  AMBARELLA_REG_LOCK();
+  AMBARELLA_INC_REGLOCK_COUNT();
+  rval = amb_hal_function_thunk (amb_hal_function_index, arg0, arg1, arg2, arg3) ;
+  AMBARELLA_REG_UNLOCK();
 
-  return amb_hal_function_thunk (amb_hal_function_index, arg0, arg1, arg2, arg3) ;
+  return rval ;
 }
 
 /**
@@ -1216,7 +1221,7 @@ static INLINE amb_boot_type_t amb_get_boot_type (void *amb_hal_base_address)
 }
 
 /**
- * Get the host interface type 
+ * Get the host interface type
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1758,7 +1763,7 @@ static INLINE amb_hal_success_t amb_enable_sensor_clock_observation (void *amb_h
 /**
  * Apply the usb device controller soft reset sequence
  *
- * @note This function triggers a soft reset sequence for the usb 
+ * @note This function triggers a soft reset sequence for the usb
  * device controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
@@ -1777,9 +1782,9 @@ static INLINE amb_hal_success_t amb_usb_device_soft_reset (void *amb_hal_base_ad
 /**
  * Turn USB Port 0 On/Off
  *
- * @note If both USB Ports 0 and 1 are used, enable USB Port 1 first. 
- * This function suspends the USB Port 0 port if ::AMB_USB_SUSPEND is specified.  
- * 
+ * @note If both USB Ports 0 and 1 are used, enable USB Port 1 first.
+ * This function suspends the USB Port 0 port if ::AMB_USB_SUSPEND is specified.
+ *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_port_state Requested State of the USB Port 0
  *
@@ -1796,7 +1801,7 @@ static INLINE amb_hal_success_t amb_set_usb_port0_state (void *amb_hal_base_addr
 }
 
 /**
- * Get the state of the USB Port 0 
+ * Get the state of the USB Port 0
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1815,7 +1820,7 @@ static INLINE amb_usb_port_state_t amb_get_usb_port0_state (void *amb_hal_base_a
 /**
  * Select USB Port 0 PHY Clock Source
  *
- * @note 
+ * @note
  * Use this function to change the USB PHY clock source. This can only be
  * used after power-on reset before setting the usb_port_state to
  * AMB_USB_ON for the first time.  Note that the default clock source after
@@ -1861,7 +1866,7 @@ static INLINE amb_hal_success_t amb_usb_host_soft_reset (void *amb_hal_base_addr
  * Turn USB Port 1 On/Off
  *
  * @note If both USB Ports 0 and 1 are used, enable USB Port 1 first.
- * This function suspends the USB Port 1 port if ::AMB_USB_SUSPEND is specified. 
+ * This function suspends the USB Port 1 port if ::AMB_USB_SUSPEND is specified.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] usb_port_state Requested State of the USB Port 1
