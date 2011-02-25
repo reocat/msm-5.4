@@ -293,15 +293,39 @@ static void __init ambarella_init_elephant(void)
 
 	ambarella_init_machine("Elephant");
 
-	ambarella_board_generic.lcd_reset.gpio_id = GPIO(46);
-	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.lcd_reset.active_delay = 1;
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
+		ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
+		ambarella_board_generic.lcd_power.active_delay = 1;
 
-	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(45);
-	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(45);
-	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
-	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+		ambarella_board_generic.lcd_reset.gpio_id = GPIO(32);
+		ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
+		ambarella_board_generic.lcd_reset.active_delay = 1;
+
+		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
+		ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
+		ambarella_board_generic.lcd_backlight.active_delay = 1;
+
+		ambarella_board_generic.touch_panel_reset.gpio_id = GPIO(29);
+		ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
+		ambarella_board_generic.touch_panel_reset.active_delay = 1;
+
+		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(51);
+		ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(51);
+		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	} else {
+		ambarella_board_generic.lcd_reset.gpio_id = GPIO(46);
+		ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
+		ambarella_board_generic.lcd_reset.active_delay = 1;
+
+		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(45);
+		ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(45);
+		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	}
 
 	/* Config IR*/
 	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_SONY;
@@ -348,6 +372,11 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	ambarella_tm1510_board_info.flags = I2C_M_PIN_MUXING;
 	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
+
+	ambarella_nt11001_board_info.irq =
+		ambarella_board_generic.touch_panel_irq.irq_line;
+	ambarella_tm1510_board_info.flags = 0;
+	i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
 
 	ambarella_board_vin_infos[0].flags = I2C_M_PIN_MUXING;
 	ambarella_board_vin_infos[1].flags = I2C_M_PIN_MUXING;

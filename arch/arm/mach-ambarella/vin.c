@@ -31,11 +31,11 @@
 struct i2c_board_info ambarella_board_vin_infos[2] = {
 	[0] = {
 		.type			= "amb_vin",
-		.addr			= 0x01,
+		.addr			= 0x02,
 	},
 	[1] = {
 		.type			= "amb_vin1",
-		.addr			= 0x02,
+		.addr			= 0x03,
 	},
 };
 
