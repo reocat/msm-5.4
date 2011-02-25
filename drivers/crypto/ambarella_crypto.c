@@ -43,6 +43,9 @@ static DECLARE_COMPLETION(g_des_irq_wait);
 static int config_polling_mode = 0;
 module_param(config_polling_mode, int, S_IRUGO);
 
+static const char *ambdev_name =
+	"Ambarella Media Processor Cryptography Engine";
+
 struct des_ctx {
 	u32 expkey[DES_EXPKEY_WORDS];
 };
@@ -440,17 +443,19 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 		amba_writel(CRYPT_A_INT_EN_REG, 0x0001);
 		amba_writel(CRYPT_D_INT_EN_REG, 0x0001);
 
-		errCode = request_irq(pinfo->aes_irq,
-			ambarella_aes_irq, IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
+		errCode = request_irq(pinfo->aes_irq, ambarella_aes_irq,
+			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 		if (errCode) {
-			dev_err(&pdev->dev, "%s: Request aes IRQ failed!\n", __func__);
+			dev_err(&pdev->dev,
+				"%s: Request aes IRQ failed!\n", __func__);
 			goto crypto_errCode_kzalloc;
 		}
 
-		errCode = request_irq(pinfo->des_irq,
-			ambarella_des_irq, IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
+		errCode = request_irq(pinfo->des_irq, ambarella_des_irq,
+			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 		if (errCode) {
-			dev_err(&pdev->dev, "%s: Request des IRQ failed!\n", __func__);
+			dev_err(&pdev->dev,
+				"%s: Request des IRQ failed!\n", __func__);
 			goto crypto_errCode_free_aes_irq;
 		}
 	}
@@ -477,11 +482,9 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 	}
 
 	if(likely(config_polling_mode == 0))
-		dev_notice(&pdev->dev,
-			"Ambarella Media Processor crypto eningine probed(interrupt mode)\n");
+		dev_notice(&pdev->dev,"%s probed(interrupt mode).\n", ambdev_name);
 	else
-		dev_notice(&pdev->dev,
-			"Ambarella Media Processor crypto eningine probed(polling mode)\n");
+		dev_notice(&pdev->dev,"%s probed(polling mode).\n", ambdev_name);
 
 	goto crypto_errCode_na;
 
@@ -515,15 +518,12 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 	if (pinfo && config_polling_mode == 0) {
 		free_irq(pinfo->aes_irq, pinfo);
 		free_irq(pinfo->des_irq, pinfo);
-
 		platform_set_drvdata(pdev, NULL);
-
-		release_mem_region(pinfo->mem->start, (pinfo->mem->end - pinfo->mem->start) + 1);
-
+		release_mem_region(pinfo->mem->start,
+			(pinfo->mem->end - pinfo->mem->start) + 1);
 		kfree(pinfo);
 	}
-
-	dev_notice(&pdev->dev, "Remove Ambarella Media Processor CRYPTO.\n");
+	dev_notice(&pdev->dev, "%s removed.\n", ambdev_name);
 
 	return errCode;
 }
@@ -544,7 +544,8 @@ static struct platform_driver ambarella_crypto_driver = {
 
 static int __init ambarella_crypto_init(void)
 {
-	return platform_driver_probe(&ambarella_crypto_driver, ambarella_crypto_probe);
+	return platform_driver_probe(&ambarella_crypto_driver,
+		ambarella_crypto_probe);
 }
 
 static void __exit ambarella_crypto_exit(void)
@@ -552,13 +553,11 @@ static void __exit ambarella_crypto_exit(void)
 	platform_driver_unregister(&ambarella_crypto_driver);
 }
 
-
 module_init(ambarella_crypto_init);
 module_exit(ambarella_crypto_exit);
 
-MODULE_DESCRIPTION("Ambarella HW AES/DES algorithm support");
+MODULE_DESCRIPTION("Ambarella Cryptography Engine");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Qiao Wang");
-
 MODULE_ALIAS("crypo-all");
 

@@ -68,7 +68,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= AHB_BASE,
 			.pfn	= __phys_to_pfn(AHB_PHYS_BASE),
 			.length	= AHB_SIZE,
-			.type	= MT_MEMORY_IOAMB,
+			.type	= MT_DEVICE,
 			},
 	},
 	[AMBARELLA_IO_DESC_APB_ID] = {
@@ -77,7 +77,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= APB_BASE,
 			.pfn	= __phys_to_pfn(APB_PHYS_BASE),
 			.length	= APB_SIZE,
-			.type	= MT_MEMORY_IOAMB,
+			.type	= MT_DEVICE,
 			},
 	},
 	[AMBARELLA_IO_DESC_PPM_ID] = {
@@ -95,7 +95,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DEFAULT_BSB_BASE,
 			.pfn	= __phys_to_pfn(DEFAULT_BSB_START),
 			.length	= DEFAULT_BSB_SIZE,
-			.type	= MT_MEMORY_DAMB,
+			.type	= MT_MEMORY,
 			},
 	},
 	[AMBARELLA_IO_DESC_DSP_ID] = {
@@ -104,7 +104,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DEFAULT_DSP_BASE,
 			.pfn	= __phys_to_pfn(DEFAULT_DSP_START),
 			.length	= DEFAULT_DSP_SIZE,
-			.type	= MT_MEMORY_DAMB,
+			.type	= MT_MEMORY,
 			},
 	},
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
@@ -114,7 +114,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DRAMC_BASE,
 			.pfn	= __phys_to_pfn(DRAMC_PHYS_BASE),
 			.length	= DRAMC_SIZE,
-			.type	= MT_MEMORY_IOAMB,
+			.type	= MT_DEVICE,
 			},
 	},
 	[AMBARELLA_IO_DESC_CRYPT_ID] = {
@@ -123,7 +123,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= CRYPT_BASE,
 			.pfn	= __phys_to_pfn(CRYPT_PHYS_BASE),
 			.length	= CRYPT_SIZE,
-			.type	= MT_MEMORY_IOAMB,
+			.type	= MT_DEVICE,
 			},
 	},
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
@@ -133,7 +133,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= AXI_BASE,
 			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
 			.length	= AXI_SIZE,
-			.type	= MT_MEMORY_IOAMB,
+			.type	= MT_DEVICE,
 			},
 	},
 	[AMBARELLA_IO_DESC_DDD_ID] = {
@@ -142,7 +142,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DDD_BASE,
 			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
 			.length	= DDD_SIZE,
-			.type	= MT_MEMORY_IOAMB,
+			.type	= MT_DEVICE,
 			},
 	},
 #endif
@@ -224,7 +224,7 @@ void __init ambarella_map_io(void)
 			hal_desc.virtual = halv;
 			hal_desc.pfn = __phys_to_pfn(halp);
 			hal_desc.length = hals;
-			hal_desc.type = MT_MEMORY_IAMB;
+			hal_desc.type = MT_MEMORY;
 			iotable_init(&hal_desc, 1);
 			bhal_mapped = 1;
 			hal_type = hal_desc.type;
