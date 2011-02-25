@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 131870
+ * @version 136312
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -871,6 +871,25 @@ AMB_FIO_RESET_FAST,
 /* Reserved */
 AMB_FIO_RESET_RESERVED=0xffffffff
 } amb_fio_reset_period_t ;
+
+/**
+ * DRAM parameters for spi boot only!!
+ *
+ * @ingroup init_group
+ */
+
+typedef struct {
+/** dram_dqs_sync register setting */
+unsigned int dram_dqs_sync ;
+/** dram_pad_zctl register setting */
+unsigned int dram_pad_zctl ;
+/** dll0 register setting */
+unsigned int dll0 ;
+/** dll1 register setting */
+unsigned int dll1 ;
+/* Reserved */
+unsigned int delay ;
+} amb_dram_parameters_t ;
 
 /*
  *
