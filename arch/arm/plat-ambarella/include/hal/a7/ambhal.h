@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 133245
+ * @version 136281
  *
  * @par Introduction:
  * The Ambarella A7 Hardware Abstraction Layer (ambhal) provides an API between
@@ -131,6 +131,7 @@
  * @code
  * amb_hal_success_t success ;
  * amb_operating_mode_t operating_mode ;
+ * operating_mode.vidcap_size = AMB_VIDCAP_4000X2250 ;
  * operating_mode.performance = AMB_PERFORMANCE_720P30 ;
  * operating_mode.mode = AMB_OPERATING_MODE_CAPTURE ;
  * success =
@@ -459,6 +460,27 @@ unsigned int delay ;
 typedef unsigned int amb_clock_frequency_t ;
 
 /**
+ * Video Capture Window Size
+ *
+ * @ingroup mode_group
+ */
+
+typedef enum {
+/** IMX 078: 1080p30, 720p30 */
+AMB_VIDCAP_4000X2250,
+/** Aptina 3135: 1080p60, 720p60, 1080p30, 720p30 */
+AMB_VIDCAP_2304X1296,
+/** IMX 078: 1080p60, 720p60 */
+AMB_VIDCAP_1984X1116,
+/** Aptina 3135: 4:3 photo preview */
+AMB_VIDCAP_2048X1536,
+/** IMX 078: 4:3 photo preview */
+AMB_VIDCAP_1312X984,
+/* Reserved */
+AMB_VIDCAP_RESERVED=0xffffffff
+} amb_vidcap_window_size_t ;
+
+/**
  * Performance.
  *
  * @ingroup mode_group
@@ -595,16 +617,18 @@ AMB_DUAL_STREAM_RESERVED=0xffffffff
  */
 
 typedef struct {
-/** Sensor resolution (capture)/Output resolution (playback) ::amb_performance_t */
-unsigned int performance ;
+/** Sensor resolution */
+amb_vidcap_window_size_t vidcap_size ;
+/** Output resolution */
+amb_performance_t performance ;
 /** Operating mode ::amb_mode_t */
-unsigned int mode ;
-/** USB state ::amb_usb_clock_source_t */
-unsigned int usb_state ;
-/** HDMI state ::amb_hdmi_interface_state_t */
-unsigned int hdmi_state ;
-/** Dual Stream state ::amb_dual_stream_state_t */
-unsigned int dual_stream_state ;
+amb_mode_t mode ;
+/** USB state */
+amb_usb_interface_state_t usb_state ;
+/** HDMI state */
+amb_hdmi_interface_state_t hdmi_state ;
+/** Dual Stream state */
+amb_dual_stream_state_t dual_stream_state ;
 } amb_operating_mode_t ;
 
 /**
