@@ -30,11 +30,15 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 
+#include <asm/cacheflush.h>
 #include <asm/io.h>
+#include <asm/system.h>
 
-#include <mach/hardware.h>
 #include <mach/board.h>
+#include <mach/hardware.h>
 #include <mach/init.h>
+#include <mach/system.h>
+
 #include <hal/hal.h>
 
 /* ==========================================================================*/
@@ -61,6 +65,22 @@ void ambarella_power_off(void)
 	} else {
 		rct_power_down();
 	}
+}
+
+void ambarella_machine_restart(char mode, const char *cmd)
+{
+	local_irq_disable();
+	local_fiq_disable();
+	flush_cache_all();
+	outer_flush_all();
+	outer_disable();
+	outer_inv_all();
+	flush_cache_all();
+
+	arch_reset(mode, cmd);
+	mdelay(1000);
+	printk("Reboot failed -- System halted\n");
+	while (1);
 }
 
 /* ==========================================================================*/
@@ -364,6 +384,7 @@ static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
 int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
+	arm_pm_restart = ambarella_machine_restart;
 
 	suspend_set_ops(&ambarella_pm_suspend_ops);
 	hibernation_set_ops(&ambarella_pm_hibernation_ops);

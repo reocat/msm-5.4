@@ -417,7 +417,7 @@ static void ambarella_wdt_shutdown(struct platform_device *pdev)
 	else
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 
-	dev_info(&pdev->dev, "%s exit.\n", __func__);
+	dev_dbg(&pdev->dev, "%s exit.\n", __func__);
 }
 
 #ifdef CONFIG_PM
