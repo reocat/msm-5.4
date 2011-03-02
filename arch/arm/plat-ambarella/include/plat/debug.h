@@ -39,6 +39,8 @@
 extern u32				ambarella_debug_level;
 extern u32				ambarella_debug_info;
 
+extern unsigned long ambarella_debug_lookup_name(const char *name);
+
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

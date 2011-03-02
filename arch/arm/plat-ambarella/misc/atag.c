@@ -42,6 +42,12 @@ EXPORT_SYMBOL(ambarella_debug_level);
 u32 ambarella_debug_info = 0;
 EXPORT_SYMBOL(ambarella_debug_info);
 
+unsigned long ambarella_debug_lookup_name(const char *name)
+{
+	return module_kallsyms_lookup_name(name);
+}
+EXPORT_SYMBOL(ambarella_debug_lookup_name);
+
 /* ==========================================================================*/
 #define AMBARELLA_IO_DESC_AHB_ID	0
 #define AMBARELLA_IO_DESC_APB_ID	1
