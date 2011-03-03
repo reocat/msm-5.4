@@ -310,35 +310,50 @@ void rct_reset_chip(void)
 
 void rct_reset_fio(void)
 {
-	if (amb_reset_all(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
+	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_all_reset_period = AMB_FIO_RESET_FAST;
+	
+	if (amb_reset_all(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_fio() failed");
 	}
 }
 
 void rct_reset_fio_only(void)
 {
-	if (amb_reset_fio(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
+	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_all_reset_period = AMB_FIO_RESET_FAST;
+	
+	if (amb_reset_fio(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_fio() failed");
 	}
 }
 
 void rct_reset_cf(void)
 {
-	if (amb_reset_cf(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
+	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_all_reset_period = AMB_FIO_RESET_FAST;
+	
+	if (amb_reset_cf(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_cf() failed");
 	}
 }
 
 void rct_reset_flash(void)
 {
-	if (amb_reset_flash(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
+	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_all_reset_period = AMB_FIO_RESET_FAST;
+	
+	if (amb_reset_flash(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_flash() failed");
 	}
 }
 
 void rct_reset_xd(void)
 {
-	if (amb_reset_xd(HAL_BASE_VP, AMB_FIO_RESET_FAST) != AMB_HAL_SUCCESS) {
+	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_all_reset_period = AMB_FIO_RESET_FAST;
+	
+	if (amb_reset_xd(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_xd() failed");
 	}
 }
@@ -410,7 +425,7 @@ void rct_set_ir_pll(void)
 void rct_set_ssi_pll(void)
 {
 	if (amb_set_ssi_clock_frequency(HAL_BASE_VP,
-				54000000) != AMB_HAL_SUCCESS) {
+				13500000) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_ssi_clock_frequency() failed");
 	}
 }
@@ -426,7 +441,7 @@ u32 get_ssi2_freq_hz(void)
 void rct_set_ssi2_pll(void)
 {
 	 if (amb_set_ssi2_clock_frequency(HAL_BASE_VP,
-				54000000) != AMB_HAL_SUCCESS) {
+				13500000) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_ssi2_clock_frequency() failed");
 	}
 }
@@ -796,7 +811,6 @@ void rct_set_ssi_clk_src(int src)
 void rct_set_vin_lvds_pad(int mode)
 {
 	u32 rval = AMB_HAL_SUCCESS;
-
 	if (mode == VIN_LVDS_PAD_MODE_LVCMOS) {
 		rval = amb_set_lvds_pad_mode(HAL_BASE_VP,
 		 		        AMB_LVDS_PAD_MODE_LVCMOS);
