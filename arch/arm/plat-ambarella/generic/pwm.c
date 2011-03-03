@@ -596,7 +596,8 @@ int __init ambarella_init_pwm(void)
 	add_pwm_device(&ambarella_pwm1);
 	add_pwm_device(&ambarella_pwm2);
 	add_pwm_device(&ambarella_pwm3);
-	add_pwm_device(&ambarella_pwm4);
+	if (AMBARELLA_BOARD_TYPE(system_rev) != AMBARELLA_BOARD_TYPE_EVK)
+		add_pwm_device(&ambarella_pwm4);
 
 	return retval;
 }
