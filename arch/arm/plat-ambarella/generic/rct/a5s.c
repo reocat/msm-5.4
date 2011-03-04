@@ -310,9 +310,9 @@ void rct_reset_chip(void)
 
 void rct_reset_fio(void)
 {
-	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_fio_reset_period_t amb_all_reset_period;
 	amb_all_reset_period = AMB_FIO_RESET_FAST;
-	
+
 	if (amb_reset_all(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_fio() failed");
 	}
@@ -320,9 +320,9 @@ void rct_reset_fio(void)
 
 void rct_reset_fio_only(void)
 {
-	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_fio_reset_period_t amb_all_reset_period;
 	amb_all_reset_period = AMB_FIO_RESET_FAST;
-	
+
 	if (amb_reset_fio(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_fio() failed");
 	}
@@ -330,9 +330,9 @@ void rct_reset_fio_only(void)
 
 void rct_reset_cf(void)
 {
-	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_fio_reset_period_t amb_all_reset_period;
 	amb_all_reset_period = AMB_FIO_RESET_FAST;
-	
+
 	if (amb_reset_cf(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_cf() failed");
 	}
@@ -340,9 +340,9 @@ void rct_reset_cf(void)
 
 void rct_reset_flash(void)
 {
-	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_fio_reset_period_t amb_all_reset_period;
 	amb_all_reset_period = AMB_FIO_RESET_FAST;
-	
+
 	if (amb_reset_flash(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_flash() failed");
 	}
@@ -350,9 +350,9 @@ void rct_reset_flash(void)
 
 void rct_reset_xd(void)
 {
-	amb_fio_reset_period_t amb_all_reset_period;	
+	amb_fio_reset_period_t amb_all_reset_period;
 	amb_all_reset_period = AMB_FIO_RESET_FAST;
-	
+
 	if (amb_reset_xd(HAL_BASE_VP, amb_all_reset_period) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_reset_xd() failed");
 	}
