@@ -51,6 +51,9 @@
 static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 static u32 cortex_l2cache_status = 0;
 #endif
+#ifdef CONFIG_OUTER_CACHE
+static DEFINE_SPINLOCK(ambcache_l2_lock);
+#endif
 
 /* ==========================================================================*/
 void ambcache_clean_range(void *addr, unsigned int size)
@@ -58,7 +61,11 @@ void ambcache_clean_range(void *addr, unsigned int size)
 	u32					addr_start;
 	u32					addr_end;
 	u32					addr_tmp;
+#ifdef CONFIG_OUTER_CACHE
+	unsigned long				flags;
 
+	spin_lock_irqsave(&ambcache_l2_lock, flags);
+#endif
 	addr_start = (u32)addr & CACHE_LINE_MASK;
 	addr_end = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 
@@ -73,6 +80,7 @@ void ambcache_clean_range(void *addr, unsigned int size)
 	addr_start = ambarella_virt_to_phys(addr_start);
 	addr_end = addr_start + size;
 	outer_clean_range(addr_start, addr_end);
+	spin_unlock_irqrestore(&ambcache_l2_lock, flags);
 #endif
 }
 EXPORT_SYMBOL(ambcache_clean_range);
@@ -82,7 +90,11 @@ void ambcache_inv_range(void *addr, unsigned int size)
 	u32					addr_start;
 	u32					addr_end;
 	u32					addr_tmp;
+#ifdef CONFIG_OUTER_CACHE
+	unsigned long				flags;
 
+	spin_lock_irqsave(&ambcache_l2_lock, flags);
+#endif
 	addr_start = (u32)addr & CACHE_LINE_MASK;
 	addr_end = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 
@@ -97,6 +109,7 @@ void ambcache_inv_range(void *addr, unsigned int size)
 	addr_start = ambarella_virt_to_phys(addr_start);
 	addr_end = addr_start + size;
 	outer_inv_range(addr_start, addr_end);
+	spin_unlock_irqrestore(&ambcache_l2_lock, flags);
 #endif
 }
 EXPORT_SYMBOL(ambcache_inv_range);
@@ -106,7 +119,11 @@ void ambcache_flush_range(void *addr, unsigned int size)
 	u32					addr_start;
 	u32					addr_end;
 	u32					addr_tmp;
+#ifdef CONFIG_OUTER_CACHE
+	unsigned long				flags;
 
+	spin_lock_irqsave(&ambcache_l2_lock, flags);
+#endif
 	addr_start = (u32)addr & CACHE_LINE_MASK;
 	addr_end = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 
@@ -121,6 +138,7 @@ void ambcache_flush_range(void *addr, unsigned int size)
 	addr_start = ambarella_virt_to_phys(addr_start);
 	addr_end = addr_start + size;
 	outer_flush_range(addr_start, addr_end);
+	spin_unlock_irqrestore(&ambcache_l2_lock, flags);
 #endif
 }
 EXPORT_SYMBOL(ambcache_flush_range);

@@ -27,6 +27,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/irq.h>
+#include <linux/interrupt.h>
 #include <linux/device.h>
 
 #include <asm/io.h>
@@ -538,6 +539,15 @@ void __init ambarella_init_irq(void)
 #if defined(CONFIG_ARM_GIC)
 	gic_dist_init(0, __io(AMBARELLA_VA_GIC_DIST_BASE), LOCAL_TIMER_IRQ);
 	gic_cpu_init(0, __io(AMBARELLA_VA_GIC_CPU_BASE));
+
+	irq_set_affinity(CODING_ORC0_IRQ, cpumask_of(0));
+	irq_set_affinity(CODING_ORC1_IRQ, cpumask_of(0));
+	irq_set_affinity(CODING_ORC2_IRQ, cpumask_of(0));
+	irq_set_affinity(CODING_ORC3_IRQ, cpumask_of(0));
+	irq_set_affinity(VOUT_IRQ, cpumask_of(0));
+	irq_set_affinity(ORC_VOUT0_IRQ, cpumask_of(0));
+	irq_set_affinity(VIN_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
 #else
 	/* Set VIC sense and event type for each entry */
 	amba_writel(VIC_SENSE_REG, 0x00000000);
