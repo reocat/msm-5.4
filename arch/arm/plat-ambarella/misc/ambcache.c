@@ -51,94 +51,96 @@
 static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 static u32 cortex_l2cache_status = 0;
 #endif
-#ifdef CONFIG_OUTER_CACHE
-static DEFINE_SPINLOCK(ambcache_l2_lock);
-#endif
 
 /* ==========================================================================*/
 void ambcache_clean_range(void *addr, unsigned int size)
 {
-	u32					addr_start;
-	u32					addr_end;
-	u32					addr_tmp;
+	u32					vstart;
+	u32					vend;
 #ifdef CONFIG_OUTER_CACHE
-	unsigned long				flags;
-
-	spin_lock_irqsave(&ambcache_l2_lock, flags);
+	u32					pstart;
 #endif
-	addr_start = (u32)addr & CACHE_LINE_MASK;
-	addr_end = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+	u32					addr_tmp;
 
-	for (addr_tmp = addr_start; addr_tmp < addr_end;
-		addr_tmp += CACHE_LINE_SIZE) {
+	vstart = (u32)addr & CACHE_LINE_MASK;
+	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
 			"mcr p15, 0, %0, c7, c10, 1" : : "r" (addr_tmp));
 	}
 	dsb();
 
 #ifdef CONFIG_OUTER_CACHE
-	addr_start = ambarella_virt_to_phys(addr_start);
-	addr_end = addr_start + size;
-	outer_clean_range(addr_start, addr_end);
-	spin_unlock_irqrestore(&ambcache_l2_lock, flags);
+	pstart = ambarella_virt_to_phys(vstart);
+	outer_clean_range(pstart, (pstart + size));
+	dsb();
 #endif
 }
 EXPORT_SYMBOL(ambcache_clean_range);
 
 void ambcache_inv_range(void *addr, unsigned int size)
 {
-	u32					addr_start;
-	u32					addr_end;
-	u32					addr_tmp;
+	u32					vstart;
+	u32					vend;
 #ifdef CONFIG_OUTER_CACHE
-	unsigned long				flags;
-
-	spin_lock_irqsave(&ambcache_l2_lock, flags);
+	u32					pstart;
 #endif
-	addr_start = (u32)addr & CACHE_LINE_MASK;
-	addr_end = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+	u32					addr_tmp;
 
-	for (addr_tmp = addr_start; addr_tmp < addr_end;
-		addr_tmp += CACHE_LINE_SIZE) {
+	vstart = (u32)addr & CACHE_LINE_MASK;
+	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
 			"mcr p15, 0, %0, c7, c6, 1" : : "r" (addr_tmp));
 	}
 	dsb();
 
 #ifdef CONFIG_OUTER_CACHE
-	addr_start = ambarella_virt_to_phys(addr_start);
-	addr_end = addr_start + size;
-	outer_inv_range(addr_start, addr_end);
-	spin_unlock_irqrestore(&ambcache_l2_lock, flags);
+	pstart = ambarella_virt_to_phys(vstart);
+	outer_inv_range(pstart, (pstart + size));
+	dsb();
 #endif
 }
 EXPORT_SYMBOL(ambcache_inv_range);
 
 void ambcache_flush_range(void *addr, unsigned int size)
 {
-	u32					addr_start;
-	u32					addr_end;
-	u32					addr_tmp;
+	u32					vstart;
+	u32					vend;
 #ifdef CONFIG_OUTER_CACHE
-	unsigned long				flags;
-
-	spin_lock_irqsave(&ambcache_l2_lock, flags);
+	u32					pstart;
 #endif
-	addr_start = (u32)addr & CACHE_LINE_MASK;
-	addr_end = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+	u32					addr_tmp;
 
-	for (addr_tmp = addr_start; addr_tmp < addr_end;
-		addr_tmp += CACHE_LINE_SIZE) {
+#ifdef CONFIG_OUTER_CACHE
+	vstart = (u32)addr & CACHE_LINE_MASK;
+	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
+		__asm__ __volatile__ (
+			"mcr p15, 0, %0, c7, c10, 1" : : "r" (addr_tmp));
+	}
+	dsb();
+
+	pstart = ambarella_virt_to_phys(vstart);
+	outer_flush_range(pstart, (pstart + size));
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
+		__asm__ __volatile__ (
+			"mcr p15, 0, %0, c7, c6, 1" : : "r" (addr_tmp));
+	}
+	dsb();
+#else
+	vstart = (u32)addr & CACHE_LINE_MASK;
+	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
 			"mcr p15, 0, %0, c7, c14, 1" : : "r" (addr_tmp));
 	}
 	dsb();
-
-#ifdef CONFIG_OUTER_CACHE
-	addr_start = ambarella_virt_to_phys(addr_start);
-	addr_end = addr_start + size;
-	outer_flush_range(addr_start, addr_end);
-	spin_unlock_irqrestore(&ambcache_l2_lock, flags);
 #endif
 }
 EXPORT_SYMBOL(ambcache_flush_range);
