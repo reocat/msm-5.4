@@ -368,15 +368,17 @@ static void __init ambarella_init_elephant(void)
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
-	ambarella_tm1510_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = I2C_M_PIN_MUXING;
-	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
-
-	ambarella_nt11001_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		ambarella_nt11001_board_info.irq =
+			ambarella_board_generic.touch_panel_irq.irq_line;
+		ambarella_nt11001_board_info.flags = 0;
+		i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
+	} else {
+		ambarella_tm1510_board_info.irq =
+			ambarella_board_generic.touch_panel_irq.irq_line;
+		ambarella_tm1510_board_info.flags = I2C_M_PIN_MUXING;
+		i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
+	}
 
 	ambarella_board_vin_infos[0].flags = I2C_M_PIN_MUXING;
 	ambarella_board_vin_infos[1].flags = I2C_M_PIN_MUXING;
