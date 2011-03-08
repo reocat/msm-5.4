@@ -245,6 +245,17 @@ static struct ambarella_key_table elephant_keymap_ability[AMBINPUT_TABLE_SIZE] =
 	{AMBINPUT_END},
 };
 
+static struct ambarella_key_table elephant_keymap_ability[AMBINPUT_TABLE_SIZE] = {
+	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
+	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
+	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
+	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
+
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	0,	1,	GPIO(186),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+
+	{AMBINPUT_END},
+};
+
 static struct ambarella_input_board_info elephant_board_input_info = {
 	.pkeymap		= elephant_keymap,
 	.pinput_dev		= NULL,
@@ -305,27 +316,38 @@ static void __init ambarella_init_elephant(void)
 	ambarella_init_machine("Elephant");
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
-		ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
-		ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
-		ambarella_board_generic.lcd_power.active_delay = 1;
+		/* Ability Board */
+		if (AMBARELLA_BOARD_REV(system_rev) == 1)
+			elephant_board_input_info.pkeymap = elephant_keymap_ability;
+	}
 
-		ambarella_board_generic.lcd_reset.gpio_id = GPIO(32);
-		ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-		ambarella_board_generic.lcd_reset.active_delay = 1;
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		if (AMBARELLA_BOARD_REV(system_rev) == 1) {
+			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
+			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.lcd_power.active_delay = 1;
 
-		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
-		ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-		ambarella_board_generic.lcd_backlight.active_delay = 1;
+			ambarella_board_generic.lcd_reset.gpio_id = GPIO(32);
+			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.lcd_reset.active_delay = 1;
 
-		ambarella_board_generic.touch_panel_reset.gpio_id = GPIO(29);
-		ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
-		ambarella_board_generic.touch_panel_reset.active_delay = 1;
+			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
+			ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
+			ambarella_board_generic.lcd_backlight.active_delay = 1;
 
-		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(51);
-		ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(51);
-		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
-		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
-		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+			ambarella_board_generic.touch_panel_reset.gpio_id = GPIO(29);
+			ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.touch_panel_reset.active_delay = 1;
+
+			ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(51);
+			ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(51);
+			ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+			ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+			ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+		} else {
+			pr_err("Invalid Board Revision\n");
+			BUG();
+		}
 	} else {
 		ambarella_board_generic.lcd_reset.gpio_id = GPIO(46);
 		ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
@@ -380,10 +402,15 @@ static void __init ambarella_init_elephant(void)
 		ARRAY_SIZE(ambarella_spi_devices));
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
-		ambarella_nt11001_board_info.irq =
-			ambarella_board_generic.touch_panel_irq.irq_line;
-		ambarella_nt11001_board_info.flags = 0;
-		i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
+		if (AMBARELLA_BOARD_REV(system_rev) == 1) {
+			ambarella_nt11001_board_info.irq =
+				ambarella_board_generic.touch_panel_irq.irq_line;
+			ambarella_nt11001_board_info.flags = 0;
+			i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
+		} else {
+			pr_err("Invalid Board Revision\n");
+			BUG();
+		}
 	} else {
 		ambarella_tm1510_board_info.irq =
 			ambarella_board_generic.touch_panel_irq.irq_line;
