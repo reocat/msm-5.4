@@ -82,18 +82,24 @@ static inline void __l2x0_inv_all(void)
 	cache_sync();
 }
 
-#ifdef CONFIG_PL310_ERRATA_588369
-static void debug_writel(unsigned long val)
-{
-	extern void omap_smc1(u32 fn, u32 arg);
+#if defined(CONFIG_PL310_ERRATA_588369) || defined(CONFIG_PL310_ERRATA_727915)
 
-	/*
-	 * Texas Instrument secure monitor api to modify the
-	 * PL310 Debug Control Register.
-	 */
-	omap_smc1(0x100, val);
+#define debug_writel(val)	outer_cache.set_debug(val)
+
+static void l2x0_set_debug(unsigned long val)
+{
+	writel_relaxed(val, l2x0_base + L2X0_DEBUG_CTRL);
+}
+#else
+/* Optimised out for non-errata case */
+static inline void debug_writel(unsigned long val)
+{
 }
 
+#define l2x0_set_debug	NULL
+#endif
+
+#ifdef CONFIG_PL310_ERRATA_588369
 static inline void l2x0_flush_line(unsigned long addr)
 {
 	void __iomem *base = l2x0_base;
@@ -105,11 +111,6 @@ static inline void l2x0_flush_line(unsigned long addr)
 	writel_relaxed(addr, base + L2X0_INV_LINE_PA);
 }
 #else
-
-/* Optimised out for non-errata case */
-static inline void debug_writel(unsigned long val)
-{
-}
 
 static inline void l2x0_flush_line(unsigned long addr)
 {
@@ -142,9 +143,11 @@ static void l2x0_flush_all(void)
 		spin_unlock_irqrestore(&l2x0_lock, flags);
 		return;
 	}
+	debug_writel(0x03);
 	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_CLEAN_INV_WAY);
 	cache_wait_way(l2x0_base + L2X0_CLEAN_INV_WAY, l2x0_way_mask);
 	cache_sync();
+	debug_writel(0x00);
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
@@ -412,6 +415,7 @@ void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 	outer_cache.clean_all = l2x0_clean_all;
 	outer_cache.enable = l2x0_enable;
 	outer_cache.is_enabled = l2x0_is_enabled;
+	outer_cache.set_debug = l2x0_set_debug;
 	if (!(readl_relaxed(l2x0_base + L2X0_CTRL) & 1)) {
 		writel_relaxed(aux, l2x0_base + L2X0_AUX_CTRL);
 		__l2x0_inv_all();
