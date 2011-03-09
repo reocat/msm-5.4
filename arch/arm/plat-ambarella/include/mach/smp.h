@@ -25,7 +25,6 @@
 #define __ASM_ARCH_SMP_H
 
 /* ==========================================================================*/
-#include <plat/cortex.h>
 #include <asm/hardware/gic.h>
 #include <asm/smp_twd.h>
 

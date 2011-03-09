@@ -31,12 +31,12 @@
 #include <linux/bootmem.h>
 
 #include <asm/cacheflush.h>
-#include <mach/hardware.h>
 #include <asm/mach-types.h>
 #include <asm/localtimer.h>
 #include <asm/unified.h>
 #include <asm/smp_scu.h>
 
+#include <mach/hardware.h>
 #include <plat/ambcache.h>
 
 /* ==========================================================================*/

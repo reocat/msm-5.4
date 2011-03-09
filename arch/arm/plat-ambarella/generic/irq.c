@@ -36,7 +36,6 @@
 
 #if defined(CONFIG_ARM_GIC)
 #include <asm/hardware/gic.h>
-#include <plat/cortex.h>
 #endif
 
 /* ==========================================================================*/

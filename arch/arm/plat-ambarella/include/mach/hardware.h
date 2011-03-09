@@ -39,6 +39,9 @@
 #include <plat/pwm.h>
 #include <plat/rct.h>
 #include <plat/ambreglock.h>
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#include <plat/cortex.h>
+#endif
 
 /* ==========================================================================*/
 #define	AMBA_DEV_MAJOR			(248)

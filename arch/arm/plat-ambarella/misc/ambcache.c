@@ -32,9 +32,9 @@
 #endif
 #include <asm/io.h>
 
+#include <mach/hardware.h>
 #include <plat/ambcache.h>
 #include <plat/atag.h>
-#include <plat/cortex.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX

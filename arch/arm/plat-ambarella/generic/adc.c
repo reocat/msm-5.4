@@ -235,15 +235,14 @@ void ambarella_adc_start(void)
 
 	amba_writel(ADC_ENABLE_REG, 0x1);
 	amba_writel(ADC_CONTROL_REG, 0x1);
-#endif
-
-#if (CHIP_REV != A7)
+#else
+#if (CHIP_REV != I1)
 	if (amba_readl(ADC_ENABLE_REG) != 0) {
-		pr_err("%s: ADC_ENABLE_REG] = %d.\n",
+		pr_err("%s: ADC_ENABLE_REG = %d.\n",
 			__func__, amba_readl(ADC_ENABLE_REG));
 		return;
 	}
-
+#endif
 	amba_writel(ADC_ENABLE_REG, 0x1);
 #endif
 
