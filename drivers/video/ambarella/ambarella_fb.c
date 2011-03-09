@@ -831,6 +831,8 @@ static int ambfb_pan_display(struct fb_var_screeninfo *var,
 	ambfb_data->proc_wait_flag++;
 	wake_up(&(ambfb_data->proc_wait));
 	mutex_lock(&ambfb_data->lock);
+	ambfb_data->screen_var.xoffset = var->xoffset;
+	ambfb_data->screen_var.yoffset = var->yoffset;
 	if (ambfb_data->pan_display) {
 		errorCode = ambfb_data->pan_display(var, info);
 	}
