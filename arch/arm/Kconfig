@@ -123,7 +123,7 @@ config GENERIC_IRQ_PROBE
 config GENERIC_LOCKBREAK
 	bool
 	default y
-	depends on SMP && PREEMPT
+	depends on SMP && PREEMPT && !ARCH_AMBARELLA
 
 config RWSEM_GENERIC_SPINLOCK
 	bool
