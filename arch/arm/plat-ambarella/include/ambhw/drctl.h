@@ -290,7 +290,7 @@
 #define DRAM_DQS_SYNC_ROUND_TRIP(x)	(x)
 
 #elif (CHIP_REV == A7) || (CHIP_REV == A5L) || (CHIP_REV == A5S) || \
-      (CHIP_REV == I1)
+      (CHIP_REV == I1) || (CHIP_REV == A7L) 
 
 #define DRAM_CTL_OFFSET			0x00
 #define DRAM_CFG_OFFSET			0x04

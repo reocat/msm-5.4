@@ -95,8 +95,20 @@ u32 rtc_check_status(void)
 {
 	u32					rtc_status;
 	u32					need_clear = 0;
+#if (RTC_POWER_LOST_DETECT == 1)
+	u32					rtc_pwc_status;
+#endif
 
 	rtc_status = amba_readl(RTC_STATUS_REG);
+
+#if (RTC_POWER_LOST_DETECT == 1)
+	rtc_pwc_status = amba_readl(RTC_PWC_REG_STA_REG);
+	amba_setbitsl(RTC_PWC_SET_STATUS_REG, 0x20);
+	if ((rtc_pwc_status & 0x20) != 0x20)
+		rtc_status |= RTC_STATUS_PC_RST;
+	else
+		rtc_status &= ~RTC_STATUS_PC_RST;
+#endif
 
 	if ((rtc_status & RTC_STATUS_PC_RST) != RTC_STATUS_PC_RST) {
 		need_clear = 1;
@@ -106,7 +118,7 @@ u32 rtc_check_status(void)
 	if ((rtc_status & RTC_STATUS_WKUP) == RTC_STATUS_WKUP)
 		pr_debug("=====RTC wake up=====\n");
 
-	if ((rtc_status & RTC_STATUS_ALA_WK) == RTC_STATUS_PC_RST)
+	if ((rtc_status & RTC_STATUS_ALA_WK) == RTC_STATUS_ALA_WK)
 		pr_info("=====RTC alarm wake up=====\n");
 
 	if (need_clear)

@@ -23,13 +23,13 @@
       (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
       (CHIP_REV == A5S) || (CHIP_REV == A5L)
 #define	ADC_MAX_RESOLUTION	10
-#elif (CHIP_REV == A7)  || (CHIP_REV == I1)
+#elif (CHIP_REV == A7)  || (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define	ADC_MAX_RESOLUTION	12
 #else
 #define	ADC_MAX_RESOLUTION	16
 #endif
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6)
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L)
 #define ADC_NUM_CHANNELS	8
 #elif (CHIP_REV == A7)
 #define ADC_NUM_CHANNELS	6
@@ -40,7 +40,7 @@
 #endif
 
 #if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
-    (CHIP_REV == A7) || (CHIP_REV == I1) 	
+    (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)	
 #define ADC_SUPPORT_THRESHOLD_INT	1
 #else
 #define ADC_SUPPORT_THRESHOLD_INT	0
@@ -84,7 +84,7 @@
 #define ADC_CHAN2_INTR_OFFSET		0x4c
 #define ADC_CHAN3_INTR_OFFSET		0x50
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) 
 #define ADC_DATA4_OFFSET		0x100
 #define ADC_DATA5_OFFSET		0x104
 #define ADC_DATA6_OFFSET		0x108
@@ -167,4 +167,22 @@
 #define ADC_CONTROL_START		0x02
 #define ADC_CONTROL_STATUS		0x01
 
+#if (CHIP_REV == A5)
+#define ADC_HI_THRESHOLD_EN		(0x1 << 21)
+#define ADC_LO_THRESHOLD_EN		(0x1 << 20)
+#else 
+#define ADC_HI_THRESHOLD_EN		(0x1 << 31)
+#define ADC_LO_THRESHOLD_EN		(0x1 << 30)
 #endif
+
+#define ADC_THRESHOLD_INT_HI		1
+#define ADC_THRESHOLD_INT_LO		0
+
+#if (CHIP_REV == A5)
+#define ADC_VAL_HI(x)			((x) << 10)
+#else
+#define ADC_VAL_HI(x)			((x) << 15)
+#endif
+
+#endif
+

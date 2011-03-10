@@ -297,11 +297,18 @@
 #define I2S_SI		GPIO(80)
 #define CLK_AU		GPIO(81)
 
+#if (CHIP_REV == A7L)
+#define SSI_4_N		GPIO(88)
+#define SSI_5_N		GPIO(89)
+#define SSI_6_N		GPIO(90)
+#define SSI_7_N		GPIO(91)
+#else
 /* Tertiary function of GPIO pins */
 #define SSI_4_N		GPIO(77)
 #define SSI_5_N		GPIO(78)
 #define SSI_6_N		GPIO(79)
 #define SSI_7_N		GPIO(80)
+#endif
 
 /*------------------------------------------------------------------------*/
 /* (CHIP_REV == A3) and later */
@@ -344,8 +351,9 @@
 /* (CHIP_REV == A2S/A2M) */
 #define IDC_BUS_HDMI	GPIO(87)
 #endif
+
 /*------------------------------------------------------------------------*/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5S) 
 /* (CHIP_REV == A5S)*/
 #define IDC3_BUS_MUX	GPIO(36)
 
@@ -362,6 +370,23 @@
 #define PHY_RXD_I_1	GPIO(47)
 #define PHY_RXD_I_2	GPIO(48)
 #define PHY_RXD_I_3	GPIO(49)
+#define UART1_TX	GPIO(50)
+#define UART1_RTS	GPIO(51)
+#define UART1_RX	GPIO(52)
+#define UART1_CTS	GPIO(53)
+#define SSI_SLAVE_MISO	GPIO(50)
+#define SSI_SLAVE_EN	GPIO(51)
+#define SSI_SLAVE_MOSI	GPIO(52)
+#define SSI_SLAVE_CLK	GPIO(53)
+
+#elif (CHIP_REV == A7L)
+/* (CHIP_REV == A7L)*/
+#define SD_HS		GPIO(22)
+#define IDC3_BUS_MUX	GPIO(36)
+
+#define IDC3_DATA	GPIO(36)
+#define IDC3_CLK	GPIO(37)
+
 #define UART1_TX	GPIO(50)
 #define UART1_RTS	GPIO(51)
 #define UART1_RX	GPIO(52)
@@ -619,6 +644,38 @@
 #define PHY_RXD_I_3	GPIO(113)
 #endif
 
+
+#if (CHIP_REV == A7L)
+/* (CHIP_REV == A7L)*/
+#define VD1_OUT00	GPIO(96)
+#define VD1_OUT01	GPIO(97)
+#define VD1_OUT02	GPIO(98)
+#define VD1_OUT03	GPIO(99)
+#define VD1_OUT04	GPIO(100)
+#define VD1_OUT05	GPIO(101)
+#define VD1_OUT06	GPIO(102)
+#define VD1_OUT07	GPIO(103)
+#define VD1_OUT08	GPIO(104)
+#define VD1_OUT09	GPIO(105)
+#define VD1_OUT10	GPIO(106)
+#define VD1_OUT11	GPIO(107)
+#define VD1_OUT12	GPIO(108)
+#define VD1_OUT13	GPIO(109)
+#define VD1_OUT14	GPIO(110)
+#define VD1_OUT15	GPIO(111)
+#define VD1_OUT16	GPIO(112)
+#define VD1_OUT17	GPIO(113)
+#define VD1_OUT18	GPIO(114)
+#define VD1_OUT19	GPIO(115)
+#define VD1_OUT20	GPIO(116)
+#define VD1_OUT21	GPIO(117)
+#define VD1_OUT22	GPIO(118)
+#define VD1_OUT23	GPIO(119)
+#define VD1_VSYNC	GPIO(120)
+#define VD1_HSYNC	GPIO(121)
+#define VD1_HVLD	GPIO(122)
+#define VD1_CLK		GPIO(123)
+#else
 #define VD1_OUT20	GPIO(28)
 #define VD1_OUT21	GPIO(29)
 #define VD1_OUT22	GPIO(30)
@@ -627,5 +684,7 @@
 #define VD1_OUT16	GPIO(93)
 #define VD1_OUT17	GPIO(94)
 #define VD1_OUT18	GPIO(95)
+#endif
 
 #endif
+

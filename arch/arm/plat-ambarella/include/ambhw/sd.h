@@ -17,30 +17,31 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if ((CHIP_REV == A1) || (CHIP_REV == A5) || (CHIP_REV == A6) 		|| \
-     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) 	|| \
-     (CHIP_REV == A5S) || (CHIP_REV == A5L)  || (CHIP_REV == A7))
+#if ((CHIP_REV == A1)  || (CHIP_REV == A5)  || (CHIP_REV == A6)  || \
+     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7))
 #define SD_INSTANCES			1
 #else
 #define SD_INSTANCES			2
 #endif
 
-#if (CHIP_REV == A1) || (CHIP_REV == A2) || (CHIP_REV == A3) || \
+#if (CHIP_REV == A1) || (CHIP_REV == A2) || (CHIP_REV == A3) ||	\
     defined(__FPGA__)
 #define SD_SUPPORT_PLL_SCALER		0
 #else
 #define SD_SUPPORT_PLL_SCALER     	1
 #endif
 
-#if ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) 	|| \
-     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) 	|| \
-     (CHIP_REV == I1))
+#if ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) || \
+     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) || \
+     (CHIP_REV == I1)  || (CHIP_REV == A7L))
 #define SD_HAS_INTERNAL_MUXER      	1
 #else
 #define SD_HAS_INTERNAL_MUXER           0
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) 	|| \
+    (CHIP_REV == A7L)
 /* There is no dedicated irq for 2nd CD pin. */
 /* So it does not work in A5S and use GPIO instead. */
 #define SD_HAS_INTERNAL_2ND_CDWP	0
@@ -48,13 +49,13 @@
 #define SD_HAS_INTERNAL_2ND_CDWP	0
 #endif
 
-#if (CHIP_REV == A5L) || (CHIP_REV == I1)
+#if (CHIP_REV == A5L) || (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define SD_HAS_DELAY_CTRL		1
 #else
 #define SD_HAS_DELAY_CTRL		0
 #endif
 
-#if ((CHIP_REV == A1) || (CHIP_REV == A3) || (CHIP_REV == A5) || \
+#if ((CHIP_REV == A1) || (CHIP_REV == A3)  || (CHIP_REV == A5)  || \
      (CHIP_REV == A6) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || \
      (CHIP_REV == A2Q))
 #define SD_BUS_SWITCH_DLY		1
@@ -63,13 +64,13 @@
 #endif
 
 #if ((CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) || \
-     (CHIP_REV == I1))
+     (CHIP_REV == I1)  || (CHIP_REV == A7L))   
 #define SD_HAS_IO_DRIVE_CTRL		1
 #else
 #define SD_HAS_IO_DRIVE_CTRL		0
 #endif
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define SD_HOST1_SUPPORT_XC		0
 #define SD_HOST2_SUPPORT_XC		1
 #else
@@ -77,7 +78,7 @@
 #define SD_HOST2_SUPPORT_XC		0
 #endif
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) 
 #define SD_SUPPORT_ACMD23		0
 #else
 #define SD_SUPPORT_ACMD23		1
@@ -253,7 +254,7 @@
 #define SD_PWR_3_3V			0x0e
 #define SD_PWR_3_0V			0x0c
 #define SD_PWR_1_8V			0x0a
-#elif ((CHIP_REV == I1))
+#elif ((CHIP_REV == I1) || (CHIP_REV == A7L))
 /* SD_PWR_REG only care about bit[3] */
 #define SD_PWR_3_3V			0x08
 #define SD_PWR_3_0V			0x08
@@ -363,9 +364,9 @@
 #define SD_EIXEN_CMD_TMOUT_ERR		0x0001
 
 /* SD_AC12ES_REG */
-#if ((CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) ||	\
+#if ((CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M) || \
      (CHIP_REV == A2Q) || (CHIP_REV == A5L) || (CHIP_REV == A7) || \
-     (CHIP_REV == I1))
+     (CHIP_REV == I1) || (CHIP_REV == A7L))
 #define SD_AC12ES_NOT_ISSUED		0x0080
 #define SD_AC12ES_INDEX			0x0010
 #define SD_AC12ES_END_BIT		0x0008

@@ -17,7 +17,7 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define INTERVAL_TIMER_INSTANCES		8
 #else
 #define INTERVAL_TIMER_INSTANCES		3

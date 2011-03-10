@@ -17,7 +17,7 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if (CHIP_REV == A1) || (CHIP_REV == A2) || 		\
+#if (CHIP_REV == A1)  || (CHIP_REV == A2)  || \
     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
     (CHIP_REV == A5L)
 #define VIN_DIRECT_DSP_INTERFACE	0
@@ -34,7 +34,7 @@
 #define VIN_SMEM_PREVIEW_INSTANCES	2
 #endif
 
-#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) 	|| \
+#if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
     (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define VIN_SUPPORT_SLVS_MLVS		1
 #else

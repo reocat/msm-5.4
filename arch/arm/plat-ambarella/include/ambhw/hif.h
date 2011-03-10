@@ -17,7 +17,7 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if (CHIP_REV == A1) || (CHIP_REV == A5L)
+#if (CHIP_REV == A1) || (CHIP_REV == A5L) || (CHIP_REV == A7L)
 #define HOST_SUPPORT_AHB_CLK_EN		0
 #define HOST_USE_APB_BUS_CLK		0
 #else
@@ -37,7 +37,7 @@
 #define HOST_MAX_MODES			6
 #endif
 
-#if (CHIP_REV == A5L)
+#if (CHIP_REV == A5L) || (CHIP_REV == A7L)
 #define HOST_INSTANCES			0
 #else
 #define HOST_INSTANCES			1

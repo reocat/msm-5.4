@@ -17,41 +17,49 @@
  * The APB physical address is at 0x70000000 but is always mapped to
  * virtual address 0xd9000000
  */
-#define AHB_BASE	0xd8000000
-#define APB_BASE	0xd9000000
-#define CRYPT_BASE	0xdb000000
-#define DRAM_VIRT_BASE	0xfece0000
+#define AHB_BASE		0xd8000000
+#define APB_BASE		0xd9000000
+#define CRYPT_BASE		0xdb000000
+#define DRAM_VIRT_BASE		0xfece0000
 
 /* The physical address of AHB & APB - they SHOULD NOT be used directly */
 #if (CHIP_REV == I1)
-#define AHB_PHYS_BASE	0xe0000000
-#define APB_PHYS_BASE	0xe8000000
-#define DRAM_PHYS_BASE	0xdffe0000
-#define AXI_PHYS_BASE	0xf0000000
-#define CRYPT_PHYS_BASE	0xfffef000
+#define AHB_PHYS_BASE		0xe0000000
+#define APB_PHYS_BASE		0xe8000000
+#define DRAM_PHYS_BASE		0xdffe0000
+#define AXI_PHYS_BASE		0xf0000000
+#define CRYPT_PHYS_BASE		0xfffef000
 #define PHY_BUS_MAP_TYPE	1
-#else
-#define AHB_PHYS_BASE	0x60000000
-#define APB_PHYS_BASE	0x70000000
+#elif (CHIP_REV == A7L)
+#define AHB_PHYS_BASE		0x60000000
+#define APB_PHYS_BASE		0x70000000
 #define PHY_BUS_MAP_TYPE	0
-#define DRAM_PHYS_BASE	0xc0000000
+#define DRAM_PHYS_BASE		0xfffe0000  
+#else
+#define AHB_PHYS_BASE		0x60000000
+#define APB_PHYS_BASE		0x70000000
+#define PHY_BUS_MAP_TYPE	0
+#define DRAM_PHYS_BASE		AHB_PHYS_BASE  
 #endif
 
 #if defined(__BUILD_AMBOOT__) || defined(__AMBOOT__)
 /* The boot-loader still deals with physical address */
 #undef AHB_BASE
-#define AHB_BASE	AHB_PHYS_BASE
+#define AHB_BASE		AHB_PHYS_BASE
 #undef APB_BASE
-#define APB_BASE	APB_PHYS_BASE
+#define APB_BASE		APB_PHYS_BASE
 #undef CRYPT_BASE
-#define CRYPT_BASE	CRYPT_PHYS_BASE
+#define CRYPT_BASE		CRYPT_PHYS_BASE
 #undef DRAM_VIRT_BASE
-#define DRAM_VIRT_BASE	DRAM_PHYS_BASE
+#define DRAM_VIRT_BASE		DRAM_PHYS_BASE
 #endif
 #endif
+
+/* DRAM slave offsets */
+#define DRAM_DRAM_OFFSET 		0x0000
+#define DRAM_DDRC_OFFSET  		0x0800
 
 /* AHB slave offsets */
-
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
 #define SD_OFFSET			0x2000
@@ -73,7 +81,7 @@
 
 #if (CHIP_REV == A6)
 #define MS_OFFSET			0x17000
-#elif (CHIP_REV == A5S) || (CHIP_REV == A7)
+#elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L)
 #define MS_OFFSET			0x16000
 #else
 #define MS_OFFSET			0xc000
@@ -241,6 +249,8 @@
 
 #if (CHIP_REV == A7) || (CHIP_REV == I1)
 #define GPIO3_OFFSET			0x10000
+#elif (CHIP_REV == A7L)
+#define GPIO3_OFFSET			0x1e000
 #else
 #define GPIO3_OFFSET			0x1f000
 #endif
@@ -259,7 +269,12 @@
 #define SPI4_OFFSET			0x16000 /* iONE */
 #define SATA_PHY_OFFSET			0x19000 /* iONE */
 
+#if (CHIP_REV == A7L)
+#define SPI_SLAVE_OFFSET		0x1000
+#else
 #define SPI_SLAVE_OFFSET		0x1e000
+#endif
+
 #define UART1_OFFSET			0x1f000
 #define IDCS_OFFSET			0x12000
 
@@ -360,7 +375,8 @@
 
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
-    (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)
+    (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)  || \
+    (CHIP_REV == A7L) 	
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))

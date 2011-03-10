@@ -4,7 +4,7 @@
  * History:
  *	2006/12/27 - [Charles Chiou] created file
  *
- * Copyright (C) 2006-2007, Ambarella, Inc.
+ * Copyright (C) 2006-2011, Ambarella, Inc.
  */
 
 #ifndef __AMBHW__PWM_H__
@@ -38,11 +38,13 @@
 #define PWM_SUPPORT_DUAL_BANK 		1
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)  || (CHIP_REV == I1) 
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)  || (CHIP_REV == I1) || \
+    (CHIP_REV == A7L)
 #define PWM_SUPPORT_BANK_CLK_SRC_SEL	1
 #else
 #define PWM_SUPPORT_BANK_CLK_SRC_SEL	0
 #endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/

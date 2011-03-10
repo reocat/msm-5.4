@@ -53,8 +53,8 @@
 #define SPI_SUPPORT_TSSI_MODE			0
 #endif
 
-#if ((CHIP_REV == A1) || (CHIP_REV == A2) || 		\
-     (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6))
+#if ((CHIP_REV == A1) || (CHIP_REV == A2) || (CHIP_REV == A3) || \
+     (CHIP_REV == A5) || (CHIP_REV == A6))
 #define SPI_EN2_EN3_ENABLED_BY_HOST_ENA_REG	1
 #else
 #define SPI_EN2_EN3_ENABLED_BY_HOST_ENA_REG	0
@@ -75,7 +75,7 @@
 #define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	0
 #endif
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
 #define SPI_SUPPORT_MASTER_DELAY_START_TIME	1
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1

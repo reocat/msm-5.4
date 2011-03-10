@@ -54,14 +54,14 @@
 #if 	(CHIP_REV == A1) || \
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
 	(CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)  || \
-	(CHIP_REV == I1)
+	(CHIP_REV == I1) || (CHIP_REV == A7L)
 #define FIO_SUPPORT_AHB_CLK_ENA			0
 #else
 #define FIO_SUPPORT_AHB_CLK_ENA			1
 #endif
 
 #if 	(CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) || \
-	(CHIP_REV == A7M) || (CHIP_REV == I1)
+	(CHIP_REV == A7M) || (CHIP_REV == A7L)
 #define	FIO_USE_2X_FREQ				1
 #else
 #define	FIO_USE_2X_FREQ				0
@@ -72,7 +72,7 @@
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) ||		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
 	(CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)  ||	\
-	(CHIP_REV == I1)
+	(CHIP_REV == I1)  || (CHIP_REV == A7L)
 #define NAND_XD_SUPPORT_WAS			1
 #else
 #define NAND_XD_SUPPORT_WAS			2
@@ -86,7 +86,7 @@
 #endif
 
 #if 	(CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || 	\
-	(CHIP_REV == I1)
+	(CHIP_REV == I1) || (CHIP_REV == A7L)
 #define CFC_SUPPORT_HW_LBA48			1
 #define NAND_SUPPORT_INTLVE			0
 #define NAND_SUPPORT_SPARE_BURST_READ		0
@@ -98,7 +98,8 @@
 #define NAND_SUPPORT_EDC_STATUS_READ		0
 #endif
 
-#if 	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
+#if 	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
+	(CHIP_REV == A7L)
 #define	NAND_DUMMY_XFER				0
 #else
 #define	NAND_DUMMY_XFER				0

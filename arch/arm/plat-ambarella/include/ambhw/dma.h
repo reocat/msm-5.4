@@ -79,7 +79,7 @@
 #endif
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A5S) || \
-    (CHIP_REV == A7)
+    (CHIP_REV == A7)  || (CHIP_REV == A7L) 
 #define MS_DMA_CHAN		3
 #elif (CHIP_REV == A6)
 #define MS_DMA_CHAN		5
@@ -96,7 +96,7 @@
 
 #if (CHIP_REV == A6)
 #define NUM_DMA_CHANNELS 	7
-#elif (CHIP_REV == A5S) || (CHIP_REV == A7)
+#elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L)  
 #define NUM_DMA_CHANNELS 	4
 #else
 #define NUM_DMA_CHANNELS 	5

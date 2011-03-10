@@ -17,7 +17,7 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if (CHIP_REV == A1) || (CHIP_REV == A2Q) || (CHIP_REV == A5L)
+#if (CHIP_REV == A1) || (CHIP_REV == A2Q) || (CHIP_REV == A5L) || (CHIP_REV == A7L)
 #define ETH_INSTANCES	0
 #elif (CHIP_REV == A7)
 #define ETH_INSTANCES	2
