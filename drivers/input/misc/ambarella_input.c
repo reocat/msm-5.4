@@ -95,7 +95,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 
 		if (pbinfo->pkeymap[i].type == AMBINPUT_GPIO_KEY) {
 			input_report_key(pbinfo->pinput_dev,
-				pbinfo->pkeymap[i].gpio_key.key_code, level);
+				pbinfo->pkeymap[i].gpio_key.key_code,
+				(level == pbinfo->pkeymap[i].gpio_key.active_val) ? 1 : 0);
 			dev_dbg(&pbinfo->pinput_dev->dev,
 				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_key.key_code,
@@ -105,7 +106,8 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 
 		if (pbinfo->pkeymap[i].type == AMBINPUT_GPIO_SW) {
 			input_report_switch(pbinfo->pinput_dev,
-				pbinfo->pkeymap[i].gpio_sw.key_code, level);
+				pbinfo->pkeymap[i].gpio_sw.key_code,
+				(level == pbinfo->pkeymap[i].gpio_key.active_val) ? 1 : 0);
 			dev_dbg(&pbinfo->pinput_dev->dev,
 				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_sw.key_code,

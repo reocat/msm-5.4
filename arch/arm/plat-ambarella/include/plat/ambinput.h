@@ -107,7 +107,7 @@ struct ambarella_key_table {
 	} adc_abs;
 	struct {
 		u32				key_code;
-		u32				avtive_val;
+		u32				active_val;
 		u16				can_wakeup;
 		u8				id;
 		u8				irq_mode;
@@ -128,7 +128,7 @@ struct ambarella_key_table {
 	} gpio_abs;
 	struct {
 		u32				key_code;
-		u32				avtive_val;
+		u32				active_val;
 		u16				can_wakeup;
 		u8				id;
 		u8				irq_mode;
