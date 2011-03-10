@@ -104,7 +104,7 @@ u32 rtc_check_status(void)
 #if (RTC_POWER_LOST_DETECT == 1)
 	rtc_pwc_status = amba_readl(RTC_PWC_REG_STA_REG);
 	amba_setbitsl(RTC_PWC_SET_STATUS_REG, 0x20);
-	if ((rtc_pwc_status & 0x20) != 0x20)
+	if ((rtc_pwc_status & 0x20) == 0x20)
 		rtc_status |= RTC_STATUS_PC_RST;
 	else
 		rtc_status &= ~RTC_STATUS_PC_RST;
