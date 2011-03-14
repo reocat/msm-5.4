@@ -245,17 +245,6 @@ static struct ambarella_key_table elephant_keymap_ability[AMBINPUT_TABLE_SIZE] =
 	{AMBINPUT_END},
 };
 
-static struct ambarella_key_table elephant_keymap_ability[AMBINPUT_TABLE_SIZE] = {
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	0,	1,	GPIO(186),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-
-	{AMBINPUT_END},
-};
-
 static struct ambarella_input_board_info elephant_board_input_info = {
 	.pkeymap		= elephant_keymap,
 	.pinput_dev		= NULL,
