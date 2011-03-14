@@ -42,6 +42,7 @@ struct ambarella_i2s_interface {
 	u8 state;
 	u8 mode;
 	u8 sfreq;
+	u8 clksrc;
 	u8 mclk;
 	u8 ch;
 	u8 oversample;
@@ -108,7 +109,7 @@ struct ambarella_i2s_controller {
 	void					(*aucodec_digitalio_1)(void);
 	void					(*aucodec_digitalio_2)(void);
 	void					(*channel_select)(u32);
-	void					(*set_audio_pll)(u8);
+	void					(*set_audio_pll)(u8, u8);
 };
 
 /* ==========================================================================*/

@@ -126,7 +126,8 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct ambarella_pcm_dma_params *dma_data;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
 	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
-	u8 slots, word_pos, rx_enabled = 0, tx_enabled = 0;
+	u8 slots, word_pos, clksrc, mclk, oversample;
+	u8 rx_enabled = 0, tx_enabled = 0;
 	u32 clock_divider, channels;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -213,9 +214,12 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* Set clock */
+	clksrc = priv_data->amb_i2s_intf.clksrc;
+	mclk = priv_data->amb_i2s_intf.mclk;
+	oversample = priv_data->amb_i2s_intf.oversample;
 	if (priv_data->controller_info->set_audio_pll)
-		priv_data->controller_info->set_audio_pll(priv_data->amb_i2s_intf.mclk);
-	clock_divider = DAI_Clock_Divide_Table[priv_data->amb_i2s_intf.oversample][slots >> 6];
+		priv_data->controller_info->set_audio_pll(clksrc, mclk);
+	clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
 	clock_divider |= 0x3C0 ;
 	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
 	priv_data->clock_reg |= clock_divider;
@@ -323,6 +327,8 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 
 	switch (clk_id) {
 	case AMBARELLA_CLKSRC_ONCHIP:
+	case AMBARELLA_CLKSRC_EXTERNAL:
+		priv_data->amb_i2s_intf.clksrc = clk_id;
 		priv_data->amb_i2s_intf.mclk = freq;
 		break;
 	default:
@@ -386,7 +392,7 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 		priv_data->clock_reg = 0x1<<10;
 
 	if (priv_data->controller_info->set_audio_pll)
-		priv_data->controller_info->set_audio_pll(AudioCodec_12_288M);
+		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_12_288M);
 
 	/* Dai default smapling rate, polarity configuration*/
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
@@ -396,6 +402,7 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
 
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
+	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
 	priv_data->amb_i2s_intf.mclk = AudioCodec_12_288M;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;

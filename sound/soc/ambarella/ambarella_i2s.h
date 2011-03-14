@@ -101,6 +101,7 @@ enum DAI_INIT_CTL
 #define DAI_48slots	48
 
 #define AMBARELLA_CLKSRC_ONCHIP	AUC_CLK_ONCHIP_PLL_27MHZ
+#define AMBARELLA_CLKSRC_EXTERNAL	AUC_CLK_EXTERNAL
 #define AMBARELLA_CLKDIV_LRCLK	0
 
 extern struct snd_soc_dai ambarella_i2s_dai;

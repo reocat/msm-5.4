@@ -120,13 +120,13 @@ static void i2s_channel_select(u32 ch)
 #endif
 }
 
-static void set_audio_pll(u8 mclk)
+static void set_audio_pll(u8 clksrc, u8 mclk)
 {
 #if (RCT_AUDIO_PLL_USE_HAL_API == 0)
 	rct_set_aud_ctrl2_reg();
 	rct_set_pll_frac_mode();
 #endif
-	rct_set_audio_pll_fs(AUC_CLK_ONCHIP_PLL_27MHZ, mclk);
+	rct_set_audio_pll_fs(clksrc, mclk);
 }
 
 static struct ambarella_i2s_controller ambarella_platform_i2s_controller0 = {
