@@ -345,7 +345,7 @@ static void __init ambarella_init_elephant(void)
 	/* Config SD*/
 	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
 		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
-		fio_default_owner = SELECT_FIO_SD;
+		fio_default_owner = SELECT_FIO_SDIO;
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
