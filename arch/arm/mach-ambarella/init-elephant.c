@@ -306,11 +306,6 @@ static void __init ambarella_init_elephant(void)
 
 	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
 		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
-			elephant_board_input_info.pkeymap = elephant_keymap_ability;
-	}
-
-	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
-		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
 		ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
 		ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.lcd_power.active_delay = 1;
@@ -350,7 +345,7 @@ static void __init ambarella_init_elephant(void)
 	/* Config SD*/
 	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
 		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
-		fio_select_sdio_as_default = 0;
+		fio_default_owner = SELECT_FIO_SD;
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
@@ -371,7 +366,7 @@ static void __init ambarella_init_elephant(void)
 		ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 	} else {
-		fio_select_sdio_as_default = 1;
+		fio_default_owner = SELECT_FIO_SDIO;
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
@@ -415,23 +410,24 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.touch_panel_irq.irq_line;
 		ambarella_nt11001_board_info.flags = 0;
 		i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
+
+		elephant_board_input_info.pkeymap = elephant_keymap_ability;
 	} else {
 		ambarella_tm1510_board_info.irq =
 			ambarella_board_generic.touch_panel_irq.irq_line;
 		ambarella_tm1510_board_info.flags = I2C_M_PIN_MUXING;
 		i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
+
+		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
+		i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
 	}
+	platform_device_register(&elephant_board_input);
 
 	ambarella_board_vin_infos[0].flags = I2C_M_PIN_MUXING;
 	ambarella_board_vin_infos[1].flags = I2C_M_PIN_MUXING;
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-
-	i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
-	i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
-
-	platform_device_register(&elephant_board_input);
 }
 
 /* ==========================================================================*/

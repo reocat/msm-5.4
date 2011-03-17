@@ -86,7 +86,7 @@ extern int ambarella_spi2_cs_pins[];
 extern int ambarella_spi3_cs_pins[];
 extern int ambarella_spi4_cs_pins[];
 
-extern int fio_select_sdio_as_default;
+extern int fio_default_owner;
 
 extern struct ambarella_ir_controller ambarella_platform_ir_controller0;
 

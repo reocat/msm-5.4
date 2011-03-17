@@ -48,22 +48,14 @@ static DECLARE_WAIT_QUEUE_HEAD(fio_lock);
 static atomic_t fio_owner = ATOMIC_INIT(SELECT_FIO_FREE);
 module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
 
-int fio_select_sdio_as_default = 0;
-module_param_cb(fio_select_sdio_as_default, &param_ops_int,
-	&fio_select_sdio_as_default, 0644);
+int fio_default_owner = SELECT_FIO_FREE;
+module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
 
 /* ==========================================================================*/
-void fio_select_lock(int module)
+void __fio_select_lock(int module)
 {
 	u32 fio_ctr;
 	u32 fio_dmactr;
-
-	if (atomic_read(&fio_owner) != module) {
-		wait_event(fio_lock, (atomic_cmpxchg(&fio_owner,
-			SELECT_FIO_FREE, module) == SELECT_FIO_FREE));
-	} else {
-		pr_warning("%s: module[%d] reentry!\n", __func__, module);
-	}
 
 	fio_ctr = amba_readl(FIO_CTR_REG);
 	fio_dmactr = amba_readl(FIO_DMACTR_REG);
@@ -113,32 +105,24 @@ void fio_select_lock(int module)
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
 }
 
+void fio_select_lock(int module)
+{
+	if (atomic_read(&fio_owner) != module) {
+		wait_event(fio_lock, (atomic_cmpxchg(&fio_owner,
+			SELECT_FIO_FREE, module) == SELECT_FIO_FREE));
+	} else {
+		pr_warning("%s: module[%d] reentry!\n", __func__, module);
+	}
+
+	__fio_select_lock(module);
+}
+
 void fio_unlock(int module)
 {
-#if (SD_HAS_INTERNAL_MUXER == 1)
-	u32 fio_ctr;
-	u32 fio_dmactr;
-#endif
-
-	if (atomic_read(&fio_owner) == module) {
-#if (SD_HAS_INTERNAL_MUXER == 1)
-		if (fio_select_sdio_as_default && (module != SELECT_FIO_SDIO)) {
-			fio_ctr = amba_readl(FIO_CTR_REG);
-			fio_dmactr = amba_readl(FIO_DMACTR_REG);
-
-			fio_ctr |= FIO_CTR_XD;
-			fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-
-			amba_writel(FIO_CTR_REG, fio_ctr);
-			amba_writel(FIO_DMACTR_REG, fio_dmactr);
-		}
-#endif
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-		if (fio_select_sdio_as_default && (module == SELECT_FIO_CF)) {
-			fio_amb_cf_disable();
-			fio_amb_sd2_enable();
-		}
-#endif
+	if ((atomic_read(&fio_owner) == module) &&
+		(fio_default_owner != SELECT_FIO_FREE) &&
+		(fio_default_owner != module)) {
+		__fio_select_lock(fio_default_owner);
 	}
 
 	if (atomic_cmpxchg(&fio_owner, module, SELECT_FIO_FREE) == module) {
