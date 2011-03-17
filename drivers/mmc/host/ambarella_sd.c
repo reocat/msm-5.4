@@ -952,11 +952,11 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		(pslotinfo->plat_info->fixed_cd == -1)) {
 		if (nis & SD_NIS_REMOVAL) {
 			ambsd_dbg(pslotinfo, "SD_NIS_REMOVAL\n");
-			mmc_detect_change(pslotinfo->mmc, 0);
-		} else if (nis & SD_NIS_INSERT) {
 			mmc_detect_change(pslotinfo->mmc,
 				pslotinfo->plat_info->cd_delay);
-			ambsd_dbg(pslotinfo, "SD_NIS_INSERT %d...\n",
+		} else if (nis & SD_NIS_INSERT) {
+			ambsd_dbg(pslotinfo, "SD_NIS_INSERT\n");
+			mmc_detect_change(pslotinfo->mmc,
 				pslotinfo->plat_info->cd_delay);
 		}
 	}
@@ -1018,12 +1018,8 @@ static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 			(val == pslotinfo->plat_info->gpio_cd.irq_gpio_val) ?
 			"card insert" : "card eject",
 			pslotinfo->plat_info->cd_delay);
-		if (val == pslotinfo->plat_info->gpio_cd.irq_gpio_val) {
 			mmc_detect_change(pslotinfo->mmc,
 				pslotinfo->plat_info->cd_delay);
-		} else {
-			mmc_detect_change(pslotinfo->mmc, 0);
-		}
 	}
 
 	return IRQ_HANDLED;
