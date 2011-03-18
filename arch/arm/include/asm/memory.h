@@ -33,7 +33,14 @@
  */
 #define PAGE_OFFSET		UL(CONFIG_PAGE_OFFSET)
 #define TASK_SIZE		(UL(CONFIG_PAGE_OFFSET) - UL(0x01000000))
+
+#if defined(CONFIG_VMSPLIT_1G)
+#define TASK_UNMAPPED_BASE	(UL(0x20000000))
+#elif defined(CONFIG_VMSPLIT_2G)
+#define TASK_UNMAPPED_BASE	(UL(0x30000000))
+#else
 #define TASK_UNMAPPED_BASE	(UL(CONFIG_PAGE_OFFSET) / 3)
+#endif
 
 /*
  * The maximum size of a 26-bit user space task.
@@ -84,7 +91,7 @@
 #define CONSISTENT_DMA_SIZE 	SZ_2M
 #endif
 
-#define CONSISTENT_END		(0xffe00000UL)
+#define CONSISTENT_END		(0xfee00000UL)
 #define CONSISTENT_BASE		(CONSISTENT_END - CONSISTENT_DMA_SIZE)
 
 #else /* CONFIG_MMU */

@@ -147,10 +147,14 @@ gic_set_cpu(struct irq_data *d, const struct cpumask *mask_val, bool force)
 {
 	void __iomem *reg = gic_dist_base(d) + GIC_DIST_TARGET + (gic_irq(d) & ~3);
 	unsigned int shift = (d->irq % 4) * 8;
-	unsigned int cpu = cpumask_first(mask_val);
-	u32 val;
+	unsigned int cpu;
+	u32 val, cpu_mask = 0;
 	struct irq_desc *desc;
 
+	for_each_cpu_and(cpu, mask_val, cpu_online_mask)
+		cpu_mask |= 0x1 << cpu;
+	cpu_mask &= 0xff;
+	cpu = cpumask_first(mask_val);
 	spin_lock(&irq_controller_lock);
 	desc = irq_to_desc(d->irq);
 	if (desc == NULL) {
@@ -159,7 +163,7 @@ gic_set_cpu(struct irq_data *d, const struct cpumask *mask_val, bool force)
 	}
 	d->node = cpu;
 	val = readl(reg) & ~(0xff << shift);
-	val |= 1 << (cpu + shift);
+	val |= (cpu_mask << shift);
 	writel(val, reg);
 	spin_unlock(&irq_controller_lock);
 

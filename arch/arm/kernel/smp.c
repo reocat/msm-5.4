@@ -320,6 +320,7 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	 * OK, now it's safe to let the boot CPU continue
 	 */
 	set_cpu_online(cpu, true);
+	balance_irqs();
 
 	/*
 	 * OK, it's off to the idle thread for us
@@ -556,6 +557,9 @@ asmlinkage void __exception_irq_entry do_IPI(int ipinr, struct pt_regs *regs)
 		__inc_irq_stat(cpu, ipi_irqs[ipinr - IPI_TIMER]);
 
 	switch (ipinr) {
+	case 1:
+		break;
+
 	case IPI_TIMER:
 		ipi_timer();
 		break;
