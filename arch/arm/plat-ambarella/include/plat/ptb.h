@@ -101,7 +101,10 @@ typedef struct flpart_table_s
  * The meta data table is a region in flash after partition table.
  * The data need by dual boot are stored.
  */
+/* For first version of flpart_meta_t */
 #define PTB_META_MAGIC		0x33219fbd
+/* For second version of flpart_meta_t */
+#define PTB_META_MAGIC2		0x4432a0ce
 #define PART_NAME_LEN		8
 #define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN + sizeof(u32)) * \
 				 PART_MAX + sizeof(u32) + sizeof(u32) + \
@@ -116,12 +119,12 @@ typedef struct flpart_meta_s
 		u32	nblk;
 		char	name[PART_NAME_LEN];
 	} part_info[PART_MAX];
-	u32	part_dev[PART_MAX];
 	u32	magic;				/**< Magic number */
-	u8	model_name[FW_MODEL_NAME_SIZE];
 	/* This meta crc32 doesn't include itself. */
 	/* It's only calc data before this field.  */
 	u32 	crc32;
+	u32	part_dev[PART_MAX];
+	u8	model_name[FW_MODEL_NAME_SIZE];
 	u8 	rsv[PTB_META_PAD_SIZE];
 } __attribute__((packed)) flpart_meta_t;
 

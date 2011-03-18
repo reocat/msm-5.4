@@ -1479,6 +1479,9 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		if (meta_table->magic == PTB_META_MAGIC) {
 			found = 1;
 			break;
+		} else if (meta_table->magic == PTB_META_MAGIC2) {
+			found = 2;
+			break;
 		}
 	}
 
@@ -1493,10 +1496,13 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		kzalloc((PART_MAX+CMDLINE_PART_MAX)*sizeof(struct mtd_partition),
 		GFP_KERNEL);
 
-	/* if this partition isn't located in NAND, fake its nblk to 0. */
-	for (i = 0; i < PART_MAX; i++) {
-		if (meta_table->part_dev[i] != BOOT_DEV_NAND)
-			meta_table->part_info[i].nblk = 0;
+	/* if this partition isn't located in NAND, fake its nblk to 0, this
+	 * feature start from the second version of flpart_meta_t. */
+	if (found > 1) {
+		for (i = 0; i < PART_MAX; i++) {
+			if (meta_table->part_dev[i] != BOOT_DEV_NAND)
+				meta_table->part_info[i].nblk = 0;
+		}
 	}
 
 	amboot_nr_partitions = 0;
