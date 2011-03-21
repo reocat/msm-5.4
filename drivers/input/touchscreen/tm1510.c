@@ -43,7 +43,10 @@ typedef enum {
 
 	TM_IRQ_STATUS_ABS	= 0x14,
 	TM_FINGER_STATE_ABS	= 0x15,
+	TM_DEV_CNTL		= 0x25,
 	TM_IRQ_ENABLE_ABS	= 0x26,
+	TM_RESET		= 0x6f,
+	TM_FAMILY_CODE		= 0x7c,
 } tm1510_sub_addr_t;
 
 #define NUM_DATA			32
@@ -56,10 +59,67 @@ struct tm1510 {
 	struct work_struct		report_worker;
 	u8				reg_data[NUM_DATA];
 	int				irq;
-	struct tm1510_fix_data	fix;
+	struct tm1510_fix_data		fix;
 	int				(*get_pendown_state)(void);
 	void				(*clear_penirq)(void);
 };
+
+static int tm1510_reset(struct tm1510 *tm)
+{
+	struct i2c_msg		msg;
+	int			errorCode;
+	u8			buf[] = {TM_RESET, 0x00};
+
+	msg.addr	= tm->client->addr;
+	msg.flags	= tm->client->flags;
+	msg.buf		= buf;
+	msg.len		= sizeof(buf);
+	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
+	if (errorCode != 1) {
+		printk("TM1510: Can't write reg data.\n");
+		return -EIO;
+	}
+
+	buf[0]		= TM_DEV_CNTL;
+	buf[1]		= 0x80;
+	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
+	if (errorCode != 1) {
+		printk("TM1510: Can't write reg data.\n");
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int tm1510_read_family_code(struct tm1510 *tm, u8 *family_code)
+{
+	struct i2c_msg		msg;
+	int			errorCode;
+	u8			buf[] = {TM_FAMILY_CODE};
+
+	msg.addr	= tm->client->addr;
+	msg.flags	= tm->client->flags;
+	msg.buf		= buf;
+	msg.len		= 1;
+	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
+	if (errorCode != 1) {
+		printk("TM1510: Can't write reg data.\n");
+		return -EIO;
+	}
+
+	msg.addr	= tm->client->addr;
+	msg.flags	= tm->client->flags | I2C_M_RD;
+	msg.buf		= buf;
+	msg.len		= 1;
+	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
+	if (errorCode != 1) {
+		printk("TM1510: Can't read reg data.\n");
+		return -EIO;
+	}
+
+	*family_code = buf[0];
+	return 0;
+}
 
 static int tm1510_config_irq(struct tm1510 *tm)
 {
@@ -150,19 +210,22 @@ static void tm1510_send_event(struct tm1510 *tm)
 	finger_state[0] = tm->reg_data[TM_FINGER_STATE] & 0x03;
 	finger_state[1] = (tm->reg_data[TM_FINGER_STATE] & 0x0c) >> 2;
 	curr_touch = 0;
-	if (finger_state[0] == 1)
+	if (finger_state[0] == 1 || finger_state[0] == 2)
 		curr_touch++;
-	if (finger_state[1] == 1)
+	if (finger_state[1] == 1 || finger_state[1] == 2)
 		curr_touch++;
 
 	/* Button Pressed */
 	if (!prev_touch && curr_touch) {
+		input_report_abs(input, BTN_TOUCH, curr_touch);
 		TM1510_DEBUG("Finger Pressed\n");
 	}
 
 	/* Button Released */
 	if (prev_touch && !curr_touch) {
 		event = 1;
+		input_report_abs(input, ABS_PRESSURE, 0);
+		input_report_abs(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
 		input_mt_sync(input);
 		TM1510_DEBUG("Finger Released\n\n\n");
@@ -178,41 +241,37 @@ static void tm1510_send_event(struct tm1510 *tm)
 		y1l = (tm->reg_data[TM_XY1_LOW] & 0xf0) >> 4;
 		x1 = (x1h << 4) | x1l;
 		y1 = (y1h << 4) | y1l;
+		TM1510_DEBUG("Finger1 Raw: (%d, %d)\n", x1, y1);
 
-		if (x1 > MAX_X)
-			x1 = MAX_X;
-
-		if (y1 > MAX_Y)
-			y1 = MAX_Y;
-
-		if (tm->fix.x_rescale) {
-			x1 = (x1 > tm->fix.x_min) ? (x1 - tm->fix.x_min) : 0;
-			x1 *= MAX_X;
-			x1 /= (tm->fix.x_max - tm->fix.x_min);
-			if (x1 >= MAX_X)
-				x1 = MAX_X;
+		if (x1 < tm->fix.x_min) {
+			x1 = tm->fix.x_min;
 		}
-
-		if (tm->fix.y_rescale) {
-			y1 = (y1 > tm->fix.y_min) ? (y1 - tm->fix.y_min) : 0;
-			y1 *= MAX_Y;
-			y1 /= (tm->fix.y_max - tm->fix.y_min);
-			if (y1 >= MAX_Y)
-				y1 = MAX_Y;
+		if (x1 > tm->fix.x_max) {
+			x1 = tm->fix.x_max;
+		}
+		if (y1 < tm->fix.y_min) {
+			y1 = tm->fix.y_min;
+		}
+		if (y1 > tm->fix.y_max) {
+			y1 = tm->fix.y_max;
 		}
 
 		if (tm->fix.x_invert)
-			x1 = MAX_X - x1;
+			x1 = tm->fix.x_max - x1 + tm->fix.x_min;
 
 		if (tm->fix.y_invert)
-			y1 = MAX_Y - y1;
+			y1 = tm->fix.y_max - y1 + tm->fix.y_min;
 
 		event = 1;
+		input_report_abs(input, ABS_PRESSURE, MAX_Z);
+		input_report_abs(input, ABS_X, x1);
+		input_report_abs(input, ABS_Y, y1);
+
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
 		input_report_abs(input, ABS_MT_POSITION_X, x1);
 		input_report_abs(input, ABS_MT_POSITION_Y, y1);
 		input_mt_sync(input);
-		TM1510_DEBUG("Finger1: (%d, %d)\n", x1, y1);
+		TM1510_DEBUG("Finger1 Calibrated: (%d, %d)\n", x1, y1);
 	}
 
 	if (curr_touch >= 2) {
@@ -225,41 +284,33 @@ static void tm1510_send_event(struct tm1510 *tm)
 		y2l = (tm->reg_data[TM_XY2_LOW] & 0xf0) >> 4;
 		x2 = (x2h << 4) | x2l;
 		y2 = (y2h << 4) | y2l;
+		TM1510_DEBUG("Finger2 Raw: (%d, %d)\n", x2, y2);
 
-		if (x2 > MAX_X)
-			x2 = MAX_X;
-
-		if (y2 > MAX_Y)
-			y2 = MAX_Y;
-
-		if (tm->fix.x_rescale) {
-			x2 = (x2 > tm->fix.x_min) ? (x2 - tm->fix.x_min) : 0;
-			x2 *= MAX_X;
-			x2 /= (tm->fix.x_max - tm->fix.x_min);
-			if (x2 >= MAX_X)
-				x2 = MAX_X;
+		if (x2 < tm->fix.x_min) {
+			x2 = tm->fix.x_min;
 		}
-
-		if (tm->fix.y_rescale) {
-			y2 = (y2 > tm->fix.y_min) ? (y2 - tm->fix.y_min) : 0;
-			y2 *= MAX_Y;
-			y2 /= (tm->fix.y_max - tm->fix.y_min);
-			if (y2 >= MAX_Y)
-				y2 = MAX_Y;
+		if (x2 > tm->fix.x_max) {
+			x2 = tm->fix.x_max;
+		}
+		if (y2 < tm->fix.y_min) {
+			y2 = tm->fix.y_min;
+		}
+		if (y2 > tm->fix.y_max) {
+			y2 = tm->fix.y_max;
 		}
 
 		if (tm->fix.x_invert)
-			x2 = MAX_X - x2;
+			x2 = tm->fix.x_max - x2 + tm->fix.x_min;
 
 		if (tm->fix.y_invert)
-			y2 = MAX_Y - y2;
+			y2 = tm->fix.y_max - y2 + tm->fix.y_min;
 
 		event = 1;
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
 		input_report_abs(input, ABS_MT_POSITION_X, x2);
 		input_report_abs(input, ABS_MT_POSITION_Y, y2);
 		input_mt_sync(input);
-		TM1510_DEBUG("Finger2: (%d, %d)\n", x2, y2);
+		TM1510_DEBUG("Finger2 Calibrated: (%d, %d)\n", x2, y2);
 	}
 
 	if (event)
@@ -302,6 +353,8 @@ static int tm1510_probe(struct i2c_client *client,
 	struct tm1510 			*tm;
 	struct tm1510_platform_data	*pdata;
 	int				err;
+	u8				family_code;
+	tm1510_product_family_t		tm1510_family;
 
 	pdata = client->dev.platform_data;
 	if (!pdata) {
@@ -325,21 +378,50 @@ static int tm1510_probe(struct i2c_client *client,
 	tm->client = client;
 	i2c_set_clientdata(client, tm);
 	tm->input = input_dev;
-	tm->fix	= pdata->fix;
 	tm->get_pendown_state = pdata->get_pendown_state;
 	tm->clear_penirq = pdata->clear_penirq;
 	snprintf(tm->phys, sizeof(tm->phys),
 		 "%s/input0", dev_name(&client->dev));
 
+	err = tm1510_reset(tm);
+	if (err)
+		goto err_free_mem;
+
+	err = tm1510_read_family_code(tm, &family_code);
+	if (err)
+		goto err_free_mem;
+
+	tm->fix	= pdata->fix[TM1510_FAMILY_1];
+	for (tm1510_family = TM1510_FAMILY_0; tm1510_family < TM1510_FAMILY_END; tm1510_family++) {
+		if (pdata->fix[tm1510_family].family_code == family_code) {
+			tm->fix	= pdata->fix[tm1510_family];
+			break;
+		}
+	}
+
+	err = tm1510_config_irq(tm);
+	if (err)
+		goto err_free_mem;
+
+	err = tm1510_clear_irq(tm);
+	if (err)
+		goto err_free_mem;
+
 	input_dev->name = "Synaptics TM1510 Touchscreen";
 	input_dev->phys = tm->phys;
 	input_dev->id.bustype = BUS_I2C;
-	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
-	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
+	set_bit(EV_SYN, input_dev->evbit);
+	set_bit(EV_KEY, input_dev->evbit);
+	set_bit(BTN_TOUCH, input_dev->keybit);
+	set_bit(EV_ABS, input_dev->evbit);
+
+	input_set_abs_params(input_dev, ABS_PRESSURE, 0, MAX_Z, 0, 0);
+	input_set_abs_params(input_dev, ABS_X, tm->fix.x_min, tm->fix.x_max, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y, tm->fix.y_min, tm->fix.y_max, 0, 0);
 
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, MAX_Z, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0, MAX_X, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0, MAX_Y, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_X, tm->fix.x_min, tm->fix.x_max, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, tm->fix.y_min, tm->fix.y_max, 0, 0);
 
 	tm->workqueue = create_singlethread_workqueue("tm1510");
 	INIT_WORK(&tm->report_worker, tm1510_report_worker);
@@ -356,15 +438,7 @@ static int tm1510_probe(struct i2c_client *client,
 	if (err)
 		goto err_free_irq;
 
-	err = tm1510_config_irq(tm);
-	if (err)
-		goto err_free_irq;
-
-	err = tm1510_clear_irq(tm);
-	if (err)
-		goto err_free_irq;
-
-	dev_info(&client->dev, "registered with irq (%d)\n", tm->irq);
+	dev_info(&client->dev, "Family code: 0x%02x, Family: %d", family_code, tm1510_family);
 
 	return 0;
 
