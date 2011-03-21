@@ -65,6 +65,39 @@ enum AudioCodec_OverSample {
 	AudioCodec_2304xfs = 8
 };
 
+enum AudioCodec_MCLK {
+	AudioCodec_18_432M = 0,
+	AudioCodec_16_9344M = 1,
+	AudioCodec_12_288M = 2,
+	AudioCodec_11_2896M = 3,
+	AudioCodec_9_216M = 4,
+	AudioCodec_8_4672M = 5,
+	AudioCodec_8_192M = 6,
+	AudioCodec_6_144 = 7,
+	AudioCodec_5_6448M = 8,
+	AudioCodec_4_608M = 9,
+	AudioCodec_4_2336M = 10,
+	AudioCodec_4_096M = 11,
+	AudioCodec_3_072M = 12,
+	AudioCodec_2_8224M = 13,
+	AudioCodec_2_048M = 14
+};
+
+enum audio_in_freq_e
+{
+	AUDIO_SF_reserved = 0,
+	AUDIO_SF_96000,
+	AUDIO_SF_48000,
+	AUDIO_SF_44100,
+	AUDIO_SF_32000,
+	AUDIO_SF_24000,
+	AUDIO_SF_22050,
+	AUDIO_SF_16000,
+	AUDIO_SF_12000,
+	AUDIO_SF_11025,
+	AUDIO_SF_8000,
+};
+
 enum Audio_Notify_Type
 {
 	AUDIO_NOTIFY_UNKNOWN,
@@ -104,6 +137,21 @@ enum DAI_WordOrder
 	DAI_LSB_FIRST = 1
 };
 
+enum DAI_INIT_CTL
+{
+	DAI_FIFO_RST = 1,
+	DAI_RX_EN = 2,
+	DAI_TX_EN = 4
+};
+
+#define DAI_32slots	32
+#define DAI_64slots	64
+#define DAI_48slots	48
+
+#define AMBARELLA_CLKSRC_ONCHIP	AUC_CLK_ONCHIP_PLL_27MHZ
+#define AMBARELLA_CLKSRC_EXTERNAL	AUC_CLK_EXTERNAL
+#define AMBARELLA_CLKDIV_LRCLK	0
+
 struct ambarella_i2s_controller {
 	void					(*aucodec_digitalio_0)(void);
 	void					(*aucodec_digitalio_1)(void);
@@ -114,6 +162,8 @@ struct ambarella_i2s_controller {
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_i2s0;
+extern struct platform_device			ambarella_pcm0;
+extern struct platform_device			ambarella_dummy_codec0;
 
 extern u32					alsa_tx_enable_flag;
 

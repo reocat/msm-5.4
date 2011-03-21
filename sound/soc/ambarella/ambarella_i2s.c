@@ -9,6 +9,7 @@
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *	2009/06/29 - [Cao Rongrong] Support more mclk and fs
  *	2010/10/25 - [Cao Rongrong] Port to 2.6.36+
+ *	2011/03/20 - [Cao Rongrong] Port to 2.6.38
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -57,13 +58,6 @@
 unsigned int used_port = 1;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
-
-
-struct amb_i2s_priv {
-	u32 clock_reg;
-	struct ambarella_i2s_controller *controller_info;
-	struct ambarella_i2s_interface amb_i2s_intf;
-};
 
 static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
 	{ 1, 0 }, // 128xfs
@@ -120,12 +114,10 @@ static inline void dai_fifo_rst(void)
 
 static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
-				struct snd_soc_dai *dai)
+				struct snd_soc_dai *cpu_dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct ambarella_pcm_dma_params *dma_data;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	u8 slots, word_pos, clksrc, mclk, oversample;
 	u8 rx_enabled = 0, tx_enabled = 0;
 	u32 clock_divider, channels;
@@ -291,7 +283,7 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 		unsigned int fmt)
 {
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
@@ -323,7 +315,7 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 		int clk_id, unsigned int freq, int dir)
 {
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (clk_id) {
 	case AMBARELLA_CLKSRC_ONCHIP:
@@ -342,7 +334,7 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 		int div_id, int div)
 {
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (div_id) {
 	case AMBARELLA_CLKDIV_LRCLK:
@@ -355,42 +347,17 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int ambarella_i2s_dai_probe(struct platform_device *pdev,
-	struct snd_soc_dai *dai)
+static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
 	u32 clock_divider;
-	struct amb_i2s_priv *priv_data = dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+#if 0
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-
-	switch(used_port) {
-	case 3:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		if (priv_data->controller_info->aucodec_digitalio_2)
-			priv_data->controller_info->aucodec_digitalio_2();
-
-	case 2:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		if (priv_data->controller_info->aucodec_digitalio_1)
-			priv_data->controller_info->aucodec_digitalio_1();
-
-	case 1:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		if (priv_data->controller_info->aucodec_digitalio_0)
-			priv_data->controller_info->aucodec_digitalio_0();
-		break;
-
-	default:
-		printk("%s: Need to select proper I2S port.\n", __func__);
-		return -EINVAL;
-	}
 
 	/* Switch to external I2S Input except  IPcam Board */
 	if (strcmp(socdev->card->name, "IPcam"))
 		priv_data->clock_reg = 0x1<<10;
-
+#endif
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_12_288M);
 
@@ -418,14 +385,15 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	return 0;
 }
 
-static void ambarella_i2s_dai_remove(struct platform_device *pdev,
-	struct snd_soc_dai *dai)
+static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 {
-	struct amb_i2s_priv *priv_data = dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	/* Notify that the audio interface is removed */
 	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf,
 		AUDIO_NOTIFY_REMOVE);
+
+	return 0;
 }
 
 static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
@@ -437,9 +405,7 @@ static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
 		.set_clkdiv = ambarella_i2s_set_clkdiv,
 };
 
-struct snd_soc_dai ambarella_i2s_dai = {
-	.name = "ambarella-i2s0",
-	.id = 0,
+static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.probe = ambarella_i2s_dai_probe,
 	.remove = ambarella_i2s_dai_remove,
 	.playback = {
@@ -456,7 +422,6 @@ struct snd_soc_dai ambarella_i2s_dai = {
 	},
 	.ops = &ambarella_i2s_dai_ops,
 };
-EXPORT_SYMBOL(ambarella_i2s_dai);
 
 static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 {
@@ -466,20 +431,44 @@ static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 	if (priv_data == NULL)
 		return -ENOMEM;
 
-	/* aucodec_digitalio_on */
 	priv_data->controller_info = pdev->dev.platform_data;
+	/* aucodec_digitalio_on */
+	switch(used_port) {
+	case 3:
+		ambarella_i2s_dai.playback.channels_max += 2;
+		ambarella_i2s_dai.capture.channels_max += 2;
+		if (priv_data->controller_info->aucodec_digitalio_2)
+			priv_data->controller_info->aucodec_digitalio_2();
 
-	ambarella_i2s_dai.private_data = priv_data;
-	ambarella_i2s_dai.dev = &pdev->dev;
+	case 2:
+		ambarella_i2s_dai.playback.channels_max += 2;
+		ambarella_i2s_dai.capture.channels_max += 2;
+		if (priv_data->controller_info->aucodec_digitalio_1)
+			priv_data->controller_info->aucodec_digitalio_1();
 
-	return snd_soc_register_dai(&ambarella_i2s_dai);
+	case 1:
+		ambarella_i2s_dai.playback.channels_max += 2;
+		ambarella_i2s_dai.capture.channels_max += 2;
+		if (priv_data->controller_info->aucodec_digitalio_0)
+			priv_data->controller_info->aucodec_digitalio_0();
+		break;
+
+	default:
+		printk("%s: Need to select proper I2S port.\n", __func__);
+		return -EINVAL;
+	}
+
+	dev_set_drvdata(&pdev->dev, priv_data);
+
+	return snd_soc_register_dai(&pdev->dev, &ambarella_i2s_dai);
 }
 
 static int __devexit ambarella_i2s_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_dai(&ambarella_i2s_dai);
-	kfree(ambarella_i2s_dai.private_data);
-	ambarella_i2s_dai.private_data = NULL;;
+	struct amb_i2s_priv *priv_data = dev_get_drvdata(&pdev->dev);
+
+	snd_soc_unregister_dai(&pdev->dev);
+	kfree(priv_data);
 
 	return 0;
 }

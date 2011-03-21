@@ -149,3 +149,13 @@ struct platform_device ambarella_i2s0 = {
 	}
 };
 
+struct platform_device ambarella_pcm0 = {
+	.name		= "ambarella-pcm-audio",
+	.id		= -1,
+};
+
+struct platform_device ambarella_dummy_codec0 = {
+	.name		= "ambdummy-codec",
+	.id		= -1,
+};
+

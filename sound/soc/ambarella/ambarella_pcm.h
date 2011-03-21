@@ -34,8 +34,5 @@ struct ambarella_pcm_dma_params {
 	u32 dev_addr;			/* device physical address for DMA */
 };
 
-/* platform data */
-extern struct snd_soc_platform ambarella_soc_platform;
-
 #endif /* _AMBARELLA_PCM_H */
 

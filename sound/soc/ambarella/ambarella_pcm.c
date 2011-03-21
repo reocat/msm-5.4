@@ -11,6 +11,7 @@
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
  *	2009/06/30 - [Cao Rongrong] Fix last_desc bug
  *	2010/10/25 - [Cao Rongrong] Port to 2.6.36+
+ *	2011/03/20 - [Cao Rongrong] Port to 2.6.38
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -197,7 +198,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	dma_addr_t dma_buff_phys, next_desc_phys, next_rpt;
 	int ret, i;
 
-	dma_data = snd_soc_dai_get_dma_data(rtd->dai->cpu_dai, substream);
+	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 	if (!dma_data)
 		return -ENODEV;
 
@@ -529,14 +530,14 @@ static int ambarella_pcm_new(struct snd_card *card,
 	card->dev->dma_mask = &ambarella_dmamask;
 	card->dev->coherent_dma_mask = ambarella_dmamask;
 
-	if (dai->playback.channels_min) {
+	if (dai->driver->playback.channels_min) {
 		ret = ambarella_pcm_preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_PLAYBACK);
 		if (ret)
 			goto out;
 	}
 
-	if (dai->capture.channels_min) {
+	if (dai->driver->capture.channels_min) {
 		ret = ambarella_pcm_preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_CAPTURE);
 		if (ret)
@@ -546,28 +547,46 @@ out:
 	return ret;
 }
 
-struct snd_soc_platform ambarella_soc_platform = {
-	.name		= "ambarella-audio",
+static struct snd_soc_platform_driver ambarella_soc_platform = {
 	.pcm_new	= ambarella_pcm_new,
 	.pcm_free	= ambarella_pcm_free_dma_buffers,
-	.pcm_ops	= &ambarella_pcm_ops,
+	.ops		= &ambarella_pcm_ops,
 };
-EXPORT_SYMBOL(ambarella_soc_platform);
 
-static int __init ambarella_soc_platform_init(void)
+static int __devinit ambarella_soc_platform_probe(struct platform_device *pdev)
 {
-	return snd_soc_register_platform(&ambarella_soc_platform);
+	return snd_soc_register_platform(&pdev->dev, &ambarella_soc_platform);
 }
-module_init(ambarella_soc_platform_init);
 
-static void __exit ambarella_soc_platform_exit(void)
+static int __devexit ambarella_soc_platform_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_platform(&ambarella_soc_platform);
+	snd_soc_unregister_platform(&pdev->dev);
+	return 0;
 }
-module_exit(ambarella_soc_platform_exit);
+
+static struct platform_driver ambarella_pcm_driver = {
+	.driver = {
+			.name = "ambarella-pcm-audio",
+			.owner = THIS_MODULE,
+	},
+
+	.probe = ambarella_soc_platform_probe,
+	.remove = __devexit_p(ambarella_soc_platform_remove),
+};
+
+static int __init snd_ambarella_pcm_init(void)
+{
+	return platform_driver_register(&ambarella_pcm_driver);
+}
+module_init(snd_ambarella_pcm_init);
+
+static void __exit snd_ambarella_pcm_exit(void)
+{
+	platform_driver_unregister(&ambarella_pcm_driver);
+}
+module_exit(snd_ambarella_pcm_exit);
 
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella Soc PCM DMA module");
-
 MODULE_LICENSE("GPL");
 
