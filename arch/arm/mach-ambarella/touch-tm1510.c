@@ -78,14 +78,44 @@ static void ambarella_tm1510_exit_platform_hw(void)
 
 static struct tm1510_platform_data ambarella_tm1510_pdata = {
 	.fix = {
-		.x_invert	= 0,
-		.y_invert	= 1,
-		.x_rescale	= 1,
-		.y_rescale	= 1,
-		.x_min		= 11,
-		.x_max		= 3873,
-		.y_min		= 0,
-		.y_max		= 2248,
+		[TM1510_FAMILY_0] = {
+			.x_invert	= 0,
+			.y_invert	= 1,
+			.x_rescale	= 0,
+			.y_rescale	= 0,
+			.x_min		= 11,
+			.x_max		= 3873,
+			.y_min		= 0,
+			.y_max		= 2248,
+
+			.family_code	= 0x00,
+		},
+
+		[TM1510_FAMILY_1] = {
+			.x_invert	= 1,
+			.y_invert	= 0,
+			.x_rescale	= 0,
+			.y_rescale	= 0,
+			.x_min		= 11,
+			.x_max		= 3236,
+			.y_min		= 0,
+			.y_max		= 2022,
+
+			.family_code	= 0x26,
+		},
+
+		[TM1510_FAMILY_2] = {
+			.x_invert	= 1,
+			.y_invert	= 0,
+			.x_rescale	= 0,
+			.y_rescale	= 0,
+			.x_min		= 11,
+			.x_max		= 3236,
+			.y_min		= 0,
+			.y_max		= 2022,
+
+			.family_code	= 0xc1,
+		},
 	},
 	.get_pendown_state	= ambarella_tm1510_get_pendown_state,
 	.clear_penirq		= ambarella_tm1510_clear_penirq,
