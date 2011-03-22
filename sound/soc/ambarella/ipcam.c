@@ -3,10 +3,11 @@
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  * History:
- *	2008/xx/xx  - [Anthony Ginger] Created file
+ *	2008/xx/xx - [Anthony Ginger] Created file
  *	2009/03/05 - [Cao Rongrong] Correct and Add Controls,
- *				      Modify function and variable names
+ *				    Modify function and variable names
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
+ *	2011/03/20 - [Cao Rongrong] Port to 2.6.38
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -30,12 +31,8 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/io.h>
-#include <linux/ioport.h>
-#include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
-#include <linux/dma-mapping.h>
-#include <asm/dma.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -47,8 +44,6 @@
 #include <mach/hardware.h>
 #include <plat/audio.h>
 
-#include "ambarella_pcm.h"
-#include "ambarella_i2s.h"
 #include "../codecs/ambarella_auc.h"
 
 
@@ -92,6 +87,7 @@ static int amba_spk_func = AMBA_SPK_ON;
 static void ipcam_ext_control(struct snd_soc_codec *codec)
 {
 	int errorCode = 0;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	/* set up mic connection */
 	if (amba_mic_func == AMBA_MIC_ON){
@@ -101,7 +97,7 @@ static void ipcam_ext_control(struct snd_soc_codec *codec)
 			goto err_exit;
 		}
 		mdelay(mic_delay);
-		snd_soc_dapm_enable_pin(codec, "Mic Jack");
+		snd_soc_dapm_enable_pin(dapm, "Mic Jack");
 	}else{
 		errorCode = gpio_direction_output(mic_gpio, !mic_level);
 		if (errorCode < 0) {
@@ -109,7 +105,7 @@ static void ipcam_ext_control(struct snd_soc_codec *codec)
 			goto err_exit;
 		}
 		mdelay(mic_delay);
-		snd_soc_dapm_disable_pin(codec, "Mic Jack");
+		snd_soc_dapm_disable_pin(dapm, "Mic Jack");
 	}
 
 	if (amba_spk_func == AMBA_SPK_ON){
@@ -119,7 +115,7 @@ static void ipcam_ext_control(struct snd_soc_codec *codec)
 			goto err_exit;
 		}
 		mdelay(spk_delay);
-		snd_soc_dapm_enable_pin(codec, "Ext Spk");
+		snd_soc_dapm_enable_pin(dapm, "Ext Spk");
 	}else{
 		errorCode = gpio_direction_output(spk_gpio, !spk_level);
 		if (errorCode < 0) {
@@ -127,11 +123,11 @@ static void ipcam_ext_control(struct snd_soc_codec *codec)
 			goto err_exit;
 		}
 		mdelay(spk_delay);
-		snd_soc_dapm_disable_pin(codec, "Ext Spk");
+		snd_soc_dapm_disable_pin(dapm, "Ext Spk");
 	}
 
 	/* signal a DAPM event */
-	snd_soc_dapm_sync(codec);
+	snd_soc_dapm_sync(dapm);
 
 err_exit:
 	return;
@@ -141,7 +137,7 @@ err_exit:
 static int ipcam_board_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->socdev->card->codec;
+	struct snd_soc_codec *codec = rtd->codec;
 
 	ipcam_ext_control(codec);
 
@@ -152,8 +148,8 @@ static int ipcam_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int errorCode = 0, mclk, oversample;
 
 	switch (params_rate(params)) {
@@ -360,23 +356,21 @@ static const struct snd_kcontrol_new a2auc_ipcam_controls[] = {
 	SOC_ENUM_EXT("Spk Function", ipcam_enum[1], ipcam_get_spk, ipcam_set_spk),
 };
 
-static int ipcam_a2auc_init(struct snd_soc_codec *codec)
+static int ipcam_a2auc_init(struct snd_soc_pcm_runtime *rtd)
 {
-	int errorCode = 0, i;
+	int errorCode = 0;
+	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
-	snd_soc_dapm_nc_pin(codec, "LHPOUT");
-	snd_soc_dapm_nc_pin(codec, "RHPOUT");
+	snd_soc_dapm_nc_pin(dapm, "LHPOUT");
+	snd_soc_dapm_nc_pin(dapm, "RHPOUT");
 
 	/* Add IPcam specific controls */
-	for (i = 0; i < ARRAY_SIZE(a2auc_ipcam_controls); i++) {
-		errorCode = snd_ctl_add(codec->card,
-			snd_soc_cnew(&a2auc_ipcam_controls[i],codec, NULL));
-		if (errorCode < 0)
-			goto init_exit;
-	}
+	snd_soc_add_controls(codec, a2auc_ipcam_controls,
+				ARRAY_SIZE(a2auc_ipcam_controls));
 
 	/* Add IPcam specific widgets */
-	errorCode = snd_soc_dapm_new_controls(codec,
+	errorCode = snd_soc_dapm_new_controls(dapm,
 		ipcam_dapm_widgets,
 		ARRAY_SIZE(ipcam_dapm_widgets));
 	if (errorCode) {
@@ -384,38 +378,34 @@ static int ipcam_a2auc_init(struct snd_soc_codec *codec)
 	}
 
 	/* Set up IPcam specific audio path ipcam_audio_map */
-	errorCode = snd_soc_dapm_add_routes(codec,
+	errorCode = snd_soc_dapm_add_routes(dapm,
 		ipcam_audio_map,
 		ARRAY_SIZE(ipcam_audio_map));
 	if (errorCode) {
 		goto init_exit;
 	}
 
-	errorCode = snd_soc_dapm_sync(codec);
+	errorCode = snd_soc_dapm_sync(dapm);
 
 init_exit:
 	return errorCode;
 }
 
 static struct snd_soc_dai_link ipcam_dai_link = {
-	.name = "A2AUC-DAI-LINK",
+	.name = "A2AUC",
 	.stream_name = "A2AUC-STREAM",
-	.cpu_dai = &ambarella_i2s_dai,
-	.codec_dai = &ambarella_a2auc_dai,
+	.cpu_dai_name = "ambarella-i2s.0",
+	.platform_name = "ambarella-pcm-audio",
+	.codec_dai_name = "a2auc-hifi",
+	.codec_name = "a2auc-codec",
 	.init = ipcam_a2auc_init,
 	.ops = &ipcam_board_ops,
 };
 
 static struct snd_soc_card snd_soc_card_ipcam = {
 	.name = "IPcam",
-	.platform = &ambarella_soc_platform,
 	.dai_link = &ipcam_dai_link,
 	.num_links = 1,
-};
-
-static struct snd_soc_device ipcam_snd_devdata = {
-	.card = &snd_soc_card_ipcam,
-	.codec_dev = &ambarella_a2auc_codec_device,
 };
 
 static struct platform_device *ipcam_snd_device;
@@ -424,46 +414,48 @@ static int __init ipcam_board_init(void)
 {
 	int errorCode = 0;
 
-	ipcam_snd_device =
-		platform_device_alloc("soc-audio", -1);
-	if (!ipcam_snd_device) {
-		errorCode = -ENOMEM;
-		goto ipcam_board_init_exit;
-	}
-
-	platform_set_drvdata(ipcam_snd_device, &ipcam_snd_devdata);
-	ipcam_snd_devdata.dev = &ipcam_snd_device->dev;
-
-	errorCode = platform_device_add(ipcam_snd_device);
-	if (errorCode) {
-		platform_device_del(ipcam_snd_device);
-		platform_device_put(ipcam_snd_device);
-		goto ipcam_board_init_exit;
-	}
-
 	errorCode = gpio_request(mic_gpio, "Mic-Ctrl");
 	if (errorCode < 0) {
 		printk(KERN_ERR "Could not get Mic-Ctrl GPIO %d\n", mic_gpio);
-		goto ipcam_board_init_exit;
+		goto ipcam_board_init_exit2;
 	}
 
 	errorCode = gpio_request(spk_gpio, "Spk-Ctrl");
 	if (errorCode < 0) {
 		printk(KERN_ERR "Could not get Spk-Ctrl GPIO %d\n", spk_gpio);
-		gpio_free(mic_gpio);
-		goto ipcam_board_init_exit;
+		goto ipcam_board_init_exit1;
 	}
 
-ipcam_board_init_exit:
+	ipcam_snd_device =
+		platform_device_alloc("soc-audio", -1);
+	if (!ipcam_snd_device) {
+		errorCode = -ENOMEM;
+		goto ipcam_board_init_exit0;
+	}
+
+	platform_set_drvdata(ipcam_snd_device, &snd_soc_card_ipcam);
+
+	errorCode = platform_device_add(ipcam_snd_device);
+	if (errorCode) {
+		platform_device_put(ipcam_snd_device);
+		goto ipcam_board_init_exit0;
+	}
+
+	return 0;
+
+ipcam_board_init_exit0:
+	gpio_free(mic_gpio);
+ipcam_board_init_exit1:
+	gpio_free(spk_gpio);
+ipcam_board_init_exit2:
 	return errorCode;
 }
 
 static void __exit ipcam_board_exit(void)
 {
+	platform_device_unregister(ipcam_snd_device);
 	gpio_free(spk_gpio);
 	gpio_free(mic_gpio);
-
-	platform_device_unregister(ipcam_snd_device);
 }
 
 module_init(ipcam_board_init);
