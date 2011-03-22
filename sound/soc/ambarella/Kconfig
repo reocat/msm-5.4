@@ -26,41 +26,14 @@ config IPCAM_BOARD
 	  Say Y if you want to add internal audio codec support for
 	  SoC audio on Ambarella IPCAM Board.
 
-config A2SBUB_BOARD
-	tristate "A2SBUB Board [With ADAV803 Codec]"
-	depends on SND_AMBARELLA_SOC && (PLAT_AMBARELLA_A2S || PLAT_AMBARELLA_A2M)
-	select SND_AMBARELLA_SOC_I2S
-	select SND_SOC_ADAV803
-	help
-	  Say Y if you want to add adav803 audio codec support for
-	  SoC audio on Ambarella A2SBUB Board.
-
-config A2SIPCAM_BOARD
-	tristate "A2SIPCAM Board [With CS42L51 Codec]"
-	depends on SND_AMBARELLA_SOC && PLAT_AMBARELLA_A2S
-	select SND_AMBARELLA_SOC_I2S
-	select SND_SOC_CS42L51
-	help
-	  Say Y if you want to add cs42l51 audio codec support for
-	  SoC audio on Ambarella A2SIPCAM Board.
-
-config COCONUT_BOARD
-	tristate "COCONUT Board [With AK4642 Codec]"
-	depends on SND_AMBARELLA_SOC && MACH_COCONUT
+config A5SEVK_BOARD
+	tristate "A5SEVK Board [With AK4642 Codec]"
+	depends on SND_AMBARELLA_SOC && (MACH_COCONUT || MACH_DURIAN)
 	select SND_AMBARELLA_SOC_I2S
 	select SND_SOC_AK4642_AMB
 	help
 	  Say Y if you want to add ak4642 audio codec support for
-	  SoC audio on Ambarella COCONUT Board.
-
-config DURIAN_BOARD
-	tristate "DURIAN Board [With AK4642 Codec]"
-	depends on SND_AMBARELLA_SOC && MACH_DURIAN
-	select SND_AMBARELLA_SOC_I2S
-	select SND_SOC_AK4642_AMB
-	help
-	  Say Y if you want to add ak4642 audio codec support for
-	  SoC audio on Ambarella DURIAN Board.
+	  SoC audio on Ambarella A5SEVK Board (COCONUT or DURIAN Board).
 
 config AMBARELLA_DUMMY_BOARD
 	tristate "Ambarella Dummy Board [With Dummy Codec]"
