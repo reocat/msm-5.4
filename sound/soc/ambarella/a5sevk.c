@@ -1,10 +1,12 @@
 /*
- * sound/soc/durian.c
+ * sound/soc/a5sevk.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
  * History:
- *	2010/06/07 - [Cao Rongrong] Created file
+ *	2009/08/20 - [Cao Rongrong] Created file
+ *	2011/03/20 - [Cao Rongrong] Port to 2.6.38,
+ *				    merge coconut and durian into a5sevk
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -36,26 +38,24 @@
 #include <mach/hardware.h>
 #include <plat/audio.h>
 
-#include "ambarella_pcm.h"
-#include "ambarella_i2s.h"
 #include "../codecs/ak4642_amb.h"
 
+static unsigned int dai_fmt = 0;
+module_param(dai_fmt, uint, 0644);
+MODULE_PARM_DESC(dai_fmt, "DAI format.");
 
-#define AK4642_RESET_PIN	102
-#define AK4642_RESET_DELAY	1
-
-static int durian_board_startup(struct snd_pcm_substream *substream)
+static int a5sevk_board_startup(struct snd_pcm_substream *substream)
 {
 	return 0;
 }
 
-static int durian_board_hw_params(struct snd_pcm_substream *substream,
+static int a5sevk_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	int errorCode = 0, amb_mclk, mclk, oversample;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	int errorCode = 0, amb_mclk, mclk, oversample, i2s_mode;
 
 	switch (params_rate(params)) {
 	case 8000:
@@ -108,16 +108,21 @@ static int durian_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
+	if (dai_fmt == 0)
+		i2s_mode = SND_SOC_DAIFMT_I2S;
+	else
+		i2s_mode = SND_SOC_DAIFMT_DSP_A;
+
 	/* set the I2S system data format*/
-	errorCode = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	errorCode = snd_soc_dai_set_fmt(codec_dai,
+		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		pr_err("can't set codec DAI configuration\n");
 		goto hw_params_exit;
 	}
 
-	errorCode = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
-		SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	errorCode = snd_soc_dai_set_fmt(cpu_dai,
+		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		pr_err("can't set cpu DAI configuration\n");
 		goto hw_params_exit;
@@ -146,22 +151,21 @@ hw_params_exit:
 	return errorCode;
 }
 
-
-static struct snd_soc_ops durian_board_ops = {
-	.startup = durian_board_startup,
-	.hw_params = durian_board_hw_params,
+static struct snd_soc_ops a5sevk_board_ops = {
+	.startup = a5sevk_board_startup,
+	.hw_params = a5sevk_board_hw_params,
 };
 
-/* durian machine dapm widgets */
-static const struct snd_soc_dapm_widget durian_dapm_widgets[] = {
+/* a5sevk machine dapm widgets */
+static const struct snd_soc_dapm_widget a5sevk_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
 	SND_SOC_DAPM_HP("HP Jack", NULL),
 };
 
-/* durian machine audio map (connections to ak4642 pins) */
-static const struct snd_soc_dapm_route durian_audio_map[] = {
+/* a5sevk machine audio map (connections to ak4642 pins) */
+static const struct snd_soc_dapm_route a5sevk_audio_map[] = {
 	/* Line In is connected to LLIN1, RLIN1 */
 	{"LIN1", NULL, "Mic Jack"},
 	{"RIN1", NULL, "Mic Jack"},
@@ -175,105 +179,94 @@ static const struct snd_soc_dapm_route durian_audio_map[] = {
 	{"HP Jack", NULL, "HPR"},
 };
 
-
-static int durian_ak4642_init(struct snd_soc_codec *codec)
+static int a5sevk_ak4642_init(struct snd_soc_pcm_runtime *rtd)
 {
 	int errorCode = 0;
+	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	/* not connected */
-	snd_soc_dapm_nc_pin(codec, "SPP");
-	snd_soc_dapm_nc_pin(codec, "SPN");
-	snd_soc_dapm_nc_pin(codec, "MIN");
+	snd_soc_dapm_nc_pin(dapm, "SPP");
+	snd_soc_dapm_nc_pin(dapm, "SPN");
+	snd_soc_dapm_nc_pin(dapm, "MIN");
 
-	/* Add durian specific widgets */
-	errorCode = snd_soc_dapm_new_controls(codec,
-		durian_dapm_widgets,
-		ARRAY_SIZE(durian_dapm_widgets));
+	/* Add a5sevk specific widgets */
+	errorCode = snd_soc_dapm_new_controls(dapm,
+		a5sevk_dapm_widgets,
+		ARRAY_SIZE(a5sevk_dapm_widgets));
 	if (errorCode) {
 		goto init_exit;
 	}
 
-	/* Set up durian specific audio path durian_audio_map */
-	errorCode = snd_soc_dapm_add_routes(codec,
-		durian_audio_map,
-		ARRAY_SIZE(durian_audio_map));
+	/* Set up a5sevk specific audio path a5sevk_audio_map */
+	errorCode = snd_soc_dapm_add_routes(dapm,
+		a5sevk_audio_map,
+		ARRAY_SIZE(a5sevk_audio_map));
 	if (errorCode) {
 		goto init_exit;
 	}
 
-	errorCode = snd_soc_dapm_sync(codec);
+	errorCode = snd_soc_dapm_sync(dapm);
 
 init_exit:
 	return errorCode;
 }
 
-/* durian digital audio interface glue - connects codec <--> A2S */
-static struct snd_soc_dai_link durian_dai_link = {
-	.name = "AK4642-DAI-LINK",
+/* a5sevk digital audio interface glue - connects codec <--> A2S */
+static struct snd_soc_dai_link a5sevk_dai_link = {
+	.name = "AK4642",
 	.stream_name = "AK4642-STREAM",
-	.cpu_dai = &ambarella_i2s_dai,
-	.codec_dai = &ak4642_dai,
-	.init = durian_ak4642_init,
-	.ops = &durian_board_ops,
+	.cpu_dai_name = "ambarella-i2s.0",
+	.platform_name = "ambarella-pcm-audio",
+	.codec_dai_name = "ak4642-hifi",
+	.codec_name = "ak4642-codec.0-0012",
+	.init = a5sevk_ak4642_init,
+	.ops = &a5sevk_board_ops,
 };
 
-/* durian audio machine driver */
-static struct snd_soc_card snd_soc_card_durian = {
-	.name = "DURIAN",
-	.platform = &ambarella_soc_platform,
-	.dai_link = &durian_dai_link,
+
+/* a5sevk audio machine driver */
+static struct snd_soc_card snd_soc_card_a5sevk = {
+	.name = "A5SEVK",
+	.dai_link = &a5sevk_dai_link,
 	.num_links = 1,
 };
 
-/* durian audio private data */
-static struct ak4642_setup_data durian_ak4642_setup = {
-	.i2c_bus	= 0,
-	.i2c_address	= 0x12,
-	.rst_pin		= AK4642_RESET_PIN,
-	.rst_delay	= AK4642_RESET_DELAY,
-};
+static struct platform_device *a5sevk_snd_device;
 
-/* durian audio subsystem */
-static struct snd_soc_device durian_snd_devdata = {
-	.card = &snd_soc_card_durian,
-	.codec_dev = &soc_codec_dev_ak4642,
-	.codec_data = &durian_ak4642_setup,
-};
-
-static struct platform_device *durian_snd_device;
-
-static int __init durian_board_init(void)
+static int __init a5sevk_board_init(void)
 {
 	int errorCode = 0;
 
-	durian_snd_device = platform_device_alloc("soc-audio", -1);
-	if (!durian_snd_device)
+	a5sevk_snd_device = platform_device_alloc("soc-audio", -1);
+	if (!a5sevk_snd_device)
 		return -ENOMEM;
 
-	platform_set_drvdata(durian_snd_device, &durian_snd_devdata);
-	durian_snd_devdata.dev = &durian_snd_device->dev;
+	platform_set_drvdata(a5sevk_snd_device, &snd_soc_card_a5sevk);
 
-	errorCode = platform_device_add(durian_snd_device);
+	errorCode = platform_device_add(a5sevk_snd_device);
 	if (errorCode) {
-		goto durian_board_init_exit;
+		goto a5sevk_board_init_exit;
 	}
 
 	return 0;
 
-durian_board_init_exit:
-	platform_device_put(durian_snd_device);
+a5sevk_board_init_exit:
+	platform_device_put(a5sevk_snd_device);
 	return errorCode;
 }
 
-static void __exit durian_board_exit(void)
+static void __exit a5sevk_board_exit(void)
 {
-	platform_device_unregister(durian_snd_device);
+	platform_device_unregister(a5sevk_snd_device);
 }
 
-module_init(durian_board_init);
-module_exit(durian_board_exit);
+module_init(a5sevk_board_init);
+module_exit(a5sevk_board_exit);
 
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
-MODULE_DESCRIPTION("Amabrella Durian Board with AK4642 Codec for ALSA");
+MODULE_DESCRIPTION("Amabrella a5sevk Board with AK4642 Codec for ALSA");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("snd-soc-coconut");
+MODULE_ALIAS("snd-soc-durian");
 
