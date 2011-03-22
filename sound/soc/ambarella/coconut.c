@@ -5,6 +5,7 @@
  *
  * History:
  *	2009/08/20 - [Cao Rongrong] Created file
+ *	2011/03/20 - [Cao Rongrong] Port to 2.6.38
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -36,16 +37,11 @@
 #include <mach/hardware.h>
 #include <plat/audio.h>
 
-#include "ambarella_pcm.h"
-#include "ambarella_i2s.h"
 #include "../codecs/ak4642_amb.h"
 
 static unsigned int dai_fmt = 0;
 module_param(dai_fmt, uint, 0644);
 MODULE_PARM_DESC(dai_fmt, "DAI format.");
-
-#define AK4642_RESET_PIN	12
-#define AK4642_RESET_DELAY	1
 
 static int coconut_board_startup(struct snd_pcm_substream *substream)
 {
@@ -56,8 +52,8 @@ static int coconut_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int errorCode = 0, amb_mclk, mclk, oversample, i2s_mode;
 
 	switch (params_rate(params)) {
@@ -184,17 +180,19 @@ static const struct snd_soc_dapm_route coconut_audio_map[] = {
 };
 
 
-static int coconut_ak4642_init(struct snd_soc_codec *codec)
+static int coconut_ak4642_init(struct snd_soc_pcm_runtime *rtd)
 {
 	int errorCode = 0;
+	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	/* not connected */
-	snd_soc_dapm_nc_pin(codec, "SPP");
-	snd_soc_dapm_nc_pin(codec, "SPN");
-	snd_soc_dapm_nc_pin(codec, "MIN");
+	snd_soc_dapm_nc_pin(dapm, "SPP");
+	snd_soc_dapm_nc_pin(dapm, "SPN");
+	snd_soc_dapm_nc_pin(dapm, "MIN");
 
 	/* Add coconut specific widgets */
-	errorCode = snd_soc_dapm_new_controls(codec,
+	errorCode = snd_soc_dapm_new_controls(dapm,
 		coconut_dapm_widgets,
 		ARRAY_SIZE(coconut_dapm_widgets));
 	if (errorCode) {
@@ -202,14 +200,14 @@ static int coconut_ak4642_init(struct snd_soc_codec *codec)
 	}
 
 	/* Set up coconut specific audio path coconut_audio_map */
-	errorCode = snd_soc_dapm_add_routes(codec,
+	errorCode = snd_soc_dapm_add_routes(dapm,
 		coconut_audio_map,
 		ARRAY_SIZE(coconut_audio_map));
 	if (errorCode) {
 		goto init_exit;
 	}
 
-	errorCode = snd_soc_dapm_sync(codec);
+	errorCode = snd_soc_dapm_sync(dapm);
 
 init_exit:
 	return errorCode;
@@ -217,35 +215,22 @@ init_exit:
 
 /* coconut digital audio interface glue - connects codec <--> A2S */
 static struct snd_soc_dai_link coconut_dai_link = {
-	.name = "AK4642-DAI-LINK",
+	.name = "AK4642",
 	.stream_name = "AK4642-STREAM",
-	.cpu_dai = &ambarella_i2s_dai,
-	.codec_dai = &ak4642_dai,
+	.cpu_dai_name = "ambarella-i2s.0",
+	.platform_name = "ambarella-pcm-audio",
+	.codec_dai_name = "ak4642-hifi",
+	.codec_name = "ak4642-codec.0-0012",
 	.init = coconut_ak4642_init,
 	.ops = &coconut_board_ops,
 };
 
+
 /* coconut audio machine driver */
 static struct snd_soc_card snd_soc_card_coconut = {
 	.name = "COCONUT",
-	.platform = &ambarella_soc_platform,
 	.dai_link = &coconut_dai_link,
 	.num_links = 1,
-};
-
-/* coconut audio private data */
-static struct ak4642_setup_data coconut_ak4642_setup = {
-	.i2c_bus	= 0,
-	.i2c_address	= 0x12,
-	.rst_pin		= AK4642_RESET_PIN,
-	.rst_delay	= AK4642_RESET_DELAY,
-};
-
-/* coconut audio subsystem */
-static struct snd_soc_device coconut_snd_devdata = {
-	.card = &snd_soc_card_coconut,
-	.codec_dev = &soc_codec_dev_ak4642,
-	.codec_data = &coconut_ak4642_setup,
 };
 
 static struct platform_device *coconut_snd_device;
@@ -258,8 +243,7 @@ static int __init coconut_board_init(void)
 	if (!coconut_snd_device)
 		return -ENOMEM;
 
-	platform_set_drvdata(coconut_snd_device, &coconut_snd_devdata);
-	coconut_snd_devdata.dev = &coconut_snd_device->dev;
+	platform_set_drvdata(coconut_snd_device, &snd_soc_card_coconut);
 
 	errorCode = platform_device_add(coconut_snd_device);
 	if (errorCode) {

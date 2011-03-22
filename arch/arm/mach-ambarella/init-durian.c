@@ -41,6 +41,8 @@
 #include <linux/i2c/cy8ctmg.h>
 #include <linux/i2c/pca953x.h>
 
+#include <sound/ak4642_amb.h>
+
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
@@ -204,6 +206,20 @@ static struct i2c_board_info durian_board_ext_gpio_info = {
 	.addr		= 0x1f,
 	.flags		= I2C_M_PIN_MUXING,
 	.platform_data	= &durian_board_ext_gpio0,
+};
+
+/* ==========================================================================*/
+#define AK4642_RESET_PIN	102
+#define AK4642_RESET_DELAY	1
+
+static struct ak4642_platform_data durian_ak4642_pdata = {
+	.rst_pin	= AK4642_RESET_PIN,
+	.rst_delay	= AK4642_RESET_DELAY,
+};
+
+static struct i2c_board_info ambarella_ak4642_board_info = {
+	I2C_BOARD_INFO("ak4642", 0x12),
+	.platform_data	= &durian_ak4642_pdata,
 };
 
 /* ==========================================================================*/
@@ -424,6 +440,8 @@ static void __init ambarella_init_durian(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
+
+	i2c_register_board_info(0, &ambarella_ak4642_board_info, 1);
 
 	ambarella_chacha_mt4d_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;

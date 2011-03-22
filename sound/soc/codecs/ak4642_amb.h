@@ -50,20 +50,10 @@
 
 #define AK4642_CACHEREGNUM 	0x20
 
-struct ak4642_setup_data {
-	int		i2c_bus;
-	unsigned short	i2c_address;
-	unsigned int	rst_pin;
-	unsigned int 	rst_delay;
-};
-
 #define AK4642_SYSCLK	0
 
 #define AK4642_LINE_IN_ON	0
 #define AK4642_BOTH_MIC_ON	1
 #define AK4642_INPUT_UNKNOWN	2
-
-extern struct snd_soc_dai ak4642_dai;
-extern struct snd_soc_codec_device soc_codec_dev_ak4642;
 
 #endif
