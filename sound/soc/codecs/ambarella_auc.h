@@ -46,8 +46,8 @@
 /********/
 /* AUC */
 /********/
-#define a2auc_write(p, v)		__raw_writel(v, p)
-#define a2auc_read(p)			__raw_readl(p)
+#define a2auc_write(p, v)		amba_writel(p, v)
+#define a2auc_read(p)			amba_readl(p)
 
 #define AUC_ENABLE_REG_VAL      	0x00000000	//Default Audio Codec Enable Reg Value
 #define AUC_DP_RESET_REG_VAL    	0x00000000	//Default Audio Codec Digital Path Reset Reg Value
@@ -77,7 +77,7 @@
 
 #if (defined(CONFIG_BSP_HD747) || defined(CONFIG_BSP_HD787))
 #define AUC_ADC_VGA_GAIN_REG_OPT	0x00000019
-#else 
+#else
 #define AUC_ADC_VGA_GAIN_REG_OPT	0x0000000E
 #endif
 
@@ -204,9 +204,6 @@ typedef struct a2aucctrl_reg {
 
 #define A2AUC_SYSCLK_MCLK	0
 #define A2AUC_CLKDIV_LRCLK	0
-
-extern struct snd_soc_dai ambarella_a2auc_dai;
-extern struct snd_soc_codec_device ambarella_a2auc_codec_device;
 
 #endif /* _AMBARELLA_A2AUC_H_ */
 

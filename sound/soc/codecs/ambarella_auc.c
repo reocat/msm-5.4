@@ -8,6 +8,7 @@
  *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
  *	2008/03/05 - [Cao Rongrong] Added widgets and controls
  *	2009/06/10 - [Cao Rongrong] Port to 2.6.29
+ *	2011/03/20 - [Cao Rongrong] Port to 2.6.38
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -31,12 +32,8 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/io.h>
-#include <linux/ioport.h>
-#include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
-#include <linux/dma-mapping.h>
-#include <asm/dma.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -110,20 +107,6 @@ static const struct snd_kcontrol_new a2auc_snd_controls[] = {
 	A2AUC_SOC_SINGLE("Speaker Playback Volume"),
 };
 
-/* add non dapm controls */
-static int a2auc_add_controls(struct snd_soc_codec *codec)
-{
-	int err, i;
-
-	for (i = 0; i < ARRAY_SIZE(a2auc_snd_controls); i++) {
-		if ((err = snd_ctl_add(codec->card,
-				snd_soc_cnew(&a2auc_snd_controls[i],codec, NULL))) < 0)
-			return err;
-	}
-
-	return 0;
-}
-
 static const struct snd_soc_dapm_widget a2auc_dapm_widgets[] = {
 	SND_SOC_DAPM_DAC("DAC", "Playback", 0x3c, 6, 1),
 	SND_SOC_DAPM_OUTPUT("LLOUT"),
@@ -152,14 +135,13 @@ static const struct snd_soc_dapm_route intercon[] = {
 
 static int a2auc_add_widgets(struct snd_soc_codec *codec)
 {
-	snd_soc_dapm_new_controls(codec, a2auc_dapm_widgets,
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
+
+	snd_soc_dapm_new_controls(dapm, a2auc_dapm_widgets,
 				  ARRAY_SIZE(a2auc_dapm_widgets));
-
 	/* set up audio path interconnects */
-	snd_soc_dapm_add_routes(codec, intercon, ARRAY_SIZE(intercon));
+	snd_soc_dapm_add_routes(dapm, intercon, ARRAY_SIZE(intercon));
 
-
-	snd_soc_dapm_new_widgets(codec);
 	return 0;
 }
 
@@ -861,7 +843,7 @@ static int a2auc_set_bias_level(struct snd_soc_codec *codec,
 		a2auc_pwr_down();
 		break;
 	}
-	codec->bias_level = level;
+	codec->dapm.bias_level = level;
 	return 0;
 }
 
@@ -873,8 +855,8 @@ static struct snd_soc_dai_ops ambarella_a2auc_dai_ops = {
 	.set_clkdiv = a2auc_set_clkdiv,
 };
 
-struct snd_soc_dai ambarella_a2auc_dai = {
-	.name = "A2AUC",
+static struct snd_soc_dai_driver ambarella_a2auc_dai = {
+	.name = "a2auc-hifi",
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 2,
@@ -891,47 +873,10 @@ struct snd_soc_dai ambarella_a2auc_dai = {
 	},
 	.ops = &ambarella_a2auc_dai_ops,
 };
-EXPORT_SYMBOL(ambarella_a2auc_dai);
 
-static int a2auc_probe(struct platform_device *pdev)
+static int a2auc_probe(struct snd_soc_codec *codec)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec;
-	int ret = 0;
-
-	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
-	if (codec == NULL) {
-		ret = -ENOMEM;
-		goto a2auc_probe_exit;
-	}
-
-	socdev->card->codec = codec;
-	mutex_init(&codec->mutex);
-
-	codec->reg_cache = kmemdup(&a2auc_reg, sizeof(a2auc_reg), GFP_KERNEL);
-	if (codec->reg_cache == NULL) {
-		ret = -ENOMEM;
-		goto a2auc_probe_cache_err;
-	}
-	codec->reg_cache_size = sizeof(a2auc_reg);
-	codec->reg_cache_step = 4;
-
-	codec->name = "A2AUC";
-	codec->owner = THIS_MODULE;
-	codec->dai = &ambarella_a2auc_dai;
-	codec->num_dai = 1;
-	codec->write = a2auc_codec_write;
-	codec->read = a2auc_codec_read;
-	codec->set_bias_level = a2auc_set_bias_level;
-	INIT_LIST_HEAD(&codec->dapm_widgets);
-	INIT_LIST_HEAD(&codec->dapm_paths);
-
-	ret = snd_soc_new_pcms(socdev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1);
-	if (ret < 0) {
-		printk(KERN_ERR "%s: snd_soc_new_pcms fail %d\n",
-			__func__, ret);
-		goto a2auc_probe_reg_cache_err;
-	}
+	dev_info(codec->dev, "A2AUC Audio Codec");
 
 	a2auc_codec_init();
 
@@ -942,67 +887,30 @@ static int a2auc_probe(struct platform_device *pdev)
 	a2auc_sp_power_on();
 	a2auc_hp_power_on();
 
-	a2auc_add_controls(codec);
+	snd_soc_add_controls(codec, a2auc_snd_controls,
+				ARRAY_SIZE(a2auc_snd_controls));
 	a2auc_add_widgets(codec);
 
-	ret = snd_soc_init_card(socdev);
-	if (ret < 0) {
-		printk(KERN_ERR "%s: snd_soc_register_card fail %d\n",
-			__func__, ret);
-		goto a2auc_probe_pcm_err;
-	}
-
-	printk(KERN_INFO "%s: Ambarella A2AUC\n", __func__);
-	goto a2auc_probe_exit;
-
-a2auc_probe_pcm_err:
-	snd_soc_free_pcms(socdev);
-
-a2auc_probe_reg_cache_err:
-	kfree(codec->reg_cache);
-
-a2auc_probe_cache_err:
-	kfree(socdev->card->codec);
-	socdev->card->codec = NULL;
-
-a2auc_probe_exit:
-	return ret;
+	return 0;
 }
 
-static int a2auc_remove(struct platform_device *pdev)
+static int a2auc_remove(struct snd_soc_codec *codec)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
-	if (codec == NULL)
-		return 0;
-
 	a2auc_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
-	kfree(codec->reg_cache);
-	kfree(codec);
 
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int a2auc_suspend(struct platform_device *pdev, pm_message_t state)
+static int a2auc_suspend(struct snd_soc_codec *codec, pm_message_t state)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
 	a2auc_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;
 }
 
-static int a2auc_resume(struct platform_device *pdev)
+static int a2auc_resume(struct snd_soc_codec *codec)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
 #if 0 // FIXME recover all register?
 	int i;
 	u8 data[2];
@@ -1016,7 +924,6 @@ static int a2auc_resume(struct platform_device *pdev)
 	}
 #endif
 	a2auc_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	a2auc_set_bias_level(codec, codec->suspend_bias_level);
 
 	return 0;
 }
@@ -1026,23 +933,47 @@ static int a2auc_resume(struct platform_device *pdev)
 #define a2auc_resume NULL
 #endif
 
-struct snd_soc_codec_device ambarella_a2auc_codec_device = {
-	.probe = a2auc_probe,
-	.remove = a2auc_remove,
-	.suspend = a2auc_suspend,
-	.resume = a2auc_resume,
+static struct snd_soc_codec_driver soc_codec_dev_a2auc = {
+	.probe =		a2auc_probe,
+	.remove =		a2auc_remove,
+	.suspend =		a2auc_suspend,
+	.resume =		a2auc_resume,
+	.read =			a2auc_codec_read,
+	.write =		a2auc_codec_write,
+	.set_bias_level =	a2auc_set_bias_level,
+	.reg_cache_step =	4,
 };
-EXPORT_SYMBOL(ambarella_a2auc_codec_device);
+
+static int __devinit ambarella_a2auc_codec_probe(struct platform_device *pdev)
+{
+	return snd_soc_register_codec(&pdev->dev,
+			&soc_codec_dev_a2auc, &ambarella_a2auc_dai, 1);
+}
+
+static int __devexit ambarella_a2auc_codec_remove(struct platform_device *pdev)
+{
+	snd_soc_unregister_codec(&pdev->dev);
+	return 0;
+}
+
+static struct platform_driver ambarella_a2auc_codec_driver = {
+	.probe		= ambarella_a2auc_codec_probe,
+	.remove		= __devexit_p(ambarella_a2auc_codec_remove),
+	.driver		= {
+		.name	= "a2auc-codec",
+		.owner	= THIS_MODULE,
+	},
+};
 
 static int __init ambarella_a2auc_init(void)
 {
-	return snd_soc_register_dai(&ambarella_a2auc_dai);
+	return platform_driver_register(&ambarella_a2auc_codec_driver);
 }
 module_init(ambarella_a2auc_init);
 
 static void __exit ambarella_a2auc_exit(void)
 {
-	snd_soc_unregister_dai(&ambarella_a2auc_dai);
+	platform_driver_unregister(&ambarella_a2auc_codec_driver);
 }
 module_exit(ambarella_a2auc_exit);
 
