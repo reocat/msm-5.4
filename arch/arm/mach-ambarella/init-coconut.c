@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/pda_power.h>
+#include <sound/ak4642_amb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -179,6 +180,20 @@ static struct platform_device coconut_board_input = {
 };
 
 /* ==========================================================================*/
+#define AK4642_RESET_PIN	12
+#define AK4642_RESET_DELAY	1
+
+static struct ak4642_platform_data coconut_ak4642_pdata = {
+	.rst_pin	= AK4642_RESET_PIN,
+	.rst_delay	= AK4642_RESET_DELAY,
+};
+
+static struct i2c_board_info ambarella_ak4642_board_info = {
+	I2C_BOARD_INFO("ak4642", 0x12),
+	.platform_data	= &coconut_ak4642_pdata,
+};
+
+/* ==========================================================================*/
 static void __init ambarella_init_coconut(void)
 {
 	int					i;
@@ -261,6 +276,8 @@ static void __init ambarella_init_coconut(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
+
+	i2c_register_board_info(0, &ambarella_ak4642_board_info, 1);
 
 	ambarella_ak4183_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
