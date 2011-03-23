@@ -353,8 +353,8 @@ struct ambarella_board_info ambarella_board_generic = {
 	},
 
 	.pwm0_config = {
-                .period_ns      = 40000,
-                .max_duty       = 100,
+                .period_ns      = 1666,
+                .max_duty       = 255,
         },
         .pwm1_config = {
                 .period_ns      = 10000,

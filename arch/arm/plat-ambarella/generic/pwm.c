@@ -333,7 +333,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm0_config.max_duty;
 		data->dft_brightness	=
-			ambarella_board_generic.pwm0_config.max_duty;
+			0;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm0_config.period_ns;
 		break;
@@ -384,8 +384,8 @@ static int pwm_backlight_init(struct device *dev)
 
 static struct platform_pwm_backlight_data amb_pwm0_pdata = {
 	.pwm_id		= 0,
-	.max_brightness	= 100,
-	.dft_brightness	= 100,
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
 	.pwm_period_ns	= 40000,
 	.init		= pwm_backlight_init,
 	.notify		= NULL,
@@ -593,7 +593,8 @@ int __init ambarella_init_pwm(void)
 #endif
 
 	add_pwm_device(&ambarella_pwm0);
-	add_pwm_device(&ambarella_pwm1);
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK)
+		add_pwm_device(&ambarella_pwm1);
 	add_pwm_device(&ambarella_pwm2);
 	add_pwm_device(&ambarella_pwm3);
 	if (AMBARELLA_BOARD_TYPE(system_rev) != AMBARELLA_BOARD_TYPE_EVK)
