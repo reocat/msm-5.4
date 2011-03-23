@@ -403,7 +403,7 @@ static struct snd_soc_dai_link ipcam_dai_link = {
 };
 
 static struct snd_soc_card snd_soc_card_ipcam = {
-	.name = "IPcam",
+	.name = "A2IPcam",
 	.dai_link = &ipcam_dai_link,
 	.num_links = 1,
 };

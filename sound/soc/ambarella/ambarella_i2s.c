@@ -351,13 +351,11 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
 	u32 clock_divider;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
-#if 0
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
 
 	/* Switch to external I2S Input except  IPcam Board */
-	if (strcmp(socdev->card->name, "IPcam"))
+	if (strcmp(dai->card->name, "A2IPcam"))
 		priv_data->clock_reg = 0x1<<10;
-#endif
+
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_12_288M);
 
