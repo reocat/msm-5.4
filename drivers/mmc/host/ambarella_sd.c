@@ -1756,7 +1756,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
 			pslotinfo->max_blk_sz);
 		mmc->max_blk_count = 0xFFFF;
-		mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
+		mmc->max_req_size = mmc->max_seg_size;
 		if (pslotinfo->plat_info->use_bounce_buffer) {
 			mmc->max_segs = 128;
 			pslotinfo->buf_vaddress = dma_alloc_coherent(
