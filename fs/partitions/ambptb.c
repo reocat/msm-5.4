@@ -48,7 +48,8 @@ int ambptb_partition(struct parsed_partitions *state)
 		goto ambptb_partition_exit;
 	}
 	ptb_meta = (flpart_meta_t *)(data + sect_offset);
-	if (ptb_meta->magic == PTB_META_MAGIC)
+	if ((ptb_meta->magic == PTB_META_MAGIC) ||
+		(ptb_meta->magic == PTB_META_MAGIC2))
 		goto ambptb_partition_report_ptb;
 
 	put_dev_sector(sect);
@@ -58,7 +59,8 @@ int ambptb_partition(struct parsed_partitions *state)
 		goto ambptb_partition_exit;
 	}
 	ptb_meta = (flpart_meta_t *)(data + sect_offset);
-	if (ptb_meta->magic != PTB_META_MAGIC)
+	if ((ptb_meta->magic != PTB_META_MAGIC) &&
+		(ptb_meta->magic != PTB_META_MAGIC2))
 		goto ambptb_partition_exit;
 
 ambptb_partition_report_ptb:
