@@ -1756,7 +1756,8 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
 			pslotinfo->max_blk_sz);
 		mmc->max_blk_count = 0xFFFF;
-		mmc->max_req_size = mmc->max_seg_size;
+		mmc->max_req_size = min(mmc->max_blk_size * mmc->max_blk_count,
+			mmc->max_seg_size);
 		if (pslotinfo->plat_info->use_bounce_buffer) {
 			mmc->max_segs = 128;
 			pslotinfo->buf_vaddress = dma_alloc_coherent(
@@ -1778,10 +1779,10 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				goto sd_errorCode_free_host;
 			}
 			dev_notice(&pdev->dev, "Slot%d bounce buffer:"
-				"0x%p<->0x%08x, size=%d\n", pslotinfo->slot_id,
-				pslotinfo->buf_vaddress,
-				pslotinfo->buf_paddress,
-				mmc->max_seg_size);
+				"0x%p<->0x%08x, size=%d, req_size=%d\n",
+				pslotinfo->slot_id, pslotinfo->buf_vaddress,
+				pslotinfo->buf_paddress, mmc->max_seg_size,
+				mmc->max_req_size);
 		} else {
 			mmc->max_segs = 1;
 			pslotinfo->buf_paddress = (dma_addr_t)NULL;
