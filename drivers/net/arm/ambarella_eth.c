@@ -1494,6 +1494,7 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 	} else if ((netdev_mc_count(ndev) <= AMBETH_MULTICAST_PF)) {
 		int				i;
 		int				filtered;
+		int				count = netdev_mc_count(ndev);
 		unsigned char			zeromacbuf[6];
 		struct netdev_hw_addr		*ha;
 
@@ -1512,7 +1513,7 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 				continue;
 			}
 			ambhw_set_hwaddr_perfect_filtering(
-				lp, ha->addr, i + 1, 1);
+				lp, ha->addr, (count - 1 - i) + 1, 1);
 			dev_dbg(&lp->ndev->dev,
 				"%s: Added perfect filtering[%pM].\n",
 				__func__, ha->addr);
