@@ -307,7 +307,8 @@ static void __init ambarella_init_elephant(void)
 	ambarella_init_machine("Elephant");
 
 	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
-		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
+		(AMBARELLA_BOARD_REV(system_rev) == 1 ||
+		AMBARELLA_BOARD_REV(system_rev) == 2)) {
 		ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
 		ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.lcd_power.active_delay = 1;
@@ -346,7 +347,8 @@ static void __init ambarella_init_elephant(void)
 
 	/* Config SD*/
 	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
-		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
+		(AMBARELLA_BOARD_REV(system_rev) == 1 ||
+		AMBARELLA_BOARD_REV(system_rev) == 2)) {
 		fio_default_owner = SELECT_FIO_SDIO;
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
@@ -407,7 +409,8 @@ static void __init ambarella_init_elephant(void)
 		ARRAY_SIZE(ambarella_spi_devices));
 
 	if ((AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) &&
-		(AMBARELLA_BOARD_REV(system_rev) == 1)) {
+		(AMBARELLA_BOARD_REV(system_rev) == 1 ||
+		AMBARELLA_BOARD_REV(system_rev) == 2)) {
 		ambarella_nt11001_board_info.irq =
 			ambarella_board_generic.touch_panel_irq.irq_line;
 		ambarella_nt11001_board_info.flags = 0;
