@@ -355,7 +355,7 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 	struct spi_message		*msg;
 	struct spi_transfer		*xfer;
 	struct ambarella_spi_cs_config  cs_config;
-	u32				ctrlr0;
+	u32				ctrlr0, flags;
 	void				*wbuf, *rbuf;
 
 	msg = list_entry(as->queue.next, struct spi_message, queue);
@@ -377,15 +377,15 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 		msg->complete(msg->context);
 
 		/* Next Message */
-		spin_lock(&as->lock);
+		spin_lock_irqsave(&as->lock, flags);
 		list_del(as->queue.next);
 
 		if (!list_empty(&as->queue)) {
-			spin_unlock(&as->lock);
+			spin_unlock_irqrestore(&as->lock, flags);
 			ambarella_spi_do_message(master);
 		} else {
 			as->c_xfer = NULL;
-			spin_unlock(&as->lock);
+			spin_unlock_irqrestore(&as->lock, flags);
 		}
 
 		return;
@@ -486,6 +486,7 @@ static int ambarella_spi_transfer(struct spi_device *spi, struct spi_message *ms
 {
 	struct ambarella_spi		*as;
 	struct spi_transfer		*xfer;
+	u32				flags;
 
 	/* Validation */
 	if (unlikely(list_empty(&msg->transfers) || !spi->max_speed_hz)) {
@@ -507,15 +508,15 @@ static int ambarella_spi_transfer(struct spi_device *spi, struct spi_message *ms
 	/* Add into message list */
 	msg->status = -EINPROGRESS;
 	msg->actual_length = 0;
-	spin_lock(&as->lock);
+	spin_lock_irqsave(&as->lock, flags);
 	list_add_tail(&msg->queue, &as->queue);
 
 	if (!as->c_xfer) {
 		as->c_xfer = (struct spi_transfer *)4;
-		spin_unlock(&as->lock);
+		spin_unlock_irqrestore(&as->lock, flags);
 		ambarella_spi_do_message(spi->master);
 	} else {
-		spin_unlock(&as->lock);
+		spin_unlock_irqrestore(&as->lock, flags);
 	}
 
 	return 0;
