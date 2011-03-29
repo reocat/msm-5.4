@@ -54,13 +54,13 @@ static int isl12022_read_regs(struct i2c_client *client, uint8_t reg,
 	struct i2c_msg msgs[] = {
 		{
 			.addr	= client->addr,
-			.flags	= 0,
+			.flags	= client->flags,
 			.len	= 1,
 			.buf	= data
 		},		/* setup read ptr */
 		{
 			.addr	= client->addr,
-			.flags	= I2C_M_RD,
+			.flags	= I2C_M_RD | client->flags,
 			.len	= n,
 			.buf	= data
 		}
@@ -84,10 +84,18 @@ static int isl12022_write_reg(struct i2c_client *client,
 			      uint8_t reg, uint8_t val)
 {
 	uint8_t data[2] = { reg, val };
+	struct i2c_msg msgs[] = {
+		{
+			.addr	= client->addr,
+			.flags	= I2C_M_IGNORE_NAK | client->flags,
+			.len	= 2,
+			.buf	= data
+		}
+	};
 	int err;
 
-	err = i2c_master_send(client, data, sizeof(data));
-	if (err != sizeof(data)) {
+	err = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
+	if (err != ARRAY_SIZE(msgs)) {
 		dev_err(&client->dev,
 			"%s: err=%d addr=%02x, data=%02x\n",
 			__func__, err, data[0], data[1]);
@@ -295,6 +303,7 @@ static int isl12022_remove(struct i2c_client *client)
 static const struct i2c_device_id isl12022_id[] = {
 	{ "isl12022", 0 },
 	{ "rtc8564", 0 },
+	{ "isl12022m", 0 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, isl12022_id);
