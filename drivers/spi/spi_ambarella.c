@@ -355,7 +355,8 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 	struct spi_message		*msg;
 	struct spi_transfer		*xfer;
 	struct ambarella_spi_cs_config  cs_config;
-	u32				ctrlr0, flags;
+	u32				ctrlr0;
+	unsigned long			flags;
 	void				*wbuf, *rbuf;
 
 	msg = list_entry(as->queue.next, struct spi_message, queue);
@@ -486,7 +487,7 @@ static int ambarella_spi_transfer(struct spi_device *spi, struct spi_message *ms
 {
 	struct ambarella_spi		*as;
 	struct spi_transfer		*xfer;
-	u32				flags;
+	unsigned long			flags;
 
 	/* Validation */
 	if (unlikely(list_empty(&msg->transfers) || !spi->max_speed_hz)) {
