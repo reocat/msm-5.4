@@ -412,7 +412,8 @@ static void ambarella_spi_do_xfer(struct spi_master *master)
 
 	ctrlr0 = amba_readl(as->regbase + SPI_CTRLR0_OFFSET);
 	ctrlr0 &= 0xfffff4ff;
-	ctrlr0 |= (as->rw_mode << 8);
+	/* Always use write & read mode due to I1 changes */
+	ctrlr0 |= (SPI_WRITE_READ << 8);
 	if (as->c_dev->mode & SPI_LOOP)
 		ctrlr0 |= (0x1 << 11);
 
