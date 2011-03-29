@@ -57,6 +57,7 @@ obj-y	+= generic/timer.o
 obj-y	+= generic/uart.o
 obj-y	+= generic/udc.o
 obj-y	+= generic/wdt.o
+obj-y	+= generic/adb.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
