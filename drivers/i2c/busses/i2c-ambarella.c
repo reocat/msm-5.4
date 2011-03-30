@@ -457,8 +457,9 @@ static int ambarella_i2c_xfer(
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
 			dev_err(pinfo->dev,
-				"No ACK from address 0x%x, timeout!\n",
-				pinfo->msg_addr);
+				"No ACK from address 0x%x, %d:%d!\n",
+				pinfo->msg_addr, pinfo->msg_num,
+				pinfo->msg_index);
 		}
 		dev_dbg(pinfo->dev, "%ld jiffies left.\n", timeout);
 
