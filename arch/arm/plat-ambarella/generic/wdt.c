@@ -43,8 +43,37 @@ static struct resource ambarella_wdt0_resources[] = {
 	},
 };
 
+static void ambarella_wdt0_start(u32 mode)
+{
+	if ((mode & WDOG_CTR_RST_EN) == WDOG_CTR_RST_EN) {
+	
+		/* Allow the change of WDT_RST_L_REG via APB */  
+#if (RCT_SUPPORT_UNL_WDT_RST_ANAPWR == 1)
+		amba_writel(ANA_PWR_REG, readl(ANA_PWR_REG) | 0x80);
+#endif	
+
+		/* Clear the WDT_RST_L_REG to zero */
+#if (RCT_WDT_RESET_VAL == 0)
+		amba_writel(WDT_RST_L_REG, RCT_WDT_RESET_VAL);
+#else
+		amba_writel(WDT_RST_L_REG, 0x1);		
+#endif
+
+		/* Not allow the change of WDT_RST_L_REG via APB */
+#if (RCT_SUPPORT_UNL_WDT_RST_ANAPWR == 1)
+		amba_writel(ANA_PWR_REG, readl(ANA_PWR_REG) & (~0x80));
+#endif
+
+		/* Clear software reset bit. */
+		amba_writel(SOFT_RESET_REG, 0x2);
+	}
+	amba_writel(WDOG_CONTROL_REG, mode);
+	while(amba_tstbitsl(WDOG_CONTROL_REG, mode) != mode);
+}
+
 static struct ambarella_wdt_controller ambarella_platform_wdt_controller0 = {
 	.get_pll		= get_apb_bus_freq_hz,
+	.start			= ambarella_wdt0_start,
 };
 
 struct platform_device ambarella_wdt0 = {

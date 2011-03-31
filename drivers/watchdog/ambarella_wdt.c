@@ -60,13 +60,14 @@ struct ambarella_wdt_info {
 
 	u32				ctl_reg;
 	u32				init_mode;
+	u32				act_timeout;
 };
 static struct ambarella_wdt_info *pwdtinfo = NULL;
 
 static void ambarella_wdt_keepalive(struct ambarella_wdt_info *pinfo)
 {
 	amba_writel(pinfo->regbase + WDOG_RELOAD_OFFSET, pinfo->tmo);
-	amba_writel(pinfo->regbase + WDOG_RESTART_OFFSET, 0x4755);
+	amba_writel(pinfo->regbase + WDOG_RESTART_OFFSET, WDT_RESTART_VAL);
 }
 
 static void ambarella_wdt_stop(struct ambarella_wdt_info *pinfo)
@@ -79,10 +80,7 @@ static void ambarella_wdt_start(struct ambarella_wdt_info *pinfo, u32 ctl_reg)
 {
 	if (!ctl_reg)
 		ctl_reg = pinfo->init_mode | WDOG_CTR_EN;
-
-	amba_writel(pinfo->regbase + WDOG_CONTROL_OFFSET, ctl_reg);
-	while(amba_tstbitsl(pinfo->regbase + WDOG_CONTROL_OFFSET,
-		ctl_reg) != ctl_reg);
+	pinfo->pcontroller->start(ctl_reg);
 }
 
 static int ambarella_wdt_set_heartbeat(struct ambarella_wdt_info *pinfo,
@@ -109,6 +107,7 @@ static int ambarella_wdt_set_heartbeat(struct ambarella_wdt_info *pinfo,
 	}
 
 	pinfo->tmo = timeout * freq;
+	pinfo->act_timeout = timeout;
 	ambarella_wdt_keepalive(pinfo);
 
 ambarella_wdt_set_heartbeat_exit:
@@ -209,6 +208,7 @@ static long ambarella_wdt_ioctl(struct file *file,
 	void __user				*argp = (void __user *)arg;
 	u32 __user				*p = argp;
 	u32					new_tmo;
+	int					options;
 
 	pinfo = (struct ambarella_wdt_info *)file->private_data;
 
@@ -233,14 +233,13 @@ static long ambarella_wdt_ioctl(struct file *file,
 			break;
 
 		case WDIOC_SETTIMEOUT:
-			errorCode = get_user(new_tmo, p);
-			if (errorCode)
+			if (get_user(new_tmo, p)) {
+				errorCode = -EFAULT;
 				break;
-
+			}
 			errorCode = ambarella_wdt_set_heartbeat(pinfo, new_tmo);
 			if (errorCode)
 				break;
-
 			ambarella_wdt_keepalive(pinfo);
 			errorCode = put_user(pinfo->tmo, p);
 			break;
@@ -249,8 +248,24 @@ static long ambarella_wdt_ioctl(struct file *file,
 			errorCode = put_user(pinfo->tmo, p);
 			break;
 
+		case WDIOC_SETOPTIONS:
+			if (get_user(options, p)) {
+				errorCode = -EFAULT;
+				break;
+			}
+			if (options & WDIOS_DISABLECARD) {
+				ambarella_wdt_stop(pinfo);
+				errorCode = 0;
+			}
+			if (options & WDIOS_ENABLECARD) {
+				ambarella_wdt_keepalive(pinfo);
+				errorCode = 0;
+			}
+			break;
+
 		default:
-			return -ENOTTY;
+			errorCode = -ENOTTY;
+			break;
 		}
 	}
 
@@ -320,7 +335,8 @@ static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 	pinfo->pcontroller =
 		(struct ambarella_wdt_controller *)pdev->dev.platform_data;
 	if ((pinfo->pcontroller == NULL) ||
-		(pinfo->pcontroller->get_pll == NULL)) {
+		(pinfo->pcontroller->get_pll == NULL) ||
+		(pinfo->pcontroller->start == NULL)) {
 		dev_err(&pdev->dev, "Need WDT controller info!\n");
 		errorCode = -EPERM;
 		goto ambarella_wdt_free_pinfo;
@@ -336,7 +352,7 @@ static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 	pinfo->wdt_dev.name = "watchdog",
 	pinfo->wdt_dev.fops = &ambarella_wdt_fops,
 	pinfo->boot_tmo = amba_readl(pinfo->regbase + WDOG_TIMEOUT_OFFSET);
-	pinfo->init_mode = init_mode;
+	pinfo->init_mode = (init_mode & (WDOG_CTR_INT_EN | WDOG_CTR_RST_EN));
 	platform_set_drvdata(pdev, pinfo);
 	pwdtinfo = pinfo;
 
@@ -455,7 +471,7 @@ static int ambarella_wdt_resume(struct platform_device *pdev)
 
 	if (pinfo) {
 		if (pinfo->ctl_reg) {
-			ambarella_wdt_keepalive(pinfo);
+			ambarella_wdt_set_heartbeat(pinfo, pinfo->act_timeout);
 			ambarella_wdt_start(pinfo, pinfo->ctl_reg);
 		}
 		if (!device_may_wakeup(&pdev->dev))
