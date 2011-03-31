@@ -22,6 +22,7 @@
 #define RCT_MAX_DLL_CTRL		1
 #define RCT_SUPPORT_ADC16_CTRL		1
 #define RCT_SUPPORT_PLL_HDMI		1
+#define RCT_SUPPORT_UNL_WDT_RST_ANAPWR	0 /* Use bit-7 of ANA_PWR_REG */
 
 /****************************************************/
 /* Controller registers definitions                 */

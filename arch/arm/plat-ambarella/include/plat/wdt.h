@@ -30,7 +30,8 @@
 #ifndef __ASSEMBLER__
 
 struct ambarella_wdt_controller {
-	u32					(*get_pll)(void);
+	u32	(*get_pll)(void);
+	u32	(*start)(u32 mode);
 };
 
 /* ==========================================================================*/
