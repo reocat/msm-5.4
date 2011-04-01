@@ -43,7 +43,7 @@
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
-#define CONFIG_SD_AMBARELLA_WAIT_TIMEOUT	(HZ * 1)
+#define CONFIG_SD_AMBARELLA_WAIT_TIMEOUT	(HZ)
 #define CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT	(100000)
 #define CONFIG_SD_AMBARELLA_SLEEP_COUNTER_LIMIT	(1000)
 
@@ -997,29 +997,40 @@ ambarella_sd_irq_exit:
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
+static int ambarella_sd_gpio_cd_check_val(
+	struct ambarella_sd_mmc_info *pslotinfo)
 {
-	struct ambarella_sd_mmc_info		*pslotinfo;
-	u32					val = 0;
+	u32					val = -1;
 	struct ambarella_sd_controller_info	*pinfo;
 
-	pslotinfo = (struct ambarella_sd_mmc_info *)devid;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (pslotinfo->valid && (pslotinfo->plat_info->fixed_cd == -1) &&
-		ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
+	if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
 		ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
 			GPIO_FUNC_SW_INPUT);
 		val = ambarella_gpio_get(
 			pslotinfo->plat_info->gpio_cd.irq_gpio);
 		ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
 			pslotinfo->plat_info->gpio_cd.irq_gpio_mode);
-		ambsd_dbg(pslotinfo, "%s:%d\n",
-			(val == pslotinfo->plat_info->gpio_cd.irq_gpio_val) ?
+		val = (val == pslotinfo->plat_info->gpio_cd.irq_gpio_val) ?
+			1 : 0;
+		ambsd_dbg(pslotinfo, "%s:%d\n", (val == 1) ?
 			"card insert" : "card eject",
 			pslotinfo->plat_info->cd_delay);
-			mmc_detect_change(pslotinfo->mmc,
-				pslotinfo->plat_info->cd_delay);
+	}
+
+	return val;
+}
+
+static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo;
+
+	pslotinfo = (struct ambarella_sd_mmc_info *)devid;
+	if (pslotinfo->valid &&
+		(ambarella_sd_gpio_cd_check_val(pslotinfo) != -1)) {
+		mmc_detect_change(pslotinfo->mmc,
+			pslotinfo->plat_info->cd_delay);
 	}
 
 	return IRQ_HANDLED;
@@ -1435,18 +1446,34 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	u32					need_reset = 0;
 	u32					error_id = -ETIMEDOUT;
 	struct ambarella_sd_controller_info	*pinfo;
+	u32					valid_request = 0;
+	u32					valid_cd = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
-	ambarella_sd_check_ios(mmc, &mmc->ios);
 
 	pslotinfo->mrq = mrq;
 
 	card_sta = amba_readl(pinfo->regbase + SD_STA_OFFSET);
 
-	if ((card_sta & SD_STA_CARD_INSERTED) ||
-		ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
+	if (pslotinfo->plat_info->fixed_cd != -1) {
+		valid_request = 1;
+	} else {
+		valid_cd = ambarella_sd_gpio_cd_check_val(pslotinfo);
+		if (valid_cd == 1) {
+			valid_request = 1;
+		} else if (valid_cd == -1) {
+			if (card_sta & SD_STA_CARD_INSERTED) {
+				valid_request = 1;
+			}
+		}
+	}
+
+	ambsd_dbg(pslotinfo, "0x%08x:%d & cmd = %d valid_request = %d.\n",
+		card_sta, valid_cd, mrq->cmd->opcode, valid_request);
+	if (valid_request) {
+		ambarella_sd_check_ios(mmc, &mmc->ios);
 		ambarella_sd_send_cmd(pslotinfo, mrq->cmd, mrq->stop);
 		if (pslotinfo->state != AMBA_SD_STATE_ERR) {
 			timeout = wait_event_timeout(pslotinfo->wait,
@@ -1467,8 +1494,8 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			goto ambarella_sd_request_need_reset;
 		}
 	} else {
-		ambsd_dbg(pslotinfo, "card_sta 0x%x.\n", card_sta);
 		mrq->cmd->error = error_id;
+		goto ambarella_sd_request_exit;
 	}
 
 ambarella_sd_request_need_reset:
@@ -1497,6 +1524,7 @@ ambarella_sd_request_need_reset:
 		ambarella_sd_reset_all(pslotinfo->mmc);
 	}
 
+ambarella_sd_request_exit:
 	pslotinfo->mrq = NULL;
 
 	ambarella_sd_release_bus(mmc);
@@ -1836,12 +1864,6 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
-		errorCode = mmc_add_host(pslotinfo->mmc);
-		if (errorCode) {
-			ambsd_err(pslotinfo, "Can't add mmc host!\n");
-			goto sd_errorCode_remove_host;
-		}
-		pslotinfo->valid = 1;
 		pslotinfo->system_event.notifier_call =
 			ambarella_sd_system_event;
 		ambarella_register_event_notifier(&pslotinfo->system_event);
@@ -1857,9 +1879,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				goto sd_errorCode_free_host;
 			}
 
-			ambarella_gpio_config(
-				pslotinfo->plat_info->gpio_cd.irq_gpio,
-				pslotinfo->plat_info->gpio_cd.irq_gpio_mode);
+			ambarella_sd_gpio_cd_check_val(pslotinfo);
 			errorCode = request_irq(
 				pslotinfo->plat_info->gpio_cd.irq_line,
 				ambarella_sd_gpio_cd_irq,
@@ -1880,6 +1900,12 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
 		pslotinfo->plat_info->pmmc_host = pslotinfo->mmc;
+		pslotinfo->valid = 1;
+		errorCode = mmc_add_host(pslotinfo->mmc);
+		if (errorCode) {
+			ambsd_err(pslotinfo, "Can't add mmc host!\n");
+			goto sd_errorCode_remove_host;
+		}
 	}
 
 	dev_notice(&pdev->dev,
