@@ -31,8 +31,5 @@
 struct i2c_board_info ambarella_board_hdmi_info = {
 	.type			= "ambhdmi ddc",
 	.addr			= 0x03,
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	.flags			= I2C_M_PIN_MUXING,
-#endif
 };
 

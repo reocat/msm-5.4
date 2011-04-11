@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/i2c.h>
+#include <linux/ambarella-i2cmux.h>
 
 #include <mach/hardware.h>
 #include <plat/idc.h>
@@ -96,6 +97,26 @@ struct platform_device ambarella_idc0 = {
 		.platform_data		= &ambarella_idc0_platform_info,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+static struct ambarella_i2cmux_platform_data ambarella_i2cmux_info = {
+	.parent		= 0,
+	.number		= 2,
+#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
+	.gpio		= IDC_BUS_HDMI,
+#elif (IDC_SUPPORT_INTERNAL_MUX == 1)
+	.gpio		= IDC3_BUS_MUX,
+#endif
+	.select_function	= GPIO_FUNC_HW,
+	.deselect_function	= GPIO_FUNC_SW_OUTPUT,
+};
+
+struct platform_device ambarella_i2cmux = {
+	.name		= "ambarella-i2cmux",
+	.id		= 0,
+	.dev		= {
+		.platform_data		= &ambarella_i2cmux_info,
 	}
 };
 

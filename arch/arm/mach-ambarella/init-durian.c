@@ -204,7 +204,6 @@ static struct pca953x_platform_data durian_board_ext_gpio0 = {
 static struct i2c_board_info durian_board_ext_gpio_info = {
 	.type		= "pca9557",
 	.addr		= 0x1f,
-	.flags		= I2C_M_PIN_MUXING,
 	.platform_data	= &durian_board_ext_gpio0,
 };
 
@@ -445,14 +444,13 @@ static void __init ambarella_init_durian(void)
 
 	ambarella_chacha_mt4d_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_chacha_mt4d_board_info.flags = I2C_M_PIN_MUXING;
-	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
+	i2c_register_board_info(2, &ambarella_chacha_mt4d_board_info, 1);
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
-	i2c_register_board_info(0, &durian_board_ext_gpio_info, 1);
+	i2c_register_board_info(2, &durian_board_ext_gpio_info, 1);
 
 	platform_device_register(&durian_board_input);
 }
