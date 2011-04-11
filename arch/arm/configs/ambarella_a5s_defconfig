@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.2 Kernel Configuration
-# Wed Mar 30 11:08:39 2011
+# Mon Apr 11 16:55:21 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -371,6 +371,7 @@ CONFIG_CPU_TLB_V6=y
 CONFIG_CPU_HAS_ASID=y
 CONFIG_CPU_CP15=y
 CONFIG_CPU_CP15_MMU=y
+CONFIG_CPU_USE_DOMAINS=y
 
 #
 # Processor Features
@@ -981,6 +982,7 @@ CONFIG_I2C_MUX=m
 # Multiplexer I2C Chip support
 #
 # CONFIG_I2C_MUX_GPIO is not set
+CONFIG_I2C_MUX_AMBARELLA=m
 # CONFIG_I2C_MUX_PCA9541 is not set
 # CONFIG_I2C_MUX_PCA954x is not set
 # CONFIG_I2C_HELPER_AUTO is not set
