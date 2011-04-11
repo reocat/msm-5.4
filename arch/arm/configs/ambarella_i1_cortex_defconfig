@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38 Kernel Configuration
-# Mon Apr 11 14:44:56 2011
+# Mon Apr 11 16:48:21 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1201,7 +1201,7 @@ CONFIG_SSB_POSSIBLE=y
 # CONFIG_DRM is not set
 # CONFIG_VGASTATE is not set
 # CONFIG_VIDEO_OUTPUT_CONTROL is not set
-CONFIG_FB=m
+CONFIG_FB=y
 # CONFIG_FIRMWARE_EDID is not set
 # CONFIG_FB_DDC is not set
 # CONFIG_FB_BOOT_VESA_SUPPORT is not set
