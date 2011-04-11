@@ -216,10 +216,6 @@ static inline void ambarella_i2c_start_current_msg(
 	pinfo->msg_index = 0;
 	pinfo->msg_addr = (pinfo->msgs->addr << 1);
 
-	if (pinfo->platform_info->set_pin_muxing)
-		pinfo->platform_info->set_pin_muxing(
-			pinfo->msgs->flags & I2C_M_PIN_MUXING);
-
 	if (pinfo->msgs->flags & I2C_M_RD)
 		pinfo->msg_addr |= 1;
 

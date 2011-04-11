@@ -297,8 +297,8 @@ static void __init ambarella_init_coconut(void)
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
 	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
-		ambarella_isl12022m_board_info.flags = I2C_M_PIN_MUXING;
-		i2c_register_board_info(0, &ambarella_isl12022m_board_info, 1);
+		ambarella_isl12022m_board_info.flags;
+		i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 	} else {
 		platform_device_register(&ambarella_rtc0);
 	}

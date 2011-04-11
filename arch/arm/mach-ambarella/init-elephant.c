@@ -80,6 +80,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_dummy_codec0,
 	&ambarella_idc0,
 	&ambarella_idc1,
+	&ambarella_i2cmux,
 	&ambarella_ir0,
 	&ambarella_ohci0,
 	&ambarella_ahci0,
@@ -420,17 +421,14 @@ static void __init ambarella_init_elephant(void)
 	} else {
 		ambarella_tm1510_board_info.irq =
 			ambarella_board_generic.touch_panel_irq.irq_line;
-		ambarella_tm1510_board_info.flags = I2C_M_PIN_MUXING;
-		i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
+		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
 		i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
 	}
 	platform_device_register(&elephant_board_input);
 
-	ambarella_board_vin_infos[0].flags = I2C_M_PIN_MUXING;
-	ambarella_board_vin_infos[1].flags = I2C_M_PIN_MUXING;
-	i2c_register_board_info(0, ambarella_board_vin_infos,
+	i2c_register_board_info(2, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
