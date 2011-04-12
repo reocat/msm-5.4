@@ -29,7 +29,7 @@
 #define MAX_Z	16
 
 typedef enum {
-	TM_FINGER_STATE		= 0x0,
+	TM_FINGER_STATE		= 0x01,
 	TM_X1_HIGH,
 	TM_Y1_HIGH,
 	TM_XY1_LOW,
@@ -66,137 +66,57 @@ struct tm1510 {
 
 static int tm1510_reset(struct tm1510 *tm)
 {
-	struct i2c_msg		msg;
-	int			errorCode;
-	u8			buf[] = {TM_RESET, 0x00};
+	u8			buf[1] = {0x00};
 
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags;
-	msg.buf		= buf;
-	msg.len		= sizeof(buf);
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't write reg data.\n");
+	if (i2c_smbus_write_i2c_block_data(tm->client,
+		TM_RESET, 1, buf)) {
+		printk("I2C Error: %s\n", __func__);
 		return -EIO;
 	}
 
-	buf[0]		= TM_DEV_CNTL;
-	buf[1]		= 0x80;
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't write reg data.\n");
+	buf[0] = 0x80;
+	if (i2c_smbus_write_i2c_block_data(tm->client,
+		TM_DEV_CNTL, 1, buf)) {
+		printk("I2C Error: %s\n", __func__);
 		return -EIO;
+	} else {
+		return 0;
 	}
-
-	return 0;
 }
 
 static int tm1510_read_family_code(struct tm1510 *tm, u8 *family_code)
 {
-	struct i2c_msg		msg;
-	int			errorCode;
-	u8			buf[] = {TM_FAMILY_CODE};
-
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags;
-	msg.buf		= buf;
-	msg.len		= 1;
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't write reg data.\n");
+	if (i2c_smbus_read_i2c_block_data(tm->client,
+		TM_FAMILY_CODE, 1, family_code) != 1) {
+		printk("I2C Error: %s\n", __func__);
 		return -EIO;
+	} else {
+		return 0;
 	}
-
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags | I2C_M_RD;
-	msg.buf		= buf;
-	msg.len		= 1;
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't read reg data.\n");
-		return -EIO;
-	}
-
-	*family_code = buf[0];
-	return 0;
 }
 
 static int tm1510_config_irq(struct tm1510 *tm)
 {
-	struct i2c_msg		msg;
-	int			errorCode;
-	u8			buf[] = {TM_IRQ_ENABLE_ABS,
-						0x04, 0x01, 0x0b, 0x06, 0x06};
+	u8			buf[5] = {0x04, 0x01, 0x0b, 0x06, 0x06};
 
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags;
-	msg.buf		= buf;
-	msg.len		= sizeof(buf);
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't write reg data.\n");
+	if (i2c_smbus_write_i2c_block_data(tm->client,
+		TM_IRQ_ENABLE_ABS, 5, buf)) {
+		printk("I2C Error: %s\n", __func__);
 		return -EIO;
+	} else {
+		return 0;
 	}
-
-	return 0;
-}
-
-static int tm1510_clear_irq(struct tm1510 *tm)
-{
-	struct i2c_msg		msg;
-	int			errorCode;
-	u8			buf[] = {TM_IRQ_STATUS_ABS};
-
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags;
-	msg.buf		= buf;
-	msg.len		= sizeof(buf);
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't write reg data.\n");
-		return -EIO;
-	}
-
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags | I2C_M_RD;
-	msg.buf		= buf;
-	msg.len		= sizeof(buf);
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't read reg data.\n");
-		return -EIO;
-	}
-
-	return 0;
 }
 
 static inline int tm1510_read_all(struct tm1510 *tm)
 {
-	struct i2c_msg		msg;
-	int			errorCode;
-	u8			buf[] = {TM_FINGER_STATE_ABS};
-
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags;
-	msg.buf		= buf;
-	msg.len		= 1;
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't write reg data.\n");
+	if (i2c_smbus_read_i2c_block_data(tm->client,
+		TM_IRQ_STATUS_ABS, NUM_DATA, tm->reg_data) != NUM_DATA) {
+		printk("I2C Error: %s\n", __func__);
 		return -EIO;
+	} else {
+		return 0;
 	}
-
-	msg.addr	= tm->client->addr;
-	msg.flags	= tm->client->flags | I2C_M_RD;
-	msg.buf		= tm->reg_data;
-	msg.len		= NUM_DATA;
-	errorCode = i2c_transfer(tm->client->adapter, &msg, 1);
-	if (errorCode != 1) {
-		printk("TM1510: Can't read reg data.\n");
-		return -EIO;
-	}
-
-	return 0;
 }
 
 static void tm1510_send_event(struct tm1510 *tm)
@@ -341,7 +261,6 @@ static void tm1510_report_worker(struct work_struct *work)
 
 	tm = container_of(work, struct tm1510, report_worker);
 
-	tm1510_clear_irq(tm);
 	tm1510_read_all(tm);
 	tm1510_send_event(tm);
 }
@@ -403,7 +322,7 @@ static int tm1510_probe(struct i2c_client *client,
 	if (err)
 		goto err_free_mem;
 
-	err = tm1510_clear_irq(tm);
+	err = tm1510_read_all(tm);
 	if (err)
 		goto err_free_mem;
 
