@@ -67,7 +67,6 @@ struct ambarella_idc_platform_info {
 	int					clk_limit;	//Hz
 	int					bulk_write_num;
 	unsigned int				i2c_class;
-	void					(*set_pin_muxing)(u32 on);
 	u32					(*get_clock)(void);
 };
 #define AMBA_IDC_PARAM_CALL(id, arg, perm) \
