@@ -83,6 +83,8 @@ static int ambarella_ehci_setup(struct usb_hcd *hcd)
 		ehci->hcs_params |= 0x1;
 	}
 
+	ehci->has_synopsys_hc_bug = 1;
+
 	retval = ehci_halt(ehci);
 	if (retval)
 		return retval;
