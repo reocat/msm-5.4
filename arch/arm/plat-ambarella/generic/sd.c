@@ -137,6 +137,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
+		.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
@@ -171,6 +172,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
+		.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ,
 	},
 	.num_slots		= 2,
 #else
@@ -296,6 +298,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
+		.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ,
 	},
 	.num_slots		= 1,
 	.clk_limit		= 25000000,

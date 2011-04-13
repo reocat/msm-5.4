@@ -480,9 +480,9 @@ static int ambhw_mdio_reset(struct mii_bus *bus)
 		lp->platform_info->mii_power.gpio_id,
 		lp->platform_info->mii_reset.gpio_id);
 
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
-	ambarella_set_gpio_reset(&lp->platform_info->mii_reset);
+	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
+	ambarella_set_gpio_reset(&lp->platform_info->mii_power);
+	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 0);
 
 	return errorCode;
 }
