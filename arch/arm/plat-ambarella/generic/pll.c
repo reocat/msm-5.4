@@ -111,6 +111,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
 
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60 + 1)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -119,6 +120,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 #elif (CHIP_REV == A7)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
@@ -135,6 +137,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
 
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60 + 1)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -142,6 +145,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 #elif (CHIP_REV == I1)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
@@ -159,6 +163,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
 
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60 + 1)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -166,6 +171,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 #endif
 
@@ -331,11 +337,12 @@ static int ambarella_mode_proc_write(struct file *file,
 		retval = -EFAULT;
 		goto pll_mode_proc_write_exit;
 	}
-	str[MAX_CMD_LENGTH - 1] = 0;
+	str[i - 1] = 0;
 
 	mode = AMB_OPERATING_MODE_END;
 	for (i = 0; i < ARRAY_SIZE(mode_list); i++) {
-		if (strstr(str, mode_list[i].name) != NULL) {
+		if (strlen(str) == strlen(mode_list[i].name)
+			&& strcmp(str, mode_list[i].name) == 0) {
 			mode = mode_list[i].mode;
 		}
 	}
@@ -377,16 +384,17 @@ static int ambarella_performance_proc_write(struct file *file,
 		retval = -EFAULT;
 		goto pll_performance_proc_write_exit;
 	}
-	str[MAX_CMD_LENGTH - 1] = 0;
+	str[i - 1] = 0;
 
-	performance = AMB_PERFORMANCE_2160P60 + 1;
+	performance = AMB_OPERATING_PERFORMANCE_END;
 	for (i = 0; i < ARRAY_SIZE(performance_list); i++) {
-		if (strstr(str, performance_list[i].name) != NULL) {
+		if (strlen(str) == strlen(performance_list[i].name)
+			&& strcmp(str, performance_list[i].name) == 0) {
 			performance = performance_list[i].performance;
 		}
 	}
 
-	if (performance > AMB_PERFORMANCE_2160P60){
+	if (performance >= AMB_OPERATING_PERFORMANCE_END){
 		pr_err("%s: invalid performance (%s)!\n", __func__, str);
 		retval = -EINVAL;
 		goto pll_performance_proc_write_exit;
