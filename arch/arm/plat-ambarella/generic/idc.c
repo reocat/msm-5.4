@@ -88,7 +88,7 @@ static struct ambarella_i2cmux_platform_data ambarella_i2cmux_info = {
 	.gpio		= IDC3_BUS_MUX,
 #endif
 	.select_function	= GPIO_FUNC_HW,
-	.deselect_function	= GPIO_FUNC_SW_OUTPUT,
+	.deselect_function	= GPIO_FUNC_SW_INPUT,
 };
 
 struct platform_device ambarella_i2cmux = {
