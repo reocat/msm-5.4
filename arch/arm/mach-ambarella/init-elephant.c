@@ -366,6 +366,10 @@ static void __init ambarella_init_elephant(void)
 			use_bub_default = 0;
 			break;
 
+		case 'B':
+			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 		case 'A':
 			ambarella_board_generic.lcd_reset.gpio_id = GPIO(105);
 			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
@@ -393,9 +397,9 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.mii_reset.active_delay = 10;
 
 			fio_default_owner = SELECT_FIO_SDIO;
-			ambarella_platform_sd_controller0.clk_limit = 24000000;
+			ambarella_platform_sd_controller0.clk_limit = 48000000;
 			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-			//ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_8_BIT_DATA;
+			ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_8_BIT_DATA;
 			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 			ambarella_platform_sd_controller0.slot[0].fixed_cd = 1;
@@ -414,13 +418,11 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = -1;
 			ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
 			ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = -1;
-			ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(111);
-			ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
-			ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
 			ambarella_platform_sd_controller1.clk_limit = 24000000;
 			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
 			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+			ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_8_BIT_DATA;
 
 			use_bub_default = 0;
 			break;
@@ -430,7 +432,7 @@ static void __init ambarella_init_elephant(void)
 			break;
 		}
 
-	} 
+	}
 	if (use_bub_default) {
 		pr_info("%s: Default BUB config:\n", __func__);
 		ambarella_board_generic.lcd_reset.gpio_id = GPIO(46);
