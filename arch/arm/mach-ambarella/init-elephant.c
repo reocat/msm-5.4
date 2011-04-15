@@ -428,6 +428,9 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 			ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_8_BIT_DATA;
 
+			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
+			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
+
 			use_bub_default = 0;
 			break;
 

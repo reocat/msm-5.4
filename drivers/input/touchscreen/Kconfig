@@ -702,6 +702,17 @@ config TOUCHSCREEN_TM1510
           To compile this driver as a module, choose M here: the
           module will be called tm1510.
 
+config TOUCHSCREEN_TM1726
+        tristate "TM1726 based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a TM1726 based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called tm1726.
+
 config TOUCHSCREEN_NT11001
         tristate "NT11001 based touchscreens"
         depends on I2C
