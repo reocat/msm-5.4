@@ -47,6 +47,8 @@
 #include <linux/input.h>
 #include <plat/ambinput.h>
 
+#include <linux/mmc/host.h>
+
 #include "board-device.h"
 
 /* ==========================================================================*/

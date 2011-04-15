@@ -44,6 +44,7 @@ struct ambarella_sd_slot {
 	u32					cd_delay;	//jiffies
 	int					fixed_wp;
 	struct ambarella_gpio_io_info		gpio_wp;
+	u32					caps;
 };
 
 struct ambarella_sd_controller {

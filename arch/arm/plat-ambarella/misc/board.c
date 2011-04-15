@@ -372,6 +372,24 @@ struct ambarella_board_info ambarella_board_generic = {
                 .period_ns      = 10000,
                 .max_duty       = 1000,
         },
+
+	.wifi_irq       = {
+		.irq_gpio       = -1,
+		.irq_line       = -1,
+		.irq_type       = -1,
+		.irq_gpio_val   = GPIO_LOW,
+		.irq_gpio_mode  = GPIO_FUNC_SW_INPUT,
+	},
+	.wifi_power     = {
+		.gpio_id        = -1,
+		.active_level   = GPIO_LOW,
+		.active_delay   = 1,
+	},
+	.wifi_reset     = {
+		.gpio_id        = -1,
+		.active_level   = GPIO_LOW,
+		.active_delay   = 1,
+	},
 };
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);
 EXPORT_SYMBOL(ambarella_board_generic);
