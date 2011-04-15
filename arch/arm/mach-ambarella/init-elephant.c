@@ -256,10 +256,11 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,	0,	2,	1750,	2050}}},	//sw4: HOME
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	0,	2,	1350,	1650}}},	//sw5: MENU
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	0,	2,	980,	1280}}},	//sw3: BACK
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,	0,	2,	600,	900}}},		//sw6: SEARCH
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,0,	2,	2500,	4095}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,	0,	2,	1750,	2050}}},	//HOME
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	0,	2,	1350,	1650}}},	//MENU
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	0,	2,	980,	1280}}},	//BACK
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,	0,	2,	600,	900}}},		//SEARCH
 
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_VOLUMEUP,	0,	0,	GPIO(191),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_VOLUMEDOWN,	0,	0,	GPIO(187),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
