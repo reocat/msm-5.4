@@ -115,12 +115,26 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	case 3:
 		adc_data = amba_readl(ADC_DATA3_REG);
 		break;
-#if (ADC_NUM_CHANNELS == 6)
+#if (ADC_NUM_CHANNELS >= 6)
 	case 4:
 		adc_data = amba_readl(ADC_DATA4_REG);
 		break;
 	case 5:
 		adc_data = amba_readl(ADC_DATA5_REG);
+		break;
+#endif
+#if (ADC_NUM_CHANNELS >= 10)
+	case 6:
+		adc_data = amba_readl(ADC_DATA6_REG);
+		break;
+	case 7:
+		adc_data = amba_readl(ADC_DATA7_REG);
+		break;
+	case 8:
+		adc_data = amba_readl(ADC_DATA8_REG);
+		break;
+	case 9:
+		adc_data = amba_readl(ADC_DATA9_REG);
 		break;
 #endif
 #endif
@@ -170,9 +184,15 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	adc_data[1] = amba_readl(ADC_DATA1_REG);
 	adc_data[2] = amba_readl(ADC_DATA2_REG);
 	adc_data[3] = amba_readl(ADC_DATA3_REG);
-#if (ADC_NUM_CHANNELS == 6)
+#if (ADC_NUM_CHANNELS >= 6)
 	adc_data[4] = amba_readl(ADC_DATA4_REG);
 	adc_data[5] = amba_readl(ADC_DATA5_REG);
+#endif
+#if (ADC_NUM_CHANNELS >= 10)
+	adc_data[6] = amba_readl(ADC_DATA6_REG);
+	adc_data[7] = amba_readl(ADC_DATA7_REG);
+	adc_data[8] = amba_readl(ADC_DATA8_REG);
+	adc_data[9] = amba_readl(ADC_DATA9_REG);
 #endif
 #endif
 
@@ -220,7 +240,7 @@ void ambarella_adc_start(void)
 	amba_writel(ADC_DATA1_REG, 0);
 	amba_writel(ADC_DATA2_REG, 0);
 	amba_writel(ADC_DATA3_REG, 0);
-	
+
 	amba_writel(ADC_ENABLE_REG, 0x0);
 #endif
 
@@ -390,7 +410,7 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 	case 3:
 		irq_control_address = ADC_CHAN3_INTR_REG;
 		break;
-#if (ADC_NUM_CHANNELS == 6)
+#if (ADC_NUM_CHANNELS >= 6)
 	case 4:
 		irq_control_address = ADC_CHAN4_INTR_REG;
 		break;
@@ -398,18 +418,20 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 		irq_control_address = ADC_CHAN5_INTR_REG;
 		break;
 #endif
-#if (ADC_NUM_CHANNELS == 8)
-	case 4:
-		irq_control_address = ADC_CHAN4_INTR_REG;
-		break;
-	case 5:
-		irq_control_address = ADC_CHAN5_INTR_REG;
-		break;
+#if (ADC_NUM_CHANNELS >= 8)
 	case 6:
 		irq_control_address = ADC_CHAN6_INTR_REG;
 		break;
 	case 7:
 		irq_control_address = ADC_CHAN7_INTR_REG;
+		break;
+#endif
+#if (ADC_NUM_CHANNELS >= 10)
+	case 8:
+		irq_control_address = ADC_CHAN8_INTR_REG;
+		break;
+	case 9:
+		irq_control_address = ADC_CHAN9_INTR_REG;
 		break;
 #endif
 	default:
@@ -433,15 +455,17 @@ struct ambarella_adc_pm_info {
 	u32 adc_chan1_intr_reg;
 	u32 adc_chan2_intr_reg;
 	u32 adc_chan3_intr_reg;
-#if (ADC_NUM_CHANNELS == 6)
+#if (ADC_NUM_CHANNELS >= 6)
 	u32 adc_chan4_intr_reg;
 	u32 adc_chan5_intr_reg;
 #endif
-#if (ADC_NUM_CHANNELS == 8)
-	u32 adc_chan4_intr_reg;
-	u32 adc_chan5_intr_reg;
+#if (ADC_NUM_CHANNELS >= 8)
 	u32 adc_chan6_intr_reg;
 	u32 adc_chan7_intr_reg;
+#endif
+#if (ADC_NUM_CHANNELS >= 10)
+	u32 adc_chan8_intr_reg;
+	u32 adc_chan9_intr_reg;
 #endif
 };
 
@@ -458,15 +482,17 @@ u32 ambarella_adc_suspend(u32 level)
 	ambarella_adc_pm.adc_chan1_intr_reg = amba_readl(ADC_CHAN1_INTR_REG);
 	ambarella_adc_pm.adc_chan2_intr_reg = amba_readl(ADC_CHAN2_INTR_REG);
 	ambarella_adc_pm.adc_chan3_intr_reg = amba_readl(ADC_CHAN3_INTR_REG);
-#if (ADC_NUM_CHANNELS == 6)
+#if (ADC_NUM_CHANNELS >= 6)
 	ambarella_adc_pm.adc_chan4_intr_reg = amba_readl(ADC_CHAN4_INTR_REG);
 	ambarella_adc_pm.adc_chan5_intr_reg = amba_readl(ADC_CHAN5_INTR_REG);
 #endif
-#if (ADC_NUM_CHANNELS == 8)
-	ambarella_adc_pm.adc_chan4_intr_reg = amba_readl(ADC_CHAN4_INTR_REG);
-	ambarella_adc_pm.adc_chan5_intr_reg = amba_readl(ADC_CHAN5_INTR_REG);
+#if (ADC_NUM_CHANNELS >= 8)
 	ambarella_adc_pm.adc_chan6_intr_reg = amba_readl(ADC_CHAN6_INTR_REG);
 	ambarella_adc_pm.adc_chan7_intr_reg = amba_readl(ADC_CHAN7_INTR_REG);
+#endif
+#if (ADC_NUM_CHANNELS >= 10)
+	ambarella_adc_pm.adc_chan8_intr_reg = amba_readl(ADC_CHAN8_INTR_REG);
+	ambarella_adc_pm.adc_chan9_intr_reg = amba_readl(ADC_CHAN9_INTR_REG);
 #endif
 
 	return 0;
@@ -493,15 +519,17 @@ u32 ambarella_adc_resume(u32 level)
 		amba_writel(ADC_CHAN1_INTR_REG, ambarella_adc_pm.adc_chan1_intr_reg);
 		amba_writel(ADC_CHAN2_INTR_REG, ambarella_adc_pm.adc_chan2_intr_reg);
 		amba_writel(ADC_CHAN3_INTR_REG, ambarella_adc_pm.adc_chan3_intr_reg);
-#if (ADC_NUM_CHANNELS == 6)
+#if (ADC_NUM_CHANNELS >= 6)
 		amba_writel(ADC_CHAN4_INTR_REG, ambarella_adc_pm.adc_chan4_intr_reg);
 		amba_writel(ADC_CHAN5_INTR_REG, ambarella_adc_pm.adc_chan5_intr_reg);
 #endif
-#if (ADC_NUM_CHANNELS == 8)
-		amba_writel(ADC_CHAN4_INTR_REG, ambarella_adc_pm.adc_chan4_intr_reg);
-		amba_writel(ADC_CHAN5_INTR_REG, ambarella_adc_pm.adc_chan5_intr_reg);
+#if (ADC_NUM_CHANNELS >= 8)
 		amba_writel(ADC_CHAN6_INTR_REG, ambarella_adc_pm.adc_chan6_intr_reg);
 		amba_writel(ADC_CHAN7_INTR_REG, ambarella_adc_pm.adc_chan7_intr_reg);
+#endif
+#if (ADC_NUM_CHANNELS >= 10)
+		amba_writel(ADC_CHAN8_INTR_REG, ambarella_adc_pm.adc_chan8_intr_reg);
+		amba_writel(ADC_CHAN9_INTR_REG, ambarella_adc_pm.adc_chan9_intr_reg);
 #endif
 	}
 

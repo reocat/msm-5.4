@@ -250,6 +250,23 @@ static struct ambarella_key_table elephant_keymap_ability[AMBINPUT_TABLE_SIZE] =
 	{AMBINPUT_END},
 };
 
+static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
+	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
+	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
+	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
+	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
+
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,	0,	2,	1750,	2050}}},	//sw4: HOME
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,	0,	2,	1350,	1650}}},	//sw5: MENU
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_BACK,	0,	2,	980,	1280}}},	//sw3: BACK
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,	0,	2,	600,	900}}},		//sw6: SEARCH
+
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_VOLUMEUP,	0,	0,	GPIO(191),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_VOLUMEDOWN,	0,	0,	GPIO(187),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+
+	{AMBINPUT_END},
+};
+
 static struct ambarella_input_board_info elephant_board_input_info = {
 	.pkeymap		= elephant_keymap,
 	.pinput_dev		= NULL,
@@ -430,6 +447,8 @@ static void __init ambarella_init_elephant(void)
 
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
+
+			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 
 			use_bub_default = 0;
 			break;
