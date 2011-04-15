@@ -100,12 +100,17 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_uart3,
 	&ambarella_udc0,
 	&ambarella_wdt0,
+//	&ambarella_fsg_device0,
+	&ambarella_usb_device0,
+	&ambarella_power_supply,
+};
+
+static struct platform_device *ambarella_pwm_devices[] __initdata = {
 	&ambarella_pwm_platform_device0,
 	&ambarella_pwm_platform_device1,
 	&ambarella_pwm_platform_device2,
 	&ambarella_pwm_platform_device3,
 	&ambarella_pwm_platform_device4,
-	&ambarella_power_supply,
 };
 
 /* ==========================================================================*/
@@ -324,14 +329,16 @@ static struct i2c_board_info elephant_board_ext_i2c_info = {
 static void __init ambarella_init_elephant(void)
 {
 	int					i;
+	int					add_pwm_dev = 1;
 	int					use_bub_default = 1;
 
 	ambarella_init_machine("Elephant");
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
-		case 1:
 		case 2:
+			add_pwm_dev = 0;
+		case 1:
 			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
 			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.lcd_power.active_delay = 1;
@@ -513,6 +520,14 @@ static void __init ambarella_init_elephant(void)
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+	}
+
+	if (add_pwm_dev) {
+		platform_add_devices(ambarella_pwm_devices, ARRAY_SIZE(ambarella_pwm_devices));
+		for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
+			device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
+			device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
+		}
 	}
 
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
