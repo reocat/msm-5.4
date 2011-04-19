@@ -100,7 +100,6 @@ struct ambarella_spi_cs_config {
 };
 
 struct ambarella_spi_platform_info {
-	int					use_interrupt;
 	int					cs_num;
 	int					*cs_pins;
 	void    				(*cs_activate)  (struct ambarella_spi_cs_config *);
