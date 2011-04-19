@@ -1,10 +1,9 @@
 /*
- * arch/arm/plat-ambarella/include/mach/system.h
+ * arch/arm/plat-ambarella/include/plat/reboot.h
  *
- * History:
- *	2006/12/27 - [Charles Chiou] created file
+ * Author: Eric Chen <pzchen@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2004-2010, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,51 +21,29 @@
  *
  */
 
-#ifndef __ASM_ARCH_SYSTEM_H
-#define __ASM_ARCH_SYSTEM_H
+#ifndef __PLAT_AMBARELLA_REBOOT_H
+#define __PLAT_AMBARELLA_REBOOT_H
 
-#include <plat/reboot.h>
-#include <plat/ambcache.h>
-
-/* ==========================================================================*/
+	
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/
-static inline void arch_idle(void)
-{
-	cpu_do_idle();
-}
+extern u32				ambarella_reboot_info;
 
-static inline void arch_reset(char mode, const char *cmd)
-{
-	reboot_info_t *info = (reboot_info_t *)(ambarella_reboot_info);
-	if(info != NULL)
-	{
-		info->magic = REBOOT_MAGIC;
-		if(cmd == NULL)
-		{
-			info->mode = NORMAL;
-		}
-		else if(strcmp(cmd, "recovery") == 0)
-		{
-			info->mode = RECOVERY;
-		}
-		else if(strcmp(cmd, "fastboot") == 0)
-		{
-			info->mode = FASTBOOT;
-		}
-		else
-		{
-			info->mode = NORMAL;
-		}
-		ambcache_clean_range(info,sizeof(reboot_info_t));
-	}
+#define REBOOT_MAGIC    0x4a32e9b0
+#define NORMAL      0
+#define RECOVERY    1
+#define FASTBOOT    2
 
-	rct_reset_chip();
-	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);
-}
+#define REBOOT_INFO_SIZE	sizeof(reboot_info_t)
+typedef struct _reboot_info
+{
+    int magic;
+    int mode;
+	int reserve[2];
+}reboot_info_t;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
