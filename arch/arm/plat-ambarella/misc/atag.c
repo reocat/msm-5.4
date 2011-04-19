@@ -33,6 +33,7 @@
 
 #include <mach/hardware.h>
 #include <plat/debug.h>
+#include <plat/reboot.h>
 #include <hal/hal.h>
 
 /* ==========================================================================*/
@@ -42,6 +43,8 @@ EXPORT_SYMBOL(ambarella_debug_level);
 u32 ambarella_debug_info = 0;
 EXPORT_SYMBOL(ambarella_debug_info);
 
+u32 ambarella_reboot_info = 0;
+EXPORT_SYMBOL(ambarella_reboot_info);
 unsigned long ambarella_debug_lookup_name(const char *name)
 {
 	return module_kallsyms_lookup_name(name);
@@ -219,10 +222,12 @@ void __init ambarella_map_io(void)
 		}
 #endif
 	}
-	ambarella_debug_info =
+	ambarella_reboot_info =
 		(ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.virtual +
 		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length -
 		DEFAULT_DEBUG_SIZE);
+
+	ambarella_debug_info = ambarella_reboot_info + REBOOT_INFO_SIZE;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	if (!bhal_mapped) {
