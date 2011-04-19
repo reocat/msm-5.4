@@ -24,12 +24,12 @@
 #define TM1726_DEBUG(format, arg...)
 #endif
 
-#define MAX_X	3930
-#define MAX_Y	2384
-#define MAX_Z	16
+#define	MAX_Z		16
+#define MAX_FINGERS	5
 
 typedef enum {
-	TM_FINGER_STATE		= 0x01,
+	TM_FINGER_STATE1	= 0x01,
+	TM_FINGER_STATE2,
 	TM_X1_HIGH,
 	TM_Y1_HIGH,
 	TM_XY1_LOW,
@@ -40,13 +40,27 @@ typedef enum {
 	TM_XY2_LOW,
 	TM_W2,
 	TM_Z2,
+	TM_X3_HIGH,
+	TM_Y3_HIGH,
+	TM_XY3_LOW,
+	TM_W3,
+	TM_Z3,
+	TM_X4_HIGH,
+	TM_Y4_HIGH,
+	TM_XY4_LOW,
+	TM_W4,
+	TM_Z4,
+	TM_X5_HIGH,
+	TM_Y5_HIGH,
+	TM_XY5_LOW,
+	TM_W5,
+	TM_Z5,
 
 	TM_IRQ_STATUS_ABS	= 0x14,
-	TM_FINGER_STATE_ABS	= 0x15,
-	TM_DEV_CNTL		= 0x25,
-	TM_IRQ_ENABLE_ABS	= 0x26,
-	TM_RESET		= 0x6f,
-	TM_FAMILY_CODE		= 0x7c,
+	TM_DEV_CNTL		= 0x35,
+	TM_IRQ_ENABLE_ABS	= 0x36,
+	TM_RESET		= 0x88,
+	TM_FAMILY_CODE		= 0x95,
 } tm1726_sub_addr_t;
 
 #define NUM_DATA			32
@@ -122,18 +136,23 @@ static inline int tm1726_read_all(struct tm1726 *tm)
 static void tm1726_send_event(struct tm1726 *tm)
 {
 	struct input_dev	*input = tm->input;
-	u8			finger_state[2];
+	u8			i, fingers, finger_state[MAX_FINGERS];
 	static int		prev_touch = 0;
 	static int		curr_touch = 0;
 	int			event = 0;
 
-	finger_state[0] = tm->reg_data[TM_FINGER_STATE] & 0x03;
-	finger_state[1] = (tm->reg_data[TM_FINGER_STATE] & 0x0c) >> 2;
+	finger_state[0] = tm->reg_data[TM_FINGER_STATE1] & 0x03;
+	finger_state[1] = (tm->reg_data[TM_FINGER_STATE1] & 0x0c) >> 2;
+	finger_state[2] = (tm->reg_data[TM_FINGER_STATE1] & 0x30) >> 4;
+	finger_state[3] = (tm->reg_data[TM_FINGER_STATE1] & 0xc0) >> 6;
+	finger_state[4] = tm->reg_data[TM_FINGER_STATE2] & 0x03;
+
 	curr_touch = 0;
-	if (finger_state[0] == 1 || finger_state[0] == 2)
-		curr_touch++;
-	if (finger_state[1] == 1 || finger_state[1] == 2)
-		curr_touch++;
+	for (i = 0; i < MAX_FINGERS; i++) {
+		if (finger_state[i] == 1 || finger_state[i] == 2) {
+			curr_touch++;
+		}
+	}
 
 	/* Button Pressed */
 	if (!prev_touch && curr_touch) {
@@ -151,86 +170,56 @@ static void tm1726_send_event(struct tm1726 *tm)
 		TM1726_DEBUG("Finger Released\n\n\n");
 	}
 
-	if (curr_touch) {
-		u8 x1h, x1l, y1h, y1l;
-		u32 x1, y1;
+	fingers = 0;
+	for (i = 0; i < MAX_FINGERS; i++) {
+		if (finger_state[i] == 1 || finger_state[i] == 2) {
+			u8	xh, xl, yh, yl;
+			u32	x, y;
 
-		x1h = tm->reg_data[TM_X1_HIGH];
-		x1l = tm->reg_data[TM_XY1_LOW] & 0x0f;
-		y1h = tm->reg_data[TM_Y1_HIGH];
-		y1l = (tm->reg_data[TM_XY1_LOW] & 0xf0) >> 4;
-		x1 = (x1h << 4) | x1l;
-		y1 = (y1h << 4) | y1l;
-		TM1726_DEBUG("Finger1 Raw: (%d, %d)\n", x1, y1);
+			fingers++;
 
-		if (x1 < tm->fix.x_min) {
-			x1 = tm->fix.x_min;
+			xh	= tm->reg_data[TM_X1_HIGH + 5 * i];
+			xl	= tm->reg_data[TM_XY1_LOW + 5 * i] & 0x0f;
+			yh	= tm->reg_data[TM_Y1_HIGH + 5 * i];
+			yl	= (tm->reg_data[TM_XY1_LOW + 5 * i] & 0xf0) >> 4;
+			x	= (xh << 4) | xl;
+			y	= (yh << 4) | yl;
+			TM1726_DEBUG("Finger%d Raw: (%d, %d)\n", fingers, x, y);
+
+			if (x < tm->fix.x_min) {
+				x = tm->fix.x_min;
+			}
+			if (x > tm->fix.x_max) {
+				x = tm->fix.x_max;
+			}
+			if (y < tm->fix.y_min) {
+				y = tm->fix.y_min;
+			}
+			if (y > tm->fix.y_max) {
+				y = tm->fix.y_max;
+			}
+
+			if (tm->fix.x_invert) {
+				x = tm->fix.x_max - x + tm->fix.x_min;
+			}
+
+			if (tm->fix.y_invert) {
+				y = tm->fix.y_max - y + tm->fix.y_min;
+			}
+
+			event	= 1;
+			if (fingers == 1) {
+				input_report_abs(input, ABS_PRESSURE, MAX_Z);
+				input_report_abs(input, ABS_X, x);
+				input_report_abs(input, ABS_Y, y);
+			}
+
+			input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
+			input_report_abs(input, ABS_MT_POSITION_X, x);
+			input_report_abs(input, ABS_MT_POSITION_Y, y);
+			input_mt_sync(input);
+			TM1726_DEBUG("Finger%d Calibrated: (%d, %d)\n", fingers, x, y);
 		}
-		if (x1 > tm->fix.x_max) {
-			x1 = tm->fix.x_max;
-		}
-		if (y1 < tm->fix.y_min) {
-			y1 = tm->fix.y_min;
-		}
-		if (y1 > tm->fix.y_max) {
-			y1 = tm->fix.y_max;
-		}
-
-		if (tm->fix.x_invert)
-			x1 = tm->fix.x_max - x1 + tm->fix.x_min;
-
-		if (tm->fix.y_invert)
-			y1 = tm->fix.y_max - y1 + tm->fix.y_min;
-
-		event = 1;
-		input_report_abs(input, ABS_PRESSURE, MAX_Z);
-		input_report_abs(input, ABS_X, x1);
-		input_report_abs(input, ABS_Y, y1);
-
-		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
-		input_report_abs(input, ABS_MT_POSITION_X, x1);
-		input_report_abs(input, ABS_MT_POSITION_Y, y1);
-		input_mt_sync(input);
-		TM1726_DEBUG("Finger1 Calibrated: (%d, %d)\n", x1, y1);
-	}
-
-	if (curr_touch >= 2) {
-		u8 x2h, x2l, y2h, y2l;
-		u32 x2, y2;
-
-		x2h = tm->reg_data[TM_X2_HIGH];
-		x2l = tm->reg_data[TM_XY2_LOW] & 0x0f;
-		y2h = tm->reg_data[TM_Y2_HIGH];
-		y2l = (tm->reg_data[TM_XY2_LOW] & 0xf0) >> 4;
-		x2 = (x2h << 4) | x2l;
-		y2 = (y2h << 4) | y2l;
-		TM1726_DEBUG("Finger2 Raw: (%d, %d)\n", x2, y2);
-
-		if (x2 < tm->fix.x_min) {
-			x2 = tm->fix.x_min;
-		}
-		if (x2 > tm->fix.x_max) {
-			x2 = tm->fix.x_max;
-		}
-		if (y2 < tm->fix.y_min) {
-			y2 = tm->fix.y_min;
-		}
-		if (y2 > tm->fix.y_max) {
-			y2 = tm->fix.y_max;
-		}
-
-		if (tm->fix.x_invert)
-			x2 = tm->fix.x_max - x2 + tm->fix.x_min;
-
-		if (tm->fix.y_invert)
-			y2 = tm->fix.y_max - y2 + tm->fix.y_min;
-
-		event = 1;
-		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
-		input_report_abs(input, ABS_MT_POSITION_X, x2);
-		input_report_abs(input, ABS_MT_POSITION_Y, y2);
-		input_mt_sync(input);
-		TM1726_DEBUG("Finger2 Calibrated: (%d, %d)\n", x2, y2);
 	}
 
 	if (event)
@@ -310,7 +299,7 @@ static int tm1726_probe(struct i2c_client *client,
 	if (err)
 		goto err_free_mem;
 
-	tm->fix	= pdata->fix[TM1726_FAMILY_1];
+	tm->fix	= pdata->fix[TM1726_FAMILY_0];
 	for (tm1726_family = TM1726_FAMILY_0; tm1726_family < TM1726_FAMILY_END; tm1726_family++) {
 		if (pdata->fix[tm1726_family].family_code == family_code) {
 			tm->fix	= pdata->fix[tm1726_family];

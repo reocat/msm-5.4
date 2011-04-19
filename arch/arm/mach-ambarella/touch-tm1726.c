@@ -80,39 +80,39 @@ static struct tm1726_platform_data ambarella_tm1726_pdata = {
 	.fix = {
 		[TM1726_FAMILY_0] = {
 			.x_invert	= 0,
-			.y_invert	= 1,
+			.y_invert	= 0,
 			.x_rescale	= 0,
 			.y_rescale	= 0,
-			.x_min		= 11,
-			.x_max		= 3873,
+			.x_min		= 0,
+			.x_max		= 1123,
 			.y_min		= 0,
-			.y_max		= 2248,
+			.y_max		= 1872,
 
 			.family_code	= 0x00,
 		},
 
 		[TM1726_FAMILY_1] = {
-			.x_invert	= 1,
+			.x_invert	= 0,
 			.y_invert	= 0,
 			.x_rescale	= 0,
 			.y_rescale	= 0,
-			.x_min		= 11,
-			.x_max		= 3236,
+			.x_min		= 0,
+			.x_max		= 1123,
 			.y_min		= 0,
-			.y_max		= 2022,
+			.y_max		= 1872,
 
 			.family_code	= 0x26,
 		},
 
 		[TM1726_FAMILY_2] = {
-			.x_invert	= 1,
+			.x_invert	= 0,
 			.y_invert	= 0,
 			.x_rescale	= 0,
 			.y_rescale	= 0,
-			.x_min		= 11,
-			.x_max		= 3236,
+			.x_min		= 0,
+			.x_max		= 1123,
 			.y_min		= 0,
-			.y_max		= 2022,
+			.y_max		= 1872,
 
 			.family_code	= 0xc1,
 		},
