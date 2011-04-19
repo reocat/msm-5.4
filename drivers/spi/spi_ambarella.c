@@ -244,7 +244,7 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 
 static void ambarella_spi_tasklet(unsigned long data)
 {
-	struct ambarella_spi		*priv	= data;
+	struct ambarella_spi		*priv	= (struct ambarella_spi *)data;
 	void 				*rbuf;
 	u32				widx, ridx, len;
 	u32				rxflr, xfer_len;
