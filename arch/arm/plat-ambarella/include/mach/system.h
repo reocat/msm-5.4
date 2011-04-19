@@ -42,23 +42,18 @@ static inline void arch_idle(void)
 static inline void arch_reset(char mode, const char *cmd)
 {
 	reboot_info_t *info = (reboot_info_t *)(ambarella_reboot_info);
-	if(info != NULL)
-	{
+	if(info != NULL) {
 		info->magic = REBOOT_MAGIC;
-		if(cmd == NULL)
-		{
+		if(cmd == NULL) {
 			info->mode = NORMAL;
 		}
-		else if(strcmp(cmd, "recovery") == 0)
-		{
+		else if(strcmp(cmd, "recovery") == 0) {
 			info->mode = RECOVERY;
 		}
-		else if(strcmp(cmd, "fastboot") == 0)
-		{
+		else if(strcmp(cmd, "fastboot") == 0) {
 			info->mode = FASTBOOT;
 		}
-		else
-		{
+		else {
 			info->mode = NORMAL;
 		}
 		ambcache_clean_range(info,sizeof(reboot_info_t));

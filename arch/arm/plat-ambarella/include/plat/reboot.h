@@ -24,8 +24,6 @@
 #ifndef __PLAT_AMBARELLA_REBOOT_H
 #define __PLAT_AMBARELLA_REBOOT_H
 
-	
-
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
