@@ -28,12 +28,12 @@
 #define GPIO_BANK_SIZE			32
 #define AMBGPIO_SIZE			(GPIO_INSTANCES * GPIO_BANK_SIZE)
 
-#ifndef CONFIG_AMBGPIO_EXT_SIZE
-#define CONFIG_AMBGPIO_EXT_SIZE		(32)
+#ifndef CONFIG_AMBARELLA_EXT_GPIO_NUM
+#define CONFIG_AMBARELLA_EXT_GPIO_NUM	(64)
 #endif
 #define EXT_GPIO(x)			(AMBGPIO_SIZE + x)
 
-#define ARCH_NR_GPIOS			(AMBGPIO_SIZE + CONFIG_AMBGPIO_EXT_SIZE)
+#define ARCH_NR_GPIOS			EXT_GPIO(CONFIG_AMBARELLA_EXT_GPIO_NUM)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

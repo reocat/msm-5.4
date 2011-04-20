@@ -27,9 +27,12 @@
 /* ==========================================================================*/
 #define NR_VIC_IRQ_SIZE			(32)
 
-#if defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX)
+#if defined(CONFIG_ARM_GIC)
 #define VIC_IRQ(x)			((x) + 32)
 #define NR_SPI_IRQS			(256)
+#define SGI_INT_VEC(x)			(x)
+#define PPI_INT_VEC(x)			(x)
+#define SPI_INT_VEC(x)			(x)
 #else
 #define VIC_IRQ(x)			(x)
 #endif
@@ -41,20 +44,18 @@
 
 #ifndef NR_SPI_IRQS
 #define NR_VIC_IRQS			(VIC_INSTANCES * NR_VIC_IRQ_SIZE)
+#define GPIO_INT_VEC(x)			(NR_VIC_IRQS + x)
 #else
 #define NR_VIC_IRQS			NR_SPI_IRQS
+#define GPIO_INT_VEC(x)			(NR_SPI_IRQS + x)
 #endif
-#define SGI_INT_VEC(x)			(x)
-#define PPI_INT_VEC(x)			(x)
-#define SPI_INT_VEC(x)			(x)
 
-#ifndef CONFIG_AMBIRQ_EXT_SIZE
-#define CONFIG_AMBIRQ_EXT_SIZE		(64)
+#ifndef CONFIG_AMBARELLA_EXT_IRQ_NUM
+#define CONFIG_AMBARELLA_EXT_IRQ_NUM	(64)
 #endif
-#define EXT_IRQ(x)			(NR_VIC_IRQS + AMBGPIO_SIZE + x)
+#define EXT_IRQ(x)			GPIO_INT_VEC(AMBGPIO_SIZE + x)
 
-#define NR_IRQS				VIC_IRQ(NR_VIC_IRQS + AMBGPIO_SIZE + CONFIG_AMBIRQ_EXT_SIZE)
-#define GPIO_INT_VEC(x)			VIC_IRQ(x + NR_VIC_IRQS)
+#define NR_IRQS				EXT_IRQ(CONFIG_AMBARELLA_EXT_IRQ_NUM)
 
 /* ==========================================================================*/
 #if (CHIP_REV == A2)
