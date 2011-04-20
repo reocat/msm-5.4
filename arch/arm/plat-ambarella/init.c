@@ -94,10 +94,14 @@ int __init ambarella_init_machine(char *board_name)
 	BUG_ON(retval != AMB_HAL_SUCCESS);
 #endif
 
+	ambarella_board_generic.board_chip = AMBARELLA_BOARD_CHIP(system_rev);
+	ambarella_board_generic.board_type = AMBARELLA_BOARD_TYPE(system_rev);
+	ambarella_board_generic.board_rev = AMBARELLA_BOARD_REV(system_rev);
+
 	pr_info("Ambarella %s:\n", board_name);
-	pr_info("\tchip id:\t\t%d\n", AMBARELLA_BOARD_CHIP(system_rev));
-	pr_info("\tboard type:\t\t%d\n", AMBARELLA_BOARD_TYPE(system_rev));
-	pr_info("\tboard revision:\t\t%d\n", AMBARELLA_BOARD_REV(system_rev));
+	pr_info("\tchip id:\t\t%d\n", ambarella_board_generic.board_chip);
+	pr_info("\tboard type:\t\t%d\n", ambarella_board_generic.board_type);
+	pr_info("\tboard revision:\t\t%d\n", ambarella_board_generic.board_rev);
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	pr_info("\tchip name:\t\t%s\n", pname);
 	pr_info("\tHAL version:\t\t%d\n", version);
@@ -110,10 +114,6 @@ int __init ambarella_init_machine(char *board_name)
 	pr_info("\thif type:\t\t0x%08x\n",
 		amb_get_hif_type(HAL_BASE_VP));
 #endif
-
-	//Check chip ID
-	//if (AMBARELLA_BOARD_CHIP(system_rev) != AMBARELLA_BOARD_CHIP_AUTO)
-		//BUG_ON(AMBARELLA_BOARD_CHIP(system_rev) != CHIP_REV);
 
 	retval = ambarella_create_proc_dir();
 	BUG_ON(retval != 0);

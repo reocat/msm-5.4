@@ -30,6 +30,10 @@
 #ifndef __ASSEMBLER__
 
 struct ambarella_board_info {
+	u32					board_chip;
+	u32					board_type;
+	u32					board_rev;
+
 	struct ambarella_gpio_irq_info		power_detect;
 	struct ambarella_gpio_io_info		power_control;
 	struct ambarella_gpio_io_info		debug_led0;
@@ -108,6 +112,9 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		pmic_irq;
 };
 #define AMBA_BOARD_CALL(arg, perm) \
+	module_param_cb(board_chip, &param_ops_uint, &(arg.board_chip), 0444); \
+	module_param_cb(board_type, &param_ops_uint, &(arg.board_type), 0444); \
+	module_param_cb(board_rev, &param_ops_uint, &(arg.board_rev), 0444); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect##_, arg.power_detect, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##power_control##_, arg.power_control, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##debug_led0##_, arg.debug_led0, perm); \
