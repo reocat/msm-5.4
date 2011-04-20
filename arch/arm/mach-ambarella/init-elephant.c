@@ -466,7 +466,7 @@ static void __init ambarella_init_elephant(void)
 			break;
 
 		default:
-			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
+			pr_warn("%s: Unknown VENDOR Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
 			break;
 		}
 	}
