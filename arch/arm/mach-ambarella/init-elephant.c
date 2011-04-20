@@ -541,7 +541,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_uart3,
 	&ambarella_udc0,
 	&ambarella_wdt0,
-	&ambarella_power_supply,
 };
 
 static struct platform_device *ambarella_pwm_devices[] __initdata = {
