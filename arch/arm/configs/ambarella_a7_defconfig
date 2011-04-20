@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 2.6.38 Kernel Configuration
-# Mon Mar 21 18:21:59 2011
+# Linux/arm 2.6.38.2 Kernel Configuration
+# Wed Apr 20 17:11:10 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -897,6 +897,7 @@ CONFIG_TOUCHSCREEN_AK4183=m
 # CONFIG_TOUCHSCREEN_CY8CTMG is not set
 CONFIG_TOUCHSCREEN_CHACHA_MT4D=m
 # CONFIG_TOUCHSCREEN_TM1510 is not set
+# CONFIG_TOUCHSCREEN_TM1726 is not set
 # CONFIG_TOUCHSCREEN_NT11001 is not set
 # CONFIG_TOUCHSCREEN_ST1232 is not set
 # CONFIG_TOUCHSCREEN_TPS6507X is not set
@@ -979,6 +980,7 @@ CONFIG_I2C_MUX=m
 # Multiplexer I2C Chip support
 #
 # CONFIG_I2C_MUX_GPIO is not set
+CONFIG_I2C_MUX_AMBARELLA=m
 # CONFIG_I2C_MUX_PCA9541 is not set
 # CONFIG_I2C_MUX_PCA954x is not set
 # CONFIG_I2C_HELPER_AUTO is not set
