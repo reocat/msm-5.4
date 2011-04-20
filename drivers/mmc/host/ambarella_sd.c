@@ -1350,7 +1350,10 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc,
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	hostr = amba_readb(pinfo->regbase + SD_HOST_OFFSET);
-	if (bus_width == MMC_BUS_WIDTH_4) {
+	if (bus_width == MMC_BUS_WIDTH_8) {
+		hostr |= SD_HOST_8BIT;
+		hostr &= ~(SD_HOST_4BIT);
+	} else if (bus_width == MMC_BUS_WIDTH_4) {
 		hostr &= ~(SD_HOST_8BIT);
 		hostr |= SD_HOST_4BIT;
 	} else if (bus_width == MMC_BUS_WIDTH_1) {
@@ -1455,8 +1458,10 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	card_sta = amba_readl(pinfo->regbase + SD_STA_OFFSET);
 
-	if (pslotinfo->plat_info->fixed_cd != -1) {
+	if (pslotinfo->plat_info->fixed_cd == 1) {
 		valid_request = 1;
+	} else if (pslotinfo->plat_info->fixed_cd == 0) {
+		valid_request = 0;
 	} else {
 		valid_cd = ambarella_sd_gpio_cd_check_val(pslotinfo);
 		if (valid_cd == 1) {
@@ -1733,7 +1738,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			"SD max_blk_size: %d.\n",
 			mmc->max_blk_size);
 
-		mmc->caps = MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ;
+		mmc->caps = pslotinfo->plat_info->caps;
 		if (hc_cap & SD_CAP_HIGH_SPEED) {
 			mmc->caps |= MMC_CAP_SD_HIGHSPEED;
 			mmc->caps |= MMC_CAP_MMC_HIGHSPEED;
@@ -1778,6 +1783,12 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			goto sd_errorCode_free_host;
 		}
 
+		pslotinfo->max_blk_sz = pslotinfo->plat_info->max_blk_sz;
+		mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
+			pslotinfo->max_blk_sz);
+		mmc->max_blk_count = 0xFFFF;
+		mmc->max_req_size = min(mmc->max_blk_size * mmc->max_blk_count,
+			mmc->max_seg_size);
 		if (pslotinfo->plat_info->use_bounce_buffer) {
 			mmc->max_segs = 128;
 			pslotinfo->max_blk_sz =

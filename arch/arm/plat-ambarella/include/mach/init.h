@@ -53,6 +53,7 @@
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
 #include <plat/ahci.h>
 #endif
+
 #include <plat/wdt.h>
 #include <plat/adb.h>
 

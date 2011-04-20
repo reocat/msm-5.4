@@ -104,6 +104,8 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		wifi_irq;
 	struct ambarella_gpio_io_info		wifi_power;
 	struct ambarella_gpio_io_info		wifi_reset;
+
+	struct ambarella_gpio_irq_info		pmic_irq;
 };
 #define AMBA_BOARD_CALL(arg, perm) \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect##_, arg.power_detect, perm); \
@@ -164,7 +166,8 @@ struct ambarella_board_info {
 	AMBA_PWM_MODULE_PARAM_CALL(board_##pwm4##_, arg.pwm4_config, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##wifi_irq##_, arg.wifi_irq, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##wifi_power##_, arg.wifi_power, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##wifi_reset##_, arg.wifi_reset, perm)
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##wifi_reset##_, arg.wifi_reset, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##pmic_irq##_, arg.pmic_irq, perm);
 
 /* ==========================================================================*/
 extern struct ambarella_board_info ambarella_board_generic;

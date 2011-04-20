@@ -318,9 +318,23 @@ endmenu
 config AMBARELLA_TIMER_HZ
 	int "Kernel HZ (jiffies per second)"
 	range 100 1000
-	default "100"
+	default 100
 	help
-	Please test and figure out what you need.
+	  Please test and figure out what you need.
+
+config AMBARELLA_EXT_IRQ_NUM
+	int "External IRQ Num"
+	range 0 256
+	default 64
+	help
+	  Depends on your HW design.
+
+config AMBARELLA_EXT_GPIO_NUM
+	int "External GPIO Num"
+	range 0 256
+	default 64
+	help
+	  Depends on your HW design.
 
 endmenu
 

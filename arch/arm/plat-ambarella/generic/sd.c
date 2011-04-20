@@ -41,16 +41,29 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+typedef void (*mmc_detect_change_fn)(struct mmc_host *host, unsigned long delay);
+
 int ambarella_sd_set_fixed_cd(const char *val, const struct kernel_param *kp)
 {
-#if defined(CONFIG_MMC)
 	struct ambarella_sd_slot		*pslotinfo;
+	mmc_detect_change_fn			pmmc_detect_change_fn = NULL;
+	int					retval;
 
+	retval = param_set_int(val, kp);
 	pslotinfo = container_of(kp->arg, struct ambarella_sd_slot, fixed_cd);
-	if (pslotinfo && pslotinfo->pmmc_host)
-		mmc_detect_change(pslotinfo->pmmc_host, pslotinfo->cd_delay);
+#if defined(CONFIG_MMC)
+	pmmc_detect_change_fn = mmc_detect_change;
+#else
+	pmmc_detect_change_fn = (mmc_detect_change_fn)
+		module_kallsyms_lookup_name("mmc_detect_change");
 #endif
-	return param_set_int(val, kp);
+	if (!retval && pslotinfo && pmmc_detect_change_fn &&
+		pslotinfo->pmmc_host) {
+		pmmc_detect_change_fn(pslotinfo->pmmc_host,
+			pslotinfo->cd_delay);
+	}
+
+	return retval;
 }
 
 static struct kernel_param_ops param_ops_ambarella_sd_cdpos = {
@@ -137,6 +150,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
+		.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
@@ -171,13 +185,14 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
+		.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ,
 	},
 	.num_slots		= 2,
 #else
 	.num_slots		= 1,
 #endif
 	.clk_limit		= 12500000,
-	.wait_tmo		= (5 * HZ),
+	.wait_tmo		= (1 * HZ),
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
 #if (SD_SUPPORT_PLL_SCALER == 1)
@@ -296,10 +311,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
+		.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ,
 	},
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
-	.wait_tmo		= (5 * HZ),
+	.wait_tmo		= (1 * HZ),
 #if (CHIP_REV == I1)
 	.set_pll		= ambarella_platform_sdxc_set_pll,
 	.get_pll		= ambarella_platform_sdxc_get_pll,
