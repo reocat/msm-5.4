@@ -236,7 +236,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 	}
 
 	priv->widx = widx;
-	priv->ridx = ridx;
 	enable_irq(priv->irq);
 
 	return;
@@ -303,6 +302,7 @@ static void ambarella_spi_tasklet(unsigned long data)
 			}
 		}
 
+		priv->ridx	= ridx;
 		break;
 
 	default:
