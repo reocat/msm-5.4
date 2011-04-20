@@ -180,7 +180,7 @@ static unsigned int get_pwm_1_through_4_clock_hz(void)
 
 static struct pwm_device ambarella_pwm0 = {
 	.pwm_id		= 0,
-	.gpio_id	= 16,
+	.gpio_id	= GPIO(16),
 	.get_clock	= get_pwm_freq_hz,
 	.enable		= {
 		.addr	= PWM_ENABLE_REG,
@@ -208,7 +208,7 @@ static struct pwm_device ambarella_pwm0 = {
 
 static struct pwm_device ambarella_pwm1 = {
 	.pwm_id		= 1,
-	.gpio_id	= 45,
+	.gpio_id	= GPIO(45),
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_B0_ENABLE_REG,
@@ -236,7 +236,7 @@ static struct pwm_device ambarella_pwm1 = {
 
 static struct pwm_device ambarella_pwm2 = {
 	.pwm_id		= 2,
-	.gpio_id	= 46,
+	.gpio_id	= GPIO(46),
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_B1_ENABLE_REG,
@@ -264,7 +264,7 @@ static struct pwm_device ambarella_pwm2 = {
 
 static struct pwm_device ambarella_pwm3 = {
 	.pwm_id		= 3,
-	.gpio_id	= 50,
+	.gpio_id	= GPIO(50),
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_C0_ENABLE_REG,
@@ -292,7 +292,7 @@ static struct pwm_device ambarella_pwm3 = {
 
 static struct pwm_device ambarella_pwm4 = {
 	.pwm_id		= 4,
-	.gpio_id	= 51,
+	.gpio_id	= GPIO(51),
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_C1_ENABLE_REG,
@@ -596,8 +596,7 @@ int __init ambarella_init_pwm(void)
 	add_pwm_device(&ambarella_pwm1);
 	add_pwm_device(&ambarella_pwm2);
 	add_pwm_device(&ambarella_pwm3);
-	if (AMBARELLA_BOARD_TYPE(system_rev) != AMBARELLA_BOARD_TYPE_EVK)
-		add_pwm_device(&ambarella_pwm4);
+	add_pwm_device(&ambarella_pwm4);
 
 	return retval;
 }

@@ -326,69 +326,13 @@ static struct i2c_board_info elephant_board_ext_i2c_info = {
 /* ==========================================================================*/
 static void __init ambarella_init_elephant(void)
 {
-	int					i;
-	int					add_pwm_dev = 1;
+	int					i, ret;
 	int					use_bub_default = 1;
 
 	ambarella_init_machine("Elephant");
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
-		case 2:
-			add_pwm_dev = 0;
-		case 1:
-			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
-			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
-			ambarella_board_generic.lcd_power.active_delay = 1;
-
-			ambarella_board_generic.lcd_reset.gpio_id = GPIO(32);
-			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-			ambarella_board_generic.lcd_reset.active_delay = 1;
-
-			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
-			ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-			ambarella_board_generic.lcd_backlight.active_delay = 1;
-
-			ambarella_board_generic.touch_panel_reset.gpio_id = GPIO(29);
-			ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
-			ambarella_board_generic.touch_panel_reset.active_delay = 1;
-
-			ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(51);
-			ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(51);
-			ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
-			ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
-			ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-			fio_default_owner = SELECT_FIO_SDIO;
-			ambarella_platform_sd_controller0.clk_limit = 24000000;
-			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
-			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[1].fixed_cd = 1;
-			ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
-			ambarella_platform_sd_controller1.clk_limit = 24000000;
-			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-
-			ambarella_nt11001_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
-			ambarella_nt11001_board_info.flags = 0;
-			i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
-
-			elephant_board_input_info.pkeymap = elephant_keymap_ability;
-
-			use_bub_default = 0;
-			break;
-
 		case 'B':
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
@@ -463,8 +407,70 @@ static void __init ambarella_init_elephant(void)
 			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
 			break;
 		}
-
 	}
+
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
+		switch (AMBARELLA_BOARD_REV(system_rev)) {
+		case 2:
+		case 1:
+			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
+			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.lcd_power.active_delay = 1;
+
+			ambarella_board_generic.lcd_reset.gpio_id = GPIO(32);
+			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.lcd_reset.active_delay = 1;
+
+			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
+			ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
+			ambarella_board_generic.lcd_backlight.active_delay = 1;
+
+			ambarella_board_generic.touch_panel_reset.gpio_id = GPIO(29);
+			ambarella_board_generic.touch_panel_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.touch_panel_reset.active_delay = 1;
+
+			ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(51);
+			ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(51);
+			ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+			ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+			ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+			fio_default_owner = SELECT_FIO_SDIO;
+			ambarella_platform_sd_controller0.clk_limit = 24000000;
+			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
+			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+			ambarella_platform_sd_controller0.slot[1].fixed_cd = 1;
+			ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
+			ambarella_platform_sd_controller1.clk_limit = 24000000;
+			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
+			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
+			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+
+			ambarella_nt11001_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
+			ambarella_nt11001_board_info.flags = 0;
+			i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
+
+			elephant_board_input_info.pkeymap = elephant_keymap_ability;
+
+			use_bub_default = 0;
+			break;
+
+		default:
+			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
+			break;
+		}
+	}
+
 	if (use_bub_default) {
 		pr_info("%s: Default BUB config:\n", __func__);
 		ambarella_board_generic.lcd_reset.gpio_id = GPIO(46);
@@ -520,12 +526,22 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
-	if (add_pwm_dev) {
-		platform_add_devices(ambarella_pwm_devices, ARRAY_SIZE(ambarella_pwm_devices));
-		for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
-			device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
-			device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
-		}
+	for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
+		if (i == 1
+			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_BUB)
+			continue;
+		if (i == 2
+			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR
+			&& AMBARELLA_BOARD_REV(system_rev) == 2)
+			continue;
+		if (i == 4
+			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK)
+			continue;
+		ret = platform_device_register(ambarella_pwm_devices[i]);
+		if (ret)
+			continue;
+		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
+		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
 
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
