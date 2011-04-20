@@ -49,24 +49,465 @@
 
 #include <linux/mmc/host.h>
 
+#include <linux/regulator/machine.h>
+#include <linux/mfd/wm831x/core.h>
+#include <linux/mfd/wm831x/pdata.h>
 #include "board-device.h"
 
 /* ==========================================================================*/
 #include <linux/pda_power.h>
-static int ambarella_power_is_ac_online(void)
-{
-	return 1;
-}
-
-static struct pda_power_pdata  ambarella_power_supply_info = {
-	.is_ac_online    = ambarella_power_is_ac_online,
+/* DCDC1: iOne_VDDAX for Cortex and 3D */
+static struct regulator_consumer_supply dcdc1_consumers[] = {
+	{
+		.supply = "cpu_vcc",
+	},
 };
 
-static struct platform_device ambarella_power_supply = {
-	.name = "pda-power",
-	.id   = -1,
-	.dev  = {
-		.platform_data = &ambarella_power_supply_info,
+static struct regulator_init_data elephant_wm8310_dcdc1_data = {
+	.constraints = {
+		.name = "VDD_AXI_1.2V",
+		.min_uV = 1000000,
+		.max_uV = 1400000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
+		.state_mem = {
+			.disabled = 1,
+		},
+		.initial_state = PM_SUSPEND_ON,
+		.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(dcdc1_consumers),
+	 .consumer_supplies = dcdc1_consumers,
+};
+
+static struct regulator_consumer_supply dcdc2_consumers[] = {
+	{
+		.supply = "ddr3_vcc",
+	},
+};
+/* DCDC2 iOne_D1P5 for DDR3 */
+static struct regulator_init_data elephant_wm8310_dcdc2_data = {
+	.constraints = {
+		.name = "VDDQ_i1_1.5V",
+		.min_uV = 1500000,
+		.max_uV = 1500000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
+		.state_mem = {
+			.disabled = 1,
+		},
+		.initial_state = PM_SUSPEND_ON,
+		.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(dcdc2_consumers),
+	 .consumer_supplies = dcdc2_consumers,
+};
+static struct regulator_consumer_supply dcdc3_consumers[] = {
+	{
+		.supply = "gen_vcc",
+	},
+	{
+		.supply = "lp_vcc",
+	},
+};
+/* DCDC3 iOne_D3P15 for A3P15 or D3P15 */
+static struct regulator_init_data elephant_wm8310_dcdc3_data = {
+	.constraints = {
+		.name = "VDD33_LP_AND_GEN_3.15V",
+		.min_uV = 3150000,
+		.max_uV = 3150000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(dcdc3_consumers),
+	 .consumer_supplies = dcdc3_consumers,
+};
+
+#if 0
+static struct regulator_consumer_supply dcdc4_consumers[] = {
+	{
+		.supply = "lcd_vcc",
+	},
+};
+
+static struct regulator_init_data elephant_wm8310_dcdc4_data = {
+	.constraints = {
+		.name = "VDD_LCD_28V",
+		.min_uV = 28000000,
+		.max_uV = 28000000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(dcdc4_consumers),
+	 .consumer_supplies = dcdc4_consumers,
+};
+#endif
+
+static struct regulator_consumer_supply ldo1_consumers[] = {
+	{
+		.supply = "mipi_vcc",
+	},
+};
+/* LDO1 MIPI_PHY */
+static struct regulator_init_data elephant_wm8310_ldo1_data = {
+	.constraints = {
+		.name = "MIPI_PHY_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo1_consumers),
+	 .consumer_supplies = ldo1_consumers,
+};
+static struct regulator_consumer_supply ldo2_consumers[] = {
+	{
+		.supply = "sensor_vcc",
+	},
+};
+/* LDO2 SEN_VDD */
+static struct regulator_init_data elephant_wm8310_ldo2_data = {
+	.constraints = {
+		.name = "VDD_SEN_1.5V",
+		.min_uV = 1500000,
+		.max_uV = 1500000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo2_consumers),
+	 .consumer_supplies = ldo2_consumers,
+};
+static struct regulator_consumer_supply ldo3_consumers[] = {
+	{
+		.supply = "audio_vcc",
+	},
+};
+/* LDO3 Audio codec power */
+static struct regulator_init_data elephant_wm8310_ldo3_data = {
+	.constraints = {
+		.name = "VDD_AUD_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo3_consumers),
+	 .consumer_supplies = ldo3_consumers,
+};
+
+static struct regulator_consumer_supply ldo4_consumers[] = {
+	{
+		.supply = "gyro_vcc",
+	},
+};
+/* LDO4 gyro sensor */
+static struct regulator_init_data elephant_wm8310_ldo4_data = {
+	.constraints = {
+		.name = "VDD_GY_3.1V",
+		.min_uV = 3100000,
+		.max_uV = 3100000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo4_consumers),
+	 .consumer_supplies = ldo4_consumers,
+};
+static struct regulator_consumer_supply ldo5_consumers[] = {
+	{
+		.supply = "sdxc_vcc",
+	},
+};
+/* LDO5 VDD33_SDXC */
+static struct regulator_init_data elephant_wm8310_ldo5_data = {
+	.constraints = {
+		.name = "VDD33_SDXC_3.15V_L",
+			/* can not get 3.15 but 3.1 or 3.2 */
+		.min_uV = 3100000,
+		.max_uV = 3100000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo5_consumers),
+	 .consumer_supplies = ldo5_consumers,
+};
+static struct regulator_consumer_supply ldo6_consumers[] = {
+	{
+		.supply = "gsensor_vcc",
+	},
+};
+/* LDO6 Gsensor */
+static struct regulator_init_data elephant_wm8310_ldo6_data = {
+	.constraints = {
+		.name = "VDD_G_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo6_consumers),
+	 .consumer_supplies = ldo6_consumers,
+};
+static struct regulator_consumer_supply ldo7_consumers[] = {
+	{
+		.supply = "analog_vcc",
+	},
+};
+/* LDO7 VDDA_25_XX */
+static struct regulator_init_data elephant_wm8310_ldo7_data = {
+	.constraints = {
+		.name = "VDDA_25_XXX_2.5V",
+		.min_uV = 2500000,
+		.max_uV = 2500000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo7_consumers),
+	 .consumer_supplies = ldo7_consumers,
+};
+static struct regulator_consumer_supply ldo8_consumers[] = {
+	{
+		.supply = "imagesen_vcc",
+	},
+};
+/* LDO8 Image sensor */
+static struct regulator_init_data elephant_wm8310_ldo8_data = {
+	.constraints = {
+		.name = "VDD_IMG_SEN_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo8_consumers),
+	 .consumer_supplies = ldo8_consumers,
+};
+static struct regulator_consumer_supply ldo9_consumers[] = {
+	{
+		.supply = "bt_vcc",
+	},
+};
+/* LDO9 VDD_BT */
+static struct regulator_init_data elephant_wm8310_ldo9_data = {
+	.constraints = {
+		.name = "VDD_BT_3.1V",
+		.min_uV = 3100000,
+		.max_uV = 3100000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo9_consumers),
+	 .consumer_supplies = ldo9_consumers,
+};
+static struct regulator_consumer_supply ldo10_consumers[] = {
+	{
+		.supply = "lcd_ctl_vcc",
+	},
+};
+/* LDO10 VDD_LCD */
+static struct regulator_init_data elephant_wm8310_ldo10_data = {
+	.constraints = {
+		.name = "VDD_LCD_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(ldo10_consumers),
+	 .consumer_supplies = ldo10_consumers,
+};
+static struct regulator_consumer_supply lsink1_consumers[] = {
+	{
+		.supply = "lcd_bl_sink",
+	},
+};
+/* ISINK1 backlight */
+static struct regulator_init_data elephant_wm8310_isink1_data = {
+	.constraints = {
+		.name = "VDD_LCD_BL_20mA_28V",
+		.min_uA = 19484,
+		.max_uA = 19484,
+		//.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+		//.initial_state = PM_SUSPEND_MAX,
+		//.always_on = 1,
+		.boot_on = 1,
+	},
+	 .num_consumer_supplies = ARRAY_SIZE(lsink1_consumers),
+	 .consumer_supplies = lsink1_consumers,
+};
+static struct wm831x_backlight_pdata elephant_wm8310_backlight_pdata = {
+	.isink = 1,
+	/* 20*2^(13.25) = 19484 */
+	.max_uA = 19484,
+};
+
+
+static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
+	.enable = 1,
+	.fast_enable	 = 1,
+	.off_mask = 1,
+	.trickle_ilim = 50,
+	.vsel = 4200,
+	.eoc_iterm = 20,
+	.fast_ilim = 450,
+	.timeout = 360,
+};
+
+#if 0
+static struct gpio elephant_wm8310_gpios[] = {
+		{GPIO_BOARD_START + 0, GPIOF_OUT_INIT_HIGH, "VDD_EN1"},
+		{GPIO_BOARD_START + 1, GPIOF_OUT_INIT_HIGH, "VDD_EN2"},
+		{GPIO_BOARD_START + 2, GPIOF_OUT_INIT_HIGH, "VDD_EN3"},
+		{GPIO_BOARD_START + 3, GPIOF_OUT_INIT_HIGH, "VDD_EN4"},
+		{GPIO_BOARD_START + 4, GPIOF_OUT_INIT_HIGH, "VDD_EN5"},
+		{GPIO_BOARD_START + 5, GPIOF_OUT_INIT_HIGH, "VDD_EN6"},
+		{GPIO_BOARD_START + 6, GPIOF_OUT_INIT_HIGH, "VDD_EN7"},
+		{GPIO_BOARD_START + 7, GPIOF_OUT_INIT_HIGH, "VDD_EN8"},
+		{GPIO_BOARD_START + 8, GPIOF_OUT_INIT_HIGH, "VDD_EN9"},
+};
+#endif
+
+static int elephant_wm8310_pre_init(struct wm831x *wm831x)
+{
+	wm831x->irq = gpio_to_irq(54);
+	//printk("wm8310 irq is %d\n", wm831x->irq);
+	return 0;
+ }
+
+/* setup the gpio 1..9 (1 is the 1st one) as power supply by hw init/OTP */
+/* we only check the gpio's high value */
+static int elephant_wm8310_post_init(struct wm831x *wm831x)
+{
+	int ret = 0;
+	#if 0
+	int i;
+	printk("by pass post init\n");
+	if ((ret = gpio_request_array(elephant_wm8310_gpios, ARRAY_SIZE(elephant_wm8310_gpios)))) {
+		printk("Error request gpio for wm8310 on iOne\n");
+		return ret;
+	};
+	for (i = 0 ; i < ARRAY_SIZE(elephant_wm8310_gpios); i++) {
+		if (!gpio_get_value_cansleep(GPIO_BOARD_START + i)) {
+			printk("WARNING:gpio in wm8310 is not pulled high with hw init\n");
+			/* we hope it will work anyway */
+			//ret = -EINVAL;
+		};
+	}
+	#endif
+
+	return ret;
+}
+
+static struct wm831x_pdata elephant_wm8310_pdata = {
+	.pre_init = elephant_wm8310_pre_init,
+	.post_init = elephant_wm8310_post_init,
+	/* CIFMODE is pulled up to enable wm8310 spi mode with GPIO */
+	.irq_base = EXT_IRQ(0),
+
+	.gpio_base = EXT_GPIO(0),
+	.backlight = &elephant_wm8310_backlight_pdata,
+
+	.battery = &elephant_wm8310_battery_pdata,
+
+	.dcdc = {
+		&elephant_wm8310_dcdc1_data, /* DCDC1 */
+		&elephant_wm8310_dcdc2_data, /* DCDC2 */
+		&elephant_wm8310_dcdc3_data, /* DCDC3 */
+	},
+	.ldo = {
+		&elephant_wm8310_ldo1_data,
+		&elephant_wm8310_ldo2_data,
+		&elephant_wm8310_ldo3_data,
+		&elephant_wm8310_ldo4_data,
+		&elephant_wm8310_ldo5_data,
+		&elephant_wm8310_ldo6_data,
+		&elephant_wm8310_ldo7_data,
+		&elephant_wm8310_ldo8_data,
+		&elephant_wm8310_ldo9_data,
+		&elephant_wm8310_ldo10_data,
+	},
+
+	.isink = {
+		&elephant_wm8310_isink1_data, /* ISINK1 */
 	},
 };
 
@@ -113,97 +554,97 @@ static struct platform_device *ambarella_pwm_devices[] __initdata = {
 
 /* ==========================================================================*/
 static struct spi_board_info ambarella_spi_devices[] = {
-	{
+	[0] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 0,
 	},
-	{
+	[1] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 1,
 	},
-	{
+	[2] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 2,
 	},
-	{
+	[3] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 3,
 	},
-	{
+	[4] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 4,
 	},
-	{
+	[5] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 5,
 	},
-	{
+	[6] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 6,
 	},
-	{
+	[7] = {
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 7,
 	},
-	{
+	[8] = {
 		.modalias	= "spidev",
 		.bus_num	= 1,
 		.chip_select	= 0,
 	},
-	{
+	[9] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 0,
 	},
-	{
+	[10] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 1,
 	},
-	{
+	[11] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 2,
 	},
-	{
+	[12] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 3,
 	},
-	{
+	[13] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 4,
 	},
-	{
+	[14] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 5,
 	},
-	{
+	[15] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 6,
 	},
-	{
+	[16] = {
 		.modalias	= "spidev",
 		.bus_num	= 2,
 		.chip_select	= 7,
 	},
-	{
+	[17] = {
 		.modalias	= "spidev",
 		.bus_num	= 3,
 		.chip_select	= 0,
 	},
-	{
+	[18] = {
 		.modalias	= "spidev",
 		.bus_num	= 4,
 		.chip_select	= 0,
@@ -359,6 +800,16 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.wifi_power.gpio_id = GPIO(109);
 			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.wifi_power.active_delay = 300;
+
+			ambarella_board_generic.pmic_irq.irq_gpio = GPIO(54);
+			ambarella_board_generic.pmic_irq.irq_line = gpio_to_irq(54);
+			ambarella_board_generic.pmic_irq.irq_type = IRQF_TRIGGER_FALLING;
+			ambarella_board_generic.pmic_irq.irq_gpio_val = GPIO_LOW;
+			ambarella_board_generic.pmic_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
+			ambarella_spi_devices[12].max_speed_hz = 2000000;
+			ambarella_spi_devices[12].platform_data = &elephant_wm8310_pdata;
 
 			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
 			ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;

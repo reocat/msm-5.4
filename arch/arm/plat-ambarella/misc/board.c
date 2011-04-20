@@ -390,6 +390,13 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
+	.pmic_irq	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
 };
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);
 EXPORT_SYMBOL(ambarella_board_generic);

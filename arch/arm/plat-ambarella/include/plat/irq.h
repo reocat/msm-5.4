@@ -48,7 +48,12 @@
 #define PPI_INT_VEC(x)			(x)
 #define SPI_INT_VEC(x)			(x)
 
-#define NR_IRQS				VIC_IRQ(NR_VIC_IRQS + AMBGPIO_SIZE)
+#ifndef CONFIG_AMBIRQ_EXT_SIZE
+#define CONFIG_AMBIRQ_EXT_SIZE		(64)
+#endif
+#define EXT_IRQ(x)			(NR_VIC_IRQS + AMBGPIO_SIZE + x)
+
+#define NR_IRQS				VIC_IRQ(NR_VIC_IRQS + AMBGPIO_SIZE + CONFIG_AMBIRQ_EXT_SIZE)
 #define GPIO_INT_VEC(x)			VIC_IRQ(x + NR_VIC_IRQS)
 
 /* ==========================================================================*/

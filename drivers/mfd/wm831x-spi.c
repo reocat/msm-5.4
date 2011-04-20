@@ -18,6 +18,7 @@
 
 #include <linux/mfd/wm831x/core.h>
 
+#include <linux/swab.h>
 static int wm831x_spi_read_device(struct wm831x *wm831x, unsigned short reg,
 				  int bytes, void *dest)
 {
@@ -29,7 +30,7 @@ static int wm831x_spi_read_device(struct wm831x *wm831x, unsigned short reg,
 	for (r = reg; r < reg + (bytes / 2); r++) {
 		tx_val = r | 0x8000;
 
-		ret = spi_write_then_read(wm831x->control_data,
+		ret = spi_write_then_read2(wm831x->control_data,
 					  (u8 *)&tx_val, 2, (u8 *)d, 2);
 		if (ret != 0)
 			return ret;
@@ -54,6 +55,7 @@ static int wm831x_spi_write_device(struct wm831x *wm831x, unsigned short reg,
 	for (r = reg; r < reg + (bytes / 2); r++) {
 		data[0] = r;
 		data[1] = *s++;
+		swab16s(&data[1]);
 
 		ret = spi_write(spi, (char *)&data, sizeof(data));
 		if (ret != 0)
@@ -92,7 +94,7 @@ static int __devinit wm831x_spi_probe(struct spi_device *spi)
 	if (wm831x == NULL)
 		return -ENOMEM;
 
-	spi->bits_per_word = 16;
+	spi->bits_per_word = 32;
 	spi->mode = SPI_MODE_0;
 
 	dev_set_drvdata(&spi->dev, wm831x);
