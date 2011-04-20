@@ -63,15 +63,16 @@
 #define AMBARELLA_BOARD_TYPE_BUB	(1)
 #define AMBARELLA_BOARD_TYPE_EVK	(2)
 #define AMBARELLA_BOARD_TYPE_IPCAM	(3)
+#define AMBARELLA_BOARD_TYPE_VENDOR	(4)
 
 #define AMBARELLA_BOARD_CHIP_AUTO	(0)
 
 #define AMBARELLA_BOARD_REV_AUTO	(0)
 
-#define AMBARELLA_BOARD_VERSION(c,t,r)	(((c) << 16) + ((t) << 8) + (r))
+#define AMBARELLA_BOARD_VERSION(c,t,r)	(((c) << 16) + ((t) << 12) + (r))
 #define AMBARELLA_BOARD_CHIP(v)		(((v) >> 16) & 0xFFFF)
-#define AMBARELLA_BOARD_TYPE(v)		(((v) >> 8) & 0xFF)
-#define AMBARELLA_BOARD_REV(v)		(((v) >> 0) & 0xFF)
+#define AMBARELLA_BOARD_TYPE(v)		(((v) >> 12) & 0xF)
+#define AMBARELLA_BOARD_REV(v)		(((v) >> 0) & 0xFFF)
 
 #define MEMORY_RESERVE_MAX_NR		(16)
 
