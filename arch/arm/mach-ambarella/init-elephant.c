@@ -850,6 +850,11 @@ static void __init ambarella_init_elephant(void)
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
 
+			ambarella_board_generic.vin_power.gpio_id = GPIO(122);
+			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin_power.active_delay = 1;
+			i2c_register_board_info(0, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
+
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 
 			use_bub_default = 0;
@@ -968,6 +973,8 @@ static void __init ambarella_init_elephant(void)
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
 		i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
+
+		i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 	}
 
 	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_SONY;
@@ -1000,7 +1007,6 @@ static void __init ambarella_init_elephant(void)
 
 	platform_device_register(&elephant_board_input);
 
-	i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 
