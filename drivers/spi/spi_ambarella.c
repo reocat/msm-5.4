@@ -163,8 +163,8 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 	switch (priv->rw_mode) {
 	case SPI_WRITE_ONLY:
 		xfer_len = len - widx;
-		if (xfer_len > SPI_FIFO_LENGTH)
-			xfer_len = SPI_FIFO_LENGTH;
+		if (xfer_len > priv->pinfo->fifo_entries)
+			xfer_len = priv->pinfo->fifo_entries;
 
 		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
 		if (priv->bpw <= 8) {
@@ -192,8 +192,8 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 
 	case SPI_WRITE_READ:
 		xfer_len = len - widx;
-		if (xfer_len > SPI_FIFO_LENGTH)
-			xfer_len = SPI_FIFO_LENGTH;
+		if (xfer_len > priv->pinfo->fifo_entries)
+			xfer_len = priv->pinfo->fifo_entries;
 
 		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
 		if (priv->bpw <= 8) {
@@ -221,8 +221,8 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 
 	case SPI_READ_ONLY:
 		xfer_len = len - ridx;
-		if (xfer_len > SPI_FIFO_LENGTH)
-			xfer_len = SPI_FIFO_LENGTH;
+		if (xfer_len > priv->pinfo->fifo_entries)
+			xfer_len = priv->pinfo->fifo_entries;
 
 		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
 		for(i = 0; i < xfer_len; i++)
@@ -570,7 +570,7 @@ static int ambarella_spi_inithw(struct ambarella_spi *priv)
 	amba_writel(priv->regbase + SPI_BAUDR_OFFSET, sckdv);
 
 	amba_writel(priv->regbase + SPI_TXFTLR_OFFSET, 0);
-	amba_writel(priv->regbase + SPI_RXFTLR_OFFSET, SPI_FIFO_LENGTH);
+	amba_writel(priv->regbase + SPI_RXFTLR_OFFSET, priv->pinfo->fifo_entries);
 
 	return 0;
 }

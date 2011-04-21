@@ -36,7 +36,6 @@
 #define SPI_TXEIS_MASK		0x00000001
 
 /* SPI Parameters */
-#define SPI_FIFO_LENGTH		16L
 #define SPI_DUMMY_DATA		0xffff
 #define MAX_QUERY_TIMES		10
 
@@ -100,6 +99,7 @@ struct ambarella_spi_cs_config {
 };
 
 struct ambarella_spi_platform_info {
+	int					fifo_entries;
 	int					cs_num;
 	int					*cs_pins;
 	void    				(*cs_activate)  (struct ambarella_spi_cs_config *);

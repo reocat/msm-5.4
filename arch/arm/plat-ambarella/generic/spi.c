@@ -94,6 +94,11 @@ int ambarella_spi0_cs_pins[] = {
 };
 AMBA_SPI_PARAM_CALL(0, ambarella_spi0_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
+#if (SPI_MASTER_INSTANCES == 5 )
+	.fifo_entries		= 64,
+#else
+	.fifo_entries		= 16,
+#endif
 	.cs_num			= ARRAY_SIZE(ambarella_spi0_cs_pins),
 	.cs_pins		= ambarella_spi0_cs_pins,
 	.cs_activate		= ambarella_spi_cs_activate,
@@ -131,6 +136,7 @@ struct resource ambarella_spi1_resources[] = {
 int ambarella_spi1_cs_pins[] = {SSI2_0EN, -1, -1, -1, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
+	.fifo_entries		= 16,
 	.cs_num			= ARRAY_SIZE(ambarella_spi1_cs_pins),
 	.cs_pins		= ambarella_spi1_cs_pins,
 	.cs_activate		= ambarella_spi_cs_activate,
@@ -152,7 +158,7 @@ struct platform_device ambarella_spi1 = {
 };
 #endif
 
-#if (SPI_MASTER_INSTANCES >= 5 )
+#if (SPI_MASTER_INSTANCES >= 3 )
 struct resource ambarella_spi2_resources[] = {
 	[0] = {
 		.start	= SPI3_BASE,
@@ -172,6 +178,11 @@ int ambarella_spi2_cs_pins[] = {
 };
 AMBA_SPI_PARAM_CALL(2, ambarella_spi2_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi2_platform_info = {
+#if (SPI_MASTER_INSTANCES == 5 )
+	.fifo_entries		= 64,
+#else
+	.fifo_entries		= 16,
+#endif
 	.cs_num			= ARRAY_SIZE(ambarella_spi2_cs_pins),
 	.cs_pins		= ambarella_spi2_cs_pins,
 	.cs_activate		= ambarella_spi_cs_activate,
@@ -191,7 +202,9 @@ struct platform_device ambarella_spi2 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+#endif
 
+#if (SPI_MASTER_INSTANCES >= 5 )
 struct resource ambarella_spi3_resources[] = {
 	[0] = {
 		.start	= SPI4_BASE,
@@ -208,6 +221,7 @@ struct resource ambarella_spi3_resources[] = {
 int ambarella_spi3_cs_pins[] = {SSI4_EN0, -1, -1, -1, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(3, ambarella_spi3_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi3_platform_info = {
+	.fifo_entries		= 16,
 	.cs_num			= ARRAY_SIZE(ambarella_spi3_cs_pins),
 	.cs_pins		= ambarella_spi3_cs_pins,
 	.cs_activate		= ambarella_spi_cs_activate,
@@ -244,6 +258,11 @@ struct resource ambarella_spi4_resources[] = {
 int ambarella_spi4_cs_pins[] = {SSI_AHB_EN0, -1, -1, -1, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(4, ambarella_spi4_cs_pins, 0644);
 struct ambarella_spi_platform_info ambarella_spi4_platform_info = {
+#if (SPI_MASTER_INSTANCES == 5 )
+	.fifo_entries		= 64,
+#else
+	.fifo_entries		= 16,
+#endif
 	.cs_num			= ARRAY_SIZE(ambarella_spi4_cs_pins),
 	.cs_pins		= ambarella_spi4_cs_pins,
 	.cs_activate		= ambarella_spi_cs_activate,
