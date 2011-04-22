@@ -133,7 +133,6 @@ static struct regulator_init_data elephant_wm8310_dcdc3_data = {
 	 .consumer_supplies = dcdc3_consumers,
 };
 
-#if 0
 static struct regulator_consumer_supply dcdc4_consumers[] = {
 	{
 		.supply = "lcd_vcc",
@@ -145,7 +144,7 @@ static struct regulator_init_data elephant_wm8310_dcdc4_data = {
 		.name = "VDD_LCD_28V",
 		.min_uV = 28000000,
 		.max_uV = 28000000,
-		.apply_uV = 1,
+		.apply_uV = 0,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem = {
 			.disabled = 1,
@@ -157,7 +156,6 @@ static struct regulator_init_data elephant_wm8310_dcdc4_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(dcdc4_consumers),
 	 .consumer_supplies = dcdc4_consumers,
 };
-#endif
 
 static struct regulator_consumer_supply ldo1_consumers[] = {
 	{
@@ -167,7 +165,7 @@ static struct regulator_consumer_supply ldo1_consumers[] = {
 /* LDO1 MIPI_PHY */
 static struct regulator_init_data elephant_wm8310_ldo1_data = {
 	.constraints = {
-		.name = "MIPI_PHY_1.8V",
+		.name = "VDD_MIPI_PHY_1.8V",
 		.min_uV = 1800000,
 		.max_uV = 1800000,
 		.apply_uV = 1,
@@ -260,8 +258,8 @@ static struct regulator_consumer_supply ldo5_consumers[] = {
 /* LDO5 VDD33_SDXC */
 static struct regulator_init_data elephant_wm8310_ldo5_data = {
 	.constraints = {
-		.name = "VDD33_SDXC_3.15V_L",
-			/* can not get 3.15 but 3.1 or 3.2 */
+		.name = "VDD33_SDXC_3.1V",
+		/* can not get 3.15 but 3.1 or 3.2 */
 		.min_uV = 3100000,
 		.max_uV = 3100000,
 		.apply_uV = 1,
@@ -492,6 +490,7 @@ static struct wm831x_pdata elephant_wm8310_pdata = {
 		&elephant_wm8310_dcdc1_data, /* DCDC1 */
 		&elephant_wm8310_dcdc2_data, /* DCDC2 */
 		&elephant_wm8310_dcdc3_data, /* DCDC3 */
+		&elephant_wm8310_dcdc4_data, /* DCDC4 */
 	},
 	.ldo = {
 		&elephant_wm8310_ldo1_data,
