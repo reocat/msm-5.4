@@ -385,6 +385,53 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 	return 0;
 }
 
+static int wm831x_bat_read_capacity(struct wm831x *wm831x,
+			       int *capacity)
+{
+	int uV, ret;
+	/* calculate the capacity from voltage */
+	/* 100%-20% 4.2V-3.8V 20%-0% 3.8V-3.5V */
+	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
+
+	if (uV >= 0) {
+		if (uV > 4200000) {
+			*capacity = 100;
+		} else if ((uV <= 4200000) && (uV > 3800000)) {
+			*capacity = 20 + 80*(uV - 3800000)/400000;
+		} else if ((uV <= 3800000) && (uV > 3500000)) {
+			*capacity = 20*(uV - 3500000)/300000;
+		} else {
+			*capacity = 0;
+		}
+		ret = 0;
+	} else {
+		ret = -EINVAL;
+	}
+	return ret;
+}
+
+static int wm831x_bat_read_capacity_level(struct wm831x *wm831x,
+			       int *cl)
+{
+	int ret, c;
+	ret = wm831x_bat_read_capacity(wm831x, &c);
+	if (ret >= 0) {
+		if (100 == c) {
+			*cl = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
+		} else if ((c < 100) && (c >= 60)) {
+			*cl = POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
+		} else if ( (c < 60) && ( c >= 20) ) {
+			*cl = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
+		} else if ( (c < 20) && ( c >= 10) ) {
+			*cl = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+		} else  if ( c < 10 ){
+			*cl = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
+		}
+	}
+	return ret;
+
+}
+
 static int wm831x_bat_get_prop(struct power_supply *psy,
 			       enum power_supply_property psp,
 			       union power_supply_propval *val)
@@ -410,6 +457,12 @@ static int wm831x_bat_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		ret = wm831x_bat_check_type(wm831x, &val->intval);
 		break;
+	case POWER_SUPPLY_PROP_CAPACITY:
+		ret = wm831x_bat_read_capacity(wm831x, &val->intval);
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
+		ret = wm831x_bat_read_capacity_level(wm831x, &val->intval);
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -424,6 +477,8 @@ static enum power_supply_property wm831x_bat_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
+	POWER_SUPPLY_PROP_CAPACITY,
+	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 };
 
 static const char *wm831x_bat_irqs[] = {
