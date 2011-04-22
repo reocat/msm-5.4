@@ -371,7 +371,7 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	priv_data->amb_i2s_intf.mclk = AudioCodec_12_288M;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
-	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
+	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_44100;
 	priv_data->amb_i2s_intf.word_len = DAI_16bits;
 	priv_data->amb_i2s_intf.word_pos = 0;
 	priv_data->amb_i2s_intf.slots = DAI_32slots;
