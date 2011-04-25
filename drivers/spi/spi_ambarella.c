@@ -396,6 +396,19 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 
 static void ambarella_spi_finish_transfer(struct ambarella_spi *priv)
 {
+	if (priv->pinfo->cs_deactivate) {
+		struct ambarella_spi_cs_config  cs_config;
+
+		cs_config.bus_id	= priv->c_dev->master->bus_num;
+		cs_config.cs_id		= priv->c_msg->spi->chip_select;
+		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
+		cs_config.cs_pins	= priv->pinfo->cs_pins;
+		cs_config.cs_change	= priv->c_xfer->cs_change;
+
+		priv->pinfo->cs_deactivate(&cs_config);
+	}
+	ambarella_spi_stop(priv);
+
 	if (list_empty(&priv->c_msg->transfers)) {
 		ambarella_spi_finish_message(priv);
 	} else {
@@ -407,24 +420,12 @@ static void ambarella_spi_finish_transfer(struct ambarella_spi *priv)
 static void ambarella_spi_finish_message(struct ambarella_spi *priv)
 {
 	struct spi_message		*msg;
-	struct ambarella_spi_cs_config  cs_config;
 	unsigned long			flags;
 	u32				message_pending;
 
 	msg			= priv->c_msg;
 	msg->actual_length	= priv->c_xfer->len;
 	msg->status		= 0;
-
-	if (priv->pinfo->cs_deactivate) {
-		cs_config.bus_id	= priv->c_dev->master->bus_num;
-		cs_config.cs_id		= msg->spi->chip_select;
-		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
-		cs_config.cs_pins	= priv->pinfo->cs_pins;
-		cs_config.cs_change	= priv->c_xfer->cs_change;
-
-		priv->pinfo->cs_deactivate(&cs_config);
-	}
-	ambarella_spi_stop(priv);
 
 	/* Next Message */
 	spin_lock_irqsave(&priv->lock, flags);
