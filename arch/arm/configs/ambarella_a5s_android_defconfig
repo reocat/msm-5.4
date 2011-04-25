@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 2.6.38.2 Kernel Configuration
-# Wed Apr 20 17:12:36 2011
+# Linux/arm 2.6.38.4 Kernel Configuration
+# Mon Apr 25 14:53:12 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1880,6 +1880,7 @@ CONFIG_DYNAMIC_DEBUG=y
 # CONFIG_ATOMIC64_SELFTEST is not set
 # CONFIG_SAMPLES is not set
 CONFIG_HAVE_ARCH_KGDB=y
+# CONFIG_TEST_KSTRTOX is not set
 # CONFIG_STRICT_DEVMEM is not set
 CONFIG_ARM_UNWIND=y
 CONFIG_DEBUG_USER=y
