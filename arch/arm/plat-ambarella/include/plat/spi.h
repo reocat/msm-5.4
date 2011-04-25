@@ -94,7 +94,6 @@ struct ambarella_spi_cs_config {
 	u8					bus_id;
 	u8					cs_id;
 	u8					cs_num;
-	u8					cs_change;
 	int					*cs_pins;
 };
 
