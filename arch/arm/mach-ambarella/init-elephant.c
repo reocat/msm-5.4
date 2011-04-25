@@ -709,9 +709,10 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	4,	2500,	4095}}},
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,	0,	4,	1800,	2100}}},	//VOLUME DOWN
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,	0,	4,	1320,	1620}}},	//VOLUME UP
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	820,	1120}}},	//STOP
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	310,	610}}},		//RECORD
 
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	//{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 
 	{AMBINPUT_END},
 };
