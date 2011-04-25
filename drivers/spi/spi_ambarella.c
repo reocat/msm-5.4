@@ -54,7 +54,7 @@ struct ambarella_spi {
 	struct spi_message			*c_msg;
 	struct spi_transfer			*c_xfer;
 
-	u8					rw_mode, bpw;
+	u8					rw_mode, bpw, chip_select;
 	u32					ridx, widx, len;
 };
 
@@ -380,14 +380,15 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 
 	amba_writel(priv->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
-	if (priv->pinfo->cs_activate) {
+	if (!priv->chip_select) {
 		cs_config.bus_id	= priv->c_dev->master->bus_num;
 		cs_config.cs_id		= priv->c_dev->chip_select;
 		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
 		cs_config.cs_pins	= priv->pinfo->cs_pins;
-		cs_config.cs_change	= priv->c_xfer->cs_change;
 		priv->pinfo->cs_activate(&cs_config);
+		priv->chip_select	= 1;
 	}
+
 	disable_irq_nosync(priv->irq);
 	amba_writel(priv->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
 	amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
@@ -396,16 +397,16 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 
 static void ambarella_spi_finish_transfer(struct ambarella_spi *priv)
 {
-	if (priv->pinfo->cs_deactivate) {
+	if (priv->c_xfer->cs_change) {
 		struct ambarella_spi_cs_config  cs_config;
 
 		cs_config.bus_id	= priv->c_dev->master->bus_num;
 		cs_config.cs_id		= priv->c_msg->spi->chip_select;
 		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
 		cs_config.cs_pins	= priv->pinfo->cs_pins;
-		cs_config.cs_change	= priv->c_xfer->cs_change;
 
 		priv->pinfo->cs_deactivate(&cs_config);
+		priv->chip_select	= 0;
 	}
 	ambarella_spi_stop(priv);
 
@@ -422,6 +423,18 @@ static void ambarella_spi_finish_message(struct ambarella_spi *priv)
 	struct spi_message		*msg;
 	unsigned long			flags;
 	u32				message_pending;
+
+	if (priv->chip_select) {
+		struct ambarella_spi_cs_config  cs_config;
+
+		cs_config.bus_id	= priv->c_dev->master->bus_num;
+		cs_config.cs_id		= priv->c_msg->spi->chip_select;
+		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
+		cs_config.cs_pins	= priv->pinfo->cs_pins;
+
+		priv->pinfo->cs_deactivate(&cs_config);
+		priv->chip_select	= 0;
+	}
 
 	msg			= priv->c_msg;
 	msg->actual_length	= priv->c_xfer->len;
@@ -486,8 +499,9 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 	sckdv = (u16)(((ssi_clk / msg->spi->max_speed_hz) + 0x01) & 0xfffe);
 	amba_writel(priv->regbase + SPI_BAUDR_OFFSET, sckdv);
 
-	priv->c_dev	= msg->spi;
-	priv->c_msg	= msg;
+	priv->chip_select	= 0;
+	priv->c_dev		= msg->spi;
+	priv->c_msg		= msg;
 }
 
 static int ambarella_spi_main_entry(struct spi_device *spi, struct spi_message *msg)
@@ -548,7 +562,7 @@ static void ambarella_spi_cleanup(struct spi_device *spi)
 
 static int ambarella_spi_inithw(struct ambarella_spi *priv)
 {
-	u16 				sckdv;
+	u16 				sckdv, i;
 	u32 				ctrlr0, ssi_freq;
 
 	/* Set PLL */
@@ -557,6 +571,12 @@ static int ambarella_spi_inithw(struct ambarella_spi *priv)
 
 	/* Disable SPI */
 	ambarella_spi_stop(priv);
+
+	/* Config Chip Select Pins */
+	for (i = 0; i < priv->pinfo->cs_num; i++) {
+		ambarella_gpio_config(priv->pinfo->cs_pins[i], GPIO_FUNC_SW_OUTPUT);
+		ambarella_gpio_set(priv->pinfo->cs_pins[i], GPIO_HIGH);
+	}
 
 	/* Initial Register Settings */
 	ctrlr0 = ( ( SPI_CFS << 12) | (SPI_WRITE_ONLY << 8) | (SPI_SCPOL << 7) |

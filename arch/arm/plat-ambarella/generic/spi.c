@@ -36,7 +36,6 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-#define SPI0_CS2_CS3_EN			0x00000002
 void ambarella_spi_cs_activate(struct ambarella_spi_cs_config *cs_config)
 {
 	u8			cs_pin;
@@ -46,18 +45,7 @@ void ambarella_spi_cs_activate(struct ambarella_spi_cs_config *cs_config)
 		return;
 
 	cs_pin = cs_config->cs_pins[cs_config->cs_id];
-	if (cs_config->cs_change) {
-		if (cs_config->bus_id == 0
-			&& (cs_config->cs_id == 2 || cs_config->cs_id == 3))
-			amba_writel(HOST_ENABLE_REG, amba_readl(HOST_ENABLE_REG) | SPI0_CS2_CS3_EN);
-		ambarella_gpio_config(cs_pin, GPIO_FUNC_HW);
-	} else {
-		if (cs_config->bus_id == 0 &&
-			(cs_config->cs_id == 2 || cs_config->cs_id == 3))
-			amba_writel(HOST_ENABLE_REG, amba_readl(HOST_ENABLE_REG) & ~SPI0_CS2_CS3_EN);
-		ambarella_gpio_config(cs_pin, GPIO_FUNC_SW_OUTPUT);
-		ambarella_gpio_set(cs_pin, 0);
-	}
+	ambarella_gpio_set(cs_pin, 0);
 }
 
 void ambarella_spi_cs_deactivate(struct ambarella_spi_cs_config *cs_config)
@@ -69,10 +57,7 @@ void ambarella_spi_cs_deactivate(struct ambarella_spi_cs_config *cs_config)
 		return;
 
 	cs_pin = cs_config->cs_pins[cs_config->cs_id];
-	if (cs_config->cs_change)
-		return;
-	else
-		ambarella_gpio_set(cs_pin, 1);
+	ambarella_gpio_set(cs_pin, 1);
 }
 
 struct resource ambarella_spi0_resources[] = {
