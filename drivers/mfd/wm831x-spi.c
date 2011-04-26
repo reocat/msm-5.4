@@ -30,7 +30,7 @@ static int wm831x_spi_read_device(struct wm831x *wm831x, unsigned short reg,
 	for (r = reg; r < reg + (bytes / 2); r++) {
 		tx_val = r | 0x8000;
 
-		ret = spi_write_then_read2(wm831x->control_data,
+		ret = spi_write_then_read(wm831x->control_data,
 					  (u8 *)&tx_val, 2, (u8 *)d, 2);
 		if (ret != 0)
 			return ret;
