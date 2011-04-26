@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
 #include <asm/setup.h>
@@ -101,8 +102,30 @@ void __fio_select_lock(int module)
 		break;
 	}
 
+#if (FIO_SDIO_SWITCH_SUPPORT_GPIO == 1)
+	if (module != SELECT_FIO_SDIO) {
+		ambarella_gpio_config(SMIO_38, GPIO_FUNC_SW_INPUT);
+		ambarella_gpio_config(SMIO_39, GPIO_FUNC_SW_INPUT);
+		ambarella_gpio_config(SMIO_40, GPIO_FUNC_SW_INPUT);
+		ambarella_gpio_config(SMIO_41, GPIO_FUNC_SW_INPUT);
+		ambarella_gpio_config(SMIO_42, GPIO_FUNC_SW_INPUT);
+		ambarella_gpio_config(SMIO_43, GPIO_FUNC_SW_INPUT);
+	}
+#endif
+
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
+
+#if (FIO_SDIO_SWITCH_SUPPORT_GPIO == 1)
+	if (module == SELECT_FIO_SDIO) {
+		ambarella_gpio_config(SMIO_38, GPIO_FUNC_HW);
+		ambarella_gpio_config(SMIO_39, GPIO_FUNC_HW);
+		ambarella_gpio_config(SMIO_40, GPIO_FUNC_HW);
+		ambarella_gpio_config(SMIO_41, GPIO_FUNC_HW);
+		ambarella_gpio_config(SMIO_42, GPIO_FUNC_HW);
+		ambarella_gpio_config(SMIO_43, GPIO_FUNC_HW);
+	}
+#endif
 }
 
 void fio_select_lock(int module)
