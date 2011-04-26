@@ -111,7 +111,7 @@ static int tm1726_read_family_code(struct tm1726 *tm, u8 *family_code)
 
 static int tm1726_config_irq(struct tm1726 *tm)
 {
-	u8			buf[5] = {0x04, 0x01, 0x0b, 0x06, 0x06};
+	u8			buf[5] = {0x04, 0x01, 0x0b, 0x04, 0x04};
 
 	if (i2c_smbus_write_i2c_block_data(tm->client,
 		TM_IRQ_ENABLE_ABS, 5, buf)) {
