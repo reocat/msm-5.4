@@ -222,12 +222,12 @@ void __init ambarella_map_io(void)
 		}
 #endif
 	}
-	ambarella_reboot_info =
+	ambarella_debug_info =
 		(ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.virtual +
 		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length -
 		DEFAULT_DEBUG_SIZE);
 
-	ambarella_debug_info = ambarella_reboot_info + REBOOT_INFO_SIZE;
+	ambarella_reboot_info = ambarella_debug_info + DEBUG_INFO_SIZE;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	if (!bhal_mapped) {
