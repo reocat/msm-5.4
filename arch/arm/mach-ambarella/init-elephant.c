@@ -887,6 +887,9 @@ static void __init ambarella_init_elephant(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 2:
+			ambarella_board_generic.wifi_power.gpio_id = GPIO(128);
+			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.wifi_power.active_delay = 100;
 		case 1:
 			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
 			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
