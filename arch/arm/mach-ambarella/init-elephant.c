@@ -814,6 +814,20 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi_devices[12].max_speed_hz = 2000000;
 			ambarella_spi_devices[12].platform_data = &elephant_wm8310_pdata;
 
+			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
+			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.gsensor_power.active_delay = 10;
+
+			ambarella_board_generic.gsensor_irq.irq_gpio = GPIO(49);
+			ambarella_board_generic.gsensor_irq.irq_line = gpio_to_irq(GPIO(49));
+			ambarella_board_generic.gsensor_irq.irq_type = IRQF_TRIGGER_RISING;
+			ambarella_board_generic.gsensor_irq.irq_gpio_val = GPIO_LOW;
+			ambarella_board_generic.gsensor_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+			strcpy(ambarella_spi_devices[17].modalias, "mma7455l");
+			ambarella_spi_devices[17].irq = ambarella_board_generic.gsensor_irq.irq_line;
+
+
 			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
 			ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
 			ambarella_eth0_platform_info.mii_power.active_delay = 10;
