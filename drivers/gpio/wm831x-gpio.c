@@ -271,6 +271,16 @@ static int __devinit wm831x_gpio_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+#define WM831X_GPN_FN_IN_ONOFF 0x0002
+	/* i1 EVK specific pmic gpio setup */
+	ret = wm831x_reg_write(wm831x, WM831X_GPIO5_CONTROL,
+		WM831X_GPN_DIR| WM831X_GPN_ENA | WM831X_GPN_FN_IN_ONOFF);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Could not config pmic gpio for off transition, %d\n",
+			ret);
+		goto err;
+	}
+
 	platform_set_drvdata(pdev, wm831x_gpio);
 
 	return ret;
