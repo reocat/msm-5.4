@@ -574,6 +574,10 @@ static int ambarella_spi_inithw(struct ambarella_spi *priv)
 
 	/* Config Chip Select Pins */
 	for (i = 0; i < priv->pinfo->cs_num; i++) {
+		if (priv->pinfo->cs_pins[i] < 0) {
+			continue;
+		}
+
 		ambarella_gpio_config(priv->pinfo->cs_pins[i], GPIO_FUNC_SW_OUTPUT);
 		ambarella_gpio_set(priv->pinfo->cs_pins[i], GPIO_HIGH);
 	}
