@@ -41,26 +41,23 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-typedef void (*mmc_detect_change_fn)(struct mmc_host *host, unsigned long delay);
+typedef void (*mmc_dc_fn)(struct mmc_host *host, unsigned long delay);
 
 int ambarella_sd_set_fixed_cd(const char *val, const struct kernel_param *kp)
 {
 	struct ambarella_sd_slot		*pslotinfo;
-	mmc_detect_change_fn			pmmc_detect_change_fn = NULL;
+	mmc_dc_fn				mmc_dc = NULL;
 	int					retval;
 
 	retval = param_set_int(val, kp);
 	pslotinfo = container_of(kp->arg, struct ambarella_sd_slot, fixed_cd);
 #if defined(CONFIG_MMC)
-	pmmc_detect_change_fn = mmc_detect_change;
+	mmc_dc = mmc_detect_change;
 #else
-	pmmc_detect_change_fn = (mmc_detect_change_fn)
-		module_kallsyms_lookup_name("mmc_detect_change");
+	mmc_dc = (mmc_dc_fn)module_kallsyms_lookup_name("mmc_detect_change");
 #endif
-	if (!retval && pslotinfo && pmmc_detect_change_fn &&
-		pslotinfo->pmmc_host) {
-		pmmc_detect_change_fn(pslotinfo->pmmc_host,
-			pslotinfo->cd_delay);
+	if (!retval && pslotinfo && mmc_dc && pslotinfo->pmmc_host) {
+		mmc_dc(pslotinfo->pmmc_host, pslotinfo->cd_delay);
 	}
 
 	return retval;
@@ -361,3 +358,32 @@ int __init ambarella_init_sd(void)
 	return retval;
 }
 
+void ambarella_detect_sd_slot(int bus, int slot)
+{
+	struct ambarella_sd_slot		*pslotinfo = NULL;
+	mmc_dc_fn				mmc_dc = NULL;
+
+	if ((bus == 0) && (slot == 0)) {
+		pslotinfo = &ambarella_platform_sd_controller0.slot[0];
+	}
+#if (SD_HAS_INTERNAL_MUXER == 1)
+	if ((bus == 0) && (slot == 1)) {
+		pslotinfo = &ambarella_platform_sd_controller0.slot[1];
+	}
+#endif
+#if (SD_INSTANCES >= 2)
+	if ((bus == 1) && (slot == 0)) {
+		pslotinfo = &ambarella_platform_sd_controller1.slot[0];
+	}
+#endif
+
+#if defined(CONFIG_MMC)
+	mmc_dc = mmc_detect_change;
+#else
+	mmc_dc = (mmc_dc_fn)module_kallsyms_lookup_name("mmc_detect_change");
+#endif
+	if (pslotinfo && mmc_dc && pslotinfo->pmmc_host) {
+		mmc_dc(pslotinfo->pmmc_host, pslotinfo->cd_delay);
+	}
+}
+EXPORT_SYMBOL(ambarella_detect_sd_slot);

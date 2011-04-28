@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
 #include <asm/setup.h>
@@ -101,8 +102,25 @@ void __fio_select_lock(int module)
 		break;
 	}
 
+#if (SD_HAS_INTERNAL_MUXER == 1)
+	if (module != SELECT_FIO_SDIO) {
+		//SMIO_38 ~ SMIO_43
+		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		//amba_setbitsl(GPIO2_MASK_REG, 0x000007e0);
+		//amba_clrbitsl(GPIO2_DIR_REG, 0x000007e0);
+	}
+#endif
+
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
+
+#if (SD_HAS_INTERNAL_MUXER == 1)
+	if (module == SELECT_FIO_SDIO) {
+		//SMIO_38 ~ SMIO_43
+		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		//amba_clrbitsl(GPIO2_MASK_REG, 0x000007e0);
+	}
+#endif
 }
 
 void fio_select_lock(int module)

@@ -38,7 +38,7 @@ ENTRY(swsusp_arch_suspend)
 	stmea	r0, {r1-r3}
 	b	swsusp_save
 
-ENTRY(restore_image)
+ENTRY(swsusp_arch_restore_image)
 	mov	r4, r0
 	adr	r5, arch_debug_context
 1000:
@@ -60,6 +60,7 @@ ENTRY(restore_image)
 	cmp	r4, #0x00
 	bne	1000b
 
+ENTRY(swsusp_arch_restore_cpu)
 	ldr	r3, arch_saved_context
 	add	r0, r3, #SAVED_CONTEXT_R0
 	add	r0, r0, #16

@@ -26,21 +26,12 @@
 #include <asm/suspend.h>
 
 extern struct pbe *restore_pblist;
-extern int restore_image(struct pbe *restore_pblist);
 extern const void __nosave_begin, __nosave_end;
+extern int swsusp_arch_restore_image(struct pbe *restore_pblist);
 
 int swsusp_arch_resume(void)
 {
-#if 0
-	struct pbe *tmp_pblist;
-	int i;
-
-	for(tmp_pblist = restore_pblist, i = 0; tmp_pblist != NULL; i++) {
-		printk("page(%d):0x%p:0x%p\n", i, tmp_pblist->orig_address, tmp_pblist->address);
-		tmp_pblist = tmp_pblist->next;
-	}
-#endif
-	restore_image(restore_pblist);
+	swsusp_arch_restore_image(restore_pblist);
 
 	return 1;
 }

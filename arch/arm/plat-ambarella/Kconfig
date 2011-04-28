@@ -230,6 +230,13 @@ config AMBARELLA_SUPPORT_CLOCKSOURCE
 	help
 	  If you are not sure, say Y here.
 
+config AMBARELLA_SUPPORT_BAPI
+	bool "Suport BAPI"
+	default n
+	select ARCH_HAS_SWSUSP_WRITE
+	help
+	  If you are not sure, say N here.
+
 menu "Proc file system support"
 
 config AMBARELLA_GPIO_PROC

@@ -26,23 +26,24 @@
 
 static inline int arch_prepare_suspend(void) { return 0; }
 extern int arch_pfn_is_nosave(unsigned long pfn);
+extern void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn);
+extern int arch_swsusp_write(unsigned int flags);
+extern int swsusp_arch_restore_cpu(void);
 
 struct saved_context {
-	u32 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12;
-	u32 usr_sp, usr_lr;
-	u32 svr_sp, svr_lr, svr_spsr;
-	u32 abt_sp, abt_lr, abt_spsr;
-	u32 irq_sp, irq_lr, irq_spsr;
-	u32 und_sp, und_lr, und_spsr;
-	u32 fiq_sp, fiq_lr, fiq_spsr;
-	u32 fiq_r8, fiq_r9, fiq_r10, fiq_r11, fiq_r12;
-	u32 cp15_control;
-	u32 cp15_ttbr;
-	u32 cp15_dacl;
+	u32 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12;	//0x00
+	u32 usr_sp, usr_lr;						//0x34
+	u32 svr_sp, svr_lr, svr_spsr;					//0x3c
+	u32 abt_sp, abt_lr, abt_spsr;					//0x48
+	u32 irq_sp, irq_lr, irq_spsr;					//0x54
+	u32 und_sp, und_lr, und_spsr;					//0x60
+	u32 fiq_sp, fiq_lr, fiq_spsr;					//0x6c
+	u32 fiq_r8, fiq_r9, fiq_r10, fiq_r11, fiq_r12;			//0x78
+	u32 cp15_control;						//0x8c
+	u32 cp15_ttbr;							//0x90
+	u32 cp15_dacl;							//0x94
+	u32 rev[26];							//0x98
 } __attribute__((packed));
-
-extern asmlinkage int arch_save_processor_state(struct saved_context *sc);
-extern asmlinkage int arch_restore_processor_state(struct saved_context *sc);
 
 #endif /* _ASM_ARM_SUSPEND_H */
 

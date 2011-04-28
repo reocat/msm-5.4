@@ -105,6 +105,8 @@ struct ambarella_board_info {
 	struct ambarella_pwm_info		pwm3_config;
 	struct ambarella_pwm_info		pwm4_config;
 
+	int					wifi_sd_bus;
+	int					wifi_sd_slot;
 	struct ambarella_gpio_irq_info		wifi_irq;
 	struct ambarella_gpio_io_info		wifi_power;
 	struct ambarella_gpio_io_info		wifi_reset;
@@ -171,6 +173,8 @@ struct ambarella_board_info {
 	AMBA_PWM_MODULE_PARAM_CALL(board_##pwm2##_, arg.pwm2_config, perm); \
 	AMBA_PWM_MODULE_PARAM_CALL(board_##pwm3##_, arg.pwm3_config, perm); \
 	AMBA_PWM_MODULE_PARAM_CALL(board_##pwm4##_, arg.pwm4_config, perm); \
+	module_param_cb(board_wifi_sd_bus, &param_ops_int, &(arg.wifi_sd_bus), perm); \
+	module_param_cb(board_wifi_sd_slot, &param_ops_int, &(arg.wifi_sd_slot), perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##wifi_irq##_, arg.wifi_irq, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##wifi_power##_, arg.wifi_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##wifi_reset##_, arg.wifi_reset, perm); \

@@ -422,7 +422,7 @@ static struct wm831x_backlight_pdata elephant_wm8310_backlight_pdata = {
 static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
 	.enable = 1,
 	.fast_enable	 = 1,
-	.off_mask = 1,
+//	.off_mask = 1,
 	.trickle_ilim = 50,
 	.vsel = 4200,
 	.eoc_iterm = 20,
@@ -805,12 +805,17 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.wifi_power.gpio_id = GPIO(109);
 			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.wifi_power.active_delay = 300;
+			ambarella_board_generic.wifi_sd_bus = 0;
+			ambarella_board_generic.wifi_sd_slot = 1;
 
 			ambarella_board_generic.pmic_irq.irq_gpio = GPIO(54);
 			ambarella_board_generic.pmic_irq.irq_line = gpio_to_irq(54);
 			ambarella_board_generic.pmic_irq.irq_type = IRQF_TRIGGER_FALLING;
 			ambarella_board_generic.pmic_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.pmic_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+			ambarella_board_generic.power_control.gpio_id = GPIO(120);
+			ambarella_board_generic.power_control.active_level = GPIO_LOW;
 
 			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
 			ambarella_spi_devices[12].max_speed_hz = 2000000;
