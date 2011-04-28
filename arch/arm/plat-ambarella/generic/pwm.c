@@ -524,11 +524,11 @@ static int ambarella_pwm_proc_write(struct file *file,
 
 	cmd_cnt = count / (PWM_CMD_SIZE * sizeof(pwm_array[0]));
 	for (i = 0; i < cmd_cnt; i++) {
-		pwm_ch = pwm_array[i * 3];
-		enable = pwm_array[i * 3 + 1];
-		xon = pwm_array[i * 3 + 2];
-		xoff = pwm_array[i * 3 + 3];
-		div = pwm_array[i * 3 + 4];
+		pwm_ch = pwm_array[i * PWM_CMD_SIZE];
+		enable = pwm_array[i * PWM_CMD_SIZE + 1];
+		xon = pwm_array[i * PWM_CMD_SIZE + 2];
+		xoff = pwm_array[i * PWM_CMD_SIZE + 3];
+		div = pwm_array[i * PWM_CMD_SIZE + 4];
 
 		if (pwm_ch == 0)
 			data_reg = ((xon - 1) << 16) + (xoff - 1);
