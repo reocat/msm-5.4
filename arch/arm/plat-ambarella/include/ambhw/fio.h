@@ -117,12 +117,6 @@
 #define	NAND_PROGRAMMABLE_CMDWORD		0
 #endif
 
-#if 	(CHIP_REV == A5S) || (CHIP_REV == I1)
-#define	FIO_SDIO_SWITCH_SUPPORT_GPIO		1
-#else
-#define	FIO_SDIO_SWITCH_SUPPORT_GPIO		0
-#endif
-
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/

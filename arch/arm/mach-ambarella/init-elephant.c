@@ -803,6 +803,8 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.wifi_power.gpio_id = GPIO(109);
 			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.wifi_power.active_delay = 300;
+			ambarella_board_generic.wifi_sd_bus = 0;
+			ambarella_board_generic.wifi_sd_slot = 1;
 
 			ambarella_board_generic.pmic_irq.irq_gpio = GPIO(54);
 			ambarella_board_generic.pmic_irq.irq_line = gpio_to_irq(54);

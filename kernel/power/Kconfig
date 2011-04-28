@@ -196,6 +196,10 @@ config PM_STD_PARTITION
 	  suspended image to. It will simply pick the first available swap 
 	  device.
 
+config ARCH_HAS_SWSUSP_WRITE
+	bool
+	depends on HIBERNATION
+
 config APM_EMULATION
 	tristate "Advanced Power Management Emulation"
 	depends on PM && SYS_SUPPORTS_APM_EMULATION

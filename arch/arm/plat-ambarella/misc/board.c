@@ -378,6 +378,8 @@ struct ambarella_board_info ambarella_board_generic = {
 		.max_duty	= 1000,
 	},
 
+	.wifi_sd_bus		= -1,
+	.wifi_sd_slot		= -1,
 	.wifi_irq	= {
 		.irq_gpio	= -1,
 		.irq_line	= -1,

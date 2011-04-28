@@ -102,28 +102,23 @@ void __fio_select_lock(int module)
 		break;
 	}
 
-#if (FIO_SDIO_SWITCH_SUPPORT_GPIO == 1)
+#if (SD_HAS_INTERNAL_MUXER == 1)
 	if (module != SELECT_FIO_SDIO) {
-		ambarella_gpio_config(SMIO_38, GPIO_FUNC_SW_INPUT);
-		ambarella_gpio_config(SMIO_39, GPIO_FUNC_SW_INPUT);
-		ambarella_gpio_config(SMIO_40, GPIO_FUNC_SW_INPUT);
-		ambarella_gpio_config(SMIO_41, GPIO_FUNC_SW_INPUT);
-		ambarella_gpio_config(SMIO_42, GPIO_FUNC_SW_INPUT);
-		ambarella_gpio_config(SMIO_43, GPIO_FUNC_SW_INPUT);
+		//SMIO_38 ~ SMIO_43
+		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		//amba_setbitsl(GPIO2_MASK_REG, 0x000007e0);
+		//amba_clrbitsl(GPIO2_DIR_REG, 0x000007e0);
 	}
 #endif
 
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
 
-#if (FIO_SDIO_SWITCH_SUPPORT_GPIO == 1)
+#if (SD_HAS_INTERNAL_MUXER == 1)
 	if (module == SELECT_FIO_SDIO) {
-		ambarella_gpio_config(SMIO_38, GPIO_FUNC_HW);
-		ambarella_gpio_config(SMIO_39, GPIO_FUNC_HW);
-		ambarella_gpio_config(SMIO_40, GPIO_FUNC_HW);
-		ambarella_gpio_config(SMIO_41, GPIO_FUNC_HW);
-		ambarella_gpio_config(SMIO_42, GPIO_FUNC_HW);
-		ambarella_gpio_config(SMIO_43, GPIO_FUNC_HW);
+		//SMIO_38 ~ SMIO_43
+		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		//amba_clrbitsl(GPIO2_MASK_REG, 0x000007e0);
 	}
 #endif
 }

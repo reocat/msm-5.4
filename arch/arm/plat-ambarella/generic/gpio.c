@@ -84,16 +84,17 @@ static inline int ambarella_gpio_inline_get(u32 base, u32 offset)
 	val = amba_readl(base + GPIO_DATA_OFFSET);
 	val = (val >> offset) & 0x1;
 
-	return (val ? GPIO_HIGH: GPIO_LOW);
+	return (val ? GPIO_HIGH : GPIO_LOW);
 }
 
 /* ==========================================================================*/
-void ambarella_gpio_config(int id, int func)
+static inline u32 ambarella_gpio_id_to_base(int id)
 {
 	u32					base = 0;
-	u32					offset;
 
-	if (id < (1 * GPIO_BANK_SIZE)) {
+	if (id < 0) {
+		base = 0;
+	} else if (id < (1 * GPIO_BANK_SIZE)) {
 		base = GPIO0_BASE;
 	} else if (id < (2 * GPIO_BANK_SIZE)) {
 		base = GPIO1_BASE;
@@ -114,6 +115,16 @@ void ambarella_gpio_config(int id, int func)
 		base = GPIO5_BASE;
 #endif
 	}
+
+	return base;
+}
+
+void ambarella_gpio_config(int id, int func)
+{
+	u32					base;
+	u32					offset;
+
+	base = ambarella_gpio_id_to_base(id);
 	if (base == 0) {
 		pr_err("%s: invalid GPIO %d for func %d.\n",
 			__func__, id, func);
@@ -127,30 +138,10 @@ EXPORT_SYMBOL(ambarella_gpio_config);
 
 void ambarella_gpio_set(int id, int value)
 {
-	u32					base = 0;
+	u32					base;
 	u32					offset;
 
-	if (id < (1 * GPIO_BANK_SIZE)) {
-		base = GPIO0_BASE;
-	} else if (id < (2 * GPIO_BANK_SIZE)) {
-		base = GPIO1_BASE;
-#if (GPIO_INSTANCES >= 3)
-	} else if (id < (3 * GPIO_BANK_SIZE)) {
-		base = GPIO2_BASE;
-#endif
-#if (GPIO_INSTANCES >= 4)
-	} else if (id < (4 * GPIO_BANK_SIZE)) {
-		base = GPIO3_BASE;
-#endif
-#if (GPIO_INSTANCES >= 5)
-	} else if (id < (5 * GPIO_BANK_SIZE)) {
-		base = GPIO4_BASE;
-#endif
-#if (GPIO_INSTANCES >= 6)
-	} else if (id < (6 * GPIO_BANK_SIZE)) {
-		base = GPIO5_BASE;
-#endif
-	}
+	base = ambarella_gpio_id_to_base(id);
 	if (base == 0) {
 		pr_err("%s: invalid GPIO %d for value %d.\n",
 			__func__, id, value);
@@ -164,30 +155,10 @@ EXPORT_SYMBOL(ambarella_gpio_set);
 
 int ambarella_gpio_get(int id)
 {
-	u32					base = 0;
+	u32					base;
 	u32					offset;
 
-	if (id < (1 * GPIO_BANK_SIZE)) {
-		base = GPIO0_BASE;
-	} else if (id < (2 * GPIO_BANK_SIZE)) {
-		base = GPIO1_BASE;
-#if (GPIO_INSTANCES >= 3)
-	} else if (id < (3 * GPIO_BANK_SIZE)) {
-		base = GPIO2_BASE;
-#endif
-#if (GPIO_INSTANCES >= 4)
-	} else if (id < (4 * GPIO_BANK_SIZE)) {
-		base = GPIO3_BASE;
-#endif
-#if (GPIO_INSTANCES >= 5)
-	} else if (id < (5 * GPIO_BANK_SIZE)) {
-		base = GPIO4_BASE;
-#endif
-#if (GPIO_INSTANCES >= 6)
-	} else if (id < (6 * GPIO_BANK_SIZE)) {
-		base = GPIO5_BASE;
-#endif
-	}
+	base = ambarella_gpio_id_to_base(id);
 	if (base == 0) {
 		pr_err("%s: invalid GPIO %d.\n",
 			__func__, id);
@@ -258,10 +229,8 @@ static int ambarella_gpio_chip_direction_input(struct gpio_chip *chip,
 
 	mutex_lock(&ambarella_gpio_lock);
 
-	retval = ambarella_gpio_inline_config(
-		ambarella_chip->mem_base,
-		offset,
-		GPIO_FUNC_SW_INPUT);
+	retval = ambarella_gpio_inline_config(ambarella_chip->mem_base,
+		offset, GPIO_FUNC_SW_INPUT);
 
 	mutex_unlock(&ambarella_gpio_lock);
 
@@ -300,10 +269,8 @@ static int ambarella_gpio_chip_direction_output(struct gpio_chip *chip,
 
 	mutex_lock(&ambarella_gpio_lock);
 
-	retval = ambarella_gpio_inline_config(
-		ambarella_chip->mem_base,
-		offset,
-		GPIO_FUNC_SW_OUTPUT);
+	retval = ambarella_gpio_inline_config(ambarella_chip->mem_base,
+		offset, GPIO_FUNC_SW_OUTPUT);
 	ambarella_gpio_inline_set(ambarella_chip->mem_base, offset, val);
 
 	mutex_unlock(&ambarella_gpio_lock);
