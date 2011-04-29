@@ -26,6 +26,52 @@ struct wm831x_power {
 	struct power_supply battery;
 };
 
+#define WM831X_VOLTAGE_BUF_NUM 200
+static int uV_buffer[WM831X_VOLTAGE_BUF_NUM];
+static bool b_first_zero;
+static unsigned long uV_buf_counter;
+static int cur_total_uV;
+static unsigned long last_buf_counter;
+static int wm831x_bat_avg_uV(struct wm831x *wm831x, int uV) {
+	int ret;
+
+	if (b_first_zero ) {
+		b_first_zero = false;
+		if(uV_buf_counter == 0) {
+			cur_total_uV = uV;
+			uV_buffer[0] = uV;
+			ret = uV;
+		} else {
+			dev_err(wm831x->dev, "BUG:should not get here\n");
+			/* in this error, just return uV */
+			ret = uV;
+		}
+	} else {
+		if(uV_buf_counter == 0) {
+			/* warpped around */
+			dev_dbg(wm831x->dev, "uV_buf_counter:warpped with last is %lu\n", last_buf_counter);
+			if ((last_buf_counter%WM831X_VOLTAGE_BUF_NUM + 1)== WM831X_VOLTAGE_BUF_NUM) {
+				cur_total_uV = cur_total_uV + uV - uV_buffer[0];
+				uV_buffer[0] = uV;
+			} else {
+				cur_total_uV = cur_total_uV + uV - uV_buffer[last_buf_counter%WM831X_VOLTAGE_BUF_NUM + 1];
+				uV_buffer[last_buf_counter%WM831X_VOLTAGE_BUF_NUM + 1] = uV;
+			}
+			ret = cur_total_uV/WM831X_VOLTAGE_BUF_NUM;
+		} else if (uV_buf_counter <  WM831X_VOLTAGE_BUF_NUM) {
+			cur_total_uV += uV;
+			uV_buffer[uV_buf_counter] = uV;
+			ret = cur_total_uV/(uV_buf_counter + 1);
+		} else {
+			cur_total_uV = cur_total_uV + uV - uV_buffer[uV_buf_counter %WM831X_VOLTAGE_BUF_NUM];
+			 uV_buffer[uV_buf_counter %WM831X_VOLTAGE_BUF_NUM] = uV;
+			ret = cur_total_uV/WM831X_VOLTAGE_BUF_NUM;
+		}
+	}
+	last_buf_counter = uV_buf_counter++;
+
+	return ret;
+}
 static int wm831x_power_check_online(struct wm831x *wm831x, int supply,
 				     union power_supply_propval *val)
 {
@@ -207,6 +253,8 @@ static void wm831x_battey_apply_config(struct wm831x *wm831x,
 		*reg |= map[i].reg_val;
 		dev_dbg(wm831x->dev, "Set %s of %d%s\n", name, val, units);
 	}
+	uV_buf_counter = 0;
+	b_first_zero = true;
 }
 
 static void wm831x_config_battery(struct wm831x *wm831x)
@@ -388,18 +436,18 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 static int wm831x_bat_read_capacity(struct wm831x *wm831x,
 			       int *capacity)
 {
-	int uV, ret;
+	int uV, ret, uV_avg;
 	/* calculate the capacity from voltage */
 	/* 100%-20% 4.2V-3.8V 20%-0% 3.8V-3.5V */
 	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
-
-	if (uV >= 0) {
-		if (uV > 4200000) {
+	uV_avg = wm831x_bat_avg_uV(wm831x, uV);
+	if (uV_avg >= 0) {
+		if (uV_avg > 4200000) {
 			*capacity = 100;
-		} else if ((uV <= 4200000) && (uV > 3800000)) {
-			*capacity = 20 + 80*(uV - 3800000)/400000;
-		} else if ((uV <= 3800000) && (uV > 3500000)) {
-			*capacity = 20*(uV - 3500000)/300000;
+		} else if ((uV_avg <= 4200000) && (uV_avg > 3800000)) {
+			*capacity = 20 + 80*(uV_avg - 3800000)/400000;
+		} else if ((uV_avg <= 3800000) && (uV_avg > 3500000)) {
+			*capacity = 20*(uV_avg - 3500000)/300000;
 		} else {
 			*capacity = 0;
 		}
