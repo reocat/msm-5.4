@@ -357,7 +357,7 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 		priv_data->clock_reg = 0x1<<10;
 
 	if (priv_data->controller_info->set_audio_pll)
-		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_12_288M);
+		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_11_2896M);
 
 	/* Dai default smapling rate, polarity configuration*/
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
@@ -368,7 +368,7 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
 	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
-	priv_data->amb_i2s_intf.mclk = AudioCodec_12_288M;
+	priv_data->amb_i2s_intf.mclk = AudioCodec_11_2896M;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
 	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_44100;
