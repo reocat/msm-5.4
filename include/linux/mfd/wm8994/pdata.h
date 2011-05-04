@@ -74,6 +74,8 @@ struct wm8958_mbc_cfg {
 };
 
 struct wm8994_pdata {
+	int ldo2_enable;
+
 	int gpio_base;
 
 	/**
