@@ -33,3 +33,6 @@ extern struct i2c_board_info ambarella_board_vin_infos[2];
 
 extern struct i2c_board_info ambarella_board_hdmi_info;
 
+extern int ambarella_init_wm8994(struct spi_board_info *board_info, u32 n,
+		u16 bus_num, u16 chip_select);
+

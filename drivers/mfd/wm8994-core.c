@@ -16,6 +16,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/spi/spi.h>
 #include <linux/delay.h>
 #include <linux/mfd/core.h>
 #include <linux/pm_runtime.h>
@@ -354,6 +355,34 @@ static int wm8994_device_init(struct wm8994 *wm8994, int irq)
 	mutex_init(&wm8994->io_lock);
 	dev_set_drvdata(wm8994->dev, wm8994);
 
+	/* Enable LDO2, then WM8994 can be configured */
+	if (!pdata || !pdata->ldo2_enable || !gpio_is_valid(pdata->ldo2_enable)) {
+		dev_err(wm8994->dev, "Failed to get GPIO for ldo2 enable\n");
+		ret = -ENODEV;
+		goto err_gpio1;
+	}
+
+	ret = gpio_request(pdata->ldo2_enable, "WM8994 LDO2 enable");
+	if (ret < 0) {
+		dev_err(wm8994->dev, "Failed to get ldo2 GPIO: %d\n", ret);
+		goto err_gpio1;
+	}
+
+	ret = gpio_direction_output(pdata->ldo2_enable, 1);
+	if (ret < 0) {
+		dev_err(wm8994->dev, "Failed to set ldo2 GPIO up: %d\n", ret);
+		goto err_gpio2;
+	}
+
+	/* Delay to wait for ldo stable */
+	mdelay(3);
+
+	/* Configure wm8994 control interface as 4-wire SPI,
+	 * and GPIO1 of wm8994 is configured as SDOUT */
+	wm8994_reg_write(wm8994, WM8994_PULL_CONTROL_2, 0x0050);
+	wm8994_reg_write(wm8994, WM8994_CONTROL_INTERFACE, 0x8060);
+	wm8994_reg_write(wm8994, WM8994_GPIO_1, 0x0102);
+
 	/* Add the on-chip regulators first for bootstrapping */
 	ret = mfd_add_devices(wm8994->dev, -1,
 			      wm8994_regulator_devs,
@@ -397,7 +426,7 @@ static int wm8994_device_init(struct wm8994 *wm8994, int irq)
 		BUG();
 		return -EINVAL;
 	}
-		
+
 	ret = regulator_bulk_get(wm8994->dev, wm8994->num_supplies,
 				 wm8994->supplies);
 	if (ret != 0) {
@@ -515,6 +544,9 @@ err_supplies:
 	kfree(wm8994->supplies);
 err:
 	mfd_remove_devices(wm8994->dev);
+err_gpio2:
+	gpio_free(pdata->ldo2_enable);
+err_gpio1:
 	kfree(wm8994);
 	return ret;
 }
@@ -625,6 +657,77 @@ static struct i2c_driver wm8994_i2c_driver = {
 	.id_table = wm8994_i2c_id,
 };
 
+#if defined(CONFIG_SPI_MASTER)
+static int wm8994_spi_read_device(struct wm8994 *wm8994, unsigned short reg,
+				  int bytes, void *dest)
+{
+	struct spi_device *spi = wm8994->control_data;
+	int ret;
+
+	/* Do SPI transfer; first 16bits are command;
+	 * remaining 16bits are register contents */
+	reg = cpu_to_be16((1 << 15) | reg);
+
+	ret = spi_write_then_read(spi, (u8 *)&reg, 2, (u8 *)dest, bytes);
+
+	return ret < 0 ? ret : 0;
+}
+
+static int wm8994_spi_write_device(struct wm8994 *wm8994, unsigned short reg,
+				   int bytes, void *src)
+{
+	struct spi_device *spi = wm8994->control_data;
+	unsigned char msg[bytes + 2];
+	int ret;
+
+	reg = cpu_to_be16(reg);
+	memcpy(&msg[0], &reg, 2);
+	memcpy(&msg[2], src, bytes);
+
+	ret = spi_write(spi, msg, bytes + 2);
+
+	return ret;
+}
+
+static int __devinit wm8994_spi_probe(struct spi_device *spi)
+{
+	struct wm8994 *wm8994;
+
+	wm8994 = kzalloc(sizeof(struct wm8994), GFP_KERNEL);
+	if (wm8994 == NULL)
+		return -ENOMEM;
+
+	wm8994->dev = &spi->dev;
+	wm8994->control_data = spi;
+	wm8994->read_dev = wm8994_spi_read_device;
+	wm8994->write_dev = wm8994_spi_write_device;
+	wm8994->irq = spi->irq;
+	spi_set_drvdata(spi, wm8994);
+	wm8994->type = WM8994;
+
+	return wm8994_device_init(wm8994, 0);
+}
+
+static int wm8994_spi_remove(struct spi_device *spi)
+{
+	struct wm8994 *wm8994 = spi_get_drvdata(spi);
+
+	wm8994_device_exit(wm8994);
+
+	return 0;
+}
+
+static struct spi_driver wm8994_spi_driver = {
+	.driver = {
+		.name	= "wm8994",
+		.owner	= THIS_MODULE,
+		.pm = &wm8994_pm_ops,
+	},
+	.probe		= wm8994_spi_probe,
+	.remove		= wm8994_spi_remove,
+};
+#endif /* CONFIG_SPI_MASTER */
+
 static int __init wm8994_i2c_init(void)
 {
 	int ret;
@@ -633,6 +736,11 @@ static int __init wm8994_i2c_init(void)
 	if (ret != 0)
 		pr_err("Failed to register wm8994 I2C driver: %d\n", ret);
 
+#if defined(CONFIG_SPI_MASTER)
+	ret = spi_register_driver(&wm8994_spi_driver);
+	if (ret != 0)
+		pr_err("Failed to register wm8994 SPI driver: %d\n", ret);
+#endif
 	return ret;
 }
 module_init(wm8994_i2c_init);

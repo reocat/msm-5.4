@@ -1027,6 +1027,9 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
 
+	ambarella_init_wm8994(ambarella_spi_devices,
+			ARRAY_SIZE(ambarella_spi_devices), 0, 1);
+
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
 
 	platform_device_register(&elephant_board_input);
