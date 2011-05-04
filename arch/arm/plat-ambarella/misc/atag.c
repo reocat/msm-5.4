@@ -33,7 +33,6 @@
 
 #include <mach/hardware.h>
 #include <plat/debug.h>
-#include <plat/reboot.h>
 #include <hal/hal.h>
 
 /* ==========================================================================*/
@@ -222,10 +221,6 @@ void __init ambarella_map_io(void)
 		}
 #endif
 	}
-	ambarella_debug_info =
-		(ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.virtual +
-		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length -
-		DEFAULT_DEBUG_SIZE);
 
 	ambarella_reboot_info = ambarella_debug_info + DEBUG_INFO_SIZE;
 
@@ -425,8 +420,9 @@ EXPORT_SYMBOL(get_ambarella_dspmem_size);
 u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize)
 {
 	if ((ambarella_bst_info.size == 0) ||
-		(ambarella_bst_info.physaddr < PHYS_OFFSET) ||
-		(ambarella_bst_info.physaddr >= (u32)high_memory))
+		(ambarella_bst_info.physaddr < get_ambarella_ppm_phys()) ||
+		((ambarella_bst_info.physaddr + ambarella_bst_info.size) >
+		(get_ambarella_ppm_phys() + get_ambarella_ppm_size())))
 		return AMB_BST_INVALID;
 
 	*bstadd = ambarella_bst_info.physaddr;

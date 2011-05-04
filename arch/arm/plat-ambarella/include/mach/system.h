@@ -25,10 +25,10 @@
 #ifndef __ASM_ARCH_SYSTEM_H
 #define __ASM_ARCH_SYSTEM_H
 
-#include <plat/reboot.h>
-#include <plat/ambcache.h>
+#include <plat/bapi.h>
 
 /* ==========================================================================*/
+#include <plat/bapi.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -41,23 +41,20 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
-	reboot_info_t *info = (reboot_info_t *)(ambarella_reboot_info);
-	if(info != NULL) {
-		info->magic = REBOOT_MAGIC;
-		if(cmd == NULL) {
-			info->mode = NORMAL;
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	struct ambarella_bapi_reboot_info_s	reboot_info;
+
+	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
+	reboot_info.mode = DEFAULT_BAPI_REBOOT_NORMAL;
+	if (cmd) {
+		if(strcmp(cmd, "recovery") == 0) {
+			reboot_info.mode = DEFAULT_BAPI_REBOOT_RECOVERY;
+		} else if(strcmp(cmd, "fastboot") == 0) {
+			reboot_info.mode = DEFAULT_BAPI_REBOOT_FASTBOOT;
 		}
-		else if(strcmp(cmd, "recovery") == 0) {
-			info->mode = RECOVERY;
-		}
-		else if(strcmp(cmd, "fastboot") == 0) {
-			info->mode = FASTBOOT;
-		}
-		else {
-			info->mode = NORMAL;
-		}
-		ambcache_clean_range(info,sizeof(reboot_info_t));
 	}
+	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO, &reboot_info);
+#endif
 
 	rct_reset_chip();
 	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);

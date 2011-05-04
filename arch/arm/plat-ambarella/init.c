@@ -74,7 +74,6 @@ void __init ambarella_memblock_reserve(void)
 
 	if (get_ambarella_bstmem_info(&bstadd, &bstsize) == AMB_BST_MAGIC) {
 		pr_info("\t--:\t0x%08x[0x%08x]\tBST\n", bstadd, bstsize);
-		memblock_reserve(bstadd, bstsize);
 	}
 }
 

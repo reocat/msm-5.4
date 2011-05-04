@@ -45,6 +45,8 @@ enum ambarella_bapi_cmd_e {
 	AMBARELLA_BAPI_CMD_AOSS_INIT		= 0x1000,
 	AMBARELLA_BAPI_CMD_AOSS_COPY_PAGE	= 0x1001,
 	AMBARELLA_BAPI_CMD_AOSS_SAVE		= 0x1002,
+
+	AMBARELLA_BAPI_CMD_SET_REBOOT_INFO	= 0x2000,
 };
 
 struct ambarella_bapi_aoss_page_info_s {
@@ -70,10 +72,16 @@ struct ambarella_bapi_s {
 	u32					magic;
 	u32					version;
 	int					size;
-	u32					rev;
+	u32					crc;
+	u32					mode;
+	u32					block_dev;
+	u32					block_start;
+	u32					block_num;
+	u32					rev0[64 - 8];
 	struct ambarella_bapi_reboot_info_s	reboot_info;
+	u32					rev1[64 - 4];
 	u32					debug[128];
-	u32					rev1[1024 - 8 - 128];
+	u32					rev2[1024 - 128 - 128];
 	struct ambarella_bapi_aoss_s		aoss_info;
 };
 
@@ -83,7 +91,7 @@ struct ambarella_bapi_tag_s {
 };
 
 /* ==========================================================================*/
-typedef unsigned int (*ambarella_bapi_aoss_t)(u32);
+typedef unsigned int (*ambarella_bapi_aoss_call_t)(u32, u32, u32, u32);
 
 extern int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args);
 

@@ -54,8 +54,6 @@ module_param(pm_debug_enable_timer_irq, int, 0644);
 static int pm_debug_hal_standby = 1;
 module_param(pm_debug_hal_standby, int, 0644);
 
-static unsigned long ambarella_pm_lrq_flags;
-
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -84,58 +82,74 @@ void ambarella_machine_restart(char mode, const char *cmd)
 }
 
 /* ==========================================================================*/
-static int ambarella_pm_pre(unsigned long *irqflag)
+static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend,
+	u32 tm_level, u32 bnotifier)
 {
 	int					retval = 0;
 
-	retval = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_PRE_PM, NULL));
-	if (retval) {
-		pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, __LINE__, retval);
+	if (bnotifier) {
+		retval = notifier_to_errno(
+			ambarella_set_event(AMBA_EVENT_PRE_PM, NULL));
+		if (retval) {
+			pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
+				__func__, __LINE__, retval);
+		}
 	}
-	local_irq_save(*irqflag);
+	if (irqflag)
+		local_irq_save(*irqflag);
 
-	ambarella_adc_suspend(1);
-	ambarella_timer_suspend(1);
-	ambarella_irq_suspend(1);
-	ambarella_gpio_suspend(1);
-	ambarella_pll_suspend(1);
+	if (bsuspend) {
+		ambarella_adc_suspend(1);
+		ambarella_timer_suspend(tm_level);
+		ambarella_irq_suspend(1);
+		ambarella_gpio_suspend(1);
+		//ambarella_pll_suspend(1);
+	}
 
-	retval = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
-	if (retval) {
-		pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, __LINE__, retval);
+	if (bnotifier) {
+		retval = notifier_to_errno(
+			ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
+		if (retval) {
+			pr_err("%s@%d: AMBA_EVENT_PRE_PM failed(%d)\n",
+				__func__, __LINE__, retval);
+		}
 	}
 
 	return retval;
 }
 
-static int ambarella_pm_post(unsigned long *irqflag)
+static int ambarella_pm_post(unsigned long *irqflag, u32 bresume,
+	u32 tm_level, u32 bnotifier)
 {
 	int					retval = 0;
 
-	retval = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_POST_PM, NULL));
-	if (retval) {
-		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, retval);
+	if (bnotifier) {
+		retval = notifier_to_errno(
+			ambarella_set_raw_event(AMBA_EVENT_POST_PM, NULL));
+		if (retval) {
+			pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+				__func__, retval);
+		}
 	}
 
-	ambarella_pll_resume(1);
-	ambarella_gpio_resume(1);
-	ambarella_irq_resume(1);
-	ambarella_timer_resume(1);
-	ambarella_adc_resume(1);
+	if (bresume) {
+		//ambarella_pll_resume(1);
+		ambarella_gpio_resume(1);
+		ambarella_irq_resume(1);
+		ambarella_timer_resume(tm_level);
+		ambarella_adc_resume(1);
+	}
 
-	local_irq_restore(*irqflag);
+	if (irqflag)
+		local_irq_restore(*irqflag);
 
-	retval = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_POST_PM, NULL));
-	if (retval) {
-		pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
-			__func__, retval);
+	if (bnotifier) {
+		retval = notifier_to_errno(
+			ambarella_set_event(AMBA_EVENT_POST_PM, NULL));
+		if (retval) {
+			pr_err("%s: AMBA_EVENT_PRE_PM failed(%d)\n",
+				__func__, retval);
+		}
 	}
 
 	return retval;
@@ -173,8 +187,9 @@ static int ambarella_pm_enter_standby(void)
 #endif
 	struct irq_desc				*pm_desc;
 	struct irq_chip				*pm_chip = NULL;
+	unsigned long				flags;
 
-	if (ambarella_pm_pre(&ambarella_pm_lrq_flags))
+	if (ambarella_pm_pre(&flags, 1, 1, 1))
 		BUG();
 
 	if (pm_debug_enable_timer_irq) {
@@ -225,7 +240,7 @@ static int ambarella_pm_enter_standby(void)
 
 #endif
 
-	if (ambarella_pm_post(&ambarella_pm_lrq_flags))
+	if (ambarella_pm_post(&flags, 1, 1, 1))
 		BUG();
 
 	return retval;
@@ -309,21 +324,17 @@ static void ambarella_pm_hibernation_end(void)
 static int ambarella_pm_hibernation_pre_snapshot(void)
 {
 	int					retval = 0;
+	unsigned long				flags;
 
-	local_irq_save(ambarella_pm_lrq_flags);
-	ambarella_adc_suspend(1);
-	ambarella_timer_suspend(0);
-	ambarella_irq_suspend(1);
-	ambarella_gpio_suspend(1);
-	//ambarella_pll_suspend(1);
+	retval = ambarella_pm_pre(&flags, 1, 0, 1);
+	if (retval)
+		goto ambarella_pm_hibernation_pre_snapshot_exit;
 
-	//ambarella_pll_resume(1);
-	ambarella_gpio_resume(1);
-	ambarella_irq_resume(1);
-	ambarella_timer_resume(0);
-	ambarella_adc_resume(1);
-	local_irq_restore(ambarella_pm_lrq_flags);
+	retval = ambarella_pm_post(&flags, 1, 0, 0);
+	if (retval)
+		goto ambarella_pm_hibernation_pre_snapshot_exit;
 
+ambarella_pm_hibernation_pre_snapshot_exit:
 	return retval;
 }
 
@@ -349,11 +360,7 @@ static int ambarella_pm_hibernation_enter(void)
 
 static void ambarella_pm_hibernation_leave(void)
 {
-	//ambarella_pll_resume(1);
-	ambarella_gpio_resume(1);
-	ambarella_irq_resume(1);
-	ambarella_timer_resume(0);
-	ambarella_adc_resume(1);
+	ambarella_pm_post(NULL, 1, 0, 1);
 }
 
 static int ambarella_pm_hibernation_pre_restore(void)
@@ -369,6 +376,7 @@ static void ambarella_pm_hibernation_restore_cleanup(void)
 
 static void ambarella_pm_hibernation_restore_recover(void)
 {
+	ambarella_pm_post(NULL, 0, 0, 1);
 }
 
 static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
