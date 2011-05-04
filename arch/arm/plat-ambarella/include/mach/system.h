@@ -26,6 +26,7 @@
 #define __ASM_ARCH_SYSTEM_H
 
 /* ==========================================================================*/
+#include <plat/bapi.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -38,6 +39,21 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	struct ambarella_bapi_reboot_info_s	reboot_info;
+
+	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
+	reboot_info.mode = DEFAULT_BAPI_REBOOT_NORMAL;
+	if (cmd) {
+		if(strcmp(cmd, "recovery") == 0) {
+			reboot_info.mode = DEFAULT_BAPI_REBOOT_RECOVERY;
+		} else if(strcmp(cmd, "fastboot") == 0) {
+			reboot_info.mode = DEFAULT_BAPI_REBOOT_FASTBOOT;
+		}
+	}
+	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO, &reboot_info);
+#endif
+
 	rct_reset_chip();
 	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);
 }
