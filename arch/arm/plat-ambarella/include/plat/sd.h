@@ -74,7 +74,7 @@ extern struct platform_device			ambarella_sd0;
 extern struct platform_device			ambarella_sd1;
 
 extern int ambarella_init_sd(void);
-extern void ambarella_detect_sd_slot(int bus, int slot);
+extern void ambarella_detect_sd_slot(int bus, int slot, int fixed_cd);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
