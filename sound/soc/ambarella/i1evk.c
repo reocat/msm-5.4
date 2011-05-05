@@ -95,8 +95,6 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_nc_pin(dapm, "LINEOUT1P");
 	snd_soc_dapm_nc_pin(dapm, "LINEOUT2N");
 	snd_soc_dapm_nc_pin(dapm, "LINEOUT2P");
-	snd_soc_dapm_nc_pin(dapm, "SPKOUTRN");
-	snd_soc_dapm_nc_pin(dapm, "SPKOUTRP");
 
 	snd_soc_dapm_sync(dapm);
 
