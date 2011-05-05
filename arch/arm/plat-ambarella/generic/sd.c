@@ -358,11 +358,12 @@ int __init ambarella_init_sd(void)
 	return retval;
 }
 
-void ambarella_detect_sd_slot(int bus, int slot)
+void ambarella_detect_sd_slot(int bus, int slot, int fixed_cd)
 {
 	struct ambarella_sd_slot		*pslotinfo = NULL;
 	mmc_dc_fn				mmc_dc = NULL;
 
+	pr_debug("%s:%d[%d:%d:%d]\n", __func__, __LINE__, bus, slot, fixed_cd);
 	if ((bus == 0) && (slot == 0)) {
 		pslotinfo = &ambarella_platform_sd_controller0.slot[0];
 	}
@@ -383,7 +384,11 @@ void ambarella_detect_sd_slot(int bus, int slot)
 	mmc_dc = (mmc_dc_fn)module_kallsyms_lookup_name("mmc_detect_change");
 #endif
 	if (pslotinfo && mmc_dc && pslotinfo->pmmc_host) {
+		pslotinfo->fixed_cd = fixed_cd;
 		mmc_dc(pslotinfo->pmmc_host, pslotinfo->cd_delay);
+		pr_debug("%s:%d[%p:%p:%p:%d]\n", __func__, __LINE__, pslotinfo,
+			mmc_dc, pslotinfo->pmmc_host, pslotinfo->cd_delay);
 	}
 }
 EXPORT_SYMBOL(ambarella_detect_sd_slot);
+
