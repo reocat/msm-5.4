@@ -831,8 +831,8 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.gsensor_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.gsensor_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-			strcpy(ambarella_spi_devices[17].modalias, "mma7455l");
-			ambarella_spi_devices[17].irq = ambarella_board_generic.gsensor_irq.irq_line;
+//			strcpy(ambarella_spi_devices[17].modalias, "mma7455l");
+//			ambarella_spi_devices[17].irq = ambarella_board_generic.gsensor_irq.irq_line;
 
 			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
 			ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
