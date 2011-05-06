@@ -54,7 +54,8 @@ static inline void arch_reset(char mode, const char *cmd)
 	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO, &reboot_info);
 #endif
 
-	rct_reset_chip();
+	amba_writel(SOFT_RESET_REG, 0x0);
+	amba_writel(SOFT_RESET_REG, 0x1);
 	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);
 }
 

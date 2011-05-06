@@ -99,14 +99,14 @@ static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend,
 		local_irq_save(*irqflag);
 
 	if (bsuspend) {
-		ambarella_adc_suspend(1);
+		ambarella_adc_suspend(0);
 		ambarella_timer_suspend(tm_level);
-		ambarella_irq_suspend(1);
-		ambarella_gpio_suspend(1);
+		ambarella_irq_suspend(0);
+		ambarella_gpio_suspend(0);
 		//ambarella_pll_suspend(1);
 	}
 
-	if (bnotifier) {
+	if (bnotifier && irqflag) {
 		retval = notifier_to_errno(
 			ambarella_set_raw_event(AMBA_EVENT_PRE_PM, NULL));
 		if (retval) {
@@ -123,7 +123,7 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume,
 {
 	int					retval = 0;
 
-	if (bnotifier) {
+	if (bnotifier && irqflag) {
 		retval = notifier_to_errno(
 			ambarella_set_raw_event(AMBA_EVENT_POST_PM, NULL));
 		if (retval) {
@@ -134,10 +134,10 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume,
 
 	if (bresume) {
 		//ambarella_pll_resume(1);
-		ambarella_gpio_resume(1);
-		ambarella_irq_resume(1);
+		ambarella_gpio_resume(0);
+		ambarella_irq_resume(0);
 		ambarella_timer_resume(tm_level);
-		ambarella_adc_resume(1);
+		ambarella_adc_resume(0);
 	}
 
 	if (irqflag)
@@ -319,22 +319,17 @@ static int ambarella_pm_hibernation_begin(void)
 
 static void ambarella_pm_hibernation_end(void)
 {
+	int					retval = 0;
+
+	retval = ambarella_pm_post(NULL, 0, 0, 1);
 }
 
 static int ambarella_pm_hibernation_pre_snapshot(void)
 {
 	int					retval = 0;
-	unsigned long				flags;
 
-	retval = ambarella_pm_pre(&flags, 1, 0, 1);
-	if (retval)
-		goto ambarella_pm_hibernation_pre_snapshot_exit;
+	retval = ambarella_pm_pre(NULL, 1, 0, 1);
 
-	retval = ambarella_pm_post(&flags, 1, 0, 0);
-	if (retval)
-		goto ambarella_pm_hibernation_pre_snapshot_exit;
-
-ambarella_pm_hibernation_pre_snapshot_exit:
 	return retval;
 }
 
@@ -360,7 +355,7 @@ static int ambarella_pm_hibernation_enter(void)
 
 static void ambarella_pm_hibernation_leave(void)
 {
-	ambarella_pm_post(NULL, 1, 0, 1);
+	ambarella_pm_post(NULL, 1, 0, 0);
 }
 
 static int ambarella_pm_hibernation_pre_restore(void)
