@@ -185,7 +185,7 @@ static int ambarella_pm_enter_standby(void)
 	amb_hal_success_t			result;
 	amb_operating_mode_t			operating_mode;
 #endif
-	struct irq_desc				*pm_desc;
+	struct irq_desc				*pm_desc = NULL;
 	struct irq_chip				*pm_chip = NULL;
 	unsigned long				flags;
 
