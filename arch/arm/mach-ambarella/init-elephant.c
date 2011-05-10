@@ -877,6 +877,9 @@ static void __init ambarella_init_elephant(void)
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 
+			ambarella_init_wm8994(ambarella_spi_devices,
+					ARRAY_SIZE(ambarella_spi_devices), 0, 1);
+
 			use_bub_default = 0;
 			break;
 
@@ -1025,9 +1028,6 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
-
-	ambarella_init_wm8994(ambarella_spi_devices,
-			ARRAY_SIZE(ambarella_spi_devices), 0, 1);
 
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
 
