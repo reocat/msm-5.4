@@ -46,13 +46,13 @@ struct wm8737_priv {
 };
 
 static const u16 wm8737_reg[WM8737_REGISTER_COUNT] = {
-	0x00C3,     /* R0  - Left PGA volume */
-	0x00C3,     /* R1  - Right PGA volume */
-	0x0007,     /* R2  - AUDIO path L */
-	0x0007,     /* R3  - AUDIO path R */
+	0x01C3,     /* R0  - Left PGA volume, 0db default */
+	0x01C3,     /* R1  - Right PGA volume, 0db default  */
+	0x0010,     /* R2  - turn on MIC preamp, apply gain immediately.  */
+	0x0010,	    /* R3  - turn on MIC preamp, apply gain immediately.  */
 	0x0000,     /* R4  - 3D Enhance */
 	0x0000,     /* R5  - ADC Control */
-	0x0000,     /* R6  - Power Management */
+	0x01FF,     /* R6  - Power Management, turn on all modules */
 	0x000A,     /* R7  - Audio Format */
 	0x0000,     /* R8  - Clocking */
 	0x000F,     /* R9  - MIC Preamp Control */
