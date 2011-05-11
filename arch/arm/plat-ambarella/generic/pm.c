@@ -355,6 +355,9 @@ static int ambarella_pm_hibernation_enter(void)
 
 static void ambarella_pm_hibernation_leave(void)
 {
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	set_ambarella_hal_invalid();
+#endif
 	ambarella_pm_post(NULL, 1, 0, 0);
 }
 

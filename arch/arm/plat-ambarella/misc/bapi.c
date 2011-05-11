@@ -29,6 +29,8 @@
 
 #include <asm/setup.h>
 #include <asm/suspend.h>
+#include <asm/io.h>
+#include <asm/unified.h>
 
 #include <mach/hardware.h>
 #include <plat/bapi.h>
@@ -44,6 +46,8 @@
 /* ==========================================================================*/
 static struct ambarella_bapi_tag_s bapi_tag;
 static struct ambarella_bapi_s *bapi_info = NULL;
+static ambarella_bapi_aoss_call_t bapi_aoss_entry = NULL;
+static u32 bapi_aoss_arg[4];
 extern int in_suspend;
 
 /* ==========================================================================*/
@@ -69,7 +73,7 @@ static int __init parse_mem_tag_bapi(const struct tag *tag)
 __tagtable(ATAG_AMBARELLA_BAPI, parse_mem_tag_bapi);
 
 /* ==========================================================================*/
-int ambarella_bapi_check_bapi_info(enum ambarella_bapi_cmd_e cmd)
+static int ambarella_bapi_check_bapi_info(enum ambarella_bapi_cmd_e cmd)
 {
 	int				retval = 0;
 
@@ -97,9 +101,16 @@ ambarella_bapi_check_bapi_info_exit:
 	return retval;
 }
 
+static void ambarella_bapi_aoss_return(void)
+{
+	bapi_info->aoss_info.copy_pages = 0;
+	in_suspend = 0;
+	swsusp_arch_restore_cpu();
+}
+
 int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 {
-	int					retval = 0;
+	int						retval = 0;
 
 	switch(cmd) {
 	case AMBARELLA_BAPI_CMD_INIT:
@@ -170,37 +181,39 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 
 	case AMBARELLA_BAPI_CMD_AOSS_SAVE:
 	{
-		ambarella_bapi_aoss_call_t		aoss_entry = NULL;
-		unsigned long                           flags;
+		unsigned long				flags;
 		int					i;
-		u32					tmp_v[4];
-
-		for (i = 0; i < 4; i++) {
-			tmp_v[i] = ambarella_phys_to_virt(
-				bapi_info->aoss_info.fn_pri[i]);
-		}
 
 		retval = ambarella_bapi_check_bapi_info(cmd);
 		if (retval == 0) {
-			aoss_entry = (ambarella_bapi_aoss_call_t)tmp_v[0];
+			for (i = 0; i < 4; i++) {
+				bapi_aoss_arg[i] = ambarella_phys_to_virt(
+					bapi_info->aoss_info.fn_pri[i]);
+			}
 			pr_info("%s: %p for 0x%08x[0x%08x], 0x%08x[0x%08x], "
-				"0x%08x[0x%08x], 0x%08x[0x%08x].\n",
-				__func__, bapi_info->aoss_info.fn_pri,
-				tmp_v[0], bapi_info->aoss_info.fn_pri[0],
-				tmp_v[1], bapi_info->aoss_info.fn_pri[1],
-				tmp_v[2], bapi_info->aoss_info.fn_pri[2],
-				tmp_v[3], bapi_info->aoss_info.fn_pri[3]);
-			local_irq_save(flags);
+			"0x%08x[0x%08x], 0x%08x[0x%08x].\n",
+			__func__, bapi_info->aoss_info.fn_pri,
+			bapi_aoss_arg[0], bapi_info->aoss_info.fn_pri[0],
+			bapi_aoss_arg[1], bapi_info->aoss_info.fn_pri[1],
+			bapi_aoss_arg[2], bapi_info->aoss_info.fn_pri[2],
+			bapi_aoss_arg[3], bapi_info->aoss_info.fn_pri[3]);
 			ambcache_clean_range(bapi_info, bapi_info->size);
-			retval = aoss_entry((u32)bapi_info->aoss_info.fn_pri,
-				tmp_v[1], tmp_v[2], tmp_v[3]);
-			bapi_info->aoss_info.copy_pages = 0;
-			in_suspend = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-			set_ambarella_hal_invalid();
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+			disable_nonboot_cpus();
 #endif
-			swsusp_arch_restore_cpu();
-			local_irq_restore(flags);
+			local_irq_save(flags);
+
+			bapi_aoss_entry =
+				(ambarella_bapi_aoss_call_t)bapi_aoss_arg[0];
+			retval = bapi_aoss_entry((u32)bapi_info->aoss_info.fn_pri,
+				bapi_aoss_arg[1], bapi_aoss_arg[2], bapi_aoss_arg[3]);
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+			if (retval != 0x01) {
+				ambarella_swvic_set(AXI_SOFT_IRQ(0));
+				while(1) {};
+			}
+#endif
+			ambarella_bapi_aoss_return();
 		}
 	}
 		break;

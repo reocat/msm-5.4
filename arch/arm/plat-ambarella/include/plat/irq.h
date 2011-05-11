@@ -440,6 +440,8 @@ extern void ambarella_init_irq(void);
 
 extern u32 ambarella_irq_suspend(u32 level);
 extern u32 ambarella_irq_resume(u32 level);
+extern void ambarella_swvic_set(u32 irq);
+extern void ambarella_swvic_clr(u32 irq);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
