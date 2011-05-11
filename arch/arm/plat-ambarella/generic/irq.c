@@ -253,6 +253,8 @@ int ambarella_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	amba_writel(gpio_base + GPIO_IBE_OFFSET, bothedges);
 	amba_writel(gpio_base + GPIO_IEV_OFFSET, event);
 
+	ambarella_gpio_ack_irq(d);
+
 	return 0;
 }
 
@@ -283,11 +285,13 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 };
 
 /* ==========================================================================*/
-#if !defined(CONFIG_ARM_GIC)
 #if (VIC_INSTANCES == 1)
-#define AMBARELLA_VIC_IRQ2BASE()	do { } while (0)
+#define AMBARELLA_VIC_IRQ2BASE()	do { \
+	irq -= VIC_INT_VEC(0); \
+	} while (0)
 #elif (VIC_INSTANCES == 2)
 #define AMBARELLA_VIC_IRQ2BASE()	do { \
+	irq -= VIC_INT_VEC(0); \
 	if (irq >= NR_VIC_IRQ_SIZE) { \
 		irq -= NR_VIC_IRQ_SIZE; \
 		vic_base = VIC2_BASE; \
@@ -295,6 +299,7 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 	} while (0)
 #elif (VIC_INSTANCES == 3)		//FIX_IONE
 #define AMBARELLA_VIC_IRQ2BASE()	do { \
+	irq -= VIC_INT_VEC(0); \
 	if (irq >= NR_VIC_IRQ_SIZE) { \
 		irq -= NR_VIC_IRQ_SIZE; \
 		vic_base = VIC2_BASE; \
@@ -306,6 +311,7 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 	} while (0)
 #endif
 
+#if !defined(CONFIG_ARM_GIC)
 static void ambarella_ack_irq(struct irq_data *d)
 {
 	u32					vic_base = VIC_BASE;
@@ -409,6 +415,8 @@ static int ambarella_irq_set_type(struct irq_data *d, unsigned int type)
 	amba_writel(vic_base + VIC_BOTHEDGE_OFFSET, bothedges);
 	amba_writel(vic_base + VIC_EVENT_OFFSET, event);
 
+	ambarella_ack_irq(d);
+
 	return 0;
 }
 
@@ -429,6 +437,26 @@ static struct irq_chip ambarella_irq_chip = {
 	.irq_set_wake	= ambarella_irq_set_wake,
 };
 #endif
+
+void ambarella_swvic_set(u32 irq)
+{
+	u32					vic_base = VIC_BASE;
+
+	AMBARELLA_VIC_IRQ2BASE();
+
+	amba_writel(vic_base + VIC_SOFTEN_OFFSET, 0x1 << irq);
+}
+EXPORT_SYMBOL(ambarella_swvic_set);
+
+void ambarella_swvic_clr(u32 irq)
+{
+	u32					vic_base = VIC_BASE;
+
+	AMBARELLA_VIC_IRQ2BASE();
+
+	amba_writel(vic_base + VIC_SOFTEN_CLR_OFFSET, 0x1 << irq);
+}
+EXPORT_SYMBOL(ambarella_swvic_clr);
 
 /* ==========================================================================*/
 static inline u32 ambarella_irq_stat2nr(u32 stat)
