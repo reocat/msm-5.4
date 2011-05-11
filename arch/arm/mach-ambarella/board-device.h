@@ -38,4 +38,5 @@ extern	struct platform_device lcd_1p3831;
 extern struct wm831x_pdata elephant_wm8310_pdata;
 
 extern int ambarella_init_wm8994(void);
+extern int ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr);
 

@@ -147,6 +147,10 @@ config RTC_AMBARELLA_IS112022M
 
 comment "Audio Codec"
 
+config CODEC_AMBARELLA_WM8737
+	bool "wm8737"
+	default n
+
 config CODEC_AMBARELLA_WM8994
 	bool "wm8994"
 	default n

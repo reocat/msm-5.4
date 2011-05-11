@@ -35,6 +35,14 @@ config A5SEVK_BOARD
 	  Say Y if you want to add ak4642 audio codec support for
 	  SoC audio on Ambarella A5SEVK Board (COCONUT or DURIAN Board).
 
+config A5S_PA2_BOARD
+	tristate "A5s PA2 board [with WM8737 Codec]"
+	depends on SND_AMBARELLA_SOC && (MACH_COCONUT)
+	select SND_AMBARELLA_SOC_I2S
+	select SND_SOC_WM8737
+	help
+	  Say Y if you want to add WM8737 codec for A5s PA2 board
+
 config I1EVK_BOARD
 	tristate "I1EVK Board [With WM8994 Codec]"
 	depends on SND_AMBARELLA_SOC && MACH_ELEPHANT

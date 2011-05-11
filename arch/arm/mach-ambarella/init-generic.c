@@ -187,6 +187,7 @@ struct platform_device generic_board_input = {
 	}
 };
 
+
 /* ==========================================================================*/
 static void __init ambarella_init_generic(void)
 {
