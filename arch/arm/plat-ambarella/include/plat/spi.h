@@ -34,6 +34,7 @@
 
 /* Tx FIFO empty interrupt mask */
 #define SPI_TXEIS_MASK		0x00000001
+#define SPI_TXOIS_MASK 		0x00000002
 
 /* SPI Parameters */
 #define SPI_DUMMY_DATA		0xffff
@@ -98,6 +99,7 @@ struct ambarella_spi_cs_config {
 };
 
 struct ambarella_spi_platform_info {
+	int					support_dma;
 	int					fifo_entries;
 	int					cs_num;
 	int					*cs_pins;
