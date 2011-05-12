@@ -19,6 +19,7 @@
 #include <linux/mfd/wm831x/pmu.h>
 #include <linux/mfd/wm831x/pdata.h>
 
+#include <linux/discharge_curve.h>
 struct wm831x_power {
 	struct wm831x *wm831x;
 	struct power_supply wall;
@@ -388,25 +389,9 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 static int wm831x_bat_read_capacity(struct wm831x *wm831x,
 			       int *capacity)
 {
-	int uV, ret, uV_avg;
-	/* calculate the capacity from voltage */
-	/* 100%-20% 4.2V-3.6V 20%-0% 3.6V-3.4V */
+	int uV;
 	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
-	if (uV >= 0) {
-		if (uV > 4200000) {
-			*capacity = 100;
-		} else if ((uV <= 4200000) && (uV > 3600000)) {
-			*capacity = 20 + 80*(uV - 3600000)/600000;
-		} else if ((uV <= 3600000) && (uV > 3400000)) {
-			*capacity = 20*(uV - 3400000)/200000;
-		} else {
-			*capacity = 0;
-		}
-		ret = 0;
-	} else {
-		ret = -EINVAL;
-	}
-	return ret;
+	return (convert_uV_to_capacity(uV, capacity));
 }
 
 static int wm831x_bat_read_capacity_level(struct wm831x *wm831x,
