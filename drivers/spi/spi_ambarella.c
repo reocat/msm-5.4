@@ -34,7 +34,9 @@
 #include <linux/spi/spidev.h>
 #include <asm/io.h>
 #include <mach/io.h>
+#include <mach/dma.h>
 #include <plat/spi.h>
+#include <plat/ambcache.h>
 
 /*============================Global Variables================================*/
 
@@ -110,6 +112,8 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *);
 static void ambarella_spi_finish_transfer(struct ambarella_spi *);
 static void ambarella_spi_finish_message(struct ambarella_spi *);
 static void ambarella_spi_start_transfer(struct ambarella_spi *);
+static void ambarella_spi_dma_complete(void *, u32);
+
 
 /*============================SPI Bus Driver==================================*/
 
@@ -159,84 +163,192 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 	widx	= priv->widx;
 	ridx	= priv->ridx;
 
-	/* Feed data into FIFO */
-	switch (priv->rw_mode) {
-	case SPI_WRITE_ONLY:
-		xfer_len = len - widx;
-		if (xfer_len > priv->pinfo->fifo_entries)
-			xfer_len = priv->pinfo->fifo_entries;
+	if (!priv->pinfo->support_dma) {
+		/* Feed data into FIFO */
+		switch (priv->rw_mode) {
+		case SPI_WRITE_ONLY:
+			xfer_len = len - widx;
+			if (xfer_len > priv->pinfo->fifo_entries)
+				xfer_len = priv->pinfo->fifo_entries;
 
-		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
-		if (priv->bpw <= 8) {
-			for(i = 0; i < xfer_len; i++) {
-				tmp = ((u8 *)wbuf)[widx++];
-				if (lsb) {
-					tmp = ambarella_spi_bit_reverse_8(tmp);
-					tmp = tmp >> (8 - priv->bpw);
+			amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+			if (priv->bpw <= 8) {
+				for(i = 0; i < xfer_len; i++) {
+					tmp = ((u8 *)wbuf)[widx++];
+					if (lsb) {
+						tmp = ambarella_spi_bit_reverse_8(tmp);
+						tmp = tmp >> (8 - priv->bpw);
+					}
+					amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
 				}
-				amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
-			}
-		}else{
-			for(i = 0; i < xfer_len; i++) {
-				tmp = ((u16 *)wbuf)[widx++];
-				if (lsb) {
-					tmp = ambarella_spi_bit_reverse_16(tmp);
-					tmp = tmp >> (16 - priv->bpw);
+			} else{
+				for(i = 0; i < xfer_len; i++) {
+					tmp = ((u16 *)wbuf)[widx++];
+					if (lsb) {
+						tmp = ambarella_spi_bit_reverse_16(tmp);
+						tmp = tmp >> (16 - priv->bpw);
+					}
+					amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
 				}
-				amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
 			}
+			amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
+
+			break;
+
+		case SPI_WRITE_READ:
+			xfer_len = len - widx;
+			if (xfer_len > priv->pinfo->fifo_entries)
+				xfer_len = priv->pinfo->fifo_entries;
+
+			amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+			if (priv->bpw <= 8) {
+				for(i = 0; i < xfer_len; i++) {
+					tmp = ((u8 *)wbuf)[widx++];
+					if (lsb) {
+						tmp = ambarella_spi_bit_reverse_8(tmp);
+						tmp = tmp >> (8 - priv->bpw);
+					}
+					amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
+				}
+			} else{
+				for(i = 0; i < xfer_len; i++) {
+					tmp = ((u16 *)wbuf)[widx++];
+					if (lsb) {
+						tmp = ambarella_spi_bit_reverse_16(tmp);
+						tmp = tmp >> (16 - priv->bpw);
+					}
+					amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
+				}
+			}
+			amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
+
+			break;
+
+		case SPI_READ_ONLY:
+			xfer_len = len - ridx;
+			if (xfer_len > priv->pinfo->fifo_entries)
+				xfer_len = priv->pinfo->fifo_entries;
+
+			amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+			for(i = 0; i < xfer_len; i++)
+				amba_writel(priv->regbase + SPI_DR_OFFSET, SPI_DUMMY_DATA);
+			amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
+
+			break;
+
+		default:
+			break;
 		}
-		amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
 
-		break;
+		priv->widx = widx;
+		enable_irq(priv->irq);
+	} else {
+		ambarella_dma_req_t	tx_dma, rx_dma;
+		u32			dma_switch_reg, val;
 
-	case SPI_WRITE_READ:
-		xfer_len = len - widx;
-		if (xfer_len > priv->pinfo->fifo_entries)
-			xfer_len = priv->pinfo->fifo_entries;
+		dma_switch_reg = AHB_SCRATCHPAD_REG(0xc);
+		memset(&tx_dma, 0, sizeof(tx_dma));
+		memset(&rx_dma, 0, sizeof(rx_dma));
 
-		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
-		if (priv->bpw <= 8) {
-			for(i = 0; i < xfer_len; i++) {
-				tmp = ((u8 *)wbuf)[widx++];
-				if (lsb) {
-					tmp = ambarella_spi_bit_reverse_8(tmp);
-					tmp = tmp >> (8 - priv->bpw);
-				}
-				amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
+		switch (priv->rw_mode) {
+		case SPI_WRITE_ONLY:
+			ambarella_dma_enable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+			tx_dma.src		= ambarella_virt_to_phys((u32)wbuf);
+			tx_dma.dst		= ambarella_virt_to_phys(priv->regbase + SPI_DR_OFFSET);
+			tx_dma.attr		= DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_CHANX_CTR_BLK_8B;
+			if (priv->bpw <= 8) {
+				tx_dma.xfr_count	= len;
+				tx_dma.attr		|= DMA_CHANX_CTR_TS_1B;
+			} else {
+				tx_dma.xfr_count	= len << 1;
+				tx_dma.attr |= DMA_CHANX_CTR_TS_2B;
 			}
-		}else{
-			for(i = 0; i < xfer_len; i++) {
-				tmp = ((u16 *)wbuf)[widx++];
-				if (lsb) {
-					tmp = ambarella_spi_bit_reverse_16(tmp);
-					tmp = tmp >> (16 - priv->bpw);
-				}
-				amba_writel(priv->regbase + SPI_DR_OFFSET, tmp);
+			ambcache_clean_range(wbuf, len);
+			ambarella_dma_xfr(&tx_dma, MS_AHB_SSI_TX_DMA_CHAN);
+			rx_dma.src		= ambarella_virt_to_phys(priv->regbase + SPI_DR_OFFSET);
+			rx_dma.dst		= ambarella_virt_to_phys((u32)wbuf);
+			rx_dma.attr		= DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_CHANX_CTR_BLK_8B;
+			if (priv->bpw <= 8) {
+				rx_dma.xfr_count	= len;
+				rx_dma.attr		|= DMA_CHANX_CTR_TS_1B;
+			} else {
+				rx_dma.xfr_count	= len << 1;
+				rx_dma.attr |= DMA_CHANX_CTR_TS_2B;
 			}
+			ambarella_dma_xfr(&rx_dma, SPDIF_AHB_SSI_DMA_CHAN);
+			val = amba_readl(dma_switch_reg);
+			amba_writel(dma_switch_reg, val | 0x1);
+			amba_writel(priv->regbase + SPI_DMAC_OFFSET, 3);
+
+			break;
+
+		case SPI_WRITE_READ:
+			ambarella_dma_enable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+			tx_dma.src		= ambarella_virt_to_phys((u32)wbuf);
+			tx_dma.dst		= ambarella_virt_to_phys(priv->regbase + SPI_DR_OFFSET);
+			tx_dma.attr		= DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_CHANX_CTR_BLK_8B;
+			if (priv->bpw <= 8) {
+				tx_dma.xfr_count	= len;
+				tx_dma.attr		|= DMA_CHANX_CTR_TS_1B;
+			} else {
+				tx_dma.xfr_count	= len << 1;
+				tx_dma.attr |= DMA_CHANX_CTR_TS_2B;
+			}
+			ambcache_clean_range(wbuf, len);
+			ambarella_dma_xfr(&tx_dma, MS_AHB_SSI_TX_DMA_CHAN);
+			rx_dma.src		= ambarella_virt_to_phys(priv->regbase + SPI_DR_OFFSET);
+			rx_dma.dst		= ambarella_virt_to_phys((u32)rbuf);
+			rx_dma.attr		= DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_CHANX_CTR_BLK_8B;
+			if (priv->bpw <= 8) {
+				rx_dma.xfr_count	= len;
+				rx_dma.attr		|= DMA_CHANX_CTR_TS_1B;
+			} else {
+				rx_dma.xfr_count	= len << 1;
+				rx_dma.attr |= DMA_CHANX_CTR_TS_2B;
+			}
+			ambarella_dma_xfr(&rx_dma, SPDIF_AHB_SSI_DMA_CHAN);
+			val = amba_readl(dma_switch_reg);
+			amba_writel(dma_switch_reg, val | 0x1);
+			amba_writel(priv->regbase + SPI_DMAC_OFFSET, 3);
+
+			break;
+
+		case SPI_READ_ONLY:
+			ambarella_dma_enable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+			tx_dma.src		= ambarella_virt_to_phys((u32)rbuf);
+			tx_dma.dst		= ambarella_virt_to_phys(priv->regbase + SPI_DR_OFFSET);
+			tx_dma.attr		= DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_CHANX_CTR_BLK_8B;
+			if (priv->bpw <= 8) {
+				tx_dma.xfr_count	= len;
+				tx_dma.attr		|= DMA_CHANX_CTR_TS_1B;
+			} else {
+				tx_dma.xfr_count	= len << 1;
+				tx_dma.attr |= DMA_CHANX_CTR_TS_2B;
+			}
+			ambarella_dma_xfr(&tx_dma, MS_AHB_SSI_TX_DMA_CHAN);
+			rx_dma.src		= ambarella_virt_to_phys(priv->regbase + SPI_DR_OFFSET);
+			rx_dma.dst		= ambarella_virt_to_phys((u32)rbuf);
+			rx_dma.attr		= DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_CHANX_CTR_BLK_8B;
+			if (priv->bpw <= 8) {
+				rx_dma.xfr_count	= len;
+				rx_dma.attr		|= DMA_CHANX_CTR_TS_1B;
+			} else {
+				rx_dma.xfr_count	= len << 1;
+				rx_dma.attr |= DMA_CHANX_CTR_TS_2B;
+			}
+			ambarella_dma_xfr(&rx_dma, SPDIF_AHB_SSI_DMA_CHAN);
+			val = amba_readl(dma_switch_reg);
+			amba_writel(dma_switch_reg, val | 0x1);
+			amba_writel(priv->regbase + SPI_DMAC_OFFSET, 3);
+
+			break;
+
+		default:
+			break;
 		}
+
 		amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
-
-		break;
-
-	case SPI_READ_ONLY:
-		xfer_len = len - ridx;
-		if (xfer_len > priv->pinfo->fifo_entries)
-			xfer_len = priv->pinfo->fifo_entries;
-
-		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
-		for(i = 0; i < xfer_len; i++)
-			amba_writel(priv->regbase + SPI_DR_OFFSET, SPI_DUMMY_DATA);
-		amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
-
-		break;
-
-	default:
-		break;
 	}
-
-	priv->widx = widx;
-	enable_irq(priv->irq);
 
 	return;
 }
@@ -389,10 +501,25 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 		priv->chip_select	= 1;
 	}
 
-	disable_irq_nosync(priv->irq);
-	amba_writel(priv->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
-	amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
-	amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+	if (!priv->pinfo->support_dma) {
+		disable_irq_nosync(priv->irq);
+		amba_writel(priv->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
+		amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
+		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+	} else {
+		ambarella_dma_disable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+		amba_writel(priv->regbase + SPI_DMAC_OFFSET, 0);
+		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+		amba_writel(priv->regbase + SPI_TXFTLR_OFFSET, priv->pinfo->fifo_entries / 4 - 1);
+		if (priv->bpw <= 8) {
+			amba_writel(priv->regbase + SPI_RXFTLR_OFFSET, 8 - 1);
+		} else {
+			amba_writel(priv->regbase + SPI_RXFTLR_OFFSET, 4 - 1);
+		}
+		amba_writel(priv->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK | SPI_TXOIS_MASK);
+		amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
+	}
+
 }
 
 static void ambarella_spi_finish_transfer(struct ambarella_spi *priv)
@@ -595,7 +722,7 @@ static int ambarella_spi_inithw(struct ambarella_spi *priv)
 	amba_writel(priv->regbase + SPI_BAUDR_OFFSET, sckdv);
 
 	amba_writel(priv->regbase + SPI_TXFTLR_OFFSET, 0);
-	amba_writel(priv->regbase + SPI_RXFTLR_OFFSET, priv->pinfo->fifo_entries);
+	amba_writel(priv->regbase + SPI_RXFTLR_OFFSET, 1);
 
 	return 0;
 }
@@ -612,6 +739,17 @@ static irqreturn_t ambarella_spi_isr(int irq, void *dev_data)
 	}
 
 	return IRQ_HANDLED;
+}
+
+static void ambarella_spi_dma_complete(void *dev_id, u32 dma_status)
+{
+	struct ambarella_spi	*priv	= dev_id;
+
+	if (priv->rw_mode == SPI_WRITE_READ || priv->rw_mode == SPI_READ_ONLY) {
+		ambcache_inv_range(priv->c_xfer->rx_buf, priv->c_xfer->len);
+	}
+
+	ambarella_spi_finish_transfer(priv);
 }
 
 static int __devinit ambarella_spi_probe(struct platform_device *pdev)
@@ -676,7 +814,9 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	priv->regbase		= (u32)res->start;
 	priv->irq		= irq;
 	priv->pinfo		= pinfo;
-	tasklet_init(&priv->tasklet, ambarella_spi_tasklet, (unsigned long)priv);
+	if (!pinfo->support_dma) {
+		tasklet_init(&priv->tasklet, ambarella_spi_tasklet, (unsigned long)priv);
+	}
 	INIT_LIST_HEAD(&priv->queue);
 	priv->idle		= 1;
 	priv->c_dev		= NULL;
@@ -690,8 +830,13 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	ambarella_spi_inithw(priv);
 
 	/* Request IRQ */
-	errorCode = request_irq(irq, ambarella_spi_isr, IRQF_TRIGGER_HIGH,
-			dev_name(&pdev->dev), priv);
+	if (!pinfo->support_dma) {
+		errorCode = request_irq(irq, ambarella_spi_isr, IRQF_TRIGGER_HIGH,
+				dev_name(&pdev->dev), priv);
+	} else {
+		errorCode = ambarella_dma_request_irq(SPDIF_AHB_SSI_DMA_CHAN,
+			ambarella_spi_dma_complete, priv);
+	}
 	if (errorCode)
 		goto ambarella_spi_probe_exit2;
 	else
@@ -729,10 +874,16 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	goto ambarella_spi_probe_exit3;
 
 ambarella_spi_probe_exit1:
-	free_irq(irq, master);
+	if (!pinfo->support_dma) {
+		free_irq(irq, master);
+	} else {
+		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+	}
 
 ambarella_spi_probe_exit2:
-	tasklet_kill(&priv->tasklet);
+	if (!pinfo->support_dma) {
+		tasklet_kill(&priv->tasklet);
+	}
 	spi_master_put(master);
 
 ambarella_spi_probe_exit3:
@@ -751,8 +902,14 @@ static int __devexit ambarella_spi_remove(struct platform_device *pdev)
 	priv->shutdown	= 1;
 	spin_unlock_irqrestore(&priv->lock, flags);
 
-	tasklet_kill(&priv->tasklet);
-	free_irq(priv->irq, master);
+	if (!priv->pinfo->support_dma) {
+		tasklet_kill(&priv->tasklet);
+	}
+	if (!priv->pinfo->support_dma) {
+		free_irq(priv->irq, master);
+	} else {
+		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+	}
 	ambarella_spi_stop(priv);
 
 	spin_lock_irqsave(&priv->lock, flags);
@@ -773,14 +930,19 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 {
 	int				errorCode = 0;
 	struct spi_master		*master;
-	struct ambarella_spi		*pinfo;
+	struct ambarella_spi		*priv;
 
 	master = platform_get_drvdata(pdev);
-	pinfo = spi_master_get_devdata(master);
+	priv = spi_master_get_devdata(master);
 
-	if (pinfo) {
-		if (!device_may_wakeup(&pdev->dev))
-			disable_irq_nosync(pinfo->irq);
+	if (priv) {
+		if (!device_may_wakeup(&pdev->dev)) {
+			if (!priv->pinfo->support_dma) {
+				disable_irq_nosync(priv->irq);
+			} else {
+				ambarella_dma_disable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+			}
+		}
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;
@@ -796,14 +958,19 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 {
 	int				errorCode = 0;
 	struct spi_master		*master;
-	struct ambarella_spi		*pinfo;
+	struct ambarella_spi		*priv;
 
 	master = platform_get_drvdata(pdev);
-	pinfo = spi_master_get_devdata(master);
+	priv = spi_master_get_devdata(master);
 
-	if (pinfo) {
-		if (!device_may_wakeup(&pdev->dev))
-			enable_irq(pinfo->irq);
+	if (priv) {
+		if (!device_may_wakeup(&pdev->dev)) {
+			if (!priv->pinfo->support_dma) {
+				enable_irq(priv->irq);
+			} else {
+				ambarella_dma_enable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
+			}
+		}
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;
