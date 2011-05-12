@@ -112,7 +112,9 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *);
 static void ambarella_spi_finish_transfer(struct ambarella_spi *);
 static void ambarella_spi_finish_message(struct ambarella_spi *);
 static void ambarella_spi_start_transfer(struct ambarella_spi *);
+#if (SPI_AHB_INSTANCES > 0)
 static void ambarella_spi_dma_complete(void *, u32);
+#endif
 
 
 /*============================SPI Bus Driver==================================*/
@@ -163,7 +165,9 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 	widx	= priv->widx;
 	ridx	= priv->ridx;
 
+#if (SPI_AHB_INSTANCES > 0)
 	if (!priv->pinfo->support_dma) {
+#endif
 		/* Feed data into FIFO */
 		switch (priv->rw_mode) {
 		case SPI_WRITE_ONLY:
@@ -242,6 +246,7 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 
 		priv->widx = widx;
 		enable_irq(priv->irq);
+#if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_req_t	tx_dma, rx_dma;
 		u32			dma_switch_reg, val;
@@ -349,6 +354,7 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 
 		amba_writel(priv->regbase + SPI_SER_OFFSET, 1 << cs_id);
 	}
+#endif
 
 	return;
 }
@@ -501,11 +507,14 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 		priv->chip_select	= 1;
 	}
 
+#if (SPI_AHB_INSTANCES > 0)
 	if (!priv->pinfo->support_dma) {
+#endif
 		disable_irq_nosync(priv->irq);
 		amba_writel(priv->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
 		amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
 		amba_writel(priv->regbase + SPI_SER_OFFSET, 0);
+#if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_disable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
 		amba_writel(priv->regbase + SPI_DMAC_OFFSET, 0);
@@ -519,6 +528,7 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 		amba_writel(priv->regbase + SPI_IMR_OFFSET, SPI_TXEIS_MASK | SPI_TXOIS_MASK);
 		amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
 	}
+#endif
 
 }
 
@@ -741,6 +751,7 @@ static irqreturn_t ambarella_spi_isr(int irq, void *dev_data)
 	return IRQ_HANDLED;
 }
 
+#if (SPI_AHB_INSTANCES > 0)
 static void ambarella_spi_dma_complete(void *dev_id, u32 dma_status)
 {
 	struct ambarella_spi	*priv	= dev_id;
@@ -751,6 +762,7 @@ static void ambarella_spi_dma_complete(void *dev_id, u32 dma_status)
 
 	ambarella_spi_finish_transfer(priv);
 }
+#endif
 
 static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 {
@@ -814,9 +826,13 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	priv->regbase		= (u32)res->start;
 	priv->irq		= irq;
 	priv->pinfo		= pinfo;
+#if (SPI_AHB_INSTANCES > 0)
 	if (!pinfo->support_dma) {
+#endif
 		tasklet_init(&priv->tasklet, ambarella_spi_tasklet, (unsigned long)priv);
+#if (SPI_AHB_INSTANCES > 0)
 	}
+#endif
 	INIT_LIST_HEAD(&priv->queue);
 	priv->idle		= 1;
 	priv->c_dev		= NULL;
@@ -830,13 +846,17 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	ambarella_spi_inithw(priv);
 
 	/* Request IRQ */
+#if (SPI_AHB_INSTANCES > 0)
 	if (!pinfo->support_dma) {
+#endif
 		errorCode = request_irq(irq, ambarella_spi_isr, IRQF_TRIGGER_HIGH,
 				dev_name(&pdev->dev), priv);
+#if (SPI_AHB_INSTANCES > 0)
 	} else {
 		errorCode = ambarella_dma_request_irq(SPDIF_AHB_SSI_DMA_CHAN,
 			ambarella_spi_dma_complete, priv);
 	}
+#endif
 	if (errorCode)
 		goto ambarella_spi_probe_exit2;
 	else
@@ -874,16 +894,24 @@ static int __devinit ambarella_spi_probe(struct platform_device *pdev)
 	goto ambarella_spi_probe_exit3;
 
 ambarella_spi_probe_exit1:
+#if (SPI_AHB_INSTANCES > 0)
 	if (!pinfo->support_dma) {
+#endif
 		free_irq(irq, master);
+#if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
 	}
+#endif
 
 ambarella_spi_probe_exit2:
+#if (SPI_AHB_INSTANCES > 0)
 	if (!pinfo->support_dma) {
+#endif
 		tasklet_kill(&priv->tasklet);
+#if (SPI_AHB_INSTANCES > 0)
 	}
+#endif
 	spi_master_put(master);
 
 ambarella_spi_probe_exit3:
@@ -902,14 +930,22 @@ static int __devexit ambarella_spi_remove(struct platform_device *pdev)
 	priv->shutdown	= 1;
 	spin_unlock_irqrestore(&priv->lock, flags);
 
+#if (SPI_AHB_INSTANCES > 0)
 	if (!priv->pinfo->support_dma) {
+#endif
 		tasklet_kill(&priv->tasklet);
+#if (SPI_AHB_INSTANCES > 0)
 	}
+#endif
+#if (SPI_AHB_INSTANCES > 0)
 	if (!priv->pinfo->support_dma) {
+#endif
 		free_irq(priv->irq, master);
+#if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
 	}
+#endif
 	ambarella_spi_stop(priv);
 
 	spin_lock_irqsave(&priv->lock, flags);
@@ -937,11 +973,15 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 
 	if (priv) {
 		if (!device_may_wakeup(&pdev->dev)) {
+#if (SPI_AHB_INSTANCES > 0)
 			if (!priv->pinfo->support_dma) {
+#endif
 				disable_irq_nosync(priv->irq);
+#if (SPI_AHB_INSTANCES > 0)
 			} else {
 				ambarella_dma_disable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
 			}
+#endif
 		}
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
@@ -965,11 +1005,15 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 
 	if (priv) {
 		if (!device_may_wakeup(&pdev->dev)) {
+#if (SPI_AHB_INSTANCES > 0)
 			if (!priv->pinfo->support_dma) {
+#endif
 				enable_irq(priv->irq);
+#if (SPI_AHB_INSTANCES > 0)
 			} else {
 				ambarella_dma_enable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
 			}
+#endif
 		}
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
