@@ -428,6 +428,7 @@ static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
 	.eoc_iterm = 20,
 	.fast_ilim = 450,
 	.timeout = 360,
+	.enable_fet = 1,
 };
 
 #define WM8310_GPIO_START EXT_GPIO(0)

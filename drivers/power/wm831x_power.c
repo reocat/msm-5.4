@@ -285,6 +285,15 @@ static void wm831x_config_battery(struct wm831x *wm831x)
 		dev_err(wm831x->dev, "Failed to set charger control 2: %d\n",
 			ret);
 
+	if (pdata->enable_fet) {
+		ret = wm831x_set_bits(wm831x, WM831X_RESET_CONTROL,
+					WM831X_BATT_FET_ENA,
+					WM831X_BATT_FET_ENA);
+		if (ret != 0)
+			dev_err(wm831x->dev, "Failed to enable battery FET circuit: %d\n",
+				ret);
+	}
+
 	wm831x_reg_lock(wm831x);
 }
 
