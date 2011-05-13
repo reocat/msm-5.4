@@ -386,12 +386,29 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 	return 0;
 }
 
+#define	UV_BUF_SIZE	8
+#define	UV_MIN	2800000
+#define	UV_MAX	4500000
+
 static int wm831x_bat_read_capacity(struct wm831x *wm831x,
 			       int *capacity)
 {
-	int uV;
-	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
-	return (convert_uV_to_capacity(uV, capacity));
+	int i, uV_total, uV, valid_data;
+	uV_total = valid_data = 0;
+	for (i = 0; i < UV_BUF_SIZE; i++) {
+		uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
+		/* sanity check */
+		if ((uV > UV_MIN) && (uV < UV_MAX)) {
+			uV_total += uV;
+			valid_data++;
+		}
+	}
+	if (valid_data) {
+		uV = uV_total/valid_data;
+		return (convert_uV_to_capacity(uV, capacity));
+	} else {
+		return -EINVAL;
+	}
 }
 
 static int wm831x_bat_read_capacity_level(struct wm831x *wm831x,
