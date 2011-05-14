@@ -29,26 +29,10 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-extern void *get_ambarella_hal_vp(void);
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
-
-/* ==========================================================================*/
-struct ambarella_mem_hal_desc {
-	u32 physaddr;
-	u32 size;
-	u32 virtual;
-	u32 remapped;
-	u32 inited;
-};
-
 /* ==========================================================================*/
 extern int ambarella_init_pll(void);
-
 extern u32 ambarella_pll_suspend(u32 level);
 extern u32 ambarella_pll_resume(u32 level);
-
-extern void set_ambarella_hal_invalid(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

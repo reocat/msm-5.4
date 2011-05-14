@@ -48,6 +48,7 @@ static struct ambarella_bapi_tag_s bapi_tag;
 static struct ambarella_bapi_s *bapi_info = NULL;
 static ambarella_bapi_aoss_call_t bapi_aoss_entry = NULL;
 static u32 bapi_aoss_arg[4];
+static u32 aoss_copy_page = 0;
 extern int in_suspend;
 
 /* ==========================================================================*/
@@ -103,9 +104,56 @@ ambarella_bapi_check_bapi_info_exit:
 
 static void ambarella_bapi_aoss_return(void)
 {
+	aoss_copy_page = 0;
 	bapi_info->aoss_info.copy_pages = 0;
 	in_suspend = 0;
 	swsusp_arch_restore_cpu();
+}
+
+static int ambarella_bapi_aoss_increase_page_info(
+	struct ambarella_bapi_aoss_s *sysainfo,
+	struct ambarella_bapi_aoss_page_info_s *src_page_info)
+{
+	int						retval = 0;
+	struct ambarella_bapi_aoss_page_info_s		*syspinfo = NULL;
+
+	if (sysainfo->copy_pages >= sysainfo->total_pages) {
+		pr_err("%s: copy_pages[%d] >= total_pages[%d].\n", __func__,
+			sysainfo->copy_pages, sysainfo->total_pages);
+		retval = -EPERM;
+		goto ambarella_bapi_aoss_increase_page_info_exit;
+	}
+
+	syspinfo = (struct ambarella_bapi_aoss_page_info_s *)
+		ambarella_phys_to_virt(sysainfo->page_info);
+	pr_debug("%s: syspinfo %p offset %d, cur %p \n", __func__,
+		syspinfo, sysainfo->copy_pages,
+		&syspinfo[sysainfo->copy_pages]);
+	if (aoss_copy_page == 0) {
+		aoss_copy_page = 1;
+		sysainfo->copy_pages = 0;
+		syspinfo[0].src = src_page_info->src;
+		syspinfo[0].dst = src_page_info->dst;
+		syspinfo[0].size = PAGE_SIZE;
+	} else {
+		if ((src_page_info->src == (syspinfo[sysainfo->copy_pages].src + syspinfo[sysainfo->copy_pages].size)) &&
+			(src_page_info->dst == (syspinfo[sysainfo->copy_pages].dst + syspinfo[sysainfo->copy_pages].size))) {
+			syspinfo[sysainfo->copy_pages].size += PAGE_SIZE;
+		} else {
+			sysainfo->copy_pages++;
+			syspinfo[sysainfo->copy_pages].src = src_page_info->src;
+			syspinfo[sysainfo->copy_pages].dst = src_page_info->dst;
+			syspinfo[sysainfo->copy_pages].size = PAGE_SIZE;
+		}
+	}
+	pr_debug("%s: copy [0x%08x] to [0x%08x], size [0x%08x] %d\n", __func__,
+		syspinfo[sysainfo->copy_pages].src,
+		syspinfo[sysainfo->copy_pages].dst,
+		syspinfo[sysainfo->copy_pages].size,
+		sysainfo->copy_pages);
+
+ambarella_bapi_aoss_increase_page_info_exit:
+	return retval;
 }
 
 int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
@@ -146,42 +194,16 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 		break;
 
 	case AMBARELLA_BAPI_CMD_AOSS_COPY_PAGE:
-	{
-		struct ambarella_bapi_aoss_s		*tmp_aoss_info = NULL;
-		struct ambarella_bapi_aoss_page_info_s	*tmp_page_info = NULL;
-		struct ambarella_bapi_aoss_page_info_s	*src_page_info = NULL;
-
 		retval = ambarella_bapi_check_bapi_info(cmd);
 		if ((retval != 0) || (args == NULL))
 			break;
-
-		tmp_aoss_info = &bapi_info->aoss_info;
-		src_page_info = (struct ambarella_bapi_aoss_page_info_s *)args;
-		if (tmp_aoss_info->copy_pages < tmp_aoss_info->total_pages) {
-			tmp_page_info = (struct ambarella_bapi_aoss_page_info_s *)
-				ambarella_phys_to_virt(tmp_aoss_info->page_info);
-			pr_debug("%s: tmp_page_info %p offset %d, cur %p \n", __func__,
-				tmp_page_info, tmp_aoss_info->copy_pages,
-				&tmp_page_info[tmp_aoss_info->copy_pages]);
-			tmp_page_info[tmp_aoss_info->copy_pages].src =
-				src_page_info->src;
-			tmp_page_info[tmp_aoss_info->copy_pages].dst =
-				src_page_info->dst;
-			pr_debug("%s: copy [0x%08x] to [0x%08x]\n", __func__,
-				tmp_page_info[tmp_aoss_info->copy_pages].src,
-				tmp_page_info[tmp_aoss_info->copy_pages].dst);
-			tmp_aoss_info->copy_pages++;
-		} else {
-			pr_err("%s: copy_pages[%d] >= total_pages[%d].\n", __func__,
-				tmp_aoss_info->copy_pages, tmp_aoss_info->total_pages);
-			retval = -EPERM;
-		}
-	}
+		retval = ambarella_bapi_aoss_increase_page_info(
+			&bapi_info->aoss_info,
+			(struct ambarella_bapi_aoss_page_info_s *)args);
 		break;
 
 	case AMBARELLA_BAPI_CMD_AOSS_SAVE:
 	{
-		unsigned long				flags;
 		int					i;
 
 		retval = ambarella_bapi_check_bapi_info(cmd);
@@ -198,11 +220,10 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			bapi_aoss_arg[2], bapi_info->aoss_info.fn_pri[2],
 			bapi_aoss_arg[3], bapi_info->aoss_info.fn_pri[3]);
 			ambcache_clean_range(bapi_info, bapi_info->size);
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-			disable_nonboot_cpus();
-#endif
-			local_irq_save(flags);
 
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+			arch_smp_suspend(0);
+#endif
 			bapi_aoss_entry =
 				(ambarella_bapi_aoss_call_t)bapi_aoss_arg[0];
 			retval = bapi_aoss_entry((u32)bapi_info->aoss_info.fn_pri,
@@ -212,7 +233,9 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				ambarella_swvic_set(AXI_SOFT_IRQ(0));
 				while(1) {};
 			}
+			arch_smp_resume(0);
 #endif
+
 			ambarella_bapi_aoss_return();
 		}
 	}

@@ -80,7 +80,6 @@ int platform_cpu_kill(unsigned int cpu)
 void platform_cpu_die(unsigned int cpu)
 {
 	u32 *phead_address = get_ambarella_bstmem_head();
-	int i;
 	u32 bstadd, bstsize;
 
 #ifdef DEBUG
@@ -97,9 +96,8 @@ void platform_cpu_die(unsigned int cpu)
 	bstadd = ambarella_phys_to_virt(bstadd);
 
 	printk(KERN_NOTICE "CPU%u: shutdown\n", cpu);
-	for (i = 0; i <= (PROCESSOR_STATUS_3 - PROCESSOR_STATUS_0); i++)
-		phead_address[PROCESSOR_STATUS_0 + i] = AMB_BST_MAGIC;
-	ambcache_flush_range((void *)(bstadd), bstsize);
+	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_MAGIC;
+	ambcache_clean_range((void *)(bstadd), bstsize);
 	complete(&cpu_killed);
 
 	for (;;) {
@@ -113,9 +111,8 @@ void platform_cpu_die(unsigned int cpu)
 		printk(KERN_DEBUG "CPU%u: spurious wakeup call\n", cpu);
 #endif
 	}
-	for (i = 0; i <= (PROCESSOR_STATUS_3 - PROCESSOR_STATUS_0); i++)
-		phead_address[PROCESSOR_STATUS_0 + i] = AMB_BST_MAGIC;
-	ambcache_flush_range((void *)(bstadd), bstsize);
+	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_MAGIC;
+	ambcache_clean_range((void *)(bstadd), bstsize);
 }
 
 int platform_cpu_disable(unsigned int cpu)

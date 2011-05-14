@@ -45,6 +45,8 @@ static inline void smp_cross_call(const struct cpumask *mask, int ipi)
 }
 
 /* ==========================================================================*/
+extern u32 arch_smp_suspend(u32 level);
+extern u32 arch_smp_resume(u32 level);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
