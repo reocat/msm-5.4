@@ -79,17 +79,19 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		retval = -EPERM;
 		goto boot_secondary_exit;
 	}
+	phead_address[PROCESSOR_START_0 + cpu] = BSYM(
+		virt_to_phys(ambarella_secondary_startup));
 	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_INVALID;
 	smp_wmb();
 	ambcache_flush_range((void *)(bstadd), bstsize);
 	smp_cross_call(cpumask_of(cpu), 1);
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
-		ambcache_inv_range((void *)(bstadd), bstsize);
 		smp_rmb();
 		if (phead_address[PROCESSOR_STATUS_0 + cpu] != AMB_BST_INVALID)
 			break;
 		udelay(10);
+		ambcache_inv_range((void *)(bstadd), bstsize);
 	}
 	ambcache_inv_range((void *)(bstadd), bstsize);
 	smp_rmb();
@@ -146,5 +148,19 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	}
 	ambcache_flush_range((void *)(bstadd), bstsize);
 	smp_max_cpus = max_cpus;
+}
+
+u32 arch_smp_suspend(u32 level)
+{
+	scu_disable(scu_base);
+
+	return 0;
+}
+
+u32 arch_smp_resume(u32 level)
+{
+	scu_enable(scu_base);
+
+	return 0;
 }
 

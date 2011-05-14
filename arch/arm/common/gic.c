@@ -354,3 +354,96 @@ void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	writel(map << 16 | irq, gic_data[0].dist_base + GIC_DIST_SOFTINT);
 }
 #endif
+
+/* ==========================================================================*/
+struct gic_dist_info_s {
+	u32					gic_dist_ctrl;
+	u32					gic_dist_enable_set[32];
+	u32					gic_dist_pri[256];
+	u32					gic_dist_target[256];
+	u32					gic_dist_config[64];
+};
+struct gic_info_s {
+	u32					gic_cpu_ctrl;
+	u32					gic_cpu_primask;
+	u32					gic_cpu_binpoint;
+	struct gic_dist_info_s			gic_dist;
+};
+static struct gic_info_s gic_pm_info;
+
+u32 gic_suspend(u32 level)
+{
+	int					retval = 0;
+	void __iomem				*dist_base;
+	void __iomem				*cpu_base;
+	u32					gic_irqs;
+	int					i;
+
+	cpu_base = gic_data[0].cpu_base;
+	dist_base = gic_data[0].dist_base;
+	if ((cpu_base == NULL) || (dist_base == NULL))
+		goto gic_dist_pm_exit;
+
+	gic_irqs = readl(dist_base + GIC_DIST_CTR) & 0x1f;
+	gic_irqs = (gic_irqs + 1) * 32;
+	if (gic_irqs > 1020)
+		gic_irqs = 1020;
+
+	gic_pm_info.gic_cpu_ctrl = readl(cpu_base + GIC_CPU_CTRL);
+	gic_pm_info.gic_cpu_primask = readl(cpu_base + GIC_CPU_PRIMASK);
+	gic_pm_info.gic_cpu_binpoint = readl(cpu_base + GIC_CPU_BINPOINT);
+
+	gic_pm_info.gic_dist.gic_dist_ctrl = readl(dist_base + GIC_DIST_CTRL);
+	for (i = 0; i < gic_irqs; i += 32)
+		gic_pm_info.gic_dist.gic_dist_enable_set[i / 32] = readl(dist_base + GIC_DIST_ENABLE_SET + i * 4 / 32);
+	for (i = 0; i < gic_irqs; i += 4) {
+		gic_pm_info.gic_dist.gic_dist_pri[i / 4] = readl(dist_base + GIC_DIST_PRI + i * 4 / 4);
+		gic_pm_info.gic_dist.gic_dist_target[i / 4] = readl(dist_base + GIC_DIST_TARGET + i * 4 / 4);
+	}
+	for (i = 0; i < gic_irqs; i += 16)
+		gic_pm_info.gic_dist.gic_dist_config[i / 16] = readl(dist_base + GIC_DIST_CONFIG + i * 4 / 16);
+
+gic_dist_pm_exit:
+	return retval;
+}
+
+u32 gic_resume(u32 level)
+{
+	int					retval = 0;
+	void __iomem				*dist_base;
+	void __iomem				*cpu_base;
+	u32					gic_irqs;
+	int					i;
+
+	cpu_base = gic_data[0].cpu_base;
+	dist_base = gic_data[0].dist_base;
+	if ((cpu_base == NULL) || (dist_base == NULL))
+		goto gic_dist_pm_exit;
+
+	gic_irqs = readl(dist_base + GIC_DIST_CTR) & 0x1f;
+	gic_irqs = (gic_irqs + 1) * 32;
+	if (gic_irqs > 1020)
+		gic_irqs = 1020;
+
+	writel(0, dist_base + GIC_DIST_CTRL);
+	for (i = 0; i < gic_irqs; i += 16)
+		writel(gic_pm_info.gic_dist.gic_dist_config[i / 16], dist_base + GIC_DIST_CONFIG + i * 4 / 16);
+	for (i = 0; i < gic_irqs; i += 4) {
+		 writel(gic_pm_info.gic_dist.gic_dist_pri[i / 4], dist_base + GIC_DIST_PRI + i * 4 / 4);
+		 writel(gic_pm_info.gic_dist.gic_dist_target[i / 4], dist_base + GIC_DIST_TARGET + i * 4 / 4);
+	}
+	for (i = 0; i < gic_irqs; i += 32) {
+		 writel(0xFFFFFFFF, dist_base + GIC_DIST_ENABLE_CLEAR + i * 4 / 32);
+		 writel(gic_pm_info.gic_dist.gic_dist_enable_set[i / 32], dist_base + GIC_DIST_ENABLE_SET + i * 4 / 32);
+	}
+
+	writel(gic_pm_info.gic_cpu_primask, cpu_base + GIC_CPU_PRIMASK);
+	writel(gic_pm_info.gic_cpu_binpoint, cpu_base + GIC_CPU_BINPOINT);
+	writel(gic_pm_info.gic_cpu_ctrl, cpu_base + GIC_CPU_CTRL);
+
+	writel(gic_pm_info.gic_dist.gic_dist_ctrl , dist_base + GIC_DIST_CTRL);
+
+gic_dist_pm_exit:
+	return retval;
+}
+

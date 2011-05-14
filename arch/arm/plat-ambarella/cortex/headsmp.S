@@ -24,7 +24,7 @@
 #include <linux/linkage.h>
 #include <linux/init.h>
 
-	__INIT
+	__CPUINIT
 
 ENTRY(ambarella_secondary_startup)
 	b	secondary_startup

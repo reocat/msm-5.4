@@ -39,7 +39,11 @@
 #define DEFAULT_HAL_BASE		(0xfee00000)
 #define DEFAULT_HAL_SIZE		(0x00030000)
 
-#define HAL_BASE_VP			(get_ambarella_hal_vp())
+#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
+
+/* ==========================================================================*/
+#ifndef __ASSEMBLER__
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 
 #include <hal/header.h>
 #if (CHIP_REV == A7)
@@ -52,13 +56,22 @@
 #error "Undefined CHIP_REV, Can't support HAL!"
 #endif
 
+struct ambarella_mem_hal_desc {
+	u32 physaddr;
+	u32 size;
+	u32 virtual;
+	u32 remapped;
+	u32 inited;
+};
+
+/* ==========================================================================*/
+extern void set_ambarella_hal_invalid(void);
+extern void *get_ambarella_hal_vp(void);
+
+/* ==========================================================================*/
+#define HAL_BASE_VP			(get_ambarella_hal_vp())
+
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
-
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-/* ==========================================================================*/
-
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
