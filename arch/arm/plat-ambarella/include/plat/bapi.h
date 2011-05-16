@@ -29,6 +29,7 @@
 #define DEFAULT_BAPI_MAGIC			(0x19790110)
 #define DEFAULT_BAPI_VERSION			(0x00000001)
 #define DEFAULT_BAPI_SIZE			(4096)
+#define DEFAULT_BAPI_AOSS_SIZE			(1024)
 
 #define DEFAULT_BAPI_AOSS_MAGIC			(0x19531110)
 
@@ -57,7 +58,7 @@ struct ambarella_bapi_aoss_page_info_s {
 };
 
 struct ambarella_bapi_aoss_s {
-	u32					fn_pri[128 - 4];
+	u32					fn_pri[256 - 4];
 	u32					magic;
 	u32					total_pages;
 	u32					copy_pages;
@@ -83,7 +84,7 @@ struct ambarella_bapi_s {
 	struct ambarella_bapi_reboot_info_s	reboot_info;
 	u32					rev1[64 - 4];
 	u32					debug[128];
-	u32					rev2[1024 - 128 - 128 - 128];
+	u32					rev2[1024 - 128 - 128 - 256];
 	struct ambarella_bapi_aoss_s		aoss_info;
 };
 
