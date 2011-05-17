@@ -312,7 +312,7 @@ static void ambarella_init_usb(void)
 
 	amba_setbitsl(USB_DEV_CTRL_REG, value);
 
-	udelay(200); // FIXME: how long to wait is the best?
+	// udelay(200); // FIXME: how long to wait is the best?
 }
 
 
@@ -990,7 +990,6 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		amba_writel(USB_DEV_EP_INTR_REG, 0xffffffff);
 
 		ambarella_udc_enable(udc);
-
 #if 0
 		/* enable suspend interrupt */
 		amba_clrbitsl(USB_DEV_INTR_MSK_REG, UDC_INTR_MSK_US);
@@ -1205,7 +1204,6 @@ static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 	u32 value, handled = 0, i, ep_irq;
 	unsigned long flags;
 
-
 	/* If gadget driver is not connected, do not handle the interrupt  */
 	if (!udc->driver) {
 		amba_writel(USB_DEV_INTR_REG, amba_readl(USB_DEV_INTR_REG));
@@ -1225,7 +1223,6 @@ static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 	/* 2. check if endpoint interrupt */
 	value = amba_readl(USB_DEV_EP_INTR_REG);
 	if(value) {
-
 		dprintk(DEBUG_NORMAL, "endpoint int value = 0x%x\n", value);
 
 		handled = 1;
@@ -1789,21 +1786,28 @@ static int ambarella_udc_set_pullup(struct ambarella_udc *udc, int is_on)
 
 static int ambarella_udc_vbus_session(struct usb_gadget *gadget, int is_active)
 {
-	unsigned long	flags;
+	unsigned long flags;
+	struct ambarella_udc *udc = to_ambarella_udc(gadget);
 
-	spin_lock_irqsave(&the_controller->lock, flags);
-	if (the_controller->driver)
-		ambarella_udc_set_pullup(the_controller, is_active);
+	spin_lock_irqsave(&udc->lock, flags);
+	if (udc->driver)
+		ambarella_udc_set_pullup(udc, is_active);
 	else
-		ambarella_udc_set_pullup(the_controller, 0);
-	spin_unlock_irqrestore(&the_controller->lock, flags);
+		ambarella_udc_set_pullup(udc, 0);
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	return 0;
 }
 
 static int ambarella_udc_pullup(struct usb_gadget *gadget, int is_on)
 {
-	ambarella_udc_set_pullup(the_controller, is_on);
+	unsigned long	flags;
+	struct ambarella_udc *udc = to_ambarella_udc(gadget);
+
+	spin_lock_irqsave(&udc->lock, flags);
+	ambarella_udc_set_pullup(udc, is_on);
+	spin_unlock_irqrestore(&udc->lock, flags);
+
 	return 0;
 }
 
@@ -1921,7 +1925,7 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	/* Good bye, cruel world - Set soft disconnect  */
-	ambarella_set_softdis(0);
+	ambarella_set_softdis(1);
 
 	udc->gadget.speed = USB_SPEED_UNKNOWN;
 
@@ -2094,9 +2098,9 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	ambarella_udc_reinit(udc);
 	ambarella_regaddr_map(udc);
 
-	/*initial usb hardware, and set soft disconnect if VBUS is on */
+	/*initial usb hardware, and set soft disconnect */
 	ambarella_init_usb();
-	ambarella_set_softdis(0);
+	ambarella_set_softdis(1);
 
 	/* DMA pool create */
 	udc->desc_dma_pool = dma_pool_create("desc_dma_pool", NULL,
@@ -2206,8 +2210,9 @@ static int __devexit ambarella_udc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t message)
 {
-	struct ambarella_udc *udc;
+	unsigned long flags;
 	int retval = 0;
+	struct ambarella_udc *udc;
 
 	udc = platform_get_drvdata(pdev);
 	udc->sys_suspended = 1;
@@ -2216,7 +2221,9 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, message.event);
 
+	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_set_pullup(udc, 0);
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	sprintf(udc->udc_state, "Suspend");
 
@@ -2225,16 +2232,27 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 
 static int ambarella_udc_resume(struct platform_device *pdev)
 {
-	struct ambarella_udc *udc;
+	unsigned long flags;
 	int retval = 0;
+	struct ambarella_udc *udc;
 
 	udc = platform_get_drvdata(pdev);
 	udc->sys_suspended = 0;
-	enable_irq(USBC_IRQ);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
+	/* Initial USB PLL */
+	udc->controller_info->init_pll();
+	/* Reset USB */
+	udc->controller_info->reset_usb();
+	/*initial usb hardware */
+	ambarella_init_usb();
+
+	enable_irq(USBC_IRQ);
+
+	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_set_pullup(udc, 1);
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	sprintf(udc->udc_state, "Resume");
 
