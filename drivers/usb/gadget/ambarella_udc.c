@@ -970,6 +970,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 
 	/* case 2. Get reset Interrupt */
 	else if (int_value & USB_DEV_RESET) {
+		unsigned long flags;
 
 		dprintk(DEBUG_NORMAL, "USB reset IRQ\n");
 
@@ -980,7 +981,9 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 			udc->host_suspended = 0;
 		}
 
+		spin_lock_irqsave(&udc->lock, flags);
 		ambarella_stop_activity(udc);  // Todo
+		spin_unlock_irqrestore(&udc->lock, flags);
 
 		udc->gadget.speed = USB_SPEED_UNKNOWN;
 		udc->auto_ack_0_pkt = 0;
@@ -1315,7 +1318,9 @@ static void ambarella_stop_activity(struct ambarella_udc *udc)
 		ambarella_ep_nuke(ep, -ESHUTDOWN);
 	}
 	if (driver) {
+		spin_unlock(&udc->lock);
 		driver->disconnect(&udc->gadget);
+		spin_lock(&udc->lock);
 	}
 
 	ambarella_udc_reinit(udc);
@@ -2035,6 +2040,7 @@ EXPORT_SYMBOL(usb_gadget_probe_driver);
  */
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
+	unsigned long flags;
 	struct ambarella_udc *udc = the_controller;
 
 	dprintk(DEBUG_NORMAL,"usb_gadget_unregister_driver() '%s'\n",
@@ -2046,13 +2052,16 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	if (!driver || driver != udc->driver || !driver->unbind)
 		return -EINVAL;
 
+	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_stop_activity(udc);
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	if (driver->unbind)
 		driver->unbind(&udc->gadget);
 
 	device_del(&udc->gadget.dev);
 	udc->driver = NULL;
+	udc->gadget.dev.driver = NULL;
 
 	ambarella_udc_disable(udc);
 
