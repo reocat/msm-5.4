@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/cpu.h>
 
 #include <asm/cacheflush.h>
 #include <asm/io.h>
@@ -67,6 +68,7 @@ void ambarella_power_off(void)
 
 void ambarella_machine_restart(char mode, const char *cmd)
 {
+	disable_nonboot_cpus();
 	local_irq_disable();
 	local_fiq_disable();
 	flush_cache_all();
