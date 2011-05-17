@@ -249,13 +249,16 @@ static long has_wake_lock_locked(int type)
 
 long has_wake_lock(int type)
 {
-	long ret;
+	long ret = 0;
 	unsigned long irqflags;
-	spin_lock_irqsave(&list_lock, irqflags);
-	ret = has_wake_lock_locked(type);
-	if (ret && (debug_mask & DEBUG_SUSPEND) && type == WAKE_LOCK_SUSPEND)
-		print_active_locks(type);
-	spin_unlock_irqrestore(&list_lock, irqflags);
+	if (requested_suspend_state != PM_SUSPEND_HIBERNATE) {
+		spin_lock_irqsave(&list_lock, irqflags);
+		ret = has_wake_lock_locked(type);
+		if (ret && (debug_mask & DEBUG_SUSPEND) &&
+			type == WAKE_LOCK_SUSPEND)
+			print_active_locks(type);
+		spin_unlock_irqrestore(&list_lock, irqflags);
+	}
 	return ret;
 }
 

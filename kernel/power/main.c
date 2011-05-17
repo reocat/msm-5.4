@@ -180,6 +180,9 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 #endif
 	const char * const *s;
 #endif
+#ifdef CONFIG_WAKELOCK
+	suspend_state_t old_suspend_state = PM_SUSPEND_ON;
+#endif
 	char *p;
 	int len;
 	int error = -EINVAL;
@@ -189,8 +192,15 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	/* First, check if we are requested to hibernate */
 	if (len == 4 && !strncmp(buf, "disk", len)) {
+#ifdef CONFIG_WAKELOCK
+		old_suspend_state = requested_suspend_state;
+		requested_suspend_state = PM_SUSPEND_HIBERNATE;
+#endif
 		error = hibernate();
-  goto Exit;
+#ifdef CONFIG_WAKELOCK
+		requested_suspend_state = old_suspend_state;
+#endif
+		goto Exit;
 	}
 
 #ifdef CONFIG_SUSPEND
@@ -209,7 +219,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 #endif
 #endif
 
- Exit:
+Exit:
 	return error ? error : n;
 }
 
