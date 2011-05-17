@@ -95,6 +95,7 @@ struct ambarella_nand_info {
 
 	u32				origin_clk;	/* in Khz */
 	struct ambarella_nand_timing	*origin_timing;
+	struct ambarella_nand_timing	current_timing;
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
@@ -307,7 +308,6 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
 	int					errorCode = NOTIFY_OK;
-	struct ambarella_nand_timing		timing;
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = container_of(nb, struct ambarella_nand_info, system_event);
@@ -324,13 +324,13 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 		 * it's big enough to operate
 		 * with NAND, so no need to change it. */
 		if (nand_info->origin_timing->control != 0) {
-			timing.timing0 = ambnand_calc_timing(nand_info, 0);
-			timing.timing1 = ambnand_calc_timing(nand_info, 1);
-			timing.timing2 = ambnand_calc_timing(nand_info, 2);
-			timing.timing3 = ambnand_calc_timing(nand_info, 3);
-			timing.timing4 = ambnand_calc_timing(nand_info, 4);
-			timing.timing5 = ambnand_calc_timing(nand_info, 5);
-			amb_nand_set_timing(nand_info, &timing);
+			nand_info->current_timing.timing0 = ambnand_calc_timing(nand_info, 0);
+			nand_info->current_timing.timing1 = ambnand_calc_timing(nand_info, 1);
+			nand_info->current_timing.timing2 = ambnand_calc_timing(nand_info, 2);
+			nand_info->current_timing.timing3 = ambnand_calc_timing(nand_info, 3);
+			nand_info->current_timing.timing4 = ambnand_calc_timing(nand_info, 4);
+			nand_info->current_timing.timing5 = ambnand_calc_timing(nand_info, 5);
+			amb_nand_set_timing(nand_info, &nand_info->current_timing);
 
 			pr_debug("origin reg:\t0x%08x 0x%08x"
 				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
@@ -343,8 +343,12 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 
 			pr_debug("new reg:\t0x%08x 0x%08x"
 				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
-				timing.timing0, timing.timing1, timing.timing2,
-				timing.timing3, timing.timing4, timing.timing5);
+				nand_info->current_timing.timing0,
+				nand_info->current_timing.timing1,
+				nand_info->current_timing.timing2,
+				nand_info->current_timing.timing3,
+				nand_info->current_timing.timing4,
+				nand_info->current_timing.timing5);
 		}
 		up(&nand_info->system_event_sem);
 		break;
@@ -1614,6 +1618,8 @@ ambarella_nand_probe_add_partitions:
 
 	nand_info->origin_clk = get_ahb_bus_freq_hz() / 1000; /* in Khz */
 	nand_info->origin_timing = plat_nand->timing;
+	memcpy(&nand_info->current_timing, plat_nand->timing,
+			sizeof(struct ambarella_nand_timing));
 
 	nand_info->system_event.notifier_call =	ambarella_nand_system_event;
 	ambarella_register_event_notifier(&nand_info->system_event);
@@ -1711,6 +1717,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 0;
+	amb_nand_set_timing(nand_info, &nand_info->current_timing);
 
 	if (!device_may_wakeup(&pdev->dev)) {
 		enable_irq(nand_info->dma_irq);
