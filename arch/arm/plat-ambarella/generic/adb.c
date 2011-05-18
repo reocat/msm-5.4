@@ -30,9 +30,16 @@
 #include <linux/usb/android_composite.h>
 #include <plat/adb.h>
 
-static char *usb_functions_adb[] = { "adb" };
+static char *usb_functions[] = { "usb_mass_storage" };
+static char *usb_functions_adb[] = { "usb_mass_storage", "adb" };
+//static char *usb_functions_adb[] = { "adb" };
 
 static struct android_usb_product usb_products[] = {
+	{
+		.product_id     = AMB_FSG_PRODUCT_ID,
+		.num_functions  = ARRAY_SIZE(usb_functions),
+		.functions      = usb_functions,
+	},
 	{
 		.product_id	= AMB_ADB_PRODUCT_ID,
 		.num_functions	= ARRAY_SIZE(usb_functions_adb),
