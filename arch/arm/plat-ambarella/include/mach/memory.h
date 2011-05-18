@@ -114,6 +114,7 @@
 #define DEFAULT_BST_SIZE		(0x00000000)
 #define AMB_BST_MAGIC			(0xffaa5500)
 #define AMB_BST_INVALID			(0xdeadbeaf)
+#define AMB_BST_START_COUNTER		(0xffffffff)
 
 #define DEFAULT_DEBUG_START		(DEFAULT_MEM_START + 0x000f8000)
 #define DEFAULT_DEBUG_SIZE		(0x00008000)
