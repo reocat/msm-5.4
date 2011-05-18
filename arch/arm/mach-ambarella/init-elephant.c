@@ -829,15 +829,12 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.gsensor_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.gsensor_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-//			strcpy(ambarella_spi_devices[17].modalias, "mma7455l");
-//			ambarella_spi_devices[17].irq = ambarella_board_generic.gsensor_irq.irq_line;
-
 			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
 			ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
 			ambarella_eth0_platform_info.mii_power.active_delay = 10;
 			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(98);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 10;
+			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 
 			fio_default_owner = SELECT_FIO_SDIO;
 			ambarella_platform_sd_controller0.clk_limit = 24000000;
@@ -845,7 +842,7 @@ static void __init ambarella_init_elephant(void)
 			//ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_8_BIT_DATA;
 			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[0].fixed_cd = 1;
+			ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;
 			ambarella_platform_sd_controller0.slot[0].fixed_wp = 0;
