@@ -220,6 +220,12 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			bapi_aoss_arg[2], bapi_info->aoss_info.fn_pri[2],
 			bapi_aoss_arg[3], bapi_info->aoss_info.fn_pri[3]);
 			ambcache_clean_range(bapi_info, bapi_info->size);
+			if ((bapi_info->aoss_info.fn_pri[0] == 0) ||
+				(bapi_info->aoss_info.fn_pri[1] == 0)) {
+				pr_info("Wrong BAPI AOSS info\n");
+				retval = -EPERM;
+				break;
+			}
 
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 			arch_smp_suspend(0);
