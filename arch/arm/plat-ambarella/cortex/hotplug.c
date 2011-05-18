@@ -93,7 +93,7 @@ void platform_cpu_die(unsigned int cpu)
 	bstadd = ambarella_phys_to_virt(bstadd);
 
 	printk(KERN_NOTICE "CPU%u: shutdown\n", cpu);
-	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_MAGIC;
+	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
 	ambcache_clean_range((void *)(bstadd), bstsize);
 	complete(&cpu_killed);
 
@@ -102,13 +102,18 @@ void platform_cpu_die(unsigned int cpu)
 		asm volatile("wfi" : : : "memory", "cc");
 		cpu_leave_lowpower();
 		ambcache_inv_range((void *)(bstadd), bstsize);
-		if (phead_address[PROCESSOR_STATUS_0 + cpu] != AMB_BST_MAGIC)
+		smp_rmb();
+		phead_address[PROCESSOR_STATUS_0 + cpu]++;
+		smp_wmb();
+		ambcache_clean_range((void *)(bstadd), bstsize);
+		if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID)
 			break;
 #ifdef DEBUG
 		printk(KERN_DEBUG "CPU%u: spurious wakeup call\n", cpu);
 #endif
 	}
-	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_MAGIC;
+	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
+	smp_wmb();
 	ambcache_clean_range((void *)(bstadd), bstsize);
 }
 
