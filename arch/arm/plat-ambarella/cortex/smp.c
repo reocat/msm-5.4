@@ -102,6 +102,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		pr_err("CPU[%d] isn't ready: 0x%08x 0x%08x.\n", cpu,
 			phead_address[PROCESSOR_START_0 + cpu],
 			phead_address[PROCESSOR_STATUS_0 + cpu]);
+		retval = -EPERM;
 	}
 
 boot_secondary_exit:
