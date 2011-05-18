@@ -1636,11 +1636,14 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 
 	/* request in processing */
 	if((ep->data_desc == req->data_desc) && (ep->dir = USB_DIR_IN)) {
+		int try_count = 3;
 		struct ambarella_data_desc *last_data_desc;
 		last_data_desc = ambarella_get_last_desc(ep);
 		/* flush fifo until DMA done. */
 		while((last_data_desc->status & USB_DMA_BUF_STS) !=
 				USB_DMA_BUF_DMA_DONE) {
+			if (try_count-- == 0)
+				break;
 			ambarella_ep_fifo_flush(ep);
 		}
 	}
