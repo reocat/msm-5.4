@@ -58,11 +58,11 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
-	unsigned long timeout;
-	int i;
-	u32 *phead_address;
-	u32 bstadd, bstsize;
-	int retval = 0;
+	unsigned long				timeout;
+	u32					*phead_address;
+	u32					bstadd;
+	u32					bstsize;
+	int					retval = 0;
 
 	spin_lock(&boot_lock);
 
@@ -81,25 +81,28 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	}
 	phead_address[PROCESSOR_START_0 + cpu] = BSYM(
 		virt_to_phys(ambarella_secondary_startup));
-	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_INVALID;
+	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
 	smp_wmb();
 	ambcache_flush_range((void *)(bstadd), bstsize);
 	smp_cross_call(cpumask_of(cpu), 1);
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
-		if (phead_address[PROCESSOR_STATUS_0 + cpu] != AMB_BST_INVALID)
+		if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID)
 			break;
 		udelay(10);
 		ambcache_inv_range((void *)(bstadd), bstsize);
 	}
 	ambcache_inv_range((void *)(bstadd), bstsize);
 	smp_rmb();
-	for (i = 0; i < smp_max_cpus; i++)
-		if (phead_address[PROCESSOR_STATUS_0 + i] == AMB_BST_INVALID)
-			pr_err("CPU[%d] is still dead!\n", i);
-	if (phead_address[PROCESSOR_STATUS_0 + cpu] == AMB_BST_INVALID)
-		retval = -EAGAIN;
+	if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID) {
+		pr_debug("CPU[%d]: 0x%08x.\n", cpu,
+			phead_address[PROCESSOR_STATUS_0 + cpu]);
+	} else {
+		pr_err("CPU[%d] isn't ready: 0x%08x 0x%08x.\n", cpu,
+			phead_address[PROCESSOR_START_0 + cpu],
+			phead_address[PROCESSOR_STATUS_0 + cpu]);
+	}
 
 boot_secondary_exit:
 	spin_unlock(&boot_lock);
@@ -109,8 +112,10 @@ boot_secondary_exit:
 
 void __init smp_init_cpus(void)
 {
-	unsigned int i, ncores = scu_get_core_count(scu_base);
+	int					i;
+	unsigned int				ncores;
 
+	ncores = scu_get_core_count(scu_base);
 	if (ncores > NR_CPUS) {
 		pr_warning("%s: no. of cores (%d) greater than configured\n"
 			"maximum of %d - clipping\n",
@@ -123,14 +128,16 @@ void __init smp_init_cpus(void)
 
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
-	int i;
-	u32 *phead_address = get_ambarella_bstmem_head();
-	u32 bstadd, bstsize;
+	int					i;
+	u32					*phead_address;
+	u32					bstadd;
+	u32					bstsize;
 
 	if (get_ambarella_bstmem_info(&bstadd, &bstsize) != AMB_BST_MAGIC) {
 		pr_err("Can't find SMP BST!\n");
 		return;
 	}
+	phead_address = get_ambarella_bstmem_head();
 	if (phead_address == (u32 *)AMB_BST_INVALID) {
 		pr_err("Can't find SMP BST Head!\n");
 		return;
@@ -143,8 +150,7 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	for (i = 1; i < max_cpus; i++) {
 		phead_address[PROCESSOR_START_0 + i] = BSYM(
 			virt_to_phys(ambarella_secondary_startup));
-		phead_address[PROCESSOR_STATUS_0 + i] =
-			AMB_BST_INVALID;
+		phead_address[PROCESSOR_STATUS_0 + i] = AMB_BST_START_COUNTER;
 	}
 	ambcache_flush_range((void *)(bstadd), bstsize);
 	smp_max_cpus = max_cpus;

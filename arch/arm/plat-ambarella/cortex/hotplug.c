@@ -40,16 +40,12 @@ static inline void cpu_enter_lowpower(void)
 
 	flush_cache_all();
 	asm volatile(
-	"	mcr	p15, 0, %1, c7, c5, 0\n"
-	"	mcr	p15, 0, %1, c7, c10, 4\n"
-	/*
-	* Turn off coherency
-	*/
 	"	mrc	p15, 0, %0, c1, c0, 1\n"
 	"	bic	%0, %0, #(1 << 6)\n"
+	"	bic	%0, %0, #(1 << 0)\n"
 	"	mcr	p15, 0, %0, c1, c0, 1\n"
 	"	mrc	p15, 0, %0, c1, c0, 0\n"
-	"	bic	%0, %0, #0x04\n"
+	"	bic	%0, %0, #(1 << 2)\n"
 	"	mcr	p15, 0, %0, c1, c0, 0\n"
 		: "=&r" (v)
 		: "r" (0)
@@ -62,10 +58,11 @@ static inline void cpu_leave_lowpower(void)
 
 	asm volatile(
 	"	mrc	p15, 0, %0, c1, c0, 0\n"
-	"	orr	%0, %0, #0x04\n"
+	"	orr	%0, %0, #(1 << 2)\n"
 	"	mcr	p15, 0, %0, c1, c0, 0\n"
 	"	mrc	p15, 0, %0, c1, c0, 1\n"
 	"	orr	%0, %0, #(1 << 6)\n"
+	"	orr	%0, %0, #(1 << 0)\n"
 	"	mcr	p15, 0, %0, c1, c0, 1\n"
 		: "=&r" (v)
 		:
