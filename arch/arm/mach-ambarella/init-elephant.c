@@ -684,7 +684,7 @@ static struct ambarella_key_table elephant_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_END},
 };
 
-static struct ambarella_key_table elephant_keymap_ability[AMBINPUT_TABLE_SIZE] = {
+static struct ambarella_key_table elephant_keymap_vendor1[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
@@ -946,7 +946,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_nt11001_board_info.flags = 0;
 			i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
 
-			elephant_board_input_info.pkeymap = elephant_keymap_ability;
+			elephant_board_input_info.pkeymap = elephant_keymap_vendor1;
 
 			use_bub_default = 0;
 			break;
