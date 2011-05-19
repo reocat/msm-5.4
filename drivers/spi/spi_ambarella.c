@@ -972,17 +972,8 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 	priv = spi_master_get_devdata(master);
 
 	if (priv) {
-		if (!device_may_wakeup(&pdev->dev)) {
-#if (SPI_AHB_INSTANCES > 0)
-			if (!priv->pinfo->support_dma) {
-#endif
-				disable_irq_nosync(priv->irq);
-#if (SPI_AHB_INSTANCES > 0)
-			} else {
-				ambarella_dma_disable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
-			}
-#endif
-		}
+		disable_irq(priv->irq);
+		ambarella_spi_stop(priv);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;
@@ -1004,17 +995,8 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 	priv = spi_master_get_devdata(master);
 
 	if (priv) {
-		if (!device_may_wakeup(&pdev->dev)) {
-#if (SPI_AHB_INSTANCES > 0)
-			if (!priv->pinfo->support_dma) {
-#endif
-				enable_irq(priv->irq);
-#if (SPI_AHB_INSTANCES > 0)
-			} else {
-				ambarella_dma_enable_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
-			}
-#endif
-		}
+		ambarella_spi_inithw(priv);
+		enable_irq(priv->irq);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;
