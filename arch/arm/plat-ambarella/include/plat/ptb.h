@@ -108,7 +108,8 @@ typedef struct flpart_table_s
 #define PART_NAME_LEN		8
 #define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN + sizeof(u32)) * \
 				 PART_MAX + sizeof(u32) + sizeof(u32) + \
-				 FW_MODEL_NAME_SIZE)
+				 FW_MODEL_NAME_SIZE + (sizeof(u32) * 4))
+
 #define PTB_META_SIZE		2048
 #define PTB_META_PAD_SIZE	(PTB_META_SIZE - PTB_META_ACTURAL_LEN)
 
@@ -125,6 +126,10 @@ typedef struct flpart_meta_s
 	u32 	crc32;
 	u32	part_dev[PART_MAX];
 	u8	model_name[FW_MODEL_NAME_SIZE];
+	struct {
+		u32	sblk;
+		u32	nblk;
+	} sm_stg[2];
 	u8 	rsv[PTB_META_PAD_SIZE];
 } __attribute__((packed)) flpart_meta_t;
 
