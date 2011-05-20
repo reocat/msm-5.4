@@ -64,7 +64,7 @@ int ambptb_partition(struct parsed_partitions *state)
 		goto ambptb_partition_exit;
 
 ambptb_partition_report_ptb:
-	for (i = 0; i < PART_MAX; i++) {
+	for (i = 0; i < TOTAL_FW_PARTS; i++) {
 		if (slot >= state->limit)
 			break;
 
