@@ -74,6 +74,12 @@ config DC_SANYO_18650
 	help
 	  Say Y here to enable discharge curve for sanyo 18650 lion battery
 
+config DC_TRUST_FIRE_18650
+	bool "Discharge curve driver for trust fire 18650 battery"
+	depends on DISCHARGE_CURVE
+	help
+	  Say Y here to enable discharge curve for trust fire 18650 lion battery
+
 config BATTERY_DS2760
 	tristate "DS2760 battery driver (HP iPAQ & others)"
 	depends on W1 && W1_SLAVE_DS2760
