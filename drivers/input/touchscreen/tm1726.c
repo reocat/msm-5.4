@@ -59,6 +59,7 @@ typedef enum {
 	TM_IRQ_STATUS_ABS	= 0x14,
 	TM_DEV_CNTL		= 0x35,
 	TM_IRQ_ENABLE_ABS	= 0x36,
+	TM_SENSITIVITY_ADJUST	= 0x82,
 	TM_RESET		= 0x88,
 	TM_FAMILY_CODE		= 0x95,
 } tm1726_sub_addr_t;
@@ -115,6 +116,19 @@ static int tm1726_config_irq(struct tm1726 *tm)
 
 	if (i2c_smbus_write_i2c_block_data(tm->client,
 		TM_IRQ_ENABLE_ABS, 5, buf)) {
+		printk("I2C Error: %s\n", __func__);
+		return -EIO;
+	} else {
+		return 0;
+	}
+}
+
+static int tm1726_adjust_sensitivity(struct tm1726 *tm)
+{
+	u8			buf[1] = {0x0c};
+
+	if (i2c_smbus_write_i2c_block_data(tm->client,
+		TM_SENSITIVITY_ADJUST, 1, buf)) {
 		printk("I2C Error: %s\n", __func__);
 		return -EIO;
 	} else {
@@ -306,6 +320,10 @@ static int tm1726_probe(struct i2c_client *client,
 			break;
 		}
 	}
+
+	err = tm1726_adjust_sensitivity(tm);
+	if (err)
+		goto err_free_mem;
 
 	err = tm1726_config_irq(tm);
 	if (err)
