@@ -47,6 +47,8 @@ static const struct snd_soc_dapm_widget i1evk_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Main Mic", NULL),
 	SND_SOC_DAPM_MIC("2nd Mic", NULL),
 	SND_SOC_DAPM_LINE("Radio In", NULL),
+	SND_SOC_DAPM_LINE("Line Out 1", NULL),
+	SND_SOC_DAPM_LINE("Line Out 2", NULL),
 };
 
 static const struct snd_soc_dapm_route i1evk_dapm_routes[] = {
@@ -61,6 +63,12 @@ static const struct snd_soc_dapm_route i1evk_dapm_routes[] = {
 
 	{"Headset Stereophone", NULL, "HPOUT1L"},
 	{"Headset Stereophone", NULL, "HPOUT1R"},
+
+	{"Line Out 1", NULL, "LINEOUT1N"},
+	{"Line Out 1", NULL, "LINEOUT1P"},
+
+	{"Line Out 2", NULL, "LINEOUT2N"},
+	{"Line Out 2", NULL, "LINEOUT2P"},
 
 	{"IN1RN", NULL, "Headset Mic"},
 	{"IN1RP", NULL, "Headset Mic"},
@@ -91,10 +99,6 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 	/* set endpoints to not connected */
 	snd_soc_dapm_nc_pin(dapm, "IN2LP:VXRN");
 	snd_soc_dapm_nc_pin(dapm, "IN2RP:VXRP");
-	snd_soc_dapm_nc_pin(dapm, "LINEOUT1N");
-	snd_soc_dapm_nc_pin(dapm, "LINEOUT1P");
-	snd_soc_dapm_nc_pin(dapm, "LINEOUT2N");
-	snd_soc_dapm_nc_pin(dapm, "LINEOUT2P");
 
 	snd_soc_dapm_sync(dapm);
 
