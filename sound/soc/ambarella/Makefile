@@ -1,15 +1,28 @@
 # AMBARELLA Platform Support
+
+ifeq ($(CONFIG_AMBARELLA_IPC),y)
+snd-soc-ambarella-objs := ambarella_vpcm.o
+snd-soc-ambarella-i2s-objs := ambarella_vi2s.o
+
+obj-$(CONFIG_SND_AMBARELLA_SOC)		+= snd-soc-ambarella.o
+obj-$(CONFIG_SND_AMBARELLA_SOC_I2S)	+= snd-soc-ambarella-i2s.o
+else
 snd-soc-ambarella-objs := ambarella_pcm.o
 snd-soc-ambarella-i2s-objs := ambarella_i2s.o
 
 obj-$(CONFIG_SND_AMBARELLA_SOC)		+= snd-soc-ambarella.o
 obj-$(CONFIG_SND_AMBARELLA_SOC_I2S)	+= snd-soc-ambarella-i2s.o
+endif
 
 # AMBARELLA Machine Support
 snd-soc-ipcam-objs := ipcam.o
 snd-soc-a5sevk-objs := a5sevk.o
 snd-soc-i1evk-objs := i1evk.o
+ifeq ($(CONFIG_AMBARELLA_IPC),y)
+snd-soc-dummy-objs := vdummy.o
+else
 snd-soc-dummy-objs := dummy.o
+endif
 snd-soc-a5spa2-objs := a5spa2.o
 
 obj-$(CONFIG_IPCAM_BOARD)		+= snd-soc-ipcam.o

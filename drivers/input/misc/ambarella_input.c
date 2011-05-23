@@ -162,6 +162,56 @@ ambarella_gpio_irq_exit:
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_AMBARELLA_IPC
+
+static struct ambarella_input_board_info *ipc_pbinfo = NULL;
+int ambarella_vi_press_abs_sync(int x, int y)
+{
+	if(ipc_pbinfo==NULL){
+		return -1;
+	}
+
+	input_report_key(ipc_pbinfo->pinput_dev, BTN_TOUCH, 1);
+	input_report_abs(ipc_pbinfo->pinput_dev, ABS_X, x);
+	input_report_abs(ipc_pbinfo->pinput_dev, ABS_Y, y);
+	if (abx_active_pressure == 0){
+		abx_active_pressure = ipc_pbinfo->abx_max_pressure / 2;
+	}
+	input_report_abs(ipc_pbinfo->pinput_dev, ABS_PRESSURE, abx_active_pressure);
+	input_sync(ipc_pbinfo->pinput_dev);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_vi_press_abs_sync);
+
+int ambarella_vi_release_abs_sync(int x, int y)
+{
+	if(ipc_pbinfo==NULL){
+		return -1;
+	}
+	
+	input_report_key(ipc_pbinfo->pinput_dev, BTN_TOUCH, 0);
+	input_report_abs(ipc_pbinfo->pinput_dev, ABS_PRESSURE, 0);
+	input_sync(ipc_pbinfo->pinput_dev);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_vi_release_abs_sync);
+
+int ambarella_vi_send_key(int key, int pressed)
+{
+	if(ipc_pbinfo==NULL){
+		return -1;
+	}
+	
+	input_report_key(ipc_pbinfo->pinput_dev, key, pressed);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_vi_send_key);
+
+#endif
+
 int ambarella_vi_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
@@ -447,6 +497,11 @@ static int __devinit ambarella_input_probe(struct platform_device *pdev)
 		input_file->data = pbinfo;
 	}
 
+#ifdef CONFIG_AMBARELLA_IPC
+	//Keep for IPC
+	ipc_pbinfo = pbinfo;
+#endif
+	
 	retval = ambarella_setup_keymap(pbinfo);
 	if (retval)
 		goto ambarella_input_probe_unregister_device;

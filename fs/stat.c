@@ -239,6 +239,14 @@ static int cp_new_stat(struct kstat *stat, struct stat __user *statbuf)
 	return copy_to_user(statbuf,&tmp,sizeof(tmp)) ? -EFAULT : 0;
 }
 
+#if defined(CONFIG_AMBARELLA_IPC)
+int lk_cp_new_stat(struct kstat *stat, struct stat __user *statbuf)
+{
+	return cp_new_stat(stat, statbuf);
+}
+EXPORT_SYMBOL(lk_cp_new_stat);
+#endif
+
 SYSCALL_DEFINE2(newstat, const char __user *, filename,
 		struct stat __user *, statbuf)
 {

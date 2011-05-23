@@ -35,6 +35,18 @@
 #include <plat/debug.h>
 #include <hal/hal.h>
 
+#if defined(CONFIG_MACH_BOSS)
+
+#include <linux/aipc/aipc.h>
+#include <mach/boss.h>
+#include <plat/ambcache.h>
+#include <asm/cacheflush.h>
+
+struct boss_s *boss = NULL;
+EXPORT_SYMBOL(boss);
+
+#endif
+
 /* ==========================================================================*/
 u32 ambarella_debug_level = AMBA_DEBUG_NULL;
 EXPORT_SYMBOL(ambarella_debug_level);
@@ -247,6 +259,32 @@ void __init ambarella_map_io(void)
 	else
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x Map Fail!\n",
 			halp, halv, hals);
+#endif
+#if defined(CONFIG_MACH_BOSS)
+	if (boss != NULL) {
+		struct map_desc	smem_desc;
+		u32 virt, phys;
+
+		extern unsigned int boss_log_buf_ptr;
+		extern unsigned int boss_log_buf_len_ptr;
+		extern unsigned int boss_log_buf_last_ptr;
+
+		pr_notice ("aipc: smem: %08x, %08x\n", boss->smem_addr, boss->smem_size);
+		phys = boss->smem_addr;
+		virt = ambarella_phys_to_virt (phys);
+
+		smem_desc.virtual = virt;
+		smem_desc.pfn = __phys_to_pfn(phys);
+		smem_desc.length = boss->smem_size;
+		smem_desc.type = MT_MEMORY_NONCACHED;
+		iotable_init(&smem_desc, 1);
+
+		boss->smem_addr = virt;
+
+		boss->log_buf_ptr = ambarella_virt_to_phys (boss_log_buf_ptr);
+		boss->log_buf_len_ptr = ambarella_virt_to_phys (boss_log_buf_len_ptr);
+		boss->log_buf_last_ptr = ambarella_virt_to_phys (boss_log_buf_last_ptr);
+	}
 #endif
 }
 
@@ -728,3 +766,29 @@ int arch_pfn_is_nosave(unsigned long pfn)
 	return (pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn);
 }
 
+#if defined(CONFIG_MACH_BOSS)
+
+static void __init early_boss(char *p)
+{
+	extern unsigned int boss_log_buf_ptr;
+	extern unsigned int boss_log_buf_len_ptr;
+	extern unsigned int boss_log_buf_last_ptr;
+	unsigned long paddr, vaddr;
+
+	char	*endp;
+
+	paddr = memparse(p, &endp);
+	vaddr = ambarella_phys_to_virt (paddr);
+
+	printk (KERN_NOTICE "boss: %08x [%08x]\n", vaddr, paddr);
+	printk (KERN_NOTICE "boss: printk: %08x [%08x], %08x [%08x], %08x [%08x]\n", 
+		(u32) boss_log_buf_ptr, ambarella_virt_to_phys (boss_log_buf_ptr), 
+		(u32) boss_log_buf_len_ptr, ambarella_virt_to_phys (boss_log_buf_len_ptr), 
+		(u32) boss_log_buf_last_ptr, ambarella_virt_to_phys (boss_log_buf_last_ptr));
+
+	boss = (struct boss_s *) vaddr;
+}
+
+early_param("boss", early_boss);
+
+#endif

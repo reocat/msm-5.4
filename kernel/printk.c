@@ -1659,3 +1659,15 @@ void kmsg_dump(enum kmsg_dump_reason reason)
 	rcu_read_unlock();
 }
 #endif
+
+#if defined(CONFIG_MACH_BOSS)
+
+/*
+ * Before we write a new console device. Let's export the symbols to pass to
+ * other OS on the same memory bus to access Linux' log_buf.
+ */
+void *boss_log_buf_ptr = &log_buf;
+void *boss_log_buf_len_ptr = &log_buf_len;
+void *boss_log_buf_last_ptr = &log_end;
+
+#endif

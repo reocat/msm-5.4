@@ -544,4 +544,9 @@ config MTD_NAND_FSMC
 	  Enables support for NAND Flash chips on the ST Microelectronics
 	  Flexible Static Memory Controller (FSMC)
 
+config MTD_NAND_BOSS
+	tristate "BOSS NAND virtual driver"
+	help
+		BOSS NAND virtual driver.
+
 endif # MTD_NAND

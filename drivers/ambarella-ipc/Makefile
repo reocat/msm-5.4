@@ -1,0 +1,138 @@
+#
+# drivers/ambarella-ipc/Makefile
+#
+# Ambarella IPC in Linux kernel-space.
+#
+# Authors:
+#	Charles Chiou <cchiou@ambarella.com>
+#
+# Copyright (C) 2009-2010, Ambarella, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+#
+
+
+IPCDIR := $(realpath $(shell pwd)/../ipc)
+ifeq ($(IPCDIR),)
+$(shell ln -s android/device/ambarella/ipc $(shell pwd)/../ipc)
+IPCDIR := $(realpath $(shell pwd)/../ipc)
+endif
+
+ifeq ($(IPCDIR),)
+$(error "Cannot find IPCDIR")
+endif
+
+IPCGEN := $(IPCDIR)/ipcgen
+
+# Servers
+X-S-y +=	$(IPCDIR)/defs/lk_util.x \
+		$(IPCDIR)/defs/lk_sdhc.x \
+		$(IPCDIR)/defs/lk_gpio.x \
+		$(IPCDIR)/defs/lk_vfs.x \
+		$(IPCDIR)/defs/lk_fifo.x
+
+# Clients
+X-C-y +=	$(IPCDIR)/defs/i_util.x \
+		$(IPCDIR)/defs/i_flpart.x \
+		$(IPCDIR)/defs/i_nand.x \
+		$(IPCDIR)/defs/i_sdhc.x \
+		$(IPCDIR)/defs/i_gpio.x \
+		$(IPCDIR)/defs/i_ffs.x \
+		$(IPCDIR)/defs/i_fifo.x
+
+ifeq ($(CONFIG_FB_DSP_CMD),y)		
+X-C-y +=	$(IPCDIR)/defs/i_dsp.x
+else
+X-C-y +=	$(IPCDIR)/defs/i_display.x
+endif
+
+# vtouch
+X-S-y +=	$(IPCDIR)/defs/lk_touch.x
+X-C-y +=	$(IPCDIR)/defs/i_touch.x
+
+#vbutton
+X-S-y +=	$(IPCDIR)/defs/lk_button.x
+X-C-y +=	$(IPCDIR)/defs/i_button.x
+
+#Streaming .x file
+X-C-y +=	$(IPCDIR)/defs/i_streamer.x
+
+# Virtual ALSA
+X-S-y +=	$(IPCDIR)/defs/lk_alsa_fifo.x
+X-C-y +=	$(IPCDIR)/defs/i_alsa_op.x
+
+# Collect intermediate files
+
+SRCS-S-y = $(foreach f,$(X-S-y),server/$(patsubst %.x,%_server.c,$(notdir $(f))))
+OBJS-S-y = $(foreach f,$(SRCS-S-y),$(patsubst %.c,%.o,$(f)))
+
+SRCS-C-y = $(foreach f,$(X-C-y),client/$(patsubst %.x,%_client.c,$(notdir $(f))))
+OBJS-C-y = $(foreach f,$(SRCS-C-y),$(patsubst %.c,%.o,$(f)))
+
+#Streaming related src and obj
+SRCS-C-y += client/ambastreamdrv.c
+OBJS-C-y += client/ambastreamdrv.o
+
+H-S-y = $(foreach f,$(X-S-y),ipcgen/$(patsubst %.x,%.h,$(notdir $(f))))
+TAB_I-S-y = $(foreach f,$(X-S-y),ipcgen/$(patsubst %.x,%_tab.i,$(notdir $(f))))
+
+H-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%.h,$(notdir $(f))))
+TAB_I-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%_tab.i,$(notdir $(f))))
+CLNT_C-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%_clnt.c,$(notdir $(f))))
+CLNT_O-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%_clnt.o,$(notdir $(f))))
+
+IPCGEN_H = $(H-S-y) $(H-C-y)
+IPCGEN_TAB_I = $(TAB_I-S-y) $(TAB_I-C-y)
+IPCGEN_CLNT_C = $(CLNT_C-C-y)
+
+IPCGEN_FILES = $(IPCGEN_H) $(IPCGEN_TAB_I) $(IPCGEN_CLNT_C)
+
+# Finally, obj-y collects for linux objects to be made
+
+obj-y := ipc.o irq.o mem.o binder.o ipc_bh.o errstr.o nl.o ipc_shm.o ipc_slock.o ipc_mutex.o ipc_log.o
+obj-y += $(OBJS-S-y) $(OBJS-C-y)
+obj-y += $(CLNT_O-C-y)
+
+ccflags-y += -Idrivers/ambarella-ipc
+
+clean-dirs += ipcgen/
+
+# Dependencies
+
+always := $(IPCGEN_FILES)
+IMPLEMENT_SRCS := $(foreach f,$(SRCS-S-y) $(SRCS-C-y),$(src)/$(f))
+$(IMPLEMENT_SRCS): $(foreach f,$(IPCGEN_FILES),$(src)/$(f))
+
+# Explicit rules
+
+drivers/ambarella-ipc/ipcgen/%.h: $(IPCDIR)/defs/%.x $(IPCGEN)
+	@echo "  IPCGEN  $@" ; \
+	mkdir -p $(dir $@) ; \
+	(cd $(realpath $(dir $<)) ; $(IPCGEN) -C -M -h $(notdir $<)) > $@
+
+drivers/ambarella-ipc/ipcgen/%_tab.i: $(IPCDIR)/defs/%.x $(IPCGEN)
+	@echo "  IPCGEN  $@" ; \
+	mkdir -p $(dir $@) ; \
+	(cd $(realpath $(dir $<)) ; $(IPCGEN) -C -M -t $(notdir $<)) > $@
+
+drivers/ambarella-ipc/ipcgen/%_clnt.c: $(IPCDIR)/defs/%.x $(IPCGEN)
+	@echo "  IPCGEN  $@" ; \
+	mkdir -p $(dir $@) ; \
+	(cd $(realpath $(dir $<)) ; $(IPCGEN) -C -M -l $(notdir $<)) > $@
+
+$(IPCGEN): 	$(wildcard $(IPCDIR)/sunrpc/*.*) \
+		$(wildcard $(IPCDIR)/sunrpc/rpc/*.*) \
+		$(wildcard $(IPCDIR)/sunrpc/rpvsvc/*.*)
+	@cd $(IPCDIR) && $(MAKE) $(notdir $@)

@@ -43,7 +43,11 @@ obj-y						+= generic/crypto.o
 obj-y						+= generic/dma.o
 obj-y						+= generic/eth.o
 obj-y						+= generic/fio.o
+ifeq ($(CONFIG_MACH_BOSS), y)
+obj-y						+= generic/vgpio.o
+else
 obj-y						+= generic/gpio.o
+endif
 obj-y						+= generic/idc.o
 obj-y						+= generic/ir.o
 obj-y						+= generic/irq.o

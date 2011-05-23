@@ -2333,6 +2333,29 @@ config FB_AMBARELLA
 	help
           Frame buffer driver for Ambarella chips.
 
+#
+# The "FB AMBARELA type" choice list is ordered alphabetically by option
+# text.  
+#
+          
+choice
+	prompt "FB AMBARELA type"
+	depends on FB_AMBARELLA
+	default FB_MW_CMD
+	
+
+config FB_DSP_CMD
+	bool "Use DSP CMD for FB"
+	help
+	  This enables support for FB based on DSP cmd
+
+config FB_MW_CMD
+	bool "Use MW CMD for FB"
+	help
+	  This enables support for FB based on MW cmd
+	  
+endchoice
+
 config FB_MSM
 	tristate "MSM Framebuffer support"
 	depends on FB && ARCH_MSM

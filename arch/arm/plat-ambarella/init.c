@@ -116,16 +116,16 @@ int __init ambarella_init_machine(char *board_name)
 
 	retval = ambarella_create_proc_dir();
 	BUG_ON(retval != 0);
-
+#if !defined(CONFIG_MACH_BOSS)
 	retval = ambarella_init_pll();
 	BUG_ON(retval != 0);
 
 	retval = ambarella_init_tm();
 	BUG_ON(retval != 0);
-
+#endif
 	retval = ambarella_init_gpio();
 	BUG_ON(retval != 0);
-
+#if !defined(CONFIG_MACH_BOSS)
 	retval = ambarella_init_fio();
 	BUG_ON(retval != 0);
 
@@ -137,16 +137,19 @@ int __init ambarella_init_machine(char *board_name)
 
 	retval = ambarella_init_pwm();
 	BUG_ON(retval != 0);
-
+#endif
 	retval = ambarella_init_fb();
 	BUG_ON(retval != 0);
 
+#if !defined(CONFIG_MACH_BOSS)
 	retval = ambarella_init_pm();
 	BUG_ON(retval != 0);
+#endif
 
 	retval = ambarella_init_audio();
 	BUG_ON(retval != 0);
 
+#if !defined(CONFIG_MACH_BOSS)
 	retval = ambarella_init_sd();
 	BUG_ON(retval != 0);
 
@@ -160,6 +163,7 @@ int __init ambarella_init_machine(char *board_name)
 		device_set_wakeup_capable(&ambarella_nand.dev, 1);
 		device_set_wakeup_enable(&ambarella_nand.dev, 0);
 	}
+#endif
 	if (rct_is_eth_enabled()) {
 		retval = ambarella_init_eth0(system_serial_high,
 			system_serial_low);
@@ -172,4 +176,4 @@ int __init ambarella_init_machine(char *board_name)
 
 	return retval;
 }
-
+ 

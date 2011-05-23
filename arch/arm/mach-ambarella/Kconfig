@@ -53,6 +53,13 @@ config MACH_ELEPHANT
 	help
 	  Say Y here if you are using iOne Elephant.
 
+config MACH_BOSS
+	bool "Boss"
+	depends on PLAT_AMBARELLA_I1
+	default n
+	help
+	  Say Y here if you are using iOne Boss.
+
 menu "Misc Configuration"
 
 config MMC_AMBARELLA_SDIO

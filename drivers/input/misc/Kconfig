@@ -488,4 +488,11 @@ config INPUT_CMA3000_I2C
 	  To compile this driver as a module, choose M here: the
 	  module will be called cma3000_d0x_i2c.
 
+config INPUT_AMBA_VBUTTON
+	tristate "Ambarella Virtual Button driver support"
+	default n
+	help
+	  Say Y here if you want to enable the Ambarella Virtual
+	  Button driver.
+
 endif

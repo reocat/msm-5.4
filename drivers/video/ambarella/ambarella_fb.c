@@ -48,6 +48,11 @@
 
 #include <plat/fb.h>
 
+#if defined(CONFIG_AMBARELLA_IPC)
+extern int ambfb_vdspdrv_claim(struct ambarella_platform_fb *, int);
+extern int ambfb_vdspdrv_release(struct ambarella_platform_fb *, int);
+#endif
+
 /* video=amb0fb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,
    <color_format>,<conversion_buffer>[,<prealloc_start>,<prealloc_length>] */
 
@@ -981,6 +986,10 @@ static int __devinit ambfb_probe(struct platform_device *pdev)
 		errorCode = -ENODEV;
 		goto ambfb_probe_exit;
 	}
+	
+#if defined(CONFIG_AMBARELLA_IPC)
+	ambfb_vdspdrv_claim(ambfb_data, pdev->id);
+#endif
 
 	info = framebuffer_alloc(sizeof(ambfb_data), &pdev->dev);
 	if (info == NULL) {
@@ -1174,6 +1183,12 @@ ambfb_probe_release_framebuffer:
 	mutex_unlock(&ambfb_data->lock);
 
 ambfb_probe_exit:
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	if (errorCode != 0)
+		ambfb_vdspdrv_release(ambfb_data, pdev->id);
+#endif
+
 	return errorCode;
 }
 
@@ -1212,6 +1227,10 @@ static int __devexit ambfb_remove(struct platform_device *pdev)
 		framebuffer_release(info);
 		mutex_unlock(&ambfb_data->lock);
 	}
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	ambfb_vdspdrv_release(ambfb_data, pdev->id);
+#endif
 
 	return 0;
 }

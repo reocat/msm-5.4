@@ -22,3 +22,10 @@
 
 obj-$(CONFIG_FB_AMBARELLA) += ambarella_fb.o
 
+ifdef CONFIG_AMBARELLA_IPC
+ifdef CONFIG_FB_DSP_CMD
+obj-$(CONFIG_FB_AMBARELLA) += ambarella_cc.o boss_fb.o
+else
+obj-$(CONFIG_FB_AMBARELLA) += ambarella_cc.o boss_mw_fb.o
+endif
+endif
