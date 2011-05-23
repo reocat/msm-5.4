@@ -355,6 +355,26 @@ static int wm8994_device_init(struct wm8994 *wm8994, int irq)
 	mutex_init(&wm8994->io_lock);
 	dev_set_drvdata(wm8994->dev, wm8994);
 
+	/* Enable Speaker control */
+	if (!pdata || !pdata->spk_enable || !gpio_is_valid(pdata->spk_enable)) {
+		dev_err(wm8994->dev, "Failed to get GPIO for speaker enable\n");
+		ret = -ENODEV;
+		goto err_gpio1;
+	}
+
+	ret = gpio_request(pdata->spk_enable, "WM8994 speaker enable");
+	if (ret < 0) {
+		dev_err(wm8994->dev, "Failed to get speaker GPIO: %d\n", ret);
+		goto err_gpio1;
+	}
+
+	ret = gpio_direction_output(pdata->spk_enable, 1);
+	if (ret < 0) {
+		dev_err(wm8994->dev, "Failed to set speaker GPIO up: %d\n", ret);
+		goto err_gpio2;
+	}
+
+
 	/* Enable LDO2, then WM8994 can be configured */
 	if (!pdata || !pdata->ldo2_enable || !gpio_is_valid(pdata->ldo2_enable)) {
 		dev_err(wm8994->dev, "Failed to get GPIO for ldo2 enable\n");

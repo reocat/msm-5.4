@@ -65,7 +65,8 @@ static struct regulator_init_data wm8994_ldo2_data = {
 };
 
 static struct wm8994_pdata ambarella_wm8994_pdata = {
-	.ldo2_enable		= GPIO(11),
+	.ldo2_enable		= GPIO(126),
+	.spk_enable		= GPIO(155),
 	/* configure gpio1 function: SDOUT */
 	.gpio_defaults[0]	= 0x0102,
 	/* configure gpio3/4/5/7 function for AIF2 BT */
@@ -78,7 +79,7 @@ static struct wm8994_pdata ambarella_wm8994_pdata = {
 	.gpio_defaults[8]	= 0,	//0x0100,
 	.gpio_defaults[9]	= 0,	//0x8100,
 	.gpio_defaults[10]	= 0,	//0x8100,
-	.ldo[0]			= { GPIO(82), NULL, &wm8994_ldo1_data },
+	.ldo[0]			= { GPIO(125), NULL, &wm8994_ldo1_data },
 	.ldo[1]			= { 0, NULL, &wm8994_ldo2_data },
 };
 
