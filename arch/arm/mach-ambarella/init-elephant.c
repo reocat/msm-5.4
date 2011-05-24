@@ -1022,6 +1022,9 @@ static void __init ambarella_init_elephant(void)
 			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR
 			&& AMBARELLA_BOARD_REV(system_rev) == 2)
 			continue;
+		if (i == 2
+			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_BUB)
+			continue;
 		if (i == 4
 			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK)
 			continue;
