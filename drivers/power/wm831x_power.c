@@ -368,7 +368,11 @@ static int wm831x_bat_check_status(struct wm831x *wm831x, int *status)
 		return ret;
 
 	if (ret & WM831X_PWR_SRC_BATT) {
-		*status = POWER_SUPPLY_STATUS_DISCHARGING;
+		if (ret & WM831X_PWR_USB) {
+			*status = POWER_SUPPLY_STATUS_CHARGING;
+		} else {
+			*status = POWER_SUPPLY_STATUS_DISCHARGING;
+		}
 		return 0;
 	}
 
@@ -703,6 +707,15 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 				wm831x_bat_irqs[i], irq, ret);
 			goto err_bat_irq;
 		}
+	}
+
+	ret = wm831x_set_bits(wm831x, WM831X_POWER_STATE,
+		WM831X_USB_ILIM_MASK,
+		WM831X_USB_ILIM_500MA);
+
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Failed to set usb current limitation! return (%d)\n", ret);
 	}
 
 	return ret;
