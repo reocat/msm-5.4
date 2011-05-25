@@ -23,6 +23,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/cpu.h>
 #include <linux/platform_device.h>
 #include <linux/bootmem.h>
 #include <linux/delay.h>
@@ -159,6 +160,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
 	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"lowpower_cortex", AMB_OPERATING_MODE_LOW_POWER_WITH_CORTEX},
 	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
@@ -275,6 +277,7 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 
 	oldfreq = get_arm_bus_freq_hz();
 
+//	disable_nonboot_cpus();
 	local_irq_save(flags);
 
 	retval = notifier_to_errno(
@@ -302,6 +305,7 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	}
 
 	local_irq_restore(flags);
+//	enable_nonboot_cpus();
 
 	newfreq = get_arm_bus_freq_hz();
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);

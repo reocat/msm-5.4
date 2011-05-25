@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 141874
+ * @version 144424
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -684,7 +684,7 @@ AMB_OPERATING_MODE_CAPTURE,
 AMB_OPERATING_MODE_PLAYBACK,
 /** GUI only */
 AMB_OPERATING_MODE_DISPLAY_AND_ARM,
-/** Low power mode */
+/** Standby mode */
 AMB_OPERATING_MODE_STANDBY,
 /** LCD off */
 AMB_OPERATING_MODE_LCD_BYPASS,
@@ -692,6 +692,8 @@ AMB_OPERATING_MODE_LCD_BYPASS,
 AMB_OPERATING_MODE_STILL_PREVIEW,
 /** Low power */
 AMB_OPERATING_MODE_LOW_POWER,
+/** Low power dsp with cortex running */
+AMB_OPERATING_MODE_LOW_POWER_WITH_CORTEX,
 /** Audio playback */
 AMB_OPERATING_MODE_AUDIO_PLAYBACK,
 /** Audio capture */
@@ -1029,10 +1031,22 @@ AMB_GTX_CLOCK_SOURCE_RESERVED = 0xffffffffUL
  */
 
 typedef enum {
-/** Normal/Default priority for all clients */
-AMB_DRAM_ARIBTER_NORMAL_PRIORITY,
+/** Low priority for dsp clients (75 of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_VERY_LOW_PRIORITY,
+/** Low priority for dsp clients (81.25% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_LOW_PRIORITY,
+/** Normal priority for dsp clients (87.5% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_NORMAL_PRIORITY,
+/** High priority for dsp clients (93.75% of total bandwidth - large arbiter throttle period) */
+AMB_DRAM_ARBITER_DSP_HIGH_PRIORITY_HIGH_THROTTLE,
+/** High priority for dsp clients (93.75% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_HIGH_PRIORITY,
+/** High priority for dsp clients (96.8% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_VERY_HIGH_PRIORITY,
+/** High priority for dsp clients (100% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_HIGHEST_PRIORITY,
 /* Reserved */
-AMB_DRAM_ARIBTER_RESERVED=0xffffffff
+AMB_DRAM_ARBITER_RESERVED=0xffffffff
 } amb_dram_arbiter_priority_t ;
 
 /**
