@@ -185,10 +185,6 @@ static enum power_supply_property wm831x_usb_props[] = {
  *		Battery properties
  *********************************************************************/
 
-struct chg_map {
-	int val;
-	int reg_val;
-};
 
 static struct chg_map trickle_ilims[] = {
 	{  50, 0 << WM831X_CHG_TRKL_ILIM_SHIFT },
