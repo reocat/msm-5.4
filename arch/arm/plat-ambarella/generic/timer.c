@@ -61,26 +61,42 @@ struct ambarella_timer_pm_info {
 struct ambarella_timer_pm_info ambarella_timer_pm;
 
 /* ==========================================================================*/
+#if !defined(CONFIG_MACH_BOSS)
 #define AMBARELLA_CE_TIMER_STATUS_REG	TIMER3_STATUS_REG
 #define AMBARELLA_CE_TIMER_RELOAD_REG	TIMER3_RELOAD_REG
 #define AMBARELLA_CE_TIMER_MATCH1_REG	TIMER3_MATCH1_REG
 #define AMBARELLA_CE_TIMER_MATCH2_REG	TIMER3_MATCH2_REG
 #define AMBARELLA_CE_TIMER_IRQ		TIMER3_IRQ
+#define AMBARELLA_CE_TIMER_CTR_EN	TIMER_CTR_EN3
+#define AMBARELLA_CE_TIMER_CTR_OF	TIMER_CTR_OF3
+#define AMBARELLA_CE_TIMER_CTR_CSL	TIMER_CTR_CSL3
+#define AMBARELLA_CE_TIMER_CTR_MASK	0x00000F00
+#else
+#define AMBARELLA_CE_TIMER_STATUS_REG	TIMER4_STATUS_REG
+#define AMBARELLA_CE_TIMER_RELOAD_REG	TIMER4_RELOAD_REG
+#define AMBARELLA_CE_TIMER_MATCH1_REG	TIMER4_MATCH1_REG
+#define AMBARELLA_CE_TIMER_MATCH2_REG	TIMER4_MATCH2_REG
+#define AMBARELLA_CE_TIMER_IRQ		TIMER4_IRQ
+#define AMBARELLA_CE_TIMER_CTR_EN	TIMER_CTR_EN4
+#define AMBARELLA_CE_TIMER_CTR_OF	TIMER_CTR_OF4
+#define AMBARELLA_CE_TIMER_CTR_CSL	TIMER_CTR_CSL4
+#define AMBARELLA_CE_TIMER_CTR_MASK	0x0000F000
+#endif
 
 static inline void ambarella_ce_timer_disable(void)
 {
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN3);
+	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_EN);
 }
 
 static inline void ambarella_ce_timer_enable(void)
 {
-	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN3);
+	amba_setbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_EN);
 }
 
 static inline void ambarella_ce_timer_misc(void)
 {
-	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF3);
-	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL3);
+	amba_setbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_OF);
+	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_CSL);
 }
 
 static inline void ambarella_ce_timer_set_periodic(void)
@@ -201,6 +217,7 @@ static struct clocksource ambarella_cs_timer_clksrc = {
 /* ==========================================================================*/
 static void ambarella_timer_init(void)
 {
+u32 hz;
 #ifdef CONFIG_LOCAL_TIMERS
 	twd_base = __io(AMBARELLA_VA_PT_WD_BASE);
 #endif
@@ -211,7 +228,7 @@ static void ambarella_timer_init(void)
 		AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);
 	clocksource_register(&ambarella_cs_timer_clksrc);
 #endif
-
+hz = get_apb_bus_freq_hz();
 	setup_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
 	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
 		NSEC_PER_SEC, ambarella_clkevt.shift);
@@ -236,7 +253,7 @@ u32 ambarella_timer_suspend(u32 level)
 		(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF00F));
 #else
 	amba_writel(TIMER_CTR_REG,
-		(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF0FF));
+		(ambarella_timer_pm.timer_ctr_reg & ~AMBARELLA_CE_TIMER_CTR_MASK));
 #endif
 
 	ambarella_timer_pm.timer1_status_reg = amba_readl(TIMER1_STATUS_REG);

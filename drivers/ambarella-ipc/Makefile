@@ -26,7 +26,12 @@
 
 IPCDIR := $(realpath $(shell pwd)/../ipc)
 ifeq ($(IPCDIR),)
-$(shell ln -s android/device/ambarella/ipc $(shell pwd)/../ipc)
+$(shell ln -sf android/device/ambarella/ipc $(shell pwd)/../ipc)
+IPCDIR := $(realpath $(shell pwd)/../ipc)
+endif
+
+ifeq ($(IPCDIR),)
+$(shell ln -sf ../../android/device/ambarella/ipc $(shell pwd)/../ipc)
 IPCDIR := $(realpath $(shell pwd)/../ipc)
 endif
 

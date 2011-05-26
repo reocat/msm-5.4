@@ -587,7 +587,9 @@ static int __init serial_ambarella_console_setup(struct console *co,
 	if (co->index < 0 || co->index >= ambarella_uart_ports.total_port_num)
 		co->index = 0;
 	port = (struct uart_port *)(ambarella_uart_ports.amba_port[co->index].port);
+#if !defined(CONFIG_MACH_BOSS)
 	ambarella_uart_ports.amba_port[co->index].set_pll();
+#endif
 	port->uartclk = ambarella_uart_ports.amba_port[co->index].get_pll();
 	port->ops = &serial_ambarella_pops;
 	port->private_data = &(ambarella_uart_ports.amba_port[co->index]);
@@ -656,7 +658,9 @@ static int __devinit serial_ambarella_probe(struct platform_device *pdev)
 	}
 
 	port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
+#if !defined(CONFIG_MACH_BOSS)
 	pinfo->amba_port[pdev->id].set_pll();
+#endif
 	port->uartclk = pinfo->amba_port[pdev->id].get_pll();
 	port->ops = &serial_ambarella_pops;
 	port->dev = &pdev->dev;
