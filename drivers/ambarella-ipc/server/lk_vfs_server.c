@@ -826,6 +826,40 @@ bool_t lk_sys_umount_1_svc(struct lk_sys_umount_arg *arg, int *res, struct svc_r
 	return 1;
 }
 
+/* lk_vfs_ioctl() */
+
+static bool_t __lk_vfs_ioctl_1_svc(struct lk_vfs_ioctl_arg *arg, int *res, SVCXPRT *svcxprt)
+{
+	extern int do_vfs_ioctl(struct file *filp, unsigned int fd, unsigned int cmd,
+		     unsigned long arg);
+	mm_segment_t oldfs;
+
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
+
+	/* FIXME: the arg->arg should be do cache operation depends on cmd. */
+
+	DEBUG_MSG("__lk_vfs_ioctl_1_svc, filp = 0x%x, fd = %d, cmd = %d, arg = 0x%x\n",
+			arg->filp, arg->fd, arg->cmd, arg->arg);
+
+	*res = do_vfs_ioctl((struct file *)arg->filp, arg->fd,
+				arg->cmd, arg->arg);
+
+	set_fs(oldfs);
+
+	svcxprt->rcode = IPC_SUCCESS;
+	ipc_svc_sendreply(svcxprt, NULL);
+
+	return 1;
+}
+
+bool_t lk_vfs_ioctl_1_svc(struct lk_vfs_ioctl_arg *arg, int *res, struct svc_req *rqstp)
+{
+	ipc_bh_queue((ipc_bh_f) __lk_vfs_ioctl_1_svc,
+		     arg, res, rqstp->svcxprt);
+	return 1;
+}
+
 /*
  * Service initialization.
  */
