@@ -81,7 +81,7 @@ static void __exit i_button_cleanup(void)
 	}
 }
 
-module_init(i_button_init);
+subsys_initcall_sync(i_button_init);
 module_exit(i_button_cleanup);
 
 MODULE_LICENSE("GPL");

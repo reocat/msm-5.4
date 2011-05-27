@@ -294,7 +294,7 @@ static void __exit i_flpart_cleanup(void)
 #endif
 }
 
-module_init(i_flpart_init);
+subsys_initcall_sync(i_flpart_init);
 module_exit(i_flpart_cleanup);
 
 MODULE_LICENSE("GPL");

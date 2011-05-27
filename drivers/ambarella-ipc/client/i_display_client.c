@@ -1045,7 +1045,7 @@ static void __exit i_display_dsp_cleanup(void)
 #endif
 }
 
-module_init(i_display_dsp_init);
+subsys_initcall_sync(i_display_dsp_init);
 module_exit(i_display_dsp_cleanup);
 
 MODULE_LICENSE("GPL");

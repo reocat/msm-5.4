@@ -273,7 +273,7 @@ static void __exit i_gpio_cleanup(void)
 	}
 }
 
-module_init(i_gpio_init);
+subsys_initcall_sync(i_gpio_init);
 module_exit(i_gpio_cleanup);
 
 MODULE_LICENSE("GPL");

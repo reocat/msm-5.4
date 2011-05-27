@@ -131,7 +131,11 @@ static void ipc_dump_data (unsigned char *data, int size)
 
 #endif
 
-static struct ipc_binder_s G_ipc_binder;	/* Global instance of binder */
+/* Global instance of binder */
+static struct ipc_binder_s G_ipc_binder = {
+	.init = 0,
+};
+
 struct ipc_binder_s *binder = &G_ipc_binder;
 static struct ipc_buf_s *ipc_buf = NULL;
 
@@ -441,6 +445,7 @@ int ipc_binder_init(void)
 {
 	memset(binder, 0x0, sizeof(*binder));
 
+	binder->init = 1;
 	binder->lu_prog_id = 1;
 
 	/* Set up the correct pointer to the streaming buffers */
@@ -560,6 +565,8 @@ CLIENT *ipc_clnt_prog_register(struct ipc_prog_s *prog)
 {
 	CLIENT *clnt = NULL;
 	unsigned long flags;
+
+	printk("aipc: register: %s %08x %d\n", prog->name, prog->prog, prog->vers);
 
 	if (prog == NULL)
 		return NULL;
@@ -982,6 +989,8 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	unsigned int flags;
 	unsigned int time_send_req = ipc_tick_get ();
 	unsigned int xid;
+
+	K_ASSERT(binder->init);
 
 	ipc_log_print(IPC_LOG_LEVEL_DEBUG, "lk: call_v => %08x %d %08x %08x",
 		(unsigned int ) clnt, procnum, (unsigned int ) in, (unsigned int ) out);
