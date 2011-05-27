@@ -39,16 +39,20 @@
 #include "../codecs/wm8994.h"
 
 static const struct snd_soc_dapm_widget i1evk_dapm_widgets[] = {
+	/* Output */
 	SND_SOC_DAPM_SPK("Ext Left Spk", NULL),
 	SND_SOC_DAPM_SPK("Ext Right Spk", NULL),
 	SND_SOC_DAPM_SPK("Ext Rcv", NULL),
 	SND_SOC_DAPM_HP("Headset Stereophone", NULL),
-	SND_SOC_DAPM_MIC("Headset Mic", NULL),
-	SND_SOC_DAPM_MIC("Main Mic", NULL),
-	SND_SOC_DAPM_MIC("2nd Mic", NULL),
-	SND_SOC_DAPM_LINE("Radio In", NULL),
 	SND_SOC_DAPM_LINE("Line Out 1", NULL),
 	SND_SOC_DAPM_LINE("Line Out 2", NULL),
+	/* Input */
+	SND_SOC_DAPM_MIC("Main Mic", NULL),
+	SND_SOC_DAPM_MIC("2nd Mic", NULL),
+	SND_SOC_DAPM_MIC("External Mic", NULL),
+	SND_SOC_DAPM_LINE("FM Left In", NULL),
+	SND_SOC_DAPM_LINE("FM Right In", NULL),
+	SND_SOC_DAPM_LINE("3G In", NULL),
 };
 
 static const struct snd_soc_dapm_route i1evk_dapm_routes[] = {
@@ -70,17 +74,21 @@ static const struct snd_soc_dapm_route i1evk_dapm_routes[] = {
 	{"Line Out 2", NULL, "LINEOUT2N"},
 	{"Line Out 2", NULL, "LINEOUT2P"},
 
-	{"IN1RN", NULL, "Headset Mic"},
-	{"IN1RP", NULL, "Headset Mic"},
+	{"IN1LN", NULL, "MICBIAS1"},
+	{"MICBIAS1", NULL, "Main Mic"},
 
-	{"IN1RN", NULL, "2nd Mic"},
-	{"IN1RP", NULL, "2nd Mic"},
+	{"IN1LP", NULL, "FM Left In"},
 
-	{"IN1LN", NULL, "Main Mic"},
-	{"IN1LP", NULL, "Main Mic"},
+	{"IN2LN", NULL, "MICBIAS2"},
+	{"MICBIAS2", NULL, "External Mic"},
 
-	{"IN2LN", NULL, "Radio In"},
-	{"IN2RN", NULL, "Radio In"},
+	{"IN1RN", NULL, "MICBIAS1"},
+	{"MICBIAS1", NULL, "2nd Mic"},
+
+	{"IN1RP", NULL, "FM Right In"},
+
+	{"IN2LP:VXRN", NULL, "3G In"},
+	{"IN2RP:VXRP", NULL, "3G In"},
 };
 
 static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
@@ -95,10 +103,6 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 	/* set up i1evk specific audio routes */
 	snd_soc_dapm_add_routes(dapm, i1evk_dapm_routes,
 			ARRAY_SIZE(i1evk_dapm_routes));
-
-	/* set endpoints to not connected */
-	snd_soc_dapm_nc_pin(dapm, "IN2LP:VXRN");
-	snd_soc_dapm_nc_pin(dapm, "IN2RP:VXRP");
 
 	snd_soc_dapm_sync(dapm);
 
