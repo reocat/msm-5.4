@@ -284,8 +284,6 @@ config AMBARELLA_PLL_PROC
 
 	  If you are not sure, say N here.
 
-
-
 endmenu
 
 menu "PPM Configuration"
@@ -328,6 +326,13 @@ config AMBARELLA_TIMER_HZ
 	default 100
 	help
 	  Please test and figure out what you need.
+
+config AMBARELLA_TIMER_HIGHRES
+	bool "High resolution timer wrapper Support"
+	default n
+	depends on HIGH_RES_TIMERS
+	help
+		Add high resolution timer wrapper for non-GPL
 
 config AMBARELLA_EXT_IRQ_NUM
 	int "External IRQ Num"
