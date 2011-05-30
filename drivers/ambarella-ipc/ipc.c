@@ -453,7 +453,7 @@ static void __exit ambarella_ipc_cleanup(void)
 	aipc_nl_cleanup();
 }
 
-fs_initcall(ambarella_ipc_init);
+subsys_initcall(ambarella_ipc_init);
 module_exit(ambarella_ipc_cleanup);
 
 MODULE_LICENSE("GPL");

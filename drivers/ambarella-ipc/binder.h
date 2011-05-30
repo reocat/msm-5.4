@@ -44,6 +44,8 @@ struct aipc_nl_prog
  */
 struct ipc_binder_s
 {
+	int init;
+
 	unsigned int pending_req;
 	unsigned int pending_rsp;
 

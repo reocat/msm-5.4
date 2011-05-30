@@ -472,7 +472,7 @@ static void __exit i_sdhc_cleanup(void)
 	}
 }
 
-module_init(i_sdhc_init);
+subsys_initcall_sync(i_sdhc_init);
 module_exit(i_sdhc_cleanup);
 
 MODULE_LICENSE("GPL");

@@ -83,6 +83,7 @@ enum clnt_stat
 	IPC_UNKNOWN = 12,
 	IPC_PROCESSING = 13,	/* IPC Call is processing */
 	IPC_CMD_QUEUE_FULL = 14,/* IPC command queue is full */
+	IPC_UNITIALIZED = 15,	/* IPC service is not initialized */
 };
 
 /*

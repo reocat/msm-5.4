@@ -280,7 +280,7 @@ static void __exit i_nand_cleanup(void)
 	}
 }
 
-module_init(i_nand_init);
+subsys_initcall_sync(i_nand_init);
 module_exit(i_nand_cleanup);
 
 MODULE_LICENSE("GPL");

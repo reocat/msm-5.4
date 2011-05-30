@@ -218,7 +218,7 @@ static void __exit i_touch_cleanup(void)
 	}
 }
 
-module_init(i_touch_init);
+subsys_initcall_sync(i_touch_init);
 module_exit(i_touch_cleanup);
 
 MODULE_LICENSE("GPL");
