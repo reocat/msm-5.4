@@ -34,6 +34,7 @@ obj-y						+= misc/ambcache.o
 obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= misc/bapi.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= misc/gdma.o
 obj-$(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)	+= misc/ambreglock.o
+obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= misc/highres_timer.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
