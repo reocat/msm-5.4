@@ -29,8 +29,8 @@ struct wm831x_power {
 	struct timer_list battery_update_timer;
 };
 
-#define	ANDROID_BAT_UPDATE_DELAY_MSEC	2000
-#define WM831X_VOLTAGE_BUF_NUM 200
+#define	ANDROID_BAT_UPDATE_DELAY_MSEC	5000
+#define WM831X_VOLTAGE_BUF_NUM 50
 static int uV_buffer[WM831X_VOLTAGE_BUF_NUM];
 static bool b_first_zero;
 static unsigned long uV_buf_counter;

@@ -383,7 +383,7 @@ int wm831x_auxadc_read(struct wm831x *wm831x, enum wm831x_auxadc input)
 		 * the notification of the interrupt may be delayed by
 		 * threaded IRQ handling. */
 		if (!wait_for_completion_timeout(&wm831x->auxadc_done,
-						 msecs_to_jiffies(500))) {
+						 msecs_to_jiffies(2000))) {
 			dev_err(wm831x->dev, "Timed out waiting for AUXADC\n");
 			ret = -EBUSY;
 			goto disable;
