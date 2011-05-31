@@ -40,7 +40,7 @@
 static DECLARE_COMPLETION(g_aes_irq_wait);
 static DECLARE_COMPLETION(g_des_irq_wait);
 
-static int config_polling_mode = 1;
+static int config_polling_mode = 0;
 module_param(config_polling_mode, int, S_IRUGO);
 
 static const char *ambdev_name =
