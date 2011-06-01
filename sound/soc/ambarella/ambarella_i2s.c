@@ -419,6 +419,7 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.ops = &ambarella_i2s_dai_ops,
+	.symmetric_rates = 1,
 };
 
 static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
