@@ -42,8 +42,6 @@ EXPORT_SYMBOL(ambarella_debug_level);
 u32 ambarella_debug_info = 0;
 EXPORT_SYMBOL(ambarella_debug_info);
 
-u32 ambarella_reboot_info = 0;
-EXPORT_SYMBOL(ambarella_reboot_info);
 unsigned long ambarella_debug_lookup_name(const char *name)
 {
 	return module_kallsyms_lookup_name(name);
@@ -221,8 +219,6 @@ void __init ambarella_map_io(void)
 		}
 #endif
 	}
-
-	ambarella_reboot_info = ambarella_debug_info + DEBUG_INFO_SIZE;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	if (!bhal_mapped) {

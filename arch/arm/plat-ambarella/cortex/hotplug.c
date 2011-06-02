@@ -92,7 +92,6 @@ void platform_cpu_die(unsigned int cpu)
 	get_ambarella_bstmem_info(&bstadd, &bstsize);
 	bstadd = ambarella_phys_to_virt(bstadd);
 
-	printk(KERN_NOTICE "CPU%u: shutdown\n", cpu);
 	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
 	ambcache_clean_range((void *)(bstadd), bstsize);
 	complete(&cpu_killed);
@@ -104,8 +103,8 @@ void platform_cpu_die(unsigned int cpu)
 		ambcache_inv_range((void *)(bstadd), bstsize);
 		smp_rmb();
 		phead_address[PROCESSOR_STATUS_0 + cpu]++;
-		smp_wmb();
 		ambcache_clean_range((void *)(bstadd), bstsize);
+		smp_wmb();
 		if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID)
 			break;
 #ifdef DEBUG
@@ -113,8 +112,8 @@ void platform_cpu_die(unsigned int cpu)
 #endif
 	}
 	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
-	smp_wmb();
 	ambcache_clean_range((void *)(bstadd), bstsize);
+	smp_wmb();
 }
 
 int platform_cpu_disable(unsigned int cpu)

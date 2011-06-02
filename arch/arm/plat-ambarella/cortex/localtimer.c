@@ -29,9 +29,16 @@
 #include <asm/smp_twd.h>
 #include <asm/localtimer.h>
 
+#include <hal/hal.h>
+
 void __cpuinit local_timer_setup(struct clock_event_device *evt)
 {
 	evt->irq = LOCAL_TIMER_IRQ;
-	twd_timer_setup(evt);
+	twd_timer_setup_rate(evt, amb_get_axi_clock_frequency(HAL_BASE_VP));
+}
+
+void local_timer_update_rate(struct clock_event_device *evt, u32 timer_rate)
+{
+	twd_timer_update_rate(evt, timer_rate);
 }
 

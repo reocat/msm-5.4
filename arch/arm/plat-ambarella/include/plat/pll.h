@@ -25,9 +25,44 @@
 #define __PLAT_AMBARELLA_PLL_H
 
 /* ==========================================================================*/
+#define AMBPLL_MAX_CMD_LENGTH			(32)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
+
+/* ==========================================================================*/
+static inline unsigned long cpufreq_scale_copy(unsigned long old,
+	u_int div, u_int mult)
+{
+#if BITS_PER_LONG == 32
+
+	u64 result = ((u64) old) * ((u64) mult);
+	do_div(result, div);
+	return (unsigned long) result;
+
+#elif BITS_PER_LONG == 64
+
+	unsigned long result = old * ((u64) mult);
+	result /= div;
+	return result;
+
+#endif
+};
+
+extern unsigned long loops_per_jiffy;
+static inline unsigned int ambarella_adjust_jiffies(unsigned long val,
+	unsigned int oldfreq, unsigned int newfreq)
+{
+	if (((val == AMBA_EVENT_PRE_CPUFREQ) && (oldfreq < newfreq)) ||
+		((val == AMBA_EVENT_POST_CPUFREQ) && (oldfreq != newfreq))) {
+		loops_per_jiffy = cpufreq_scale_copy(loops_per_jiffy,
+			oldfreq, newfreq);
+
+		return newfreq;
+	}
+
+	return oldfreq;
+}
 
 /* ==========================================================================*/
 extern int ambarella_init_pll(void);

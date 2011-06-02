@@ -25,8 +25,6 @@
 #ifndef __ASM_ARCH_SYSTEM_H
 #define __ASM_ARCH_SYSTEM_H
 
-#include <plat/bapi.h>
-
 /* ==========================================================================*/
 #include <plat/bapi.h>
 

@@ -191,7 +191,7 @@ static cycle_t ambarella_cs_timer_read(struct clocksource *cs)
 
 static struct clocksource ambarella_cs_timer_clksrc = {
 	.name		= "ambarella-cs-timer",
-	.shift		= 21,
+	.shift		= 24,
 	.rating		= AMBARELLA_TIMER_RATING,
 	.read		= ambarella_cs_timer_read,
 	.mask		= CLOCKSOURCE_MASK(32),
@@ -300,8 +300,6 @@ u32 ambarella_timer_resume(u32 level)
 		}
 
 #ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
-		/* Since AMBARELLA_TIMER_FREQ may be changed during suspend,
-		   we'll switch to a safe clocksource and update it! */
 		clocksource_change_rating(&ambarella_cs_timer_clksrc, 0);
 		ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
 			AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);

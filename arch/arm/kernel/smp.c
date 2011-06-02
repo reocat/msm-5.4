@@ -493,6 +493,11 @@ static void local_timer_setup(struct clock_event_device *evt)
 
 	clockevents_register_device(evt);
 }
+
+static void local_timer_update_rate(struct clock_event_device *evt,
+	u32 timer_rate)
+{
+}
 #endif
 
 void __cpuinit percpu_timer_setup(void)
@@ -504,6 +509,17 @@ void __cpuinit percpu_timer_setup(void)
 	evt->broadcast = smp_timer_broadcast;
 
 	local_timer_setup(evt);
+}
+
+void percpu_timer_update_rate(u32 timer_rate)
+{
+	unsigned int cpu = smp_processor_id();
+	struct clock_event_device *evt = &per_cpu(percpu_clockevent, cpu);
+	struct cpuinfo_arm *cpu_info = &per_cpu(cpu_data, cpu);
+
+	local_timer_update_rate(evt, timer_rate);
+
+	cpu_info->loops_per_jiffy = loops_per_jiffy;
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
