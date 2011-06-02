@@ -38,6 +38,9 @@ enum amb_event_type {
 
 	/* G_SENSOR Output Event*/
 	AMB_EV_GSENSOR_OUTPUT			= 0x00030000,
+
+	/* FB2 Event */
+	AMB_EV_FB2_PAN_DISPLAY			= 0x00040000,
 };
 
 struct amb_event {
