@@ -361,13 +361,8 @@ static snd_pcm_uframes_t ambarella_pcm_pointer(
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
-	snd_pcm_uframes_t x;
 
-	spin_lock_irq(&prtd->lock);
-	x = prtd->last_descr * runtime->period_size;
-	spin_unlock_irq(&prtd->lock);
-
-	return x;
+	return prtd->last_descr * runtime->period_size;
 }
 
 static int ambarella_pcm_open(struct snd_pcm_substream *substream)
