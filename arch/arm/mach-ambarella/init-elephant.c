@@ -428,21 +428,24 @@ static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
 	.eoc_iterm = 20,
 	.fast_ilim = 450,
 	.timeout = 360,
+	.enable_fet = 1,
 };
 
-#if 0
+#define WM8310_GPIO_START EXT_GPIO(0)
 static struct gpio elephant_wm8310_gpios[] = {
-		{GPIO_BOARD_START + 0, GPIOF_OUT_INIT_HIGH, "VDD_EN1"},
-		{GPIO_BOARD_START + 1, GPIOF_OUT_INIT_HIGH, "VDD_EN2"},
-		{GPIO_BOARD_START + 2, GPIOF_OUT_INIT_HIGH, "VDD_EN3"},
-		{GPIO_BOARD_START + 3, GPIOF_OUT_INIT_HIGH, "VDD_EN4"},
-		{GPIO_BOARD_START + 4, GPIOF_OUT_INIT_HIGH, "VDD_EN5"},
-		{GPIO_BOARD_START + 5, GPIOF_OUT_INIT_HIGH, "VDD_EN6"},
-		{GPIO_BOARD_START + 6, GPIOF_OUT_INIT_HIGH, "VDD_EN7"},
-		{GPIO_BOARD_START + 7, GPIOF_OUT_INIT_HIGH, "VDD_EN8"},
-		{GPIO_BOARD_START + 8, GPIOF_OUT_INIT_HIGH, "VDD_EN9"},
-};
+/* pmic gpio 0..5 can be controlled with OTP data */
+#if 0
+		{WM8310_GPIO_START + 0, GPIOF_OUT_INIT_HIGH, "VDD_EN1"},
+		{WM8310_GPIO_START + 1, GPIOF_OUT_INIT_HIGH, "VDD_EN2"},
+		{WM8310_GPIO_START + 2, GPIOF_OUT_INIT_HIGH, "VDD_EN3"},
+		{WM8310_GPIO_START + 3, GPIOF_OUT_INIT_HIGH, "VDD_EN4"},
+		{WM8310_GPIO_START + 4, GPIOF_OUT_INIT_HIGH, "VDD_EN5"},
+		{WM8310_GPIO_START + 5, GPIOF_OUT_INIT_HIGH, "VDD_EN6"},
 #endif
+		{WM8310_GPIO_START + 6, GPIOF_OUT_INIT_HIGH, "VDD_EN7"},
+		{WM8310_GPIO_START + 7, GPIOF_OUT_INIT_HIGH, "VDD_EN8"},
+		{WM8310_GPIO_START + 8, GPIOF_OUT_INIT_HIGH, "VDD_EN9"},
+};
 
 static int elephant_wm8310_pre_init(struct wm831x *wm831x)
 {
@@ -455,22 +458,20 @@ static int elephant_wm8310_pre_init(struct wm831x *wm831x)
 /* we only check the gpio's high value */
 static int elephant_wm8310_post_init(struct wm831x *wm831x)
 {
-	int ret = 0;
-	#if 0
-	int i;
-	printk("by pass post init\n");
+	int i, ret = 0;
 	if ((ret = gpio_request_array(elephant_wm8310_gpios, ARRAY_SIZE(elephant_wm8310_gpios)))) {
 		printk("Error request gpio for wm8310 on iOne\n");
 		return ret;
 	};
 	for (i = 0 ; i < ARRAY_SIZE(elephant_wm8310_gpios); i++) {
-		if (!gpio_get_value_cansleep(GPIO_BOARD_START + i)) {
-			printk("WARNING:gpio in wm8310 is not pulled high with hw init\n");
+		gpio_set_value_cansleep(elephant_wm8310_gpios[i].gpio, 1);
+		if (!gpio_get_value_cansleep(elephant_wm8310_gpios[i].gpio)) {
+			printk("WARNING:wm8310 gpio[%d] can not be pulled high.\n",
+				elephant_wm8310_gpios[i].gpio - WM8310_GPIO_START);
 			/* we hope it will work anyway */
 			//ret = -EINVAL;
 		};
 	}
-	#endif
 
 	return ret;
 }
@@ -891,7 +892,10 @@ static void __init ambarella_init_elephant(void)
 		case 2:
 			ambarella_board_generic.wifi_power.gpio_id = GPIO(128);
 			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
-			ambarella_board_generic.wifi_power.active_delay = 100;
+			ambarella_board_generic.wifi_power.active_delay = 300;
+			/* sdio slot */
+			ambarella_board_generic.wifi_sd_bus = 0;
+			ambarella_board_generic.wifi_sd_slot = 1;
 		case 1:
 			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
 			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;

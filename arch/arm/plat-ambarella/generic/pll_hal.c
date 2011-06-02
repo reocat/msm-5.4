@@ -123,6 +123,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
 	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"lowpower_cortex", AMB_OPERATING_MODE_LOW_POWER_WITH_CORTEX},
 	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
