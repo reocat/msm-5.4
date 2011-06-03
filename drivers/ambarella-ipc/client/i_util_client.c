@@ -250,7 +250,7 @@ int ipc_get_exfb(void **mem, unsigned int *size)
 
 	stat = lk_get_exfb_1(NULL, &exfb, IPC_i_util);
 	if (stat != IPC_SUCCESS) {
-		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		pr_err("%s: ipc error: %d (%s) (%p)\n",__FUNCTION__, stat, ipc_strerror(stat), IPC_i_util);
 		return -stat;
 	}
 
@@ -474,7 +474,8 @@ static void __exit i_util_cleanup(void)
 	}
 }
 
-module_init(i_util_init);
+//module_init(i_util_init);
+subsys_initcall_sync(i_util_init);
 module_exit(i_util_cleanup);
 
 MODULE_LICENSE("GPL");
