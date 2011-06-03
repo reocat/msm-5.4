@@ -1635,7 +1635,7 @@ static int ambarella_udc_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	}
 
 	/* request in processing */
-	if((ep->data_desc == req->data_desc) && (ep->dir = USB_DIR_IN)) {
+	if((ep->data_desc == req->data_desc) && (ep->dir == USB_DIR_IN)) {
 		int try_count = 3;
 		struct ambarella_data_desc *last_data_desc;
 		last_data_desc = ambarella_get_last_desc(ep);
