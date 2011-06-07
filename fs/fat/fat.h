@@ -111,6 +111,10 @@ struct msdos_inode_info {
 	loff_t i_pos;		/* on-disk position of directory entry or 0 */
 	struct hlist_node i_fat_hash;	/* hash by i_location */
 	struct inode vfs_inode;
+#if defined(CONFIG_FAT_AMBARELLA_IMPROVEMENT)
+	int i_flag;
+	struct inode * i_dir;
+#endif
 };
 
 struct fat_slot_info {
@@ -343,6 +347,16 @@ extern int fat_sync_bhs(struct buffer_head **bhs, int nr_bhs);
 
 int fat_cache_init(void);
 void fat_cache_destroy(void);
+
+#if defined(CONFIG_FAT_AMBARELLA_IMPROVEMENT)
+extern int  is_dir_support_del(struct inode *dir);
+extern int del_file_inode_in_dir(struct inode *dir);
+extern int fat_free_del_clusters(struct super_block *sb, int cluster);
+extern int mark_del_dir(struct inode *inode);
+extern int del_del_dir(struct inode *inode);
+extern void add_del_file(struct inode *inode,struct inode *dir, int num);
+extern void del_del_file(struct inode *inode, int num);
+#endif
 
 /* helper for printk */
 typedef unsigned long long	llu;

@@ -98,10 +98,22 @@ struct __fat_dirent {
  */
 #define VFAT_IOCTL_READDIR_BOTH		_IOR('r', 1, struct __fat_dirent[2])
 #define VFAT_IOCTL_READDIR_SHORT	_IOR('r', 2, struct __fat_dirent[2])
+
+#if defined(CONFIG_FAT_AMBARELLA_IMPROVEMENT)
+//add for fast del dir
+#define VFAT_IOCTL_MARK_DIR	_IOR('r', 5, struct __fat_dirent[2])
+#define VFAT_IOCTL_DEL_DIR	_IOR('r', 6, struct __fat_dirent[2])
+#endif
+
 /* <linux/videotext.h> has used 0x72 ('r') in collision, so skip a few */
 #define FAT_IOCTL_GET_ATTRIBUTES	_IOR('r', 0x10, __u32)
 #define FAT_IOCTL_SET_ATTRIBUTES	_IOW('r', 0x11, __u32)
 #define VFAT_IOCTL_GET_VOLUME_ID	_IOR('r', 0x12, __u32)
+
+#if defined(CONFIG_FAT_AMBARELLA_IMPROVEMENT)
+#define FAT_IOCTL_RECORD_POS	_IOW('r', 0x15, __u32)
+#define FAT_IOCTL_LOGIC_MOVE	_IOW('r', 0x16, __u32)
+#endif
 
 struct fat_boot_sector {
 	__u8	ignored[3];	/* Boot strap short or near jump */
