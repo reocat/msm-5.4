@@ -103,6 +103,13 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	.max_work_count		= 5,
 	.mii_id			= -1,
 	.phy_id			= 0x00008201,
+	.phy_irq	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
 	.mii_power	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
