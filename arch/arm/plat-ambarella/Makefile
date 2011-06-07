@@ -59,6 +59,7 @@ obj-y						+= generic/uart.o
 obj-y						+= generic/udc.o
 obj-y						+= generic/wdt.o
 obj-y						+= generic/adb.o
+
 ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
 obj-y						+= generic/pll_hal.o
 else

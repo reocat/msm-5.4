@@ -99,7 +99,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		pr_debug("CPU[%d]: 0x%08x.\n", cpu,
 			phead_address[PROCESSOR_STATUS_0 + cpu]);
 	} else {
-		pr_err("CPU[%d] isn't ready: 0x%08x 0x%08x.\n", cpu,
+		pr_err("CPU[%d] after [%d] is: 0x%08x 0x%08x.\n", cpu, timeout,
 			phead_address[PROCESSOR_START_0 + cpu],
 			phead_address[PROCESSOR_STATUS_0 + cpu]);
 		retval = -EPERM;
