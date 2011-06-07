@@ -19,7 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-
+#include <linux/kthread.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -120,12 +120,23 @@ struct ambarella_sd_mmc_info {
 	struct semaphore		system_event_sem;
 };
 
+#if defined(CONFIG_AMBARELLA_IPC)
+struct bh_cd_irq_s {
+	struct task_struct	*task;
+	wait_queue_head_t	wait;
+	int			cnt;
+};
+#endif
+
 struct ambarella_sd_controller_info {
 	unsigned char __iomem 		*regbase;
 	struct device			*dev;
 	struct resource			*mem;
 	unsigned int			irq;
 	spinlock_t			lock;
+#if defined(CONFIG_AMBARELLA_IPC)
+	struct bh_cd_irq_s		bh_cd_irq;
+#endif
 
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
@@ -786,9 +797,29 @@ static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
 }
 
+#if defined(CONFIG_AMBARELLA_IPC)
+static int ambarella_sd_card_in_slot(struct mmc_host *mmc)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+	struct ambarella_sd_controller_info	*pinfo;
+	u32					val;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
+				GPIO_FUNC_SW_INPUT);
+	val = ambarella_gpio_get(pslotinfo->plat_info->gpio_cd.irq_gpio);
+
+	ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
+				pslotinfo->plat_info->gpio_cd.irq_gpio_mode);
+
+	return !val;
+}
+#endif
+
 static void ambarella_sd_data_done(
 	struct ambarella_sd_mmc_info *pslotinfo,
-	u16 nis, 
+	u16 nis,
 	u16 eis)
 {
 	struct mmc_data				*data = NULL;
@@ -905,6 +936,57 @@ static void ambarella_sd_cmd_done(
 	}
 }
 
+#if defined(CONFIG_AMBARELLA_IPC)
+#define VIC2_INT_VEC_OFFSET	32
+#define VIC3_INT_VEC_OFFSET	64
+
+static inline u32 vic_check(u32 line)
+{
+	if (line < 32) {
+		return amba_readl(VIC_INTEN_REG) & (0x1 << line);
+#if (VIC_INSTANCES >= 2)
+	} else if (line < VIC2_INT_VEC_OFFSET + 32) {
+		u32 val = (0x1 << (line - VIC2_INT_VEC_OFFSET));
+		return amba_readl(VIC2_INTEN_REG) & val;
+#endif
+#if (VIC_INSTANCES >= 3)
+	} else if (line < VIC3_INT_VEC_OFFSET + 32) {
+		u32 val = (0x1 << (line - VIC3_INT_VEC_OFFSET));
+		return amba_readl(VIC3_INTEN_REG) & val;
+#endif
+	}
+	return 0;
+}
+
+static inline void ambarella_sd_vic_ctrl(u32 line, u32 enable)
+{
+	if (line < 32) {
+		if (enable)
+			amba_writel(VIC_INTEN_REG ,(0x1 << line));
+		else
+			amba_writel(VIC_INTEN_CLR_REG ,(0x1 << line));
+#if (VIC_INSTANCES >= 2)
+	} else if (line < VIC2_INT_VEC_OFFSET + 32) {
+		u32 val = (0x1 << (line - VIC2_INT_VEC_OFFSET));
+		if (enable)
+			amba_writel(VIC2_INTEN_REG ,val);
+		else
+			amba_writel(VIC2_INTEN_CLR_REG ,val);
+#endif
+#if (VIC_INSTANCES >= 3)
+	} else if (line < VIC3_INT_VEC_OFFSET + 32) {
+		u32 val = (0x1 << (line - VIC3_INT_VEC_OFFSET));
+		if (enable)
+			amba_writel(VIC3_INTEN_REG ,val);
+		else
+			amba_writel(VIC3_INTEN_CLR_REG ,val);
+#endif
+	}
+
+	return;
+}
+#endif
+
 static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 {
 	struct ambarella_sd_controller_info	*pinfo;
@@ -918,6 +1000,12 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 
 	/* Read the interrupt registers */
 	amba_read2w(pinfo->regbase + SD_NIS_OFFSET, &nis, &eis);
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	if ((nis & SD_NIS_CARD) != SD_NIS_CARD &&
+	    (vic_check(pinfo->irq - 32)) != 0)
+		goto ambarella_sd_irq_exit;
+#endif
 
 	if (unlikely(nis == 0)) {
 		goto ambarella_sd_irq_exit;
@@ -944,6 +1032,15 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 
 	ambsd_dbg(pslotinfo, "%s nis = 0x%x, eis = 0x%x & %d:%d\n", __func__,
 		nis, eis, pslotinfo->state, enabled);
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	if ((nis & SD_NIS_CMD_DONE) || (nis & SD_NIS_XFR_DONE)) {
+		if (pslotinfo->mrq && pslotinfo->mrq->cmd) {
+			/* Normal Interrupt from Linux */
+		} else
+			goto ambarella_sd_irq_exit;
+	}
+#endif
 
 	/* Check for card detection interrupt */
 	if (!ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd) &&
@@ -1023,8 +1120,21 @@ static int ambarella_sd_gpio_cd_check_val(
 static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo;
+#if defined(CONFIG_AMBARELLA_IPC)
+	struct ambarella_sd_controller_info	*pinfo;
+#endif
 
 	pslotinfo = (struct ambarella_sd_mmc_info *)devid;
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	if (pinfo->bh_cd_irq.task) {
+		pinfo->bh_cd_irq.cnt = pslotinfo->slot_id + 1;
+		wake_up(&pinfo->bh_cd_irq.wait);
+		return IRQ_HANDLED;
+	}
+#endif
 	if (pslotinfo->valid &&
 		(ambarella_sd_gpio_cd_check_val(pslotinfo) != -1)) {
 		mmc_detect_change(pslotinfo->mmc,
@@ -1033,6 +1143,30 @@ static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 
 	return IRQ_HANDLED;
 }
+
+#if defined(CONFIG_AMBARELLA_IPC)
+static int ambarella_sd_cd_irq_thread(void *arg)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo;
+	struct ambarella_sd_controller_info	*pinfo;
+	unsigned long flags;
+
+	pinfo = (struct ambarella_sd_controller_info *)arg;
+
+	while (1) {
+		wait_event(pinfo->bh_cd_irq.wait, pinfo->bh_cd_irq.cnt);
+		pslotinfo = (struct ambarella_sd_mmc_info *)
+				pinfo->pslotinfo[pinfo->bh_cd_irq.cnt - 1];
+
+		local_irq_save(flags);
+		pinfo->bh_cd_irq.cnt = 0;
+		local_irq_restore(flags);
+		ambarella_sd_gpio_cd_irq(pinfo->irq, pslotinfo);
+	}
+
+	return 0;
+}
+#endif
 
 static void ambarella_sd_send_cmd(
 	struct ambarella_sd_mmc_info *pslotinfo,
@@ -1385,6 +1519,11 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		pinfo->controller_ios.vdd = ios->vdd;
 	}
 
+#if defined(CONFIG_AMBARELLA_IPC)
+	/* Clock changed by Itron, force to re-setup. */
+	if ((amba_readw(pinfo->regbase + SD_CLK_OFFSET) & SD_CLK_EN) == 0)
+		pinfo->controller_ios.clock = 0;
+#endif
 	if ((pinfo->controller_ios.clock != ios->clock) ||
 		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
 		msleep(10);
@@ -1453,6 +1592,10 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	ambarella_sd_vic_ctrl(pinfo->irq - 32, 0);
+#endif
 
 	pslotinfo->mrq = mrq;
 
@@ -1530,6 +1673,9 @@ ambarella_sd_request_need_reset:
 ambarella_sd_request_exit:
 	pslotinfo->mrq = NULL;
 
+#if defined(CONFIG_AMBARELLA_IPC)
+	/* ambarella_sd_vic_ctrl(pinfo->irq - 32, 1); */
+#endif
 	ambarella_sd_release_bus(mmc);
 
 	mmc_request_done(mmc, mrq);
@@ -1540,6 +1686,9 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.set_ios	= ambarella_sd_ios,
 	.get_ro		= ambarella_sd_get_ro,
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
+#if defined(CONFIG_AMBARELLA_IPC)
+	.get_cd		= ambarella_sd_card_in_slot,
+#endif
 };
 
 static int ambarella_sd_system_event(struct notifier_block *nb,
@@ -1878,6 +2027,15 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				pslotinfo->plat_info->gpio_cd.irq_line);
 				goto sd_errorCode_free_host;
 			}
+#if defined(CONFIG_AMBARELLA_IPC)
+			if (!pinfo->bh_cd_irq.task) {
+				init_waitqueue_head(&pinfo->bh_cd_irq.wait);
+				pinfo->bh_cd_irq.task =
+					kthread_run(ambarella_sd_cd_irq_thread,
+						(void *) pinfo,
+						"sd_cd_irq%d_bh", pinfo->irq);
+			}
+#endif
 		}
 	}
 
@@ -1916,6 +2074,12 @@ sd_errorCode_free_host:
 		if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
 			free_irq(pslotinfo->plat_info->gpio_cd.irq_line, pslotinfo);
 			gpio_free(pslotinfo->plat_info->gpio_cd.irq_gpio);
+#if defined(CONFIG_AMBARELLA_IPC)
+			if (pinfo->bh_cd_irq.task) {
+				kthread_stop(pinfo->bh_cd_irq.task);
+				pinfo->bh_cd_irq.task = NULL;
+			}
+#endif
 		}
 		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1)
 			gpio_free(pslotinfo->plat_info->gpio_wp.gpio_id);

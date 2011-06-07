@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.6 Kernel Configuration
-# Thu May 26 11:29:38 2011
+# Tue Jun  7 16:55:48 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1373,6 +1373,7 @@ CONFIG_MSDOS_FS=y
 CONFIG_VFAT_FS=y
 CONFIG_FAT_DEFAULT_CODEPAGE=437
 CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+CONFIG_FAT_AMBARELLA_IMPROVEMENT=y
 # CONFIG_NTFS_FS is not set
 
 #

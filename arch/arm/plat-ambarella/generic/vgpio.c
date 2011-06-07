@@ -43,7 +43,8 @@
 
 #include <linux/aipc/i_gpio.h>
 
-#define CONFIG_AMBARELLA_GPIO_FORCE_LOCK	0
+#define CONFIG_AMBARELLA_GPIO_CAN_SLEEP		(0)
+#define CONFIG_AMBARELLA_GPIO_ACCESS_MODE	(0)
 
 #if 0
 #define amba_dbg printk
@@ -268,14 +269,14 @@ static int ambarella_gpio_chip_get(struct gpio_chip *chip,
 amba_dbg("\n\n%s\n\n",__func__);
 	ambarella_chip = to_ambarella_gpio_chip(chip);
 
-#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
+#if (CONFIG_AMBARELLA_GPIO_CAN_SLEEP == 1)
 	mutex_lock(&ambarella_gpio_lock);
 #endif
 
 	retval = ambarella_gpio_inline_get(ambarella_chip->mem_base,
 		offset);
 
-#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
+#if (CONFIG_AMBARELLA_GPIO_CAN_SLEEP == 1)
 	mutex_unlock(&ambarella_gpio_lock);
 #endif
 
@@ -312,13 +313,13 @@ static void ambarella_gpio_chip_set(struct gpio_chip *chip,
 amba_dbg("\n\n%s\n\n",__func__);
 	ambarella_chip = to_ambarella_gpio_chip(chip);
 
-#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
+#if (CONFIG_AMBARELLA_GPIO_CAN_SLEEP == 1)
 	mutex_lock(&ambarella_gpio_lock);
 #endif
 
 	ambarella_gpio_inline_set(ambarella_chip->mem_base, offset, val);
 
-#if (CONFIG_AMBARELLA_GPIO_FORCE_LOCK == 1)
+#if (CONFIG_AMBARELLA_GPIO_CAN_SLEEP == 1)
 	mutex_unlock(&ambarella_gpio_lock);
 #endif
 }
@@ -381,7 +382,7 @@ static void ambarella_gpio_chip_dbg_show(struct seq_file *s,
 		.dbg_show		= ambarella_gpio_chip_dbg_show,	\
 		.base			= base_gpio,			\
 		.ngpio			= GPIO_BANK_SIZE,		\
-		.can_sleep		= CONFIG_AMBARELLA_GPIO_FORCE_LOCK,	\
+		.can_sleep		= CONFIG_AMBARELLA_GPIO_CAN_SLEEP,	\
 		.exported		= 0,				\
 	},								\
 	.mem_base			= reg_base,			\
@@ -752,14 +753,46 @@ amba_dbg("\n\n%s\n\n",__func__);
 }
 #endif
 /* ==========================================================================*/
-int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
+static inline int ambarella_gpio_check(struct ambarella_gpio_io_info *pinfo)
 {
-	int					requested = 1;
+	int					retval = 0;
 
-amba_dbg("\n\n%s\n\n",__func__);
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
-		return -1;
+		retval = -1;
+		goto ambarella_gpio_check_exit;
+	}
+
+	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS)) {
+		amba_dbg("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
+		retval = -1;
+		goto ambarella_gpio_check_exit;
+	}
+
+ambarella_gpio_check_exit:
+	return retval;
+}
+
+static inline void ambarella_gpio_delay(int delay)
+{
+	if (delay > 0) {
+#if (CONFIG_AMBARELLA_GPIO_CAN_SLEEP == 1)
+		msleep(delay);
+#else
+		mdelay(delay);
+#endif
+	}
+}
+
+int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
+{
+	int retval = 0;
+
+amba_dbg("\n\n%s\n\n",__func__);
+
+	retval = ambarella_gpio_check(pinfo);
+	if (retval){
+		goto ambarella_set_gpio_output_exit;
 	}
 
 	amba_dbg("%s: Gpio[%d] %s, level[%s], delay[%dms].\n",
@@ -769,14 +802,12 @@ amba_dbg("\n\n%s\n\n",__func__);
 		pinfo->active_level ? "HIGH" : "LOW",
 		pinfo->active_delay);
 
-	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS)){
-		return -1;
-	}
-
+#if (CONFIG_AMBARELLA_GPIO_ACCESS_MODE == 1)
+	retval = 1;
 	if (gpio_request(pinfo->gpio_id, __func__)) {
 		printk("%s: Cannot request gpio%d!\n",
 			__func__, pinfo->gpio_id);
-		requested = 0;
+		retval = 0;
 	}
 
 	if (on){
@@ -787,40 +818,62 @@ amba_dbg("\nClr GPIO Pin\n");
 		gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
 	}
 
-	if (pinfo->active_delay)
-		msleep(pinfo->active_delay);
-
-	if (requested)
+	if (retval) {
 		gpio_free(pinfo->gpio_id);
+		retval = 0;
+	}
+#else
+	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
+	if (on){
+		ambarella_gpio_set(pinfo->gpio_id, pinfo->active_level);
+	} else {
+		ambarella_gpio_set(pinfo->gpio_id, !pinfo->active_level);
+	}
+#endif
 
-	return 0;
+	ambarella_gpio_delay(pinfo->active_delay);
+
+ambarella_set_gpio_output_exit:
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_set_gpio_output);
 
 u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 {
-	int					requested = 1;
-	u32					gpio_value;
+	int retval = 0;
+	u32 gpio_value = 0;
 
 amba_dbg("\n\n%s\n\n",__func__);
-	if (pinfo == NULL) {
-		printk("%s: pinfo is NULL.\n", __func__);
-		return 0;
+
+	retval = ambarella_gpio_check(pinfo);
+	if (retval){
+		goto ambarella_get_gpio_input_exit;
 	}
 
+#if (CONFIG_AMBARELLA_GPIO_ACCESS_MODE == 1)
+	retval = 1;
 	if (gpio_request(pinfo->gpio_id, __func__)) {
 		printk("%s: Cannot request gpio%d!\n",
 			__func__, pinfo->gpio_id);
-		requested = 0;
+		retval = 0;
 	}
 
 	gpio_direction_input(pinfo->gpio_id);
-	if (pinfo->active_delay)
-		msleep(pinfo->active_delay);
-	gpio_value = gpio_get_value(pinfo->gpio_id);
+#else
+	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_INPUT);
+#endif
 
-	if (requested)
+	ambarella_gpio_delay(pinfo->active_delay);
+
+#if (CONFIG_AMBARELLA_GPIO_ACCESS_MODE == 1)
+	gpio_value = gpio_get_value(pinfo->gpio_id);
+	if (retval) {
 		gpio_free(pinfo->gpio_id);
+		retval = 0;
+	}
+#else
+	gpio_value = ambarella_gpio_get(pinfo->gpio_id);
+#endif
 
 	amba_dbg("%s: {gpio[%d], level[%s], delay[%dms]} get[%d].\n",
 		__func__,
@@ -829,18 +882,20 @@ amba_dbg("\n\n%s\n\n",__func__);
 		pinfo->active_delay,
 		gpio_value);
 
+ambarella_get_gpio_input_exit:
 	return (gpio_value == pinfo->active_level) ? 1 : 0;
 }
 EXPORT_SYMBOL(ambarella_get_gpio_input);
 
 int ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 {
-	int					requested = 1;
+	int					retval = 0;
 
 amba_dbg("\n\n%s\n\n",__func__);
-	if (pinfo == NULL) {
-		pr_err("%s: pinfo is NULL.\n", __func__);
-		return -1;
+
+	retval = ambarella_gpio_check(pinfo);
+	if (retval){
+		goto ambarella_set_gpio_reset_exit;
 	}
 
 	amba_dbg("%s: Reset gpio[%d], level[%s], delay[%dms].\n",
@@ -849,28 +904,39 @@ amba_dbg("\n\n%s\n\n",__func__);
 		pinfo->active_level ? "HIGH" : "LOW",
 		pinfo->active_delay);
 
-	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= ARCH_NR_GPIOS)){
-		printk("\n%s, %d\n",__func__,__LINE__);
-		return -1;
-	}
-
+#if (CONFIG_AMBARELLA_GPIO_ACCESS_MODE == 1)
+	retval = 1;
 	if (gpio_request(pinfo->gpio_id, __func__)) {
 		printk("%s: Cannot request gpio%d!\n",
 			__func__, pinfo->gpio_id);
-		requested = 0;
+		retval = 0;
 	}
 
 	gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
-	if (pinfo->active_delay)
-		msleep(pinfo->active_delay);
+#else
+	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(pinfo->gpio_id, pinfo->active_level);
+#endif
+
+	ambarella_gpio_delay(pinfo->active_delay);
+
+#if (CONFIG_AMBARELLA_GPIO_ACCESS_MODE == 1)
 	gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
-	if (pinfo->active_delay)
-		msleep(pinfo->active_delay);
+#else
+	ambarella_gpio_set(pinfo->gpio_id, !pinfo->active_level);
+#endif
 
-	if (requested)
+	ambarella_gpio_delay(pinfo->active_delay);
+
+#if (CONFIG_AMBARELLA_GPIO_ACCESS_MODE == 1)
+	if (retval) {
 		gpio_free(pinfo->gpio_id);
+		retval = 0;
+	}
+#endif
 
-	return 0;
+ambarella_set_gpio_reset_exit:
+	return retval;
 }
 EXPORT_SYMBOL(ambarella_set_gpio_reset);
 
@@ -879,6 +945,7 @@ int ambarella_is_valid_gpio_irq(struct ambarella_gpio_irq_info *pinfo)
 	int					bvalid = 0;
 
 amba_dbg("\n\n%s\n\n",__func__);
+
 	if (pinfo == NULL) {
 		printk("%s: pinfo is NULL.\n", __func__);
 		goto ambarella_is_valid_gpio_irq_exit;

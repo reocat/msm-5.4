@@ -523,13 +523,15 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_i2s0,
+	&ambarella_sd0,
+	&ambarella_sd1,
 	&ambarella_uart2,
 #ifdef CONFIG_TOUCHSCREEN_AMBA_VTOUCH
 	&amba_vtouch,
 #endif
 #ifdef CONFIG_INPUT_AMBA_VBUTTON
 	&amba_vbutton,
-#endif	
+#endif
 };
 
 static struct platform_device *ambarella_pwm_devices[] __initdata = {
@@ -646,6 +648,7 @@ static struct ambarella_key_table boss_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
+#ifndef CONFIG_INPUT_AMBA_VBUTTON
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_POWER,	3,	0x001a0015}}},	//POWER
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_HOME,	3,	0x001a0061}}},	//HOME
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_MENU,	3,	0x001a004d}}},	//MENU
@@ -667,6 +670,7 @@ static struct ambarella_key_table boss_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_MENU,	1,	1,	GPIO(121),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	1,	1,	GPIO(122),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(123),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+#endif
 
 	{AMBINPUT_END},
 };
@@ -677,7 +681,9 @@ static struct ambarella_key_table boss_keymap_vendor1[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
+#ifndef CONFIG_INPUT_AMBA_VBUTTON
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	0,	1,	GPIO(186),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+#endif
 
 	{AMBINPUT_END},
 };
@@ -688,6 +694,7 @@ static struct ambarella_key_table boss_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
+#ifndef CONFIG_INPUT_AMBA_VBUTTON
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	2,	2500,	4095}}},
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,		0,	2,	1750,	2050}}},	//HOME
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,		0,	2,	1350,	1650}}},	//MENU
@@ -701,6 +708,7 @@ static struct ambarella_key_table boss_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	310,	610}}},		//RECORD
 
 	//{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+#endif
 
 	{AMBINPUT_END},
 };
@@ -729,6 +737,7 @@ struct platform_device boss_board_input = {
 };
 
 /* ==========================================================================*/
+#if 0
 static struct pcf857x_platform_data boss_board_ext_gpio0_pdata = {
 	.gpio_base	= EXT_GPIO(0),
 };
@@ -756,14 +765,48 @@ static struct i2c_board_info boss_board_ext_i2c_info = {
 	.flags			= 0,
 	.platform_data		= &boss_board_ext_i2c_pdata,
 };
-
+#endif
 /* ==========================================================================*/
 static void __init ambarella_init_boss(void)
 {
-	int					i, ret;
+	int					i;
 	int					use_bub_default = 1;
 
 	ambarella_init_machine("Boss");
+
+	/* Config SD*/
+	ambarella_platform_sd_controller0.clk_limit = 25000000;
+	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[0].cd_delay = 1000;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val	= GPIO_LOW,
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+	ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[1].cd_delay = 1000;
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_val	= GPIO_LOW,
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
+	ambarella_platform_sd_controller1.clk_limit = 25000000;
+	ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
+	ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(106);
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = GPIO(129);
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(129);
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_val	= GPIO_LOW,
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = GPIO(128);
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
