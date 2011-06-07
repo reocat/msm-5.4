@@ -282,6 +282,7 @@ struct wm831x {
 	 */
 	struct mutex key_lock;
 	unsigned int locked:1;
+	u16 auxadc_data;
 };
 
 /* Device I/O API */
