@@ -526,6 +526,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_sd0,
 	&ambarella_sd1,
 	&ambarella_uart2,
+	&ambarella_udc0,
+	&ambarella_fsg_device0,
+	&ambarella_usb_device0,
 #ifdef CONFIG_TOUCHSCREEN_AMBA_VTOUCH
 	&amba_vtouch,
 #endif
