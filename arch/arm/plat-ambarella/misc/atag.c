@@ -242,13 +242,21 @@ void __init ambarella_map_io(void)
 			hal_desc.virtual = halv;
 			hal_desc.pfn = __phys_to_pfn(halp);
 			hal_desc.length = hals;
+#if defined(CONFIG_MACH_BOSS)
+			hal_desc.type = MT_MEMORY_NONCACHED;
+#else
 			hal_desc.type = MT_MEMORY;
+#endif
 			iotable_init(&hal_desc, 1);
 			bhal_mapped = 1;
 			hal_type = hal_desc.type;
 			ambarella_hal_info.remapped = bhal_mapped;
 		} else {
+#if defined(CONFIG_MACH_BOSS)
+			hal_type = MT_MEMORY_NONCACHED;
+#else
 			hal_type = MT_MEMORY;
+#endif
 		}
 	} else {
 		ambarella_hal_info.remapped = bhal_mapped;
@@ -457,12 +465,13 @@ EXPORT_SYMBOL(get_ambarella_dspmem_size);
 
 u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize)
 {
+#if !defined(CONFIG_MACH_BOSS)
 	if ((ambarella_bst_info.size == 0) ||
 		(ambarella_bst_info.physaddr < get_ambarella_ppm_phys()) ||
 		((ambarella_bst_info.physaddr + ambarella_bst_info.size) >
 		(get_ambarella_ppm_phys() + get_ambarella_ppm_size())))
 		return AMB_BST_INVALID;
-
+#endif
 	*bstadd = ambarella_bst_info.physaddr;
 	*bstsize = ambarella_bst_info.size;
 
