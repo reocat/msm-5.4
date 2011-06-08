@@ -203,6 +203,7 @@ typedef struct SVCXPRT
 			struct completion cmpl;
 			struct list_head list;
 			unsigned int clnt_pid;	/* Used to save pid of client program */
+			int timeout;
 		} l;
 		unsigned char reserved[256];	/* Padded up to 256 bytes */
 	} __attribute__((packed)) u;

@@ -801,6 +801,7 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 	svcxprt->u.l.clnt_pid = clnt_pid;
 	svcxprt->compl_arg = current;
 	svcxprt->time[IPC_TIME_SEND_REQEST] = time_send_req;
+	svcxprt->u.l.timeout = 0;
 	init_completion(&svcxprt->u.l.cmpl);
 
 	ipc_spin_lock(ipc_buf->lock, &flags, LOCK_POS_LU_CLNT_OUT);
@@ -847,9 +848,12 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 			rval = IPC_SUCCESS;
 		} else {
 			rval = IPC_TIMEDOUT;
+			svcxprt->u.l.timeout = 1;
 		}
 
-		ipc_clnt_call_complete(svcxprt, rval);
+		if(rval != IPC_TIMEDOUT) {
+			ipc_clnt_call_complete(svcxprt, rval);
+		}
 	} else {
 		svcxprt->proc_type |= IPC_CALL_ASYNC_AUTO_DEL;
 	}
@@ -1102,9 +1106,12 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 			rval = (enum clnt_stat) svcxprt->rcode;
 		} else {
 			rval = IPC_TIMEDOUT;
+			svcxprt->u.l.timeout = 1;
 		}
 
-		ipc_clnt_call_complete(svcxprt, rval);
+		if(rval != IPC_TIMEDOUT) {
+			ipc_clnt_call_complete(svcxprt, rval);
+		}
 	} else {
 		if (req) {
 			req->svcxprt = svcxprt;
@@ -1147,8 +1154,12 @@ enum clnt_stat ipc_clnt_wait_for_completion(CLIENT *clnt,
 		unsigned long success;
 
 		/* Wait for the remote procedure to complete */
-		success = wait_for_completion_timeout(&svcxprt->u.l.cmpl,
-						   msecs_to_jiffies(timeout));
+		if(timeout != 0) {
+			success = wait_for_completion_timeout(&svcxprt->u.l.cmpl,
+							   msecs_to_jiffies(timeout));
+		} else {
+			success = try_wait_for_completion(&svcxprt->u.l.cmpl);
+		}
 		if (success) {
 			rval = (enum clnt_stat) svcxprt->rcode;
 		} else {
@@ -1275,10 +1286,14 @@ static void ipc_binder_got_reply(SVCXPRT *svcxprt)
 		ipc_bh_queue((ipc_bh_f) ipc_clnt_call_complete_bh,
 			     NULL, NULL, svcxprt);
 	} else {
-		/* Just wake up the caller who is blocked by the event flag. */
-		/* Note that we're in ISR */
-		svcxprt->rcode = IPC_SUCCESS;
-		complete(&svcxprt->u.l.cmpl);
+		if(svcxprt->u.l.timeout) {
+			ipc_free(svcxprt);
+		} else {
+			/* Just wake up the caller who is blocked by the event flag. */
+			/* Note that we're in ISR */
+			svcxprt->rcode = IPC_SUCCESS;
+			complete(&svcxprt->u.l.cmpl);
+		}
 	}
 }
 
