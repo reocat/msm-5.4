@@ -1161,7 +1161,12 @@ static int ambarella_sd_cd_irq_thread(void *arg)
 		local_irq_save(flags);
 		pinfo->bh_cd_irq.cnt = 0;
 		local_irq_restore(flags);
-		ambarella_sd_gpio_cd_irq(pinfo->irq, pslotinfo);
+
+		if (pslotinfo->valid &&
+		    (ambarella_sd_gpio_cd_check_val(pslotinfo) != -1)) {
+			mmc_detect_change(pslotinfo->mmc,
+					  pslotinfo->plat_info->cd_delay);
+		}
 	}
 
 	return 0;
