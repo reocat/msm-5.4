@@ -256,13 +256,14 @@ static int ambfb_activate(int voutid)
 	dst1= boss_fb->ccf[0];
 	dst2 = boss_fb->ccf[1];
 
-	display_osd_setbuf(voutid, dst1, dst2);
+	display_osd_setbuf(voutid, dst1, dst2, boss_fb->width, boss_fb->height, boss_fb->pitch);
 
 	display_osd_apply(voutid, &boss_fb->bossed);
 	
 	boss_fb->active = 1;
 
 	DEBUG_MSG_FB ("[ipc] ambfb_activate (%d) END\n", voutid);
+	pr_notice ("[ipc]ambfb_activate w(%d) h(%d) p(%d) END\n", boss_fb->width,boss_fb->height,boss_fb->pitch);
 
 	return 0;
 }
@@ -283,7 +284,7 @@ static int ambfb_deactivate(int voutid)
 
 	/* Restore OSD settings */
 	//display_osd_apply(voutid, &boss_fb->original);
-	display_osd_back2itron(voutid, &boss_fb->original);
+	display_osd_back2itron(voutid);
 
 	/* Hand back OSD to remote OS */
 	ipc_report_fb_released();
@@ -561,7 +562,7 @@ int ambfb_vdspdrv_claim(struct ambarella_platform_fb *pfb,
 		framesize *= PAGE_SIZE;
 	}
 	total_size = framesize * (fb_num + CCF_NUM);
-	DEBUG_MSG_FB ("[ipc] osd: %dx%d (%d), %d, %08x\n", 
+	pr_notice ("[ipc] ambfb_vdspdrv_claim osd: (w)%d, (h)%d ,(pitch)%d, %d, %08x\n", 
 			boss_fb->width, boss_fb->height, boss_fb->pitch, 
 			fb_num, total_size);
 

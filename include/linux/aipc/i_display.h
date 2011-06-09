@@ -136,10 +136,10 @@ extern int vdspdrv_osd_flip(int voutid, int flip);
 //extern int vdspdrv_osd_apply(int voutid, struct vdspdrv_osd *osd);
 
 
-extern int display_osd_setbuf(int voutid, void* dst1, void* dst2);
+extern int display_osd_setbuf(int voutid, void* dst1, void* dst2,int width, int height, int pitch);
 extern int display_osd_switch(int voutid);
 extern int display_osd_apply(int voutid, struct vdspdrv_osd *osd);
-extern int display_osd_back2itron(int voutid, struct vdspdrv_osd *osd);
+extern int display_osd_back2itron(int voutid);
 
 #endif  /* __KERNEL__ */
 

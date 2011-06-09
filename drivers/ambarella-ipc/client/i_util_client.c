@@ -474,7 +474,6 @@ static void __exit i_util_cleanup(void)
 	}
 }
 
-//module_init(i_util_init);
 subsys_initcall_sync(i_util_init);
 module_exit(i_util_cleanup);
 

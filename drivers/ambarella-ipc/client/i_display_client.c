@@ -29,7 +29,7 @@
 #include "ipcgen/i_display_tab.i"
 #endif
 
-#define DEBUG_VDSP_CLINT	1
+#define DEBUG_VDSP_CLINT	0
 
 #if DEBUG_VDSP_CLINT
 #define DEBUG_MSG_VDSP pr_notice
@@ -177,8 +177,6 @@ int vdspdrv_refresh(void)
 	struct i_display_dsp_drvinfo drvinfo;
 	struct i_display_dsp_opinfo opinfo;
 	struct i_display_dsp_histinfo histinfo;
-	int voutid;
-	struct i_display_osd_info osdinfo;
 
 	DEBUG_MSG_VDSP ("[ipc] vdspdrv_refresh\n");
 
@@ -516,7 +514,7 @@ int display_osd_switch(int voutid)
 }
 EXPORT_SYMBOL(display_osd_switch);
 
-int display_osd_setbuf(int voutid, void *ptr1, void *ptr2)
+int display_osd_setbuf(int voutid, void *ptr1, void *ptr2, int width, int height, int pitch)
 {
 	enum clnt_stat stat;
 	struct i_display_osd_setbuf_arg arg;
@@ -527,6 +525,9 @@ int display_osd_setbuf(int voutid, void *ptr1, void *ptr2)
 	arg.voutid = voutid;
 	arg.ptr1 = ptr1;
 	arg.ptr2 = ptr2;
+	arg.width = width;
+	arg.height = height;
+	arg.pitch = pitch;
 	stat = i_display_osd_setbuf_1(&arg, &rval, IPC_i_display_osd);
 	if (stat != IPC_SUCCESS)
 		return -EIO;
@@ -576,11 +577,11 @@ int display_osd_apply(int voutid, struct vdspdrv_osd *osd)
 	DEBUG_MSG_VDSP ("zbuf3 = %08x\n", (u32) osd->zbuf3);
 	DEBUG_MSG_VDSP ("osdupdptr = %08x\n", (u32) osd->osdupdptr);
 
-	osd->zbuf0 = (u32) ambarella_virt_to_phys ((u32) osd->zbuf0);
-	osd->zbuf1 = (u32) ambarella_virt_to_phys ((u32) osd->zbuf1);
-	osd->zbuf2 = (u32) ambarella_virt_to_phys ((u32) osd->zbuf2);
-	osd->zbuf3 = (u32) ambarella_virt_to_phys ((u32) osd->zbuf3);
-	osd->osdupdptr = (u32) ambarella_virt_to_phys ((u32) osd->osdupdptr);
+	osd->zbuf0 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf0);
+	osd->zbuf1 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf1);
+	osd->zbuf2 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf2);
+	osd->zbuf3 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf3);
+	osd->osdupdptr = (void *) ambarella_virt_to_phys ((u32) osd->osdupdptr);
 
 	ambcache_clean_range (osd, sizeof (*osd));
 
@@ -595,12 +596,12 @@ int display_osd_apply(int voutid, struct vdspdrv_osd *osd)
 }
 EXPORT_SYMBOL(display_osd_apply);
 
-int display_osd_back2itron(int voutid, struct vdspdrv_osd *osd)
+int display_osd_back2itron(int voutid)
 {
 	enum clnt_stat stat;
-	struct i_display_osd_apply_arg arg;
 	int rval;
-	stat = i_display_osd_back2itron_1(&arg, &rval, IPC_i_display_osd);
+	
+	stat = i_display_osd_back2itron_1(&voutid, &rval, IPC_i_display_osd);
 	if (stat != IPC_SUCCESS)
 		return -EIO;
 
