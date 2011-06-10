@@ -391,7 +391,7 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 	}
 
 	val = ETH_MAC_GMII_ADDR_PA(mii_id) | ETH_MAC_GMII_ADDR_GR(regnum);
-	val |= ETH_MAC_GMII_ADDR_CR_20_35MHZ | ETH_MAC_GMII_ADDR_GB;
+	val |= ETH_MAC_GMII_ADDR_CR_250_300MHZ | ETH_MAC_GMII_ADDR_GB;
 	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET, val);
 
 	for (limit = AMBETH_MII_RETRY_LIMIT; limit > 0; limit--) {
@@ -447,7 +447,7 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 	val = value;
 	amba_writel(lp->regbase + ETH_MAC_GMII_DATA_OFFSET, val);
 	val = ETH_MAC_GMII_ADDR_PA(mii_id) | ETH_MAC_GMII_ADDR_GR(regnum);
-	val |= ETH_MAC_GMII_ADDR_CR_20_35MHZ | ETH_MAC_GMII_ADDR_GW |
+	val |= ETH_MAC_GMII_ADDR_CR_250_300MHZ | ETH_MAC_GMII_ADDR_GW |
 		ETH_MAC_GMII_ADDR_GB;
 	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET, val);
 
