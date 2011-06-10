@@ -426,8 +426,8 @@ static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
 	.trickle_ilim = 50,
 	.vsel = 4200,
 	.eoc_iterm = 20,
-	.fast_ilim = 450,
-	.timeout = 360,
+	.fast_ilim = 600,
+	.timeout = 480,
 	.enable_fet = 1,
 };
 
