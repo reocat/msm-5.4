@@ -829,6 +829,52 @@ int ambarella_fb_set_iav_info(u32 fb_id, struct ambarella_fb_iav_info *iav)
 }
 EXPORT_SYMBOL(ambarella_fb_set_iav_info);
 
+int ambarella_fb_update_info(u32 fb_id, int xres, int yres,
+	int xvirtual, int yvirtual, int format, u32 bits_per_pixel,
+	u32 smem_start, u32 smem_len)
+{
+	u32					status = -EPERM;
+
+	if (fb_id == 0) {
+		mutex_lock(&ambarella_platform_fb0.lock);
+		ambarella_platform_fb0.screen_var.xres = xres;
+		ambarella_platform_fb0.screen_var.yres = yres;
+		ambarella_platform_fb0.screen_var.xres_virtual = xvirtual;
+		ambarella_platform_fb0.screen_var.yres_virtual = yvirtual;
+		ambarella_platform_fb0.screen_var.bits_per_pixel =
+			bits_per_pixel;
+		ambarella_platform_fb0.color_format = format;
+		ambarella_platform_fb0.use_prealloc = 1;
+		ambarella_platform_fb0.screen_fix.smem_start = smem_start;
+		ambarella_platform_fb0.screen_fix.smem_len = smem_len;
+		mutex_unlock(&ambarella_platform_fb0.lock);
+
+		status = 0;
+	} else
+	if (fb_id == 1) {
+		mutex_lock(&ambarella_platform_fb1.lock);
+		ambarella_platform_fb1.screen_var.xres = xres;
+		ambarella_platform_fb1.screen_var.yres = yres;
+		ambarella_platform_fb1.screen_var.xres_virtual = xvirtual;
+		ambarella_platform_fb1.screen_var.yres_virtual = yvirtual;
+		ambarella_platform_fb1.screen_var.bits_per_pixel =
+			bits_per_pixel;
+		ambarella_platform_fb1.color_format = format;
+		ambarella_platform_fb1.use_prealloc = 1;
+		ambarella_platform_fb1.screen_fix.smem_start = smem_start;
+		ambarella_platform_fb1.screen_fix.smem_len = smem_len;
+		mutex_unlock(&ambarella_platform_fb1.lock);
+
+		status = 0;
+	}
+
+	pr_debug("%s %d: %dx%d %dx%d %d %d 0x%08x:0x%08x\n", __func__, fb_id,
+		xres, yres, xvirtual, yvirtual,
+		format, bits_per_pixel, smem_start, smem_len);
+
+	return status;
+}
+
 int __init ambarella_init_fb(void)
 {
 	mutex_init(&ambarella_platform_fb0.lock);
