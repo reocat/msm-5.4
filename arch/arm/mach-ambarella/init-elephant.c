@@ -976,6 +976,9 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
+		ambarella_eth0_platform_info.mii_id = 0;
+		ambarella_eth0_platform_info.phy_id = 0x001cc912;
+
 		fio_default_owner = SELECT_FIO_SDIO;
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;

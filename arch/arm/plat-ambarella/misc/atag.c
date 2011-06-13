@@ -250,21 +250,37 @@ void __init ambarella_map_io(void)
 static int __init dsp_mem_check(u32 start, u32 size)
 {
 	u32					vstart;
+	u32					tmp;
 
 	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
-		pr_err("Ambarella: Bad dsp mem start 0x%08x\n", start);
+		pr_err("Ambarella: Bad DSP mem start 0x%08x\n", start);
 		return -EINVAL;
 	}
 
 	if (size & MEM_MAP_CHECK_MASK) {
-		pr_err("Ambarella: Bad dsp mem size 0x%08x\n", size);
+		pr_err("Ambarella: Bad DSP mem size 0x%08x\n", size);
 		return -EINVAL;
 	}
 
 	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
 	if (vstart < VMALLOC_END) {
-		pr_err("Ambarella: Bad dsp virtual 0x%08x\n", vstart);
+		pr_err("Ambarella: Bad DSP virtual 0x%08x\n", vstart);
 		return -EINVAL;
+	}
+	if (vstart >= (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
+		tmp = vstart - NOLINUX_MEM_V_SIZE;
+		if (tmp < NOLINUX_MEM_V_START) {
+			tmp = NOLINUX_MEM_V_START;
+		}
+		pr_info("%s: Change DSP start form 0x%08x to 0x%08x\n",
+			__func__, vstart, tmp);
+		vstart = tmp;
+	}
+	if ((vstart + size) > (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
+		tmp = (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE) - vstart;
+		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",
+			__func__, size, tmp);
+		size = tmp;
 	}
 
 	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual = vstart;
@@ -299,21 +315,37 @@ __tagtable(ATAG_AMBARELLA_DSP, parse_mem_tag_dsp);
 static int __init bsb_mem_check(u32 start, u32 size)
 {
 	u32					vstart;
+	u32					tmp;
 
 	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
-		pr_err("Ambarella: Bad bsb mem start 0x%08x\n", start);
+		pr_err("Ambarella: Bad BSB mem start 0x%08x\n", start);
 		return -EINVAL;
 	}
 
 	if (size & MEM_MAP_CHECK_MASK) {
-		pr_err("Ambarella: Bad bsb mem size 0x%08x\n", size);
+		pr_err("Ambarella: Bad BSB mem size 0x%08x\n", size);
 		return -EINVAL;
 	}
 
 	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
 	if (vstart < VMALLOC_END) {
-		pr_err("Ambarella: Bad bsb virtual 0x%08x\n", vstart);
+		pr_err("Ambarella: Bad BSB virtual 0x%08x\n", vstart);
 		return -EINVAL;
+	}
+	if (vstart >= (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
+		tmp = vstart - NOLINUX_MEM_V_SIZE;
+		if (tmp < NOLINUX_MEM_V_START) {
+			tmp = NOLINUX_MEM_V_START;
+		}
+		pr_info("%s: Change DSP start form 0x%08x to 0x%08x\n",
+			__func__, vstart, tmp);
+		vstart = tmp;
+	}
+	if ((vstart + size) > (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
+		tmp = (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE) - vstart;
+		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",
+			__func__, size, tmp);
+		size = tmp;
 	}
 
 	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual = vstart;
