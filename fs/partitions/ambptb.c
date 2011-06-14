@@ -64,7 +64,7 @@ int ambptb_partition(struct parsed_partitions *state)
 		goto ambptb_partition_exit;
 
 ambptb_partition_report_ptb:
-	for (i = 0; i < PART_MAX; i++) {
+	for (i = 0; i < TOTAL_FW_PARTS; i++) {
 		if (slot >= state->limit)
 			break;
 
@@ -77,6 +77,20 @@ ambptb_partition_report_ptb:
 			slot++;
 		}
 	}
+
+	for (i = 0; i < ARRAY_SIZE(ptb_meta->sm_stg); i++) {
+		if (slot >= state->limit)
+			break;
+
+		if (ptb_meta->sm_stg[i].nblk != 0) {
+			state->parts[slot].from = ptb_meta->sm_stg[i].sblk;
+			state->parts[slot].size = ptb_meta->sm_stg[i].nblk;
+			snprintf(ptb_tmp, sizeof(ptb_tmp), " stg%d", i + 1);
+			strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
+			slot++;
+		}
+	}
+
 	strlcat(state->pp_buf, "\n", PAGE_SIZE);
 	put_dev_sector(sect);
 	result = 1;
