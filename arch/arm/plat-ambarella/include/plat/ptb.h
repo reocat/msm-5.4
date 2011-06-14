@@ -127,13 +127,13 @@ typedef struct flpart_meta_s
 	u32	magic;				/**< Magic number */
 	/* This meta crc32 doesn't include itself. */
 	/* It's only calc data before this field.  */
-	u32 	crc32;
 	u32	part_dev[PART_MAX];
 	u8	model_name[FW_MODEL_NAME_SIZE];
 	struct {
 	  u32     sblk;
 	  u32     nblk;
 	} sm_stg[2];
+	u32 	crc32;
 	u8 	rsv[PTB_META_PAD_SIZE];
 } __attribute__((packed)) flpart_meta_t;
 
