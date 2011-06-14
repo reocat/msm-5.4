@@ -782,6 +782,16 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+		 	/* the cs_pin of spi0.1 is used to determine wm8994's
+		 	 * I2C address, and the cs_pin of spi0.4, spi0,5, spi0.6
+		 	 * spi0.7 are used as I2S signals, so we need to prevent
+		 	 * them from be modified by SPI driver */
+			ambarella_spi0_cs_pins[1] = -1;
+			ambarella_spi0_cs_pins[4] = -1;
+			ambarella_spi0_cs_pins[5] = -1;
+			ambarella_spi0_cs_pins[6] = -1;
+			ambarella_spi0_cs_pins[7] = -1;
+			ambarella_init_wm8994();
 		case 'A':
 			ambarella_board_generic.lcd_reset.gpio_id = GPIO(105);
 			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
@@ -881,9 +891,6 @@ static void __init ambarella_init_elephant(void)
 			i2c_register_board_info(0, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
-
-			ambarella_init_wm8994(ambarella_spi_devices,
-					ARRAY_SIZE(ambarella_spi_devices), 0, 1);
 
 			use_bub_default = 0;
 			break;
