@@ -808,6 +808,12 @@ static void __init ambarella_init_boss(void)
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 			ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
 			ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
+			{ // enable uart1
+				struct platform_device *p = &ambarella_uart1;
+				platform_add_devices(&p, 1);
+				device_set_wakeup_capable(&p->dev, 1);
+				device_set_wakeup_enable(&p->dev, 0);
+			}
 			break;
 		default:
 			pr_warn("%s: Unknown VENDOR Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
