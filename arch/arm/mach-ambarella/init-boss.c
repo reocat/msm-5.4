@@ -784,6 +784,30 @@ static void __init ambarella_init_boss(void)
 			break;
 		case 2:
 			use_bub_default = 0;
+			ambarella_platform_sd_controller0.clk_limit = 24000000;
+			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
+			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+			ambarella_platform_sd_controller0.slot[1].fixed_cd = 1;
+			ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
+			ambarella_platform_sd_controller1.clk_limit = 24000000;
+			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
+			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
+			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+			ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
+			ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
 			break;
 		default:
 			pr_warn("%s: Unknown VENDOR Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
