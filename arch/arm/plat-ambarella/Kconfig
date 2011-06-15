@@ -189,8 +189,11 @@ config PLAT_AMBARELLA_I1_CORTEX
 	select ARM_ERRATA_742230 if SMP
 	select ARM_ERRATA_742231 if SMP
 	select ARM_ERRATA_743622
+	select ARM_ERRATA_754322
 	select ARM_ERRATA_751472 if SMP
 	select ARM_ERRATA_753970 if CACHE_PL310
+	select PL310_ERRATA_588369 if CACHE_PL310
+	select PL310_ERRATA_727915 if CACHE_PL310
 
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.

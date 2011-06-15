@@ -79,16 +79,6 @@ void platform_cpu_die(unsigned int cpu)
 	u32 *phead_address = get_ambarella_bstmem_head();
 	u32 bstadd, bstsize;
 
-#ifdef DEBUG
-	unsigned int this_cpu = hard_smp_processor_id();
-
-	if (cpu != this_cpu) {
-		printk(KERN_CRIT
-			"Eek! platform_cpu_die running on %u, should be %u\n",
-			this_cpu, cpu);
-		BUG();
-	}
-#endif
 	get_ambarella_bstmem_info(&bstadd, &bstsize);
 	bstadd = ambarella_phys_to_virt(bstadd);
 
@@ -96,24 +86,17 @@ void platform_cpu_die(unsigned int cpu)
 	ambcache_clean_range((void *)(bstadd), bstsize);
 	complete(&cpu_killed);
 
+	cpu_enter_lowpower();
 	for (;;) {
-		cpu_enter_lowpower();
 		asm volatile("wfi" : : : "memory", "cc");
-		cpu_leave_lowpower();
-		ambcache_inv_range((void *)(bstadd), bstsize);
-		smp_rmb();
 		phead_address[PROCESSOR_STATUS_0 + cpu]++;
-		ambcache_clean_range((void *)(bstadd), bstsize);
-		smp_wmb();
-		if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID)
+		if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
+			phead_address[PROCESSOR_START_0 + cpu] =
+				AMB_BST_INVALID;
 			break;
-#ifdef DEBUG
-		printk(KERN_DEBUG "CPU%u: spurious wakeup call\n", cpu);
-#endif
+		}
 	}
-	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
-	ambcache_clean_range((void *)(bstadd), bstsize);
-	smp_wmb();
+	cpu_leave_lowpower();
 }
 
 int platform_cpu_disable(unsigned int cpu)

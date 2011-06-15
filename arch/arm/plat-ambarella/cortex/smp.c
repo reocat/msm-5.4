@@ -95,13 +95,13 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		udelay(10);
 		timeout--;
 	}
-	if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID) {
-		pr_debug("CPU[%d]: 0x%08x.\n", cpu,
+	if (phead_address[PROCESSOR_STATUS_0 + cpu] > 0) {
+		pr_err("CPU%d: spurious wakeup %d times.\n", cpu,
 			phead_address[PROCESSOR_STATUS_0 + cpu]);
-	} else {
-		pr_err("CPU[%d] after [%d] is: 0x%08x 0x%08x.\n", cpu, timeout,
-			phead_address[PROCESSOR_START_0 + cpu],
-			phead_address[PROCESSOR_STATUS_0 + cpu]);
+	}
+	if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
+		pr_err("CPU%d: [0x%08x] tmo[%d].\n", cpu, timeout,
+			phead_address[PROCESSOR_START_0 + cpu]);
 		retval = -EPERM;
 	}
 
