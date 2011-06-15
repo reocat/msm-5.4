@@ -341,6 +341,11 @@ i1sevk_board_init_exit:
 
 static void __exit i1evk_board_exit(void)
 {
+	snd_soc_jack_free_gpios(&hs_jack, ARRAY_SIZE(hs_jack_gpios),
+				hs_jack_gpios);
+	snd_soc_jack_free_gpios(&av_jack, ARRAY_SIZE(av_jack_gpios),
+				av_jack_gpios);
+
 	platform_device_unregister(i1evk_snd_device);
 }
 
