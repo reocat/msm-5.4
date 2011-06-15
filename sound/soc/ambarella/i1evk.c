@@ -38,18 +38,64 @@
 #include <linux/mfd/wm8994/registers.h>
 #include "../codecs/wm8994.h"
 
+/* Headset jack */
+static struct snd_soc_jack hs_jack;
+
+/* Headset jack detection DAPM pins */
+static struct snd_soc_jack_pin hs_jack_pins[] = {
+	{
+		.pin = "Headset Mic",
+		.mask = SND_JACK_MICROPHONE,
+	},
+	{
+		.pin = "Headset Stereophone",
+		.mask = SND_JACK_HEADPHONE,
+	},
+};
+
+/* Headset jack detection gpios */
+static struct snd_soc_jack_gpio hs_jack_gpios[] = {
+	{
+		.gpio = GPIO(12),
+		.name = "hsdet-gpio",
+		.report = SND_JACK_HEADSET,
+		.debounce_time = 200,
+	},
+};
+
+/* AV jack */
+static struct snd_soc_jack av_jack;
+
+/* AV jack detection DAPM pins */
+static struct snd_soc_jack_pin av_jack_pins[] = {
+	{
+		.pin = "Line Out 2",
+		.mask = SND_JACK_LINEOUT,
+	},
+};
+
+/* AV jack detection gpios */
+static struct snd_soc_jack_gpio av_jack_gpios[] = {
+	{
+		.gpio = GPIO(13),
+		.name = "avdet-gpio",
+		.report = SND_JACK_LINEOUT,
+		.debounce_time = 200,
+	},
+};
+
 static const struct snd_soc_dapm_widget i1evk_dapm_widgets[] = {
 	/* Output */
 	SND_SOC_DAPM_SPK("Ext Left Spk", NULL),
 	SND_SOC_DAPM_SPK("Ext Right Spk", NULL),
-	SND_SOC_DAPM_SPK("Ext Rcv", NULL),
+	SND_SOC_DAPM_SPK("Earphone", NULL),
 	SND_SOC_DAPM_HP("Headset Stereophone", NULL),
 	SND_SOC_DAPM_LINE("Line Out 1", NULL),
 	SND_SOC_DAPM_LINE("Line Out 2", NULL),
 	/* Input */
 	SND_SOC_DAPM_MIC("Main Mic", NULL),
 	SND_SOC_DAPM_MIC("2nd Mic", NULL),
-	SND_SOC_DAPM_MIC("External Mic", NULL),
+	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_LINE("FM Left In", NULL),
 	SND_SOC_DAPM_LINE("FM Right In", NULL),
 	SND_SOC_DAPM_LINE("3G In", NULL),
@@ -62,8 +108,8 @@ static const struct snd_soc_dapm_route i1evk_dapm_routes[] = {
 	{"Ext Right Spk", NULL, "SPKOUTRP"},
 	{"Ext Right Spk", NULL, "SPKOUTRN"},
 
-	{"Ext Rcv", NULL, "HPOUT2N"},
-	{"Ext Rcv", NULL, "HPOUT2P"},
+	{"Earphone", NULL, "HPOUT2N"},
+	{"Earphone", NULL, "HPOUT2P"},
 
 	{"Headset Stereophone", NULL, "HPOUT1L"},
 	{"Headset Stereophone", NULL, "HPOUT1R"},
@@ -80,7 +126,7 @@ static const struct snd_soc_dapm_route i1evk_dapm_routes[] = {
 	{"IN1LP", NULL, "FM Left In"},
 
 	{"IN2LN", NULL, "MICBIAS2"},
-	{"MICBIAS2", NULL, "External Mic"},
+	{"MICBIAS2", NULL, "Headset Mic"},
 
 	{"IN1RN", NULL, "MICBIAS1"},
 	{"MICBIAS1", NULL, "2nd Mic"},
@@ -95,6 +141,7 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	int errorCode = 0;
 
 	/* add i1evk specific widgets */
 	snd_soc_dapm_new_controls(dapm, i1evk_dapm_widgets,
@@ -106,7 +153,37 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_sync(dapm);
 
-	return 0;
+	/* Headset jack detection */
+	errorCode = snd_soc_jack_new(codec, "Headset Jack",
+				SND_JACK_HEADSET, &hs_jack);
+	if (errorCode)
+		return errorCode;
+
+	errorCode = snd_soc_jack_add_pins(&hs_jack, ARRAY_SIZE(hs_jack_pins),
+				hs_jack_pins);
+	if (errorCode)
+		return errorCode;
+
+	errorCode = snd_soc_jack_add_gpios(&hs_jack, ARRAY_SIZE(hs_jack_gpios),
+				hs_jack_gpios);
+	if (errorCode)
+		return errorCode;
+
+	/* Headset jack detection */
+	errorCode = snd_soc_jack_new(codec, "AV Jack",
+				SND_JACK_LINEOUT, &av_jack);
+	if (errorCode)
+		return errorCode;
+
+	errorCode = snd_soc_jack_add_pins(&av_jack, ARRAY_SIZE(av_jack_pins),
+				av_jack_pins);
+	if (errorCode)
+		return errorCode;
+
+	errorCode = snd_soc_jack_add_gpios(&av_jack, ARRAY_SIZE(av_jack_gpios),
+				av_jack_gpios);
+
+	return errorCode;
 }
 
 static int i1evk_hifi_hw_params(struct snd_pcm_substream *substream,
