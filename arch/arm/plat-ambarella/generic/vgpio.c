@@ -952,7 +952,7 @@ amba_dbg("\n\n%s\n\n",__func__);
 	}
 
 	if ((pinfo->irq_gpio < 0 ) || (pinfo->irq_gpio >= ARCH_NR_GPIOS)){
-		printk("\n%s, %d\n",__func__,__LINE__);
+//		printk("\n%s, %d\n",__func__,__LINE__);
 		goto ambarella_is_valid_gpio_irq_exit;
 	}
 
