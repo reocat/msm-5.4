@@ -1806,13 +1806,9 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	ndev->watchdog_timeo = AMBETH_TX_TIMEOUT;
 	netif_napi_add(ndev, &lp->napi, ambeth_poll,
 		lp->platform_info->napi_weight);
-	if (memcmp(lp->platform_info->mac_addr, "\0\0\0\0\0\0",
-		AMBETH_MAC_SIZE)) {
-		memcpy(ndev->dev_addr, lp->platform_info->mac_addr,
-			AMBETH_MAC_SIZE);
-	} else {
-		memcpy(ndev->dev_addr, "\0\1\2\3\4\5", AMBETH_MAC_SIZE);
-	}
+	if (!is_valid_ether_addr(lp->platform_info->mac_addr))
+		random_ether_addr(lp->platform_info->mac_addr);
+	memcpy(ndev->dev_addr, lp->platform_info->mac_addr, AMBETH_MAC_SIZE);
 	ambhw_set_hwaddr(lp, ndev->dev_addr);
 	ambhw_get_hwaddr(lp, ndev->dev_addr);
 	dev_info(&pdev->dev, "MAC Address[%pM].\n", ndev->dev_addr);
