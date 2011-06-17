@@ -313,11 +313,17 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 		pslotinfo->dma_w_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			current_sg[i].dma_address = dma_map_page(pinfo->dev,
 							sg_page(&current_sg[i]),
 							current_sg[i].offset,
 							current_sg[i].length,
 							DMA_TO_DEVICE);
+#else
+			current_sg[i].dma_address = sg_phys(&current_sg[i]);
+			ambcache_clean_range(sg_virt(&current_sg[i]),
+				current_sg[i].length);
+#endif
 			if ((current_sg[i].length & 0xFFF) &&
 				(i < pslotinfo->sg_len - 1)) {
 				ambsd_dbg(pslotinfo,
@@ -409,6 +415,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 
 static void ambarella_sd_post_sg_to_dma(void *data)
 {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
 	struct scatterlist			*current_sg;
@@ -423,6 +430,7 @@ static void ambarella_sd_post_sg_to_dma(void *data)
 		dma_unmap_page(pinfo->dev, current_sg[i].dma_address,
 				current_sg[i].length, DMA_TO_DEVICE);
 	}
+#endif
 }
 
 static void ambarella_sd_pre_dma_to_sg(void *data)
@@ -445,11 +453,15 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 		pslotinfo->dma_r_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			current_sg[i].dma_address = dma_map_page(pinfo->dev,
 							sg_page(&current_sg[i]),
 							current_sg[i].offset,
 							current_sg[i].length,
 							DMA_FROM_DEVICE);
+#else
+			current_sg[i].dma_address = sg_phys(&current_sg[i]);
+#endif
 			if ((current_sg[i].length & 0xFFF) &&
 				(i < pslotinfo->sg_len - 1)) {
 				ambsd_dbg(pslotinfo,
@@ -541,8 +553,13 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 
 	current_sg = pslotinfo->sg;
 	for (i = 0; i < pslotinfo->sg_len; i++) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 		dma_unmap_page(pinfo->dev, current_sg[i].dma_address,
 				current_sg[i].length, DMA_FROM_DEVICE);
+#else
+		ambcache_inv_range(sg_virt(&current_sg[i]),
+			current_sg[i].length);
+#endif
 	}
 	if (pslotinfo->dma_need_fill) {
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
