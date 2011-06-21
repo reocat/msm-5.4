@@ -65,6 +65,8 @@ static int ambarella_ehci_setup(struct usb_hcd *hcd)
 	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
 	int retval = 0;
 
+printk("%s(%d): \n", __func__, __LINE__);
+
 	/* registers start at offset 0x0 */
 	ehci->caps = hcd->regs;
 	ehci->regs = hcd->regs +

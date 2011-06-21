@@ -443,6 +443,7 @@ static void ehci_shutdown(struct usb_hcd *hcd)
 {
 	struct ehci_hcd	*ehci = hcd_to_ehci(hcd);
 
+printk("%s(%d): \n", __func__, __LINE__);
 	del_timer_sync(&ehci->watchdog);
 	del_timer_sync(&ehci->iaa_watchdog);
 
@@ -1123,6 +1124,7 @@ ehci_endpoint_reset(struct usb_hcd *hcd, struct usb_host_endpoint *ep)
 	if (eptype != USB_ENDPOINT_XFER_BULK && eptype != USB_ENDPOINT_XFER_INT)
 		return;
 
+printk("%s(%d): \n", __func__, __LINE__);
 	spin_lock_irqsave(&ehci->lock, flags);
 	qh = ep->hcpriv;
 
