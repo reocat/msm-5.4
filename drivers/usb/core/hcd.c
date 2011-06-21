@@ -2103,7 +2103,6 @@ irqreturn_t usb_hcd_irq (int irq, void *__hcd)
 		rc = IRQ_NONE;
 	} else {
 		set_bit(HCD_FLAG_SAW_IRQ, &hcd->flags);
-
 		rc = IRQ_HANDLED;
 	}
 
