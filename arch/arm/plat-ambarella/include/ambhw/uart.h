@@ -50,6 +50,7 @@
 #define UART_LS_OFFSET			0x14
 #define UART_MS_OFFSET			0x18
 #define UART_SC_OFFSET			0x1c	/* Byte */
+#define UART_SRR_OFFSET			0x88
 
 #define UART0_RB_REG			UART0_REG(UART_RB_OFFSET)
 #define UART0_TH_REG			UART0_REG(UART_TH_OFFSET)

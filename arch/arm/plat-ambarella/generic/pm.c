@@ -105,7 +105,7 @@ static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend,
 		ambarella_timer_suspend(tm_level);
 		ambarella_irq_suspend(0);
 		ambarella_gpio_suspend(0);
-		ambarella_pll_suspend(1);
+		ambarella_pll_suspend(0);
 	}
 
 	if (bnotifier && irqflag) {
@@ -135,7 +135,7 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume,
 	}
 
 	if (bresume) {
-		ambarella_pll_resume(1);
+		ambarella_pll_resume(0);
 		ambarella_gpio_resume(0);
 		ambarella_irq_resume(0);
 		ambarella_timer_resume(tm_level);
