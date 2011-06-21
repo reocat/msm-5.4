@@ -229,7 +229,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				break;
 			}
 
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX) && defined(CONFIG_SMP)
 			arch_smp_suspend(0);
 #endif
 			bapi_aoss_entry =
@@ -241,7 +241,9 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				ambarella_swvic_set(AXI_SOFT_IRQ(0));
 				while(1) {};
 			}
+#if defined(CONFIG_SMP)
 			arch_smp_resume(0);
+#endif
 #endif
 
 			ambarella_bapi_aoss_return();
