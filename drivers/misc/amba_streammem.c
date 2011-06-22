@@ -16,7 +16,8 @@
 
 #include <linux/module.h>
 #include <linux/fs.h>
-#include <linux/cdev.h>
+#include <linux/miscdevice.h>
+#include <linux/platform_device.h>
 #include <linux/mm.h>
 
 extern int ipc_i_streamer_get_iavpool_info(unsigned char **base_addr, unsigned int *size);
@@ -24,17 +25,17 @@ extern int ipc_i_streamer_init(void);
 extern void ipc_i_streamer_cleanup(void);
 
 
-static const char *ambastrdrv_name = "ambastreamdrv";
-//static int iav_major = 248;
-//static int iav_minor = 0;
-static struct cdev ambastrdrv_cdev;
-static dev_t dev_id;
 static unsigned char *iavpool_baseaddr = NULL;
 static unsigned int iavpool_size = 0;
+struct ambastrmem_dev {
+	struct miscdevice *misc_dev;
+};
+
+static struct ambastrmem_dev amba_strmem_dev = {NULL};
 
 //DEFINE_MUTEX(iav_mutex);
 
-static long ambastrdrv_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long ambastrmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 /*	int rval;
 //	mutex_lock(&iav_mutex);
@@ -76,7 +77,7 @@ extern pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
 			      unsigned long size, pgprot_t vma_prot);
 #endif
 
-static int ambastrdrv_mmap(struct file *filp, struct vm_area_struct *vma)
+static int ambastrmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	int rval;
 	unsigned long size;
@@ -132,66 +133,101 @@ Done:
 	return rval;
 }
 
-static int ambastrdrv_open(struct inode *inode, struct file *filp)
+static int ambastrmem_open(struct inode *inode, struct file *filp)
 {
 printk("%s\n",__func__);
 	return 0;
 }
 
-static int ambastrdrv_release(struct inode *inode, struct file *filp)
+static int ambastrmem_release(struct inode *inode, struct file *filp)
 {
 printk("%s\n",__func__);
 	return 0;
 }
 
-static struct file_operations ambastrdrv_fops = {
+static struct file_operations ambastrmem_fops = {
 	.owner = THIS_MODULE,
-	.unlocked_ioctl = ambastrdrv_ioctl,
-	.mmap = ambastrdrv_mmap,
-	.open = ambastrdrv_open,
-	.release = ambastrdrv_release,
+	.unlocked_ioctl = ambastrmem_ioctl,
+	.mmap = ambastrmem_mmap,
+	.open = ambastrmem_open,
+	.release = ambastrmem_release,
 };
 
-static int __init __ambastrdrv_init(void)
+static struct miscdevice amba_strmem_device = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "amba_streammem",
+	.fops = &ambastrmem_fops,
+};
+
+struct platform_device amba_streammem = {
+	.name			= "amba_streammem",
+	.id			= -1,
+	.dev			= {
+		.platform_data		= NULL,
+	}
+};
+EXPORT_SYMBOL(amba_streammem);
+
+static int __devinit ambastrmem_probe(struct platform_device *pdev)
 {
+	int err = 0;
+
+		
+	if(amba_strmem_dev.misc_dev!=NULL){
+		dev_err(&pdev->dev, "Amba_Strmem already exists. Skip operation!\n");
+		return 0;
+	}
+
+	platform_set_drvdata(pdev, &amba_strmem_dev);
+
+	amba_strmem_dev.misc_dev = &amba_strmem_device;
 	
-	int rval;
-	
+	err = misc_register(amba_strmem_dev.misc_dev);
+	if (err){
+		dev_err(&pdev->dev, "failed to misc_register Amba_Strmem.\n");
+		goto err_fail;
+	}
+
+	printk("Probe %s successfully\n",amba_strmem_dev.misc_dev->name);
 	ipc_i_streamer_init();
-	//if (*major) {
-	//	dev_id = MKDEV(*major, minor);
-	//	rval = register_chrdev_region(dev_id, numdev, name);
-	//} else {
-		rval = alloc_chrdev_region(&dev_id, 0, 1, ambastrdrv_name);
-		//major = MAJOR(dev_id);
-	//}
+	
+	return 0;
 
-	if (rval) {
-		//LOG_ERROR("failed to get dev region for %s\n", name);
-		return rval;
-	}
+err_fail:
+	misc_deregister(amba_strmem_dev.misc_dev);
+	amba_strmem_dev.misc_dev=NULL;
+	return err;
+}
 
-	cdev_init(&ambastrdrv_cdev, &ambastrdrv_fops);
-	//ambastrdrv_cdev.owner = THIS_MODULE;
-	rval = cdev_add(&ambastrdrv_cdev, dev_id, 1);
-	if (rval) {
-		//LOG_ERROR("cdev_add failed for %s, error = %d\n", name, rval);
-		return rval;
-	}
 
-	printk("%s dev init done, dev_id = %d:%d\n", ambastrdrv_name, MAJOR(dev_id), MINOR(dev_id));
+static int __devexit ambastrmem_remove(struct platform_device *pdev)
+{
+	ipc_i_streamer_cleanup();
+	misc_deregister(amba_strmem_dev.misc_dev);
+	amba_strmem_dev.misc_dev=NULL;
+	
 	return 0;
 }
 
-static void __exit __ambastrdrv_exit(void)
+static struct platform_driver ambastrmem_driver = {
+	.probe = ambastrmem_probe,
+	.remove = ambastrmem_remove,
+	.driver = { .name = "amba_streammem" }
+};
+
+static int __init __ambastrmem_init(void)
 {
-	ipc_i_streamer_cleanup();
+	return platform_driver_register(&ambastrmem_driver);
 }
 
-module_init(__ambastrdrv_init);
-module_exit(__ambastrdrv_exit);
+static void __exit __ambastrmem_exit(void)
+{
+	platform_driver_unregister(&ambastrmem_driver);
+}
+
+module_init(__ambastrmem_init);
+module_exit(__ambastrmem_exit);
 
 MODULE_AUTHOR("Keny Huang <skhuang@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella streaming driver");
 MODULE_LICENSE("GPL");
-

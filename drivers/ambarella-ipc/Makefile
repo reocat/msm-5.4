@@ -86,10 +86,6 @@ OBJS-S-y = $(foreach f,$(SRCS-S-y),$(patsubst %.c,%.o,$(f)))
 SRCS-C-y = $(foreach f,$(X-C-y),client/$(patsubst %.x,%_client.c,$(notdir $(f))))
 OBJS-C-y = $(foreach f,$(SRCS-C-y),$(patsubst %.c,%.o,$(f)))
 
-#Streaming related src and obj
-SRCS-C-y += client/ambastreamdrv.c
-OBJS-C-y += client/ambastreamdrv.o
-
 H-S-y = $(foreach f,$(X-S-y),ipcgen/$(patsubst %.x,%.h,$(notdir $(f))))
 TAB_I-S-y = $(foreach f,$(X-S-y),ipcgen/$(patsubst %.x,%_tab.i,$(notdir $(f))))
 

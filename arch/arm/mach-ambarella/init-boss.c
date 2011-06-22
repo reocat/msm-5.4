@@ -517,6 +517,9 @@ extern struct platform_device amba_vtouch;
 #ifdef CONFIG_INPUT_AMBA_VBUTTON
 extern struct platform_device amba_vbutton;
 #endif
+#ifdef CONFIG_AMBARELLA_STREAMMEM
+extern struct platform_device amba_streammem;
+#endif
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
@@ -534,6 +537,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 #ifdef CONFIG_INPUT_AMBA_VBUTTON
 	&amba_vbutton,
+#endif
+#ifdef CONFIG_AMBARELLA_STREAMMEM
+	&amba_streammem,
 #endif
 };
 
