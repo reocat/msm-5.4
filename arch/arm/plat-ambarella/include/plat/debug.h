@@ -32,7 +32,6 @@
 #define	AMBA_DEBUG_VOUT			(1 << 3)
 #define	AMBA_DEBUG_AAA			(1 << 4)
 
-#define	DEBUG_INFO_SIZE			128
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 

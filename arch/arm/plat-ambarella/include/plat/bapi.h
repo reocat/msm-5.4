@@ -49,6 +49,8 @@ enum ambarella_bapi_cmd_e {
 	AMBARELLA_BAPI_CMD_AOSS_SAVE		= 0x1002,
 
 	AMBARELLA_BAPI_CMD_SET_REBOOT_INFO	= 0x2000,
+
+	AMBARELLA_BAPI_CMD_UPDATE_FB_INFO	= 0x3000,
 };
 
 struct ambarella_bapi_aoss_page_info_s {
@@ -71,6 +73,17 @@ struct ambarella_bapi_reboot_info_s {
 	u32					rev[2];
 };
 
+struct ambarella_bapi_fb_info_s {
+	int					xres;
+	int					yres;
+	int					xvirtual;
+	int					yvirtual;
+	int					format;
+	u32					fb_start;
+	u32					fb_length;
+	u32					bits_per_pixel;
+};
+
 struct ambarella_bapi_s {
 	u32					magic;
 	u32					version;
@@ -82,7 +95,11 @@ struct ambarella_bapi_s {
 	u32					block_num;
 	u32					rev0[64 - 8];
 	struct ambarella_bapi_reboot_info_s	reboot_info;
-	u32					rev1[64 - 4];
+	u32					fb_start;
+	u32					fb_length;
+	struct ambarella_bapi_fb_info_s		fb0_info;
+	struct ambarella_bapi_fb_info_s		fb1_info;
+	u32					rev1[64 - 4 - 8 - 8 - 2];
 	u32					debug[128];
 	u32					rev2[1024 - 128 - 128 - 256];
 	struct ambarella_bapi_aoss_s		aoss_info;

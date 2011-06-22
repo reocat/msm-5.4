@@ -207,7 +207,7 @@ static cycle_t ambarella_cs_timer_read(struct clocksource *cs)
 
 static struct clocksource ambarella_cs_timer_clksrc = {
 	.name		= "ambarella-cs-timer",
-	.shift		= 21,
+	.shift		= 24,
 	.rating		= AMBARELLA_TIMER_RATING,
 	.read		= ambarella_cs_timer_read,
 	.mask		= CLOCKSOURCE_MASK(32),
@@ -245,16 +245,16 @@ struct sys_timer ambarella_timer = {
 
 u32 ambarella_timer_suspend(u32 level)
 {
-	if (level)
-		disable_irq(AMBARELLA_CE_TIMER_IRQ);
 	ambarella_timer_pm.timer_ctr_reg = amba_readl(TIMER_CTR_REG);
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
-	amba_writel(TIMER_CTR_REG,
-		(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF00F));
-#else
-	amba_writel(TIMER_CTR_REG,
-		(ambarella_timer_pm.timer_ctr_reg & ~AMBARELLA_CE_TIMER_CTR_MASK));
-#endif
+
+//#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+//	amba_writel(TIMER_CTR_REG,
+//		(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF00F));
+//#else
+//	amba_writel(TIMER_CTR_REG,
+//		(ambarella_timer_pm.timer_ctr_reg & ~AMBARELLA_CE_TIMER_CTR_MASK));
+//#endif
+
 
 	ambarella_timer_pm.timer1_status_reg = amba_readl(TIMER1_STATUS_REG);
 	ambarella_timer_pm.timer1_reload_reg = amba_readl(TIMER1_RELOAD_REG);
@@ -270,11 +270,23 @@ u32 ambarella_timer_suspend(u32 level)
 	ambarella_timer_pm.timer3_match2_reg = amba_readl(TIMER3_MATCH2_REG);
 	ambarella_timer_pm.timer_clk = AMBARELLA_TIMER_FREQ;
 
+	if (level) {
+		disable_irq(AMBARELLA_CE_TIMER_IRQ);
+#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+		amba_writel(TIMER_CTR_REG,
+			(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF00F));
+#else
+		amba_writel(TIMER_CTR_REG,
+			(ambarella_timer_pm.timer_ctr_reg & 0xFFFFF0FF));
+#endif
+	}
+
 	return 0;
 }
 
 u32 ambarella_timer_resume(u32 level)
 {
+	amba_writel(TIMER_CTR_REG, 0x00000000);
 #if 0
 	amba_writel(TIMER1_STATUS_REG, ambarella_timer_pm.timer1_status_reg);
 	amba_writel(TIMER1_RELOAD_REG, ambarella_timer_pm.timer1_reload_reg);
@@ -317,8 +329,6 @@ u32 ambarella_timer_resume(u32 level)
 		}
 
 #ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
-		/* Since AMBARELLA_TIMER_FREQ may be changed during suspend,
-		   we'll switch to a safe clocksource and update it! */
 		clocksource_change_rating(&ambarella_cs_timer_clksrc, 0);
 		ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
 			AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);

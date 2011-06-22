@@ -39,6 +39,8 @@
 #include <mach/hardware.h>
 #include <plat/ambcache.h>
 
+#include <hal/hal.h>
+
 /* ==========================================================================*/
 extern void ambarella_secondary_startup(void);
 
@@ -58,7 +60,7 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
-	unsigned long				timeout;
+	u32					timeout = 100000;
 	u32					*phead_address;
 	u32					bstadd;
 	u32					bstsize;
@@ -82,26 +84,24 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	phead_address[PROCESSOR_START_0 + cpu] = BSYM(
 		virt_to_phys(ambarella_secondary_startup));
 	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
+	ambcache_clean_range((void *)(bstadd), bstsize);
 	smp_wmb();
-	ambcache_flush_range((void *)(bstadd), bstsize);
 	smp_cross_call(cpumask_of(cpu), 1);
-	timeout = jiffies + (1 * HZ);
-	while (time_before(jiffies, timeout)) {
+	while (timeout) {
+		ambcache_inv_range((void *)(bstadd), bstsize);
 		smp_rmb();
 		if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID)
 			break;
 		udelay(10);
-		ambcache_inv_range((void *)(bstadd), bstsize);
+		timeout--;
 	}
-	ambcache_inv_range((void *)(bstadd), bstsize);
-	smp_rmb();
-	if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID) {
-		pr_debug("CPU[%d]: 0x%08x.\n", cpu,
+	if (phead_address[PROCESSOR_STATUS_0 + cpu] > 0) {
+		pr_err("CPU%d: spurious wakeup %d times.\n", cpu,
 			phead_address[PROCESSOR_STATUS_0 + cpu]);
-	} else {
-		pr_err("CPU[%d] isn't ready: 0x%08x 0x%08x.\n", cpu,
-			phead_address[PROCESSOR_START_0 + cpu],
-			phead_address[PROCESSOR_STATUS_0 + cpu]);
+	}
+	if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
+		pr_err("CPU%d: [0x%08x] tmo[%d].\n", cpu, timeout,
+			phead_address[PROCESSOR_START_0 + cpu]);
 		retval = -EPERM;
 	}
 

@@ -32,6 +32,15 @@ static struct discharge_curve_table dc_table = {
 		[1] = {3630000, 20},
 		[2] = {3350000, 0}
 	},
+#elif defined (CONFIG_DC_TRUST_FIRE_18650)
+	.name = "trust fire 18650",
+	.num = 4,
+	.curve = {
+		[0] = {4120000, 100},
+		[1] = {3800000, 80},
+		[2] = {3400000,20},
+		[3] = {3100000,0},
+	},
 #else
 	.name = "generic lithium based",
 	.num = 3,

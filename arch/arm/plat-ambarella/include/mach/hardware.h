@@ -32,7 +32,6 @@
 #include <plat/atag.h>
 #include <plat/event.h>
 #include <plat/irq.h>
-#include <plat/pll.h>
 #include <plat/pm.h>
 #include <plat/pwm.h>
 #include <plat/rct.h>

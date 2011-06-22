@@ -36,6 +36,7 @@ struct ambarella_eth_platform_info {
 	int					max_work_count;
 	int					mii_id;
 	u32					phy_id;
+	struct ambarella_gpio_irq_info		phy_irq;
 	struct ambarella_gpio_io_info		mii_power;
 	struct ambarella_gpio_io_info		mii_reset;
 	int					default_clk;
@@ -54,9 +55,10 @@ struct ambarella_eth_platform_info {
 	module_param_cb(eth##id##_max_work_count, &param_ops_int, &(arg.max_work_count), perm); \
 	module_param_cb(eth##id##_mii_id, &param_ops_int, &(arg.mii_id), perm); \
 	module_param_cb(eth##id##_phy_id, &param_ops_uint, &(arg.phy_id), perm); \
-	module_param_cb(eth##id##_default_clk, &param_ops_uint, &(arg.default_clk), perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(eth##id##_phy_irq_, arg.phy_irq, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm)
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm); \
+	module_param_cb(eth##id##_default_clk, &param_ops_uint, &(arg.default_clk), perm)
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_eth0;

@@ -34,6 +34,7 @@ struct outer_cache_fns {
 	void (*clean_all)(void);
 	void (*enable)(void);
 	int (*is_enabled)(void);
+	void (*set_debug)(unsigned long);
 };
 
 #ifdef CONFIG_OUTER_CACHE

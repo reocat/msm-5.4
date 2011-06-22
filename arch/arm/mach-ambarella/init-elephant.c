@@ -426,8 +426,8 @@ static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
 	.trickle_ilim = 50,
 	.vsel = 4200,
 	.eoc_iterm = 20,
-	.fast_ilim = 450,
-	.timeout = 360,
+	.fast_ilim = 600,
+	.timeout = 480,
 	.enable_fet = 1,
 };
 
@@ -842,9 +842,16 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.gsensor_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.gsensor_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
+			ambarella_eth0_platform_info.mii_id = 0;
+			ambarella_eth0_platform_info.phy_id = 0x001cc912;
+			ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(21);
+			ambarella_eth0_platform_info.phy_irq.irq_line = gpio_to_irq(GPIO(21));
+			ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
+			ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
+			ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
 			ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
-			ambarella_eth0_platform_info.mii_power.active_delay = 10;
+			ambarella_eth0_platform_info.mii_power.active_delay = 20;
 			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(98);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
 			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
@@ -886,7 +893,6 @@ static void __init ambarella_init_elephant(void)
 			i2c_register_board_info(0, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
-
 
 			use_bub_default = 0;
 			break;
@@ -976,6 +982,9 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+		ambarella_eth0_platform_info.mii_id = 0;
+		ambarella_eth0_platform_info.phy_id = 0x001cc912;
 
 		fio_default_owner = SELECT_FIO_SDIO;
 		ambarella_platform_sd_controller0.clk_limit = 24000000;

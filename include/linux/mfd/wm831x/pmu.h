@@ -47,6 +47,7 @@
 #define WM831X_USB_ILIM_MASK                    0x0007  /* USB_ILIM - [2:0] */
 #define WM831X_USB_ILIM_SHIFT                        0  /* USB_ILIM - [2:0] */
 #define WM831X_USB_ILIM_WIDTH                        3  /* USB_ILIM - [2:0] */
+#define WM831X_USB_ILIM_500MA	3
 
 /*
  * R16390 (0x4006) - Reset Control (but have some FET config bit)
@@ -198,5 +199,10 @@
 #define WM831X_BKUP_CHG_ILIM_MASK               0x0003  /* BKUP_CHG_ILIM - [1:0] */
 #define WM831X_BKUP_CHG_ILIM_SHIFT                   0  /* BKUP_CHG_ILIM - [1:0] */
 #define WM831X_BKUP_CHG_ILIM_WIDTH                   2  /* BKUP_CHG_ILIM - [1:0] */
+
+struct chg_map {
+	int val;
+	int reg_val;
+};
 
 #endif

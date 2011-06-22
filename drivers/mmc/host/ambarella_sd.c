@@ -324,11 +324,17 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 		pslotinfo->dma_w_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			current_sg[i].dma_address = dma_map_page(pinfo->dev,
 							sg_page(&current_sg[i]),
 							current_sg[i].offset,
 							current_sg[i].length,
 							DMA_TO_DEVICE);
+#else
+			current_sg[i].dma_address = sg_phys(&current_sg[i]);
+			ambcache_clean_range(sg_virt(&current_sg[i]),
+				current_sg[i].length);
+#endif
 			if ((current_sg[i].length & 0xFFF) &&
 				(i < pslotinfo->sg_len - 1)) {
 				ambsd_dbg(pslotinfo,
@@ -420,6 +426,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 
 static void ambarella_sd_post_sg_to_dma(void *data)
 {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
 	struct scatterlist			*current_sg;
@@ -434,6 +441,7 @@ static void ambarella_sd_post_sg_to_dma(void *data)
 		dma_unmap_page(pinfo->dev, current_sg[i].dma_address,
 				current_sg[i].length, DMA_TO_DEVICE);
 	}
+#endif
 }
 
 static void ambarella_sd_pre_dma_to_sg(void *data)
@@ -456,11 +464,15 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 		pslotinfo->dma_r_counter++;
 
 		for (i = 0; i < pslotinfo->sg_len; i++) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			current_sg[i].dma_address = dma_map_page(pinfo->dev,
 							sg_page(&current_sg[i]),
 							current_sg[i].offset,
 							current_sg[i].length,
 							DMA_FROM_DEVICE);
+#else
+			current_sg[i].dma_address = sg_phys(&current_sg[i]);
+#endif
 			if ((current_sg[i].length & 0xFFF) &&
 				(i < pslotinfo->sg_len - 1)) {
 				ambsd_dbg(pslotinfo,
@@ -552,8 +564,13 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 
 	current_sg = pslotinfo->sg;
 	for (i = 0; i < pslotinfo->sg_len; i++) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 		dma_unmap_page(pinfo->dev, current_sg[i].dma_address,
 				current_sg[i].length, DMA_FROM_DEVICE);
+#else
+		ambcache_inv_range(sg_virt(&current_sg[i]),
+			current_sg[i].length);
+#endif
 	}
 	if (pslotinfo->dma_need_fill) {
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
@@ -2175,12 +2192,13 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int					errorCode = 0;
-#ifndef CONFIG_MMC_UNSAFE_RESUME
 	struct ambarella_sd_controller_info	*pinfo;
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
+
+#if !defined(CONFIG_MMC_UNSAFE_RESUME)
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
 		if (pslotinfo->mmc) {
@@ -2190,16 +2208,14 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 				ambsd_err(pslotinfo, "Can't mmc_suspend_host!\n");
 		}
 	}
-
-	if (!device_may_wakeup(&pdev->dev)) {
-		disable_irq(pinfo->irq);
-		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
-			pslotinfo = pinfo->pslotinfo[i];
-			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
-				disable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
-		}
-	}
 #endif
+
+	disable_irq(pinfo->irq);
+	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+		pslotinfo = pinfo->pslotinfo[i];
+		if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
+			disable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
+	}
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -2209,25 +2225,21 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 static int ambarella_sd_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
-#ifndef CONFIG_MMC_UNSAFE_RESUME
 	struct ambarella_sd_controller_info	*pinfo;
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
-
 	pinfo->pcontroller->set_pll(pinfo->pcontroller->max_clk);
-
-	if (!device_may_wakeup(&pdev->dev)) {
-		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
-			pslotinfo = pinfo->pslotinfo[i];
-			ambarella_sd_reset_all(pslotinfo->mmc);
-			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
-				enable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
-		}
-		enable_irq(pinfo->irq);
+	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+		pslotinfo = pinfo->pslotinfo[i];
+		ambarella_sd_reset_all(pslotinfo->mmc);
+		if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
+			enable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
 	}
+	enable_irq(pinfo->irq);
 
+#if !defined(CONFIG_MMC_UNSAFE_RESUME)
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
 		if (pslotinfo->mmc) {

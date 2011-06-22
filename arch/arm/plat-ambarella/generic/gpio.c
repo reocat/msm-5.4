@@ -320,14 +320,20 @@ static void ambarella_gpio_chip_dbg_show(struct seq_file *s,
 	dir = amba_readl(ambarella_chip->mem_base + GPIO_DIR_OFFSET);
 
 	for (i = 0; i < chip->ngpio; i++) {
-		if ((afsel & (1 << i)) && !(mask & (1 << i)))
-			seq_printf(s, "GPIO %s%d: HW\n", chip->label, i);
-		else if (!(afsel & (1 << i)) && (mask & (1 << i)))
-			seq_printf(s, "GPIO %s%d:\t%s\t%s\n", chip->label, i,
-				   (data & (1 << i)) ? "set" : "clear",
-				   (dir & (1 << i)) ? "out" : "in");
-		else
-			seq_printf(s, "GPIO %s%d: unknown!\n", chip->label, i);
+		seq_printf(s, "GPIO %d: ", (chip->base + i));
+		if (afsel & (1 << i)) {
+			seq_printf(s, "HW\n");
+		} else if (!(afsel & (1 << i)) && (mask & (1 << i))) {
+			seq_printf(s, "%s\t%s\n",
+				(dir & (1 << i)) ? "out" : "in",
+				(data & (1 << i)) ? "set" : "clear");
+		} else {
+			seq_printf(s, "Unknown %x:%x:%x:%x.\n",
+				((afsel & (1 << i)) >> i),
+				((mask & (1 << i)) >> i),
+				((data & (1 << i)) >> i),
+				((dir & (1 << i)) >> i));
+		}
 	}
 }
 

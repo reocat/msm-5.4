@@ -52,7 +52,6 @@ endif
 obj-y						+= generic/idc.o
 obj-y						+= generic/ir.o
 obj-y						+= generic/irq.o
-obj-y						+= generic/pll.o
 obj-y						+= generic/pm.o
 obj-y						+= generic/pwm.o
 obj-y						+= generic/rct.o
@@ -64,18 +63,22 @@ obj-y						+= generic/uart.o
 obj-y						+= generic/udc.o
 obj-y						+= generic/wdt.o
 obj-y						+= generic/adb.o
+
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
+obj-y						+= generic/pll_hal.o
+else
+obj-y						+= generic/pll_rct.o
+endif
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_USB), y)
+obj-y						+= generic/uhc.o
+endif
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA), y)
+obj-y						+= generic/ahci.o
+endif
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
 obj-y						+= video/ambfb.o
-endif
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_USB), y)
-obj-y						+= generic/uhc.o
-endif
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA), y)
-obj-y						+= generic/ahci.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)

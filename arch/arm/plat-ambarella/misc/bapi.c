@@ -26,6 +26,7 @@
 #include <linux/module.h>
 #include <linux/cpu.h>
 #include <linux/suspend.h>
+#include <linux/fb.h>
 
 #include <asm/setup.h>
 #include <asm/suspend.h>
@@ -36,6 +37,7 @@
 #include <plat/bapi.h>
 #include <plat/ambcache.h>
 #include <plat/debug.h>
+#include <plat/fb.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -227,7 +229,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				break;
 			}
 
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX) && defined(CONFIG_SMP)
 			arch_smp_suspend(0);
 #endif
 			bapi_aoss_entry =
@@ -239,7 +241,9 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				ambarella_swvic_set(AXI_SOFT_IRQ(0));
 				while(1) {};
 			}
+#if defined(CONFIG_SMP)
 			arch_smp_resume(0);
+#endif
 #endif
 
 			ambarella_bapi_aoss_return();
@@ -257,6 +261,44 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			sizeof(struct ambarella_bapi_reboot_info_s));
 		ambcache_clean_range(&bapi_info->reboot_info,
 			sizeof(struct ambarella_bapi_reboot_info_s));
+	}
+		break;
+
+	case AMBARELLA_BAPI_CMD_UPDATE_FB_INFO:
+	{
+		retval = ambarella_bapi_check_bapi_info(cmd);
+		if (retval != 0)
+			break;
+
+		if (bapi_info->fb0_info.xres && bapi_info->fb0_info.yres &&
+			bapi_info->fb0_info.xvirtual &&
+			bapi_info->fb0_info.yvirtual &&
+			bapi_info->fb0_info.fb_start &&
+			bapi_info->fb0_info.fb_length) {
+			ambarella_fb_update_info(0, bapi_info->fb0_info.xres,
+				bapi_info->fb0_info.yres,
+				bapi_info->fb0_info.xvirtual,
+				bapi_info->fb0_info.yvirtual,
+				bapi_info->fb0_info.format,
+				bapi_info->fb0_info.bits_per_pixel,
+				bapi_info->fb0_info.fb_start,
+				bapi_info->fb0_info.fb_length);
+		}
+
+		if (bapi_info->fb1_info.xres && bapi_info->fb1_info.yres &&
+			bapi_info->fb1_info.xvirtual &&
+			bapi_info->fb1_info.yvirtual &&
+			bapi_info->fb1_info.fb_start &&
+			bapi_info->fb1_info.fb_length) {
+			ambarella_fb_update_info(1, bapi_info->fb1_info.xres,
+				bapi_info->fb1_info.yres,
+				bapi_info->fb1_info.xvirtual,
+				bapi_info->fb1_info.yvirtual,
+				bapi_info->fb1_info.format,
+				bapi_info->fb1_info.bits_per_pixel,
+				bapi_info->fb1_info.fb_start,
+				bapi_info->fb1_info.fb_length);
+		}
 	}
 		break;
 
@@ -291,6 +333,7 @@ static int __init ambarella_bapi_init(void)
 
 	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_INIT, NULL);
 	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_INIT, NULL);
+	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_UPDATE_FB_INFO, NULL);
 
 	return retval;
 }

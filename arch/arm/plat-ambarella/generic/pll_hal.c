@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/pll.c
+ * arch/arm/plat-ambarella/generic/pll_hal.c
  *
  * Author: Cao Rongrong, <rrcao@ambarella.com>
  *
@@ -28,59 +28,20 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/dma-mapping.h>
-
 #include <linux/proc_fs.h>
+#include <linux/cpu.h>
+
 #include <asm/uaccess.h>
+#include <asm/localtimer.h>
+
 #include <mach/hardware.h>
-#include <mach/init.h>
+
+#include <plat/pll.h>
+#include <plat/timer.h>
+
 #include <hal/hal.h>
 
-#define MAX_CMD_LENGTH				(32)
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-static struct proc_dir_entry *mode_file = NULL;
-static struct proc_dir_entry *performance_file = NULL;
-#else
-static struct proc_dir_entry *freq_file = NULL;
-#endif
-
-static inline unsigned long ambarella_cpufreq_scale(unsigned long old,
-	u_int div, u_int mult)
-{
-#if BITS_PER_LONG == 32
-
-	u64 result = ((u64) old) * ((u64) mult);
-	do_div(result, div);
-	return (unsigned long) result;
-
-#elif BITS_PER_LONG == 64
-
-	unsigned long result = old * ((u64) mult);
-	result /= div;
-	return result;
-
-#endif
-};
-
-static unsigned long l_p_j_ref;
-static unsigned int  l_p_j_ref_freq;
-
-static void ambarella_adjust_jiffies(unsigned long val,
-	unsigned int oldfreq, unsigned int newfreq)
-{
-	if (!l_p_j_ref_freq) {
-		l_p_j_ref = loops_per_jiffy;
-		l_p_j_ref_freq = oldfreq;
-	}
-	if ((val == AMBA_EVENT_PRE_CPUFREQ  && oldfreq < newfreq) ||
-	    (val == AMBA_EVENT_POST_CPUFREQ && oldfreq > newfreq)) {
-		loops_per_jiffy = ambarella_cpufreq_scale(l_p_j_ref,
-			l_p_j_ref_freq, newfreq);
-	}
-}
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-
+/* ==========================================================================*/
 struct ambarella_pll_info {
 	amb_operating_mode_t operating_mode;
 };
@@ -94,6 +55,11 @@ struct ambarella_pll_performance_info {
 	char *name;
 	unsigned int performance;
 };
+
+/* ==========================================================================*/
+static struct proc_dir_entry *mode_file = NULL;
+static struct proc_dir_entry *performance_file = NULL;
+static struct ambarella_pll_info pll_info;
 
 #if (CHIP_REV == A5S)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
@@ -110,8 +76,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"raw", AMB_OPERATING_MODE_RAW},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
-
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60 + 1)
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -120,8 +85,8 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
-	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
+
 #elif (CHIP_REV == A7)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
@@ -136,8 +101,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
-
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60 + 1)
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -145,8 +109,8 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
-	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
+
 #elif (CHIP_REV == I1)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
@@ -159,11 +123,11 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
 	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"lowpower_cortex", AMB_OPERATING_MODE_LOW_POWER_WITH_CORTEX},
 	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
-
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60 + 1)
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -171,12 +135,10 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
-	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 #endif
 
-static struct ambarella_pll_info pll_info;
-
+/* ==========================================================================*/
 static int ambarella_pll_proc_read(char *page, char **start,
 	off_t off, int count, int *eof, void *data)
 {
@@ -273,8 +235,7 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 			__func__, retval);
 	}
 
-	oldfreq = get_arm_bus_freq_hz();
-
+	disable_nonboot_cpus();
 	local_irq_save(flags);
 
 	retval = notifier_to_errno(
@@ -284,9 +245,23 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 			__func__, retval);
 	}
 
+	oldfreq = get_arm_bus_freq_hz();
+
 	ambarella_timer_suspend(1);
 	result = amb_set_operating_mode(HAL_BASE_VP, popmode);
+	if (result != AMB_HAL_SUCCESS) {
+		pr_err("%s: amb_set_operating_mode failed(%d)\n",
+			__func__, result);
+		retval = -EPERM;
+	}
 	ambarella_timer_resume(1);
+
+	newfreq = get_arm_bus_freq_hz();
+	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
+
+#if defined(CONFIG_SMP)
+	percpu_timer_update_rate(amb_get_axi_clock_frequency(HAL_BASE_VP));
+#endif
 
 	retval = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
@@ -295,16 +270,8 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 			__func__, retval);
 	}
 
-	if (result != AMB_HAL_SUCCESS) {
-		pr_err("%s: amb_set_operating_mode failed(%d)\n",
-			__func__, result);
-		retval = -EPERM;
-	}
-
 	local_irq_restore(flags);
-
-	newfreq = get_arm_bus_freq_hz();
-	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
+	enable_nonboot_cpus();
 
 	retval = notifier_to_errno(
 		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
@@ -327,15 +294,15 @@ static int ambarella_mode_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
 	int					retval = 0;
-	char					str[MAX_CMD_LENGTH];
+	char					str[AMBPLL_MAX_CMD_LENGTH];
 	int					mode, i;
 	amb_hal_success_t			result;
 
-	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
+	i = (count < AMBPLL_MAX_CMD_LENGTH) ? count : AMBPLL_MAX_CMD_LENGTH;
 	if (copy_from_user(str, buffer, i)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
 		retval = -EFAULT;
-		goto pll_mode_proc_write_exit;
+		goto ambarella_mode_proc_write_exit;
 	}
 	str[i - 1] = 0;
 
@@ -344,13 +311,13 @@ static int ambarella_mode_proc_write(struct file *file,
 		if (strlen(str) == strlen(mode_list[i].name)
 			&& strcmp(str, mode_list[i].name) == 0) {
 			mode = mode_list[i].mode;
+			break;
 		}
 	}
-
 	if (mode >= AMB_OPERATING_MODE_END) {
 		pr_err("%s: invalid mode (%s)!\n", __func__, str);
 		retval = -EINVAL;
-		goto pll_mode_proc_write_exit;
+		goto ambarella_mode_proc_write_exit;
 	}
 
 	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
@@ -358,15 +325,17 @@ static int ambarella_mode_proc_write(struct file *file,
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
 			__func__, result);
 		retval = -EPERM;
-		goto pll_mode_proc_write_exit;
+		goto ambarella_mode_proc_write_exit;
 	}
 
-	pll_info.operating_mode.mode = mode;
-	retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	if (pll_info.operating_mode.mode != mode) {
+		pll_info.operating_mode.mode = mode;
+		retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	}
 	if (!retval)
 		retval = count;
 
-pll_mode_proc_write_exit:
+ambarella_mode_proc_write_exit:
 	return retval;
 }
 
@@ -374,15 +343,15 @@ static int ambarella_performance_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
 	int					retval = 0;
-	char					str[MAX_CMD_LENGTH];
+	char					str[AMBPLL_MAX_CMD_LENGTH];
 	int					performance, i;
 	amb_hal_success_t			result;
 
-	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
+	i = (count < AMBPLL_MAX_CMD_LENGTH) ? count : AMBPLL_MAX_CMD_LENGTH;
 	if (copy_from_user(str, buffer, i)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
 		retval = -EFAULT;
-		goto pll_performance_proc_write_exit;
+		goto ambarella_performance_proc_write_exit;
 	}
 	str[i - 1] = 0;
 
@@ -391,13 +360,13 @@ static int ambarella_performance_proc_write(struct file *file,
 		if (strlen(str) == strlen(performance_list[i].name)
 			&& strcmp(str, performance_list[i].name) == 0) {
 			performance = performance_list[i].performance;
+			break;
 		}
 	}
-
 	if (performance >= AMB_OPERATING_PERFORMANCE_END){
-		pr_err("%s: invalid performance (%s)!\n", __func__, str);
+		pr_err("\n%s: invalid performance (%s)!\n", __func__, str);
 		retval = -EINVAL;
-		goto pll_performance_proc_write_exit;
+		goto ambarella_performance_proc_write_exit;
 	}
 
 	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
@@ -405,29 +374,30 @@ static int ambarella_performance_proc_write(struct file *file,
 		pr_err("%s: amb_get_operating_mode failed(%d)\n",
 			__func__, result);
 		retval = -EPERM;
-		goto pll_performance_proc_write_exit;
+		goto ambarella_performance_proc_write_exit;
 	}
 
-	pll_info.operating_mode.performance = performance;
-	retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	if (pll_info.operating_mode.performance != performance) {
+		pll_info.operating_mode.performance = performance;
+		retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	}
 	if (!retval)
 		retval = count;
 
-pll_performance_proc_write_exit:
+ambarella_performance_proc_write_exit:
 	return retval;
 }
 
-static int ambarella_init_pll_a5s(void)
+static int __init ambarella_init_pll_hal(void)
 {
 	amb_hal_success_t			result;
 	int					retval = 0;
 
-	/* initial pll_info */
 	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
 	if(result != AMB_HAL_SUCCESS){
 		pr_err("%s: get operating mode failed(%d)\n",__func__, result);
 		retval = -EPERM;
-		goto pll_a5s_exit;
+		goto ambarella_init_pll_hal_exit;
 	}
 
 	mode_file = create_proc_entry("mode", S_IRUGO | S_IWUSR,
@@ -435,7 +405,7 @@ static int ambarella_init_pll_a5s(void)
 	if (mode_file == NULL) {
 		retval = -ENOMEM;
 		pr_err("%s: create proc file (mode) fail!\n", __func__);
-		goto pll_a5s_exit;
+		goto ambarella_init_pll_hal_exit;
 	} else {
 		mode_file->read_proc = ambarella_pll_proc_read;
 		mode_file->write_proc = ambarella_mode_proc_write;
@@ -446,217 +416,21 @@ static int ambarella_init_pll_a5s(void)
 	if (performance_file == NULL) {
 		retval = -ENOMEM;
 		pr_err("%s: create proc file (performance) fail!\n", __func__);
-		goto pll_a5s_exit;
+		goto ambarella_init_pll_hal_exit;
 	} else {
 		performance_file->read_proc = ambarella_pll_proc_read;
 		performance_file->write_proc = ambarella_performance_proc_write;
 	}
 
-pll_a5s_exit:
+ambarella_init_pll_hal_exit:
 	return retval;
 }
-
-#else
-
-struct ambarella_pll_info {
-	unsigned int armfreq;
-};
-
-static struct ambarella_pll_info pll_info;
-
-static int ambarella_freq_proc_read(char *page, char **start,
-	off_t off, int count, int *eof, void *data)
-{
-	int					retlen = 0;
-
-	if (off != 0)
-		return 0;
-
-	retlen = scnprintf(page, count,
-			"\nPLL Information:\n"
-			"\tCore:\t%d Hz\n"
-			"\tDram:\t%d Hz\n"
-			"\tiDSP:\t%d Hz\n"
-			"\tAHB:\t%d Hz\n"
-			"\tAPB:\t%d Hz\n\n",
-			get_core_bus_freq_hz(),
-			get_dram_freq_hz(),
-			get_idsp_freq_hz(),
-			get_ahb_bus_freq_hz(),
-			get_apb_bus_freq_hz());
-
-	*eof = 1;
-
-	return retlen;
-}
-
-static void ambarella_freq_set_pll(unsigned int new_freq_cpu)
-{
-	unsigned int				cur_freq_cpu;
-
-#if ((CHIP_REV == A2) || (CHIP_REV == A3))
-	do {
-		cur_freq_cpu = amba_readl(PLL_CORE_CTRL_REG) & 0xfff00000;
-		if (new_freq_cpu > pll_info.armfreq) {
-			cur_freq_cpu += 0x01000000;
-		} else {
-			cur_freq_cpu -= 0x01000000;
-		}
-		cur_freq_cpu |= (amba_readl(PLL_CORE_CTRL_REG) & 0x000fffff);
-		amba_writel(PLL_CORE_CTRL_REG, cur_freq_cpu);
-		mdelay(20);
-		cur_freq_cpu = get_core_bus_freq_hz();
-	} while ((new_freq_cpu > pll_info.armfreq && cur_freq_cpu < new_freq_cpu) ||
-		 (new_freq_cpu < pll_info.armfreq && cur_freq_cpu > new_freq_cpu));
-#elif ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
-	(CHIP_REV == A5) || (CHIP_REV == A6))
-	do {
-		u32 reg, intprog, sdiv, sout, valwe;
-
-		reg = amba_readl(PLL_CORE_CTRL_REG);
-		intprog = PLL_CTRL_INTPROG(reg);
-		sout = PLL_CTRL_SOUT(reg);
-		sdiv = PLL_CTRL_SDIV(reg);
-		valwe = PLL_CTRL_VALWE(reg);
-		valwe &= 0xffe;
-		if (new_freq_cpu > pll_info.armfreq)
-			intprog++;
-		else
-			intprog--;
-
-		reg = PLL_CTRL_VAL(intprog, sout, sdiv, valwe);
-		amba_writel(PLL_CORE_CTRL_REG, reg);
-
-		/* PLL write enable */
-		reg |= 0x1;
-		amba_writel(PLL_CORE_CTRL_REG, reg);
-
-		/* FIXME: wait a while */
-		mdelay(20);
-		cur_freq_cpu = get_core_bus_freq_hz();
-	} while ((new_freq_cpu > pll_info.armfreq && cur_freq_cpu < new_freq_cpu) ||
-		(new_freq_cpu < pll_info.armfreq && cur_freq_cpu > new_freq_cpu));
-#endif
-}
-
-static int ambarella_freq_proc_write(struct file *file,
-	const char __user *buffer, unsigned long count, void *data)
-{
-	char					str[MAX_CMD_LENGTH];
-	int					retval = 0;
-	unsigned int				i;
-	unsigned long				flags;
-
-	i = (count < MAX_CMD_LENGTH) ? count : MAX_CMD_LENGTH;
-	if (copy_from_user(str, buffer, i)) {
-		pr_err("%s: copy_from_user fail!\n", __func__);
-		retval = -EFAULT;
-		goto ambarella_pll_proc_write_exit;
-	}
-	str[MAX_CMD_LENGTH - 1] = 0;
-
-	retval = sscanf(str, "%d", &i);
-	if (retval != 1) {
-		pr_err("%s: convert sting fail %d!\n", __func__, retval);
-		retval = -EINVAL;
-		goto ambarella_pll_proc_write_exit;
-	}
-
-	if (i > 243000000 || i < 135000000) {
-		pr_err("%s:\n\tinvalid frequency (%d)\n",
-			__func__, i);
-		pr_info("\tfrequency should be 135000 ~ 243000 (in KHz)\n");
-		retval = -EINVAL;
-		goto ambarella_pll_proc_write_exit;
-	}
-
-	pr_debug("%s: %ld %d\n", __func__, count, i);
-	retval = count;
-
-	if(i == pll_info.armfreq)
-		goto ambarella_pll_proc_write_exit;
-
-	retval = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (retval) {
-		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, retval);
-	}
-
-	ambarella_adjust_jiffies(AMBA_EVENT_PRE_CPUFREQ,
-		pll_info.armfreq, i);
-
-	local_irq_save(flags);
-
-	retval = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
-	if (retval) {
-		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-			__func__, retval);
-	}
-
-	ambarella_timer_suspend(1);
-	ambarella_freq_set_pll(i);
-	ambarella_timer_resume(1);
-
-	retval = notifier_to_errno(
-		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
-	if (retval) {
-		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
-			__func__, retval);
-	}
-
-	local_irq_restore(flags);
-
-	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ,
-		pll_info.armfreq, i);
-
-	retval = notifier_to_errno(
-		ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
-	if (retval) {
-		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
-			__func__, retval);
-	}
-
-	pll_info.armfreq = get_core_bus_freq_hz();
-
-ambarella_pll_proc_write_exit:
-	return retval;
-}
-
-static int ambarella_init_pll_general(void)
-{
-	int					retval = 0;
-
-	/* initial pll_info */
-	pll_info.armfreq = get_core_bus_freq_hz();
-
-	freq_file = create_proc_entry("corepll", S_IRUGO | S_IWUSR,
-		get_ambarella_proc_dir());
-	if (freq_file == NULL) {
-		retval = -ENOMEM;
-		pr_err("%s: create proc file (freq) fail!\n", __func__);
-		goto pll_general_exit;
-	} else {
-		freq_file->read_proc = ambarella_freq_proc_read;
-		freq_file->write_proc = ambarella_freq_proc_write;
-	}
-
-pll_general_exit:
-	return retval;
-}
-
-#endif	/* End for #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL) */
 
 int __init ambarella_init_pll(void)
 {
 	int					retval = 0;
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	retval = ambarella_init_pll_a5s();
-#else
-	retval = ambarella_init_pll_general();
-#endif
+	retval = ambarella_init_pll_hal();
 
 	return retval;
 }
@@ -669,12 +443,10 @@ u32 ambarella_pll_suspend(u32 level)
 
 u32 ambarella_pll_resume(u32 level)
 {
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_set_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
-#else
-	ambarella_freq_set_pll(pll_info.armfreq);
-#endif
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	return 0;
+#else
+	return amb_set_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
+#endif
 }
 

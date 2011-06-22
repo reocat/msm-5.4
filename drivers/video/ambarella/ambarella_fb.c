@@ -912,13 +912,7 @@ static int __init ambfb_setup(struct device *dev, char *options,
 	unsigned int				cl_prealloc_start;
 	unsigned int				cl_prealloc_length;
 
-	if ((!options || !*options) && (ambfb_data->use_prealloc == 0)) {
-		goto ambfb_setup_exit;
-	}
-
-	if (ambfb_data->use_prealloc) {
-		dev_warn(dev, "Use prealloc and skip %s!\n", options);
-		retval = 0;
+	if (!options || !*options) {
 		goto ambfb_setup_exit;
 	}
 
@@ -977,14 +971,18 @@ static int __devinit ambfb_probe(struct platform_device *pdev)
 		goto ambfb_probe_exit;
 	}
 
-	snprintf(fb_name, sizeof(fb_name), "amb%dfb", pdev->id);
-	if (fb_get_options(fb_name, &option)) {
-		errorCode = -ENODEV;
-		goto ambfb_probe_exit;
-	}
-	if (ambfb_setup(&pdev->dev, option, ambfb_data)) {
-		errorCode = -ENODEV;
-		goto ambfb_probe_exit;
+	if (ambfb_data->use_prealloc) {
+		dev_info(&pdev->dev, "%s: use prealloc.\n", __func__);
+	} else {
+		snprintf(fb_name, sizeof(fb_name), "amb%dfb", pdev->id);
+		if (fb_get_options(fb_name, &option)) {
+			errorCode = -ENODEV;
+			goto ambfb_probe_exit;
+		}
+		if (ambfb_setup(&pdev->dev, option, ambfb_data)) {
+			errorCode = -ENODEV;
+			goto ambfb_probe_exit;
+		}
 	}
 	
 #if defined(CONFIG_AMBARELLA_IPC)
