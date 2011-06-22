@@ -72,10 +72,19 @@ static long ambastrmem_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 	return 0;
 }
 
-#ifdef CONFIG_ARM_DMA_MEM_BUFFERABLE
-extern pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
-			      unsigned long size, pgprot_t vma_prot);
-#endif
+#define pgprot_noncached(prot) \
+       __pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_UNCACHED)
+
+static pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
+				     unsigned long size, pgprot_t vma_prot)
+{
+	if (file->f_flags & O_DSYNC){
+		printk("phys_mem_access_prot: set as noncached\n");
+		return pgprot_noncached(vma_prot);
+	}
+
+	return vma_prot;
+}
 
 static int ambastrmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
@@ -109,12 +118,9 @@ static int ambastrmem_mmap(struct file *filp, struct vm_area_struct *vma)
 	//}
 	//vma->vm_flags |= VM_RESERVED;
 
-#ifdef CONFIG_ARM_DMA_MEM_BUFFERABLE
-	printk("before phys_mem_access_prot\n");
 	vma->vm_page_prot = phys_mem_access_prot(filp, vma->vm_pgoff,
 						 size,
 						 vma->vm_page_prot);
-#endif
 
 	vma->vm_pgoff = ((int)iavpool_baseaddr) >> PAGE_SHIFT;
 	if ((rval = remap_pfn_range(vma,
