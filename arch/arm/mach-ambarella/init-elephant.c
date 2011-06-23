@@ -121,10 +121,11 @@ static struct regulator_consumer_supply dcdc3_consumers[] = {
 static struct regulator_init_data elephant_wm8310_dcdc3_data = {
 	.constraints = {
 		.name = "VDD33_LP_AND_GEN_3.15V",
-		.min_uV = 3150000,
-		.max_uV = 3150000,
-		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.min_uV = 2800000,
+		.max_uV = 3400000,
+		.apply_uV = 0,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -132,8 +133,8 @@ static struct regulator_init_data elephant_wm8310_dcdc3_data = {
 		//.always_on = 1,
 		.boot_on = 1,
 	},
-	 .num_consumer_supplies = ARRAY_SIZE(dcdc3_consumers),
-	 .consumer_supplies = dcdc3_consumers,
+	.num_consumer_supplies = ARRAY_SIZE(dcdc3_consumers),
+	.consumer_supplies = dcdc3_consumers,
 };
 
 static struct regulator_consumer_supply dcdc4_consumers[] = {
