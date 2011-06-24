@@ -622,9 +622,9 @@ static int __init serial_ambarella_console_setup(struct console *co,
 
 	if (co->index < 0 || co->index >= ambarella_uart_ports.total_port_num)
 		co->index = 0;
-#if !defined(CONFIG_MACH_BOSS)
 	port = (struct uart_port *)(
 		ambarella_uart_ports.amba_port[co->index].port);
+#if !defined(CONFIG_MACH_BOSS)
 	ambarella_uart_ports.amba_port[co->index].set_pll();
 #endif
 	port->uartclk = ambarella_uart_ports.amba_port[co->index].get_pll();
