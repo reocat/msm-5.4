@@ -258,12 +258,13 @@ static struct regulator_consumer_supply ldo5_consumers[] = {
 /* LDO5 VDD33_SDXC */
 static struct regulator_init_data elephant_wm8310_ldo5_data = {
 	.constraints = {
-		.name = "VDD33_SDXC_3.1V",
+		.name = "VDD33_SDXC_1.5V_3.3V",
 		/* can not get 3.15 but 3.1 or 3.2 */
-		.min_uV = 3100000,
-		.max_uV = 3100000,
+		.min_uV = 1500000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
