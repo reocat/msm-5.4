@@ -52,7 +52,11 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+static int pm_debug_hal_standby = 0;
+#else
 static int pm_debug_hal_standby = 1;
+#endif
 module_param(pm_debug_hal_standby, int, 0644);
 
 /* ==========================================================================*/
