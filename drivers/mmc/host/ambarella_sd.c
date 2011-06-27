@@ -461,6 +461,8 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 							DMA_FROM_DEVICE);
 #else
 			current_sg[i].dma_address = sg_phys(&current_sg[i]);
+			ambcache_inv_range(sg_virt(&current_sg[i]),
+				current_sg[i].length);
 #endif
 			if ((current_sg[i].length & 0xFFF) &&
 				(i < pslotinfo->sg_len - 1)) {

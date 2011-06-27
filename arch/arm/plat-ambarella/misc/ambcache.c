@@ -64,6 +64,9 @@ void ambcache_clean_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+#ifdef CONFIG_OUTER_CACHE
+	pstart = ambarella_virt_to_phys(vstart);
+#endif
 
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
@@ -72,7 +75,6 @@ void ambcache_clean_range(void *addr, unsigned int size)
 	dsb();
 
 #ifdef CONFIG_OUTER_CACHE
-	pstart = ambarella_virt_to_phys(vstart);
 	outer_clean_range(pstart, (pstart + size));
 	dsb();
 #endif
@@ -91,6 +93,12 @@ void ambcache_inv_range(void *addr, unsigned int size)
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 
+#ifdef CONFIG_OUTER_CACHE
+	pstart = ambarella_virt_to_phys(vstart);
+	outer_inv_range(pstart, (pstart + size));
+	dsb();
+#endif
+
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
 			"mcr p15, 0, %0, c7, c6, 1" : : "r" (addr_tmp));
@@ -98,8 +106,12 @@ void ambcache_inv_range(void *addr, unsigned int size)
 	dsb();
 
 #ifdef CONFIG_OUTER_CACHE
-	pstart = ambarella_virt_to_phys(vstart);
 	outer_inv_range(pstart, (pstart + size));
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
+		__asm__ __volatile__ (
+			"mcr p15, 0, %0, c7, c6, 1" : : "r" (addr_tmp));
+	}
 	dsb();
 #endif
 }
@@ -117,6 +129,7 @@ void ambcache_flush_range(void *addr, unsigned int size)
 #ifdef CONFIG_OUTER_CACHE
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+	pstart = ambarella_virt_to_phys(vstart);
 
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
@@ -124,7 +137,6 @@ void ambcache_flush_range(void *addr, unsigned int size)
 	}
 	dsb();
 
-	pstart = ambarella_virt_to_phys(vstart);
 	outer_flush_range(pstart, (pstart + size));
 
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
