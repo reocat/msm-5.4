@@ -65,7 +65,7 @@ static struct regulator_consumer_supply dcdc1_consumers[] = {
 
 static struct regulator_init_data elephant_wm8310_dcdc1_data = {
 	.constraints = {
-		.name = "VDD_AXI_1.2V",
+		.name = "VDD_AXI_1.0V_1.4V",
 		.min_uV = 1000000,
 		.max_uV = 1400000,
 		.apply_uV = 1,
@@ -90,11 +90,11 @@ static struct regulator_consumer_supply dcdc2_consumers[] = {
 /* DCDC2 iOne_D1P5 for DDR3 */
 static struct regulator_init_data elephant_wm8310_dcdc2_data = {
 	.constraints = {
-		.name = "VDDQ_i1_1.5V",
-		.min_uV = 1500000,
-		.max_uV = 1500000,
+		.name = "VDDQ_i1_0.6V_1.8",
+		.min_uV = 600000,
+		.max_uV = 1800000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_MODE,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
@@ -141,11 +141,12 @@ static struct regulator_consumer_supply dcdc4_consumers[] = {
 
 static struct regulator_init_data elephant_wm8310_dcdc4_data = {
 	.constraints = {
-		.name = "VDD_LCD_28V",
-		.min_uV = 28000000,
-		.max_uV = 28000000,
+		.name = "VDD_LCD_6.5V_30V",
+		.min_uV = 6500000,
+		.max_uV = 30000000,
 		.apply_uV = 0,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -165,11 +166,12 @@ static struct regulator_consumer_supply ldo1_consumers[] = {
 /* LDO1 MIPI_PHY */
 static struct regulator_init_data elephant_wm8310_ldo1_data = {
 	.constraints = {
-		.name = "VDD_MIPI_PHY_1.8V",
-		.min_uV = 1800000,
-		.max_uV = 1800000,
+		.name = "VDD_MIPI_PHY_0.9V_3.3V",
+		.min_uV = 900000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -188,11 +190,12 @@ static struct regulator_consumer_supply ldo2_consumers[] = {
 /* LDO2 SEN_VDD */
 static struct regulator_init_data elephant_wm8310_ldo2_data = {
 	.constraints = {
-		.name = "VDD_SEN_1.5V",
-		.min_uV = 1500000,
-		.max_uV = 1500000,
+		.name = "VDD_SEN_0.9V_3.3V",
+		.min_uV = 900000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -211,11 +214,12 @@ static struct regulator_consumer_supply ldo3_consumers[] = {
 /* LDO3 Audio codec power */
 static struct regulator_init_data elephant_wm8310_ldo3_data = {
 	.constraints = {
-		.name = "VDD_AUD_1.8V",
-		.min_uV = 1800000,
-		.max_uV = 1800000,
+		.name = "VDD_AUD_0.9V_3.3V",
+		.min_uV = 900000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -235,11 +239,12 @@ static struct regulator_consumer_supply ldo4_consumers[] = {
 /* LDO4 gyro sensor */
 static struct regulator_init_data elephant_wm8310_ldo4_data = {
 	.constraints = {
-		.name = "VDD_GY_3.1V",
-		.min_uV = 3100000,
-		.max_uV = 3100000,
+		.name = "VDD_GY_0.9V_3.3V",
+		.min_uV = 900000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -258,9 +263,9 @@ static struct regulator_consumer_supply ldo5_consumers[] = {
 /* LDO5 VDD33_SDXC */
 static struct regulator_init_data elephant_wm8310_ldo5_data = {
 	.constraints = {
-		.name = "VDD33_SDXC_1.5V_3.3V",
+		.name = "VDD33_SDXC_0.9V_3.3V",
 		/* can not get 3.15 but 3.1 or 3.2 */
-		.min_uV = 1500000,
+		.min_uV = 900000,
 		.max_uV = 3300000,
 		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
@@ -283,11 +288,12 @@ static struct regulator_consumer_supply ldo6_consumers[] = {
 /* LDO6 Gsensor */
 static struct regulator_init_data elephant_wm8310_ldo6_data = {
 	.constraints = {
-		.name = "VDD_G_2.8V",
-		.min_uV = 2800000,
-		.max_uV = 2800000,
+		.name = "VDD_G_0.9V_3.3V",
+		.min_uV = 900000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -306,11 +312,12 @@ static struct regulator_consumer_supply ldo7_consumers[] = {
 /* LDO7 VDDA_25_XX */
 static struct regulator_init_data elephant_wm8310_ldo7_data = {
 	.constraints = {
-		.name = "VDDA_25_XXX_2.5V",
-		.min_uV = 2500000,
-		.max_uV = 2500000,
+		.name = "VDDA_25_XXX_1V_3.5V",
+		.min_uV = 1000000,
+		.max_uV = 3500000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -329,11 +336,12 @@ static struct regulator_consumer_supply ldo8_consumers[] = {
 /* LDO8 Image sensor */
 static struct regulator_init_data elephant_wm8310_ldo8_data = {
 	.constraints = {
-		.name = "VDD_IMG_SEN_2.8V",
-		.min_uV = 2800000,
-		.max_uV = 2800000,
+		.name = "VDD_IMG_SEN_1V_3.5",
+		.min_uV = 1000000,
+		.max_uV = 3500000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -352,11 +360,12 @@ static struct regulator_consumer_supply ldo9_consumers[] = {
 /* LDO9 VDD_BT */
 static struct regulator_init_data elephant_wm8310_ldo9_data = {
 	.constraints = {
-		.name = "VDD_BT_3.1V",
-		.min_uV = 3100000,
-		.max_uV = 3100000,
+		.name = "VDD_BT_1V_3.5V",
+		.min_uV = 1000000,
+		.max_uV = 3500000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
@@ -375,11 +384,12 @@ static struct regulator_consumer_supply ldo10_consumers[] = {
 /* LDO10 VDD_LCD */
 static struct regulator_init_data elephant_wm8310_ldo10_data = {
 	.constraints = {
-		.name = "VDD_LCD_2.8V",
-		.min_uV = 2800000,
-		.max_uV = 2800000,
+		.name = "VDD_LCD_1V_3.5V",
+		.min_uV = 1000000,
+		.max_uV = 3500000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
 		},
