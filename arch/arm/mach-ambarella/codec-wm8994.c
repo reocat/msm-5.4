@@ -59,7 +59,7 @@ static struct regulator_init_data wm8994_ldo2_data = {
 		.always_on	= 1,
 
 	},
-	.supply_regulator	= "VDD_AUD_1.8V",
+	.supply_regulator	= "VDD_AUD_0.9V_3.3V",
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &wm8994_dcvdd_supply,
 };
