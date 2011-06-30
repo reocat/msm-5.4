@@ -775,6 +775,63 @@ static struct i2c_board_info boss_board_ext_i2c_info = {
 	.platform_data		= &boss_board_ext_i2c_pdata,
 };
 #endif
+
+static void ambarella_init_vendor_2(void)
+{
+	static struct platform_device *vendor_2_devices[] __initdata = {
+		&ambarella_fb0,
+		&ambarella_fb1,
+		&ambarella_i2s0,
+		&ambarella_sd1,
+		&ambarella_sd0,
+		&ambarella_uart1,
+		&ambarella_udc0,
+		&ambarella_fsg_device0,
+		&ambarella_usb_device0,
+#ifdef CONFIG_TOUCHSCREEN_AMBA_VTOUCH
+		&amba_vtouch,
+#endif
+#ifdef CONFIG_INPUT_AMBA_VBUTTON
+		&amba_vbutton,
+#endif
+#ifdef CONFIG_AMBARELLA_STREAMMEM
+		&amba_streammem,
+#endif
+	};
+	int i;
+
+	ambarella_platform_sd_controller0.clk_limit = 24000000;
+	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+	ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[1].fixed_cd = 1;
+	ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
+	ambarella_platform_sd_controller1.clk_limit = 24000000;
+	ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
+	ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+	ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
+	ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
+
+	platform_add_devices(vendor_2_devices, ARRAY_SIZE(vendor_2_devices));
+	for (i = 0; i < ARRAY_SIZE(vendor_2_devices); i++) {
+		device_set_wakeup_capable(&vendor_2_devices[i]->dev, 1);
+		device_set_wakeup_enable(&vendor_2_devices[i]->dev, 0);
+	}
+}
+
 /* ==========================================================================*/
 static void __init ambarella_init_boss(void)
 {
@@ -790,36 +847,7 @@ static void __init ambarella_init_boss(void)
 			break;
 		case 2:
 			use_bub_default = 0;
-			ambarella_platform_sd_controller0.clk_limit = 24000000;
-			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
-			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[1].fixed_cd = 1;
-			ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
-			ambarella_platform_sd_controller1.clk_limit = 24000000;
-			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
-			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
-			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
-			ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
-			{ // enable uart1
-				struct platform_device *p = &ambarella_uart1;
-				platform_add_devices(&p, 1);
-				device_set_wakeup_capable(&p->dev, 1);
-				device_set_wakeup_enable(&p->dev, 0);
-			}
+			ambarella_init_vendor_2();
 			break;
 		default:
 			pr_warn("%s: Unknown VENDOR Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
@@ -861,12 +889,12 @@ static void __init ambarella_init_boss(void)
 		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_val	= GPIO_LOW,
 		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = GPIO(128);
-	}
 
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+		platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
+		for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
+			device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
+			device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+		}
 	}
 
 	platform_device_register(&boss_board_input);
