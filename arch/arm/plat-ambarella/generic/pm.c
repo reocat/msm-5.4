@@ -52,15 +52,32 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+static int pm_debug_hal_standby = 0;
+#else
 static int pm_debug_hal_standby = 1;
+#endif
 module_param(pm_debug_hal_standby, int, 0644);
+
+#ifdef CONFIG_GPIO_WM831X
+extern int wm831x_config_poweroff(void);
+#endif
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
 	if (ambarella_board_generic.power_control.gpio_id >= 0) {
+#ifdef CONFIG_GPIO_WM831X
+		if (!wm831x_config_poweroff()) {
+			ambarella_set_gpio_output(
+				&ambarella_board_generic.power_control, 0);
+		} else {
+			printk("Fail to config gpio for power off, Abort\r\n");
+		}
+#else
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 0);
+#endif
 	} else {
 		rct_power_down();
 	}
