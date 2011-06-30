@@ -2074,6 +2074,36 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 }
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
 
+#ifdef CONFIG_AMBARELLA_IPC
+int ambarella_udc_connect(int on)
+{
+	struct ambarella_udc *udc = the_controller;
+
+	if(!udc)
+		return -ENODEV;
+
+	if(on)
+	{
+		/* Initial USB PLL */
+		udc->controller_info->init_pll();
+		/* Reset USB */
+		udc->controller_info->reset_usb();
+		/*initial usb hardware */
+		ambarella_init_usb();
+		enable_irq(USBC_IRQ);
+		usb_gadget_connect(&udc->gadget);
+	}
+	else
+	{
+		disable_irq(USBC_IRQ);
+		usb_gadget_disconnect(&udc->gadget);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_udc_connect);
+#endif
+
 /*---------------------------------------------------------------------------*/
 /*
  * Name: ambarella_udc_probe
