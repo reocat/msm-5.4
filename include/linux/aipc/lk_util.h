@@ -29,6 +29,8 @@ struct fbreq_handler
 
 extern struct fbreq_handler fbreq_handler;
 
+extern int ambarella_udc_connect(int on);
+
 #endif  /* __KERNEL__ */
 
 #endif

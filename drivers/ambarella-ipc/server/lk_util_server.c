@@ -325,6 +325,32 @@ bool_t linux_get_ipcstat_1_svc(void *arg, struct linux_ipcstat_res *res, struct 
 	return 1;
 }
 
+static bool_t __linux_usb_gadget_enable_1_svc(int *arg, int *res, SVCXPRT *svcxprt)
+{
+#ifdef CONFIG_USB_AMBARELLA
+	int reval;
+	reval = ambarella_udc_connect((*arg & 1));
+
+	if(reval < 0)
+		svcxprt->rcode = IPC_PROGUNAVAIL;
+	else
+		svcxprt->rcode = IPC_SUCCESS;
+	ipc_svc_sendreply(svcxprt, NULL);
+#else
+	svcxprt->rcode = IPC_PROGUNAVAIL;
+	ipc_svc_sendreply(svcxprt, NULL);
+#endif
+
+	return 1;
+}
+
+bool_t linux_usb_gadget_enable_1_svc(u_int *arg, void *res, struct svc_req *rqstp)
+{
+	ipc_bh_queue((ipc_bh_f) __linux_usb_gadget_enable_1_svc,
+		     arg, res, rqstp->svcxprt);
+	return 1;
+}
+
 /* ------------------------------------------------------------------------- */
 
 /*
