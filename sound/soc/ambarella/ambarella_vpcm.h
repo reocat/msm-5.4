@@ -2,7 +2,8 @@
  * sound/ambarella_vpcm.h
  *
  * History:
- *  2011/03/28 - [Eric Lee] [Eric Lee] Port from ambarella_pcm.h
+ *  2011/03/28 - [Eric Lee] Port from ambarella_pcm.h
+ *	2011/06/23 - [Eric Lee] Port to 2.6.38
  *
  * Copyright (C) 2004-2011, Ambarella, Inc.
  *
@@ -29,9 +30,6 @@ struct ambarella_pcm_dma_params {
 	char *name;			/* stream identifier */
 	u32 dev_addr;			/* device physical address for DMA */
 };
-
-/* platform data */
-extern struct snd_soc_platform ambarella_soc_platform;
 
 #endif /* _AMBARELLA_VPCM_H */
 

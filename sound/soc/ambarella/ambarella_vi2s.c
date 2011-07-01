@@ -3,6 +3,7 @@
  *
  * History:
  *	2011/03/28 - [Eric Lee] Port from ambarella_i2s.c
+ *	2011/06/23 - [Eric Lee] Port to 2.6.38
  *
  * Copyright (C) 2004-2011, Ambarella, Inc.
  *
@@ -48,6 +49,7 @@
 
 extern int ipc_ialsa_tx_open(unsigned int ch, unsigned int freq);
 extern int ipc_ialsa_rx_open(unsigned int ch, unsigned int freq);
+extern int ipc_ialsa_get_max_channels(void);
 
 /*
   * The I2S ports are mux with the GPIOs.
@@ -58,16 +60,10 @@ extern int ipc_ialsa_rx_open(unsigned int ch, unsigned int freq);
   * 2: 4 channels
   * 3: 6 channels
   */
-unsigned int used_port = 1;
+unsigned int used_port;
+unsigned int op_port;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
-
-
-struct amb_i2s_priv {
-	u32 clock_reg;
-	struct ambarella_i2s_controller *controller_info;
-	struct ambarella_i2s_interface amb_i2s_intf;
-};
 
 static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
 	{ 1, 0 }, // 128xfs
@@ -95,13 +91,11 @@ static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_in = {
 
 static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
-				struct snd_soc_dai *dai)
+				struct snd_soc_dai *cpu_dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct ambarella_pcm_dma_params *dma_data;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
-	u8 slots, word_pos;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
+	u8 slots, word_pos, oversample;
 	u32 clock_divider, channels;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -163,9 +157,9 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* Set clock */
-	clock_divider =
-		DAI_Clock_Divide_Table[priv_data->amb_i2s_intf.oversample][slots >> 6];
-	clock_divider |= 0x3C0 ;
+	oversample = priv_data->amb_i2s_intf.oversample;
+  clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
+	clock_divider |= 0x3C0;
 	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
 	priv_data->clock_reg |= clock_divider;
 	/* Notify HDMI that the audio interface is changed */
@@ -174,12 +168,13 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	//	AUDIO_NOTIFY_SETHWPARAMS);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-    ipc_ialsa_tx_open(channels, params_rate(params));
+    	ipc_ialsa_tx_open(channels, params_rate(params));
 	} else {
-    ipc_ialsa_rx_open(channels, params_rate(params));
+    	ipc_ialsa_rx_open(channels, params_rate(params));
 	}
 
-  vi2s_printk("ambarella_i2s_hw_params ch: %d, freq: %d\n",
+	op_port = channels >> 1;
+  	vi2s_printk("ambarella_i2s_hw_params ch: %d, freq: %d\n",
 		channels, params_rate(params));
 
 	return 0;
@@ -223,7 +218,7 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 		unsigned int fmt)
 {
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
@@ -257,7 +252,7 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 		int clk_id, unsigned int freq, int dir)
 {
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (clk_id) {
 	case AMBARELLA_CLKSRC_ONCHIP:
@@ -275,7 +270,7 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 		int div_id, int div)
 {
-	struct amb_i2s_priv *priv_data = cpu_dai->private_data;
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (div_id) {
 	case AMBARELLA_CLKDIV_LRCLK:
@@ -289,41 +284,22 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int ambarella_i2s_dai_probe(struct platform_device *pdev,
-	struct snd_soc_dai *dai)
+static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
 	u32 clock_divider;
-	struct amb_i2s_priv *priv_data = dai->private_data;
-	//struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
-	switch(used_port) {
-	case 3:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-
-	case 2:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-
-	case 1:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		break;
-
-	default:
-		printk("%s: Need to select proper I2S port.\n", __func__);
-		return -EINVAL;
-	}
 	/* Dai default smapling rate, polarity configuration*/
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
 	clock_divider |= 0x3C0 ;
 	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
 	priv_data->clock_reg |= clock_divider;
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
-	priv_data->amb_i2s_intf.mclk = AudioCodec_12_288M;
+	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
+	priv_data->amb_i2s_intf.mclk = AudioCodec_11_2896M;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
-	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
+	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_44100;
 	priv_data->amb_i2s_intf.word_len = DAI_16bits;
 	priv_data->amb_i2s_intf.word_pos = 0;
 	priv_data->amb_i2s_intf.slots = DAI_32slots;
@@ -337,16 +313,16 @@ static int ambarella_i2s_dai_probe(struct platform_device *pdev,
 	return 0;
 }
 
-static void ambarella_i2s_dai_remove(struct platform_device *pdev,
-	struct snd_soc_dai *dai)
+static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 {
-	//struct amb_i2s_priv *priv_data = dai->private_data;
+	//struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	/* Notify that the audio interface is removed */
 	// FIXME check this with Rongrong
 	/* ambarella_audio_notify_transition(&priv_data->amb_i2s_intf,
 		AUDIO_NOTIFY_REMOVE); */
 	vi2s_printk("ambarella_i2s_dai_remove\n");
+	return 0;
 }
 
 static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
@@ -358,9 +334,7 @@ static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
 		.set_clkdiv = ambarella_i2s_set_clkdiv,
 };
 
-struct snd_soc_dai ambarella_i2s_dai = {
-	.name = "ambarella-i2s0",
-	.id = 0,
+static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.probe = ambarella_i2s_dai_probe,
 	.remove = ambarella_i2s_dai_remove,
 	.playback = {
@@ -377,7 +351,6 @@ struct snd_soc_dai ambarella_i2s_dai = {
 	},
 	.ops = &ambarella_i2s_dai_ops,
 };
-EXPORT_SYMBOL(ambarella_i2s_dai);
 
 static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 {
@@ -387,23 +360,31 @@ static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 	if (priv_data == NULL)
 		return -ENOMEM;
 
-	/* aucodec_digitalio_on */
 	priv_data->controller_info = pdev->dev.platform_data;
+	/* aucodec_digitalio_on */
 
-	ambarella_i2s_dai.private_data = priv_data;
-	ambarella_i2s_dai.dev = &pdev->dev;
+	used_port = ipc_ialsa_get_max_channels();
+	if (used_port > 4) /* Temp solutions */
+	  used_port = 4;
+	  
+	ambarella_i2s_dai.playback.channels_max = used_port;
+	ambarella_i2s_dai.capture.channels_max = used_port;
+
+	dev_set_drvdata(&pdev->dev, priv_data);
+	
 	vi2s_printk("ambarella_i2s_probe\n");
 
-	return snd_soc_register_dai(&ambarella_i2s_dai);
+	return snd_soc_register_dai(&pdev->dev, &ambarella_i2s_dai);
 }
 
 static int __devexit ambarella_i2s_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_dai(&ambarella_i2s_dai);
-	kfree(ambarella_i2s_dai.private_data);
-	ambarella_i2s_dai.private_data = NULL;;
+	struct amb_i2s_priv *priv_data = dev_get_drvdata(&pdev->dev);
 
-  vi2s_printk("ambarella_i2s_remove\n");
+	snd_soc_unregister_dai(&pdev->dev);
+	kfree(priv_data);
+
+	vi2s_printk("ambarella_i2s_remove\n");
 	return 0;
 }
 
@@ -434,3 +415,4 @@ MODULE_AUTHOR("Eric Lee <cylee@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella Soc Virtual I2S Interface");
 
 MODULE_LICENSE("GPL");
+

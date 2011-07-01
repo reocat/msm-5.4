@@ -97,6 +97,26 @@ int ipc_ialsa_rx_op(unsigned int operation)
 }
 EXPORT_SYMBOL(ipc_ialsa_rx_op);
 
+/*
+ * IPC: ipc_ialsa_get_max_channels().
+ */
+int ipc_ialsa_get_max_channels(void)
+{
+	enum clnt_stat stat;
+	int res;
+
+	stat = ialsa_get_max_channels_1(NULL, &res, IPC_i_alsa_op);
+	if (stat != IPC_SUCCESS) {
+		printk("ipc error: %d (%s)", stat, ipc_strerror(stat));
+	}
+	if (res < 0 || res > 6) {
+	  printk("WRONG audio channel number !! %d\n", res);
+		res = 2;
+	}
+	return res;
+}
+EXPORT_SYMBOL(ipc_ialsa_get_max_channels);
+
 /* ------------------------------------------------------------------------- */
 
 /*

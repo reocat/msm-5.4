@@ -79,26 +79,48 @@ ambarella_vdaidma_request_cb_exit_na:
 }
 EXPORT_SYMBOL(vdma_request_callback);
 
-static void lk_get_alsa_vfifo_adr(int chan, unsigned int *adr, int *size)
+static void lk_get_alsa_vfifo_adr_tx(unsigned int *adr, int *size)
 {
-	void *harg = G_vdaidma.chan[chan].harg;
+	void *harg = G_vdaidma.chan[0].harg;
 
-	*adr = G_vdaidma.chan[chan].handler1(harg);
-	*size = G_vdaidma.chan[chan].handler2(harg);
+	*adr = G_vdaidma.chan[0].handler1(harg);
+	*size = G_vdaidma.chan[0].handler2(harg);
 }
 
-static void lk_update_alsa_vfifo(int chan)
+static void lk_get_alsa_vfifo_adr_rx(unsigned int *adr, int *size)
 {
-	void *harg = G_vdaidma.chan[chan].harg;
+	void *harg = G_vdaidma.chan[1].harg;
 
-	G_vdaidma.chan[chan].handler3(harg);
+	*adr = G_vdaidma.chan[1].handler1(harg);
+	*size = G_vdaidma.chan[1].handler2(harg);
 }
 
-static void lk_alsa_op_finish(int chan)
+static void lk_update_alsa_vfifo_tx(void)
 {
-	void *harg = G_vdaidma.chan[chan].harg;
+	void *harg = G_vdaidma.chan[0].harg;
+
+	G_vdaidma.chan[0].handler3(harg);
+}
+
+static void lk_update_alsa_vfifo_rx(void)
+{
+	void *harg = G_vdaidma.chan[1].harg;
+
+	G_vdaidma.chan[1].handler3(harg);
+}
+
+static void lk_alsa_op_finish_tx(void)
+{
+	void *harg = G_vdaidma.chan[0].harg;
 	
-	G_vdaidma.chan[chan].handler4(harg);
+	G_vdaidma.chan[0].handler4(harg);
+}
+
+static void lk_alsa_op_finish_rx(void)
+{
+	void *harg = G_vdaidma.chan[1].harg;
+
+	G_vdaidma.chan[1].handler4(harg);
 }
 
 /* linux get alsa fifo read address */
@@ -109,13 +131,14 @@ static bool_t __lkalas_get_fifo_radr_1_svc(struct vdaidma_info *arg, int *res,
 	int size;
 	u32 *vptr;
 
-	lk_get_alsa_vfifo_adr(0, &adr, &size);
+	lk_get_alsa_vfifo_adr_tx(&adr, &size);
 	arg->base = adr;
 	arg->size = size;
 	//printk("size: %d, adr: 0x%x\n", size, adr);
 	vptr = (u32 *)ipc_phys_to_virt(arg->base);
 	ambcache_clean_range(vptr, size);
-	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + 512), *(vptr + 1023));
+	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + (size >> 3)),
+	//	*(vptr + (size >> 2) - 1));
 
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
@@ -132,10 +155,10 @@ bool_t lkalas_get_fifo_radr_1_svc(struct vdaidma_info *arg, int *res,
 }
 
 /* linux update alsa fifo read address */
-static bool_t __lkalas_update_fifo_radr_1_svc(void *arg, int *res,
+static bool_t __lkalas_update_fifo_radr_1_svc(void *arg, void *res,
 	SVCXPRT *svcxprt)
 {
-	lk_update_alsa_vfifo(0);
+	lk_update_alsa_vfifo_tx();
 
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
@@ -143,7 +166,7 @@ static bool_t __lkalas_update_fifo_radr_1_svc(void *arg, int *res,
 	return 1;
 }
 
-bool_t lkalas_update_fifo_radr_1_svc(void *arg, int *res,
+bool_t lkalas_update_fifo_radr_1_svc(void *arg, void *res,
 	struct svc_req *rqstp)
 {
 	ipc_bh_queue((ipc_bh_f) __lkalas_update_fifo_radr_1_svc,
@@ -158,7 +181,7 @@ static bool_t __lkalas_get_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
 	unsigned int adr;
 	int size;
 
-	lk_get_alsa_vfifo_adr(1, &adr, &size);
+	lk_get_alsa_vfifo_adr_rx(&adr, &size);
 	arg->base = adr;
 	arg->size = size;
 	//printk("size: %d, adr: 0x%x\n", size, adr);
@@ -178,15 +201,15 @@ bool_t lkalas_get_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
 }
 
 /* linux update alsa fifo write address */
-static bool_t __lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
-	SVCXPRT *svcxprt)
+static bool_t __lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg,
+	int *res, SVCXPRT *svcxprt)
 {
 	u32 *vptr;
 	vptr = (u32 *)ipc_phys_to_virt(arg->base);
 	ambcache_inv_range(vptr, arg->size);
 	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + 512), *(vptr + 1023));
 
-	lk_update_alsa_vfifo(1);
+	lk_update_alsa_vfifo_rx();
 
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
@@ -202,10 +225,10 @@ bool_t lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
 	return 1;
 }
 
-/* linux alsa rx op finish */
-static bool_t __lkalas_rx_op_finish_1_svc(void *arg, int *res, SVCXPRT *svcxprt)
+/* linux alsa tx op finish */
+static bool_t __lkalas_tx_op_finish_1_svc(void *arg, void *res, SVCXPRT *svcxprt)
 {
-	lk_alsa_op_finish(1);
+	lk_alsa_op_finish_tx();
 
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
@@ -213,17 +236,17 @@ static bool_t __lkalas_rx_op_finish_1_svc(void *arg, int *res, SVCXPRT *svcxprt)
 	return 1;
 }
 
-bool_t lkalas_rx_op_finish_1_svc(void *arg, int *res, struct svc_req *rqstp)
+bool_t lkalas_tx_op_finish_1_svc(void *arg, void *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lkalas_rx_op_finish_1_svc,
+	ipc_bh_queue((ipc_bh_f) __lkalas_tx_op_finish_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
 
-/* linux alsa tx op finish */
-static bool_t __lkalas_tx_op_finish_1_svc(void *arg, int *res, SVCXPRT *svcxprt)
+/* linux alsa rx op finish */
+static bool_t __lkalas_rx_op_finish_1_svc(void *arg, void *res, SVCXPRT *svcxprt)
 {
-	lk_alsa_op_finish(0);
+	lk_alsa_op_finish_rx();
 
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
@@ -231,9 +254,9 @@ static bool_t __lkalas_tx_op_finish_1_svc(void *arg, int *res, SVCXPRT *svcxprt)
 	return 1;
 }
 
-bool_t lkalas_tx_op_finish_1_svc(void *arg, int *res, struct svc_req *rqstp)
+bool_t lkalas_rx_op_finish_1_svc(void *arg, void *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lkalas_tx_op_finish_1_svc,
+	ipc_bh_queue((ipc_bh_f) __lkalas_rx_op_finish_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }

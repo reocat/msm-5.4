@@ -3,6 +3,7 @@
  *
  * History:
  *	2011/03/28 - [Eric Lee] Port from dummy.c
+ *	2011/06/23 - [Eric Lee] Port to 2.6.38
  *
  * Copyright (C) 2004-2011, Ambarella, Inc.
  *
@@ -25,13 +26,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/io.h>
-#include <linux/ioport.h>
-#include <linux/interrupt.h>
 #include <linux/platform_device.h>
-#include <linux/delay.h>
-#include <linux/dma-mapping.h>
-#include <asm/dma.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -40,7 +35,6 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 
-#include <mach/hardware.h>
 #include <plat/audio.h>
 
 #include "ambarella_vpcm.h"
@@ -64,7 +58,7 @@ static int ambarella_dummy_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int errorCode = 0, mclk, oversample, i2s_mode;
 
 	switch (params_rate(params)) {
@@ -136,75 +130,20 @@ static struct snd_soc_ops ambarella_dummy_board_ops = {
 	.hw_params = ambarella_dummy_board_hw_params,
 };
 
-
-/* ambarella_dummy board machine dapm widgets */
-static const struct snd_soc_dapm_widget ambarella_dummy_dapm_widgets[] = {
-
-};
-
-/* ambarella_dummy board machine audio map (connections to the a2auc pins) */
-static const struct snd_soc_dapm_route ambarella_dummy_audio_map[] = {
-
-};
-
-static const struct snd_kcontrol_new ambarella_dummy_controls[] = {
-
-};
-
-static int ambarella_dummy_init(struct snd_soc_codec *codec)
-{
-	int errorCode = 0, i;
-
-	/* Add ambarella_dummy board specific controls */
-	for (i = 0; i < ARRAY_SIZE(ambarella_dummy_controls); i++) {
-		errorCode = snd_ctl_add(codec->card,
-			snd_soc_cnew(&ambarella_dummy_controls[i],codec, NULL));
-		if (errorCode < 0)
-			goto init_exit;
-	}
-
-	/* Add ambarella_dummy board specific widgets */
-	errorCode = snd_soc_dapm_new_controls(codec,
-		ambarella_dummy_dapm_widgets,
-		ARRAY_SIZE(ambarella_dummy_dapm_widgets));
-	if (errorCode) {
-		goto init_exit;
-	}
-
-	/* Set up ambarella_dummy board specific audio path ambarella_dummy_audio_map */
-	errorCode = snd_soc_dapm_add_routes(codec,
-		ambarella_dummy_audio_map,
-		ARRAY_SIZE(ambarella_dummy_audio_map));
-	if (errorCode) {
-		goto init_exit;
-	}
-
-	errorCode = snd_soc_dapm_sync(codec);
-	printk("ambarella_dummy_init done!\n");
-
-init_exit:
-	return errorCode;
-}
-
 static struct snd_soc_dai_link ambarella_dummy_dai_link = {
-	.name = "AMB-DUMMY-DAI-LINK",
+	.name = "AMB-DUMMY",
 	.stream_name = "AMB-DUMMY-STREAM",
-	.cpu_dai = &ambarella_i2s_dai,
-	.codec_dai = &ambdummy_dai,
-	.init = ambarella_dummy_init,
+	.cpu_dai_name = "ambarella-i2s.0",
+	.platform_name = "ambarella-pcm-audio",
+	.codec_dai_name = "AMBARELLA_DUMMY_CODEC",
+	.codec_name = "ambdummy-codec",
 	.ops = &ambarella_dummy_board_ops,
 };
 
 static struct snd_soc_card snd_soc_card_ambarella_dummy = {
 	.name = "ambarella_dummy",
-	.platform = &ambarella_soc_platform,
 	.dai_link = &ambarella_dummy_dai_link,
 	.num_links = 1,
-};
-
-static struct snd_soc_device ambarella_dummy_snd_devdata = {
-	.card = &snd_soc_card_ambarella_dummy,
-	.codec_dev = &soc_codec_dev_ambdummy,
 };
 
 static struct platform_device *ambarella_dummy_snd_device;
@@ -221,9 +160,7 @@ static int __init ambarella_dummy_board_init(void)
 	}
 
 	platform_set_drvdata(ambarella_dummy_snd_device,
-		&ambarella_dummy_snd_devdata);
-	ambarella_dummy_snd_devdata.dev =
-		&ambarella_dummy_snd_device->dev;
+		&snd_soc_card_ambarella_dummy);
 
 	errorCode = platform_device_add(ambarella_dummy_snd_device);
 	if (errorCode)
