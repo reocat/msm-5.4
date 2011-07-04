@@ -215,7 +215,7 @@ int ambarella_init_wm8994(void)
 	}
 
 	/* Delay to wait for ldo stable */
-//	mdelay(1);
+	msleep(150);
 
 	platform_add_devices(wm8994_fixed_voltage_devices,
 			ARRAY_SIZE(wm8994_fixed_voltage_devices));
