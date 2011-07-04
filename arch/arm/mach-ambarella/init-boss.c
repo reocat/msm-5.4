@@ -841,55 +841,60 @@ static void __init ambarella_init_boss(void)
 	ambarella_init_machine("Boss");
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
-		case 'B':
-			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
-			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
-			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
-		case 'A':
-			ambarella_board_generic.wifi_power.gpio_id = GPIO(109);
-			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
-			ambarella_board_generic.wifi_power.active_delay = 300;
-			ambarella_board_generic.wifi_sd_bus = 0;
-			ambarella_board_generic.wifi_sd_slot = 1;
+			case 'B':
+				ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+				ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+				ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+			case 'A':
+				ambarella_board_generic.wifi_power.gpio_id = GPIO(109);
+				ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
+				ambarella_board_generic.wifi_power.active_delay = 300;
+				ambarella_board_generic.wifi_sd_bus = 0;
+				ambarella_board_generic.wifi_sd_slot = 1;
 
-			ambarella_platform_sd_controller0.clk_limit = 24000000;
-			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;
-			ambarella_platform_sd_controller0.slot[0].fixed_wp = 0;
-			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = -1;
-			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = GPIO(157);
-			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
-			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-			ambarella_platform_sd_controller0.slot[1].fixed_cd = 0;
-			ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = -1;
-			ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = -1;
-			ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
-			ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = -1;
-			ambarella_platform_sd_controller1.clk_limit = 25000000;
-			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
-			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = GPIO(129);
-			ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(129);
-			ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-			ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_val  = GPIO_LOW,
-			ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT,
-			ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = GPIO(128);
+				ambarella_platform_sd_controller0.clk_limit = 24000000;
+				ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+				ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+				ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+				ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
+				ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
+				ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;
+				ambarella_platform_sd_controller0.slot[0].fixed_wp = 0;
+				ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = -1;
+				ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = GPIO(157);
+				ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
+				ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
+				ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+				ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
+				ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+				ambarella_platform_sd_controller0.slot[1].fixed_cd = 0;
+				ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = -1;
+				ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = -1;
+				ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
+				ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = -1;
+				ambarella_platform_sd_controller1.clk_limit = 25000000;
+				ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
+				ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
+				ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+				ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = GPIO(129);
+				ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(129);
+				ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+				ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_val  = GPIO_LOW,
+				ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT,
+				ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = GPIO(128);
 
-			use_bub_default = 0;
-			break;
-		default:
-			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
-			break;
-			}
-	   }
+				use_bub_default = 0;
+				break;
+			default:
+				pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
+				break;
+		}
+		platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
+		for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
+			device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
+			device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+		}
+	}
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
