@@ -23,20 +23,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
+BOSSDIR := $(shell echo $${PWD%boss*}boss)
+IPCDIR := $(realpath $(BOSSDIR)/ipc)
 
-IPCDIR := $(realpath $(shell pwd)/../ipc)
+# check for ipc android: ipc is located in android/device/ambarella/ipc
 ifeq ($(IPCDIR),)
-$(shell ln -sf android/device/ambarella/ipc $(shell pwd)/../ipc)
-IPCDIR := $(realpath $(shell pwd)/../ipc)
-endif
-
-ifeq ($(IPCDIR),)
-$(shell ln -sf ../../android/device/ambarella/ipc $(shell pwd)/../ipc)
-IPCDIR := $(realpath $(shell pwd)/../ipc)
-endif
-
-ifeq ($(IPCDIR),)
-$(error "Cannot find IPCDIR")
+$(shell ln -s $(BOSSDIR)/android/device/ambarella/ipc $(BOSSDIR)/ipc)
+IPCDIR := $(realpath $(BOSSDIR)/ipc)
 endif
 
 IPCGEN := $(IPCDIR)/ipcgen
