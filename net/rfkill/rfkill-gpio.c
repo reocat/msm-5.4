@@ -41,13 +41,11 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	struct rfkill_gpio_data *rfkill = data;
 
 	if (blocked) {
-		printk("AllenLiu___rfkill_gpio_set_power___blocked___0");  
 		if (gpio_is_valid(rfkill->pdata->shutdown_gpio))
 			gpio_direction_output(rfkill->pdata->shutdown_gpio, 0);
 		if (gpio_is_valid(rfkill->pdata->reset_gpio))
 			gpio_direction_output(rfkill->pdata->reset_gpio, 0);
 	} else {
-		printk("AllenLiu___rfkill_gpio_set_power___not_blocked___1");
 		if (gpio_is_valid(rfkill->pdata->reset_gpio))
 			gpio_direction_output(rfkill->pdata->reset_gpio, 1);
 		if (gpio_is_valid(rfkill->pdata->shutdown_gpio))
@@ -96,12 +94,11 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	rfkill->shutdown_name = kzalloc(len + 10, GFP_KERNEL);
 	if (!rfkill->shutdown_name) {
 		ret = -ENOMEM;
-		goto fail_reset_name;		
+		goto fail_reset_name;
 	}
 
 	snprintf(rfkill->reset_name, len + 6 , "%s_reset", pdata->name);
 	snprintf(rfkill->shutdown_name, len + 9, "%s_shutdown", pdata->name);
-   
 
 	if (gpio_is_valid(pdata->reset_gpio)) {
 		ret = gpio_request(pdata->reset_gpio, rfkill->reset_name);
@@ -128,11 +125,11 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto fail_rfkill;
 
-	platform_set_drvdata(pdev, rfkill);  
+	platform_set_drvdata(pdev, rfkill);
 
 	dev_info(&pdev->dev, "%s device registered.\n", pdata->name);
 
-	rfkill_gpio_set_power(rfkill,true);               
+	rfkill_gpio_set_power(rfkill,true);
 
 	return 0;
 
@@ -165,7 +162,7 @@ static int rfkill_gpio_remove(struct platform_device *pdev)
 		gpio_free(rfkill->pdata->shutdown_gpio);
 	if (gpio_is_valid(rfkill->pdata->reset_gpio))
 		gpio_free(rfkill->pdata->reset_gpio);
-	
+
 	kfree(rfkill->shutdown_name);
 	kfree(rfkill->reset_name);
 	kfree(rfkill);
