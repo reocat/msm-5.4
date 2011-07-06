@@ -745,7 +745,7 @@ static struct rfkill_gpio_platform_data elephant_board_bt_info = {
 	.name				= "bt-gpio",
 	.reset_gpio			= GPIO(190),
 	.shutdown_gpio		= -1,
-	.type				= RFKILL_TYPE_BLUETOOTH,	
+	.type				= RFKILL_TYPE_BLUETOOTH,
 };
 
 
