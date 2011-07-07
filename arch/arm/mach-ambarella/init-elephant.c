@@ -744,14 +744,6 @@ static struct ambarella_input_board_info elephant_board_input_info = {
 	.abx_max_width		= 16,
 };
 
-static struct rfkill_gpio_platform_data elephant_board_bt_info = {
-	.name				= "bt-gpio",
-	.reset_gpio			= GPIO(190),
-	.shutdown_gpio		= -1,
-	.type				= RFKILL_TYPE_BLUETOOTH,
-};
-
-
 struct platform_device elephant_board_input = {
 	.name		= "ambarella-input",
 	.id		= -1,
@@ -764,7 +756,14 @@ struct platform_device elephant_board_input = {
 	}
 };
 
-struct platform_device elephant_bt_rfkill = {
+static struct rfkill_gpio_platform_data elephant_board_bt_info = {
+	.name		= "bt-gpio",
+	.reset_gpio	= GPIO(190),
+	.shutdown_gpio	= -1,
+	.type		= RFKILL_TYPE_BLUETOOTH,
+};
+
+static struct platform_device elephant_bt_rfkill = {
 	.name		= "rfkill_gpio",
 	.id		= -1,
 	.resource	= NULL,
