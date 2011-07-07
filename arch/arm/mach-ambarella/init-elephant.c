@@ -54,6 +54,9 @@
 #include <linux/mfd/wm831x/pdata.h>
 #include "board-device.h"
 
+#include <linux/rfkill-gpio.h>
+
+
 /* ==========================================================================*/
 #include <linux/pda_power.h>
 /* DCDC1: iOne_VDDAX for Cortex and 3D */
@@ -753,6 +756,26 @@ struct platform_device elephant_board_input = {
 	}
 };
 
+static struct rfkill_gpio_platform_data elephant_board_bt_info = {
+	.name		= "bt-gpio",
+	.reset_gpio	= GPIO(190),
+	.shutdown_gpio	= -1,
+	.type		= RFKILL_TYPE_BLUETOOTH,
+};
+
+static struct platform_device elephant_bt_rfkill = {
+	.name		= "rfkill_gpio",
+	.id		= -1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &elephant_board_bt_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+
 /* ==========================================================================*/
 static struct pcf857x_platform_data elephant_board_ext_gpio0_pdata = {
 	.gpio_base	= EXT_GPIO(0),
@@ -903,6 +926,8 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.vin_power.active_delay = 1;
 			i2c_register_board_info(0, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
+
+			platform_device_register(&elephant_bt_rfkill);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 

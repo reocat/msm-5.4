@@ -40,6 +40,7 @@ endif
 ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
 obj-y						+= generic/adc.o
 obj-y						+= generic/audio.o
+obj-y						+= generic/clk.o
 obj-y						+= generic/crypto.o
 obj-y						+= generic/dma.o
 obj-y						+= generic/eth.o

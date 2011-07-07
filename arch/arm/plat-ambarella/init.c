@@ -116,7 +116,11 @@ int __init ambarella_init_machine(char *board_name)
 
 	retval = ambarella_create_proc_dir();
 	BUG_ON(retval != 0);
+
 #if !defined(CONFIG_MACH_BOSS)
+	retval = ambarella_init_clk();
+	BUG_ON(retval != 0);
+
 	retval = ambarella_init_pll();
 	BUG_ON(retval != 0);
 
