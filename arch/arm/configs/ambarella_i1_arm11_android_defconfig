@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 2.6.38.6 Kernel Configuration
-# Thu Jun  2 11:28:08 2011
+# Linux/arm 2.6.38.8 Kernel Configuration
+# Thu Jul  7 11:40:12 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -692,6 +692,7 @@ CONFIG_MAC80211_RC_DEFAULT="minstrel_ht"
 CONFIG_RFKILL=y
 CONFIG_RFKILL_PM=y
 CONFIG_RFKILL_INPUT=y
+CONFIG_RFKILL_GPIO=y
 # CONFIG_NET_9P is not set
 # CONFIG_CAIF is not set
 # CONFIG_CEPH_LIB is not set
