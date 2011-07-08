@@ -38,6 +38,7 @@ IPCGEN := $(IPCDIR)/ipcgen
 X-S-y +=	$(IPCDIR)/defs/lk_util.x \
 		$(IPCDIR)/defs/lk_sdhc.x \
 		$(IPCDIR)/defs/lk_gpio.x \
+		$(IPCDIR)/defs/lk_pmic.x \
 		$(IPCDIR)/defs/lk_vfs.x \
 		$(IPCDIR)/defs/lk_fifo.x
 
@@ -47,6 +48,7 @@ X-C-y +=	$(IPCDIR)/defs/i_util.x \
 		$(IPCDIR)/defs/i_nand.x \
 		$(IPCDIR)/defs/i_sdhc.x \
 		$(IPCDIR)/defs/i_gpio.x \
+		$(IPCDIR)/defs/i_pmic.x \
 		$(IPCDIR)/defs/i_ffs.x \
 		$(IPCDIR)/defs/i_fifo.x
 
