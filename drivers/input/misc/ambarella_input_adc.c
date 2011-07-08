@@ -344,7 +344,7 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 		goto adc_errorCode_mem;
 	}
 
-	pinfo->workqueue = create_singlethread_workqueue("AMBA ADC");
+	pinfo->workqueue = create_singlethread_workqueue("amba_adc");
 	if (!pinfo->workqueue) {
 		retval = -ENOMEM;
 		dev_err(&pdev->dev, "Create ADC workqueue failed!\n");
