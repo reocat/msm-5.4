@@ -97,6 +97,8 @@ do  { \
 #define IPC_CACHE_ALIGN_DATA(data,size)
 #endif
 
+#define BINDER_GET_SVCXPRT(i)   (binder->svcxprts[i])
+
 #if DEBUG_IPC_DATA
 
 static void ipc_dump_data (unsigned char *data, int size)
@@ -438,6 +440,132 @@ struct ipc_prog_s *ipc_clnt_progs(void)
 }
 EXPORT_SYMBOL(ipc_clnt_progs);
 
+#if defined(STATIC_SVC)
+/*
+ *  * Count trailing zero
+ *   */
+static inline unsigned int ipc_ctz(unsigned int val)
+{
+	register unsigned int tmp = 0;
+
+	__asm__ __volatile__(
+			"rsbs	%0, %1, #0;\n"
+			"and	%1, %1, %0;\n"
+			"clz	%1, %1;\n"
+			"rsbne	%1, %1, #0x1f"
+			:"=r"(tmp)
+			:"r"(val)
+			);
+
+	return val;
+}
+
+/*
+ * Allocate a SVCXPRT
+ */
+static void ipc_init_svcxprts(void)
+{
+	int i;
+	unsigned char *ptr;
+
+	/* Initialize SVCXPRT pools */
+	binder->svcxprt_mask = 0xFFFFFFFF;
+	binder->svcxprt_num = IPC_BINDER_MSG_BUFSIZE - 1;
+	binder->svcxprt_in_queue = 0;
+	binder->svcxprt_in_queue_max = 0;
+
+	/* Create svcxprt spinlock */
+	spin_lock_init(&binder->svcxprt_lock);
+#if 0
+	printk("ipc: SVCXPRT: size = %d, num = %d, mtx = %d",
+	SVCXPRT_ALIGNED_SIZE, binder->svcxprt_num,
+	binder->svcxprt_mtxid);
+#endif
+	binder->svcxprt_buf = (char*)ipc_malloc(SVCXPRT_ALIGNED_SIZE * (IPC_BINDER_MSG_BUFSIZE - 1));
+	if(binder->svcxprt_buf == NULL)
+	{
+		pr_err("binder->svcxprt_buf alloc fail\n");
+		K_ASSERT(0);
+	}
+	memset(binder->svcxprt_buf, 0, sizeof(binder->svcxprt_buf));
+
+	/* Create svcxprt flag */
+	ptr = binder->svcxprt_buf;
+	for (i = 0; i < binder->svcxprt_num; i++)
+	{
+		SVCXPRT *svcxprt = (SVCXPRT *) ptr;
+
+		binder->svcxprts[i] = svcxprt;
+
+		ptr += SVCXPRT_ALIGNED_SIZE;
+	}
+}
+#endif
+
+/*
+ *  * Allocate a SVCXPRT
+ *   */
+static SVCXPRT *ipc_alloc_svcxprt(void)
+{
+	SVCXPRT *svcxprt = NULL;
+#if defined(STATIC_SVC)
+	unsigned long flags;
+	int id;
+
+	spin_lock_irqsave(&binder->svcxprt_lock, flags);
+
+	id = (int)ipc_ctz(binder->svcxprt_mask);
+	if ((id >= binder->svcxprt_num) || (id < 0)) {
+		goto exit;
+	}
+
+	svcxprt = BINDER_GET_SVCXPRT(id);
+	memset (svcxprt, 0, SVCXPRT_HEAD_SIZE);
+	svcxprt->u.l.priv_id = id;
+	binder->svcxprt_mask &= ~(1 << id);
+	binder->svcxprt_in_queue++;
+	if (binder->svcxprt_in_queue > binder->svcxprt_in_queue_max) {
+		binder->svcxprt_in_queue_max = binder->svcxprt_in_queue;
+	}
+exit:
+	spin_unlock_irqrestore(&binder->svcxprt_lock, flags);
+#else
+	svcxprt = ipc_malloc(sizeof(SVCXPRT));
+
+	if(svcxprt)
+		memset (svcxprt, 0, sizeof(SVCXPRT));
+#endif
+
+	return svcxprt;
+}
+
+/*
+ *  * Free a SVCXPRT
+ *   */
+static void ipc_free_svcxprt(SVCXPRT *svcxprt)
+{
+#if defined(STATIC_SVC)
+	unsigned long flags;
+	int id = svcxprt->u.l.priv_id;
+
+	spin_lock_irqsave(&binder->svcxprt_lock, flags);
+
+	if (binder->svcxprt_mask & (1 << id)) {
+		printk("ipc: try to free unused SVCXPRT %d, %08x",
+			id, (int)svcxprt);
+		K_ASSERT(0);
+	}
+
+	K_ASSERT(svcxprt == BINDER_GET_SVCXPRT(id));
+	binder->svcxprt_mask |= (1 << id);
+	binder->svcxprt_in_queue--;
+
+	spin_unlock_irqrestore(&binder->svcxprt_lock, flags);
+#else
+	ipc_free(svcxprt);
+#endif
+}
+
 /*
  * Initialize the binder.
  */
@@ -491,6 +619,11 @@ int ipc_binder_init(void)
 	mod_timer(&ipc_poll_irq_timer,
 		  jiffies + IPC_POLL_IRQ_INTERVAL);
 
+#if defined(STATIC_SVC)
+	/* Create all SVCXPRTs */
+	ipc_init_svcxprts();
+#endif
+
 	return 0;
 }
 
@@ -499,7 +632,10 @@ int ipc_binder_init(void)
  */
 void ipc_binder_cleanup(void)
 {
-
+#if defined(STATIC_SVC)
+	if(binder->svcxprt_buf)
+		ipc_free(binder->svcxprt_buf);
+#endif
 }
 
 /*
@@ -776,15 +912,13 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 	/*
 	 * Create a transaction object
 	 */
-	svcxprt = ipc_malloc(sizeof(*svcxprt));
-	if (svcxprt <= 0) {
+	svcxprt = ipc_alloc_svcxprt();
+	if (svcxprt == NULL) {
 		/* Out of memory.. So free object and return error */
-		ipc_free(svcxprt);
 		ipc_log_print(IPC_LOG_LEVEL_ERROR, "lu: %s", ipc_strerror(IPC_CANTSEND));
 		return IPC_CANTSEND;
 	}
 
-	memset (svcxprt, 0, sizeof (*svcxprt));
 	svcxprt->tag = IPC_TAG_BEGIN;
 	svcxprt->tag_end = IPC_TAG_END;
 	svcxprt->pid = aipc_hdr->pid;
@@ -960,20 +1094,31 @@ void ipc_clnt_call_signal_lu(SVCXPRT *svcxprt)
  */
 void ipc_clnt_call_complete(SVCXPRT *svcxprt, enum clnt_stat rval)
 {
+	unsigned long flags;
 	ipc_log_print(IPC_LOG_LEVEL_INFO, "%s: complete %08x",
 			(svcxprt->pid >= MIN_LUIPC_PROG_NUM)?"lu":"lk", svcxprt->xid);
 
+#if defined(STATIC_SVC)
+	spin_lock_irqsave(&binder->svcxprt_lock, flags);
+#endif
 	if (rval == IPC_SUCCESS) {
 		ipc_clnt_call_statistic(svcxprt);
 	}
+#if defined(STATIC_SVC)
+	spin_unlock_irqrestore(&binder->svcxprt_lock, flags);
+#endif
 
 	/* call completion callback */
 	if (svcxprt->compl_proc) {
 		svcxprt->compl_proc(svcxprt->compl_arg, svcxprt);
 	}
 
+	 if (svcxprt->u.l.timeout) {
+		svcxprt->u.l.timeout = 0;
+	}
+
 	/* Free transaction object */
-	ipc_free(svcxprt);
+	ipc_free_svcxprt(svcxprt);
 }
 
 /*
@@ -1032,14 +1177,14 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	 * assign the pointer ->res to the end of this structure without having to
 	 * call a separate malloc.
 	 */
-	svcxprt = ipc_malloc(sizeof(*svcxprt));
-	if (svcxprt <= 0) {
+	svcxprt = ipc_alloc_svcxprt();
+	if (svcxprt == NULL) {
 		/* Out of memory.. So free object and return error */
 		ipc_log_print(IPC_LOG_LEVEL_ERROR, "lk: %s => %08x %d",
 				ipc_strerror(IPC_CANTSEND), prog->prog, fid);
 		return IPC_CANTSEND;
 	}
-	memset (svcxprt, 0, sizeof (*svcxprt));
+
 	svcxprt->tag = IPC_TAG_BEGIN;
 	svcxprt->tag_end = IPC_TAG_END;
 	svcxprt->pid = prog->prog;
@@ -1054,6 +1199,7 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	svcxprt->ftab = ftab;
 	svcxprt->proc_type = ftab->type;
 	svcxprt->time[IPC_TIME_SEND_REQEST] = time_send_req;
+	svcxprt->u.l.timeout = 0;
 
 	init_completion(&svcxprt->u.l.cmpl);
 
@@ -1282,18 +1428,14 @@ static void ipc_binder_got_reply(SVCXPRT *svcxprt)
 {
 	svcxprt->time[IPC_TIME_GOT_REPLY] = ipc_tick_get ();
 
-	if (svcxprt->proc_type & IPC_CALL_ASYNC_AUTO_DEL) {
+	if ((svcxprt->proc_type & IPC_CALL_ASYNC_AUTO_DEL) || svcxprt->u.l.timeout) {
 		ipc_bh_queue((ipc_bh_f) ipc_clnt_call_complete_bh,
 			     NULL, NULL, svcxprt);
 	} else {
-		if(svcxprt->u.l.timeout) {
-			ipc_free(svcxprt);
-		} else {
-			/* Just wake up the caller who is blocked by the event flag. */
-			/* Note that we're in ISR */
-			svcxprt->rcode = IPC_SUCCESS;
-			complete(&svcxprt->u.l.cmpl);
-		}
+		/* Just wake up the caller who is blocked by the event flag. */
+		/* Note that we're in ISR */
+		svcxprt->rcode = IPC_SUCCESS;
+		complete(&svcxprt->u.l.cmpl);
 	}
 }
 

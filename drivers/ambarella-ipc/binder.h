@@ -75,6 +75,15 @@ struct ipc_binder_s
 	unsigned int tick_irq_last;
 	unsigned int tick_irq_interval;
 	
+#if defined(STATIC_SVC)
+	spinlock_t svcxprt_lock;
+	unsigned char *svcxprt_buf;
+	SVCXPRT *svcxprts[IPC_BINDER_MSG_BUFSIZE - 1];
+	int svcxprt_mask;   /* free slot is marked by 1 */
+	int svcxprt_num;
+	int svcxprt_in_queue;
+	int svcxprt_in_queue_max;
+#endif
 };
 
 extern struct ipc_binder_s *binder;

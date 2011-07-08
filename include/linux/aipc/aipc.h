@@ -32,7 +32,11 @@
 #include <mach/hardware.h>
 #include <plat/ambcache.h>
 
+#define STATIC_SVC
 #define K_ASSERT(x)			BUG_ON(!(x))
+
+#define CACHE_LINE_SIZE     32
+#define CACHE_LINE_MASK     ~(CACHE_LINE_SIZE - 1)
 
 struct SVCXPRT;
 
@@ -204,12 +208,16 @@ typedef struct SVCXPRT
 			struct list_head list;
 			unsigned int clnt_pid;	/* Used to save pid of client program */
 			int timeout;
+#ifdef STATIC_SVC
+			unsigned int priv_id;
+#endif
 		} l;
 		unsigned char reserved[256];	/* Padded up to 256 bytes */
 	} __attribute__((packed)) u;
 } __attribute__((packed)) SVCXPRT;
 
 #define SVCXPRT_HEAD_SIZE	offsetof(SVCXPRT,u)
+#define SVCXPRT_ALIGNED_SIZE    ((sizeof(SVCXPRT) + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK)
 
 /*
  * IPC binder buffer.
