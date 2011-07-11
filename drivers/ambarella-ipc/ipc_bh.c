@@ -86,6 +86,13 @@ static int ipc_bh_worker_thread(void *data)
 		svcxprt = ipc_bh->queue[index].svcxprt;
 		ipc_bh->workers[id].serviced++;
 
+#ifdef STATIC_SVC
+		if(ipc_cancel_check(svcxprt)) {
+			up(&ipc_bh->sem);
+			continue;
+		}
+#endif
+
 		ipc_bh->r_index++;
 		ipc_bh->r_index %= MAX_IPC_BH_QUEUE;
 

@@ -50,6 +50,7 @@
 #define LOCK_POS_L_SVC_IN		50
 #define LOCK_POS_L_SVC_OUT		51
 #define LOCK_POS_LU_CLNT_OUT		52
+#define LOCK_POS_L_CLNT_CANCEL		53
 
 int g_ipc_dump = 0;
 
@@ -467,6 +468,7 @@ static void ipc_init_svcxprts(void)
 {
 	int i;
 	unsigned char *ptr;
+	int id;
 
 	/* Initialize SVCXPRT pools */
 	binder->svcxprt_mask = 0xFFFFFFFF;
@@ -491,11 +493,14 @@ static void ipc_init_svcxprts(void)
 
 	/* Create svcxprt flag */
 	ptr = binder->svcxprt_buf;
+	id = boss->svc_lock_start_id;
 	for (i = 0; i < binder->svcxprt_num; i++)
 	{
 		SVCXPRT *svcxprt = (SVCXPRT *) ptr;
 
 		binder->svcxprts[i] = svcxprt;
+		svcxprt->svcxprt_lock = id;
+		id++;
 
 		ptr += SVCXPRT_ALIGNED_SIZE;
 	}
@@ -885,6 +890,36 @@ static inline void ipc_clnt_call_statistic (SVCXPRT *svcxprt)
 	spin_unlock_irqrestore(&binder->lock, flags);
 }
 
+static inline void ipc_timeout_init(SVCXPRT *svcxprt)
+{
+	svcxprt->u.l.timeout = 0;
+#ifdef STATIC_SVC
+	svcxprt->svcxprt_cancel = 0;
+#endif
+}
+
+static inline enum clnt_stat ipc_timeout_cancel(SVCXPRT *svcxprt, unsigned int *flags)
+{
+#ifdef STATIC_SVC
+	ipc_spin_lock(svcxprt->svcxprt_lock, flags, LOCK_POS_L_CLNT_CANCEL);
+	svcxprt->svcxprt_cancel = 1;
+	ipc_spin_unlock(svcxprt->svcxprt_lock, *flags, LOCK_POS_L_CLNT_CANCEL);
+#endif
+	svcxprt->u.l.timeout = 1;
+	return IPC_TIMEDOUT;
+}
+
+static inline void ipc_timeout_wait(SVCXPRT *svcxprt, enum clnt_stat stat)
+{
+#ifdef STATIC_SVC
+	if(stat == IPC_TIMEDOUT) {
+		wait_for_completion(&svcxprt->u.l.cmpl);
+/*        printk("%s: %d (%s)\n", __func__, svcxprt->rcode, ipc_strerror(svcxprt->rcode));*/
+		ipc_free_svcxprt(svcxprt);
+	}
+#endif
+}
+
 /*
  * Execute an RPC call. Request comes from LU
  */
@@ -935,7 +970,7 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 	svcxprt->u.l.clnt_pid = clnt_pid;
 	svcxprt->compl_arg = current;
 	svcxprt->time[IPC_TIME_SEND_REQEST] = time_send_req;
-	svcxprt->u.l.timeout = 0;
+	ipc_timeout_init(svcxprt);
 	init_completion(&svcxprt->u.l.cmpl);
 
 	ipc_spin_lock(ipc_buf->lock, &flags, LOCK_POS_LU_CLNT_OUT);
@@ -981,8 +1016,7 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
  			aipc_nl_send_result_to_lu(svcxprt);
 			rval = IPC_SUCCESS;
 		} else {
-			rval = IPC_TIMEDOUT;
-			svcxprt->u.l.timeout = 1;
+			rval = ipc_timeout_cancel(svcxprt, &flags);
 		}
 
 		if(rval != IPC_TIMEDOUT) {
@@ -994,6 +1028,8 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 
 exit:
 	K_ASSERT(rval != IPC_CMD_QUEUE_FULL);
+
+	ipc_timeout_wait(svcxprt, rval);
 	
 	if ((rval != IPC_SUCCESS) && (rval != IPC_PROCESSING)) {
 		ipc_log_print(IPC_LOG_LEVEL_ERROR, "lu: %s => %08x",
@@ -1094,28 +1130,23 @@ void ipc_clnt_call_signal_lu(SVCXPRT *svcxprt)
  */
 void ipc_clnt_call_complete(SVCXPRT *svcxprt, enum clnt_stat rval)
 {
-	unsigned long flags;
 	ipc_log_print(IPC_LOG_LEVEL_INFO, "%s: complete %08x",
 			(svcxprt->pid >= MIN_LUIPC_PROG_NUM)?"lu":"lk", svcxprt->xid);
 
-#if defined(STATIC_SVC)
-	spin_lock_irqsave(&binder->svcxprt_lock, flags);
-#endif
 	if (rval == IPC_SUCCESS) {
 		ipc_clnt_call_statistic(svcxprt);
 	}
-#if defined(STATIC_SVC)
-	spin_unlock_irqrestore(&binder->svcxprt_lock, flags);
-#endif
 
 	/* call completion callback */
 	if (svcxprt->compl_proc) {
 		svcxprt->compl_proc(svcxprt->compl_arg, svcxprt);
 	}
 
-	 if (svcxprt->u.l.timeout) {
+#if !defined(STATIC_SVC)
+	if (svcxprt->u.l.timeout) {
 		svcxprt->u.l.timeout = 0;
 	}
+#endif
 
 	/* Free transaction object */
 	ipc_free_svcxprt(svcxprt);
@@ -1199,8 +1230,7 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	svcxprt->ftab = ftab;
 	svcxprt->proc_type = ftab->type;
 	svcxprt->time[IPC_TIME_SEND_REQEST] = time_send_req;
-	svcxprt->u.l.timeout = 0;
-
+	ipc_timeout_init(svcxprt);
 	init_completion(&svcxprt->u.l.cmpl);
 
 	ipc_spin_lock(ipc_buf->lock, &flags, LOCK_POS_L_CLNT_OUT);
@@ -1251,8 +1281,7 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 			/* ready to return upstack! */
 			rval = (enum clnt_stat) svcxprt->rcode;
 		} else {
-			rval = IPC_TIMEDOUT;
-			svcxprt->u.l.timeout = 1;
+			rval = ipc_timeout_cancel(svcxprt, &flags);
 		}
 
 		if(rval != IPC_TIMEDOUT) {
@@ -1267,6 +1296,8 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	}
 exit:
 	K_ASSERT(rval != IPC_CMD_QUEUE_FULL);
+
+	ipc_timeout_wait(svcxprt, rval);
 
 	if ((rval != IPC_SUCCESS) && (rval != IPC_PROCESSING)) {
 		ipc_log_print(IPC_LOG_LEVEL_ERROR, "lk: %s => %08x",
@@ -1428,16 +1459,45 @@ static void ipc_binder_got_reply(SVCXPRT *svcxprt)
 {
 	svcxprt->time[IPC_TIME_GOT_REPLY] = ipc_tick_get ();
 
+#ifdef STATIC_SVC
+	if ((svcxprt->proc_type & IPC_CALL_ASYNC_AUTO_DEL)) {
+#else
 	if ((svcxprt->proc_type & IPC_CALL_ASYNC_AUTO_DEL) || svcxprt->u.l.timeout) {
+#endif
 		ipc_bh_queue((ipc_bh_f) ipc_clnt_call_complete_bh,
 			     NULL, NULL, svcxprt);
 	} else {
 		/* Just wake up the caller who is blocked by the event flag. */
 		/* Note that we're in ISR */
-		svcxprt->rcode = IPC_SUCCESS;
+#ifdef STATIC_SVC
+		if(svcxprt->u.l.timeout) {
+			svcxprt->u.l.timeout = 0;
+			svcxprt->rcode = IPC_CANCEL;
+		}
+		else
+#endif
+			svcxprt->rcode = IPC_SUCCESS;
 		complete(&svcxprt->u.l.cmpl);
 	}
 }
+
+#ifdef STATIC_SVC
+int ipc_cancel_check(SVCXPRT *svcxprt)
+{
+	unsigned int flags;
+
+	ipc_spin_lock(svcxprt->svcxprt_lock, &flags, LOCK_POS_L_CLNT_CANCEL);
+	if(svcxprt->svcxprt_cancel) {
+		svcxprt->rcode = IPC_CANCEL;
+		svcxprt->svcxprt_cancel = 0;
+		ipc_spin_unlock(svcxprt->svcxprt_lock, flags, LOCK_POS_L_CLNT_CANCEL);
+		ipc_svc_sendreply(svcxprt, NULL);
+		return 1;
+	}
+	ipc_spin_unlock(svcxprt->svcxprt_lock, flags, LOCK_POS_L_CLNT_CANCEL);
+	return 0;
+}
+#endif
 
 /*
  * Piggy-backed on one of ipc_bh task to perform user-space pass-over
@@ -1508,6 +1568,11 @@ void ipc_binder_got_request(SVCXPRT *svcxprt)
 		ipc_svc_sendreply(svcxprt, NULL);
 		return;
 	}
+
+#ifdef STATIC_SVC
+	if (ipc_cancel_check(svcxprt))
+		return;
+#endif
 
 	/* Now invoke the function! */
 	svc_req.svcxprt = svcxprt;

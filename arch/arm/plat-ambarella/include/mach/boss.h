@@ -132,6 +132,8 @@ struct boss_s
 	 * remote OS can retrieve these when it boots up.
 	 */
 	struct ipc_buf_s ipc_buf;	/* IPC buffer */
+	unsigned int svc_lock_start_id;
+	unsigned int svc_num;
 
 	unsigned int ipcstat_timescale;
 

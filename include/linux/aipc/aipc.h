@@ -56,7 +56,7 @@ enum {
 	IPC_TIME_NUM
 };
 
-#define IPC_DUMMY_ALIGN		11
+#define IPC_DUMMY_ALIGN		9
 
 #define IPC_TAG_BEGIN		0x42435049	/* 'IPCB' */
 #define IPC_TAG_END		0x45435049	/* 'IPCE' */
@@ -88,6 +88,7 @@ enum clnt_stat
 	IPC_PROCESSING = 13,	/* IPC Call is processing */
 	IPC_CMD_QUEUE_FULL = 14,/* IPC command queue is full */
 	IPC_UNITIALIZED = 15,	/* IPC service is not initialized */
+	IPC_CANCEL = 16         /* IPC command canceled by server */
 };
 
 /*
@@ -193,6 +194,8 @@ typedef struct SVCXPRT
 	unsigned int lu_xid;
 
 	unsigned int time[IPC_TIME_NUM];
+	int svcxprt_lock;
+	int svcxprt_cancel;
 	unsigned int dummy[IPC_DUMMY_ALIGN];
 	unsigned int tag_end;	/* End Mark */
 
@@ -222,7 +225,7 @@ typedef struct SVCXPRT
 /*
  * IPC binder buffer.
  */
-#define IPC_BINDER_MSG_BUFSIZE_BITS	5
+#define IPC_BINDER_MSG_BUFSIZE_BITS	4
 #define IPC_BINDER_MSG_BUFSIZE_MASK	((1 << IPC_BINDER_MSG_BUFSIZE_BITS) - 1)
 #define IPC_BINDER_MSG_BUFSIZE		(1 << IPC_BINDER_MSG_BUFSIZE_BITS)
 
@@ -348,6 +351,13 @@ extern CLIENT *ipc_clnt_prog_register(struct ipc_prog_s *prog);
  * Unregister a client program.
  */
 extern int ipc_clnt_prog_unregister(struct ipc_prog_s *prog, CLIENT *client);
+
+#ifdef STATIC_SVC
+/*
+ * Check ipc service cancel.
+ */
+extern int ipc_cancel_check(SVCXPRT *svcxprt);
+#endif
 
 /**************************/
 /* IPC bottom half helper */

@@ -39,6 +39,7 @@ const char *ipc_strerror(enum clnt_stat stat)
 		"processsing",
 		"command queue is full",
 		"ipc service is not initialized",
+		"ipc service is canceled",
 	};
 	static int nerrstr = sizeof(errstr) / sizeof(const char *);
 
