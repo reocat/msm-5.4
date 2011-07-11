@@ -54,6 +54,10 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	/* GPIO7 and GPIO9 are programmed as hardware mode */
 	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000280);
 
+	/* Reset usb host controller */
+	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
+		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
+
 	/*
 	 * We must enable both of the usb ports first, then we can disable
 	 * usb port1 if it is configured as device port.
