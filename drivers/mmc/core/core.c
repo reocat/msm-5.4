@@ -1524,6 +1524,21 @@ EXPORT_SYMBOL(mmc_set_blocklen);
 
 static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 {
+#if defined(CONFIG_AMBARELLA_IPC)
+	struct ipc_sdinfo *sdinfo;
+	ambarella_sdinfo_ipc(host);
+	sdinfo = ambarella_sd_get_sdinfo(host);
+	ambarella_sd_cmd_from_ipc(host, sdinfo->is_init);
+
+	if (sdinfo->is_init) {
+		if (sdinfo->is_sdmem) {
+			return mmc_attach_sd(host);
+		} else if (sdinfo->is_mmc) {
+			return mmc_attach_mmc(host);
+		} else
+			ambarella_sd_cmd_from_ipc(host, 0);
+	}
+#endif
 	host->f_init = freq;
 
 #ifdef CONFIG_MMC_DEBUG

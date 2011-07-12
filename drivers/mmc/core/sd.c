@@ -258,6 +258,13 @@ static int mmc_read_switch(struct mmc_card *card)
 	int err;
 	u8 *status;
 
+#if defined(CONFIG_AMBARELLA_IPC)
+	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
+	if (sdinfo->from_ipc && sdinfo->is_init) {
+		card->sw_caps.hs_max_dtr = 50000000;
+		return 0;
+	}
+#endif
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1)
 		return 0;
 
@@ -310,6 +317,12 @@ int mmc_sd_switch_hs(struct mmc_card *card)
 {
 	int err;
 	u8 *status;
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
+	if (sdinfo->from_ipc)
+		return 0;
+#endif
 
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1)
 		return 0;
@@ -691,7 +704,7 @@ static void mmc_sd_detect(struct mmc_host *host)
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
-       
+
 	mmc_claim_host(host);
 
 	/*

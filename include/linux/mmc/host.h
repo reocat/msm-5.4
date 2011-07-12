@@ -16,6 +16,10 @@
 #include <linux/mmc/core.h>
 #include <linux/mmc/pm.h>
 
+#if defined(CONFIG_AMBARELLA_IPC)
+#include <linux/aipc/i_sdresp.h>
+#endif
+
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
 	unsigned short	vdd;
@@ -359,5 +363,9 @@ static inline int mmc_card_is_powered_resumed(struct mmc_host *host)
 	return host->pm_flags & MMC_PM_KEEP_POWER;
 }
 
+extern int ambarella_sdmmc_cmd_ipc(struct mmc_host * mmc, struct mmc_command * cmd);
+extern struct ipc_sdinfo *ambarella_sd_get_sdinfo(struct mmc_host *mmc);
+extern int ambarella_sdinfo_ipc(struct mmc_host *mmc);
+extern void ambarella_sd_cmd_from_ipc(struct mmc_host * mmc, u8 enable);
 #endif
 

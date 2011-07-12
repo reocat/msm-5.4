@@ -942,7 +942,9 @@ static void __init ambarella_init_boss(void)
 		ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 		ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+#if !defined(CONFIG_AMBARELLA_IPC)
 		ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(106);
+#endif
 		ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = GPIO(129);
@@ -951,6 +953,14 @@ static void __init ambarella_init_boss(void)
 		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_val	= GPIO_LOW,
 		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = GPIO(128);
+#if defined(CONFIG_AMBARELLA_IPC)
+		ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_8_BIT_DATA;
+		ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_8_BIT_DATA;
+
+		ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_BUS_WIDTH_TEST;
+		ambarella_platform_sd_controller0.slot[1].caps |= MMC_CAP_BUS_WIDTH_TEST;
+		ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_BUS_WIDTH_TEST;
+#endif
 
 		platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 		for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {

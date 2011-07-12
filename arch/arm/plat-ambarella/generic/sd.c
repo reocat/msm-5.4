@@ -249,7 +249,7 @@ int fio_amb_sd2_check_owner(void)
 
 void fio_amb_sd2_request(void)
 {
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1) || defined(CONFIG_AMBARELLA_IPC)
 	fio_select_lock(SELECT_FIO_SD2);
 #else
 	return;
@@ -258,7 +258,7 @@ void fio_amb_sd2_request(void)
 
 void fio_amb_sd2_release(void)
 {
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
+#if (FIO_SUPPORT_AHB_CLK_ENA == 1) || defined(CONFIG_AMBARELLA_IPC)
 	fio_unlock(SELECT_FIO_SD2);
 #else
 	return;

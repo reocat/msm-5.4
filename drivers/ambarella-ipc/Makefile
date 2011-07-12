@@ -50,9 +50,10 @@ X-C-y +=	$(IPCDIR)/defs/i_util.x \
 		$(IPCDIR)/defs/i_gpio.x \
 		$(IPCDIR)/defs/i_pmic.x \
 		$(IPCDIR)/defs/i_ffs.x \
-		$(IPCDIR)/defs/i_fifo.x
+		$(IPCDIR)/defs/i_fifo.x \
+		$(IPCDIR)/defs/i_sdresp.x
 
-ifeq ($(CONFIG_FB_DSP_CMD),y)		
+ifeq ($(CONFIG_FB_DSP_CMD),y)
 X-C-y +=	$(IPCDIR)/defs/i_dsp.x
 else
 X-C-y +=	$(IPCDIR)/defs/i_display.x
