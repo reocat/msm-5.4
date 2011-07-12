@@ -543,9 +543,6 @@ int ambfb_vdspdrv_claim(struct ambarella_platform_fb *pfb,
 	}
 
 	boss_fb->pitch = boss_fb->width * bytesperpixel;
-	if (boss_fb->pitch < 1024) {
-		boss_fb->pitch = 1024;
-	}
 	boss_fb->csc_en = 2;
    	boss_fb->csc_parms[0] = 0x003f0275;
 	boss_fb->csc_parms[1] = 0x1ea600bb;
