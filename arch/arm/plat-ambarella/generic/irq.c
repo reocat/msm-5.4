@@ -281,7 +281,9 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 	.irq_unmask	= ambarella_gpio_enable_irq,
 	.irq_mask_ack	= ambarella_gpio_mask_ack_irq,
 	.irq_set_type	= ambarella_gpio_irq_set_type,
+#ifdef CONFIG_PM
 	.irq_set_wake	= ambarella_gpio_irq_set_wake,
+#endif
 };
 
 /* ==========================================================================*/
@@ -434,7 +436,9 @@ static struct irq_chip ambarella_irq_chip = {
 	.irq_unmask	= ambarella_enable_irq,
 	.irq_mask_ack	= ambarella_mask_ack_irq,
 	.irq_set_type	= ambarella_irq_set_type,
+#ifdef CONFIG_PM
 	.irq_set_wake	= ambarella_irq_set_wake,
+#endif
 };
 #endif
 

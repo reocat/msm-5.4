@@ -52,13 +52,6 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-static int pm_debug_hal_standby = 0;
-#else
-static int pm_debug_hal_standby = 1;
-#endif
-module_param(pm_debug_hal_standby, int, 0644);
-
 #ifdef CONFIG_GPIO_WM831X
 extern int wm831x_config_poweroff(void);
 #endif
@@ -200,10 +193,6 @@ ambarella_pm_check_exit:
 static int ambarella_pm_enter_standby(void)
 {
 	int					retval = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_hal_success_t			result;
-	amb_operating_mode_t			operating_mode;
-#endif
 	struct irq_desc				*pm_desc = NULL;
 	struct irq_chip				*pm_chip = NULL;
 	unsigned long				flags;
@@ -227,37 +216,19 @@ static int ambarella_pm_enter_standby(void)
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
 	}
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
-	BUG_ON(result != AMB_HAL_SUCCESS);
-	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
-
 	if (pm_debug_enable_timer_irq) {
 		if (pm_chip && pm_chip->irq_startup)
 			pm_chip->irq_startup(&pm_desc->irq_data);
 		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 	}
 
-	if (pm_debug_hal_standby) {
-		result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
-		if (result != AMB_HAL_SUCCESS) {
-			pr_err("%s: amb_set_operating_mode failed(%d)\n",
-				__func__, result);
-			retval = -EPERM;
-		}
-	} else {
-		__asm__ __volatile__ (
-			"mcr	p15, 0, %[result], c7, c0, 4" :
-			[result] "+r" (result));
-	}
+	cpu_do_idle();
 
 	if (pm_debug_enable_timer_irq) {
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 		if (pm_chip && pm_chip->irq_shutdown)
 			pm_chip->irq_shutdown(&pm_desc->irq_data);
 	}
-
-#endif
 
 	if (ambarella_pm_post(&flags, 1, 1, 1))
 		BUG();
@@ -306,9 +277,7 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_STANDBY:
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 		valid = 1;
-#endif
 		break;
 
 	case PM_SUSPEND_MEM:
