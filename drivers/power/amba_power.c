@@ -99,7 +99,7 @@ static int ambapmic_usb_get_prop(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		val->intval = ipc_ipmic_get_prop_int(IPC_PMIC_MOD_WALL,psp);
+		val->intval = ipc_ipmic_get_prop_int(IPC_PMIC_MOD_USB,psp);
 		break;
 	default:
 		DEBUG("%s: unsupport props(%d)\n",__func__,psp);
