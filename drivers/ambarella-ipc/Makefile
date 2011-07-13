@@ -44,6 +44,7 @@ X-S-y +=	$(IPCDIR)/defs/lk_util.x \
 
 # Clients
 X-C-y +=	$(IPCDIR)/defs/i_util.x \
+		$(IPCDIR)/defs/i_status.x \
 		$(IPCDIR)/defs/i_flpart.x \
 		$(IPCDIR)/defs/i_nand.x \
 		$(IPCDIR)/defs/i_sdhc.x \

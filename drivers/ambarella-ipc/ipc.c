@@ -33,6 +33,7 @@
 #include <linux/aipc/ipc_shm.h>
 #include <linux/aipc/ipc_mutex.h>
 #include <linux/aipc/ipc_log.h>
+#include <linux/aipc/i_status.h>
 
 #include "binder.h"
 
@@ -314,6 +315,12 @@ static int ipc_smem_init(void)
 	return 0;
 }
 
+static void ipc_status_report(void)
+{
+	i_status_init();
+	ipc_status_report_ready(1);
+}
+
 static int __init ambarella_ipc_init(void)
 {
 	int rval = 0;
@@ -410,6 +417,8 @@ done:
 		ipc_bh_cleanup();
 		ipc_irq_free();
 	}
+	else
+		ipc_status_report();
 
 	return rval;
 }
@@ -447,6 +456,7 @@ static void __exit ambarella_ipc_cleanup(void)
 	}
 #endif
 
+	i_status_cleanup();
 	ipc_binder_cleanup();
 	ipc_bh_cleanup();
 	ipc_irq_free();
