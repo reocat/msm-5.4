@@ -72,16 +72,6 @@ config LIS3L02DQ
 	  accelerometer. The driver supplies direct access via sysfs files
 	  and an event interface via a character device.
 
-config MMA7455L
-	tristate "Freescale Semiconductor MMA7455L Accelerometer Driver"
-	depends on SPI
-	select IIO_TRIGGER if IIO_RING_BUFFER
-	select IIO_SW_RING if IIO_RING_BUFFER
-	help
-	  Say yes here to build SPI support for the Freescale Semiconductor
-	  accelerometer. The driver supplies direct access via sysfs files
-	  and an event interface via a character device.
-
 config SCA3000
 	depends on IIO_RING_BUFFER
 	depends on SPI
