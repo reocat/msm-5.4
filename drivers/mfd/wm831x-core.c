@@ -1707,7 +1707,8 @@ int wm831x_device_suspend(struct wm831x *wm831x)
 					 reg & mask);
 		}
 	}
-
+	//disable wm831x irq
+	disable_irq(wm831x->irq);
 	return 0;
 }
 
