@@ -536,7 +536,9 @@ static struct wm831x_pdata elephant_wm8310_pdata = {
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
+#endif
 	&ambarella_ehci0,
 	&ambarella_fb0,
 	&ambarella_fb1,
