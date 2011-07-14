@@ -251,6 +251,8 @@ static void __init ambarella_init_coconut(void)
 
 	/* Config ETH*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
+	ambarella_eth0_platform_info.mii_id = 5;
+	ambarella_eth0_platform_info.phy_id = 0x004dd023;
 
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;

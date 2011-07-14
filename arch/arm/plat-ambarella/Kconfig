@@ -127,14 +127,6 @@ config PLAT_AMBARELLA_A2
 	help
 	  Say Y here if you are using Ambarella A2.
 
-config PLAT_AMBARELLA_A2S
-	bool "A2S"
-	select CPU_ARM926T
-	select PLAT_AMBARELLA_GENERIC
-	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
-	help
-	  Say Y here if you are using Ambarella A2S.
-
 config PLAT_AMBARELLA_A5S
 	bool "A5S"
 	select CPU_V6

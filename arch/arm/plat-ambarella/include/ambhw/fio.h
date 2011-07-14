@@ -67,12 +67,12 @@
 #define	FIO_USE_2X_FREQ				0
 #endif
 
-#if 	(CHIP_REV == A1)
+#if 	(CHIP_REV == A1) || (CHIP_REV == I1)
 #define NAND_XD_SUPPORT_WAS			0
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) ||		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
 	(CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)  ||	\
-	(CHIP_REV == I1)  || (CHIP_REV == A7L)
+	(CHIP_REV == A7L)
 #define NAND_XD_SUPPORT_WAS			1
 #else
 #define NAND_XD_SUPPORT_WAS			2

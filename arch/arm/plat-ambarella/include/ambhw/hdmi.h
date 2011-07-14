@@ -88,7 +88,7 @@
 #define VOUT_SUPPORT_ONCHIP_HDCP	0
 #endif
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define VOUT_HDCP_REGS_OFFSET_GROUP	2
 #else
 #define VOUT_HDCP_REGS_OFFSET_GROUP	1
@@ -1266,6 +1266,11 @@
 #endif
 
 /* ---------------------------------------------------------------------- */
+#if (VOUT_HDCP_REGS_OFFSET_GROUP == 1)
+#define HDCP_HDCPCE_CTL_OFFSET		0x300
+#else
+#define HDCP_HDCPCE_CTL_OFFSET		0x400
+#endif
 
 #if (VOUT_SUPPORT_ONCHIP_HDCP == 1)
 
@@ -1276,7 +1281,7 @@
 #define HDCP_REG(x)			(HDCP_BASE + (x))
 
 #if (VOUT_HDCP_REGS_OFFSET_GROUP == 1)
-#define HDCP_HDCPCE_CTL_OFFSET		0x300
+//#define HDCP_HDCPCE_CTL_OFFSET		0x300
 #define HDCP_AUTH_STAT_CTL_OFFSET	0x304
 #define HDCP_HDCPCE_TX_MODE_OFFSET	0x308
 #define HDCP_BCONF_OFFSET		0x30c
@@ -1326,7 +1331,7 @@
 #define HDCP_KRAM_STATUS_OFFSET 	0x40c
 
 #else	/* VOUT_HDCP_REGS_OFFSET_GROUP == 2 */
-#define HDCP_HDCPCE_CTL_OFFSET		0x400
+//#define HDCP_HDCPCE_CTL_OFFSET		0x400
 #define HDCP_AUTH_STAT_CTL_OFFSET	0x404
 #define HDCP_HDCPCE_TX_MODE_OFFSET	0x408
 #define HDCP_BCONF_OFFSET		0x40c
@@ -1498,7 +1503,7 @@
 
 #endif
 
-#define HDMI_EESS_CTL_REG			HDMI_REG(0x300)
+#define HDMI_EESS_CTL_REG			HDMI_REG(HDCP_HDCPCE_CTL_OFFSET)
 #define HDMI_HDCPCE_CTL_HDCPCE_EN		(0x1UL << 31)
 #define HDMI_HDCPCE_CTL_HDCP_ENC_EN		(0x1 << 5)
 #define HDMI_HDCPCE_CTL_USE_EESS(x)		(((x) & 0x01) << 4)

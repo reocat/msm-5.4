@@ -37,6 +37,7 @@
 #define DEFAULT_BAPI_REBOOT_NORMAL		(0)
 #define DEFAULT_BAPI_REBOOT_RECOVERY		(1)
 #define DEFAULT_BAPI_REBOOT_FASTBOOT		(2)
+#define DEFAULT_BAPI_REBOOT_SELFREFERESH	(3)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -112,6 +113,7 @@ struct ambarella_bapi_tag_s {
 
 /* ==========================================================================*/
 typedef unsigned int (*ambarella_bapi_aoss_call_t)(u32, u32, u32, u32);
+typedef void (*ambarella_bapi_aoss_return_t)(void);
 
 extern int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args);
 

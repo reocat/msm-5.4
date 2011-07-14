@@ -32,12 +32,16 @@
 #include <asm/suspend.h>
 #include <asm/io.h>
 #include <asm/unified.h>
+#include <asm/cacheflush.h>
+#include <asm/tlbflush.h>
 
 #include <mach/hardware.h>
 #include <plat/bapi.h>
 #include <plat/ambcache.h>
 #include <plat/debug.h>
 #include <plat/fb.h>
+
+#include <hal/hal.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -102,14 +106,6 @@ static int ambarella_bapi_check_bapi_info(enum ambarella_bapi_cmd_e cmd)
 
 ambarella_bapi_check_bapi_info_exit:
 	return retval;
-}
-
-static void ambarella_bapi_aoss_return(void)
-{
-	aoss_copy_page = 0;
-	bapi_info->aoss_info.copy_pages = 0;
-	in_suspend = 0;
-	swsusp_arch_restore_cpu();
 }
 
 static int ambarella_bapi_aoss_increase_page_info(
@@ -207,14 +203,16 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 	case AMBARELLA_BAPI_CMD_AOSS_SAVE:
 	{
 		int					i;
+		ambarella_bapi_aoss_return_t		return_fn;
 
+		return_fn = (ambarella_bapi_aoss_return_t)args;
 		retval = ambarella_bapi_check_bapi_info(cmd);
 		if (retval == 0) {
 			for (i = 0; i < 4; i++) {
 				bapi_aoss_arg[i] = ambarella_phys_to_virt(
 					bapi_info->aoss_info.fn_pri[i]);
 			}
-			pr_info("%s: %p for 0x%08x[0x%08x], 0x%08x[0x%08x], "
+			pr_debug("%s: %p for 0x%08x[0x%08x], 0x%08x[0x%08x], "
 			"0x%08x[0x%08x], 0x%08x[0x%08x].\n",
 			__func__, bapi_info->aoss_info.fn_pri,
 			bapi_aoss_arg[0], bapi_info->aoss_info.fn_pri[0],
@@ -234,6 +232,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 #endif
 			bapi_aoss_entry =
 				(ambarella_bapi_aoss_call_t)bapi_aoss_arg[0];
+			flush_cache_all();
 			retval = bapi_aoss_entry((u32)bapi_info->aoss_info.fn_pri,
 				bapi_aoss_arg[1], bapi_aoss_arg[2], bapi_aoss_arg[3]);
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
@@ -245,8 +244,13 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			arch_smp_resume(0);
 #endif
 #endif
-
-			ambarella_bapi_aoss_return();
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+			set_ambarella_hal_invalid();
+#endif
+			aoss_copy_page = 0;
+			bapi_info->aoss_info.copy_pages = 0;
+			if (return_fn)
+				return_fn();
 		}
 	}
 		break;
@@ -321,9 +325,16 @@ void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
 	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_COPY_PAGE, &page_info);
 }
 
+static void ambarella_arch_swsusp_return(void)
+{
+	in_suspend = 0;
+	swsusp_arch_restore_cpu();
+}
+
 int arch_swsusp_write(unsigned int flags)
 {
-	return ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE, NULL);
+	return ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE,
+		ambarella_arch_swsusp_return);
 }
 
 /* ==========================================================================*/

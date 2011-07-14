@@ -765,6 +765,7 @@ u32 ambarella_irq_resume(u32 level)
 #else
 	amba_writel(VIC_INT_SEL_REG, ambarella_vic_pm.vic_int_sel_reg);
 	amba_writel(VIC_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC_EDGE_CLR_REG, 0xffffffff);
 	amba_writel(VIC_INTEN_REG, ambarella_vic_pm.vic_inten_reg);
 	amba_writel(VIC_SOFTEN_CLR_REG, 0xffffffff);
 	amba_writel(VIC_SOFTEN_REG, ambarella_vic_pm.vic_soften_reg);
@@ -775,6 +776,7 @@ u32 ambarella_irq_resume(u32 level)
 #if (VIC_INSTANCES >= 2)
 	amba_writel(VIC2_INT_SEL_REG, ambarella_vic2_pm.vic_int_sel_reg);
 	amba_writel(VIC2_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC2_EDGE_CLR_REG, 0xffffffff);
 	amba_writel(VIC2_INTEN_REG, ambarella_vic2_pm.vic_inten_reg);
 	amba_writel(VIC2_SOFTEN_CLR_REG, 0xffffffff);
 	amba_writel(VIC2_SOFTEN_REG, ambarella_vic2_pm.vic_soften_reg);
@@ -786,6 +788,7 @@ u32 ambarella_irq_resume(u32 level)
 #if (VIC_INSTANCES >= 3)
 	amba_writel(VIC3_INT_SEL_REG, ambarella_vic3_pm.vic_int_sel_reg);
 	amba_writel(VIC3_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC3_EDGE_CLR_REG, 0xffffffff);
 	amba_writel(VIC3_INTEN_REG, ambarella_vic3_pm.vic_inten_reg);
 	amba_writel(VIC3_SOFTEN_CLR_REG, 0xffffffff);
 	amba_writel(VIC3_SOFTEN_REG, ambarella_vic3_pm.vic_soften_reg);

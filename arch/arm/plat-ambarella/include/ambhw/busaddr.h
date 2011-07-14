@@ -33,13 +33,13 @@
 #elif (CHIP_REV == A7L)
 #define AHB_PHYS_BASE		0x60000000
 #define APB_PHYS_BASE		0x70000000
-#define PHY_BUS_MAP_TYPE	0
-#define DRAM_PHYS_BASE		0xfffe0000  
+#define PHY_BUS_MAP_TYPE	2
+#define DRAM_PHYS_BASE		0xfffe0000
 #else
 #define AHB_PHYS_BASE		0x60000000
 #define APB_PHYS_BASE		0x70000000
 #define PHY_BUS_MAP_TYPE	0
-#define DRAM_PHYS_BASE		AHB_PHYS_BASE  
+#define DRAM_PHYS_BASE		AHB_PHYS_BASE
 #endif
 
 #if defined(__BUILD_AMBOOT__) || defined(__AMBOOT__)
@@ -56,15 +56,21 @@
 #endif
 
 /* DRAM slave offsets */
+
+#if (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define DRAM_DRAM_OFFSET 		0x0000
 #define DRAM_DDRC_OFFSET  		0x0800
+#else
+#define DRAM_DRAM_OFFSET 		0x4000
+#define DRAM_DDRC_OFFSET  		DRAM_DRAM_OFFSET
+#endif
 
 /* AHB slave offsets */
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
 #define SD_OFFSET			0x2000
 #define VIC_OFFSET			0x3000
-#define DRAM_OFFSET			0x4000
+#define DRAM_OFFSET			DRAM_DDRC_OFFSET
 #define DMA_OFFSET			0x5000
 #define USBDC_OFFSET			0x6000
 #define VOUT_OFFSET			0x8000
@@ -81,10 +87,10 @@
 
 #if (CHIP_REV == A6)
 #define MS_OFFSET			0x17000
-#elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L)
-#define MS_OFFSET			0x16000
-#else
+#elif (CHIP_REV == A2) || (CHIP_REV == A2S) 
 #define MS_OFFSET			0xc000
+#else
+#define MS_OFFSET			0x16000
 #endif
 
 #if (CHIP_REV == A6)
@@ -131,7 +137,12 @@
 #define USB_HOST_CTRL_OHCI_OFFSET	0x18000 /* iONE */
 #define AHB_SCRATCHPAD_OFFSET		0x19000 /* iONE */
 #define SATA_OFFSET			0x1a000 /* iONE */
+
+#if (CHIP_REV == I1)
 #define SDXC_OFFSET			0x1b000 /* iONE */
+#else
+#define SDXC_OFFSET			0xc000
+#endif
 #define VIC3_OFFSET			0x1c000 /* iONE */
 #define SPDIF_OFFSET			0x1e000 /* iONE */
 #define AHB_SECURE_OFFSET		0x1f000 /* iONE */
@@ -141,7 +152,7 @@
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
 #define SD_BASE				(AHB_BASE + SD_OFFSET)
 #define VIC_BASE			(AHB_BASE + VIC_OFFSET)
-#define DRAM_BASE			(AHB_BASE + DRAM_OFFSET)
+#define DRAM_BASE			(DRAM_PHYS_BASE + DRAM_OFFSET)
 #define DMA_BASE			(AHB_BASE + DMA_OFFSET)
 #define USBDC_BASE			(AHB_BASE + USBDC_OFFSET)
 #define VOUT_BASE			(AHB_BASE + VOUT_OFFSET)
@@ -176,10 +187,18 @@
 #define VIC3_BASE			(AHB_BASE + VIC3_OFFSET)
 #define SPDIF_BASE			(AHB_BASE + SPDIF_OFFSET)
 #define AHB_SECURE_BASE			(AHB_BASE + AHB_SECURE_OFFSET)
+#if !defined(__KERNEL__)
+#if defined(CRYPT_PHYS_BASE)
+#define CRYPT_UNIT_BASE			(CRYPT_PHYS_BASE)
+#else
+#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#endif
+#else
 #if defined(CRYPT_BASE)
 #define CRYPT_UNIT_BASE			(CRYPT_BASE)
 #else
 #define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#endif
 #endif
 
 /* AHB slave registers */
@@ -376,7 +395,7 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
     (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)  || \
-    (CHIP_REV == A7L) 	
+    (CHIP_REV == A7L)
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))

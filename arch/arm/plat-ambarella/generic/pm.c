@@ -52,25 +52,12 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
-#ifdef CONFIG_GPIO_WM831X
-extern int wm831x_config_poweroff(void);
-#endif
-
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
 	if (ambarella_board_generic.power_control.gpio_id >= 0) {
-#ifdef CONFIG_GPIO_WM831X
-		if (!wm831x_config_poweroff()) {
-			ambarella_set_gpio_output(
-				&ambarella_board_generic.power_control, 0);
-		} else {
-			printk("Fail to config gpio for power off, Abort\r\n");
-		}
-#else
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 0);
-#endif
 	} else {
 		rct_power_down();
 	}
@@ -236,6 +223,34 @@ static int ambarella_pm_enter_standby(void)
 	return retval;
 }
 
+static int ambarella_pm_enter_mem(void)
+{
+	int					retval = 0;
+	unsigned long				flags;
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	struct ambarella_bapi_reboot_info_s	reboot_info;
+#endif
+
+	if (ambarella_pm_pre(&flags, 1, 1, 1))
+		BUG();
+
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
+	reboot_info.mode = DEFAULT_BAPI_REBOOT_SELFREFERESH;
+	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
+		&reboot_info);
+	if (retval)
+		goto ambarella_pm_enter_mem_exit_bapi;
+	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE, NULL);
+ambarella_pm_enter_mem_exit_bapi:
+#endif
+
+	if (ambarella_pm_post(&flags, 1, 1, 1))
+		BUG();
+
+	return retval;
+}
+
 static int ambarella_pm_suspend_enter(suspend_state_t state)
 {
 	int					retval = 0;
@@ -251,6 +266,7 @@ static int ambarella_pm_suspend_enter(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
+		retval = ambarella_pm_enter_mem();
 		break;
 
 	default:
@@ -281,6 +297,9 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+		valid = 1;
+#endif
 		break;
 
 	default:
@@ -343,9 +362,6 @@ static int ambarella_pm_hibernation_enter(void)
 
 static void ambarella_pm_hibernation_leave(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	set_ambarella_hal_invalid();
-#endif
 	ambarella_pm_post(NULL, 1, 0, 0);
 }
 

@@ -443,7 +443,7 @@ u32 ambarella_pll_suspend(u32 level)
 
 u32 ambarella_pll_resume(u32 level)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_I1)
+#if 1
 	return 0;
 #else
 	return amb_set_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);

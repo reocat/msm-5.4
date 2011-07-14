@@ -329,6 +329,9 @@
 #define DLL_CTRL_SEL2_REG		RCT_REG(0x244)
 #define DLL_CTRL_SEL3_REG		RCT_REG(0x248)
 
+#define CORE_CLK_RATIO_1X_OFFSET	0x24c
+#define CORE_CLK_RATIO_1X_REG		RCT_REG(0x24c)
+
 /* Memory stick */
 #define CG_DVEN_OFFSET			0x1c8
 #define SCALER_MS_OFFSET		0x1cc

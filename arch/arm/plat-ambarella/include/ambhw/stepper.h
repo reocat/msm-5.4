@@ -43,6 +43,12 @@
 #define	ST_SUPPORT_MICROST	0
 #endif
 
+#if (CHIP_REV == A7L)
+#define MS_CLK_REF_MULTI_AHB_CLK	2
+#else
+#define MS_CLK_REF_MULTI_AHB_CLK	1
+#endif
+
 #define ST_TOTAL_PIN		5
 
 /****************************************************/
