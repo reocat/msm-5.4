@@ -726,11 +726,12 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		}
 	}
 
-
 nand_amb_request_exit:
 	atomic_set(&nand_info->irq_flag, 0x7);
 	nand_info->dma_status = 0;
-	nand_info->err_code = errorCode;
+	/* Avoid to flush previous error info */
+	if (nand_info->err_code == 0)
+		nand_info->err_code = errorCode;
 
 #ifdef AMBARELLA_NAND_WP
 	if ((cmd == NAND_AMB_CMD_ERASE ||
