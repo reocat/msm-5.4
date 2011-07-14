@@ -972,7 +972,7 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 	priv = spi_master_get_devdata(master);
 
 	if (priv) {
-		disable_irq(priv->irq);
+		//disable_irq(priv->irq);
 		ambarella_spi_stop(priv);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
@@ -996,7 +996,7 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 
 	if (priv) {
 		ambarella_spi_inithw(priv);
-		enable_irq(priv->irq);
+		//enable_irq(priv->irq);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;

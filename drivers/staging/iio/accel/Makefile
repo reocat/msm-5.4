@@ -31,9 +31,5 @@ lis3l02dq-y		:= lis3l02dq_core.o
 lis3l02dq-$(CONFIG_IIO_RING_BUFFER) += lis3l02dq_ring.o
 obj-$(CONFIG_LIS3L02DQ)	+= lis3l02dq.o
 
-mma7455l-y		:= mma7455l_core.o
-mma7455l-$(CONFIG_IIO_RING_BUFFER) += mma7455l_ring.o
-obj-$(CONFIG_MMA7455L)	+= mma7455l.o
-
 sca3000-y		:= sca3000_core.o sca3000_ring.o
 obj-$(CONFIG_SCA3000)	+= sca3000.o
