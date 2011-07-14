@@ -1194,7 +1194,6 @@ static int __devexit ambfb_remove(struct platform_device *pdev)
 			if (info->screen_base) {
 				kfree(info->screen_base);
 			}
-
 			if (ambfb_data->conversion_buf.available) {
 				if (ambfb_data->conversion_buf.ping_buf) {
 					kfree(ambfb_data->conversion_buf.ping_buf);
@@ -1203,9 +1202,9 @@ static int __devexit ambfb_remove(struct platform_device *pdev)
 					kfree(ambfb_data->conversion_buf.pong_buf);
 				}
 			}
+			ambfb_data->screen_fix.smem_start = 0;
+			ambfb_data->screen_fix.smem_len = 0;
 		}
-		ambfb_data->screen_fix.smem_start = 0;
-		ambfb_data->screen_fix.smem_len = 0;
 		platform_set_drvdata(pdev, NULL);
 		framebuffer_release(info);
 		mutex_unlock(&ambfb_data->lock);
