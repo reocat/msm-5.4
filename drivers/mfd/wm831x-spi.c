@@ -15,7 +15,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/spi/spi.h>
-
+#include <linux/mfd/wm831x/irq.h>
 #include <linux/mfd/wm831x/core.h>
 
 #include <linux/swab.h>
@@ -122,6 +122,14 @@ static int wm831x_spi_suspend(struct spi_device *spi, pm_message_t m)
 	return wm831x_device_suspend(wm831x);
 }
 
+static int wm831x_spi_resume(struct spi_device *spi)
+{
+	struct wm831x *wm831x = dev_get_drvdata(&spi->dev);
+	//enable wm831x irq
+	enable_irq(wm831x->irq);
+	return 0;
+}
+
 static struct spi_driver wm8310_spi_driver = {
 	.driver = {
 		.name	= "wm8310",
@@ -131,6 +139,7 @@ static struct spi_driver wm8310_spi_driver = {
 	.probe		= wm831x_spi_probe,
 	.remove		= __devexit_p(wm831x_spi_remove),
 	.suspend	= wm831x_spi_suspend,
+	.resume = wm831x_spi_resume,
 };
 
 static struct spi_driver wm8311_spi_driver = {
