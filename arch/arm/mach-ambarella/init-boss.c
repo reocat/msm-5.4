@@ -803,6 +803,9 @@ static void ambarella_init_vendor_2(void)
 #ifdef CONFIG_AMBARELLA_STREAMMEM
 		&amba_streammem,
 #endif
+#ifdef CONFIG_AMBAPMIC_POWER
+		&ambapmic_power,
+#endif
 	};
 	int i;
 
