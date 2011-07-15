@@ -162,6 +162,7 @@ static const struct snd_soc_dapm_widget a5sevk_dapm_widgets[] = {
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
 	SND_SOC_DAPM_HP("HP Jack", NULL),
+	SND_SOC_DAPM_SPK("Speaker", NULL),
 };
 
 /* a5sevk machine audio map (connections to ak4642 pins) */
@@ -177,6 +178,10 @@ static const struct snd_soc_dapm_route a5sevk_audio_map[] = {
 	{"Line Out", NULL, "ROUT"},
 	{"HP Jack", NULL, "HPL"},
 	{"HP Jack", NULL, "HPR"},
+
+	/* Speaker is connected to SPP, SPN */
+	{"Speaker", NULL, "SPP"},
+	{"Speaker", NULL, "SPN"},
 };
 
 static int a5sevk_ak4642_init(struct snd_soc_pcm_runtime *rtd)
@@ -186,8 +191,8 @@ static int a5sevk_ak4642_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	/* not connected */
-	snd_soc_dapm_nc_pin(dapm, "SPP");
-	snd_soc_dapm_nc_pin(dapm, "SPN");
+	/* snd_soc_dapm_nc_pin(dapm, "SPP"); */
+	/* snd_soc_dapm_nc_pin(dapm, "SPN"); */
 	snd_soc_dapm_nc_pin(dapm, "MIN");
 
 	/* Add a5sevk specific widgets */
