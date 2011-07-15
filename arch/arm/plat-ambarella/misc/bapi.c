@@ -333,8 +333,21 @@ static void ambarella_arch_swsusp_return(void)
 
 int arch_swsusp_write(unsigned int flags)
 {
-	return ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE,
+	int					retval = 0;
+	struct ambarella_bapi_reboot_info_s	reboot_info;
+
+	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
+	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_HIBERNATE;
+	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
+		&reboot_info);
+	if (retval)
+		goto arch_swsusp_write_exit;
+
+	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE,
 		ambarella_arch_swsusp_return);
+
+arch_swsusp_write_exit:
+	return retval;
 }
 
 /* ==========================================================================*/
