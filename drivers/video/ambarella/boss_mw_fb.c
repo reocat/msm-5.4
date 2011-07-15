@@ -94,7 +94,7 @@ struct boss_fb
 	void *smem_start_virt;		/* FB subsystem smem start virt addr */
 	unsigned int smem_len;		/* FB subsustem smem length */
 	int framesize;
-	int smem_index;
+	int smem_y_offset;
 
 	unsigned int ccflen;		/* Color-conversion frame length */
 
@@ -145,7 +145,7 @@ static int ambfb_vdspdrv_pan_display(struct fb_var_screeninfo *var,
 	int voutid = info->node;
 
 	boss_fb = &G_boss_fb[voutid];
-	boss_fb->smem_index = var->yoffset / boss_fb->height;
+	boss_fb->smem_y_offset = var->yoffset;
 		
 	if (vdspdrv->active == 0)
 		return -EIO;
@@ -250,7 +250,7 @@ static int ambfb_activate(int voutid)
 	/* We need to assign a valid buffer to let mw switch osd buffer in the first time */
 	memcpy(&boss_fb->bossed, osd, sizeof(*osd));
 	boss_fb->bossed.zbuf0 = (void *) ((u32) boss_fb->smem_start_virt +
-			boss_fb->smem_index * boss_fb->framesize);
+			boss_fb->smem_y_offset * boss_fb->pitch);
 	memcpy (boss_fb->ccf[1], boss_fb->bossed.zbuf0, boss_fb->framesize);
 #endif
 	dst1= boss_fb->ccf[0];
