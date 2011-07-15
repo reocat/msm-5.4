@@ -63,23 +63,6 @@ void ambarella_power_off(void)
 	}
 }
 
-void ambarella_machine_restart(char mode, const char *cmd)
-{
-	disable_nonboot_cpus();
-	local_irq_disable();
-	local_fiq_disable();
-	flush_cache_all();
-	outer_flush_all();
-	outer_disable();
-	outer_inv_all();
-	flush_cache_all();
-
-	arch_reset(mode, cmd);
-	mdelay(1000);
-	printk("Reboot failed -- System halted\n");
-	while (1);
-}
-
 /* ==========================================================================*/
 static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend,
 	u32 tm_level, u32 bnotifier)
@@ -236,7 +219,7 @@ static int ambarella_pm_enter_mem(void)
 
 #if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
 	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
-	reboot_info.mode = DEFAULT_BAPI_REBOOT_SELFREFERESH;
+	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_SELFREFERESH;
 	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
 		&reboot_info);
 	if (retval)
@@ -397,7 +380,6 @@ static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
 int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
-	arm_pm_restart = ambarella_machine_restart;
 
 	suspend_set_ops(&ambarella_pm_suspend_ops);
 	hibernation_set_ops(&ambarella_pm_hibernation_ops);

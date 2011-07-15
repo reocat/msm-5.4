@@ -43,20 +43,19 @@ static inline void arch_reset(char mode, const char *cmd)
 	struct ambarella_bapi_reboot_info_s	reboot_info;
 
 	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
-	reboot_info.mode = DEFAULT_BAPI_REBOOT_NORMAL;
+	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_NORMAL;
 	if (cmd) {
 		if(strcmp(cmd, "recovery") == 0) {
-			reboot_info.mode = DEFAULT_BAPI_REBOOT_RECOVERY;
+			reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_RECOVERY;
 		} else if(strcmp(cmd, "fastboot") == 0) {
-			reboot_info.mode = DEFAULT_BAPI_REBOOT_FASTBOOT;
+			reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_FASTBOOT;
 		}
 	}
 	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO, &reboot_info);
 #endif
 
-	amba_writel(SOFT_RESET_REG, 0x0);
-	amba_writel(SOFT_RESET_REG, 0x1);
-	cpu_reset(CONFIG_AMBARELLA_ZRELADDR);
+	__raw_writel(0x00, SOFT_RESET_REG);
+	__raw_writel(0x01, SOFT_RESET_REG);
 }
 
 #endif /* __ASSEMBLER__ */
