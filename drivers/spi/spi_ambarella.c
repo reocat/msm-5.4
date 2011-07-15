@@ -940,7 +940,7 @@ static int __devexit ambarella_spi_remove(struct platform_device *pdev)
 #if (SPI_AHB_INSTANCES > 0)
 	if (!priv->pinfo->support_dma) {
 #endif
-		free_irq(priv->irq, master);
+		free_irq(priv->irq, priv);
 #if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
