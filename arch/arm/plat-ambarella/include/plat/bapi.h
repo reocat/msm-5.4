@@ -34,9 +34,11 @@
 #define DEFAULT_BAPI_AOSS_MAGIC			(0x19531110)
 
 #define DEFAULT_BAPI_REBOOT_MAGIC		(0x4a32e9b0)
-#define DEFAULT_BAPI_REBOOT_NORMAL		(0)
-#define DEFAULT_BAPI_REBOOT_RECOVERY		(1)
-#define DEFAULT_BAPI_REBOOT_FASTBOOT		(2)
+#define AMBARELLA_BAPI_CMD_REBOOT_NORMAL	(0xdeadbeaf)
+#define AMBARELLA_BAPI_CMD_REBOOT_RECOVERY	(0x5555aaaa)
+#define AMBARELLA_BAPI_CMD_REBOOT_FASTBOOT	(0x555aaaa5)
+#define AMBARELLA_BAPI_CMD_REBOOT_SELFREFERESH	(0x55aaaa55)
+#define AMBARELLA_BAPI_CMD_REBOOT_HIBERNATE	(0x5aaaa555)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -112,6 +114,7 @@ struct ambarella_bapi_tag_s {
 
 /* ==========================================================================*/
 typedef unsigned int (*ambarella_bapi_aoss_call_t)(u32, u32, u32, u32);
+typedef void (*ambarella_bapi_aoss_return_t)(void);
 
 extern int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args);
 

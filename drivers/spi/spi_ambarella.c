@@ -993,7 +993,6 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 
 	master = platform_get_drvdata(pdev);
 	priv = spi_master_get_devdata(master);
-
 	if (priv) {
 		ambarella_spi_inithw(priv);
 		//enable_irq(priv->irq);

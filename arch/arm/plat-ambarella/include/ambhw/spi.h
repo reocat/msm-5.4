@@ -66,13 +66,17 @@
 #define SPI_EN2_ENABLED_BY_GPIO2_AFSEL_REG	0
 #endif
 
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
+#define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	1
+#else
+#define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	0
+#endif
+
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
     (CHIP_REV == A7L)
 #define SPI_SLAVE_INSTANCES			1
-#define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	1
 #else     	
 #define SPI_SLAVE_INSTANCES			0
-#define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	0
 #endif
 
 #if (CHIP_REV == I1) || (CHIP_REV == A7L)
@@ -94,6 +98,7 @@
 /* SPI_FIFO_SIZE */
 #define SPI_DATA_FIFO_SIZE_16		0x10
 #define SPI_DATA_FIFO_SIZE_32		0x20
+#define SPI_DATA_FIFO_SIZE_64		0x40
 #define SPI_DATA_FIFO_SIZE_128		0x80
 
 /****************************************************/

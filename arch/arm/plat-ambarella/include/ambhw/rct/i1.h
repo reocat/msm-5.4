@@ -23,6 +23,7 @@
 #define RCT_SUPPORT_PLL_HDMI		1
 #define RCT_SUPPORT_UNL_WDT_RST_ANAPWR	1 /* Use bit-7 of ANA_PWR_REG */
 #define RCT_SUPPORT_PLL_CORETEX		1
+#define RCT_SUPPORT_IOCTRL_GPIO		1
 
 /****************************************************/
 /* Controller registers definitions                 */
@@ -348,6 +349,25 @@
 #define USE_COMMON_VO_CLK_OFFSET	0x1d4
 #define USE_COMMON_VO_CLK_REG		RCT_REG(0x1d4)
 
+#define CLOCK_OBSV_OFFSET		0x1e0
+#define CLOCK_OBSV_REG			RCT_REG(0x1e0)
+
+/* PLL output */
+#define CLOCK_OBSV_ENABLE			0x010
+#define CLOCK_OBSV_PLL_OUT_CORE			0x000
+#define CLOCK_OBSV_PLL_OUT_VIDEO		0x001
+#define CLOCK_OBSV_PLL_OUT_SENSOR		0x002
+#define CLOCK_OBSV_PLL_OUT_AUDIO		0x003
+#define CLOCK_OBSV_PLL_OUT_VIDEO2		0x004
+#define CLOCK_OBSV_PLL_OUT_IDSP			0x005
+#define CLOCK_OBSV_PLL_OUT_DDR			0x006
+#define CLOCK_OBSV_PLL_OUT_HDMI			0x007
+#define CLOCK_OBSV_PLL_OUT_LVDS_IDSP_SCLK	0x008
+#define CLOCK_OBSV_PLL_OUT_CORTEX		0x009
+#define CLOCK_OBSV_PLL_OUT_DDD			0x00a
+#define CLOCK_OBSV_PLL_OUT_SDXC			0x00b
+
+
 #define DISABLE_EXT_BYPASS_OFFSET	0x1e4
 #define DISABLE_EXT_BYPASS_REG		RCT_REG(0x1e4)
 
@@ -470,7 +490,7 @@
 #define DISABLE_CLOCKS_VIDEO		(0x001L << 3)
 #define DISABLE_CLOCKS_VIN		(0x001L << 4)
 #define DISABLE_CLOCKS_GTX		(0x001L << 5)
-#define DISABLE_CLOCKS_SXDC		(0x001L << 6)
+#define DISABLE_CLOCKS_SDXC		(0x001L << 6)
 #define DISABLE_CLOCKS_AUDIO_ORC	(0x001L << 7)
 #define DISABLE_CLOCKS_IDSP		(0x001L << 8)
 #define DISABLE_CLOCKS_CORTEX		(0x001L << 9)

@@ -525,11 +525,8 @@ static int ambarella_ir_suspend(struct platform_device *pdev,
 
 	pirinfo = platform_get_drvdata(pdev);
 
-	if (!device_may_wakeup(&pdev->dev)) {
-		amba_clrbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
-			IR_CONTROL_INTENB);
-		disable_irq(pirinfo->irq);
-	}
+	disable_irq(pirinfo->irq);
+	amba_clrbitsl(pirinfo->regbase + IR_CONTROL_OFFSET, IR_CONTROL_INTENB);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, state.event);
@@ -543,11 +540,7 @@ static int ambarella_ir_resume(struct platform_device *pdev)
 
 	pirinfo = platform_get_drvdata(pdev);
 
-	if (!device_may_wakeup(&pdev->dev)) {
-		amba_setbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
-			IR_CONTROL_INTENB);
-		ambarella_ir_enable(pirinfo);
-	}
+	ambarella_ir_enable(pirinfo);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 

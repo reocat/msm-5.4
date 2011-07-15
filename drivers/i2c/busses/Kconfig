@@ -284,6 +284,8 @@ comment "I2C system bus drivers (mostly embedded / system-on-chip)"
 config I2C_AMBARELLA
 	tristate "Ambarella Media Soc I2C bus support"
 	depends on PLAT_AMBARELLA
+	select I2C_MUX if PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select I2C_MUX_AMBARELLA if PLAT_AMBARELLA_SUPPORT_I2C_MUX
 	help
 	  This driver supports the Ambarella Media Soc
 	  I2C Bus master controller

@@ -464,10 +464,17 @@ static struct gpio elephant_wm8310_gpios[] = {
 
 static int elephant_wm8310_pre_init(struct wm831x *wm831x)
 {
-	wm831x->irq = gpio_to_irq(54);
-	//printk("wm8310 irq is %d\n", wm831x->irq);
-	return 0;
- }
+	int					ret = 0;
+
+	if (ambarella_is_valid_gpio_irq(&ambarella_board_generic.pmic_irq)) {
+		wm831x->irq = ambarella_board_generic.pmic_irq.irq_line;
+		set_irq_wake(wm831x->irq, 1);
+	} else {
+		ret = -1;
+	}
+
+	return ret;
+}
 
 /* setup the gpio 1..9 (1 is the 1st one) as power supply by hw init/OTP */
 /* we only check the gpio's high value */
@@ -529,7 +536,9 @@ static struct wm831x_pdata elephant_wm8310_pdata = {
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
+#endif
 	&ambarella_ehci0,
 	&ambarella_fb0,
 	&ambarella_fb1,
@@ -728,7 +737,7 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	820,	1120}}},	//STOP
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	310,	610}}},		//RECORD
 
-	//{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	//{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_UNKNOWN,		1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 
 	{AMBINPUT_END},
 };

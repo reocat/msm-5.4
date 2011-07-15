@@ -64,7 +64,7 @@
 #endif
 
 #if ((CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) || \
-     (CHIP_REV == I1)  || (CHIP_REV == A7L))   
+     (CHIP_REV == I1)  || (CHIP_REV == A7L))
 #define SD_HAS_IO_DRIVE_CTRL		1
 #else
 #define SD_HAS_IO_DRIVE_CTRL		0
@@ -78,10 +78,22 @@
 #define SD_HOST2_SUPPORT_XC		0
 #endif
 
-#if (CHIP_REV == I1) 
+#if (CHIP_REV == I1) ||  (CHIP_REV == A7L)
 #define SD_SUPPORT_ACMD23		0
 #else
 #define SD_SUPPORT_ACMD23		1
+#endif
+
+#if (CHIP_REV == I1)
+#define SD_HAS_SDXC_CLOCK		1
+#else
+#define SD_HAS_SDXC_CLOCK		0
+#endif
+
+#if (CHIP_REV == A7L)
+#define SD_HOST1_HOST2_HAS_MUX		1
+#else
+#define SD_HOST1_HOST2_HAS_MUX		0
 #endif
 
 /****************************************************/
