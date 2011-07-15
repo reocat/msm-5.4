@@ -42,7 +42,7 @@
 
 struct dma_s G_dma;
 static spinlock_t dma_lock;
-	
+
 #ifdef CONFIG_AMBARELLA_DMA_PROC
 static const char dma_proc_name[] = "dma";
 static struct proc_dir_entry *dma_file;
@@ -441,6 +441,26 @@ ambarella_dma_desc_xfr_exit:
 }
 EXPORT_SYMBOL(ambarella_dma_desc_xfr);
 
+#if defined(CONFIG_MTD_NAND_AMBARELLA) && defined(CONFIG_AMBARELLA_IPC)
+int __init ambarella_init_dma(void)
+{
+	int					retval = 0;
+	struct dma_s				*dma = &G_dma;
+
+	spin_lock_init(&dma_lock);
+	memset(&G_dma, 0x0, sizeof(G_dma));
+
+	retval = request_irq(DMA_FIOS_IRQ, ambarella_dma_fios_int_handler,
+		IRQ_TYPE_LEVEL_HIGH, "ambarella-fios-dma", dma);
+	if (retval){
+		pr_err("%s: request_irq %d fail %d!\n",
+			__func__, DMA_FIOS_IRQ, retval);
+	}
+
+	return retval;
+}
+#else	/* NAND_AMBARELLA && AMBARELLA_IPC */
+
 int __init ambarella_init_dma(void)
 {
 	int					retval = 0;
@@ -490,4 +510,5 @@ int __init ambarella_init_dma(void)
 ambarella_init_dma_exit:
 	return retval;
 }
+#endif	/* NAND_AMBARELLA && AMBARELLA_IPC */
 

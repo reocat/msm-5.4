@@ -415,10 +415,46 @@ static void nand_dma_isr_handler(void *dev_id, u32 dma_status)
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
+#if defined(CONFIG_AMBARELLA_IPC)
+	if (nand_info->cmd == 0)
+		return;
+#endif
 	nand_info->dma_status = dma_status;
 	atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
 	wake_up(&nand_info->wq);
 }
+
+#if defined(CONFIG_AMBARELLA_IPC)
+#define VIC2_INT_VEC_OFFSET	32
+#define VIC3_INT_VEC_OFFSET	64
+static inline void ambarella_nand_vic_ctrl(u32 line, u32 enable)
+{
+	if (line < 32) {
+		if (enable)
+			amba_writel(VIC_INTEN_REG ,(0x1 << line));
+		else
+			amba_writel(VIC_INTEN_CLR_REG ,(0x1 << line));
+#if (VIC_INSTANCES >= 2)
+	} else if (line < VIC2_INT_VEC_OFFSET + 32) {
+		u32 val = (0x1 << (line - VIC2_INT_VEC_OFFSET));
+		if (enable)
+			amba_writel(VIC2_INTEN_REG ,val);
+		else
+			amba_writel(VIC2_INTEN_CLR_REG ,val);
+#endif
+#if  (VIC_INSTANCES >= 3)
+	} else if (line < VIC3_INT_VEC_OFFSET + 32) {
+		u32 val = (0x1 << (line - VIC3_INT_VEC_OFFSET));
+		if (enable)
+			amba_writel(VIC3_INTEN_REG ,val);
+		else
+			amba_writel(VIC3_INTEN_CLR_REG ,val);
+#endif
+	}
+
+	return;
+}
+#endif
 
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 {
@@ -512,6 +548,16 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	nand_ctr_reg = nand_info->control_reg | NAND_CTR_WAS;
 
 	nand_info->plat_nand->request();
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	ambarella_nand_vic_ctrl(FIOCMD_IRQ, 0);
+	ambarella_nand_vic_ctrl(FIODMA_IRQ, 0);
+	ambarella_nand_vic_ctrl(DMA_FIOS_IRQ, 0);
+
+	enable_irq(DMA_FIOS_IRQ);
+	enable_irq(nand_info->cmd_irq);
+	enable_irq(nand_info->dma_irq);
+#endif
 
 #ifdef AMBARELLA_NAND_WP
 	if ((cmd == NAND_AMB_CMD_ERASE ||
@@ -739,6 +785,13 @@ nand_amb_request_exit:
 		cmd == NAND_AMB_CMD_PROGRAM) &&
 		nand_info->wp_gpio >= 0)
 		gpio_direction_output(nand_info->wp_gpio, GPIO_LOW);
+#endif
+
+#if defined(CONFIG_AMBARELLA_IPC)
+	nand_info->cmd = 0;
+	disable_irq(DMA_FIOS_IRQ);
+	disable_irq(nand_info->cmd_irq);
+	disable_irq(nand_info->dma_irq);
 #endif
 
 	nand_info->plat_nand->release();
@@ -1426,6 +1479,16 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_free_dma_chan;
 	}
 
+#if defined(CONFIG_AMBARELLA_IPC)
+	/*
+	 * Disablle the IRQs, which by default are enabled when requested.
+	 * Otherwise, it causes the unbalenced IRQ enable/disable checking
+	 * failed when the first time nand_amb_request() is called.
+	 */
+	disable_irq(DMA_FIOS_IRQ);
+	disable_irq(nand_info->cmd_irq);
+	disable_irq(nand_info->dma_irq);
+#endif
 	ambarella_nand_init_chip(nand_info);
 
 	mtd = &nand_info->mtd;

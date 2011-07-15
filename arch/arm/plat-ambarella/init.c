@@ -168,6 +168,14 @@ int __init ambarella_init_machine(char *board_name)
 		device_set_wakeup_enable(&ambarella_nand.dev, 0);
 	}
 #endif
+#if defined(CONFIG_MTD_NAND_AMBARELLA) && defined(CONFIG_AMBARELLA_IPC)
+	retval = ambarella_init_dma();
+	BUG_ON(retval != 0);
+
+	platform_device_register(&ambarella_nand);
+	device_set_wakeup_capable(&ambarella_nand.dev, 1);
+	device_set_wakeup_enable(&ambarella_nand.dev, 0);
+#endif
 	if (rct_is_eth_enabled()) {
 		retval = ambarella_init_eth0(system_serial_high,
 			system_serial_low);
