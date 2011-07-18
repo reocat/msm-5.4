@@ -574,7 +574,7 @@ int ambfb_vdspdrv_claim(struct ambarella_platform_fb *pfb,
 
 		boss_fb->smem_start_virt = G_boss_video_mem.curmem;
 		boss_fb->smem_start =
-			(void *) ambarella_virt_to_phys((u32) boss_fb->smem_start_virt);
+			(void *) ipc_virt_to_phys((u32) boss_fb->smem_start_virt);
 		boss_fb->smem_len = framesize * fb_num;
 		G_boss_video_mem.curmem += boss_fb->smem_len;
 		G_boss_video_mem.leftover -= boss_fb->smem_len;

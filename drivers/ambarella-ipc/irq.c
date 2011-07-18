@@ -25,7 +25,13 @@
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/irq.h>
 
+#if (CHIP_REV == I1)
 #define USE_VIC_IRQ	0
+#elif (CHIP_REV == A5S)
+#define USE_VIC_IRQ	1
+#else
+#error "Boss is not supported on this chip!"
+#endif
 
 extern void ipc_binder_dispatch(void);
 
@@ -50,12 +56,20 @@ void ipc_send_irq(void)
 	if (ipc_irq.irqno_uitron < 32) {
 		__raw_writel(0x1 << ipc_irq.irqno_uitron,
 			     VIC_SOFTEN_REG);
+	}
 #if (VIC_INSTANCES >= 2)
-	} else if (ipc_irq.irqno_uitron < 64) {
+	else if (ipc_irq.irqno_uitron < 64) {
 		__raw_writel(0x1 << (ipc_irq.irqno_uitron - 32),
 			     VIC2_SOFTEN_REG);
+	}
 #endif
-	} else {
+#if (VIC_INSTANCES >= 3)
+	else if (ipc_irq.irqno_uitron < 96) {
+		__raw_writel(0x1 << (ipc_irq.irqno_uitron - 64),
+			     VIC3_SOFTEN_REG);
+	}
+#endif
+	else {
 		BUG();
 	}
 }
@@ -69,19 +83,30 @@ void ipc_fake_irq(void)
 	if (ipc_irq.irqno_linux < 32) {
 		__raw_writel(0x1 << ipc_irq.irqno_linux,
 			VIC_SOFTEN_REG);
+	}
 #if (VIC_INSTANCES >= 2)
-	} else if (ipc_irq.irqno_linux < 64) {
+	else if (ipc_irq.irqno_linux < 64) {
 		__raw_writel(0x1 << (ipc_irq.irqno_linux - 32),
 			     VIC2_SOFTEN_REG);
+	}
 #endif
-	} else {
+#if (VIC_INSTANCES >= 3)
+	else if (ipc_irq.irqno_linux < 96) {
+		__raw_writel(0x1 << (ipc_irq.irqno_linux - 64),
+			     VIC3_SOFTEN_REG);
+	}
+#endif
+	else {
 		BUG();
 	}
-#else
-
+#else	/* !USE_VIC_IRQ */
+#if (CHIP_REV == I1)
 	__raw_writel(
 	       0x1 << (ipc_irq.irqno_linux - AXI_SOFT_IRQ(0)),
 	       0xe0019010);
+#else
+#error "GIC is only supported on i1!"
+#endif
 #endif
 }
 
@@ -96,17 +121,29 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 	if (ipc_irq.irqno_linux < 32) {
 		__raw_writel(0x1 << ipc_irq.irqno_linux,
 			     VIC_SOFTEN_CLR_REG);
+	}
 #if (VIC_INSTANCES >= 2)
-	} else if (ipc_irq.irqno_linux < 64) {
+	else if (ipc_irq.irqno_linux < 64) {
 		__raw_writel(0x1 << (ipc_irq.irqno_linux - 32),
-			     VIC_SOFTEN_CLR_REG);
+			     VIC2_SOFTEN_CLR_REG);
+	}
 #endif
-	} else {
+#if (VIC_INSTANCES >= 3)
+	else if (ipc_irq.irqno_linux < 96) {
+		__raw_writel(0x1 << (ipc_irq.irqno_linux - 64),
+			     VIC3_SOFTEN_CLR_REG);
+	}
+#endif
+	else {
 		BUG();
 	}
-#else
+#else	/* !USE_VIC_IRQ */
+#if (CHIP_REV == I1)
 	__raw_writel (0x1 << (ipc_irq.irqno_linux - AXI_SOFT_IRQ(0)),
-			AHB_SCRATCHPAD_REG(0x14));
+	AHB_SCRATCHPAD_REG(0x14));
+#else
+#error "GIC is only supported on i1!"
+#endif
 #endif
 
 	ipc_binder_dispatch();	/* Call out to the handler in binder */
@@ -126,12 +163,20 @@ void ipc_irq_enable(int enabled)
 		if (ipc_irq.irqno_linux < 32) {
 			__raw_writel(0x1 << ipc_irq.irqno_linux,
 				     VIC_SOFTEN_CLR_REG);
+		}
 #if (VIC_INSTANCES >= 2)
-		} else if (ipc_irq.irqno_linux < 64) {
+		else if (ipc_irq.irqno_linux < 64) {
 			__raw_writel(0x1 << (ipc_irq.irqno_linux - 32),
 				     VIC2_SOFTEN_CLR_REG);
+		}
 #endif
-		} else {
+#if (VIC_INSTANCES >= 3)
+		else if (ipc_irq.irqno_linux < 96) {
+			__raw_writel(0x1 << (ipc_irq.irqno_linux - 64),
+				     VIC3_SOFTEN_CLR_REG);
+		}
+#endif
+		else {
 			BUG();
 		}
 #endif

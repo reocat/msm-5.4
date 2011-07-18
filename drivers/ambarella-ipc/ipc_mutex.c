@@ -138,7 +138,12 @@ static void ipc_mutex_irq_enable(int irqno, irqreturn_t (*handler)(int, void *))
 	ipc_mutex_irq_clear(irqno);
 
 	/* Register IRQ to system and enable it */
-	rval = request_irq(irqno + AXI_SOFT_IRQ(0),
+#if (CHIP_REV == I1)
+	if (G_mutex->irqno_use_cortex_sw_int) {
+		irqno += AXI_SOFT_IRQ(0);
+	}
+#endif
+	rval = request_irq(irqno,
 			   handler,
 			   IRQF_TRIGGER_HIGH | IRQF_SHARED,
 			   "IPC_Mutex",
@@ -152,15 +157,26 @@ static void ipc_mutex_irq_enable(int irqno, irqreturn_t (*handler)(int, void *))
 static void ipc_mutex_irq_clear(int irqno)
 {
 	if (G_mutex->irqno_use_cortex_sw_int) {
+#if (CHIP_REV == I1)
 		__raw_writel (1 << irqno, AHB_SCRATCHPAD_REG(0x14));
-	} else {
+#endif
+	}
+	else
+	{
 		if (irqno < 32) {
 			__raw_writel(1 << irqno, VIC_SOFTEN_CLR_REG);
-		} else if (irqno < 64) {
+		}
+#if (VIC_INSTANCES >= 2)
+		else if (irqno < 64) {
 			__raw_writel(1 << (irqno - 32), VIC2_SOFTEN_CLR_REG);
-		} else if (irqno < 96) {
+		}
+#endif
+#if (VIC_INSTANCES >= 3)
+		else if (irqno < 96) {
 			__raw_writel(1 << (irqno - 64), VIC3_SOFTEN_CLR_REG);
-		} else {
+		}
+#endif
+		else {
 			K_ASSERT(0);
 		}
 	}
@@ -175,11 +191,18 @@ static void ipc_mutex_irq_send(int irqno)
 
 	if (irqno < 32) {
 		__raw_writel(1 << irqno, VIC_SOFTEN_REG);
-	} else if (irqno < 64) {
+	}
+#if (VIC_INSTANCES >= 2)
+	else if (irqno < 64) {
 		__raw_writel(1 << (irqno - 32), VIC2_SOFTEN_REG);
-	} else if (irqno < 96) {
+	}
+#endif
+#if (VIC_INSTANCES >= 3)
+	else if (irqno < 96) {
 		__raw_writel(1 << (irqno - 64), VIC3_SOFTEN_REG);
-	} else {
+	}
+#endif
+	else {
 		K_ASSERT(0);
 	}
 }

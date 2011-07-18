@@ -120,7 +120,7 @@ int mmc_app_set_bus_width(struct mmc_card *card, int width)
 	int err;
 	struct mmc_command cmd;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
 	if (sdinfo->is_init) {
 		u32 bus = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8:
@@ -161,7 +161,7 @@ int mmc_send_app_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 	struct mmc_command cmd;
 	int i, err = 0;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(host);
 	if (sdinfo->from_ipc && sdinfo->is_sdmem) {
 		if (rocr)
@@ -216,7 +216,7 @@ int mmc_send_if_cond(struct mmc_host *host, u32 ocr)
 	static const u8 test_pattern = 0xAA;
 	u8 result_pattern;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(host);
 	if (sdinfo->from_ipc) {
 		int rval = (sdinfo->hcs) ? 0: -ETIMEDOUT;
@@ -252,7 +252,7 @@ int mmc_send_relative_addr(struct mmc_host *host, unsigned int *rca)
 	int err;
 	struct mmc_command cmd;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(host);
 	if (sdinfo->from_ipc && sdinfo->is_sdmem) {
 		if (rca)
@@ -290,7 +290,7 @@ int mmc_app_send_scr(struct mmc_card *card, u32 *scr)
 	BUG_ON(!card->host);
 	BUG_ON(!scr);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	memset(&mrq, 0, sizeof(struct mmc_request));
 	memset(&cmd, 0, sizeof(struct mmc_command));
 	memset(&data, 0, sizeof(struct mmc_data));
@@ -361,7 +361,7 @@ int mmc_sd_switch(struct mmc_card *card, int mode, int group,
 	struct mmc_data data;
 	struct scatterlist sg;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
 	if (sdinfo->from_ipc && sdinfo->is_sdmem)
 		return 0;
@@ -419,7 +419,7 @@ int mmc_app_sd_status(struct mmc_card *card, void *ssr)
 	BUG_ON(!card->host);
 	BUG_ON(!ssr);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	memset(&mrq, 0, sizeof(struct mmc_request));
 	memset(&cmd, 0, sizeof(struct mmc_command));
 	memset(&data, 0, sizeof(struct mmc_data));

@@ -193,7 +193,7 @@ int ipc_sdhc_req(int host, int card,
 	}
 
 	if (arg.has_data) {
-		ambcache_clean_range ((void *)ambarella_phys_to_virt((u32)arg.data.buf), arg.data.blksz * arg.data.blocks);
+		ambcache_clean_range ((void *) ipc_phys_to_virt((u32)arg.data.buf), arg.data.blksz * arg.data.blocks);
 	}
 
 
@@ -205,7 +205,7 @@ int ipc_sdhc_req(int host, int card,
 
 	if (arg.has_data) {
 		if ((arg.data.flags & IPC_SDHC_DATA_WRITE) == 0) { // read
-			ambcache_flush_range ((void *)ambarella_phys_to_virt((u32)arg.data.buf), arg.data.blksz * arg.data.blocks);
+			ambcache_flush_range ((void *) ipc_phys_to_virt((u32)arg.data.buf), arg.data.blksz * arg.data.blocks);
 		}
 	}
 

@@ -577,11 +577,11 @@ int display_osd_apply(int voutid, struct vdspdrv_osd *osd)
 	DEBUG_MSG_VDSP ("zbuf3 = %08x\n", (u32) osd->zbuf3);
 	DEBUG_MSG_VDSP ("osdupdptr = %08x\n", (u32) osd->osdupdptr);
 
-	osd->zbuf0 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf0);
-	osd->zbuf1 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf1);
-	osd->zbuf2 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf2);
-	osd->zbuf3 = (void *) ambarella_virt_to_phys ((u32) osd->zbuf3);
-	osd->osdupdptr = (void *) ambarella_virt_to_phys ((u32) osd->osdupdptr);
+	osd->zbuf0 = (void *) ipc_virt_to_phys ((u32) osd->zbuf0);
+	osd->zbuf1 = (void *) ipc_virt_to_phys ((u32) osd->zbuf1);
+	osd->zbuf2 = (void *) ipc_virt_to_phys ((u32) osd->zbuf2);
+	osd->zbuf3 = (void *) ipc_virt_to_phys ((u32) osd->zbuf3);
+	osd->osdupdptr = (void *) ipc_virt_to_phys ((u32) osd->osdupdptr);
 
 	ambcache_clean_range (osd, sizeof (*osd));
 

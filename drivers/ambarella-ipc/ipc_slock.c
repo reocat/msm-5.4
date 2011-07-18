@@ -16,6 +16,7 @@
  * Copyright (C) 2009-2011, Ambarella Inc.
  */
 
+#include <ambhw/chip.h>
 #include <linux/sched.h>
 #include <linux/aipc/ipc_slock.h>
 #include <linux/aipc/ipc_shm.h>
@@ -81,6 +82,7 @@ void ipc_spin_lock(int i, unsigned int *flags, int pos)
 
 	spin_lock_irqsave(&lock_obj.lock, *flags);
 
+#if (CHIP_REV == I1)
 	__asm__ __volatile__(
 "1:	ldrex	%0, [%1]\n"
 "	teq	%0, #0\n"
@@ -90,6 +92,7 @@ void ipc_spin_lock(int i, unsigned int *flags, int pos)
 	: "=&r" (tmp)
 	: "r" (&lock->lock), "r" (1)
 	: "cc");
+#endif /* CHIP_REV == I1 */
 
 #if DEBUG_SPINLOCK
 	K_ASSERT(lock->lock_count == lock->unlock_count);
@@ -130,11 +133,13 @@ void ipc_spin_unlock(int i, unsigned int flags, int pos)
 	lock->unlock_count++;
 #endif /* DEBUG_SPINLOCK */
 
+#if (CHIP_REV == I1)
 	__asm__ __volatile__(
 "	str	%1, [%0]\n"
 	:
 	: "r" (&lock->lock), "r" (0)
 	: "cc");
+#endif /* CHIP_REV == I1 */
 
 	spin_unlock_irqrestore(&lock_obj.lock, flags);
 }

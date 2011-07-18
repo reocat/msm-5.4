@@ -58,6 +58,8 @@
 #define CHIP_REV	A5
 #elif	defined(CONFIG_PLAT_AMBARELLA_A5S)
 #define CHIP_REV	A5S
+#elif	defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
+#define CHIP_REV	A5S
 #elif	defined(CONFIG_PLAT_AMBARELLA_A5L)
 #define CHIP_REV	A5L
 #elif	defined(CONFIG_PLAT_AMBARELLA_A6)
@@ -69,6 +71,8 @@
 #elif	defined(CONFIG_PLAT_AMBARELLA_A7M)
 #define CHIP_REV	A7M
 #elif	defined(CONFIG_PLAT_AMBARELLA_I1)
+#define CHIP_REV	I1
+#elif	defined(CONFIG_PLAT_AMBARELLA_I1_BOSS)
 #define CHIP_REV	I1
 #else
 #error "Undefined CHIP_REV"

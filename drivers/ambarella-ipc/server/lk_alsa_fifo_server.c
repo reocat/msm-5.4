@@ -113,7 +113,7 @@ static bool_t __lkalas_get_fifo_radr_1_svc(struct vdaidma_info *arg, int *res,
 	arg->base = adr;
 	arg->size = size;
 	//printk("size: %d, adr: 0x%x\n", size, adr);
-	vptr = (u32 *)ambarella_phys_to_virt(arg->base);
+	vptr = (u32 *)ipc_phys_to_virt(arg->base);
 	ambcache_clean_range(vptr, size);
 	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + 512), *(vptr + 1023));
 
@@ -182,7 +182,7 @@ static bool_t __lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res
 	SVCXPRT *svcxprt)
 {
 	u32 *vptr;
-	vptr = (u32 *)ambarella_phys_to_virt(arg->base);
+	vptr = (u32 *)ipc_phys_to_virt(arg->base);
 	ambcache_inv_range(vptr, arg->size);
 	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + 512), *(vptr + 1023));
 

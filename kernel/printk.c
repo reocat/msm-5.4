@@ -1660,7 +1660,7 @@ void kmsg_dump(enum kmsg_dump_reason reason)
 }
 #endif
 
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 
 /*
  * Before we write a new console device. Let's export the symbols to pass to
