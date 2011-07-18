@@ -19,6 +19,7 @@
 
 enum {
 	IPC_MUTEX_ID_FIO = 0,
+	IPC_MUTEX_ID_SD2 = 1,
 	IPC_MUTEX_ID_NUM
 };
 
