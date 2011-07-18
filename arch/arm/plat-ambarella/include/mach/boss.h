@@ -29,6 +29,7 @@
 #include <linux/aipc/aipc.h>
 
 #define BOSS_BOSS_MEM_SIZE	0x1000		/* 4KB */
+#define BOSS_LINUX_VERSION	0x0001		/* linux struct boss_s version */
 
 #if (CHIP_REV == A5S)
 #define BOSS_VIRT_H2G_INT_VEC	32	/* Virtual 'host-to-guest' irq */
@@ -58,6 +59,18 @@
 #define BOSS_VIC2MASK_OFFSET	36
 
 #if !defined(__ASM__)
+
+enum device_privilege
+{
+	PRIV_UNKNOWN=0,
+	PRIV_LINUX_OS,
+	PRIV_UITRON_OS
+};
+
+struct privilege
+{
+	unsigned int usb;
+};
 
 /*
  * CPU context.
@@ -137,6 +150,10 @@ struct boss_s
 
 	unsigned int ipcstat_timescale;
 
+	/*
+	 * device controll privilege, linux or uItron
+	 */
+	struct privilege device_priv;
 };
 
 extern struct boss_s *boss;

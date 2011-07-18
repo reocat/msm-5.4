@@ -319,6 +319,7 @@ static void ipc_status_report(void)
 {
 	i_status_init();
 	ipc_status_report_ready(1);
+	ipc_boss_ver_report(BOSS_LINUX_VERSION);
 }
 
 static int __init ambarella_ipc_init(void)

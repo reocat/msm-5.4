@@ -35,6 +35,9 @@
 #include <mach/hardware.h>
 #include <plat/udc.h>
 #include "ambarella_udc.h"
+#if defined(CONFIG_MACH_BOSS)
+#include <mach/boss.h>
+#endif
 
 #define DRIVER_DESC	"Ambarella USB Device Controller Gadget"
 #define DRIVER_VERSION	"12 June 2008"
@@ -46,7 +49,7 @@ static const char		gadget_name[] = "ambarella_udc";
 static const char		driver_desc[] = DRIVER_DESC;
 static const char 	ep0name [] = "ep0";
 
-static struct ambarella_udc	*the_controller;
+static struct ambarella_udc	*the_controller = NULL;
 
 static const char *amb_ep_string[] = {
 	ep0name,
@@ -265,9 +268,9 @@ static void ambarella_ep_fifo_flush(struct ambarella_ep *ep)
  * Description:
  *	 Empty Tx/Rx FIFO of DMA
  */
-static void ambarella_udc_fifo_flush(void)
+static void ambarella_udc_fifo_flush(struct ambarella_udc *udc)
 {
-	struct ambarella_udc *udc = the_controller;
+/*    struct ambarella_udc *udc = the_controller;*/
 	struct ambarella_ep *ep;
 	u32 ep_id;
 
@@ -279,7 +282,7 @@ static void ambarella_udc_fifo_flush(void)
 	}
 }
 
-static void ambarella_init_usb(void)
+static void ambarella_init_usb(struct ambarella_udc *udc)
 {
 	u32 value;
 
@@ -288,7 +291,7 @@ static void ambarella_init_usb(void)
 	/* disable Tx and Rx DMA */
 	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 	/* flush dma fifo, may used in AMboot */
-	ambarella_udc_fifo_flush();
+	ambarella_udc_fifo_flush(udc);
 
 	/* device config register */
 	value = USB_DEV_SPD_HI |
@@ -1890,7 +1893,7 @@ static void ambarella_udc_enable(struct ambarella_udc *udc)
 		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	/* flush all of dma fifo */
-	ambarella_udc_fifo_flush();
+	ambarella_udc_fifo_flush(udc);
 
 	/* initialize ep0 register */
 	init_ep0(udc);
@@ -2022,8 +2025,13 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		goto register_error;
 	}
 
-	/* Enable udc */
-	ambarella_udc_enable(udc);
+#if defined(CONFIG_MACH_BOSS)
+	if(boss->device_priv.usb == PRIV_LINUX_OS)
+#endif
+	{
+		/* Enable udc */
+		ambarella_udc_enable(udc);
+	}
 
 	sprintf(udc->udc_state, "Registered");
 
@@ -2089,7 +2097,7 @@ int ambarella_udc_connect(int on)
 		/* Reset USB */
 		udc->controller_info->reset_usb();
 		/*initial usb hardware */
-		ambarella_init_usb();
+		ambarella_init_usb(udc);
 		enable_irq(USBC_IRQ);
 		usb_gadget_connect(&udc->gadget);
 	}
@@ -2104,6 +2112,54 @@ int ambarella_udc_connect(int on)
 EXPORT_SYMBOL(ambarella_udc_connect);
 #endif
 
+static inline void ambarella_udc_setup(struct ambarella_udc *udc)
+{
+#if defined(CONFIG_MACH_BOSS)
+	if(boss->device_priv.usb == PRIV_LINUX_OS)
+#endif
+	{
+		/* Initial USB PLL */
+		udc->controller_info->init_pll();
+		/* Reset USB */
+		udc->controller_info->reset_usb();
+
+		/*initial usb hardware, and set soft disconnect */
+		ambarella_init_usb(udc);
+		ambarella_set_softdis(1);
+	}
+}
+
+static inline int ambarella_udc_irq_setup(struct platform_device *pdev, struct ambarella_udc *udc)
+{
+	int retval;
+
+	retval = request_irq(USBC_IRQ, ambarella_udc_irq,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			dev_name(&pdev->dev), udc);
+	if (retval != 0) {
+		dprintk(DEBUG_NORMAL, "cannot get irq %i, err %d\n", USBC_IRQ, retval);
+		return -1;
+	}
+
+#if 0
+	retval = request_irq(USBVBUS_IRQ, ambarella_udc_vbus_irq,
+			0, dev_name(&pdev->dev), udc);
+	if (retval != 0) {
+		dprintk(DEBUG_NORMAL, "can't get vbus irq %i, err %d\n",
+			USBVBUS_IRQ, retval);
+		retval = -EBUSY;
+		free_irq(USBC_IRQ, udc);
+		return retval;
+	}
+#endif
+
+#if defined(CONFIG_MACH_BOSS)
+	if(boss->device_priv.usb != PRIV_LINUX_OS)
+		disable_irq(USBC_IRQ);
+#endif
+
+	return 0;
+}
 /*---------------------------------------------------------------------------*/
 /*
  * Name: ambarella_udc_probe
@@ -2122,7 +2178,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		retval = -ENOMEM;
 		goto out;
 	}
-	the_controller = udc;
+
 	platform_set_drvdata(pdev, udc);
 
 	udc->controller_info = pdev->dev.platform_data;
@@ -2131,18 +2187,11 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
-	/* Initial USB PLL */
-	udc->controller_info->init_pll();
-	/* Reset USB */
-	udc->controller_info->reset_usb();
-
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);
 	ambarella_regaddr_map(udc);
 
-	/*initial usb hardware, and set soft disconnect */
-	ambarella_init_usb();
-	ambarella_set_softdis(1);
+	ambarella_udc_setup(udc);
 
 	/* DMA pool create */
 	udc->desc_dma_pool = dma_pool_create("desc_dma_pool", NULL,
@@ -2167,25 +2216,10 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	}
 
 	/* irq setup after old hardware state is cleaned up */
-	retval = request_irq(USBC_IRQ, ambarella_udc_irq,
-			IRQF_SHARED | IRQF_TRIGGER_HIGH,
-			dev_name(&pdev->dev), udc);
-	if (retval != 0) {
-		dprintk(DEBUG_NORMAL, "cannot get irq %i, err %d\n", USBC_IRQ, retval);
+	if(ambarella_udc_irq_setup(pdev, udc) < 0) {
 		goto err_out4;
 	}
 
-#if 0
-	retval = request_irq(USBVBUS_IRQ, ambarella_udc_vbus_irq,
-			0, dev_name(&pdev->dev), udc);
-	if (retval != 0) {
-		dprintk(DEBUG_NORMAL, "can't get vbus irq %i, err %d\n",
-			USBVBUS_IRQ, retval);
-		retval = -EBUSY;
-		free_irq(USBC_IRQ, udc);
-		return retval;
-	}
-#endif
 	udc->proc_file = create_proc_entry("udc", S_IRUGO,
 				get_ambarella_proc_dir());
 	if (udc->proc_file == NULL) {
@@ -2199,6 +2233,11 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		sprintf(udc->udc_state, "Probed");
 	}
 	create_proc_files();
+
+	/*
+	 * Set the_controller pointer after successfully probe complete.
+	 */
+	the_controller = udc;
 
 	dprintk(DEBUG_NORMAL, "probe ok\n");
 
@@ -2288,7 +2327,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	/* Reset USB */
 	udc->controller_info->reset_usb();
 	/*initial usb hardware */
-	ambarella_init_usb();
+	ambarella_init_usb(udc);
 
 	enable_irq(USBC_IRQ);
 

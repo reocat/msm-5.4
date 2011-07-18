@@ -25,6 +25,7 @@ extern int i_status_init(void);
 extern void i_status_cleanup(void);
 
 extern int ipc_status_report_ready(int status);
+extern int ipc_boss_ver_report(int ver);
 
 #endif
 

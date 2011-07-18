@@ -58,6 +58,19 @@ int ipc_status_report_ready(int status)
 }
 EXPORT_SYMBOL(ipc_status_report_ready);
 
+int ipc_boss_ver_report(int ver)
+{
+	enum clnt_stat stat;
+
+	stat = lk_boss_version_report_1(&ver, NULL, IPC_i_status);
+	if (stat != IPC_SUCCESS) {
+		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		return -stat;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(ipc_boss_ver_report);
+
 /*
  * Client initialization.
  */
