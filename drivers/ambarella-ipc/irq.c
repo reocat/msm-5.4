@@ -103,7 +103,7 @@ void ipc_fake_irq(void)
 #if (CHIP_REV == I1)
 	__raw_writel(
 	       0x1 << (ipc_irq.irqno_linux - AXI_SOFT_IRQ(0)),
-	       0xe0019010);
+	       AHB_SCRATCHPAD_REG(0x10));
 #else
 #error "GIC is only supported on i1!"
 #endif

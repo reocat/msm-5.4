@@ -27,7 +27,10 @@
 
 /* ==========================================================================*/
 #include <plat/bapi.h>
+
+#if defined(CONFIG_BOSS_SINGLE_CORE)
 #include <mach/boss.h>
+#endif
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -36,9 +39,12 @@
 static inline void arch_idle(void)
 {
 	cpu_do_idle();
+
+#if defined(CONFIG_BOSS_SINGLE_CORE)
 	if (boss) {
 		*boss->gidle = 1;
 	}
+#endif
 }
 
 static inline void arch_reset(char mode, const char *cmd)

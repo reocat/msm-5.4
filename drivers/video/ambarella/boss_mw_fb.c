@@ -34,6 +34,7 @@
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
 #include <plat/fb.h>
+#include <linux/aipc/aipc.h>
 #include <linux/aipc/i_util.h>
 #include <linux/aipc/lk_util.h>
 #include <linux/aipc/i_display.h>

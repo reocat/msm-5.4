@@ -52,6 +52,8 @@
 #define LOCK_POS_LU_CLNT_OUT		52
 #define LOCK_POS_L_CLNT_CANCEL		53
 
+int ipc_check_svcxprt(SVCXPRT *svcxprt);
+
 int g_ipc_dump = 0;
 
 #if DEBUG_IPC_LK

@@ -76,7 +76,7 @@
 		.endm
 #endif
 
-#if !defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX)
+#if !defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX) && !defined(CONFIG_PLAT_AMBARELLA_I1_BOSS)
 
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\base, =(VIC_BASE)

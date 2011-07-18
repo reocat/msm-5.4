@@ -154,6 +154,7 @@ int __init ambarella_init_machine(char *board_name)
 	BUG_ON(retval != 0);
 
 	boot_from = rct_boot_from();
+
 	if ((boot_from & BOOT_FROM_NOR) == BOOT_FROM_NOR) {
 		platform_device_register(&ambarella_nor);
 		device_set_wakeup_capable(&ambarella_nor.dev, 1);
@@ -163,7 +164,7 @@ int __init ambarella_init_machine(char *board_name)
 		device_set_wakeup_capable(&ambarella_nand.dev, 1);
 		device_set_wakeup_enable(&ambarella_nand.dev, 0);
 	}
-#endif
+
 	if (rct_is_eth_enabled()) {
 		retval = ambarella_init_eth0(system_serial_high,
 			system_serial_low);
