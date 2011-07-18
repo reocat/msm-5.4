@@ -23,9 +23,7 @@
 
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/irq.h>
-#if defined(CONFIG_ARCH_BOSS)
 #include <mach/boss.h>
-#endif
 
 #ifdef __KERNEL__
 

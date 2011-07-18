@@ -24,8 +24,13 @@
 obj-$(CONFIG_MACH_COCONUT)	+= init-coconut.o
 obj-$(CONFIG_MACH_DURIAN)	+= init-durian.o
 obj-$(CONFIG_MACH_ELEPHANT)	+= init-elephant.o
+
+ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS),y)
+obj-$(CONFIG_PLAT_AMBARELLA_I1_BOSS)	+= init-boss.o
+obj-$(CONFIG_PLAT_AMBARELLA_A5S_BOSS)	+= init-boss_a5s.o
+else
 obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
-obj-$(CONFIG_MACH_BOSS)		+= init-boss.o
+endif
 
 obj-y				+= touch-ak4183.o
 obj-y				+= touch-chacha_mt4d.o

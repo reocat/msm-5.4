@@ -191,14 +191,19 @@ static int boss_nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	unsigned int addr_hi, addr;
 	int page;
 	int rval;
+	char *buf = bn->buf;
 
         page = (int) (ofs >> bn->chip.page_shift);
         page &= bn->chip.pagemask;
 
         memset(bn->buf, 0x0, mtd->oobsize);
 	addr_conv(mtd, page, &addr_hi, &addr);
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	buf = __virt_to_phys(buf);
+#endif
+
 	rval = ipc_nand_write(addr_hi, addr,
-			      bn->buf,
+			      buf,
 			      mtd->oobsize,
 			      1,	/* spare area */
 			      0,	/* no ecc */
@@ -331,6 +336,11 @@ static void boss_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 	unsigned int addr_hi;
 	unsigned int addr;
 	unsigned int data;
+	char *buf = bn->buf;
+
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	buf = __virt_to_phys(buf);
+#endif
 
 	switch (command) {
 	case NAND_CMD_RESET:
@@ -365,7 +375,7 @@ static void boss_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		addr_conv(mtd, page_addr, &addr_hi, &addr);
 		bn->pos = column;
 		rval = ipc_nand_read(addr_hi, addr,
-				     bn->buf,
+				     buf,
 				     mtd->oobsize,
 				     1,		/* spare area */
 				     0,		/* no ecc */
@@ -378,7 +388,7 @@ static void boss_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		/* Read the main area first */
 		bn->pos = column;
 		rval = ipc_nand_read(addr_hi, addr,
-				     bn->buf,
+				     buf,
 				     mtd->writesize,
 				     0,		/* main area */
 				     1,		/* w/ ecc */
@@ -388,7 +398,7 @@ static void boss_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 
 		/* Read the spare area next */
 		rval = ipc_nand_read(addr_hi, addr,
-				     bn->buf + mtd->writesize,
+				     buf + mtd->writesize,
 				     mtd->oobsize,
 				     1,		/* spare area */
 				     0,		/* no ecc */
@@ -406,7 +416,7 @@ static void boss_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		if (bn->seqin_column < mtd->writesize) {
 			/* Write to main area */
 			rval = ipc_nand_write(addr_hi, addr,
-					      bn->buf,
+					      buf,
 					      mtd->writesize,
 					      0,	/* main area */
 					      1,	/* w/ ecc */
@@ -416,7 +426,7 @@ static void boss_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		}
 		/* Write to spare area */
 		rval = ipc_nand_write(addr_hi, addr,
-				      bn->buf + mtd->writesize,
+				      buf + mtd->writesize,
 				      mtd->oobsize,
 				      1,	/* spare area */
 				      0,	/* no ecc */

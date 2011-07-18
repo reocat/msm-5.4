@@ -48,7 +48,7 @@ static int _mmc_select_card(struct mmc_host *host, struct mmc_card *card)
 
 int mmc_select_card(struct mmc_card *card)
 {
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
 	if (sdinfo->is_init && sdinfo->from_ipc)
 		return 0;
@@ -124,7 +124,7 @@ int mmc_go_idle(struct mmc_host *host)
 	cmd.arg = 0;
 	cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_NONE | MMC_CMD_BC;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 {
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(host);
 	if (sdinfo->from_ipc && !sdinfo->is_sdio) {
@@ -153,7 +153,7 @@ int mmc_send_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 	struct mmc_command cmd;
 	int i, err = 0;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(host);
 	if (sdinfo->from_ipc && sdinfo->is_mmc) {
 		if (rocr)
@@ -212,7 +212,7 @@ int mmc_all_send_cid(struct mmc_host *host, u32 *cid)
 	cmd.arg = 0;
 	cmd.flags = MMC_RSP_R2 | MMC_CMD_BCR;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	if (ambarella_sdmmc_cmd_ipc(host, &cmd) == 0) {
 		err = cmd.error;
 	} else {
@@ -234,7 +234,7 @@ int mmc_set_relative_addr(struct mmc_card *card)
 	int err;
 	struct mmc_command cmd;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
 	if (sdinfo->from_ipc && sdinfo->is_mmc) {
 		if (card->rca != sdinfo->rca)
@@ -274,7 +274,7 @@ mmc_send_cxd_native(struct mmc_host *host, u32 arg, u32 *cxd, int opcode)
 	cmd.arg = arg;
 	cmd.flags = MMC_RSP_R2 | MMC_CMD_AC;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	if (ambarella_sdmmc_cmd_ipc(host, &cmd) == 0) {
 		err = cmd.error;
 	} else {
@@ -343,7 +343,7 @@ mmc_send_cxd_data(struct mmc_card *card, struct mmc_host *host,
 	} else
 		mmc_set_data_timeout(&data, card);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	data.buf = data_buf;
 	cmd.data = &data;
 	if (ambarella_sdmmc_cmd_ipc(host, &cmd) == 0) {
@@ -450,7 +450,7 @@ int mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value)
 	struct mmc_command cmd;
 	u32 status;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
 	if (sdinfo->is_init)
 		return 0;
@@ -538,7 +538,7 @@ mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,
 	static u8 testdata_8bit[8] = { 0x55, 0xaa, 0, 0, 0, 0, 0, 0 };
 	static u8 testdata_4bit[4] = { 0x5a, 0, 0, 0 };
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	memset(&cmd, 0, sizeof(struct mmc_command));
 	cmd.opcode = opcode;
 	cmd.arg = len;
@@ -619,7 +619,7 @@ int mmc_bus_test(struct mmc_card *card, u8 bus_width)
 {
 	int err, width;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(card->host);
 	if (sdinfo->is_init) {
 		u32 bus = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8:

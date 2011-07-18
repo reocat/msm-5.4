@@ -25,8 +25,9 @@
 #ifndef __ASM_ARCH_BOSS_H
 #define __ASM_ARCH_BOSS_H
 
-#include <plat/irq.h>
+#if !defined(__ASM__)
 #include <linux/aipc/aipc.h>
+#endif
 
 #define BOSS_BOSS_MEM_SIZE	0x1000		/* 4KB */
 #define BOSS_LINUX_VERSION	0x0001		/* linux struct boss_s version */
@@ -34,6 +35,8 @@
 #if (CHIP_REV == A5S)
 #define BOSS_VIRT_H2G_INT_VEC	32	/* Virtual 'host-to-guest' irq */
 #define BOSS_VIRT_G2H_INT_VEC	35	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_H2G_MTX_VEC	51	/* Virtual 'host-to-guest' mutex irq */
+#define BOSS_VIRT_G2H_MTX_VEC	52	/* Virtual 'guest-to-host' mutex irq */
 #elif (CHIP_REV == I1)
 #define BOSS_VIRT_H2G_INT_VEC	AXI_SOFT_IRQ(0)	/* Virtual 'host-to-guest' irq */
 #define BOSS_VIRT_G2H_INT_VEC	3	/* Virtual 'guest-to-host' irq */

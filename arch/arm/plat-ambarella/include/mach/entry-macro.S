@@ -27,6 +27,26 @@
 #include <mach/hardware.h>
 #include <asm/irq.h>
 
+#ifdef CONFIG_BOSS_SINGLE_CORE
+
+#define __ASM__
+#include <mach/boss.h>
+
+#define VIC1MASK_OFFSET		BOSS_VIC1MASK_OFFSET
+#define VIC2MASK_OFFSET		BOSS_VIC2MASK_OFFSET
+
+#endif
+
+#ifndef VIC1MASK_OFFSET
+#define VIC1MASK_OFFSET		0
+#endif
+#ifndef VIC2MASK_OFFSET
+#define VIC2MASK_OFFSET		0
+#endif
+#ifndef VIC3MASK_OFFSET
+#define VIC3MASK_OFFSET		0
+#endif
+
 		.macro	stat2nr, stat, nr, tmp
 		rsbs	\tmp, \stat, #0
 		and	\nr, \tmp, \stat
@@ -44,16 +64,30 @@
 		.macro	arch_ret_to_user, tmp1, tmp2
 		.endm
 
+#ifdef CONFIG_BOSS_SINGLE_CORE
+		.macro	vicmask, stat, off, tmp
+		ldr	\tmp, =boss
+		ldr	\tmp, [\tmp]
+		ldr	\tmp, [\tmp, \off]
+		and	\stat, \stat, \tmp
+		.endm
+#else
+		.macro	vicmask, stat, off, tmp
+		.endm
+#endif
+
 #if !defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX)
 
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\base, =(VIC_BASE)
 		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
+		vicmask \irqstat, #VIC1MASK_OFFSET, \tmp
 		stat2nr	\irqstat, \irqnr, \tmp
 #if (VIC_INSTANCES >= 2)
 		bne	1000f
 		ldr	\base, =(VIC2_BASE)
 		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
+		vicmask \irqstat, #VIC2MASK_OFFSET, \tmp
 		stat2nr	\irqstat, \irqnr, \tmp
 		addne	\irqnr, \irqnr, #VIC2_INT_VEC(0)
 #endif
@@ -61,6 +95,7 @@
 		bne	1000f
 		ldr	\base, =(VIC3_BASE)
 		ldr	\irqstat, [\base, #VIC_IRQ_STA_OFFSET]
+		vicmask \irqstat, #VIC3MASK_OFFSET, \tmp
 		stat2nr	\irqstat, \irqnr, \tmp
 		addne	\irqnr, \irqnr, #VIC3_INT_VEC(0)
 #endif

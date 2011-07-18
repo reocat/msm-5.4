@@ -26,7 +26,9 @@
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/irq.h>
 #include <mach/boss.h>
+#if (CHIP_REV == I1)
 #include <asm/spinlock.h>
+#endif
 #include <asm/uaccess.h>
 
 #include <linux/aipc/ipc_slock.h>

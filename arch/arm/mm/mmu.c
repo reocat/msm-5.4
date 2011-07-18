@@ -883,6 +883,12 @@ static inline void prepare_page_table(void)
 	for (addr = __phys_to_virt(end);
 	     addr < VMALLOC_END; addr += PGDIR_SIZE)
 		pmd_clear(pmd_off_k(addr));
+
+#ifdef CONFIG_BOSS_SINGLE_CORE
+#define CONSISTENT_BASE	(CONSISTENT_END - CONSISTENT_DMA_SIZE)
+	for (addr = CONSISTENT_BASE; addr < CONSISTENT_END; addr += PGDIR_SIZE)
+		pmd_clear(pmd_off_k(addr));
+#endif
 }
 
 /*
@@ -914,6 +920,7 @@ void __init arm_mm_memblock_reserve(void)
  */
 static void __init devicemaps_init(struct machine_desc *mdesc)
 {
+#ifndef CONFIG_BOSS_SINGLE_CORE
 	struct map_desc map;
 	unsigned long addr;
 
@@ -924,6 +931,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 
 	for (addr = VMALLOC_END; addr; addr += PGDIR_SIZE)
 		pmd_clear(pmd_off_k(addr));
+#endif
 
 	/*
 	 * Map the kernel if it is XIP.
@@ -955,6 +963,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	create_mapping(&map);
 #endif
 
+#ifndef CONFIG_BOSS_SINGLE_CORE
 	/*
 	 * Create a mapping for the machine vectors at the high-vectors
 	 * location (0xffff0000).  If we aren't using high-vectors, also
@@ -971,6 +980,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 		map.type = MT_LOW_VECTORS;
 		create_mapping(&map);
 	}
+#endif
 
 	/*
 	 * Ask the machine support to map in the statically mapped devices.

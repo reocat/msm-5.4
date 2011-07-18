@@ -27,6 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/serial_core.h>
 
+#include <mach/memory.h>
 #include <mach/hardware.h>
 #include <plat/uart.h>
 

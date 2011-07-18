@@ -30,7 +30,20 @@
 #include <asm/mach/arch.h>
 #include <asm/io.h>
 #include <mach/hardware.h>
+
+#include <ambhw/chip.h>
+
+#if (CHIP_REV == I1)
 #include <plat/ambcache.h>
+#endif
+
+#if (CHIP_REV == A5S)
+#define CONFIG_NEED_PTR_CONV		0
+#elif (CHIP_REV == I1)
+#define CONFIG_NEED_PTR_CONV		1
+#else
+#error "Not yet supported!"
+#endif
 
 #define STATIC_SVC
 #define K_ASSERT(x)			BUG_ON(!(x))
@@ -45,6 +58,25 @@ struct SVCXPRT;
 
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
+
+#if CONFIG_NEED_PTR_CONV
+
+extern u32 ipc_phys_to_virt (u32 phys);
+extern u32 ipc_virt_to_phys (u32 virt);
+
+#else	/* !CONFIG_NEED_PTR_CONV */
+
+#define ipc_phys_to_virt(p)			(p)
+#define ipc_virt_to_phys(v)			(v)
+#define ipc_flush_cache(p,s)
+#define ipc_inv_cache(p,s)
+#define ipc_clean_cache(p,s)
+
+#define ambcache_clean_range(addr, size)
+#define ambcache_inv_range(addr, size)
+#define ambcache_flush_range(addr, size)
+
+#endif
 
 extern struct proc_dir_entry *aipc_proc_dir;
 

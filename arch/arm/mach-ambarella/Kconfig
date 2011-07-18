@@ -55,7 +55,7 @@ config MACH_ELEPHANT
 
 config MACH_BOSS
 	bool "Boss"
-	depends on PLAT_AMBARELLA_I1
+	depends on PLAT_AMBARELLA_BOSS
 	default n
 	help
 	  Say Y here if you are using iOne Boss.

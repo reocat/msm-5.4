@@ -1,9 +1,10 @@
 /*
- * arch/arm/plat-ambarella/init.c
+ * arch/arm/plat-ambarella/boss/init.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
+ * Author: Henry Lin <hllin@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2004-2011, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,53 +118,24 @@ int __init ambarella_init_machine(char *board_name)
 	retval = ambarella_create_proc_dir();
 	BUG_ON(retval != 0);
 
-	retval = ambarella_init_clk();
-	BUG_ON(retval != 0);
-
-	retval = ambarella_init_pll();
-	BUG_ON(retval != 0);
-
-	retval = ambarella_init_tm();
-	BUG_ON(retval != 0);
-
 	retval = ambarella_init_gpio();
-	BUG_ON(retval != 0);
-
-	retval = ambarella_init_fio();
-	BUG_ON(retval != 0);
-
-	retval = ambarella_init_dma();
-	BUG_ON(retval != 0);
-
-	retval = ambarella_init_adc();
-	BUG_ON(retval != 0);
-
-	retval = ambarella_init_pwm();
 	BUG_ON(retval != 0);
 
 	retval = ambarella_init_fb();
 	BUG_ON(retval != 0);
 
-	retval = ambarella_init_pm();
-	BUG_ON(retval != 0);
-
 	retval = ambarella_init_audio();
 	BUG_ON(retval != 0);
 
-	retval = ambarella_init_sd();
+#if defined(CONFIG_MTD_NAND_AMBARELLA)
+	retval = ambarella_init_dma();
 	BUG_ON(retval != 0);
 
-	boot_from = rct_boot_from();
-	if ((boot_from & BOOT_FROM_NOR) == BOOT_FROM_NOR) {
-		platform_device_register(&ambarella_nor);
-		device_set_wakeup_capable(&ambarella_nor.dev, 1);
-		device_set_wakeup_enable(&ambarella_nor.dev, 0);
-	} else {
-		platform_device_register(&ambarella_nand);
-		device_set_wakeup_capable(&ambarella_nand.dev, 1);
-		device_set_wakeup_enable(&ambarella_nand.dev, 0);
-	}
+	platform_device_register(&ambarella_nand);
+	device_set_wakeup_capable(&ambarella_nand.dev, 1);
+	device_set_wakeup_enable(&ambarella_nand.dev, 0);
 #endif
+
 	if (rct_is_eth_enabled()) {
 		retval = ambarella_init_eth0(system_serial_high,
 			system_serial_low);

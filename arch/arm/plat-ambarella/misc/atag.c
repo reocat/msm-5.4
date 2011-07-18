@@ -35,7 +35,7 @@
 #include <plat/debug.h>
 #include <hal/hal.h>
 
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 
 #include <linux/aipc/aipc.h>
 #include <mach/boss.h>
@@ -80,6 +80,7 @@ struct ambarella_mem_map_desc {
 	struct map_desc	io_desc;
 };
 static struct ambarella_mem_map_desc ambarella_io_desc[] = {
+#if !defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
 	[AMBARELLA_IO_DESC_AHB_ID] = {
 		.name		= "AHB",
 		.io_desc	= {
@@ -98,6 +99,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_DEVICE,
 			},
 	},
+#endif
 	[AMBARELLA_IO_DESC_PPM_ID] = {
 		.name		= "PPM",	/*Private Physical Memory*/
 		.io_desc	= {
@@ -232,13 +234,18 @@ void __init ambarella_map_io(void)
 #endif
 	}
 
+#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
+	bhal_mapped = 1;
+	ambarella_hal_info.remapped = 1;
+#endif
+
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	if (!bhal_mapped) {
 		if (!ambarella_hal_info.remapped) {
 			hal_desc.virtual = halv;
 			hal_desc.pfn = __phys_to_pfn(halp);
 			hal_desc.length = hals;
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 			hal_desc.type = MT_MEMORY_NONCACHED;
 #else
 			hal_desc.type = MT_MEMORY;
@@ -248,7 +255,7 @@ void __init ambarella_map_io(void)
 			hal_type = hal_desc.type;
 			ambarella_hal_info.remapped = bhal_mapped;
 		} else {
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 			hal_type = MT_MEMORY_NONCACHED;
 #else
 			hal_type = MT_MEMORY;
@@ -264,7 +271,8 @@ void __init ambarella_map_io(void)
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x Map Fail!\n",
 			halp, halv, hals);
 #endif
-#if defined(CONFIG_MACH_BOSS)
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if (boss != NULL) {
 		struct map_desc	smem_desc;
 		u32 virt, phys;
@@ -275,7 +283,7 @@ void __init ambarella_map_io(void)
 
 		pr_notice ("aipc: smem: %08x, %08x\n", boss->smem_addr, boss->smem_size);
 		phys = boss->smem_addr;
-		virt = ambarella_phys_to_virt (phys);
+		virt = ipc_phys_to_virt (phys);
 
 		smem_desc.virtual = virt;
 		smem_desc.pfn = __phys_to_pfn(phys);
@@ -285,9 +293,9 @@ void __init ambarella_map_io(void)
 
 		boss->smem_addr = virt;
 
-		boss->log_buf_ptr = ambarella_virt_to_phys (boss_log_buf_ptr);
-		boss->log_buf_len_ptr = ambarella_virt_to_phys (boss_log_buf_len_ptr);
-		boss->log_buf_last_ptr = ambarella_virt_to_phys (boss_log_buf_last_ptr);
+		boss->log_buf_ptr = ipc_virt_to_phys (boss_log_buf_ptr);
+		boss->log_buf_len_ptr = ipc_virt_to_phys (boss_log_buf_len_ptr);
+		boss->log_buf_last_ptr = ipc_virt_to_phys (boss_log_buf_last_ptr);
 	}
 #endif
 }
@@ -493,7 +501,7 @@ EXPORT_SYMBOL(get_ambarella_dspmem_size);
 
 u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize)
 {
-#if !defined(CONFIG_MACH_BOSS)
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if ((ambarella_bst_info.size == 0) ||
 		(ambarella_bst_info.physaddr < get_ambarella_ppm_phys()) ||
 		((ambarella_bst_info.physaddr + ambarella_bst_info.size) >
@@ -803,7 +811,7 @@ int arch_pfn_is_nosave(unsigned long pfn)
 	return (pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn);
 }
 
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 
 static void __init early_boss(char *p)
 {
@@ -815,13 +823,13 @@ static void __init early_boss(char *p)
 	char	*endp;
 
 	paddr = memparse(p, &endp);
-	vaddr = ambarella_phys_to_virt (paddr);
+	vaddr = ipc_phys_to_virt(paddr);
 
 	printk (KERN_NOTICE "boss: %08x [%08x]\n", vaddr, paddr);
-	printk (KERN_NOTICE "boss: printk: %08x [%08x], %08x [%08x], %08x [%08x]\n", 
-		(u32) boss_log_buf_ptr, ambarella_virt_to_phys (boss_log_buf_ptr), 
-		(u32) boss_log_buf_len_ptr, ambarella_virt_to_phys (boss_log_buf_len_ptr), 
-		(u32) boss_log_buf_last_ptr, ambarella_virt_to_phys (boss_log_buf_last_ptr));
+	printk (KERN_NOTICE "boss: printk: %08x [%08x], %08x [%08x], %08x [%08x]\n",
+		(u32) boss_log_buf_ptr, ipc_virt_to_phys (boss_log_buf_ptr),
+		(u32) boss_log_buf_len_ptr, ipc_virt_to_phys (boss_log_buf_len_ptr),
+		(u32) boss_log_buf_last_ptr, ipc_virt_to_phys (boss_log_buf_last_ptr));
 
 	boss = (struct boss_s *) vaddr;
 }

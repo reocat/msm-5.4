@@ -24,11 +24,11 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 
-#include <linux/aipc/aipc.h>
+#include <ambhw/chip.h>
+#include <mach/boss.h>
 #include <linux/aipc/irq.h>
 #include <linux/aipc/ipc_slock.h>
 #include <linux/aipc/ipc_log.h>
-#include <mach/boss.h>
 
 #include "binder.h"
 
@@ -165,25 +165,33 @@ static inline u32 ipc_tick_diff(u32 start, u32 end)
  */
 u32 ipc_tick_get(void)
 {
+#if (CHIP_REV == I1)
 	return amba_readl(TIMER8_STATUS_REG);
+#else
+	return 0;
+#endif
 }
 EXPORT_SYMBOL(ipc_tick_get);
 
-static u32 ipc_virt_to_phys (u32 virt)
+#if CONFIG_NEED_PTR_CONV
+
+u32 ipc_virt_to_phys (u32 virt)
 {
 	if (virt == 0) {
 		return 0;
 	}
 	return ambarella_virt_to_phys (virt);
 }
+EXPORT_SYMBOL(ipc_virt_to_phys);
 
-static u32 ipc_phys_to_virt (u32 phys)
+u32 ipc_phys_to_virt (u32 phys)
 {
 	if (phys == 0) {
 		return 0;
 	}
 	return ambarella_phys_to_virt (phys);
 }
+EXPORT_SYMBOL(ipc_phys_to_virt);
 
 void ipc_flush_cache (void *addr, unsigned int size)
 {
@@ -235,21 +243,6 @@ void ipc_ptr_conv_phys_to_virt (u32 data, u32 num, u32 *offs)
 		u32 ptr = data + offs[i];
 		*(u32 *) ptr = ipc_phys_to_virt (*(u32 *) ptr);
 	}
-}
-
-int ipc_check_svcxprt(SVCXPRT *svcxprt)
-{
-	int rval;
-
-	rval = (svcxprt->tag == IPC_TAG_BEGIN) && (svcxprt->tag_end == IPC_TAG_END);
-
-	if (!rval) {
-		ipc_log_print(IPC_LOG_LEVEL_WARNING, "%s: invalid svcxprt => %08x %08x %08x",
-				(svcxprt->pid >= MIN_LUIPC_PROG_NUM)?"lu":"lk",
-				(u32) svcxprt, svcxprt->tag, svcxprt->tag_end);
-	}
-
-	return rval;
 }
 
 SVCXPRT *ipc_binder_preproc_in (SVCXPRT *svcxprt, int is_svc)
@@ -412,6 +405,31 @@ SVCXPRT *ipc_binder_preproc_out (SVCXPRT *svcxprt, int is_svc)
 	return svcxprt_pa;
 
 }
+
+#else	/* !CONFIG_NEED_PTR_CONV */
+
+#define ipc_binder_preproc_in(p,b)		(p)
+#define ipc_binder_preproc_out(p,b)		(p)
+#define ipc_ptr_conv_virt_to_phys(n,p)
+#define ipc_ptr_conv_phys_to_virt(n,p)
+
+#endif	/* CONFIG_NEED_PTR_CONV */
+
+int ipc_check_svcxprt(SVCXPRT *svcxprt)
+{
+	int rval;
+
+	rval = (svcxprt->tag == IPC_TAG_BEGIN) && (svcxprt->tag_end == IPC_TAG_END);
+
+	if (!rval) {
+		ipc_log_print(IPC_LOG_LEVEL_WARNING, "%s: invalid svcxprt => %08x %08x %08x",
+				(svcxprt->pid >= MIN_LUIPC_PROG_NUM)?"lu":"lk",
+				(u32) svcxprt, svcxprt->tag, svcxprt->tag_end);
+	}
+
+	return rval;
+}
+
 
 void  ipc_svc_get_stat(struct ipcstat_s *ipcstat)
 {
