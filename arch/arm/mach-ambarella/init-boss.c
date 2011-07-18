@@ -806,6 +806,9 @@ static void ambarella_init_vendor_2(void)
 #ifdef CONFIG_AMBAPMIC_POWER
 		&ambapmic_power,
 #endif
+#ifdef CONFIG_RTC_DRV_AMBARELLA
+		&ambarella_rtc0,
+#endif
 	};
 	int i;
 
