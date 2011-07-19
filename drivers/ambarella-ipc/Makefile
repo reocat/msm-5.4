@@ -53,9 +53,7 @@ X-C-y +=	$(IPCDIR)/defs/i_util.x \
 		$(IPCDIR)/defs/i_pmic.x \
 		$(IPCDIR)/defs/i_ffs.x \
 		$(IPCDIR)/defs/i_fifo.x \
-
 		$(IPCDIR)/defs/i_sdresp.x \
-
 		$(IPCDIR)/defs/i_host_dsp.x 
 
 
