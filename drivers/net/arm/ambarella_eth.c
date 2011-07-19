@@ -1871,6 +1871,8 @@ static int __devexit ambeth_drv_remove(struct platform_device *pdev)
 			gpio_free(lp->platform_info->mii_power.gpio_id);
 		if (lp->platform_info->mii_reset.gpio_id != -1)
 			gpio_free(lp->platform_info->mii_reset.gpio_id);
+		if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq))
+			gpio_free(lp->platform_info->phy_irq.irq_gpio);
 		mdiobus_unregister(&lp->new_bus);
 		kfree(lp->new_bus.irq);
 		free_netdev(ndev);

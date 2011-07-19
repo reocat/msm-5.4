@@ -446,10 +446,9 @@ static int ambarella_wdt_suspend(struct platform_device *pdev,
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
-		if (!device_may_wakeup(&pdev->dev))
-			disable_irq(pinfo->irq);
-		pinfo->ctl_reg =
-			amba_readl(pinfo->regbase + WDOG_CONTROL_OFFSET);
+		disable_irq(pinfo->irq);
+		pinfo->ctl_reg = amba_readl(pinfo->regbase +
+			WDOG_CONTROL_OFFSET);
 		ambarella_wdt_stop(pinfo);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
@@ -474,8 +473,7 @@ static int ambarella_wdt_resume(struct platform_device *pdev)
 			ambarella_wdt_set_heartbeat(pinfo, pinfo->act_timeout);
 			ambarella_wdt_start(pinfo, pinfo->ctl_reg);
 		}
-		if (!device_may_wakeup(&pdev->dev))
-			enable_irq(pinfo->irq);
+		enable_irq(pinfo->irq);
 	} else {
 		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
 		errorCode = -ENXIO;

@@ -52,52 +52,15 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-static int pm_debug_hal_standby = 0;
-#else
-static int pm_debug_hal_standby = 1;
-#endif
-module_param(pm_debug_hal_standby, int, 0644);
-
-#ifdef CONFIG_GPIO_WM831X
-extern int wm831x_config_poweroff(void);
-#endif
-
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
 	if (ambarella_board_generic.power_control.gpio_id >= 0) {
-#ifdef CONFIG_GPIO_WM831X
-		if (!wm831x_config_poweroff()) {
-			ambarella_set_gpio_output(
-				&ambarella_board_generic.power_control, 0);
-		} else {
-			printk("Fail to config gpio for power off, Abort\r\n");
-		}
-#else
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 0);
-#endif
 	} else {
 		rct_power_down();
 	}
-}
-
-void ambarella_machine_restart(char mode, const char *cmd)
-{
-	disable_nonboot_cpus();
-	local_irq_disable();
-	local_fiq_disable();
-	flush_cache_all();
-	outer_flush_all();
-	outer_disable();
-	outer_inv_all();
-	flush_cache_all();
-
-	arch_reset(mode, cmd);
-	mdelay(1000);
-	printk("Reboot failed -- System halted\n");
-	while (1);
 }
 
 /* ==========================================================================*/
@@ -200,10 +163,6 @@ ambarella_pm_check_exit:
 static int ambarella_pm_enter_standby(void)
 {
 	int					retval = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_hal_success_t			result;
-	amb_operating_mode_t			operating_mode;
-#endif
 	struct irq_desc				*pm_desc = NULL;
 	struct irq_chip				*pm_chip = NULL;
 	unsigned long				flags;
@@ -227,29 +186,13 @@ static int ambarella_pm_enter_standby(void)
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
 	}
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	result = amb_get_operating_mode(HAL_BASE_VP, &operating_mode);
-	BUG_ON(result != AMB_HAL_SUCCESS);
-	operating_mode.mode = AMB_OPERATING_MODE_STANDBY;
-
 	if (pm_debug_enable_timer_irq) {
 		if (pm_chip && pm_chip->irq_startup)
 			pm_chip->irq_startup(&pm_desc->irq_data);
 		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 	}
 
-	if (pm_debug_hal_standby) {
-		result = amb_set_operating_mode(HAL_BASE_VP, &operating_mode);
-		if (result != AMB_HAL_SUCCESS) {
-			pr_err("%s: amb_set_operating_mode failed(%d)\n",
-				__func__, result);
-			retval = -EPERM;
-		}
-	} else {
-		__asm__ __volatile__ (
-			"mcr	p15, 0, %[result], c7, c0, 4" :
-			[result] "+r" (result));
-	}
+	cpu_do_idle();
 
 	if (pm_debug_enable_timer_irq) {
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
@@ -257,6 +200,32 @@ static int ambarella_pm_enter_standby(void)
 			pm_chip->irq_shutdown(&pm_desc->irq_data);
 	}
 
+	if (ambarella_pm_post(&flags, 1, 1, 1))
+		BUG();
+
+	return retval;
+}
+
+static int ambarella_pm_enter_mem(void)
+{
+	int					retval = 0;
+	unsigned long				flags;
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	struct ambarella_bapi_reboot_info_s	reboot_info;
+#endif
+
+	if (ambarella_pm_pre(&flags, 1, 1, 1))
+		BUG();
+
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
+	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_SELFREFERESH;
+	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
+		&reboot_info);
+	if (retval)
+		goto ambarella_pm_enter_mem_exit_bapi;
+	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE, NULL);
+ambarella_pm_enter_mem_exit_bapi:
 #endif
 
 	if (ambarella_pm_post(&flags, 1, 1, 1))
@@ -280,6 +249,7 @@ static int ambarella_pm_suspend_enter(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_MEM:
+		retval = ambarella_pm_enter_mem();
 		break;
 
 	default:
@@ -306,12 +276,13 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_STANDBY:
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 		valid = 1;
-#endif
 		break;
 
 	case PM_SUSPEND_MEM:
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+		//valid = 1;
+#endif
 		break;
 
 	default:
@@ -374,9 +345,6 @@ static int ambarella_pm_hibernation_enter(void)
 
 static void ambarella_pm_hibernation_leave(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	set_ambarella_hal_invalid();
-#endif
 	ambarella_pm_post(NULL, 1, 0, 0);
 }
 
@@ -412,7 +380,6 @@ static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
 int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
-	arm_pm_restart = ambarella_machine_restart;
 
 	suspend_set_ops(&ambarella_pm_suspend_ops);
 	hibernation_set_ops(&ambarella_pm_hibernation_ops);

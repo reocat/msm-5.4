@@ -897,7 +897,7 @@ ambarella_spi_probe_exit1:
 #if (SPI_AHB_INSTANCES > 0)
 	if (!pinfo->support_dma) {
 #endif
-		free_irq(irq, master);
+		free_irq(irq, priv);
 #if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
@@ -940,7 +940,7 @@ static int __devexit ambarella_spi_remove(struct platform_device *pdev)
 #if (SPI_AHB_INSTANCES > 0)
 	if (!priv->pinfo->support_dma) {
 #endif
-		free_irq(priv->irq, master);
+		free_irq(priv->irq, priv);
 #if (SPI_AHB_INSTANCES > 0)
 	} else {
 		ambarella_dma_free_irq(SPDIF_AHB_SSI_DMA_CHAN, ambarella_spi_dma_complete);
@@ -993,7 +993,6 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 
 	master = platform_get_drvdata(pdev);
 	priv = spi_master_get_devdata(master);
-
 	if (priv) {
 		ambarella_spi_inithw(priv);
 		//enable_irq(priv->irq);

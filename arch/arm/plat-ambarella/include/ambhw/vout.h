@@ -21,11 +21,11 @@
     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
 #define VOUT_SUPPORT_DIGITAL_1080P	0
 #define VOUT_LCD_COLOR_SEQ_OUT_WA	0
-#elif (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7L)
+#elif (CHIP_REV == A5S) || (CHIP_REV == A5L)
 #define VOUT_SUPPORT_DIGITAL_1080P	0
 #define VOUT_LCD_COLOR_SEQ_OUT_WA	1
 #else
-/* (CHIP_REV == A7) || (CHIP_REV == I1) */ 
+/* (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) */
 #define VOUT_SUPPORT_DIGITAL_1080P	1
 #define VOUT_LCD_COLOR_SEQ_OUT_WA	1
 #endif
@@ -81,7 +81,7 @@
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1) || (CHIP_REV == A7L) 
+    (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define VOUT_SUPPORT_RGB24			1
 #define VOUT_SUPPORT_ANALOG_CSC_SCALER		1
 #define VOUT_SUPPORT_DUAL_VOUT_SYNC		1
@@ -102,7 +102,7 @@
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1) || (CHIP_REV == A7L) 
+    (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define VOUT_DISPLAY_SECTIONS		2
 #define VOUT_DIRECT_DSP_INTERFACE	1
 #define VOUT_16B_DVOUT_Y_LOW_BYTE	1
@@ -116,7 +116,7 @@
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) || \
     (CHIP_REV == A2Q) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1)  || (CHIP_REV == A7L) 
+    (CHIP_REV == I1)  || (CHIP_REV == A7L)
 #define VOUT_SUPPORT_8BIT_SD_DOUT	1
 #else
 #define VOUT_SUPPORT_8BIT_SD_DOUT	0
@@ -134,7 +134,7 @@
 #define VOUT_SUPPORT_ORC_MULTI_THREADS	0
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) 
+#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define VOUT_SUPPORT_DIGITAL_DITHER	1
 #define VOUT_SUPPORT_GAMMA_TABLE	1
 #else
@@ -156,6 +156,12 @@
 #else
 #define VOUT_SUPPORT_OSD_16BIT_DIR_MODE 0
 #define VOUT_SUPPORT_OSD_CSC		0
+#endif
+
+#if (CHIP_REV == A7L)
+#define VOUT_HVLD_POLARITY		1
+#else
+#define VOUT_HVLD_POLARITY		0
 #endif
 
 /****************************************************/
@@ -845,7 +851,7 @@
 
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || 	\
-    (CHIP_REV == A7L)  
+    (CHIP_REV == A7L)
 
 /* Display A control regsiters */
 #define VOUT_DA_CONTROL_OFFSET				0x300

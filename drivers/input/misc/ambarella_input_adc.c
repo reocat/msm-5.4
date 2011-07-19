@@ -422,10 +422,8 @@ static int ambarella_input_adc_suspend(struct platform_device *pdev,
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!device_may_wakeup(&pdev->dev)) {
-		if (pinfo->support_irq)
-			disable_irq(pinfo->irq);
-	}
+	if (pinfo->support_irq)
+		disable_irq(pinfo->irq);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, state.event);
@@ -439,10 +437,8 @@ static int ambarella_input_adc_resume(struct platform_device *pdev)
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (!device_may_wakeup(&pdev->dev)) {
-		if (pinfo->support_irq)
-			enable_irq(pinfo->irq);
-	}
+	if (pinfo->support_irq)
+		enable_irq(pinfo->irq);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 

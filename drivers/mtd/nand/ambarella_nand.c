@@ -543,6 +543,12 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	u32					fio_ctr_reg = 0;
 	long					timeout;
 
+	if (unlikely(nand_info->suspend == 1)) {
+		dev_err(nand_info->dev, "%s: suspend!\n", __func__);
+		errorCode = -EPERM;
+		goto nand_amb_request_exit;
+	}
+
 	cmd = nand_info->cmd;
 
 	nand_ctr_reg = nand_info->control_reg | NAND_CTR_WAS;
@@ -698,7 +704,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		dev_warn(nand_info->dev,
 			"%s: wrong command %d!\n", __func__, cmd);
 		errorCode = -EINVAL;
-		goto nand_amb_request_exit;
+		goto nand_amb_request_done;
 		break;
 	}
 
@@ -720,7 +726,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				"%s: Errors happend in DMA transaction %d!\n",
 				__func__, nand_info->dma_status);
 			errorCode = -EIO;
-			goto nand_amb_request_exit;
+			goto nand_amb_request_done;
 		}
 
 		errorCode = nand_info->plat_nand->parse_error(
@@ -744,7 +750,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_info->area,
 				nand_info->ecc,
 				block_addr);
-			goto nand_amb_request_exit;
+			goto nand_amb_request_done;
 		}
 	} else {
 		/* just wait cmd irq, no care about both DMA irqs */
@@ -754,7 +760,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			errorCode = -EBUSY;
 			dev_err(nand_info->dev, "%s: cmd=0x%x timeout 0x%08x\n",
 				__func__, cmd, atomic_read(&nand_info->irq_flag));
-			goto nand_amb_request_exit;
+			goto nand_amb_request_done;
 		} else {
 			dev_dbg(nand_info->dev, "%ld jiffies left.\n", timeout);
 
@@ -772,7 +778,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		}
 	}
 
-nand_amb_request_exit:
+nand_amb_request_done:
 	atomic_set(&nand_info->irq_flag, 0x7);
 	nand_info->dma_status = 0;
 	/* Avoid to flush previous error info */
@@ -796,6 +802,7 @@ nand_amb_request_exit:
 
 	nand_info->plat_nand->release();
 
+nand_amb_request_exit:
 	return errorCode;
 }
 
@@ -1762,11 +1769,8 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 1;
-
-	if (!device_may_wakeup(&pdev->dev)) {
-		disable_irq(nand_info->dma_irq);
-		disable_irq(nand_info->cmd_irq);
-	}
+	disable_irq(nand_info->dma_irq);
+	disable_irq(nand_info->cmd_irq);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
@@ -1780,13 +1784,10 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = platform_get_drvdata(pdev);
-	nand_info->suspend = 0;
 	amb_nand_set_timing(nand_info, &nand_info->current_timing);
-
-	if (!device_may_wakeup(&pdev->dev)) {
-		enable_irq(nand_info->dma_irq);
-		enable_irq(nand_info->cmd_irq);
-	}
+	nand_info->suspend = 0;
+	enable_irq(nand_info->dma_irq);
+	enable_irq(nand_info->cmd_irq);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

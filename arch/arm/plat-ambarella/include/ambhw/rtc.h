@@ -38,8 +38,12 @@
 #define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		1
 #define RTC_POWER_LOST_DETECT			1
 #define RTC_SW_POWER_LOST_DETECT		0
-#elif (CHIP_REV == A7) || (CHIP_REV == A5L)
+#elif (CHIP_REV == A7)
 #define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		1
+#define RTC_POWER_LOST_DETECT			0
+#define RTC_SW_POWER_LOST_DETECT		1
+#elif (CHIP_REV == A5L)
+#define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		0
 #define RTC_POWER_LOST_DETECT			0
 #define RTC_SW_POWER_LOST_DETECT		1
 #else
@@ -57,6 +61,21 @@
 #define RTC_WAKEUP_CTRL				0
 #define RTC_LOW_BATTERY_DETECT			0
 #endif
+
+#if (CHIP_REV == I1)
+#define RTC_PWR_LOSS_DETECT_BIT			5
+#define RTC_PWC_LOSS_MASK			0x20
+#elif (CHIP_REV == A7L)
+#define RTC_PWR_LOSS_DETECT_BIT			6
+#define RTC_PWC_LOSS_MASK			0x40
+#elif (CHIP_REV == A7) || (CHIP_REV == A5L)
+#define RTC_PWR_LOSS_DETECT_BIT			30
+#define RTC_PWC_LOSS_MASK			0x40000000
+#else
+#define RTC_PWR_LOSS_DETECT_BIT			1
+#define RTC_PWC_LOSS_MASK			0x2
+#endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
