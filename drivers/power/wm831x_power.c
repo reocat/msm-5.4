@@ -674,7 +674,7 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	}
 
 	wm831x_reg_write(wm831x, WM831X_GPIO5_CONTROL,
-					WM831X_GPN_DIR| WM831X_GPN_ENA | WM831X_SLEEP_REQUEST | (1<<10) | WM831X_GPIO_PULL_NONE);
+					WM831X_GPN_DIR| WM831X_GPN_ENA | WM831X_SLEEP_REQUEST | WM831X_GPN_POL | WM831X_GPIO_PULL_NONE);
 	if (ret != 0)
 		dev_err(wm831x->dev, "Fail to set sleep request with error: %d\n",
 			ret);
