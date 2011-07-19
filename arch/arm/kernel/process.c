@@ -97,6 +97,12 @@ void arm_machine_restart(char mode, const char *cmd)
 	local_irq_disable();
 	local_fiq_disable();
 
+	/* Turn off L2 if have */
+	flush_cache_all();
+	outer_flush_all();
+	outer_disable();
+	outer_inv_all();
+
 	/*
 	 * Tell the mm system that we are going to reboot -
 	 * we may need it to insert some 1:1 mappings so that

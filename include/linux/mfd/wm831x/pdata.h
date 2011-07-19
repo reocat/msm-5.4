@@ -129,4 +129,5 @@ struct wm831x_pdata {
 	struct regulator_init_data *isink[WM831X_MAX_ISINK];
 };
 
+
 #endif

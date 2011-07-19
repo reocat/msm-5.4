@@ -418,9 +418,7 @@ amba_i2c_irq_exit:
 	return IRQ_HANDLED;
 }
 
-static int ambarella_i2c_xfer(
-	struct i2c_adapter *adap,
-	struct i2c_msg *msgs,
+static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	int num)
 {
 	struct ambarella_i2c_dev_info	*pinfo;
@@ -434,22 +432,14 @@ static int ambarella_i2c_xfer(
 
 	for (retryCount = 0; retryCount < adap->retries; retryCount++) {
 		errorCode = 0;
-
-		if (pinfo->state != AMBA_I2C_STATE_IDLE) {
-			dev_err(pinfo->dev,
-				"Start state is 0x%x!\n",
-				pinfo->state);
+		if (pinfo->state != AMBA_I2C_STATE_IDLE)
 			ambarella_i2c_hw_init(pinfo);
-		}
-
 		pinfo->msgs = msgs;
 		pinfo->msg_num = num;
 
 		ambarella_i2c_start_current_msg(pinfo);
-
 		timeout = wait_event_timeout(pinfo->msg_wait,
-				pinfo->msg_num == 0,
-				CONFIG_I2C_AMBARELLA_ACK_TIMEOUT);
+			pinfo->msg_num == 0, CONFIG_I2C_AMBARELLA_ACK_TIMEOUT);
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
 			dev_err(pinfo->dev,
@@ -623,38 +613,45 @@ static int __devexit ambarella_i2c_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ambarella_i2c_suspend(struct platform_device *pdev,
-	pm_message_t state)
+static int ambarella_i2c_suspend_noirq(struct device *dev)
 {
 	int				errorCode = 0;
+	struct platform_device		*pdev;
 	struct ambarella_i2c_dev_info	*pinfo;
 
-	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
-		__func__, errorCode, state.event);
-
+	pdev = to_platform_device(dev);
 	pinfo = platform_get_drvdata(pdev);
 	if (pinfo) {
 		disable_irq(pinfo->irq);
 	}
 
+	dev_dbg(&pdev->dev, "%s\n", __func__);
+
 	return errorCode;
 }
 
-static int ambarella_i2c_resume(struct platform_device *pdev)
+static int ambarella_i2c_resume_noirq(struct device *dev)
 {
 	int				errorCode = 0;
+	struct platform_device		*pdev;
 	struct ambarella_i2c_dev_info	*pinfo;
 
+	pdev = to_platform_device(dev);
 	pinfo = platform_get_drvdata(pdev);
 	if (pinfo) {
 		ambarella_i2c_hw_init(pinfo);
 		enable_irq(pinfo->irq);
 	}
 
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s\n", __func__);
 
 	return errorCode;
 }
+
+static const struct dev_pm_ops ambarella_i2c_dev_pm_ops = {
+	.suspend_noirq = ambarella_i2c_suspend_noirq,
+	.resume_noirq = ambarella_i2c_resume_noirq,
+};
 #endif
 
 static const char ambarella_i2c_name[] = "ambarella-i2c";
@@ -662,13 +659,12 @@ static const char ambarella_i2c_name[] = "ambarella-i2c";
 static struct platform_driver ambarella_i2c_driver = {
 	.probe		= ambarella_i2c_probe,
 	.remove		= __devexit_p(ambarella_i2c_remove),
-#ifdef CONFIG_PM
-	.suspend	= ambarella_i2c_suspend,
-	.resume		= ambarella_i2c_resume,
-#endif
 	.driver		= {
 		.name	= ambarella_i2c_name,
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm	= &ambarella_i2c_dev_pm_ops,
+#endif
 	},
 };
 

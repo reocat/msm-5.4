@@ -200,9 +200,4 @@
 #define WM831X_BKUP_CHG_ILIM_SHIFT                   0  /* BKUP_CHG_ILIM - [1:0] */
 #define WM831X_BKUP_CHG_ILIM_WIDTH                   2  /* BKUP_CHG_ILIM - [1:0] */
 
-struct chg_map {
-	int val;
-	int reg_val;
-};
-
 #endif

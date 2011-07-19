@@ -13,24 +13,21 @@
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
 #include <linux/slab.h>
-#include <linux/timer.h>
 
 #include <linux/mfd/wm831x/core.h>
 #include <linux/mfd/wm831x/auxadc.h>
 #include <linux/mfd/wm831x/pmu.h>
 #include <linux/mfd/wm831x/pdata.h>
+#include <linux/mfd/wm831x/gpio.h>
 
-#include <linux/discharge_curve.h>
 struct wm831x_power {
 	struct wm831x *wm831x;
 	struct power_supply wall;
 	struct power_supply usb;
 	struct power_supply battery;
-	struct timer_list battery_update_timer;
 };
 
-#define	ANDROID_BAT_UPDATE_DELAY_MSEC	5000
-#define WM831X_VOLTAGE_BUF_NUM 50
+#define WM831X_VOLTAGE_BUF_NUM 200
 static int uV_buffer[WM831X_VOLTAGE_BUF_NUM];
 static bool b_first_zero;
 static unsigned long uV_buf_counter;
@@ -76,19 +73,6 @@ static int wm831x_bat_avg_uV(struct wm831x *wm831x, int uV) {
 
 	return ret;
 }
-
-static void battery_update_timer_func(unsigned long data)
-{
-	struct wm831x_power *power = (struct wm831x_power *)data;
-	struct wm831x *wm831x = power->wm831x;
-
-	dev_dbg(wm831x->dev, "Update battery status\n");
-	power_supply_changed(&power->battery);
-
-	mod_timer(&power->battery_update_timer,
-		  jiffies + msecs_to_jiffies(ANDROID_BAT_UPDATE_DELAY_MSEC));
-}
-
 static int wm831x_power_check_online(struct wm831x *wm831x, int supply,
 				     union power_supply_propval *val)
 {
@@ -185,6 +169,10 @@ static enum power_supply_property wm831x_usb_props[] = {
  *		Battery properties
  *********************************************************************/
 
+struct chg_map {
+	int val;
+	int reg_val;
+};
 
 static struct chg_map trickle_ilims[] = {
 	{  50, 0 << WM831X_CHG_TRKL_ILIM_SHIFT },
@@ -266,6 +254,8 @@ static void wm831x_battey_apply_config(struct wm831x *wm831x,
 		*reg |= map[i].reg_val;
 		dev_dbg(wm831x->dev, "Set %s of %d%s\n", name, val, units);
 	}
+	uV_buf_counter = 0;
+	b_first_zero = true;
 }
 
 static void wm831x_config_battery(struct wm831x *wm831x)
@@ -343,15 +333,6 @@ static void wm831x_config_battery(struct wm831x *wm831x)
 		dev_err(wm831x->dev, "Failed to set charger control 2: %d\n",
 			ret);
 
-	if (pdata->enable_fet) {
-		ret = wm831x_set_bits(wm831x, WM831X_RESET_CONTROL,
-					WM831X_BATT_FET_ENA,
-					WM831X_BATT_FET_ENA);
-		if (ret != 0)
-			dev_err(wm831x->dev, "Failed to enable battery FET circuit: %d\n",
-				ret);
-	}
-
 	wm831x_reg_lock(wm831x);
 }
 
@@ -364,11 +345,7 @@ static int wm831x_bat_check_status(struct wm831x *wm831x, int *status)
 		return ret;
 
 	if (ret & WM831X_PWR_SRC_BATT) {
-		if (ret & WM831X_PWR_USB) {
-			*status = POWER_SUPPLY_STATUS_CHARGING;
-		} else {
-			*status = POWER_SUPPLY_STATUS_DISCHARGING;
-		}
+		*status = POWER_SUPPLY_STATUS_DISCHARGING;
 		return 0;
 	}
 
@@ -457,33 +434,29 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 	return 0;
 }
 
-
-#define	UV_BUF_SIZE	8
-#define	UV_MIN	2800000
-#define	UV_MAX	4500000
-#define	UV_MAX_TRY	5
-
-static int uV_last = UV_MIN ;
-
 static int wm831x_bat_read_capacity(struct wm831x *wm831x,
 			       int *capacity)
 {
-	int uV_smooth, uV, try_num = 0;
-	do {
-		uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
-		try_num++;
-	} while (((uV < UV_MIN) || (uV > UV_MAX)) && (try_num < UV_MAX_TRY));
-
-	if (try_num == UV_MAX_TRY ) {
-		/* can not get valid voltage, use last valid voltage */
-		uV_smooth = uV_last;
-		dev_err(wm831x->dev, "WARNING: Timeout, use last value(%d)\n", uV_last);
+	int uV, ret, uV_avg;
+	/* calculate the capacity from voltage */
+	/* 100%-20% 4.2V-3.8V 20%-0% 3.8V-3.5V */
+	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
+	uV_avg = wm831x_bat_avg_uV(wm831x, uV);
+	if (uV_avg >= 0) {
+		if (uV_avg > 4200000) {
+			*capacity = 100;
+		} else if ((uV_avg <= 4200000) && (uV_avg > 3800000)) {
+			*capacity = 20 + 80*(uV_avg - 3800000)/400000;
+		} else if ((uV_avg <= 3800000) && (uV_avg > 3500000)) {
+			*capacity = 20*(uV_avg - 3500000)/300000;
+		} else {
+			*capacity = 0;
+		}
+		ret = 0;
 	} else {
-		/* get valid voltage, get a smooth one with buffer filter */
-		uV_smooth = wm831x_bat_avg_uV(wm831x, uV);
-		uV_last = uV_smooth;
+		ret = -EINVAL;
 	}
-	return (convert_uV_to_capacity(uV_smooth, capacity));
+	return ret;
 }
 
 static int wm831x_bat_read_capacity_level(struct wm831x *wm831x,
@@ -653,11 +626,6 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	battery->num_properties = ARRAY_SIZE(wm831x_bat_props);
 	battery->get_property = wm831x_bat_get_prop;
 	battery->use_for_apm = 1;
-
-	setup_timer(&power->battery_update_timer, battery_update_timer_func, (long unsigned int)power);
-	mod_timer(&power->battery_update_timer,
-		  jiffies + msecs_to_jiffies(ANDROID_BAT_UPDATE_DELAY_MSEC));
-
 	ret = power_supply_register(&pdev->dev, battery);
 	if (ret)
 		goto err_wall;
@@ -705,13 +673,35 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = wm831x_set_bits(wm831x, WM831X_POWER_STATE,
-		WM831X_USB_ILIM_MASK,
-		WM831X_USB_ILIM_500MA);
+	wm831x_reg_write(wm831x, WM831X_GPIO5_CONTROL,
+					WM831X_GPN_DIR| WM831X_GPN_ENA | WM831X_SLEEP_REQUEST | WM831X_GPN_POL | WM831X_GPIO_PULL_NONE);
+	if (ret != 0)
+		dev_err(wm831x->dev, "Fail to set sleep request with error: %d\n",
+			ret);
 
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Failed to set usb current limitation! return (%d)\n", ret);
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+		return ret;
+	}
+
+	ret = wm831x_set_bits(wm831x, WM831X_ON_PIN_CONTROL,
+		WM831X_ON_PIN_PRIMACT_MASK,
+		WM831X_ON_PIN_PRIMACT_ON<<WM831X_ON_PIN_PRIMACT_SHIFT);
+
+	 wm831x_reg_lock(wm831x);
+
+	if (ret != 0)
+		dev_err(wm831x->dev, "Fail to set on prim act to on request with error: %d\n",
+			ret);
+
+	ret = wm831x_reg_read( wm831x, WM831X_ON_PIN_CONTROL);
+	if (ret > 0) {
+		dev_err(wm831x->dev, "New ON PIN CONTROL(0x%04x): 0x%04x\n",
+			WM831X_ON_PIN_CONTROL, ret);
+	} else {
+		dev_err(wm831x->dev, "Fail to get on pin control error: %d\n",
+			ret);
 	}
 
 	return ret;
@@ -752,8 +742,6 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 
 	irq = platform_get_irq_byname(pdev, "SYSLO");
 	free_irq(irq, wm831x_power);
-
-	del_timer_sync(&wm831x_power->battery_update_timer);
 
 	power_supply_unregister(&wm831x_power->battery);
 	power_supply_unregister(&wm831x_power->wall);
