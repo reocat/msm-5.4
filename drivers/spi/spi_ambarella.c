@@ -961,13 +961,14 @@ static int __devexit ambarella_spi_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ambarella_spi_suspend(struct platform_device *pdev,
-	pm_message_t state)
+static int ambarella_spi_suspend_noirq(struct device *dev)
 {
 	int				errorCode = 0;
 	struct spi_master		*master;
 	struct ambarella_spi		*priv;
+	struct platform_device		*pdev;
 
+	pdev = to_platform_device(dev);
 	master = platform_get_drvdata(pdev);
 	priv = spi_master_get_devdata(master);
 
@@ -979,18 +980,19 @@ static int ambarella_spi_suspend(struct platform_device *pdev,
 		errorCode = -ENXIO;
 	}
 
-	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
-		__func__, errorCode, state.event);
+	dev_dbg(&pdev->dev, "%s\n", __func__);
 
 	return errorCode;
 }
 
-static int ambarella_spi_resume(struct platform_device *pdev)
+static int ambarella_spi_resume_noirq(struct device *dev)
 {
 	int				errorCode = 0;
 	struct spi_master		*master;
 	struct ambarella_spi		*priv;
+	struct platform_device		*pdev;
 
+	pdev = to_platform_device(dev);
 	master = platform_get_drvdata(pdev);
 	priv = spi_master_get_devdata(master);
 	if (priv) {
@@ -1001,22 +1003,26 @@ static int ambarella_spi_resume(struct platform_device *pdev)
 		errorCode = -ENXIO;
 	}
 
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_dbg(&pdev->dev, "%s\n", __func__);
 
 	return errorCode;
 }
+
+static const struct dev_pm_ops ambarella_spi_dev_pm_ops = {
+	.suspend_noirq = ambarella_spi_suspend_noirq,
+	.resume_noirq = ambarella_spi_resume_noirq,
+};
 #endif
 
 static struct platform_driver ambarella_spi_driver = {
 	.probe		= ambarella_spi_probe,
 	.remove		= __devexit_p(ambarella_spi_remove),
-#ifdef CONFIG_PM
-	.suspend	= ambarella_spi_suspend,
-	.resume		= ambarella_spi_resume,
-#endif
 	.driver		= {
 		.name	= "ambarella-spi",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm	= &ambarella_spi_dev_pm_ops,
+#endif
 	},
 };
 
