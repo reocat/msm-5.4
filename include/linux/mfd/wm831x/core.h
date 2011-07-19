@@ -233,6 +233,7 @@
 #define WM831X_ON_PIN_TO_MASK                   0x0003  /* ON_PIN_TO - [1:0] */
 #define WM831X_ON_PIN_TO_SHIFT                       0  /* ON_PIN_TO - [1:0] */
 #define WM831X_ON_PIN_TO_WIDTH                       2  /* ON_PIN_TO - [1:0] */
+#define WM831X_ON_PIN_PRIMACT_ON			1
 
 struct regulator_dev;
 

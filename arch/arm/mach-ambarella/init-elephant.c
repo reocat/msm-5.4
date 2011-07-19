@@ -52,6 +52,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/mfd/wm831x/core.h>
 #include <linux/mfd/wm831x/pdata.h>
+#include <linux/mfd/wm831x/regulator.h>
 #include "board-device.h"
 
 #include <linux/rfkill-gpio.h>
@@ -76,8 +77,9 @@ static struct regulator_init_data elephant_wm8310_dcdc1_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = REGULATOR_MODE_STANDBY,
 		},
-		.initial_state = PM_SUSPEND_ON,
+		.initial_state = PM_SUSPEND_MEM,
 		.always_on = 1,
 		.boot_on = 1,
 	},
@@ -101,8 +103,9 @@ static struct regulator_init_data elephant_wm8310_dcdc2_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = REGULATOR_MODE_STANDBY,
 		},
-		.initial_state = PM_SUSPEND_ON,
+		.initial_state = PM_SUSPEND_MEM,
 		.always_on = 1,
 		.boot_on = 1,
 	},
@@ -128,8 +131,9 @@ static struct regulator_init_data elephant_wm8310_dcdc3_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = REGULATOR_MODE_STANDBY,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -178,8 +182,9 @@ static struct regulator_init_data elephant_wm8310_ldo1_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO1_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -202,8 +207,9 @@ static struct regulator_init_data elephant_wm8310_ldo2_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO2_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -226,8 +232,9 @@ static struct regulator_init_data elephant_wm8310_ldo3_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO3_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -251,8 +258,9 @@ static struct regulator_init_data elephant_wm8310_ldo4_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO4_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -276,8 +284,9 @@ static struct regulator_init_data elephant_wm8310_ldo5_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO5_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -300,8 +309,9 @@ static struct regulator_init_data elephant_wm8310_ldo6_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO6_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -324,8 +334,9 @@ static struct regulator_init_data elephant_wm8310_ldo7_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO7_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -348,8 +359,9 @@ static struct regulator_init_data elephant_wm8310_ldo8_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO8_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -372,8 +384,9 @@ static struct regulator_init_data elephant_wm8310_ldo9_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO9_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},
@@ -396,8 +409,9 @@ static struct regulator_init_data elephant_wm8310_ldo10_data = {
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
+			.mode = WM831X_LDO10_SLP_MODE,
 		},
-		//.initial_state = PM_SUSPEND_MAX,
+		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
 		.boot_on = 1,
 	},

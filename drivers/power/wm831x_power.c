@@ -18,6 +18,7 @@
 #include <linux/mfd/wm831x/auxadc.h>
 #include <linux/mfd/wm831x/pmu.h>
 #include <linux/mfd/wm831x/pdata.h>
+#include <linux/mfd/wm831x/gpio.h>
 
 struct wm831x_power {
 	struct wm831x *wm831x;
@@ -670,6 +671,37 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 				wm831x_bat_irqs[i], irq, ret);
 			goto err_bat_irq;
 		}
+	}
+
+	wm831x_reg_write(wm831x, WM831X_GPIO5_CONTROL,
+					WM831X_GPN_DIR| WM831X_GPN_ENA | WM831X_SLEEP_REQUEST | (1<<10) | WM831X_GPIO_PULL_NONE);
+	if (ret != 0)
+		dev_err(wm831x->dev, "Fail to set sleep request with error: %d\n",
+			ret);
+
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+		return ret;
+	}
+
+	ret = wm831x_set_bits(wm831x, WM831X_ON_PIN_CONTROL,
+		WM831X_ON_PIN_PRIMACT_MASK,
+		WM831X_ON_PIN_PRIMACT_ON<<WM831X_ON_PIN_PRIMACT_SHIFT);
+
+	 wm831x_reg_lock(wm831x);
+
+	if (ret != 0)
+		dev_err(wm831x->dev, "Fail to set on prim act to on request with error: %d\n",
+			ret);
+
+	ret = wm831x_reg_read( wm831x, WM831X_ON_PIN_CONTROL);
+	if (ret > 0) {
+		dev_err(wm831x->dev, "New ON PIN CONTROL(0x%04x): 0x%04x\n",
+			WM831X_ON_PIN_CONTROL, ret);
+	} else {
+		dev_err(wm831x->dev, "Fail to get on pin control error: %d\n",
+			ret);
 	}
 
 	return ret;
