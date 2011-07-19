@@ -35,4 +35,4 @@ obj-y				+= rtc-is112022m.o
 obj-y				+= vin.o
 obj-y				+= vout.o
 obj-y				+= codec-wm8994.o
-
+obj-y				+= wm831x-config.o
