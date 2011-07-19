@@ -1426,8 +1426,10 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if ((pinfo->controller_ios.clock != ios->clock) ||
 		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
+		msleep(10);
 		ambarella_sd_set_clk(mmc, ios->clock);
 		pinfo->controller_ios.clock = ios->clock;
+		msleep(10);
 	}
 
 	if ((pinfo->controller_ios.bus_width != ios->bus_width) ||
