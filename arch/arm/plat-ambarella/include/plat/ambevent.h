@@ -36,8 +36,13 @@ enum amb_event_type {
 	AMB_EV_VOUT_HDMI_PLUG,
 	AMB_EV_VOUT_HDMI_REMOVE,
 
-	/* G_SENSOR Output Event*/
-	AMB_EV_GSENSOR_OUTPUT			= 0x00030000,
+	/* SENSOR Event*/
+	AMB_EV_ACCELEROMETER_REPORT		= 0x00030000,
+	AMB_EV_MAGNETIC_FIELD_REPORT,
+	AMB_EV_LIGHT_REPORT,
+	AMB_EV_PROXIMITY_REPORT,
+	AMB_EV_GYROSCOPE_REPORT,
+	AMB_EV_TEMPERATURE_REPORT,
 
 	/* FB2 Event */
 	AMB_EV_FB2_PAN_DISPLAY			= 0x00040000,
@@ -45,7 +50,7 @@ enum amb_event_type {
 
 struct amb_event {
 	u32			sno;		//sequential number
-	u32			time_code;
+	u64			time_code;
 	enum amb_event_type	type;
 	u8			data[32];
 };
