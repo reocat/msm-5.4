@@ -42,3 +42,4 @@ obj-y				+= vin.o
 obj-y				+= vout.o
 obj-y				+= codec-wm8994.o
 obj-y				+= codec-wm8737.o
+obj-y				+= wm831x-config.o

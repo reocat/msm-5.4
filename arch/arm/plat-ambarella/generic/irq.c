@@ -580,6 +580,9 @@ void __init ambarella_init_irq(void)
 	irq_set_affinity(ORC_VOUT0_IRQ, cpumask_of(0));
 	irq_set_affinity(VIN_IRQ, cpumask_of(0));
 	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_LAST_PIXEL_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_VSYNC_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
 #else
 	/* Set VIC sense and event type for each entry */
 	amba_writel(VIC_SENSE_REG, 0x00000000);
