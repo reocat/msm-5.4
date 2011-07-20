@@ -52,6 +52,10 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
+#ifdef CONFIG_GPIO_WM831X
+extern int wm831x_config_poweroff(void);
+#endif
+
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -63,6 +67,12 @@ void ambarella_power_off(void)
 	}
 }
 
+void ambarella_power_off_prepare(void)
+{
+#ifdef CONFIG_GPIO_WM831X
+	wm831x_config_poweroff();
+#endif
+}
 /* ==========================================================================*/
 static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend,
 	u32 tm_level, u32 bnotifier)
@@ -380,6 +390,7 @@ static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
 int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
+	pm_power_off_prepare = ambarella_power_off_prepare;
 
 	suspend_set_ops(&ambarella_pm_suspend_ops);
 	hibernation_set_ops(&ambarella_pm_hibernation_ops);
