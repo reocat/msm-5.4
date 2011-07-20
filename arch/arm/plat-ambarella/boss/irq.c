@@ -334,8 +334,6 @@ static void ambarella_disable_irq(struct irq_data *d)
 	u32					irq = d->irq;
 	unsigned long flags;
 
-printk(">>>>>> ambarella_disable_irq: %d\n", irq);
-
 	if (irq < 32)
 		boss->vic1mask &= ~(0x1 << irq);
 	else if (irq < 64)
@@ -353,13 +351,6 @@ static void ambarella_enable_irq(struct irq_data *d)
 	u32					vic_base = VIC_BASE;
 	u32					irq = d->irq;
 	unsigned long flags;
-
-#if 0
-printk(">>>>>> ambarella_enable_irq: %d\n", irq);
-if (irq == 48) {
-printk(">>>>>>IRQ48\n");	
-}
-#endif
 
 	if (irq < 32)
 		boss->vic1mask |= (0x1 << irq);
