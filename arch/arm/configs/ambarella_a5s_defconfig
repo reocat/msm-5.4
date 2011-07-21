@@ -924,6 +924,11 @@ CONFIG_INPUT_UINPUT=m
 # CONFIG_GAMEPORT is not set
 
 #
+# Sensor support
+#
+# CONFIG_SENSOR_SUPPORT is not set
+
+#
 # Character devices
 #
 CONFIG_VT=y
