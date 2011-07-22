@@ -77,13 +77,6 @@
 #define NOLINUX_MEM_V_START		(0xb0000000)
 #define NOLINUX_MEM_V_SIZE		(0x20000000)
 
-#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
-#define AHB_BASE			0xd8000000
-#define APB_BASE			0xd9000000
-#else
-#define AHB_BASE			AHB_PHYS_BASE
-#define APB_BASE			APB_PHYS_BASE
-#endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
 #define AHB_BASE			AHB_PHYS_BASE
@@ -95,8 +88,13 @@
 #define DRAMC_BASE			DRAMC_PHYS_BASE
 #define CRYPT_BASE			CRYPT_PHYS_BASE
 #else
+#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
+#define AHB_BASE			(0xd8000000)
+#define APB_BASE			(0xd9000000)
+#else
 #define AHB_BASE			(0xe0000000)
 #define APB_BASE			(0xe8000000)
+#endif
 #endif
 #endif
 
