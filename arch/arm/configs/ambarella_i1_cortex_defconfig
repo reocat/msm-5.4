@@ -1032,6 +1032,11 @@ CONFIG_INPUT_WM831X_ON=y
 # CONFIG_GAMEPORT is not set
 
 #
+# Sensor support
+#
+# CONFIG_SENSOR_SUPPORT is not set
+
+#
 # Character devices
 #
 CONFIG_VT=y
