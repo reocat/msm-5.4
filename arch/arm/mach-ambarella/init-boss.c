@@ -524,6 +524,10 @@ extern struct platform_device amba_streammem;
 extern struct platform_device ambapmic_power;
 #endif
 
+#ifdef CONFIG_VIRTUAL_SERIAL_AMBARELLA
+extern struct platform_device virtual_gps_uart;
+#endif
+
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb0,
@@ -548,6 +552,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 #ifdef CONFIG_AMBAPMIC_POWER
 	&ambapmic_power,
+#endif
+#ifdef CONFIG_VIRTUAL_SERIAL_AMBARELLA
+	&virtual_gps_uart,
 #endif
 };
 

@@ -63,6 +63,9 @@ else
 X-C-y +=	$(IPCDIR)/defs/i_display.x
 endif
 
+#vserial for gps
+X-S-y +=	$(IPCDIR)/defs/lk_vserial.x
+
 # vtouch
 X-S-y +=	$(IPCDIR)/defs/lk_touch.x
 X-C-y +=	$(IPCDIR)/defs/i_touch.x
