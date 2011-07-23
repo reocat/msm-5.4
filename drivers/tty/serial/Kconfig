@@ -277,6 +277,14 @@ config SERIAL_AMBARELLA
 	  If you have a machine based on an Ambarella Media SoC you
 	  can enable its onboard serial ports by enabling this option.
 
+config VIRTUAL_SERIAL_AMBARELLA
+	tristate "Ambarella virtual serial port support"
+	depends on PLAT_AMBARELLA
+	select SERIAL_CORE
+	help
+	  If you have a machine based on an Ambarella Media SoC you
+	  can enable its virtual serial ports by enabling this option.
+
 config SERIAL_AMBARELLA_CONSOLE
 	bool "Console on Ambarella Media SoC serial port"
 	depends on SERIAL_AMBARELLA=y
