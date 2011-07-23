@@ -20,6 +20,7 @@
 #include <linux/vmalloc.h>
 #include <linux/time.h>
 #include <linux/module.h>
+#include <plat/event.h>
 
 #include <linux/aipc/aipc.h>
 #if !defined(__DEPENDENCY_GENERATION__)
@@ -39,14 +40,25 @@ static struct ipc_prog_s lk_host_dsp_prog =
 	.prev = NULL,
 };
 
+static bool_t __a2c_dsp_host_1_svc(void *arg, void *res, 
+			  SVCXPRT *svcxprt)
+{
+  printk("a2c_dsp_host!\n");
+  svcxprt->rcode = IPC_SUCCESS;
+  ipc_svc_sendreply(svcxprt, NULL);
+
+  ambarella_set_event(AMBA_EVENT_PRE_TAKEOVER_DSP, NULL);
+  ambarella_set_event(AMBA_EVENT_TAKEOVER_DSP, NULL);
+  ambarella_set_event(AMBA_EVENT_POST_TAKEOVER_DSP, NULL);
+
+  return 1;
+}
+
 bool_t a2c_dsp_host_1_svc(void *arg, void *res, 
 			  struct svc_req *rqstp)
 {
-  
-  printk("a2c_dsp_host!\n");
-  rqstp->svcxprt->rcode = IPC_SUCCESS;
-  ipc_svc_sendreply(rqstp->svcxprt, NULL);
-
+  ipc_bh_queue((ipc_bh_f) __a2c_dsp_host_1_svc,
+  		arg, res, rqstp->svcxprt);
   return 1;
 }
 

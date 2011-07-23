@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/delay.h>
+#include <plat/event.h>
 
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/i_host_dsp.h>
@@ -48,11 +49,17 @@ int ipc_c2a_dsp_host(void)
 	enum clnt_stat stat;
 	int res;
 
+	ambarella_set_event(AMBA_EVENT_PRE_GIVEUP_DSP, NULL);
+	ambarella_set_event(AMBA_EVENT_GIVEUP_DSP, NULL);
+	ambarella_set_event(AMBA_EVENT_POST_GIVEUP_DSP, NULL);
+
 	stat = c2a_dsp_host_1(NULL, &res, IPC_i_host_dsp);
 	if (stat != IPC_SUCCESS) {
 		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
 		return -stat;
 	}
+
+	printk("ipc_c2a_dsp_host done\n");
 
 	return res;
 }
