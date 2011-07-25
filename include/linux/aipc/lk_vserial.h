@@ -30,7 +30,7 @@ extern int amba_vserial_report_msg(struct amba_vserial_msg *msg);
 #else
 int amba_vserial_report_msg(struct amba_vserial_msg *msg)
 {
-	printk("Dummy %s function.\n",__func__);
+//	printk("Dummy %s function.\n",__func__);
 	return 0;
 }
 #endif
