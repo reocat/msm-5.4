@@ -53,8 +53,10 @@
 
 struct SVCXPRT;
 
-#define IPC_I2L_INT_VEC		BOSS_VIRT_H2G_INT_VEC
-#define IPC_L2I_INT_VEC		BOSS_VIRT_G2H_INT_VEC
+#define IPC_I2L_INT_REQ_VEC	BOSS_VIRT_H2G_INT_REQ_VEC
+#define IPC_I2L_INT_RLY_VEC	BOSS_VIRT_H2G_INT_RLY_VEC
+#define IPC_L2I_INT_REQ_VEC	BOSS_VIRT_G2H_INT_REQ_VEC
+#define IPC_L2I_INT_RLY_VEC	BOSS_VIRT_G2H_INT_RLY_VEC
 
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);

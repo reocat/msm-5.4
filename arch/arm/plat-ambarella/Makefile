@@ -87,6 +87,7 @@ obj-$(CONFIG_LOCAL_TIMERS)			+= cortex/localtimer.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
+obj-y						+= boss/boss.o
 obj-y						+= misc/ambsyncproc.o
 obj-y						+= misc/ambasyncproc.o
 obj-y						+= misc/ambevent.o

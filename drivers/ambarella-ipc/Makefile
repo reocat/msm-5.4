@@ -24,15 +24,33 @@
 #
 
 BOSSDIR := $(shell echo $${PWD%boss*}boss)
-IPCDIR := $(realpath $(BOSSDIR)/ipc)
 
-# check for ipc android: ipc is located in android/device/ambarella/ipc
-ifeq ($(IPCDIR),)
-$(shell ln -s $(BOSSDIR)/android/device/ambarella/ipc $(BOSSDIR)/ipc)
+# IPC direcotry
 IPCDIR := $(realpath $(BOSSDIR)/ipc)
+ifeq ($(IPCDIR),)
+IPCDIR := $(realpath $(BOSSDIR)/android/device/ambarella/ipc)
+endif
+ifeq ($(IPCDIR),)
+$(error "Cannot find IPC directory!!")
+endif
+
+# IPCGEN
+ifeq ($(HOST_OS),)
+HOST_OS := $(shell uname -s | sed -e s/CYGWIN.*/CYGWIN/ | sed -e s/MINGW.*/MINGW/)
 endif
 
 IPCGEN := $(IPCDIR)/ipcgen
+ifeq ($(HOST_OS),CYGWIN)
+IPCGEN_TYPE := PE32
+else
+ifeq ($(HOST_OS),Linux)
+IPCGEN_TYPE := ELF
+endif
+endif
+
+ifneq ($(shell file $(IPCGEN) | grep -o $(IPCGEN_TYPE)), $(IPCGEN_TYPE))
+ERR := $(shell rm -rf $(IPCGEN)* $(IPCDIR)/.tmp)
+endif
 
 # Servers
 X-S-y +=	$(IPCDIR)/defs/lk_util.x \
