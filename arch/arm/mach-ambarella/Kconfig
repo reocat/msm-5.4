@@ -53,6 +53,13 @@ config MACH_ELEPHANT
 	help
 	  Say Y here if you are using iOne Elephant.
 
+config MACH_FILBERT
+	bool "Filbert"
+	depends on PLAT_AMBARELLA_A7
+	default n
+	help
+	  Say Y here if you are using A7 Filbert.
+
 menu "Misc Configuration"
 
 config MMC_AMBARELLA_SDIO
