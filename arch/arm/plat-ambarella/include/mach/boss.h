@@ -29,39 +29,58 @@
 #include <linux/aipc/aipc.h>
 #endif
 
-#define BOSS_BOSS_MEM_SIZE	0x1000		/* 4KB */
-#define BOSS_LINUX_VERSION	0x0001		/* linux struct boss_s version */
+#define BOSS_BOSS_MEM_SIZE		0x1000		/* 4KB */
+#define BOSS_LINUX_VERSION		0x0002		/* linux struct boss_s version */
 
 #if (CHIP_REV == A5S)
-#define BOSS_VIRT_H2G_INT_VEC	32	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_INT_VEC	35	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_H2G_MTX_VEC	51	/* Virtual 'host-to-guest' mutex irq */
-#define BOSS_VIRT_G2H_MTX_VEC	52	/* Virtual 'guest-to-host' mutex irq */
+#define BOSS_VIRT_H2G_INT_REQ_VEC	32	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_H2G_INT_RLY_VEC	53	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_G2H_INT_REQ_VEC	35	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_INT_RLY_VEC	54	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_H2G_MTX_VEC		51	/* Virtual 'host-to-guest' mutex irq */
+#define BOSS_VIRT_G2H_MTX_VEC		52	/* Virtual 'guest-to-host' mutex irq */
 #elif (CHIP_REV == I1)
-#define BOSS_VIRT_H2G_INT_VEC	AXI_SOFT_IRQ(0)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_INT_VEC	3	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_H2G_MTX_VEC	AXI_SOFT_IRQ(1)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_MTX_VEC	64	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_H2G_INT_REQ_VEC	AXI_SOFT_IRQ(0)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_H2G_INT_RLY_VEC	AXI_SOFT_IRQ(2)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_G2H_INT_REQ_VEC	3	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_INT_RLY_VEC	68	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_H2G_MTX_VEC		AXI_SOFT_IRQ(1)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_G2H_MTX_VEC		64	/* Virtual 'guest-to-host' irq */
 #else
 #error "Boss is not supported on this chip!"
 #endif
 
-#define BOSS_VIRT_TIMER_INT_VEC	47	/* Virtual 'timer' to guest irq */
-#define BOSS_VIRT_GIRQ_INT_VEC	50	/* Virtual 'guest IRQ' irq */
+#define BOSS_VIRT_TIMER_INT_VEC		47	/* Virtual 'timer' to guest irq */
+#define BOSS_VIRT_GIRQ_INT_VEC		50	/* Virtual 'guest IRQ' irq */
 
 /* Keep these in sync with data structure below */
-#define BOSS_ROOT_CTX_OFFSET	0
-#define BOSS_GUEST_CTX_OFFSET	4
-#define BOSS_MODE_OFFSET	8
-#define BOSS_GILDLE_OFFSET	12
-#define BOSS_ENVTIMER_OFFSET	16
-#define BOSS_CVTIMER_OFFSET	20
-#define BOSS_NVTIMER_OFFSET	24
-#define BOSS_IRQNO_OFFSET	28
-#define BOSS_VIC1MASK_OFFSET	32
-#define BOSS_VIC2MASK_OFFSET	36
+#define BOSS_ROOT_CTX_OFFSET		0
+#define BOSS_GUEST_CTX_OFFSET		4
+#define BOSS_MODE_OFFSET		8
+#define BOSS_GILDLE_OFFSET		12
+#define BOSS_ENVTIMER_OFFSET		16
+#define BOSS_CVTIMER_OFFSET		20
+#define BOSS_NVTIMER_OFFSET		24
+#define BOSS_IRQNO_OFFSET		28
+#define BOSS_VIC1MASK_OFFSET		32
+#define BOSS_VIC2MASK_OFFSET		36
+#define BOSS_VIC3MASK_OFFSET		40
+#define BOSS_GPIO0MASK_OFFSET		44
+#define BOSS_GPIO1MASK_OFFSET		48
+#define BOSS_GPIO2MASK_OFFSET		52
+#define BOSS_GPIO3MASK_OFFSET		56
+#define BOSS_GPIO4MASK_OFFSET		60
+#define BOSS_GPIO5MASK_OFFSET		64
 
 #if !defined(__ASM__)
+
+enum {
+	BOSS_STATE_UNINIT = 0,
+	BOSS_STATE_INIT,
+	BOSS_STATE_BOOTING,
+	BOSS_STATE_READY,
+	BOSS_STATE_NUM
+};
 
 enum device_privilege
 {
@@ -99,7 +118,6 @@ struct boss_context_s
  */
 struct boss_s
 {
-
 	struct boss_context_s *root_ctx;	/* Root context */
 	struct boss_context_s *guest_ctx;	/* Guest context */
 	unsigned int *mode;			/* BOSS mode */
@@ -122,6 +140,13 @@ struct boss_s
 	 */
 	unsigned int vic1mask;		/* VIC1 bitmask */
 	unsigned int vic2mask;		/* VIC2 bitmask */
+	unsigned int vic3mask;		/* VIC3 bitmask */
+	unsigned int gpio0mask;		/* GPIO0 bitmask */
+	unsigned int gpio1mask;		/* GPIO1 bitmask */
+	unsigned int gpio2mask;		/* GPIO2 bitmask */
+	unsigned int gpio3mask;		/* GPIO3 bitmask */
+	unsigned int gpio4mask;		/* GPIO4 bitmask */
+	unsigned int gpio5mask;		/* GPIO5 bitmask */
 
 	/*
 	 * The following 3 variables are initialized to 0 and expected to
@@ -131,6 +156,9 @@ struct boss_s
 	unsigned int log_buf_ptr;	/* Guest OS log buffer address */
 	unsigned int log_buf_len_ptr;	/* Guest OS log buffer length */
 	unsigned int log_buf_last_ptr;	/* Index to latest updated buf. */
+
+	unsigned int state;		/* BOSS state */
+	unsigned int lock;		/* BOSS lock */
 
 	unsigned int smem_addr;	/* Shared memory address */
 	unsigned int smem_size;	/* Shared memory length */

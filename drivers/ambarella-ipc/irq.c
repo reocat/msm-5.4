@@ -33,15 +33,18 @@
 #error "Boss is not supported on this chip!"
 #endif
 
-extern void ipc_binder_dispatch(void);
+extern void ipc_binder_request(void);
+extern void ipc_binder_reply(void);
 
 /*
  * IPC IRQ object.
  */
 struct ipc_irq_s
 {
-	int irqno_uitron;	/* IRQ line number of uITRON */
-	int irqno_linux;	/* IRQ line number of Linux */
+	int irqno_uitron_req;	/* IRQ line number of uITRON */
+	int irqno_uitron_rly;	/* IRQ line number of uITRON */
+	int irqno_linux_req;	/* IRQ line number of Linux */
+	int irqno_linux_rly;	/* IRQ line number of Linux */
 	struct ipc_irq_stat_s stat;	/* Status */
 };
 
@@ -50,23 +53,28 @@ static struct ipc_irq_s ipc_irq;	/* The global instance */
 /*
  * Send an interrupt to the other OS.
  */
-void ipc_send_irq(void)
+void ipc_send_irq(int type)
 {
+	int irqno;
+
+	if (type == IPC_IRQ_REQ) {
+		irqno = ipc_irq.irqno_uitron_req;
+	} else {
+		irqno = ipc_irq.irqno_uitron_rly;
+	}
+
 	ipc_irq.stat.sent++;
-	if (ipc_irq.irqno_uitron < 32) {
-		__raw_writel(0x1 << ipc_irq.irqno_uitron,
-			     VIC_SOFTEN_REG);
+	if (irqno < 32) {
+		__raw_writel(0x1 << irqno, VIC_SOFTEN_REG);
 	}
 #if (VIC_INSTANCES >= 2)
-	else if (ipc_irq.irqno_uitron < 64) {
-		__raw_writel(0x1 << (ipc_irq.irqno_uitron - 32),
-			     VIC2_SOFTEN_REG);
+	else if (irqno < 64) {
+		__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_REG);
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
-	else if (ipc_irq.irqno_uitron < 96) {
-		__raw_writel(0x1 << (ipc_irq.irqno_uitron - 64),
-			     VIC3_SOFTEN_REG);
+	else if (irqno < 96) {
+		__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_REG);
 	}
 #endif
 	else {
@@ -77,23 +85,28 @@ void ipc_send_irq(void)
 /*
  * Send a faked interrupt to ourselves... Sort of a 'loop-back' test.
  */
-void ipc_fake_irq(void)
+void ipc_fake_irq(int type)
 {
+	int irqno;
+
+	if (type == IPC_IRQ_REQ) {
+		irqno = ipc_irq.irqno_linux_req;
+	} else {
+		irqno = ipc_irq.irqno_linux_rly;
+	}
+
 #if USE_VIC_IRQ
-	if (ipc_irq.irqno_linux < 32) {
-		__raw_writel(0x1 << ipc_irq.irqno_linux,
-			VIC_SOFTEN_REG);
+	if (irqno < 32) {
+		__raw_writel(0x1 << irqno, VIC_SOFTEN_REG);
 	}
 #if (VIC_INSTANCES >= 2)
-	else if (ipc_irq.irqno_linux < 64) {
-		__raw_writel(0x1 << (ipc_irq.irqno_linux - 32),
-			     VIC2_SOFTEN_REG);
+	else if (irqno < 64) {
+		__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_REG);
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
-	else if (ipc_irq.irqno_linux < 96) {
-		__raw_writel(0x1 << (ipc_irq.irqno_linux - 64),
-			     VIC3_SOFTEN_REG);
+	else if (irqno < 96) {
+		__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_REG);
 	}
 #endif
 	else {
@@ -102,8 +115,7 @@ void ipc_fake_irq(void)
 #else	/* !USE_VIC_IRQ */
 #if (CHIP_REV == I1)
 	__raw_writel(
-	       0x1 << (ipc_irq.irqno_linux - AXI_SOFT_IRQ(0)),
-	       AHB_SCRATCHPAD_REG(0x10));
+	       0x1 << (irqno - AXI_SOFT_IRQ(0)), AHB_SCRATCHPAD_REG(0x10));
 #else
 #error "GIC is only supported on i1!"
 #endif
@@ -115,23 +127,22 @@ void ipc_fake_irq(void)
  */
 static irqreturn_t ipc_irq_handler(int irqno, void *args)
 {
+	int type = ((int) args) - 1;
+
 	ipc_irq.stat.recv++;
 
 #if USE_VIC_IRQ
-	if (ipc_irq.irqno_linux < 32) {
-		__raw_writel(0x1 << ipc_irq.irqno_linux,
-			     VIC_SOFTEN_CLR_REG);
+	if (irqno < 32) {
+		__raw_writel(0x1 << irqno, VIC_SOFTEN_CLR_REG);
 	}
 #if (VIC_INSTANCES >= 2)
-	else if (ipc_irq.irqno_linux < 64) {
-		__raw_writel(0x1 << (ipc_irq.irqno_linux - 32),
-			     VIC2_SOFTEN_CLR_REG);
+	else if (irqno < 64) {
+		__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_CLR_REG);
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
-	else if (ipc_irq.irqno_linux < 96) {
-		__raw_writel(0x1 << (ipc_irq.irqno_linux - 64),
-			     VIC3_SOFTEN_CLR_REG);
+	else if (irqno < 96) {
+		__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_CLR_REG);
 	}
 #endif
 	else {
@@ -139,14 +150,18 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 	}
 #else	/* !USE_VIC_IRQ */
 #if (CHIP_REV == I1)
-	__raw_writel (0x1 << (ipc_irq.irqno_linux - AXI_SOFT_IRQ(0)),
-	AHB_SCRATCHPAD_REG(0x14));
+	__raw_writel (0x1 << (irqno - AXI_SOFT_IRQ(0)), AHB_SCRATCHPAD_REG(0x14));
 #else
 #error "GIC is only supported on i1!"
 #endif
 #endif
 
-	ipc_binder_dispatch();	/* Call out to the handler in binder */
+	/* Call out to the handler in binder */
+	if (type == IPC_IRQ_REQ) {
+		ipc_binder_request();
+	} else {
+		ipc_binder_reply();
+	}
 
 	return IRQ_HANDLED;
 }
@@ -154,36 +169,41 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 /*
  * Enable or disable IRQ.
  */
-void ipc_irq_enable(int enabled)
+void ipc_irq_enable(int type, int enabled)
 {
+	int irqno;
+
+	if (type == IPC_IRQ_REQ) {
+		irqno = ipc_irq.irqno_linux_req;
+	} else {
+		irqno = ipc_irq.irqno_linux_rly;
+	}
+
 	if (enabled) {
-		ipc_irq.stat.enabled = 1;
+		ipc_irq.stat.enabled |= (1 << irqno);
 #if USE_VIC_IRQ
 		/* Sanitize the VIC line of the IRQ first */
-		if (ipc_irq.irqno_linux < 32) {
-			__raw_writel(0x1 << ipc_irq.irqno_linux,
-				     VIC_SOFTEN_CLR_REG);
+		if (irqno < 32) {
+			__raw_writel(0x1 << irqno, VIC_SOFTEN_CLR_REG);
 		}
 #if (VIC_INSTANCES >= 2)
-		else if (ipc_irq.irqno_linux < 64) {
-			__raw_writel(0x1 << (ipc_irq.irqno_linux - 32),
-				     VIC2_SOFTEN_CLR_REG);
+		else if (irqno < 64) {
+			__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_CLR_REG);
 		}
 #endif
 #if (VIC_INSTANCES >= 3)
-		else if (ipc_irq.irqno_linux < 96) {
-			__raw_writel(0x1 << (ipc_irq.irqno_linux - 64),
-				     VIC3_SOFTEN_CLR_REG);
+		else if (irqno < 96) {
+			__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_CLR_REG);
 		}
 #endif
 		else {
 			BUG();
 		}
 #endif
-		enable_irq(ipc_irq.irqno_linux);
+		enable_irq(irqno);
 	} else {
-		ipc_irq.stat.enabled = 0;
-		disable_irq(ipc_irq.irqno_linux);
+		ipc_irq.stat.enabled &= ~(1 << irqno);
+		disable_irq(irqno);
 	}
 }
 
@@ -203,23 +223,33 @@ void ipc_irq_init(void)
 {
 	int rval;
 
-	ipc_irq.irqno_uitron = IPC_L2I_INT_VEC;
-	ipc_irq.irqno_linux = IPC_I2L_INT_VEC;
+	ipc_irq.irqno_uitron_req = IPC_L2I_INT_REQ_VEC;
+	ipc_irq.irqno_uitron_rly = IPC_L2I_INT_RLY_VEC;
+	ipc_irq.irqno_linux_req = IPC_I2L_INT_REQ_VEC;
+	ipc_irq.irqno_linux_rly = IPC_I2L_INT_RLY_VEC;
 
-	printk (KERN_NOTICE "aipc: irq => l2i: %d, i2l: %d\n", 
-		ipc_irq.irqno_uitron, ipc_irq.irqno_linux);
+	printk (KERN_NOTICE "aipc: irq => l2i: %d %d, i2l: %d %d\n",
+		ipc_irq.irqno_uitron_req, ipc_irq.irqno_uitron_rly,
+		ipc_irq.irqno_linux_req, ipc_irq.irqno_linux_rly);
 
 	/* Register IRQ to system and enable it */
-	rval = request_irq(ipc_irq.irqno_linux,
+	rval = request_irq(ipc_irq.irqno_linux_req,
 			   ipc_irq_handler,
 			   IRQF_TRIGGER_HIGH | IRQF_SHARED,
-			   "IPC",
-			   &ipc_irq);
+			   "IPC_REQ",
+			   (void *) IPC_IRQ_REQ + 1);
+	rval = request_irq(ipc_irq.irqno_linux_rly,
+			   ipc_irq_handler,
+			   IRQF_TRIGGER_HIGH | IRQF_SHARED,
+			   "IPC_RLY",
+			   (void *) IPC_IRQ_RLY + 1);
+
 	BUG_ON(rval != 0);
 }
 
 void ipc_irq_free(void)
 {
-	free_irq(ipc_irq.irqno_linux, &ipc_irq);
+	free_irq(ipc_irq.irqno_linux_req, (void *) IPC_IRQ_REQ);
+	free_irq(ipc_irq.irqno_linux_rly, (void *) IPC_IRQ_RLY);
 }
 

@@ -40,6 +40,9 @@
 
 #include <mach/boss.h>
 
+extern void boss_enable_irq(int irq);
+extern void boss_disable_irq(int irq);
+
 /* ==========================================================================*/
 static unsigned long ambarella_gpio_irq_bit[BITS_TO_LONGS(AMBGPIO_SIZE)];
 static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(AMBGPIO_SIZE)];
@@ -334,10 +337,7 @@ static void ambarella_disable_irq(struct irq_data *d)
 	u32					irq = d->irq;
 	unsigned long flags;
 
-	if (irq < 32)
-		boss->vic1mask &= ~(0x1 << irq);
-	else if (irq < 64)
-		boss->vic2mask &= ~(0x1 << (irq - 32));
+	boss_disable_irq(irq);
 
 	AMBARELLA_VIC_IRQ2BASE();
 
@@ -352,10 +352,7 @@ static void ambarella_enable_irq(struct irq_data *d)
 	u32					irq = d->irq;
 	unsigned long flags;
 
-	if (irq < 32)
-		boss->vic1mask |= (0x1 << irq);
-	else if (irq < 64)
-		boss->vic2mask |= (0x1 << (irq - 32));
+	boss_enable_irq(irq);
 
 	AMBARELLA_VIC_IRQ2BASE();
 
