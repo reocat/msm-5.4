@@ -36,7 +36,7 @@
 #include <linux/aipc/ipc_mutex.h>
 
 #if  defined(CONFIG_AMBARELLA_IPC)
-#define ENABLE_IPC_MUTEX_SD2	0
+#define ENABLE_IPC_MUTEX_SD2	1
 #endif
 
 /* ==========================================================================*/

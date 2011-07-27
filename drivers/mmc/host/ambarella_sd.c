@@ -1419,6 +1419,13 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		pslotinfo->dma_r_counter = 0;
 #endif
 	} else {
+	
+#if defined(CONFIG_AMBARELLA_IPC)
+		struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(mmc);
+		if (sdinfo->is_init && sdinfo->from_ipc)
+			goto done;
+#endif
+
 		desired_clk = clk;
 		if (desired_clk > pinfo->pcontroller->clk_limit)
 			desired_clk = pinfo->pcontroller->clk_limit;
@@ -1462,6 +1469,9 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		ambsd_dbg(pslotinfo, "actual_clk = %d.\n", actual_clk);
 		ambsd_dbg(pslotinfo, "clk_div = %d.\n", clk_div);
 
+#if defined(CONFIG_AMBARELLA_IPC)
+done:
+#endif
 		clk_div <<= 8;
 		clk_div |= SD_CLK_ICLK_EN;
 		amba_writew(pinfo->regbase + SD_CLK_OFFSET, clk_div);
