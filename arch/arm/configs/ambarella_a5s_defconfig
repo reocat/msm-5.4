@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Fri Jul  8 19:22:49 2011
+# Wed Jul 27 18:19:47 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1248,7 +1248,9 @@ CONFIG_USB_AMBARELLA=m
 CONFIG_USB_GADGET_DUALSPEED=y
 # CONFIG_USB_ZERO is not set
 # CONFIG_USB_AUDIO is not set
-# CONFIG_USB_ETH is not set
+CONFIG_USB_ETH=m
+CONFIG_USB_ETH_RNDIS=y
+# CONFIG_USB_ETH_EEM is not set
 # CONFIG_USB_G_NCM is not set
 # CONFIG_USB_GADGETFS is not set
 # CONFIG_USB_FUNCTIONFS is not set
