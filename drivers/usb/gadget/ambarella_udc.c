@@ -861,9 +861,9 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 	ep->last_data_desc = NULL;
 
 	ep->halted = 1;
-//	spin_unlock(&ep->udc->lock);
+	spin_unlock(&ep->udc->lock);
 	req->req.complete(&ep->ep, &req->req);
-//	spin_lock(&ep->udc->lock);
+	spin_lock(&ep->udc->lock);
 	ep->halted = halted_tmp;
 
 	if(need_queue){
@@ -1577,9 +1577,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 		  * is zero. */
 		if(req->req.length == 0) {
 			if(ep->id == CTRL_OUT) {
-				spin_unlock(&udc->lock);
 				ambarella_udc_done(ep, req, 0);
-				spin_lock(&udc->lock);
 				/* told UDC the configuration is done, and to ack HOST */
 				//amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_CSR_DONE);
 				//udelay(150);
