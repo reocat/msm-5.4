@@ -60,6 +60,13 @@ config MACH_BOSS
 	help
 	  Say Y here if you are using iOne Boss.
 
+config MACH_FILBERT
+	bool "Filbert"
+	depends on PLAT_AMBARELLA_A7
+	default n
+	help
+	  Say Y here if you are using A7 Filbert.
+
 menu "Misc Configuration"
 
 config MMC_AMBARELLA_SDIO

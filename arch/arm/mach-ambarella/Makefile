@@ -32,6 +32,8 @@ else
 obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
 endif
 
+obj-$(CONFIG_MACH_FILBERT)	+= init-filbert.o
+
 obj-y				+= touch-ak4183.o
 obj-y				+= touch-chacha_mt4d.o
 obj-y				+= touch-tm1510.o
