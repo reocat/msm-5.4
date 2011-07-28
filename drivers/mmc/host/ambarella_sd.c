@@ -52,6 +52,9 @@
 #define SD_HOST2_SD	1
 #define SD_HOST1_SDIO	2
 #define SD_MAX_CARD	3
+
+static struct ipc_sdinfo G_ipc_sdinfo[SD_MAX_CARD];
+
 #endif
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
@@ -1419,7 +1422,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		pslotinfo->dma_r_counter = 0;
 #endif
 	} else {
-	
+
 #if defined(CONFIG_AMBARELLA_IPC)
 		struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(mmc);
 		if (sdinfo->is_init && sdinfo->from_ipc)
@@ -2338,6 +2341,10 @@ static int __init ambarella_sd_init(void)
 {
 	int				errorCode = 0;
 
+#if defined(CONFIG_AMBARELLA_IPC)
+	memset(G_ipc_sdinfo, 0x0, sizeof(G_ipc_sdinfo));
+#endif
+
 	errorCode = platform_driver_register(&ambarella_sd_driver);
 	if (errorCode) {
 		printk(KERN_ERR "%s: Register failed %d!\n",
@@ -2354,7 +2361,6 @@ static void __exit ambarella_sd_exit(void)
 
 
 #if defined(CONFIG_AMBARELLA_IPC)
-static struct ipc_sdinfo G_ipc_sdinfo[SD_MAX_CARD];
 
 /**
  * ambarella_sdmmc_cmd_ipc.
