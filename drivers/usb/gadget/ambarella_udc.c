@@ -233,28 +233,11 @@ static void ambarella_disable_all_intr(void)
 
 static void ambarella_ep_fifo_flush(struct ambarella_ep *ep)
 {
-	int retry_count = 10000;
-	volatile u32 dummy;
-
 	if(ep->dir == USB_DIR_IN)  /* Empty Tx FIFO */
 		amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_FLUSH);
 	else { 			  /* Empty RX FIFO */
-		if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)){
-			dprintk(DEBUG_NORMAL,"%s Rx FIFO not empty\n",ep->ep.name);
-			/* Switch to slave mode */
-			amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
-
-			while (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
-				if (retry_count-- < 0) {
-					printk (KERN_ERR "%s: failed", __func__);
-					break;
-				}
-				dummy = amba_readl (USB_RXFIFO_BASE);
-				udelay(3);
-			}
-			/* Switch to DMA mode */
-			amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
-		}
+		if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS))
+			ep->udc->controller_info->flush_rxfifo();
 	}
 }
 
@@ -647,8 +630,7 @@ static void ambarella_set_rx_dma(struct ambarella_ep *ep,
 		}
 
 		wait_timeout--;
-		if (wait_timeout == 0)
-		{
+		if (wait_timeout == 0) {
 			printk (KERN_INFO "%s: [usb] Empty RX FIFO\n", ep->ep.name);
 			ambarella_ep_fifo_flush(ep);
 			break;
@@ -1701,9 +1683,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 	/* set/clear, then synch memory views with the device */
 	if (value) { /* stall endpoint */
 		if (ep->dir == USB_DIR_IN) {
-
-			amba_setbitsl(ep->ep_reg.ctrl_reg,
-				USB_EP_STALL|USB_EP_FLUSH);
+			amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_STALL|USB_EP_FLUSH);
 		} else {
 			int retry_count = 10000;
 			/* Wait Rx-FIFO to be empty */
