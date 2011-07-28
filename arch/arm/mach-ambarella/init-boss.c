@@ -865,7 +865,9 @@ static void __init ambarella_init_boss(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 			case 'B':
+#if !defined(CONFIG_AMBARELLA_IPC)
 				ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+#endif
 				ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 				ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 			case 'A':
