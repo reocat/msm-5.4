@@ -69,13 +69,13 @@ static void reset_usb(void)
 
 static int flush_rxfifo(void)
 {
-	int retry_count = 100;
+	int retry_count = 1000;
 	int rval = 0;
 
 #if (CHIP_REV == A2) || (CHIP_REV == A3)
 	u32 dummy;
 
-	retry_count = retry_count * 100;
+	retry_count = retry_count * 10;
 	if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)){
 		/* Switch to slave mode */
 		amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
