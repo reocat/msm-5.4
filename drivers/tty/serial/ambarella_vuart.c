@@ -74,25 +74,15 @@ int amba_vserial_report_msg(struct amba_vserial_msg *msg)
 	spin_lock_irqsave(&amba_vport->port.lock, flags);
 	tty = amba_vport->port.state->port.tty;
 	if(tty) {
-#if 1
-		len = tty_insert_flip_string(tty, str, len);
-		if(len) {
-			tty_flip_buffer_push(tty);
-			tty_wakeup(tty);
-		}
-#else
-		{
 		int max_count = amba_vport->port.fifosize;
 		int i;
 		for(i = 0; i < len && max_count > 0; i++, max_count--) {
 			amba_vport->port.icount.rx++;
 			if(!uart_handle_sysrq_char(&amba_vport->port, str[i])) {
-				tty_insert_flip_char(tty, str[i], TTY_NORMAL);
+				uart_insert_char(&amba_vport->port, UART_LS_DR, UART_LS_OE, str[i], TTY_NORMAL);
 			}
 		}
-		}
 		tty_flip_buffer_push(tty);
-#endif
 	}
 	spin_unlock_irqrestore(&amba_vport->port.lock, flags);
 #endif
@@ -252,7 +242,7 @@ static int __devinit vserial_ambarella_probe(struct platform_device *pdev)
 		goto serial_ambarella_probe_exit;
 	}
 
-	up->port.fifosize = 64;
+	up->port.fifosize = 256;
 	up->port.type = PORT_UART00;
 	up->port.ops = &vserial_ambarella_pops;
 	up->port.dev = &pdev->dev;
