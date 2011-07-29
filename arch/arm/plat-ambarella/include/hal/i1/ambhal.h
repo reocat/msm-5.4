@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 144424
+ * @version 148725
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -430,10 +430,12 @@ AMB_HAL_FUNCTION_INFO_GET_DDR_PLL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_DDR_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_DDR_PLL_LOCK_STATUS,
 AMB_HAL_FUNCTION_INFO_ENABLE_DDR_CLOCK_OBSERVATION,
+AMB_HAL_FUNCTION_INFO_SET_3D_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_3D_PLL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_3D_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_3D_PLL_LOCK_STATUS,
 AMB_HAL_FUNCTION_INFO_ENABLE_3D_CLOCK_OBSERVATION,
+AMB_HAL_FUNCTION_INFO_SET_CORTEX_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_CORTEX_PLL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_CORTEX_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_CORTEX_PLL_LOCK_STATUS,
@@ -643,6 +645,33 @@ unsigned int delay ;
 typedef unsigned int amb_clock_frequency_t ;
 
 /**
+ * Video Capture Window Size
+ *
+ * @ingroup mode_group
+ */
+
+typedef enum {
+/** IMX 083: 1080p30 */
+AMB_VIDCAP_4096X3575,
+/** IMX 078: 1080p30, 720p30 */
+AMB_VIDCAP_4000X2250,
+/** Aptina 3135: 1080p60, 720p60, 1080p30, 720p30 */
+AMB_VIDCAP_2304X1296,
+/** IMX 078: 1080p60, 720p60 */
+AMB_VIDCAP_1984X1116,
+/** Aptina 3135: 4:3 photo preview */
+AMB_VIDCAP_2048X1536,
+/** IMX 078: 4:3 photo preview */
+AMB_VIDCAP_1312X984,
+/** IMX 083: 720p30 */
+AMB_VIDCAP_1536X384,
+/** IMX 083: photo preview */
+AMB_VIDCAP_1536X384_SMALL_VB,
+/* Reserved */
+AMB_VIDCAP_RESERVED=0xffffffff
+} amb_vidcap_window_size_t ;
+
+/**
  * Performance.
  *
  * @ingroup mode_group
@@ -769,12 +798,31 @@ AMB_DUAL_STREAM_RESERVED = 0xffffffffUL
 } amb_dual_stream_state_t ;
 
 /**
+ * 50Hz LCD Mode
+ *
+ * Turning this on forces the core clock frequency to be multiple of 36 MHz.
+ * 
+ * @ingroup mode_group
+ */
+
+typedef enum {
+/** 50Hz LCD Mode is off */
+AMB_50HZ_LCD_MODE_OFF,
+/** 50Hz LCD Mode is on */
+AMB_50HZ_LCD_MODE_ON,
+/* Reserved */
+AMB_50HZ_LCD_MODE_RESERVED=0xffffffff
+} amb_50hz_lcd_mode_t ;
+
+/**
  * Operating mode
  *
  * @ingroup mode_group
  */
 
 typedef struct {
+/** Sensor resolution */
+amb_vidcap_window_size_t vidcap_size ;
 /** Sensor resolution (capture)/Output resolution (playback) ::amb_performance_t */
 unsigned int performance ;
 /** Operating mode ::amb_mode_t */
@@ -785,6 +833,8 @@ unsigned int usb_state ;
 unsigned int hdmi_state ;
 /** Dual Stream state ::amb_dual_stream_state_t */
 unsigned int dual_stream_state ;
+/** 50Hz LCD Mode */
+amb_50hz_lcd_mode_t amb_50hz_lcd_mode ;
 } amb_operating_mode_t ;
 
 /**
@@ -1077,18 +1127,26 @@ typedef unsigned int (*amb_hal_function_thunk_t) (unsigned int, unsigned int, un
  * Do not call this function directly !!
  * Use the inline wrappers below instead
  */
+/*
+static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
+{
+  amb_hal_function_thunk_t amb_hal_function_thunk = (amb_hal_function_thunk_t) ((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32)) ;
 
+  return amb_hal_function_thunk (amb_hal_function_index, arg0, arg1, arg2, arg3) ;
+}
+*/
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
   unsigned int rval;
-  amb_hal_function_thunk_t amb_hal_function_thunk = (amb_hal_function_thunk_t) ((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32)) ;
+  amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 128 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
   AMBARELLA_REG_LOCK();
   AMBARELLA_INC_REGLOCK_COUNT();
-  rval = amb_hal_function_thunk (amb_hal_function_index, arg0, arg1, arg2, arg3) ;
+  rval = amb_hal_function (arg0, arg1, arg2, arg3) ;
   AMBARELLA_REG_UNLOCK();
 
   return rval ;
 }
+
 
 /**
  * Initialize the ambhal.
@@ -1541,6 +1599,28 @@ static INLINE amb_hal_success_t amb_enable_ddr_clock_observation (void *amb_hal_
  */
 
 /**
+ * Set the 3d pll frequency.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_3d_clock_frequency The requested frequency.
+ *
+ * @retval ::AMB_HAL_SUCCESS the new requested pll frequency is valid and it has
+ * been programmed.
+ *
+ * @retval ::AMB_HAL_FAIL the new pll frequency requested is not supported.
+ * @retval ::AMB_HAL_RETRY a previous pll frequency change request is still
+ * outstanding.
+ *
+ * @ingroup ddd_group
+ */
+
+static INLINE amb_hal_success_t amb_set_3d_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_3d_clock_frequency)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_3D_CLOCK_FREQUENCY, amb_3d_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
  * Get the current 3d pll configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
@@ -1619,6 +1699,28 @@ static INLINE amb_hal_success_t amb_enable_3d_clock_observation (void *amb_hal_b
  * CORTEX
  *
  */
+
+/**
+ * Set the cortex pll frequency.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_cortex_clock_frequency The requested frequency.
+ *
+ * @retval ::AMB_HAL_SUCCESS the new requested pll frequency is valid and it has
+ * been programmed.
+ *
+ * @retval ::AMB_HAL_FAIL the new pll frequency requested is not supported.
+ * @retval ::AMB_HAL_RETRY a previous pll frequency change request is still
+ * outstanding.
+ *
+ * @ingroup cortex_group
+ */
+
+static INLINE amb_hal_success_t amb_set_cortex_clock_frequency (void *amb_hal_base_address, amb_clock_frequency_t amb_cortex_clock_frequency)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_CORTEX_CLOCK_FREQUENCY, amb_cortex_clock_frequency, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
 
 /**
  * Get the current cortex pll configuration
