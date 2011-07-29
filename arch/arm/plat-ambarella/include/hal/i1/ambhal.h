@@ -1139,10 +1139,9 @@ static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, am
 {
   unsigned int rval;
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 128 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
-  AMBARELLA_REG_LOCK();
-  AMBARELLA_INC_REGLOCK_COUNT();
+  AMBARELLA_HAL_OS_LOCK();
   rval = amb_hal_function (arg0, arg1, arg2, arg3) ;
-  AMBARELLA_REG_UNLOCK();
+  AMBARELLA_HAL_OS_UNLOCK();
 
   return rval ;
 }
