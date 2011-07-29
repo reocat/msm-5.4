@@ -842,7 +842,9 @@ static void ambarella_init_vendor_2(void)
 	ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+#if !defined(CONFIG_AMBARELLA_IPC)
 	ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+#endif
 	ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 	ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 	ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
