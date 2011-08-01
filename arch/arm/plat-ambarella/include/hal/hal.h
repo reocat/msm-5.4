@@ -39,6 +39,24 @@
 #define DEFAULT_HAL_BASE		(0xfee00000)
 #define DEFAULT_HAL_SIZE		(0x00030000)
 
+#if (CHIP_REV == I1)
+#define AMBARELLA_HAL_OS_LOCK()	\
+	do {	\
+		AMBARELLA_REG_LOCK();	\
+		AMBARELLA_INC_REGLOCK_COUNT();	\
+	} while(0)
+
+
+#define AMBARELLA_HAL_OS_UNLOCK()	\
+	do {	\
+		AMBARELLA_REG_UNLOCK();	\
+	} while(0)
+
+#else
+#define AMBARELLA_HAL_OS_LOCK()
+#define AMBARELLA_HAL_OS_UNLOCK()
+#endif
+
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
 
 /* ==========================================================================*/
