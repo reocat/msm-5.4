@@ -1884,6 +1884,9 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
+#if defined(CONFIG_AMBARELLA_IPC)
+		struct ipc_sdinfo *sdinfo;
+#endif
 		mmc = mmc_alloc_host(sizeof(struct ambarella_sd_mmc_info),
 			&pdev->dev);
 		if (!mmc) {
@@ -2066,6 +2069,15 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				goto sd_errorCode_free_host;
 			}
 		}
+
+#if defined(CONFIG_AMBARELLA_IPC)
+		ambarella_sdinfo_ipc(mmc);
+		sdinfo = ambarella_sd_get_sdinfo(mmc);
+		ambarella_sd_cmd_from_ipc(mmc, sdinfo->is_init);
+		/* Set clock back to Itron desired. */
+		if (sdinfo->is_init)
+			pinfo->pcontroller->set_pll(sdinfo->clk);
+#endif
 
 		ambarella_sd_release_bus(mmc);
 	}
