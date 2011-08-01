@@ -34,7 +34,7 @@ USB device controller on Ambarella processors
 #define EP_IN_NUM		16
 #define EP_NUM_MAX		32
 
-#define CTRL_OUT_UDC_IDX		12
+#define CTRL_OUT_UDC_IDX		11
 
 #define IS_EP0(ep)		(ep->id == CTRL_IN || ep->id == CTRL_OUT)
 
