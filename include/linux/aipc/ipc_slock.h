@@ -20,6 +20,7 @@
 #define __AIPC_SPINLOCK_H__
 
 #include <linux/module.h>
+#include <linux/aipc/ipc_slock_def.h>
 
 #define DEBUG_SPINLOCK			0
 

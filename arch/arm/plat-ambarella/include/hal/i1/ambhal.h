@@ -1081,11 +1081,12 @@ typedef unsigned int (*amb_hal_function_thunk_t) (unsigned int, unsigned int, un
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
   unsigned int rval;
+
   amb_hal_function_thunk_t amb_hal_function_thunk = (amb_hal_function_thunk_t) ((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32)) ;
-  AMBARELLA_REG_LOCK();
-  AMBARELLA_INC_REGLOCK_COUNT();
+
+  AMBARELLA_HAL_OS_LOCK();
   rval = amb_hal_function_thunk (amb_hal_function_index, arg0, arg1, arg2, arg3) ;
-  AMBARELLA_REG_UNLOCK();
+  AMBARELLA_HAL_OS_UNLOCK();
 
   return rval ;
 }

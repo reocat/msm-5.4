@@ -1,10 +1,10 @@
 /*
- * include/linux/aipc/ipc_mutex_def.h
+ * include/linux/aipc/ipc_slock_def.h
  *
- * Ambarella IPC Mutex Definitions
+ * Ambarella IPC Spinlock Definitions
  *
  * History:
- *    2011/04/12 - [Henry Lin] created file
+ *    2011/08/01 - [Henry Lin] created file
  *
  * Copyright (C) 2004-2011, Ambarella, Inc.
  *
@@ -14,14 +14,12 @@
  * without the prior consent of Ambarella, Inc.
  */
 
-#ifndef __AIPC_MUTEX_DEF_H__
-#define __AIPC_MUTEX_DEF_H__
+#ifndef __AIPC_SLOCK_DEF_H__
+#define __AIPC_SLOCK_DEF_H__
 
 enum {
-	IPC_MUTEX_ID_FIO = 0,
-	IPC_MUTEX_ID_SD2,
-	IPC_MUTEX_ID_HAL,
-	IPC_MUTEX_ID_NUM
+	IPC_SLOCK_ID_DUMMY = 0,
+	IPC_SLOCK_ID_NUM
 };
 
 #endif

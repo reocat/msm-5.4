@@ -38,6 +38,11 @@
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 
 #include <linux/aipc/aipc.h>
+#include <linux/aipc/ipc_slock.h>
+#include <linux/aipc/ipc_shm.h>
+#include <linux/aipc/ipc_mutex.h>
+#include <linux/aipc/ipc_log.h>
+
 #include <mach/boss.h>
 #include <plat/ambcache.h>
 #include <asm/cacheflush.h>
@@ -184,6 +189,52 @@ static struct ambarella_mem_rev_desc ambarella_bst_info = {
 	.size				= DEFAULT_BST_SIZE,
 };
 
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+
+static int ipc_smem_init(void)
+{
+	u32 mem, size;
+
+	mem = boss->smem_addr + BOSS_BOSS_MEM_SIZE;
+	size = boss->smem_size - BOSS_BOSS_MEM_SIZE;
+
+	/* Initialize shm buffer */
+	if (size < IPC_SHM_MEM_SIZE) {
+		return -1;
+	}
+	ipc_shm_init(mem, IPC_SHM_MEM_SIZE);
+	mem += IPC_SHM_MEM_SIZE;
+	size -= IPC_SHM_MEM_SIZE;
+
+	/* Initialize spinlock buffer */
+	if (size < IPC_SPINLOCK_MEM_SIZE) {
+		return -1;
+	}
+	ipc_slock_init(mem, IPC_SPINLOCK_MEM_SIZE);
+	mem += IPC_SPINLOCK_MEM_SIZE;
+	size -= IPC_SPINLOCK_MEM_SIZE;
+
+	/* Initialize mutex buffer */
+	if (size < IPC_MUTEX_MEM_SIZE) {
+		return -1;
+	}
+	ipc_mutex_init_map(mem, IPC_MUTEX_MEM_SIZE);
+	mem += IPC_MUTEX_MEM_SIZE;
+	size -= IPC_MUTEX_MEM_SIZE;
+
+	/* Initialize log buffer */
+	if (size < IPC_LOG_MEM_SIZE) {
+		return -1;
+	}
+	ipc_log_init(mem, IPC_LOG_MEM_SIZE);
+	mem += IPC_LOG_MEM_SIZE;
+	size -= IPC_LOG_MEM_SIZE;
+
+	return 0;
+}
+#endif
+
 void __init ambarella_map_io(void)
 {
 	int					i;
@@ -276,6 +327,7 @@ void __init ambarella_map_io(void)
 	if (boss != NULL) {
 		struct map_desc	smem_desc;
 		u32 virt, phys;
+		int rval;
 
 		extern unsigned int boss_log_buf_ptr;
 		extern unsigned int boss_log_buf_len_ptr;
@@ -292,6 +344,10 @@ void __init ambarella_map_io(void)
 		iotable_init(&smem_desc, 1);
 
 		boss->smem_addr = virt;
+
+
+		rval = ipc_smem_init();
+		K_ASSERT(rval == 0);
 
 		boss->log_buf_ptr = ipc_virt_to_phys (boss_log_buf_ptr);
 		boss->log_buf_len_ptr = ipc_virt_to_phys (boss_log_buf_len_ptr);
@@ -820,7 +876,7 @@ static void __init early_boss(char *p)
 	extern unsigned int boss_log_buf_last_ptr;
 	unsigned long paddr, vaddr;
 
-	char	*endp;
+	char *endp;
 
 	paddr = memparse(p, &endp);
 	vaddr = ipc_phys_to_virt(paddr);

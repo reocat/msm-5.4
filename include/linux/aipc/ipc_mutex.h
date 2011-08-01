@@ -33,6 +33,8 @@
  */
 #define DEBUG_LOG_MUTEX			0
 #define DEBUG_LOG_MUTEX_NUM		8
+#define DEBUG_LOG_LOCK_TIME		0
+#define DEBUG_LOG_LOCK_TIME_NUM		5
 
 /*
  * Definitions
@@ -71,6 +73,13 @@ typedef struct ipc_mutex_os_s {
 	int priority;			// waiting priority
 } ipc_mutex_os_t;
 
+typedef struct ipc_mutex_lock_time_s {
+	int lock_id;
+	int lock_os;
+	int lock_wait;
+	int lock_time;
+} ipc_mutex_lock_time_t;
+
 typedef struct ipc_mutex_s {
 
 	int id;
@@ -93,6 +102,21 @@ typedef struct ipc_mutex_s {
 	int arm_owner;
 	int cortex_owner;
 
+#if DEBUG_LOG_LOCK_TIME
+	int max_lock_wait_time;
+	int max_lock_wait_os;
+	int max_lock_wait_id;
+	int uitron_lock_wait_time;
+	int linux_lock_wait_time;
+
+	int max_lock_time;
+	int max_lock_id;
+
+	int lock_time;
+	ipc_mutex_lock_time_t lock_times[DEBUG_LOG_LOCK_TIME_NUM];
+	int lock_time_idx;
+#endif
+
 #if DEBUG_LOG_MUTEX
 	int lock_log_idx;
 	int unlock_log_idx;
@@ -108,7 +132,8 @@ typedef struct ipc_mutex_s {
 
 } ipc_mutex_t;
 
-int ipc_mutex_init(u32 addr, u32 size);
+int ipc_mutex_init_map(u32 addr, u32 size);
+int ipc_mutex_init(void);
 int ipc_mutex_lock(int id);
 int ipc_mutex_unlock(int id);
 

@@ -21,6 +21,8 @@
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
+#include <linux/jiffies.h>
+#include <linux/delay.h>
 
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/irq.h>
@@ -312,15 +314,26 @@ static int ipc_mutex_os_init(ipc_mutex_os_obj_t *os, int type)
 }
 
 /*
- * Initialize mutex subsystem
+ * Initialize mutex memory map
  */
-int ipc_mutex_init(u32 addr, u32 size)
+int ipc_mutex_init_map(u32 addr, u32 size)
 {
-	u32 i;
-
 	/* Initialize global mutex object */
 	G_mutex = (ipc_mutex_obj_t *) addr;
 	G_mutex_mutexs = (ipc_mutex_t *) ambarella_phys_to_virt((u32) G_mutex->mutexs);
+
+	pr_notice ("ipc: mutex = %08x, %08x, %d\n",
+		(unsigned int) G_mutex, (unsigned int) G_mutex_mutexs, G_mutex->num);
+
+	return 0;
+}
+
+/*
+ * Initialize mutex subsystem
+ */
+int ipc_mutex_init(void)
+{
+	u32 i;
 
 	/* Initialize OS specific part */
 	for (i = 0; i < IPC_MUTEX_OS_NUM; i++) {
@@ -331,9 +344,7 @@ int ipc_mutex_init(u32 addr, u32 size)
 		init_completion(IPC_MUTEX_GET_COMPL(i));
 	}
 
-	pr_notice ("ipc: mutex = %08x, %08x, %d, %d, %d\n",
-		(unsigned int) G_mutex,
-		(unsigned int) G_mutex_mutexs, G_mutex->num,
+	pr_notice ("ipc: mutex = %d, %d\n",
 		G_mutex->os[IPC_MUTEX_OS_UITRON].wakeup_lock,
 		G_mutex->os[IPC_MUTEX_OS_LINUX].wakeup_lock);
 
@@ -357,12 +368,24 @@ int ipc_mutex_lock(int mtxid)
 	unsigned int tskid = IPC_MUTEX_GET_TASK_ID(cpu_id, pid);
 #endif
 	int next_id, prev_token;
+#if DEBUG_LOG_LOCK_TIME
+	unsigned long wtime;
+	ipc_mutex_lock_time_t *time;
+#endif
 
 	mutex = &G_mutex_mutexs[mtxid];
+#if DEBUG_LOG_LOCK_TIME
+	wtime = jiffies;
+#endif
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: %d@%d lock", mtxid, pid, cpu_id);
 
 	ipc_log_print(IPC_LOG_LEVEL_DEBUG, "lmtx: lock %d %d %d", mtxid, pid, cpu_id);
+
+	if (in_interrupt()) {
+		printk("ipc: ipc_mutex_lock(%d) cannot be called in interrupt context!!\n", mtxid);
+		K_ASSERT(0);
+	}
 
 	ipc_spin_lock(mutex->lock, &flags, LOCK_POS_LOCK);
 
@@ -403,6 +426,22 @@ int ipc_mutex_lock(int mtxid)
 	K_ASSERT(mutex->arm_lock_count == mutex->arm_unlock_count);
 	K_ASSERT(mutex->cortex_lock_count == mutex->cortex_unlock_count);
 
+#if DEBUG_LOG_LOCK_TIME
+	mutex->lock_time = jiffies;
+	wtime = jiffies - wtime;
+
+	mutex->linux_lock_wait_time += wtime;
+	if (wtime > mutex->max_lock_wait_time) {
+		mutex->max_lock_wait_time = wtime;
+		mutex->max_lock_wait_os = IPC_MUTEX_OS_LINUX;
+		mutex->max_lock_wait_id = mutex->lock_count;
+	}
+
+	time = &mutex->lock_times[mutex->lock_time_idx];
+	time->lock_id = mutex->lock_count;
+	time->lock_os = IPC_MUTEX_OS_LINUX;
+	time->lock_wait = wtime;
+#endif
 	mutex->lock_count++;
 	mutex->cortex_lock_count++;
 #if DEBUG_LOG_MUTEX
@@ -438,6 +477,9 @@ int ipc_mutex_unlock(int mtxid)
 #if DEBUG_LOG_MUTEX
 	unsigned int tskid = IPC_MUTEX_GET_TASK_ID(cpu_id, pid);
 #endif
+#if DEBUG_LOG_LOCK_TIME
+	ipc_mutex_lock_time_t *time;
+#endif
 
 	mutex = &G_mutex_mutexs[mtxid];
 	local = &mutex->os[IPC_MUTEX_OS_LOCAL];
@@ -446,6 +488,23 @@ int ipc_mutex_unlock(int mtxid)
 	ipc_log_print(IPC_LOG_LEVEL_DEBUG, "lmtx: unlock %d %d %d", mtxid, pid, cpu_id);
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: %d@%d unlock", mtxid, pid, cpu_id);
+
+#if DEBUG_LOG_LOCK_TIME
+	time = &mutex->lock_times[mutex->lock_time_idx];
+	if (jiffies < mutex->lock_time) {
+		time->lock_time = 0xffffffff - mutex->lock_time + jiffies;
+	} else {
+		time->lock_time = jiffies - mutex->lock_time;
+	}
+	if (++mutex->lock_time_idx == DEBUG_LOG_LOCK_TIME_NUM) {
+		mutex->lock_time_idx = 0;
+	}
+
+	if (time->lock_time > mutex->max_lock_time) {
+		mutex->max_lock_time = time->lock_time;
+		mutex->max_lock_id = time->lock_id;
+	}
+#endif
 
 	ipc_spin_lock(mutex->lock, &flags, LOCK_POS_UNLOCK);
 	

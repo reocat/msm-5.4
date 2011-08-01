@@ -275,48 +275,6 @@ static int ipc_spin_proc_lock(char *page, char **start,
 
 #endif  /* CONFIG_PROC_FS */
 
-static int ipc_smem_init(void)
-{
-	u32 mem, size;
-
-	mem = boss->smem_addr + BOSS_BOSS_MEM_SIZE;
-	size = boss->smem_size - BOSS_BOSS_MEM_SIZE;
-
-	/* Initialize shm buffer */
-	if (size < IPC_SHM_MEM_SIZE) {
-		return -1;
-	}
-	ipc_shm_init(mem, IPC_SHM_MEM_SIZE);
-	mem += IPC_SHM_MEM_SIZE;
-	size -= IPC_SHM_MEM_SIZE;
-
-	/* Initialize spinlock buffer */
-	if (size < IPC_SPINLOCK_MEM_SIZE) {
-		return -1;
-	}
-	ipc_slock_init(mem, IPC_SPINLOCK_MEM_SIZE);
-	mem += IPC_SPINLOCK_MEM_SIZE;
-	size -= IPC_SPINLOCK_MEM_SIZE;
-	
-	/* Initialize mutex buffer */
-	if (size < IPC_MUTEX_MEM_SIZE) {
-		return -1;
-	}
-	ipc_mutex_init(mem, IPC_MUTEX_MEM_SIZE);
-	mem += IPC_MUTEX_MEM_SIZE;
-	size -= IPC_MUTEX_MEM_SIZE;
-
-	/* Initialize log buffer */
-	if (size < IPC_LOG_MEM_SIZE) {
-		return -1;
-	}
-	ipc_log_init(mem, IPC_LOG_MEM_SIZE);
-	mem += IPC_LOG_MEM_SIZE;
-	size -= IPC_LOG_MEM_SIZE;
-
-	return 0;
-}
-
 static void ipc_status_report(void)
 {
 	i_status_init();
@@ -375,10 +333,7 @@ static int __init ambarella_ipc_init(void)
 #endif
 
 #endif
-	rval = ipc_smem_init();	/* Setup shared memory */
-	if (rval < 0)
-		goto done;
-
+	ipc_mutex_init();
 	ipc_irq_init();		/* Setup IRQs */
 	ipc_binder_init();	/* Setup the binder */
 	ipc_bh_init();		/* Setup the bottom half */
