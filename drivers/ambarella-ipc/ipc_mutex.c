@@ -327,6 +327,7 @@ int ipc_mutex_init_map(u32 addr, u32 size)
 
 	return 0;
 }
+EXPORT_SYMBOL(ipc_mutex_init_map);
 
 /*
  * Initialize mutex subsystem
@@ -350,6 +351,7 @@ int ipc_mutex_init(void)
 
 	return 0;
 }
+EXPORT_SYMBOL(ipc_mutex_init);
 
 /*
  * Lock a mutex.
@@ -460,6 +462,7 @@ int ipc_mutex_lock(int mtxid)
 
 	return rval;
 }
+EXPORT_SYMBOL(ipc_mutex_lock);
 
 /*
  * Unlock a mutex
@@ -496,6 +499,7 @@ int ipc_mutex_unlock(int mtxid)
 	} else {
 		time->lock_time = jiffies - mutex->lock_time;
 	}
+
 	if (++mutex->lock_time_idx == DEBUG_LOG_LOCK_TIME_NUM) {
 		mutex->lock_time_idx = 0;
 	}
@@ -581,4 +585,5 @@ int ipc_mutex_unlock(int mtxid)
 
 	return IPC_MUTEX_ERR_OK;
 }
+EXPORT_SYMBOL(ipc_mutex_unlock);
 

@@ -65,6 +65,7 @@ void ipc_slock_init(unsigned int addr, unsigned int size)
 	lock_obj.num = size / sizeof (ipc_slock_t);
 	spin_lock_init(&lock_obj.lock);
 }
+EXPORT_SYMBOL(ipc_slock_init);
 
 /*
  * Lock a spinlock.
@@ -110,6 +111,7 @@ void ipc_spin_lock(int i, unsigned int *flags, int pos)
 
 	smp_mb();
 }
+EXPORT_SYMBOL(ipc_spin_lock);
 
 /*
  * Unlock a spinlock.
@@ -143,6 +145,7 @@ void ipc_spin_unlock(int i, unsigned int flags, int pos)
 
 	spin_unlock_irqrestore(&lock_obj.lock, flags);
 }
+EXPORT_SYMBOL(ipc_spin_unlock);
 
 /*
  * Try to lock a spinlock
@@ -167,6 +170,7 @@ int ipc_spin_trylock(int i)
 		return 0;
 	}
 }
+EXPORT_SYMBOL(ipc_spin_trylock);
 
 /*
  * Test a spinlock
@@ -194,5 +198,5 @@ void ipc_spin_test(void)
 	while (ipc_readl (global_stop) == 0);
 
 }
-
+EXPORT_SYMBOL(ipc_spin_test);
 
