@@ -115,6 +115,7 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 0,
 		.chip_select	= 1,
 	},
+#if 0
 	{
 		.modalias	= "spidev",
 		.bus_num	= 0,
@@ -125,6 +126,7 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 0,
 		.chip_select	= 3,
 	},
+#endif
 #if (SPI_INSTANCES >= 2)
 	{
 		.modalias	= "spidev",
@@ -179,6 +181,10 @@ static void __init ambarella_init_filbert(void)
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
+
+	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
+	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
+	ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
