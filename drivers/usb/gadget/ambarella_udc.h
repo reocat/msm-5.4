@@ -108,10 +108,11 @@ struct ambarella_ep {
 	struct ambarella_data_desc 	*last_data_desc;
 	dma_addr_t		data_desc_addr; /* data_desc Physical Address */
 
-	unsigned		halted : 1;
-	unsigned		need_cnak : 1;
-	unsigned		ctrl_sts_phase : 1;
-	unsigned                dma_enabled : 1;
+	unsigned		halted : 1,
+				cancel_transfer : 1,
+				need_cnak : 1,
+				ctrl_sts_phase : 1,
+	        	        dma_going : 1;
 
 };
 

@@ -431,24 +431,27 @@ static struct usb_gadget_strings	stringtab = {
 void req_put(struct amb_dev *dev,
 		struct list_head *head, struct usb_request *req)
 {
-	spin_lock_irq(&dev->lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&dev->lock, flags);
 	list_add_tail(&req->list, head);
-	spin_unlock_irq(&dev->lock);
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 /* get a request and remove it from the head of a list */
 struct usb_request *req_get(struct amb_dev *dev, struct list_head *head)
 {
 	struct usb_request *req;
+	unsigned long flags;
 
-	spin_lock_irq(&dev->lock);
+	spin_lock_irqsave(&dev->lock, flags);
 	if (list_empty(head)) {
 		req = NULL;
 	} else {
 		req = list_first_entry(head, struct usb_request, list);
 		list_del(&req->list);
 	}
-	spin_unlock_irq(&dev->lock);
+	spin_unlock_irqrestore(&dev->lock, flags);
 	return req;
 }
 
@@ -459,15 +462,16 @@ struct usb_request *req_move(struct amb_dev *dev,
 		struct list_head *from, struct list_head *to)
 {
 	struct usb_request *req;
+	unsigned long flags;
 
-	spin_lock_irq(&dev->lock);
+	spin_lock_irqsave(&dev->lock, flags);
 	if (list_empty(from)) {
 		req = NULL;
 	} else {
 		req = list_first_entry(from, struct usb_request, list);
 		list_move_tail(&req->list, to);
 	}
-	spin_unlock_irq(&dev->lock);
+	spin_unlock_irqrestore(&dev->lock, flags);
 	return req;
 }
 
@@ -817,11 +821,12 @@ static void notify_worker(struct work_struct *work)
 	struct amb_dev		*dev = ag_device;
 	struct usb_request	*req = NULL;
 	struct amb_notify	*event = NULL;
+	unsigned long flags;
 	int rval = 0;
 
 	if (dev && (req = dev->notify_req)) {
 		event = req->buf;
-		spin_lock_irq(&dev->lock);
+		spin_lock_irqsave(&dev->lock, flags);
 		memcpy(event, &g_port, sizeof(struct amb_notify));
 		g_port.bNotifyType = PORT_NOTIFY_IDLE;
 		g_port.port_id = 0xffff;
@@ -834,7 +839,8 @@ static void notify_worker(struct work_struct *work)
 		req->length = AG_NOTIFY_MAXPACKET;
 		req->complete = amb_notify_complete;
 		req->context = dev;
-		spin_unlock_irq(&dev->lock);
+		req->zero = !(req->length % dev->notify_ep->maxpacket);
+		spin_unlock_irqrestore(&dev->lock, flags);
 
 		rval = usb_ep_queue (dev->notify_ep, req, GFP_ATOMIC);
 		if (rval < 0)
@@ -941,14 +947,14 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 {
 	struct amb_dev	*dev = ep->driver_data;
 	int		status = req->status;
+	unsigned long	flags;
 	int 		rval = 0;
 
+	spin_lock_irqsave(&dev->lock, flags);
 	switch (status) {
 	case 0: 			/* normal completion? */
-		spin_lock_irq(&dev->lock);
 		dev->error = 0;
 		list_move_tail(&req->list, &dev->in_idle_list);
-		spin_unlock_irq(&dev->lock);
 		break;
 	/* this endpoint is normally active while we're configured */
 	case -ECONNRESET:		/* request dequeued */
@@ -960,7 +966,7 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		ERROR (dev, "%s complete --> %d, %d/%d\n", ep->name,
+		ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		dev->error = 1;
 		/* queue request again */
@@ -971,8 +977,8 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 		}
 		break;
 	}
-
 	wake_up_interruptible(&dev->wq);
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 
@@ -984,14 +990,14 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 {
 	struct amb_dev	*dev = ep->driver_data;
 	int		status = req->status;
+	unsigned long	flags;
 	int 		rval = 0;
 
+	spin_lock_irqsave(&dev->lock, flags);
 	switch (status) {
 	case 0: 			/* normal completion */
-		spin_lock_irq(&dev->lock);
 		dev->error = 0;
 		list_add_tail(&req->list, &dev->out_req_list);
-		spin_unlock_irq(&dev->lock);
 		break;
 	/* this endpoint is normally active while we're configured */
 	case -ECONNRESET:		/* request dequeued */
@@ -1003,7 +1009,7 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		DBG (dev, "%s complete --> %d, %d/%d\n", ep->name,
+		ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		dev->error = 1;
 		/* queue request again */
@@ -1014,8 +1020,8 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 		}
 		break;
 	}
-
 	wake_up_interruptible(&dev->wq);
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 
@@ -1025,15 +1031,15 @@ static void amb_notify_complete (struct usb_ep *ep, struct usb_request *req)
 {
 	int				status = req->status;
 	struct amb_dev			*dev = ep->driver_data;
+	unsigned long 			flags;
 
+	spin_lock_irqsave(&dev->lock, flags);
 	req->context = NULL;
 
 	switch (status) {
 	case 0: 			/* normal completion */
 		/* issue the second notification if host reads the previous one */
-		spin_lock_irq(&dev->lock);
 		schedule_work(&notify_work);
-		spin_unlock_irq(&dev->lock);
 		break;
 
 	/* this endpoint is normally active while we're configured */
@@ -1044,10 +1050,11 @@ static void amb_notify_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		DBG (dev, "%s complete --> %d, %d/%d\n", ep->name,
+		ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		break;
 	}
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static void amb_start_notify (struct amb_dev *dev)
@@ -1077,6 +1084,7 @@ static void amb_start_notify (struct amb_dev *dev)
 	req->length = AG_NOTIFY_MAXPACKET;
 	req->complete = amb_notify_complete;
 	req->context = dev;
+	req->zero = !(req->length % dev->notify_ep->maxpacket);
 
 	value = usb_ep_queue (dev->notify_ep, req, GFP_ATOMIC);
 	if (value < 0)
@@ -1090,6 +1098,7 @@ static void amb_start_notify (struct amb_dev *dev)
 static void amb_reset_config (struct amb_dev *dev)
 {
 	struct usb_request *req;
+	unsigned long flags;
 
 	if (dev == NULL) {
 		printk(KERN_ERR "amb_reset_config: NULL device pointer\n");
@@ -1100,7 +1109,7 @@ static void amb_reset_config (struct amb_dev *dev)
 		return;
 	dev->config = 0;
 
-	spin_lock_irq(&dev->lock);
+	spin_lock_irqsave(&dev->lock, flags);
 
 	/* free write requests on the free list */
 	while(!list_empty(&dev->in_idle_list)) {
@@ -1117,7 +1126,7 @@ static void amb_reset_config (struct amb_dev *dev)
 		req->length = buflen;
 		amb_free_buf_req(dev->in_ep, req);
 	}
-	spin_unlock_irq(&dev->lock);
+	spin_unlock_irqrestore(&dev->lock, flags);
 	/* just disable endpoints, forcing completion of pending i/o.
 	 * all our completion handlers free their requests in this case.
 	 */
@@ -1404,33 +1413,6 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 		}
 		*(u8 *)req->buf = 0;
 		value = min (w_length, (u16) 1);
-		break;
-
-	/*
-	 * These are the same vendor-specific requests supported by
-	 * Intel's USB 2.0 compliance test devices.  We exceed that
-	 * device spec by allowing multiple-packet requests.
-	 */
-	case 0x5b:	/* control WRITE test -- fill the buffer */
-		if (ctrl->bRequestType != (USB_DIR_OUT|USB_TYPE_VENDOR))
-			goto unknown;
-		if (w_value || w_index)
-			break;
-		/* just read that many bytes into the buffer */
-		if (w_length > USB_BUFSIZ)
-			break;
-		value = w_length;
-		break;
-	case 0x5c:	/* control READ test -- return the buffer */
-		if (ctrl->bRequestType != (USB_DIR_IN|USB_TYPE_VENDOR))
-			goto unknown;
-		if (w_value || w_index)
-			break;
-		/* expect those bytes are still in the buffer; send back */
-		if (w_length > USB_BUFSIZ
-				|| w_length != req->length)
-			break;
-		value = w_length;
 		break;
 
 	default:

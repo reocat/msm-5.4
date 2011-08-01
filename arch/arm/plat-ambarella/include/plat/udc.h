@@ -205,6 +205,7 @@
 #define USB_DEV_TIMER_SCALE_DOWN	0x00000800		// 0 (RW) - for gate-level simulation only
 #define USB_DEV_NAK			0x00001000		// 0 (RW) - device NAK (applied to all EPs)
 #define USB_DEV_CSR_DONE		0x00002000		// 0 (RW) - set to ACK Set_Configuration or Set_Interface if USB_DEV_CSR_PRG_EN
+#define USB_DEV_FLUSH_RXFIFO		0x00004000
 														//		    clear to NAK
 #define USB_DEV_BURST_LEN		0x00070000		// bit mask (RW)
 #define USB_DEV_THRESH_LEN		0x0f000000		// bit mask (RW)
@@ -404,6 +405,7 @@
 struct ambarella_udc_controller {
 	void					(*init_pll)(void);
 	void					(*reset_usb)(void);
+	int					(*flush_rxfifo)(void);
 };
 
 /* ==========================================================================*/

@@ -67,9 +67,51 @@ static void reset_usb(void)
 #endif
 }
 
+static int flush_rxfifo(void)
+{
+	int retry_count = 1000;
+	int rval = 0;
+
+#if (CHIP_REV == A2) || (CHIP_REV == A3)
+	u32 dummy;
+
+	retry_count = retry_count * 10;
+	if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)){
+		/* Switch to slave mode */
+		amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
+
+		while (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
+			if (retry_count-- < 0) {
+				printk (KERN_ERR "%s: failed", __func__);
+				rval = -1;
+				break;
+			}
+			dummy = amba_readl (USB_RXFIFO_BASE);
+			udelay(5);
+		}
+		/* Switch to DMA mode */
+		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
+	}
+#else
+	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_NAK);
+	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_FLUSH_RXFIFO);
+	while(!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
+		if (retry_count-- < 0) {
+			printk (KERN_ERR "%s: failed", __func__);
+			rval = -1;
+			break;
+		}
+		udelay(5);
+	}
+	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_NAK);
+#endif
+	return rval;
+}
+
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 	.init_pll	= init_usb,
 	.reset_usb	= reset_usb,
+	.flush_rxfifo	= flush_rxfifo,
 };
 
 struct platform_device ambarella_udc0 = {
