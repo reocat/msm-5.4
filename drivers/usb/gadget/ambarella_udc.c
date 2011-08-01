@@ -356,15 +356,11 @@ static void init_ep0(struct ambarella_udc *udc)
 	  * or USB_UDC_REG can't be read or write */
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
 
-	/* setup CSR */
+	/* setup ep0 CSR. Note: ep0-in and ep0-out share the same CSR reg */
 	amba_clrbitsl(USB_UDC_REG(CTRL_IN), 0x7ff << 19);
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), USB_EP_CTRL_MAX_PKT_SZ << 19);
+	/* the direction bit should not take effect for ep0 */
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), 0x1 << 4);
-
-	amba_clrbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), 0x7ff << 19);
-	amba_setbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX),
-		USB_EP_CTRL_MAX_PKT_SZ << 19);
-	amba_clrbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), 0x1 << 4);
 }
 
 
@@ -913,13 +909,11 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 			amba_clrbitsl(udc->ep[i].ep_reg.ctrl_reg, USB_EP_STALL);
 		}
 
+		/* setup ep0 CSR. Note: ep0-in and ep0-out share the same CSR reg */
 		csr_config = (udc->cur_config << 7) | (udc->cur_intf << 11) |
 			(udc->cur_alt << 15);
 		amba_clrbitsl(USB_UDC_REG(CTRL_IN), 0xfff << 7);
 		amba_setbitsl(USB_UDC_REG(CTRL_IN), csr_config);
-
-		amba_clrbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), 0xfff << 7);
-		amba_setbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), csr_config);
 
 		udc->auto_ack_0_pkt = 1;
 		ambarella_ep_nuke(&udc->ep[CTRL_OUT], -EPROTO);
