@@ -186,6 +186,10 @@ static void __init ambarella_init_filbert(void)
 	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
 	ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 
+	ambarella_eth1_platform_info.mii_reset.gpio_id = GPIO(125);
+	ambarella_eth1_platform_info.mii_reset.active_level = GPIO_LOW;
+	ambarella_eth1_platform_info.mii_reset.active_delay = 20;
+
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 

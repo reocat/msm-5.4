@@ -72,6 +72,7 @@ extern int ambarella_init_fb(void);
 
 /* ==========================================================================*/
 extern struct ambarella_eth_platform_info ambarella_eth0_platform_info;
+extern struct ambarella_eth_platform_info ambarella_eth1_platform_info;
 
 extern struct ambarella_idc_platform_info ambarella_idc0_platform_info;
 extern struct ambarella_idc_platform_info ambarella_idc1_platform_info;
