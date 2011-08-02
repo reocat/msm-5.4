@@ -189,6 +189,8 @@ int ambcache_l2_disable()
 		flush_cache_all();
 		outer_flush_all();
 		outer_disable();
+		outer_inv_all();
+		flush_cache_all();
 		local_irq_restore(flags);
 		enable_nonboot_cpus();
 	}

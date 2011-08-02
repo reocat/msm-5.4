@@ -62,18 +62,12 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	u32					timeout = 100000;
 	u32					*phead_address;
-	u32					bstadd;
-	u32					bstsize;
 	int					retval = 0;
+#ifdef CONFIG_OUTER_CACHE
+	int					enable_l2;
+#endif
 
 	spin_lock(&boot_lock);
-
-	if (get_ambarella_bstmem_info(&bstadd, &bstsize) != AMB_BST_MAGIC) {
-		pr_err("Can't find SMP BST!\n");
-		retval = -EPERM;
-		goto boot_secondary_exit;
-	}
-	bstadd = ambarella_phys_to_virt(bstadd);
 
 	phead_address = get_ambarella_bstmem_head();
 	if (phead_address == (u32 *)AMB_BST_INVALID) {
@@ -81,15 +75,27 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		retval = -EPERM;
 		goto boot_secondary_exit;
 	}
+
+#ifdef CONFIG_OUTER_CACHE
+	enable_l2 = outer_is_enabled();
+	if (enable_l2) {
+		flush_cache_all();
+		outer_flush_all();
+		outer_disable();
+		outer_inv_all();
+		flush_cache_all();
+	}
+#endif
+
 	phead_address[PROCESSOR_START_0 + cpu] = BSYM(
 		virt_to_phys(ambarella_secondary_startup));
 	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
-	ambcache_clean_range((void *)(bstadd), bstsize);
-	smp_wmb();
+	ambcache_flush_range((void *)(phead_address),
+		AMBARELLA_BST_HEAD_CACHE_SIZE);
 	smp_cross_call(cpumask_of(cpu), 1);
 	while (timeout) {
-		ambcache_inv_range((void *)(bstadd), bstsize);
-		smp_rmb();
+		ambcache_inv_range((void *)(phead_address),
+			AMBARELLA_BST_HEAD_CACHE_SIZE);
 		if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID)
 			break;
 		udelay(10);
@@ -100,10 +106,16 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 			phead_address[PROCESSOR_STATUS_0 + cpu]);
 	}
 	if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
-		pr_err("CPU%d: [0x%08x] tmo[%d].\n", cpu, timeout,
+		pr_err("CPU%d: tmo[%d] [0x%08x].\n", cpu, timeout,
 			phead_address[PROCESSOR_START_0 + cpu]);
 		retval = -EPERM;
 	}
+
+#ifdef CONFIG_OUTER_CACHE
+	if (enable_l2) {
+		outer_enable();
+	}
+#endif
 
 boot_secondary_exit:
 	spin_unlock(&boot_lock);
@@ -130,9 +142,9 @@ void __init smp_init_cpus(void)
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
 	int					i;
-	u32					*phead_address;
 	u32					bstadd;
 	u32					bstsize;
+	u32					*phead_address;
 
 	if (get_ambarella_bstmem_info(&bstadd, &bstsize) != AMB_BST_MAGIC) {
 		pr_err("Can't find SMP BST!\n");
@@ -143,7 +155,6 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 		pr_err("Can't find SMP BST Head!\n");
 		return;
 	}
-	bstadd = ambarella_phys_to_virt(bstadd);
 
 	for (i = 0; i < max_cpus; i++)
 		set_cpu_present(i, true);
@@ -153,7 +164,8 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 			virt_to_phys(ambarella_secondary_startup));
 		phead_address[PROCESSOR_STATUS_0 + i] = AMB_BST_START_COUNTER;
 	}
-	ambcache_flush_range((void *)(bstadd), bstsize);
+	ambcache_flush_range((void *)(phead_address),
+		AMBARELLA_BST_HEAD_CACHE_SIZE);
 	smp_max_cpus = max_cpus;
 }
 

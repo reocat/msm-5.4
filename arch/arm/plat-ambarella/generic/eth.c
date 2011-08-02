@@ -38,6 +38,8 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+#if (ETH_INSTANCES >= 1)
+
 static int ambarella_eth0_is_supportclk(void)
 {
 #if (SUPPORT_GMII == 1)
@@ -72,7 +74,7 @@ static u32 ambarella_eth0_getclk(void)
 
 static u32 ambarella_eth0_get_supported(void)
 {
-	u32			supported;
+	u32					supported;
 
 	supported = (SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full | \
 		SUPPORTED_100baseT_Half | SUPPORTED_100baseT_Full | \
@@ -132,7 +134,6 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 };
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
 
-/* ==========================================================================*/
 int __init ambarella_init_eth0(unsigned int high, unsigned int low)
 {
 	int					errCode = 0;
@@ -147,7 +148,6 @@ int __init ambarella_init_eth0(unsigned int high, unsigned int low)
 	return errCode;
 }
 
-/* ==========================================================================*/
 struct platform_device ambarella_eth0 = {
 	.name		= "ambarella-eth",
 	.id		= 0,
@@ -159,4 +159,110 @@ struct platform_device ambarella_eth0 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+
+#endif
+
+/* ==========================================================================*/
+#if (ETH_INSTANCES >= 2)
+
+static int ambarella_eth1_is_supportclk(void)
+{
+	return 0;
+}
+
+static void ambarella_eth1_setclk(u32 freq)
+{
+}
+
+static u32 ambarella_eth1_getclk(void)
+{
+	return 0;
+}
+
+static u32 ambarella_eth1_get_supported(void)
+{
+	u32					supported;
+
+	supported = (SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full | \
+		SUPPORTED_100baseT_Half | SUPPORTED_100baseT_Full | \
+		SUPPORTED_Autoneg | SUPPORTED_MII);
+
+	return supported;
+}
+
+static struct resource ambarella_eth1_resources[] = {
+	[0] = {
+		.start	= ETH2_BASE,
+		.end	= ETH2_BASE + 0x1FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= ETH2_IRQ,
+		.end	= ETH2_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
+	.mac_addr		= {0, 0, 0, 0, 0, 0},
+	.napi_weight		= 64,
+	.max_work_count		= 5,
+	.mii_id			= -1,
+	.phy_id			= 0x00008201,
+	.phy_irq	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.mii_power	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.mii_reset	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.default_clk		= 125000000,
+	.default_1000_clk	= 125000000,
+	.default_100_clk	= 125000000,
+	.default_10_clk		= 125000000,
+	.is_enabled		= rct_is_eth_enabled,
+	.is_supportclk		= ambarella_eth1_is_supportclk,
+	.setclk			= ambarella_eth1_setclk,
+	.getclk			= ambarella_eth1_getclk,
+	.get_supported		= ambarella_eth1_get_supported,
+};
+AMBA_ETH_PARAM_CALL(1, ambarella_eth1_platform_info, 0644);
+
+int __init ambarella_init_eth1(unsigned int high, unsigned int low)
+{
+	int					errCode = 0;
+
+	ambarella_eth1_platform_info.mac_addr[0] = 0;
+	ambarella_eth1_platform_info.mac_addr[1] = 0;
+	ambarella_eth1_platform_info.mac_addr[2] = 0;
+	ambarella_eth1_platform_info.mac_addr[3] = 0;
+	ambarella_eth1_platform_info.mac_addr[4] = 0;
+	ambarella_eth1_platform_info.mac_addr[5] = 0;
+
+	return errCode;
+}
+
+struct platform_device ambarella_eth1 = {
+	.name		= "ambarella-eth",
+	.id		= 1,
+	.resource	= ambarella_eth1_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_eth1_resources),
+	.dev		= {
+		.platform_data		= &ambarella_eth1_platform_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+#endif
 
