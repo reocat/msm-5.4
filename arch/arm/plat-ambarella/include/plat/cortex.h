@@ -25,30 +25,32 @@
 #define __PLAT_AMBARELLA_CORTEX_H
 
 /* ==========================================================================*/
-#define AMBARELLA_VA_SCU_BASE		(AXI_BASE + 0x00000000)
-#define AMBARELLA_VA_GIC_CPU_BASE	(AXI_BASE + 0x00000100)
-#define AMBARELLA_VA_GT_BASE		(AXI_BASE + 0x00000200)
-#define AMBARELLA_VA_PT_WD_BASE		(AXI_BASE + 0x00000600)
-#define AMBARELLA_VA_GIC_DIST_BASE	(AXI_BASE + 0x00001000)
-#define AMBARELLA_VA_L2CC_BASE		(AXI_BASE + 0x00002000)
+#define AMBARELLA_VA_SCU_BASE			(AXI_BASE + 0x00000000)
+#define AMBARELLA_VA_GIC_CPU_BASE		(AXI_BASE + 0x00000100)
+#define AMBARELLA_VA_GT_BASE			(AXI_BASE + 0x00000200)
+#define AMBARELLA_VA_PT_WD_BASE			(AXI_BASE + 0x00000600)
+#define AMBARELLA_VA_GIC_DIST_BASE		(AXI_BASE + 0x00001000)
+#define AMBARELLA_VA_L2CC_BASE			(AXI_BASE + 0x00002000)
 
 /* ==========================================================================*/
-#define PROCESSOR_START_0		(0)
-#define PROCESSOR_START_1		(1)
-#define PROCESSOR_START_2		(2)
-#define PROCESSOR_START_3		(3)
+#define PROCESSOR_START_0			(0)
+#define PROCESSOR_START_1			(1)
+#define PROCESSOR_START_2			(2)
+#define PROCESSOR_START_3			(3)
 
-#define PROCESSOR_STATUS_0		(4)
-#define PROCESSOR_STATUS_1		(5)
-#define PROCESSOR_STATUS_2		(6)
-#define PROCESSOR_STATUS_3		(7)
+#define PROCESSOR_STATUS_0			(4)
+#define PROCESSOR_STATUS_1			(5)
+#define PROCESSOR_STATUS_2			(6)
+#define PROCESSOR_STATUS_3			(7)
 
-#define ICDISER0_MASK			(8)
-#define INTDIS_LOCKER			(9)
-#define INTDIS_STATUS			(10)
+#define ICDISER0_MASK				(8)
+#define INTDIS_LOCKER				(9)
+#define INTDIS_STATUS				(10)
 
-#define MACHINE_ID			(11)
-#define ATAG_DATA			(12)
+#define MACHINE_ID				(11)
+#define ATAG_DATA				(12)
+
+#define AMBARELLA_BST_HEAD_CACHE_SIZE		(32)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
