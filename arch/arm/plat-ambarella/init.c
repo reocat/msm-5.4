@@ -171,6 +171,12 @@ int __init ambarella_init_machine(char *board_name)
 		platform_device_register(&ambarella_eth0);
 		device_set_wakeup_capable(&ambarella_eth0.dev, 1);
 		device_set_wakeup_enable(&ambarella_eth0.dev, 0);
+
+	#if (ETH_INSTANCES >= 2)
+		platform_device_register(&ambarella_eth1);
+		device_set_wakeup_capable(&ambarella_eth1.dev, 1);
+		device_set_wakeup_enable(&ambarella_eth1.dev, 0);
+	#endif
 	}
 
 	return retval;
