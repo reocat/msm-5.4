@@ -45,13 +45,6 @@
 #define CACHE_LINE_SIZE		32
 #define CACHE_LINE_MASK		~(CACHE_LINE_SIZE - 1)
 
-#define LOCK_POS_L_CLNT_OUT		48
-#define LOCK_POS_L_CLNT_IN		49
-#define LOCK_POS_L_SVC_IN		50
-#define LOCK_POS_L_SVC_OUT		51
-#define LOCK_POS_LU_CLNT_OUT		52
-#define LOCK_POS_L_CLNT_CANCEL		53
-
 int ipc_check_svcxprt(SVCXPRT *svcxprt);
 
 int g_ipc_dump = 0;
@@ -918,12 +911,12 @@ static inline void ipc_timeout_init(SVCXPRT *svcxprt)
 #endif
 }
 
-static inline enum clnt_stat ipc_timeout_cancel(SVCXPRT *svcxprt, unsigned int *flags)
+static inline enum clnt_stat ipc_timeout_cancel(SVCXPRT *svcxprt)
 {
 #ifdef STATIC_SVC
-	ipc_spin_lock(svcxprt->svcxprt_lock, flags, LOCK_POS_L_CLNT_CANCEL);
+	ipc_spin_lock(svcxprt->svcxprt_lock, IPC_SLOCK_POS_L_CLNT_CANCEL);
 	svcxprt->svcxprt_cancel = 1;
-	ipc_spin_unlock(svcxprt->svcxprt_lock, *flags, LOCK_POS_L_CLNT_CANCEL);
+	ipc_spin_unlock(svcxprt->svcxprt_lock, IPC_SLOCK_POS_L_CLNT_CANCEL);
 #endif
 	svcxprt->u.l.timeout = 1;
 	return IPC_TIMEDOUT;
@@ -950,7 +943,6 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 	SVCXPRT *svcxprt = NULL;
 	SVCXPRT *svcxprt_pa;
 	enum clnt_stat rval = IPC_SUCCESS;
-	unsigned int flags;
 	unsigned int time_send_req = ipc_tick_get ();
 	unsigned int xid;
 
@@ -993,9 +985,9 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 	ipc_timeout_init(svcxprt);
 	init_completion(&svcxprt->u.l.cmpl);
 
-	ipc_spin_lock(ipc_buf->lock, &flags, LOCK_POS_LU_CLNT_OUT);
+	ipc_spin_lock(ipc_buf->lock, IPC_SLOCK_POS_LU_CLNT_OUT);
 	svcxprt->xid = ipc_buf->ipc_xid++;
-	ipc_spin_unlock(ipc_buf->lock, flags, LOCK_POS_LU_CLNT_OUT);
+	ipc_spin_unlock(ipc_buf->lock, IPC_SLOCK_POS_LU_CLNT_OUT);
 
 	xid = svcxprt->xid;
 	svcxprt_pa = ipc_binder_preproc_out (svcxprt, 0);
@@ -1004,7 +996,7 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 			xid, svcxprt->pid, svcxprt->fid, time_send_req);
 
 	/* Put the SVCXPRT into outgoing queue */
-	ipc_spin_lock(ipc_buf->clnt_out_lock, &flags, LOCK_POS_LU_CLNT_OUT);
+	ipc_spin_lock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_LU_CLNT_OUT);
 
 	if (IPC_CMD_QUEUE_NOT_FULL(ipc_buf->clnt_out_head, ipc_buf->clnt_out_tail)) 
 	{
@@ -1016,12 +1008,12 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 		ipc_send_irq(IPC_IRQ_REQ);
 	} else {
 		rval = IPC_CMD_QUEUE_FULL;
-		ipc_spin_unlock(ipc_buf->clnt_out_lock, flags, LOCK_POS_LU_CLNT_OUT);
+		ipc_spin_unlock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_LU_CLNT_OUT);
 		ipc_clnt_call_complete(svcxprt, rval);
 		goto exit;
 	}
 
-	ipc_spin_unlock(ipc_buf->clnt_out_lock, flags, LOCK_POS_LU_CLNT_OUT);
+	ipc_spin_unlock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_LU_CLNT_OUT);
 
 	if ((aipc_hdr->proc_type & IPC_CALL_ASYNC) == 0) {
 
@@ -1036,7 +1028,7 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
  			aipc_nl_send_result_to_lu(svcxprt);
 			rval = IPC_SUCCESS;
 		} else {
-			rval = ipc_timeout_cancel(svcxprt, &flags);
+			rval = ipc_timeout_cancel(svcxprt);
 		}
 
 		if(rval != IPC_TIMEDOUT) {
@@ -1186,7 +1178,6 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	SVCXPRT *svcxprt_pa;
 	int fid = -1;
 	enum clnt_stat rval = IPC_PROCESSING;
-	unsigned int flags;
 	unsigned int time_send_req = ipc_tick_get ();
 	unsigned int xid;
 
@@ -1253,9 +1244,9 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	ipc_timeout_init(svcxprt);
 	init_completion(&svcxprt->u.l.cmpl);
 
-	ipc_spin_lock(ipc_buf->lock, &flags, LOCK_POS_L_CLNT_OUT);
+	ipc_spin_lock(ipc_buf->lock, IPC_SLOCK_POS_L_CLNT_OUT);
 	svcxprt->xid = ipc_buf->ipc_xid++;
-	ipc_spin_unlock(ipc_buf->lock, flags, LOCK_POS_L_CLNT_OUT);
+	ipc_spin_unlock(ipc_buf->lock, IPC_SLOCK_POS_L_CLNT_OUT);
 
 	xid = svcxprt->xid;
 	svcxprt_pa = ipc_binder_preproc_out (svcxprt, 0);
@@ -1264,7 +1255,7 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 			xid, svcxprt->pid, svcxprt->fid, time_send_req);
 
 	/* Put the SVCXPRT into outgoing queue */
-	ipc_spin_lock(ipc_buf->clnt_out_lock, &flags, LOCK_POS_L_CLNT_OUT);
+	ipc_spin_lock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_L_CLNT_OUT);
 
 	if (IPC_CMD_QUEUE_NOT_FULL(ipc_buf->clnt_out_head, ipc_buf->clnt_out_tail)) 
 	{
@@ -1276,12 +1267,12 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 		ipc_send_irq(IPC_IRQ_REQ);
 	} else {
 		rval = IPC_CMD_QUEUE_FULL;
-		ipc_spin_unlock(ipc_buf->clnt_out_lock, flags, LOCK_POS_L_CLNT_OUT);
+		ipc_spin_unlock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_L_CLNT_OUT);
 		ipc_clnt_call_complete(svcxprt, rval);
 		goto exit;
 	}
 
-	ipc_spin_unlock(ipc_buf->clnt_out_lock, flags, LOCK_POS_L_CLNT_OUT);
+	ipc_spin_unlock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_L_CLNT_OUT);
 
 #if CONFIG_IPC_INFINITE_WAIT
 	ftab->timeout = 0xFFFFFFFF;
@@ -1301,7 +1292,7 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 			/* ready to return upstack! */
 			rval = (enum clnt_stat) svcxprt->rcode;
 		} else {
-			rval = ipc_timeout_cancel(svcxprt, &flags);
+			rval = ipc_timeout_cancel(svcxprt);
 		}
 
 		if(rval != IPC_TIMEDOUT) {
@@ -1421,7 +1412,6 @@ EXPORT_SYMBOL(ipc_clnt_set_call_timeout);
 bool_t ipc_svc_sendreply(SVCXPRT *svcxprt, char *out)
 {
 	bool_t rval = 1;
-	unsigned int flags;
 	SVCXPRT *svcxprt_pa;
 
 	K_ASSERT(svcxprt);
@@ -1435,7 +1425,7 @@ bool_t ipc_svc_sendreply(SVCXPRT *svcxprt, char *out)
 	svcxprt_pa = ipc_binder_preproc_out (svcxprt, 1);
 
 	/* Now put the transaction into outgoing queue */
-	ipc_spin_lock(ipc_buf->svc_out_lock, &flags, LOCK_POS_L_SVC_OUT);
+	ipc_spin_lock(ipc_buf->svc_out_lock, IPC_SLOCK_POS_L_SVC_OUT);
 
 	if (IPC_CMD_QUEUE_NOT_FULL(ipc_buf->svc_out_head, ipc_buf->svc_out_tail))
 	{
@@ -1449,7 +1439,7 @@ bool_t ipc_svc_sendreply(SVCXPRT *svcxprt, char *out)
 		rval = 0;
 	}
 
-	ipc_spin_unlock(ipc_buf->svc_out_lock, flags, LOCK_POS_L_SVC_OUT);
+	ipc_spin_unlock(ipc_buf->svc_out_lock, IPC_SLOCK_POS_L_SVC_OUT);
 
 	K_ASSERT(rval == 1);
 
@@ -1504,17 +1494,15 @@ static void ipc_binder_got_reply(SVCXPRT *svcxprt)
 #ifdef STATIC_SVC
 int ipc_cancel_check(SVCXPRT *svcxprt)
 {
-	unsigned int flags;
-
-	ipc_spin_lock(svcxprt->svcxprt_lock, &flags, LOCK_POS_L_CLNT_CANCEL);
+	ipc_spin_lock(svcxprt->svcxprt_lock, IPC_SLOCK_POS_L_CLNT_CANCEL);
 	if(svcxprt->svcxprt_cancel) {
 		svcxprt->rcode = IPC_CANCEL;
 		svcxprt->svcxprt_cancel = 0;
-		ipc_spin_unlock(svcxprt->svcxprt_lock, flags, LOCK_POS_L_CLNT_CANCEL);
+		ipc_spin_unlock(svcxprt->svcxprt_lock, IPC_SLOCK_POS_L_CLNT_CANCEL);
 		ipc_svc_sendreply(svcxprt, NULL);
 		return 1;
 	}
-	ipc_spin_unlock(svcxprt->svcxprt_lock, flags, LOCK_POS_L_CLNT_CANCEL);
+	ipc_spin_unlock(svcxprt->svcxprt_lock, IPC_SLOCK_POS_L_CLNT_CANCEL);
 	return 0;
 }
 #endif
@@ -1605,11 +1593,10 @@ void ipc_binder_got_request(SVCXPRT *svcxprt)
 void ipc_binder_request(void)
 {
 	SVCXPRT *svcxprt;
-	unsigned int flags;
 
 	/* Check incoming requests */
 	DEBUG_MSG_IPC_LK ("[ipc] check incoming requests\n");
-	ipc_spin_lock(ipc_buf->svc_in_lock, &flags, LOCK_POS_L_SVC_IN);
+	ipc_spin_lock(ipc_buf->svc_in_lock, IPC_SLOCK_POS_L_SVC_IN);
 	if (IPC_CMD_QUEUE_NOT_EMPTY(ipc_buf->svc_in_head, ipc_buf->svc_in_tail)) {
 		svcxprt = ipc_buf->svc_incoming[ipc_buf->svc_in_head];
 		ipc_buf->svc_in_head = IPC_CMD_QUEUE_PTR_NEXT(ipc_buf->svc_in_head);
@@ -1617,7 +1604,7 @@ void ipc_binder_request(void)
 	} else {
 		svcxprt = NULL;
 	}
-	ipc_spin_unlock(ipc_buf->svc_in_lock, flags, LOCK_POS_L_SVC_IN);
+	ipc_spin_unlock(ipc_buf->svc_in_lock, IPC_SLOCK_POS_L_SVC_IN);
 
 	if (svcxprt) {
 		svcxprt = ipc_binder_preproc_in (svcxprt, 1);
@@ -1635,11 +1622,10 @@ void ipc_binder_request(void)
 void ipc_binder_reply(void)
 {
 	SVCXPRT *svcxprt;
-	unsigned int flags;
 
 	/* Check incoming replies (complete call upstack to client) */
 	DEBUG_MSG_IPC_LK ("[ipc] check incoming replies\n");
-	ipc_spin_lock(ipc_buf->clnt_in_lock, &flags, LOCK_POS_L_CLNT_IN);
+	ipc_spin_lock(ipc_buf->clnt_in_lock, IPC_SLOCK_POS_L_CLNT_IN);
 	if (IPC_CMD_QUEUE_NOT_EMPTY(ipc_buf->clnt_in_head, ipc_buf->clnt_in_tail)) {
 		svcxprt = ipc_buf->clnt_incoming[ipc_buf->clnt_in_head];
 		ipc_buf->clnt_in_head = IPC_CMD_QUEUE_PTR_NEXT(ipc_buf->clnt_in_head);
@@ -1647,7 +1633,7 @@ void ipc_binder_reply(void)
 	} else {
 		svcxprt = NULL;
 	}
-	ipc_spin_unlock(ipc_buf->clnt_in_lock, flags, LOCK_POS_L_CLNT_IN);
+	ipc_spin_unlock(ipc_buf->clnt_in_lock, IPC_SLOCK_POS_L_CLNT_IN);
 
 	if (svcxprt) {
 		svcxprt = ipc_binder_preproc_in (svcxprt, 0);

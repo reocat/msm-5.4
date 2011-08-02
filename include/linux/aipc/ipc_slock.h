@@ -38,6 +38,7 @@
 
 typedef struct {
 	volatile unsigned int lock;
+	volatile unsigned int flags;
 #if DEBUG_SPINLOCK
 	volatile unsigned int lock_count;	/* increment after get mutex lock */
 	volatile unsigned int unlock_count;	/* increment before release mutex lock */
@@ -56,8 +57,8 @@ typedef struct {
 
 void	ipc_slock_init(unsigned int addr, unsigned int size);
 
-void	ipc_spin_lock(int i, unsigned int *flags, int pos);
-void	ipc_spin_unlock(int i, unsigned int flags, int pos);
+void	ipc_spin_lock(int i, int pos);
+void	ipc_spin_unlock(int i, int pos);
 
 int	ipc_spin_trylock(int i);
 

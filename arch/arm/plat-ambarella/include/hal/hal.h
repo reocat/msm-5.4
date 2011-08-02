@@ -39,12 +39,13 @@
 #define DEFAULT_HAL_BASE		(0xfee00000)
 #define DEFAULT_HAL_SIZE		(0x00030000)
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-#include <linux/aipc/ipc_mutex.h>
+#if defined(CONFIG_BOSS_MULTIPLE_CORE)
+#include <linux/aipc/ipc_slock.h>
 #define AMBARELLA_BOSS_HAL_LOCK() \
-	ipc_mutex_lock(IPC_MUTEX_ID_HAL)
+	ipc_spin_lock(IPC_SLOCK_ID_HAL, IPC_SLOCK_POS_HAL)
+
 #define AMBARELLA_BOSS_HAL_UNLOCK() \
-	ipc_mutex_unlock(IPC_MUTEX_ID_HAL)
+	ipc_spin_unlock(IPC_SLOCK_ID_HAL, IPC_SLOCK_POS_HAL)
 #else
 #define AMBARELLA_BOSS_HAL_LOCK()
 #define AMBARELLA_BOSS_HAL_UNLOCK()

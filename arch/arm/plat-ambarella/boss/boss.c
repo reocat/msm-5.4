@@ -35,10 +35,9 @@
  */
 int boss_get_irq_owner(int irq)
 {
-	unsigned int flags;
 	int owner = BOSS_IRQ_OWNER_UITRON;
 
-	ipc_spin_lock(boss->lock, &flags, 0);
+	ipc_spin_lock(boss->lock, IPC_SLOCK_POS_BOSS_GET_IRQ_OWNER);
 
 	if (irq < 32) {
 		if (boss->vic1mask & (0x1 << irq)) {
@@ -56,7 +55,7 @@ int boss_get_irq_owner(int irq)
 		}
 	}
 
-	ipc_spin_unlock(boss->lock, flags, 0);
+	ipc_spin_unlock(boss->lock, IPC_SLOCK_POS_BOSS_GET_IRQ_OWNER);
 
 	return owner;
 }
@@ -67,9 +66,7 @@ EXPORT_SYMBOL(boss_get_irq_owner);
  */
 void boss_enable_irq(int irq)
 {
-	unsigned int flags;
-
-	ipc_spin_lock(boss->lock, &flags, 0);
+	ipc_spin_lock(boss->lock, IPC_SLOCK_POS_BOSS_ENABLE_IRQ);
 
 	if (irq < 32) {
 		boss->vic1mask |= (0x1 << irq);
@@ -81,7 +78,7 @@ void boss_enable_irq(int irq)
 		boss->vic3mask |= (0x1 << (irq - 64));
 	}
 
-	ipc_spin_unlock(boss->lock, flags, 0);
+	ipc_spin_unlock(boss->lock, IPC_SLOCK_POS_BOSS_ENABLE_IRQ);
 }
 EXPORT_SYMBOL(boss_enable_irq);
 
@@ -90,9 +87,7 @@ EXPORT_SYMBOL(boss_enable_irq);
  */
 void boss_disable_irq(int irq)
 {
-	unsigned int flags;
-
-	ipc_spin_lock(boss->lock, &flags, 0);
+	ipc_spin_lock(boss->lock, IPC_SLOCK_POS_BOSS_DISABLE_IRQ);
 
 	if (irq < 32) {
 		boss->vic1mask &= ~(0x1 << irq);
@@ -104,7 +99,7 @@ void boss_disable_irq(int irq)
 		boss->vic3mask &= ~(0x1 << (irq - 64));
 	}
 
-	ipc_spin_unlock(boss->lock, flags, 0);
+	ipc_spin_unlock(boss->lock, IPC_SLOCK_POS_BOSS_DISABLE_IRQ);
 }
 EXPORT_SYMBOL(boss_disable_irq);
 

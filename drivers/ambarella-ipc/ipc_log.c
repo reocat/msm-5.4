@@ -32,7 +32,6 @@
  * Definitions
  */
 #define IPC_LOG_MSG_BUF_SIZE		256
-#define LOCK_POS_LOG_PRINT		48
 
 /*
  * Structures
@@ -74,7 +73,6 @@ int ipc_log_init(u32 addr, u32 size)
 void ipc_log_print(int level, const char *fmt, ...)
 {
 	va_list args;
-	unsigned int flags;
 	int len, left;
 	u8 *msg;
 
@@ -89,7 +87,7 @@ void ipc_log_print(int level, const char *fmt, ...)
 		return;
 	}
 
-	ipc_spin_lock(boss->ipc_log_lock, &flags, LOCK_POS_LOG_PRINT);
+	ipc_spin_lock(boss->ipc_log_lock, IPC_SLOCK_POS_LOG_PRINT);
 
 	msg = G_ipc_log.msg;
 	len = vsnprintf((char *) msg, IPC_LOG_MSG_BUF_SIZE, fmt, args);
@@ -107,7 +105,7 @@ void ipc_log_print(int level, const char *fmt, ...)
 	memcpy(&G_ipc_log.buf[boss->ipc_log_ptr], msg, len);
 	boss->ipc_log_ptr = (boss->ipc_log_ptr + len) & IPC_LOG_MEM_SIZE_MASK;
 
-	ipc_spin_unlock(boss->ipc_log_lock, flags, LOCK_POS_LOG_PRINT);
+	ipc_spin_unlock(boss->ipc_log_lock, IPC_SLOCK_POS_LOG_PRINT);
 
 	if (G_ipc_log.output) {
 		if (level != IPC_LOG_LEVEL_ERROR) {
@@ -124,11 +122,9 @@ void ipc_log_print(int level, const char *fmt, ...)
  */
 void ipc_log_set_level(int level)
 {
-	unsigned int flags;
-
-	ipc_spin_lock(boss->ipc_log_lock, &flags, LOCK_POS_LOG_PRINT);
+	ipc_spin_lock(boss->ipc_log_lock, IPC_SLOCK_POS_LOG_PRINT);
 	boss->ipc_log_level = level;
-	ipc_spin_unlock(boss->ipc_log_lock, flags, LOCK_POS_LOG_PRINT);
+	ipc_spin_unlock(boss->ipc_log_lock, IPC_SLOCK_POS_LOG_PRINT);
 }
 
 /*

@@ -57,15 +57,6 @@
 #define DEBUG_MSG_MUTEX(...)
 #endif
 
-#define LOCK_POS_WAKEUP_ADD		1
-#define LOCK_POS_WAKEUP_REMOVE		2
-#define LOCK_POS_WAKEUP_LOCAL		3
-#define LOCK_POS_CONFIG			4
-#define LOCK_POS_LOCK			5
-#define LOCK_POS_UNLOCK			6
-#define LOCK_POS_LOCK_COUNT		7
-#define LOCK_POS_TEST			8
-
 /*
  * Structures
  */
@@ -218,15 +209,14 @@ static void
 ipc_mutex_wakeup_remote(ipc_mutex_t *mutex)
 {
 	ipc_mutex_os_obj_t *os = &G_mutex->os[IPC_MUTEX_OS_REMOTE];
-	unsigned int flags;
 	int mtxid = mutex->id;
 
-	ipc_spin_lock(os->wakeup_lock, &flags, LOCK_POS_WAKEUP_ADD);
+	ipc_spin_lock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_ADD);
 
 	os->wakeup_bitmap[IPC_MUTEX_GET_GROUP(mtxid)] |= IPC_MUTEX_GET_BIT(mtxid);
 	ipc_mutex_irq_send(os->irqno);
 
-	ipc_spin_unlock(os->wakeup_lock, flags, LOCK_POS_WAKEUP_ADD);
+	ipc_spin_unlock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_ADD);
 }
 
 /*
@@ -235,10 +225,9 @@ ipc_mutex_wakeup_remote(ipc_mutex_t *mutex)
 static ipc_mutex_t *
 ipc_mutex_wakeup_lookup(ipc_mutex_os_obj_t *os)
 {
-	unsigned int flags;
 	int i, mtxid = -1;
 
-	ipc_spin_lock(os->wakeup_lock, &flags, LOCK_POS_WAKEUP_REMOVE);
+	ipc_spin_lock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_REMOVE);
 
 	for (i = 0; i < IPC_MUTEX_GROUP_NUM; i++) {
 		unsigned int bits;
@@ -250,7 +239,7 @@ ipc_mutex_wakeup_lookup(ipc_mutex_os_obj_t *os)
 		}
 	}
 
-	ipc_spin_unlock(os->wakeup_lock, flags, LOCK_POS_WAKEUP_REMOVE);
+	ipc_spin_unlock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_REMOVE);
 
 	return 	(mtxid >= 0)?&G_mutex_mutexs[mtxid]:NULL;
 }
@@ -262,19 +251,18 @@ static void
 ipc_mutex_wakeup_local(ipc_mutex_t *mutex)
 {
 	ipc_mutex_os_t *os = &mutex->os[IPC_MUTEX_OS_LOCAL];
-	unsigned int flags;
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: help to wakeup a local waiting task", 
 			mutex->id);
 
-	ipc_spin_lock(mutex->lock, &flags, LOCK_POS_WAKEUP_LOCAL);
+	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_WAKEUP_LOCAL);
 	K_ASSERT(mutex->token == IPC_MUTEX_OS_LOCAL);
 	K_ASSERT(os->count > 0);
 	os->count--;
 	if (os->count == 0) {
 		os->priority = 0;
 	}
-	ipc_spin_unlock(mutex->lock, flags, LOCK_POS_WAKEUP_LOCAL);
+	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_WAKEUP_LOCAL);
 
 	complete(IPC_MUTEX_GET_COMPL(mutex->id));
 }
@@ -363,7 +351,6 @@ int ipc_mutex_lock(int mtxid)
 	int rval = IPC_MUTEX_ERR_OK;
 	ipc_mutex_t *mutex;
 	int locked;
-	unsigned int flags;
 	int cpu_id = smp_processor_id();
 	int pid = current->pid;
 #if DEBUG_LOG_MUTEX
@@ -389,7 +376,7 @@ int ipc_mutex_lock(int mtxid)
 		K_ASSERT(0);
 	}
 
-	ipc_spin_lock(mutex->lock, &flags, LOCK_POS_LOCK);
+	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_LOCK);
 
 	next_id = mutex->next_id;
 	prev_token = mutex->token;
@@ -407,7 +394,7 @@ int ipc_mutex_lock(int mtxid)
 	}
 	mutex->next_id++;
 
-	ipc_spin_unlock(mutex->lock, flags, LOCK_POS_LOCK);
+	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_LOCK);
 
 	if (locked) {
 		int err;
@@ -422,7 +409,7 @@ int ipc_mutex_lock(int mtxid)
 
 	K_ASSERT(mutex->token == IPC_MUTEX_OS_LOCAL);
 
-	ipc_spin_lock(mutex->lock, &flags, LOCK_POS_LOCK_COUNT);
+	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_LOCK_COUNT);
 
 	K_ASSERT(mutex->lock_count == mutex->unlock_count);
 	K_ASSERT(mutex->arm_lock_count == mutex->arm_unlock_count);
@@ -454,7 +441,7 @@ int ipc_mutex_lock(int mtxid)
 		mutex->lock_log_idx = 0;
 	}
 #endif
-	ipc_spin_unlock(mutex->lock, flags, LOCK_POS_LOCK_COUNT);
+	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_LOCK_COUNT);
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: %d@%d lock_OK", mtxid, pid, cpu_id);
 
@@ -474,7 +461,6 @@ int ipc_mutex_unlock(int mtxid)
 	ipc_mutex_t *mutex;
 	int token = IPC_MUTEX_TOKEN_NONE;
 	ipc_mutex_os_t *local, *remote;
-	unsigned int flags;
 	int cpu_id = smp_processor_id();
 	int pid = current->pid;
 #if DEBUG_LOG_MUTEX
@@ -510,7 +496,7 @@ int ipc_mutex_unlock(int mtxid)
 	}
 #endif
 
-	ipc_spin_lock(mutex->lock, &flags, LOCK_POS_UNLOCK);
+	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_UNLOCK);
 	
 	if (local->count + remote->count > 0)
 	{
@@ -567,7 +553,7 @@ int ipc_mutex_unlock(int mtxid)
 	mutex->cortex_unlock_count++;
 	mutex->token = token;
 
-	ipc_spin_unlock(mutex->lock, flags, LOCK_POS_UNLOCK);
+	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_UNLOCK);
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: %d@%d unlock_OK => next: %s (l: %d, r: %d)",
 			mtxid, pid, cpu_id, G_mutex_owners[token],

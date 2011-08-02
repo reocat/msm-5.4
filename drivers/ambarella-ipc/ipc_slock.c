@@ -70,9 +70,10 @@ EXPORT_SYMBOL(ipc_slock_init);
 /*
  * Lock a spinlock.
  */
-void ipc_spin_lock(int i, unsigned int *flags, int pos)
+void ipc_spin_lock(int i, int pos)
 {
 	ipc_slock_t *lock = &lock_obj.locks[i];
+	unsigned long flags;
 	unsigned long tmp;
 #if DEBUG_SPINLOCK
 	int cpu_id, pid;
@@ -81,7 +82,7 @@ void ipc_spin_lock(int i, unsigned int *flags, int pos)
 	pid = current->pid;
 #endif
 
-	spin_lock_irqsave(&lock_obj.lock, *flags);
+	spin_lock_irqsave(&lock_obj.lock, flags);
 
 #if (CHIP_REV == I1)
 	__asm__ __volatile__(
@@ -95,6 +96,7 @@ void ipc_spin_lock(int i, unsigned int *flags, int pos)
 	: "cc");
 #endif /* CHIP_REV == I1 */
 
+	lock->flags = flags;
 #if DEBUG_SPINLOCK
 	K_ASSERT(lock->lock_count == lock->unlock_count);
 	lock->cpu = IPC_SPINLOCK_CPU_CORTEX;
@@ -116,7 +118,7 @@ EXPORT_SYMBOL(ipc_spin_lock);
 /*
  * Unlock a spinlock.
  */
-void ipc_spin_unlock(int i, unsigned int flags, int pos)
+void ipc_spin_unlock(int i, int pos)
 {
 	ipc_slock_t *lock = &lock_obj.locks[i];
 
@@ -143,7 +145,7 @@ void ipc_spin_unlock(int i, unsigned int flags, int pos)
 	: "cc");
 #endif /* CHIP_REV == I1 */
 
-	spin_unlock_irqrestore(&lock_obj.lock, flags);
+	spin_unlock_irqrestore(&lock_obj.lock, lock->flags);
 }
 EXPORT_SYMBOL(ipc_spin_unlock);
 
@@ -180,7 +182,6 @@ void ipc_spin_test(void)
 	int cpu_id;
 	volatile unsigned int *global_count, *global_stop;
 	volatile unsigned int *cortex_count;
-	unsigned int flags;
 
 	cpu_id = smp_processor_id();
 	pr_notice("[ipc] ipc_spin_test: %d\n", cpu_id);
@@ -190,10 +191,10 @@ void ipc_spin_test(void)
 	cortex_count = ipc_shm_get(IPC_SHM_AREA_CORTEX0 + cpu_id, IPC_SHM_CORTEX_COUNT); 
 
 	do {
-		ipc_spin_lock (0, &flags, 6);
+		ipc_spin_lock (0, IPC_SLOCK_POS_TEST);
 		ipc_inc (global_count);
 		ipc_inc (cortex_count);
-		ipc_spin_unlock (0, flags, 6);
+		ipc_spin_unlock (0, IPC_SLOCK_POS_TEST);
 	}
 	while (ipc_readl (global_stop) == 0);
 
