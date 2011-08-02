@@ -64,7 +64,9 @@ struct ambarella_data_desc {
 	u32 data_ptr;
 	u32 next_desc_ptr;
 	u32 rsvd1;
-	u32 rsvd2;
+	u32 last_aux;		/* dma enginee may disturb the L bit in status
+				 * field, so we use this field as auxiliary to
+				 * mark the last descriptor */
 	dma_addr_t cur_desc_addr;	/* dma address for this descriptor */
 	struct ambarella_data_desc *next_desc_virt;
 };
