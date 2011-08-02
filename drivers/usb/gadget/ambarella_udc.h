@@ -144,7 +144,8 @@ struct ambarella_udc {
 	unsigned 		auto_ack_0_pkt : 1,
 				remote_wakeup_en  : 1,
 				host_suspended : 1,
-				sys_suspended : 1;
+				sys_suspended : 1,
+				reset_by_host : 1;
 };
 
 
