@@ -907,7 +907,6 @@ static void ambarella_ep_nuke(struct ambarella_ep *ep, int status)
 	}
 }
 
-
 /*
  * Name: device_interrupt
  * Description:
@@ -979,9 +978,19 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 
 		amba_writel(USB_DEV_INTR_REG, USB_DEV_RESET);
 
+		ambarella_disable_all_intr();
+
 		if (udc->host_suspended && udc->driver && udc->driver->resume){
+			spin_unlock(&udc->lock);
 			udc->driver->resume(&udc->gadget);
+			spin_lock(&udc->lock);
 			udc->host_suspended = 0;
+		}
+
+		if (udc->reset_by_host == 0) {
+			udc->reset_by_host = 1;
+			udc->controller_info->reset_usb();
+			ambarella_init_usb();
 		}
 
 		ambarella_stop_activity(udc);
@@ -1020,6 +1029,8 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 	/* case 4. enumeration complete */
 	else if(int_value & USB_DEV_ENUM_CMPL) {
 		u32 	value = 0;
+
+		udc->reset_by_host = 0;
 
 		/* Ack the CMPL interrupt */
 		amba_writel(USB_DEV_INTR_REG, USB_DEV_ENUM_CMPL);
@@ -2107,6 +2118,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
+	udc->reset_by_host = 0;
 	/* Initial USB PLL */
 	udc->controller_info->init_pll();
 	/* Reset USB */
