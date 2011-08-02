@@ -34,7 +34,7 @@ USB device controller on Ambarella processors
 #define EP_IN_NUM		16
 #define EP_NUM_MAX		32
 
-#define CTRL_OUT_UDC_IDX		12
+#define CTRL_OUT_UDC_IDX		11
 
 #define IS_EP0(ep)		(ep->id == CTRL_IN || ep->id == CTRL_OUT)
 
@@ -64,7 +64,9 @@ struct ambarella_data_desc {
 	u32 data_ptr;
 	u32 next_desc_ptr;
 	u32 rsvd1;
-	u32 rsvd2;
+	u32 last_aux;		/* dma enginee may disturb the L bit in status
+				 * field, so we use this field as auxiliary to
+				 * mark the last descriptor */
 	dma_addr_t cur_desc_addr;	/* dma address for this descriptor */
 	struct ambarella_data_desc *next_desc_virt;
 };
@@ -142,7 +144,8 @@ struct ambarella_udc {
 	unsigned 		auto_ack_0_pkt : 1,
 				remote_wakeup_en  : 1,
 				host_suspended : 1,
-				sys_suspended : 1;
+				sys_suspended : 1,
+				reset_by_host : 1;
 };
 
 

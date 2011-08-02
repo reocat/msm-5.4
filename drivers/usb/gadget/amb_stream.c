@@ -1126,6 +1126,15 @@ static void amb_reset_config (struct amb_dev *dev)
 		req->length = buflen;
 		amb_free_buf_req(dev->in_ep, req);
 	}
+
+	while(!list_empty(&dev->out_req_list)) {
+		req = list_entry(dev->out_req_list.prev,
+				struct usb_request, list);
+		list_del_init(&req->list);
+		req->length = buflen;
+		amb_free_buf_req(dev->out_ep, req);
+	}
+
 	spin_unlock_irqrestore(&dev->lock, flags);
 	/* just disable endpoints, forcing completion of pending i/o.
 	 * all our completion handlers free their requests in this case.
@@ -1189,6 +1198,10 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 		if (req) {
 			req->complete = amb_bulk_out_complete;
 			result = usb_ep_queue(ep, req, GFP_ATOMIC);
+			if (result < 0) {
+				ERROR(dev, "%s: can't queue bulk out request, "
+					"rval = %d\n", __func__, result);
+			}
 		} else {
 			ERROR(dev, "%s: can't allocate bulk in requests\n", __func__);
 			result = -ENOMEM;

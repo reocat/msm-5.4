@@ -40,7 +40,7 @@
 #endif
 
 #define DRIVER_DESC	"Ambarella USB Device Controller Gadget"
-#define DRIVER_VERSION	"12 June 2008"
+#define DRIVER_VERSION	"2 August 2011"
 #define DRIVER_AUTHOR	"Cao Rongrong <rrcao@ambarella.com>"
 
 #define	DMA_ADDR_INVALID	(~(dma_addr_t)0)
@@ -359,15 +359,11 @@ static void init_ep0(struct ambarella_udc *udc)
 	  * or USB_UDC_REG can't be read or write */
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
 
-	/* setup CSR */
+	/* setup ep0 CSR. Note: ep0-in and ep0-out share the same CSR reg */
 	amba_clrbitsl(USB_UDC_REG(CTRL_IN), 0x7ff << 19);
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), USB_EP_CTRL_MAX_PKT_SZ << 19);
+	/* the direction bit should not take effect for ep0 */
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), 0x1 << 4);
-
-	amba_clrbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), 0x7ff << 19);
-	amba_setbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX),
-		USB_EP_CTRL_MAX_PKT_SZ << 19);
-	amba_clrbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), 0x1 << 4);
 }
 
 
@@ -414,13 +410,13 @@ ambarella_get_last_desc(struct ambarella_ep *ep)
 	struct ambarella_data_desc *desc = ep->data_desc;
 	int retry_count = 1000;
 
-	while (desc && (desc->status & USB_DMA_LAST) == 0){
-		if (retry_count-- < 0){
+	while(desc && (desc->status & USB_DMA_LAST) == 0) {
+		if (retry_count-- < 0) {
 			printk(KERN_ERR "Can't find the last descriptor\n");
 			break;
 		}
 
-		if (desc->next_desc_virt == NULL)
+		if (desc->last_aux == 1)
 			break;
 
 		desc = desc->next_desc_virt;
@@ -429,26 +425,30 @@ ambarella_get_last_desc(struct ambarella_ep *ep)
 	return desc;
 }
 
-
-/*
- * Name: ambarella_check_error
- * Description:
- *	Check if transfer error occurred for specified endpoint.
- */
-static u32 ambarella_check_error1 (struct ambarella_ep *ep)
+static u32 ambarella_check_bna_error (struct ambarella_ep *ep)
 {
 	u32	ep_sts, retval = 0;
 
 	ep_sts = amba_readl(ep->ep_reg.sts_reg);
 
-	if (ep_sts & USB_EP_BUF_NOT_AVAIL)	/* Error: Buffer Not Available */
-	{
+	/* Error: Buffer Not Available */
+	if (ep_sts & USB_EP_BUF_NOT_AVAIL) {
 		printk(KERN_ERR "[USB]:BNA error in %s\n", ep->ep.name);
 		amba_writel(ep->ep_reg.sts_reg, USB_EP_BUF_NOT_AVAIL);
 		retval = 1;
 	}
-	if (ep_sts & USB_EP_HOST_ERR)	/* Error: Host Error */
-	{
+
+	return retval;
+}
+
+static u32 ambarella_check_he_error (struct ambarella_ep *ep)
+{
+	u32	ep_sts, retval = 0;
+
+	ep_sts = amba_readl(ep->ep_reg.sts_reg);
+
+	/* Error: Host Error */
+	if (ep_sts & USB_EP_HOST_ERR) {
 		printk(KERN_ERR "[USB]:HE error in %s\n", ep->ep.name);
 		amba_writel(ep->ep_reg.sts_reg, USB_EP_HOST_ERR);
 		retval = 1;
@@ -457,12 +457,7 @@ static u32 ambarella_check_error1 (struct ambarella_ep *ep)
 	return retval;
 }
 
-/*
- * Name: ambarella_check_error2
- * Description:
- *	Check if transfer error occurred during DMA.
- */
-static u32 ambarella_check_error2 (struct ambarella_ep *ep)
+static u32 ambarella_check_dma_error (struct ambarella_ep *ep)
 {
 	u32	retval = 0, sts_tmp1, sts_tmp2;
 
@@ -490,6 +485,10 @@ static void ambarella_free_descriptor(struct ambarella_ep *ep,
 	next_data_desc = req->data_desc;
 	for(i = 0; i < req->desc_count; i++){
 		data_desc = next_data_desc;
+		data_desc->status = USB_DMA_BUF_HOST_BUSY | USB_DMA_LAST;
+		data_desc->data_ptr = 0xffffffff;
+		data_desc->next_desc_ptr = 0;
+		data_desc->last_aux = 1;
 		next_data_desc = data_desc->next_desc_virt;
 		dma_pool_free(desc_dma_pool, data_desc, data_desc->cur_desc_addr);
 	}
@@ -497,6 +496,40 @@ static void ambarella_free_descriptor(struct ambarella_ep *ep,
 	req->desc_count = 0;
 	req->data_desc = NULL;
 	req->data_desc_addr = 0;
+}
+
+static int ambarella_reuse_descriptor(struct ambarella_ep *ep,
+	struct ambarella_request *req, u32 desc_count)
+{
+	struct ambarella_data_desc *data_desc, *next_data_desc;
+	u32 data_transmit, rest_bytes, i;
+
+	next_data_desc = req->data_desc;
+	for(i = 0; i < desc_count; i++){
+		rest_bytes = req->req.length - i * ep->ep.maxpacket;
+		if(ep->dir == USB_DIR_IN)
+			data_transmit = rest_bytes < ep->ep.maxpacket ?
+				rest_bytes : ep->ep.maxpacket;
+		else
+			data_transmit = 0;
+
+		data_desc = next_data_desc;
+		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
+		data_desc->reserved = 0xffffffff;
+		data_desc->data_ptr = req->req.dma + i * ep->ep.maxpacket;
+		data_desc->last_aux = 0;
+
+		next_data_desc = data_desc->next_desc_virt;
+	}
+
+	/* Patch last one.
+	 * Note: don't set NULL to nex_desc_virt, becasue
+	 * ambarella_free_descriptor() will use it to find the
+	 * next descriptor. */
+	data_desc->status |= USB_DMA_LAST;
+	data_desc->last_aux = 1;
+
+	return 0;
 }
 
 static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
@@ -508,16 +541,21 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 	dma_addr_t desc_phys;
 	u32 desc_count, data_transmit, rest_bytes, i;
 
-	/* build data descriptor chain */
-	if(req->desc_count > 0){
-		ambarella_free_descriptor(ep, req);
-	}
-
 	desc_count = (req->req.length + ep->ep.maxpacket - 1) / ep->ep.maxpacket;
 	if(req->req.zero && (req->req.length % ep->ep.maxpacket == 0))
 		desc_count++;
 	if(desc_count == 0)
 		desc_count = 1;
+
+	if (desc_count <= req->desc_count) {
+		ambarella_reuse_descriptor(ep, req, desc_count);
+		return 0;
+	}
+
+	if(req->desc_count > 0)
+		ambarella_free_descriptor(ep, req);
+
+	req->desc_count = desc_count;
 
 	for(i = 0; i < desc_count; i++){
 		rest_bytes = req->req.length - i * ep->ep.maxpacket;
@@ -528,16 +566,20 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 			data_transmit = 0;
 
 		data_desc = dma_pool_alloc(udc->desc_dma_pool, gfp, &desc_phys);
-		if (!data_desc)
+		if (!data_desc) {
+			req->desc_count = i;
+			if(req->desc_count > 0)
+				ambarella_free_descriptor(ep, req);
 			return -ENOMEM;
+		}
 
-		data_desc->data_ptr = req->req.dma + i * ep->ep.maxpacket;
-		data_desc->reserved = 0xffffffff;
-		data_desc->next_desc_ptr = 0;
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
+		data_desc->reserved = 0xffffffff;
+		data_desc->data_ptr = req->req.dma + i * ep->ep.maxpacket;
+		data_desc->next_desc_ptr = 0;
+		data_desc->rsvd1 = 0xffffffff;
+		data_desc->last_aux = 0;
 		data_desc->cur_desc_addr = desc_phys;
-
-		req->desc_count++;
 
 		if(prev_data_desc){
 			prev_data_desc->next_desc_ptr = desc_phys;
@@ -556,6 +598,7 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 	data_desc->status |= USB_DMA_LAST;
 	data_desc->next_desc_ptr = 0;
 	data_desc->next_desc_virt = NULL;
+	data_desc->last_aux = 1;
 
 	return 0;
 }
@@ -574,10 +617,12 @@ static void ambarella_clr_ep_nak(struct ambarella_ep *ep)
 	}
 }
 
-static void ambarella_enable_rx_dma(void)
+static void ambarella_enable_rx_dma(struct ambarella_ep *ep)
 {
+	ep->dma_going = 1;
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN);
 }
+
 
 /*
  * Name: ambarella_set_tx_dma
@@ -606,9 +651,7 @@ static void ambarella_set_rx_dma(struct ambarella_ep *ep,
 {
 	struct ambarella_ep_reg *ep_reg = &ep->ep_reg;
 	struct ambarella_udc *udc = ep->udc;
-	struct ambarella_data_desc *last_data_desc;
-
-	u32 i, wait_timeout = 10000;
+	u32 i;
 
 	dprintk(DEBUG_NORMAL, "Enter. %s Rx DMA\n", ep->ep.name);
 
@@ -623,33 +666,15 @@ static void ambarella_set_rx_dma(struct ambarella_ep *ep,
 	/* enable dma completion interrupt for next RX data */
 	amba_clrbitsl(USB_DEV_EP_INTR_MSK_REG, 1 << ep->id);
 	/* re-enable DMA read */
-	amba_setbitsl (USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN);
-	ep->dma_going = 1;
+	ambarella_enable_rx_dma(ep);
 
-	/* Wait until FIFO empty */
-	while (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
-
-		if((last_data_desc = ambarella_get_last_desc(ep)) == NULL)
-			break;
-
-		if ((last_data_desc->status & USB_DMA_BUF_STS) == USB_DMA_BUF_DMA_DONE){
-			break;
+	if (amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS) {
+		/* clear NAK for TX dma */
+		for (i = 0; i < EP_NUM_MAX; i++) {
+			struct ambarella_ep *_ep = &udc->ep[i];
+			if (_ep->need_cnak == 1)
+				ambarella_clr_ep_nak(_ep);
 		}
-
-		if (wait_timeout-- == 0) {
-			printk (KERN_INFO "%s: [usb] Empty RX FIFO\n", ep->ep.name);
-			ambarella_ep_fifo_flush(ep);
-			break;
-		}
-
-		udelay(10);
-	}
-
-	/* clear NAK for TX dma */
-	for (i = 0; i < EP_NUM_MAX; i++) {
-		struct ambarella_ep *_ep = &udc->ep[i];
-		if (_ep->need_cnak == 1)
-			ambarella_clr_ep_nak(_ep);
 	}
 
 	/* clear NAK */
@@ -749,7 +774,7 @@ static void ambarella_handle_data_in(struct ambarella_ep *ep)
 	req = list_first_entry(&ep->queue, struct ambarella_request,queue);
 
 	/* If error happened, issue the request again */
-	if (ambarella_check_error2(ep))
+	if (ambarella_check_dma_error(ep))
 		req->req.status = -EPROTO;
 	else {
 		/* No error happened, so all the data has been sent to host */
@@ -781,7 +806,7 @@ static int ambarella_handle_data_out(struct ambarella_ep *ep)
 	req = list_first_entry(&ep->queue, struct ambarella_request,queue);
 
 	/* If error happened, issue the request again */
-	if (ambarella_check_error2(ep))
+	if (ambarella_check_dma_error(ep))
 		req->req.status = -EPROTO;
 
 	recv_size = ep->last_data_desc->status & USB_DMA_RXTX_BYTES;
@@ -805,7 +830,8 @@ static int ambarella_handle_data_out(struct ambarella_ep *ep)
 		/* For STATUS-IN stage */
 		ambarella_clr_ep_nak(&udc->ep[CTRL_IN]);
 		/* Re-enable Rx DMA to receive next setup packet */
-		ambarella_enable_rx_dma();
+		ambarella_enable_rx_dma(ep);
+		ep->dma_going = 0;
 	}
 
 	return 0;
@@ -821,7 +847,6 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 	halted_tmp = ep->halted;
 
 	list_del_init(&req->queue);
-	ambarella_free_descriptor(ep, req);
 
 	if(!list_empty(&ep->queue) && !ep->halted && !ep->cancel_transfer){
 		need_queue = 1;
@@ -877,10 +902,6 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 
 static void ambarella_ep_nuke(struct ambarella_ep *ep, int status)
 {
-	/* Sanity check */
-	if (&ep->queue == NULL)
-		return;
-
 	while (!list_empty (&ep->queue)) {
 		struct ambarella_request *req;
 		req = list_first_entry(&ep->queue,
@@ -888,7 +909,6 @@ static void ambarella_ep_nuke(struct ambarella_ep *ep, int status)
 		ambarella_udc_done(ep, req, status);
 	}
 }
-
 
 /*
  * Name: device_interrupt
@@ -934,13 +954,11 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 			amba_clrbitsl(udc->ep[i].ep_reg.ctrl_reg, USB_EP_STALL);
 		}
 
+		/* setup ep0 CSR. Note: ep0-in and ep0-out share the same CSR reg */
 		csr_config = (udc->cur_config << 7) | (udc->cur_intf << 11) |
 			(udc->cur_alt << 15);
 		amba_clrbitsl(USB_UDC_REG(CTRL_IN), 0xfff << 7);
 		amba_setbitsl(USB_UDC_REG(CTRL_IN), csr_config);
-
-		amba_clrbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), 0xfff << 7);
-		amba_setbitsl(USB_UDC_REG(CTRL_OUT - CTRL_OUT_UDC_IDX), csr_config);
 
 		udc->auto_ack_0_pkt = 1;
 		ambarella_ep_nuke(&udc->ep[CTRL_OUT], -EPROTO);
@@ -963,9 +981,19 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 
 		amba_writel(USB_DEV_INTR_REG, USB_DEV_RESET);
 
+		ambarella_disable_all_intr();
+
 		if (udc->host_suspended && udc->driver && udc->driver->resume){
+			spin_unlock(&udc->lock);
 			udc->driver->resume(&udc->gadget);
+			spin_lock(&udc->lock);
 			udc->host_suspended = 0;
+		}
+
+		if (udc->reset_by_host == 0) {
+			udc->reset_by_host = 1;
+			udc->controller_info->reset_usb();
+			ambarella_init_usb(udc);
 		}
 
 		ambarella_stop_activity(udc);
@@ -1004,6 +1032,8 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 	/* case 4. enumeration complete */
 	else if(int_value & USB_DEV_ENUM_CMPL) {
 		u32 	value = 0;
+
+		udc->reset_by_host = 0;
 
 		/* Ack the CMPL interrupt */
 		amba_writel(USB_DEV_INTR_REG, USB_DEV_ENUM_CMPL);
@@ -1053,7 +1083,8 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 	if (ambarella_handle_ep_stall(ep, ep_status))
 		return;
 
-	if (ambarella_check_error1(ep) && !list_empty(&ep->queue)) {
+	if ((ambarella_check_bna_error(ep) || ambarella_check_he_error(ep))
+			&& !list_empty(&ep->queue)) {
 		struct ambarella_request	*req = NULL;
 		ep->dma_going = 0;
 		ep->cancel_transfer = 0;
@@ -1134,6 +1165,7 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 			amba_writel(ep->ep_reg.sts_reg, USB_EP_SETUP_PKT);
 			ep->ctrl_sts_phase = 0;
+			ep->dma_going = 0;
 			ambarella_handle_request_packet(udc);
 		}
 	}
@@ -1147,7 +1179,8 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		/* Just cope with the zero-length packet */
 		if(ep->ctrl_sts_phase == 1) {
 			ep->ctrl_sts_phase = 0;
-			ambarella_enable_rx_dma();
+			ambarella_enable_rx_dma(ep);
+			ep->dma_going = 0;
 			return;
 		}
 
@@ -1156,7 +1189,10 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 			return;
 		}
 
-		if(ambarella_check_error1(ep) && !list_empty(&ep->queue)) {
+		if (ambarella_check_bna_error(ep))
+			return;
+
+		if(ambarella_check_he_error(ep) && !list_empty(&ep->queue)) {
 			struct ambarella_request *req = NULL;
 			req = list_first_entry(&ep->queue,
 				struct ambarella_request, queue);
@@ -1185,22 +1221,18 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		ambarella_handle_data_out(ep);
 
 		/* clear NAK for TX dma */
-		for (i = 0; i < EP_NUM_MAX; i++) {
-			struct ambarella_ep *_ep = &udc->ep[i];
-			if (_ep->need_cnak == 1)
-				ambarella_clr_ep_nak(_ep);
+		if (amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS) {
+			for (i = 0; i < EP_NUM_MAX; i++) {
+				struct ambarella_ep *_ep = &udc->ep[i];
+				if (_ep->need_cnak == 1)
+					ambarella_clr_ep_nak(_ep);
+			}
 		}
 	}
 
 	return;
 }
 
-
-/*
- * Name: ambarella_udc_irq
- * Description:
- *	Process UDC interrupt
- */
 static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 {
 	struct ambarella_udc *udc = _dev;
@@ -1574,7 +1606,8 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 				/* For STATUS-IN stage */
 				ambarella_clr_ep_nak(&udc->ep[CTRL_IN]);
 				/* Re-enable Rx DMA to receive next setup packet */
-				ambarella_enable_rx_dma();
+				ambarella_enable_rx_dma(ep);
+				ep->dma_going = 0;
 				goto finish;
 			} else if (ep->id == CTRL_IN) {
 			 	printk("the data length of ctrl-in is zero\n");
@@ -2170,6 +2203,12 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		retval = -ENODEV;
 		goto err_out1;
 	}
+
+	udc->reset_by_host = 0;
+	/* Initial USB PLL */
+	udc->controller_info->init_pll();
+	/* Reset USB */
+	udc->controller_info->reset_usb();
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);
