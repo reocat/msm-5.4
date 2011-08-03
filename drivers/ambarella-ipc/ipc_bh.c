@@ -25,6 +25,8 @@
 #define NUM_IPC_BH_WORKERS	2
 #define MAX_IPC_BH_QUEUE	64
 
+#define IPC_BH_MAX_EXEC_TIME	500
+
 struct ipc_bh_queue_s
 {
 	ipc_bh_f func;
@@ -38,6 +40,8 @@ struct ipc_bh_s
 	struct ipc_bh_queue_s queue[MAX_IPC_BH_QUEUE];
 	unsigned int r_index;
 	unsigned int w_index;
+	unsigned int max_exec_time;
+	unsigned int count;
 
 	wait_queue_head_t wait;
 	struct semaphore sem;
@@ -45,6 +49,7 @@ struct ipc_bh_s
 	struct workers_s {
 		struct task_struct *task;
 		unsigned int serviced;
+		unsigned int count;
 	} workers[NUM_IPC_BH_WORKERS];
 };
 
@@ -65,6 +70,8 @@ static int ipc_bh_worker_thread(void *data)
 	SVCXPRT *svcxprt;
 
 	for (;;) {
+		unsigned long exec_begin, exec_end;
+
 		rval = wait_event_interruptible(ipc_bh->wait,
 						(ipc_bh->r_index !=
 						 ipc_bh->w_index));
@@ -102,7 +109,15 @@ static int ipc_bh_worker_thread(void *data)
 		BUG_ON(svcxprt == NULL);
 
 		/* Service the request! */
+		exec_begin = jiffies;
 		func(arg, result, svcxprt);
+		exec_end = jiffies;
+		if (exec_end - exec_begin > ipc_bh->max_exec_time) {
+			printk("ipc_bh %d: slow ipc service => xid = %u, pid = %u, fid = %d, %d ms\n",
+				id, svcxprt->xid, svcxprt->pid, svcxprt->fid,
+				jiffies_to_msecs(exec_end - exec_begin));
+		}
+		ipc_bh->workers[id].count++;
 	}
 
 	return 0;
@@ -146,6 +161,7 @@ void ipc_bh_init(void)
 
 	init_waitqueue_head(&ipc_bh->wait);
 	sema_init(&ipc_bh->sem, 1);
+	ipc_bh->max_exec_time = msecs_to_jiffies(IPC_BH_MAX_EXEC_TIME);
 
 	for (i = 0; i < NUM_IPC_BH_WORKERS; i++) {
 		ipc_bh->workers[i].task = kthread_run(

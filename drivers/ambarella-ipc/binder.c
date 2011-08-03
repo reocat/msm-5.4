@@ -496,12 +496,15 @@ static void ipc_init_svcxprts(void)
 	SVCXPRT_ALIGNED_SIZE, binder->svcxprt_num,
 	binder->svcxprt_mtxid);
 #endif
-	binder->svcxprt_buf = (char*)ipc_malloc(SVCXPRT_ALIGNED_SIZE * (IPC_BINDER_MSG_BUFSIZE - 1));
-	if(binder->svcxprt_buf == NULL)
+	binder->svcxprt_buf_raw = (unsigned char *)
+		ipc_malloc(IPC_BINDER_SVCXPRT_BUF_SIZE + CACHE_LINE_SIZE);
+	if(binder->svcxprt_buf_raw == NULL)
 	{
 		pr_err("binder->svcxprt_buf alloc fail\n");
 		K_ASSERT(0);
 	}
+	binder->svcxprt_buf = (unsigned char *) (((unsigned int) binder->svcxprt_buf_raw +
+				(CACHE_LINE_SIZE - 1)) & CACHE_LINE_MASK);
 	memset(binder->svcxprt_buf, 0, sizeof(binder->svcxprt_buf));
 
 	/* Create svcxprt flag */
@@ -651,8 +654,9 @@ int ipc_binder_init(void)
 void ipc_binder_cleanup(void)
 {
 #if defined(STATIC_SVC)
-	if(binder->svcxprt_buf)
-		ipc_free(binder->svcxprt_buf);
+	if (binder->svcxprt_buf) {
+		ipc_free(binder->svcxprt_buf_raw);
+	}
 #endif
 }
 
@@ -1277,7 +1281,6 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 #if CONFIG_IPC_INFINITE_WAIT
 	ftab->timeout = 0xFFFFFFFF;
 #endif
-
 	/* Wait for completion or just pass through */
 	if ((ftab->type & IPC_CALL_ASYNC) == 0) {
 		unsigned long success;
