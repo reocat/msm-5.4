@@ -48,6 +48,9 @@ static void __iomem *scu_base = __io(AMBARELLA_VA_SCU_BASE);
 static DEFINE_SPINLOCK(boot_lock);
 
 static unsigned int smp_max_cpus = 0;
+#ifdef CONFIG_OUTER_CACHE
+static unsigned int smp_l2_mode = 0;
+#endif
 
 /* ==========================================================================*/
 void __cpuinit platform_secondary_init(unsigned int cpu)
@@ -55,6 +58,10 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	gic_secondary_init(0);
 
 	spin_lock(&boot_lock);
+#ifdef CONFIG_OUTER_CACHE
+	if (smp_l2_mode)
+		ambcache_l2_enable_raw();
+#endif
 	spin_unlock(&boot_lock);
 }
 
@@ -63,9 +70,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	u32					timeout = 100000;
 	u32					*phead_address;
 	int					retval = 0;
-#ifdef CONFIG_OUTER_CACHE
-	int					enable_l2;
-#endif
 
 	spin_lock(&boot_lock);
 
@@ -77,14 +81,9 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	}
 
 #ifdef CONFIG_OUTER_CACHE
-	enable_l2 = outer_is_enabled();
-	if (enable_l2) {
-		flush_cache_all();
-		outer_flush_all();
-		outer_disable();
-		outer_inv_all();
-		flush_cache_all();
-	}
+	smp_l2_mode = outer_is_enabled();
+	if (smp_l2_mode)
+		ambcache_l2_disable_raw();
 #endif
 
 	phead_address[PROCESSOR_START_0 + cpu] = BSYM(
@@ -110,12 +109,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 			phead_address[PROCESSOR_START_0 + cpu]);
 		retval = -EPERM;
 	}
-
-#ifdef CONFIG_OUTER_CACHE
-	if (enable_l2) {
-		outer_enable();
-	}
-#endif
 
 boot_secondary_exit:
 	spin_unlock(&boot_lock);

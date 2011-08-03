@@ -204,6 +204,9 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 	{
 		int					i;
 		ambarella_bapi_aoss_return_t		return_fn;
+#ifdef CONFIG_OUTER_CACHE
+		int					l2_mode = 0;
+#endif
 
 		return_fn = (ambarella_bapi_aoss_return_t)args;
 		retval = ambarella_bapi_check_bapi_info(cmd);
@@ -232,6 +235,11 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 #endif
 			bapi_aoss_entry =
 				(ambarella_bapi_aoss_call_t)bapi_aoss_arg[0];
+#ifdef CONFIG_OUTER_CACHE
+			l2_mode = outer_is_enabled();
+			if (l2_mode)
+				ambcache_l2_disable_raw();
+#endif
 			flush_cache_all();
 			retval = bapi_aoss_entry((u32)bapi_info->aoss_info.fn_pri,
 				bapi_aoss_arg[1], bapi_aoss_arg[2], bapi_aoss_arg[3]);
@@ -246,6 +254,10 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 			set_ambarella_hal_invalid();
+#endif
+#ifdef CONFIG_OUTER_CACHE
+			if (l2_mode)
+				ambcache_l2_enable_raw();
 #endif
 			aoss_copy_page = 0;
 			bapi_info->aoss_info.copy_pages = 0;
