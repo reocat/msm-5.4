@@ -150,6 +150,17 @@ static void __init ambarella_init_filbert(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
+	//config board
+	ambarella_board_generic.power_detect.irq_gpio = GPIO(135);
+	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(135);
+	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_RISING;
+	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
+	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+	//config audio
+	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
+	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
+
 	/* Config Eth0*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
 	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
@@ -163,7 +174,13 @@ static void __init ambarella_init_filbert(void)
 	/* Config Vin*/
 	ambarella_board_generic.vin_reset.gpio_id = GPIO(127);
 	ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.vin_reset.active_delay = 100;
+	ambarella_board_generic.vin_reset.active_delay = 200;
+
+	ambarella_board_generic.vin_vsync.irq_gpio = GPIO(126);
+	ambarella_board_generic.vin_vsync.irq_line = gpio_to_irq(126);
+	ambarella_board_generic.vin_vsync.irq_type = IRQF_TRIGGER_RISING;
+	ambarella_board_generic.vin_vsync.irq_gpio_val = GPIO_HIGH;
+	ambarella_board_generic.vin_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;
