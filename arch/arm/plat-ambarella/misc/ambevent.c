@@ -102,3 +102,10 @@ amb_event_pool_query_event_exit:
 }
 EXPORT_SYMBOL(amb_event_pool_query_event);
 
+int amb_event_report_uevent(struct kobject *kobj, enum kobject_action action,
+		       char *envp_ext[])
+{
+	return kobject_uevent_env(kobj, action, envp_ext);
+}
+EXPORT_SYMBOL(amb_event_report_uevent);
+
