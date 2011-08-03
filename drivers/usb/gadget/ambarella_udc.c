@@ -2282,10 +2282,12 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	}
 
 	udc->reset_by_host = 0;
+#if 0 // already do this in ambarella_udc_setup(udc);
 	/* Initial USB PLL */
 	udc->controller_info->init_pll();
 	/* Reset USB */
 	udc->controller_info->reset_usb();
+#endif
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);
