@@ -84,20 +84,26 @@ struct ambarella_ep_reg {
 
 
 struct ambarella_request {
-	struct list_head		queue;		/* ep's requests */
+	struct list_head	queue;		/* ep's requests */
 	struct usb_request	req;
 
 	int			desc_count;
 	dma_addr_t		data_desc_addr; /* data_desc Physical Address */
 	struct ambarella_data_desc 	*data_desc;
 
-	unsigned		mapped : 1;
+	dma_addr_t		dma_aux;
+	void			*buf_aux;	/* If the original buffer of
+						 * usb_req is not 8-bytes
+						 * aligned, we use this buffer
+						 * instead */
+	unsigned		use_aux_buf : 1,
+				mapped : 1;
 };
 
 
 struct ambarella_ep {
 
-	struct list_head		queue;
+	struct list_head	queue;
 	struct ambarella_udc	*udc;
 	const struct usb_endpoint_descriptor *desc;
 	struct usb_ep		ep;
