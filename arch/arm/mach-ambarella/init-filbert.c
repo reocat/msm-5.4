@@ -160,6 +160,11 @@ static void __init ambarella_init_filbert(void)
 	ambarella_eth1_platform_info.mii_reset.active_level = GPIO_LOW;
 	ambarella_eth1_platform_info.mii_reset.active_delay = 20;
 
+	/* Config Vin*/
+	ambarella_board_generic.vin_reset.gpio_id = GPIO(127);
+	ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.vin_reset.active_delay = 100;
+
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;
 	ambarella_platform_sd_controller0.clk_limit = 25000000;
