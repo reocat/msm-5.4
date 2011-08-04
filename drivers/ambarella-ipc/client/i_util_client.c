@@ -295,6 +295,40 @@ int ipc_report_fb_released(void)
 }
 EXPORT_SYMBOL(ipc_report_fb_released);
 
+/*
+ * IPC: i_util.itron_absuspend().
+ */
+int ipc_itron_absuspend(void)
+{
+	enum clnt_stat stat;
+
+	stat = itron_absuspend_1(NULL, NULL, IPC_i_util);
+	if (stat != IPC_SUCCESS) {
+		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		return -stat;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(ipc_itron_absuspend);
+
+/*
+ * IPC: i_util.itron_abresume().
+ */
+int ipc_itron_abresume(void)
+{
+	enum clnt_stat stat;
+
+	stat = itron_abresume_1(NULL, NULL, IPC_i_util);
+	if (stat != IPC_SUCCESS) {
+		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		return -stat;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(ipc_itron_abresume);
+
 #if defined(CONFIG_PROC_FS)
 
 extern struct proc_dir_entry *proc_aipc;
@@ -303,6 +337,7 @@ struct proc_dir_entry *proc_gettimeofday = NULL;
 struct proc_dir_entry *proc_printk = NULL;
 struct proc_dir_entry *proc_fixed_printk = NULL;
 struct proc_dir_entry *proc_async_ipc = NULL;
+struct proc_dir_entry *proc_ambernation = NULL;
 
 static int i_util_proc_fs_gettimeofday(char *page, char **start, off_t off,
 				       int count, int *eof, void *data)
@@ -402,6 +437,34 @@ static int i_util_proc_fs_async_ipc(struct file *file,
 	return count;
 }
 
+static int i_util_proc_fs_ambernation(struct file *file,
+				       const char __user *buffer,
+				       unsigned long count, void *data)
+{
+	char cmd[32];
+
+	if (count > 32)
+		count = 32;
+
+	memset(cmd, 0, sizeof(cmd));
+
+	if (copy_from_user(cmd, buffer, count)) {
+		return -EFAULT;
+	}
+
+	if (strcmp(cmd, "suspend") == 0) {
+		ipc_itron_absuspend();
+	}
+	else if (strcmp(cmd, "resume") == 0) {
+		ipc_itron_abresume();
+	}
+	else {
+		printk("ambernation: unknow command = %s\n", cmd);
+	}
+
+	return count;
+}
+
 #endif
 
 /*
@@ -440,6 +503,12 @@ static int __init i_util_init(void)
 		proc_async_ipc->read_proc = NULL;
 		proc_async_ipc->write_proc = i_util_proc_fs_async_ipc;
 	}
+	proc_ambernation = create_proc_entry("ambernation", 0, proc_aipc);
+	if (proc_ambernation) {
+		proc_ambernation->data = NULL;
+		proc_ambernation->read_proc = NULL;
+		proc_ambernation->write_proc = i_util_proc_fs_ambernation;
+	}
 #endif
 
 	return 0;
@@ -466,6 +535,10 @@ static void __exit i_util_cleanup(void)
 	if (proc_async_ipc) {
 		remove_proc_entry("async_ipc", proc_aipc);
 		proc_async_ipc = NULL;
+	}
+	if (proc_ambernation) {
+		remove_proc_entry("ambernation", proc_aipc);
+		proc_ambernation = NULL;
 	}
 #endif
 	if (IPC_i_util) {

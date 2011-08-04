@@ -37,6 +37,9 @@ extern int ipc_get_exfb(void **mem, unsigned int *size);
 extern int ipc_report_fb_owned(void);
 extern int ipc_report_fb_released(void);
 
+extern int ipc_itron_absuspend(void);
+extern int ipc_itron_abresume(void);
+
 #endif
 
 #endif
