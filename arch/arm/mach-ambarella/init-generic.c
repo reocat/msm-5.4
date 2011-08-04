@@ -57,50 +57,70 @@ static struct platform_device ambarella_auc_codec0 = {
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_uart,
-#if (UART_INSTANCES >= 2)
-	&ambarella_uart1,
+	&ambarella_adc0,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
+	&ambarella_ahci0,
 #endif
-	&ambarella_sd0,
-#if (SD_INSTANCES >= 2)
-	&ambarella_sd1,
+#if (AUDIO_CODEC_INSTANCES == 1)
+	&ambarella_auc_codec0,
 #endif
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	&ambarella_crypto,
+#endif
+	&ambarella_dummy_codec0,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_USB
+	&ambarella_ehci0,
+#endif
+#if (ETH_INSTANCES >= 1)
+	&ambarella_eth0,
+#endif
+#if (ETH_INSTANCES >= 2)
+	&ambarella_eth1,
+#endif
+	&ambarella_fb0,
+	&ambarella_fb1,
+	&ambarella_i2s0,
 	&ambarella_idc0,
 #if (IDC_INSTANCES >= 2)
 	&ambarella_idc1,
 #endif
-	&ambarella_spi0,
-#if (SPI_INSTANCES >= 2)
-	&ambarella_spi1,
-#endif
-	&ambarella_i2s0,
-	&ambarella_pcm0,
-	&ambarella_dummy_codec0,
-#if (AUDIO_CODEC_INSTANCES == 1)
-	&ambarella_auc_codec0,
-#endif
-	&ambarella_rtc0,
-	&ambarella_wdt0,
-	&ambarella_udc0,
+	&ambarella_ir0,
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_USB
-	&ambarella_ehci0,
 	&ambarella_ohci0,
 #endif
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
-	&ambarella_ahci0,
-#endif
-	&ambarella_fb0,
-	&ambarella_fb1,
-	&ambarella_ir0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-	&ambarella_crypto,
-#endif
-	&ambarella_adc0,
+	&ambarella_pcm0,
 	&ambarella_pwm_platform_device0,
 	&ambarella_pwm_platform_device1,
 	&ambarella_pwm_platform_device2,
 	&ambarella_pwm_platform_device3,
 	&ambarella_pwm_platform_device4,
+	&ambarella_rtc0,
+	&ambarella_sd0,
+#if (SD_INSTANCES >= 2)
+	&ambarella_sd1,
+#endif
+	&ambarella_spi0,
+#if (SPI_INSTANCES >= 2)
+	&ambarella_spi1,
+#endif
+#if (SPI_INSTANCES >= 3)
+	&ambarella_spi2,
+#endif
+#if (SPI_INSTANCES >= 4)
+	&ambarella_spi3,
+#endif
+	&ambarella_uart,
+#if (UART_INSTANCES >= 2)
+	&ambarella_uart1,
+#endif
+#if (UART_INSTANCES >= 3)
+	&ambarella_uart2,
+#endif
+#if (UART_INSTANCES >= 4)
+	&ambarella_uart3,
+#endif
+	&ambarella_udc0,
+	&ambarella_wdt0,
 };
 
 /* ==========================================================================*/

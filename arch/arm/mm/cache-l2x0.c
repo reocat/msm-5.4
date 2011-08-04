@@ -316,7 +316,7 @@ static void l2x0_enable(void)
 	outer_cache.clean_all = l2x0_clean_all;
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 
-	printk(KERN_INFO "%s cache controller enabled\n", l2x0_type);
+	printk(KERN_DEBUG "%s cache controller enabled\n", l2x0_type);
 }
 
 static void l2x0_disable(void)
@@ -339,7 +339,7 @@ static void l2x0_disable(void)
 	outer_cache.clean_all = NULL;
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 
-	printk(KERN_INFO "%s cache controller disabled\n", l2x0_type);
+	printk(KERN_DEBUG "%s cache controller disabled\n", l2x0_type);
 }
 
 static int l2x0_is_enabled(void)
@@ -423,8 +423,8 @@ void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 	}
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 
-	printk(KERN_INFO "%s cache controller enabled\n", l2x0_type);
-	printk(KERN_INFO "l2x0: %d ways, CACHE_ID 0x%08x,"
+	printk(KERN_DEBUG "%s cache controller enabled\n", l2x0_type);
+	printk_once(KERN_INFO "l2x0: %d ways, CACHE_ID 0x%08x,"
 		" AUX_CTRL 0x%08x, Cache size: %d B\n",
 		ways, cache_id, aux, l2x0_size);
 }

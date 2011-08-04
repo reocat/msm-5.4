@@ -68,6 +68,8 @@ extern int amb_event_pool_affuse(struct amb_event_pool *pool,
 extern int amb_event_pool_query_index(struct amb_event_pool *pool);
 extern int amb_event_pool_query_event(struct amb_event_pool *pool,
 	struct amb_event *event, unsigned char index);
+extern int amb_event_report_uevent(struct kobject *kobj,
+	enum kobject_action action, char *envp_ext[]);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

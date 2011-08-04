@@ -366,6 +366,84 @@ static void init_ep0(struct ambarella_udc *udc)
 	amba_setbitsl(USB_UDC_REG(CTRL_IN), 0x1 << 4);
 }
 
+static int ambarella_map_dma_buffer(struct ambarella_ep *ep,
+		struct ambarella_request *req)
+{
+	struct ambarella_udc *udc = ep->udc;
+	enum dma_data_direction dmadir;
+
+	dmadir = (ep->dir & USB_DIR_IN) ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+	if (likely(!req->use_aux_buf)) {
+		/* map req.buf, and get req's dma address */
+		if (req->req.dma == DMA_ADDR_INVALID) {
+			req->req.dma = dma_map_single(udc->gadget.dev.parent,
+				req->req.buf, req->req.length, dmadir);
+			/* dma address isn't 8-byte align */
+			if(req->req.dma & 0x7){
+				printk("dma address isn't 8-byte align\n");
+				BUG();
+			}
+			req->mapped = 1;
+		} else {
+			dma_sync_single_for_device(udc->gadget.dev.parent,
+				req->req.dma, req->req.length, dmadir);
+			req->mapped = 0;
+		}
+	} else {
+		if (req->dma_aux == DMA_ADDR_INVALID) {
+			req->dma_aux = dma_map_single(udc->gadget.dev.parent,
+				req->buf_aux, req->req.length, dmadir);
+			/* dma address isn't 8-byte align */
+			if(req->dma_aux & 0x7){
+				printk("dma address isn't 8-byte align\n");
+				BUG();
+			}
+			req->mapped = 1;
+		} else {
+			dma_sync_single_for_device(udc->gadget.dev.parent,
+				req->dma_aux, req->req.length, dmadir);
+			req->mapped = 0;
+		}
+	}
+
+	return 0;
+}
+
+
+static int ambarella_unmap_dma_buffer(struct ambarella_ep *ep,
+		struct ambarella_request *req)
+{
+	struct ambarella_udc *udc = ep->udc;
+	enum dma_data_direction dmadir;
+
+	dmadir = (ep->dir & USB_DIR_IN) ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+	if (likely(!req->use_aux_buf)) {
+		if (req->mapped) {
+			dma_unmap_single(udc->gadget.dev.parent,
+				req->req.dma, req->req.length, dmadir);
+			req->req.dma = DMA_ADDR_INVALID;
+			req->mapped = 0;
+		} else {
+			dma_sync_single_for_cpu(udc->gadget.dev.parent,
+				req->req.dma, req->req.length, dmadir);
+		}
+	} else {
+		if (req->mapped) {
+			dma_unmap_single(udc->gadget.dev.parent,
+				req->dma_aux, req->req.length, dmadir);
+			req->dma_aux = DMA_ADDR_INVALID;
+			req->mapped = 0;
+		} else {
+			dma_sync_single_for_cpu(udc->gadget.dev.parent,
+				req->dma_aux, req->req.length, dmadir);
+		}
+	}
+
+	return 0;
+}
+
 
 /*
  * Name: ambarella_check_connected
@@ -499,7 +577,7 @@ static void ambarella_free_descriptor(struct ambarella_ep *ep,
 }
 
 static int ambarella_reuse_descriptor(struct ambarella_ep *ep,
-	struct ambarella_request *req, u32 desc_count)
+	struct ambarella_request *req, u32 desc_count, dma_addr_t start_address)
 {
 	struct ambarella_data_desc *data_desc, *next_data_desc;
 	u32 data_transmit, rest_bytes, i;
@@ -516,16 +594,13 @@ static int ambarella_reuse_descriptor(struct ambarella_ep *ep,
 		data_desc = next_data_desc;
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
 		data_desc->reserved = 0xffffffff;
-		data_desc->data_ptr = req->req.dma + i * ep->ep.maxpacket;
+		data_desc->data_ptr = start_address + i * ep->ep.maxpacket;
 		data_desc->last_aux = 0;
 
 		next_data_desc = data_desc->next_desc_virt;
 	}
 
-	/* Patch last one.
-	 * Note: don't set NULL to nex_desc_virt, becasue
-	 * ambarella_free_descriptor() will use it to find the
-	 * next descriptor. */
+	/* Patch last one. */
 	data_desc->status |= USB_DMA_LAST;
 	data_desc->last_aux = 1;
 
@@ -538,8 +613,13 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 	struct ambarella_udc *udc = ep->udc;
 	struct ambarella_data_desc *data_desc = NULL;
 	struct ambarella_data_desc *prev_data_desc = NULL;
-	dma_addr_t desc_phys;
+	dma_addr_t desc_phys, start_address;
 	u32 desc_count, data_transmit, rest_bytes, i;
+
+	if (likely(!req->use_aux_buf))
+		start_address = req->req.dma;
+	else
+		start_address = req->dma_aux;
 
 	desc_count = (req->req.length + ep->ep.maxpacket - 1) / ep->ep.maxpacket;
 	if(req->req.zero && (req->req.length % ep->ep.maxpacket == 0))
@@ -548,7 +628,7 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 		desc_count = 1;
 
 	if (desc_count <= req->desc_count) {
-		ambarella_reuse_descriptor(ep, req, desc_count);
+		ambarella_reuse_descriptor(ep, req, desc_count, start_address);
 		return 0;
 	}
 
@@ -575,7 +655,7 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
 		data_desc->reserved = 0xffffffff;
-		data_desc->data_ptr = req->req.dma + i * ep->ep.maxpacket;
+		data_desc->data_ptr = start_address + i * ep->ep.maxpacket;
 		data_desc->next_desc_ptr = 0;
 		data_desc->rsvd1 = 0xffffffff;
 		data_desc->last_aux = 0;
@@ -859,20 +939,10 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 	else
 		status = req->req.status;
 
-	if (req->mapped) {
-		dma_unmap_single(ep->udc->gadget.dev.parent,
-			req->req.dma, req->req.length,
-			(ep->dir & USB_DIR_IN)
-				? DMA_TO_DEVICE
-				: DMA_FROM_DEVICE);
-		req->req.dma = DMA_ADDR_INVALID;
-		req->mapped = 0;
-	} else
-		dma_sync_single_for_cpu(ep->udc->gadget.dev.parent,
-			req->req.dma, req->req.length,
-			(ep->dir & USB_DIR_IN)
-				? DMA_TO_DEVICE
-				: DMA_FROM_DEVICE);
+	ambarella_unmap_dma_buffer(ep, req);
+
+	if (req->use_aux_buf && ep->dir != USB_DIR_IN)
+		memcpy(req->req.buf, req->buf_aux, req->req.actual);
 
 	ep->data_desc = NULL;
 	ep->last_data_desc = NULL;
@@ -1485,6 +1555,10 @@ ambarella_udc_alloc_request(struct usb_ep *_ep, gfp_t mem_flags)
 	INIT_LIST_HEAD (&req->queue);
 	req->desc_count = 0;
 
+	req->buf_aux = NULL;
+	req->dma_aux = DMA_ADDR_INVALID;
+	req->use_aux_buf = 0;
+
 	return &req->req;
 }
 
@@ -1502,6 +1576,11 @@ ambarella_udc_free_request(struct usb_ep *_ep, struct usb_request *_req)
 
 	if(req->desc_count > 0)
 		ambarella_free_descriptor(ep, req);
+
+	if (req->buf_aux) {
+		kfree(req->buf_aux);
+		req->buf_aux = NULL;
+	}
 
 	WARN_ON (!list_empty (&req->queue));
 	kfree(req);
@@ -1563,24 +1642,22 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 		return -ESHUTDOWN;
 	}
 
-	/* map req.buf, and get req's dma address */
-	if (req->req.dma == DMA_ADDR_INVALID) {
-		req->req.dma = dma_map_single(ep->udc->gadget.dev.parent,
-			req->req.buf, req->req.length,
-			(ep->dir & USB_DIR_IN) ? DMA_TO_DEVICE	: DMA_FROM_DEVICE);
-		req->mapped = 1;
-		/* dma address isn't 8-byte align */
-		if(req->req.dma & 0x7){
-			printk("dma address isn't 8-byte align\n");
-			BUG();
+	if (unlikely((unsigned long)req->req.buf & 0x7)) {
+		req->use_aux_buf = 1;
+
+		if (req->buf_aux == NULL) {
+			req->buf_aux = kmalloc(UDC_DMA_MAXPACKET, GFP_ATOMIC);
+			if (req->buf_aux == NULL)
+				return -ENOMEM;
 		}
+
+		if (ep->dir == USB_DIR_IN)
+			memcpy(req->buf_aux, req->req.buf, req->req.length);
 	} else {
-		dma_sync_single_for_device(
-			ep->udc->gadget.dev.parent,
-			req->req.dma, req->req.length,
-			(ep->dir & USB_DIR_IN) ? DMA_TO_DEVICE	: DMA_FROM_DEVICE);
-		req->mapped = 0;
+		req->use_aux_buf = 0;
 	}
+
+	ambarella_map_dma_buffer(ep, req);
 
 	/* disable IRQ handler's bottom-half  */
 	spin_lock_irqsave(&udc->lock, flags);

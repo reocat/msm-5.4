@@ -57,50 +57,32 @@ static struct platform_device ambarella_auc_codec0 = {
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_uart,
-#if (UART_INSTANCES >= 2)
-	&ambarella_uart1,
-#endif
-	&ambarella_sd0,
-#if (SD_INSTANCES >= 2)
-	&ambarella_sd1,
-#endif
-	&ambarella_idc0,
-#if (IDC_INSTANCES >= 2)
-	&ambarella_idc1,
-#endif
-	&ambarella_spi0,
-#if (SPI_INSTANCES >= 2)
-	&ambarella_spi1,
-#endif
-	&ambarella_i2s0,
-	&ambarella_pcm0,
+	&ambarella_adc0,
+	&ambarella_crypto,
 	&ambarella_dummy_codec0,
-#if (AUDIO_CODEC_INSTANCES == 1)
-	&ambarella_auc_codec0,
-#endif
-	&ambarella_rtc0,
-	&ambarella_wdt0,
-	&ambarella_udc0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_USB
-	&ambarella_ehci0,
-	&ambarella_ohci0,
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
-	&ambarella_ahci0,
-#endif
+	&ambarella_eth0,
+	&ambarella_eth1,
 	&ambarella_fb0,
 	&ambarella_fb1,
+	&ambarella_i2s0,
+	&ambarella_idc0,
+	&ambarella_idc1,
 	&ambarella_ir0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-	&ambarella_crypto,
-#endif
-	&ambarella_adc0,
+	&ambarella_pcm0,
 	&ambarella_pwm_platform_device0,
 	&ambarella_pwm_platform_device1,
 	&ambarella_pwm_platform_device2,
 	&ambarella_pwm_platform_device3,
 	&ambarella_pwm_platform_device4,
+	&ambarella_rtc0,
+	&ambarella_sd0,
+	&ambarella_spi0,
+	&ambarella_spi1,
+//	&ambarella_spi2,
+	&ambarella_uart,
+	&ambarella_uart1,
+	&ambarella_udc0,
+	&ambarella_wdt0,
 };
 
 /* ==========================================================================*/
@@ -115,25 +97,11 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 0,
 		.chip_select	= 1,
 	},
-#if 0
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-#endif
-#if (SPI_INSTANCES >= 2)
 	{
 		.modalias	= "spidev",
 		.bus_num	= 1,
 		.chip_select	= 0,
-	}
-#endif
+	},
 };
 
 /* ==========================================================================*/
@@ -182,9 +150,52 @@ static void __init ambarella_init_filbert(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
+	//config board
+	ambarella_board_generic.power_detect.irq_gpio = GPIO(135);
+	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(135);
+	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_RISING;
+	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
+	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+	//config audio
+	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
+	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
+
+	/* Config Eth0*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
 	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
 	ambarella_eth0_platform_info.mii_reset.active_delay = 20;
+
+	/* Config Eth1*/
+	ambarella_eth1_platform_info.mii_reset.gpio_id = GPIO(125);
+	ambarella_eth1_platform_info.mii_reset.active_level = GPIO_LOW;
+	ambarella_eth1_platform_info.mii_reset.active_delay = 20;
+
+	/* Config Vin*/
+	ambarella_board_generic.vin_reset.gpio_id = GPIO(127);
+	ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.vin_reset.active_delay = 200;
+
+	ambarella_board_generic.vin_vsync.irq_gpio = GPIO(126);
+	ambarella_board_generic.vin_vsync.irq_line = gpio_to_irq(126);
+	ambarella_board_generic.vin_vsync.irq_type = IRQF_TRIGGER_RISING;
+	ambarella_board_generic.vin_vsync.irq_gpio_val = GPIO_HIGH;
+	ambarella_board_generic.vin_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+	/* Config SD*/
+	fio_default_owner = SELECT_FIO_SDIO;
+	ambarella_platform_sd_controller0.clk_limit = 25000000;
+	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
+	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
+	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));

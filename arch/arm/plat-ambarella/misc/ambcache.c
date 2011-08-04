@@ -157,7 +157,7 @@ void ambcache_flush_range(void *addr, unsigned int size)
 }
 EXPORT_SYMBOL(ambcache_flush_range);
 
-int ambcache_l2_enable()
+void ambcache_l2_enable_raw()
 {
 #ifdef CONFIG_OUTER_CACHE
 	if (!outer_is_enabled()) {
@@ -166,14 +166,30 @@ int ambcache_l2_enable()
 			0x00000120) {
 			writel(0x00000120, (ambcache_l2_base +
 				L2X0_DATA_LATENCY_CTRL));
-			pr_info("DATA_LATENCY[0x%08x]\n", readl(
-				ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
 			l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
 		} else
 #endif
 			outer_enable();
 	}
 #endif
+}
+EXPORT_SYMBOL(ambcache_l2_enable_raw);
+
+void ambcache_l2_disable_raw()
+{
+#ifdef CONFIG_OUTER_CACHE
+	flush_cache_all();
+	outer_flush_all();
+	outer_disable();
+	outer_inv_all();
+	flush_cache_all();
+#endif
+}
+EXPORT_SYMBOL(ambcache_l2_disable_raw);
+
+int ambcache_l2_enable()
+{
+	ambcache_l2_enable_raw();
 	return outer_is_enabled() ? 0 : -1;
 }
 EXPORT_SYMBOL(ambcache_l2_enable);
@@ -186,9 +202,7 @@ int ambcache_l2_disable()
 	if (outer_is_enabled()) {
 		disable_nonboot_cpus();
 		local_irq_save(flags);
-		flush_cache_all();
-		outer_flush_all();
-		outer_disable();
+		ambcache_l2_disable_raw();
 		local_irq_restore(flags);
 		enable_nonboot_cpus();
 	}

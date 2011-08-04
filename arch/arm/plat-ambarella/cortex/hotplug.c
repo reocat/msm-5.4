@@ -76,14 +76,14 @@ int platform_cpu_kill(unsigned int cpu)
 
 void platform_cpu_die(unsigned int cpu)
 {
-	u32 *phead_address = get_ambarella_bstmem_head();
-	u32 bstadd, bstsize;
+	u32					*phead_address;
 
-	get_ambarella_bstmem_info(&bstadd, &bstsize);
-	bstadd = ambarella_phys_to_virt(bstadd);
+	phead_address = get_ambarella_bstmem_head();
+	BUG_ON(phead_address == (u32 *)AMB_BST_INVALID);
 
 	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
-	ambcache_clean_range((void *)(bstadd), bstsize);
+	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
+	flush_cache_all();
 	complete(&cpu_killed);
 
 	cpu_enter_lowpower();
