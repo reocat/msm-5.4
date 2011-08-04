@@ -642,33 +642,6 @@ void __init ambarella_init_irq(void)
 #endif
 #endif
 
-#if defined(CONFIG_MACH_BOSS)
-	/* Setup SD CD GPIO IRQs */
-	set_irq_chip(GPIO_INT_VEC(67), &ambarella_gpio_irq_chip);
-	set_irq_handler(GPIO_INT_VEC(67), handle_level_irq);
-	__clear_bit(67, ambarella_gpio_wakeup_bit);
-	set_irq_flags(GPIO_INT_VEC(67), IRQF_VALID);
-
-	/* Setup SDIO CD GPIO IRQs */
-	set_irq_chip(GPIO_INT_VEC(75), &ambarella_gpio_irq_chip);
-	set_irq_handler(GPIO_INT_VEC(75), handle_level_irq);
-	__clear_bit(75, ambarella_gpio_wakeup_bit);
-	set_irq_flags(GPIO_INT_VEC(75), IRQF_VALID);
-
-	set_irq_type(GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
-	set_irq_chained_handler(GPIO2_IRQ, ambarella_gpio_irq_handler);
-
-	/* Setup SDXC CD GPIO IRQs */
-	set_irq_chip(GPIO_INT_VEC(129), &ambarella_gpio_irq_chip);
-	set_irq_handler(GPIO_INT_VEC(129), handle_level_irq);
-	__clear_bit(129, ambarella_gpio_wakeup_bit);
-	set_irq_flags(GPIO_INT_VEC(129), IRQF_VALID);
-
-	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
-	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
-
-#else
-
 	/* Setup GPIO IRQs */
 	for (i = 0; i < AMBGPIO_SIZE; i++) {
 		set_irq_chip(GPIO_INT_VEC(i), &ambarella_gpio_irq_chip);
@@ -697,7 +670,6 @@ void __init ambarella_init_irq(void)
 #if (GPIO_INSTANCES >= 6)
 	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
-#endif
 #endif
 }
 

@@ -259,10 +259,6 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	newfreq = get_arm_bus_freq_hz();
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
 
-#if defined(CONFIG_SMP)
-	percpu_timer_update_rate(amb_get_axi_clock_frequency(HAL_BASE_VP));
-#endif
-
 	retval = notifier_to_errno(
 		ambarella_set_raw_event(AMBA_EVENT_POST_CPUFREQ, NULL));
 	if (retval) {

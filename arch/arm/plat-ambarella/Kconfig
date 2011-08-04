@@ -267,6 +267,7 @@ config PLAT_AMBARELLA_I1_BOSS
 	select ARM_ERRATA_753970 if CACHE_PL310
 	select PL310_ERRATA_588369 if CACHE_PL310
 	select PL310_ERRATA_727915 if CACHE_PL310
+	select ARCH_HAS_SWSUSP_WRITE
 
 	help
 	  Say Y here if you are using Ambarella I1 BOSS.

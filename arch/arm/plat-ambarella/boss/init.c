@@ -82,7 +82,6 @@ void __init ambarella_memblock_reserve(void)
 int __init ambarella_init_machine(char *board_name)
 {
 	int					retval = 0;
-	u32 					boot_from;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	char					*pname;
@@ -118,10 +117,19 @@ int __init ambarella_init_machine(char *board_name)
 	retval = ambarella_create_proc_dir();
 	BUG_ON(retval != 0);
 
+	retval = ambarella_init_pll();
+	BUG_ON(retval != 0);
+
+	retval = ambarella_init_tm();
+	BUG_ON(retval != 0);
+
 	retval = ambarella_init_gpio();
 	BUG_ON(retval != 0);
 
 	retval = ambarella_init_fb();
+	BUG_ON(retval != 0);
+
+	retval = ambarella_init_pm();
 	BUG_ON(retval != 0);
 
 	retval = ambarella_init_audio();

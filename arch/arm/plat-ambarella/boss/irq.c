@@ -30,7 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/device.h>
 
-#include <asm/io.h> 
+#include <asm/io.h>
 #include <asm/cacheflush.h>
 #include <mach/hardware.h>
 
@@ -286,7 +286,9 @@ static struct irq_chip ambarella_gpio_irq_chip = {
 	.irq_unmask	= ambarella_gpio_enable_irq,
 	.irq_mask_ack	= ambarella_gpio_mask_ack_irq,
 	.irq_set_type	= ambarella_gpio_irq_set_type,
+#ifdef CONFIG_PM
 	.irq_set_wake	= ambarella_gpio_irq_set_wake,
+#endif
 };
 
 /* ==========================================================================*/
@@ -468,7 +470,9 @@ static struct irq_chip ambarella_irq_chip = {
 	.irq_unmask	= ambarella_enable_irq,
 	.irq_mask_ack	= ambarella_mask_ack_irq,
 	.irq_set_type	= ambarella_irq_set_type,
+#ifdef CONFIG_PM
 	.irq_set_wake	= ambarella_irq_set_wake,
+#endif
 };
 #endif
 
@@ -594,7 +598,8 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 }
 
 /* ==========================================================================*/
-void __init ambarella_init_irq(void)
+#ifdef CONFIG_PLAT_AMBARELLA_A5S_BOSS
+void __init ambarella_init_irq_a5s(void)
 {
 	u32					i;
 
@@ -654,35 +659,139 @@ void __init ambarella_init_irq(void)
 #endif
 
 }
+#endif
 
-/* ==========================================================================*/
+#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+void __init ambarella_init_irq_i1(void)
+{
 #if !defined(CONFIG_ARM_GIC)
-struct ambarella_vic_pm_info {
-	u32 vic_int_sel_reg;
-	u32 vic_inten_reg;
-	u32 vic_soften_reg;
-	u32 vic_proten_reg;
-	u32 vic_sense_reg;
-	u32 vic_bothedge_reg;
-	u32 vic_event_reg;
-};
+	u32					i;
+#endif
 
-struct ambarella_vic_pm_info ambarella_vic_pm;
+#if defined(CONFIG_ARM_GIC)
+	gic_init(0, LOCAL_TIMER_IRQ, __io(AMBARELLA_VA_GIC_DIST_BASE),
+		__io(AMBARELLA_VA_GIC_CPU_BASE));
+
+	irq_set_affinity(CODING_ORC0_IRQ, cpumask_of(0));
+	irq_set_affinity(CODING_ORC1_IRQ, cpumask_of(0));
+	irq_set_affinity(CODING_ORC2_IRQ, cpumask_of(0));
+	irq_set_affinity(CODING_ORC3_IRQ, cpumask_of(0));
+	irq_set_affinity(VOUT_IRQ, cpumask_of(0));
+	irq_set_affinity(ORC_VOUT0_IRQ, cpumask_of(0));
+	irq_set_affinity(VIN_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_LAST_PIXEL_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_VSYNC_IRQ, cpumask_of(0));
+	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
+#else
+	/* Set VIC sense and event type for each entry */
+	amba_writel(VIC_SENSE_REG, 0x00000000);
+	amba_writel(VIC_BOTHEDGE_REG, 0x00000000);
+	amba_writel(VIC_EVENT_REG, 0x00000000);
+
 #if (VIC_INSTANCES >= 2)
-struct ambarella_vic_pm_info ambarella_vic2_pm;
+	amba_writel(VIC2_SENSE_REG, 0x00000000);
+	amba_writel(VIC2_BOTHEDGE_REG, 0x00000000);
+	amba_writel(VIC2_EVENT_REG, 0x00000000);
+#endif
+
+#if (VIC_INSTANCES >= 3)
+	amba_writel(VIC3_SENSE_REG, 0x00000000);
+	amba_writel(VIC3_BOTHEDGE_REG, 0x00000000);
+	amba_writel(VIC3_EVENT_REG, 0x00000000);
+#endif
+
+	/* Disable all IRQ */
+	amba_writel(VIC_INT_SEL_REG, 0x00000000);
+	amba_writel(VIC_INTEN_REG, 0x00000000);
+	amba_writel(VIC_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC_EDGE_CLR_REG, 0xffffffff);
+
+#if (VIC_INSTANCES >= 2)
+	amba_writel(VIC2_INT_SEL_REG, 0x00000000);
+	amba_writel(VIC2_INTEN_REG, 0x00000000);
+	amba_writel(VIC2_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC2_EDGE_CLR_REG, 0xffffffff);
+#endif
+
+#if (VIC_INSTANCES >= 3)
+	amba_writel(VIC3_INT_SEL_REG, 0x00000000);
+	amba_writel(VIC3_INTEN_REG, 0x00000000);
+	amba_writel(VIC3_INTEN_CLR_REG, 0xffffffff);
+	amba_writel(VIC3_EDGE_CLR_REG, 0xffffffff);
+#endif
+
+	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
+		set_irq_chip(VIC_INT_VEC(i), &ambarella_irq_chip);
+		set_irq_handler(VIC_INT_VEC(i), handle_level_irq);
+		set_irq_flags(VIC_INT_VEC(i), IRQF_VALID);
+	}
+#if (VIC_INSTANCES >= 2)
+	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
+		set_irq_chip(VIC2_INT_VEC(i), &ambarella_irq_chip);
+		set_irq_handler(VIC2_INT_VEC(i), handle_level_irq);
+		set_irq_flags(VIC2_INT_VEC(i), IRQF_VALID);
+	}
 #endif
 #if (VIC_INSTANCES >= 3)
-struct ambarella_vic_pm_info ambarella_vic3_pm;
+	for (i = 0; i <  NR_VIC_IRQ_SIZE; i++) {
+		set_irq_chip(VIC3_INT_VEC(i), &ambarella_irq_chip);
+		set_irq_handler(VIC3_INT_VEC(i), handle_level_irq);
+		set_irq_flags(VIC3_INT_VEC(i), IRQF_VALID);
+	}
 #endif
 #endif
 
+	/* Setup SD CD GPIO IRQs */
+	set_irq_chip(GPIO_INT_VEC(67), &ambarella_gpio_irq_chip);
+	set_irq_handler(GPIO_INT_VEC(67), handle_level_irq);
+	__clear_bit(67, ambarella_gpio_wakeup_bit);
+	set_irq_flags(GPIO_INT_VEC(67), IRQF_VALID);
+
+	/* Setup SDIO CD GPIO IRQs */
+	set_irq_chip(GPIO_INT_VEC(75), &ambarella_gpio_irq_chip);
+	set_irq_handler(GPIO_INT_VEC(75), handle_level_irq);
+	__clear_bit(75, ambarella_gpio_wakeup_bit);
+	set_irq_flags(GPIO_INT_VEC(75), IRQF_VALID);
+
+	set_irq_type(GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO2_IRQ, ambarella_gpio_irq_handler);
+
+	/* Setup SDXC CD GPIO IRQs */
+	set_irq_chip(GPIO_INT_VEC(129), &ambarella_gpio_irq_chip);
+	set_irq_handler(GPIO_INT_VEC(129), handle_level_irq);
+	__clear_bit(129, ambarella_gpio_wakeup_bit);
+	set_irq_flags(GPIO_INT_VEC(129), IRQF_VALID);
+
+	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
+}
+#endif
+
+void __init ambarella_init_irq(void)
+{
+#ifdef CONFIG_PLAT_AMBARELLA_A5S_BOSS
+	ambarella_init_irq_a5s();
+#endif
+#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+	ambarella_init_irq_i1();
+#endif
+}
+
+/* ==========================================================================*/
 u32 ambarella_irq_suspend(u32 level)
 {
+#if defined(CONFIG_ARM_GIC)
+	gic_suspend(level);
+#endif
 	return 0;
 }
 
 u32 ambarella_irq_resume(u32 level)
 {
+#if defined(CONFIG_ARM_GIC)
+	gic_resume(level);
+#endif
 	return 0;
 }
 

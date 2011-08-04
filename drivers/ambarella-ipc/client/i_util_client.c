@@ -298,7 +298,7 @@ EXPORT_SYMBOL(ipc_report_fb_released);
 /*
  * IPC: i_util.itron_absuspend().
  */
-int ipc_itron_absuspend(void)
+int ipc_report_absuspend(void)
 {
 	enum clnt_stat stat;
 
@@ -310,12 +310,12 @@ int ipc_itron_absuspend(void)
 
 	return 0;
 }
-EXPORT_SYMBOL(ipc_itron_absuspend);
+EXPORT_SYMBOL(ipc_report_absuspend);
 
 /*
  * IPC: i_util.itron_abresume().
  */
-int ipc_itron_abresume(void)
+int ipc_report_abresume(void)
 {
 	enum clnt_stat stat;
 
@@ -327,7 +327,7 @@ int ipc_itron_abresume(void)
 
 	return 0;
 }
-EXPORT_SYMBOL(ipc_itron_abresume);
+EXPORT_SYMBOL(ipc_report_abresume);
 
 #if defined(CONFIG_PROC_FS)
 
@@ -453,10 +453,10 @@ static int i_util_proc_fs_ambernation(struct file *file,
 	}
 
 	if (strcmp(cmd, "suspend") == 0) {
-		ipc_itron_absuspend();
+		ipc_report_absuspend();
 	}
 	else if (strcmp(cmd, "resume") == 0) {
-		ipc_itron_abresume();
+		ipc_report_abresume();
 	}
 	else {
 		printk("ambernation: unknow command = %s\n", cmd);

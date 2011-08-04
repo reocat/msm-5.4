@@ -869,7 +869,7 @@ int arch_pfn_is_nosave(unsigned long pfn)
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 
-static void __init early_boss(char *p)
+static int __init early_boss(char *p)
 {
 	extern unsigned int boss_log_buf_ptr;
 	extern unsigned int boss_log_buf_len_ptr;
@@ -881,13 +881,15 @@ static void __init early_boss(char *p)
 	paddr = memparse(p, &endp);
 	vaddr = ipc_phys_to_virt(paddr);
 
-	printk (KERN_NOTICE "boss: %08x [%08x]\n", vaddr, paddr);
+	printk (KERN_NOTICE "boss: %08lx [%08lx]\n", vaddr, paddr);
 	printk (KERN_NOTICE "boss: printk: %08x [%08x], %08x [%08x], %08x [%08x]\n",
 		(u32) boss_log_buf_ptr, ipc_virt_to_phys (boss_log_buf_ptr),
 		(u32) boss_log_buf_len_ptr, ipc_virt_to_phys (boss_log_buf_len_ptr),
 		(u32) boss_log_buf_last_ptr, ipc_virt_to_phys (boss_log_buf_last_ptr));
 
 	boss = (struct boss_s *) vaddr;
+
+	return 0;
 }
 
 early_param("boss", early_boss);
