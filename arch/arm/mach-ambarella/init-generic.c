@@ -121,6 +121,8 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 	&ambarella_udc0,
 	&ambarella_wdt0,
+	&ambarella_fsg_device0,
+	&ambarella_usb_device0,
 };
 
 /* ==========================================================================*/
