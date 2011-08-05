@@ -49,74 +49,38 @@
 
 #include <mach/hardware.h>
 
-/*-------------------------------------------------------------------------*/
+#include "usbstring.c"
+#include "config.c"
+#include "epautoconf.c"
 
 #define DRIVER_VERSION		"1 Jan 2009"
 
 static const char shortname [] = "g_amb_stream";
 static const char longname [] = "Ambarella Data Streaming Gadget";
 
-static const char source_sink [] = "bulk in and out data";
 
-
-#define xprintk(d,level,fmt,args...) \
-	dev_printk(level , &(d)->gadget->dev , fmt , ## args)
+/*-------------------------------------------------------------------------*/
 
 #ifdef DEBUG
-#define DBG(dev,fmt,args...) \
-	xprintk(dev , KERN_DEBUG , fmt , ## args)
+#define AMB_DBG(dev,fmt,args...) \
+	dev_printk(KERN_DEBUG , &(dev)->gadget->dev , fmt , ## args)
 #else
-#define DBG(dev,fmt,args...) \
+#define AMB_DBG(dev,fmt,args...) \
 	do { } while (0)
 #endif /* DEBUG */
 
-#ifdef VERBOSE
-#define VDBG	DBG
-#else
-#define VDBG(dev,fmt,args...) \
-	do { } while (0)
-#endif /* VERBOSE */
+#define AMB_ERROR(dev,fmt,args...) \
+	dev_printk(KERN_ERR , &(dev)->gadget->dev , fmt , ## args)
 
-#define ERROR(dev,fmt,args...) \
-	xprintk(dev , KERN_ERR , fmt , ## args)
-#define _WARN(dev,fmt,args...) \
-	xprintk(dev , KERN_WARNING , fmt , ## args)
-#define INFO(dev,fmt,args...) \
-	xprintk(dev , KERN_INFO , fmt , ## args)
+#define AMB_INFO(dev,fmt,args...) \
+	dev_printk(KERN_INFO , &(dev)->gadget->dev , fmt , ## args)
 
 
 /*-------------------------------------------------------------------------*/
-
-
-/*-------------------------------------------------------------------------*/
-
-#define AMB_GADGET_MAJOR		AMBA_DEV_MAJOR
-#define AMB_GADGET_MINOR_START		(AMBA_DEV_MINOR_PUBLIC_START + 0)
-
-/* TOKEN */
-#define AMB_COMMAND_TOKEN		0x55434D44
-#define AMB_STATUS_TOKEN		0x55525350
-#define AMB_ACK_TOKEN		0x5541434b
-
-#define AMB_RSP_SUCCESS		0
-#define AMB_RSP_FAILED		1
-
-#define	AMB_RSP_NO_CONN		0
-#define AMB_RSP_CONNECT		1
-
-
-#define AMB_ACK_SUCCESS		0x00000000
-#define AMB_ACK_FAILURE		0x00000001
-
-#define USB_CMD_RECV_REQUEST	0x00000006
-
-#define SIMPLE_CMD_SIZE		32
-
 #define AG_NOTIFY_INTERVAL		5	/* 1 << 5 == 32 msec */
 #define AG_NOTIFY_MAXPACKET		8
 
-static struct cdev ag_cdev;
-
+#define SIMPLE_CMD_SIZE		32
 struct amb_cmd {
 	u32 signature;
 	u32 command;
@@ -161,7 +125,6 @@ struct amb_notify g_port = {
 	.value = 0,
 };
 
-
 /*-------------------------------------------------------------------------*/
 
 #define AMB_DATA_STREAM_MAGIC	'u'
@@ -171,33 +134,36 @@ struct amb_notify g_port = {
 
 /*-------------------------------------------------------------------------*/
 
+#define AMB_GADGET_MAJOR		AMBA_DEV_MAJOR
+#define AMB_GADGET_MINOR_START		(AMBA_DEV_MINOR_PUBLIC_START + 0)
+
+static struct cdev ag_cdev;
+
 /* big enough to hold our biggest descriptor */
 #define USB_BUFSIZ	256
 
 struct amb_dev {
 	spinlock_t		lock;
+	wait_queue_head_t	wq;
+	struct mutex		mtx;
+
+	u8			config;
+
 	struct usb_gadget	*gadget;
-	struct usb_request	*ctrl_req;	/* for control responses */
+	struct usb_request	*ctrl_req;
 	struct usb_request	*notify_req;
 
-	/* when configured, we have one of two configs:
-	 * - source data (in to host) and sink it (out from host)
-	 * - or loop it back (out from host back in to host)
-	 */
-	u8			config;
-	struct usb_ep		*in_ep, *out_ep;
-	struct usb_endpoint_descriptor		/* ep descriptor */
-				*in_ep_desc, *out_ep_desc;
-
-	struct usb_ep		*notify_ep;	/* interrupt endpoint */
-	struct usb_endpoint_descriptor	*notify_ep_desc;
+	struct usb_ep		*in_ep;
+	struct usb_ep		*out_ep;
+	struct usb_ep		*notify_ep;
+	/* ep descriptor */
+	struct usb_endpoint_descriptor *in_ep_desc;
+	struct usb_endpoint_descriptor *out_ep_desc;
+	struct usb_endpoint_descriptor *notify_ep_desc;
 
 	struct list_head		in_idle_list;	/* list of idle write requests */
 	struct list_head		in_queue_list;	/* list of queueing write requests */
 	struct list_head		out_req_list;	/* list of bulk out requests */
-
-	wait_queue_head_t	wq;
-	struct mutex		mtx;
 
 	int			open_count;
 	int			error;
@@ -218,16 +184,6 @@ static unsigned int qdepth = 5;
 module_param (qdepth, uint, S_IRUGO);
 MODULE_PARM_DESC(qdepth, "bulk transfer queue depth, default=5");
 
-static unsigned int use_notify = 1;
-module_param(use_notify, uint, S_IRUGO);
-MODULE_PARM_DESC(use_notify, "Use intr_in Endpoint, 0=no, 1=yes, default=yes");
-
-
-/*-------------------------------------------------------------------------*/
-
-#define DRIVER_VENDOR_ID	0x4255		/* Ambarella */
-#define DRIVER_PRODUCT_ID	0x0001
-
 /*-------------------------------------------------------------------------*/
 
 /*
@@ -240,14 +196,10 @@ MODULE_PARM_DESC(use_notify, "Use intr_in Endpoint, 0=no, 1=yes, default=yes");
 #define STRING_SERIAL			101
 #define STRING_SOURCE_SINK		250
 
-/*
- * This device advertises two configurations; these numbers work
- * on a pxa250 as well as more flexible hardware.
- */
-#define	AMB_BULK_CONFIG_VALUE	1
+#define DRIVER_VENDOR_ID	0x4255		/* Ambarella */
+#define DRIVER_PRODUCT_ID	0x0001
 
-static struct usb_device_descriptor
-ag_device_desc = {
+static struct usb_device_descriptor ag_device_desc = {
 	.bLength =		sizeof ag_device_desc,
 	.bDescriptorType =	USB_DT_DEVICE,
 
@@ -262,22 +214,19 @@ ag_device_desc = {
 	.bNumConfigurations =	1,
 };
 
-static struct usb_config_descriptor
-amb_bulk_config = {
+static struct usb_config_descriptor amb_bulk_config = {
 	.bLength =		sizeof amb_bulk_config,
 	.bDescriptorType =	USB_DT_CONFIG,
 
-	/* compute wTotalLength on the fly */
 	.bNumInterfaces =	1,
-	.bConfigurationValue =	AMB_BULK_CONFIG_VALUE,
+	.bConfigurationValue =	1,
 	.iConfiguration =	STRING_SOURCE_SINK,
 	.bmAttributes =		USB_CONFIG_ATT_ONE | USB_CONFIG_ATT_SELFPOWER,
 	.bMaxPower =		1,	/* self-powered */
 };
 
 
-static struct usb_otg_descriptor
-otg_descriptor = {
+static struct usb_otg_descriptor otg_descriptor = {
 	.bLength =		sizeof otg_descriptor,
 	.bDescriptorType =	USB_DT_OTG,
 
@@ -285,13 +234,11 @@ otg_descriptor = {
 };
 
 /* one interface in each configuration */
-
-static struct usb_interface_descriptor
-amb_data_stream_intf = {
+static struct usb_interface_descriptor amb_data_stream_intf = {
 	.bLength =		sizeof amb_data_stream_intf,
 	.bDescriptorType =	USB_DT_INTERFACE,
 
-	.bNumEndpoints =	2,
+	.bNumEndpoints =	3,
 	.bInterfaceClass =	USB_CLASS_VENDOR_SPEC,
 	.iInterface =		STRING_SOURCE_SINK,
 };
@@ -299,8 +246,7 @@ amb_data_stream_intf = {
 
 /* two full speed bulk endpoints; their use is config-dependent */
 
-static struct usb_endpoint_descriptor
-fs_bulk_in_desc = {
+static struct usb_endpoint_descriptor fs_bulk_in_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 
@@ -308,8 +254,7 @@ fs_bulk_in_desc = {
 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
 };
 
-static struct usb_endpoint_descriptor
-fs_bulk_out_desc = {
+static struct usb_endpoint_descriptor fs_bulk_out_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 
@@ -317,8 +262,7 @@ fs_bulk_out_desc = {
 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
 };
 
-static struct usb_endpoint_descriptor
-fs_intr_in_desc = {
+static struct usb_endpoint_descriptor fs_intr_in_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bEndpointAddress =	USB_DIR_IN,
@@ -339,17 +283,7 @@ static const struct usb_descriptor_header *fs_amb_data_stream_function [] = {
 
 #ifdef	CONFIG_USB_GADGET_DUALSPEED
 
-/*
- * usb 2.0 devices need to expose both high speed and full speed
- * descriptors, unless they only run at full speed.
- *
- * that means alternate endpoint descriptors (bigger packets)
- * and a "device qualifier" ... plus more construction options
- * for the config descriptor.
- */
-
-static struct usb_endpoint_descriptor
-hs_bulk_in_desc = {
+static struct usb_endpoint_descriptor hs_bulk_in_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 
@@ -358,8 +292,7 @@ hs_bulk_in_desc = {
 	.wMaxPacketSize =	__constant_cpu_to_le16 (512),
 };
 
-static struct usb_endpoint_descriptor
-hs_bulk_out_desc = {
+static struct usb_endpoint_descriptor hs_bulk_out_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 
@@ -367,8 +300,7 @@ hs_bulk_out_desc = {
 	.wMaxPacketSize =	__constant_cpu_to_le16 (512),
 };
 
-static struct usb_endpoint_descriptor
-hs_intr_in_desc = {
+static struct usb_endpoint_descriptor hs_intr_in_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bEndpointAddress =	USB_DIR_IN,
@@ -377,8 +309,7 @@ hs_intr_in_desc = {
 	.bInterval =		AG_NOTIFY_INTERVAL + 4,
 };
 
-static struct usb_qualifier_descriptor
-dev_qualifier = {
+static struct usb_qualifier_descriptor dev_qualifier = {
 	.bLength =		sizeof dev_qualifier,
 	.bDescriptorType =	USB_DT_DEVICE_QUALIFIER,
 
@@ -408,15 +339,15 @@ static const struct usb_descriptor_header *hs_amb_data_stream_function [] = {
 
 #endif	/* !CONFIG_USB_GADGET_DUALSPEED */
 
-static char				manufacturer [50];
-static char				serial [40];
+static char manufacturer [50];
+static char serial [40];
 
 /* static strings, in UTF-8 */
 static struct usb_string		strings [] = {
 	{ STRING_MANUFACTURER, manufacturer, },
 	{ STRING_PRODUCT, longname, },
 	{ STRING_SERIAL, serial, },
-	{ STRING_SOURCE_SINK, source_sink, },
+	{ STRING_SOURCE_SINK, "bulk in and out data", },
 	{  }			/* end of list */
 };
 
@@ -492,7 +423,7 @@ static int amb_send(u8 *buf, u32 len)
 	}
 
 	if(dev->error) {
-		ERROR(dev, "%s: device error", __func__);
+		AMB_ERROR(dev, "%s: device error", __func__);
 		spin_lock_irq(&dev->lock);
 		if (req)
 			list_move_tail(&req->list, &dev->in_idle_list);
@@ -506,7 +437,7 @@ static int amb_send(u8 *buf, u32 len)
 	req->length = len;
 	rval = usb_ep_queue(dev->in_ep, req, GFP_ATOMIC);
 	if (rval != 0) {
-		ERROR(dev, "%s: cannot queue bulk in request, "
+		AMB_ERROR(dev, "%s: cannot queue bulk in request, "
 			"rval=%d\n", __func__, rval);
 		spin_lock_irq(&dev->lock);
 		list_move_tail(&req->list, &dev->in_idle_list);
@@ -537,13 +468,13 @@ static int amb_recv(u8 *buf, u32 len)
 
 		req->length = buflen;
 		if ((rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC))) {
-			ERROR(dev, "%s: can't queue bulk out request, "
+			AMB_ERROR(dev, "%s: can't queue bulk out request, "
 				"rval = %d\n", __func__, rval);
 		}
 	}
 
 	if(dev->error) {
-		ERROR(dev, "%s: device error", __func__);
+		AMB_ERROR(dev, "%s: device error", __func__);
 		rval = -EIO;
 	}
 
@@ -557,11 +488,10 @@ static long ag_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	int rval = 0;
 	struct amb_dev *dev = ag_device;
 	struct amb_cmd _cmd;
-//	struct amb_ack ack;
 	struct amb_rsp rsp;
 	struct amb_notify notify;
 
-	DBG(dev, "%s: Enter\n", __func__);
+	AMB_DBG(dev, "%s: Enter\n", __func__);
 
 	mutex_lock(&dev->mtx);
 
@@ -600,25 +530,6 @@ static long ag_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		g_port.port_id = notify.port_id;
 		g_port.value = notify.value;
 		spin_unlock_irq(&dev->lock);
-#if 0
-		/* wait for ack from host */
-		amb_recv((u8 *)&ack, sizeof(ack));
-
-		/* send response to host */
-		if((ack.acknowledge == AMB_ACK_SUCCESS) &&
-				(ack.parameter0 == USB_CMD_RECV_REQUEST)){
-			rsp.signature = AMB_STATUS_TOKEN;
-			rsp.response = AMB_RSP_SUCCESS;
-			rsp.parameter0 = AMB_RSP_CONNECT;
-			rsp.parameter1 = 0;
-		}else {
-			rsp.signature = AMB_STATUS_TOKEN;
-			rsp.response = AMB_RSP_SUCCESS;
-			rsp.parameter0 = AMB_RSP_NO_CONN;
-			rsp.parameter1 = 0;
-		}
-		amb_send((u8 *)&rsp, sizeof(rsp));
-#endif
 		break;
 
 	default:
@@ -628,7 +539,7 @@ static long ag_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	mutex_unlock(&dev->mtx);
 
-	DBG(dev, "%s: Exit\n", __func__);
+	AMB_DBG(dev, "%s: Exit\n", __func__);
 
 	return rval;
 }
@@ -659,7 +570,7 @@ static int ag_open(struct inode *inode, struct file *filp)
 		/* re-use the req again */
 		req->length = buflen;
 		if ((rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC))) {
-			ERROR(dev, "%s: can't queue bulk out request, "
+			AMB_ERROR(dev, "%s: can't queue bulk out request, "
 				"rval = %d\n", __func__, rval);
 			break;
 		}
@@ -681,7 +592,7 @@ static int ag_release(struct inode *inode, struct file *filp)
 	while ((req = req_move(dev, &dev->in_queue_list, &dev->in_idle_list))) {
 		rval = usb_ep_dequeue(dev->in_ep, req);
 		if (rval != 0) {
-			ERROR(dev, "%s: cannot dequeue bulk in request, "
+			AMB_ERROR(dev, "%s: cannot dequeue bulk in request, "
 				"rval=%d\n", __func__, rval);
 			break;
 		}
@@ -718,12 +629,12 @@ static int ag_read(struct file *file, char __user *buf,
 		}
 
 		if(dev->error){
-			ERROR(dev, "%s: device error", __func__);
+			AMB_ERROR(dev, "%s: device error", __func__);
 			if (req) {
 				req->length = buflen;
 				rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
 				if (rval)
-					ERROR(dev, "%s: "
+					AMB_ERROR(dev, "%s: "
 						"can't queue bulk out request, "
 						"rval = %d\n", __func__, rval);
 			}
@@ -732,7 +643,7 @@ static int ag_read(struct file *file, char __user *buf,
 		}
 
 		if(copy_to_user(buf + len, req->buf, req->actual)){
-			printk("len = %d, actual = %d\n", len, req->actual);
+			pr_err("len = %d, actual = %d\n", len, req->actual);
 			mutex_unlock(&dev->mtx);
 			return -EFAULT;
 		}
@@ -741,7 +652,7 @@ static int ag_read(struct file *file, char __user *buf,
 
 		req->length = buflen;
 		if ((rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC))) {
-			ERROR(dev, "%s: can't queue bulk out request, "
+			AMB_ERROR(dev, "%s: can't queue bulk out request, "
 				"rval = %d\n", __func__, rval);
 			len = rval;
 			break;
@@ -774,7 +685,7 @@ static int ag_write(struct file *file, const char __user *buf,
 		}
 
 		if(dev->error){
-			ERROR(dev, "%s: device error", __func__);
+			AMB_ERROR(dev, "%s: device error", __func__);
 			spin_lock_irq(&dev->lock);
 			if (req)
 				list_move_tail(&req->list, &dev->in_idle_list);
@@ -795,7 +706,7 @@ static int ag_write(struct file *file, const char __user *buf,
 
 		rval = usb_ep_queue(dev->in_ep, req, GFP_ATOMIC);
 		if (rval != 0) {
-			ERROR(dev, "%s: cannot queue bulk in request, "
+			AMB_ERROR(dev, "%s: cannot queue bulk in request, "
 				"rval=%d\n", __func__, rval);
 			list_move_tail(&req->list, &dev->in_idle_list);
 			mutex_unlock(&dev->mtx);
@@ -808,12 +719,21 @@ static int ag_write(struct file *file, const char __user *buf,
 
 	mutex_unlock(&dev->mtx);
 
-	DBG(dev, "%s: Exit\n", __func__);
+	AMB_DBG(dev, "%s: Exit\n", __func__);
 
 	return len;
 }
 
-/*-------------------------------------------------------------------------*/
+static struct file_operations ag_fops = {
+	.owner = THIS_MODULE,
+	.unlocked_ioctl = ag_ioctl,
+	.open = ag_open,
+	.read = ag_read,
+	.write = ag_write,
+	.release = ag_release
+};
+
+
 static void amb_notify_complete (struct usb_ep *ep, struct usb_request *req);
 
 static void notify_worker(struct work_struct *work)
@@ -844,33 +764,11 @@ static void notify_worker(struct work_struct *work)
 
 		rval = usb_ep_queue (dev->notify_ep, req, GFP_ATOMIC);
 		if (rval < 0)
-			DBG (dev, "status buf queue --> %d\n", rval);
+			AMB_DBG(dev, "status buf queue --> %d\n", rval);
 	}
 }
 
-/*-------------------------------------------------------------------------*/
-
-
-/*
- * config descriptors are also handcrafted.  these must agree with code
- * that sets configurations, and with code managing interfaces and their
- * altsettings.  other complexity may come from:
- *
- *  - high speed support, including "other speed config" rules
- *  - multiple configurations
- *  - interfaces with alternate settings
- *  - embedded class or vendor-specific descriptors
- *
- * this handles high speed, and has a second config that could as easily
- * have been an alternate interface setting (on most hardware).
- *
- * NOTE:  to demonstrate (and test) more USB capabilities, this driver
- * should include an altsetting to test interrupt transfers, including
- * high bandwidth modes at high speed.  (Maybe work like Intel's test
- * device?)
- */
-static int
-amb_config_buf (struct usb_gadget *gadget,
+static int amb_config_buf (struct usb_gadget *gadget,
 		u8 *buf, u8 type, unsigned index)
 {
 	int len;
@@ -907,10 +805,8 @@ amb_config_buf (struct usb_gadget *gadget,
 	return len;
 }
 
-/*-------------------------------------------------------------------------*/
-
-static struct usb_request *
-amb_alloc_buf_req (struct usb_ep *ep, unsigned length, gfp_t kmalloc_flags)
+static struct usb_request *amb_alloc_buf_req (struct usb_ep *ep,
+		unsigned length, gfp_t kmalloc_flags)
 {
 	struct usb_request	*req;
 
@@ -937,12 +833,6 @@ static void amb_free_buf_req (struct usb_ep *ep, struct usb_request *req)
 	}
 }
 
-/*-------------------------------------------------------------------------*/
-
-/* if there is only one request in the queue, there'll always be an
- * irq delay between end of one request and start of the next.
- * that prevents using hardware dma queues.
- */
 static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 {
 	struct amb_dev	*dev = ep->driver_data;
@@ -966,13 +856,13 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
+		AMB_ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		dev->error = 1;
 		/* queue request again */
 		rval = usb_ep_queue(dev->in_ep, req, GFP_ATOMIC);
 		if (rval != 0) {
-			ERROR(dev, "%s: cannot queue bulk in request, "
+			AMB_ERROR(dev, "%s: cannot queue bulk in request, "
 				"rval=%d\n", __func__, rval);
 		}
 		break;
@@ -981,11 +871,6 @@ static void amb_bulk_in_complete (struct usb_ep *ep, struct usb_request *req)
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
-
-/* if there is only one request in the queue, there'll always be an
- * irq delay between end of one request and start of the next.
- * that prevents using hardware dma queues.
- */
 static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 {
 	struct amb_dev	*dev = ep->driver_data;
@@ -1009,13 +894,13 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
+		AMB_ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		dev->error = 1;
 		/* queue request again */
 		rval = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
 		if (rval != 0) {
-			ERROR(dev, "%s: cannot queue bulk in request, "
+			AMB_ERROR(dev, "%s: cannot queue bulk in request, "
 				"rval=%d\n", __func__, rval);
 		}
 		break;
@@ -1023,9 +908,6 @@ static void amb_bulk_out_complete (struct usb_ep *ep, struct usb_request *req)
 	wake_up_interruptible(&dev->wq);
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
-
-
-/*-------------------------------------------------------------------------*/
 
 static void amb_notify_complete (struct usb_ep *ep, struct usb_request *req)
 {
@@ -1050,7 +932,7 @@ static void amb_notify_complete (struct usb_ep *ep, struct usb_request *req)
 		amb_free_buf_req (ep, req);
 		break;
 	default:
-		ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
+		AMB_ERROR(dev, "%s complete --> %d, %d/%d\n", ep->name,
 				status, req->actual, req->length);
 		break;
 	}
@@ -1064,12 +946,6 @@ static void amb_start_notify (struct amb_dev *dev)
 	int value;
 
 	/* flush old status
-	 *
-	 * FIXME ugly idiom, maybe we'd be better with just
-	 * a "cancel the whole queue" primitive since any
-	 * unlink-one primitive has way too many error modes.
-	 * here, we "know" toggle is already clear...
-	 *
 	 * FIXME iff req->context != null just dequeue it
 	 */
 	usb_ep_disable (dev->notify_ep);
@@ -1088,12 +964,8 @@ static void amb_start_notify (struct amb_dev *dev)
 
 	value = usb_ep_queue (dev->notify_ep, req, GFP_ATOMIC);
 	if (value < 0)
-		DBG (dev, "status buf queue --> %d\n", value);
+		AMB_DBG (dev, "status buf queue --> %d\n", value);
 }
-
-
-
-/*-------------------------------------------------------------------------*/
 
 static void amb_reset_config (struct amb_dev *dev)
 {
@@ -1101,7 +973,7 @@ static void amb_reset_config (struct amb_dev *dev)
 	unsigned long flags;
 
 	if (dev == NULL) {
-		printk(KERN_ERR "amb_reset_config: NULL device pointer\n");
+		pr_err("amb_reset_config: NULL device pointer\n");
 		return;
 	}
 
@@ -1160,7 +1032,7 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 	if (result == 0) {
 		dev->in_ep_desc = d;
 	} else {
-		ERROR(dev, "%s: can't enable %s, result=%d\n",
+		AMB_ERROR(dev, "%s: can't enable %s, result=%d\n",
 			__func__, dev->in_ep->name, result);
 		goto exit;
 	}
@@ -1171,24 +1043,23 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 	if (result == 0) {
 		dev->out_ep_desc = d;
 	} else {
-		ERROR(dev, "%s: can't enable %s, result=%d\n",
+		AMB_ERROR(dev, "%s: can't enable %s, result=%d\n",
 			__func__, dev->out_ep->name, result);
 		usb_ep_disable(dev->in_ep);
 		goto exit;
 	}
 
-	if(use_notify) {
-		d = ep_desc (gadget, &hs_intr_in_desc, &fs_intr_in_desc);
-		result = usb_ep_enable(dev->notify_ep, d);
-		if (result == 0) {
-			dev->notify_ep_desc = d;
-		} else {
-			ERROR(dev, "%s: can't enable %s, result=%d\n",
-				__func__, dev->notify_ep->name, result);
-			usb_ep_disable(dev->out_ep);
-			usb_ep_disable(dev->in_ep);
-			goto exit;
-		}
+	/* one endpoint report status  (to the host) */
+	d = ep_desc (gadget, &hs_intr_in_desc, &fs_intr_in_desc);
+	result = usb_ep_enable(dev->notify_ep, d);
+	if (result == 0) {
+		dev->notify_ep_desc = d;
+	} else {
+		AMB_ERROR(dev, "%s: can't enable %s, result=%d\n",
+			__func__, dev->notify_ep->name, result);
+		usb_ep_disable(dev->out_ep);
+		usb_ep_disable(dev->in_ep);
+		goto exit;
 	}
 
 	/* allocate and queue read requests */
@@ -1199,11 +1070,11 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 			req->complete = amb_bulk_out_complete;
 			result = usb_ep_queue(ep, req, GFP_ATOMIC);
 			if (result < 0) {
-				ERROR(dev, "%s: can't queue bulk out request, "
+				AMB_ERROR(dev, "%s: can't queue bulk out request, "
 					"rval = %d\n", __func__, result);
 			}
 		} else {
-			ERROR(dev, "%s: can't allocate bulk in requests\n", __func__);
+			AMB_ERROR(dev, "%s: can't allocate bulk in requests\n", __func__);
 			result = -ENOMEM;
 			goto exit;
 		}
@@ -1217,7 +1088,7 @@ static int amb_set_stream_config (struct amb_dev *dev, gfp_t gfp_flags)
 			req->complete = amb_bulk_in_complete;
 			req_put(dev, &dev->in_idle_list, req);
 		} else {
-			ERROR(dev, "%s: can't allocate bulk in requests\n", __func__);
+			AMB_ERROR(dev, "%s: can't allocate bulk in requests\n", __func__);
 			result = -ENOMEM;
 			goto exit;
 		}
@@ -1235,21 +1106,7 @@ exit:
 }
 
 
-/*-------------------------------------------------------------------------*/
-
-
-/* change our operational config.  this code must agree with the code
- * that returns config descriptors, and altsetting code.
- *
- * it's also responsible for power management interactions. some
- * configurations might not work with our current power sources.
- *
- * note that some device controller hardware will constrain what this
- * code can do, perhaps by disallowing more than one configuration or
- * by limiting configuration choices (like the pxa2xx).
- */
-static int
-amb_set_config (struct amb_dev *dev, unsigned number, gfp_t gfp_flags)
+static int amb_set_config (struct amb_dev *dev, unsigned number, gfp_t gfp_flags)
 {
 	int			result = 0;
 	struct usb_gadget	*gadget = dev->gadget;
@@ -1260,7 +1117,7 @@ amb_set_config (struct amb_dev *dev, unsigned number, gfp_t gfp_flags)
 	amb_reset_config (dev);
 
 	switch (number) {
-	case AMB_BULK_CONFIG_VALUE:
+	case 1:
 		result = amb_set_stream_config(dev, gfp_flags);
 		break;
 	default:
@@ -1276,7 +1133,6 @@ amb_set_config (struct amb_dev *dev, unsigned number, gfp_t gfp_flags)
 		amb_reset_config (dev);
 	else {
 		char *speed;
-		char notify_info[64];
 
 		switch (gadget->speed) {
 		case USB_SPEED_LOW:	speed = "low"; break;
@@ -1286,37 +1142,30 @@ amb_set_config (struct amb_dev *dev, unsigned number, gfp_t gfp_flags)
 		}
 
 		dev->config = number;
-		INFO (dev, "%s speed config #%d: \n", speed, number);
-		snprintf(notify_info, sizeof(notify_info), "intr_in address = 0x%02x",
-			dev->notify_ep ? dev->notify_ep_desc->bEndpointAddress : 0);
+		AMB_INFO(dev, "%s speed config #%d: \n", speed, number);
 
-		INFO(dev, "bulk_out address = 0x%02x, bulk_in address = 0x%02x, %s\n",
+		AMB_INFO(dev, "bulk_out address = 0x%02x, bulk_in address = 0x%02x,"
+			" intr_in address = 0x%02x\n",
 			dev->out_ep_desc->bEndpointAddress,
 			dev->in_ep_desc->bEndpointAddress,
-			dev->notify_ep ? notify_info : "");
+			dev->notify_ep_desc->bEndpointAddress);
 	}
 	return result;
 }
 
-/*-------------------------------------------------------------------------*/
-
 static void amb_setup_complete (struct usb_ep *ep, struct usb_request *req)
 {
-	if (req->status || req->actual != req->length)
-		DBG ((struct amb_dev *) ep->driver_data,
-				"setup complete --> %d, %d/%d\n",
-				req->status, req->actual, req->length);
+	struct amb_dev *dev;
+
+	dev = ep->driver_data;
+
+	if (req->status || req->actual != req->length) {
+		AMB_DBG(dev, "setup complete --> %d, %d/%d\n",
+			req->status, req->actual, req->length);
+	}
 }
 
-/*
- * The setup() callback implements all the ep0 functionality that's
- * not handled lower down, in hardware or the hardware driver (like
- * device and endpoint feature flags, and their status).  It's all
- * housekeeping for the gadget function we're implementing.  Most of
- * the work is in config-specific setup.
- */
-static int
-amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
+static int amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 {
 	struct amb_dev		*dev = get_gadget_data (gadget);
 	struct usb_request	*req = dev->ctrl_req;
@@ -1325,9 +1174,6 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u16			w_value = le16_to_cpu(ctrl->wValue);
 	u16			w_length = le16_to_cpu(ctrl->wLength);
 
-	/* usually this stores reply data in the pre-allocated ep0 buffer,
-	 * but config change events will reconfigure hardware.
-	 */
 	req->zero = 0;
 	switch (ctrl->bRequest) {
 
@@ -1379,14 +1225,9 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	case USB_REQ_SET_CONFIGURATION:
 		if (ctrl->bRequestType != 0)
 			goto unknown;
-		if (gadget->a_hnp_support)
-			DBG (dev, "HNP available\n");
-		else if (gadget->a_alt_hnp_support)
-			DBG (dev, "HNP needs a different root port\n");
-		else
-			VDBG (dev, "HNP inactive\n");
 		value = amb_set_config (dev, w_value, GFP_ATOMIC);
 		break;
+
 	case USB_REQ_GET_CONFIGURATION:
 		if (ctrl->bRequestType != USB_DIR_IN)
 			goto unknown;
@@ -1394,10 +1235,6 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 		value = min (w_length, (u16) 1);
 		break;
 
-	/* until we add altsetting support, or other interfaces,
-	 * only 0/0 are possible.  pxa2xx only supports 0/0 (poorly)
-	 * and already killed pending endpoint I/O.
-	 */
 	case USB_REQ_SET_INTERFACE:
 		if (ctrl->bRequestType != USB_RECIP_INTERFACE)
 			goto unknown;
@@ -1430,8 +1267,7 @@ amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 
 	default:
 unknown:
-		VDBG (dev,
-			"unknown control req%02x.%02x v%04x i%04x l%d\n",
+		AMB_DBG(dev, "unknown control req%02x.%02x v%04x i%04x l%d\n",
 			ctrl->bRequestType, ctrl->bRequest,
 			w_value, w_index, w_length);
 	}
@@ -1442,7 +1278,7 @@ unknown:
 		req->zero = value < w_length;
 		value = usb_ep_queue (gadget->ep0, req, GFP_ATOMIC);
 		if (value < 0) {
-			DBG (dev, "ep_queue --> %d\n", value);
+			AMB_DBG(dev, "ep_queue --> %d\n", value);
 			req->status = 0;
 			amb_setup_complete (gadget->ep0, req);
 		}
@@ -1468,14 +1304,11 @@ static void amb_disconnect (struct usb_gadget *gadget)
 	 */
 }
 
-
-/*-------------------------------------------------------------------------*/
-
-static void /* __init_or_exit */ amb_unbind (struct usb_gadget *gadget)
+static void __exit amb_unbind (struct usb_gadget *gadget)
 {
 	struct amb_dev		*dev = get_gadget_data (gadget);
 
-	DBG (dev, "unbind\n");
+	AMB_DBG(dev, "unbind\n");
 
 	/* we've already been disconnected ... no i/o is active */
 	if (dev->ctrl_req) {
@@ -1499,7 +1332,7 @@ static int __ref amb_bind (struct usb_gadget *gadget)
 	if (gcnum >= 0)
 		ag_device_desc.bcdDevice = cpu_to_le16 (0x0200 + gcnum);
 	else {
-		printk (KERN_WARNING "%s: controller '%s' not recognized\n",
+		pr_warn("%s: controller '%s' not recognized\n",
 			shortname, gadget->name);
 		ag_device_desc.bcdDevice = __constant_cpu_to_le16 (0x9999);
 	}
@@ -1508,12 +1341,14 @@ static int __ref amb_bind (struct usb_gadget *gadget)
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
+
 	spin_lock_init (&dev->lock);
 	mutex_init(&dev->mtx);
 	init_waitqueue_head(&dev->wq);
 	INIT_LIST_HEAD(&dev->in_idle_list);
 	INIT_LIST_HEAD(&dev->in_queue_list);
 	INIT_LIST_HEAD(&dev->out_req_list);
+
 	dev->gadget = gadget;
 	dev->config = 0;
 	dev->error = 0;
@@ -1524,33 +1359,35 @@ static int __ref amb_bind (struct usb_gadget *gadget)
 	usb_ep_autoconfig_reset (gadget);
 
 	ep = usb_ep_autoconfig (gadget, &fs_bulk_in_desc);
-	if (!ep)
-		goto autoconf_fail;
+	if (!ep) {
+		AMB_ERROR(dev, "amb_bind: cannot get bulk-in endpoint\n");
+		return -ENODEV;
+	}
 	ep->driver_data = dev;	/* claim the endpoint */
 	dev->in_ep = ep;
 
 	ep = usb_ep_autoconfig (gadget, &fs_bulk_out_desc);
-	if (!ep)
-		goto autoconf_fail;
+	if (!ep) {
+		AMB_ERROR(dev, "amb_bind: cannot get bulk-out endpoint\n");
+		return -ENODEV;
+	}
 	ep->driver_data = dev;	/* claim the endpoint */
 	dev->out_ep = ep;
 
-	if (use_notify) {
-		ep = usb_ep_autoconfig(gadget, &fs_intr_in_desc);
-		if (!ep) {
-			printk(KERN_ERR "amb_bind: cannot use notify endpoint\n");
-			goto autoconf_fail;
-		}
-		dev->notify_ep = ep;
-		ep->driver_data = dev;	/* claim the endpoint */
-
-		amb_data_stream_intf.bNumEndpoints = 3;
+	ep = usb_ep_autoconfig(gadget, &fs_intr_in_desc);
+	if (!ep) {
+		AMB_ERROR(dev, "amb_bind: cannot use notify endpoint\n");
+		return -ENODEV;
 	}
+	dev->notify_ep = ep;
+	ep->driver_data = dev;	/* claim the endpoint */
 
 	/* preallocate control response and buffer */
 	dev->ctrl_req = amb_alloc_buf_req (gadget->ep0, USB_BUFSIZ, GFP_KERNEL);
 	if (dev->ctrl_req == NULL) {
-		goto enomem;
+		AMB_ERROR(dev, "%s: No memory\n", __func__);
+		amb_unbind (gadget);
+		return -ENOMEM;
 	}
 	dev->ctrl_req->complete = amb_setup_complete;
 	gadget->ep0->driver_data = dev;
@@ -1566,7 +1403,6 @@ static int __ref amb_bind (struct usb_gadget *gadget)
 	hs_bulk_out_desc.bEndpointAddress = fs_bulk_out_desc.bEndpointAddress;
 	hs_intr_in_desc.bEndpointAddress = fs_intr_in_desc.bEndpointAddress;
 #endif
-
 	if (gadget->is_otg) {
 		otg_descriptor.bmAttributes |= USB_OTG_HNP,
 		amb_bulk_config.bmAttributes |= USB_CONFIG_ATT_WAKEUP;
@@ -1576,25 +1412,15 @@ static int __ref amb_bind (struct usb_gadget *gadget)
 
 	gadget->ep0->driver_data = dev;
 
-	INFO (dev, "%s, version: " DRIVER_VERSION "\n", longname);
-
+	strlcpy (serial, "123456789ABC", sizeof serial);
 	snprintf (manufacturer, sizeof manufacturer, "%s %s with %s",
 		init_utsname()->sysname, init_utsname()->release,
 		gadget->name);
 
+	AMB_INFO(dev, "%s, version: " DRIVER_VERSION "\n", longname);
+
 	return 0;
-
-enomem:
-	printk(KERN_ERR "%s: No memory\n", __func__);
-	amb_unbind (gadget);
-	return -ENOMEM;
-autoconf_fail:
-	printk (KERN_ERR "%s: can't autoconfigure on %s\n",
-		shortname, gadget->name);
-	return -ENODEV;
 }
-
-/*-------------------------------------------------------------------------*/
 
 static void amb_suspend (struct usb_gadget *gadget)
 {
@@ -1604,7 +1430,7 @@ static void amb_suspend (struct usb_gadget *gadget)
 		return;
 
 	dev = get_gadget_data (gadget);
-	DBG (dev, "suspend\n");
+	AMB_DBG(dev, "suspend\n");
 }
 
 static void amb_resume (struct usb_gadget *gadget)
@@ -1612,21 +1438,8 @@ static void amb_resume (struct usb_gadget *gadget)
 	struct amb_dev		*dev = NULL;
 
 	dev = get_gadget_data (gadget);
-	DBG (dev, "resume\n");
+	AMB_DBG(dev, "resume\n");
 }
-
-
-/*-------------------------------------------------------------------------*/
-
-static struct file_operations ag_fops = {
-	.owner = THIS_MODULE,
-	.unlocked_ioctl = ag_ioctl,
-	.open = ag_open,
-	.read = ag_read,
-	.write = ag_write,
-	.release = ag_release
-};
-
 
 static struct usb_gadget_driver amb_gadget_driver = {
 #ifdef CONFIG_USB_GADGET_DUALSPEED
@@ -1649,29 +1462,20 @@ static struct usb_gadget_driver amb_gadget_driver = {
 	},
 };
 
-MODULE_AUTHOR ("Cao Rongrong <rrcao@ambarella.com>");
-MODULE_LICENSE ("GPL");
-
-
 static int __init amb_gadget_init(void)
 {
 	int rval = 0;
 	dev_t dev_id;
 
-	/* a real value would likely come through some id prom
-	 * or module option.  this one takes at least two packets.
-	 */
-	strlcpy (serial, "123456789ABC", sizeof serial);
-
 	rval = usb_gadget_probe_driver(&amb_gadget_driver, amb_bind);
 	if (rval) {
-		printk(KERN_ERR "amb_gadget_init: cannot register gadget driver, "
+		pr_err("amb_gadget_init: cannot register gadget driver, "
 			"rval=%d\n", rval);
 		goto out0;
 	}
 
 	if (buflen >= 65536) {
-		printk(KERN_ERR "amb_gadget_init: buflen is too large\n");
+		pr_err("amb_gadget_init: buflen is too large\n");
 		rval = -EINVAL;
 		goto out1;
 	}
@@ -1679,7 +1483,7 @@ static int __init amb_gadget_init(void)
 	dev_id = MKDEV(AMB_GADGET_MAJOR, AMB_GADGET_MINOR_START);
 	rval = register_chrdev_region(dev_id, 1, "amb_gadget");
 	if(rval < 0){
-		printk(KERN_ERR "amb_gadget_init: register devcie number error!\n");
+		pr_err("amb_gadget_init: register devcie number error!\n");
 		goto out1;
 	}
 
@@ -1687,7 +1491,7 @@ static int __init amb_gadget_init(void)
 	ag_cdev.owner = THIS_MODULE;
 	rval = cdev_add(&ag_cdev, dev_id, 1);
 	if (rval) {
-		printk(KERN_ERR "amb_gadget_init: cdev_add failed\n");
+		pr_err("amb_gadget_init: cdev_add failed\n");
 		unregister_chrdev_region(dev_id, 1);
 		goto out1;
 	}
@@ -1711,4 +1515,9 @@ static void __exit amb_gadget_exit (void)
 	cdev_del(&ag_cdev);
 }
 module_exit (amb_gadget_exit);
+
+
+MODULE_AUTHOR ("Cao Rongrong <rrcao@ambarella.com>");
+MODULE_LICENSE ("GPL");
+
 
