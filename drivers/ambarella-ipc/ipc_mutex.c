@@ -234,7 +234,9 @@ ipc_mutex_wakeup_lookup(ipc_mutex_os_obj_t *os)
 
 		bits = os->wakeup_bitmap[i];
 		if (bits) {
-			mtxid = (i << 5) + get_trailing_zero(bits);
+			mtxid = ipc_ctz(bits);
+			os->wakeup_bitmap[i] &= ~(1 << mtxid);
+			mtxid += (i << 5);
 			break;
 		}
 	}

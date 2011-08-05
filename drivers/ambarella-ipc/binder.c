@@ -454,11 +454,10 @@ struct ipc_prog_s *ipc_clnt_progs(void)
 }
 EXPORT_SYMBOL(ipc_clnt_progs);
 
-#if defined(STATIC_SVC)
 /*
- *  * Count trailing zero
- *   */
-static inline unsigned int ipc_ctz(unsigned int val)
+ * Count trailing zero
+ */
+unsigned int ipc_ctz(unsigned int val)
 {
 	register unsigned int tmp = 0;
 
@@ -473,7 +472,9 @@ static inline unsigned int ipc_ctz(unsigned int val)
 
 	return val;
 }
+EXPORT_SYMBOL(ipc_ctz);
 
+#if defined(STATIC_SVC)
 /*
  * Allocate a SVCXPRT
  */

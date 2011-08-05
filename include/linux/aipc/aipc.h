@@ -60,6 +60,7 @@ struct SVCXPRT;
 
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
+extern unsigned int ipc_ctz(unsigned int val);
 
 #if CONFIG_NEED_PTR_CONV
 
