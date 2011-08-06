@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
+#include <linux/seq_file.h>
 
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/irq.h>
@@ -52,10 +53,40 @@ extern void aipc_nl_cleanup(void);
 
 #if defined(CONFIG_PROC_FS)
 
+#define PROC_SEQ_FILE_DEFINE(name) \
+static void *seq_start_##name(struct seq_file *s, loff_t *pos); \
+static void *seq_next_##name(struct seq_file *s, void *v, loff_t *pos); \
+static void seq_stop_##name(struct seq_file *s, void *v); \
+static int seq_show_##name(struct seq_file *s, void *v); \
+\
+static struct seq_operations proc_seq_ops_##name = { \
+    .start = seq_start_##name, \
+    .next  = seq_next_##name, \
+    .stop  = seq_stop_##name, \
+    .show  = seq_show_##name \
+}; \
+\
+static int proc_open_##name(struct inode *inode, struct file *file) \
+{ \
+    return seq_open(file, &proc_seq_ops_##name); \
+} \
+\
+static struct file_operations proc_ops_##name = { \
+    .owner   = THIS_MODULE, \
+    .open    = proc_open_##name, \
+    .read    = seq_read, \
+    .llseek  = seq_lseek, \
+    .release = seq_release \
+}; \
+\
+struct proc_dir_entry *proc_##name = NULL;
+
 struct proc_dir_entry *proc_aipc = NULL;
 EXPORT_SYMBOL(proc_aipc);
-struct proc_dir_entry *proc_proginfo = NULL;
 struct proc_dir_entry *proc_lu_prog_id = NULL;
+
+/* procfs: proginfo */
+PROC_SEQ_FILE_DEFINE(proginfo)
 
 #if IPC_SPINLOCK_TEST
 struct proc_dir_entry *proc_spin_test = NULL;
@@ -67,31 +98,34 @@ static int G_mutex_count[256];
 static unsigned int *G_mutex_shm_count = NULL;
 #endif
 
-static int print_ipcgen_table(char *p, ssize_t size,
+static int print_ipcgen_table(struct seq_file *s,
 			      struct ipcgen_table *table, int nproc)
 {
 	int i, len = 0;
 
-	for (i = 0; i < nproc; i++) {
-		len += sprintf(p + len, "0x%.8x %4d %4d %4d   %s\n",
-			       (unsigned int)table[i + 1].proc,
-			       table[i + 1].fid,
-			       table[i + 1].len_arg,
-			       table[i + 1].len_res,
-			       table[i + 1].name);
+	for (i = 1; i <= nproc; i++) {
+		len += seq_printf(s, "0x%.8x %4d %4d %4d %4d %4d %4d   %s\n",
+			       (unsigned int)table[i].proc,
+			       table[i].fid,
+			       table[i].len_arg,
+			       table[i].arg_ptbl_num,
+			       table[i].len_res,
+			       table[i].res_ptbl_num,
+			       table[i].timeout,
+			       table[i].name);
 	}
 
 	return len;
 }
 
-static int print_lu_procinfo(char *p, ssize_t size,
+static int print_lu_procinfo(struct seq_file *s,
 			      struct aipc_nl_proc_info *proc_info,
 			      int nproc)
 {
 	int i, len = 0;
 
 	for (i = 0; i < nproc; i++) {
-		len += sprintf(p + len, "0x%.8x %4d %4d %4d   %s\n",
+		len += seq_printf(s, "0x%.8x %4d %4d %4d   %s\n",
 			       (unsigned int)proc_info->proc,
 			       proc_info->fid,
 			       proc_info->len_arg,
@@ -103,98 +137,99 @@ static int print_lu_procinfo(char *p, ssize_t size,
 	return len;
 }
 
-static int ipc_proginfo_proc_read(char *page, char **start,
-				  off_t off, int count, int *eof, void *data)
+/*
+ * seq_start() for /proc/aipc/proginfo
+ */
+static void *seq_start_proginfo(struct seq_file *s, loff_t *pos)
 {
-	int len = 0;
+	uint32_t *seq;
+
+	if (*pos > 0) {
+		return NULL;
+	}
+
+	seq = kzalloc(sizeof(uint32_t), GFP_KERNEL);
+	if (!seq) {
+		return NULL;
+	}
+
+	*seq = *pos + 1;
+
+	return seq;
+}
+
+/*
+ * seq_next() for /proc/aipc/proginfo
+ */
+static void *seq_next_proginfo(struct seq_file *s, void *v, loff_t *pos)
+{
+	uint32_t *seq = v;
+
+	*pos = ++(*seq);
+	if (*pos > 0) {
+		return NULL;
+	}
+	return seq;
+}
+
+/*
+ * seq_stop() for /proc/aipc/proginfo
+ */
+static void seq_stop_proginfo(struct seq_file *s, void *v)
+{
+	kfree(v);
+}
+
+/*
+ * seq_show() for /proc/aipc/proginfo
+ */
+static int seq_show_proginfo(struct seq_file *s, void *v)
+{
 	struct ipc_prog_s *prog;
 	struct aipc_nl_prog *nl_prog;
 
-	/*
-	 * To avoid buffer overflow, we split all the information into two
-	 * parts: kernel ipc programs, and user-space ipc programs
-	 * This method looks somewhat odd, we may use seq_file instead
-	 * of proc->read_proc.
-	 */
-	if (off != 0)
-		goto lu_prog_info;
-
-	*(unsigned long *)start = 1;
-
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"=======================\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"Registered IPC programs\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"servers: ");
+	seq_printf(s, "=======================\n");
+	seq_printf(s, "Registered IPC programs\n");
+	seq_printf(s, "servers: ");
 	for (prog = ipc_svc_progs(); prog != NULL; prog = prog->next) {
-		len += snprintf(page + len, PAGE_SIZE - len,
-				"%s ", prog->name);
+		seq_printf(s, "%s ", prog->name);
 	}
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"clients: ");
+	seq_printf(s, "\n");
+	seq_printf(s, "clients: ");
 	for (prog = ipc_clnt_progs(); prog != NULL; prog = prog->next) {
-		len += snprintf(page + len, PAGE_SIZE - len,
-				"%s ", prog->name);
+		seq_printf(s, "%s ", prog->name);
 	}
-	len += snprintf(page + len, PAGE_SIZE - len,
-		      "\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
-		      "=======================\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
-		      "\n\n");
+	seq_printf(s, "\n");
+	seq_printf(s, "=======================\n");
+	seq_printf(s, "\n\n");
 
 	for (prog = ipc_svc_progs(); prog != NULL; prog = prog->next) {
-		len += snprintf(page + len, PAGE_SIZE - len,
-			      "%s (S) P:0x%.8x, V:%d N:%d\n",
-				prog->name, prog->prog,
-				prog->vers, prog->nproc);
-		len += print_ipcgen_table(page + len, PAGE_SIZE - len,
-					  prog->table, prog->nproc);
-		len += snprintf(page + len, PAGE_SIZE - len, "\n");
+		seq_printf(s, "%s (S) P:0x%.8x, V:%d N:%d\n",
+				prog->name, prog->prog, prog->vers, prog->nproc);
+		print_ipcgen_table(s, prog->table, prog->nproc);
+		seq_printf(s, "\n");
 	}
 
 	for (prog = ipc_clnt_progs(); prog != NULL; prog = prog->next) {
-		len += snprintf(page + len, PAGE_SIZE - len,
-				"%s (C) P:0x%.8x, V:%d N:%d\n",
-				prog->name, prog->prog,
-				prog->vers, prog->nproc);
-		len += print_ipcgen_table(page + len, PAGE_SIZE - len,
-					  prog->table, prog->nproc);
-		len += snprintf(page + len, PAGE_SIZE - len,
-				"\n");
+		seq_printf(s, "%s (C) P:0x%.8x, V:%d N:%d\n",
+				prog->name, prog->prog, prog->vers, prog->nproc);
+		print_ipcgen_table(s, prog->table, prog->nproc);
+		seq_printf(s, "\n");
 	}
-
-	return len;
-
-lu_prog_info:
-
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"=======================\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
-			"Registered IPC programs in user-space\n");
+	seq_printf(s, "=======================\n");
+	seq_printf(s, "Registered IPC programs in user-space\n");
 	list_for_each_entry(nl_prog, &binder->lu_prog_list, list) {
-		len += snprintf(page + len, PAGE_SIZE - len,
-			      "%s (S) P:0x%.8x, V:%d N:%d\n",
+		seq_printf(s, "%s (S) P:0x%.8x, V:%d N:%d\n",
 				nl_prog->prog_info.name,
 				nl_prog->prog_info.pid,
 				nl_prog->prog_info.vers,
 				nl_prog->prog_info.nproc);
-		len += print_lu_procinfo(page + len, PAGE_SIZE - len,
-					  nl_prog->proc_info,
-					  nl_prog->prog_info.nproc);
-		len += snprintf(page + len, PAGE_SIZE - len,
-				"\n");
+		print_lu_procinfo(s, nl_prog->proc_info, nl_prog->prog_info.nproc);
+		seq_printf(s, "\n");
 	}
+	seq_printf(s, "\n");
 
-
-	len += snprintf(page + len, PAGE_SIZE - len, "\n");
-
-	*eof = 1;
-
-	return len;
+	return 0;
 }
 
 static int ipc_lu_prog_id_proc_read(char *page, char **start,
@@ -302,7 +337,7 @@ static int __init ambarella_ipc_init(void)
 		rval = -ENOMEM;
 		goto done;
 	}
-	proc_proginfo->read_proc = ipc_proginfo_proc_read;
+        proc_proginfo->proc_fops = &proc_ops_proginfo;
 
 	proc_lu_prog_id = create_proc_entry("lu_prog_id", S_IRUGO, proc_aipc);
 	if (proc_lu_prog_id == NULL) {
