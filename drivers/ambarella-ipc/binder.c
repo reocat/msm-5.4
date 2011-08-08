@@ -1588,6 +1588,8 @@ void ipc_binder_got_request(SVCXPRT *svcxprt)
 
 	/* Now invoke the function! */
 	svc_req.svcxprt = svcxprt;
+
+	K_ASSERT(proc != NULL);
 	result_code = proc(svcxprt->arg, svcxprt->res, &svc_req);
 }
 

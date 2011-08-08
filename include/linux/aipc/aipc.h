@@ -51,6 +51,13 @@
 #define CACHE_LINE_SIZE     32
 #define CACHE_LINE_MASK     ~(CACHE_LINE_SIZE - 1)
 
+#ifndef __ATTRIB_WEAK__
+#define __ATTRIB_WEAK__	__attribute__((weak))
+#endif
+#ifndef __ARMCC_WEAK__
+#define __ARMCC_WEAK__
+#endif
+
 struct SVCXPRT;
 
 #define IPC_I2L_INT_REQ_VEC	BOSS_VIRT_H2G_INT_REQ_VEC
