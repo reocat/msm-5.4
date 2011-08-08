@@ -119,7 +119,7 @@ static struct nand_ecclayout amb_oobinfo_2048 = {
 		{49, 7}, {61, 3}}
 };
 
-static uint8_t amb_scan_ff_pattern[] = { 0xff, 0xff };
+static uint8_t amb_scan_ff_pattern[] = { 0xff, };
 
 static struct nand_bbt_descr amb_512_bbt_descr = {
 	.offs = 5,
@@ -131,6 +131,34 @@ static struct nand_bbt_descr amb_2048_bbt_descr = {
 	.offs = 0,
 	.len = 1,
 	.pattern = amb_scan_ff_pattern
+};
+
+
+/*
+ * The generic flash bbt decriptors overlap with our ecc
+ * hardware, so define some Ambarella specific ones.
+ */
+static uint8_t bbt_pattern[] = { 'B', 'b', 't', '0' };
+static uint8_t mirror_pattern[] = { '1', 't', 'b', 'B' };
+
+static struct nand_bbt_descr bbt_main_descr = {
+	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+	.offs = 1,
+	.len = 4,
+	.veroffs = 5,
+	.maxblocks = 4,
+	.pattern = bbt_pattern,
+};
+
+static struct nand_bbt_descr bbt_mirror_descr = {
+	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+	.offs = 1,
+	.len = 4,
+	.veroffs = 5,
+	.maxblocks = 4,
+	.pattern = mirror_pattern,
 };
 
 
@@ -1130,27 +1158,6 @@ static int amb_nand_write_oob_std(struct mtd_info *mtd,
 	return status & NAND_STATUS_FAIL ? -EIO : 0;
 }
 
-static int amb_nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
-{
-	struct ambarella_nand_info		*nand_info;
-	int					page;
-	int					errorCode;
-
-	nand_info = (struct ambarella_nand_info *)mtd->priv;
-
-	page = (int)(ofs >> nand_info->chip.page_shift);
-	dev_info(nand_info->dev, "%s: page = 0x%x\n", __func__, page);
-	page &=  nand_info->chip.pagemask;
-	dev_info(nand_info->dev, "%s: real page = 0x%x\n", __func__, page);
-
-	memset(nand_info->dmabuf, 0, mtd->oobsize);
-
-	errorCode = nand_amb_write_data(nand_info, page,
-				nand_info->dmaaddr, SPARE_ONLY);
-
-	return errorCode;
-}
-
 /* ==========================================================================*/
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 	struct ambarella_nand_timing *timing)
@@ -1239,6 +1246,8 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 	  */
 	nand_info->control_reg |= (NAND_CTR_P3 | NAND_CTR_I4 | NAND_CTR_IE);
 
+	chip->chip_delay = 0;
+	chip->controller = &nand_info->controller;
 	chip->read_byte = amb_nand_read_byte;
 	chip->read_word = amb_nand_read_word;
 	chip->write_buf = amb_nand_write_buf;
@@ -1251,8 +1260,11 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 	chip->cmdfunc = amb_nand_cmdfunc;
 
 	chip->options = NAND_NO_AUTOINCR;
-	chip->controller = &nand_info->controller;
-	chip->block_markbad = amb_nand_block_markbad;
+	if (nand_info->plat_nand->flash_bbt) {
+		chip->options |= NAND_USE_FLASH_BBT;
+		chip->bbt_td = &bbt_main_descr;
+		chip->bbt_md = &bbt_mirror_descr;
+	}
 
 	nand_info->mtd.priv = chip;
 	nand_info->mtd.owner = THIS_MODULE;
