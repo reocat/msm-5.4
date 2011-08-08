@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 136866
+ * @version 149175
  *
  * @par Introduction:
  * The Ambarella A7 Hardware Abstraction Layer (ambhal) provides an API between
@@ -319,29 +319,37 @@ AMB_HAL_FUNCTION_INFO_RESET_WATCHDOG,
 AMB_HAL_FUNCTION_INFO_RESET_CHIP,
 AMB_HAL_FUNCTION_INFO_SET_LVDS_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_GET_LVDS_PAD_MODE,
-AMB_HAL_FUNCTION_INFO_SET_MISC_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_MISC_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_MISC_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SC_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SC_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SC_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SDCLK_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SDCMD_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SDWPCD_IOCTRL_CONFIGURATION,
-AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_DRIVE_STRENGTH,
-AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_PULLUPDOWN,
-AMB_HAL_FUNCTION_INFO_GET_SD_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_MISC1_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_MISC1_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_MISC1_IOCTRL_INPUT_TYPE,
+AMB_HAL_FUNCTION_INFO_GET_MISC1_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_MISC2_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_MISC2_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_MISC2_IOCTRL_INPUT_TYPE,
+AMB_HAL_FUNCTION_INFO_GET_MISC2_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_SMIOA_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_SMIOA_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_SMIOA_IOCTRL_INPUT_TYPE,
+AMB_HAL_FUNCTION_INFO_GET_SMIOA_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_SMIOB_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_SMIOB_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_SMIOB_IOCTRL_INPUT_TYPE,
+AMB_HAL_FUNCTION_INFO_GET_SMIOB_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_SMIOC_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_SMIOC_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_SMIOC_IOCTRL_INPUT_TYPE,
+AMB_HAL_FUNCTION_INFO_GET_SMIOC_IOCTRL_CONFIGURATION,
+AMB_HAL_FUNCTION_INFO_SET_SMIOD_IOCTRL_DRIVE_STRENGTH,
+AMB_HAL_FUNCTION_INFO_SET_SMIOD_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_SMIOD_IOCTRL_INPUT_TYPE,
+AMB_HAL_FUNCTION_INFO_GET_SMIOD_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_DRIVE_STRENGTH,
 AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_INPUT_TYPE,
 AMB_HAL_FUNCTION_INFO_GET_VD1_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_IOCTRL_DRIVE_STRENGTH,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_IOCTRL_PULLUPDOWN,
+AMB_HAL_FUNCTION_INFO_SET_SENSOR_IOCTRL_INPUT_TYPE,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_ARM_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_HDMI_CLOCK_FREQUENCY,
@@ -351,6 +359,7 @@ AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
 AMB_HAL_FUNCTION_INFO_GET_AHB_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
 
@@ -466,6 +475,8 @@ typedef unsigned int amb_clock_frequency_t ;
  */
 
 typedef enum {
+/** IMX 083: 1080p30 */
+AMB_VIDCAP_4096X3575,
 /** IMX 078: 1080p30, 720p30 */
 AMB_VIDCAP_4000X2250,
 /** Aptina 3135: 1080p60, 720p60, 1080p30, 720p30 */
@@ -476,6 +487,10 @@ AMB_VIDCAP_1984X1116,
 AMB_VIDCAP_2048X1536,
 /** IMX 078: 4:3 photo preview */
 AMB_VIDCAP_1312X984,
+/** IMX 083: 720p30 */
+AMB_VIDCAP_1536X384,
+/** IMX 083: photo preview */
+AMB_VIDCAP_1536X384_SMALL_VB,
 /* Reserved */
 AMB_VIDCAP_RESERVED=0xffffffff
 } amb_vidcap_window_size_t ;
@@ -611,6 +626,23 @@ AMB_DUAL_STREAM_RESERVED=0xffffffff
 } amb_dual_stream_state_t ;
 
 /**
+ * Digital Gamma Mode
+ *
+ * Turning this on forces the core clock frequency to be multiple of 36 MHz.
+ * 
+ * @ingroup mode_group
+ */
+
+typedef enum {
+/** Digital Gamma Mode is off */
+AMB_DIGITAL_GAMMA_MODE_OFF,
+/** Digital Gamma Mode is on */
+AMB_DIGITAL_GAMMA_MODE_ON,
+/* Reserved */
+AMB_DIGITAL_GAMMA_MODE_RESERVED=0xffffffff
+} amb_digital_gamma_mode_t ;
+
+/**
  * Operating mode
  *
  * @ingroup mode_group
@@ -629,6 +661,8 @@ amb_usb_interface_state_t usb_state ;
 amb_hdmi_interface_state_t hdmi_state ;
 /** Dual Stream state */
 amb_dual_stream_state_t dual_stream_state ;
+/** Digital Gamma Mode */
+amb_digital_gamma_mode_t amb_digital_gamma_mode ;
 } amb_operating_mode_t ;
 
 /**
@@ -829,13 +863,13 @@ AMB_IOCTRL_RESERVED_SLEW_RATE=0xffffffff
 
 typedef struct {
 /** pad drive strength ::amb_ioctrl_drive_strength_t */
-unsigned int drive_strength ;
+amb_ioctrl_drive_strength_t drive_strength ;
 /** pad pullup/pulldown enabled ::amb_ioctrl_pullupdown_t */
-unsigned int pullupdown ;
+amb_ioctrl_pullupdown_t pullupdown ;
 /** type of input pad ::amb_ioctrl_input_type_t */
-unsigned int input_type ;
+amb_ioctrl_input_type_t input_type ;
 /** slew rate ::amb_ioctrl_slew_rate_t */
-unsigned int slew_rate ;
+amb_ioctrl_slew_rate_t slew_rate ;
 } amb_ioctrl_configuration_t ;
 
 /**
@@ -852,6 +886,31 @@ AMB_SENSOR_CLOCK_PAD_INPUT_MODE,
 /* Reserved */
 AMB_SENSOR_CLOCK_PAD_RESERVED_MODE=0xffffffff
 } amb_sensor_clock_pad_mode_t ;
+
+/**
+ * DRAM arbiter priority
+ *
+ * @ingroup init_group
+ */
+
+typedef enum {
+/** Low priority for dsp clients (75 of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_VERY_LOW_PRIORITY,
+/** Low priority for dsp clients (81.25% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_LOW_PRIORITY,
+/** Normal priority for dsp clients (87.5% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_NORMAL_PRIORITY,
+/** High priority for dsp clients (93.75% of total bandwidth - large arbiter throttle period) */
+AMB_DRAM_ARBITER_DSP_HIGH_PRIORITY_HIGH_THROTTLE,
+/** High priority for dsp clients (93.75% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_HIGH_PRIORITY,
+/** High priority for dsp clients (96.8% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_VERY_HIGH_PRIORITY,
+/** High priority for dsp clients (100% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_HIGHEST_PRIORITY,
+/* Reserved */
+AMB_DRAM_ARBITER_DSP_RESERVED=0xffffffff
+} amb_dram_arbiter_priority_t ;
 
 /*
  *
@@ -2253,7 +2312,7 @@ static INLINE amb_clock_frequency_t amb_get_adc_clock_frequency (void *amb_hal_b
  * Set the clock frequency of the sd controller.
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] amb_clock_frequency New sd frequency
+ * @param[in] amb_clock_frequency New smiod frequency
  *
  * @retval ::AMB_HAL_SUCCESS The new frequency has been set
  * @retval ::AMB_HAL_FAIL The new requested frequency is not valid
@@ -2612,7 +2671,7 @@ static INLINE amb_lvds_pad_mode_t amb_get_lvds_pad_mode (void *amb_hal_base_addr
  */
 
 /**
- * Set the miscellaneous io pad drive strength
+ * Set the misc1 io pad drive strength
  *
  * @note These are the pads not covered by the other api calls.
  *
@@ -2624,14 +2683,14 @@ static INLINE amb_lvds_pad_mode_t amb_get_lvds_pad_mode (void *amb_hal_base_addr
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_misc_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_misc1_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC1_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the miscellaneous io pad pullup or pulldown
+ * Set the misc1 io pad pullup or pulldown
  *
  * @note These are the pads not covered by the other api calls.
  *
@@ -2643,14 +2702,33 @@ static INLINE amb_hal_success_t amb_set_misc_ioctrl_drive_strength (void *amb_ha
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_misc_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_misc1_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC1_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the miscellaneous io pad configuration
+ * Set the misc1 io pad input type
+ *
+ * @note These are the pads not covered by the other api calls.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_misc1_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC1_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the misc1 io pad configuration
  *
  * @note These are the pads not covered by the other api calls.
  *
@@ -2660,14 +2738,14 @@ static INLINE amb_hal_success_t amb_set_misc_ioctrl_pullupdown (void *amb_hal_ba
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_misc_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_misc1_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_MISC_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_MISC1_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sc io pad drive strength
+ * Set the misc2 io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2677,14 +2755,14 @@ static INLINE amb_hal_success_t amb_get_misc_ioctrl_configuration (void *amb_hal
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sc_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_misc2_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SC_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC2_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sc io pad pullup or pulldown
+ * Set the misc2 io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2694,14 +2772,31 @@ static INLINE amb_hal_success_t amb_set_sc_ioctrl_drive_strength (void *amb_hal_
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sc_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_misc2_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SC_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC2_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sc io pad configuration
+ * Set the misc2 io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_misc2_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_MISC2_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the misc2 io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2709,14 +2804,14 @@ static INLINE amb_hal_success_t amb_set_sc_ioctrl_pullupdown (void *amb_hal_base
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sc_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_misc2_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SC_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_MISC2_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdclk io pad drive strength
+ * Set the smioa io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2726,14 +2821,14 @@ static INLINE amb_hal_success_t amb_get_sc_ioctrl_configuration (void *amb_hal_b
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_smioa_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOA_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdclk io pad pullup or pulldown
+ * Set the smioa io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2743,14 +2838,31 @@ static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_drive_strength (void *amb_h
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_smioa_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCLK_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOA_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sdclk io pad configuration
+ * Set the smioa io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_smioa_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOA_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the smioa io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2758,14 +2870,14 @@ static INLINE amb_hal_success_t amb_set_sdclk_ioctrl_pullupdown (void *amb_hal_b
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdclk_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_smioa_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDCLK_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SMIOA_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdcmd io pad drive strength
+ * Set the smiob io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2775,14 +2887,14 @@ static INLINE amb_hal_success_t amb_get_sdclk_ioctrl_configuration (void *amb_ha
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_smiob_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOB_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdcmd io pad pullup or pulldown
+ * Set the smiob io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2792,14 +2904,31 @@ static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_drive_strength (void *amb_h
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_smiob_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDCMD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOB_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sdcmd io pad configuration
+ * Set the smiob io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_smiob_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOB_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the smiob io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2807,14 +2936,14 @@ static INLINE amb_hal_success_t amb_set_sdcmd_ioctrl_pullupdown (void *amb_hal_b
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdcmd_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_smiob_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDCMD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SMIOB_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdwpcd io pad drive strength
+ * Set the smioc io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2824,14 +2953,14 @@ static INLINE amb_hal_success_t amb_get_sdcmd_ioctrl_configuration (void *amb_ha
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_smioc_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOC_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sdwpcd io pad pullup or pulldown
+ * Set the smioc io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2841,14 +2970,31 @@ static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_drive_strength (void *amb_
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_smioc_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SDWPCD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOC_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sdwpcd io pad configuration
+ * Set the smioc io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_smioc_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOC_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the smioc io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2856,14 +3002,14 @@ static INLINE amb_hal_success_t amb_set_sdwpcd_ioctrl_pullupdown (void *amb_hal_
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sdwpcd_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_smioc_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SDWPCD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SMIOC_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sd io pad drive strength
+ * Set the smiod io pad drive strength
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_drive_strength The drive strength of the io pad
@@ -2873,14 +3019,14 @@ static INLINE amb_hal_success_t amb_get_sdwpcd_ioctrl_configuration (void *amb_h
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sd_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
+static INLINE amb_hal_success_t amb_set_smiod_ioctrl_drive_strength (void *amb_hal_base_address, amb_ioctrl_drive_strength_t amb_ioctrl_drive_strength)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOD_IOCTRL_DRIVE_STRENGTH, amb_ioctrl_drive_strength, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Set the sd io pad pullup or pulldown
+ * Set the smiod io pad pullup or pulldown
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[in] amb_ioctrl_pullupdown The pullup/pulldown of the io pad
@@ -2890,14 +3036,31 @@ static INLINE amb_hal_success_t amb_set_sd_ioctrl_drive_strength (void *amb_hal_
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_set_sd_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
+static INLINE amb_hal_success_t amb_set_smiod_ioctrl_pullupdown (void *amb_hal_base_address, amb_ioctrl_pullupdown_t amb_ioctrl_pullupdown)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOD_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the sd io pad configuration
+ * Set the smiod io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_smiod_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SMIOD_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the smiod io pad configuration
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  * @param[out] amb_ioctrl_configuration The current configuration of the io pad
@@ -2905,10 +3068,10 @@ static INLINE amb_hal_success_t amb_set_sd_ioctrl_pullupdown (void *amb_hal_base
  * @ingroup ioctrl_group
  */
 
-static INLINE amb_hal_success_t amb_get_sd_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
+static INLINE amb_hal_success_t amb_get_smiod_ioctrl_configuration (void *amb_hal_base_address, amb_ioctrl_configuration_t *amb_ioctrl_configuration)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_SMIOD_IOCTRL_CONFIGURATION, (unsigned int) amb_ioctrl_configuration, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
@@ -2943,6 +3106,23 @@ static INLINE amb_hal_success_t amb_set_vd1_ioctrl_pullupdown (void *amb_hal_bas
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Set the vd1 io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_vd1_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_VD1_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
@@ -2992,6 +3172,23 @@ static INLINE amb_hal_success_t amb_set_sensor_ioctrl_pullupdown (void *amb_hal_
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SENSOR_IOCTRL_PULLUPDOWN, amb_ioctrl_pullupdown, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Set the sensor io pad input type
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_ioctrl_input_type The input type of the io pad
+ *
+ * @retval ::AMB_HAL_SUCCESS The new input type was set.
+ *
+ * @ingroup ioctrl_group
+ */
+
+static INLINE amb_hal_success_t amb_set_sensor_ioctrl_input_type (void *amb_hal_base_address, amb_ioctrl_input_type_t amb_ioctrl_input_type)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_SENSOR_IOCTRL_INPUT_TYPE, amb_ioctrl_input_type, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
@@ -3143,6 +3340,25 @@ static INLINE amb_clock_frequency_t amb_get_apb_clock_frequency (void *amb_hal_b
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Change the priority of dsp clients in DRAM arbiter
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_dram_arbiter_priority Priority given to dsp clients by DRAM arbiter.
+ *
+ * @retval ::AMB_HAL_SUCCESS ambhal initialization was successful
+ *
+ * @retval ::AMB_HAL_FAIL The amb_dram_arbiter_priority is not defined
+ *
+ * @ingroup init_group
+ */
+
+static INLINE amb_hal_success_t amb_set_dram_arbiter_priority (void *amb_hal_base_address, amb_dram_arbiter_priority_t amb_dram_arbiter_priority)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY, (unsigned int) amb_dram_arbiter_priority, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_
