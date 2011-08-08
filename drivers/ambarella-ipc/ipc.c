@@ -449,6 +449,7 @@ static void __exit ambarella_ipc_cleanup(void)
 	}
 #endif
 
+	ipc_status_report_ready(0);
 	i_status_cleanup();
 	ipc_binder_cleanup();
 	ipc_bh_cleanup();

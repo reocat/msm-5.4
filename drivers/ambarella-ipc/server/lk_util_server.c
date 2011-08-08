@@ -351,26 +351,6 @@ bool_t linux_usb_gadget_enable_1_svc(u_int *arg, void *res, struct svc_req *rqst
 	return 1;
 }
 
-bool_t linux_absuspend_1_svc(void *arg, void *res, struct svc_req *rqstp)
-{
-	SVCXPRT *svcxprt = rqstp->svcxprt;
-
-	printk("linux_absuspend_1_svc\n");
-	svcxprt->rcode = IPC_SUCCESS;
-	ipc_svc_sendreply(svcxprt, NULL);
-	return 1;
-}
-
-bool_t linux_abresume_1_svc(void *arg, void *res, struct svc_req *rqstp)
-{
-	SVCXPRT *svcxprt = rqstp->svcxprt;
-
-	printk("linux_abresume_1_svc\n");
-	svcxprt->rcode = IPC_SUCCESS;
-	ipc_svc_sendreply(svcxprt, NULL);
-	return 1;
-}
-
 /* ------------------------------------------------------------------------- */
 
 /*

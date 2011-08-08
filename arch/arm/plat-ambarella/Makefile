@@ -86,6 +86,7 @@ obj-$(CONFIG_HOTPLUG_CPU)			+= cortex/hotplug.o
 obj-$(CONFIG_LOCAL_TIMERS)			+= cortex/localtimer.o
 endif
 
+ccflags-$(CONFIG_PLAT_AMBARELLA_BOSS)		+= -Idrivers/ambarella-ipc/ipcgen
 ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
 obj-y						+= boss/boss.o
 obj-y						+= misc/ambsyncproc.o

@@ -34,6 +34,7 @@
 #include <asm/cacheflush.h>
 #include <asm/io.h>
 #include <asm/system.h>
+#include <asm/suspend.h>
 
 #include <mach/board.h>
 #include <mach/hardware.h>
@@ -42,7 +43,8 @@
 
 #include <hal/hal.h>
 #include <linux/aipc/i_util.h>
-#include <linux/aipc/lk_util.h>
+#include <linux/aipc/i_status.h>
+#include "i_util.h"
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -50,7 +52,12 @@
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
+typedef unsigned int (*ambnation_aoss_call_t)(u32, u32, u32, u32);
+extern int in_suspend;
+
 /* ==========================================================================*/
+static struct ambernation_check_info pm_abcheck_info;
+static u32 pm_abcopy_page = 0;
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
@@ -255,6 +262,12 @@ static int ambarella_pm_hibernation_begin(void)
 {
 	int					retval = 0;
 
+	if (pm_abcheck_info.aoss_info == NULL) {
+		pm_abcopy_page = 0;
+		linux_absuspend_check((void *)&pm_abcheck_info);
+	}
+	ipc_status_report_ready(0);
+
 	return retval;
 }
 
@@ -262,9 +275,11 @@ static void ambarella_pm_hibernation_end(void)
 {
 	int					retval = 0;
 
+	ipc_status_report_ready(1);
+
 	retval = ambarella_pm_post(NULL, 0, 0, 1);
 
-	ipc_report_abresume();
+	linux_absuspend_exit();
 }
 
 static int ambarella_pm_hibernation_pre_snapshot(void)
@@ -338,6 +353,8 @@ int __init ambarella_init_pm(void)
 	suspend_set_ops(&ambarella_pm_suspend_ops);
 	hibernation_set_ops(&ambarella_pm_hibernation_ops);
 
+	pm_abcheck_info.aoss_info = NULL;
+
 	return 0;
 }
 
@@ -345,15 +362,117 @@ int __init ambarella_init_pm(void)
 int arch_swsusp_write(unsigned int flags)
 {
 	int					retval = 0;
+	int					i;
+#ifdef CONFIG_OUTER_CACHE
+	int					l2_mode = 0;
+#endif
+	ambnation_aoss_call_t			pm_abaoss_entry = NULL;
+	u32					pm_abaoss_arg[4];
+	u32					pm_fn_pri;
 
-	ipc_report_absuspend();
+	if (pm_abcheck_info.aoss_info) {
+		for (i = 0; i < 4; i++) {
+			pm_abaoss_arg[i] = ambarella_phys_to_virt(
+				pm_abcheck_info.aoss_info->fn_pri[i]);
+		}
+		pm_abaoss_entry = (ambnation_aoss_call_t)pm_abaoss_arg[0];
+		pm_fn_pri = (u32)pm_abcheck_info.aoss_info->fn_pri;
 
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX) && defined(CONFIG_SMP)
+		arch_smp_suspend(0);
+#endif
+#ifdef CONFIG_OUTER_CACHE
+		l2_mode = outer_is_enabled();
+		if (l2_mode)
+			ambcache_l2_disable_raw();
+#endif
+		flush_cache_all();
+		retval = pm_abaoss_entry(pm_fn_pri, pm_abaoss_arg[1],
+			pm_abaoss_arg[2], pm_abaoss_arg[3]);
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+		if (retval != 0x01) {
+			linux_absuspend_enter();
+			while(1) {};
+		}
+#if defined(CONFIG_SMP)
+		arch_smp_resume(0);
+#endif
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+		set_ambarella_hal_invalid();
+#endif
+#ifdef CONFIG_OUTER_CACHE
+		if (l2_mode)
+			ambcache_l2_enable_raw();
+#endif
+		pm_abcopy_page = 0;
+		pm_abcheck_info.aoss_info->copy_pages = 0;
+		in_suspend = 0;
+		swsusp_arch_restore_cpu();
+	}
+
+	return retval;
+}
+
+static int ambernation_increase_page_info(
+	struct ambernation_aoss_info *aoss_info,
+	struct ambernation_page_info *src_page_info)
+{
+	int						retval = 0;
+	struct ambernation_page_info			*page_info;
+
+	if (pm_abcopy_page == 0) {
+		aoss_info->copy_pages = 0;
+	}
+	if (aoss_info->copy_pages >= aoss_info->total_pages) {
+		pr_err("%s: copy_pages[%d] >= total_pages[%d].\n", __func__,
+			aoss_info->copy_pages, aoss_info->total_pages);
+		retval = -EPERM;
+		goto ambernation_increase_page_info_exit;
+	}
+
+	page_info = (struct ambernation_page_info *)
+		ambarella_phys_to_virt((u32)aoss_info->page_info);
+	pr_debug("%s: page_info %p offset %d, cur %p \n", __func__,
+		page_info, aoss_info->copy_pages,
+		&page_info[aoss_info->copy_pages]);
+	if (pm_abcopy_page == 0) {
+		pm_abcopy_page = 1;
+		aoss_info->copy_pages = 0;
+		page_info[0].src = src_page_info->src;
+		page_info[0].dst = src_page_info->dst;
+		page_info[0].size = src_page_info->size;
+	} else {
+		if ((src_page_info->src == (page_info[aoss_info->copy_pages].src + page_info[aoss_info->copy_pages].size)) &&
+			(src_page_info->dst == (page_info[aoss_info->copy_pages].dst + page_info[aoss_info->copy_pages].size))) {
+			page_info[aoss_info->copy_pages].size += src_page_info->size;
+		} else {
+			aoss_info->copy_pages++;
+			page_info[aoss_info->copy_pages].src = src_page_info->src;
+			page_info[aoss_info->copy_pages].dst = src_page_info->dst;
+			page_info[aoss_info->copy_pages].size = src_page_info->size;
+		}
+	}
+	pr_debug("%s: copy [0x%08x] to [0x%08x], size [0x%08x] %d\n", __func__,
+		page_info[aoss_info->copy_pages].src,
+		page_info[aoss_info->copy_pages].dst,
+		page_info[aoss_info->copy_pages].size,
+		aoss_info->copy_pages);
+
+ambernation_increase_page_info_exit:
 	return retval;
 }
 
 void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
 {
-	pr_debug("Copy 0x%08lx to 0x%08lx\n", __pfn_to_phys(src_pfn),
-		__pfn_to_phys(dst_pfn));
+	struct ambernation_page_info		src_page_info;
+
+	if (pm_abcheck_info.aoss_info) {
+		src_page_info.src = __pfn_to_phys(src_pfn);
+		src_page_info.dst = __pfn_to_phys(dst_pfn);
+		src_page_info.size = PAGE_SIZE;
+		ambernation_increase_page_info(pm_abcheck_info.aoss_info,
+			&src_page_info);
+	}
 }
 

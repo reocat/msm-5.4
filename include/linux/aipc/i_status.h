@@ -16,8 +16,8 @@
  * Copyright (C) 2009-2010, Ambarella Inc.
  */
 
-#ifndef __AIPC_I_UTIL_H__
-#define __AIPC_I_UTIL_H__
+#ifndef __AIPC_I_STATUS_H__
+#define __AIPC_I_STATUS_H__
 
 #ifdef __KERNEL__
 

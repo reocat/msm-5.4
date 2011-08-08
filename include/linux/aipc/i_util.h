@@ -37,8 +37,9 @@ extern int ipc_get_exfb(void **mem, unsigned int *size);
 extern int ipc_report_fb_owned(void);
 extern int ipc_report_fb_released(void);
 
-extern int ipc_report_absuspend(void);
-extern int ipc_report_abresume(void);
+extern int linux_absuspend_check(void *pinfo);
+extern int linux_absuspend_enter(void);
+extern int linux_absuspend_exit(void);
 
 #endif
 

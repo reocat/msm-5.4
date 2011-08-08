@@ -296,38 +296,56 @@ int ipc_report_fb_released(void)
 EXPORT_SYMBOL(ipc_report_fb_released);
 
 /*
- * IPC: i_util.itron_absuspend().
+ * IPC: i_util.lk_absuspend_prepare().
  */
-int ipc_report_absuspend(void)
+int linux_absuspend_check(void *pinfo)
 {
 	enum clnt_stat stat;
 
-	stat = itron_absuspend_1(NULL, NULL, IPC_i_util);
+	stat = lk_absuspend_check_1(NULL,
+		(struct ambernation_check_info *)pinfo, IPC_i_util);
 	if (stat != IPC_SUCCESS) {
-		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		pr_err("%s: ipc error: %d (%s)\n",
+			__func__, stat, ipc_strerror(stat));
 		return -stat;
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(ipc_report_absuspend);
+EXPORT_SYMBOL(linux_absuspend_check);
 
 /*
- * IPC: i_util.itron_abresume().
+ * IPC: i_util.lk_absuspend_enter().
  */
-int ipc_report_abresume(void)
+int linux_absuspend_enter(void)
+{
+	enum clnt_stat stat;
+	struct clnt_req req;
+
+	stat = lk_absuspend_enter_1(NULL, NULL, IPC_i_util, &req);
+	printk("%s: %d (%s)\n", __func__, stat, ipc_strerror(stat));
+
+	return 0;
+}
+EXPORT_SYMBOL(linux_absuspend_enter);
+
+/*
+ * IPC: i_util.lk_absuspend_exit().
+ */
+int linux_absuspend_exit(void)
 {
 	enum clnt_stat stat;
 
-	stat = itron_abresume_1(NULL, NULL, IPC_i_util);
+	stat = lk_absuspend_exit_1(NULL, NULL, IPC_i_util);
 	if (stat != IPC_SUCCESS) {
-		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		pr_err("%s: ipc error: %d (%s)\n",
+			__func__, stat, ipc_strerror(stat));
 		return -stat;
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(ipc_report_abresume);
+EXPORT_SYMBOL(linux_absuspend_exit);
 
 #if defined(CONFIG_PROC_FS)
 
@@ -442,6 +460,7 @@ static int i_util_proc_fs_ambernation(struct file *file,
 				       unsigned long count, void *data)
 {
 	char cmd[32];
+	struct ambernation_check_info check_info;
 
 	if (count > 32)
 		count = 32;
@@ -452,13 +471,22 @@ static int i_util_proc_fs_ambernation(struct file *file,
 		return -EFAULT;
 	}
 
-	if (strcmp(cmd, "suspend") == 0) {
-		ipc_report_absuspend();
-	}
-	else if (strcmp(cmd, "resume") == 0) {
-		ipc_report_abresume();
-	}
-	else {
+	if (strncmp(cmd, "suspend", 7) == 0) {
+		linux_absuspend_enter();
+	} else if (strncmp(cmd, "resume", 6) == 0) {
+		linux_absuspend_exit();
+	} else if (strncmp(cmd, "check", 5) == 0) {
+		linux_absuspend_check((void *)&check_info);
+		printk("aoss = 0x%p\n", check_info.aoss_info);
+		printk("fn_pri[0] = 0x%08x\n", check_info.aoss_info->fn_pri[0]);
+		printk("fn_pri[1] = 0x%08x\n", check_info.aoss_info->fn_pri[1]);
+		printk("magic = 0x%08x\n", check_info.aoss_info->magic);
+		printk("total_pages = 0x%08x\n",
+			check_info.aoss_info->total_pages);
+		printk("copy_pages = 0x%08x\n",
+			check_info.aoss_info->copy_pages);
+		printk("page_info = 0x%p\n", check_info.aoss_info->page_info);
+	} else {
 		printk("ambernation: unknow command = %s\n", cmd);
 	}
 
