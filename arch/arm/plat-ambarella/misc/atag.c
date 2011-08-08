@@ -744,8 +744,9 @@ void set_ambarella_hal_invalid(void)
 
 int arch_pfn_is_nosave(unsigned long pfn)
 {
-	unsigned long nosave_begin_pfn;
-	unsigned long nosave_end_pfn;
+	int					i;
+	unsigned long				nosave_begin_pfn;
+	unsigned long				nosave_end_pfn;
 
 	nosave_begin_pfn =
 		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.pfn;
@@ -753,6 +754,19 @@ int arch_pfn_is_nosave(unsigned long pfn)
 		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length;
 	nosave_end_pfn = PFN_UP(nosave_end_pfn);
 
-	return (pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn);
+	if ((pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn))
+		return 1;
+
+	for (i = 0; i < ambarella_reserve_mem_info.counter; i++) {
+		nosave_begin_pfn = __phys_to_pfn(
+			ambarella_reserve_mem_info.desc[i].physaddr);
+		nosave_end_pfn = __phys_to_pfn(
+			ambarella_reserve_mem_info.desc[i].physaddr +
+			ambarella_reserve_mem_info.desc[i].size);
+		if ((pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn))
+			return 1;
+	}
+
+	return 0;
 }
 
