@@ -77,11 +77,11 @@ struct ambarella_nand_set
 	int				*nr_map;
 };
 
-struct ambarella_platform_nand 
+struct ambarella_platform_nand
 {
 	struct ambarella_nand_timing	*timing;
-
 	struct ambarella_nand_set	*sets;
+	u32				flash_bbt;
 
 	int				(*parse_error)(u32 reg);
 	void				(*request)(void);
