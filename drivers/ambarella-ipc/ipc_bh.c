@@ -18,7 +18,7 @@
 
 #include <linux/kthread.h>
 #include <linux/wait.h>
-#include <linux/semaphore.h>
+#include <linux/spinlock.h>
 #include <linux/slab.h>
 #include <linux/aipc/aipc.h>
 
@@ -44,7 +44,7 @@ struct ipc_bh_s
 	unsigned int count;
 
 	wait_queue_head_t wait;
-	struct semaphore sem;
+	spinlock_t lock;
 
 	struct workers_s {
 		struct task_struct *task;
@@ -68,6 +68,7 @@ static int ipc_bh_worker_thread(void *data)
 	void *arg;
 	void *result;
 	SVCXPRT *svcxprt;
+	unsigned long flags;
 
 	for (;;) {
 		unsigned long exec_begin, exec_end;
@@ -78,11 +79,11 @@ static int ipc_bh_worker_thread(void *data)
 		if (rval != 0)
 			break;	/* Received a signal */
 
-		down(&ipc_bh->sem);
+		spin_lock_irqsave(&ipc_bh->lock, flags);
 
 		if (ipc_bh->r_index == ipc_bh->w_index) {
 			/* nothing to do ?! */
-			up(&ipc_bh->sem);
+			spin_unlock_irqrestore(&ipc_bh->lock, flags);
 			continue;
 		}
 
@@ -95,7 +96,7 @@ static int ipc_bh_worker_thread(void *data)
 
 #ifdef STATIC_SVC
 		if(ipc_cancel_check(svcxprt)) {
-			up(&ipc_bh->sem);
+			spin_unlock_irqrestore(&ipc_bh->lock, flags);
 			continue;
 		}
 #endif
@@ -103,7 +104,7 @@ static int ipc_bh_worker_thread(void *data)
 		ipc_bh->r_index++;
 		ipc_bh->r_index %= MAX_IPC_BH_QUEUE;
 
-		up(&ipc_bh->sem);
+		spin_unlock_irqrestore(&ipc_bh->lock, flags);
 
 		BUG_ON(func == NULL);
 		BUG_ON(svcxprt == NULL);
@@ -131,7 +132,7 @@ void ipc_bh_queue(ipc_bh_f func, void *arg, void *result, SVCXPRT *svcxprt)
 	unsigned long flags;
 	int index;
 
-	local_irq_save(flags);
+	spin_lock_irqsave(&ipc_bh->lock, flags);
 
 	index = ipc_bh->w_index;
 	ipc_bh->queue[index].func = func;
@@ -145,7 +146,7 @@ void ipc_bh_queue(ipc_bh_f func, void *arg, void *result, SVCXPRT *svcxprt)
 
 	wake_up_nr(&ipc_bh->wait, 1);
 
-	local_irq_restore(flags);
+	spin_unlock_irqrestore(&ipc_bh->lock, flags);
 }
 EXPORT_SYMBOL(ipc_bh_queue);
 
@@ -160,7 +161,7 @@ void ipc_bh_init(void)
 	BUG_ON(ipc_bh == NULL);
 
 	init_waitqueue_head(&ipc_bh->wait);
-	sema_init(&ipc_bh->sem, 1);
+	spin_lock_init(&ipc_bh->lock);
 	ipc_bh->max_exec_time = msecs_to_jiffies(IPC_BH_MAX_EXEC_TIME);
 
 	for (i = 0; i < NUM_IPC_BH_WORKERS; i++) {
