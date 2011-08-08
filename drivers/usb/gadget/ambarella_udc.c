@@ -1484,7 +1484,7 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	amba_writel(ep->ep_reg.ctrl_reg, type | USB_EP_SET_NAK);
 
 	if(ep->dir == USB_DIR_IN)
-		amba_writel(ep->ep_reg.buf_sz_reg, max_packet * 2 / 4);
+		amba_writel(ep->ep_reg.buf_sz_reg, max_packet / 4);
 	amba_writel(ep->ep_reg.max_pkt_sz_reg, max_packet);
 
 	/* print some debug message */
