@@ -103,6 +103,22 @@ static inline struct ambarella_request *to_ambarella_req(struct usb_request *req
 
 /**************  PROC FILESYSTEM BEGIN *****************/
 
+static void ambarella_uevent_work(struct work_struct *data)
+{
+	struct ambarella_udc *udc;
+	char buf[64];
+	char *envp[2];
+
+	udc = container_of(data, struct ambarella_udc, uevent_work);
+
+	spin_lock_irq(&udc->lock);
+	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s", udc->udc_state);
+	spin_unlock_irq(&udc->lock);
+	envp[0] = buf;
+	envp[1] = NULL;
+	kobject_uevent_env(&udc->dev->kobj, KOBJ_CHANGE, envp);
+}
+
 static int ambarella_proc_udc_read(char *page, char **start,
 	off_t off, int count, int *eof, void *data)
 {
@@ -374,7 +390,7 @@ static int ambarella_map_dma_buffer(struct ambarella_ep *ep,
 	if (likely(!req->use_aux_buf)) {
 		/* map req.buf, and get req's dma address */
 		if (req->req.dma == DMA_ADDR_INVALID) {
-			req->req.dma = dma_map_single(udc->gadget.dev.parent,
+			req->req.dma = dma_map_single(udc->dev,
 				req->req.buf, req->req.length, dmadir);
 			/* dma address isn't 8-byte align */
 			if(req->req.dma & 0x7){
@@ -383,13 +399,13 @@ static int ambarella_map_dma_buffer(struct ambarella_ep *ep,
 			}
 			req->mapped = 1;
 		} else {
-			dma_sync_single_for_device(udc->gadget.dev.parent,
+			dma_sync_single_for_device(udc->dev,
 				req->req.dma, req->req.length, dmadir);
 			req->mapped = 0;
 		}
 	} else {
 		if (req->dma_aux == DMA_ADDR_INVALID) {
-			req->dma_aux = dma_map_single(udc->gadget.dev.parent,
+			req->dma_aux = dma_map_single(udc->dev,
 				req->buf_aux, req->req.length, dmadir);
 			/* dma address isn't 8-byte align */
 			if(req->dma_aux & 0x7){
@@ -398,7 +414,7 @@ static int ambarella_map_dma_buffer(struct ambarella_ep *ep,
 			}
 			req->mapped = 1;
 		} else {
-			dma_sync_single_for_device(udc->gadget.dev.parent,
+			dma_sync_single_for_device(udc->dev,
 				req->dma_aux, req->req.length, dmadir);
 			req->mapped = 0;
 		}
@@ -418,22 +434,22 @@ static int ambarella_unmap_dma_buffer(struct ambarella_ep *ep,
 
 	if (likely(!req->use_aux_buf)) {
 		if (req->mapped) {
-			dma_unmap_single(udc->gadget.dev.parent,
+			dma_unmap_single(udc->dev,
 				req->req.dma, req->req.length, dmadir);
 			req->req.dma = DMA_ADDR_INVALID;
 			req->mapped = 0;
 		} else {
-			dma_sync_single_for_cpu(udc->gadget.dev.parent,
+			dma_sync_single_for_cpu(udc->dev,
 				req->req.dma, req->req.length, dmadir);
 		}
 	} else {
 		if (req->mapped) {
-			dma_unmap_single(udc->gadget.dev.parent,
+			dma_unmap_single(udc->dev,
 				req->dma_aux, req->req.length, dmadir);
 			req->dma_aux = DMA_ADDR_INVALID;
 			req->mapped = 0;
 		} else {
-			dma_sync_single_for_cpu(udc->gadget.dev.parent,
+			dma_sync_single_for_cpu(udc->dev,
 				req->dma_aux, req->req.length, dmadir);
 		}
 	}
@@ -1039,6 +1055,8 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_CSR_DONE);
 		udelay(150);
 		sprintf(udc->udc_state, "Configured");
+		schedule_work(&udc->uevent_work);
+
 	}
 
 	/* case 2. Get reset Interrupt */
@@ -1094,6 +1112,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		}
 
 		sprintf(udc->udc_state, "BusSuspend");
+		schedule_work(&udc->uevent_work);
 	}
 
 	/* case 4. enumeration complete */
@@ -2007,10 +2026,8 @@ static void ambarella_udc_enable(struct ambarella_udc *udc)
 		amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_SOFT_DISCON);
 
 	/* Resume if udc is connected to host */
-	if(ambarella_check_connected()) {
+	if(ambarella_check_connected())
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
-
-	}
 }
 
 /*
@@ -2120,6 +2137,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	ambarella_udc_enable(udc);
 
 	sprintf(udc->udc_state, "Registered");
+	schedule_work(&udc->uevent_work);
 
 	dprintk(DEBUG_NORMAL, "%s() Exit\n", __func__);
 
@@ -2163,6 +2181,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	ambarella_udc_disable(udc);
 
 	sprintf(udc->udc_state, "Unregistered");
+	schedule_work(&udc->uevent_work);
 
 	return 0;
 }
@@ -2195,6 +2214,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
+	udc->dev = &pdev->dev;
 	udc->reset_by_host = 0;
 	/* Initial USB PLL */
 	udc->controller_info->init_pll();
@@ -2251,6 +2271,9 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		return retval;
 	}
 #endif
+
+	INIT_WORK(&udc->uevent_work, ambarella_uevent_work);
+
 	udc->proc_file = create_proc_entry("udc", S_IRUGO,
 				get_ambarella_proc_dir());
 	if (udc->proc_file == NULL) {
@@ -2262,6 +2285,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		udc->proc_file->read_proc = ambarella_proc_udc_read;
 		udc->proc_file->data = udc;
 		sprintf(udc->udc_state, "Probed");
+		schedule_work(&udc->uevent_work);
 	}
 	create_proc_files();
 
@@ -2308,6 +2332,8 @@ static int __devexit ambarella_udc_remove(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 
+	kfree(udc);
+
 	dprintk(DEBUG_NORMAL, "%s: remove ok\n", __func__);
 
 	return 0;
@@ -2333,6 +2359,7 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	sprintf(udc->udc_state, "Suspend");
+	schedule_work(&udc->uevent_work);
 
 	return retval;
 }
@@ -2362,6 +2389,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	sprintf(udc->udc_state, "Resume");
+	schedule_work(&udc->uevent_work);
 
 	return retval;
 }

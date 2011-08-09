@@ -125,10 +125,11 @@ struct ambarella_ep {
 };
 
 struct ambarella_udc {
-
 	spinlock_t		lock;
+	struct device		*dev;
 	struct proc_dir_entry	*proc_file;
 	char			udc_state[UDC_STATE_MAX_LENGTH];
+	struct work_struct	uevent_work;
 
 	struct ambarella_udc_controller	*controller_info;
 	struct usb_gadget	gadget;
