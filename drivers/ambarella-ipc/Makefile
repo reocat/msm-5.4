@@ -123,7 +123,7 @@ IPCGEN_FILES = $(IPCGEN_H) $(IPCGEN_TAB_I) $(IPCGEN_CLNT_C)
 
 # Finally, obj-y collects for linux objects to be made
 
-obj-y := ipc.o irq.o mem.o binder.o ipc_bh.o errstr.o nl.o ipc_shm.o ipc_slock.o ipc_mutex.o ipc_log.o
+obj-y := ipc.o irq.o mem.o binder.o ipc_bh.o errstr.o nl.o ipc_shm.o ipc_slock.o ipc_mutex.o ipc_log.o server/lkvfs_bh.o
 obj-y += $(OBJS-S-y) $(OBJS-C-y)
 obj-y += $(CLNT_O-C-y)
 

@@ -46,6 +46,10 @@
 
 #define LKVFS_PATH_LEN	256
 
+extern void lkvfs_bh_init(void);
+extern void lkvfs_bh_cleanup(void);
+extern void lkvfs_bh_queue(ipc_bh_f func, void *arg, void *result, SVCXPRT *svcxprt);
+
 static struct ipc_prog_s lk_vfs_prog =
 {
 	.name = "lk_vfs",
@@ -88,7 +92,7 @@ static bool_t __lk_filp_open_1_svc(struct lk_filp_open_arg *arg, int *res,
 bool_t lk_filp_open_1_svc(struct lk_filp_open_arg *arg, int *res,
 			  struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_filp_open_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_filp_open_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -113,7 +117,7 @@ static bool_t __lk_fput_1_svc(int *arg, void *res, SVCXPRT *svcxprt)
 
 bool_t lk_fput_1_svc(int *arg, void *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_fput_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_fput_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -161,7 +165,7 @@ static bool_t __lk_f_op_read_1_svc(struct lk_f_op_read_arg *arg, int *res,
 bool_t lk_f_op_read_1_svc(struct lk_f_op_read_arg *arg, int *res,
 			  struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_f_op_read_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_f_op_read_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -206,7 +210,7 @@ static bool_t __lk_f_op_write_1_svc(struct lk_f_op_write_arg *arg, int *res,
 bool_t lk_f_op_write_1_svc(struct lk_f_op_write_arg *arg, int *res,
 			   struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_f_op_write_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_f_op_write_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -241,7 +245,7 @@ static bool_t __lk_vfs_llseek_1_svc(struct lk_vfs_llseek_arg *arg, int *res,
 bool_t lk_vfs_llseek_1_svc(struct lk_vfs_llseek_arg *arg, int *res,
 			struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_vfs_llseek_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_vfs_llseek_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -262,7 +266,7 @@ static  bool_t __lk_file_pos_read_1_svc(int *arg, s64 *res, SVCXPRT *svcxprt)
 
 bool_t lk_file_pos_read_1_svc(int *arg, s64 *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_file_pos_read_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_file_pos_read_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -296,7 +300,7 @@ static  bool_t __lk_sys_mkdir_1_svc(lk_sys_mkdir_arg *arg, int *res, SVCXPRT *sv
 
 bool_t lk_sys_mkdir_1_svc(lk_sys_mkdir_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_mkdir_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_mkdir_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -329,7 +333,7 @@ static  bool_t __lk_sys_rmdir_1_svc(char **arg, int *res, SVCXPRT *svcxprt)
 
 bool_t lk_sys_rmdir_1_svc(char **arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_rmdir_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_rmdir_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -362,7 +366,7 @@ static  bool_t __lk_sys_unlink_1_svc(char **arg, int *res, SVCXPRT *svcxprt)
 
 bool_t lk_sys_unlink_1_svc(char **arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_unlink_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_unlink_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -400,7 +404,7 @@ static  bool_t __lk_sys_rename_1_svc(lk_sys_rename_arg *arg, int *res, SVCXPRT *
 
 bool_t lk_sys_rename_1_svc(lk_sys_rename_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_rename_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_rename_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -473,7 +477,7 @@ out:
 
 bool_t lk_getdents_1_svc(lk_getdents_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_getdents_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_getdents_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -514,7 +518,7 @@ static  bool_t __lk_sys_stat_1_svc(lk_sys_stat_arg *arg, int *res, SVCXPRT *svcx
 
 bool_t lk_sys_stat_1_svc(lk_sys_stat_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_stat_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_stat_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -555,7 +559,7 @@ static  bool_t __lk_sys_lstat_1_svc(lk_sys_stat_arg *arg, int *res, SVCXPRT *svc
 
 bool_t lk_sys_lstat_1_svc(lk_sys_stat_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_lstat_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_lstat_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -608,7 +612,7 @@ static  bool_t __lk_fpstat_1_svc(lk_fpstat_arg *arg, int *res, SVCXPRT *svcxprt)
 
 bool_t lk_fpstat_1_svc(lk_fpstat_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_fpstat_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_fpstat_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -640,7 +644,7 @@ static  bool_t __lk_sys_chdir_1_svc(char **arg, int *res, SVCXPRT *svcxprt)
 
 bool_t lk_sys_chdir_1_svc(char **arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_chdir_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_chdir_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -681,7 +685,7 @@ static  bool_t __lk_sys_statfs_1_svc(lk_sys_statfs_arg *arg, int *res, SVCXPRT *
 
 bool_t lk_sys_statfs_1_svc(lk_sys_statfs_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_statfs_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_statfs_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -704,7 +708,7 @@ static bool_t __lk_sys_sync_1_svc(void *arg, int *res, SVCXPRT *svcxprt)
 
 bool_t lk_sys_sync_1_svc(void *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_sync_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_sync_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -733,7 +737,7 @@ static bool_t __lk_sys_fsync_1_svc(int *arg, int *res, SVCXPRT *svcxprt)
 
 bool_t lk_sys_fsync_1_svc(int *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_fsync_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_fsync_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -786,7 +790,7 @@ static bool_t __lk_sys_mount_1_svc(struct lk_sys_mount_arg *arg, int *res, SVCXP
 
 bool_t lk_sys_mount_1_svc(struct lk_sys_mount_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_mount_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_mount_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -821,7 +825,7 @@ static bool_t __lk_sys_umount_1_svc(struct lk_sys_umount_arg *arg, int *res, SVC
 
 bool_t lk_sys_umount_1_svc(struct lk_sys_umount_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_sys_umount_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_sys_umount_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -855,7 +859,7 @@ static bool_t __lk_vfs_ioctl_1_svc(struct lk_vfs_ioctl_arg *arg, int *res, SVCXP
 
 bool_t lk_vfs_ioctl_1_svc(struct lk_vfs_ioctl_arg *arg, int *res, struct svc_req *rqstp)
 {
-	ipc_bh_queue((ipc_bh_f) __lk_vfs_ioctl_1_svc,
+	lkvfs_bh_queue((ipc_bh_f) __lk_vfs_ioctl_1_svc,
 		     arg, res, rqstp->svcxprt);
 	return 1;
 }
@@ -865,6 +869,7 @@ bool_t lk_vfs_ioctl_1_svc(struct lk_vfs_ioctl_arg *arg, int *res, struct svc_req
  */
 static int __init lk_vfs_init(void)
 {
+	lkvfs_bh_init();
 	return ipc_svc_prog_register(&lk_vfs_prog);
 }
 
@@ -873,6 +878,7 @@ static int __init lk_vfs_init(void)
  */
 static void __exit lk_vfs_cleanup(void)
 {
+	lkvfs_bh_cleanup();
 	ipc_svc_prog_unregister(&lk_vfs_prog);
 }
 
