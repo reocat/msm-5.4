@@ -159,6 +159,7 @@ int usb_add_function(struct usb_configuration *config,
 		MKDEV(0, index), NULL, function->name);
 	if (IS_ERR(function->dev))
 		return PTR_ERR(function->dev);
+	function->index = index;
 
 	value = device_create_file(function->dev, &dev_attr_enable);
 	if (value < 0) {
@@ -1177,6 +1178,7 @@ composite_unbind(struct usb_gadget *gadget)
 			f = list_first_entry(&c->functions,
 					struct usb_function, list);
 			list_del(&f->list);
+			device_destroy(cdev->driver->class, MKDEV(0, f->index));
 			if (f->unbind) {
 				DBG(cdev, "unbind function '%s'/%p\n",
 						f->name, f);
@@ -1496,4 +1498,6 @@ void usb_composite_unregister(struct usb_composite_driver *driver)
 	if (composite != driver)
 		return;
 	usb_gadget_unregister_driver(&composite_driver);
+
+	class_destroy(driver->class);
 }
