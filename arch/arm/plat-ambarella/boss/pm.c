@@ -44,7 +44,8 @@
 #include <hal/hal.h>
 #include <linux/aipc/i_util.h>
 #include <linux/aipc/i_status.h>
-#include "i_util.h"
+
+#include <plat/ambcache.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -54,6 +55,26 @@
 
 typedef unsigned int (*ambnation_aoss_call_t)(u32, u32, u32, u32);
 extern int in_suspend;
+
+/* ==========================================================================*/
+struct ambernation_page_info {
+	u_int src;
+	u_int dst;
+	u_int size;
+};
+#define AMBERNATION_AOSS_MAGIC 0x19531110
+
+struct ambernation_aoss_info {
+	u_int fn_pri[252];
+	u_int magic;
+	u_int total_pages;
+	u_int copy_pages;
+	struct ambernation_page_info *page_info;
+};
+
+struct ambernation_check_info {
+	struct ambernation_aoss_info *aoss_info;
+};
 
 /* ==========================================================================*/
 static struct ambernation_check_info pm_abcheck_info;
