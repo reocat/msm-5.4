@@ -29,6 +29,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/regulator/fixed.h>
+#include <linux/switch.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
 
@@ -192,12 +193,24 @@ static struct platform_device *wm8994_fixed_voltage_devices[] = {
 	&wm8994_fixed_voltage2,
 };
 
+static struct gpio_switch_platform_data headset_switch_data = {
+       .name = "h2w",
+       .gpio = GPIO(12),
+};
+
+static struct platform_device headset_switch_device = {
+       .name             = "switch-gpio",
+       .dev = {
+               .platform_data    = &headset_switch_data,
+       }
+};
 
 static struct i2c_board_info ambarella_wm8994_board_info = {
 	.type		= "wm8994",
 	.addr		= 0x1a,
 	.platform_data	= &ambarella_wm8994_pdata,
 };
+
 
 int ambarella_init_wm8994(void)
 {
@@ -217,6 +230,8 @@ int ambarella_init_wm8994(void)
 
 	/* Delay to wait for ldo stable */
 	msleep(150);
+
+	platform_device_register(&headset_switch_device);
 
 	platform_add_devices(wm8994_fixed_voltage_devices,
 			ARRAY_SIZE(wm8994_fixed_voltage_devices));
