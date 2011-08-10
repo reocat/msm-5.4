@@ -38,6 +38,12 @@
 #include <linux/mfd/wm8994/registers.h>
 #include "../codecs/wm8994.h"
 
+/* If don't use alsa standard Jack detction mechanism,
+ * switch class will take over this job. */
+static unsigned int gpio_jack = 1;
+module_param(gpio_jack, uint, S_IRUGO);
+MODULE_PARM_DESC(gpio_jack, "Whether or not use alsa standard Jack detection mechanism.");
+
 /* Headset jack */
 static struct snd_soc_jack hs_jack;
 
@@ -153,35 +159,37 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_sync(dapm);
 
-	/* Headset jack detection */
-	errorCode = snd_soc_jack_new(codec, "Headset Jack",
-				SND_JACK_HEADSET, &hs_jack);
-	if (errorCode)
-		return errorCode;
+	if (gpio_jack) {
+		/* Headset jack detection */
+		errorCode = snd_soc_jack_new(codec,
+				"Headset Jack", SND_JACK_HEADSET, &hs_jack);
+		if (errorCode)
+			return errorCode;
 
-	errorCode = snd_soc_jack_add_pins(&hs_jack, ARRAY_SIZE(hs_jack_pins),
-				hs_jack_pins);
-	if (errorCode)
-		return errorCode;
+		errorCode = snd_soc_jack_add_pins(&hs_jack,
+				ARRAY_SIZE(hs_jack_pins), hs_jack_pins);
+		if (errorCode)
+			return errorCode;
 
-	errorCode = snd_soc_jack_add_gpios(&hs_jack, ARRAY_SIZE(hs_jack_gpios),
-				hs_jack_gpios);
-	if (errorCode)
-		return errorCode;
+		errorCode = snd_soc_jack_add_gpios(&hs_jack,
+				ARRAY_SIZE(hs_jack_gpios), hs_jack_gpios);
+		if (errorCode)
+			return errorCode;
 
-	/* Headset jack detection */
-	errorCode = snd_soc_jack_new(codec, "AV Jack",
-				SND_JACK_LINEOUT, &av_jack);
-	if (errorCode)
-		return errorCode;
+		/* Headset jack detection */
+		errorCode = snd_soc_jack_new(codec,
+				"AV Jack", SND_JACK_LINEOUT, &av_jack);
+		if (errorCode)
+			return errorCode;
 
-	errorCode = snd_soc_jack_add_pins(&av_jack, ARRAY_SIZE(av_jack_pins),
-				av_jack_pins);
-	if (errorCode)
-		return errorCode;
+		errorCode = snd_soc_jack_add_pins(&av_jack,
+				ARRAY_SIZE(av_jack_pins), av_jack_pins);
+		if (errorCode)
+			return errorCode;
 
-	errorCode = snd_soc_jack_add_gpios(&av_jack, ARRAY_SIZE(av_jack_gpios),
-				av_jack_gpios);
+		errorCode = snd_soc_jack_add_gpios(&av_jack,
+				ARRAY_SIZE(av_jack_gpios), av_jack_gpios);
+	}
 
 	return errorCode;
 }
@@ -341,10 +349,12 @@ i1sevk_board_init_exit:
 
 static void __exit i1evk_board_exit(void)
 {
-	snd_soc_jack_free_gpios(&hs_jack, ARRAY_SIZE(hs_jack_gpios),
-				hs_jack_gpios);
-	snd_soc_jack_free_gpios(&av_jack, ARRAY_SIZE(av_jack_gpios),
-				av_jack_gpios);
+	if (gpio_jack) {
+		snd_soc_jack_free_gpios(&hs_jack,
+			ARRAY_SIZE(hs_jack_gpios), hs_jack_gpios);
+		snd_soc_jack_free_gpios(&av_jack,
+			ARRAY_SIZE(av_jack_gpios), av_jack_gpios);
+	}
 
 	platform_device_unregister(i1evk_snd_device);
 }
