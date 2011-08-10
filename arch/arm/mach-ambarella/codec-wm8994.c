@@ -192,12 +192,12 @@ static struct platform_device *wm8994_fixed_voltage_devices[] = {
 	&wm8994_fixed_voltage2,
 };
 
-
 static struct i2c_board_info ambarella_wm8994_board_info = {
 	.type		= "wm8994",
 	.addr		= 0x1a,
 	.platform_data	= &ambarella_wm8994_pdata,
 };
+
 
 int ambarella_init_wm8994(void)
 {

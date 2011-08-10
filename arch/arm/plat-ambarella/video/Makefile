@@ -1,5 +1,5 @@
 #
-# arch/arm/plat-ambarella/Makefile
+# arch/arm/plat-ambarella/video/Makefile
 #
 # Author: Anthony Ginger <hfjiang@ambarella.com>
 #
@@ -20,19 +20,5 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
-obj-y						+= generic/
-obj-y						+= misc/
-obj-y						+= video/
-endif
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
-obj-y						+= cortex/
-endif
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
-obj-y						+= boss/
-obj-y						+= misc/
-obj-y						+= video/
-endif
+obj-y						+= ambfb.o
 

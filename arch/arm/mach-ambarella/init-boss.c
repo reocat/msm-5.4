@@ -849,6 +849,7 @@ static void ambarella_init_vendor_2(void)
 	ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 	ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
 	ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
+	ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_NONREMOVABLE;
 
 	platform_add_devices(vendor_2_devices, ARRAY_SIZE(vendor_2_devices));
 	for (i = 0; i < ARRAY_SIZE(vendor_2_devices); i++) {

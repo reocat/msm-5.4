@@ -1,5 +1,5 @@
 #
-# arch/arm/plat-ambarella/Makefile
+# arch/arm/plat-ambarella/generic/Makefile
 #
 # Author: Anthony Ginger <hfjiang@ambarella.com>
 #
@@ -20,19 +20,35 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
-obj-y						+= generic/
-obj-y						+= misc/
-obj-y						+= video/
+obj-y						+= init.o
+obj-y						+= adc.o
+obj-y						+= audio.o
+obj-y						+= clk.o
+obj-y						+= crypto.o
+obj-y						+= dma.o
+obj-y						+= eth.o
+obj-y						+= fio.o
+obj-y						+= gpio.o
+obj-y						+= idc.o
+obj-y						+= ir.o
+obj-y						+= irq.o
+obj-y						+= pm.o
+obj-y						+= pwm.o
+obj-y						+= rct.o
+obj-y						+= rtc.o
+obj-y						+= sd.o
+obj-y						+= spi.o
+obj-y						+= timer.o
+obj-y						+= uart.o
+obj-y						+= udc.o
+obj-y						+= wdt.o
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
+obj-y						+= pll_hal.o
+else
+obj-y						+= pll_rct.o
 endif
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= uhc.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ahci.o
 
-ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
-obj-y						+= cortex/
-endif
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
-obj-y						+= boss/
-obj-y						+= misc/
-obj-y						+= video/
-endif
+obj-y						+= adb.o
 

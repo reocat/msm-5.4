@@ -134,6 +134,7 @@ struct usb_function {
 	struct list_head		list;
 	DECLARE_BITMAP(endpoints, 32);
 	struct device			*dev;
+	int			index;
 };
 
 int usb_add_function(struct usb_configuration *, struct usb_function *);

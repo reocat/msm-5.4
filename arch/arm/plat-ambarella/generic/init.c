@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/init.c
+ * arch/arm/plat-ambarella/generic/init.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
