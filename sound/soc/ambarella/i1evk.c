@@ -28,6 +28,7 @@
 #include <linux/moduleparam.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
+#include <linux/switch.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <asm/mach-types.h>
@@ -88,6 +89,18 @@ static struct snd_soc_jack_gpio av_jack_gpios[] = {
 		.report = SND_JACK_LINEOUT,
 		.debounce_time = 200,
 	},
+};
+
+static struct gpio_switch_platform_data headset_switch_data = {
+       .name = "h2w",
+       .gpio = GPIO(12),
+};
+
+static struct platform_device headset_switch_device = {
+       .name             = "switch-gpio",
+       .dev = {
+               .platform_data    = &headset_switch_data,
+       }
 };
 
 static const struct snd_soc_dapm_widget i1evk_dapm_widgets[] = {
@@ -189,6 +202,8 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 
 		errorCode = snd_soc_jack_add_gpios(&av_jack,
 				ARRAY_SIZE(av_jack_gpios), av_jack_gpios);
+	} else {
+		platform_device_register(&headset_switch_device);
 	}
 
 	return errorCode;
@@ -354,6 +369,8 @@ static void __exit i1evk_board_exit(void)
 			ARRAY_SIZE(hs_jack_gpios), hs_jack_gpios);
 		snd_soc_jack_free_gpios(&av_jack,
 			ARRAY_SIZE(av_jack_gpios), av_jack_gpios);
+	} else {
+		platform_device_unregister(&headset_switch_device);
 	}
 
 	platform_device_unregister(i1evk_snd_device);
