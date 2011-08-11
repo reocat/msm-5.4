@@ -2270,6 +2270,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	int					errorCode = 0;
+#if !defined(CONFIG_AMBARELLA_IPC)
 	struct ambarella_sd_controller_info	*pinfo;
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
@@ -2298,12 +2299,14 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
+#endif
 	return errorCode;
 }
 
 static int ambarella_sd_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
+#if !defined(CONFIG_AMBARELLA_IPC)
 	struct ambarella_sd_controller_info	*pinfo;
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	u32					i;
@@ -2331,7 +2334,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	}
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
-
+#endif
 	return errorCode;
 }
 #endif
