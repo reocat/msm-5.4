@@ -1,5 +1,5 @@
 /*
- * drivers/ambarella-ipc/lkvfs_bh.h
+ * drivers/ambarella-ipc/server/lkvfs_bh.c
  *
  * Authors:
  *	Charles Chiou <cchiou@ambarella.com>
@@ -18,12 +18,14 @@
 
 #include <linux/kthread.h>
 #include <linux/wait.h>
-#include <linux/semaphore.h>
+#include <linux/spinlock.h>
 #include <linux/slab.h>
 #include <linux/aipc/aipc.h>
 
-#define NUM_LKVFS_BH_WORKERS	2
+#define NUM_LKVFS_BH_WORKERS	1
 #define MAX_LKVFS_BH_QUEUE	32
+
+#define LKVFS_BH_MAX_EXEC_TIME	0xffffffff
 
 struct lkvfs_bh_queue_s
 {
@@ -38,9 +40,10 @@ struct lkvfs_bh_s
 	struct lkvfs_bh_queue_s queue[MAX_LKVFS_BH_QUEUE];
 	unsigned int r_index;
 	unsigned int w_index;
+	unsigned int max_exec_time;
 
 	wait_queue_head_t wait;
-	struct semaphore sem;
+	spinlock_t lock;
 
 	struct workers_s {
 		struct task_struct *task;
@@ -63,19 +66,22 @@ static int lkvfs_bh_worker_thread(void *data)
 	void *arg;
 	void *result;
 	SVCXPRT *svcxprt;
+	unsigned long flags;
 
 	for (;;) {
+		unsigned long exec_begin, exec_end;
+
 		rval = wait_event_interruptible(lkvfs_bh->wait,
 						(lkvfs_bh->r_index !=
 						 lkvfs_bh->w_index));
 		if (rval != 0)
 			break;	/* Received a signal */
 
-		down(&lkvfs_bh->sem);
+		spin_lock_irqsave(&lkvfs_bh->lock, flags);
 
 		if (lkvfs_bh->r_index == lkvfs_bh->w_index) {
 			/* nothing to do ?! */
-			up(&lkvfs_bh->sem);
+			spin_unlock_irqrestore(&lkvfs_bh->lock, flags);
 			continue;
 		}
 
@@ -89,13 +95,20 @@ static int lkvfs_bh_worker_thread(void *data)
 		lkvfs_bh->r_index++;
 		lkvfs_bh->r_index %= MAX_LKVFS_BH_QUEUE;
 
-		up(&lkvfs_bh->sem);
+		spin_unlock_irqrestore(&lkvfs_bh->lock, flags);
 
 		BUG_ON(func == NULL);
 		BUG_ON(svcxprt == NULL);
 
 		/* Service the request! */
+		exec_begin = jiffies;
 		func(arg, result, svcxprt);
+		exec_end = jiffies;
+		if (exec_end - exec_begin > lkvfs_bh->max_exec_time) {
+			printk("lkvfs_bh %d: slow vfs service => xid = %u, pid = %u, fid = %d, %d ms\n",
+				id, svcxprt->xid, svcxprt->pid, svcxprt->fid,
+				jiffies_to_msecs(exec_end - exec_begin));
+		}
 	}
 
 	return 0;
@@ -109,7 +122,7 @@ void lkvfs_bh_queue(ipc_bh_f func, void *arg, void *result, SVCXPRT *svcxprt)
 	unsigned long flags;
 	int index;
 
-	local_irq_save(flags);
+	spin_lock_irqsave(&lkvfs_bh->lock, flags);
 
 	index = lkvfs_bh->w_index;
 	lkvfs_bh->queue[index].func = func;
@@ -123,7 +136,7 @@ void lkvfs_bh_queue(ipc_bh_f func, void *arg, void *result, SVCXPRT *svcxprt)
 
 	wake_up_nr(&lkvfs_bh->wait, 1);
 
-	local_irq_restore(flags);
+	spin_unlock_irqrestore(&lkvfs_bh->lock, flags);
 }
 EXPORT_SYMBOL(lkvfs_bh_queue);
 
@@ -138,7 +151,8 @@ void lkvfs_bh_init(void)
 	BUG_ON(lkvfs_bh == NULL);
 
 	init_waitqueue_head(&lkvfs_bh->wait);
-	sema_init(&lkvfs_bh->sem, 1);
+	spin_lock_init(&lkvfs_bh->lock);
+	lkvfs_bh->max_exec_time = msecs_to_jiffies(LKVFS_BH_MAX_EXEC_TIME);
 
 	for (i = 0; i < NUM_LKVFS_BH_WORKERS; i++) {
 		lkvfs_bh->workers[i].task = kthread_run(
