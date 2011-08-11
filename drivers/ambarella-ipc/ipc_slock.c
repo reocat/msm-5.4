@@ -18,6 +18,7 @@
 
 #include <ambhw/chip.h>
 #include <linux/sched.h>
+#include <linux/aipc/aipc.h>
 #include <linux/aipc/ipc_slock.h>
 #include <linux/aipc/ipc_shm.h>
 
@@ -75,13 +76,18 @@ void ipc_spin_lock(int i, int pos)
 	ipc_slock_t *lock = &lock_obj.locks[i];
 	unsigned long flags;
 	unsigned long tmp;
+#if DEBUG_LOCK_TIME
+	unsigned int time;
+#endif
 #if DEBUG_SPINLOCK
 	int cpu_id, pid;
 
 	cpu_id = smp_processor_id ();
 	pid = current->pid;
 #endif
-
+#if DEBUG_LOCK_TIME
+	time = jiffies;
+#endif
 	spin_lock_irqsave(&lock_obj.lock, flags);
 
 #if (CHIP_REV == I1)
@@ -96,11 +102,19 @@ void ipc_spin_lock(int i, int pos)
 	: "cc");
 #endif /* CHIP_REV == I1 */
 
+#if DEBUG_LOCK_TIME
+	lock->cortex_lock_time = jiffies;
+	if (lock->cortex_lock_time - time > DEBUG_LOCK_MAX_MS) {
+		lock->cortex_long_wait++;
+	}
+#endif
 	lock->flags = flags;
+	lock->count++;
+	lock->cortex++;
+
 #if DEBUG_SPINLOCK
 	K_ASSERT(lock->lock_count == lock->unlock_count);
 	lock->cpu = IPC_SPINLOCK_CPU_CORTEX;
-	lock->cortex++;
 	lock->lock_count++;
 #if DEBUG_LOG_SPINLOCK
 	lock->lock_task_id[lock->lock_log_idx] = IPC_SLOCK_GET_TASK_ID(cpu_id, pid);
@@ -121,6 +135,7 @@ EXPORT_SYMBOL(ipc_spin_lock);
 void ipc_spin_unlock(int i, int pos)
 {
 	ipc_slock_t *lock = &lock_obj.locks[i];
+	unsigned int time;
 
 	smp_mb();
 
@@ -136,6 +151,13 @@ void ipc_spin_unlock(int i, int pos)
 #endif /* DEBUG_LOG_SPINLOCK */
 	lock->unlock_count++;
 #endif /* DEBUG_SPINLOCK */
+
+#if DEBUG_LOCK_TIME
+	time = jiffies;
+	if (time - lock->cortex_lock_time > DEBUG_LOCK_MAX_MS) {
+		lock->cortex_long_lock++;
+	}
+#endif
 
 #if (CHIP_REV == I1)
 	__asm__ __volatile__(

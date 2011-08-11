@@ -33,7 +33,7 @@
 #include "binder.h"
 
 #define CONFIG_IPC_SIGNAL_LU_COMPL	0
-#define CONFIG_IPC_INFINITE_WAIT	0
+#define CONFIG_IPC_INFINITE_WAIT	1
 
 #define DEBUG_IPC_DATA			0
 #define DEBUG_IPC_ALIGN_DATA		0
@@ -147,13 +147,14 @@ inline static struct ipc_prog_s *ipc_lookup_prog(struct ipc_prog_s *head, unsign
 /*
  * Diff time stamps and the result.
  */
-static inline u32 ipc_tick_diff(u32 start, u32 end)
+u32 ipc_tick_diff(u32 start, u32 end)
 {
 	if (end < start)
 		return 0xffffffff - start + end;
 	else
 		return end - start;
 }
+EXPORT_SYMBOL(ipc_tick_diff);
 
 /*
  * Get time tick.
@@ -1602,22 +1603,27 @@ void ipc_binder_request(void)
 
 	/* Check incoming requests */
 	DEBUG_MSG_IPC_LK ("[ipc] check incoming requests\n");
-	ipc_spin_lock(ipc_buf->svc_in_lock, IPC_SLOCK_POS_L_SVC_IN);
-	if (IPC_CMD_QUEUE_NOT_EMPTY(ipc_buf->svc_in_head, ipc_buf->svc_in_tail)) {
-		svcxprt = ipc_buf->svc_incoming[ipc_buf->svc_in_head];
-		ipc_buf->svc_in_head = IPC_CMD_QUEUE_PTR_NEXT(ipc_buf->svc_in_head);
-		binder->pending_rsp++;
-	} else {
-		svcxprt = NULL;
-	}
-	ipc_spin_unlock(ipc_buf->svc_in_lock, IPC_SLOCK_POS_L_SVC_IN);
 
-	if (svcxprt) {
-		svcxprt = ipc_binder_preproc_in (svcxprt, 1);
-		ipc_binder_got_request(svcxprt);				
-	}
+	for (;;) {
+		ipc_spin_lock(ipc_buf->svc_in_lock, IPC_SLOCK_POS_L_SVC_IN);
+		if (IPC_CMD_QUEUE_NOT_EMPTY(ipc_buf->svc_in_head, ipc_buf->svc_in_tail)) {
+			svcxprt = ipc_buf->svc_incoming[ipc_buf->svc_in_head];
+			ipc_buf->svc_in_head = IPC_CMD_QUEUE_PTR_NEXT(ipc_buf->svc_in_head);
+			binder->pending_rsp++;
+		} else {
+			svcxprt = NULL;
+		}
+		ipc_spin_unlock(ipc_buf->svc_in_lock, IPC_SLOCK_POS_L_SVC_IN);
 
-	binder->tick_irq_last = ipc_tick_get ();
+		if (svcxprt) {
+			svcxprt = ipc_binder_preproc_in(svcxprt, 1);
+			ipc_binder_got_request(svcxprt);
+		} else {
+			break;
+		}
+
+		binder->tick_irq_last = ipc_tick_get ();
+	}
 
 	DEBUG_MSG_IPC_LK ("[ipc] ipc_binder_dispatch END\n");
 }
@@ -1631,22 +1637,27 @@ void ipc_binder_reply(void)
 
 	/* Check incoming replies (complete call upstack to client) */
 	DEBUG_MSG_IPC_LK ("[ipc] check incoming replies\n");
-	ipc_spin_lock(ipc_buf->clnt_in_lock, IPC_SLOCK_POS_L_CLNT_IN);
-	if (IPC_CMD_QUEUE_NOT_EMPTY(ipc_buf->clnt_in_head, ipc_buf->clnt_in_tail)) {
-		svcxprt = ipc_buf->clnt_incoming[ipc_buf->clnt_in_head];
-		ipc_buf->clnt_in_head = IPC_CMD_QUEUE_PTR_NEXT(ipc_buf->clnt_in_head);
-		binder->pending_req--;
-	} else {
-		svcxprt = NULL;
-	}
-	ipc_spin_unlock(ipc_buf->clnt_in_lock, IPC_SLOCK_POS_L_CLNT_IN);
 
-	if (svcxprt) {
-		svcxprt = ipc_binder_preproc_in (svcxprt, 0);
-		ipc_binder_got_reply(svcxprt);
-	}
+	for (;;) {
+		ipc_spin_lock(ipc_buf->clnt_in_lock, IPC_SLOCK_POS_L_CLNT_IN);
+		if (IPC_CMD_QUEUE_NOT_EMPTY(ipc_buf->clnt_in_head, ipc_buf->clnt_in_tail)) {
+			svcxprt = ipc_buf->clnt_incoming[ipc_buf->clnt_in_head];
+			ipc_buf->clnt_in_head = IPC_CMD_QUEUE_PTR_NEXT(ipc_buf->clnt_in_head);
+			binder->pending_req--;
+		} else {
+			svcxprt = NULL;
+		}
+		ipc_spin_unlock(ipc_buf->clnt_in_lock, IPC_SLOCK_POS_L_CLNT_IN);
 
-	binder->tick_irq_last = ipc_tick_get ();
+		if (svcxprt) {
+			svcxprt = ipc_binder_preproc_in(svcxprt, 0);
+			ipc_binder_got_reply(svcxprt);
+		} else {
+			break;
+		}
+
+		binder->tick_irq_last = ipc_tick_get();
+	}
 
 	DEBUG_MSG_IPC_LK ("[ipc] ipc_binder_dispatch END\n");
 }

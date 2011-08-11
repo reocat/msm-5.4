@@ -72,6 +72,7 @@ int ipc_log_init(u32 addr, u32 size)
  */
 void ipc_log_print(int level, const char *fmt, ...)
 {
+#if IPC_LOG_ENABLE
 	va_list args;
 	int len, left;
 	u8 *msg;
@@ -115,6 +116,7 @@ void ipc_log_print(int level, const char *fmt, ...)
 	}
 	
 	va_end (args);
+#endif
 }
 
 /*

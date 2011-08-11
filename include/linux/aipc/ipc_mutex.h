@@ -33,7 +33,7 @@
  */
 #define DEBUG_LOG_MUTEX			0
 #define DEBUG_LOG_MUTEX_NUM		8
-#define DEBUG_LOG_LOCK_TIME		0
+#define DEBUG_LOG_LOCK_TIME		1
 #define DEBUG_LOG_LOCK_TIME_NUM		5
 
 /*

@@ -17,6 +17,8 @@
 #ifndef __AIPC_LOG_H__
 #define __AIPC_LOG_H__
 
+#define IPC_LOG_ENABLE			0
+
 enum {
 	IPC_LOG_LEVEL_ERROR = 0,
 	IPC_LOG_LEVEL_WARNING,

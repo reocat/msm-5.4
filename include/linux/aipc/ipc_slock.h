@@ -23,7 +23,8 @@
 #include <linux/aipc/ipc_slock_def.h>
 
 #define DEBUG_SPINLOCK			0
-
+#define DEBUG_LOCK_TIME			0
+#define DEBUG_LOCK_MAX_MS		2
 #define DEBUG_LOG_SPINLOCK		0
 #define DEBUG_LOG_SPINLOCK_NUM		8
 
@@ -39,12 +40,22 @@
 typedef struct {
 	volatile unsigned int lock;
 	volatile unsigned int flags;
+	volatile unsigned int count;
+	volatile unsigned int arm;		/* the count of ARM's lock */
+	volatile unsigned int cortex;		/* the count of Cortex's lock */
+#if DEBUG_LOCK_TIME
+	volatile unsigned int bound;
+	volatile unsigned int arm_lock_time;
+	volatile unsigned int arm_long_wait;
+	volatile unsigned int arm_long_lock;
+	volatile unsigned int cortex_lock_time;
+	volatile unsigned int cortex_long_wait;
+	volatile unsigned int cortex_long_lock;
+#endif
 #if DEBUG_SPINLOCK
 	volatile unsigned int lock_count;	/* increment after get mutex lock */
 	volatile unsigned int unlock_count;	/* increment before release mutex lock */
 	volatile unsigned int cpu;		/* last cpu got the mutex lock: ARM or Cortex */
-	volatile unsigned int arm;		/* the count of ARM's lock */
-	volatile unsigned int cortex;		/* the count of Cortex's lock */
 #if DEBUG_LOG_SPINLOCK
 	volatile int lock_log_idx;
 	volatile int unlock_log_idx;
