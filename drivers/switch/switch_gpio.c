@@ -111,8 +111,9 @@ static int gpio_switch_probe(struct platform_device *pdev)
 		goto err_detect_irq_num_failed;
 	}
 
-	ret = request_irq(switch_data->irq, gpio_irq_handler,
-			  IRQF_TRIGGER_LOW, pdev->name, switch_data);
+	ret = request_any_context_irq(switch_data->irq, gpio_irq_handler,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				pdev->name, switch_data);
 	if (ret < 0)
 		goto err_request_irq;
 
