@@ -35,18 +35,8 @@ $(error "Cannot find IPC directory!!")
 endif
 
 # IPCGEN
-ifeq ($(HOST_OS),)
-HOST_OS := $(shell uname -s | sed -e s/CYGWIN.*/CYGWIN/ | sed -e s/MINGW.*/MINGW/)
-endif
-
 IPCGEN := $(IPCDIR)/ipcgen
-ifeq ($(HOST_OS),CYGWIN)
-IPCGEN_TYPE := PE32
-else
-ifeq ($(HOST_OS),Linux)
 IPCGEN_TYPE := ELF
-endif
-endif
 
 ifneq ($(shell file $(IPCGEN) | grep -o $(IPCGEN_TYPE)), $(IPCGEN_TYPE))
 ERR := $(shell rm -rf $(IPCGEN)* $(IPCDIR)/.tmp)
@@ -107,19 +97,16 @@ OBJS-S-y = $(foreach f,$(SRCS-S-y),$(patsubst %.c,%.o,$(f)))
 SRCS-C-y = $(foreach f,$(X-C-y),client/$(patsubst %.x,%_client.c,$(notdir $(f))))
 OBJS-C-y = $(foreach f,$(SRCS-C-y),$(patsubst %.c,%.o,$(f)))
 
-H-S-y = $(foreach f,$(X-S-y),ipcgen/$(patsubst %.x,%.h,$(notdir $(f))))
 TAB_I-S-y = $(foreach f,$(X-S-y),ipcgen/$(patsubst %.x,%_tab.i,$(notdir $(f))))
 
-H-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%.h,$(notdir $(f))))
 TAB_I-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%_tab.i,$(notdir $(f))))
 CLNT_C-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%_clnt.c,$(notdir $(f))))
 CLNT_O-C-y = $(foreach f,$(X-C-y),ipcgen/$(patsubst %.x,%_clnt.o,$(notdir $(f))))
 
-IPCGEN_H = $(H-S-y) $(H-C-y)
 IPCGEN_TAB_I = $(TAB_I-S-y) $(TAB_I-C-y)
 IPCGEN_CLNT_C = $(CLNT_C-C-y)
 
-IPCGEN_FILES = $(IPCGEN_H) $(IPCGEN_TAB_I) $(IPCGEN_CLNT_C)
+IPCGEN_FILES = $(IPCGEN_TAB_I) $(IPCGEN_CLNT_C)
 
 # Finally, obj-y collects for linux objects to be made
 
@@ -127,7 +114,7 @@ obj-y := ipc.o irq.o mem.o binder.o ipc_bh.o errstr.o nl.o ipc_shm.o ipc_slock.o
 obj-y += $(OBJS-S-y) $(OBJS-C-y)
 obj-y += $(CLNT_O-C-y)
 
-ccflags-y += -Idrivers/ambarella-ipc
+ccflags-y += -Idrivers/ambarella-ipc -Iinclude/generated -Iinclude/generated/ipcgen
 
 clean-dirs += ipcgen/
 
@@ -138,11 +125,6 @@ IMPLEMENT_SRCS := $(foreach f,$(SRCS-S-y) $(SRCS-C-y),$(src)/$(f))
 $(IMPLEMENT_SRCS): $(foreach f,$(IPCGEN_FILES),$(src)/$(f))
 
 # Explicit rules
-
-drivers/ambarella-ipc/ipcgen/%.h: $(IPCDIR)/defs/%.x $(IPCGEN)
-	@echo "  IPCGEN  $@" ; \
-	mkdir -p $(dir $@) ; \
-	(cd $(realpath $(dir $<)) ; $(IPCGEN) -C -M -h $(notdir $<)) > $@
 
 drivers/ambarella-ipc/ipcgen/%_tab.i: $(IPCDIR)/defs/%.x $(IPCGEN)
 	@echo "  IPCGEN  $@" ; \

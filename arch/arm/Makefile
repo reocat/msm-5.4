@@ -279,6 +279,9 @@ boot := arch/arm/boot
 
 archprepare:
 	$(Q)$(MAKE) $(build)=arch/arm/tools include/generated/mach-types.h
+ifeq ($(CONFIG_AMBARELLA_IPC),y)
+	$(Q)$(MAKE) $(build)=arch/arm/tools gen-aipc-headers
+endif
 
 # Convert bzImage to zImage
 bzImage: zImage

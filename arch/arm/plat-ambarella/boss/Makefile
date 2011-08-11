@@ -20,8 +20,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-ccflags-y					+= -Idrivers/ambarella-ipc/ipcgen
-
 obj-y						+= init.o
 obj-y						+= boss.o
 obj-y						+= irq.o
