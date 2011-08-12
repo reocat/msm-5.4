@@ -51,9 +51,8 @@ static struct vdaidma_s {
 	} chan[2];
 } G_vdaidma;
 
-int vdma_request_callback(int chan, unsigned int (*handler1)(void *),
-	int (*handler2)(void *), void (*handler3)(void *),  void (*handler4)(void *),
-	void *harg)
+int vdma_request_callback(int chan, void (*handler1)(void *),
+ void (*handler2)(void *), void *harg)
 {
 	int retval = 0;
 
@@ -62,16 +61,13 @@ int vdma_request_callback(int chan, unsigned int (*handler1)(void *),
 		goto ambarella_vdaidma_request_cb_exit_na;
 	}
 
-	if (handler1 == NULL || handler2 == NULL || handler3 == NULL ||
-		handler4 == NULL) {
+	if (handler1 == NULL || handler2 == NULL) {
 		retval = -EINVAL;
 		goto ambarella_vdaidma_request_cb_exit_na;
 	}
 
 	G_vdaidma.chan[chan].handler1 = handler1;
 	G_vdaidma.chan[chan].handler2 = handler2;
-	G_vdaidma.chan[chan].handler3 = handler3;
-	G_vdaidma.chan[chan].handler4 = handler4;
 	G_vdaidma.chan[chan].harg = harg;
 
 ambarella_vdaidma_request_cb_exit_na:
@@ -79,79 +75,32 @@ ambarella_vdaidma_request_cb_exit_na:
 }
 EXPORT_SYMBOL(vdma_request_callback);
 
-static void lk_get_alsa_vfifo_adr_tx(unsigned int *adr, int *size)
-{
-	void *harg = G_vdaidma.chan[0].harg;
-
-	*adr = G_vdaidma.chan[0].handler1(harg);
-	*size = G_vdaidma.chan[0].handler2(harg);
-}
-
-static void lk_get_alsa_vfifo_adr_rx(unsigned int *adr, int *size)
-{
-	void *harg = G_vdaidma.chan[1].harg;
-
-	*adr = G_vdaidma.chan[1].handler1(harg);
-	*size = G_vdaidma.chan[1].handler2(harg);
-}
-
 static void lk_update_alsa_vfifo_tx(void)
 {
 	void *harg = G_vdaidma.chan[0].harg;
 
-	G_vdaidma.chan[0].handler3(harg);
+	G_vdaidma.chan[0].handler1(harg);
 }
 
 static void lk_update_alsa_vfifo_rx(void)
 {
 	void *harg = G_vdaidma.chan[1].harg;
 
-	G_vdaidma.chan[1].handler3(harg);
+	G_vdaidma.chan[1].handler1(harg);
 }
 
 static void lk_alsa_op_finish_tx(void)
 {
 	void *harg = G_vdaidma.chan[0].harg;
 	
-	G_vdaidma.chan[0].handler4(harg);
+	G_vdaidma.chan[0].handler2(harg);
 }
 
 static void lk_alsa_op_finish_rx(void)
 {
 	void *harg = G_vdaidma.chan[1].harg;
 
-	G_vdaidma.chan[1].handler4(harg);
-}
-
-/* linux get alsa fifo read address */
-static bool_t __lkalas_get_fifo_radr_1_svc(struct vdaidma_info *arg, int *res,
-	SVCXPRT *svcxprt)
-{
-	unsigned int adr;
-	int size;
-	u32 *vptr;
-
-	lk_get_alsa_vfifo_adr_tx(&adr, &size);
-	arg->base = adr;
-	arg->size = size;
-	//printk("size: %d, adr: 0x%x\n", size, adr);
-	vptr = (u32 *)ipc_phys_to_virt(arg->base);
-	ambcache_clean_range(vptr, size);
-	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + (size >> 3)),
-	//	*(vptr + (size >> 2) - 1));
-
-	svcxprt->rcode = IPC_SUCCESS;
-	ipc_svc_sendreply(svcxprt, NULL);
-
-	return 1;
-}
-
-bool_t lkalas_get_fifo_radr_1_svc(struct vdaidma_info *arg, int *res,
-	struct svc_req *rqstp)
-{
-	ipc_bh_queue((ipc_bh_f) __lkalas_get_fifo_radr_1_svc,
-		     arg, res, rqstp->svcxprt);
-	return 1;
+	G_vdaidma.chan[1].handler2(harg);
 }
 
 /* linux update alsa fifo read address */
@@ -174,41 +123,10 @@ bool_t lkalas_update_fifo_radr_1_svc(void *arg, void *res,
 	return 1;
 }
 
-/* linux get alsa fifo write address */
-static bool_t __lkalas_get_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
-	SVCXPRT *svcxprt)
-{
-	unsigned int adr;
-	int size;
-
-	lk_get_alsa_vfifo_adr_rx(&adr, &size);
-	arg->base = adr;
-	arg->size = size;
-	//printk("size: %d, adr: 0x%x\n", size, adr);
-
-	svcxprt->rcode = IPC_SUCCESS;
-	ipc_svc_sendreply(svcxprt, NULL);
-
-	return 1;
-}
-
-bool_t lkalas_get_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
-	struct svc_req *rqstp)
-{
-	ipc_bh_queue((ipc_bh_f) __lkalas_get_fifo_wadr_1_svc,
-		     arg, res, rqstp->svcxprt);
-	return 1;
-}
-
 /* linux update alsa fifo write address */
-static bool_t __lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg,
-	int *res, SVCXPRT *svcxprt)
+static bool_t __lkalas_update_fifo_wadr_1_svc(void *arg, void *res,
+  SVCXPRT *svcxprt)
 {
-	u32 *vptr;
-	vptr = (u32 *)ipc_phys_to_virt(arg->base);
-	ambcache_inv_range(vptr, arg->size);
-	//printk("0x%x, 0x%x, 0x%x\n", *vptr, *(vptr + 512), *(vptr + 1023));
-
 	lk_update_alsa_vfifo_rx();
 
 	svcxprt->rcode = IPC_SUCCESS;
@@ -217,7 +135,7 @@ static bool_t __lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg,
 	return 1;
 }
 
-bool_t lkalas_update_fifo_wadr_1_svc(struct vdaidma_info *arg, int *res,
+bool_t lkalas_update_fifo_wadr_1_svc(void *arg, void *res,
 	struct svc_req *rqstp)
 {
 	ipc_bh_queue((ipc_bh_f) __lkalas_update_fifo_wadr_1_svc,

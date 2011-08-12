@@ -40,15 +40,13 @@
 #include "ambarella_vpcm.h"
 #include "ambarella_vi2s.h"
 
-#define ALSA_VI2S_DEBUG
+//#define ALSA_VI2S_DEBUG
 #ifdef ALSA_VI2S_DEBUG
 #define vi2s_printk	printk
 #else
 #define vi2s_printk(...)
 #endif
 
-extern int ipc_ialsa_tx_open(unsigned int ch, unsigned int freq);
-extern int ipc_ialsa_rx_open(unsigned int ch, unsigned int freq);
 extern int ipc_ialsa_get_max_channels(void);
 
 /*
@@ -61,7 +59,8 @@ extern int ipc_ialsa_get_max_channels(void);
   * 3: 6 channels
   */
 unsigned int used_port;
-unsigned int op_port;
+unsigned int op_port = 2;
+unsigned int op_sfreq = 48000;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
 
@@ -167,13 +166,8 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	//ambarella_audio_notify_transition(&priv_data->amb_i2s_intf,
 	//	AUDIO_NOTIFY_SETHWPARAMS);
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-    	ipc_ialsa_tx_open(channels, params_rate(params));
-	} else {
-    	ipc_ialsa_rx_open(channels, params_rate(params));
-	}
-
-	op_port = channels >> 1;
+  op_sfreq = params_rate(params);
+	op_port = channels;
   	vi2s_printk("ambarella_i2s_hw_params ch: %d, freq: %d\n",
 		channels, params_rate(params));
 
