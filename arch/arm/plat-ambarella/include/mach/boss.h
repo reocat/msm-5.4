@@ -30,7 +30,7 @@
 #endif
 
 #define BOSS_BOSS_MEM_SIZE		0x1000		/* 4KB */
-#define BOSS_LINUX_VERSION		0x0002		/* linux struct boss_s version */
+#define BOSS_LINUX_VERSION		0x00000003	/* linux struct boss_s version */
 
 #if (CHIP_REV == A5S)
 #define BOSS_VIRT_H2G_INT_REQ_VEC	32	/* Virtual 'host-to-guest' irq */
@@ -170,21 +170,18 @@ struct boss_s
 	unsigned int ipc_log_total;
 
 	/*
+	 * device controll privilege, linux or uItron
+	 */
+	struct privilege device_priv;
+
+	/*
 	 * The following fields are used by the IPC drivers.
 	 * The IPC binder on the root OS sets up the pointers and the sizes of
 	 * the circular buffers so that the corresponding IPC binder on the
 	 * remote OS can retrieve these when it boots up.
 	 */
 	struct ipc_buf_s ipc_buf;	/* IPC buffer */
-	unsigned int svc_lock_start_id;
-	unsigned int svc_num;
 
-	unsigned int ipcstat_timescale;
-
-	/*
-	 * device controll privilege, linux or uItron
-	 */
-	struct privilege device_priv;
 };
 
 extern struct boss_s *boss;

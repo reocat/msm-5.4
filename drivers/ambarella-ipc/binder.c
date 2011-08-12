@@ -34,6 +34,7 @@
 
 #define CONFIG_IPC_SIGNAL_LU_COMPL	0
 #define CONFIG_IPC_INFINITE_WAIT	1
+#define CONFIG_IPC_RECOVER_IRQ		20	// ms
 
 #define DEBUG_IPC_DATA			0
 #define DEBUG_IPC_ALIGN_DATA		0
@@ -44,6 +45,8 @@
 
 #define CACHE_LINE_SIZE		32
 #define CACHE_LINE_MASK		~(CACHE_LINE_SIZE - 1)
+
+#define IPC_POLL_IRQ_INTERVAL		(HZ * CONFIG_IPC_RECOVER_IRQ / 1000)
 
 int ipc_check_svcxprt(SVCXPRT *svcxprt);
 
@@ -137,7 +140,6 @@ static struct ipc_binder_s G_ipc_binder = {
 struct ipc_binder_s *binder = &G_ipc_binder;
 static struct ipc_buf_s *ipc_buf = NULL;
 
-#define IPC_POLL_IRQ_INTERVAL (HZ/50)
 static void ipc_poll_irq(unsigned long dummy);
 static DEFINE_TIMER(ipc_poll_irq_timer, ipc_poll_irq, 0, 0);
 
@@ -429,11 +431,6 @@ int ipc_check_svcxprt(SVCXPRT *svcxprt)
 
 void  ipc_svc_get_stat(struct ipcstat_s *ipcstat)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&binder->lock, flags);
-	*ipcstat = binder->ipcstat;
-	spin_unlock_irqrestore(&binder->lock, flags);
 }
 EXPORT_SYMBOL(ipc_svc_get_stat);
 
@@ -511,7 +508,9 @@ static void ipc_init_svcxprts(void)
 
 	/* Create svcxprt flag */
 	ptr = binder->svcxprt_buf;
-	id = boss->svc_lock_start_id;
+	id = ipc_buf->linux_svcxprt_lock_start;
+	K_ASSERT(ipc_buf->linux_svcxprt_num == binder->svcxprt_num);
+
 	for (i = 0; i < binder->svcxprt_num; i++)
 	{
 		SVCXPRT *svcxprt = (SVCXPRT *) ptr;
@@ -594,6 +593,8 @@ static void ipc_free_svcxprt(SVCXPRT *svcxprt)
  */
 int ipc_binder_init(void)
 {
+	struct ipcprog_stat_s *ipcprog;
+
 	memset(binder, 0x0, sizeof(*binder));
 
 	binder->init = 1;
@@ -602,13 +603,15 @@ int ipc_binder_init(void)
 	/* Set up the correct pointer to the streaming buffers */
 	ipc_buf = &boss->ipc_buf;
 
-	binder->ipcstat.timescale = boss->ipcstat_timescale;
-	binder->ipcstat.ticks_in_1ms = boss->ipcstat_timescale / 1000;
-	binder->tick_irq_interval = boss->ipcstat_timescale / 50;
+	binder->ipcstat = &ipc_buf->ipcstat;
+	binder->tick_in_1_ms = binder->ipcstat->timescale / 1000;
+	binder->tick_irq_interval = binder->tick_in_1_ms * CONFIG_IPC_RECOVER_IRQ;
 
-	binder->ipcstat.min_req_lat = 0xFFFFFFFF;
-	binder->ipcstat.min_rsp_lat = 0xFFFFFFFF;
-	binder->ipcstat.min_call_exec = 0xFFFFFFFF;
+	ipcprog = &binder->ipcstat->linux_prog;
+	ipcprog->req.min = 0xFFFFFFFF;
+	ipcprog->rsp.min = 0xFFFFFFFF;
+	ipcprog->wakeup.min = 0xFFFFFFFF;
+	ipcprog->call.min = 0xFFFFFFFF;
 
 	printk (KERN_NOTICE "aipc: boss = 0x%08x, ipc_buf = %08x\n", (u32) boss, (u32) ipc_buf);
 	printk (KERN_NOTICE "aipc: binder = 0x%08x %08x\n",
@@ -835,78 +838,101 @@ static void ipc_poll_irq(unsigned long dummy)
 /*
  * Profiling
  */
-static inline void ipc_clnt_call_statistic (SVCXPRT *svcxprt)
+static inline void ipc_clnt_call_statistics (SVCXPRT *svcxprt, enum clnt_stat rval)
 {
-	unsigned long flags;
 	unsigned int cur, elapsed;
+	struct ipcprog_stat_s *ipcprog;
 
-	spin_lock_irqsave(&binder->lock, flags);
+	ipcprog = &binder->ipcstat->linux_prog;
+
+	ipc_spin_lock(ipc_buf->lock, IPC_SLOCK_POS_L_STATISTIC);
+
+	ipcprog->invocations++;
+	if (rval == IPC_SUCCESS) {
+		ipcprog->success++;
+	} else {
+		ipcprog->failure++;
+		goto done;
+	}
 
 	cur = ipc_tick_get ();
 
 	/* Statistics: exec time */
 	elapsed = ipc_tick_diff (cur, svcxprt->time[IPC_TIME_SEND_REQEST]);
-	if (elapsed > binder->ipcstat.max_call_exec) {
-		binder->ipcstat.max_call_exec = elapsed;
+	if (elapsed > ipcprog->call.max) {
+		ipcprog->call.max = elapsed;
 	}
-	if (elapsed > binder->ipcstat.ticks_in_1ms) {
-		binder->ipcstat.slow_call_count++;
-		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow exec: %08x %d, %d ticks\n",
+	if (elapsed > binder->tick_in_1_ms) {
+		ipcprog->call.slow++;
+		ipcprog->call.xid = svcxprt->xid;
+		ipcprog->call.pid = svcxprt->pid;
+		ipcprog->call.fid = svcxprt->fid;
+		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow exec: %08x %d, %d ticks",
 			svcxprt->xid, svcxprt->pid, svcxprt->fid, elapsed);
 	}
-	if (elapsed < binder->ipcstat.min_call_exec) {
-		binder->ipcstat.min_call_exec = elapsed;
+	if (elapsed < ipcprog->call.min) {
+		ipcprog->call.min = elapsed;
 	}
-	binder->ipcstat.total_call_exec += elapsed;
+	ipcprog->call.total += elapsed;
 
 	/* Statistics: request latency */
 	elapsed = ipc_tick_diff (svcxprt->time[IPC_TIME_GOT_REQEST],
 			svcxprt->time[IPC_TIME_SEND_REQEST]);
-	if (elapsed > binder->ipcstat.max_req_lat) {
-		binder->ipcstat.max_req_lat = elapsed;
+	if (elapsed > ipcprog->req.max) {
+		ipcprog->req.max = elapsed;
 	}
-	if (elapsed > binder->ipcstat.ticks_in_1ms) {
-		binder->ipcstat.slow_req_count++;
-		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow req latency: %08x %d, %d ticks\n",
+	if (elapsed > binder->tick_in_1_ms) {
+		ipcprog->req.slow++;
+		ipcprog->req.xid = svcxprt->xid;
+		ipcprog->req.pid = svcxprt->pid;
+		ipcprog->req.fid = svcxprt->fid;
+		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow exec: %08x %d, %d ticks",
 			svcxprt->xid, svcxprt->pid, svcxprt->fid, elapsed);
 	}
-	if (elapsed < binder->ipcstat.min_req_lat) {
-		binder->ipcstat.min_req_lat = elapsed;
+	if (elapsed < ipcprog->req.min) {
+		ipcprog->req.min = elapsed;
 	}
-	binder->ipcstat.total_req_lat += elapsed;
+	ipcprog->req.total += elapsed;
 
 	/* Statistics: response latency */
 	elapsed = ipc_tick_diff (svcxprt->time[IPC_TIME_GOT_REPLY],
 			svcxprt->time[IPC_TIME_SEND_REPLY]);
-	if (elapsed > binder->ipcstat.max_rsp_lat) {
-		binder->ipcstat.max_rsp_lat = elapsed;
+	if (elapsed > ipcprog->rsp.max) {
+		ipcprog->rsp.max = elapsed;
 	}
-	if (elapsed > binder->ipcstat.ticks_in_1ms) {
-		binder->ipcstat.slow_rsp_count++;
-		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow rsp latency: %08x %d, %d ticks\n",
+	if (elapsed > binder->tick_in_1_ms) {
+		ipcprog->rsp.slow++;
+		ipcprog->rsp.xid = svcxprt->xid;
+		ipcprog->rsp.pid = svcxprt->pid;
+		ipcprog->rsp.fid = svcxprt->fid;
+		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow exec: %08x %d, %d ticks",
 			svcxprt->xid, svcxprt->pid, svcxprt->fid, elapsed);
 	}
-	if (elapsed < binder->ipcstat.min_rsp_lat) {
-		binder->ipcstat.min_rsp_lat = elapsed;
+	if (elapsed < ipcprog->rsp.min) {
+		ipcprog->rsp.min = elapsed;
 	}
-	binder->ipcstat.total_rsp_lat += elapsed;
+	ipcprog->rsp.total += elapsed;
 
 	/* Statistics: wakeup latency */
 	elapsed = ipc_tick_diff (cur, svcxprt->time[IPC_TIME_GOT_REPLY]);
-	if (elapsed > binder->ipcstat.max_wakeup_lat) {
-		binder->ipcstat.max_wakeup_lat = elapsed;
+	if (elapsed > ipcprog->wakeup.max) {
+		ipcprog->wakeup.max = elapsed;
 	}
-	if (elapsed > binder->ipcstat.ticks_in_1ms) {
-		binder->ipcstat.slow_wakeup_count++;
-		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow wakeup latency: %08x %d, %d ticks\n",
+	if (elapsed > binder->tick_in_1_ms) {
+		ipcprog->wakeup.slow++;
+		ipcprog->wakeup.xid = svcxprt->xid;
+		ipcprog->wakeup.pid = svcxprt->pid;
+		ipcprog->wakeup.fid = svcxprt->fid;
+		DEBUG_MSG_IPC_SLOW("ipcstat %d: slow exec: %08x %d, %d ticks",
 			svcxprt->xid, svcxprt->pid, svcxprt->fid, elapsed);
 	}
-	if (elapsed < binder->ipcstat.min_wakeup_lat) {
-		binder->ipcstat.min_wakeup_lat = elapsed;
+	if (elapsed < ipcprog->wakeup.min) {
+		ipcprog->wakeup.min = elapsed;
 	}
-	binder->ipcstat.total_wakeup_lat += elapsed;
+	ipcprog->wakeup.total += elapsed;
 
-	spin_unlock_irqrestore(&binder->lock, flags);
+done:
+	ipc_spin_unlock(ipc_buf->lock, IPC_SLOCK_POS_L_STATISTIC);
 }
 
 static inline void ipc_timeout_init(SVCXPRT *svcxprt)
@@ -1151,9 +1177,7 @@ void ipc_clnt_call_complete(SVCXPRT *svcxprt, enum clnt_stat rval)
 	ipc_log_print(IPC_LOG_LEVEL_INFO, "%s: complete %08x",
 			(svcxprt->pid >= MIN_LUIPC_PROG_NUM)?"lu":"lk", svcxprt->xid);
 
-	if (rval == IPC_SUCCESS) {
-		ipc_clnt_call_statistic(svcxprt);
-	}
+	ipc_clnt_call_statistics(svcxprt, rval);
 
 	/* call completion callback */
 	if (svcxprt->compl_proc) {

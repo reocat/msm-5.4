@@ -181,30 +181,49 @@ extern void ambarella_ipc_free(void *);
 
 struct CLIENT;
 
+struct ipcbuf_stat_s
+{
+	unsigned int size;
+	unsigned int head;
+	unsigned int tail;
+};
+
+struct ipccall_stat_s
+{
+	unsigned int max;	/* maximium time */
+	unsigned int min;	/* minimal time */
+	unsigned int total;	/* total time */
+	unsigned int slow;	/* slow count */
+
+	unsigned int xid;	/* maximium time: xid */
+	unsigned int pid;	/* maximium time: pid */
+	unsigned int fid;	/* maximium time: fid */
+};
+
+struct ipcprog_stat_s
+{
+	unsigned int invocations;
+	unsigned int success;
+	unsigned int failure;
+
+	struct ipccall_stat_s req;
+	struct ipccall_stat_s rsp;
+	struct ipccall_stat_s wakeup;
+	struct ipccall_stat_s call;
+};
+
 struct ipcstat_s
 {
+	struct ipcbuf_stat_s clnt_outgoing;
+	struct ipcbuf_stat_s clnt_incoming;
+	struct ipcbuf_stat_s svc_incoming;
+	struct ipcbuf_stat_s svc_outgoing;
+
+	struct ipcprog_stat_s uitron_prog;
+	struct ipcprog_stat_s linux_prog;
+
+	unsigned int next_xid;
 	unsigned int timescale;
-	unsigned int ticks_in_1ms;
-
-	unsigned int max_req_lat;
-	unsigned int min_req_lat;
-	unsigned long long total_req_lat;
-	unsigned int slow_req_count;
-
-	unsigned int max_rsp_lat;
-	unsigned int min_rsp_lat;
-	unsigned long long total_rsp_lat;
-	unsigned int slow_rsp_count;
-
-	unsigned int max_wakeup_lat;
-	unsigned int min_wakeup_lat;
-	unsigned long long total_wakeup_lat;
-	unsigned int slow_wakeup_count;
-
-	unsigned int max_call_exec;
-	unsigned int min_call_exec;
-	unsigned long long total_call_exec;
-	unsigned int slow_call_count;
 };
 
 /*
@@ -303,9 +322,15 @@ struct ipc_buf_s
 	int clnt_out_lock;
 	int clnt_in_lock;
 
+	/* SVCXPRT spinlocks for Linux */
+	unsigned int linux_svcxprt_lock_start;
+	unsigned int linux_svcxprt_num;
+
 	int lock;
 	unsigned int ipc_xid;
-	
+
+	struct ipcstat_s ipcstat;
+
 };
 /*
  * Request for client.

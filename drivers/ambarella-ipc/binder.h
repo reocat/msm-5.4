@@ -68,8 +68,9 @@ struct ipc_binder_s
 	struct list_head lu_done_list;
 	unsigned int lu_prog_id;
 
-	struct ipcstat_s ipcstat;
+	struct ipcstat_s *ipcstat;
 
+	unsigned int tick_in_1_ms;
 	unsigned int tick_irq_last;
 	unsigned int tick_irq_interval;
 	

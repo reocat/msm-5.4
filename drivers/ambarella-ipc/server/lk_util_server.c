@@ -290,28 +290,6 @@ bool_t linux_send_key_1_svc(struct linux_key_status *arg, int *res, struct svc_r
 /* linux_get_ipcstat() */
 static bool_t __linux_get_ipcstat_1_svc(void *arg, struct linux_ipcstat_res *res, SVCXPRT *svcxprt)
 {
-	struct ipcstat_s ipcstat;
-
-	ipc_svc_get_stat(&ipcstat);
-
-	res->max_req_lat = ipcstat.max_req_lat;
-	res->min_req_lat = ipcstat.min_req_lat;
-	res->slow_req_count = ipcstat.slow_req_count;
-	res->total_req_lat_low = ipcstat.total_req_lat & 0xFFFFFFFF;
-	res->total_req_lat_high = ipcstat.total_req_lat >> 32;
-
-	res->max_rsp_lat = ipcstat.max_rsp_lat;
-	res->min_rsp_lat = ipcstat.min_rsp_lat;
-	res->slow_rsp_count = ipcstat.slow_rsp_count;
-	res->total_rsp_lat_low = ipcstat.total_rsp_lat & 0xFFFFFFFF;
-	res->total_rsp_lat_high = ipcstat.total_rsp_lat >> 32;
-
-	res->min_call_exec = ipcstat.min_call_exec;
-	res->max_call_exec = ipcstat.max_call_exec;
-	res->slow_call_count = ipcstat.slow_call_count;
-	res->total_call_exec_low = ipcstat.total_call_exec & 0xFFFFFFFF;
-	res->total_call_exec_high = ipcstat.total_call_exec >> 32;
-
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
 
