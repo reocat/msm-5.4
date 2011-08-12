@@ -40,29 +40,32 @@
 #include "ambarella_vpcm.h"
 
 extern unsigned int op_port;
+extern unsigned int op_sfreq;
+static unsigned int op_addr;
+static unsigned int op_size;
 
-#define AMBA_MAX_DESC_NUM   16
+#define AMBA_MAX_DESC_NUM   8
 #define AMBA_MIN_DESC_NUM   8
 #define AMBA_PERIOD_BYTES_MAX		1024 * 2 * 2
 #define AMBA_PERIOD_BYTES_MIN   1024 * 2 * 2
 
-#define ALSA_VPCM_DEBUG
+//#define ALSA_VPCM_DEBUG
 #ifdef ALSA_VPCM_DEBUG
 #define vpcm_printk	printk
 #else
 #define vpcm_printk(...)
 #endif
 
-extern int ipc_ialsa_tx_op(unsigned int operation);
-extern int ipc_ialsa_rx_op(unsigned int operation);
-
-enum alsajob_op
-{
-	ALSA_OPEN = 0x0,
-	ALSA_START = 0x1,
-	ALSA_STOP = 0x2,
-	ALSA_CLOSE = 0x3,
-};
+extern int ipc_ialsa_tx_open(unsigned int ch, unsigned int freq,
+  unsigned int base, int size, int desc_num);
+extern int ipc_ialsa_tx_start(void);
+extern int ipc_ialsa_tx_stop(void);
+extern int ipc_ialsa_tx_close(void);
+extern int ipc_ialsa_rx_open(unsigned int ch, unsigned int freq,
+  unsigned int base, int size, int desc_num);
+extern int ipc_ialsa_rx_start(void);
+extern int ipc_ialsa_rx_stop(void);
+extern int ipc_ialsa_rx_close(void);
 
 struct ambarella_runtime_data {
 	int working;
@@ -101,52 +104,6 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 	.buffer_bytes_max	= AMBA_MAX_DESC_NUM * AMBA_PERIOD_BYTES_MAX,
 };
 
-static unsigned int get_alsa_vfifo_adr(void *dev_id)
-{
-	struct snd_pcm_substream *substream = dev_id;
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct ambarella_runtime_data *prtd = runtime->private_data;
-	unsigned int adr;
-  u32 *vptr;
-
-  adr = (unsigned int)runtime->dma_addr +
-		prtd->last_descr_in * ambarella_pcm_hardware.period_bytes_max;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (prtd->op_stop == 1) {
-			vptr = (u32 *)ambarella_phys_to_virt(adr);
-			memset(vptr, 0, ambarella_pcm_hardware.period_bytes_max);
-		}
-		prtd->last_descr_in++;
-	} else {
-		prtd->last_descr_in += op_port;
-	}
-
-	if (prtd->last_descr_in >= prtd->ndescr) {
-		prtd->last_descr_in = 0;
-	}
-
-  //vpcm_printk("get_alsa_vfifo_adr: 0x%x %d %d\n",
-	//	adr, prtd->last_descr_in, AMBA_PERIOD_BYTES_MAX * op_port);
-
-	return adr;
-}
-
-static int get_alsa_vfifo_size(void *dev_id)
-{
-  struct snd_pcm_substream *substream = dev_id;
-	int size;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		size = ambarella_pcm_hardware.period_bytes_max;
-	} else {
-    size = ambarella_pcm_hardware.period_bytes_max * op_port;
-	}
-	//vpcm_printk("get_alsa_vfifo_size: %d\n", size);
-
-	return size;
-}
-
 static void v_daidma_fifo_update(void *dev_id)
 {
 	struct snd_pcm_substream *substream = dev_id;
@@ -157,7 +114,7 @@ static void v_daidma_fifo_update(void *dev_id)
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		prtd->last_descr++;
 	} else {
-		prtd->last_descr += op_port;
+		prtd->last_descr += (op_port >> 1);
 	}
 	if (prtd->last_descr >= prtd->ndescr) {
 		prtd->last_descr = 0;
@@ -178,9 +135,8 @@ static void alsa_op_finish(void *dev_id)
   wake_up(&prtd->wq);
 }
 
-extern int vdma_request_callback(int chan, unsigned int (*handler1)(void *),
-	int (*handler2)(void *), void (*handler3)(void *),
-	void (*handler4)(void *), void *harg);
+extern int vdma_request_callback(int chan, void (*handler1)(void *),
+  void (*handler2)(void *), void *harg);
 /* this may get called several times by oss emulation */
 static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
@@ -207,18 +163,19 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->working = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		ret = vdma_request_callback(0, get_alsa_vfifo_adr,
-			get_alsa_vfifo_size, v_daidma_fifo_update,
-			alsa_op_finish, substream);
+		ret = vdma_request_callback(0, v_daidma_fifo_update, alsa_op_finish,
+      substream);
 		if (ret < 0)
 			return ret;
 	} else {
-		ret = vdma_request_callback(1, get_alsa_vfifo_adr,
-			get_alsa_vfifo_size, v_daidma_fifo_update,
-			alsa_op_finish, substream);
+		ret = vdma_request_callback(1, v_daidma_fifo_update, alsa_op_finish,
+      substream);
 		if (ret < 0)
 			return ret;
 	}
+
+  op_addr = runtime->dma_addr;
+  op_size = totsize;
 
 	prtd->ndescr = 0;
 	prtd->last_descr_in = 0;
@@ -228,6 +185,14 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 			period = totsize;
 		prtd->ndescr++;
 	} while (totsize -= period);
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+    	ipc_ialsa_tx_open(op_port, op_sfreq, op_addr, op_size, prtd->ndescr);
+    	printk("ambarella_pcm_hw_params call ipc_ialsa_tx_open\n");
+	} else {
+    	ipc_ialsa_rx_open(op_port, op_sfreq, op_addr, op_size, prtd->ndescr);
+      printk("ambarella_pcm_hw_params call ipc_ialsa_rx_open\n");
+	}
 
   vpcm_printk("ambarella_pcm_hw_params\n");
   vpcm_printk("period: %d, ndescr: %d dma adr: 0x%x dma area: 0x%x\n",
@@ -285,19 +250,20 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			ipc_ialsa_tx_op(ALSA_START);
+			ipc_ialsa_tx_start();
 		} else {
-			ipc_ialsa_rx_op(ALSA_START);
+			ipc_ialsa_rx_start();
 		}
 		prtd->working = 1;
+		prtd->op_stop = 0;
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			ipc_ialsa_tx_op(ALSA_STOP);
+			ipc_ialsa_tx_stop();
 		} else {
-			ipc_ialsa_rx_op(ALSA_STOP);
+			ipc_ialsa_rx_stop();
 		}
 		prtd->op_stop = 1;
 		break;
@@ -309,7 +275,7 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 	spin_unlock_irq(&prtd->lock);
 	
-	vpcm_printk("ambarella_pcm_trigger\n");
+	vpcm_printk("ambarella_pcm_trigger %d\n", cmd);
 
 	return ret;
 }
@@ -420,9 +386,9 @@ static int ambarella_pcm_close(struct snd_pcm_substream *substream)
 		runtime->private_data = NULL;
 	}
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		ipc_ialsa_tx_op(ALSA_CLOSE);
+		ipc_ialsa_tx_close();
 	} else {
-		ipc_ialsa_rx_op(ALSA_CLOSE);
+		ipc_ialsa_rx_close();
 	}
 	
 	vpcm_printk("ambarella_pcm_close\n");

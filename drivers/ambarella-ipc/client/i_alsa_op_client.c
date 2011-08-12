@@ -27,6 +27,8 @@
 #endif
 
 static CLIENT *IPC_i_alsa_op = NULL;
+static struct pcm_info tx_info;
+static struct pcm_info rx_info;
 
 static struct ipc_prog_s i_alsa_op_prog =
 {
@@ -40,62 +42,107 @@ static struct ipc_prog_s i_alsa_op_prog =
 };
 
 /*
- * IPC: ipc_ialsa_tx_open().
+ * IPC: ipc_ialsa_tx_open(). (async auto_del)
  */
-int ipc_ialsa_tx_open(unsigned int ch, unsigned int freq)
+int ipc_ialsa_tx_open(unsigned int ch, unsigned int freq, unsigned int base,
+  int size, int desc_num)
 {
 	enum clnt_stat stat;
-	struct pcm_info info;
-	
-	info.channels = ch;
-	info.freq = freq;
-	stat = ialsa_tx_open_1(&info, NULL, IPC_i_alsa_op, NULL);
+
+	tx_info.channels = ch;
+	tx_info.freq = freq;
+	tx_info.base = base;
+	tx_info.size = size;
+	tx_info.desc_num = desc_num;
+	stat = ialsa_tx_open_1(&tx_info, NULL, IPC_i_alsa_op, NULL);
 
 	return 0;
 }
 EXPORT_SYMBOL(ipc_ialsa_tx_open);
 
 /*
- * IPC: ipc_ialsa_rx_open().
+ * IPC: ipc_ialsa_rx_open(). (async auto_del)
  */
-int ipc_ialsa_rx_open(unsigned int ch, unsigned int freq)
+int ipc_ialsa_rx_open(unsigned int ch, unsigned int freq, unsigned int base,
+  int size, int desc_num)
 {
 	enum clnt_stat stat;
-	struct pcm_info info;
 
-	info.channels = ch;
-	info.freq = freq;
-	stat = ialsa_rx_open_1(&info, NULL, IPC_i_alsa_op, NULL);
-
+	rx_info.channels = ch;
+	rx_info.freq = freq;
+	rx_info.base = base;
+	rx_info.size = size;
+	rx_info.desc_num = desc_num;
+	stat = ialsa_rx_open_1(&rx_info, NULL, IPC_i_alsa_op, NULL);
 	return 0;
 }
 EXPORT_SYMBOL(ipc_ialsa_rx_open);
 
 /*
- * IPC: ipc_ialsa_tx_op(). (async auto_del)
+ * IPC: ipc_ialsa_tx_start(). (async auto_del)
  */
-int ipc_ialsa_tx_op(unsigned int operation)
+int ipc_ialsa_tx_start(void)
 {
 	enum clnt_stat stat;
-
-	stat = ialsa_tx_op_1(&operation, NULL, IPC_i_alsa_op, NULL);
-
+	stat = ialsa_tx_start_1(NULL, NULL, IPC_i_alsa_op, NULL);
 	return 0;
 }
-EXPORT_SYMBOL(ipc_ialsa_tx_op);
+EXPORT_SYMBOL(ipc_ialsa_tx_start);
 
 /*
- * IPC: ipc_ialsa_rx_op(). (async auto_del)
+ * IPC: ipc_ialsa_tx_stop(). (async auto_del)
  */
-int ipc_ialsa_rx_op(unsigned int operation)
+int ipc_ialsa_tx_stop(void)
 {
 	enum clnt_stat stat;
-
-	stat = ialsa_rx_op_1(&operation, NULL, IPC_i_alsa_op, NULL);
-
+	stat = ialsa_tx_stop_1(NULL, NULL, IPC_i_alsa_op, NULL);
 	return 0;
 }
-EXPORT_SYMBOL(ipc_ialsa_rx_op);
+EXPORT_SYMBOL(ipc_ialsa_tx_stop);
+
+/*
+ * IPC: ipc_ialsa_tx_close(). (async auto_del)
+ */
+int ipc_ialsa_tx_close(void)
+{
+	enum clnt_stat stat;
+	stat = ialsa_tx_close_1(NULL, NULL, IPC_i_alsa_op, NULL);
+	return 0;
+}
+EXPORT_SYMBOL(ipc_ialsa_tx_close);
+
+/*
+ * IPC: ipc_ialsa_rx_start(). (async auto_del)
+ */
+int ipc_ialsa_rx_start(void)
+{
+	enum clnt_stat stat;
+	stat = ialsa_rx_start_1(NULL, NULL, IPC_i_alsa_op, NULL);
+	return 0;
+}
+EXPORT_SYMBOL(ipc_ialsa_rx_start);
+
+/*
+ * IPC: ipc_ialsa_rx_stop(). (async auto_del)
+ */
+int ipc_ialsa_rx_stop(void)
+{
+	enum clnt_stat stat;
+	stat = ialsa_rx_stop_1(NULL, NULL, IPC_i_alsa_op, NULL);
+	return 0;
+}
+EXPORT_SYMBOL(ipc_ialsa_rx_stop);
+
+/*
+ * IPC: ipc_ialsa_rx_close(). (async auto_del)
+ */
+int ipc_ialsa_rx_close(void)
+{
+	enum clnt_stat stat;
+	stat = ialsa_rx_close_1(NULL, NULL, IPC_i_alsa_op, NULL);
+	return 0;
+}
+EXPORT_SYMBOL(ipc_ialsa_rx_close);
 
 /*
  * IPC: ipc_ialsa_get_max_channels().
