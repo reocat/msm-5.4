@@ -173,21 +173,31 @@ EXPORT_SYMBOL(ipc_tick_get);
 
 #if CONFIG_NEED_PTR_CONV
 
+#define CONFIG_DO_PTR_CONV	1
+
 u32 ipc_virt_to_phys (u32 virt)
 {
+#if CONFIG_DO_PTR_CONV
 	if (virt == 0) {
 		return 0;
 	}
 	return ambarella_virt_to_phys (virt);
+#else
+	return virt;
+#endif
 }
 EXPORT_SYMBOL(ipc_virt_to_phys);
 
 u32 ipc_phys_to_virt (u32 phys)
 {
+#if CONFIG_DO_PTR_CONV
 	if (phys == 0) {
 		return 0;
 	}
 	return ambarella_phys_to_virt (phys);
+#else
+	return phys;
+#endif
 }
 EXPORT_SYMBOL(ipc_phys_to_virt);
 
@@ -490,11 +500,7 @@ static void ipc_init_svcxprts(void)
 
 	/* Create svcxprt spinlock */
 	spin_lock_init(&binder->svcxprt_lock);
-#if 0
-	printk("ipc: SVCXPRT: size = %d, num = %d, mtx = %d",
-	SVCXPRT_ALIGNED_SIZE, binder->svcxprt_num,
-	binder->svcxprt_mtxid);
-#endif
+
 	binder->svcxprt_buf_raw = (unsigned char *)
 		ipc_malloc(IPC_BINDER_SVCXPRT_BUF_SIZE + CACHE_LINE_SIZE);
 	if(binder->svcxprt_buf_raw == NULL)
@@ -573,7 +579,7 @@ static void ipc_free_svcxprt(SVCXPRT *svcxprt)
 	spin_lock_irqsave(&binder->svcxprt_lock, flags);
 
 	if (binder->svcxprt_mask & (1 << id)) {
-		printk("ipc: try to free unused SVCXPRT %d, %08x",
+		printk("aipc: try to free unused SVCXPRT %d, %08x",
 			id, (int)svcxprt);
 		K_ASSERT(0);
 	}
@@ -1614,6 +1620,10 @@ void ipc_binder_got_request(SVCXPRT *svcxprt)
 	/* Now invoke the function! */
 	svc_req.svcxprt = svcxprt;
 
+	if (proc == NULL) {
+		printk("aipc: ipc service is not implemented: pid = %08x, fid = %d\n",
+			svcxprt->pid, svcxprt->fid);
+	}
 	K_ASSERT(proc != NULL);
 	result_code = proc(svcxprt->arg, svcxprt->res, &svc_req);
 }

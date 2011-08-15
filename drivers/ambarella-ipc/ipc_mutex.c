@@ -93,33 +93,6 @@ static void ipc_mutex_irq_enable(int irqno, irqreturn_t (*handler)(int, void *))
 static void ipc_mutex_irq_send(int irqno);
 static void ipc_mutex_irq_clear(int irqno);
 
-inline static int get_trailing_zero (unsigned int bits)
-{
-        int n = 0;
-
-        if ((bits & 0x0000FFFF) == 0) {
-                bits >>= 16;
-                n += 16;
-        }
-        if ((bits & 0x000000FF) == 0) {
-                bits >>= 8;
-                n += 8;
-        }
-        if ((bits & 0x0000000F) == 0) {
-                bits >>= 4;
-                n += 4;
-        }
-        if ((bits & 0x00000003) == 0) {
-                bits >>= 2;
-                n += 2;
-        }
-        if ((bits & 0x00000001) == 0) {
-                n++;
-        }
-
-        return n;
-}
-
 /*
  * Enable IRQ.
  */

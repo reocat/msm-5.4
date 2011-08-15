@@ -20,7 +20,26 @@
 enum {
 	IPC_MUTEX_ID_FIO = 0,
 	IPC_MUTEX_ID_SD2,
-	IPC_MUTEX_ID_HAL,
+
+	/* IDC master instances */
+	IPC_MUTEX_ID_IDC_MASTER_1,
+	IPC_MUTEX_ID_IDC_MASTER_2,
+
+	/* IDC slave instances */
+	IPC_MUTEX_ID_IDC_SLAVE_1,
+
+	/* SPI master instances on APB */
+	IPC_MUTEX_ID_SPI_APB_MASTER_1,
+	IPC_MUTEX_ID_SPI_APB_MASTER_2,
+	IPC_MUTEX_ID_SPI_APB_MASTER_3,
+	IPC_MUTEX_ID_SPI_APB_MASTER_4,
+
+	/* SPI master instances on AHB */
+	IPC_MUTEX_ID_SPI_AHB_MASTER_1,
+
+	/* SPI slave instances on APB */
+	IPC_MUTEX_ID_SPI_APB_SLAVE_1,
+
 	IPC_MUTEX_ID_NUM
 };
 

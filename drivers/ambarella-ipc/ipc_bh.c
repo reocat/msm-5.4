@@ -114,7 +114,7 @@ static int ipc_bh_worker_thread(void *data)
 		func(arg, result, svcxprt);
 		exec_end = jiffies;
 		if (exec_end - exec_begin > ipc_bh->max_exec_time) {
-			printk("ipc_bh %d: slow ipc service => xid = %u, pid = %u, fid = %d, %d ms\n",
+			printk("ipc_bh %d: slow ipc service => xid = %u, pid = %08x, fid = %d, %d ms\n",
 				id, svcxprt->xid, svcxprt->pid, svcxprt->fid,
 				jiffies_to_msecs(exec_end - exec_begin));
 		}

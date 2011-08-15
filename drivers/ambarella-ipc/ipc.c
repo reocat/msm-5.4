@@ -377,7 +377,12 @@ static int __init ambarella_ipc_init(void)
 		goto done;
 
 done:
-	if (rval < 0) {
+	if (rval >= 0)
+	{
+		ipc_status_report();
+	}
+	else
+	{
 #if defined(CONFIG_PROC_FS)
 #if IPC_SPINLOCK_TEST
 		if (proc_spin_test) {
@@ -410,8 +415,6 @@ done:
 		ipc_bh_cleanup();
 		ipc_irq_free();
 	}
-	else
-		ipc_status_report();
 
 	return rval;
 }
