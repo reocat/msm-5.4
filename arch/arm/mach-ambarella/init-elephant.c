@@ -247,19 +247,34 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	2,	2500,	4095}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,		0,	2,	1750,	2050}}},	//HOME
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,		0,	2,	1350,	1650}}},	//MENU
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,		0,	2,	980,	1280}}},	//ESC
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,		0,	2,	600,	900}}},		//SEARCH
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_POWER,	3,	0x001a0015}}},	//POWER
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_HOME,	3,	0x001a0061}}},	//HOME
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_MENU,	3,	0x001a004d}}},	//MENU
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_ESC,	3,	0x001a0063}}},	//BACK
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_SEND,	3,	0x001a0010}}},	//CALL
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_END,	3,	0x001a0020}}},	//ENDCALL
+	{AMBINPUT_IR_SW,	{.ir_key	= {0,		0,	0x001a003d}}},	//SW0 OFF
+	{AMBINPUT_IR_SW,	{.ir_key	= {0,		1,	0x001a0064}}},	//SW0 ON
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEUP,3,	0x001a0077}}},	//VOLUME_UP
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEDOWN,3,	0x001a0078}}},	//VOLUME_DOWN
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_OK,	3,	0x001a0076}}},	//DPAD_CENTER
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_S,	3,	0x001a0073}}},	//S
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_W,	3,	0x001a0072}}},	//W
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_A,	3,	0x001a0075}}},	//A
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_D,	3,	0x001a0074}}},	//D
+	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_SEARCH,	3,	0x001a007e}}},	//SEARCH
 
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	4,	2500,	4095}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,	0,	4,	1800,	2100}}},	//VOLUME DOWN
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,	0,	4,	1320,	1620}}},	//VOLUME UP
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	820,	1120}}},	//STOP
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	310,	610}}},		//RECORD
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	2,	3000,	4095}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,		0,	2,	1820,	2250}}},	//HOME
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,		0,	2,	1450,	1750}}},	//MENU
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,		0,	2,	1050,	1350}}},	//ESC
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,		0,	2,	700,	900}}},		//SEARCH
 
-	//{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_UNKNOWN,		1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	4,	3000,	4095}}},
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,	0,	4,	1750,	2150}}},	//VOLUME DOWN
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,	0,	4,	1300,	1650}}},	//VOLUME UP
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	850,	1100}}},	//STOP
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	400,	600}}},		//RECORD
 
 	{AMBINPUT_END},
 };
