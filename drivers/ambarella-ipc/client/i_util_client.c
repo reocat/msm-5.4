@@ -347,6 +347,25 @@ int linux_absuspend_exit(void)
 }
 EXPORT_SYMBOL(linux_absuspend_exit);
 
+int ipc_set_device_owner(int device, int owner)
+{
+	enum clnt_stat stat;
+	struct device_owner dev_owner;
+
+	dev_owner.device = device;
+	dev_owner.owner = owner;
+
+	stat = lk_set_device_owner_1(&dev_owner, NULL, IPC_i_util);
+	if (stat != IPC_SUCCESS) {
+		pr_err("%s: ipc error: %d (%s)\n",
+			__func__, stat, ipc_strerror(stat));
+		return -stat;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(ipc_set_device_owner);
+
 #if defined(CONFIG_PROC_FS)
 
 extern struct proc_dir_entry *proc_aipc;

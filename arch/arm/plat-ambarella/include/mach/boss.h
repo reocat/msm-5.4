@@ -30,7 +30,7 @@
 #endif
 
 #define BOSS_BOSS_MEM_SIZE		0x1000		/* 4KB */
-#define BOSS_LINUX_VERSION		0x00000003	/* linux struct boss_s version */
+#define BOSS_LINUX_VERSION		0x00000004	/* linux struct boss_s version */
 
 #if (CHIP_REV == A5S)
 #define BOSS_VIRT_H2G_INT_REQ_VEC	32	/* Virtual 'host-to-guest' irq */
@@ -82,16 +82,15 @@ enum {
 	BOSS_STATE_NUM
 };
 
-enum device_privilege
-{
-	PRIV_UNKNOWN=0,
-	PRIV_LINUX_OS,
-	PRIV_UITRON_OS
+enum boss_device {
+	BOSS_DEVICE_USB = 0,
+	BOSS_DEVICE_NUM
 };
 
-struct privilege
-{
-	unsigned int usb;
+enum boss_device_owner {
+	BOSS_DEVICE_OWNER_UITRON = 0,
+	BOSS_DEVICE_OWNER_LINUX,
+	BOSS_DEVICE_OWNER_NUM
 };
 
 /*
@@ -169,10 +168,8 @@ struct boss_s
 	unsigned int ipc_log_size;
 	unsigned int ipc_log_total;
 
-	/*
-	 * device controll privilege, linux or uItron
-	 */
-	struct privilege device_priv;
+	/* device ownership */
+	unsigned int device_owner_mask;
 
 	/*
 	 * The following fields are used by the IPC drivers.
@@ -185,6 +182,8 @@ struct boss_s
 };
 
 extern struct boss_s *boss;
+
+extern int boss_get_device_owner(int device);
 
 #endif  /* !__ASM__ */
 

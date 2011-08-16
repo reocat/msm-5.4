@@ -103,3 +103,14 @@ void boss_disable_irq(int irq)
 }
 EXPORT_SYMBOL(boss_disable_irq);
 
+int boss_get_device_owner(int device)
+{
+	K_ASSERT(boss != NULL);
+
+	if (device >= BOSS_DEVICE_NUM) {
+		return -1;
+	}
+
+	return ((boss->device_owner_mask >> device) & 1);
+}
+EXPORT_SYMBOL(boss_get_device_owner);
