@@ -244,6 +244,7 @@ struct mxt_finger {
 	int x;
 	int y;
 	int area;
+	int pressure;
 };
 
 /* Each client has this additional data */
@@ -531,6 +532,8 @@ static void mxt_input_report(struct mxt_data *data, int single_id)
 				finger[id].x);
 		input_report_abs(input_dev, ABS_MT_POSITION_Y,
 				finger[id].y);
+		input_report_abs(input_dev, ABS_MT_PRESSURE,
+				finger[id].pressure);
 		input_mt_sync(input_dev);
 
 		if (finger[id].status == MXT_RELEASE)
@@ -544,6 +547,8 @@ static void mxt_input_report(struct mxt_data *data, int single_id)
 	if (status != MXT_RELEASE) {
 		input_report_abs(input_dev, ABS_X, finger[single_id].x);
 		input_report_abs(input_dev, ABS_Y, finger[single_id].y);
+		input_report_abs(input_dev,
+				 ABS_PRESSURE, finger[single_id].pressure);
 	}
 
 	input_sync(input_dev);
@@ -558,6 +563,7 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	int x;
 	int y;
 	int area;
+	int pressure;
 
 	/* Check the touch is present on the screen */
 	if (!(status & MXT_DETECT)) {
@@ -582,6 +588,7 @@ static void mxt_input_touchevent(struct mxt_data *data,
 		y = y >> 2;
 
 	area = message->message[4];
+	pressure = message->message[5];
 
 	dev_dbg(dev, "[%d] %s x: %d, y: %d, area: %d\n", id,
 		status & MXT_MOVE ? "moved" : "pressed",
@@ -592,6 +599,7 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	finger[id].x = x;
 	finger[id].y = y;
 	finger[id].area = area;
+	finger[id].pressure = pressure;
 
 	mxt_input_report(data, id);
 }
@@ -1114,6 +1122,8 @@ static int __devinit mxt_probe(struct i2c_client *client,
 			     0, data->max_x, 0, 0);
 	input_set_abs_params(input_dev, ABS_Y,
 			     0, data->max_y, 0, 0);
+	input_set_abs_params(input_dev, ABS_PRESSURE,
+			     0, 255, 0, 0);
 
 	/* For multi touch */
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
@@ -1122,6 +1132,8 @@ static int __devinit mxt_probe(struct i2c_client *client,
 			     0, data->max_x, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
 			     0, data->max_y, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_PRESSURE,
+			     0, 255, 0, 0);
 
 	input_set_drvdata(input_dev, data);
 	i2c_set_clientdata(client, data);
