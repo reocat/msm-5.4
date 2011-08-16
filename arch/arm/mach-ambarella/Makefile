@@ -32,6 +32,7 @@ obj-y				+= touch-chacha_mt4d.o
 obj-y				+= touch-tm1510.o
 obj-y				+= touch-tm1726.o
 obj-y				+= touch-nt11001.o
+obj-y				+= lcd-1p3831.o
 obj-y				+= rtc-is112022m.o
 obj-y				+= vin.o
 obj-y				+= vout.o

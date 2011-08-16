@@ -474,6 +474,7 @@ static void __init ambarella_init_elephant(void)
 			i2c_register_board_info(0, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 
 			platform_device_register(&elephant_bt_rfkill);
+			platform_device_register(&lcd_1p3831);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 
