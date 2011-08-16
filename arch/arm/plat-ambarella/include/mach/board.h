@@ -25,6 +25,8 @@
 #define __PLAT_AMBARELLA_BOARD_H
 
 /* ==========================================================================*/
+#include <plat/gpio.h>
+#include <plat/spi.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -55,6 +57,7 @@ struct ambarella_board_info {
 	struct ambarella_gpio_io_info		lcd_power;
 	struct ambarella_gpio_io_info		lcd_reset;
 	struct ambarella_gpio_io_info		lcd_backlight;
+	struct ambarella_spi_cfg_info		lcd_spi_cfg;
 
 	struct ambarella_gpio_irq_info		vin_vsync;
 	struct ambarella_gpio_io_info		vin_power;

@@ -24,7 +24,12 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+
+#include <mach/hardware.h>
+#include <mach/board.h>
 #include <plat/spi.h>
+#include <plat/gpio.h>
+
 #include <video/platform_lcd.h>
 
 /* ========================================================================== */
@@ -162,16 +167,8 @@ static const reg_t TRUELY_1P3831_REGS[] =
 
 static void truely_1p3831_write_cmd(u16 cmd)
 {
-	amba_spi_cfg_t		config;
 	amba_spi_write_t	write;
-	u16			data;
-
-	/* spi config */
-	config.spi_mode		= 0;
-	config.cfs_dfs		= 16;
-	config.baud_rate	= 500000;
-	config.lsb_first	= 0;
-	config.cs_change	= 0;
+	u16			data[2];
 
 	/* spi write */
 	write.bus_id		= 2;
@@ -179,27 +176,15 @@ static void truely_1p3831_write_cmd(u16 cmd)
 	write.buffer		= (u8 *)&data;
 	write.n_size		= sizeof(data);
 
-	/* Address High Byte */
-	data = 0x2000 | (cmd >> 8);
-	ambarella_spi_write(&config, &write);
-
-	/* Address Low Byte */
-	data = 0x0000 | (cmd & 0xff);
-	ambarella_spi_write(&config, &write);
+	data[0] = 0x2000 | (cmd >> 8);
+	data[1] = 0x0000 | (cmd & 0xff);
+	ambarella_spi_write(&ambarella_board_generic.lcd_spi_cfg, &write);
 }
 
 static void truely_1p3831_write_cmd_data(reg_t reg)
 {
-	amba_spi_cfg_t		config;
 	amba_spi_write_t	write;
-	u16			data;
-
-	/* spi config */
-	config.spi_mode		= 0;
-	config.cfs_dfs		= 16;
-	config.baud_rate	= 500000;
-	config.lsb_first	= 0;
-	config.cs_change	= 0;
+	u16			data[3];
 
 	/* spi write */
 	write.bus_id		= 2;
@@ -207,36 +192,33 @@ static void truely_1p3831_write_cmd_data(reg_t reg)
 	write.buffer		= (u8 *)&data;
 	write.n_size		= sizeof(data);
 
-	/* Address High Byte */
-	data = 0x2000 | (reg.addr >> 8);
-	ambarella_spi_write(&config, &write);
-
-	/* Address Low Byte */
-	data = 0x0000 | (reg.addr & 0xff);
-	ambarella_spi_write(&config, &write);
-
-	/* Data */
-	data = 0x4000 | reg.val;
-	ambarella_spi_write(&config, &write);
+	data[0] = 0x2000 | (reg.addr >> 8);
+	data[1] = 0x0000 | (reg.addr & 0xff);
+	data[2] = 0x4000 | reg.val;
+	ambarella_spi_write(&ambarella_board_generic.lcd_spi_cfg, &write);
 }
 
 static void lcd_1p3831_set_power(struct plat_lcd_data *pdata, unsigned int power)
 {
 	int			i;
 
-	if (!power) {
-		return;
+	if (power) {
+		ambarella_set_gpio_output(&ambarella_board_generic.lcd_power, 1);
+		ambarella_set_gpio_reset(&ambarella_board_generic.lcd_reset);
+		ambarella_set_gpio_output(&ambarella_board_generic.lcd_backlight, 1);
+
+		truely_1p3831_write_cmd(0x1100);	//Sleep Out
+		mdelay(200);
+
+		for (i = 0; i < sizeof(TRUELY_1P3831_REGS) / sizeof(reg_t); i++) {
+			truely_1p3831_write_cmd_data(TRUELY_1P3831_REGS[i]);
+		}
+
+		truely_1p3831_write_cmd(0x2900);	//Display On
+	} else {
+		ambarella_set_gpio_output(&ambarella_board_generic.lcd_power, 0);
+		ambarella_set_gpio_output(&ambarella_board_generic.lcd_backlight, 0);
 	}
-
-	truely_1p3831_write_cmd(0x1100);	//Sleep Out
-	msleep(200);
-
-	for (i = 0; i < sizeof(TRUELY_1P3831_REGS) / sizeof(reg_t); i++) {
-		truely_1p3831_write_cmd_data(TRUELY_1P3831_REGS[i]);
-	}
-
-	truely_1p3831_write_cmd(0x2900);	//Display On
-	msleep(200);
 }
 
 static int lcd_1p3831_match_fb(struct plat_lcd_data *pdata, struct fb_info *pinfo)
