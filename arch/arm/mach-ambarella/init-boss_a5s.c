@@ -55,11 +55,16 @@
 #include "board-device.h"
 
 /* ==========================================================================*/
-
+#ifdef CONFIG_AMBARELLA_STREAMMEM
+extern struct platform_device amba_streammem;
+#endif
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 #if (UART_INSTANCES >= 2) 	
 	&ambarella_uart1,
+#endif
+#ifdef CONFIG_AMBARELLA_STREAMMEM
+	&amba_streammem,
 #endif
 };
 
