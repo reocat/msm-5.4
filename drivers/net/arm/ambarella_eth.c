@@ -146,7 +146,7 @@ static inline int ambhw_dma_reset(struct ambeth_info *lp)
 			errorCode = -EIO;
 			break;
 		}
-		msleep(1);
+		mdelay(1);
 	} while (amba_tstbitsl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		ETH_DMA_BUS_MODE_SWR));
 

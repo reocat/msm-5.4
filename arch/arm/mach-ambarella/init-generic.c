@@ -189,6 +189,7 @@ struct platform_device generic_board_input = {
 	}
 };
 
+
 /* ==========================================================================*/
 static void __init ambarella_init_generic(void)
 {
@@ -205,11 +206,6 @@ static void __init ambarella_init_generic(void)
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
-	ambarella_tm1510_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
-
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 
@@ -220,16 +216,6 @@ static void __init ambarella_init_generic(void)
 #endif
 
 	platform_device_register(&generic_board_input);
-
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
-		switch (AMBARELLA_BOARD_REV(system_rev)) {
-			case 11:
-				ambarella_init_wm8737(1, 0x1A);	/*i2c-1, 0x1A */
-				break;
-			default:
-				break;
-		}
-	}
 }
 
 /* ==========================================================================*/

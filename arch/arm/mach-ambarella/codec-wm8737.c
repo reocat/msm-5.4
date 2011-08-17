@@ -43,4 +43,3 @@ int ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr)
 	return 0;
 }
 
-

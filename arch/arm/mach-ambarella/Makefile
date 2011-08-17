@@ -1,10 +1,9 @@
 #
 # arch/arm/mach-ambarella/Makefile
 #
-# History:
-#	2006/12/18 - [Charles Chiou] created file
+# Author: Anthony Ginger <hfjiang@ambarella.com>
 #
-# Copyright (C) 2004-2009, Ambarella, Inc.
+# Copyright (C) 2004-2011, Ambarella, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,20 +20,27 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-$(CONFIG_MACH_COCONUT)	+= init-coconut.o
-obj-$(CONFIG_MACH_DURIAN)	+= init-durian.o
-obj-$(CONFIG_MACH_ELEPHANT)	+= init-elephant.o
-obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
-obj-$(CONFIG_MACH_FILBERT)	+= init-filbert.o
+obj-$(CONFIG_MACH_COCONUT)			+= init-coconut.o
+obj-$(CONFIG_MACH_DURIAN)			+= init-durian.o
+obj-$(CONFIG_MACH_ELEPHANT)			+= init-elephant.o
+obj-$(CONFIG_MACH_AMBARELLA)			+= init-generic.o
+obj-$(CONFIG_MACH_FILBERT)			+= init-filbert.o
 
-obj-y				+= touch-ak4183.o
-obj-y				+= touch-chacha_mt4d.o
-obj-y				+= touch-tm1510.o
-obj-y				+= touch-tm1726.o
-obj-y				+= touch-nt11001.o
-obj-y				+= rtc-is112022m.o
-obj-y				+= vin.o
-obj-y				+= vout.o
-obj-y				+= codec-wm8994.o
-obj-y				+= codec-wm8737.o
-obj-y				+= wm831x-config.o
+obj-$(CONFIG_AMBARELLA_VIN)			+= vin.o
+obj-$(CONFIG_AMBARELLA_VOUT)			+= vout.o
+
+obj-$(CONFIG_TOUCH_AMBARELLA_AK4183)		+= touch-ak4183.o
+obj-$(CONFIG_TOUCH_AMBARELLA_CHACHA_MT4D)	+= touch-chacha_mt4d.o
+obj-$(CONFIG_TOUCH_AMBARELLA_TM1510)		+= touch-tm1510.o
+obj-$(CONFIG_TOUCH_AMBARELLA_TM1726)		+= touch-tm1726.o
+obj-$(CONFIG_TOUCH_AMBARELLA_NT11001)		+= touch-nt11001.o
+
+obj-$(CONFIG_LCD_AMBARELLA_1P3831)		+= lcd-1p3831.o
+
+obj-$(CONFIG_RTC_AMBARELLA_IS112022M)		+= rtc-is112022m.o
+
+obj-$(CONFIG_CODEC_AMBARELLA_WM8994)		+= codec-wm8994.o
+obj-$(CONFIG_CODEC_AMBARELLA_WM8737)		+= codec-wm8737.o
+
+obj-$(CONFIG_PMIC_AMBARELLA_WM831X)		+= wm831x-config.o
+
