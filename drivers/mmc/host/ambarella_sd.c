@@ -54,6 +54,7 @@
 #define SD_MAX_CARD	3
 
 static struct ipc_sdinfo G_ipc_sdinfo[SD_MAX_CARD];
+static struct mmc_host *G_mmc[SD_MAX_CARD];
 
 #endif
 /* ==========================================================================*/
@@ -1812,10 +1813,13 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	struct resource 			*irq;
 	struct resource 			*mem;
 	struct resource 			*ioarea;
-	struct mmc_host				*mmc;
+	struct mmc_host				*mmc = NULL;
 	u32					hc_cap = 0;
 	u32					i;
 	u32					clock_min;
+#if defined(CONFIG_AMBARELLA_IPC)
+	struct ipc_sdinfo 			*sdinfo;
+#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
@@ -1884,9 +1888,6 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
-#if defined(CONFIG_AMBARELLA_IPC)
-		struct ipc_sdinfo *sdinfo;
-#endif
 		mmc = mmc_alloc_host(sizeof(struct ambarella_sd_mmc_info),
 			&pdev->dev);
 		if (!mmc) {
@@ -2110,7 +2111,11 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				pslotinfo->plat_info->gpio_cd.irq_gpio);
 				goto sd_errorCode_free_host;
 			}
-
+#if defined(CONFIG_AMBARELLA_IPC)
+			sdinfo = ambarella_sd_get_sdinfo(mmc);
+			if (sdinfo->is_init)
+				continue;
+#endif
 			ambarella_sd_gpio_cd_check_val(pslotinfo);
 			errorCode = request_irq(
 				pslotinfo->plat_info->gpio_cd.irq_line,
@@ -2454,6 +2459,8 @@ int ambarella_sdinfo_ipc(struct mmc_host *mmc)
 	G_ipc_sdinfo[slot_id].hcs 	= ipc_sdinfo.hcs;
 	G_ipc_sdinfo[slot_id].rca 	= ipc_sdinfo.rca;
 
+	G_mmc[slot_id] = mmc;
+
 	return 0;
 }
 
@@ -2479,7 +2486,18 @@ void ambarella_sd_cmd_from_ipc(struct mmc_host *mmc, u8 enable)
 }
 
 EXPORT_SYMBOL(ambarella_sd_cmd_from_ipc);
+
+void ambarella_sd_cd_ipc(int slot_id)
+{
+	struct mmc_host 			*mmc = G_mmc[slot_id];
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+
+	mmc_detect_change(mmc, pslotinfo->plat_info->cd_delay);
+}
+
+EXPORT_SYMBOL(ambarella_sd_cd_ipc);
 #endif
+
 fs_initcall(ambarella_sd_init);
 module_exit(ambarella_sd_exit);
 

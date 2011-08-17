@@ -49,7 +49,8 @@ X-S-y +=	$(IPCDIR)/defs/lk_util.x \
 		$(IPCDIR)/defs/lk_pmic.x \
 		$(IPCDIR)/defs/lk_vfs.x \
 		$(IPCDIR)/defs/lk_fifo.x \
-		$(IPCDIR)/defs/lk_host_dsp.x
+		$(IPCDIR)/defs/lk_host_dsp.x \
+		$(IPCDIR)/defs/lk_sdresp.x
 
 # Clients
 X-C-y +=	$(IPCDIR)/defs/i_util.x \
@@ -62,7 +63,7 @@ X-C-y +=	$(IPCDIR)/defs/i_util.x \
 		$(IPCDIR)/defs/i_ffs.x \
 		$(IPCDIR)/defs/i_fifo.x \
 		$(IPCDIR)/defs/i_sdresp.x \
-		$(IPCDIR)/defs/i_host_dsp.x 
+		$(IPCDIR)/defs/i_host_dsp.x
 
 
 ifeq ($(CONFIG_FB_DSP_CMD),y)
