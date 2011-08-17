@@ -1074,7 +1074,7 @@ static int __devinit ambfb_probe(struct platform_device *pdev)
 
 		info->screen_base = (char __iomem *)
 			ambarella_phys_to_virt(info->fix.smem_start);
-		memset(info->screen_base, 0, info->fix.smem_len);
+		//memset(info->screen_base, 0, info->fix.smem_len);
 
 		if (ambfb_data->conversion_buf.available) {
 			if (info->fix.smem_len < 3 * framesize) {

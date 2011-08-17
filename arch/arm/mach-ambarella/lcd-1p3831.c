@@ -165,6 +165,9 @@ static const reg_t TRUELY_1P3831_REGS[] =
 	{0x3b00, 0x03},
 };
 
+static int skip_lcd_1p3831_init = 0;
+
+/* ========================================================================== */
 static void truely_1p3831_write_cmd(u16 cmd)
 {
 	amba_spi_write_t	write;
@@ -198,30 +201,43 @@ static void truely_1p3831_write_cmd_data(reg_t reg)
 	ambarella_spi_write(&ambarella_board_generic.lcd_spi_cfg, &write);
 }
 
-static void lcd_1p3831_set_power(struct plat_lcd_data *pdata, unsigned int power)
+static void lcd_1p3831_set_power(struct plat_lcd_data *pdata,
+	unsigned int power)
 {
 	int			i;
 
 	if (power) {
-		ambarella_set_gpio_output(&ambarella_board_generic.lcd_power, 1);
-		ambarella_set_gpio_reset(&ambarella_board_generic.lcd_reset);
-		ambarella_set_gpio_output(&ambarella_board_generic.lcd_backlight, 1);
-
-		truely_1p3831_write_cmd(0x1100);	//Sleep Out
-		mdelay(200);
-
-		for (i = 0; i < sizeof(TRUELY_1P3831_REGS) / sizeof(reg_t); i++) {
-			truely_1p3831_write_cmd_data(TRUELY_1P3831_REGS[i]);
+		if (skip_lcd_1p3831_init) {
+			skip_lcd_1p3831_init = 0;
+		} else {
+			ambarella_set_gpio_output(
+				&ambarella_board_generic.lcd_power, 1);
+#if 0
+			ambarella_set_gpio_reset(
+				&ambarella_board_generic.lcd_reset);
+#endif
+			truely_1p3831_write_cmd(0x1100);
+			mdelay(200);
+			for (i = 0; i < sizeof(TRUELY_1P3831_REGS) /
+				sizeof(reg_t); i++) {
+				truely_1p3831_write_cmd_data(
+					TRUELY_1P3831_REGS[i]);
+			}
+			truely_1p3831_write_cmd(0x2900);
+			ambarella_set_gpio_output(
+				&ambarella_board_generic.lcd_backlight, 1);
 		}
-
-		truely_1p3831_write_cmd(0x2900);	//Display On
 	} else {
-		ambarella_set_gpio_output(&ambarella_board_generic.lcd_power, 0);
-		ambarella_set_gpio_output(&ambarella_board_generic.lcd_backlight, 0);
+		ambarella_set_gpio_output(
+			&ambarella_board_generic.lcd_power, 0);
+		ambarella_set_gpio_output(
+			&ambarella_board_generic.lcd_backlight, 0);
+		skip_lcd_1p3831_init = 0;
 	}
 }
 
-static int lcd_1p3831_match_fb(struct plat_lcd_data *pdata, struct fb_info *pinfo)
+static int lcd_1p3831_match_fb(struct plat_lcd_data *pdata,
+	struct fb_info *pinfo)
 {
 	return 1;
 }
@@ -238,4 +254,11 @@ struct platform_device lcd_1p3831 = {
 		.platform_data		= &lcd_1p3831_pdata,
 	},
 };
+
+static int __init early_skip_lcd_1p3831_init(char *p)
+{
+	skip_lcd_1p3831_init = 1;
+	return 0;
+}
+early_param("skip_lcd_1p3831_init", early_skip_lcd_1p3831_init);
 

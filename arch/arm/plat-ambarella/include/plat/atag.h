@@ -119,6 +119,8 @@ extern u32 get_ambarella_apb_size(void);
 extern u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize);
 extern u32 *get_ambarella_bstmem_head(void);
 
+extern u32 ambarella_boot_splash_logo;
+
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
