@@ -203,6 +203,11 @@ static struct resource ambarella_eth1_resources[] = {
 	},
 };
 
+int eth1_enabled(void)
+{
+	return 1;
+}
+
 struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 	.mac_addr		= {0, 0, 0, 0, 0, 0},
 	.napi_weight		= 64,
@@ -230,7 +235,7 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 	.default_1000_clk	= 125000000,
 	.default_100_clk	= 125000000,
 	.default_10_clk		= 125000000,
-	.is_enabled		= rct_is_eth_enabled,
+	.is_enabled		= eth1_enabled,
 	.is_supportclk		= ambarella_eth1_is_supportclk,
 	.setclk			= ambarella_eth1_setclk,
 	.getclk			= ambarella_eth1_getclk,
