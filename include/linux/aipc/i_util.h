@@ -41,6 +41,8 @@ extern int linux_absuspend_check(void *pinfo);
 extern int linux_absuspend_enter(void);
 extern int linux_absuspend_exit(void);
 
+extern int ipc_set_device_owner(int device, int owner);
+
 #endif
 
 #endif

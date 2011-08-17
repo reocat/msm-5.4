@@ -2137,7 +2137,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	}
 
 #if defined(CONFIG_MACH_BOSS)
-	if(boss->device_priv.usb == PRIV_LINUX_OS)
+	if (boss_get_device_owner(BOSS_DEVICE_USB) == BOSS_DEVICE_OWNER_LINUX)
 #endif
 	{
 		/* Enable udc */
@@ -2228,7 +2228,7 @@ EXPORT_SYMBOL(ambarella_udc_connect);
 static inline void ambarella_udc_setup(struct ambarella_udc *udc)
 {
 #if defined(CONFIG_MACH_BOSS)
-	if(boss->device_priv.usb == PRIV_LINUX_OS)
+	if (boss_get_device_owner(BOSS_DEVICE_USB) == BOSS_DEVICE_OWNER_LINUX)
 #endif
 	{
 		/* Initial USB PLL */
@@ -2267,7 +2267,7 @@ static inline int ambarella_udc_irq_setup(struct platform_device *pdev, struct a
 #endif
 
 #if defined(CONFIG_MACH_BOSS)
-	if(boss->device_priv.usb != PRIV_LINUX_OS)
+	if (boss_get_device_owner(BOSS_DEVICE_USB) != BOSS_DEVICE_OWNER_LINUX)
 		disable_irq(USBC_IRQ);
 #endif
 
