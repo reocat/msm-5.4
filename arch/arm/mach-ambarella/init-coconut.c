@@ -311,7 +311,9 @@ static void __init ambarella_init_coconut(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 			case 11:
+#if defined(CONFIG_CODEC_AMBARELLA_WM8737)
 				ambarella_init_wm8737(1, 0x1A);	/*i2c-1, 0x1A */
+#endif
 				break;
 			default:
 				break;
