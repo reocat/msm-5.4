@@ -53,8 +53,8 @@
 #ifndef __ASSEMBLER__
 
 struct ambarella_spi_hw_info {
-	u8	bus_id;
-	u8	cs_id;
+	int	bus_id;
+	int	cs_id;
 };
 typedef struct ambarella_spi_hw_info amba_spi_hw_t;
 
