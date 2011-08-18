@@ -162,6 +162,9 @@ static void __init ambarella_init_filbert(void)
 	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
 	ambarella_board_generic.lcd_backlight.active_delay = 1;
 
+	ambarella_board_generic.lcd_spi_hw.bus_id = 2;
+	ambarella_board_generic.lcd_spi_hw.cs_id = 4;
+
 	//config audio
 	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
 	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;

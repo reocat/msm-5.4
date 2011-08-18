@@ -230,6 +230,9 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
 	ambarella_board_generic.lcd_backlight.active_delay = 1;
 
+	ambarella_board_generic.lcd_spi_hw.bus_id = 0;
+	ambarella_board_generic.lcd_spi_hw.cs_id = 1;
+
 	ambarella_board_generic.vin_vsync.irq_gpio = GPIO(95);
 	ambarella_board_generic.vin_vsync.irq_line = gpio_to_irq(95);
 	ambarella_board_generic.vin_vsync.irq_type = IRQF_TRIGGER_RISING;

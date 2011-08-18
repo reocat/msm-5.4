@@ -156,10 +156,9 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.lcd_power	= {
-		.gpio_id	= -1,
-		.active_level	= GPIO_LOW,
-		.active_delay	= 1,
+	.lcd_spi_hw = {
+		.bus_id		= 0,
+		.cs_id		= 0,
 	},
 
 	.vin_vsync	= {
