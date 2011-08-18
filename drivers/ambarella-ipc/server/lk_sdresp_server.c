@@ -44,15 +44,15 @@ static struct ipc_prog_s lk_sdresp_prog =
 	.prev = NULL,
 };
 
-extern void ambarella_sd_cd_ipc(int slot_id);
-
 /* lk_sdresp_ioctl() */
 
 static bool_t __lk_sdresp_detect_change_1_svc(struct lk_sdresp_arg *arg,
 					      int *res, SVCXPRT *svcxprt)
 {
+#ifdef CONFIG_MMC_AMBARELLA
+	extern void ambarella_sd_cd_ipc(int slot_id);
 	ambarella_sd_cd_ipc(arg->slot);
-
+#endif
 	svcxprt->rcode = IPC_SUCCESS;
 	ipc_svc_sendreply(svcxprt, NULL);
 
