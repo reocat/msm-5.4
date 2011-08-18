@@ -1504,7 +1504,6 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	 * Otherwise, it causes the unbalenced IRQ enable/disable checking
 	 * failed when the first time nand_amb_request() is called.
 	 */
-	disable_irq(DMA_FIOS_IRQ);
 	disable_irq(nand_info->cmd_irq);
 	disable_irq(nand_info->dma_irq);
 #endif
