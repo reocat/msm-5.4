@@ -455,6 +455,10 @@ int __init ambarella_init_dma(void)
 	if (retval){
 		pr_err("%s: request_irq %d fail %d!\n",
 			__func__, DMA_FIOS_IRQ, retval);
+	} else {
+		/* Disablle DMA IRQ by default.	    */
+		/* Enable it in nand_amb_request(). */
+		disable_irq(DMA_FIOS_IRQ);
 	}
 
 	return retval;
