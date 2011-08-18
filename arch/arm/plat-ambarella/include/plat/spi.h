@@ -52,13 +52,20 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-typedef struct {
+struct ambarella_spi_hw_info {
+	int	bus_id;
+	int	cs_id;
+};
+typedef struct ambarella_spi_hw_info amba_spi_hw_t;
+
+struct ambarella_spi_cfg_info {
 	u8	spi_mode;
 	u8	cfs_dfs;
 	u8	lsb_first;
 	u8	cs_change;
 	u32	baud_rate;
-} amba_spi_cfg_t;
+};
+typedef struct ambarella_spi_cfg_info amba_spi_cfg_t;
 
 typedef struct {
 	u8	bus_id;

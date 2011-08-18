@@ -59,6 +59,9 @@ EXPORT_SYMBOL(ambarella_debug_level);
 u32 ambarella_debug_info = 0;
 EXPORT_SYMBOL(ambarella_debug_info);
 
+u32 ambarella_boot_splash_logo = 0;
+EXPORT_SYMBOL(ambarella_boot_splash_logo);
+
 unsigned long ambarella_debug_lookup_name(const char *name)
 {
 	return module_kallsyms_lookup_name(name);
@@ -881,6 +884,7 @@ int arch_pfn_is_nosave(unsigned long pfn)
 	return 0;
 }
 
+
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 
 static int __init early_boss(char *p)
@@ -909,3 +913,11 @@ static int __init early_boss(char *p)
 early_param("boss", early_boss);
 
 #endif
+
+/* ==========================================================================*/
+static int __init early_boot_splash_logo(char *p)
+{
+	ambarella_boot_splash_logo = 1;
+	return 0;
+}
+early_param("boot_splash_logo_on", early_boot_splash_logo);

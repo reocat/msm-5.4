@@ -28,7 +28,8 @@ comment "Ambarella Board"
 config MACH_AMBARELLA
 	bool "Generic"
 	default y
-	select HAVE_PWM
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
 	help
 	  Say Y here if you can't find suitable Board Name.
 
@@ -36,6 +37,11 @@ config MACH_COCONUT
 	bool "Coconut"
 	depends on PLAT_AMBARELLA_A5S
 	default n
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
+	select TOUCH_AMBARELLA_AK4183
+	select TOUCH_AMBARELLA_TM1510
+	select RTC_AMBARELLA_IS112022M
 	help
 	  Say Y here if you are using A5S Coconut.
 
@@ -43,6 +49,9 @@ config MACH_DURIAN
 	bool "Durian"
 	depends on PLAT_AMBARELLA_A5S
 	default n
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
+	select TOUCH_AMBARELLA_CHACHA_MT4D
 	help
 	  Say Y here if you are using A5S Durian.
 
@@ -50,6 +59,14 @@ config MACH_ELEPHANT
 	bool "Elephant"
 	depends on PLAT_AMBARELLA_I1
 	default n
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
+	select TOUCH_AMBARELLA_TM1510
+	select TOUCH_AMBARELLA_TM1726
+	select TOUCH_AMBARELLA_NT11001
+	select LCD_AMBARELLA_1P3831
+	select CODEC_AMBARELLA_WM8994
+	select PMIC_AMBARELLA_WM831X
 	help
 	  Say Y here if you are using iOne Elephant.
 
@@ -64,10 +81,18 @@ config MACH_FILBERT
 	bool "Filbert"
 	depends on PLAT_AMBARELLA_A7
 	default n
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
+	select TOUCH_AMBARELLA_AK4183
+	select TOUCH_AMBARELLA_TM1510
+	select TOUCH_AMBARELLA_TM1726
+	select TOUCH_AMBARELLA_NT11001
 	help
 	  Say Y here if you are using A7 Filbert.
 
-menu "Misc Configuration"
+menu "Misc on Board Devices"
+
+comment "Ambarella"
 
 config MMC_AMBARELLA_SDIO
 	bool "Suport SDIO"
@@ -84,6 +109,64 @@ config MMC_AMBARELLA_SDIO
 	  If disabled, you can provide your driver for "ambarella-sdio".
 
 	  If you are not sure, say Y here.
+
+config AMBARELLA_VIN
+	bool "Suport Vin"
+	default y
+
+config AMBARELLA_VOUT
+	bool "Suport Vout"
+	default y
+
+comment "Touch"
+
+config TOUCH_AMBARELLA_AK4183
+	bool "ak4183"
+	default n
+
+config TOUCH_AMBARELLA_CHACHA_MT4D
+	bool "chacha_mt4d"
+	default n
+
+config TOUCH_AMBARELLA_TM1510
+	bool "tm1510"
+	default n
+
+config TOUCH_AMBARELLA_TM1726
+	bool "tm1726"
+	default n
+
+config TOUCH_AMBARELLA_NT11001
+	bool "nt11001"
+	default n
+
+comment "LCD"
+
+config LCD_AMBARELLA_1P3831
+	bool "1p3831"
+	default n
+
+comment "RTC"
+
+config RTC_AMBARELLA_IS112022M
+	bool "is112022m"
+	default n
+
+comment "Audio Codec"
+
+config CODEC_AMBARELLA_WM8737
+	bool "wm8737"
+	default n
+
+config CODEC_AMBARELLA_WM8994
+	bool "wm8994"
+	default n
+
+comment "PMIC"
+
+config PMIC_AMBARELLA_WM831X
+	bool "wm831x"
+	default n
 
 endmenu
 

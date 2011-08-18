@@ -25,6 +25,8 @@
 #define __PLAT_AMBARELLA_BOARD_H
 
 /* ==========================================================================*/
+#include <plat/gpio.h>
+#include <plat/spi.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -55,6 +57,8 @@ struct ambarella_board_info {
 	struct ambarella_gpio_io_info		lcd_power;
 	struct ambarella_gpio_io_info		lcd_reset;
 	struct ambarella_gpio_io_info		lcd_backlight;
+	struct ambarella_spi_hw_info		lcd_spi_hw;
+	struct ambarella_spi_cfg_info		lcd_spi_cfg;
 
 	struct ambarella_gpio_irq_info		vin_vsync;
 	struct ambarella_gpio_io_info		vin_power;
@@ -135,6 +139,8 @@ struct ambarella_board_info {
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##lcd_power##_, arg.lcd_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##lcd_reset##_, arg.lcd_reset, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##lcd_backlight##_, arg.lcd_backlight, perm); \
+	module_param_cb(board_lcd_spi_bus_id, &param_ops_int, &(arg.lcd_spi_hw.bus_id), perm); \
+	module_param_cb(board_lcd_spi_cs_id, &param_ops_int, &(arg.lcd_spi_hw.cs_id), perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_vsync##_, arg.vin_vsync, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_power##_, arg.vin_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##vin_reset##_, arg.vin_reset, perm); \
