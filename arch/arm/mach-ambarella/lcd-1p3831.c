@@ -166,6 +166,7 @@ static const reg_t TRUELY_1P3831_REGS[] =
 };
 
 static int skip_lcd_1p3831_init = 0;
+static int lcd_1p3831_power = 0;
 
 /* ========================================================================== */
 static void truely_1p3831_write_cmd(u16 cmd)
@@ -206,6 +207,10 @@ static void lcd_1p3831_set_power(struct plat_lcd_data *pdata,
 {
 	int			i;
 
+	if (power == lcd_1p3831_power) {
+		return;
+	}
+
 	if (power) {
 		if (skip_lcd_1p3831_init) {
 			skip_lcd_1p3831_init = 0;
@@ -234,6 +239,7 @@ static void lcd_1p3831_set_power(struct plat_lcd_data *pdata,
 			&ambarella_board_generic.lcd_backlight, 0);
 		skip_lcd_1p3831_init = 0;
 	}
+	lcd_1p3831_power = power;
 }
 
 static int lcd_1p3831_match_fb(struct plat_lcd_data *pdata,

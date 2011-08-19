@@ -247,7 +247,7 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 
 	case PM_SUSPEND_MEM:
 #if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-		//valid = 1;
+		valid = 1;
 #endif
 		break;
 
