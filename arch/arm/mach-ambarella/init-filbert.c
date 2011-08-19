@@ -157,11 +157,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 2,
 		.chip_select	= 6,
 	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 7,
-	},
 };
 
 /* ==========================================================================*/
@@ -201,6 +196,7 @@ struct platform_device filbert_board_input = {
 static void __init ambarella_init_filbert(void)
 {
 	int					i;
+	struct ambarella_spi_platform_info	*spi2_pdata;
 
 	ambarella_init_machine("Filbert");
 
@@ -265,6 +261,9 @@ static void __init ambarella_init_filbert(void)
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
 
+	spi2_pdata = (struct ambarella_spi_platform_info *)ambarella_spi2.dev.platform_data;
+	spi2_pdata->cs_num = 7;
+	spi2_pdata->cs_pins[7] = -1;
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
