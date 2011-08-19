@@ -36,6 +36,18 @@
 #define CONFIG_IPC_INFINITE_WAIT	1
 #define CONFIG_IPC_RECOVER_IRQ		20	// ms
 
+#define CONFIG_IPC_TIMER_COUNT_DOWN	1
+
+#if (CHIP_REV == I1)
+#define CONFIG_IPC_TIMER_PROFILE	1
+#define CONFIG_IPC_TIMER_STATUS_REG	TIMER8_STATUS_REG
+#define CONFIG_IPC_RECOVERY_TIMER	1
+#elif (CHIP_REV == A5S)
+#define CONFIG_IPC_TIMER_PROFILE	1
+#define CONFIG_IPC_TIMER_STATUS_REG	TIMER3_STATUS_REG
+#define CONFIG_IPC_RECOVERY_TIMER	0
+#endif
+
 #define DEBUG_IPC_DATA			0
 #define DEBUG_IPC_ALIGN_DATA		0
 #define DEBUG_IPC_LK			0
@@ -151,10 +163,22 @@ inline static struct ipc_prog_s *ipc_lookup_prog(struct ipc_prog_s *head, unsign
  */
 u32 ipc_tick_diff(u32 start, u32 end)
 {
-	if (end < start)
-		return 0xffffffff - start + end;
-	else
-		return end - start;
+	u32 diff;
+
+#if !CONFIG_IPC_TIMER_COUNT_DOWN
+	if (start <= end) {
+		diff = end - start;
+	} else {
+		diff = 0xFFFFFFFF - start + 1 + end;
+	}
+#else
+	if (end <= start) {
+		diff = start - end;
+	} else {
+		diff = 0xFFFFFFFF - end + 1 + start;
+	}
+#endif
+	return diff;
 }
 EXPORT_SYMBOL(ipc_tick_diff);
 
@@ -163,11 +187,14 @@ EXPORT_SYMBOL(ipc_tick_diff);
  */
 u32 ipc_tick_get(void)
 {
-#if (CHIP_REV == I1)
-	return amba_readl(TIMER8_STATUS_REG);
+	u32 ticks;
+
+#if CONFIG_IPC_TIMER_PROFILE
+	ticks = readl(CONFIG_IPC_TIMER_STATUS_REG);
 #else
-	return 0;
+	ticks = 0;
 #endif
+	return ticks;
 }
 EXPORT_SYMBOL(ipc_tick_get);
 
@@ -648,8 +675,10 @@ int ipc_binder_init(void)
 	spin_lock_init(&binder->lu_prog_lock);
 	spin_lock_init(&binder->lu_done_lock);
 
+#if CONFIG_IPC_RECOVERY_TIMER
 	mod_timer(&ipc_poll_irq_timer,
 		  jiffies + IPC_POLL_IRQ_INTERVAL);
+#endif
 
 #if defined(STATIC_SVC)
 	/* Create all SVCXPRTs */
@@ -831,10 +860,10 @@ static void ipc_poll_irq(unsigned long dummy)
 
 	if (binder->tick_irq_last != 0) {
 		/* Statistics: exec time */
-		elapsed = ipc_tick_diff (ipc_tick_get (), binder->tick_irq_last);
+		elapsed = ipc_tick_diff(binder->tick_irq_last, ipc_tick_get());
 		if (elapsed > binder->tick_irq_interval) {
-			ipc_fake_irq (IPC_IRQ_REQ);
-			ipc_fake_irq (IPC_IRQ_RLY);
+			ipc_fake_irq(IPC_IRQ_REQ);
+			ipc_fake_irq(IPC_IRQ_RLY);
 		}
 	}
 
@@ -861,10 +890,10 @@ static inline void ipc_clnt_call_statistics (SVCXPRT *svcxprt, enum clnt_stat rv
 		goto done;
 	}
 
-	cur = ipc_tick_get ();
+	cur = ipc_tick_get();
 
 	/* Statistics: exec time */
-	elapsed = ipc_tick_diff (cur, svcxprt->time[IPC_TIME_SEND_REQEST]);
+	elapsed = ipc_tick_diff(svcxprt->time[IPC_TIME_SEND_REQEST], cur);
 	if (elapsed > ipcprog->call.max) {
 		ipcprog->call.max = elapsed;
 	}
@@ -882,8 +911,8 @@ static inline void ipc_clnt_call_statistics (SVCXPRT *svcxprt, enum clnt_stat rv
 	ipcprog->call.total += elapsed;
 
 	/* Statistics: request latency */
-	elapsed = ipc_tick_diff (svcxprt->time[IPC_TIME_GOT_REQEST],
-			svcxprt->time[IPC_TIME_SEND_REQEST]);
+	elapsed = ipc_tick_diff(svcxprt->time[IPC_TIME_SEND_REQEST],
+				svcxprt->time[IPC_TIME_GOT_REQEST]);
 	if (elapsed > ipcprog->req.max) {
 		ipcprog->req.max = elapsed;
 	}
@@ -901,8 +930,8 @@ static inline void ipc_clnt_call_statistics (SVCXPRT *svcxprt, enum clnt_stat rv
 	ipcprog->req.total += elapsed;
 
 	/* Statistics: response latency */
-	elapsed = ipc_tick_diff (svcxprt->time[IPC_TIME_GOT_REPLY],
-			svcxprt->time[IPC_TIME_SEND_REPLY]);
+	elapsed = ipc_tick_diff(svcxprt->time[IPC_TIME_SEND_REPLY],
+				svcxprt->time[IPC_TIME_GOT_REPLY]);
 	if (elapsed > ipcprog->rsp.max) {
 		ipcprog->rsp.max = elapsed;
 	}
@@ -920,7 +949,7 @@ static inline void ipc_clnt_call_statistics (SVCXPRT *svcxprt, enum clnt_stat rv
 	ipcprog->rsp.total += elapsed;
 
 	/* Statistics: wakeup latency */
-	elapsed = ipc_tick_diff (cur, svcxprt->time[IPC_TIME_GOT_REPLY]);
+	elapsed = ipc_tick_diff(svcxprt->time[IPC_TIME_GOT_REPLY], cur);
 	if (elapsed > ipcprog->wakeup.max) {
 		ipcprog->wakeup.max = elapsed;
 	}
@@ -981,7 +1010,7 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 	SVCXPRT *svcxprt = NULL;
 	SVCXPRT *svcxprt_pa;
 	enum clnt_stat rval = IPC_SUCCESS;
-	unsigned int time_send_req = ipc_tick_get ();
+	unsigned int time_send_req = ipc_tick_get();
 	unsigned int xid;
 
 	ipc_log_print(IPC_LOG_LEVEL_DEBUG, "lu: call_v => %d %08x %08x %08x %s %d",
@@ -1214,7 +1243,7 @@ enum clnt_stat ipc_clnt_call(CLIENT *clnt,
 	SVCXPRT *svcxprt_pa;
 	int fid = -1;
 	enum clnt_stat rval = IPC_PROCESSING;
-	unsigned int time_send_req = ipc_tick_get ();
+	unsigned int time_send_req = ipc_tick_get();
 	unsigned int xid;
 
 	K_ASSERT(binder->init);
@@ -1451,7 +1480,7 @@ bool_t ipc_svc_sendreply(SVCXPRT *svcxprt, char *out)
 
 	K_ASSERT(svcxprt);
 
-	svcxprt->time[IPC_TIME_SEND_REPLY] = ipc_tick_get ();
+	svcxprt->time[IPC_TIME_SEND_REPLY] = ipc_tick_get();
 
 	if (out) {
 		memcpy(svcxprt->res, out, svcxprt->len_res);
@@ -1502,7 +1531,7 @@ static bool_t ipc_clnt_call_complete_bh(void *arg, void *res, SVCXPRT *svcxprt)
  */
 static void ipc_binder_got_reply(SVCXPRT *svcxprt)
 {
-	svcxprt->time[IPC_TIME_GOT_REPLY] = ipc_tick_get ();
+	svcxprt->time[IPC_TIME_GOT_REPLY] = ipc_tick_get();
 
 #ifdef STATIC_SVC
 	if ((svcxprt->proc_type & IPC_CALL_ASYNC_AUTO_DEL)) {
@@ -1571,7 +1600,7 @@ void ipc_binder_got_request(SVCXPRT *svcxprt)
 	struct svc_req svc_req;
 	bool_t result_code;
 
-	svcxprt->time[IPC_TIME_GOT_REQEST] = ipc_tick_get ();
+	svcxprt->time[IPC_TIME_GOT_REQEST] = ipc_tick_get();
 
 	if (svcxprt->pid >= MIN_LUIPC_PROG_NUM) {
 		ipc_bh_queue(__ipc_binder_userspace_got_request,
@@ -1656,7 +1685,7 @@ void ipc_binder_request(void)
 			break;
 		}
 
-		binder->tick_irq_last = ipc_tick_get ();
+		binder->tick_irq_last = ipc_tick_get();
 	}
 
 	DEBUG_MSG_IPC_LK ("[ipc] ipc_binder_dispatch END\n");

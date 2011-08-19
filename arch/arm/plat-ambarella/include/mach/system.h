@@ -38,12 +38,12 @@
 /* ==========================================================================*/
 static inline void arch_idle(void)
 {
-	cpu_do_idle();
-
 #if defined(CONFIG_BOSS_SINGLE_CORE)
 	if (boss) {
 		*boss->gidle = 1;
 	}
+#else
+	cpu_do_idle();
 #endif
 }
 
