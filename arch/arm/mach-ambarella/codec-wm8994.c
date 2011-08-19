@@ -82,6 +82,8 @@ static struct wm8994_pdata ambarella_wm8994_pdata = {
 	.ldo[0]			= { GPIO(125), NULL, &wm8994_ldo1_data },
 	.ldo[1]			= { 0, NULL, &wm8994_ldo2_data },
 	.lineout1_diff		= 1,
+	.micbias1_lvl		= 1,
+	.micbias2_lvl		= 1,
 };
 
 /* Fixed voltage regulators */
