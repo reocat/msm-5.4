@@ -380,7 +380,7 @@ static void __init ambarella_init_elephant(void)
 		case 'A':
 			ambarella_board_generic.lcd_reset.gpio_id = GPIO(105);
 			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-			ambarella_board_generic.lcd_reset.active_delay = 1;
+			ambarella_board_generic.lcd_reset.active_delay = 10;
 
 			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(16);
 			ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
@@ -391,7 +391,7 @@ static void __init ambarella_init_elephant(void)
 
 			ambarella_board_generic.lcd_spi_cfg.spi_mode = 0;
 			ambarella_board_generic.lcd_spi_cfg.cfs_dfs = 16;
-			ambarella_board_generic.lcd_spi_cfg.baud_rate = 500000;
+			ambarella_board_generic.lcd_spi_cfg.baud_rate = 5000000;
 			ambarella_board_generic.lcd_spi_cfg.lsb_first = 0;
 			ambarella_board_generic.lcd_spi_cfg.cs_change = 0;
 
