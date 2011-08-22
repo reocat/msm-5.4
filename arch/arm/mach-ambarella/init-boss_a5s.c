@@ -62,6 +62,9 @@ extern struct platform_device amba_streammem;
 static struct platform_device *ambarella_devices[] __initdata = {
 #if (UART_INSTANCES >= 2) 	
 	&ambarella_uart1,
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	&ambarella_sd0,
+#endif
 #endif
 #ifdef CONFIG_AMBARELLA_STREAMMEM
 	&amba_streammem,
