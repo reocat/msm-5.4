@@ -40,6 +40,9 @@
 #define AMBARELLA_BAPI_CMD_REBOOT_SELFREFERESH	(0x55aaaa55)
 #define AMBARELLA_BAPI_CMD_REBOOT_HIBERNATE	(0x5aaaa555)
 
+#define AMBARELLA_BAPI_REBOOT_HIBERNATE		(0x1 << 0)
+#define AMBARELLA_BAPI_REBOOT_SELFREFERESH	(0x1 << 1)
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -51,6 +54,7 @@ enum ambarella_bapi_cmd_e {
 	AMBARELLA_BAPI_CMD_AOSS_SAVE		= 0x1002,
 
 	AMBARELLA_BAPI_CMD_SET_REBOOT_INFO	= 0x2000,
+	AMBARELLA_BAPI_CMD_CHECK_REBOOT		= 0x2001,
 
 	AMBARELLA_BAPI_CMD_UPDATE_FB_INFO	= 0x3000,
 };
@@ -72,7 +76,8 @@ struct ambarella_bapi_aoss_s {
 struct ambarella_bapi_reboot_info_s {
 	u32					magic;
 	u32					mode;
-	u32					rev[2];
+	u32					flag;
+	u32					rev;
 };
 
 struct ambarella_bapi_fb_info_s {

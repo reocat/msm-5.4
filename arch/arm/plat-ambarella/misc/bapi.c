@@ -271,14 +271,32 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 
 	case AMBARELLA_BAPI_CMD_SET_REBOOT_INFO:
 	{
+		struct ambarella_bapi_reboot_info_s	*preboot_info;
+
 		retval = ambarella_bapi_check_bapi_info(cmd);
 		if ((retval != 0) || (args == NULL))
 			break;
 
-		memcpy(&bapi_info->reboot_info, args,
+		preboot_info = (struct ambarella_bapi_reboot_info_s *)args;
+		ambcache_inv_range(&bapi_info->reboot_info,
 			sizeof(struct ambarella_bapi_reboot_info_s));
+		bapi_info->reboot_info.magic = preboot_info->magic;
+		bapi_info->reboot_info.mode = preboot_info->mode;
 		ambcache_clean_range(&bapi_info->reboot_info,
 			sizeof(struct ambarella_bapi_reboot_info_s));
+	}
+		break;
+
+	case AMBARELLA_BAPI_CMD_CHECK_REBOOT:
+	{
+		retval = ambarella_bapi_check_bapi_info(cmd);
+		if ((retval != 0) || (args == NULL))
+			break;
+
+		ambcache_inv_range(&bapi_info->reboot_info,
+			sizeof(struct ambarella_bapi_reboot_info_s));
+		if (bapi_info->reboot_info.flag & *(u32 *)args)
+			retval = 1;
 	}
 		break;
 
