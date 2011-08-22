@@ -1773,8 +1773,10 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		}
 
 		if (pslotinfo->slot_info.use_bounce_buffer) {
-			mmc->max_hw_segs = 128;
-			mmc->max_phys_segs = 128;
+			//mmc->max_hw_segs = 128;
+			//mmc->max_phys_segs = 128;
+			//2.6.38 merged max_hw_segs & max_phys_segs into max_segs
+			mmc->max_segs = 128;
 			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
 				pslotinfo->slot_info.max_blk_sz);
 			mmc->max_req_size = mmc->max_seg_size;
@@ -1804,8 +1806,10 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				pslotinfo->buf_paddress,
 				mmc->max_seg_size);
 		} else {
-			mmc->max_hw_segs = 1;
-			mmc->max_phys_segs = 1;
+			//mmc->max_hw_segs = 1;
+			//mmc->max_phys_segs = 1;
+			//2.6.38 merged max_hw_segs & max_phys_segs into max_segs
+			mmc->max_segs = 128;
 			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
 				pslotinfo->slot_info.max_blk_sz);
 			mmc->max_req_size = mmc->max_seg_size;
