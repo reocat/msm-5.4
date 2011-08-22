@@ -678,7 +678,7 @@ static void __exit ambarella_i2c_exit(void)
 	platform_driver_unregister(&ambarella_i2c_driver);
 }
 
-module_init(ambarella_i2c_init);
+subsys_initcall(ambarella_i2c_init);
 module_exit(ambarella_i2c_exit);
 
 MODULE_DESCRIPTION("Ambarella Media Processor I2C Bus Controller");

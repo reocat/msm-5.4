@@ -166,6 +166,7 @@ static const reg_t TRUELY_1P3831_REGS[] =
 };
 
 static int skip_lcd_1p3831_init = 0;
+static int lcd_1p3831_power = 0;
 
 /* ========================================================================== */
 static void truely_1p3831_write_cmd(u16 cmd)
@@ -206,18 +207,20 @@ static void lcd_1p3831_set_power(struct plat_lcd_data *pdata,
 {
 	int			i;
 
+	if (power == lcd_1p3831_power) {
+		return;
+	}
+
 	if (power) {
 		if (skip_lcd_1p3831_init) {
 			skip_lcd_1p3831_init = 0;
 		} else {
 			ambarella_set_gpio_output(
 				&ambarella_board_generic.lcd_power, 1);
-#if 0
 			ambarella_set_gpio_reset(
 				&ambarella_board_generic.lcd_reset);
-#endif
 			truely_1p3831_write_cmd(0x1100);
-			mdelay(200);
+			mdelay(120);
 			for (i = 0; i < sizeof(TRUELY_1P3831_REGS) /
 				sizeof(reg_t); i++) {
 				truely_1p3831_write_cmd_data(
@@ -226,14 +229,17 @@ static void lcd_1p3831_set_power(struct plat_lcd_data *pdata,
 			truely_1p3831_write_cmd(0x2900);
 			ambarella_set_gpio_output(
 				&ambarella_board_generic.lcd_backlight, 1);
+			pr_info("Power on 1p3831\n");
 		}
 	} else {
+		pr_info("Power off 1p3831\n");
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.lcd_power, 0);
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.lcd_backlight, 0);
 		skip_lcd_1p3831_init = 0;
 	}
+	lcd_1p3831_power = power;
 }
 
 static int lcd_1p3831_match_fb(struct plat_lcd_data *pdata,

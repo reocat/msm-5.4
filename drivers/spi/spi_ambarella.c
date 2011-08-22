@@ -1036,7 +1036,7 @@ static void __exit ambarella_spi_exit(void)
 	platform_driver_unregister(&ambarella_spi_driver);
 }
 
-module_init(ambarella_spi_init);
+subsys_initcall(ambarella_spi_init);
 module_exit(ambarella_spi_exit);
 
 MODULE_DESCRIPTION("Ambarella Media Processor SPI Bus Controller");

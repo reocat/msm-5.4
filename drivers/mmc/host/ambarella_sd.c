@@ -736,7 +736,7 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 			ambsd_warn(pslotinfo, "Wait SD_RESET_ALL....\n");
 			break;
 		}
-		msleep(1);
+		mdelay(1);
 	}
 
 	amba_writeb(pinfo->regbase + SD_TMO_OFFSET,
@@ -1534,7 +1534,7 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 		}
 		if (amba_readb(pinfo->regbase + SD_PWR_OFFSET) != pwr) {
 			amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
-			msleep(pslotinfo->plat_info->ext_power.active_delay);
+			mdelay(pslotinfo->plat_info->ext_power.active_delay);
 		}
 	}
 
@@ -1608,10 +1608,10 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if ((pinfo->controller_ios.clock != ios->clock) ||
 		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
-		msleep(10);
+		mdelay(10);
 		ambarella_sd_set_clk(mmc, ios->clock);
 		pinfo->controller_ios.clock = ios->clock;
-		msleep(10);
+		mdelay(10);
 	}
 
 	if ((pinfo->controller_ios.bus_width != ios->bus_width) ||
