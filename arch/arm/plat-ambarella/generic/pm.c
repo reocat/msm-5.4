@@ -231,6 +231,9 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 {
 	int					retval = 0;
 	int					valid = 0;
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	int					mode;
+#endif
 
 	retval = ambarella_pm_check(state);
 	if (retval)
@@ -247,7 +250,11 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 
 	case PM_SUSPEND_MEM:
 #if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-		valid = 1;
+		mode = AMBARELLA_BAPI_REBOOT_SELFREFERESH;
+		if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT,
+			&mode) == 1) {
+			valid = 1;
+		}
 #endif
 		break;
 
@@ -316,9 +323,21 @@ static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 /* ==========================================================================*/
 static int ambarella_pm_hibernation_begin(void)
 {
-	int					retval = 0;
+	int					retval;
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+	int					mode;
 
-	retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
+	retval = -1;
+	mode = AMBARELLA_BAPI_REBOOT_HIBERNATE;
+	if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT, &mode) == 1) {
+		retval = 1;
+	}
+#else
+	retval = 1;
+#endif
+
+	if (retval == 1)
+		retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
 
 	return retval;
 }

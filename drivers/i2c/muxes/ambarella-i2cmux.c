@@ -25,7 +25,7 @@ struct ambarella_mux {
 
 static int ambarella_mux_select(struct i2c_adapter *adap, void *data, u32 chan)
 {
-	struct ambarella_mux *mux = data;
+	struct ambarella_mux			*mux = data;
 
 	ambarella_gpio_config(mux->data.gpio, mux->data.select_function);
 
@@ -34,7 +34,7 @@ static int ambarella_mux_select(struct i2c_adapter *adap, void *data, u32 chan)
 
 static int ambarella_mux_deselect(struct i2c_adapter *adap, void *data, u32 chan)
 {
-	struct ambarella_mux *mux = data;
+	struct ambarella_mux			*mux = data;
 
 	ambarella_gpio_config(mux->data.gpio, mux->data.deselect_function);
 
@@ -46,7 +46,7 @@ static int __devinit ambarella_mux_probe(struct platform_device *pdev)
 	struct ambarella_mux			*mux;
 	struct ambarella_i2cmux_platform_data	*pdata;
 	struct i2c_adapter			*parent;
-	int					ret;
+	int					ret = 0;
 
 	pdata = pdev->dev.platform_data;
 	if (!pdata) {
@@ -67,10 +67,10 @@ static int __devinit ambarella_mux_probe(struct platform_device *pdev)
 		goto alloc_failed;
 	}
 
-	mux->parent	= parent;
-	mux->data	= *pdata;
-	mux->adap	= i2c_add_mux_adapter(parent, mux, pdata->number, 0,
-				ambarella_mux_select, ambarella_mux_deselect);
+	mux->parent = parent;
+	mux->data = *pdata;
+	mux->adap = i2c_add_mux_adapter(parent, mux, pdata->number, 0,
+		ambarella_mux_select, ambarella_mux_deselect);
 	if (!mux->adap) {
 		ret = -ENODEV;
 		dev_err(&pdev->dev, "Failed to add mux adapter\n");
@@ -81,25 +81,30 @@ static int __devinit ambarella_mux_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, mux);
 
-	return 0;
+	goto ambarella_mux_probe_exit;
 
 add_adapter_failed:
 	i2c_del_mux_adapter(mux->adap);
 	kfree(mux);
+
 alloc_failed:
 	i2c_put_adapter(parent);
 
+ambarella_mux_probe_exit:
 	return ret;
 }
 
 static int __devexit ambarella_mux_remove(struct platform_device *pdev)
 {
-	struct ambarella_mux	*mux = platform_get_drvdata(pdev);
+	struct ambarella_mux			*mux;
 
-	i2c_del_mux_adapter(mux->adap);
-	platform_set_drvdata(pdev, NULL);
-	i2c_put_adapter(mux->parent);
-	kfree(mux);
+	mux = platform_get_drvdata(pdev);
+	if (mux) {
+		i2c_del_mux_adapter(mux->adap);
+		platform_set_drvdata(pdev, NULL);
+		i2c_put_adapter(mux->parent);
+		kfree(mux);
+	}
 
 	return 0;
 }
@@ -123,7 +128,7 @@ static void __exit ambarella_mux_exit(void)
 	platform_driver_unregister(&ambarella_mux_driver);
 }
 
-module_init(ambarella_mux_init);
+subsys_initcall(ambarella_mux_init);
 module_exit(ambarella_mux_exit);
 
 MODULE_DESCRIPTION("Ambarella I2C multiplexer driver");
