@@ -272,6 +272,7 @@ struct mxt_data {
 	unsigned int max_y;
 	unsigned int driver_paused;
 	struct bin_attribute mem_access_attr;
+	int debug_enabled;
 };
 
 static bool mxt_object_readable(unsigned int type)
@@ -651,6 +652,10 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 		min_reportid = max_reportid -
 			object->num_report_ids * (object->instances + 1) + 1;
 		id = reportid - min_reportid;
+
+		if (reportid != MXT_RPTID_NOMSG && data->debug_enabled)
+			print_hex_dump(KERN_DEBUG, "MXT MSG:", DUMP_PREFIX_NONE,
+				16, 1, &message, sizeof(struct mxt_message), false);
 
 		if (reportid >= min_reportid && reportid <= max_reportid)
 			mxt_input_touchevent(data, &message, id);
@@ -1132,6 +1137,34 @@ static ssize_t mxt_pause_store(struct device *dev,
 	return count;
 }
 
+static ssize_t mxt_debug_enable_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int count = 0;
+
+	count += sprintf(buf + count, "%d", data->debug_enabled);
+	count += sprintf(buf + count, "\n");
+
+	return count;
+}
+
+static ssize_t mxt_debug_enable_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int i;
+
+	if (sscanf(buf, "%u", &i) == 1 && i < 2) {
+		data->debug_enabled = i;
+
+		dev_dbg(dev, "%s\n", i ? "debug enabled" : "debug disabled");
+	} else
+	dev_dbg(dev, "debug_enabled write error\n");
+
+	return count;
+}
+
 static ssize_t mxt_mem_access_read(struct file *filp, struct kobject *kobj,
 	struct bin_attribute *bin_attr, char *buf, loff_t off, size_t count)
 {
@@ -1203,11 +1236,13 @@ static ssize_t mxt_mem_access_write(struct file *filp, struct kobject *kobj,
 static DEVICE_ATTR(object, 0444, mxt_object_show, NULL);
 static DEVICE_ATTR(update_fw, 0664, NULL, mxt_update_fw_store);
 static DEVICE_ATTR(pause_driver, 0666, mxt_pause_show, mxt_pause_store);
+static DEVICE_ATTR(debug_enable, 0666, mxt_debug_enable_show, mxt_debug_enable_store);
 
 static struct attribute *mxt_attrs[] = {
 	&dev_attr_object.attr,
 	&dev_attr_update_fw.attr,
 	&dev_attr_pause_driver.attr,
+	&dev_attr_debug_enable.attr,
 	NULL
 };
 
