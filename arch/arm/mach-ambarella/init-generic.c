@@ -80,6 +80,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_i2s0,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	&ambarella_i2cmux,
+#endif
 	&ambarella_idc0,
 #if (IDC_INSTANCES >= 2)
 	&ambarella_idc1,
