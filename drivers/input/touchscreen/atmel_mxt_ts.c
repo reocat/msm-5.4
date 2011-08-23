@@ -271,6 +271,7 @@ struct mxt_data {
 	unsigned int max_x;
 	unsigned int max_y;
 	struct bin_attribute mem_access_attr;
+	bool debug_enabled;
 };
 
 static bool mxt_object_readable(unsigned int type)
@@ -336,20 +337,6 @@ static bool mxt_object_writable(unsigned int type)
 	default:
 		return false;
 	}
-}
-
-static void mxt_dump_message(struct device *dev,
-				  struct mxt_message *message)
-{
-	dev_dbg(dev, "reportid:\t0x%x\n", message->reportid);
-	dev_dbg(dev, "message1:\t0x%x\n", message->message[0]);
-	dev_dbg(dev, "message2:\t0x%x\n", message->message[1]);
-	dev_dbg(dev, "message3:\t0x%x\n", message->message[2]);
-	dev_dbg(dev, "message4:\t0x%x\n", message->message[3]);
-	dev_dbg(dev, "message5:\t0x%x\n", message->message[4]);
-	dev_dbg(dev, "message6:\t0x%x\n", message->message[5]);
-	dev_dbg(dev, "message7:\t0x%x\n", message->message[6]);
-	dev_dbg(dev, "checksum:\t0x%x\n", message->checksum);
 }
 
 static int mxt_check_bootloader(struct i2c_client *client,
@@ -662,10 +649,13 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 			object->num_report_ids * object->instances + 1;
 		id = reportid - min_reportid;
 
+		if (reportid != 0xff && data->debug_enabled)
+			print_hex_dump(KERN_DEBUG,
+				"MXT MSG:", DUMP_PREFIX_NONE, 16, 1,
+				&message, sizeof(struct mxt_message), false);
+
 		if (reportid >= min_reportid && reportid <= max_reportid)
 			mxt_input_touchevent(data, &message, id);
-		else
-			mxt_dump_message(dev, &message);
 	} while (reportid != 0xff);
 
 end:
@@ -1121,6 +1111,36 @@ static ssize_t mxt_update_fw_store(struct device *dev,
 	return count;
 }
 
+static ssize_t mxt_debug_enable_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int count;
+	char c;
+
+	c = data->debug_enabled ? '1' : '0';
+	count = sprintf(buf, "%c\n", c);
+
+	return count;
+}
+
+static ssize_t mxt_debug_enable_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int i;
+
+	if (sscanf(buf, "%u", &i) == 1 && i < 2) {
+		data->debug_enabled = (i == 1);
+
+		dev_dbg(dev, "%s\n", i ? "debug enabled" : "debug disabled");
+		return count;
+	} else {
+		dev_dbg(dev, "debug_enabled write error\n");
+		return -EINVAL;
+	}
+}
+
 static int mxt_check_mem_access_params(struct mxt_data *data, loff_t off,
 				       size_t *count)
 {
@@ -1173,10 +1193,13 @@ static ssize_t mxt_mem_access_write(struct file *filp, struct kobject *kobj,
 
 static DEVICE_ATTR(object, 0444, mxt_object_show, NULL);
 static DEVICE_ATTR(update_fw, 0664, NULL, mxt_update_fw_store);
+static DEVICE_ATTR(debug_enable, 0664, mxt_debug_enable_show,
+		   mxt_debug_enable_store);
 
 static struct attribute *mxt_attrs[] = {
 	&dev_attr_object.attr,
 	&dev_attr_update_fw.attr,
+	&dev_attr_debug_enable.attr,
 	NULL
 };
 
