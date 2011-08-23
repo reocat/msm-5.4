@@ -38,6 +38,7 @@
 #define IPC_SLOCK_GET_LOCAL_TASK_ID(tid) ((tid) & 0x3fffffff)
 
 #define K_ASSERT(x)			BUG_ON(!(x))
+#define IPC_SLOCK_MAX_NUM		64
 
 /*
  * Global structure
@@ -45,10 +46,11 @@
 typedef struct ipc_slock_obj_s {
 	ipc_slock_t	*locks;
 	int		num;
-	spinlock_t	lock;
+	spinlock_t	spinlocks[IPC_SLOCK_MAX_NUM];
 } ipc_slock_obj_t;
 
-static ipc_slock_obj_t lock_obj;
+static ipc_slock_obj_t G_lock_obj;
+
 
 /*
  * Forward Declarations
@@ -60,11 +62,16 @@ static ipc_slock_obj_t lock_obj;
  */
 void ipc_slock_init(unsigned int addr, unsigned int size)
 {
+	int i;
+
 	memset ((void *) addr, 0, size);
 
-	lock_obj.locks = (ipc_slock_t *) addr;
-	lock_obj.num = size / sizeof (ipc_slock_t);
-	spin_lock_init(&lock_obj.lock);
+	G_lock_obj.locks = (ipc_slock_t *) addr;
+	G_lock_obj.num = size / sizeof (ipc_slock_t);
+
+	for (i = 0; i < IPC_SLOCK_MAX_NUM; i++) {
+		spin_lock_init(&G_lock_obj.spinlocks[i]);
+	}
 }
 EXPORT_SYMBOL(ipc_slock_init);
 
@@ -73,7 +80,7 @@ EXPORT_SYMBOL(ipc_slock_init);
  */
 void ipc_spin_lock(int i, int pos)
 {
-	ipc_slock_t *lock = &lock_obj.locks[i];
+	ipc_slock_t *lock = &G_lock_obj.locks[i];
 	unsigned long flags;
 	unsigned long tmp;
 #if DEBUG_LOCK_TIME
@@ -82,13 +89,15 @@ void ipc_spin_lock(int i, int pos)
 #if DEBUG_SPINLOCK
 	int cpu_id, pid;
 
+	K_ASSERT(i < IPC_SLOCK_MAX_NUM);
+
 	cpu_id = smp_processor_id ();
 	pid = current->pid;
 #endif
 #if DEBUG_LOCK_TIME
 	time = jiffies;
 #endif
-	spin_lock_irqsave(&lock_obj.lock, flags);
+	spin_lock_irqsave(&G_lock_obj.spinlocks[i], flags);
 
 #if (CHIP_REV == I1)
 	__asm__ __volatile__(
@@ -134,8 +143,10 @@ EXPORT_SYMBOL(ipc_spin_lock);
  */
 void ipc_spin_unlock(int i, int pos)
 {
-	ipc_slock_t *lock = &lock_obj.locks[i];
+	ipc_slock_t *lock = &G_lock_obj.locks[i];
 	unsigned int time;
+
+	K_ASSERT(i < IPC_SLOCK_MAX_NUM);
 
 	smp_mb();
 
@@ -167,7 +178,7 @@ void ipc_spin_unlock(int i, int pos)
 	: "cc");
 #endif /* CHIP_REV == I1 */
 
-	spin_unlock_irqrestore(&lock_obj.lock, lock->flags);
+	spin_unlock_irqrestore(&G_lock_obj.spinlocks[i], lock->flags);
 }
 EXPORT_SYMBOL(ipc_spin_unlock);
 
@@ -176,7 +187,7 @@ EXPORT_SYMBOL(ipc_spin_unlock);
  */
 int ipc_spin_trylock(int i)
 {
-	ipc_slock_t *lock = &lock_obj.locks[i];
+	ipc_slock_t *lock = &G_lock_obj.locks[i];
 	unsigned long tmp;
 
 	__asm__ __volatile__(
