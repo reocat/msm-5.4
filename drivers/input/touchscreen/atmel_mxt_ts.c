@@ -221,6 +221,9 @@
 
 #define MXT_MAX_FINGER		10
 
+#define MXT_MEMACCESS_SIZE 32768
+#define MXT_I2C_MAX_REQ_SIZE 256
+
 struct mxt_info {
 	u8 family_id;
 	u8 variant_id;
@@ -267,6 +270,7 @@ struct mxt_data {
 	unsigned int max_x;
 	unsigned int max_y;
 	unsigned int driver_paused;
+	struct bin_attribute mem_access_attr;
 };
 
 static bool mxt_object_readable(unsigned int type)
@@ -1118,6 +1122,74 @@ static ssize_t mxt_pause_store(struct device *dev,
 	return count;
 }
 
+static ssize_t mxt_mem_access_read(struct file *filp, struct kobject *kobj,
+	struct bin_attribute *bin_attr, char *buf, loff_t off, size_t count)
+{
+	struct device *dev = container_of(kobj, struct device, kobj);
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (off >= MXT_MEMACCESS_SIZE)
+		return -EIO;
+
+	if (off + count > MXT_MEMACCESS_SIZE)
+		count = MXT_MEMACCESS_SIZE - off;
+
+	if (count > MXT_I2C_MAX_REQ_SIZE)
+		count = MXT_I2C_MAX_REQ_SIZE;
+
+	if (count > 0)
+		ret = __mxt_read_reg(data->client, off, count, buf);
+
+	return ret == 0 ? count : ret;
+}
+
+int mxt_write_block(struct i2c_client *client, u16 addr, u16 length, u8 *value)
+{
+	int i;
+	struct {
+		__le16 le_addr;
+		u8  data[MXT_I2C_MAX_REQ_SIZE];
+	} i2c_block_transfer;
+
+	if (length > MXT_I2C_MAX_REQ_SIZE)
+		return -EINVAL;
+
+	for (i = 0; i < length; i++)
+		i2c_block_transfer.data[i] = *value++;
+
+		i2c_block_transfer.le_addr = cpu_to_le16(addr);
+
+		i = i2c_master_send(client, (u8 *) &i2c_block_transfer, length + 2);
+
+	if (i == (length + 2))
+		return 0;
+	else
+		return -EIO;
+}
+
+static ssize_t mxt_mem_access_write(struct file *filp, struct kobject *kobj,
+	struct bin_attribute *bin_attr, char *buf, loff_t off, size_t count)
+{
+	struct device *dev = container_of(kobj, struct device, kobj);
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (off >= MXT_MEMACCESS_SIZE)
+		return -EIO;
+
+	if (off + count > MXT_MEMACCESS_SIZE)
+		count = MXT_MEMACCESS_SIZE - off;
+
+	if (count > MXT_I2C_MAX_REQ_SIZE)
+		count = MXT_I2C_MAX_REQ_SIZE;
+
+	if (count > 0)
+		ret = mxt_write_block(data->client, off, count, buf);
+
+	return ret == 0 ? count : 0;
+}
+
 static DEVICE_ATTR(object, 0444, mxt_object_show, NULL);
 static DEVICE_ATTR(update_fw, 0664, NULL, mxt_update_fw_store);
 static DEVICE_ATTR(pause_driver, 0666, mxt_pause_show, mxt_pause_store);
@@ -1239,8 +1311,22 @@ static int __devinit mxt_probe(struct i2c_client *client,
 	if (error)
 		goto err_unregister_device;
 
+	sysfs_bin_attr_init(&data->mem_access_attr);
+	data->mem_access_attr.attr.name = "mem_access";
+	data->mem_access_attr.attr.mode = S_IRUGO | S_IWUGO;
+	data->mem_access_attr.read = mxt_mem_access_read;
+	data->mem_access_attr.write = mxt_mem_access_write;
+	data->mem_access_attr.size = MXT_MEMACCESS_SIZE;
+
+	if (sysfs_create_bin_file(&client->dev.kobj, &data->mem_access_attr) < 0) {
+		dev_err(&client->dev, "Failed to create %s\n", data->mem_access_attr.attr.name);
+		goto err_remove_sysfs_group;
+	}
+
 	return 0;
 
+err_remove_sysfs_group:
+        sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 err_unregister_device:
 	input_unregister_device(input_dev);
 	input_dev = NULL;
@@ -1258,6 +1344,7 @@ static int __devexit mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
+	sysfs_remove_bin_file(&client->dev.kobj, &data->mem_access_attr);
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	free_irq(data->irq, data);
 	input_unregister_device(data->input_dev);
