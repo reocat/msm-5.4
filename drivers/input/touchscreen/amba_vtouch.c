@@ -40,40 +40,31 @@ static struct amba_vtouch *amba_vtouch_dev = NULL;
 int amba_vtouch_press_abs_mt_sync(struct amba_vtouch_data *data)
 {
 	int MAX_Z = 16;
+	int MAX_FINGERS = data->max_finger;
 	int cur_touch = 0;
-	int tmp = 0;
+	int tmp = 0, i = 0, done = 0;
 
 	if((amba_vtouch_dev==NULL) || (amba_vtouch_dev->input_dev==NULL)){
 		return -1;
 	}
-	dbgmsg("===> %s, %d,%d\n",__func__, data->x, data->y);
+	dbgmsg("===> %s, %d,%d\n",__func__, data->finger[0].x, data->finger[0].y);
 
-	if(data->press == 1) {
-		cur_touch++;
-	}
-	if(data->press_1 == 1) {
-		cur_touch++;
-	}
+	for (i = 0; i < MAX_FINGERS; i++) {
 
-	if(data->press == 0 && data->press_1 == 1) {
-		tmp = data->x;
-		data->x = data->x_1;
-		data->x_1 = tmp;
-
-		tmp = data->y;
-		data->y = data->y_1;
-		data->y_1 = tmp;
-	}
-	input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_TOUCH_MAJOR, MAX_Z);
-	input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_POSITION_X, data->x);
-	input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_POSITION_Y, data->y);
-	input_mt_sync(amba_vtouch_dev->input_dev);
-
-	if(cur_touch > 1) {
-		input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_TOUCH_MAJOR, MAX_Z);
-		input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_POSITION_X, data->x_1);
-		input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_POSITION_Y, data->y_1);
-		input_mt_sync(amba_vtouch_dev->input_dev);
+		if (data->finger[i].press) {
+			if (done == 0) {
+				input_report_abs(amba_vtouch_dev->input_dev, ABS_PRESSURE, MAX_Z);
+				input_report_abs(amba_vtouch_dev->input_dev, ABS_X, data->finger[i].x);
+				input_report_abs(amba_vtouch_dev->input_dev, ABS_Y, data->finger[i].y);
+				done = 1;
+			}
+			input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_TOUCH_MAJOR, MAX_Z);
+			input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_POSITION_X,
+					data->finger[i].x);
+			input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_POSITION_Y,
+					data->finger[i].y);
+			input_mt_sync(amba_vtouch_dev->input_dev);
+		}
 	}
 	//Inform Linux/Android events arrive
 	input_sync(amba_vtouch_dev->input_dev);
@@ -87,7 +78,7 @@ int amba_vtouch_release_abs_mt_sync(struct amba_vtouch_data *data)
 	if((amba_vtouch_dev==NULL) || (amba_vtouch_dev->input_dev==NULL)){
 		return -1;
 	}
-	dbgmsg("===> %s, %d,%d\n",__func__, data->x, data->y);
+	dbgmsg("===> %s, %d,%d\n",__func__, data->finger[0].x, data->finger[0].y);
 
 	input_report_abs(amba_vtouch_dev->input_dev, ABS_MT_TOUCH_MAJOR, 0);
 	input_mt_sync(amba_vtouch_dev->input_dev);

@@ -21,15 +21,20 @@
 
 #ifdef __KERNEL__
 
-struct amba_vtouch_data
-{
+struct amba_vtouch_finger {
 	int x;
 	int y;
-	int x_1;
-	int y_1;
+	int z;
 	int press;
-	int press_1;
-	int gid;
+};
+
+#define MAX_VTOUCH_FINGER	10
+struct amba_vtouch_data
+{
+	struct amba_vtouch_finger finger[MAX_VTOUCH_FINGER];
+	int curr_;
+	int prev_;
+	int max_finger;
 };
 
 #ifdef CONFIG_TOUCHSCREEN_AMBA_VTOUCH
