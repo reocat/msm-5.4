@@ -25,6 +25,12 @@ struct wm831x_power {
 	struct power_supply wall;
 	struct power_supply usb;
 	struct power_supply battery;
+	/* prevent suspend before handle power source irq */
+	struct wake_lock work_wake_lock;
+	/* the real wake lock */
+	struct wake_lock charge_wake_lock;
+	struct work_struct charge_work;
+	struct mutex mutex;
 };
 
 #define WM831X_VOLTAGE_BUF_NUM 200
@@ -560,6 +566,35 @@ static irqreturn_t wm831x_bat_irq(int irq, void *data)
  *		Initialisation
  *********************************************************************/
 
+static void wm831x_charge_work(struct work_struct *work)
+{
+	int ret = 0;
+	struct wm831x_power *power =
+		container_of(work, struct wm831x_power, charge_work);
+
+	mutex_lock(&power->mutex);
+
+	ret = power_supply_is_system_supplied();
+
+	/* If in charging, we lock the wake_lock, while if not, we release it.
+	 * Note: wake_lock_timeout() can also release the wake_lock,
+	 * but it can give userspace some time to see the uevent and
+	 * update LED state or whatnot... */
+	if (ret)
+		wake_lock(&power->charge_wake_lock);
+	else
+		wake_lock_timeout(&power->charge_wake_lock, HZ / 2);
+
+	/* Just notify for everything - little harm in overnotifying. */
+	power_supply_changed(&power->battery);
+	power_supply_changed(&power->usb);
+	power_supply_changed(&power->wall);
+
+	wake_unlock(&power->work_wake_lock);
+
+	mutex_unlock(&power->mutex);
+}
+
 static irqreturn_t wm831x_syslo_irq(int irq, void *data)
 {
 	struct wm831x_power *wm831x_power = data;
@@ -579,10 +614,8 @@ static irqreturn_t wm831x_pwr_src_irq(int irq, void *data)
 
 	dev_dbg(wm831x->dev, "Power source changed\n");
 
-	/* Just notify for everything - little harm in overnotifying. */
-	power_supply_changed(&wm831x_power->battery);
-	power_supply_changed(&wm831x_power->usb);
-	power_supply_changed(&wm831x_power->wall);
+	wake_lock(&wm831x_power->work_wake_lock);
+	schedule_work(&wm831x_power->charge_work);
 
 	return IRQ_HANDLED;
 }
@@ -602,6 +635,11 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 
 	power->wm831x = wm831x;
 	platform_set_drvdata(pdev, power);
+
+	mutex_init(&power->mutex);
+	wake_lock_init(&power->charge_wake_lock, WAKE_LOCK_SUSPEND, "wm831x-chargeing");
+	wake_lock_init(&power->work_wake_lock, WAKE_LOCK_SUSPEND, "wm831x-work");
+	INIT_WORK(&power->charge_work, wm831x_charge_work);
 
 	usb = &power->usb;
 	battery = &power->battery;
@@ -676,33 +714,35 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	ret = wm831x_reg_unlock(wm831x);
 	if (ret != 0) {
 		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
-		return ret;
+		goto err_bat_irq;
 	}
 
 	ret = wm831x_set_bits(wm831x, WM831X_ON_PIN_CONTROL,
 		WM831X_ON_PIN_PRIMACT_MASK,
-		WM831X_ON_PIN_PRIMACT_ON<<WM831X_ON_PIN_PRIMACT_SHIFT);
+		WM831X_ON_PIN_PRIMACT_ON << WM831X_ON_PIN_PRIMACT_SHIFT);
 
-	 wm831x_reg_lock(wm831x);
+	wm831x_reg_lock(wm831x);
 
-	if (ret != 0)
-		dev_err(wm831x->dev, "Fail to set on prim act to on request with error: %d\n",
-			ret);
-
-	ret = wm831x_reg_read( wm831x, WM831X_ON_PIN_CONTROL);
-	if (ret > 0) {
-		dev_err(wm831x->dev, "New ON PIN CONTROL(0x%04x): 0x%04x\n",
-			WM831X_ON_PIN_CONTROL, ret);
-	} else {
-		dev_err(wm831x->dev, "Fail to get on pin control error: %d\n",
-			ret);
+	if (ret != 0) {
+		dev_err(wm831x->dev,
+			"Fail to set on prim act to on request with error: %d\n", ret);
+		goto err_bat_irq;
 	}
 
-	return ret;
+	ret = wm831x_reg_read( wm831x, WM831X_ON_PIN_CONTROL);
+	if (ret < 0) {
+		dev_err(wm831x->dev, "Fail to get on pin error: %d\n", ret);
+		goto err_bat_irq;
+	}
+
+	wake_lock(&power->work_wake_lock);
+	schedule_work(&power->charge_work);
+
+	return 0;
 
 err_bat_irq:
-	for (; i >= 0; i--) {
-		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
+	for (; i > 0; i--) {
+		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i-1]);
 		free_irq(irq, power);
 	}
 	irq = platform_get_irq_byname(pdev, "PWR SRC");
@@ -717,6 +757,9 @@ err_battery:
 err_wall:
 	power_supply_unregister(wall);
 err_kmalloc:
+	mutex_destroy(&power->mutex);
+	wake_lock_destroy(&power->work_wake_lock);
+	wake_lock_destroy(&power->charge_wake_lock);
 	kfree(power);
 	return ret;
 }
@@ -740,6 +783,11 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 	power_supply_unregister(&wm831x_power->battery);
 	power_supply_unregister(&wm831x_power->wall);
 	power_supply_unregister(&wm831x_power->usb);
+
+	mutex_destroy(&wm831x_power->mutex);
+	wake_lock_destroy(&wm831x_power->work_wake_lock);
+	wake_lock_destroy(&wm831x_power->charge_wake_lock);
+
 	kfree(wm831x_power);
 	return 0;
 }
