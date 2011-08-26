@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 148758
+ * @version 149721
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -651,22 +651,22 @@ typedef unsigned int amb_clock_frequency_t ;
  */
 
 typedef enum {
-/** IMX 083: 1080p30 */
-AMB_VIDCAP_4096X3575,
-/** IMX 078: 1080p30, 720p30 */
-AMB_VIDCAP_4000X2250,
-/** Aptina 3135: 1080p60, 720p60, 1080p30, 720p30 */
-AMB_VIDCAP_2304X1296,
-/** IMX 078: 1080p60, 720p60 */
-AMB_VIDCAP_1984X1116,
-/** Aptina 3135: 4:3 photo preview */
+/* IMX078, IMX083, Aptina 3135, Aptina 14041, OmniVision 14810: 1080p60  - 216 MHz (432 / 2) */
+AMB_VIDCAP_2304X1296_60FPS,
+/* IMX083: 1080p30 - 144 MHz (432 / 3) */
+AMB_VIDCAP_1296X1787,
+/* Aptina 3135: photo preview, 1080p30  - 120 MHz (480/4) */
 AMB_VIDCAP_2048X1536,
-/** IMX 078: 4:3 photo preview */
+/* Aptina 14041: 1080p30 - 108 MHz (432 / 4) */
+AMB_VIDCAP_2240X1260,
+/* IMX078: 1080p30 - 96 MHz (480 / 5) */
+AMB_VIDCAP_1984X1116,
+/* OmniVision 14810: 1080p30 - 86.5 MZ (432 / 5) */
+AMB_VIDCAP_2112X1188,
+/* IMX078: photo preview - 48 MHz (480 / 10) */
 AMB_VIDCAP_1312X984,
-/** IMX 083: 720p30 */
-AMB_VIDCAP_1536X384,
-/** IMX 083: photo preview */
-AMB_VIDCAP_1536X384_SMALL_VB,
+/* IMX083, Aptina 14041, OmniVision 14810 - photo preview  - 40 MHz (480 / 12) */
+AMB_VIDCAP_1088X816,
 /* Reserved */
 AMB_VIDCAP_RESERVED=0xffffffff
 } amb_vidcap_window_size_t ;
@@ -798,21 +798,21 @@ AMB_DUAL_STREAM_RESERVED = 0xffffffffUL
 } amb_dual_stream_state_t ;
 
 /**
- * 50Hz LCD Mode
+ * Digital Gamma Mode
  *
- * Turning this on forces the core clock frequency to be multiple of 36 MHz.
- * 
+ * Turning this on forces the core clock frequency to be a multiple of 36 MHz.
+ *
  * @ingroup mode_group
  */
 
 typedef enum {
-/** 50Hz LCD Mode is off */
-AMB_50HZ_LCD_MODE_OFF,
-/** 50Hz LCD Mode is on */
-AMB_50HZ_LCD_MODE_ON,
+/** Digital Gamma Mode is off */
+AMB_DIGITAL_GAMMA_MODE_OFF,
+/** Digital Gamma Mode is on */
+AMB_DIGITAL_GAMMA_MODE_ON,
 /* Reserved */
-AMB_50HZ_LCD_MODE_RESERVED=0xffffffff
-} amb_50hz_lcd_mode_t ;
+AMB_DIGITAL_GAMMA_MODE_RESERVED=0xffffffff
+} amb_digital_gamma_mode_t ;
 
 /**
  * Operating mode
@@ -833,8 +833,8 @@ unsigned int usb_state ;
 unsigned int hdmi_state ;
 /** Dual Stream state ::amb_dual_stream_state_t */
 unsigned int dual_stream_state ;
-/** 50Hz LCD Mode */
-amb_50hz_lcd_mode_t amb_50hz_lcd_mode ;
+/** Digital Gamma Mode ::amb_digital_gamma_mode_t */
+amb_digital_gamma_mode_t amb_digital_gamma_mode ;
 } amb_operating_mode_t ;
 
 /**
