@@ -1601,9 +1601,12 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 
 #if defined(CONFIG_AMBARELLA_IPC)
-	/* Clock changed by Itron, force to re-setup. */
-	if ((amba_readw(pinfo->regbase + SD_CLK_OFFSET) & SD_CLK_EN) == 0)
+	if ((amba_readw(pinfo->regbase + SD_CLK_OFFSET) & SD_CLK_EN) == 0) {
+		/* uitron will on/off clock every sd request, */
+		/* if clock is diable, that means uitron has ever access sd */
+		/* controller and we need to set to correct clock again. */
 		pinfo->controller_ios.clock = 0;
+	}
 #endif
 
 	if ((pinfo->controller_ios.clock != ios->clock) ||
@@ -2446,8 +2449,12 @@ int ambarella_sdinfo_ipc(struct mmc_host *mmc)
 	slot_id = (pinfo->id == 0 && pslotinfo->slot_id == 0) ? SD_HOST1_SD:
 		  (pinfo->id == 0 && pslotinfo->slot_id == 1) ? SD_HOST1_SDIO:
 								SD_HOST2_SD;
+	memset(&ipc_sdinfo, 0x0, sizeof(ipc_sdinfo));
 	ipc_sdinfo.slot_id = slot_id;
-	ipc_sdinfo_get(0, &ipc_sdinfo);
+	if (ipc_sdinfo_get(0, &ipc_sdinfo) < 0) {
+		memset(&G_ipc_sdinfo[slot_id], 0x0, sizeof(ipc_sdinfo));
+		return -1;
+	}
 
 	G_ipc_sdinfo[slot_id].is_init 	= ipc_sdinfo.is_init;
 	G_ipc_sdinfo[slot_id].is_sdmem 	= ipc_sdinfo.is_sdmem;
@@ -2461,6 +2468,13 @@ int ambarella_sdinfo_ipc(struct mmc_host *mmc)
 
 	G_mmc[slot_id] = mmc;
 
+#if 0
+	printk("%s: ipc_sdinfo.is_init = %d\n", __func__, ipc_sdinfo.is_init);
+	printk("%s: ipc_sdinfo.is_sdmem = %d\n", __func__, ipc_sdinfo.is_sdmem);
+	printk("%s: ipc_sdinfo.is_mmc = %d\n", __func__, ipc_sdinfo.is_mmc);
+	printk("%s: ipc_sdinfo.is_sdio = %d\n", __func__, ipc_sdinfo.is_sdio);
+	printk("%s: ipc_sdinfo.bus_width = %d\n", __func__, ipc_sdinfo.bus_width);
+#endif
 	return 0;
 }
 

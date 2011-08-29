@@ -60,7 +60,7 @@ extern struct platform_device amba_streammem;
 #endif
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-#if (UART_INSTANCES >= 2) 	
+#if (UART_INSTANCES >= 2)
 	&ambarella_uart1,
 #endif
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
@@ -80,7 +80,38 @@ static void __init ambarella_init_boss(void)
 
 	ambarella_init_machine("Boss");
 
-	if (use_bub_default) {		
+	if (use_bub_default) {
+
+		/* Config SD*/
+		ambarella_platform_sd_controller0.clk_limit = 25000000;
+		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+		ambarella_platform_sd_controller0.slot[0].cd_delay = 1000;
+#if 0
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val  = GPIO_LOW,
+			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT,
+			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+#endif
+		ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
+		ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
+		ambarella_platform_sd_controller0.slot[1].cd_delay = 1000;
+#if 0
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_val  = GPIO_LOW,
+			ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT,
+			ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
+#endif
+
+#if defined(CONFIG_AMBARELLA_IPC)
+		ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_8_BIT_DATA;
+
+		ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_BUS_WIDTH_TEST;
+#endif
 		platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 		for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 			device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
