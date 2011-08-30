@@ -223,7 +223,12 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tUSB:\t\t%s\n"
 			"\tHDMI:\t\t%s\n"
 			"\tDualStream:\t%s\n"
+#if (CHIP_REV == A5S)
+			"\tHDpreview:\t%s\n"
+#endif
+#if (CHIP_REV == A7 || CHIP_REV == I1)
 			"\tDigitalGamma:\t%s\n"
+#endif
 			"\tARM:\t\t%d Hz\n"
 			"\tDram:\t\t%d Hz\n"
 			"\tiDSP:\t\t%d Hz\n"
@@ -246,7 +251,12 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			operating_mode.usb_state ? "On" : "Off",
 			operating_mode.hdmi_state ? "On" : "Off",
 			operating_mode.dual_stream_state ? "On" : "Off",
+#if (CHIP_REV == A5S)
+			operating_mode.hd_preview_state ? "On" : "Off",
+#endif
+#if (CHIP_REV == A7 || CHIP_REV == I1)
 			operating_mode.amb_digital_gamma_mode ? "On" : "Off",
+#endif
 			get_arm_bus_freq_hz(),
 			get_dram_freq_hz(),
 			get_idsp_freq_hz(),
