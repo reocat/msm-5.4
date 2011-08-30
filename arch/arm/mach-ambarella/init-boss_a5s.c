@@ -69,6 +69,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_AMBARELLA_STREAMMEM
 	&amba_streammem,
 #endif
+#ifdef CONFIG_USB_GADGET_AMBARELLA
+	&ambarella_udc0,
+#endif
 };
 
 
