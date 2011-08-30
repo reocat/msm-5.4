@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Mon Aug 29 14:11:12 2011
+# Tue Aug 30 10:56:41 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1545,7 +1545,7 @@ CONFIG_MMC_BLOCK_DEFERRED_RESUME=y
 #
 # MMC/SD/SDIO Host Controller Drivers
 #
-CONFIG_MMC_AMBARELLA=y
+# CONFIG_MMC_AMBARELLA is not set
 # CONFIG_MMC_BOSS is not set
 # CONFIG_MMC_SDHCI is not set
 # CONFIG_MMC_SPI is not set
