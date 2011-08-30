@@ -46,6 +46,13 @@ struct ambarella_pll_info {
 	amb_operating_mode_t operating_mode;
 };
 
+#if (CHIP_REV == A7 || CHIP_REV == I1)
+struct ambarella_pll_vidcap_info {
+	char *name;
+	unsigned int vidcap;
+};
+#endif
+
 struct ambarella_pll_mode_info {
 	char *name;
 	unsigned int mode;
@@ -88,6 +95,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 };
 
 #elif (CHIP_REV == A7)
+static struct proc_dir_entry *vidcap_file = NULL;
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
@@ -110,8 +118,20 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 };
+#define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
+static struct ambarella_pll_vidcap_info vidcap_list[] = {
+	{"4096x3575", AMB_VIDCAP_4096X3575},
+	{"4000x2250", AMB_VIDCAP_4000X2250},
+	{"2304x1296", AMB_VIDCAP_2304X1296},
+	{"1984x1116", AMB_VIDCAP_1984X1116},
+	{"2048x1536", AMB_VIDCAP_2048X1536},
+	{"1312x984", AMB_VIDCAP_1312X984},
+	{"1536x384", AMB_VIDCAP_1536X384},
+	{"1536x384_small_vb", AMB_VIDCAP_1536X384_SMALL_VB},
+};
 
 #elif (CHIP_REV == I1)
+static struct proc_dir_entry *vidcap_file = NULL;
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
@@ -135,6 +155,17 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+};
+#define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
+static struct ambarella_pll_vidcap_info vidcap_list[] = {
+	{"4096x3575", AMB_VIDCAP_4096X3575},
+	{"4000x2250", AMB_VIDCAP_4000X2250},
+	{"2304x1296", AMB_VIDCAP_2304X1296},
+	{"1984x1116", AMB_VIDCAP_1984X1116},
+	{"2048x1536", AMB_VIDCAP_2048X1536},
+	{"1312x984", AMB_VIDCAP_1312X984},
+	{"1536x384", AMB_VIDCAP_1536X384},
+	{"1536x384_small_vb", AMB_VIDCAP_1536X384_SMALL_VB},
 };
 #endif
 
@@ -160,6 +191,14 @@ static int ambarella_pll_proc_read(char *page, char **start,
 		goto ambarella_pll_proc_read_exit;
 	}
 
+#if (CHIP_REV == A7 || CHIP_REV == I1)
+	retlen += scnprintf((page + retlen), (count - retlen),
+			"\nPossible Vidcap:\n");
+	for (i = 0; i < ARRAY_SIZE(vidcap_list); i++) {
+		retlen += scnprintf((page + retlen), (count - retlen),
+				"\t%s\n", vidcap_list[i].name);
+	}
+#endif
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPossible Mode:\n");
 	for (i = 0; i < ARRAY_SIZE(mode_list); i++) {
@@ -176,6 +215,9 @@ static int ambarella_pll_proc_read(char *page, char **start,
 
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPLL Information:\n"
+#if (CHIP_REV == A7 || CHIP_REV == I1)
+			"\tVidcap:\t\t%s\n"
+#endif
 			"\tPerformance:\t%s\n"
 			"\tMode:\t\t%s\n"
 			"\tUSB:\t\t%s\n"
@@ -196,6 +238,9 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tVOUT:\t\t%d Hz\n"
 			"\tVOUT2:\t\t%d Hz\n"
 			"\tVIN:\t\t%d Hz\n\n",
+#if (CHIP_REV == A7 || CHIP_REV == I1)
+			vidcap_list[operating_mode.vidcap_size].name,
+#endif
 			performance_list[operating_mode.performance].name,
 			mode_list[operating_mode.mode].name,
 			operating_mode.usb_state ? "On" : "Off",
@@ -386,6 +431,57 @@ ambarella_performance_proc_write_exit:
 	return retval;
 }
 
+#if (CHIP_REV == A7 || CHIP_REV == I1)
+static int ambarella_vidcap_proc_write(struct file *file,
+	const char __user *buffer, unsigned long count, void *data)
+{
+	int					retval = 0;
+	char					str[AMBPLL_MAX_CMD_LENGTH];
+	int					vidcap, i;
+	amb_hal_success_t			result;
+
+	i = (count < AMBPLL_MAX_CMD_LENGTH) ? count : AMBPLL_MAX_CMD_LENGTH;
+	if (copy_from_user(str, buffer, i)) {
+		pr_err("%s: copy_from_user fail!\n", __func__);
+		retval = -EFAULT;
+		goto ambarella_vidcap_proc_write_exit;
+	}
+	str[i - 1] = 0;
+
+	vidcap = AMB_OPERATING_VIDCAP_END;
+	for (i = 0; i < ARRAY_SIZE(vidcap_list); i++) {
+		if (strlen(str) == strlen(vidcap_list[i].name)
+			&& strcmp(str, vidcap_list[i].name) == 0) {
+			vidcap = vidcap_list[i].vidcap;
+			break;
+		}
+	}
+	if (vidcap >= AMB_OPERATING_VIDCAP_END){
+		pr_err("\n%s: invalid vidcap (%s)!\n", __func__, str);
+		retval = -EINVAL;
+		goto ambarella_vidcap_proc_write_exit;
+	}
+
+	result = amb_get_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
+	if(result != AMB_HAL_SUCCESS){
+		pr_err("%s: amb_get_operating_mode failed(%d)\n",
+			__func__, result);
+		retval = -EPERM;
+		goto ambarella_vidcap_proc_write_exit;
+	}
+
+	if (pll_info.operating_mode.vidcap_size != vidcap) {
+		pll_info.operating_mode.vidcap_size = vidcap;
+		retval = ambarella_set_operating_mode(&pll_info.operating_mode);
+	}
+	if (!retval)
+		retval = count;
+
+ambarella_vidcap_proc_write_exit:
+	return retval;
+}
+#endif
+
 static int __init ambarella_init_pll_hal(void)
 {
 	amb_hal_success_t			result;
@@ -397,6 +493,19 @@ static int __init ambarella_init_pll_hal(void)
 		retval = -EPERM;
 		goto ambarella_init_pll_hal_exit;
 	}
+
+#if (CHIP_REV == A7 || CHIP_REV == I1)
+	vidcap_file = create_proc_entry("vidcap", S_IRUGO | S_IWUSR,
+		get_ambarella_proc_dir());
+	if (vidcap_file == NULL) {
+		retval = -ENOMEM;
+		pr_err("%s: create proc file (vidcap) fail!\n", __func__);
+		goto ambarella_init_pll_hal_exit;
+	} else {
+		vidcap_file->read_proc = ambarella_pll_proc_read;
+		vidcap_file->write_proc = ambarella_vidcap_proc_write;
+	}
+#endif
 
 	mode_file = create_proc_entry("mode", S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
