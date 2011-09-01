@@ -48,13 +48,8 @@
 #include <plat/timer.h>
 #include <plat/uart.h>
 #include <plat/udc.h>
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_USB
 #include <plat/uhc.h>
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
 #include <plat/ahci.h>
-#endif
-
 #include <plat/wdt.h>
 #include <plat/adb.h>
 

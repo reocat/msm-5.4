@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/include/plat/ambreglock.h
+ * arch/arm/plat-ambarella/include/plat/reglock.h
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
@@ -26,9 +26,7 @@
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
-
 #ifdef CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK
-
 #include <linux/spinlock.h>
 extern spinlock_t ambarella_register_lock;
 extern unsigned long ambarella_register_flags;
@@ -40,16 +38,11 @@ extern u32 amb_reglock_count;
 	spin_unlock_irqrestore(&ambarella_register_lock, ambarella_register_flags)
 #define AMBARELLA_INC_REGLOCK_COUNT()	\
 	amb_reglock_count++
-
 #else
-
 #define AMBARELLA_REG_LOCK()
 #define AMBARELLA_REG_UNLOCK()
 #define AMBARELLA_INC_REGLOCK_COUNT()
-
 #endif /* CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK */
-
-
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

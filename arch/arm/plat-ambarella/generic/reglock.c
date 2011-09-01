@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/misc/ambreglock.c
+ * arch/arm/plat-ambarella/generic/reglock.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
@@ -23,9 +23,9 @@
 
 #include <linux/init.h>
 #include <linux/module.h>
-#include <mach/hardware.h>
+#include <linux/spinlock.h>
 
-#ifdef CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK
+#include <mach/hardware.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -35,12 +35,12 @@
 
 /* ==========================================================================*/
 DEFINE_SPINLOCK(ambarella_register_lock);
-EXPORT_SYMBOL(ambarella_register_lock);
 unsigned long ambarella_register_flags;
-EXPORT_SYMBOL(ambarella_register_flags);
 u32 amb_reglock_count = 0;
+
+/* ==========================================================================*/
+EXPORT_SYMBOL(ambarella_register_lock);
+EXPORT_SYMBOL(ambarella_register_flags);
 EXPORT_SYMBOL(amb_reglock_count);
 module_param (amb_reglock_count, uint, S_IRUGO);
-
-#endif
 

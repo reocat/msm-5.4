@@ -1,5 +1,5 @@
 /*
- * drivers/misc/gdma.c
+ * arch/arm/plat-ambarella/generic/gdma.c
  *
  * Author: Louis Sun <lysun@ambarella.com>
  *

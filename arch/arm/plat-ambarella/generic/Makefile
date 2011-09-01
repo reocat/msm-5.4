@@ -20,21 +20,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= init.o
 obj-y						+= adc.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ahci.o
 obj-y						+= audio.o
-obj-y						+= clk.o
 obj-y						+= crypto.o
 obj-y						+= dma.o
 obj-y						+= eth.o
 obj-y						+= fio.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 obj-y						+= gpio.o
 obj-y						+= idc.o
+obj-y						+= init.o
 obj-y						+= ir.o
 obj-y						+= irq.o
+ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
+obj-y						+= pll_hal.o
+else
+obj-y						+= pll_rct.o
+endif
 obj-y						+= pm.o
 obj-y						+= pwm.o
 obj-y						+= rct.o
+obj-$(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)	+= reglock.o
 obj-y						+= rtc.o
 obj-y						+= sd.o
 obj-y						+= spi.o
@@ -42,13 +49,7 @@ obj-y						+= timer.o
 obj-y						+= uart.o
 obj-y						+= udc.o
 obj-y						+= wdt.o
-ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
-obj-y						+= pll_hal.o
-else
-obj-y						+= pll_rct.o
-endif
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= uhc.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ahci.o
 
 obj-y						+= adb.o
 
