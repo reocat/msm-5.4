@@ -218,8 +218,13 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.rs485.active_level = GPIO_LOW;
 	ambarella_board_generic.rs485.active_delay = 1;
 
+#ifdef CONFIG_TOUCH_AMBARELLA_TM1510
+	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(85);
+	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(85);
+#else
 	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
 	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
+#endif
 	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
