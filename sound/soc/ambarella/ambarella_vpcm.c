@@ -75,7 +75,6 @@ struct ambarella_runtime_data {
 	dma_addr_t dma_desc_array_phys;
 	int channel;		/* Physical DMA channel */
 	int ndescr;		/* Number of descriptors */
-	int last_descr_in;
 	int last_descr;		/* Record lastest DMA done descriptor number */
 
 	u32 *dma_rpt_buf;
@@ -111,11 +110,7 @@ static void v_daidma_fifo_update(void *dev_id)
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 
 	spin_lock_irq(&prtd->lock);
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		prtd->last_descr++;
-	} else {
-		prtd->last_descr += (op_port >> 1);
-	}
+	prtd->last_descr++;
 	if (prtd->last_descr >= prtd->ndescr) {
 		prtd->last_descr = 0;
 	}
@@ -178,7 +173,6 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
   op_size = totsize;
 
 	prtd->ndescr = 0;
-	prtd->last_descr_in = 0;
 	prtd->last_descr = 0;
 	do {
 		if (period > totsize)
@@ -188,10 +182,8 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
     	ipc_ialsa_tx_open(op_port, op_sfreq, op_addr, op_size, prtd->ndescr);
-    	printk("ambarella_pcm_hw_params call ipc_ialsa_tx_open\n");
 	} else {
     	ipc_ialsa_rx_open(op_port, op_sfreq, op_addr, op_size, prtd->ndescr);
-      printk("ambarella_pcm_hw_params call ipc_ialsa_rx_open\n");
 	}
 
   vpcm_printk("ambarella_pcm_hw_params\n");
@@ -216,7 +208,6 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 		}
 		prtd->dma_data = NULL;
 		prtd->ndescr = 0;
-		prtd->last_descr_in = 0;
 		prtd->last_descr = 0;
 	}
 

@@ -43,10 +43,8 @@ static struct ipc_prog_s lk_alsa_fifo_prog =
  */
 static struct vdaidma_s {
 	struct vdma_chan_s {
-		unsigned int (*handler1)(void *);
-		int (*handler2)(void *);
-		void (*handler3)(void *);
-		void (*handler4)(void *);
+		void (*handler1)(void *);
+		void (*handler2)(void *);
 		void *harg;
 	} chan[2];
 } G_vdaidma;
