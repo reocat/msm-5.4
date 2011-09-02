@@ -28,6 +28,8 @@
 #include "ipcgen/i_status_tab.i"
 #endif
 
+extern void boss_on_ipc_report_ready(int ready);
+
 static CLIENT *IPC_i_status = NULL;
 
 static struct ipc_prog_s i_status_prog =
@@ -49,7 +51,9 @@ int ipc_status_report_ready(int status)
 	enum clnt_stat stat;
 
 	stat = lk_status_report_1(&status, NULL, IPC_i_status);
-	if (stat != IPC_SUCCESS) {
+	if (stat == IPC_SUCCESS) {
+		boss_on_ipc_report_ready(status);
+	} else {
 		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
 		return -stat;
 	}

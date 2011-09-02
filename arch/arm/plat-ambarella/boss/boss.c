@@ -31,6 +31,19 @@
 #define BOSS_IRQ_OWNER_LINUX	1
 
 /*
+ * Called when ipc reports ready status
+ */
+void boss_on_ipc_report_ready(int ready)
+{
+	if (ready) {
+		boss->log_buf_ptr = ipc_virt_to_phys (boss_log_buf_ptr);
+		boss->log_buf_len_ptr = ipc_virt_to_phys (boss_log_buf_len_ptr);
+		boss->log_buf_last_ptr = ipc_virt_to_phys (boss_log_buf_last_ptr);
+	}
+}
+EXPORT_SYMBOL(boss_on_ipc_report_ready);
+
+/*
  * Get the owner of a BOSS IRQ
  */
 int boss_get_irq_owner(int irq)

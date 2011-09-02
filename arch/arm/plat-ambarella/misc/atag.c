@@ -336,10 +336,6 @@ void __init ambarella_map_io(void)
 		pgd_t *pgd;
 		pmd_t *pmd;
 #endif
-		extern unsigned int boss_log_buf_ptr;
-		extern unsigned int boss_log_buf_len_ptr;
-		extern unsigned int boss_log_buf_last_ptr;
-
 		pr_notice ("aipc: smem: %08x, %08x\n", boss->smem_addr, boss->smem_size);
 		phys = boss->smem_addr;
 		virt = ipc_phys_to_virt (phys);

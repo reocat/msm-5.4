@@ -183,7 +183,13 @@ struct boss_s
 
 extern struct boss_s *boss;
 
+/* BOSS APIs */
 extern int boss_get_device_owner(int device);
+
+/* BOSS printk */
+extern unsigned int boss_log_buf_ptr;
+extern unsigned int boss_log_buf_len_ptr;
+extern unsigned int boss_log_buf_last_ptr;
 
 #endif  /* !__ASM__ */
 
