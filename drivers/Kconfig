@@ -124,4 +124,6 @@ source "drivers/clk/Kconfig"
 
 source "drivers/ambarella-ipc/Kconfig"
 
+source "drivers/ambarella-ipc2/Kconfig"
+
 endmenu
