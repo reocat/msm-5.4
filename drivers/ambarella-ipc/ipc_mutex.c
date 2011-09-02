@@ -58,17 +58,6 @@
 #define DEBUG_MSG_MUTEX(...)
 #endif
 
-#if (CHIP_REV == A5S)
-#define SANITIZE_DCACHE_IN_SPINLOCK     1
-#else
-#define SANITIZE_DCACHE_IN_SPINLOCK     0
-#endif
-#if (SANITIZE_DCACHE_IN_SPINLOCK)
-#define FLUSH_CACHE_ALL()            flush_cache_all()
-#else
-#define FLUSH_CACHE_ALL(...)
-#endif
-
 /*
  * Structures
  */
@@ -197,12 +186,10 @@ ipc_mutex_wakeup_remote(ipc_mutex_t *mutex)
 	int mtxid = mutex->id;
 
 	ipc_spin_lock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_ADD);
-	FLUSH_CACHE_ALL();
 
 	os->wakeup_bitmap[IPC_MUTEX_GET_GROUP(mtxid)] |= IPC_MUTEX_GET_BIT(mtxid);
 	ipc_mutex_irq_send(os->irqno);
 
-	FLUSH_CACHE_ALL();
 	ipc_spin_unlock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_ADD);
 }
 
@@ -215,7 +202,6 @@ ipc_mutex_wakeup_lookup(ipc_mutex_os_obj_t *os)
 	int i, mtxid = -1;
 
 	ipc_spin_lock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_REMOVE);
-	FLUSH_CACHE_ALL();
 
 	for (i = 0; i < IPC_MUTEX_GROUP_NUM; i++) {
 		unsigned int bits;
@@ -229,7 +215,6 @@ ipc_mutex_wakeup_lookup(ipc_mutex_os_obj_t *os)
 		}
 	}
 
-	FLUSH_CACHE_ALL();
 	ipc_spin_unlock(os->wakeup_lock, IPC_SLOCK_POS_WAKEUP_REMOVE);
 
 	return 	(mtxid >= 0)?&G_mutex_mutexs[mtxid]:NULL;
@@ -247,14 +232,12 @@ ipc_mutex_wakeup_local(ipc_mutex_t *mutex)
 			mutex->id);
 
 	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_WAKEUP_LOCAL);
-	FLUSH_CACHE_ALL();
 	K_ASSERT(mutex->token == IPC_MUTEX_OS_LOCAL);
 	K_ASSERT(os->count > 0);
 	os->count--;
 	if (os->count == 0) {
 		os->priority = 0;
 	}
-	FLUSH_CACHE_ALL();
 	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_WAKEUP_LOCAL);
 
 	complete(IPC_MUTEX_GET_COMPL(mutex->id));
@@ -370,7 +353,6 @@ int ipc_mutex_lock(int mtxid)
 	}
 
 	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_LOCK);
-	FLUSH_CACHE_ALL();
 
 	next_id = mutex->next_id;
 	prev_token = mutex->token;
@@ -388,7 +370,6 @@ int ipc_mutex_lock(int mtxid)
 	}
 	mutex->next_id++;
 
-	FLUSH_CACHE_ALL();
 	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_LOCK);
 
 	if (locked) {
@@ -405,7 +386,6 @@ int ipc_mutex_lock(int mtxid)
 	K_ASSERT(mutex->token == IPC_MUTEX_OS_LOCAL);
 
 	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_LOCK_COUNT);
-	FLUSH_CACHE_ALL();
 
 	K_ASSERT(mutex->lock_count == mutex->unlock_count);
 	K_ASSERT(mutex->arm_lock_count == mutex->arm_unlock_count);
@@ -437,7 +417,6 @@ int ipc_mutex_lock(int mtxid)
 		mutex->lock_log_idx = 0;
 	}
 #endif
-	FLUSH_CACHE_ALL();
 	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_LOCK_COUNT);
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: %d@%d lock_OK", mtxid, pid, cpu_id);
@@ -494,7 +473,6 @@ int ipc_mutex_unlock(int mtxid)
 #endif
 
 	ipc_spin_lock(mutex->lock, IPC_SLOCK_POS_UNLOCK);
-	FLUSH_CACHE_ALL();
 
 	if (local->count + remote->count > 0)
 	{
@@ -551,7 +529,6 @@ int ipc_mutex_unlock(int mtxid)
 	mutex->cortex_unlock_count++;
 	mutex->token = token;
 
-	FLUSH_CACHE_ALL();
 	ipc_spin_unlock(mutex->lock, IPC_SLOCK_POS_UNLOCK);
 
 	DEBUG_MSG_MUTEX ("ipc: mutex %d: %d@%d unlock_OK => next: %s (l: %d, r: %d)",
