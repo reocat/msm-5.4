@@ -120,4 +120,9 @@ obj-y				+= ieee802154/
 #common clk code
 obj-y				+= clk/
 
+ifndef CONFIG_AMBARELLA_IPC2
 obj-$(CONFIG_AMBARELLA_IPC)	+= ambarella-ipc/
+else
+obj-$(CONFIG_AMBARELLA_IPC)	+= ambarella-ipc2/
+endif
+
