@@ -301,7 +301,7 @@ int ipc_mutex_init_map(u32 addr, u32 size)
 {
 	/* Initialize global mutex object */
 	G_mutex = (ipc_mutex_obj_t *) addr;
-	G_mutex_mutexs = (ipc_mutex_t *) ambarella_phys_to_virt((u32) G_mutex->mutexs);
+	G_mutex_mutexs = (ipc_mutex_t *) ipc_phys_to_virt(G_mutex->mutexs);
 
 	pr_notice ("ipc: mutex = %08x, %08x, %d\n",
 		(unsigned int) G_mutex, (unsigned int) G_mutex_mutexs, G_mutex->num);
