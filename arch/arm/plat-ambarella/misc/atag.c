@@ -25,10 +25,12 @@
 #include <linux/init.h>
 #include <linux/bootmem.h>
 #include <linux/dma-mapping.h>
+#include <linux/sched.h>
 
 #include <asm/page.h>
 #include <asm/io.h>
 #include <asm/setup.h>
+#include <asm/tlbflush.h>
 #include <asm/mach/map.h>
 
 #include <mach/hardware.h>
@@ -328,12 +330,12 @@ void __init ambarella_map_io(void)
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if (boss != NULL) {
-#if !defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
-		struct map_desc	smem_desc;
-#endif /* defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS) */
 		u32 virt, phys;
 		int rval;
-
+#if defined(CONFIG_BOSS_MULTIPLE_CORE)
+		pgd_t *pgd;
+		pmd_t *pmd;
+#endif
 		extern unsigned int boss_log_buf_ptr;
 		extern unsigned int boss_log_buf_len_ptr;
 		extern unsigned int boss_log_buf_last_ptr;
@@ -342,15 +344,16 @@ void __init ambarella_map_io(void)
 		phys = boss->smem_addr;
 		virt = ipc_phys_to_virt (phys);
 
-#if !defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
-		smem_desc.virtual = virt;
-		smem_desc.pfn = __phys_to_pfn(phys);
-		smem_desc.length = boss->smem_size;
-		smem_desc.type = MT_MEMORY_NONCACHED;
-		iotable_init(&smem_desc, 1);
-#endif /* defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS) */
+#if defined(CONFIG_BOSS_MULTIPLE_CORE)
+		pgd = pgd_offset_k(virt);
+		pmd = pmd_offset(pgd, virt);
+		if (virt & PGDIR_MASK) {
+			pmd++;
+		}
+		*pmd = __pmd(phys | PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_SECT_S);
+		flush_pmd_entry(pmd);
+#endif
 		boss->smem_addr = virt;
-
 
 		rval = ipc_smem_init();
 		K_ASSERT(rval == 0);
