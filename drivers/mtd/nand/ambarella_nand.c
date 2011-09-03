@@ -45,6 +45,8 @@
 #include <plat/nand.h>
 #include <plat/ptb.h>
 
+#include <mach/boss.h>
+
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 
 /* nand_check_wp will be checked before write, so wait MTD fix */
@@ -584,13 +586,14 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	nand_info->plat_nand->request();
 
 #if defined(CONFIG_AMBARELLA_IPC)
-	ambarella_nand_vic_ctrl(FIOCMD_IRQ, 0);
-	ambarella_nand_vic_ctrl(FIODMA_IRQ, 0);
-	ambarella_nand_vic_ctrl(DMA_FIOS_IRQ, 0);
-
+	boss_set_irq_owner(DMA_FIOS_IRQ, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(nand_info->cmd_irq, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(nand_info->dma_irq, BOSS_IRQ_OWNER_LINUX, 1);
+#if (CHIP_REV == I1)
 	enable_irq(DMA_FIOS_IRQ);
 	enable_irq(nand_info->cmd_irq);
 	enable_irq(nand_info->dma_irq);
+#endif
 #endif
 
 #ifdef AMBARELLA_NAND_WP
@@ -823,9 +826,11 @@ nand_amb_request_done:
 
 #if defined(CONFIG_AMBARELLA_IPC)
 	nand_info->cmd = 0;
+#if (CHIP_REV == I1)
 	disable_irq(DMA_FIOS_IRQ);
 	disable_irq(nand_info->cmd_irq);
 	disable_irq(nand_info->dma_irq);
+#endif
 #endif
 
 	nand_info->plat_nand->release();
@@ -1504,9 +1509,12 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	 * Otherwise, it causes the unbalenced IRQ enable/disable checking
 	 * failed when the first time nand_amb_request() is called.
 	 */
+#if (CHIP_REV == I1)
 	disable_irq(nand_info->cmd_irq);
 	disable_irq(nand_info->dma_irq);
 #endif
+#endif
+
 	ambarella_nand_init_chip(nand_info);
 
 	mtd = &nand_info->mtd;

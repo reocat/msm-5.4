@@ -43,6 +43,7 @@
 #include <plat/ambcache.h>
 
 #if defined(CONFIG_AMBARELLA_IPC)
+#include <mach/boss.h>
 #include <linux/aipc/i_sdresp.h>
 
 /**
@@ -1677,7 +1678,8 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	ambarella_sd_request_bus(mmc);
 #if defined(CONFIG_AMBARELLA_IPC)
-	ambarella_sd_vic_ctrl(pinfo->irq - 32, 0);
+	/* ambarella_sd_vic_ctrl(pinfo->irq - 32, 0); */
+	boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
 #endif
 
 	pslotinfo->mrq = mrq;

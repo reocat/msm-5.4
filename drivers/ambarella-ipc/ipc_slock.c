@@ -37,7 +37,6 @@
 #define IPC_SLOCK_GET_TASK_ID(cid,pid)	((pid) + (cid << 30) + (IPC_SLOCK_OS_LOCAL << 31))
 #define IPC_SLOCK_GET_LOCAL_TASK_ID(tid) ((tid) & 0x3fffffff)
 
-#define K_ASSERT(x)			BUG_ON(!(x))
 #define IPC_SLOCK_MAX_NUM		64
 
 /*

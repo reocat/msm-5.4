@@ -25,9 +25,7 @@
 #ifndef __ASM_ARCH_BOSS_H
 #define __ASM_ARCH_BOSS_H
 
-#if !defined(__ASM__)
-#include <linux/aipc/aipc.h>
-#endif
+#include <ambhw/chip.h>
 
 #define BOSS_BOSS_MEM_SIZE		0x1000		/* 4KB */
 #define BOSS_LINUX_VERSION		0x00000004	/* linux struct boss_s version */
@@ -71,8 +69,18 @@
 #define BOSS_GPIO3MASK_OFFSET		56
 #define BOSS_GPIO4MASK_OFFSET		60
 #define BOSS_GPIO5MASK_OFFSET		64
+#define BOSS_ROOT_IRQ_MASK_OFFSET	68
+#define BOSS_GUEST_IRQ_MASK_OFFSET	72
+#define BOSS_ROOT_VIC1_EN_OFFSET	76
+#define BOSS_ROOT_VIC2_EN_OFFSET	80
+#define BOSS_ROOT_VIC3_EN_OFFSET	84
+#define BOSS_GUEST_VIC1_EN_OFFSET	88
+#define BOSS_GUEST_VIC2_EN_OFFSET	92
+#define BOSS_GUEST_VIC3_EN_OFFSET	96
 
 #if !defined(__ASM__)
+
+#include <linux/aipc/aipc_struct.h>
 
 enum {
 	BOSS_STATE_UNINIT = 0,
@@ -147,6 +155,18 @@ struct boss_s
 	unsigned int gpio4mask;		/* GPIO4 bitmask */
 	unsigned int gpio5mask;		/* GPIO5 bitmask */
 
+	/* IRQ status */
+	unsigned int root_irq_mask;	/* Root IRQ status */
+	unsigned int guest_irq_mask;	/* If guest IRQ is masked? */
+
+	unsigned int root_vic1_en;	/* Root VIC1 enable */
+	unsigned int root_vic2_en;	/* Root VIC2 enable */
+	unsigned int root_vic3_en;	/* Root VIC3 enable */
+
+	unsigned int guest_vic1_en;	/* Guest VIC1 enable */
+	unsigned int guest_vic2_en;	/* Guest VIC2 enable */
+	unsigned int guest_vic3_en;	/* Guest VIC3 enable */
+
 	/*
 	 * The following 3 variables are initialized to 0 and expected to
 	 * be filled in by the guest OS and maintained thereafter to trigger
@@ -178,18 +198,64 @@ struct boss_s
 	 * remote OS can retrieve these when it boots up.
 	 */
 	struct ipc_buf_s ipc_buf;	/* IPC buffer */
-
 };
 
-extern struct boss_s *boss;
+typedef struct boss_obj_s {
+	unsigned int	ready;
+	unsigned int	count;
+	unsigned int	irq_start_time;
+	unsigned int	irq_enable_count;
+	unsigned int	irq_enable_time;
+	unsigned int	irq_disable_count;
+	unsigned int	irq_disable_time;
+	unsigned int	irq_save_count;
+	unsigned int	irq_save_time;
+	unsigned int	irq_restore_count;
+	unsigned int	irq_restore_time;
+} boss_obj_t;
 
-/* BOSS APIs */
+/*
+ * BOSS: global declaration.
+ */
+extern struct boss_s *boss;
+extern struct boss_obj_s *boss_obj;
+
+
+#define BOSS_IRQ_OWNER_UITRON	0
+#define BOSS_IRQ_OWNER_LINUX	1
+
+#define BOSS_VIC_SET_UITRON(vic, irq)	(vic &= ~(1 << (irq)))
+#define BOSS_VIC_SET_LINUX(vic, irq)	(vic |= (1 << (irq)))
+
+#define BOSS_VIC_SET(vic, irq)		(vic |= (1 << (irq)))
+#define BOSS_VIC_CLR(vic, irq)		(vic &= ~(1 << (irq)))
+
+/*
+ * BOSS: API.
+ */
+extern void boss_set_ready(int ready);
+
+extern unsigned long boss_local_irq_save(void);
+extern void boss_local_irq_restore(unsigned long flags);
+extern void boss_local_irq_enable(void);
+extern void boss_local_irq_disable(void);
+extern unsigned long boss_local_save_flags(void);
+
+extern int boss_get_irq_owner(int irq);
+extern void boss_set_irq_owner(int irq, int owner, int update);
+
+extern void boss_enable_irq(int irq);
+extern void boss_disable_irq(int irq);
+
 extern int boss_get_device_owner(int device);
 
 /* BOSS printk */
 extern unsigned int boss_log_buf_ptr;
 extern unsigned int boss_log_buf_len_ptr;
 extern unsigned int boss_log_buf_last_ptr;
+
+#define boss_writel(a, v)	(*(volatile unsigned int __force *)(a) = (v))
+#define boss_readl(a)		(*(volatile unsigned int __force   *)(a))
 
 #endif  /* !__ASM__ */
 

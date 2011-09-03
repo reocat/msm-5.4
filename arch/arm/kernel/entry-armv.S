@@ -191,8 +191,15 @@ __dabt_svc:
 	@
 	@ restore SPSR and restart the instruction
 	@
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	ldr	r5, [sp, #S_PSR]
+	mov	r0, r5
+	bl	boss_exception_exit
+	svc_exit r5				@ return from exception
+#else
 	ldr	r2, [sp, #S_PSR]
 	svc_exit r2				@ return from exception
+#endif
  UNWIND(.fnend		)
 ENDPROC(__dabt_svc)
 
@@ -223,6 +230,10 @@ __irq_svc:
 #ifdef CONFIG_TRACE_IRQFLAGS
 	tst	r4, #PSR_I_BIT
 	bleq	trace_hardirqs_on
+#endif
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	mov	r0, r4
+	bl	boss_irq_exit
 #endif
 	svc_exit r4				@ return from exception
  UNWIND(.fnend		)
@@ -281,8 +292,15 @@ __und_svc:
 	@
 	@ restore SPSR and restart the instruction
 	@
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	ldr	r5, [sp, #S_PSR]
+	mov	r0, r5
+	bl	boss_exception_exit
+	svc_exit r5				@ return from exception
+#else
 	ldr	r2, [sp, #S_PSR]		@ Get SVC cpsr
 	svc_exit r2				@ return from exception
+#endif
  UNWIND(.fnend		)
 ENDPROC(__und_svc)
 
@@ -318,8 +336,15 @@ __pabt_svc:
 	@
 	@ restore SPSR and restart the instruction
 	@
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	ldr	r5, [sp, #S_PSR]
+	mov	r0, r5
+	bl	boss_exception_exit
+	svc_exit r5				@ return from exception
+#else
 	ldr	r2, [sp, #S_PSR]
 	svc_exit r2				@ return from exception
+#endif
  UNWIND(.fnend		)
 ENDPROC(__pabt_svc)
 

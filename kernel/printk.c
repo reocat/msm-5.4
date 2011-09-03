@@ -1666,8 +1666,8 @@ void kmsg_dump(enum kmsg_dump_reason reason)
  * Before we write a new console device. Let's export the symbols to pass to
  * other OS on the same memory bus to access Linux' log_buf.
  */
-void *boss_log_buf_ptr = &log_buf;
-void *boss_log_buf_len_ptr = &log_buf_len;
-void *boss_log_buf_last_ptr = &log_end;
+unsigned int boss_log_buf_ptr = (unsigned int) &log_buf;
+unsigned int boss_log_buf_len_ptr = (unsigned int) &log_buf_len;
+unsigned int boss_log_buf_last_ptr = (unsigned int) &log_end;
 
 #endif

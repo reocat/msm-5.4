@@ -18,9 +18,10 @@
  * Copyright (C) 2009-2010, Ambarella Inc.
  */
 
-#include <asm/mach-types.h>
 #include <asm/io.h>
+#include <mach/io.h>
 #include <mach/boss.h>
+#include <plat/ambcache.h>
 #include <linux/interrupt.h>
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/irq.h>
@@ -65,16 +66,16 @@ void ipc_send_irq(int type)
 
 	ipc_irq.stat.sent++;
 	if (irqno < 32) {
-		__amba_writel(VIC_SOFTEN_REG, 0x1 << irqno);
+		amba_writel(VIC_SOFTEN_REG, 0x1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__amba_writel(VIC2_SOFTEN_REG, 0x1 << (irqno - 32));
+		amba_writel(VIC2_SOFTEN_REG, 0x1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__amba_writel(VIC3_SOFTEN_REG, 0x1 << (irqno - 64));
+		amba_writel(VIC3_SOFTEN_REG, 0x1 << (irqno - 64));
 	}
 #endif
 	else {
@@ -97,16 +98,16 @@ void ipc_fake_irq(int type)
 
 #if USE_VIC_IRQ
 	if (irqno < 32) {
-		__amba_writel(VIC_SOFTEN_REG, 0x1 << irqno);
+		amba_writel(VIC_SOFTEN_REG, 0x1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__amba_writel(VIC2_SOFTEN_REG, 0x1 << (irqno - 32));
+		amba_writel(VIC2_SOFTEN_REG, 0x1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__amba_writel(VIC3_SOFTEN_REG, 0x1 << (irqno - 64));
+		amba_writel(VIC3_SOFTEN_REG, 0x1 << (irqno - 64));
 	}
 #endif
 	else {
@@ -114,7 +115,7 @@ void ipc_fake_irq(int type)
 	}
 #else	/* !USE_VIC_IRQ */
 #if (CHIP_REV == I1)
-	__amba_writel(AHB_SCRATCHPAD_REG(0x10),
+	amba_writel(AHB_SCRATCHPAD_REG(0x10),
 		0x1 << (irqno - AXI_SOFT_IRQ(0)));
 #else
 #error "GIC is only supported on i1!"
@@ -133,16 +134,16 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 
 #if USE_VIC_IRQ
 	if (irqno < 32) {
-		__amba_writel(VIC_SOFTEN_CLR_REG, 0x1 << irqno);
+		amba_writel(VIC_SOFTEN_CLR_REG, 0x1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__amba_writel(VIC2_SOFTEN_CLR_REG, 0x1 << (irqno - 32));
+		amba_writel(VIC2_SOFTEN_CLR_REG, 0x1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__amba_writel(VIC3_SOFTEN_CLR_REG, 0x1 << (irqno - 64));
+		amba_writel(VIC3_SOFTEN_CLR_REG, 0x1 << (irqno - 64));
 	}
 #endif
 	else {
@@ -150,7 +151,7 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 	}
 #else	/* !USE_VIC_IRQ */
 #if (CHIP_REV == I1)
-	__amba_writel(AHB_SCRATCHPAD_REG(0x14),
+	amba_writel(AHB_SCRATCHPAD_REG(0x14),
 		0x1 << (irqno - AXI_SOFT_IRQ(0)));
 #else
 #error "GIC is only supported on i1!"
@@ -185,16 +186,16 @@ void ipc_irq_enable(int type, int enabled)
 #if USE_VIC_IRQ
 		/* Sanitize the VIC line of the IRQ first */
 		if (irqno < 32) {
-			__amba_writel(VIC_SOFTEN_CLR_REG, 0x1 << irqno);
+			amba_writel(VIC_SOFTEN_CLR_REG, 0x1 << irqno);
 		}
 #if (VIC_INSTANCES >= 2)
 		else if (irqno < 64) {
-			__amba_writel(VIC2_SOFTEN_CLR_REG, 0x1 << (irqno - 32));
+			amba_writel(VIC2_SOFTEN_CLR_REG, 0x1 << (irqno - 32));
 		}
 #endif
 #if (VIC_INSTANCES >= 3)
 		else if (irqno < 96) {
-			__amba_writel(VIC3_SOFTEN_CLR_REG, 0x1 << (irqno - 64));
+			amba_writel(VIC3_SOFTEN_CLR_REG, 0x1 << (irqno - 64));
 		}
 #endif
 		else {
@@ -232,6 +233,9 @@ void ipc_irq_init(void)
 	printk (KERN_NOTICE "aipc: irq => l2i: %d %d, i2l: %d %d\n",
 		ipc_irq.irqno_uitron_req, ipc_irq.irqno_uitron_rly,
 		ipc_irq.irqno_linux_req, ipc_irq.irqno_linux_rly);
+
+	boss_set_irq_owner(ipc_irq.irqno_linux_req, BOSS_IRQ_OWNER_LINUX, 0);
+	boss_set_irq_owner(ipc_irq.irqno_linux_rly, BOSS_IRQ_OWNER_LINUX, 0);
 
 	/* Register IRQ to system and enable it */
 	rval = request_irq(ipc_irq.irqno_linux_req,

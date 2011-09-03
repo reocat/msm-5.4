@@ -48,6 +48,10 @@
 #include <mach/hardware.h>
 #include <plat/uart.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+#include <mach/boss.h>
+#endif
+
 /* ==========================================================================*/
 static void __serial_ambarella_enable_ms(struct uart_port *port)
 {
@@ -376,6 +380,8 @@ static int serial_ambarella_startup(struct uart_port *port)
 		UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET, (port_info->fcr |
 		UART_FC_XMITR | UART_FC_RCVRR));
+
+	boss_set_irq_owner(port->irq, BOSS_IRQ_OWNER_LINUX, 0);	
 	retval = request_irq(port->irq, serial_ambarella_irq,
 		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
 	amba_writel(port->membase + UART_IE_OFFSET, port_info->ier);
@@ -700,6 +706,7 @@ static int __devinit serial_ambarella_probe(struct platform_device *pdev)
 	}
 
 	port = (struct uart_port *)(pinfo->amba_port[pdev->id].port);
+
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	pinfo->amba_port[pdev->id].set_pll();
 #endif

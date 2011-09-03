@@ -63,7 +63,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #if (UART_INSTANCES >= 2)
 	&ambarella_uart1,
 #endif
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#ifdef CONFIG_MMC_AMBARELLA
 	&ambarella_sd0,
 #endif
 #ifdef CONFIG_AMBARELLA_STREAMMEM
@@ -84,7 +84,7 @@ static void __init ambarella_init_boss(void)
 	ambarella_init_machine("Boss");
 
 	if (use_bub_default) {
-
+#ifdef CONFIG_MMC_AMBARELLA
 		/* Config SD*/
 		ambarella_platform_sd_controller0.clk_limit = 25000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
@@ -114,6 +114,7 @@ static void __init ambarella_init_boss(void)
 		ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_8_BIT_DATA;
 
 		ambarella_platform_sd_controller0.slot[0].caps |= MMC_CAP_BUS_WIDTH_TEST;
+#endif
 #endif
 		platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 		for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {

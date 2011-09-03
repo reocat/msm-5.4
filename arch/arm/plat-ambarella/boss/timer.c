@@ -41,7 +41,7 @@
 #define AMBARELLA_TIMER_FREQ			(get_apb_bus_freq_hz())
 #define AMBARELLA_TIMER_RATING			(300)
 
-#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+#ifdef CONFIG_BOSS_MULTIPLE_CORE
 struct ambarella_timer_pm_info {
 	u32 timer_clk;
 	u32 timer_ctr_reg;
@@ -51,26 +51,65 @@ struct ambarella_timer_pm_info {
 	u32 timer_ce_match2_reg;
 };
 struct ambarella_timer_pm_info ambarella_timer_pm;
-#endif
+#endif	/* CONFIG_BOSS_MULTIPLE_CORE */
 
 /* ==========================================================================*/
-#ifdef CONFIG_PLAT_AMBARELLA_A5S_BOSS
-static irqreturn_t ambarella_timer_interrupt(int irq, void *dev_id)
+#ifdef CONFIG_BOSS_SINGLE_CORE
+
+static void boss_ce_timer_set_mode(enum clock_event_mode mode,
+	struct clock_event_device *evt)
 {
-	timer_tick();
+	switch (mode) {
+	case CLOCK_EVT_MODE_PERIODIC:
+		break;
+	case CLOCK_EVT_MODE_ONESHOT:
+		break;
+	case CLOCK_EVT_MODE_UNUSED:
+	case CLOCK_EVT_MODE_SHUTDOWN:
+		break;
+	case CLOCK_EVT_MODE_RESUME:
+		break;
+	}
+}
+
+static int boss_ce_timer_set_next_event(unsigned long delta,
+	struct clock_event_device *dev)
+{
+	if ((delta == 0) || (delta > 0xFFFFFFFF))
+		return -ETIME;
+
+	return 0;
+}
+
+static struct clock_event_device boss_clkevt = {
+	.name		= "boss-clkevt",
+	.features	= CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
+	.shift		= 32,
+	.rating		= AMBARELLA_TIMER_RATING,
+	.cpumask	= cpu_all_mask,
+	.set_next_event	= boss_ce_timer_set_next_event,
+	.set_mode	= boss_ce_timer_set_mode,
+	.mode		= CLOCK_EVT_MODE_UNUSED,
+	.irq		= BOSS_VIRT_TIMER_INT_VEC,
+};
+
+static irqreturn_t boss_ce_timer_interrupt(int irq, void *dev_id)
+{
+	boss_clkevt.event_handler(&boss_clkevt);
 
 	return IRQ_HANDLED;
 }
 
-static struct irqaction ambarella_timer_irq = {
-	.name		= "BOSS Timer Tick",
+static struct irqaction boss_ce_timer_irq = {
+	.name		= "boss-ce-timer",
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_TRIGGER_RISING,
-	.handler	= ambarella_timer_interrupt,
+	.handler	= boss_ce_timer_interrupt,
 };
-#endif
+
+#endif	/* CONFIG_BOSS_SINGLE_CORE */
 
 /* ==========================================================================*/
-#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+#ifdef CONFIG_BOSS_MULTIPLE_CORE
 #define AMBARELLA_CE_TIMER_STATUS_REG	TIMER4_STATUS_REG
 #define AMBARELLA_CE_TIMER_RELOAD_REG	TIMER4_RELOAD_REG
 #define AMBARELLA_CE_TIMER_MATCH1_REG	TIMER4_MATCH1_REG
@@ -178,20 +217,26 @@ static struct irqaction ambarella_ce_timer_irq = {
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_TRIGGER_RISING,
 	.handler	= ambarella_ce_timer_interrupt,
 };
-#endif
+#endif	/* CONFIG_BOSS_MULTIPLE_CORE */
 
 /* ==========================================================================*/
 static void ambarella_timer_init(void)
 {
-#ifdef CONFIG_PLAT_AMBARELLA_A5S_BOSS
-	setup_irq(BOSS_VIRT_TIMER_INT_VEC, &ambarella_timer_irq);
-#endif
-
 #ifdef CONFIG_LOCAL_TIMERS
 	twd_base = __io(AMBARELLA_VA_PT_WD_BASE);
 #endif
 
-#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	boss_set_irq_owner(BOSS_VIRT_TIMER_INT_VEC, BOSS_IRQ_OWNER_LINUX, 0);
+	setup_irq(boss_clkevt.irq, &boss_ce_timer_irq);
+	boss_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
+		NSEC_PER_SEC, boss_clkevt.shift);
+	boss_clkevt.max_delta_ns = clockevent_delta2ns(0xffffffff, &boss_clkevt);
+	boss_clkevt.min_delta_ns = clockevent_delta2ns(1, &boss_clkevt);
+	clockevents_register_device(&boss_clkevt);
+#endif
+
+#ifdef CONFIG_BOSS_MULTIPLE_CORE
 	setup_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
 	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
 		NSEC_PER_SEC, ambarella_clkevt.shift);
@@ -209,7 +254,7 @@ struct sys_timer ambarella_timer = {
 
 u32 ambarella_timer_suspend(u32 level)
 {
-#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+#ifdef CONFIG_BOSS_MULTIPLE_CORE
 	u32					timer_ctr_mask;
 
 	ambarella_timer_pm.timer_ctr_reg = amba_readl(TIMER_CTR_REG);
@@ -235,7 +280,7 @@ u32 ambarella_timer_suspend(u32 level)
 
 u32 ambarella_timer_resume(u32 level)
 {
-#ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
+#ifdef CONFIG_BOSS_MULTIPLE_CORE
 	u32					timer_ctr_mask;
 
 	timer_ctr_mask = AMBARELLA_CE_TIMER_CTR_MASK;

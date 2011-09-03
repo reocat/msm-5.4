@@ -21,6 +21,7 @@
 
 #ifdef __KERNEL__
 
+#include <linux/aipc/aipc_struct.h>
 #include <linux/time.h>
 #include <linux/types.h>
 #include <linux/mutex.h>
@@ -181,51 +182,6 @@ extern void ambarella_ipc_free(void *);
 
 struct CLIENT;
 
-struct ipcbuf_stat_s
-{
-	unsigned int size;
-	unsigned int head;
-	unsigned int tail;
-};
-
-struct ipccall_stat_s
-{
-	unsigned int max;	/* maximium time */
-	unsigned int min;	/* minimal time */
-	unsigned int total;	/* total time */
-	unsigned int slow;	/* slow count */
-
-	unsigned int xid;	/* maximium time: xid */
-	unsigned int pid;	/* maximium time: pid */
-	unsigned int fid;	/* maximium time: fid */
-};
-
-struct ipcprog_stat_s
-{
-	unsigned int invocations;
-	unsigned int success;
-	unsigned int failure;
-
-	struct ipccall_stat_s req;
-	struct ipccall_stat_s rsp;
-	struct ipccall_stat_s wakeup;
-	struct ipccall_stat_s call;
-};
-
-struct ipcstat_s
-{
-	struct ipcbuf_stat_s clnt_outgoing;
-	struct ipcbuf_stat_s clnt_incoming;
-	struct ipcbuf_stat_s svc_incoming;
-	struct ipcbuf_stat_s svc_outgoing;
-
-	struct ipcprog_stat_s uitron_prog;
-	struct ipcprog_stat_s linux_prog;
-
-	unsigned int next_xid;
-	unsigned int timescale;
-};
-
 /*
  * Service transport - used for holding an IPC transaction.
  *
@@ -285,53 +241,11 @@ typedef struct SVCXPRT
 #define SVCXPRT_HEAD_SIZE	offsetof(SVCXPRT,u)
 #define SVCXPRT_ALIGNED_SIZE    ((sizeof(SVCXPRT) + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK)
 
-/*
- * IPC binder buffer.
- */
-#define IPC_BINDER_MSG_BUFSIZE_BITS	4
-#define IPC_BINDER_MSG_BUFSIZE_MASK	((1 << IPC_BINDER_MSG_BUFSIZE_BITS) - 1)
-#define IPC_BINDER_MSG_BUFSIZE		(1 << IPC_BINDER_MSG_BUFSIZE_BITS)
-#define IPC_BINDER_SVCXPRT_BUF_SIZE	(SVCXPRT_ALIGNED_SIZE * (IPC_BINDER_MSG_BUFSIZE - 1))
-
 #define IPC_CMD_QUEUE_PTR_NEXT(ptr)	(((ptr) + 1) & IPC_BINDER_MSG_BUFSIZE_MASK)
 #define IPC_CMD_QUEUE_IS_FULL(head, tail)	(IPC_CMD_QUEUE_PTR_NEXT(tail) == head)
 #define IPC_CMD_QUEUE_NOT_FULL(head, tail)	(IPC_CMD_QUEUE_PTR_NEXT(tail) != head)
 #define IPC_CMD_QUEUE_NOT_EMPTY(head, tail)	(head != tail)
 
-struct ipc_buf_s
-{
-	/* Cicular buffers */
-	SVCXPRT *svc_incoming[IPC_BINDER_MSG_BUFSIZE];
-	SVCXPRT *svc_outgoing[IPC_BINDER_MSG_BUFSIZE];
-	SVCXPRT *clnt_outgoing[IPC_BINDER_MSG_BUFSIZE];
-	SVCXPRT *clnt_incoming[IPC_BINDER_MSG_BUFSIZE];
-
-	/* Index to circular buffers */
-	unsigned int svc_in_head;
-	unsigned int svc_in_tail;
-	unsigned int svc_out_head;
-	unsigned int svc_out_tail;
-	unsigned int clnt_out_head;
-	unsigned int clnt_out_tail;
-	unsigned int clnt_in_head;
-	unsigned int clnt_in_tail;
-
-	/* Spinlock for buffers */
-	int svc_in_lock;
-	int svc_out_lock;
-	int clnt_out_lock;
-	int clnt_in_lock;
-
-	/* SVCXPRT spinlocks for Linux */
-	unsigned int linux_svcxprt_lock_start;
-	unsigned int linux_svcxprt_num;
-
-	int lock;
-	unsigned int ipc_xid;
-
-	struct ipcstat_s ipcstat;
-
-};
 /*
  * Request for client.
  */

@@ -101,6 +101,8 @@ static void ipc_mutex_irq_enable(int irqno, irqreturn_t (*handler)(int, void *))
 {
 	int rval;
 
+	boss_set_irq_owner(irqno, BOSS_IRQ_OWNER_LINUX, 0);
+
 	/* Sanitize the VIC line of the IRQ first */
 	ipc_mutex_irq_clear(irqno);
 
@@ -125,22 +127,22 @@ static void ipc_mutex_irq_clear(int irqno)
 {
 	if (G_mutex->irqno_use_cortex_sw_int) {
 #if (CHIP_REV == I1)
-		__amba_writel(AHB_SCRATCHPAD_REG(0x14), 1 << irqno);
+		amba_writel(AHB_SCRATCHPAD_REG(0x14), 1 << irqno);
 #endif
 	}
 	else
 	{
 		if (irqno < 32) {
-			__amba_writel(VIC_SOFTEN_CLR_REG, 1 << irqno);
+			amba_writel(VIC_SOFTEN_CLR_REG, 1 << irqno);
 		}
 #if (VIC_INSTANCES >= 2)
 		else if (irqno < 64) {
-			__amba_writel(VIC2_SOFTEN_CLR_REG, 1 << (irqno - 32));
+			amba_writel(VIC2_SOFTEN_CLR_REG, 1 << (irqno - 32));
 		}
 #endif
 #if (VIC_INSTANCES >= 3)
 		else if (irqno < 96) {
-			__amba_writel(VIC3_SOFTEN_CLR_REG, 1 << (irqno - 64));
+			amba_writel(VIC3_SOFTEN_CLR_REG, 1 << (irqno - 64));
 		}
 #endif
 		else {
@@ -157,16 +159,16 @@ static void ipc_mutex_irq_send(int irqno)
 	DEBUG_MSG_MUTEX ("ipc: mutex: issue wakeup irq\n");
 
 	if (irqno < 32) {
-		__amba_writel(VIC_SOFTEN_REG, 1 << irqno);
+		amba_writel(VIC_SOFTEN_REG, 1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__amba_writel(VIC2_SOFTEN_REG, 1 << (irqno - 32));
+		amba_writel(VIC2_SOFTEN_REG, 1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__amba_writel(VIC3_SOFTEN_REG, 1 << (irqno - 64));
+		amba_writel(VIC3_SOFTEN_REG, 1 << (irqno - 64));
 	}
 #endif
 	else {

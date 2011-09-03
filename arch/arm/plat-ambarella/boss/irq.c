@@ -359,7 +359,9 @@ static void ambarella_enable_irq(struct irq_data *d)
 	AMBARELLA_VIC_IRQ2BASE();
 
 	local_irq_save(flags);
-	amba_writel(vic_base + VIC_INTEN_OFFSET, 0x1 << irq);
+	if (boss && !boss->guest_irq_mask) {
+		amba_writel(vic_base + VIC_INTEN_OFFSET, 0x1 << irq);
+	}
 	local_irq_restore(flags);
 }
 
@@ -657,6 +659,8 @@ void __init ambarella_init_irq_a5s(void)
 		set_irq_flags(VIC3_INT_VEC(i), IRQF_VALID);
 	}
 #endif
+
+	boss_set_ready(1);
 
 }
 #endif

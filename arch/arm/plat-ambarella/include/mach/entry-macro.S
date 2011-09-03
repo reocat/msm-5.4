@@ -62,6 +62,32 @@
 		.endm
 
 		.macro	arch_ret_to_user, tmp1, tmp2
+#ifdef CONFIG_BOSS_SINGLE_CORE
+		stmfd	sp!, {r0-r2}
+		mrs	r0, spsr
+		tst	r0, #128				@ IRQ mask
+		bne	1f
+
+		ldr	r0, =boss
+		ldr	r0, [r0]
+
+		ldr	r1, [r0, #BOSS_VIC1MASK_OFFSET]
+		ldr	r2, [r0, #BOSS_GUEST_VIC1_EN_OFFSET]
+		and	r1, r1, r2
+		ldr	r2, =VIC_BASE
+		str	r1, [r2, #VIC_INTEN_OFFSET]
+
+		ldr	r1, [r0, #BOSS_VIC2MASK_OFFSET]
+		ldr	r2, [r0, #BOSS_GUEST_VIC2_EN_OFFSET]
+		and	r1, r1, r2
+		ldr	r2, =VIC2_BASE
+		str	r1, [r2, #VIC_INTEN_OFFSET]
+
+		mov	r1, #0
+		str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
+1:
+		ldmfd	sp!, {r0-r2}
+#endif
 		.endm
 
 #ifdef CONFIG_BOSS_SINGLE_CORE
