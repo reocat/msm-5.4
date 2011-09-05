@@ -108,8 +108,6 @@ void __fio_select_lock(int module)
 	if (module != SELECT_FIO_SDIO) {
 		//SMIO_38 ~ SMIO_43
 		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
-		//amba_setbitsl(GPIO2_MASK_REG, 0x000007e0);
-		//amba_clrbitsl(GPIO2_DIR_REG, 0x000007e0);
 	}
 #endif
 
@@ -120,7 +118,6 @@ void __fio_select_lock(int module)
 	if (module == SELECT_FIO_SDIO) {
 		//SMIO_38 ~ SMIO_43
 		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
-		//amba_clrbitsl(GPIO2_MASK_REG, 0x000007e0);
 	}
 #endif
 }
@@ -357,6 +354,13 @@ int __init ambarella_init_fio(void)
 	amba_writel(XD_INT_REG, 0x0);
 	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
 #endif
+
+	//SMIO_38 ~ SMIO_43
+	amba_setbitsl(GPIO2_MASK_REG, 0x000007e0);
+	amba_clrbitsl(GPIO2_DIR_REG, 0x00000780);
+	amba_setbitsl(GPIO2_DIR_REG, 0x00000060);
+	amba_setbitsl(GPIO2_DATA_REG, 0x00000040);
+	amba_clrbitsl(GPIO2_DATA_REG, 0x00000020);
 
 	return 0;
 }

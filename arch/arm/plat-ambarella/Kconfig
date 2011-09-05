@@ -148,6 +148,10 @@ config PLAT_AMBARELLA_ADD_REGISTER_LOCK
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	bool
+	default n
+
 config PLAT_AMBARELLA_I1
 	bool
 	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
@@ -155,10 +159,6 @@ config PLAT_AMBARELLA_I1
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	select PLAT_AMBARELLA_SUPPORT_USB
 	select PLAT_AMBARELLA_SUPPORT_SATA
-	default n
-
-config PLAT_AMBARELLA_SUPPORT_I2C_MUX
-	bool
 	default n
 
 choice

@@ -35,7 +35,7 @@
 #include <plat/pm.h>
 #include <plat/pwm.h>
 #include <plat/rct.h>
-#include <plat/ambreglock.h>
+#include <plat/reglock.h>
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 #include <plat/cortex.h>
 #endif

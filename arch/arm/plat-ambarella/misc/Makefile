@@ -20,15 +20,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= ambsyncproc.o
 obj-y						+= ambasyncproc.o
+obj-y						+= ambcache.o
+obj-y						+= ambench.o
 obj-y						+= ambevent.o
+obj-y						+= ambfb.o
+obj-y						+= ambsyncproc.o
 obj-y						+= atag.o
+obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
 obj-y						+= board.o
 obj-y						+= event.o
-obj-y						+= ambcache.o
-obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
-obj-$(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)	+= ambreglock.o
 obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= highres_timer.o
 
