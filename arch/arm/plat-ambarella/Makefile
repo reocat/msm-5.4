@@ -32,6 +32,5 @@ endif
 ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
 obj-y						+= boss/
 obj-y						+= misc/
-obj-y						+= video/
 endif
 

@@ -20,37 +20,37 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= init.o
-obj-y						+= boss.o
-obj-y						+= irq.o
-obj-y						+= pm.o
-obj-y						+= timer.o
-
 obj-y						+= ../generic/adc.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ../generic/ahci.o
 obj-y						+= ../generic/audio.o
-obj-y						+= ../generic/clk.o
 obj-y						+= ../generic/crypto.o
 obj-y						+= ../generic/dma.o
 obj-y						+= ../generic/eth.o
 obj-y						+= ../generic/fio.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 obj-y						+= ../generic/gpio.o
 obj-y						+= ../generic/idc.o
+obj-y						+= init.o
 obj-y						+= ../generic/ir.o
-obj-y						+= ../generic/pwm.o
-obj-y						+= ../generic/rct.o
-obj-y						+= ../generic/rtc.o
-obj-y						+= ../generic/sd.o
-obj-y						+= ../generic/spi.o
-obj-y						+= ../generic/uart.o
-obj-y						+= ../generic/udc.o
-obj-y						+= ../generic/wdt.o
+obj-y						+= irq.o
 ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
 obj-y						+= ../generic/pll_hal.o
 else
 obj-y						+= ../generic/pll_rct.o
 endif
+obj-y						+= pm.o
+obj-y						+= ../generic/pwm.o
+obj-y						+= ../generic/rct.o
+obj-$(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)	+= ../generic/reglock.o
+obj-y						+= ../generic/rtc.o
+obj-y						+= ../generic/sd.o
+obj-y						+= ../generic/spi.o
+obj-y						+= timer.o
+obj-y						+= ../generic/uart.o
+obj-y						+= ../generic/udc.o
+obj-y						+= ../generic/wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= ../generic/uhc.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ../generic/ahci.o
 
 obj-y						+= ../generic/adb.o
 
+obj-y						+= boss.o
