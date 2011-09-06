@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 149721
+ * @version 153372
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -821,9 +821,9 @@ AMB_DIGITAL_GAMMA_MODE_RESERVED=0xffffffff
  */
 
 typedef struct {
-/** Sensor resolution */
+/** Sensor resolution (capture) */
 amb_vidcap_window_size_t vidcap_size ;
-/** Sensor resolution (capture)/Output resolution (playback) ::amb_performance_t */
+/** Output resolution (playback) ::amb_performance_t */
 unsigned int performance ;
 /** Operating mode ::amb_mode_t */
 unsigned int mode ;
