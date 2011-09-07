@@ -54,6 +54,8 @@
 #include <linux/mfd/wm831x/pdata.h>
 #include "board-device.h"
 
+#include <linux/rfkill-gpio.h>
+
 /* ==========================================================================*/
 #include <linux/pda_power.h>
 /* DCDC1: iOne_VDDAX for Cortex and 3D */
@@ -537,6 +539,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_dummy_codec0,
 	&ambarella_sd0,
 	&ambarella_sd1,
+	&ambarella_uart1,  //for BT
 	&ambarella_uart2,
 	&ambarella_udc0,
 	&ambarella_fsg_device0,
@@ -759,6 +762,29 @@ struct platform_device boss_board_input = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+
+// for BT
+static struct rfkill_gpio_platform_data boss_board_bt_info = {
+	.name		= "bt-gpio",
+	.reset_gpio	= GPIO(190),
+	.shutdown_gpio	= -1,
+	.type		= RFKILL_TYPE_BLUETOOTH,
+};
+
+static struct platform_device boss_bt_rfkill = {
+	.name		= "rfkill_gpio",
+	.id		= -1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &boss_board_bt_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+
+
 
 /* ==========================================================================*/
 #if 0
@@ -992,6 +1018,8 @@ static void __init ambarella_init_boss(void)
 	}
 
 	platform_device_register(&boss_board_input);
+	platform_device_register(&boss_bt_rfkill);  // for BT
+	
 }
 
 /* ==========================================================================*/
