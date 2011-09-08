@@ -63,7 +63,8 @@ X-C-y +=	$(IPCDIR)/defs/i_util.x \
 		$(IPCDIR)/defs/i_ffs.x \
 		$(IPCDIR)/defs/i_fifo.x \
 		$(IPCDIR)/defs/i_sdresp.x \
-		$(IPCDIR)/defs/i_host_dsp.x
+		$(IPCDIR)/defs/i_host_dsp.x \
+		$(IPCDIR)/defs/i_vout.x
 
 
 ifeq ($(CONFIG_FB_DSP_CMD),y)
