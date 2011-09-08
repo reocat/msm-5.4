@@ -65,16 +65,16 @@ void ipc_send_irq(int type)
 
 	ipc_irq.stat.sent++;
 	if (irqno < 32) {
-		__raw_writel(0x1 << irqno, VIC_SOFTEN_REG);
+		__amba_writel(VIC_SOFTEN_REG, 0x1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_REG);
+		__amba_writel(VIC2_SOFTEN_REG, 0x1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_REG);
+		__amba_writel(VIC3_SOFTEN_REG, 0x1 << (irqno - 64));
 	}
 #endif
 	else {
@@ -97,16 +97,16 @@ void ipc_fake_irq(int type)
 
 #if USE_VIC_IRQ
 	if (irqno < 32) {
-		__raw_writel(0x1 << irqno, VIC_SOFTEN_REG);
+		__amba_writel(VIC_SOFTEN_REG, 0x1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_REG);
+		__amba_writel(VIC2_SOFTEN_REG, 0x1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_REG);
+		__amba_writel(VIC3_SOFTEN_REG, 0x1 << (irqno - 64));
 	}
 #endif
 	else {
@@ -114,8 +114,8 @@ void ipc_fake_irq(int type)
 	}
 #else	/* !USE_VIC_IRQ */
 #if (CHIP_REV == I1)
-	__raw_writel(
-	       0x1 << (irqno - AXI_SOFT_IRQ(0)), AHB_SCRATCHPAD_REG(0x10));
+	__amba_writel(AHB_SCRATCHPAD_REG(0x10),
+		0x1 << (irqno - AXI_SOFT_IRQ(0)));
 #else
 #error "GIC is only supported on i1!"
 #endif
@@ -133,16 +133,16 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 
 #if USE_VIC_IRQ
 	if (irqno < 32) {
-		__raw_writel(0x1 << irqno, VIC_SOFTEN_CLR_REG);
+		__amba_writel(VIC_SOFTEN_CLR_REG, 0x1 << irqno);
 	}
 #if (VIC_INSTANCES >= 2)
 	else if (irqno < 64) {
-		__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_CLR_REG);
+		__amba_writel(VIC2_SOFTEN_CLR_REG, 0x1 << (irqno - 32));
 	}
 #endif
 #if (VIC_INSTANCES >= 3)
 	else if (irqno < 96) {
-		__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_CLR_REG);
+		__amba_writel(VIC3_SOFTEN_CLR_REG, 0x1 << (irqno - 64));
 	}
 #endif
 	else {
@@ -150,7 +150,8 @@ static irqreturn_t ipc_irq_handler(int irqno, void *args)
 	}
 #else	/* !USE_VIC_IRQ */
 #if (CHIP_REV == I1)
-	__raw_writel (0x1 << (irqno - AXI_SOFT_IRQ(0)), AHB_SCRATCHPAD_REG(0x14));
+	__amba_writel(AHB_SCRATCHPAD_REG(0x14),
+		0x1 << (irqno - AXI_SOFT_IRQ(0)));
 #else
 #error "GIC is only supported on i1!"
 #endif
@@ -184,16 +185,16 @@ void ipc_irq_enable(int type, int enabled)
 #if USE_VIC_IRQ
 		/* Sanitize the VIC line of the IRQ first */
 		if (irqno < 32) {
-			__raw_writel(0x1 << irqno, VIC_SOFTEN_CLR_REG);
+			__amba_writel(VIC_SOFTEN_CLR_REG, 0x1 << irqno);
 		}
 #if (VIC_INSTANCES >= 2)
 		else if (irqno < 64) {
-			__raw_writel(0x1 << (irqno - 32), VIC2_SOFTEN_CLR_REG);
+			__amba_writel(VIC2_SOFTEN_CLR_REG, 0x1 << (irqno - 32));
 		}
 #endif
 #if (VIC_INSTANCES >= 3)
 		else if (irqno < 96) {
-			__raw_writel(0x1 << (irqno - 64), VIC3_SOFTEN_CLR_REG);
+			__amba_writel(VIC3_SOFTEN_CLR_REG, 0x1 << (irqno - 64));
 		}
 #endif
 		else {

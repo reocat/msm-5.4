@@ -190,7 +190,7 @@ u32 ipc_tick_get(void)
 	u32 ticks;
 
 #if CONFIG_IPC_TIMER_PROFILE
-	ticks = readl(CONFIG_IPC_TIMER_STATUS_REG);
+	ticks = amba_readl(CONFIG_IPC_TIMER_STATUS_REG);
 #else
 	ticks = 0;
 #endif
