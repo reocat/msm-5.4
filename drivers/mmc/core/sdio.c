@@ -26,7 +26,7 @@
 #include "sdio_ops.h"
 #include "sdio_cis.h"
 
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
 #include <linux/mmc/sdio_ids.h>
 #endif
 
@@ -446,8 +446,11 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 
 		goto finish;
 	}
+#ifdef CONFIG_TIWLAN_SDIO
+		card->quirks = host->embedded_sdio_data.quirks;
+#endif
 
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
 	if (host->embedded_sdio_data.cccr)
 		memcpy(&card->cccr, host->embedded_sdio_data.cccr, sizeof(struct sdio_cccr));
 	else {
@@ -458,11 +461,11 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 		err = sdio_read_cccr(card);
 		if (err)
 			goto remove;
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
 	}
 #endif
 
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
 	if (host->embedded_sdio_data.cis)
 		memcpy(&card->cis, host->embedded_sdio_data.cis, sizeof(struct sdio_cis));
 	else {
@@ -473,7 +476,7 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 		err = sdio_read_common_cis(card);
 		if (err)
 			goto remove;
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
 	}
 #endif
 
@@ -809,7 +812,13 @@ int mmc_attach_sdio(struct mmc_host *host)
 	 * Initialize (but don't add) all present functions.
 	 */
 	for (i = 0; i < funcs; i++, card->sdio_funcs++) {
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+		
+		printk(KERN_WARNING "%s:attach sdio array 1 \r\n",mmc_hostname(host));
+
+		
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
+
+
 		if (host->embedded_sdio_data.funcs) {
 			struct sdio_func *tmp;
 
@@ -827,7 +836,8 @@ int mmc_attach_sdio(struct mmc_host *host)
 			err = sdio_init_func(host->card, i + 1);
 			if (err)
 				goto remove;
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
+
 		}
 #endif
 		/*

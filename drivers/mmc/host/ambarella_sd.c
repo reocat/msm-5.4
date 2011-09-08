@@ -1572,12 +1572,25 @@ ambarella_sd_request_exit:
 
 	mmc_request_done(mmc, mrq);
 }
+#ifdef CONFIG_TIWLAN_SDIO
+static int ambarella_sd_get_cd(struct mmc_host *mmc)
+{
+	struct ambarella_sd_mmc_info *host = mmc_priv(mmc);
 
+	if (!host->plat_info->card_detect)
+		return -ENOSYS;
+	return host->plat_info->card_detect(NULL, host->slot_id);
+}
+#endif
 static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.request	= ambarella_sd_request,
 	.set_ios	= ambarella_sd_ios,
 	.get_ro		= ambarella_sd_get_ro,
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
+	
+#ifdef CONFIG_TIWLAN_SDIO
+	.get_cd = ambarella_sd_get_cd,
+#endif
 };
 
 static int ambarella_sd_system_event(struct notifier_block *nb,
@@ -1612,6 +1625,32 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 
 	return errorCode;
 }
+#ifdef CONFIG_TIWLAN_SDIO
+static void ambarella_hsmmc_status_notify_cb(int card_present, void *dev_id)
+{
+
+       struct ambarella_sd_mmc_info *device = dev_id;
+       struct ambarella_sd_slot *slot = device->plat_info;
+       int carddetect;
+
+       printk(KERN_NOTICE "%s %s : card_present %d\n", mmc_hostname(slot->pmmc_host),__func__,card_present);
+
+       carddetect = slot->card_detect(0, 0);
+
+//       sysfs_notify(&host->mmc->class_dev.kobj, NULL, "cover_switch"); 
+#if 0
+	if (carddetect)
+		mmc_detect_change(slot->pmmc_host, (HZ * 200) / 1000);
+	else
+		mmc_detect_change(slot->pmmc_host, (HZ * 50) / 1000);
+#endif	
+	if (carddetect)
+		mmc_detect_change(slot->pmmc_host, slot->cd_delay);
+	else
+		mmc_detect_change(slot->pmmc_host, slot->cd_delay);
+
+}
+#endif
 
 /* ==========================================================================*/
 static int __devinit ambarella_sd_probe(struct platform_device *pdev)
@@ -1626,6 +1665,10 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	u32					hc_cap = 0;
 	u32					i;
 	u32					clock_min;
+#ifdef CONFIG_TIWLAN_SDIO
+struct ambarella_sd_slot * tristan_plat_info;
+#endif
+
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
@@ -1930,6 +1973,25 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			ambsd_err(pslotinfo, "Can't add mmc host!\n");
 			goto sd_errorCode_remove_host;
 		}
+#ifdef CONFIG_TIWLAN_SDIO
+
+		if(pdev->id == 0 && i==0){//controller =0 && slot=0
+		tristan_plat_info = &(pinfo->pcontroller->slot[i]);
+		mmc_set_embedded_sdio_data(pslotinfo->plat_info->pmmc_host,
+		&tristan_plat_info->embedded_sdio->cis,
+		&tristan_plat_info->embedded_sdio->cccr,
+		tristan_plat_info->embedded_sdio->funcs,
+		tristan_plat_info->embedded_sdio->quirks);
+		if (pslotinfo->plat_info->register_status_notify)
+			{
+			printk(KERN_NOTICE "%s: register notifyCB for notify function \n", 
+				mmc_hostname(pinfo->pslotinfo[i]->mmc));
+				pinfo->pslotinfo[i]->plat_info->register_status_notify(ambarella_hsmmc_status_notify_cb, pslotinfo);
+			}
+
+		}
+#endif
+
 	}
 
 	dev_notice(&pdev->dev,

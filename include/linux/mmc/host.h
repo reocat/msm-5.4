@@ -15,6 +15,16 @@
 
 #include <linux/mmc/core.h>
 #include <linux/mmc/pm.h>
+#ifdef CONFIG_TIWLAN_SDIO
+#include <linux/mmc/card.h>
+#endif
+
+#ifdef CONFIG_TIWLAN_SDIO
+int omap_wifi_status_register(void (*callback)(int card_present,
+        void *dev_id), void *dev_id);
+int omap_wifi_status(struct device *dev, int slot);
+#endif
+
 
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
@@ -247,13 +257,26 @@ struct mmc_host {
 
 	struct dentry		*debugfs_root;
 
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#ifdef CONFIG_TIWLAN_SDIO
 	struct {
-		struct sdio_cis			*cis;
-		struct sdio_cccr		*cccr;
-		struct sdio_embedded_func	*funcs;
-		int				num_funcs;
+		struct sdio_cis         *cis;
+		struct sdio_cccr	*cccr;
+		struct sdio_embedded_func   *funcs;
+		unsigned int quirks;    /* embedded sdio card quirks */
+#define MMC_QUIRK_VDD_165_195  (1<<0)  /* do not ignore MMC_VDD_165_195 */
+#define MMC_QUIRK_LENIENT_FUNC0  (1<<1)
+	/* allow SDIO FN0 writes outside of VS CCCR */
 	} embedded_sdio_data;
+
+#else
+	#ifdef CONFIG_MMC_EMBEDDED_SDIO
+		struct {
+			struct sdio_cis			*cis;
+			struct sdio_cccr		*cccr;
+			struct sdio_embedded_func	*funcs;		
+			int				num_funcs;
+		} embedded_sdio_data;
+	#endif
 #endif
 
 	unsigned long		private[0] ____cacheline_aligned;
@@ -264,12 +287,21 @@ extern int mmc_add_host(struct mmc_host *);
 extern void mmc_remove_host(struct mmc_host *);
 extern void mmc_free_host(struct mmc_host *);
 
-#ifdef CONFIG_MMC_EMBEDDED_SDIO
-extern void mmc_set_embedded_sdio_data(struct mmc_host *host,
-				       struct sdio_cis *cis,
-				       struct sdio_cccr *cccr,
-				       struct sdio_embedded_func *funcs,
-				       int num_funcs);
+#ifdef CONFIG_TIWLAN_SDIO 
+void mmc_set_embedded_sdio_data(struct mmc_host *host,
+       struct sdio_cis *cis,
+	struct sdio_cccr *cccr,
+       struct sdio_embedded_func *funcs,
+	unsigned int quirks);
+
+#else 
+	#ifdef CONFIG_MMC_EMBEDDED_SDIO
+	extern void mmc_set_embedded_sdio_data(struct mmc_host *host,
+						   struct sdio_cis *cis,
+						   struct sdio_cccr *cccr,
+						   struct sdio_embedded_func *funcs,
+						   int num_funcs);
+	#endif
 #endif
 
 static inline void *mmc_priv(struct mmc_host *host)

@@ -50,13 +50,86 @@
 #include <linux/mmc/host.h>
 
 #include "board-device.h"
+#ifdef CONFIG_TIWLAN_SDIO
+#include <linux/mmc/sdio_ids.h>
+#include <linux/mmc/sdio_func.h>
+#include <plat/sd.h>
+#include <linux/wl12xx.h>
+#endif
+#ifdef CONFIG_TI_ST
+#include <linux/ti_wilink_st.h>
+#endif
 
 #include <linux/rfkill-gpio.h>
 
 #include <linux/mfd/wm831x/pdata.h>
 /* ==========================================================================*/
 #include <linux/pda_power.h>
+#ifdef CONFIG_TIWLAN_SDIO
 
+static struct sdio_embedded_func wifi_func_array[] = {
+	{
+		.f_class        = SDIO_CLASS_NONE,
+		.f_maxblksize   = 512,
+	},
+	{
+		.f_class        = SDIO_CLASS_WLAN,
+		.f_maxblksize   = 512,
+	},
+};
+
+static struct embedded_sdio_data omap_wifi_emb_data = {
+	.cis    = {
+		.vendor         = SDIO_VENDOR_ID_TI,
+		.device         = SDIO_DEVICE_ID_TI_WL12xx,
+		.blksize        = 512,
+		.max_dtr        = 48000000,
+	},
+	.cccr   = {
+		.multi_block	= 1,
+		.low_speed	= 0,
+		.wide_bus	= 1,
+		.high_power	= 0,
+		.high_speed	= 1,
+		.disable_cd	= 1,
+	},
+	.funcs  = wifi_func_array,
+	.quirks = MMC_QUIRK_VDD_165_195 | MMC_QUIRK_LENIENT_FUNC0,
+};
+#endif
+#ifdef CONFIG_TI_ST
+int plat_kim_suspend(struct platform_device *pdev, pm_message_t state)
+{ 
+    return 0;
+}
+ 
+int plat_kim_resume(struct platform_device *pdev)
+{
+    return 0;
+}
+
+/* wl128x BT, FM, GPS connectivity chip */
+struct ti_st_plat_data wilink_pdata = {
+	// OMAP4430 use GPIO55 to control BT_EN pin, please check which GPIO mapping for WL128X BT_EN pin.
+	.nshutdown_gpio = GPIO(4),
+	// OMAP4430 UART2's system node is /dev/ttyO1, please check which UART port mapping for WL128X in the platform.
+	.dev_name = "/dev/ttyS1", //ambarella ttyS1
+	.flow_cntrl = 1,
+	.baud_rate = 115200,
+	.suspend = plat_kim_suspend,
+	.resume = plat_kim_resume,
+};
+static struct platform_device wl128x_device = {
+	.name		= "kim",
+	.id		= -1,
+	.dev.platform_data = &wilink_pdata,
+};
+static struct platform_device btwilink_device = {
+	.name = "btwilink",
+	.id = -1,
+};
+
+#endif
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
@@ -90,6 +163,11 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_udc0,
 	&ambarella_wdt0,
 	&ambarella_fsg_device0,
+#ifdef CONFIG_TI_ST
+/* TI sample code origin register of WL128X BT, FM, GPS */	
+	&wl128x_device,
+	&btwilink_device,
+#endif	
 	&ambarella_usb_device0,
 };
 
@@ -589,9 +667,18 @@ static void __init ambarella_init_elephant(void)
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;
 
 		fio_default_owner = SELECT_FIO_SDIO;
+#ifdef CONFIG_TIWLAN_SDIO
+		//because Ione chip is too far away from TI chip on bub board ,TI sdio is not stable in this case .;
+		ambarella_platform_sd_controller0.clk_limit = 2000000;//24000000 
+#else		
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
+#endif
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+#ifdef CONFIG_TIWLAN_SDIO
+		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_256KB;//SD_BLK_SZ_128KB;
+#else
 		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+#endif
 		ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
@@ -599,6 +686,13 @@ static void __init ambarella_init_elephant(void)
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 		ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+
+#ifdef CONFIG_TIWLAN_SDIO
+		ambarella_platform_sd_controller0.slot[0].embedded_sdio = &omap_wifi_emb_data;
+		ambarella_platform_sd_controller0.slot[0].register_status_notify =&omap_wifi_status_register;
+		ambarella_platform_sd_controller0.slot[0].card_detect = &omap_wifi_status;
+		ambarella_platform_sd_controller1.slot[0].embedded_sdio = NULL;
+#endif
 		ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
 		ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
@@ -617,6 +711,36 @@ static void __init ambarella_init_elephant(void)
 		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
+		
+/*<-------------------------------------wl12xx start --------------------------------------------->*/		
+/*-->WiFi_EN  = GPIO2 WiFi_IRQ=GPIO3 BT_EN=GPIO4<--*/	
+#ifdef CONFIG_TIWLAN_SDIO
+		ambarella_board_generic.wifi_sd_bus = 0;
+		ambarella_board_generic.wifi_sd_slot = 0;
+		ambarella_board_generic.wifi_irq.irq_gpio = GPIO(3);
+		ambarella_board_generic.wifi_irq.irq_line = gpio_to_irq(3);
+		ambarella_board_generic.wifi_irq.irq_type = IRQF_TRIGGER_FALLING;
+		ambarella_board_generic.wifi_irq.irq_gpio_val = GPIO_LOW;
+		ambarella_board_generic.wifi_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+		
+		ambarella_board_generic.wifi_power.gpio_id = GPIO(2);
+		ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
+		ambarella_board_generic.wifi_power.active_delay = 300;				
+#endif
+#ifdef CONFIG_TI_ST
+		struct ambarella_gpio_io_info		BT_power;
+        BT_power.gpio_id = GPIO(4);
+		BT_power.active_level = GPIO_HIGH;
+		BT_power.active_delay = 1;
+
+		ambarella_set_gpio_output(&BT_power, 0);
+		mdelay(10);
+		ambarella_set_gpio_output(&BT_power, 1);		
+		mdelay(100);		
+		ambarella_set_gpio_output(&BT_power, 0);
+
+#endif		
+/*	<----------------------------------- wl12xxx end-------------------------------------------->*/
 		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
