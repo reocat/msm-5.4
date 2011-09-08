@@ -6,6 +6,13 @@ config SND_AMBARELLA_SOC
 	  the AMBARELLA I2S interface. You will also need
 	  to select the audio interfaces to support below.
 
+config NOT_USE_AMBARELLA_VIRTUAL_SOC
+	boolean "Not use IPC virtual sound soc"
+	depends on SND_AMBARELLA_SOC
+	default n
+	help
+	  Say Y if the device is not using virtual driver.
+
 config SND_AMBARELLA_SOC_I2S
 	tristate
 
@@ -45,7 +52,7 @@ config A5S_PA2_BOARD
 
 config I1EVK_BOARD
 	tristate "I1EVK Board [With WM8994 Codec]"
-	depends on SND_AMBARELLA_SOC && MACH_ELEPHANT
+	depends on SND_AMBARELLA_SOC && (MACH_ELEPHANT || (MACH_BOSS && SUPPORT_ANDROID_TT))
 	select SND_AMBARELLA_SOC_I2S
 	select SND_SOC_WM8994
 	help

@@ -741,7 +741,40 @@ void __init ambarella_init_irq_i1(void)
 	}
 #endif
 #endif
-
+#if defined(CONFIG_SUPPORT_ANDROID_TT)
+	/* Setup GPIO IRQs */
+	{
+	int j = 0;
+	for (j = 0; j < AMBGPIO_SIZE; j++) {
+		set_irq_chip(GPIO_INT_VEC(j), &ambarella_gpio_irq_chip);
+		set_irq_handler(GPIO_INT_VEC(j), handle_level_irq);
+		__clear_bit(j, ambarella_gpio_wakeup_bit);
+		set_irq_flags(GPIO_INT_VEC(j), IRQF_VALID);
+	}
+	}
+	set_irq_type(GPIO0_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO0_IRQ, ambarella_gpio_irq_handler);
+	set_irq_type(GPIO1_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO1_IRQ, ambarella_gpio_irq_handler);
+#if (GPIO_INSTANCES >= 3)
+#if (GPIO2_IRQ != GPIO1_IRQ)
+	set_irq_type(GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO2_IRQ, ambarella_gpio_irq_handler);
+#endif
+#endif
+#if (GPIO_INSTANCES >= 4)
+	set_irq_type(GPIO3_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO3_IRQ, ambarella_gpio_irq_handler);
+#endif
+#if (GPIO_INSTANCES >= 5)
+	set_irq_type(GPIO4_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO4_IRQ, ambarella_gpio_irq_handler);
+#endif
+#if (GPIO_INSTANCES >= 6)
+	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
+	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
+#endif
+#else
 	/* Setup SD CD GPIO IRQs */
 	set_irq_chip(GPIO_INT_VEC(67), &ambarella_gpio_irq_chip);
 	set_irq_handler(GPIO_INT_VEC(67), handle_level_irq);
@@ -765,6 +798,7 @@ void __init ambarella_init_irq_i1(void)
 
 	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
+#endif
 }
 #endif
 

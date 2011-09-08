@@ -39,6 +39,9 @@
 
 #include <mach/hardware.h>
 #include <plat/idc.h>
+#if defined(CONFIG_AMBARELLA_IPC)
+#include <linux/aipc/ipc_mutex.h>
+#endif
 
 #ifndef CONFIG_I2C_AMBARELLA_RETRIES
 #define CONFIG_I2C_AMBARELLA_RETRIES		(3)
@@ -429,7 +432,10 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	pinfo = (struct ambarella_i2c_dev_info *)i2c_get_adapdata(adap);
 
 	down(&pinfo->system_event_sem);
-
+#if defined(CONFIG_AMBARELLA_IPC)
+	ipc_mutex_lock(pinfo->platform_info->ipc_mutex_id);
+	enable_irq(pinfo->irq);
+#endif
 	for (retryCount = 0; retryCount < adap->retries; retryCount++) {
 		errorCode = 0;
 		if (pinfo->state != AMBA_I2C_STATE_IDLE)
@@ -458,7 +464,10 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 			break;
 		}
 	}
-
+#if defined(CONFIG_AMBARELLA_IPC)
+	disable_irq(pinfo->irq);
+	ipc_mutex_unlock(pinfo->platform_info->ipc_mutex_id);
+#endif
 	up(&pinfo->system_event_sem);
 
 	if (errorCode)
@@ -543,7 +552,9 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: Request IRQ failed!\n", __func__);
 		goto i2c_errorCode_kzalloc;
 	}
-
+#if defined(CONFIG_AMBARELLA_IPC)
+	disable_irq(pinfo->irq);
+#endif
 	adap = &pinfo->adap;
 	i2c_set_adapdata(adap, pinfo);
 	adap->owner = THIS_MODULE;

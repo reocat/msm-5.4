@@ -25,8 +25,12 @@ obj-$(CONFIG_MACH_DURIAN)	+= init-durian.o
 obj-$(CONFIG_MACH_ELEPHANT)	+= init-elephant.o
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS),y)
+ifeq ($(CONFIG_SUPPORT_ANDROID_TT),y)
+obj-$(CONFIG_SUPPORT_ANDROID_TT)       += init-boss_tt.o
+else
 obj-$(CONFIG_PLAT_AMBARELLA_I1_BOSS)	+= init-boss.o
 obj-$(CONFIG_PLAT_AMBARELLA_A5S_BOSS)	+= init-boss_a5s.o
+endif
 else
 obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o
 endif
