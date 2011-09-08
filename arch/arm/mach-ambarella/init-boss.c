@@ -877,6 +877,14 @@ static void ambarella_init_vendor_2(void)
 	ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
 	ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_NONREMOVABLE;
 
+	ambarella_board_generic.wifi_sd_bus = 0;
+	if (ambarella_gpio_get(190) == 0 && ambarella_gpio_get(191) == 1) {
+		// (0, 1) = ability bub
+		ambarella_board_generic.wifi_sd_slot = ambarella_gpio_get(67);
+	} else { // Default case, note: (1,1) = ability real set
+		ambarella_board_generic.wifi_sd_slot = 1; // sdio slot
+	}
+
 	platform_add_devices(vendor_2_devices, ARRAY_SIZE(vendor_2_devices));
 	for (i = 0; i < ARRAY_SIZE(vendor_2_devices); i++) {
 		device_set_wakeup_capable(&vendor_2_devices[i]->dev, 1);
