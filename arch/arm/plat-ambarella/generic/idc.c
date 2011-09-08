@@ -30,7 +30,9 @@
 
 #include <mach/hardware.h>
 #include <plat/idc.h>
-
+#if defined(CONFIG_AMBARELLA_IPC)
+#include <linux/aipc/ipc_mutex.h>
+#endif
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
@@ -62,6 +64,9 @@ struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 	.i2c_class	= DEFAULT_I2C_CLASS,
 #else
 	.i2c_class	= DEFAULT_I2C_CLASS,
+#endif
+#if defined(CONFIG_AMBARELLA_IPC)
+	.ipc_mutex_id = IPC_MUTEX_ID_IDC_MASTER_1,
 #endif
 	.get_clock	= get_apb_bus_freq_hz,
 };
@@ -117,6 +122,9 @@ struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
 	.clk_limit	= 100000,
 	.bulk_write_num	= 60,
 	.i2c_class	= I2C_CLASS_DDC,
+#if defined(CONFIG_AMBARELLA_IPC)
+	.ipc_mutex_id = IPC_MUTEX_ID_IDC_MASTER_2,
+#endif
 	.get_clock	= get_apb_bus_freq_hz,
 };
 AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);

@@ -35,7 +35,7 @@
 #include <mach/hardware.h>
 #include <plat/udc.h>
 #include "ambarella_udc.h"
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
 #include <mach/boss.h>
 #endif
 
@@ -2136,7 +2136,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		goto register_error;
 	}
 
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
 	if (boss_get_device_owner(BOSS_DEVICE_USB) == BOSS_DEVICE_OWNER_LINUX)
 #endif
 	{
@@ -2227,7 +2227,7 @@ EXPORT_SYMBOL(ambarella_udc_connect);
 
 static inline void ambarella_udc_setup(struct ambarella_udc *udc)
 {
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
 	if (boss_get_device_owner(BOSS_DEVICE_USB) == BOSS_DEVICE_OWNER_LINUX)
 #endif
 	{
@@ -2266,7 +2266,7 @@ static inline int ambarella_udc_irq_setup(struct platform_device *pdev, struct a
 	}
 #endif
 
-#if defined(CONFIG_MACH_BOSS)
+#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
 	if (boss_get_device_owner(BOSS_DEVICE_USB) != BOSS_DEVICE_OWNER_LINUX)
 		disable_irq(USBC_IRQ);
 #endif
