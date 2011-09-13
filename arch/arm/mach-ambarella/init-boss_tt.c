@@ -212,7 +212,7 @@ static struct regulator_consumer_supply ldo3_consumers[] = {
 /* LDO3 Audio codec power */
 static struct regulator_init_data boss_wm8310_ldo3_data = {
 	.constraints = {
-		.name = "VDD_AUD_1.8V",
+		.name = "VDD_AUD_0.9V_3.3V",
 		.min_uV = 1800000,
 		.max_uV = 1800000,
 		.apply_uV = 1,
@@ -752,7 +752,7 @@ static struct ambarella_key_table boss_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,		0,	2,	700,	900}}},		//SEARCH
 
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	4,	3000,	4095}}},
-	
+
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,	0,	4,	1750,	2150}}},	//VOLUME DOWN
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,	0,	4,	1300,	1650}}},	//VOLUME UP
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	850,	1100}}},	//STOP
@@ -806,12 +806,12 @@ static void __init ambarella_init_boss(void)
 					 * I2C address, and the cs_pin of spi0.4, spi0,5, spi0.6
 					 * spi0.7 are used as I2S signals, so we need to prevent
 					 * them from be modified by SPI driver */
-					//ambarella_spi0_cs_pins[1] = -1;
-					//ambarella_spi0_cs_pins[4] = -1;
-					//ambarella_spi0_cs_pins[5] = -1;
-					//ambarella_spi0_cs_pins[6] = -1;
-					//ambarella_spi0_cs_pins[7] = -1;
-					//ambarella_init_wm8994();
+					ambarella_spi0_cs_pins[1] = -1;
+					ambarella_spi0_cs_pins[4] = -1;
+					ambarella_spi0_cs_pins[5] = -1;
+					ambarella_spi0_cs_pins[6] = -1;
+					ambarella_spi0_cs_pins[7] = -1;
+					ambarella_init_wm8994();
 				}
 			case 'A':
 				ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(44);
