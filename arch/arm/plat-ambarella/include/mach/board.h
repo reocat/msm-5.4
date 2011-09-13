@@ -36,6 +36,10 @@ struct ambarella_board_info {
 	u32					board_type;
 	u32					board_rev;
 
+	u8					eth0_mac[6];
+	u8					eth1_mac[6];
+	u8					wifi_mac[6];
+
 	struct ambarella_gpio_irq_info		power_detect;
 	struct ambarella_gpio_io_info		power_control;
 	struct ambarella_gpio_io_info		debug_led0;
