@@ -32,6 +32,7 @@
 #include <asm/mach/map.h>
 
 #include <mach/hardware.h>
+#include <mach/board.h>
 #include <plat/debug.h>
 #include <hal/hal.h>
 
@@ -50,6 +51,58 @@ unsigned long ambarella_debug_lookup_name(const char *name)
 	return module_kallsyms_lookup_name(name);
 }
 EXPORT_SYMBOL(ambarella_debug_lookup_name);
+
+/* ==========================================================================*/
+static int __init parse_eth0_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.eth0_mac[0] = (low >> 0);
+	ambarella_board_generic.eth0_mac[1] = (low >> 8);
+	ambarella_board_generic.eth0_mac[2] = (low >> 16);
+	ambarella_board_generic.eth0_mac[3] = (low >> 24);
+	ambarella_board_generic.eth0_mac[4] = (high >> 0);
+	ambarella_board_generic.eth0_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_ETH0, parse_eth0_tag_mac);
+
+static int __init parse_eth1_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.eth1_mac[0] = (low >> 0);
+	ambarella_board_generic.eth1_mac[1] = (low >> 8);
+	ambarella_board_generic.eth1_mac[2] = (low >> 16);
+	ambarella_board_generic.eth1_mac[3] = (low >> 24);
+	ambarella_board_generic.eth1_mac[4] = (high >> 0);
+	ambarella_board_generic.eth1_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_ETH1, parse_eth1_tag_mac);
+
+static int __init parse_wifi_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.wifi_mac[0] = (low >> 0);
+	ambarella_board_generic.wifi_mac[1] = (low >> 8);
+	ambarella_board_generic.wifi_mac[2] = (low >> 16);
+	ambarella_board_generic.wifi_mac[3] = (low >> 24);
+	ambarella_board_generic.wifi_mac[4] = (high >> 0);
+	ambarella_board_generic.wifi_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_WIFI, parse_wifi_tag_mac);
 
 /* ==========================================================================*/
 #define AMBARELLA_IO_DESC_AHB_ID	0

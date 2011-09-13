@@ -57,6 +57,16 @@ typedef struct flpart_s
 } __attribute__((packed)) flpart_t;
 
 #define FLDEV_CMD_LINE_SIZE	1024
+
+typedef struct netdev_s
+{
+	/* This section contains networking related settings */
+	u8	mac[6];		/**< MAC address*/
+	u32	ip;		/**< Boot loader's LAN IP */
+	u32	mask;		/**< Boot loader's LAN mask */
+	u32	gw;		/**< Boot loader's LAN gateway */
+} __attribute__((packed)) netdev_t;
+
 typedef struct fldev_s
 {
 	char	sn[32];		/**< Serial number */
@@ -67,10 +77,10 @@ typedef struct fldev_s
 	u32	splash_id;
 
 	/* This section contains networking related settings */
-	u8	eth_mac[6];	/**< Ethernet MAC */
-	u32	lan_ip;		/**< Boot loader's LAN IP */
-	u32	lan_mask;	/**< Boot loader's LAN mask */
-	u32	lan_gw;		/**< Boot loader's LAN gateway */
+	netdev_t eth[2];
+	netdev_t wifi;
+
+	/* This section contains update by network  related settings */
 	u8	auto_dl;	/**< Automatic download? */
 	u32	tftpd;		/**< Boot loader's TFTP server */
 	u32	pri_addr;	/**< RTOS download address */
@@ -125,9 +135,6 @@ typedef struct flpart_meta_s
 		char	name[PART_NAME_LEN];
 	} part_info[PART_MAX];
 	u32	magic;				/**< Magic number */
-	/* This meta crc32 doesn't include itself. */
-	/* It's only calc data before this field.  */
-	u32 	crc32;
 	u32	part_dev[PART_MAX];
 	u8	model_name[FW_MODEL_NAME_SIZE];
 	struct {
@@ -135,6 +142,9 @@ typedef struct flpart_meta_s
 		u32	nblk;
 	} sm_stg[2];
 	u8 	rsv[PTB_META_PAD_SIZE];
+	/* This meta crc32 doesn't include itself. */
+	/* It's only calc data before this field.  */
+	u32 	crc32;
 } __attribute__((packed)) flpart_meta_t;
 
 #endif /* __ASSEMBLER__ */
