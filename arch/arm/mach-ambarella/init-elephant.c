@@ -99,10 +99,9 @@ static struct embedded_sdio_data omap_wifi_emb_data = {
 #endif
 #ifdef CONFIG_TI_ST
 int plat_kim_suspend(struct platform_device *pdev, pm_message_t state)
-{ 
+{
     return 0;
 }
- 
 int plat_kim_resume(struct platform_device *pdev)
 {
     return 0;
@@ -164,10 +163,10 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_wdt0,
 	&ambarella_fsg_device0,
 #ifdef CONFIG_TI_ST
-/* TI sample code origin register of WL128X BT, FM, GPS */	
+/* TI sample code origin register of WL128X BT, FM, GPS */
 	&wl128x_device,
 	&btwilink_device,
-#endif	
+#endif
 	&ambarella_usb_device0,
 };
 
@@ -669,8 +668,8 @@ static void __init ambarella_init_elephant(void)
 		fio_default_owner = SELECT_FIO_SDIO;
 #ifdef CONFIG_TIWLAN_SDIO
 		//because Ione chip is too far away from TI chip on bub board ,TI sdio is not stable in this case .;
-		ambarella_platform_sd_controller0.clk_limit = 2000000;//24000000 
-#else		
+		ambarella_platform_sd_controller0.clk_limit = 2000000;//24000000
+#else
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
 #endif
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
@@ -711,7 +710,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
-		
 /*<-------------------------------------wl12xx start --------------------------------------------->*/		
 /*-->WiFi_EN  = GPIO2 WiFi_IRQ=GPIO3 BT_EN=GPIO4<--*/	
 #ifdef CONFIG_TIWLAN_SDIO
@@ -722,10 +720,9 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.wifi_irq.irq_type = IRQF_TRIGGER_FALLING;
 		ambarella_board_generic.wifi_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.wifi_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-		
 		ambarella_board_generic.wifi_power.gpio_id = GPIO(2);
 		ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
-		ambarella_board_generic.wifi_power.active_delay = 300;				
+		ambarella_board_generic.wifi_power.active_delay = 300;
 #endif
 #ifdef CONFIG_TI_ST
 		struct ambarella_gpio_io_info		BT_power;
@@ -735,11 +732,11 @@ static void __init ambarella_init_elephant(void)
 
 		ambarella_set_gpio_output(&BT_power, 0);
 		mdelay(10);
-		ambarella_set_gpio_output(&BT_power, 1);		
-		mdelay(100);		
+		ambarella_set_gpio_output(&BT_power, 1);
+		mdelay(100);
 		ambarella_set_gpio_output(&BT_power, 0);
 
-#endif		
+#endif
 /*	<----------------------------------- wl12xxx end-------------------------------------------->*/
 		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);
 

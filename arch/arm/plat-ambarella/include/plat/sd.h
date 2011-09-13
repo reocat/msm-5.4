@@ -20,7 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
- 
+
 #ifdef CONFIG_TIWLAN_SDIO
 #include <linux/mmc/card.h>
 #endif
@@ -59,7 +59,6 @@ struct ambarella_sd_slot {
 	int					fixed_wp;
 	struct ambarella_gpio_io_info		gpio_wp;
 	u32					caps;
-	
 #ifdef CONFIG_TIWLAN_SDIO
 	struct embedded_sdio_data *embedded_sdio;
 	int (*register_status_notify)(void (*callback)(int card_present, void *dev_id),void *dev_id);

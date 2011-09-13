@@ -1587,7 +1587,7 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.set_ios	= ambarella_sd_ios,
 	.get_ro		= ambarella_sd_get_ro,
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
-	
+
 #ifdef CONFIG_TIWLAN_SDIO
 	.get_cd = ambarella_sd_get_cd,
 #endif
@@ -1637,13 +1637,13 @@ static void ambarella_hsmmc_status_notify_cb(int card_present, void *dev_id)
 
        carddetect = slot->card_detect(0, 0);
 
-//       sysfs_notify(&host->mmc->class_dev.kobj, NULL, "cover_switch"); 
+//       sysfs_notify(&host->mmc->class_dev.kobj, NULL, "cover_switch");
 #if 0
 	if (carddetect)
 		mmc_detect_change(slot->pmmc_host, (HZ * 200) / 1000);
 	else
 		mmc_detect_change(slot->pmmc_host, (HZ * 50) / 1000);
-#endif	
+#endif
 	if (carddetect)
 		mmc_detect_change(slot->pmmc_host, slot->cd_delay);
 	else
@@ -1984,7 +1984,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 		tristan_plat_info->embedded_sdio->quirks);
 		if (pslotinfo->plat_info->register_status_notify)
 			{
-			printk(KERN_NOTICE "%s: register notifyCB for notify function \n", 
+			printk(KERN_NOTICE "%s: register notifyCB for notify function \n",
 				mmc_hostname(pinfo->pslotinfo[i]->mmc));
 				pinfo->pslotinfo[i]->plat_info->register_status_notify(ambarella_hsmmc_status_notify_cb, pslotinfo);
 			}

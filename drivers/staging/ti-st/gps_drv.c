@@ -144,7 +144,7 @@ long gpsdrv_st_recv(void *arg, struct sk_buff *skb)
 		GPSDRV_ERR("Input SKB is not a Channel-9 packet");
 		return GPS_ERR_FAILURE;
 	}
-	
+
 	/* Copy Ch-9 info to local structure */
 	memcpy(&gpsdrv_hdr, skb->data, GPS_CH9_PKT_HDR_SIZE - 1);
 	skb_pull(skb, GPS_CH9_PKT_HDR_SIZE - 1);
@@ -171,7 +171,6 @@ long gpsdrv_st_recv(void *arg, struct sk_buff *skb)
 	 * if the opcode is GPS_CH9_OP_READ and get AI2 packet
 	 */
 	if (GPS_CH9_OP_READ == gpsdrv_hdr.opcode) {
-		
 		spin_lock(&hgps->lock);
 		skb_queue_tail(&hgps->rx_list, skb);
 		spin_unlock(&hgps->lock);
@@ -623,7 +622,7 @@ ssize_t gpsdrv_write(struct file *file, const char __user *data,
  *  Returns  GPS_SUCCESS on success
  *           else suitable error code
  */
-//tristan modify for fit TI 2.6.35 old strucle 
+//tristan modify for fit TI 2.6.35 old strucle
 //int (*ioctl) (struct inode *, struct file *, unsigned int, unsigned long);
 #if 1
 static long gpsdrv_ioctl(struct file *file,
@@ -632,7 +631,7 @@ static long gpsdrv_ioctl(struct file *file,
 #else
 static int gpsdrv_ioctl(struct inode *inode, struct file *file,
 			    unsigned int cmd, unsigned long arg)
-#endif			    
+#endif
 {
 	struct sk_buff *skb = NULL;
 	int		retCode = GPS_SUCCESS;

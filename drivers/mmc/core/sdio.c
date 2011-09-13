@@ -812,10 +812,8 @@ int mmc_attach_sdio(struct mmc_host *host)
 	 * Initialize (but don't add) all present functions.
 	 */
 	for (i = 0; i < funcs; i++, card->sdio_funcs++) {
-		
 		printk(KERN_WARNING "%s:attach sdio array 1 \r\n",mmc_hostname(host));
 
-		
 #if defined(CONFIG_MMC_EMBEDDED_SDIO) || defined(CONFIG_TIWLAN_SDIO)
 
 

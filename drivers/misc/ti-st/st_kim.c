@@ -448,12 +448,12 @@ long st_kim_start(void *kim_data)
 		mdelay(5);	/* FIXME: a proper toggle */
 		gpio_set_value(kim_gdata->nshutdown, GPIO_HIGH);
 		mdelay(100);
-#else		
-		ambarella_set_gpio_output(&BT_power, 0);		
+#else
+		ambarella_set_gpio_output(&BT_power, 0);
 		mdelay(10);
 		ambarella_set_gpio_output(&BT_power, 1);
-		mdelay(100);//must hole on 70-99ms for TI spec 
-#endif		
+		mdelay(100);//must hole on 70-99ms for TI spec
+#endif
 		/* re-initialize the completion */
 		INIT_COMPLETION(kim_gdata->ldisc_installed);
 		/* send notification to UIM */
@@ -527,20 +527,20 @@ struct ambarella_gpio_io_info		BT_power;
 BT_power.gpio_id = GPIO(4);
 BT_power.active_level = GPIO_HIGH;
 BT_power.active_delay = 300;
-ambarella_set_gpio_output(&BT_power, 0);		
+ambarella_set_gpio_output(&BT_power, 0);
 mdelay(10);
 ambarella_set_gpio_output(&BT_power, 1);
-mdelay(10);//must hole on 70-99ms for TI spec 
-ambarella_set_gpio_output(&BT_power, 0);	
+mdelay(10);//must hole on 70-99ms for TI spec
+ambarella_set_gpio_output(&BT_power, 0);
 
 
-#else		
+#else
 	gpio_set_value(kim_gdata->nshutdown, GPIO_LOW);
 	mdelay(1);
 	gpio_set_value(kim_gdata->nshutdown, GPIO_HIGH);
 	mdelay(1);
 	gpio_set_value(kim_gdata->nshutdown, GPIO_LOW);
-#endif	
+#endif
 	return err;
 }
 
@@ -709,7 +709,7 @@ static int kim_probe(struct platform_device *pdev)
 		pr_err(" unable to configure gpio %ld", kim_gdata->nshutdown);
 		return status;
 	}
-#endif	
+#endif
 	/* get reference of pdev for request_firmware
 	 */
 	kim_gdata->kim_pdev = pdev;

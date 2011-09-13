@@ -1897,17 +1897,15 @@ void mmc_set_embedded_sdio_data(struct mmc_host *host,
 				struct sdio_embedded_func *funcs,
 				unsigned int quirks)
 {
-	
 	host->embedded_sdio_data.cis = cis;
 	host->embedded_sdio_data.cccr = cccr;
 	host->embedded_sdio_data.funcs = funcs;
 	host->embedded_sdio_data.quirks = quirks;
-	
     printk("mmc_set_embedded_sdio_data quirks = %d \r\n",quirks);
 }
 EXPORT_SYMBOL(mmc_set_embedded_sdio_data);
 
-#elif defined(CONFIG_MMC_EMBEDDED_SDIO) 
+#elif defined(CONFIG_MMC_EMBEDDED_SDIO)
 
 	void mmc_set_embedded_sdio_data(struct mmc_host *host,
 					struct sdio_cis *cis,

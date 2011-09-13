@@ -42,7 +42,7 @@ void config_wlan_mux(void)
 	omap_mux_init_gpio(SDP4430_WIFI_IRQ_GPIO, OMAP_PIN_INPUT |
 				OMAP_PIN_OFF_WAKEUPENABLE);
 	omap_mux_init_gpio(SDP4430_WIFI_PMENA_GPIO, OMAP_PIN_OUTPUT);
-#endif	
+#endif
 }
 
 int omap_wifi_status_register(void (*callback)(int card_present,void *dev_id), void *dev_id)
@@ -87,7 +87,7 @@ struct ambarella_gpio_io_info		WIFI_POWER;
 WIFI_POWER.gpio_id = GPIO(2);
 WIFI_POWER.active_level = GPIO_HIGH;
 WIFI_POWER.active_delay = 300;
-ambarella_set_gpio_output(&WIFI_POWER, on);		
+ambarella_set_gpio_output(&WIFI_POWER, on);
 #else
 gpio_set_value(SDP4430_WIFI_PMENA_GPIO, on);
 #endif
@@ -143,9 +143,7 @@ static int __init sdp4430_wifi_init(void)
 
 	printk(KERN_WARNING"%s: start\n", __func__);
 #if tristan_amba
-	
       printk(KERN_NOTICE"GPIO configation has done when plat init\n", __func__);
-	
 #else
 
 	ret = gpio_request(SDP4430_WIFI_PMENA_GPIO, "wifi_pmena");
@@ -163,7 +161,7 @@ static int __init sdp4430_wifi_init(void)
 		goto out;
 	}
 	gpio_direction_input(SDP4430_WIFI_IRQ_GPIO);
-#endif	
+#endif
 #ifdef CONFIG_WIFI_CONTROL_FUNC
 	ret = platform_device_register(&sdp4430_wifi_device);
 #endif
