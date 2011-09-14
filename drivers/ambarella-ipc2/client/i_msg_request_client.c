@@ -70,25 +70,35 @@ static int i_msg_request_proc_fs_msg_request (struct file *file, const char __us
 				 unsigned long count, void *data)
 {
 	int rval;
-	struct i_msg_request_s msg;
+	struct i_msg_request_s *msg;
 
-	if (count > sizeof (msg.msg_content))
-		count = sizeof (msg.msg_content);
+	if ((msg = (struct i_msg_request_s *)kmalloc (GFP_KERNEL,
+		sizeof (struct i_msg_request_s))) == NULL)
+		return -ENOMEM;
+
+	if (count >= sizeof (msg->msg_content))
+		count = sizeof (msg->msg_content) - 1;
 	
-	memset (msg.msg_content, 0x0, sizeof (msg.msg_content));
-	if (copy_from_user(msg.msg_content, buffer, count))
-		return -EFAULT;
+	memset (msg->msg_content, 0x0, sizeof (msg->msg_content));
+	if (copy_from_user (msg->msg_content, buffer, count)) {
+		rval = -EFAULT;
+		goto exit;
+	}
 
-	msg.msg_type = 0;
-	msg.msg_size = count;
-	msg.msg_content[count] = '\0';
+	msg->msg_type = 0;
+	msg->msg_size = count;
+	msg->msg_content[count] = '\0';
 
-	rval = ipc_msg_request(&msg);
+	if ((rval = ipc_msg_request (msg)) < 0) {
+		rval = -EFAULT;
+		goto exit;
+	}
 
-	if (rval < 0)
-		return -EFAULT;
+	rval = count;
 	
-	return count;
+exit:
+	kfree (msg);
+	return rval;
 }
 
 #endif
