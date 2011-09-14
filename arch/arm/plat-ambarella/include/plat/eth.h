@@ -64,8 +64,8 @@ struct ambarella_eth_platform_info {
 extern struct platform_device			ambarella_eth0;
 extern struct platform_device			ambarella_eth1;
 /* ==========================================================================*/
-extern int ambarella_init_eth0(unsigned int high, unsigned int low);
-extern int ambarella_init_eth1(unsigned int high, unsigned int low);
+extern int ambarella_init_eth0(const u8 *mac_addr);
+extern int ambarella_init_eth1(const u8 *mac_addr);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
