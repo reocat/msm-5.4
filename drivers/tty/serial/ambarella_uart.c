@@ -380,8 +380,9 @@ static int serial_ambarella_startup(struct uart_port *port)
 		UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET, (port_info->fcr |
 		UART_FC_XMITR | UART_FC_RCVRR));
-
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	boss_set_irq_owner(port->irq, BOSS_IRQ_OWNER_LINUX, 0);	
+#endif
 	retval = request_irq(port->irq, serial_ambarella_irq,
 		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
 	amba_writel(port->membase + UART_IE_OFFSET, port_info->ier);
