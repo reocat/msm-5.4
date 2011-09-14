@@ -162,11 +162,11 @@ int __init ambarella_init_machine(char *board_name)
 	}
 
 #if (ETH_INSTANCES >= 1)
-	retval = ambarella_init_eth0(system_serial_high, system_serial_low);
+	retval = ambarella_init_eth0(ambarella_board_generic.eth0_mac);
 	BUG_ON(retval != 0);
 #endif
 #if (ETH_INSTANCES >= 2)
-	retval = ambarella_init_eth1(system_serial_high, system_serial_low);
+	retval = ambarella_init_eth1(ambarella_board_generic.eth1_mac);
 	BUG_ON(retval != 0);
 #endif
 
