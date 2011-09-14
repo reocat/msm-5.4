@@ -21,6 +21,10 @@
  *
  */
 
+#ifdef CONFIG_TIWLAN_SDIO
+#include <linux/mmc/card.h>
+#endif
+
 #ifndef __PLAT_AMBARELLA_SD_H
 #define __PLAT_AMBARELLA_SD_H
 
@@ -29,6 +33,16 @@
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
+
+#ifdef CONFIG_TIWLAN_SDIO
+
+struct embedded_sdio_data {
+	struct sdio_cis cis;
+	struct sdio_cccr cccr;
+	struct sdio_embedded_func *funcs;
+	unsigned int quirks;
+};
+#endif
 
 struct ambarella_sd_slot {
 	struct mmc_host				*pmmc_host;
@@ -45,6 +59,12 @@ struct ambarella_sd_slot {
 	int					fixed_wp;
 	struct ambarella_gpio_io_info		gpio_wp;
 	u32					caps;
+#ifdef CONFIG_TIWLAN_SDIO
+	struct embedded_sdio_data *embedded_sdio;
+	int (*register_status_notify)(void (*callback)(int card_present, void *dev_id),void *dev_id);
+	int (*card_detect)(struct device *dev, int slot);
+	unsigned int quirks;
+#endif
 };
 
 struct ambarella_sd_controller {

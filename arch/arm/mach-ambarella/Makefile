@@ -36,7 +36,7 @@ obj-$(CONFIG_TOUCH_AMBARELLA_TM1726)		+= touch-tm1726.o
 obj-$(CONFIG_TOUCH_AMBARELLA_NT11001)		+= touch-nt11001.o
 
 obj-$(CONFIG_LCD_AMBARELLA_1P3831)		+= lcd-1p3831.o
-
+obj-$(CONFIG_TIWLAN_SDIO)               += board-1283sdp-wifi.o
 obj-$(CONFIG_RTC_AMBARELLA_IS112022M)		+= rtc-is112022m.o
 
 obj-$(CONFIG_CODEC_AMBARELLA_WM8994)		+= codec-wm8994.o
