@@ -54,6 +54,22 @@ struct ipc_ffs_stat
 	u16 fstat;	/* file attribute */
 };
 
+struct ipc_ffs_getdev
+{
+	int fs_type;
+	u64 cls;	/* total number of clusters */
+	u64 ecl;	/* number of unused clusters */
+	int bps;	/* bytes per sector */
+	int spc;	/* sectors per cluster, for udf, spc=1 */
+	u32 cpg;	/* clusters per cluster group */
+	u32 ecg;	/* number of empty cluster groups */
+	int fmt;	/* format type */
+/*#define FF_FMT_FAT12    0
+#define FF_FMT_FAT16    1
+#define FF_FMT_FAT31    2
+#define FF_FMT_EXFAT    3*/
+};
+
 extern int ipc_ffs_fstat(const char *path, struct ipc_ffs_stat *stat);
 
 extern int ipc_ffs_remove(const char *fname);
