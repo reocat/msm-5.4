@@ -49,8 +49,9 @@
 
 #define AMBA_MAX_DESC_NUM		128
 #define AMBA_MIN_DESC_NUM		2
-#define AMBA_PERIOD_BYTES_MAX		8192
+#define AMBA_PERIOD_BYTES_MAX		(128 * 1024)
 #define AMBA_PERIOD_BYTES_MIN		32
+#define AMBA_BUFFER_BYTES_MAX		(256 * 1024)
 
 
 struct ambarella_runtime_data {
@@ -85,7 +86,7 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 	.period_bytes_max	= AMBA_PERIOD_BYTES_MAX,
 	.periods_min		= AMBA_MIN_DESC_NUM,
 	.periods_max		= AMBA_MAX_DESC_NUM,
-	.buffer_bytes_max	= 256 * 1024,
+	.buffer_bytes_max	= AMBA_BUFFER_BYTES_MAX,
 };
 
 

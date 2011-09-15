@@ -134,16 +134,16 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 };
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
 
-int __init ambarella_init_eth0(unsigned int high, unsigned int low)
+int __init ambarella_init_eth0(const u8 *mac_addr)
 {
 	int					errCode = 0;
 
-	ambarella_eth0_platform_info.mac_addr[0] = (low >> 0);
-	ambarella_eth0_platform_info.mac_addr[1] = (low >> 8);
-	ambarella_eth0_platform_info.mac_addr[2] = (low >> 16);
-	ambarella_eth0_platform_info.mac_addr[3] = (low >> 24);
-	ambarella_eth0_platform_info.mac_addr[4] = (high >> 0);
-	ambarella_eth0_platform_info.mac_addr[5] = (high >> 8);
+	ambarella_eth0_platform_info.mac_addr[0] = mac_addr[0];
+	ambarella_eth0_platform_info.mac_addr[1] = mac_addr[1];
+	ambarella_eth0_platform_info.mac_addr[2] = mac_addr[2];
+	ambarella_eth0_platform_info.mac_addr[3] = mac_addr[3];
+	ambarella_eth0_platform_info.mac_addr[4] = mac_addr[4];
+	ambarella_eth0_platform_info.mac_addr[5] = mac_addr[5];
 
 	return errCode;
 }
@@ -243,16 +243,16 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 };
 AMBA_ETH_PARAM_CALL(1, ambarella_eth1_platform_info, 0644);
 
-int __init ambarella_init_eth1(unsigned int high, unsigned int low)
+int __init ambarella_init_eth1(const u8 *mac_addr)
 {
 	int					errCode = 0;
 
-	ambarella_eth1_platform_info.mac_addr[0] = 0;
-	ambarella_eth1_platform_info.mac_addr[1] = 0;
-	ambarella_eth1_platform_info.mac_addr[2] = 0;
-	ambarella_eth1_platform_info.mac_addr[3] = 0;
-	ambarella_eth1_platform_info.mac_addr[4] = 0;
-	ambarella_eth1_platform_info.mac_addr[5] = 0;
+	ambarella_eth1_platform_info.mac_addr[0] = mac_addr[0];
+	ambarella_eth1_platform_info.mac_addr[1] = mac_addr[1];
+	ambarella_eth1_platform_info.mac_addr[2] = mac_addr[2];
+	ambarella_eth1_platform_info.mac_addr[3] = mac_addr[3];
+	ambarella_eth1_platform_info.mac_addr[4] = mac_addr[4];
+	ambarella_eth1_platform_info.mac_addr[5] = mac_addr[5];
 
 	return errCode;
 }
