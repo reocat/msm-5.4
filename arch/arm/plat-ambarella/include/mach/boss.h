@@ -254,9 +254,6 @@ extern unsigned int boss_log_buf_ptr;
 extern unsigned int boss_log_buf_len_ptr;
 extern unsigned int boss_log_buf_last_ptr;
 
-#define boss_writel(a, v)	(*(volatile unsigned int __force *)(a) = (v))
-#define boss_readl(a)		(*(volatile unsigned int __force   *)(a))
-
 #endif  /* !__ASM__ */
 
 #endif
