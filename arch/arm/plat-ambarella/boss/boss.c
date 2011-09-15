@@ -84,8 +84,8 @@ void boss_exception_exit(unsigned long flags)
 	if (BOSS_IRQ_IS_ENABLED(flags))
 	{
 		boss->guest_irq_mask = 0;
-		boss_writel(VIC_INTEN_REG, boss->vic1mask & boss->guest_vic1_en);
-		boss_writel(VIC2_INTEN_REG, boss->vic2mask & boss->guest_vic2_en);
+		amba_writel(VIC_INTEN_REG, boss->vic1mask & boss->guest_vic1_en);
+		amba_writel(VIC2_INTEN_REG, boss->vic2mask & boss->guest_vic2_en);
 	}
 }
 
@@ -100,8 +100,8 @@ void boss_local_irq_enable(void)
 	boss_obj->irq_enable_count++;
 	boss_obj->irq_enable_time = ipc_tick_get();
 
-	boss_writel(VIC_INTEN_REG, boss->vic1mask & boss->guest_vic1_en);
-	boss_writel(VIC2_INTEN_REG, boss->vic2mask & boss->guest_vic2_en);
+	amba_writel(VIC_INTEN_REG, boss->vic1mask & boss->guest_vic1_en);
+	amba_writel(VIC2_INTEN_REG, boss->vic2mask & boss->guest_vic2_en);
 
 	arm_irq_enable();
 }
@@ -116,8 +116,8 @@ void boss_local_irq_disable(void)
 
 	flags = arm_irq_save();
 
-	boss_writel(VIC_INTEN_CLR_REG, boss->vic1mask);
-	boss_writel(VIC2_INTEN_CLR_REG, boss->vic2mask);
+	amba_writel(VIC_INTEN_CLR_REG, boss->vic1mask);
+	amba_writel(VIC2_INTEN_CLR_REG, boss->vic2mask);
 
 	boss->guest_irq_mask = 1;
 
@@ -252,16 +252,16 @@ void boss_set_irq_owner(int irq, int owner, int update)
 			BOSS_VIC_SET_UITRON(boss->vic1mask, irq);
 			BOSS_VIC_SET(boss->root_vic1_en, irq);
 			if (update) {
-				boss_writel(VIC_INTEN_REG, 1 << irq);
+				amba_writel(VIC_INTEN_REG, 1 << irq);
 			}
 		} else {
 			BOSS_VIC_SET_LINUX(boss->vic1mask, irq);
 			BOSS_VIC_SET(boss->guest_vic1_en, irq);
 			if (update) {
 				if (boss->guest_irq_mask) {
-					boss_writel(VIC_INTEN_CLR_REG, 1 << irq);
+					amba_writel(VIC_INTEN_CLR_REG, 1 << irq);
 				} else {
-					boss_writel(VIC_INTEN_REG, 1 << irq);
+					amba_writel(VIC_INTEN_REG, 1 << irq);
 				}
 			}
 		}
@@ -271,16 +271,16 @@ void boss_set_irq_owner(int irq, int owner, int update)
 			BOSS_VIC_SET_UITRON(boss->vic2mask, irq - 32);
 			BOSS_VIC_SET(boss->root_vic2_en, irq - 32);
 			if (update) {
-				boss_writel(VIC2_INTEN_REG, 1 << (irq - 32));
+				amba_writel(VIC2_INTEN_REG, 1 << (irq - 32));
 			}
 		} else {
 			BOSS_VIC_SET_LINUX(boss->vic2mask, irq - 32);
 			BOSS_VIC_SET(boss->guest_vic2_en, irq - 32);
 			if (update) {
 				if (boss->guest_irq_mask) {
-					boss_writel(VIC2_INTEN_CLR_REG, 1 << (irq - 32));
+					amba_writel(VIC2_INTEN_CLR_REG, 1 << (irq - 32));
 				} else {
-					boss_writel(VIC2_INTEN_REG, 1 << (irq - 32));
+					amba_writel(VIC2_INTEN_REG, 1 << (irq - 32));
 				}
 			}
 		}
@@ -291,16 +291,16 @@ void boss_set_irq_owner(int irq, int owner, int update)
 			BOSS_VIC_SET_UITRON(boss->vic3mask, irq - 64);
 			BOSS_VIC_SET(boss->root_vic3_en, irq - 64);
 			if (update) {
-				boss_writel(VIC3_INTEN_REG, 1 << (irq - 64));
+				amba_writel(VIC3_INTEN_REG, 1 << (irq - 64));
 			}
 		} else {
 			BOSS_VIC_SET_LINUX(boss->vic3mask, irq - 64);
 			BOSS_VIC_SET(boss->guest_vic3_en, irq - 64);
 			if (update) {
 				if (boss->guest_irq_mask) {
-					boss_writel(VIC3_INTEN_CLR_REG, 1 << (irq - 64));
+					amba_writel(VIC3_INTEN_CLR_REG, 1 << (irq - 64));
 				} else {
-					boss_writel(VIC3_INTEN_REG, 1 << (irq - 64));
+					amba_writel(VIC3_INTEN_REG, 1 << (irq - 64));
 				}
 			}
 		}
