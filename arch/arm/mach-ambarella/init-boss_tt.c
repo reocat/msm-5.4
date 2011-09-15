@@ -53,6 +53,8 @@
 #include <linux/mfd/wm831x/core.h>
 #include <linux/mfd/wm831x/pdata.h>
 #include "board-device.h"
+#include <linux/rfkill-gpio.h>
+
 
 /*===========================================================================*/
 /* ==========================================================================*/
@@ -784,6 +786,25 @@ struct platform_device boss_board_input = {
 	}
 };
 
+// for BT
+static struct rfkill_gpio_platform_data boss_board_bt_info = {
+	.name		= "bt-gpio",
+	.reset_gpio	= GPIO(190),
+	.shutdown_gpio	= -1,
+	.type		= RFKILL_TYPE_BLUETOOTH,
+};
+
+static struct platform_device boss_bt_rfkill = {
+	.name		= "rfkill_gpio",
+	.id		= -1,
+	.resource	= NULL,
+	.num_resources	= 0,
+	.dev		= {
+		.platform_data		= &boss_board_bt_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
 /* ==========================================================================*/
 static void __init ambarella_init_boss(void)
 {
@@ -940,6 +961,7 @@ static void __init ambarella_init_boss(void)
 	}
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
 	platform_device_register(&boss_board_input);
+	platform_device_register(&boss_bt_rfkill);  // for BT
 }
 
 /* ==========================================================================*/
