@@ -145,8 +145,7 @@ int __init ambarella_init_machine(char *board_name)
 #endif
 
 	if (rct_is_eth_enabled()) {
-		retval = ambarella_init_eth0(system_serial_high,
-			system_serial_low);
+		retval = ambarella_init_eth0( ambarella_board_generic.eth0_mac );
 		BUG_ON(retval != 0);
 
 		platform_device_register(&ambarella_eth0);
