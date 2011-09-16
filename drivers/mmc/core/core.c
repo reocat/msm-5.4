@@ -1524,7 +1524,7 @@ EXPORT_SYMBOL(mmc_set_blocklen);
 
 static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 {
-#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA)
+#if defined(CONFIG_AMBARELLA_IPC) && defined(CONFIG_MMC_AMBARELLA) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	struct ipc_sdinfo *sdinfo;
 	ambarella_sdinfo_ipc(host);
 	sdinfo = ambarella_sd_get_sdinfo(host);

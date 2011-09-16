@@ -42,7 +42,7 @@
 #include <plat/sd.h>
 #include <plat/ambcache.h>
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 #include <mach/boss.h>
 #include <linux/aipc/i_sdresp.h>
 
@@ -136,7 +136,7 @@ struct ambarella_sd_mmc_info {
 	struct semaphore		system_event_sem;
 };
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 struct bh_cd_irq_s {
 	struct task_struct	*task;
 	wait_queue_head_t	wait;
@@ -150,7 +150,7 @@ struct ambarella_sd_controller_info {
 	struct resource			*mem;
 	unsigned int			irq;
 	spinlock_t			lock;
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	struct bh_cd_irq_s		bh_cd_irq;
 	unsigned int			id;
 #endif
@@ -830,7 +830,7 @@ static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
 }
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 static int ambarella_sd_card_in_slot(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
@@ -987,7 +987,7 @@ static void ambarella_sd_cmd_done(
 	}
 }
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 #define VIC2_INT_VEC_OFFSET	32
 #define VIC3_INT_VEC_OFFSET	64
 
@@ -1052,7 +1052,7 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	/* Read the interrupt registers */
 	amba_read2w(pinfo->regbase + SD_NIS_OFFSET, &nis, &eis);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	if ((nis & SD_NIS_CARD) != SD_NIS_CARD &&
 	    (vic_check(pinfo->irq - 32)) != 0)
 		goto ambarella_sd_irq_exit;
@@ -1084,7 +1084,7 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	ambsd_dbg(pslotinfo, "%s nis = 0x%x, eis = 0x%x & %d:%d\n", __func__,
 		nis, eis, pslotinfo->state, enabled);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	if ((nis & SD_NIS_CMD_DONE) ||
 	    (nis & SD_NIS_XFR_DONE) ||
 	    (nis & SD_NIS_DMA)) {
@@ -1173,13 +1173,13 @@ static int ambarella_sd_gpio_cd_check_val(
 static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo;
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	struct ambarella_sd_controller_info	*pinfo;
 #endif
 
 	pslotinfo = (struct ambarella_sd_mmc_info *)devid;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	if (pinfo->bh_cd_irq.task) {
@@ -1197,7 +1197,7 @@ static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 static int ambarella_sd_cd_irq_thread(void *arg)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo;
@@ -1425,7 +1425,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 #endif
 	} else {
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 		struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(mmc);
 		if (sdinfo->is_init && sdinfo->from_ipc)
 			goto done;
@@ -1474,7 +1474,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		ambsd_dbg(pslotinfo, "actual_clk = %d.\n", actual_clk);
 		ambsd_dbg(pslotinfo, "clk_div = %d.\n", clk_div);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 done:
 #endif
 		clk_div <<= 8;
@@ -1582,7 +1582,7 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info	*pinfo;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	struct ipc_sdinfo *sdinfo = ambarella_sd_get_sdinfo(mmc);
 	if (sdinfo->from_ipc && !sdinfo->is_sdio) {
 		ios->bus_width = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8:
@@ -1601,7 +1601,7 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		pinfo->controller_ios.vdd = ios->vdd;
 	}
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	if ((amba_readw(pinfo->regbase + SD_CLK_OFFSET) & SD_CLK_EN) == 0) {
 		/* uitron will on/off clock every sd request, */
 		/* if clock is diable, that means uitron has ever access sd */
@@ -1677,7 +1677,7 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	/* ambarella_sd_vic_ctrl(pinfo->irq - 32, 0); */
 	boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
 #endif
@@ -1758,7 +1758,7 @@ ambarella_sd_request_need_reset:
 ambarella_sd_request_exit:
 	pslotinfo->mrq = NULL;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	/* ambarella_sd_vic_ctrl(pinfo->irq - 32, 1); */
 #endif
 	ambarella_sd_release_bus(mmc);
@@ -1780,7 +1780,7 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.set_ios	= ambarella_sd_ios,
 	.get_ro		= ambarella_sd_get_ro,
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	.get_cd		= ambarella_sd_card_in_slot,
 #endif
 
@@ -1861,7 +1861,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	u32					hc_cap = 0;
 	u32					i;
 	u32					clock_min;
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	struct ipc_sdinfo 			*sdinfo;
 #endif
 #ifdef CONFIG_TIWLAN_SDIO
@@ -1898,7 +1898,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 		errorCode = -ENOMEM;
 		goto sd_errorCode_ioarea;
 	}
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	pinfo->id = pdev->id;
 #endif
 	pinfo->regbase = (unsigned char __iomem *)mem->start;
@@ -2119,7 +2119,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 			}
 		}
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 		ambarella_sdinfo_ipc(mmc);
 		sdinfo = ambarella_sd_get_sdinfo(mmc);
 		ambarella_sd_cmd_from_ipc(mmc, sdinfo->is_init);
@@ -2140,7 +2140,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 		goto sd_errorCode_free_host;
 	}
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	disable_irq(pinfo->irq);
 #endif
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
@@ -2159,7 +2159,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 				pslotinfo->plat_info->gpio_cd.irq_gpio);
 				goto sd_errorCode_free_host;
 			}
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 			sdinfo = ambarella_sd_get_sdinfo(mmc);
 			if (sdinfo->is_init)
 				continue;
@@ -2177,7 +2177,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 				pslotinfo->plat_info->gpio_cd.irq_line);
 				goto sd_errorCode_free_host;
 			}
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 			if (!pinfo->bh_cd_irq.task) {
 				init_waitqueue_head(&pinfo->bh_cd_irq.wait);
 				pinfo->bh_cd_irq.task =
@@ -2225,7 +2225,7 @@ struct ambarella_sd_slot * tristan_plat_info;
 		"Ambarella SD/MMC[%d] probed %d slots, 0x%08x!\n",
 		pdev->id, pinfo->pcontroller->num_slots, hc_cap);
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	enable_irq(pinfo->irq);
 #endif
 	goto sd_errorCode_na;
@@ -2246,7 +2246,7 @@ sd_errorCode_free_host:
 		if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
 			free_irq(pslotinfo->plat_info->gpio_cd.irq_line, pslotinfo);
 			gpio_free(pslotinfo->plat_info->gpio_cd.irq_gpio);
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 			if (pinfo->bh_cd_irq.task) {
 				kthread_stop(pinfo->bh_cd_irq.task);
 				pinfo->bh_cd_irq.task = NULL;
@@ -2428,7 +2428,7 @@ static int __init ambarella_sd_init(void)
 {
 	int				errorCode = 0;
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	memset(G_ipc_sdinfo, 0x0, sizeof(G_ipc_sdinfo));
 #endif
 
@@ -2447,7 +2447,7 @@ static void __exit ambarella_sd_exit(void)
 }
 
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 
 /**
  * ambarella_sdmmc_cmd_ipc.
@@ -2573,6 +2573,12 @@ void ambarella_sd_cd_ipc(int slot_id)
 	mmc_detect_change(mmc, pslotinfo->plat_info->cd_delay);
 }
 
+EXPORT_SYMBOL(ambarella_sd_cd_ipc);
+#else
+//TODO: remove the ipc stuff, now just shut up the compiler
+void ambarella_sd_cd_ipc(int slot_id)
+{
+}
 EXPORT_SYMBOL(ambarella_sd_cd_ipc);
 #endif
 

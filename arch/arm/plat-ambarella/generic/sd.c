@@ -256,7 +256,7 @@ void fio_amb_sd2_request(void)
 {
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	fio_select_lock(SELECT_FIO_SD2);
-#elif  defined(CONFIG_AMBARELLA_IPC) && (ENABLE_IPC_MUTEX_SD2 == 1)
+#elif  defined(CONFIG_AMBARELLA_IPC) && (ENABLE_IPC_MUTEX_SD2 == 1) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	ipc_mutex_lock(IPC_MUTEX_ID_SD2);
 #elif  defined(CONFIG_AMBARELLA_IPC)
 	fio_select_lock(SELECT_FIO_SD2);
@@ -269,7 +269,7 @@ void fio_amb_sd2_release(void)
 {
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1) 
 	fio_unlock(SELECT_FIO_SD2);
-#elif  defined(CONFIG_AMBARELLA_IPC) && (ENABLE_IPC_MUTEX_SD2 == 1)
+#elif  defined(CONFIG_AMBARELLA_IPC) && (ENABLE_IPC_MUTEX_SD2 == 1) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
 	ipc_mutex_unlock(IPC_MUTEX_ID_SD2);
 #elif  defined(CONFIG_AMBARELLA_IPC) 
 	fio_unlock(SELECT_FIO_SD2);
