@@ -219,6 +219,34 @@ int ipc_ffs_feof(int fd)
 EXPORT_SYMBOL(ipc_ffs_feof);
 
 /*
+ * IPC: i_ffs.vffs_getdev().
+ */
+int ipc_ffs_getdev(const char *path, struct ipc_ffs_getdev *ffs_getdev)
+{
+	enum clnt_stat stat;
+	struct vffs_getdev_res res;
+
+	ambcache_clean_range ((void *) path, strlen (path) + 1);
+
+	stat = vffs_getdev_1((char **) &path, &res, IPC_i_ffs);
+	if (stat != IPC_SUCCESS) {
+		pr_err("ipc error: %d (%s)\n", stat, ipc_strerror(stat));
+		return -stat;
+	}
+	ffs_getdev->fs_type= res.fs_type;
+	ffs_getdev->cls= res.cls;
+	ffs_getdev->ecl= res.ecl;
+	ffs_getdev->bps= res.bps;
+	ffs_getdev->spc= res.spc;
+	ffs_getdev->cpg= res.cpg;
+	ffs_getdev->ecg= res.ecg;
+	ffs_getdev->fmt= res.fmt;
+
+	return res.rval;
+}
+EXPORT_SYMBOL(ipc_ffs_getdev);
+
+/*
  * IPC: i_ffs.vffs_fstat().
  */
 int ipc_ffs_fstat(const char *path, struct ipc_ffs_stat *ffs_stat)
@@ -397,6 +425,8 @@ static struct proc_dir_entry *proc_fcre = NULL;
 static struct proc_dir_entry *proc_remove = NULL;
 static struct proc_dir_entry *proc_seek = NULL;
 static struct proc_dir_entry *proc_size = NULL;
+static struct proc_dir_entry *proc_getdev = NULL;
+static struct proc_dir_entry *proc_getdev_bin = NULL;
 static struct proc_dir_entry *proc_ffs_mkdir = NULL;
 static struct proc_dir_entry *proc_rmdir = NULL;
 static struct proc_dir_entry *proc_fsfirst = NULL;
@@ -418,6 +448,7 @@ struct proc_ffs_list
 static LIST_HEAD(pl_head);
 static int last_mapped_vfd = -1;
 static int last_unmapped_vfd = -1;
+static struct ipc_ffs_getdev last_ffs_getdev;
 static struct ipc_ffs_stat last_ffs_stat;
 static u64 last_seek_fpos;
 static struct ipc_ffs_fsfind last_fsfind;
@@ -890,6 +921,63 @@ static int i_ffs_proc_fs_seek_write(struct file *file,
 }
 
 /*
+ * /proc/aipc/ffs/getdev read function.
+ */
+static int i_ffs_proc_fs_getdev_read(char *page, char **start, off_t off,
+				   int count, int *eof, void *data)
+{
+	int len = 0;
+
+	len += sprintf(page+len, "total clusters: %lld\n", last_ffs_getdev.cls);
+	len += sprintf(page+len, "empty clusters: %lld\n", last_ffs_getdev.ecl);
+	len += sprintf(page+len, "bytes per sector: %d\n", last_ffs_getdev.bps);
+	len += sprintf(page+len, "sectors per cluster: %d\n", last_ffs_getdev.spc);
+	len += sprintf(page+len, "clusters per group: %u\n", last_ffs_getdev.cpg);
+	len += sprintf(page+len, "empty cluster groups: %u\n", last_ffs_getdev.ecg);
+	len += sprintf(page+len, "total space: %lld KB\n",(((u64)(last_ffs_getdev.cls * last_ffs_getdev.spc)) * last_ffs_getdev.bps) >> 10 );
+	len += sprintf(page+len, "used space: %lld KB\n",(((u64)((last_ffs_getdev.cls - last_ffs_getdev.ecl) * last_ffs_getdev.spc)) * last_ffs_getdev.bps) >> 10 );
+	len += sprintf(page+len, "free space: %lld KB\n",(((u64)(last_ffs_getdev.ecl * last_ffs_getdev.spc)) * last_ffs_getdev.bps) >> 10 );
+	*eof = 1;
+
+	return len;
+}
+
+/*
+ * /proc/aipc/ffs/getdev_bin read function.
+ */
+static int i_ffs_proc_fs_getdev_read_bin(char *page, char **start, off_t off,
+				   int count, int *eof, void *data)
+{
+	memcpy(page,&last_ffs_getdev,sizeof(last_ffs_getdev));
+	*eof = 1;
+
+	return sizeof(last_ffs_getdev);
+}
+
+/*
+ * /proc/aipc/ffs/getdev write function.
+ */
+static int i_ffs_proc_fs_getdev_write(struct file *file,
+				     const char __user *buffer,
+				     unsigned long count, void *data)
+{
+	char drive[2];
+	int rval, i;
+
+	memset(&drive, 0x0, sizeof(drive));
+	if (copy_from_user(drive, buffer, 1))
+		return -EFAULT;
+
+	DEBUG_MSG(KERN_WARNING "getdev_write: %s\n", drive);
+
+	rval = ipc_ffs_getdev(drive, &last_ffs_getdev);
+	if (rval < 0)
+		return -EIO;
+
+	return count;
+}
+
+/*
  * /proc/aipc/ffs/size read function.
  */
 static int i_ffs_proc_fs_size_read(char *page, char **start, off_t off,
@@ -1184,6 +1272,20 @@ static void i_ffs_procfs_init(void)
 		proc_size->data = NULL;
 		proc_size->read_proc = i_ffs_proc_fs_size_read;
 		proc_size->write_proc = i_ffs_proc_fs_size_write;
+	}
+
+	proc_getdev = create_proc_entry("getdev", 0, proc_ffs);
+	if (proc_getdev) {
+		proc_getdev->data = NULL;
+		proc_getdev->read_proc = i_ffs_proc_fs_getdev_read;
+		proc_getdev->write_proc = i_ffs_proc_fs_getdev_write;
+	}
+
+	proc_getdev_bin = create_proc_entry("getdev_bin", 0, proc_ffs);
+	if (proc_getdev_bin) {
+		proc_getdev_bin->data = NULL;
+		proc_getdev_bin->read_proc = i_ffs_proc_fs_getdev_read_bin;
+		proc_getdev_bin->write_proc = i_ffs_proc_fs_getdev_write;
 	}
 
 	proc_ffs_mkdir = create_proc_entry("mkdir", 0, proc_ffs);
