@@ -86,7 +86,7 @@ static void __init ambarella_init_boss(void)
 	if (use_bub_default) {
 #ifdef CONFIG_MMC_AMBARELLA
 		/* Config SD*/
-		ambarella_platform_sd_controller0.clk_limit = 25000000;
+		ambarella_platform_sd_controller0.clk_limit = 48000000;
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 		ambarella_platform_sd_controller0.slot[0].cd_delay = 1000;
