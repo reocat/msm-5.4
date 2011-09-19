@@ -138,6 +138,7 @@ static int ambapmic_bat_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 	case POWER_SUPPLY_PROP_CAPACITY:
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
+	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = ipc_ipmic_get_prop_int(IPC_PMIC_MOD_BAT,psp);
 		break;
 	default:
@@ -157,6 +158,7 @@ static enum power_supply_property ambapmic_bat_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+	POWER_SUPPLY_PROP_TEMP,
 };
 
 int ambapmic_pwr_src_notify(unsigned int modules)
