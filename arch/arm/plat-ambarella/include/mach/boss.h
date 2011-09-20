@@ -50,6 +50,7 @@
 
 #define BOSS_VIRT_TIMER_INT_VEC		47	/* Virtual 'timer' to guest irq */
 #define BOSS_VIRT_GIRQ_INT_VEC		50	/* Virtual 'guest IRQ' irq */
+#define BOSS_VIRT_RIRQ_INT_VEC		55	/* Virtual 'root IRQ' irq */
 
 /* Keep these in sync with data structure below */
 #define BOSS_ROOT_CTX_OFFSET		0

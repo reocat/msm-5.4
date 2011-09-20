@@ -39,6 +39,10 @@
 #include <asm/stacktrace.h>
 #include <asm/mach/time.h>
 
+#if defined(CONFIG_BOSS_SINGLE_CORE)
+#include <mach/boss.h>
+#endif
+
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
 unsigned long __stack_chk_guard __read_mostly;
@@ -213,6 +217,11 @@ void cpu_idle(void)
 				local_irq_enable();
 			}
 		}
+#if defined(CONFIG_BOSS_SINGLE_CORE)
+		if (boss) {
+			*boss->gidle = 0;
+		}
+#endif
 		leds_event(led_idle_end);
 		tick_nohz_restart_sched_tick();
 		preempt_enable_no_resched();

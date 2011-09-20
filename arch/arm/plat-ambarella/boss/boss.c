@@ -59,37 +59,6 @@ EXPORT_SYMBOL(boss_set_ready);
 #if defined(CONFIG_BOSS_SINGLE_CORE)
 
 /*
- * IRQ handler exit entry
- */
-void boss_irq_exit(unsigned long flags)
-{
-	if (!boss_obj->ready) {
-		return;
-	}
-
-	if (BOSS_IRQ_IS_ENABLED(flags)) {
-		boss_local_irq_enable();
-	}
-}
-
-/*
- * Exception handler exit entry
- */
-void boss_exception_exit(unsigned long flags)
-{
-	if (!boss_obj->ready) {
-		return;
-	}
-
-	if (BOSS_IRQ_IS_ENABLED(flags))
-	{
-		boss->guest_irq_mask = 0;
-		amba_writel(VIC_INTEN_REG, boss->vic1mask & boss->guest_vic1_en);
-		amba_writel(VIC2_INTEN_REG, boss->vic2mask & boss->guest_vic2_en);
-	}
-}
-
-/*
  * BOSS: arch_local_irq_enable
  */
 void boss_local_irq_enable(void)

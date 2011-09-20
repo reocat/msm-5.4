@@ -61,31 +61,51 @@
 		.macro	get_irqnr_preamble, base, tmp
 		.endm
 
+		.macro boss_vic_update, reg1, reg2, reg3
+		tst	\reg1, #0x80
+		ldr	\reg1, =boss			@ reg1: boss
+		ldr	\reg1, [\reg1]
+		bne	1f
+
+		ldr	\reg2, [\reg1, #BOSS_VIC1MASK_OFFSET]
+		ldr	\reg3, [\reg1, #BOSS_GUEST_VIC1_EN_OFFSET]
+		and	\reg2, \reg2, \reg3
+		ldr	\reg3, =VIC_BASE
+		str	\reg2, [\reg3, #VIC_INTEN_OFFSET]
+
+		ldr	\reg2, [\reg1, #BOSS_VIC2MASK_OFFSET]
+		ldr	\reg3, [\reg1, #BOSS_GUEST_VIC2_EN_OFFSET]
+		and	\reg2, \reg2, \reg3
+		ldr	\reg3, =VIC2_BASE
+		str	\reg2, [\reg3, #VIC_INTEN_OFFSET]
+
+		mov	\reg2, #0
+		str	\reg2, [\reg1, #BOSS_GUEST_IRQ_MASK_OFFSET]
+		b	2f
+1:
+
+		ldr	\reg2, [\reg1, #BOSS_VIC1MASK_OFFSET]
+		ldr	\reg3, [\reg1, #BOSS_GUEST_VIC1_EN_OFFSET]
+		and	\reg2, \reg2, \reg3
+		ldr	\reg3, =VIC_BASE
+		str	\reg2, [\reg3, #VIC_INTEN_CLR_OFFSET]
+
+		ldr	\reg2, [\reg1, #BOSS_VIC2MASK_OFFSET]
+		ldr	\reg3, [\reg1, #BOSS_GUEST_VIC2_EN_OFFSET]
+		and	\reg2, \reg2, \reg3
+		ldr	\reg3, =VIC2_BASE
+		str	\reg2, [\reg3, #VIC_INTEN_CLR_OFFSET]
+
+		mov	\reg2, #1
+		str	\reg2, [\reg1, #BOSS_GUEST_IRQ_MASK_OFFSET]
+2:
+		.endm
+
 		.macro	arch_ret_to_user, tmp1, tmp2
 #ifdef CONFIG_BOSS_SINGLE_CORE
 		stmfd	sp!, {r0-r2}
 		mrs	r0, spsr
-		tst	r0, #128				@ IRQ mask
-		bne	1f
-
-		ldr	r0, =boss
-		ldr	r0, [r0]
-
-		ldr	r1, [r0, #BOSS_VIC1MASK_OFFSET]
-		ldr	r2, [r0, #BOSS_GUEST_VIC1_EN_OFFSET]
-		and	r1, r1, r2
-		ldr	r2, =VIC_BASE
-		str	r1, [r2, #VIC_INTEN_OFFSET]
-
-		ldr	r1, [r0, #BOSS_VIC2MASK_OFFSET]
-		ldr	r2, [r0, #BOSS_GUEST_VIC2_EN_OFFSET]
-		and	r1, r1, r2
-		ldr	r2, =VIC2_BASE
-		str	r1, [r2, #VIC_INTEN_OFFSET]
-
-		mov	r1, #0
-		str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
-1:
+		boss_vic_update r0, r1, r2
 		ldmfd	sp!, {r0-r2}
 #endif
 		.endm

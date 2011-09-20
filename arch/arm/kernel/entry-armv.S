@@ -191,15 +191,13 @@ __dabt_svc:
 	@
 	@ restore SPSR and restart the instruction
 	@
-#ifdef CONFIG_BOSS_SINGLE_CORE
-	ldr	r5, [sp, #S_PSR]
-	mov	r0, r5
-	bl	boss_exception_exit
-	svc_exit r5				@ return from exception
-#else
 	ldr	r2, [sp, #S_PSR]
-	svc_exit r2				@ return from exception
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	stmfd	sp!, {r0-r2}
+	boss_vic_update r2, r0, r1
+	ldmfd	sp!, {r0-r2}
 #endif
+	svc_exit r2				@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__dabt_svc)
 
@@ -232,8 +230,9 @@ __irq_svc:
 	bleq	trace_hardirqs_on
 #endif
 #ifdef CONFIG_BOSS_SINGLE_CORE
-	mov	r0, r4
-	bl	boss_irq_exit
+	stmfd	sp!, {r0-r1, r4}
+	boss_vic_update r4, r0, r1
+	ldmfd	sp!, {r0-r1, r4}
 #endif
 	svc_exit r4				@ return from exception
  UNWIND(.fnend		)
@@ -292,15 +291,13 @@ __und_svc:
 	@
 	@ restore SPSR and restart the instruction
 	@
+	ldr	r2, [sp, #S_PSR]
 #ifdef CONFIG_BOSS_SINGLE_CORE
-	ldr	r5, [sp, #S_PSR]
-	mov	r0, r5
-	bl	boss_exception_exit
-	svc_exit r5				@ return from exception
-#else
-	ldr	r2, [sp, #S_PSR]		@ Get SVC cpsr
-	svc_exit r2				@ return from exception
+	stmfd	sp!, {r0-r2}
+	boss_vic_update r2, r0, r1
+	ldmfd	sp!, {r0-r2}
 #endif
+	svc_exit r2				@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__und_svc)
 
@@ -336,15 +333,13 @@ __pabt_svc:
 	@
 	@ restore SPSR and restart the instruction
 	@
-#ifdef CONFIG_BOSS_SINGLE_CORE
-	ldr	r5, [sp, #S_PSR]
-	mov	r0, r5
-	bl	boss_exception_exit
-	svc_exit r5				@ return from exception
-#else
 	ldr	r2, [sp, #S_PSR]
-	svc_exit r2				@ return from exception
+#ifdef CONFIG_BOSS_SINGLE_CORE
+	stmfd	sp!, {r0-r2}
+	boss_vic_update r2, r0, r1
+	ldmfd	sp!, {r0-r2}
 #endif
+	svc_exit r2				@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__pabt_svc)
 
