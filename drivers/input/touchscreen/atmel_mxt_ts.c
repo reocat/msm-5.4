@@ -480,7 +480,7 @@ mxt_get_object(struct mxt_data *data, u8 type)
 			return object;
 	}
 
-	dev_err(&data->client->dev, "Invalid object type\n");
+	dev_err(&data->client->dev, "Invalid object type T%d\n", type);
 	return NULL;
 }
 
@@ -650,7 +650,8 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 		if (reportid >= min_reportid && reportid <= max_reportid)
 			mxt_input_touchevent(data, &message, id);
 		else
-			mxt_dump_message(dev, &message);
+			if (reportid != 0xff)
+				mxt_dump_message(dev, &message);
 	} while (reportid != 0xff);
 
 end:
@@ -800,6 +801,7 @@ static int mxt_get_info(struct mxt_data *data)
 
 static int mxt_get_object_table(struct mxt_data *data)
 {
+	struct device *dev = &data->client->dev;
 	int error;
 	int i;
 	u16 reg;
@@ -824,6 +826,11 @@ static int mxt_get_object_table(struct mxt_data *data)
 			reportid += object->num_report_ids * object->instances;
 			object->max_reportid = reportid;
 		}
+
+		dev_dbg(dev, "T%d, start:%d size:%d instances:%d "
+			"max_reportid:%d\n",
+			object->type, object->start_address, object->size,
+			object->instances, object->max_reportid);
 	}
 
 	return 0;
@@ -852,13 +859,17 @@ static int mxt_initialize(struct mxt_data *data)
 
 	/* Get object table information */
 	error = mxt_get_object_table(data);
-	if (error)
+	if (error) {
+		dev_err(&client->dev, "Failed to read object table\n");
 		return error;
+	}
 
 	/* Check register init values */
 	error = mxt_check_reg_init(data);
-	if (error)
+	if (error) {
+		dev_err(&client->dev, "Failed to initialize configuration\n");
 		return error;
+	}
 
 	mxt_handle_pdata(data);
 
@@ -1334,16 +1345,22 @@ static int __devinit mxt_probe(struct i2c_client *client,
 	}
 
 	error = mxt_make_highchg(data);
-	if (error)
+	if (error) {
+		dev_err(&client->dev, "Failed to make high CHG\n");
 		goto err_free_irq;
+	}
 
 	error = input_register_device(input_dev);
-	if (error)
+	if (error) {
+		dev_err(&client->dev, "Failed to register input device\n");
 		goto err_free_irq;
+	}
 
 	error = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
-	if (error)
+	if (error) {
+		dev_err(&client->dev, "Failed to create sysfs group\n");
 		goto err_unregister_device;
+	}
 
 	sysfs_bin_attr_init(&data->mem_access_attr);
 	data->mem_access_attr.attr.name = "mem_access";
