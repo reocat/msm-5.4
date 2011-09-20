@@ -86,6 +86,9 @@ X-C-y +=	$(IPCDIR)/defs/i_button.x
 #Streaming .x file
 X-C-y +=	$(IPCDIR)/defs/i_streamer.x
 
+#Preview .x file
+X-C-y +=	$(IPCDIR)/defs/i_preview.x
+
 # Virtual ALSA
 X-S-y +=	$(IPCDIR)/defs/lk_alsa_fifo.x
 X-C-y +=	$(IPCDIR)/defs/i_alsa_op.x

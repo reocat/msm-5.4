@@ -23,10 +23,14 @@
 extern int ipc_i_streamer_get_iavpool_info(unsigned char **base_addr, unsigned int *size);
 extern int ipc_i_streamer_init(void);
 extern void ipc_i_streamer_cleanup(void);
-
+extern int ipc_i_preview_get_previewpool_info(unsigned char **base_addr, unsigned int *size);
+extern int ipc_i_preview_init(void);
+extern void ipc_i_preview_cleanup(void);
 
 static unsigned char *iavpool_baseaddr = NULL;
 static unsigned int iavpool_size = 0;
+static unsigned char *previewpool_baseaddr = NULL;
+static unsigned int previewpool_size = 0;
 struct ambastrmem_dev {
 	struct miscdevice *misc_dev;
 };
@@ -90,6 +94,7 @@ static int ambastrmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	int rval;
 	unsigned long size;
+	int baseaddr;
 
 	//iavpool must map as read-only area!
 	//if((vma->vm_flags & VM_WRITE)!=0){
@@ -105,10 +110,20 @@ static int ambastrmem_mmap(struct file *filp, struct vm_area_struct *vma)
 		goto Done;
 	}
 	
-	printk("%s: iavpool_baseaddr=%p, iavpool_size=%x\n",__func__, iavpool_baseaddr, iavpool_size);
+	if(ipc_i_preview_get_previewpool_info(&previewpool_baseaddr, &previewpool_size)<0){
+		printk("ipc_i_preview_get_previewpool_info() fail\n");
+		rval = -EINVAL;
+		goto Done;
+	}
 	
 	size = vma->vm_end - vma->vm_start;
-	if (size != iavpool_size) {
+	if(size==iavpool_size) {
+		printk("%s: iavpool_baseaddr=%p, iavpool_size=%x\n",__func__, iavpool_baseaddr, iavpool_size);
+		baseaddr=(int)iavpool_baseaddr;
+	} else if(size==previewpool_size) {
+		printk("%s: previewpool_baseaddr=%p, previewpool_size=%x\n",__func__, previewpool_baseaddr, previewpool_size);
+		baseaddr=(int)previewpool_baseaddr;
+	} else {
 		rval = -EINVAL;
 		goto Done;
 	}
@@ -122,7 +137,7 @@ static int ambastrmem_mmap(struct file *filp, struct vm_area_struct *vma)
 						 size,
 						 vma->vm_page_prot);
 
-	vma->vm_pgoff = ((int)iavpool_baseaddr) >> PAGE_SHIFT;
+	vma->vm_pgoff = (baseaddr) >> PAGE_SHIFT;
 	if ((rval = remap_pfn_range(vma,
 			vma->vm_start,
 			vma->vm_pgoff,
@@ -196,6 +211,7 @@ static int __devinit ambastrmem_probe(struct platform_device *pdev)
 
 	printk("Probe %s successfully\n",amba_strmem_dev.misc_dev->name);
 	ipc_i_streamer_init();
+	ipc_i_preview_init();
 	
 	return 0;
 
@@ -209,6 +225,7 @@ err_fail:
 static int __devexit ambastrmem_remove(struct platform_device *pdev)
 {
 	ipc_i_streamer_cleanup();
+	ipc_i_preview_cleanup();
 	misc_deregister(amba_strmem_dev.misc_dev);
 	amba_strmem_dev.misc_dev=NULL;
 	
