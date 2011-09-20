@@ -532,8 +532,11 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.phy_id = 0x00008201;
 			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(187);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
-			//ambarella_eth0_platform_info.default_100_clk = 25000000;
+			ambarella_eth0_platform_info.mii_reset.active_delay = 300;
+			ambarella_eth0_platform_info.default_clk = 25000000;
+			ambarella_eth0_platform_info.default_10_clk = 25000000;
+			ambarella_eth0_platform_info.default_100_clk = 25000000;
+			ambarella_eth0_platform_info.default_1000_clk = 25000000;
 
 			fio_default_owner = SELECT_FIO_SDIO;
 			ambarella_platform_sd_controller0.clk_limit = 24000000;
@@ -690,6 +693,34 @@ static void __init ambarella_init_elephant(void)
 		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
+/*<-------------------------------------wl12xx start --------------------------------------------->*/
+/*-->WiFi_EN  = GPIO2 WiFi_IRQ=GPIO3 BT_EN=GPIO4<--*/
+#ifdef CONFIG_TIWLAN_SDIO
+		ambarella_board_generic.wifi_sd_bus = 0;
+		ambarella_board_generic.wifi_sd_slot = 0;
+		ambarella_board_generic.wifi_irq.irq_gpio = GPIO(3);
+		ambarella_board_generic.wifi_irq.irq_line = gpio_to_irq(3);
+		ambarella_board_generic.wifi_irq.irq_type = IRQF_TRIGGER_FALLING;
+		ambarella_board_generic.wifi_irq.irq_gpio_val = GPIO_LOW;
+		ambarella_board_generic.wifi_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+		ambarella_board_generic.wifi_power.gpio_id = GPIO(2);
+		ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
+		ambarella_board_generic.wifi_power.active_delay = 300;
+#endif
+#ifdef CONFIG_TI_ST
+		struct ambarella_gpio_io_info		BT_power;
+        BT_power.gpio_id = GPIO(4);
+		BT_power.active_level = GPIO_HIGH;
+		BT_power.active_delay = 1;
+
+		ambarella_set_gpio_output(&BT_power, 0);
+		mdelay(10);
+		ambarella_set_gpio_output(&BT_power, 1);
+		mdelay(100);
+		ambarella_set_gpio_output(&BT_power, 0);
+
+#endif
+/*	<----------------------------------- wl12xxx end-------------------------------------------->*/
 		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
