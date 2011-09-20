@@ -612,8 +612,11 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.phy_id = 0x00008201;
 			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(187);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
-			//ambarella_eth0_platform_info.default_100_clk = 25000000;
+			ambarella_eth0_platform_info.mii_reset.active_delay = 300;
+			ambarella_eth0_platform_info.default_clk = 25000000;
+			ambarella_eth0_platform_info.default_10_clk = 25000000;
+			ambarella_eth0_platform_info.default_100_clk = 25000000;
+			ambarella_eth0_platform_info.default_1000_clk = 25000000;
 
 			fio_default_owner = SELECT_FIO_SDIO;
 			ambarella_platform_sd_controller0.clk_limit = 24000000;
@@ -786,8 +789,8 @@ static void __init ambarella_init_elephant(void)
 		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
-/*<-------------------------------------wl12xx start --------------------------------------------->*/		
-/*-->WiFi_EN  = GPIO2 WiFi_IRQ=GPIO3 BT_EN=GPIO4<--*/	
+/*<-------------------------------------wl12xx start --------------------------------------------->*/
+/*-->WiFi_EN  = GPIO2 WiFi_IRQ=GPIO3 BT_EN=GPIO4<--*/
 #ifdef CONFIG_TIWLAN_SDIO
 		ambarella_board_generic.wifi_sd_bus = 0;
 		ambarella_board_generic.wifi_sd_slot = 0;
