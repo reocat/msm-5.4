@@ -554,8 +554,8 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
 			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 
-			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
-			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
+			ambarella_tm1927_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
+			i2c_register_board_info(2, &ambarella_tm1927_board_info, 1);
 
 			ambarella_board_generic.vin_power.gpio_id = GPIO(122);
 			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
@@ -732,7 +732,7 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
 		ambarella_board_generic.lcd_reset.active_delay = 1;
 
-		ambarella_board_generic.lcd_spi_hw.bus_id = 2;
+		ambarella_board_generic.lcd_spi_hw.bus_id = 3;
 		ambarella_board_generic.lcd_spi_hw.cs_id = 0;
 
 		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(45);
