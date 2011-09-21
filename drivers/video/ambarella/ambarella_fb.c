@@ -48,7 +48,7 @@
 
 #include <plat/fb.h>
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_FB_NOT_USE_UITRON_VOUT)
 extern int ambfb_vdspdrv_claim(struct ambarella_platform_fb *, int);
 extern int ambfb_vdspdrv_release(struct ambarella_platform_fb *, int);
 #endif
@@ -985,7 +985,7 @@ static int __devinit ambfb_probe(struct platform_device *pdev)
 		}
 	}
 	
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_FB_NOT_USE_UITRON_VOUT)
 	ambfb_vdspdrv_claim(ambfb_data, pdev->id);
 #endif
 
@@ -1182,7 +1182,7 @@ ambfb_probe_release_framebuffer:
 
 ambfb_probe_exit:
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_FB_NOT_USE_UITRON_VOUT)
 	if (errorCode != 0)
 		ambfb_vdspdrv_release(ambfb_data, pdev->id);
 #endif
@@ -1225,7 +1225,7 @@ static int __devexit ambfb_remove(struct platform_device *pdev)
 		mutex_unlock(&ambfb_data->lock);
 	}
 
-#if defined(CONFIG_AMBARELLA_IPC)
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_FB_NOT_USE_UITRON_VOUT)
 	ambfb_vdspdrv_release(ambfb_data, pdev->id);
 #endif
 
