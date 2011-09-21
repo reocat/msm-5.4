@@ -39,9 +39,6 @@
 
 #include <mach/hardware.h>
 #include <plat/idc.h>
-#if defined(CONFIG_AMBARELLA_IPC)
-#include <linux/aipc/ipc_mutex.h>
-#endif
 
 #ifndef CONFIG_I2C_AMBARELLA_RETRIES
 #define CONFIG_I2C_AMBARELLA_RETRIES		(3)
@@ -433,7 +430,6 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	down(&pinfo->system_event_sem);
 #if defined(CONFIG_AMBARELLA_IPC)
-	ipc_mutex_lock(pinfo->platform_info->ipc_mutex_id);
 	enable_irq(pinfo->irq);
 #endif
 	for (retryCount = 0; retryCount < adap->retries; retryCount++) {
@@ -466,7 +462,6 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	}
 #if defined(CONFIG_AMBARELLA_IPC)
 	disable_irq(pinfo->irq);
-	ipc_mutex_unlock(pinfo->platform_info->ipc_mutex_id);
 #endif
 	up(&pinfo->system_event_sem);
 
@@ -564,6 +559,9 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 	adap->dev.parent = &pdev->dev;
 	adap->nr = pdev->id;
 	adap->retries = CONFIG_I2C_AMBARELLA_RETRIES;
+#if defined(CONFIG_AMBARELLA_IPC)
+	adap->ipc_mutex_id = platform_info->ipc_mutex_id;
+#endif
 	errorCode = i2c_add_numbered_adapter(adap);
 	if (errorCode) {
 		dev_err(&pdev->dev,
