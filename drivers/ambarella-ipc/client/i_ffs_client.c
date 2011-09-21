@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/list.h>
+#include <linux/mutex.h>
 
 #include <linux/aipc/aipc.h>
 #include <linux/aipc/i_ffs.h>
@@ -34,6 +35,14 @@
 #define DEBUG_MSG printk
 #else
 #define DEBUG_MSG(...)
+#endif
+
+#ifdef CONFIG_BOSS_SINGLE_CORE
+#undef ambcache_clean_range
+#undef ambcache_inv_range
+
+#define ambcache_clean_range(...)
+#define ambcache_inv_range(...)
 #endif
 
 static CLIENT *IPC_i_ffs = NULL;
@@ -424,13 +433,18 @@ static struct proc_dir_entry *proc_list = NULL;
 static struct proc_dir_entry *proc_fcre = NULL;
 static struct proc_dir_entry *proc_remove = NULL;
 static struct proc_dir_entry *proc_seek = NULL;
-static struct proc_dir_entry *proc_size = NULL;
+static struct proc_dir_entry *proc_fstat = NULL;
 static struct proc_dir_entry *proc_getdev = NULL;
-static struct proc_dir_entry *proc_getdev_bin = NULL;
 static struct proc_dir_entry *proc_ffs_mkdir = NULL;
 static struct proc_dir_entry *proc_rmdir = NULL;
 static struct proc_dir_entry *proc_fsfirst = NULL;
 static struct proc_dir_entry *proc_fsnext = NULL;
+
+static struct proc_dir_entry *proc_fstat_bin = NULL;
+static struct proc_dir_entry *proc_fsfirst_bin = NULL;
+static struct proc_dir_entry *proc_fsnext_bin = NULL;
+static struct proc_dir_entry *proc_getdev_bin = NULL;
+
 
 /*
  * Mapped entry to virtual ffs.
@@ -452,6 +466,7 @@ static struct ipc_ffs_getdev last_ffs_getdev;
 static struct ipc_ffs_stat last_ffs_stat;
 static u64 last_seek_fpos;
 static struct ipc_ffs_fsfind last_fsfind;
+static struct mutex g_mlock;
 
 /*
  * Mapped file read.
@@ -463,26 +478,37 @@ static int i_ffs_proc_fs_actual_read(char *page, char **start, off_t off,
 	int rval;
 	int len = 0;
 
+	mutex_lock(&g_mlock);
+
 	*start = page;
-#if 0
+
 	rval = ipc_ffs_fseek(pl->vfd, off, IPC_FFS_SEEK_SET);
-	if (rval < 0)
-		return -EFAULT;
-#endif
+	if (rval < 0) {
+		rval = -EFAULT;
+		goto done;
+	}
 
 	rval = ipc_ffs_fread(page, 1, count, pl->vfd);
 	if (rval < 0) {
 		DEBUG_MSG(KERN_WARNING "actual_read fail\n");
-		return -EIO;
+		rval = -EIO;
+		goto done;
 	} else
 		len = rval;
 
 	if (ipc_ffs_feof(pl->vfd))
 		*eof = 1;
 #if 0
-	DEBUG_MSG(KERN_WARNING "actual_read, *start = %p, off = %d, count = %d, len = %d, eof = %d\n",
+	DEBUG_MSG(KERN_WARNING "actual_read, *start = %p, off = 0x%x, count = %d, len = %d, eof = %d\n",
 			*start, off, count, len, *eof);
 #endif
+
+done:
+	mutex_unlock(&g_mlock);
+	if (rval < 0) {
+		return rval;
+	}
+
 	return len;
 }
 
@@ -962,7 +988,7 @@ static int i_ffs_proc_fs_getdev_write(struct file *file,
 				     unsigned long count, void *data)
 {
 	char drive[2];
-	int rval, i;
+	int rval;
 
 	memset(&drive, 0x0, sizeof(drive));
 	if (copy_from_user(drive, buffer, 1))
@@ -978,23 +1004,52 @@ static int i_ffs_proc_fs_getdev_write(struct file *file,
 }
 
 /*
- * /proc/aipc/ffs/size read function.
+ * /proc/aipc/ffs/fstat_bin read function.
  */
-static int i_ffs_proc_fs_size_read(char *page, char **start, off_t off,
+static int i_ffs_proc_fs_fstat_read_bin(char *page, char **start, off_t off,
 				   int count, int *eof, void *data)
 {
 	int len;
 
-	len = sprintf(page, "0x%llx\n", last_ffs_stat.fstfz);
+	len = sizeof(last_ffs_stat);
+	memcpy(page, &last_ffs_stat, len);
 	*eof = 1;
 
 	return len;
 }
 
 /*
- * /proc/aipc/ffs/size write function.
+ * /proc/aipc/ffs/fstat read function.
  */
-static int i_ffs_proc_fs_size_write(struct file *file,
+static int i_ffs_proc_fs_fstat_read(char *page, char **start, off_t off,
+				   int count, int *eof, void *data)
+{
+	int len = 0;
+
+	len =  sprintf(page + len, "fs_type = 0x%x\n", last_ffs_stat.fs_type);
+	len += sprintf(page + len, "fstfz = 0x%llx\n", last_ffs_stat.fstfz);
+	len += sprintf(page + len, "fstact = 0x%x\n", last_ffs_stat.fstact);
+	len += sprintf(page + len, "fstad = 0x%x\n", last_ffs_stat.fstad);
+	len += sprintf(page + len, "fstautc = 0x%x\n", last_ffs_stat.fstautc);
+	len += sprintf(page + len, "fstut = 0x%x\n", last_ffs_stat.fstut);
+	len += sprintf(page + len, "fstuc = 0x%x\n", last_ffs_stat.fstuc);
+	len += sprintf(page + len, "fstud = 0x%x\n", last_ffs_stat.fstud);
+	len += sprintf(page + len, "fstuutc = 0x%x\n", last_ffs_stat.fstuutc);
+	len += sprintf(page + len, "fstct = 0x%x\n", last_ffs_stat.fstct);
+	len += sprintf(page + len, "fstcd = 0x%x\n", last_ffs_stat.fstcd);
+	len += sprintf(page + len, "fstcc = 0x%x\n", last_ffs_stat.fstcc);
+	len += sprintf(page + len, "fstcutc = 0x%x\n", last_ffs_stat.fstcutc);
+	len += sprintf(page + len, "fstat = 0x%x\n", last_ffs_stat.fstat);
+
+	*eof = 1;
+
+	return len;
+}
+
+/*
+ * /proc/aipc/ffs/fstat write function.
+ */
+static int i_ffs_proc_fs_fstat_write(struct file *file,
 				     const char __user *buffer,
 				     unsigned long count, void *data)
 {
@@ -1016,7 +1071,7 @@ static int i_ffs_proc_fs_size_write(struct file *file,
 			break;
 	}
 
-	DEBUG_MSG(KERN_WARNING "size_write: %s\n", filename);
+	DEBUG_MSG(KERN_WARNING "fstat_write: %s\n", filename);
 
 	rval = ipc_ffs_fstat(filename, &last_ffs_stat);
 	if (rval < 0)
@@ -1116,6 +1171,22 @@ static int i_ffs_proc_fs_rmdir_write(struct file *file,
 /*
  * /proc/aipc/ffs/fsfirst read function.
  */
+static int i_ffs_proc_fs_fsfirst_read_bin(char *page, char **start, off_t off,
+				   int count, int *eof, void *data)
+{
+	int len = 0;
+
+	len = sizeof(last_fsfind);
+	memcpy(page, &last_fsfind, len);
+
+	*eof = 1;
+
+	return len;
+}
+
+/*
+ * /proc/aipc/ffs/fsfirst read function.
+ */
 static int i_ffs_proc_fs_fsfirst_read(char *page, char **start, off_t off,
 				   int count, int *eof, void *data)
 {
@@ -1124,8 +1195,14 @@ static int i_ffs_proc_fs_fsfirst_read(char *page, char **start, off_t off,
 	/* FIXME: how to handle unicode case? */
 	/* Assume ASCII now */
 	if (last_fsfind.rval == 0) {
-		len += sprintf(page, "%s\n", last_fsfind.FileName);
-		//len += sprintf(page, "%s\n", last_fsfind.LongName);
+		len += sprintf(page + len, "rval = %d\n", last_fsfind.rval);
+		len += sprintf(page + len, "vdta = 0x%x\n", last_fsfind.vdta);
+		len += sprintf(page + len, "Time = 0x%x\n", last_fsfind.Time);
+		len += sprintf(page + len, "Date = 0x%x\n", last_fsfind.Date);
+		len += sprintf(page + len, "FileSize = 0x%llx\n", last_fsfind.FileSize);
+		len += sprintf(page + len, "Attribute = 0x%x\n", last_fsfind.Attribute);
+		len += sprintf(page + len, "FileName = %s\n", last_fsfind.FileName);
+		len += sprintf(page + len, "LongName = %s\n", last_fsfind.LongName);
 	} else {
 		len = 0;
 	}
@@ -1174,6 +1251,35 @@ static int i_ffs_proc_fs_fsfirst_write(struct file *file,
 /*
  * /proc/aipc/ffs/fsnext read function.
  */
+static int i_ffs_proc_fs_fsnext_read_bin(char *page, char **start, off_t off,
+				   int count, int *eof, void *data)
+{
+	int len = 0, rval;
+
+	if (off > 0)
+		goto done;
+
+	/* FIXME: how to handle unicode case? */
+	rval = ipc_ffs_fsnext(&last_fsfind);
+	if (rval < 0)
+		goto done;
+
+	len = sizeof(last_fsfind);
+	memcpy(page, &last_fsfind, len);
+
+done:
+	*eof = 1;
+#if 0
+	DEBUG_MSG(KERN_WARNING "fsnext_read, *start = %p, off = %d, count = %d,"
+		" len = %d, eof = %d\n", *start, off, count, len, *eof);
+#endif
+
+	return len;
+}
+
+/*
+ * /proc/aipc/ffs/fsnext read function.
+ */
 static int i_ffs_proc_fs_fsnext_read(char *page, char **start, off_t off,
 				   int count, int *eof, void *data)
 {
@@ -1188,8 +1294,14 @@ static int i_ffs_proc_fs_fsnext_read(char *page, char **start, off_t off,
 		goto done;
 
 	if (last_fsfind.rval == 0) {
-		len += sprintf(page, "%s\n", last_fsfind.FileName);
-		//len += sprintf(page, "%s\n", last_fsfind.LongName);
+		len += sprintf(page + len, "rval = %d\n", last_fsfind.rval);
+		len += sprintf(page + len, "vdta = 0x%x\n", last_fsfind.vdta);
+		len += sprintf(page + len, "Time = 0x%x\n", last_fsfind.Time);
+		len += sprintf(page + len, "Date = 0x%x\n", last_fsfind.Date);
+		len += sprintf(page + len, "FileSize = 0x%llx\n", last_fsfind.FileSize);
+		len += sprintf(page + len, "Attribute = 0x%x\n", last_fsfind.Attribute);
+		len += sprintf(page + len, "FileName = %s\n", last_fsfind.FileName);
+		len += sprintf(page + len, "LongName = %s\n", last_fsfind.LongName);
 	} else {
 		len = 0;
 	}
@@ -1224,6 +1336,8 @@ static void i_ffs_procfs_init(void)
 		pr_err("create ffs dir failed!\n");
 		return;
 	}
+
+	mutex_init(&g_mlock);
 
 	proc_map = create_proc_entry("map", 0, proc_ffs);
 	if (proc_map) {
@@ -1267,11 +1381,12 @@ static void i_ffs_procfs_init(void)
 		proc_seek->write_proc = i_ffs_proc_fs_seek_write;
 	}
 
-	proc_size = create_proc_entry("size", 0, proc_ffs);
-	if (proc_size) {
-		proc_size->data = NULL;
-		proc_size->read_proc = i_ffs_proc_fs_size_read;
-		proc_size->write_proc = i_ffs_proc_fs_size_write;
+	proc_fstat = create_proc_entry("fstat", 0, proc_ffs);
+	if (proc_fstat) {
+		proc_fstat->data = NULL;
+		proc_fstat->read_proc = i_ffs_proc_fs_fstat_read;
+		proc_fstat->write_proc = i_ffs_proc_fs_fstat_write;
+
 	}
 
 	proc_getdev = create_proc_entry("getdev", 0, proc_ffs);
@@ -1279,13 +1394,6 @@ static void i_ffs_procfs_init(void)
 		proc_getdev->data = NULL;
 		proc_getdev->read_proc = i_ffs_proc_fs_getdev_read;
 		proc_getdev->write_proc = i_ffs_proc_fs_getdev_write;
-	}
-
-	proc_getdev_bin = create_proc_entry("getdev_bin", 0, proc_ffs);
-	if (proc_getdev_bin) {
-		proc_getdev_bin->data = NULL;
-		proc_getdev_bin->read_proc = i_ffs_proc_fs_getdev_read_bin;
-		proc_getdev_bin->write_proc = i_ffs_proc_fs_getdev_write;
 	}
 
 	proc_ffs_mkdir = create_proc_entry("mkdir", 0, proc_ffs);
@@ -1308,14 +1416,43 @@ static void i_ffs_procfs_init(void)
 		proc_fsfirst->data = NULL;
 		proc_fsfirst->read_proc = i_ffs_proc_fs_fsfirst_read;
 		proc_fsfirst->write_proc = i_ffs_proc_fs_fsfirst_write;
-	}
 
+	}
 
 	proc_fsnext = create_proc_entry("fsnext", 0, proc_ffs);
 	if (proc_fsnext) {
 		proc_fsnext->data = NULL;
 		proc_fsnext->read_proc = i_ffs_proc_fs_fsnext_read;
 		proc_fsnext->write_proc = i_ffs_proc_fs_fsnext_write;
+
+	}
+
+	proc_fstat_bin = create_proc_entry("fstat_bin", 0, proc_ffs);
+	if (proc_fstat_bin) {
+		proc_fstat_bin->data = NULL;
+		proc_fstat_bin->read_proc = i_ffs_proc_fs_fstat_read_bin;
+		proc_fstat_bin->write_proc = i_ffs_proc_fs_fstat_write;
+	}
+
+	proc_getdev_bin = create_proc_entry("getdev_bin", 0, proc_ffs);
+	if (proc_getdev_bin) {
+		proc_getdev_bin->data = NULL;
+		proc_getdev_bin->read_proc = i_ffs_proc_fs_getdev_read_bin;
+		proc_getdev_bin->write_proc = i_ffs_proc_fs_getdev_write;
+	}
+
+	proc_fsfirst_bin = create_proc_entry("fsfirst_bin", 0, proc_ffs);
+	if (proc_fsfirst_bin) {
+		proc_fsfirst_bin->data = NULL;
+		proc_fsfirst_bin->read_proc = i_ffs_proc_fs_fsfirst_read_bin;
+		proc_fsfirst_bin->write_proc = i_ffs_proc_fs_fsfirst_write;
+	}
+
+	proc_fsnext_bin = create_proc_entry("fsnext_bin", 0, proc_ffs);
+	if (proc_fsnext_bin) {
+		proc_fsnext_bin->data = NULL;
+		proc_fsnext_bin->read_proc = i_ffs_proc_fs_fsnext_read_bin;
+		proc_fsnext_bin->write_proc = i_ffs_proc_fs_fsnext_write;
 	}
 }
 
@@ -1362,9 +1499,9 @@ static void i_ffs_procfs_cleanup(void)
 		proc_seek = NULL;
 	}
 
-	if (proc_size) {
-		remove_proc_entry("size", proc_ffs);
-		proc_size = NULL;
+	if (proc_fstat) {
+		remove_proc_entry("fstat", proc_ffs);
+		proc_fstat = NULL;
 	}
 
 	if (proc_ffs_mkdir) {
@@ -1386,6 +1523,27 @@ static void i_ffs_procfs_cleanup(void)
 		remove_proc_entry("fsnext", proc_ffs);
 		proc_fsnext = NULL;
 	}
+
+	if (proc_fstat_bin) {
+		remove_proc_entry("fstat_bin", proc_ffs);
+		proc_fstat_bin = NULL;
+	}
+
+	if (proc_getdev_bin) {
+		remove_proc_entry("getdev_bin", proc_ffs);
+		proc_getdev_bin = NULL;
+	}
+
+	if (proc_fsfirst_bin) {
+		remove_proc_entry("fsfirst_bin", proc_ffs);
+		proc_fsfirst_bin = NULL;
+	}
+
+	if (proc_fsnext_bin) {
+		remove_proc_entry("fsnext_bin", proc_ffs);
+		proc_fsnext_bin = NULL;
+	}
+
 
 	list_for_each_safe(pos, q, &pl_head) {
 		pl = list_entry(pos, struct proc_ffs_list, list);
