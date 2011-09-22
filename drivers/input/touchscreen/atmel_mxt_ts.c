@@ -32,7 +32,7 @@
 #define MXT_VER_21		21
 #define MXT_VER_22		22
 
-/* Firmware */
+/* Firmware files */
 #define MXT_FW_NAME		"maxtouch.fw"
 
 /* Registers */
@@ -207,6 +207,9 @@
 #define MXT_BOOT_STATUS_MASK	0x3f
 #define MXT_BOOT_EXTENDED_ID	(1 << 5)
 #define MXT_BOOT_ID_MASK	0x1f
+
+/* Command process status */
+#define MXT_STATUS_CFGERROR	(1 << 3)
 
 /* Touch status */
 #define MXT_SUPPRESS		(1 << 1)
@@ -753,9 +756,17 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 			goto end;
 
 		if (reportid >= object->min_reportid
-		    && reportid <= object->max_reportid) {
+			&& reportid <= object->max_reportid) {
 			touchid = reportid - object->min_reportid;
 			mxt_input_touchevent(data, &message, touchid);
+		} else {
+			object = mxt_get_object(data, MXT_GEN_COMMAND_T6);
+			if (!object)
+				goto end;
+
+			if ((reportid == object->max_reportid)
+				&& (message.message[0] & MXT_STATUS_CFGERROR))
+				dev_err(dev, "Configuration error\n");
 		}
 	} while (reportid != MXT_RPTID_NOMSG);
 
@@ -1140,6 +1151,13 @@ static int mxt_initialize(struct mxt_data *data)
 			return 0;
 		}
 	}
+
+	dev_info(&client->dev,
+		"Family ID: %d Variant ID: %d Version: %d.%d "
+		"Build: 0x%02X Object Num: %d\n",
+		info->family_id, info->variant_id,
+		info->version >> 4, info->version & 0xf,
+		info->build, info->object_num);
 
 	data->state = APPMODE;
 
