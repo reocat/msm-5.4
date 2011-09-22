@@ -1161,6 +1161,9 @@ static int ambeth_open(struct net_device *ndev)
 	if (errorCode)
 		goto ambeth_open_exit;
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        boss_set_irq_owner(ndev->irq, BOSS_IRQ_OWNER_LINUX, 0);
+#endif
 	errorCode = request_irq(ndev->irq, ambeth_interrupt,
 		IRQF_SHARED | IRQF_TRIGGER_HIGH,
 		ndev->name, ndev);
