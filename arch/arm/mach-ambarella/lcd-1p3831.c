@@ -175,8 +175,8 @@ static void truely_1p3831_write_cmd(u16 cmd)
 	u16			data[2];
 
 	/* spi write */
-	write.bus_id		= 2;
-	write.cs_id		= 0;
+	write.bus_id		= ambarella_board_generic.lcd_spi_hw.bus_id;
+	write.cs_id		= ambarella_board_generic.lcd_spi_hw.cs_id;
 	write.buffer		= (u8 *)&data;
 	write.n_size		= sizeof(data);
 
@@ -191,8 +191,8 @@ static void truely_1p3831_write_cmd_data(reg_t reg)
 	u16			data[3];
 
 	/* spi write */
-	write.bus_id		= 2;
-	write.cs_id		= 0;
+	write.bus_id		= ambarella_board_generic.lcd_spi_hw.bus_id;
+	write.cs_id		= ambarella_board_generic.lcd_spi_hw.cs_id;
 	write.buffer		= (u8 *)&data;
 	write.n_size		= sizeof(data);
 

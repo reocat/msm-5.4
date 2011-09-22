@@ -732,7 +732,7 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
 		ambarella_board_generic.lcd_reset.active_delay = 1;
 
-		ambarella_board_generic.lcd_spi_hw.bus_id = 2;
+		ambarella_board_generic.lcd_spi_hw.bus_id = 3;
 		ambarella_board_generic.lcd_spi_hw.cs_id = 0;
 
 		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(45);
