@@ -215,7 +215,7 @@ void boss_set_irq_owner(int irq, int owner, int update)
 {
 	ipc_spin_lock(boss->lock, 0);
 
-#if (CHIP_REV == A5S)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)
 	if (irq < 32) {
 		if (owner == BOSS_IRQ_OWNER_UITRON) {
 			BOSS_VIC_SET_UITRON(boss->vic1mask, irq);

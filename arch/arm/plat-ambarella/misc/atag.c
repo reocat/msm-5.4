@@ -143,7 +143,8 @@ struct ambarella_mem_map_desc {
 	struct map_desc	io_desc;
 };
 static struct ambarella_mem_map_desc ambarella_io_desc[] = {
-#if !defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
+#if !defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS) && \
+    !defined(CONFIG_PLAT_AMBARELLA_A7_BOSS)
 	[AMBARELLA_IO_DESC_AHB_ID] = {
 		.name		= "AHB",
 		.io_desc	= {
@@ -343,7 +344,8 @@ void __init ambarella_map_io(void)
 #endif
 	}
 
-#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS)
+#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS) || \
+    defined(CONFIG_PLAT_AMBARELLA_A7_BOSS)
 	bhal_mapped = 1;
 	ambarella_hal_info.remapped = 1;
 #endif

@@ -213,6 +213,22 @@ config PLAT_AMBARELLA_A7
 	help
 	  Say Y here if you are using Ambarella A7.
 
+config PLAT_AMBARELLA_A7_BOSS
+	bool "A7 BOSS"
+	default n
+	select CPU_V6
+	select CPU_32v6K
+	select CPU_USE_DOMAINS
+	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_BOSS
+	select BOSS_SINGLE_CORE
+	select GENERIC_CLOCKEVENTS
+	help
+	  Say Y here if you are using Ambarella A7.
+
 config PLAT_AMBARELLA_I1_ARM11
 	bool "iOne ARM11"
 	select CPU_V6

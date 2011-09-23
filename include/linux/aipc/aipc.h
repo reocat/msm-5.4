@@ -40,6 +40,8 @@
 
 #if (CHIP_REV == A5S)
 #define CONFIG_NEED_PTR_CONV		0
+#elif (CHIP_REV == A7)
+#define CONFIG_NEED_PTR_CONV		0
 #elif (CHIP_REV == I1)
 #define CONFIG_NEED_PTR_CONV		1
 #else

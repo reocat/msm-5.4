@@ -30,6 +30,7 @@ obj-$(CONFIG_SUPPORT_ANDROID_TT)       += init-boss_tt.o
 else
 obj-$(CONFIG_PLAT_AMBARELLA_I1_BOSS)	+= init-boss.o
 obj-$(CONFIG_PLAT_AMBARELLA_A5S_BOSS)	+= init-boss_a5s.o
+obj-$(CONFIG_PLAT_AMBARELLA_A7_BOSS)	+= init-boss_a7.o
 endif
 else
 obj-$(CONFIG_MACH_AMBARELLA)	+= init-generic.o

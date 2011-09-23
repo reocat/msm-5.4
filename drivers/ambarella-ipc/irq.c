@@ -30,6 +30,8 @@
 #define USE_VIC_IRQ	0
 #elif (CHIP_REV == A5S)
 #define USE_VIC_IRQ	1
+#elif (CHIP_REV == A7)
+#define USE_VIC_IRQ	1
 #else
 #error "Boss is not supported on this chip!"
 #endif

@@ -66,6 +66,8 @@
 #define CHIP_REV	A6
 #elif	defined(CONFIG_PLAT_AMBARELLA_A7)
 #define CHIP_REV	A7
+#elif	defined(CONFIG_PLAT_AMBARELLA_A7_BOSS)
+#define CHIP_REV	A7
 #elif	defined(CONFIG_PLAT_AMBARELLA_A7L)
 #define CHIP_REV	A7L
 #elif	defined(CONFIG_PLAT_AMBARELLA_A7M)

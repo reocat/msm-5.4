@@ -31,26 +31,44 @@
 #define BOSS_LINUX_VERSION		0x00000004	/* linux struct boss_s version */
 
 #if (CHIP_REV == A5S)
-#define BOSS_VIRT_H2G_INT_REQ_VEC	32	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_H2G_INT_RLY_VEC	53	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_INT_REQ_VEC	35	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_G2H_INT_RLY_VEC	54	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_H2G_MTX_VEC		51	/* Virtual 'host-to-guest' mutex irq */
-#define BOSS_VIRT_G2H_MTX_VEC		52	/* Virtual 'guest-to-host' mutex irq */
+#define BOSS_VIRT_H2G_INT_REQ_VEC	(32 + 0)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_H2G_INT_RLY_VEC	(32 + 21)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_G2H_INT_REQ_VEC	(32 + 3)	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_INT_RLY_VEC	(32 + 22)	/* Virtual 'guest-to-host' irq */
+
+#define BOSS_VIRT_H2G_MTX_VEC		(32 + 19)	/* Virtual 'host-to-guest' mutex irq */
+#define BOSS_VIRT_G2H_MTX_VEC		(32 + 20)	/* Virtual 'guest-to-host' mutex irq */
+
+#define BOSS_VIRT_TIMER_INT_VEC		(32 + 15)	/* Virtual 'timer' to guest irq */
+#define BOSS_VIRT_GIRQ_INT_VEC		(32 + 18)	/* Virtual 'guest IRQ' irq */
+#define BOSS_VIRT_RIRQ_INT_VEC		(32 + 23)	/* Virtual 'root IRQ' irq */
+#elif (CHIP_REV == A7)
+#define BOSS_VIRT_H2G_INT_REQ_VEC	(32 + 0)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_H2G_INT_RLY_VEC	(32 + 27)	/* Virtual 'host-to-guest' irq */
+#define BOSS_VIRT_G2H_INT_REQ_VEC	(32 + 3)	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_INT_RLY_VEC	(32 + 28)	/* Virtual 'guest-to-host' irq */
+
+#define BOSS_VIRT_H2G_MTX_VEC		(32 + 29)	/* Virtual 'host-to-guest' mutex irq */
+#define BOSS_VIRT_G2H_MTX_VEC		(32 + 30)	/* Virtual 'guest-to-host' mutex irq */
+
+#define BOSS_VIRT_TIMER_INT_VEC		(32 + 15)	/* Virtual 'timer' to guest irq */
+#define BOSS_VIRT_GIRQ_INT_VEC		(32 + 31)	/* Virtual 'guest IRQ' irq */
+/* FIXME: BUG: VIC2_20 on A7 is temporarily borrowed from ETH2 IRQ */
+#define BOSS_VIRT_RIRQ_INT_VEC		(32 + 20)	/* Virtual 'root IRQ' irq */
 #elif (CHIP_REV == I1)
 #define BOSS_VIRT_H2G_INT_REQ_VEC	AXI_SOFT_IRQ(0)	/* Virtual 'host-to-guest' irq */
 #define BOSS_VIRT_H2G_INT_RLY_VEC	AXI_SOFT_IRQ(2)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_INT_REQ_VEC	3	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_G2H_INT_RLY_VEC	68	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_INT_REQ_VEC	3		/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_INT_RLY_VEC	(32 + 32 + 4)	/* Virtual 'guest-to-host' irq */
 #define BOSS_VIRT_H2G_MTX_VEC		AXI_SOFT_IRQ(1)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_MTX_VEC		64	/* Virtual 'guest-to-host' irq */
+#define BOSS_VIRT_G2H_MTX_VEC		(32 + 32 + 0)	/* Virtual 'guest-to-host' irq */
+
+#define BOSS_VIRT_TIMER_INT_VEC		(32 + 15)	/* Virtual 'timer' to guest irq */
+#define BOSS_VIRT_GIRQ_INT_VEC		(32 + 18)	/* Virtual 'guest IRQ' irq */
+#define BOSS_VIRT_RIRQ_INT_VEC		(32 + 23)	/* Virtual 'root IRQ' irq */
 #else
 #error "Boss is not supported on this chip!"
 #endif
-
-#define BOSS_VIRT_TIMER_INT_VEC		47	/* Virtual 'timer' to guest irq */
-#define BOSS_VIRT_GIRQ_INT_VEC		50	/* Virtual 'guest IRQ' irq */
-#define BOSS_VIRT_RIRQ_INT_VEC		55	/* Virtual 'root IRQ' irq */
 
 /* Keep these in sync with data structure below */
 #define BOSS_ROOT_CTX_OFFSET		0
