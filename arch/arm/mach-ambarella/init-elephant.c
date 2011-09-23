@@ -320,6 +320,21 @@ static struct ambarella_key_table elephant_keymap_vendor1[AMBINPUT_TABLE_SIZE] =
 	{AMBINPUT_END},
 };
 
+static struct ambarella_key_table elephant_keymap_vendor51[AMBINPUT_TABLE_SIZE] = {
+	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
+	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
+	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
+	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
+
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_HOME,	1,	1,	GPIO(144),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_MENU,	1,	1,	GPIO(145),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	1,	1,	GPIO(146),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_SEARCH,	1,	1,	GPIO(147),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+
+	{AMBINPUT_END},
+};
+
+
 static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
@@ -655,7 +670,7 @@ static void __init ambarella_init_elephant(void)
 
 			platform_device_register(&lcd_1p3831);
 
-			elephant_board_input_info.pkeymap = elephant_keymap_evk;
+			elephant_board_input_info.pkeymap = elephant_keymap_vendor51;
 			break;
 		case 2:
 			ambarella_board_generic.wifi_power.gpio_id = GPIO(128);
