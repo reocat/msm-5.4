@@ -1032,6 +1032,11 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 		ipc_log_print(IPC_LOG_LEVEL_ERROR, "lu: %s", ipc_strerror(IPC_CANTSEND));
 		return IPC_CANTSEND;
 	}
+#if CONFIG_IPC_INFINITE_WAIT
+	if ((aipc_hdr->proc_type & IPC_CALL_ASYNC) == 0) {
+		aipc_hdr->timeout = 0xFFFFFFFF;
+	}
+#endif
 
 	svcxprt->tag = IPC_TAG_BEGIN;
 	svcxprt->tag_end = IPC_TAG_END;
@@ -1082,11 +1087,8 @@ enum clnt_stat ipc_lu_clnt_call(unsigned int clnt_pid,
 
 	ipc_spin_unlock(ipc_buf->clnt_out_lock, IPC_SLOCK_POS_LU_CLNT_OUT);
 
-	if ((aipc_hdr->proc_type & IPC_CALL_ASYNC) == 0) {
-
-#if CONFIG_IPC_INFINITE_WAIT
-		aipc_hdr->timeout = 0xFFFFFFFF;
-#endif
+	if ((aipc_hdr->proc_type & IPC_CALL_ASYNC) == 0)
+	{
 		ipc_log_print(IPC_LOG_LEVEL_INFO, "lu: call wait %08x", xid);
 
 		/* Wait for the remote procedure to complete */
