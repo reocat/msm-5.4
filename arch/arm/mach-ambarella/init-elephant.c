@@ -627,7 +627,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.phy_id = 0x00008201;
 			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(187);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 300;
+			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 			ambarella_eth0_platform_info.default_clk = 25000000;
 			ambarella_eth0_platform_info.default_10_clk = 25000000;
 			ambarella_eth0_platform_info.default_100_clk = 25000000;
