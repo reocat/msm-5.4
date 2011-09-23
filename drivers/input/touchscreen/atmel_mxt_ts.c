@@ -81,6 +81,9 @@
 #define MXT_SPT_MESSAGECOUNT_T44	44
 #define MXT_SPT_CTECONFIG_T46		46
 
+/* MXT_GEN_MESSAGE_T5 object */
+#define MXT_RPTID_NOMSG		0xff
+
 /* MXT_GEN_COMMAND_T6 field */
 #define MXT_COMMAND_RESET	0
 #define MXT_COMMAND_BACKUPNV	1
@@ -242,6 +245,7 @@ struct mxt_object {
 	u8 num_report_ids;
 
 	/* to map object and message */
+	u8 min_reportid;
 	u8 max_reportid;
 };
 
@@ -630,10 +634,8 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 	struct mxt_message message;
 	struct mxt_object *object;
 	struct device *dev = &data->client->dev;
-	int id;
+	int touchid;
 	u8 reportid;
-	u8 max_reportid;
-	u8 min_reportid;
 
 	do {
 		if (mxt_read_message(data, &message)) {
@@ -643,26 +645,22 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 
 		reportid = message.reportid;
 
-		/* whether reportid is thing of MXT_TOUCH_MULTI_T9 */
 		object = mxt_get_object(data, MXT_TOUCH_MULTI_T9);
 		if (!object)
 			goto end;
-
-		max_reportid = object->max_reportid;
-		min_reportid = max_reportid -
-			object->num_report_ids * object->instances + 1;
-		id = reportid - min_reportid;
 
 		if (reportid != MXT_RPTID_NOMSG && data->debug_enabled)
 			print_hex_dump(KERN_DEBUG, "MXT MSG:", DUMP_PREFIX_NONE,
 				16, 1, &message, sizeof(struct mxt_message), false);
 
-		if (reportid >= min_reportid && reportid <= max_reportid)
-			mxt_input_touchevent(data, &message, id);
-		else
-			if (reportid != 0xff)
-				mxt_dump_message(dev, &message);
-	} while (reportid != 0xff);
+		if (reportid >= object->min_reportid
+			&& reportid <= object->max_reportid) {
+			touchid = reportid - object->min_reportid;
+			mxt_input_touchevent(data, &message, touchid);
+		}
+		else if (reportid != MXT_RPTID_NOMSG)
+			mxt_dump_message(dev, &message);
+	} while (reportid != MXT_RPTID_NOMSG);
 
 end:
 	return IRQ_HANDLED;
@@ -716,7 +714,7 @@ static int mxt_make_highchg(struct mxt_data *data)
 		error = mxt_read_message(data, &message);
 		if (error)
 			return error;
-	} while (message.reportid != 0xff && --count);
+	} while (message.reportid != MXT_RPTID_NOMSG && --count);
 
 	if (!count) {
 		dev_err(dev, "CHG pin isn't cleared\n");
@@ -835,12 +833,15 @@ static int mxt_get_object_table(struct mxt_data *data)
 		if (object->num_report_ids) {
 			reportid += object->num_report_ids * object->instances;
 			object->max_reportid = reportid;
+			object->min_reportid = object->max_reportid -
+				object->instances * object->num_report_ids + 1;
 		}
 
 		dev_dbg(dev, "T%d, start:%d size:%d instances:%d "
-			"max_reportid:%d\n",
+			"min_reportid:%d max_reportid:%d\n",
 			object->type, object->start_address, object->size,
-			object->instances, object->max_reportid);
+			object->instances,
+			object->min_reportid, object->max_reportid);
 	}
 
 	return 0;
