@@ -52,6 +52,10 @@
 #include <linux/phy.h>
 #include <linux/ethtool.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+#include <mach/boss.h>
+#endif
+
 #include <mach/hardware.h>
 #include <plat/eth.h>
 
