@@ -600,8 +600,10 @@ static void ambarella_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 }
 
 /* ==========================================================================*/
-#ifdef CONFIG_PLAT_AMBARELLA_A5S_BOSS
-void __init ambarella_init_irq_a5s(void)
+#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS) || \
+    defined(CONFIG_PLAT_AMBARELLA_A7_BOSS)
+
+void __init ambarella_init_irq_a5s_a7(void)
 {
 	u32					i;
 
@@ -808,8 +810,9 @@ void __init ambarella_init_irq_i1(void)
 
 void __init ambarella_init_irq(void)
 {
-#ifdef CONFIG_PLAT_AMBARELLA_A5S_BOSS
-	ambarella_init_irq_a5s();
+#if defined(CONFIG_PLAT_AMBARELLA_A5S_BOSS) || \
+    defined CONFIG_PLAT_AMBARELLA_A7_BOSS
+	ambarella_init_irq_a5s_a7();
 #endif
 #ifdef CONFIG_PLAT_AMBARELLA_I1_BOSS
 	ambarella_init_irq_i1();
