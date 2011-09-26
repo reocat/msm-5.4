@@ -580,7 +580,6 @@ static void serial_ambarella_console_putchar(struct uart_port *port, int ch)
 	amba_writel(port->membase + UART_TH_OFFSET, ch);
 }
 
-#if !defined(CONFIG_BOSS_SINGLE_CORE)
 static void serial_ambarella_console_write(struct console *co,
 	const char *s, unsigned int count)
 {
@@ -618,7 +617,6 @@ static void serial_ambarella_console_write(struct console *co,
 		local_irq_restore(flags);
 	}
 }
-#endif /* CONFIG_BOSS_SINGLE_CORE */
 
 static int __init serial_ambarella_console_setup(struct console *co,
 	char *options)
@@ -649,9 +647,7 @@ static int __init serial_ambarella_console_setup(struct console *co,
 
 static struct console serial_ambarella_console = {
 	.name		= "ttyS",
-#if !defined(CONFIG_BOSS_SINGLE_CORE)
 	.write		= serial_ambarella_console_write,
-#endif
 	.device		= uart_console_device,
 	.setup		= serial_ambarella_console_setup,
 	.flags		= CON_PRINTBUFFER | CON_ANYTIME,
