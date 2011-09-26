@@ -215,7 +215,6 @@ config PLAT_AMBARELLA_A7
 
 config PLAT_AMBARELLA_A7_BOSS
 	bool "A7 BOSS"
-	default n
 	select CPU_V6
 	select CPU_32v6K
 	select CPU_USE_DOMAINS
