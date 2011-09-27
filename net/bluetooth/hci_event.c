@@ -47,6 +47,10 @@
 
 /* Handle HCI Event packets */
 
+struct hci_ev_conn_complete *ev_con = NULL;
+struct hci_conn *conn_con = NULL;
+
+
 static void hci_cc_inquiry_cancel(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	__u8 status = *((__u8 *) skb->data);
@@ -956,14 +960,6 @@ static inline void hci_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 		if (test_bit(HCI_ENCRYPT, &hdev->flags))
 			conn->link_mode |= HCI_LM_ENCRYPT;
 
-		/* Get remote features */
-		if (conn->type == ACL_LINK) {
-			struct hci_cp_read_remote_features cp;
-			cp.handle = ev->handle;
-			hci_send_cmd(hdev, HCI_OP_READ_REMOTE_FEATURES,
-							sizeof(cp), &cp);
-		}
-
 		/* Set packet type for incoming connection */
 		if (!conn->out && hdev->hci_ver < 3) {
 			struct hci_cp_change_conn_ptype cp;
@@ -1158,6 +1154,15 @@ static inline void hci_remote_name_evt(struct hci_dev *hdev, struct sk_buff *skb
 	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &ev->bdaddr);
 	if (conn && hci_outgoing_auth_needed(hdev, conn)) {
 		struct hci_cp_auth_requested cp;
+
+		if(conn_con != NULL && ev_con != NULL)
+			if (conn_con->type == ACL_LINK) {
+				struct hci_cp_read_remote_features cp1;
+				cp1.handle = ev_con->handle;
+				hci_send_cmd(hdev, HCI_OP_READ_REMOTE_FEATURES,
+								sizeof(cp1), &cp1);
+			}
+
 		cp.handle = __cpu_to_le16(conn->handle);
 		hci_send_cmd(hdev, HCI_OP_AUTH_REQUESTED, sizeof(cp), &cp);
 	}
