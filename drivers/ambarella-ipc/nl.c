@@ -44,7 +44,7 @@ static inline void ipc_binder_add_donelist(SVCXPRT *svcxprt)
 
 	spin_lock_irqsave(&binder->lu_done_lock, flags);
 	list_add_tail(&svcxprt->u.l.list, &binder->lu_done_list);
-	spin_unlock_irqrestore(&binder->lu_done_lock, flags);	
+	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
 }
 
 static inline void ipc_binder_del_donelist(SVCXPRT *svcxprt)
@@ -53,7 +53,7 @@ static inline void ipc_binder_del_donelist(SVCXPRT *svcxprt)
 
 	spin_lock_irqsave(&binder->lu_done_lock, flags);
 	list_del_init(&svcxprt->u.l.list);
-	spin_unlock_irqrestore(&binder->lu_done_lock, flags);	
+	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
 }
 
 static inline SVCXPRT *ipc_binder_find_done(struct aipc_nl_data *aipc_hdr)
@@ -71,7 +71,7 @@ static inline SVCXPRT *ipc_binder_find_done(struct aipc_nl_data *aipc_hdr)
 	}
 	if (found)
 		list_del(&svcxprt->u.l.list);
-	spin_unlock_irqrestore(&binder->lu_done_lock, flags);	
+	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
 
 	if (!found)
 		svcxprt = NULL;
@@ -162,7 +162,6 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 	if (rval < 0) {
 		pr_err("can't unicast skb (%d)\n", rval);
 		ipc_binder_del_donelist(svcxprt);
-		kfree_skb(skb);
 		/* Maybe the nl_prog have been unregistered,
 		 * so we need to search it again */
 		spin_lock_irqsave(&binder->lu_prog_lock, flags);
@@ -260,7 +259,6 @@ int aipc_nl_send_result_to_lu(SVCXPRT *svcxprt)
 			       MSG_DONTWAIT);
 	if (rval < 0) {
 		pr_err("can not unicast skb (%d)\n", rval);
-		kfree_skb(skb);
 		rval = -1;
 	}
 
@@ -397,8 +395,6 @@ static int aipc_nl_ack(struct sk_buff *skb,
 			list_del_init(&nl_prog->list);
 			kfree(nl_prog);
 		}
-
-		kfree_skb(skb);
 	}
 done:
 	return 0;
