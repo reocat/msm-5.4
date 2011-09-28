@@ -584,7 +584,7 @@ static int i_ffs_proc_fs_map_write(struct file *file,
 	char name[16];
 	char filename[260];
 	char mode[3];
-	int vfd;
+	int vfd, rval = 0;
 	int i;
 
 	if (count > sizeof(filename))
@@ -614,13 +614,14 @@ static int i_ffs_proc_fs_map_write(struct file *file,
 	if (i < 0)
 		strcpy(mode, "r");
 
-	DEBUG_MSG(KERN_WARNING "map_write: %s, %s\n", filename, mode);
+	mutex_lock(&g_mlock);
 
 	/* Try to obtain a file descriptor */
 	vfd = ipc_ffs_fopen(filename, mode);
-	if (vfd < 0)
-		return -EIO;
-
+	if (vfd < 0) {
+		rval = -EIO;
+		goto done;
+	}
 	snprintf(name, sizeof(name), "%.8x", vfd);
 	last_mapped_vfd = vfd;
 
@@ -633,8 +634,12 @@ static int i_ffs_proc_fs_map_write(struct file *file,
 		ipc_ffs_fstat(filename, &pl->stat);
 		pl->proc = NULL;
 		list_add_tail(&pl->list, &pl_head);
-	} else
-		return -ENOMEM;
+	} else {
+		rval = -ENOMEM;
+		goto done;
+	}
+
+	DEBUG_MSG(KERN_WARNING "map_write: %s, %s, %s\n", filename, mode, pl->name);
 
 	/* Create a new proc entry */
 	proc = create_proc_entry(pl->name, 0, proc_ffs);
@@ -644,6 +649,13 @@ static int i_ffs_proc_fs_map_write(struct file *file,
 		proc->read_proc = i_ffs_proc_fs_actual_read;
 		proc->write_proc = i_ffs_proc_fs_actual_write;
 		proc->size = pl->stat.fstfz;
+	}
+
+done:
+	mutex_unlock(&g_mlock);
+	if (rval < 0) {
+		printk(KERN_WARNING "%s %s %d\n", __func__, filename, rval);
+		return rval;
 	}
 
 	return count;
@@ -723,6 +735,7 @@ static int i_ffs_proc_fs_unmap_write(struct file *file,
 	list_for_each_safe(pos, q, &pl_head) {
 		pl = list_entry(pos, struct proc_ffs_list, list);
 		if (all || pl->vfd == vfd) {
+			mutex_lock(&g_mlock);
 			DEBUG_MSG(KERN_WARNING "unmap_write: %s, %x\n",
 					pl->filename, pl->vfd);
 			last_unmapped_vfd = pl->vfd;
@@ -730,6 +743,7 @@ static int i_ffs_proc_fs_unmap_write(struct file *file,
 			remove_proc_entry(pl->name, proc_ffs);
 			list_del(pos);
 			kfree(pl);
+			mutex_unlock(&g_mlock);
 		}
 	}
 
