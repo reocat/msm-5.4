@@ -922,63 +922,62 @@ static inline void hci_inquiry_result_evt(struct hci_dev *hdev, struct sk_buff *
 
 static inline void hci_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
 {
-	struct hci_ev_conn_complete *ev = (void *) skb->data;
-	struct hci_conn *conn;
+	ev_con = (void *) skb->data;
 
 	BT_DBG("%s", hdev->name);
 
 	hci_dev_lock(hdev);
 
-	conn = hci_conn_hash_lookup_ba(hdev, ev->link_type, &ev->bdaddr);
-	if (!conn) {
-		if (ev->link_type != SCO_LINK)
+	conn_con = hci_conn_hash_lookup_ba(hdev, ev_con->link_type, &ev_con->bdaddr);
+	if (!conn_con) {
+		if (ev_con->link_type != SCO_LINK)
 			goto unlock;
 
-		conn = hci_conn_hash_lookup_ba(hdev, ESCO_LINK, &ev->bdaddr);
-		if (!conn)
+		conn_con = hci_conn_hash_lookup_ba(hdev, ESCO_LINK, &ev_con->bdaddr);
+		if (!conn_con)
 			goto unlock;
 
-		conn->type = SCO_LINK;
+		conn_con->type = SCO_LINK;
 	}
 
-	if (!ev->status) {
-		conn->handle = __le16_to_cpu(ev->handle);
+	if (!ev_con->status) {
+		conn_con->handle = __le16_to_cpu(ev_con->handle);
 
-		if (conn->type == ACL_LINK) {
-			conn->state = BT_CONFIG;
-			hci_conn_hold(conn);
-			conn->disc_timeout = HCI_DISCONN_TIMEOUT;
+		if (conn_con->type == ACL_LINK) {
+			conn_con->state = BT_CONFIG;
+			hci_conn_hold(conn_con);
+			conn_con->disc_timeout = HCI_DISCONN_TIMEOUT;
 		} else
-			conn->state = BT_CONNECTED;
+			conn_con->state = BT_CONNECTED;
 
-		hci_conn_hold_device(conn);
-		hci_conn_add_sysfs(conn);
+		hci_conn_hold_device(conn_con);
+		hci_conn_add_sysfs(conn_con);
 
 		if (test_bit(HCI_AUTH, &hdev->flags))
-			conn->link_mode |= HCI_LM_AUTH;
+			conn_con->link_mode |= HCI_LM_AUTH;
 
 		if (test_bit(HCI_ENCRYPT, &hdev->flags))
-			conn->link_mode |= HCI_LM_ENCRYPT;
+			conn_con->link_mode |= HCI_LM_ENCRYPT;
 
 		/* Set packet type for incoming connection */
-		if (!conn->out && hdev->hci_ver < 3) {
+		if (!conn_con->out && hdev->hci_ver < 3) {
 			struct hci_cp_change_conn_ptype cp;
-			cp.handle = ev->handle;
-			cp.pkt_type = cpu_to_le16(conn->pkt_type);
+			cp.handle = ev_con->handle;
+			cp.pkt_type = cpu_to_le16(conn_con->pkt_type);
 			hci_send_cmd(hdev, HCI_OP_CHANGE_CONN_PTYPE,
 							sizeof(cp), &cp);
 		}
 	} else
-		conn->state = BT_CLOSED;
+		conn_con->state = BT_CLOSED;
 
-	if (conn->type == ACL_LINK)
-		hci_sco_setup(conn, ev->status);
+	if (conn_con->type == ACL_LINK)
+		hci_sco_setup(conn_con, ev_con->status);
 
-	if (ev->status) {
-		hci_proto_connect_cfm(conn, ev->status);
-		hci_conn_del(conn);
-	} else if (ev->link_type != ACL_LINK)
-		hci_proto_connect_cfm(conn, ev->status);
+	if (ev_con->status) {
+		hci_proto_connect_cfm(conn_con, ev_con->status);
+		hci_conn_del(conn_con);
+	} else if (ev_con->link_type != ACL_LINK)
+		hci_proto_connect_cfm(conn_con, ev_con->status);
 
 unlock:
 	hci_dev_unlock(hdev);
