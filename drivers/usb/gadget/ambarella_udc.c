@@ -460,6 +460,16 @@ static int ambarella_unmap_dma_buffer(struct ambarella_ep *ep,
 	return 0;
 }
 
+static int boss_linux_is_owner(struct ambarella_udc *udc)
+{
+	udc->linux_is_owner = 1;
+
+#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
+	if (boss_get_device_owner(BOSS_DEVICE_USB) != BOSS_DEVICE_OWNER_LINUX)
+		udc->linux_is_owner = 0;
+#endif
+	return udc->linux_is_owner;
+}
 
 /*
  * Name: ambarella_check_connected
@@ -2136,10 +2146,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		goto register_error;
 	}
 
-#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
-	if (boss_get_device_owner(BOSS_DEVICE_USB) == BOSS_DEVICE_OWNER_LINUX)
-#endif
-	{
+	if (boss_linux_is_owner(udc)) {
 		/* Enable udc */
 		ambarella_udc_enable(udc);
 	}
@@ -2203,8 +2210,7 @@ int ambarella_udc_connect(int on)
 	if(!udc)
 		return -ENODEV;
 
-	if(on)
-	{
+	if(on) {
 		/* Initial USB PLL */
 		udc->controller_info->init_pll();
 		/* Reset USB */
@@ -2213,9 +2219,7 @@ int ambarella_udc_connect(int on)
 		ambarella_init_usb(udc);
 		enable_irq(USBC_IRQ);
 		usb_gadget_connect(&udc->gadget);
-	}
-	else
-	{
+	} else {
 		disable_irq(USBC_IRQ);
 		usb_gadget_disconnect(&udc->gadget);
 	}
@@ -2227,10 +2231,7 @@ EXPORT_SYMBOL(ambarella_udc_connect);
 
 static inline void ambarella_udc_setup(struct ambarella_udc *udc)
 {
-#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
-	if (boss_get_device_owner(BOSS_DEVICE_USB) == BOSS_DEVICE_OWNER_LINUX)
-#endif
-	{
+	if (boss_linux_is_owner(udc)) {
 		/* Initial USB PLL */
 		udc->controller_info->init_pll();
 		/* Reset USB */
@@ -2265,11 +2266,8 @@ static inline int ambarella_udc_irq_setup(struct platform_device *pdev, struct a
 		return retval;
 	}
 #endif
-
-#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
-	if (boss_get_device_owner(BOSS_DEVICE_USB) != BOSS_DEVICE_OWNER_LINUX)
+	if (!boss_linux_is_owner(udc))
 		disable_irq(USBC_IRQ);
-#endif
 
 	return 0;
 }
@@ -2302,12 +2300,6 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	udc->dev = &pdev->dev;
 	udc->reset_by_host = 0;
-#if 0 // already do this in ambarella_udc_setup(udc);
-	/* Initial USB PLL */
-	udc->controller_info->init_pll();
-	/* Reset USB */
-	udc->controller_info->reset_usb();
-#endif
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);
@@ -2430,20 +2422,19 @@ static int __devexit ambarella_udc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t message)
 {
-	unsigned long flags;
 	int retval = 0;
 	struct ambarella_udc *udc;
 
 	udc = platform_get_drvdata(pdev);
 	udc->sys_suspended = 1;
-	disable_irq(USBC_IRQ);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, message.event);
 
-	spin_lock_irqsave(&udc->lock, flags);
-	ambarella_udc_set_pullup(udc, 0);
-	spin_unlock_irqrestore(&udc->lock, flags);
+	if (boss_linux_is_owner(udc)) {
+		disable_irq(USBC_IRQ);
+		usb_gadget_disconnect(&udc->gadget);
+	}
 
 	sprintf(udc->udc_state, "Suspend");
 	schedule_work(&udc->uevent_work);
@@ -2453,7 +2444,6 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 
 static int ambarella_udc_resume(struct platform_device *pdev)
 {
-	unsigned long flags;
 	int retval = 0;
 	struct ambarella_udc *udc;
 
@@ -2462,18 +2452,16 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
-	/* Initial USB PLL */
-	udc->controller_info->init_pll();
-	/* Reset USB */
-	udc->controller_info->reset_usb();
-	/*initial usb hardware */
-	ambarella_init_usb(udc);
-
-	enable_irq(USBC_IRQ);
-
-	spin_lock_irqsave(&udc->lock, flags);
-	ambarella_udc_set_pullup(udc, 1);
-	spin_unlock_irqrestore(&udc->lock, flags);
+	if (boss_linux_is_owner(udc)) {
+		/* Initial USB PLL */
+		udc->controller_info->init_pll();
+		/* Reset USB */
+		udc->controller_info->reset_usb();
+		/*initial usb hardware */
+		ambarella_init_usb(udc);
+		enable_irq(USBC_IRQ);
+		usb_gadget_connect(&udc->gadget);
+	}
 
 	sprintf(udc->udc_state, "Resume");
 	schedule_work(&udc->uevent_work);

@@ -152,7 +152,8 @@ struct ambarella_udc {
 				remote_wakeup_en  : 1,
 				host_suspended : 1,
 				sys_suspended : 1,
-				reset_by_host : 1;
+				reset_by_host : 1,
+				linux_is_owner : 1;
 };
 
 
