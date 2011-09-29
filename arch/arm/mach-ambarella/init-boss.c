@@ -819,12 +819,13 @@ static struct i2c_board_info boss_board_ext_i2c_info = {
 
 static void ambarella_init_vendor_2(void)
 {
-	static struct platform_device *vendor_2_devices[] __initdata = {
+	int i;
+	struct platform_device *vendor_2_devices[] = {
 		&ambarella_fb0,
 		&ambarella_fb1,
 		&ambarella_i2s0,
-    &ambarella_pcm0,
-    &ambarella_dummy_codec0,
+		&ambarella_pcm0,
+		&ambarella_dummy_codec0,
 		&ambarella_sd1,
 		&ambarella_sd0,
 		&ambarella_uart1,
@@ -847,18 +848,26 @@ static void ambarella_init_vendor_2(void)
 		&ambarella_rtc0,
 #endif
 	};
-	int i;
 
-	ambarella_platform_sd_controller0.clk_limit = 24000000;
-	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-	ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+	ambarella_board_generic.wifi_sd_bus = 0;
+	if (ambarella_gpio_get(GPIO(190)) == 0 && ambarella_gpio_get(GPIO(191)) == 1) {
+		// (0, 1) = ability bub
+		ambarella_board_generic.wifi_sd_slot = ambarella_gpio_get(GPIO(67));
+		ambarella_platform_sd_controller0.clk_limit = 24000000;
+		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+		ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+		ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+	} else { // Default case, note: (1,1) = ability real set
+		ambarella_board_generic.wifi_sd_slot = 1; // sdio slot
+		ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
+	}
+
 	ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
 	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
@@ -876,14 +885,6 @@ static void ambarella_init_vendor_2(void)
 	ambarella_platform_sd_controller1.slot[0].fixed_cd = 1;
 	ambarella_platform_sd_controller1.slot[0].fixed_wp = 0;
 	ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_NONREMOVABLE;
-
-	ambarella_board_generic.wifi_sd_bus = 0;
-	if (ambarella_gpio_get(190) == 0 && ambarella_gpio_get(191) == 1) {
-		// (0, 1) = ability bub
-		ambarella_board_generic.wifi_sd_slot = ambarella_gpio_get(67);
-	} else { // Default case, note: (1,1) = ability real set
-		ambarella_board_generic.wifi_sd_slot = 1; // sdio slot
-	}
 
 	platform_add_devices(vendor_2_devices, ARRAY_SIZE(vendor_2_devices));
 	for (i = 0; i < ARRAY_SIZE(vendor_2_devices); i++) {
@@ -1027,7 +1028,7 @@ static void __init ambarella_init_boss(void)
 
 	platform_device_register(&boss_board_input);
 	platform_device_register(&boss_bt_rfkill);  // for BT
-	
+
 }
 
 /* ==========================================================================*/
