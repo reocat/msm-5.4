@@ -735,6 +735,17 @@ config TOUCHSCREEN_NT11001
           To compile this driver as a module, choose M here: the
           module will be called nt11001.
 
+config TOUCHSCREEN_FT540
+        tristate "FT540 based touchscreens"
+        depends on I2C
+        help
+          Say Y here if you have a FT540 based touchscreen.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called ft540.
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK
