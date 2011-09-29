@@ -126,6 +126,7 @@ void fio_select_lock(int module)
 {
 #if	defined(CONFIG_AMBARELLA_IPC)
 	ipc_mutex_lock(IPC_MUTEX_ID_FIO);
+	atomic_set(&fio_owner, module);
 #else
 	if (atomic_read(&fio_owner) != module) {
 		wait_event(fio_lock, (atomic_cmpxchg(&fio_owner,
@@ -173,6 +174,7 @@ void fio_unlock(int module)
 	}
 
 #if	defined(CONFIG_AMBARELLA_IPC)
+	atomic_set(&fio_owner, SELECT_FIO_FREE);
 	ipc_mutex_unlock(IPC_MUTEX_ID_FIO);
 #else
 	if (atomic_cmpxchg(&fio_owner, module, SELECT_FIO_FREE) == module) {
