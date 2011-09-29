@@ -35,6 +35,7 @@ obj-$(CONFIG_TOUCH_AMBARELLA_TM1510)		+= touch-tm1510.o
 obj-$(CONFIG_TOUCH_AMBARELLA_TM1726)		+= touch-tm1726.o
 obj-$(CONFIG_TOUCH_AMBARELLA_TM1927)		+= touch-tm1927.o
 obj-$(CONFIG_TOUCH_AMBARELLA_NT11001)		+= touch-nt11001.o
+obj-$(CONFIG_TOUCH_AMBARELLA_FT540)		+= touch-ft540.o
 
 obj-$(CONFIG_LCD_AMBARELLA_1P3831)		+= lcd-1p3831.o
 obj-$(CONFIG_TIWLAN_SDIO)               += board-1283sdp-wifi.o
