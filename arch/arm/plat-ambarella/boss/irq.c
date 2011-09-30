@@ -329,7 +329,7 @@ static void ambarella_ack_irq(struct irq_data *d)
 
 	local_irq_save(flags);
 	amba_writel(vic_base + VIC_EDGE_CLR_OFFSET, 0x1 << irq);
-	amba_writel(vic_base + VIC_SOFTEN_CLR_OFFSET, 0x1 << irq);	
+	amba_writel(vic_base + VIC_SOFTEN_CLR_OFFSET, 0x1 << irq);
 	local_irq_restore(flags);
 }
 
@@ -444,10 +444,10 @@ static int ambarella_irq_set_type(struct irq_data *d, unsigned int type)
 
 	if (irqtype & bit) {
 		pr_err("%s: irq[%d] is FIQ mode[0x%08x]\n", __func__, irq, irqtype);
-	}	
-	irqtype &= mask;	
+	}
+	irqtype &= mask;
 
-	amba_writel(vic_base + VIC_INT_SEL_OFFSET, irqtype);	
+	amba_writel(vic_base + VIC_INT_SEL_OFFSET, irqtype);
 	amba_writel(vic_base + VIC_SENSE_OFFSET, sense);
 	amba_writel(vic_base + VIC_BOTHEDGE_OFFSET, bothedges);
 	amba_writel(vic_base + VIC_EVENT_OFFSET, event);
@@ -661,7 +661,22 @@ void __init ambarella_init_irq_a5s_a7(void)
 		set_irq_flags(VIC3_INT_VEC(i), IRQF_VALID);
 	}
 #endif
+#if defined(CONFIG_AMBARELLA_IPC)
+       /* Setup SD CD GPIO IRQs */
+       set_irq_chip(GPIO_INT_VEC(67), &ambarella_gpio_irq_chip);
+       set_irq_handler(GPIO_INT_VEC(67), handle_level_irq);
+       __clear_bit(67, ambarella_gpio_wakeup_bit);
+       set_irq_flags(GPIO_INT_VEC(67), IRQF_VALID);
 
+       /* Setup SDIO CD GPIO IRQs */
+       set_irq_chip(GPIO_INT_VEC(75), &ambarella_gpio_irq_chip);
+       set_irq_handler(GPIO_INT_VEC(75), handle_level_irq);
+       __clear_bit(75, ambarella_gpio_wakeup_bit);
+       set_irq_flags(GPIO_INT_VEC(75), IRQF_VALID);
+
+       set_irq_type(GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
+       set_irq_chained_handler(GPIO2_IRQ, ambarella_gpio_irq_handler);
+#endif
 	boss_set_ready(1);
 
 }

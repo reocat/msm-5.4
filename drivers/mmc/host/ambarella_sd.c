@@ -744,8 +744,12 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 		CONFIG_SD_AMBARELLA_TIMEOUT_VAL);
 
 	int_flag = pslotinfo->nisen	|
+#if defined(CONFIG_AMBARELLA_IPC)
+		/* Use gpio for card detection */
+#else
 		SD_NISEN_REMOVAL	|
 		SD_NISEN_INSERT		|
+#endif
 		SD_NISEN_DMA		|
 		SD_NISEN_BLOCK_GAP	|
 		SD_NISEN_XFR_DONE	|
