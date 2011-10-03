@@ -850,22 +850,25 @@ static void ambarella_init_vendor_2(void)
 	};
 
 	ambarella_board_generic.wifi_sd_bus = 0;
+	ambarella_platform_sd_controller0.clk_limit = 24000000;
+	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
+
 	if (ambarella_gpio_get(GPIO(190)) == 0 && ambarella_gpio_get(GPIO(191)) == 1) {
 		// (0, 1) = ability bub
 		ambarella_board_generic.wifi_sd_slot = ambarella_gpio_get(GPIO(67));
-		ambarella_platform_sd_controller0.clk_limit = 24000000;
-		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-		ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-		ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
 	} else { // Default case, note: (1,1) = ability real set
 		ambarella_board_generic.wifi_sd_slot = 1; // sdio slot
 		ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
+		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;
 	}
 
 	ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
