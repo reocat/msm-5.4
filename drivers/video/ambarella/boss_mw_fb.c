@@ -117,10 +117,10 @@ static int ambfb_vdspdrv_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	struct boss_fb *boss_fb;
 	int voutid;
 
-	DEBUG_MSG_FB ("[ipc] ambfb_vdspdrv_setcmap (%d)\n", vdspdrv->active);
+	//DEBUG_MSG_FB ("[ipc] ambfb_vdspdrv_setcmap (%d)\n", vdspdrv->active);
 
-	if (vdspdrv->active == 0)
-		return -EIO;
+	//if (vdspdrv->active == 0)
+	//	return -EIO;
 
 	/*
 	 * Set new color look-up table.
@@ -148,8 +148,8 @@ static int ambfb_vdspdrv_pan_display(struct fb_var_screeninfo *var,
 	boss_fb = &G_boss_fb[voutid];
 	boss_fb->smem_y_offset = var->yoffset;
 		
-	if (vdspdrv->active == 0)
-		return -EIO;
+	//if (vdspdrv->active == 0)
+	//	return -EIO;
 
 	pfb->proc_wait_flag++;
 	wake_up(&pfb->proc_wait);
@@ -195,19 +195,19 @@ static int ambfb_activate(int voutid)
 	/*
 	 * Refresh IPC data and check if vdspdrv is active.
 	 */
-	if (vdspdrv_refresh() < 0)
+	/*if (vdspdrv_refresh() < 0)
 		return -EIO;
 	else if (!vdspdrv->active)
-		return -ENODEV;
+		return -ENODEV;*/
 
 	if (boss_fb->active)
 		return -EAGAIN;
 
-#if defined(OSD_SETTING_SWITCH)
-	if (vdspdrv_refresh_osd(voutid) < 0){
-		return -EIO;
-	}
-#endif
+//#if defined(OSD_SETTING_SWITCH)
+//	if (vdspdrv_refresh_osd(voutid) < 0){
+//		return -EIO;
+//	}
+//#endif
 
 
 	/* Take over OSD from remote OS (Not implemented in i_util_server.c )*/
@@ -484,16 +484,16 @@ int ambfb_vdspdrv_claim(struct ambarella_platform_fb *pfb,
 	/*
 	 * Refresh IPC data and check if vdspdrv is active.
 	 */
-	if (vdspdrv_refresh() < 0)
-		return -EIO;
-	else if (!vdspdrv->active)
-		return -ENODEV;
-
-#if defined(OSD_SETTING_SWITCH)
-	if (vdspdrv_refresh_osd(voutid) < 0){
-		return -EIO;
-	}
-#endif
+	//if (vdspdrv_refresh() < 0)
+	//	return -EIO;
+	//else if (!vdspdrv->active)
+	//	return -ENODEV;
+        
+//#if defined(OSD_SETTING_SWITCH)
+//	if (vdspdrv_refresh_osd(voutid) < 0){
+//		return -EIO;
+//	}
+//#endif
 
 	/*
 	 * Get the exclusive video memory that is reserved for Linux
