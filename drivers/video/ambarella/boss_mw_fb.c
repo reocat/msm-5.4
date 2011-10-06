@@ -186,7 +186,7 @@ static int ambfb_activate(int voutid)
 {
 	struct boss_fb *boss_fb = &G_boss_fb[voutid];
 	struct vdspdrv_osd *osd = vdspdrv_osd[voutid];
-	int i;
+	int i,ccf = 0;
 	void *dst1, *dst2;
 
 	DEBUG_MSG_FB ("[ipc] ambfb_activate (%d): %08x %08x\n",
@@ -252,10 +252,15 @@ static int ambfb_activate(int voutid)
 	memcpy(&boss_fb->bossed, osd, sizeof(*osd));
 	boss_fb->bossed.zbuf0 = (void *) ((u32) boss_fb->smem_start_virt +
 			boss_fb->smem_y_offset * boss_fb->pitch);
-	memcpy (boss_fb->ccf[1], boss_fb->bossed.zbuf0, boss_fb->framesize);
+	ccf = boss_fb->ccfi;
+	ccf = (ccf + 1) % boss_fb->nccf;
+	memcpy (boss_fb->ccf[ccf], boss_fb->bossed.zbuf0, boss_fb->framesize);
 #endif
-	dst1= boss_fb->ccf[0];
-	dst2 = boss_fb->ccf[1];
+	/*Sync fb between uitron and android */
+	ccf = boss_fb->ccfi;
+	dst1= boss_fb->ccf[ccf];
+	ccf = (ccf + 1) % boss_fb->nccf;
+	dst2 = boss_fb->ccf[ccf];
 
 	display_osd_setbuf(voutid, dst1, dst2, boss_fb->width, boss_fb->height, boss_fb->pitch);
 
