@@ -271,6 +271,7 @@ int ipc_ffs_fstat(const char *path, struct ipc_ffs_stat *ffs_stat)
 		return -stat;
 	}
 
+	ffs_stat->rval	= res.rval;
 	ffs_stat->fs_type	= res.fs_type;
 	ffs_stat->fstfz		= res.fstfz;
 	ffs_stat->fstact	= res.fstact;
@@ -286,7 +287,7 @@ int ipc_ffs_fstat(const char *path, struct ipc_ffs_stat *ffs_stat)
 	ffs_stat->fstcutc	= res.fstcutc;
 	ffs_stat->fstat		= res.fstat;
 
-	return res.rval;
+	return 0;
 }
 EXPORT_SYMBOL(ipc_ffs_fstat);
 
@@ -1040,7 +1041,8 @@ static int i_ffs_proc_fs_fstat_read(char *page, char **start, off_t off,
 {
 	int len = 0;
 
-	len =  sprintf(page + len, "fs_type = 0x%x\n", last_ffs_stat.fs_type);
+	len += sprintf(page + len, "rval = 0x%x\n", last_ffs_stat.rval);
+	len += sprintf(page + len, "fs_type = 0x%x\n", last_ffs_stat.fs_type);
 	len += sprintf(page + len, "fstfz = 0x%llx\n", last_ffs_stat.fstfz);
 	len += sprintf(page + len, "fstact = 0x%x\n", last_ffs_stat.fstact);
 	len += sprintf(page + len, "fstad = 0x%x\n", last_ffs_stat.fstad);

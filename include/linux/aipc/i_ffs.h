@@ -38,6 +38,7 @@ extern int ipc_ffs_feof(int fd);
 
 struct ipc_ffs_stat
 {
+	int rval;
 	int fs_type;
 	u64 fstfz;	/* file size in bytes */
 	u16 fstact;	/* file last access time */
