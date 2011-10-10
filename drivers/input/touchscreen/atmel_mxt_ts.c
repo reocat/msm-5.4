@@ -285,6 +285,7 @@ struct mxt_data {
 	u8 actv_cycle_time;
 	u8 idle_cycle_time;
 	u8 is_stopped;
+	u8 max_reportid;
 };
 
 static bool mxt_object_writable(unsigned int type)
@@ -652,8 +653,13 @@ static int mxt_make_highchg(struct mxt_data *data)
 {
 	struct device *dev = &data->client->dev;
 	struct mxt_message message;
-	int count = 10;
+	int count;
 	int error;
+
+	/* If all objects report themselves then a number of messages equal to
+	 * the number of report ids may be generated. Therefore a good safety
+	 * heuristic is twice this number */
+	count = data->max_reportid * 2;
 
 	/* Read dummy message to make high CHG pin */
 	do {
@@ -990,6 +996,9 @@ static int mxt_get_object_table(struct mxt_data *data)
 			object->instances,
 			object->min_reportid, object->max_reportid);
 	}
+
+	/* Store maximum reportid */
+	data->max_reportid = reportid;
 
 	return 0;
 }
