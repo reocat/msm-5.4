@@ -229,20 +229,20 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #if (CHIP_REV == A7 || CHIP_REV == I1)
 			"\tDigitalGamma:\t%s\n"
 #endif
-			"\tARM:\t\t%d Hz\n"
-			"\tDram:\t\t%d Hz\n"
-			"\tiDSP:\t\t%d Hz\n"
-			"\tCore:\t\t%d Hz\n"
+			"\tARM:\t\t%u Hz\n"
+			"\tDram:\t\t%u Hz\n"
+			"\tiDSP:\t\t%u Hz\n"
+			"\tCore:\t\t%u Hz\n"
 #if (CHIP_REV == I1)
-			"\tCortex:\t\t%d Hz\n"
-			"\tAXI:\t\t%d Hz\n"
-			"\tDDD:\t\t%d Hz\n"
+			"\tCortex:\t\t%u Hz\n"
+			"\tAXI:\t\t%u Hz\n"
+			"\tDDD:\t\t%u Hz\n"
 #endif
-			"\tAHB:\t\t%d Hz\n"
-			"\tAPB:\t\t%d Hz\n"
-			"\tVOUT:\t\t%d Hz\n"
-			"\tVOUT2:\t\t%d Hz\n"
-			"\tVIN:\t\t%d Hz\n\n",
+			"\tAHB:\t\t%u Hz\n"
+			"\tAPB:\t\t%u Hz\n"
+			"\tVOUT:\t\t%u Hz\n"
+			"\tVOUT2:\t\t%u Hz\n"
+			"\tVIN:\t\t%u Hz\n\n",
 #if (CHIP_REV == A7 || CHIP_REV == I1)
 			vidcap_list[operating_mode.vidcap_size].name,
 #endif
