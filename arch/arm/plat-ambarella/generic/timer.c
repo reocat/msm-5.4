@@ -60,6 +60,9 @@ struct ambarella_timer_pm_info {
 #endif
 };
 struct ambarella_timer_pm_info ambarella_timer_pm;
+#if defined(CONFIG_SMP)
+int ambarella_ce_timer_used = 1;
+#endif
 
 /* ==========================================================================*/
 #define AMBARELLA_CE_TIMER_STATUS_REG		TIMER3_STATUS_REG
@@ -79,7 +82,10 @@ static inline void ambarella_ce_timer_disable(void)
 
 static inline void ambarella_ce_timer_enable(void)
 {
-	amba_setbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_EN);
+#if defined(CONFIG_SMP)
+	if (ambarella_ce_timer_used)
+#endif
+		amba_setbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_EN);
 }
 
 static inline void ambarella_ce_timer_misc(void)
@@ -125,6 +131,10 @@ static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 		ambarella_ce_timer_enable();
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
+#if defined(CONFIG_SMP)
+		ambarella_ce_timer_used = 0;
+#endif
+		break;
 	case CLOCK_EVT_MODE_SHUTDOWN:
 		ambarella_ce_timer_disable();
 		break;
