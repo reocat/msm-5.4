@@ -110,7 +110,7 @@ int ipc_ffs_fread(char *buf, unsigned int size, unsigned int nobj, int fd)
 	struct vffs_fread_arg arg;
 	int res;
 
-	arg.buf = buf;
+	arg.buf = virt_to_phys(buf);
 	arg.size = size;
 	arg.nobj = nobj;
 	arg.fd = fd;
@@ -138,7 +138,7 @@ int ipc_ffs_fwrite(const char *buf, unsigned int size, unsigned int nobj, int fd
 
 	ambcache_clean_range ((void *) buf, size);
 
-	arg.buf = (char *) buf;
+	arg.buf = virt_to_phys(buf);
 	arg.size = size;
 	arg.nobj = nobj;
 	arg.fd = fd;
