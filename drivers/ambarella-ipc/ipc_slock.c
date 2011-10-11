@@ -39,6 +39,12 @@
 
 #define IPC_SLOCK_MAX_NUM		64
 
+#if defined(CONFIG_BOSS_SINGLE_CORE)
+#define IPC_SLOCK_SUPPORT_VIRT_IRQ	1
+#else
+#define IPC_SLOCK_SUPPORT_VIRT_IRQ	0
+#endif
+
 /*
  * Global structure
  */
@@ -81,7 +87,12 @@ void ipc_spin_lock(int i, int pos)
 {
 	ipc_slock_t *lock = &G_lock_obj.locks[i];
 	unsigned long flags;
+#if IPC_SLOCK_SUPPORT_VIRT_IRQ
+	unsigned long flags2;
+#endif
+#if defined(CONFIG_BOSS_MULTIPLE_CORE)
 	unsigned long tmp;
+#endif
 #if DEBUG_LOCK_TIME
 	unsigned int time;
 #endif
@@ -96,9 +107,13 @@ void ipc_spin_lock(int i, int pos)
 #if DEBUG_LOCK_TIME
 	time = jiffies;
 #endif
+
+#if IPC_SLOCK_SUPPORT_VIRT_IRQ
+	flags2 = arm_irq_save();
+#endif
 	spin_lock_irqsave(&G_lock_obj.spinlocks[i], flags);
 
-#if (CHIP_REV == I1)
+#if defined(CONFIG_BOSS_MULTIPLE_CORE)
 	__asm__ __volatile__(
 "1:	ldrex	%0, [%1]\n"
 "	teq	%0, #0\n"
@@ -108,7 +123,7 @@ void ipc_spin_lock(int i, int pos)
 	: "=&r" (tmp)
 	: "r" (&lock->lock), "r" (1)
 	: "cc");
-#endif /* CHIP_REV == I1 */
+#endif /* CONFIG_BOSS_MULTIPLE_CORE */
 
 #if DEBUG_LOCK_TIME
 	lock->cortex_lock_time = jiffies;
@@ -117,6 +132,9 @@ void ipc_spin_lock(int i, int pos)
 	}
 #endif
 	lock->flags = flags;
+#if IPC_SLOCK_SUPPORT_VIRT_IRQ
+	lock->flags = flags2;
+#endif
 	lock->count++;
 	lock->cortex++;
 
@@ -143,7 +161,9 @@ EXPORT_SYMBOL(ipc_spin_lock);
 void ipc_spin_unlock(int i, int pos)
 {
 	ipc_slock_t *lock = &G_lock_obj.locks[i];
+#if DEBUG_LOCK_TIME
 	unsigned int time;
+#endif
 
 	K_ASSERT(i < IPC_SLOCK_MAX_NUM);
 
@@ -169,15 +189,18 @@ void ipc_spin_unlock(int i, int pos)
 	}
 #endif
 
-#if (CHIP_REV == I1)
+#if defined(CONFIG_BOSS_MULTIPLE_CORE)
 	__asm__ __volatile__(
 "	str	%1, [%0]\n"
 	:
 	: "r" (&lock->lock), "r" (0)
 	: "cc");
-#endif /* CHIP_REV == I1 */
+#endif /* CONFIG_BOSS_MULTIPLE_CORE */
 
 	spin_unlock_irqrestore(&G_lock_obj.spinlocks[i], lock->flags);
+#if IPC_SLOCK_SUPPORT_VIRT_IRQ
+	arm_irq_restore(lock->flags);
+#endif
 }
 EXPORT_SYMBOL(ipc_spin_unlock);
 
