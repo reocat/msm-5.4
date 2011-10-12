@@ -631,6 +631,7 @@ static int ambarella_i2c_suspend_noirq(struct device *dev)
 	pdev = to_platform_device(dev);
 	pinfo = platform_get_drvdata(pdev);
 	if (pinfo) {
+		down(&pinfo->system_event_sem);
 		disable_irq(pinfo->irq);
 	}
 
@@ -650,6 +651,7 @@ static int ambarella_i2c_resume_noirq(struct device *dev)
 	if (pinfo) {
 		ambarella_i2c_hw_init(pinfo);
 		enable_irq(pinfo->irq);
+		up(&pinfo->system_event_sem);
 	}
 
 	dev_dbg(&pdev->dev, "%s\n", __func__);

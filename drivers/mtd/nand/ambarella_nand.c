@@ -148,7 +148,7 @@ static struct nand_bbt_descr bbt_main_descr = {
 	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
 	.offs = 1,
 	.len = 4,
-	.veroffs = 5,
+	.veroffs = 13,
 	.maxblocks = 4,
 	.pattern = bbt_pattern,
 };
@@ -158,7 +158,7 @@ static struct nand_bbt_descr bbt_mirror_descr = {
 	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
 	.offs = 1,
 	.len = 4,
-	.veroffs = 5,
+	.veroffs = 13,
 	.maxblocks = 4,
 	.pattern = mirror_pattern,
 };
