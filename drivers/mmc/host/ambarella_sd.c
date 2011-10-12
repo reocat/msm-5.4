@@ -834,26 +834,6 @@ static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
 }
 
-#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
-static int ambarella_sd_card_in_slot(struct mmc_host *mmc)
-{
-	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	struct ambarella_sd_controller_info	*pinfo;
-	u32					val;
-
-	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
-
-	ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
-				GPIO_FUNC_SW_INPUT);
-	val = ambarella_gpio_get(pslotinfo->plat_info->gpio_cd.irq_gpio);
-
-	ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
-				pslotinfo->plat_info->gpio_cd.irq_gpio_mode);
-
-	return !val;
-}
-#endif
-
 static void ambarella_sd_data_done(
 	struct ambarella_sd_mmc_info *pslotinfo,
 	u16 nis,
@@ -1769,6 +1749,27 @@ ambarella_sd_request_exit:
 
 	mmc_request_done(mmc, mrq);
 }
+
+#if defined(CONFIG_AMBARELLA_IPC) && !defined(CONFIG_NOT_SHARE_SD_CONTROLLER_WITH_UITRON)
+static int ambarella_sd_card_in_slot(struct mmc_host *mmc)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+	u32					valid_cd;
+
+	if (pslotinfo->plat_info->fixed_cd == 1) {
+		valid_cd = 1;
+	} else if (pslotinfo->plat_info->fixed_cd == 0) {
+		valid_cd = 0;
+	} else {
+		valid_cd = ambarella_sd_gpio_cd_check_val(pslotinfo);
+		if (valid_cd < 0)
+			valid_cd = 0;
+	}
+
+	return valid_cd;
+}
+#endif
+
 #ifdef CONFIG_TIWLAN_SDIO
 static int ambarella_sd_get_cd(struct mmc_host *mmc)
 {
@@ -1779,6 +1780,7 @@ static int ambarella_sd_get_cd(struct mmc_host *mmc)
 	return host->plat_info->card_detect(NULL, host->slot_id);
 }
 #endif
+
 static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.request	= ambarella_sd_request,
 	.set_ios	= ambarella_sd_ios,
