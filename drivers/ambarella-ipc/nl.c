@@ -47,15 +47,6 @@ static inline void ipc_binder_add_donelist(SVCXPRT *svcxprt)
 	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
 }
 
-static inline void ipc_binder_del_donelist(SVCXPRT *svcxprt)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&binder->lu_done_lock, flags);
-	list_del_init(&svcxprt->u.l.list);
-	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
-}
-
 static inline SVCXPRT *ipc_binder_find_done(struct aipc_nl_data *aipc_hdr)
 {
 	SVCXPRT *svcxprt;
@@ -128,6 +119,7 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 	struct nlmsghdr *nlh;
 	struct aipc_nl_data *aipc_hdr;
 	struct aipc_nl_prog *nl_prog;
+	unsigned int uid;
 	unsigned long flags;
 
 	spin_lock_irqsave(&binder->lu_prog_lock, flags);
@@ -138,6 +130,7 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 		ipc_svc_sendreply(svcxprt, NULL);
 		return -1;
 	}
+	uid = nl_prog->prog_info.uid;
 	spin_unlock_irqrestore(&binder->lu_prog_lock, flags);
 
 	len = NLMSG_SPACE(NL_AIPC_HDRLEN + svcxprt->len_arg);
@@ -155,13 +148,9 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 	aipc_nl_set_header(aipc_hdr, svcxprt);
 	memcpy(NL_AIPC_DATA(aipc_hdr), svcxprt->arg, svcxprt->len_arg);
 
-	ipc_binder_add_donelist(svcxprt);
-
-	rval = netlink_unicast(binder->nlsock, skb,
-			       nl_prog->prog_info.uid, MSG_DONTWAIT);
+	rval = netlink_unicast(binder->nlsock, skb, uid, MSG_DONTWAIT);
 	if (rval < 0) {
 		pr_err("can't unicast skb (%d)\n", rval);
-		ipc_binder_del_donelist(svcxprt);
 		/* Maybe the nl_prog have been unregistered,
 		 * so we need to search it again */
 		spin_lock_irqsave(&binder->lu_prog_lock, flags);
@@ -173,6 +162,8 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 		spin_unlock_irqrestore(&binder->lu_prog_lock, flags);
 		return -1;
 	}
+
+	ipc_binder_add_donelist(svcxprt);
 
 	return 0;
 }
@@ -282,8 +273,10 @@ static enum aipc_nl_status aipc_nl_register_prog(struct nlmsghdr *nlh)
 
 	spin_lock_irqsave(&binder->lu_prog_lock, flags);
 
-	if (nlh->nlmsg_len < NLMSG_SPACE(sizeof(struct aipc_nl_prog_info)))
+	if (nlh->nlmsg_len < NLMSG_SPACE(sizeof(struct aipc_nl_prog_info))) {
+		spin_unlock_irqrestore(&binder->lu_prog_lock, flags);
 		return AIPC_NLSTATUS_ERR_EINVAL;
+	}
 
 	prog_info = (struct aipc_nl_prog_info *)data;
 	proc_info = (struct aipc_nl_proc_info *)(data + sizeof(*prog_info));
@@ -302,7 +295,7 @@ static enum aipc_nl_status aipc_nl_register_prog(struct nlmsghdr *nlh)
 	}
 
 	len = sizeof(*nl_prog) + prog_info->nproc * sizeof(*proc_info);
-	nl_prog = kzalloc(len, GFP_KERNEL);
+	nl_prog = kzalloc(len, GFP_ATOMIC);
 	if (nl_prog == NULL) {
 		pr_err("no memory for aipc_nl_prog\n");
 		status = AIPC_NLSTATUS_ERR_OTHERS;
@@ -369,6 +362,7 @@ static int aipc_nl_ack(struct sk_buff *skb,
 	unsigned int prog;
 	struct aipc_nl_prog *nl_prog;
 	struct nlmsghdr *nlh;
+	unsigned long flags;
 
 	/* Sanity check */
 	if (skb == NULL || skb->len <= NLMSG_HDRLEN || nlmsg_pid == 0) {
@@ -390,11 +384,13 @@ static int aipc_nl_ack(struct sk_buff *skb,
 
 	rval = netlink_unicast(binder->nlsock, skb, nlmsg_pid, MSG_DONTWAIT);
 	if (rval < 0) {
+		spin_lock_irqsave(&binder->lu_prog_lock, flags);
 		nl_prog = aipc_nl_search_prog(prog);
 		if (nl_prog) {
 			list_del_init(&nl_prog->list);
 			kfree(nl_prog);
 		}
+		spin_unlock_irqrestore(&binder->lu_prog_lock, flags);
 	}
 done:
 	return 0;
