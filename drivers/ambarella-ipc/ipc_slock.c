@@ -51,7 +51,9 @@
 typedef struct ipc_slock_obj_s {
 	ipc_slock_t	*locks;
 	int		num;
+#if !IPC_SLOCK_SUPPORT_VIRT_IRQ
 	spinlock_t	spinlocks[IPC_SLOCK_MAX_NUM];
+#endif
 } ipc_slock_obj_t;
 
 static ipc_slock_obj_t G_lock_obj;
@@ -74,9 +76,11 @@ void ipc_slock_init(unsigned int addr, unsigned int size)
 	G_lock_obj.locks = (ipc_slock_t *) addr;
 	G_lock_obj.num = size / sizeof (ipc_slock_t);
 
+#if !IPC_SLOCK_SUPPORT_VIRT_IRQ
 	for (i = 0; i < IPC_SLOCK_MAX_NUM; i++) {
 		spin_lock_init(&G_lock_obj.spinlocks[i]);
 	}
+#endif
 }
 EXPORT_SYMBOL(ipc_slock_init);
 
@@ -87,9 +91,6 @@ void ipc_spin_lock(int i, int pos)
 {
 	ipc_slock_t *lock = &G_lock_obj.locks[i];
 	unsigned long flags;
-#if IPC_SLOCK_SUPPORT_VIRT_IRQ
-	unsigned long flags2;
-#endif
 #if defined(CONFIG_BOSS_MULTIPLE_CORE)
 	unsigned long tmp;
 #endif
@@ -109,9 +110,10 @@ void ipc_spin_lock(int i, int pos)
 #endif
 
 #if IPC_SLOCK_SUPPORT_VIRT_IRQ
-	flags2 = arm_irq_save();
-#endif
+	flags = arm_irq_save();
+#else
 	spin_lock_irqsave(&G_lock_obj.spinlocks[i], flags);
+#endif
 
 #if defined(CONFIG_BOSS_MULTIPLE_CORE)
 	__asm__ __volatile__(
@@ -132,9 +134,6 @@ void ipc_spin_lock(int i, int pos)
 	}
 #endif
 	lock->flags = flags;
-#if IPC_SLOCK_SUPPORT_VIRT_IRQ
-	lock->flags = flags2;
-#endif
 	lock->count++;
 	lock->cortex++;
 
@@ -197,9 +196,10 @@ void ipc_spin_unlock(int i, int pos)
 	: "cc");
 #endif /* CONFIG_BOSS_MULTIPLE_CORE */
 
-	spin_unlock_irqrestore(&G_lock_obj.spinlocks[i], lock->flags);
 #if IPC_SLOCK_SUPPORT_VIRT_IRQ
 	arm_irq_restore(lock->flags);
+#else
+	spin_unlock_irqrestore(&G_lock_obj.spinlocks[i], lock->flags);
 #endif
 }
 EXPORT_SYMBOL(ipc_spin_unlock);
