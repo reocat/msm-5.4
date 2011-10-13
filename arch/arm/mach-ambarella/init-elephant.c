@@ -676,6 +676,10 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
+		ambarella_board_generic.vin_reset.gpio_id = GPIO(12);
+		ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
+		ambarella_board_generic.vin_reset.active_delay = 100;
+
 		ambarella_eth0_platform_info.mii_id = 0;
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;
 
