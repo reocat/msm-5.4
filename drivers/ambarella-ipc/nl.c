@@ -47,6 +47,15 @@ static inline void ipc_binder_add_donelist(SVCXPRT *svcxprt)
 	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
 }
 
+static inline void ipc_binder_del_donelist(SVCXPRT *svcxprt)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&binder->lu_done_lock, flags);
+	list_del_init(&svcxprt->u.l.list);
+	spin_unlock_irqrestore(&binder->lu_done_lock, flags);
+}
+
 static inline SVCXPRT *ipc_binder_find_done(struct aipc_nl_data *aipc_hdr)
 {
 	SVCXPRT *svcxprt;
@@ -150,9 +159,11 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 	aipc_nl_set_header(aipc_hdr, svcxprt);
 	memcpy(NL_AIPC_DATA(aipc_hdr), svcxprt->arg, svcxprt->len_arg);
 
+	ipc_binder_add_donelist(svcxprt);
 	rval = netlink_unicast(binder->nlsock, skb, uid, MSG_DONTWAIT);
 	if (rval < 0) {
 		pr_err("can't unicast skb to %d: (%d)\n", uid, rval);
+		ipc_binder_del_donelist(svcxprt);
 		/* Maybe the nl_prog have been unregistered,
 		 * so we need to search it again */
 		spin_lock_irqsave(&binder->lu_prog_lock, flags);
@@ -166,8 +177,6 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 		ipc_svc_sendreply(svcxprt, NULL);
 		return -1;
 	}
-
-	ipc_binder_add_donelist(svcxprt);
 
 	return 0;
 }
