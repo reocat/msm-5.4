@@ -137,6 +137,8 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 	skb = alloc_skb(len, GFP_KERNEL);
 	if (!skb){
 		pr_err("%s: no memory.\n", __func__);
+		svcxprt->rcode = IPC_NOMEM;
+		ipc_svc_sendreply(svcxprt, NULL);
 		return -1;
 	}
 
@@ -150,7 +152,7 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 
 	rval = netlink_unicast(binder->nlsock, skb, uid, MSG_DONTWAIT);
 	if (rval < 0) {
-		pr_err("can't unicast skb (%d)\n", rval);
+		pr_err("can't unicast skb to %d: (%d)\n", uid, rval);
 		/* Maybe the nl_prog have been unregistered,
 		 * so we need to search it again */
 		spin_lock_irqsave(&binder->lu_prog_lock, flags);
@@ -160,6 +162,8 @@ int aipc_nl_get_request_from_itron(SVCXPRT *svcxprt)
 			kfree(nl_prog);
 		}
 		spin_unlock_irqrestore(&binder->lu_prog_lock, flags);
+		svcxprt->rcode = IPC_PROGUNAVAIL;
+		ipc_svc_sendreply(svcxprt, NULL);
 		return -1;
 	}
 
@@ -249,7 +253,7 @@ int aipc_nl_send_result_to_lu(SVCXPRT *svcxprt)
 	rval = netlink_unicast(binder->nlsock, skb, svcxprt->u.l.clnt_pid,
 			       MSG_DONTWAIT);
 	if (rval < 0) {
-		pr_err("can not unicast skb (%d)\n", rval);
+		pr_err("can not unicast skb to %d: (%d)\n", svcxprt->u.l.clnt_pid, rval);
 		rval = -1;
 	}
 
