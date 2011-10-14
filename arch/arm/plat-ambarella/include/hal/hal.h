@@ -83,11 +83,12 @@ struct ambarella_mem_hal_desc {
 };
 
 /* ==========================================================================*/
-extern void set_ambarella_hal_invalid(void);
-extern void *get_ambarella_hal_vp(void);
+extern void ambarella_hal_set_invalid(void);
+extern u32 ambarella_hal_get_size(void);
+extern void *ambarella_hal_get_vp(void);
 
 /* ==========================================================================*/
-#define HAL_BASE_VP			(get_ambarella_hal_vp())
+#define HAL_BASE_VP			(ambarella_hal_get_vp())
 
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
 #endif /* __ASSEMBLER__ */

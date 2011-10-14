@@ -253,7 +253,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 #endif
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-			set_ambarella_hal_invalid();
+			ambarella_hal_set_invalid();
 #endif
 #ifdef CONFIG_OUTER_CACHE
 #if 0

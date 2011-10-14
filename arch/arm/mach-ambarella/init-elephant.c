@@ -456,7 +456,6 @@ static void __init ambarella_init_elephant(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'B':
-			ambarella_platform_sd_controller1.slot[0].caps |= MMC_CAP_NONREMOVABLE;
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
@@ -755,6 +754,10 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+		ambarella_board_generic.vin_reset.gpio_id = GPIO(12);
+		ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
+		ambarella_board_generic.vin_reset.active_delay = 100;
 
 		ambarella_eth0_platform_info.mii_id = 0;
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;
