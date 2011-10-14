@@ -128,6 +128,8 @@ EXPORT_SYMBOL(pwm_enable);
 void pwm_disable(struct pwm_device *pwm)
 {
 	SET_REG_BIT_FILED(pwm->enable, 0);
+	ambarella_gpio_config(pwm->gpio_id, GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(pwm->gpio_id, GPIO_LOW);
 }
 EXPORT_SYMBOL(pwm_disable);
 
