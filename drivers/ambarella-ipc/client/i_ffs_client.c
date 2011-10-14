@@ -110,7 +110,7 @@ int ipc_ffs_fread(char *buf, unsigned int size, unsigned int nobj, int fd)
 	struct vffs_fread_arg arg;
 	int res;
 
-	arg.buf = virt_to_phys(buf);
+	arg.buf = (char *)virt_to_phys(buf);
 	arg.size = size;
 	arg.nobj = nobj;
 	arg.fd = fd;
@@ -138,7 +138,7 @@ int ipc_ffs_fwrite(const char *buf, unsigned int size, unsigned int nobj, int fd
 
 	ambcache_clean_range ((void *) buf, size);
 
-	arg.buf = virt_to_phys(buf);
+	arg.buf = (char *)virt_to_phys(buf);
 	arg.size = size;
 	arg.nobj = nobj;
 	arg.fd = fd;
@@ -425,27 +425,7 @@ EXPORT_SYMBOL(ipc_ffs_fsnext);
 #if defined(CONFIG_PROC_FS)
 
 extern struct proc_dir_entry *proc_aipc;
-
 static struct proc_dir_entry *proc_ffs = NULL;
-static struct proc_dir_entry *proc_map = NULL;
-static struct proc_dir_entry *proc_unmap = NULL;
-static struct proc_dir_entry *proc_list = NULL;
-
-static struct proc_dir_entry *proc_fcre = NULL;
-static struct proc_dir_entry *proc_remove = NULL;
-static struct proc_dir_entry *proc_seek = NULL;
-static struct proc_dir_entry *proc_fstat = NULL;
-static struct proc_dir_entry *proc_getdev = NULL;
-static struct proc_dir_entry *proc_ffs_mkdir = NULL;
-static struct proc_dir_entry *proc_rmdir = NULL;
-static struct proc_dir_entry *proc_fsfirst = NULL;
-static struct proc_dir_entry *proc_fsnext = NULL;
-
-static struct proc_dir_entry *proc_fstat_bin = NULL;
-static struct proc_dir_entry *proc_fsfirst_bin = NULL;
-static struct proc_dir_entry *proc_fsnext_bin = NULL;
-static struct proc_dir_entry *proc_getdev_bin = NULL;
-
 
 /*
  * Mapped entry to virtual ffs.
@@ -470,9 +450,16 @@ static struct ipc_ffs_fsfind last_fsfind;
 static struct mutex g_mlock;
 
 /*
+ * used by proc_file_read to use specified buffer instead of 3K
+ * the buffer size is 64KB by default
+ */
+int vffs_b_size = PAGE_SIZE<<4;
+EXPORT_SYMBOL(vffs_b_size);
+
+/*
  * Mapped file read.
  */
-static int i_ffs_proc_fs_actual_read(char *page, char **start, off_t off,
+int i_ffs_proc_fs_actual_read(char *page, char **start, off_t off,
 				     int count, int *eof, void *data)
 {
 	struct proc_ffs_list *pl = (struct proc_ffs_list *) data;
@@ -512,6 +499,7 @@ done:
 
 	return len;
 }
+EXPORT_SYMBOL(i_ffs_proc_fs_actual_read);
 
 /*
  * Mapped file write.
@@ -522,17 +510,16 @@ static int i_ffs_proc_fs_actual_write(struct file *file,
 {
 	struct proc_ffs_list *pl = (struct proc_ffs_list *) data;
 	void *wbuf = NULL;
-	int rval, wbuf_size, len;
+	int rval, len;
 
-	wbuf_size = 0x1000;
-	wbuf = kmalloc(wbuf_size, GFP_KERNEL);
+	wbuf = kmalloc(vffs_b_size, GFP_KERNEL);
 	if (!wbuf) {
 		rval = -ENOMEM;
 		goto done;
 	}
 
-	if (count > wbuf_size)
-		len = wbuf_size;
+	if (count > vffs_b_size)
+		len = vffs_b_size;
 	else
 		len = count;
 
@@ -552,6 +539,39 @@ done:
 		kfree(wbuf);
 
 	return rval;
+}
+
+/*
+ * /proc/aipc/ffs/bs read function.
+ */
+static int i_ffs_proc_fs_bs_read(char *page, char **start, off_t off,
+				   int count, int *eof, void *data)
+{
+	int len = 0;
+
+	len += sprintf(page+len, "%d\n", vffs_b_size);
+	*eof = 1;
+
+	return len;
+}
+
+/*
+ * /proc/aipc/ffs/bs write function.
+ */
+static int i_ffs_proc_fs_bs_write(struct file *file,
+				     const char __user *buffer,
+				     unsigned long count, void *data)
+{
+	char buf[12];
+
+	memset(&buf, 0x0, sizeof(buf));
+	if (copy_from_user(buf, buffer, count))
+		return -EFAULT;
+
+	vffs_b_size=(int)simple_strtol(buf, NULL, 10);
+
+
+	return count;
 }
 
 /*
@@ -647,6 +667,7 @@ static int i_ffs_proc_fs_map_write(struct file *file,
 	if (proc) {
 		pl->proc = proc;	/* Save pointer to pl */
 		proc->data = (void *) pl;
+		/* read_proc is used to notify proc_file_read to use specified buffer size instead of 3K */
 		proc->read_proc = i_ffs_proc_fs_actual_read;
 		proc->write_proc = i_ffs_proc_fs_actual_write;
 		proc->size = pl->stat.fstfz;
@@ -732,11 +753,10 @@ static int i_ffs_proc_fs_unmap_write(struct file *file,
 			vfd |= (x << ((7 - i) * 4));
 		}
 	}
-
+	mutex_lock(&g_mlock);
 	list_for_each_safe(pos, q, &pl_head) {
 		pl = list_entry(pos, struct proc_ffs_list, list);
 		if (all || pl->vfd == vfd) {
-			mutex_lock(&g_mlock);
 			DEBUG_MSG(KERN_WARNING "unmap_write: %s, %x\n",
 					pl->filename, pl->vfd);
 			last_unmapped_vfd = pl->vfd;
@@ -744,9 +764,10 @@ static int i_ffs_proc_fs_unmap_write(struct file *file,
 			remove_proc_entry(pl->name, proc_ffs);
 			list_del(pos);
 			kfree(pl);
-			mutex_unlock(&g_mlock);
+			break;
 		}
 	}
+	mutex_unlock(&g_mlock);
 
 done:
 
@@ -1347,6 +1368,8 @@ static int i_ffs_proc_fs_fsnext_write(struct file *file,
  */
 static void i_ffs_procfs_init(void)
 {
+	struct proc_dir_entry *proc;
+
 	proc_ffs = proc_mkdir("ffs", proc_aipc);
 	if (proc_ffs == NULL) {
 		pr_err("create ffs dir failed!\n");
@@ -1355,120 +1378,127 @@ static void i_ffs_procfs_init(void)
 
 	mutex_init(&g_mlock);
 
-	proc_map = create_proc_entry("map", 0, proc_ffs);
-	if (proc_map) {
-		proc_map->data = NULL;
-		proc_map->read_proc = i_ffs_proc_fs_map_read;
-		proc_map->write_proc = i_ffs_proc_fs_map_write;
+	proc = create_proc_entry("map", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_map_read;
+		proc->write_proc = i_ffs_proc_fs_map_write;
 	}
 
-	proc_unmap = create_proc_entry("unmap", 0, proc_ffs);
-	if (proc_unmap) {
-		proc_unmap->data = NULL;
-		proc_unmap->read_proc = i_ffs_proc_fs_unmap_read;
-		proc_unmap->write_proc = i_ffs_proc_fs_unmap_write;
+	proc = create_proc_entry("unmap", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_unmap_read;
+		proc->write_proc = i_ffs_proc_fs_unmap_write;
 	}
 
-	proc_list = create_proc_entry("list", 0, proc_ffs);
-	if (proc_list) {
-		proc_list->data = NULL;
-		proc_list->read_proc = i_ffs_proc_fs_list_read;
-		proc_list->write_proc = NULL;
+	proc = create_proc_entry("list", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_list_read;
+		proc->write_proc = NULL;
 	}
 
-	proc_fcre = create_proc_entry("create", 0, proc_ffs);
-	if (proc_fcre) {
-		proc_fcre->data = NULL;
-		proc_fcre->read_proc = i_ffs_proc_fs_create_read;
-		proc_fcre->write_proc = i_ffs_proc_fs_create_write;
+	proc = create_proc_entry("create", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_create_read;
+		proc->write_proc = i_ffs_proc_fs_create_write;
 	}
 
-	proc_remove = create_proc_entry("remove", 0, proc_ffs);
-	if (proc_remove) {
-		proc_remove->data = NULL;
-		proc_remove->read_proc = i_ffs_proc_fs_remove_read;
-		proc_remove->write_proc = i_ffs_proc_fs_remove_write;
+	proc = create_proc_entry("remove", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_remove_read;
+		proc->write_proc = i_ffs_proc_fs_remove_write;
 	}
 
-	proc_seek = create_proc_entry("seek", 0, proc_ffs);
-	if (proc_seek) {
-		proc_seek->data = NULL;
-		proc_seek->read_proc = i_ffs_proc_fs_seek_read;
-		proc_seek->write_proc = i_ffs_proc_fs_seek_write;
+	proc = create_proc_entry("seek", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_seek_read;
+		proc->write_proc = i_ffs_proc_fs_seek_write;
 	}
 
-	proc_fstat = create_proc_entry("fstat", 0, proc_ffs);
-	if (proc_fstat) {
-		proc_fstat->data = NULL;
-		proc_fstat->read_proc = i_ffs_proc_fs_fstat_read;
-		proc_fstat->write_proc = i_ffs_proc_fs_fstat_write;
-
-	}
-
-	proc_getdev = create_proc_entry("getdev", 0, proc_ffs);
-	if (proc_getdev) {
-		proc_getdev->data = NULL;
-		proc_getdev->read_proc = i_ffs_proc_fs_getdev_read;
-		proc_getdev->write_proc = i_ffs_proc_fs_getdev_write;
-	}
-
-	proc_ffs_mkdir = create_proc_entry("mkdir", 0, proc_ffs);
-	if (proc_ffs_mkdir) {
-		proc_ffs_mkdir->data = NULL;
-		proc_ffs_mkdir->read_proc = i_ffs_proc_fs_mkdir_read;
-		proc_ffs_mkdir->write_proc = i_ffs_proc_fs_mkdir_write;
-	}
-
-
-	proc_rmdir = create_proc_entry("rmdir", 0, proc_ffs);
-	if (proc_rmdir) {
-		proc_rmdir->data = NULL;
-		proc_rmdir->read_proc = i_ffs_proc_fs_rmdir_read;
-		proc_rmdir->write_proc = i_ffs_proc_fs_rmdir_write;
-	}
-
-	proc_fsfirst = create_proc_entry("fsfirst", 0, proc_ffs);
-	if (proc_fsfirst) {
-		proc_fsfirst->data = NULL;
-		proc_fsfirst->read_proc = i_ffs_proc_fs_fsfirst_read;
-		proc_fsfirst->write_proc = i_ffs_proc_fs_fsfirst_write;
+	proc = create_proc_entry("fstat", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_fstat_read;
+		proc->write_proc = i_ffs_proc_fs_fstat_write;
 
 	}
 
-	proc_fsnext = create_proc_entry("fsnext", 0, proc_ffs);
-	if (proc_fsnext) {
-		proc_fsnext->data = NULL;
-		proc_fsnext->read_proc = i_ffs_proc_fs_fsnext_read;
-		proc_fsnext->write_proc = i_ffs_proc_fs_fsnext_write;
+	proc = create_proc_entry("getdev", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_getdev_read;
+		proc->write_proc = i_ffs_proc_fs_getdev_write;
+	}
+
+	proc = create_proc_entry("mkdir", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_mkdir_read;
+		proc->write_proc = i_ffs_proc_fs_mkdir_write;
+	}
+
+
+	proc = create_proc_entry("rmdir", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_rmdir_read;
+		proc->write_proc = i_ffs_proc_fs_rmdir_write;
+	}
+
+	proc = create_proc_entry("fsfirst", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_fsfirst_read;
+		proc->write_proc = i_ffs_proc_fs_fsfirst_write;
 
 	}
 
-	proc_fstat_bin = create_proc_entry("fstat_bin", 0, proc_ffs);
-	if (proc_fstat_bin) {
-		proc_fstat_bin->data = NULL;
-		proc_fstat_bin->read_proc = i_ffs_proc_fs_fstat_read_bin;
-		proc_fstat_bin->write_proc = i_ffs_proc_fs_fstat_write;
+	proc = create_proc_entry("fsnext", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_fsnext_read;
+		proc->write_proc = i_ffs_proc_fs_fsnext_write;
+
 	}
 
-	proc_getdev_bin = create_proc_entry("getdev_bin", 0, proc_ffs);
-	if (proc_getdev_bin) {
-		proc_getdev_bin->data = NULL;
-		proc_getdev_bin->read_proc = i_ffs_proc_fs_getdev_read_bin;
-		proc_getdev_bin->write_proc = i_ffs_proc_fs_getdev_write;
+	proc = create_proc_entry("bs", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_bs_read;
+		proc->write_proc = i_ffs_proc_fs_bs_write;
 	}
 
-	proc_fsfirst_bin = create_proc_entry("fsfirst_bin", 0, proc_ffs);
-	if (proc_fsfirst_bin) {
-		proc_fsfirst_bin->data = NULL;
-		proc_fsfirst_bin->read_proc = i_ffs_proc_fs_fsfirst_read_bin;
-		proc_fsfirst_bin->write_proc = i_ffs_proc_fs_fsfirst_write;
+	proc = create_proc_entry("fstat_bin", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_fstat_read_bin;
+		proc->write_proc = i_ffs_proc_fs_fstat_write;
 	}
 
-	proc_fsnext_bin = create_proc_entry("fsnext_bin", 0, proc_ffs);
-	if (proc_fsnext_bin) {
-		proc_fsnext_bin->data = NULL;
-		proc_fsnext_bin->read_proc = i_ffs_proc_fs_fsnext_read_bin;
-		proc_fsnext_bin->write_proc = i_ffs_proc_fs_fsnext_write;
+	proc = create_proc_entry("getdev_bin", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_getdev_read_bin;
+		proc->write_proc = i_ffs_proc_fs_getdev_write;
+	}
+
+	proc = create_proc_entry("fsfirst_bin", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_fsfirst_read_bin;
+		proc->write_proc = i_ffs_proc_fs_fsfirst_write;
+	}
+
+	proc = create_proc_entry("fsnext_bin", 0, proc_ffs);
+	if (proc) {
+		proc->data = NULL;
+		proc->read_proc = i_ffs_proc_fs_fsnext_read_bin;
+		proc->write_proc = i_ffs_proc_fs_fsnext_write;
 	}
 }
 
@@ -1480,86 +1510,39 @@ static void i_ffs_procfs_cleanup(void)
 	struct proc_ffs_list *pl;
 	struct list_head *pos, *q;
 
-	if (proc_map) {
-		remove_proc_entry("map", proc_ffs);
-		proc_map = NULL;
-	}
+	remove_proc_entry("bs", proc_ffs);
 
-	if (proc_unmap) {
-		remove_proc_entry("unmap", proc_ffs);
-		proc_unmap = NULL;
-	}
+	remove_proc_entry("map", proc_ffs);
 
-	if (proc_list) {
-		remove_proc_entry("list", proc_ffs);
-		proc_list = NULL;
-	}
+	remove_proc_entry("unmap", proc_ffs);
 
-	if (proc_fcre) {
-		remove_proc_entry("create", proc_ffs);
-		proc_fcre = NULL;
-	}
+	remove_proc_entry("list", proc_ffs);
 
-	if (proc_remove) {
-		remove_proc_entry("remove", proc_ffs);
-		proc_remove = NULL;
-	}
+	remove_proc_entry("create", proc_ffs);
 
-	if (proc_seek) {
-		remove_proc_entry("seek", proc_ffs);
-		proc_seek = NULL;
-	}
+	remove_proc_entry("remove", proc_ffs);
 
-	if (proc_seek) {
-		remove_proc_entry("seek", proc_ffs);
-		proc_seek = NULL;
-	}
+	remove_proc_entry("seek", proc_ffs);
 
-	if (proc_fstat) {
-		remove_proc_entry("fstat", proc_ffs);
-		proc_fstat = NULL;
-	}
+	remove_proc_entry("seek", proc_ffs);
 
-	if (proc_ffs_mkdir) {
-		remove_proc_entry("mkdir", proc_ffs);
-		proc_ffs_mkdir = NULL;
-	}
+	remove_proc_entry("fstat", proc_ffs);
 
-	if (proc_rmdir) {
-		remove_proc_entry("rmdir", proc_ffs);
-		proc_rmdir = NULL;
-	}
+	remove_proc_entry("mkdir", proc_ffs);
 
-	if (proc_fsfirst) {
-		remove_proc_entry("fsfirst", proc_ffs);
-		proc_fsfirst = NULL;
-	}
+	remove_proc_entry("rmdir", proc_ffs);
 
-	if (proc_fsnext) {
-		remove_proc_entry("fsnext", proc_ffs);
-		proc_fsnext = NULL;
-	}
+	remove_proc_entry("fsfirst", proc_ffs);
 
-	if (proc_fstat_bin) {
-		remove_proc_entry("fstat_bin", proc_ffs);
-		proc_fstat_bin = NULL;
-	}
+	remove_proc_entry("fsnext", proc_ffs);
 
-	if (proc_getdev_bin) {
-		remove_proc_entry("getdev_bin", proc_ffs);
-		proc_getdev_bin = NULL;
-	}
+	remove_proc_entry("fstat_bin", proc_ffs);
 
-	if (proc_fsfirst_bin) {
-		remove_proc_entry("fsfirst_bin", proc_ffs);
-		proc_fsfirst_bin = NULL;
-	}
+	remove_proc_entry("getdev_bin", proc_ffs);
 
-	if (proc_fsnext_bin) {
-		remove_proc_entry("fsnext_bin", proc_ffs);
-		proc_fsnext_bin = NULL;
-	}
+	remove_proc_entry("fsfirst_bin", proc_ffs);
 
+	remove_proc_entry("fsnext_bin", proc_ffs);
 
 	list_for_each_safe(pos, q, &pl_head) {
 		pl = list_entry(pos, struct proc_ffs_list, list);
@@ -1570,7 +1553,6 @@ static void i_ffs_procfs_cleanup(void)
 	}
 
 	remove_proc_entry("ffs", proc_aipc);
-	proc_ffs = NULL;
 }
 
 #endif  /* CONFIG_PROC_FS */
