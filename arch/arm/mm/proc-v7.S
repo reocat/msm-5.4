@@ -276,6 +276,12 @@ __v7_setup:
 	orrlt	r10, r10, #1 << 11		@ set bit #11
 	mcrlt	p15, 0, r10, c15, c0, 1		@ write diagnostic register
 #endif
+	mrc	p15, 0, r10, c1, c0, 1		@ read aux control register
+	orr	r10, r10, #(1 << 2)		@ set Dside prefetch to 1
+#ifdef CONFIG_CACHE_PL310
+	orr	r10, r10, #(1 << 1)		@ set Prefetch hint to 1
+#endif
+	mcr	p15, 0, r10, c1, c0, 1		@ write aux control register
 
 3:	mov	r10, #0
 #ifdef HARVARD_CACHE

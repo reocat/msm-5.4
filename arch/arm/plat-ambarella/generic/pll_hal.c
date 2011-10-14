@@ -38,6 +38,7 @@
 
 #include <plat/pll.h>
 #include <plat/timer.h>
+#include <plat/ambcache.h>
 
 #include <hal/hal.h>
 
@@ -305,6 +306,7 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	oldfreq = get_arm_bus_freq_hz();
 
 	ambarella_timer_suspend(1);
+	ambcache_pli_range(HAL_BASE_VP, ambarella_hal_get_size());
 	result = amb_set_operating_mode(HAL_BASE_VP, popmode);
 	if (result != AMB_HAL_SUCCESS) {
 		pr_err("%s: amb_set_operating_mode failed(%d)\n",

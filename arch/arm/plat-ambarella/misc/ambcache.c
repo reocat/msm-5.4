@@ -159,6 +159,30 @@ void ambcache_flush_range(void *addr, unsigned int size)
 }
 EXPORT_SYMBOL(ambcache_flush_range);
 
+void ambcache_pli_range(void *addr, unsigned int size)
+{
+	u32					vstart;
+	u32					vend;
+	u32					addr_tmp;
+
+	vstart = (u32)addr & CACHE_LINE_MASK;
+	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+
+	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
+#if __LINUX_ARM_ARCH__ >= 7
+		__asm__ __volatile__ (
+			"pli [%0]" : : "r" (addr_tmp));
+#elif __LINUX_ARM_ARCH__ >= 5
+		__asm__ __volatile__ (
+			"mcr p15, 0, %0, c7, c13, 1" : : "r" (addr_tmp));
+#else
+#error "PLI not supported"
+#endif
+	}
+}
+EXPORT_SYMBOL(ambcache_pli_range);
+
+/* ==========================================================================*/
 void ambcache_l2_enable_raw()
 {
 #ifdef CONFIG_OUTER_CACHE
@@ -168,7 +192,13 @@ void ambcache_l2_enable_raw()
 			0x00000120) {
 			writel(0x00000120, (ambcache_l2_base +
 				L2X0_DATA_LATENCY_CTRL));
-			l2x0_init(ambcache_l2_base, 0x00000000, 0xffffffff);
+			l2x0_init(ambcache_l2_base,
+				((1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT) |
+				(0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT) |
+				(0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT) |
+				(1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT) |
+				(1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT)),
+				L2X0_AUX_CTRL_MASK);
 		} else
 #endif
 			outer_enable();

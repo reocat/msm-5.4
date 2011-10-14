@@ -751,7 +751,7 @@ static int __init parse_mem_tag_hal(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_HAL, parse_mem_tag_hal);
 
-void *get_ambarella_hal_vp(void)
+void *ambarella_hal_get_vp(void)
 {
 	if (unlikely((!ambarella_hal_info.remapped))) {
 		pr_err("%s: remap HAL first!\n", __func__);
@@ -790,9 +790,15 @@ void *get_ambarella_hal_vp(void)
 
 	return (void *)ambarella_hal_info.virtual;
 }
-EXPORT_SYMBOL(get_ambarella_hal_vp);
+EXPORT_SYMBOL(ambarella_hal_get_vp);
 
-void set_ambarella_hal_invalid(void)
+u32 ambarella_hal_get_size(void)
+{
+	return ambarella_hal_info.size;
+}
+EXPORT_SYMBOL(ambarella_hal_get_size);
+
+void ambarella_hal_set_invalid(void)
 {
 	ambarella_hal_info.inited = 0;
 }
