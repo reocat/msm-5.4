@@ -137,6 +137,8 @@ static void ft540_send_event(struct ft540 *ft)
 	u8			i;
 	static int		prev_touch = 0;
 	static int		curr_touch = 0;
+	static int		prev_home = 0, prev_menu = 0, prev_back = 0;
+	int			curr_home = 0, curr_menu = 0, curr_back = 0;
 	int			event = 0;
 
 	curr_touch = ft->reg_data[FT_FINGER_NUM] & 0x07;
@@ -159,7 +161,7 @@ static void ft540_send_event(struct ft540 *ft)
 
 	for (i = 0; i < curr_touch; i++) {
 		u8	xh, xl, yh, yl;
-		u32	x, y, z;
+		u32	x, y;
 
 		xh	= ft->reg_data[FT_X1_HI + 6 * i] & 0x0f;
 		xl	= ft->reg_data[FT_X1_LO + 6 * i] & 0xff;
@@ -168,11 +170,62 @@ static void ft540_send_event(struct ft540 *ft)
 		x	= (xh << 8) | xl;
 		y	= (yh << 8) | yl;
 
-		/* Swap x & y */
-		z = x;
-		x = y;
-		y = z;
 		FT_DEBUG("Finger%d Raw: (%d, %d)\n", i, x, y);
+
+		//HOME
+		if (x >= 1095 && x <= 1105 && y <= 5) {
+			curr_home = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 300 && y <= 310) {
+			curr_home = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 450 && y <= 460) {
+			curr_home = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 760 && y <= 770) {
+			curr_home = 1;
+			continue;
+		}
+
+		//MENU
+		if (x >= 1095 && x <= 1105 && y >= 65 && y <= 75) {
+			curr_menu = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 255 && y <= 265) {
+			curr_menu = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 400 && y <= 410) {
+			curr_menu = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 695 && y <= 705) {
+			curr_menu = 1;
+			continue;
+		}
+
+		//BACK
+		if (x >= 1095 && x <= 1105 && y >= 115 && y <= 125) {
+			curr_back = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 215 && y <= 225) {
+			curr_back = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 355 && y <= 365) {
+			curr_back = 1;
+			continue;
+		}
+		if (x >= 1095 && x <= 1105 && y >= 645 && y <= 655) {
+			curr_back = 1;
+			continue;
+		}
+
 
 		if (x < ft->fix.x_min) {
 			x = ft->fix.x_min;
@@ -210,9 +263,49 @@ static void ft540_send_event(struct ft540 *ft)
 
 	}
 
+	//HOME
+	if (!prev_home && curr_home) {
+		event = 1;
+		input_report_key(input, KEY_HOME, 1);
+		FT_DEBUG("HOME Pressed\n");
+	}
+	if (prev_home && !curr_home) {
+		event = 1;
+		input_report_key(input, KEY_HOME, 0);
+		FT_DEBUG("HOME Released\n");
+	}
+
+	//MENU
+	if (!prev_menu && curr_menu) {
+		event = 1;
+		input_report_key(input, KEY_MENU, 1);
+		FT_DEBUG("MENU Pressed\n");
+	}
+	if (prev_menu && !curr_menu) {
+		event = 1;
+		input_report_key(input, KEY_MENU, 0);
+		FT_DEBUG("MENU Released\n");
+	}
+
+	//ESC
+	if (!prev_back && curr_back) {
+		event = 1;
+		input_report_key(input, KEY_ESC, 1);
+		FT_DEBUG("BACK Pressed\n");
+	}
+	if (prev_back && !curr_back) {
+		event = 1;
+		input_report_key(input, KEY_ESC, 0);
+		FT_DEBUG("ESC Released\n");
+	}
+
+
 	if (event)
 		input_sync(input);
 	prev_touch = curr_touch;
+	prev_home = curr_home;
+	prev_menu = curr_menu;
+	prev_back = curr_back;
 }
 
 static irqreturn_t ft540_irq(int irq, void *handle)
@@ -285,6 +378,9 @@ static int ft540_probe(struct i2c_client *client,
 	set_bit(EV_SYN, input_dev->evbit);
 	set_bit(EV_KEY, input_dev->evbit);
 	set_bit(BTN_TOUCH, input_dev->keybit);
+	set_bit(KEY_HOME, input_dev->keybit);
+	set_bit(KEY_MENU, input_dev->keybit);
+	set_bit(KEY_ESC, input_dev->keybit);
 	set_bit(EV_ABS, input_dev->evbit);
 
 	input_set_abs_params(input_dev, ABS_PRESSURE, 0, MAX_Z, 0, 0);
