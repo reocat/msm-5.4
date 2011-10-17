@@ -81,39 +81,39 @@ static struct ft540_platform_data ambarella_ft540_pdata = {
 	.fix = {
 		[FT540_FAMILY_0] = {
 			.x_invert	= 0,
-			.y_invert	= 1,
+			.y_invert	= 0,
 			.x_rescale	= 0,
 			.y_rescale	= 0,
 			.x_min		= 0,
-			.x_max		= 786,
+			.x_max		= 1024,
 			.y_min		= 0,
-			.y_max		= 460,
+			.y_max		= 768,
 
 			.family_code	= 0x00,
 		},
 
 		[FT540_FAMILY_1] = {
 			.x_invert	= 0,
-			.y_invert	= 1,
+			.y_invert	= 0,
 			.x_rescale	= 0,
 			.y_rescale	= 0,
 			.x_min		= 0,
-			.x_max		= 786,
+			.x_max		= 1024,
 			.y_min		= 0,
-			.y_max		= 460,
+			.y_max		= 768,
 
 			.family_code	= 0x26,
 		},
 
 		[FT540_FAMILY_2] = {
 			.x_invert	= 0,
-			.y_invert	= 1,
+			.y_invert	= 0,
 			.x_rescale	= 0,
 			.y_rescale	= 0,
 			.x_min		= 0,
-			.x_max		= 786,
+			.x_max		= 1024,
 			.y_min		= 0,
-			.y_max		= 460,
+			.y_max		= 768,
 
 			.family_code	= 0xc1,
 		},
