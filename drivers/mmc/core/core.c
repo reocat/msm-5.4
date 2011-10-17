@@ -1799,14 +1799,15 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		if (!host->bus_ops || host->bus_ops->suspend)
 			break;
 
-		mmc_claim_host(host);
-
+		mmc_bus_get(host);
 		if (host->bus_ops->remove)
 			host->bus_ops->remove(host);
 
+		mmc_claim_host(host);
 		mmc_detach_bus(host);
 		mmc_release_host(host);
 		host->pm_flags = 0;
+		mmc_bus_put(host);
 		break;
 
 	case PM_POST_SUSPEND:
