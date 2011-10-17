@@ -26,9 +26,11 @@
 
 #include "internal.h"
 
+#ifdef AMBARELLA_IPC
 /* used to notify proc_file_read to use specified buffer instead of 3K */
 extern int i_ffs_proc_fs_actual_read(char *page, char **start, off_t off, int count, int *eof, void *data);
 extern int vffs_b_size;
+#endif
 
 DEFINE_SPINLOCK(proc_subdir_lock);
 
@@ -68,7 +70,7 @@ __proc_file_read(struct file *file, char __user *buf, size_t nbytes,
 		nbytes = MAX_NON_LFS - pos;
 
 	dp = PDE(inode);
-
+#ifdef AMBARELLA_IPC
 	if ( i_ffs_proc_fs_actual_read == dp->read_proc ) {
 		/* increase vffs throughput: allow specified buffer size */
 		p_block_size = vffs_b_size;
@@ -76,11 +78,14 @@ __proc_file_read(struct file *file, char __user *buf, size_t nbytes,
 		if (!(page = (char*) kzalloc(p_size, GFP_KERNEL)))
 			return -ENOMEM;
 	} else {
+#endif
 		p_block_size = PROC_BLOCK_SIZE;
 		p_size = PAGE_SIZE;
 		if (!(page = (char*) __get_free_page(GFP_TEMPORARY)))
 			return -ENOMEM;
+#ifdef AMBARELLA_IPC
 	}
+#endif
 
 	while ((nbytes > 0) && !eof) {
 		count = min_t(size_t, p_block_size, nbytes);
@@ -196,9 +201,11 @@ __proc_file_read(struct file *file, char __user *buf, size_t nbytes,
 		buf += n;
 		retval += n;
 	}
+#ifdef AMBARELLA_IPC
 	if ( i_ffs_proc_fs_actual_read == dp->read_proc )
 		kfree(page);
 	else
+#endif
 		free_page((unsigned long) page);
 
 	return retval;
