@@ -206,25 +206,6 @@ static void __init ambarella_init_filbert(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
-	//config board
-	ambarella_board_generic.power_detect.irq_gpio = GPIO(135);
-	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(135);
-	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	//config LCD
-	ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
-	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-	ambarella_board_generic.lcd_backlight.active_delay = 1;
-
-	ambarella_board_generic.lcd_spi_hw.bus_id = 2;
-	ambarella_board_generic.lcd_spi_hw.cs_id = 4;
-
-	//config audio
-	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
-	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
-
 	/* Config Eth0*/
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
 	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
@@ -235,51 +216,17 @@ static void __init ambarella_init_filbert(void)
 	ambarella_eth1_platform_info.mii_reset.active_level = GPIO_LOW;
 	ambarella_eth1_platform_info.mii_reset.active_delay = 20;
 
-	/* Config Vin*/
-	ambarella_board_generic.vin_reset.gpio_id = GPIO(127);
-	ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.vin_reset.active_delay = 200;
-
-	ambarella_board_generic.vin_vsync.irq_gpio = GPIO(126);
-	ambarella_board_generic.vin_vsync.irq_line = gpio_to_irq(126);
-	ambarella_board_generic.vin_vsync.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.vin_vsync.irq_gpio_val = GPIO_HIGH;
-	ambarella_board_generic.vin_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;
 	ambarella_platform_sd_controller0.clk_limit = 25000000;
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
-	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
-	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
 	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
-
-	spi2_pdata = (struct ambarella_spi_platform_info *)ambarella_spi2.dev.platform_data;
-	spi2_pdata->cs_num = 7;
-	spi2_pdata->cs_pins[7] = -1;
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
-
-	ambarella_tm1510_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
-
-	i2c_register_board_info(0, ambarella_board_vin_infos,
-		ARRAY_SIZE(ambarella_board_vin_infos));
-
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	i2c_register_board_info(0, &ambarella_board_hdmi_info, 1);
-#else
-	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-#endif
 
 	platform_device_register(&filbert_board_input);
 }
