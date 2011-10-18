@@ -30,6 +30,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/ahci_platform.h>
 #include <linux/irq.h>
+#include <mach/board.h>
 
 /*
  * AHCI: all of the initialization for SATA PHY has been done at Amboot.
@@ -39,6 +40,9 @@ static int ambarella_ahci_init(struct device *dev, void __iomem *addr)
 	int			rval = 0;
 	struct irq_desc		*ahci_desc;
 	struct irq_chip		*ahci_chip = NULL;
+
+	if (ambarella_board_generic.sata_power.gpio_id >= 0)
+		ambarella_set_gpio_output(&ambarella_board_generic.sata_power, 1);
 
 	ahci_desc = irq_to_desc(SATA_IRQ);
 	if (ahci_desc)
