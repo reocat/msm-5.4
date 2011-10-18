@@ -409,6 +409,11 @@ struct ambarella_board_info ambarella_board_generic = {
 		.irq_gpio_val	= GPIO_LOW,
 		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	},
+	.sata_power	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
 };
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);
 EXPORT_SYMBOL(ambarella_board_generic);
