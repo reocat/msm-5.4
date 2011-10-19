@@ -335,7 +335,7 @@ static int pwm_backlight_init(struct device *dev)
 		data->max_brightness	=
 			ambarella_board_generic.pwm0_config.max_duty;
 		data->dft_brightness	=
-			0;
+			ambarella_board_generic.pwm0_config.max_duty;
 		data->pwm_period_ns	=
 			ambarella_board_generic.pwm0_config.period_ns;
 		break;

@@ -30,6 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/cpu.h>
+#include <linux/power_supply.h>
 
 #include <asm/cacheflush.h>
 #include <asm/io.h>
@@ -52,10 +53,6 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
-#ifdef CONFIG_GPIO_WM831X
-extern int wm831x_config_poweroff(void);
-#endif
-
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -69,10 +66,8 @@ void ambarella_power_off(void)
 
 void ambarella_power_off_prepare(void)
 {
-#ifdef CONFIG_GPIO_WM831X
-	wm831x_config_poweroff();
-#endif
 }
+
 /* ==========================================================================*/
 static int ambarella_pm_notify(unsigned long val)
 {
@@ -256,6 +251,9 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 			valid = 1;
 		}
 #endif
+		if ((power_supply_is_system_supplied() > 0)) {
+			valid = 0;
+		}
 		break;
 
 	default:

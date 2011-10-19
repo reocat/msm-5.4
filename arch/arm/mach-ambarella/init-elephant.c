@@ -529,7 +529,8 @@ static void __init ambarella_init_elephant(void)
 
 			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
 			ambarella_spi_devices[12].max_speed_hz = 500000;
-			ambarella_spi_devices[12].platform_data = &elephant_wm8310_pdata;
+			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
+			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
@@ -755,7 +756,8 @@ static void __init ambarella_init_elephant(void)
 
 			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
 			ambarella_spi_devices[12].max_speed_hz = 500000;
-			ambarella_spi_devices[12].platform_data = &elephant_wm8310_pdata;
+			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
+			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
