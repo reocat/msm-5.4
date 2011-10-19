@@ -35,14 +35,15 @@
 #include <linux/mfd/wm831x/pdata.h>
 #include <linux/mfd/wm831x/regulator.h>
 
+/* ==========================================================================*/
 /* DCDC1: iOne_VDDAX for Cortex and 3D */
-static struct regulator_consumer_supply dcdc1_consumers[] = {
+static struct regulator_consumer_supply dcdc1_consumers[] __initdata = {
 	{
 		.supply = "cpu_vcc",
 	},
 };
 
-static struct regulator_init_data elephant_wm8310_dcdc1_data = {
+static struct regulator_init_data wm8310_default_dcdc1_data __initdata = {
 	.constraints = {
 		.name = "VDD_AXI_1.0V_1.4V",
 		.min_uV = 1000000,
@@ -62,13 +63,15 @@ static struct regulator_init_data elephant_wm8310_dcdc1_data = {
 	 .consumer_supplies = dcdc1_consumers,
 };
 
-static struct regulator_consumer_supply dcdc2_consumers[] = {
+/* ==========================================================================*/
+/* DCDC2 iOne_D1P5 for DDR3 */
+static struct regulator_consumer_supply dcdc2_consumers[] __initdata = {
 	{
 		.supply = "ddr3_vcc",
 	},
 };
-/* DCDC2 iOne_D1P5 for DDR3 */
-static struct regulator_init_data elephant_wm8310_dcdc2_data = {
+
+static struct regulator_init_data wm8310_default_dcdc2_data __initdata = {
 	.constraints = {
 		.name = "VDDQ_i1_0.6V_1.8",
 		.min_uV = 600000,
@@ -87,7 +90,10 @@ static struct regulator_init_data elephant_wm8310_dcdc2_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(dcdc2_consumers),
 	 .consumer_supplies = dcdc2_consumers,
 };
-static struct regulator_consumer_supply dcdc3_consumers[] = {
+
+/* ==========================================================================*/
+/* DCDC3 iOne_D3P15 for A3P15 or D3P15 */
+static struct regulator_consumer_supply dcdc3_consumers[] __initdata = {
 	{
 		.supply = "gen_vcc",
 	},
@@ -95,8 +101,7 @@ static struct regulator_consumer_supply dcdc3_consumers[] = {
 		.supply = "lp_vcc",
 	},
 };
-/* DCDC3 iOne_D3P15 for A3P15 or D3P15 */
-static struct regulator_init_data elephant_wm8310_dcdc3_data = {
+static struct regulator_init_data wm8310_default_dcdc3_data __initdata = {
 	.constraints = {
 		.name = "VDD33_LP_AND_GEN_3.15V",
 		.min_uV = 2800000,
@@ -116,13 +121,13 @@ static struct regulator_init_data elephant_wm8310_dcdc3_data = {
 	.consumer_supplies = dcdc3_consumers,
 };
 
-static struct regulator_consumer_supply dcdc4_consumers[] = {
+/* ==========================================================================*/
+static struct regulator_consumer_supply dcdc4_consumers[] __initdata = {
 	{
 		.supply = "lcd_vcc",
 	},
 };
-
-static struct regulator_init_data elephant_wm8310_dcdc4_data = {
+static struct regulator_init_data wm8310_default_dcdc4_data __initdata = {
 	.constraints = {
 		.name = "VDD_LCD_6.5V_30V",
 		.min_uV = 6500000,
@@ -141,13 +146,14 @@ static struct regulator_init_data elephant_wm8310_dcdc4_data = {
 	 .consumer_supplies = dcdc4_consumers,
 };
 
-static struct regulator_consumer_supply ldo1_consumers[] = {
+/* ==========================================================================*/
+/* LDO1 MIPI_PHY */
+static struct regulator_consumer_supply ldo1_consumers[] __initdata = {
 	{
 		.supply = "mipi_vcc",
 	},
 };
-/* LDO1 MIPI_PHY */
-static struct regulator_init_data elephant_wm8310_ldo1_data = {
+static struct regulator_init_data wm8310_default_ldo1_data __initdata = {
 	.constraints = {
 		.name = "VDD_MIPI_PHY_0.9V_3.3V",
 		.min_uV = 900000,
@@ -166,13 +172,15 @@ static struct regulator_init_data elephant_wm8310_ldo1_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo1_consumers),
 	 .consumer_supplies = ldo1_consumers,
 };
-static struct regulator_consumer_supply ldo2_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO2 SEN_VDD */
+static struct regulator_consumer_supply ldo2_consumers[] __initdata = {
 	{
 		.supply = "sensor_vcc",
 	},
 };
-/* LDO2 SEN_VDD */
-static struct regulator_init_data elephant_wm8310_ldo2_data = {
+static struct regulator_init_data wm8310_default_ldo2_data __initdata = {
 	.constraints = {
 		.name = "VDD_SEN_0.9V_3.3V",
 		.min_uV = 900000,
@@ -191,13 +199,15 @@ static struct regulator_init_data elephant_wm8310_ldo2_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo2_consumers),
 	 .consumer_supplies = ldo2_consumers,
 };
-static struct regulator_consumer_supply ldo3_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO3 Audio codec power */
+static struct regulator_consumer_supply ldo3_consumers[] __initdata = {
 	{
 		.supply = "audio_vcc",
 	},
 };
-/* LDO3 Audio codec power */
-static struct regulator_init_data elephant_wm8310_ldo3_data = {
+static struct regulator_init_data wm8310_default_ldo3_data __initdata = {
 	.constraints = {
 		.name = "VDD_AUD_0.9V_3.3V",
 		.min_uV = 900000,
@@ -217,13 +227,14 @@ static struct regulator_init_data elephant_wm8310_ldo3_data = {
 	 .consumer_supplies = ldo3_consumers,
 };
 
-static struct regulator_consumer_supply ldo4_consumers[] = {
+/* ==========================================================================*/
+/* LDO4 gyro sensor */
+static struct regulator_consumer_supply ldo4_consumers[] __initdata = {
 	{
 		.supply = "gyro_vcc",
 	},
 };
-/* LDO4 gyro sensor */
-static struct regulator_init_data elephant_wm8310_ldo4_data = {
+static struct regulator_init_data wm8310_default_ldo4_data __initdata = {
 	.constraints = {
 		.name = "VDD_GY_0.9V_3.3V",
 		.min_uV = 900000,
@@ -242,13 +253,15 @@ static struct regulator_init_data elephant_wm8310_ldo4_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo4_consumers),
 	 .consumer_supplies = ldo4_consumers,
 };
-static struct regulator_consumer_supply ldo5_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO5 VDD33_SDXC */
+static struct regulator_consumer_supply ldo5_consumers[] __initdata = {
 	{
 		.supply = "sdxc_vcc",
 	},
 };
-/* LDO5 VDD33_SDXC */
-static struct regulator_init_data elephant_wm8310_ldo5_data = {
+static struct regulator_init_data wm8310_default_ldo5_data __initdata = {
 	.constraints = {
 		.name = "VDD33_SDXC_0.9V_3.3V",
 		/* can not get 3.15 but 3.1 or 3.2 */
@@ -268,13 +281,15 @@ static struct regulator_init_data elephant_wm8310_ldo5_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo5_consumers),
 	 .consumer_supplies = ldo5_consumers,
 };
-static struct regulator_consumer_supply ldo6_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO6 Gsensor */
+static struct regulator_consumer_supply ldo6_consumers[] __initdata = {
 	{
 		.supply = "gsensor_vcc",
 	},
 };
-/* LDO6 Gsensor */
-static struct regulator_init_data elephant_wm8310_ldo6_data = {
+static struct regulator_init_data wm8310_default_ldo6_data __initdata = {
 	.constraints = {
 		.name = "VDD_G_0.9V_3.3V",
 		.min_uV = 900000,
@@ -293,13 +308,15 @@ static struct regulator_init_data elephant_wm8310_ldo6_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo6_consumers),
 	 .consumer_supplies = ldo6_consumers,
 };
-static struct regulator_consumer_supply ldo7_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO7 VDDA_25_XX */
+static struct regulator_consumer_supply ldo7_consumers[] __initdata = {
 	{
 		.supply = "analog_vcc",
 	},
 };
-/* LDO7 VDDA_25_XX */
-static struct regulator_init_data elephant_wm8310_ldo7_data = {
+static struct regulator_init_data wm8310_default_ldo7_data __initdata = {
 	.constraints = {
 		.name = "VDDA_25_XXX_1V_3.5V",
 		.min_uV = 1000000,
@@ -318,13 +335,15 @@ static struct regulator_init_data elephant_wm8310_ldo7_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo7_consumers),
 	 .consumer_supplies = ldo7_consumers,
 };
-static struct regulator_consumer_supply ldo8_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO8 Image sensor */
+static struct regulator_consumer_supply ldo8_consumers[] __initdata = {
 	{
 		.supply = "imagesen_vcc",
 	},
 };
-/* LDO8 Image sensor */
-static struct regulator_init_data elephant_wm8310_ldo8_data = {
+static struct regulator_init_data wm8310_default_ldo8_data __initdata = {
 	.constraints = {
 		.name = "VDD_IMG_SEN_1V_3.5",
 		.min_uV = 1000000,
@@ -343,13 +362,15 @@ static struct regulator_init_data elephant_wm8310_ldo8_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo8_consumers),
 	 .consumer_supplies = ldo8_consumers,
 };
-static struct regulator_consumer_supply ldo9_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO9 VDD_BT */
+static struct regulator_consumer_supply ldo9_consumers[] __initdata = {
 	{
 		.supply = "bt_vcc",
 	},
 };
-/* LDO9 VDD_BT */
-static struct regulator_init_data elephant_wm8310_ldo9_data = {
+static struct regulator_init_data wm8310_default_ldo9_data __initdata = {
 	.constraints = {
 		.name = "VDD_BT_1V_3.5V",
 		.min_uV = 1000000,
@@ -368,13 +389,15 @@ static struct regulator_init_data elephant_wm8310_ldo9_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(ldo9_consumers),
 	 .consumer_supplies = ldo9_consumers,
 };
-static struct regulator_consumer_supply ldo10_consumers[] = {
+
+/* ==========================================================================*/
+/* LDO10 VDD_LCD */
+static struct regulator_consumer_supply ldo10_consumers[] __initdata = {
 	{
 		.supply = "lcd_ctl_vcc",
 	},
 };
-/* LDO10 VDD_LCD */
-static struct regulator_init_data elephant_wm8310_ldo10_data = {
+static struct regulator_init_data wm8310_default_ldo10_data __initdata = {
 	.constraints = {
 		.name = "VDD_LCD_1V_3.5V",
 		.min_uV = 1000000,
@@ -394,13 +417,14 @@ static struct regulator_init_data elephant_wm8310_ldo10_data = {
 	 .consumer_supplies = ldo10_consumers,
 };
 
-static struct regulator_consumer_supply lsink1_consumers[] = {
+/* ==========================================================================*/
+/* ISINK1 backlight */
+static struct regulator_consumer_supply lsink1_consumers[] __initdata = {
 	{
 		.supply = "lcd_bl_sink",
 	},
 };
-/* ISINK1 backlight */
-static struct regulator_init_data elephant_wm8310_isink1_data = {
+static struct regulator_init_data wm8310_default_isink1_data __initdata = {
 	.constraints = {
 		.name = "VDD_LCD_BL_20mA_28V",
 		.min_uA = 19484,
@@ -417,109 +441,74 @@ static struct regulator_init_data elephant_wm8310_isink1_data = {
 	 .num_consumer_supplies = ARRAY_SIZE(lsink1_consumers),
 	 .consumer_supplies = lsink1_consumers,
 };
-static struct wm831x_backlight_pdata elephant_wm8310_backlight_pdata = {
+
+/* ==========================================================================*/
+static struct wm831x_backlight_pdata wm8310_default_backlight_pdata __initdata = {
 	.isink = 1,
 	/* 20*2^(13.25) = 19484 */
 	.max_uA = 19484,
 };
 
+static struct wm831x_backup_pdata wm8310_default_backup_pdata __initdata = {
+	.charger_enable = 1,
+	.vlim = 2500,  /* mV */
+	.ilim = 200,   /* uA */
+};
 
-static struct wm831x_battery_pdata elephant_wm8310_battery_pdata = {
+static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.enable = 1,
-	.fast_enable	 = 1,
-//	.off_mask = 1,
+	.fast_enable = 1,
+	.off_mask = 0,
 	.trickle_ilim = 50,
 	.vsel = 4200,
 	.eoc_iterm = 20,
 	.fast_ilim = 450,
 	.timeout = 360,
-	.enable_fet = 1,
 };
 
-#define WM8310_GPIO_START EXT_GPIO(0)
-static struct gpio elephant_wm8310_gpios[] = {
-/* pmic gpio 0..5 can be controlled with OTP data */
-#if 0
-		{WM8310_GPIO_START + 0, GPIOF_OUT_INIT_HIGH, "VDD_EN1"},
-		{WM8310_GPIO_START + 1, GPIOF_OUT_INIT_HIGH, "VDD_EN2"},
-		{WM8310_GPIO_START + 2, GPIOF_OUT_INIT_HIGH, "VDD_EN3"},
-		{WM8310_GPIO_START + 3, GPIOF_OUT_INIT_HIGH, "VDD_EN4"},
-		{WM8310_GPIO_START + 4, GPIOF_OUT_INIT_HIGH, "VDD_EN5"},
-		{WM8310_GPIO_START + 5, GPIOF_OUT_INIT_HIGH, "VDD_EN6"},
-#endif
-		{WM8310_GPIO_START + 6, GPIOF_OUT_INIT_HIGH, "VDD_EN7"},
-		{WM8310_GPIO_START + 7, GPIOF_OUT_INIT_HIGH, "VDD_EN8"},
-		{WM8310_GPIO_START + 8, GPIOF_OUT_INIT_HIGH, "VDD_EN9"},
+static struct wm831x_status_pdata wm8310_default_on_led __initdata = {
+	.name = "wm8310:on:",
+	.default_src = WM831X_STATUS_POWER,
 };
 
-static int elephant_wm8310_pre_init(struct wm831x *wm831x)
-{
-	int					ret = 0;
-	if (ambarella_is_valid_gpio_irq(&ambarella_board_generic.pmic_irq)) {
-		wm831x->irq = ambarella_board_generic.pmic_irq.irq_line;
-		set_irq_wake(wm831x->irq, 1);
-	} else {
-		ret = -1;
-	}
+static struct wm831x_status_pdata wm8310_default_chg_led __initdata = {
+	.name = "wm8310:chg:",
+	.default_src = WM831X_STATUS_CHARGER,
+};
 
-	return ret;
-}
-
-/* setup the gpio 1..9 (1 is the 1st one) as power supply by hw init/OTP */
-/* we only check the gpio's high value */
-static int elephant_wm8310_post_init(struct wm831x *wm831x)
-{
-	int i, ret = 0;
-	if ((ret = gpio_request_array(elephant_wm8310_gpios, ARRAY_SIZE(elephant_wm8310_gpios)))) {
-		printk("Error request gpio for wm8310 on iOne\n");
-		return ret;
-	};
-	for (i = 0 ; i < ARRAY_SIZE(elephant_wm8310_gpios); i++) {
-		gpio_set_value_cansleep(elephant_wm8310_gpios[i].gpio, 1);
-		if (!gpio_get_value_cansleep(elephant_wm8310_gpios[i].gpio)) {
-			printk("WARNING:wm8310 gpio[%d] can not be pulled high.\n",
-				elephant_wm8310_gpios[i].gpio - WM8310_GPIO_START);
-			/* we hope it will work anyway */
-			//ret = -EINVAL;
-		};
-	}
-
-	return ret;
-}
-
-struct wm831x_pdata elephant_wm8310_pdata = {
-	.pre_init = elephant_wm8310_pre_init,
-	.post_init = elephant_wm8310_post_init,
-	/* CIFMODE is pulled up to enable wm8310 spi mode with GPIO */
+struct wm831x_pdata wm8310_default_pdata __initdata = {
+	.wm831x_num = 0,
+	.irq_cmos = true,
+	.disable_touch = true,
 	.irq_base = EXT_IRQ(0),
-
 	.gpio_base = EXT_GPIO(0),
-	.backlight = &elephant_wm8310_backlight_pdata,
-
-	.battery = &elephant_wm8310_battery_pdata,
-
+	.backlight = &wm8310_default_backlight_pdata,
+	.backup = &wm8310_default_backup_pdata,
+	.battery = &wm8310_default_battery_pdata,
+	.status = {
+		&wm8310_default_on_led,
+		&wm8310_default_chg_led,
+	},
 	.dcdc = {
-		&elephant_wm8310_dcdc1_data, /* DCDC1 */
-		&elephant_wm8310_dcdc2_data, /* DCDC2 */
-		&elephant_wm8310_dcdc3_data, /* DCDC3 */
-		&elephant_wm8310_dcdc4_data, /* DCDC4 */
+		&wm8310_default_dcdc1_data, /* DCDC1 */
+		&wm8310_default_dcdc2_data, /* DCDC2 */
+		&wm8310_default_dcdc3_data, /* DCDC3 */
+		&wm8310_default_dcdc4_data, /* DCDC4 */
 	},
 	.ldo = {
-		&elephant_wm8310_ldo1_data,
-		&elephant_wm8310_ldo2_data,
-		&elephant_wm8310_ldo3_data,
-		&elephant_wm8310_ldo4_data,
-		&elephant_wm8310_ldo5_data,
-		&elephant_wm8310_ldo6_data,
-		&elephant_wm8310_ldo7_data,
-		&elephant_wm8310_ldo8_data,
-		&elephant_wm8310_ldo9_data,
-		&elephant_wm8310_ldo10_data,
+		&wm8310_default_ldo1_data,
+		&wm8310_default_ldo2_data,
+		&wm8310_default_ldo3_data,
+		&wm8310_default_ldo4_data,
+		&wm8310_default_ldo5_data,
+		&wm8310_default_ldo6_data,
+		&wm8310_default_ldo7_data,
+		&wm8310_default_ldo8_data,
+		&wm8310_default_ldo9_data,
+		&wm8310_default_ldo10_data,
 	},
-
 	.isink = {
-		&elephant_wm8310_isink1_data, /* ISINK1 */
+		&wm8310_default_isink1_data, /* ISINK1 */
 	},
 };
-
 

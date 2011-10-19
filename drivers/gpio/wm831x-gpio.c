@@ -1,5 +1,5 @@
 /*
- * wm831x-gpio.c  --  gpiolib support for Wolfson WM831x PMICs
+ * gpiolib support for Wolfson WM831x PMICs
  *
  * Copyright 2009 Wolfson Microelectronics PLC.
  *
@@ -29,8 +29,6 @@ struct wm831x_gpio {
 	struct wm831x *wm831x;
 	struct gpio_chip gpio_chip;
 };
-
-static struct wm831x * wm831x_config = NULL;
 
 static inline struct wm831x_gpio *to_wm831x_gpio(struct gpio_chip *chip)
 {
@@ -182,6 +180,7 @@ static void wm831x_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 			break;
 		case WM831X_GPIO_PULL_UP:
 			pull = "pullup";
+			break;
 		default:
 			pull = "INVALID PULL";
 			break;
@@ -246,21 +245,6 @@ static struct gpio_chip template_chip = {
 	.can_sleep		= 1,
 };
 
-int wm831x_config_poweroff(void)
-{
-	int ret;
-#define WM831X_GPN_FN_IN_ONOFF 0x0002
-	ret = wm831x_reg_write(wm831x_config, WM831X_GPIO5_CONTROL,
-		WM831X_GPN_DIR| WM831X_GPN_ENA | WM831X_GPN_FN_IN_ONOFF);
-	if (ret < 0) {
-		dev_err(wm831x_config->dev, "Could not config pmic gpio for off transition, %d\n",
-			ret);
-		return -EINVAL;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(wm831x_config_poweroff);
-
 static int __devinit wm831x_gpio_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
@@ -287,9 +271,6 @@ static int __devinit wm831x_gpio_probe(struct platform_device *pdev)
 			ret);
 		goto err;
 	}
-
-	/* save wm831x pointer for later gpio config */
-	wm831x_config = wm831x;
 
 	platform_set_drvdata(pdev, wm831x_gpio);
 

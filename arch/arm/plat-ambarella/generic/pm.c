@@ -52,10 +52,6 @@
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
 
-#ifdef CONFIG_GPIO_WM831X
-extern int wm831x_config_poweroff(void);
-#endif
-
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -69,10 +65,8 @@ void ambarella_power_off(void)
 
 void ambarella_power_off_prepare(void)
 {
-#ifdef CONFIG_GPIO_WM831X
-	wm831x_config_poweroff();
-#endif
 }
+
 /* ==========================================================================*/
 static int ambarella_pm_notify(unsigned long val)
 {
