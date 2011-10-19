@@ -48,13 +48,6 @@
 
 #include "board-device.h"
 
-#if (AUDIO_CODEC_INSTANCES == 1)
-static struct platform_device ambarella_auc_codec0 = {
-	.name		= "a2auc-codec",
-	.id		= -1,
-};
-#endif
-
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
@@ -86,117 +79,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 };
 
 /* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 6,
-	},
-};
-
-/* ==========================================================================*/
-static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_END},
-};
-
-static struct ambarella_input_board_info filbert_board_input_info = {
-	.pkeymap		= generic_keymap,
-	.pinput_dev		= NULL,
-	.pdev			= NULL,
-
-	.abx_max_x		= 4095,
-	.abx_max_y		= 4095,
-	.abx_max_pressure	= 4095,
-	.abx_max_width		= 16,
-};
-
-struct platform_device filbert_board_input = {
-	.name		= "ambarella-input",
-	.id		= -1,
-	.resource	= NULL,
-	.num_resources	= 0,
-	.dev		= {
-		.platform_data		= &filbert_board_input_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_filbert(void)
 {
 	int					i;
-	struct ambarella_spi_platform_info	*spi2_pdata;
 
 	ambarella_init_machine("Filbert");
 
@@ -227,8 +112,6 @@ static void __init ambarella_init_filbert(void)
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
-
-	platform_device_register(&filbert_board_input);
 }
 
 /* ==========================================================================*/
