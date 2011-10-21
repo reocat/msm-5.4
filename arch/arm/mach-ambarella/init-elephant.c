@@ -735,9 +735,14 @@ static void __init ambarella_init_elephant(void)
 			ambarella_ft540_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_ft540_board_info, 1);
 
+			ambarella_board_generic.vin_power.gpio_id = GPIO(101);
+			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin_power.active_delay = 1;
+
 			ambarella_board_generic.vin_reset.gpio_id = GPIO(107);
 			ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.vin_reset.active_delay = 1;
+
 			i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 
 			platform_device_register(&elephant_bt_rfkill);
