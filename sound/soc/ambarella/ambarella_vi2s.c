@@ -358,8 +358,6 @@ static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 	/* aucodec_digitalio_on */
 
 	used_port = ipc_ialsa_get_max_channels();
-	if (used_port > 4) /* Temp solutions */
-	  used_port = 4;
 	  
 	ambarella_i2s_dai.playback.channels_max = used_port;
 	ambarella_i2s_dai.capture.channels_max = used_port;

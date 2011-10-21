@@ -44,10 +44,10 @@ extern unsigned int op_sfreq;
 static unsigned int op_addr;
 static unsigned int op_size;
 
-#define AMBA_MAX_DESC_NUM   8
-#define AMBA_MIN_DESC_NUM   8
-#define AMBA_PERIOD_BYTES_MAX		1024 * 2 * 2
-#define AMBA_PERIOD_BYTES_MIN   1024 * 2 * 2
+#define AMBA_MAX_DESC_NUM   32
+#define AMBA_MIN_DESC_NUM   4
+#define AMBA_PERIOD_BYTES_MAX		8192
+#define AMBA_PERIOD_BYTES_MIN   256 * 2 * 2
 
 //#define ALSA_VPCM_DEBUG
 #ifdef ALSA_VPCM_DEBUG
@@ -170,7 +170,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	}
 
   op_addr = runtime->dma_addr;
-  op_size = totsize;
+  op_size = period;
 
 	prtd->ndescr = 0;
 	prtd->last_descr = 0;
