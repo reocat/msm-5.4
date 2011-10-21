@@ -147,7 +147,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_ir0,
 	&ambarella_ohci0,
 	&ambarella_ahci0,
-	&ambarella_rtc0,
 	&ambarella_sd0,
 	&ambarella_sd1,
 	&ambarella_spi0,
@@ -461,6 +460,7 @@ static void __init ambarella_init_elephant(void)
 {
 	int					i, ret;
 	int					use_bub_default = 1;
+	int					use_ambarella_rtc0 = 1;
 
 	ambarella_init_machine("Elephant");
 
@@ -531,6 +531,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi_devices[12].max_speed_hz = 500000;
 			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
 			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
+			use_ambarella_rtc0 = 0;
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
@@ -758,6 +759,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi_devices[12].max_speed_hz = 500000;
 			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
 			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
+			use_ambarella_rtc0 = 0;
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
@@ -1036,6 +1038,8 @@ static void __init ambarella_init_elephant(void)
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
 
 	platform_device_register(&elephant_board_input);
+	if (use_ambarella_rtc0)
+		platform_device_register(&ambarella_rtc0);
 
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
