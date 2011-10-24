@@ -622,6 +622,9 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi0_cs_pins[7] = -1;
 			ambarella_init_es8328(0, 0);
 
+			/* usb0 don't use over-current protection function */
+			ambarella_board_generic.uhc_use_ocp &= ~0x1;
+
 			ambarella_board_generic.lcd_reset.gpio_id = GPIO(105);
 			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.lcd_reset.active_delay = 10;

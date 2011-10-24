@@ -28,6 +28,7 @@
 #include <linux/delay.h>
 
 #include <mach/hardware.h>
+#include <mach/board.h>
 #include <plat/uhc.h>
 #include <hal/hal.h>
 
@@ -49,10 +50,15 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	usb_host_initialized = 1;
 
 	/* GPIO8 and GPIO10 are programmed as hardware mode */
-	if (sys_config & USB1_IS_HOST)
-		amba_setbitsl(GPIO0_AFSEL_REG, 0x00000500);
+	if (sys_config & USB1_IS_HOST) {
+		amba_setbitsl(GPIO0_AFSEL_REG, 0x00000400);
+		if ((ambarella_board_generic.uhc_use_ocp & 0x2) == 0x2)
+			amba_setbitsl(GPIO0_AFSEL_REG, 0x00000100);
+	}
 	/* GPIO7 and GPIO9 are programmed as hardware mode */
-	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000280);
+	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000200);
+	if ((ambarella_board_generic.uhc_use_ocp & 0x1) == 0x1)
+		amba_setbitsl(GPIO0_AFSEL_REG, 0x00000080);
 
 	/*
 	 * We must enable both of the usb ports first, then we can disable
