@@ -41,4 +41,5 @@ extern struct wm831x_pdata wm8310_default_pdata;
 
 extern int ambarella_init_wm8994(void);
 extern int ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr);
+extern int ambarella_init_es8328(u8 i2c_bus_num, u8 i2c_addr);
 
