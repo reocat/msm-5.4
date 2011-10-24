@@ -32,6 +32,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_CS4270 if I2C
 	select SND_SOC_CX20442
 	select SND_SOC_DA7210 if I2C
+	select SND_SOC_ES8328 if I2C
 	select SND_SOC_JZ4740_CODEC if SOC_JZ4740
 	select SND_SOC_MAX98088 if I2C
 	select SND_SOC_MAX9877 if I2C
@@ -122,7 +123,7 @@ config SND_SOC_AD1980
 
 config SND_SOC_AD73311
 	tristate
-	
+
 config SND_SOC_ADS117X
 	tristate
 
@@ -184,6 +185,9 @@ config SND_SOC_DA7210
         tristate
 
 config SND_SOC_DMIC
+	tristate
+
+config SND_SOC_ES8328
 	tristate
 
 config SND_SOC_MAX98088

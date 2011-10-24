@@ -68,6 +68,7 @@ config MACH_ELEPHANT
 	select TOUCH_AMBARELLA_FT540
 	select LCD_AMBARELLA_1P3831
 	select CODEC_AMBARELLA_WM8994
+	select CODEC_AMBARELLA_ES8328
 	select PMIC_AMBARELLA_WM831X
 	help
 	  Say Y here if you are using iOne Elephant.
@@ -165,6 +166,10 @@ config CODEC_AMBARELLA_WM8737
 
 config CODEC_AMBARELLA_WM8994
 	bool "wm8994"
+	default n
+
+config CODEC_AMBARELLA_ES8328
+	bool "es8328"
 	default n
 
 comment "PMIC"
