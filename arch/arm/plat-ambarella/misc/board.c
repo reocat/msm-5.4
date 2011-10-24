@@ -421,6 +421,7 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
+	.uhc_use_ocp	= 0x3,
 };
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);
 EXPORT_SYMBOL(ambarella_board_generic);

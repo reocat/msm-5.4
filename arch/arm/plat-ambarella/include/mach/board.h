@@ -122,6 +122,9 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		pmic_irq;
 
 	struct ambarella_gpio_io_info		sata_power;
+	/* Determine if usb host controller use over-current protection
+	 * bit0 for usb0 and bit1 for usb1, other bits ignored */
+	int					uhc_use_ocp;
 };
 #define AMBA_BOARD_CALL(arg, perm) \
 	module_param_cb(board_chip, &param_ops_uint, &(arg.board_chip), 0444); \
