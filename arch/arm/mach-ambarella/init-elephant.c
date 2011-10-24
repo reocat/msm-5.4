@@ -129,12 +129,21 @@ static struct platform_device btwilink_device = {
 };
 
 #endif
+
+static struct platform_device amba_wlan_ar6000_pm_device = {
+       .name = "wlan_ar6000_pm_dev",
+       .id = 1,
+       .num_resources = 0,
+       .resource = NULL,
+};
+
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
 #endif
 	&ambarella_ehci0,
+	&amba_wlan_ar6000_pm_device,
 	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
