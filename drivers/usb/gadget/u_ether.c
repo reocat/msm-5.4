@@ -732,6 +732,18 @@ static int get_ether_addr(const char *str, u8 *dev_addr)
 		}
 		if (is_valid_ether_addr(dev_addr))
 			return 0;
+#if defined(CONFIG_MACH_BOSS) && defined(CONFIG_USB_GADGET_AMBARELLA) && \
+	!defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
+	} else {
+		extern u8 *ambarella_udc_get_mac_address(void);
+		u8 *mac_addr;
+
+		mac_addr = ambarella_udc_get_mac_address();
+		if (is_valid_ether_addr(mac_addr)) {
+			memcpy(dev_addr, mac_addr, 6);
+			return 0;
+		}
+#endif
 	}
 	random_ether_addr(dev_addr);
 	return 1;

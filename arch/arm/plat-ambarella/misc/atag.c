@@ -123,6 +123,23 @@ static int __init parse_wifi_tag_mac(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_WIFI, parse_wifi_tag_mac);
 
+static int __init parse_ueth_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.ueth_mac[0] = (low >> 0);
+	ambarella_board_generic.ueth_mac[1] = (low >> 8);
+	ambarella_board_generic.ueth_mac[2] = (low >> 16);
+	ambarella_board_generic.ueth_mac[3] = (low >> 24);
+	ambarella_board_generic.ueth_mac[4] = (high >> 0);
+	ambarella_board_generic.ueth_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_UETH, parse_ueth_tag_mac);
+
 /* ==========================================================================*/
 #define AMBARELLA_IO_DESC_AHB_ID	0
 #define AMBARELLA_IO_DESC_APB_ID	1

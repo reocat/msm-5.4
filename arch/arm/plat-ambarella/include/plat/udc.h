@@ -406,11 +406,13 @@ struct ambarella_udc_controller {
 	void					(*init_pll)(void);
 	void					(*reset_usb)(void);
 	int					(*flush_rxfifo)(void);
+	u8					mac_addr[6];
 };
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_udc0;
 
+extern int ambarella_init_usb_eth(const u8 *mac_addr);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

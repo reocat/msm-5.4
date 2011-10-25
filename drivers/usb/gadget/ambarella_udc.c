@@ -2229,6 +2229,19 @@ int ambarella_udc_connect(int on)
 EXPORT_SYMBOL(ambarella_udc_connect);
 #endif
 
+#if defined(CONFIG_MACH_BOSS) && !defined(CONFIG_NOT_SHARE_USB_CONTROLLER_WITH_UITRON)
+u8 *ambarella_udc_get_mac_address(void)
+{
+	struct ambarella_udc *udc = the_controller;
+
+	if (!udc)
+		return NULL;
+
+	return udc->controller_info->mac_addr;
+}
+EXPORT_SYMBOL(ambarella_udc_get_mac_address);
+#endif
+
 static inline void ambarella_udc_setup(struct ambarella_udc *udc)
 {
 	if (boss_linux_is_owner(udc)) {

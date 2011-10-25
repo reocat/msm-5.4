@@ -113,6 +113,10 @@ static void __init ambarella_board_vendor_41_init(void)
 #endif
 #endif
 
+#if defined(CONFIG_USB_ETH)
+	ambarella_init_usb_eth( ambarella_board_generic.ueth_mac );
+#endif
+
 	ambarella_devices = ambarella_bub_devices;
 	ambarella_devices_num = ARRAY_SIZE(ambarella_bub_devices);
 }

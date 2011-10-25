@@ -61,6 +61,7 @@ struct ambarella_board_info ambarella_board_generic = {
 	.eth0_mac		= {0, 0, 0, 0, 0, 0},
 	.eth1_mac		= {0, 0, 0, 0, 0, 0},
 	.wifi_mac		= {0, 0, 0, 0, 0, 0},
+	.ueth_mac		= {0, 0, 0, 0, 0, 0},
 	.power_detect	= {
 		.irq_gpio	= -1,
 		.irq_line	= -1,

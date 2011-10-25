@@ -112,6 +112,7 @@ static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 	.init_pll	= init_usb,
 	.reset_usb	= reset_usb,
 	.flush_rxfifo	= flush_rxfifo,
+	.mac_addr	= {0, 0, 0, 0, 0, 0},
 };
 
 struct platform_device ambarella_udc0 = {
@@ -126,3 +127,16 @@ struct platform_device ambarella_udc0 = {
 	}
 };
 
+int __init ambarella_init_usb_eth(const u8 *mac_addr)
+{
+	int					errCode = 0;
+
+	ambarella_platform_udc_controller0.mac_addr[0] = mac_addr[0];
+	ambarella_platform_udc_controller0.mac_addr[1] = mac_addr[1];
+	ambarella_platform_udc_controller0.mac_addr[2] = mac_addr[2];
+	ambarella_platform_udc_controller0.mac_addr[3] = mac_addr[3];
+	ambarella_platform_udc_controller0.mac_addr[4] = mac_addr[4];
+	ambarella_platform_udc_controller0.mac_addr[5] = mac_addr[5];
+
+	return errCode;
+}
