@@ -192,15 +192,31 @@ static int ohci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 /* Maybe just need to suspend/resume controller via HAL function. */
 static int ohci_hcd_ambarella_drv_suspend(struct device *dev)
 {
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
+
+	if (time_before(jiffies, ohci->next_statechange))
+		msleep(5);
+	ohci->next_statechange = jiffies;
+
+	ambarella_stop_ohc(amb_ohci);
+	ohci_to_hcd(ohci)->state = HC_STATE_SUSPENDED;
 	return 0;
 }
 
 static int ohci_hcd_ambarella_drv_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 
+	if (time_before(jiffies, ohci->next_statechange))
+		msleep(5);
+	ohci->next_statechange = jiffies;
+
+	ambarella_start_ohc(amb_ohci);
 	ohci_finish_controller_resume(hcd);
-
 	return 0;
 }
 

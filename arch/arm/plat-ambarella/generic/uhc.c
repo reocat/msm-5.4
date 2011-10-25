@@ -44,10 +44,8 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	if (sys_config & USB1_IS_HOST)
 		pdata->usb1_is_host = 1;
 
-	if (usb_host_initialized == 1)
+	if (usb_host_initialized++ > 0)
 		return;
-
-	usb_host_initialized = 1;
 
 	pin_mode = amba_readl(GPIO0_AFSEL_REG);
 	/* GPIO8 and GPIO10 are programmed as hardware mode */
@@ -94,10 +92,8 @@ static void ambarella_disable_usb_host(void)
 {
 	u32 sys_config;
 
-	if (usb_host_initialized == 0)
+	if (usb_host_initialized-- <= 0)
 		return;
-
-	usb_host_initialized = 0;
 
 	sys_config = amba_readl(SYS_CONFIG_REG);
 
