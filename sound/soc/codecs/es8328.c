@@ -49,7 +49,7 @@ struct es8328_priv {
  * are using 2 wire for device control, so we cache them instead.
  */
 static const u8 es8328_reg[] = {
-	0x06, 0x1C, 0xC3, 0xFC,  /*  0 *////0x0100 0x0180
+	0x06, 0x1C, 0xC3, 0xFC,  /*  0 */
 	0xC0, 0x00, 0x00, 0x7C,  /*  4 */
 	0x80, 0x00, 0x00, 0x06,  /*  8 */
 	0x00, 0x06, 0x30, 0x30,  /* 12 */
@@ -65,40 +65,6 @@ static const u8 es8328_reg[] = {
 	0x00, 0x00, 0x00, 0x00,  /* 52 */
 };
 
-
-static int dac_start_event(struct snd_soc_dapm_widget *w,
-    struct snd_kcontrol *kcontrol, int event)
-{
-	struct snd_soc_codec *codec = w->codec;
-
-	switch(event) {
-	case SND_SOC_DAPM_POST_PMU:
-		snd_soc_update_bits(codec, ES8328_CHIPPOWER, 0x51, 0x00);
-		break;
-	case SND_SOC_DAPM_PRE_PMD:
-		snd_soc_update_bits(codec, ES8328_CHIPPOWER, 0x51, 0x51);
-		break;
-	}
-	return 0;
-}
-
-static int adc_start_event(struct snd_soc_dapm_widget *w,
-    struct snd_kcontrol *kcontrol, int event)
-{
-	struct snd_soc_codec *codec = w->codec;
-
-	switch(event) {
-	case SND_SOC_DAPM_POST_PMU:
-		snd_soc_update_bits(codec, ES8328_CHIPPOWER, 0xA2, 0x00);
-		break;
-	case SND_SOC_DAPM_PRE_PMD:
-		snd_soc_update_bits(codec, ES8328_CHIPPOWER, 0xA2, 0xA2);
-		break;
-	}
-	return 0;
-}
-
-
 static const struct snd_kcontrol_new es8328_snd_controls[] = {
 	//SOC_DOUBLE_R("Capture Volume", ES8328_LINVOL, ES8328_RINVOL, 0, 63, 0),
 	//SOC_DOUBLE_R("Capture ZC Switch", ES8328_LINVOL, ES8328_RINVOL, 6, 1, 0),
@@ -109,7 +75,6 @@ static const struct snd_kcontrol_new es8328_snd_controls[] = {
 	//SOC_DOUBLE_R("Playback Switch", ES8328_LDAC, ES8328_RDAC,6, 1, 1),
 	SOC_DOUBLE_R("Playback Volume", ES8328_LDAC_VOL, ES8328_RDAC_VOL, 0, 192, 0),
 };
-
 
 /*
  * DAPM Controls
@@ -123,45 +88,31 @@ static const unsigned int es8328_line_values[] = {
 	0, 1, 3};
 
 static const struct soc_enum es8328_lline_enum =
-	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL3, 6, 0xC0,
-		ARRAY_SIZE(es8328_line_texts),
-		es8328_line_texts, es8328_line_values);
+	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL2, 6, 0xC0,
+		ARRAY_SIZE(es8328_line_texts), es8328_line_texts,
+		es8328_line_values);
 static const struct snd_kcontrol_new es8328_left_line_controls =
 	SOC_DAPM_VALUE_ENUM("Route", es8328_lline_enum);
 
 static const struct soc_enum es8328_rline_enum =
-	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL3, 4, 0x30,
-		ARRAY_SIZE(es8328_line_texts),
-		es8328_line_texts, es8328_line_values);
+	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL2, 4, 0x30,
+		ARRAY_SIZE(es8328_line_texts), es8328_line_texts,
+		es8328_line_values);
 static const struct snd_kcontrol_new es8328_right_line_controls =
 	SOC_DAPM_VALUE_ENUM("Route", es8328_lline_enum);
 
 
 /* Left Mixer */
 static const struct snd_kcontrol_new es8328_left_mixer_controls[] = {
-	SOC_DAPM_SINGLE("Left Playback Switch", ES8328_DACCONTROL17, 7, 1, 0),      // 39
-	SOC_DAPM_SINGLE("Left Bypass Switch"  , ES8328_DACCONTROL17, 6, 1, 0),      // 39
+	SOC_DAPM_SINGLE("Left Playback Switch", ES8328_DACCONTROL17, 7, 1, 0),
+	SOC_DAPM_SINGLE("Left Bypass Switch"  , ES8328_DACCONTROL17, 6, 1, 0),
 };
 
 /* Right Mixer */
 static const struct snd_kcontrol_new es8328_right_mixer_controls[] = {
-	SOC_DAPM_SINGLE("Right Playback Switch", ES8328_DACCONTROL20, 7, 1, 0),     // 42
-	SOC_DAPM_SINGLE("Right Bypass Switch"  , ES8328_DACCONTROL20, 6, 1, 0),     // 42
+	SOC_DAPM_SINGLE("Right Playback Switch", ES8328_DACCONTROL20, 7, 1, 0),
+	SOC_DAPM_SINGLE("Right Bypass Switch"  , ES8328_DACCONTROL20, 6, 1, 0),
 };
-
-
-/* Differential Mux */
-static const char *es8328_diff_sel[] = {"Line 1", "Line 2"};
-static const struct soc_enum left_diffmux =
-	SOC_ENUM_SINGLE(ES8328_ADCCONTROL2, 2, 2, es8328_diff_sel);
-static const struct snd_kcontrol_new es8328_left_diffmux_controls =
-	SOC_DAPM_ENUM("Route", left_diffmux);
-
-static const struct soc_enum right_diffmux =
-	SOC_ENUM_SINGLE(ES8328_ADCCONTROL3, 7, 2, es8328_diff_sel);
-static const struct snd_kcontrol_new es8328_right_diffmux_controls =
-	SOC_DAPM_ENUM("Route", right_diffmux);
-
 
 /* Mono ADC Mux */
 static const char *es8328_mono_mux[] = {"Stereo", "Mono (Left)",
@@ -174,41 +125,29 @@ static const struct snd_kcontrol_new es8328_monomux_controls =
 
 
 static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
-	// DAC Part
+	/* DAC Part */
 	SND_SOC_DAPM_MIXER("Left Mixer", SND_SOC_NOPM, 0, 0,
 		&es8328_left_mixer_controls[0], ARRAY_SIZE(es8328_left_mixer_controls)),
 	SND_SOC_DAPM_MIXER("Right Mixer", SND_SOC_NOPM, 0, 0,
 		&es8328_right_mixer_controls[0], ARRAY_SIZE(es8328_right_mixer_controls)),
 
-	SND_SOC_DAPM_MUX("Left Line Mux", SND_SOC_NOPM, 0, 0,
-		&es8328_left_line_controls),
-	SND_SOC_DAPM_MUX("Right Line Mux", SND_SOC_NOPM, 0, 0,
-		&es8328_right_line_controls),
+	SND_SOC_DAPM_MUX("Left Line Mux", SND_SOC_NOPM, 0, 0, &es8328_left_line_controls),
+	SND_SOC_DAPM_MUX("Right Line Mux", SND_SOC_NOPM, 0, 0, &es8328_right_line_controls),
 
 	SND_SOC_DAPM_DAC("Left DAC"  , "Left Playback" , ES8328_DACPOWER, 7, 1),
 	SND_SOC_DAPM_DAC("Right DAC" , "Right Playback", ES8328_DACPOWER, 6, 1),
 	SND_SOC_DAPM_PGA("Left Out 1" , ES8328_DACPOWER, 5, 0, NULL, 0),
-	//SND_SOC_DAPM_PGA("Right Out 1", ES8328_DACPOWER, 4, 0, NULL, 0),
-	SND_SOC_DAPM_PGA_E("Right Out 1", ES8328_DACPOWER, 4, 0, NULL, 0,
-		dac_start_event, SND_SOC_DAPM_POST_PMU|SND_SOC_DAPM_PRE_PMD),
-	//SND_SOC_DAPM_PGA("Left Out 2" , ES8328_DACPOWER, 3, 0, NULL, 0),
-	//SND_SOC_DAPM_PGA("Right Out 2", ES8328_DACPOWER, 2, 0, NULL, 0),
+	SND_SOC_DAPM_PGA("Right Out 1", ES8328_DACPOWER, 4, 0, NULL, 0),
+	/* SND_SOC_DAPM_PGA("Left Out 2" , ES8328_DACPOWER, 3, 0, NULL, 0), */
+	/* SND_SOC_DAPM_PGA("Right Out 2", ES8328_DACPOWER, 2, 0, NULL, 0), */
 
 	SND_SOC_DAPM_OUTPUT("LOUT1"),
 	SND_SOC_DAPM_OUTPUT("ROUT1"),
 	SND_SOC_DAPM_OUTPUT("LOUT2"),
 	SND_SOC_DAPM_OUTPUT("ROUT2"),
-	SND_SOC_DAPM_OUTPUT("VREF"),
 
 #if 1
-	//--------------------------------------------
-	// ADC Part
-	//--------------------------------------------
-	SND_SOC_DAPM_MUX("Differential Left Mux", SND_SOC_NOPM, 0, 0,
-		&es8328_left_diffmux_controls),
-	SND_SOC_DAPM_MUX("Differential Right Mux", SND_SOC_NOPM, 0, 0,
-		&es8328_right_diffmux_controls),
-
+	/* ADC Part */
 	SND_SOC_DAPM_MUX("Left ADC Mux", SND_SOC_NOPM, 0, 0,
 		&es8328_monomux_controls),
 	SND_SOC_DAPM_MUX("Right ADC Mux", SND_SOC_NOPM, 0, 0,
@@ -220,7 +159,7 @@ static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 	SND_SOC_DAPM_ADC("Left ADC" , "Left Capture" , ES8328_ADCPOWER, 5, 1),
 	SND_SOC_DAPM_ADC("Right ADC", "Right Capture", ES8328_ADCPOWER, 4, 1),
 
-	SND_SOC_DAPM_MICBIAS_E("Mic Bias", ES8328_ADCPOWER, 3, 1, adc_start_event, SND_SOC_DAPM_POST_PMU|SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_MICBIAS("Mic Bias", ES8328_ADCPOWER, 3, 1),
 #endif
 
 	SND_SOC_DAPM_INPUT("MICIN"),
@@ -233,54 +172,42 @@ static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route intercon[] = {
 	/* left mixer */
-	{"Left Mixer", "Left Playback Switch"   , "Left DAC"},
+	{"Left Mixer", "Left Playback Switch", "Left DAC"},
 
 	/* right mixer */
-	{"Right Mixer", "Right Playback Switch" , "Right DAC"},
+	{"Right Mixer", "Right Playback Switch", "Right DAC"},
 
 	/* left out 1 */
-	{"Left Out 1" , NULL, "Left Mixer"},
-	{"LOUT1"      , NULL, "Left Out 1"},
+	{"Left Out 1", NULL, "Left Mixer"},
+	{"LOUT1", NULL, "Left Out 1"},
 
 	/* right out 1 */
 	{"Right Out 1", NULL, "Right Mixer"},
-	{"ROUT1"      , NULL, "Right Out 1"},
+	{"ROUT1", NULL, "Right Out 1"},
 
 
 #if 1
-	/* Differential Mux */
-	{"Differential Left Mux" , "Line 1", "LINPUT1"},
-	{"Differential Right Mux", "Line 1", "RINPUT1"},
-	{"Differential Left Mux" , "Line 2", "LINPUT2"},
-	{"Differential Right Mux", "Line 2", "RINPUT2"},
-
 	/* Left Line Mux */
-	{"Left Line Mux", "Line 1"      , "LINPUT1"},
-	{"Left Line Mux", "Line 2"      , "LINPUT2"},
-	{"Left Line Mux", "Differential", "Differential Left Mux"},
+	{"Left Line Mux", "Line 1", "LINPUT1"},
+	{"Left Line Mux", "Line 2", "LINPUT2"},
+	{"Left Line Mux", "Differential", "MICIN"},
 
 	/* Right Line Mux */
-	{"Right Line Mux", "Line 1"      , "RINPUT1"},
-	{"Right Line Mux", "Line 2"      , "RINPUT2"},
-	{"Right Line Mux", "Differential", "Differential Right Mux"},
+	{"Right Line Mux", "Line 1", "RINPUT1"},
+	{"Right Line Mux", "Line 2", "RINPUT2"},
+	{"Right Line Mux", "Differential", "MICIN"},
 
 	/* Left ADC Mux */
-	{"Left ADC Mux", "Stereo"      , "Left Line Mux"},
-	//    {"Left ADC Mux", "Mono (Left)" , "Left Line Mux"},
+	{"Left ADC Mux", "Stereo", "Left Line Mux"},
+//	{"Left ADC Mux", "Mono (Left)" , "Left Line Mux"},
 
 	/* Right ADC Mux */
-	{"Right ADC Mux", "Stereo"      , "Right Line Mux"},
-	//    {"Right ADC Mux", "Mono (Right)", "Right Line Mux"},
+	{"Right ADC Mux", "Stereo", "Right Line Mux"},
+//	{"Right ADC Mux", "Mono (Right)", "Right Line Mux"},
 
 	/* ADC */
 	{"Left ADC" , NULL, "Left ADC Mux"},
 	{"Right ADC", NULL, "Right ADC Mux"},
-
-
-	{"Left ADC" , NULL, "Mic Bias"},
-	{"Right ADC", NULL, "Mic Bias"},
-
-	{"Mic Bias", NULL, "MICIN"},
 #endif
 };
 
