@@ -245,23 +245,17 @@ err_exit:
 }
 
 
-/* tcc machine dapm widgets */
+/* md800 dapm widgets */
 static const struct snd_soc_dapm_widget md800_dapm_widgets[] = {
-    SND_SOC_DAPM_HP("Headphone Jack", md800_hp_event),
     SND_SOC_DAPM_MIC("Mic Jack", NULL),
+    SND_SOC_DAPM_HP("Headphone Jack", md800_hp_event),
     SND_SOC_DAPM_SPK("Ext Spk", md800_spk_event),
-    SND_SOC_DAPM_LINE("Line Jack", NULL),
-    SND_SOC_DAPM_HP("Headset Jack", NULL),
 };
 
-/* tcc machine audio map (connections to the codec pins) */
+/* md800 audio map (connections to the codec pins) */
 static const struct snd_soc_dapm_route md800_audio_map[] = {
 	/* mic is connected to MICIN (via right channel of headphone jack) */
 	{"MICIN", NULL, "Mic Jack"},
-
-	/* headset Jack  - in = micin, out = LHPOUT*/
-	{"Headset Jack", NULL, "LOUT1"},
-	{"Headset Jack", NULL, "ROUT1"},
 
 	/* headphone connected to LHPOUT1, RHPOUT1 */
 	{"Headphone Jack", NULL, "LOUT1"},
@@ -287,6 +281,12 @@ static int md800_es8328_init(struct snd_soc_pcm_runtime *rtd)
 	int errorCode = 0;
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
+
+	/* not connected */
+	snd_soc_dapm_nc_pin(dapm, "LINPUT1");
+	snd_soc_dapm_nc_pin(dapm, "RINPUT1");
+	snd_soc_dapm_nc_pin(dapm, "LOUT2");
+	snd_soc_dapm_nc_pin(dapm, "ROUT2");
 
 	snd_soc_dapm_enable_pin(dapm, "MICIN");
 
