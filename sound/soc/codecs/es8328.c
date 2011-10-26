@@ -15,21 +15,15 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
-#include <linux/pm.h>
 #include <linux/i2c.h>
-#include <linux/platform_device.h>
 #include <linux/gpio.h>
-#include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
-#include <sound/initval.h>
+#include <sound/tlv.h>
 #include <sound/es8328.h>
 
 #include "es8328.h"
@@ -65,15 +59,23 @@ static const u8 es8328_reg[] = {
 	0x00, 0x00, 0x00, 0x00,  /* 52 */
 };
 
+/* DAC/ADC Volume: min -96.0dB (0xC0) ~ max 0dB (0x00)  ( 0.5 dB step ) */
+static const DECLARE_TLV_DB_SCALE(digital_tlv, -9600, 50, 0);
+/* Analog Out Volume: min -30.0dB (0x00) ~ max 3dB (0x21)  ( 1 dB step ) */
+static const DECLARE_TLV_DB_SCALE(out_tlv, -3000, 100, 0);
+/* Analog In Volume: min 0dB (0x00) ~ max 24dB (0x08)  ( 3 dB step ) */
+static const DECLARE_TLV_DB_SCALE(in_tlv, 0, 300, 0);
+
 static const struct snd_kcontrol_new es8328_snd_controls[] = {
-	//SOC_DOUBLE_R("Capture Volume", ES8328_LINVOL, ES8328_RINVOL, 0, 63, 0),
-	//SOC_DOUBLE_R("Capture ZC Switch", ES8328_LINVOL, ES8328_RINVOL, 6, 1, 0),
+	SOC_DOUBLE_R_TLV("Playback Volume",
+		ES8328_LDAC_VOL, ES8328_RDAC_VOL, 0, 0xC0, 1, digital_tlv),
+	SOC_DOUBLE_R_TLV("Analog Out Volume",
+		ES8328_LOUT1_VOL, ES8328_ROUT1_VOL, 0, 0x21, 0, out_tlv),
 
-	//SOC_DOUBLE_R("Capture Switch", ES8328_LINVOL, ES8328_RINVOL, 7, 1, 1),
-	//SOC_SINGLE("Capture Mic Switch", ES8328_ADCIN, 7, 1, 1),
-
-	//SOC_DOUBLE_R("Playback Switch", ES8328_LDAC, ES8328_RDAC,6, 1, 1),
-	SOC_DOUBLE_R("Playback Volume", ES8328_LDAC_VOL, ES8328_RDAC_VOL, 0, 192, 0),
+	SOC_DOUBLE_R_TLV("Capture Volume",
+		ES8328_LADC_VOL, ES8328_RADC_VOL, 0, 0xC0, 1, digital_tlv),
+	SOC_DOUBLE_TLV("Analog In Volume",
+		ES8328_ADCCONTROL1, 4, 0, 0x08, 0, in_tlv),
 };
 
 /*
@@ -81,11 +83,8 @@ static const struct snd_kcontrol_new es8328_snd_controls[] = {
  */
 
 /* Channel Input Mixer */
-static const char *es8328_line_texts[] = {
-	"Line 1", "Line 2", "Differential"};
-
-static const unsigned int es8328_line_values[] = {
-	0, 1, 3};
+static const char *es8328_line_texts[] = { "Line 1", "Line 2", "Differential"};
+static const unsigned int es8328_line_values[] = { 0, 1, 3};
 
 static const struct soc_enum es8328_lline_enum =
 	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL2, 6, 0xC0,
@@ -115,14 +114,11 @@ static const struct snd_kcontrol_new es8328_right_mixer_controls[] = {
 };
 
 /* Mono ADC Mux */
-static const char *es8328_mono_mux[] = {"Stereo", "Mono (Left)",
-	"Mono (Right)", "NONE"};
+static const char *es8328_mono_mux[] = {"Stereo", "Mono (Left)", "Mono (Right)", "NONE"};
 static const struct soc_enum monomux =
 	SOC_ENUM_SINGLE(ES8328_ADCCONTROL3, 3, 4, es8328_mono_mux);
 static const struct snd_kcontrol_new es8328_monomux_controls =
 	SOC_DAPM_ENUM("Route", monomux);
-
-
 
 static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 	/* DAC Part */
@@ -146,13 +142,9 @@ static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("LOUT2"),
 	SND_SOC_DAPM_OUTPUT("ROUT2"),
 
-#if 1
 	/* ADC Part */
-	SND_SOC_DAPM_MUX("Left ADC Mux", SND_SOC_NOPM, 0, 0,
-		&es8328_monomux_controls),
-	SND_SOC_DAPM_MUX("Right ADC Mux", SND_SOC_NOPM, 0, 0,
-		&es8328_monomux_controls),
-
+	SND_SOC_DAPM_MUX("Left ADC Mux", SND_SOC_NOPM, 0, 0, &es8328_monomux_controls),
+	SND_SOC_DAPM_MUX("Right ADC Mux", SND_SOC_NOPM, 0, 0, &es8328_monomux_controls),
 
 	SND_SOC_DAPM_PGA("Left Analog Input" , ES8328_ADCPOWER, 7, 1, NULL, 0),
 	SND_SOC_DAPM_PGA("Right Analog Input", ES8328_ADCPOWER, 6, 1, NULL, 0),
@@ -160,7 +152,6 @@ static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 	SND_SOC_DAPM_ADC("Right ADC", "Right Capture", ES8328_ADCPOWER, 4, 1),
 
 	SND_SOC_DAPM_MICBIAS("Mic Bias", ES8328_ADCPOWER, 3, 1),
-#endif
 
 	SND_SOC_DAPM_INPUT("MICIN"),
 	SND_SOC_DAPM_INPUT("LINPUT1"),
@@ -168,7 +159,6 @@ static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("RINPUT1"),
 	SND_SOC_DAPM_INPUT("RINPUT2"),
 };
-
 
 static const struct snd_soc_dapm_route intercon[] = {
 	/* left mixer */
@@ -185,8 +175,6 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"Right Out 1", NULL, "Right Mixer"},
 	{"ROUT1", NULL, "Right Out 1"},
 
-
-#if 1
 	/* Left Line Mux */
 	{"Left Line Mux", "Line 1", "LINPUT1"},
 	{"Left Line Mux", "Line 2", "LINPUT2"},
@@ -208,7 +196,6 @@ static const struct snd_soc_dapm_route intercon[] = {
 	/* ADC */
 	{"Left ADC" , NULL, "Left ADC Mux"},
 	{"Right ADC", NULL, "Right ADC Mux"},
-#endif
 };
 
 static inline unsigned int es8328_read_reg_cache(struct snd_soc_codec *codec,
@@ -557,7 +544,7 @@ static int es8328_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, ES8328_ANAVOLMANAG, 0x7C);     //
 
 	//-----------------------------------------------------------------------------------------------------------------
-	snd_soc_write(codec, ES8328_ADCCONTROL1, 0xbb);     // MIC PGA gain: +24dB
+	snd_soc_write(codec, ES8328_ADCCONTROL1, 0x66);     // MIC PGA gain: +24dB
 	snd_soc_write(codec, ES8328_ADCCONTROL2, 0xf0);     // LINSEL(L-R differential), RINGSEL(L-R differential)
 	snd_soc_write(codec, ES8328_ADCCONTROL3, 0x82);     // Input Select: LIN2/RIN2
 	snd_soc_write(codec, ES8328_ADCCONTROL4, 0x4C);     // Left data = left ADC, right data = right ADC, 24 bits I2S
@@ -593,8 +580,8 @@ static int es8328_probe(struct snd_soc_codec *codec)
 	//snd_soc_write(codec, ES8328_CONTROL2 , 0x72);   // updated by david-everest,5-25
 	//mdelay(100);
 
-	snd_soc_write(codec, ES8328_LOUT1_VOL, 0x1c);   //
-	snd_soc_write(codec, ES8328_ROUT1_VOL, 0x1c);   //
+	snd_soc_write(codec, ES8328_LOUT1_VOL, 0x21);   //
+	snd_soc_write(codec, ES8328_ROUT1_VOL, 0x21);   //
 	snd_soc_write(codec, ES8328_LOUT2_VOL, 0x00);   // Disable LOUT2
 	snd_soc_write(codec, ES8328_ROUT2_VOL, 0x00);   // Disable ROUT2
 
