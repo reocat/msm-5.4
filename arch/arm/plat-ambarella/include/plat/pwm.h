@@ -33,11 +33,13 @@
 struct ambarella_pwm_info {
 	unsigned int period_ns;
 	unsigned int max_duty;
+	unsigned int default_duty;
 };
 
 #define AMBA_PWM_MODULE_PARAM_CALL(name_prefix, arg, perm) \
 	module_param_cb(name_prefix##period_ns, &param_ops_int, &(arg.period_ns), perm); \
-	module_param_cb(name_prefix##max_duty, &param_ops_int, &(arg.max_duty), perm)
+	module_param_cb(name_prefix##max_duty, &param_ops_int, &(arg.max_duty), perm); \
+	module_param_cb(name_prefix##default_duty, &param_ops_int, &(arg.default_duty), perm)
 
 extern struct platform_device ambarella_pwm_platform_device0;
 extern struct platform_device ambarella_pwm_platform_device1;
