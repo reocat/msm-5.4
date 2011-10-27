@@ -243,7 +243,18 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tAPB:\t\t%u Hz\n"
 			"\tVOUT:\t\t%u Hz\n"
 			"\tVOUT2:\t\t%u Hz\n"
-			"\tVIN:\t\t%u Hz\n\n",
+			"\tVIN:\t\t%u Hz\n"
+			"\tHDMI:\t\t%u Hz\n"
+			"\tAudio:\t\t%u Hz\n"
+			"\tADC:\t\t%u Hz\n"
+			"\tSSI:\t\t%u Hz\n"
+			"\tSSI2:\t\t%u Hz\n"
+			"\tUART:\t\t%u Hz\n"
+#if (CHIP_REV == I1)
+			"\tGTX:\t\t%u Hz\n"
+			"\tSDXC:\t\t%u Hz\n"
+#endif
+			"\tSD:\t\t%u Hz\n\n",
 #if (CHIP_REV == A7 || CHIP_REV == I1)
 			vidcap_list[operating_mode.vidcap_size].name,
 #endif
@@ -271,7 +282,18 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			get_apb_bus_freq_hz(),
 			get_vout_freq_hz(),
 			get_vout2_freq_hz(),
-			get_so_freq_hz());
+			get_so_freq_hz(),
+			amb_get_hdmi_clock_frequency(HAL_BASE_VP),
+			amb_get_audio_clock_frequency(HAL_BASE_VP),
+			amb_get_adc_clock_frequency(HAL_BASE_VP),
+			amb_get_ssi_clock_frequency(HAL_BASE_VP),
+			amb_get_ssi2_clock_frequency(HAL_BASE_VP),
+			amb_get_uart_clock_frequency(HAL_BASE_VP),
+#if (CHIP_REV == I1)
+			amb_get_gtx_clock_frequency(HAL_BASE_VP),
+			amb_get_sdxc_clock_frequency(HAL_BASE_VP),
+#endif
+			get_sd_freq_hz());
 
 	*eof = 1;
 
