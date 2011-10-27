@@ -41,6 +41,7 @@ config MACH_COCONUT
 	select AMBARELLA_VOUT
 	select TOUCH_AMBARELLA_AK4183
 	select TOUCH_AMBARELLA_TM1510
+	select TOUCH_AMBARELLA_TM1927
 	select RTC_AMBARELLA_IS112022M
 	help
 	  Say Y here if you are using A5S Coconut.
