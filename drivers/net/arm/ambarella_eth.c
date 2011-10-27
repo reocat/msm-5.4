@@ -57,7 +57,7 @@
 
 #define AMBETH_TX_TIMEOUT	(2 * HZ)
 #define AMBETH_TX_RING_SIZE	(32)
-#define AMBETH_RX_RING_SIZE	(64)
+#define AMBETH_RX_RING_SIZE	(128)
 #define AMBETH_PACKET_MAXFRAME	(1536)
 #define AMBETH_RX_COPYBREAK	(1518)
 #define AMBETH_MULTICAST_LIMIT	(1000)
@@ -571,7 +571,7 @@ static int ambeth_init_phy(struct ambeth_info *lp)
 	goto ambeth_init_phy_scan;
 
 ambeth_init_phy_default:
-	dev_dbg(&lp->ndev->dev, "Find default PHY in %d!\n", phy_addr);
+	dev_vdbg(&lp->ndev->dev, "Find default PHY in %d!\n", phy_addr);
 	if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq)) {
 		phydev->irq = lp->platform_info->phy_irq.irq_line;
 		phydev->irq_flags = lp->platform_info->phy_irq.irq_type;
@@ -672,7 +672,7 @@ static inline int ambeth_rx_refill(struct ambeth_info *lp)
 
 	rx = &lp->rx;
 
-	dev_dbg(&lp->ndev->dev, "%s: cur_rx %d, dirty_rx %d.\n",
+	dev_vdbg(&lp->ndev->dev, "%s: cur_rx %d, dirty_rx %d.\n",
 		__func__, rx->cur_rx, rx->dirty_rx);
 
 	for (; (rx->cur_rx - rx->dirty_rx) > 0; rx->dirty_rx++) {
@@ -824,6 +824,8 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 
 	ndev = (struct net_device *)dev_id;
 	lp = netdev_priv(ndev);
+	spin_lock(&lp->lock);
+
 	irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
 	work_count = lp->platform_info->max_work_count;
 
@@ -834,12 +836,12 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 	do {
 		if (!rxd && (irq_status & (ETH_DMA_STATUS_RI |
 			ETH_DMA_STATUS_RU | ETH_DMA_STATUS_ERI))) {
-			dev_dbg(&lp->ndev->dev,	"%s: RX IRQ[0x%x]!\n",
+			dev_vdbg(&lp->ndev->dev, "%s: RX IRQ[0x%x]!\n",
 				__func__, irq_status);
 			rxd++;
 
 			amba_writel(lp->regbase + ETH_DMA_INTEN_OFFSET,
-				AMBETH_DMA_INT_ENABLE & (~AMBETH_DMA_INT_RXPOLL));
+				AMBETH_DMA_INT_ENABLE & ~AMBETH_DMA_INT_RXPOLL);
 			amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET,
 				ETH_DMA_STATUS_RI | ETH_DMA_STATUS_ERI |
 				ETH_DMA_STATUS_RU);
@@ -847,9 +849,8 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 			napi_schedule(&lp->napi);
 
 			if (!(irq_status & (~(ETH_DMA_STATUS_NIS |
-				ETH_DMA_STATUS_AIS | AMBETH_DMA_INT_RXPOLL |
-				ETH_DMA_STATUS_OVF)))) {
-				dev_dbg(&lp->ndev->dev,
+				ETH_DMA_STATUS_AIS | AMBETH_DMA_INT_RXPOLL)))) {
+				dev_err(&lp->ndev->dev,
 					"%s: No Intr except Rx 0x%x!\n",
 					__func__, irq_status);
 				break;
@@ -860,7 +861,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 			ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TPS))) {
 			tx = &lp->tx;
 
-			dev_dbg(&lp->ndev->dev, "%s: gap %d, irq 0x%x.\n",
+			dev_vdbg(&lp->ndev->dev, "%s: gap %d, irq 0x%x.\n",
 				__func__, tx->cur_tx - tx->dirty_tx,
 				irq_status);
 
@@ -870,12 +871,12 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 				status = tx->desc[entry].status;
 
 				if (status & ETH_TDES0_OWN) {
-					dev_dbg(&lp->ndev->dev,
+					dev_err(&lp->ndev->dev,
 						"%s: frame not transmitted yet"
 						", entry %d, irq 0x%x,"
-						" Tx status 0x%x\n",
-						__func__, entry,
-						irq_status, status);
+						" Tx status 0x%x, %d\n",
+						__func__, entry, irq_status,
+						status, tx_count);
 					break;
 				}
 
@@ -888,7 +889,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 
 				/* if there was an major error, log it. */
 				if (unlikely(status & ETH_TDES0_ES)) {
-					dev_dbg(&lp->ndev->dev,
+					dev_err(&lp->ndev->dev,
 						"%s: Transmit error, entry %d,"
 						" irq 0x%x, Tx status 0x%x\n",
 						__func__, entry,
@@ -948,7 +949,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 			* then wake up netif
 			*/
 			if (likely(dirty_to_tx < (AMBETH_TX_RING_SIZE - 2))) {
-				dev_dbg(&lp->ndev->dev,
+				dev_vdbg(&lp->ndev->dev,
 					"%s: Now gap %d, wakeup.\n",
 					__func__, dirty_to_tx);
 				netif_wake_queue(ndev);
@@ -963,12 +964,12 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 				ambeth_restart_rxtx(lp);
 			}
 
-			dev_dbg(&lp->ndev->dev,	"%s: tx count %d.\n",
+			dev_vdbg(&lp->ndev->dev, "%s: tx count %d.\n",
 				__func__, tx_count);
 		}
 
 		if (unlikely(irq_status & ETH_DMA_STATUS_AIS)) {
-			dev_dbg(&lp->ndev->dev, "%s: Abnormal: 0x%x\n",
+			dev_err(&lp->ndev->dev, "%s: Abnormal: 0x%x\n",
 				__func__, irq_status);
 
 			if (irq_status & ETH_DMA_STATUS_TJT) {
@@ -990,7 +991,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 			}
 			if (irq_status & (ETH_DMA_STATUS_RPS |
 				ETH_DMA_STATUS_OVF)) {
-				dev_dbg(&lp->ndev->dev,
+				dev_err(&lp->ndev->dev,
 					"%s: ETH_DMA_STATUS_RPS or "
 					"ETH_DMA_STATUS_OVF 0x%x\n",
 					__func__, irq_status);
@@ -1048,6 +1049,8 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET, irq_status);
 
 ambeth_interrupt_exit:
+	spin_unlock(&lp->lock);
+
 	return IRQ_HANDLED;
 }
 
@@ -1059,7 +1062,7 @@ static void ambeth_oom_timer(unsigned long data)
 	ndev = (struct net_device *)data;
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
-	dev_dbg(&lp->ndev->dev, "%s: napi_schedule.\n", __func__);
+	dev_err(&lp->ndev->dev, "%s: napi_schedule.\n", __func__);
 	napi_schedule(&lp->napi);
 }
 
@@ -1154,8 +1157,10 @@ static int ambeth_open(struct net_device *ndev)
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
+	spin_lock_irqsave(&lp->lock, flags);
 
 	errorCode = ambeth_start_hw(ndev);
 	if (errorCode)
@@ -1180,14 +1185,20 @@ static int ambeth_open(struct net_device *ndev)
 ambeth_open_exit:
 	if (errorCode)
 		ambeth_stop_hw(ndev);
+
+	spin_unlock_irqrestore(&lp->lock, flags);
+
 	return errorCode;
 }
 
 static int ambeth_stop(struct net_device *ndev)
 {
+	int					errorCode = 0;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
+	spin_lock_irqsave(&lp->lock, flags);
 
 	ambhw_dma_int_disable(lp);
 	free_irq(ndev->irq, ndev);
@@ -1197,11 +1208,15 @@ static int ambeth_stop(struct net_device *ndev)
 	flush_scheduled_work();
 	del_timer_sync(&lp->oom_timer);
 
-	return ambeth_stop_hw(ndev);
+	errorCode = ambeth_stop_hw(ndev);
+	spin_unlock_irqrestore(&lp->lock, flags);
+
+	return errorCode;
 }
 
 static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
+	int					errorCode = 0;
 	struct ambeth_info			*lp;
 	dma_addr_t				mapping;
 	struct ambeth_tx_rngmng			*tx;
@@ -1210,13 +1225,12 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	tx = &lp->tx;
-
 	spin_lock_irqsave(&lp->lock, flags);
 
+	tx = &lp->tx;
 	entry = tx->cur_tx % AMBETH_TX_RING_SIZE;
 
-	dev_dbg(&lp->ndev->dev,
+	dev_vdbg(&lp->ndev->dev,
 		"%s: cur_tx[%d], dirty_tx[%d], entry[%d], skb.len[%d].\n",
 		__func__, tx->cur_tx, tx->dirty_tx, entry, skb->len);
 
@@ -1251,7 +1265,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	ndev->trans_start = jiffies;
 
-	return 0;
+	return errorCode;
 }
 
 static void ambeth_timeout(struct net_device *ndev)
@@ -1276,71 +1290,47 @@ static struct net_device_stats *ambeth_get_stats(struct net_device *ndev)
 static inline void ambeth_poll_error_status(struct ambeth_info *lp,
 	unsigned int status)
 {
-	if ((status & 0x38000300) != 0x0300) {
-		if (!(status & 0xffff)) {
-			dev_dbg(&lp->ndev->dev, "%s: 802.3 frame size %d "
-			"spanned multi buffer, status %8.8x.\n",
-			__func__, ETH_RDES0_FL(status),	status);
-		} else if ((status & 0xffff) !=	0x7fff) {
-			dev_dbg(&lp->ndev->dev, "%s: Ethernet frame size %d"
-			" spanned multi buffer, status %8.8x.\n",
-			__func__, ETH_RDES0_FL(status), status);
-			//lp->stats.rx_length_errors++;
-		}
-	} else if (status & ETH_RDES0_ES) {
-		dev_dbg(&lp->ndev->dev,
-			"%s: Receive error, Rx status 0x%8.8x.\n",
-			__func__, status);
-		lp->stats.rx_errors++;
-
-		if (status & ETH_RDES0_DE) {
-			dev_err(&lp->ndev->dev, "%s: rx descriptor error.\n",
-				__func__);
-		}
-		if (status & ETH_RDES0_SAF) {
-			dev_err(&lp->ndev->dev, "%s: rx SA filter fail.\n",
-				__func__);
-		}
-		if (status & ETH_RDES0_LC) {
-			dev_err(&lp->ndev->dev, "%s: rx collison error.\n",
-				__func__);
-			lp->stats.collisions++;
-		}
-		if(status & ETH_RDES0_CE ) {
-			lp->stats.rx_crc_errors++;
-			dev_err(&lp->ndev->dev, "%s: rx crc error.\n",
-				__func__);
-		}
-		if(status & ETH_RDES0_DBE ) {
-			lp->stats.rx_frame_errors++;
-			dev_err(&lp->ndev->dev, "%s: rx dribbling error.\n",
-				__func__);
-		}
-		if(status & ETH_RDES0_LE) {
-			lp->stats.rx_length_errors++;
-			dev_err(&lp->ndev->dev, "%s: rx length error.\n",
-				__func__);
-		}
-		if (status & ETH_RDES0_OE) {
-			dev_dbg(&lp->ndev->dev,
-				"%s: rx damage frame because of overflow.\n",
-				__func__);
-		}
-		if (status & ETH_RDES0_IPC) {
-			dev_err(&lp->ndev->dev,
-				"%s: rx Long frame error.\n",
-				__func__);
-		}
-		if (status & ETH_RDES0_RWT) {
-			dev_err(&lp->ndev->dev,
-				"%s: rx watchdog timeout.\n",
-				__func__);
-		}
-		if (status & ETH_RDES0_RE) {
-			dev_err(&lp->ndev->dev,
-				"%s: rx receive error by mii.\n",
-				__func__);
-		}
+	if (status & ETH_RDES0_DE) {
+		lp->stats.rx_frame_errors++;
+		dev_err(&lp->ndev->dev, "RX Error: Descriptor Error.\n");
+	}
+	if (status & ETH_RDES0_SAF) {
+		lp->stats.multicast++;
+		dev_err(&lp->ndev->dev,
+			"RX Error: Source Address Filter Fail.\n");
+	}
+	if (status & ETH_RDES0_LE) {
+		lp->stats.rx_length_errors++;
+		dev_err(&lp->ndev->dev, "RX Error: Length Error.\n");
+	}
+	if (status & ETH_RDES0_OE) {
+		lp->stats.rx_over_errors++;
+		dev_err(&lp->ndev->dev, "RX Error: Overflow Error.\n");
+	}
+	if (status & ETH_RDES0_VLAN) {
+		dev_info(&lp->ndev->dev, "RX Info: VLAN.\n");
+	}
+	if (status & ETH_RDES0_IPC) {
+		dev_err(&lp->ndev->dev,
+			"RX Error: IPC Checksum/Giant Frame.\n");
+	}
+	if (status & ETH_RDES0_LC) {
+		lp->stats.collisions++;
+		dev_err(&lp->ndev->dev, "RX Error: Late Collision.\n");
+	}
+	if (status & ETH_RDES0_FT) {
+		dev_info(&lp->ndev->dev, "RX Info: Ethernet-type frame.\n");
+	}
+	if (status & ETH_RDES0_RWT) {
+		dev_err(&lp->ndev->dev, "RX Error: Watchdog Timeout.\n");
+	}
+	if (status & ETH_RDES0_DBE) {
+		lp->stats.rx_frame_errors++;
+		dev_err(&lp->ndev->dev, "RX Error: Receive.\n");
+	}
+	if (status & ETH_RDES0_CE) {
+		lp->stats.rx_crc_errors++;
+		dev_err(&lp->ndev->dev, "RX Error: CRC.\n");
 	}
 }
 
@@ -1355,9 +1345,19 @@ static inline void ambeth_poll_status(struct ambeth_info *lp,
 	ndev = lp->ndev;
 	pkt_len = ETH_RDES0_FL(status) - 4;
 
+	if ((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
+		(ETH_RDES0_FS | ETH_RDES0_LS)) {
+		dev_info(&lp->ndev->dev,
+			"RX status: 0x%08x %d.\n", status, entry);
+		dev_info(&lp->ndev->dev,
+			"RX BUS_MODE: 0x%08x.\n", amba_readl(
+			lp->regbase + ETH_DMA_BUS_MODE_OFFSET));
+		dev_info(&lp->ndev->dev,
+			"RX DMA_STATUS: 0x%08x.\n", amba_readl(
+			lp->regbase + ETH_DMA_STATUS_OFFSET));
+	}
 	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
-		dev_warn(&lp->ndev->dev,
-			"%s: Bogus packet size of %d.\n",
+		dev_warn(&lp->ndev->dev, "%s: Bogus packet size of %d.\n",
 			__func__, pkt_len);
 		pkt_len = AMBETH_RX_COPYBREAK;
 		lp->stats.rx_length_errors++;
@@ -1397,10 +1397,14 @@ int ambeth_poll(struct napi_struct *napi, int budget)
 	int					rx_intr = 0;
 	int					loop_count = 0;
 	unsigned int				status;
+	unsigned long				flags;
+	int					loop_rdes0 = 0;
 
 	lp = container_of(napi, struct ambeth_info, napi);
+	spin_lock_irqsave(&lp->lock, flags);
 	ndev = lp->ndev;
 	entry = lp->rx.cur_rx % AMBETH_RX_RING_SIZE;
+	spin_unlock_irqrestore(&lp->lock, flags);
 	rx_work_limit = budget;
 
 	if (unlikely(!netif_carrier_ok(ndev)))
@@ -1411,11 +1415,24 @@ int ambeth_poll(struct napi_struct *napi, int budget)
 			status = lp->rx.desc[entry].status;
 			if (status & ETH_RDES0_OWN)
 				break;
+			loop_rdes0 = 0;
+			if ((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
+				(ETH_RDES0_FS | ETH_RDES0_LS)) {
+				loop_rdes0++;
+				udelay(1);
+				status = lp->rx.desc[entry].status;
+				if (loop_rdes0 > 100)
+					break;
+			}
+			if (loop_rdes0 > 1)
+				dev_warn(&lp->ndev->dev,
+					"loop_rdes0: %d, status: 0x%08x.\n",
+					loop_rdes0, status);
 
-			if (unlikely((status & 0x38008300) != 0x0300)) {
-				ambeth_poll_error_status(lp, status);
-			} else {
+			if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 				ambeth_poll_status(lp, status, entry);
+			} else {
+				ambeth_poll_error_status(lp, status);
 			}
 
 			if (unlikely((lp->rx.cur_rx - lp->rx.dirty_rx) >
@@ -1435,9 +1452,11 @@ int ambeth_poll(struct napi_struct *napi, int budget)
 				goto ambeth_poll_exit;
 		}
 
+		spin_lock_irqsave(&lp->lock, flags);
 		rx_intr = amba_test_and_set_mask(
 			lp->regbase + ETH_DMA_STATUS_OFFSET,
 			ETH_DMA_STATUS_RI);
+		spin_unlock_irqrestore(&lp->lock, flags);
 
 		loop_count++;
 		if (loop_count > 1)
@@ -1446,17 +1465,21 @@ int ambeth_poll(struct napi_struct *napi, int budget)
 	} while (rx_intr);
 
 ambeth_poll_complete:
+	spin_lock_irqsave(&lp->lock, flags);
 	if (ambeth_rx_refill(lp) < 0)
 		goto ambeth_poll_out_of_memory;
 
 	napi_complete(&lp->napi);
 	ambhw_dma_int_enable(lp);
+	spin_unlock_irqrestore(&lp->lock, flags);
 	goto ambeth_poll_exit;
 
 ambeth_poll_out_of_memory:
+	spin_lock_irqsave(&lp->lock, flags);
 	dev_info(&lp->ndev->dev, "%s: ambeth_poll_out_of_memory.\n", __func__);
 	mod_timer(&lp->oom_timer, jiffies + 1);
 	napi_complete(&lp->napi);
+	spin_unlock_irqrestore(&lp->lock, flags);
 
 ambeth_poll_exit:
 	return received;
@@ -1466,37 +1489,39 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 {
 	struct ambeth_info			*lp;
 	unsigned int				mac_filter_reg;
+	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
+	spin_lock_irqsave(&lp->lock, flags);
 
 	mac_filter_reg = amba_readl(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
-	dev_dbg(&lp->ndev->dev, "%s: mac_filter 0x%x.\n",
+	dev_vdbg(&lp->ndev->dev, "%s: mac_filter 0x%x.\n",
 		__func__, mac_filter_reg);
 	mac_filter_reg &= ~(ETH_MAC_FRAME_FILTER_PM | ETH_MAC_FRAME_FILTER_PR |
 		ETH_MAC_FRAME_FILTER_HMC | ETH_MAC_FRAME_FILTER_RA);
-	dev_dbg(&lp->ndev->dev, "%s: flags 0x%x.\n",
+	dev_vdbg(&lp->ndev->dev, "%s: flags 0x%x.\n",
 		__func__, ndev->flags);
-	dev_dbg(&lp->ndev->dev, "%s: mc_count 0x%x.\n",
+	dev_vdbg(&lp->ndev->dev, "%s: mc_count 0x%x.\n",
 		__func__, netdev_mc_count(ndev));
 
 	if (ndev->flags & IFF_PROMISC) {
-		dev_dbg(&lp->ndev->dev, "%s: Promiscuous mode.\n", __func__);
+		dev_vdbg(&lp->ndev->dev, "%s: Promiscuous mode.\n", __func__);
 		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
 			mac_filter_reg | ETH_MAC_FRAME_FILTER_PR);
 	} else if ((netdev_mc_count(ndev) > AMBETH_MULTICAST_LIMIT) ||
 		(ndev->flags & IFF_ALLMULTI)) {
 		if (netdev_mc_count(ndev) > AMBETH_MULTICAST_LIMIT) {
-			dev_dbg(&lp->ndev->dev,
+			dev_err(&lp->ndev->dev,
 				"%s: too many in multicast, accept all.\n",
 				__func__);
 		}
 
 		if (ndev->flags & IFF_ALLMULTI) {
-			dev_dbg(&lp->ndev->dev,
+			dev_vdbg(&lp->ndev->dev,
 				"%s: IFF_ALLLMULTI flag set, accept all.\n",
 				__func__);
 		}
-		dev_dbg(&lp->ndev->dev,
+		dev_vdbg(&lp->ndev->dev,
 			"%s: Accept All Multi %d.\n",
 			__func__, netdev_mc_count(ndev));
 		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
@@ -1508,7 +1533,7 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 		unsigned char			zeromacbuf[6];
 		struct netdev_hw_addr		*ha;
 
-		dev_dbg(&lp->ndev->dev,
+		dev_vdbg(&lp->ndev->dev,
 			"%s: use perfect filtering %d.\n",
 			__func__, netdev_mc_count(ndev));
 		mac_filter_reg &= ~(ETH_MAC_FRAME_FILTER_HMC |
@@ -1524,14 +1549,14 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 			}
 			ambhw_set_hwaddr_perfect_filtering(
 				lp, ha->addr, (count - 1 - i) + 1, 1);
-			dev_dbg(&lp->ndev->dev,
+			dev_vdbg(&lp->ndev->dev,
 				"%s: Added perfect filtering[%pM].\n",
 				__func__, ha->addr);
 			i++;
 		}
 
 		filtered = i;
-		dev_dbg(&lp->ndev->dev,
+		dev_vdbg(&lp->ndev->dev,
 			"%s: Disable the rest %d MAC for perfect filtering.\n",
 			__func__, AMBETH_MULTICAST_PF - filtered);
 		memset(zeromacbuf, 0, sizeof(zeromacbuf));
@@ -1547,7 +1572,7 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 		u32				mc_filter[2] = {0, 0};
 		int				filterbit;
 
-		dev_dbg(&lp->ndev->dev, "%s: handling HASH MULTI.\n", __func__);
+		dev_err(&lp->ndev->dev, "%s: handling HASH MULTI.\n", __func__);
 
 		netdev_for_each_mc_addr(ha, ndev) {
 			if (!(ha->addr[0] & 1)) {
@@ -1563,7 +1588,7 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 
 			mc_filter[filterbit >> 5] |= 1 << (filterbit & 31);
 
-			dev_dbg(&lp->ndev->dev,
+			dev_err(&lp->ndev->dev,
 				"%s: Added filter for[%pM], hash:0x%8x.\n",
 				__func__, ha->addr, filterbit);
 		}
@@ -1572,7 +1597,7 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 			(mc_filter[1] == lp->mc_filter[1])) {
 			/* No change. */
 		} else {
-			dev_dbg(&lp->ndev->dev,
+			dev_err(&lp->ndev->dev,
 				"%s: Update HASH, HI[0x%x], LO[0x%x].\n",
 				__func__, mc_filter[1], mc_filter[0]);
 
@@ -1586,21 +1611,25 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 		lp->mc_filter[0] = mc_filter[0];
 		lp->mc_filter[1] = mc_filter[1];
 #else
-		dev_dbg(&lp->ndev->dev, "%s: Accept All Multi %d.\n",
+		dev_err(&lp->ndev->dev, "%s: Accept All Multi %d.\n",
 			__func__, netdev_mc_count(ndev));
 		amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
 			mac_filter_reg | ETH_MAC_FRAME_FILTER_PM);
 #endif
 	}
+
+	spin_unlock_irqrestore(&lp->lock, flags);
 }
 
 static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 {
-	struct sockaddr				*saddr;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
+	struct sockaddr				*saddr;
 
-	saddr = (struct sockaddr *)(addr);
 	lp = (struct ambeth_info *)netdev_priv(ndev);
+	spin_lock_irqsave(&lp->lock, flags);
+	saddr = (struct sockaddr *)(addr);
 
 	if (netif_running(ndev))
 		return -EBUSY;
@@ -1608,11 +1637,13 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 	if (!is_valid_ether_addr(saddr->sa_data))
 		return -EADDRNOTAVAIL;
 
-	dev_dbg(&lp->ndev->dev, "MAC address[%pM].\n", saddr->sa_data);
+	dev_err(&lp->ndev->dev, "MAC address[%pM].\n", saddr->sa_data);
 
 	memcpy(ndev->dev_addr, saddr->sa_data, ndev->addr_len);
 	ambhw_set_hwaddr(lp, ndev->dev_addr);
 	ambhw_get_hwaddr(lp, ndev->dev_addr);
+
+	spin_unlock_irqrestore(&lp->lock, flags);
 
 	return 0;
 }
@@ -1859,12 +1890,13 @@ static int __devexit ambeth_drv_remove(struct platform_device *pdev)
 {
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	ndev = platform_get_drvdata(pdev);
 
 	if (ndev) {
 		lp = (struct ambeth_info *)netdev_priv(ndev);
-
+		spin_lock_irqsave(&lp->lock, flags);
 		unregister_netdev(ndev);
 		netif_napi_del(&lp->napi);
 		if (lp->platform_info->mii_power.gpio_id != -1)
@@ -1875,9 +1907,9 @@ static int __devexit ambeth_drv_remove(struct platform_device *pdev)
 			gpio_free(lp->platform_info->phy_irq.irq_gpio);
 		mdiobus_unregister(&lp->new_bus);
 		kfree(lp->new_bus.irq);
-		free_netdev(ndev);
-
+		spin_unlock_irqrestore(&lp->lock, flags);
 		platform_set_drvdata(pdev, NULL);
+		free_netdev(ndev);
 	}
 
 	dev_info(&pdev->dev, "%s: exit.\n", __func__);
@@ -1891,6 +1923,7 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 	int					errorCode = 0;
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	ndev = platform_get_drvdata(pdev);
 	if (ndev) {
@@ -1898,17 +1931,18 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 			goto ambeth_drv_suspend_exit;
 
 		lp = (struct ambeth_info *)netdev_priv(ndev);
-
+		spin_lock_irqsave(&lp->lock, flags);
 		netif_stop_queue(ndev);
 		disable_irq(ndev->irq);
 		napi_disable(&lp->napi);
 		netif_device_detach(ndev);
 		ambhw_dma_int_disable(lp);
 		ambeth_stop_hw(ndev);
+		spin_unlock_irqrestore(&lp->lock, flags);
 	}
 
 ambeth_drv_suspend_exit:
-	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
+	dev_err(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 	return errorCode;
 }
@@ -1918,6 +1952,7 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	int					errorCode = 0;
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	ndev = platform_get_drvdata(pdev);
 	if (ndev) {
@@ -1925,6 +1960,7 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 			goto ambeth_drv_resume_exit;
 
 		lp = (struct ambeth_info *)netdev_priv(ndev);
+		spin_lock_irqsave(&lp->lock, flags);
 		ambhw_dma_reset(lp);
 		ambeth_start_hw(ndev);
 		ambhw_dma_int_enable(lp);
@@ -1932,10 +1968,11 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		napi_enable(&lp->napi);
 		enable_irq(ndev->irq);
 		netif_start_queue(ndev);
+		spin_unlock_irqrestore(&lp->lock, flags);
 	}
 
 ambeth_drv_resume_exit:
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+	dev_err(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 	return errorCode;
 }
 #endif
