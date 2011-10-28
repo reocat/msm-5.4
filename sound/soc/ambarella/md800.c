@@ -35,6 +35,7 @@
 #include <sound/pcm_params.h>
 #include <sound/initval.h>
 #include <sound/soc.h>
+#include <sound/jack.h>
 #include <sound/soc-dapm.h>
 
 #include <mach/hardware.h>
@@ -42,14 +43,47 @@
 
 #include "../codecs/es8328.h"
 
+/* Headset jack detection DAPM pins */
+static struct snd_soc_jack hp_jack;
+
+static struct snd_soc_jack_pin hp_jack_pins[] = {
+	{
+		.pin = "Speaker",
+		.mask = SND_JACK_HEADPHONE,
+		.invert = 1,
+	},
+};
+
+static struct snd_soc_jack_gpio hp_jack_gpios[] = {
+	{
+		.gpio = GPIO(12),
+		.name = "hpdet-gpio",
+		.report = SND_JACK_HEADPHONE,
+		.debounce_time = 200,
+		.invert = 1,
+	},
+};
 
 #define MD800_SPK_ON    0
 #define MD800_SPK_OFF   1
 
 /* default: Speaker output */
-static int md800_spk_func;
+static int md800_spk_func = MD800_SPK_ON;
 static int md800_spk_gpio = GPIO(139);
 static int md800_spk_level = GPIO_HIGH;
+
+static struct notifier_block hp_event;
+
+/* headphone inserted, so we disable speaker. */
+static int md800_hp_event(struct notifier_block *nb, unsigned long val, void *data)
+{
+	if (val != 0)
+		md800_spk_func = MD800_SPK_OFF;
+	else
+		md800_spk_func = MD800_SPK_ON;
+
+	return NOTIFY_OK;
+}
 
 static void md800_ext_control(struct snd_soc_codec *codec)
 {
@@ -63,7 +97,7 @@ static void md800_ext_control(struct snd_soc_codec *codec)
 			goto err_exit;
 		}
 		mdelay(1);
-		snd_soc_dapm_enable_pin(dapm, "Ext Spk");
+		snd_soc_dapm_enable_pin(dapm, "Speaker");
 	} else {
 		errorCode = gpio_direction_output(md800_spk_gpio, !md800_spk_level);
 		if (errorCode < 0) {
@@ -71,7 +105,7 @@ static void md800_ext_control(struct snd_soc_codec *codec)
 			goto err_exit;
 		}
 		mdelay(1);
-		snd_soc_dapm_disable_pin(dapm, "Ext Spk");
+		snd_soc_dapm_disable_pin(dapm, "Speaker");
 	}
 
 	/* signal a DAPM event */
@@ -213,19 +247,12 @@ static int md800_set_spk(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_valu
 	return 1;
 }
 
-static int md800_hp_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int event)
-{
-	/* when hp enabled, do we need to disable speaker? */
-	return 0;
-}
-
 static int md800_spk_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int event)
 {
 	int errorCode = 0;
 
-	if (SND_SOC_DAPM_EVENT_ON(event)){
+	if (SND_SOC_DAPM_EVENT_ON(event) && (md800_spk_func == MD800_SPK_ON)){
 		errorCode = gpio_direction_output(md800_spk_gpio, !!md800_spk_level);
 		if (errorCode < 0) {
 			printk(KERN_ERR "Could not Set Spk-Ctrl GPIO high\n");
@@ -248,8 +275,8 @@ err_exit:
 /* md800 dapm widgets */
 static const struct snd_soc_dapm_widget md800_dapm_widgets[] = {
     SND_SOC_DAPM_MIC("Mic Jack", NULL),
-    SND_SOC_DAPM_HP("Headphone Jack", md800_hp_event),
-    SND_SOC_DAPM_SPK("Ext Spk", md800_spk_event),
+    SND_SOC_DAPM_HP("Headphone Jack", NULL),
+    SND_SOC_DAPM_SPK("Speaker", md800_spk_event),
 };
 
 /* md800 audio map (connections to the codec pins) */
@@ -262,8 +289,8 @@ static const struct snd_soc_dapm_route md800_audio_map[] = {
 	{"Headphone Jack", NULL, "ROUT1"},
 
 	/* speaker connected to LOUT, ROUT */
-	{"Ext Spk", NULL, "ROUT1"},
-	{"Ext Spk", NULL, "LOUT1"},
+	{"Speaker", NULL, "ROUT1"},
+	{"Speaker", NULL, "LOUT1"},
 };
 
 static const char *spk_function[]  = {"On", "Off"};
@@ -295,24 +322,34 @@ static int md800_es8328_init(struct snd_soc_pcm_runtime *rtd)
 			ARRAY_SIZE(es8328_md800_controls));
 
 	/* Add md800 specific widgets */
-	errorCode = snd_soc_dapm_new_controls(dapm,
+	snd_soc_dapm_new_controls(dapm,
 			md800_dapm_widgets,
 			ARRAY_SIZE(md800_dapm_widgets));
-	if (errorCode) {
-		goto init_exit;
-	}
 
-	/* Set up md800 specific audio path md800_audio_map */
-	errorCode = snd_soc_dapm_add_routes(dapm,
-		md800_audio_map,
-		ARRAY_SIZE(md800_audio_map));
-	if (errorCode) {
-		goto init_exit;
-	}
+	/* Setup md800 specific audio path md800_audio_map */
+	snd_soc_dapm_add_routes(dapm,
+			md800_audio_map,
+			ARRAY_SIZE(md800_audio_map));
 
-	errorCode = snd_soc_dapm_sync(dapm);
+	snd_soc_dapm_sync(dapm);
 
-init_exit:
+	/* Headset jack detection */
+	errorCode = snd_soc_jack_new(codec, "Headset Jack",
+				SND_JACK_HEADSET, &hp_jack);
+	if (errorCode)
+		return errorCode;
+
+	errorCode = snd_soc_jack_add_pins(&hp_jack, ARRAY_SIZE(hp_jack_pins),
+				hp_jack_pins);
+	if (errorCode)
+		return errorCode;
+
+	errorCode = snd_soc_jack_add_gpios(&hp_jack, ARRAY_SIZE(hp_jack_gpios),
+				hp_jack_gpios);
+
+	hp_event.notifier_call = md800_hp_event;
+	snd_soc_jack_notifier_register(&hp_jack, &hp_event);
+
 	return errorCode;
 }
 
@@ -371,6 +408,8 @@ md800_board_init_exit1:
 
 static void __exit md800_board_exit(void)
 {
+	snd_soc_jack_notifier_unregister(&hp_jack, &hp_event);
+	snd_soc_jack_free_gpios(&hp_jack, ARRAY_SIZE(hp_jack_gpios), hp_jack_gpios);
 	platform_device_unregister(md800_snd_device);
 	gpio_free(md800_spk_gpio);
 }
