@@ -17,6 +17,7 @@
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
 #include <linux/i2c/ft540.h>
+#include <asm/io.h>
 
 #ifdef	CONFIG_DEBUG_TOUCHSCREEN
 #define FT_DEBUG(format, arg...)	printk(format , ## arg)
@@ -105,6 +106,13 @@ typedef enum {
 	FT_CLB,
 } ft540_sub_addr_t;
 
+enum {
+	FT_UPPER_LEFT	= 0,
+	FT_UPPER_RIGHT,
+	FT_LOWER_LEFT,
+	FT_LOWER_RIGHT,
+};
+
 #define NUM_DATA			32
 
 struct ft540 {
@@ -114,11 +122,49 @@ struct ft540 {
 	struct workqueue_struct 	*workqueue;
 	struct work_struct		report_worker;
 	u8				reg_data[NUM_DATA];
+	u8				lights_enabled[4];
 	int				irq;
 	struct ft540_fix_data		fix;
 	int				(*get_pendown_state)(void);
 	void				(*clear_penirq)(void);
 };
+
+static void ft540_update_lights_status(struct ft540 *ft)
+{
+	u32	afsel, dir, data;
+
+	afsel	= amba_readl(GPIO1_BASE + 0x18);
+	dir	= amba_readl(GPIO1_BASE + 0x04);
+	data	= amba_readl(GPIO1_BASE + 0x00);
+
+	//GPIO45
+	if (!(afsel & 0x00002000) && (dir & 0x00002000) && (data & 0x00002000)) {
+		ft->lights_enabled[FT_UPPER_LEFT] = 1;
+	} else {
+		ft->lights_enabled[FT_UPPER_LEFT] = 0;
+	}
+
+	//GPIO46
+	if (!(afsel & 0x00004000) && (dir & 0x00004000) && (data & 0x00004000)) {
+		ft->lights_enabled[FT_UPPER_RIGHT] = 1;
+	} else {
+		ft->lights_enabled[FT_UPPER_RIGHT] = 0;
+	}
+
+	//GPIO50
+	if (!(afsel & 0x00040000) && (dir & 0x00040000) && (data & 0x00040000)) {
+		ft->lights_enabled[FT_LOWER_LEFT] = 1;
+	} else {
+		ft->lights_enabled[FT_LOWER_LEFT] = 0;
+	}
+
+	//GPIO51
+	if (!(afsel & 0x00080000) && (dir & 0x00080000) && (data & 0x00080000)) {
+		ft->lights_enabled[FT_LOWER_RIGHT] = 1;
+	} else {
+		ft->lights_enabled[FT_LOWER_RIGHT] = 0;
+	}
+}
 
 static inline int ft540_read_all(struct ft540 *ft)
 {
@@ -173,55 +219,55 @@ static void ft540_send_event(struct ft540 *ft)
 		FT_DEBUG("Finger%d Raw: (%d, %d)\n", i, x, y);
 
 		//HOME
-		if (x >= 1095 && x <= 1105 && y <= 5) {
+		if (ft->lights_enabled[FT_LOWER_RIGHT] && x >= 1095 && x <= 1105 && y <= 5) {
 			curr_home = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 300 && y <= 310) {
+		if (ft->lights_enabled[FT_UPPER_RIGHT] && x >= 1095 && x <= 1105 && y >= 300 && y <= 310) {
 			curr_home = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 450 && y <= 460) {
+		if (ft->lights_enabled[FT_UPPER_LEFT] && x >= 1095 && x <= 1105 && y >= 450 && y <= 460) {
 			curr_home = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 760 && y <= 770) {
+		if (ft->lights_enabled[FT_LOWER_LEFT] && x >= 1095 && x <= 1105 && y >= 760 && y <= 770) {
 			curr_home = 1;
 			continue;
 		}
 
 		//MENU
-		if (x >= 1095 && x <= 1105 && y >= 65 && y <= 75) {
+		if (ft->lights_enabled[FT_LOWER_RIGHT] && x >= 1095 && x <= 1105 && y >= 65 && y <= 75) {
 			curr_menu = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 255 && y <= 265) {
+		if (ft->lights_enabled[FT_UPPER_RIGHT] && x >= 1095 && x <= 1105 && y >= 255 && y <= 265) {
 			curr_menu = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 400 && y <= 410) {
+		if (ft->lights_enabled[FT_UPPER_LEFT] && x >= 1095 && x <= 1105 && y >= 400 && y <= 410) {
 			curr_menu = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 695 && y <= 705) {
+		if (ft->lights_enabled[FT_LOWER_LEFT] && x >= 1095 && x <= 1105 && y >= 695 && y <= 705) {
 			curr_menu = 1;
 			continue;
 		}
 
 		//BACK
-		if (x >= 1095 && x <= 1105 && y >= 115 && y <= 125) {
+		if (ft->lights_enabled[FT_LOWER_RIGHT] && x >= 1095 && x <= 1105 && y >= 115 && y <= 125) {
 			curr_back = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 215 && y <= 225) {
+		if (ft->lights_enabled[FT_UPPER_RIGHT] && x >= 1095 && x <= 1105 && y >= 215 && y <= 225) {
 			curr_back = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 355 && y <= 365) {
+		if (ft->lights_enabled[FT_UPPER_LEFT] && x >= 1095 && x <= 1105 && y >= 355 && y <= 365) {
 			curr_back = 1;
 			continue;
 		}
-		if (x >= 1095 && x <= 1105 && y >= 645 && y <= 655) {
+		if (ft->lights_enabled[FT_LOWER_LEFT] && x >= 1095 && x <= 1105 && y >= 645 && y <= 655) {
 			curr_back = 1;
 			continue;
 		}
@@ -332,6 +378,7 @@ static void ft540_report_worker(struct work_struct *work)
 	ft = container_of(work, struct ft540, report_worker);
 
 	ft540_read_all(ft);
+	ft540_update_lights_status(ft);
 	ft540_send_event(ft);
 }
 
