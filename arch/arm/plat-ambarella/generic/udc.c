@@ -31,6 +31,10 @@
 #include <mach/hardware.h>
 #include <plat/udc.h>
 
+/* amb_udc_status will be modified in ambarella_udc.c */
+enum ambarella_udc_status amb_udc_status = AMBARELLA_UDC_STATUS_UNKNOWN;
+EXPORT_SYMBOL(amb_udc_status);
+
 /* ==========================================================================*/
 struct resource ambarella_udc_resources[] = {
 	[0] = {

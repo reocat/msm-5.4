@@ -61,8 +61,6 @@ static const char *amb_ep_string[] = {
 	"ep12out-bulk", "ep13out-bulk", "ep14out-bulk", "ep15out-bulk"
 };
 
-enum ambarella_udc_status amb_udc_status;
-
 /*************************** DEBUG FUNCTION ***************************/
 #define DEBUG_ERR		0
 #define DEBUG_NORMAL		1
