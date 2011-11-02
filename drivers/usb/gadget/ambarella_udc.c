@@ -61,6 +61,7 @@ static const char *amb_ep_string[] = {
 	"ep12out-bulk", "ep13out-bulk", "ep14out-bulk", "ep15out-bulk"
 };
 
+enum ambarella_udc_status amb_udc_status;
 
 /*************************** DEBUG FUNCTION ***************************/
 #define DEBUG_ERR		0
@@ -1055,6 +1056,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_CSR_DONE);
 		udelay(150);
 		sprintf(udc->udc_state, "Configured");
+		amb_udc_status = AMBARELLA_UDC_STATUS_CONFIGURED;
 		schedule_work(&udc->uevent_work);
 
 	}
@@ -1112,6 +1114,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		}
 
 		sprintf(udc->udc_state, "BusSuspend");
+		amb_udc_status = AMBARELLA_UDC_STATUS_BUSSUSPEND;
 		schedule_work(&udc->uevent_work);
 	}
 
@@ -2137,6 +2140,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	ambarella_udc_enable(udc);
 
 	sprintf(udc->udc_state, "Registered");
+		amb_udc_status = AMBARELLA_UDC_STATUS_REGISTERED;
 	schedule_work(&udc->uevent_work);
 
 	dprintk(DEBUG_NORMAL, "%s() Exit\n", __func__);
@@ -2181,6 +2185,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	ambarella_udc_disable(udc);
 
 	sprintf(udc->udc_state, "Unregistered");
+	amb_udc_status = AMBARELLA_UDC_STATUS_UNREGISTERED;
 	schedule_work(&udc->uevent_work);
 
 	return 0;
@@ -2285,6 +2290,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		udc->proc_file->read_proc = ambarella_proc_udc_read;
 		udc->proc_file->data = udc;
 		sprintf(udc->udc_state, "Probed");
+		amb_udc_status = AMBARELLA_UDC_STATUS_PROBED;
 		schedule_work(&udc->uevent_work);
 	}
 	create_proc_files();
@@ -2359,6 +2365,7 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	sprintf(udc->udc_state, "Suspend");
+	amb_udc_status = AMBARELLA_UDC_STATUS_SUSPEND;
 	schedule_work(&udc->uevent_work);
 
 	return retval;
@@ -2389,6 +2396,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	sprintf(udc->udc_state, "Resume");
+	amb_udc_status = AMBARELLA_UDC_STATUS_RESUME;
 	schedule_work(&udc->uevent_work);
 
 	return retval;
