@@ -43,12 +43,27 @@ config WM831X_BACKUP
 	  Say Y here to enable support for the backup battery charger
 	  in the Wolfson Microelectronics WM831x PMICs.
 
+choice
+	prompt "WM831X PMU support"
+	default WM831X_POWER
+	help
+	  This options set the WM831X PMU support for which mainboard.
+
 config WM831X_POWER
-	tristate "WM831X PMU support"
+	bool "I1EVK WM831X PMU support"
 	depends on MFD_WM831X
 	help
-	  Say Y here to enable support for the power management unit
+	  Say Y here to enable support for the I1EVK power management unit
 	  provided by Wolfson Microelectronics WM831x PMICs.
+
+config MD800_WM831X_POWER
+	bool "MD800 WM831X PMU support"
+	depends on MFD_WM831X
+	help
+	  Say Y here to enable support for the MD800 power management unit
+	  provided by Wolfson Microelectronics WM831x PMICs.
+
+endchoice
 
 config WM8350_POWER
         tristate "WM8350 PMU support"
