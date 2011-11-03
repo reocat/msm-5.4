@@ -19,10 +19,13 @@
 #include <linux/mfd/wm831x/pmu.h>
 #include <linux/mfd/wm831x/pdata.h>
 
+#include <plat/udc.h>
+#include <plat/gpio.h>
+
 #define BAT_UPDATE_DELAY_MSEC   5000
-#define ADC_GAP        500000
-#define BATTERY_VOLTAGE_MIN   3600000
-#define BATTERY_VOLTAGE_MAX   4200000
+#define MD800_ADC_GAP        700000
+#define MD800_BATTERY_VOLTAGE_MIN   3600000
+#define MD800_BATTERY_VOLTAGE_MAX   4200000
 
 struct wm831x_power {
 	struct wm831x *wm831x;
@@ -34,6 +37,71 @@ struct wm831x_power {
 	char battery_name[20];
 	struct timer_list battery_update_timer;
 };
+
+static void enable_battery_charge(struct wm831x *wm831x)
+{
+	int ret= 0;
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+		return;
+	}
+
+	ret =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
+	if(ret < 0){
+		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
+				ret);
+		return;
+	}
+
+	if(!(ret & WM831X_CHG_ENA_MASK)){
+		ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
+				      WM831X_CHG_ENA_MASK,
+				      WM831X_CHG_ENA);
+		if (ret != 0)
+			dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
+				ret);
+	}
+	wm831x_reg_lock(wm831x);
+}
+
+static void disable_battery_charge(struct wm831x *wm831x)
+{
+	int ret= 0;
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+		return;
+	}
+
+	ret =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
+	if(ret < 0){
+		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
+				ret);
+		return;
+	}
+
+	if((ret & WM831X_CHG_ENA_MASK)){
+		ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
+				      WM831X_CHG_ENA_MASK,
+				      0);
+		if (ret != 0)
+			dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
+				ret);
+	}
+	wm831x_reg_lock(wm831x);
+}
+
+static int usbcable_without_docking(void)
+{
+	int ret =0;
+	if((amb_udc_status == AMBARELLA_UDC_STATUS_CONFIGURED)
+		& (ambarella_gpio_get(GPIO(7)) == GPIO_LOW)){
+		printk(KERN_DEBUG "usb cable without docking \n");
+		ret = 1;
+	}
+	return ret;
+}
 
 static int wm831x_power_check_online(struct wm831x *wm831x, int supply,
 				     union power_supply_propval *val)
@@ -412,15 +480,22 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	if (status < 0)
 		return status;
 
+	if(usbcable_without_docking()){
+		disable_battery_charge(wm831x);
+		stopcharge = 1;
+	}else{
+		enable_battery_charge(wm831x);
+	}
+
 	/* calculate the capacity from voltage */
 	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
 
 	if(!(status & WM831X_PWR_WALL)){
-		uV = uV + ADC_GAP;
+		uV = uV + MD800_ADC_GAP;
 	}
 
 	if (uV >= 0) {
-			capc = 100 *(uV - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN);
+			capc = 100 *(uV - MD800_BATTERY_VOLTAGE_MIN) / (MD800_BATTERY_VOLTAGE_MAX - MD800_BATTERY_VOLTAGE_MIN);
 			ret = 0;
 		} else {
 			ret = -EINVAL;
@@ -438,7 +513,6 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 		if((ret & WM831X_CHG_STATE_MASK) == 0)
 			capc = 100;
 	}
-
 	if(first_time == 1){
 		first_time = 0;
 		if(!(status & WM831X_PWR_WALL))
@@ -624,16 +698,19 @@ static irqreturn_t wm831x_syslo_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+
 static irqreturn_t wm831x_pwr_src_irq(int irq, void *data)
 {
 	struct wm831x_power *wm831x_power = data;
 	struct wm831x *wm831x = wm831x_power->wm831x;
 
 	dev_dbg(wm831x->dev, "Power source changed\n");
+
 	/* Just notify for everything - little harm in overnotifying. */
 	power_supply_changed(&wm831x_power->battery);
 	power_supply_changed(&wm831x_power->usb);
 	power_supply_changed(&wm831x_power->wall);
+
 
 	return IRQ_HANDLED;
 }
@@ -645,6 +722,7 @@ static void battery_update_timer_func(unsigned long data)
 	mod_timer(&power->battery_update_timer,
 		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
 }
+
 static __devinit int wm831x_power_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
@@ -658,6 +736,8 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	power = kzalloc(sizeof(struct wm831x_power), GFP_KERNEL);
 	if (power == NULL)
 		return -ENOMEM;
+
+	printk(KERN_DEBUG "md800 pmic power\n");
 
 	power->wm831x = wm831x;
 	platform_set_drvdata(pdev, power);
@@ -821,3 +901,4 @@ MODULE_DESCRIPTION("Power supply driver for WM831x PMICs");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wm831x-power");
+
