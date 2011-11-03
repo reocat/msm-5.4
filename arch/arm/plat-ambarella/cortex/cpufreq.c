@@ -145,7 +145,8 @@ static int ambarella_cpu_init(struct cpufreq_policy *policy)
 		if (IS_ERR(vdd_axi)) {
 			pr_err("Unable to obtain voltage regulator for VDD_AXI;"
 				" voltage scaling unsupported\n");
-			return PTR_ERR(vdd_axi);
+			//return PTR_ERR(vdd_axi);
+			vdd_axi = NULL;
 		}
 	}
 #endif
@@ -166,7 +167,8 @@ static int ambarella_cpu_exit(struct cpufreq_policy *policy)
 {
 	cpufreq_frequency_table_cpuinfo(policy, freq_table);
 #ifdef CONFIG_REGULATOR
-	regulator_put(vdd_axi);
+	if (vdd_axi)
+		regulator_put(vdd_axi);
 #endif
 	return 0;
 }
