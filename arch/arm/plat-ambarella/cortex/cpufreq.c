@@ -34,8 +34,8 @@ static unsigned int vol_table[] = {
 	[0] = 1200000,
 	[1] = 1200000,
 	[2] = 1200000,
-	[3] = 1200000,
-	[4] = 1200000,
+	[3] = 1300000,
+	[4] = 1300000,
 	[5] = 1300000,
 };
 #endif
@@ -47,7 +47,7 @@ static struct cpufreq_frequency_table freq_table[] = {
 	{ 2, 600000 },	/* INTPROG=24 */
 	{ 3, 768000 },	/* INTPROG=31 */
 	{ 4, 888000 },	/* INTPROG=36 */
-	{ 5, 1008000 },	/* INTPROG=41 */
+//	{ 5, 1008000 },	/* INTPROG=41 */
 	{ 6, CPUFREQ_TABLE_END },
 };
 
