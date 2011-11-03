@@ -1053,6 +1053,7 @@ static void ambarella_spi_complete(void *arg)
 int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_write)
 {
 	u8				bus_id, cs_id, cs_num;
+	unsigned long			flags;
 	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
@@ -1103,9 +1104,9 @@ int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_write)
 	spi->max_speed_hz	= spi_cfg->baud_rate;
 
 	/* Wait */
-	spin_lock_irq(&ps[cs_id].lock);
+	spin_lock_irqsave(&ps[cs_id].lock, flags);
 	errorCode = spi->master->transfer(spi, &msg);
-	spin_unlock_irq(&ps[cs_id].lock);
+	spin_unlock_irqrestore(&ps[cs_id].lock, flags);
 	if (!errorCode)
 		wait_for_completion(&done);
 
@@ -1118,6 +1119,7 @@ EXPORT_SYMBOL(ambarella_spi_write);
 int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_read)
 {
 	u8				bus_id, cs_id, cs_num;
+	unsigned long			flags;
 	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
@@ -1168,9 +1170,9 @@ int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_read)
 	spi->max_speed_hz	= spi_cfg->baud_rate;
 
 	/* Wait */
-	spin_lock_irq(&ps[cs_id].lock);
+	spin_lock_irqsave(&ps[cs_id].lock, flags);
 	errorCode = spi->master->transfer(spi, &msg);
-	spin_unlock_irq(&ps[cs_id].lock);
+	spin_unlock_irqrestore(&ps[cs_id].lock, flags);
 	if (!errorCode)
 		wait_for_completion(&done);
 
@@ -1185,6 +1187,7 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 {
 	u8				bus_id, cs_id, cs_num, *buf;
 	u16				size;
+	unsigned long			flags;
 	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
@@ -1247,9 +1250,9 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 	spi->max_speed_hz	= spi_cfg->baud_rate;
 
 	/* Wait */
-	spin_lock_irq(&ps[cs_id].lock);
+	spin_lock_irqsave(&ps[cs_id].lock, flags);
 	errorCode = spi->master->transfer(spi, &msg);
-	spin_unlock_irq(&ps[cs_id].lock);
+	spin_unlock_irqrestore(&ps[cs_id].lock, flags);
 	if (!errorCode)
 		wait_for_completion(&done);
 
@@ -1268,6 +1271,7 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 	amba_spi_write_and_read_t *spi_write_and_read)
 {
 	u8				bus_id, cs_id, cs_num;
+	unsigned long			flags;
 	int				errorCode;
 	struct ambarella_spi_private	*ps;
 	struct spi_device		*spi;
@@ -1320,9 +1324,9 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 	spi->max_speed_hz	= spi_cfg->baud_rate;
 
 	/* Wait */
-	spin_lock_irq(&ps[cs_id].lock);
+	spin_lock_irqsave(&ps[cs_id].lock, flags);
 	errorCode = spi->master->transfer(spi, &msg);
-	spin_unlock_irq(&ps[cs_id].lock);
+	spin_unlock_irqrestore(&ps[cs_id].lock, flags);
 	if (!errorCode)
 		wait_for_completion(&done);
 
