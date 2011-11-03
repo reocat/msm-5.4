@@ -21,20 +21,34 @@
  *
  */
 
+#include <linux/regulator/consumer.h>
 #include <linux/cpufreq.h>
+#include <linux/err.h>
 #include <mach/hardware.h>
 #include <hal/hal.h>
+
+#ifdef CONFIG_REGULATOR
+static struct regulator *vdd_axi = NULL;
+/* CPU power table, it correspond with the frequency table.  */
+static unsigned int vol_table[] = {
+	[0] = 1200000,
+	[1] = 1200000,
+	[2] = 1200000,
+	[3] = 1200000,
+	[4] = 1200000,
+	[5] = 1300000,
+};
+#endif
 
 /* Frequency table index must be sequential starting at 0 */
 static struct cpufreq_frequency_table freq_table[] = {
 	{ 0, 360000 },	/* INTPROG=14 */
 	{ 1, 480000 },	/* INTPROG=19 */
 	{ 2, 600000 },	/* INTPROG=24 */
-//	{ 3, 768000 },	/* INTPROG=31 */
-//	{ 4, 864000 },	/* INTPROG=35 */
-//	{ 5, 984000 },	/* INTPROG=40 */
-//	{ 6, 1200000 },	/* INTPROG=49 */
-	{ 7, CPUFREQ_TABLE_END },
+	{ 3, 768000 },	/* INTPROG=31 */
+	{ 4, 888000 },	/* INTPROG=36 */
+	{ 5, 1008000 },	/* INTPROG=41 */
+	{ 6, CPUFREQ_TABLE_END },
 };
 
 static int ambarella_verify_speed(struct cpufreq_policy *policy)
@@ -75,12 +89,42 @@ static int ambarella_target(struct cpufreq_policy *policy,
 	       freqs.old, freqs.new);
 #endif
 
+#ifdef CONFIG_REGULATOR
+	/* if moving to higher frequency, up the voltage beforehand */
+	if (vdd_axi && freqs.new > freqs.old) {
+		ret = regulator_set_voltage(vdd_axi,
+				vol_table[freq_table[idx].index],
+				vol_table[freq_table[idx].index]);
+		if (ret != 0) {
+			pr_err("cpufreq: Failed to set VDD_AXI for %dkHz: %d\n",
+			       freqs.new, ret);
+			goto err;
+		}
+	}
+#endif
+
 	ret = amb_set_cortex_clock_frequency(HAL_BASE_VP, freqs.new * 1000);
 	if (ret != AMB_HAL_SUCCESS) {
 		pr_err("cpu-ambarella: Failed to set cpu frequency to %d kHz\n",
 			freqs.new);
 		return ret;
 	}
+
+#ifdef CONFIG_REGULATOR
+	/* if moving to lower freq, lower the voltage after lowering freq */
+	if (vdd_axi && freqs.new < freqs.old) {
+		ret = regulator_set_voltage(vdd_axi,
+				vol_table[freq_table[idx].index],
+				vol_table[freq_table[idx].index]);
+		if (ret != 0) {
+			pr_err("cpufreq: Failed to set VDD_AXI for %dkHz: %d\n",
+			       freqs.new, ret);
+			/* Although failed to set voltage, we still stay on new frequency */
+			goto err;
+		}
+	}
+err:
+#endif
 
 	for_each_online_cpu(freqs.cpu)
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
@@ -93,6 +137,18 @@ static int ambarella_cpu_init(struct cpufreq_policy *policy)
 	if (policy->cpu >= NR_CPUS)
 		return -EINVAL;
 
+#ifdef CONFIG_REGULATOR
+	/* ambarella_cpu_init() will be called per cpu,
+	 * but we need only one regulator. */
+	if (vdd_axi == NULL) {
+		vdd_axi = regulator_get(NULL, "cpu_vcc");
+		if (IS_ERR(vdd_axi)) {
+			pr_err("Unable to obtain voltage regulator for VDD_AXI;"
+				" voltage scaling unsupported\n");
+			return PTR_ERR(vdd_axi);
+		}
+	}
+#endif
 	cpufreq_frequency_table_cpuinfo(policy, freq_table);
 	cpufreq_frequency_table_get_attr(freq_table, policy->cpu);
 	policy->cur = ambarella_getspeed(policy->cpu);
@@ -109,6 +165,9 @@ static int ambarella_cpu_init(struct cpufreq_policy *policy)
 static int ambarella_cpu_exit(struct cpufreq_policy *policy)
 {
 	cpufreq_frequency_table_cpuinfo(policy, freq_table);
+#ifdef CONFIG_REGULATOR
+	regulator_put(vdd_axi);
+#endif
 	return 0;
 }
 
@@ -136,7 +195,6 @@ static void __exit ambarella_cpufreq_exit(void)
 {
         cpufreq_unregister_driver(&ambarella_cpufreq_driver);
 }
-
 
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("cpufreq driver for Ambarella iONE Cortex");
