@@ -50,4 +50,5 @@ obj-y						+= uart.o
 obj-y						+= udc.o
 obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= uhc.o
+obj-$(CONFIG_CPU_FREQ)				+= cpufreq.o
 

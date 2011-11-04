@@ -46,4 +46,5 @@ obj-$(CONFIG_CODEC_AMBARELLA_WM8737)		+= codec-wm8737.o
 obj-$(CONFIG_CODEC_AMBARELLA_ES8328)		+= codec-es8328.o
 
 obj-$(CONFIG_PMIC_AMBARELLA_WM831X)		+= wm831x-config.o
+obj-$(CONFIG_CPUFREQ_AMBARELLA_DEVICE)		+= cpufreq-dev.o
 
