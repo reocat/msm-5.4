@@ -44,7 +44,7 @@
 
 static const char		gadget_name[] = "ambarella_udc";
 static const char		driver_desc[] = DRIVER_DESC;
-static const char 	ep0name [] = "ep0";
+static const char 		ep0name [] = "ep0";
 
 static struct ambarella_udc	*the_controller;
 
@@ -59,6 +59,12 @@ static const char *amb_ep_string[] = {
 	"ep4out-bulk", "ep5out-bulk", "ep6out-bulk", "ep7out-bulk",
 	"ep8out-bulk", "ep9out-bulk", "ep10out-bulk", "ep11out-bulk",
 	"ep12out-bulk", "ep13out-bulk", "ep14out-bulk", "ep15out-bulk"
+};
+
+/* must keep consistent with enum ambarella_udc_status */
+static const char *amb_udc_status_str [] = {
+	"Unknown", "Enabled", "Configured", "Suspend", "Resume",
+	"Disabled", "Bussuspend"
 };
 
 /*************************** DEBUG FUNCTION ***************************/
@@ -109,9 +115,11 @@ static void ambarella_uevent_work(struct work_struct *data)
 	char *envp[2];
 
 	udc = container_of(data, struct ambarella_udc, uevent_work);
+	buf[0] = '\0';
 
 	spin_lock_irq(&udc->lock);
-	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s", udc->udc_state);
+	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s",
+			amb_udc_status_str[amb_udc_status+1]);
 	spin_unlock_irq(&udc->lock);
 	envp[0] = buf;
 	envp[1] = NULL;
@@ -123,15 +131,19 @@ static int ambarella_proc_udc_read(char *page, char **start,
 {
 	struct ambarella_udc *udc;
 	int len;
+	char buf[64];
 
 	if (off != 0)
 		return 0;
 
 	udc = (struct ambarella_udc *)data;
+	buf[0] = '\0';
+
+	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s",
+			amb_udc_status_str[amb_udc_status+1]);
 
 	*start = page + off;
-	len = sprintf(*start, "%s (%s: %s)\n",
-		udc->udc_state,
+	len = sprintf(*start, "%s (%s: %s)\n", buf,
 		udc->driver ? udc->driver->driver.name : "NULL",
 		ambarella_check_connected(udc) ? "Connected" : "Disconnected");
 
@@ -1053,7 +1065,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		/* told UDC the configuration is done, and to ack HOST */
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_CSR_DONE);
 		udelay(150);
-		sprintf(udc->udc_state, "Configured");
+		amb_udc_status = AMBARELLA_UDC_STATUS_CONFIGURED;
 		schedule_work(&udc->uevent_work);
 
 	}
@@ -1110,7 +1122,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 			spin_lock(&udc->lock);
 		}
 
-		sprintf(udc->udc_state, "BusSuspend");
+		amb_udc_status = AMBARELLA_UDC_STATUS_BUSSUSPEND;
 		schedule_work(&udc->uevent_work);
 	}
 
@@ -1403,22 +1415,20 @@ static irqreturn_t ambarella_udc_vbus_irq(int irq, void *_dev)
 }
 #endif
 
-static int ambarella_check_vbus_event(struct notifier_block *nb,
-		unsigned long val, void *data)
+static void ambarella_vbus_timer(unsigned long data)
 {
-	struct ambarella_udc *udc = container_of(nb, struct ambarella_udc, vbus_event);
+	struct ambarella_udc *udc = (struct ambarella_udc *)data;
+	u32 connected;
 
-	switch (val) {
-	case AMBA_EVENT_CHECK_USBVBUS:
-		udc->vbus_status = *(u32 *)data;
+	connected = !!(amba_readl(VIC_RAW_STA_REG) & 0x1);
+
+	if (udc->vbus_status != connected) {
+		udc->vbus_status = connected;
 		ambarella_udc_vbus_session(&udc->gadget, udc->vbus_status);
-		break;
-
-	default:
-		break;
 	}
 
-	return NOTIFY_OK;
+	if (!timer_pending(&udc->vbus_timer))
+		mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
 }
 
 static void ambarella_stop_activity(struct ambarella_udc *udc)
@@ -2042,6 +2052,9 @@ static void ambarella_udc_enable(struct ambarella_udc *udc)
 	/* Resume if udc is connected to host */
 	if(ambarella_check_connected(udc))
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_REMOTE_WAKEUP);
+
+	amb_udc_status = AMBARELLA_UDC_STATUS_ENABLED;
+	schedule_work(&udc->uevent_work);
 }
 
 /*
@@ -2049,8 +2062,6 @@ static void ambarella_udc_enable(struct ambarella_udc *udc)
  */
 static void ambarella_udc_disable(struct ambarella_udc *udc)
 {
-	dprintk(DEBUG_NORMAL, "Enter.\n");
-
 	/* Disable all interrupts and Clear the interrupt registers */
 	ambarella_disable_all_intr();
 
@@ -2062,7 +2073,8 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 
 	udc->gadget.speed = USB_SPEED_UNKNOWN;
 
-	dprintk(DEBUG_NORMAL, "Exit.\n");
+	amb_udc_status = AMBARELLA_UDC_STATUS_DISABLED;
+	schedule_work(&udc->uevent_work);
 }
 
 
@@ -2104,9 +2116,6 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 {
 	struct ambarella_udc *udc = the_controller;
 	int retval;
-
-	dprintk(DEBUG_NORMAL, "driver name is '%s'\n",
-		driver->driver.name);
 
 	/* Sanity checks */
 	if (!udc)
@@ -2150,11 +2159,6 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	/* Enable udc */
 	ambarella_udc_enable(udc);
 
-	sprintf(udc->udc_state, "Registered");
-	schedule_work(&udc->uevent_work);
-
-	dprintk(DEBUG_NORMAL, "%s() Exit\n", __func__);
-
 	return 0;
 
 register_error:
@@ -2171,9 +2175,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
 	unsigned long flags;
 	struct ambarella_udc *udc = the_controller;
-
-	dprintk(DEBUG_NORMAL,"usb_gadget_unregister_driver() '%s'\n",
-		driver->driver.name);
 
 	if (!udc)
 		return -ENODEV;
@@ -2193,9 +2194,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	udc->gadget.dev.driver = NULL;
 
 	ambarella_udc_disable(udc);
-
-	sprintf(udc->udc_state, "Unregistered");
-	schedule_work(&udc->uevent_work);
 
 	return 0;
 }
@@ -2230,6 +2228,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	udc->dev = &pdev->dev;
 	udc->reset_by_host = 0;
+	udc->vbus_status = 0;
 	/* Initial USB PLL */
 	udc->controller_info->init_pll();
 	/* Reset USB */
@@ -2285,8 +2284,12 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 		return retval;
 	}
 #endif
-	udc->vbus_event.notifier_call =	ambarella_check_vbus_event;
-	ambarella_register_event_notifier(&udc->vbus_event);
+
+	if (udc->controller_info->vbus_polled) {
+		setup_timer(&udc->vbus_timer,
+			ambarella_vbus_timer, (unsigned long)udc);
+		mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
+	}
 
 	INIT_WORK(&udc->uevent_work, ambarella_uevent_work);
 
@@ -2300,8 +2303,6 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	} else {
 		udc->proc_file->read_proc = ambarella_proc_udc_read;
 		udc->proc_file->data = udc;
-		sprintf(udc->udc_state, "Probed");
-		schedule_work(&udc->uevent_work);
 	}
 	create_proc_files();
 
@@ -2340,7 +2341,6 @@ static int __devexit ambarella_udc_remove(struct platform_device *pdev)
 	remove_proc_entry("udc", get_ambarella_proc_dir());
 	remove_proc_files();
 
-	ambarella_unregister_event_notifier(&udc->vbus_event);
 	free_irq(USBC_IRQ, udc);
 
 	dma_pool_free(udc->desc_dma_pool, udc->dummy_desc, udc->dummy_desc_addr);
@@ -2375,7 +2375,7 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	ambarella_udc_set_pullup(udc, 0);
 	spin_unlock_irqrestore(&udc->lock, flags);
 
-	sprintf(udc->udc_state, "Suspend");
+	amb_udc_status = AMBARELLA_UDC_STATUS_SUSPEND;
 	schedule_work(&udc->uevent_work);
 
 	return retval;
@@ -2405,7 +2405,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	ambarella_udc_set_pullup(udc, 1);
 	spin_unlock_irqrestore(&udc->lock, flags);
 
-	sprintf(udc->udc_state, "Resume");
+	amb_udc_status = AMBARELLA_UDC_STATUS_RESUME;
 	schedule_work(&udc->uevent_work);
 
 	return retval;

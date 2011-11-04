@@ -28,19 +28,19 @@ USB device controller on Ambarella processors
 #ifndef _AMBARELLA_UDC_H
 #define _AMBARELLA_UDC_H
 
-#define CTRL_IN		0
+#define CTRL_IN			0
 #define CTRL_OUT		16
 
 #define EP_IN_NUM		16
 #define EP_NUM_MAX		32
 
-#define CTRL_OUT_UDC_IDX		11
+#define CTRL_OUT_UDC_IDX	11
 
 #define IS_EP0(ep)		(ep->id == CTRL_IN || ep->id == CTRL_OUT)
 
-#define UDC_DMA_MAXPACKET		65536
+#define UDC_DMA_MAXPACKET	65536
 
-#define UDC_STATE_MAX_LENGTH	32
+#define VBUS_POLL_TIMEOUT	msecs_to_jiffies(500)
 
 //-------------------------------------
 // Structure definition
@@ -77,7 +77,7 @@ struct ambarella_ep_reg {
 	u32 sts_reg;
 	u32 buf_sz_reg;		// IN_EP: buf_sz_reg,     OUT_EP: pkt_frm_num_reg
 	u32 max_pkt_sz_reg;	// IN_EP: max_pkt_sz_reg,   OUT EP: buffer_size_max_pkt_sz_reg
-	u32 setup_buf_ptr_reg; // Just for ep0
+	u32 setup_buf_ptr_reg;	// Just for ep0
 	u32 dat_desc_ptr_reg;
 	//u32 rw_confirm;	// For slave-only mode
 };
@@ -103,60 +103,58 @@ struct ambarella_request {
 
 struct ambarella_ep {
 
-	struct list_head	queue;
-	struct ambarella_udc	*udc;
+	struct list_head		queue;
+	struct ambarella_udc		*udc;
 	const struct usb_endpoint_descriptor *desc;
-	struct usb_ep		ep;
-	u8 			id;
-	u8 			dir;
+	struct usb_ep			ep;
+	u8 				id;
+	u8 				dir;
 
-	struct ambarella_ep_reg	ep_reg;
+	struct ambarella_ep_reg		ep_reg;
 
 	struct ambarella_data_desc 	*data_desc;
 	struct ambarella_data_desc 	*last_data_desc;
-	dma_addr_t		data_desc_addr; /* data_desc Physical Address */
+	dma_addr_t			data_desc_addr; /* data_desc Physical Address */
 
-	unsigned		halted : 1,
-				cancel_transfer : 1,
-				need_cnak : 1,
-				ctrl_sts_phase : 1,
-	        	        dma_going : 1;
+	unsigned			halted : 1,
+					cancel_transfer : 1,
+					need_cnak : 1,
+					ctrl_sts_phase : 1,
+					dma_going : 1;
 
 };
 
 struct ambarella_udc {
-	spinlock_t		lock;
-	struct device		*dev;
-	struct proc_dir_entry	*proc_file;
-	char			udc_state[UDC_STATE_MAX_LENGTH];
-	struct work_struct	uevent_work;
-	struct notifier_block	vbus_event;
-	u32			vbus_status;
+	spinlock_t			lock;
+	struct device			*dev;
+	struct proc_dir_entry		*proc_file;
+	struct work_struct		uevent_work;
+	struct timer_list		vbus_timer;
 
 	struct ambarella_udc_controller	*controller_info;
-	struct usb_gadget	gadget;
+	struct usb_gadget		gadget;
 	struct usb_gadget_driver	*driver;
 
-	struct dma_pool		*desc_dma_pool;
+	struct dma_pool			*desc_dma_pool;
 
-	struct ambarella_ep	ep[EP_NUM_MAX];
-	u32			setup[2];
-	dma_addr_t		setup_addr;	/* setup_desc Physical Address */
+	struct ambarella_ep		ep[EP_NUM_MAX];
+	u32				setup[2];
+	dma_addr_t			setup_addr;	/* setup_desc Physical Address */
 	struct ambarella_setup_desc	*setup_buf; /* for Control OUT ep only */
-	dma_addr_t		dummy_desc_addr;
+	dma_addr_t			dummy_desc_addr;
 	struct ambarella_data_desc	*dummy_desc;
 
-	u16			cur_config;
-	u16			cur_intf;
-	u16			cur_alt;
+	u16				cur_config;
+	u16				cur_intf;
+	u16				cur_alt;
 
-	unsigned 		auto_ack_0_pkt : 1,
-				remote_wakeup_en  : 1,
-				host_suspended : 1,
-				sys_suspended : 1,
-				reset_by_host : 1;
+	unsigned 			auto_ack_0_pkt : 1,
+					remote_wakeup_en  : 1,
+					host_suspended : 1,
+					sys_suspended : 1,
+					reset_by_host : 1,
+					vbus_status : 1;
 };
-
 
 /* Function Declaration  */
 static void ambarella_udc_done(struct ambarella_ep *ep,

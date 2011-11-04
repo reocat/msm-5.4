@@ -402,7 +402,20 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+enum ambarella_udc_status {
+	AMBARELLA_UDC_STATUS_UNKNOWN = -1,
+	AMBARELLA_UDC_STATUS_ENABLED = 0,
+	AMBARELLA_UDC_STATUS_CONFIGURED,
+	AMBARELLA_UDC_STATUS_SUSPEND,
+	AMBARELLA_UDC_STATUS_RESUME,
+	AMBARELLA_UDC_STATUS_DISABLED,
+	AMBARELLA_UDC_STATUS_BUSSUSPEND,
+};
+
+extern enum ambarella_udc_status amb_udc_status;
+
 struct ambarella_udc_controller {
+	u32					vbus_polled;
 	void					(*init_pll)(void);
 	void					(*reset_usb)(void);
 	int					(*flush_rxfifo)(void);
@@ -410,7 +423,6 @@ struct ambarella_udc_controller {
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_udc0;
-extern int ambarella_init_udc(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
