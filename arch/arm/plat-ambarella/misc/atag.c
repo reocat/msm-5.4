@@ -219,6 +219,8 @@ static struct ambarella_mem_hal_desc ambarella_hal_info = {
 	.remapped			= 0,
 	.inited				= 0,
 };
+DEFINE_SPINLOCK(ambarella_hal_info_lock);
+unsigned long ambarella_hal_info_lock_flags;
 #endif
 
 static struct ambarella_mem_rev_desc ambarella_bst_info = {
@@ -236,9 +238,13 @@ void __init ambarella_map_io(void)
 	int					bhal_mapped = 0;
 	struct map_desc				hal_desc;
 
+	spin_lock_irqsave(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 	halp = ambarella_hal_info.physaddr;
 	hals = ambarella_hal_info.size;
 	halv = ambarella_hal_info.virtual;
+	spin_unlock_irqrestore(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 #endif
 
 	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
@@ -277,6 +283,8 @@ void __init ambarella_map_io(void)
 	}
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	spin_lock_irqsave(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 	if (!bhal_mapped) {
 		if (!ambarella_hal_info.remapped) {
 			hal_desc.virtual = halv;
@@ -299,6 +307,8 @@ void __init ambarella_map_io(void)
 	else
 		pr_info("Ambarella: HAL\t= 0x%08x[0x%08x],0x%08x Map Fail!\n",
 			halp, halv, hals);
+	spin_unlock_irqrestore(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 #endif
 }
 
@@ -720,9 +730,13 @@ static int __init hal_mem_check(u32 pstart, u32 size, u32 vstart)
 		return -EINVAL;
 	}
 
+	spin_lock_irqsave(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 	ambarella_hal_info.physaddr = pstart;
 	ambarella_hal_info.size = size;
 	ambarella_hal_info.virtual = vstart;
+	spin_unlock_irqrestore(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 
 	return 0;
 }
@@ -753,6 +767,10 @@ __tagtable(ATAG_AMBARELLA_HAL, parse_mem_tag_hal);
 
 void *ambarella_hal_get_vp(void)
 {
+	u32					hal_vp;
+
+	spin_lock_irqsave(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 	if (unlikely((!ambarella_hal_info.remapped))) {
 		pr_err("%s: remap HAL first!\n", __func__);
 		BUG();
@@ -763,6 +781,7 @@ void *ambarella_hal_get_vp(void)
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
+		pr_err("%s: %d!\n", __func__, __LINE__);
 		retval = amb_hal_init(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE,
@@ -788,19 +807,34 @@ void *ambarella_hal_get_vp(void)
 		ambarella_hal_info.inited = 1;
 	}
 
-	return (void *)ambarella_hal_info.virtual;
+	hal_vp = ambarella_hal_info.virtual;
+	spin_unlock_irqrestore(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
+
+	return (void *)hal_vp;
 }
 EXPORT_SYMBOL(ambarella_hal_get_vp);
 
 u32 ambarella_hal_get_size(void)
 {
-	return ambarella_hal_info.size;
+	u32					hal_size;
+
+	spin_lock_irqsave(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
+	hal_size = ambarella_hal_info.size;
+	spin_unlock_irqrestore(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
+	return hal_size;
 }
 EXPORT_SYMBOL(ambarella_hal_get_size);
 
 void ambarella_hal_set_invalid(void)
 {
+	spin_lock_irqsave(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 	ambarella_hal_info.inited = 0;
+	spin_unlock_irqrestore(&ambarella_hal_info_lock,
+		ambarella_hal_info_lock_flags);
 }
 #endif
 

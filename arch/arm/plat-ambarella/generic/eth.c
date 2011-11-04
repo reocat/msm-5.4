@@ -39,53 +39,6 @@
 
 /* ==========================================================================*/
 #if (ETH_INSTANCES >= 1)
-
-static int ambarella_eth0_is_supportclk(void)
-{
-#if (SUPPORT_GMII == 1)
-	return 1;
-#else
-	return 0;
-#endif
-}
-
-static void ambarella_eth0_setclk(u32 freq)
-{
-#if (SUPPORT_GMII == 1)
-	if (amb_set_gtx_clock_frequency(HAL_BASE_VP, freq) !=
-		AMB_HAL_SUCCESS) {
- 		pr_info("%s: amb_set_gtx_clock_frequency fail!\n", __func__);
-	}
-	if (amb_set_gtx_clock_source(HAL_BASE_VP,
-		AMB_GTX_CLOCK_SOURCE_GTX_PLL) != AMB_HAL_SUCCESS) {
- 		pr_info("%s: amb_set_gtx_clock_source fail!\n", __func__);
-	}
-#endif
-}
-
-static u32 ambarella_eth0_getclk(void)
-{
-#if (SUPPORT_GMII == 1)
-	return amb_get_gtx_clock_frequency(HAL_BASE_VP);
-#else
-	return 0;
-#endif
-}
-
-static u32 ambarella_eth0_get_supported(void)
-{
-	u32					supported;
-
-	supported = (SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full | \
-		SUPPORTED_100baseT_Half | SUPPORTED_100baseT_Full | \
-		SUPPORTED_Autoneg | SUPPORTED_MII);
-#if (SUPPORT_GMII == 1)
-	supported |= (SUPPORTED_1000baseT_Half | SUPPORTED_1000baseT_Full);
-#endif
-
-	return supported;
-}
-
 static struct resource ambarella_eth0_resources[] = {
 	[0] = {
 		.start	= ETH_BASE,
@@ -101,8 +54,8 @@ static struct resource ambarella_eth0_resources[] = {
 
 struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	.mac_addr		= {0, 0, 0, 0, 0, 0},
-	.napi_weight		= 64,
-	.max_work_count		= 5,
+	.napi_weight		= 32,
+	.watchdog_timeo		= (2 * HZ),
 	.mii_id			= -1,
 	.phy_id			= 0x00008201,
 	.phy_irq	= {
@@ -112,6 +65,16 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 		.irq_gpio_val	= GPIO_LOW,
 		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	},
+	.phy_supported		= SUPPORTED_10baseT_Half |
+				SUPPORTED_10baseT_Full |
+				SUPPORTED_100baseT_Half |
+				SUPPORTED_100baseT_Full |
+#if (SUPPORT_GMII == 1)
+				SUPPORTED_1000baseT_Half |
+				SUPPORTED_1000baseT_Full |
+#endif
+				SUPPORTED_Autoneg |
+				SUPPORTED_MII,
 	.mii_power	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
@@ -122,15 +85,17 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.default_clk		= 125000000,
-	.default_1000_clk	= 125000000,
-	.default_100_clk	= 125000000,
-	.default_10_clk		= 125000000,
+	.mii_retry_limit	= 200,
+	.mii_retry_tmo		= 10,
+	.default_dma_bus_mode	= ETH_DMA_BUS_MODE_FB |
+				ETH_DMA_BUS_MODE_PBL_32 |
+				ETH_DMA_BUS_MODE_DA_RX,
+	.default_dma_opmode	= ETH_DMA_OPMODE_TTC_256 |
+				ETH_DMA_OPMODE_RTC_64 |
+				ETH_DMA_OPMODE_FUF,
+	.default_tx_ring_size	= 32,
+	.default_rx_ring_size	= 64,
 	.is_enabled		= rct_is_eth_enabled,
-	.is_supportclk		= ambarella_eth0_is_supportclk,
-	.setclk			= ambarella_eth0_setclk,
-	.getclk			= ambarella_eth0_getclk,
-	.get_supported		= ambarella_eth0_get_supported,
 };
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
 
@@ -165,31 +130,6 @@ struct platform_device ambarella_eth0 = {
 /* ==========================================================================*/
 #if (ETH_INSTANCES >= 2)
 
-static int ambarella_eth1_is_supportclk(void)
-{
-	return 0;
-}
-
-static void ambarella_eth1_setclk(u32 freq)
-{
-}
-
-static u32 ambarella_eth1_getclk(void)
-{
-	return 0;
-}
-
-static u32 ambarella_eth1_get_supported(void)
-{
-	u32					supported;
-
-	supported = (SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full | \
-		SUPPORTED_100baseT_Half | SUPPORTED_100baseT_Full | \
-		SUPPORTED_Autoneg | SUPPORTED_MII);
-
-	return supported;
-}
-
 static struct resource ambarella_eth1_resources[] = {
 	[0] = {
 		.start	= ETH2_BASE,
@@ -203,15 +143,15 @@ static struct resource ambarella_eth1_resources[] = {
 	},
 };
 
-int eth1_enabled(void)
+static int eth1_is_enabled(void)
 {
 	return 1;
 }
 
 struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 	.mac_addr		= {0, 0, 0, 0, 0, 0},
-	.napi_weight		= 64,
-	.max_work_count		= 5,
+	.napi_weight		= 32,
+	.watchdog_timeo		= (2 * HZ),
 	.mii_id			= -1,
 	.phy_id			= 0x00008201,
 	.phy_irq	= {
@@ -221,6 +161,12 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 		.irq_gpio_val	= GPIO_LOW,
 		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	},
+	.phy_supported		= SUPPORTED_10baseT_Half |
+				SUPPORTED_10baseT_Full |
+				SUPPORTED_100baseT_Half |
+				SUPPORTED_100baseT_Full |
+				SUPPORTED_Autoneg |
+				SUPPORTED_MII,
 	.mii_power	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
@@ -231,15 +177,17 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.default_clk		= 125000000,
-	.default_1000_clk	= 125000000,
-	.default_100_clk	= 125000000,
-	.default_10_clk		= 125000000,
-	.is_enabled		= eth1_enabled,
-	.is_supportclk		= ambarella_eth1_is_supportclk,
-	.setclk			= ambarella_eth1_setclk,
-	.getclk			= ambarella_eth1_getclk,
-	.get_supported		= ambarella_eth1_get_supported,
+	.mii_retry_limit	= 200,
+	.mii_retry_tmo		= 10,
+	.default_dma_bus_mode	= ETH_DMA_BUS_MODE_FB |
+				ETH_DMA_BUS_MODE_PBL_32 |
+				ETH_DMA_BUS_MODE_DA_RX,
+	.default_dma_opmode	= ETH_DMA_OPMODE_TTC_256 |
+				ETH_DMA_OPMODE_RTC_64 |
+				ETH_DMA_OPMODE_FUF,
+	.default_tx_ring_size	= 32,
+	.default_rx_ring_size	= 64,
+	.is_enabled		= eth1_is_enabled,
 };
 AMBA_ETH_PARAM_CALL(1, ambarella_eth1_platform_info, 0644);
 
