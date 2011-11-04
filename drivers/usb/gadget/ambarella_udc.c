@@ -1427,8 +1427,7 @@ static void ambarella_vbus_timer(unsigned long data)
 		ambarella_udc_vbus_session(&udc->gadget, udc->vbus_status);
 	}
 
-	if (!timer_pending(&udc->vbus_timer))
-		mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
+	mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
 }
 
 static void ambarella_stop_activity(struct ambarella_udc *udc)
@@ -2337,6 +2336,9 @@ static int __devexit ambarella_udc_remove(struct platform_device *pdev)
 	dprintk(DEBUG_NORMAL, "%s()\n", __func__);
 	if (udc->driver)
 		return -EBUSY;
+
+	if (udc->controller_info->vbus_polled)
+		del_timer_sync(&udc->vbus_timer);
 
 	remove_proc_entry("udc", get_ambarella_proc_dir());
 	remove_proc_files();
