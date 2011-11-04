@@ -40,21 +40,22 @@ struct wm831x_power {
 
 static void enable_battery_charge(struct wm831x *wm831x)
 {
-	int ret= 0;
+	int ret= 0,value=0;
+
+	value =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
+	if(value < 0){
+		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
+				value);
+		return;
+	}
+
 	ret = wm831x_reg_unlock(wm831x);
 	if (ret != 0) {
 		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
 		return;
 	}
 
-	ret =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
-	if(ret < 0){
-		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
-				ret);
-		return;
-	}
-
-	if(!(ret & WM831X_CHG_ENA_MASK)){
+	if(!(value & WM831X_CHG_ENA_MASK)){
 		ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
 				      WM831X_CHG_ENA_MASK,
 				      WM831X_CHG_ENA);
@@ -67,21 +68,22 @@ static void enable_battery_charge(struct wm831x *wm831x)
 
 static void disable_battery_charge(struct wm831x *wm831x)
 {
-	int ret= 0;
+	int ret= 0,value=0;
+
+	value =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
+	if(value < 0){
+		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
+				value);
+		return;
+	}
+
 	ret = wm831x_reg_unlock(wm831x);
 	if (ret != 0) {
 		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
 		return;
 	}
 
-	ret =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
-	if(ret < 0){
-		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
-				ret);
-		return;
-	}
-
-	if((ret & WM831X_CHG_ENA_MASK)){
+	if((value & WM831X_CHG_ENA_MASK)){
 		ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
 				      WM831X_CHG_ENA_MASK,
 				      0);
