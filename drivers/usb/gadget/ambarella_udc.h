@@ -130,6 +130,8 @@ struct ambarella_udc {
 	struct proc_dir_entry	*proc_file;
 	char			udc_state[UDC_STATE_MAX_LENGTH];
 	struct work_struct	uevent_work;
+	struct notifier_block	vbus_event;
+	u32			vbus_status;
 
 	struct ambarella_udc_controller	*controller_info;
 	struct usb_gadget	gadget;
@@ -178,7 +180,9 @@ static void ambarella_udc_enable(struct ambarella_udc *udc);
 
 static void ambarella_udc_disable(struct ambarella_udc *udc);
 
-static int ambarella_check_connected(void);
+static int ambarella_check_connected(struct ambarella_udc *udc);
+
+static int ambarella_udc_vbus_session(struct usb_gadget *gadget, int is_active);
 
 
 #endif

@@ -170,6 +170,9 @@ int __init ambarella_init_machine(char *board_name)
 	BUG_ON(retval != 0);
 #endif
 
+	retval = ambarella_init_udc();
+	BUG_ON(retval != 0);
+
 	return retval;
 }
 
