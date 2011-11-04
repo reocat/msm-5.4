@@ -264,12 +264,15 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
 	ambarella_board_generic.flash_enable.active_delay = 1;
 
-	/* Config ETH*/
+	/* Config ETH */
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
 	ambarella_eth0_platform_info.mii_id = 5;
 	ambarella_eth0_platform_info.phy_id = 0x004dd023;
 
-	/* Config SD*/
+	/* Config I2C */
+	ambarella_idc0_platform_info.clk_limit = 400000;
+
+	/* Config SD */
 	fio_default_owner = SELECT_FIO_SDIO;
 	ambarella_platform_sd_controller0.clk_limit = 25000000;
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
