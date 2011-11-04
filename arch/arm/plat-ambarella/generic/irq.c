@@ -584,10 +584,11 @@ void __init ambarella_init_irq(void)
 	irq_set_affinity(IDSP_VSYNC_IRQ, cpumask_of(0));
 	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
 #else
-	/* Set VIC sense and event type for each entry */
-	amba_writel(VIC_SENSE_REG, 0x00000000);
+	/* Set VIC sense and event type for each entry
+	 * note: we initialize udc vbus irq type here */
+	amba_writel(VIC_SENSE_REG, 0x00000001);
 	amba_writel(VIC_BOTHEDGE_REG, 0x00000000);
-	amba_writel(VIC_EVENT_REG, 0x00000000);
+	amba_writel(VIC_EVENT_REG, 0x00000001);
 
 #if (VIC_INSTANCES >= 2)
 	amba_writel(VIC2_SENSE_REG, 0x00000000);
