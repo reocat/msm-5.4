@@ -37,6 +37,8 @@ extern struct i2c_board_info ambarella_board_hdmi_info;
 
 extern	struct platform_device lcd_1p3831;
 
+extern	struct platform_device i1evk_cpufreq_device;
+
 extern struct wm831x_pdata wm8310_default_pdata;
 
 extern int ambarella_init_wm8994(void);

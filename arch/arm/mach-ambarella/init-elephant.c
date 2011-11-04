@@ -604,6 +604,7 @@ static void __init ambarella_init_elephant(void)
 
 			platform_device_register(&elephant_bt_rfkill);
 			platform_device_register(&lcd_1p3831);
+			platform_device_register(&i1evk_cpufreq_device);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 
