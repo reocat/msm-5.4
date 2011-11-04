@@ -324,7 +324,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.get_pll		= get_sd_freq_hz,
 #endif
 #if (SD_SUPPORT_PLL_SCALER == 1)
+#if (CHIP_REV == I1)
+	.support_pll_scaler	= 0,
+#else
 	.support_pll_scaler	= 1,
+#endif
 #else
 	.support_pll_scaler	= 0,
 #endif

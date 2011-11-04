@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 153372
+ * @version 156926
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -727,6 +727,8 @@ AMB_OPERATING_MODE_LOW_POWER_WITH_CORTEX,
 AMB_OPERATING_MODE_AUDIO_PLAYBACK,
 /** Audio capture */
 AMB_OPERATING_MODE_AUDIO_CAPTURE,
+/** Duplex mode */
+AMB_OPERATING_MODE_DUPLEX,
 /* Reserved */
 AMB_OPERATING_MODE_RESERVED = 0xffffffffUL
 } amb_mode_t ;

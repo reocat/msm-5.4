@@ -32,33 +32,35 @@
 
 struct ambarella_eth_platform_info {
 	u8					mac_addr[AMBETH_MAC_SIZE];
-	int					napi_weight;
-	int					max_work_count;
-	int					mii_id;
+	u32					napi_weight;
+	u32					watchdog_timeo;
+
 	u32					phy_id;
 	struct ambarella_gpio_irq_info		phy_irq;
+	u32					phy_supported;
+	u32					mii_id;
 	struct ambarella_gpio_io_info		mii_power;
 	struct ambarella_gpio_io_info		mii_reset;
-	int					default_clk;
-	int					default_1000_clk;
-	int					default_100_clk;
-	int					default_10_clk;
+	u32					mii_retry_limit;
+	u32					mii_retry_tmo;
+
+	u32					default_dma_bus_mode;
+	u32					default_dma_opmode;
+	u32					default_tx_ring_size;
+	u32					default_rx_ring_size;
 
 	int					(*is_enabled)(void);
-	int					(*is_supportclk)(void);
-	void					(*setclk)(u32 freq);
-	u32					(*getclk)(void);
-	u32					(*get_supported)(void);
 };
 #define AMBA_ETH_PARAM_CALL(id, arg, perm) \
-	module_param_cb(eth##id##_napi_weight, &param_ops_int, &(arg.napi_weight), perm); \
-	module_param_cb(eth##id##_max_work_count, &param_ops_int, &(arg.max_work_count), perm); \
-	module_param_cb(eth##id##_mii_id, &param_ops_int, &(arg.mii_id), perm); \
+	module_param_cb(eth##id##_napi_weight, &param_ops_uint, &(arg.napi_weight), perm); \
+	module_param_cb(eth##id##_watchdog_timeo, &param_ops_uint, &(arg.watchdog_timeo), perm); \
 	module_param_cb(eth##id##_phy_id, &param_ops_uint, &(arg.phy_id), perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(eth##id##_phy_irq_, arg.phy_irq, perm); \
+	module_param_cb(eth##id##_mii_id, &param_ops_uint, &(arg.mii_id), perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm); \
-	module_param_cb(eth##id##_default_clk, &param_ops_uint, &(arg.default_clk), perm)
+	module_param_cb(eth##id##_mii_retry_limit, &param_ops_uint, &(arg.mii_retry_limit), perm); \
+	module_param_cb(eth##id##_mii_retry_tmo, &param_ops_uint, &(arg.mii_retry_tmo), perm);
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_eth0;

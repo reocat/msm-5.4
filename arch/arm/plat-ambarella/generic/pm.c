@@ -30,6 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/cpu.h>
+#include <linux/power_supply.h>
 
 #include <asm/cacheflush.h>
 #include <asm/io.h>
@@ -51,6 +52,9 @@
 /* ==========================================================================*/
 static int pm_debug_enable_timer_irq = 0;
 module_param(pm_debug_enable_timer_irq, int, 0644);
+
+static int pm_check_power_supply = 1;
+module_param(pm_check_power_supply, int, 0644);
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
@@ -250,6 +254,10 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 			valid = 1;
 		}
 #endif
+		if (pm_check_power_supply &&
+			(power_supply_is_system_supplied() > 0)) {
+			valid = 0;
+		}
 		break;
 
 	default:
