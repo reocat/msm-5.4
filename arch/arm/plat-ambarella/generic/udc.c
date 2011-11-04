@@ -31,6 +31,10 @@
 #include <mach/hardware.h>
 #include <plat/udc.h>
 
+/* amb_udc_status will be modified in ambarella_udc.c */
+enum ambarella_udc_status amb_udc_status = AMBARELLA_UDC_STATUS_UNKNOWN;
+EXPORT_SYMBOL(amb_udc_status);
+
 /* ==========================================================================*/
 struct resource ambarella_udc_resources[] = {
 	[0] = {
@@ -99,6 +103,7 @@ static int flush_rxfifo(void)
 }
 
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
+	.vbus_polled	= 1,	/* need to poll vbus(usb cable) status */
 	.init_pll	= init_usb,
 	.reset_usb	= reset_usb,
 	.flush_rxfifo	= flush_rxfifo,
@@ -115,39 +120,4 @@ struct platform_device ambarella_udc0 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
-
-
-/*****************************************************************************/
-#define VBUS_POLL_TIMEOUT	msecs_to_jiffies(500)
-
-static struct timer_list vbus_timer;
-static int pre_vbus_connected = -1;
-
-static void ambarella_vbus_timer(unsigned long dummy)
-{
-	int rval;
-	u32 connected;
-
-	connected = !!(amba_readl(VIC_RAW_STA_REG) & 0x1);
-
-	if (pre_vbus_connected != connected) {
-		pre_vbus_connected = connected;
-		rval = notifier_to_errno(
-			ambarella_set_event(AMBA_EVENT_CHECK_USBVBUS, &connected));
-		if (rval) {
-			pr_err("%s: AMBA_EVENT_CHECK_USBVBUS failed(%d)\n",
-				__func__, rval);
-		}
-	}
-
-	mod_timer(&vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
-}
-
-int ambarella_init_udc(void)
-{
-	setup_timer(&vbus_timer, ambarella_vbus_timer, 0);
-	mod_timer(&vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
-
-	return 0;
-}
 
