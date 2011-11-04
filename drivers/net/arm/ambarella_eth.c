@@ -643,14 +643,16 @@ static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
 	struct sk_buff				*skb;
 
 	for (i = 0; i < lp->rx_count; i++) {
-		skb = lp->rx.rng_rx[i].skb;
-		mapping = lp->rx.rng_rx[i].mapping;
-		lp->rx.rng_rx[i].skb = NULL;
-		lp->rx.rng_rx[i].mapping = 0;
-		if (skb) {
-			dma_unmap_single(&lp->ndev->dev, mapping,
-				skb->len, DMA_FROM_DEVICE);
-			dev_kfree_skb(skb);
+		if (lp->rx.rng_rx) {
+			skb = lp->rx.rng_rx[i].skb;
+			mapping = lp->rx.rng_rx[i].mapping;
+			lp->rx.rng_rx[i].skb = NULL;
+			lp->rx.rng_rx[i].mapping = 0;
+			if (skb) {
+				dma_unmap_single(&lp->ndev->dev, mapping,
+					skb->len, DMA_FROM_DEVICE);
+				dev_kfree_skb(skb);
+			}
 		}
 		if (lp->rx.desc_rx) {
 			lp->rx.desc_rx[i].status = 0;
@@ -697,14 +699,16 @@ static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
 		}
 	}
 	for (i = 0; i < lp->tx_count; i++) {
-		skb = lp->tx.rng_tx[i].skb;
-		mapping = lp->tx.rng_tx[i].mapping;
-		lp->tx.rng_tx[i].skb = NULL;
-		lp->tx.rng_tx[i].mapping = 0;
-		if (skb) {
-			dma_unmap_single(&lp->ndev->dev, mapping,
-				skb->len, DMA_TO_DEVICE);
-			dev_kfree_skb(skb);
+		if (lp->tx.rng_tx) {
+			skb = lp->tx.rng_tx[i].skb;
+			mapping = lp->tx.rng_tx[i].mapping;
+			lp->tx.rng_tx[i].skb = NULL;
+			lp->tx.rng_tx[i].mapping = 0;
+			if (skb) {
+				dma_unmap_single(&lp->ndev->dev, mapping,
+					skb->len, DMA_TO_DEVICE);
+				dev_kfree_skb(skb);
+			}
 		}
 		if (lp->tx.desc_tx) {
 			lp->tx.desc_tx[i].status = 0;
