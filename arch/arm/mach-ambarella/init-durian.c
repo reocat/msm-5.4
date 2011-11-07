@@ -280,25 +280,25 @@ static void __init ambarella_init_durian(void)
 	ambarella_board_generic.lcd_spi_hw.bus_id = 0;
 	ambarella_board_generic.lcd_spi_hw.cs_id = 1;
 
-	ambarella_board_generic.vin_vsync.irq_gpio = GPIO(95);
-	ambarella_board_generic.vin_vsync.irq_line = gpio_to_irq(95);
-	ambarella_board_generic.vin_vsync.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.vin_vsync.irq_gpio_val = GPIO_HIGH;
-	ambarella_board_generic.vin_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(95);
+	ambarella_board_generic.vin0_vsync.irq_line = gpio_to_irq(95);
+	ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
+	ambarella_board_generic.vin0_vsync.irq_gpio_val = GPIO_HIGH;
+	ambarella_board_generic.vin0_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-	ambarella_board_generic.vin_power.gpio_id = EXT_GPIO(0);
-	ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
-	ambarella_board_generic.vin_power.active_delay = 1;
+	ambarella_board_generic.vin0_power.gpio_id = EXT_GPIO(0);
+	ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
+	ambarella_board_generic.vin0_power.active_delay = 1;
 
-	ambarella_board_generic.vin_reset.gpio_id = GPIO(7);
-	ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.vin_reset.active_delay = 100;
+	ambarella_board_generic.vin0_reset.gpio_id = GPIO(7);
+	ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.vin0_reset.active_delay = 100;
 
-	ambarella_board_generic.vin_strobe.irq_gpio = GPIO(21);
-	ambarella_board_generic.vin_strobe.irq_line = gpio_to_irq(21);
-	ambarella_board_generic.vin_strobe.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.vin_strobe.irq_gpio_val = GPIO_HIGH;
-	ambarella_board_generic.vin_strobe.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_board_generic.vin0_strobe.irq_gpio = GPIO(21);
+	ambarella_board_generic.vin0_strobe.irq_line = gpio_to_irq(21);
+	ambarella_board_generic.vin0_strobe.irq_type = IRQF_TRIGGER_RISING;
+	ambarella_board_generic.vin0_strobe.irq_gpio_val = GPIO_HIGH;
+	ambarella_board_generic.vin0_strobe.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
 	ambarella_board_generic.flash_charge_ready.irq_gpio = GPIO(13);
 	ambarella_board_generic.flash_charge_ready.irq_line = gpio_to_irq(13);

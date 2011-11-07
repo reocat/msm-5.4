@@ -64,12 +64,19 @@ struct ambarella_board_info {
 	struct ambarella_spi_hw_info		lcd_spi_hw;
 	struct ambarella_spi_cfg_info		lcd_spi_cfg;
 
-	struct ambarella_gpio_irq_info		vin_vsync;
-	struct ambarella_gpio_io_info		vin_power;
-	struct ambarella_gpio_io_info		vin_reset;
-	struct ambarella_gpio_io_info		vin_trigger;
-	struct ambarella_gpio_irq_info		vin_strobe;
-	struct ambarella_gpio_io_info		vin_hdmi_hpd;
+	struct ambarella_gpio_irq_info		vin0_vsync;
+	struct ambarella_gpio_io_info		vin0_power;
+	struct ambarella_gpio_io_info		vin0_reset;
+	struct ambarella_gpio_io_info		vin0_trigger;
+	struct ambarella_gpio_irq_info		vin0_strobe;
+	struct ambarella_gpio_io_info		vin0_hdmi_hpd;
+
+	struct ambarella_gpio_irq_info		vin1_vsync;
+	struct ambarella_gpio_io_info		vin1_power;
+	struct ambarella_gpio_io_info		vin1_reset;
+	struct ambarella_gpio_io_info		vin1_trigger;
+	struct ambarella_gpio_irq_info		vin1_strobe;
+	struct ambarella_gpio_io_info		vin1_hdmi_hpd;
 
 	struct ambarella_gpio_irq_info		flash_charge_ready;
 	struct ambarella_gpio_io_info		flash_enable;
@@ -150,12 +157,18 @@ struct ambarella_board_info {
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##lcd_backlight##_, arg.lcd_backlight, perm); \
 	module_param_cb(board_lcd_spi_bus_id, &param_ops_int, &(arg.lcd_spi_hw.bus_id), perm); \
 	module_param_cb(board_lcd_spi_cs_id, &param_ops_int, &(arg.lcd_spi_hw.cs_id), perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_vsync##_, arg.vin_vsync, perm); \
-	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_power##_, arg.vin_power, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##vin_reset##_, arg.vin_reset, perm); \
-	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_trigger##_, arg.vin_trigger, perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin_strobe##_, arg.vin_strobe, perm); \
-	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin_hdmi_hpd##_, arg.vin_hdmi_hpd, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin0_vsync##_, arg.vin0_vsync, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin0_power##_, arg.vin0_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##vin0_reset##_, arg.vin0_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin0_trigger##_, arg.vin0_trigger, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin0_strobe##_, arg.vin0_strobe, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin0_hdmi_hpd##_, arg.vin0_hdmi_hpd, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin1_vsync##_, arg.vin1_vsync, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin1_power##_, arg.vin1_power, perm); \
+	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##vin1_reset##_, arg.vin1_reset, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin1_trigger##_, arg.vin1_trigger, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##vin1_strobe##_, arg.vin1_strobe, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##vin1_hdmi_hpd##_, arg.vin1_hdmi_hpd, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##flash_charge_ready##_, arg.flash_charge_ready, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##flash_enable##_, arg.flash_enable, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##flash_trigger##_, arg.flash_trigger, perm); \

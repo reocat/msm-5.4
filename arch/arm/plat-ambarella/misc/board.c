@@ -167,36 +167,71 @@ struct ambarella_board_info ambarella_board_generic = {
 		.cs_id		= 0,
 	},
 
-	.vin_vsync	= {
+	.vin0_vsync	= {
 		.irq_gpio	= -1,
 		.irq_line	= -1,
 		.irq_type	= -1,
 		.irq_gpio_val	= GPIO_LOW,
 		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	},
-	.vin_power	= {
+	.vin0_power	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.vin_reset	= {
+	.vin0_reset	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.vin_trigger	= {
+	.vin0_trigger	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.vin_strobe	= {
+	.vin0_strobe	= {
 		.irq_gpio	= -1,
 		.irq_line	= -1,
 		.irq_type	= -1,
 		.irq_gpio_val	= GPIO_LOW,
 		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 	},
-	.vin_hdmi_hpd	= {
+	.vin0_hdmi_hpd	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+
+	.vin1_vsync	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.vin1_power	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.vin1_reset	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.vin1_trigger	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.vin1_strobe	= {
+		.irq_gpio	= -1,
+		.irq_line	= -1,
+		.irq_type	= -1,
+		.irq_gpio_val	= GPIO_LOW,
+		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
+	},
+	.vin1_hdmi_hpd	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
