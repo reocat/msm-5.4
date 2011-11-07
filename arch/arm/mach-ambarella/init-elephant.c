@@ -597,10 +597,20 @@ static void __init ambarella_init_elephant(void)
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
 
-			ambarella_board_generic.vin_power.gpio_id = GPIO(122);
-			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
-			ambarella_board_generic.vin_power.active_delay = 1;
-			i2c_register_board_info(0, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
+			//vin0: Rear Sensor vin1: Front Sensor
+			ambarella_board_generic.vin0_power.gpio_id = GPIO(122);
+			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin0_power.active_delay = 1;
+			i2c_register_board_info(0, &ambarella_board_vin_infos[0], 1);
+
+			ambarella_board_generic.vin1_power.gpio_id = GPIO(121);
+			ambarella_board_generic.vin1_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin1_power.active_delay = 1;
+
+			ambarella_board_generic.vin1_reset.gpio_id = GPIO(123);
+			ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.vin1_reset.active_delay = 1;
+			i2c_register_board_info(2, &ambarella_board_vin_infos[1], 1);
 
 			platform_device_register(&elephant_bt_rfkill);
 			platform_device_register(&lcd_1p3831);
@@ -688,9 +698,9 @@ static void __init ambarella_init_elephant(void)
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
 
-			ambarella_board_generic.vin_power.gpio_id = GPIO(113);
-			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
-			ambarella_board_generic.vin_power.active_delay = 10;
+			ambarella_board_generic.vin0_power.gpio_id = GPIO(113);
+			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin0_power.active_delay = 10;
 			i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 
 			platform_device_register(&lcd_1p3831);
@@ -829,15 +839,25 @@ static void __init ambarella_init_elephant(void)
 			ambarella_ft540_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_ft540_board_info, 1);
 
-			ambarella_board_generic.vin_power.gpio_id = GPIO(101);
-			ambarella_board_generic.vin_power.active_level = GPIO_HIGH;
-			ambarella_board_generic.vin_power.active_delay = 1;
+			ambarella_board_generic.vin0_power.gpio_id = GPIO(101);
+			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin0_power.active_delay = 1;
 
-			ambarella_board_generic.vin_reset.gpio_id = GPIO(107);
-			ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
-			ambarella_board_generic.vin_reset.active_delay = 1;
+			ambarella_board_generic.vin0_reset.gpio_id = GPIO(107);
+			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.vin0_reset.active_delay = 1;
 
-			i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
+			i2c_register_board_info(2, &ambarella_board_vin_infos[0], 1);
+
+			ambarella_board_generic.vin1_power.gpio_id = GPIO(100);
+			ambarella_board_generic.vin1_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin1_power.active_delay = 1;
+
+			ambarella_board_generic.vin1_reset.gpio_id = GPIO(102);
+			ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.vin1_reset.active_delay = 1;
+
+			i2c_register_board_info(0, &ambarella_board_vin_infos[1], 1);
 
 			platform_device_register(&elephant_bt_rfkill);
 
@@ -936,9 +956,9 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-		ambarella_board_generic.vin_reset.gpio_id = GPIO(12);
-		ambarella_board_generic.vin_reset.active_level = GPIO_LOW;
-		ambarella_board_generic.vin_reset.active_delay = 100;
+		ambarella_board_generic.vin0_reset.gpio_id = GPIO(12);
+		ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
+		ambarella_board_generic.vin0_reset.active_delay = 100;
 
 		ambarella_eth0_platform_info.mii_id = 0;
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;

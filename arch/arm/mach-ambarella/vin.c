@@ -30,7 +30,7 @@
 /* ==========================================================================*/
 struct i2c_board_info ambarella_board_vin_infos[2] = {
 	[0] = {
-		.type			= "amb_vin",
+		.type			= "amb_vin0",
 		.addr			= 0x02,
 	},
 	[1] = {
