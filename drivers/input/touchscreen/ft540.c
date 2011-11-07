@@ -139,9 +139,9 @@ static void ft540_update_lights_status(struct ft540 *ft)
 
 	//GPIO45
 	if (!(afsel & 0x00002000) && (dir & 0x00002000) && (data & 0x00002000)) {
-		ft->lights_enabled[FT_UPPER_LEFT] = 1;
+		ft->lights_enabled[FT_LOWER_RIGHT] = 1;
 	} else {
-		ft->lights_enabled[FT_UPPER_LEFT] = 0;
+		ft->lights_enabled[FT_LOWER_RIGHT] = 0;
 	}
 
 	//GPIO46
@@ -160,9 +160,9 @@ static void ft540_update_lights_status(struct ft540 *ft)
 
 	//GPIO51
 	if (!(afsel & 0x00080000) && (dir & 0x00080000) && (data & 0x00080000)) {
-		ft->lights_enabled[FT_LOWER_RIGHT] = 1;
+		ft->lights_enabled[FT_UPPER_LEFT] = 1;
 	} else {
-		ft->lights_enabled[FT_LOWER_RIGHT] = 0;
+		ft->lights_enabled[FT_UPPER_LEFT] = 0;
 	}
 }
 
