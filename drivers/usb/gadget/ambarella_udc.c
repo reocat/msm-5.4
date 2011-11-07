@@ -1646,7 +1646,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	}
 
 	udc = ep->udc;
-	if( unlikely( !udc->driver || udc->gadget.speed==USB_SPEED_UNKNOWN)){
+	if( unlikely( !udc->driver || udc->gadget.speed == USB_SPEED_UNKNOWN)){
 		dprintk(DEBUG_NORMAL, "%s: %01d %01d\n", _ep->name,
 			!udc->driver, udc->gadget.speed==USB_SPEED_UNKNOWN);
 		return -ESHUTDOWN;
@@ -2019,8 +2019,6 @@ static void ambarella_init_gadget(struct ambarella_udc *udc,
  */
 static void ambarella_udc_enable(struct ambarella_udc *udc)
 {
-	udc->gadget.speed = USB_SPEED_UNKNOWN;
-
 	/* Disable Tx and Rx DMA */
 	amba_clrbitsl(USB_DEV_CTRL_REG,
 		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
