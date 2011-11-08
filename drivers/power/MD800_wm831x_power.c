@@ -23,8 +23,9 @@
 #include <plat/gpio.h>
 
 #define BAT_UPDATE_DELAY_MSEC   5000
-#define MD800_ADC_GAP        700000
-#define MD800_BATTERY_VOLTAGE_MIN   3600000
+#define MD800_ADC_GAP        500000
+#define MD800_BATTERY_VOLTAGE_MIN   3800000
+#define MD800_BATTERY_VOLTAGE_MID   4000000
 #define MD800_BATTERY_VOLTAGE_MAX   4200000
 
 struct wm831x_power {
@@ -97,6 +98,7 @@ static void disable_battery_charge(struct wm831x *wm831x)
 static int usbcable_without_docking(void)
 {
 	int ret =0;
+	printk(KERN_DEBUG "usb cable without docking %d\n",amb_udc_status);
 	if((amb_udc_status == AMBARELLA_UDC_STATUS_CONFIGURED)
 		& (ambarella_gpio_get(GPIO(7)) == GPIO_LOW)){
 		printk(KERN_DEBUG "usb cable without docking \n");
@@ -497,11 +499,15 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	}
 
 	if (uV >= 0) {
-			capc = 100 *(uV - MD800_BATTERY_VOLTAGE_MIN) / (MD800_BATTERY_VOLTAGE_MAX - MD800_BATTERY_VOLTAGE_MIN);
-			ret = 0;
-		} else {
-			ret = -EINVAL;
+		if(uV <= MD800_BATTERY_VOLTAGE_MID){
+			capc = 30 *(uV - MD800_BATTERY_VOLTAGE_MIN) / (MD800_BATTERY_VOLTAGE_MID - MD800_BATTERY_VOLTAGE_MIN);
+		}else{
+			capc =30+ 70 *(uV - MD800_BATTERY_VOLTAGE_MID) / (MD800_BATTERY_VOLTAGE_MAX - MD800_BATTERY_VOLTAGE_MID);
 		}
+		ret = 0;
+	} else {
+		ret = -EINVAL;
+	}
 	if(capc >= 100)
 		capc = 99;
 
@@ -515,6 +521,7 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 		if((ret & WM831X_CHG_STATE_MASK) == 0)
 			capc = 100;
 	}
+
 	if(first_time == 1){
 		first_time = 0;
 		if(!(status & WM831X_PWR_WALL))
