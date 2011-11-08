@@ -8,6 +8,7 @@
  * published by the Free Software Foundation.
  */
 
+
 #include <linux/module.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>
@@ -410,7 +411,7 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 
 static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 {
-	int uV, ret,status,capc=0,stopcharge=0,chargecurrent=0;
+	int uV, ret,status,capc=0,chargecurrent=0;
 	static int       pre_adc_voltage_capacity = -1;
 	static int first_time=2;
 	static int times=2;
@@ -751,7 +752,7 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	ret = wm831x_reg_unlock(wm831x);
 	if (ret != 0) {
 		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
-		return;
+		return ret;
 	}
 
 	ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
