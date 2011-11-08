@@ -384,7 +384,7 @@ static struct regulator_init_data wm8310_default_ldo9_data __initdata = {
 		},
 		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
-		.boot_on = 1,
+		//.boot_on = 1,
 	},
 	 .num_consumer_supplies = ARRAY_SIZE(ldo9_consumers),
 	 .consumer_supplies = ldo9_consumers,
