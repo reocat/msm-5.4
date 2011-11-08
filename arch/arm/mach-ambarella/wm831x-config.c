@@ -463,7 +463,7 @@ static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.vsel = 4200,
 	.eoc_iterm = 20,
 	.fast_ilim = 1000,
-	.timeout = 360,
+	.timeout = 510,
 };
 
 static struct wm831x_status_pdata wm8310_default_on_led __initdata = {
