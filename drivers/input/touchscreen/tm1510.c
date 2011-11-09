@@ -137,7 +137,7 @@ static void tm1510_send_event(struct tm1510 *tm)
 
 	/* Button Pressed */
 	if (!prev_touch && curr_touch) {
-		input_report_abs(input, BTN_TOUCH, curr_touch);
+		input_report_key(input, BTN_TOUCH, curr_touch);
 		TM1510_DEBUG("Finger Pressed\n");
 	}
 
@@ -145,7 +145,7 @@ static void tm1510_send_event(struct tm1510 *tm)
 	if (prev_touch && !curr_touch) {
 		event = 1;
 		input_report_abs(input, ABS_PRESSURE, 0);
-		input_report_abs(input, BTN_TOUCH, 0);
+		input_report_key(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
 		input_mt_sync(input);
 		TM1510_DEBUG("Finger Released\n\n\n");
