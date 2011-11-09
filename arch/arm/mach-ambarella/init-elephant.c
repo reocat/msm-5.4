@@ -878,6 +878,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.wifi_sd_slot = 1;
 
 		case 1:
+		case 3:
 			ambarella_board_generic.lcd_power.gpio_id = GPIO(41);
 			ambarella_board_generic.lcd_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.lcd_power.active_delay = 1;
