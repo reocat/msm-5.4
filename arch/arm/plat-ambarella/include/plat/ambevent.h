@@ -18,6 +18,7 @@
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
+#include <linux/kobject.h>
 
 /* Copy from build/include/ambas_event.h */
 enum amb_event_type {
