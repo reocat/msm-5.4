@@ -200,6 +200,26 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 	}
 }
 
+static inline void ambhw_dma_stop_tx_rx(struct ambeth_info *lp)
+{
+	unsigned int				irq_status;
+	int					i = 1300;
+
+	amba_clrbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
+		(ETH_DMA_OPMODE_SR | ETH_DMA_OPMODE_ST));
+	do {
+		udelay(1);
+		irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
+	} while ((irq_status & (ETH_DMA_STATUS_TS_MASK |
+		ETH_DMA_STATUS_RS_MASK)) && --i);
+	if ((i <= 0) && netif_msg_drv(lp)) {
+		dev_err(&lp->ndev->dev,
+			"DMA Error: Stop TX/RX status=0x%x, opmode=0x%x.\n",
+			amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET),
+			amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET));
+	}
+}
+
 static inline void ambhw_set_dma_desc(struct ambeth_info *lp)
 {
 	amba_writel(lp->regbase + ETH_DMA_RX_DESC_LIST_OFFSET,
@@ -294,8 +314,7 @@ ambhw_init_exit:
 
 static inline void ambhw_disable(struct ambeth_info *lp)
 {
-	ambhw_dma_rx_stop(lp);
-	ambhw_dma_tx_stop(lp);
+	ambhw_dma_stop_tx_rx(lp);
 	ambhw_dma_int_disable(lp);
 	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
 	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
@@ -303,11 +322,15 @@ static inline void ambhw_disable(struct ambeth_info *lp)
 
 static inline void ambhw_dump(struct ambeth_info *lp)
 {
-	dev_info(&lp->ndev->dev, "RX BUS_MODE: 0x%08x.\n",
+	dev_info(&lp->ndev->dev, "MAC_CFG: 0x%08x.\n",
+		amba_readl(lp->regbase + ETH_MAC_CFG_OFFSET));
+	dev_info(&lp->ndev->dev, "DMA_BUS_MODE: 0x%08x.\n",
 		amba_readl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET));
-	dev_info(&lp->ndev->dev, "RX DMA_STATUS: 0x%08x.\n",
+	dev_info(&lp->ndev->dev, "DMA_STATUS: 0x%08x.\n",
 		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
-	dev_info(&lp->ndev->dev, "RX DMA_INTEN: 0x%08x.\n",
+	dev_info(&lp->ndev->dev, "DMA_OPMODE: 0x%08x.\n",
+		amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET));
+	dev_info(&lp->ndev->dev, "DMA_INTEN: 0x%08x.\n",
 		amba_readl(lp->regbase + ETH_DMA_INTEN_OFFSET));
 	dev_info(&lp->ndev->dev, "RX Info: cur_rx %d, dirty_rx %d.\n",
 		lp->rx.cur_rx, lp->rx.dirty_rx);
@@ -1300,8 +1323,15 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 		if (status & ETH_RDES0_OWN)
 			break;
 		if (unlikely((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
-			(ETH_RDES0_FS | ETH_RDES0_LS)))
+			(ETH_RDES0_FS | ETH_RDES0_LS))) {
+			if (netif_msg_probe(lp)) {
+				dev_info(&lp->ndev->dev, "RX Info: Wrong FS/LS"
+				" cur_rx[%d] status 0x%08x.\n",
+				lp->rx.cur_rx, status);
+				ambhw_dump(lp);
+			}
 			break;
+		}
 
 		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 			ambeth_napi_rx(lp, status, entry);
