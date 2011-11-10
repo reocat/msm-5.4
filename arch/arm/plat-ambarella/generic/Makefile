@@ -20,6 +20,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
+obj-y						+= adb.o
 obj-y						+= adc.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ahci.o
 obj-y						+= audio.o
@@ -51,6 +52,4 @@ obj-y						+= udc.o
 obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= uhc.o
 obj-$(CONFIG_CPU_FREQ)				+= cpufreq.o
-
-obj-y						+= adb.o
 
