@@ -1067,6 +1067,10 @@ static void __init ambarella_init_elephant(void)
 		if (i == 4
 			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK)
 			continue;
+		if (i == 4
+			&& AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR
+			&& AMBARELLA_BOARD_REV(system_rev) == 3)
+			continue;
 		ret = platform_device_register(ambarella_pwm_devices[i]);
 		if (ret)
 			continue;
