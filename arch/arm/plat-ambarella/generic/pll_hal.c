@@ -74,6 +74,7 @@ static struct ambarella_pll_info pll_info;
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
+	{"capture_nopreview", AMB_OPERATING_MODE_CAPTURE_NOPREVIEW},
 	{"capture", AMB_OPERATING_MODE_CAPTURE},
 	{"playback", AMB_OPERATING_MODE_PLAYBACK},
 	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
@@ -83,6 +84,10 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
 	{"raw", AMB_OPERATING_MODE_RAW},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
+	{"ipcam_HP", AMB_OPERATING_MODE_IP_CAM_HP},
+	{"ipcam_HP1_372MHZ", AMB_OPERATING_MODE_IP_CAM_HP1},
+	{"ipcam_HP2_384MHZ", AMB_OPERATING_MODE_IP_CAM_HP2},
+	{"ipcam_HP3_396MHZ", AMB_OPERATING_MODE_IP_CAM_HP3},
 };
 #define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
 static struct ambarella_pll_performance_info performance_list[] = {

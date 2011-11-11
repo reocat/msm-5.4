@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 137166
+ * @version 143168
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -477,6 +477,8 @@ typedef enum {
 AMB_OPERATING_MODE_PREVIEW,
 /** Still picture capture */
 AMB_OPERATING_MODE_STILL_CAPTURE,
+/** Camera is on, video is being captured and no preview */
+AMB_OPERATING_MODE_CAPTURE_NOPREVIEW,
 /** Camera is on and video is being captured */
 AMB_OPERATING_MODE_CAPTURE,
 /** Video playback */
@@ -495,6 +497,14 @@ AMB_OPERATING_MODE_LOW_POWER,
 AMB_OPERATING_MODE_RAW,
 /** IP Cam */
 AMB_OPERATING_MODE_IP_CAM,
+/** IP Cam High Performance */
+AMB_OPERATING_MODE_IP_CAM_HP,
+/** IP Cam High Performance - 372 MHz ddr */
+AMB_OPERATING_MODE_IP_CAM_HP1,
+/** IP Cam High Performance - 384 MHz ddr */
+AMB_OPERATING_MODE_IP_CAM_HP2,
+/** IP Cam High Performance - 396 MHz ddr */
+AMB_OPERATING_MODE_IP_CAM_HP3,
 /* Reserved */
 AMB_OPERATING_MODE_RESERVED=0xffffffff
 } amb_mode_t ;
@@ -840,21 +850,21 @@ AMB_SENSOR_CLOCK_PAD_RESERVED_MODE=0xffffffff
 
 typedef enum {
 /** Low priority for dsp clients (75 of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_VERY_LOW_PRIORITY,
+AMB_DRAM_ARBITER_DSP_VERY_LOW_PRIORITY,
 /** Low priority for dsp clients (81.25% of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_LOW_PRIORITY,
+AMB_DRAM_ARBITER_DSP_LOW_PRIORITY,
 /** Normal priority for dsp clients (87.5% of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_NORMAL_PRIORITY,
+AMB_DRAM_ARBITER_DSP_NORMAL_PRIORITY,
 /** High priority for dsp clients (93.75% of total bandwidth - large arbiter throttle period) */
-AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY_HIGH_THROTTLE,
+AMB_DRAM_ARBITER_DSP_HIGH_PRIORITY_HIGH_THROTTLE,
 /** High priority for dsp clients (93.75% of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_HIGH_PRIORITY,
+AMB_DRAM_ARBITER_DSP_HIGH_PRIORITY,
 /** High priority for dsp clients (96.8% of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_VERY_HIGH_PRIORITY,
+AMB_DRAM_ARBITER_DSP_VERY_HIGH_PRIORITY,
 /** High priority for dsp clients (100% of total bandwidth) */
-AMB_DRAM_ARIBTER_DSP_HIGHEST_PRIORITY,
+AMB_DRAM_ARBITER_DSP_HIGHEST_PRIORITY,
 /* Reserved */
-AMB_DRAM_ARIBTER_DSP_RESERVED=0xffffffff
+AMB_DRAM_ARBITER_DSP_RESERVED=0xffffffff
 } amb_dram_arbiter_priority_t ;
 
 /**
