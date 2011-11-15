@@ -50,8 +50,10 @@ static const struct mxt_address_pair mxt_slave_addresses[] = {
 
 enum mxt_device_state { INIT, APPMODE, BOOTLOADER };
 
-/* Firmware */
+/* Firmware files */
 #define MXT_FW_NAME		"maxtouch.fw"
+#define MXT_CFG_NAME		"maxtouch.cfg"
+#define MXT_CFG_MAGIC		"OBP_RAW V1"
 
 /* Registers */
 #define MXT_FAMILY_ID		0x00
@@ -113,7 +115,7 @@ enum mxt_device_state { INIT, APPMODE, BOOTLOADER };
 #define MXT_POWER_ACTV2IDLETO	2
 
 #define MXT_POWER_CFG_RUN	0
-#define MXT_POWER_CFG_SLEEP	1
+#define MXT_POWER_CFG_DEEPSLEEP	1
 
 /* MXT_GEN_ACQUIRE_T8 field */
 #define MXT_ACQUIRE_CHRGTIME	0
@@ -201,6 +203,7 @@ enum mxt_device_state { INIT, APPMODE, BOOTLOADER };
 
 /* Define for MXT_GEN_COMMAND_T6 */
 #define MXT_BOOT_VALUE		0xa5
+#define MXT_RESET_VALUE		0x01
 #define MXT_BACKUP_VALUE	0x55
 
 /* Delay times */
@@ -305,37 +308,6 @@ struct mxt_data {
 	u8 is_stopped;
 	u8 max_reportid;
 };
-
-static bool mxt_object_writable(unsigned int type)
-{
-	switch (type) {
-	case MXT_GEN_COMMAND_T6:
-	case MXT_GEN_POWER_T7:
-	case MXT_GEN_ACQUIRE_T8:
-	case MXT_TOUCH_MULTI_T9:
-	case MXT_TOUCH_KEYARRAY_T15:
-	case MXT_TOUCH_PROXIMITY_T23:
-	case MXT_TOUCH_PROXKEY_T52:
-	case MXT_PROCI_GRIPFACE_T20:
-	case MXT_PROCG_NOISE_T22:
-	case MXT_PROCI_ONETOUCH_T24:
-	case MXT_PROCI_TWOTOUCH_T27:
-	case MXT_PROCI_GRIP_T40:
-	case MXT_PROCI_PALM_T41:
-	case MXT_PROCI_TOUCHSUPPRESSION_T42:
-	case MXT_PROCI_STYLUS_T47:
-	case MXT_PROCG_NOISESUPPRESSION_T48:
-	case MXT_SPT_COMMSCONFIG_T18:
-	case MXT_SPT_GPIOPWM_T19:
-	case MXT_SPT_SELFTEST_T25:
-	case MXT_SPT_CTECONFIG_T28:
-	case MXT_SPT_DIGITIZER_T43:
-	case MXT_SPT_CTECONFIG_T46:
-		return true;
-	default:
-		return false;
-	}
-}
 
 static int mxt_switch_to_bootloader_address(struct mxt_data *data)
 {
@@ -621,6 +593,30 @@ static int mxt_read_message(struct mxt_data *data,
 	return ret;
 }
 
+static int mxt_read_message_reportid(struct mxt_data *data,
+	struct mxt_message *message, u8 reportid)
+{
+	int try = 0;
+	int error;
+	int fail_count;
+
+	fail_count = data->max_reportid * 2;
+
+	while (++try < fail_count) {
+		error = mxt_read_message(data, message);
+		if (error)
+			return error;
+
+		if (message->reportid == 0xff)
+			return -EINVAL;
+
+		if (message->reportid == reportid)
+			return 0;
+	}
+
+	return -EINVAL;
+}
+
 static int mxt_read_object(struct mxt_data *data,
 				u8 type, u8 offset, u8 *val)
 {
@@ -821,107 +817,215 @@ static int mxt_make_highchg(struct mxt_data *data)
 	return 0;
 }
 
-static int mxt_check_reg_init(struct mxt_data *data)
+static int mxt_read_current_crc(struct mxt_data *data, unsigned long *crc)
 {
-	struct i2c_client *client = data->client;
-	const struct mxt_platform_data *pdata = data->pdata;
-	struct mxt_object *object;
-	struct mxt_message message;
 	struct device *dev = &data->client->dev;
-	int index = 0;
-	int timeout_counter = 0;
-	int i, j, config_offset;
 	int error;
-	unsigned long current_crc;
-	u8 command_register;
-
-	if (!pdata->config) {
-		dev_dbg(dev, "No cfg data defined, skipping reg init\n");
-		return 0;
-	}
-
-	/* Try to read the config checksum of the existing cfg */
-	mxt_write_object(data, MXT_GEN_COMMAND_T6,
-		MXT_COMMAND_REPORTALL, 1);
-	msleep(30);
-
-	error = mxt_read_message(data, &message);
-	if (error)
-		return error;
+	struct mxt_message message;
+	struct mxt_object *object;
 
 	object = mxt_get_object(data, MXT_GEN_COMMAND_T6);
 	if (!object)
 		return -EIO;
 
-	/* Check if this message is from command processor (which has
-	only one reporting ID), if so, bytes 1-3 are the checksum. */
-	if (message.reportid == object->max_reportid) {
-		current_crc = message.message[1] | (message.message[2] << 8) |
-			(message.message[3] << 16);
-	} else {
-		dev_err(dev, "Failure retrieving cfg checksum, "
-			"forcing load\n");
-		current_crc = 0xFFFFFFFF;
+	/* Try to read the config checksum of the existing cfg */
+	mxt_write_object(data, MXT_GEN_COMMAND_T6,
+		MXT_COMMAND_REPORTALL, 1);
+
+	msleep(30);
+
+	/* Read message from command processor, which only has one report ID */
+	error = mxt_read_message_reportid(data, &message, object->max_reportid);
+	if (error) {
+		dev_err(dev, "Failed to retrieve CRC\n");
+		return error;
 	}
 
-	if (current_crc == pdata->config_crc) {
-		dev_info(dev,
-		"Config CRC %X: OK\n", (unsigned int) current_crc);
+	/* Bytes 1-3 are the checksum. */
+	*crc = message.message[1] | (message.message[2] << 8) |
+		(message.message[3] << 16);
+
+	return 0;
+}
+
+int mxt_download_config(struct mxt_data *data, const char *fn)
+{
+	struct device *dev = &data->client->dev;
+	struct mxt_info cfg_info;
+	struct mxt_object *object;
+	const struct firmware *cfg = NULL;
+	int ret;
+	int offset;
+	int pos;
+	int i;
+	unsigned long current_crc, info_crc, config_crc;
+	unsigned int type, instance, size;
+	u8 val;
+	u16 reg;
+
+	ret = request_firmware(&cfg, fn, dev);
+	if (ret < 0) {
+		dev_err(dev, "Failure to request config file %s\n", fn);
 		return 0;
+	}
+
+	ret = mxt_read_current_crc(data, &current_crc);
+	if (ret)
+		return ret;
+
+	if (strncmp(cfg->data, MXT_CFG_MAGIC, strlen(MXT_CFG_MAGIC))) {
+		dev_err(dev, "Unrecognised config file\n");
+		ret = -EINVAL;
+		goto release;
+	}
+
+	pos = strlen(MXT_CFG_MAGIC);
+
+	/* Load information block and check */
+	for (i = 0; i < sizeof(struct mxt_info); i++) {
+		ret = sscanf(cfg->data + pos, "%hhx%n",
+			     (unsigned char *)&cfg_info + i,
+			     &offset);
+		if (ret != 1) {
+			dev_err(dev, "Bad format\n");
+			ret = -EINVAL;
+			goto release;
+		}
+
+		pos += offset;
+	}
+
+	if (cfg_info.family_id != data->info.family_id) {
+		dev_err(dev, "Family ID mismatch!\n");
+		ret = -EINVAL;
+		goto release;
+	}
+
+	if (cfg_info.variant_id != data->info.variant_id) {
+		dev_err(dev, "Variant ID mismatch!\n");
+		ret = -EINVAL;
+		goto release;
+	}
+
+	if (cfg_info.version != data->info.version)
+		dev_err(dev, "Warning: version mismatch!\n");
+
+	if (cfg_info.build != data->info.build)
+		dev_err(dev, "Warning: build num mismatch!\n");
+
+	ret = sscanf(cfg->data + pos, "%lx%n", &info_crc, &offset);
+	if (ret != 1) {
+		dev_err(dev, "Bad format\n");
+		ret = -EINVAL;
+		goto release;
+	}
+	pos += offset;
+
+	/* Check config CRC */
+	ret = sscanf(cfg->data + pos, "%lx%n", &config_crc, &offset);
+	if (ret != 1) {
+		dev_err(dev, "Bad format\n");
+		ret = -EINVAL;
+		goto release;
+	}
+	pos += offset;
+
+	if (current_crc == config_crc) {
+		dev_info(dev,
+		"Config CRC 0x%X: OK\n", (unsigned int) current_crc);
+		ret = 0;
+		goto release;
 	} else {
-		dev_info(dev, "Config CRC %X: does not match %X, "
+		dev_info(dev, "Config CRC 0x%X: does not match 0x%X, "
 			"writing config\n",
 			(unsigned int) current_crc,
-			(unsigned int) pdata->config_crc);
+			(unsigned int) config_crc);
 	}
 
-	for (i = 0; i < data->info.object_num; i++) {
-		object = data->object_table + i;
-
-		if (!mxt_object_writable(object->type))
-			continue;
-
-		for (j = 0;
-		     j < object->size * object->instances;
-		     j++) {
-			config_offset = index + j;
-			if (config_offset > pdata->config_length) {
-				dev_err(dev, "Not enough config data!\n");
-				return -EINVAL;
-			}
-			mxt_write_object(data, object->type, j,
-					 pdata->config[config_offset]);
+	while (pos < cfg->size) {
+		/* Read type, instance, length */
+		ret = sscanf(cfg->data + pos, "%x %x %x%n",
+			     &type, &instance, &size, &offset);
+		if (ret == 0) {
+			/* EOF */
+			ret = 1;
+			goto release;
+		} else if (ret < 0) {
+			dev_err(dev, "Bad format\n");
+			ret = -EINVAL;
+			goto release;
 		}
-		index += object->size * object->instances;
+		pos += offset;
+
+		object = mxt_get_object(data, type);
+		if (!object) {
+			ret = -EINVAL;
+			goto release;
+		}
+
+		if (size > object->size) {
+			dev_err(dev, "Object length exceeded!\n");
+			ret = -EINVAL;
+			goto release;
+		}
+
+		if (instance >= object->instances) {
+			dev_err(dev, "Object instances exceeded!\n");
+			ret = -EINVAL;
+			goto release;
+		}
+
+		reg = object->start_address + object->size * instance;
+
+		for (i = 0; i < size; i++) {
+			ret = sscanf(cfg->data + pos, "%hhx%n",
+				     &val,
+				     &offset);
+			if (ret != 1) {
+				dev_err(dev, "Bad format\n");
+				ret = -EINVAL;
+				goto release;
+			}
+
+			ret = mxt_write_reg(data->client, reg + i, val);
+			if (ret)
+				goto release;
+
+			pos += offset;
+		}
+
+		/* If firmware is upgraded, new bytes may be added to end of
+		 * objects. It is generally forward compatible to zero these
+		 * bytes - previous behaviour will be retained. However
+		 * this does invalidate the CRC and will force a config
+		 * download every time until the configuration is updated */
+		if (size < object->size) {
+			dev_info(dev, "Warning: zeroing %d byte(s) in T%d\n",
+				 object->size - size, type);
+
+			for (i = size + 1; i < object->size; i++) {
+				ret = mxt_write_reg(data->client, reg + i, 0);
+				if (ret)
+					goto release;
+			}
+		}
 	}
 
-	dev_info(dev, "Config written\n");
+release:
+	release_firmware(cfg);
+	return ret;
+}
 
-	error = mxt_make_highchg(data);
-	if (error)
-		return error;
+static int mxt_soft_reset(struct mxt_data *data, u8 value)
+{
+	int timeout_counter = 0;
+	struct device *dev = &data->client->dev;
 
-	/* Backup to memory */
+	dev_info(dev, "Resetting chip\n");
+
 	mxt_write_object(data, MXT_GEN_COMMAND_T6,
-			MXT_COMMAND_BACKUPNV,
-			MXT_BACKUP_VALUE);
-	msleep(MXT_BACKUP_TIME);
-	do {
-		error =  mxt_read_object(data, MXT_GEN_COMMAND_T6,
-					MXT_COMMAND_BACKUPNV,
-					&command_register);
-		if (error)
-			return error;
-		msleep(10);
-	} while ((command_register != 0) && (timeout_counter++ <= 100));
-	if (timeout_counter > 100) {
-		dev_err(&client->dev, "No response after backup!\n");
-		return -EIO;
-	}
+			MXT_COMMAND_RESET, value);
 
-	/* Soft reset */
-	mxt_write_object(data, MXT_GEN_COMMAND_T6,
-			MXT_COMMAND_RESET, 1);
 	if (data->pdata->read_chg == NULL) {
 		msleep(MXT_RESET_NOCHGREAD);
 	} else {
@@ -942,7 +1046,7 @@ static int mxt_check_reg_init(struct mxt_data *data)
 		while ((timeout_counter++ <= 100) && data->pdata->read_chg())
 			msleep(10);
 		if (timeout_counter > 100) {
-			dev_err(&client->dev, "No response after reset!\n");
+			dev_err(dev, "No response after reset!\n");
 			return -EIO;
 		}
 	}
@@ -950,69 +1054,28 @@ static int mxt_check_reg_init(struct mxt_data *data)
 	return 0;
 }
 
-static void mxt_handle_pdata(struct mxt_data *data)
-{
-	const struct mxt_platform_data *pdata = data->pdata;
-	u8 voltage;
-
-	/* Set touchscreen lines */
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9, MXT_TOUCH_XSIZE,
-			pdata->x_line);
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9, MXT_TOUCH_YSIZE,
-			pdata->y_line);
-
-	/* Set touchscreen orient */
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9, MXT_TOUCH_ORIENT,
-			pdata->orient);
-
-	/* Set touchscreen burst length */
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9,
-			MXT_TOUCH_BLEN, pdata->blen);
-
-	/* Set touchscreen threshold */
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9,
-			MXT_TOUCH_TCHTHR, pdata->threshold);
-
-	/* Set touchscreen resolution */
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9,
-			MXT_TOUCH_XRANGE_LSB, (pdata->x_size - 1) & 0xff);
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9,
-			MXT_TOUCH_XRANGE_MSB, (pdata->x_size - 1) >> 8);
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9,
-			MXT_TOUCH_YRANGE_LSB, (pdata->y_size - 1) & 0xff);
-	mxt_write_object(data, MXT_TOUCH_MULTI_T9,
-			MXT_TOUCH_YRANGE_MSB, (pdata->y_size - 1) >> 8);
-
-	/* Set touchscreen voltage */
-	if (pdata->voltage) {
-		if (pdata->voltage < MXT_VOLTAGE_DEFAULT) {
-			voltage = (MXT_VOLTAGE_DEFAULT - pdata->voltage) /
-				MXT_VOLTAGE_STEP;
-			voltage = 0xff - voltage + 1;
-		} else
-			voltage = (pdata->voltage - MXT_VOLTAGE_DEFAULT) /
-				MXT_VOLTAGE_STEP;
-
-		mxt_write_object(data, MXT_SPT_CTECONFIG_T28,
-				MXT_CTE_VOLTAGE, voltage);
-	}
-}
-
-static int mxt_set_power_cfg(struct mxt_data *data, u8 sleep)
+static int mxt_set_power_cfg(struct mxt_data *data, u8 mode)
 {
 	struct device *dev = &data->client->dev;
 	int error;
-	u8 actv_cycle_time = 0;
-	u8 idle_cycle_time = 0;
+	u8 actv_cycle_time;
+	u8 idle_cycle_time;
 
 	if (data->state != APPMODE) {
 		dev_err(dev, "Not in APPMODE\n");
 		return -EINVAL;
 	}
 
-	if (!sleep) {
+	switch (mode) {
+	case MXT_POWER_CFG_DEEPSLEEP:
+		actv_cycle_time = 0;
+		idle_cycle_time = 0;
+		break;
+	case MXT_POWER_CFG_RUN:
+	default:
 		actv_cycle_time = data->actv_cycle_time;
 		idle_cycle_time = data->idle_cycle_time;
+		break;
 	}
 
 	error = mxt_write_object(data, MXT_GEN_POWER_T7, MXT_POWER_ACTVACQINT,
@@ -1027,7 +1090,7 @@ static int mxt_set_power_cfg(struct mxt_data *data, u8 sleep)
 
 	dev_dbg(dev, "Set ACTV %d, IDLE %d", actv_cycle_time, idle_cycle_time);
 
-	data->is_stopped = sleep;
+	data->is_stopped = (mode == MXT_POWER_CFG_DEEPSLEEP) ? 1 : 0;
 
 	return 0;
 
@@ -1036,33 +1099,112 @@ i2c_error:
 	return error;
 }
 
-static int mxt_init_power_cfg(struct mxt_data *data)
+static int mxt_read_power_cfg(struct mxt_data *data, u8 *actv_cycle_time,
+				u8 *idle_cycle_time)
 {
-	struct device *dev = &data->client->dev;
 	int error;
 
 	error = mxt_read_object(data, MXT_GEN_POWER_T7,
 				MXT_POWER_ACTVACQINT,
-				&data->actv_cycle_time);
+				actv_cycle_time);
 	if (error)
 		return error;
 
 	error = mxt_read_object(data, MXT_GEN_POWER_T7,
 				MXT_POWER_IDLEACQINT,
-				&data->idle_cycle_time);
+				idle_cycle_time);
 	if (error)
 		return error;
 
-	/* On init, power up */
-	error = mxt_set_power_cfg(data, MXT_POWER_CFG_RUN);
+	return 0;
+}
+
+static int mxt_check_power_cfg_post_reset(struct mxt_data *data)
+{
+	struct device *dev = &data->client->dev;
+	int error;
+
+	error = mxt_read_power_cfg(data, &data->actv_cycle_time,
+				   &data->idle_cycle_time);
 	if (error)
 		return error;
 
-	dev_info(dev, "Initialised power cfg: ACTV %d, IDLE %d",
-			data->actv_cycle_time, data->idle_cycle_time);
+	/* Power config is zero, select free run */
+	if (data->actv_cycle_time == 0 || data->idle_cycle_time == 0) {
+		dev_dbg(dev, "Overriding power cfg to free run\n");
+		data->actv_cycle_time = 255;
+		data->idle_cycle_time = 255;
 
-	if (data->actv_cycle_time == 0 || data->idle_cycle_time == 0)
-		dev_err(dev, "Warning: cycle time set to zero.\n");
+		error = mxt_set_power_cfg(data, MXT_POWER_CFG_RUN);
+		if (error)
+			return error;
+	}
+
+	return 0;
+}
+
+static int mxt_probe_power_cfg(struct mxt_data *data)
+{
+	int error;
+
+	error = mxt_read_power_cfg(data, &data->actv_cycle_time,
+				   &data->idle_cycle_time);
+	if (error)
+		return error;
+
+	/* If in deep sleep mode, attempt reset */
+	if (data->actv_cycle_time == 0 || data->idle_cycle_time == 0) {
+		error = mxt_soft_reset(data, MXT_RESET_VALUE);
+		if (error)
+			return error;
+
+		error = mxt_check_power_cfg_post_reset(data);
+		if (error)
+			return error;
+	}
+
+	return 0;
+}
+
+static int mxt_check_reg_init(struct mxt_data *data)
+{
+	struct device *dev = &data->client->dev;
+	int timeout_counter = 0;
+	int ret;
+	u8 command_register;
+
+	ret = mxt_download_config(data, MXT_CFG_NAME);
+	if (ret < 0)
+		return ret;
+	else if (ret == 0)
+		/* CRC matched, or no config file, no need to reset */
+		return 0;
+
+	/* Backup to memory */
+	mxt_write_object(data, MXT_GEN_COMMAND_T6,
+			MXT_COMMAND_BACKUPNV,
+			MXT_BACKUP_VALUE);
+	msleep(MXT_BACKUP_TIME);
+	do {
+		ret =  mxt_read_object(data, MXT_GEN_COMMAND_T6,
+					MXT_COMMAND_BACKUPNV,
+					&command_register);
+		if (ret)
+			return ret;
+		msleep(10);
+	} while ((command_register != 0) && (timeout_counter++ <= 100));
+	if (timeout_counter > 100) {
+		dev_err(dev, "No response after backup!\n");
+		return -EIO;
+	}
+
+	ret = mxt_soft_reset(data, MXT_RESET_VALUE);
+	if (ret)
+		return ret;
+
+	ret = mxt_check_power_cfg_post_reset(data);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -1153,12 +1295,83 @@ static int mxt_get_object_table(struct mxt_data *data)
 	return 0;
 }
 
+static int mxt_read_resolution(struct mxt_data *data)
+{
+	struct i2c_client *client = data->client;
+	int error;
+	unsigned int x_range, y_range;
+	unsigned char orient;
+	unsigned char val;
+
+	/* Update matrix size in info struct */
+	error = mxt_read_reg(client, MXT_MATRIX_X_SIZE, &val);
+	if (error)
+		return error;
+	data->info.matrix_xsize = val;
+
+	error = mxt_read_reg(client, MXT_MATRIX_Y_SIZE, &val);
+	if (error)
+		return error;
+	data->info.matrix_ysize = val;
+
+	/* Read X/Y size of touchscreen */
+	error =  mxt_read_object(data, MXT_TOUCH_MULTI_T9,
+			       MXT_TOUCH_XRANGE_MSB, &val);
+	if (error)
+		return error;
+	x_range = val << 8;
+
+	error =  mxt_read_object(data, MXT_TOUCH_MULTI_T9,
+			       MXT_TOUCH_XRANGE_LSB, &val);
+	if (error)
+		return error;
+	x_range |= val;
+
+	error =  mxt_read_object(data, MXT_TOUCH_MULTI_T9,
+			       MXT_TOUCH_YRANGE_MSB, &val);
+	if (error)
+		return error;
+	y_range = val << 8;
+
+	error =  mxt_read_object(data, MXT_TOUCH_MULTI_T9,
+			       MXT_TOUCH_YRANGE_LSB, &val);
+	if (error)
+		return error;
+	y_range |= val;
+
+	error =  mxt_read_object(data, MXT_TOUCH_MULTI_T9,
+			       MXT_TOUCH_ORIENT, &orient);
+	if (error)
+		return error;
+
+	/* Handle default values */
+	if (x_range == 0)
+		x_range = 1023;
+
+	if (y_range == 0)
+		y_range = 1023;
+
+	if (orient & MXT_XY_SWITCH) {
+		data->max_x = y_range;
+		data->max_y = x_range;
+	} else {
+		data->max_x = x_range;
+		data->max_y = y_range;
+	}
+
+	dev_info(&client->dev,
+			"Matrix Size X%uY%u Touchscreen size X%uY%u\n",
+			data->info.matrix_xsize, data->info.matrix_ysize,
+			data->max_x, data->max_y);
+
+	return 0;
+}
+
 static int mxt_initialize(struct mxt_data *data)
 {
 	struct i2c_client *client = data->client;
 	struct mxt_info *info = &data->info;
 	int error;
-	u8 val;
 
 	error = mxt_get_info(data);
 	if (error) {
@@ -1205,52 +1418,26 @@ static int mxt_initialize(struct mxt_data *data)
 	if (error)
 		return error;
 
-	/* Check register init values */
-	error = mxt_check_reg_init(data);
-	if (error) {
-		dev_err(&client->dev, "Error %d initialising configuration\n",
-			error);
-		return error;
-	}
-
-	mxt_handle_pdata(data);
-
-	error = mxt_init_power_cfg(data);
+	error = mxt_probe_power_cfg(data);
 	if (error) {
 		dev_err(&client->dev, "Failed to initialize power cfg\n");
 		return error;
 	}
 
-	/* Update matrix size at info struct */
-	error = mxt_read_reg(client, MXT_MATRIX_X_SIZE, &val);
-	if (error)
+	/* Check register init values */
+	error = mxt_check_reg_init(data);
+	if (error) {
+		dev_err(&client->dev, "Failed to initialize config\n");
 		return error;
-	info->matrix_xsize = val;
+	}
 
-	error = mxt_read_reg(client, MXT_MATRIX_Y_SIZE, &val);
-	if (error)
+	error = mxt_read_resolution(data);
+	if (error) {
+		dev_err(&client->dev, "Failed to initialize screen size\n");
 		return error;
-	info->matrix_ysize = val;
-
-	dev_info(&client->dev,
-			"Matrix X Size: %u Matrix Y Size: %u\n",
-			info->matrix_xsize, info->matrix_ysize);
+	}
 
 	return 0;
-}
-
-static void mxt_calc_resolution(struct mxt_data *data)
-{
-	unsigned int max_x = data->pdata->x_size - 1;
-	unsigned int max_y = data->pdata->y_size - 1;
-
-	if (data->pdata->orient & MXT_XY_SWITCH) {
-		data->max_x = max_y;
-		data->max_y = max_x;
-	} else {
-		data->max_x = max_x;
-		data->max_y = max_y;
-	}
 }
 
 static int mxt_load_fw(struct device *dev, const char *fn)
@@ -1271,9 +1458,9 @@ static int mxt_load_fw(struct device *dev, const char *fn)
 
 	if (data->state != BOOTLOADER) {
 		/* Change to the bootloader mode */
-		mxt_write_object(data, MXT_GEN_COMMAND_T6,
-				MXT_COMMAND_RESET, MXT_BOOT_VALUE);
-		msleep(MXT_RESET_TIME);
+		ret = mxt_soft_reset(data, MXT_BOOT_VALUE);
+		if (ret)
+			goto release_firmware;
 
 		ret = mxt_switch_to_bootloader_address(data);
 		if (ret)
@@ -1524,7 +1711,7 @@ static void mxt_stop(struct mxt_data *data)
 	if (data->is_stopped)
 		return;
 
-	error = mxt_set_power_cfg(data, MXT_POWER_CFG_SLEEP);
+	error = mxt_set_power_cfg(data, MXT_POWER_CFG_DEEPSLEEP);
 
 	if (!error)
 		dev_dbg(dev, "MXT suspended\n");
@@ -1567,18 +1754,22 @@ static int __devinit mxt_probe(struct i2c_client *client,
 
 	data->state = INIT;
 
-	input_dev->name = "Atmel maXTouch Touchscreen";
-	input_dev->id.bustype = BUS_I2C;
-	input_dev->dev.parent = &client->dev;
-	input_dev->open = mxt_input_open;
-	input_dev->close = mxt_input_close;
-
 	data->client = client;
 	data->input_dev = input_dev;
 	data->pdata = pdata;
 	data->irq = client->irq;
 
-	mxt_calc_resolution(data);
+	/* Initialize i2c device */
+	error = mxt_initialize(data);
+	if (error)
+		goto err_free_object;
+
+	/* Initialize input device */
+	input_dev->name = "Atmel maXTouch Touchscreen";
+	input_dev->id.bustype = BUS_I2C;
+	input_dev->dev.parent = &client->dev;
+	input_dev->open = mxt_input_open;
+	input_dev->close = mxt_input_close;
 
 	__set_bit(EV_ABS, input_dev->evbit);
 	__set_bit(EV_KEY, input_dev->evbit);
@@ -1604,10 +1795,6 @@ static int __devinit mxt_probe(struct i2c_client *client,
 
 	input_set_drvdata(input_dev, data);
 	i2c_set_clientdata(client, data);
-
-	error = mxt_initialize(data);
-	if (error)
-		goto err_free_object;
 
 	error = request_threaded_irq(client->irq, NULL, mxt_interrupt,
 			pdata->irqflags, client->dev.driver->name, data);
@@ -1705,10 +1892,7 @@ static int mxt_resume(struct device *dev)
 	struct input_dev *input_dev = data->input_dev;
 
 	/* Soft reset */
-	mxt_write_object(data, MXT_GEN_COMMAND_T6,
-			MXT_COMMAND_RESET, 1);
-
-	msleep(MXT_RESET_TIME);
+	mxt_soft_reset(data, MXT_RESET_VALUE);
 
 	mutex_lock(&input_dev->mutex);
 
