@@ -529,6 +529,9 @@ static void __init ambarella_init_elephant(void)
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
 
+			ambarella_board_generic.pwm0_config.max_duty = 255;
+			ambarella_board_generic.pwm0_config.default_duty = 255;
+
 			use_bub_default = 0;
 			break;
 
@@ -614,6 +617,10 @@ static void __init ambarella_init_elephant(void)
 			platform_device_register(&lcd_1p3831);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_vendor51;
+
+			ambarella_board_generic.pwm0_config.max_duty = 255;
+			ambarella_board_generic.pwm0_config.default_duty = 255;
+
 			break;
 
 		case 61:
@@ -766,6 +773,9 @@ static void __init ambarella_init_elephant(void)
 
 			elephant_board_input_info.pkeymap = elephant_keymap_vendor61;
 
+			ambarella_board_generic.pwm0_config.max_duty = 255;
+			ambarella_board_generic.pwm0_config.default_duty = 0;
+
 			use_bub_default = 0;
 			break;
 
@@ -830,6 +840,10 @@ static void __init ambarella_init_elephant(void)
 			i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_vendor1;
+
+			ambarella_board_generic.pwm0_config.max_duty = 255;
+			ambarella_board_generic.pwm0_config.default_duty = 255;
+
 			break;
 
 		default:
