@@ -272,6 +272,12 @@ static void ft540_send_event(struct ft540 *ft)
 			continue;
 		}
 
+		//INVALID KEY
+		if (x >= 1095 && x <= 1105) {
+			FT_DEBUG("Invalid Finger%d Calibrated: (%d, %d)\n", i, x, y);
+			continue;
+		}
+
 
 		if (x < ft->fix.x_min) {
 			x = ft->fix.x_min;
