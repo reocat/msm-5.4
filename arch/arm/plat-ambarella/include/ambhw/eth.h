@@ -303,6 +303,16 @@
 #define ETH_RDES0_CE			0x00000002
 #define ETH_RDES0_RX			0x00000001
 
+#define ETH_RDES0_COE_MASK		0x000000a1
+#define ETH_RDES0_COE_LENLT600		0x00000000	/* Bit(5:7:0)=>0 IEEE 802.3 type frame Length field is Lessthan 0x0600			*/
+#define ETH_RDES0_COE_UNSUPPORTED	0x00000001	/* Bit(5:7:0)=>1 Payload & Ip header checksum bypassed (unsuppported payload) 		*/
+#define ETH_RDES0_COE_RESERVED		0x00000080	/* Bit(5:7:0)=>2 Reserved						 		*/
+#define ETH_RDES0_COE_CHKBYPASS		0x00000081	/* Bit(5:7:0)=>3 Neither IPv4 nor IPV6. So checksum bypassed 		 		*/
+#define ETH_RDES0_COE_NOCHKERROR	0x00000020	/* Bit(5:7:0)=>4 No IPv4/IPv6 Checksum error detected					*/
+#define ETH_RDES0_COE_PLCHKERROR	0x00000021	/* Bit(5:7:0)=>5 Payload checksum error detected for Ipv4/Ipv6 frames			*/
+#define ETH_RDES0_COE_HDRCHKERROR	0x000000a0	/* Bit(5:7:0)=>6 Ip header checksum error detected for Ipv4 frames			*/
+#define ETH_RDES0_COE_HDRPLCHKERROR	0x000000a1	/* Bit(5:7:0)=>7 Payload & Ip header checksum error detected for Ipv4/Ipv6 frames	*/
+
 /* Receive Descriptor 1 (RDES1) */
 #define ETH_RDES1_DIC			0x80000000
 #define ETH_RDES1_RER			0x02000000
@@ -314,6 +324,8 @@
 
 /* Transmit Descriptor 0 (TDES0) */
 #define ETH_TDES0_OWN			0x80000000
+#define ETH_TDES0_TTSS			0x00020000
+#define ETH_TDES0_IHE			0x00010000
 #define ETH_TDES0_ES			0x00008000
 #define ETH_TDES0_JT			0x00004000
 #define ETH_TDES0_FF			0x00002000
@@ -327,11 +339,18 @@
 #define ETH_TDES0_ED			0x00000004
 #define ETH_TDES0_UF			0x00000002
 #define ETH_TDES0_DB			0x00000001
+#define ETH_TDES0_ES_MASK		(ETH_TDES0_UF | ETH_TDES0_ED | \
+					ETH_TDES0_EC | ETH_TDES0_LCO | \
+					ETH_TDES0_NC | ETH_TDES0_LCA | \
+					ETH_TDES0_FF | ETH_TDES0_JT | \
+					ETH_TDES0_ES)
 
 /* Transmit Descriptor 1 (TDES1) */
 #define ETH_TDES1_IC			0x80000000
 #define ETH_TDES1_LS			0x40000000
 #define ETH_TDES1_FS			0x20000000
+#define ETH_TDES1_CIC_TUI		0x10000000
+#define ETH_TDES1_CIC_HDR		0x08000000
 #define ETH_TDES1_DC			0x04000000
 #define ETH_TDES1_TER			0x02000000
 #define ETH_TDES1_TCH			0x01000000

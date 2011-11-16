@@ -66,6 +66,11 @@
 				ETH_DMA_INTEN_FBE | AMBETH_RXDMA_INTEN | \
 				AMBETH_TXDMA_INTEN)
 
+#define AMBETH_TDES0_ATOMIC_CHECK
+#undef AMBETH_TDES0_ATOMIC_CHECK_ALL
+#define AMBETH_RDES0_ATOMIC_CHECK
+#undef AMBETH_RDES0_ATOMIC_CHECK_ALL
+
 /* ==========================================================================*/
 struct ambeth_desc {
 	u32					status;
@@ -97,6 +102,7 @@ struct ambeth_info {
 	unsigned int				rx_count;
 	struct ambeth_rx_rngmng			rx;
 	unsigned int				tx_count;
+	unsigned int				tx_irq_count;
 	struct ambeth_tx_rngmng			tx;
 	dma_addr_t				rx_dma_desc;
 	dma_addr_t				tx_dma_desc;
@@ -198,13 +204,28 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 			amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET),
 			amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET));
 	}
+	amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET, ETH_DMA_OPMODE_FTF);
 }
 
-static inline void ambhw_dma_stop_tx_rx(struct ambeth_info *lp)
+static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
+{
+	amba_writel(lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET,
+		(u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)));
+	ambhw_dma_tx_start(lp);
+}
+
+static inline void ambhw_dma_tx_poll(struct ambeth_info *lp, u32 entry)
+{
+	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
+	amba_writel(lp->regbase + ETH_DMA_TX_POLL_DMD_OFFSET, 0x01);
+}
+
+static inline void ambhw_stop_tx_rx(struct ambeth_info *lp)
 {
 	unsigned int				irq_status;
 	int					i = 1300;
 
+	amba_clrbitsl(lp->regbase + ETH_MAC_CFG_OFFSET, ETH_MAC_CFG_RE);
 	amba_clrbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 		(ETH_DMA_OPMODE_SR | ETH_DMA_OPMODE_ST));
 	do {
@@ -218,6 +239,7 @@ static inline void ambhw_dma_stop_tx_rx(struct ambeth_info *lp)
 			amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET),
 			amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET));
 	}
+	amba_clrbitsl(lp->regbase + ETH_MAC_CFG_OFFSET, ETH_MAC_CFG_TE);
 }
 
 static inline void ambhw_set_dma_desc(struct ambeth_info *lp)
@@ -277,7 +299,6 @@ static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
 		val |= ETH_MAC_CFG_PS;
 		break;
 	}
-	val |= (ETH_MAC_CFG_TE | ETH_MAC_CFG_RE);
 	if (lp->oldduplex) {
 		val &= ~(ETH_MAC_CFG_DO);
 		val |= ETH_MAC_CFG_DM;
@@ -305,8 +326,16 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, 0);
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 		lp->platform_info->default_dma_opmode);
+#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
+	amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET, ETH_DMA_OPMODE_TSF);
+#endif
 	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET,
 		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
+	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
+		(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE));
+#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
+	amba_setbitsl(lp->regbase + ETH_MAC_CFG_OFFSET, ETH_MAC_CFG_IPC);
+#endif
 
 ambhw_init_exit:
 	return errorCode;
@@ -314,7 +343,7 @@ ambhw_init_exit:
 
 static inline void ambhw_disable(struct ambeth_info *lp)
 {
-	ambhw_dma_stop_tx_rx(lp);
+	ambhw_stop_tx_rx(lp);
 	ambhw_dma_int_disable(lp);
 	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
 	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
@@ -322,30 +351,34 @@ static inline void ambhw_disable(struct ambeth_info *lp)
 
 static inline void ambhw_dump(struct ambeth_info *lp)
 {
-	dev_info(&lp->ndev->dev, "MAC_CFG: 0x%08x.\n",
-		amba_readl(lp->regbase + ETH_MAC_CFG_OFFSET));
-	dev_info(&lp->ndev->dev, "DMA_BUS_MODE: 0x%08x.\n",
-		amba_readl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET));
-	dev_info(&lp->ndev->dev, "DMA_STATUS: 0x%08x.\n",
-		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
-	dev_info(&lp->ndev->dev, "DMA_OPMODE: 0x%08x.\n",
-		amba_readl(lp->regbase + ETH_DMA_OPMODE_OFFSET));
-	dev_info(&lp->ndev->dev, "DMA_INTEN: 0x%08x.\n",
-		amba_readl(lp->regbase + ETH_DMA_INTEN_OFFSET));
+	u32					i;
+
 	dev_info(&lp->ndev->dev, "RX Info: cur_rx %d, dirty_rx %d.\n",
 		lp->rx.cur_rx, lp->rx.dirty_rx);
-	dev_info(&lp->ndev->dev, "RX Info: cur_rx status 0x%08x.\n",
-		lp->rx.desc_rx[lp->rx.cur_rx % lp->rx_count].status);
-	dev_info(&lp->ndev->dev, "RX Info: dirty_rx status 0x%08x.\n",
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].status);
-	dev_info(&lp->ndev->dev, "RX Info: dirty_rx length 0x%08x.\n",
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].length);
+	dev_info(&lp->ndev->dev, "RX Info: RX descriptor "
+		"0x%08x 0x%08x 0x%08x 0x%08x.\n",
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].status,
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].length,
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer1,
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer2);
 	dev_info(&lp->ndev->dev, "TX Info: cur_tx %d, dirty_tx %d.\n",
 		lp->tx.cur_tx, lp->tx.dirty_tx);
-	dev_info(&lp->ndev->dev, "TX Info: cur_tx status 0x%08x.\n",
-		lp->tx.desc_tx[lp->tx.cur_tx % lp->tx_count].status);
-	dev_info(&lp->ndev->dev, "TX Info: dirty_tx status 0x%08x.\n",
-		lp->tx.desc_tx[lp->tx.dirty_tx % lp->tx_count].status);
+	for (i = lp->tx.dirty_tx; i < lp->tx.cur_tx; i++) {
+		dev_info(&lp->ndev->dev, "TX Info: TX descriptor[%d] "
+			"0x%08x 0x%08x 0x%08x 0x%08x.\n", i,
+			lp->tx.desc_tx[i % lp->tx_count].status,
+			lp->tx.desc_tx[i % lp->tx_count].length,
+			lp->tx.desc_tx[i % lp->tx_count].buffer1,
+			lp->tx.desc_tx[i % lp->tx_count].buffer2);
+	}
+	for (i = 0; i <= 21; i++) {
+		dev_info(&lp->ndev->dev, "GMAC[%d]: 0x%08x.\n", i,
+		amba_readl(lp->regbase + ETH_MAC_CFG_OFFSET + (i << 2)));
+	}
+	for (i = 0; i <= 54; i++) {
+		dev_info(&lp->ndev->dev, "GDMA[%d]: 0x%08x.\n", i,
+		amba_readl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET + (i << 2)));
+	}
 }
 
 /* ==========================================================================*/
@@ -599,8 +632,7 @@ ambeth_init_phy_exit:
 	return errorCode;
 }
 
-static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp,
-	u32 entry)
+static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
 {
 	int					errorCode = 0;
 	dma_addr_t				mapping;
@@ -642,7 +674,6 @@ static inline void ambeth_rx_rngmng_init(struct ambeth_info *lp)
 		lp->rx.desc_rx[i].buffer2 = (u32)lp->rx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
 	}
-	lp->rx.desc_rx[lp->rx_count - 1].length |= ETH_RDES1_RER;
 	lp->rx.desc_rx[lp->rx_count - 1].buffer2 = (u32)lp->rx_dma_desc;
 }
 
@@ -700,7 +731,6 @@ static inline void ambeth_tx_rngmng_init(struct ambeth_info *lp)
 		lp->tx.desc_tx[i].buffer2 = (u32)lp->tx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
 	}
-	lp->tx.desc_tx[lp->tx_count - 1].length |= ETH_TDES1_TER;
 	lp->tx.desc_tx[lp->tx_count - 1].buffer2 = (u32)lp->tx_dma_desc;
 }
 
@@ -748,10 +778,6 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 	u32					miss_ov;
 
 	if (unlikely(irq_status & ETH_DMA_STATUS_AIS)) {
-		if (netif_msg_tx_err(lp) || netif_msg_rx_err(lp))
-			dev_err(&lp->ndev->dev, "DMA Error: Abnormal: 0x%x.\n",
-				irq_status);
-
 		if (irq_status & (ETH_DMA_STATUS_RU | ETH_DMA_STATUS_OVF))
 			miss_ov = amba_readl(lp->regbase +
 				ETH_DMA_MISS_FRAME_BOCNT_OFFSET);
@@ -768,7 +794,6 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 				"DMA Error: Early Transmit.\n");
 		}
 		if (irq_status & ETH_DMA_STATUS_RWT) {
-			lp->stats.rx_frame_errors++;
 			if (netif_msg_rx_err(lp))
 				dev_err(&lp->ndev->dev,
 				"DMA Error: Receive Watchdog Timeout.\n");
@@ -790,7 +815,7 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 				ETH_DMA_MISS_FRAME_BOCNT_HOST(miss_ov));
 		}
 		if (irq_status & ETH_DMA_STATUS_UNF) {
-			if (netif_msg_drv(lp))
+			if (netif_msg_tx_err(lp))
 				dev_err(&lp->ndev->dev,
 				"DMA Error: Transmit Underflow.\n");
 		}
@@ -815,8 +840,11 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 				dev_err(&lp->ndev->dev,
 				"DMA Error: Transmit Process Stopped.\n");
 		}
-		if (netif_msg_tx_err(lp) || netif_msg_rx_err(lp))
+		if (netif_msg_tx_err(lp) || netif_msg_rx_err(lp)) {
+			dev_err(&lp->ndev->dev, "DMA Error: Abnormal: 0x%x.\n",
+				irq_status);
 			ambhw_dump(lp);
+		}
 	}
 }
 
@@ -830,9 +858,11 @@ static inline void ambeth_interrupt_rx(struct ambeth_info *lp, u32 irq_status)
 	}
 }
 
-static inline void ambeth_check_tdes0_status(struct ambeth_info *lp,
+static inline u32 ambeth_check_tdes0_status(struct ambeth_info *lp,
 	unsigned int status)
 {
+	u32					tx_retry = 0;
+
 	if (status & ETH_TDES0_JT) {
 		lp->stats.tx_heartbeat_errors++;
 		if (netif_msg_drv(lp))
@@ -883,17 +913,19 @@ static inline void ambeth_check_tdes0_status(struct ambeth_info *lp,
 			"TX Error: Excessive Deferral.\n");
 	}
 	if (status & ETH_TDES0_UF) {
-		lp->stats.tx_fifo_errors++;
-		if (netif_msg_drv(lp))
+		tx_retry = 1;
+		if (netif_msg_tx_err(lp)) {
 			dev_err(&lp->ndev->dev, "TX Error: Underflow Error.\n");
+			ambhw_dump(lp);
+		}
 	}
 	if (status & ETH_TDES0_DB) {
 		lp->stats.tx_fifo_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "TX Error: Deferred Bit.\n");
 	}
-	if (netif_msg_drv(lp))
-		ambhw_dump(lp);
+
+	return tx_retry;
 }
 
 static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
@@ -906,18 +938,65 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 	if (irq_status & AMBETH_TXDMA_STATUS) {
 		dev_vdbg(&lp->ndev->dev, "cur_tx[%d], dirty_tx[%d], 0x%x.\n",
 			lp->tx.cur_tx, lp->tx.dirty_tx, irq_status);
-		for (dirty_tx = lp->tx.dirty_tx; lp->tx.cur_tx > dirty_tx;
+		for (dirty_tx = lp->tx.dirty_tx; dirty_tx < lp->tx.cur_tx;
 			dirty_tx++) {
 			entry = dirty_tx % lp->tx_count;
 			status = lp->tx.desc_tx[entry].status;
 
-			if (status & ETH_TDES0_OWN)
+			if (status & ETH_TDES0_OWN) {
+				irq_status &= ETH_DMA_STATUS_TS_MASK;
+				if ((irq_status == ETH_DMA_STATUS_TS_CTD) ||
+				(irq_status == ETH_DMA_STATUS_TS_SUSP) ||
+				(irq_status == ETH_DMA_STATUS_TS_STOP))
+					ambhw_dma_tx_poll(lp, entry);
 				break;
+			}
 
 			if (unlikely(status & ETH_TDES0_ES)) {
-				lp->stats.tx_errors++;
-				ambeth_check_tdes0_status(lp, status);
+#if defined(AMBETH_TDES0_ATOMIC_CHECK)
+				if ((status & ETH_TDES0_ES_MASK) ==
+					ETH_TDES0_ES) {
+					if (netif_msg_probe(lp)) {
+						dev_err(&lp->ndev->dev,
+						"TX Error: Wrong ES"
+						" 0x%08x vs 0x%08x.\n",
+						status,
+						lp->tx.desc_tx[entry].status);
+						ambhw_dump(lp);
+					}
+					break;
+				}
+#endif
+				if (ambeth_check_tdes0_status(lp, status)) {
+					ambhw_dma_tx_stop(lp);
+					ambhw_dma_tx_restart(lp, entry);
+					ambhw_dma_tx_poll(lp, entry);
+					break;
+				} else {
+					lp->stats.tx_errors++;
+				}
 			} else {
+#if defined(AMBETH_TDES0_ATOMIC_CHECK_ALL)
+				udelay(1);
+				if (unlikely(status !=
+					lp->tx.desc_tx[entry].status)) {
+					if (netif_msg_probe(lp)) {
+						dev_err(&lp->ndev->dev,
+						"TX Error: Wrong status"
+						" 0x%08x vs 0x%08x.\n",
+						status,
+						lp->tx.desc_tx[entry].status);
+						ambhw_dump(lp);
+					}
+				}
+#endif
+#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
+				if (unlikely(status & ETH_TDES0_IHE)) {
+					if (netif_msg_drv(lp))
+						dev_err(&lp->ndev->dev,
+						"TX Error: IP Header Error.\n");
+				}
+#endif
 				lp->stats.tx_bytes +=
 					lp->tx.rng_tx[entry].skb->len;
 				lp->stats.tx_packets++;
@@ -1154,33 +1233,41 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	spin_lock_irqsave(&lp->lock, flags);
 	entry = lp->tx.cur_tx % lp->tx_count;
 	dirty_to_tx = lp->tx.cur_tx - lp->tx.dirty_tx;
+	if (dirty_to_tx >= lp->tx_count) {
+		netif_stop_queue(ndev);
+		errorCode = -ENOMEM;
+		spin_unlock_irqrestore(&lp->lock, flags);
+		goto ambeth_hard_start_xmit_exit;
+	}
 
 	mapping = dma_map_single(&lp->ndev->dev,
 		skb->data, skb->len, DMA_TO_DEVICE);
 	tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
-	if (entry == (lp->tx_count - 1))
-		tx_flag |= ETH_TDES1_TER;
-	if (dirty_to_tx >= (lp->tx_count - 2)) {
-		tx_flag |= ETH_TDES1_IC;
+	if (dirty_to_tx >= lp->tx_irq_count) {
 		netif_stop_queue(ndev);
-	} else if (dirty_to_tx == (lp->tx_count / 2)) {
 		tx_flag |= ETH_TDES1_IC;
 	}
-
+#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
+	if (skb->ip_summed == CHECKSUM_PARTIAL) {
+		tx_flag |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
+	}
+#endif
 	lp->tx.rng_tx[entry].skb = skb;
 	lp->tx.rng_tx[entry].mapping = mapping;
 	lp->tx.desc_tx[entry].buffer1 = mapping;
 	lp->tx.desc_tx[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
-	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	lp->tx.cur_tx++;
-	amba_writel(lp->regbase + ETH_DMA_TX_POLL_DMD_OFFSET, 0x01);
+	ambhw_dma_tx_poll(lp, entry);
 	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ndev->trans_start = jiffies;
-	dev_vdbg(&lp->ndev->dev,
-		"TX Info: cur_tx[%d], dirty_tx[%d], entry[%d], len[%d].\n",
-		lp->tx.cur_tx, lp->tx.dirty_tx, entry, skb->len);
+	dev_vdbg(&lp->ndev->dev, "TX Info: cur_tx[%d], dirty_tx[%d], "
+		"entry[%d], len[%d], data_len[%d], ip_summed[%d], "
+		"csum_start[%d], csum_offset[%d].\n",
+		lp->tx.cur_tx, lp->tx.dirty_tx, entry, skb->len, skb->data_len,
+		skb->ip_summed, skb->csum_start, skb->csum_offset);
 
+ambeth_hard_start_xmit_exit:
 	return errorCode;
 }
 
@@ -1188,11 +1275,14 @@ static void ambeth_timeout(struct net_device *ndev)
 {
 	struct ambeth_info			*lp;
 	unsigned long				flags;
+	u32					irq_status;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
 	dev_info(&lp->ndev->dev, "OOM Info:...\n");
 	spin_lock_irqsave(&lp->lock, flags);
+	irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
+	ambeth_interrupt_tx(lp, irq_status | AMBETH_TXDMA_STATUS);
 	ambhw_dump(lp);
 	spin_unlock_irqrestore(&lp->lock, flags);
 
@@ -1288,6 +1378,18 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 			skb->len, DMA_FROM_DEVICE);
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, lp->ndev);
+#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
+		if ((status & ETH_RDES0_COE_MASK) == ETH_RDES0_COE_NOCHKERROR) {
+			skb->ip_summed = CHECKSUM_UNNECESSARY;
+		} else {
+			skb->ip_summed = CHECKSUM_NONE;
+			if (netif_msg_rx_err(lp)) {
+				dev_err(&lp->ndev->dev,
+				"RX Error: RDES0_COE[0x%x].\n", status);
+				ambhw_dump(lp);
+			}
+		}
+#endif
 		netif_receive_skb(skb);
 		lp->rx.rng_rx[entry].skb = NULL;
 		lp->rx.rng_rx[entry].mapping = 0;
@@ -1322,17 +1424,29 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 		status = lp->rx.desc_rx[entry].status;
 		if (status & ETH_RDES0_OWN)
 			break;
+#if defined(AMBETH_RDES0_ATOMIC_CHECK)
 		if (unlikely((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
 			(ETH_RDES0_FS | ETH_RDES0_LS))) {
 			if (netif_msg_probe(lp)) {
-				dev_info(&lp->ndev->dev, "RX Info: Wrong FS/LS"
+				dev_err(&lp->ndev->dev, "RX Error: Wrong FS/LS"
 				" cur_rx[%d] status 0x%08x.\n",
 				lp->rx.cur_rx, status);
 				ambhw_dump(lp);
 			}
 			break;
 		}
-
+#endif
+#if defined(AMBETH_TDES0_ATOMIC_CHECK_ALL)
+		udelay(1);
+		if (unlikely(status != lp->rx.desc_rx[entry].status)) {
+			if (netif_msg_probe(lp)) {
+				dev_err(&lp->ndev->dev, "RX Error: Wrong status"
+				" 0x%08x vs 0x%08x.\n",
+				status, lp->rx.desc_rx[entry].status);
+				ambhw_dump(lp);
+			}
+		}
+#endif
 		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 			ambeth_napi_rx(lp, status, entry);
 		} else {
@@ -1627,7 +1741,9 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	ndev->dev.dma_mask = pdev->dev.dma_mask;
 	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
 	ndev->irq = irq_res->start;
-
+#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
+	ndev->features = NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
+#endif
 	lp = netdev_priv(ndev);
 	spin_lock_init(&lp->lock);
 	lp->ndev = ndev;
@@ -1639,6 +1755,7 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	lp->tx_count = lp->platform_info->default_tx_ring_size;
 	if (lp->tx_count < AMBETH_TX_RNG_MIN)
 		lp->tx_count = AMBETH_TX_RNG_MIN;
+	lp->tx_irq_count = (lp->tx_count * 2) / 3;
 	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV);
 
 	if (lp->platform_info->mii_power.gpio_id != -1) {
