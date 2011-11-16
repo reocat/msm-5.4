@@ -61,39 +61,39 @@ static int a5sevk_board_hw_params(struct snd_pcm_substream *substream,
 
 	switch (params_rate(params)) {
 	case 8000:
-		amb_mclk = AudioCodec_2_048M;
-		mclk = 2048000;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_12_288M;
+		mclk = 12288000;
+		oversample = AudioCodec_1536xfs;
 		break;
 	case 11025:
-		amb_mclk = AudioCodec_2_8224M;
-		mclk = 2822400;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_11_2896M;
+		mclk = 11289600;
+		oversample = AudioCodec_1024xfs;
 		break;
 	case 12000:
-		amb_mclk = AudioCodec_3_072M;
-		mclk = 3072000;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_12_288M;
+		mclk = 12288000;
+		oversample = AudioCodec_1024xfs;
 		break;
 	case 16000:
-		amb_mclk = AudioCodec_4_096M;
-		mclk = 4096000;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_12_288M;
+		mclk = 12288000;
+		oversample = AudioCodec_768xfs;
 		break;
 	case 22050:
-		amb_mclk = AudioCodec_5_6448M;
-		mclk = 5644800;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_11_2896M;
+		mclk = 11289600;
+		oversample = AudioCodec_512xfs;
 		break;
 	case 24000:
-		amb_mclk = AudioCodec_6_144;
-		mclk = 6144000;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_12_288M;
+		mclk = 12288000;
+		oversample = AudioCodec_512xfs;
 		break;
 	case 32000:
-		amb_mclk = AudioCodec_8_192M;
-		mclk = 8192000;
-		oversample = AudioCodec_256xfs;
+		amb_mclk = AudioCodec_12_288M;
+		mclk = 12288000;
+		oversample = AudioCodec_384xfs;
 		break;
 	case 44100:
 		amb_mclk = AudioCodec_11_2896M;
