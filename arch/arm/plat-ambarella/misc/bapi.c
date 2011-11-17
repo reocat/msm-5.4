@@ -256,10 +256,8 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			ambarella_hal_set_invalid();
 #endif
 #ifdef CONFIG_OUTER_CACHE
-#if 0
 			if (l2_mode)
 				ambcache_l2_enable_raw();
-#endif
 #endif
 			aoss_copy_page = 0;
 			bapi_info->aoss_info.copy_pages = 0;

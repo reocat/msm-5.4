@@ -571,18 +571,6 @@ void __init ambarella_init_irq(void)
 #if defined(CONFIG_ARM_GIC)
 	gic_init(0, LOCAL_TIMER_IRQ, __io(AMBARELLA_VA_GIC_DIST_BASE),
 		__io(AMBARELLA_VA_GIC_CPU_BASE));
-
-	irq_set_affinity(CODING_ORC0_IRQ, cpumask_of(0));
-	irq_set_affinity(CODING_ORC1_IRQ, cpumask_of(0));
-	irq_set_affinity(CODING_ORC2_IRQ, cpumask_of(0));
-	irq_set_affinity(CODING_ORC3_IRQ, cpumask_of(0));
-	irq_set_affinity(VOUT_IRQ, cpumask_of(0));
-	irq_set_affinity(ORC_VOUT0_IRQ, cpumask_of(0));
-	irq_set_affinity(VIN_IRQ, cpumask_of(0));
-	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
-	irq_set_affinity(IDSP_LAST_PIXEL_IRQ, cpumask_of(0));
-	irq_set_affinity(IDSP_VSYNC_IRQ, cpumask_of(0));
-	irq_set_affinity(IDSP_SENSOR_VSYNC_IRQ, cpumask_of(0));
 #else
 	/* Set VIC sense and event type for each entry
 	 * note: we initialize udc vbus irq type here */
