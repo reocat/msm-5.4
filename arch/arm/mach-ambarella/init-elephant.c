@@ -930,8 +930,10 @@ static void __init ambarella_init_elephant(void)
 			i2c_register_board_info(0, &ambarella_nt11001_board_info, 1);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_vendor1;
+
 			ambarella_board_generic.pwm0_config.max_duty = 255;
 			ambarella_board_generic.pwm0_config.default_duty = 255;
+
 			break;
 
 		default:

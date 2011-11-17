@@ -187,6 +187,9 @@ void ambcache_l2_enable_raw()
 {
 #ifdef CONFIG_OUTER_CACHE
 	if (!outer_is_enabled()) {
+#if (CHIP_REV == I1)
+		amba_writel((APB_BASE + 0x160200), 0x1);
+#endif
 #ifdef CONFIG_CACHE_PL310
 		if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) !=
 			0x00000120) {
@@ -239,6 +242,10 @@ int ambcache_l2_disable()
 		enable_nonboot_cpus();
 	}
 #endif
+#if (CHIP_REV == I1)
+	amba_writel((APB_BASE + 0x160200), 0x0);
+#endif
+
 	return outer_is_enabled() ? -1 : 0;
 }
 EXPORT_SYMBOL(ambcache_l2_disable);

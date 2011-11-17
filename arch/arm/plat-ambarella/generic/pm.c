@@ -81,7 +81,7 @@ static int ambarella_pm_notify(unsigned long val)
 
 	retval = notifier_to_errno(ambarella_set_event(val, NULL));
 	if (retval)
-		pr_err("%s@%d: %ld fail(%d)\n",__func__, __LINE__, val, retval);
+		pr_debug("%s: 0x%08lx fail(%d)\n",__func__, val, retval);
 
 	return retval;
 }
@@ -92,7 +92,7 @@ static int ambarella_pm_notify_raw(unsigned long val)
 
 	retval = notifier_to_errno(ambarella_set_raw_event(val, NULL));
 	if (retval)
-		pr_err("%s@%d: %ld fail(%d)\n",__func__, __LINE__, val, retval);
+		pr_debug("%s: 0x%08lx fail(%d)\n",__func__, val, retval);
 
 	return retval;
 }
@@ -329,22 +329,20 @@ static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 /* ==========================================================================*/
 static int ambarella_pm_hibernation_begin(void)
 {
-	int					retval;
+	int					retval = -1;
 #if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
 	int					mode;
 
-	retval = -1;
 	mode = AMBARELLA_BAPI_REBOOT_HIBERNATE;
-	if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT, &mode) == 1) {
-		retval = 1;
+	if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT, &mode) != 1) {
+		goto ambarella_pm_hibernation_begin_exit;
 	}
-#else
-	retval = 1;
 #endif
+	retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
 
-	if (retval == 1)
-		retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
-
+#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
+ambarella_pm_hibernation_begin_exit:
+#endif
 	return retval;
 }
 
