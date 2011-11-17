@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 157231
+ * @version 157998
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -365,7 +365,7 @@
  * The api to change the clock source takes the new clock source name and the new clock source frequency.
  * @par External PLL Reference Clocks
  * When the new clock source is 
- * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
+ * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI, ::AMB_PLL_REFERENCE_CLOCK_SOURCE_IDSP_RCT_CLK_LVDS_MIPI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
  * the reference clock source of the pll is being changed.
  * The api needs that reference clock frequency to be able to calculate the correct pll settings
  * that will generate the output clock of the pll.
@@ -597,6 +597,8 @@ AMB_PLL_REFERENCE_CLOCK_SOURCE_SPCLK_C,
 AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI,
 /** Use lvds_idsp_sclk as reference for the pll */
 AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK,
+/** Use idsp_rct_clk_lvds_mipi as reference for the pll */
+AMB_PLL_REFERENCE_CLOCK_SOURCE_IDSP_RCT_CLK_LVDS_MIPI,
 /** Use external clock source - no pll */
 AMB_EXTERNAL_CLOCK_SOURCE,
 /** Use the vout pll clock for lcd/hdmi */
@@ -2086,7 +2088,7 @@ static INLINE amb_hal_success_t amb_set_usb_port1_clock_source (void *amb_hal_ba
  * @param[in] amb_clock_frequency the clock frequency of the new source.
  *
  * @note The amb_clock_frequency only needs to be specified for the
- * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
+ * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI, ::AMB_PLL_REFERENCE_CLOCK_SOURCE_IDSP_RCT_CLK_LVDS_MIPI and
  * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
  * an amb_clock_frequency of 0 for all other clock sources.
  * The topic @ref clocksource_page covers this in more details.
@@ -2213,7 +2215,7 @@ static INLINE amb_hal_success_t amb_enable_lcd_clock_observation (void *amb_hal_
  * @param[in] amb_clock_frequency the clock frequency of the new source.
  *
  * @note The amb_clock_frequency only needs to be specified for the
- * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
+ * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI, ::AMB_PLL_REFERENCE_CLOCK_SOURCE_IDSP_RCT_CLK_LVDS_MIPI and
  * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
  * an amb_clock_frequency of 0 for all other clock sources.
  * The topic @ref clocksource_page covers this in more details.
