@@ -420,7 +420,8 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	}
 
 	if (uV >= 0) {
-			capc = 100 *(uV - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN);
+			capc = 100 * (uV - BATTERY_VOLTAGE_MIN) /
+				(BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN);
 			ret = 0;
 		} else {
 			ret = -EINVAL;
@@ -439,13 +440,13 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 			capc = 100;
 	}
 
-	if(first_time == 1){
+	if (first_time == 1) {
 		first_time = 0;
-		if(!(status & WM831X_PWR_WALL))
+		if (!(status & WM831X_PWR_WALL))
 			pre_adc_voltage_capacity = capc+20;//20:for first time ADC value adjust number
 		else
-				pre_adc_voltage_capacity = capc;
-			}
+			pre_adc_voltage_capacity = capc;
+	}
 
 	if(capc == pre_adc_voltage_capacity){
 		*capacity = capc;
@@ -714,9 +715,6 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_battery;
 
-	setup_timer(&power->battery_update_timer, battery_update_timer_func, (unsigned long)power);
-	mod_timer(&power->battery_update_timer,jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
-
 	irq = platform_get_irq_byname(pdev, "SYSLO");
 	ret = request_threaded_irq(irq, NULL, wm831x_syslo_irq,
 				   IRQF_TRIGGER_RISING, "System power low",
@@ -751,6 +749,11 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 		}
 	}
 
+	setup_timer(&power->battery_update_timer, battery_update_timer_func,
+		(unsigned long)power);
+	mod_timer(&power->battery_update_timer,
+		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
+
 	return ret;
 
 err_bat_irq:
@@ -779,6 +782,8 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 	struct wm831x_power *wm831x_power = platform_get_drvdata(pdev);
 	int irq, i;
 
+	del_timer_sync(&wm831x_power->battery_update_timer);
+
 	for (i = 0; i < ARRAY_SIZE(wm831x_bat_irqs); i++) {
 		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
 		free_irq(irq, wm831x_power);
@@ -794,8 +799,33 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 	power_supply_unregister(&wm831x_power->wall);
 	power_supply_unregister(&wm831x_power->usb);
 	kfree(wm831x_power);
+
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int wm831x_power_suppend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	struct wm831x_power *wm831x_power = platform_get_drvdata(pdev);
+
+	del_timer_sync(&wm831x_power->battery_update_timer);
+
+	return 0;
+}
+
+static int wm831x_power_resume(struct platform_device *pdev)
+{
+	struct wm831x_power *wm831x_power = platform_get_drvdata(pdev);
+
+	setup_timer(&wm831x_power->battery_update_timer,
+		battery_update_timer_func, (unsigned long)wm831x_power);
+	mod_timer(&wm831x_power->battery_update_timer,
+		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
+
+	return 0;
+}
+#endif
 
 static struct platform_driver wm831x_power_driver = {
 	.probe = wm831x_power_probe,
@@ -803,6 +833,10 @@ static struct platform_driver wm831x_power_driver = {
 	.driver = {
 		.name = "wm831x-power",
 	},
+#ifdef CONFIG_PM
+	.suspend = wm831x_power_suppend,
+	.resume = wm831x_power_resume,
+#endif
 };
 
 static int __init wm831x_power_init(void)
