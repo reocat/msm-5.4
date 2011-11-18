@@ -609,9 +609,23 @@ static void __init ambarella_init_elephant(void)
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
 
+			//vin0: Rear Sensor vin1: Front Sensor
 			ambarella_board_generic.vin0_power.gpio_id = GPIO(113);
 			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.vin0_power.active_delay = 10;
+
+			ambarella_board_generic.vin0_reset.gpio_id = GPIO(112);
+			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.vin0_reset.active_delay = 1;
+
+			ambarella_board_generic.vin1_power.gpio_id = GPIO(115);
+			ambarella_board_generic.vin1_power.active_level = GPIO_HIGH;
+			ambarella_board_generic.vin1_power.active_delay = 1;
+
+			ambarella_board_generic.vin1_reset.gpio_id = GPIO(114);
+			ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.vin1_reset.active_delay = 1;
+
 			i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 
 			platform_device_register(&lcd_1p3831);
