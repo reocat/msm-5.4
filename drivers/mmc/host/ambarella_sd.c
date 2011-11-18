@@ -66,6 +66,8 @@
 	({ if (0) ambsd_printk(KERN_DEBUG, phcinfo, format, ##arg); 0; })
 #endif
 
+#undef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
+
 /* ==========================================================================*/
 enum ambarella_sd_state {
 	AMBA_SD_STATE_IDLE,
@@ -321,7 +323,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 							DMA_TO_DEVICE);
 #else
 			current_sg[i].dma_address = sg_phys(&current_sg[i]);
-			ambcache_clean_range(sg_virt(&current_sg[i]),
+			ambcache_flush_range(sg_virt(&current_sg[i]),
 				current_sg[i].length);
 #endif
 			if ((current_sg[i].length & 0xFFF) &&
@@ -367,7 +369,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 				pinfo->dev, pslotinfo->buf_paddress,
 				pslotinfo->dma_size, DMA_TO_DEVICE);
 #else
-			ambcache_clean_range(pslotinfo->buf_vaddress,
+			ambcache_flush_range(pslotinfo->buf_vaddress,
 				pslotinfo->dma_size);
 #endif
 			pslotinfo->dma_address = pslotinfo->buf_paddress;
@@ -552,12 +554,15 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
-
 	current_sg = pslotinfo->sg;
+
 	for (i = 0; i < pslotinfo->sg_len; i++) {
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 		dma_unmap_page(pinfo->dev, current_sg[i].dma_address,
 				current_sg[i].length, DMA_FROM_DEVICE);
+#else
+		ambcache_inv_range(sg_virt(&current_sg[i]),
+			current_sg[i].length);
 #endif
 	}
 	if (pslotinfo->dma_need_fill) {
@@ -1857,9 +1862,14 @@ struct ambarella_sd_slot * tristan_plat_info;
 				errorCode = -ENOMEM;
 				goto sd_errorCode_free_host;
 			}
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			pslotinfo->buf_paddress = dma_map_single(
 				pinfo->dev, pslotinfo->buf_vaddress,
 				mmc->max_req_size, DMA_BIDIRECTIONAL);
+#else
+			pslotinfo->buf_paddress = (dma_addr_t)__virt_to_phys(
+				pslotinfo->buf_vaddress);
+#endif
 			if (ambarella_sd_check_dma_boundary(pslotinfo,
 				pslotinfo->buf_paddress, mmc->max_req_size,
 				ambarella_sd_dma_mask_to_size(
@@ -2023,6 +2033,13 @@ sd_errorCode_free_host:
 			gpio_free(pslotinfo->plat_info->ext_power.gpio_id);
 		if (pslotinfo->plat_info->ext_reset.gpio_id != -1)
 			gpio_free(pslotinfo->plat_info->ext_reset.gpio_id);
+		if (pslotinfo->buf_paddress) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
+			dma_unmap_single(pinfo->dev, pslotinfo->buf_paddress,
+				pslotinfo->mmc->max_req_size, DMA_FROM_DEVICE);
+#endif
+			pslotinfo->buf_paddress = (dma_addr_t)NULL;
+		}
 		if (pslotinfo->buf_vaddress) {
 			kfree(pslotinfo->buf_vaddress);
 			pslotinfo->buf_vaddress = NULL;
@@ -2077,10 +2094,12 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 			if (pslotinfo->plat_info->gpio_wp.gpio_id != -1)
 				gpio_free(pslotinfo->plat_info->gpio_wp.gpio_id);
 			if (pslotinfo->buf_paddress) {
+#ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 				dma_unmap_single(pinfo->dev,
 					pslotinfo->buf_paddress,
 					pslotinfo->mmc->max_req_size,
 					DMA_FROM_DEVICE);
+#endif
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
 			if (pslotinfo->buf_vaddress) {

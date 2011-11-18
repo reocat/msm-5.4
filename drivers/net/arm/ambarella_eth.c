@@ -943,14 +943,8 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			entry = dirty_tx % lp->tx_count;
 			status = lp->tx.desc_tx[entry].status;
 
-			if (status & ETH_TDES0_OWN) {
-				irq_status &= ETH_DMA_STATUS_TS_MASK;
-				if ((irq_status == ETH_DMA_STATUS_TS_CTD) ||
-				(irq_status == ETH_DMA_STATUS_TS_SUSP) ||
-				(irq_status == ETH_DMA_STATUS_TS_STOP))
-					ambhw_dma_tx_poll(lp, entry);
+			if (status & ETH_TDES0_OWN)
 				break;
-			}
 
 			if (unlikely(status & ETH_TDES0_ES)) {
 #if defined(AMBETH_TDES0_ATOMIC_CHECK)
@@ -1172,6 +1166,7 @@ static int ambeth_open(struct net_device *ndev)
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 	spin_lock_irqsave(&lp->lock, flags);
 
+	netif_carrier_off(ndev);
 	errorCode = ambeth_start_hw(ndev);
 	if (errorCode)
 		goto ambeth_open_exit;
@@ -1306,7 +1301,6 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 			"RX Error: Descriptor Error.\n");
 	}
 	if (status & ETH_RDES0_SAF) {
-		lp->stats.multicast++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"RX Error: Source Address Filter Fail.\n");
@@ -1345,15 +1339,29 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 			dev_err(&lp->ndev->dev,
 			"RX Error: Watchdog Timeout.\n");
 	}
-	if (status & ETH_RDES0_DBE) {
-		lp->stats.rx_frame_errors++;
+	if (status & ETH_RDES0_RE) {
+		lp->stats.rx_errors++;
 		if (netif_msg_rx_err(lp))
 			dev_err(&lp->ndev->dev, "RX Error: Receive.\n");
+	}
+	if (status & ETH_RDES0_DBE) {
+		if (amba_tstbitsl(lp->regbase + ETH_MAC_CFG_OFFSET,
+			ETH_MAC_CFG_PS)) {
+			lp->stats.rx_length_errors++;
+			if (netif_msg_drv(lp))
+				dev_err(&lp->ndev->dev,
+				"RX Error: Dribble Bit.\n");
+		}
 	}
 	if (status & ETH_RDES0_CE) {
 		lp->stats.rx_crc_errors++;
 		if (netif_msg_rx_err(lp))
 			dev_err(&lp->ndev->dev, "RX Error: CRC.\n");
+	}
+	if (status & ETH_RDES0_RX) {
+		if (netif_msg_drv(lp))
+			dev_err(&lp->ndev->dev,
+			"RX Error: Rx MAC Address/Payload Checksum.\n");
 	}
 }
 
