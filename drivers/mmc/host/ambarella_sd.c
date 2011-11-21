@@ -66,7 +66,7 @@
 	({ if (0) ambsd_printk(KERN_DEBUG, phcinfo, format, ##arg); 0; })
 #endif
 
-#undef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
+#define CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 
 /* ==========================================================================*/
 enum ambarella_sd_state {
@@ -365,7 +365,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 			sg_copy_to_buffer(current_sg, pslotinfo->sg_len,
 				pslotinfo->buf_vaddress, pslotinfo->dma_size);
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
-			dma_sync_single_for_cpu(
+			dma_sync_single_for_device(
 				pinfo->dev, pslotinfo->buf_paddress,
 				pslotinfo->dma_size, DMA_TO_DEVICE);
 #else
@@ -797,14 +797,6 @@ static void ambarella_sd_reset_data_line(struct mmc_host *mmc)
 	}
 
 	ambsd_dbg(pslotinfo, "Exit %s with counter %d\n", __func__, counter);
-}
-
-static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
-{
-	if (enable)
-		ambarella_sd_enable_normal_int(mmc, SD_NISEN_CARD);
-	else
-		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
 }
 
 static void ambarella_sd_data_done(
@@ -1336,8 +1328,8 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u8					pwr = SD_PWR_OFF;
 	struct ambarella_sd_controller_info	*pinfo;
+	u8					pwr = SD_PWR_OFF;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
@@ -1383,8 +1375,8 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc,
 	u32 bus_width, u32 timing)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u8					hostr = 0;
 	struct ambarella_sd_controller_info	*pinfo;
+	u8					hostr = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
@@ -1448,77 +1440,52 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	pslotinfo->state = AMBA_SD_STATE_IDLE;
 }
 
-static void ambarella_sd_ios(struct mmc_host *mmc, struct mmc_ios *ios)
-{
-	ambarella_sd_request_bus(mmc);
-	ambarella_sd_check_ios(mmc, ios);
-	ambarella_sd_release_bus(mmc);
-}
-
-static int ambarella_sd_get_ro(struct mmc_host *mmc)
+static int ambarella_sd_check_cd(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u32					wpspl;
 	struct ambarella_sd_controller_info	*pinfo;
+	u32					cdpin;
+	u32					valid_cd = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	ambarella_sd_request_bus(mmc);
-
-	if (pslotinfo->plat_info->fixed_wp == -1) {
-		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
-			wpspl = !ambarella_get_gpio_input(
-				&pslotinfo->plat_info->gpio_wp);
-		} else {
-			wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-			ambsd_dbg(pslotinfo, "SD/MMC RD[0x%x].\n", wpspl);
-			wpspl &= SD_STA_WPS_PL;
-		}
+	if (pslotinfo->plat_info->fixed_cd == 1) {
+		valid_cd = 1;
+	} else if (pslotinfo->plat_info->fixed_cd == 0) {
+		valid_cd = 0;
 	} else {
-		wpspl =	pslotinfo->plat_info->fixed_wp;
+		cdpin = ambarella_sd_gpio_cd_check_val(pslotinfo);
+		if (cdpin == 1) {
+			valid_cd = 1;
+		} else if (cdpin == -1) {
+			if (amba_tstbitsl(pinfo->regbase + SD_STA_OFFSET,
+				SD_STA_CARD_INSERTED)) {
+				valid_cd = 1;
+			}
+		}
 	}
 
-	ambarella_sd_release_bus(mmc);
-
-	return wpspl ? 1 : 0;
+	return valid_cd;
 }
 
 static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	long					timeout;
-	u32					card_sta;
-	u32					need_reset = 0;
 	struct ambarella_sd_controller_info	*pinfo;
+	long					timeout;
+	u32					need_reset = 0;
 	u32					valid_request = 0;
-	u32					valid_cd = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
 
-	pslotinfo->mrq = mrq;
+	valid_request = ambarella_sd_check_cd(mmc);
 
-	card_sta = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-
-	if (pslotinfo->plat_info->fixed_cd == 1) {
-		valid_request = 1;
-	} else if (pslotinfo->plat_info->fixed_cd == 0) {
-		valid_request = 0;
-	} else {
-		valid_cd = ambarella_sd_gpio_cd_check_val(pslotinfo);
-		if (valid_cd == 1) {
-			valid_request = 1;
-		} else if (valid_cd == -1) {
-			if (card_sta & SD_STA_CARD_INSERTED) {
-				valid_request = 1;
-			}
-		}
-	}
-
-	ambsd_dbg(pslotinfo, "0x%08x:%d & cmd = %d valid_request = %d.\n",
-		card_sta, valid_cd, mrq->cmd->opcode, valid_request);
+	ambsd_dbg(pslotinfo, "cmd = %d valid_request = %d.\n",
+		mrq->cmd->opcode, valid_request);
 	if (valid_request) {
+		pslotinfo->mrq = mrq;
 		ambarella_sd_check_ios(mmc, &mmc->ios);
 		ambarella_sd_send_cmd(pslotinfo, mrq->cmd, mrq->stop);
 		if (pslotinfo->state != AMBA_SD_STATE_ERR) {
@@ -1565,37 +1532,84 @@ ambarella_sd_request_need_reset:
 	}
 
 	if (need_reset) {
-		ambsd_dbg(pslotinfo, "need_reset %d %d 0x%x!\n",
-			pslotinfo->state, mrq->cmd->opcode, card_sta);
+		ambsd_dbg(pslotinfo, "need_reset %d %d!\n",
+			pslotinfo->state, mrq->cmd->opcode);
 		ambarella_sd_reset_all(pslotinfo->mmc);
 	}
 
-ambarella_sd_request_exit:
 	pslotinfo->mrq = NULL;
 
+ambarella_sd_request_exit:
 	ambarella_sd_release_bus(mmc);
 
 	mmc_request_done(mmc, mrq);
 }
-#ifdef CONFIG_TIWLAN_SDIO
+
+static void ambarella_sd_ios(struct mmc_host *mmc, struct mmc_ios *ios)
+{
+	ambarella_sd_request_bus(mmc);
+	ambarella_sd_check_ios(mmc, ios);
+	ambarella_sd_release_bus(mmc);
+}
+
+static int ambarella_sd_get_ro(struct mmc_host *mmc)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+	struct ambarella_sd_controller_info	*pinfo;
+	u32					wpspl;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	ambarella_sd_request_bus(mmc);
+
+	if (pslotinfo->plat_info->fixed_wp == -1) {
+		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
+			wpspl = ambarella_get_gpio_input(
+				&pslotinfo->plat_info->gpio_wp);
+		} else {
+			wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			wpspl &= SD_STA_WPS_PL;
+		}
+	} else {
+		wpspl =	pslotinfo->plat_info->fixed_wp;
+	}
+
+	ambarella_sd_release_bus(mmc);
+
+	ambsd_dbg(pslotinfo, "RO[%d].\n", wpspl);
+	return wpspl ? 1 : 0;
+}
+
 static int ambarella_sd_get_cd(struct mmc_host *mmc)
 {
-	struct ambarella_sd_mmc_info *host = mmc_priv(mmc);
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+	struct ambarella_sd_controller_info	*pinfo;
+	u32					cdpin;
 
-	if (!host->plat_info->card_detect)
-		return -ENOSYS;
-	return host->plat_info->card_detect(NULL, host->slot_id);
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	ambarella_sd_request_bus(mmc);
+	cdpin = ambarella_sd_check_cd(mmc);
+	ambarella_sd_release_bus(mmc);
+
+	ambsd_dbg(pslotinfo, "CD[%d].\n", cdpin);
+	return cdpin ? 1 : 0;
 }
-#endif
+
+static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
+{
+	if (enable)
+		ambarella_sd_enable_normal_int(mmc, SD_NISEN_CARD);
+	else
+		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
+}
+
 static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.request	= ambarella_sd_request,
 	.set_ios	= ambarella_sd_ios,
 	.get_ro		= ambarella_sd_get_ro,
+	.get_cd		= ambarella_sd_get_cd,
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
-
-#ifdef CONFIG_TIWLAN_SDIO
-	.get_cd = ambarella_sd_get_cd,
-#endif
 };
 
 static int ambarella_sd_system_event(struct notifier_block *nb,
@@ -1630,32 +1644,6 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 
 	return errorCode;
 }
-#ifdef CONFIG_TIWLAN_SDIO
-static void ambarella_hsmmc_status_notify_cb(int card_present, void *dev_id)
-{
-
-       struct ambarella_sd_mmc_info *device = dev_id;
-       struct ambarella_sd_slot *slot = device->plat_info;
-       int carddetect;
-
-       printk(KERN_NOTICE "%s %s : card_present %d\n", mmc_hostname(slot->pmmc_host),__func__,card_present);
-
-       carddetect = slot->card_detect(0, 0);
-
-//       sysfs_notify(&host->mmc->class_dev.kobj, NULL, "cover_switch");
-#if 0
-	if (carddetect)
-		mmc_detect_change(slot->pmmc_host, (HZ * 200) / 1000);
-	else
-		mmc_detect_change(slot->pmmc_host, (HZ * 50) / 1000);
-#endif
-	if (carddetect)
-		mmc_detect_change(slot->pmmc_host, slot->cd_delay);
-	else
-		mmc_detect_change(slot->pmmc_host, slot->cd_delay);
-
-}
-#endif
 
 /* ==========================================================================*/
 static int __devinit ambarella_sd_probe(struct platform_device *pdev)
@@ -1670,10 +1658,6 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	u32					hc_cap = 0;
 	u32					i;
 	u32					clock_min;
-#ifdef CONFIG_TIWLAN_SDIO
-struct ambarella_sd_slot * tristan_plat_info;
-#endif
-
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
@@ -1983,25 +1967,6 @@ struct ambarella_sd_slot * tristan_plat_info;
 			ambsd_err(pslotinfo, "Can't add mmc host!\n");
 			goto sd_errorCode_remove_host;
 		}
-#ifdef CONFIG_TIWLAN_SDIO
-
-		if(pdev->id == 0 && i==0){//controller =0 && slot=0
-		tristan_plat_info = &(pinfo->pcontroller->slot[i]);
-		mmc_set_embedded_sdio_data(pslotinfo->plat_info->pmmc_host,
-		&tristan_plat_info->embedded_sdio->cis,
-		&tristan_plat_info->embedded_sdio->cccr,
-		tristan_plat_info->embedded_sdio->funcs,
-		tristan_plat_info->embedded_sdio->quirks);
-		if (pslotinfo->plat_info->register_status_notify)
-			{
-			printk(KERN_NOTICE "%s: register notifyCB for notify function \n",
-				mmc_hostname(pinfo->pslotinfo[i]->mmc));
-				pinfo->pslotinfo[i]->plat_info->register_status_notify(ambarella_hsmmc_status_notify_cb, pslotinfo);
-			}
-
-		}
-#endif
-
 	}
 
 	dev_notice(&pdev->dev,
@@ -2036,7 +2001,8 @@ sd_errorCode_free_host:
 		if (pslotinfo->buf_paddress) {
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			dma_unmap_single(pinfo->dev, pslotinfo->buf_paddress,
-				pslotinfo->mmc->max_req_size, DMA_FROM_DEVICE);
+				pslotinfo->mmc->max_req_size,
+				DMA_BIDIRECTIONAL);
 #endif
 			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 		}
@@ -2098,7 +2064,7 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				dma_unmap_single(pinfo->dev,
 					pslotinfo->buf_paddress,
 					pslotinfo->mmc->max_req_size,
-					DMA_FROM_DEVICE);
+					DMA_BIDIRECTIONAL);
 #endif
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}

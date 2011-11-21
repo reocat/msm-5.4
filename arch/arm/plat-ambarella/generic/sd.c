@@ -144,7 +144,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
-			.active_level	= GPIO_LOW,
+			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
@@ -180,7 +180,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
-			.active_level	= GPIO_LOW,
+			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
@@ -307,7 +307,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
-			.active_level	= GPIO_LOW,
+			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |

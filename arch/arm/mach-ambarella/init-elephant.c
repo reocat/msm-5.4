@@ -926,9 +926,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
 			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
 			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
 			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
@@ -981,41 +979,21 @@ static void __init ambarella_init_elephant(void)
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;
 
 		fio_default_owner = SELECT_FIO_SDIO;
-#ifdef CONFIG_TIWLAN_SDIO
-		//because Ione chip is too far away from TI chip on bub board ,TI sdio is not stable in this case .;
-		ambarella_platform_sd_controller0.clk_limit = 2000000;//24000000
-#else
 		ambarella_platform_sd_controller0.clk_limit = 24000000;
-#endif
 		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-#ifdef CONFIG_TIWLAN_SDIO
-		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_256KB;//SD_BLK_SZ_128KB;
-#else
 		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-#endif
 		ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = GPIO(67);
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(67);
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_val = GPIO_LOW;
 		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-		ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = GPIO(68);
-
-#ifdef CONFIG_TIWLAN_SDIO
-		ambarella_platform_sd_controller0.slot[0].embedded_sdio = &omap_wifi_emb_data;
-		ambarella_platform_sd_controller0.slot[0].register_status_notify =&omap_wifi_status_register;
-		ambarella_platform_sd_controller0.slot[0].card_detect = &omap_wifi_status;
-		ambarella_platform_sd_controller1.slot[0].embedded_sdio = NULL;
-#endif
 		ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
 		ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
 		ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
 		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_val = GPIO_LOW;
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-		ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
+		ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
 		ambarella_platform_sd_controller1.clk_limit = 24000000;
 		ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
 		ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;

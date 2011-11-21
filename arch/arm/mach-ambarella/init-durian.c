@@ -428,14 +428,10 @@ static void __init ambarella_init_durian(void)
 	ambarella_platform_sd_controller0.slot[1].ext_reset.active_delay = 100;
 	*/
 	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_val = GPIO_HIGH;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.active_level = GPIO_LOW;
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.active_delay = 0;
+	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
 
 	/* Register devices*/
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
