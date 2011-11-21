@@ -66,7 +66,7 @@
 	({ if (0) ambsd_printk(KERN_DEBUG, phcinfo, format, ##arg); 0; })
 #endif
 
-#undef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
+#define CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 
 /* ==========================================================================*/
 enum ambarella_sd_state {
@@ -365,7 +365,7 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 			sg_copy_to_buffer(current_sg, pslotinfo->sg_len,
 				pslotinfo->buf_vaddress, pslotinfo->dma_size);
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
-			dma_sync_single_for_cpu(
+			dma_sync_single_for_device(
 				pinfo->dev, pslotinfo->buf_paddress,
 				pslotinfo->dma_size, DMA_TO_DEVICE);
 #else
@@ -1974,7 +1974,8 @@ sd_errorCode_free_host:
 		if (pslotinfo->buf_paddress) {
 #ifdef CONFIG_SD_AMBARELLA_SYNC_DMA_STANDARD
 			dma_unmap_single(pinfo->dev, pslotinfo->buf_paddress,
-				pslotinfo->mmc->max_req_size, DMA_FROM_DEVICE);
+				pslotinfo->mmc->max_req_size,
+				DMA_BIDIRECTIONAL);
 #endif
 			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 		}
@@ -2036,7 +2037,7 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				dma_unmap_single(pinfo->dev,
 					pslotinfo->buf_paddress,
 					pslotinfo->mmc->max_req_size,
-					DMA_FROM_DEVICE);
+					DMA_BIDIRECTIONAL);
 #endif
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
