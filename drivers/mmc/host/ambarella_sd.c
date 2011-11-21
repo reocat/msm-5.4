@@ -799,14 +799,6 @@ static void ambarella_sd_reset_data_line(struct mmc_host *mmc)
 	ambsd_dbg(pslotinfo, "Exit %s with counter %d\n", __func__, counter);
 }
 
-static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
-{
-	if (enable)
-		ambarella_sd_enable_normal_int(mmc, SD_NISEN_CARD);
-	else
-		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
-}
-
 static void ambarella_sd_data_done(
 	struct ambarella_sd_mmc_info *pslotinfo,
 	u16 nis, 
@@ -1336,8 +1328,8 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u8					pwr = SD_PWR_OFF;
 	struct ambarella_sd_controller_info	*pinfo;
+	u8					pwr = SD_PWR_OFF;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
@@ -1383,8 +1375,8 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc,
 	u32 bus_width, u32 timing)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u8					hostr = 0;
 	struct ambarella_sd_controller_info	*pinfo;
+	u8					hostr = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
@@ -1448,77 +1440,52 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	pslotinfo->state = AMBA_SD_STATE_IDLE;
 }
 
-static void ambarella_sd_ios(struct mmc_host *mmc, struct mmc_ios *ios)
-{
-	ambarella_sd_request_bus(mmc);
-	ambarella_sd_check_ios(mmc, ios);
-	ambarella_sd_release_bus(mmc);
-}
-
-static int ambarella_sd_get_ro(struct mmc_host *mmc)
+static int ambarella_sd_check_cd(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	u32					wpspl;
 	struct ambarella_sd_controller_info	*pinfo;
+	u32					cdpin;
+	u32					valid_cd = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	ambarella_sd_request_bus(mmc);
-
-	if (pslotinfo->plat_info->fixed_wp == -1) {
-		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
-			wpspl = !ambarella_get_gpio_input(
-				&pslotinfo->plat_info->gpio_wp);
-		} else {
-			wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-			ambsd_dbg(pslotinfo, "SD/MMC RD[0x%x].\n", wpspl);
-			wpspl &= SD_STA_WPS_PL;
-		}
+	if (pslotinfo->plat_info->fixed_cd == 1) {
+		valid_cd = 1;
+	} else if (pslotinfo->plat_info->fixed_cd == 0) {
+		valid_cd = 0;
 	} else {
-		wpspl =	pslotinfo->plat_info->fixed_wp;
+		cdpin = ambarella_sd_gpio_cd_check_val(pslotinfo);
+		if (cdpin == 1) {
+			valid_cd = 1;
+		} else if (cdpin == -1) {
+			if (amba_tstbitsl(pinfo->regbase + SD_STA_OFFSET,
+				SD_STA_CARD_INSERTED)) {
+				valid_cd = 1;
+			}
+		}
 	}
 
-	ambarella_sd_release_bus(mmc);
-
-	return wpspl ? 1 : 0;
+	return valid_cd;
 }
 
 static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	long					timeout;
-	u32					card_sta;
-	u32					need_reset = 0;
 	struct ambarella_sd_controller_info	*pinfo;
+	long					timeout;
+	u32					need_reset = 0;
 	u32					valid_request = 0;
-	u32					valid_cd = 0;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
 
-	pslotinfo->mrq = mrq;
+	valid_request = ambarella_sd_check_cd(mmc);
 
-	card_sta = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-
-	if (pslotinfo->plat_info->fixed_cd == 1) {
-		valid_request = 1;
-	} else if (pslotinfo->plat_info->fixed_cd == 0) {
-		valid_request = 0;
-	} else {
-		valid_cd = ambarella_sd_gpio_cd_check_val(pslotinfo);
-		if (valid_cd == 1) {
-			valid_request = 1;
-		} else if (valid_cd == -1) {
-			if (card_sta & SD_STA_CARD_INSERTED) {
-				valid_request = 1;
-			}
-		}
-	}
-
-	ambsd_dbg(pslotinfo, "0x%08x:%d & cmd = %d valid_request = %d.\n",
-		card_sta, valid_cd, mrq->cmd->opcode, valid_request);
+	ambsd_dbg(pslotinfo, "cmd = %d valid_request = %d.\n",
+		mrq->cmd->opcode, valid_request);
 	if (valid_request) {
+		pslotinfo->mrq = mrq;
 		ambarella_sd_check_ios(mmc, &mmc->ios);
 		ambarella_sd_send_cmd(pslotinfo, mrq->cmd, mrq->stop);
 		if (pslotinfo->state != AMBA_SD_STATE_ERR) {
@@ -1565,23 +1532,83 @@ ambarella_sd_request_need_reset:
 	}
 
 	if (need_reset) {
-		ambsd_dbg(pslotinfo, "need_reset %d %d 0x%x!\n",
-			pslotinfo->state, mrq->cmd->opcode, card_sta);
+		ambsd_dbg(pslotinfo, "need_reset %d %d!\n",
+			pslotinfo->state, mrq->cmd->opcode);
 		ambarella_sd_reset_all(pslotinfo->mmc);
 	}
 
-ambarella_sd_request_exit:
 	pslotinfo->mrq = NULL;
 
+ambarella_sd_request_exit:
 	ambarella_sd_release_bus(mmc);
 
 	mmc_request_done(mmc, mrq);
+}
+
+static void ambarella_sd_ios(struct mmc_host *mmc, struct mmc_ios *ios)
+{
+	ambarella_sd_request_bus(mmc);
+	ambarella_sd_check_ios(mmc, ios);
+	ambarella_sd_release_bus(mmc);
+}
+
+static int ambarella_sd_get_ro(struct mmc_host *mmc)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+	struct ambarella_sd_controller_info	*pinfo;
+	u32					wpspl;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	ambarella_sd_request_bus(mmc);
+
+	if (pslotinfo->plat_info->fixed_wp == -1) {
+		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
+			wpspl = ambarella_get_gpio_input(
+				&pslotinfo->plat_info->gpio_wp);
+		} else {
+			wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			wpspl &= SD_STA_WPS_PL;
+		}
+	} else {
+		wpspl =	pslotinfo->plat_info->fixed_wp;
+	}
+
+	ambarella_sd_release_bus(mmc);
+
+	ambsd_dbg(pslotinfo, "RO[%d].\n", wpspl);
+	return wpspl ? 1 : 0;
+}
+
+static int ambarella_sd_get_cd(struct mmc_host *mmc)
+{
+	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
+	struct ambarella_sd_controller_info	*pinfo;
+	u32					cdpin;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	ambarella_sd_request_bus(mmc);
+	cdpin = ambarella_sd_check_cd(mmc);
+	ambarella_sd_release_bus(mmc);
+
+	ambsd_dbg(pslotinfo, "CD[%d].\n", cdpin);
+	return cdpin ? 1 : 0;
+}
+
+static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
+{
+	if (enable)
+		ambarella_sd_enable_normal_int(mmc, SD_NISEN_CARD);
+	else
+		ambarella_sd_disable_normal_int(mmc, SD_NISEN_CARD);
 }
 
 static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.request	= ambarella_sd_request,
 	.set_ios	= ambarella_sd_ios,
 	.get_ro		= ambarella_sd_get_ro,
+	.get_cd		= ambarella_sd_get_cd,
 	.enable_sdio_irq= ambarella_sd_enable_sdio_irq,
 };
 
