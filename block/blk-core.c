@@ -468,6 +468,7 @@ void blk_cleanup_queue(struct request_queue *q)
 	blk_sync_queue(q);
 
 	del_timer_sync(&q->backing_dev_info.laptop_mode_wb_timer);
+	del_timer_sync(&q->backing_dev_info.wb.wakeup_timer);
 	mutex_lock(&q->sysfs_lock);
 	queue_flag_set_unlocked(QUEUE_FLAG_DEAD, q);
 	mutex_unlock(&q->sysfs_lock);
