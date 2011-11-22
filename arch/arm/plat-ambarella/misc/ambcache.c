@@ -54,6 +54,13 @@ static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 #endif
 #endif
 
+static int cache_check_start = 1;
+module_param(cache_check_start, int, 0644);
+static int cache_check_end = 0;
+module_param(cache_check_end, int, 0644);
+static int cache_check_fail_halt = 0;
+module_param(cache_check_fail_halt, int, 0644);
+
 /* ==========================================================================*/
 void ambcache_clean_range(void *addr, unsigned int size)
 {
@@ -66,6 +73,18 @@ void ambcache_clean_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+	if (cache_check_start && (vstart != (u32)addr)) {
+		pr_warn("%s start:0x%08x vs 0x%08x\n",
+			__func__, vstart, (u32)addr);
+		if (cache_check_fail_halt)
+			BUG();
+	}
+	if (cache_check_end && (vend != ((u32)addr + size))) {
+		pr_warn("%s start:0x%08x vs 0x%08x\n",
+			__func__, vend, ((u32)addr + size));
+		if (cache_check_fail_halt)
+			BUG();
+	}
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 #endif
@@ -78,7 +97,6 @@ void ambcache_clean_range(void *addr, unsigned int size)
 
 #ifdef CONFIG_OUTER_CACHE
 	outer_clean_range(pstart, (pstart + size));
-	dsb();
 #endif
 }
 EXPORT_SYMBOL(ambcache_clean_range);
@@ -94,11 +112,21 @@ void ambcache_inv_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
-
+	if (cache_check_start && (vstart != (u32)addr)) {
+		pr_warn("%s start:0x%08x vs 0x%08x\n",
+			__func__, vstart, (u32)addr);
+		if (cache_check_fail_halt)
+			BUG();
+	}
+	if (cache_check_end && (vend != ((u32)addr + size))) {
+		pr_warn("%s start:0x%08x vs 0x%08x\n",
+			__func__, vend, ((u32)addr + size));
+		if (cache_check_fail_halt)
+			BUG();
+	}
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 	outer_inv_range(pstart, (pstart + size));
-	dsb();
 #endif
 
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
@@ -128,9 +156,21 @@ void ambcache_flush_range(void *addr, unsigned int size)
 #endif
 	u32					addr_tmp;
 
-#ifdef CONFIG_OUTER_CACHE
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+	if (cache_check_start && (vstart != (u32)addr)) {
+		pr_warn("%s start:0x%08x vs 0x%08x\n",
+			__func__, vstart, (u32)addr);
+		if (cache_check_fail_halt)
+			BUG();
+	}
+	if (cache_check_end && (vend != ((u32)addr + size))) {
+		pr_warn("%s start:0x%08x vs 0x%08x\n",
+			__func__, vend, ((u32)addr + size));
+		if (cache_check_fail_halt)
+			BUG();
+	}
+#ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
@@ -147,9 +187,6 @@ void ambcache_flush_range(void *addr, unsigned int size)
 	}
 	dsb();
 #else
-	vstart = (u32)addr & CACHE_LINE_MASK;
-	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
-
 	for (addr_tmp = vstart; addr_tmp < vend; addr_tmp += CACHE_LINE_SIZE) {
 		__asm__ __volatile__ (
 			"mcr p15, 0, %0, c7, c14, 1" : : "r" (addr_tmp));
