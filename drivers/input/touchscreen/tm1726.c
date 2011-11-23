@@ -390,6 +390,46 @@ static int tm1726_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int tm1726_suspend(struct i2c_client *client, pm_message_t mesg)
+{
+	return 0;
+}
+
+static int tm1726_resume(struct i2c_client *client)
+{
+	struct tm1726_platform_data	*pdata;
+	struct tm1726 			*tm;
+	int				err = 0;
+
+	pdata = client->dev.platform_data;
+	if (!pdata) {
+		dev_err(&client->dev, "platform data is required!\n");
+		return -EINVAL;
+	}
+	pdata->init_platform_hw();
+
+	tm = (struct tm1726 *)i2c_get_clientdata(client);
+
+	err = tm1726_reset(tm);
+	if (err)
+		goto tm1726_resume_exit;
+
+	err = tm1726_adjust_sensitivity(tm);
+	if (err)
+		goto tm1726_resume_exit;
+
+	err = tm1726_config_irq(tm);
+	if (err)
+		goto tm1726_resume_exit;
+
+	err = tm1726_read_all(tm);
+	if (err)
+		goto tm1726_resume_exit;
+
+tm1726_resume_exit:
+	return err;
+}
+
 static struct i2c_device_id tm1726_idtable[] = {
 	{ "tm1726", 0 },
 	{ }
@@ -405,6 +445,8 @@ static struct i2c_driver tm1726_driver = {
 	.id_table	= tm1726_idtable,
 	.probe		= tm1726_probe,
 	.remove		= tm1726_remove,
+	.suspend	= tm1726_suspend,
+	.resume		= tm1726_resume,
 };
 
 static int __init tm1726_init(void)
