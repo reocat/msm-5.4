@@ -1257,53 +1257,6 @@ static void mxt_calc_resolution(struct mxt_data *data)
 	}
 }
 
-static ssize_t mxt_object_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	struct mxt_data *data = dev_get_drvdata(dev);
-	struct mxt_object *object;
-	int count = 0;
-	int i, j;
-	int error;
-	u8 val;
-
-	for (i = 0; i < data->info.object_num; i++) {
-		object = data->object_table + i;
-
-		count += snprintf(buf + count, PAGE_SIZE - count,
-				"Object[%d] (Type %d)\n",
-				i + 1, object->type);
-		if (count >= PAGE_SIZE)
-			return PAGE_SIZE - 1;
-
-		if (!mxt_object_readable(object->type)) {
-			count += snprintf(buf + count, PAGE_SIZE - count,
-					"\n");
-			if (count >= PAGE_SIZE)
-				return PAGE_SIZE - 1;
-			continue;
-		}
-
-		for (j = 0; j < object->size; j++) {
-			error = mxt_read_object(data,
-						object->type, j, &val);
-			if (error)
-				return error;
-
-			count += snprintf(buf + count, PAGE_SIZE - count,
-					"\t[%2d]: %02x (%d)\n", j, val, val);
-			if (count >= PAGE_SIZE)
-				return PAGE_SIZE - 1;
-		}
-
-		count += snprintf(buf + count, PAGE_SIZE - count, "\n");
-		if (count >= PAGE_SIZE)
-			return PAGE_SIZE - 1;
-	}
-
-	return count;
-}
-
 static int mxt_load_fw(struct device *dev, const char *fn)
 {
 	struct mxt_data *data = dev_get_drvdata(dev);
@@ -1560,13 +1513,11 @@ static ssize_t mxt_mem_access_write(struct file *filp, struct kobject *kobj,
 	return ret == 0 ? count : 0;
 }
 
-static DEVICE_ATTR(object, 0444, mxt_object_show, NULL);
 static DEVICE_ATTR(update_fw, 0664, NULL, mxt_update_fw_store);
 static DEVICE_ATTR(pause_driver, 0666, mxt_pause_show, mxt_pause_store);
 static DEVICE_ATTR(debug_enable, 0666, mxt_debug_enable_show, mxt_debug_enable_store);
 
 static struct attribute *mxt_attrs[] = {
-	&dev_attr_object.attr,
 	&dev_attr_update_fw.attr,
 	&dev_attr_pause_driver.attr,
 	&dev_attr_debug_enable.attr,
