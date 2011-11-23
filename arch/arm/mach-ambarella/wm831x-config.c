@@ -367,7 +367,7 @@ static struct regulator_init_data wm8310_default_ldo8_data __initdata = {
 /* LDO9 VDD_BT */
 static struct regulator_consumer_supply ldo9_consumers[] __initdata = {
 	{
-		.supply = "bt_vcc",
+		.supply = "bt&gps_vcc",
 	},
 };
 static struct regulator_init_data wm8310_default_ldo9_data __initdata = {
