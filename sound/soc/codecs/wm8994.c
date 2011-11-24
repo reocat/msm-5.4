@@ -2682,6 +2682,24 @@ static int wm8994_resume(struct snd_soc_codec *codec)
 	int i, ret;
 	unsigned int val, mask;
 
+	/* Read register back and sync to the cache table. */
+	for (i = 0; i < WM8994_CACHE_SIZE; i++) {
+		if (!wm8994_readable(i) || wm8994_volatile(i))
+			continue;
+
+		ret = wm8994_reg_read(codec->control_data, i);
+		if (ret < 0)
+			continue;
+
+		ret = snd_soc_cache_write(codec, i, ret);
+		if (ret != 0) {
+			dev_err(codec->dev,
+				"Failed to initialise cache for 0x%x: %d\n",
+				i, ret);
+			break;
+		}
+	}
+
 	if (wm8994->revision < 4) {
 		/* force a HW read */
 		val = wm8994_reg_read(codec->control_data,
