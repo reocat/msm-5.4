@@ -648,8 +648,9 @@ static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
 			goto ambeth_rx_rngmng_skb_exit;
 		}
 		skb->dev = lp->ndev;
+		skb->len = AMBETH_PACKET_MAXFRAME;
 		mapping = dma_map_single(&lp->ndev->dev, skb->data,
-			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+			skb->len, DMA_FROM_DEVICE);
 		lp->rx.rng_rx[entry].skb = skb;
 		lp->rx.rng_rx[entry].mapping = mapping;
 		lp->rx.desc_rx[entry].buffer1 = mapping;
