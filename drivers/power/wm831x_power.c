@@ -632,8 +632,48 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 	power_supply_unregister(&wm831x_power->wall);
 	power_supply_unregister(&wm831x_power->usb);
 	kfree(wm831x_power);
+
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int wm831x_power_suppend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	int irq, i;
+
+	for (i = 0; i < ARRAY_SIZE(wm831x_bat_irqs); i++) {
+		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
+		disable_irq(irq);
+	}
+
+	irq = platform_get_irq_byname(pdev, "PWR SRC");
+	disable_irq(irq);
+
+	irq = platform_get_irq_byname(pdev, "SYSLO");
+	disable_irq(irq);
+
+	return 0;
+}
+
+static int wm831x_power_resume(struct platform_device *pdev)
+{
+	int irq, i;
+
+	for (i = 0; i < ARRAY_SIZE(wm831x_bat_irqs); i++) {
+		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
+		enable_irq(irq);
+	}
+
+	irq = platform_get_irq_byname(pdev, "PWR SRC");
+	enable_irq(irq);
+
+	irq = platform_get_irq_byname(pdev, "SYSLO");
+	enable_irq(irq);
+
+	return 0;
+}
+#endif
 
 static struct platform_driver wm831x_power_driver = {
 	.probe = wm831x_power_probe,
@@ -641,6 +681,10 @@ static struct platform_driver wm831x_power_driver = {
 	.driver = {
 		.name = "wm831x-power",
 	},
+#ifdef CONFIG_PM
+	.suspend = wm831x_power_suppend,
+	.resume = wm831x_power_resume,
+#endif
 };
 
 static int __init wm831x_power_init(void)

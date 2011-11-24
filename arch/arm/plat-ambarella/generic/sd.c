@@ -203,7 +203,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 };
 module_param_cb(sd0_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller0.clk_limit), 0644);
-module_param_cb(sd0_wait_timoout, &param_ops_int,
+module_param_cb(sd0_wait_timeout, &param_ops_int,
 	&(ambarella_platform_sd_controller0.wait_tmo), 0644);
 AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0,
 	&param_ops_ambarella_sd_cdpos, 0644);
@@ -336,7 +336,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 };
 module_param_cb(sd1_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller1.clk_limit), 0644);
-module_param_cb(sd1_wait_timoout, &param_ops_int,
+module_param_cb(sd1_wait_timeout, &param_ops_int,
 	&(ambarella_platform_sd_controller1.wait_tmo), 0644);
 AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1,
 	&param_ops_ambarella_sd_cdpos, 0644);

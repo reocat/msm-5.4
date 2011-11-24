@@ -2368,8 +2368,8 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	udc->sys_suspended = 1;
 	disable_irq(USBC_IRQ);
 
-	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
-		__func__, retval, message.event);
+	if (udc->controller_info->vbus_polled)
+		del_timer_sync(&udc->vbus_timer);
 
 	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_set_pullup(udc, 0);
@@ -2377,6 +2377,9 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 
 	amb_udc_status = AMBARELLA_UDC_STATUS_SUSPEND;
 	schedule_work(&udc->uevent_work);
+
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
+		__func__, retval, message.event);
 
 	return retval;
 }
@@ -2389,8 +2392,6 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 
 	udc = platform_get_drvdata(pdev);
 	udc->sys_suspended = 0;
-
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
 	/* Initial USB PLL */
 	udc->controller_info->init_pll();
@@ -2407,6 +2408,14 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 
 	amb_udc_status = AMBARELLA_UDC_STATUS_RESUME;
 	schedule_work(&udc->uevent_work);
+
+	if (udc->controller_info->vbus_polled) {
+		setup_timer(&udc->vbus_timer,
+			ambarella_vbus_timer, (unsigned long)udc);
+		mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
+	}
+
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
 	return retval;
 }
