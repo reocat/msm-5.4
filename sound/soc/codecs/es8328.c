@@ -67,11 +67,10 @@ static const DECLARE_TLV_DB_SCALE(out_tlv, -3000, 100, 0);
 static const DECLARE_TLV_DB_SCALE(in_tlv, 0, 300, 0);
 
 static const struct snd_kcontrol_new es8328_snd_controls[] = {
-	/* We limit the register from 0xC0 to 0xB4 manually */
 	SOC_DOUBLE_R_TLV("Playback Volume",
-		ES8328_LDAC_VOL, ES8328_RDAC_VOL, 0, 0xB4, 1, digital_tlv),
+		ES8328_LDAC_VOL, ES8328_RDAC_VOL, 0, 0xC0, 1, digital_tlv),
 	SOC_DOUBLE_R_TLV("Analog Out Volume",
-		ES8328_LOUT1_VOL, ES8328_ROUT1_VOL, 0, 0x21, 0, out_tlv),
+		ES8328_LOUT1_VOL, ES8328_ROUT1_VOL, 0, 0x1D, 0, out_tlv),
 
 	SOC_DOUBLE_R_TLV("Capture Volume",
 		ES8328_LADC_VOL, ES8328_RADC_VOL, 0, 0xC0, 1, digital_tlv),
@@ -581,8 +580,8 @@ static int es8328_probe(struct snd_soc_codec *codec)
 	//snd_soc_write(codec, ES8328_CONTROL2 , 0x72);   // updated by david-everest,5-25
 	//mdelay(100);
 
-	snd_soc_write(codec, ES8328_LOUT1_VOL, 0x21);   //
-	snd_soc_write(codec, ES8328_ROUT1_VOL, 0x21);   //
+	snd_soc_write(codec, ES8328_LOUT1_VOL, 0x1D);   //
+	snd_soc_write(codec, ES8328_ROUT1_VOL, 0x1D);   //
 	snd_soc_write(codec, ES8328_LOUT2_VOL, 0x00);   // Disable LOUT2
 	snd_soc_write(codec, ES8328_ROUT2_VOL, 0x00);   // Disable ROUT2
 
