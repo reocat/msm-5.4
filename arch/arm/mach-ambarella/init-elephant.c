@@ -789,6 +789,10 @@ static void __init ambarella_init_elephant(void)
 
 			ambarella_board_generic.pwm0_config.max_duty = 255;
 			ambarella_board_generic.pwm0_config.default_duty = 0;
+			ambarella_board_generic.pwm1_config.default_duty = 0;
+			ambarella_board_generic.pwm2_config.default_duty = 0;
+			ambarella_board_generic.pwm3_config.default_duty = 0;
+			ambarella_board_generic.pwm4_config.default_duty = 0;
 
 			use_bub_default = 0;
 			break;
