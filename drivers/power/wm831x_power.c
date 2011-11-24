@@ -808,8 +808,20 @@ static int wm831x_power_suppend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	struct wm831x_power *wm831x_power = platform_get_drvdata(pdev);
+	int irq, i;
 
 	del_timer_sync(&wm831x_power->battery_update_timer);
+
+	for (i = 0; i < ARRAY_SIZE(wm831x_bat_irqs); i++) {
+		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
+		disable_irq(irq);
+	}
+
+	irq = platform_get_irq_byname(pdev, "PWR SRC");
+	disable_irq(irq);
+
+	irq = platform_get_irq_byname(pdev, "SYSLO");
+	disable_irq(irq);
 
 	return 0;
 }
@@ -817,6 +829,18 @@ static int wm831x_power_suppend(struct platform_device *pdev,
 static int wm831x_power_resume(struct platform_device *pdev)
 {
 	struct wm831x_power *wm831x_power = platform_get_drvdata(pdev);
+	int irq, i;
+
+	for (i = 0; i < ARRAY_SIZE(wm831x_bat_irqs); i++) {
+		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
+		enable_irq(irq);
+	}
+
+	irq = platform_get_irq_byname(pdev, "PWR SRC");
+	enable_irq(irq);
+
+	irq = platform_get_irq_byname(pdev, "SYSLO");
+	enable_irq(irq);
 
 	setup_timer(&wm831x_power->battery_update_timer,
 		battery_update_timer_func, (unsigned long)wm831x_power);
