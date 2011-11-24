@@ -26,6 +26,8 @@
 #include <linux/slab.h>
 
 #include <linux/rfkill-gpio.h>
+#include <linux/regulator/consumer.h>
+
 
 
 
@@ -36,6 +38,31 @@ struct rfkill_gpio_data {
 	char					*shutdown_name;
 };
 
+static int bt_setpower(bool enable){
+	int ret;
+	struct regulator *vdd_bt = NULL;
+	vdd_bt = regulator_get(NULL,"bt_vcc");
+	if(IS_ERR(vdd_bt)){
+		return -1;
+	}
+
+	if(enable){
+		ret = regulator_enable(vdd_bt);
+		if(ret!=0){
+			pr_warn("Failed to enable LDO9: %d\n",ret);
+		}
+	}else{
+		ret = regulator_disable(vdd_bt);
+		if(ret!=0){
+			pr_warn("Failed to disable LDO9: %d\n",ret);
+		}
+	}
+	regulator_put(vdd_bt);
+
+	return ret;
+}
+
+
 static int rfkill_gpio_set_power(void *data, bool blocked)
 {
 	struct rfkill_gpio_data *rfkill = data;
@@ -45,7 +72,9 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 			gpio_direction_output(rfkill->pdata->shutdown_gpio, 0);
 		if (gpio_is_valid(rfkill->pdata->reset_gpio))
 			gpio_direction_output(rfkill->pdata->reset_gpio, 0);
+		bt_setpower(false);
 	} else {
+		bt_setpower(true);
 		if (gpio_is_valid(rfkill->pdata->reset_gpio))
 			gpio_direction_output(rfkill->pdata->reset_gpio, 1);
 		if (gpio_is_valid(rfkill->pdata->shutdown_gpio))
@@ -128,8 +157,6 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rfkill);
 
 	dev_info(&pdev->dev, "%s device registered.\n", pdata->name);
-
-	rfkill_gpio_set_power(rfkill,true);
 
 	return 0;
 
