@@ -553,13 +553,20 @@ static void ambeth_adjust_link(struct net_device *ndev)
 	spin_unlock_irqrestore(&lp->lock, flags);
 }
 
-static int ambeth_init_phy(struct ambeth_info *lp)
+static int ambeth_phy_start(struct ambeth_info *lp)
 {
 	int					errorCode = 0;
-	struct phy_device			*phydev = NULL;
+	struct phy_device			*phydev;
 	phy_interface_t				interface;
 	struct net_device			*ndev;
 	int					phy_addr;
+	unsigned long				flags;
+
+	spin_lock_irqsave(&lp->lock, flags);
+	phydev = lp->phydev;
+	spin_unlock_irqrestore(&lp->lock, flags);
+	if (phydev)
+		goto ambeth_init_phy_exit;
 
 	ndev = lp->ndev;
 	lp->oldlink = PHY_DOWN;
@@ -624,12 +631,27 @@ ambeth_init_phy_connect:
 	phydev->supported &= lp->platform_info->phy_supported;
 	phydev->advertising = phydev->supported;
 
+	spin_lock_irqsave(&lp->lock, flags);
 	lp->phydev = phydev;
+	spin_unlock_irqrestore(&lp->lock, flags);
 
 	errorCode = phy_start_aneg(phydev);
 
 ambeth_init_phy_exit:
 	return errorCode;
+}
+
+static void ambeth_phy_stop(struct ambeth_info *lp)
+{
+	struct phy_device			*phydev;
+	unsigned long				flags;
+
+	spin_lock_irqsave(&lp->lock, flags);
+	phydev = lp->phydev;
+	lp->phydev = NULL;
+	spin_unlock_irqrestore(&lp->lock, flags);
+	if (phydev)
+		phy_disconnect(phydev);
 }
 
 static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
@@ -776,7 +798,7 @@ static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
 static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 	u32 irq_status)
 {
-	u32					miss_ov;
+	u32					miss_ov = 0;
 
 	if (unlikely(irq_status & ETH_DMA_STATUS_AIS)) {
 		if (irq_status & (ETH_DMA_STATUS_RU | ETH_DMA_STATUS_OVF))
@@ -1051,18 +1073,15 @@ static int ambeth_start_hw(struct net_device *ndev)
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
+	spin_lock_irqsave(&lp->lock, flags);
 	errorCode = ambhw_enable(lp);
+	spin_unlock_irqrestore(&lp->lock, flags);
 	if (errorCode)
 		goto ambeth_start_hw_exit;
-
-	if (lp->phydev == NULL) {
-		errorCode = ambeth_init_phy(lp);
-		if (errorCode)
-			goto ambeth_start_hw_exit;
-	}
 
 	lp->rx.rng_rx = kmalloc((sizeof(struct ambeth_rng_info) *
 		lp->rx_count), GFP_KERNEL);
@@ -1112,9 +1131,11 @@ static int ambeth_start_hw(struct net_device *ndev)
 		(sizeof(struct ambeth_desc) * lp->tx_count));
 	ambeth_tx_rngmng_init(lp);
 
+	spin_lock_irqsave(&lp->lock, flags);
 	ambhw_set_dma_desc(lp);
 	ambhw_dma_rx_start(lp);
 	ambhw_dma_tx_start(lp);
+	spin_unlock_irqrestore(&lp->lock, flags);
 
 ambeth_start_hw_exit:
 	return errorCode;
@@ -1123,15 +1144,13 @@ ambeth_start_hw_exit:
 static void ambeth_stop_hw(struct net_device *ndev)
 {
 	struct ambeth_info			*lp;
+	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
-	if (lp->phydev) {
-		phy_disconnect(lp->phydev);
-		lp->phydev = NULL;
-	}
-
+	spin_lock_irqsave(&lp->lock, flags);
 	ambhw_disable(lp);
+	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ambeth_tx_rngmng_del(lp);
 	if (lp->tx.desc_tx) {
@@ -1162,12 +1181,9 @@ static int ambeth_open(struct net_device *ndev)
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
-	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock_irqsave(&lp->lock, flags);
 
-	netif_carrier_off(ndev);
 	errorCode = ambeth_start_hw(ndev);
 	if (errorCode)
 		goto ambeth_open_exit;
@@ -1185,11 +1201,14 @@ static int ambeth_open(struct net_device *ndev)
 	netif_start_queue(ndev);
 	ambhw_dma_int_enable(lp);
 
-ambeth_open_exit:
-	if (errorCode)
-		ambeth_stop_hw(ndev);
+	netif_carrier_off(ndev);
+	errorCode = ambeth_phy_start(lp);
 
-	spin_unlock_irqrestore(&lp->lock, flags);
+ambeth_open_exit:
+	if (errorCode) {
+		ambeth_phy_stop(lp);
+		ambeth_stop_hw(ndev);
+	}
 
 	return errorCode;
 }
@@ -1198,7 +1217,6 @@ static int ambeth_stop(struct net_device *ndev)
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
-	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
@@ -1206,10 +1224,8 @@ static int ambeth_stop(struct net_device *ndev)
 	napi_disable(&lp->napi);
 	flush_scheduled_work();
 	free_irq(ndev->irq, ndev);
-
-	spin_lock_irqsave(&lp->lock, flags);
+	ambeth_phy_stop(lp);
 	ambeth_stop_hw(ndev);
-	spin_unlock_irqrestore(&lp->lock, flags);
 
 	return errorCode;
 }
@@ -1874,12 +1890,10 @@ static int __devexit ambeth_drv_remove(struct platform_device *pdev)
 {
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
-	unsigned long				flags;
 
 	ndev = platform_get_drvdata(pdev);
 	if (ndev) {
 		lp = (struct ambeth_info *)netdev_priv(ndev);
-		spin_lock_irqsave(&lp->lock, flags);
 		unregister_netdev(ndev);
 		netif_napi_del(&lp->napi);
 		if (lp->platform_info->mii_power.gpio_id != -1)
@@ -1890,7 +1904,6 @@ static int __devexit ambeth_drv_remove(struct platform_device *pdev)
 			gpio_free(lp->platform_info->phy_irq.irq_gpio);
 		mdiobus_unregister(&lp->new_bus);
 		kfree(lp->new_bus.irq);
-		spin_unlock_irqrestore(&lp->lock, flags);
 		platform_set_drvdata(pdev, NULL);
 		free_netdev(ndev);
 		dev_notice(&pdev->dev, "Removed.\n");

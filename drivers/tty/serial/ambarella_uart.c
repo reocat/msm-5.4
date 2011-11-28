@@ -376,10 +376,10 @@ static int serial_ambarella_startup(struct uart_port *port)
 		UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET, (port_info->fcr |
 		UART_FC_XMITR | UART_FC_RCVRR));
-	retval = request_irq(port->irq, serial_ambarella_irq,
-		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
 	amba_writel(port->membase + UART_IE_OFFSET, port_info->ier);
 	spin_unlock_irqrestore(&port->lock, flags);
+	retval = request_irq(port->irq, serial_ambarella_irq,
+		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
 
 	return retval;
 }
