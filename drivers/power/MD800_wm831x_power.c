@@ -491,7 +491,7 @@ static int cap_by_adc(int sys_status, int charge_status, int uV)
 		return 0;
 	}
 	if(!(sys_status & WM831X_PWR_WALL)){
-		if(uV < BAT_ADC_NOAC_MID){
+		if(uV <= BAT_ADC_NOAC_MID){
 			capc = 30 * (uV-BAT_ADC_NOAC_MIN) /
 				(BAT_ADC_NOAC_MID - BAT_ADC_NOAC_MIN);
 		}
@@ -503,6 +503,8 @@ static int cap_by_adc(int sys_status, int charge_status, int uV)
 			capc = 100;
 	}else{
 		if(charge_status & WM831X_CHG_TOPOFF){//constant voltage mode
+			if(pre_adc_voltage_capacity < 30)
+				pre_adc_voltage_capacity = 30;
 			if(timecounter== ((2*60) / (BAT_UPDATE_DELAY_MSEC / 1000))){//every 2 min to increase 1
 				capc = pre_adc_voltage_capacity + 1;
 				timecounter = 0;

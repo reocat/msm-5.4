@@ -24,7 +24,7 @@
 #define BATTERY_VOLTAGE_AC_MIN   3900000
 #define BATTERY_VOLTAGE_AC_MAX   4200000
 #define BATTERY_VOLTAGE_NOAC_MIN   3400000
-#define BATTERY_VOLTAGE_NOAC_MID   3800000
+#define BATTERY_VOLTAGE_NOAC_MID   3600000
 #define BATTERY_VOLTAGE_NOAC_MAX   4000000
 
 struct wm831x_power {
@@ -416,7 +416,7 @@ static int cap_by_voltage(int sys_status, int charge_status, int uV)
 		return 0;
 	}
 	if(!(sys_status & WM831X_PWR_WALL)){
-		if(uV < BATTERY_VOLTAGE_NOAC_MID){
+		if(uV <= BATTERY_VOLTAGE_NOAC_MID){
 			capc = 30 * (uV-BATTERY_VOLTAGE_NOAC_MIN) /
 				(BATTERY_VOLTAGE_NOAC_MID - BATTERY_VOLTAGE_NOAC_MIN);
 		}
@@ -428,6 +428,8 @@ static int cap_by_voltage(int sys_status, int charge_status, int uV)
 			capc = 100;
 	}else{
 		if(charge_status & WM831X_CHG_TOPOFF){//constant voltage mode
+			if(pre_adc_voltage_capacity < 30)
+				pre_adc_voltage_capacity = 30;
 			if(timecounter== ((3*60) / (BAT_UPDATE_DELAY_MSEC / 1000))){//every 3 min to increase 1
 				capc = pre_adc_voltage_capacity + 1;
 				timecounter = 0;
