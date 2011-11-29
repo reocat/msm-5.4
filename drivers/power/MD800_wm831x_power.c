@@ -573,6 +573,8 @@ static int cap_by_adc(int sys_status, int charge_status, int uV)
 	if(sys_status & WM831X_PWR_WALL){
 		if((charge_status & WM831X_CHG_STATE_MASK) == 0){
 				capc = 100;
+				if(uV > 4100000)
+					pre_adc_voltage_capacity = capc;
 		}
 	}
 	return capc;
