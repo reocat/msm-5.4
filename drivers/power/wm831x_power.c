@@ -429,7 +429,7 @@ static int cap_by_voltage(int sys_status, int charge_status, int uV)
 		if(charge_status & WM831X_CHG_TOPOFF){//constant voltage mode
 			if(pre_adc_voltage_capacity < 30)
 				pre_adc_voltage_capacity = 30;
-			if(timecounter== ((3*60) / (BAT_UPDATE_DELAY_MSEC / 1000))){//every 3 min to increase 1
+			if(timecounter== ((2*3*60) / (BAT_UPDATE_DELAY_MSEC / 1000))){//every 3 min to increase 1
 				capc = pre_adc_voltage_capacity + 1;
 				timecounter = 0;
 			}else
