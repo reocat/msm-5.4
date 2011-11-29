@@ -279,8 +279,7 @@ static void wm831x_config_battery(struct wm831x *wm831x)
 	ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
 			      WM831X_CHG_ENA_MASK |
 			      WM831X_CHG_FAST_MASK |
-			      WM831X_CHG_ITERM_MASK |
-                           WM831X_CHG_CHIP_TEMP_MON_MASK,
+			      WM831X_CHG_ITERM_MASK,
 			      reg1);
 	if (ret != 0)
 		dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
