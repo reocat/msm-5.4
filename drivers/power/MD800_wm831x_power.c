@@ -23,10 +23,16 @@
 #include <plat/gpio.h>
 
 #define BAT_UPDATE_DELAY_MSEC   5000
-#define MD800_ADC_GAP        500000
-#define MD800_BATTERY_VOLTAGE_MIN   3800000
-#define MD800_BATTERY_VOLTAGE_MID   4000000
-#define MD800_BATTERY_VOLTAGE_MAX   4200000
+#define ADC_GAP        500000
+#define BAT_ADC_NOAC_MIN   3300000
+#define BAT_ADC_NOAC_MID   3600000
+#define BAT_ADC_NOAC_MAX   3800000
+#define BAT_ADC_MIN   3950000
+#define BAT_ADC_MAX   4200000
+#define fast_percent   10
+#define cv_percent    (100-fast_percent)
+#define BAT_CC_MIN   90					//BAT charge current
+#define BAT_CC_MAX   1050
 
 struct wm831x_power {
 	struct wm831x *wm831x;
@@ -98,10 +104,10 @@ static void disable_battery_charge(struct wm831x *wm831x)
 static int usbcable_without_docking(void)
 {
 	int ret =0;
-	printk(KERN_DEBUG "usb cable without docking %d\n",amb_udc_status);
+//	printk(KERN_DEBUG "usb cable without docking %d\n",amb_udc_status);
 	if((amb_udc_status == AMBARELLA_UDC_STATUS_CONFIGURED)
 		& (ambarella_gpio_get(GPIO(7)) == GPIO_LOW)){
-		printk(KERN_DEBUG "usb cable without docking \n");
+//		printk(KERN_DEBUG "usb cable without docking \n");
 		ret = 1;
 	}
 	return ret;
@@ -474,11 +480,208 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 	return 0;
 }
 
+
+static int cap_by_adc(int sys_status, int charge_status, int uV)
+{
+	int capc=0;
+	static int first_time=0,timecounter=0;
+	static int pre_adc_voltage_capacity=-1;
+
+	if(uV < BAT_ADC_NOAC_MIN){
+		return 0;
+	}
+	if(!(sys_status & WM831X_PWR_WALL)){
+		if(uV < BAT_ADC_NOAC_MID){
+			capc = 30 * (uV-BAT_ADC_NOAC_MIN) /
+				(BAT_ADC_NOAC_MID - BAT_ADC_NOAC_MIN);
+		}
+		else{
+			capc = 30 + 70 * (uV - BAT_ADC_NOAC_MID) /
+				(BAT_ADC_NOAC_MAX - BAT_ADC_NOAC_MID);
+		}
+		if(capc >= 100)
+			capc = 100;
+	}else{
+		if(charge_status & WM831X_CHG_TOPOFF){//constant voltage mode
+			if(timecounter== ((2*60) / (BAT_UPDATE_DELAY_MSEC / 1000))){//every 2 min to increase 1
+				capc = pre_adc_voltage_capacity + 1;
+				timecounter = 0;
+			}else
+				timecounter++;
+			if(capc >= 100)
+			capc = 99;
+			if((charge_status & WM831X_CHG_STATE_MASK) == 0)
+				capc = 100;
+		}else{
+			capc = 30 * (uV - BAT_ADC_MIN) /
+				(BAT_ADC_MAX - BAT_ADC_MIN);
+		}
+	}
+
+printk("uV=%d, 400d=0x%x,404a=0x%x,cap=%d,pre=%d\n",uV, sys_status, charge_status, capc, pre_adc_voltage_capacity);
+	if (first_time == 0) {
+		first_time = 1;
+		if (!(sys_status & WM831X_PWR_WALL))
+			pre_adc_voltage_capacity = capc+20;//20:for first time ADC value adjust number
+		else
+			pre_adc_voltage_capacity = capc;
+	}
+
+	if(capc == pre_adc_voltage_capacity){
+	}
+	else if(capc > pre_adc_voltage_capacity)
+	{
+		if(!(sys_status & WM831X_PWR_WALL)){
+			if(pre_adc_voltage_capacity == 0){
+				capc = 1;
+			pre_adc_voltage_capacity = capc;
+		}
+			capc = pre_adc_voltage_capacity;
+		}
+		else{
+			capc = pre_adc_voltage_capacity + 1;
+				pre_adc_voltage_capacity = capc;
+			}
+	}
+		else
+	{
+		if(!(sys_status & WM831X_PWR_WALL)){
+			if((pre_adc_voltage_capacity - capc) <= 20){
+				capc = pre_adc_voltage_capacity-1;
+				pre_adc_voltage_capacity=capc;
+			}
+			else{
+				capc = pre_adc_voltage_capacity - 2;
+			pre_adc_voltage_capacity = capc;
+			}
+		}else{
+			capc = pre_adc_voltage_capacity;
+		}
+	}
+	if(capc <= 0){
+		capc = 0;
+		pre_adc_voltage_capacity = capc;
+	}
+
+	if(capc >= 100){
+		capc = 100;
+		pre_adc_voltage_capacity = capc;
+	}
+
+	if(sys_status & WM831X_PWR_WALL){
+		if((charge_status & WM831X_CHG_STATE_MASK) == 0){
+				capc = 100;
+		}
+	}
+	return capc;
+}
+
+
+static int cap_by_current(int chargecurrent, int sys_status, int charge_status, int uV)
+{
+	static int pre_capc,first_time=2;
+	int capc=0;
+
+	if(charge_status & WM831X_CHG_ACTIVE){
+		if(sys_status & WM831X_PWR_WALL){
+			if((charge_status & WM831X_CHG_STATE_MASK) == WM831X_CHG_STATE_FAST)
+				capc = (fast_percent * (uV - BAT_ADC_MIN)) / (BAT_ADC_MAX - BAT_ADC_MIN);
+			if(charge_status & WM831X_CHG_TOPOFF)
+				capc = fast_percent + (cv_percent * (BAT_CC_MAX - chargecurrent)) / (BAT_CC_MAX - BAT_CC_MIN);
+		}
+	}else if(!(sys_status & WM831X_PWR_WALL)){
+		if(uV < BAT_ADC_NOAC_MID){
+			capc = 30 * (uV-BAT_ADC_NOAC_MIN) /
+				(BAT_ADC_NOAC_MID - BAT_ADC_NOAC_MIN);
+		}
+		else{
+			capc = 30 + 70 * (uV - BAT_ADC_NOAC_MID) /
+				(BAT_ADC_NOAC_MAX - BAT_ADC_NOAC_MID);
+		}
+		if(capc >= 100)
+			capc = 100;
+	}
+
+	if(capc < 0)
+		capc = 0;
+
+	if(capc >= 100){
+		capc = 99;
+	}
+	//printk("uV=%d, current=%d,400d=0x%x,404a=0x%x,cap=%d,pre=%d\n",uV, chargecurrent, sys_status, charge_status, capc, pre_capc);
+	if(sys_status & WM831X_PWR_WALL){
+		if(((chargecurrent == 0) || (uV == 0)) && (uV <= 4190000) && (pre_capc != 99)){
+			return pre_capc;
+		}
+	}
+
+	if(first_time == 2){
+		if(sys_status & WM831X_PWR_WALL){
+			if(charge_status & WM831X_CHG_ACTIVE){
+				first_time = 1;
+				pre_capc = capc;
+			}
+		}else{
+			first_time = 1;
+			pre_capc = capc;
+		}
+	}
+
+	if(capc == pre_capc){
+	}
+	else if(capc > pre_capc){
+		if(!(sys_status & WM831X_PWR_WALL)){
+			if(pre_capc == 0){
+				capc = 1;
+				pre_capc = capc;
+			}
+			capc = pre_capc;
+		}else{
+			capc = pre_capc + 1;
+			pre_capc = capc;
+		}
+	}else{
+		if(!(sys_status & WM831X_PWR_WALL)){
+			if((pre_capc - capc) <= 20){
+				capc = pre_capc-1;
+				pre_capc=capc;
+			}else{
+				capc = pre_capc - 2;
+				pre_capc = capc;
+			}
+		}else{
+			capc = pre_capc;
+		}
+	}
+
+	if(capc <= 0){
+		capc = 0;
+		pre_capc = capc;
+	}
+
+	if(capc >= 100){
+		capc = 100;
+		pre_capc = capc;
+	}
+
+	if(sys_status & WM831X_PWR_WALL){
+		if((charge_status & WM831X_CHG_STATE_MASK) == 0){
+			capc = 100;
+		}
+	}
+	return capc;
+}
+
 static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 {
-	int uV, ret,status,capc=0,stopcharge=0;
-	static int       pre_adc_voltage_capacity = -1;
-	static int first_time=1;
+	int uV, ret,status,capc=0,stopcharge=0,chargecurrent=0;
+
+	/* calculate the capacity from voltage */
+	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
+	if(uV < 0){
+		ret = -EINVAL;
+		return ret;
+	}
 
 	status = wm831x_reg_read(wm831x, WM831X_SYSTEM_STATUS);
 	if (status < 0)
@@ -491,98 +694,21 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 		enable_battery_charge(wm831x);
 	}
 
-	/* calculate the capacity from voltage */
-	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
-
-	if(!(status & WM831X_PWR_WALL)){
-		uV = uV + MD800_ADC_GAP;
-	}
-
-	if (uV >= 0) {
-		if(uV <= MD800_BATTERY_VOLTAGE_MID){
-			capc = 30 *(uV - MD800_BATTERY_VOLTAGE_MIN) / (MD800_BATTERY_VOLTAGE_MID - MD800_BATTERY_VOLTAGE_MIN);
-		}else{
-			capc =30+ 70 *(uV - MD800_BATTERY_VOLTAGE_MID) / (MD800_BATTERY_VOLTAGE_MAX - MD800_BATTERY_VOLTAGE_MID);
-		}
-		ret = 0;
-	} else {
-		ret = -EINVAL;
-	}
-	if(capc >= 100)
-		capc = 99;
-
 	ret = wm831x_reg_read(wm831x, WM831X_CHARGER_STATUS);
 	if (ret < 0)
 		return ret;
-	if(ret & WM831X_CHG_TOPOFF){//constant voltage mode
-		capc = capc + (ret & 0xff);
-		if(capc >= 100)
-			capc = 99;
-		if((ret & WM831X_CHG_STATE_MASK) == 0)
-			capc = 100;
+
+	chargecurrent = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_AUX1);
+	chargecurrent = ((chargecurrent / 1000) * 125) / 100;
+	if((chargecurrent == 0)
+		&& (status & WM831X_CHG_ACTIVE)){
+		capc = cap_by_adc(status,ret,uV);
+	}else{
+		capc = cap_by_current(chargecurrent,status,ret,uV);
 	}
 
-	if(first_time == 1){
-		first_time = 0;
-		if(!(status & WM831X_PWR_WALL))
-			pre_adc_voltage_capacity = capc+20;//20:for first time ADC value adjust number
-		else
-			pre_adc_voltage_capacity = capc;
-	}
-
-	if(capc == pre_adc_voltage_capacity){
-		*capacity = capc;
-	}
-	else if(capc > pre_adc_voltage_capacity)
-	{
-		if(!(status & WM831X_PWR_WALL)){
-			if(pre_adc_voltage_capacity == 0){
-				capc = 1;
-				pre_adc_voltage_capacity = capc;
-			}
-			capc = pre_adc_voltage_capacity;
-		}
-		else{
-			capc = pre_adc_voltage_capacity + 1;
-			pre_adc_voltage_capacity = capc;
-		}
-	}
-	else
-	{
-		if(!(status & WM831X_PWR_WALL)){
-			if((pre_adc_voltage_capacity - capc) <= 20){
-				capc = pre_adc_voltage_capacity - 1;
-				pre_adc_voltage_capacity = capc;
-			}
-			else{
-				capc = pre_adc_voltage_capacity - 2;
-				pre_adc_voltage_capacity = capc;
-			}
-		}else{
-			capc = pre_adc_voltage_capacity;
-		}
-	}
-		if(capc <= 0){
-		capc = 0;
-		pre_adc_voltage_capacity = capc;
-		*capacity = capc;
-		}
-
-		if(capc >= 100){
-			capc = 100;
-			pre_adc_voltage_capacity = capc;
-			*capacity = capc;
-		}
-
-		if(status & WM831X_PWR_WALL){
-			if((ret & WM831X_CHG_STATE_MASK) == 0){
-			if(!stopcharge)
-				capc = 100;
-			}
-		}
-
-		*capacity = capc;
-		return ret;
+	*capacity = capc;
+	return ret;
  }
 
 static int wm831x_bat_read_capacity_level(struct wm831x *wm831x, int *cl)
@@ -660,7 +786,7 @@ static enum power_supply_property wm831x_bat_props[] = {
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_CAPACITY,
-	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+//	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_PRESENT,
 };
@@ -707,19 +833,16 @@ static irqreturn_t wm831x_syslo_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-
 static irqreturn_t wm831x_pwr_src_irq(int irq, void *data)
 {
 	struct wm831x_power *wm831x_power = data;
 	struct wm831x *wm831x = wm831x_power->wm831x;
 
 	dev_dbg(wm831x->dev, "Power source changed\n");
-
 	/* Just notify for everything - little harm in overnotifying. */
 	power_supply_changed(&wm831x_power->battery);
 	power_supply_changed(&wm831x_power->usb);
 	power_supply_changed(&wm831x_power->wall);
-
 
 	return IRQ_HANDLED;
 }
@@ -731,7 +854,6 @@ static void battery_update_timer_func(unsigned long data)
 	mod_timer(&power->battery_update_timer,
 		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
 }
-
 static __devinit int wm831x_power_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
@@ -745,8 +867,6 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	power = kzalloc(sizeof(struct wm831x_power), GFP_KERNEL);
 	if (power == NULL)
 		return -ENOMEM;
-
-	printk(KERN_DEBUG "md800 pmic power\n");
 
 	power->wm831x = wm831x;
 	platform_set_drvdata(pdev, power);
@@ -803,9 +923,6 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_battery;
 
-	setup_timer(&power->battery_update_timer, battery_update_timer_func, (unsigned long)power);
-	mod_timer(&power->battery_update_timer,jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
-
 	irq = platform_get_irq_byname(pdev, "SYSLO");
 	ret = request_threaded_irq(irq, NULL, wm831x_syslo_irq,
 				   IRQF_TRIGGER_RISING, "System power low",
@@ -840,6 +957,26 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 		}
 	}
 
+	setup_timer(&power->battery_update_timer, battery_update_timer_func,
+		(unsigned long)power);
+	mod_timer(&power->battery_update_timer,
+		jiffies + msecs_to_jiffies(3*BAT_UPDATE_DELAY_MSEC));
+
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+	return ret;
+	}
+
+	ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
+			      WM831X_CHG_IMON_ENA_MASK,
+			      WM831X_CHG_IMON_ENA);
+	if (ret != 0)
+		dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
+			ret);
+
+	wm831x_reg_lock(wm831x);
+
 	return ret;
 
 err_bat_irq:
@@ -868,6 +1005,8 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 	struct wm831x_power *wm831x_power = platform_get_drvdata(pdev);
 	int irq, i;
 
+	del_timer_sync(&wm831x_power->battery_update_timer);
+
 	for (i = 0; i < ARRAY_SIZE(wm831x_bat_irqs); i++) {
 		irq = platform_get_irq_byname(pdev, wm831x_bat_irqs[i]);
 		free_irq(irq, wm831x_power);
@@ -883,6 +1022,7 @@ static __devexit int wm831x_power_remove(struct platform_device *pdev)
 	power_supply_unregister(&wm831x_power->wall);
 	power_supply_unregister(&wm831x_power->usb);
 	kfree(wm831x_power);
+
 	return 0;
 }
 
@@ -910,4 +1050,3 @@ MODULE_DESCRIPTION("Power supply driver for WM831x PMICs");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wm831x-power");
-

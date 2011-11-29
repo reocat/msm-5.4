@@ -70,7 +70,6 @@ config MACH_ELEPHANT
 	select LCD_AMBARELLA_1P3831
 	select CODEC_AMBARELLA_WM8994
 	select CODEC_AMBARELLA_ES8328
-	select PMIC_AMBARELLA_WM831X
 	select CPUFREQ_AMBARELLA_DEVICE
 	help
 	  Say Y here if you are using iOne Elephant.
@@ -177,6 +176,10 @@ config CODEC_AMBARELLA_ES8328
 comment "PMIC"
 
 config PMIC_AMBARELLA_WM831X
+	bool "wm831x"
+	default n
+
+config PMIC_AMBARELLA_MD800_WM831X
 	bool "wm831x"
 	default n
 
