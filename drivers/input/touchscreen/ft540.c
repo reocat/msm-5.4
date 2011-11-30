@@ -182,28 +182,12 @@ static void ft540_send_event(struct ft540 *ft)
 	struct input_dev	*input = ft->input;
 	u8			i;
 	static int		prev_touch = 0;
-	static int		curr_touch = 0;
+	int			curr_touch = 0, real_touch = 0;
 	static int		prev_home = 0, prev_menu = 0, prev_back = 0;
 	int			curr_home = 0, curr_menu = 0, curr_back = 0;
 	int			event = 0;
 
 	curr_touch = ft->reg_data[FT_FINGER_NUM] & 0x07;
-
-	/* Button Pressed */
-	if (!prev_touch && curr_touch) {
-		input_report_key(input, BTN_TOUCH, curr_touch);
-		FT_DEBUG("Finger Pressed\n");
-	}
-
-	/* Button Released */
-	if (prev_touch && !curr_touch) {
-		event = 1;
-		input_report_abs(input, ABS_PRESSURE, 0);
-		input_report_key(input, BTN_TOUCH, 0);
-		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
-		input_mt_sync(input);
-		FT_DEBUG("Finger Released\n\n\n");
-	}
 
 	for (i = 0; i < curr_touch; i++) {
 		u8	xh, xl, yh, yl;
@@ -218,101 +202,100 @@ static void ft540_send_event(struct ft540 *ft)
 
 		FT_DEBUG("Finger%d Raw: (%d, %d)\n", i, x, y);
 
-		//HOME
-		if (ft->lights_enabled[FT_LOWER_RIGHT] && x >= 1095 && x <= 1105 && y <= 5) {
-			curr_home = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_UPPER_RIGHT] && x >= 1095 && x <= 1105 && y >= 300 && y <= 310) {
-			curr_home = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_UPPER_LEFT] && x >= 1095 && x <= 1105 && y >= 450 && y <= 460) {
-			curr_home = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_LOWER_LEFT] && x >= 1095 && x <= 1105 && y >= 760 && y <= 770) {
-			curr_home = 1;
-			continue;
-		}
-
-		//MENU
-		if (ft->lights_enabled[FT_LOWER_RIGHT] && x >= 1095 && x <= 1105 && y >= 65 && y <= 75) {
-			curr_menu = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_UPPER_RIGHT] && x >= 1095 && x <= 1105 && y >= 255 && y <= 265) {
-			curr_menu = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_UPPER_LEFT] && x >= 1095 && x <= 1105 && y >= 400 && y <= 410) {
-			curr_menu = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_LOWER_LEFT] && x >= 1095 && x <= 1105 && y >= 695 && y <= 705) {
-			curr_menu = 1;
-			continue;
-		}
-
-		//BACK
-		if (ft->lights_enabled[FT_LOWER_RIGHT] && x >= 1095 && x <= 1105 && y >= 115 && y <= 125) {
-			curr_back = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_UPPER_RIGHT] && x >= 1095 && x <= 1105 && y >= 215 && y <= 225) {
-			curr_back = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_UPPER_LEFT] && x >= 1095 && x <= 1105 && y >= 355 && y <= 365) {
-			curr_back = 1;
-			continue;
-		}
-		if (ft->lights_enabled[FT_LOWER_LEFT] && x >= 1095 && x <= 1105 && y >= 645 && y <= 655) {
-			curr_back = 1;
-			continue;
-		}
-
-		//INVALID KEY
+		//Android KEYs
 		if (x >= 1095 && x <= 1105) {
-			FT_DEBUG("Invalid Finger%d Calibrated: (%d, %d)\n", i, x, y);
-			continue;
+			//HOME
+			if (ft->lights_enabled[FT_LOWER_RIGHT] && y <= 5) {
+				curr_home = 1;
+			}
+			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 300 && y <= 310) {
+				curr_home = 1;
+			}
+			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 450 && y <= 460) {
+				curr_home = 1;
+			}
+			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 760 && y <= 770) {
+				curr_home = 1;
+			}
+
+			//MENU
+			if (ft->lights_enabled[FT_LOWER_RIGHT] && y >= 65 && y <= 75) {
+				curr_menu = 1;
+			}
+			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 255 && y <= 265) {
+				curr_menu = 1;
+			}
+			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 400 && y <= 410) {
+				curr_menu = 1;
+			}
+			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 695 && y <= 705) {
+				curr_menu = 1;
+			}
+
+			//BACK
+			if (ft->lights_enabled[FT_LOWER_RIGHT] && y >= 115 && y <= 125) {
+				curr_back = 1;
+			}
+			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 215 && y <= 225) {
+				curr_back = 1;
+			}
+			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 355 && y <= 365) {
+				curr_back = 1;
+			}
+			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 645 && y <= 655) {
+				curr_back = 1;
+			}
+		} else {
+			if (x < ft->fix.x_min) {
+				x = ft->fix.x_min;
+			}
+			if (x > ft->fix.x_max) {
+				x = ft->fix.x_max;
+			}
+			if (y < ft->fix.y_min) {
+				y = ft->fix.y_min;
+			}
+			if (y > ft->fix.y_max) {
+				y = ft->fix.y_max;
+			}
+
+			if (ft->fix.x_invert) {
+				x = ft->fix.x_max - x + ft->fix.x_min;
+			}
+			if (ft->fix.y_invert) {
+				y = ft->fix.y_max - y + ft->fix.y_min;
+			}
+
+			event = 1;
+			real_touch++;
+			if (real_touch == 1) {
+				input_report_abs(input, ABS_PRESSURE, MAX_Z);
+				input_report_abs(input, ABS_X, x);
+				input_report_abs(input, ABS_Y, y);
+			}
+
+			input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
+			input_report_abs(input, ABS_MT_POSITION_X, x);
+			input_report_abs(input, ABS_MT_POSITION_Y, y);
+			input_mt_sync(input);
+			FT_DEBUG("Finger%d Calibrated: (%d, %d)\n", i, x, y);
 		}
 
+	}
 
-		if (x < ft->fix.x_min) {
-			x = ft->fix.x_min;
-		}
-		if (x > ft->fix.x_max) {
-			x = ft->fix.x_max;
-		}
-		if (y < ft->fix.y_min) {
-			y = ft->fix.y_min;
-		}
-		if (y > ft->fix.y_max) {
-			y = ft->fix.y_max;
-		}
+	/* Button Pressed */
+	if (!prev_touch && real_touch) {
+		event = 1;
+		input_report_key(input, BTN_TOUCH, real_touch);
+	}
 
-		if (ft->fix.x_invert) {
-			x = ft->fix.x_max - x + ft->fix.x_min;
-		}
-
-		if (ft->fix.y_invert) {
-			y = ft->fix.y_max - y + ft->fix.y_min;
-		}
-
-		event	= 1;
-		if (i == 1) {
-			input_report_abs(input, ABS_PRESSURE, MAX_Z);
-			input_report_abs(input, ABS_X, x);
-			input_report_abs(input, ABS_Y, y);
-		}
-
-		input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
-		input_report_abs(input, ABS_MT_POSITION_X, x);
-		input_report_abs(input, ABS_MT_POSITION_Y, y);
+	/* Button Released */
+	if (prev_touch && !real_touch) {
+		event = 1;
+		input_report_abs(input, ABS_PRESSURE, 0);
+		input_report_key(input, BTN_TOUCH, 0);
+		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
 		input_mt_sync(input);
-		FT_DEBUG("Finger%d Calibrated: (%d, %d)\n", i, x, y);
-
 	}
 
 	//HOME
@@ -351,10 +334,11 @@ static void ft540_send_event(struct ft540 *ft)
 		FT_DEBUG("ESC Released\n");
 	}
 
-
-	if (event)
+	if (event) {
 		input_sync(input);
-	prev_touch = curr_touch;
+	}
+
+	prev_touch = real_touch;
 	prev_home = curr_home;
 	prev_menu = curr_menu;
 	prev_back = curr_back;
@@ -363,9 +347,6 @@ static void ft540_send_event(struct ft540 *ft)
 static irqreturn_t ft540_irq(int irq, void *handle)
 {
 	struct ft540 *ft = handle;
-
-	if (ft->get_pendown_state && !ft->get_pendown_state())
-		goto ft540_irq_exit;
 
 	if (ft->clear_penirq) {
 		ft->clear_penirq();
