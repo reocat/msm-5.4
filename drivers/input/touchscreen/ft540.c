@@ -348,13 +348,14 @@ static irqreturn_t ft540_irq(int irq, void *handle)
 {
 	struct ft540 *ft = handle;
 
+	disable_irq_nosync(irq);
+
 	if (ft->clear_penirq) {
 		ft->clear_penirq();
 	}
 
 	queue_work(ft->workqueue, &ft->report_worker);
 
-ft540_irq_exit:
 	return IRQ_HANDLED;
 }
 
@@ -364,9 +365,13 @@ static void ft540_report_worker(struct work_struct *work)
 
 	ft = container_of(work, struct ft540, report_worker);
 
-	ft540_read_all(ft);
-	ft540_update_lights_status(ft);
-	ft540_send_event(ft);
+	if (ft->get_pendown_state()) {
+		ft540_read_all(ft);
+		ft540_update_lights_status(ft);
+		ft540_send_event(ft);
+	}
+
+	enable_irq(ft->irq);
 }
 
 static int ft540_probe(struct i2c_client *client,
