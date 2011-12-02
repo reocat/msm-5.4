@@ -112,7 +112,7 @@ static int tm1726_read_family_code(struct tm1726 *tm, u8 *family_code)
 
 static int tm1726_config_irq(struct tm1726 *tm)
 {
-	u8			buf[5] = {0x04, 0x00, 0x0b, 0x04, 0x04};
+	u8			buf[5] = {0x04, 0x00, 0x0b, 0x14, 0x14};
 
 	if (i2c_smbus_write_i2c_block_data(tm->client,
 		TM_IRQ_ENABLE_ABS, 5, buf)) {
@@ -152,7 +152,8 @@ static void tm1726_send_event(struct tm1726 *tm)
 	struct input_dev	*input = tm->input;
 	u8			i, fingers, finger_state[MAX_FINGERS];
 	static int		prev_touch = 0;
-	static int		curr_touch = 0;
+	int			curr_touch = 0;
+	static int		touch_seq = 0;
 	int			event = 0;
 
 	finger_state[0] = tm->reg_data[TM_FINGER_STATE1] & 0x03;
@@ -177,6 +178,7 @@ static void tm1726_send_event(struct tm1726 *tm)
 	/* Button Released */
 	if (prev_touch && !curr_touch) {
 		event = 1;
+		touch_seq = 0;
 		input_report_abs(input, ABS_PRESSURE, 0);
 		input_report_key(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
@@ -184,9 +186,13 @@ static void tm1726_send_event(struct tm1726 *tm)
 		TM1726_DEBUG("Finger Released\n\n\n");
 	}
 
+	if (curr_touch) {
+		touch_seq++;
+	}
+
 	fingers = 0;
 	for (i = 0; i < MAX_FINGERS; i++) {
-		if (finger_state[i] == 1 || finger_state[i] == 2) {
+		if ((touch_seq % 4 == 1) && (finger_state[i] == 1 || finger_state[i] == 2)) {
 			u8	xh, xl, yh, yl;
 			u32	x, y;
 
@@ -236,8 +242,9 @@ static void tm1726_send_event(struct tm1726 *tm)
 		}
 	}
 
-	if (event)
+	if (event) {
 		input_sync(input);
+	}
 	prev_touch = curr_touch;
 }
 
