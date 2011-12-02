@@ -183,6 +183,7 @@ static void ft540_send_event(struct ft540 *ft)
 	u8			i;
 	static int		prev_touch = 0;
 	int			curr_touch = 0, real_touch = 0;
+	static int		touch_seq = 0;
 	static int		prev_home = 0, prev_menu = 0, prev_back = 0;
 	int			curr_home = 0, curr_menu = 0, curr_back = 0;
 	int			event = 0;
@@ -246,39 +247,46 @@ static void ft540_send_event(struct ft540 *ft)
 				curr_back = 1;
 			}
 		} else {
-			if (x < ft->fix.x_min) {
-				x = ft->fix.x_min;
-			}
-			if (x > ft->fix.x_max) {
-				x = ft->fix.x_max;
-			}
-			if (y < ft->fix.y_min) {
-				y = ft->fix.y_min;
-			}
-			if (y > ft->fix.y_max) {
-				y = ft->fix.y_max;
-			}
-
-			if (ft->fix.x_invert) {
-				x = ft->fix.x_max - x + ft->fix.x_min;
-			}
-			if (ft->fix.y_invert) {
-				y = ft->fix.y_max - y + ft->fix.y_min;
-			}
-
-			event = 1;
 			real_touch++;
+
 			if (real_touch == 1) {
-				input_report_abs(input, ABS_PRESSURE, MAX_Z);
-				input_report_abs(input, ABS_X, x);
-				input_report_abs(input, ABS_Y, y);
+				touch_seq++;
 			}
 
-			input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
-			input_report_abs(input, ABS_MT_POSITION_X, x);
-			input_report_abs(input, ABS_MT_POSITION_Y, y);
-			input_mt_sync(input);
-			FT_DEBUG("Finger%d Calibrated: (%d, %d)\n", i, x, y);
+			if (touch_seq % 3 == 1) {
+				if (x < ft->fix.x_min) {
+					x = ft->fix.x_min;
+				}
+				if (x > ft->fix.x_max) {
+					x = ft->fix.x_max;
+				}
+				if (y < ft->fix.y_min) {
+					y = ft->fix.y_min;
+				}
+				if (y > ft->fix.y_max) {
+					y = ft->fix.y_max;
+				}
+
+				if (ft->fix.x_invert) {
+					x = ft->fix.x_max - x + ft->fix.x_min;
+				}
+				if (ft->fix.y_invert) {
+					y = ft->fix.y_max - y + ft->fix.y_min;
+				}
+
+				event = 1;
+				if (real_touch == 1) {
+					input_report_abs(input, ABS_PRESSURE, MAX_Z);
+					input_report_abs(input, ABS_X, x);
+					input_report_abs(input, ABS_Y, y);
+				}
+
+				input_report_abs(input, ABS_MT_TOUCH_MAJOR, MAX_Z);
+				input_report_abs(input, ABS_MT_POSITION_X, x);
+				input_report_abs(input, ABS_MT_POSITION_Y, y);
+				input_mt_sync(input);
+				FT_DEBUG("Finger%d Calibrated: (%d, %d)\n", i, x, y);
+			}
 		}
 
 	}
@@ -292,6 +300,7 @@ static void ft540_send_event(struct ft540 *ft)
 	/* Button Released */
 	if (prev_touch && !real_touch) {
 		event = 1;
+		touch_seq = 0;
 		input_report_abs(input, ABS_PRESSURE, 0);
 		input_report_key(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 0);
