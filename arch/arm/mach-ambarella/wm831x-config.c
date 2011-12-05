@@ -466,6 +466,13 @@ static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.timeout = 360,
 };
 
+static struct wm831x_watchdog_pdata wm8310_default_watchdog_pdata __initdata = {
+	.primary = WM831X_WDOG_RESET,
+	.secondary = WM831X_WDOG_INTERRUPT,
+	.update_gpio = 112,
+	.software = 1,
+};
+
 static struct wm831x_status_pdata wm8310_default_on_led __initdata = {
 	.name = "wm8310:on:",
 	.default_src = WM831X_STATUS_POWER,
@@ -485,6 +492,8 @@ struct wm831x_pdata wm8310_default_pdata __initdata = {
 	.backlight = &wm8310_default_backlight_pdata,
 	.backup = &wm8310_default_backup_pdata,
 	.battery = &wm8310_default_battery_pdata,
+	.watchdog = &wm8310_default_watchdog_pdata,
+
 	.status = {
 		&wm8310_default_on_led,
 		&wm8310_default_chg_led,
