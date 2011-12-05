@@ -397,6 +397,11 @@ static int __devinit wm831x_wdt_probe(struct platform_device *pdev)
 		goto err_gpio;
 	}
 
+	dev_notice(&pdev->dev,
+		"Wm831x PMIC Watch Dog Timer[%s].\n",
+		dev_name(&pdev->dev));
+
+
 	return 0;
 
 err_gpio:

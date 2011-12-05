@@ -168,7 +168,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_uart2,
 	&ambarella_uart3,
 	&ambarella_udc0,
-	&ambarella_wdt0,
 	&ambarella_fsg_device0,
 #ifdef CONFIG_TI_ST
 /* TI sample code origin register of WL128X BT, FM, GPS */
@@ -470,6 +469,7 @@ static void __init ambarella_init_elephant(void)
 	int					i, ret;
 	int					use_bub_default = 1;
 	int					use_ambarella_rtc0 = 1;
+	int					use_ambarella_wdt0 = 1;
 
 	ambarella_init_machine("Elephant");
 
@@ -542,6 +542,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
 			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 			use_ambarella_rtc0 = 0;
+			use_ambarella_wdt0= 0;
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
@@ -799,6 +800,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
 			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 			use_ambarella_rtc0 = 0;
+			use_ambarella_wdt0= 0;
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
@@ -1242,8 +1244,11 @@ static void __init ambarella_init_elephant(void)
 	spi_register_board_info(ambarella_spi_devices, ARRAY_SIZE(ambarella_spi_devices));
 
 	platform_device_register(&elephant_board_input);
+
 	if (use_ambarella_rtc0)
 		platform_device_register(&ambarella_rtc0);
+	if(use_ambarella_wdt0)
+		platform_device_register(&ambarella_wdt0);
 
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }

@@ -161,13 +161,18 @@ static int wm831x_on_suspend(struct platform_device *pdev, pm_message_t state)
 static int wm831x_on_resume(struct platform_device *pdev)
 {
 	struct wm831x_on			*wm831x_on;
+	struct wm831x				*wm831x;
 	int					irq;
+	int					ret;
 
 	wm831x_on = platform_get_drvdata(pdev);
 	irq = platform_get_irq(pdev, 0);
 
+	wm831x = wm831x_on->wm831x;
+
 	//TBD: Check resumed form self-referesh.
-	if (1) {
+	ret = wm831x_reg_read(wm831x, WM831X_ON_SOURCE);
+	if (ret & WM831X_ON_SOURCE_ON_PIN) {
 		input_report_key(wm831x_on->dev, KEY_POWER, 1);
 		input_report_key(wm831x_on->dev, KEY_POWER, 0);
 		input_sync(wm831x_on->dev);
