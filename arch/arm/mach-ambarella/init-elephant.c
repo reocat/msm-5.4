@@ -475,6 +475,7 @@ static void __init ambarella_init_elephant(void)
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
+		case 'C':
 		case 'B':
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
