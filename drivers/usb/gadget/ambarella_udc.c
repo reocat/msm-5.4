@@ -826,7 +826,7 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 
 	crq = (struct usb_ctrlrequest *) &udc->setup[0];
 
-	dprintk(DEBUG_NORMAL, "bRequestType = 0x%02x, bRequest = 0x%02x,\n"
+	dprintk(DEBUG_NORMAL, "bRequestType = 0x%02x, bRequest = 0x%02x, "
 		"wValue = 0x%04x, wIndex = 0x%04x, wLength = 0x%04x\n",
 		crq->bRequestType, crq->bRequest, crq->wValue, crq->wIndex,
 		crq->wLength);
@@ -855,8 +855,13 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 	spin_unlock(&udc->lock);
 	ret = udc->driver->setup(&udc->gadget, crq);
 	spin_lock(&udc->lock);
-	if (ret < 0)
+	if (ret < 0) {
 		dprintk(DEBUG_ERR, "SETUP request failed (%d)\n", ret);
+		amba_setbitsl(udc->ep[CTRL_IN].ep_reg.ctrl_reg, USB_EP_STALL | USB_EP_FLUSH);
+		/* Re-enable Rx DMA to receive next setup packet */
+		ambarella_enable_rx_dma(&udc->ep[CTRL_OUT]);
+		ambarella_clr_ep_nak(&udc->ep[CTRL_OUT]);
+	}
 
 	dprintk(DEBUG_NORMAL, "Exit\n");
 
@@ -1840,7 +1845,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 	/* set/clear, then synch memory views with the device */
 	if (value) { /* stall endpoint */
 		if (ep->dir == USB_DIR_IN) {
-			amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_STALL|USB_EP_FLUSH);
+			amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_STALL | USB_EP_FLUSH);
 		} else {
 			int retry_count = 10000;
 			/* Wait Rx-FIFO to be empty */
@@ -1852,7 +1857,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 			}
 			amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_STALL);
 		}
-	}else { /* clear stall endpoint */
+	} else { /* clear stall endpoint */
 		amba_clrbitsl(ep->ep_reg.ctrl_reg, USB_EP_STALL);
 	}
 
