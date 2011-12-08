@@ -25,6 +25,7 @@
 #define FT_DEBUG(format, arg...)
 #endif
 
+#define LOCATION_SHIFT	10
 #define	MAX_Z		16
 #define MAX_FINGERS	5
 
@@ -204,46 +205,46 @@ static void ft540_send_event(struct ft540 *ft)
 		FT_DEBUG("Finger%d Raw: (%d, %d)\n", i, x, y);
 
 		//Android KEYs
-		if (x >= 1095 && x <= 1105) {
+		if (x > 1024) {
 			//HOME
-			if (ft->lights_enabled[FT_LOWER_RIGHT] && y <= 5) {
+			if (ft->lights_enabled[FT_LOWER_RIGHT] && y <= LOCATION_SHIFT) {
 				curr_home = 1;
 			}
-			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 300 && y <= 310) {
+			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 305 - LOCATION_SHIFT && y <= 305 + LOCATION_SHIFT) {
 				curr_home = 1;
 			}
-			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 450 && y <= 460) {
+			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 455 - LOCATION_SHIFT && y <= 455 + LOCATION_SHIFT) {
 				curr_home = 1;
 			}
-			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 760 && y <= 770) {
+			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 765 - LOCATION_SHIFT && y <= 765 + LOCATION_SHIFT) {
 				curr_home = 1;
 			}
 
 			//MENU
-			if (ft->lights_enabled[FT_LOWER_RIGHT] && y >= 65 && y <= 75) {
+			if (ft->lights_enabled[FT_LOWER_RIGHT] && y >= 70 - LOCATION_SHIFT && y <= 70 + LOCATION_SHIFT) {
 				curr_menu = 1;
 			}
-			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 255 && y <= 265) {
+			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 260 - LOCATION_SHIFT && y <= 260 + LOCATION_SHIFT) {
 				curr_menu = 1;
 			}
-			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 400 && y <= 410) {
+			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 405 - LOCATION_SHIFT && y <= 405 + LOCATION_SHIFT) {
 				curr_menu = 1;
 			}
-			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 695 && y <= 705) {
+			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 700 - LOCATION_SHIFT && y <= 700 + LOCATION_SHIFT) {
 				curr_menu = 1;
 			}
 
 			//BACK
-			if (ft->lights_enabled[FT_LOWER_RIGHT] && y >= 115 && y <= 125) {
+			if (ft->lights_enabled[FT_LOWER_RIGHT] && y >= 120 - LOCATION_SHIFT && y <= 120 + LOCATION_SHIFT) {
 				curr_back = 1;
 			}
-			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 215 && y <= 225) {
+			if (ft->lights_enabled[FT_UPPER_RIGHT] && y >= 220 - LOCATION_SHIFT && y <= 220 + LOCATION_SHIFT) {
 				curr_back = 1;
 			}
-			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 355 && y <= 365) {
+			if (ft->lights_enabled[FT_UPPER_LEFT] && y >= 360 - LOCATION_SHIFT && y <= 360 + LOCATION_SHIFT) {
 				curr_back = 1;
 			}
-			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 645 && y <= 655) {
+			if (ft->lights_enabled[FT_LOWER_LEFT] && y >= 650 - LOCATION_SHIFT && y <= 650 + LOCATION_SHIFT) {
 				curr_back = 1;
 			}
 		} else {
