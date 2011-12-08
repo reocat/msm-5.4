@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 157998
+ * @version 159201
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -1085,6 +1085,10 @@ AMB_GTX_CLOCK_SOURCE_RESERVED = 0xffffffffUL
  */
 
 typedef enum {
+/** Low priority for dsp clients (50% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_LOWEST_PRIORITY,
+/** Low priority for dsp clients (62.5% of total bandwidth) */
+AMB_DRAM_ARBITER_DSP_LOWER_PRIORITY,
 /** Low priority for dsp clients (75 of total bandwidth) */
 AMB_DRAM_ARBITER_DSP_VERY_LOW_PRIORITY,
 /** Low priority for dsp clients (81.25% of total bandwidth) */
