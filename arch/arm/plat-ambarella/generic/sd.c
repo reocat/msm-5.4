@@ -191,7 +191,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.num_slots		= 1,
 #endif
 	.clk_limit		= 12500000,
-	.wait_tmo		= (1 * HZ),
+	.wait_tmo		= (10 * HZ),
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
 #if (SD_SUPPORT_PLL_SCALER == 1)
@@ -199,7 +199,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #else
 	.support_pll_scaler	= 0,
 #endif
-	.max_clk		= 48000000,
+	.max_clk		= 50000000,
 };
 module_param_cb(sd0_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller0.clk_limit), 0644);
@@ -315,7 +315,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	},
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
-	.wait_tmo		= (1 * HZ),
+	.wait_tmo		= (10 * HZ),
 #if (CHIP_REV == I1)
 	.set_pll		= ambarella_platform_sdxc_set_pll,
 	.get_pll		= ambarella_platform_sdxc_get_pll,
@@ -332,7 +332,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 #else
 	.support_pll_scaler	= 0,
 #endif
-	.max_clk		= 48000000,
+	.max_clk		= 50000000,
 };
 module_param_cb(sd1_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller1.clk_limit), 0644);
