@@ -954,7 +954,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.pmic_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.pmic_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-			ambarella_board_generic.power_control.gpio_id = GPIO(120);
+			ambarella_board_generic.power_control.gpio_id = GPIO(99);
 			ambarella_board_generic.power_control.active_level = GPIO_LOW;
 
 			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
