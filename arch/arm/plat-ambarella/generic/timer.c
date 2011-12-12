@@ -60,9 +60,8 @@ struct ambarella_timer_pm_info {
 #endif
 };
 struct ambarella_timer_pm_info ambarella_timer_pm;
-#if defined(CONFIG_SMP)
-int ambarella_ce_timer_used = 1;
-#endif
+static struct clock_event_device ambarella_clkevt;
+static struct irqaction ambarella_ce_timer_irq;
 
 /* ==========================================================================*/
 #define AMBARELLA_CE_TIMER_STATUS_REG		TIMER3_STATUS_REG
@@ -82,10 +81,7 @@ static inline void ambarella_ce_timer_disable(void)
 
 static inline void ambarella_ce_timer_enable(void)
 {
-#if defined(CONFIG_SMP)
-	if (ambarella_ce_timer_used)
-#endif
-		amba_setbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_EN);
+	amba_setbitsl(TIMER_CTR_REG, AMBARELLA_CE_TIMER_CTR_EN);
 }
 
 static inline void ambarella_ce_timer_misc(void)
@@ -106,11 +102,10 @@ static inline void ambarella_ce_timer_set_periodic(void)
 	ambarella_ce_timer_misc();
 }
 
-static inline void ambarella_ce_timer_set_oneshot(u32 cnt)
+static inline void ambarella_ce_timer_set_oneshot(void)
 {
-	BUG_ON(cnt == 0);
-	amba_writel(AMBARELLA_CE_TIMER_STATUS_REG, cnt);
-	amba_writel(AMBARELLA_CE_TIMER_RELOAD_REG, 0x0);
+	amba_writel(AMBARELLA_CE_TIMER_STATUS_REG, 0x0);
+	amba_writel(AMBARELLA_CE_TIMER_RELOAD_REG, 0xffffffff);
 	amba_writel(AMBARELLA_CE_TIMER_MATCH1_REG, 0x0);
 	amba_writel(AMBARELLA_CE_TIMER_MATCH2_REG, 0x0);
 	ambarella_ce_timer_misc();
@@ -127,29 +122,23 @@ static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
 		ambarella_ce_timer_disable();
-		ambarella_ce_timer_set_oneshot(AMBARELLA_TIMER_FREQ / HZ);
+		ambarella_ce_timer_set_oneshot();
 		ambarella_ce_timer_enable();
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
-#if defined(CONFIG_SMP)
-		ambarella_ce_timer_used = 0;
-#endif
-		break;
+		remove_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
 	case CLOCK_EVT_MODE_SHUTDOWN:
 		ambarella_ce_timer_disable();
 		break;
 	case CLOCK_EVT_MODE_RESUME:
-		ambarella_ce_timer_enable();
 		break;
 	}
+	pr_info("%s:%d\n", __func__, mode);
 }
 
 static int ambarella_ce_timer_set_next_event(unsigned long delta,
 	struct clock_event_device *dev)
 {
-	if ((delta == 0) || (delta > 0xFFFFFFFF))
-		return -ETIME;
-
 	amba_writel(AMBARELLA_CE_TIMER_STATUS_REG, delta);
 
 	return 0;
@@ -158,9 +147,7 @@ static int ambarella_ce_timer_set_next_event(unsigned long delta,
 static struct clock_event_device ambarella_clkevt = {
 	.name		= "ambarella-clkevt",
 	.features	= CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
-	.shift		= 32,
 	.rating		= AMBARELLA_TIMER_RATING,
-	.cpumask	= cpu_all_mask,
 	.set_next_event	= ambarella_ce_timer_set_next_event,
 	.set_mode	= ambarella_ce_timer_set_mode,
 	.mode		= CLOCK_EVT_MODE_UNUSED,
@@ -210,7 +197,6 @@ static cycle_t ambarella_cs_timer_read(struct clocksource *cs)
 
 static struct clocksource ambarella_cs_timer_clksrc = {
 	.name		= "ambarella-cs-timer",
-	.shift		= 24,
 	.rating		= AMBARELLA_TIMER_RATING,
 	.read		= ambarella_cs_timer_read,
 	.mask		= CLOCKSOURCE_MASK(32),
@@ -227,18 +213,19 @@ static void ambarella_timer_init(void)
 
 #ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
 	ambarella_cs_timer_init();
-	ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
-		AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);
+	clocks_calc_mult_shift(&ambarella_cs_timer_clksrc.mult,
+		&ambarella_cs_timer_clksrc.shift,
+		AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 60);
+	pr_info("%s: mult = %u, shift = %u\n", ambarella_cs_timer_clksrc.name,
+		ambarella_cs_timer_clksrc.mult, ambarella_cs_timer_clksrc.shift);
 	clocksource_register(&ambarella_cs_timer_clksrc);
 #endif
 
+	ambarella_clkevt.cpumask = cpumask_of(0);
 	setup_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
-	ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
-		NSEC_PER_SEC, ambarella_clkevt.shift);
-	ambarella_clkevt.max_delta_ns =
-		clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
-	ambarella_clkevt.min_delta_ns =
-		clockevent_delta2ns(1, &ambarella_clkevt);
+	clockevents_calc_mult_shift(&ambarella_clkevt, AMBARELLA_TIMER_FREQ, 5);
+	ambarella_clkevt.max_delta_ns = clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
+	ambarella_clkevt.min_delta_ns = clockevent_delta2ns(1, &ambarella_clkevt);
 	clockevents_register_device(&ambarella_clkevt);
 }
 
@@ -318,8 +305,8 @@ u32 ambarella_timer_resume(u32 level)
 		ambarella_timer_pm.timer_ce_match2_reg);
 
 	if (ambarella_timer_pm.timer_clk != AMBARELLA_TIMER_FREQ) {
-		ambarella_clkevt.mult = div_sc(AMBARELLA_TIMER_FREQ,
-			NSEC_PER_SEC, ambarella_clkevt.shift);
+		clockevents_calc_mult_shift(&ambarella_clkevt,
+			AMBARELLA_TIMER_FREQ, 5);
 		ambarella_clkevt.max_delta_ns =
 			clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
 		ambarella_clkevt.min_delta_ns =
@@ -337,8 +324,11 @@ u32 ambarella_timer_resume(u32 level)
 
 #ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
 		clocksource_change_rating(&ambarella_cs_timer_clksrc, 0);
-		ambarella_cs_timer_clksrc.mult = clocksource_hz2mult(
-			AMBARELLA_TIMER_FREQ, ambarella_cs_timer_clksrc.shift);
+		clocks_calc_mult_shift(&ambarella_cs_timer_clksrc.mult,
+			&ambarella_cs_timer_clksrc.shift,
+			AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 60);
+		pr_info("%s: mult = %u, shift = %u\n", ambarella_cs_timer_clksrc.name,
+			ambarella_cs_timer_clksrc.mult, ambarella_cs_timer_clksrc.shift);
 		clocksource_change_rating(&ambarella_cs_timer_clksrc,
 			AMBARELLA_TIMER_RATING);
 #endif
