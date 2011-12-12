@@ -461,7 +461,7 @@ static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.off_mask = 0,
 	.trickle_ilim = 50,
 	.vsel = 4200,
-	.eoc_iterm = 20,
+	.eoc_iterm = 90,
 	.fast_ilim = 1000,
 	.timeout = 510,
 };

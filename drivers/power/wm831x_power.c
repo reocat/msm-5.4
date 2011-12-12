@@ -19,13 +19,7 @@
 #include <linux/mfd/wm831x/pmu.h>
 #include <linux/mfd/wm831x/pdata.h>
 
-#define BAT_UPDATE_DELAY_MSEC   5000
-#define ADC_GAP        500000
-#define BATTERY_VOLTAGE_AC_MIN   3900000
-#define BATTERY_VOLTAGE_AC_MAX   4200000
-#define BATTERY_VOLTAGE_NOAC_MIN   3400000
-#define BATTERY_VOLTAGE_NOAC_MID   3600000
-#define BATTERY_VOLTAGE_NOAC_MAX   4000000
+#include <linux/battery_curve.h>
 
 struct wm831x_power {
 	struct wm831x *wm831x;
@@ -36,6 +30,7 @@ struct wm831x_power {
 	char usb_name[20];
 	char battery_name[20];
 	struct timer_list battery_update_timer;
+	int bat_update_delay_msec;
 };
 
 static int wm831x_power_check_online(struct wm831x *wm831x, int supply,
@@ -244,6 +239,8 @@ static void wm831x_config_battery(struct wm831x *wm831x)
 	}
 
 	reg1 |= WM831X_CHG_ENA;
+	reg1 |= WM831X_CHG_IMON_ENA;//enable charge current monitor
+
 	if (pdata->off_mask)
 		reg2 |= WM831X_CHG_OFF_MSK;
 	if (pdata->fast_enable)
@@ -279,7 +276,8 @@ static void wm831x_config_battery(struct wm831x *wm831x)
 	ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
 			      WM831X_CHG_ENA_MASK |
 			      WM831X_CHG_FAST_MASK |
-			      WM831X_CHG_ITERM_MASK,
+			      WM831X_CHG_ITERM_MASK |
+			      WM831X_CHG_IMON_ENA_MASK,
 			      reg1);
 	if (ret != 0)
 		dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
@@ -405,107 +403,9 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 	return 0;
 }
 
-static int cap_by_voltage(int sys_status, int charge_status, int uV)
-{
-	int capc=0;
-	static int first_time=0,timecounter=0;
-	static int pre_adc_voltage_capacity=-1;
-
-	if(uV < BATTERY_VOLTAGE_NOAC_MIN){
-		return 0;
-	}
-	if(!(sys_status & WM831X_PWR_WALL)){
-		if(uV <= BATTERY_VOLTAGE_NOAC_MID){
-			capc = 30 * (uV-BATTERY_VOLTAGE_NOAC_MIN) /
-				(BATTERY_VOLTAGE_NOAC_MID - BATTERY_VOLTAGE_NOAC_MIN);
-		}
-		else{
-			capc = 30 + 70 * (uV - BATTERY_VOLTAGE_NOAC_MID) /
-				(BATTERY_VOLTAGE_NOAC_MAX - BATTERY_VOLTAGE_NOAC_MID);
-		}
-		if(capc >= 100)
-			capc = 100;
-	}else{
-		if(charge_status & WM831X_CHG_TOPOFF){//constant voltage mode
-			if(pre_adc_voltage_capacity < 30)
-				pre_adc_voltage_capacity = 30;
-			if(timecounter== ((2*3*60) / (BAT_UPDATE_DELAY_MSEC / 1000))){//every 3 min to increase 1
-				capc = pre_adc_voltage_capacity + 1;
-				timecounter = 0;
-			}else
-				timecounter++;
-			if(capc >= 100)
-				capc = 99;
-			if((charge_status & WM831X_CHG_STATE_MASK) == 0)
-				capc = 100;
-		}else{
-			capc = 30 * (uV - BATTERY_VOLTAGE_AC_MIN) /
-				(BATTERY_VOLTAGE_AC_MAX - BATTERY_VOLTAGE_AC_MIN);
-		}
-	}
-
-//printk("uV=%d, 400d=0x%x,404a=0x%x,cap=%d,pre=%d\n",uV, sys_status, charge_status, capc, pre_adc_voltage_capacity);
-	if (first_time == 0) {
-		first_time = 1;
-		if (!(sys_status & WM831X_PWR_WALL))
-			pre_adc_voltage_capacity = capc+20;//20:for first time ADC value adjust number
-		else
-			pre_adc_voltage_capacity = capc;
-	}
-
-	if(capc == pre_adc_voltage_capacity){
-	}
-	else if(capc > pre_adc_voltage_capacity){
-		if(!(sys_status & WM831X_PWR_WALL)){
-			if(pre_adc_voltage_capacity == 0){
-				capc = 1;
-				pre_adc_voltage_capacity = capc;
-			}
-			capc = pre_adc_voltage_capacity;
-		}else{
-			capc = pre_adc_voltage_capacity + 1;
-			pre_adc_voltage_capacity = capc;
-		}
-	}else{
-		if(!(sys_status & WM831X_PWR_WALL)){
-			if((pre_adc_voltage_capacity - capc) <= 20){
-				capc = pre_adc_voltage_capacity-1;
-				pre_adc_voltage_capacity=capc;
-			}else{
-				capc = pre_adc_voltage_capacity - 2;
-				pre_adc_voltage_capacity = capc;
-			}
-		}else{
-			capc = pre_adc_voltage_capacity;
-		}
-	}
-	if(capc <= 0){
-		capc = 0;
-		pre_adc_voltage_capacity = capc;
-	}
-
-	if(capc >= 100){
-		capc = 100;
-		pre_adc_voltage_capacity = capc;
-	}
-
-	if(sys_status & WM831X_PWR_WALL){
-		if((charge_status & WM831X_CHG_STATE_MASK) == 0){
-			capc = 100;
-			if(uV > 4100000)
-				pre_adc_voltage_capacity = capc;
-		}
-	}
-	return capc;
-}
-
 static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 {
-	int uV, ret,status,capc=0;
-
-	status = wm831x_reg_read(wm831x, WM831X_SYSTEM_STATUS);
-	if (status < 0)
-		return status;
+	int uV, ret,status,capc=0,chargecurrent=0;
 
 	/* calculate the capacity from voltage */
 	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
@@ -514,10 +414,19 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 		return ret;
 	}
 
+	status = wm831x_reg_read(wm831x, WM831X_SYSTEM_STATUS);
+	if (status < 0)
+		return status;
+
 	ret = wm831x_reg_read(wm831x, WM831X_CHARGER_STATUS);
 	if (ret < 0)
 		return ret;
-	capc = cap_by_voltage(status,ret,uV);
+
+	chargecurrent = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_AUX1);
+	chargecurrent = ((chargecurrent / 1000) * 125) / 100;
+
+	capc = cal_capacity(chargecurrent,status,ret,uV);
+
 	*capacity = capc;
 	return ret;
  }
@@ -662,7 +571,7 @@ static void battery_update_timer_func(unsigned long data)
 	struct wm831x_power *power = (struct wm831x_power *)data;
 	power_supply_changed(&power->battery);
 	mod_timer(&power->battery_update_timer,
-		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
+		jiffies + msecs_to_jiffies(power->bat_update_delay_msec));
 }
 static __devinit int wm831x_power_probe(struct platform_device *pdev)
 {
@@ -767,12 +676,11 @@ static __devinit int wm831x_power_probe(struct platform_device *pdev)
 		}
 	}
 
+	power->bat_update_delay_msec = 5000;
 	setup_timer(&power->battery_update_timer, battery_update_timer_func,
 		(unsigned long)power);
 	mod_timer(&power->battery_update_timer,
-		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
-
-
+		jiffies + msecs_to_jiffies(power->bat_update_delay_msec));
 
 	return ret;
 
@@ -865,7 +773,7 @@ static int wm831x_power_resume(struct platform_device *pdev)
 	setup_timer(&wm831x_power->battery_update_timer,
 		battery_update_timer_func, (unsigned long)wm831x_power);
 	mod_timer(&wm831x_power->battery_update_timer,
-		jiffies + msecs_to_jiffies(BAT_UPDATE_DELAY_MSEC));
+		jiffies + msecs_to_jiffies(wm831x_power->bat_update_delay_msec));
 
 	return 0;
 }
