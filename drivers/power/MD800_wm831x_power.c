@@ -97,7 +97,7 @@ static int usbcable_without_docking(void)
 	int ret =0;
 //	printk(KERN_DEBUG "usb cable without docking %d\n",amb_udc_status);
 	if((amb_udc_status == AMBARELLA_UDC_STATUS_CONFIGURED)
-		& (ambarella_gpio_get(GPIO(7)) == GPIO_LOW)){
+		& (ambarella_gpio_get(GPIO(150)) == GPIO_LOW)){
 //		printk(KERN_DEBUG "usb cable without docking \n");
 		ret = 1;
 	}
