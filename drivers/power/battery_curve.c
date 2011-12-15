@@ -142,7 +142,8 @@ static int stabilize_capacity(int capacity,
 	int sys_status,
 	int charge_status,
 	int chargecurrent,
-	int uV)
+	int uV,
+	bool usbplug)
 {
 	static int pre_capc,first_time=2;	
 	int capc = capacity;
@@ -208,13 +209,18 @@ static int stabilize_capacity(int capacity,
 			capc = 100;
 		}
 	}
+
+	if(usbplug)
+		return pre_capc;
+
 	return capc;
 }
 
 int cal_capacity(int chargecurrent,
 	int sys_status,
 	int charge_status,
-	int uV)
+	int uV,
+	bool usbplug)
 {
 	int capc = 0;
 
@@ -241,7 +247,8 @@ int cal_capacity(int chargecurrent,
 		sys_status,
 		charge_status,
 		chargecurrent,
-		uV);
+		uV,
+		usbplug);
 	return capc;
 }
 

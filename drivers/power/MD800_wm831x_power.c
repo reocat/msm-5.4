@@ -477,6 +477,7 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 {
 	int uV, ret,status,capc=0,chargecurrent=0;
+	bool usbplug;
 
 	/* calculate the capacity from voltage */
 	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
@@ -491,8 +492,10 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 
 	if(usbcable_without_docking()){
 		disable_battery_charge(wm831x);
+		usbplug=1;
 	}else{
 		enable_battery_charge(wm831x);
+		usbplug=0;
 	}
 
 	ret = wm831x_reg_read(wm831x, WM831X_CHARGER_STATUS);
@@ -502,7 +505,7 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	chargecurrent = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_AUX1);
 	chargecurrent = ((chargecurrent / 1000) * 125) / 100;
 
-	capc = cal_capacity(chargecurrent,status,ret,uV);
+	capc = cal_capacity(chargecurrent,status,ret,uV,usbplug);
 
 	*capacity = capc;
 	return ret;

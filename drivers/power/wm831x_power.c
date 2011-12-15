@@ -425,7 +425,7 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	chargecurrent = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_AUX1);
 	chargecurrent = ((chargecurrent / 1000) * 125) / 100;
 
-	capc = cal_capacity(chargecurrent,status,ret,uV);
+	capc = cal_capacity(chargecurrent,status,ret,uV,0);
 
 	*capacity = capc;
 	return ret;
