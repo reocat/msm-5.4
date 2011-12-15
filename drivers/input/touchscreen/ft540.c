@@ -30,6 +30,7 @@
 #define MAX_FINGERS	5
 
 typedef enum {
+	FT_CURRENT_KEY			= 0x01,
 	FT_FINGER_NUM			= 0x02,
 	FT_X1_HI,
 	FT_X1_LO,
@@ -190,6 +191,74 @@ static void ft540_send_event(struct ft540 *ft)
 	int			event = 0;
 
 	curr_touch = ft->reg_data[FT_FINGER_NUM] & 0x07;
+
+	switch (ft->reg_data[FT_CURRENT_KEY]) {
+	case 1:
+		if (ft->lights_enabled[FT_UPPER_RIGHT]) {
+			curr_home = 1;
+		}
+		break;
+	case 4:
+		if (ft->lights_enabled[FT_LOWER_RIGHT]) {
+			curr_home = 1;
+		}
+		break;
+	case 7:
+		if (ft->lights_enabled[FT_LOWER_LEFT]) {
+			curr_home = 1;
+		}
+		break;
+	case 10:
+		if (ft->lights_enabled[FT_UPPER_LEFT]) {
+			curr_home = 1;
+		}
+		break;
+
+	case 2:
+		if (ft->lights_enabled[FT_UPPER_RIGHT]) {
+			curr_menu = 1;
+		}
+		break;
+	case 5:
+		if (ft->lights_enabled[FT_LOWER_RIGHT]) {
+			curr_menu = 1;
+		}
+		break;
+	case 8:
+		if (ft->lights_enabled[FT_LOWER_LEFT]) {
+			curr_menu = 1;
+		}
+		break;
+	case 11:
+		if (ft->lights_enabled[FT_UPPER_LEFT]) {
+			curr_menu = 1;
+		}
+		break;
+
+	case 3:
+		if (ft->lights_enabled[FT_UPPER_RIGHT]) {
+			curr_back = 1;
+		}
+		break;
+	case 6:
+		if (ft->lights_enabled[FT_LOWER_RIGHT]) {
+			curr_back = 1;
+		}
+		break;
+	case 9:
+		if (ft->lights_enabled[FT_LOWER_LEFT]) {
+			curr_back = 1;
+		}
+		break;
+	case 12:
+		if (ft->lights_enabled[FT_UPPER_LEFT]) {
+			curr_back = 1;
+		}
+		break;
+
+	default:
+		break;
+	}
 
 	for (i = 0; i < curr_touch; i++) {
 		u8	xh, xl, yh, yl;
