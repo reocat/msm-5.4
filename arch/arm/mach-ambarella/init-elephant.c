@@ -347,7 +347,7 @@ static struct ambarella_key_table elephant_keymap_vendor61[AMBINPUT_TABLE_SIZE] 
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
 
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	1,	1,	GPIO(42),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_CAMERA,	1,	1,	GPIO(42),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 
 	{AMBINPUT_END},
 };
