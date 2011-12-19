@@ -45,6 +45,7 @@ struct ambarella_sd_slot {
 	int					fixed_wp;
 	struct ambarella_gpio_io_info		gpio_wp;
 	u32					caps;
+	int					(*set_vdd)(u32 vdd);
 };
 
 struct ambarella_sd_controller {
