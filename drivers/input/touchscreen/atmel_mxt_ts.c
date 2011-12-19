@@ -52,6 +52,8 @@
 
 #define MXT_OBJECT_SIZE		6
 
+#define MXT_MAX_BLOCK_WRITE	256
+
 /* Object types */
 #define MXT_DEBUG_DIAGNOSTIC_T37	37
 #define MXT_GEN_MESSAGE_T5		5
@@ -188,8 +190,7 @@
 #define MXT1386_RESET_TIME	200	/* msec */
 #define MXT_RESET_TIME		200	/* msec */
 #define MXT_RESET_NOCHGREAD	400	/* msec */
-
-#define MXT_FWRESET_TIME	175	/* msec */
+#define MXT_FWRESET_TIME	1000	/* msec */
 
 /* Command to unlock bootloader */
 #define MXT_UNLOCK_CMD_MSB	0xaa
@@ -263,7 +264,7 @@ struct mxt_data {
 	struct input_dev *input_dev;
 	const struct mxt_platform_data *pdata;
 	struct mxt_object *object_table;
-	u16 max_address;
+	u16 mem_size;
 	struct mxt_info info;
 	struct mxt_finger finger[MXT_MAX_FINGER];
 	unsigned int irq;
@@ -409,8 +410,8 @@ static int mxt_fw_write(struct i2c_client *client,
 	return 0;
 }
 
-static int __mxt_i2c_transfer(struct i2c_client *client,
-			      u16 reg, u16 len, void *val, bool i2c_write)
+static int __mxt_read_reg(struct i2c_client *client,
+			       u16 reg, u16 len, void *val)
 {
 	struct i2c_msg xfer[2];
 	u8 buf[2];
@@ -426,7 +427,7 @@ static int __mxt_i2c_transfer(struct i2c_client *client,
 
 	/* Read data */
 	xfer[1].addr = client->addr;
-	xfer[1].flags = i2c_write ? 0 : I2C_M_RD;
+	xfer[1].flags = I2C_M_RD;
 	xfer[1].len = len;
 	xfer[1].buf = val;
 
@@ -440,19 +441,53 @@ static int __mxt_i2c_transfer(struct i2c_client *client,
 
 static int mxt_read_reg(struct i2c_client *client, u16 reg, u8 *val)
 {
-	return __mxt_i2c_transfer(client, reg, 1, val, false);
+	return __mxt_read_reg(client, reg, 1, val);
 }
 
 static int mxt_write_reg(struct i2c_client *client, u16 reg, u8 val)
 {
-	return __mxt_i2c_transfer(client, reg, 1, &val, true);
+	u8 buf[3];
+
+	buf[0] = reg & 0xff;
+	buf[1] = (reg >> 8) & 0xff;
+	buf[2] = val;
+
+	if (i2c_master_send(client, buf, 3) != 3) {
+		dev_err(&client->dev, "%s: i2c send failed\n", __func__);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int mxt_write_block(struct i2c_client *client, u16 addr, u16 length, u8 *value)
+{
+	int i;
+	struct {
+		__le16 le_addr;
+		u8  data[MXT_MAX_BLOCK_WRITE];
+	} i2c_block_transfer;
+
+	if (length > MXT_MAX_BLOCK_WRITE)
+		return -EINVAL;
+
+	memcpy(i2c_block_transfer.data, value, length);
+
+	i2c_block_transfer.le_addr = cpu_to_le16(addr);
+
+	i = i2c_master_send(client, (u8 *) &i2c_block_transfer, length + 2);
+
+	if (i == (length + 2))
+		return 0;
+	else
+		return -EIO;
 }
 
 static int mxt_read_object_table(struct i2c_client *client,
 				      u16 reg, u8 *object_buf)
 {
-	return __mxt_i2c_transfer(client, reg, MXT_OBJECT_SIZE,
-				  object_buf, false);
+	return __mxt_read_reg(client, reg, MXT_OBJECT_SIZE,
+			      object_buf);
 }
 
 static struct mxt_object *
@@ -482,8 +517,8 @@ static int mxt_read_message(struct mxt_data *data,
 		return -EINVAL;
 
 	reg = object->start_address;
-	return __mxt_i2c_transfer(data->client, reg,
-				  sizeof(struct mxt_message), message, false);
+	return __mxt_read_reg(data->client, reg,
+				  sizeof(struct mxt_message), message);
 }
 
 static int mxt_read_object(struct mxt_data *data,
@@ -497,7 +532,7 @@ static int mxt_read_object(struct mxt_data *data,
 		return -EINVAL;
 
 	reg = object->start_address;
-	return __mxt_i2c_transfer(data->client, reg + offset, 1, val, false);
+	return __mxt_read_reg(data->client, reg + offset, 1, val);
 }
 
 static int mxt_write_object(struct mxt_data *data,
@@ -786,7 +821,7 @@ static int mxt_get_object_table(struct mxt_data *data)
 	u16 end_address;
 	u8 reportid = 0;
 	u8 buf[MXT_OBJECT_SIZE];
-	data->max_address = 0;
+	data->mem_size = 0;
 
 	for (i = 0; i < data->info.object_num; i++) {
 		struct mxt_object *object = data->object_table + i;
@@ -807,10 +842,11 @@ static int mxt_get_object_table(struct mxt_data *data)
 			object->max_reportid = reportid;
 		}
 
-		end_address = object->start_address + object->size - 1;
+		end_address = object->start_address
+			+ object->size * object->instances- 1;
 
-		if (end_address > data->max_address)
-			data->max_address = end_address;
+		if (end_address >= data->mem_size)
+			data->mem_size = end_address + 1;
 	}
 
 	return 0;
@@ -1088,11 +1124,14 @@ static ssize_t mxt_update_fw_store(struct device *dev,
 static int mxt_check_mem_access_params(struct mxt_data *data, loff_t off,
 				       size_t *count)
 {
-	if (off >= data->max_address)
+	if (off >= data->mem_size)
 		return -EIO;
 
-	if (off + *count > data->max_address)
-		*count = data->max_address - off;
+	if (off + *count > data->mem_size)
+		*count = data->mem_size - off;
+
+	if (*count > MXT_MAX_BLOCK_WRITE)
+		*count = MXT_MAX_BLOCK_WRITE;
 
 	return 0;
 }
@@ -1106,16 +1145,17 @@ static ssize_t mxt_mem_access_read(struct file *filp, struct kobject *kobj,
 
 	ret = mxt_check_mem_access_params(data, off, &count);
 	if (ret < 0)
-		return ret;;
+		return ret;
 
 	if (count > 0)
-		ret = __mxt_i2c_transfer(data->client, off, count, buf, false);
+		ret = __mxt_read_reg(data->client, off, count, buf);
 
 	return ret == 0 ? count : ret;
 }
 
 static ssize_t mxt_mem_access_write(struct file *filp, struct kobject *kobj,
-	struct bin_attribute *bin_attr, char *buf, loff_t off, size_t count)
+	struct bin_attribute *bin_attr, char *buf, loff_t off,
+	size_t count)
 {
 	struct device *dev = container_of(kobj, struct device, kobj);
 	struct mxt_data *data = dev_get_drvdata(dev);
@@ -1123,10 +1163,10 @@ static ssize_t mxt_mem_access_write(struct file *filp, struct kobject *kobj,
 
 	ret = mxt_check_mem_access_params(data, off, &count);
 	if (ret < 0)
-		return ret;;
+		return ret;
 
 	if (count > 0)
-		ret = __mxt_i2c_transfer(data->client, off, count, buf, true);
+		ret = mxt_write_block(data->client, off, count, buf);
 
 	return ret == 0 ? count : 0;
 }
@@ -1255,7 +1295,7 @@ static int __devinit mxt_probe(struct i2c_client *client,
 	data->mem_access_attr.attr.mode = S_IRUGO | S_IWUGO;
 	data->mem_access_attr.read = mxt_mem_access_read;
 	data->mem_access_attr.write = mxt_mem_access_write;
-	data->mem_access_attr.size = data->max_address;
+	data->mem_access_attr.size = data->mem_size;
 
 	if (sysfs_create_bin_file(&client->dev.kobj,
 				  &data->mem_access_attr) < 0) {
