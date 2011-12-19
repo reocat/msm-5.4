@@ -149,6 +149,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY,
+		.set_vdd	= NULL,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
@@ -185,6 +186,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		},
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY,
+		.set_vdd	= NULL,
 	},
 	.num_slots		= 2,
 #else
@@ -312,6 +314,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		},
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY,
+		.set_vdd	= NULL,
 	},
 	.num_slots		= 1,
 	.clk_limit		= 25000000,
@@ -324,11 +327,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.get_pll		= get_sd_freq_hz,
 #endif
 #if (SD_SUPPORT_PLL_SCALER == 1)
-#if (CHIP_REV == I1)
-	.support_pll_scaler	= 0,
-#else
 	.support_pll_scaler	= 1,
-#endif
 #else
 	.support_pll_scaler	= 0,
 #endif

@@ -1311,6 +1311,8 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 			}
 			ambsd_dbg(pslotinfo, "sd_clk = %d.\n", sd_clk);
 		}
+		ambsd_dbg(pslotinfo, "pll_clk = %d.\n",
+			pinfo->pcontroller->get_pll());
 		ambsd_dbg(pslotinfo, "desired_clk = %d.\n", desired_clk);
 		ambsd_dbg(pslotinfo, "actual_clk = %d.\n", actual_clk);
 		ambsd_dbg(pslotinfo, "clk_div = %d.\n", clk_div);
@@ -1810,7 +1812,8 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				"HW do not support Suspend/Resume!\n");
 
 		mmc->ocr_avail = 0;
-		if (hc_cap & SD_CAP_VOL_1_8V)
+		if ((hc_cap & SD_CAP_VOL_1_8V) &&
+			(pslotinfo->plat_info->set_vdd != NULL))
 			mmc->ocr_avail |= MMC_VDD_165_195;
 		if (hc_cap & SD_CAP_VOL_3_0V)
 			mmc->ocr_avail |= MMC_VDD_29_30 | MMC_VDD_30_31;
