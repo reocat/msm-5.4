@@ -32,6 +32,19 @@
 /* ==========================================================================*/
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
+#if (CHIP_REV == I1)
+	.mode_switch = 0,
+	.binary_mode = 0,
+	.data_swap = 1,
+	.reg_64 = 1,
+	.md5_sha1 = 1,
+#else
+	.mode_switch = 0,
+	.binary_mode = 1,
+	.data_swap = 0,
+	.reg_64 = 0,
+	.md5_sha1 = 0,
+#endif
 	.reserved = 0,
 };
 

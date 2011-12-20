@@ -35,7 +35,24 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+#if (CHIP_REV == I1)
+#define CRYPTO_DATA_64BIT (1)
+#else
+#define CRYPTO_DATA_64BIT (0)
+#endif
+
 struct ambarella_platform_crypto_info{
+	u32					mode_switch;   /*a7 support mode switch between  "Binary Compatibility Mode" and "Non-Binary Compatibility Mode" */
+									   /* 1: support switch*/
+									   /* 0: do not support switch*/
+	u32					binary_mode;   /* 1: binary compatibility mode need opcode*/
+									   /* 0: non-binary compatible mode do not need opcode*/
+	u32					data_swap;     /*swap from little to big endian 0:do not need swap  1:need swap */
+	u32					reg_64;        /*64 bit register,need memcpy to write or read*/
+									   /* 0: 32-bit ,you can use writel*/
+									   /* 1: 64-bit ,you should use memcpy to write or read 64-bit at once */
+	u32					md5_sha1;      /* 0:do not support md5 or sha1*/
+									   /* 1:support md5 and sha1*/
 	u32					reserved;
 };
 
