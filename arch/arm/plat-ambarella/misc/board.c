@@ -184,6 +184,11 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
+	.vin0_af_power	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
 	.vin0_trigger	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
@@ -215,6 +220,11 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_delay	= 1,
 	},
 	.vin1_reset	= {
+		.gpio_id	= -1,
+		.active_level	= GPIO_LOW,
+		.active_delay	= 1,
+	},
+	.vin1_af_power	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,

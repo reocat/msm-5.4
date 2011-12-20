@@ -67,6 +67,7 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		vin0_vsync;
 	struct ambarella_gpio_io_info		vin0_power;
 	struct ambarella_gpio_io_info		vin0_reset;
+	struct ambarella_gpio_io_info		vin0_af_power;
 	struct ambarella_gpio_io_info		vin0_trigger;
 	struct ambarella_gpio_irq_info		vin0_strobe;
 	struct ambarella_gpio_io_info		vin0_hdmi_hpd;
@@ -74,6 +75,7 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		vin1_vsync;
 	struct ambarella_gpio_io_info		vin1_power;
 	struct ambarella_gpio_io_info		vin1_reset;
+	struct ambarella_gpio_io_info		vin1_af_power;
 	struct ambarella_gpio_io_info		vin1_trigger;
 	struct ambarella_gpio_irq_info		vin1_strobe;
 	struct ambarella_gpio_io_info		vin1_hdmi_hpd;
