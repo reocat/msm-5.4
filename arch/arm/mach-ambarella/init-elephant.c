@@ -1022,7 +1022,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.vin0_power.active_delay = 1;
 
-			ambarella_board_generic.vin0_af_power.gpio_id = GPIO(101);
+			ambarella_board_generic.vin0_af_power.gpio_id = GPIO(103);
 			ambarella_board_generic.vin0_af_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.vin0_af_power.active_delay = 1;
 
