@@ -37,14 +37,24 @@
 
 #if (CHIP_REV == I1)
 #define CRYPTO_DATA_64BIT (1)
+#define CRYPTO_MODE_SWITCH (0)
+#elif (CHIP_REV == A7)
+#define CRYPTO_DATA_64BIT (1)
+#define CRYPTO_MODE_SWITCH (1)
 #else
 #define CRYPTO_DATA_64BIT (0)
+#define CRYPTO_MODE_SWITCH (0)
 #endif
 
 struct ambarella_platform_crypto_info{
 	u32					mode_switch;   /*a7 support mode switch between  "Binary Compatibility Mode" and "Non-Binary Compatibility Mode" */
+									   /* TODO: And now, haven't support a7 mode switch,the a7 is default mode ( non-binary compatible mode, do not need opcode)*/
+									   /* For iONE,this flag is 0, and default mode is non-binary compatible mode, do not need opcode*/
+									   /* For a5s, this flag is 0, and default mode is binary compatibility mode,  need opcode*/
+									   /* For a7,  this flag is 1, and default mode is non-binary compatible mode, do not need opcode*/
+									   /* TODO: And now, haven't support a7 mode switch,*/
 									   /* 1: support switch*/
-									   /* 0: do not support switch*/
+									   /* 0: do not support switch */
 	u32					binary_mode;   /* 1: binary compatibility mode need opcode*/
 									   /* 0: non-binary compatible mode do not need opcode*/
 	u32					data_swap;     /*swap from little to big endian 0:do not need swap  1:need swap */

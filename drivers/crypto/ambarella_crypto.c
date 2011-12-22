@@ -564,6 +564,10 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 			goto crypto_errCode_free_aes_irq;
 		}
 	}
+	//TODO: need to add a7 mode switch.now, it's default as compatibility mode
+#if (CRYPTO_MODE_SWITCH == 1)
+	amba_writel(CRYPT_BINARY_COMP_REG, 0x0000); // set a7 to compatibility mode  
+#endif
 
 	if (platform_info->binary_mode == 1){
 		aes_fun.opcode = aes_opcode;
