@@ -264,7 +264,7 @@ static void __init ambarella_init_coconut(void)
 
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;
-	ambarella_platform_sd_controller0.clk_limit = 25000000;
+	ambarella_platform_sd_controller0.wait_tmo = (10 * HZ);
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
@@ -316,18 +316,6 @@ static void __init ambarella_init_coconut(void)
 	}
 
 	platform_device_register(&coconut_board_input);
-
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
-		switch (AMBARELLA_BOARD_REV(system_rev)) {
-			case 11:
-#if defined(CONFIG_CODEC_AMBARELLA_WM8737)
-				ambarella_init_wm8737(1, 0x1A);	/*i2c-1, 0x1A */
-#endif
-				break;
-			default:
-				break;
-		}
-	}
 }
 
 /* ==========================================================================*/

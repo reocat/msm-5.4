@@ -214,12 +214,9 @@ static inline void serial_ambarella_check_modem_status(struct uart_port *port)
 static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 {
 	struct uart_port			*port = dev_id;
-	struct ambarella_uart_port_info		*port_info;
 	int					rval = IRQ_HANDLED;
 	u32					ii;
 	unsigned long				flags;
-
-	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
 	spin_lock_irqsave(&port->lock, flags);
 

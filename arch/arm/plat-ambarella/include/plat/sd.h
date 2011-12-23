@@ -51,13 +51,15 @@ struct ambarella_sd_slot {
 struct ambarella_sd_controller {
 	u32					num_slots;
 	struct ambarella_sd_slot		slot[SD_MAX_SLOT_NUM];
-	u32					clk_limit;
-	u32					wait_tmo;
-
 	void					(*set_pll)(u32);
 	u32					(*get_pll)(void);
-	u32					support_pll_scaler;
+
 	u32					max_clk;
+	u32					clk_limit;
+	u32					active_clk;
+	u32					support_pll_scaler;
+
+	u32					wait_tmo;
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
 	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bounce_buffer), perm); \

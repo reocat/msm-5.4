@@ -201,9 +201,6 @@ static unsigned long ambarella_gpio_freeflag[BITS_TO_LONGS(AMBGPIO_SIZE)];
 static int ambarella_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
 	int					retval = 0;
-	struct ambarella_gpio_chip		*ambarella_chip;
-
-	ambarella_chip = to_ambarella_gpio_chip(chip);
 
 	mutex_lock(&ambarella_gpio_mtx);
 
@@ -225,10 +222,6 @@ static int ambarella_gpio_request(struct gpio_chip *chip, unsigned offset)
 
 static void ambarella_gpio_free(struct gpio_chip *chip, unsigned offset)
 {
-	struct ambarella_gpio_chip		*ambarella_chip;
-
-	ambarella_chip = to_ambarella_gpio_chip(chip);
-
 	mutex_lock(&ambarella_gpio_mtx);
 
 	__set_bit((chip->base + offset), ambarella_gpio_freeflag);

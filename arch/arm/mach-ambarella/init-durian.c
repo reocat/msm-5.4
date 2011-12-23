@@ -408,7 +408,6 @@ static void __init ambarella_init_durian(void)
 
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;
-	ambarella_platform_sd_controller0.clk_limit = 25000000;
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_64KB;

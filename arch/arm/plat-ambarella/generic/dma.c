@@ -165,20 +165,17 @@ EXPORT_SYMBOL(ambarella_dma_request_irq);
 
 void ambarella_dma_free_irq(int chan, ambarella_dma_handler handler)
 {
-	int					retval = 0;
 	int					i;
 	unsigned long				flags;
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		retval = -EINVAL;
 		return;
 	}
 
 	if (unlikely(handler == NULL)) {
 		pr_err("%s: handler is NULL!\n", __func__);
-		retval = -EINVAL;
 		return;
 	}
 
@@ -189,7 +186,6 @@ void ambarella_dma_free_irq(int chan, ambarella_dma_handler handler)
 			"MAX_DMA_CHANNEL_IRQ_HANDLERS[%d]!\n",
 			__func__, chan, G_dma.chan[chan].irq_count,
 			MAX_DMA_CHANNEL_IRQ_HANDLERS);
-		retval = -EINVAL;
 		goto ambarella_dma_free_irq_exit;
 	}
 
