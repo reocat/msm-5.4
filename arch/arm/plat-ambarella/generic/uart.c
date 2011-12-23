@@ -99,6 +99,7 @@ static void ambarella_uart_stop_tx(unsigned char __iomem *membase)
 	iir = amba_readl(membase + UART_II_OFFSET);
 	amba_writel(membase + UART_IE_OFFSET,
 		ier & ~(UART_IE_PTIME | UART_IE_ETBEI));
+	(void)(iir);
 }
 
 static u32 ambarella_uart_read_ms(unsigned char __iomem *membase)

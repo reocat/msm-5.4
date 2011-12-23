@@ -105,6 +105,11 @@ void fio_amb_sd0_slot2_release(void)
 #endif
 
 struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
+#if (SD_HAS_INTERNAL_MUXER == 1)
+	.num_slots		= 2,
+#else
+	.num_slots		= 1,
+#endif
 	.slot[0] = {
 		.pmmc_host	= NULL,
 		.check_owner	= fio_amb_sd0_is_enable,
@@ -147,8 +152,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY,
+		.caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_SDIO_IRQ |
+				MMC_CAP_ERASE,
 		.set_vdd	= NULL,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
@@ -184,27 +190,33 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY,
+		.caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_SDIO_IRQ |
+				MMC_CAP_ERASE,
 		.set_vdd	= NULL,
 	},
-	.num_slots		= 2,
-#else
-	.num_slots		= 1,
 #endif
-	.clk_limit		= 12500000,
-	.wait_tmo		= (10 * HZ),
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
+
+	.max_clk		= 50000000,
+	.clk_limit		= 24000000,
+	.active_clk		= 0,
 #if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
 #else
 	.support_pll_scaler	= 0,
 #endif
-	.max_clk		= 50000000,
+	.wait_tmo		= (1 * HZ),
 };
+module_param_cb(sd0_max_clk, &param_ops_int,
+	&(ambarella_platform_sd_controller0.max_clk), 0444);
 module_param_cb(sd0_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller0.clk_limit), 0644);
+module_param_cb(sd0_active_clk, &param_ops_int,
+	&(ambarella_platform_sd_controller0.active_clk), 0444);
+module_param_cb(sd0_pll_scaler, &param_ops_int,
+	&(ambarella_platform_sd_controller0.support_pll_scaler), 0444);
 module_param_cb(sd0_wait_timeout, &param_ops_int,
 	&(ambarella_platform_sd_controller0.wait_tmo), 0644);
 AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0,
@@ -280,6 +292,7 @@ u32 ambarella_platform_sdxc_get_pll(void)
 #endif
 
 struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
+	.num_slots		= 1,
 	.slot[0] = {
 		.pmmc_host	= NULL,
 		.check_owner	= fio_amb_sd2_check_owner,
@@ -312,13 +325,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY,
+		.caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_SDIO_IRQ |
+				MMC_CAP_ERASE,
 		.set_vdd	= NULL,
 	},
-	.num_slots		= 1,
-	.clk_limit		= 25000000,
-	.wait_tmo		= (10 * HZ),
 #if (CHIP_REV == I1)
 	.set_pll		= ambarella_platform_sdxc_set_pll,
 	.get_pll		= ambarella_platform_sdxc_get_pll,
@@ -326,15 +337,25 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
 #endif
+
+	.max_clk		= 50000000,
+	.clk_limit		= 24000000,
+	.active_clk		= 0,
 #if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
 #else
 	.support_pll_scaler	= 0,
 #endif
-	.max_clk		= 50000000,
+	.wait_tmo		= (1 * HZ),
 };
+module_param_cb(sd1_max_clk, &param_ops_int,
+	&(ambarella_platform_sd_controller1.max_clk), 0444);
 module_param_cb(sd1_clk_limit, &param_ops_int,
 	&(ambarella_platform_sd_controller1.clk_limit), 0644);
+module_param_cb(sd1_active_clk, &param_ops_int,
+	&(ambarella_platform_sd_controller1.active_clk), 0444);
+module_param_cb(sd1_pll_scaler, &param_ops_int,
+	&(ambarella_platform_sd_controller1.support_pll_scaler), 0444);
 module_param_cb(sd1_wait_timeout, &param_ops_int,
 	&(ambarella_platform_sd_controller1.wait_tmo), 0644);
 AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1,

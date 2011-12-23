@@ -111,7 +111,7 @@ static int ambarella_wdt_set_heartbeat(struct ambarella_wdt_info *pinfo,
 	ambarella_wdt_keepalive(pinfo);
 
 ambarella_wdt_set_heartbeat_exit:
-	return 0;
+	return errorCode;
 }
 
 static int ambarella_wdt_open(struct inode *inode, struct file *file)

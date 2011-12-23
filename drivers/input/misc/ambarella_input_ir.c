@@ -248,7 +248,6 @@ static inline int ambarella_ir_update_buffer(struct ambarella_ir_info *pirinfo)
 static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 {
 	struct ambarella_ir_info	*pirinfo;
-	int				size;
 	int				rval;
 	u32				uid;
 	u32				edges;
@@ -273,7 +272,7 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		goto ambarella_ir_irq_exit;
 	}
 
-	size = ambarella_ir_update_buffer(pirinfo);
+	ambarella_ir_update_buffer(pirinfo);
 
 	if(!pirinfo->ir_parse)
 		goto ambarella_ir_irq_exit;

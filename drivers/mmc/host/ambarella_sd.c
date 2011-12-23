@@ -137,10 +137,6 @@ struct ambarella_sd_controller_info {
 /* ==========================================================================*/
 static void ambarella_sd_show_info(struct ambarella_sd_mmc_info *pslotinfo)
 {
-	struct ambarella_sd_controller_info	*pinfo;
-
-	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
-
 	ambsd_dbg(pslotinfo, "Enter %s\n", __func__);
 	ambsd_dbg(pslotinfo, "sg = 0x%x.\n", (u32)pslotinfo->sg);
 	ambsd_dbg(pslotinfo, "sg_len = 0x%x.\n", pslotinfo->sg_len);
@@ -180,9 +176,6 @@ static u32 ambarella_sd_check_dma_boundary(
 {
 	u32					start_512kb;
 	u32					end_512kb;
-	struct ambarella_sd_controller_info	*pinfo;
-
-	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	start_512kb = (address) & (~(max_size - 1));
 	end_512kb = (address + size - 1) & (~(max_size - 1));
@@ -814,9 +807,6 @@ static void ambarella_sd_data_done(
 	u16 eis)
 {
 	struct mmc_data				*data = NULL;
-	struct ambarella_sd_controller_info	*pinfo;
-
-	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	if ((pslotinfo->state == AMBA_SD_STATE_CMD) &&
 		((pslotinfo->cmd_reg & 0x3) == SD_CMD_RSP_48BUSY)) {
@@ -1039,9 +1029,6 @@ static int ambarella_sd_gpio_cd_check_val(
 	struct ambarella_sd_mmc_info *pslotinfo)
 {
 	u32					val = -1;
-	struct ambarella_sd_controller_info	*pinfo;
-
-	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
 		ambarella_gpio_config(pslotinfo->plat_info->gpio_cd.irq_gpio,
@@ -1316,6 +1303,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		ambsd_dbg(pslotinfo, "desired_clk = %d.\n", desired_clk);
 		ambsd_dbg(pslotinfo, "actual_clk = %d.\n", actual_clk);
 		ambsd_dbg(pslotinfo, "clk_div = %d.\n", clk_div);
+		pinfo->pcontroller->active_clk = actual_clk;
 
 		clk_div <<= 8;
 		clk_div |= SD_CLK_ICLK_EN;
@@ -1594,10 +1582,7 @@ static int ambarella_sd_get_ro(struct mmc_host *mmc)
 static int ambarella_sd_get_cd(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
-	struct ambarella_sd_controller_info	*pinfo;
 	u32					cdpin;
-
-	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
 	cdpin = ambarella_sd_check_cd(mmc);
