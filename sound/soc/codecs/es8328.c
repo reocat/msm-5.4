@@ -19,12 +19,12 @@
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/gpio.h>
+#include <linux/regulator/consumer.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/tlv.h>
-#include <sound/es8328.h>
 
 #include "es8328.h"
 
@@ -34,6 +34,7 @@
 struct es8328_priv {
 	unsigned int sysclk;
 	void *control_data;
+	struct regulator *vcc_io;
 };
 
 
@@ -495,12 +496,16 @@ static int es8328_resume(struct snd_soc_codec *codec)
 
 static int es8328_remove(struct snd_soc_codec *codec)
 {
-	struct es8328_platform_data *es8328_pdata;
+	struct es8328_priv *es8328 = snd_soc_codec_get_drvdata(codec);
 
 	es8328_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
-	es8328_pdata = codec->dev->platform_data;
-	gpio_free(es8328_pdata->power_pin);
+	regulator_disable(es8328->vcc_io);
+
+	if (es8328->vcc_io)
+		regulator_put(es8328->vcc_io);
+
+	es8328->vcc_io = NULL;
 
 	return 0;
 }
@@ -508,27 +513,23 @@ static int es8328_remove(struct snd_soc_codec *codec)
 static int es8328_probe(struct snd_soc_codec *codec)
 {
 	struct es8328_priv *es8328 = snd_soc_codec_get_drvdata(codec);
-	struct es8328_platform_data *es8328_pdata;
 	int ret = 0;
 
 	dev_info(codec->dev, "ES8328 Audio Codec %s", ES8328_VERSION);
 
 	codec->control_data = es8328->control_data;
 
-	es8328_pdata = codec->dev->platform_data;
-	if (!es8328_pdata)
-		return -EINVAL;
-
-	/* Power on ES8328 codec */
-	if (gpio_is_valid(es8328_pdata->power_pin)) {
-		ret = gpio_request(es8328_pdata->power_pin, "es8328 power");
-		if (ret < 0)
-			return ret;
-	} else {
-		return -ENODEV;
+	es8328->vcc_io = regulator_get(NULL, "aud_io_vcc");
+	if (IS_ERR(es8328->vcc_io)) {
+		pr_err("ES8328: Unable to obtain regulator for IO VCC\n");
+		return PTR_ERR(es8328->vcc_io);
 	}
-	gpio_direction_output(es8328_pdata->power_pin, GPIO_HIGH);
-	msleep(es8328_pdata->power_delay);
+
+	ret = regulator_enable(es8328->vcc_io);
+	if (ret != 0) {
+		dev_err(codec->dev, "Failed to enable aud_io_vcc: %d\n", ret);
+		return ret;
+	}
 
 	es8328_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 

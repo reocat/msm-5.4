@@ -27,19 +27,9 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/gpio.h>
-#include <sound/es8328.h>
-
-#define ES8328_POWER_PIN	GPIO(155)
-#define ES8328_POWER_DELAY	1
-
-static struct es8328_platform_data vendor61_es8328_pdata = {
-	.power_pin	= ES8328_POWER_PIN,
-	.power_delay	= ES8328_POWER_DELAY,
-};
 
 static struct i2c_board_info ambarella_es8328_board_info = {
 	I2C_BOARD_INFO("es8328", 0x10),
-	.platform_data	= &vendor61_es8328_pdata,
 };
 
 int ambarella_init_es8328(u8 i2c_bus_num, u8 i2c_addr)

@@ -394,16 +394,17 @@ static struct regulator_init_data wm8310_default_ldo9_data __initdata = {
 /* LDO10 VDD_LCD */
 static struct regulator_consumer_supply ldo10_consumers[] __initdata = {
 	{
-		.supply = "lcd_ctl_vcc",
+		.supply = "aud_io_vcc",
 	},
 };
 static struct regulator_init_data wm8310_default_ldo10_data __initdata = {
 	.constraints = {
-		.name = "VDD_LCD_1V_3.5V",
-		.min_uV = 1000000,
+		.name = "VDD_AUDIO_3.2V_3.5V",
+		.min_uV = 3200000,
 		.max_uV = 3500000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask = REGULATOR_MODE_STANDBY | REGULATOR_MODE_NORMAL,
 		.state_mem = {
 			.disabled = 1,
@@ -411,7 +412,7 @@ static struct regulator_init_data wm8310_default_ldo10_data __initdata = {
 		},
 		.initial_state = PM_SUSPEND_MEM,
 		//.always_on = 1,
-		.boot_on = 1,
+		//.boot_on = 1,
 	},
 	 .num_consumer_supplies = ARRAY_SIZE(ldo10_consumers),
 	 .consumer_supplies = ldo10_consumers,
