@@ -76,20 +76,20 @@ struct aes_fun_t{
 void aes_reg_enc_dec_32(u32 **offset)
 {
 #if (CRYPTO_DATA_64BIT == 0)
-	*offset = CRYPT_A_INPUT_96_REG;
+	*offset = (u32*)CRYPT_A_INPUT_96_REG;
 #endif
 }
 void aes_reg_enc_64(u32 **offset)
 {
 #if (CRYPTO_DATA_64BIT == 1)
-	*offset = CRYPT_A_INPUT_ENC_96_REG;
+	*offset = (u32*)CRYPT_A_INPUT_ENC_96_REG;
 #endif
 }
 
 void aes_reg_dec_64(u32 **offset)
 {
 #if (CRYPTO_DATA_64BIT == 1)
-	*offset = CRYPT_A_INPUT_DEC_96_REG;
+	*offset = (u32*)CRYPT_A_INPUT_DEC_96_REG;
 #endif
 }
 
@@ -151,15 +151,15 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	u32 *offset=NULL;
 	switch (ctx->key_length){
 	case 16:
-		offset = CRYPT_A_128_96_REG;
+		offset = (u32*)CRYPT_A_128_96_REG;
 		aes_fun.wdata(offset,ctx->key_enc,16);
 		break;
 	case 24:
-		offset = CRYPT_A_192_160_REG;
+		offset = (u32*)CRYPT_A_192_160_REG;
 		aes_fun.wdata(offset,ctx->key_enc,24);
 		break;
 	case 32:
-		offset = CRYPT_A_256_224_REG;
+		offset = (u32*)CRYPT_A_256_224_REG;
 		aes_fun.wdata(offset,ctx->key_enc,32);
 		break;
 	}
@@ -170,7 +170,7 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	aes_fun.reg_enc(&offset);
 
 	//input the src
-	aes_fun.wdata(offset,src,16);
+	aes_fun.wdata(offset,(u32*)src,16);
 
 	if(likely(config_polling_mode == 0)) {
 		wait_for_completion_interruptible(&g_aes_irq_wait);
@@ -181,7 +181,7 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	}
 
 	//get the output
-	offset = CRYPT_A_OUTPUT_96_REG;
+	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
 }
 
@@ -195,15 +195,15 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	u32 *offset=NULL;
 	switch (ctx->key_length) {
 	case 16:
-		offset = CRYPT_A_128_96_REG;
+		offset = (u32*)CRYPT_A_128_96_REG;
 		aes_fun.wdata(offset,ctx->key_enc,16);
 	        break;
 	case 24:
-		offset = CRYPT_A_192_160_REG;
+		offset = (u32*)CRYPT_A_192_160_REG;
 		aes_fun.wdata(offset,ctx->key_enc,24);
 	        break;
 	case 32:
-		offset = CRYPT_A_256_224_REG;
+		offset = (u32*)CRYPT_A_256_224_REG;
 		aes_fun.wdata(offset,ctx->key_enc,32);
 	        break;
 	}
@@ -214,7 +214,7 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	aes_fun.reg_dec(&offset);
 
 	//input the src
-	aes_fun.wdata(offset,src,16);
+	aes_fun.wdata(offset,(u32*)src,16);
 
 	if(likely(config_polling_mode == 0)) {
 		wait_for_completion_interruptible(&g_aes_irq_wait);
@@ -225,7 +225,7 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	}
 
 	//get the output
-	offset = CRYPT_A_OUTPUT_96_REG;
+	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
 }
 
@@ -261,21 +261,21 @@ struct des_fun_t{
 void des_reg_enc_dec_32(u32 **offset)
 {
 #if (CRYPTO_DATA_64BIT == 0)
-	*offset = CRYPT_D_INPUT_HI_REG;
+	*offset = (u32*)CRYPT_D_INPUT_HI_REG;
 #endif
 }
 
 void des_reg_enc_64(u32 **offset)
 {
 #if (CRYPTO_DATA_64BIT == 1)
-	*offset = CRYPT_D_INPUT_ENC_HI_REG;
+	*offset = (u32*)CRYPT_D_INPUT_ENC_HI_REG;
 #endif
 }
 
 void des_reg_dec_64(u32 **offset)
 {
 #if (CRYPTO_DATA_64BIT == 1)
-	*offset = CRYPT_D_INPUT_DEC_HI_REG;
+	*offset = (u32*)CRYPT_D_INPUT_DEC_HI_REG;
 #endif
 }
 
@@ -316,7 +316,7 @@ static void des_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	u32 ready;
 	u32 *offset=NULL;
 	//set key
-	des_fun.wdata(CRYPT_D_HI_REG,ctx->expkey,8);
+	des_fun.wdata((u32*)CRYPT_D_HI_REG,ctx->expkey,8);
 
 	//enc or dec option mode
 	des_fun.opcode(AMBA_HW_ENCRYPT_CMD);
@@ -325,7 +325,7 @@ static void des_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	des_fun.reg_enc(&offset);
 
 	//input the src
-	aes_fun.wdata(offset,src,8);
+	aes_fun.wdata(offset,(u32*)src,8);
 
 	if(likely(config_polling_mode == 0)) {
 		wait_for_completion_interruptible(&g_des_irq_wait);
@@ -336,7 +336,7 @@ static void des_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	}
 
 	//get the output
-	offset = CRYPT_D_OUTPUT_HI_REG;
+	offset = (u32*)CRYPT_D_OUTPUT_HI_REG;
 	aes_fun.rdata(dst,offset,8);
 }
 
@@ -349,7 +349,7 @@ static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	u32 *offset=NULL;
 
 	//set key
-	des_fun.wdata(CRYPT_D_HI_REG,ctx->expkey,8);
+	des_fun.wdata((u32*)CRYPT_D_HI_REG,ctx->expkey,8);
 
 	//enc or dec option mode
 	des_fun.opcode(AMBA_HW_DECRYPT_CMD);
@@ -358,7 +358,7 @@ static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	des_fun.reg_dec(&offset);
 
 	//input the src
-	aes_fun.wdata(offset,src,8);
+	aes_fun.wdata(offset,(u32*)src,8);
 
 	if(likely(config_polling_mode == 0)) {
 		wait_for_completion_interruptible(&g_des_irq_wait);
@@ -369,7 +369,7 @@ static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	}
 
 	//get the output
-	offset = CRYPT_D_OUTPUT_HI_REG;
+	offset = (u32*)CRYPT_D_OUTPUT_HI_REG;
 	aes_fun.rdata(dst,offset,8);
 
 }
@@ -485,6 +485,7 @@ static irqreturn_t ambarella_des_irq(int irqno, void *dev_id)
 
 	return IRQ_HANDLED;
 }
+
 static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 {
 	int	errCode;
@@ -583,10 +584,10 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 		des_fun.wdata = swap_write;
 		des_fun.rdata = swap_read;
 	}else{
-		aes_fun.wdata = memcpy;
-		aes_fun.rdata = memcpy;
-		des_fun.wdata = memcpy;
-		des_fun.rdata = memcpy;
+		aes_fun.wdata = (void*)memcpy;
+		aes_fun.rdata = (void*)memcpy;
+		des_fun.wdata = (void*)memcpy;
+		des_fun.rdata = (void*)memcpy;
 	}
 
 	if (platform_info->reg_64 == 1){
