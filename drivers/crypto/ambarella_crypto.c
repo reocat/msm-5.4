@@ -37,8 +37,17 @@
 #include <mach/hardware.h>
 #include <plat/crypto.h>
 
+#include <linux/cryptohash.h>
+#include <crypto/internal/hash.h>
+#include <crypto/sha.h>
+#include <crypto/md5.h>
+
+
 static DECLARE_COMPLETION(g_aes_irq_wait);
 static DECLARE_COMPLETION(g_des_irq_wait);
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+static DECLARE_COMPLETION(g_md5_sha1_irq_wait);
+#endif
 
 static int config_polling_mode = 0;
 module_param(config_polling_mode, int, S_IRUGO);
@@ -49,6 +58,58 @@ static const char *ambdev_name =
 struct des_ctx {
 	u32 expkey[DES_EXPKEY_WORDS];
 };
+
+
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+static md5_digest_t g_md5_digest __attribute__((__aligned__(4)));
+static md5_data_t g_md5_data __attribute__((__aligned__(4)));
+static sha1_digest_t g_sha1_digest __attribute__((__aligned__(4)));
+static sha1_data_t g_sha1_data __attribute__((__aligned__(4)));
+#endif
+
+static void __ambarella_crypto_aligned_common64(u32 * src, u32 * dst) {
+	__asm__ __volatile__ (
+	"mov r2, %0 \n\t"
+	"ldmia r2, {r3-r4} \n\t"
+	"mov r2, %1 \n\t"
+	"stmia r2, {r3-r4} \n\t"
+	:
+	: "r"(src) , "r"(dst)
+	: "r2", "r3", "r4", "memory" );
+}
+
+
+static int _ambarella_crypto_aligned_read64(u32 * buf,u32 * addr, unsigned int len) {
+	int errCode = -1;
+	int i;
+	if ( ( 0 == (((u32) addr) & 0x07) ) && (0 == (len%8))) {
+		/* address and length should be 64 bit aligned */
+		for (i = 0; i < len/8; i++) {
+			__ambarella_crypto_aligned_common64((u32 *)(addr + 2*i),  (u32 *)(buf + 2*i));
+		}
+		errCode = 0;
+	};
+	return errCode;
+
+}
+
+
+static int _ambarella_crypto_aligned_write64(u32 * addr,u32 * buf, unsigned int len ) {
+	int errCode = -1;
+	int i;
+	if ( ( 0 == (((u32) addr) & 0x07) ) && (0 == (len%8))) {
+		/* address and length should be 64 bit aligned */
+		for (i = 0; i < len/8; i++) {
+			__ambarella_crypto_aligned_common64((u32 *)(buf + 2*i), (u32 *)(addr + 2*i));
+		}
+		errCode = 0;
+	};
+	return errCode;
+
+}
+
+
+
 
 struct ambarella_platform_crypto_info *platform_info;
 
@@ -63,6 +124,10 @@ struct ambarella_crypto_dev_info {
 	struct resource				*mem;
 	unsigned int				aes_irq;
 	unsigned int				des_irq;
+
+#if (CRYPT_SUPPORT_MD5_SHA1 == 1)
+	unsigned int				md5_sha1_irq;
+#endif
 
 	struct ambarella_platform_crypto_info *platform_info;
 };
@@ -101,32 +166,17 @@ void swap_write(u32 *offset,u32 *src,int size)
 	for(size=(size>>2)-1;size >= 0;size--,point++){
 		*(merg+point) = ntohl(*(src+size));
 	}
-	//the iONE registers need to accessed by 64-bit boundaries,so this place must use number as the size of memcpy.
-	if (len == 8){
-		memcpy(offset,merg,8);
-	}else if (len == 16){
-		memcpy(offset,merg,16);
-	}else if (len == 24){
-		memcpy(offset,merg,24);
-	}else if (len == 32){
-		memcpy(offset,merg,32);
-	}
+	//the iONE registers need to accessed by 64-bit boundaries
+	_ambarella_crypto_aligned_write64(offset,merg,len);
+
 }
 
 void swap_read(u32 *offset,u32 *src,int size)
 {
 	int point=0,len=size;
 
-	//the iONE registers need to accessed by 64-bit boundaries,so this place must use number as the size of memcpy.
-	if (len == 8){
-		memcpy(merg,src,8);
-	}else if (len == 16){
-		memcpy(merg,src,16);
-	}else if (len == 24){
-		memcpy(merg,src,24);
-	}else if (len == 32){
-		memcpy(merg,src,32);
-	}
+	//the iONE registers need to accessed by 64-bit boundaries
+	_ambarella_crypto_aligned_read64(merg,src,len);
 	for(size=(size>>2)-1;size >= 0;size--,point++){
 		*(offset+point) = ntohl(*(merg+size));
 	}
@@ -472,6 +522,364 @@ static struct crypto_alg cbc_aes_alg = {
 		}
 	}
 };
+/************************************MD5 START**************************/
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+
+struct md5_sha1_fun_t{
+	void (*wdata)(u32*,u32*,int);
+	void (*rdata)(u32*,u32*,int);
+}md5_sha1_fun;
+
+static void ambarella_md5_transform(u32 *hash, u32 const *in)
+{
+	u32 ready;
+
+	memcpy(&g_md5_digest.digest_0, hash, 16);
+
+	do{
+		ready= amba_readl(CRYPT_MD5_SHA1_READY_INPUT_REG);
+	}while(ready != 1);
+
+	md5_sha1_fun.wdata((u32 *)CRYPT_MD5_INIT_31_0_REG,&(g_md5_digest.digest_0),16);
+
+	do{
+		ready= amba_readl(CRYPT_MD5_SHA1_READY_INPUT_REG);
+	}while(ready != 1);
+
+	memcpy(&g_md5_data.data[0], in, 64);
+
+	md5_sha1_fun.wdata((u32 *)CRYPT_MD5_INPUT_31_0_REG,&(g_md5_data.data[0]),64);
+
+	if(likely(config_polling_mode == 0)) {
+		do {
+			ready = try_wait_for_completion(&g_md5_sha1_irq_wait);
+		} while (!ready);
+	}else{
+		do{
+			ready = amba_readl(CRYPT_MD5_OUTPUT_READY_REG);
+		}while(ready != 1);
+	}
+
+	md5_sha1_fun.rdata(&(g_md5_digest.digest_0),(u32 *)CRYPT_MD5_OUTPUT_31_0_REG, 16);
+
+	memcpy(hash, &g_md5_digest.digest_0, 16);
+}
+
+static inline void le32_to_cpu_array(u32 *buf, unsigned int words)
+{
+	while (words--) {
+		__le32_to_cpus(buf);
+		buf++;
+	}
+}
+
+static inline void cpu_to_le32_array(u32 *buf, unsigned int words)
+{
+	while (words--) {
+		__cpu_to_le32s(buf);
+		buf++;
+	}
+}
+
+static inline void ambarella_md5_transform_helper(struct md5_state *ctx)
+{
+	le32_to_cpu_array(ctx->block, sizeof(ctx->block)/sizeof(u32));
+	ambarella_md5_transform(ctx->hash, ctx->block);
+}
+
+static int ambarella_md5_init(struct shash_desc *desc)
+{
+	struct md5_state *mctx = shash_desc_ctx(desc);
+
+	mctx->hash[0] = 0x67452301;
+	mctx->hash[1] = 0xefcdab89;
+	mctx->hash[2] = 0x98badcfe;
+	mctx->hash[3] = 0x10325476;
+	mctx->byte_count = 0;
+
+	return 0;
+}
+
+static int ambarella_md5_update(struct shash_desc *desc, const u8 *data, unsigned int len)
+{
+	struct md5_state *mctx = shash_desc_ctx(desc);
+	const u32 avail = sizeof(mctx->block) - (mctx->byte_count & 0x3f);
+
+	mctx->byte_count += len;
+
+	if (avail > len) {
+		memcpy((char *)mctx->block + (sizeof(mctx->block) - avail),
+		       data, len);
+		return 0;
+	}
+
+	memcpy((char *)mctx->block + (sizeof(mctx->block) - avail),
+	       data, avail);
+
+	ambarella_md5_transform_helper(mctx);
+	data += avail;
+	len -= avail;
+
+	while (len >= sizeof(mctx->block)) {
+		memcpy(mctx->block, data, sizeof(mctx->block));
+		ambarella_md5_transform_helper(mctx);
+		data += sizeof(mctx->block);
+		len -= sizeof(mctx->block);
+	}
+
+	memcpy(mctx->block, data, len);
+
+	return 0;
+}
+
+static int ambarella_md5_final(struct shash_desc *desc, u8 *out)
+{
+	struct md5_state *mctx = shash_desc_ctx(desc);
+	const unsigned int offset = mctx->byte_count & 0x3f;
+	char *p = (char *)mctx->block + offset;
+	int padding = 56 - (offset + 1);
+
+	*p++ = 0x80;
+	if (padding < 0) {
+		memset(p, 0x00, padding + sizeof (u64));
+		ambarella_md5_transform_helper(mctx);
+		p = (char *)mctx->block;
+		padding = 56;
+	}
+
+	memset(p, 0, padding);
+	mctx->block[14] = mctx->byte_count << 3;
+	mctx->block[15] = mctx->byte_count >> 29;
+	le32_to_cpu_array(mctx->block, (sizeof(mctx->block) -
+	                  sizeof(u64)) / sizeof(u32));
+	ambarella_md5_transform(mctx->hash, mctx->block);
+	cpu_to_le32_array(mctx->hash, sizeof(mctx->hash) / sizeof(u32));
+	memcpy(out, mctx->hash, sizeof(mctx->hash));
+	memset(mctx, 0, sizeof(*mctx));
+
+	return 0;
+}
+
+static int ambarella_md5_export(struct shash_desc *desc, void *out)
+{
+	struct md5_state *ctx = shash_desc_ctx(desc);
+
+	memcpy(out, ctx, sizeof(*ctx));
+	return 0;
+}
+
+static int ambarella_md5_import(struct shash_desc *desc, const void *in)
+{
+	struct md5_state *ctx = shash_desc_ctx(desc);
+
+	memcpy(ctx, in, sizeof(*ctx));
+	return 0;
+}
+
+static struct shash_alg md5_alg = {
+	.digestsize	=	MD5_DIGEST_SIZE,
+	.init		=	ambarella_md5_init,
+	.update		=	ambarella_md5_update,
+	.final		=	ambarella_md5_final,
+	.export		=	ambarella_md5_export,
+	.import		=	ambarella_md5_import,
+	.descsize	=	sizeof(struct md5_state),
+	.statesize	=	sizeof(struct md5_state),
+	.base		=	{
+		.cra_name	=	"md5",
+		.cra_driver_name=	"md5-ambarella",
+		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
+		.cra_blocksize	=	MD5_HMAC_BLOCK_SIZE,
+		.cra_module	=	THIS_MODULE,
+	}
+};
+/************************************MD5 END**************************/
+
+/************************************SHA1 START**************************/
+static inline void be32_to_cpu_array(u32 *buf, unsigned int words)
+{
+	while (words--) {
+		__be32_to_cpus(buf);
+		buf++;
+	}
+}
+
+static inline void cpu_to_be32_array(u32 *buf, unsigned int words)
+{
+	while (words--) {
+		__cpu_to_be32s(buf);
+		buf++;
+	}
+}
+
+static int ambarella_sha1_init(struct shash_desc *desc)
+{
+	struct sha1_state *sctx = shash_desc_ctx(desc);
+
+	*sctx = (struct sha1_state){
+		.state = { SHA1_H0, SHA1_H1, SHA1_H2, SHA1_H3, SHA1_H4 },
+	};
+
+	return 0;
+}
+
+void md5_sha1_write64(u32 * addr,u32 * buf, unsigned int len )
+{
+	/* len%8 ,align at 64bit*/
+	if ((len&0x7)){
+		len += (len&0x7);
+	}
+	_ambarella_crypto_aligned_write64(addr,buf,len);
+}
+
+void md5_sha1_read64(u32 * addr,u32 * buf, unsigned int len )
+{
+	/* len%8 ,align at 64bit*/
+	if ((len&0x7)){
+		len += (len&0x7);
+	}
+	_ambarella_crypto_aligned_read64(addr,buf,len);
+}
+
+void ambarella_sha1_transform(__u32 *digest, const char *in, __u32 *W)
+{
+    u32 ready;
+    cpu_to_be32_array(digest, 5);
+    memcpy(&g_sha1_digest.digest_0, digest, 16);
+    g_sha1_digest.digest_128 = digest[4];
+
+    do{
+        ready= amba_readl(CRYPT_MD5_SHA1_READY_INPUT_REG);
+    }while(ready != 1);
+
+    md5_sha1_fun.wdata((u32 *)CRYPT_SHA1_INIT_31_0_REG,&(g_sha1_digest.digest_0),20);
+    do{
+        ready= amba_readl(CRYPT_MD5_SHA1_READY_INPUT_REG);
+    }while(ready != 1);
+
+    memcpy(&g_sha1_data.data[0], in, 64);
+
+    md5_sha1_fun.wdata((u32 *)CRYPT_SHA1_INPUT_31_0_REG,&(g_sha1_data.data[0]),64);
+
+    if(likely(config_polling_mode == 0)) {
+        do {
+            ready = try_wait_for_completion(&g_md5_sha1_irq_wait);
+        } while (!ready);
+    }else{
+        do{
+            ready = amba_readl(CRYPT_SHA1_OUTPUT_READY_REG);
+        }while(ready != 1);
+    }
+
+
+    md5_sha1_fun.rdata(&(g_sha1_digest.digest_0),(u32 *)CRYPT_SHA1_OUTPUT_31_0_REG,20);
+
+    memcpy(digest, &g_sha1_digest.digest_0, 20);
+    cpu_to_be32_array(digest, 5);
+}
+
+
+
+static int ambarella_sha1_update(struct shash_desc *desc, const u8 *data,
+			unsigned int len)
+{
+	struct sha1_state *sctx = shash_desc_ctx(desc);
+	unsigned int partial, done;
+	const u8 *src;
+
+	partial = sctx->count & 0x3f;
+	sctx->count += len;
+	done = 0;
+	src = data;
+
+	if ((partial + len) > 63) {
+		u32 temp[SHA_WORKSPACE_WORDS];
+
+		if (partial) {
+			done = -partial;
+			memcpy(sctx->buffer + partial, data, done + 64);
+			src = sctx->buffer;
+		}
+
+		do {
+			ambarella_sha1_transform(sctx->state, src, temp);
+			done += 64;
+			src = data + done;
+		} while (done + 63 < len);
+
+		memset(temp, 0, sizeof(temp));
+		partial = 0;
+	}
+	memcpy(sctx->buffer + partial, src, len - done);
+
+	return 0;
+}
+
+/* Add padding and return the message digest. */
+static int ambarella_sha1_final(struct shash_desc *desc, u8 *out)
+{
+	struct sha1_state *sctx = shash_desc_ctx(desc);
+	__be32 *dst = (__be32 *)out;
+	u32 i, index, padlen;
+	__be64 bits;
+	static const u8 padding[64] = { 0x80, };
+
+	bits = cpu_to_be64(sctx->count << 3);
+
+	/* Pad out to 56 mod 64 */
+	index = sctx->count & 0x3f;
+	padlen = (index < 56) ? (56 - index) : ((64+56) - index);
+	ambarella_sha1_update(desc, padding, padlen);
+
+	/* Append length */
+	ambarella_sha1_update(desc, (const u8 *)&bits, sizeof(bits));
+
+	/* Store state in digest */
+	for (i = 0; i < 5; i++)
+		dst[i] = cpu_to_be32(sctx->state[i]);
+
+	/* Wipe context */
+	memset(sctx, 0, sizeof *sctx);
+
+	return 0;
+}
+
+static int ambarella_sha1_export(struct shash_desc *desc, void *out)
+{
+	struct sha1_state *sctx = shash_desc_ctx(desc);
+
+	memcpy(out, sctx, sizeof(*sctx));
+	return 0;
+}
+
+static int ambarella_sha1_import(struct shash_desc *desc, const void *in)
+{
+	struct sha1_state *sctx = shash_desc_ctx(desc);
+
+	memcpy(sctx, in, sizeof(*sctx));
+	return 0;
+}
+
+
+static struct shash_alg sha1_alg = {
+	.digestsize	=	SHA1_DIGEST_SIZE,
+	.init		=	ambarella_sha1_init,
+	.update		=	ambarella_sha1_update,
+	.final		=	ambarella_sha1_final,
+	.export		=	ambarella_sha1_export,
+	.import		=	ambarella_sha1_import,
+	.descsize	=	sizeof(struct sha1_state),
+	.statesize	=	sizeof(struct sha1_state),
+	.base		=	{
+		.cra_name	=	"sha1",
+		.cra_driver_name=	"sha1-ambarella",
+		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
+		.cra_blocksize	=	SHA1_BLOCK_SIZE,
+		.cra_module	=	THIS_MODULE,
+	}
+};
+#endif
+/************************************SHA1 END****************************/
 
 static irqreturn_t ambarella_aes_irq(int irqno, void *dev_id)
 {
@@ -486,6 +894,15 @@ static irqreturn_t ambarella_des_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+static irqreturn_t ambarella_md5_sha1_irq(int irqno, void *dev_id)
+{
+	complete(&g_md5_sha1_irq_wait);
+
+	return IRQ_HANDLED;
+}
+#endif
+
 static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 {
 	int	errCode;
@@ -493,6 +910,10 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 	struct resource	*mem = 0;
 	struct resource	*ioarea;
 	struct ambarella_crypto_dev_info *pinfo = 0;
+
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+	int	md5_sha1_irq;
+#endif
 
 	platform_info = (struct ambarella_platform_crypto_info *)pdev->dev.platform_data;
 	if (platform_info == NULL) {
@@ -523,6 +944,15 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 			goto crypto_errCode_na;
 		}
 
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+		md5_sha1_irq = platform_get_irq_byname(pdev,"md5-sha1-irq");
+		if (md5_sha1_irq == -ENXIO) {
+			dev_err(&pdev->dev, "Get crypto md5/sha1 irq resource failed!\n");
+			errCode = -ENXIO;
+			goto crypto_errCode_na;
+		}
+#endif
+
 		ioarea = request_mem_region(mem->start, (mem->end - mem->start) + 1, pdev->name);
 		if (ioarea == NULL) {
 			dev_err(&pdev->dev, "Request crypto ioarea failed!\n");
@@ -542,12 +972,19 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 		pinfo->pdev = pdev;
 		pinfo->aes_irq = aes_irq;
 		pinfo->des_irq = des_irq;
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+		pinfo->md5_sha1_irq = md5_sha1_irq;
+#endif
 		pinfo->platform_info = platform_info;
 
 		platform_set_drvdata(pdev, pinfo);
 
 		amba_writel(CRYPT_A_INT_EN_REG, 0x0001);
 		amba_writel(CRYPT_D_INT_EN_REG, 0x0001);
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+		amba_writel(CRYPT_MD5_INT_EN_REG, 0x0001);
+		amba_writel(CRYPT_SHA1_INT_EN_REG, 0x0001);
+#endif
 
 		errCode = request_irq(pinfo->aes_irq, ambarella_aes_irq,
 			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
@@ -564,10 +1001,20 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 				"%s: Request des IRQ failed!\n", __func__);
 			goto crypto_errCode_free_aes_irq;
 		}
+
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+		errCode = request_irq(pinfo->md5_sha1_irq, ambarella_md5_sha1_irq,
+			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
+		if (errCode) {
+			dev_err(&pdev->dev,
+				"%s: Request md5/sha1 IRQ failed!\n", __func__);
+			goto crypto_errCode_free_md5_sha1_irq;
+		}
+#endif
 	}
 	//TODO: need to add a7 mode switch.now, it's default as compatibility mode
 #if (CRYPTO_MODE_SWITCH == 1)
-	amba_writel(CRYPT_BINARY_COMP_REG, 0x0000); // set a7 to compatibility mode  
+	amba_writel(CRYPT_BINARY_COMP_REG, 0x0000); // set a7 to compatibility mode
 #endif
 
 	if (platform_info->binary_mode == 1){
@@ -602,6 +1049,35 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 		des_fun.reg_dec = des_reg_enc_dec_32;
 	}
 
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+	if (platform_info->md5_sha1_64bit == 1){
+		md5_sha1_fun.wdata = (void*)md5_sha1_write64;
+		md5_sha1_fun.rdata = (void*)md5_sha1_read64;
+	}else{
+		md5_sha1_fun.wdata = (void*)memcpy;
+		md5_sha1_fun.rdata = (void*)memcpy;
+	}
+#endif
+
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+	if ((errCode = crypto_register_shash(&sha1_alg))) {
+		dev_err(&pdev->dev, "reigster sha1_alg  failed.\n");
+		if(likely(config_polling_mode == 0)) {
+			goto crypto_errCode_free_md5_sha1_irq;
+		} else {
+			goto crypto_errCode_na;
+		}
+	}
+	if ((errCode = crypto_register_shash(&md5_alg))) {
+		dev_err(&pdev->dev, "reigster md5_alg  failed.\n");
+		if(likely(config_polling_mode == 0)) {
+			goto crypto_errCode_free_md5_sha1_irq;
+		} else {
+			goto crypto_errCode_na;
+		}
+	}
+#endif
+
 	if ((errCode = crypto_register_alg(&aes_alg))) {
 		dev_err(&pdev->dev, "reigster aes_alg  failed.\n");
 		if(likely(config_polling_mode == 0)) {
@@ -630,6 +1106,11 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 
 	goto crypto_errCode_na;
 
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+crypto_errCode_free_md5_sha1_irq:
+	free_irq(pinfo->md5_sha1_irq, pinfo);
+#endif
+
 crypto_errCode_free_des_irq:
 	free_irq(pinfo->des_irq, pinfo);
 
@@ -652,12 +1133,20 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 	int errCode = 0;
 	struct ambarella_crypto_dev_info *pinfo;
 
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+	crypto_unregister_shash(&sha1_alg);
+	crypto_unregister_shash(&md5_alg);
+#endif
+
 	crypto_unregister_alg(&aes_alg);
 	crypto_unregister_alg(&des_alg);
 
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo && config_polling_mode == 0) {
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+		free_irq(pinfo->md5_sha1_irq, pinfo);
+#endif
 		free_irq(pinfo->aes_irq, pinfo);
 		free_irq(pinfo->des_irq, pinfo);
 		platform_set_drvdata(pdev, NULL);

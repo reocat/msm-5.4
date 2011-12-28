@@ -38,12 +38,14 @@ static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
 	.data_swap = 1,
 	.reg_64 = 1,
 	.md5_sha1 = 1,
+	.md5_sha1_64bit = 1,
 #elif (CHIP_REV == A7)
 	.mode_switch = 1,
 	.binary_mode = 0,
 	.data_swap = 0,
 	.reg_64 = 1,
 	.md5_sha1 = 1,
+	.md5_sha1_64bit = 0,
 #else
 	.mode_switch = 0,
 	.binary_mode = 1,
@@ -73,6 +75,14 @@ static struct resource ambarella_crypto_resources[] = {
 		.name	= "des-irq",
 		.flags	= IORESOURCE_IRQ,
 	},
+#if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
+	[3] = {
+		.start	= MD5_SHA1_IRQ,
+		.end	= MD5_SHA1_IRQ,
+		.name	= "md5-sha1-irq",
+		.flags	= IORESOURCE_IRQ,
+	},
+#endif
 };
 
 struct platform_device ambarella_crypto = {
