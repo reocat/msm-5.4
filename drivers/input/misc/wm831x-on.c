@@ -97,6 +97,8 @@ static int __devinit wm831x_on_probe(struct platform_device *pdev)
 
 	wm831x_on->dev->evbit[0] = BIT_MASK(EV_KEY);
 	wm831x_on->dev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
+	wm831x_on->dev->keybit[BIT_WORD(KEY_CAMERA)] = BIT_MASK(KEY_CAMERA);
+	wm831x_on->dev->keybit[BIT_WORD(KEY_MENU)] = BIT_MASK(KEY_MENU);
 	wm831x_on->dev->name = "wm831x_on";
 	wm831x_on->dev->phys = "wm831x_on/input0";
 	wm831x_on->dev->dev.parent = &pdev->dev;
@@ -172,8 +174,17 @@ static int wm831x_on_resume(struct platform_device *pdev)
 
 	//TBD: Check resumed form self-referesh.
 	ret = wm831x_reg_read(wm831x, WM831X_ON_SOURCE);
+
 	if (ret & WM831X_ON_SOURCE_ON_PIN) {
 		input_report_key(wm831x_on->dev, KEY_POWER, 1);
+		input_sync(wm831x_on->dev);
+		input_report_key(wm831x_on->dev, KEY_POWER, 0);
+		input_sync(wm831x_on->dev);
+	}
+
+	if (ret & WM831X_ON_SOURCE_GPIO) {
+		input_report_key(wm831x_on->dev, KEY_POWER, 1);
+		input_sync(wm831x_on->dev);
 		input_report_key(wm831x_on->dev, KEY_POWER, 0);
 		input_sync(wm831x_on->dev);
 	}
