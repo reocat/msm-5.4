@@ -246,6 +246,10 @@
 #define WM831X_ON_SOURCE_ON_PIN_MASK                  0x0010  /* ON_SOURCE_ON_PIN */
 #define WM831X_ON_SOURCE_ON_PIN_SHIFT                      4  /* ON_SOURCE_ON_PIN */
 #define WM831X_ON_SOURCE_ON_PIN_WIDTH                      1  /* ON_SOURCE_ON_PIN */
+#define WM831X_ON_SOURCE_GPIO                  0x0800  /* ON_SOURCE_GPIO */
+#define WM831X_ON_SOURCE_GPIO_MASK                  0x0800  /* ON_SOURCE_GPIO */
+#define WM831X_ON_SOURCE_GPIO_SHIFT                      11  /* ON_SOURCE_GPIO */
+#define WM831X_ON_SOURCE_GPIO_WIDTH                      1  /* ON_SOURCE_GPIO */
 /*
  * R16528 (0x4090) - Clock Control 1
  */

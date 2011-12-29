@@ -97,6 +97,7 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 			input_report_key(pbinfo->pinput_dev,
 				pbinfo->pkeymap[i].gpio_key.key_code,
 				(level == pbinfo->pkeymap[i].gpio_key.active_val) ? 1 : 0);
+			input_sync(pbinfo->pinput_dev);
 			dev_dbg(&pbinfo->pinput_dev->dev,
 				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_key.key_code,
