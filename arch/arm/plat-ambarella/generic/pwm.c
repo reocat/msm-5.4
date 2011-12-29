@@ -69,6 +69,7 @@ typedef unsigned int (*get_pwm_clock_t)(void);
 struct pwm_device {
 	unsigned int		pwm_id;
 	unsigned int		gpio_id;
+	unsigned int		active_level;
 	get_pwm_clock_t		get_clock;
 	struct reg_bit_field	enable;
 	struct reg_bit_field	divider;
@@ -108,8 +109,13 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		on = 1;
 	if (off == 0)
 		off = 1;
-	SET_REG_BIT_FILED(pwm->high, on - 1);
-	SET_REG_BIT_FILED(pwm->low, off - 1);
+	if (pwm->active_level) {
+		SET_REG_BIT_FILED(pwm->high, on - 1);
+		SET_REG_BIT_FILED(pwm->low, off - 1);
+	} else {
+		SET_REG_BIT_FILED(pwm->high, off - 1);
+		SET_REG_BIT_FILED(pwm->low, on - 1);
+	}
 
 pwm_config_exit:
 	return retval;
@@ -129,7 +135,11 @@ void pwm_disable(struct pwm_device *pwm)
 {
 	SET_REG_BIT_FILED(pwm->enable, 0);
 	ambarella_gpio_config(pwm->gpio_id, GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_set(pwm->gpio_id, GPIO_LOW);
+	if (pwm->active_level) {
+		ambarella_gpio_set(pwm->gpio_id, GPIO_LOW);
+	} else {
+		ambarella_gpio_set(pwm->gpio_id, GPIO_HIGH);
+	}
 }
 EXPORT_SYMBOL(pwm_disable);
 
@@ -183,6 +193,7 @@ static unsigned int get_pwm_1_through_4_clock_hz(void)
 static struct pwm_device ambarella_pwm0 = {
 	.pwm_id		= 0,
 	.gpio_id	= GPIO(16),
+	.active_level	= 1,
 	.get_clock	= get_pwm_freq_hz,
 	.enable		= {
 		.addr	= PWM_ENABLE_REG,
@@ -211,6 +222,7 @@ static struct pwm_device ambarella_pwm0 = {
 static struct pwm_device ambarella_pwm1 = {
 	.pwm_id		= 1,
 	.gpio_id	= GPIO(45),
+	.active_level	= 1,
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_B0_ENABLE_REG,
@@ -239,6 +251,7 @@ static struct pwm_device ambarella_pwm1 = {
 static struct pwm_device ambarella_pwm2 = {
 	.pwm_id		= 2,
 	.gpio_id	= GPIO(46),
+	.active_level	= 1,
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_B1_ENABLE_REG,
@@ -267,6 +280,7 @@ static struct pwm_device ambarella_pwm2 = {
 static struct pwm_device ambarella_pwm3 = {
 	.pwm_id		= 3,
 	.gpio_id	= GPIO(50),
+	.active_level	= 1,
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_C0_ENABLE_REG,
@@ -295,6 +309,7 @@ static struct pwm_device ambarella_pwm3 = {
 static struct pwm_device ambarella_pwm4 = {
 	.pwm_id		= 4,
 	.gpio_id	= GPIO(51),
+	.active_level	= 1,
 	.get_clock	= get_pwm_1_through_4_clock_hz,
 	.enable		= {
 		.addr	= PWM_C1_ENABLE_REG,
@@ -332,48 +347,58 @@ static int pwm_backlight_init(struct device *dev)
 
 	switch (pdev->id) {
 	case 0:
-		data->max_brightness	=
+		data->max_brightness		=
 			ambarella_board_generic.pwm0_config.max_duty;
-		data->dft_brightness	=
+		data->dft_brightness		=
 			ambarella_board_generic.pwm0_config.default_duty;
-		data->pwm_period_ns	=
+		data->pwm_period_ns		=
 			ambarella_board_generic.pwm0_config.period_ns;
+		ambarella_pwm0.active_level	=
+			ambarella_board_generic.pwm0_config.active_level;
 		break;
 
 	case 1:
-		data->max_brightness	=
+		data->max_brightness		=
 			ambarella_board_generic.pwm1_config.max_duty;
-		data->dft_brightness	=
+		data->dft_brightness		=
 			ambarella_board_generic.pwm1_config.default_duty;
-		data->pwm_period_ns	=
+		data->pwm_period_ns		=
 			ambarella_board_generic.pwm1_config.period_ns;
+		ambarella_pwm1.active_level	=
+			ambarella_board_generic.pwm1_config.active_level;
 		break;
 
 	case 2:
-		data->max_brightness	=
+		data->max_brightness		=
 			ambarella_board_generic.pwm2_config.max_duty;
-		data->dft_brightness	=
+		data->dft_brightness		=
 			ambarella_board_generic.pwm2_config.default_duty;
-		data->pwm_period_ns	=
+		data->pwm_period_ns		=
 			ambarella_board_generic.pwm2_config.period_ns;
+		ambarella_pwm2.active_level	=
+			ambarella_board_generic.pwm2_config.active_level;
 		break;
 
 	case 3:
-		data->max_brightness	=
+		data->max_brightness		=
 			ambarella_board_generic.pwm3_config.max_duty;
-		data->dft_brightness	=
+		data->dft_brightness		=
 			ambarella_board_generic.pwm3_config.default_duty;
-		data->pwm_period_ns	=
+		data->pwm_period_ns		=
 			ambarella_board_generic.pwm3_config.period_ns;
+		ambarella_pwm3.active_level	=
+			ambarella_board_generic.pwm3_config.active_level;
 		break;
 
 	case 4:
-		data->max_brightness	=
+		data->max_brightness		=
 			ambarella_board_generic.pwm4_config.max_duty;
-		data->dft_brightness	=
+		data->dft_brightness		=
 			ambarella_board_generic.pwm4_config.default_duty;
-		data->pwm_period_ns	=
+		data->pwm_period_ns		=
 			ambarella_board_generic.pwm4_config.period_ns;
+		ambarella_pwm4.active_level	=
+			ambarella_board_generic.pwm4_config.active_level;
 		break;
 
 	default:
