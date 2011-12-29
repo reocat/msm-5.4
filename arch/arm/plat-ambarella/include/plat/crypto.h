@@ -52,19 +52,75 @@ struct ambarella_platform_crypto_info{
 									   /* For iONE,this flag is 0, and default mode is non-binary compatible mode, do not need opcode*/
 									   /* For a5s, this flag is 0, and default mode is binary compatibility mode,  need opcode*/
 									   /* For a7,  this flag is 1, and default mode is non-binary compatible mode, do not need opcode*/
-									   /* TODO: And now, haven't support a7 mode switch,*/
 									   /* 1: support switch*/
 									   /* 0: do not support switch */
+/*******AES&DES START***************************/
 	u32					binary_mode;   /* 1: binary compatibility mode need opcode*/
 									   /* 0: non-binary compatible mode do not need opcode*/
 	u32					data_swap;     /*swap from little to big endian 0:do not need swap  1:need swap */
-	u32					reg_64;        /*64 bit register,need memcpy to write or read*/
-									   /* 0: 32-bit ,you can use writel*/
-									   /* 1: 64-bit ,you should use memcpy to write or read 64-bit at once */
-	u32					md5_sha1;      /* 0:do not support md5 or sha1*/
-									   /* 1:support md5 and sha1*/
+	u32					reg_64;        /*64 bit register,get the 64bit address*/
+									   /* 0: 32-bit ,get the 32bit register address ,for a5s*/
+									   /* 1: 64-bit ,get the 64bit register address ,for ione */
+/*******AES&DES END***************************/
+	u32					md5_sha1;      		/* 0:do not support md5 or sha1*/
+									   		/* 1:support md5 and sha1*/
+/*******MD5&SHA1 START***************************/
+	u32					md5_sha1_64bit;     /* 0:32 bit ,read and write align at 32bit*/
+									  		/* 1:64 bit ,read and write align at 64bit*/
+/*******MD5&SHA1 END***************************/
 	u32					reserved;
 };
+
+#if (CRYPT_SUPPORT_MD5_SHA1 == 1)
+typedef struct md5_digest_s
+{
+	u32	digest_0;
+	u32	digest_32;
+
+	u32	digest_64;
+	u32	digest_96;
+
+	u32 digest_128;
+	u32 digest_160;
+
+	u32 digest_192;
+	u32 digest_224;
+
+	u32 digest_256;
+	u32 digest_288;
+
+	u32 digest_320;
+	u32 digest_352;
+
+	u32 digest_384;
+	u32 digest_416;
+
+	u32 digest_448;
+	u32 digest_480;
+} md5_digest_t;
+
+typedef struct md5_data_s
+{
+	u32 data[4];
+} md5_data_t;
+
+typedef struct sha1_digest_s
+{
+	u32	digest_0;
+	u32	digest_32;
+	u32	digest_64;
+	u32	digest_96;
+	u32	digest_128;
+	u32	digest_padding;
+
+} sha1_digest_t;
+
+typedef struct sha1_data_s
+{
+	u32 data[16];
+} sha1_data_t;
+#endif
+
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_crypto;
