@@ -411,26 +411,31 @@ struct ambarella_board_info ambarella_board_generic = {
 		.period_ns	= 40000,
 		.max_duty	= 1000,
 		.default_duty	= 1000,
+		.active_level	= 1,
 	},
 	.pwm1_config = {
 		.period_ns	= 10000,
 		.max_duty	= 1000,
 		.default_duty	= 1000,
+		.active_level	= 1,
 	},
 	.pwm2_config = {
 		.period_ns	= 10000,
 		.max_duty	= 1000,
 		.default_duty	= 1000,
+		.active_level	= 1,
 	},
 	.pwm3_config = {
 		.period_ns	= 10000,
 		.max_duty	= 1000,
 		.default_duty	= 1000,
+		.active_level	= 1,
 	},
 	.pwm4_config = {
 		.period_ns	= 10000,
 		.max_duty	= 1000,
 		.default_duty	= 1000,
+		.active_level	= 1,
 	},
 
 	.wifi_sd_bus		= -1,
