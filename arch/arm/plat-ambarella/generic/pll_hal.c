@@ -70,7 +70,7 @@ static struct proc_dir_entry *performance_file = NULL;
 static struct ambarella_pll_info pll_info;
 
 #if (CHIP_REV == A5S)
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM_HP3 + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
