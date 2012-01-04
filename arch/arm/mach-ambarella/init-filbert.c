@@ -240,12 +240,6 @@ static void __init ambarella_init_filbert(void)
 	ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.vin0_reset.active_delay = 200;
 
-	ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(126);
-	ambarella_board_generic.vin0_vsync.irq_line = gpio_to_irq(126);
-	ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.vin0_vsync.irq_gpio_val = GPIO_HIGH;
-	ambarella_board_generic.vin0_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
 	/* Config SD*/
 	fio_default_owner = SELECT_FIO_SDIO;
 	ambarella_platform_sd_controller0.wait_tmo = (10 * HZ);
