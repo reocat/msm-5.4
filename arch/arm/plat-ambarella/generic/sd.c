@@ -126,6 +126,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_delay	= 1,
 		},
 		.use_bounce_buffer	= 0,
+		.force_bounce_buffer	= 0,
 		.max_blk_sz		= SD_BLK_SZ_512KB,
 		.fixed_cd		= -1,
 #if (SD_HAS_INTERNAL_MUXER == 1)
@@ -174,6 +175,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_delay	= 1,
 		},
 		.use_bounce_buffer	= 0,
+		.force_bounce_buffer	= 0,
 		.max_blk_sz		= SD_BLK_SZ_512KB,
 		.fixed_cd		= -1,
 		.gpio_cd	= {
@@ -309,6 +311,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_delay	= 1,
 		},
 		.use_bounce_buffer	= 0,
+		.force_bounce_buffer	= 0,
 		.max_blk_sz		= SD_BLK_SZ_512KB,
 		.fixed_cd		= -1,
 		.gpio_cd	= {

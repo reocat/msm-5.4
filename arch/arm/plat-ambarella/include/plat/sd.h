@@ -39,6 +39,7 @@ struct ambarella_sd_slot {
 	struct ambarella_gpio_io_info		ext_reset;
 	u32					max_blk_sz;
 	u32					use_bounce_buffer;
+	u32					force_bounce_buffer;
 	int					fixed_cd;
 	struct ambarella_gpio_irq_info		gpio_cd;
 	u32					cd_delay;	//jiffies
@@ -63,6 +64,7 @@ struct ambarella_sd_controller {
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
 	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bounce_buffer), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_force_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].force_bounce_buffer), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_uint, &(arg.slot[slot_id].max_blk_sz), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_cd_delay, &param_ops_uint, &(arg.slot[slot_id].cd_delay), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_cd, cdpos, &(arg.slot[slot_id].fixed_cd), perm); \
