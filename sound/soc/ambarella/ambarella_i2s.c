@@ -120,7 +120,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	u8 slots, word_pos, clksrc, mclk, oversample;
 	u8 rx_enabled = 0, tx_enabled = 0;
-	u32 clock_divider, channels;
+	u32 clock_divider, clock_reg, channels;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		dma_data = &ambarella_i2s_pcm_stereo_out;
@@ -212,10 +212,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(clksrc, mclk);
 	clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
-	clock_divider |= 0x3C0 ;
-	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
-	priv_data->clock_reg |= clock_divider;
-	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
+	clock_reg = amba_readl(I2S_CLOCK_REG);
+	clock_reg &= ~DAI_CLOCK_MASK;
+	clock_reg |= clock_divider;
+	amba_writel(I2S_CLOCK_REG, clock_reg);
 
 	if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
 		dai_fifo_rst();
@@ -347,24 +347,75 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
+static int external_codec_get_status(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	u32 clock_reg, ext_i2s_status;
+
+	clock_reg = amba_readl(I2S_CLOCK_REG);
+	ext_i2s_status = (clock_reg & 0x300) ? 1 : 0;
+
+	ucontrol->value.integer.value[0] = ext_i2s_status;
+	return 0;
+}
+
+static int external_codec_set_status(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	u32 clock_reg, ext_i2s_status;
+
+	clock_reg = amba_readl(I2S_CLOCK_REG);
+	ext_i2s_status = (clock_reg & 0x300) ? 1 : 0;
+
+	if (ext_i2s_status == ucontrol->value.integer.value[0])
+		return 0;
+
+	ext_i2s_status = ucontrol->value.integer.value[0];
+
+	if (ext_i2s_status)
+		clock_reg |= 0x300;
+	else
+		clock_reg &= ~0x300;
+
+	amba_writel(I2S_CLOCK_REG, clock_reg);
+
+	return 1;
+}
+
+static const char *i2s_status_str[] = {"Off", "On"};
+
+static const struct soc_enum external_i2s_enum[] = {
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(i2s_status_str), i2s_status_str),
+};
+
+static const struct snd_kcontrol_new external_i2s_controls[] = {
+	SOC_ENUM_EXT("External I2S Switch", external_i2s_enum[0],
+			external_codec_get_status, external_codec_set_status),
+};
+
+int ambarella_i2s_add_controls(struct snd_soc_codec *codec)
+{
+	return snd_soc_add_controls(codec, external_i2s_controls,
+			ARRAY_SIZE(external_i2s_controls));
+}
+EXPORT_SYMBOL_GPL(ambarella_i2s_add_controls);
+
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
-	u32 clock_divider;
+	u32 clock_divider, clock_reg;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	/* Switch to external I2S Input except  IPcam Board */
 	if (strcmp(dai->card->name, "A2IPcam"))
-		priv_data->clock_reg = 0x1<<10;
+		clock_reg = 0x1<<10;
 
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_11_2896M);
 
 	/* Dai default smapling rate, polarity configuration*/
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
-	clock_divider |= 0x3C0 ;
-	priv_data->clock_reg &= (u16)DAI_CLOCK_MASK;
-	priv_data->clock_reg |= clock_divider;
-	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
+	clock_reg |= clock_divider | 0x3C0;
+	amba_writel(I2S_CLOCK_REG, clock_reg);
 
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
 	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
