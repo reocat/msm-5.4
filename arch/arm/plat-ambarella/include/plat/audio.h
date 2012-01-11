@@ -25,11 +25,7 @@
 #define __PLAT_AMBARELLA_AUDIO_H
 
 /* ==========================================================================*/
-#if (CHIP_REV == A2) || (CHIP_REV == A2S) || (CHIP_REV == A2M)
-#define DAI_CLOCK_MASK		0x0400
-#else
-#define DAI_CLOCK_MASK		0x0000
-#endif
+#define DAI_CLOCK_MASK		0x0000001f
 
 #define MAX_MCLK_IDX_NUM		15
 

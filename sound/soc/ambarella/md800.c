@@ -41,6 +41,7 @@
 #include <mach/hardware.h>
 #include <plat/audio.h>
 
+#include "ambarella_i2s.h"
 #include "../codecs/es8328.h"
 
 /* Headset jack detection DAPM pins */
@@ -332,6 +333,8 @@ static int md800_es8328_init(struct snd_soc_pcm_runtime *rtd)
 			ARRAY_SIZE(md800_audio_map));
 
 	snd_soc_dapm_sync(dapm);
+
+	ambarella_i2s_add_controls(codec);
 
 	/* Headset jack detection */
 	errorCode = snd_soc_jack_new(codec, "Headset Jack",

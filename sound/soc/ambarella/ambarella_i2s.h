@@ -28,10 +28,11 @@
 #define AMBARELLA_I2S_H_
 
 struct amb_i2s_priv {
-	u32 clock_reg;
 	struct ambarella_i2s_controller *controller_info;
 	struct ambarella_i2s_interface amb_i2s_intf;
 };
+
+int ambarella_i2s_add_controls(struct snd_soc_codec *codec);
 
 #endif /*AMBARELLA_I2S_H_*/
 

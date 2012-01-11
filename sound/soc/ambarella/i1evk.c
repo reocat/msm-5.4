@@ -34,6 +34,7 @@
 #include <mach/gpio.h>
 #include <plat/audio.h>
 
+#include "ambarella_i2s.h"
 #include <linux/mfd/wm8994/core.h>
 #include <linux/mfd/wm8994/registers.h>
 #include "../codecs/wm8994.h"
@@ -152,6 +153,8 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 			ARRAY_SIZE(i1evk_dapm_routes));
 
 	snd_soc_dapm_sync(dapm);
+
+	ambarella_i2s_add_controls(codec);
 
 	/* Headset jack detection */
 	errorCode = snd_soc_jack_new(codec, "Headset Jack",
