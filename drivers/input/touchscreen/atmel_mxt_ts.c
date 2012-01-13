@@ -80,6 +80,7 @@
 
 /* MXT_GEN_MESSAGE_T5 object */
 #define MXT_RPTID_NOMSG		0xff
+#define MXT_MSG_MAX_SIZE	9
 
 /* MXT_GEN_COMMAND_T6 field */
 #define MXT_COMMAND_RESET	0
@@ -254,8 +255,7 @@ struct mxt_object {
 
 struct mxt_message {
 	u8 reportid;
-	u8 message[7];
-	u8 checksum;
+	u8 message[MXT_MSG_MAX_SIZE - 2];
 };
 
 struct mxt_finger {
@@ -581,6 +581,23 @@ static struct mxt_object *mxt_get_object(struct mxt_data *data, u8 type)
 	return NULL;
 }
 
+static int mxt_check_message_length(struct mxt_data *data)
+{
+	struct device *dev = &data->client->dev;
+	struct mxt_object *object;
+
+	object = mxt_get_object(data, MXT_GEN_MESSAGE_T5);
+	if (!object)
+		return -EINVAL;
+
+	if (object->size > MXT_MSG_MAX_SIZE) {
+		dev_err(dev, "MXT_MSG_MAX_SIZE exceeded");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int mxt_read_message(struct mxt_data *data,
 				 struct mxt_message *message)
 {
@@ -593,13 +610,15 @@ static int mxt_read_message(struct mxt_data *data,
 		return -EINVAL;
 
 	reg = object->start_address;
+
+	/* Do not read last byte which contains CRC */
 	ret = __mxt_read_reg(data->client, reg,
-			     sizeof(struct mxt_message), message);
+			     object->size - 1, message);
 
 	if (ret == 0 && message->reportid != MXT_RPTID_NOMSG
 	    && data->debug_enabled)
 		print_hex_dump(KERN_DEBUG, "MXT MSG:", DUMP_PREFIX_NONE, 16, 1,
-			       message, sizeof(struct mxt_message), false);
+			       message, object->size - 1, false);
 
 	return ret;
 }
@@ -1175,6 +1194,10 @@ static int mxt_initialize(struct mxt_data *data)
 		dev_err(&client->dev, "Error %d reading object table\n", error);
 		return error;
 	}
+
+	error = mxt_check_message_length(data);
+	if (error)
+		return error;
 
 	/* Check register init values */
 	error = mxt_check_reg_init(data);
