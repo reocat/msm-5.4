@@ -2102,7 +2102,6 @@ static void ambarella_udc_reinit(struct ambarella_udc *udc)
 			list_add_tail (&ep->ep.ep_list, &udc->gadget.ep_list);
 
 		ep->udc = udc;
-		ep->desc = NULL;
 		ep->halted = 0;
 		ep->data_desc = NULL;
 		ep->last_data_desc = NULL;
