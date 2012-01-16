@@ -380,12 +380,19 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,		0,	2,	1450,	1750}}},	//MENU
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,		0,	2,	1050,	1350}}},	//ESC
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,		0,	2,	700,	900}}},		//SEARCH
+	//{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HP,		0,	2,	300,	500}}},		//FOCUS, do not use
+	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,		0,	2,	0,	100}}},		//CAMERA
 
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	4,	3000,	4095}}},
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,	0,	4,	1750,	2150}}},	//VOLUME DOWN
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,	0,	4,	1300,	1650}}},	//VOLUME UP
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	850,	1100}}},	//STOP
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	400,	600}}},		//RECORD
+
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_SEND,	0,	0,	GPIO(187),
+							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},		//CALL (GPIO_K2)
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_END,	0,	0,	GPIO(191),
+							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},		//ENDCALL (GPIO_K1)
 
 	{AMBINPUT_END},
 };
