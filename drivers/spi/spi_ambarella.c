@@ -151,14 +151,19 @@ static int ambarella_spi_stop(struct ambarella_spi *priv)
 
 static void ambarella_spi_start_transfer(struct ambarella_spi *priv)
 {
-	void 				*wbuf, *rbuf;
+	void 				*wbuf;
+#if (SPI_AHB_INSTANCES > 0)
+	void 				*rbuf;
+#endif
 	u32				widx, ridx, len;
 	u32				xfer_len;
 	u8				cs_id, lsb;
 	u16				i, tmp;
 
 	wbuf	= (void *)priv->c_xfer->tx_buf;
+#if (SPI_AHB_INSTANCES > 0)
 	rbuf	= (void *)priv->c_xfer->rx_buf;
+#endif
 	len	= priv->len;
 	cs_id	= priv->c_dev->chip_select;
 	lsb	= priv->c_dev->mode & SPI_LSB_FIRST;

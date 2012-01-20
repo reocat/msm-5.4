@@ -345,6 +345,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 }
 
 /* ==========================================================================*/
+#if defined(CONFIG_ARCH_HAS_SWSUSP_WRITE)
 void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
 {
 	struct ambarella_bapi_aoss_page_info_s	page_info;
@@ -379,6 +380,7 @@ int arch_swsusp_write(unsigned int flags)
 arch_swsusp_write_exit:
 	return retval;
 }
+#endif
 
 /* ==========================================================================*/
 static int __init ambarella_bapi_init(void)
