@@ -1155,6 +1155,7 @@ static int amb_set_config (struct amb_dev *dev, unsigned number, gfp_t gfp_flags
 
 static void amb_setup_complete (struct usb_ep *ep, struct usb_request *req)
 {
+#ifdef DEBUG
 	struct amb_dev *dev;
 
 	dev = ep->driver_data;
@@ -1163,6 +1164,7 @@ static void amb_setup_complete (struct usb_ep *ep, struct usb_request *req)
 		AMB_DBG(dev, "setup complete --> %d, %d/%d\n",
 			req->status, req->actual, req->length);
 	}
+#endif
 }
 
 static int amb_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
@@ -1422,25 +1424,6 @@ static int __ref amb_bind (struct usb_gadget *gadget)
 	return 0;
 }
 
-static void amb_suspend (struct usb_gadget *gadget)
-{
-	struct amb_dev		*dev = NULL;
-
-	if (gadget->speed == USB_SPEED_UNKNOWN)
-		return;
-
-	dev = get_gadget_data (gadget);
-	AMB_DBG(dev, "suspend\n");
-}
-
-static void amb_resume (struct usb_gadget *gadget)
-{
-	struct amb_dev		*dev = NULL;
-
-	dev = get_gadget_data (gadget);
-	AMB_DBG(dev, "resume\n");
-}
-
 static struct usb_gadget_driver amb_gadget_driver = {
 #ifdef CONFIG_USB_GADGET_DUALSPEED
 	.speed		= USB_SPEED_HIGH,
@@ -1452,9 +1435,6 @@ static struct usb_gadget_driver amb_gadget_driver = {
 
 	.setup		= amb_setup,
 	.disconnect	= amb_disconnect,
-
-	.suspend	= amb_suspend,
-	.resume		= amb_resume,
 
 	.driver 	= {
 		.name		= (char *) shortname,

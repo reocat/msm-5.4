@@ -68,7 +68,7 @@
 /* AHB slave offsets */
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
-#define SD_OFFSET			0x2000
+#define AMBSD_OFFSET			0x2000
 #define VIC_OFFSET			0x3000
 #define DRAM_OFFSET			DRAM_DDRC_OFFSET
 #define DMA_OFFSET			0x5000
@@ -150,7 +150,7 @@
 /* AHB slave base addresses */
 #define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
-#define SD_BASE				(AHB_BASE + SD_OFFSET)
+#define SD_BASE				(AHB_BASE + AMBSD_OFFSET)
 #define VIC_BASE			(AHB_BASE + VIC_OFFSET)
 #define DRAM_BASE			(DRAM_PHYS_BASE + DRAM_OFFSET)
 #define DMA_BASE			(AHB_BASE + DMA_OFFSET)
