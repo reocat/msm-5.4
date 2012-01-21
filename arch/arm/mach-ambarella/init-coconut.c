@@ -267,7 +267,8 @@ static void __init ambarella_init_coconut(void)
 	ambarella_platform_sd_controller0.wait_tmo = (10 * HZ);
 	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
 	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[0].force_bounce_buffer = 1;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
 	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
 	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
 	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
