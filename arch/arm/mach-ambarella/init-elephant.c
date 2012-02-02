@@ -657,7 +657,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.lcd_spi_cfg.spi_mode = 0;
 			ambarella_board_generic.lcd_spi_cfg.cfs_dfs = 16;
 			ambarella_board_generic.lcd_spi_cfg.baud_rate = 5000000;
-			ambarella_board_generic.lcd_spi_cfg.lsb_first = 0;
 			ambarella_board_generic.lcd_spi_cfg.cs_change = 0;
 
 			ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(118);
@@ -765,7 +764,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.lcd_spi_cfg.spi_mode = 0;
 			ambarella_board_generic.lcd_spi_cfg.cfs_dfs = 16;
 			ambarella_board_generic.lcd_spi_cfg.baud_rate = 5000000;
-			ambarella_board_generic.lcd_spi_cfg.lsb_first = 0;
 			ambarella_board_generic.lcd_spi_cfg.cs_change = 0;
 
 			ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(43);
@@ -922,7 +920,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.lcd_spi_cfg.spi_mode = 0;
 			ambarella_board_generic.lcd_spi_cfg.cfs_dfs = 16;
 			ambarella_board_generic.lcd_spi_cfg.baud_rate = 5000000;
-			ambarella_board_generic.lcd_spi_cfg.lsb_first = 0;
 			ambarella_board_generic.lcd_spi_cfg.cs_change = 0;
 
 			ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(44);
