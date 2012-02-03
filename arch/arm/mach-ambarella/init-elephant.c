@@ -354,6 +354,20 @@ static void __init ambarella_init_elephant(void)
 
 	ambarella_init_machine("Elephant");
 
+	/* Config SD */
+	fio_default_owner = SELECT_FIO_SDIO;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = SMIO_5;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = SMIO_44;
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
+	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = SMIO_45;
+	ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(106);
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'C':
@@ -448,32 +462,23 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
 			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 
-			fio_default_owner = SELECT_FIO_SDIO;
-			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[0].caps |= (MMC_CAP_8_BIT_DATA | MMC_CAP_NONREMOVABLE);
-			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
+			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = GPIO(157);
+			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
+			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
+			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
 			ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;
 			ambarella_platform_sd_controller0.slot[0].fixed_wp = 0;
 			ambarella_platform_sd_controller0.slot[0].gpio_wp.gpio_id = -1;
-			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = GPIO(157);
-			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
-			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
-			ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
+			ambarella_platform_sd_controller0.slot[0].caps |= (MMC_CAP_8_BIT_DATA | MMC_CAP_NONREMOVABLE);
 			ambarella_platform_sd_controller0.slot[1].fixed_cd = 0;
 			ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = -1;
 			ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = -1;
 			ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
 			ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = -1;
-			ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
-			ambarella_platform_sd_controller1.slot[0].force_bounce_buffer = 1;
-			ambarella_platform_sd_controller1.slot[0].caps |= (MMC_CAP_8_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST);
 			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
-			ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
+			ambarella_platform_sd_controller1.slot[0].caps |= (MMC_CAP_8_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST);
 
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
@@ -537,28 +542,6 @@ static void __init ambarella_init_elephant(void)
 
 		ambarella_eth0_platform_info.mii_id = 0;
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;
-
-		fio_default_owner = SELECT_FIO_SDIO;
-		ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-		ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-		ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = SMIO_5;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-		ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-		ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
-		ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
-		ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = SMIO_44;
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
-		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-		ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = SMIO_45;
-		ambarella_platform_sd_controller1.slot[0].cd_delay = 100;
-		ambarella_platform_sd_controller1.slot[0].use_bounce_buffer = 1;
-		ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
-		ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(106);
-		ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
-		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
 
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);

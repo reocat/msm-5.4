@@ -1931,6 +1931,8 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 		netif_device_detach(ndev);
 		disable_irq(ndev->irq);
 
+		ambeth_phy_stop(lp);
+
 		spin_lock_irqsave(&lp->lock, flags);
 		ambhw_disable(lp);
 		spin_unlock_irqrestore(&lp->lock, flags);
@@ -1970,6 +1972,9 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		if (errorCode) {
 			dev_err(&pdev->dev, "ambhw_enable.\n");
 		} else {
+			ambeth_set_multicast_list(ndev);
+			netif_carrier_off(ndev);
+			errorCode = ambeth_phy_start(lp);
 			enable_irq(ndev->irq);
 			netif_device_attach(ndev);
 			napi_enable(&lp->napi);
