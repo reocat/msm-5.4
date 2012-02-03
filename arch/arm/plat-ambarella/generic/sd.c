@@ -125,9 +125,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
-		.use_bounce_buffer	= 0,
-		.force_bounce_buffer	= 0,
-		.max_blk_sz		= SD_BLK_SZ_512KB,
+		.use_bounce_buffer	= 1,
+		.max_blk_sz		= SD_BLK_SZ_128KB,
 		.fixed_cd		= -1,
 #if (SD_HAS_INTERNAL_MUXER == 1)
 		.gpio_cd	= {
@@ -146,7 +145,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
 #endif
-		.cd_delay	= 50,
+		.cd_delay	= 100,
 		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
@@ -157,6 +156,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 				MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE,
 		.set_vdd	= NULL,
+		.dump_rw_access	= 0,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
@@ -174,9 +174,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
-		.use_bounce_buffer	= 0,
-		.force_bounce_buffer	= 0,
-		.max_blk_sz		= SD_BLK_SZ_512KB,
+		.use_bounce_buffer	= 1,
+		.max_blk_sz		= SD_BLK_SZ_128KB,
 		.fixed_cd		= -1,
 		.gpio_cd	= {
 			.irq_gpio	= -1,
@@ -185,7 +184,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.irq_gpio_val	= GPIO_LOW,
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
-		.cd_delay	= 50,
+		.cd_delay	= 100,
 		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
@@ -196,6 +195,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 				MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE,
 		.set_vdd	= NULL,
+		.dump_rw_access	= 0,
 	},
 #endif
 	.set_pll		= rct_set_sd_pll,
@@ -310,9 +310,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
-		.use_bounce_buffer	= 0,
-		.force_bounce_buffer	= 0,
-		.max_blk_sz		= SD_BLK_SZ_512KB,
+		.use_bounce_buffer	= 1,
+		.max_blk_sz		= SD_BLK_SZ_128KB,
 		.fixed_cd		= -1,
 		.gpio_cd	= {
 			.irq_gpio	= -1,
@@ -321,7 +320,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.irq_gpio_val	= GPIO_LOW,
 			.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
 		},
-		.cd_delay	= 50,
+		.cd_delay	= 100,
 		.fixed_wp	= -1,
 		.gpio_wp	= {
 			.gpio_id	= -1,
@@ -332,6 +331,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 				MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE,
 		.set_vdd	= NULL,
+		.dump_rw_access	= 0,
 	},
 #if (CHIP_REV == I1)
 	.set_pll		= ambarella_platform_sdxc_set_pll,

@@ -203,7 +203,7 @@ static void __init ambarella_init_coconut(void)
 
 	ambarella_init_machine("Coconut");
 
-	/* Config Board*/
+	/* Config Board */
 	ambarella_board_generic.power_detect.irq_gpio = GPIO(11);
 	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(11);
 	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_FALLING;
@@ -271,22 +271,16 @@ static void __init ambarella_init_coconut(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SDIO;
-	ambarella_platform_sd_controller0.wait_tmo = (10 * HZ);
-	ambarella_platform_sd_controller0.slot[0].cd_delay = 100;
-	ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 1;
-	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_128KB;
+	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
 	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
 	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
 	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
-	ambarella_platform_sd_controller0.slot[1].cd_delay = 100;
-	ambarella_platform_sd_controller0.slot[1].use_bounce_buffer = 1;
-	ambarella_platform_sd_controller0.slot[1].max_blk_sz = SD_BLK_SZ_128KB;
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
 
-	/* Register devices*/
+	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
