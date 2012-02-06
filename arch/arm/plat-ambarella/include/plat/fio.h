@@ -62,6 +62,8 @@ extern int fio_dma_parse_error(u32 reg);
 
 extern void fio_select_lock(int module);
 extern void fio_unlock(int module);
+extern void fio_amb_sd0_set_int(u32 mask, u32 on);
+extern void fio_amb_sdio0_set_int(u32 mask, u32 on);
 
 extern int ambarella_init_fio(void);
 
