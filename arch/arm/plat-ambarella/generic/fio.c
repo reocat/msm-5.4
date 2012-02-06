@@ -52,11 +52,19 @@ module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
 int fio_default_owner = SELECT_FIO_FREE;
 module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
 
+static DEFINE_SPINLOCK(fio_sd0_int_lock);
+static u32 fio_sd_int = 0;
+static u32 fio_sdio_int = 0;
+
 /* ==========================================================================*/
 void __fio_select_lock(int module)
 {
-	u32 fio_ctr;
-	u32 fio_dmactr;
+	u32					fio_ctr;
+	u32					fio_dmactr;
+#if (SD_HAS_INTERNAL_MUXER == 1)
+	u32					fio_sd0_card_on = 0;
+	unsigned long				flags;
+#endif
 
 	fio_ctr = amba_readl(FIO_CTR_REG);
 	fio_dmactr = amba_readl(FIO_DMACTR_REG);
@@ -84,11 +92,17 @@ void __fio_select_lock(int module)
 	case SELECT_FIO_SD:
 		fio_ctr &= ~FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+#if (SD_HAS_INTERNAL_MUXER == 1)
+		fio_sd0_card_on = fio_sd_int & SD_NISEN_CARD;
+#endif
 		break;
 
 	case SELECT_FIO_SDIO:
 		fio_ctr |= FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
+#if (SD_HAS_INTERNAL_MUXER == 1)
+		fio_sd0_card_on = fio_sdio_int & SD_NISEN_CARD;
+#endif
 		break;
 
 	case SELECT_FIO_SD2:
@@ -103,19 +117,19 @@ void __fio_select_lock(int module)
 	}
 
 #if (SD_HAS_INTERNAL_MUXER == 1)
-	if (module != SELECT_FIO_SDIO) {
-		//SMIO_38 ~ SMIO_43
-		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+	if (!fio_sd0_card_on) {
+		spin_lock_irqsave(&fio_sd0_int_lock, flags);
+		amba_clrbitsl(SD_NISEN_REG, SD_NISEN_CARD);
+		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	}
 #endif
-
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
-
 #if (SD_HAS_INTERNAL_MUXER == 1)
-	if (module == SELECT_FIO_SDIO) {
-		//SMIO_38 ~ SMIO_43
-		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+	if (fio_sd0_card_on) {
+		spin_lock_irqsave(&fio_sd0_int_lock, flags);
+		amba_setbitsl(SD_NISEN_REG, SD_NISEN_CARD);
+		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	}
 #endif
 }
@@ -160,6 +174,25 @@ int fio_amb_sd0_is_enable(void)
 		((fio_dmactr & FIO_DMACTR_SD) == FIO_DMACTR_SD));
 }
 
+void fio_amb_sd0_set_int(u32 mask, u32 on)
+{
+	unsigned long				flags;
+	u32					int_flag;
+
+	spin_lock_irqsave(&fio_sd0_int_lock, flags);
+	int_flag = amba_readl(SD_NISEN_REG);
+	if (on)
+		int_flag |= mask;
+	else
+		int_flag &= ~mask;
+	fio_sd_int = int_flag;
+	if (fio_amb_sd0_is_enable()) {
+		amba_writel(SD_NISEN_REG, int_flag);
+		amba_writel(SD_NIXEN_REG, int_flag);
+	}
+	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
+}
+
 int fio_amb_sdio0_is_enable(void)
 {
 	u32 fio_ctr;
@@ -170,6 +203,25 @@ int fio_amb_sdio0_is_enable(void)
 
 	return (((fio_ctr & FIO_CTR_XD) == FIO_CTR_XD) &&
 		((fio_dmactr & FIO_DMACTR_SD) == FIO_DMACTR_SD));
+}
+
+void fio_amb_sdio0_set_int(u32 mask, u32 on)
+{
+	unsigned long				flags;
+	u32					int_flag;
+
+	spin_lock_irqsave(&fio_sd0_int_lock, flags);
+	int_flag = amba_readl(SD_NISEN_REG);
+	if (on)
+		int_flag |= mask;
+	else
+		int_flag &= ~mask;
+	fio_sdio_int = int_flag;
+	if (fio_amb_sdio0_is_enable()) {
+		amba_writel(SD_NISEN_REG, int_flag);
+		amba_writel(SD_NIXEN_REG, int_flag);
+	}
+	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
 
 int fio_dma_parse_error(u32 reg)
@@ -318,13 +370,6 @@ int __init ambarella_init_fio(void)
 	amba_writel(XD_INT_REG, 0x0);
 	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
 #endif
-
-	//SMIO_38 ~ SMIO_43
-	amba_setbitsl(GPIO2_MASK_REG, 0x000007e0);
-	amba_clrbitsl(GPIO2_DIR_REG, 0x00000780);
-	amba_setbitsl(GPIO2_DIR_REG, 0x00000060);
-	amba_setbitsl(GPIO2_DATA_REG, 0x00000040);
-	amba_clrbitsl(GPIO2_DATA_REG, 0x00000020);
 
 	return 0;
 }

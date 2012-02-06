@@ -112,9 +112,13 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #endif
 	.slot[0] = {
 		.pmmc_host	= NULL,
-		.check_owner	= fio_amb_sd0_is_enable,
-		.request	= fio_amb_sd0_slot1_request,
-		.release	= fio_amb_sd0_slot1_release,
+
+		.use_bb		= 1,
+		.max_blk_sz	= SD_BLK_SZ_128KB,
+		.caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_SDIO_IRQ |
+				MMC_CAP_ERASE,
+
 		.ext_power	= {
 			.gpio_id	= -1,
 			.active_level	= GPIO_LOW,
@@ -125,9 +129,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
-		.use_bounce_buffer	= 1,
-		.max_blk_sz		= SD_BLK_SZ_128KB,
-		.fixed_cd		= -1,
+		.fixed_cd	= -1,
 #if (SD_HAS_INTERNAL_MUXER == 1)
 		.gpio_cd	= {
 			.irq_gpio	= SD1_CD,
@@ -152,18 +154,24 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.caps		= MMC_CAP_4_BIT_DATA |
-				MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE,
-		.set_vdd	= NULL,
 		.dump_rw_access	= 0,
+
+		.check_owner	= fio_amb_sd0_is_enable,
+		.request	= fio_amb_sd0_slot1_request,
+		.release	= fio_amb_sd0_slot1_release,
+		.set_int	= fio_amb_sd0_set_int,
+		.set_vdd	= NULL,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
 		.pmmc_host	= NULL,
-		.check_owner	= fio_amb_sdio0_is_enable,
-		.request	= fio_amb_sd0_slot2_request,
-		.release	= fio_amb_sd0_slot2_release,
+
+		.use_bb		= 1,
+		.max_blk_sz	= SD_BLK_SZ_128KB,
+		.caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_SDIO_IRQ |
+				MMC_CAP_ERASE,
+
 		.ext_power	= {
 			.gpio_id	= -1,
 			.active_level	= GPIO_LOW,
@@ -174,9 +182,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
-		.use_bounce_buffer	= 1,
-		.max_blk_sz		= SD_BLK_SZ_128KB,
-		.fixed_cd		= -1,
+		.fixed_cd	= -1,
 		.gpio_cd	= {
 			.irq_gpio	= -1,
 			.irq_line	= -1,
@@ -191,11 +197,13 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.caps		= MMC_CAP_4_BIT_DATA |
-				MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE,
-		.set_vdd	= NULL,
 		.dump_rw_access	= 0,
+
+		.check_owner	= fio_amb_sdio0_is_enable,
+		.request	= fio_amb_sd0_slot2_request,
+		.release	= fio_amb_sd0_slot2_release,
+		.set_int	= fio_amb_sdio0_set_int,
+		.set_vdd	= NULL,
 	},
 #endif
 	.set_pll		= rct_set_sd_pll,
@@ -281,6 +289,23 @@ void fio_amb_sd2_release(void)
 #endif
 }
 
+static DEFINE_SPINLOCK(fio_amb_sd2_int_lock);
+void fio_amb_sd2_set_int(u32 mask, u32 on)
+{
+	unsigned long				flags;
+	u32					int_flag;
+
+	spin_lock_irqsave(&fio_amb_sd2_int_lock, flags);
+	int_flag = amba_readl(SD2_NISEN_REG);
+	if (on)
+		int_flag |= mask;
+	else
+		int_flag &= ~mask;
+	amba_writel(SD2_NISEN_REG, int_flag);
+	amba_writel(SD2_NIXEN_REG, int_flag);
+	spin_unlock_irqrestore(&fio_amb_sd2_int_lock, flags);
+}
+
 #if (CHIP_REV == I1)
 void ambarella_platform_sdxc_set_pll(u32 freq_hz)
 {
@@ -297,9 +322,13 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.num_slots		= 1,
 	.slot[0] = {
 		.pmmc_host	= NULL,
-		.check_owner	= fio_amb_sd2_check_owner,
-		.request	= fio_amb_sd2_request,
-		.release	= fio_amb_sd2_release,
+
+		.use_bb		= 1,
+		.max_blk_sz	= SD_BLK_SZ_128KB,
+		.caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_SDIO_IRQ |
+				MMC_CAP_ERASE,
+
 		.ext_power	= {
 			.gpio_id	= -1,
 			.active_level	= GPIO_LOW,
@@ -310,9 +339,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_LOW,
 			.active_delay	= 1,
 		},
-		.use_bounce_buffer	= 1,
-		.max_blk_sz		= SD_BLK_SZ_128KB,
-		.fixed_cd		= -1,
+		.fixed_cd	= -1,
 		.gpio_cd	= {
 			.irq_gpio	= -1,
 			.irq_line	= -1,
@@ -327,11 +354,13 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.caps		= MMC_CAP_4_BIT_DATA |
-				MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE,
-		.set_vdd	= NULL,
 		.dump_rw_access	= 0,
+
+		.check_owner	= fio_amb_sd2_check_owner,
+		.request	= fio_amb_sd2_request,
+		.release	= fio_amb_sd2_release,
+		.set_int	= fio_amb_sd2_set_int,
+		.set_vdd	= NULL,
 	},
 #if (CHIP_REV == I1)
 	.set_pll		= ambarella_platform_sdxc_set_pll,

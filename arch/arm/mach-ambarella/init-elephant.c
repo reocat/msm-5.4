@@ -1057,7 +1057,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-			ambarella_platform_sd_controller0.slot[0].use_bounce_buffer = 0;
+			ambarella_platform_sd_controller0.slot[0].use_bb = 0;
 			ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;
