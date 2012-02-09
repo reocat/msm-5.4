@@ -235,8 +235,6 @@
 /* Touchscreen absolute values */
 #define MXT_MAX_AREA		0xff
 
-#define MXT_MAX_FINGER		10
-
 struct mxt_info {
 	u8 family_id;
 	u8 variant_id;
@@ -269,14 +267,6 @@ struct mxt_message {
 	u8 message[MXT_MSG_MAX_SIZE - 2];
 };
 
-struct mxt_finger {
-	int status;
-	int x;
-	int y;
-	int area;
-	int pressure;
-};
-
 enum mxt_device_state { INIT, APPMODE, BOOTLOADER, FAILED };
 
 /* Each client has this additional data */
@@ -288,11 +278,10 @@ struct mxt_data {
 	struct mxt_object *object_table;
 	u16 mem_size;
 	struct mxt_info info;
-	struct mxt_finger finger[MXT_MAX_FINGER];
 	unsigned int irq;
+	struct delayed_work dwork;
 	unsigned int max_x;
 	unsigned int max_y;
-
 	bool debug_enabled;
 	bool driver_paused;
 	u8 bootloader_addr;
@@ -664,52 +653,11 @@ static int mxt_write_object(struct mxt_data *data,
 	return mxt_write_reg(data->client, reg + offset, val);
 }
 
-static void mxt_input_report(struct mxt_data *data, int single_id)
-{
-	struct mxt_finger *finger = data->finger;
-	struct input_dev *input_dev = data->input_dev;
-	int status = finger[single_id].status;
-	int finger_num = 0;
-	int id;
-
-	for (id = 0; id < MXT_MAX_FINGER; id++) {
-		if (!finger[id].status)
-			continue;
-
-		input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR,
-				finger[id].status != MXT_RELEASE ?
-				finger[id].area : 0);
-		input_report_abs(input_dev, ABS_MT_POSITION_X,
-				finger[id].x);
-		input_report_abs(input_dev, ABS_MT_POSITION_Y,
-				finger[id].y);
-		input_report_abs(input_dev, ABS_MT_PRESSURE,
-				finger[id].pressure);
-		input_mt_sync(input_dev);
-
-		if (finger[id].status == MXT_RELEASE)
-			finger[id].status = 0;
-		else
-			finger_num++;
-	}
-
-	input_report_key(input_dev, BTN_TOUCH, finger_num > 0);
-
-	if (status != MXT_RELEASE) {
-		input_report_abs(input_dev, ABS_X, finger[single_id].x);
-		input_report_abs(input_dev, ABS_Y, finger[single_id].y);
-		input_report_abs(input_dev,
-				 ABS_PRESSURE, finger[single_id].pressure);
-	}
-
-	input_sync(input_dev);
-}
-
 static void mxt_input_touchevent(struct mxt_data *data,
-				      struct mxt_message *message, int id)
+				 struct mxt_message *message, int id)
 {
-	struct mxt_finger *finger = data->finger;
 	struct device *dev = &data->client->dev;
+	struct input_dev *input_dev = data->input_dev;
 	u8 status = message->message[0];
 	int x;
 	int y;
@@ -719,29 +667,8 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	if (data->driver_paused)
 		return;
 
-	if (id >= MXT_MAX_FINGER) {
-		dev_err(dev, "MXT_MAX_FINGER exceeded!\n");
-		return;
-	}
-
-	/* Check the touch is present on the screen */
-	if (!(status & MXT_DETECT)) {
-		if (status & MXT_SUPPRESS) {
-			dev_dbg(dev, "[%d] suppressed\n", id);
-
-			finger[id].status = MXT_RELEASE;
-			mxt_input_report(data,id);
-		} else if (status & MXT_RELEASE) {
-			dev_dbg(dev, "[%d] released\n", id);
-
-			finger[id].status = MXT_RELEASE;
-			mxt_input_report(data, id);
-		}
-		return;
-	}
-
-	/* Check only AMP detection */
-	if (!(status & (MXT_PRESS | MXT_MOVE)))
+	/* This driver only supports a single touch */
+	if (id > 0)
 		return;
 
 	x = (message->message[1] << 4) | ((message->message[3] >> 4) & 0xf);
@@ -754,23 +681,37 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	area = message->message[4];
 	pressure = message->message[5];
 
-	dev_dbg(dev, "[%d] %s x: %d, y: %d, area: %d\n", id,
-		status & MXT_MOVE ? "moved" : "pressed",
-		x, y, area);
+	if (status != MXT_RELEASE) {
+		dev_dbg(dev, "[%d] status: %02X x: %d, y: %d, area: %d amp: %d\n", id,
+			status, x, y, area, pressure);
 
-	finger[id].status = status & MXT_MOVE ?
-				MXT_MOVE : MXT_PRESS;
-	finger[id].x = x;
-	finger[id].y = y;
-	finger[id].area = area;
-	finger[id].pressure = pressure;
+		input_report_key(input_dev, BTN_TOUCH, 1);
+		input_report_abs(input_dev, ABS_TOOL_WIDTH, area);
+		input_report_abs(input_dev, ABS_X, x);
+		input_report_abs(input_dev, ABS_Y, y);
+		input_report_abs(input_dev, ABS_PRESSURE, pressure);
+	} else {
+		dev_dbg(dev, "[%d] status: %02X released\n", id, status);
 
-	mxt_input_report(data, id);
+		input_report_key(input_dev, BTN_TOUCH, 0);
+	}
+
+	input_sync(input_dev);
 }
 
-static irqreturn_t mxt_interrupt(int irq, void *dev_id)
+static irqreturn_t mxt_irq_handler(int irq, void *dev_id)
 {
 	struct mxt_data *data = dev_id;
+
+	cancel_delayed_work(&data->dwork);
+	schedule_delayed_work(&data->dwork, 0);
+
+	return IRQ_HANDLED;
+}
+
+static void mxt_worker(struct work_struct *work)
+{
+	struct mxt_data *data = container_of(work, struct mxt_data, dwork.work);
 	struct mxt_message message;
 	struct mxt_object *object;
 	struct device *dev = &data->client->dev;
@@ -780,14 +721,14 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 	do {
 		if (mxt_read_message(data, &message)) {
 			dev_err(dev, "Failed to read message\n");
-			goto end;
+			return;
 		}
 
 		reportid = message.reportid;
 
 		object = mxt_get_object(data, MXT_TOUCH_MULTI_T9);
 		if (!object)
-			goto end;
+			return;
 
 		if (reportid >= object->min_reportid
 			&& reportid <= object->max_reportid) {
@@ -796,16 +737,13 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 		} else {
 			object = mxt_get_object(data, MXT_GEN_COMMAND_T6);
 			if (!object)
-				goto end;
+				return;
 
 			if ((reportid == object->max_reportid)
 				&& (message.message[0] & MXT_STATUS_CFGERROR))
 				dev_err(dev, "Configuration error\n");
 		}
 	} while (reportid != MXT_RPTID_NOMSG);
-
-end:
-	return IRQ_HANDLED;
 }
 
 static int mxt_make_highchg(struct mxt_data *data)
@@ -1809,22 +1747,20 @@ static int __devinit mxt_probe(struct i2c_client *client,
 			     0, data->max_y, 0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE,
 			     0, 255, 0, 0);
-
-	/* For multi touch */
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
-			     0, MXT_MAX_AREA, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_POSITION_X,
-			     0, data->max_x, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
-			     0, data->max_y, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_PRESSURE,
+	input_set_abs_params(input_dev, ABS_TOOL_WIDTH,
 			     0, 255, 0, 0);
 
 	input_set_drvdata(input_dev, data);
 	i2c_set_clientdata(client, data);
 
-	error = request_threaded_irq(client->irq, NULL, mxt_interrupt,
-			pdata->irqflags, client->dev.driver->name, data);
+	INIT_DELAYED_WORK(&data->dwork, mxt_worker);
+
+	error = request_irq(data->irq,
+		mxt_irq_handler,
+		pdata->irqflags,
+		client->dev.driver->name,
+		data);
+
 	if (error) {
 		dev_err(&client->dev, "Error %d registering irq\n", error);
 		goto err_free_object;
@@ -1886,6 +1822,8 @@ err_free_mem:
 static int __devexit mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
+
+        cancel_delayed_work_sync(&data->dwork);
 
 	sysfs_remove_bin_file(&client->dev.kobj, &sysfs_mem_access_attr);
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
