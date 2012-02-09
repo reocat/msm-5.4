@@ -1902,7 +1902,7 @@ static int __devexit mxt_remove(struct i2c_client *client)
 }
 
 #ifdef CONFIG_PM
-static int mxt_suspend(struct device *dev)
+static int mxt_suspend(struct device *dev, pm_message_t mesg)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct mxt_data *data = i2c_get_clientdata(client);
@@ -1957,10 +1957,6 @@ static void mxt_late_resume(struct early_suspend *es)
 }
 #endif
 
-static const struct dev_pm_ops mxt_pm_ops = {
-	.suspend	= mxt_suspend,
-	.resume		= mxt_resume,
-};
 #endif
 
 static const struct i2c_device_id mxt_id[] = {
@@ -1976,7 +1972,8 @@ static struct i2c_driver mxt_driver = {
 		.name	= "atmel_mxt_ts",
 		.owner	= THIS_MODULE,
 #ifdef CONFIG_PM
-		.pm	= &mxt_pm_ops,
+		.suspend = mxt_suspend,
+		.resume = mxt_resume,
 #endif
 	},
 	.probe		= mxt_probe,
