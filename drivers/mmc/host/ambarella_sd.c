@@ -208,13 +208,20 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	struct ambarella_sd_controller_info	*pinfo;
+	int					i;
+	u32					offset;
 
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	if (likely(pslotinfo->sg_len > 1)) {
-		sg_copy_to_buffer(pslotinfo->sg, pslotinfo->sg_len,
-			pslotinfo->buf_vaddress, pslotinfo->dma_size);
+		for (i = 0, offset = 0; i < pslotinfo->sg_len; i++) {
+			memcpy(pslotinfo->buf_vaddress + offset,
+				sg_virt(&pslotinfo->sg[i]),
+				pslotinfo->sg[i].length);
+			offset += pslotinfo->sg[i].length;
+		}
+		BUG_ON(offset != pslotinfo->dma_size);
 		dma_sync_single_for_device(pinfo->dev, pslotinfo->buf_paddress,
 			pslotinfo->dma_size, DMA_TO_DEVICE);
 		pslotinfo->dma_address = pslotinfo->buf_paddress;
@@ -283,6 +290,8 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo;
 	struct ambarella_sd_controller_info	*pinfo;
+	int					i;
+	u32					offset;
 
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
@@ -290,8 +299,13 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 	if (likely(pslotinfo->sg_len > 1)) {
 		dma_sync_single_for_cpu(pinfo->dev, pslotinfo->buf_paddress,
 			pslotinfo->dma_size, DMA_FROM_DEVICE);
-		sg_copy_from_buffer(pslotinfo->sg, pslotinfo->sg_len,
-			pslotinfo->buf_vaddress, pslotinfo->dma_size);
+		for (i = 0, offset = 0; i < pslotinfo->sg_len; i++) {
+			memcpy(sg_virt(&pslotinfo->sg[i]),
+				pslotinfo->buf_vaddress + offset,
+				pslotinfo->sg[i].length);
+			offset += pslotinfo->sg[i].length;
+		}
+		BUG_ON(offset != pslotinfo->dma_size);
 	} else {
 		dma_unmap_page(pinfo->dev, pslotinfo->sg->dma_address,
 			pslotinfo->sg->length, DMA_FROM_DEVICE);
