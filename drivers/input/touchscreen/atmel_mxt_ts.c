@@ -355,14 +355,14 @@ static int mxt_get_bootloader_address(struct mxt_data *data)
 		if (mxt_i2c_addresses[i].application == client->addr) {
 			data->bootloader_addr = mxt_i2c_addresses[i].bootloader;
 
-			dev_info(&client->dev, "Bootloader i2c adress: 0x%02x",
+			dev_info(&client->dev, "Bootloader i2c adress: 0x%02x\n",
 				data->bootloader_addr);
 
 			return 0;
 		}
 	}
 
-	dev_err(&client->dev, "Address 0x%02x not found in address table",
+	dev_err(&client->dev, "Address 0x%02x not found in address table\n",
 		client->addr);
 	return -EINVAL;
 }
@@ -396,18 +396,18 @@ static int mxt_get_bootloader_version(struct mxt_data *data, u8 val)
 	u8 buf[3];
 
 	if (val | MXT_BOOT_EXTENDED_ID) {
-		dev_dbg(dev, "Getting extended mode ID information");
+		dev_dbg(dev, "Getting extended mode ID information\n");
 
 		if (mxt_fw_read(data, &buf[0], 3) != 3) {
 			dev_err(dev, "%s: i2c failure\n", __func__);
 			return -EIO;
 		}
 
-		dev_info(dev, "Bootloader ID:%d Version:%d", buf[1], buf[2]);
+		dev_info(dev, "Bootloader ID:%d Version:%d\n", buf[1], buf[2]);
 
 		return buf[0];
 	} else {
-		dev_info(dev, "Bootloader ID:%d", val & MXT_BOOT_ID_MASK);
+		dev_info(dev, "Bootloader ID:%d\n", val & MXT_BOOT_ID_MASK);
 
 		return val;
 	}
@@ -574,7 +574,7 @@ static int mxt_check_message_length(struct mxt_data *data)
 		return -EINVAL;
 
 	if (object->size > MXT_MSG_MAX_SIZE) {
-		dev_err(dev, "MXT_MSG_MAX_SIZE exceeded");
+		dev_err(dev, "MXT_MSG_MAX_SIZE exceeded\n");
 		return -EINVAL;
 	}
 
@@ -1106,14 +1106,14 @@ static int mxt_set_power_cfg(struct mxt_data *data, u8 mode)
 	if (error)
 		goto i2c_error;
 
-	dev_dbg(dev, "Set ACTV %d, IDLE %d", actv_cycle_time, idle_cycle_time);
+	dev_dbg(dev, "Set ACTV %d, IDLE %d\n", actv_cycle_time, idle_cycle_time);
 
 	data->is_stopped = (mode == MXT_POWER_CFG_DEEPSLEEP) ? 1 : 0;
 
 	return 0;
 
 i2c_error:
-	dev_err(dev, "Failed to set power cfg");
+	dev_err(dev, "Failed to set power cfg\n");
 	return error;
 }
 
