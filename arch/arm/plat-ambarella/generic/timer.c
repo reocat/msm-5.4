@@ -193,7 +193,7 @@ static inline void ambarella_cs_timer_init(void)
 
 static cycle_t ambarella_cs_timer_read(struct clocksource *cs)
 {
-	return 0xffffffff - amba_readl(AMBARELLA_CS_TIMER_STATUS_REG);
+	return (-(u32)amba_readl(AMBARELLA_CS_TIMER_STATUS_REG));
 }
 
 static struct clocksource ambarella_cs_timer_clksrc = {
@@ -206,22 +206,22 @@ static struct clocksource ambarella_cs_timer_clksrc = {
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
+#if defined(CONFIG_HAVE_SCHED_CLOCK)
 static DEFINE_CLOCK_DATA(ambarella_sched_clock);
 
 unsigned long long notrace sched_clock(void)
 {
-	return cyc_to_fixed_sched_clock(&ambarella_sched_clock,
-		(0xffffffff - amba_readl(AMBARELLA_CS_TIMER_STATUS_REG)),
-		0xffffffff, ambarella_cs_timer_clksrc.mult,
-		ambarella_cs_timer_clksrc.shift);
+	return cyc_to_sched_clock(&ambarella_sched_clock,
+		(-(u32)amba_readl(AMBARELLA_CS_TIMER_STATUS_REG)), (u32)~0);
 }
 
 static void notrace ambarella_update_sched_clock(void)
 {
 	update_sched_clock(&ambarella_sched_clock,
-		(0xffffffff - amba_readl(AMBARELLA_CS_TIMER_STATUS_REG)),
-		0xffffffff);
+		(-(u32)amba_readl(AMBARELLA_CS_TIMER_STATUS_REG)),
+		(u32)~0);
 }
+#endif
 #endif
 
 /* ==========================================================================*/
@@ -235,16 +235,18 @@ static void __init ambarella_timer_init(void)
 	ambarella_cs_timer_init();
 	clocks_calc_mult_shift(&ambarella_cs_timer_clksrc.mult,
 		&ambarella_cs_timer_clksrc.shift,
-		AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 0);
+		AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 60);
 	pr_debug("%s: mult = %u, shift = %u\n",
 		ambarella_cs_timer_clksrc.name,
 		ambarella_cs_timer_clksrc.mult,
 		ambarella_cs_timer_clksrc.shift);
 	clocksource_register(&ambarella_cs_timer_clksrc);
+#if defined(CONFIG_HAVE_SCHED_CLOCK)
 	init_fixed_sched_clock(&ambarella_sched_clock,
 		ambarella_update_sched_clock, 32, AMBARELLA_TIMER_FREQ,
 		ambarella_cs_timer_clksrc.mult,
 		ambarella_cs_timer_clksrc.shift);
+#endif
 #endif
 
 	ambarella_clkevt.cpumask = cpumask_of(0);
@@ -354,15 +356,17 @@ u32 ambarella_timer_resume(u32 level)
 		clocksource_change_rating(&ambarella_cs_timer_clksrc, 0);
 		clocks_calc_mult_shift(&ambarella_cs_timer_clksrc.mult,
 			&ambarella_cs_timer_clksrc.shift,
-			AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 0);
+			AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 60);
 		pr_debug("%s: mult = %u, shift = %u\n",
 			ambarella_cs_timer_clksrc.name,
 			ambarella_cs_timer_clksrc.mult,
 			ambarella_cs_timer_clksrc.shift);
 		clocksource_change_rating(&ambarella_cs_timer_clksrc,
 			AMBARELLA_TIMER_RATING);
+#if defined(CONFIG_HAVE_SCHED_CLOCK)
 		ambarella_sched_clock.mult = ambarella_cs_timer_clksrc.mult;
 		ambarella_sched_clock.shift = ambarella_cs_timer_clksrc.shift;
+#endif
 #endif
 	}
 
