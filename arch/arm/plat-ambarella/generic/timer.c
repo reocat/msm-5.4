@@ -35,6 +35,7 @@
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
 #include <asm/localtimer.h>
+#include <asm/sched_clock.h>
 
 #include <mach/hardware.h>
 #include <plat/timer.h>
@@ -52,7 +53,7 @@ struct ambarella_timer_pm_info {
 	u32 timer_ce_reload_reg;
 	u32 timer_ce_match1_reg;
 	u32 timer_ce_match2_reg;
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 	u32 timer_cs_status_reg;
 	u32 timer_cs_reload_reg;
 	u32 timer_cs_match1_reg;
@@ -133,7 +134,7 @@ static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 	case CLOCK_EVT_MODE_RESUME:
 		break;
 	}
-	pr_info("%s:%d\n", __func__, mode);
+	pr_debug("%s:%d\n", __func__, mode);
 }
 
 static int ambarella_ce_timer_set_next_event(unsigned long delta,
@@ -168,7 +169,7 @@ static struct irqaction ambarella_ce_timer_irq = {
 };
 
 /* ==========================================================================*/
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 #define AMBARELLA_CS_TIMER_STATUS_REG		TIMER2_STATUS_REG
 #define AMBARELLA_CS_TIMER_RELOAD_REG		TIMER2_RELOAD_REG
 #define AMBARELLA_CS_TIMER_MATCH1_REG		TIMER2_MATCH1_REG
@@ -200,32 +201,59 @@ static struct clocksource ambarella_cs_timer_clksrc = {
 	.rating		= AMBARELLA_TIMER_RATING,
 	.read		= ambarella_cs_timer_read,
 	.mask		= CLOCKSOURCE_MASK(32),
+	.mult		= 2236962133u,
+	.shift		= 27,
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
+
+static DEFINE_CLOCK_DATA(ambarella_sched_clock);
+
+unsigned long long notrace sched_clock(void)
+{
+	return cyc_to_fixed_sched_clock(&ambarella_sched_clock,
+		(0xffffffff - amba_readl(AMBARELLA_CS_TIMER_STATUS_REG)),
+		0xffffffff, ambarella_cs_timer_clksrc.mult,
+		ambarella_cs_timer_clksrc.shift);
+}
+
+static void notrace ambarella_update_sched_clock(void)
+{
+	update_sched_clock(&ambarella_sched_clock,
+		(0xffffffff - amba_readl(AMBARELLA_CS_TIMER_STATUS_REG)),
+		0xffffffff);
+}
 #endif
 
 /* ==========================================================================*/
-static void ambarella_timer_init(void)
+static void __init ambarella_timer_init(void)
 {
 #ifdef CONFIG_LOCAL_TIMERS
 	twd_base = __io(AMBARELLA_VA_PT_WD_BASE);
 #endif
 
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 	ambarella_cs_timer_init();
 	clocks_calc_mult_shift(&ambarella_cs_timer_clksrc.mult,
 		&ambarella_cs_timer_clksrc.shift,
-		AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 60);
-	pr_info("%s: mult = %u, shift = %u\n", ambarella_cs_timer_clksrc.name,
-		ambarella_cs_timer_clksrc.mult, ambarella_cs_timer_clksrc.shift);
+		AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 0);
+	pr_debug("%s: mult = %u, shift = %u\n",
+		ambarella_cs_timer_clksrc.name,
+		ambarella_cs_timer_clksrc.mult,
+		ambarella_cs_timer_clksrc.shift);
 	clocksource_register(&ambarella_cs_timer_clksrc);
+	init_fixed_sched_clock(&ambarella_sched_clock,
+		ambarella_update_sched_clock, 32, AMBARELLA_TIMER_FREQ,
+		ambarella_cs_timer_clksrc.mult,
+		ambarella_cs_timer_clksrc.shift);
 #endif
 
 	ambarella_clkevt.cpumask = cpumask_of(0);
 	setup_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
 	clockevents_calc_mult_shift(&ambarella_clkevt, AMBARELLA_TIMER_FREQ, 5);
-	ambarella_clkevt.max_delta_ns = clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
-	ambarella_clkevt.min_delta_ns = clockevent_delta2ns(1, &ambarella_clkevt);
+	ambarella_clkevt.max_delta_ns =
+		clockevent_delta2ns(0xffffffff, &ambarella_clkevt);
+	ambarella_clkevt.min_delta_ns =
+		clockevent_delta2ns(1, &ambarella_clkevt);
 	clockevents_register_device(&ambarella_clkevt);
 }
 
@@ -247,7 +275,7 @@ u32 ambarella_timer_suspend(u32 level)
 		amba_readl(AMBARELLA_CE_TIMER_MATCH1_REG);
 	ambarella_timer_pm.timer_ce_match2_reg =
 		amba_readl(AMBARELLA_CE_TIMER_MATCH2_REG);
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 	ambarella_timer_pm.timer_cs_status_reg =
 		amba_readl(AMBARELLA_CS_TIMER_STATUS_REG);
 	ambarella_timer_pm.timer_cs_reload_reg =
@@ -261,7 +289,7 @@ u32 ambarella_timer_suspend(u32 level)
 	if (level) {
 		disable_irq(AMBARELLA_CE_TIMER_IRQ);
 		timer_ctr_mask = AMBARELLA_CE_TIMER_CTR_MASK;
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 		timer_ctr_mask |= AMBARELLA_CS_TIMER_CTR_MASK;
 #endif
 		amba_clrbitsl(TIMER_CTR_REG, timer_ctr_mask);
@@ -275,11 +303,11 @@ u32 ambarella_timer_resume(u32 level)
 	u32					timer_ctr_mask;
 
 	timer_ctr_mask = AMBARELLA_CE_TIMER_CTR_MASK;
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 	timer_ctr_mask |= AMBARELLA_CS_TIMER_CTR_MASK;
 #endif
 	amba_clrbitsl(TIMER_CTR_REG, timer_ctr_mask);
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 	amba_writel(AMBARELLA_CS_TIMER_STATUS_REG,
 		ambarella_timer_pm.timer_cs_status_reg);
 	amba_writel(AMBARELLA_CS_TIMER_RELOAD_REG,
@@ -322,20 +350,24 @@ u32 ambarella_timer_resume(u32 level)
 			break;
 		}
 
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 		clocksource_change_rating(&ambarella_cs_timer_clksrc, 0);
 		clocks_calc_mult_shift(&ambarella_cs_timer_clksrc.mult,
 			&ambarella_cs_timer_clksrc.shift,
-			AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 60);
-		pr_info("%s: mult = %u, shift = %u\n", ambarella_cs_timer_clksrc.name,
-			ambarella_cs_timer_clksrc.mult, ambarella_cs_timer_clksrc.shift);
+			AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 0);
+		pr_debug("%s: mult = %u, shift = %u\n",
+			ambarella_cs_timer_clksrc.name,
+			ambarella_cs_timer_clksrc.mult,
+			ambarella_cs_timer_clksrc.shift);
 		clocksource_change_rating(&ambarella_cs_timer_clksrc,
 			AMBARELLA_TIMER_RATING);
+		ambarella_sched_clock.mult = ambarella_cs_timer_clksrc.mult;
+		ambarella_sched_clock.shift = ambarella_cs_timer_clksrc.shift;
 #endif
 	}
 
 	timer_ctr_mask = AMBARELLA_CE_TIMER_CTR_MASK;
-#ifdef CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE
+#if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 	timer_ctr_mask |= AMBARELLA_CS_TIMER_CTR_MASK;
 #endif
 	amba_setbitsl(TIMER_CTR_REG,

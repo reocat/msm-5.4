@@ -67,8 +67,6 @@ static int flush_rxfifo(void)
 	int rval = 0;
 
 #if (CHIP_REV == A2) || (CHIP_REV == A3)
-	u32 dummy;
-
 	retry_count = retry_count * 10;
 	if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)){
 		/* Switch to slave mode */
@@ -80,7 +78,7 @@ static int flush_rxfifo(void)
 				rval = -1;
 				break;
 			}
-			dummy = amba_readl (USB_RXFIFO_BASE);
+			amba_readl (USB_RXFIFO_BASE);
 			udelay(5);
 		}
 		/* Switch to DMA mode */
