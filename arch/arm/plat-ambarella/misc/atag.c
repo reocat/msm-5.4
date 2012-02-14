@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/bootmem.h>
 #include <linux/dma-mapping.h>
+#include <linux/module.h>
 
 #include <asm/page.h>
 #include <asm/io.h>

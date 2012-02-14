@@ -26,8 +26,9 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/irq.h>
-
+#include <linux/moduleparam.h>
 #include <linux/mmc/host.h>
+#include <linux/module.h>
 
 #include <mach/hardware.h>
 #include <plat/fio.h>

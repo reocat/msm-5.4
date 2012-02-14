@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/moduleparam.h>
 
 #include <mach/hardware.h>
 #include <plat/spi.h>

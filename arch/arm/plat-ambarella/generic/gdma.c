@@ -22,12 +22,13 @@
  */
 
 #include <linux/init.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
-#include <mach/hardware.h>
 #include <linux/delay.h>
 
+#include <mach/hardware.h>
 
 #define TRANSFER_2D_WIDTH				(1<<12)		 /* 4096*/
 #define MAX_TRANSFER_2D_HEIGHT		(1<<11)		/* 2048*/			

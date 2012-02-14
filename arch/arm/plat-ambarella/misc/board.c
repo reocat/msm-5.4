@@ -37,6 +37,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
 #include <linux/i2c.h>
+#include <linux/moduleparam.h>
 
 #include <asm/page.h>
 #include <asm/io.h>

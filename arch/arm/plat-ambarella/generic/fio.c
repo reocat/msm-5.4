@@ -29,6 +29,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/sched.h>
 #include <linux/delay.h>
+#include <linux/moduleparam.h>
 
 #include <asm/io.h>
 #include <asm/setup.h>

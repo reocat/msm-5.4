@@ -31,10 +31,11 @@
 #include <linux/platform_device.h>
 #include <linux/sysdev.h>
 #include <linux/delay.h>
-#include <plat/clk.h>
-#include <plat/rct.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
+
+#include <plat/clk.h>
+#include <plat/rct.h>
 
 #define DO_DIV_ROUND(divident, divider)     do {	\
 	(divident) += ((divider)>>1);			\

@@ -27,6 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/i2c.h>
 #include <linux/ambarella-i2cmux.h>
+#include <linux/moduleparam.h>
 
 #include <mach/hardware.h>
 #include <plat/idc.h>

@@ -219,10 +219,10 @@ void ambcache_pli_range(void *addr, unsigned int size)
 }
 EXPORT_SYMBOL(ambcache_pli_range);
 
+#ifdef CONFIG_OUTER_CACHE
 /* ==========================================================================*/
 void ambcache_l2_enable_raw()
 {
-#ifdef CONFIG_OUTER_CACHE
 	if (!outer_is_enabled()) {
 #if (CHIP_REV == I1)
 		amba_writel((APB_BASE + 0x160200), 0x1);
@@ -243,19 +243,16 @@ void ambcache_l2_enable_raw()
 #endif
 			outer_enable();
 	}
-#endif
 }
 EXPORT_SYMBOL(ambcache_l2_enable_raw);
 
 void ambcache_l2_disable_raw()
 {
-#ifdef CONFIG_OUTER_CACHE
 	flush_cache_all();
 	outer_flush_all();
 	outer_disable();
 	outer_inv_all();
 	flush_cache_all();
-#endif
 }
 EXPORT_SYMBOL(ambcache_l2_disable_raw);
 
@@ -268,7 +265,6 @@ EXPORT_SYMBOL(ambcache_l2_enable);
 
 int ambcache_l2_disable()
 {
-#ifdef CONFIG_OUTER_CACHE
 	unsigned long flags;
 
 	if (outer_is_enabled()) {
@@ -278,7 +274,6 @@ int ambcache_l2_disable()
 		local_irq_restore(flags);
 		enable_nonboot_cpus();
 	}
-#endif
 #if (CHIP_REV == I1)
 	amba_writel((APB_BASE + 0x160200), 0x0);
 #endif
@@ -287,7 +282,6 @@ int ambcache_l2_disable()
 }
 EXPORT_SYMBOL(ambcache_l2_disable);
 
-#ifdef CONFIG_OUTER_CACHE
 /* =========================Debug Only========================================*/
 int cache_l2_set_status(const char *val, const struct kernel_param *kp)
 {

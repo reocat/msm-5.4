@@ -28,7 +28,7 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/dma-mapping.h>
-
+#include <linux/moduleparam.h>
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 
