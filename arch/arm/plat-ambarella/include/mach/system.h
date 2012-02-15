@@ -54,6 +54,9 @@ static inline void arch_reset(char mode, const char *cmd)
 	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO, &reboot_info);
 #endif
 
+	local_irq_disable();
+	local_fiq_disable();
+	flush_cache_all();
 	__raw_writel(0x00, SOFT_RESET_REG);
 	__raw_writel(0x01, SOFT_RESET_REG);
 }

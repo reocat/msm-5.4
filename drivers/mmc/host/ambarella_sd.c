@@ -458,6 +458,17 @@ static inline void ambarella_sd_data_done(
 {
 	struct mmc_data				*data = pslotinfo->mrq->data;
 
+	if ((pslotinfo->state == AMBA_SD_STATE_CMD) &&
+		((pslotinfo->cmd_reg & 0x3) == SD_CMD_RSP_48BUSY)) {
+		if (eis) {
+			pslotinfo->state = AMBA_SD_STATE_ERR;
+		} else {
+			pslotinfo->state = AMBA_SD_STATE_IDLE;
+		}
+		wake_up(&pslotinfo->wait);
+		return;
+	}
+
 	if (eis) {
 		if (eis & SD_EIS_DATA_BIT_ERR) {
 			data->error = -EILSEQ;
@@ -478,13 +489,6 @@ static inline void ambarella_sd_data_done(
 		return;
 	} else {
 		data->bytes_xfered = pslotinfo->dma_size;
-	}
-
-	if ((pslotinfo->state == AMBA_SD_STATE_CMD) &&
-		((pslotinfo->cmd_reg & 0x3) == SD_CMD_RSP_48BUSY)) {
-		pslotinfo->state = AMBA_SD_STATE_IDLE;
-		wake_up(&pslotinfo->wait);
-		return;
 	}
 
 	pslotinfo->state = AMBA_SD_STATE_IDLE;
