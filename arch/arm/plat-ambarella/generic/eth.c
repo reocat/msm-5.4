@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/ethtool.h>
+#include <linux/moduleparam.h>
 
 #include <mach/hardware.h>
 #include <plat/eth.h>

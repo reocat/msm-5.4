@@ -21,6 +21,9 @@
  *
  */
 
+#ifndef __MACH_AMBARELLA_BOARD_DEVICE_H__
+#define __MACH_AMBARELLA_BOARD_DEVICE_H__
+
 /* ==========================================================================*/
 extern struct i2c_board_info ambarella_ak4183_board_info;
 extern struct i2c_board_info ambarella_chacha_mt4d_board_info;
@@ -45,3 +48,4 @@ extern int ambarella_init_wm8994(void);
 extern int ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr);
 extern int ambarella_init_es8328(u8 i2c_bus_num, u8 i2c_addr);
 
+#endif //__MACH_AMBARELLA_BOARD_DEVICE_H__

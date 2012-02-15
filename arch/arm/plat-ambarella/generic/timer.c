@@ -364,8 +364,9 @@ u32 ambarella_timer_resume(u32 level)
 		clocksource_change_rating(&ambarella_cs_timer_clksrc,
 			AMBARELLA_TIMER_RATING);
 #if defined(CONFIG_HAVE_SCHED_CLOCK)
-		ambarella_sched_clock.mult = ambarella_cs_timer_clksrc.mult;
-		ambarella_sched_clock.shift = ambarella_cs_timer_clksrc.shift;
+		clocks_calc_mult_shift(&ambarella_sched_clock.mult,
+			&ambarella_sched_clock.shift,
+			AMBARELLA_TIMER_FREQ, NSEC_PER_SEC, 0);
 #endif
 #endif
 	}

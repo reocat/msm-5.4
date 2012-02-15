@@ -39,10 +39,13 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
+#include "touch.h"
+
 /* ==========================================================================*/
 int ambarella_ak4183_get_pendown_state(void)
 {
-	if (ambarella_gpio_get(ambarella_board_generic.touch_panel_irq.irq_gpio))
+	if (ambarella_gpio_get(
+		ambarella_board_generic.touch_panel_irq.irq_gpio))
 		return 0;
 	else
 		return 1;
@@ -50,23 +53,12 @@ int ambarella_ak4183_get_pendown_state(void)
 
 void ambarella_ak4183_clear_penirq(void)
 {
-	struct irq_desc		*touch_desc;
-	struct irq_chip		*touch_chip = NULL;
-
-	touch_desc = irq_to_desc(ambarella_board_generic.touch_panel_irq.irq_line);
-	if (touch_desc)
-		touch_chip = get_irq_desc_chip(touch_desc);
-	if (touch_chip && touch_chip->irq_ack)
-		touch_chip->irq_ack(&touch_desc->irq_data);
+	ambarella_touch_common_ack_irq();
 }
 
 int ambarella_ak4183_init_platform_hw(void)
 {
-	ambarella_gpio_config(ambarella_board_generic.touch_panel_irq.irq_gpio,
-		ambarella_board_generic.touch_panel_irq.irq_gpio_mode);
-
-	return set_irq_type(ambarella_board_generic.touch_panel_irq.irq_line,
-		ambarella_board_generic.touch_panel_irq.irq_type);
+	return ambarella_touch_common_init_hw();
 }
 
 void ambarella_ak4183_exit_platform_hw(void)

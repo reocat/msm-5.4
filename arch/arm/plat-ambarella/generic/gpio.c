@@ -33,8 +33,8 @@
 #include <linux/device.h>
 #include <linux/seq_file.h>
 #include <linux/delay.h>
-
 #include <linux/proc_fs.h>
+
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>

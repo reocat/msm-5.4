@@ -29,8 +29,8 @@
 #include <linux/irq.h>
 #include <linux/dma-mapping.h>
 #include <linux/pwm_backlight.h>
-
 #include <linux/proc_fs.h>
+
 #include <asm/uaccess.h>
 
 #include <mach/hardware.h>
