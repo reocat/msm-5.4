@@ -2242,6 +2242,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	/*initial usb hardware, and set soft disconnect */
 	ambarella_init_usb();
 	ambarella_set_softdis(1);
+	udelay(50);
 
 	/* DMA pool create */
 	udc->desc_dma_pool = dma_pool_create("desc_dma_pool", NULL,
@@ -2403,15 +2404,18 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	udc->controller_info->reset_usb();
 	/*initial usb hardware */
 	ambarella_init_usb();
+	/* Set soft disconnected and delay 50 microseconds at least,
+	 * or it will report full speed device to host. */
+	ambarella_set_softdis(1);
+	udelay(50);
 
 	enable_irq(USBC_IRQ);
 
 	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_set_pullup(udc, 1);
-	spin_unlock_irqrestore(&udc->lock, flags);
-
 	amb_udc_status = AMBARELLA_UDC_STATUS_RESUME;
 	schedule_work(&udc->uevent_work);
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	if (udc->controller_info->vbus_polled) {
 		setup_timer(&udc->vbus_timer,
