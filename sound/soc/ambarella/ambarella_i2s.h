@@ -30,6 +30,7 @@
 struct amb_i2s_priv {
 	struct ambarella_i2s_controller *controller_info;
 	struct ambarella_i2s_interface amb_i2s_intf;
+	u32 clock_reg;
 };
 
 int ambarella_i2s_add_controls(struct snd_soc_codec *codec);

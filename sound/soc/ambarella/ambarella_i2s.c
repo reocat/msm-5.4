@@ -400,14 +400,42 @@ int ambarella_i2s_add_controls(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL_GPL(ambarella_i2s_add_controls);
 
+
+#ifdef CONFIG_PM
+static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
+{
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+
+	priv_data->clock_reg = amba_readl(I2S_CLOCK_REG);
+
+	return 0;
+}
+
+
+
+static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
+{
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+
+	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
+
+	return 0;
+}
+#else /* CONFIG_PM */
+#define ambarella_i2s_dai_suspend	NULL
+#define ambarella_i2s_dai_resume	NULL
+#endif /* CONFIG_PM */
+
+
+
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
 	u32 clock_divider, clock_reg;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
-	/* Switch to external I2S Input except  IPcam Board */
+	/* Disable internal codec (only for A2) except  IPcam Board */
 	if (strcmp(dai->card->name, "A2IPcam"))
-		clock_reg = 0x1<<10;
+		clock_reg = 0x400;
 
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_11_2896M);
@@ -457,6 +485,8 @@ static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
 static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.probe = ambarella_i2s_dai_probe,
 	.remove = ambarella_i2s_dai_remove,
+	.suspend = ambarella_i2s_dai_suspend,
+	.resume = ambarella_i2s_dai_resume,
 	.playback = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
