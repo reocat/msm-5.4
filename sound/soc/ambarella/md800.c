@@ -389,6 +389,12 @@ static int __init md800_board_init(void)
 		goto md800_board_init_exit1;
 	}
 
+	errorCode = gpio_direction_output(md800_spk_gpio, GPIO_LOW);
+	if (errorCode < 0) {
+		printk(KERN_ERR "Could not Set Spk-Ctrl GPIO high\n");
+		goto md800_board_init_exit0;
+	}
+
 	md800_snd_device = platform_device_alloc("soc-audio", -1);
 	if (!md800_snd_device)
 		return -ENOMEM;

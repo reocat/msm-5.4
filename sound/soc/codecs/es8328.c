@@ -500,10 +500,10 @@ static int es8328_remove(struct snd_soc_codec *codec)
 
 	es8328_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
-	regulator_disable(es8328->vcc_io);
-
-	if (es8328->vcc_io)
+	if (es8328->vcc_io) {
+		regulator_disable(es8328->vcc_io);
 		regulator_put(es8328->vcc_io);
+	}
 
 	es8328->vcc_io = NULL;
 

@@ -734,11 +734,13 @@ static void __init ambarella_init_elephant(void)
 
 		case 61:
 			/* the cs_pin of spi0.4, spi0,5, spi0.6, spi0.7 are used as I2S signals,
+			 * and the cs_pin of spi2.6 is used for controlling external speaker,
 			 * so we need to prevent them from be modified by SPI driver */
 			ambarella_spi0_cs_pins[4] = -1;
 			ambarella_spi0_cs_pins[5] = -1;
 			ambarella_spi0_cs_pins[6] = -1;
 			ambarella_spi0_cs_pins[7] = -1;
+			ambarella_spi2_cs_pins[6] = -1;
 			ambarella_init_es8328(0, 0);
 
 			/* usb0 don't use over-current protection function */
@@ -879,11 +881,13 @@ static void __init ambarella_init_elephant(void)
 
 		case 62:
 			/* the cs_pin of spi0.4, spi0,5, spi0.6, spi0.7 are used as I2S signals,
+			 * and the cs_pin of spi2.6 is used for controlling external speaker,
 			 * so we need to prevent them from be modified by SPI driver */
 			ambarella_spi0_cs_pins[4] = -1;
 			ambarella_spi0_cs_pins[5] = -1;
 			ambarella_spi0_cs_pins[6] = -1;
 			ambarella_spi0_cs_pins[7] = -1;
+			ambarella_spi2_cs_pins[6] = -1;
 			ambarella_init_es8328(0, 0);
 
 			/* usb0 don't use over-current protection function */
