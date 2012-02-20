@@ -183,6 +183,10 @@ config PMIC_AMBARELLA_MD800_WM831X
 	bool "wm831x"
 	default n
 
+config PMIC_AMBARELLA_TPS6586X
+	bool "tps6586x"
+	default n
+
 comment "cpufreq-dev"
 
 config CPUFREQ_AMBARELLA_DEVICE

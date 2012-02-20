@@ -33,14 +33,14 @@ extern struct i2c_board_info ambarella_tm1927_board_info;
 extern struct i2c_board_info ambarella_nt11001_board_info;
 extern struct i2c_board_info ambarella_ft540_board_info;
 extern struct i2c_board_info ambarella_isl12022m_board_info;
-
 extern struct i2c_board_info ambarella_board_vin_infos[2];
-
 extern struct i2c_board_info ambarella_board_hdmi_info;
 
 extern	struct platform_device lcd_1p3831;
-
 extern	struct platform_device i1evk_cpufreq_device;
+
+extern struct i2c_board_info ambarella_ti6586x_board_info;
+extern struct i2c_board_info ambarella_bq27410_board_info;
 
 extern struct wm831x_pdata wm8310_default_pdata;
 

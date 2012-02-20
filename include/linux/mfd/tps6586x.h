@@ -62,6 +62,11 @@ struct tps6586x_platform_data {
 	int irq_base;
 };
 
+struct tps658640_backlight_pdata {
+	int pwm_out;		//dig_pwm:0 ; dig_pwm1:1
+	int mode;		//mode0:0 ; mode1:1
+	int max_cycle;	//only for mode0 max value is 0x7f
+};
 /*
  * NOTE: the functions below are not intended for use outside
  * of the TPS6586X sub-device drivers
@@ -74,5 +79,6 @@ extern int tps6586x_set_bits(struct device *dev, int reg, uint8_t bit_mask);
 extern int tps6586x_clr_bits(struct device *dev, int reg, uint8_t bit_mask);
 extern int tps6586x_update(struct device *dev, int reg, uint8_t val,
 			   uint8_t mask);
+extern int tps6586_powerdown(void);
 
 #endif /*__LINUX_MFD_TPS6586X_H */

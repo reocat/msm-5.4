@@ -43,6 +43,8 @@
 
 #include <hal/hal.h>
 
+#include <linux/mfd/tps6586x.h>
+
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
@@ -62,11 +64,15 @@ module_param(pm_force_power_on, int, 0644);
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
-	if (ambarella_board_generic.power_control.gpio_id >= 0) {
-		ambarella_set_gpio_output(
-			&ambarella_board_generic.power_control, 0);
-	} else {
-		rct_power_down();
+	if(ambarella_board_generic.board_rev == 'D'){
+		tps6586_powerdown();	
+	}else{
+		if (ambarella_board_generic.power_control.gpio_id >= 0) {
+			ambarella_set_gpio_output(
+				&ambarella_board_generic.power_control, 0);
+		} else {
+			rct_power_down();
+		}
 	}
 }
 

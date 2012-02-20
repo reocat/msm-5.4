@@ -37,6 +37,7 @@
 #include <mach/hardware.h>
 #include <plat/ambinput.h>
 
+#include <mach/board.h>
 /* ========================================================================= */
 #define AMBVI_BUFFER_SIZE			(32)
 #define AMBVI_NAME				"ambvi"
@@ -509,6 +510,15 @@ static int ambarella_input_resume(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
+	if(ambarella_board_generic.board_rev == 'D'){
+		struct ambarella_input_board_info 	*pbinfo;
+		pbinfo = (struct ambarella_input_board_info *)pdev->dev.platform_data;
+		input_report_key(pbinfo->pinput_dev, KEY_POWER, 1);
+		input_sync(pbinfo->pinput_dev);
+		input_report_key(pbinfo->pinput_dev, KEY_POWER, 0);
+		input_sync(pbinfo->pinput_dev);
+		printk("report power key\n");
+	}
 	return errorCode;
 }
 #endif

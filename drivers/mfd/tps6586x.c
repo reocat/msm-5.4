@@ -27,6 +27,8 @@
 #include <linux/mfd/core.h>
 #include <linux/mfd/tps6586x.h>
 
+#include <linux/regulator/machine.h>
+
 /* GPIO control registers */
 #define TPS6586X_GPIOSET1	0x5d
 #define TPS6586X_GPIOSET2	0x5e
@@ -46,6 +48,8 @@
 
 /* device id */
 #define TPS6586X_VERSIONCRC	0xcd
+
+struct device *devp_g;
 
 struct tps6586x_irq_data {
 	u8	mask_reg;
@@ -250,6 +254,17 @@ out:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tps6586x_update);
+
+int tps6586_powerdown(void)
+{
+	int ret=0;
+	int reg = 0x14;
+	int reg_val = 0x8;
+	ret = tps6586x_set_bits(devp_g, reg, (uint8_t)reg_val);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(tps6586_powerdown);
+
 
 static int tps6586x_gpio_get(struct gpio_chip *gc, unsigned offset)
 {
@@ -524,6 +539,8 @@ static int __devinit tps6586x_i2c_probe(struct i2c_client *client,
 	}
 
 	tps6586x_gpio_init(tps6586x, pdata->gpio_base);
+
+	devp_g = tps6586x->dev;
 
 	return 0;
 

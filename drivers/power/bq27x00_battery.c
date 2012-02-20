@@ -29,10 +29,10 @@
 
 #define DRIVER_VERSION			"1.1.0"
 
-#define BQ27x00_REG_TEMP		0x06
-#define BQ27x00_REG_VOLT		0x08
-#define BQ27x00_REG_AI			0x14
-#define BQ27x00_REG_FLAGS		0x0A
+#define BQ27x00_REG_TEMP		0x02
+#define BQ27x00_REG_VOLT		0x04
+#define BQ27x00_REG_AI			0x10
+#define BQ27x00_REG_FLAGS		0x06
 #define BQ27x00_REG_TTE			0x16
 #define BQ27x00_REG_TTF			0x18
 #define BQ27x00_REG_TTECP		0x26
@@ -40,10 +40,11 @@
 #define BQ27000_REG_RSOC		0x0B /* Relative State-of-Charge */
 #define BQ27000_FLAG_CHGS		BIT(7)
 
-#define BQ27500_REG_SOC			0x2c
+#define BQ27500_REG_SOC			0x1c
 #define BQ27500_FLAG_DSC		BIT(0)
 #define BQ27500_FLAG_FC			BIT(9)
 
+#define BQ27410_DELAY			1000
 /* If the system has several batteries we need a different name for each
  * of them...
  */
@@ -53,6 +54,8 @@ static DEFINE_MUTEX(battery_mutex);
 struct bq27x00_device_info;
 struct bq27x00_access_methods {
 	int (*read)(u8 reg, int *rt_value, int b_single,
+		struct bq27x00_device_info *di);
+	int (*write)(u8 reg, u8 *wr_value, int count,
 		struct bq27x00_device_info *di);
 };
 
@@ -66,6 +69,7 @@ struct bq27x00_device_info {
 	enum bq27x00_chip	chip;
 
 	struct i2c_client	*client;
+	struct delayed_work	work;
 };
 
 static enum power_supply_property bq27x00_battery_props[] = {
@@ -75,9 +79,9 @@ static enum power_supply_property bq27x00_battery_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_TEMP,
-	POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW,
-	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
-	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
+//	POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW,
+//	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
+//	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
 };
 
 /*
@@ -248,7 +252,6 @@ static int bq27x00_battery_get_property(struct power_supply *psy,
 {
 	int ret = 0;
 	struct bq27x00_device_info *di = to_bq27x00_device_info(psy);
-
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		ret = bq27x00_battery_status(di, val);
@@ -336,6 +339,123 @@ static int bq27x00_read_i2c(u8 reg, int *rt_value, int b_single,
 	return err;
 }
 
+u8 bq27410_CheckSum(unsigned char* buf,int cnt)
+{
+	int sum=0;
+	int i;
+	for(i=0;i<cnt;i++){
+		sum = sum + buf[i];
+	}
+	sum = sum & 0xFF;
+	sum = 255-sum;
+	return (u8)sum;
+}
+
+static int bq27410_battery_config(struct bq27x00_device_info *di)
+{
+	int ret,i=0;
+	u8 buf[32];
+	u8 checksum=0;
+
+	struct i2c_client *client = di->client;
+
+	//set battery temperature
+	ret=i2c_smbus_write_word_data(client, 0x02, 0x0b9d);
+	if(ret!=0)
+		return ret;
+	//battery insert
+	ret=i2c_smbus_write_word_data(client, 0x00, 0x000c);
+	if(ret!=0)
+		return ret;
+
+	ret=i2c_smbus_read_word_data(client,0x3c);
+	if(ret == 0x960)//if design capacity == 2400mAh, it has been configed
+		return 0;
+
+	//access data flash set design capacity
+	//blockdatacontrol = 0
+	ret=i2c_smbus_write_byte_data(client, 0x61, 0);
+	if(ret!=0)
+		return ret;
+	//set dataflashclass(get design capacity)
+	ret=i2c_smbus_write_byte_data(client, 0x3e, 48);
+	if(ret!=0)
+		return ret;
+	//set dataflashblock
+	ret=i2c_smbus_write_byte_data(client, 0x3f, 0);
+	if(ret!=0)
+		return ret;
+	//read blockdata
+	ret=i2c_smbus_read_i2c_block_data(client,0x40,32,buf);
+	if(ret<0)
+		return ret;
+	//write blockdata space design capacity
+	ret=i2c_smbus_write_word_data(client, 0x53, 0x6009);
+	if(ret!=0)
+		return ret;
+	//read blockdata
+	ret=i2c_smbus_read_i2c_block_data(client,0x40,32,buf);
+	if(ret<0)
+		return ret;
+	//blockdata checksum
+	checksum=bq27410_CheckSum(buf,32);
+	//write checksum to blockdatachecksum
+	ret=i2c_smbus_write_byte_data(client, 0x60, checksum);
+	if(ret!=0)
+		return ret;
+
+	ret=i2c_smbus_read_word_data(client,0x00);
+	printk("control: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x02);
+	printk("temperature: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x04);
+	printk("voltage: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x06);
+	printk("flags: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x08);
+	printk("NominalAvailableCapacity: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x0a);
+	printk("FullAvailableCapacity: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x0c);
+	printk("RemainingCapacity: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x0e);
+	printk("FullChargeCapacity: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x10);
+	printk("AverageCurrent: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x12);
+	printk("StandbyCurrent: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x14);
+	printk("MaxLoadCurrent: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x16);
+	printk("AvailableEnergy: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x18);
+	printk("AveragePower: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x1c);
+	printk("StateOfCharge: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x1e);
+	printk("IntTemperature: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x20);
+	printk("StateofHealth: 0x%x\n",ret);
+	ret=i2c_smbus_read_word_data(client,0x3c);
+	printk("DesignCapacity: 0x%x\n",ret);
+
+	ret=i2c_smbus_write_word_data(client, 0x00, 0x0000);
+	if(ret!=0)
+		return ret;
+	ret=i2c_smbus_read_word_data(client,0x00);
+	printk("control status: 0x%x\n",ret);
+	return 0;
+}
+
+static void bq27410_work(struct work_struct *work)
+{
+	struct bq27x00_device_info *di;
+
+	di = container_of(work, struct bq27x00_device_info, work.work);
+	power_supply_changed(&di->bat);
+	schedule_delayed_work(&di->work, BQ27410_DELAY);
+}
+
 static int bq27x00_battery_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
@@ -388,11 +508,16 @@ static int bq27x00_battery_probe(struct i2c_client *client,
 
 	bq27x00_powersupply_init(di);
 
+	bq27410_battery_config(di);
+
 	retval = power_supply_register(&client->dev, &di->bat);
 	if (retval) {
 		dev_err(&client->dev, "failed to register battery\n");
 		goto batt_failed_4;
 	}
+
+	INIT_DELAYED_WORK_DEFERRABLE(&di->work, bq27410_work);
+	schedule_delayed_work(&di->work, BQ27410_DELAY);
 
 	dev_info(&client->dev, "support ver. %s enabled\n", DRIVER_VERSION);
 

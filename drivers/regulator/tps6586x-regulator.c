@@ -69,6 +69,7 @@ struct tps6586x_regulator {
 	int go_bit;
 };
 
+
 static inline struct device *to_tps6586x_dev(struct regulator_dev *rdev)
 {
 	return rdev_get_dev(rdev)->parent->parent;
@@ -133,7 +134,7 @@ static int tps6586x_ldo_get_voltage(struct regulator_dev *rdev)
 	ret = tps6586x_read(parent, ri->volt_reg, &val);
 	if (ret)
 		return ret;
-
+	//printk("%s volt_reg=0x%x,val=0x%x\n",__FUNCTION__,ri->volt_reg,val);
 	mask = ((1 << ri->volt_nbits) - 1) << ri->volt_shift;
 	val = (val & mask) >> ri->volt_shift;
 
@@ -211,7 +212,7 @@ static struct regulator_ops tps6586x_regulator_dvm_ops = {
 };
 
 static int tps6586x_ldo_voltages[] = {
-	1250, 1500, 1800, 2500, 2700, 2850, 3100, 3300,
+	1200, 1500, 1800, 2500, 2700, 2850, 3100, 3300,
 };
 
 static int tps6586x_ldo4_voltages[] = {
@@ -222,10 +223,10 @@ static int tps6586x_ldo4_voltages[] = {
 };
 
 static int tps6586x_sm2_voltages[] = {
-	3000, 3050, 3100, 3150, 3200, 3250, 3300, 3350,
-	3400, 3450, 3500, 3550, 3600, 3650, 3700, 3750,
-	3800, 3850, 3900, 3950, 4000, 4050, 4100, 4150,
-	4200, 4250, 4300, 4350, 4400, 4450, 4500, 4550,
+	2150, 2200, 2250, 2300, 2350, 2400, 2450, 2500,
+	2550, 2600, 2650, 2700, 2750, 2800, 2850, 2900,
+	2950, 3000, 3050, 3100, 3150, 3200, 3250, 3300,
+	3350, 3400, 3450, 3500, 3550, 3600, 3650, 3700,
 };
 
 static int tps6586x_dvm_voltages[] = {
@@ -275,20 +276,20 @@ static int tps6586x_dvm_voltages[] = {
 
 static struct tps6586x_regulator tps6586x_regulator[] = {
 	TPS6586X_LDO(LDO_0, ldo, SUPPLYV1, 5, 3, ENC, 0, END, 0),
+	TPS6586X_LDO(LDO_1, dvm, SUPPLYV1, 0, 5, ENC, 1, END, 1),
+	TPS6586X_DVM(LDO_2, dvm, LDO2BV1, 0, 5, ENA, 3, ENB, 3, VCC2, 6),
 	TPS6586X_LDO(LDO_3, ldo, SUPPLYV4, 0, 3, ENC, 2, END, 2),
+	TPS6586X_DVM(LDO_4, ldo4, LDO4V1, 0, 5, ENC, 3, END, 3, VCC1, 6),
 	TPS6586X_LDO(LDO_5, ldo, SUPPLYV6, 0, 3, ENE, 6, ENE, 6),
 	TPS6586X_LDO(LDO_6, ldo, SUPPLYV3, 0, 3, ENC, 4, END, 4),
 	TPS6586X_LDO(LDO_7, ldo, SUPPLYV3, 3, 3, ENC, 5, END, 5),
 	TPS6586X_LDO(LDO_8, ldo, SUPPLYV2, 5, 3, ENC, 6, END, 6),
 	TPS6586X_LDO(LDO_9, ldo, SUPPLYV6, 3, 3, ENE, 7, ENE, 7),
 	TPS6586X_LDO(LDO_RTC, ldo, SUPPLYV4, 3, 3, V4, 7, V4, 7),
-	TPS6586X_LDO(LDO_1, dvm, SUPPLYV1, 0, 5, ENC, 1, END, 1),
-	TPS6586X_LDO(SM_2, sm2, SUPPLYV2, 0, 5, ENC, 7, END, 7),
 
-	TPS6586X_DVM(LDO_2, dvm, LDO2BV1, 0, 5, ENA, 3, ENB, 3, VCC2, 6),
-	TPS6586X_DVM(LDO_4, ldo4, LDO4V1, 0, 5, ENC, 3, END, 3, VCC1, 6),
 	TPS6586X_DVM(SM_0, dvm, SM0V1, 0, 5, ENA, 1, ENB, 1, VCC1, 2),
 	TPS6586X_DVM(SM_1, dvm, SM1V1, 0, 5, ENA, 0, ENB, 0, VCC1, 0),
+	TPS6586X_LDO(SM_2, sm2, SUPPLYV2, 0, 5, ENC, 7, END, 7),
 };
 
 /*
@@ -313,7 +314,7 @@ static inline int tps6586x_regulator_preinit(struct device *parent,
 	ret = tps6586x_read(parent, ri->enable_reg[1], &val2);
 	if (ret)
 		return ret;
-
+	//printk("val1=0x%x,val2=0x%x\n",val1,val2);
 	if (!(val2 & (1 << ri->enable_bit[1])))
 		return 0;
 
@@ -352,7 +353,7 @@ static int __devinit tps6586x_regulator_probe(struct platform_device *pdev)
 	int id = pdev->id;
 	int err;
 
-	dev_dbg(&pdev->dev, "Probing reulator %d\n", id);
+	dev_dbg(&pdev->dev, "Probing regulator %d\n", id);
 
 	ri = find_regulator_info(id);
 	if (ri == NULL) {
@@ -398,7 +399,7 @@ static int __init tps6586x_regulator_init(void)
 {
 	return platform_driver_register(&tps6586x_regulator_driver);
 }
-subsys_initcall(tps6586x_regulator_init);
+subsys_initcall_sync(tps6586x_regulator_init);
 
 static void __exit tps6586x_regulator_exit(void)
 {

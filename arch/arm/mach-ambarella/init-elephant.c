@@ -61,7 +61,6 @@
 #endif
 
 #include <linux/rfkill-gpio.h>
-
 #include <linux/mfd/wm831x/pdata.h>
 /* ==========================================================================*/
 #include <linux/pda_power.h>
@@ -475,7 +474,7 @@ static void __init ambarella_init_elephant(void)
 	int					use_bub_default = 1;
 	int					use_ambarella_rtc0 = 1;
 	int					use_ambarella_wdt0 = 1;
-
+	int					use_pmic_tps6586x = 0;
 	ambarella_init_machine("Elephant");
 
 	/* Config SD */
@@ -494,6 +493,8 @@ static void __init ambarella_init_elephant(void)
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
+		case 'D':
+			use_pmic_tps6586x = 1;
 		case 'C':
 		case 'B':
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
@@ -555,12 +556,18 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.power_control.gpio_id = GPIO(120);
 			ambarella_board_generic.power_control.active_level = GPIO_LOW;
 
-			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
-			ambarella_spi_devices[12].max_speed_hz = 500000;
-			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
-			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
-			use_ambarella_rtc0 = 0;
-			use_ambarella_wdt0= 0;
+			if(use_pmic_tps6586x){
+				ambarella_ti6586x_board_info.irq = ambarella_board_generic.pmic_irq.irq_line;
+				i2c_register_board_info(0, &ambarella_ti6586x_board_info, 1);
+				i2c_register_board_info(0, &ambarella_bq27410_board_info,1);
+			}else{
+				memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
+				ambarella_spi_devices[12].max_speed_hz = 500000;
+				ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
+				ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
+				use_ambarella_rtc0 = 0;
+				use_ambarella_wdt0= 0;
+			}
 
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;

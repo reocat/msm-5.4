@@ -264,6 +264,13 @@ config BACKLIGHT_WM831X
 	  If you have a backlight driven by the ISINK and DCDC of a
 	  WM831x PMIC say y to enable the backlight driver for it.
 
+config BACKLIGHT_TPS6586X
+	tristate "TPS658640 PWM Backlight Driver"
+	depends on MFD_TPS6586X
+	help
+	  If you have a backlight driven by the PWM of a
+	  tps658640 PMIC say y to enable the backlight driver for it.
+
 config BACKLIGHT_ADX
 	tristate "Avionic Design Xanthos Backlight Driver"
 	depends on ARCH_PXA_ADX
