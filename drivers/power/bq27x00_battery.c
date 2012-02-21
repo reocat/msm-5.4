@@ -353,7 +353,7 @@ u8 bq27410_CheckSum(unsigned char* buf,int cnt)
 
 static int bq27410_battery_config(struct bq27x00_device_info *di)
 {
-	int ret,i=0;
+	int ret;
 	u8 buf[32];
 	u8 checksum=0;
 
