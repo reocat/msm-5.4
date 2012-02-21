@@ -88,6 +88,9 @@ extern int ambarella_gpio_get(int id);
 extern u32 ambarella_gpio_suspend(u32 level);
 extern u32 ambarella_gpio_resume(u32 level);
 
+extern void ambarella_gpio_raw_setbitsl(u32 address, u32 value);
+extern void ambarella_gpio_raw_clrbitsl(u32 address, u32 value);
+
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
