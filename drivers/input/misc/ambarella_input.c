@@ -510,6 +510,7 @@ static int ambarella_input_resume(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
+#ifdef CONFIG_PMIC_AMBARELLA_TPS6586X
 	if(ambarella_board_generic.board_rev == 'D'){
 		struct ambarella_input_board_info 	*pbinfo;
 		pbinfo = (struct ambarella_input_board_info *)pdev->dev.platform_data;
@@ -519,6 +520,7 @@ static int ambarella_input_resume(struct platform_device *pdev)
 		input_sync(pbinfo->pinput_dev);
 		printk("report power key\n");
 	}
+#endif
 	return errorCode;
 }
 #endif

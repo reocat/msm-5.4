@@ -64,16 +64,17 @@ module_param(pm_force_power_on, int, 0644);
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
-//	if(ambarella_board_generic.board_rev == 'D'){
-//		tps6586_powerdown();
-//	}else{
+#ifdef CONFIG_PMIC_AMBARELLA_TPS6586X
+	if(ambarella_board_generic.board_rev == 'D'){
+		tps6586_powerdown();
+	}
+#endif
 	if (ambarella_board_generic.power_control.gpio_id >= 0) {
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 0);
 	} else {
 		rct_power_down();
 	}
-//	}
 }
 
 void ambarella_power_off_prepare(void)
