@@ -37,6 +37,7 @@
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/nand.h>
+#include <plat/gpio.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -123,13 +124,23 @@ void __fio_select_lock(int module)
 		amba_clrbitsl(SD_NISEN_REG, SD_NISEN_CARD);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	}
+	if (module != SELECT_FIO_SDIO)
+		ambarella_gpio_raw_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
 #if (SD_HAS_INTERNAL_MUXER == 1)
-	if (fio_sd0_card_on) {
+	if (module == SELECT_FIO_SD) {
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
-		amba_setbitsl(SD_NISEN_REG, SD_NISEN_CARD);
+		amba_writel(SD_NISEN_REG, fio_sd_int);
+		amba_writel(SD_NIXEN_REG, fio_sd_int);
+		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
+	} else
+	if (module == SELECT_FIO_SDIO) {
+		ambarella_gpio_raw_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		spin_lock_irqsave(&fio_sd0_int_lock, flags);
+		amba_writel(SD_NISEN_REG, fio_sdio_int);
+		amba_writel(SD_NIXEN_REG, fio_sdio_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	}
 #endif
@@ -371,6 +382,13 @@ int __init ambarella_init_fio(void)
 	amba_writel(XD_INT_REG, 0x0);
 	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
 #endif
+
+	//SMIO_38 ~ SMIO_43
+	ambarella_gpio_raw_setbitsl(GPIO2_MASK_REG, 0x000007e0);
+	ambarella_gpio_raw_clrbitsl(GPIO2_DIR_REG, 0x00000780);
+	ambarella_gpio_raw_setbitsl(GPIO2_DIR_REG, 0x00000060);
+	ambarella_gpio_raw_setbitsl(GPIO2_DATA_REG, 0x00000040);
+	ambarella_gpio_raw_clrbitsl(GPIO2_DATA_REG, 0x00000020);
 
 	return 0;
 }

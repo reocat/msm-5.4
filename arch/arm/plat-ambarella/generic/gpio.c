@@ -40,6 +40,7 @@
 #include <asm/uaccess.h>
 
 #include <mach/hardware.h>
+#include <plat/gpio.h>
 
 #define CONFIG_AMBARELLA_GPIO_CAN_SLEEP		(0)
 #define CONFIG_AMBARELLA_GPIO_ACCESS_MODE	(0)
@@ -924,4 +925,23 @@ ambarella_is_valid_gpio_irq_exit:
 	return bvalid;
 }
 EXPORT_SYMBOL(ambarella_is_valid_gpio_irq);
+
+/* ==========================================================================*/
+void ambarella_gpio_raw_setbitsl(u32 address, u32 value)
+{
+	unsigned long				flags;
+
+	spin_lock_irqsave(&ambarella_gpio_lock, flags);
+	amba_setbitsl(address, value);
+	spin_unlock_irqrestore(&ambarella_gpio_lock, flags);
+}
+
+void ambarella_gpio_raw_clrbitsl(u32 address, u32 value)
+{
+	unsigned long				flags;
+
+	spin_lock_irqsave(&ambarella_gpio_lock, flags);
+	amba_clrbitsl(address, value);
+	spin_unlock_irqrestore(&ambarella_gpio_lock, flags);
+}
 
