@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Thu Oct 27 10:26:02 2011
+# Wed Feb 22 17:15:30 2012
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -394,6 +394,7 @@ CONFIG_CODEC_AMBARELLA_WM8737=y
 #
 # CONFIG_PMIC_AMBARELLA_WM831X is not set
 # CONFIG_PMIC_AMBARELLA_MD800_WM831X is not set
+# CONFIG_PMIC_AMBARELLA_TPS6586X is not set
 
 #
 # cpufreq-dev
@@ -1081,6 +1082,7 @@ CONFIG_I2C_AMBARELLA=y
 # CONFIG_I2C_DEBUG_BUS is not set
 CONFIG_SPI=y
 CONFIG_SPI_MASTER=y
+CONFIG_SPI_SLAVE=y
 
 #
 # SPI Master Controller Drivers
@@ -1097,6 +1099,11 @@ CONFIG_SPI_AMBARELLA=m
 #
 CONFIG_SPI_SPIDEV=m
 # CONFIG_SPI_TLE62X0 is not set
+
+#
+# SPI Slave Controller Drivers
+#
+CONFIG_SPI_SLAVE_AMBARELLA=m
 
 #
 # PPS support
