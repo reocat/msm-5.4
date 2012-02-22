@@ -64,6 +64,7 @@ obj-$(CONFIG_SPI_TLE62X0)	+= tle62x0.o
 # 	... add above this line ...
 
 # SPI slave controller drivers (upstream link)
+obj-$(CONFIG_SPI_SLAVE_AMBARELLA)       += spi_slave_ambarella.o
 # 	... add above this line ...
 
 # SPI slave drivers (protocol for that link)

@@ -275,3 +275,30 @@ struct platform_device ambarella_spi4 = {
 };
 #endif
 
+#if ( SPI_SLAVE_INSTANCES >= 1 )
+struct resource ambarella_spi_slave_resources[] = {
+	[0] = {
+		.start	= SPI_SLAVE_BASE,
+		.end	= SPI_SLAVE_BASE + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= SSI_SLAVE_IRQ,
+		.end	= SSI_SLAVE_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device ambarella_spi_slave = {
+	.name		= "ambarella-spi-slave",
+	.id		= 0,
+	.resource	= ambarella_spi_slave_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_spi_slave_resources),
+	.dev		= {
+		.platform_data		= NULL,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+#endif
+
