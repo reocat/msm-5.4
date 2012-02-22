@@ -130,6 +130,7 @@ extern struct platform_device			ambarella_spi1;
 extern struct platform_device			ambarella_spi2;
 extern struct platform_device			ambarella_spi3;
 extern struct platform_device			ambarella_spi4;
+extern struct platform_device			ambarella_spi_slave;
 
 /* ==========================================================================*/
 extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,
