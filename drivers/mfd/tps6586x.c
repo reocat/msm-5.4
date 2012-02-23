@@ -258,8 +258,15 @@ EXPORT_SYMBOL_GPL(tps6586x_update);
 int tps6586_powerdown(void)
 {
 	int ret=0;
-	int reg = 0x14;
-	int reg_val = 0x8;
+	int reg;
+	int reg_val;
+
+	reg = 0x44;
+	reg_val = 0x80;
+	ret = tps6586x_clr_bits(devp_g, reg, (uint8_t)reg_val);
+
+	reg = 0x14;
+	reg_val = 0x8;
 	ret = tps6586x_set_bits(devp_g, reg, (uint8_t)reg_val);
 	return ret;
 }
