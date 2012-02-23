@@ -51,16 +51,18 @@ static void aucodec_digitalio_on_0(void)
 {
 	/* aucodec_digitalio_on */
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M)
-	amba_setbitsl(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
+	ambarella_gpio_raw_setbitsl(2, GPIO_AFSEL_OFFSET,
+		((0xf << 18) | (0xf << 13)));
 
 #elif (CHIP_REV == A2)
-	amba_setbitsl(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
+	ambarella_gpio_raw_setbitsl(2, GPIO_AFSEL_OFFSET,
+		((0x3 << 15) | (0x3 << 20)));
 
 #elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
 	(CHIP_REV == A5S)||(CHIP_REV == I1)
-	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+	ambarella_gpio_raw_clrbitsl(1, GPIO_AFSEL_OFFSET, 0x80000000);
 	/* GPIO77~GPIO81 program as hardware mode */
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x0003e000);
+	ambarella_gpio_raw_setbitsl(2, GPIO_AFSEL_OFFSET, 0x0003e000);
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
 #endif
@@ -71,9 +73,9 @@ static void aucodec_digitalio_on_1(void)
 	/* aucodec_digitalio_on */
 #if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
 	(CHIP_REV == A5S)||(CHIP_REV == I1)
-	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+	ambarella_gpio_raw_clrbitsl(1, GPIO_AFSEL_OFFSET, 0x80000000);
 	/* GPIO77~GPIO78 and GPIO81~GPIO83 program as hardware mode */
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x000e6000);
+	ambarella_gpio_raw_setbitsl(2, GPIO_AFSEL_OFFSET, 0x000e6000);
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
 #endif
@@ -84,9 +86,9 @@ static void aucodec_digitalio_on_2(void)
 	/* aucodec_digitalio_on */
 #if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
 	(CHIP_REV == A5S)||(CHIP_REV == I1)
-	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+	ambarella_gpio_raw_clrbitsl(1, GPIO_AFSEL_OFFSET, 0x80000000);
 	/* GPIO77~GPIO78, GPIO81 and GPIO84~GPIO85 program as hardware mode */
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x00326000);
+	ambarella_gpio_raw_setbitsl(2, GPIO_AFSEL_OFFSET, 0x00326000);
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
 #endif

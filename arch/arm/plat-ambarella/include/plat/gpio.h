@@ -38,10 +38,20 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 #include <asm-generic/gpio.h>
+#include <plat/irq.h>
 
 #define gpio_get_value	__gpio_get_value
 #define gpio_set_value	__gpio_set_value
 #define gpio_cansleep	__gpio_cansleep
+#define gpio_to_irq	__gpio_to_irq
+
+static inline int irq_to_gpio(unsigned irq)
+{
+	if ((irq > GPIO_INT_VEC(0)) && (irq < NR_IRQS))
+		return irq - GPIO_INT_VEC(0);
+
+	return -EINVAL;
+}
 
 /* ==========================================================================*/
 struct ambarella_gpio_io_info {
@@ -88,8 +98,8 @@ extern int ambarella_gpio_get(int id);
 extern u32 ambarella_gpio_suspend(u32 level);
 extern u32 ambarella_gpio_resume(u32 level);
 
-extern void ambarella_gpio_raw_setbitsl(u32 address, u32 value);
-extern void ambarella_gpio_raw_clrbitsl(u32 address, u32 value);
+extern void ambarella_gpio_raw_setbitsl(u32 id, u32 reg, u32 value);
+extern void ambarella_gpio_raw_clrbitsl(u32 id, u32 reg, u32 value);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

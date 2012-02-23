@@ -417,25 +417,6 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-/* ==========================================================================*/
-
-/* ==========================================================================*/
-static inline int gpio_to_irq(unsigned gpio)
-{
-	if (gpio < GPIO_MAX_LINES)
-		return GPIO_INT_VEC(gpio);
-
-	return -EINVAL;
-}
-
-static inline int irq_to_gpio(unsigned irq)
-{
-	if ((irq > GPIO_INT_VEC(0)) && (irq < NR_IRQS))
-		return irq - GPIO_INT_VEC(0);
-
-	return -EINVAL;
-}
-
 extern void ambarella_init_irq(void);
 
 extern u32 ambarella_irq_suspend(u32 level);

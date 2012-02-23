@@ -781,28 +781,14 @@ void *ambarella_hal_get_vp(void)
 		amb_hal_success_t		retval;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
-#if defined(CONFIG_AMBARELLA_RAW_BOOT)
-		pr_err("%s: %d!\n", __func__, __LINE__);
-		retval = amb_hal_init(
+		retval = amb_set_peripherals_base_address(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE,
 			(void *)DRAMC_BASE);
 #else
 		retval = amb_set_peripherals_base_address(
 			(void *)ambarella_hal_info.virtual,
-			(void *)APB_BASE, (void *)AHB_BASE,
-			(void *)DRAMC_BASE);
-#endif
-#else
-#if defined(CONFIG_AMBARELLA_RAW_BOOT)
-		retval = amb_hal_init(
-			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE);
-#else
-		retval = amb_set_peripherals_base_address(
-			(void *)ambarella_hal_info.virtual,
-			(void *)APB_BASE, (void *)AHB_BASE);
-#endif
 #endif
 		BUG_ON(retval != AMB_HAL_SUCCESS);
 		ambarella_hal_info.inited = 1;
