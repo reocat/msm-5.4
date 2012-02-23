@@ -43,6 +43,7 @@ extern struct i2c_board_info ambarella_ti6586x_board_info;
 extern struct i2c_board_info ambarella_bq27410_board_info;
 
 extern struct wm831x_pdata wm8310_default_pdata;
+extern struct wm831x_pdata md800_wm8310_default_pdata;
 
 extern int ambarella_init_wm8994(void);
 extern int ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr);

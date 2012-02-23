@@ -35,6 +35,7 @@
 #include <linux/mfd/wm831x/pdata.h>
 #include <linux/mfd/wm831x/regulator.h>
 
+#include <linux/battery_curve.h>
 /* ==========================================================================*/
 /* DCDC1: iOne_VDDAX for Cortex and 3D */
 static struct regulator_consumer_supply dcdc1_consumers[] __initdata = {
@@ -456,6 +457,21 @@ static struct wm831x_backup_pdata wm8310_default_backup_pdata __initdata = {
 	.ilim = 200,   /* uA */
 };
 
+static struct battery_curve_parameter md800_bat_curve = {
+	.name = "MD800 BAT",
+	.voltage_with_power_min = 3950000,
+	.voltage_with_power_max = 4200000,
+	.voltage_without_power_min = 3300000,
+	.voltage_without_power_mid = 3600000,
+	.voltage_without_power_max = 3800000,
+	.charge_current_min = 90,
+	.charge_current_max = 1050,
+	.fast_mode_percent = 10,
+	.cv_mode_percent = 90,
+	.discharge_low = 30,
+	.discharge_high = 70,
+};
+
 static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.enable = 1,
 	.fast_enable = 1,
@@ -465,6 +481,7 @@ static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.eoc_iterm = 90,
 	.fast_ilim = 1000,
 	.timeout = 510,
+	.bat_curve = &md800_bat_curve,
 };
 
 static struct wm831x_status_pdata wm8310_default_on_led __initdata = {
@@ -477,7 +494,7 @@ static struct wm831x_status_pdata wm8310_default_chg_led __initdata = {
 	.default_src = WM831X_STATUS_CHARGER,
 };
 
-struct wm831x_pdata wm8310_default_pdata __initdata = {
+struct wm831x_pdata md800_wm8310_default_pdata __initdata = {
 	.wm831x_num = 0,
 	.irq_cmos = true,
 	.disable_touch = true,

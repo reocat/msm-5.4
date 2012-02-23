@@ -39,6 +39,7 @@ struct wm831x_battery_pdata {
 	int eoc_iterm;      /** End of trickle charge current, in mA */
 	int fast_ilim;      /** Fast charge current limit, in mA */
 	int timeout;        /** Charge cycle timeout, in minutes */
+	struct battery_curve_parameter *bat_curve; //battery curve
 };
 
 /**

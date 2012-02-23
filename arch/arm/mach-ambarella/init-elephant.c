@@ -952,7 +952,7 @@ static void __init ambarella_init_elephant(void)
 
 			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
 			ambarella_spi_devices[12].max_speed_hz = 500000;
-			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
+			ambarella_spi_devices[12].platform_data = &md800_wm8310_default_pdata;
 			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 			use_ambarella_rtc0 = 0;
 

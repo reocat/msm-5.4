@@ -20,42 +20,11 @@
 #include <linux/delay.h>
 #include <linux/battery_curve.h>
 #include <linux/mfd/wm831x/auxadc.h>
+#include <linux/mfd/wm831x/pdata.h>
 
-static struct battery_curve_parameter bc_parameter = {
-#ifdef CONFIG_DC_SANYO_18650
-	.name = "sanyo 18650",
+#include <linux/battery_curve.h>
 
-#elif defined (CONFIG_DC_TRUST_FIRE_18650)
-	.name = "trust fire 18650",
-	.voltage_with_power_min = 3900000,
-	.voltage_with_power_max = 4200000,
-	.voltage_without_power_min = 3400000,
-	.voltage_without_power_mid = 3600000,
-	.voltage_without_power_max = 4000000,
-	.charge_current_min = 90,
-	.charge_current_max = 1050,
-	.fast_mode_percent = 10,
-	.cv_mode_percent = 90,
-	.discharge_low = 30,
-	.discharge_high = 70,
-#elif defined (CONFIG_BAT_MD800)
-	.name = "MD800 BAT",
-	.voltage_with_power_min = 3950000,
-	.voltage_with_power_max = 4200000,
-	.voltage_without_power_min = 3300000,
-	.voltage_without_power_mid = 3600000,
-	.voltage_without_power_max = 3800000,
-	.charge_current_min = 90,
-	.charge_current_max = 1050,
-	.fast_mode_percent = 10,
-	.cv_mode_percent = 90,
-	.discharge_low = 30,
-	.discharge_high = 70,
-#else
-	.name = "generic lithium based",
-
-#endif
-};
+struct battery_curve_parameter bc_parameter;
 
 static int cal_by_voltage(int sys_status,
 	int charge_status,
@@ -108,6 +77,7 @@ static int cal_by_current(int chargecurrent,
 	int uV)
 {
 	int capc=0;
+
 //printk("by_current ");
 	if(charge_status & WM831X_CHG_ACTIVE){
 		if(sys_status & WM831X_PWR_WALL){
@@ -249,6 +219,7 @@ int cal_capacity(int chargecurrent,
 		chargecurrent,
 		uV,
 		usbplug);
+
 	return capc;
 }
 

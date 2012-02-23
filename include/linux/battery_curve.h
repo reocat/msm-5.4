@@ -45,6 +45,8 @@ struct battery_curve_parameter{
 	int discharge_high;
 };
 
+
+extern struct battery_curve_parameter bc_parameter;
 extern int cal_capacity(int chargecurrent, int sys_status, int charge_status, int uV, bool usbplug);
 
 #endif

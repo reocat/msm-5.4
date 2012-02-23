@@ -35,6 +35,7 @@
 #include <linux/mfd/wm831x/pdata.h>
 #include <linux/mfd/wm831x/regulator.h>
 
+#include <linux/battery_curve.h>
 /* ==========================================================================*/
 /* DCDC1: iOne_VDDAX for Cortex and 3D */
 static struct regulator_consumer_supply dcdc1_consumers[] __initdata = {
@@ -455,6 +456,21 @@ static struct wm831x_backup_pdata wm8310_default_backup_pdata __initdata = {
 	.ilim = 200,   /* uA */
 };
 
+static struct battery_curve_parameter bat_curve = {
+	.name = "trust fire 18650",
+	.voltage_with_power_min = 3900000,
+	.voltage_with_power_max = 4200000,
+	.voltage_without_power_min = 3400000,
+	.voltage_without_power_mid = 3600000,
+	.voltage_without_power_max = 4000000,
+	.charge_current_min = 90,
+	.charge_current_max = 1050,
+	.fast_mode_percent = 10,
+	.cv_mode_percent = 90,
+	.discharge_low = 30,
+	.discharge_high = 70,
+};
+
 static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.enable = 1,
 	.fast_enable = 1,
@@ -464,6 +480,7 @@ static struct wm831x_battery_pdata wm8310_default_battery_pdata __initdata = {
 	.eoc_iterm = 90,
 	.fast_ilim = 1000,
 	.timeout = 510,
+	.bat_curve = &bat_curve,
 };
 
 static struct wm831x_watchdog_pdata wm8310_default_watchdog_pdata __initdata = {

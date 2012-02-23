@@ -19,7 +19,12 @@
 #include <linux/mfd/wm831x/pmu.h>
 #include <linux/mfd/wm831x/pdata.h>
 
+#include <plat/udc.h>
+#include <plat/gpio.h>
+
 #include <linux/battery_curve.h>
+
+#include <mach/board.h>
 
 struct wm831x_power {
 	struct wm831x *wm831x;
@@ -32,6 +37,74 @@ struct wm831x_power {
 	struct timer_list battery_update_timer;
 	int bat_update_delay_msec;
 };
+
+static void enable_battery_charge(struct wm831x *wm831x)
+{
+	int ret= 0,value=0;
+
+	value =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
+	if(value < 0){
+		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
+				value);
+		return;
+	}
+
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+		return;
+	}
+
+	if(!(value & WM831X_CHG_ENA_MASK)){
+		ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
+				      WM831X_CHG_ENA_MASK,
+				      WM831X_CHG_ENA);
+		if (ret != 0)
+			dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
+				ret);
+	}
+	wm831x_reg_lock(wm831x);
+}
+
+static void disable_battery_charge(struct wm831x *wm831x)
+{
+	int ret= 0,value=0;
+
+	value =  wm831x_reg_read(wm831x,WM831X_CHARGER_CONTROL_1);
+	if(value < 0){
+		dev_err(wm831x->dev, "Failed to read charger control 1: %d\n",
+				value);
+		return;
+	}
+
+	ret = wm831x_reg_unlock(wm831x);
+	if (ret != 0) {
+		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
+		return;
+	}
+
+	if((value & WM831X_CHG_ENA_MASK)){
+		ret = wm831x_set_bits(wm831x, WM831X_CHARGER_CONTROL_1,
+				      WM831X_CHG_ENA_MASK,
+				      0);
+		if (ret != 0)
+			dev_err(wm831x->dev, "Failed to set charger control 1: %d\n",
+				ret);
+	}
+	wm831x_reg_lock(wm831x);
+}
+
+static int usbcable_without_docking(void)
+{
+	int ret =0;
+//	printk(KERN_DEBUG "usb cable without docking %d\n",amb_udc_status);
+	if((amb_udc_status == AMBARELLA_UDC_STATUS_CONFIGURED)
+		& (ambarella_gpio_get(GPIO(150)) == GPIO_LOW)){
+//		printk(KERN_DEBUG "usb cable without docking \n");
+		ret = 1;
+	}
+	return ret;
+}
 
 static int wm831x_power_check_online(struct wm831x *wm831x, int supply,
 				     union power_supply_propval *val)
@@ -267,6 +340,8 @@ static void wm831x_config_battery(struct wm831x *wm831x)
 				   pdata->timeout, &reg2,
 				   "charger timeout", "min");
 
+	bc_parameter = *(pdata->bat_curve);
+
 	ret = wm831x_reg_unlock(wm831x);
 	if (ret != 0) {
 		dev_err(wm831x->dev, "Failed to unlock registers: %d\n", ret);
@@ -406,6 +481,7 @@ static int wm831x_bat_check_health(struct wm831x *wm831x, int *health)
 static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 {
 	int uV, ret,status,capc=0,chargecurrent=0;
+	bool usbplug=0;
 
 	/* calculate the capacity from voltage */
 	uV = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_BATT);
@@ -418,6 +494,17 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	if (status < 0)
 		return status;
 
+	if((ambarella_board_generic.board_type == AMBARELLA_BOARD_TYPE_VENDOR)
+		&& ((ambarella_board_generic.board_rev == 62)
+		|| (ambarella_board_generic.board_rev == 61))){
+		if(usbcable_without_docking()){
+			disable_battery_charge(wm831x);
+			usbplug=1;
+		}else{
+			enable_battery_charge(wm831x);
+			usbplug=0;
+		}
+	}
 	ret = wm831x_reg_read(wm831x, WM831X_CHARGER_STATUS);
 	if (ret < 0)
 		return ret;
@@ -425,7 +512,7 @@ static int wm831x_bat_read_capacity(struct wm831x *wm831x, int *capacity)
 	chargecurrent = wm831x_auxadc_read_uv(wm831x, WM831X_AUX_AUX1);
 	chargecurrent = ((chargecurrent / 1000) * 125) / 100;
 
-	capc = cal_capacity(chargecurrent,status,ret,uV,0);
+	capc = cal_capacity(chargecurrent,status,ret,uV,usbplug);
 
 	*capacity = capc;
 	return ret;
