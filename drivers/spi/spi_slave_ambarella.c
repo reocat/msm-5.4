@@ -30,27 +30,40 @@
 #include <linux/interrupt.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
+#include <linux/fs.h>
+#include <linux/ioctl.h>
 #include <asm/io.h>
+#include <asm/uaccess.h>
 #include <mach/io.h>
 #include <plat/spi.h>
 #include <plat/ambcache.h>
+
+#define MAX_SPI_SLAVES		8
 
 #define SPI_RXFIS_MASK 		0x00000010
 #define SPI_RXOIS_MASK 		0x00000008
 #define SPI_RXUIS_MASK 		0x00000004
 
 #define RX_FTLR			8
-#define RX_BUFFER_LEN		4096
+#define RX_BUFFER_LEN		64
 
 static int rx_ftlr = RX_FTLR;
 module_param(rx_ftlr, int, 0644);
 
 struct ambarella_spi_slave {
 	u32					regbase;
+
 	int					irq;
+	int					major;
+	char					dev_name[32];
+	struct class				*psClass;
+	struct device				*psDev;
 
 	u16					mode;
 	u16					bpw;
+
+	int					count;
+	struct mutex				um_mtx;
 
 	u16					r_buf[RX_BUFFER_LEN];
 	u16					r_buf_start;
@@ -60,6 +73,10 @@ struct ambarella_spi_slave {
 	u16					r_buf_round;
 	spinlock_t				r_buf_lock;
 };
+
+DEFINE_MUTEX(g_mtx);
+static struct ambarella_spi_slave	*priv_array[MAX_SPI_SLAVES] =
+	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 static int ambarella_spi_slave_inithw(struct ambarella_spi_slave *priv)
 {
@@ -128,11 +145,137 @@ static irqreturn_t ambarella_spi_slave_isr(int irq, void *dev_data)
 	return IRQ_HANDLED;
 }
 
+static int spi_slave_open(struct inode *inode, struct file *filp)
+{
+	int				i, ret = 0;
+	struct ambarella_spi_slave	*priv = NULL;
+
+	mutex_lock(&g_mtx);
+
+	for (i = 0; i < MAX_SPI_SLAVES; i++) {
+		if (priv_array[i] && MKDEV(priv_array[i]->major, 0) == inode->i_rdev) {
+			priv = priv_array[i];
+			break;
+		}
+	}
+	mutex_lock(&priv->um_mtx);
+	if (!priv->count) {
+		priv->count++;
+		filp->private_data = priv;
+	} else {
+		ret = -ENXIO;
+	}
+	mutex_unlock(&priv->um_mtx);
+
+	mutex_unlock(&g_mtx);
+
+	return ret;
+}
+
+static ssize_t
+spi_slave_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+{
+	ssize_t				 ret = 0;
+	struct ambarella_spi_slave	*priv;
+	int				result;
+
+	priv = (struct ambarella_spi_slave *)filp->private_data;
+
+	spin_lock(&priv->r_buf_lock);
+
+	if (!priv->r_buf_empty) {
+		if (priv->r_buf_round & 0x01) {
+			if ((RX_BUFFER_LEN - priv->r_buf_start) * 2 >= count) {
+				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], count);
+				priv->r_buf_start += count / 2;
+				ret = count;
+			} else if ((RX_BUFFER_LEN - priv->r_buf_start + priv->r_buf_end) * 2 >= count) {
+				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], (RX_BUFFER_LEN - priv->r_buf_start) * 2);
+				result = copy_to_user(buf + (RX_BUFFER_LEN - priv->r_buf_start) * 2, (void *)priv->r_buf, count - (RX_BUFFER_LEN - priv->r_buf_start) * 2);
+				priv->r_buf_start = RX_BUFFER_LEN - priv->r_buf_start + priv->r_buf_end - count / 2;
+				priv->r_buf_round++;
+				ret = count;
+			} else {
+				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], (RX_BUFFER_LEN - priv->r_buf_start) * 2);
+				result = copy_to_user(buf + (RX_BUFFER_LEN - priv->r_buf_start) * 2, (void *)priv->r_buf, priv->r_buf_end * 2);
+				priv->r_buf_start = priv->r_buf_end;
+				priv->r_buf_round++;
+				ret = (RX_BUFFER_LEN - priv->r_buf_start + priv->r_buf_end) * 2;
+			}
+		} else {
+			if ((priv->r_buf_end - priv->r_buf_start) * 2 > count) {
+				ret = count;
+			} else {
+				ret = (priv->r_buf_end - priv->r_buf_start) * 2;
+			}
+			result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], ret);
+			priv->r_buf_start += ret / 2;
+		}
+
+		if (priv->r_buf_start >= RX_BUFFER_LEN) {
+			priv->r_buf_start = 0;
+			priv->r_buf_round++;
+		}
+	}
+
+	spin_unlock(&priv->r_buf_lock);
+
+	return ret;
+}
+
+static ssize_t
+spi_slave_write(struct file *filp, const char __user *buf,
+		size_t count, loff_t *f_pos)
+{
+	ssize_t			ret = 0;
+
+	return ret;
+}
+
+long spi_slave_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int			err = -ENOIOCTLCMD;
+
+	switch(cmd)
+	{
+	default:
+		break;
+	}
+
+	return err;
+}
+
+static int spi_slave_release(struct inode *inode, struct file *filp)
+{
+	int				ret = 0;
+	struct ambarella_spi_slave	*priv;
+
+	priv = (struct ambarella_spi_slave *)filp->private_data;
+
+	mutex_lock(&priv->um_mtx);
+	if (priv->count) {
+		priv->count--;
+	}
+	mutex_unlock(&priv->um_mtx);
+
+	return ret;
+}
+
+static struct file_operations spi_slave_fops = {
+	.open		= spi_slave_open,
+	.read		= spi_slave_read,
+	.write		= spi_slave_write,
+	.unlocked_ioctl	= spi_slave_ioctl,
+	.release	= spi_slave_release,
+};
+
 static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 {
 	struct ambarella_spi_slave		*priv = NULL;
 	struct resource 			*res;
-	int					irq, errorCode;
+	int					irq, errorCode = 0;
+	int					major_id = 0;
+
 
 	/* Get Base Address */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -155,7 +298,6 @@ static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 	}
 
 	priv->regbase		= (u32)res->start;
-	priv->irq		= irq;
 
 	priv->mode		= 0;
 	priv->bpw		= 16;
@@ -163,6 +305,7 @@ static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 	priv->r_buf_empty	= 1;
 	priv->r_buf_full	= 0;
 	spin_lock_init(&priv->r_buf_lock);
+	mutex_init(&priv->um_mtx);
 
 	ambarella_spi_slave_inithw(priv);
 
@@ -170,15 +313,67 @@ static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 	errorCode = request_irq(irq, ambarella_spi_slave_isr, IRQF_TRIGGER_HIGH,
 			dev_name(&pdev->dev), priv);
 	if (errorCode) {
-		kfree(priv);
+		errorCode = -EIO;
 		goto ambarella_spi_slave_probe_exit;
 	} else {
-		pdev->dev.platform_data		= priv;
-		dev_info(&pdev->dev, "Ambarella SPI Slave Controller %d created!\n", pdev->id);
-		amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
+		priv->irq		= irq;
 	}
 
+	sprintf(priv->dev_name, "slave_spi%d", pdev->id);
+	major_id = register_chrdev(0, priv->dev_name, &spi_slave_fops);
+	if (major_id <= 0) {
+		errorCode = -EIO;
+		printk("Error: %s: Unable to get major number\n", __FILE__);
+		goto ambarella_spi_slave_probe_exit;
+	} else {
+		priv->major = major_id;
+	}
+
+	priv->psClass = class_create(THIS_MODULE, priv->dev_name);
+	if (IS_ERR(priv->psClass)) {
+		errorCode = -EIO;
+		printk("Error: %s: Unable to create class\n", __FILE__);
+		goto ambarella_spi_slave_probe_exit;
+	}
+
+	priv->psDev = device_create(priv->psClass, NULL, MKDEV(major_id, 0),
+					priv, priv->dev_name);
+	if (IS_ERR(priv->psDev)) {
+		errorCode = -EIO;
+		printk("Error: %s: Unable to create device\n", __FILE__);
+		goto ambarella_spi_slave_probe_exit;
+	}
+
+	pdev->dev.platform_data	= priv;
+	if (pdev->id < MAX_SPI_SLAVES) {
+		mutex_lock(&g_mtx);
+		priv_array[pdev->id] = priv;
+		mutex_unlock(&g_mtx);
+	} else {
+		errorCode = -EIO;
+		printk("Error: %s: platform device id %d is greater than %d\n",
+			__FILE__, pdev->id, MAX_SPI_SLAVES - 1);
+		goto ambarella_spi_slave_probe_exit;
+	}
+	dev_info(&pdev->dev, "Ambarella SPI Slave Controller %d created!\n", pdev->id);
+	amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
+
 ambarella_spi_slave_probe_exit:
+	if (priv && errorCode < 0) {
+		if (priv->psDev) {
+			device_destroy(priv->psClass, MKDEV(major_id, 0));
+		}
+		if (priv->psClass) {
+			class_destroy(priv->psClass);
+		}
+		if (major_id > 0) {
+			unregister_chrdev(major_id, priv->dev_name);
+		}
+		if (priv->irq > 0) {
+			free_irq(priv->irq, priv);
+		}
+		kfree(priv);
+	}
 	return errorCode;
 }
 
@@ -187,7 +382,33 @@ static int __devexit ambarella_spi_slave_remove(struct platform_device *pdev)
 	struct ambarella_spi_slave	*priv;
 
 	priv	= (struct ambarella_spi_slave *)pdev->dev.platform_data;
-	free_irq(priv->irq, priv);
+
+	if (priv) {
+		mutex_lock(&g_mtx);
+		priv_array[pdev->id] = NULL;
+		mutex_unlock(&g_mtx);
+
+		mutex_lock(&priv->um_mtx);
+
+		if (priv->psDev) {
+			device_destroy(priv->psClass, MKDEV(priv->major, 0));
+		}
+		if (priv->psClass) {
+			class_destroy(priv->psClass);
+		}
+		if (priv->major > 0) {
+			unregister_chrdev(priv->major, priv->dev_name);
+		}
+		if (priv->irq > 0) {
+			free_irq(priv->irq, priv);
+		}
+
+		priv->count++;
+
+		mutex_unlock(&priv->um_mtx);
+		kfree(priv);
+
+	}
 
 	return 0;
 }
