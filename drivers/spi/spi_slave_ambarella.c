@@ -45,7 +45,7 @@
 #define SPI_RXUIS_MASK 		0x00000004
 
 #define RX_FTLR			8
-#define RX_BUFFER_LEN		64
+#define RX_BUFFER_LEN		4096
 
 static int rx_ftlr = RX_FTLR;
 module_param(rx_ftlr, int, 0644);
@@ -137,7 +137,6 @@ static irqreturn_t ambarella_spi_slave_isr(int irq, void *dev_data)
 				}
 			}
 		}
-		printk("Status: %d %d\n", priv->r_buf_start, priv->r_buf_end);
 		spin_unlock(&priv->r_buf_lock);
 		amba_writel(priv->regbase + SPI_ISR_OFFSET, 0);
 	}
