@@ -466,6 +466,9 @@ static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
+	/* Disable I2S clock output */
+	amba_writel(I2S_CLOCK_REG, 0x0);
+
 	/* Notify that the audio interface is removed */
 	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf,
 		AUDIO_NOTIFY_REMOVE);
