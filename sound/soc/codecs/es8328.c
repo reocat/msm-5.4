@@ -84,22 +84,17 @@ static const struct snd_kcontrol_new es8328_snd_controls[] = {
  */
 
 /* Channel Input Mixer */
-static const char *es8328_line_texts[] = { "Line 1", "Line 2", "Differential"};
-static const unsigned int es8328_line_values[] = { 0, 1, 3};
+static const char *es8328_line_texts[] = { "Line 1", "Line 2", "Line 3", "Differential"};
 
 static const struct soc_enum es8328_lline_enum =
-	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL2, 6, 0xC0,
-		ARRAY_SIZE(es8328_line_texts), es8328_line_texts,
-		es8328_line_values);
+	SOC_ENUM_SINGLE(ES8328_ADCCONTROL2, 6, 4, es8328_line_texts);
 static const struct snd_kcontrol_new es8328_left_line_controls =
-	SOC_DAPM_VALUE_ENUM("Route", es8328_lline_enum);
+	SOC_DAPM_ENUM("Route", es8328_lline_enum);
 
 static const struct soc_enum es8328_rline_enum =
-	SOC_VALUE_ENUM_SINGLE(ES8328_ADCCONTROL2, 4, 0x30,
-		ARRAY_SIZE(es8328_line_texts), es8328_line_texts,
-		es8328_line_values);
+	SOC_ENUM_SINGLE(ES8328_ADCCONTROL2, 4, 4, es8328_line_texts);
 static const struct snd_kcontrol_new es8328_right_line_controls =
-	SOC_DAPM_VALUE_ENUM("Route", es8328_lline_enum);
+	SOC_DAPM_ENUM("Route", es8328_rline_enum);
 
 
 /* Left Mixer */
@@ -147,12 +142,12 @@ static const struct snd_soc_dapm_widget es8328_dapm_widgets[] = {
 	SND_SOC_DAPM_MUX("Left ADC Mux", SND_SOC_NOPM, 0, 0, &es8328_monomux_controls),
 	SND_SOC_DAPM_MUX("Right ADC Mux", SND_SOC_NOPM, 0, 0, &es8328_monomux_controls),
 
-	SND_SOC_DAPM_PGA("Left Analog Input" , ES8328_ADCPOWER, 7, 1, NULL, 0),
-	SND_SOC_DAPM_PGA("Right Analog Input", ES8328_ADCPOWER, 6, 1, NULL, 0),
+//	SND_SOC_DAPM_PGA("Left Analog Input" , ES8328_ADCPOWER, 7, 1, NULL, 0),
+//	SND_SOC_DAPM_PGA("Right Analog Input", ES8328_ADCPOWER, 6, 1, NULL, 0),
 	SND_SOC_DAPM_ADC("Left ADC" , "Left Capture" , ES8328_ADCPOWER, 5, 1),
 	SND_SOC_DAPM_ADC("Right ADC", "Right Capture", ES8328_ADCPOWER, 4, 1),
 
-	SND_SOC_DAPM_MICBIAS("Mic Bias", ES8328_ADCPOWER, 3, 1),
+//	SND_SOC_DAPM_MICBIAS("Mic Bias", ES8328_ADCPOWER, 3, 1),
 
 	SND_SOC_DAPM_INPUT("MICIN"),
 	SND_SOC_DAPM_INPUT("LINPUT1"),
