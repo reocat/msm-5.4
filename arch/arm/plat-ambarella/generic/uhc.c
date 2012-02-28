@@ -65,8 +65,8 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	else
 		pin_clr |= 0x1 << 7;
 	ambarella_gpio_raw_lock(0, &flags);
-	amba_clrbitsl(GPIO0_AFSEL_REG, pin_clr);
 	amba_setbitsl(GPIO0_AFSEL_REG, pin_set);
+	amba_clrbitsl(GPIO0_AFSEL_REG, pin_clr);
 	ambarella_gpio_raw_unlock(0, &flags);
 
 	/* Reset usb host controller */
