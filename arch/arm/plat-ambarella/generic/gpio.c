@@ -97,16 +97,15 @@ static inline void ambarella_gpio_inline_set(
 	struct ambarella_gpio_chip *agchip, u32 offset, int value)
 {
 	unsigned long				flags;
+	u32					mask;
 
+	mask = (0x1 << offset);
 	spin_lock_irqsave(&agchip->lock, flags);
-	amba_writel(agchip->base_reg + GPIO_MASK_OFFSET,
-		(0x1 << offset));
+	amba_writel(agchip->base_reg + GPIO_MASK_OFFSET, mask);
 	if (value == GPIO_LOW) {
-		amba_clrbitsl(agchip->base_reg + GPIO_DATA_OFFSET,
-			(0x1 << offset));
+		amba_writel(agchip->base_reg + GPIO_DATA_OFFSET, 0);
 	} else {
-		amba_setbitsl(agchip->base_reg + GPIO_DATA_OFFSET,
-			(0x1 << offset));
+		amba_writel(agchip->base_reg + GPIO_DATA_OFFSET, mask);
 	}
 	spin_unlock_irqrestore(&agchip->lock, flags);
 }
@@ -118,8 +117,7 @@ static inline int ambarella_gpio_inline_get(
 	unsigned long				flags;
 
 	spin_lock_irqsave(&agchip->lock, flags);
-	amba_writel(agchip->base_reg + GPIO_MASK_OFFSET,
-		(0x1 << offset));
+	amba_writel(agchip->base_reg + GPIO_MASK_OFFSET, (0x1 << offset));
 	val = amba_readl(agchip->base_reg + GPIO_DATA_OFFSET);
 	spin_unlock_irqrestore(&agchip->lock, flags);
 
@@ -385,22 +383,14 @@ int ambarella_gpio_get(int id)
 EXPORT_SYMBOL(ambarella_gpio_get);
 
 /* ==========================================================================*/
-void ambarella_gpio_raw_setbitsl(u32 id, u32 reg, u32 value)
+void ambarella_gpio_raw_lock(u32 id, unsigned long *pflags)
 {
-	unsigned long				flags;
-
-	spin_lock_irqsave(&ambarella_gpio_banks[id].lock, flags);
-	amba_setbitsl(ambarella_gpio_banks[id].base_reg + reg, value);
-	spin_unlock_irqrestore(&ambarella_gpio_banks[id].lock, flags);
+	spin_lock_irqsave(&ambarella_gpio_banks[id].lock, *pflags);
 }
 
-void ambarella_gpio_raw_clrbitsl(u32 id, u32 reg, u32 value)
+void ambarella_gpio_raw_unlock(u32 id, unsigned long *pflags)
 {
-	unsigned long				flags;
-
-	spin_lock_irqsave(&ambarella_gpio_banks[id].lock, flags);
-	amba_clrbitsl(ambarella_gpio_banks[id].base_reg + reg, value);
-	spin_unlock_irqrestore(&ambarella_gpio_banks[id].lock, flags);
+	spin_unlock_irqrestore(&ambarella_gpio_banks[id].lock, *pflags);
 }
 
 /* ==========================================================================*/

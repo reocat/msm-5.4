@@ -115,8 +115,11 @@ void __fio_select_lock(int module)
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
 	amba_clrbitsl(SD_NISEN_REG, SD_NISEN_CARD);
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
-	if (module != SELECT_FIO_SDIO)
-		ambarella_gpio_raw_clrbitsl(2, GPIO_AFSEL_OFFSET, 0x000007e0);
+	if (module != SELECT_FIO_SDIO) {
+		ambarella_gpio_raw_lock(2, &flags);
+		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		ambarella_gpio_raw_unlock(2, &flags);
+	}
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
@@ -128,7 +131,9 @@ void __fio_select_lock(int module)
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	} else
 	if (module == SELECT_FIO_SDIO) {
-		ambarella_gpio_raw_setbitsl(2, GPIO_AFSEL_OFFSET, 0x000007e0);
+		ambarella_gpio_raw_lock(2, &flags);
+		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		ambarella_gpio_raw_unlock(2, &flags);
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
 		amba_writel(SD_NISEN_REG, fio_sdio_int);
 		amba_writel(SD_NIXEN_REG, fio_sdio_int);
@@ -360,13 +365,16 @@ void fio_amb_exit_random_mode(void)
 
 int __init ambarella_init_fio(void)
 {
+	unsigned long				flags;
+
 	//SMIO_38 ~ SMIO_43
-	ambarella_gpio_raw_setbitsl(2, GPIO_MASK_OFFSET, 0x000007e0);
-	ambarella_gpio_raw_clrbitsl(2, GPIO_DIR_OFFSET, 0x00000780);
-	ambarella_gpio_raw_setbitsl(2, GPIO_DIR_OFFSET, 0x00000060);
-	ambarella_gpio_raw_setbitsl(2, GPIO_DATA_OFFSET, 0x00000040);
-	ambarella_gpio_raw_clrbitsl(2, GPIO_DATA_OFFSET, 0x00000020);
-	ambarella_gpio_raw_clrbitsl(2, GPIO_AFSEL_OFFSET, 0x000007e0);
+	ambarella_gpio_raw_lock(2, &flags);
+	amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+	amba_clrbitsl(GPIO2_DIR_REG, 0x00000780);
+	amba_setbitsl(GPIO2_DIR_REG, 0x00000060);
+	amba_writel(GPIO2_MASK_REG, 0x00000060);
+	amba_writel(GPIO2_DATA_REG, 0x00000040);
+	ambarella_gpio_raw_unlock(2, &flags);
 
 	return 0;
 }

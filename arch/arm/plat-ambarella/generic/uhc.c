@@ -36,6 +36,7 @@ static int usb_host_initialized = 0;
 
 static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 {
+	unsigned long				flags;
 	u32 sys_config, pin_set, pin_clr;
 	amb_usb_port_state_t state;
 
@@ -63,8 +64,10 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 		pin_set |= 0x1 << 7;
 	else
 		pin_clr |= 0x1 << 7;
-	ambarella_gpio_raw_clrbitsl(0, GPIO_AFSEL_OFFSET, pin_clr);
-	ambarella_gpio_raw_setbitsl(0, GPIO_AFSEL_OFFSET, pin_set);
+	ambarella_gpio_raw_lock(0, &flags);
+	amba_clrbitsl(GPIO0_AFSEL_REG, pin_clr);
+	amba_setbitsl(GPIO0_AFSEL_REG, pin_set);
+	ambarella_gpio_raw_unlock(0, &flags);
 
 	/* Reset usb host controller */
 	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)

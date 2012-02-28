@@ -133,11 +133,17 @@ struct ft540 {
 
 static void ft540_update_lights_status(struct ft540 *ft)
 {
-	u32	afsel, dir, data;
+	unsigned long				flags;
+	u32					afsel;
+	u32					dir;
+	u32					data;
 
-	afsel	= amba_readl(GPIO1_BASE + 0x18);
-	dir	= amba_readl(GPIO1_BASE + 0x04);
-	data	= amba_readl(GPIO1_BASE + 0x00);
+	ambarella_gpio_raw_lock(1, &flags);
+	amba_writel(GPIO1_MASK_REG, 0x000C6000);
+	afsel = amba_readl(GPIO1_AFSEL_REG);
+	dir = amba_readl(GPIO1_DIR_REG);
+	data = amba_readl(GPIO1_DATA_REG);
+	ambarella_gpio_raw_unlock(1, &flags);
 
 	//GPIO45
 	if (!(afsel & 0x00002000) && (dir & 0x00002000) && (data & 0x00002000)) {
