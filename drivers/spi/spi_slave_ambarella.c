@@ -44,10 +44,11 @@
 #define SPI_RXOIS_MASK 		0x00000008
 #define SPI_RXUIS_MASK 		0x00000004
 
-#define RX_FTLR			8
-#define RX_BUFFER_LEN		4096
+#define BUFFER_LEN		4096
 
-static int rx_ftlr = RX_FTLR;
+#define DUMMY_DATA		0xffff
+
+static int rx_ftlr = 8;
 module_param(rx_ftlr, int, 0644);
 
 struct ambarella_spi_slave {
@@ -65,13 +66,21 @@ struct ambarella_spi_slave {
 	int					count;
 	struct mutex				um_mtx;
 
-	u16					r_buf[RX_BUFFER_LEN];
+	u16					r_buf[BUFFER_LEN];
 	u16					r_buf_start;
 	u16					r_buf_end;
 	u16					r_buf_empty;
 	u16					r_buf_full;
 	u16					r_buf_round;
 	spinlock_t				r_buf_lock;
+
+	u16					w_buf[BUFFER_LEN];
+	u16					w_buf_start;
+	u16					w_buf_end;
+	u16					w_buf_empty;
+	u16					w_buf_full;
+	u16					w_buf_round;
+	spinlock_t				w_buf_lock;
 };
 
 DEFINE_MUTEX(g_mtx);
@@ -90,7 +99,7 @@ static int ambarella_spi_slave_inithw(struct ambarella_spi_slave *priv)
 	ambarella_gpio_config(SSI_SLAVE_MISO, GPIO_FUNC_HW);
 
 	/* Initial Register Settings */
-	ctrlr0 = (SPI_CFS << 12) | (SPI_READ_ONLY << 8) | (priv->mode << 6) |
+	ctrlr0 = (SPI_CFS << 12) | (SPI_WRITE_READ << 8) | (priv->mode << 6) |
 				(SPI_FRF << 4) | (priv->bpw - 1);
 	amba_writel(priv->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
@@ -104,9 +113,61 @@ static int ambarella_spi_slave_inithw(struct ambarella_spi_slave *priv)
 static irqreturn_t ambarella_spi_slave_isr(int irq, void *dev_data)
 {
 	struct ambarella_spi_slave	*priv	= dev_data;
-	u32				i, rxflr;
+	u32				i, rxflr, txflr;
 
 	if (amba_readl(priv->regbase + SPI_ISR_OFFSET)) {
+		txflr = 16 - amba_readl(priv->regbase + SPI_TXFLR_OFFSET);
+		spin_lock(&priv->w_buf_lock);
+		if (priv->w_buf_empty) {
+			for (i = 0; i < txflr; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, DUMMY_DATA);
+			}
+		} else {
+			priv->w_buf_full = 0;
+			if (priv->w_buf_round & 0x01) {
+				if (BUFFER_LEN - priv->w_buf_start > txflr) {
+					for (i = 0; i < txflr; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+					}
+				} else if (BUFFER_LEN - priv->w_buf_start + priv->w_buf_end > txflr) {
+					for (i = 0; i < BUFFER_LEN - priv->w_buf_start; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+					}
+					for (i = 0; i < txflr + priv->w_buf_start - BUFFER_LEN; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[i]);
+					}
+					priv->w_buf_start = i + 1;
+					priv->w_buf_round++;
+				} else {
+					for (i = 0; i < BUFFER_LEN - priv->w_buf_start; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+					}
+					for (i = 0; i < priv->w_buf_end; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[i]);
+					}
+					for (i = 0; i < txflr + priv->w_buf_start - BUFFER_LEN - priv->w_buf_end; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, DUMMY_DATA);
+					}
+					priv->w_buf_empty = 1;
+				}
+			} else {
+				if (priv->w_buf_end - priv->w_buf_start > txflr) {
+					for (i = 0; i < txflr; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+					}
+				} else {
+					for (i = 0; i < priv->w_buf_end - priv->w_buf_start; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+					}
+					for (i = 0; i < txflr - priv->w_buf_end + priv->w_buf_start; i++) {
+						amba_writel(priv->regbase + SPI_DR_OFFSET, DUMMY_DATA);
+					}
+					priv->w_buf_empty = 1;
+				}
+			}
+		}
+		spin_unlock(&priv->w_buf_lock);
+
 		rxflr = amba_readl(priv->regbase + SPI_RXFLR_OFFSET);
 		spin_lock(&priv->r_buf_lock);
 		if (priv->r_buf_empty) {
@@ -119,14 +180,14 @@ static irqreturn_t ambarella_spi_slave_isr(int irq, void *dev_data)
 			if (priv->r_buf_full) {
 				printk("%s: Rx buffer overflow!!\n", __FILE__);
 				priv->r_buf_start++;
-				if (priv->r_buf_start >= RX_BUFFER_LEN) {
+				if (priv->r_buf_start >= BUFFER_LEN) {
 					priv->r_buf_start = 0;
 					priv->r_buf_round++;
 				}
 			}
 
 			priv->r_buf[priv->r_buf_end++] = amba_readl(priv->regbase + SPI_DR_OFFSET);
-			if (priv->r_buf_end >= RX_BUFFER_LEN) {
+			if (priv->r_buf_end >= BUFFER_LEN) {
 				priv->r_buf_end = 0;
 				priv->r_buf_round++;
 			}
@@ -138,6 +199,7 @@ static irqreturn_t ambarella_spi_slave_isr(int irq, void *dev_data)
 			}
 		}
 		spin_unlock(&priv->r_buf_lock);
+
 		amba_writel(priv->regbase + SPI_ISR_OFFSET, 0);
 	}
 
@@ -184,22 +246,22 @@ spi_slave_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 
 	if (!priv->r_buf_empty) {
 		if (priv->r_buf_round & 0x01) {
-			if ((RX_BUFFER_LEN - priv->r_buf_start) * 2 >= count) {
+			if ((BUFFER_LEN - priv->r_buf_start) * 2 >= count) {
 				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], count);
 				priv->r_buf_start += count / 2;
 				ret = count;
-			} else if ((RX_BUFFER_LEN - priv->r_buf_start + priv->r_buf_end) * 2 >= count) {
-				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], (RX_BUFFER_LEN - priv->r_buf_start) * 2);
-				result = copy_to_user(buf + (RX_BUFFER_LEN - priv->r_buf_start) * 2, (void *)priv->r_buf, count - (RX_BUFFER_LEN - priv->r_buf_start) * 2);
-				priv->r_buf_start = RX_BUFFER_LEN - priv->r_buf_start + priv->r_buf_end - count / 2;
+			} else if ((BUFFER_LEN - priv->r_buf_start + priv->r_buf_end) * 2 >= count) {
+				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], (BUFFER_LEN - priv->r_buf_start) * 2);
+				result = copy_to_user(buf + (BUFFER_LEN - priv->r_buf_start) * 2, (void *)priv->r_buf, count - (BUFFER_LEN - priv->r_buf_start) * 2);
+				priv->r_buf_start = BUFFER_LEN - priv->r_buf_start + priv->r_buf_end - count / 2;
 				priv->r_buf_round++;
 				ret = count;
 			} else {
-				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], (RX_BUFFER_LEN - priv->r_buf_start) * 2);
-				result = copy_to_user(buf + (RX_BUFFER_LEN - priv->r_buf_start) * 2, (void *)priv->r_buf, priv->r_buf_end * 2);
+				result = copy_to_user(buf, (void *)&priv->r_buf[priv->r_buf_start], (BUFFER_LEN - priv->r_buf_start) * 2);
+				result = copy_to_user(buf + (BUFFER_LEN - priv->r_buf_start) * 2, (void *)priv->r_buf, priv->r_buf_end * 2);
 				priv->r_buf_start = priv->r_buf_end;
 				priv->r_buf_round++;
-				ret = (RX_BUFFER_LEN - priv->r_buf_start + priv->r_buf_end) * 2;
+				ret = (BUFFER_LEN - priv->r_buf_start + priv->r_buf_end) * 2;
 			}
 		} else {
 			if ((priv->r_buf_end - priv->r_buf_start) * 2 > count) {
@@ -211,7 +273,7 @@ spi_slave_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 			priv->r_buf_start += ret / 2;
 		}
 
-		if (priv->r_buf_start >= RX_BUFFER_LEN) {
+		if (priv->r_buf_start >= BUFFER_LEN) {
 			priv->r_buf_start = 0;
 			priv->r_buf_round++;
 		}
@@ -226,7 +288,117 @@ static ssize_t
 spi_slave_write(struct file *filp, const char __user *buf,
 		size_t count, loff_t *f_pos)
 {
-	ssize_t			ret = 0;
+	ssize_t				 ret = 0;
+	struct ambarella_spi_slave	*priv;
+	int				txflr, i, result;
+
+	priv = (struct ambarella_spi_slave *)filp->private_data;
+
+	spin_lock(&priv->w_buf_lock);
+
+	if (!priv->w_buf_full) {
+		if (priv->w_buf_empty) {
+			priv->w_buf_empty = 0;
+
+			if (count < 2 * BUFFER_LEN) {
+				ret = count;
+				priv->w_buf_start = 0;
+				priv->w_buf_end = count / 2;
+				priv->w_buf_round = 0;
+				result = copy_from_user(priv->w_buf, buf, ret);
+			} else {
+				ret = 2 * BUFFER_LEN;
+				priv->w_buf_full = 1;
+				priv->w_buf_start = 0;
+				priv->w_buf_end = 0;
+				priv->w_buf_round = 1;
+				result = copy_from_user(priv->w_buf, buf, ret);
+			}
+		} else {
+			if (priv->w_buf_round & 0x01) {
+				if (count < (priv->w_buf_start - priv->w_buf_end) * 2) {
+					ret = count;
+					result = copy_from_user((void *)&priv->w_buf[priv->w_buf_end], buf, ret);
+					priv->w_buf_end += ret / 2;
+				} else {
+					ret = (priv->w_buf_start - priv->w_buf_end) * 2;
+					result = copy_from_user(&priv->w_buf[priv->w_buf_end], buf, ret);
+					priv->w_buf_end = priv->w_buf_start;
+					priv->w_buf_full = 1;
+				}
+			} else {
+				if (count <= (BUFFER_LEN - priv->w_buf_end) * 2) {
+					ret = count;
+					result = copy_from_user((void *)&priv->w_buf[priv->w_buf_end], buf, ret);
+					priv->w_buf_end += ret / 2;
+				} else if (count < (BUFFER_LEN + priv->w_buf_start - priv->w_buf_end) * 2) {
+					ret = count;
+					result = copy_from_user((void *)&priv->w_buf[priv->w_buf_end], buf, (BUFFER_LEN - priv->w_buf_end) * 2);
+					result = copy_from_user((void *)priv->w_buf, buf + (BUFFER_LEN - priv->w_buf_end) * 2, ret - (BUFFER_LEN - priv->w_buf_end) * 2);
+					priv->w_buf_end = priv->w_buf_end + ret / 2 - BUFFER_LEN;
+					priv->w_buf_round++;
+				} else {
+					ret = (BUFFER_LEN + priv->w_buf_start - priv->w_buf_end) * 2;
+					result = copy_from_user((void *)&priv->w_buf[priv->w_buf_end], buf, (BUFFER_LEN - priv->w_buf_end) * 2);
+					result = copy_from_user((void *)priv->w_buf, buf + (BUFFER_LEN - priv->w_buf_end) * 2, ret - (BUFFER_LEN - priv->w_buf_end) * 2);
+					priv->w_buf_end = priv->w_buf_start;
+					priv->w_buf_round++;
+					priv->w_buf_full = 1;
+				}
+			}
+		}
+
+		if (priv->w_buf_end >= BUFFER_LEN) {
+			priv->w_buf_end = 0;
+			priv->w_buf_round++;
+		}
+	}
+
+	txflr = 16 - amba_readl(priv->regbase + SPI_TXFLR_OFFSET);
+	priv->w_buf_full = 0;
+	if (priv->w_buf_round & 0x01) {
+		if (BUFFER_LEN - priv->w_buf_start > txflr) {
+			for (i = 0; i < txflr; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+			}
+		} else if (BUFFER_LEN - priv->w_buf_start + priv->w_buf_end > txflr) {
+			for (i = 0; i < BUFFER_LEN - priv->w_buf_start; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+			}
+			for (i = 0; i < txflr + priv->w_buf_start - BUFFER_LEN; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[i]);
+			}
+			priv->w_buf_start = i + 1;
+			priv->w_buf_round++;
+		} else {
+			for (i = 0; i < BUFFER_LEN - priv->w_buf_start; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+			}
+			for (i = 0; i < priv->w_buf_end; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[i]);
+			}
+			for (i = 0; i < txflr + priv->w_buf_start - BUFFER_LEN - priv->w_buf_end; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, DUMMY_DATA);
+			}
+			priv->w_buf_empty = 1;
+		}
+	} else {
+		if (priv->w_buf_end - priv->w_buf_start > txflr) {
+			for (i = 0; i < txflr; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+			}
+		} else {
+			for (i = 0; i < priv->w_buf_end - priv->w_buf_start; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, priv->w_buf[priv->w_buf_start++]);
+			}
+			for (i = 0; i < txflr - priv->w_buf_end + priv->w_buf_start; i++) {
+				amba_writel(priv->regbase + SPI_DR_OFFSET, DUMMY_DATA);
+			}
+			priv->w_buf_empty = 1;
+		}
+	}
+
+	spin_unlock(&priv->w_buf_lock);
 
 	return ret;
 }
@@ -272,7 +444,7 @@ static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 {
 	struct ambarella_spi_slave		*priv = NULL;
 	struct resource 			*res;
-	int					irq, errorCode = 0;
+	int					irq, i, errorCode = 0;
 	int					major_id = 0;
 
 
@@ -298,12 +470,15 @@ static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 
 	priv->regbase		= (u32)res->start;
 
-	priv->mode		= 0;
+	priv->mode		= 3;
 	priv->bpw		= 16;
 
 	priv->r_buf_empty	= 1;
 	priv->r_buf_full	= 0;
+	priv->w_buf_empty	= 1;
+	priv->w_buf_full	= 0;
 	spin_lock_init(&priv->r_buf_lock);
+	spin_lock_init(&priv->w_buf_lock);
 	mutex_init(&priv->um_mtx);
 
 	ambarella_spi_slave_inithw(priv);
@@ -356,6 +531,9 @@ static int __devinit ambarella_spi_slave_probe(struct platform_device *pdev)
 	}
 	dev_info(&pdev->dev, "Ambarella SPI Slave Controller %d created!\n", pdev->id);
 	amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
+	for (i = 0; i < 16; i++) {
+		amba_writel(priv->regbase + SPI_DR_OFFSET, i);
+	}
 
 ambarella_spi_slave_probe_exit:
 	if (priv && errorCode < 0) {
