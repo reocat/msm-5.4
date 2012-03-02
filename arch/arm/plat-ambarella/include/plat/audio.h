@@ -39,6 +39,7 @@ struct ambarella_i2s_interface {
 	u8 mode;
 	u8 sfreq;
 	u8 clksrc;
+	u8 ms_mode;
 	u8 mclk;
 	u8 ch;
 	u8 oversample;
@@ -109,6 +110,12 @@ enum DAI_Mode
 	DAI_MSBExtend_Mode = 2,
 	DAI_I2S_Mode = 4,
 	DAI_DSP_Mode = 6
+};
+
+enum DAI_MS_MODE
+{
+	DAI_SLAVE = 0,
+	DAI_MASTER = 1
 };
 
 enum DAI_resolution
