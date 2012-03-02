@@ -1848,6 +1848,7 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	if (!is_valid_ether_addr(lp->platform_info->mac_addr))
 		random_ether_addr(lp->platform_info->mac_addr);
 	memcpy(ndev->dev_addr, lp->platform_info->mac_addr, AMBETH_MAC_SIZE);
+	ambhw_disable(lp);
 
 	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
 	errorCode = register_netdev(ndev);
