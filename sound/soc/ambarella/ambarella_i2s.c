@@ -130,7 +130,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 			rx_enabled = 1;
 			dai_rx_disable();
 		}
-		amba_writel(I2S_TX_CTRL_REG, 0x28);
+		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
+			amba_writel(I2S_TX_CTRL_REG, 0x08);
+		else
+			amba_writel(I2S_TX_CTRL_REG, 0x28);
 		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
 	} else {
 		dma_data = &ambarella_i2s_pcm_stereo_in;
@@ -140,7 +143,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 			tx_enabled = 1;
 			dai_tx_disable();
 		}
-		amba_writel(I2S_RX_CTRL_REG, 0x02);
+		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
+			amba_writel(I2S_RX_CTRL_REG, 0x00);
+		else
+			amba_writel(I2S_RX_CTRL_REG, 0x02);
 		amba_writel(I2S_RX_FIFO_GTH_REG, 0x40);
 	}
 
@@ -208,13 +214,18 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	/* Set clock */
 	clksrc = priv_data->amb_i2s_intf.clksrc;
 	mclk = priv_data->amb_i2s_intf.mclk;
-	oversample = priv_data->amb_i2s_intf.oversample;
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(clksrc, mclk);
-	clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
+
 	clock_reg = amba_readl(I2S_CLOCK_REG);
+	oversample = priv_data->amb_i2s_intf.oversample;
+	clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
 	clock_reg &= ~DAI_CLOCK_MASK;
 	clock_reg |= clock_divider;
+	if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
+		clock_reg &= (~I2S_CLK_MASTER_MODE);
+	else
+		clock_reg |= I2S_CLK_MASTER_MODE;
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 
 	if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
@@ -285,13 +296,6 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
-	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
-	case SND_SOC_DAIFMT_CBS_CFS:
-		break;
-	default:
-		return -EINVAL;
-	}
-
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_LEFT_J:
 		priv_data->amb_i2s_intf.mode = DAI_leftJustified_Mode;
@@ -304,6 +308,21 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
 		priv_data->amb_i2s_intf.mode = DAI_DSP_Mode;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
+		priv_data->amb_i2s_intf.ms_mode = DAI_MASTER;
+		break;
+	case SND_SOC_DAIFMT_CBM_CFM:
+		if (priv_data->amb_i2s_intf.mode != DAI_I2S_Mode) {
+			printk("DAI can't work in slave mode without standard I2S format!\n");
+			return -EINVAL;
+		}
+		priv_data->amb_i2s_intf.ms_mode = DAI_SLAVE;
 		break;
 	default:
 		return -EINVAL;
@@ -347,7 +366,7 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int external_codec_get_status(struct snd_kcontrol *kcontrol,
+static int external_i2s_get_status(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	u32 clock_reg, ext_i2s_status;
@@ -359,7 +378,7 @@ static int external_codec_get_status(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int external_codec_set_status(struct snd_kcontrol *kcontrol,
+static int external_i2s_set_status(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	u32 clock_reg, ext_i2s_status;
@@ -390,7 +409,7 @@ static const struct soc_enum external_i2s_enum[] = {
 
 static const struct snd_kcontrol_new external_i2s_controls[] = {
 	SOC_ENUM_EXT("External I2S Switch", external_i2s_enum[0],
-			external_codec_get_status, external_codec_set_status),
+			external_i2s_get_status, external_i2s_set_status),
 };
 
 int ambarella_i2s_add_controls(struct snd_soc_codec *codec)
@@ -440,13 +459,16 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_11_2896M);
 
-	/* Dai default smapling rate, polarity configuration*/
+	/* Dai default smapling rate, polarity configuration.
+	 * Note: Just be configured, actually BCLK and LRCLK will not
+	 * output to outside at this time. */
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
-	clock_reg |= clock_divider | 0x3C0;
+	clock_reg |= clock_divider;
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
 	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
+	priv_data->amb_i2s_intf.ms_mode = DAI_MASTER;
 	priv_data->amb_i2s_intf.mclk = AudioCodec_11_2896M;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
