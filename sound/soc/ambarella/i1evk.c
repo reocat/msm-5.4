@@ -295,14 +295,14 @@ static int i1evk_hifi_hw_params(struct snd_pcm_substream *substream,
 	}
 #if 0
 	errorCode = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1, WM8994_FLL_SRC_MCLK1,
-					mclk, 11289600);
+					mclk, params_rate(params) * 256);
 	if (errorCode < 0) {
 		pr_err("can't set codec pll configuration\n");
 		goto hw_params_exit;
 	}
 
 	errorCode = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_FLL1,
-					11289600, SND_SOC_CLOCK_IN);
+					params_rate(params) * 256, SND_SOC_CLOCK_IN);
 	if (errorCode < 0) {
 		pr_err("can't set codec MCLK configuration\n");
 		goto hw_params_exit;
