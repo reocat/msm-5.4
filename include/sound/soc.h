@@ -754,6 +754,9 @@ static inline void *snd_soc_pcm_get_drvdata(struct snd_soc_pcm_runtime *rtd)
 	return dev_get_drvdata(&rtd->dev);
 }
 
+int snd_soc_util_init(void);
+void snd_soc_util_exit(void);
+
 #include <sound/soc-dai.h>
 
 #endif
