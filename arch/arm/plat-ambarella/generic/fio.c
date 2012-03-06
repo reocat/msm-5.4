@@ -64,7 +64,6 @@ void __fio_select_lock(int module)
 	u32					fio_ctr;
 	u32					fio_dmactr;
 #if (SD_HAS_INTERNAL_MUXER == 1)
-	u32					fio_sd0_card_on = 0;
 	unsigned long				flags;
 #endif
 
@@ -94,17 +93,11 @@ void __fio_select_lock(int module)
 	case SELECT_FIO_SD:
 		fio_ctr &= ~FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-#if (SD_HAS_INTERNAL_MUXER == 1)
-		fio_sd0_card_on = fio_sd_int & SD_NISEN_CARD;
-#endif
 		break;
 
 	case SELECT_FIO_SDIO:
 		fio_ctr |= FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-#if (SD_HAS_INTERNAL_MUXER == 1)
-		fio_sd0_card_on = fio_sdio_int & SD_NISEN_CARD;
-#endif
 		break;
 
 	case SELECT_FIO_SD2:
@@ -119,13 +112,14 @@ void __fio_select_lock(int module)
 	}
 
 #if (SD_HAS_INTERNAL_MUXER == 1)
-	if (!fio_sd0_card_on) {
-		spin_lock_irqsave(&fio_sd0_int_lock, flags);
-		amba_clrbitsl(SD_NISEN_REG, SD_NISEN_CARD);
-		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
+	spin_lock_irqsave(&fio_sd0_int_lock, flags);
+	amba_clrbitsl(SD_NISEN_REG, SD_NISEN_CARD);
+	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
+	if (module != SELECT_FIO_SDIO) {
+		ambarella_gpio_raw_lock(2, &flags);
+		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		ambarella_gpio_raw_unlock(2, &flags);
 	}
-	if (module != SELECT_FIO_SDIO)
-		ambarella_gpio_raw_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
@@ -137,7 +131,9 @@ void __fio_select_lock(int module)
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	} else
 	if (module == SELECT_FIO_SDIO) {
-		ambarella_gpio_raw_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		ambarella_gpio_raw_lock(2, &flags);
+		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		ambarella_gpio_raw_unlock(2, &flags);
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
 		amba_writel(SD_NISEN_REG, fio_sdio_int);
 		amba_writel(SD_NIXEN_REG, fio_sdio_int);
@@ -369,26 +365,16 @@ void fio_amb_exit_random_mode(void)
 
 int __init ambarella_init_fio(void)
 {
-#ifndef CONFIG_AMBARELLA_QUICK_INIT
-	/* Following should be handled by the bootloader... */
-#if (HOST_MAX_AHB_CLK_EN_BITS == 10)
-	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG,
-		(HOST_AHB_BOOT_SEL | HOST_AHB_FDMA_BURST_DIS));
-#endif
-	rct_reset_fio();
-	fio_amb_exit_random_mode();
-	enable_fio_dma();
-	amba_writel(FLASH_INT_REG, 0x0);
-	amba_writel(XD_INT_REG, 0x0);
-	amba_writel(CF_STA_REG, CF_STA_CW | CF_STA_DW);
-#endif
+	unsigned long				flags;
 
 	//SMIO_38 ~ SMIO_43
-	ambarella_gpio_raw_setbitsl(GPIO2_MASK_REG, 0x000007e0);
-	ambarella_gpio_raw_clrbitsl(GPIO2_DIR_REG, 0x00000780);
-	ambarella_gpio_raw_setbitsl(GPIO2_DIR_REG, 0x00000060);
-	ambarella_gpio_raw_setbitsl(GPIO2_DATA_REG, 0x00000040);
-	ambarella_gpio_raw_clrbitsl(GPIO2_DATA_REG, 0x00000020);
+	ambarella_gpio_raw_lock(2, &flags);
+	amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+	amba_clrbitsl(GPIO2_DIR_REG, 0x00000780);
+	amba_setbitsl(GPIO2_DIR_REG, 0x00000060);
+	amba_writel(GPIO2_MASK_REG, 0x00000060);
+	amba_writel(GPIO2_DATA_REG, 0x00000040);
+	ambarella_gpio_raw_unlock(2, &flags);
 
 	return 0;
 }

@@ -201,7 +201,7 @@
 #define CFCD1_IRQ			VIC_INT_VEC(23)
 #define SD1CD_IRQ			VIC_INT_VEC(24)
 #define UART1_IRQ			VIC_INT_VEC(25)
-#define GPIO3_IRQ			VIC_INT_VEC(26)
+#define SSI_SLAVE_IRQ			VIC_INT_VEC(26)
 #define ETH_IRQ				VIC_INT_VEC(27)
 #define IDSP_ERROR_IRQ			VIC_INT_VEC(28)
 #define VOUT_SYNC_MISSED_IRQ		VIC_INT_VEC(29)
@@ -416,25 +416,6 @@
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
-
-/* ==========================================================================*/
-
-/* ==========================================================================*/
-static inline int gpio_to_irq(unsigned gpio)
-{
-	if (gpio < GPIO_MAX_LINES)
-		return GPIO_INT_VEC(gpio);
-
-	return -EINVAL;
-}
-
-static inline int irq_to_gpio(unsigned irq)
-{
-	if ((irq > GPIO_INT_VEC(0)) && (irq < NR_IRQS))
-		return irq - GPIO_INT_VEC(0);
-
-	return -EINVAL;
-}
 
 extern void ambarella_init_irq(void);
 

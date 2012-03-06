@@ -200,19 +200,6 @@ endchoice
 menu "Generic Platform Configuration"
 depends on PLAT_AMBARELLA_GENERIC
 
-config AMBARELLA_QUICK_INIT
-	bool "Suport quick init"
-	default y
-	help
-	  If you are not sure, say Y here.
-
-config AMBARELLA_RAW_BOOT
-	bool "Raw boot mode"
-	default n
-	depends on !AMBARELLA_QUICK_INIT
-	help
-	  If you are not sure, say N here.
-
 config AMBARELLA_SUPPORT_SPARSEMEM
 	bool "Suport SPARSEMEM"
 	default n
@@ -237,15 +224,6 @@ config AMBARELLA_SUPPORT_BAPI
 	  If you are not sure, say N here.
 
 menu "Proc file system support"
-
-config AMBARELLA_GPIO_PROC
-	bool "Ambarella GPIO proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/gpio for Ambarella GPIO access.
-
-	  If you are not sure, say N here.
 
 config AMBARELLA_ADC_PROC
 	bool "Ambarella ADC proc support"
