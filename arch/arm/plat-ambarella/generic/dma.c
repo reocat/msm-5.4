@@ -25,24 +25,19 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/sched.h>
 #include <linux/spinlock.h>
-#include <linux/errno.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/delay.h>
 #include <linux/proc_fs.h>
-
-#include <asm/system.h>
-#include <asm/dma.h>
-#include <asm/io.h>
-#include <asm/irq.h>
-
-#include <mach/hardware.h>
+#include <linux/dma-mapping.h>
 #include <mach/dma.h>
 
-struct dma_s G_dma;
+static struct dma_s G_dma;
 static spinlock_t dma_lock;
-	
+static ambarella_dma_req_t *dummy_descriptor = NULL;
+static dma_addr_t dummy_descriptor_phys;
+
 #ifdef CONFIG_AMBARELLA_DMA_PROC
 static const char dma_proc_name[] = "dma";
 static struct proc_dir_entry *dma_file;
@@ -408,43 +403,78 @@ EXPORT_SYMBOL(ambarella_dma_xfr);
 
 int ambarella_dma_desc_xfr(dma_addr_t desc_addr, int chan)
 {
-	int					retval = 0;
-
 	if (unlikely(desc_addr == 0)) {
 		pr_err("%s: desc_addr is NULL!\n", __func__);
-		retval = -EINVAL;
-		goto ambarella_dma_desc_xfr_exit;
+		return -EINVAL;
 	}
 
 	if (unlikely((desc_addr & 0x7) != 0)) {
 		pr_err("%s: desc_addr isn't aligned!\n", __func__);
-		retval = -EINVAL;
-		goto ambarella_dma_desc_xfr_exit;
+		return -EINVAL;
 	}
 
 	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
 		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
 			__func__, chan, NUM_DMA_CHANNELS);
-		retval = -EINVAL;
-		goto ambarella_dma_desc_xfr_exit;
+		return -EINVAL;
 	}
+
+	if (amba_readl(DMA_CHAN_CTR_REG(chan)) & DMA_CHANX_CTR_EN)
+		pr_err("%s: dma (channel = %d) is still enabled!\n", __func__, chan);
 
 	amba_writel(DMA_CHAN_DA_REG(chan), desc_addr);
 	amba_writel(DMA_CHAN_CTR_REG(chan), DMA_CHANX_CTR_EN | DMA_CHANX_CTR_D);
 
-ambarella_dma_desc_xfr_exit:
-	return retval;
+	return 0;
 }
 EXPORT_SYMBOL(ambarella_dma_desc_xfr);
+
+int ambarella_dma_desc_stop(int chan)
+{
+	if (unlikely(chan < 0 || chan >= NUM_DMA_CHANNELS)) {
+		pr_err("%s: chan[%d] < NUM_DMA_CHANNELS[%d]!\n",
+			__func__, chan, NUM_DMA_CHANNELS);
+		return -EINVAL;
+	}
+
+	/* Disable DMA: following sequence is not mentioned at APM.*/
+	if (amba_readl(DMA_CHAN_CTR_REG(chan)) & DMA_CHANX_CTR_EN) {
+		amba_writel(DMA_CHAN_STA_REG(chan), DMA_CHANX_STA_DD);
+		amba_writel(DMA_CHAN_DA_REG(chan), dummy_descriptor_phys);
+		amba_writel(DMA_CHAN_CTR_REG(chan), 0x28000000);
+		udelay(1);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_dma_desc_stop);
 
 int __init ambarella_init_dma(void)
 {
 	int					retval = 0;
 	int					i;
 	struct dma_s				*dma = &G_dma;
+	ambarella_dma_req_t			*dma_desc_array;
 
 	spin_lock_init(&dma_lock);
 	memset(&G_dma, 0x0, sizeof(G_dma));
+
+	dummy_descriptor =  dma_alloc_coherent(NULL,
+			sizeof(ambarella_dma_req_t) * 4,
+			&dummy_descriptor_phys, GFP_KERNEL);
+	if (!dummy_descriptor) {
+		retval = -ENOMEM;
+		goto ambarella_init_dma_exit;
+	}
+
+	dma_desc_array = (ambarella_dma_req_t *)dummy_descriptor;
+	dma_desc_array->attr = DMA_DESC_EOC | DMA_DESC_WM | DMA_DESC_NI |
+				DMA_DESC_IE | DMA_DESC_ST | DMA_DESC_ID;
+	dma_desc_array->src = 0;
+	dma_desc_array->next = (ambarella_dma_req_t *)dummy_descriptor_phys;
+	dma_desc_array->rpt = dummy_descriptor_phys + sizeof(ambarella_dma_req_t);
+	dma_desc_array->dst = dummy_descriptor_phys + sizeof(ambarella_dma_req_t) * 2;
+	dma_desc_array->xfr_count = 0;
 
 	retval = request_irq(DMA_IRQ, ambarella_dma_int_handler,
 		IRQ_TYPE_LEVEL_HIGH, "ambarella-dma", dma);

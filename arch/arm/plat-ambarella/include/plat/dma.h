@@ -79,6 +79,7 @@ extern int ambarella_dma_enable_irq(int chan, ambarella_dma_handler handler);
 extern int ambarella_dma_disable_irq(int chan, ambarella_dma_handler handler);
 extern int ambarella_dma_xfr(ambarella_dma_req_t *req, int chan);
 extern int ambarella_dma_desc_xfr(dma_addr_t desc_addr, int chan);
+extern int ambarella_dma_desc_stop(int chan);
 
 extern int ambarella_init_dma(void);
 

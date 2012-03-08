@@ -55,7 +55,6 @@
 
 
 struct ambarella_runtime_data {
-	int working;
 	struct ambarella_pcm_dma_params *dma_data;
 
 	ambarella_dma_req_t *dma_desc_array; // FIXME this
@@ -68,7 +67,6 @@ struct ambarella_runtime_data {
 	dma_addr_t dma_rpt_phys;
 
 	spinlock_t lock;
-	wait_queue_head_t wq;
 };
 
 static const struct snd_pcm_hardware ambarella_pcm_hardware = {
@@ -77,7 +75,8 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 				SNDRV_PCM_INFO_MMAP |
 				SNDRV_PCM_INFO_MMAP_VALID |
 				SNDRV_PCM_INFO_PAUSE |
-				SNDRV_PCM_INFO_RESUME,
+				SNDRV_PCM_INFO_RESUME |
+				SNDRV_PCM_INFO_BATCH,
 	.formats		= SNDRV_PCM_FMTBIT_S16_LE,
 	.rates			= SNDRV_PCM_RATE_8000_48000,
 	.rate_min		= 8000,
@@ -110,8 +109,6 @@ static int ambarella_dai_dma_xfr(struct ambarella_runtime_data *prtd)
 		prtd->dma_desc_array_phys + sizeof(ambarella_dma_req_t) * prtd->last_descr,
 		prtd->channel);
 
-	prtd->working = 1;
-
 	return retval;
 }
 
@@ -120,26 +117,19 @@ static int ambarella_dai_dma_xfr(struct ambarella_runtime_data *prtd)
  * param me Point to the object self
  * return 0 = success; otherwise, failure.
  */
-int dai_dma_stop(struct ambarella_runtime_data *prtd)
+static int ambarella_dai_dma_stop(struct ambarella_runtime_data *prtd)
 {
-	int descr, i;
-
-	for(i = 2; i <= 4; i++){
-		descr = (prtd->last_descr + i) % prtd->ndescr;
-		prtd->dma_desc_array[descr].attr |= DMA_DESC_EOC;
-	}
-
+	ambarella_dma_desc_stop(prtd->channel);
 	return 0;
 }
 
 static void dai_dma_handler(void *dev_id)
 {
+	u32 *rpt;
+	int cur_descr;
 	struct snd_pcm_substream *substream = dev_id;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
-
-	u32 *rpt;
-	int cur_descr;
 
 	cur_descr = prtd->last_descr;
 
@@ -152,7 +142,6 @@ static void dai_dma_handler(void *dev_id)
 	/* Check if stop dma chain */
 	rpt = &prtd->dma_rpt_buf[cur_descr];
 	if (*rpt & 0x10000000) { /* Descriptor chain done */
-		prtd->working = 0;
 		*rpt &= (~0x10000000);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			/* dai_tx_disable() */
@@ -167,8 +156,6 @@ static void dai_dma_handler(void *dev_id)
 			if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
 				amba_setbitsl(I2S_INIT_REG, 0x1);
 		}
-
-		wake_up(&prtd->wq);
 	}
 
 	//if (*rpt & 0x08000000)  /* Descriptor DMA operation done */
@@ -210,7 +197,6 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 		return 0;
 
 	prtd->dma_data = dma_data;
-	prtd->working = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		prtd->channel = I2S_TX_DMA_CHAN;
@@ -288,8 +274,6 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 
 	if (prtd->dma_data) {
-		/* Wait DMA stop before disable DMA irq */
-		wait_event_timeout(prtd->wq, (prtd->working == 0), 3 * HZ);
 		/* Disable and free DMA irq */
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			ambarella_dma_disable_irq(I2S_TX_DMA_CHAN,
@@ -319,10 +303,8 @@ static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
 	int ret = 0;
 
 	spin_lock_irq(&prtd->lock);
-	dai_dma_stop(prtd);
+	ambarella_dai_dma_stop(prtd);
 	spin_unlock_irq(&prtd->lock);
-
-	wait_event_interruptible_timeout(prtd->wq, (prtd->working == 0), 3 * HZ);
 
 	return ret;
 }
@@ -344,7 +326,7 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-			dai_dma_stop(prtd);
+			ambarella_dai_dma_stop(prtd);
 		break;
 
 	default:
@@ -414,7 +396,6 @@ static int ambarella_pcm_open(struct snd_pcm_substream *substream)
 	}
 
 	spin_lock_init(&prtd->lock);
-	init_waitqueue_head(&prtd->wq);
 
 	runtime->private_data = prtd;
 	goto ambarella_pcm_open_exit;
