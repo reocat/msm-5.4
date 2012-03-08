@@ -263,7 +263,7 @@ static int i1evk_hifi_hw_params(struct snd_pcm_substream *substream,
 		break;
 	default:
 		errorCode = -EINVAL;
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 
 	/* set the I2S system data format*/
@@ -271,52 +271,52 @@ static int i1evk_hifi_hw_params(struct snd_pcm_substream *substream,
 		SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		pr_err("can't set codec DAI configuration\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 
 	errorCode = snd_soc_dai_set_fmt(cpu_dai,
 		SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (errorCode < 0) {
 		pr_err("can't set cpu DAI configuration\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 
 	/* set the I2S system clock*/
 	errorCode = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, amb_mclk, 0);
 	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK configuration\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 
 	errorCode = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, oversample);
 	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK/SF ratio\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 #if 0
 	errorCode = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1, WM8994_FLL_SRC_MCLK1,
 					mclk, params_rate(params) * 256);
 	if (errorCode < 0) {
 		pr_err("can't set codec pll configuration\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 
 	errorCode = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_FLL1,
 					params_rate(params) * 256, SND_SOC_CLOCK_IN);
 	if (errorCode < 0) {
 		pr_err("can't set codec MCLK configuration\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 #else
 	errorCode = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_MCLK1, mclk, 0);
 	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK configuration\n");
-		goto hw_params_exit;
+		goto hifi_hw_params_exit;
 	}
 
 #endif
 
-hw_params_exit:
+hifi_hw_params_exit:
 	return errorCode;
 }
 
@@ -324,21 +324,76 @@ static struct snd_soc_ops i1evk_hifi_ops = {
 	.hw_params = i1evk_hifi_hw_params,
 };
 
-static struct snd_soc_dai_link i1evk_dai_link = {
-	.name = "WM8994",
-	.stream_name = "WM8994-STREAM",
-	.cpu_dai_name = "ambarella-i2s.0",
-	.codec_dai_name = "wm8994-aif1",
-	.platform_name = "ambarella-pcm-audio",
-	.codec_name = "wm8994-codec",
-	.init = i1evk_wm8994_init,
-	.ops = &i1evk_hifi_ops,
+static int i1evk_voice_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	int errorCode = 0;
+
+	if (params_rate(params) != 8000) {
+		pr_err("Voice dai only support 8000Hz sample rate!\n");
+		return -EINVAL;
+	}
+
+	errorCode = snd_soc_dai_set_fmt(codec_dai,
+		SND_SOC_DAIFMT_DSP_B | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (errorCode < 0) {
+		pr_err("can't set codec pll configuration\n");
+		goto voice_hw_params_exit;
+	}
+
+#if 0	/* When enable these codes, we need to specify BCLK2_FREQ. */
+	/* Set FLL2, use BCLK2 as its source */
+	errorCode = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_BCLK,
+					BCLK2_FREQ, params_rate(params) * 512);
+	if (errorCode < 0) {
+		pr_err("can't set codec FLL2 configuration\n");
+		goto voice_hw_params_exit;
+	}
+
+	errorCode = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_FLL2,
+					params_rate(params) * 512, SND_SOC_CLOCK_IN);
+	if (errorCode < 0) {
+		pr_err("can't set codec SYSCLK configuration\n");
+		goto voice_hw_params_exit;
+	}
+#endif
+	return 0;
+
+voice_hw_params_exit:
+	return errorCode;
+}
+
+static struct snd_soc_ops i1evk_voice_ops = {
+	.hw_params = i1evk_voice_hw_params,
+};
+
+static struct snd_soc_dai_link i1evk_dai_link[] = {
+	{
+		.name = "WM8994",
+		.stream_name = "WM8994 HiFi",
+		.cpu_dai_name = "ambarella-i2s.0",
+		.codec_dai_name = "wm8994-aif1",
+		.platform_name = "ambarella-pcm-audio",
+		.codec_name = "wm8994-codec",
+		.init = i1evk_wm8994_init,
+		.ops = &i1evk_hifi_ops,
+	},
+	{	/* Bluetooth/3G Voice */
+		.name = "WM8994 Voice",
+		.stream_name = "Voice",
+		.cpu_dai_name = "AMBARELLA_DUMMY_CODEC",
+		.codec_dai_name = "wm8994-aif2",
+		.codec_name = "wm8994-codec",
+		.ops = &i1evk_voice_ops,
+	},
 };
 
 static struct snd_soc_card snd_soc_card_i1evk = {
 	.name = "I1EVK",
-	.dai_link = &i1evk_dai_link,
-	.num_links = 1,
+	.dai_link = i1evk_dai_link,
+	.num_links = ARRAY_SIZE(i1evk_dai_link),
 };
 
 
