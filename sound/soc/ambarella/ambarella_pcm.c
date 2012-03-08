@@ -88,39 +88,16 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 	.buffer_bytes_max	= AMBA_BUFFER_BYTES_MAX,
 };
 
-
-
-/*
- * DMA transfer request
- * param me Point to object self
- * param req Point to DMA request array
- * param chan DMA channel
- * param ndes Number of descriptors in descriptor chain
- * return 0 = success; otherwise, failure
- */
-static int ambarella_dai_dma_xfr(struct ambarella_runtime_data *prtd)
+static int ambarella_dai_dma_start(struct ambarella_runtime_data *prtd)
 {
-	int retval, i;
-
-	for(i = 0; i < prtd->ndescr; i++)
-		prtd->dma_desc_array[i].attr &= ~DMA_DESC_EOC;
-
-	retval = ambarella_dma_desc_xfr(
+	return ambarella_dma_desc_xfr(
 		prtd->dma_desc_array_phys + sizeof(ambarella_dma_req_t) * prtd->last_descr,
 		prtd->channel);
-
-	return retval;
 }
 
-/*
- * Stop DMA transfer
- * param me Point to the object self
- * return 0 = success; otherwise, failure.
- */
 static int ambarella_dai_dma_stop(struct ambarella_runtime_data *prtd)
 {
-	ambarella_dma_desc_stop(prtd->channel);
-	return 0;
+	return ambarella_dma_desc_stop(prtd->channel);
 }
 
 static void dai_dma_handler(void *dev_id)
@@ -184,6 +161,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	size_t period = params_period_bytes(params);
 	ambarella_dma_req_t *dma_desc;
 	dma_addr_t dma_buff_phys, next_desc_phys, next_rpt;
+	unsigned long flags;
 	int ret, i;
 
 	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
@@ -221,7 +199,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 	}
 
-	spin_lock_irq(&prtd->lock);
+	spin_lock_irqsave(&prtd->lock, flags);
 
 	dma_desc = prtd->dma_desc_array;
 	next_desc_phys = prtd->dma_desc_array_phys;
@@ -263,7 +241,7 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	for (i = 0; i < prtd->ndescr; i++)
 		prtd->dma_rpt_buf[i] = 0;
 
-	spin_unlock_irq(&prtd->lock);
+	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	return 0;
 }
@@ -300,28 +278,27 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct ambarella_runtime_data *prtd = substream->runtime->private_data;
-	int ret = 0;
 
-	spin_lock_irq(&prtd->lock);
+	/* Ensure dma is stopped */
 	ambarella_dai_dma_stop(prtd);
-	spin_unlock_irq(&prtd->lock);
 
-	return ret;
+	return 0;
 }
 
 static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
+	unsigned long flags;
 	int ret = 0;
 
-	spin_lock_irq(&prtd->lock);
+	spin_lock_irqsave(&prtd->lock, flags);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-			ambarella_dai_dma_xfr(prtd);
+			ambarella_dai_dma_start(prtd);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -334,7 +311,7 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		break;
 	}
 
-	spin_unlock_irq(&prtd->lock);
+	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	return ret;
 }
