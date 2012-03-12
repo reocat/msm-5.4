@@ -463,7 +463,7 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	 * Note: Just be configured, actually BCLK and LRCLK will not
 	 * output to outside at this time. */
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
-	clock_reg |= clock_divider;
+	clock_reg |= clock_divider | I2S_CLK_TX_PO_FALL;
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
