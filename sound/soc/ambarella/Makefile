@@ -20,3 +20,8 @@ obj-$(CONFIG_MD800_BOARD)		+= snd-soc-md800.o
 obj-$(CONFIG_AMBARELLA_DUMMY_BOARD)	+= snd-soc-dummy.o
 obj-$(CONFIG_A5S_PA2_BOARD)		+= snd-soc-a5spa2.o
 
+# Amdroid Jack Detect Support
+snd-soc-amdroid-jack-objs := amdroid_jack.o
+
+obj-$(CONFIG_SND_AMDROID_JACK)		+=  snd-soc-amdroid-jack.o
+

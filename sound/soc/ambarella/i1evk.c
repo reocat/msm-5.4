@@ -28,13 +28,13 @@
 #include <linux/moduleparam.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
-#include <linux/switch.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <asm/mach-types.h>
 #include <mach/gpio.h>
 #include <plat/audio.h>
 
+#include "amdroid_jack.h"
 #include "ambarella_i2s.h"
 #include <linux/mfd/wm8994/core.h>
 #include <linux/mfd/wm8994/registers.h>
@@ -92,15 +92,56 @@ static struct snd_soc_jack_gpio av_jack_gpios[] = {
 	},
 };
 
-static struct gpio_switch_platform_data headset_switch_data = {
-       .name = "h2w",
-       .gpio = GPIO(12),
+static struct amdroid_jack_zone amdroid_jack_zones[] = {
+	{
+		/* 0 <= adc <= 0x200, unstable zone, default to 3pole if it stays
+		 * in this range for a half second (20ms delays, 25 samples) */
+		.adc_high = 0x200,
+		.delay_ms = 20,
+		.check_count = 25,
+		.jack_type = AMDROID_HEADSET_3POLE,
+	},
+	{
+		/* 200 < adc, 4 pole zone, default to 4pole if it stays
+		 * in this range for half second (20ms delays, 10 samples) */
+		.adc_high = 0x7fffffff,
+		.delay_ms = 20,
+		.check_count = 25,
+		.jack_type = AMDROID_HEADSET_4POLE,
+	},
 };
 
-static struct platform_device headset_switch_device = {
-       .name             = "switch-gpio",
+static void platform_amdroid_jack_release(struct device * dev)
+{
+	return ;
+}
+
+static void jack_set_micbias_state(void *private_data, bool on)
+{
+	struct snd_soc_dapm_context *dapm = private_data;
+
+	if (on)
+		snd_soc_dapm_force_enable_pin(dapm, "MICBIAS2");
+	else
+		snd_soc_dapm_disable_pin(dapm, "MICBIAS2");
+
+	snd_soc_dapm_sync(dapm);
+}
+
+struct amdroid_jack_platform_data amdroid_jack_data = {
+	.set_micbias_state = jack_set_micbias_state,
+	.adc_channel = 0,
+	.zones = amdroid_jack_zones,
+	.num_zones = ARRAY_SIZE(amdroid_jack_zones),
+	.detect_gpio = GPIO(12),
+	.active_high = 1,
+};
+
+static struct platform_device amdroid_jack_device = {
+       .name             = "amdroid_jack",
        .dev = {
-               .platform_data    = &headset_switch_data,
+               .platform_data = &amdroid_jack_data,
+	       .release	= platform_amdroid_jack_release,
        }
 };
 
@@ -206,7 +247,8 @@ static int i1evk_wm8994_init(struct snd_soc_pcm_runtime *rtd)
 		errorCode = snd_soc_jack_add_gpios(&av_jack,
 				ARRAY_SIZE(av_jack_gpios), av_jack_gpios);
 	} else {
-		platform_device_register(&headset_switch_device);
+		amdroid_jack_data.private_data = dapm;
+		platform_device_register(&amdroid_jack_device);
 	}
 
 	return errorCode;
@@ -428,7 +470,7 @@ static void __exit i1evk_board_exit(void)
 		snd_soc_jack_free_gpios(&av_jack,
 			ARRAY_SIZE(av_jack_gpios), av_jack_gpios);
 	} else {
-		platform_device_unregister(&headset_switch_device);
+		platform_device_unregister(&amdroid_jack_device);
 	}
 
 	platform_device_unregister(i1evk_snd_device);

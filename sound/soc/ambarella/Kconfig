@@ -9,6 +9,12 @@ config SND_AMBARELLA_SOC
 config SND_AMBARELLA_SOC_I2S
 	tristate
 
+config SND_AMDROID_JACK
+	tristate
+	help
+	  Say Y or M if you want to add support for headset/headphone
+	  jack detection in Amdroid style.
+
 menuconfig SND_AMBARELLA_BOARD
 	tristate "Ambarella Board Type"
 	depends on SND_AMBARELLA_SOC
@@ -49,6 +55,7 @@ config I1EVK_BOARD
 	select SND_AMBARELLA_SOC_I2S
 	select SND_SOC_WM8994
 	select SND_SOC_AMBARELLA_DUMMY
+	select SND_AMDROID_JACK
 	help
 	  Say Y if you want to add wm8994 audio codec support for
 	  SoC audio on Ambarella I1EVK Board.
