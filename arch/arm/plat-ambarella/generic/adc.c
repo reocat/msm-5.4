@@ -229,6 +229,8 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 		pr_debug("%s: channel[%d] = %d.\n", __func__, i, adc_data[i]);
 }
 
+EXPORT_SYMBOL(ambarella_adc_get_array);
+
 #if (CHIP_REV == S2)
 void ambarella_adc_set_slot_ctrl(u8 slot_id, u32 slot_value)
 {

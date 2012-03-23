@@ -87,6 +87,7 @@ extern struct platform_device		ambarella_adc_temper;
 extern int ambarella_init_adc(void);
 extern u32 ambarella_adc_suspend(u32 level);
 extern u32 ambarella_adc_resume(u32 level);
+extern void ambarella_adc_get_array(u32 *adc_data, u32 *array_size);
 extern u32 amb_temper_curve(u32 adc_data);
 
 #endif /* __ASSEMBLER__ */
