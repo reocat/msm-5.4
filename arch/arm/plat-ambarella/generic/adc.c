@@ -200,6 +200,8 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 		pr_debug("%s: channel[%d] = %d.\n", __func__, i, adc_data[i]);
 }
 
+EXPORT_SYMBOL(ambarella_adc_get_array);
+
 void ambarella_adc_start(void)
 {
 #if defined(ADC16_CTRL_REG)
