@@ -59,6 +59,9 @@ unsigned int used_port = 1;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
 
+static DEFINE_MUTEX(clock_reg_mutex);
+static int enable_ext_i2s = 1;
+
 static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
 	{ 1, 0 }, // 128xfs
 	{ 3, 1 }, // 256xfs
@@ -217,16 +220,22 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (priv_data->controller_info->set_audio_pll)
 		priv_data->controller_info->set_audio_pll(clksrc, mclk);
 
+	mutex_lock(&clock_reg_mutex);
 	clock_reg = amba_readl(I2S_CLOCK_REG);
 	oversample = priv_data->amb_i2s_intf.oversample;
 	clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
 	clock_reg &= ~DAI_CLOCK_MASK;
 	clock_reg |= clock_divider;
-	if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
-		clock_reg &= (~I2S_CLK_MASTER_MODE);
-	else
+	if (priv_data->amb_i2s_intf.ms_mode == DAI_MASTER)
 		clock_reg |= I2S_CLK_MASTER_MODE;
+	else
+		clock_reg &= (~I2S_CLK_MASTER_MODE);
+	/* Disable output BCLK and LRCLK to disable external codec */
+	if (enable_ext_i2s == 0)
+		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
+
 	amba_writel(I2S_CLOCK_REG, clock_reg);
+	mutex_unlock(&clock_reg_mutex);
 
 	if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
 		dai_fifo_rst();
@@ -369,34 +378,29 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 static int external_i2s_get_status(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	u32 clock_reg, ext_i2s_status;
+	mutex_lock(&clock_reg_mutex);
+	ucontrol->value.integer.value[0] = enable_ext_i2s;
+	mutex_unlock(&clock_reg_mutex);
 
-	clock_reg = amba_readl(I2S_CLOCK_REG);
-	ext_i2s_status = (clock_reg & 0x300) ? 1 : 0;
-
-	ucontrol->value.integer.value[0] = ext_i2s_status;
 	return 0;
 }
 
 static int external_i2s_set_status(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	u32 clock_reg, ext_i2s_status;
+	u32 clock_reg;
 
+	mutex_lock(&clock_reg_mutex);
 	clock_reg = amba_readl(I2S_CLOCK_REG);
-	ext_i2s_status = (clock_reg & 0x300) ? 1 : 0;
 
-	if (ext_i2s_status == ucontrol->value.integer.value[0])
-		return 0;
-
-	ext_i2s_status = ucontrol->value.integer.value[0];
-
-	if (ext_i2s_status)
-		clock_reg |= 0x300;
+	enable_ext_i2s = ucontrol->value.integer.value[0];
+	if (enable_ext_i2s)
+		clock_reg |= (I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
 	else
-		clock_reg &= ~0x300;
+		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
 
 	amba_writel(I2S_CLOCK_REG, clock_reg);
+	mutex_unlock(&clock_reg_mutex);
 
 	return 1;
 }
