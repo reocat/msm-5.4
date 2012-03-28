@@ -190,7 +190,7 @@ static int amdroid_jack_probe(struct platform_device *pdev)
 
 	wake_lock_init(&jack_info->det_wake_lock, WAKE_LOCK_SUSPEND, "hs_jack_det");
 
-	rval = gpio_request(pdata->detect_gpio, "jack_detect_gpio");
+	rval = gpio_request_one(pdata->detect_gpio, GPIOF_IN, "jack_detect_gpio");
 	if (rval) {
 		pr_err("%s : gpio_request failed for %d\n",
 		       __func__, pdata->detect_gpio);
@@ -204,7 +204,7 @@ static int amdroid_jack_probe(struct platform_device *pdev)
 	rval = request_threaded_irq(jack_info->detect_irq, NULL,
 				   amdroid_jack_detect_irq_thread,
 				   IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
-				   "hs_jack_detect", jack_info);
+				   pdev->name, jack_info);
 	if (rval) {
 		pr_err("%s : Failed to request_irq.\n", __func__);
 		goto err_request_irq_failed;
