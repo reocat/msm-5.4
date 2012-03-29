@@ -249,6 +249,7 @@ static int amdroid_jack_remove(struct platform_device *pdev)
 
 	struct amdroid_jack_info *jack_info = dev_get_drvdata(&pdev->dev);
 
+	cancel_delayed_work_sync(&jack_info->work);
 	disable_irq_wake(jack_info->detect_irq);
 	free_irq(jack_info->detect_irq, jack_info);
 	wake_lock_destroy(&jack_info->det_wake_lock);
