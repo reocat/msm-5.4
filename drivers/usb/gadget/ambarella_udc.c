@@ -118,8 +118,9 @@ static void ambarella_uevent_work(struct work_struct *data)
 	buf[0] = '\0';
 
 	spin_lock_irq(&udc->lock);
-	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s",
-			amb_udc_status_str[amb_udc_status+1]);
+	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s\nUDCVBUS_STATUS=%s",
+			amb_udc_status_str[amb_udc_status+1],
+			ambarella_check_connected(udc) ? "Connected" : "Disconnected");
 	spin_unlock_irq(&udc->lock);
 	envp[0] = buf;
 	envp[1] = NULL;
