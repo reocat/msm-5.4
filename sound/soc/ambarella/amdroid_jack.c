@@ -40,6 +40,7 @@ struct amdroid_jack_info {
 	struct amdroid_jack_zone *zone;
 	int detect_irq;
 	unsigned int cur_jack_type;
+	struct delayed_work work;
 };
 
 /* sysfs name HeadsetObserver.java looks for to track headset state */
@@ -120,14 +121,22 @@ static void adc_check_jack_type(struct amdroid_jack_info *jack_info)
 static irqreturn_t amdroid_jack_detect_irq_thread(int irq, void *dev_id)
 {
 	struct amdroid_jack_info *jack_info = dev_id;
-	struct amdroid_jack_platform_data *pdata = jack_info->pdata;
-	int npolarity = !jack_info->pdata->active_high;
-	int time_left_ms = DET_CHECK_TIME_MS;
 
-	if (gpio_get_value(pdata->detect_gpio))
-		set_irq_type(gpio_to_irq(pdata->detect_gpio),IRQF_TRIGGER_LOW);
-	else
-		set_irq_type(gpio_to_irq(pdata->detect_gpio),IRQF_TRIGGER_HIGH);
+	schedule_delayed_work(&jack_info->work, 0);
+
+	return IRQ_HANDLED;
+}
+
+static void amdroid_jack_detect_worker(struct work_struct *work)
+{
+	struct amdroid_jack_info *jack_info;
+	struct amdroid_jack_platform_data *pdata;
+	int npolarity, time_left_ms;
+
+	jack_info = container_of(work, struct amdroid_jack_info, work.work);
+	pdata = jack_info->pdata;
+	npolarity = !jack_info->pdata->active_high;
+	time_left_ms = DET_CHECK_TIME_MS;
 
 	/* set mic bias to enable adc */
 	pdata->set_micbias_state(pdata->private_data, true);
@@ -151,8 +160,6 @@ static irqreturn_t amdroid_jack_detect_irq_thread(int irq, void *dev_id)
 
 	/* disable micbias */
 	pdata->set_micbias_state(pdata->private_data, false);
-
-	return IRQ_HANDLED;
 }
 
 static int amdroid_jack_probe(struct platform_device *pdev)
@@ -198,13 +205,11 @@ static int amdroid_jack_probe(struct platform_device *pdev)
 	}
 
 	jack_info->detect_irq = gpio_to_irq(pdata->detect_gpio);
-	/* The detect_irq will be triggered by HIGH level first, we will toggle
-	 * its irq type to LOW level in the irq handler. This method can detect
-	 * the headset/headphone which is plugged before system booted */
+
 	rval = request_threaded_irq(jack_info->detect_irq, NULL,
-				   amdroid_jack_detect_irq_thread,
-				   IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
-				   pdev->name, jack_info);
+			amdroid_jack_detect_irq_thread,
+			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+			pdev->name, jack_info);
 	if (rval) {
 		pr_err("%s : Failed to request_irq.\n", __func__);
 		goto err_request_irq_failed;
@@ -218,6 +223,11 @@ static int amdroid_jack_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(&pdev->dev, jack_info);
+
+	/* Perform initial detection,
+	 * delay 300ms to wait for sound card init completion */
+	INIT_DELAYED_WORK(&jack_info->work, amdroid_jack_detect_worker);
+	schedule_delayed_work(&jack_info->work, msecs_to_jiffies(300));
 
 	return 0;
 
