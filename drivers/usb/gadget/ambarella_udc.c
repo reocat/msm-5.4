@@ -111,19 +111,28 @@ static inline struct ambarella_request *to_ambarella_req(struct usb_request *req
 static void ambarella_uevent_work(struct work_struct *data)
 {
 	struct ambarella_udc *udc;
-	char buf[64];
-	char *envp[2];
+	char buf_status[64];
+	char buf_vbus[64];
+	char buf_driver[64];
+	char *envp[4];
 
 	udc = container_of(data, struct ambarella_udc, uevent_work);
-	buf[0] = '\0';
+	buf_status[0] = '\0';
+	buf_vbus[0] = '\0';
+	buf_driver[0] = '\0';
 
 	spin_lock_irq(&udc->lock);
-	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s\nUDCVBUS_STATUS=%s",
-			amb_udc_status_str[amb_udc_status+1],
-			ambarella_check_connected(udc) ? "Connected" : "Disconnected");
+	snprintf(buf_status, sizeof(buf_status), "AMBUDC_STATUS=%s",
+		amb_udc_status_str[amb_udc_status + 1]);
+	snprintf(buf_vbus, sizeof(buf_vbus), "AMBUDC_VBUS=%s",
+		ambarella_check_connected(udc) ? "Connected" : "Disconnected");
+	snprintf(buf_driver, sizeof(buf_driver), "AMBUDC_DRIVER=%s",
+		udc->driver ? udc->driver->driver.name : "NULL");
 	spin_unlock_irq(&udc->lock);
-	envp[0] = buf;
-	envp[1] = NULL;
+	envp[0] = buf_status;
+	envp[1] = buf_vbus;
+	envp[2] = buf_driver;
+	envp[3] = NULL;
 	kobject_uevent_env(&udc->dev->kobj, KOBJ_CHANGE, envp);
 }
 
@@ -141,7 +150,7 @@ static int ambarella_proc_udc_read(char *page, char **start,
 	buf[0] = '\0';
 
 	snprintf(buf, sizeof(buf), "AMBUDC_STATUS=%s",
-			amb_udc_status_str[amb_udc_status+1]);
+			amb_udc_status_str[amb_udc_status + 1]);
 
 	*start = page + off;
 	len = sprintf(*start, "%s (%s: %s)\n", buf,
