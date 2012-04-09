@@ -122,11 +122,13 @@ static void ambarella_uevent_work(struct work_struct *data)
 	buf_driver[0] = '\0';
 
 	spin_lock_irq(&udc->lock);
-	if (udc->pre_status == amb_udc_status) {
+	if (udc->pre_uevent_status == amb_udc_status &&
+			udc->pre_uevent_vbus == udc->vbus_status) {
 		spin_unlock_irq(&udc->lock);
 		return;
 	}
-	udc->pre_status = amb_udc_status;
+	udc->pre_uevent_status = amb_udc_status;
+	udc->pre_uevent_vbus = udc->vbus_status;
 	snprintf(buf_status, sizeof(buf_status), "AMBUDC_STATUS=%s",
 		amb_udc_status_str[amb_udc_status + 1]);
 	snprintf(buf_vbus, sizeof(buf_vbus), "AMBUDC_VBUS=%s",
@@ -2257,7 +2259,8 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	}
 
 	udc->dev = &pdev->dev;
-	udc->pre_status = AMBARELLA_UDC_STATUS_UNKNOWN;
+	udc->pre_uevent_status = AMBARELLA_UDC_STATUS_UNKNOWN;
+	udc->pre_uevent_vbus = 0;
 	udc->udc_is_enabled = 0;
 	udc->reset_by_host = 0;
 	udc->vbus_status = 0;

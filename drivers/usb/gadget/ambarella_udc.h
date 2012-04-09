@@ -130,7 +130,7 @@ struct ambarella_udc {
 	struct proc_dir_entry		*proc_file;
 	struct work_struct		uevent_work;
 	struct timer_list		vbus_timer;
-	enum ambarella_udc_status	pre_status;
+	enum ambarella_udc_status	pre_uevent_status;
 
 	struct ambarella_udc_controller	*controller_info;
 	struct usb_gadget		gadget;
@@ -155,6 +155,7 @@ struct ambarella_udc {
 					sys_suspended : 1,
 					reset_by_host : 1,
 					vbus_status : 1,
+					pre_uevent_vbus : 1,
 					udc_is_enabled : 1;
 };
 
