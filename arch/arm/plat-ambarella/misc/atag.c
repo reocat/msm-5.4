@@ -88,22 +88,73 @@ static int __init parse_eth1_tag_mac(const struct tag *tag)
 }
 __tagtable(ATAG_AMBARELLA_ETH1, parse_eth1_tag_mac);
 
-static int __init parse_wifi_tag_mac(const struct tag *tag)
+static int __init parse_wifi0_tag_mac(const struct tag *tag)
 {
 	u32 high, low;
 
 	high = tag->u.serialnr.high;
 	low = tag->u.serialnr.low;
 
-	ambarella_board_generic.wifi_mac[0] = (low >> 0);
-	ambarella_board_generic.wifi_mac[1] = (low >> 8);
-	ambarella_board_generic.wifi_mac[2] = (low >> 16);
-	ambarella_board_generic.wifi_mac[3] = (low >> 24);
-	ambarella_board_generic.wifi_mac[4] = (high >> 0);
-	ambarella_board_generic.wifi_mac[5] = (high >> 8);
+	ambarella_board_generic.wifi0_mac[0] = (low >> 0);
+	ambarella_board_generic.wifi0_mac[1] = (low >> 8);
+	ambarella_board_generic.wifi0_mac[2] = (low >> 16);
+	ambarella_board_generic.wifi0_mac[3] = (low >> 24);
+	ambarella_board_generic.wifi0_mac[4] = (high >> 0);
+	ambarella_board_generic.wifi0_mac[5] = (high >> 8);
 	return 0;
 }
-__tagtable(ATAG_AMBARELLA_WIFI, parse_wifi_tag_mac);
+__tagtable(ATAG_AMBARELLA_WIFI0, parse_wifi0_tag_mac);
+
+static int __init parse_wifi1_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.wifi1_mac[0] = (low >> 0);
+	ambarella_board_generic.wifi1_mac[1] = (low >> 8);
+	ambarella_board_generic.wifi1_mac[2] = (low >> 16);
+	ambarella_board_generic.wifi1_mac[3] = (low >> 24);
+	ambarella_board_generic.wifi1_mac[4] = (high >> 0);
+	ambarella_board_generic.wifi1_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_WIFI1, parse_wifi1_tag_mac);
+
+static int __init parse_usb_eth0_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.usb_eth0_mac[0] = (low >> 0);
+	ambarella_board_generic.usb_eth0_mac[1] = (low >> 8);
+	ambarella_board_generic.usb_eth0_mac[2] = (low >> 16);
+	ambarella_board_generic.usb_eth0_mac[3] = (low >> 24);
+	ambarella_board_generic.usb_eth0_mac[4] = (high >> 0);
+	ambarella_board_generic.usb_eth0_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_USB_ETH0, parse_usb_eth0_tag_mac);
+
+static int __init parse_usb_eth1_tag_mac(const struct tag *tag)
+{
+	u32 high, low;
+
+	high = tag->u.serialnr.high;
+	low = tag->u.serialnr.low;
+
+	ambarella_board_generic.usb_eth1_mac[0] = (low >> 0);
+	ambarella_board_generic.usb_eth1_mac[1] = (low >> 8);
+	ambarella_board_generic.usb_eth1_mac[2] = (low >> 16);
+	ambarella_board_generic.usb_eth1_mac[3] = (low >> 24);
+	ambarella_board_generic.usb_eth1_mac[4] = (high >> 0);
+	ambarella_board_generic.usb_eth1_mac[5] = (high >> 8);
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_USB_ETH1, parse_usb_eth1_tag_mac);
 
 /* ==========================================================================*/
 #define AMBARELLA_IO_DESC_AHB_ID	0

@@ -78,7 +78,8 @@ typedef struct fldev_s
 
 	/* This section contains networking related settings */
 	netdev_t eth[2];
-	netdev_t wifi;
+	netdev_t wifi[2];
+	netdev_t usb_eth[2];
 
 	/* This section contains update by network  related settings */
 	u8	auto_dl;	/**< Automatic download? */
