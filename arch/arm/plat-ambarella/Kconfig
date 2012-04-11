@@ -173,6 +173,19 @@ config PLAT_AMBARELLA_I1_ARM11
 	help
 	  Say Y here if you are using Ambarella I1 ARM11.
 
+config PLAT_AMBARELLA_S2
+	bool "S2"
+	select CPU_V6
+	select CPU_32v6K
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	help
+	  Say Y here if you are using Ambarella S2.
+
 config PLAT_AMBARELLA_I1_CORTEX
 	bool "iOne Cortex"
 	select CPU_V7

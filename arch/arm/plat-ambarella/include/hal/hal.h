@@ -70,6 +70,8 @@
 #include <hal/a5s/ambhal.h>
 #elif (CHIP_REV == I1)
 #include <hal/i1/ambhal.h>
+#elif (CHIP_REV == S2)
+#include <hal/s2/ambhal.h>
 #else
 #error "Undefined CHIP_REV, Can't support HAL!"
 #endif

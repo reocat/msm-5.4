@@ -25,6 +25,7 @@ obj-$(CONFIG_MACH_DURIAN)			+= init-durian.o
 obj-$(CONFIG_MACH_ELEPHANT)			+= init-elephant.o
 obj-$(CONFIG_MACH_AMBARELLA)			+= init-generic.o
 obj-$(CONFIG_MACH_FILBERT)			+= init-filbert.o
+obj-$(CONFIG_MACH_GINKGO)			+= init-ginkgo.o
 
 obj-$(CONFIG_AMBARELLA_VIN)			+= vin.o
 obj-$(CONFIG_AMBARELLA_VOUT)			+= vout.o

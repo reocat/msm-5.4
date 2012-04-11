@@ -89,22 +89,40 @@ void rct_set_audio_pll_hal(u8 op_mode, amb_clock_frequency_t set_freq)
 			break;
 #endif
 		case AUC_CLK_ONCHIP_PLL_CLK_SI:
+#if (CHIP_REV == S2)
+			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_CLK_SI;
+#else
 			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI;
+#endif
 			break;
 		case AUC_CLK_ONCHIP_PLL_LVDS_IDSP_SCLK:
+#if (CHIP_REV == S2)
+			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
+#else
 			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
+#endif
 			break;
 		case AUC_CLK_EXTERNAL:
 			clk_src_sel = AMB_EXTERNAL_CLOCK_SOURCE;
 			break;
 		default:
 		case AUC_CLK_ONCHIP_PLL_27MHZ:
+#if (CHIP_REV == S2)
+			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_CLK_REF;
+#else
 			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF;
+#endif
 			break;
 	}
 
+#if (CHIP_REV == S2)
+	if (clk_src_sel == AMB_REFERENCE_CLOCK_SOURCE_CLK_SI ||
+		clk_src_sel == AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK)
+#else
 	if (clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI ||
-		clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK) {
+		clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK)
+#endif
+	{
 		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, set_freq);
 	} else {
 		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, 0);
