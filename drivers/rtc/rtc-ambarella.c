@@ -42,7 +42,7 @@
 
 /* ==========================================================================*/
 static unsigned long epoch = 1970;
-
+#define ALARM_POLLING_INTERVAL 1000
 /* ==========================================================================*/
 u32 __ambrtc_tm2epoch_diff(struct rtc_time *current_tm)
 {
@@ -149,7 +149,7 @@ int __ambrtc_dev_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	if (alrm->enabled) {
 		tm2epoch_diff = __ambrtc_tm2epoch_diff(&(alrm->time));
 		ret = pinfo->check_capacity(tm2epoch_diff);
-		if (!ret)
+		if (ret)
 			goto __ambrtc_dev_set_alarm_exit;
 	} else
 		tm2epoch_diff = 0;
@@ -288,11 +288,39 @@ static const struct rtc_class_ops ambarella_rtc_ops = {
 	.proc	   	= ambrtc_proc,
 };
 
+static void alarm_polling_timer_func(unsigned long data)
+{
+	struct	ambarella_rtc_controller	*pinfo;
+	struct	rtc_time					tm;
+	struct	rtc_wkalrm				alarm;
+	unsigned long		time = 0;
+	unsigned long		alarmtime = 0;
+	struct	rtc_device *rtc = (struct rtc_device *)data;
+	struct	platform_device *pdev = to_platform_device(rtc->dev.parent);
+
+
+	pinfo = (struct ambarella_rtc_controller *)pdev->dev.platform_data;
+	rtc_read_time(rtc, &tm);
+	rtc_tm_to_time(&tm, &time);
+
+	rtc_read_alarm(rtc, &alarm);
+	rtc_tm_to_time(&(alarm.time), &alarmtime);
+//	printk("%s, time =0x%lx,alarmtime=0x%lx\n",__func__,time,alarmtime);
+	if(alarmtime == time)
+		rtc_update_irq(rtc,1,RTC_IRQF | RTC_UF);
+
+	mod_timer(&pinfo->alarm_polling_timer,
+		jiffies + msecs_to_jiffies(ALARM_POLLING_INTERVAL));
+}
+
 /* ==========================================================================*/
 static int __devinit ambrtc_probe(struct platform_device *pdev)
 {
 	struct rtc_device *rtc;
 	int ret = 0;
+	struct ambarella_rtc_controller  *pinfo;
+
+	pinfo = (struct ambarella_rtc_controller *)pdev->dev.platform_data;
 
 	rtc = rtc_device_register(pdev->name,
 		&pdev->dev, &ambarella_rtc_ops, THIS_MODULE);
@@ -303,6 +331,13 @@ static int __devinit ambrtc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, rtc);
+
+	setup_timer(&pinfo->alarm_polling_timer,
+		alarm_polling_timer_func,
+		(unsigned long)rtc
+		);
+	mod_timer(&pinfo->alarm_polling_timer,
+		jiffies + msecs_to_jiffies(ALARM_POLLING_INTERVAL));
 
 err_nores:
 	return ret;

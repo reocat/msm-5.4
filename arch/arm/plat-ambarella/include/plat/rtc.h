@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_RTC_H
 #define __PLAT_AMBARELLA_RTC_H
 
+#include <linux/timer.h>
+
 /* ==========================================================================*/
 
 /* ==========================================================================*/
@@ -40,6 +42,7 @@ struct ambarella_rtc_controller {
 	void					(*set_alat_time)(u32);
 	u32					(*get_alat_time)(void);
 	u32					reset_delay;
+	struct  timer_list          alarm_polling_timer;
 };
 #define AMBA_RTC_PARAM_CALL(id, arg, perm, param_ops_rtcpos) \
 	module_param_cb(rtc##id##_pos0, &param_ops_byte, &(arg.pos0), perm); \

@@ -37,6 +37,11 @@
 #define I1	7200
 #define A7L	7500
 
+#define A8	8000
+#define A9	9000
+#define A7S	A9
+#define S2	A9
+
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
 #define CHIP_MINOR(x)	((x / 10) % 10)
@@ -70,6 +75,8 @@
 #define CHIP_REV	A7M
 #elif	defined(CONFIG_PLAT_AMBARELLA_I1)
 #define CHIP_REV	I1
+#elif	defined(CONFIG_PLAT_AMBARELLA_S2)
+#define CHIP_REV	S2
 #else
 #error "Undefined CHIP_REV"
 #endif
@@ -132,6 +139,10 @@
 	defined(CONFIG_ARCH_I1) ||	     \
 	defined(CONFIG_ARCH_MMP2_I1)
 #define CHIP_REV	I1
+#elif	defined(CONFIG_ARCH_AMBARELLA_S2) || \
+	defined(CONFIG_ARCH_S2) ||	     \
+	defined(CONFIG_ARCH_MMP2_S2)
+#define CHIP_REV	S2
 #else
 #error "Undefined CHIP_REV"
 #endif

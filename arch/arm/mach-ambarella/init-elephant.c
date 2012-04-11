@@ -584,8 +584,12 @@ static void __init ambarella_init_elephant(void)
 
 	platform_device_register(&elephant_board_input);
 
-	if (use_ambarella_rtc0)
+	if (use_ambarella_rtc0){
 		platform_device_register(&ambarella_rtc0);
+		device_set_wakeup_capable(&ambarella_rtc0.dev, 1);
+		device_set_wakeup_enable(&ambarella_rtc0.dev, 1);
+	}
+
 	if (use_ambarella_wdt0)
 		platform_device_register(&ambarella_wdt0);
 

@@ -47,7 +47,7 @@ struct ambarella_pll_info {
 	amb_operating_mode_t operating_mode;
 };
 
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 struct ambarella_pll_vidcap_info {
 	char *name;
 	unsigned int vidcap;
@@ -101,6 +101,42 @@ static struct ambarella_pll_performance_info performance_list[] = {
 };
 
 #elif (CHIP_REV == A7)
+static struct proc_dir_entry *vidcap_file = NULL;
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
+static struct ambarella_pll_mode_info mode_list[] = {
+	{"preview", AMB_OPERATING_MODE_PREVIEW},
+	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
+	{"capture", AMB_OPERATING_MODE_CAPTURE},
+	{"playback", AMB_OPERATING_MODE_PLAYBACK},
+	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
+	{"standby", AMB_OPERATING_MODE_STANDBY},
+	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
+	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
+	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
+};
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
+static struct ambarella_pll_performance_info performance_list[] = {
+	{"480P30", AMB_PERFORMANCE_480P30},
+	{"720P30", AMB_PERFORMANCE_720P30},
+	{"720P60", AMB_PERFORMANCE_720P60},
+	{"1080I60", AMB_PERFORMANCE_1080I60},
+	{"1080P30", AMB_PERFORMANCE_1080P30},
+	{"1080P60", AMB_PERFORMANCE_1080P60},
+};
+#define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
+static struct ambarella_pll_vidcap_info vidcap_list[] = {
+	{"4096x3575", AMB_VIDCAP_4096X3575},
+	{"4000x2250", AMB_VIDCAP_4000X2250},
+	{"2304x1296", AMB_VIDCAP_2304X1296},
+	{"1984x1116", AMB_VIDCAP_1984X1116},
+	{"2048x1536", AMB_VIDCAP_2048X1536},
+	{"1312x984", AMB_VIDCAP_1312X984},
+	{"1536x384", AMB_VIDCAP_1536X384},
+	{"1536x384_small_vb", AMB_VIDCAP_1536X384_SMALL_VB},
+};
+
+#elif (CHIP_REV == S2)
 static struct proc_dir_entry *vidcap_file = NULL;
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
@@ -470,7 +506,7 @@ ambarella_performance_proc_write_exit:
 	return retval;
 }
 
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 static int ambarella_vidcap_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
@@ -533,7 +569,7 @@ static int __init ambarella_init_pll_hal(void)
 		goto ambarella_init_pll_hal_exit;
 	}
 
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 	vidcap_file = create_proc_entry("vidcap", S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (vidcap_file == NULL) {

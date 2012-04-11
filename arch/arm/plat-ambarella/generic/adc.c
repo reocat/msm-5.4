@@ -41,9 +41,10 @@
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
+struct ambarella_adc_controller ambarella_platform_adc_controller0;
 /* ==========================================================================*/
 #if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) ||\
-     (CHIP_REV == A7) || (CHIP_REV == A5L))
+     (CHIP_REV == A7) || (CHIP_REV == A5L) || (CHIP_REV == S2))
 #undef ADC_ONE_SHOT
 #define ADC_ONE_SHOT
 #else
@@ -53,6 +54,7 @@
 #ifndef CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT
 #define CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT	(100000)
 #endif
+
 
 /* ==========================================================================*/
 u32 ambarella_adc_get_instances(void)
@@ -71,6 +73,8 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
 		msleep(1);
 	}
+#elif (CHIP_REV == S2)
+	while (amba_tstbitsl(ADC_STATUS_REG, ADC_CONTROL_STATUS) == 0x0);
 #else
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
 #endif
@@ -137,6 +141,14 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 		adc_data = amba_readl(ADC_DATA9_REG);
 		break;
 #endif
+#if (ADC_NUM_CHANNELS >= 12)
+	case 10:
+		adc_data = amba_readl(ADC_DATA10_REG);
+		break;
+	case 11:
+		adc_data = amba_readl(ADC_DATA11_REG);
+		break;
+#endif
 #endif
 	default:
 		pr_warning("%s: invalid adc channel id %d!\n",
@@ -165,6 +177,8 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
 		msleep(1);
 	}
+#elif (CHIP_REV == S2)
+	while (amba_tstbitsl(ADC_STATUS_REG, ADC_CONTROL_STATUS) == 0x0);
 #else
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
 #endif
@@ -194,11 +208,65 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	adc_data[8] = amba_readl(ADC_DATA8_REG);
 	adc_data[9] = amba_readl(ADC_DATA9_REG);
 #endif
+#if (ADC_NUM_CHANNELS >= 12)
+	adc_data[10] = amba_readl(ADC_DATA10_REG);
+	adc_data[11] = amba_readl(ADC_DATA11_REG);
+#endif
 #endif
 
 	for (i = 0; i < ADC_NUM_CHANNELS; i++)
 		pr_debug("%s: channel[%d] = %d.\n", __func__, i, adc_data[i]);
 }
+
+#if (CHIP_REV == S2)
+void ambarella_adc_set_slot_ctrl(u8 slot_id, u32 slot_value)
+{
+	switch (slot_id) {
+	case 0:
+		writel(ADC_SLOT_CTRL_0_REG, slot_value);
+		break;
+	case 1:
+		writel(ADC_SLOT_CTRL_1_REG, slot_value);
+		break;
+	case 2:
+		writel(ADC_SLOT_CTRL_2_REG, slot_value);
+		break;
+	case 3:
+		writel(ADC_SLOT_CTRL_3_REG, slot_value);
+		break;
+	case 4:
+		writel(ADC_SLOT_CTRL_4_REG, slot_value);
+		break;
+	case 5:
+		writel(ADC_SLOT_CTRL_5_REG, slot_value);
+		break;
+	case 6:
+		writel(ADC_SLOT_CTRL_6_REG, slot_value);
+		break;
+	case 7:
+		writel(ADC_SLOT_CTRL_7_REG, slot_value);
+		break;
+	}
+}
+
+void ambarella_adc_set_config(void)
+{
+	int i = 0;
+	int slot_num_reg = 0;
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
+	udelay(3);
+
+	ambarella_platform_adc_controller0.adc_slot_num = 1;
+	ambarella_platform_adc_controller0.adc_slot_period = 60;
+	ambarella_platform_adc_controller0.adc_slot_ctrl[0] = 0xfff;
+	slot_num_reg = ambarella_platform_adc_controller0.adc_slot_num-1;
+	amba_writel(ADC_SLOT_NUM_REG, slot_num_reg);
+	amba_writel(ADC_SLOT_PERIOD_REG, ambarella_platform_adc_controller0.adc_slot_period);
+	for(i=0;i <= slot_num_reg; i++)
+		ambarella_adc_set_slot_ctrl(i, ambarella_platform_adc_controller0.adc_slot_ctrl[i]);
+}
+
+#endif
 
 void ambarella_adc_start(void)
 {
@@ -255,7 +323,7 @@ void ambarella_adc_start(void)
 
 	amba_writel(ADC_ENABLE_REG, 0x1);
 	amba_writel(ADC_CONTROL_REG, 0x1);
-#else
+#elif (CHIP_REV != S2)
 #if (CHIP_REV != I1)
 	if (amba_readl(ADC_ENABLE_REG) != 0) {
 		pr_err("%s: ADC_ENABLE_REG = %d.\n",
@@ -264,6 +332,10 @@ void ambarella_adc_start(void)
 	}
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x1);
+#endif
+
+#if (CHIP_REV == S2)
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_CLEAR);
 #endif
 
 #ifdef ADC_ONE_SHOT
@@ -276,6 +348,10 @@ void ambarella_adc_start(void)
 	/* start conversion */
 	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
+#endif
+
+#if (CHIP_REV == S2)
+	ambarella_adc_set_config();
 #endif
 }
 
@@ -293,87 +369,9 @@ void ambarella_adc_stop(void)
 #endif
 }
 
-#ifdef CONFIG_AMBARELLA_ADC_PROC
-#define AMBARELLA_ADC_PROC_READ_SIZE		(13)
-static const char adc_proc_name[] = "adc";
-static struct proc_dir_entry *adc_file;
-
-static int ambarella_adc_proc_write(struct file *file,
-	const char __user *buffer, unsigned long count, void *data)
-{
-	int					read_counter = 0;
-	char					cmd;
-
-	if (copy_from_user(&cmd, buffer, 1)) {
-		pr_err("%s: copy_from_user fail!\n", __func__);
-		read_counter = -EFAULT;
-		goto ambarella_adc_proc_write_exit;
-	}
-	read_counter = count;
-
-	if (cmd == '1') {
-		ambarella_adc_start();
-	} else {
-		ambarella_adc_stop();
-	}
-
-ambarella_adc_proc_write_exit:
-	return read_counter;
-}
-
-static int ambarella_adc_proc_read(char *page, char **start,
-	off_t off, int count, int *eof, void *data)
-{
-	int					len = 0;
-	int					i;
-	u32					adc_data[ADC_NUM_CHANNELS];
-	int					adc_size;
-
-	adc_size = ambarella_adc_get_instances();
-
-	if (off > (adc_size * AMBARELLA_ADC_PROC_READ_SIZE)) {
-		*eof = 1;
-		return 0;
-	}
-
-	*start = page + off;
-
-	if (count > (adc_size * AMBARELLA_ADC_PROC_READ_SIZE)) {
-		count = (adc_size * AMBARELLA_ADC_PROC_READ_SIZE);
-		*eof = 1;
-	}
-
-	if ((off + count) > (adc_size * AMBARELLA_ADC_PROC_READ_SIZE)) {
-		count = (adc_size * AMBARELLA_ADC_PROC_READ_SIZE) - off;
-		*eof = 1;
-	}
-
-	adc_size = count / AMBARELLA_ADC_PROC_READ_SIZE;
-	ambarella_adc_get_array(adc_data, &adc_size);
-	for (i = off / AMBARELLA_ADC_PROC_READ_SIZE; i < adc_size; i++)
-		len += sprintf(*start + len, "adc%d = 0x%03x\n",
-			i, adc_data[i]);
-
-	return len;
-}
-#endif
-
 int __init ambarella_init_adc(void)
 {
 	int					retval = 0;
-
-#ifdef CONFIG_AMBARELLA_ADC_PROC
-	adc_file = create_proc_entry(adc_proc_name, S_IRUGO | S_IWUSR,
-		get_ambarella_proc_dir());
-	if (adc_file == NULL) {
-		retval = -ENOMEM;
-		pr_err("%s: %s fail!\n", __func__, adc_proc_name);
-	} else {
-		adc_file->read_proc = ambarella_adc_proc_read;
-		adc_file->write_proc = ambarella_adc_proc_write;
-	}
-#endif
-
 	return retval;
 }
 

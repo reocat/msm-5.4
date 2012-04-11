@@ -34,6 +34,9 @@
 #endif
 #define ADC_VAL_LO(x)			((x) & 0x3ff)
 
+#if (CHIP_REV == S2)
+#define ADC_MAX_SLOT_NUMBER	8
+#endif
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -51,6 +54,12 @@ struct ambarella_adc_controller {
 	u32				(*get_channel_num)(void);
 
 	u32				scan_delay;
+#if (CHIP_REV == S2)
+	u8				adc_counter;
+	u8				adc_slot_num;
+	u16				adc_slot_period;
+	u16				adc_slot_ctrl[ADC_MAX_SLOT_NUMBER];
+#endif
 };
 #define AMBA_ADC_PARAM_CALL(arg, perm) \
 	module_param_cb(adc_scan_delay, &param_ops_int, &arg.scan_delay, perm)

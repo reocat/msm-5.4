@@ -16,7 +16,7 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-#if 	(CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L)
+#if 	(CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define GPIO_INSTANCES	4
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) || 		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
@@ -44,6 +44,8 @@
 #define GPIO_MAX_LINES			144
 #elif 	(CHIP_REV == I1)
 #define GPIO_MAX_LINES			192
+#elif 	(CHIP_REV == S2)
+#define GPIO_MAX_LINES			138
 #else
 #define GPIO_MAX_LINES			128
 #endif

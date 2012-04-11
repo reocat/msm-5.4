@@ -89,6 +89,15 @@ config MACH_FILBERT
 	help
 	  Say Y here if you are using A7 Filbert.
 
+config MACH_GINKGO
+	bool "Ginkgo"
+	depends on PLAT_AMBARELLA_S2
+	default n
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
+	help
+	  Say Y here if you are using S2 ginkgo.
+
 menu "Misc on Board Devices"
 
 comment "Ambarella"

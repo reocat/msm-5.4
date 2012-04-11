@@ -266,7 +266,7 @@
 #define SD_PWR_3_3V			0x0e
 #define SD_PWR_3_0V			0x0c
 #define SD_PWR_1_8V			0x0a
-#elif ((CHIP_REV == I1) || (CHIP_REV == A7L))
+#elif ((CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2))
 /* SD_PWR_REG only care about bit[3] */
 #define SD_PWR_3_3V			0x08
 #define SD_PWR_3_0V			0x08
