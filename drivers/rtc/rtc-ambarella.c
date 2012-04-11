@@ -336,8 +336,8 @@ static int __devinit ambrtc_probe(struct platform_device *pdev)
 		alarm_polling_timer_func,
 		(unsigned long)rtc
 		);
-	mod_timer(&pinfo->alarm_polling_timer,
-		jiffies + msecs_to_jiffies(ALARM_POLLING_INTERVAL));
+//	mod_timer(&pinfo->alarm_polling_timer,
+//		jiffies + msecs_to_jiffies(ALARM_POLLING_INTERVAL));
 
 err_nores:
 	return ret;
