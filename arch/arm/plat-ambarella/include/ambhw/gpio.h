@@ -16,16 +16,18 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-#if 	(CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L) || (CHIP_REV == S2)
-#define GPIO_INSTANCES	4
+#if 	(CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L)
+	#define GPIO_INSTANCES	4
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) || 		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
 	(CHIP_REV == A5S) || (CHIP_REV == A5L)
 #define GPIO_INSTANCES	3
-#elif 	(CHIP_REV == A7)
+#elif 	(CHIP_REV == A7) || (CHIP_REV == A7S)
 #define GPIO_INSTANCES	5
 #elif 	(CHIP_REV == I1)
 #define GPIO_INSTANCES	6
+#elif 	(CHIP_REV == A8)
+#define GPIO_INSTANCES	1
 #else
 #define GPIO_INSTANCES	2
 #endif
@@ -44,8 +46,10 @@
 #define GPIO_MAX_LINES			144
 #elif 	(CHIP_REV == I1)
 #define GPIO_MAX_LINES			192
-#elif 	(CHIP_REV == S2)
-#define GPIO_MAX_LINES			138
+#elif 	(CHIP_REV == A8)
+#define GPIO_MAX_LINES			16
+#elif 	(CHIP_REV == A9) || (CHIP_REV == A7S) || (CHIP_REV == S2)
+#define GPIO_MAX_LINES			138	
 #else
 #define GPIO_MAX_LINES			128
 #endif
@@ -254,8 +258,14 @@
 #define PWM1		GPIO(45)
 #define PWM2		GPIO(46)
 #define NAND_CE1	GPIO(47)
+
+#if (CHIP_REV == A7S)
+#define SSIO_EN2	GPIO(7)
+#define SSIO_EN3	GPIO(9)
+#else
 #define SSIO_EN2	GPIO(48)
 #define SSIO_EN3	GPIO(49)
+#endif
 #if (CHIP_REV == A5L)
 #define PWM3		GPIO(40)
 #define PWM4		GPIO(41)
@@ -314,8 +324,13 @@
 
 /*------------------------------------------------------------------------*/
 /* (CHIP_REV == A3) and later */
+#if (CHIP_REV == A7S)
+#define I2S1_SO		GPIO(126)
+#define I2S1_SI		GPIO(125)
+#else
 #define I2S1_SO		GPIO(82)
 #define I2S1_SI		GPIO(83)
+#endif
 #define I2S2_SO		GPIO(84)
 #define I2S2_SI		GPIO(85)
 #define IDC2CLK		GPIO(86)
@@ -355,7 +370,7 @@
 #endif
 
 /*------------------------------------------------------------------------*/
-#if (CHIP_REV == A5S) 
+#if (CHIP_REV == A5S)
 /* (CHIP_REV == A5S)*/
 #define IDC3_BUS_MUX	GPIO(36)
 
@@ -381,6 +396,8 @@
 #define SSI_SLAVE_MOSI	GPIO(52)
 #define SSI_SLAVE_CLK	GPIO(53)
 
+
+/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == A7L)
 /* (CHIP_REV == A7L)*/
 #define SD_HS		GPIO(22)
@@ -398,7 +415,8 @@
 #define SSI_SLAVE_MOSI	GPIO(52)
 #define SSI_SLAVE_CLK	GPIO(53)
 
-#elif (CHIP_REV == A7) 
+/*------------------------------------------------------------------------*/
+#elif (CHIP_REV == A7)
 
 #define VD1_OUT20	GPIO(28)
 #define VD1_OUT21	GPIO(29)
@@ -473,10 +491,12 @@
 #define SC_D3		GPIO(142)
 #define SC_D4		GPIO(143)
 
+/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == A5L)
 
 #define IDC3_BUS_MUX	GPIO(63)
 
+/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == I1) /* iONE */
 
 #define APP_PRT_OVCURR_I0	GPIO(7)
@@ -631,6 +651,96 @@
 #define SC_D3		GPIO(142)
 #define SC_D4		GPIO(143)
 
+/*------------------------------------------------------------------------*/
+#elif (CHIP_REV == A7S) /* A7S */
+
+#define SD_HS			GPIO(22)
+#define SDIO_HS			GPIO(23)
+
+#define APP_PRT_OVCURR_I0	GPIO(7)
+#define CLK_AU_1CH		GPIO(8)
+
+#define ECHI_PRT_PWR_O0		GPIO(9)
+
+#define UART2_TX		GPIO(10)
+#define UART2_RX		GPIO(18)
+#define UART3_TX		GPIO(19)
+#define UART3_RX		GPIO(20)
+
+#define IDC3_DATA		GPIO(36)
+#define IDC3_CLK		GPIO(37)
+
+#define SSIO_EN4		GPIO(82)
+#define SSIO_EN5		GPIO(83)
+#define SSIO_EN6		GPIO(79)
+#define SSIO_EN7		GPIO(80)
+
+#define I2S1_WS			GPIO(127)
+#define I2S1_CLK		GPIO(124)
+
+#define PWM_OIS_B0		GPIO(128)
+#define PWM_OIS_B1		GPIO(136)
+#define PWM_OIS_C0		GPIO(137)
+#define PWM_OIS_C1		GPIO(138)
+
+#define SSI3_MISO		GPIO(18)
+#define SSI4_MISO		GPIO(19)
+#define SSI_AHB_CLK_OUT		GPIO(17)
+#define SSI_AHB_MISO		GPIO(20)
+#define SSI_AHB_MOSI		GPIO(158)
+#define SSI_AHB_EN0		GPIO(159)
+
+#define VD0_OUT20		GPIO(28)
+#define VD0_OUT21		GPIO(29)
+#define VD0_OUT22		GPIO(30)
+#define VD0_OUT23		GPIO(31)
+#define VD0_OUT16		GPIO(92)
+#define VD0_OUT17		GPIO(93)
+#define VD0_OUT18		GPIO(94)
+#define VD0_OUT19		GPIO(95)
+
+/* Tertiary function of GPIO pins */
+#define PHY_TXD_I_4		GPIO(28)
+#define PHY_TXD_I_5		GPIO(29)
+#define PHY_TXD_I_6		GPIO(30)
+#define PHY_TXD_I_7		GPIO(31)
+#define PHY_RXD_I_0		GPIO(40)
+#define PHY_RXD_I_1		GPIO(41)
+#define PHY_RXD_I_2		GPIO(42)
+#define PHY_RXD_I_3		GPIO(43)
+#define PHY_RXD_I_4		GPIO(44)
+#define PHY_RXD_I_5		GPIO(45)
+#define PHY_RXD_I_6		GPIO(46)
+#define PHY_RXD_I_7		GPIO(47)
+#define PHY_TXER_O  		GPIO(82)
+#define PHY_RXER_I		GPIO(83)
+#define PHY_TXD_I_0		GPIO(92)
+#define PHY_TXD_I_1		GPIO(93)
+#define PHY_TXD_I_2		GPIO(94)
+#define PHY_TXD_I_3		GPIO(95)
+#define PHY_CLK_TX_I		GPIO(124)
+#define PHY_CLK_RX_I		GPIO(125)
+#define PHY_GMII_MDC_O		GPIO(126)
+#define PHY_GMII_MDO_O		GPIO(127)
+#define PHY_TXEN_O 		GPIO(128)
+#define PHY_RXDV_I		GPIO(136)
+#define PHY_CRS_I		GPIO(137)
+#define PHY_COL_I		GPIO(138)
+
+#define UART1_TX		GPIO(50)
+#define UART1_RTS		GPIO(51)
+#define UART1_RX		GPIO(52)
+#define UART1_CTS		GPIO(53)
+
+/* Forth function */
+#define SSI_SLAVE_MISO		GPIO(50)
+#define SSI_SLAVE_EN		GPIO(51)
+#define SSI_SLAVE_MOSI		GPIO(52)
+#define SSI_SLAVE_CLK		GPIO(53)
+
+#define YUV_PCLK		GPIO(125)
+
+/*------------------------------------------------------------------------*/
 #else
 
 /* (CHIP_REV == A5) and later */
@@ -647,6 +757,8 @@
 #endif
 
 
+/*------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------*/
 #if (CHIP_REV == A7L)
 /* (CHIP_REV == A7L)*/
 #define VD1_OUT00	GPIO(96)
@@ -677,6 +789,7 @@
 #define VD1_HSYNC	GPIO(121)
 #define VD1_HVLD	GPIO(122)
 #define VD1_CLK		GPIO(123)
+#define SDXC_CD		GPIO(75)
 #else
 #define VD1_OUT20	GPIO(28)
 #define VD1_OUT21	GPIO(29)

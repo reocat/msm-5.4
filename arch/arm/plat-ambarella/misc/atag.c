@@ -169,6 +169,11 @@ __tagtable(ATAG_AMBARELLA_USB_ETH1, parse_usb_eth1_tag_mac);
 #define AMBARELLA_IO_DESC_AXI_ID	(AMBARELLA_IO_DESC_DSP_ID + 3)
 #define AMBARELLA_IO_DESC_DDD_ID	(AMBARELLA_IO_DESC_DSP_ID + 4)
 #endif
+#else
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
+#define AMBARELLA_IO_DESC_AXI_ID	(AMBARELLA_IO_DESC_DSP_ID + 1)
+#define AMBARELLA_IO_DESC_DDD_ID	(AMBARELLA_IO_DESC_DSP_ID + 2)
+#endif
 #endif
 
 struct ambarella_mem_map_desc {
@@ -240,6 +245,27 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_DEVICE,
 			},
 	},
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
+	[AMBARELLA_IO_DESC_AXI_ID] = {
+		.name		= "AXI",
+		.io_desc	= {
+			.virtual= AXI_BASE,
+			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
+			.length	= AXI_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+	[AMBARELLA_IO_DESC_DDD_ID] = {
+		.name		= "DDD",
+		.io_desc	= {
+			.virtual= DDD_BASE,
+			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
+			.length	= DDD_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+#endif
+#else
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
 	[AMBARELLA_IO_DESC_AXI_ID] = {
 		.name		= "AXI",

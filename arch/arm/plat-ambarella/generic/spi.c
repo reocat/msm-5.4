@@ -106,7 +106,8 @@ struct platform_device ambarella_spi0 = {
 	}
 };
 
-#if (SPI_MASTER_INSTANCES >= 2 )
+//#if (SPI_MASTER_INSTANCES >= 2 )
+#if 0
 struct resource ambarella_spi1_resources[] = {
 	[0] = {
 		.start	= SPI2_BASE,

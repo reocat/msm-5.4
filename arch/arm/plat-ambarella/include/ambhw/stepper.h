@@ -18,7 +18,7 @@
 /****************************************************/
 #if ((CHIP_REV == A5)  || (CHIP_REV == A2S) || (CHIP_REV == A6)	 || \
      (CHIP_REV == A5S) || (CHIP_REV == A7)  || (CHIP_REV == A5L) || \
-     (CHIP_REV == I1)  || (CHIP_REV == A7L))
+     (CHIP_REV == I1)  || (CHIP_REV == A7L)) || (CHIP_REV == A7S)
 #define ST_CONFIG_LAST_POL	1
 #define	ST_SUPPORT_PRECOUNT	1
 #define	ST_SUPPORT_ACC_MODE	1
@@ -32,12 +32,14 @@
 #define ST_INSTANCES		4
 #elif (CHIP_REV == A5L)
 #define ST_INSTANCES		2
-#else
+#elif (CHIP_REV == A8)
+#define ST_INSTANCES		0
+#else 
 #define ST_INSTANCES		3
 #endif
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L)	|| \
-    (CHIP_REV == I1)  || (CHIP_REV == A7L)
+    (CHIP_REV == I1)  || (CHIP_REV == A7L) ||  (CHIP_REV == A7S)
 #define	ST_SUPPORT_MICROST	1
 #else
 #define	ST_SUPPORT_MICROST	0

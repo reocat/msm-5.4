@@ -45,6 +45,7 @@
 #include <linux/delay.h>
 
 #include <plat/ambinput.h>
+#include <plat/ambcache.h>
 
 #include "board-device.h"
 
@@ -57,8 +58,8 @@ static struct platform_device ambarella_auc_codec0 = {
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_adc0,
-	&ambarella_crypto,
+//	&ambarella_adc0,
+//	&ambarella_crypto,
 	&ambarella_dummy_codec0,
 	&ambarella_eth0,
 	&ambarella_fb0,
@@ -67,14 +68,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_idc0,
 	&ambarella_idc1,
 	&ambarella_ir0,
-	&ambarella_pcm0,
-	&ambarella_pwm_platform_device0,
-	&ambarella_pwm_platform_device1,
-	&ambarella_pwm_platform_device2,
-	&ambarella_pwm_platform_device3,
-	&ambarella_pwm_platform_device4,
 	&ambarella_rtc0,
 	&ambarella_sd0,
+	&ambarella_sd1,
 	&ambarella_spi0,
 	&ambarella_uart,
 	&ambarella_udc0,
@@ -195,6 +191,10 @@ static void __init ambarella_init_ginkgo(void)
 
 	ambarella_init_machine("ginkgo");
 
+#ifdef CONFIG_OUTER_CACHE
+	ambcache_l2_enable();
+#endif
+
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
@@ -244,11 +244,6 @@ static void __init ambarella_init_ginkgo(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
-
-	ambarella_tm1510_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));

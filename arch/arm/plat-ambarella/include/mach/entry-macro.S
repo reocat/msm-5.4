@@ -44,7 +44,7 @@
 		.macro	arch_ret_to_user, tmp1, tmp2
 		.endm
 
-#if !defined(CONFIG_PLAT_AMBARELLA_I1_CORTEX)
+#if !defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\base, =(VIC_BASE)

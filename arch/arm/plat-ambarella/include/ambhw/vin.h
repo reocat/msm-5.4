@@ -4,7 +4,7 @@
  * History:
  *	2007/01/27 - [Charles Chiou] created file
  *
- * Copyright (C) 2006-2008, Ambarella, Inc.
+ * Copyright (C) 2006-2011, Ambarella, Inc.
  */
 
 #ifndef __AMBHW_VIN_H__
@@ -14,7 +14,7 @@
 #include <ambhw/busaddr.h>
 
 /****************************************************/
-/* Capabilities based on chip revision	      */
+/* Capabilities based on chip revision              */
 /****************************************************/
 
 #if (CHIP_REV == A1)  || (CHIP_REV == A2)  || \
@@ -35,44 +35,69 @@
 #endif
 
 #if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
-    (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)
+    (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A7S)
 #define VIN_SUPPORT_SLVS_MLVS		1
 #else
 #define VIN_SUPPORT_SLVS_MLVS		0
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)
-#define VIN_SPPORT_SEPARATE_SLVS_MLVS		1
+#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A7S)
+#define VIN_SPPORT_SEPARATE_SLVS_MLVS	1
 #else
-#define VIN_SPPORT_SEPARATE_SLVS_MLVS		0
+#define VIN_SPPORT_SEPARATE_SLVS_MLVS	0
 #endif
 
-#if (CHIP_REV == A7)
-#define VIN_SLVS_LANES_MAX			12
+#if (CHIP_REV == A7) || (CHIP_REV == A7S)
+#define VIN_SLVS_LANES_MAX		12
 #elif (CHIP_REV == I1) || (CHIP_REV == A7L)
-#define VIN_SLVS_LANES_MAX			8
+#define VIN_SLVS_LANES_MAX		8
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A7) || (CHIP_REV == A7S)
+#define VIN_CFA_MAX_WIDTH		4096
+#else
+#define VIN_CFA_MAX_WIDTH		3200
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A7S)
 #define VIN_SUPPORT_MIPI		1
 #else
 #define VIN_SUPPORT_MIPI		0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define VIN_SUPPORT_CLK_SELECTION	1
 #else
 #define VIN_SUPPORT_CLK_SELECTION	0
 #endif
 
-#if (CHIP_REV == A7L)
+#if (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define VIN_SUPPORT_AMBA_MIPI_PHY	1
 #else
 #define VIN_SUPPORT_AMBA_MIPI_PHY	0
 #endif
 
+#if (CHIP_REV == A7S)
+#define VIN_SUPPORT_DUAL_SENSOR_INTERFACES	1
+#define VIN_SUPPORT_BIT_WIDE_MASTER_SYNC	1
+#define VIN_SUPPORT_SLVS_SYNC_CODE_REMAP	1
+#else
+#define VIN_SUPPORT_DUAL_SENSOR_INTERFACES	0	
+#define VIN_SUPPORT_BIT_WIDE_MASTER_SYNC	0
+#define VIN_SUPPORT_SLVS_SYNC_CODE_REMAP	0
+#endif
+
+#if (CHIP_REV == A7S)
+#define VIN_INSTANCES			2
+#else
+#define VIN_INSTANCES			1
+#endif
+
 /****************************************************/
-/* Controller registers definitions		 */
+/* Controller registers definitions                 */
 /****************************************************/
 
 #if (VIN_DIRECT_DSP_INTERFACE == 0)
@@ -89,7 +114,7 @@
 
 #if (VIN_SMEM_PREVIEW_INSTANCES == 1)
 #define S_VOUT_START_OFFSET		0x28
-#endif
+#endif /* VIN_SMEM_PREVIEW_INSTANCES == 1 */
 
 #define S_CAP_START_OFFSET		0x2c
 #define S_CAP_END_OFFSET		0x30
@@ -118,7 +143,7 @@
 
 #if (VIN_SMEM_PREVIEW_INSTANCES == 1)
 #define S_VOUT_START_REG		VIN_REG(S_VOUT_START_OFFSET)
-#endif
+#endif /* VIN_SMEM_PREVIEW_INSTANCES == 1 */
 
 #define S_CAP_START_REG			VIN_REG(S_CAP_START_OFFSET)
 #define S_CAP_END_REG			VIN_REG(S_CAP_END_OFFSET)
@@ -135,7 +160,7 @@
 #define S_DEBUG_FIFO_COUNT_REG		VIN_REG(S_DEBUG_FIFO_COUNT_OFFSET)
 #define S_DEBUG_FIFO_DATA_REG		VIN_REG(S_DEBUG_FIFO_DATA_OFFSET)
 
-#endif
+#endif /* VIN_DIRECT_DSP_INTERFACE == 0 */
 
 #if (VIN_DIRECT_DSP_INTERFACE == 1)
 #define S_CTRL_INDEX			0x00
@@ -241,7 +266,7 @@
 #define S_MIPI_FRM_NUM_INDEX		0x2F
 #define S_MIPI_PHY_STATUS0_INDEX	0x30
 #define S_MIPI_PHY_STATUS1_INDEX	0x31
-#endif
+#endif /* VIN_SUPPORT_AMBA_MIPI_PHY == 1 */
 
 #define S_MIPI_FRM_NUM_OFFSET		(S_MIPI_FRM_NUM_INDEX << 2)
 #define S_MIPI_PHY_STATUS0_OFFSET	(S_MIPI_PHY_STATUS0_INDEX << 2)
@@ -260,9 +285,9 @@
 
 #define S_MIPI_FRM_NUM_REG		DSP_VIN_DEBUG_REG(S_MIPI_FRM_NUM_OFFSET)
 #define S_MIPI_PHY_STATUS_REG		DSP_VIN_DEBUG_REG(S_MIPI_PHY_STATUS_OFFSET)
-#endif
+#endif /* VIN_SUPPORT_CLK_SELECTION == 1 */
 
-#endif
+#endif /* VIN_SUPPORT_MIPI == 1 */
 
 #if (VIN_SPPORT_SEPARATE_SLVS_MLVS == 1)
 #define SLVS_CTRL_INDEX			0x20
@@ -286,14 +311,36 @@
 #if (VIN_SLVS_LANES_MAX > 8)
 #define SLVS_LANE_MUX_SELECT_2_INDEX	0x26
 #define SLVS_LANE_MUX_SELECT_2_OFFSET	(SLVS_LANE_MUX_SELECT_2_INDEX << 2)
-#endif
+#endif /* VIN_SLVS_LANES_MAX > 8 */
 
 #else
 
 #define SLVS_STATUS_INDEX		0x24
 
-#endif
+#endif /* VIN_SPPORT_SEPARATE_SLVS_MLVS == 1 */
 
-#endif
+#if (VIN_SUPPORT_BIT_WIDE_MASTER_SYNC == 1)
+#define S_VSYNCSTART_INDEX		0x45
+#define S_VSYNCEND_INDEX		0x46
 
-#endif
+#define S_VSYNCHSTART_OFFSET		(S_VSYNCHSTART_INDEX << 2)
+#define S_VSYNCHEND_OFFSET		(S_VSYNCHEND_INDEX << 2)
+#endif /* VIN_SUPPORT_BIT_WIDE_MASTER_SYNC == 1 */
+
+#if (VIN_SUPPORT_SLVS_SYNC_CODE_REMAP == 1)
+#define SLVS_CTRL_1_INDEX		0x40
+#define SLVS_SAV_VZERO_MAP_INDEX	0x41
+#define SLVS_SAV_VONE_MAP_INDEX		0x42
+#define SLVS_EAV_VZERO_MAP_INDEX	0x43
+#define SLVS_EAV_VONE_MAP_INDEX		0x44
+
+#define SLVS_CTRL_1_OFFSET		(SLVS_CTRL_1_INDEX << 2)
+#define SLVS_SAV_VZERO_MAP_OFFSET	(SLVS_SAV_VZERO_MAP_INDEX << 2)
+#define SLVS_SAV_VONE_MAP_OFFSET	(SLVS_SAV_VONE_MAP_INDEX << 2)
+#define SLVS_EAV_VZERO_MAP_OFFSET	(SLVS_EAV_VZERO_MAP_INDEX << 2)
+#define SLVS_EAV_VONE_MAP_OFFSET	(SLVS_EAV_VONE_MAP_INDEX << 2)
+#endif /* VIN_SUPPORT_SLVS_SYNC_CODE_REMAP == 1 */
+
+#endif /* VIN_DIRECT_DSP_INTERFACE == 1 */
+
+#endif /*  __AMBHW_VIN_H__ */

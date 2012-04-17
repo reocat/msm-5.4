@@ -98,6 +98,8 @@
 #define NUM_DMA_CHANNELS 	7
 #elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L)  
 #define NUM_DMA_CHANNELS 	4
+#elif (CHIP_REV == A7S)
+#define NUM_DMA_CHANNELS 	8	
 #else
 #define NUM_DMA_CHANNELS 	5
 #endif
@@ -141,7 +143,7 @@
 #define DMA_CHAN6_DST_OFFSET		0x368
 #define DMA_CHAN6_STA_OFFSET		0x36c
 
-#if	defined(__FPGA__)
+#if	defined(__FPGA__) || (NUM_DMA_CHANNELS >= 8)
 #define DMA_CHAN7_CTR_OFFSET		0x370
 #define DMA_CHAN7_SRC_OFFSET		0x374
 #define DMA_CHAN7_DST_OFFSET		0x378
@@ -188,7 +190,7 @@
 #define DMA_CHAN6_DST_REG		DMA_REG(0x368)
 #define DMA_CHAN6_STA_REG		DMA_REG(0x36c)
 
-#if	defined(__FPGA__)
+#if	defined(__FPGA__) || (NUM_DMA_CHANNELS >= 8)
 #define DMA_CHAN7_CTR_REG		DMA_REG(0x370)
 #define DMA_CHAN7_SRC_REG		DMA_REG(0x374)
 #define DMA_CHAN7_DST_REG		DMA_REG(0x378)
@@ -277,7 +279,7 @@
 /* DMA_INT_REG */
 #define DMA_INT_CHAN(x)			(0x1 << (x))
 
-#if	defined(__FPGA__)
+#if	defined(__FPGA__) || (NUM_DMA_CHANNELS >= 8)
 #define DMA_INT_CHAN7			0x00000080
 #define DMA_INT_CHAN6			0x00000040
 #define DMA_INT_CHAN5			0x00000020

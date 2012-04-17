@@ -942,7 +942,7 @@ AMB_SYSTEM_CONFIGURATION_NOR_FLASH = 0x1UL,
 /** 2048 Bytes Flash Page Size (1) or 512 Bytes Flash Page Size (0) */
 AMB_SYSTEM_CONFIGURATION_NAND_FLASH_2048_PAGE_SIZE = 0x20UL,
 /** Ethernet Selected */
-AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED = 0x80UL,
+AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED = 0x00800000UL,
 /** RMII Selected */
 AMB_SYSTEM_CONFIGURATION_RMII_SELECTED = 0x8000UL,
 /** Host Interface Secure Mode */
@@ -4229,6 +4229,12 @@ static INLINE amb_hal_success_t amb_set_dram_arbiter_priority (void *amb_hal_bas
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY, (unsigned int) amb_dram_arbiter_priority, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+static INLINE amb_clock_frequency_t amb_get_axi_clock_frequency (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return amb_get_cortex_clock_frequency(amb_hal_base_address) / 3;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_

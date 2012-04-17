@@ -74,17 +74,24 @@
 #endif
 
 #if (CHIP_REV == A1)  || (CHIP_REV == A2)  || \
-    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q)
+    (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
+    (CHIP_REV == A8)
 #define VOUT_INSTANCES			1
 #else
 #define VOUT_INSTANCES			2
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1) || (CHIP_REV == A7L)
+    (CHIP_REV == I1) || (CHIP_REV == A7L) ||  (CHIP_REV == A7S)
 #define VOUT_SUPPORT_RGB24			1
 #define VOUT_SUPPORT_ANALOG_CSC_SCALER		1
 #define VOUT_SUPPORT_DUAL_VOUT_SYNC		1
+#define VOUT_SUPPORT_CONFIG_DIGI_FMT656		1
+#define VOUT_SUPPORT_OUTPUT_INTERN_DIVIDED_CLK  1
+#elif (CHIP_REV == A8)
+#define VOUT_SUPPORT_RGB24			0
+#define VOUT_SUPPORT_ANALOG_CSC_SCALER		0
+#define VOUT_SUPPORT_DUAL_VOUT_SYNC		0
 #define VOUT_SUPPORT_CONFIG_DIGI_FMT656		1
 #define VOUT_SUPPORT_OUTPUT_INTERN_DIVIDED_CLK  1
 #else
@@ -102,8 +109,13 @@
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1) || (CHIP_REV == A7L)
+    (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define VOUT_DISPLAY_SECTIONS		2
+#define VOUT_DIRECT_DSP_INTERFACE	1
+#define VOUT_16B_DVOUT_Y_LOW_BYTE	1
+#define VOUT_8_BITS_BLENDING		1
+#elif  (CHIP_REV == A8)
+#define VOUT_DISPLAY_SECTIONS		1
 #define VOUT_DIRECT_DSP_INTERFACE	1
 #define VOUT_16B_DVOUT_Y_LOW_BYTE	1
 #define VOUT_8_BITS_BLENDING		1
@@ -116,7 +128,8 @@
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) || \
     (CHIP_REV == A2Q) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1)  || (CHIP_REV == A7L)
+    (CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
+    (CHIP_REV == A8)
 #define VOUT_SUPPORT_8BIT_SD_DOUT	1
 #else
 #define VOUT_SUPPORT_8BIT_SD_DOUT	0
@@ -128,13 +141,15 @@
 #define VOUT_SUPPORT_MIPI		0
 #endif
 
-#if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)
+#if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
+    (CHIP_REV == A7S) || (CHIP_REV == A8)
 #define VOUT_SUPPORT_ORC_MULTI_THREADS	1
 #else
 #define VOUT_SUPPORT_ORC_MULTI_THREADS	0
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A7S)
 #define VOUT_SUPPORT_DIGITAL_DITHER	1
 #define VOUT_SUPPORT_GAMMA_TABLE	1
 #else
@@ -142,7 +157,7 @@
 #define VOUT_SUPPORT_GAMMA_TABLE	0
 #endif
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) ||  (CHIP_REV == A7S)
 #define VOUT_DCHAN_ANALOG_OUT		1
 #define VOUT_HALF_PIXEL_SHIFT		1
 #else
@@ -150,19 +165,39 @@
 #define VOUT_HALF_PIXEL_SHIFT		0
 #endif
 
-#if (CHIP_REV == A5L) || (CHIP_REV == A7L) 
+#if (CHIP_REV == A5L) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define VOUT_SUPPORT_OSD_16BIT_DIR_MODE 1
+#define VOUT_SUPPORT_OSD_CSC		1
+#elif (CHIP_REV == A8)
+#define VOUT_SUPPORT_OSD_16BIT_DIR_MODE 0
 #define VOUT_SUPPORT_OSD_CSC		1
 #else
 #define VOUT_SUPPORT_OSD_16BIT_DIR_MODE 0
 #define VOUT_SUPPORT_OSD_CSC		0
 #endif
 
-#if (CHIP_REV == A7L)
+#if (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define VOUT_HVLD_POLARITY		1
 #else
 #define VOUT_HVLD_POLARITY		0
 #endif
+
+#if (CHIP_REV == A7S) || (CHIP_REV == A8)
+#define VOUT_SUPPORT_4X2K_30P		1
+#define VOUT_SUPPORT_3D_FORMAT		1
+#define VOUT_SUPPORT_HORIZONTAL_REVERSE	1
+#else
+#define VOUT_SUPPORT_4X2K_30P		0
+#define VOUT_SUPPORT_3D_FORMAT		0
+#define VOUT_SUPPORT_HORIZONTAL_REVERSE 0
+#endif
+
+#if (CHIP_REV == A8)
+#define VOUT_ANALOG_OUT			0
+#else
+#define VOUT_ANALOG_OUT			1
+#endif
+
 
 /****************************************************/
 /* Controller registers definitions                 */
@@ -851,7 +886,7 @@
 
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || 	\
-    (CHIP_REV == A7L)
+    (CHIP_REV == A7L) || (CHIP_REV == A8) || (CHIP_REV == A7S)
 
 /* Display A control regsiters */
 #define VOUT_DA_CONTROL_OFFSET				0x300
@@ -1010,6 +1045,8 @@
 #define VOUT_DB_HDMI_CSC_PARAM_6_OFFSET			0x734
 #define VOUT_DB_HDMI_CSC_PARAM_7_OFFSET			0x738
 #define VOUT_DB_HDMI_CSC_PARAM_8_OFFSET			0x73c
+#define VOUT_DB_AUDIO_REGION_START_OFFSET		0x740
+#define VOUT_DB_AUDIO_REGION_BYTE_COUNT_OFFSET		0x744
 #define VOUT_DB_DIGITAL_DITHER_SETTINGS_OFFSET		0x754
 #define VOUT_DB_DIGITAL_DITHER_SEED_OFFSET		0x758
 #define VOUT_DB_VOUT_VOUT_SYNC_OFFSET			0x75c
@@ -1250,6 +1287,8 @@
 #define VOUT_DB_HDMI_CSC_PARAM_6_REG			VOUT_REG(0x734)
 #define VOUT_DB_HDMI_CSC_PARAM_7_REG			VOUT_REG(0x738)
 #define VOUT_DB_HDMI_CSC_PARAM_8_REG			VOUT_REG(0x73c)
+#define VOUT_DB_AUDIO_REGION_START_REG			VOUT_REG(0x740)
+#define VOUT_DB_AUDIO_REGION_BYTE_COUNT_REG		VOUT_REG(0x744)
 #define VOUT_DB_DIGITAL_DITHER_SETTINGS_REG		VOUT_REG(0x754)
 #define VOUT_DB_DIGITAL_DITHER_SEED_REG			VOUT_REG(0x758)
 #define VOUT_DB_VOUT_VOUT_SYNC_REG			VOUT_REG(0x75c)

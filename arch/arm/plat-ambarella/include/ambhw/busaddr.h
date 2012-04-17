@@ -23,7 +23,7 @@
 #define DRAM_VIRT_BASE		0xfece0000
 
 /* The physical address of AHB & APB - they SHOULD NOT be used directly */
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
 #define AHB_PHYS_BASE		0xe0000000
 #define APB_PHYS_BASE		0xe8000000
 #define DRAM_PHYS_BASE		0xdffe0000
@@ -56,8 +56,7 @@
 #endif
 
 /* DRAM slave offsets */
-
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A8) 
 #define DRAM_DRAM_OFFSET 		0x0000
 #define DRAM_DDRC_OFFSET  		0x0800
 #else
@@ -95,10 +94,21 @@
 
 #if (CHIP_REV == A6)
 #define HIF_OFFSET			0x14000
-#elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
+#elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
+      (CHIP_REV == A8)
 #define HIF_OFFSET			0xb000
 #else
 #define HIF_OFFSET			0xd000
+#endif
+
+//#if (CHIP_REV == A8)
+#define SIF_OFFSET			0xd000
+//#endif
+
+#if (CHIP_REV == A8) || (CHIP_REV == A9)
+#define I2S2_OFFSET			0xc000
+#else
+#define I2S2_OFFSET			0xa000
 #endif
 
 #define SSI_DMA_OFFSET			0xd000 /* iONE */
@@ -122,7 +132,7 @@
 #define AHB_SECURE_SCRATCHPAD_OFFSET	0x14000 /* iONE */
 #define GRAPHICS_DMA_OFFSET		0x15000
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
 #define TS_OFFSET			0x1d000
 #else
 #define TS_OFFSET			0x15000
@@ -133,9 +143,18 @@
 #define ETH2_OFFSET			0x18000
 #define ETH2_DMA_OFFSET			0x19000
 
+#if (CHIP_REV == A7S)
+#define USB_HOST_CTRL_EHCI_OFFSET	0x18000 
+#define USB_HOST_CTRL_OHCI_OFFSET	0x19000 
+#define AHB_SCRATCHPAD_OFFSET		0x1b000
+#define AHB_SECURE_OFFSET		0x1d000 
+#else
 #define USB_HOST_CTRL_EHCI_OFFSET	0x17000 /* iONE */
 #define USB_HOST_CTRL_OHCI_OFFSET	0x18000 /* iONE */
 #define AHB_SCRATCHPAD_OFFSET		0x19000 /* iONE */
+#define AHB_SECURE_OFFSET		0x1f000 /* iONE */
+#endif
+
 #define SATA_OFFSET			0x1a000 /* iONE */
 
 #if (CHIP_REV == I1)
@@ -145,7 +164,6 @@
 #endif
 #define VIC3_OFFSET			0x1c000 /* iONE */
 #define SPDIF_OFFSET			0x1e000 /* iONE */
-#define AHB_SECURE_OFFSET		0x1f000 /* iONE */
 
 /* AHB slave base addresses */
 #define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
@@ -159,6 +177,8 @@
 #define VIN_BASE			(AHB_BASE + VIN_OFFSET)
 #define I2S_BASE			(AHB_BASE + I2S_OFFSET)
 #define I2S_BASE_PHYS 			(AHB_PHYS_BASE + I2S_OFFSET)
+#define I2S2_BASE			(AHB_BASE + I2S2_OFFSET)
+#define I2S2_BASE_PHYS 			(AHB_PHYS_BASE + I2S2_OFFSET)
 #define SD2_BASE			(AHB_BASE + SD2_OFFSET)
 #define MS_BASE				(AHB_BASE + MS_OFFSET)
 #define HOST_BASE			(AHB_BASE + HOST_OFFSET)
@@ -214,6 +234,8 @@
 #define VIN_REG(x)			(VIN_BASE + (x))
 #define I2S_REG(x)			(I2S_BASE + (x))
 #define I2S_REG_PHYS(x)  		(I2S_BASE_PHYS + (x))
+#define I2S2_REG(x)			(I2S2_BASE + (x))
+#define I2S2_REG_PHYS(x)  		(I2S2_BASE_PHYS + (x))
 #define SD2_REG(x)			(SD2_BASE + (x))
 #define MS_REG(x)			(MS_BASE + (x))
 #define HOST_REG(x)			(HOST_BASE + (x))
@@ -243,12 +265,14 @@
 #define VIC3_REG(x)			(VIC3_BASE + (x))
 #define SPDIF_REG(x)			(SPDIF_BASE + (x))
 #define AHB_SECURE_REG(x)		(AHB_SECURE_BASE + (x))
+#define SIF_REG(x)			(SIF_BASE + (x))
 
 /*----------------------------------------------------------------------------*/
 
 /* APB slave offsets */
 
 #define TSSI_OFFSET			0x1000
+#define PWM_OIS_OFFSET			0x1000 /* A7S */
 #define SSI_OFFSET			0x2000
 #define SPI_OFFSET			0x2000
 #define IDC_OFFSET			0x3000
@@ -264,9 +288,10 @@
 #define ADC_OFFSET			0xd000
 #define RTC_OFFSET			0xd000
 #define GPIO2_OFFSET			0xe000
+#define IDC3_OFFSET			0xe000 /* A8 */
 #define SPI2_OFFSET			0xf000
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1)
+#if (CHIP_REV == A7) || (CHIP_REV == I1) ||(CHIP_REV == A7S) 
 #define GPIO3_OFFSET			0x10000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1e000
@@ -290,11 +315,17 @@
 
 #if (CHIP_REV == A7L)
 #define SPI_SLAVE_OFFSET		0x1000
+#elif (CHIP_REV == A7S)
+#define SPI_SLAVE_OFFSET		0x14000
 #else
 #define SPI_SLAVE_OFFSET		0x1e000
 #endif
 
+#if (CHIP_REV == A7S)
+#define UART1_OFFSET			0x15000
+#else
 #define UART1_OFFSET			0x1f000
+#endif
 #define IDCS_OFFSET			0x12000
 
 #if	defined(__A1_FPGA__)
@@ -307,6 +338,7 @@
 /* APB slave base addresses */
 
 #define TSSI_BASE			(APB_BASE + TSSI_OFFSET)
+#define PWM_OIS_BASE			(APB_BASE + PWM_OIS_OFFSET) /* A7S */
 #define SSI_BASE			(APB_BASE + SPI_OFFSET)
 #define SPI_BASE			(APB_BASE + SPI_OFFSET)
 #define IDC_BASE			(APB_BASE + IDC_OFFSET)
@@ -322,6 +354,7 @@
 #define ADC_BASE			(APB_BASE + ADC_OFFSET)
 #define RTC_BASE			(APB_BASE + RTC_OFFSET)
 #define GPIO2_BASE			(APB_BASE + GPIO2_OFFSET)
+#define IDC3_BASE			(APB_BASE + IDC3_OFFSET)
 #define SPI2_BASE			(APB_BASE + SPI2_OFFSET)
 #define GPIO3_BASE			(APB_BASE + GPIO3_OFFSET)
 #define RCT_BASE			(APB_BASE + RCT_OFFSET)
@@ -340,6 +373,7 @@
 /* APB slave registers */
 
 #define TSSI_REG(x)			(TSSI_BASE + (x))
+#define PWM_OIS_REG(x)			(PWM_OIS_BASE + (x))  /* A7S */
 #define SPI_REG(x)			(SPI_BASE + (x))
 #define SSI_REG(x)			(SPI_BASE + (x))
 #define IDC_REG(x)			(IDC_BASE + (x))
@@ -357,6 +391,7 @@
 #define RTC_REG(x)			(RTC_BASE + (x))
 #define GPIO2_REG(x)			(GPIO2_BASE + (x))
 #define SPI2_REG(x)			(SPI2_BASE + (x))
+#define IDC3_REG(x)			(IDC3_BASE + (x))
 #define GPIO3_REG(x)			(GPIO3_BASE + (x))
 #define RCT_REG(x)			(RCT_BASE + (x))
 #define AUC_REG(x)			(AUC_BASE + (x))
@@ -370,7 +405,6 @@
 #define UART3_REG(x)			(UART3_BASE + (x))
 #define SPI4_REG(x)			(SPI4_BASE + (x))
 #define SATA_PHY_REG(x)			(SATA_PHY_BASE + (x))
-
 
 /* DSP Debug ports */
 
@@ -395,7 +429,7 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
     (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)  || \
-    (CHIP_REV == A7L)
+    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8) 
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))
@@ -413,7 +447,8 @@
 /* DSP related ... */
 /*******************/
 
-#if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)
+#if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
+    (CHIP_REV == A7S)
 
 #define ME_OFFSET			0x140000
 #define MDXF_OFFSET			0x150000
@@ -435,6 +470,40 @@
 #define DSP_CONFIG_MAIN_REG		(CODE_BASE + DSP_CONFIG_MAIN_OFFSET)
 #define DSP_CONFIG_SUB0_REG		(ME_BASE   + DSP_CONFIG_SUB0_OFFSET)
 #define DSP_CONFIG_SUB1_REG		(MDXF_BASE + DSP_CONFIG_SUB1_OFFSET)
+
+#elif (CHIP_REV == A8) 
+
+#define ORC_MDENC_OFFSET		0x010000
+#define ORC_MDDEC_OFFSET		0x020000
+#define ORC_ME_OFFSET			0x140000
+#define ORC_VIN_OFFSET			0x030000
+#define ORC_CODEENC_OFFSET		0x168000
+#define ORC_CODEDEC_OFFSET		0x1c8000
+
+#define APB_DEBUG_BASE			(APB_BASE | (1 << 26))	/* debug port */
+
+#define ORC_MDENC_BASE			(APB_DEBUG_BASE + ORC_MDENC_OFFSET)
+#define ORC_MDDEC_BASE			(APB_DEBUG_BASE + ORC_MDDEC_OFFSET)
+#define ORC_ME_BASE			(APB_DEBUG_BASE + ORC_ME_OFFSET)
+#define ORC_VIN_BASE			(APB_DEBUG_BASE + ORC_VIN_OFFSET)
+#define ORC_CODEENC_BASE		(APB_DEBUG_BASE + ORC_CODEENC_OFFSET)
+#define ORC_CODEDEC_BASE		(APB_DEBUG_BASE + ORC_CODEDEC_OFFSET)
+
+#define DSP_DRAM_OFFSET			0x0008
+#define DSP_CONFIG_OFFSET		0x0000
+
+#define DSP_DRAM_ORC_MDENC_REG		(ORC_MDENC_BASE   + DSP_DRAM_OFFSET)
+#define DSP_DRAM_ORC_MDDEC_REG		(ORC_MDDEC_BASE   + DSP_DRAM_OFFSET)
+#define DSP_DRAM_ORC_ME_REG		(ORC_ME_BASE      + DSP_DRAM_OFFSET)
+#define DSP_DRAM_ORC_VIN_REG		(ORC_VIN_BASE     + DSP_DRAM_OFFSET)
+#define DSP_DRAM_ORC_CODEENC_REG	(ORC_CODEENC_BASE + DSP_DRAM_OFFSET)
+#define DSP_DRAM_ORC_CODEDEC_REG	(ORC_CODEDEC_BASE + DSP_DRAM_OFFSET)
+#define DSP_CONFIG_ORC_MDENC_REG	(ORC_MDENC_BASE   + DSP_CONFIG_OFFSET)
+#define DSP_CONFIG_ORC_MDDEC_REG	(ORC_MDDEC_BASE   + DSP_CONFIG_OFFSET)
+#define DSP_CONFIG_ORC_ME_REG		(ORC_ME_BASE      + DSP_CONFIG_OFFSET)
+#define DSP_CONFIG_ORC_VIN_REG		(ORC_VIN_BASE     + DSP_CONFIG_OFFSET)
+#define DSP_CONFIG_ORC_CODEENC_REG	(ORC_CODEENC_BASE + DSP_CONFIG_OFFSET)
+#define DSP_CONFIG_ORC_CODEDEC_REG	(ORC_CODEDEC_BASE + DSP_CONFIG_OFFSET)
 
 #else
 
@@ -487,5 +556,6 @@
 /* Cryptography enginer offset */
 #define CRYPT_OFFSET	0x0
 #define CRTYP_REG(x)	(CRYPT_BASE + (x))
+#define CRTYP1_REG(x)	(CRYPT1_BASE + (x))
 
 #endif

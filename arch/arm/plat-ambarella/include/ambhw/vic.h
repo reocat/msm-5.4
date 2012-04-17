@@ -19,20 +19,21 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5)  || (CHIP_REV == A6) || \
     (CHIP_REV ==A5S) || (CHIP_REV == A7M) || (CHIP_REV == A7) || \
-    (CHIP_REV == A7L)
+    (CHIP_REV == A7L) || (CHIP_REV == A8)
 #define VIC_INSTANCES	2
-#elif (CHIP_REV == I1)
+#elif (CHIP_REV == I1) || (CHIP_REV == A7S)
 #define VIC_INSTANCES	3
 #else
 #define VIC_INSTANCES	1
 #endif
 
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A8)
 #define VIC_SUPPORT_CPU_OFFLOAD			1
 #define VIC_SUPPORT_REPRIORITIZE_INTR_SRC	1
 #else
-#define VIC_SUPPORT_CPU_OFFLOAD			0	
+#define VIC_SUPPORT_CPU_OFFLOAD			0
 #define VIC_SUPPORT_REPRIORITIZE_INTR_SRC	0
 #endif
 

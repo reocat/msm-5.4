@@ -19,7 +19,8 @@
 
 #if ((CHIP_REV == A1)  || (CHIP_REV == A5)  || (CHIP_REV == A6)  || \
      (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
-     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7))
+     (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)) || \
+     (CHIP_REV == A8)
 #define SD_INSTANCES			1
 #else
 #define SD_INSTANCES			2
@@ -49,7 +50,9 @@
 #define SD_HAS_INTERNAL_2ND_CDWP	0
 #endif
 
-#if (CHIP_REV == A5L) || (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5L) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A7S) || (CHIP_REV == A8)
+
 #define SD_HAS_DELAY_CTRL		1
 #else
 #define SD_HAS_DELAY_CTRL		0
@@ -64,36 +67,50 @@
 #endif
 
 #if ((CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) || \
-     (CHIP_REV == I1)  || (CHIP_REV == A7L))
+     (CHIP_REV == I1)  || (CHIP_REV == A7L)) || (CHIP_REV == A7S) || \
+     (CHIP_REV == A8)
 #define SD_HAS_IO_DRIVE_CTRL		1
 #else
 #define SD_HAS_IO_DRIVE_CTRL		0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1)
 #define SD_HOST1_SUPPORT_XC		0
+#define SD_HOST2_SUPPORT_XC		1
+#elif (CHIP_REV == A8) || (CHIP_REV == A7L)
+#define SD_HOST1_SUPPORT_XC		1
+#define SD_HOST2_SUPPORT_XC		0
+#elif (CHIP_REV == A7S)
+#define SD_HOST1_SUPPORT_XC		1
 #define SD_HOST2_SUPPORT_XC		1
 #else
 #define SD_HOST1_SUPPORT_XC		0
 #define SD_HOST2_SUPPORT_XC		0
 #endif
 
-#if (CHIP_REV == I1) ||  (CHIP_REV == A7L)
+#if (CHIP_REV == I1) ||  (CHIP_REV == A7L) || (CHIP_REV == A8) || \
+    (CHIP_REV == A9)
 #define SD_SUPPORT_ACMD23		0
 #else
 #define SD_SUPPORT_ACMD23		1
 #endif
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == A8)
 #define SD_HAS_SDXC_CLOCK		1
 #else
 #define SD_HAS_SDXC_CLOCK		0
 #endif
 
-#if (CHIP_REV == A7L)
+#if (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define SD_HOST1_HOST2_HAS_MUX		1
 #else
 #define SD_HOST1_HOST2_HAS_MUX		0
+#endif
+
+#if (CHIP_REV == A9)
+#define SD_SUPPORT_ADMA			1
+#else
+#define SD_SUPPORT_ADMA			0
 #endif
 
 /****************************************************/
@@ -128,6 +145,8 @@
 #define SD_AC12ES_OFFSET		0x03c	/* Half word */
 #define SD_CAP_OFFSET			0x040
 #define SD_CUR_OFFSET			0x048
+#define SD_ADMA_STA_OFFSET		0x054
+#define SD_ADMA_ADDR_OFFSET		0x058
 #define SD_XC_CTR_OFFSET		0x060
 #define SD_BOOT_CTR_OFFSET		0x070
 #define SD_BOOT_STA_OFFSET		0x074
@@ -163,6 +182,8 @@
 #define SD_AC12ES_REG			SD_REG(0x03c)	/* Half word */
 #define SD_CAP_REG			SD_REG(0x040)
 #define SD_CUR_REG			SD_REG(0x048)
+#define SD_ADMA_STA_REG			SD_REG(0x054)
+#define SD_ADMA_ADDR_REG		SD_REG(0x058)
 #define SD_XC_CTR_REG			SD_REG(0x060)
 #define SD_BOOT_CTR_REG			SD_REG(0x070)
 #define SD_BOOT_STA_REG			SD_REG(0x074)
@@ -201,6 +222,8 @@
 #define SD2_AC12ES_REG			SD2_REG(0x03c)	/* Half word */
 #define SD2_CAP_REG			SD2_REG(0x040)
 #define SD2_CUR_REG			SD2_REG(0x048)
+#define SD2_ADMA_STA_REG		SD2_REG(0x054)
+#define SD2_ADMA_ADDR_REG		SD2_REG(0x058)
 #define SD2_SIST_REG			SD2_REG(0x0fc)	/* Half word */
 #define SD2_VER_REG			SD2_REG(0x0fe)	/* Half word */
 #endif
@@ -254,6 +277,7 @@
 #define SD_STA_CMD_INHIBIT_CMD		0x00000001
 
 /* SD_HOST_REG */
+#define SD_HOST_ADMA			0x10
 #define SD_HOST_8BIT			0x08
 #define SD_HOST_HIGH_SPEED		0x04
 #define SD_HOST_4BIT			0x02
@@ -266,7 +290,8 @@
 #define SD_PWR_3_3V			0x0e
 #define SD_PWR_3_0V			0x0c
 #define SD_PWR_1_8V			0x0a
-#elif ((CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2))
+#elif ((CHIP_REV == I1) || (CHIP_REV == A7L)) || (CHIP_REV == A8) ||	\
+       (CHIP_REV == A7S)
 /* SD_PWR_REG only care about bit[3] */
 #define SD_PWR_3_3V			0x08
 #define SD_PWR_3_0V			0x08
@@ -343,6 +368,7 @@
 #define SD_NISEN_CMD_DONE		0x0001
 
 /* SD_EISEN_REG */
+#define SD_EISEN_ADMA_ERR		0x0200
 #define SD_EISEN_ACMD12_ERR		0x0100
 #define SD_EISEN_CURRENT_ERR		0x0080
 #define SD_EISEN_DATA_BIT_ERR		0x0040
@@ -365,6 +391,7 @@
 #define SD_NIXEN_CMD_DONE		0x0001
 
 /* SD_EIXEN_REG */
+#define SD_EISEN_ADMA_ERR		0x0200
 #define SD_EIXEN_ACMD12_ERR		0x0100
 #define SD_EIXEN_CURRENT_ERR		0x0080
 #define SD_EIXEN_DATA_BIT_ERR		0x0040
@@ -392,6 +419,12 @@
 #define SD_AC12ES_TMOUT_ERROR		0x0002
 #define SD_AC12ES_NOT_EXECED		0x0001
 
+/* SD_ADMA_STA_REG */
+#define SD_ADMA_STA_ST_STOP		0x00000000
+#define SD_ADMA_STA_ST_FDS		0x00000001
+#define SD_ADMA_STA_ST_TFR		0x00000003
+#define SD_ADMA_STA_LEN_ERR		0x00000004
+
 /* SD_CAP_REG */
 #define SD_CAP_INTMODE			0x08000000
 #define SD_CAP_VOL_1_8V			0x04000000
@@ -400,6 +433,7 @@
 #define SD_CAP_SUS_RES			0x00800000
 #define SD_CAP_DMA			0x00400000
 #define SD_CAP_HIGH_SPEED		0x00200000
+#define SD_CAP_ADMA_SUPPORT		0x00080000
 #define SD_CAP_MAX_512B_BLK		0x00000000
 #define SD_CAP_MAX_1KB_BLK		0x00010000
 #define SD_CAP_MAX_2KB_BLK		0x00020000

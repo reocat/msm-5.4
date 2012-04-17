@@ -26,7 +26,7 @@
 #endif
 
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == A8)
 #define SUPPORT_GMII	1	// Gbit phy
 #else
 #define SUPPORT_GMII	0	// 10/100 bits phy

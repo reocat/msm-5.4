@@ -127,6 +127,13 @@ config PLAT_AMBARELLA_I1
 	select PLAT_AMBARELLA_SUPPORT_SATA
 	default n
 
+config PLAT_AMBARELLA_S2
+	bool
+	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	default n
+
 choice
 	prompt "Chip REV"
 
@@ -173,19 +180,6 @@ config PLAT_AMBARELLA_I1_ARM11
 	help
 	  Say Y here if you are using Ambarella I1 ARM11.
 
-config PLAT_AMBARELLA_S2
-	bool "S2"
-	select CPU_V6
-	select CPU_32v6K
-	select PLAT_AMBARELLA_GENERIC
-	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
-	select PLAT_AMBARELLA_SUPPORT_HAL
-	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
-	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-	help
-	  Say Y here if you are using Ambarella S2.
-
 config PLAT_AMBARELLA_I1_CORTEX
 	bool "iOne Cortex"
 	select CPU_V7
@@ -207,6 +201,34 @@ config PLAT_AMBARELLA_I1_CORTEX
 
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.
+
+config PLAT_AMBARELLA_S2_ARM11
+	bool "S2 ARM11"
+	select CPU_V6
+	select CPU_32v6K
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_S2
+	help
+	  Say Y here if you are using Ambarella S2 ARM11.
+
+config PLAT_AMBARELLA_S2_CORTEX
+	bool "S2 Cortex"
+	select CPU_V7
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_S2
+	select PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT
+	select PLAT_AMBARELLA_CORTEX
+	select ARM_ERRATA_742230 if SMP
+	select ARM_ERRATA_742231 if SMP
+	select ARM_ERRATA_743622
+	select ARM_ERRATA_754322
+	select ARM_ERRATA_751472 if SMP
+	select ARM_ERRATA_753970 if CACHE_PL310
+	select PL310_ERRATA_588369 if CACHE_PL310
+	select PL310_ERRATA_727915 if CACHE_PL310
+
+	help
+	  Say Y here if you are using Ambarella S2 Cortex.
 
 endchoice
 

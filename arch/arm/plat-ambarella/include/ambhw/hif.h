@@ -17,7 +17,8 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 
-#if (CHIP_REV == A1) || (CHIP_REV == A5L) || (CHIP_REV == A7L)
+#if (CHIP_REV == A1) || (CHIP_REV == A5L) || (CHIP_REV == A7L) || \
+    (CHIP_REV == A8)
 #define HOST_SUPPORT_AHB_CLK_EN		0
 #define HOST_USE_APB_BUS_CLK		0
 #else
@@ -29,7 +30,8 @@
 #define HOST_MAX_AHB_CLK_EN_BITS	8
 #define HOST_MAX_MODES			5
 #elif  (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
-	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) 
+	(CHIP_REV == A7L) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
+	(CHIP_REV == A7S)
 #define HOST_MAX_AHB_CLK_EN_BITS	0
 #define HOST_MAX_MODES			5
 #else
@@ -37,10 +39,16 @@
 #define HOST_MAX_MODES			6
 #endif
 
-#if (CHIP_REV == A5L) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5L) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
 #define HOST_INSTANCES			0
 #else
 #define HOST_INSTANCES			1
+#endif
+
+#if (CHIP_REV == A8)
+#define SIF_INSTANCES			1
+#else
+#define SIF_INSTANCES			0
 #endif
 
 /****************************************************/
@@ -167,5 +175,10 @@
 #define HOST_AHB_FLASH_CLK_ENB		0x04
 #define HOST_AHB_CF_CLK_ENB		0x02
 #define HOST_AHB_XD_CLK_ENB		0x01
+
+
+
+/* Synchronous host interface (SIF) */
+
 
 #endif

@@ -104,7 +104,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 	&ambarella_spi0,
 #if (SPI_INSTANCES >= 2)
-	&ambarella_spi1,
+//	&ambarella_spi1,
 #endif
 #if (SPI_INSTANCES >= 3)
 	&ambarella_spi2,

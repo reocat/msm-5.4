@@ -26,7 +26,8 @@
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L)
 #define RTC_SUPPORT_EXTRA_WAKEUP_PINS		1
 #define RTC_SUPPORT_30BITS_PASSED_SECONDS	1
-#elif (CHIP_REV == I1) || (CHIP_REV == A7L)
+#elif (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
+      (CHIP_REV == A8)  
 #define RTC_SUPPORT_EXTRA_WAKEUP_PINS		1
 #define RTC_SUPPORT_30BITS_PASSED_SECONDS	0
 #else
@@ -34,7 +35,8 @@
 #define RTC_SUPPORT_30BITS_PASSED_SECONDS	0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
+    (CHIP_REV == A8)
 #define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		1
 #define RTC_POWER_LOST_DETECT			1
 #define RTC_SW_POWER_LOST_DETECT		0
@@ -52,7 +54,8 @@
 #define RTC_SW_POWER_LOST_DETECT		0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
+    (CHIP_REV == A8)
 #define RTC_SEQ_LEVEL_CONFIGURABLE		1
 #define RTC_WAKEUP_CTRL				1
 #define RTC_LOW_BATTERY_DETECT			1
@@ -65,7 +68,7 @@
 #if (CHIP_REV == I1)
 #define RTC_PWR_LOSS_DETECT_BIT			5
 #define RTC_PWC_LOSS_MASK			0x20
-#elif (CHIP_REV == A7L)
+#elif (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8) /* FIXME */
 #define RTC_PWR_LOSS_DETECT_BIT			6
 #define RTC_PWC_LOSS_MASK			0x40
 #elif (CHIP_REV == A7) || (CHIP_REV == A5L)
