@@ -346,7 +346,7 @@ CONFIG_AMBARELLA_EXT_GPIO_NUM=64
 # Ambarella Board
 #
 CONFIG_MACH_AMBARELLA=y
-# CONFIG_MACH_GINKGO is not set
+CONFIG_MACH_GINKGO=y
 
 #
 # Misc on Board Devices
