@@ -2184,7 +2184,6 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	}
 
 	/* Enable udc */
-		printk("%s: %d\n", __func__, udc->udc_is_enabled);
 	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_enable(udc);
 	spin_unlock_irqrestore(&udc->lock, flags);

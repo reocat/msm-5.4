@@ -1306,7 +1306,7 @@ static void amb_disconnect (struct usb_gadget *gadget)
 	 */
 }
 
-static void __exit amb_unbind (struct usb_gadget *gadget)
+static void amb_unbind (struct usb_gadget *gadget)
 {
 	struct amb_dev		*dev = get_gadget_data (gadget);
 

@@ -993,12 +993,17 @@ void _init_usb_pll(void)
 {
 	//register int i;
 
-	rct_set_usb_ana_on();
-	dly_tsk(1);
+//	rct_set_usb_ana_on();
+//	amba_writel(0x70170050, 0x2);
+	amba_writel(ANA_PWR_REG, 0x2);
+	//dly_tsk(1);
+	/* Fixme: do we need to reduce the delay time ? */
+	udelay(150);
 }
 
 void rct_usb_reset(void)
 {
+#if 0
 	amb_hal_success_t rval;
 
 	rval = amb_usb_subsystem_soft_reset(HAL_BASE_VP);
@@ -1006,6 +1011,7 @@ void rct_usb_reset(void)
 	if (rval != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_usb_device_soft_reset() failed\r\n");
 	}
+#endif
 }
 
 /**
