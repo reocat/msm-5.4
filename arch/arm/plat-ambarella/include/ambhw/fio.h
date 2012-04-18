@@ -51,7 +51,7 @@
 
 #endif
 
-#if 	(CHIP_REV == A1)  || \
+#if 	(CHIP_REV == A1) || \
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
 	(CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)  || \
 	(CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
@@ -97,7 +97,6 @@
 
 #if 	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
 	(CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8)
-
 #define	NAND_DUMMY_XFER				0
 #else
 #define	NAND_DUMMY_XFER				0

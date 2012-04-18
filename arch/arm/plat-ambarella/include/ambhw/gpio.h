@@ -17,7 +17,7 @@
 /* Capabilities based on chip revision              */
 /****************************************************/
 #if 	(CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A7L)
-	#define GPIO_INSTANCES	4
+#define GPIO_INSTANCES	4
 #elif 	(CHIP_REV == A2) || (CHIP_REV == A3) || 		\
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
 	(CHIP_REV == A5S) || (CHIP_REV == A5L)
@@ -396,8 +396,6 @@
 #define SSI_SLAVE_MOSI	GPIO(52)
 #define SSI_SLAVE_CLK	GPIO(53)
 
-
-/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == A7L)
 /* (CHIP_REV == A7L)*/
 #define SD_HS		GPIO(22)
@@ -415,7 +413,6 @@
 #define SSI_SLAVE_MOSI	GPIO(52)
 #define SSI_SLAVE_CLK	GPIO(53)
 
-/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == A7)
 
 #define VD1_OUT20	GPIO(28)
@@ -491,12 +488,10 @@
 #define SC_D3		GPIO(142)
 #define SC_D4		GPIO(143)
 
-/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == A5L)
 
 #define IDC3_BUS_MUX	GPIO(63)
 
-/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == I1) /* iONE */
 
 #define APP_PRT_OVCURR_I0	GPIO(7)
@@ -651,7 +646,6 @@
 #define SC_D3		GPIO(142)
 #define SC_D4		GPIO(143)
 
-/*------------------------------------------------------------------------*/
 #elif (CHIP_REV == A7S) /* A7S */
 
 #define SD_HS			GPIO(22)
@@ -757,8 +751,6 @@
 #endif
 
 
-/*------------------------------------------------------------------------*/
-/*------------------------------------------------------------------------*/
 #if (CHIP_REV == A7L)
 /* (CHIP_REV == A7L)*/
 #define VD1_OUT00	GPIO(96)

@@ -176,9 +176,4 @@
 #define HOST_AHB_CF_CLK_ENB		0x02
 #define HOST_AHB_XD_CLK_ENB		0x01
 
-
-
-/* Synchronous host interface (SIF) */
-
-
 #endif

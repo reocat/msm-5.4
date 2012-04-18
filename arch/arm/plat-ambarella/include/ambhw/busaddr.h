@@ -17,9 +17,10 @@
  * The APB physical address is at 0x70000000 but is always mapped to
  * virtual address 0xd9000000
  */
-#define AHB_BASE		0xd8000000
-#define APB_BASE		0xd9000000
+#define AHB_BASE		0x60000000
+#define APB_BASE		0x70000000
 #define CRYPT_BASE		0xdb000000
+#define CRYPT1_BASE		0xdb800000
 #define DRAM_VIRT_BASE		0xfece0000
 
 /* The physical address of AHB & APB - they SHOULD NOT be used directly */
@@ -144,10 +145,10 @@
 #define ETH2_DMA_OFFSET			0x19000
 
 #if (CHIP_REV == A7S)
-#define USB_HOST_CTRL_EHCI_OFFSET	0x18000 
-#define USB_HOST_CTRL_OHCI_OFFSET	0x19000 
+#define USB_HOST_CTRL_EHCI_OFFSET	0x18000
+#define USB_HOST_CTRL_OHCI_OFFSET	0x19000
 #define AHB_SCRATCHPAD_OFFSET		0x1b000
-#define AHB_SECURE_OFFSET		0x1d000 
+#define AHB_SECURE_OFFSET		0x1d000
 #else
 #define USB_HOST_CTRL_EHCI_OFFSET	0x17000 /* iONE */
 #define USB_HOST_CTRL_OHCI_OFFSET	0x18000 /* iONE */
@@ -291,7 +292,7 @@
 #define IDC3_OFFSET			0xe000 /* A8 */
 #define SPI2_OFFSET			0xf000
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1) ||(CHIP_REV == A7S) 
+#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7S)
 #define GPIO3_OFFSET			0x10000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1e000
@@ -429,7 +430,7 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
     (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)  || \
-    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8) 
+    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8)
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))

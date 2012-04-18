@@ -233,7 +233,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 		goto ambarella_pll_proc_read_exit;
 	}
 
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPossible Vidcap:\n");
 	for (i = 0; i < ARRAY_SIZE(vidcap_list); i++) {
@@ -257,7 +257,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPLL Information:\n"
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 			"\tVidcap:\t\t%s\n"
 #endif
 			"\tPerformance:\t%s\n"
@@ -268,16 +268,18 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #if (CHIP_REV == A5S)
 			"\tHDpreview:\t%s\n"
 #endif
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 			"\tDigitalGamma:\t%s\n"
 #endif
 			"\tARM:\t\t%u Hz\n"
 			"\tDram:\t\t%u Hz\n"
 			"\tiDSP:\t\t%u Hz\n"
 			"\tCore:\t\t%u Hz\n"
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			"\tCortex:\t\t%u Hz\n"
 			"\tAXI:\t\t%u Hz\n"
+#endif
+#if (CHIP_REV == I1)
 			"\tDDD:\t\t%u Hz\n"
 #endif
 			"\tAHB:\t\t%u Hz\n"
@@ -291,12 +293,12 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tSSI:\t\t%u Hz\n"
 			"\tSSI2:\t\t%u Hz\n"
 			"\tUART:\t\t%u Hz\n"
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			"\tGTX:\t\t%u Hz\n"
 			"\tSDXC:\t\t%u Hz\n"
 #endif
 			"\tSD:\t\t%u Hz\n\n",
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 			vidcap_list[operating_mode.vidcap_size].name,
 #endif
 			performance_list[operating_mode.performance].name,
@@ -307,16 +309,18 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #if (CHIP_REV == A5S)
 			operating_mode.hd_preview_state ? "On" : "Off",
 #endif
-#if (CHIP_REV == A7 || CHIP_REV == I1)
+#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
 			operating_mode.amb_digital_gamma_mode ? "On" : "Off",
 #endif
 			get_arm_bus_freq_hz(),
 			get_dram_freq_hz(),
 			get_idsp_freq_hz(),
 			get_core_bus_freq_hz(),
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			amb_get_cortex_clock_frequency(HAL_BASE_VP),
 			amb_get_axi_clock_frequency(HAL_BASE_VP),
+#endif
+#if (CHIP_REV == I1)
 			amb_get_3d_clock_frequency(HAL_BASE_VP),
 #endif
 			get_ahb_bus_freq_hz(),
@@ -330,9 +334,14 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			amb_get_ssi_clock_frequency(HAL_BASE_VP),
 			amb_get_ssi2_clock_frequency(HAL_BASE_VP),
 			amb_get_uart_clock_frequency(HAL_BASE_VP),
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			amb_get_gtx_clock_frequency(HAL_BASE_VP),
+#endif
+#if (CHIP_REV == I1)
 			amb_get_sdxc_clock_frequency(HAL_BASE_VP),
+#endif
+#if (CHIP_REV == S2)
+			amb_get_sdio_clock_frequency(HAL_BASE_VP),
 #endif
 			get_sd_freq_hz());
 

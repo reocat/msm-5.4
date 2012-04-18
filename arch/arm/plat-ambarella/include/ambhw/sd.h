@@ -52,7 +52,6 @@
 
 #if (CHIP_REV == A5L) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
     (CHIP_REV == A7S) || (CHIP_REV == A8)
-
 #define SD_HAS_DELAY_CTRL		1
 #else
 #define SD_HAS_DELAY_CTRL		0

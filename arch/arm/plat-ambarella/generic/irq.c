@@ -634,7 +634,7 @@ void __init ambarella_init_irq(void)
 	}
 #endif
 #endif
-#if 0
+
 	/* Setup GPIO IRQs */
 	for (i = 0; i < AMBGPIO_SIZE; i++) {
 		set_irq_chip(GPIO_INT_VEC(i), &ambarella_gpio_irq_chip);
@@ -663,7 +663,6 @@ void __init ambarella_init_irq(void)
 #if (GPIO_INSTANCES >= 6)
 	set_irq_type(GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
 	set_irq_chained_handler(GPIO5_IRQ, ambarella_gpio_irq_handler);
-#endif
 #endif
 }
 

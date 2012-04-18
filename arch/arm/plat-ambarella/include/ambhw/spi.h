@@ -18,7 +18,7 @@
 /****************************************************/
 #if (CHIP_REV == A1)
 #define SPI_MAX_SLAVE_ID 			3
-#elif (CHIP_REV == I1) 
+#elif (CHIP_REV == I1)
 #define SPI_AHB_MAX_SLAVE_ID			0
 #define SPI_MAX_SLAVE_ID 			7
 #else
@@ -32,8 +32,7 @@
 #endif
 
 #if ((CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) || \
-     (CHIP_REV == A5S) || (CHIP_REV == A7S) || (CHIP_REV == A9) || \
-     (CHIP_REV == S2))
+     (CHIP_REV == A5S))
 #define SPI_INSTANCES				2
 #define SPI_AHB_INSTANCES			0
 #define SPI_SUPPORT_TSSI_MODE			1
@@ -44,7 +43,7 @@
 #define SPI_SUPPORT_TSSI_MODE			1
 
 #elif (CHIP_REV == A7S)
-#define SPI_INSTANCES				2
+#define SPI_INSTANCES				1
 #define SPI_AHB_INSTANCES			0
 #define SPI_SUPPORT_TSSI_MODE			0
 

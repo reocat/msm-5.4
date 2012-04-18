@@ -201,58 +201,17 @@ static void __init ambarella_init_ginkgo(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
-	/* config board */
-	ambarella_board_generic.power_detect.irq_gpio = GPIO(135);
-	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(135);
-	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	/* config LCD */
-	ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
-	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-	ambarella_board_generic.lcd_backlight.active_delay = 1;
-
-	ambarella_board_generic.lcd_spi_hw.bus_id = 2;
-	ambarella_board_generic.lcd_spi_hw.cs_id = 4;
-
-	/* config audio */
-	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
-	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
-
-	/* Config Eth0 */
-	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
-	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-	ambarella_eth0_platform_info.mii_reset.active_delay = 20;
-
-
-	/* Config Vin */
-	ambarella_board_generic.vin0_reset.gpio_id = GPIO(127);
-	ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.vin0_reset.active_delay = 200;
-
 	/* Config SD */
-	fio_default_owner = SELECT_FIO_SDIO;
+	fio_default_owner = SELECT_FIO_FREE;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
-	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
-	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
-	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
+	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
-
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	i2c_register_board_info(0, &ambarella_board_hdmi_info, 1);
-#else
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-#endif
 
 	platform_device_register(&ginkgo_board_input);
 }

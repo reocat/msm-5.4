@@ -135,7 +135,6 @@
 #define ADC_CHAN7_INTR_OFFSET		0x70
 #endif
 
-
 #if (CHIP_REV == S2)
 #define ADC_DATA8_OFFSET		0x170
 #define ADC_DATA9_OFFSET		0x174
