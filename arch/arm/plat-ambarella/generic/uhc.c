@@ -25,8 +25,8 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/delay.h>
-
+#include <linux/io.h>
+#include <linux/interrupt.h>
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <plat/uhc.h>
@@ -200,6 +200,7 @@ static struct ambarella_uhc_controller ambarella_platform_ehci_data = {
 	.enable_host	= ambarella_enable_usb_host,
 	.disable_host	= ambarella_disable_usb_host,
 	.usb1_is_host	= 0,
+	.irqflags	= IRQF_TRIGGER_HIGH,
 };
 
 struct platform_device ambarella_ehci0 = {
@@ -230,6 +231,11 @@ struct resource ambarella_ohci_resources[] = {
 static struct ambarella_uhc_controller ambarella_platform_ohci_data = {
 	.enable_host	= ambarella_enable_usb_host,
 	.disable_host	= ambarella_disable_usb_host,
+#if (CHIP_REV == I1)
+	.irqflags	= IRQF_TRIGGER_LOW,
+#else
+	.irqflags	= IRQF_TRIGGER_HIGH,
+#endif
 };
 
 struct platform_device ambarella_ohci0 = {
