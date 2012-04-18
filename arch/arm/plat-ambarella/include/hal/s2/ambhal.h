@@ -1,14 +1,14 @@
 /**
- * @mainpage Ambarella S2 Hardware Abstraction Layer
+ * @mainpage Ambarella A7S Hardware Abstraction Layer
  *
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date January 2012
- * @version 6908
+ * @version 7034
  *
  * @par Introduction:
- * The Ambarella S2 Hardware Abstraction Layer (ambhal) provides an API between
- * high level software and the low level hardware registers of the S2 chip.
+ * The Ambarella A7S Hardware Abstraction Layer (ambhal) provides an API between
+ * high level software and the low level hardware registers of the A7S chip.
  *
  * @par Objectives:
  * - Ease of Use
@@ -323,24 +323,24 @@
  * The api to change the clock source takes the new clock source name and the new clock source frequency.
  * @par External PLL Reference Clocks
  * When the new clock source is 
- * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
+ * AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI or AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK
  * the reference clock source of the pll is being changed.
  * The api needs that reference clock frequency to be able to calculate the correct pll settings
  * that will generate the output clock of the pll.
  * @par Internal PLL Reference Clock
- * When the new clock source is ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF the api selects the reference clock frequency
+ * When the new clock source is AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF the api selects the reference clock frequency
  * based on the system configuration pins (it is either 24 MHz or 27 MHz). In this
  * case the application does not need to provide anything as the api will figure it out on its
  * own and do the pll settings calculations accordingly.
  * @par External Clock (No PLL) 
- * When the new clock source is ::AMB_EXTERNAL_CLOCK_SOURCE the pll is not used and so the api does not
+ * When the new clock source is AMB_EXTERNAL_CLOCK_SOURCE the pll is not used and so the api does not
  * care what the reference clock frequency is. In fact the api will power down
  * that pll when the application selects that option to save power.
  */
 
 /**
  * @file ambhal.h
- * @brief Ambarella S2 Hardware Abstraction Layer API.
+ * @brief Ambarella A7S Hardware Abstraction Layer API.
  *
  */
 
@@ -416,10 +416,10 @@ AMB_HAL_FUNCTION_INFO_GET_AUDIO_PLL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_AUDIO_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_AUDIO_PLL_LOCK_STATUS,
 AMB_HAL_FUNCTION_INFO_ENABLE_AUDIO_CLOCK_OBSERVATION,
-AMB_HAL_FUNCTION_INFO_USB_SUBSYSTEM_SOFT_RESET,
-AMB_HAL_FUNCTION_INFO_SET_USB_INTERFACE_STATE,
-AMB_HAL_FUNCTION_INFO_GET_USB_INTERFACE_STATE,
-AMB_HAL_FUNCTION_INFO_SET_USB_CLOCK_SOURCE,
+AMB_HAL_FUNCTION_INFO_USB_DEVICE_SOFT_RESET,
+AMB_HAL_FUNCTION_INFO_USB_HOST_SOFT_RESET,
+AMB_HAL_FUNCTION_INFO_SET_USB_PORT_STATE,
+AMB_HAL_FUNCTION_INFO_GET_USB_PORT_STATE,
 AMB_HAL_FUNCTION_INFO_SET_UART_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_UART_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_UART_CLOCK_CONFIGURATION,
@@ -529,6 +529,9 @@ AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
 AMB_HAL_FUNCTION_INFO_GET_AHB_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_APB_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_GET_AXI_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_SOURCE,
+AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_SOURCE,
 AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY,
 AMB_HAL_FUNCTION_INFO_NULL
 } amb_hal_function_info_index_t ;
@@ -760,52 +763,27 @@ AMB_OPERATING_MODE_RESERVED = 0xffffffffUL
 } amb_mode_t ;
 
 /**
- * USB Interface State Settings.
+ * USB Port State Settings.
  *
  * @ingroup usb_group
  */
 
 typedef enum {
-/** Disable USB interface */
+/** Disable USB port */
 AMB_USB_OFF,
-/** Enable USB interface */
+/** Enable USB port */
 AMB_USB_ON,
-/** Force USB interface into suspend state */
+/** Force USB port into suspend state */
 AMB_USB_SUSPEND,
-/** Enable USB interface  & force USB to never suspend */
+/** Enable USB port  & force USB to never suspend */
 AMB_USB_ALWAYS_ON,
 /* Reserved */
 AMB_USB_RESERVED = 0xffffffffUL
-} amb_usb_interface_state_t ;
-
-/**
- * USB Phy Clock Source Selection
- *
- * @ingroup usb_group
- */
-
-typedef enum {
-/** Use internally generated (on-chip) 12MHz clock source*/
-AMB_USB_CLK_CORE_12MHZ,
-/** Use internally generated (on-chip) 24MHz clock source*/
-AMB_USB_CLK_CORE_24MHZ,
-/** Use internally generated (on-chip) 48MHz clock source*/
-AMB_USB_CLK_CORE_48MHZ,
-/** Use external (off-chip) 12MHz clock source (2.5V) on xx_xout_usb pin */
-AMB_USB_CLK_EXT_12MHZ,
-/** Use external (off-chip) 24MHz clock source (2.5V) on xx_xout_usb pin */
-AMB_USB_CLK_EXT_24MHZ,
-/** Use external (off-chip) 48MHz clock source (2.5V) on xx_xout_usb pin */
-AMB_USB_CLK_EXT_48MHZ,
-/** Use external 12MHz crystal clock source on xx_xout_usb pin */
-AMB_USB_CLK_CRYSTAL_12MHZ,
-/* Reserved */
-AMB_USB_CLK_RESERVED = 0xffffffffUL
-} amb_usb_clock_source_t ;
+} amb_usb_port_state_t ;
 
 /**
  * State of HDMI Interface
- *
+ * 
  * @ingroup hdmi_group
  */
 
@@ -820,7 +798,7 @@ AMB_HDMI_RESERVED = 0xffffffffUL
 
 /**
  * Dual Stream state
- *
+ * 
  * @ingroup mode_group
  */
 
@@ -837,7 +815,7 @@ AMB_DUAL_STREAM_RESERVED = 0xffffffffUL
  * Digital Gamma Mode
  *
  * Turning this on forces the core clock frequency to be multiple of 36 MHz.
- *
+ * 
  * @ingroup mode_group
  */
 
@@ -864,7 +842,7 @@ amb_performance_t performance ;
 /** Operating mode ::amb_mode_t */
 amb_mode_t mode ;
 /** USB state */
-amb_usb_interface_state_t usb_state ;
+amb_usb_port_state_t usb_state ;
 /** HDMI state */
 amb_hdmi_interface_state_t hdmi_state ;
 /** Dual Stream state */
@@ -1226,7 +1204,7 @@ static INLINE amb_hal_success_t amb_set_operating_mode (void *amb_hal_base_addre
  * Get the current operating mode for the system
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[out] ::amb_operating_mode Current operating mode.
+ * @param[out] amb_operating_mode Current operating mode.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
@@ -1311,7 +1289,7 @@ static INLINE amb_boot_type_t amb_get_boot_type (void *amb_hal_base_address)
 }
 
 /**
- * Get the host interface type
+ * Get the host interface type 
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1793,10 +1771,9 @@ static INLINE amb_hal_success_t amb_enable_sensor_clock_observation (void *amb_h
  */
 
 /**
- * Apply the usb phy and usb device controller soft reset sequence
+ * Apply the usb device controller soft reset
  *
- * @note This function triggers a soft reset sequence for the usb phy and
- * device controller
+ * @note This function triggers a soft reset for the usb device controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
@@ -1805,74 +1782,66 @@ static INLINE amb_hal_success_t amb_enable_sensor_clock_observation (void *amb_h
  * @ingroup usb_group
  */
 
-static INLINE amb_hal_success_t amb_usb_subsystem_soft_reset (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_usb_device_soft_reset (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_USB_SUBSYSTEM_SOFT_RESET, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_USB_DEVICE_SOFT_RESET, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Turn USB Interface On/Off
+ * Apply the usb host controller soft reset
  *
- * @note This function suspends the USB interface if ::AMB_USB_SUSPEND is specified.
+ * @note This function triggers a soft reset for the usb host controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] usb_interface_state Requested State of the USB Interface
  *
- * @retval ::AMB_HAL_SUCCESS Interface state has been set
- * @retval ::AMB_HAL_FAIL Interface state is not valid
+ * @retval ::AMB_HAL_SUCCESS reset sequence has completed
  *
  * @ingroup usb_group
  */
 
-static INLINE amb_hal_success_t amb_set_usb_interface_state (void *amb_hal_base_address, amb_usb_interface_state_t usb_interface_state)
+static INLINE amb_hal_success_t amb_usb_host_soft_reset (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_USB_INTERFACE_STATE, usb_interface_state, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_USB_HOST_SOFT_RESET, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Get the state of the usb interface
+ * Suspend/un-suspend USB Port
+ *
+ * @note This function suspends the USB Port if ::AMB_USB_SUSPEND is specified. 
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] usb_port_state Requested State of the USB Device
  *
- * @retval ::AMB_USB_ON if USB Interface is enabled
- * @retval ::AMB_USB_SUSPEND if USB Interface is suspended
+ * @retval ::AMB_HAL_SUCCESS Port state has been set
+ * @retval ::AMB_HAL_FAIL Port state is not valid
  *
  * @ingroup usb_group
  */
 
-static INLINE amb_usb_interface_state_t amb_get_usb_interface_state (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_set_usb_port_state (void *amb_hal_base_address, amb_usb_port_state_t usb_port_state)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_usb_interface_state_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_USB_INTERFACE_STATE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_USB_PORT_STATE, usb_port_state, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
- * Select USB PHY Clock Source
- *
- * @note The default clock source after power-on reset is ::AMB_USB_CLK_CORE_48MHZ.
- * Use this function to change the USB PHY clock source.
- * However, this function can only be called before setting amb_usb_interface_state
- * to ::AMB_USB_ON for the first time after power-on reset
+ * Get the state of the USB Port
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[in] usb_clock_source Requested usbphy clock source selection
  *
- * @retval ::AMB_HAL_SUCCESS Clock source selection successful
- * @retval ::AMB_HAL_FAIL Clock source selection failed. This happens if
- * amb_usb_interface_state is already ::AMB_USB_ON. The USB PHY clock source
- * is unchanged.
+ * @retval ::AMB_USB_ON if USB Device is enabled
+ * @retval ::AMB_USB_SUSPEND if USB Device is suspended
  *
  * @ingroup usb_group
  */
 
-static INLINE amb_hal_success_t amb_set_usb_clock_source (void *amb_hal_base_address, amb_usb_clock_source_t usb_clock_source)
+static INLINE amb_usb_port_state_t amb_get_usb_port_state (void *amb_hal_base_address)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_USB_CLOCK_SOURCE, usb_clock_source, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_usb_port_state_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_USB_PORT_STATE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
-
 
 /*
  *
@@ -1888,8 +1857,8 @@ static INLINE amb_hal_success_t amb_set_usb_clock_source (void *amb_hal_base_add
  * @param[in] amb_clock_frequency the clock frequency of the new source.
  *
  * @note The amb_clock_frequency only needs to be specified for the
- * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
- * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
+ * clock sources AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
+ * AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
  * an amb_clock_frequency of 0 for all other clock sources.
  * The topic @ref clocksource_page covers this in more details.
  *
@@ -2015,8 +1984,8 @@ static INLINE amb_hal_success_t amb_enable_lcd_clock_observation (void *amb_hal_
  * @param[in] amb_clock_frequency the clock frequency of the new source.
  *
  * @note The amb_clock_frequency only needs to be specified for the
- * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
- * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
+ * clock sources AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
+ * AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
  * an amb_clock_frequency of 0 for all other clock sources.
  * The topic @ref clocksource_page covers this in more details.
  *
@@ -2142,8 +2111,8 @@ static INLINE amb_hal_success_t amb_enable_vout_clock_observation (void *amb_hal
  * @param[in] amb_clock_frequency the clock frequency of the new source.
  *
  * @note The amb_clock_frequency only needs to be specified for the
- * clock sources ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
- * ::AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
+ * clock sources AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI and
+ * AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Specify
  * an amb_clock_frequency of 0 for all other clock sources.
  * The topic @ref clocksource_page covers this in more details.
  *
@@ -2338,7 +2307,7 @@ static INLINE amb_clock_frequency_t amb_get_uart_clock_configuration (void *amb_
  * @param[in] amb_clock_source Clock source for the uart divider.
  *
  * @note: Valid clock sources are: ::AMB_REFERENCE_CLOCK_SOURCE_IDSP, ::AMB_REFERENCE_CLOCK_SOURCE_ARM, ::AMB_REFERENCE_CLOCK_SOURCE_CORE or ::AMB_REFERENCE_CLOCK_SOURCE_CLK_REF.
- *
+ * 
  * @retval ::AMB_HAL_SUCCESS The function always returns success.
  *
  * @ingroup uart_group
@@ -2642,8 +2611,8 @@ static INLINE amb_clock_frequency_t amb_get_ssi_clock_configuration (void *amb_h
  * @param[in] amb_clock_source Clock source for the ssi divider.
  * @param[in] amb_clock_frequency Clock frequency of the selected source.
  *
- * @note: Valid clock sources are: ::AMB_REFERENCE_CLOCK_SOURCE_APB or ::AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. The amb_clock_frequency must be specified for ::AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. Otherwise it should be set to 0.
- *
+ * @note: Valid clock sources are: AMB_REFERENCE_CLOCK_SOURCE_APB or AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. The amb_clock_frequency must be specified for AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. Otherwise it should be set to 0.
+ * 
  * @retval ::AMB_HAL_SUCCESS The function always returns success.
  *
  * @ingroup ssi_group
@@ -2703,8 +2672,8 @@ static INLINE amb_clock_frequency_t amb_get_ssi2_clock_frequency (void *amb_hal_
  * @param[in] amb_clock_source Clock source for the ssi divider.
  * @param[in] amb_clock_frequency Clock frequency of the selected source.
  *
- * @note: Valid clock sources are: ::AMB_REFERENCE_CLOCK_SOURCE_APB or ::AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. The amb_clock_frequency must be specified for ::AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. Otherwise it should be set to 0.
- *
+ * @note: Valid clock sources are: AMB_REFERENCE_CLOCK_SOURCE_APB or AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. The amb_clock_frequency must be specified for AMB_REFERENCE_CLOCK_SOURCE_SPCLK_C. Otherwise it should be set to 0.
+ * 
  * @retval ::AMB_HAL_SUCCESS The function always returns success.
  *
  * @ingroup ssi2_group
@@ -2780,8 +2749,8 @@ static INLINE amb_clock_frequency_t amb_get_pwm_clock_configuration (void *amb_h
  * @param[in] amb_clock_source Clock source for the pwm divider.
  * @param[in] amb_clock_frequency Clock frequency of the selected source.
  *
- * @note: Valid clock sources are: ::AMB_REFERENCE_CLOCK_SOURCE_APB or ::AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. The amb_clock_frequency must be specified for ::AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Otherwise it should be set to 0.
- *
+ * @note: Valid clock sources are: AMB_REFERENCE_CLOCK_SOURCE_APB or AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. The amb_clock_frequency must be specified for AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Otherwise it should be set to 0.
+ * 
  * @retval ::AMB_HAL_SUCCESS The function always returns success.
  *
  * @ingroup pwm_group
@@ -2858,7 +2827,7 @@ static INLINE amb_clock_frequency_t amb_get_pwmois_clock_configuration (void *am
  * @param[in] amb_clock_frequency Clock frequency of the selected source.
  *
  * @note: Valid clock sources are: ::AMB_REFERENCE_CLOCK_SOURCE_IDSP_PLL_VCO, ::AMB_REFERENCE_CLOCK_SOURCE_AUDIO_PLL_VCO, ::AMB_REFERENCE_CLOCK_SOURCE_CORE_PLL_VCO or ::AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. The amb_clock_frequency must be specified for ::AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK. Otherwise it should be set to 0.
- *
+ * 
  * @retval ::AMB_HAL_SUCCESS The function always returns success.
  *
  * @ingroup pwmois_group
@@ -3523,7 +3492,7 @@ static INLINE amb_hal_success_t amb_set_lvds_pad_mode (void *amb_hal_base_addres
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::amb_lvds_pad_mode_t The current pad mode setting.
+ * @retval amb_lvds_pad_mode_t The current pad mode setting.
  *
  * @ingroup lvds_group
  */
@@ -4213,6 +4182,58 @@ static INLINE amb_clock_frequency_t amb_get_apb_clock_frequency (void *amb_hal_b
 }
 
 /**
+ * Get the AXI clock frequency
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::amb_clock_frequency_t The AXI clock frequency.
+ *
+ * @ingroup cortex_group
+ */
+
+static INLINE amb_clock_frequency_t amb_get_axi_clock_frequency (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_AXI_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Set the GTX clock source
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_gtx_clock_source The gtx clock source.
+ *
+ * @note: Valid clock sources are: AMB_REFERENCE_CLOCK_SOURCE_CORTEX_PLL_VCO and AMB_EXTERNAL_CLOCK_SOURCE.
+ *
+ * @retval ::AMB_HAL_SUCCESS The gtx clock source was set properly.
+ * @retval ::AMB_HAL_FAIL The requested gtx clock source is not valid.
+ *
+ * @ingroup gtx_group
+ */
+
+static INLINE amb_hal_success_t amb_set_gtx_clock_source (void *amb_hal_base_address, amb_clock_source_t amb_gtx_clock_source)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_GTX_CLOCK_SOURCE, amb_gtx_clock_source, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the GTX clock source
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval amb_clock_source_t The gtx clock source.
+ *
+ * @ingroup gtx_group
+ */
+
+static INLINE amb_clock_source_t amb_get_gtx_clock_source (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_clock_source_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_GTX_CLOCK_SOURCE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
  * Change the priority of dsp clients in DRAM arbiter
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
@@ -4229,12 +4250,6 @@ static INLINE amb_hal_success_t amb_set_dram_arbiter_priority (void *amb_hal_bas
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_DRAM_ARBITER_PRIORITY, (unsigned int) amb_dram_arbiter_priority, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
-}
-
-static INLINE amb_clock_frequency_t amb_get_axi_clock_frequency (void *amb_hal_base_address)
-{
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return amb_get_cortex_clock_frequency(amb_hal_base_address) / 3;
 }
 
 #endif // ifndef _AMBHAL_H_INCLUDED_

@@ -26,7 +26,7 @@
 #define PLL_SO			3
 
 static u32 g_ref_clk_hz;
-static u32 so_clk_freq_hz 	= 0;
+//static u32 so_clk_freq_hz 	= 0;
 static u32 spclk_freq_hz 	= 0;
 static u32 vo_clk_freq_hz 	= 0;
 static u32 vo2_clk_freq_hz 	= 0;
@@ -900,7 +900,7 @@ void rct_set_usb_ana_on(void)
 {
 	amb_hal_success_t rval;
 
-	rval = amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ON);
+	rval = amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_ON);
 
 	/* Just enable usb port1 which is configured as usb device port */
 	if (rval != AMB_HAL_SUCCESS) {
@@ -912,7 +912,7 @@ void rct_suspend_usb(void)
 {
 	amb_hal_success_t rval;
 
-	rval = amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_SUSPEND);
+	rval = amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_SUSPEND);
 
 	if (rval != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_usb_interface_state() failed\r\n");
@@ -955,14 +955,6 @@ void rct_set_usb_ext_clk(void)
 
 void rct_ena_usb_int_clk(void)
 {
-	/* FIXME, Set to internal 48MHz by default */
-	amb_hal_success_t rval;
-
-	rval = amb_set_usb_clock_source(HAL_BASE_VP, AMB_USB_CLK_CORE_48MHZ);
-
-	if (rval != AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_set_usb_clock_source() failed\r\n");
-	}
 
 }
 
@@ -991,27 +983,20 @@ u32 read_usb_reg_setting(void)
 /* called by prusb driver */
 void _init_usb_pll(void)
 {
-	//register int i;
-
-//	rct_set_usb_ana_on();
-//	amba_writel(0x70170050, 0x2);
-	amba_writel(ANA_PWR_REG, 0x2);
-	//dly_tsk(1);
+	rct_set_usb_ana_on();
 	/* Fixme: do we need to reduce the delay time ? */
 	udelay(150);
 }
 
 void rct_usb_reset(void)
 {
-#if 0
 	amb_hal_success_t rval;
 
-	rval = amb_usb_subsystem_soft_reset(HAL_BASE_VP);
+	rval = amb_usb_device_soft_reset(HAL_BASE_VP);
 
 	if (rval != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_usb_device_soft_reset() failed\r\n");
 	}
-#endif
 }
 
 /**

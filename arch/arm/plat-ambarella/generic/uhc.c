@@ -34,19 +34,20 @@
 
 static int usb_host_initialized = 0;
 
+#if (CHIP_REV == I1)
 static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 {
 	unsigned long				flags;
 	u32 sys_config, pin_set, pin_clr;
 	amb_usb_port_state_t state;
 
+	if (usb_host_initialized++ > 0)
+		return;
+
 	sys_config = amba_readl(SYS_CONFIG_REG);
 
 	if (sys_config & USB1_IS_HOST)
 		pdata->usb1_is_host = 1;
-
-	if (usb_host_initialized++ > 0)
-		return;
 
 	pin_set = 0;
 	pin_clr = 0;
@@ -71,7 +72,7 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 
 	/* Reset usb host controller */
 	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
-		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
+		pr_info("%s: amb_usb_host_soft_reset fail!\n", __func__);
 
 	/*
 	 * We must enable both of the usb ports first, then we can disable
@@ -117,6 +118,68 @@ static void ambarella_disable_usb_host(void)
 		}
 	}
 }
+
+#elif (CHIP_REV == S2)
+static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
+{
+	unsigned long				flags;
+	u32 pin_set, pin_clr;
+
+	if (usb_host_initialized++ > 0)
+		return;
+
+	/* GPIO7 and GPIO9 are programmed as hardware mode */
+	pin_clr = 0;
+	pin_set = 0x1 << 9;
+	if ((ambarella_board_generic.uhc_use_ocp & 0x1) == 0x1)
+		pin_set |= 0x1 << 7;
+	else
+		pin_clr |= 0x1 << 7;
+	ambarella_gpio_raw_lock(0, &flags);
+	amba_setbitsl(GPIO0_AFSEL_REG, pin_set);
+	amba_clrbitsl(GPIO0_AFSEL_REG, pin_clr);
+	ambarella_gpio_raw_unlock(0, &flags);
+
+	/* Determine the polarity of over-current protect pin
+	 * bit16 == 1: high is normal, low will trigger the ocp interrupt
+	 * bit16 == 0: row is normal, high will trigger the ocp interrupt */
+	if ((ambarella_board_generic.uhc_use_ocp & (0x1<<16)) == 0)
+		amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
+	else
+		amba_clrbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
+
+	/* Reset usb host controller */
+	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
+		pr_info("%s: amb_usb_host_soft_reset fail!\n", __func__);
+
+	/* Enable usb port (usbphy) */
+	if (amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_ON)
+			!= AMB_HAL_SUCCESS) {
+		pr_info("%s: amb_set_usb_port_state fail!\n", __func__);
+	}
+}
+
+static void ambarella_disable_usb_host(void)
+{
+	if (usb_host_initialized-- <= 0)
+		return;
+
+	/* We will not disable usb port here, because usb device controller
+	 * may use the port. */
+}
+
+#else
+static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
+{
+	pr_err("ambarella_enable_usb_host: Unknown Chip Architecture\n");
+}
+
+static void ambarella_disable_usb_host(void)
+{
+	pr_err("ambarella_disable_usb_host: Unknown Chip Architecture\n");
+}
+
+#endif
 
 /* ==========================================================================*/
 struct resource ambarella_ehci_resources[] = {

@@ -61,6 +61,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 //	&ambarella_adc0,
 //	&ambarella_crypto,
 	&ambarella_dummy_codec0,
+	&ambarella_ehci0,
 	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
@@ -205,6 +206,8 @@ static void __init ambarella_init_ginkgo(void)
 	fio_default_owner = SELECT_FIO_FREE;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
 	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
+
+	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
