@@ -58,7 +58,7 @@ static struct platform_device ambarella_auc_codec0 = {
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-//	&ambarella_adc0,
+	&ambarella_adc0,
 //	&ambarella_crypto,
 	&ambarella_dummy_codec0,
 	&ambarella_ehci0,

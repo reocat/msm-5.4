@@ -223,28 +223,28 @@ void ambarella_adc_set_slot_ctrl(u8 slot_id, u32 slot_value)
 {
 	switch (slot_id) {
 	case 0:
-		writel(ADC_SLOT_CTRL_0_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_0_REG, slot_value);
 		break;
 	case 1:
-		writel(ADC_SLOT_CTRL_1_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_1_REG, slot_value);
 		break;
 	case 2:
-		writel(ADC_SLOT_CTRL_2_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_2_REG, slot_value);
 		break;
 	case 3:
-		writel(ADC_SLOT_CTRL_3_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_3_REG, slot_value);
 		break;
 	case 4:
-		writel(ADC_SLOT_CTRL_4_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_4_REG, slot_value);
 		break;
 	case 5:
-		writel(ADC_SLOT_CTRL_5_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_5_REG, slot_value);
 		break;
 	case 6:
-		writel(ADC_SLOT_CTRL_6_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_6_REG, slot_value);
 		break;
 	case 7:
-		writel(ADC_SLOT_CTRL_7_REG, slot_value);
+		amba_writel(ADC_SLOT_CTRL_7_REG, slot_value);
 		break;
 	}
 }
@@ -265,7 +265,6 @@ void ambarella_adc_set_config(void)
 	for(i=0;i <= slot_num_reg; i++)
 		ambarella_adc_set_slot_ctrl(i, ambarella_platform_adc_controller0.adc_slot_ctrl[i]);
 }
-
 #endif
 
 void ambarella_adc_start(void)
@@ -430,6 +429,14 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 		break;
 	case 9:
 		irq_control_address = ADC_CHAN9_INTR_REG;
+		break;
+#endif
+#if (ADC_NUM_CHANNELS >= 12)
+	case 10:
+		irq_control_address = ADC_CHAN10_INTR_REG;
+		break;
+	case 11:
+		irq_control_address = ADC_CHAN11_INTR_REG;
 		break;
 #endif
 	default:
