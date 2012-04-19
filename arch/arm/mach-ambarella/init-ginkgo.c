@@ -75,6 +75,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_sd1,
 	&ambarella_spi0,
 	&ambarella_uart,
+	&ambarella_uart1,
+	&ambarella_uart2,
+	&ambarella_uart3,
 	&ambarella_udc0,
 	&ambarella_wdt0,
 };

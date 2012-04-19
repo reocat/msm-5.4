@@ -23,9 +23,9 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L)
 #define	UART_INSTANCES			2
-#elif (CHIP_REV == I1) || (CHIP_REV == A8)
+#elif (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == A7S)
 #define	UART_INSTANCES			4
 #else
 #define	UART_INSTANCES			1
