@@ -132,6 +132,8 @@
 #define USB_EP_RCV_SET_STALL            0x04000000		// 0 (R/WC) - Received Set Stall indication
 #define USB_EP_RX_PKT_SZ		0x007ff800		// bit mask (RW) - receive packet size in RxFIFO (e.g. SETUP=64, BULK=512)
 
+#define USB_EP_TXFIFO_EMPTY		0x08000000		// 0 (R/WC) - TxFIFO is empty after DMA transfer done
+
 // for USB_EP_IN_BUF_SZ_REG(n) and USB_EP_OUT_PKT_FRM_NUM_REG(n)
 #define USB_EP_TXFIFO_DEPTH		0x0000ffff		// bit mask (RW) - for IN EP only
 #define USB_EP_FRM_NUM			0x0000ffff		// bit mask (RW) - for OUT EP only

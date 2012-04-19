@@ -68,15 +68,10 @@ static const char *amb_udc_status_str [] = {
 };
 
 /*************************** DEBUG FUNCTION ***************************/
-#define DEBUG_ERR		0
-#define DEBUG_NORMAL		1
-#define DEBUG_VERBOSE	2
+#define DEBUG_NORMAL		0
+#define DEBUG_VERBOSE		1
 
-#define DEBUG_BULK_OUT	3
-#define DEBUG_BULK_IN	3
-#define DEBUG_INTR_IN		3
-
-#define AMBARELLA_USB_DEBUG 1
+#define AMBARELLA_USB_DEBUG 0
 #if AMBARELLA_USB_DEBUG
 
 #define dprintk(level,format,args...) \
@@ -544,14 +539,12 @@ ambarella_get_last_desc(struct ambarella_ep *ep)
 	return desc;
 }
 
-static u32 ambarella_check_bna_error (struct ambarella_ep *ep)
+static u32 ambarella_check_bna_error (struct ambarella_ep *ep, u32 ep_status)
 {
-	u32	ep_sts, retval = 0;
-
-	ep_sts = amba_readl(ep->ep_reg.sts_reg);
+	u32 retval = 0;
 
 	/* Error: Buffer Not Available */
-	if (ep_sts & USB_EP_BUF_NOT_AVAIL) {
+	if (ep_status & USB_EP_BUF_NOT_AVAIL) {
 		printk(KERN_ERR "[USB]:BNA error in %s\n", ep->ep.name);
 		amba_writel(ep->ep_reg.sts_reg, USB_EP_BUF_NOT_AVAIL);
 		retval = 1;
@@ -560,14 +553,12 @@ static u32 ambarella_check_bna_error (struct ambarella_ep *ep)
 	return retval;
 }
 
-static u32 ambarella_check_he_error (struct ambarella_ep *ep)
+static u32 ambarella_check_he_error (struct ambarella_ep *ep, u32 ep_status)
 {
-	u32	ep_sts, retval = 0;
-
-	ep_sts = amba_readl(ep->ep_reg.sts_reg);
+	u32 retval = 0;
 
 	/* Error: Host Error */
-	if (ep_sts & USB_EP_HOST_ERR) {
+	if (ep_status & USB_EP_HOST_ERR) {
 		printk(KERN_ERR "[USB]:HE error in %s\n", ep->ep.name);
 		amba_writel(ep->ep_reg.sts_reg, USB_EP_HOST_ERR);
 		retval = 1;
@@ -855,9 +846,10 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 		case USB_REQ_SET_ADDRESS:
 		case USB_REQ_CLEAR_FEATURE:
 		case USB_REQ_SET_FEATURE:
-			dprintk(DEBUG_ERR, "This bRequest is not implemented!\n"
+			pr_err("%s: This bRequest is not implemented!\n"
 				"\tbRequestType = 0x%02x, bRequest = 0x%02x,\n"
 				"\twValue = 0x%04x, wIndex = 0x%04x, wLength = 0x%04x\n",
+				__func__,
 				crq->bRequestType, crq->bRequest, crq->wValue, crq->wIndex,
 				crq->wLength);
 		}
@@ -873,7 +865,7 @@ static void ambarella_handle_request_packet(struct ambarella_udc *udc)
 	ret = udc->driver->setup(&udc->gadget, crq);
 	spin_lock(&udc->lock);
 	if (ret < 0) {
-		dprintk(DEBUG_ERR, "SETUP request failed (%d)\n", ret);
+		pr_err("%s: SETUP request failed (%d)\n", __func__, ret);
 		amba_setbitsl(udc->ep[CTRL_IN].ep_reg.ctrl_reg, USB_EP_STALL | USB_EP_FLUSH);
 		/* Re-enable Rx DMA to receive next setup packet */
 		ambarella_enable_rx_dma(&udc->ep[CTRL_OUT]);
@@ -1109,6 +1101,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		}
 
 		if (udc->reset_by_host == 0) {
+			printk("%s: %d\n", __func__, __LINE__);
 			udc->reset_by_host = 1;
 			udc->controller_info->reset_usb();
 			ambarella_init_usb();
@@ -1134,7 +1127,7 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 	/* case 3. Get suspend Interrupt */
 	else if (int_value & USB_DEV_SUSP) {
 
-		dprintk(DEBUG_ERR, "USB suspend IRQ\n");
+		pr_err("%s: USB suspend IRQ\n", __func__);
 
 		amba_writel(USB_DEV_INTR_REG, USB_DEV_SUSP);
 
@@ -1198,20 +1191,28 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 	ep_status = amba_readl(ep->ep_reg.sts_reg);
 
-	dprintk(DEBUG_NORMAL, "ep_status = 0x%x\n", ep_status);
+	/* TxFIFO is empty, but we've not used this bit, so just ignored simply. */
+	if (ep_status == USB_EP_TXFIFO_EMPTY) {
+		amba_writel(ep->ep_reg.sts_reg, ep_status);
+		return;
+	}
+
+	dprintk(DEBUG_NORMAL, "%s: ep_status = 0x%08x\n", ep->ep.name, ep_status);
 
 	if (ambarella_handle_ep_stall(ep, ep_status))
 		return;
 
-	if ((ambarella_check_bna_error(ep) || ambarella_check_he_error(ep))
-			&& !list_empty(&ep->queue)) {
+	if (ambarella_check_bna_error(ep, ep_status)
+			|| ambarella_check_he_error(ep, ep_status)) {
 		struct ambarella_request	*req = NULL;
 		ep->dma_going = 0;
 		ep->cancel_transfer = 0;
 		ep->need_cnak = 0;
-		req = list_first_entry(&ep->queue, struct ambarella_request,queue);
-		req->req.status = -EPROTO;
-		ambarella_udc_done(ep, req, 0);
+		if (!list_empty(&ep->queue)) {
+			req = list_first_entry(&ep->queue, struct ambarella_request,queue);
+			req->req.status = -EPROTO;
+			ambarella_udc_done(ep, req, 0);
+		}
 		return;
 	}
 
@@ -1246,16 +1247,14 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		}
 		ep->cancel_transfer = 0;
 	} else if (ep_status != 0){
-		if (ep_status != 0x08000000) {
-			dprintk(DEBUG_ERR, "%s: Unknown int source(0x%08x)\n",
-				ep->ep.name, ep_status);
-		}
+		pr_err("%s: %s, Unknown int source(0x%08x)\n", __func__,
+			ep->ep.name, ep_status);
 		amba_writel(ep->ep_reg.sts_reg, ep_status);
 		return;
 	}
 
 	if (ep_status != 0) {
-		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL);
+		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_TXFIFO_EMPTY);
 //		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_RCV_CLR_STALL);
 		amba_writel(ep->ep_reg.sts_reg, ep_status);
 	}
@@ -1282,7 +1281,6 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 	if(ep_id == CTRL_OUT) {
 		/* Cope with setup-data packet  */
 		if((ep_status & USB_EP_OUT_PKT_MSK) == USB_EP_SETUP_PKT){
-
 			amba_writel(ep->ep_reg.sts_reg, USB_EP_SETUP_PKT);
 			ep->ctrl_sts_phase = 0;
 			ep->dma_going = 0;
@@ -1309,10 +1307,10 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 			return;
 		}
 
-		if (ambarella_check_bna_error(ep))
+		if (ambarella_check_bna_error(ep, ep_status))
 			return;
 
-		if(ambarella_check_he_error(ep) && !list_empty(&ep->queue)) {
+		if(ambarella_check_he_error(ep, ep_status) && !list_empty(&ep->queue)) {
 			struct ambarella_request *req = NULL;
 			req = list_first_entry(&ep->queue,
 				struct ambarella_request, queue);
@@ -1323,8 +1321,7 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 
 		ep->last_data_desc = ambarella_get_last_desc(ep);
 		if(ep->last_data_desc == NULL){
-			dprintk(DEBUG_ERR, "%s: last_data_desc is NULL\n",
-				ep->ep.name);
+			pr_err("%s: %s, last_data_desc is NULL\n", __func__, ep->ep.name);
 			BUG();
 			return;
 		}
@@ -1658,13 +1655,13 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	unsigned long flags;
 
 	if (unlikely (!_ep)) {
-		dprintk(DEBUG_ERR, "_ep is NULL\n");
+		pr_err("%s: _ep is NULL\n", __func__);
 		return -EINVAL;
 	}
 
 	ep = to_ambarella_ep(_ep);
 	if (unlikely (!ep->desc && !IS_EP0(ep))) {
-		dprintk(DEBUG_ERR, "%s: invalid args\n", _ep->name);
+		pr_err("%s: %s, invalid args\n", __func__, _ep->name);
 		return -EINVAL;
 	}
 
@@ -1676,14 +1673,14 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	}
 
 	if (unlikely(!_req )) {
-		dprintk(DEBUG_ERR, "%s: _req is NULL\n", _ep->name);
+		pr_err("%s: %s, _req is NULL\n", __func__, _ep->name);
 		return -EINVAL;
 	}
 
 	req = to_ambarella_req(_req);
 	if (unlikely(!req->req.complete || !req->req.buf
 				|| !list_empty(&req->queue))) {
-		dprintk(DEBUG_ERR, "%s: %01d %01d %01d\n", _ep->name,
+		pr_err("%s: %s, %01d %01d %01d\n", __func__, _ep->name,
 			!_req->complete, !_req->buf, !list_empty(&req->queue));
 
 		return -EINVAL;
@@ -1700,7 +1697,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 
 	/* check whether USB is suspended */
 	if(amba_readl(USB_DEV_STS_REG) & USB_DEV_SUSP_STS){
-		printk(KERN_ERR "UDC is suspended!\n");
+		pr_err("%s: UDC is suspended!\n", __func__);
 		return -ESHUTDOWN;
 	}
 
@@ -1746,6 +1743,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 				ambarella_clr_ep_nak(&udc->ep[CTRL_IN]);
 				/* Re-enable Rx DMA to receive next setup packet */
 				ambarella_enable_rx_dma(ep);
+				ambarella_clr_ep_nak(ep);
 				ep->dma_going = 0;
 				goto finish;
 			} else if (ep->id == CTRL_IN) {
@@ -1764,7 +1762,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 			ambarella_set_rx_dma(ep, req);
 			break;
 		default:
-			dprintk(DEBUG_ERR, "bulk or intr queue error\n");
+			pr_err("%s: bulk or intr queue error\n", __func__);
 			BUG();
 			return -EL2HLT;
 		}
@@ -1845,16 +1843,16 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 	dprintk(DEBUG_NORMAL, "Enter, %s: value = %d\n", _ep->name, value);
 
 	if (unlikely (!_ep || (!ep->desc && !IS_EP0(ep)))) {
-		dprintk(DEBUG_ERR, "%s: -EINVAL 1\n",_ep->name);
+		pr_err("%s: %s, -EINVAL 1\n", __func__,_ep->name);
 		return -EINVAL;
 	}
 	if (!ep->udc->driver || ep->udc->gadget.speed == USB_SPEED_UNKNOWN){
-		dprintk(DEBUG_ERR, "%s: -ESHUTDOWN\n",_ep->name);
+		pr_err("%s: %s, -ESHUTDOWN\n", __func__, _ep->name);
 		return -ESHUTDOWN;
 	}
 	if (ep->desc /* not ep0 */
 		&& (ep->desc->bmAttributes & 0x03) == USB_ENDPOINT_XFER_ISOC){
-		dprintk(DEBUG_ERR, "%s: -EINVAL 2\n",_ep->name);
+		pr_err("%s: %s, -EINVAL 2\n", __func__, _ep->name);
 		return -EINVAL;
 	}
 
@@ -2112,8 +2110,6 @@ static void ambarella_udc_reinit(struct ambarella_udc *udc)
 {
 	u32 i;
 
-	dprintk(DEBUG_NORMAL, "Enter\n");
-
 	/* device/ep0 records init */
 	INIT_LIST_HEAD (&udc->gadget.ep_list);
 	INIT_LIST_HEAD (&udc->gadget.ep0->ep_list);
@@ -2132,8 +2128,6 @@ static void ambarella_udc_reinit(struct ambarella_udc *udc)
 		ep->last_data_desc = NULL;
 		INIT_LIST_HEAD (&ep->queue);
 	}
-
-	dprintk(DEBUG_NORMAL, "Exit\n");
 }
 
 /* Called by gadget driver to register itself */
@@ -2281,7 +2275,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	udc->desc_dma_pool = dma_pool_create("desc_dma_pool", NULL,
 		sizeof(struct ambarella_data_desc), 16, 0);
 	if (!udc->desc_dma_pool) {
-		dprintk(DEBUG_ERR, "can't get descriptor dma pool\n");
+		pr_err("%s: can't get descriptor dma pool\n", __func__);
 		retval = -ENOMEM;
 		goto err_out1;
 	}
@@ -2304,7 +2298,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			dev_name(&pdev->dev), udc);
 	if (retval != 0) {
-		dprintk(DEBUG_NORMAL, "cannot get irq %i, err %d\n", USBC_IRQ, retval);
+		pr_err("%s: cannot get irq %i, err %d\n", __func__, USBC_IRQ, retval);
 		goto err_out4;
 	}
 
