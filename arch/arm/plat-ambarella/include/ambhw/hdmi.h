@@ -27,7 +27,7 @@
 #endif
 
 #if (CHIP_REV == A5)  || (CHIP_REV == A6)  || (CHIP_REV == A5S) ||	\
-    (CHIP_REV == A7)  || (CHIP_REV == I1)  || (CHIP_REV == A7L)
+    (CHIP_REV == A7)  || (CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_HDCP_AKSV_FETCH		1
 #else
 #define VOUT_HDCP_AKSV_FETCH		0
@@ -36,7 +36,7 @@
 #if (CHIP_REV == A5)  || (CHIP_REV == A6)  || (CHIP_REV == A5S) ||	\
     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
     (CHIP_REV == A7)  || (CHIP_REV == A5L) || (CHIP_REV == I1)  ||	\
-    (CHIP_REV == A7L)
+    (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_HDMI_SUPPORT_1P3_GAMUT	1
 #define VOUT_HDMI_ONLINE_STATUS		1
 #define VOUT_CEC_SUPPORT_CTL_TYPE	2
@@ -48,7 +48,7 @@
 
 #if (CHIP_REV == A3)
 #define VOUT_HDMI_REGS_OFFSET_GROUP	1
-#elif (CHIP_REV == I1) || (CHIP_REV == A7L)
+#elif (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_HDMI_REGS_OFFSET_GROUP	3
 #else
  /* CHIP_REV == A5)   || (CHIP_REV == A6)  || (CHIP_REV == A5S) ||	\
@@ -57,7 +57,7 @@
 #define VOUT_HDMI_REGS_OFFSET_GROUP	2
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_HDMI_SUPPORT_3D_FORMAT 		1
 #define VOUT_HDMI_SUPPORT_4KX2K_FORMAT		1
 #define VOUT_HDMI_SUPPORT_HBR_AUDIO		1
@@ -82,13 +82,13 @@
 #define VOUT_HDMI_480I_576I_FORMAT_ENABLE	0
 #endif
 
-#if (CHIP_REV == A6) || (CHIP_REV == I1)
+#if (CHIP_REV == A6) || (CHIP_REV == I1) || (CHIP_REV == S2)
 #define VOUT_SUPPORT_ONCHIP_HDCP	1
 #else
 #define VOUT_SUPPORT_ONCHIP_HDCP	0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_HDCP_REGS_OFFSET_GROUP	2
 #else
 #define VOUT_HDCP_REGS_OFFSET_GROUP	1
