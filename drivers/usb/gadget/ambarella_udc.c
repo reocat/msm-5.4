@@ -1742,8 +1742,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 				/* For STATUS-IN stage */
 				ambarella_clr_ep_nak(&udc->ep[CTRL_IN]);
 				/* Re-enable Rx DMA to receive next setup packet */
-				ambarella_enable_rx_dma(ep);
-				ambarella_clr_ep_nak(ep);
+				ambarella_set_rx_dma(ep, NULL);
 				ep->dma_going = 0;
 				goto finish;
 			} else if (ep->id == CTRL_IN) {
@@ -2162,6 +2161,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	driver->driver.bus = NULL;
 	udc->driver = driver;
 	udc->gadget.dev.driver = &driver->driver;
+	udc->gadget.ep0 = &udc->ep[CTRL_IN].ep;
 
 	/* Bind the driver */
 	if ((retval = device_add(&udc->gadget.dev)) != 0) {
