@@ -420,6 +420,12 @@ static int __init dsp_mem_check(u32 start, u32 size)
 			__func__, vstart, tmp);
 		vstart = tmp;
 	}
+	if (size > NOLINUX_MEM_V_SIZE) {
+		tmp = NOLINUX_MEM_V_SIZE;
+		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",
+			__func__, size, tmp);
+		size = tmp;
+	}
 	if ((vstart + size) > (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
 		tmp = (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE) - vstart;
 		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",

@@ -102,22 +102,6 @@ menu "Misc on Board Devices"
 
 comment "Ambarella"
 
-config MMC_AMBARELLA_SDIO
-	bool "Suport SDIO"
-	depends on MACH_AMBARELLA
-	select WEXT_CORE
-	select WEXT_PROC
-	select WEXT_SPY
-	select WEXT_PRIV
-	select WIRELESS_EXT
-	default y
-	help
-	  If enabled, SDIO interface will be reported as "ambarella-sd",
-	  so MMC/SD driver will support it automatically.
-	  If disabled, you can provide your driver for "ambarella-sdio".
-
-	  If you are not sure, say Y here.
-
 config AMBARELLA_VIN
 	bool "Suport Vin"
 	default y

@@ -69,6 +69,15 @@ config PLAT_AMBARELLA_GENERIC
 	select HAVE_PWM
 	select HAVE_SCHED_CLOCK if AMBARELLA_SUPPORT_CLOCKSOURCE
 
+config PLAT_AMBARELLA_WIRELESS
+	bool
+	default n
+	select WEXT_CORE
+	select WEXT_PROC
+	select WEXT_SPY
+	select WEXT_PRIV
+	select WIRELESS_EXT
+
 config PLAT_AMBARELLA_CORTEX
 	bool
 	default n
@@ -142,6 +151,7 @@ config PLAT_AMBARELLA_A2
 	bool "A2"
 	select CPU_ARM926T
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
 	help
 	  Say Y here if you are using Ambarella A2.
@@ -151,6 +161,7 @@ config PLAT_AMBARELLA_A5S
 	select CPU_V6
 	select CPU_32v6K
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
@@ -164,6 +175,7 @@ config PLAT_AMBARELLA_A7
 	select CPU_V6
 	select CPU_32v6K
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_SUPPORT_MMAP_OLD
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
@@ -176,6 +188,7 @@ config PLAT_AMBARELLA_I1_ARM11
 	select CPU_V6
 	select CPU_32v6K
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_I1
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	help
@@ -185,6 +198,7 @@ config PLAT_AMBARELLA_I1_CORTEX
 	bool "iOne Cortex"
 	select CPU_V7
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_I1
 	select PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT
 	select PLAT_AMBARELLA_CORTEX
@@ -208,6 +222,7 @@ config PLAT_AMBARELLA_S2_ARM11
 	select CPU_V6
 	select CPU_32v6K
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_S2
 	help
 	  Say Y here if you are using Ambarella S2 ARM11.
@@ -216,14 +231,11 @@ config PLAT_AMBARELLA_S2_CORTEX
 	bool "S2 Cortex"
 	select CPU_V7
 	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_S2
 	select PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT
 	select PLAT_AMBARELLA_CORTEX
-	select ARM_ERRATA_742230 if SMP
-	select ARM_ERRATA_742231 if SMP
-	select ARM_ERRATA_743622
 	select ARM_ERRATA_754322
-	select ARM_ERRATA_751472 if SMP
 	select ARM_ERRATA_753970 if CACHE_PL310
 	select PL310_ERRATA_588369 if CACHE_PL310
 	select PL310_ERRATA_727915 if CACHE_PL310
@@ -330,6 +342,16 @@ config AMBARELLA_INITRD_PHYS
 	default 0x00a00000
 	help
 	  Specify the physical address for initrd.
+
+endmenu
+
+menu "FIO Configuration"
+
+config AMBARELLA_FIO_FORCE_SDIO_GPIO
+	bool "Force SDIO Pins to GPIO mode when idle"
+	default n
+	help
+	  If you are not sure, say N here.
 
 endmenu
 

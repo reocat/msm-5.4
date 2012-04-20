@@ -267,17 +267,20 @@ int fio_amb_sd2_check_owner(void)
 {
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	return fio_amb_sd2_is_enable();
-#else
-	return 1;
 #endif
+#if (SD_HOST1_HOST2_HAS_MUX == 1)
+	return fio_amb_sd0_is_enable();
+#endif
+	return 1;
 }
 
 void fio_amb_sd2_request(void)
 {
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	fio_select_lock(SELECT_FIO_SD2);
-#else
-	return;
+#endif
+#if (SD_HOST1_HOST2_HAS_MUX == 1)
+	fio_select_lock(SELECT_FIO_SD2);
 #endif
 }
 
@@ -285,8 +288,9 @@ void fio_amb_sd2_release(void)
 {
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	fio_unlock(SELECT_FIO_SD2);
-#else
-	return;
+#endif
+#if (SD_HOST1_HOST2_HAS_MUX == 1)
+	fio_unlock(SELECT_FIO_SD2);
 #endif
 }
 
@@ -363,9 +367,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		.set_int	= fio_amb_sd2_set_int,
 		.set_vdd	= NULL,
 	},
-#if (CHIP_REV == I1)
-	.set_pll		= ambarella_platform_sdxc_set_pll,
-	.get_pll		= ambarella_platform_sdxc_get_pll,
+#if (SD_HAS_SDXC_CLOCK == 1)
+	.set_pll		= rct_set_sdxc_pll,
+	.get_pll		= get_sdxc_freq_hz,
 #else
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
@@ -395,11 +399,7 @@ AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1,
 	&param_ops_ambarella_sd_cdpos, 0644);
 
 struct platform_device ambarella_sd1 = {
-#ifdef CONFIG_MMC_AMBARELLA_SDIO
 	.name		= "ambarella-sd",
-#else
-	.name		= "ambarella-sdio",
-#endif
 	.id		= 1,
 	.resource	= ambarella_sd1_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_sd1_resources),

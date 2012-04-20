@@ -293,8 +293,10 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tSSI:\t\t%u Hz\n"
 			"\tSSI2:\t\t%u Hz\n"
 			"\tUART:\t\t%u Hz\n"
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if (SUPPORT_GMII == 1)
 			"\tGTX:\t\t%u Hz\n"
+#endif
+#if (SD_HAS_SDXC_CLOCK == 1)
 			"\tSDXC:\t\t%u Hz\n"
 #endif
 			"\tSD:\t\t%u Hz\n\n",
@@ -334,14 +336,11 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			amb_get_ssi_clock_frequency(HAL_BASE_VP),
 			amb_get_ssi2_clock_frequency(HAL_BASE_VP),
 			amb_get_uart_clock_frequency(HAL_BASE_VP),
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if (SUPPORT_GMII == 1)
 			amb_get_gtx_clock_frequency(HAL_BASE_VP),
 #endif
-#if (CHIP_REV == I1)
-			amb_get_sdxc_clock_frequency(HAL_BASE_VP),
-#endif
-#if (CHIP_REV == S2)
-			amb_get_sdio_clock_frequency(HAL_BASE_VP),
+#if (SD_HAS_SDXC_CLOCK == 1)
+			get_sdxc_freq_hz(),
 #endif
 			get_sd_freq_hz());
 

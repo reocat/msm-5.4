@@ -209,7 +209,15 @@ static void __init ambarella_init_ginkgo(void)
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_FREE;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = SMIO_5;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 	ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = SMIO_44;
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = SMIO_45;
 
 	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
 

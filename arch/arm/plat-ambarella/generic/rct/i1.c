@@ -184,6 +184,11 @@ u32 get_sd_freq_hz(void)
 	return (u32) amb_get_sd_clock_frequency(HAL_BASE_VP);
 }
 
+u32 get_sdxc_freq_hz(void)
+{
+	return (u32)amb_get_sdxc_clock_frequency(HAL_BASE_VP);
+}
+
 /**
  * Get sensor clock out
  */
@@ -401,6 +406,16 @@ void rct_set_sd_pll(u32 freq_hz)
 	if (amb_set_sd_clock_frequency(HAL_BASE_VP,
 				freq_hz) != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_sd_clock_frequency() failed");
+	}
+}
+
+void rct_set_sdxc_pll(u32 freq_hz)
+{
+	amb_hal_success_t rval;
+
+	rval = amb_set_sdxc_clock_frequency(HAL_BASE_VP, freq_hz);
+	if (rval != AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_set_sdxc_clock_frequency() failed");
 	}
 }
 

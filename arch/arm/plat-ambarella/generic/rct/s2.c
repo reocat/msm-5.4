@@ -225,21 +225,12 @@ u32 get_host_freq_hz(void)
 
 u32 get_sd_freq_hz(void)
 {
-	return (u32) amb_get_sd_clock_frequency(HAL_BASE_VP);
+	return (u32)amb_get_sd_clock_frequency(HAL_BASE_VP);
 }
 
 u32 get_sdxc_freq_hz(void)
 {
-#if 0
-	u32 rval = AMB_HAL_SUCCESS;
-
-	HAL_GLOBAL_MUTEX_LOCK();
-	rval = amb_get_sdxc_clock_frequency(HAL_BASE_VP);
-	HAL_GLOBAL_MUTEX_UNLOCK();
-
-	return (u32) rval;
-#endif
-	return 0;
+	return (u32)amb_get_sdio_clock_frequency(HAL_BASE_VP);
 }
 
 /**
@@ -511,7 +502,6 @@ void rct_set_sd_pll(u32 freq_hz)
 	amb_hal_success_t rval;
 
 	rval = amb_set_sd_clock_frequency(HAL_BASE_VP, freq_hz);
-
 	if (rval != AMB_HAL_SUCCESS) {
 		DEBUG_MSG("amb_set_sd_clock_frequency() failed");
 	}
@@ -519,17 +509,12 @@ void rct_set_sd_pll(u32 freq_hz)
 
 void rct_set_sdxc_pll(u32 freq_hz)
 {
-#if 0
 	amb_hal_success_t rval;
 
-	HAL_GLOBAL_MUTEX_LOCK();
-	rval = amb_set_sdxc_clock_frequency(HAL_BASE_VP, freq_hz);
-	HAL_GLOBAL_MUTEX_UNLOCK();
-
+	rval = amb_set_sdio_clock_frequency(HAL_BASE_VP, freq_hz);
 	if (rval != AMB_HAL_SUCCESS) {
-		DEBUG_MSG("amb_set_sdxc_clock_frequency() failed");
+		DEBUG_MSG("amb_set_sdio_clock_frequency() failed");
 	}
-#endif
 }
 
 void rct_set_sd_ioctrl(void)
