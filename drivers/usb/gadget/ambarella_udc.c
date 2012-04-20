@@ -772,6 +772,7 @@ static void ambarella_set_rx_dma(struct ambarella_ep *ep,
 		amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr);
 	} else {
 		/* receive zero-length-packet */
+		udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 		amba_writel(ep_reg->dat_desc_ptr_reg, udc->dummy_desc_addr);
 	}
 
@@ -904,7 +905,6 @@ static void ambarella_handle_data_in(struct ambarella_ep *ep)
 	if(ep->id == CTRL_IN){
 		/* For STATUS-OUT stage */
 		udc->ep[CTRL_OUT].ctrl_sts_phase = 1;
-		udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 		ambarella_set_rx_dma(&udc->ep[CTRL_OUT], NULL);
 	}
 }
@@ -1101,7 +1101,6 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		}
 
 		if (udc->reset_by_host == 0) {
-			printk("%s: %d\n", __func__, __LINE__);
 			udc->reset_by_host = 1;
 			udc->controller_info->reset_usb();
 			ambarella_init_usb();
@@ -2295,7 +2294,7 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 
 	/* irq setup after old hardware state is cleaned up */
 	retval = request_irq(USBC_IRQ, ambarella_udc_irq,
-			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			udc->controller_info->irqflags,
 			dev_name(&pdev->dev), udc);
 	if (retval != 0) {
 		pr_err("%s: cannot get irq %i, err %d\n", __func__, USBC_IRQ, retval);

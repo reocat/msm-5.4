@@ -25,9 +25,9 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/irq.h>
-
 #include <mach/hardware.h>
 #include <plat/udc.h>
 
@@ -102,6 +102,11 @@ static int flush_rxfifo(void)
 
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 	.vbus_polled	= 1,	/* need to poll vbus(usb cable) status */
+#if (CHIP_REV == A2)
+	.irqflags	= IRQF_SHARED | IRQF_TRIGGER_HIGH,
+#else
+	.irqflags	= IRQF_DISABLED | IRQF_TRIGGER_HIGH,
+#endif
 	.init_pll	= init_usb,
 	.reset_usb	= reset_usb,
 	.flush_rxfifo	= flush_rxfifo,

@@ -418,6 +418,7 @@ extern enum ambarella_udc_status amb_udc_status;
 
 struct ambarella_udc_controller {
 	u32					vbus_polled;
+	unsigned long				irqflags;
 	void					(*init_pll)(void);
 	void					(*reset_usb)(void);
 	int					(*flush_rxfifo)(void);
