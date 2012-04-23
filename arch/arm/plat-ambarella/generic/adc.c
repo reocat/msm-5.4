@@ -361,6 +361,8 @@ void ambarella_adc_stop(void)
 #endif
 #if (CHIP_REV != S2)
 	amba_writel(ADC_ENABLE_REG, 0x0);
+#else
+	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
 #endif
 #if (CHIP_REV == A7)
 	amba_writel(ADC_CONTROL_REG, 0x0);
