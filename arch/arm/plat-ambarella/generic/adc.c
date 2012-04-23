@@ -359,7 +359,9 @@ void ambarella_adc_stop(void)
 #ifndef ADC_ONE_SHOT
 	amba_writel(ADC_CONTROL_REG, 0x0);
 #endif
+#if (CHIP_REV != S2)
 	amba_writel(ADC_ENABLE_REG, 0x0);
+#endif
 #if (CHIP_REV == A7)
 	amba_writel(ADC_CONTROL_REG, 0x0);
 #endif
