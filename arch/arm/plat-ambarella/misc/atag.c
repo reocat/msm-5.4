@@ -162,18 +162,20 @@ __tagtable(ATAG_AMBARELLA_USB_ETH1, parse_usb_eth1_tag_mac);
 #define AMBARELLA_IO_DESC_PPM_ID	2
 #define AMBARELLA_IO_DESC_BSB_ID	3
 #define AMBARELLA_IO_DESC_DSP_ID	4
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
-#define AMBARELLA_IO_DESC_DRAMC_ID	(AMBARELLA_IO_DESC_DSP_ID + 1)
-#define AMBARELLA_IO_DESC_CRYPT_ID	(AMBARELLA_IO_DESC_DSP_ID + 2)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
-#define AMBARELLA_IO_DESC_AXI_ID	(AMBARELLA_IO_DESC_DSP_ID + 3)
-#define AMBARELLA_IO_DESC_DDD_ID	(AMBARELLA_IO_DESC_DSP_ID + 4)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
+#define AMBARELLA_IO_DESC_AXI_ID	5
 #endif
-#else
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
-#define AMBARELLA_IO_DESC_AXI_ID	(AMBARELLA_IO_DESC_DSP_ID + 1)
-#define AMBARELLA_IO_DESC_DDD_ID	(AMBARELLA_IO_DESC_DSP_ID + 2)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
+#define AMBARELLA_IO_DESC_DDD_ID	6
 #endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
+#define AMBARELLA_IO_DESC_DRAMC_ID	7
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
+#define AMBARELLA_IO_DESC_CRYPT_ID	8
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
+#define AMBARELLA_IO_DESC_AHB64_ID	9
 #endif
 
 struct ambarella_mem_map_desc {
@@ -226,7 +228,29 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_MEMORY,
 			},
 	},
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
+	[AMBARELLA_IO_DESC_AXI_ID] = {
+		.name		= "AXI",
+		.io_desc	= {
+			.virtual= AXI_BASE,
+			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
+			.length	= AXI_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
+	[AMBARELLA_IO_DESC_DDD_ID] = {
+		.name		= "DDD",
+		.io_desc	= {
+			.virtual= DDD_BASE,
+			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
+			.length	= DDD_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 	[AMBARELLA_IO_DESC_DRAMC_ID] = {
 		.name		= "DRAMC",
 		.io_desc	= {
@@ -236,6 +260,8 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_DEVICE,
 			},
 	},
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
 	[AMBARELLA_IO_DESC_CRYPT_ID] = {
 		.name		= "CRYPT",
 		.io_desc	= {
@@ -245,47 +271,17 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type	= MT_DEVICE,
 			},
 	},
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
-	[AMBARELLA_IO_DESC_AXI_ID] = {
-		.name		= "AXI",
-		.io_desc	= {
-			.virtual= AXI_BASE,
-			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
-			.length	= AXI_SIZE,
-			.type	= MT_DEVICE,
-			},
-	},
-	[AMBARELLA_IO_DESC_DDD_ID] = {
-		.name		= "DDD",
-		.io_desc	= {
-			.virtual= DDD_BASE,
-			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
-			.length	= DDD_SIZE,
-			.type	= MT_DEVICE,
-			},
-	},
 #endif
-#else
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
-	[AMBARELLA_IO_DESC_AXI_ID] = {
-		.name		= "AXI",
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
+	[AMBARELLA_IO_DESC_AHB64_ID] = {
+		.name		= "AHB64",
 		.io_desc	= {
-			.virtual= AXI_BASE,
-			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
-			.length	= AXI_SIZE,
+			.virtual= AHB64_BASE,
+			.pfn	= __phys_to_pfn(AHB64_PHYS_BASE),
+			.length	= AHB64_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},
-	[AMBARELLA_IO_DESC_DDD_ID] = {
-		.name		= "DDD",
-		.io_desc	= {
-			.virtual= DDD_BASE,
-			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
-			.length	= DDD_SIZE,
-			.type	= MT_DEVICE,
-			},
-	},
-#endif
 #endif
 };
 
@@ -487,13 +483,19 @@ static int __init bsb_mem_check(u32 start, u32 size)
 		if (tmp < NOLINUX_MEM_V_START) {
 			tmp = NOLINUX_MEM_V_START;
 		}
-		pr_info("%s: Change DSP start form 0x%08x to 0x%08x\n",
+		pr_info("%s: Change BSB start form 0x%08x to 0x%08x\n",
 			__func__, vstart, tmp);
 		vstart = tmp;
 	}
+	if (size > NOLINUX_MEM_V_SIZE) {
+		tmp = NOLINUX_MEM_V_SIZE;
+		pr_info("%s: Change BSB size form 0x%08x to 0x%08x\n",
+			__func__, size, tmp);
+		size = tmp;
+	}
 	if ((vstart + size) > (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
 		tmp = (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE) - vstart;
-		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",
+		pr_info("%s: Change BSB size form 0x%08x to 0x%08x\n",
 			__func__, size, tmp);
 		size = tmp;
 	}
@@ -863,7 +865,7 @@ void *ambarella_hal_get_vp(void)
 	if (unlikely((!ambarella_hal_info.inited))) {
 		amb_hal_success_t		retval;
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 		retval = amb_set_peripherals_base_address(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE,

@@ -23,19 +23,14 @@
 
 #ifndef __PLAT_AMBARELLA_HAL_H
 #define __PLAT_AMBARELLA_HAL_H
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 
 /* ==========================================================================*/
 #ifndef __ASM_ARCH_HARDWARE_H
 #error "include <mach/hardware.h> first"
 #endif
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_NEW_CORTEX_EXT)
-#define DEFAULT_HAL_START		(0x000a0000)
-#else
-#define DEFAULT_HAL_START		(0xc00a0000)
-#endif
+#define DEFAULT_HAL_START		(DEFAULT_MEM_START + 0x000a0000)
 #define DEFAULT_HAL_BASE		(0xfee00000)
 #define DEFAULT_HAL_SIZE		(0x00030000)
 
@@ -57,11 +52,8 @@
 #define AMBARELLA_HAL_OS_UNLOCK()
 #endif
 
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
-
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 
 #include <hal/header.h>
 #if (CHIP_REV == A7)
@@ -92,9 +84,9 @@ extern void *ambarella_hal_get_vp(void);
 /* ==========================================================================*/
 #define HAL_BASE_VP			(ambarella_hal_get_vp())
 
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
+#endif /* __PLAT_AMBARELLA_HAL_H */
 
