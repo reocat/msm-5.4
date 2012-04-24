@@ -31,7 +31,7 @@ obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 obj-y						+= gpio.o
 obj-y						+= idc.o
 obj-y						+= init.o
-obj-y						+= ir.o
+obj-$(CONFIG_INPUT_AMBARELLA_IR)		+= ir.o
 obj-y						+= irq.o
 ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
 obj-y						+= pll_hal.o
@@ -39,7 +39,7 @@ else
 obj-y						+= pll_rct.o
 endif
 obj-y						+= pm.o
-obj-y						+= pwm.o
+obj-$(CONFIG_HAVE_PWM)				+= pwm.o
 obj-y						+= rct.o
 obj-$(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)	+= reglock.o
 obj-y						+= rtc.o
@@ -47,7 +47,7 @@ obj-y						+= sd.o
 obj-y						+= spi.o
 obj-y						+= timer.o
 obj-y						+= uart.o
-obj-y						+= udc.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= udc.o
 obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= uhc.o
 obj-$(CONFIG_CPU_FREQ)				+= cpufreq.o

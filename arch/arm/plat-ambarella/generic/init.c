@@ -135,9 +135,10 @@ int __init ambarella_init_machine(char *board_name)
 	retval = ambarella_init_adc();
 	BUG_ON(retval != 0);
 
+#if defined(CONFIG_HAVE_PWM)
 	retval = ambarella_init_pwm();
 	BUG_ON(retval != 0);
-
+#endif
 	retval = ambarella_init_fb();
 	BUG_ON(retval != 0);
 

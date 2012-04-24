@@ -62,6 +62,9 @@
 #elif (CHIP_REV == S2)
 #define REF_CLK_FREQ	24000000
 #include <ambhw/rct/s2.h>
+#elif (CHIP_REV == A8)
+#define REF_CLK_FREQ	27000000
+#include <ambhw/rct/a8.h>
 #endif
 
 #ifndef RCT_MAX_DLL_CTRL

@@ -34,7 +34,7 @@
 #define DEFAULT_HAL_BASE		(0xfee00000)
 #define DEFAULT_HAL_SIZE		(0x00030000)
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == A8)
 #define AMBARELLA_HAL_OS_LOCK()	\
 	do {	\
 		AMBARELLA_REG_LOCK();	\
@@ -64,6 +64,8 @@
 #include <hal/i1/ambhal.h>
 #elif (CHIP_REV == S2)
 #include <hal/s2/ambhal.h>
+#elif (CHIP_REV == A8)
+#include <hal/a8/ambhal.h>
 #else
 #error "Undefined CHIP_REV, Can't support HAL!"
 #endif

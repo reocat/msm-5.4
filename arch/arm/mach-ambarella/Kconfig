@@ -98,6 +98,12 @@ config MACH_GINKGO
 	help
 	  Say Y here if you are using S2 ginkgo.
 
+config MACH_HYACINTH
+	bool "Hyacinth"
+	default n
+	help
+	  Say Y here if you can't find suitable Board Name.
+
 menu "Misc on Board Devices"
 
 comment "Ambarella"

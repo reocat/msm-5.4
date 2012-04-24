@@ -65,6 +65,8 @@
 #include "rct/i1.c"
 #elif (CHIP_REV == S2)
 #include "rct/s2.c"
+#elif (CHIP_REV == A8)
+#include "rct/a8.c"
 #endif
 #include "rct/audio.c"
 
@@ -91,11 +93,13 @@ EXPORT_SYMBOL(get_vout_clk_rescale_value);
 EXPORT_SYMBOL(rct_set_vout_freq_hz);
 EXPORT_SYMBOL(rct_set_vout_clk_src);
 EXPORT_SYMBOL(rct_rescale_vout_clk_freq_hz);
+#if (CHIP_REV != A8)
 EXPORT_SYMBOL(get_vout2_freq_hz);
 EXPORT_SYMBOL(get_vout2_clk_rescale_value);
 EXPORT_SYMBOL(rct_set_vout2_freq_hz);
 EXPORT_SYMBOL(rct_set_vout2_clk_src);
 EXPORT_SYMBOL(rct_rescale_vout2_clk_freq_hz);
+#endif
 
 #if (VOUT_SUPPORT_ONCHIP_HDMI != 0)
 EXPORT_SYMBOL(rct_set_hdmi_clk_src);

@@ -77,6 +77,8 @@
 #define CHIP_REV	I1
 #elif	defined(CONFIG_PLAT_AMBARELLA_S2)
 #define CHIP_REV	S2
+#elif	defined(CONFIG_PLAT_AMBARELLA_A8)
+#define CHIP_REV	A8
 #else
 #error "Undefined CHIP_REV"
 #endif
@@ -143,6 +145,10 @@
 	defined(CONFIG_ARCH_S2) ||	     \
 	defined(CONFIG_ARCH_MMP2_S2)
 #define CHIP_REV	S2
+#elif	defined(CONFIG_ARCH_AMBARELLA_A8) || \
+	defined(CONFIG_ARCH_A8) ||	     \
+	defined(CONFIG_ARCH_MMP2_A8)
+#define CHIP_REV	A8
 #else
 #error "Undefined CHIP_REV"
 #endif

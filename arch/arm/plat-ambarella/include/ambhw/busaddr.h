@@ -56,6 +56,10 @@
 #endif
 #endif
 
+#if (CHIP_REV == A8)
+#define APB_DEBUG_BASE		(APB_BASE | (1 << 26))	/* debug port */
+#endif
+
 /* DRAM slave offsets */
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A8)
 #define DRAM_DRAM_OFFSET 		0x0000
@@ -364,7 +368,11 @@
 #define IDC3_BASE			(APB_BASE + IDC3_OFFSET)
 #define SPI2_BASE			(APB_BASE + SPI2_OFFSET)
 #define GPIO3_BASE			(APB_BASE + GPIO3_OFFSET)
+#if (CHIP_REV == A8)
+#define RCT_BASE			(APB_DEBUG_BASE + RCT_OFFSET)
+#else
 #define RCT_BASE			(APB_BASE + RCT_OFFSET)
+#endif
 #define AUC_BASE			(APB_BASE + AUC_OFFSET)
 #define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
 #define UART1_BASE			(APB_BASE + UART1_OFFSET)
@@ -486,8 +494,6 @@
 #define ORC_VIN_OFFSET			0x030000
 #define ORC_CODEENC_OFFSET		0x168000
 #define ORC_CODEDEC_OFFSET		0x1c8000
-
-#define APB_DEBUG_BASE			(APB_BASE | (1 << 26))	/* debug port */
 
 #define ORC_MDENC_BASE			(APB_DEBUG_BASE + ORC_MDENC_OFFSET)
 #define ORC_MDDEC_BASE			(APB_DEBUG_BASE + ORC_MDDEC_OFFSET)

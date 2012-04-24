@@ -199,15 +199,28 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 };
 #define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1088X816)
-static struct ambarella_pll_vidcap_info vidcap_list[] = {
-	{"2304x1296_60fps", AMB_VIDCAP_2304X1296_60FPS},
-	{"1296x1787", AMB_VIDCAP_1296X1787},
-	{"2048x1536", AMB_VIDCAP_2048X1536},
-	{"2240x1260", AMB_VIDCAP_2240X1260},
-	{"1984x1116", AMB_VIDCAP_1984X1116},
-	{"2112x1188", AMB_VIDCAP_2112X1188},
-	{"1312x984", AMB_VIDCAP_1312X984},
-	{"1088x816", AMB_VIDCAP_1088X816},
+#elif (CHIP_REV == A8)
+#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
+static struct ambarella_pll_mode_info mode_list[] = {
+	{"preview", AMB_OPERATING_MODE_PREVIEW},
+	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
+	{"capture", AMB_OPERATING_MODE_CAPTURE},
+	{"playback", AMB_OPERATING_MODE_PLAYBACK},
+	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
+	{"standby", AMB_OPERATING_MODE_STANDBY},
+	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
+	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
+	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
+	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
+};
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_480P30)
+static struct ambarella_pll_performance_info performance_list[] = {
+	{"480P30", AMB_PERFORMANCE_480P30},
+	{"720P30", AMB_PERFORMANCE_720P30},
+	{"720P60", AMB_PERFORMANCE_720P60},
+	{"1080I60", AMB_PERFORMANCE_1080I60},
+	{"1080P30", AMB_PERFORMANCE_1080P30},
+	{"1080P60", AMB_PERFORMANCE_1080P60},
 };
 #endif
 
@@ -262,7 +275,9 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #endif
 			"\tPerformance:\t%s\n"
 			"\tMode:\t\t%s\n"
+#if (CHIP_REV != A8)
 			"\tUSB:\t\t%s\n"
+#endif
 			"\tHDMI:\t\t%s\n"
 			"\tDualStream:\t%s\n"
 #if (CHIP_REV == A5S)
@@ -275,7 +290,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tDram:\t\t%u Hz\n"
 			"\tiDSP:\t\t%u Hz\n"
 			"\tCore:\t\t%u Hz\n"
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2 || CHIP_REV == A8)
 			"\tCortex:\t\t%u Hz\n"
 			"\tAXI:\t\t%u Hz\n"
 #endif
@@ -285,18 +300,22 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tAHB:\t\t%u Hz\n"
 			"\tAPB:\t\t%u Hz\n"
 			"\tVOUT:\t\t%u Hz\n"
+#if (CHIP_REV != A8)
 			"\tVOUT2:\t\t%u Hz\n"
+#endif
 			"\tVIN:\t\t%u Hz\n"
 			"\tHDMI:\t\t%u Hz\n"
 			"\tAudio:\t\t%u Hz\n"
 			"\tADC:\t\t%u Hz\n"
 			"\tSSI:\t\t%u Hz\n"
+#if (CHIP_REV != A8)
 			"\tSSI2:\t\t%u Hz\n"
+#endif
 			"\tUART:\t\t%u Hz\n"
-#if (SUPPORT_GMII == 1)
+#if (SUPPORT_GMII == 1 && CHIP_REV != A8)
 			"\tGTX:\t\t%u Hz\n"
 #endif
-#if (SD_HAS_SDXC_CLOCK == 1)
+#if (SD_HAS_SDXC_CLOCK == 1 && CHIP_REV != A8)
 			"\tSDXC:\t\t%u Hz\n"
 #endif
 			"\tSD:\t\t%u Hz\n\n",
@@ -305,7 +324,9 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #endif
 			performance_list[operating_mode.performance].name,
 			mode_list[operating_mode.mode].name,
+#if (CHIP_REV != A8)
 			operating_mode.usb_state ? "On" : "Off",
+#endif
 			operating_mode.hdmi_state ? "On" : "Off",
 			operating_mode.dual_stream_state ? "On" : "Off",
 #if (CHIP_REV == A5S)
@@ -318,7 +339,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			get_dram_freq_hz(),
 			get_idsp_freq_hz(),
 			get_core_bus_freq_hz(),
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2 || CHIP_REV == A8)
 			amb_get_cortex_clock_frequency(HAL_BASE_VP),
 			amb_get_axi_clock_frequency(HAL_BASE_VP),
 #endif
@@ -328,18 +349,22 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			get_ahb_bus_freq_hz(),
 			get_apb_bus_freq_hz(),
 			get_vout_freq_hz(),
+#if (CHIP_REV != A8)
 			get_vout2_freq_hz(),
+#endif
 			get_so_freq_hz(),
 			amb_get_hdmi_clock_frequency(HAL_BASE_VP),
 			amb_get_audio_clock_frequency(HAL_BASE_VP),
 			amb_get_adc_clock_frequency(HAL_BASE_VP),
 			amb_get_ssi_clock_frequency(HAL_BASE_VP),
+#if (CHIP_REV != A8)
 			amb_get_ssi2_clock_frequency(HAL_BASE_VP),
+#endif
 			amb_get_uart_clock_frequency(HAL_BASE_VP),
-#if (SUPPORT_GMII == 1)
+#if (SUPPORT_GMII == 1 && CHIP_REV != A8)
 			amb_get_gtx_clock_frequency(HAL_BASE_VP),
 #endif
-#if (SD_HAS_SDXC_CLOCK == 1)
+#if (SD_HAS_SDXC_CLOCK == 1 && CHIP_REV != A8)
 			get_sdxc_freq_hz(),
 #endif
 			get_sd_freq_hz());

@@ -1407,7 +1407,7 @@ static struct clk adc_clk = {
 	.ops		= NULL,
 };
 
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == A8)
 
 /* Cortex */
 static struct clk cortex_clk = {
@@ -1638,14 +1638,16 @@ int __init ambarella_init_clk(void)
 	ambarella_register_clk(&hdmi_phy_clk);
 #endif
 	ambarella_register_clk(&ssi_clk);
+#if (CHIP_REV != A8)
 	ambarella_register_clk(&ssi2_clk);
-	ambarella_register_clk(&uart_clk);
 	ambarella_register_clk(&motor_clk);
 	ambarella_register_clk(&ir_clk);
-	ambarella_register_clk(&sd_clk);
-	ambarella_register_clk(&audio_clk);
 	ambarella_register_clk(&pwm_clk);
 	ambarella_register_clk(&usb_phy_clk);
+#endif
+	ambarella_register_clk(&uart_clk);
+	ambarella_register_clk(&sd_clk);
+	ambarella_register_clk(&audio_clk);
 	ambarella_register_clk(&adc_clk);
 #if (CHIP_REV == I1)
 	ambarella_register_clk(&cortex_clk);
@@ -1653,6 +1655,11 @@ int __init ambarella_init_clk(void)
 	ambarella_register_clk(&ddd_clk);
 	ambarella_register_clk(&ssi_ahb_clk);
 	ambarella_register_clk(&sdxc_clk);
+#endif
+#if (CHIP_REV == A8)
+	ambarella_register_clk(&cortex_clk);
+	ambarella_register_clk(&axi_clk);
+	ambarella_register_clk(&ssi_ahb_clk);
 #endif
 
 	return 0;

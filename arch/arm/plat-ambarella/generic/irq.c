@@ -47,7 +47,11 @@ static unsigned long ambarella_gpio_wakeup_bit[BITS_TO_LONGS(AMBGPIO_SIZE)];
 	girq -= GPIO_INT_VEC(0); \
 	} while (0)
 
-#if (GPIO_INSTANCES == 2)
+#if (GPIO_INSTANCES == 1)
+#define AMBARELLA_GPIO_IRQ2BASE()	do { \
+	gpio_base = GPIO0_BASE; \
+	} while (0)
+#elif (GPIO_INSTANCES == 2)
 #define AMBARELLA_GPIO_IRQ2BASE()	do { \
 	gpio_base = GPIO0_BASE; \
 	if (girq >= GPIO_BANK_SIZE) { \

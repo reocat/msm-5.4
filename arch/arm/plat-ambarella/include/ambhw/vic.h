@@ -19,9 +19,9 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5)  || (CHIP_REV == A6) || \
     (CHIP_REV ==A5S) || (CHIP_REV == A7M) || (CHIP_REV == A7) || \
-    (CHIP_REV == A7L) || (CHIP_REV == A8)
+    (CHIP_REV == A7L)
 #define VIC_INSTANCES	2
-#elif (CHIP_REV == I1) || (CHIP_REV == A7S)
+#elif (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == A8)
 #define VIC_INSTANCES	3
 #else
 #define VIC_INSTANCES	1
