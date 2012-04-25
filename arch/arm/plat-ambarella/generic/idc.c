@@ -135,3 +135,38 @@ struct platform_device ambarella_idc1 = {
 };
 #endif
 
+#if (IDC_INSTANCES >= 3)
+struct resource ambarella_idc2_resources[] = {
+	[0] = {
+		.start	= IDC3_BASE,
+		.end	= IDC3_BASE + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IDC3_IRQ,
+		.end	= IDC3_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct ambarella_idc_platform_info ambarella_idc2_platform_info = {
+	.clk_limit	= 100000,
+	.bulk_write_num	= 60,
+	.i2c_class	= DEFAULT_I2C_CLASS,
+	.get_clock	= get_apb_bus_freq_hz,
+};
+AMBA_IDC_PARAM_CALL(2, ambarella_idc2_platform_info, 0644);
+
+struct platform_device ambarella_idc2 = {
+	.name		= "ambarella-i2c",
+	.id		= 2,
+	.resource	= ambarella_idc2_resources,
+	.num_resources	= ARRAY_SIZE(ambarella_idc2_resources),
+	.dev		= {
+		.platform_data		= &ambarella_idc2_platform_info,
+		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+#endif
+

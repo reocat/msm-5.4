@@ -21,7 +21,7 @@
     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
     (CHIP_REV == A5L)  
 #define IDC_INSTANCES		1
-#elif (CHIP_REV == A8)  
+#elif (CHIP_REV == A8 || CHIP_REV == A7S || CHIP_REV == S2)  
 #define IDC_INSTANCES		3
 #else
 #define IDC_INSTANCES		2
