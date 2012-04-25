@@ -42,8 +42,12 @@
 #define SPI_AHB_INSTANCES			0
 #define SPI_SUPPORT_TSSI_MODE			1
 
-#elif (CHIP_REV == A7S)
+#elif (CHIP_REV == A7S || CHIP_REV == S2)
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
+#define SPI_INSTANCES				2
+#else
 #define SPI_INSTANCES				1
+#endif
 #define SPI_AHB_INSTANCES			0
 #define SPI_SUPPORT_TSSI_MODE			0
 
@@ -78,14 +82,14 @@
 #endif
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-    (CHIP_REV == A7L) || (CHIP_REV == A7S)
+    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == S2)
 #define SPI_SLAVE_INSTANCES			1
 #else     	
 #define SPI_SLAVE_INSTANCES			0
 #endif
 
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
-    (CHIP_REV == A8)	
+    (CHIP_REV == A8) || (CHIP_REV == S2)	
 #define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
 #define SPI_SUPPORT_MASTER_DELAY_START_TIME	1
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1

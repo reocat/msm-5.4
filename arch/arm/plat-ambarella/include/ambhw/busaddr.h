@@ -144,7 +144,7 @@
 #define ETH2_OFFSET			0x18000
 #define ETH2_DMA_OFFSET			0x19000
 
-#if (CHIP_REV == A7S)
+#if (CHIP_REV == A7S || CHIP_REV == S2)
 #define USB_HOST_CTRL_EHCI_OFFSET	0x18000
 #define USB_HOST_CTRL_OHCI_OFFSET	0x19000
 #define AHB_SCRATCHPAD_OFFSET		0x1b000
@@ -292,7 +292,7 @@
 #define IDC3_OFFSET			0xe000 /* A8 */
 #define SPI2_OFFSET			0xf000
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == S2)
 #define GPIO3_OFFSET			0x10000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1e000
@@ -316,13 +316,13 @@
 
 #if (CHIP_REV == A7L)
 #define SPI_SLAVE_OFFSET		0x1000
-#elif (CHIP_REV == A7S)
+#elif (CHIP_REV == A7S || CHIP_REV == S2)
 #define SPI_SLAVE_OFFSET		0x14000
 #else
 #define SPI_SLAVE_OFFSET		0x1e000
 #endif
 
-#if (CHIP_REV == A7S)
+#if (CHIP_REV == A7S || CHIP_REV == S2)
 #define UART1_OFFSET			0x15000
 #else
 #define UART1_OFFSET			0x1f000
@@ -430,7 +430,7 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
     (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)  || \
-    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8)
+    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == S2) || (CHIP_REV == A8)
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))
@@ -449,7 +449,7 @@
 /*******************/
 
 #if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == A7S) || (CHIP_REV == S2)
 
 #define ME_OFFSET			0x140000
 #define MDXF_OFFSET			0x150000

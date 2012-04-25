@@ -107,6 +107,20 @@ struct platform_device ambarella_spi0 = {
 };
 
 #if (SPI_MASTER_INSTANCES >= 2 )
+#if  (CHIP_REV == A7S || CHIP_REV == S2)
+struct resource ambarella_spi1_resources[] = {
+	[0] = {
+		.start	= AHB64_BASE + 0x4000,
+		.end	= AHB64_BASE + 0x4000 + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= SSI_MASTER_IRQ,
+		.end	= SSI_MASTER_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+#else
 struct resource ambarella_spi1_resources[] = {
 	[0] = {
 		.start	= SPI2_BASE,
@@ -119,6 +133,7 @@ struct resource ambarella_spi1_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+#endif
 
 int ambarella_spi1_cs_pins[] = {SSI2_0EN, -1, -1, -1, -1, -1, -1, -1};
 AMBA_SPI_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
