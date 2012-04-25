@@ -48,13 +48,6 @@
 
 #include "board-device.h"
 
-#if (AUDIO_CODEC_INSTANCES == 1)
-static struct platform_device ambarella_auc_codec0 = {
-	.name		= "a2auc-codec",
-	.id		= -1,
-};
-#endif
-
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,

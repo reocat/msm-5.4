@@ -37,8 +37,7 @@
 #include <linux/spi/spidev.h>
 
 #include <linux/i2c.h>
-#include <linux/i2c/ak4183.h>
-#include <linux/i2c/cy8ctmg.h>
+#include <linux/i2c/pca953x.h>
 
 #include <linux/irq.h>
 #include <linux/interrupt.h>
@@ -48,13 +47,6 @@
 #include <plat/ambcache.h>
 
 #include "board-device.h"
-
-#if (AUDIO_CODEC_INSTANCES == 1)
-static struct platform_device ambarella_auc_codec0 = {
-	.name		= "a2auc-codec",
-	.id		= -1,
-};
-#endif
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
@@ -168,6 +160,19 @@ struct platform_device ginkgo_board_input = {
 	}
 };
 
+static struct pca953x_platform_data ginkgo_ipcam_gpio_pca953x_platform_data = {
+	.gpio_base		= EXT_GPIO(0),
+	.irq_base		= EXT_IRQ(0),
+};
+
+static struct i2c_board_info ginkgo_ipcam_gpio_i2c_board_info = {
+	.type			= "pca9539",
+	.flags			= 0,
+	.addr			= 0x74,
+	.platform_data		= &ginkgo_ipcam_gpio_pca953x_platform_data,
+	.irq			= GPIO_INT_VEC(11),
+};
+
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
@@ -186,7 +191,7 @@ static void __init ambarella_init_ginkgo(void)
 	}
 
 	/* Config SD */
-	fio_default_owner = SELECT_FIO_FREE;
+	fio_default_owner = SELECT_FIO_SD;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = SMIO_5;
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
@@ -198,6 +203,11 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = SMIO_45;
 
+	/* Config ETH */
+	ambarella_eth0_platform_info.mii_id = 1;
+	ambarella_eth0_platform_info.phy_id = 0x001cc915;
+
+	/* Config USB */
 	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
 
 	spi_register_board_info(ambarella_spi_devices,
@@ -206,6 +216,10 @@ static void __init ambarella_init_ginkgo(void)
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		i2c_register_board_info(2,
+			&ginkgo_ipcam_gpio_i2c_board_info, 1);
+	}
 
 	platform_device_register(&ginkgo_board_input);
 }
