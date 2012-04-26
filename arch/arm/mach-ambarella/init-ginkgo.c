@@ -210,6 +210,11 @@ static void __init ambarella_init_ginkgo(void)
 	/* Config USB */
 	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
 
+	/* Config Vin */
+	ambarella_board_generic.vin1_reset.gpio_id = GPIO(49);
+	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
+	ambarella_board_generic.vin1_reset.active_delay = 1;
+
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
