@@ -117,6 +117,7 @@ struct ambarella_sd_controller_info {
 	struct device			*dev;
 	struct resource			*mem;
 	unsigned int			irq;
+	u32				dma_fix;
 
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
@@ -1008,8 +1009,13 @@ static inline void ambarella_sd_send_cmd(
 		}
 
 		amba_writeb(pinfo->regbase + SD_TMO_OFFSET, pslotinfo->tmo);
-		amba_writel(pinfo->regbase + SD_DMA_ADDR_OFFSET,
-			pslotinfo->dma_address);
+		if (pinfo->dma_fix) {
+			amba_writel(pinfo->regbase + SD_DMA_ADDR_OFFSET,
+				(pslotinfo->dma_address | pinfo->dma_fix));
+		} else {
+			amba_writel(pinfo->regbase + SD_DMA_ADDR_OFFSET,
+				pslotinfo->dma_address);
+		}
 		amba_write2w(pinfo->regbase + SD_BLK_SZ_OFFSET,
 			pslotinfo->blk_sz, pslotinfo->blk_cnt);
 		amba_writel(pinfo->regbase + SD_ARG_OFFSET, pslotinfo->arg_reg);
@@ -1240,6 +1246,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		goto sd_errorCode_free_pinfo;
 	}
 
+	pinfo->dma_fix = pinfo->pcontroller->dma_fix;
 	if (pinfo->pcontroller->wait_tmo <
 		CONFIG_SD_AMBARELLA_WAIT_TIMEOUT) {
 		dev_dbg(&pdev->dev, "Change wait timeout from %d to %d.\n",
@@ -1501,10 +1508,15 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		}
 	}
 
-	dev_notice(&pdev->dev,
-		"Ambarella SD/MMC[%d] probed %d slots, 0x%08x!\n",
-		pdev->id, pinfo->pcontroller->num_slots, hc_cap);
-
+	if (pinfo->dma_fix) {
+		dev_notice(&pdev->dev, "Ambarella SD/MMC[%d] probed %d slots,"
+			" [0x%08x:0x%08x]\n", pdev->id,
+			pinfo->pcontroller->num_slots, hc_cap, pinfo->dma_fix);
+	} else {
+		dev_notice(&pdev->dev, "Ambarella SD/MMC[%d] probed %d slots,"
+			" [0x%08x]\n", pdev->id,
+			pinfo->pcontroller->num_slots, hc_cap);
+	}
 	goto sd_errorCode_na;
 
 sd_errorCode_remove_host:

@@ -66,6 +66,7 @@ struct ambarella_sd_controller {
 	u32					support_pll_scaler;
 
 	u32					wait_tmo;
+	u32					dma_fix;
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
 	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bb), perm); \

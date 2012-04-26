@@ -219,6 +219,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.support_pll_scaler	= 0,
 #endif
 	.wait_tmo		= (1 * HZ),
+	.dma_fix		= 0,
 };
 module_param_cb(sd0_max_clk, &param_ops_int,
 	&(ambarella_platform_sd_controller0.max_clk), 0444);
@@ -311,18 +312,6 @@ void fio_amb_sd2_set_int(u32 mask, u32 on)
 	spin_unlock_irqrestore(&fio_amb_sd2_int_lock, flags);
 }
 
-#if (CHIP_REV == I1)
-void ambarella_platform_sdxc_set_pll(u32 freq_hz)
-{
-	amb_set_sdxc_clock_frequency(HAL_BASE_VP, freq_hz);
-}
-
-u32 ambarella_platform_sdxc_get_pll(void)
-{
-	return (u32)amb_get_sdxc_clock_frequency(HAL_BASE_VP);
-}
-#endif
-
 struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.num_slots		= 1,
 	.slot[0] = {
@@ -384,6 +373,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.support_pll_scaler	= 0,
 #endif
 	.wait_tmo		= (1 * HZ),
+#if (CHIP_REV == S2)
+	.dma_fix		= 0xC0000000,
+#else
+	.dma_fix		= 0,
+#endif
 };
 module_param_cb(sd1_max_clk, &param_ops_int,
 	&(ambarella_platform_sd_controller1.max_clk), 0444);
