@@ -258,7 +258,9 @@ static void serial_ambarella_enable_ms(struct uart_port *port)
 
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
+	wait_for_tx(port);
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	serial_ambarella_transmit_chars(port);
 }
 
 static void serial_ambarella_stop_tx(struct uart_port *port)
@@ -368,7 +370,7 @@ static int serial_ambarella_startup(struct uart_port *port)
 	port_info = (struct ambarella_uart_port_info *)(port->private_data);
 
 	spin_lock_irqsave(&port->lock, flags);
-	amba_setbitsl(port->membase + UART_SRR_OFFSET, 0x00);
+	amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
 	amba_writel(port->membase + UART_IE_OFFSET, port_info->ier |
 		UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET, (port_info->fcr |
@@ -389,7 +391,7 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&port->lock, flags);
 	amba_clrbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
-	amba_setbitsl(port->membase + UART_SRR_OFFSET, 0x01);
+	amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
