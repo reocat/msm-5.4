@@ -128,6 +128,14 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	if (usb_host_initialized++ > 0)
 		return;
 
+	/* Determine the polarity of over-current protect pin
+	 * bit16 == 1: high is normal, low will trigger the ocp interrupt
+	 * bit16 == 0: row is normal, high will trigger the ocp interrupt */
+	if ((ambarella_board_generic.uhc_use_ocp & (0x1<<16)) == 0)
+		amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
+	else
+		amba_clrbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
+
 	/* GPIO7 and GPIO9 are programmed as hardware mode */
 	pin_clr = 0;
 	pin_set = 0x1 << 9;
@@ -136,17 +144,10 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	else
 		pin_clr |= 0x1 << 7;
 	ambarella_gpio_raw_lock(0, &flags);
+	amba_clrbitsl(GPIO3_AFSEL_REG, 0x3);
 	amba_setbitsl(GPIO0_AFSEL_REG, pin_set);
 	amba_clrbitsl(GPIO0_AFSEL_REG, pin_clr);
 	ambarella_gpio_raw_unlock(0, &flags);
-
-	/* Determine the polarity of over-current protect pin
-	 * bit16 == 1: high is normal, low will trigger the ocp interrupt
-	 * bit16 == 0: row is normal, high will trigger the ocp interrupt */
-	if ((ambarella_board_generic.uhc_use_ocp & (0x1<<16)) == 0)
-		amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
-	else
-		amba_clrbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
 
 	/* Reset usb host controller */
 	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
