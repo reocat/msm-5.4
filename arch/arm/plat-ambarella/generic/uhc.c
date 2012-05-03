@@ -154,7 +154,7 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 		pr_info("%s: amb_usb_host_soft_reset fail!\n", __func__);
 
 	/* Enable usb port (usbphy) */
-	if (amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_ON)
+	if (amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_ALWAYS_ON)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("%s: amb_set_usb_port_state fail!\n", __func__);
 	}
