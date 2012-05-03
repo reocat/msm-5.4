@@ -390,7 +390,7 @@ static void ambarella_spi_handle_message(struct ambarella_spi *priv)
 
 static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 {
-	u32 				ctrlr0, ssi_clk, sckdv;
+	u32 				ctrlr0, ssi_clk, sckdv, cs_pin;
 	struct spi_message		*msg;
 	unsigned long			flags;
 
@@ -424,6 +424,10 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 	priv->chip_select	= 0;
 	priv->c_dev		= msg->spi;
 	priv->c_msg		= msg;
+
+	cs_pin = priv->pinfo->cs_pins[priv->c_dev->chip_select];
+	ambarella_gpio_config(cs_pin, GPIO_FUNC_SW_OUTPUT);
+	ambarella_gpio_set(cs_pin, GPIO_HIGH);
 }
 
 static int ambarella_spi_main_entry(struct spi_device *spi, struct spi_message *msg)
@@ -484,7 +488,7 @@ static void ambarella_spi_cleanup(struct spi_device *spi)
 
 static int ambarella_spi_inithw(struct ambarella_spi *priv)
 {
-	u16 				sckdv, i;
+	u16 				sckdv;
 	u32 				ctrlr0, ssi_freq;
 
 	/* Set PLL */
@@ -494,6 +498,7 @@ static int ambarella_spi_inithw(struct ambarella_spi *priv)
 	/* Disable SPI */
 	ambarella_spi_stop(priv);
 
+#if 0
 	/* Config Chip Select Pins */
 	for (i = 0; i < priv->pinfo->cs_num; i++) {
 		if (priv->pinfo->cs_pins[i] < 0) {
@@ -503,6 +508,7 @@ static int ambarella_spi_inithw(struct ambarella_spi *priv)
 		ambarella_gpio_config(priv->pinfo->cs_pins[i], GPIO_FUNC_SW_OUTPUT);
 		ambarella_gpio_set(priv->pinfo->cs_pins[i], GPIO_HIGH);
 	}
+#endif
 
 	/* Initial Register Settings */
 	ctrlr0 = ( ( SPI_CFS << 12) | (SPI_WRITE_ONLY << 8) | (SPI_SCPOL << 7) |
