@@ -249,6 +249,39 @@ void ambarella_adc_set_slot_ctrl(u8 slot_id, u32 slot_value)
 	}
 }
 
+static int ambarella_adc_set_fifo_ctrl(u32 fifo_id, u16 fifo_cid)
+{
+	u32 reg=0;
+	u32 reg_val=0;
+
+	switch(fifo_id) {
+	case 0:
+		reg = ADC_FIFO_CTRL_0_REG;
+		reg_val = ADC_FIFO_TH
+			| (fifo_cid << ADC_FIFO_ID_SHIFT)
+			| ADC_FIFO_DEPTH;
+		break;
+	case 1:
+		reg=ADC_FIFO_CTRL_1_REG;
+		break;
+	case 2:
+		reg=ADC_FIFO_CTRL_2_REG;
+		break;
+	case 3:
+		reg=ADC_FIFO_CTRL_3_REG;
+		break;
+	default:
+		pr_err("%s: invalid fifo NO = %d.\n",
+			__func__, fifo_id);
+		return -1;
+	}
+
+	amba_writel(reg, reg_val);
+
+	amba_writel(ADC_FIFO_CTRL_REG, ADC_FIFO_CONTROL_CLEAR);
+	return 0;
+}
+
 void ambarella_adc_set_config(void)
 {
 	int i = 0;
@@ -264,6 +297,9 @@ void ambarella_adc_set_config(void)
 	amba_writel(ADC_SLOT_PERIOD_REG, ambarella_platform_adc_controller0.adc_slot_period);
 	for(i=0;i <= slot_num_reg; i++)
 		ambarella_adc_set_slot_ctrl(i, ambarella_platform_adc_controller0.adc_slot_ctrl[i]);
+
+	//temporary config fifo_0 with channel 3
+	ambarella_adc_set_fifo_ctrl(0,3);
 }
 #endif
 
@@ -476,6 +512,10 @@ struct ambarella_adc_pm_info {
 	u32 adc_chan8_intr_reg;
 	u32 adc_chan9_intr_reg;
 #endif
+#if (ADC_NUM_CHANNELS >= 12)
+	u32 adc_chan10_intr_reg;
+	u32 adc_chan11_intr_reg;
+#endif
 };
 
 struct ambarella_adc_pm_info ambarella_adc_pm;
@@ -503,7 +543,10 @@ u32 ambarella_adc_suspend(u32 level)
 	ambarella_adc_pm.adc_chan8_intr_reg = amba_readl(ADC_CHAN8_INTR_REG);
 	ambarella_adc_pm.adc_chan9_intr_reg = amba_readl(ADC_CHAN9_INTR_REG);
 #endif
-
+#if (ADC_NUM_CHANNELS >= 12)
+	ambarella_adc_pm.adc_chan10_intr_reg = amba_readl(ADC_CHAN10_INTR_REG);
+	ambarella_adc_pm.adc_chan11_intr_reg = amba_readl(ADC_CHAN11_INTR_REG);
+#endif
 	return 0;
 }
 
@@ -539,6 +582,10 @@ u32 ambarella_adc_resume(u32 level)
 #if (ADC_NUM_CHANNELS >= 10)
 		amba_writel(ADC_CHAN8_INTR_REG, ambarella_adc_pm.adc_chan8_intr_reg);
 		amba_writel(ADC_CHAN9_INTR_REG, ambarella_adc_pm.adc_chan9_intr_reg);
+#endif
+#if (ADC_NUM_CHANNELS >= 12)
+		amba_writel(ADC_CHAN8_INTR_REG, ambarella_adc_pm.adc_chan10_intr_reg);
+		amba_writel(ADC_CHAN9_INTR_REG, ambarella_adc_pm.adc_chan11_intr_reg);
 #endif
 	}
 
