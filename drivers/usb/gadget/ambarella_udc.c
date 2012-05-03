@@ -351,7 +351,8 @@ static void init_setup_descriptor(struct ambarella_udc *udc)
 	udc->setup_buf->data0	= 0xffffffff;
 	udc->setup_buf->data1	= 0xffffffff;
 
-	amba_writel(ep->ep_reg.setup_buf_ptr_reg, udc->setup_addr);
+	amba_writel(ep->ep_reg.setup_buf_ptr_reg,
+		udc->setup_addr | udc->controller_info->dma_fix);
 }
 
 
@@ -364,9 +365,11 @@ static int init_null_pkt_desc(struct ambarella_udc *udc)
 		return -ENOMEM;
 	}
 
-	udc->dummy_desc->data_ptr = udc->dummy_desc_addr;
+	udc->dummy_desc->data_ptr =
+		udc->dummy_desc_addr | udc->controller_info->dma_fix;
 	udc->dummy_desc->reserved = 0xffffffff;
-	udc->dummy_desc->next_desc_ptr = udc->dummy_desc_addr;
+	udc->dummy_desc->next_desc_ptr =
+		udc->dummy_desc_addr | udc->controller_info->dma_fix;
 	udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 
 	return 0;
@@ -611,8 +614,10 @@ static void ambarella_free_descriptor(struct ambarella_ep *ep,
 static int ambarella_reuse_descriptor(struct ambarella_ep *ep,
 	struct ambarella_request *req, u32 desc_count, dma_addr_t start_address)
 {
+	struct ambarella_udc *udc = ep->udc;
 	struct ambarella_data_desc *data_desc, *next_data_desc;
 	u32 data_transmit, rest_bytes, i;
+	dma_addr_t buf_dma_address;
 
 	next_data_desc = req->data_desc;
 	for(i = 0; i < desc_count; i++){
@@ -626,7 +631,8 @@ static int ambarella_reuse_descriptor(struct ambarella_ep *ep,
 		data_desc = next_data_desc;
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
 		data_desc->reserved = 0xffffffff;
-		data_desc->data_ptr = start_address + i * ep->ep.maxpacket;
+		buf_dma_address = start_address + i * ep->ep.maxpacket;
+		data_desc->data_ptr = buf_dma_address | udc->controller_info->dma_fix;
 		data_desc->last_aux = 0;
 
 		next_data_desc = data_desc->next_desc_virt;
@@ -645,7 +651,7 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 	struct ambarella_udc *udc = ep->udc;
 	struct ambarella_data_desc *data_desc = NULL;
 	struct ambarella_data_desc *prev_data_desc = NULL;
-	dma_addr_t desc_phys, start_address;
+	dma_addr_t desc_phys, start_address, buf_dma_address;
 	u32 desc_count, data_transmit, rest_bytes, i;
 
 	if (likely(!req->use_aux_buf))
@@ -687,14 +693,15 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
 		data_desc->reserved = 0xffffffff;
-		data_desc->data_ptr = start_address + i * ep->ep.maxpacket;
+		buf_dma_address = start_address + i * ep->ep.maxpacket;
+		data_desc->data_ptr = buf_dma_address | udc->controller_info->dma_fix;
 		data_desc->next_desc_ptr = 0;
 		data_desc->rsvd1 = 0xffffffff;
 		data_desc->last_aux = 0;
 		data_desc->cur_desc_addr = desc_phys;
 
 		if(prev_data_desc){
-			prev_data_desc->next_desc_ptr = desc_phys;
+			prev_data_desc->next_desc_ptr = desc_phys | udc->controller_info->dma_fix;
 			prev_data_desc->next_desc_virt = data_desc;
 		}
 
@@ -744,12 +751,14 @@ static void ambarella_enable_rx_dma(struct ambarella_ep *ep)
 static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	struct ambarella_request * req)
 {
+	struct ambarella_udc *udc = ep->udc;
 	struct ambarella_ep_reg *ep_reg = &ep->ep_reg;
 
 	dprintk(DEBUG_NORMAL, "Enter. %s Tx DMA\n", ep->ep.name);
 
 	ep->data_desc = req->data_desc;
-	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr);
+	amba_writel(ep_reg->dat_desc_ptr_reg,
+		req->data_desc_addr | udc->controller_info->dma_fix);
 	/* set Poll command to transfer data to Tx FIFO */
 	amba_setbitsl(ep_reg->ctrl_reg, USB_EP_POLL_DEMAND);
 	ep->dma_going = 1;
@@ -769,11 +778,13 @@ static void ambarella_set_rx_dma(struct ambarella_ep *ep,
 
 	if(req){
 		ep->data_desc = req->data_desc;
-		amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr);
+		amba_writel(ep_reg->dat_desc_ptr_reg,
+			req->data_desc_addr | udc->controller_info->dma_fix);
 	} else {
 		/* receive zero-length-packet */
 		udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
-		amba_writel(ep_reg->dat_desc_ptr_reg, udc->dummy_desc_addr);
+		amba_writel(ep_reg->dat_desc_ptr_reg,
+			udc->dummy_desc_addr | udc->controller_info->dma_fix);
 	}
 
 	/* enable dma completion interrupt for next RX data */

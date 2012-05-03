@@ -419,6 +419,8 @@ extern enum ambarella_udc_status amb_udc_status;
 struct ambarella_udc_controller {
 	u32					vbus_polled;
 	unsigned long				irqflags;
+	/* dma_fix is only used for S2 chip, due to its DMA engine fault */
+	u32					dma_fix;
 	void					(*init_pll)(void);
 	void					(*reset_usb)(void);
 	int					(*flush_rxfifo)(void);
