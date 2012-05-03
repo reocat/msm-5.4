@@ -57,7 +57,7 @@
 #endif
 
 /* DRAM slave offsets */
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A8) 
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A8)
 #define DRAM_DRAM_OFFSET 		0x0000
 #define DRAM_DDRC_OFFSET  		0x0800
 #else
@@ -87,7 +87,7 @@
 
 #if (CHIP_REV == A6)
 #define MS_OFFSET			0x17000
-#elif (CHIP_REV == A2) || (CHIP_REV == A2S) 
+#elif (CHIP_REV == A2) || (CHIP_REV == A2S)
 #define MS_OFFSET			0xc000
 #else
 #define MS_OFFSET			0x16000
@@ -144,7 +144,7 @@
 #define ETH2_OFFSET			0x18000
 #define ETH2_DMA_OFFSET			0x19000
 
-#if (CHIP_REV == A7S || CHIP_REV == S2)
+#if (CHIP_REV == S2)
 #define USB_HOST_CTRL_EHCI_OFFSET	0x18000
 #define USB_HOST_CTRL_OHCI_OFFSET	0x19000
 #define AHB_SCRATCHPAD_OFFSET		0x1b000
@@ -289,10 +289,14 @@
 #define ADC_OFFSET			0xd000
 #define RTC_OFFSET			0xd000
 #define GPIO2_OFFSET			0xe000
+#if (CHIP_REV == S2)
+#define IDC3_OFFSET			0x13000 /* S2 */
+#else
 #define IDC3_OFFSET			0xe000 /* A8 */
+#endif
 #define SPI2_OFFSET			0xf000
 
-#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == S2)
+#if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
 #define GPIO3_OFFSET			0x10000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1e000
@@ -316,13 +320,13 @@
 
 #if (CHIP_REV == A7L)
 #define SPI_SLAVE_OFFSET		0x1000
-#elif (CHIP_REV == A7S || CHIP_REV == S2)
+#elif (CHIP_REV == S2)
 #define SPI_SLAVE_OFFSET		0x14000
 #else
 #define SPI_SLAVE_OFFSET		0x1e000
 #endif
 
-#if (CHIP_REV == A7S || CHIP_REV == S2)
+#if (CHIP_REV == S2)
 #define UART1_OFFSET			0x15000
 #else
 #define UART1_OFFSET			0x1f000
@@ -430,7 +434,7 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A5S) || \
     (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1)  || \
-    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == S2) || (CHIP_REV == A8)
+    (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8)
 #define DSP_VIN_DEBUG_OFFSET		DSP_DEBUG1_OFFSET
 #define DSP_VIN_DEBUG_BASE		DSP_DEBUG1_BASE
 #define DSP_VIN_DEBUG_REG(x)		(DSP_VIN_DEBUG_BASE + (x))
@@ -449,7 +453,7 @@
 /*******************/
 
 #if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-    (CHIP_REV == A7S) || (CHIP_REV == S2)
+    (CHIP_REV == S2)
 
 #define ME_OFFSET			0x140000
 #define MDXF_OFFSET			0x150000
@@ -472,7 +476,7 @@
 #define DSP_CONFIG_SUB0_REG		(ME_BASE   + DSP_CONFIG_SUB0_OFFSET)
 #define DSP_CONFIG_SUB1_REG		(MDXF_BASE + DSP_CONFIG_SUB1_OFFSET)
 
-#elif (CHIP_REV == A8) 
+#elif (CHIP_REV == A8)
 
 #define ORC_MDENC_OFFSET		0x010000
 #define ORC_MDDEC_OFFSET		0x020000
