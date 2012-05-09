@@ -49,6 +49,7 @@
 #define AMBETH_RX_COPYBREAK	(1518)
 #define AMBETH_RX_RNG_MIN	(8)
 #define AMBETH_TX_RNG_MIN	(4)
+#define AMBETH_PHY_REG_SIZE	(32)
 
 #define AMBETH_RXDMA_STATUS	(ETH_DMA_STATUS_OVF | ETH_DMA_STATUS_RI | \
 				ETH_DMA_STATUS_RU | ETH_DMA_STATUS_RPS | \
@@ -59,8 +60,7 @@
 #define AMBETH_TXDMA_STATUS	(ETH_DMA_STATUS_TI | ETH_DMA_STATUS_TPS | \
 				ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TJT | \
 				ETH_DMA_STATUS_UNF)
-#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TSE | \
-				ETH_DMA_INTEN_TUE | ETH_DMA_INTEN_TJE | \
+#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TJE | \
 				ETH_DMA_INTEN_UNE)
 #define AMBETH_DMA_INTEN	(ETH_DMA_INTEN_NIE | ETH_DMA_INTEN_AIE | \
 				ETH_DMA_INTEN_FBE | AMBETH_RXDMA_INTEN | \
@@ -70,6 +70,8 @@
 #undef AMBETH_TDES0_ATOMIC_CHECK_ALL
 #define AMBETH_RDES0_ATOMIC_CHECK
 #undef AMBETH_RDES0_ATOMIC_CHECK_ALL
+
+#undef AMBETH_DEBUG_DUMP_DATA
 
 /* ==========================================================================*/
 struct ambeth_desc {
@@ -323,7 +325,12 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	ambhw_set_hwaddr(lp, lp->ndev->dev_addr);
 	amba_writel(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		lp->platform_info->default_dma_bus_mode);
+#if defined(AMBETH_DEBUG_DUMP_DATA)
+	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+		ETH_MAC_FRAME_FILTER_RA);
+#else
 	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, 0);
+#endif
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 		lp->platform_info->default_dma_opmode);
 #if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
@@ -349,7 +356,25 @@ static inline void ambhw_disable(struct ambeth_info *lp)
 	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
 }
 
-static inline void ambhw_dump(struct ambeth_info *lp)
+#if defined(AMBETH_DEBUG_DUMP_DATA)
+static void ambhw_dump_buffer(const char *msg,
+	unsigned char *data, unsigned int length)
+{
+	unsigned int				i;
+
+	if (msg)
+		printk("%s", msg);
+	for (i = 0; i < length; i++) {
+		if (i % 16 == 0) {
+			printk("\n%03X:", i);
+		}
+		printk(" %02x", data[i]);
+	}
+	printk("\n");
+}
+#endif
+
+static void ambhw_dump(struct ambeth_info *lp)
 {
 	u32					i;
 
@@ -670,9 +695,8 @@ static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
 			goto ambeth_rx_rngmng_skb_exit;
 		}
 		skb->dev = lp->ndev;
-		skb->len = AMBETH_PACKET_MAXFRAME;
 		mapping = dma_map_single(&lp->ndev->dev, skb->data,
-			skb->len, DMA_FROM_DEVICE);
+			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
 		lp->rx.rng_rx[entry].skb = skb;
 		lp->rx.rng_rx[entry].mapping = mapping;
 		lp->rx.desc_rx[entry].buffer1 = mapping;
@@ -725,9 +749,12 @@ static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
 			mapping = lp->rx.rng_rx[i].mapping;
 			lp->rx.rng_rx[i].skb = NULL;
 			lp->rx.rng_rx[i].mapping = 0;
-			if (skb) {
+			if (mapping) {
 				dma_unmap_single(&lp->ndev->dev, mapping,
-					skb->len, DMA_FROM_DEVICE);
+					AMBETH_PACKET_MAXFRAME,
+					DMA_FROM_DEVICE);
+			}
+			if (skb) {
 				dev_kfree_skb(skb);
 			}
 		}
@@ -1251,6 +1278,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		spin_unlock_irqrestore(&lp->lock, flags);
 		goto ambeth_hard_start_xmit_exit;
 	}
+#if defined(AMBETH_DEBUG_DUMP_DATA)
+	ambhw_dump_buffer(__func__, skb->data, skb->len);
+#endif
 
 	mapping = dma_map_single(&lp->ndev->dev,
 		skb->data, skb->len, DMA_TO_DEVICE);
@@ -1308,8 +1338,35 @@ static struct net_device_stats *ambeth_get_stats(struct net_device *ndev)
 	return &lp->stats;
 }
 
+#if defined(AMBETH_DEBUG_DUMP_DATA)
+static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
+{
+	short					pkt_len;
+	struct sk_buff				*skb;
+	dma_addr_t				mapping;
+
+	pkt_len = ETH_RDES0_FL(status) - 4;
+	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
+		dev_warn(&lp->ndev->dev, "Bogus packet size %d.\n", pkt_len);
+		pkt_len = AMBETH_RX_COPYBREAK;
+	}
+
+	skb = lp->rx.rng_rx[entry].skb;
+	mapping = lp->rx.rng_rx[entry].mapping;
+	if (likely(skb && mapping)) {
+		dma_unmap_single(&lp->ndev->dev, mapping,
+			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+		skb_put(skb, pkt_len);
+		lp->rx.rng_rx[entry].skb = NULL;
+		lp->rx.rng_rx[entry].mapping = 0;
+		ambhw_dump_buffer(__func__, skb->data, skb->len);
+		dev_kfree_skb(skb);
+	}
+}
+#endif
+
 static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
-	unsigned int status)
+	u32 status, u32 entry)
 {
 	if (status & ETH_RDES0_DE) {
 		lp->stats.rx_frame_errors++;
@@ -1372,13 +1429,18 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 	}
 	if (status & ETH_RDES0_CE) {
 		lp->stats.rx_crc_errors++;
-		if (netif_msg_rx_err(lp))
+		if (netif_msg_rx_err(lp)) {
 			dev_err(&lp->ndev->dev, "RX Error: CRC.\n");
+		}
 	}
 	if (status & ETH_RDES0_RX) {
-		if (netif_msg_drv(lp))
+		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
 			"RX Error: Rx MAC Address/Payload Checksum.\n");
+#if defined(AMBETH_DEBUG_DUMP_DATA)
+			ambhw_dump_rx(lp, status, entry);
+#endif
+		}
 	}
 }
 
@@ -1400,7 +1462,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	mapping = lp->rx.rng_rx[entry].mapping;
 	if (likely(skb && mapping)) {
 		dma_unmap_single(&lp->ndev->dev, mapping,
-			skb->len, DMA_FROM_DEVICE);
+			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, lp->ndev);
 #if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
@@ -1414,6 +1476,9 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 				ambhw_dump(lp);
 			}
 		}
+#endif
+#if defined(AMBETH_DEBUG_DUMP_DATA)
+		ambhw_dump_buffer(__func__, skb->data, skb->len);
 #endif
 		netif_receive_skb(skb);
 		lp->rx.rng_rx[entry].skb = NULL;
@@ -1475,7 +1540,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 			ambeth_napi_rx(lp, status, entry);
 		} else {
-			ambeth_check_rdes0_status(lp, status);
+			ambeth_check_rdes0_status(lp, status, entry);
 		}
 		rx_budget--;
 		lp->rx.cur_rx++;
@@ -1694,6 +1759,35 @@ ambeth_get_settings_exit:
 	return errorCode;
 }
 
+static int ambeth_get_regs_len(struct net_device *ndev)
+{
+	return AMBETH_PHY_REG_SIZE * sizeof(u16);
+}
+
+static void ambeth_get_regs(struct net_device *ndev,
+	struct ethtool_regs *regs, void *p)
+{
+	struct ambeth_info			*lp;
+	unsigned long				flags;
+	unsigned int				i;
+	u16					*regbuf = p;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	if (regs->len < (AMBETH_PHY_REG_SIZE * sizeof(u16)))
+		return;
+	regs->version = 0;
+	/* Dump PHY for debug */
+	spin_lock_irqsave(&lp->lock, flags);
+	if (lp->phydev) {
+		for (i = 0; i < AMBETH_PHY_REG_SIZE; i++) {
+			regbuf[i] = mdiobus_read(lp->phydev->bus,
+				lp->phydev->addr, i);
+		}
+	}
+	spin_unlock_irqrestore(&lp->lock, flags);
+}
+
 /* ==========================================================================*/
 static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_open		= ambeth_open,
@@ -1712,9 +1806,11 @@ static const struct net_device_ops ambeth_netdev_ops = {
 };
 
 static const struct ethtool_ops ambeth_ethtool_ops = {
-	.get_settings	= ambeth_get_settings,
-	.set_settings	= ambeth_set_settings,
-	.get_link	= ethtool_op_get_link,
+	.get_settings		= ambeth_get_settings,
+	.set_settings		= ambeth_set_settings,
+	.get_link		= ethtool_op_get_link,
+	.get_regs_len		= ambeth_get_regs_len,
+	.get_regs		= ambeth_get_regs,
 };
 
 static int __devinit ambeth_drv_probe(struct platform_device *pdev)
@@ -1848,6 +1944,7 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	if (!is_valid_ether_addr(lp->platform_info->mac_addr))
 		random_ether_addr(lp->platform_info->mac_addr);
 	memcpy(ndev->dev_addr, lp->platform_info->mac_addr, AMBETH_MAC_SIZE);
+	ambhw_disable(lp);
 
 	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
 	errorCode = register_netdev(ndev);
