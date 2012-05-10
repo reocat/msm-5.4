@@ -306,8 +306,14 @@
 
 #define GPIO4_OFFSET			0x11000
 #define GPIO5_OFFSET			0x12000 /* iONE */
+
+#if (CHIP_REV == S2)
+#define UART2_OFFSET			0x14000
+#define UART3_OFFSET			0x15000
+#else
 #define UART2_OFFSET			0x13000 /* iONE */
 #define UART3_OFFSET			0x14000 /* iONE */
+#endif
 
 #if (CHIP_REV == I1)
 #define SPI3_OFFSET			0x15000
@@ -326,11 +332,7 @@
 #define SPI_SLAVE_OFFSET		0x1e000
 #endif
 
-#if (CHIP_REV == S2)
-#define UART1_OFFSET			0x15000
-#else
 #define UART1_OFFSET			0x1f000
-#endif
 #define IDCS_OFFSET			0x12000
 
 #if	defined(__A1_FPGA__)
