@@ -327,6 +327,11 @@ config AMBARELLA_PLL_PROC
 
 	  If you are not sure, say N here.
 
+config AMBARELLA_SKIP_BOARD_CALL
+	bool "Ambarella skip board call"
+	default n
+	---help---
+	  Skip adding sysfs_params of gpio and other devices.
 endmenu
 
 menu "PPM Configuration"

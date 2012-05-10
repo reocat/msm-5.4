@@ -139,6 +139,10 @@ struct ambarella_board_info {
 	 * bit16 for polarity selection if used, and other bits are ignored */
 	u32					uhc_use_ocp;
 };
+
+#ifdef CONFIG_AMBARELLA_SKIP_BOARD_CALL
+#define AMBA_BOARD_CALL(arg, perm)
+#else
 #define AMBA_BOARD_CALL(arg, perm) \
 	module_param_cb(board_chip, &param_ops_uint, &(arg.board_chip), 0444); \
 	module_param_cb(board_type, &param_ops_uint, &(arg.board_type), 0444); \
@@ -216,6 +220,7 @@ struct ambarella_board_info {
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##sata_power##_, arg.sata_power, perm); \
 	module_param_cb(board_uhc_use_ocp, &param_ops_uint, &(arg.uhc_use_ocp), perm);
 
+#endif
 /* ==========================================================================*/
 extern struct ambarella_board_info ambarella_board_generic;
 
