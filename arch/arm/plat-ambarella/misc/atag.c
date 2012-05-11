@@ -177,8 +177,8 @@ __tagtable(ATAG_AMBARELLA_USB_ETH1, parse_usb_eth1_tag_mac);
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
 #define AMBARELLA_IO_DESC_AHB64_ID	9
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_RCT_ON_DEBUG_BUS)
-#define AMBARELLA_IO_DESC_APB_DBG_ID	10
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
+#define AMBARELLA_IO_DESC_DBGBUS_ID	10
 #endif
 
 struct ambarella_mem_map_desc {
@@ -286,15 +286,17 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			},
 	},
 #endif
-	[AMBARELLA_IO_DESC_APB_DBG_ID] = {
-		.name		= "APB_DBG",
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
+	[AMBARELLA_IO_DESC_DBGBUS_ID] = {
+		.name		= "DBGBUS",
 		.io_desc	= {
-			.virtual= APB_DEBUG_BASE,
-			.pfn	= __phys_to_pfn(APB_DEBUG_PHYS_BASE),
-			.length	= APB_DEBUG_SIZE,
+			.virtual= DBGBUS_BASE,
+			.pfn	= __phys_to_pfn(DBGBUS_PHYS_BASE),
+			.length	= DBGBUS_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},
+#endif
 };
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
@@ -884,11 +886,11 @@ void *ambarella_hal_get_vp(void)
 #endif /* CONFIG_AMBARELLA_RAW_BOOT */
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
-#if defined(CONFIG_PLAT_AMBARELLA_RCT_ON_DEBUG_BUS)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 		retval = hal_init_fn(
 			(void *)ambarella_hal_info.virtual,
 			(void *)APB_BASE, (void *)AHB_BASE,
-			(void *)DRAMC_BASE, (void*)APB_DEBUG_BASE);
+			(void *)DRAMC_BASE, (void*)DBGBUS_BASE);
 #else
 		retval = hal_init_fn(
 			(void *)ambarella_hal_info.virtual,
