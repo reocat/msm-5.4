@@ -241,7 +241,6 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 	case UART_II_NO_INT_PENDING:
 	default:
 		printk(KERN_DEBUG "%s: 0x%x\n", __func__, ii);
-		rval = IRQ_NONE;
 		break;
 	}
 
