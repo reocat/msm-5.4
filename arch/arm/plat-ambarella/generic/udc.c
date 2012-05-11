@@ -107,7 +107,7 @@ static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 #else
 	.irqflags	= IRQF_DISABLED | IRQF_TRIGGER_HIGH,
 #endif
-#if (CHIP_REV == S2)
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
 	.dma_fix	= 0xC0000000,
 #else
 	.dma_fix	= 0,
