@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date January 2012
- * @version 7034
+ * @version 7059
  *
  * @par Introduction:
  * The Ambarella A7S Hardware Abstraction Layer (ambhal) provides an API between
@@ -524,6 +524,8 @@ AMB_HAL_FUNCTION_INFO_GET_SENSOR_IOCTRL_CONFIGURATION,
 AMB_HAL_FUNCTION_INFO_GET_ARM_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_GET_HDMI_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_ENABLE_HDMI_CLOCK_OBSERVATION,
+AMB_HAL_FUNCTION_INFO_GET_HDMI4K_CLOCK_FREQUENCY,
+AMB_HAL_FUNCTION_INFO_ENABLE_HDMI4K_CLOCK_OBSERVATION,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
@@ -4062,11 +4064,11 @@ static INLINE amb_clock_frequency_t amb_get_arm_clock_frequency (void *amb_hal_b
 }
 
 /**
- * Get the HDMI clock frequency
+ * Get the hdmi clock frequency
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::amb_clock_frequency_t The HDMI clock frequency.
+ * @retval ::amb_clock_frequency_t The hdmi clock frequency.
  *
  * @ingroup hdmi_group
  */
@@ -4094,6 +4096,41 @@ static INLINE amb_hal_success_t amb_enable_hdmi_clock_observation (void *amb_hal
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_ENABLE_HDMI_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Get the hdmi4k clock frequency
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::amb_clock_frequency_t The hdmi4k clock frequency.
+ *
+ * @ingroup hdmi_group
+ */
+
+static INLINE amb_clock_frequency_t amb_get_hdmi4k_clock_frequency (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_clock_frequency_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_GET_HDMI4K_CLOCK_FREQUENCY, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Enable observation of hdmi4k clock
+ *
+ * @note A divided by 16 version of the clock may be observed on the xx_clk_si
+ * pin.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::AMB_HAL_SUCCESS Always returns success
+ *
+ * @ingroup hdmi_group
+ */
+
+static INLINE amb_hal_success_t amb_enable_hdmi4k_clock_observation (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_ENABLE_HDMI4K_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
