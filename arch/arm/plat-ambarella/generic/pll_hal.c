@@ -199,6 +199,17 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 };
 #define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1088X816)
+static struct ambarella_pll_vidcap_info vidcap_list[] = {
+	{"2304x1296_60fps", AMB_VIDCAP_2304X1296_60FPS},
+	{"1296x1787", AMB_VIDCAP_1296X1787},
+	{"2048x1536", AMB_VIDCAP_2048X1536},
+	{"2240x1260", AMB_VIDCAP_2240X1260},
+	{"1984x1116", AMB_VIDCAP_1984X1116},
+	{"2112x1188", AMB_VIDCAP_2112X1188},
+	{"1312x984", AMB_VIDCAP_1312X984},
+	{"1088x816", AMB_VIDCAP_1088X816},
+};
+
 #elif (CHIP_REV == A8)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
