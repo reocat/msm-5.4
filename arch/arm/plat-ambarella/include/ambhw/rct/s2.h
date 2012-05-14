@@ -579,8 +579,8 @@
 	 * 1: ARM does not wait for FIO to fetch 2KB code before execution.
 	 */
 #define SYS_CONFIG_ENET_SEL		0x00000080 /* 0: disable, 1: enable */
-#define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040 /* 0: use, 1: doesn't use */
-#define SYS_CONFIG_NAND_FLASH_PAGE	0x00000020 /* 0: 512Byte, 1: 2K Byte */
+#define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020 /* 0: use, 1: doesn't use */
+#define SYS_CONFIG_NAND_FLASH_PAGE	0x00000010 /* 0: 512Byte, 1: 2K Byte */
 #define SYS_CONFIG_PLL_UNLOCK_TRIG_RESET 0x00000010
 	/*
 	 * 0: disable generating grst when core pll out of lock.(default)
