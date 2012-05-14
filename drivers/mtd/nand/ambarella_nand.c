@@ -25,9 +25,6 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
-#include <linux/io.h>
-#include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
@@ -37,11 +34,8 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
-
-#include <asm/dma.h>
-
-#include <mach/hardware.h>
 #include <mach/dma.h>
+#include <mach/board.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
 
@@ -1231,7 +1225,7 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 	u32 sys_config, cfg_page_size, cfg_read_confirm;
 	struct nand_chip *chip = &nand_info->chip;
 
-	sys_config = amba_readl(SYS_CONFIG_REG);
+	sys_config = ambarella_board_generic.board_poc;
 
 	cfg_page_size = sys_config & SYS_CONFIG_NAND_FLASH_PAGE ? 2048 : 512;
 	cfg_read_confirm = sys_config & SYS_CONFIG_NAND_READ_CONFIRM ? 1 : 0;

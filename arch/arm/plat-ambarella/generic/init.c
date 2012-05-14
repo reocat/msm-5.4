@@ -102,16 +102,18 @@ int __init ambarella_init_machine(char *board_name)
 	pr_info("\tboard type:\t\t%d\n", ambarella_board_generic.board_type);
 	pr_info("\tboard revision:\t\t%d\n", ambarella_board_generic.board_rev);
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	ambarella_board_generic.board_poc = amb_get_system_configuration(HAL_BASE_VP);
 	pr_info("\tchip name:\t\t%s\n", pname);
 	pr_info("\tHAL version:\t\t%d\n", version);
 	pr_info("\treference clock:\t%d\n",
 		amb_get_reference_clock_frequency(HAL_BASE_VP));
-	pr_info("\tsystem configuration:\t0x%08x\n",
-		amb_get_system_configuration(HAL_BASE_VP));
+	pr_info("\tsystem configuration:\t0x%08x\n", ambarella_board_generic.board_poc);
 	pr_info("\tboot type:\t\t0x%08x\n",
 		amb_get_boot_type(HAL_BASE_VP));
 	pr_info("\thif type:\t\t0x%08x\n",
 		amb_get_hif_type(HAL_BASE_VP));
+#else
+	ambarella_board_generic.board_poc = amba_readl(SYS_CONFIG_REG);
 #endif
 
 	retval = ambarella_create_proc_dir();
