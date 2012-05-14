@@ -77,6 +77,7 @@ static int __devinit ambarella_mux_probe(struct platform_device *pdev)
 		goto add_adapter_failed;
 	}
 
+	ambarella_mux_deselect(mux->adap, mux, 0);
 	dev_info(&pdev->dev, "mux on %s adapter\n", parent->name);
 
 	platform_set_drvdata(pdev, mux);
