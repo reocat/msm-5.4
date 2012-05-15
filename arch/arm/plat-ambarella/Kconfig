@@ -130,6 +130,10 @@ config PLAT_AMBARELLA_SUPPORT_USB
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_UDC
+	bool
+	default n
+
 config PLAT_AMBARELLA_SUPPORT_SATA
 	bool
 	default n
@@ -154,12 +158,14 @@ config PLAT_AMBARELLA_I1
 	select PLAT_AMBARELLA_SUPPORT_USB
 	select PLAT_AMBARELLA_SUPPORT_SATA
 	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_SUPPORT_UDC
 	default n
 
 config PLAT_AMBARELLA_S2
 	bool
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	select PLAT_AMBARELLA_SUPPORT_USB
+	select PLAT_AMBARELLA_SUPPORT_UDC
 	default n
 
 config PLAT_AMBARELLA_A8
@@ -179,6 +185,7 @@ config PLAT_AMBARELLA_A2
 	select CPU_ARM926T
 	select PLAT_AMBARELLA_GENERIC
 	select PLAT_AMBARELLA_WIRELESS
+	select PLAT_AMBARELLA_SUPPORT_UDC
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A2.
@@ -193,6 +200,7 @@ config PLAT_AMBARELLA_A5S
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	select PLAT_AMBARELLA_SUPPORT_GDMA
 	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_SUPPORT_UDC
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A5S.
@@ -206,6 +214,7 @@ config PLAT_AMBARELLA_A7
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_HAL
 	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_SUPPORT_UDC
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A7.
