@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date January 2012
- * @version 7060
+ * @version 7062
  *
  * @par Introduction:
  * The Ambarella A7S Hardware Abstraction Layer (ambhal) provides an API between
@@ -917,10 +917,16 @@ typedef unsigned int amb_ms_delay_t ;
  */
 
 typedef enum {
-/** NOR Flash Selected (1) or NAND Flash Selected (0) */
-AMB_SYSTEM_CONFIGURATION_NOR_FLASH = 0x1UL,
+/** 1.8V NAND Flash Selected (1) or 3.3V NAND Flash Selected (0) */
+AMB_SYSTEM_CONFIGURATION_NAND_FLASH_TYPE = 0x1UL,
 /** 2048 Bytes Flash Page Size (1) or 512 Bytes Flash Page Size (0) */
-AMB_SYSTEM_CONFIGURATION_NAND_FLASH_2048_PAGE_SIZE = 0x20UL,
+AMB_SYSTEM_CONFIGURATION_NAND_FLASH_2048_PAGE_SIZE = 0x10UL,
+/** NAND Read Confirm */
+AMB_SYSTEM_CONFIGURATION_NAND_FLASH_READ_CONFIRM = 0x20UL,
+/** NAND ECC */
+AMB_SYSTEM_CONFIGURATION_NAND_FLASH_ECC = 0x400UL,
+/** NAND Spare Cell */
+AMB_SYSTEM_CONFIGURATION_NAND_FLASH_SPARE_CELL = 0x800UL,
 /** Ethernet Selected */
 AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED = 0x00800000UL,
 /** RMII Selected */
