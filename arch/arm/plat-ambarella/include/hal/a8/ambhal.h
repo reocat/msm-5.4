@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 172910
+ * @version 173484
  *
  * @par Introduction:
  * The Ambarella A8 Hardware Abstraction Layer (AMBHAL) provides an API between
