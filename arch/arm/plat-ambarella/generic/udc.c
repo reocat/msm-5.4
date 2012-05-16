@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <mach/hardware.h>
+#include <plat/uport.h>
 #include <plat/udc.h>
 
 /* amb_udc_status will be modified in ambarella_udc.c */
@@ -51,7 +52,11 @@ struct resource ambarella_udc_resources[] = {
 
 static void init_usb(void)
 {
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
+	ambarella_enable_usb_port(UDC_OWN_PORT);
+#else
 	_init_usb_pll();
+#endif
 }
 
 static void reset_usb(void)

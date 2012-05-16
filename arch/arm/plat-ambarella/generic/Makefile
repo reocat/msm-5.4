@@ -47,8 +47,9 @@ obj-y						+= sd.o
 obj-y						+= spi.o
 obj-y						+= timer.o
 obj-y						+= uart.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UDC)	+= udc.o
 obj-y						+= wdt.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_USB)	+= uhc.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UPORT)	+= uport.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UDC)	+= udc.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UHC)	+= uhc.o
 obj-$(CONFIG_CPU_FREQ)				+= cpufreq.o
 

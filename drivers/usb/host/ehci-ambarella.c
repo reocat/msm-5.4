@@ -55,7 +55,7 @@ static void ambarella_start_ehc(struct ehci_ambarella *amb_ehci)
 static void ambarella_stop_ehc(struct ehci_ambarella *amb_ehci)
 {
 	if (amb_ehci && amb_ehci->plat_ehci->disable_host)
-		amb_ehci->plat_ehci->disable_host();
+		amb_ehci->plat_ehci->disable_host(amb_ehci->plat_ehci);
 
 }
 
@@ -160,7 +160,7 @@ static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 		pr_debug("resource[1] is not IORESOURCE_IRQ");
 		return -ENOMEM;
 	}
-	hcd = usb_create_hcd(&ehci_ambarella_hc_driver, &pdev->dev, "Ambi1");
+	hcd = usb_create_hcd(&ehci_ambarella_hc_driver, &pdev->dev, "AmbUSB");
 	if (!hcd)
 		return -ENOMEM;
 

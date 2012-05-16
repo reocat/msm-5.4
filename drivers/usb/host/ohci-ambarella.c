@@ -55,7 +55,7 @@ static void ambarella_start_ohc(struct ohci_ambarella *amb_ohci)
 static void ambarella_stop_ohc(struct ohci_ambarella *amb_ohci)
 {
 	if (amb_ohci && amb_ohci->plat_ohci->enable_host)
-		amb_ohci->plat_ohci->disable_host();
+		amb_ohci->plat_ohci->disable_host(amb_ohci->plat_ohci);
 }
 
 static int __devinit ohci_ambarella_start(struct usb_hcd *hcd)
@@ -140,7 +140,7 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	hcd = usb_create_hcd(&ohci_ambarella_hc_driver, &pdev->dev, "Ambi1");
+	hcd = usb_create_hcd(&ohci_ambarella_hc_driver, &pdev->dev, "AmbUSB");
 	if (!hcd)
 		return -ENOMEM;
 
