@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 159201
+ * @version 172770
  *
  * @par Introduction:
  * The Ambarella I1 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -1108,6 +1108,21 @@ AMB_DRAM_ARBITER_RESERVED=0xffffffff
 } amb_dram_arbiter_priority_t ;
 
 /**
+ * FIO reset delay length
+ *
+ * @ingroup flash_group
+ */
+
+typedef enum {
+/** FIO is reset for a long period */
+AMB_FIO_RESET_SLOW,
+/** FIO is reset for a short period */
+AMB_FIO_RESET_FAST,
+/* Reserved */
+AMB_FIO_RESET_RESERVED=0xffffffff
+} amb_fio_reset_period_t ;
+
+/**
  * PLL Vdda Supply
  *
  * @ingroup pll_group
@@ -1243,7 +1258,7 @@ static INLINE amb_hal_success_t amb_set_operating_mode (void *amb_hal_base_addre
  * Get the current operating mode for the system
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[out] ::amb_operating_mode Current operating mode.
+ * @param[out] amb_operating_mode Current operating mode.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
@@ -3158,80 +3173,85 @@ static INLINE amb_ms_status_t amb_get_ms_status (void *amb_hal_base_address)
  * Reset the flash controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_fio_reset_period Length of reset.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
 
-static INLINE amb_hal_success_t amb_reset_flash (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_flash (void *amb_hal_base_address, amb_fio_reset_period_t amb_fio_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FLASH, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FLASH, amb_fio_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the xd controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_fio_reset_period Length of reset.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
 
-static INLINE amb_hal_success_t amb_reset_xd (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_xd (void *amb_hal_base_address, amb_fio_reset_period_t amb_fio_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_XD, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_XD, amb_fio_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the cf controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_fio_reset_period Length of reset.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
 
-static INLINE amb_hal_success_t amb_reset_cf (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_cf (void *amb_hal_base_address, amb_fio_reset_period_t amb_fio_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_CF, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_CF, amb_fio_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the fio controller
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_fio_reset_period Length of reset.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
 
-static INLINE amb_hal_success_t amb_reset_fio (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_fio (void *amb_hal_base_address, amb_fio_reset_period_t amb_fio_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FIO, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_FIO, amb_fio_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
  * Reset the fio, cf, xd & flash controller all at once
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ * @param[in] amb_fio_reset_period Length of reset.
  *
  * @retval ::AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup flash_group
  */
 
-static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address)
+static INLINE amb_hal_success_t amb_reset_all (void *amb_hal_base_address, amb_fio_reset_period_t amb_fio_reset_period)
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
-  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_ALL, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_RESET_ALL, amb_fio_reset_period, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /*
