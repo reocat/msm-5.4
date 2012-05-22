@@ -38,7 +38,7 @@ void ambarella_enable_usb_port(int owner)
 	amb_usb_interface_state_t state;
 
 	state = amb_get_usb_interface_state(HAL_BASE_VP);
-	if (state != AMB_USB_ON) && amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ON)
+	if (state != AMB_USB_ON && amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ON)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("amb_set_usb_interface_state() failed");
 	}
