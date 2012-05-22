@@ -153,7 +153,7 @@ ignore_char:
 	spin_lock(&port->lock);
 }
 
-#if(CHIP_REV == S2) // for S2 workaround
+#if(CHIP_REV == S2 || CHIP_REV == A8) // for S2 and A8 workaround
 static void serial_ambarella_transmit_chars_before(struct uart_port *port)
 {
 	struct circ_buf				*xmit = &port->state->xmit;
@@ -292,7 +292,7 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 {
 	wait_for_tx(port);
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
-#if(CHIP_REV == S2) // for S2 workaround
+#if(CHIP_REV == S2 || CHIP_REV == A8) // for S2 and A8 workaround
 	serial_ambarella_transmit_chars_before(port);
 #endif
 }
