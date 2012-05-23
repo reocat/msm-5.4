@@ -30,14 +30,17 @@
 #define UART_FIFO_SIZE			(16)
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI)
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
+#define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(0)
 #elif (CHIP_REV == S2 || CHIP_REV == A8)
 #define UART_FIFO_SIZE			(16)
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI)
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
+#define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(1) // S2 and A8 workaround
 #else
 #define UART_FIFO_SIZE			(16)
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI)
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
+#define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(0)
 #endif
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -48,6 +51,7 @@ struct ambarella_uart_port_info {
 	u32					fcr;
 	u32					ier;
 	u32					tx_fifo_fix;
+	u32					first_send_num;
 
 	void					(*stop_tx)(unsigned char __iomem *membase);
 	void					(*set_pll)(void);
