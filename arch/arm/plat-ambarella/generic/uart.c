@@ -142,6 +142,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
 		.get_ms		= NULL,
+		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
 #if (UART_INSTANCES >= 2)
 	.amba_port[1]		= {
@@ -153,6 +154,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
 		.get_ms		= ambarella_uart_read_ms,
+		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
 #endif
 #if (UART_INSTANCES >= 3)
@@ -165,6 +167,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
 		.get_ms		= ambarella_uart_read_ms,
+		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
 #endif
 #if (UART_INSTANCES >= 4)
@@ -177,6 +180,7 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.set_pll	= rct_set_uart_pll,
 		.get_pll	= get_uart_freq_hz,
 		.get_ms		= ambarella_uart_read_ms,
+		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
 #endif
 };

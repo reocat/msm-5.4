@@ -153,8 +153,7 @@ ignore_char:
 	spin_lock(&port->lock);
 }
 
-#if(CHIP_REV == S2 || CHIP_REV == A8) // for S2 and A8 workaround
-static void serial_ambarella_transmit_chars_before(struct uart_port *port)
+static void serial_ambarella_transmit_chars_first(struct uart_port *port)
 {
 	struct circ_buf				*xmit = &port->state->xmit;
 	int					count;
@@ -174,7 +173,7 @@ static void serial_ambarella_transmit_chars_before(struct uart_port *port)
 		return;
 	}
 
-	count = 1;
+	count = port_info->first_send_num;
 	while (count-- > 0) {
 		amba_writel(port->membase + UART_TH_OFFSET,
 			xmit->buf[xmit->tail]);
@@ -184,7 +183,6 @@ static void serial_ambarella_transmit_chars_before(struct uart_port *port)
 			break;
 	}
 }
-#endif
 
 static void serial_ambarella_transmit_chars(struct uart_port *port)
 {
@@ -290,11 +288,15 @@ static void serial_ambarella_enable_ms(struct uart_port *port)
 
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
+	struct ambarella_uart_port_info		*port_info;
+
+	port_info = (struct ambarella_uart_port_info *)(port->private_data);
+
 	wait_for_tx(port);
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
-#if(CHIP_REV == S2 || CHIP_REV == A8) // for S2 and A8 workaround
-	serial_ambarella_transmit_chars_before(port);
-#endif
+
+	if(port_info->first_send_num)
+		serial_ambarella_transmit_chars_first(port);
 }
 
 static void serial_ambarella_stop_tx(struct uart_port *port)
