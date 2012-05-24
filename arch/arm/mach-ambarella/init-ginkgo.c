@@ -124,7 +124,7 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.modalias	= "spidev",
 		.bus_num	= 1,
 		.chip_select	= 0,
-	},	
+	},
 };
 
 /* ==========================================================================*/
@@ -184,12 +184,6 @@ static void __init ambarella_init_ginkgo(void)
 	ambcache_l2_enable();
 #endif
 
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
-	}
-
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
 	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
@@ -214,6 +208,33 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_board_generic.vin1_reset.gpio_id = GPIO(49);
 	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.vin1_reset.active_delay = 1;
+
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		switch (AMBARELLA_BOARD_REV(system_rev)) {
+		case 'A':
+			ambarella_board_generic.uport_irq.irq_gpio = GPIO(49);
+			ambarella_board_generic.uport_irq.irq_line = gpio_to_irq(49);
+			ambarella_board_generic.uport_irq.irq_type = IRQ_TYPE_EDGE_BOTH;
+			ambarella_board_generic.uport_irq.irq_gpio_val = GPIO_LOW;
+			ambarella_board_generic.uport_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+			ambarella_board_generic.uport_control.gpio_id = EXT_GPIO(14);
+			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
+			ambarella_board_generic.uport_control.active_delay = 1;
+
+			break;
+
+		default:
+			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
+			break;
+		}
+	}
+
+	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
+	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
+		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
+		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+	}
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
