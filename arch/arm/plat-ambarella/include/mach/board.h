@@ -135,6 +135,9 @@ struct ambarella_board_info {
 	struct ambarella_gpio_irq_info		pmic_irq;
 
 	struct ambarella_gpio_io_info		sata_power;
+
+	struct ambarella_gpio_irq_info		uport_irq;
+	struct ambarella_gpio_io_info		uport_control;
 	/* Determine if usb host controller use over-current protection:
 	 * bit0 for usb0 and bit1 for usb1, bit2 ~ bit15 are ignored,
 	 * bit16 for polarity selection if used, and other bits are ignored */
@@ -220,6 +223,8 @@ struct ambarella_board_info {
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(board_##wifi_reset##_, arg.wifi_reset, perm); \
 	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##pmic_irq##_, arg.pmic_irq, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##sata_power##_, arg.sata_power, perm); \
+	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##uport_irq##_, arg.uport_irq, perm); \
+	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##uport_control##_, arg.uport_control, perm); \
 	module_param_cb(board_uhc_use_ocp, &param_ops_uint, &(arg.uhc_use_ocp), perm);
 
 #endif

@@ -31,4 +31,5 @@ obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
 obj-y						+= board.o
 obj-y						+= event.o
 obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= highres_timer.o
+obj-$(CONFIG_PLAT_AMBARELLA_S2)		+= uport_switcher.o
 
