@@ -60,8 +60,7 @@
 #define AMBETH_TXDMA_STATUS	(ETH_DMA_STATUS_TI | ETH_DMA_STATUS_TPS | \
 				ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TJT | \
 				ETH_DMA_STATUS_UNF)
-#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TJE | \
-				ETH_DMA_INTEN_UNE)
+#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_UNE)
 #define AMBETH_DMA_INTEN	(ETH_DMA_INTEN_NIE | ETH_DMA_INTEN_AIE | \
 				ETH_DMA_INTEN_FBE | AMBETH_RXDMA_INTEN | \
 				AMBETH_TXDMA_INTEN)
@@ -216,9 +215,8 @@ static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 	ambhw_dma_tx_start(lp);
 }
 
-static inline void ambhw_dma_tx_poll(struct ambeth_info *lp, u32 entry)
+static inline void ambhw_dma_tx_poll(struct ambeth_info *lp)
 {
-	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	amba_writel(lp->regbase + ETH_DMA_TX_POLL_DMD_OFFSET, 0x01);
 }
 
@@ -1014,7 +1012,7 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 				if (ambeth_check_tdes0_status(lp, status)) {
 					ambhw_dma_tx_stop(lp);
 					ambhw_dma_tx_restart(lp, entry);
-					ambhw_dma_tx_poll(lp, entry);
+					ambhw_dma_tx_poll(lp);
 					break;
 				} else {
 					lp->stats.tx_errors++;
@@ -1275,6 +1273,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (dirty_to_tx >= lp->tx_count) {
 		netif_stop_queue(ndev);
 		errorCode = -ENOMEM;
+		ambhw_dma_tx_poll(lp);
 		spin_unlock_irqrestore(&lp->lock, flags);
 		goto ambeth_hard_start_xmit_exit;
 	}
@@ -1286,7 +1285,6 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		skb->data, skb->len, DMA_TO_DEVICE);
 	tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
 	if (dirty_to_tx >= lp->tx_irq_count) {
-		netif_stop_queue(ndev);
 		tx_flag |= ETH_TDES1_IC;
 	}
 #if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
@@ -1298,8 +1296,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	lp->tx.rng_tx[entry].mapping = mapping;
 	lp->tx.desc_tx[entry].buffer1 = mapping;
 	lp->tx.desc_tx[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
+	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	lp->tx.cur_tx++;
-	ambhw_dma_tx_poll(lp, entry);
+	ambhw_dma_tx_poll(lp);
 	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ndev->trans_start = jiffies;
