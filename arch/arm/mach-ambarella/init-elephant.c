@@ -514,6 +514,10 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.pwm0_config.max_duty = 255;
 			ambarella_board_generic.pwm0_config.default_duty = 255;
 
+			ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH9;
+			ambarella_platform_adc_temper_controller0.temper_curve = amb_temper_curve;
+			platform_device_register(&ambarella_adc_temper);
+
 			use_bub_default = 0;
 			break;
 

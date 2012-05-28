@@ -41,6 +41,10 @@
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
+static atomic_t use_count;
+
+static DEFINE_MUTEX(adc_lock);
+
 struct ambarella_adc_controller ambarella_platform_adc_controller0;
 /* ==========================================================================*/
 #if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) ||\
@@ -65,6 +69,8 @@ u32 ambarella_adc_get_instances(void)
 static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 {
 	u32					adc_data = 0;
+
+	mutex_lock(&adc_lock);
 
 #if defined(ADC_ONE_SHOT)
 	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
@@ -157,6 +163,8 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	}
 	pr_debug("%s: channel[%d] = %d.\n", __func__, channel_id, adc_data);
 
+	mutex_unlock(&adc_lock);
+
 	return adc_data;
 }
 
@@ -169,6 +177,8 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 			__func__, ADC_NUM_CHANNELS, *array_size);
 		return;
 	}
+
+	mutex_lock(&adc_lock);
 
 #if defined(ADC_ONE_SHOT)
 	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
@@ -213,6 +223,7 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	adc_data[11] = amba_readl(ADC_DATA11_REG);
 #endif
 #endif
+	mutex_unlock(&adc_lock);
 
 	for (i = 0; i < ADC_NUM_CHANNELS; i++)
 		pr_debug("%s: channel[%d] = %d.\n", __func__, i, adc_data[i]);
@@ -305,6 +316,8 @@ void ambarella_adc_set_config(void)
 
 void ambarella_adc_start(void)
 {
+	mutex_lock(&adc_lock);
+
 #if defined(ADC16_CTRL_REG)
 	amba_clrbitsl(ADC16_CTRL_REG, 0x2);
 #endif
@@ -363,6 +376,7 @@ void ambarella_adc_start(void)
 	if (amba_readl(ADC_ENABLE_REG) != 0) {
 		pr_err("%s: ADC_ENABLE_REG = %d.\n",
 			__func__, amba_readl(ADC_ENABLE_REG));
+		mutex_unlock(&adc_lock);
 		return;
 	}
 #endif
@@ -388,10 +402,13 @@ void ambarella_adc_start(void)
 #if (CHIP_REV == S2)
 	ambarella_adc_set_config();
 #endif
+
+	mutex_unlock(&adc_lock);
 }
 
 void ambarella_adc_stop(void)
 {
+	mutex_lock(&adc_lock);
 #ifndef ADC_ONE_SHOT
 	amba_writel(ADC_CONTROL_REG, 0x0);
 #endif
@@ -406,11 +423,13 @@ void ambarella_adc_stop(void)
 #if defined(ADC16_CTRL_REG)
 	amba_setbitsl(ADC16_CTRL_REG, 0x2);
 #endif
+	mutex_unlock(&adc_lock);
 }
 
 int __init ambarella_init_adc(void)
 {
 	int					retval = 0;
+	atomic_set(&use_count, -1);
 	return retval;
 }
 
@@ -487,6 +506,29 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 	pr_err("%s: set ch[%d] h[%d], l[%d], 0x%08X!\n",
 		__func__, ch, h_level, l_level, value);
 #endif
+}
+
+u32 amb_temper_curve(u32 adc_data)
+{
+	return ((((1083 * adc_data * 315) / 4096) - 81900) / 1000);// Tj=(108.3 * adc_value * 3.15 / 4096) - 81.9
+}
+
+u32 ambarella_adc_open(void)
+{
+	if(atomic_inc_and_test(&use_count))
+		ambarella_adc_start();
+	return 0;
+}
+
+u32 ambarella_adc_close(void)
+{
+	if(atomic_read(&use_count) < 0)
+		return -1;
+
+	if(atomic_dec_return(&use_count) == (-1)){
+		ambarella_adc_stop();
+	}
+	return 0;
 }
 
 /* ==========================================================================*/
@@ -594,6 +636,8 @@ u32 ambarella_adc_resume(u32 level)
 
 /* ==========================================================================*/
 struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
+	.open			= ambarella_adc_open,
+	.close			= ambarella_adc_close,
 	.read_channels		= ambarella_adc_get_array,
 	.is_irq_supported	= adc_is_irq_supported,
 	.set_irq_threshold	= adc_set_irq_threshold,
@@ -630,6 +674,27 @@ struct platform_device ambarella_adc0 = {
 	.dev		= {
 		.platform_data		= &ambarella_platform_adc_controller0,
 		.dma_mask		= &ambarella_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+struct ambarella_adc_controller ambarella_platform_adc_temper_controller0 = {
+	.open			= ambarella_adc_open,
+	.close			= ambarella_adc_close,
+	.read_channel		= ambarella_adc_get_channel_inline,
+	.reset			= ambarella_adc_start,
+	.stop			= ambarella_adc_stop,
+	.get_channel_num	= ambarella_adc_get_instances,
+	.temper_curve		= NULL,
+	.adc_temper_channel	= -1,
+};
+
+struct platform_device ambarella_adc_temper = {
+	.name		= "ambarella-adc-temper",
+	.id		= -1,
+	.dev		= {
+		.platform_data		= &ambarella_platform_adc_temper_controller0,
+		.dma_mask			= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };

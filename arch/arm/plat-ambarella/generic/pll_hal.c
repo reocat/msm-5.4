@@ -174,7 +174,6 @@ static struct ambarella_pll_vidcap_info vidcap_list[] = {
 
 #elif (CHIP_REV == I1)
 static struct proc_dir_entry *vidcap_file = NULL;
-static struct proc_dir_entry *cortex_file = NULL;
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
@@ -602,61 +601,6 @@ ambarella_vidcap_proc_write_exit:
 }
 #endif
 
-#if (CHIP_REV == I1)
-static int ambarella_cortex_proc_write(struct file *file,
-	const char __user *buffer, unsigned long count, void *data)
-{
-	int					retval = 0;
-	char					str[AMBPLL_MAX_CMD_LENGTH];
-	int					i;
-	int					result;
-	unsigned int				cortex_pll;
-	unsigned int				cortex_pll_old;
-	unsigned int				cortex_pll_new;
-	unsigned int				axi_pll_new;
-	unsigned long				flags;
-
-	i = (count < AMBPLL_MAX_CMD_LENGTH) ? count : AMBPLL_MAX_CMD_LENGTH;
-	if (copy_from_user(str, buffer, i)) {
-		pr_err("%s: copy_from_user fail!\n", __func__);
-		retval = -EFAULT;
-		goto ambarella_cortex_proc_write_exit;
-	}
-	str[i - 1] = 0;
-	result = sscanf(str, "%u", &cortex_pll);
-	if (result != 1) {
-		pr_err("%s: wrong cortex_pll %s!\n", __func__, str);
-		retval = -EINVAL;
-		goto ambarella_cortex_proc_write_exit;
-	}
-
-	disable_nonboot_cpus();
-	local_irq_save(flags);
-
-	cortex_pll_old = amb_get_cortex_clock_frequency(HAL_BASE_VP);
-	result = amb_set_cortex_clock_frequency(HAL_BASE_VP, cortex_pll);
-	if (result != AMB_HAL_SUCCESS) {
-		pr_err("%s: amb_set_cortex_clock_frequency(%u) failed(%d)\n",
-			__func__, cortex_pll, result);
-		retval = -EPERM;
-	}
-	cortex_pll_new = amb_get_cortex_clock_frequency(HAL_BASE_VP);
-	axi_pll_new = amb_get_axi_clock_frequency(HAL_BASE_VP);
-
-	percpu_timer_update_rate(axi_pll_new);
-	local_irq_restore(flags);
-	enable_nonboot_cpus();
-
-	pr_info("%s: Change Cortex PLL from (%u) to (%u:%u)\n",
-		__func__, cortex_pll_old, cortex_pll_new, axi_pll_new);
-
-	if (!retval)
-		retval = count;
-
-ambarella_cortex_proc_write_exit:
-	return retval;
-}
-#endif
 
 static int __init ambarella_init_pll_hal(void)
 {
@@ -680,19 +624,6 @@ static int __init ambarella_init_pll_hal(void)
 	} else {
 		vidcap_file->read_proc = ambarella_pll_proc_read;
 		vidcap_file->write_proc = ambarella_vidcap_proc_write;
-	}
-#endif
-
-#if (CHIP_REV == I1)
-	cortex_file = create_proc_entry("cortex", S_IRUGO | S_IWUSR,
-		get_ambarella_proc_dir());
-	if (cortex_file == NULL) {
-		retval = -ENOMEM;
-		pr_err("%s: create proc file (cortex) fail!\n", __func__);
-		goto ambarella_init_pll_hal_exit;
-	} else {
-		cortex_file->read_proc = ambarella_pll_proc_read;
-		cortex_file->write_proc = ambarella_cortex_proc_write;
 	}
 #endif
 

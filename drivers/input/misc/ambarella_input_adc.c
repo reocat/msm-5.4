@@ -298,6 +298,8 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 		(pinfo->pcontroller_info->set_irq_threshold == NULL) ||
 		(pinfo->pcontroller_info->reset == NULL) ||
 		(pinfo->pcontroller_info->stop == NULL) ||
+		(pinfo->pcontroller_info->open == NULL) ||
+		(pinfo->pcontroller_info->close == NULL) ||
 		(pinfo->pcontroller_info->get_channel_num == NULL) ) {
 		dev_err(&pdev->dev, "Platform data is NULL!\n");
 		retval = -ENXIO;
@@ -336,7 +338,7 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 	pinfo->dev = pboard_info->pinput_dev;
 	pinfo->pkeymap = pboard_info->pkeymap;
 
-	pinfo->pcontroller_info->reset();
+	pinfo->pcontroller_info->open();
 
 	retval = ambarella_setup_adc_key(pinfo);
 	if (retval) {
@@ -397,6 +399,7 @@ static int __devexit ambarella_input_adc_remove(struct platform_device *pdev)
 	if (pinfo) {
 		if (pinfo->support_irq)
 			free_irq(pinfo->irq, pinfo);
+		pinfo->pcontroller_info->close();
 		platform_set_drvdata(pdev, NULL);
 		cancel_delayed_work(&pinfo->detect_adc);
 		flush_workqueue(pinfo->workqueue);

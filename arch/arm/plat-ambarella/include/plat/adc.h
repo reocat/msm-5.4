@@ -37,6 +37,18 @@
 #if (CHIP_REV == S2)
 #define ADC_MAX_SLOT_NUMBER	8
 #endif
+#define ADC_CH0		(1 << 0)
+#define ADC_CH1		(1 << 1)
+#define ADC_CH2		(1 << 2)
+#define ADC_CH3		(1 << 3)
+#define ADC_CH4		(1 << 4)
+#define ADC_CH5		(1 << 5)
+#define ADC_CH6		(1 << 6)
+#define ADC_CH7		(1 << 7)
+#define ADC_CH8		(1 << 8)
+#define ADC_CH9		(1 << 9)
+#define ADC_CH10		(1 << 10)
+#define ADC_CH11		(1 << 11)
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -46,14 +58,18 @@ enum ambarella_adc_mode{
 };
 
 struct ambarella_adc_controller {
+	u32				(*open)(void);
+	u32				(*close)(void);
 	void				(*read_channels)(u32*, u32*);
 	u32				(*is_irq_supported)(void);
 	void				(*set_irq_threshold)(u32, u32, u32);
 	void				(*reset)(void);
 	void				(*stop)(void);
 	u32				(*get_channel_num)(void);
-
+	u32				(*read_channel)(u32);
 	u32				scan_delay;
+	u32				(*temper_curve)(u32);
+	u32				adc_temper_channel;
 #if (CHIP_REV == S2)
 	u8				adc_counter;
 	u8				adc_slot_num;
@@ -66,11 +82,12 @@ struct ambarella_adc_controller {
 
 /* ==========================================================================*/
 extern struct platform_device		ambarella_adc0;
-
+extern struct platform_device		ambarella_adc_temper;
 /* ==========================================================================*/
 extern int ambarella_init_adc(void);
 extern u32 ambarella_adc_suspend(u32 level);
 extern u32 ambarella_adc_resume(u32 level);
+extern u32 amb_temper_curve(u32 adc_data);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

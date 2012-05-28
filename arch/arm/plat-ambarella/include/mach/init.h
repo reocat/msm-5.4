@@ -88,6 +88,7 @@ extern int fio_default_owner;
 extern struct ambarella_ir_controller ambarella_platform_ir_controller0;
 
 extern struct ambarella_adc_controller ambarella_platform_adc_controller0;
+extern struct ambarella_adc_controller ambarella_platform_adc_temper_controller0;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
