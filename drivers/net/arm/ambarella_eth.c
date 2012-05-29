@@ -210,6 +210,7 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 
 static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 {
+	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	amba_writel(lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET,
 		(u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)));
 	ambhw_dma_tx_start(lp);
