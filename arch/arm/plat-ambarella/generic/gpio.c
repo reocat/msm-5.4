@@ -502,44 +502,45 @@ u32 ambarella_gpio_resume(u32 level)
 }
 
 /* ==========================================================================*/
-static inline int ambarella_gpio_check(struct ambarella_gpio_io_info *pinfo)
+int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 {
 	int					retval = 0;
 
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
 		retval = -1;
-		goto ambarella_gpio_check_exit;
+		goto ambarella_set_gpio_output_exit;
 	}
-
-	if ((pinfo->gpio_id < 0 ) || (pinfo->gpio_id >= GPIO_MAX_LINES)) {
+	if (pinfo->gpio_id < 0 ) {
 		pr_debug("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
 		retval = -1;
-		goto ambarella_gpio_check_exit;
-	}
-
-ambarella_gpio_check_exit:
-	return retval;
-}
-
-int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
-{
-	int					retval = 0;
-
-	retval = ambarella_gpio_check(pinfo);
-	if (retval)
 		goto ambarella_set_gpio_output_exit;
+	}
 
 	pr_debug("%s: Gpio[%d] %s, level[%s], delay[%dms].\n", __func__,
 		pinfo->gpio_id, on ? "ON" : "OFF",
 		pinfo->active_level ? "HIGH" : "LOW",
 		pinfo->active_delay);
-
-	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
-	if (on)
-		ambarella_gpio_set(pinfo->gpio_id, pinfo->active_level);
-	else
-		ambarella_gpio_set(pinfo->gpio_id, !pinfo->active_level);
+	if (pinfo->gpio_id >= EXT_GPIO(0)) {
+		pr_debug("%s: try expander gpio id %d.\n",
+			__func__, pinfo->gpio_id);
+		if (on) {
+			gpio_direction_output(pinfo->gpio_id,
+				pinfo->active_level);
+		} else {
+			gpio_direction_output(pinfo->gpio_id,
+				!pinfo->active_level);
+		}
+	} else {
+		ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
+		if (on) {
+			ambarella_gpio_set(pinfo->gpio_id,
+				pinfo->active_level);
+		} else {
+			ambarella_gpio_set(pinfo->gpio_id,
+				!pinfo->active_level);
+		}
+	}
 	mdelay(pinfo->active_delay);
 
 ambarella_set_gpio_output_exit:
@@ -549,16 +550,28 @@ EXPORT_SYMBOL(ambarella_set_gpio_output);
 
 u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 {
-	int					retval = 0;
 	u32					gpio_value = 0;
 
-	retval = ambarella_gpio_check(pinfo);
-	if (retval)
+	if (pinfo == NULL) {
+		pr_err("%s: pinfo is NULL.\n", __func__);
 		goto ambarella_get_gpio_input_exit;
+	}
+	if (pinfo->gpio_id < 0 ) {
+		pr_debug("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
+		goto ambarella_get_gpio_input_exit;
+	}
 
-	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_INPUT);
-	mdelay(pinfo->active_delay);
-	gpio_value = ambarella_gpio_get(pinfo->gpio_id);
+	if (pinfo->gpio_id >= EXT_GPIO(0)) {
+		pr_debug("%s: try expander gpio id %d.\n",
+			__func__, pinfo->gpio_id);
+		gpio_direction_input(pinfo->gpio_id);
+		mdelay(pinfo->active_delay);
+		gpio_value = gpio_get_value(pinfo->gpio_id);
+	} else {
+		ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_INPUT);
+		mdelay(pinfo->active_delay);
+		gpio_value = ambarella_gpio_get(pinfo->gpio_id);
+	}
 
 	pr_debug("%s: {gpio[%d], level[%s], delay[%dms]} get[%d].\n",
 		__func__, pinfo->gpio_id,
@@ -574,20 +587,35 @@ int ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 {
 	int					retval = 0;
 
-	retval = ambarella_gpio_check(pinfo);
-	if (retval)
+	if (pinfo == NULL) {
+		pr_err("%s: pinfo is NULL.\n", __func__);
+		retval = -1;
 		goto ambarella_set_gpio_reset_exit;
+	}
+	if (pinfo->gpio_id < 0 ) {
+		pr_debug("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
+		retval = -1;
+		goto ambarella_set_gpio_reset_exit;
+	}
 
 	pr_debug("%s: Reset gpio[%d], level[%s], delay[%dms].\n",
 		__func__, pinfo->gpio_id,
 		pinfo->active_level ? "HIGH" : "LOW",
 		pinfo->active_delay);
-
-	ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_set(pinfo->gpio_id, pinfo->active_level);
-	mdelay(pinfo->active_delay);
-	ambarella_gpio_set(pinfo->gpio_id, !pinfo->active_level);
-	mdelay(pinfo->active_delay);
+	if (pinfo->gpio_id >= EXT_GPIO(0)) {
+		pr_debug("%s: try expander gpio id %d.\n",
+			__func__, pinfo->gpio_id);
+		gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
+		mdelay(pinfo->active_delay);
+		gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
+		mdelay(pinfo->active_delay);
+	} else {
+		ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
+		ambarella_gpio_set(pinfo->gpio_id, pinfo->active_level);
+		mdelay(pinfo->active_delay);
+		ambarella_gpio_set(pinfo->gpio_id, !pinfo->active_level);
+		mdelay(pinfo->active_delay);
+	}
 
 ambarella_set_gpio_reset_exit:
 	return retval;

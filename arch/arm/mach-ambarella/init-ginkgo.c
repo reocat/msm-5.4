@@ -209,7 +209,7 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.vin1_reset.active_delay = 1;
 
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
 			ambarella_board_generic.uport_irq.irq_gpio = GPIO(49);
@@ -222,10 +222,24 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
 			ambarella_board_generic.uport_control.active_delay = 1;
 
+			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = EXT_GPIO(0);
+			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
+			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
+			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = EXT_GPIO(1);
+			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+
+			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
+			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
+			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
+
+			i2c_register_board_info(2,
+				&ginkgo_ipcam_gpio_i2c_board_info, 1);
 			break;
 
 		default:
-			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
+			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__,
+				AMBARELLA_BOARD_REV(system_rev));
 			break;
 		}
 	}
@@ -242,10 +256,6 @@ static void __init ambarella_init_ginkgo(void)
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
-		i2c_register_board_info(2,
-			&ginkgo_ipcam_gpio_i2c_board_info, 1);
-	}
 
 	platform_device_register(&ginkgo_board_input);
 }

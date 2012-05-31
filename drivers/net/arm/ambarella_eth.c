@@ -314,9 +314,6 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 {
 	int					errorCode = 0;
 
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
-	ambarella_set_gpio_reset(&lp->platform_info->mii_reset);
-
 	errorCode = ambhw_dma_reset(lp);
 	if (errorCode)
 		goto ambhw_init_exit;
@@ -351,8 +348,6 @@ static inline void ambhw_disable(struct ambeth_info *lp)
 {
 	ambhw_stop_tx_rx(lp);
 	ambhw_dma_int_disable(lp);
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
-	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
 }
 
 #if defined(AMBETH_DEBUG_DUMP_DATA)
@@ -1103,6 +1098,9 @@ static int ambeth_start_hw(struct net_device *ndev)
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
+	ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
+	ambarella_set_gpio_reset(&lp->platform_info->mii_reset);
+
 	spin_lock_irqsave(&lp->lock, flags);
 	errorCode = ambhw_enable(lp);
 	spin_unlock_irqrestore(&lp->lock, flags);
@@ -1201,6 +1199,9 @@ static void ambeth_stop_hw(struct net_device *ndev)
 		kfree(lp->rx.rng_rx);
 		lp->rx.rng_rx = NULL;
 	}
+
+	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
+	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
 }
 
 static int ambeth_open(struct net_device *ndev)
@@ -1945,6 +1946,8 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 		random_ether_addr(lp->platform_info->mac_addr);
 	memcpy(ndev->dev_addr, lp->platform_info->mac_addr, AMBETH_MAC_SIZE);
 	ambhw_disable(lp);
+	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
+	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
 
 	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
 	errorCode = register_netdev(ndev);
@@ -2033,6 +2036,9 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 		spin_lock_irqsave(&lp->lock, flags);
 		ambhw_disable(lp);
 		spin_unlock_irqrestore(&lp->lock, flags);
+
+		ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
+		ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
 	}
 
 ambeth_drv_suspend_exit:
@@ -2054,6 +2060,9 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 			goto ambeth_drv_resume_exit;
 
 		lp = (struct ambeth_info *)netdev_priv(ndev);
+
+		ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
+		ambarella_set_gpio_reset(&lp->platform_info->mii_reset);
 
 		spin_lock_irqsave(&lp->lock, flags);
 		errorCode = ambhw_enable(lp);
