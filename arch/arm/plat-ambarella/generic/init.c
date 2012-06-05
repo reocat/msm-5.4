@@ -131,9 +131,6 @@ int __init ambarella_init_machine(char *board_name)
 	retval = ambarella_init_fio();
 	BUG_ON(retval != 0);
 
-	retval = ambarella_init_dma();
-	BUG_ON(retval != 0);
-
 	retval = ambarella_init_adc();
 	BUG_ON(retval != 0);
 

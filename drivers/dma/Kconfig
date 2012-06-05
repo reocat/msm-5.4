@@ -227,6 +227,17 @@ config IMX_DMA
 	  Support the i.MX DMA engine. This engine is integrated into
 	  Freescale i.MX1/21/27 chips.
 
+config AMBARELLA_DMA
+	tristate "Ambarella DMA Engine System support"
+	depends on PLAT_AMBARELLA
+	select DMA_ENGINE
+	help
+	  Support the Ambarella DMA Engine. This engine is integrated into
+	  Ambarella chip.
+
+	  Say Y here if you have such a chipest.
+	  If unsure,say N.
+
 config DMA_ENGINE
 	bool
 

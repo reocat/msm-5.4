@@ -51,6 +51,7 @@
 
 #include "board-device.h"
 
+#include <plat/dma.h>
 #include <linux/rfkill-gpio.h>
 
 #include <linux/mfd/wm831x/pdata.h>
@@ -89,6 +90,10 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_uart2,
 	&ambarella_uart3,
 	&ambarella_udc0,
+	&ambarella_dma,
+#if (DMA_SUPPORT_DMA_FIOS == 1)
+	&ambarella_dma_fios,
+#endif
 };
 
 static struct platform_device *ambarella_pwm_devices[] __initdata = {

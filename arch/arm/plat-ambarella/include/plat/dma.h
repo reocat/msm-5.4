@@ -24,67 +24,36 @@
 #ifndef __PLAT_AMBARELLA_DMA_H
 #define __PLAT_AMBARELLA_DMA_H
 
+#include <linux/init.h>
+#include <linux/types.h>
+#include <linux/mm.h>
+#include <linux/interrupt.h>
+#include <linux/spinlock.h>
+#include <linux/device.h>
+#include <linux/dma-mapping.h>
+#include <linux/slab.h>
+#include <linux/platform_device.h>
+#include <linux/dmaengine.h>
+
+#include <asm/irq.h>
+#include <mach/hardware.h>
+
 /* ==========================================================================*/
 #define MAX_DMA_CHANNEL_IRQ_HANDLERS	4
-
 /* ==========================================================================*/
+
 #ifndef __ASSEMBLER__
+#if (DMA_SUPPORT_DMA_FIOS == 0)
+#define FIOS_DMA_DEV_ID	0
+#endif
 
-typedef struct ambarella_dma_req_s {
-	u32 src;		/*  Source address */
-	u32 dst;		/* Destination address */
-	struct ambarella_dma_req_s *next; /* Pointing to next descriptor */
-	u32 rpt;		/* The physical address to store DMA hardware
-					reporting status */
-	u32 xfr_count;		/* Transfer byte count , max value = 2^22 */
-	u32 attr;		/* Descriptor 's attribute */
-} ambarella_dma_req_t;
-
-typedef struct ambarella_dmadesc_s {
-	u32	src_addr;	/**< Source address */
-	u32	dst_addr;	/**< Destination address */
-	u32	next;		/**< Next descriptor */
-	u32	rpt_addr;	/**< Report address */
-	u32	xfrcnt;		/**< Transfer count */
-	u32	ctrl;		/**< Control */
-	u32	rsv0;		/**< Reserved */
-	u32	rsv1;		/**< Reserved */
-	u32	rpt;		/**< Report */
-	u32	rsv2;		/**< Reserved */
-	u32	rsv3;		/**< Reserved */
-	u32	rsv4;		/**< Reserved */
-} ambarella_dmadesc_t;
-
-typedef void (*ambarella_dma_handler)(void *dev_id, u32 status);
-
-struct dma_s {
-	struct dma_chan_s {
-		u32 status;	/**< The status of the current transaction */
-		int use_flag;
-		int irq_count;
-		struct {
-			int enabled;
-			ambarella_dma_handler handler;
-			void *harg;
-		} irq[MAX_DMA_CHANNEL_IRQ_HANDLERS];
-	} chan[NUM_DMA_CHANNELS];
-};
-
-/* ==========================================================================*/
-
-/* ==========================================================================*/
-extern int ambarella_dma_request_irq(int chan, ambarella_dma_handler handler, void *harg);
-extern void ambarella_dma_free_irq(int chan, ambarella_dma_handler handler);
-extern int ambarella_dma_enable_irq(int chan, ambarella_dma_handler handler);
-extern int ambarella_dma_disable_irq(int chan, ambarella_dma_handler handler);
-extern int ambarella_dma_xfr(ambarella_dma_req_t *req, int chan);
-extern int ambarella_dma_desc_xfr(dma_addr_t desc_addr, int chan);
-extern int ambarella_dma_desc_stop(int chan);
-
-extern int ambarella_init_dma(void);
-
+extern struct platform_device		ambarella_dma;
+#if (DMA_SUPPORT_DMA_FIOS == 1)
+#define FIOS_DMA_DEV_ID	1
+extern struct platform_device		ambarella_dma_fios;
+#endif
 #endif /* __ASSEMBLER__ */
+
 /* ==========================================================================*/
 
 #endif
-

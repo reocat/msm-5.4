@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38 Kernel Configuration
-# Wed May 16 07:37:04 2012
+# Tue Jun  5 13:32:36 2012
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -851,6 +851,7 @@ CONFIG_AMBARELLA_ETH=m
 # CONFIG_IBM_NEW_EMAC_MAL_CLR_ICINTSTAT is not set
 # CONFIG_IBM_NEW_EMAC_MAL_COMMON_ERR is not set
 # CONFIG_B44 is not set
+# CONFIG_KS8842 is not set
 # CONFIG_KS8851 is not set
 # CONFIG_KS8851_MLL is not set
 # CONFIG_NETDEV_1000 is not set
@@ -1425,7 +1426,22 @@ CONFIG_RTC_DRV_ISL12022=y
 # on-CPU RTC drivers
 #
 CONFIG_RTC_DRV_AMBARELLA=y
-# CONFIG_DMADEVICES is not set
+CONFIG_DMADEVICES=y
+# CONFIG_DMADEVICES_DEBUG is not set
+
+#
+# DMA Devices
+#
+# CONFIG_TIMB_DMA is not set
+CONFIG_AMBARELLA_DMA=y
+CONFIG_DMA_ENGINE=y
+
+#
+# DMA Clients
+#
+# CONFIG_NET_DMA is not set
+# CONFIG_ASYNC_TX_DMA is not set
+# CONFIG_DMATEST is not set
 # CONFIG_AUXDISPLAY is not set
 # CONFIG_UIO is not set
 # CONFIG_STAGING is not set

@@ -45,7 +45,7 @@
 #include <linux/delay.h>
 
 #include <plat/ambinput.h>
-
+#include <plat/dma.h>
 #include "board-device.h"
 
 /* ==========================================================================*/
@@ -76,6 +76,10 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_uart1,
 	&ambarella_udc0,
 	&ambarella_wdt0,
+	&ambarella_dma,
+#if (DMA_SUPPORT_DMA_FIOS == 1)
+	&ambarella_dma_fios,
+#endif
 };
 
 /* ==========================================================================*/
