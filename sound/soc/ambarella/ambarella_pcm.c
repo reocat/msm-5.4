@@ -94,7 +94,7 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 static bool ambpcm_play_dma_filter(struct dma_chan *chan, void *fparam)
 {
 	struct ambarella_runtime_data *prtd;
-	
+
 	prtd = (struct ambarella_runtime_data *)fparam;
 	if ((chan->dev->dev_id == 0) && (chan->chan_id == I2S_TX_DMA_CHAN)) {
 		chan->private = &prtd->dma_status;
@@ -106,7 +106,7 @@ static bool ambpcm_play_dma_filter(struct dma_chan *chan, void *fparam)
 static bool ambpcm_record_dma_filter(struct dma_chan *chan, void *fparam)
 {
 	struct ambarella_runtime_data *prtd;
-	
+
 	prtd = (struct ambarella_runtime_data *)fparam;
 	if ((chan->dev->dev_id == 0) && (chan->chan_id == I2S_RX_DMA_CHAN)) {
 		chan->private = &prtd->dma_status;
