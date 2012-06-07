@@ -30,33 +30,32 @@
 
 #include <mach/hardware.h>
 
-#define TRANSFER_2D_WIDTH				(1<<12)		 /* 4096*/
-#define MAX_TRANSFER_2D_HEIGHT		(1<<11)		/* 2048*/			
-#define MAX_TRANSFER_SIZE_2D_UNIT	(TRANSFER_2D_WIDTH * MAX_TRANSFER_2D_HEIGHT)	/* 8MB*/
+#define TRANSFER_2D_WIDTH		(1 <<12 )		/* 4096 */
+#define MAX_TRANSFER_2D_HEIGHT		(1 <<11 )		/* 2048 */
+#define MAX_TRANSFER_SIZE_2D_UNIT	(TRANSFER_2D_WIDTH * MAX_TRANSFER_2D_HEIGHT)	/* 8MB */
 
-#define TRANSFER_1D_WIDTH				TRANSFER_2D_WIDTH
+#define TRANSFER_1D_WIDTH		TRANSFER_2D_WIDTH
 #define MAX_TRANSFER_SIZE_1D_UNIT	TRANSFER_1D_WIDTH
 
 /* transfer 6 big blocks (although maximum is 8), because we may do another 1 small block and 1 line. total 8 Ops */
-#define MAX_TRANSFER_SIZE_ONCE		(MAX_TRANSFER_SIZE_2D_UNIT * 6)	/* 48 MB*/
-
-#define MAX_OPS							8
+#define MAX_TRANSFER_SIZE_ONCE		(MAX_TRANSFER_SIZE_2D_UNIT * 6)	/* 48 MB */
+#define MAX_OPS				8
 
 static struct completion	transfer_completion;
-
+static struct mutex		transfer_mutex;
 
 /* handle 8MB at one time */
 static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
-{	
+{
 	int row_count;
 	if (size > MAX_TRANSFER_SIZE_2D_UNIT) {
-		printk("transfer_unit size %d bigger than %d \n", 
+		printk("transfer_unit size %d bigger than %d \n",
 			size, MAX_TRANSFER_SIZE_2D_UNIT);
 		return -1;
 	}
-		
+
 	row_count = size / TRANSFER_2D_WIDTH;
-	
+
 	/* copy rows by 2D copy */
 	if (row_count > 0) {
 		amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
@@ -64,7 +63,12 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 		amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
 		amba_writel(GDMA_DST_PITCH_REG, TRANSFER_2D_WIDTH);
 		amba_writel(GDMA_WIDTH_REG, TRANSFER_2D_WIDTH - 1);
-		amba_writel(GDMA_HEIGHT_REG, row_count - 1);		
+		amba_writel(GDMA_HEIGHT_REG, row_count - 1);
+#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
+		amba_writel(GDMA_PIXELFORMAT_REG, 3);
+		amba_writel(GDMA_ALPHA_REG, 0);
+		amba_writel(GDMA_CLUT_BASE_REG, 0);
+#endif
 
 		/* start 2D copy */
 		amba_writel(GDMA_OPCODE_REG, 1);
@@ -73,21 +77,24 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 
 }
 
-
 /* use 1D copy to copy max  4KB each time */
 static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
-{	
-	
+{
 	if (size > TRANSFER_1D_WIDTH) {
-		printk("transfer_unit size %d bigger than %d \n", 
+		printk("transfer_unit size %d bigger than %d \n",
 			size, TRANSFER_1D_WIDTH);
 		return -1;
 	}
-		
+
 	/* linear copy */
 	amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
 	amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
 	amba_writel(GDMA_WIDTH_REG, TRANSFER_1D_WIDTH - 1);
+#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
+	amba_writel(GDMA_PIXELFORMAT_REG, 3);
+	amba_writel(GDMA_ALPHA_REG, 0);
+	amba_writel(GDMA_CLUT_BASE_REG, 0);
+#endif
 
 	/* start linear copy */
 	amba_writel(GDMA_OPCODE_REG, 0);
@@ -100,13 +107,13 @@ static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 /* this is async function, just fill dma registers and let it run*/
 static inline int transfer_once(u8 *dest_addr, u8 *src_addr, u32 size)
 {
-	//total pending count must be no bigger than 8 
+	//total pending count must be no bigger than 8
 	int big_count;
 	int rows_count;
 	int i;
 	u32 transferred_bytes = 0;
 	int remain_bytes ;
-	
+
 	if (size > MAX_TRANSFER_SIZE_ONCE)  {
 		printk(" size too big %d for transfer once \n", size);
 		return -1;
@@ -115,29 +122,29 @@ static inline int transfer_once(u8 *dest_addr, u8 *src_addr, u32 size)
 	big_count = size/MAX_TRANSFER_SIZE_2D_UNIT;
 	//big pages (each is 8MB)
 	for (i = big_count ; i > 0; i--) {
-		transfer_big_unit(dest_addr + transferred_bytes, 
+		transfer_big_unit(dest_addr + transferred_bytes,
 						src_addr  + transferred_bytes,
-						MAX_TRANSFER_SIZE_2D_UNIT);	
+						MAX_TRANSFER_SIZE_2D_UNIT);
 		transferred_bytes += MAX_TRANSFER_SIZE_2D_UNIT;
 	}
-	remain_bytes =  size - transferred_bytes;	
+	remain_bytes =  size - transferred_bytes;
 
 
 	//transfer rows (align to TRANSFER_2D_WIDTH)
 	rows_count = remain_bytes / TRANSFER_2D_WIDTH;
 	if (rows_count > 0) {
-		transfer_big_unit(dest_addr + transferred_bytes, 
+		transfer_big_unit(dest_addr + transferred_bytes,
 							src_addr  + transferred_bytes,
-							TRANSFER_2D_WIDTH * rows_count);	
+							TRANSFER_2D_WIDTH * rows_count);
 		transferred_bytes += TRANSFER_2D_WIDTH * rows_count;
-		remain_bytes =  size - transferred_bytes;	
+		remain_bytes =  size - transferred_bytes;
 	}
 
 	if (remain_bytes > 0) {
-		transfer_small_unit(dest_addr + transferred_bytes, 
+		transfer_small_unit(dest_addr + transferred_bytes,
 						src_addr  + transferred_bytes, remain_bytes);
 	}
-	
+
 	return 0;
 }
 
@@ -148,41 +155,53 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 	int transferred_size = 0;
 	int current_transfer_size;
 
+	if (size <= 0) {
+		return -1;
+	}
+
+#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
+	if (size & 0x1) {
+		printk("Size must be even !\n");
+		return -1;
+	}
+#endif
+
+	mutex_lock(&transfer_mutex);
+
 	while (remain_size > 0)	{
 		if (remain_size > MAX_TRANSFER_SIZE_ONCE) {
 			remain_size -= MAX_TRANSFER_SIZE_ONCE;
 			current_transfer_size = MAX_TRANSFER_SIZE_ONCE;
 		} else {
-			current_transfer_size = remain_size;	
+			current_transfer_size = remain_size;
 			remain_size = 0;
 		}
 
-		transfer_once(dest_addr + transferred_size, 
+		transfer_once(dest_addr + transferred_size,
 			src_addr + transferred_size, current_transfer_size);
 		wait_for_completion(&transfer_completion);
-		transferred_size += current_transfer_size;		
+		transferred_size += current_transfer_size;
 	}
-	
+
+	mutex_unlock(&transfer_mutex);
+
 	return 0;
 }
-
 EXPORT_SYMBOL(dma_memcpy);
-
 
 static irqreturn_t gdma_interrupt(int irq, void *dev_id)
 {
-	int pending_ops;			
+	int pending_ops;
 	pending_ops = amba_readl(GDMA_PENDING_OPS_REG);
 
 	if (pending_ops == 0) {
 		/* if no following transfer */
 		complete(&transfer_completion);
 	} else {
-	
+
 	}
 	return IRQ_HANDLED;
 }
-
 
 static int hw_init(void)
 {
@@ -199,11 +218,10 @@ static int hw_init(void)
 	return 0;
 }
 
-
 /* wait till transmit completes */
 static void wait_transmit_complete(void)
 {
-	int pending_ops;			
+	int pending_ops;
 	pending_ops = amba_readl(GDMA_PENDING_OPS_REG);
 
 	while(pending_ops!= 0) {
@@ -218,10 +236,10 @@ static int __init gdma_init(void)
 		return -1;
 	/* init completion */
 	init_completion(&transfer_completion);
+	mutex_init(&transfer_mutex);
 
 	return 0;
 }
-
 
 static void __exit gdma_exit(void)
 {
@@ -229,7 +247,7 @@ static void __exit gdma_exit(void)
 }
 
 MODULE_AUTHOR("Louis Sun <lysun@ambarella.com>");
-MODULE_DESCRIPTION("GDMA driver on Ambarella A5s");
+MODULE_DESCRIPTION("GDMA driver on Ambarella A5S / S2");
 MODULE_LICENSE("GPL v2");
 MODULE_VERSION("1.0");
 
