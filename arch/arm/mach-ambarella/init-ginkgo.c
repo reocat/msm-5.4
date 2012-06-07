@@ -236,7 +236,7 @@ static void __init ambarella_init_ginkgo(void)
 
 			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
+			ambarella_eth0_platform_info.mii_reset.active_delay = 200;
 
 			i2c_register_board_info(2,
 				&ginkgo_ipcam_gpio_i2c_board_info, 1);
