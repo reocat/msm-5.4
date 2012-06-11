@@ -54,5 +54,6 @@ menuconfig_public_linux:
 
 defconfig_public_linux:
 	@echo "Build Linux with ambarella_$(KERNEL_DEFCONFIG)_defconfig ..."
+	@mkdir -p $(LINUX_OUT_DIR)
 	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) $(LINUX_MAKE_FLAG) ambarella_$(KERNEL_DEFCONFIG)_defconfig
 
