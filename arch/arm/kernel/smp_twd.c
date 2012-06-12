@@ -159,10 +159,9 @@ void twd_timer_update_rate(struct clock_event_device *clk, u32 timer_rate)
 		clk->mult = div_sc(twd_timer_rate, NSEC_PER_SEC, clk->shift);
 		clk->max_delta_ns = clockevent_delta2ns(0xffffffff, clk);
 		clk->min_delta_ns = clockevent_delta2ns(0xf, clk);
- 		__raw_writel(twd_timer_rate / HZ, twd_base + TWD_TIMER_LOAD);
+		__raw_writel(twd_timer_rate / HZ, twd_base + TWD_TIMER_LOAD);
 		printk(KERN_INFO "Switch local timer to %lu.%02luMHz.\n",
 			twd_timer_rate / 1000000,
 			(twd_timer_rate / 1000000) % 100);
 	}
 }
-

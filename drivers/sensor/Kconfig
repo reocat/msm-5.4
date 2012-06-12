@@ -22,7 +22,7 @@ config DEBUG_SENSOR
 
 	  If unsure, say N.
 
-config SENSOR_MMA7455L 
+config SENSOR_MMA7455L
 	tristate "Freescale MMA7455L"
 	depends on SENSOR_SUPPORT
 	help

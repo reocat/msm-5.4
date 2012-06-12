@@ -246,4 +246,3 @@ void migrate_irqs(void)
 	free_cpumask_var(new_affinity);
 }
 #endif /* CONFIG_HOTPLUG_CPU */
-

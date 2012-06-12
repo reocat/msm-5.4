@@ -428,4 +428,3 @@ void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 		" AUX_CTRL 0x%08x, Cache size: %d B\n",
 		ways, cache_id, aux, l2x0_size);
 }
-

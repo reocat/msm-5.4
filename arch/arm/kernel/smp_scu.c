@@ -61,4 +61,3 @@ void scu_disable(void __iomem *scu_base)
 
 	flush_cache_all();
 }
-
