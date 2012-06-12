@@ -182,6 +182,12 @@ static int __init ambarella_init_uport_switcher(void)
 	}
 
 	if (ambarella_board_generic.uport_control.gpio_id >= 0) {
+		rval = gpio_request(ambarella_board_generic.uport_control.gpio_id,
+				"uport_switcher");
+		if (rval) {
+			pr_err("%s: request uport_switcher gpio failed\n", __func__);
+			goto uport_switcher_err2;
+		}
 		if (amba_readl(USB_REFCLK_REG) & USB_PORT_IS_HOST) {
 			/* route D+/D- signal to host port */
 			usb_port_control = USB_PORT_TO_HOST;
@@ -204,7 +210,7 @@ static int __init ambarella_init_uport_switcher(void)
 	if (proc_file == NULL) {
 		rval = -ENOMEM;
 		pr_err("%s: create uport proc file failed!\n", __func__);
-		goto uport_switcher_err2;
+		goto uport_switcher_err3;
 	} else {
 		proc_file->read_proc = ambarella_uport_switcher_proc_read;
 		proc_file->write_proc = ambarella_uport_switcher_proc_write;
@@ -212,6 +218,8 @@ static int __init ambarella_init_uport_switcher(void)
 
 	return 0;
 
+uport_switcher_err3:
+	gpio_free(ambarella_board_generic.uport_control.gpio_id);
 uport_switcher_err2:
 	free_irq(ambarella_board_generic.uport_irq.irq_line, NULL);
 uport_switcher_err1:
