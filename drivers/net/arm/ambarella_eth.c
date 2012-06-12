@@ -1818,10 +1818,9 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	ndev->dev.dma_mask = pdev->dev.dma_mask;
 	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
 	ndev->irq = irq_res->start;
-	ndev->features = 0;
 	if (platform_info->default_supported &
 		AMBARELLA_ETH_SUPPORTED_IPC_TX) {
-		ndev->features = NETIF_F_ALL_CSUM;
+		ndev->features |= NETIF_F_HW_CSUM;
 	}
 	lp = netdev_priv(ndev);
 	spin_lock_init(&lp->lock);
