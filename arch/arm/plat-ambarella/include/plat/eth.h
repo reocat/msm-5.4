@@ -27,6 +27,10 @@
 /* ==========================================================================*/
 #define AMBETH_MAC_SIZE				(6)
 
+#define AMBARELLA_ETH_SUPPORTED_IPC_RX		(1 << 0)
+#define AMBARELLA_ETH_SUPPORTED_IPC_TX		(1 << 1)
+#define AMBARELLA_ETH_SUPPORTED_DUMP		(1 << 31)
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -44,10 +48,11 @@ struct ambarella_eth_platform_info {
 	u32					mii_retry_limit;
 	u32					mii_retry_tmo;
 
-	u32					default_dma_bus_mode;
-	u32					default_dma_opmode;
 	u32					default_tx_ring_size;
 	u32					default_rx_ring_size;
+	u32					default_dma_bus_mode;
+	u32					default_dma_opmode;
+	u32					default_supported;
 
 	int					(*is_enabled)(void);
 };

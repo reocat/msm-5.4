@@ -100,6 +100,7 @@ config MACH_GINKGO
 
 config MACH_HYACINTH
 	bool "Hyacinth"
+	depends on PLAT_AMBARELLA_A8
 	default n
 	help
 	  Say Y here if you can't find suitable Board Name.

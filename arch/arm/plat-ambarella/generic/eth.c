@@ -88,14 +88,22 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	},
 	.mii_retry_limit	= 200,
 	.mii_retry_tmo		= 10,
-	.default_dma_bus_mode	= ETH_DMA_BUS_MODE_FB |
-				ETH_DMA_BUS_MODE_PBL_32 |
-				ETH_DMA_BUS_MODE_DA_RX,
-	.default_dma_opmode	= ETH_DMA_OPMODE_TTC_256 |
-				ETH_DMA_OPMODE_RTC_64 |
-				ETH_DMA_OPMODE_FUF,
 	.default_tx_ring_size	= 32,
 	.default_rx_ring_size	= 64,
+	.default_dma_bus_mode	= (ETH_DMA_BUS_MODE_FB |
+				ETH_DMA_BUS_MODE_PBL_32 |
+				ETH_DMA_BUS_MODE_DA_RX),
+	.default_dma_opmode	= (ETH_DMA_OPMODE_TTC_256 |
+				ETH_DMA_OPMODE_RTC_64 |
+				ETH_DMA_OPMODE_FUF),
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
+	.default_supported	= (AMBARELLA_ETH_SUPPORTED_IPC_RX |
+				AMBARELLA_ETH_SUPPORTED_IPC_TX),
+#elif (CHIP_REV == A7S)
+	.default_supported	= AMBARELLA_ETH_SUPPORTED_IPC_RX,
+#else
+	.default_supported	= 0,
+#endif
 	.is_enabled		= rct_is_eth_enabled,
 };
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
@@ -180,14 +188,15 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 	},
 	.mii_retry_limit	= 200,
 	.mii_retry_tmo		= 10,
+	.default_tx_ring_size	= 32,
+	.default_rx_ring_size	= 64,
 	.default_dma_bus_mode	= ETH_DMA_BUS_MODE_FB |
 				ETH_DMA_BUS_MODE_PBL_32 |
 				ETH_DMA_BUS_MODE_DA_RX,
 	.default_dma_opmode	= ETH_DMA_OPMODE_TTC_256 |
 				ETH_DMA_OPMODE_RTC_64 |
 				ETH_DMA_OPMODE_FUF,
-	.default_tx_ring_size	= 32,
-	.default_rx_ring_size	= 64,
+	.default_supported	= 0,
 	.is_enabled		= eth1_is_enabled,
 };
 AMBA_ETH_PARAM_CALL(1, ambarella_eth1_platform_info, 0644);

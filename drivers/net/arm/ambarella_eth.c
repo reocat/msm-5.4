@@ -65,13 +65,6 @@
 				ETH_DMA_INTEN_FBE | AMBETH_RXDMA_INTEN | \
 				AMBETH_TXDMA_INTEN)
 
-#define AMBETH_TDES0_ATOMIC_CHECK
-#undef AMBETH_TDES0_ATOMIC_CHECK_ALL
-#define AMBETH_RDES0_ATOMIC_CHECK
-#undef AMBETH_RDES0_ATOMIC_CHECK_ALL
-
-#undef AMBETH_DEBUG_DUMP_DATA
-
 /* ==========================================================================*/
 struct ambeth_desc {
 	u32					status;
@@ -321,24 +314,30 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	ambhw_set_hwaddr(lp, lp->ndev->dev_addr);
 	amba_writel(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		lp->platform_info->default_dma_bus_mode);
-#if defined(AMBETH_DEBUG_DUMP_DATA)
-	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
-		ETH_MAC_FRAME_FILTER_RA);
-#else
 	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, 0);
-#endif
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 		lp->platform_info->default_dma_opmode);
-#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
-	amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET, ETH_DMA_OPMODE_TSF);
-#endif
-	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET,
-		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
 		(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE));
-#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
-	amba_setbitsl(lp->regbase + ETH_MAC_CFG_OFFSET, ETH_MAC_CFG_IPC);
-#endif
+	if (lp->platform_info->default_supported &
+		AMBARELLA_ETH_SUPPORTED_IPC_RX) {
+		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
+			ETH_DMA_OPMODE_RSF);
+		amba_setbitsl(lp->regbase + ETH_MAC_CFG_OFFSET,
+			ETH_MAC_CFG_IPC);
+	}
+	if (lp->platform_info->default_supported &
+		AMBARELLA_ETH_SUPPORTED_IPC_TX) {
+		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
+			ETH_DMA_OPMODE_TSF);
+	}
+	if (lp->platform_info->default_supported &
+		AMBARELLA_ETH_SUPPORTED_DUMP) {
+		amba_setbitsl(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+			ETH_MAC_FRAME_FILTER_RA);
+	}
+	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET,
+		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
 
 ambhw_init_exit:
 	return errorCode;
@@ -350,7 +349,6 @@ static inline void ambhw_disable(struct ambeth_info *lp)
 	ambhw_dma_int_disable(lp);
 }
 
-#if defined(AMBETH_DEBUG_DUMP_DATA)
 static void ambhw_dump_buffer(const char *msg,
 	unsigned char *data, unsigned int length)
 {
@@ -366,7 +364,6 @@ static void ambhw_dump_buffer(const char *msg,
 	}
 	printk("\n");
 }
-#endif
 
 static void ambhw_dump(struct ambeth_info *lp)
 {
@@ -991,20 +988,10 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 				break;
 
 			if (unlikely(status & ETH_TDES0_ES)) {
-#if defined(AMBETH_TDES0_ATOMIC_CHECK)
 				if ((status & ETH_TDES0_ES_MASK) ==
 					ETH_TDES0_ES) {
-					if (netif_msg_probe(lp)) {
-						dev_err(&lp->ndev->dev,
-						"TX Error: Wrong ES"
-						" 0x%08x vs 0x%08x.\n",
-						status,
-						lp->tx.desc_tx[entry].status);
-						ambhw_dump(lp);
-					}
 					break;
 				}
-#endif
 				if (ambeth_check_tdes0_status(lp, status)) {
 					ambhw_dma_tx_stop(lp);
 					ambhw_dma_tx_restart(lp, entry);
@@ -1014,27 +1001,11 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 					lp->stats.tx_errors++;
 				}
 			} else {
-#if defined(AMBETH_TDES0_ATOMIC_CHECK_ALL)
-				udelay(1);
-				if (unlikely(status !=
-					lp->tx.desc_tx[entry].status)) {
-					if (netif_msg_probe(lp)) {
-						dev_err(&lp->ndev->dev,
-						"TX Error: Wrong status"
-						" 0x%08x vs 0x%08x.\n",
-						status,
-						lp->tx.desc_tx[entry].status);
-						ambhw_dump(lp);
-					}
-				}
-#endif
-#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
 				if (unlikely(status & ETH_TDES0_IHE)) {
 					if (netif_msg_drv(lp))
 						dev_err(&lp->ndev->dev,
 						"TX Error: IP Header Error.\n");
 				}
-#endif
 				lp->stats.tx_bytes +=
 					lp->tx.rng_tx[entry].skb->len;
 				lp->stats.tx_packets++;
@@ -1279,9 +1250,10 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		spin_unlock_irqrestore(&lp->lock, flags);
 		goto ambeth_hard_start_xmit_exit;
 	}
-#if defined(AMBETH_DEBUG_DUMP_DATA)
-	ambhw_dump_buffer(__func__, skb->data, skb->len);
-#endif
+	if (unlikely(lp->platform_info->default_supported &
+		AMBARELLA_ETH_SUPPORTED_DUMP)) {
+		ambhw_dump_buffer(__func__, skb->data, skb->len);
+	}
 
 	mapping = dma_map_single(&lp->ndev->dev,
 		skb->data, skb->len, DMA_TO_DEVICE);
@@ -1289,11 +1261,11 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (dirty_to_tx >= lp->tx_irq_count) {
 		tx_flag |= ETH_TDES1_IC;
 	}
-#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
-	if (skb->ip_summed == CHECKSUM_PARTIAL) {
+	if ((lp->platform_info->default_supported &
+		AMBARELLA_ETH_SUPPORTED_IPC_TX) &&
+		(skb->ip_summed == CHECKSUM_PARTIAL)) {
 		tx_flag |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
 	}
-#endif
 	lp->tx.rng_tx[entry].skb = skb;
 	lp->tx.rng_tx[entry].mapping = mapping;
 	lp->tx.desc_tx[entry].buffer1 = mapping;
@@ -1339,7 +1311,6 @@ static struct net_device_stats *ambeth_get_stats(struct net_device *ndev)
 	return &lp->stats;
 }
 
-#if defined(AMBETH_DEBUG_DUMP_DATA)
 static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
 {
 	short					pkt_len;
@@ -1364,7 +1335,6 @@ static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
 		dev_kfree_skb(skb);
 	}
 }
-#endif
 
 static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 	u32 status, u32 entry)
@@ -1438,9 +1408,10 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
 			"RX Error: Rx MAC Address/Payload Checksum.\n");
-#if defined(AMBETH_DEBUG_DUMP_DATA)
-			ambhw_dump_rx(lp, status, entry);
-#endif
+			if (lp->platform_info->default_supported &
+				AMBARELLA_ETH_SUPPORTED_DUMP) {
+				ambhw_dump_rx(lp, status, entry);
+			}
 		}
 	}
 }
@@ -1466,21 +1437,24 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, lp->ndev);
-#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
-		if ((status & ETH_RDES0_COE_MASK) == ETH_RDES0_COE_NOCHKERROR) {
-			skb->ip_summed = CHECKSUM_UNNECESSARY;
-		} else {
-			skb->ip_summed = CHECKSUM_NONE;
-			if (netif_msg_rx_err(lp)) {
-				dev_err(&lp->ndev->dev,
-				"RX Error: RDES0_COE[0x%x].\n", status);
-				ambhw_dump(lp);
+		if (lp->platform_info->default_supported &
+			AMBARELLA_ETH_SUPPORTED_IPC_RX) {
+			if ((status & ETH_RDES0_COE_MASK) ==
+				ETH_RDES0_COE_NOCHKERROR) {
+				skb->ip_summed = CHECKSUM_UNNECESSARY;
+			} else {
+				skb->ip_summed = CHECKSUM_NONE;
+				if (netif_msg_rx_err(lp)) {
+					dev_err(&lp->ndev->dev,
+					"RX Error: RDES0_COE[0x%x].\n", status);
+					ambhw_dump(lp);
+				}
 			}
 		}
-#endif
-#if defined(AMBETH_DEBUG_DUMP_DATA)
-		ambhw_dump_buffer(__func__, skb->data, skb->len);
-#endif
+		if (unlikely(lp->platform_info->default_supported &
+			AMBARELLA_ETH_SUPPORTED_DUMP)) {
+			ambhw_dump_buffer(__func__, skb->data, skb->len);
+		}
 		netif_receive_skb(skb);
 		lp->rx.rng_rx[entry].skb = NULL;
 		lp->rx.rng_rx[entry].mapping = 0;
@@ -1515,29 +1489,10 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 		status = lp->rx.desc_rx[entry].status;
 		if (status & ETH_RDES0_OWN)
 			break;
-#if defined(AMBETH_RDES0_ATOMIC_CHECK)
 		if (unlikely((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
 			(ETH_RDES0_FS | ETH_RDES0_LS))) {
-			if (netif_msg_probe(lp)) {
-				dev_err(&lp->ndev->dev, "RX Error: Wrong FS/LS"
-				" cur_rx[%d] status 0x%08x.\n",
-				lp->rx.cur_rx, status);
-				ambhw_dump(lp);
-			}
 			break;
 		}
-#endif
-#if defined(AMBETH_TDES0_ATOMIC_CHECK_ALL)
-		udelay(1);
-		if (unlikely(status != lp->rx.desc_rx[entry].status)) {
-			if (netif_msg_probe(lp)) {
-				dev_err(&lp->ndev->dev, "RX Error: Wrong status"
-				" 0x%08x vs 0x%08x.\n",
-				status, lp->rx.desc_rx[entry].status);
-				ambhw_dump(lp);
-			}
-		}
-#endif
 		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 			ambeth_napi_rx(lp, status, entry);
 		} else {
@@ -1863,9 +1818,11 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	ndev->dev.dma_mask = pdev->dev.dma_mask;
 	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
 	ndev->irq = irq_res->start;
-#if defined(CONFIG_AMBARELLA_ETH_SUPPORT_IPC)
-	ndev->features = NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
-#endif
+	ndev->features = 0;
+	if (platform_info->default_supported &
+		AMBARELLA_ETH_SUPPORTED_IPC_TX) {
+		ndev->features = NETIF_F_ALL_CSUM;
+	}
 	lp = netdev_priv(ndev);
 	spin_lock_init(&lp->lock);
 	lp->ndev = ndev;
