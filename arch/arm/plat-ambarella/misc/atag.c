@@ -192,7 +192,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= AHB_BASE,
 			.pfn	= __phys_to_pfn(AHB_PHYS_BASE),
 			.length	= AHB_SIZE,
+#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
+			.type	= MT_DEVICE_NONSHARED,
+#else
 			.type	= MT_DEVICE,
+#endif
 			},
 	},
 	[AMBARELLA_IO_DESC_APB_ID] = {
@@ -201,7 +205,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= APB_BASE,
 			.pfn	= __phys_to_pfn(APB_PHYS_BASE),
 			.length	= APB_SIZE,
+#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
+			.type	= MT_DEVICE_NONSHARED,
+#else
 			.type	= MT_DEVICE,
+#endif
 			},
 	},
 	[AMBARELLA_IO_DESC_PPM_ID] = {
@@ -260,7 +268,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DRAMC_BASE,
 			.pfn	= __phys_to_pfn(DRAMC_PHYS_BASE),
 			.length	= DRAMC_SIZE,
+#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
+			.type	= MT_DEVICE_NONSHARED,
+#else
 			.type	= MT_DEVICE,
+#endif
 			},
 	},
 #endif
@@ -271,7 +283,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= CRYPT_BASE,
 			.pfn	= __phys_to_pfn(CRYPT_PHYS_BASE),
 			.length	= CRYPT_SIZE,
+#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
+			.type	= MT_DEVICE_NONSHARED,
+#else
 			.type	= MT_DEVICE,
+#endif
 			},
 	},
 #endif
