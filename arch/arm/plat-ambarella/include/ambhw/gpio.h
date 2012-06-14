@@ -314,6 +314,11 @@
 #define SSI_5_N		GPIO(89)
 #define SSI_6_N		GPIO(90)
 #define SSI_7_N		GPIO(91)
+#elif (CHIP_REV == A7S)
+#define SSI_4_N		GPIO(82)
+#define SSI_5_N		GPIO(83)
+#define SSI_6_N		GPIO(79)
+#define SSI_7_N		GPIO(80)
 #else
 /* Tertiary function of GPIO pins */
 #define SSI_4_N		GPIO(77)
