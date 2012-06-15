@@ -25,8 +25,7 @@ linux:
 	@if [ -f $(LINUX_OUT_DIR)/.config ]; then \
 		echo "with previous configuration ..."; \
 	else \
-		echo "with ambarella_$(KERNEL_DEFCONFIG)_defconfig ..."; \
-		$(MAKE) $(AMBA_MAKE_PARA) $(LINUX_MAKE_FLAG) ambarella_$(KERNEL_DEFCONFIG)_defconfig; \
+		$(MAKE) $(AMBA_MAKE_PARA) defconfig_public_linux; \
 	fi
 	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) $(LINUX_MAKE_FLAG) all
 	@if [ -n "$(KERNEL_INSTALL_PATH)" ]; then \
@@ -53,7 +52,11 @@ menuconfig_public_linux:
 .PHONY: defconfig_public_linux
 
 defconfig_public_linux:
-	@echo "Build Linux with ambarella_$(KERNEL_DEFCONFIG)_defconfig ..."
+	@echo "Build Linux with $(KERNEL_DEFCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR)
-	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) $(LINUX_MAKE_FLAG) ambarella_$(KERNEL_DEFCONFIG)_defconfig
+	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
+		cp -dpRf $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) $(LINUX_OUT_DIR)/.config; \
+	else \
+		$(MAKE) $(AMBA_MAKE_PARA) $(LINUX_MAKE_FLAG) $(KERNEL_DEFCONFIG); \
+	fi
 
