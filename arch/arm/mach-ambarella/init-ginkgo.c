@@ -207,9 +207,6 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_eth0_platform_info.mii_id = 1;
 	ambarella_eth0_platform_info.phy_id = 0x001cc915;
 
-	/* Config USB */
-	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
-
 	/* Config Vin */
 	ambarella_board_generic.vin1_reset.gpio_id = GPIO(49);
 	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
@@ -240,6 +237,9 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
 			ambarella_eth0_platform_info.mii_reset.active_delay = 200;
 
+			/* Config USB over-curent protection */
+			ambarella_board_generic.uhc_use_ocp = 0x1;
+
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
 			use_bub_default = 0;
@@ -253,6 +253,8 @@ static void __init ambarella_init_ginkgo(void)
 	}
 
 	if (use_bub_default) {
+		/* Config USB over-curent protection */
+		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
 		platform_device_register(&ambarella_rtc0);
 	}
 
