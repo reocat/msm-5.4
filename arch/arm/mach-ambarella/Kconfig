@@ -95,6 +95,7 @@ config MACH_GINKGO
 	default n
 	select AMBARELLA_VIN
 	select AMBARELLA_VOUT
+	select RTC_AMBARELLA_IS112022M
 	help
 	  Say Y here if you are using S2 ginkgo.
 

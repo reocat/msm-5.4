@@ -64,7 +64,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_idc1,
 	&ambarella_idc2,
 	&ambarella_ir0,
-	&ambarella_rtc0,
 	&ambarella_sd0,
 	&ambarella_sd1,
 	&ambarella_spi0,
@@ -168,6 +167,7 @@ struct platform_device ginkgo_board_input = {
 static struct pca953x_platform_data ginkgo_ipcam_gpio_pca953x_platform_data = {
 	.gpio_base		= EXT_GPIO(0),
 	.irq_base		= EXT_IRQ(0),
+	.invert			= 0,
 };
 
 static struct i2c_board_info ginkgo_ipcam_gpio_i2c_board_info = {
@@ -182,6 +182,7 @@ static struct i2c_board_info ginkgo_ipcam_gpio_i2c_board_info = {
 static void __init ambarella_init_ginkgo(void)
 {
 	int					i;
+	int					use_bub_default = 1;
 
 	ambarella_init_machine("ginkgo");
 
@@ -238,8 +239,9 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
 			ambarella_eth0_platform_info.mii_reset.active_delay = 200;
 
-			i2c_register_board_info(2,
-				&ginkgo_ipcam_gpio_i2c_board_info, 1);
+			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
+			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
+			use_bub_default = 0;
 			break;
 
 		default:
@@ -247,6 +249,10 @@ static void __init ambarella_init_ginkgo(void)
 				AMBARELLA_BOARD_REV(system_rev));
 			break;
 		}
+	}
+
+	if (use_bub_default) {
+		platform_device_register(&ambarella_rtc0);
 	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));

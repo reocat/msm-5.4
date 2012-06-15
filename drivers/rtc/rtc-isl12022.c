@@ -281,8 +281,22 @@ static int isl12022_probe(struct i2c_client *client,
 		goto exit_kfree;
 	}
 
+	if (!strcmp(id->name, "isl12022m")) {
+		uint8_t buf;
+
+		ret = isl12022_read_regs(client, ISL12022_REG_INT, &buf, 1);
+		if (ret)
+			goto exit_unregister;
+
+		ret = isl12022_write_reg(client, ISL12022_REG_INT, buf & 0xf0);
+		if (ret)
+			goto exit_unregister;
+	}
+
 	return 0;
 
+exit_unregister:
+	rtc_device_unregister(isl12022->rtc);
 exit_kfree:
 	kfree(isl12022);
 
