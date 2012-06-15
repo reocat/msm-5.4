@@ -224,7 +224,8 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.uport_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.uport_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-			ambarella_board_generic.uport_control.gpio_id = EXT_GPIO(14);
+			/* EXT_GPIO(12) => the 4th gpio of second port */
+			ambarella_board_generic.uport_control.gpio_id = EXT_GPIO(12);
 			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
 			ambarella_board_generic.uport_control.active_delay = 1;
 
