@@ -72,6 +72,7 @@ static struct ambarella_pll_info pll_info;
 #if (CHIP_REV == A5S)
 #define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM_HP3 + 1)
 static struct ambarella_pll_mode_info mode_list[] = {
+	{"3d_playback", AMB_OPERATING_MODE_3D_PLAYBACK},
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
 	{"capture_nopreview", AMB_OPERATING_MODE_CAPTURE_NOPREVIEW},
@@ -97,6 +98,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60_LowPower", AMB_PERFORMANCE_1080I60_LP},
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
+	{"1080P50", AMB_PERFORMANCE_1080P50},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 };
 

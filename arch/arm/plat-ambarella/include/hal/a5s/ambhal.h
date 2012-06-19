@@ -5,7 +5,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date November 2008
- * @version 143168
+ * @version 176463
  *
  * @par Introduction:
  * The Ambarella A5M Hardware Abstraction Layer (ambhal) provides an API between
@@ -458,6 +458,8 @@ AMB_PERFORMANCE_1080I60_LP,
 AMB_PERFORMANCE_1080I60,
 /** 1080p30 */
 AMB_PERFORMANCE_1080P30,
+/** 1080p50 */
+AMB_PERFORMANCE_1080P50,
 /** 1080p60 */
 AMB_PERFORMANCE_1080P60,
 /** 2160p60 */
@@ -473,6 +475,8 @@ AMB_PERFORMANCE_RESERVED=0xffffffff
  */
 
 typedef enum {
+/** 3D Video Playback */
+AMB_OPERATING_MODE_3D_PLAYBACK,
 /** Camera is on but no video being captured */
 AMB_OPERATING_MODE_PREVIEW,
 /** Still picture capture */
@@ -1011,9 +1015,9 @@ static INLINE amb_hal_success_t amb_set_operating_mode (void *amb_hal_base_addre
  * Get the current operating mode for the system
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
- * @param[out] ::amb_operating_mode Current operating mode.
+ * @param[out] amb_operating_mode Current operating mode.
  *
- * @retval ::AMB_HAL_SUCCESS Always returns success.
+ * @retval AMB_HAL_SUCCESS Always returns success.
  *
  * @ingroup mode_group
  */
@@ -2642,7 +2646,7 @@ static INLINE amb_hal_success_t amb_set_lvds_pad_mode (void *amb_hal_base_addres
  *
  * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
  *
- * @retval ::amb_lvds_pad_mode_t The current pad mode setting.
+ * @retval amb_lvds_pad_mode_t The current pad mode setting.
  *
  * @ingroup lvds_group
  */
