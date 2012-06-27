@@ -53,13 +53,14 @@
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
 //	&ambarella_crypto,
-	&ambarella_dummy_codec0,
 	&ambarella_ehci0,
 	&ambarella_ohci0,
 	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_i2s0,
+	&ambarella_pcm0,
+	&ambarella_dummy_codec0,
 	&ambarella_idc0,
 	&ambarella_idc1,
 	&ambarella_idc2,
@@ -239,6 +240,16 @@ static void __init ambarella_init_ginkgo(void)
 
 			/* Config USB over-curent protection */
 			ambarella_board_generic.uhc_use_ocp = 0x1;
+
+			/* Register audio codec
+		 	 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
+		 	 * used as I2S signals, so we need to prevent
+		 	 * them from be modified by SPI driver */
+			ambarella_spi0_cs_pins[4] = -1;
+			ambarella_spi0_cs_pins[5] = -1;
+			ambarella_spi0_cs_pins[6] = -1;
+			ambarella_spi0_cs_pins[7] = -1;
+			ambarella_init_ak4642(0, 0x12, EXT_GPIO(3));
 
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);

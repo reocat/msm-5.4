@@ -42,6 +42,7 @@ config MACH_COCONUT
 	select TOUCH_AMBARELLA_AK4183
 	select TOUCH_AMBARELLA_TM1510
 	select RTC_AMBARELLA_IS112022M
+	select CODEC_AMBARELLA_AK4642
 	help
 	  Say Y here if you are using A5S Coconut.
 
@@ -52,6 +53,7 @@ config MACH_DURIAN
 	select AMBARELLA_VIN
 	select AMBARELLA_VOUT
 	select TOUCH_AMBARELLA_CHACHA_MT4D
+	select CODEC_AMBARELLA_AK4642
 	help
 	  Say Y here if you are using A5S Durian.
 
@@ -96,6 +98,7 @@ config MACH_GINKGO
 	select AMBARELLA_VIN
 	select AMBARELLA_VOUT
 	select RTC_AMBARELLA_IS112022M
+	select CODEC_AMBARELLA_AK4642
 	help
 	  Say Y here if you are using S2 ginkgo.
 
@@ -172,6 +175,10 @@ config CODEC_AMBARELLA_WM8994
 
 config CODEC_AMBARELLA_ES8328
 	bool "es8328"
+	default n
+
+config CODEC_AMBARELLA_AK4642
+	bool "ak4642"
 	default n
 
 comment "PMIC"

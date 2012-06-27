@@ -214,20 +214,6 @@ static struct i2c_board_info durian_board_ext_gpio_info = {
 };
 
 /* ==========================================================================*/
-#define AK4642_RESET_PIN	102
-#define AK4642_RESET_DELAY	1
-
-static struct ak4642_platform_data durian_ak4642_pdata = {
-	.rst_pin	= AK4642_RESET_PIN,
-	.rst_delay	= AK4642_RESET_DELAY,
-};
-
-static struct i2c_board_info ambarella_ak4642_board_info = {
-	I2C_BOARD_INFO("ak4642", 0x12),
-	.platform_data	= &durian_ak4642_pdata,
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_durian(void)
 {
 	int					i;
@@ -430,6 +416,9 @@ static void __init ambarella_init_durian(void)
 	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
 
+	/* Register audio codec */
+	ambarella_init_ak4642(0, 0x12, GPIO(102));
+
 	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
@@ -439,8 +428,6 @@ static void __init ambarella_init_durian(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
-
-	i2c_register_board_info(0, &ambarella_ak4642_board_info, 1);
 
 	ambarella_chacha_mt4d_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;

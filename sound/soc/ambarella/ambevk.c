@@ -1,5 +1,5 @@
 /*
- * sound/soc/a5sevk.c
+ * sound/soc/ambevk.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
@@ -7,6 +7,7 @@
  *	2009/08/20 - [Cao Rongrong] Created file
  *	2011/03/20 - [Cao Rongrong] Port to 2.6.38,
  *				    merge coconut and durian into a5sevk
+ *	2012/06/27 - [Cao Rongrong] Rename to ambevk.c
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -44,12 +45,12 @@ static unsigned int dai_fmt = 0;
 module_param(dai_fmt, uint, 0644);
 MODULE_PARM_DESC(dai_fmt, "DAI format.");
 
-static int a5sevk_board_startup(struct snd_pcm_substream *substream)
+static int ambevk_board_startup(struct snd_pcm_substream *substream)
 {
 	return 0;
 }
 
-static int a5sevk_board_hw_params(struct snd_pcm_substream *substream,
+static int ambevk_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -151,13 +152,13 @@ hw_params_exit:
 	return errorCode;
 }
 
-static struct snd_soc_ops a5sevk_board_ops = {
-	.startup = a5sevk_board_startup,
-	.hw_params = a5sevk_board_hw_params,
+static struct snd_soc_ops ambevk_board_ops = {
+	.startup = ambevk_board_startup,
+	.hw_params = ambevk_board_hw_params,
 };
 
-/* a5sevk machine dapm widgets */
-static const struct snd_soc_dapm_widget a5sevk_dapm_widgets[] = {
+/* ambevk machine dapm widgets */
+static const struct snd_soc_dapm_widget ambevk_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
@@ -165,8 +166,8 @@ static const struct snd_soc_dapm_widget a5sevk_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Speaker", NULL),
 };
 
-/* a5sevk machine audio map (connections to ak4642 pins) */
-static const struct snd_soc_dapm_route a5sevk_audio_map[] = {
+/* ambevk machine audio map (connections to ak4642 pins) */
+static const struct snd_soc_dapm_route ambevk_audio_map[] = {
 	/* Line In is connected to LLIN1, RLIN1 */
 	{"LIN1", NULL, "Mic Jack"},
 	{"RIN1", NULL, "Mic Jack"},
@@ -184,7 +185,7 @@ static const struct snd_soc_dapm_route a5sevk_audio_map[] = {
 	{"Speaker", NULL, "SPN"},
 };
 
-static int a5sevk_ak4642_init(struct snd_soc_pcm_runtime *rtd)
+static int ambevk_ak4642_init(struct snd_soc_pcm_runtime *rtd)
 {
 	int errorCode = 0;
 	struct snd_soc_codec *codec = rtd->codec;
@@ -195,18 +196,18 @@ static int a5sevk_ak4642_init(struct snd_soc_pcm_runtime *rtd)
 	/* snd_soc_dapm_nc_pin(dapm, "SPN"); */
 	snd_soc_dapm_nc_pin(dapm, "MIN");
 
-	/* Add a5sevk specific widgets */
+	/* Add ambevk specific widgets */
 	errorCode = snd_soc_dapm_new_controls(dapm,
-		a5sevk_dapm_widgets,
-		ARRAY_SIZE(a5sevk_dapm_widgets));
+		ambevk_dapm_widgets,
+		ARRAY_SIZE(ambevk_dapm_widgets));
 	if (errorCode) {
 		goto init_exit;
 	}
 
-	/* Set up a5sevk specific audio path a5sevk_audio_map */
+	/* Set up ambevk specific audio path ambevk_audio_map */
 	errorCode = snd_soc_dapm_add_routes(dapm,
-		a5sevk_audio_map,
-		ARRAY_SIZE(a5sevk_audio_map));
+		ambevk_audio_map,
+		ARRAY_SIZE(ambevk_audio_map));
 	if (errorCode) {
 		goto init_exit;
 	}
@@ -217,61 +218,63 @@ init_exit:
 	return errorCode;
 }
 
-/* a5sevk digital audio interface glue - connects codec <--> A2S */
-static struct snd_soc_dai_link a5sevk_dai_link = {
+/* ambevk digital audio interface glue - connects codec <--> A2S */
+static struct snd_soc_dai_link ambevk_dai_link = {
 	.name = "AK4642",
 	.stream_name = "AK4642-STREAM",
 	.cpu_dai_name = "ambarella-i2s.0",
 	.platform_name = "ambarella-pcm-audio",
 	.codec_dai_name = "ak4642-hifi",
 	.codec_name = "ak4642-codec.0-0012",
-	.init = a5sevk_ak4642_init,
-	.ops = &a5sevk_board_ops,
+	.init = ambevk_ak4642_init,
+	.ops = &ambevk_board_ops,
 };
 
 
-/* a5sevk audio machine driver */
-static struct snd_soc_card snd_soc_card_a5sevk = {
-	.name = "A5SEVK",
-	.dai_link = &a5sevk_dai_link,
+/* ambevk audio machine driver */
+static struct snd_soc_card snd_soc_card_ambevk = {
+	.name = "AMBEVK",
+	.dai_link = &ambevk_dai_link,
 	.num_links = 1,
 };
 
-static struct platform_device *a5sevk_snd_device;
+static struct platform_device *ambevk_snd_device;
 
-static int __init a5sevk_board_init(void)
+static int __init ambevk_board_init(void)
 {
 	int errorCode = 0;
 
-	a5sevk_snd_device = platform_device_alloc("soc-audio", -1);
-	if (!a5sevk_snd_device)
+	ambevk_snd_device = platform_device_alloc("soc-audio", -1);
+	if (!ambevk_snd_device)
 		return -ENOMEM;
 
-	platform_set_drvdata(a5sevk_snd_device, &snd_soc_card_a5sevk);
+	platform_set_drvdata(ambevk_snd_device, &snd_soc_card_ambevk);
 
-	errorCode = platform_device_add(a5sevk_snd_device);
+	errorCode = platform_device_add(ambevk_snd_device);
 	if (errorCode) {
-		goto a5sevk_board_init_exit;
+		goto ambevk_board_init_exit;
 	}
 
 	return 0;
 
-a5sevk_board_init_exit:
-	platform_device_put(a5sevk_snd_device);
+ambevk_board_init_exit:
+	platform_device_put(ambevk_snd_device);
 	return errorCode;
 }
 
-static void __exit a5sevk_board_exit(void)
+static void __exit ambevk_board_exit(void)
 {
-	platform_device_unregister(a5sevk_snd_device);
+	platform_device_unregister(ambevk_snd_device);
 }
 
-module_init(a5sevk_board_init);
-module_exit(a5sevk_board_exit);
+module_init(ambevk_board_init);
+module_exit(ambevk_board_exit);
 
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
-MODULE_DESCRIPTION("Amabrella a5sevk Board with AK4642 Codec for ALSA");
+MODULE_DESCRIPTION("Amabrella Board with AK4642 Codec for ALSA");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("snd-soc-coconut");
 MODULE_ALIAS("snd-soc-durian");
+MODULE_ALIAS("snd-soc-ginkgo");
+MODULE_ALIAS("snd-soc-a5sevk");
 
