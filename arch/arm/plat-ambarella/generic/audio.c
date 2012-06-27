@@ -80,14 +80,14 @@ static void aucodec_digitalio_on_0(void)
 #elif (CHIP_REV == S2)
 	unsigned long flags;
 
-	ambarella_gpio_raw_lock(1, &flags);
-	amba_setbitsl(GPIO0_AFSEL_REG, 0x00000100);
-	ambarella_gpio_raw_unlock(1, &flags);
-
 	ambarella_gpio_raw_lock(3, &flags);
-	amba_setbitsl(GPIO3_AFSEL_REG, 0xf0000000);
-	amba_clrbitsl(GPIO3_AFSEL_REG, 0x0000003c);
+	amba_clrbitsl(GPIO3_AFSEL_REG, 0x00000030);
 	ambarella_gpio_raw_unlock(3, &flags);
+
+	/* GPIO77~GPIO81 program as hardware mode */
+	ambarella_gpio_raw_lock(2, &flags);
+	amba_setbitsl(GPIO2_AFSEL_REG, 0x0003e000);
+	ambarella_gpio_raw_unlock(2, &flags);
 
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
@@ -113,13 +113,14 @@ static void aucodec_digitalio_on_1(void)
 #elif (CHIP_REV == S2)
 	unsigned long flags;
 
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x03f80000);
-	ambarella_gpio_raw_unlock(2, &flags);
-
 	ambarella_gpio_raw_lock(3, &flags);
-	amba_clrbitsl(GPIO2_AFSEL_REG, 0x0000003c);
+	amba_clrbitsl(GPIO3_AFSEL_REG, 0x0000000c);
 	ambarella_gpio_raw_unlock(3, &flags);
+
+	/* GPIO82~GPIO83 program as hardware mode */
+	ambarella_gpio_raw_lock(2, &flags);
+	amba_setbitsl(GPIO2_AFSEL_REG, 0x000c0000);
+	ambarella_gpio_raw_unlock(2, &flags);
 
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
