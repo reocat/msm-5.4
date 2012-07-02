@@ -78,7 +78,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_dummy_codec0,
 	&ambarella_idc0,
 	&ambarella_idc1,
-	&ambarella_i2cmux,
+	&ambarella_idc0_mux,
 	&ambarella_ir0,
 	&ambarella_sd0,
 	&ambarella_spi0,
@@ -157,8 +157,8 @@ static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HP,	0,	1,	120,	160,}}},	//FOCUS
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	0,	1,	0,	40,}}},		//CAMERA
 
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {125,		0,	0,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	0,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_CAMERA,	0,	0,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 
 	{AMBINPUT_END}
 };
@@ -278,29 +278,36 @@ static void __init ambarella_init_coconut(void)
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
+#if defined(CONFIG_TOUCH_AMBARELLA_AK4183)
 	ambarella_ak4183_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
-
+#endif
+#if defined(CONFIG_TOUCH_AMBARELLA_CHACHA_MT4D)
 	ambarella_chacha_mt4d_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	ambarella_chacha_mt4d_board_info.flags = 0;
 	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
-
+#endif
+#if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
 	ambarella_tm1510_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	ambarella_tm1510_board_info.flags = 0;
 	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
-
+#endif
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
+#if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
 		i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 	} else {
+#endif
 		platform_device_register(&ambarella_rtc0);
+#if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 	}
+#endif
 
 	platform_device_register(&coconut_board_input);
 }

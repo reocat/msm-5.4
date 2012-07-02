@@ -49,7 +49,11 @@ EXPORT_SYMBOL(ambarella_boot_splash_logo);
 
 unsigned long ambarella_debug_lookup_name(const char *name)
 {
+#if defined(CONFIG_KALLSYMS)
 	return module_kallsyms_lookup_name(name);
+#else
+	return 0;
+#endif
 }
 EXPORT_SYMBOL(ambarella_debug_lookup_name);
 

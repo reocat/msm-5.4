@@ -55,7 +55,9 @@ int ambarella_sd_set_fixed_cd(const char *val, const struct kernel_param *kp)
 #if defined(CONFIG_MMC)
 	mmc_dc = mmc_detect_change;
 #else
+#if defined(CONFIG_KALLSYMS)
 	mmc_dc = (mmc_dc_fn)module_kallsyms_lookup_name("mmc_detect_change");
+#endif
 #endif
 	if (!retval && pslotinfo && mmc_dc && pslotinfo->pmmc_host) {
 		mmc_dc(pslotinfo->pmmc_host, pslotinfo->cd_delay);
@@ -435,7 +437,9 @@ void ambarella_detect_sd_slot(int bus, int slot, int fixed_cd)
 #if defined(CONFIG_MMC)
 	mmc_dc = mmc_detect_change;
 #else
+#if defined(CONFIG_KALLSYMS)
 	mmc_dc = (mmc_dc_fn)module_kallsyms_lookup_name("mmc_detect_change");
+#endif
 #endif
 	if (pslotinfo && mmc_dc && pslotinfo->pmmc_host) {
 		pslotinfo->fixed_cd = fixed_cd;

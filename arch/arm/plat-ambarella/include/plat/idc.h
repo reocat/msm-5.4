@@ -77,7 +77,7 @@ struct ambarella_idc_platform_info {
 extern struct platform_device			ambarella_idc0;
 extern struct platform_device			ambarella_idc1;
 extern struct platform_device			ambarella_idc2;
-extern struct platform_device			ambarella_i2cmux;
+extern struct platform_device			ambarella_idc0_mux;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

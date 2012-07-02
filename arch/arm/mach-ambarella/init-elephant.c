@@ -72,7 +72,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_dummy_codec0,
 	&ambarella_idc0,
 	&ambarella_idc1,
-	&ambarella_i2cmux,
+	&ambarella_idc0_mux,
 	&ambarella_ir0,
 #ifndef CONFIG_PLAT_AMBARELLA_I1_CORTEX
 	&ambarella_ohci0,

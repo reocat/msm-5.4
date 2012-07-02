@@ -31,7 +31,7 @@ obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 obj-y						+= gpio.o
 obj-y						+= idc.o
 obj-y						+= init.o
-obj-$(CONFIG_INPUT_AMBARELLA_IR)		+= ir.o
+obj-y						+= ir.o
 obj-y						+= irq.o
 ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
 obj-y						+= pll_hal.o

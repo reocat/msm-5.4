@@ -242,9 +242,9 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.uhc_use_ocp = 0x1;
 
 			/* Register audio codec
-		 	 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
-		 	 * used as I2S signals, so we need to prevent
-		 	 * them from be modified by SPI driver */
+			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
+			 * used as I2S signals, so we need to prevent
+			 * them from be modified by SPI driver */
 			ambarella_spi0_cs_pins[4] = -1;
 			ambarella_spi0_cs_pins[5] = -1;
 			ambarella_spi0_cs_pins[6] = -1;

@@ -92,7 +92,7 @@ static struct ambarella_i2cmux_platform_data ambarella_i2cmux_info = {
 	.deselect_function	= GPIO_FUNC_SW_INPUT,
 };
 
-struct platform_device ambarella_i2cmux = {
+struct platform_device ambarella_idc0_mux = {
 	.name		= "ambarella-i2cmux",
 	.id		= 0,
 	.dev		= {
