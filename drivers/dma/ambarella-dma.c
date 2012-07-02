@@ -113,7 +113,6 @@ static inline struct ambarella_dma_chan *to_ambarella_dma_chan(struct dma_chan *
 **/
 static ambarella_dma_desc_t *dummy_descriptor = NULL;
 static dma_addr_t dummy_descriptor_phys;
-#define AMBA_CHAN_MAX_DESC_NUM 128
 
 /**
 * ambarella_dma_cookie_status - report cookie status
@@ -385,7 +384,7 @@ static int ambarella_dma_alloc_chan_resources(struct dma_chan *chan)
 
 	/* Now allocate and setup the descriptor. */
 	amb_dma_chan->desc = dma_alloc_coherent(NULL,
-			sizeof(ambarella_dma_desc_t) * AMBA_CHAN_MAX_DESC_NUM,
+			sizeof(ambarella_dma_desc_t) * AMBARELLA_DMA_MAX_DESC_NUM,
 			&amba_desc_phys, GFP_KERNEL);
 
 	if (!amb_dma_chan->desc) {
@@ -400,7 +399,7 @@ static void ambarella_dma_free_chan_resources(struct dma_chan *chan)
 {
 	struct ambarella_dma_chan *amb_dma_chan = to_ambarella_dma_chan(chan);
 
-	dma_free_coherent(NULL, sizeof(ambarella_dma_desc_t) * AMBA_CHAN_MAX_DESC_NUM,
+	dma_free_coherent(NULL, sizeof(ambarella_dma_desc_t) * AMBARELLA_DMA_MAX_DESC_NUM,
 				amb_dma_chan->desc, amb_dma_chan->desc_phys);
 }
 
@@ -648,6 +647,11 @@ static struct dma_async_tx_descriptor *ambarella_prep_slave_sg(
 	struct scatterlist *sgent;
 	dma_addr_t next_desc_phys;
 	unsigned j = 0;
+
+	if (sg_len > AMBARELLA_DMA_MAX_DESC_NUM) {
+		pr_err("%s: the number of desc is insufficient!\n", __func__);
+		return NULL;
+	}
 
 	amb_dma_chan->num_desc = sg_len;
 	amba_dma_desc = amb_dma_chan->desc;

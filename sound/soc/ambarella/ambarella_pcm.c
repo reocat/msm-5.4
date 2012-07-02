@@ -47,12 +47,13 @@
 
 #include "ambarella_pcm.h"
 
-#define AMBA_MAX_DESC_NUM		128
+#define AMBA_MAX_DESC_NUM		AMBARELLA_DMA_MAX_DESC_NUM
 #define AMBA_MIN_DESC_NUM		2
 #define AMBA_PERIOD_BYTES_MAX		8192
 #define AMBA_PERIOD_BYTES_MIN		32
 
-struct scatterlist sg[AMBA_MAX_DESC_NUM];
+
+static struct scatterlist sg[AMBA_MAX_DESC_NUM];
 
 struct ambarella_runtime_data {
 	struct ambarella_pcm_dma_params *dma_data;
@@ -91,28 +92,19 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 	.buffer_bytes_max	= 256 * 1024,
 };
 
-static bool ambpcm_play_dma_filter(struct dma_chan *chan, void *fparam)
+static bool ambpcm_dma_filter(struct dma_chan *chan, void *fparam)
 {
+	bool ret = false;
 	struct ambarella_runtime_data *prtd;
 
 	prtd = (struct ambarella_runtime_data *)fparam;
-	if ((chan->dev->dev_id == 0) && (chan->chan_id == I2S_TX_DMA_CHAN)) {
-		chan->private = &prtd->dma_status;
-		return true;
-	}
-	return false;
-}
 
-static bool ambpcm_record_dma_filter(struct dma_chan *chan, void *fparam)
-{
-	struct ambarella_runtime_data *prtd;
-
-	prtd = (struct ambarella_runtime_data *)fparam;
-	if ((chan->dev->dev_id == 0) && (chan->chan_id == I2S_RX_DMA_CHAN)) {
+	if ((chan->dev->dev_id == 0) && (chan->chan_id == prtd->channel)) {
 		chan->private = &prtd->dma_status;
-		return true;
+		ret = true;
 	}
-	return false;
+
+	return ret;
 }
 
 static void dai_dma_handler(void *dev_id)
@@ -198,26 +190,21 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	sg_len = 0;
 	sg_init_table(&sg[0], AMBA_MAX_DESC_NUM);
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		prtd->channel = I2S_TX_DMA_CHAN;
 		direction = DMA_TO_DEVICE;
-		/* Try to grab a DMA channel */
-		dma_cap_zero(mask);
-		dma_cap_set(DMA_SLAVE, mask);
-		prtd->dma_chan = dma_request_channel(mask, ambpcm_play_dma_filter, prtd);
-		if (!prtd->dma_chan) {
-			return -EINVAL;
-		}
 	} else {
 		prtd->channel = I2S_RX_DMA_CHAN;
 		direction = DMA_FROM_DEVICE;
-		/* Try to grab a DMA channel */
-		dma_cap_zero(mask);
-		dma_cap_set(DMA_SLAVE, mask);
-		prtd->dma_chan = dma_request_channel(mask, ambpcm_record_dma_filter, prtd);
-		if (!prtd->dma_chan) {
-			return -EINVAL;
-		}
+	}
+
+	/* Try to grab a DMA channel */
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+	prtd->dma_chan = dma_request_channel(mask, ambpcm_dma_filter, prtd);
+	if (!prtd->dma_chan) {
+		return -EINVAL;
 	}
 
 	spin_lock_irqsave(&prtd->lock, flags);
@@ -298,7 +285,7 @@ static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
 	struct ambarella_runtime_data *prtd = substream->runtime->private_data;
 
 	/* Ensure dma is stopped */
-		dmaengine_terminate_all(prtd->dma_chan);
+	dmaengine_terminate_all(prtd->dma_chan);
 
 	return 0;
 }
