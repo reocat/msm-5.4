@@ -21,7 +21,7 @@ LOCAL_PATH:=$(call my-dir)
 
 .PHONY: linux
 
-linux:
+linux: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR)
 	@echo -n "Build Linux "
 	@if [ -f $(LINUX_OUT_DIR)/.config ]; then \
@@ -47,7 +47,7 @@ $(call add-target-into-build, linux)
 
 .PHONY: menuconfig_public_linux
 
-menuconfig_public_linux:
+menuconfig_public_linux: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR)
 	@$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) menuconfig
 
@@ -55,7 +55,7 @@ menuconfig_public_linux:
 
 .PHONY: defconfig_public_linux
 
-defconfig_public_linux:
+defconfig_public_linux: $(DOT_CONFIG)
 	@echo "Build Linux with $(KERNEL_DEFCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR)
 	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
@@ -76,7 +76,7 @@ LINUX_OUT_DIR_2		:= $(KERNEL_OUT_DIR)/linux_$(strip \
 
 .PHONY: linux_2
 
-linux_2:
+linux_2: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR_2)
 	@echo -n "Build Linux_2 "
 	@if [ -f $(LINUX_OUT_DIR_2)/.config ]; then \
@@ -94,7 +94,7 @@ $(call add-target-into-build, linux_2)
 
 .PHONY: menuconfig_public_linux_2
 
-menuconfig_public_linux_2:
+menuconfig_public_linux_2: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR_2)
 	@$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) menuconfig
 
@@ -102,7 +102,7 @@ menuconfig_public_linux_2:
 
 .PHONY: defconfig_public_linux_2
 
-defconfig_public_linux_2:
+defconfig_public_linux_2: $(DOT_CONFIG)
 	@echo "Build Linux with $(KERNEL_DEFCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR_2)
 	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
