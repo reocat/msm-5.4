@@ -44,9 +44,13 @@
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
-#define CONFIG_SD_AMBARELLA_WAIT_TIMEOUT	(HZ)
+#define CONFIG_SD_AMBARELLA_WAIT_TIMEOUT	(HZ / 100)
 #define CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT	(100000)
-#define CONFIG_SD_AMBARELLA_SLEEP_COUNTER_LIMIT	(1000)
+#define CONFIG_SD_AMBARELLA_DEFAULT_CLOCK	(24000000)
+
+#undef CONFIG_SD_AMBARELLA_DEBUG
+#undef CONFIG_SD_AMBARELLA_DEBUG_RW_ACCESS
+#undef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
 
 #define ambsd_printk(level, phcinfo, format, arg...)	\
 	printk(level "%s.%d: " format,			\
@@ -57,6 +61,8 @@
 	ambsd_printk(KERN_ERR, phcinfo, format, ## arg)
 #define ambsd_warn(phcinfo, format, arg...)		\
 	ambsd_printk(KERN_WARNING, phcinfo, format, ## arg)
+#define ambsd_info(phcinfo, format, arg...)		\
+	ambsd_printk(KERN_INFO, phcinfo, format, ## arg)
 #define ambsd_rtdbg(phcinfo, format, arg...)		\
 	ambsd_printk(KERN_DEBUG, phcinfo, format, ## arg)
 
@@ -93,6 +99,7 @@ struct ambarella_sd_mmc_info {
 	u32				arg_reg;
 	u16				xfr_reg;
 	u16				cmd_reg;
+	u16				sta_reg;
 
 	char				*buf_vaddress;
 	dma_addr_t			buf_paddress;
@@ -118,6 +125,7 @@ struct ambarella_sd_controller_info {
 	struct resource			*mem;
 	unsigned int			irq;
 	u32				dma_fix;
+	u32				clk_limit;
 
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
@@ -234,11 +242,11 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 	pslotinfo->blk_sz &= 0xFFF;
 	pslotinfo->blk_sz |= pslotinfo->max_blk_sz;
 
-	if (unlikely(pslotinfo->plat_info->dump_rw_access)) {
-		ambsd_rtdbg(pslotinfo, "WRITE %d in %d sg [0x%08x:0x%08x]\n",
-			pslotinfo->dma_size, pslotinfo->sg_len,
-			pslotinfo->dma_address, pslotinfo->dma_size);
-	}
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_RW_ACCESS
+	ambsd_rtdbg(pslotinfo, "WRITE %d in %d sg [0x%08x:0x%08x]\n",
+		pslotinfo->dma_size, pslotinfo->sg_len,
+		pslotinfo->dma_address, pslotinfo->dma_size);
+#endif
 }
 
 static void ambarella_sd_post_sg_to_dma(void *data)
@@ -279,11 +287,11 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 	pslotinfo->blk_sz &= 0xFFF;
 	pslotinfo->blk_sz |= pslotinfo->max_blk_sz;
 
-	if (unlikely(pslotinfo->plat_info->dump_rw_access)) {
-		ambsd_rtdbg(pslotinfo, "READ %d in %d sg [0x%08x:0x%08x]\n",
-			pslotinfo->dma_size, pslotinfo->sg_len,
-			pslotinfo->dma_address, pslotinfo->dma_size);
-	}
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_RW_ACCESS
+	ambsd_rtdbg(pslotinfo, "READ %d in %d sg [0x%08x:0x%08x]\n",
+		pslotinfo->dma_size, pslotinfo->sg_len,
+		pslotinfo->dma_address, pslotinfo->dma_size);
+#endif
 }
 
 static void ambarella_sd_post_dma_to_sg(void *data)
@@ -368,7 +376,7 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 		if (!(reset_reg & SD_RESET_ALL))
 			break;
 		counter++;
-		if (counter > CONFIG_SD_AMBARELLA_SLEEP_COUNTER_LIMIT) {
+		if (counter > CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT) {
 			ambsd_warn(pslotinfo, "Wait SD_RESET_ALL....\n");
 			break;
 		}
@@ -457,7 +465,7 @@ static void ambarella_sd_reset_data_line(struct mmc_host *mmc)
 static inline void ambarella_sd_data_done(
 	struct ambarella_sd_mmc_info *pslotinfo, u16 nis, u16 eis)
 {
-	struct mmc_data				*data = pslotinfo->mrq->data;
+	struct mmc_data				*data;
 
 	if ((pslotinfo->state == AMBA_SD_STATE_CMD) &&
 		((pslotinfo->cmd_reg & 0x3) == SD_CMD_RSP_48BUSY)) {
@@ -470,6 +478,16 @@ static inline void ambarella_sd_data_done(
 		return;
 	}
 
+	if (!pslotinfo->mrq) {
+		ambsd_dbg(pslotinfo, "%s mrq is NULL\n", __func__);
+		return;
+	}
+	if (!pslotinfo->mrq->data) {
+		ambsd_dbg(pslotinfo, "%s data is NULL\n", __func__);
+		return;
+	}
+	data = pslotinfo->mrq->data;
+
 	if (eis) {
 		if (eis & SD_EIS_DATA_BIT_ERR) {
 			data->error = -EILSEQ;
@@ -480,7 +498,7 @@ static inline void ambarella_sd_data_done(
 		} else {
 			data->error = -EIO;
 		}
-#ifdef CONFIG_SD_AMBARELLA_DEBUG
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
 		ambsd_err(pslotinfo, "%s: CMD[%d] get eis[0x%x]\n", __func__,
 			pslotinfo->mrq->cmd->opcode, eis);
 #endif
@@ -499,10 +517,20 @@ static inline void ambarella_sd_data_done(
 static inline void ambarella_sd_cmd_done(
 	struct ambarella_sd_mmc_info *pslotinfo, u16 nis, u16 eis)
 {
-	struct mmc_command			*cmd = pslotinfo->mrq->cmd;
+	struct mmc_command			*cmd;
 	u32					rsp0, rsp1, rsp2, rsp3;
 	struct ambarella_sd_controller_info	*pinfo;
 	u16					ac12es;
+
+	if (!pslotinfo->mrq) {
+		ambsd_dbg(pslotinfo, "%s mrq is NULL\n", __func__);
+		return;
+	}
+	if (!pslotinfo->mrq->cmd) {
+		ambsd_dbg(pslotinfo, "%s cmd is NULL\n", __func__);
+		return;
+	}
+	cmd = pslotinfo->mrq->cmd;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
@@ -532,7 +560,7 @@ static inline void ambarella_sd_cmd_done(
 		} else {
 			cmd->error = -EIO;
 		}
-#ifdef CONFIG_SD_AMBARELLA_DEBUG
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
 		ambsd_err(pslotinfo, "%s: CMD[%d] get eis[0x%x]\n", __func__,
 			pslotinfo->mrq->cmd->opcode, eis);
 #endif
@@ -670,7 +698,7 @@ static irqreturn_t ambarella_sd_gpio_cd_irq(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
-static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
+static void ambarella_sd_set_clk(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
 	u16					clk_div = 0x00;
@@ -684,28 +712,23 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (pinfo->pcontroller->clk_limit > pinfo->pcontroller->max_clk)
-		pinfo->pcontroller->clk_limit = pinfo->pcontroller->max_clk;
-
-	if (clk == 0) {
+	if (ios->clock == 0) {
 		amba_writew(pinfo->regbase + SD_CLK_OFFSET, 0);
+		pinfo->pcontroller->active_clock = 0;
 	} else {
-		desired_clk = clk;
-		if (desired_clk > pinfo->pcontroller->clk_limit)
-			desired_clk = pinfo->pcontroller->clk_limit;
+		desired_clk = ios->clock;
+		if (desired_clk > pinfo->clk_limit)
+			desired_clk = pinfo->clk_limit;
 
 		if (pinfo->pcontroller->support_pll_scaler) {
 			if (desired_clk < 10000000) {
 				/* Below 10Mhz, divide by sd controller */
-				pinfo->pcontroller->set_pll(
-					pinfo->pcontroller->clk_limit);
+				pinfo->pcontroller->set_pll(pinfo->clk_limit);
 			} else {
 				pinfo->pcontroller->set_pll(desired_clk);
 				actual_clk = pinfo->pcontroller->get_pll();
 				bneed_div = 0;
 			}
-		} else {
-			pinfo->pcontroller->set_pll(48000000);
 		}
 
 		if (bneed_div) {
@@ -734,7 +757,7 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 		ambsd_dbg(pslotinfo, "desired_clk = %d.\n", desired_clk);
 		ambsd_dbg(pslotinfo, "actual_clk = %d.\n", actual_clk);
 		ambsd_dbg(pslotinfo, "clk_div = %d.\n", clk_div);
-		pinfo->pcontroller->active_clk = actual_clk;
+		pinfo->pcontroller->active_clock = actual_clk;
 
 		clk_div <<= 8;
 		clk_div |= SD_CLK_ICLK_EN;
@@ -755,41 +778,47 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clk)
 	}
 }
 
-static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
+static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info	*pinfo;
-	u8					pwr = SD_PWR_OFF;
+	u8					pwr;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+	pwr = (SD_PWR_OFF | SD_PWR_3_3V);
 
-	if (pwr_mode == MMC_POWER_OFF) {
+	if (ios->power_mode == MMC_POWER_OFF) {
+		ambarella_sd_reset_all(pslotinfo->mmc);
 		amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
 		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_reset, 1);
 		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_power, 0);
-	} else if (pwr_mode == MMC_POWER_UP) {
+		if (pslotinfo->plat_info->set_vdd) {
+			pslotinfo->plat_info->set_vdd(0);
+		}
+	} else if (ios->power_mode == MMC_POWER_UP) {
+		if (pslotinfo->plat_info->set_vdd) {
+			pslotinfo->plat_info->set_vdd(3300);
+		}
 		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_power, 1);
 		ambarella_set_gpio_output(&pslotinfo->plat_info->ext_reset, 0);
 	}
 
-	if ((pwr_mode == MMC_POWER_ON) || (pwr_mode == MMC_POWER_UP)) {
-		pwr = SD_PWR_ON;
-		switch (1 << vdd) {
+	if ((ios->power_mode == MMC_POWER_ON) ||
+		(ios->power_mode == MMC_POWER_UP)) {
+		switch (1 << ios->vdd) {
 		case MMC_VDD_165_195:
-			pwr |= SD_PWR_1_8V;
-			break;
-		case MMC_VDD_29_30:
-		case MMC_VDD_30_31:
-			pwr |= SD_PWR_3_0V;
+			pwr = (SD_PWR_ON | SD_PWR_1_8V);
+			if (pslotinfo->plat_info->set_vdd) {
+				pslotinfo->plat_info->set_vdd(1800);
+			}
 			break;
 		case MMC_VDD_32_33:
 		case MMC_VDD_33_34:
-			pwr |= SD_PWR_3_3V;
+			pwr = (SD_PWR_ON | SD_PWR_3_3V);
 			break;
 		default:
-			pwr = SD_PWR_OFF;
 			ambsd_err(pslotinfo, "%s Wrong voltage[%d]!\n",
-				__func__, vdd);
+				__func__, ios->vdd);
 			break;
 		}
 		if (amba_readb(pinfo->regbase + SD_PWR_OFFSET) != pwr) {
@@ -801,8 +830,7 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, u32 pwr_mode, u32 vdd)
 	ambsd_dbg(pslotinfo, "pwr = 0x%x.\n", pwr);
 }
 
-static void ambarella_sd_set_bus(struct mmc_host *mmc,
-	u32 bus_width, u32 timing)
+static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct ambarella_sd_mmc_info		*pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info	*pinfo;
@@ -811,26 +839,27 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc,
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	hostr = amba_readb(pinfo->regbase + SD_HOST_OFFSET);
-	if (bus_width == MMC_BUS_WIDTH_8) {
+	if (ios->bus_width == MMC_BUS_WIDTH_8) {
 		hostr |= SD_HOST_8BIT;
 		hostr &= ~(SD_HOST_4BIT);
-	} else if (bus_width == MMC_BUS_WIDTH_4) {
+	} else if (ios->bus_width == MMC_BUS_WIDTH_4) {
 		hostr &= ~(SD_HOST_8BIT);
 		hostr |= SD_HOST_4BIT;
-	} else if (bus_width == MMC_BUS_WIDTH_1) {
+	} else if (ios->bus_width == MMC_BUS_WIDTH_1) {
+		hostr &= ~(SD_HOST_8BIT);
+		hostr &= ~(SD_HOST_4BIT);
+	} else {
+		ambsd_err(pslotinfo, "Unknown bus_width[%d], assume 1bit.\n",
+			ios->bus_width);
 		hostr &= ~(SD_HOST_8BIT);
 		hostr &= ~(SD_HOST_4BIT);
 	}
-#if 0
-	if ((timing == MMC_TIMING_SD_HS) || (timing == MMC_TIMING_MMC_HS)) {
-		ambsd_warn(pslotinfo, "Switch to high speed mode!\n");
-		hostr |= SD_HOST_HIGH_SPEED;
-	} else {
-		hostr &= ~SD_HOST_HIGH_SPEED;
-	}
-#else
 	hostr &= ~SD_HOST_HIGH_SPEED;
-#endif
+	if ((ios->timing == MMC_TIMING_MMC_HS) &&
+		(ios->ddr == MMC_1_8V_DDR_MODE)) {
+		ambsd_info(pslotinfo, "Switch to MMC 1.8V DDR mode.\n");
+		hostr |= SD_HOST_HIGH_SPEED;
+	}
 	amba_writeb(pinfo->regbase + SD_HOST_OFFSET, hostr);
 
 	ambsd_dbg(pslotinfo, "hostr = 0x%x.\n", hostr);
@@ -846,23 +875,25 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	if ((pinfo->controller_ios.power_mode != ios->power_mode) ||
 		(pinfo->controller_ios.vdd != ios->vdd) ||
 		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
-		ambarella_sd_set_pwr(mmc, ios->power_mode, ios->vdd);
+		ambarella_sd_set_pwr(mmc, ios);
 		pinfo->controller_ios.power_mode = ios->power_mode;
 		pinfo->controller_ios.vdd = ios->vdd;
 	}
 
 	if ((pinfo->controller_ios.clock != ios->clock) ||
 		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
-		ambarella_sd_set_clk(mmc, ios->clock);
+		ambarella_sd_set_clk(mmc, ios);
 		pinfo->controller_ios.clock = ios->clock;
 	}
 
 	if ((pinfo->controller_ios.bus_width != ios->bus_width) ||
 		(pinfo->controller_ios.timing != ios->timing) ||
+		(pinfo->controller_ios.ddr != ios->ddr) ||
 		(pslotinfo->state == AMBA_SD_STATE_RESET)) {
-		ambarella_sd_set_bus(mmc, ios->bus_width, ios->timing);
+		ambarella_sd_set_bus(mmc, ios);
 		pinfo->controller_ios.bus_width = ios->bus_width;
 		pinfo->controller_ios.timing = ios->timing;
+		pinfo->controller_ios.ddr = ios->ddr;
 	}
 
 	if (pslotinfo->state == AMBA_SD_STATE_RESET) {
@@ -896,6 +927,37 @@ static int ambarella_sd_check_cd(struct mmc_host *mmc)
 	}
 
 	return valid_cd;
+}
+
+static inline void ambarella_sd_prepare_tmo(
+	struct ambarella_sd_mmc_info *pslotinfo,
+	struct mmc_data *pmmcdata)
+{
+	struct ambarella_sd_controller_info	*pinfo;
+	u32					actual_cycle_ns;
+	u32					desired_tmo;
+	u32					actual_tmo;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	if (pinfo->pcontroller->active_clock) {
+		actual_cycle_ns = (1000000000 /
+			pinfo->pcontroller->active_clock);
+		desired_tmo = pmmcdata->timeout_ns / actual_cycle_ns;
+		desired_tmo += pmmcdata->timeout_clks;
+		for (pslotinfo->tmo = 0; pslotinfo->tmo < 0xe;
+			pslotinfo->tmo++) {
+			actual_tmo = (0x1 << (13 + pslotinfo->tmo));
+			if (actual_tmo >= desired_tmo)
+				break;
+		}
+	} else {
+		pslotinfo->tmo = CONFIG_SD_AMBARELLA_TIMEOUT_VAL;
+	}
+	ambsd_dbg(pslotinfo,
+		"timeout_ns = %d, timeout_clks = %d @ %dHz, get tmo = %d.\n",
+		pmmcdata->timeout_ns, pmmcdata->timeout_clks,
+		pinfo->pcontroller->active_clock, pslotinfo->tmo);
 }
 
 static inline void ambarella_sd_pre_cmd(
@@ -940,7 +1002,7 @@ static inline void ambarella_sd_pre_cmd(
 
 	if (pslotinfo->mrq->data) {
 		pslotinfo->state = AMBA_SD_STATE_DATA;
-		pslotinfo->tmo = CONFIG_SD_AMBARELLA_TIMEOUT_VAL;
+		ambarella_sd_prepare_tmo(pslotinfo, pslotinfo->mrq->data);
 		pslotinfo->blk_sz = pslotinfo->mrq->data->blksz;
 		pslotinfo->dma_size = pslotinfo->mrq->data->blksz *
 			pslotinfo->mrq->data->blocks;
@@ -959,10 +1021,14 @@ static inline void ambarella_sd_pre_cmd(
 		}
 		if (pslotinfo->mrq->data->flags & MMC_DATA_WRITE) {
 			pslotinfo->xfr_reg &= ~SD_XFR_CTH_SEL;
+			pslotinfo->sta_reg = (SD_STA_WRITE_XFR_ACTIVE |
+				SD_STA_DAT_ACTIVE);
 			pslotinfo->pre_dma = &ambarella_sd_pre_sg_to_dma;
 			pslotinfo->post_dma = &ambarella_sd_post_sg_to_dma;
 		} else {
 			pslotinfo->xfr_reg |= SD_XFR_CTH_SEL;
+			pslotinfo->sta_reg = (SD_STA_READ_XFR_ACTIVE |
+				SD_STA_DAT_ACTIVE);
 			pslotinfo->pre_dma = &ambarella_sd_pre_dma_to_sg;
 			pslotinfo->post_dma = &ambarella_sd_post_dma_to_sg;
 		}
@@ -1042,23 +1108,47 @@ static inline void ambarella_sd_send_cmd(
 	}
 
 ambarella_sd_send_cmd_exit:
-	if ((pslotinfo->state == AMBA_SD_STATE_CMD) ||
-		(pslotinfo->state == AMBA_SD_STATE_DATA)) {
+	if (pslotinfo->state == AMBA_SD_STATE_CMD) {
 		timeout = wait_event_timeout(pslotinfo->wait,
-			((pslotinfo->state != AMBA_SD_STATE_CMD) &&
-			(pslotinfo->state != AMBA_SD_STATE_DATA)),
+			(pslotinfo->state != AMBA_SD_STATE_CMD),
 			pinfo->pcontroller->wait_tmo);
 		if (timeout <= 0) {
-			ambsd_err(pslotinfo, "%s cmd%d timeout "
-				"%d@%d, retries=%d\n",
-				__func__, pslotinfo->mrq->cmd->opcode,
+			ambsd_err(pslotinfo,
+				"cmd%d %d@%d, sta=0x%04x\n",
+				pslotinfo->mrq->cmd->opcode,
 				pslotinfo->state,
 				pinfo->pcontroller->wait_tmo,
-				pslotinfo->mrq->cmd->retries);
+				amba_readl(pinfo->regbase + SD_STA_OFFSET));
 			pslotinfo->mrq->cmd->error = -ETIMEDOUT;
 		}
-		ambsd_dbg(pslotinfo, "%ld jiffies left.\n", timeout);
+	} else if (pslotinfo->state == AMBA_SD_STATE_DATA) {
+		do {
+			timeout = wait_event_timeout(pslotinfo->wait,
+				(pslotinfo->state != AMBA_SD_STATE_DATA),
+				pinfo->pcontroller->wait_tmo);
+			tmpreg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+		} while ((timeout <= 0) && (tmpreg & pslotinfo->sta_reg));
+		if (timeout <= 0) {
+			ambsd_err(pslotinfo,
+				"data%d %d@%d, sta=0x%04x:0x%04x\n",
+				pslotinfo->mrq->cmd->opcode,
+				pslotinfo->state,
+				pinfo->pcontroller->wait_tmo,
+				tmpreg, pslotinfo->sta_reg);
+			pslotinfo->mrq->data->error = -ETIMEDOUT;
+		}
 	}
+#ifdef CONFIG_SD_AMBARELLA_DEBUG
+	if (pslotinfo->state != AMBA_SD_STATE_IDLE) {
+		ambsd_dbg(pslotinfo, "need_reset %d %d!\n",
+			pslotinfo->state, pslotinfo->mrq->cmd->opcode);
+		for (counter = 0; counter < 0x100; counter += 4) {
+			ambsd_dbg(pslotinfo, "0x%04x: 0x%08x\n",
+			counter, amba_readl(pinfo->regbase + counter));
+		}
+		ambarella_sd_show_info(pslotinfo);
+	}
+#endif
 	ambarella_sd_release_bus(pslotinfo->mmc);
 }
 
@@ -1069,16 +1159,6 @@ static inline void ambarella_sd_post_cmd(
 		if (pslotinfo->mrq->data) {
 			pslotinfo->post_dma(pslotinfo);
 		}
-	} else {
-		ambsd_dbg(pslotinfo, "need_reset %d %d!\n",
-			pslotinfo->state, pslotinfo->mrq->cmd->opcode);
-#ifdef CONFIG_SD_AMBARELLA_DEBUG
-		ambarella_sd_show_info(pslotinfo);
-#endif
-		ambarella_sd_request_bus(pslotinfo->mmc);
-		ambarella_sd_reset_all(pslotinfo->mmc);
-		ambarella_sd_check_ios(pslotinfo->mmc, &pslotinfo->mmc->ios);
-		ambarella_sd_release_bus(pslotinfo->mmc);
 	}
 }
 
@@ -1177,8 +1257,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 
 	case AMBA_EVENT_POST_CPUFREQ:
 		pr_debug("%s[%d]: Post Change\n", __func__, pslotinfo->slot_id);
-		ambarella_sd_set_clk(pslotinfo->mmc,
-			pinfo->controller_ios.clock);
+		ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
 		up(&pslotinfo->system_event_sem);
 		break;
 
@@ -1247,23 +1326,28 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	}
 
 	pinfo->dma_fix = pinfo->pcontroller->dma_fix;
-	if (pinfo->pcontroller->wait_tmo <
-		CONFIG_SD_AMBARELLA_WAIT_TIMEOUT) {
-		dev_dbg(&pdev->dev, "Change wait timeout from %d to %d.\n",
+	if (pinfo->pcontroller->wait_tmo < CONFIG_SD_AMBARELLA_WAIT_TIMEOUT) {
+		dev_notice(&pdev->dev, "Change wait timeout from %d to %d.\n",
 			pinfo->pcontroller->wait_tmo,
 			CONFIG_SD_AMBARELLA_WAIT_TIMEOUT);
 		pinfo->pcontroller->wait_tmo =
 			CONFIG_SD_AMBARELLA_WAIT_TIMEOUT;
 	}
 
-	pinfo->pcontroller->set_pll(pinfo->pcontroller->max_clk);
-	clock_min = pinfo->pcontroller->get_pll() >> 8;
-	if (pinfo->pcontroller->clk_limit < clock_min) {
-		dev_dbg(&pdev->dev,
-			"Change clock limit from %dKHz to %dKHz.\n",
-			pinfo->pcontroller->clk_limit,
-			clock_min);
-		pinfo->pcontroller->clk_limit = clock_min;
+	pinfo->pcontroller->set_pll(pinfo->pcontroller->max_clock ?
+		pinfo->pcontroller->max_clock :
+		CONFIG_SD_AMBARELLA_DEFAULT_CLOCK);
+	pinfo->clk_limit = pinfo->pcontroller->get_pll();
+	clock_min = pinfo->clk_limit >> 8;
+	if (pinfo->clk_limit < clock_min) {
+		pinfo->clk_limit = clock_min;
+		dev_err(&pdev->dev, "Wrong clk_limit %dHz vs %dHz!\n",
+			pinfo->clk_limit, clock_min);
+		errorCode = -EPERM;
+		goto sd_errorCode_free_pinfo;
+	}
+	if (pinfo->pcontroller->max_clock != pinfo->clk_limit) {
+		pinfo->pcontroller->max_clock = pinfo->clk_limit;
 	}
 
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
@@ -1308,7 +1392,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 				SD_CAP_TOCLK_FREQ(hc_cap));
 
 		mmc->f_min = clock_min;
-		mmc->f_max = pinfo->pcontroller->max_clk;
+		mmc->f_max = pinfo->clk_limit;
 		dev_dbg(&pdev->dev,
 			"SD Clock: base[%dMHz], min[%dHz], max[%dHz].\n",
 			SD_CAP_BASE_FREQ(hc_cap),
@@ -1325,13 +1409,11 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			"SD max_blk_size: %d.\n",
 			mmc->max_blk_size);
 
-		mmc->caps = pslotinfo->plat_info->caps;
-		if (hc_cap & SD_CAP_HIGH_SPEED) {
+		mmc->caps = pslotinfo->plat_info->default_caps;
+		if (pinfo->clk_limit > 25000000) {
 			mmc->caps |= MMC_CAP_SD_HIGHSPEED;
 			mmc->caps |= MMC_CAP_MMC_HIGHSPEED;
 		}
-		dev_dbg(&pdev->dev, "SD caps: 0x%lx.\n", mmc->caps);
-
 		if (hc_cap & SD_CAP_DMA) {
 			dev_dbg(&pdev->dev, "HW support DMA!\n");
 		} else {
@@ -1348,10 +1430,12 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 
 		mmc->ocr_avail = 0;
 		if ((hc_cap & SD_CAP_VOL_1_8V) &&
-			(pslotinfo->plat_info->set_vdd != NULL))
+			(pslotinfo->plat_info->set_vdd != NULL)) {
 			mmc->ocr_avail |= MMC_VDD_165_195;
-		if (hc_cap & SD_CAP_VOL_3_0V)
-			mmc->ocr_avail |= MMC_VDD_29_30 | MMC_VDD_30_31;
+			if (hc_cap & SD_CAP_HIGH_SPEED) {
+				mmc->caps |= MMC_CAP_1_8V_DDR;
+			}
+		}
 		if (hc_cap & SD_CAP_VOL_3_3V)
 			mmc->ocr_avail |= MMC_VDD_32_33 | MMC_VDD_33_34;
 		if (mmc->ocr_avail == 0) {
@@ -1412,6 +1496,9 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			pslotinfo->buf_vaddress = NULL;
 		}
+		pslotinfo->plat_info->active_caps = mmc->caps;
+		dev_dbg(&pdev->dev, "SD caps: 0x%lx.\n", mmc->caps);
+		dev_dbg(&pdev->dev, "SD ocr: 0x%x.\n", mmc->ocr_avail);
 		dev_notice(&pdev->dev, "Slot%d req_size=%d, "
 			"segs=%d, seg_size=%d\n",
 			pslotinfo->slot_id, mmc->max_req_size,
@@ -1453,8 +1540,7 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		ambarella_sd_release_bus(mmc);
 	}
 
-	errorCode = request_irq(pinfo->irq,
-		ambarella_sd_irq,
+	errorCode = request_irq(pinfo->irq, ambarella_sd_irq,
 		IRQF_SHARED | IRQF_TRIGGER_HIGH,
 		dev_name(&pdev->dev), pinfo);
 	if (errorCode) {
@@ -1508,15 +1594,10 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (pinfo->dma_fix) {
-		dev_notice(&pdev->dev, "Ambarella SD/MMC[%d] probed %d slots,"
-			" [0x%08x:0x%08x]\n", pdev->id,
-			pinfo->pcontroller->num_slots, hc_cap, pinfo->dma_fix);
-	} else {
-		dev_notice(&pdev->dev, "Ambarella SD/MMC[%d] probed %d slots,"
-			" [0x%08x]\n", pdev->id,
-			pinfo->pcontroller->num_slots, hc_cap);
-	}
+	dev_notice(&pdev->dev,
+		"Ambarella SD/MMC[%d] has %d slots @ %dHz, [0x%08x:0x%08x]\n",
+		pdev->id, pinfo->pcontroller->num_slots,
+		pinfo->clk_limit, hc_cap, pinfo->dma_fix);
 	goto sd_errorCode_na;
 
 sd_errorCode_remove_host:
@@ -1669,7 +1750,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	u32					i;
 
 	pinfo = platform_get_drvdata(pdev);
-	pinfo->pcontroller->set_pll(pinfo->pcontroller->max_clk);
+	pinfo->pcontroller->set_pll(pinfo->clk_limit);
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
 		ambarella_sd_reset_all(pslotinfo->mmc);

@@ -35,7 +35,8 @@ struct ambarella_sd_slot {
 
 	u32					use_bb;
 	u32					max_blk_sz;
-	u32					caps;
+	u32					default_caps;
+	u32					active_caps;
 
 	struct ambarella_gpio_io_info		ext_power;
 	struct ambarella_gpio_io_info		ext_reset;
@@ -45,13 +46,11 @@ struct ambarella_sd_slot {
 	int					fixed_wp;
 	struct ambarella_gpio_io_info		gpio_wp;
 
-	u32					dump_rw_access;
-
 	int					(*check_owner)(void);
 	void					(*request)(void);
 	void					(*release)(void);
 	void					(*set_int)(u32 mask, u32 on);
-	int					(*set_vdd)(u32 vdd);
+	void					(*set_vdd)(u32 vdd);
 };
 
 struct ambarella_sd_controller {
@@ -60,9 +59,8 @@ struct ambarella_sd_controller {
 	void					(*set_pll)(u32);
 	u32					(*get_pll)(void);
 
-	u32					max_clk;
-	u32					clk_limit;
-	u32					active_clk;
+	u32					max_clock;
+	u32					active_clock;
 	u32					support_pll_scaler;
 
 	u32					wait_tmo;
@@ -70,8 +68,9 @@ struct ambarella_sd_controller {
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
 	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bb), perm); \
-	module_param_cb(sd##controller_id##_slot##slot_id##_dump_rw_access, &param_ops_uint, &(arg.slot[slot_id].dump_rw_access), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_uint, &(arg.slot[slot_id].max_blk_sz), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_default_caps, &param_ops_uint, &(arg.slot[slot_id].default_caps), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_active_caps, &param_ops_uint, &(arg.slot[slot_id].active_caps), 0644); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_cd_delay, &param_ops_uint, &(arg.slot[slot_id].cd_delay), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_cd, cdpos, &(arg.slot[slot_id].fixed_cd), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_wp, &param_ops_int, &(arg.slot[slot_id].fixed_wp), perm); \

@@ -43,6 +43,8 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
+#include <linux/mmc/host.h>
+
 #include <plat/ambinput.h>
 #include <plat/ambcache.h>
 
@@ -179,6 +181,11 @@ static struct i2c_board_info ginkgo_ipcam_gpio_i2c_board_info = {
 	.irq			= GPIO_INT_VEC(11),
 };
 
+static void ginkgo_ipcam_set_vdd_hw_mode(u32 vdd)
+{
+	pr_debug("%s = %dmV\n", __func__, vdd);
+}
+
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
@@ -227,12 +234,17 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
 			ambarella_board_generic.uport_control.active_delay = 1;
 
+			ambarella_platform_sd_controller0.max_clock = 48000000;
+			ambarella_platform_sd_controller0.slot[0].default_caps |= MMC_CAP_8_BIT_DATA;
 			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = EXT_GPIO(0);
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
+			ambarella_platform_sd_controller0.slot[0].set_vdd = ginkgo_ipcam_set_vdd_hw_mode;
+			ambarella_platform_sd_controller1.max_clock = 48000000;
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = EXT_GPIO(1);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+			ambarella_platform_sd_controller1.slot[0].set_vdd = ginkgo_ipcam_set_vdd_hw_mode;
 
 			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;

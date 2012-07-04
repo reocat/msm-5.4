@@ -118,9 +118,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 
 		.use_bb		= 1,
 		.max_blk_sz	= SD_BLK_SZ_128KB,
-		.caps		= MMC_CAP_4_BIT_DATA |
+		.default_caps	= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE,
+				MMC_CAP_ERASE |
+				MMC_CAP_BUS_WIDTH_TEST,
+		.active_caps	= 0,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -157,7 +159,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.dump_rw_access	= 0,
 
 		.check_owner	= fio_amb_sd0_is_enable,
 		.request	= fio_amb_sd0_slot1_request,
@@ -171,9 +172,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 
 		.use_bb		= 1,
 		.max_blk_sz	= SD_BLK_SZ_128KB,
-		.caps		= MMC_CAP_4_BIT_DATA |
+		.default_caps	= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE,
+				MMC_CAP_ERASE |
+				MMC_CAP_BUS_WIDTH_TEST,
+		.active_caps	= 0,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -200,7 +203,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.dump_rw_access	= 0,
 
 		.check_owner	= fio_amb_sdio0_is_enable,
 		.request	= fio_amb_sd0_slot2_request,
@@ -212,9 +214,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
 
-	.max_clk		= 50000000,
-	.clk_limit		= 24000000,
-	.active_clk		= 0,
+	.max_clock		= 24000000,
+	.active_clock		= 0,
 #if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
 #else
@@ -223,12 +224,10 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.wait_tmo		= (1 * HZ),
 	.dma_fix		= 0,
 };
-module_param_cb(sd0_max_clk, &param_ops_int,
-	&(ambarella_platform_sd_controller0.max_clk), 0444);
-module_param_cb(sd0_clk_limit, &param_ops_int,
-	&(ambarella_platform_sd_controller0.clk_limit), 0644);
-module_param_cb(sd0_active_clk, &param_ops_int,
-	&(ambarella_platform_sd_controller0.active_clk), 0444);
+module_param_cb(sd0_max_clock, &param_ops_int,
+	&(ambarella_platform_sd_controller0.max_clock), 0644);
+module_param_cb(sd0_active_clock, &param_ops_int,
+	&(ambarella_platform_sd_controller0.active_clock), 0444);
 module_param_cb(sd0_pll_scaler, &param_ops_int,
 	&(ambarella_platform_sd_controller0.support_pll_scaler), 0444);
 module_param_cb(sd0_wait_timeout, &param_ops_int,
@@ -321,9 +320,11 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 
 		.use_bb		= 1,
 		.max_blk_sz	= SD_BLK_SZ_128KB,
-		.caps		= MMC_CAP_4_BIT_DATA |
+		.default_caps	= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_SDIO_IRQ |
-				MMC_CAP_ERASE,
+				MMC_CAP_ERASE |
+				MMC_CAP_BUS_WIDTH_TEST,
+		.active_caps	= 0,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -350,7 +351,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-		.dump_rw_access	= 0,
 
 		.check_owner	= fio_amb_sd2_check_owner,
 		.request	= fio_amb_sd2_request,
@@ -366,9 +366,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.get_pll		= get_sd_freq_hz,
 #endif
 
-	.max_clk		= 50000000,
-	.clk_limit		= 24000000,
-	.active_clk		= 0,
+	.max_clock		= 24000000,
+	.active_clock		= 0,
 #if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
 #else
@@ -381,12 +380,10 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.dma_fix		= 0,
 #endif
 };
-module_param_cb(sd1_max_clk, &param_ops_int,
-	&(ambarella_platform_sd_controller1.max_clk), 0444);
-module_param_cb(sd1_clk_limit, &param_ops_int,
-	&(ambarella_platform_sd_controller1.clk_limit), 0644);
-module_param_cb(sd1_active_clk, &param_ops_int,
-	&(ambarella_platform_sd_controller1.active_clk), 0444);
+module_param_cb(sd1_max_clock, &param_ops_int,
+	&(ambarella_platform_sd_controller1.max_clock), 0644);
+module_param_cb(sd1_active_clock, &param_ops_int,
+	&(ambarella_platform_sd_controller1.active_clock), 0444);
 module_param_cb(sd1_pll_scaler, &param_ops_int,
 	&(ambarella_platform_sd_controller1.support_pll_scaler), 0444);
 module_param_cb(sd1_wait_timeout, &param_ops_int,
