@@ -70,7 +70,7 @@ struct ambarella_sd_controller {
 	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bb), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_uint, &(arg.slot[slot_id].max_blk_sz), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_default_caps, &param_ops_uint, &(arg.slot[slot_id].default_caps), perm); \
-	module_param_cb(sd##controller_id##_slot##slot_id##_active_caps, &param_ops_uint, &(arg.slot[slot_id].active_caps), 0644); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_active_caps, &param_ops_uint, &(arg.slot[slot_id].active_caps), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_cd_delay, &param_ops_uint, &(arg.slot[slot_id].cd_delay), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_cd, cdpos, &(arg.slot[slot_id].fixed_cd), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_wp, &param_ops_int, &(arg.slot[slot_id].fixed_wp), perm); \
