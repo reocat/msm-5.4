@@ -94,9 +94,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_pwm_platform_device4,
 	&ambarella_power_supply,
 	&ambarella_dma,
-#if (DMA_SUPPORT_DMA_FIOS == 1)
-	&ambarella_dma_fios,
-#endif
 };
 
 /* ==========================================================================*/

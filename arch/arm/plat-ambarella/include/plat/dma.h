@@ -44,15 +44,8 @@
 /* ==========================================================================*/
 
 #ifndef __ASSEMBLER__
-#if (DMA_SUPPORT_DMA_FIOS == 0)
-#define FIOS_DMA_DEV_ID	0
-#endif
 
 extern struct platform_device		ambarella_dma;
-#if (DMA_SUPPORT_DMA_FIOS == 1)
-#define FIOS_DMA_DEV_ID	1
-extern struct platform_device		ambarella_dma_fios;
-#endif
 #endif /* __ASSEMBLER__ */
 
 /* ==========================================================================*/

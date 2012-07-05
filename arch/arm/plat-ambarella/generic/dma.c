@@ -48,29 +48,3 @@ struct platform_device ambarella_dma = {
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	}
 };
-
-#if (DMA_SUPPORT_DMA_FIOS == 1)
-struct resource ambarella_dma_fios_resources[] = {
-	[0] = {
-		.start = DMA_FIOS_BASE,
-		.end = DMA_FIOS_BASE + 0x0FFF,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = DMA_FIOS_IRQ,
-		.end = DMA_FIOS_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device ambarella_dma_fios = {
-	.name = "ambarella-dma",
-	.id = 1,
-	.resource = ambarella_dma_fios_resources,
-	.num_resources = ARRAY_SIZE(ambarella_dma_fios_resources),
-	.dev = {
-		.dma_mask = &ambarella_dmamask,
-		.coherent_dma_mask = DMA_BIT_MASK(32),
-	}
-};
-#endif

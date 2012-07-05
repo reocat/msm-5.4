@@ -155,13 +155,7 @@ static int ambarella_dma_init_channel(struct ambarella_dma_engine *amb_dma_dev, 
 {
 	struct ambarella_dma_chan *amb_dma_c = &amb_dma_dev->amb_dma_chan[dma_chan];
 
-#if (DMA_SUPPORT_DMA_FIOS == 1)
-	if (FIO_DMA_CHAN == dma_chan) {
-		amba_writel(DMA_FIOS_CHAN_STA_REG(dma_chan), 0);
-		amba_writel(DMA_FIOS_CHAN_CTR_REG(dma_chan), DMA_CTRL_RESET_VALUE);
-	} else
-#endif
-	{
+	if (dma_chan != FIO_DMA_CHAN) {
 		amba_writel(DMA_CHAN_STA_REG(dma_chan), 0);
 		amba_writel(DMA_CHAN_CTR_REG(dma_chan), DMA_CTRL_RESET_VALUE);
 	}
@@ -201,6 +195,9 @@ static irqreturn_t ambarella_dma_irq_handler(int irq, void *dev_data)
 	u32 *dma_status;
 
 	ireg = amba_readl(amb_dma->regbase + DMA_INT_OFFSET);
+
+	if (ireg & (1 << FIO_DMA_CHAN))
+		return IRQ_NONE;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		if (ireg & (1 << i)) {
@@ -749,7 +746,7 @@ static int __devinit ambarella_dma_probe(struct platform_device *pdev)
 	spin_lock_init(&amb_dma->lock);
 	tasklet_init(&amb_dma->tasklet, ambarella_dma_task, (unsigned long)amb_dma);
 
-	ret = request_irq(irq, ambarella_dma_irq_handler, IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), amb_dma);
+	ret = request_irq(irq, ambarella_dma_irq_handler, IRQF_SHARED | IRQF_TRIGGER_HIGH , dev_name(&pdev->dev), amb_dma);
 	if (ret)
 		goto ambarella_dma_probe_exit2;
 
@@ -758,11 +755,6 @@ static int __devinit ambarella_dma_probe(struct platform_device *pdev)
 			ambarella_dma_init_channel(amb_dma, i);
 		}
 	}
-#if (DMA_SUPPORT_DMA_FIOS == 1)
-	else {
-		ambarella_dma_init_channel(amb_dma, FIO_DMA_CHAN);
-	}
-#endif
 
 	ret = dma_async_device_register(&amb_dma->dma_common_device);
 	if (ret) {

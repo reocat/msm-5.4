@@ -5,6 +5,7 @@
  *	2008/04/11 - [Cao Rongrong & Chien-Yang Chen] created file
  *	2009/01/04 - [Anthony Ginger] Port to 2.6.28
  *	2012/05/23 - [Ken He] Add the dma engine driver method support
+ *  2012/07/03 - [Ken He] use the individual FDMA for nand
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -40,7 +41,8 @@
 #include <mach/board.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
-#include <linux/dmaengine.h>
+
+#include "ambarella-fdma.h"
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 
@@ -97,7 +99,6 @@ struct ambarella_nand_info {
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
 
-	struct dma_chan *dma_chan;
 };
 
 static struct nand_ecclayout amb_oobinfo_512 = {
@@ -187,18 +188,6 @@ static char part_name[PART_MAX][PART_NAME_LEN];
 	NAND_TIMING_CALC_SPDUP(val, new_clk, origin_clk) :	\
 	NAND_TIMING_CALC_SPDDOWN(val, new_clk, origin_clk))
 
-static bool ambnand_dma_filter(struct dma_chan *chan, void *fparam)
-{
-	struct ambarella_nand_info		*nand_info;
-
-	nand_info = (struct ambarella_nand_info *)fparam;
-	if ((chan->dev->dev_id == FIOS_DMA_DEV_ID) && (chan->chan_id == FIO_DMA_CHAN)) {
-		chan->private = &nand_info->dma_status;
-		return true;
-	}
-
-	return false;
-}
 
 
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
@@ -450,12 +439,13 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 	return IRQ_NONE;
 }
 
-static void nand_dma_irq_handler(void *data)
+static void nand_dma_isr_handler(void *dev_id, u32 dma_status)
 {
 	struct ambarella_nand_info		*nand_info;
 
-	nand_info = (struct ambarella_nand_info *)data;
+	nand_info = (struct ambarella_nand_info *)dev_id;
 
+	nand_info->dma_status = dma_status;
 	atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
 	wake_up(&nand_info->wq);
 }
@@ -463,32 +453,24 @@ static void nand_dma_irq_handler(void *data)
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 {
 	u32					val;
+	ambarella_fdma_desc_t			dma_req;
 
-	struct dma_slave_config slave_config;
-	struct dma_async_tx_descriptor	*desc;
-	struct dma_chan *dma_chan = nand_info->dma_chan;
-	struct scatterlist sg;
-
-	sg_init_table(&sg, 1);
-	memset(&slave_config, 0, sizeof(struct dma_slave_config));
-	slave_config.direction = DMA_FROM_DEVICE;
-	slave_config.dst_addr = nand_info->buf_phys;
-	slave_config.src_addr = nand_info->dmabase;
-	slave_config.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-
-	sg_dma_len(&sg) = nand_info->len;
+	dma_req.src = nand_info->dmabase;
+	dma_req.dst = nand_info->buf_phys;
+	dma_req.next_desc = NULL;
+	dma_req.rpt = (u32) NULL;
+	dma_req.xfr_count = nand_info->len;
 	if (nand_info->len > 16) {
-		slave_config.src_maxburst = 512;
+		dma_req.ctrl_info = DMA_CHANX_CTR_WM |
+			DMA_CHANX_CTR_NI |
+			DMA_NODC_MN_BURST_SIZE;
 	} else {
-		slave_config.src_maxburst = 16;
+		dma_req.ctrl_info = DMA_CHANX_CTR_WM |
+			DMA_CHANX_CTR_NI |
+			DMA_NODC_SP_BURST_SIZE;
 	}
-	desc = dma_chan->device->device_prep_slave_sg(dma_chan, &sg, 1,
-			 DMA_FROM_DEVICE, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-	desc->callback = nand_dma_irq_handler;
-	desc->callback_param = nand_info;
 
-	dmaengine_slave_config(nand_info->dma_chan, &slave_config);
-	dmaengine_submit(desc);
+	ambarella_fdma_xfr(&dma_req, FIO_DMA_CHAN);
 
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
@@ -509,31 +491,24 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 {
 	u32					val;
+	ambarella_fdma_desc_t			dma_req;
 
-	struct dma_slave_config slave_config;
-	struct dma_async_tx_descriptor	*desc;
-	struct dma_chan *dma_chan = nand_info->dma_chan;
-	struct scatterlist sg;
-
-	sg_init_table(&sg, 1);
-	memset(&slave_config, 0, sizeof(struct dma_slave_config));
-	sg_dma_len(&sg) = nand_info->len;
-	slave_config.direction = DMA_TO_DEVICE;
-	slave_config.src_addr = nand_info->buf_phys;
-	slave_config.dst_addr = nand_info->dmabase;
-	slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-	
+	dma_req.src = nand_info->buf_phys;
+	dma_req.dst = nand_info->dmabase;
+	dma_req.next_desc = NULL;
+	dma_req.rpt = (u32) NULL;
+	dma_req.xfr_count = nand_info->len;
 	if (nand_info->len > 16) {
-		slave_config.src_maxburst = 512;
+		dma_req.ctrl_info = DMA_CHANX_CTR_RM |
+			DMA_CHANX_CTR_NI |
+			DMA_NODC_MN_BURST_SIZE;
 	} else {
-		slave_config.src_maxburst = 16;
+		dma_req.ctrl_info = DMA_CHANX_CTR_RM |
+			DMA_CHANX_CTR_NI |
+			DMA_NODC_SP_BURST_SIZE;
 	}
-	desc = dma_chan->device->device_prep_slave_sg(dma_chan, &sg, 1,
-			 DMA_TO_DEVICE, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-	desc->callback = nand_dma_irq_handler;
-	desc->callback_param = nand_info;
-	dmaengine_slave_config(nand_info->dma_chan, &slave_config);
-	dmaengine_submit(desc);
+
+	ambarella_fdma_xfr(&dma_req, FIO_DMA_CHAN);
 
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
@@ -1140,12 +1115,13 @@ static void amb_nand_hwctl(struct mtd_info *mtd, int mode)
 static int amb_nand_caculate_ecc(struct mtd_info *mtd,
 	const u_char *dat, u_char *ecc_code)
 {
-	ecc_code[0] = 0xff;
-	ecc_code[1] = 0xff;
-	ecc_code[2] = 0xff;
-	ecc_code[3] = 0xff;
-	ecc_code[4] = 0xff;
-	ecc_code[5] = 0xff;
+	int i;
+	struct ambarella_nand_info		*nand_info;
+
+	nand_info = (struct ambarella_nand_info *)mtd->priv;
+
+	for (i = 0; i < nand_info->chip.ecc.bytes;i++) 
+		ecc_code[i] = 0xff;
 
 	return 0;
 }
@@ -1349,7 +1325,6 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	struct mtd_partition			*cmd_partitions = NULL;
 #endif
 #endif
-	dma_cap_mask_t mask;
 
 	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
 	if ((plat_nand == NULL) || (plat_nand->timing == NULL) ||
@@ -1457,13 +1432,24 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_free_cmd_irq;
 	}
 
-	/* Try to grab a DMA channel */
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-	nand_info->dma_chan = dma_request_channel(mask, ambnand_dma_filter, nand_info);
-	if (!nand_info->dma_chan) {
+	errorCode = ambarella_fdma_init();
+	if (errorCode) {
+		dev_err(&pdev->dev, "fdma init request irq failed!\n");
+		goto ambarella_nand_probe_free_cmd_irq;
+	}
+
+	errorCode = ambarella_fdma_request_irq(nand_dma_isr_handler, nand_info);
+	if (errorCode) {
+		dev_err(&pdev->dev, "Could not request DMA channel %d\n",
+			FIO_DMA_CHAN);
 		goto ambarella_nand_probe_free_dma_irq;
-		return -EINVAL;
+	}
+
+	errorCode = ambarella_fdma_enable_irq(nand_dma_isr_handler);
+	if (errorCode) {
+		dev_err(&pdev->dev, "Could not enable DMA channel %d\n",
+			FIO_DMA_CHAN);
+		goto ambarella_nand_probe_free_dma_chan;
 	}
 
 	ambarella_nand_init_chip(nand_info);
@@ -1668,10 +1654,10 @@ ambarella_nand_probe_add_partitions:
 	goto ambarella_nand_probe_exit;
 
 ambarella_nand_probe_mtd_error:
-	if(nand_info->dma_chan) {
-		dma_release_channel(nand_info->dma_chan);
-		nand_info->dma_chan = NULL;
-	}
+	ambarella_fdma_disable_irq(nand_dma_isr_handler);
+
+ambarella_nand_probe_free_dma_chan:
+	ambarella_fdma_free_irq(nand_dma_isr_handler);
 
 ambarella_nand_probe_free_dma_irq:
 	free_irq(nand_info->dma_irq, nand_info);
@@ -1708,11 +1694,8 @@ static int __devexit ambarella_nand_remove(struct platform_device *pdev)
 
 		platform_set_drvdata(pdev, NULL);
 
-	if (nand_info->dma_chan) {
-		dma_release_channel(nand_info->dma_chan);
-		nand_info->dma_chan = NULL;
-	}
-
+		errorCode = ambarella_fdma_disable_irq(nand_dma_isr_handler);
+		ambarella_fdma_free_irq(nand_dma_isr_handler);
 		free_irq(nand_info->dma_irq, nand_info);
 		free_irq(nand_info->cmd_irq, nand_info);
 
