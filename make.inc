@@ -23,9 +23,8 @@ LOCAL_PATH:=$(call my-dir)
 
 linux: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR)
-	@echo -n "Build Linux "
 	@if [ -f $(LINUX_OUT_DIR)/.config ]; then \
-		echo "with previous configuration ..."; \
+		echo "Build Linux with previous configuration ..."; \
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) defconfig_public_linux; \
 	fi
@@ -78,9 +77,8 @@ LINUX_OUT_DIR_2		:= $(KERNEL_OUT_DIR)/linux_$(strip \
 
 linux_2: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR_2)
-	@echo -n "Build Linux_2 "
 	@if [ -f $(LINUX_OUT_DIR_2)/.config ]; then \
-		echo "with previous configuration ..."; \
+		echo "Build Linux_2 with previous configuration ..."; \
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) defconfig_public_linux_2; \
 	fi
@@ -103,12 +101,12 @@ menuconfig_public_linux_2: $(DOT_CONFIG)
 .PHONY: defconfig_public_linux_2
 
 defconfig_public_linux_2: $(DOT_CONFIG)
-	@echo "Build Linux with $(KERNEL_DEFCONFIG) ..."
+	@echo "Build Linux_2 with $(KERNEL_2NDCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR_2)
-	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
-		cp -dpRf $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) $(LINUX_OUT_DIR_2)/.config; \
+	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_2NDCONFIG) ]; then \
+		cp -dpRf $(WORK_DIR)/config/kernel/$(KERNEL_2NDCONFIG) $(LINUX_OUT_DIR_2)/.config; \
 	else \
-		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) $(KERNEL_DEFCONFIG); \
+		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) $(KERNEL_2NDCONFIG); \
 	fi
 
 endif
