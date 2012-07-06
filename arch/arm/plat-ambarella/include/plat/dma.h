@@ -39,8 +39,8 @@
 #include <mach/hardware.h>
 
 /* ==========================================================================*/
-#define MAX_DMA_CHANNEL_IRQ_HANDLERS	4
 #define AMBARELLA_DMA_MAX_DESC_NUM	128
+
 /* ==========================================================================*/
 
 #ifndef __ASSEMBLER__

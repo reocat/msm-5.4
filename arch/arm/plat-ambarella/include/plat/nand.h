@@ -45,6 +45,13 @@
 #define SPARE_ONLY_BURST	4
 #define SPARE_ECC_BURST		5
 
+#define FDMA_CTR_OFFSET		(0x300 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_SRC_OFFSET		(0x304 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_DST_OFFSET		(0x308 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_STA_OFFSET		(0x30c + ((FIO_DMA_CHAN) << 4))
+#define FDMA_DA_OFFSET		(0x380 + ((FIO_DMA_CHAN) << 2))
+#define FDMA_INT_OFFSET		(0x3f0)
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 /* struct ambarella_nand_set

@@ -5,7 +5,7 @@
  *	2008/04/11 - [Cao Rongrong & Chien-Yang Chen] created file
  *	2009/01/04 - [Anthony Ginger] Port to 2.6.28
  *	2012/05/23 - [Ken He] Add the dma engine driver method support
- *  2012/07/03 - [Ken He] use the individual FDMA for nand
+ *	2012/07/03 - [Ken He] use the individual FDMA for nand
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -42,8 +42,6 @@
 #include <plat/nand.h>
 #include <plat/ptb.h>
 
-#include "ambarella-fdma.h"
-
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 
 /* nand_check_wp will be checked before write, so wait MTD fix */
@@ -63,10 +61,14 @@ struct ambarella_nand_info {
 
 	struct ambarella_platform_nand	*plat_nand;
 	int				suspend;
+	/* dma irq for transferring data between Nand and FIFO */
 	int				dma_irq;
 	int				cmd_irq;
+	/* fdma irq for transferring data between FIFO and Dram */
+	int				fdma_irq;
 	int				wp_gpio;
 	unsigned char __iomem		*regbase;
+	unsigned char __iomem		*fdmaregbase;
 	u32				dmabase;
 
 	dma_addr_t			dmaaddr;
@@ -392,6 +394,7 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 
 static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 {
+	irqreturn_t				rval = IRQ_NONE;
 	struct ambarella_nand_info		*nand_info;
 	u32					val;
 
@@ -408,14 +411,16 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 		atomic_clear_mask(0x1, (unsigned long *)&nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
-		return IRQ_HANDLED;
+		rval = IRQ_HANDLED;
 	}
 
-	return IRQ_NONE;
+	return rval;
 }
 
+/* this dma is used to transfer data between Nand and FIO FIFO. */
 static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 {
+	irqreturn_t				rval = IRQ_NONE;
 	struct ambarella_nand_info		*nand_info;
 	u32					val;
 
@@ -433,99 +438,103 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 		atomic_clear_mask(0x2, (unsigned long *)&nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
-		return IRQ_HANDLED;
+		rval = IRQ_HANDLED;
 	}
 
-	return IRQ_NONE;
+	return rval;
 }
 
-static void nand_dma_isr_handler(void *dev_id, u32 dma_status)
+/* this dma is used to transfer data between FIO FIFO and Memory. */
+static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 {
+	irqreturn_t				rval = IRQ_NONE;
 	struct ambarella_nand_info		*nand_info;
+	u32					int_src;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
-	nand_info->dma_status = dma_status;
-	atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
-	wake_up(&nand_info->wq);
+	int_src = amba_readl(nand_info->fdmaregbase + FDMA_INT_OFFSET);
+
+	if (int_src & (1 << FIO_DMA_CHAN)) {
+		nand_info->dma_status =
+			amba_readl(nand_info->fdmaregbase + FDMA_STA_OFFSET);
+		amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+
+		atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
+		wake_up(&nand_info->wq);
+
+		rval = IRQ_HANDLED;
+	}
+
+	return rval;
 }
 
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 {
-	u32					val;
-	ambarella_fdma_desc_t			dma_req;
+	u32					ctrl_val;
 
-	dma_req.src = nand_info->dmabase;
-	dma_req.dst = nand_info->buf_phys;
-	dma_req.next_desc = NULL;
-	dma_req.rpt = (u32) NULL;
-	dma_req.xfr_count = nand_info->len;
-	if (nand_info->len > 16) {
-		dma_req.ctrl_info = DMA_CHANX_CTR_WM |
-			DMA_CHANX_CTR_NI |
-			DMA_NODC_MN_BURST_SIZE;
-	} else {
-		dma_req.ctrl_info = DMA_CHANX_CTR_WM |
-			DMA_CHANX_CTR_NI |
-			DMA_NODC_SP_BURST_SIZE;
-	}
+	/* init and enable fdma to transfer data betwee FIFO and Memory */
+	if (nand_info->len > 16)
+		ctrl_val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_NODC_MN_BURST_SIZE;
+	else
+		ctrl_val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_NODC_SP_BURST_SIZE;
 
-	ambarella_fdma_xfr(&dma_req, FIO_DMA_CHAN);
+	ctrl_val |= nand_info->len | DMA_CHANX_CTR_EN;
+	ctrl_val &= ~DMA_CHANX_CTR_D;
 
+	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+
+	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->dmabase);
+	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->buf_phys);
+	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET, ctrl_val);
+
+	/* init and enable fio-dma to transfer data between Nand and FIFO */
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
 	if (nand_info->len > 16) {
-		val = FIO_DMACTR_EN |
+		ctrl_val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_MN_BURST_SIZE |
 			nand_info->len;
 	} else {
-		val = FIO_DMACTR_EN |
+		ctrl_val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_SP_BURST_SIZE |
 			nand_info->len;
 	}
-	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, val);
+	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, ctrl_val);
 }
 
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 {
-	u32					val;
-	ambarella_fdma_desc_t			dma_req;
+	u32					ctrl_val;
 
-	dma_req.src = nand_info->buf_phys;
-	dma_req.dst = nand_info->dmabase;
-	dma_req.next_desc = NULL;
-	dma_req.rpt = (u32) NULL;
-	dma_req.xfr_count = nand_info->len;
-	if (nand_info->len > 16) {
-		dma_req.ctrl_info = DMA_CHANX_CTR_RM |
-			DMA_CHANX_CTR_NI |
-			DMA_NODC_MN_BURST_SIZE;
-	} else {
-		dma_req.ctrl_info = DMA_CHANX_CTR_RM |
-			DMA_CHANX_CTR_NI |
-			DMA_NODC_SP_BURST_SIZE;
-	}
+	/* init and enable fdma to transfer data betwee FIFO and Memory */
+	if (nand_info->len > 16)
+		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_NODC_MN_BURST_SIZE;
+	else
+		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_NODC_SP_BURST_SIZE;
 
-	ambarella_fdma_xfr(&dma_req, FIO_DMA_CHAN);
+	ctrl_val |= nand_info->len | DMA_CHANX_CTR_EN;
+	ctrl_val &= ~DMA_CHANX_CTR_D;
 
+	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+
+	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->buf_phys);
+	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->dmabase);
+	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET, ctrl_val);
+
+	/* init and enable fio-dma to transfer data between Nand and FIFO */
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
 	if (nand_info->len > 16) {
-		val = FIO_DMACTR_EN |
-			FIO_DMACTR_FL |
-			FIO_MN_BURST_SIZE |
-			FIO_DMACTR_RM |
-			nand_info->len;
+		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_MN_BURST_SIZE |
+			FIO_DMACTR_RM | nand_info->len;
 	} else {
-		val = FIO_DMACTR_EN |
-			FIO_DMACTR_FL |
-			FIO_SP_BURST_SIZE |
-			FIO_DMACTR_RM |
-			nand_info->len;
+		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_SP_BURST_SIZE |
+			FIO_DMACTR_RM | nand_info->len;
 	}
-	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, val);
+	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, ctrl_val);
 }
 
 static int nand_amb_request(struct ambarella_nand_info *nand_info)
@@ -1120,7 +1129,7 @@ static int amb_nand_caculate_ecc(struct mtd_info *mtd,
 
 	nand_info = (struct ambarella_nand_info *)mtd->priv;
 
-	for (i = 0; i < nand_info->chip.ecc.bytes;i++) 
+	for (i = 0; i < nand_info->chip.ecc.bytes;i++)
 		ecc_code[i] = 0xff;
 
 	return 0;
@@ -1305,16 +1314,140 @@ static int __devinit ambarella_nand_init_chipecc(
 	return 0;
 }
 
-static int __devinit ambarella_nand_probe(struct platform_device *pdev)
+static int __devinit ambarella_nand_get_resource(
+	struct ambarella_nand_info *nand_info, struct platform_device *pdev)
 {
 	int					errorCode = 0;
-	struct ambarella_nand_info		*nand_info;
-	struct mtd_info				*mtd;
-	struct ambarella_platform_nand		*plat_nand;
-	struct resource				*wp_res;
-	struct resource				*reg_res;
-	struct resource				*dma_res;
+	struct resource				*res;
+
+	res = platform_get_resource_byname(pdev,
+		IORESOURCE_MEM, "fio_reg");
+	if (res == NULL) {
+		dev_err(&pdev->dev, "Get reg_res failed!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+	nand_info->regbase = (unsigned char __iomem *)res->start;
+
+	res = platform_get_resource_byname(pdev,
+		IORESOURCE_MEM, "fio_fifo");
+	if (res == NULL) {
+		dev_err(&pdev->dev, "Get dma_res failed!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+	nand_info->dmabase = ambarella_virt_to_phys(res->start);
+
+	res = platform_get_resource_byname(pdev,
+		IORESOURCE_MEM, "fdma_reg");
+	if (res == NULL) {
+		dev_err(&pdev->dev, "Get dmareg_res failed!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+	nand_info->fdmaregbase = (unsigned char __iomem *)res->start;
+
+	nand_info->cmd_irq = platform_get_irq_byname(pdev, "fio_cmd_irq");
+	if (nand_info->cmd_irq <= 0) {
+		dev_err(&pdev->dev, "Get cmd_irq failed!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+
+	nand_info->dma_irq = platform_get_irq_byname(pdev, "fio_dma_irq");
+	if (nand_info->dma_irq <= 0) {
+		dev_err(&pdev->dev, "Get dma_irq failed!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+
+	nand_info->fdma_irq = platform_get_irq_byname(pdev, "fdma_irq");
+	if (nand_info->fdma_irq <= 0) {
+		dev_err(&pdev->dev, "Get fdma_irq failed!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+
+	res = platform_get_resource_byname(pdev,
+		IORESOURCE_IO, "wp_gpio");
+	if (res == NULL) {
+		nand_info->wp_gpio = -1;
+	} else {
+		nand_info->wp_gpio = res->start;
+
+		errorCode = gpio_request_one(nand_info->wp_gpio,
+				GPIOF_OUT_INIT_HIGH, pdev->name);
+		if (errorCode < 0) {
+			dev_err(&pdev->dev, "Could not get WP GPIO %d\n",
+				nand_info->wp_gpio);
+			goto nand_get_resource_err_exit;
+		}
+	}
+
+	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			"fio_cmd_irq", nand_info);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Could not register fio_cmd_irq %d!\n",
+			nand_info->cmd_irq);
+		goto nand_get_resource_free_wp_gpio;
+	}
+
+	errorCode = request_irq(nand_info->dma_irq, nand_fiodma_isr_handler,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			"fio_dma_irq", nand_info);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Could not register fio_dma_irq %d!\n",
+			nand_info->dma_irq);
+		goto nand_get_resource_free_fiocmd_irq;
+	}
+
+	/* init fdma to avoid dummy irq */
+	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
+		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+
+	errorCode = request_irq(nand_info->fdma_irq, ambarella_fdma_isr_handler,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			"fdma_irq", nand_info);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Could not register fdma_irq %d!\n",
+			nand_info->dma_irq);
+		goto nand_get_resource_free_fiodma_irq;
+	}
+
+	return 0;
+
+nand_get_resource_free_fiodma_irq:
+	free_irq(nand_info->dma_irq, nand_info);
+
+nand_get_resource_free_fiocmd_irq:
+	free_irq(nand_info->cmd_irq, nand_info);
+
+nand_get_resource_free_wp_gpio:
+	if (nand_info->wp_gpio >= 0)
+		gpio_free(nand_info->wp_gpio);
+
+nand_get_resource_err_exit:
+	return errorCode;
+}
+
+static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
+{
+	free_irq(nand_info->fdma_irq, nand_info);
+	free_irq(nand_info->dma_irq, nand_info);
+	free_irq(nand_info->cmd_irq, nand_info);
+
+	if (nand_info->wp_gpio >= 0)
+		gpio_free(nand_info->wp_gpio);
+}
+
+static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
+{
+	int					errorCode = 0;
+
 #ifdef CONFIG_MTD_PARTITIONS
+	struct mtd_info				*mtd;
 	struct mtd_partition			*amboot_partitions;
 	int					amboot_nr_partitions = 0;
 	flpart_meta_t				*meta_table;
@@ -1324,159 +1457,12 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 #ifdef CONFIG_MTD_CMDLINE_PARTS
 	struct mtd_partition			*cmd_partitions = NULL;
 #endif
-#endif
-
-	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
-	if ((plat_nand == NULL) || (plat_nand->timing == NULL) ||
-		(plat_nand->sets == NULL) || (plat_nand->parse_error == NULL) ||
-		(plat_nand->request == NULL) || (plat_nand->release == NULL)) {
-		dev_err(&pdev->dev, "Can't get platform_data!\n");
-		errorCode = - EPERM;
-		goto ambarella_nand_probe_exit;
-	}
-
-	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
-	if (nand_info == NULL) {
-		dev_err(&pdev->dev, "kzalloc for nand nand_info failed!\n");
-		errorCode = - ENOMEM;
-		goto ambarella_nand_probe_exit;
-	}
-
-	reg_res = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "registers");
-	if (reg_res == NULL) {
-		dev_err(&pdev->dev, "Get reg_res failed!\n");
-		errorCode = -ENXIO;
-		goto ambarella_nand_probe_free_info;
-	}
-	nand_info->regbase = (unsigned char __iomem *)reg_res->start;
-
-	dma_res = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "dma");
-	if (dma_res == NULL) {
-		dev_err(&pdev->dev, "Get dma_res failed!\n");
-		errorCode = -ENXIO;
-		goto ambarella_nand_probe_free_info;
-	}
-	nand_info->dmabase = ambarella_virt_to_phys(dma_res->start);
-
-	wp_res = platform_get_resource_byname(pdev,
-		IORESOURCE_IO, "wp_gpio");
-	if (wp_res == NULL) {
-		nand_info->wp_gpio = -1;
-	} else {
-		nand_info->wp_gpio = wp_res->start;
-
-		errorCode = gpio_request(nand_info->wp_gpio, pdev->name);
-		if (errorCode < 0) {
-			dev_err(&pdev->dev, "Could not get WP GPIO %d\n",
-				nand_info->wp_gpio);
-			goto ambarella_nand_probe_free_info;
-		}
-
-		errorCode = gpio_direction_output(nand_info->wp_gpio,
-			GPIO_HIGH);
-		if (errorCode < 0) {
-			dev_err(&pdev->dev, "Could not Set WP GPIO %d\n",
-				nand_info->wp_gpio);
-			goto ambarella_nand_probe_free_wp_gpio;
-		}
-	}
-
-	nand_info->cmd_irq = platform_get_irq_byname(pdev, "ambarella-fio-cmd");
-	if (nand_info->cmd_irq <= 0) {
-		dev_err(&pdev->dev, "Get cmd_irq failed!\n");
-		errorCode = -ENXIO;
-		goto ambarella_nand_probe_free_wp_gpio;
-	}
-
-	nand_info->dma_irq = platform_get_irq_byname(pdev, "ambarella-fio-dma");
-	if (nand_info->dma_irq <= 0) {
-		dev_err(&pdev->dev, "Get dma_irq failed!\n");
-		errorCode = -ENXIO;
-		goto ambarella_nand_probe_free_wp_gpio;
-	}
-
-	nand_info->plat_nand = plat_nand;
-	nand_info->dev = &pdev->dev;
-	spin_lock_init(&nand_info->controller.lock);
-	init_waitqueue_head(&nand_info->controller.wq);
-	init_waitqueue_head(&nand_info->wq);
-	sema_init(&nand_info->system_event_sem, 1);
-	atomic_set(&nand_info->irq_flag, 0x7);
-
-	nand_info->dmabuf = dma_alloc_coherent(nand_info->dev,
-		AMBARELLA_NAND_DMA_BUFFER_SIZE,
-		&nand_info->dmaaddr, GFP_KERNEL);
-	if (nand_info->dmabuf == NULL) {
-		dev_err(&pdev->dev, "dma_alloc_coherent failed!\n");
-		errorCode = -ENOMEM;
-		goto ambarella_nand_probe_free_wp_gpio;
-	}
-
-	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
-			IRQF_SHARED | IRQF_TRIGGER_HIGH,
-			dev_name(&pdev->dev), nand_info);
-	if (errorCode) {
-		dev_err(&pdev->dev, "Could not register IRQ %d!\n",
-			nand_info->cmd_irq);
-		goto ambarella_nand_probe_free_dma;
-	}
-
-	errorCode = request_irq(nand_info->dma_irq, nand_fiodma_isr_handler,
-			IRQF_SHARED | IRQF_TRIGGER_HIGH,
-			dev_name(&pdev->dev), nand_info);
-	if (errorCode) {
-		dev_err(&pdev->dev, "Could not register IRQ %d!\n",
-			nand_info->dma_irq);
-		goto ambarella_nand_probe_free_cmd_irq;
-	}
-
-	errorCode = ambarella_fdma_init();
-	if (errorCode) {
-		dev_err(&pdev->dev, "fdma init request irq failed!\n");
-		goto ambarella_nand_probe_free_cmd_irq;
-	}
-
-	errorCode = ambarella_fdma_request_irq(nand_dma_isr_handler, nand_info);
-	if (errorCode) {
-		dev_err(&pdev->dev, "Could not request DMA channel %d\n",
-			FIO_DMA_CHAN);
-		goto ambarella_nand_probe_free_dma_irq;
-	}
-
-	errorCode = ambarella_fdma_enable_irq(nand_dma_isr_handler);
-	if (errorCode) {
-		dev_err(&pdev->dev, "Could not enable DMA channel %d\n",
-			FIO_DMA_CHAN);
-		goto ambarella_nand_probe_free_dma_chan;
-	}
-
-	ambarella_nand_init_chip(nand_info);
 
 	mtd = &nand_info->mtd;
-	errorCode = nand_scan_ident(mtd, plat_nand->sets->nr_chips, NULL);
-	if (errorCode)
-		goto ambarella_nand_probe_mtd_error;
 
-	errorCode = ambarella_nand_init_chipecc(nand_info);
-	if (errorCode)
-		goto ambarella_nand_probe_mtd_error;
-
-	errorCode = ambarella_nand_config_flash(nand_info);
-	if (errorCode)
-		goto ambarella_nand_probe_mtd_error;
-
-	errorCode = nand_scan_tail(mtd);
-	if (errorCode)
-		goto ambarella_nand_probe_mtd_error;
-
-#ifdef CONFIG_MTD_PARTITIONS
-	/* struct  flpart_table_t contains the meta data which contains the
-	  * partition info.
-	  * meta_offpage indicate the offset from each block
-	  * meta_numpages indicate the size of the meta data
-	  */
+	/* struct flpart_table_t contains the meta data containing partition info.
+	 * meta_offpage indicate the offset from each block
+	 * meta_numpages indicate the size of the meta data */
 	meta_offpage = sizeof(flpart_table_t) / mtd->writesize;
 	meta_numpages = sizeof(flpart_meta_t) / mtd->writesize;
 	if (sizeof(flpart_meta_t) % mtd->writesize)
@@ -1486,11 +1472,14 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		dev_err(nand_info->dev,
 			"%s: The size of meta data is too large\n", __func__);
 		errorCode = -ENOMEM;
-		goto ambarella_nand_probe_mtd_error;
+		goto ambarella_nand_scan_error1;
 	}
 
 	/* find the meta data, start from the second block */
 	meta_table = kzalloc(sizeof(flpart_meta_t), GFP_KERNEL);
+	if (meta_table == NULL)
+		goto ambarella_nand_scan_error1;
+
 	found = 0;
 	for (from = mtd->erasesize; from < mtd->size; from += mtd->erasesize) {
 		if (mtd->block_isbad(mtd, from)) {
@@ -1504,7 +1493,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 		if (errorCode < 0) {
 			dev_info(nand_info->dev,
 				"%s: Can't meta data!\n", __func__);
-			goto ambarella_nand_probe_mtd_error;
+			goto ambarella_nand_scan_error2;
 		}
 
 		if (meta_table->magic == PTB_META_MAGIC) {
@@ -1519,13 +1508,16 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	if (found == 0) {
 		dev_err(nand_info->dev, "%s: meta appears damaged...\n", __func__);
 		errorCode = -EINVAL;
-		goto ambarella_nand_probe_mtd_error;
+		goto ambarella_nand_scan_error2;
 	}
 
 	dev_info(nand_info->dev, "%s: Partition infomation found!\n", __func__);
-	amboot_partitions =
-		kzalloc((PART_MAX+CMDLINE_PART_MAX)*sizeof(struct mtd_partition),
+
+	amboot_partitions = kzalloc(
+		PART_MAX + CMDLINE_PART_MAX * sizeof(struct mtd_partition),
 		GFP_KERNEL);
+	if (amboot_partitions == NULL)
+		goto ambarella_nand_scan_error2;
 
 	/* if this partition isn't located in NAND, fake its nblk to 0, this
 	 * feature start from the second version of flpart_meta_t. */
@@ -1540,16 +1532,16 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	found = 0;
 	for (i = 0; i < PART_MAX; i++) {
 #ifdef CONFIG_MTD_NAND_AMBARELLA_ENABLE_FULL_PTB
-	/*
-	  * found swp partition, and with it as a benchmark to adjust each
-	  * partitions's offset
-	  * adjust rules:
-	  * 1. if before swp partition,
-	  *	if the partition's nblk (size) is 0, make its sblk and nblk
-	  *	equal to the previous one;
-	  * 2. if after swp partition,
-	  *	if the partition's nblk (size) is 0, skip the partition;
-	  */
+		/*
+		 * find swp partition, and then take it as a benchmark to adjust
+		 * each partitions's offset.
+		 * adjust rules:
+		 * 1. before swp partition:
+		 *	if the partition's nblk (size) is 0, make its sblk and
+		 *	nblk equal to the previous one;
+		 * 2. after swp partition:
+		 *	if the partition's nblk (size) is 0, skip the partition;
+		 */
 		if (!found && !strncmp(meta_table->part_info[i].name, "swp", 3)) {
 			found = 1;
 		}
@@ -1590,8 +1582,7 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 	}
 
 	/* if cmdline don't define the partition offset, we should modify the
-	  * offset to make it append to the existent partitions
-	  */
+	 * offset to make it append to the existent partitions. */
 	if (cmd_partitions->offset == 0) {
 		struct mtd_partition *p_cmdpart = cmd_partitions;
 		struct mtd_partition *p_ambpart = &amboot_partitions[0];
@@ -1630,16 +1621,94 @@ static int __devinit ambarella_nand_probe(struct platform_device *pdev)
 
 ambarella_nand_probe_add_partitions:
 #endif
+	errorCode = 0;
+
 	i = 0;
 	if (cmd_nr_partitions >= 0)
 		i = cmd_nr_partitions;
+
 	add_mtd_partitions(mtd, amboot_partitions, amboot_nr_partitions + i);
 
-	kfree(meta_table);
 	kfree(amboot_partitions);
+ambarella_nand_scan_error2:
+	kfree(meta_table);
+
 #else
 	add_mtd_device(&nand_info->mtd);
 #endif
+
+ambarella_nand_scan_error1:
+
+	return errorCode;
+}
+
+static int __devinit ambarella_nand_probe(struct platform_device *pdev)
+{
+	int					errorCode = 0;
+	struct ambarella_nand_info		*nand_info;
+	struct mtd_info				*mtd;
+	struct ambarella_platform_nand		*plat_nand;
+
+	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
+	if ((plat_nand == NULL) || (plat_nand->timing == NULL) ||
+		(plat_nand->sets == NULL) || (plat_nand->parse_error == NULL) ||
+		(plat_nand->request == NULL) || (plat_nand->release == NULL)) {
+		dev_err(&pdev->dev, "Can't get platform_data!\n");
+		errorCode = - EPERM;
+		goto ambarella_nand_probe_exit;
+	}
+
+	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
+	if (nand_info == NULL) {
+		dev_err(&pdev->dev, "kzalloc for nand nand_info failed!\n");
+		errorCode = - ENOMEM;
+		goto ambarella_nand_probe_exit;
+	}
+
+	nand_info->plat_nand = plat_nand;
+	nand_info->dev = &pdev->dev;
+	spin_lock_init(&nand_info->controller.lock);
+	init_waitqueue_head(&nand_info->controller.wq);
+	init_waitqueue_head(&nand_info->wq);
+	sema_init(&nand_info->system_event_sem, 1);
+	atomic_set(&nand_info->irq_flag, 0x7);
+
+	nand_info->dmabuf = dma_alloc_coherent(nand_info->dev,
+		AMBARELLA_NAND_DMA_BUFFER_SIZE,
+		&nand_info->dmaaddr, GFP_KERNEL);
+	if (nand_info->dmabuf == NULL) {
+		dev_err(&pdev->dev, "dma_alloc_coherent failed!\n");
+		errorCode = -ENOMEM;
+		goto ambarella_nand_probe_free_info;
+	}
+	BUG_ON(nand_info->dmaaddr & 0x7);
+
+	errorCode = ambarella_nand_get_resource(nand_info, pdev);
+	if (errorCode < 0)
+		goto ambarella_nand_probe_free_dma;
+
+	ambarella_nand_init_chip(nand_info);
+
+	mtd = &nand_info->mtd;
+	errorCode = nand_scan_ident(mtd, plat_nand->sets->nr_chips, NULL);
+	if (errorCode)
+		goto ambarella_nand_probe_mtd_error;
+
+	errorCode = ambarella_nand_init_chipecc(nand_info);
+	if (errorCode)
+		goto ambarella_nand_probe_mtd_error;
+
+	errorCode = ambarella_nand_config_flash(nand_info);
+	if (errorCode)
+		goto ambarella_nand_probe_mtd_error;
+
+	errorCode = nand_scan_tail(mtd);
+	if (errorCode)
+		goto ambarella_nand_probe_mtd_error;
+
+	errorCode = ambarella_nand_scan_partitions(nand_info);
+	if (errorCode)
+		goto ambarella_nand_probe_mtd_error;
 
 	platform_set_drvdata(pdev, nand_info);
 
@@ -1648,31 +1717,18 @@ ambarella_nand_probe_add_partitions:
 	memcpy(&nand_info->current_timing, plat_nand->timing,
 			sizeof(struct ambarella_nand_timing));
 
-	nand_info->system_event.notifier_call =	ambarella_nand_system_event;
+	nand_info->system_event.notifier_call = ambarella_nand_system_event;
 	ambarella_register_event_notifier(&nand_info->system_event);
 
 	goto ambarella_nand_probe_exit;
 
 ambarella_nand_probe_mtd_error:
-	ambarella_fdma_disable_irq(nand_dma_isr_handler);
-
-ambarella_nand_probe_free_dma_chan:
-	ambarella_fdma_free_irq(nand_dma_isr_handler);
-
-ambarella_nand_probe_free_dma_irq:
-	free_irq(nand_info->dma_irq, nand_info);
-
-ambarella_nand_probe_free_cmd_irq:
-	free_irq(nand_info->cmd_irq, nand_info);
+	ambarella_nand_put_resource(nand_info);
 
 ambarella_nand_probe_free_dma:
 	dma_free_coherent(nand_info->dev,
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,
 		nand_info->dmabuf, nand_info->dmaaddr);
-
-ambarella_nand_probe_free_wp_gpio:
-	if (nand_info->wp_gpio >= 0)
-		gpio_free(nand_info->wp_gpio);
 
 ambarella_nand_probe_free_info:
 	kfree(nand_info);
@@ -1694,21 +1750,14 @@ static int __devexit ambarella_nand_remove(struct platform_device *pdev)
 
 		platform_set_drvdata(pdev, NULL);
 
-		errorCode = ambarella_fdma_disable_irq(nand_dma_isr_handler);
-		ambarella_fdma_free_irq(nand_dma_isr_handler);
-		free_irq(nand_info->dma_irq, nand_info);
-		free_irq(nand_info->cmd_irq, nand_info);
+		nand_release(&nand_info->mtd);
+
+		ambarella_nand_put_resource(nand_info);
 
 		dma_free_coherent(nand_info->dev,
 			AMBARELLA_NAND_DMA_BUFFER_SIZE,
 			nand_info->dmabuf, nand_info->dmaaddr);
 
-		nand_release(&nand_info->mtd);
-
-		if (nand_info->wp_gpio >= 0) {
-			gpio_direction_output(nand_info->wp_gpio, GPIO_LOW);
-			gpio_free(nand_info->wp_gpio);
-		}
 		kfree(nand_info);
 	}
 

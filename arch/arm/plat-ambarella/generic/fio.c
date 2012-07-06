@@ -482,19 +482,19 @@ static struct resource ambarella_fio_resources[] = {
 	[0] = {
 		.start	= FIO_BASE,
 		.end	= FIO_BASE + 0x0FFF,
-		.name	= "registers",
+		.name	= "fio_reg",
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
 		.start	= FIOCMD_IRQ,
 		.end	= FIOCMD_IRQ,
-		.name	= "ambarella-fio-cmd",
+		.name	= "fio_cmd_irq",
 		.flags	= IORESOURCE_IRQ,
 	},
 	[2] = {
 		.start	= FIODMA_IRQ,
 		.end	= FIODMA_IRQ,
-		.name	= "ambarella-fio-dma",
+		.name	= "fio_dma_irq",
 		.flags	= IORESOURCE_IRQ,
 	},
 	[3] = {
@@ -506,9 +506,36 @@ static struct resource ambarella_fio_resources[] = {
 	[4] = {
 		.start	= FIO_FIFO_BASE,
 		.end	= FIO_FIFO_BASE + 0x0FFF,
-		.name	= "dma",
+		.name	= "fio_fifo",
 		.flags	= IORESOURCE_MEM,
 	},
+#if (DMA_SUPPORT_DMA_FIOS == 1)
+	[5] = {
+		.start	= DMA_FIOS_BASE,
+		.end	= DMA_FIOS_BASE + 0x0FFF,
+		.name	= "fdma_reg",
+		.flags	= IORESOURCE_MEM,
+	},
+	[6] = {
+		.start	= DMA_FIOS_IRQ,
+		.end	= DMA_FIOS_IRQ,
+		.name	= "fdma_irq",
+		.flags	= IORESOURCE_IRQ,
+	},
+#else
+	[5] = {
+		.start	= DMA_BASE,
+		.end	= DMA_BASE + 0x0FFF,
+		.name	= "fdma_reg",
+		.flags	= IORESOURCE_MEM,
+	},
+	[6] = {
+		.start	= DMA_IRQ,
+		.end	= DMA_IRQ,
+		.name	= "fdma_irq",
+		.flags	= IORESOURCE_IRQ,
+	},
+#endif
 };
 
 struct platform_device ambarella_nand = {

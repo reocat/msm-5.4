@@ -27,9 +27,6 @@
 #include <mach/hardware.h>
 #include <mach/dma.h>
 
-/* Marco for DMA REG related */
-#define DMA_CTRL_RESET_VALUE 	0x38000000
-
 #define DMA_CTRL_REG_OFFSET	0x300
 #define DMA_SRC_REG_OFFSET 	0x304
 #define DMA_DST_REG_OFFSET 	0x308
@@ -155,11 +152,6 @@ static int ambarella_dma_init_channel(struct ambarella_dma_engine *amb_dma_dev, 
 {
 	struct ambarella_dma_chan *amb_dma_c = &amb_dma_dev->amb_dma_chan[dma_chan];
 
-	if (dma_chan != FIO_DMA_CHAN) {
-		amba_writel(DMA_CHAN_STA_REG(dma_chan), 0);
-		amba_writel(DMA_CHAN_CTR_REG(dma_chan), DMA_CTRL_RESET_VALUE);
-	}
-
 	amb_dma_dev->dma_common_device.chancnt++;
 	amb_dma_c->channel = dma_chan;
 	amb_dma_c->amb_dma = amb_dma_dev;
@@ -203,17 +195,17 @@ static irqreturn_t ambarella_dma_irq_handler(int irq, void *dev_data)
 		if (ireg & (1 << i)) {
 			dma_reg = amb_dma->regbase + DMA_STATUS_REG_OFFSET + (i << 4);
 			amb_dma->amb_dma_chan[i].status = amba_readl(dma_reg);
+			amba_writel(dma_reg, 0);
 			if(amb_dma->amb_dma_chan[i].chan.private) {
 				dma_status = amb_dma->amb_dma_chan[i].chan.private;
 				*dma_status = amb_dma->amb_dma_chan[i].status;
 			}
 
-			if(((amb_dma->amb_dma_chan[i].status) & 0xE7800000) != 0) {
+			if((amb_dma->amb_dma_chan[i].status & 0xE7800000) != 0) {
 				amb_dma->amb_dma_chan[i].dma_status = DMA_ERROR;
 				pr_err("dma channel[%d] status is error0x[%08x]!\n",i,
 					amb_dma->amb_dma_chan[i].status);
 			}
-			amba_writel(dma_reg, 0);
 			ambarella_dma_irq_handler_chan(&amb_dma->amb_dma_chan[i]);
 		}
 	}
@@ -746,14 +738,21 @@ static int __devinit ambarella_dma_probe(struct platform_device *pdev)
 	spin_lock_init(&amb_dma->lock);
 	tasklet_init(&amb_dma->tasklet, ambarella_dma_task, (unsigned long)amb_dma);
 
+	/* although FIO DMA has its own driver, we also init FIO DMA
+	 * status here, orelse dummy FIO DMA interrupts may occurred without
+	 * its driver installed. */
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		amba_writel(DMA_CHAN_STA_REG(i), 0);
+		amba_writel(DMA_CHAN_CTR_REG(i),
+			DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+	}
+
 	ret = request_irq(irq, ambarella_dma_irq_handler, IRQF_SHARED | IRQF_TRIGGER_HIGH , dev_name(&pdev->dev), amb_dma);
 	if (ret)
 		goto ambarella_dma_probe_exit2;
 
-	if (pdev->id == 0) {
-		for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-			ambarella_dma_init_channel(amb_dma, i);
-		}
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		ambarella_dma_init_channel(amb_dma, i);
 	}
 
 	ret = dma_async_device_register(&amb_dma->dma_common_device);
