@@ -1509,6 +1509,7 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		return 0;
 
 	mmc_power_off(host);
+	host->ocr = 0;
 	return -EIO;
 }
 

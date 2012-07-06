@@ -123,6 +123,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 				MMC_CAP_ERASE |
 				MMC_CAP_BUS_WIDTH_TEST,
 		.active_caps	= 0,
+		.default_caps2	= 0,
+		.active_caps2	= 0,
+		.private_caps	= 0,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -177,6 +180,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 				MMC_CAP_ERASE |
 				MMC_CAP_BUS_WIDTH_TEST,
 		.active_caps	= 0,
+		.default_caps2	= 0,
+		.active_caps2	= 0,
+		.private_caps	= 0,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -216,22 +222,24 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 
 	.max_clock		= 24000000,
 	.active_clock		= 0,
+	.wait_tmo		= (1 * HZ),
+	.pwr_delay		= 1,
+
+	.dma_fix		= 0,
 #if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
 #else
 	.support_pll_scaler	= 0,
 #endif
-	.wait_tmo		= (1 * HZ),
-	.dma_fix		= 0,
 };
-module_param_cb(sd0_max_clock, &param_ops_int,
+module_param_cb(sd0_max_clock, &param_ops_uint,
 	&(ambarella_platform_sd_controller0.max_clock), 0644);
-module_param_cb(sd0_active_clock, &param_ops_int,
+module_param_cb(sd0_active_clock, &param_ops_uint,
 	&(ambarella_platform_sd_controller0.active_clock), 0444);
-module_param_cb(sd0_pll_scaler, &param_ops_int,
-	&(ambarella_platform_sd_controller0.support_pll_scaler), 0444);
-module_param_cb(sd0_wait_timeout, &param_ops_int,
+module_param_cb(sd0_wait_timeout, &param_ops_uint,
 	&(ambarella_platform_sd_controller0.wait_tmo), 0644);
+module_param_cb(sd0_pwr_delay, &param_ops_uint,
+	&(ambarella_platform_sd_controller0.pwr_delay), 0644);
 AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0,
 	&param_ops_ambarella_sd_cdpos, 0644);
 #if (SD_HAS_INTERNAL_MUXER == 1)
@@ -325,6 +333,9 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 				MMC_CAP_ERASE |
 				MMC_CAP_BUS_WIDTH_TEST,
 		.active_caps	= 0,
+		.default_caps2	= 0,
+		.active_caps2	= 0,
+		.private_caps	= 0,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -368,26 +379,28 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 
 	.max_clock		= 24000000,
 	.active_clock		= 0,
-#if (SD_SUPPORT_PLL_SCALER == 1)
-	.support_pll_scaler	= 1,
-#else
-	.support_pll_scaler	= 0,
-#endif
 	.wait_tmo		= (1 * HZ),
+	.pwr_delay		= 1,
+
 #if (CHIP_REV == S2)
 	.dma_fix		= 0xC0000000,
 #else
 	.dma_fix		= 0,
 #endif
+#if (SD_SUPPORT_PLL_SCALER == 1)
+	.support_pll_scaler	= 1,
+#else
+	.support_pll_scaler	= 0,
+#endif
 };
-module_param_cb(sd1_max_clock, &param_ops_int,
+module_param_cb(sd1_max_clock, &param_ops_uint,
 	&(ambarella_platform_sd_controller1.max_clock), 0644);
-module_param_cb(sd1_active_clock, &param_ops_int,
+module_param_cb(sd1_active_clock, &param_ops_uint,
 	&(ambarella_platform_sd_controller1.active_clock), 0444);
-module_param_cb(sd1_pll_scaler, &param_ops_int,
-	&(ambarella_platform_sd_controller1.support_pll_scaler), 0444);
-module_param_cb(sd1_wait_timeout, &param_ops_int,
+module_param_cb(sd1_wait_timeout, &param_ops_uint,
 	&(ambarella_platform_sd_controller1.wait_tmo), 0644);
+module_param_cb(sd1_pwr_delay, &param_ops_uint,
+	&(ambarella_platform_sd_controller1.pwr_delay), 0644);
 AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1,
 	&param_ops_ambarella_sd_cdpos, 0644);
 

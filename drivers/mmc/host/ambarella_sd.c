@@ -128,7 +128,7 @@ struct ambarella_sd_controller_info {
 	u32				clk_limit;
 
 	struct ambarella_sd_controller	*pcontroller;
-	struct ambarella_sd_mmc_info	*pslotinfo[SD_MAX_SLOT_NUM];
+	struct ambarella_sd_mmc_info	*pslotinfo[AMBA_SD_MAX_SLOT_NUM];
 	struct mmc_ios			controller_ios;
 };
 
@@ -817,13 +817,14 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 			pwr = (SD_PWR_ON | SD_PWR_3_3V);
 			break;
 		default:
+			pwr = (SD_PWR_ON | SD_PWR_3_3V);
 			ambsd_err(pslotinfo, "%s Wrong voltage[%d]!\n",
 				__func__, ios->vdd);
 			break;
 		}
 		if (amba_readb(pinfo->regbase + SD_PWR_OFFSET) != pwr) {
 			amba_writeb(pinfo->regbase + SD_PWR_OFFSET, pwr);
-			mdelay(pslotinfo->plat_info->ext_power.active_delay);
+			mdelay(pinfo->pcontroller->pwr_delay);
 		}
 	}
 
@@ -1138,17 +1139,25 @@ ambarella_sd_send_cmd_exit:
 			pslotinfo->mrq->data->error = -ETIMEDOUT;
 		}
 	}
-#ifdef CONFIG_SD_AMBARELLA_DEBUG
 	if (pslotinfo->state != AMBA_SD_STATE_IDLE) {
-		ambsd_dbg(pslotinfo, "need_reset %d %d!\n",
-			pslotinfo->state, pslotinfo->mrq->cmd->opcode);
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
+		ambsd_err(pslotinfo, "CMD%d retries[%d] state[%d].\n",
+			pslotinfo->mrq->cmd->opcode,
+			pslotinfo->mrq->cmd->retries,
+			pslotinfo->state);
 		for (counter = 0; counter < 0x100; counter += 4) {
 			ambsd_dbg(pslotinfo, "0x%04x: 0x%08x\n",
 			counter, amba_readl(pinfo->regbase + counter));
 		}
+#ifdef CONFIG_SD_AMBARELLA_DEBUG
 		ambarella_sd_show_info(pslotinfo);
-	}
 #endif
+#endif
+		if (amba_readl(pinfo->regbase + SD_STA_OFFSET) & (
+			SD_STA_CMD_INHIBIT_CMD | SD_STA_CMD_INHIBIT_DAT)) {
+			ambarella_sd_reset_all(pslotinfo->mmc);
+		}
+	}
 	ambarella_sd_release_bus(pslotinfo->mmc);
 }
 
@@ -1430,7 +1439,8 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 
 		mmc->ocr_avail = 0;
 		if ((hc_cap & SD_CAP_VOL_1_8V) &&
-			(pslotinfo->plat_info->set_vdd != NULL)) {
+			(pslotinfo->plat_info->private_caps &
+			AMBA_SD_PRIVATE_CAPS_VDD_18)) {
 			mmc->ocr_avail |= MMC_VDD_165_195;
 			if (hc_cap & SD_CAP_HIGH_SPEED) {
 				mmc->caps |= MMC_CAP_1_8V_DDR;

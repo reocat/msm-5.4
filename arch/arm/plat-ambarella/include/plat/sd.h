@@ -25,7 +25,9 @@
 #define __PLAT_AMBARELLA_SD_H
 
 /* ==========================================================================*/
-#define SD_MAX_SLOT_NUM				(8)
+#define AMBA_SD_MAX_SLOT_NUM			(2)
+
+#define AMBA_SD_PRIVATE_CAPS_VDD_18		(0x1 << 0)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -37,6 +39,9 @@ struct ambarella_sd_slot {
 	u32					max_blk_sz;
 	u32					default_caps;
 	u32					active_caps;
+	u32					default_caps2;
+	u32					active_caps2;
+	u32					private_caps;
 
 	struct ambarella_gpio_io_info		ext_power;
 	struct ambarella_gpio_io_info		ext_reset;
@@ -55,22 +60,26 @@ struct ambarella_sd_slot {
 
 struct ambarella_sd_controller {
 	u32					num_slots;
-	struct ambarella_sd_slot		slot[SD_MAX_SLOT_NUM];
+	struct ambarella_sd_slot		slot[AMBA_SD_MAX_SLOT_NUM];
 	void					(*set_pll)(u32);
 	u32					(*get_pll)(void);
 
 	u32					max_clock;
 	u32					active_clock;
-	u32					support_pll_scaler;
-
 	u32					wait_tmo;
+	u32					pwr_delay;	//ms
+
 	u32					dma_fix;
+	u32					support_pll_scaler;
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
 	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bb), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_uint, &(arg.slot[slot_id].max_blk_sz), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_default_caps, &param_ops_uint, &(arg.slot[slot_id].default_caps), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_active_caps, &param_ops_uint, &(arg.slot[slot_id].active_caps), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_default_caps2, &param_ops_uint, &(arg.slot[slot_id].default_caps2), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_active_caps2, &param_ops_uint, &(arg.slot[slot_id].active_caps2), perm); \
+	module_param_cb(sd##controller_id##_slot##slot_id##_private_caps, &param_ops_uint, &(arg.slot[slot_id].private_caps), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_cd_delay, &param_ops_uint, &(arg.slot[slot_id].cd_delay), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_cd, cdpos, &(arg.slot[slot_id].fixed_cd), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_fixed_wp, &param_ops_int, &(arg.slot[slot_id].fixed_wp), perm); \

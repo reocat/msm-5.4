@@ -178,9 +178,24 @@ static struct i2c_board_info ginkgo_ipcam_gpio_i2c_board_info = {
 	.irq			= GPIO_INT_VEC(11),
 };
 
-static void ginkgo_ipcam_set_vdd_hw_mode(u32 vdd)
+static void ginkgo_ipcam_sd_set_vdd(u32 vdd)
 {
 	pr_debug("%s = %dmV\n", __func__, vdd);
+	if (vdd == 1800) {
+		ambarella_gpio_set(GPIO(22), 0);
+	} else {
+		ambarella_gpio_set(GPIO(22), 1);
+	}
+}
+
+static void ginkgo_ipcam_sdio_set_vdd(u32 vdd)
+{
+	pr_debug("%s = %dmV\n", __func__, vdd);
+	if (vdd == 1800) {
+		ambarella_gpio_set(GPIO(23), 0);
+	} else {
+		ambarella_gpio_set(GPIO(23), 1);
+	}
 }
 
 /* ==========================================================================*/
@@ -233,15 +248,17 @@ static void __init ambarella_init_ginkgo(void)
 
 			ambarella_platform_sd_controller0.max_clock = 48000000;
 			ambarella_platform_sd_controller0.slot[0].default_caps |= MMC_CAP_8_BIT_DATA;
+			ambarella_platform_sd_controller0.slot[0].private_caps |= AMBA_SD_PRIVATE_CAPS_VDD_18;
 			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = EXT_GPIO(0);
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller0.slot[0].set_vdd = ginkgo_ipcam_set_vdd_hw_mode;
+			ambarella_platform_sd_controller0.slot[0].set_vdd = ginkgo_ipcam_sd_set_vdd;
 			ambarella_platform_sd_controller1.max_clock = 48000000;
+			ambarella_platform_sd_controller1.slot[0].private_caps |= AMBA_SD_PRIVATE_CAPS_VDD_18;
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = EXT_GPIO(1);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller1.slot[0].set_vdd = ginkgo_ipcam_set_vdd_hw_mode;
+			ambarella_platform_sd_controller1.slot[0].set_vdd = ginkgo_ipcam_sdio_set_vdd;
 
 			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
 			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
