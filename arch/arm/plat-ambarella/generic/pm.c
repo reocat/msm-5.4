@@ -165,12 +165,24 @@ static int ambarella_pm_enter_standby(void)
 		BUG();
 
 	if (pm_debug_enable_timer_irq) {
+#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+		pm_desc = irq_to_desc(TIMER6_IRQ);
+#else
 		pm_desc = irq_to_desc(TIMER1_IRQ);
+#endif
 		if (pm_desc)
 			pm_chip = get_irq_desc_chip(pm_desc);
 		if (pm_chip && pm_chip->irq_shutdown)
 			pm_chip->irq_shutdown(&pm_desc->irq_data);
-
+#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN6);
+		amba_writel(TIMER6_STATUS_REG, 0x800000);
+		amba_writel(TIMER6_RELOAD_REG, 0x800000);
+		amba_writel(TIMER6_MATCH1_REG, 0x0);
+		amba_writel(TIMER6_MATCH2_REG, 0x0);
+		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF6);
+		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL6);
+#else
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 		amba_writel(TIMER1_STATUS_REG, 0x800000);
 		amba_writel(TIMER1_RELOAD_REG, 0x800000);
@@ -178,18 +190,27 @@ static int ambarella_pm_enter_standby(void)
 		amba_writel(TIMER1_MATCH2_REG, 0x0);
 		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
+#endif
 	}
 
 	if (pm_debug_enable_timer_irq) {
 		if (pm_chip && pm_chip->irq_startup)
 			pm_chip->irq_startup(&pm_desc->irq_data);
+#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN6);
+#else
 		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+#endif
 	}
 
 	cpu_do_idle();
 
 	if (pm_debug_enable_timer_irq) {
+#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN6);
+#else
 		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
+#endif
 		if (pm_chip && pm_chip->irq_shutdown)
 			pm_chip->irq_shutdown(&pm_desc->irq_data);
 	}
