@@ -701,7 +701,7 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 		amb_desc->lli->dst = dst;
 		amb_desc->lli->attr = DMA_DESC_RM | DMA_DESC_WM | DMA_DESC_IE |
 				DMA_DESC_ST | DMA_DESC_BLK_32B | DMA_DESC_TS_4B;
-		xfer_count = min(len, (size_t)AMBARELLA_DMA_MAX_LENGTH);
+		xfer_count = min(left_len, (size_t)AMBARELLA_DMA_MAX_LENGTH);
 		amb_desc->lli->xfr_count = xfer_count;
 		/* rpt_addr points to amb_desc->lli->rpt */
 		amb_desc->lli->rpt_addr =
@@ -718,7 +718,6 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 
 		prev = amb_desc;
 
-		len -= xfer_count;
 		src += xfer_count;
 		dst += xfer_count;
 		left_len -= xfer_count;
