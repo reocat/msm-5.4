@@ -39,9 +39,7 @@
 #include <mach/hardware.h>
 
 /* ==========================================================================*/
-#define AMBARELLA_DMA_MAX_DESC_NUM	128
-
-/* ==========================================================================*/
+extern int ambarella_dma_channel_id(struct dma_chan * chan);
 
 #ifndef __ASSEMBLER__
 

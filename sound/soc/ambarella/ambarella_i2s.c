@@ -109,10 +109,6 @@ static inline void dai_rx_disable(void)
 static inline void dai_fifo_rst(void)
 {
 	amba_setbitsl(I2S_INIT_REG, DAI_FIFO_RST);
-	msleep(1);
-	if (amba_tstbitsl(I2S_INIT_REG, DAI_FIFO_RST)) {
-		printk("DAI_FIFO_RST fail!\n");
-	}
 }
 
 static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
@@ -237,9 +233,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 	mutex_unlock(&clock_reg_mutex);
 
-	if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
-		dai_fifo_rst();
-
 	if(rx_enabled)
 		dai_rx_enable();
 	if(tx_enabled)
@@ -281,13 +274,10 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			//dai_rx_disable();
-			//Stop by DMA EOC
-		} else {
-			//dai_tx_disable();
-			//Stop by DMA EOC
-		}
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			dai_tx_disable();
+		else
+			dai_rx_disable();
 		break;
 	default:
 		ret = -EINVAL;
@@ -481,6 +471,9 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	priv_data->amb_i2s_intf.word_pos = 0;
 	priv_data->amb_i2s_intf.slots = DAI_32slots;
 	priv_data->amb_i2s_intf.ch = 2;
+
+	/* reset fifo */
+	dai_fifo_rst();
 
 	/* Notify HDMI that the audio interface is initialized */
 	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf, AUDIO_NOTIFY_INIT);

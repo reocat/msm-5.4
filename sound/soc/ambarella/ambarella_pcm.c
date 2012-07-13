@@ -47,30 +47,23 @@
 
 #include "ambarella_pcm.h"
 
-#define AMBA_MAX_DESC_NUM		AMBARELLA_DMA_MAX_DESC_NUM
+#define AMBA_MAX_DESC_NUM		128
 #define AMBA_MIN_DESC_NUM		2
 #define AMBA_PERIOD_BYTES_MAX		8192
 #define AMBA_PERIOD_BYTES_MIN		32
 
-
-static struct scatterlist sg[AMBA_MAX_DESC_NUM];
-
 struct ambarella_runtime_data {
 	struct ambarella_pcm_dma_params *dma_data;
+	int channel;		/* Physical DMA channel */
+
+	spinlock_t lock;
 
 	struct dma_chan *dma_chan;
 	struct dma_async_tx_descriptor *desc;
-	struct dma_slave_config *slave_config;
 
-	int channel;		/* Physical DMA channel */
-	int ndescr;		/* Number of descriptors */
-	int last_descr;		/* Record lastest DMA done descriptor number */
-
-	u32 *dma_rpt_buf;
-	dma_addr_t dma_rpt_phys;
-	u32				dma_status;
-
-	spinlock_t lock;
+	int pointer_bytes;
+	int periods;
+	int period_bytes;
 };
 
 static const struct snd_pcm_hardware ambarella_pcm_hardware = {
@@ -94,66 +87,26 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 
 static bool ambpcm_dma_filter(struct dma_chan *chan, void *fparam)
 {
-	bool ret = false;
 	struct ambarella_runtime_data *prtd;
+	bool ret = false;
 
 	prtd = (struct ambarella_runtime_data *)fparam;
 
-	if ((chan->dev->dev_id == 0) && (chan->chan_id == prtd->channel)) {
-		chan->private = &prtd->dma_status;
+	if (ambarella_dma_channel_id(chan) == prtd->channel)
 		ret = true;
-	}
 
 	return ret;
 }
 
-static void dai_dma_handler(void *dev_id)
+static void ambarella_dai_dma_handler(void *dev_id)
 {
-	u32 *rpt;
-	int cur_descr;
 	struct snd_pcm_substream *substream = dev_id;
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct ambarella_runtime_data *prtd = runtime->private_data;
+	struct ambarella_runtime_data *prtd = substream->runtime->private_data;
 
-	cur_descr = prtd->last_descr;
+	prtd->pointer_bytes += prtd->period_bytes;
+	prtd->pointer_bytes %= prtd->period_bytes * prtd->periods;
 
-	prtd->last_descr++;
-	if (prtd->last_descr >= prtd->ndescr) {
-		prtd->last_descr = 0;
-	}
 	snd_pcm_period_elapsed(substream);
-
-	/* Check if stop dma chain */
-	rpt = &prtd->dma_rpt_buf[cur_descr];
-	if (*rpt & 0x10000000) { /* Descriptor chain done */
-		*rpt &= (~0x10000000);
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			/* dai_tx_disable() */
-			amba_clrbitsl(I2S_INIT_REG, 0x4);
-			/* dai_fifo_rst() */
-			if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
-				amba_setbitsl(I2S_INIT_REG, 0x1);
-		} else {
-			/* dai_rx_disable() */
-			amba_clrbitsl(I2S_INIT_REG, 0x2);
-			/* dai_fifo_rst() */
-			if(!amba_tstbitsl(I2S_INIT_REG, 0x6))
-				amba_setbitsl(I2S_INIT_REG, 0x1);
-		}
-	}
-
-	//if (*rpt & 0x08000000)  /* Descriptor DMA operation done */
-	//	*rpt &= (~0x08000000);
-}
-
-static void dai_rx_dma_handler(void *dev_id)
-{
-	dai_dma_handler(dev_id);
-}
-
-static void dai_tx_dma_handler(void *dev_id)
-{
-	dai_dma_handler(dev_id);
 }
 
 /* this may get called several times by oss emulation */
@@ -163,98 +116,44 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct ambarella_pcm_dma_params *dma_data;
-	size_t totsize = params_buffer_bytes(params);
-	size_t period = params_period_bytes(params);
-
-	dma_addr_t dma_buff_phys, next_rpt;
-	unsigned long flags;
-	int i;
-
- 	dma_cap_mask_t mask;
-	struct dma_slave_config *amb_slave_config;
-	enum dma_data_direction direction;
-	unsigned sg_len;
-
-	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
-	if (!dma_data)
-		return -ENODEV;
-
-	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
-	runtime->dma_bytes = totsize;
+	struct dma_slave_config slave_config;
 
 	if (prtd->dma_data)
 		return 0;
 
-	prtd->dma_data = dma_data;
+	prtd->dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	if (!prtd->dma_data)
+		return -ENODEV;
 
-	sg_len = 0;
-	sg_init_table(&sg[0], AMBA_MAX_DESC_NUM);
+	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
+	runtime->dma_bytes = params_buffer_bytes(params);
+
+	prtd->periods = params_periods(params);
+	prtd->period_bytes = params_period_bytes(params);
+	prtd->pointer_bytes = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		prtd->channel = I2S_TX_DMA_CHAN;
-		direction = DMA_TO_DEVICE;
+		slave_config.direction = DMA_TO_DEVICE;
+		slave_config.dst_addr = prtd->dma_data->dev_addr;
+		slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		slave_config.dst_maxburst = 32;
 	} else {
-		prtd->channel = I2S_RX_DMA_CHAN;
-		direction = DMA_FROM_DEVICE;
+		slave_config.direction = DMA_FROM_DEVICE;
+		slave_config.src_addr = prtd->dma_data->dev_addr;
+		slave_config.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		slave_config.src_maxburst = 32;
 	}
+	dmaengine_slave_config(prtd->dma_chan, &slave_config);
 
-	/* Try to grab a DMA channel */
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-	prtd->dma_chan = dma_request_channel(mask, ambpcm_dma_filter, prtd);
-	if (!prtd->dma_chan) {
+	prtd->desc = prtd->dma_chan->device->device_prep_dma_cyclic(
+			prtd->dma_chan, runtime->dma_addr,
+			prtd->period_bytes * prtd->periods,
+			prtd->period_bytes, slave_config.direction);
+	if (!prtd->desc)
 		return -EINVAL;
-	}
 
-	spin_lock_irqsave(&prtd->lock, flags);
-
-	amb_slave_config = prtd->slave_config;
-	next_rpt = prtd->dma_rpt_phys;
-	dma_buff_phys = runtime->dma_addr;
-
-	prtd->ndescr = 0;
-	prtd->last_descr = 0;
-	do {
-		if (period > totsize)
-			period = totsize;
-
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			amb_slave_config->direction = DMA_TO_DEVICE;
-			amb_slave_config->src_addr = dma_buff_phys;
-			amb_slave_config->dst_addr = prtd->dma_data->dev_addr;
-			amb_slave_config->dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-			amb_slave_config->dst_maxburst = 32;
-		} else {
-			amb_slave_config->direction = DMA_FROM_DEVICE;
-			amb_slave_config->src_addr = prtd->dma_data->dev_addr;
-			amb_slave_config->dst_addr = dma_buff_phys;
-			amb_slave_config->src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
-			amb_slave_config->src_maxburst = 32;
-		}
-		sg[sg_len].dma_address = next_rpt;
-		sg_dma_len(&sg[sg_len]) = period;
-
-		dma_buff_phys += period;
-		next_rpt += sizeof(dma_addr_t);
-		prtd->ndescr++;
-		sg_len++;
-		amb_slave_config++;
-	} while (totsize -= period);
-
-	prtd->desc = prtd->dma_chan->device->device_prep_slave_sg(prtd->dma_chan,
-		 &sg[0], sg_len, direction, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		prtd->desc->callback = dai_tx_dma_handler;
-	else
-		prtd->desc->callback = dai_rx_dma_handler;
-
+	prtd->desc->callback = ambarella_dai_dma_handler;
 	prtd->desc->callback_param = substream;
-
-	for (i = 0; i < prtd->ndescr; i++)
-		prtd->dma_rpt_buf[i] = 0;
-
-	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	return 0;
 }
@@ -264,17 +163,7 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 
-	if (prtd->dma_data) {
-		if (prtd->dma_chan) {
-			dma_release_channel(prtd->dma_chan);
-			prtd->dma_chan = NULL;
-		}
-		prtd->dma_data = NULL;
-		prtd->ndescr = 0;
-		prtd->last_descr = 0;
-	}
-
-	/* TODO - do we need to ensure DMA flushed */
+	prtd->dma_data = NULL;
 	snd_pcm_set_runtime_buffer(substream, NULL);
 
 	return 0;
@@ -294,16 +183,11 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
-	unsigned long flags;
-	int ret = 0;
-
-	spin_lock_irqsave(&prtd->lock, flags);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-			dmaengine_slave_config(prtd->dma_chan, prtd->slave_config);
 			dmaengine_submit(prtd->desc);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -313,13 +197,10 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		break;
 
 	default:
-		ret = -EINVAL;
-		break;
+		return -EINVAL;
 	}
 
-	spin_unlock_irqrestore(&prtd->lock, flags);
-
-	return ret;
+	return 0;
 }
 
 static snd_pcm_uframes_t ambarella_pcm_pointer(
@@ -328,13 +209,14 @@ static snd_pcm_uframes_t ambarella_pcm_pointer(
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 
-	return prtd->last_descr * runtime->period_size;
+	return bytes_to_frames(runtime, prtd->pointer_bytes);
 }
 
 static int ambarella_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd;
+	dma_cap_mask_t mask;
 	int ret = 0;
 
 	snd_soc_set_runtime_hwparams(substream, &ambarella_pcm_hardware);
@@ -361,26 +243,25 @@ static int ambarella_pcm_open(struct snd_pcm_substream *substream)
 		goto ambarella_pcm_open_exit;
 	}
 
-	prtd->slave_config = kzalloc(sizeof(struct dma_slave_config) * AMBA_MAX_DESC_NUM,
-				 			GFP_KERNEL);
-	if (prtd->slave_config == NULL) {
-		ret = -ENOMEM;
-		goto ambarella_pcm_open_free_prtd;
-	}
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		prtd->channel = I2S_TX_DMA_CHAN;
+	else
+		prtd->channel = I2S_RX_DMA_CHAN;
 
-	prtd->dma_rpt_buf = dma_alloc_coherent(substream->pcm->card->dev,
-					AMBA_MAX_DESC_NUM * sizeof(prtd->dma_rpt_buf),
-					&prtd->dma_rpt_phys, GFP_KERNEL);
-	if(prtd->dma_rpt_buf == NULL){
-		dev_err(substream->pcm->card->dev,
-			"No memory for dma_rpt_buf\n");
+	/* Try to grab a DMA channel */
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+	dma_cap_set(DMA_CYCLIC, mask);
+	prtd->dma_chan = dma_request_channel(mask, ambpcm_dma_filter, prtd);
+	if (!prtd->dma_chan) {
+		ret = -ENXIO;
 		goto ambarella_pcm_open_free_prtd;
 	}
 
 	spin_lock_init(&prtd->lock);
 
 	runtime->private_data = prtd;
-	goto ambarella_pcm_open_exit;
+	return 0;
 
 ambarella_pcm_open_free_prtd:
 	kfree(prtd);
@@ -395,17 +276,10 @@ static int ambarella_pcm_close(struct snd_pcm_substream *substream)
 	struct ambarella_runtime_data *prtd = runtime->private_data;
 
 	if(prtd){
-		if (prtd->slave_config != NULL )
-			kfree(prtd->slave_config);
-		prtd->slave_config = NULL;
-
-		if(prtd->dma_rpt_buf != NULL) {
-			dma_free_coherent(substream->pcm->card->dev,
-				AMBA_MAX_DESC_NUM * sizeof(prtd->dma_rpt_buf),
-				prtd->dma_rpt_buf, prtd->dma_rpt_phys);
-			prtd->dma_rpt_buf = NULL;
+		if (prtd->dma_chan) {
+			dma_release_channel(prtd->dma_chan);
+			prtd->dma_chan = NULL;
 		}
-
 		kfree(prtd);
 		runtime->private_data = NULL;
 	}
