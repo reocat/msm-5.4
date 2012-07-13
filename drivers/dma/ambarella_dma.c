@@ -73,7 +73,7 @@ static struct ambdma_desc *ambdma_get_desc(struct ambdma_chan *amb_chan)
 	spin_lock_irqsave(&amb_chan->lock, flags);
 	list_for_each_entry_safe(desc, _desc, &amb_chan->free_list, desc_node) {
 		if (async_tx_test_ack(&desc->txd)) {
-			list_del(&desc->desc_node);
+			list_del_init(&desc->desc_node);
 			ret = desc;
 			break;
 		}
@@ -193,7 +193,7 @@ static void ambdma_advance_work(struct ambdma_chan *amb_chan)
 static void ambdma_handle_error(struct ambdma_chan *amb_chan,
 		struct ambdma_desc *bad_desc)
 {
-	list_del(&bad_desc->desc_node);
+	list_del_init(&bad_desc->desc_node);
 
 	/* try to submit queued descriptors to restart dma */
 	list_splice_init(&amb_chan->queue, amb_chan->active_list.prev);
@@ -371,7 +371,7 @@ static int ambdma_alloc_chan_resources(struct dma_chan *chan)
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 	amb_chan->descs_allocated = i;
-	list_splice(&tmp_list, &amb_chan->free_list);
+	list_splice_init(&tmp_list, &amb_chan->free_list);
 	amb_chan->completed_cookie = chan->cookie = 1;
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 
