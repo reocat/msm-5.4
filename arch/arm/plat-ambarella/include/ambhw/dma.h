@@ -98,8 +98,6 @@
 #define NUM_DMA_CHANNELS 	7
 #elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L)  
 #define NUM_DMA_CHANNELS 	4
-#elif (CHIP_REV == A7S)
-#define NUM_DMA_CHANNELS 	8	
 #else
 #define NUM_DMA_CHANNELS 	5
 #endif
