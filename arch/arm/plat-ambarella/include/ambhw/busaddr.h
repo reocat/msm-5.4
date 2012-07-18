@@ -129,7 +129,11 @@
 #define HDMI_OFFSET			0x13000
 #endif
 
+#if (CHIP_REV == S2)
+#define CRYPT_UNIT_OFFSET		0x7000
+#else
 #define CRYPT_UNIT_OFFSET		0x14000
+#endif
 #define AHB_SECURE_SCRATCHPAD_OFFSET	0x14000 /* iONE */
 #define GRAPHICS_DMA_OFFSET		0x15000
 
@@ -212,13 +216,20 @@
 #if defined(CRYPT_PHYS_BASE)
 #define CRYPT_UNIT_BASE			(CRYPT_PHYS_BASE)
 #else
+#if (CHIP_REV == S2)
+#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
+#else
 #define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
 #endif
 #else
 #if defined(CRYPT_BASE)
 #define CRYPT_UNIT_BASE			(CRYPT_BASE)
 #else
+#if (CHIP_REV == S2)
+#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
+#else
 #define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#endif
 #endif
 #endif
 

@@ -32,7 +32,7 @@
 /* ==========================================================================*/
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
-#if (CHIP_REV == I1)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 	.mode_switch = 0,
 	.binary_mode = 0,
 	.data_swap = 1,
