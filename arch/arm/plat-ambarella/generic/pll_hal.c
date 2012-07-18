@@ -100,6 +100,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P50", AMB_PERFORMANCE_1080P50},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 
 #elif (CHIP_REV == A7)
@@ -125,6 +126,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 #define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
 static struct ambarella_pll_vidcap_info vidcap_list[] = {
@@ -153,7 +155,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
+#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_4KP30)
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -161,9 +163,12 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"4KP30", AMB_PERFORMANCE_4KP30},
 };
 #define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
 static struct ambarella_pll_vidcap_info vidcap_list[] = {
+	{"4kp30", AMB_VIDCAP_4KP30},
+	{"4096x2176_60fps", AMB_VIDCAP_4096X2176_60FPS},
 	{"4096x3575", AMB_VIDCAP_4096X3575},
 	{"4000x2250", AMB_VIDCAP_4000X2250},
 	{"2304x1296", AMB_VIDCAP_2304X1296},
@@ -199,6 +204,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080I60", AMB_PERFORMANCE_1080I60},
 	{"1080P30", AMB_PERFORMANCE_1080P30},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
+	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
 #define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1088X816)
 static struct ambarella_pll_vidcap_info vidcap_list[] = {

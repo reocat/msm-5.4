@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date January 2012
- * @version 7062
+ * @version 7121
  *
  * @par Introduction:
  * The Ambarella A7S Hardware Abstraction Layer (ambhal) provides an API between
@@ -688,6 +688,10 @@ unsigned int divider ;
  */
 
 typedef enum {
+/** 4K p30 */
+AMB_VIDCAP_4KP30,
+/** 4K p60 */
+AMB_VIDCAP_4096X2176_60FPS,
 /** IMX 083: 1080p30 */
 AMB_VIDCAP_4096X3575,
 /** IMX 078: 1080p30, 720p30 */
@@ -727,8 +731,8 @@ AMB_PERFORMANCE_1080I60,
 AMB_PERFORMANCE_1080P30,
 /** 1080p60 */
 AMB_PERFORMANCE_1080P60,
-/** 2160p60 */
-AMB_PERFORMANCE_2160P60,
+/** 4K p30 */
+AMB_PERFORMANCE_4KP30,
 /* Reserved */
 AMB_PERFORMANCE_RESERVED = 0xffffffffUL
 } amb_performance_t ;
