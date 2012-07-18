@@ -221,6 +221,7 @@
 #else
 #define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
 #endif
+#endif
 #else
 #if defined(CRYPT_BASE)
 #define CRYPT_UNIT_BASE			(CRYPT_BASE)
