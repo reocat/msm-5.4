@@ -47,6 +47,9 @@ enum amb_event_type {
 
 	/* FB2 Event */
 	AMB_EV_FB2_PAN_DISPLAY			= 0x00040000,
+
+	/* FDET_EVENT */
+	AMB_EV_FDET_FACE_DETECTED		= 0x00050000,
 };
 
 struct amb_event {
