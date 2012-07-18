@@ -54,7 +54,9 @@
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
-//	&ambarella_crypto,
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	&ambarella_crypto,
+#endif
 	&ambarella_ehci0,
 	&ambarella_ohci0,
 	&ambarella_eth0,
