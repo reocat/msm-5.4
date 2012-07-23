@@ -37,6 +37,9 @@
 #include <mach/hardware.h>
 #include <plat/ambinput.h>
 
+#include <mach/board.h>
+#include <linux/firmware.h>
+
 /* ========================================================================= */
 #define AMBVI_BUFFER_SIZE			(32)
 #define AMBVI_NAME				"ambvi"
@@ -54,6 +57,9 @@ static int abx_active_pressure = 0;
 /* ========================================================================= */
 static DEFINE_MUTEX(pboard_info_lock);
 static struct ambarella_input_board_info *pboard_info = NULL;
+static char *ambarella_keymap = NULL;
+MODULE_PARM_DESC(ambarella_keymap, "Ambarella Input's key map");
+module_param(ambarella_keymap, charp, 0644);
 
 struct ambarella_input_board_info *ambarella_input_get_board_info(void)
 {
@@ -243,6 +249,24 @@ static int __devinit ambarella_setup_keymap(
 	int					vi_enabled = 0;
 	int					vi_key_set = 0;
 	int					vi_sw_set = 0;
+	const struct firmware			*ext_key_map;
+
+	if (ambarella_keymap != NULL) {
+		retval = request_firmware(&ext_key_map,
+			ambarella_keymap, &pbinfo->pinput_dev->dev);
+		if (retval) {
+			printk("Can't load firmware, use default %d\n",retval);
+		}
+		else
+		{
+			printk("Keymap Load: %s, size = %d\n",
+				ambarella_keymap, ext_key_map->size);
+			memset(pbinfo->pkeymap, AMBINPUT_END,
+				sizeof(pbinfo->pkeymap));
+			memcpy(pbinfo->pkeymap,
+				ext_key_map->data, ext_key_map->size);
+		}
+	}
 
 	if (!pbinfo->pkeymap) {
 		retval = -EINVAL;
