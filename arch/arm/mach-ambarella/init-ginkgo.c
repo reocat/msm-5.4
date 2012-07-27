@@ -228,6 +228,7 @@ static void __init ambarella_init_ginkgo(void)
 	/* Config ETH */
 	ambarella_eth0_platform_info.mii_id = 1;
 	ambarella_eth0_platform_info.phy_id = 0x001cc915;
+	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
 
 	/* Config Vin */
 	ambarella_board_generic.vin1_reset.gpio_id = GPIO(49);
