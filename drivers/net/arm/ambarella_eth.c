@@ -96,7 +96,8 @@ struct ambeth_info {
 	unsigned int				rx_count;
 	struct ambeth_rx_rngmng			rx;
 	unsigned int				tx_count;
-	unsigned int				tx_irq_count;
+	unsigned int				tx_irq_low;
+	unsigned int				tx_irq_high;
 	struct ambeth_tx_rngmng			tx;
 	dma_addr_t				rx_dma_desc;
 	dma_addr_t				tx_dma_desc;
@@ -122,6 +123,38 @@ module_param (msg_level, int, 0);
 MODULE_PARM_DESC (msg_level, "Override default message level");
 
 /* ==========================================================================*/
+static void ambhw_dump(struct ambeth_info *lp)
+{
+	u32					i;
+
+	dev_info(&lp->ndev->dev, "RX Info: cur_rx %d, dirty_rx %d.\n",
+		lp->rx.cur_rx, lp->rx.dirty_rx);
+	dev_info(&lp->ndev->dev, "RX Info: RX descriptor "
+		"0x%08x 0x%08x 0x%08x 0x%08x.\n",
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].status,
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].length,
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer1,
+		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer2);
+	dev_info(&lp->ndev->dev, "TX Info: cur_tx %d, dirty_tx %d.\n",
+		lp->tx.cur_tx, lp->tx.dirty_tx);
+	for (i = lp->tx.dirty_tx; i < lp->tx.cur_tx; i++) {
+		dev_info(&lp->ndev->dev, "TX Info: TX descriptor[%d] "
+			"0x%08x 0x%08x 0x%08x 0x%08x.\n", i,
+			lp->tx.desc_tx[i % lp->tx_count].status,
+			lp->tx.desc_tx[i % lp->tx_count].length,
+			lp->tx.desc_tx[i % lp->tx_count].buffer1,
+			lp->tx.desc_tx[i % lp->tx_count].buffer2);
+	}
+	for (i = 0; i <= 21; i++) {
+		dev_dbg(&lp->ndev->dev, "GMAC[%d]: 0x%08x.\n", i,
+		amba_readl(lp->regbase + ETH_MAC_CFG_OFFSET + (i << 2)));
+	}
+	for (i = 0; i <= 54; i++) {
+		dev_dbg(&lp->ndev->dev, "GDMA[%d]: 0x%08x.\n", i,
+		amba_readl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET + (i << 2)));
+	}
+}
+
 static inline int ambhw_dma_reset(struct ambeth_info *lp)
 {
 	int					errorCode = 0;
@@ -203,9 +236,14 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 
 static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 {
+	lp->tx.desc_tx[entry].length |= ETH_TDES1_IC;
 	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	amba_writel(lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET,
 		(u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)));
+	if (netif_msg_tx_err(lp)) {
+		dev_err(&lp->ndev->dev, "TX Error: restart %d.\n", entry);
+		ambhw_dump(lp);
+	}
 	ambhw_dma_tx_start(lp);
 }
 
@@ -363,38 +401,6 @@ static void ambhw_dump_buffer(const char *msg,
 		printk(" %02x", data[i]);
 	}
 	printk("\n");
-}
-
-static void ambhw_dump(struct ambeth_info *lp)
-{
-	u32					i;
-
-	dev_info(&lp->ndev->dev, "RX Info: cur_rx %d, dirty_rx %d.\n",
-		lp->rx.cur_rx, lp->rx.dirty_rx);
-	dev_info(&lp->ndev->dev, "RX Info: RX descriptor "
-		"0x%08x 0x%08x 0x%08x 0x%08x.\n",
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].status,
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].length,
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer1,
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer2);
-	dev_info(&lp->ndev->dev, "TX Info: cur_tx %d, dirty_tx %d.\n",
-		lp->tx.cur_tx, lp->tx.dirty_tx);
-	for (i = lp->tx.dirty_tx; i < lp->tx.cur_tx; i++) {
-		dev_info(&lp->ndev->dev, "TX Info: TX descriptor[%d] "
-			"0x%08x 0x%08x 0x%08x 0x%08x.\n", i,
-			lp->tx.desc_tx[i % lp->tx_count].status,
-			lp->tx.desc_tx[i % lp->tx_count].length,
-			lp->tx.desc_tx[i % lp->tx_count].buffer1,
-			lp->tx.desc_tx[i % lp->tx_count].buffer2);
-	}
-	for (i = 0; i <= 21; i++) {
-		dev_info(&lp->ndev->dev, "GMAC[%d]: 0x%08x.\n", i,
-		amba_readl(lp->regbase + ETH_MAC_CFG_OFFSET + (i << 2)));
-	}
-	for (i = 0; i <= 54; i++) {
-		dev_info(&lp->ndev->dev, "GDMA[%d]: 0x%08x.\n", i,
-		amba_readl(lp->regbase + ETH_DMA_BUS_MODE_OFFSET + (i << 2)));
-	}
 }
 
 /* ==========================================================================*/
@@ -1021,17 +1027,7 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 		}
 
 		dirty_to_tx = lp->tx.cur_tx - dirty_tx;
-		if (unlikely(dirty_to_tx > lp->tx_count)) {
-			netif_stop_queue(lp->ndev);
-			if (netif_msg_drv(lp))
-				dev_err(&lp->ndev->dev, "TX Error: TX OV.\n");
-			ambhw_dump(lp);
-			ambhw_dma_tx_stop(lp);
-			ambeth_tx_rngmng_del(lp);
-			ambeth_tx_rngmng_init(lp);
-			dirty_tx = dirty_to_tx = 0;
-		}
-		if (likely(dirty_to_tx < (lp->tx_count / 2))) {
+		if (likely(dirty_to_tx < lp->tx_irq_low)) {
 			dev_vdbg(&lp->ndev->dev, "TX Info: Now gap %d.\n",
 				dirty_to_tx);
 			netif_wake_queue(lp->ndev);
@@ -1239,28 +1235,30 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	unsigned long				flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
+	tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
 
 	spin_lock_irqsave(&lp->lock, flags);
 	entry = lp->tx.cur_tx % lp->tx_count;
 	dirty_to_tx = lp->tx.cur_tx - lp->tx.dirty_tx;
-	if (dirty_to_tx >= lp->tx_count) {
+	if (dirty_to_tx == lp->tx_irq_high) {
+		tx_flag |= ETH_TDES1_IC;
+	} else if (dirty_to_tx == (lp->tx_count - 1)) {
+		netif_stop_queue(ndev);
+		tx_flag |= ETH_TDES1_IC;
+	} else if (dirty_to_tx >= lp->tx_count) {
 		netif_stop_queue(ndev);
 		errorCode = -ENOMEM;
 		ambhw_dma_tx_poll(lp);
 		spin_unlock_irqrestore(&lp->lock, flags);
+		dev_err(&lp->ndev->dev, "TX Error: TX OV.\n");
 		goto ambeth_hard_start_xmit_exit;
 	}
 	if (unlikely(lp->platform_info->default_supported &
 		AMBARELLA_ETH_SUPPORTED_DUMP)) {
 		ambhw_dump_buffer(__func__, skb->data, skb->len);
 	}
-
 	mapping = dma_map_single(&lp->ndev->dev,
 		skb->data, skb->len, DMA_TO_DEVICE);
-	tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
-	if (dirty_to_tx >= lp->tx_irq_count) {
-		tx_flag |= ETH_TDES1_IC;
-	}
 	if ((lp->platform_info->default_supported &
 		AMBARELLA_ETH_SUPPORTED_IPC_TX) &&
 		(skb->ip_summed == CHECKSUM_PARTIAL)) {
@@ -1833,7 +1831,8 @@ static int __devinit ambeth_drv_probe(struct platform_device *pdev)
 	lp->tx_count = lp->platform_info->default_tx_ring_size;
 	if (lp->tx_count < AMBETH_TX_RNG_MIN)
 		lp->tx_count = AMBETH_TX_RNG_MIN;
-	lp->tx_irq_count = (lp->tx_count * 2) / 3;
+	lp->tx_irq_low = ((lp->tx_count * 1) / 4);
+	lp->tx_irq_high = ((lp->tx_count * 3) / 4);
 	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV);
 
 	if (lp->platform_info->mii_power.gpio_id != -1) {
