@@ -100,6 +100,7 @@ struct ambarella_sd_mmc_info {
 	u16				xfr_reg;
 	u16				cmd_reg;
 	u16				sta_reg;
+	u32				sta_counter;
 
 	char				*buf_vaddress;
 	dma_addr_t			buf_paddress;
@@ -133,7 +134,7 @@ struct ambarella_sd_controller_info {
 };
 
 /* ==========================================================================*/
-#ifdef CONFIG_SD_AMBARELLA_DEBUG
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
 static void ambarella_sd_show_info(struct ambarella_sd_mmc_info *pslotinfo)
 {
 	ambsd_dbg(pslotinfo, "Enter %s\n", __func__);
@@ -955,10 +956,18 @@ static inline void ambarella_sd_prepare_tmo(
 	} else {
 		pslotinfo->tmo = CONFIG_SD_AMBARELLA_TIMEOUT_VAL;
 	}
-	ambsd_dbg(pslotinfo,
-		"timeout_ns = %d, timeout_clks = %d @ %dHz, get tmo = %d.\n",
+	if ((pinfo->pcontroller->wait_tmo > 0) &&
+		(pinfo->pcontroller->wait_tmo < (10 * HZ))) {
+		pslotinfo->sta_counter = (10 * HZ);
+		pslotinfo->sta_counter /= pinfo->pcontroller->wait_tmo;
+	} else {
+		pslotinfo->sta_counter = 1;
+	}
+	ambsd_dbg(pslotinfo, "timeout_ns = %d, timeout_clks = %d @ %dHz, "
+		"get tmo = %d, sta_counter = %d.\n",
 		pmmcdata->timeout_ns, pmmcdata->timeout_clks,
-		pinfo->pcontroller->active_clock, pslotinfo->tmo);
+		pinfo->pcontroller->active_clock,
+		pslotinfo->tmo, pslotinfo->sta_counter);
 }
 
 static inline void ambarella_sd_pre_cmd(
@@ -971,6 +980,8 @@ static inline void ambarella_sd_pre_cmd(
 	pslotinfo->blk_cnt = 0;
 	pslotinfo->arg_reg = 0;
 	pslotinfo->cmd_reg = 0;
+	pslotinfo->sta_reg = 0;
+	pslotinfo->sta_counter = 0;
 	pslotinfo->tmo = 0;
 	pslotinfo->xfr_reg = 0;
 	pslotinfo->dma_address = 0;
@@ -1128,6 +1139,19 @@ ambarella_sd_send_cmd_exit:
 				(pslotinfo->state != AMBA_SD_STATE_DATA),
 				pinfo->pcontroller->wait_tmo);
 			tmpreg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			if ((timeout <= 0) && (tmpreg & pslotinfo->sta_reg)) {
+				ambsd_err(pslotinfo, "wait data%d %d@%d, "
+					"sta=0x%04x:0x%04x\n",
+					pslotinfo->mrq->cmd->opcode,
+					pslotinfo->state,
+					pinfo->pcontroller->wait_tmo,
+					tmpreg, pslotinfo->sta_reg);
+			}
+			if (pslotinfo->sta_counter) {
+				pslotinfo->sta_counter--;
+			} else {
+				break;
+			}
 		} while ((timeout <= 0) && (tmpreg & pslotinfo->sta_reg));
 		if (timeout <= 0) {
 			ambsd_err(pslotinfo,
@@ -1139,35 +1163,35 @@ ambarella_sd_send_cmd_exit:
 			pslotinfo->mrq->data->error = -ETIMEDOUT;
 		}
 	}
-	if (pslotinfo->state != AMBA_SD_STATE_IDLE) {
-#ifdef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
-		ambsd_err(pslotinfo, "CMD%d retries[%d] state[%d].\n",
-			pslotinfo->mrq->cmd->opcode,
-			pslotinfo->mrq->cmd->retries,
-			pslotinfo->state);
-		for (counter = 0; counter < 0x100; counter += 4) {
-			ambsd_dbg(pslotinfo, "0x%04x: 0x%08x\n",
-			counter, amba_readl(pinfo->regbase + counter));
-		}
-#ifdef CONFIG_SD_AMBARELLA_DEBUG
-		ambarella_sd_show_info(pslotinfo);
-#endif
-#endif
-		if (amba_readl(pinfo->regbase + SD_STA_OFFSET) & (
-			SD_STA_CMD_INHIBIT_CMD | SD_STA_CMD_INHIBIT_DAT)) {
-			ambarella_sd_reset_all(pslotinfo->mmc);
-		}
-	}
-	ambarella_sd_release_bus(pslotinfo->mmc);
 }
 
 static inline void ambarella_sd_post_cmd(
 	struct ambarella_sd_mmc_info *pslotinfo)
 {
 	if (pslotinfo->state == AMBA_SD_STATE_IDLE) {
+		ambarella_sd_release_bus(pslotinfo->mmc);
 		if (pslotinfo->mrq->data) {
 			pslotinfo->post_dma(pslotinfo);
 		}
+	} else {
+#ifdef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
+		u32					counter = 0;
+		struct ambarella_sd_controller_info	*pinfo;
+
+		pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+		ambsd_err(pslotinfo, "CMD%d retries[%d] state[%d].\n",
+			pslotinfo->mrq->cmd->opcode,
+			pslotinfo->mrq->cmd->retries,
+			pslotinfo->state);
+		for (counter = 0; counter < 0x100; counter += 4) {
+			ambsd_err(pslotinfo, "0x%04x: 0x%08x\n",
+			counter, amba_readl(pinfo->regbase + counter));
+		}
+		ambarella_sd_show_info(pslotinfo);
+#endif
+		ambarella_sd_reset_all(pslotinfo->mmc);
+		ambarella_sd_check_ios(pslotinfo->mmc, &pslotinfo->mmc->ios);
+		ambarella_sd_release_bus(pslotinfo->mmc);
 	}
 }
 
@@ -1623,8 +1647,10 @@ sd_errorCode_remove_host:
 sd_errorCode_free_host:
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
-		if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
-			free_irq(pslotinfo->plat_info->gpio_cd.irq_line, pslotinfo);
+		if (ambarella_is_valid_gpio_irq(
+			&pslotinfo->plat_info->gpio_cd)) {
+			free_irq(pslotinfo->plat_info->gpio_cd.irq_line,
+				pslotinfo);
 			gpio_free(pslotinfo->plat_info->gpio_cd.irq_gpio);
 		}
 		if (pslotinfo->plat_info->gpio_wp.gpio_id != -1)
@@ -1675,10 +1701,14 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
 			pslotinfo->plat_info->pmmc_host = NULL;
-			ambarella_unregister_event_notifier(&pslotinfo->system_event);
-			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
-				free_irq(pslotinfo->plat_info->gpio_cd.irq_line, pslotinfo);
-				gpio_free(pslotinfo->plat_info->gpio_cd.irq_gpio);
+			ambarella_unregister_event_notifier(
+				&pslotinfo->system_event);
+			if (ambarella_is_valid_gpio_irq(
+				&pslotinfo->plat_info->gpio_cd)) {
+				free_irq(pslotinfo->plat_info->gpio_cd.irq_line,
+					pslotinfo);
+				gpio_free(
+					pslotinfo->plat_info->gpio_cd.irq_gpio);
 			}
 			if (pslotinfo->mmc)
 				mmc_remove_host(pslotinfo->mmc);
@@ -1686,12 +1716,18 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
-			if (pslotinfo->plat_info->ext_power.gpio_id != -1)
-				gpio_free(pslotinfo->plat_info->ext_power.gpio_id);
-			if (pslotinfo->plat_info->ext_reset.gpio_id != -1)
-				gpio_free(pslotinfo->plat_info->ext_reset.gpio_id);
-			if (pslotinfo->plat_info->gpio_wp.gpio_id != -1)
-				gpio_free(pslotinfo->plat_info->gpio_wp.gpio_id);
+			if (pslotinfo->plat_info->ext_power.gpio_id != -1) {
+				gpio_free(
+				pslotinfo->plat_info->ext_power.gpio_id);
+			}
+			if (pslotinfo->plat_info->ext_reset.gpio_id != -1) {
+				gpio_free(
+				pslotinfo->plat_info->ext_reset.gpio_id);
+			}
+			if (pslotinfo->plat_info->gpio_wp.gpio_id != -1) {
+				gpio_free(
+				pslotinfo->plat_info->gpio_wp.gpio_id);
+			}
 			if (pslotinfo->buf_paddress) {
 				dma_unmap_single(pinfo->dev,
 					pslotinfo->buf_paddress,
