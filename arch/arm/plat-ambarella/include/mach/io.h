@@ -36,6 +36,14 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
+#define AMBARELLA_REG_LOCK()	AMBARELLA_GLOBAL_HW_LOCK()
+#define AMBARELLA_REG_UNLOCK()	AMBARELLA_GLOBAL_HW_UNLOCK()
+#else
+#define AMBARELLA_REG_LOCK()
+#define AMBARELLA_REG_UNLOCK()
+#endif
+
 #if defined(CONFIG_PLAT_AMBARELLA_DISABLE_8_16_ACCESS)
 static inline u8 __amba_readb(const volatile void __iomem *address)
 {
@@ -46,8 +54,8 @@ static inline u8 __amba_readb(const volatile void __iomem *address)
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
 	AMBARELLA_REG_LOCK();
-	AMBARELLA_INC_REGLOCK_COUNT();
 	tmpreg = __raw_readl(base);
+	AMBARELLA_REG_UNLOCK();
 	switch (index) {
 	case 1:
 		tmpreg &= 0x0000FF00;
@@ -69,7 +77,6 @@ static inline u8 __amba_readb(const volatile void __iomem *address)
 		tmpreg &= 0x000000FF;
 		break;
 	}
-	AMBARELLA_REG_UNLOCK();
 
 	return (u8)tmpreg;
 }
@@ -83,7 +90,6 @@ static inline void __amba_writeb(const volatile void __iomem *address, u8 value)
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
 	AMBARELLA_REG_LOCK();
-	AMBARELLA_INC_REGLOCK_COUNT();
 	tmpreg = __raw_readl(base);
 	switch (index) {
 	case 1:
@@ -120,8 +126,8 @@ static inline u16 __amba_readw(const volatile void __iomem *address)
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
 	AMBARELLA_REG_LOCK();
-	AMBARELLA_INC_REGLOCK_COUNT();
 	tmpreg = __raw_readl(base);
+	AMBARELLA_REG_UNLOCK();
 	switch (index) {
 	case 2:
 		tmpreg &= 0xFFFF0000;
@@ -133,7 +139,6 @@ static inline u16 __amba_readw(const volatile void __iomem *address)
 		tmpreg &= 0x0000FFFF;
 		break;
 	}
-	AMBARELLA_REG_UNLOCK();
 
 	return (u16)tmpreg;
 }
@@ -147,7 +152,6 @@ static inline void __amba_writew(const volatile void __iomem *address, u16 value
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
 	AMBARELLA_REG_LOCK();
-	AMBARELLA_INC_REGLOCK_COUNT();
 	tmpreg = __raw_readl(base);
 	switch (index) {
 	case 2:
@@ -176,13 +180,11 @@ static inline void __amba_writew(const volatile void __iomem *address, u16 value
 #define amba_writew(v,d)	__raw_writew(d,v)
 #endif
 
-#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
 static inline u32 __amba_readl(const volatile void __iomem *address)
 {
 	u32					tmpval;
 
 	AMBARELLA_REG_LOCK();
-	AMBARELLA_INC_REGLOCK_COUNT();
 	tmpval = __raw_readl(address);
 	AMBARELLA_REG_UNLOCK();
 
@@ -192,17 +194,12 @@ static inline u32 __amba_readl(const volatile void __iomem *address)
 static inline void __amba_writel(const volatile void __iomem *address, u32 value)
 {
 	AMBARELLA_REG_LOCK();
-	AMBARELLA_INC_REGLOCK_COUNT();
 	__raw_writel(value, address);
 	AMBARELLA_REG_UNLOCK();
 }
 
 #define amba_readl(v)		__amba_readl((const volatile void __iomem *)v)
 #define amba_writel(v,d)	__amba_writel((const volatile void __iomem *)v, d)
-#else
-#define amba_readl(v)		__raw_readl(v)
-#define amba_writel(v,d)	__raw_writel(d,v)
-#endif
 
 static inline void __amba_read2w(const volatile void __iomem *address,
 	u16 *value1, u16 *value2)

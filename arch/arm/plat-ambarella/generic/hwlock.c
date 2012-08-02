@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/include/plat/reglock.h
+ * arch/arm/plat-ambarella/generic/reglock.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
@@ -21,30 +21,15 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_REGISTER_LOCK_H
-#define __PLAT_AMBARELLA_REGISTER_LOCK_H
-
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-#ifdef CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK
+#include <linux/init.h>
+#include <linux/module.h>
 #include <linux/spinlock.h>
-extern spinlock_t ambarella_register_lock;
-extern unsigned long ambarella_register_flags;
-extern u32 amb_reglock_count;
 
-#define AMBARELLA_REG_LOCK()		\
-	spin_lock_irqsave(&ambarella_register_lock, ambarella_register_flags)
-#define AMBARELLA_REG_UNLOCK()		\
-	spin_unlock_irqrestore(&ambarella_register_lock, ambarella_register_flags)
-#define AMBARELLA_INC_REGLOCK_COUNT()	\
-	amb_reglock_count++
-#else
-#define AMBARELLA_REG_LOCK()
-#define AMBARELLA_REG_UNLOCK()
-#define AMBARELLA_INC_REGLOCK_COUNT()
-#endif /* CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK */
-#endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
+DEFINE_SPINLOCK(ambarella_global_hw_lock);
+unsigned long ambarella_global_hw_flags;
 
-#endif
+/* ==========================================================================*/
+EXPORT_SYMBOL(ambarella_global_hw_lock);
+EXPORT_SYMBOL(ambarella_global_hw_flags);
 

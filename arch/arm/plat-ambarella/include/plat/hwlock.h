@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/reglock.c
+ * arch/arm/plat-ambarella/include/plat/hwlock.h
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
@@ -21,26 +21,23 @@
  *
  */
 
-#include <linux/init.h>
-#include <linux/module.h>
+#ifndef __PLAT_AMBARELLA_GLOBAL_HW_LOCK_H
+#define __PLAT_AMBARELLA_GLOBAL_HW_LOCK_H
+
+/* ==========================================================================*/
+#ifndef __ASSEMBLER__
+
 #include <linux/spinlock.h>
+extern spinlock_t ambarella_global_hw_lock;
+extern unsigned long ambarella_global_hw_flags;
 
-#include <mach/hardware.h>
+#define AMBARELLA_GLOBAL_HW_LOCK()		\
+	spin_lock_irqsave(&ambarella_global_hw_lock, ambarella_global_hw_flags)
+#define AMBARELLA_GLOBAL_HW_UNLOCK()		\
+	spin_unlock_irqrestore(&ambarella_global_hw_lock, ambarella_global_hw_flags)
 
+#endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
-#ifdef MODULE_PARAM_PREFIX
-#undef MODULE_PARAM_PREFIX
+
 #endif
-#define MODULE_PARAM_PREFIX		"ambarella_config."
-
-/* ==========================================================================*/
-DEFINE_SPINLOCK(ambarella_register_lock);
-unsigned long ambarella_register_flags;
-u32 amb_reglock_count = 0;
-
-/* ==========================================================================*/
-EXPORT_SYMBOL(ambarella_register_lock);
-EXPORT_SYMBOL(ambarella_register_flags);
-EXPORT_SYMBOL(amb_reglock_count);
-module_param (amb_reglock_count, uint, S_IRUGO);
 
