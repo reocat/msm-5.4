@@ -59,6 +59,10 @@ unsigned int used_port = 1;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
 
+unsigned int default_sfreq = 0;
+module_param(default_sfreq, uint, S_IRUGO);
+MODULE_PARM_DESC(default_sfreq, "Default sfreq: 0. 44100, 1. 48000.");
+
 static DEFINE_MUTEX(clock_reg_mutex);
 static int enable_ext_i2s = 1;
 
@@ -443,15 +447,24 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
+	u32 mclk, sfreq;
 	u32 clock_divider, clock_reg;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+
+	if (default_sfreq == 0) {
+		mclk = AudioCodec_11_2896M;
+		sfreq = AUDIO_SF_44100;
+	} else {
+		mclk = AudioCodec_12_288M;
+		sfreq = AUDIO_SF_48000;
+	}
 
 	/* Disable internal codec (only for A2) except  IPcam Board */
 	if (strcmp(dai->card->name, "A2IPcam"))
 		clock_reg = 0x400;
 
 	if (priv_data->controller_info->set_audio_pll)
-		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, AudioCodec_11_2896M);
+		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, mclk);
 
 	/* Dai default smapling rate, polarity configuration.
 	 * Note: Just be configured, actually BCLK and LRCLK will not
@@ -463,10 +476,10 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
 	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
 	priv_data->amb_i2s_intf.ms_mode = DAI_MASTER;
-	priv_data->amb_i2s_intf.mclk = AudioCodec_11_2896M;
+	priv_data->amb_i2s_intf.mclk = mclk;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
-	priv_data->amb_i2s_intf.sfreq = AUDIO_SF_44100;
+	priv_data->amb_i2s_intf.sfreq = sfreq;
 	priv_data->amb_i2s_intf.word_len = DAI_16bits;
 	priv_data->amb_i2s_intf.word_pos = 0;
 	priv_data->amb_i2s_intf.slots = DAI_32slots;
