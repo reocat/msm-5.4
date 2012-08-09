@@ -248,6 +248,11 @@
 
 #define MXT_STYLUS_PRESSURE_MASK	0x3F
 
+/* T15 Key array */
+int mxt_t15_keys[] = { };
+
+static unsigned long mxt_t15_keystatus;
+
 /* Touchscreen absolute values */
 #define MXT_MAX_AREA		0xff
 
@@ -316,6 +321,7 @@ struct mxt_data {
 	u16 T7_address;
 	u8 T9_reportid_min;
 	u8 T9_reportid_max;
+	u8 T15_reportid;
 	u8 T42_reportid_min;
 	u8 T42_reportid_max;
 	u16 T44_address;
@@ -775,6 +781,36 @@ static void mxt_proc_t9_messages(struct mxt_data *data, u8 *message)
 	}
 }
 
+static void mxt_proc_t15_messages(struct mxt_data *data, u8 *msg)
+{
+	struct input_dev *input_dev = data->input_dev;
+	struct device *dev = &data->client->dev;
+	u8 key;
+	bool curr_state, new_state;
+	bool sync = false;
+	unsigned long keystates = le32_to_cpu(msg[2]);
+
+	for (key = 0; key < ARRAY_SIZE(mxt_t15_keys); key++) {
+		curr_state = test_bit(key, &mxt_t15_keystatus);
+		new_state = test_bit(key, &keystates);
+
+		if (!curr_state && new_state) {
+			dev_dbg(dev, "T15 key press: %u\n", key);
+			__set_bit(key, &mxt_t15_keystatus);
+			input_event(input_dev, EV_KEY, mxt_t15_keys[key], 1);
+			sync = true;
+		} else if (curr_state && !new_state) {
+			dev_dbg(dev, "T15 key release: %u\n", key);
+			__clear_bit(key, &mxt_t15_keystatus);
+			input_event(input_dev, EV_KEY, mxt_t15_keys[key], 0);
+			sync = true;
+		}
+	}
+
+	if (sync)
+		input_sync(input_dev);
+}
+
 static void mxt_proc_t42_messages(struct mxt_data *data, u8 *msg)
 {
 	struct device *dev = &data->client->dev;
@@ -878,6 +914,8 @@ static int mxt_proc_message(struct mxt_data *data, u8 *msg)
 	} else if (report_id >= data->T63_reportid_min
 		   && report_id <= data->T63_reportid_max) {
 		mxt_proc_t63_messages(data, msg);
+	} else if (report_id == data->T15_reportid) {
+		mxt_proc_t15_messages(data, msg);
 	} else if (report_id == data->T6_reportid) {
 		mxt_proc_t6_messages(data, msg);
 	} else if (report_id == data->T48_reportid) {
@@ -2056,6 +2094,7 @@ static int mxt_initialize_input_device(struct mxt_data *data)
 	struct device *dev = &data->client->dev;
 	struct input_dev *input_dev;
 	int ret;
+	int key;
 
 	/* Initialize input device */
 	input_dev = input_allocate_device();
@@ -2108,6 +2147,12 @@ static int mxt_initialize_input_device(struct mxt_data *data)
 
 		input_set_abs_params(input_dev, ABS_MT_TOOL_TYPE,
 			0, MT_TOOL_MAX, 0, 0);
+	}
+
+	/* For T15 key array */
+	mxt_t15_keystatus = 0;
+	for (key = 0; key < ARRAY_SIZE(mxt_t15_keys); key++) {
+		input_set_capability(input_dev, EV_KEY, mxt_t15_keys[key]);
 	}
 
 	input_set_drvdata(input_dev, data);
