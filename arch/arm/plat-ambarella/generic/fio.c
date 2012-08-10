@@ -394,6 +394,7 @@ static struct ambarella_nand_set ambarella_nand_default_set = {
 	.name		= "ambarella_nand_set",
 	.nr_chips	= 1,
 	.nr_partitions	= 0,
+	.ecc_bits = 0,
 };
 
 static struct ambarella_nand_timing ambarella_nand_default_timing = {
@@ -431,6 +432,11 @@ static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.timing		= &ambarella_nand_default_timing,
 	.flash_bbt	= 1,
 
+#if (NAND_READ_ID5 == 1)
+	.id_cycles = 5,
+#else
+	.id_cycles = 4,
+#endif
 	.parse_error	= fio_amb_nand_parse_error,
 	.request	= fio_amb_nand_request,
 	.release	= fio_amb_nand_release,
@@ -471,6 +477,14 @@ static int __init parse_nand_tag_t2(const struct tag *tag)
 	return 0;
 }
 __tagtable(ATAG_AMBARELLA_NAND_T2, parse_nand_tag_t2);
+
+static int __init parse_nand_tag_ecc(const struct tag *tag)
+{
+	ambarella_nand_default_set.ecc_bits = tag->u.serialnr.low;
+
+	return 0;
+}
+__tagtable(ATAG_AMBARELLA_NAND_ECC, parse_nand_tag_ecc);
 
 void __init ambarella_init_nand_hotboot(
 	struct ambarella_nand_timing *hot_nand_timing)

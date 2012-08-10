@@ -114,6 +114,14 @@
 #define	NAND_PROGRAMMABLE_CMDWORD		0
 #endif
 
+#if 	(CHIP_REV == A7S) || (CHIP_REV == A9)
+#define	NAND_DUAL_SPACE_MODE	1
+#define	NAND_READ_ID5			1
+#else
+#define	NAND_DUAL_SPACE_MODE	0
+#define	NAND_READ_ID5			0
+#endif
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -129,17 +137,23 @@
 #define FIO_DMACTR_OFFSET		0x080
 #define FIO_DMAADR_OFFSET		0x084
 #define FIO_DMASTA_OFFSET		0x08c
+#define FIO_DSM_CTR_OFFSET              0x0a0
+#define FIO_ECC_RPT_STA_OFFSET          0x0a4
 
 #define FIO_CTR_REG			FIO_REG(0x000)
 #define FIO_STA_REG			FIO_REG(0x004)
 #define FIO_DMACTR_REG			FIO_REG(0x080)
 #define FIO_DMAADR_REG			FIO_REG(0x084)
 #define FIO_DMASTA_REG			FIO_REG(0x08c)
+#define FIO_DSM_CTR_REG		FIO_REG(0x0a0)
+#define FIO_ECC_RPT_STA_REG		FIO_REG(0x0a4)
 
 /* FIO_CTR_REG */
 #define FIO_CTR_DA			0x00020000
 #define FIO_CTR_DR			0x00010000
 #define FIO_CTR_SX			0x00000100
+#define FIO_CTR_ECC_8BIT		0x00000060
+#define FIO_CTR_ECC_6BIT		0x00000040
 #define FIO_CTR_RS			0x00000010
 #define FIO_CTR_SE			0x00000008
 #define FIO_CTR_CO			0x00000004
@@ -172,15 +186,25 @@
 #define FIO_DMACTR_BLK_32B		0x02000000
 #define FIO_DMACTR_BLK_16B		0x01000000
 #define FIO_DMACTR_BLK_8B		0x00000000
-#define FIO_DMACTR_TS8B			0x00c00000
-#define FIO_DMACTR_TS4B			0x00800000
-#define FIO_DMACTR_TS2B			0x00400000
-#define FIO_DMACTR_TS1B			0x00000000
+#define FIO_DMACTR_TS8B		0x00c00000
+#define FIO_DMACTR_TS4B		0x00800000
+#define FIO_DMACTR_TS2B		0x00400000
+#define FIO_DMACTR_TS1B		0x00000000
 
 /* FIO_DMASTA_REG */
 #define FIO_DMASTA_RE			0x04000000
 #define FIO_DMASTA_AE			0x02000000
 #define FIO_DMASTA_DN			0x01000000
+
+/* FIO_DSM_CTR_REG */
+#define FIO_DSM_EN			0x80000000
+#define FIO_DSM_MAJP_2KB		0x00000090
+#define FIO_DSM_SPJP_64B		0x00000004
+#define FIO_DSM_SPJP_128B		0x00000005
+
+/* FIO_ECC_RPT_REG */
+#define FIO_ECC_RPT_ERR		0x80000000
+#define FIO_ECC_RPT_FAIL		0x40000000
 
 /* ---------------------------------------------------------------------- */
 
@@ -201,6 +225,8 @@
 #define FLASH_CFI_OFFSET		0x148
 #define FLASH_LEN_OFFSET		0x14c
 #define FLASH_INT_OFFSET		0x150
+#define FLASH_EX_CTR_OFFSET		0x15c
+#define FLASH_EX_ID_OFFSET		0x160
 
 #define FLASH_CTR_REG			FIO_REG(0x120)
 #define FLASH_CMD_REG			FIO_REG(0x124)
@@ -215,6 +241,8 @@
 #define FLASH_CFI_REG			FIO_REG(0x148)
 #define FLASH_LEN_REG			FIO_REG(0x14c)
 #define FLASH_INT_REG			FIO_REG(0x150)
+#define FLASH_EXT_CTR_REG		FIO_REG(0x15c)
+#define FLASH_EXT_ID5_REG		FIO_REG(0x160)
 
 #define NAND_CTR_REG			FLASH_CTR_REG
 #define NAND_CMD_REG			FLASH_CMD_REG
@@ -229,6 +257,8 @@
 #define NAND_COPY_ADDR_REG		FLASH_CFI_REG
 #define NAND_LEN_REG			FLASH_LEN_REG
 #define NAND_INT_REG			FLASH_INT_REG
+#define NAND_EXT_CTR_REG		FLASH_EXT_CTR_REG
+#define NAND_EXT_ID5_REG		FLASH_EXT_ID5_REG
 
 /* For chips to support programable command word. */
 #define NAND_READ_CMDWORD_REG		FIO_REG(0x154)
@@ -384,6 +414,10 @@
 
 /* FLASH_INT_REG (NAND mode) */
 #define NAND_INT_DI			0x1
+
+/* NAND_EXT_CTR_REG */
+#define NAND_EXT_CTR_I5		0x00800000
+#define NAND_EXT_CTR_SP_2X		0x00000001
 
 /* NOR mode definitions */
 

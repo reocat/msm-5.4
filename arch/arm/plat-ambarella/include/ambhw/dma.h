@@ -102,6 +102,12 @@
 #define NUM_DMA_CHANNELS 	5
 #endif
 
+/* Dual space mode DMA */
+#if 	(CHIP_REV == A7S) || (CHIP_REV == A9)
+#define	DMA_DUAL_SPACE_MODE	        	1
+#else
+#undef	DMA_DUAL_SPACE_MODE
+#endif
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -111,6 +117,56 @@
 #define DMA_CHAN_DST_REG(x)		DMA_REG((0x308 + ((x) << 4)))
 #define DMA_CHAN_STA_REG(x)		DMA_REG((0x30c + ((x) << 4)))
 #define DMA_CHAN_DA_REG(x)		DMA_REG((0x380 + ((x) << 2)))
+
+#define DMA_CHAN_DSM_CTR_REG(x)	DMA_REG((0x3a0 + ((x) << 4)))
+
+#define DMA_CHAN_SPR_CNT_REG(x)	DMA_REG((0x200 + ((x) << 4)))
+#define DMA_CHAN_SPR_SRC_REG(x)	DMA_REG((0x204 + ((x) << 4)))
+#define DMA_CHAN_SPR_DST_REG(x)	DMA_REG((0x208 + ((x) << 4)))
+#define DMA_CHAN_SPR_STA_REG(x)	DMA_REG((0x20c + ((x) << 4)))
+#define DMA_CHAN_SPR_DA_REG(x)		DMA_REG((0x280 + ((x) << 2)))
+
+#define DMA_CHAN0_SPR_CT_OFFSET         0x200
+#define DMA_CHAN0_SPR_SRC_OFFSET        0x204
+#define DMA_CHAN0_SPR_DST_OFFSET        0x208
+#define DMA_CHAN0_SPR_STA_OFFSET        0x20c
+#define DMA_CHAN1_SPR_CT_OFFSET         0x210
+#define DMA_CHAN1_SPR_SRC_OFFSET        0x214
+#define DMA_CHAN1_SPR_DST_OFFSET        0x218
+#define DMA_CHAN1_SPR_STA_OFFSET        0x21c
+#define DMA_CHAN2_SPR_CT_OFFSET         0x220
+#define DMA_CHAN2_SPR_SRC_OFFSET        0x224
+#define DMA_CHAN2_SPR_DST_OFFSET        0x228
+#define DMA_CHAN2_SPR_STA_OFFSET        0x22c
+#define DMA_CHAN3_SPR_CT_OFFSET         0x230
+#define DMA_CHAN3_SPR_SRC_OFFSET        0x234
+#define DMA_CHAN3_SPR_DST_OFFSET        0x238
+#define DMA_CHAN3_SPR_STA_OFFSET        0x23c
+#define DMA_CHAN4_SPR_CT_OFFSET         0x240
+#define DMA_CHAN4_SPR_SRC_OFFSET        0x244
+#define DMA_CHAN4_SPR_DST_OFFSET        0x248
+#define DMA_CHAN4_SPR_STA_OFFSET        0x24c
+#define DMA_CHAN5_SPR_CT_OFFSET         0x250
+#define DMA_CHAN5_SPR_SRC_OFFSET        0x254
+#define DMA_CHAN5_SPR_DST_OFFSET        0x258
+#define DMA_CHAN5_SPR_STA_OFFSET        0x25c
+#define DMA_CHAN6_SPR_CT_OFFSET         0x260
+#define DMA_CHAN6_SPR_SRC_OFFSET        0x264
+#define DMA_CHAN6_SPR_DST_OFFSET        0x268
+#define DMA_CHAN6_SPR_STA_OFFSET        0x26c
+#define DMA_CHAN7_SPR_CT_OFFSET         0x270
+#define DMA_CHAN7_SPR_SRC_OFFSET        0x274
+#define DMA_CHAN7_SPR_DST_OFFSET        0x278
+#define DMA_CHAN7_SPR_STA_OFFSET        0x27c
+
+#define DMA_CHAN0_SPR_DA_OFFSET	0x280
+#define DMA_CHAN1_SPR_DA_OFFSET	0x284
+#define DMA_CHAN2_SPR_DA_OFFSET	0x288
+#define DMA_CHAN3_SPR_DA_OFFSET	0x28c
+#define DMA_CHAN4_SPR_DA_OFFSET	0x290
+#define DMA_CHAN5_SPR_DA_OFFSET	0x294
+#define DMA_CHAN6_SPR_DA_OFFSET	0x298
+#define DMA_CHAN7_SPR_DA_OFFSET	0x29c
 
 #define DMA_CHAN0_CTR_OFFSET		0x300
 #define DMA_CHAN0_SRC_OFFSET		0x304
@@ -159,6 +215,48 @@
 
 #define DMA_INT_OFFSET			0x3f0
 
+#define DMA_CHAN0_SPR_CNT_REG           DMA_REG(0x200)
+#define DMA_CHAN0_SPR_SRC_REG           DMA_REG(0x204)
+#define DMA_CHAN0_SPR_DST_REG           DMA_REG(0x208)
+#define DMA_CHAN0_SPR_STA_REG           DMA_REG(0x20c)
+#define DMA_CHAN1_SPR_CNT_REG           DMA_REG(0x210)
+#define DMA_CHAN1_SPR_SRC_REG           DMA_REG(0x214)
+#define DMA_CHAN1_SPR_DST_REG           DMA_REG(0x218)
+#define DMA_CHAN1_SPR_STA_REG           DMA_REG(0x21c)
+#define DMA_CHAN2_SPR_CNT_REG           DMA_REG(0x220)
+#define DMA_CHAN2_SPR_SRC_REG           DMA_REG(0x224)
+#define DMA_CHAN2_SPR_DST_REG           DMA_REG(0x228)
+#define DMA_CHAN2_SPR_STA_REG           DMA_REG(0x22c)
+#define DMA_CHAN3_SPR_CNT_REG           DMA_REG(0x230)
+#define DMA_CHAN3_SPR_SRC_REG           DMA_REG(0x234)
+#define DMA_CHAN3_SPR_DST_REG           DMA_REG(0x238)
+#define DMA_CHAN3_SPR_STA_REG           DMA_REG(0x23c)
+#define DMA_CHAN4_SPR_CNT_REG           DMA_REG(0x240)
+#define DMA_CHAN4_SPR_SRC_REG           DMA_REG(0x244)
+#define DMA_CHAN4_SPR_DST_REG           DMA_REG(0x248)
+#define DMA_CHAN4_SPR_STA_REG           DMA_REG(0x24c)
+#define DMA_CHAN5_SPR_CNT_REG           DMA_REG(0x250)
+#define DMA_CHAN5_SPR_SRC_REG           DMA_REG(0x254)
+#define DMA_CHAN5_SPR_DST_REG           DMA_REG(0x258)
+#define DMA_CHAN5_SPR_STA_REG           DMA_REG(0x25c)
+#define DMA_CHAN6_SPR_CNT_REG           DMA_REG(0x260)
+#define DMA_CHAN6_SPR_SRC_REG           DMA_REG(0x264)
+#define DMA_CHAN6_SPR_DST_REG           DMA_REG(0x268)
+#define DMA_CHAN6_SPR_STA_REG           DMA_REG(0x26c)
+#define DMA_CHAN7_SPR_CNT_REG           DMA_REG(0x270)
+#define DMA_CHAN7_SPR_SRC_REG           DMA_REG(0x274)
+#define DMA_CHAN7_SPR_DST_REG           DMA_REG(0x278)
+#define DMA_CHAN7_SPR_STA_REG           DMA_REG(0x27c)
+
+#define DMA_CHAN0_SPR_DA_REG		DMA_REG(0x280)
+#define DMA_CHAN1_SPR_DA_REG		DMA_REG(0x284)
+#define DMA_CHAN2_SPR_DA_REG		DMA_REG(0x288)
+#define DMA_CHAN3_SPR_DA_REG		DMA_REG(0x28c)
+#define DMA_CHAN4_SPR_DA_REG		DMA_REG(0x290)
+#define DMA_CHAN5_SPR_DA_REG		DMA_REG(0x294)
+#define DMA_CHAN6_SPR_DA_REG		DMA_REG(0x298)
+#define DMA_CHAN7_SPR_DA_REG		DMA_REG(0x29c)
+
 #define DMA_CHAN0_CTR_REG		DMA_REG(0x300)
 #define DMA_CHAN0_SRC_REG		DMA_REG(0x304)
 #define DMA_CHAN0_DST_REG		DMA_REG(0x308)
@@ -204,6 +302,15 @@
 #define DMA_CHAN6_NDA_REG		DMA_REG(0x398)
 #define DMA_CHAN7_NDA_REG		DMA_REG(0x39c)
 
+#define DMA_CHAN0_DSM_CTR_REG		DMA_REG(0x3a0)
+#define DMA_CHAN1_DSM_CTR_REG		DMA_REG(0x3a4)
+#define DMA_CHAN2_DSM_CTR_REG		DMA_REG(0x3a8)
+#define DMA_CHAN3_DSM_CTR_REG		DMA_REG(0x3ac)
+#define DMA_CHAN4_DSM_CTR_REG		DMA_REG(0x3b0)
+#define DMA_CHAN5_DSM_CTR_REG		DMA_REG(0x3b4)
+#define DMA_CHAN6_DSM_CTR_REG		DMA_REG(0x3b8)
+#define DMA_CHAN7_DSM_CTR_REG		DMA_REG(0x3bc)
+
 #define DMA_INT_REG			DMA_REG(0x3f0)
 
 #if (DMA_SUPPORT_DMA_FIOS == 1)
@@ -211,7 +318,7 @@
 #define DMA_FIOS_CHAN_SRC_REG(x)	DMA_FIOS_REG((0x304 + ((x) << 4)))
 #define DMA_FIOS_CHAN_DST_REG(x)	DMA_FIOS_REG((0x308 + ((x) << 4)))
 #define DMA_FIOS_CHAN_STA_REG(x)	DMA_FIOS_REG((0x30c + ((x) << 4)))
-#define DMA_FIOS_CHAN_DA_REG(x)		DMA_FIOS_REG((0x380 + ((x) << 2)))
+#define DMA_FIOS_CHAN_DA_REG(x)	DMA_FIOS_REG((0x380 + ((x) << 2)))
 
 #define DMA_FIOS_CHAN0_CTR_REG		DMA_FIOS_REG(0x300)
 #define DMA_FIOS_CHAN0_SRC_REG		DMA_FIOS_REG(0x304)
@@ -220,15 +327,24 @@
 
 #define DMA_FIOS_CHAN0_NDA_REG		DMA_FIOS_REG(0x380)
 #define DMA_FIOS_INT_REG		DMA_FIOS_REG(0x3f0)
+
+#define DMA_FIOS_CHAN_SPR_CNT_REG(x)	DMA_FIOS_REG((0x200 + ((x) << 4)))
+#define DMA_FIOS_CHAN_SPR_SRC_REG(x)	DMA_FIOS_REG((0x204 + ((x) << 4)))
+#define DMA_FIOS_CHAN_SPR_DST_REG(x)	DMA_FIOS_REG((0x208 + ((x) << 4)))
+#define DMA_FIOS_CHAN_SPR_STA_REG(x)	DMA_FIOS_REG((0x20c + ((x) << 4)))
+#define DMA_FIOS_CHAN_SPR_DA_REG(x)	DMA_FIOS_REG((0x280 + ((x) << 2)))
+
+#define DMA_FIOS_CHAN_DSM_CTR_REG(x)	DMA_FIOS_REG((0x3a0 + ((x) << 4)))
+
 #endif
 
 /* DMA_CHANX_CTR_REG */
 #define DMA_CHANX_CTR_EN		0x80000000
-#define DMA_CHANX_CTR_D			0x40000000
+#define DMA_CHANX_CTR_D		0x40000000
 #define DMA_CHANX_CTR_WM		0x20000000
 #define DMA_CHANX_CTR_RM		0x10000000
 #define DMA_CHANX_CTR_NI		0x08000000
-#define DMA_CHANX_CTR_BLK_1024B		0x07000000
+#define DMA_CHANX_CTR_BLK_1024B	0x07000000
 #define DMA_CHANX_CTR_BLK_512B		0x06000000
 #define DMA_CHANX_CTR_BLK_256B		0x05000000
 #define DMA_CHANX_CTR_BLK_128B		0x04000000
@@ -289,6 +405,12 @@
 #define DMA_INT_CHAN1			0x00000002
 #define DMA_INT_CHAN0			0x00000001
 
+/* DMA_DUAL_SPACE_MODE_REG */
+#define DMA_DSM_EN                      0x80000000
+#define DMA_DSM_MAJP_2KB                0x00000090
+#define DMA_DSM_SPJP_64B                0x00000004
+#define DMA_DSM_SPJP_128B               0x00000005
+
 
 /*********************************/
 /* FIO/DMA Burst Setup           */
@@ -319,8 +441,10 @@
 #define DMA_NODC_SP_BURST_SIZE	(DMA_CHANX_CTR_BLK_16B | DMA_CHANX_CTR_TS_4B)
 #define DMA_DESC_MN_BURST_SIZE	(DMA_DESC_BLK_512B | DMA_DESC_TS_4B)
 #define DMA_DESC_SP_BURST_SIZE	(DMA_DESC_BLK_16B | DMA_DESC_TS_4B)
+#define DMA_NODC_MN_BURST_SIZE8	(DMA_CHANX_CTR_BLK_512B | DMA_CHANX_CTR_TS_8B)
 #define FIO_MN_BURST_SIZE	(FIO_DMACTR_BLK_512B | FIO_DMACTR_TS4B)
 #define FIO_SP_BURST_SIZE	(FIO_DMACTR_BLK_16B | FIO_DMACTR_TS4B)
+#define FIO_MN_BURST_SIZE8	(FIO_DMACTR_BLK_512B | FIO_DMACTR_TS8B)
 #endif
 
 #endif

@@ -76,6 +76,7 @@ struct ambarella_nand_info {
 	int				dma_bufpos;
 	u32				dma_status;
 	u32				fio_dma_sta;
+	u32				fio_ecc_sta;
 	atomic_t			irq_flag;
 
 	/* saved column/page_addr during CMD_SEQIN */
@@ -90,7 +91,9 @@ struct ambarella_nand_info {
 	u32				addr;
 	u32				dst;
 	dma_addr_t			buf_phys;
+	dma_addr_t			spare_buf_phys;
 	u32				len;
+	u32				slen;
 	u32				area;
 	u32				ecc;
 
@@ -121,6 +124,15 @@ static struct nand_ecclayout amb_oobinfo_2048 = {
 		{49, 7}, {61, 3}}
 };
 
+static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc6 = {
+	.eccbytes = 40,
+	.eccpos = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+		22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+		38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+		54, 55, 56, 57, 58, 59, 60, 61, 62, 63},
+	.oobfree = {{1, 5}, {17, 5},
+			{33, 5}, {49, 5}}
+};
 static uint8_t amb_scan_ff_pattern[] = { 0xff, };
 
 static struct nand_bbt_descr amb_512_bbt_descr = {
@@ -163,6 +175,30 @@ static struct nand_bbt_descr bbt_mirror_descr = {
 	.pattern = mirror_pattern,
 };
 
+/* bbt pattern for dual space mode */
+static u8 bbt_pattern_dsm[] = { 'B', 'b', 't', '2' };
+static u8 mirror_pattern_dsm[] = { '3', 't', 'b', 'B' };
+
+static struct nand_bbt_descr bbt_main_descr_dsm = {
+	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+	.offs = 1,
+	.len = 4,
+	.veroffs = 5,
+	.maxblocks = 4,
+	.pattern = bbt_pattern_dsm,
+};
+
+static struct nand_bbt_descr bbt_mirror_descr_dsm = {
+	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+	.offs = 1,
+	.len = 4,
+	.veroffs = 5,
+	.maxblocks = 4,
+	.pattern = mirror_pattern_dsm,
+};
+
 
 /* ==========================================================================*/
 #ifdef CONFIG_MTD_PARTITIONS
@@ -190,7 +226,66 @@ static char part_name[PART_MAX][PART_NAME_LEN];
 	NAND_TIMING_CALC_SPDUP(val, new_clk, origin_clk) :	\
 	NAND_TIMING_CALC_SPDDOWN(val, new_clk, origin_clk))
 
+static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
+{
+	u32 fio_dsm_ctr = 0, fio_ctr_reg = 0, dma_dsm_ctr = 0;
+	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
 
+	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+			fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
+			dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
+			fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO);
+
+			if (nand_info->plat_nand->sets->ecc_bits == 6) {
+			  fio_dsm_ctr |= FIO_DSM_SPJP_64B;
+				dma_dsm_ctr |= DMA_DSM_SPJP_64B;
+				fio_ctr_reg |= FIO_CTR_ECC_6BIT;
+			} else {
+				fio_dsm_ctr |= FIO_DSM_SPJP_128B;
+				dma_dsm_ctr |= DMA_DSM_SPJP_128B;
+				fio_ctr_reg |= FIO_CTR_ECC_8BIT;
+			}
+	}
+
+	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, fio_dsm_ctr);
+	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
+	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, dma_dsm_ctr);
+
+}
+
+static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
+{
+	u32 fio_ctr_reg = 0;
+
+	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+	/* Setup FIO Dual Space Mode Control Register */
+	fio_ctr_reg |= FIO_CTR_RS;
+	fio_ctr_reg &= ~(FIO_CTR_CO |
+			 FIO_CTR_ECC_6BIT |
+			 FIO_CTR_ECC_8BIT);
+
+	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
+
+	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, 0);
+	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, 0);
+}
+
+static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
+{
+	u32 i;
+	u8 *bsp;
+
+	bsp = nand_info->dmabuf + nand_info->mtd.writesize;
+	if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+		for (i = 0; i < nand_info->mtd.oobsize; i++) {
+				if (bsp[i] != 0xff)
+					break;
+		}
+		if (i == nand_info->mtd.oobsize)
+			return 0;
+		}
+	return -1;
+}
 
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 	struct ambarella_nand_timing *timing);
@@ -435,6 +530,11 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 
 		amba_writel(nand_info->regbase + FIO_DMASTA_OFFSET, 0x0);
 
+		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+			nand_info->fio_ecc_sta =
+				amba_readl(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
+			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
+		}
 		atomic_clear_mask(0x2, (unsigned long *)&nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
@@ -472,6 +572,7 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 {
 	u32					ctrl_val;
+	u32					size = 0;
 
 	/* init and enable fdma to transfer data betwee FIFO and Memory */
 	if (nand_info->len > 16)
@@ -482,57 +583,88 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 	ctrl_val |= nand_info->len | DMA_CHANX_CTR_EN;
 	ctrl_val &= ~DMA_CHANX_CTR_D;
 
+	/* Setup main external DMA engine transfer */
 	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
 
 	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->dmabase);
 	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->buf_phys);
+
+	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		/* Setup spare external DMA engine transfer */
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0x0);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET, nand_info->dmabase);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_DST_OFFSET, nand_info->spare_buf_phys);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_CNT_OFFSET, nand_info->slen);
+	}
+
 	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET, ctrl_val);
 
 	/* init and enable fio-dma to transfer data between Nand and FIFO */
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
-	if (nand_info->len > 16) {
+	size = nand_info->len + nand_info->slen;
+	if (size > 16) {
 		ctrl_val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_MN_BURST_SIZE |
-			nand_info->len;
+			size;
 	} else {
 		ctrl_val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
 			FIO_SP_BURST_SIZE |
-			nand_info->len;
+			size;
 	}
 	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, ctrl_val);
 }
 
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 {
-	u32					ctrl_val;
+	u32					ctrl_val, dma_burst_val, fio_burst_val;
+	u32					size = 0;
+
+	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		dma_burst_val = DMA_NODC_MN_BURST_SIZE8;
+		fio_burst_val = FIO_MN_BURST_SIZE8;
+	} else {
+		dma_burst_val = DMA_NODC_MN_BURST_SIZE;
+		fio_burst_val = FIO_MN_BURST_SIZE;
+	}
 
 	/* init and enable fdma to transfer data betwee FIFO and Memory */
 	if (nand_info->len > 16)
-		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_NODC_MN_BURST_SIZE;
+		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | dma_burst_val;
 	else
 		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_NODC_SP_BURST_SIZE;
 
 	ctrl_val |= nand_info->len | DMA_CHANX_CTR_EN;
 	ctrl_val &= ~DMA_CHANX_CTR_D;
 
+	/* Setup main external DMA engine transfer */
 	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
 
 	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->buf_phys);
 	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->dmabase);
+
+	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		/* Setup spare external DMA engine transfer */
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0x0);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET, nand_info->spare_buf_phys);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_DST_OFFSET, nand_info->dmabase);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_CNT_OFFSET, nand_info->slen);
+	}
+
 	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET, ctrl_val);
 
 	/* init and enable fio-dma to transfer data between Nand and FIFO */
 	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
-	if (nand_info->len > 16) {
-		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_MN_BURST_SIZE |
-			FIO_DMACTR_RM | nand_info->len;
+	size = nand_info->len + nand_info->slen;
+	if (size > 16) {
+		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | fio_burst_val |
+			FIO_DMACTR_RM | size;
 	} else {
 		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_SP_BURST_SIZE |
-			FIO_DMACTR_RM | nand_info->len;
+			FIO_DMACTR_RM | size;
 	}
 	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, ctrl_val);
 }
@@ -576,6 +708,17 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	case NAND_AMB_CMD_READID:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_READID;
+
+		if (nand_info->plat_nand->id_cycles == 5) {
+			u32	nand_ext_ctr_reg = 0;
+
+			nand_ext_ctr_reg = amba_readl(nand_info->regbase + FLASH_EXT_CTR_REG);
+			nand_ext_ctr_reg |= NAND_EXT_CTR_I5;
+			nand_ctr_reg &= ~(NAND_CTR_I4);
+			amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
+				nand_ext_ctr_reg);
+		}
+
 		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
 			nand_ctr_reg);
 		amba_writel(nand_info->regbase + FLASH_CMD_OFFSET,
@@ -615,39 +758,50 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	case NAND_AMB_CMD_READ:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 
-		if (nand_info->area == MAIN_ECC)
-			nand_ctr_reg |= (NAND_CTR_SE);
-		else if (nand_info->area == SPARE_ONLY ||
-			nand_info->area == SPARE_ECC)
-			nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
+		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+			/* Setup FIO DMA Control Register */
+			nand_amb_enable_bch(nand_info);
+			/* in dual space mode,enable the SE bit */
+			nand_ctr_reg |= NAND_CTR_SE;
 
-		fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			/* Clean Flash_IO_ecc_rpt_status Register */
+			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
+		} else {
+			if (nand_info->area == MAIN_ECC)
+				nand_ctr_reg |= (NAND_CTR_SE);
+			else if (nand_info->area == SPARE_ONLY ||
+				nand_info->area == SPARE_ECC)
+				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
-		if (nand_info->area == SPARE_ONLY ||
-			nand_info->area == SPARE_ECC  ||
-			nand_info->area == MAIN_ECC)
-			fio_ctr_reg |= (FIO_CTR_RS);
+			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
 
-		switch (nand_info->ecc) {
-		case EC_MDSE:
-			nand_ctr_reg |= NAND_CTR_EC_SPARE;
-			fio_ctr_reg |= FIO_CTR_CO;
-			break;
-		case EC_MESD:
-			nand_ctr_reg |= NAND_CTR_EC_MAIN;
-			fio_ctr_reg |= FIO_CTR_CO;
-			break;
-		case EC_MESE:
-			nand_ctr_reg |=	(NAND_CTR_EC_MAIN | NAND_CTR_EC_SPARE);
-			fio_ctr_reg |= FIO_CTR_CO;
-			break;
-		case EC_MDSD:
-		default:
-			break;
+			if (nand_info->area == SPARE_ONLY ||
+				nand_info->area == SPARE_ECC  ||
+				nand_info->area == MAIN_ECC)
+				fio_ctr_reg |= (FIO_CTR_RS);
+
+			switch (nand_info->ecc) {
+			case EC_MDSE:
+				nand_ctr_reg |= NAND_CTR_EC_SPARE;
+				fio_ctr_reg |= FIO_CTR_CO;
+				break;
+			case EC_MESD:
+				nand_ctr_reg |= NAND_CTR_EC_MAIN;
+				fio_ctr_reg |= FIO_CTR_CO;
+				break;
+			case EC_MESE:
+				nand_ctr_reg |=	(NAND_CTR_EC_MAIN | NAND_CTR_EC_SPARE);
+				fio_ctr_reg |= FIO_CTR_CO;
+				break;
+			case EC_MDSD:
+			default:
+				break;
+			}
+
+			amba_writel(nand_info->regbase + FIO_CTR_OFFSET,
+						fio_ctr_reg);
 		}
 
-		amba_writel(nand_info->regbase + FIO_CTR_OFFSET,
-			fio_ctr_reg);
 		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
 			nand_ctr_reg);
 		nand_amb_setup_dma_devmem(nand_info);
@@ -657,36 +811,46 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	case NAND_AMB_CMD_PROGRAM:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 
-		if (nand_info->area == MAIN_ECC)
-			nand_ctr_reg |= (NAND_CTR_SE);
-		else if (nand_info->area == SPARE_ONLY ||
-			nand_info->area == SPARE_ECC)
-			nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
+		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+			/* Setup FIO DMA Control Register */
+			nand_amb_enable_bch(nand_info);
+			/* in dual space mode,enable the SE bit */
+			nand_ctr_reg |= NAND_CTR_SE;
 
-		fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			/* Clean Flash_IO_ecc_rpt_status Register */
+			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
+		} else {
+			if (nand_info->area == MAIN_ECC)
+				nand_ctr_reg |= (NAND_CTR_SE);
+			else if (nand_info->area == SPARE_ONLY ||
+				nand_info->area == SPARE_ECC)
+				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
-		if (nand_info->area == SPARE_ONLY ||
-			nand_info->area == SPARE_ECC  ||
-			nand_info->area == MAIN_ECC)
-			fio_ctr_reg |= (FIO_CTR_RS);
+			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
 
-		switch (nand_info->ecc) {
-		case EG_MDSE :
-			nand_ctr_reg |= NAND_CTR_EG_SPARE;
-			break;
-		case EG_MESD :
-			nand_ctr_reg |= NAND_CTR_EG_MAIN;
-			break;
-		case EG_MESE :
-			nand_ctr_reg |= (NAND_CTR_EG_MAIN | NAND_CTR_EG_SPARE);
-			break;
-		case EG_MDSD:
-		default:
-			break;
+			if (nand_info->area == SPARE_ONLY ||
+				nand_info->area == SPARE_ECC  ||
+				nand_info->area == MAIN_ECC)
+				fio_ctr_reg |= (FIO_CTR_RS);
+
+			switch (nand_info->ecc) {
+			case EG_MDSE :
+				nand_ctr_reg |= NAND_CTR_EG_SPARE;
+				break;
+			case EG_MESD :
+				nand_ctr_reg |= NAND_CTR_EG_MAIN;
+				break;
+			case EG_MESE :
+				nand_ctr_reg |= (NAND_CTR_EG_MAIN | NAND_CTR_EG_SPARE);
+				break;
+			case EG_MDSD:
+			default:
+				break;
+			}
+
+			amba_writel(nand_info->regbase + FIO_CTR_OFFSET,
+				fio_ctr_reg);
 		}
-
-		amba_writel(nand_info->regbase + FIO_CTR_OFFSET,
-			fio_ctr_reg);
 		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
 			nand_ctr_reg);
 		nand_amb_setup_dma_memdev(nand_info);
@@ -722,6 +886,34 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			goto nand_amb_request_done;
 		}
 
+		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+			if (cmd == NAND_AMB_CMD_READ) {
+				int ret = 0;
+				struct mtd_info		*mtd;
+				mtd = &nand_info->mtd;
+				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
+				/* Workaround for page never used, BCH will be failed */
+					if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
+						ret = nand_bch_spare_cmp(nand_info);
+
+					if (ret < 0) {
+						mtd->ecc_stats.failed++;
+						printk(KERN_ERR "read BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
+									nand_info->fio_ecc_sta, nand_info->addr);
+					}
+				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
+						mtd->ecc_stats.corrected++;
+				}
+			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
+				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
+					printk(KERN_ERR "nand_amb_dsm_request program failed (0x%08x)!\n",
+								nand_info->fio_ecc_sta);
+				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
+					printk(KERN_ERR "program BCH code corrected (0x%08x)!\n",
+								nand_info->fio_ecc_sta);
+				}
+			}
+		}
 		errorCode = nand_info->plat_nand->parse_error(
 			nand_info->fio_dma_sta);
 		if (errorCode) {
@@ -760,6 +952,11 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			if (cmd == NAND_AMB_CMD_READID) {
 				u32 id = amba_readl(nand_info->regbase +
 					FLASH_ID_OFFSET);
+				if (nand_info->plat_nand->id_cycles == 5) {
+					u32 id_5 = amba_readl(nand_info->regbase +
+					FLASH_EX_ID_OFFSET);
+					nand_info->dmabuf[4] = (unsigned char) (id_5 & 0xFF);
+				}
 				nand_info->dmabuf[0] = (unsigned char) (id >> 24);
 				nand_info->dmabuf[1] = (unsigned char) (id >> 16);
 				nand_info->dmabuf[2] = (unsigned char) (id >> 8);
@@ -785,6 +982,11 @@ nand_amb_request_done:
 		nand_info->wp_gpio >= 0)
 		gpio_direction_output(nand_info->wp_gpio, GPIO_LOW);
 #endif
+
+	if ((cmd == NAND_AMB_CMD_READ ||
+		cmd == NAND_AMB_CMD_PROGRAM) &&
+		nand_info->plat_nand->sets->ecc_bits > 0x1)
+		nand_amb_disable_bch(nand_info);
 
 	nand_info->plat_nand->release();
 
@@ -832,6 +1034,10 @@ int nand_amb_erase(struct ambarella_nand_info *nand_info, u32 page_addr)
 	nand_info->addr_hi = addr_hi;
 	nand_info->addr = addr;
 
+	/* Fix dual space mode bug */
+	if (nand_info->plat_nand->sets->ecc_bits > 1)
+		amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
+
 	errorCode = nand_amb_request(nand_info);
 
 	return errorCode;
@@ -845,7 +1051,7 @@ int nand_amb_read_data(struct ambarella_nand_info *nand_info,
 	u32					addr;
 	u32					len;
 	u64					addr64;
-	u8					ecc;
+	u8					ecc = 0;
 
 	addr64 = (u64)(page_addr * nand_info->mtd.writesize);
 	addr_hi = (u32)(addr64 >> 32);
@@ -873,6 +1079,15 @@ int nand_amb_read_data(struct ambarella_nand_info *nand_info,
 		errorCode = -EINVAL;
 		goto nand_amb_read_page_exit;
 		break;
+	}
+
+	nand_info->slen = 0;
+	if(nand_info->plat_nand->sets->ecc_bits > 1) {
+		/* when use BCH, the EG and EC should be 0 */
+		ecc = 0;
+		len = nand_info->mtd.writesize;
+		nand_info->slen = nand_info->mtd.oobsize;
+		nand_info->spare_buf_phys = buf_dma + len;
 	}
 
 	nand_info->cmd = NAND_AMB_CMD_READ;
@@ -927,6 +1142,14 @@ int nand_amb_write_data(struct ambarella_nand_info *nand_info,
 		break;
 	}
 
+	nand_info->slen = 0;
+	if(nand_info->plat_nand->sets->ecc_bits > 1) {
+		/* when use BCH, the EG and EC should be 0 */
+		ecc = 0;
+		len = nand_info->mtd.writesize;
+		nand_info->slen = nand_info->mtd.oobsize;
+		nand_info->spare_buf_phys = buf_dma + len;
+	}
 	nand_info->cmd = NAND_AMB_CMD_PROGRAM;
 	nand_info->addr_hi = addr_hi;
 	nand_info->addr = addr;
@@ -1083,15 +1306,26 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		break;
 	case NAND_CMD_READOOB:
 		nand_info->dma_bufpos = column;
-		nand_amb_read_data(nand_info, page_addr,
-			nand_info->dmaaddr, SPARE_ONLY);
+		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+				nand_info->dma_bufpos = mtd->writesize;
+				nand_amb_read_data(nand_info, page_addr,
+					nand_info->dmaaddr, MAIN_ECC);
+		} else {
+			nand_amb_read_data(nand_info, page_addr,
+				nand_info->dmaaddr, SPARE_ONLY);
+		}
 		break;
 	case NAND_CMD_READ0:
 		nand_info->dma_bufpos = column;
-		nand_amb_read_data(nand_info, page_addr,
-			nand_info->dmaaddr, MAIN_ECC);
-		nand_amb_read_data(nand_info, page_addr,
-			nand_info->dmaaddr + mtd->writesize, SPARE_ONLY);
+		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+			nand_amb_read_data(nand_info, page_addr,
+				nand_info->dmaaddr, MAIN_ECC);
+		} else {
+			nand_amb_read_data(nand_info, page_addr,
+				nand_info->dmaaddr, MAIN_ECC);
+			nand_amb_read_data(nand_info, page_addr,
+				nand_info->dmaaddr + mtd->writesize, SPARE_ONLY);
+		}
 		break;
 	case NAND_CMD_SEQIN:
 		nand_info->dma_bufpos = column;
@@ -1099,15 +1333,27 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		nand_info->seqin_page_addr = page_addr;
 		break;
 	case NAND_CMD_PAGEPROG:
-		if (nand_info->seqin_column < mtd->writesize) {
+		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+			if (nand_info->seqin_column < mtd->writesize) {
+				nand_amb_write_data(nand_info,
+					nand_info->seqin_page_addr,
+					nand_info->dmaaddr, MAIN_ECC);
+			} else {
+					nand_amb_write_data(nand_info,
+						nand_info->seqin_page_addr,
+						nand_info->dmaaddr, SPARE_ECC);
+			}
+		} else {
+			if (nand_info->seqin_column < mtd->writesize) {
+				nand_amb_write_data(nand_info,
+					nand_info->seqin_page_addr,
+					nand_info->dmaaddr, MAIN_ECC);
+			}
 			nand_amb_write_data(nand_info,
-				nand_info->seqin_page_addr,
-				nand_info->dmaaddr, MAIN_ECC);
-		}
-		nand_amb_write_data(nand_info,
 				nand_info->seqin_page_addr,
 				nand_info->dmaaddr + mtd->writesize,
 				SPARE_ONLY);
+		}
 		break;
 	default:
 		dev_err(nand_info->dev, "%s: 0x%x, %d, %d\n",
@@ -1121,7 +1367,7 @@ static void amb_nand_hwctl(struct mtd_info *mtd, int mode)
 {
 }
 
-static int amb_nand_caculate_ecc(struct mtd_info *mtd,
+static int amb_nand_calculate_ecc(struct mtd_info *mtd,
 	const u_char *dat, u_char *ecc_code)
 {
 	int i;
@@ -1274,8 +1520,13 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 	chip->options = NAND_NO_AUTOINCR;
 	if (nand_info->plat_nand->flash_bbt) {
 		chip->options |= NAND_USE_FLASH_BBT;
-		chip->bbt_td = &bbt_main_descr;
-		chip->bbt_md = &bbt_mirror_descr;
+		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+			chip->bbt_td = &bbt_main_descr_dsm;
+			chip->bbt_md = &bbt_mirror_descr_dsm;
+		} else {
+			chip->bbt_td = &bbt_main_descr;
+			chip->bbt_md = &bbt_mirror_descr;
+		}
 	}
 
 	nand_info->mtd.priv = chip;
@@ -1305,9 +1556,25 @@ static int __devinit ambarella_nand_init_chipecc(
 
 	chip->ecc.mode = NAND_ECC_HW;
 	chip->ecc.size = 512;
-	chip->ecc.bytes = 6;
+
+	printk(KERN_INFO "ambarella nand in ecc-[%d]bit mode\n",
+				nand_info->plat_nand->sets->ecc_bits);
+	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		if (nand_info->plat_nand->sets->ecc_bits == 6) {
+			chip->ecc.bytes = NAND_ECC_BCH6_BYTES;
+			chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
+			chip->ecc.size = 2048;
+		} else if (nand_info->plat_nand->sets->ecc_bits == 8)
+			chip->ecc.bytes = NAND_ECC_BCH8_BYTES;
+			/* 8 bit can not supprot on board recently */
+			/* ecc bit part maybe need optimize
+			when nand supports internel ecc bit itself */
+	} else {
+		chip->ecc.bytes = 6;
+	}
+
 	chip->ecc.hwctl = amb_nand_hwctl;
-	chip->ecc.calculate = amb_nand_caculate_ecc;
+	chip->ecc.calculate = amb_nand_calculate_ecc;
 	chip->ecc.correct = amb_nand_correct_data;
 	chip->ecc.write_oob = amb_nand_write_oob_std;
 

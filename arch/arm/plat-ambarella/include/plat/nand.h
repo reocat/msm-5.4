@@ -45,12 +45,22 @@
 #define SPARE_ONLY_BURST	4
 #define SPARE_ECC_BURST		5
 
+/* ECC use bch-x bytes */
+#define NAND_ECC_BCH6_BYTES	40	/* 10Bytes/512Bytes, so 40B/2048B */
+#define NAND_ECC_BCH8_BYTES	52	/* 13Bytes/512Bytes, so 52B/2048B */
+
 #define FDMA_CTR_OFFSET		(0x300 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_SRC_OFFSET		(0x304 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_DST_OFFSET		(0x308 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_STA_OFFSET		(0x30c + ((FIO_DMA_CHAN) << 4))
 #define FDMA_DA_OFFSET		(0x380 + ((FIO_DMA_CHAN) << 2))
 #define FDMA_INT_OFFSET		(0x3f0)
+
+#define FDMA_SPR_CNT_OFFSET	(0x200 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_SPR_SRC_OFFSET	(0x204 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_SPR_DST_OFFSET	(0x208 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_SPR_STA_OFFSET	(0x20c + ((FIO_DMA_CHAN) << 4))
+#define FDMA_DSM_CTR_OFFSET	(0x3a0 + ((FIO_DMA_CHAN) << 4))
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -82,6 +92,7 @@ struct ambarella_nand_set
 	int				nr_partitions;
 	char				*name;
 	int				*nr_map;
+	u32				ecc_bits;
 };
 
 struct ambarella_platform_nand
@@ -89,6 +100,7 @@ struct ambarella_platform_nand
 	struct ambarella_nand_timing	*timing;
 	struct ambarella_nand_set	*sets;
 	u32				flash_bbt;
+	u32				id_cycles;
 
 	int				(*parse_error)(u32 reg);
 	void				(*request)(void);
