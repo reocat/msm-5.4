@@ -870,7 +870,8 @@ static void rproc_fw_config_virtio(const struct firmware *fw, void *context)
 		goto out;
 
 out:
-	release_firmware(fw);
+	rproc_fw_release_firmware(rproc, fw);
+
 	/* allow rproc_del() contexts, if any, to proceed */
 	complete_all(&rproc->firmware_loading_complete);
 }
@@ -928,7 +929,7 @@ int rproc_boot(struct rproc *rproc)
 	dev_info(dev, "powering up %s\n", rproc->name);
 
 	/* load firmware */
-	ret = request_firmware(&firmware_p, rproc->firmware, dev);
+	ret = rproc_fw_request_firmware(rproc, &firmware_p);
 	if (ret < 0) {
 		dev_err(dev, "request_firmware failed: %d\n", ret);
 		goto downref_rproc;
@@ -936,7 +937,7 @@ int rproc_boot(struct rproc *rproc)
 
 	ret = rproc_fw_boot(rproc, firmware_p);
 
-	release_firmware(firmware_p);
+	rproc_fw_release_firmware(rproc, firmware_p);
 
 downref_rproc:
 	if (ret) {
@@ -1057,9 +1058,7 @@ int rproc_add(struct rproc *rproc)
 	 * We're initiating an asynchronous firmware loading, so we can
 	 * be built-in kernel code, without hanging the boot process.
 	 */
-	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-					rproc->firmware, dev, GFP_KERNEL,
-					rproc, rproc_fw_config_virtio);
+	ret = rproc_fw_request_firmware_nowait(rproc, rproc_fw_config_virtio);
 	if (ret < 0) {
 		dev_err(dev, "request_firmware_nowait failed: %d\n", ret);
 		complete_all(&rproc->firmware_loading_complete);
