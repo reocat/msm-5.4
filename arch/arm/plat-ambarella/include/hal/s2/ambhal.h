@@ -1125,9 +1125,13 @@ typedef unsigned int (*amb_hal_function_t) (unsigned int, unsigned int, unsigned
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
+  unsigned int rval;
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 32 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
+  AMBARELLA_HAL_OS_LOCK();
+  rval = amb_hal_function (arg0, arg1, arg2, arg3) ;
+  AMBARELLA_HAL_OS_UNLOCK();
 
-  return amb_hal_function (arg0, arg1, arg2, arg3) ;
+  return rval;
 }
 
 /**
