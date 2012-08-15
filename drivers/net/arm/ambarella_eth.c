@@ -1219,6 +1219,7 @@ static int ambeth_stop(struct net_device *ndev)
 	flush_scheduled_work();
 	free_irq(ndev->irq, ndev);
 	ambeth_phy_stop(lp);
+	netif_carrier_off(ndev);
 	ambeth_stop_hw(ndev);
 
 	return errorCode;

@@ -228,6 +228,8 @@ static void __init ambarella_init_ginkgo(void)
 	/* Config ETH */
 	ambarella_eth0_platform_info.mii_id = 1;
 	ambarella_eth0_platform_info.phy_id = 0x001cc915;
+	ambarella_eth0_platform_info.default_tx_ring_size = 128;
+	ambarella_eth0_platform_info.default_rx_ring_size = 64;
 	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
 
 	/* Config Vin */
