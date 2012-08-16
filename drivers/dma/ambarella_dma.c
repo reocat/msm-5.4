@@ -270,7 +270,7 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 			DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
 
 		for (i = 0; i < 100; i++) {
-			if (ambdma_chan_is_enabled(amb_chan))
+			if (!ambdma_chan_is_enabled(amb_chan))
 				return 0;
 			udelay(10);
 		}
