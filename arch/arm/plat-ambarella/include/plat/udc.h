@@ -421,7 +421,8 @@ struct ambarella_udc_controller {
 	unsigned long				irqflags;
 	/* dma_fix is only used for S2 chip, due to its DMA engine fault */
 	u32					dma_fix;
-	void					(*init_pll)(void);
+	void					(*enable_phy)(void);
+	void					(*disable_phy)(void);
 	void					(*reset_usb)(void);
 	int					(*flush_rxfifo)(void);
 };

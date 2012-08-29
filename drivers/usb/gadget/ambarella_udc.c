@@ -1111,12 +1111,6 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 			udc->host_suspended = 0;
 		}
 
-		if (udc->reset_by_host == 0) {
-			udc->reset_by_host = 1;
-			udc->controller_info->reset_usb();
-			ambarella_init_usb();
-		}
-
 		ambarella_stop_activity(udc);
 
 		udc->gadget.speed = USB_SPEED_UNKNOWN;
@@ -1155,8 +1149,6 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 	/* case 4. enumeration complete */
 	else if(int_value & USB_DEV_ENUM_CMPL) {
 		u32 	value = 0;
-
-		udc->reset_by_host = 0;
 
 		/* Ack the CMPL interrupt */
 		amba_writel(USB_DEV_INTR_REG, USB_DEV_ENUM_CMPL);
@@ -1452,7 +1444,7 @@ static void ambarella_vbus_timer(unsigned long data)
 
 	connected = !!(amba_readl(VIC_RAW_STA_REG) & 0x1);
 
-	if (udc->vbus_status != connected) {
+	if ((udc->vbus_status != connected) && (udc->driver != NULL)) {
 		udc->vbus_status = connected;
 		ambarella_udc_vbus_session(&udc->gadget, udc->vbus_status);
 	}
@@ -2043,16 +2035,13 @@ static void ambarella_init_gadget(struct ambarella_udc *udc,
 	return;
 }
 
-
-/*
- * ambarella_udc_enable
- */
 static void ambarella_udc_enable(struct ambarella_udc *udc)
 {
 	if (udc->udc_is_enabled)
 		return;
 
 	udc->udc_is_enabled = 1;
+	udc->controller_info->enable_phy();
 
 	/* Disable Tx and Rx DMA */
 	amba_clrbitsl(USB_DEV_CTRL_REG,
@@ -2108,6 +2097,7 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 	amb_udc_status = AMBARELLA_UDC_STATUS_DISABLED;
 	schedule_work(&udc->uevent_work);
 
+	udc->controller_info->disable_phy();
 	udc->udc_is_enabled = 0;
 }
 
@@ -2265,10 +2255,9 @@ static int __devinit ambarella_udc_probe(struct platform_device *pdev)
 	udc->pre_uevent_status = AMBARELLA_UDC_STATUS_UNKNOWN;
 	udc->pre_uevent_vbus = 0;
 	udc->udc_is_enabled = 0;
-	udc->reset_by_host = 0;
 	udc->vbus_status = 0;
 	/* Initial USB PLL */
-	udc->controller_info->init_pll();
+	udc->controller_info->enable_phy();
 	/* Reset USB */
 	udc->controller_info->reset_usb();
 
@@ -2420,6 +2409,9 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	amb_udc_status = AMBARELLA_UDC_STATUS_SUSPEND;
 	schedule_work(&udc->uevent_work);
 
+	udc->controller_info->disable_phy();
+	udc->udc_is_enabled = 0;
+
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, message.event);
 
@@ -2436,7 +2428,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	udc->sys_suspended = 0;
 
 	/* Initial USB PLL */
-	udc->controller_info->init_pll();
+	udc->controller_info->enable_phy();
 	/* Reset USB */
 	udc->controller_info->reset_usb();
 	/*initial usb hardware */

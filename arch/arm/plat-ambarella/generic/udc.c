@@ -50,12 +50,19 @@ struct resource ambarella_udc_resources[] = {
 	},
 };
 
-static void init_usb(void)
+static void enable_phy(void)
 {
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
 	ambarella_enable_usb_port(UDC_OWN_PORT);
 #else
 	_init_usb_pll();
+#endif
+}
+
+static void disable_phy(void)
+{
+#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
+	ambarella_disable_usb_port(UDC_OWN_PORT);
 #endif
 }
 
@@ -117,7 +124,8 @@ static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 #else
 	.dma_fix	= 0,
 #endif
-	.init_pll	= init_usb,
+	.enable_phy	= enable_phy,
+	.disable_phy	= disable_phy,
 	.reset_usb	= reset_usb,
 	.flush_rxfifo	= flush_rxfifo,
 };
