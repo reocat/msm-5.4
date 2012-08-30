@@ -261,26 +261,32 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	int i = 10, id = amb_chan->id;
+	unsigned long flags;
 
+	spin_lock_irqsave(&amb_chan->lock, flags);
 	/* Disable DMA: following sequence is not mentioned at APM.*/
 	if (ambdma_chan_is_enabled(amb_chan)) {
-		amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_DD);
-		amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
-		amba_writel(DMA_CHAN_CTR_REG(id),
-			DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
-
 		for (i = 0; i < 100; i++) {
-			if (!ambdma_chan_is_enabled(amb_chan))
-				return 0;
+			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_DD);
+			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
+			amba_writel(DMA_CHAN_CTR_REG(id),
+				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
+
 			udelay(10);
+			if (!ambdma_chan_is_enabled(amb_chan)) {
+				spin_unlock_irqrestore(&amb_chan->lock, flags);
+				return 0;
+			}
 		}
 
 		if (ambdma_chan_is_enabled(amb_chan)) {
+			spin_unlock_irqrestore(&amb_chan->lock, flags);
 			pr_err("%s: stop dma channel(%d) failed\n", __func__, id);
 			return -EIO;
 		}
 	}
 
+	spin_unlock_irqrestore(&amb_chan->lock, flags);
 	return 0;
 }
 
