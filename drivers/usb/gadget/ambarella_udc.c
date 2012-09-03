@@ -1444,9 +1444,10 @@ static void ambarella_vbus_timer(unsigned long data)
 
 	connected = !!(amba_readl(VIC_RAW_STA_REG) & 0x1);
 
-	if ((udc->vbus_status != connected) && (udc->driver != NULL)) {
+	if (udc->vbus_status != connected) {
 		udc->vbus_status = connected;
-		ambarella_udc_vbus_session(&udc->gadget, udc->vbus_status);
+		if (udc->driver != NULL)
+			ambarella_udc_vbus_session(&udc->gadget, udc->vbus_status);
 	}
 
 	mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
