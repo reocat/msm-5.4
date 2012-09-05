@@ -1446,6 +1446,7 @@ static void ambarella_vbus_timer(unsigned long data)
 
 	if (udc->vbus_status != connected) {
 		udc->vbus_status = connected;
+		schedule_work(&udc->uevent_work);
 		if (udc->driver != NULL)
 			ambarella_udc_vbus_session(&udc->gadget, udc->vbus_status);
 	}
