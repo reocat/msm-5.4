@@ -551,7 +551,7 @@ static struct platform_driver ambarella_input_driver = {
 
 static int __init ambarella_input_init(void)
 {
-	int				retval = 0;
+	int				retval = 0,i=0;
 
 	mutex_lock(&pboard_info_lock);
 
@@ -561,12 +561,26 @@ static int __init ambarella_input_init(void)
 			retval);
 
 #ifdef CONFIG_INPUT_AMBARELLA_IR
-	if (platform_driver_register_ir())
-		printk(KERN_ERR "Register ambarella_ir_driver failed!\n");
+	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
+		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
+			break;
+		if (pboard_info->pkeymap[i].type == AMBINPUT_IR_KEY){
+			if (platform_driver_register_ir())
+				printk(KERN_ERR "Register ambarella_ir_driver failed!\n");
+			break;
+		}
+	}
 #endif
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
-	if (platform_driver_register_adc())
-		printk(KERN_ERR "Register ambarella_adc_driver failed!\n");
+	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
+		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
+			break;
+		if (pboard_info->pkeymap[i].type == AMBINPUT_ADC_KEY){
+			if (platform_driver_register_adc())
+				printk(KERN_ERR "Register ambarella_adc_driver failed!\n");
+			break;
+		}
+	}
 #endif
 
 	return retval;
