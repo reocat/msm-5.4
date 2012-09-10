@@ -261,9 +261,7 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	int i = 10, id = amb_chan->id;
-	unsigned long flags;
 
-	spin_lock_irqsave(&amb_chan->lock, flags);
 	/* Disable DMA: following sequence is not mentioned at APM.*/
 	if (ambdma_chan_is_enabled(amb_chan)) {
 		for (i = 0; i < 100; i++) {
@@ -271,22 +269,19 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
 			amba_writel(DMA_CHAN_CTR_REG(id),
 				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
+			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 
 			udelay(10);
-			if (!ambdma_chan_is_enabled(amb_chan)) {
-				spin_unlock_irqrestore(&amb_chan->lock, flags);
+			if (!ambdma_chan_is_enabled(amb_chan))
 				return 0;
-			}
 		}
 
 		if (ambdma_chan_is_enabled(amb_chan)) {
-			spin_unlock_irqrestore(&amb_chan->lock, flags);
 			pr_err("%s: stop dma channel(%d) failed\n", __func__, id);
 			return -EIO;
 		}
 	}
 
-	spin_unlock_irqrestore(&amb_chan->lock, flags);
 	return 0;
 }
 
@@ -314,6 +309,7 @@ static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *fir
 		return;
 	}
 
+	amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 	amba_writel(DMA_CHAN_DA_REG(id), first->txd.phys);
 	amba_writel(DMA_CHAN_CTR_REG(id), DMA_CHANX_CTR_EN | DMA_CHANX_CTR_D);
 }
@@ -393,11 +389,11 @@ static void ambdma_free_chan_resources(struct dma_chan *chan)
 
 	amb_chan = to_ambdma_chan(chan);
 
+	spin_lock_irqsave(&amb_chan->lock, flags);
 	BUG_ON(!list_empty(&amb_chan->active_list));
 	BUG_ON(!list_empty(&amb_chan->queue));
 	BUG_ON(ambdma_chan_is_enabled(amb_chan));
 
-	spin_lock_irqsave(&amb_chan->lock, flags);
 	list_splice_init(&amb_chan->free_list, &list);
 	amb_chan->descs_allocated = 0;
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
@@ -450,9 +446,9 @@ static int ambdma_device_control(struct dma_chan *chan,
 
 	switch (cmd) {
 	case DMA_TERMINATE_ALL:
+		spin_lock_irqsave(&amb_chan->lock, flags);
 		ambdma_stop_channel(amb_chan);
 
-		spin_lock_irqsave(&amb_chan->lock, flags);
 		/* active_list entries will end up before queued entries */
 		list_splice_init(&amb_chan->queue, &list);
 		list_splice_init(&amb_chan->active_list, &list);
