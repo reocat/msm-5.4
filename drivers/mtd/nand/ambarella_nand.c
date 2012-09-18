@@ -712,7 +712,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		if (nand_info->plat_nand->id_cycles == 5) {
 			u32	nand_ext_ctr_reg = 0;
 
-			nand_ext_ctr_reg = amba_readl(nand_info->regbase + FLASH_EXT_CTR_REG);
+			nand_ext_ctr_reg = amba_readl(nand_info->regbase + FLASH_EX_CTR_OFFSET);
 			nand_ext_ctr_reg |= NAND_EXT_CTR_I5;
 			nand_ctr_reg &= ~(NAND_CTR_I4);
 			amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
