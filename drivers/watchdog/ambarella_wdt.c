@@ -428,12 +428,14 @@ static void ambarella_wdt_shutdown(struct platform_device *pdev)
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (pinfo)
-		ambarella_wdt_stop(pinfo);
-	else
-		dev_err(&pdev->dev, "Cannot find valid pinfo\n");
+	if (pinfo) {
+		if ((system_state == SYSTEM_RESTART) ||
+			(system_state == SYSTEM_HALT)) {
+			ambarella_wdt_stop(pinfo);
+		}
+	}
 
-	dev_dbg(&pdev->dev, "%s exit.\n", __func__);
+	dev_info(&pdev->dev, "%s @ %d.\n", __func__, system_state);
 }
 
 #ifdef CONFIG_PM
