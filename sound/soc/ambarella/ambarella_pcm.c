@@ -170,16 +170,6 @@ static int ambarella_pcm_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int ambarella_pcm_prepare(struct snd_pcm_substream *substream)
-{
-	struct ambarella_runtime_data *prtd = substream->runtime->private_data;
-
-	/* Ensure dma is stopped */
-	dmaengine_terminate_all(prtd->dma_chan);
-
-	return 0;
-}
-
 static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -303,7 +293,6 @@ static struct snd_pcm_ops ambarella_pcm_ops = {
 	.ioctl		= snd_pcm_lib_ioctl,
 	.hw_params	= ambarella_pcm_hw_params,
 	.hw_free	= ambarella_pcm_hw_free,
-	.prepare	= ambarella_pcm_prepare,
 	.trigger	= ambarella_pcm_trigger,
 	.pointer	= ambarella_pcm_pointer,
 	.mmap		= ambarella_pcm_mmap,

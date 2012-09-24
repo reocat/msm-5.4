@@ -242,16 +242,21 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 
 	int_src = amba_readl(DMA_INT_REG);
 
+	if (int_src == 0)
+		return IRQ_HANDLED;
+
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 
 		if (i == FIO_DMA_CHAN)
 			continue;
 
+		spin_lock(&amb_dma->amb_chan[i].lock);
 		if (int_src & (1 << i)) {
 			amba_writel(DMA_CHAN_STA_REG(i), 0);
 			tasklet_schedule(&amb_dma->amb_chan[i].tasklet);
 			ret = IRQ_HANDLED;
 		}
+		spin_unlock(&amb_dma->amb_chan[i].lock);
 	}
 
 	return ret;
@@ -260,18 +265,18 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
-	int i = 10, id = amb_chan->id;
+	int i, id = amb_chan->id;
 
 	/* Disable DMA: following sequence is not mentioned at APM.*/
 	if (ambdma_chan_is_enabled(amb_chan)) {
-		for (i = 0; i < 100; i++) {
-			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_DD);
+		for (i = 0; i < 10; i++) {
+			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
 			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
 			amba_writel(DMA_CHAN_CTR_REG(id),
 				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
 			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 
-			udelay(10);
+			udelay(1);
 			if (!ambdma_chan_is_enabled(amb_chan))
 				return 0;
 		}
