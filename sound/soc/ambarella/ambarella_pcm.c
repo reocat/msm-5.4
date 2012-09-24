@@ -61,6 +61,7 @@ struct ambarella_runtime_data {
 
 	struct dma_chan *dma_chan;
 	struct dma_async_tx_descriptor *desc;
+	enum dma_data_direction direction;
 
 	int pointer_bytes;
 	int periods;
@@ -134,27 +135,19 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->pointer_bytes = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		prtd->direction = DMA_TO_DEVICE;
 		slave_config.direction = DMA_TO_DEVICE;
 		slave_config.dst_addr = prtd->dma_data->dev_addr;
 		slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		slave_config.dst_maxburst = 32;
 	} else {
+		prtd->direction = DMA_FROM_DEVICE;
 		slave_config.direction = DMA_FROM_DEVICE;
 		slave_config.src_addr = prtd->dma_data->dev_addr;
 		slave_config.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		slave_config.src_maxburst = 32;
 	}
 	dmaengine_slave_config(prtd->dma_chan, &slave_config);
-
-	prtd->desc = prtd->dma_chan->device->device_prep_dma_cyclic(
-			prtd->dma_chan, runtime->dma_addr,
-			prtd->period_bytes * prtd->periods,
-			prtd->period_bytes, slave_config.direction);
-	if (!prtd->desc)
-		return -EINVAL;
-
-	prtd->desc->callback = ambarella_dai_dma_handler;
-	prtd->desc->callback_param = substream;
 
 	return 0;
 }
@@ -179,12 +172,21 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-			dmaengine_submit(prtd->desc);
+		prtd->desc = prtd->dma_chan->device->device_prep_dma_cyclic(
+				prtd->dma_chan, runtime->dma_addr,
+				prtd->period_bytes * prtd->periods,
+				prtd->period_bytes, prtd->direction);
+		if (!prtd->desc)
+			return -EINVAL;
+
+		prtd->desc->callback = ambarella_dai_dma_handler;
+		prtd->desc->callback_param = substream;
+		dmaengine_submit(prtd->desc);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-			dmaengine_terminate_all(prtd->dma_chan);
+		dmaengine_terminate_all(prtd->dma_chan);
 		break;
 
 	default:
