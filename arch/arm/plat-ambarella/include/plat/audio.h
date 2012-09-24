@@ -168,8 +168,6 @@ extern struct platform_device			ambarella_i2s0;
 extern struct platform_device			ambarella_pcm0;
 extern struct platform_device			ambarella_dummy_codec0;
 
-extern u32					alsa_tx_enable_flag;
-
 /* ==========================================================================*/
 extern int ambarella_init_audio(void);
 

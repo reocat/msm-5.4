@@ -30,10 +30,6 @@
 #include <plat/audio.h>
 
 /* ==========================================================================*/
-u32 alsa_tx_enable_flag = 0;
-EXPORT_SYMBOL(alsa_tx_enable_flag);
-
-/* ==========================================================================*/
 static struct resource ambarella_i2s0_resources[] = {
 	[0] = {
 		.start	= I2S_BASE,

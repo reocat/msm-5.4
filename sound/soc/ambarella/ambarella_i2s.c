@@ -268,12 +268,10 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 			dai_rx_enable();
-		} else {
-			if(alsa_tx_enable_flag == 0)
-				dai_tx_enable();
-		}
+		else
+			dai_tx_enable();
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
