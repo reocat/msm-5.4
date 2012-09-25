@@ -785,16 +785,12 @@ static void mxt_proc_t9_messages(struct mxt_data *data,
 
 	/* Check the touch is present on the screen */
 	if (!(status & MXT_T9_DETECT)) {
-		if (status & MXT_T9_SUPPRESS) {
-			dev_dbg(dev, "[%d] suppressed\n", id);
+		if (status & (MXT_T9_SUPPRESS | MXT_T9_RELEASE)) {
+			dev_dbg(dev, "[%d] %s\n", id, 
+				status & MXT_T9_SUPPRESS ? "suppressed" : "released");
 
 			finger[id].status = MXT_T9_RELEASE;
 			mxt_t9_input_report(data,id);
-		} else if (status & MXT_T9_RELEASE) {
-			dev_dbg(dev, "[%d] released\n", id);
-
-			finger[id].status = MXT_T9_RELEASE;
-			mxt_input_report(data, id);
 		}
 		return;
 	}
