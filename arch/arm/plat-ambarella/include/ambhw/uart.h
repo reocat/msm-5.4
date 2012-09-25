@@ -165,9 +165,9 @@
 /* UART[x]_LC_REG */
 #define UART_LC_DLAB			0x80
 #define UART_LC_BRK			0x40
-#define UART_LC_EPS			0x10
-#define UART_LC_EVEN_PARITY		0x08
+#define UART_LC_EVEN_PARITY		0x10
 #define UART_LC_ODD_PARITY		0x00
+#define UART_LC_PEN			0x08
 #define UART_LC_STOP_2BIT		0x04
 #define UART_LC_STOP_1BIT		0x00
 #define UART_LC_CLS_8_BITS		0x03
