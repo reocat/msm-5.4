@@ -727,13 +727,6 @@ static void mxt_proc_t6_messages(struct mxt_data *data, u8 *msg)
 			(status & MXT_STATUS_CFGERR) ? "CFGERR " : "",
 			(status & MXT_STATUS_COMSERR) ? "COMSERR " : "");
 }
-#if 0
-static void mxt_input_sync(struct mxt_data *data)
-{
-	input_mt_report_pointer_emulation(data->input_dev, false);
-	input_sync(data->input_dev);
-}
-#endif
 
 static void mxt_t9_input_report(struct mxt_data *data, int single_id)
 {
@@ -992,14 +985,14 @@ static irqreturn_t mxt_read_messages_t44(struct mxt_data *data)
 	if (num_left) {
 		ret = mxt_read_count_messages(data, num_left);
 		if (ret < 0) {
-			//mxt_input_sync(data);
+			input_sync(data->input_dev);
 			return IRQ_NONE;
 		} else if (ret != num_left) {
 			dev_warn(dev, "Unexpected invalid message\n");
 		}
 	}
 
-	//mxt_input_sync(data);
+	input_sync(data->input_dev);
 
 	return IRQ_HANDLED;
 }
