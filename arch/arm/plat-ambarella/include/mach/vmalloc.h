@@ -29,7 +29,7 @@
 #if defined(CONFIG_VMSPLIT_3G)
 #define VMALLOC_END			UL(0xe0000000)
 #else
-#define VMALLOC_END			UL(0xb0000000)
+#define VMALLOC_END			UL(0xc0000000)
 #endif
 
 /* ==========================================================================*/

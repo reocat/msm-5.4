@@ -109,7 +109,7 @@
 #define DBGBUS_BASE			(0xf2200000)
 #endif
 #else	/* CONFIG_VMSPLIT_3G */
-#define NOLINUX_MEM_V_START		(0xb0000000)
+#define NOLINUX_MEM_V_START		(0xc0000000)
 #define NOLINUX_MEM_V_SIZE		(0x20000000)
 #define AHB_BASE			(0xe0000000)
 #define APB_BASE			(0xe8000000)
