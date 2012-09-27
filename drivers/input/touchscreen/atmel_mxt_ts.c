@@ -18,7 +18,7 @@
 #include <linux/firmware.h>
 #include <linux/i2c.h>
 #include <linux/i2c/atmel_mxt_ts.h>
-#include <linux/input/mt.h>
+#include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -81,6 +81,7 @@
 
 /* MXT_GEN_MESSAGE_T5 object */
 #define MXT_RPTID_NOMSG		0xff
+#define MXT_MSG_MAX_SIZE        9
 
 /* MXT_GEN_COMMAND_T6 field */
 #define MXT_COMMAND_RESET	0
@@ -241,6 +242,7 @@ static unsigned long mxt_t15_keystatus;
 
 /* Touchscreen absolute values */
 #define MXT_MAX_AREA		0xff
+#define MXT_MAX_FINGER          10
 
 struct mxt_info {
 	u8 family_id;
@@ -271,6 +273,14 @@ struct mxt_object {
 
 enum mxt_device_state { INIT, APPMODE, BOOTLOADER, FAILED, SHUTDOWN };
 
+struct mxt_finger {
+	int status;
+	int x;
+	int y;
+	int area;
+	int pressure;
+};
+
 /* Each client has this additional data */
 struct mxt_data {
 	struct i2c_client *client;
@@ -280,6 +290,7 @@ struct mxt_data {
 	struct mxt_object *object_table;
 	u16 mem_size;
 	struct mxt_info info;
+        struct mxt_finger finger[MXT_MAX_FINGER];
 	unsigned int irq;
 	unsigned int max_x;
 	unsigned int max_y;
@@ -716,86 +727,109 @@ static void mxt_proc_t6_messages(struct mxt_data *data, u8 *msg)
 			(status & MXT_STATUS_CFGERR) ? "CFGERR " : "",
 			(status & MXT_STATUS_COMSERR) ? "COMSERR " : "");
 }
-
 static void mxt_input_sync(struct mxt_data *data)
 {
 	input_mt_report_pointer_emulation(data->input_dev, false);
 	input_sync(data->input_dev);
 }
 
-static void mxt_proc_t9_messages(struct mxt_data *data, u8 *message)
+static void mxt_t9_input_report(struct mxt_data *data, int single_id)
 {
-	struct device *dev = &data->client->dev;
+	struct mxt_finger *finger = data->finger;
 	struct input_dev *input_dev = data->input_dev;
-	u8 status;
+	int status = finger[single_id].status;
+	int finger_num = 0;
+	int id;
+
+	for (id = 0; id < MXT_MAX_FINGER; id++) {
+		if (!finger[id].status)
+			continue;
+
+		input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR,
+				finger[id].status != MXT_T9_RELEASE ?
+				finger[id].area : 0);
+		input_report_abs(input_dev, ABS_MT_POSITION_X,
+				finger[id].x);
+		input_report_abs(input_dev, ABS_MT_POSITION_Y,
+				finger[id].y);
+		input_report_abs(input_dev, ABS_MT_PRESSURE,
+				finger[id].pressure);
+		input_mt_sync(input_dev);
+
+		if (finger[id].status == MXT_T9_RELEASE)
+			finger[id].status = 0;
+		else
+			finger_num++;
+	}
+
+	input_report_key(input_dev, BTN_TOUCH, finger_num > 0);
+
+	if (status != MXT_T9_RELEASE) {
+		input_report_abs(input_dev, ABS_X, finger[single_id].x);
+		input_report_abs(input_dev, ABS_Y, finger[single_id].y);
+		input_report_abs(input_dev,
+				 ABS_PRESSURE, finger[single_id].pressure);
+	}
+
+	input_sync(input_dev);
+}
+
+static void mxt_proc_t9_messages(struct mxt_data *data,
+				      u8 *message, u8 id)
+{
+	struct mxt_finger *finger = data->finger;
+	struct device *dev = &data->client->dev;
+	u8 status = message[1];
 	int x;
 	int y;
 	int area;
-	int amplitude;
-	u8 vector;
-	int id;
+	int pressure;
 
-	if (!input_dev)
+	if (data->driver_paused)
 		return;
 
-	id = message[0] - data->T9_reportid_min;
+	/* Check the touch is present on the screen */
+	if (!(status & MXT_T9_DETECT)) {
+		if (status & MXT_T9_SUPPRESS) {
+			dev_dbg(dev, "[%d] suppressed\n", id);
 
-	if (id < 0 || id > data->num_touchids) {
-		dev_err(dev, "invalid touch id %d, total num touch is %d\n",
-			id, data->num_touchids);
+			finger[id].status = MXT_T9_RELEASE;
+			mxt_t9_input_report(data,id);
+		} else if (status & MXT_T9_RELEASE) {
+			dev_dbg(dev, "[%d] released\n", id);
+
+			finger[id].status = MXT_T9_RELEASE;
+			mxt_input_report(data, id);
+		}
 		return;
 	}
 
-	status = message[1];
+	/* Check only AMP detection */
+	if (!(status & (MXT_T9_PRESS | MXT_T9_MOVE)))
+		return;
 
 	x = (message[2] << 4) | ((message[4] >> 4) & 0xf);
-	y = (message[3] << 4) | ((message[4] & 0xf));
+	y = (message[3] << 4) | ((message[5] & 0xf));
 	if (data->max_x < 1024)
-		x >>= 2;
+		x = x >> 2;
 	if (data->max_y < 1024)
-		y >>= 2;
+		y = y >> 2;
+
 	area = message[5];
-	amplitude = message[6];
-	vector = message[7];
+	pressure = message[6];
 
-	dev_dbg(dev,
-		"[%d] %c%c%c%c%c%c%c%c x: %d y: %d area: %d amp: %d vector: %02X\n",
-		id,
-		(status & MXT_T9_DETECT) ? 'D' : '.',
-		(status & MXT_T9_PRESS) ? 'P' : '.',
-		(status & MXT_T9_RELEASE) ? 'R' : '.',
-		(status & MXT_T9_MOVE) ? 'M' : '.',
-		(status & MXT_T9_VECTOR) ? 'V' : '.',
-		(status & MXT_T9_AMP) ? 'A' : '.',
-		(status & MXT_T9_SUPPRESS) ? 'S' : '.',
-		(status & MXT_T9_UNGRIP) ? 'U' : '.',
-		x, y, area, amplitude, vector);
+	dev_dbg(dev, "[%d] %s x: %d, y: %d, area: %d\n", id,
+		status & MXT_T9_MOVE ? "moved" : "pressed",
+		x, y, area);
 
-	input_mt_slot(input_dev, id);
+	finger[id].status = status & MXT_T9_MOVE ?
+				MXT_T9_MOVE : MXT_T9_PRESS;
+	finger[id].x = x;
+	finger[id].y = y;
+	finger[id].area = area;
+	finger[id].pressure = pressure;
 
-	if ((status & MXT_T9_DETECT) && (status & MXT_T9_RELEASE)) {
-		/* Touch in detect, just after being released, so
-		 * get new touch tracking ID */
-		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 0);
-		mxt_input_sync(data);
-		}
-
-	if (status & MXT_T9_DETECT) {
-		/* Touch in detect, report X/Y position */
-		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 1);
-
-		input_report_abs(input_dev, ABS_MT_POSITION_X, x);
-		input_report_abs(input_dev, ABS_MT_POSITION_Y, y);
-		input_report_abs(input_dev, ABS_MT_PRESSURE, amplitude);
-		input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, area);
-		input_report_abs(input_dev, ABS_MT_ORIENTATION, vector);
-	}
-
-	if (!(status & MXT_T9_DETECT)) {
-		/* Touch no longer in detect, so close out slot */
-		mxt_input_sync(data);
-		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 0);
-	}
+	mxt_t9_input_report(data, id);
 }
 
 static void mxt_proc_t15_messages(struct mxt_data *data, u8 *msg)
@@ -872,7 +906,7 @@ static int mxt_proc_message(struct mxt_data *data, u8 *msg)
 
 	if (report_id >= data->T9_reportid_min
 	    && report_id <= data->T9_reportid_max) {
-		mxt_proc_t9_messages(data, msg);
+		mxt_proc_t9_messages(data, msg, report_id);
 	} else if (report_id >= data->T15_reportid_min
 		   && report_id <= data->T15_reportid_max) {
 		mxt_proc_t15_messages(data, msg);
