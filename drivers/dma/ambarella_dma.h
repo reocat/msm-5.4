@@ -56,7 +56,6 @@ struct ambdma_chan {
 	struct list_head		queue;
 	struct list_head		free_list;
 
-	struct ambdma_desc		*cur_desc;
 	dma_addr_t			rt_addr;
 	u32				rt_attr;
 };

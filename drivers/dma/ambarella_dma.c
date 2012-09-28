@@ -22,10 +22,6 @@
 
 #include "ambarella_dma.h"
 
-static unsigned int force_stop = 1;
-module_param(force_stop, uint, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(force_stop, "Force to stop dma immediately.");
-
 int ambarella_dma_channel_id(struct dma_chan *chan)
 {
 	return to_ambdma_chan(chan)->id;
@@ -268,48 +264,25 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 
 static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
-	int id = amb_chan->id;
-	unsigned long flags;
+	struct ambdma_device *amb_dma = amb_chan->amb_dma;
+	int i, id = amb_chan->id;
 
+	/* Disable DMA: following sequence is not mentioned at APM.*/
 	if (ambdma_chan_is_enabled(amb_chan)) {
-		if (force_stop) {
-			/* Disable DMA: this sequence is not mentioned at APM.*/
-			struct ambdma_device *amb_dma = amb_chan->amb_dma;
-			int i;
+		for (i = 0; i < 10; i++) {
+			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
+			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
+			amba_writel(DMA_CHAN_CTR_REG(id),
+				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
+			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 
-			for (i = 0; i < 10; i++) {
-				spin_lock_irqsave(&amb_chan->lock, flags);
-				amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
-				amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
-				amba_writel(DMA_CHAN_CTR_REG(id),
-					DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
-				amba_writel(DMA_CHAN_STA_REG(id), 0x0);
-				spin_unlock_irqrestore(&amb_chan->lock, flags);
-
-				udelay(1);
-				if (!ambdma_chan_is_enabled(amb_chan))
-					return 0;
-			}
-		} else {
-			struct ambdma_desc *amb_desc;
-			unsigned long timeout;
-
-			spin_lock_irqsave(&amb_chan->lock, flags);
-			list_for_each_entry(amb_desc, &amb_chan->cur_desc->tx_list, desc_node) {
-				amb_desc->lli->attr |= DMA_DESC_EOC;
-			}
-			amb_chan->cur_desc->lli->attr |= DMA_DESC_EOC;
-			spin_unlock_irqrestore(&amb_chan->lock, flags);
-
-			timeout = jiffies + msecs_to_jiffies(2000);
-			while (ambdma_chan_is_enabled(amb_chan)) {
-				if (time_after(jiffies, timeout))
-					break;
-			}
+			udelay(1);
+			if (!ambdma_chan_is_enabled(amb_chan))
+				return 0;
 		}
 
 		if (ambdma_chan_is_enabled(amb_chan)) {
-			pr_crit("%s: stop dma channel(%d) failed\n", __func__, id);
+			pr_err("%s: stop dma channel(%d) failed\n", __func__, id);
 			return -EIO;
 		}
 	}
@@ -334,23 +307,12 @@ static dma_cookie_t ambdma_assign_cookie(struct ambdma_chan *amb_chan,
 static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *first)
 {
 	int id = amb_chan->id;
-	struct ambdma_desc *amb_desc;
 
 	if (ambdma_chan_is_enabled(amb_chan)) {
 		pr_err("%s: Attempted to start non-idle channel\n", __func__);
 		/* The tasklet will hopefully advance the queue... */
 		return;
 	}
-
-	/* if it's cyclic dma, the EOC flag will be set at "stop" routine, so
-	 * we need to clear the EOC flag here to start dma again. */
-	if (!force_stop && (first->lli->attr & DMA_DESC_ID) == DMA_DESC_ID) {
-		list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
-			amb_desc->lli->attr &= ~DMA_DESC_EOC;
-		}
-		first->lli->attr &= ~DMA_DESC_EOC;
-	}
-	amb_chan->cur_desc = first;
 
 	amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 	amba_writel(DMA_CHAN_DA_REG(id), first->txd.phys);
@@ -489,9 +451,9 @@ static int ambdma_device_control(struct dma_chan *chan,
 
 	switch (cmd) {
 	case DMA_TERMINATE_ALL:
+		spin_lock_irqsave(&amb_chan->lock, flags);
 		ambdma_stop_channel(amb_chan);
 
-		spin_lock_irqsave(&amb_chan->lock, flags);
 		/* active_list entries will end up before queued entries */
 		list_splice_init(&amb_chan->queue, &list);
 		list_splice_init(&amb_chan->active_list, &list);
@@ -877,7 +839,6 @@ static int __devinit ambarella_dma_probe(struct platform_device *pdev)
 		spin_lock_init(&amb_chan->lock);
 		amb_chan->amb_dma = amb_dma;
 		amb_chan->id = i;
-		amb_chan->cur_desc = NULL;
 		INIT_LIST_HEAD(&amb_chan->active_list);
 		INIT_LIST_HEAD(&amb_chan->queue);
 		INIT_LIST_HEAD(&amb_chan->free_list);
@@ -928,7 +889,7 @@ static int __devinit ambarella_dma_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, amb_dma);
 
-	dev_info(&pdev->dev, "Ambarella DMA Engine [force_stop=%d]\n", force_stop);
+	dev_info(&pdev->dev, "Ambarella DMA Engine \n");
 
 	return 0;
 
