@@ -222,7 +222,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= NOLINUX_MEM_V_START,
 			.pfn	= __phys_to_pfn(DEFAULT_MEM_START),
 			.length	= CONFIG_AMBARELLA_PPM_SIZE,
+#if defined(CONFIG_PLAT_AMBARELLA_PPM_UNCACHED)
+			.type	= MT_DEVICE,
+#else
 			.type	= MT_MEMORY,
+#endif
 			},
 	},
 	[AMBARELLA_IO_DESC_BSB_ID] = {
