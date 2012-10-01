@@ -24,6 +24,7 @@
 #define RCT_SUPPORT_UNL_WDT_RST_ANAPWR	1 /* Use bit-7 of ANA_PWR_REG */
 #define RCT_SUPPORT_PLL_CORETEX		1
 #define RCT_SUPPORT_IOCTRL_GPIO		1
+#define RCT_SOFT_OR_DLLRESET_PATTERN	0x1e
 
 /****************************************************/
 /* Controller registers definitions                 */

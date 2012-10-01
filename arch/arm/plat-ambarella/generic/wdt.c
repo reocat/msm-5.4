@@ -65,7 +65,11 @@ static void ambarella_wdt0_start(u32 mode)
 #endif
 
 		/* Clear software reset bit. */
+#if defined(RCT_SOFT_OR_DLLRESET_PATTERN)
+		amba_writel(SOFT_RESET_REG, RCT_SOFT_OR_DLLRESET_PATTERN);
+#else
 		amba_writel(SOFT_RESET_REG, 0x2);
+#endif
 	}
 	amba_writel(WDOG_CONTROL_REG, mode);
 	while(amba_tstbitsl(WDOG_CONTROL_REG, mode) != mode);
