@@ -189,6 +189,11 @@
  */
 #define PHYS_PFN_OFFSET	(PHYS_OFFSET >> PAGE_SHIFT)
 
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_DIRECTMAP_PPM
+extern u32 ambarella_phys_to_virt(u32 paddr);
+extern u32 ambarella_virt_to_phys(u32 vaddr);
+#endif
+
 /*
  * These are *only* valid on the kernel direct mapped RAM memory.
  * Note: Drivers should NOT use these.  They are the wrong
@@ -197,19 +202,32 @@
  */
 static inline unsigned long virt_to_phys(const volatile void *x)
 {
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_DIRECTMAP_PPM
+	return ambarella_virt_to_phys((unsigned long)(x));
+#else
 	return __virt_to_phys((unsigned long)(x));
+#endif
 }
 
 static inline void *phys_to_virt(unsigned long x)
 {
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_DIRECTMAP_PPM
+	return (void *)(ambarella_phys_to_virt((unsigned long)(x)));
+#else
 	return (void *)(__phys_to_virt((unsigned long)(x)));
+#endif
 }
 
 /*
  * Drivers should NOT use these either.
  */
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_DIRECTMAP_PPM
+#define __pa(x)			ambarella_virt_to_phys((unsigned long)(x))
+#define __va(x)			((void *)ambarella_phys_to_virt((unsigned long)(x)))
+#else
 #define __pa(x)			__virt_to_phys((unsigned long)(x))
 #define __va(x)			((void *)__phys_to_virt((unsigned long)(x)))
+#endif
 #define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
 
 /*
