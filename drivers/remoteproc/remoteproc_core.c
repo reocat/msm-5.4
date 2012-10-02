@@ -49,7 +49,7 @@ typedef int (*rproc_handle_resource_t)(struct rproc *rproc, void *, int avail);
 
 /* Unique indices for remoteproc devices */
 static DEFINE_IDA(rproc_dev_index);
-
+#if 0
 /*
  * This is the IOMMU fault handler we register with the IOMMU API
  * (when relevant; not all remote processors access memory through
@@ -132,6 +132,7 @@ static void rproc_disable_iommu(struct rproc *rproc)
 	return;
 }
 
+#endif
 /*
  * Some remote processors will ask us to allocate them physically contiguous
  * memory regions (which we call "carveouts"), and map them to specific
@@ -786,6 +787,7 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 
 	dev_info(dev, "Booting fw image %s, size %zd\n", name, fw->size);
 
+#if 0
 	/*
 	 * if enabling an IOMMU isn't relevant for this rproc, this is
 	 * just a nop
@@ -795,7 +797,7 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 		dev_err(dev, "can't enable iommu: %d\n", ret);
 		return ret;
 	}
-
+#endif
 	rproc->bootaddr = rproc_get_boot_addr(rproc, fw);
 
 	/* look for the resource table */
@@ -834,7 +836,9 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 
 clean_up:
 	rproc_resource_cleanup(rproc);
+#if 0
 	rproc_disable_iommu(rproc);
+#endif
 	return ret;
 }
 
@@ -990,7 +994,9 @@ void rproc_shutdown(struct rproc *rproc)
 	/* clean up all acquired resources */
 	rproc_resource_cleanup(rproc);
 
+#if 0
 	rproc_disable_iommu(rproc);
+#endif
 
 	rproc->state = RPROC_OFFLINE;
 

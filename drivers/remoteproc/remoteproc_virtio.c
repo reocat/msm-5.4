@@ -17,7 +17,9 @@
  * GNU General Public License for more details.
  */
 
+#if 0
 #include <linux/export.h>
+#endif
 #include <linux/remoteproc.h>
 #include <linux/virtio.h>
 #include <linux/virtio_config.h>
