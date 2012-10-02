@@ -34,6 +34,9 @@
 #include <linux/rpmsg.h>
 #include <linux/mutex.h>
 
+#include <linux/remoteproc.h>
+#include <plat/remoteproc.h>
+
 /**
  * struct virtproc_info - virtual remote processor state
  * @vdev:	the virtio device
@@ -929,6 +932,8 @@ static void rpmsg_ns_cb(struct rpmsg_channel *rpdev, void *data, int len,
 
 static int rpmsg_probe(struct virtio_device *vdev)
 {
+	struct rproc *rproc = vdev_to_rproc(vdev);
+	struct ambarella_rproc_pdata *pdata;
 	vq_callback_t *vq_cbs[] = { rpmsg_recv_done, rpmsg_xmit_done };
 	const char *names[] = { "input", "output" };
 	struct virtqueue *vqs[2];
@@ -955,10 +960,15 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	vrp->rvq = vqs[0];
 	vrp->svq = vqs[1];
 
+#if 0
 	/* allocate coherent memory for the buffers */
 	bufs_va = dma_alloc_coherent(vdev->dev.parent->parent,
 				RPMSG_TOTAL_BUF_SPACE,
 				&vrp->bufs_dma, GFP_KERNEL);
+#else
+	pdata = rproc->priv;
+	bufs_va = ambarella_phys_to_virt((unsigned long)pdata->buf_addr_pa);
+#endif
 	if (!bufs_va)
 		goto vqs_del;
 

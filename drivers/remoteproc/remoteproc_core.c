@@ -197,7 +197,12 @@ int rproc_alloc_vring(struct rproc_vdev *rvdev, int i)
 	 * this call will also configure the IOMMU for us
 	 * TODO: let the rproc know the da of this vring
 	 */
+#if 0
 	va = dma_alloc_coherent(dev->parent, size, &dma, GFP_KERNEL);
+#else
+	va = (void*)ambarella_phys_to_virt(rvring->da);
+	dma = rvring->da;
+#endif
 	if (!va) {
 		dev_err(dev->parent, "dma_alloc_coherent failed\n");
 		return -EINVAL;
@@ -253,6 +258,7 @@ rproc_parse_vring(struct rproc_vdev *rvdev, struct fw_rsc_vdev *rsc, int i)
 	rvring->len = vring->num;
 	rvring->align = vring->align;
 	rvring->rvdev = rvdev;
+	rvring->da = vring->da;
 
 	return 0;
 }
