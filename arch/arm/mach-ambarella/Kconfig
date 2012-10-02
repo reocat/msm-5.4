@@ -79,8 +79,15 @@ config MACH_GINKGO
 	help
 	  Say Y here if you are using S2 ginkgo.
 
-config MACH_HYACINTH
-	bool "Hyacinth"
+config MACH_HYACINTH_0
+	bool "Hyacinth_0"
+	depends on PLAT_AMBARELLA_A8
+	default n
+	help
+	  Say Y here if you can't find suitable Board Name.
+
+config MACH_HYACINTH_1
+	bool "Hyacinth_1"
 	depends on PLAT_AMBARELLA_A8
 	default n
 	help
