@@ -299,7 +299,6 @@ static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 	int					errorCode = 0;
 	struct resource 			*irq;
 	struct resource 			*mem;
-	struct resource 			*ioarea;
 	struct ambarella_wdt_info		*pinfo;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -316,20 +315,12 @@ static int __devinit ambarella_wdt_probe(struct platform_device *pdev)
 		goto ambarella_wdt_na;
 	}
 
-	ioarea = request_mem_region(mem->start,
-			(mem->end - mem->start) + 1, pdev->name);
-	if (ioarea == NULL) {
-		dev_err(&pdev->dev, "Request WDT ioarea failed!\n");
-		errorCode = -EBUSY;
-		goto ambarella_wdt_na;
-	}
-
 	pinfo = kzalloc(sizeof(struct ambarella_wdt_info),
 		GFP_KERNEL);
 	if (pinfo == NULL) {
 		dev_err(&pdev->dev, "Out of memory!\n");
 		errorCode = -ENOMEM;
-		goto ambarella_wdt_ioarea;
+		goto ambarella_wdt_na;
 	}
 
 	pinfo->pcontroller =
@@ -388,9 +379,6 @@ ambarella_wdt_deregister:
 
 ambarella_wdt_free_pinfo:
 	kfree(pinfo);
-
-ambarella_wdt_ioarea:
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
 
 ambarella_wdt_na:
 	return errorCode;

@@ -273,7 +273,6 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 	struct ambarella_adc_info		*pinfo;
 	int					irq;
 	struct resource 			*mem;
-	struct resource 			*ioarea;
 	struct ambarella_input_board_info	*pboard_info;
 
 	pboard_info = ambarella_input_get_board_info();
@@ -312,13 +311,6 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 		retval = -ENXIO;
 		goto adc_errorCode_pinfo;
 	}
-	ioarea = request_mem_region(mem->start,
-			(mem->end - mem->start) + 1, pdev->name);
-	if (ioarea == NULL) {
-		dev_err(&pdev->dev, "Request ioarea failed!\n");
-		retval = -EBUSY;
-		goto adc_errorCode_pinfo;
-	}
 
 	pinfo->support_irq = pinfo->pcontroller_info->is_irq_supported();
 	if (pinfo->support_irq) {
@@ -326,7 +318,7 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 		if (irq == -ENXIO) {
 			dev_err(&pdev->dev, "Get irq resource failed!\n");
 			retval = -ENXIO;
-			goto adc_errorCode_mem;
+			goto adc_errorCode_pinfo;
 		} else {
 			pinfo->irq = irq;
 		}
@@ -343,7 +335,7 @@ static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
 	retval = ambarella_setup_adc_key(pinfo);
 	if (retval) {
 		dev_err(&pdev->dev, "ambarella_setup_adc_key failed!\n");
-		goto adc_errorCode_mem;
+		goto adc_errorCode_pinfo;
 	}
 
 	pinfo->workqueue = create_singlethread_workqueue("amba_adc");
@@ -381,8 +373,6 @@ adc_errorCode_setup_adc_key:
 	pinfo->adc_key_pressed = NULL;
 	kfree(pinfo->adc_channel_info);
 	pinfo->adc_channel_info = NULL;
-adc_errorCode_mem:
-	release_mem_region(pinfo->mem->start, (pinfo->mem->end - pinfo->mem->start) + 1);
 adc_errorCode_pinfo:
 	kfree(pinfo);
 adc_errorCode_na:

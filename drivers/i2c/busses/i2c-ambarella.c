@@ -484,7 +484,6 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 	struct i2c_adapter			*adap;
 	struct resource				*irq;
 	struct resource				*mem;
-	struct resource				*ioarea;
 	struct ambarella_idc_platform_info	*platform_info;
 
 	platform_info =
@@ -509,19 +508,11 @@ static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
 		goto i2c_errorCode_na;
 	}
 
-	ioarea = request_mem_region(mem->start,
-			(mem->end - mem->start) + 1, pdev->name);
-	if (ioarea == NULL) {
-		dev_err(&pdev->dev, "Request I2C ioarea failed!\n");
-		errorCode = -EBUSY;
-		goto i2c_errorCode_na;
-	}
-
 	pinfo = kzalloc(sizeof(struct ambarella_i2c_dev_info), GFP_KERNEL);
 	if (pinfo == NULL) {
 		dev_err(&pdev->dev, "Out of memory!\n");
 		errorCode = -ENOMEM;
-		goto i2c_errorCode_ioarea;
+		goto i2c_errorCode_na;
 	}
 
 	pinfo->regbase = (unsigned char __iomem *)mem->start;
@@ -575,9 +566,6 @@ i2c_errorCode_free_irq:
 i2c_errorCode_kzalloc:
 	platform_set_drvdata(pdev, NULL);
 	kfree(pinfo);
-
-i2c_errorCode_ioarea:
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
 
 i2c_errorCode_na:
 	return errorCode;

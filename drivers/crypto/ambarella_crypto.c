@@ -892,7 +892,6 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 	int	errCode;
 	int	aes_irq, des_irq;
 	struct resource	*mem = 0;
-	struct resource	*ioarea;
 	struct ambarella_crypto_dev_info *pinfo = 0;
 	int	md5_sha1_irq = 0;
 
@@ -934,18 +933,11 @@ static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
 			}
 		}
 
-		ioarea = request_mem_region(mem->start, (mem->end - mem->start) + 1, pdev->name);
-		if (ioarea == NULL) {
-			dev_err(&pdev->dev, "Request crypto ioarea failed!\n");
-			errCode = -EBUSY;
-			goto crypto_errCode_na;
-		}
-
 		pinfo = kzalloc(sizeof(struct ambarella_crypto_dev_info), GFP_KERNEL);
 		if (pinfo == NULL) {
 			dev_err(&pdev->dev, "Out of memory!\n");
 			errCode = -ENOMEM;
-			goto crypto_errCode_ioarea;
+			goto crypto_errCode_na;
 		}
 
 		pinfo->regbase = (unsigned char __iomem *)mem->start;
@@ -1099,9 +1091,6 @@ crypto_errCode_free_aes_irq:
 crypto_errCode_kzalloc:
 	platform_set_drvdata(pdev, NULL);
 	kfree(pinfo);
-
-crypto_errCode_ioarea:
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
 
 crypto_errCode_na:
 	return errCode;

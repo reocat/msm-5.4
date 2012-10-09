@@ -401,7 +401,6 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 	struct resource 			*irq;
 	struct resource 			*mem;
 	struct resource 			*io;
-	struct resource 			*ioarea;
 	struct ambarella_ir_info		*pirinfo;
 	struct ambarella_input_board_info	*pboard_info;
 
@@ -450,14 +449,6 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 		goto ir_errorCode_pinfo;
 	}
 
-	ioarea = request_mem_region(mem->start,
-			(mem->end - mem->start) + 1, pdev->name);
-	if (ioarea == NULL) {
-		dev_err(&pdev->dev, "Request ioarea failed!\n");
-		retval = -EBUSY;
-		goto ir_errorCode_pinfo;
-	}
-
 	pirinfo->regbase = (unsigned char __iomem *)mem->start;
 	pirinfo->id = pdev->id;
 	pirinfo->mem = mem;
@@ -486,7 +477,6 @@ static int __devinit ambarella_ir_probe(struct platform_device *pdev)
 
 ir_errorCode_free_platform:
 	platform_set_drvdata(pdev, NULL);
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
 ir_errorCode_pinfo:
 	kfree(pirinfo);
 
