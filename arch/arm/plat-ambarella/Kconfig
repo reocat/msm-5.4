@@ -402,6 +402,12 @@ config AMBARELLA_SUPPORT_BAPI
 	help
 	  If you are not sure, say N here.
 
+config AMBARELLA_PMUSERENR_EN
+	bool "Enable userspcae access to PMU"
+	default n
+	help
+	  Enable userspcae access to PMU
+
 menu "Proc file system support"
 
 config AMBARELLA_ADC_PROC

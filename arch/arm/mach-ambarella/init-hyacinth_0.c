@@ -62,6 +62,8 @@ static void __init ambarella_init_hyacinth(void)
 
 	ambarella_eth0_platform_info.mii_id = 0;
 	ambarella_eth0_platform_info.phy_id = 0x001cc915;
+
+	pmu_enable_userspace_access();
 }
 
 MACHINE_START(HYACINTH_0, "Hyacinth_0")

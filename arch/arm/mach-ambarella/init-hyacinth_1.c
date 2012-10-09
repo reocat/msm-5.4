@@ -28,6 +28,7 @@
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
 
+#include <plat/ambcache.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
