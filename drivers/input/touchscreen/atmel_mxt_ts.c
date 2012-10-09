@@ -242,7 +242,6 @@ static unsigned long mxt_t15_keystatus;
 
 /* Touchscreen absolute values */
 #define MXT_MAX_AREA		0xff
-#define MXT_MAX_FINGER          10
 
 struct mxt_info {
 	u8 family_id;
@@ -290,7 +289,7 @@ struct mxt_data {
 	struct mxt_object *object_table;
 	u16 mem_size;
 	struct mxt_info info;
-        struct mxt_finger finger[MXT_MAX_FINGER];
+        struct mxt_finger *finger;
 	unsigned int irq;
 	unsigned int max_x;
 	unsigned int max_y;
@@ -736,7 +735,7 @@ static void mxt_t9_input_report(struct mxt_data *data, int single_id)
 	int finger_num = 0;
 	int id;
 
-	for (id = 0; id < MXT_MAX_FINGER; id++) {
+	for (id = 0; id < data->num_touchids; id++) {
 		if (!finger[id].status)
 			continue;
 
@@ -1553,6 +1552,12 @@ static int mxt_get_object_table(struct mxt_data *data)
 			data->T9_reportid_max = object->max_reportid;
 			data->T9_reportid_min = object->min_reportid;
 			data->num_touchids = object->num_report_ids * object->instances;
+                        data->finger = kcalloc(data->num_touchids,
+                                                sizeof(struct mxt_finger), GFP_KERNEL);
+			if (!data->finger) {
+				dev_err(dev, "Failed to allocate mxt_finger\n");
+				return -ENOMEM;
+			}
 			break;
 		case MXT_GEN_COMMAND_T6:
 			data->T6_reportid = object->max_reportid;
