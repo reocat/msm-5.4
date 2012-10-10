@@ -469,7 +469,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = GPIO(157);
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
+			ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
 			ambarella_platform_sd_controller0.slot[0].fixed_cd = 1;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = -1;
 			ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = -1;

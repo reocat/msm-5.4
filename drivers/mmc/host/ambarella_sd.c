@@ -47,9 +47,9 @@
 #define CONFIG_SD_AMBARELLA_WAIT_TIMEOUT	(HZ / 100)
 #define CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT	(100000)
 #define CONFIG_SD_AMBARELLA_DEFAULT_CLOCK	(24000000)
+#define CONFIG_SD_AMBARELLA_MAX_TIMEOUT		(5 * HZ)
 
 #undef CONFIG_SD_AMBARELLA_DEBUG
-#undef CONFIG_SD_AMBARELLA_DEBUG_RW_ACCESS
 #undef CONFIG_SD_AMBARELLA_DEBUG_VERBOSE
 
 #define ambsd_printk(level, phcinfo, format, arg...)	\
@@ -94,7 +94,7 @@ struct ambarella_sd_mmc_info {
 	struct scatterlist		*sg;
 	u32				sg_len;
 	u8				tmo;
-	u32				blk_sz;
+	u16				blk_sz;
 	u16				blk_cnt;
 	u32				arg_reg;
 	u16				xfr_reg;
@@ -114,7 +114,6 @@ struct ambarella_sd_mmc_info {
 	u32				slot_id;
 	void				*pinfo;
 	u32				valid;
-	u32				max_blk_sz;
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
@@ -123,10 +122,12 @@ struct ambarella_sd_mmc_info {
 struct ambarella_sd_controller_info {
 	unsigned char __iomem 		*regbase;
 	struct device			*dev;
-	struct resource			*mem;
 	unsigned int			irq;
 	u32				dma_fix;
 	u32				clk_limit;
+
+	u32				max_blk_sz;
+	struct kmem_cache		*buf_cache;
 
 	struct ambarella_sd_controller	*pcontroller;
 	struct ambarella_sd_mmc_info	*pslotinfo[AMBA_SD_MAX_SLOT_NUM];
@@ -223,31 +224,17 @@ static void ambarella_sd_pre_sg_to_dma(void *data)
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (likely(pslotinfo->sg_len > 1)) {
-		for (i = 0, offset = 0; i < pslotinfo->sg_len; i++) {
-			memcpy(pslotinfo->buf_vaddress + offset,
-				sg_virt(&pslotinfo->sg[i]),
-				pslotinfo->sg[i].length);
-			offset += pslotinfo->sg[i].length;
-		}
-		BUG_ON(offset != pslotinfo->dma_size);
-		dma_sync_single_for_device(pinfo->dev, pslotinfo->buf_paddress,
-			pslotinfo->dma_size, DMA_TO_DEVICE);
-		pslotinfo->dma_address = pslotinfo->buf_paddress;
-	} else {
-		pslotinfo->sg->dma_address = dma_map_page(pinfo->dev,
-			sg_page(pslotinfo->sg), pslotinfo->sg->offset,
-			pslotinfo->sg->length, DMA_TO_DEVICE);
-		pslotinfo->dma_address = pslotinfo->sg->dma_address;
+	for (i = 0, offset = 0; i < pslotinfo->sg_len; i++) {
+		memcpy(pslotinfo->buf_vaddress + offset,
+			sg_virt(&pslotinfo->sg[i]),
+			pslotinfo->sg[i].length);
+		offset += pslotinfo->sg[i].length;
 	}
-	pslotinfo->blk_sz &= 0xFFF;
-	pslotinfo->blk_sz |= pslotinfo->max_blk_sz;
-
-#ifdef CONFIG_SD_AMBARELLA_DEBUG_RW_ACCESS
-	ambsd_rtdbg(pslotinfo, "WRITE %d in %d sg [0x%08x:0x%08x]\n",
-		pslotinfo->dma_size, pslotinfo->sg_len,
-		pslotinfo->dma_address, pslotinfo->dma_size);
-#endif
+	BUG_ON(offset != pslotinfo->dma_size);
+	dma_sync_single_for_device(pinfo->dev, pslotinfo->buf_paddress,
+		pslotinfo->dma_size, DMA_TO_DEVICE);
+	pslotinfo->dma_address = pslotinfo->buf_paddress;
+	pslotinfo->blk_sz |= SD_BLK_SZ_512KB;
 }
 
 static void ambarella_sd_post_sg_to_dma(void *data)
@@ -258,13 +245,8 @@ static void ambarella_sd_post_sg_to_dma(void *data)
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (likely(pslotinfo->sg_len > 1)) {
-		dma_sync_single_for_cpu(pinfo->dev, pslotinfo->buf_paddress,
-			pslotinfo->dma_size, DMA_TO_DEVICE);
-	} else {
-		dma_unmap_page(pinfo->dev, pslotinfo->sg->dma_address,
-			pslotinfo->sg->length, DMA_TO_DEVICE);
-	}
+	dma_sync_single_for_cpu(pinfo->dev, pslotinfo->buf_paddress,
+		pslotinfo->dma_size, DMA_TO_DEVICE);
 }
 
 static void ambarella_sd_pre_dma_to_sg(void *data)
@@ -275,24 +257,10 @@ static void ambarella_sd_pre_dma_to_sg(void *data)
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (likely(pslotinfo->sg_len > 1)) {
-		dma_sync_single_for_device(pinfo->dev, pslotinfo->buf_paddress,
-			pslotinfo->dma_size, DMA_FROM_DEVICE);
-		pslotinfo->dma_address = pslotinfo->buf_paddress;
-	} else {
-		pslotinfo->sg->dma_address = dma_map_page(pinfo->dev,
-			sg_page(pslotinfo->sg), pslotinfo->sg->offset,
-			pslotinfo->sg->length, DMA_FROM_DEVICE);
-		pslotinfo->dma_address = pslotinfo->sg->dma_address;
-	}
-	pslotinfo->blk_sz &= 0xFFF;
-	pslotinfo->blk_sz |= pslotinfo->max_blk_sz;
-
-#ifdef CONFIG_SD_AMBARELLA_DEBUG_RW_ACCESS
-	ambsd_rtdbg(pslotinfo, "READ %d in %d sg [0x%08x:0x%08x]\n",
-		pslotinfo->dma_size, pslotinfo->sg_len,
-		pslotinfo->dma_address, pslotinfo->dma_size);
-#endif
+	dma_sync_single_for_device(pinfo->dev, pslotinfo->buf_paddress,
+		pslotinfo->dma_size, DMA_FROM_DEVICE);
+	pslotinfo->dma_address = pslotinfo->buf_paddress;
+	pslotinfo->blk_sz |= SD_BLK_SZ_512KB;
 }
 
 static void ambarella_sd_post_dma_to_sg(void *data)
@@ -305,20 +273,15 @@ static void ambarella_sd_post_dma_to_sg(void *data)
 	pslotinfo = (struct ambarella_sd_mmc_info *)data;
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (likely(pslotinfo->sg_len > 1)) {
-		dma_sync_single_for_cpu(pinfo->dev, pslotinfo->buf_paddress,
-			pslotinfo->dma_size, DMA_FROM_DEVICE);
-		for (i = 0, offset = 0; i < pslotinfo->sg_len; i++) {
-			memcpy(sg_virt(&pslotinfo->sg[i]),
-				pslotinfo->buf_vaddress + offset,
-				pslotinfo->sg[i].length);
-			offset += pslotinfo->sg[i].length;
-		}
-		BUG_ON(offset != pslotinfo->dma_size);
-	} else {
-		dma_unmap_page(pinfo->dev, pslotinfo->sg->dma_address,
-			pslotinfo->sg->length, DMA_FROM_DEVICE);
+	dma_sync_single_for_cpu(pinfo->dev, pslotinfo->buf_paddress,
+		pslotinfo->dma_size, DMA_FROM_DEVICE);
+	for (i = 0, offset = 0; i < pslotinfo->sg_len; i++) {
+		memcpy(sg_virt(&pslotinfo->sg[i]),
+			pslotinfo->buf_vaddress + offset,
+			pslotinfo->sg[i].length);
+		offset += pslotinfo->sg[i].length;
 	}
+	BUG_ON(offset != pslotinfo->dma_size);
 }
 
 static void ambarella_sd_request_bus(struct mmc_host *mmc)
@@ -653,10 +616,12 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		if (nis & SD_NIS_XFR_DONE) {
 			ambarella_sd_data_done(pslotinfo, nis, eis);
 		}
+#if 0
 		if (nis & SD_NIS_DMA) {
 			amba_writel(pinfo->regbase + SD_DMA_ADDR_OFFSET,
 			amba_readl(pinfo->regbase + SD_DMA_ADDR_OFFSET));
 		}
+#endif
 	}
 
 ambarella_sd_irq_exit:
@@ -957,8 +922,9 @@ static inline void ambarella_sd_prepare_tmo(
 		pslotinfo->tmo = CONFIG_SD_AMBARELLA_TIMEOUT_VAL;
 	}
 	if ((pinfo->pcontroller->wait_tmo > 0) &&
-		(pinfo->pcontroller->wait_tmo < (10 * HZ))) {
-		pslotinfo->sta_counter = (10 * HZ);
+		(pinfo->pcontroller->wait_tmo <
+		CONFIG_SD_AMBARELLA_MAX_TIMEOUT)) {
+		pslotinfo->sta_counter = CONFIG_SD_AMBARELLA_MAX_TIMEOUT;
 		pslotinfo->sta_counter /= pinfo->pcontroller->wait_tmo;
 	} else {
 		pslotinfo->sta_counter = 1;
@@ -1015,7 +981,7 @@ static inline void ambarella_sd_pre_cmd(
 	if (pslotinfo->mrq->data) {
 		pslotinfo->state = AMBA_SD_STATE_DATA;
 		ambarella_sd_prepare_tmo(pslotinfo, pslotinfo->mrq->data);
-		pslotinfo->blk_sz = pslotinfo->mrq->data->blksz;
+		pslotinfo->blk_sz = (pslotinfo->mrq->data->blksz & 0xFFF);
 		pslotinfo->dma_size = pslotinfo->mrq->data->blksz *
 			pslotinfo->mrq->data->blocks;
 		pslotinfo->sg_len = pslotinfo->mrq->data->sg_len;
@@ -1054,6 +1020,7 @@ static inline void ambarella_sd_send_cmd(
 	struct ambarella_sd_controller_info	*pinfo;
 	u32					valid_request = 0;
 	u32					counter = 0;
+	u32					sta_reg;
 	u32					tmpreg;
 	long					timeout;
 
@@ -1073,8 +1040,8 @@ static inline void ambarella_sd_send_cmd(
 	ambarella_sd_check_ios(pslotinfo->mmc, &pslotinfo->mmc->ios);
 	if (pslotinfo->mrq->data) {
 		while (1) {
-			tmpreg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-			if ((tmpreg & SD_STA_CMD_INHIBIT_DAT) == 0) {
+			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			if ((sta_reg & SD_STA_CMD_INHIBIT_DAT) == 0) {
 				break;
 			}
 			counter++;
@@ -1101,8 +1068,8 @@ static inline void ambarella_sd_send_cmd(
 			pslotinfo->xfr_reg, pslotinfo->cmd_reg);
 	} else {
 		while (1) {
-			tmpreg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-			if ((tmpreg & SD_STA_CMD_INHIBIT_CMD) == 0) {
+			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			if ((sta_reg & SD_STA_CMD_INHIBIT_CMD) == 0) {
 				break;
 			}
 			counter++;
@@ -1138,28 +1105,55 @@ ambarella_sd_send_cmd_exit:
 			timeout = wait_event_timeout(pslotinfo->wait,
 				(pslotinfo->state != AMBA_SD_STATE_DATA),
 				pinfo->pcontroller->wait_tmo);
-			tmpreg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-			if ((timeout <= 0) && (tmpreg & pslotinfo->sta_reg)) {
-				ambsd_err(pslotinfo, "wait data%d %d@%d, "
+			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			if ((timeout <= 0) && (sta_reg & pslotinfo->sta_reg)) {
+				ambsd_rtdbg(pslotinfo, "data%d %d@%d, "
 					"sta=0x%04x:0x%04x\n",
 					pslotinfo->mrq->cmd->opcode,
 					pslotinfo->state,
 					pinfo->pcontroller->wait_tmo,
-					tmpreg, pslotinfo->sta_reg);
+					sta_reg, pslotinfo->sta_reg);
+				ambsd_rtdbg(pslotinfo,
+					"DMA %d in %d sg [0x%08x:0x%08x]\n",
+					pslotinfo->dma_size,
+					pslotinfo->sg_len,
+					pslotinfo->dma_address,
+					pslotinfo->dma_size);
+				tmpreg = amba_readw(pinfo->regbase +
+					SD_BLK_CNT_OFFSET);
+				if (tmpreg) {
+					ambsd_rtdbg(pslotinfo,
+						"SD_DMA_ADDR_OFFSET[0x%08X]\n",
+						amba_readl(pinfo->regbase +
+						SD_DMA_ADDR_OFFSET));
+					amba_writel((pinfo->regbase +
+						SD_DMA_ADDR_OFFSET),
+						amba_readl(pinfo->regbase +
+						SD_DMA_ADDR_OFFSET));
+				} else {
+					ambsd_rtdbg(pslotinfo,
+						"SD_DATA_OFFSET[0x%08X]\n",
+						amba_readl(pinfo->regbase +
+						SD_DATA_OFFSET));
+					ambsd_rtdbg(pslotinfo,
+						"SD_STA_OFFSET[0x%08X]\n",
+						amba_readl(pinfo->regbase +
+						SD_STA_OFFSET));
+				}
 			}
 			if (pslotinfo->sta_counter) {
 				pslotinfo->sta_counter--;
 			} else {
 				break;
 			}
-		} while ((timeout <= 0) && (tmpreg & pslotinfo->sta_reg));
+		} while ((timeout <= 0) && (sta_reg & pslotinfo->sta_reg));
 		if (timeout <= 0) {
 			ambsd_err(pslotinfo,
 				"data%d %d@%d, sta=0x%04x:0x%04x\n",
 				pslotinfo->mrq->cmd->opcode,
 				pslotinfo->state,
 				pinfo->pcontroller->wait_tmo,
-				tmpreg, pslotinfo->sta_reg);
+				sta_reg, pslotinfo->sta_reg);
 			pslotinfo->mrq->data->error = -ETIMEDOUT;
 		}
 	}
@@ -1309,7 +1303,6 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	struct ambarella_sd_mmc_info		*pslotinfo = NULL;
 	struct resource 			*irq;
 	struct resource 			*mem;
-	struct resource 			*ioarea;
 	struct mmc_host				*mmc;
 	u32					hc_cap = 0;
 	u32					i;
@@ -1329,24 +1322,15 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		goto sd_errorCode_na;
 	}
 
-	ioarea = request_mem_region(mem->start,
-			(mem->end - mem->start) + 1, pdev->name);
-	if (ioarea == NULL) {
-		dev_err(&pdev->dev, "Request SD/MMC ioarea failed!\n");
-		errorCode = -EBUSY;
-		goto sd_errorCode_na;
-	}
-
 	pinfo = kzalloc(sizeof(struct ambarella_sd_controller_info),
 		GFP_KERNEL);
 	if (pinfo == NULL) {
 		dev_err(&pdev->dev, "Out of memory!\n");
 		errorCode = -ENOMEM;
-		goto sd_errorCode_ioarea;
+		goto sd_errorCode_na;
 	}
 	pinfo->regbase = (unsigned char __iomem *)mem->start;
 	pinfo->dev = &pdev->dev;
-	pinfo->mem = mem;
 	pinfo->irq = irq->start;
 	pinfo->pcontroller =
 		(struct ambarella_sd_controller *)pdev->dev.platform_data;
@@ -1381,6 +1365,15 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 	}
 	if (pinfo->pcontroller->max_clock != pinfo->clk_limit) {
 		pinfo->pcontroller->max_clock = pinfo->clk_limit;
+	}
+	pinfo->max_blk_sz = ambarella_sd_dma_mask_to_size(
+		pinfo->pcontroller->max_blk_mask);
+	pinfo->buf_cache = kmem_cache_create(dev_name(&pdev->dev),
+		pinfo->max_blk_sz, pinfo->max_blk_sz, 0, NULL);
+	if (!pinfo->buf_cache) {
+		dev_err(&pdev->dev, "Can't alloc DMA Cache");
+		errorCode = -ENOMEM;
+		goto sd_errorCode_free_pinfo;
 	}
 
 	for (i = 0; i < pinfo->pcontroller->num_slots; i++) {
@@ -1490,51 +1483,37 @@ static int __devinit ambarella_sd_probe(struct platform_device *pdev)
 		}
 
 		mmc->max_blk_count = 0xFFFF;
-		if (pslotinfo->plat_info->use_bb) {
-			pslotinfo->max_blk_sz =
-				pslotinfo->plat_info->max_blk_sz;
-			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
-				pslotinfo->max_blk_sz);
-			mmc->max_segs = mmc->max_seg_size / PAGE_SIZE;
-			mmc->max_req_size = min(mmc->max_seg_size,
-				mmc->max_blk_size * mmc->max_blk_count);
-			pslotinfo->buf_vaddress = kmalloc(
-				mmc->max_req_size, GFP_KERNEL);
-			if (!pslotinfo->buf_vaddress) {
-				ambsd_err(pslotinfo, "Can't alloc DMA memory");
-				errorCode = -ENOMEM;
-				goto sd_errorCode_free_host;
-			}
-			pslotinfo->buf_paddress = dma_map_single(
-				pinfo->dev, pslotinfo->buf_vaddress,
-				mmc->max_req_size, DMA_BIDIRECTIONAL);
-			if (ambarella_sd_check_dma_boundary(pslotinfo,
-				pslotinfo->buf_paddress, mmc->max_req_size,
-				ambarella_sd_dma_mask_to_size(
-				pslotinfo->max_blk_sz)) == 0) {
-				ambsd_err(pslotinfo, "DMA boundary err!\n");
-				errorCode = -ENOMEM;
-				goto sd_errorCode_free_host;
-			}
-			dev_notice(&pdev->dev, "Slot%d use bounce buffer["
-				"0x%p<->0x%08x]\n", pslotinfo->slot_id,
-				pslotinfo->buf_vaddress,
-				pslotinfo->buf_paddress);
-		} else {
-			pslotinfo->max_blk_sz = SD_BLK_SZ_512KB;
-			mmc->max_seg_size = ambarella_sd_dma_mask_to_size(
-				pslotinfo->max_blk_sz) / 2;
-			mmc->max_segs = 1;
-			mmc->max_req_size = min(mmc->max_seg_size,
-				mmc->max_blk_size * mmc->max_blk_count);
-			pslotinfo->buf_paddress = (dma_addr_t)NULL;
-			pslotinfo->buf_vaddress = NULL;
+		mmc->max_seg_size = pinfo->max_blk_sz;
+		mmc->max_segs = mmc->max_seg_size / PAGE_SIZE;
+		mmc->max_req_size = min(mmc->max_seg_size,
+			mmc->max_blk_size * mmc->max_blk_count);
+		pslotinfo->buf_vaddress = kmem_cache_alloc(
+			pinfo->buf_cache, GFP_KERNEL);
+		if (!pslotinfo->buf_vaddress) {
+			ambsd_err(pslotinfo, "Can't alloc DMA memory");
+			errorCode = -ENOMEM;
+			goto sd_errorCode_free_host;
 		}
+		pslotinfo->buf_paddress = dma_map_single(
+			pinfo->dev, pslotinfo->buf_vaddress,
+			mmc->max_req_size, DMA_BIDIRECTIONAL);
+		if (ambarella_sd_check_dma_boundary(pslotinfo,
+			pslotinfo->buf_paddress, mmc->max_req_size,
+			pinfo->max_blk_sz) == 0) {
+			ambsd_err(pslotinfo, "DMA boundary err!\n");
+			errorCode = -ENOMEM;
+			goto sd_errorCode_free_host;
+		}
+		dev_notice(&pdev->dev, "Slot%d use bounce buffer["
+			"0x%p<->0x%08x]\n", pslotinfo->slot_id,
+			pslotinfo->buf_vaddress,
+			pslotinfo->buf_paddress);
+
 		pslotinfo->plat_info->active_caps = mmc->caps;
 		dev_dbg(&pdev->dev, "SD caps: 0x%lx.\n", mmc->caps);
 		dev_dbg(&pdev->dev, "SD ocr: 0x%x.\n", mmc->ocr_avail);
-		dev_notice(&pdev->dev, "Slot%d req_size=%d, "
-			"segs=%d, seg_size=%d\n",
+		dev_notice(&pdev->dev, "Slot%d req_size=0x%08X, "
+			"segs=%d, seg_size=0x%08X\n",
 			pslotinfo->slot_id, mmc->max_req_size,
 			mmc->max_segs, mmc->max_seg_size);
 
@@ -1666,19 +1645,20 @@ sd_errorCode_free_host:
 			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 		}
 		if (pslotinfo->buf_vaddress) {
-			kfree(pslotinfo->buf_vaddress);
+			kmem_cache_free(pinfo->buf_cache,
+				pslotinfo->buf_vaddress);
 			pslotinfo->buf_vaddress = NULL;
-			pslotinfo->buf_paddress = (dma_addr_t)NULL;
 		}
 		if (pslotinfo->mmc);
 			mmc_free_host(pslotinfo->mmc);
 	}
+	if (pinfo->buf_cache) {
+		kmem_cache_destroy(pinfo->buf_cache);
+		pinfo->buf_cache = NULL;
+	}
 
 sd_errorCode_free_pinfo:
 	kfree(pinfo);
-
-sd_errorCode_ioarea:
-	release_mem_region(mem->start, (mem->end - mem->start) + 1);
 
 sd_errorCode_na:
 	return errorCode;
@@ -1736,14 +1716,17 @@ static int __devexit ambarella_sd_remove(struct platform_device *pdev)
 				pslotinfo->buf_paddress = (dma_addr_t)NULL;
 			}
 			if (pslotinfo->buf_vaddress) {
-				kfree(pslotinfo->buf_vaddress);
+				kmem_cache_free(pinfo->buf_cache,
+					pslotinfo->buf_vaddress);
 				pslotinfo->buf_vaddress = NULL;
 			}
 			if (pslotinfo->mmc)
 				mmc_free_host(pslotinfo->mmc);
 		}
-		release_mem_region(pinfo->mem->start,
-			(pinfo->mem->end - pinfo->mem->start) + 1);
+		if (pinfo->buf_cache) {
+			kmem_cache_destroy(pinfo->buf_cache);
+			pinfo->buf_cache = NULL;
+		}
 		kfree(pinfo);
 	}
 

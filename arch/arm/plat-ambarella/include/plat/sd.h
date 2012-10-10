@@ -35,8 +35,6 @@
 struct ambarella_sd_slot {
 	struct mmc_host				*pmmc_host;
 
-	u32					use_bb;
-	u32					max_blk_sz;
 	u32					default_caps;
 	u32					active_caps;
 	u32					default_caps2;
@@ -64,6 +62,7 @@ struct ambarella_sd_controller {
 	void					(*set_pll)(u32);
 	u32					(*get_pll)(void);
 
+	u32					max_blk_mask;
 	u32					max_clock;
 	u32					active_clock;
 	u32					wait_tmo;
@@ -73,8 +72,6 @@ struct ambarella_sd_controller {
 	u32					support_pll_scaler;
 };
 #define AMBA_SD_PARAM_CALL(controller_id, slot_id, arg, cdpos, perm) \
-	module_param_cb(sd##controller_id##_slot##slot_id##_use_bounce_buffer, &param_ops_uint, &(arg.slot[slot_id].use_bb), perm); \
-	module_param_cb(sd##controller_id##_slot##slot_id##_max_blk_sz, &param_ops_uint, &(arg.slot[slot_id].max_blk_sz), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_default_caps, &param_ops_uint, &(arg.slot[slot_id].default_caps), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_active_caps, &param_ops_uint, &(arg.slot[slot_id].active_caps), perm); \
 	module_param_cb(sd##controller_id##_slot##slot_id##_default_caps2, &param_ops_uint, &(arg.slot[slot_id].default_caps2), perm); \

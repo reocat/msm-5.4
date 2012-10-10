@@ -116,8 +116,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.slot[0] = {
 		.pmmc_host	= NULL,
 
-		.use_bb		= 1,
-		.max_blk_sz	= SD_BLK_SZ_128KB,
 		.default_caps	= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE |
@@ -173,8 +171,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.slot[1] = {
 		.pmmc_host	= NULL,
 
-		.use_bb		= 1,
-		.max_blk_sz	= SD_BLK_SZ_128KB,
 		.default_caps	= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE |
@@ -220,6 +216,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.set_pll		= rct_set_sd_pll,
 	.get_pll		= get_sd_freq_hz,
 
+	.max_blk_mask		= SD_BLK_SZ_128KB,
 	.max_clock		= 24000000,
 	.active_clock		= 0,
 	.wait_tmo		= (1 * HZ),
@@ -232,6 +229,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.support_pll_scaler	= 0,
 #endif
 };
+module_param_cb(sd0_max_block, &param_ops_uint,
+	&(ambarella_platform_sd_controller0.max_blk_mask), 0644);
 module_param_cb(sd0_max_clock, &param_ops_uint,
 	&(ambarella_platform_sd_controller0.max_clock), 0644);
 module_param_cb(sd0_active_clock, &param_ops_uint,
@@ -326,8 +325,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.slot[0] = {
 		.pmmc_host	= NULL,
 
-		.use_bb		= 1,
-		.max_blk_sz	= SD_BLK_SZ_128KB,
 		.default_caps	= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_SDIO_IRQ |
 				MMC_CAP_ERASE |
@@ -377,6 +374,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.get_pll		= get_sd_freq_hz,
 #endif
 
+	.max_blk_mask		= SD_BLK_SZ_128KB,
 	.max_clock		= 24000000,
 	.active_clock		= 0,
 	.wait_tmo		= (1 * HZ),
@@ -393,6 +391,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.support_pll_scaler	= 0,
 #endif
 };
+module_param_cb(sd1_max_block, &param_ops_uint,
+	&(ambarella_platform_sd_controller1.max_blk_mask), 0644);
 module_param_cb(sd1_max_clock, &param_ops_uint,
 	&(ambarella_platform_sd_controller1.max_clock), 0644);
 module_param_cb(sd1_active_clock, &param_ops_uint,

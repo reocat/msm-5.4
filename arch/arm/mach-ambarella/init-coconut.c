@@ -253,7 +253,7 @@ static void __init ambarella_init_coconut(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SDIO;
-	ambarella_platform_sd_controller0.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
+	ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
 	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
 	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
 	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
