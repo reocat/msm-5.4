@@ -398,8 +398,6 @@ static int __devexit ambarella_wdt_remove(struct platform_device *pdev)
 		free_irq(pinfo->irq, pinfo);
 		platform_set_drvdata(pdev, NULL);
 		pwdtinfo = NULL;
-		release_mem_region(pinfo->mem->start,
-			(pinfo->mem->end - pinfo->mem->start) + 1);
 		kfree(pinfo);
 	}
 

@@ -394,7 +394,6 @@ static int __devexit ambarella_input_adc_remove(struct platform_device *pdev)
 		cancel_delayed_work(&pinfo->detect_adc);
 		flush_workqueue(pinfo->workqueue);
 		destroy_workqueue(pinfo->workqueue);
-		release_mem_region(pinfo->mem->start, (pinfo->mem->end - pinfo->mem->start) + 1);
 		kfree(pinfo->adc_data);
 		kfree(pinfo->adc_key_pressed);
 		kfree(pinfo->adc_channel_info);

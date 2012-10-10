@@ -494,8 +494,6 @@ static int __devexit ambarella_ir_remove(struct platform_device *pdev)
 	if (pirinfo) {
 		free_irq(pirinfo->irq, pirinfo);
 		platform_set_drvdata(pdev, NULL);
-		release_mem_region(pirinfo->mem->start,
-			(pirinfo->mem->end - pirinfo->mem->start) + 1);
 		kfree(pirinfo);
 	}
 

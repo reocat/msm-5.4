@@ -587,9 +587,6 @@ static int __devexit ambarella_i2c_remove(struct platform_device *pdev)
 
 		platform_set_drvdata(pdev, NULL);
 
-		release_mem_region(pinfo->mem->start,
-			(pinfo->mem->end - pinfo->mem->start) + 1);
-
 		kfree(pinfo);
 	}
 

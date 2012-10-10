@@ -1118,8 +1118,6 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 		free_irq(pinfo->aes_irq, pinfo);
 		free_irq(pinfo->des_irq, pinfo);
 		platform_set_drvdata(pdev, NULL);
-		release_mem_region(pinfo->mem->start,
-			(pinfo->mem->end - pinfo->mem->start) + 1);
 		kfree(pinfo);
 	}
 	dev_notice(&pdev->dev, "%s removed.\n", ambdev_name);
