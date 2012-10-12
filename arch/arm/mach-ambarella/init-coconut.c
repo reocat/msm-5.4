@@ -205,23 +205,6 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.rs485.active_level = GPIO_LOW;
 	ambarella_board_generic.rs485.active_delay = 1;
 
-	ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
-	ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
-	ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
-	ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	if (AMBARELLA_BOARD_REV(system_rev) > 10) {
-		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
-	} else {
-		ambarella_board_generic.lcd_backlight.gpio_id = GPIO(45);
-	}
-	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-	ambarella_board_generic.lcd_backlight.active_delay = 1;
-
-	ambarella_board_generic.lcd_spi_hw.bus_id = 0;
-	ambarella_board_generic.lcd_spi_hw.cs_id = 1;
-
 	ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(95);
 	ambarella_board_generic.vin0_vsync.irq_line = gpio_to_irq(95);
 	ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
@@ -246,24 +229,59 @@ static void __init ambarella_init_coconut(void)
 	ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
 	ambarella_board_generic.flash_enable.active_delay = 1;
 
-	/* Config ETH */
-	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
-	ambarella_eth0_platform_info.mii_id = 1;
-	ambarella_eth0_platform_info.phy_id = 0x00008201;
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		/* Config SD */
+		fio_default_owner = SELECT_FIO_SDIO;
+		ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
+		ambarella_platform_sd_controller0.slot[1].fixed_cd = 0;
+		ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = -1;
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = -1;
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = -1;
+		ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = -1;
 
-	/* Config SD */
-	fio_default_owner = SELECT_FIO_SDIO;
-	ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
-	ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
-	ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
-	ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
+		ambarella_board_generic.wifi_power.gpio_id = GPIO(84);
+		ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
+		ambarella_board_generic.wifi_power.active_delay = 300;
+		ambarella_board_generic.wifi_sd_bus = 0;
+		ambarella_board_generic.wifi_sd_slot = 1;
+	} else {
+		/* Config ETH */
+		ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
+		ambarella_eth0_platform_info.mii_id = 1;
+		ambarella_eth0_platform_info.phy_id = 0x00008201;
 
-	/* Register audio codec */
-	ambarella_init_ak4642(0, 0x12, GPIO(12));
+		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
+		ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
+		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
+		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
+		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+		if (AMBARELLA_BOARD_REV(system_rev) > 10) {
+			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
+		} else {
+			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(45);
+		}
+		ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
+		ambarella_board_generic.lcd_backlight.active_delay = 1;
+
+		ambarella_board_generic.lcd_spi_hw.bus_id = 0;
+		ambarella_board_generic.lcd_spi_hw.cs_id = 1;
+
+		/* Config SD */
+		fio_default_owner = SELECT_FIO_SDIO;
+		ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
+		ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(54);
+		ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
+		ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+		ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
+
+		/* Register audio codec */
+		ambarella_init_ak4642(0, 0x12, GPIO(12));
+	}
 
 	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
