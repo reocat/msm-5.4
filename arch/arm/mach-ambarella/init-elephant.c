@@ -379,6 +379,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+#if defined(CONFIG_CODEC_AMBARELLA_WM8994)
 		 	/* the cs_pin of spi0.1 is used to determine wm8994's
 		 	 * I2C address, and the cs_pin of spi0.4, spi0,5, spi0.6
 		 	 * spi0.7 are used as I2S signals, so we need to prevent
@@ -389,6 +390,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_spi0_cs_pins[6] = -1;
 			ambarella_spi0_cs_pins[7] = -1;
 			ambarella_init_wm8994();
+#endif
 		case 'A':
 			ambarella_board_generic.lcd_reset.gpio_id = GPIO(105);
 			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
