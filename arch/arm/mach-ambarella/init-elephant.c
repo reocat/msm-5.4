@@ -482,7 +482,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller0.slot[1].fixed_wp = 0;
 			ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = -1;
 			ambarella_platform_sd_controller1.max_clock = 12000000;
-			ambarella_platform_sd_controller1.slot[0].max_blk_sz = SD_BLK_SZ_512KB;
+			ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
 			ambarella_platform_sd_controller1.slot[0].default_caps |= MMC_CAP_8_BIT_DATA;
 
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
