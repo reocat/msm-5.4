@@ -414,7 +414,9 @@ static void __init ambarella_init_durian(void)
 	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
 
 	/* Register audio codec */
+#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
 	ambarella_init_ak4642(0, 0x12, GPIO(102));
+#endif
 
 	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
