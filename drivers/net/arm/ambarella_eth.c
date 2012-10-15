@@ -1477,6 +1477,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 	u32					entry;
 	u32					status;
 	unsigned long				flags;
+	int					force = 0;
 
 	lp = container_of(napi, struct ambeth_info, napi);
 
@@ -1496,6 +1497,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 			ambeth_napi_rx(lp, status, entry);
 		} else {
 			ambeth_check_rdes0_status(lp, status, entry);
+			force = 1;
 		}
 		rx_budget--;
 		lp->rx.cur_rx++;
@@ -1505,7 +1507,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 	}
 
 ambeth_poll_complete:
-	if (rx_budget > 0) {
+	if ((rx_budget > 0) || force) {
 		ambeth_rx_rngmng_refill(lp);
 		spin_lock_irqsave(&lp->lock, flags);
 		napi_complete(&lp->napi);
