@@ -44,12 +44,12 @@ config MACH_COCONUT
 
 config MACH_DURIAN
 	bool "Durian"
-	depends on PLAT_AMBARELLA_A5S
+	depends on PLAT_AMBARELLA_A7L
 	default n
 	select AMBARELLA_VIN
 	select AMBARELLA_VOUT
 	help
-	  Say Y here if you are using A5S Durian.
+	  Say Y here if you are using A7L Durian.
 
 config MACH_ELEPHANT
 	bool "Elephant"

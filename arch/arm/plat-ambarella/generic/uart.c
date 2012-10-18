@@ -86,7 +86,7 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 #endif
 };
 
-#if (CHIP_REV == I1 || CHIP_REV == A8)
+#if (CHIP_REV == I1 || CHIP_REV == A8 || CHIP_REV == A7L)
 static void ambarella_uart_stop_tx(unsigned char __iomem *membase)
 {
 	u32					ier;

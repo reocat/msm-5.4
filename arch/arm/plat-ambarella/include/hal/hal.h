@@ -43,6 +43,8 @@
 #include <hal/header.h>
 #if (CHIP_REV == A7)
 #include <hal/a7/ambhal.h>
+#elif (CHIP_REV == A7L)
+#include <hal/a7l/ambhal.h>
 #elif (CHIP_REV == A5S)
 #include <hal/a5s/ambhal.h>
 #elif (CHIP_REV == I1)

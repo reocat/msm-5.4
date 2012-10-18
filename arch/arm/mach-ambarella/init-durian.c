@@ -74,8 +74,6 @@ static struct platform_device ambarella_power_supply = {
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
-	&ambarella_crypto,
-	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_i2s0,
@@ -88,7 +86,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rtc0,
 	&ambarella_sd0,
 	&ambarella_spi0,
-	&ambarella_spi1,
 	&ambarella_uart,
 	&ambarella_uart1,
 	&ambarella_udc0,
@@ -216,7 +213,7 @@ static void __init ambarella_init_durian(void)
 	int					i;
 
 	ambarella_init_machine("Durian");
-
+#if 0
 	if (AMBARELLA_BOARD_REV(system_rev) >= 2) {
 		durian_board_input_info.pkeymap = durian_keymap_v0b;
 	}
@@ -417,6 +414,7 @@ static void __init ambarella_init_durian(void)
 #if defined(CONFIG_CODEC_AMBARELLA_AK4642)
 	ambarella_init_ak4642(0, 0x12, GPIO(102));
 #endif
+#endif
 
 	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
@@ -427,7 +425,7 @@ static void __init ambarella_init_durian(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
-
+#if 0
 	ambarella_chacha_mt4d_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	i2c_register_board_info(2, &ambarella_chacha_mt4d_board_info, 1);
@@ -437,7 +435,7 @@ static void __init ambarella_init_durian(void)
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
 	i2c_register_board_info(2, &durian_board_ext_gpio_info, 1);
-
+#endif
 	platform_device_register(&durian_board_input);
 }
 

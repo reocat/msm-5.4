@@ -245,6 +245,22 @@ config PLAT_AMBARELLA_A7
 	help
 	  Say Y here if you are using Ambarella A7.
 
+config PLAT_AMBARELLA_A7L
+	bool "A7L"
+	select CPU_V6
+	select CPU_32v6K
+	select PLAT_AMBARELLA_GENERIC
+	select PLAT_AMBARELLA_WIRELESS
+	select PLAT_AMBARELLA_SUPPORT_HAL
+	select PLAT_AMBARELLA_SUPPORT_GDMA
+	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
+	select PLAT_AMBARELLA_SUPPORT_UDC
+	select PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC
+	select PLAT_AMBARELLA_SUPPORT_IR
+	select HAVE_PWM
+	help
+	  Say Y here if you are using Ambarella A7l.
+
 config PLAT_AMBARELLA_I1_ARM11
 	bool "iOne ARM11"
 	select CPU_V6
