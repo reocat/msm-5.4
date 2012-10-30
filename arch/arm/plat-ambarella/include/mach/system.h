@@ -58,7 +58,11 @@ static inline void arch_reset(char mode, const char *cmd)
 	local_fiq_disable();
 	flush_cache_all();
 	__raw_writel(0x02, SOFT_RESET_REG);
+#if(CHIP_REV == S2)
+	__raw_writel(0x01, SOFT_RESET_REG);
+#else
 	__raw_writel(0x03, SOFT_RESET_REG);
+#endif
 }
 
 #endif /* __ASSEMBLER__ */
