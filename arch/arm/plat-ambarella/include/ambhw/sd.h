@@ -112,6 +112,17 @@
 #define SD_SUPPORT_ADMA			0
 #endif
 
+#define SD_ADMA_TBL_LINE_SIZE	(8)
+#define SD_ADMA_TBL_LINE_MAX_LEN		(0x40000)
+#define SD_ADMA_TBL_ATTR_NOP	(0x0000)
+#define SD_ADMA_TBL_ATTR_RSV	(0x0010)
+#define SD_ADMA_TBL_ATTR_TRAN	(0x0020)
+#define SD_ADMA_TBL_ATTR_LINK	(0x0030)
+#define SD_ADMA_TBL_ATTR_WORD	(0x0008)
+#define SD_ADMA_TBL_ATTR_INT	(0x0004)
+#define SD_ADMA_TBL_ATTR_END	(0x0002)
+#define SD_ADMA_TBL_ATTR_VALID	(0x0001)
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/
@@ -345,6 +356,7 @@
 #define SD_NIS_CMD_DONE			0x0001
 
 /* SD_EIS_REG */
+#define SD_EIS_ADMA_ERR		0x0200
 #define SD_EIS_ACMD12_ERR		0x0100
 #define SD_EIS_CURRENT_ERR		0x0080
 #define SD_EIS_DATA_BIT_ERR		0x0040
@@ -390,7 +402,7 @@
 #define SD_NIXEN_CMD_DONE		0x0001
 
 /* SD_EIXEN_REG */
-#define SD_EISEN_ADMA_ERR		0x0200
+#define SD_EIXEN_ADMA_ERR		0x0200
 #define SD_EIXEN_ACMD12_ERR		0x0100
 #define SD_EIXEN_CURRENT_ERR		0x0080
 #define SD_EIXEN_DATA_BIT_ERR		0x0040

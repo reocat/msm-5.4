@@ -28,6 +28,7 @@
 #define AMBA_SD_MAX_SLOT_NUM			(2)
 
 #define AMBA_SD_PRIVATE_CAPS_VDD_18		(0x1 << 0)
+#define AMBA_SD_PRIVATE_CAPS_ADMA		(0x1 << 1)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
