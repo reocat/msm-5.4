@@ -126,24 +126,30 @@ MODULE_PARM_DESC (msg_level, "Override default message level");
 static void ambhw_dump(struct ambeth_info *lp)
 {
 	u32					i;
+	unsigned int				dirty_diff;
+	u32					entry;
 
-	dev_info(&lp->ndev->dev, "RX Info: cur_rx %d, dirty_rx %d.\n",
-		lp->rx.cur_rx, lp->rx.dirty_rx);
-	dev_info(&lp->ndev->dev, "RX Info: RX descriptor "
-		"0x%08x 0x%08x 0x%08x 0x%08x.\n",
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].status,
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].length,
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer1,
-		lp->rx.desc_rx[lp->rx.dirty_rx % lp->rx_count].buffer2);
-	dev_info(&lp->ndev->dev, "TX Info: cur_tx %d, dirty_tx %d.\n",
-		lp->tx.cur_tx, lp->tx.dirty_tx);
-	for (i = lp->tx.dirty_tx; i < lp->tx.cur_tx; i++) {
-		dev_info(&lp->ndev->dev, "TX Info: TX descriptor[%d] "
+	dirty_diff = (lp->rx.cur_rx - lp->rx.dirty_rx);
+	entry = (lp->rx.cur_rx % lp->rx_count);
+	dev_info(&lp->ndev->dev, "RX Info: cur_rx[%u], dirty_rx[%u],"
+		" diff[%u], entry[%u].\n", lp->rx.cur_rx, lp->rx.dirty_rx,
+		dirty_diff, entry);
+	for (i = 0; i < lp->rx_count; i++) {
+		dev_info(&lp->ndev->dev, "RX Info: RX descriptor[%u] "
 			"0x%08x 0x%08x 0x%08x 0x%08x.\n", i,
-			lp->tx.desc_tx[i % lp->tx_count].status,
-			lp->tx.desc_tx[i % lp->tx_count].length,
-			lp->tx.desc_tx[i % lp->tx_count].buffer1,
-			lp->tx.desc_tx[i % lp->tx_count].buffer2);
+			lp->rx.desc_rx[i].status, lp->rx.desc_rx[i].length,
+			lp->rx.desc_rx[i].buffer1, lp->rx.desc_rx[i].buffer2);
+	}
+	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+	entry = (lp->tx.cur_tx % lp->tx_count);
+	dev_info(&lp->ndev->dev, "TX Info: cur_tx[%u], dirty_tx[%u],"
+		" diff[%u], entry[%u].\n", lp->tx.cur_tx, lp->tx.dirty_tx,
+		dirty_diff, entry);
+	for (i = 0; i < lp->tx_count; i++) {
+		dev_info(&lp->ndev->dev, "TX Info: TX descriptor[%u] "
+			"0x%08x 0x%08x 0x%08x 0x%08x.\n", i,
+			lp->tx.desc_tx[i].status, lp->tx.desc_tx[i].length,
+			lp->tx.desc_tx[i].buffer1, lp->tx.desc_tx[i].buffer2);
 	}
 	for (i = 0; i <= 21; i++) {
 		dev_dbg(&lp->ndev->dev, "GMAC[%d]: 0x%08x.\n", i,
@@ -241,7 +247,7 @@ static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 	amba_writel(lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET,
 		(u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)));
 	if (netif_msg_tx_err(lp)) {
-		dev_err(&lp->ndev->dev, "TX Error: restart %d.\n", entry);
+		dev_err(&lp->ndev->dev, "TX Error: restart %u.\n", entry);
 		ambhw_dump(lp);
 	}
 	ambhw_dma_tx_start(lp);
@@ -723,9 +729,12 @@ static inline void ambeth_rx_rngmng_init(struct ambeth_info *lp)
 
 static inline void ambeth_rx_rngmng_refill(struct ambeth_info *lp)
 {
+	u32					i;
+	unsigned int				dirty_diff;
 	u32					entry;
 
-	while (lp->rx.cur_rx > lp->rx.dirty_rx) {
+	dirty_diff = (lp->rx.cur_rx - lp->rx.dirty_rx);
+	for (i = 0; i < dirty_diff; i++) {
 		entry = lp->rx.dirty_rx % lp->rx_count;
 		if (ambeth_rx_rngmng_check_skb(lp, entry))
 			break;
@@ -766,7 +775,7 @@ static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
 
 static inline void ambeth_tx_rngmng_init(struct ambeth_info *lp)
 {
-	int					i;
+	u32					i;
 
 	lp->tx.cur_tx = 0;
 	lp->tx.dirty_tx = 0;
@@ -783,21 +792,10 @@ static inline void ambeth_tx_rngmng_init(struct ambeth_info *lp)
 
 static inline void ambeth_tx_rngmng_del(struct ambeth_info *lp)
 {
-	int					i;
+	u32					i;
 	dma_addr_t				mapping;
 	struct sk_buff				*skb;
-	unsigned int				dirty_tx;
-	u32					entry;
-	u32					status;
 
-	for (dirty_tx = lp->tx.dirty_tx; lp->tx.cur_tx > dirty_tx; dirty_tx++) {
-		entry = dirty_tx % lp->tx_count;
-		if (lp->tx.desc_tx) {
-			status = lp->tx.desc_tx[entry].status;
-			if (status & ETH_TDES0_OWN)
-				lp->stats.tx_dropped++;
-		}
-	}
 	for (i = 0; i < lp->tx_count; i++) {
 		if (lp->tx.rng_tx) {
 			skb = lp->tx.rng_tx[i].skb;
@@ -855,10 +853,9 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 				lp->stats.rx_dropped +=
 					ETH_DMA_MISS_FRAME_BOCNT_HOST(miss_ov);
 			}
-			ambhw_dma_rx_stop(lp);
 			if (netif_msg_rx_err(lp))
 				dev_err(&lp->ndev->dev,
-				"DMA Error: Receive Buffer Unavailable, %d.\n",
+				"DMA Error: Receive Buffer Unavailable, %u.\n",
 				ETH_DMA_MISS_FRAME_BOCNT_HOST(miss_ov));
 		}
 		if (irq_status & ETH_DMA_STATUS_UNF) {
@@ -873,7 +870,7 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 			}
 			if (netif_msg_rx_err(lp))
 				dev_err(&lp->ndev->dev,
-				"DMA Error: Receive FIFO Overflow, %d.\n",
+				"DMA Error: Receive FIFO Overflow, %u.\n",
 				ETH_DMA_MISS_FRAME_BOCNT_APP(miss_ov));
 		}
 		if (irq_status & ETH_DMA_STATUS_TJT) {
@@ -946,7 +943,7 @@ static inline u32 ambeth_check_tdes0_status(struct ambeth_info *lp,
 		lp->stats.collisions += ETH_TDES0_CC(status);
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
-			"TX Error: Excessive Collision %d.\n",
+			"TX Error: Excessive Collision %u.\n",
 			ETH_TDES0_CC(status));
 	}
 	if (status & ETH_TDES0_VF) {
@@ -977,17 +974,17 @@ static inline u32 ambeth_check_tdes0_status(struct ambeth_info *lp,
 
 static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 {
-	unsigned int				dirty_tx;
-	unsigned int				dirty_to_tx;
+	u32					i;
+	unsigned int				dirty_diff;
 	u32					entry;
 	u32					status;
 
 	if (irq_status & AMBETH_TXDMA_STATUS) {
-		dev_vdbg(&lp->ndev->dev, "cur_tx[%d], dirty_tx[%d], 0x%x.\n",
+		dev_vdbg(&lp->ndev->dev, "cur_tx[%u], dirty_tx[%u], 0x%x.\n",
 			lp->tx.cur_tx, lp->tx.dirty_tx, irq_status);
-		for (dirty_tx = lp->tx.dirty_tx; dirty_tx < lp->tx.cur_tx;
-			dirty_tx++) {
-			entry = dirty_tx % lp->tx_count;
+		dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+		for (i = 0; i < dirty_diff; i++) {
+			entry = (lp->tx.dirty_tx % lp->tx_count);
 			status = lp->tx.desc_tx[entry].status;
 
 			if (status & ETH_TDES0_OWN)
@@ -1024,15 +1021,15 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			dev_kfree_skb_irq(lp->tx.rng_tx[entry].skb);
 			lp->tx.rng_tx[entry].skb = NULL;
 			lp->tx.rng_tx[entry].mapping = 0;
+			lp->tx.dirty_tx++;
 		}
 
-		dirty_to_tx = lp->tx.cur_tx - dirty_tx;
-		if (likely(dirty_to_tx < lp->tx_irq_low)) {
-			dev_vdbg(&lp->ndev->dev, "TX Info: Now gap %d.\n",
-				dirty_to_tx);
+		dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+		if (likely(dirty_diff < lp->tx_irq_low)) {
+			dev_vdbg(&lp->ndev->dev, "TX Info: Now gap %u.\n",
+				dirty_diff);
 			netif_wake_queue(lp->ndev);
 		}
-		lp->tx.dirty_tx = dirty_tx;
 	}
 }
 
@@ -1231,7 +1228,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	struct ambeth_info			*lp;
 	dma_addr_t				mapping;
 	u32					entry;
-	unsigned int				dirty_to_tx;
+	unsigned int				dirty_diff;
 	u32					tx_flag;
 	unsigned long				flags;
 
@@ -1239,14 +1236,14 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
 
 	spin_lock_irqsave(&lp->lock, flags);
-	entry = lp->tx.cur_tx % lp->tx_count;
-	dirty_to_tx = lp->tx.cur_tx - lp->tx.dirty_tx;
-	if (dirty_to_tx == lp->tx_irq_high) {
+	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+	entry = (lp->tx.cur_tx % lp->tx_count);
+	if (dirty_diff == lp->tx_irq_high) {
 		tx_flag |= ETH_TDES1_IC;
-	} else if (dirty_to_tx == (lp->tx_count - 1)) {
+	} else if (dirty_diff == (lp->tx_count - 1)) {
 		netif_stop_queue(ndev);
 		tx_flag |= ETH_TDES1_IC;
-	} else if (dirty_to_tx >= lp->tx_count) {
+	} else if (dirty_diff >= lp->tx_count) {
 		netif_stop_queue(ndev);
 		errorCode = -ENOMEM;
 		ambhw_dma_tx_poll(lp);
@@ -1275,9 +1272,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ndev->trans_start = jiffies;
-	dev_vdbg(&lp->ndev->dev, "TX Info: cur_tx[%d], dirty_tx[%d], "
-		"entry[%d], len[%d], data_len[%d], ip_summed[%d], "
-		"csum_start[%d], csum_offset[%d].\n",
+	dev_vdbg(&lp->ndev->dev, "TX Info: cur_tx[%u], dirty_tx[%u], "
+		"entry[%u], len[%u], data_len[%u], ip_summed[%u], "
+		"csum_start[%u], csum_offset[%u].\n",
 		lp->tx.cur_tx, lp->tx.dirty_tx, entry, skb->len, skb->data_len,
 		skb->ip_summed, skb->csum_start, skb->csum_offset);
 
@@ -1318,7 +1315,7 @@ static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
 
 	pkt_len = ETH_RDES0_FL(status) - 4;
 	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
-		dev_warn(&lp->ndev->dev, "Bogus packet size %d.\n", pkt_len);
+		dev_warn(&lp->ndev->dev, "Bogus packet size %u.\n", pkt_len);
 		pkt_len = AMBETH_RX_COPYBREAK;
 	}
 
@@ -1424,7 +1421,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	pkt_len = ETH_RDES0_FL(status) - 4;
 
 	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
-		dev_warn(&lp->ndev->dev, "Bogus packet size %d.\n", pkt_len);
+		dev_warn(&lp->ndev->dev, "Bogus packet size %u.\n", pkt_len);
 		pkt_len = AMBETH_RX_COPYBREAK;
 		lp->stats.rx_length_errors++;
 	}
@@ -1463,7 +1460,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	} else {
 		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
-			"RX Error: %d skb[%p], map[0x%08X].\n",
+			"RX Error: %u skb[%p], map[0x%08X].\n",
 			entry, skb, mapping);
 			ambhw_dump(lp);
 		}
@@ -1477,7 +1474,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 	u32					entry;
 	u32					status;
 	unsigned long				flags;
-	int					force = 0;
+	unsigned int				dirty_diff;
 
 	lp = container_of(napi, struct ambeth_info, napi);
 
@@ -1496,18 +1493,21 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 			ambeth_napi_rx(lp, status, entry);
 		} else {
+			ambhw_dma_rx_stop(lp);
 			ambeth_check_rdes0_status(lp, status, entry);
-			force = 1;
+			rx_budget += lp->rx_count;
 		}
 		rx_budget--;
 		lp->rx.cur_rx++;
 
-		if ((lp->rx.cur_rx - lp->rx.dirty_rx) > (lp->rx_count / 4))
+		dirty_diff = (lp->rx.cur_rx - lp->rx.dirty_rx);
+		if (dirty_diff > (lp->rx_count / 4)) {
 			ambeth_rx_rngmng_refill(lp);
+		}
 	}
 
 ambeth_poll_complete:
-	if ((rx_budget > 0) || force) {
+	if (rx_budget > 0) {
 		ambeth_rx_rngmng_refill(lp);
 		spin_lock_irqsave(&lp->lock, flags);
 		napi_complete(&lp->napi);

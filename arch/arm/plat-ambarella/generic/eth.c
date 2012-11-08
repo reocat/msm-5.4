@@ -100,7 +100,7 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	.default_supported	= (AMBARELLA_ETH_SUPPORTED_IPC_RX |
 				AMBARELLA_ETH_SUPPORTED_IPC_TX),
 #elif (CHIP_REV == A7S)
-	.default_supported	= 0,
+	.default_supported	= AMBARELLA_ETH_SUPPORTED_IPC_RX,
 #else
 	.default_supported	= 0,
 #endif
