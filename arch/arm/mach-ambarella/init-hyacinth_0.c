@@ -27,7 +27,9 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
+#include <asm/pmu.h>
 
+#include <plat/ambcache.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
@@ -36,6 +38,14 @@
 extern struct platform_device ambarella_rproc_ca9_a_and_b_dev;
 extern struct platform_device ambarella_rproc_ca9_a_and_arm11_dev;
 #endif /* CONFIG_RPROC_CA9_A */
+
+#ifdef CONFIG_PERF_EVENTS
+static struct platform_device pmu_device = {
+	.name			= "arm-pmu",
+	.id			= -1,
+	.num_resources		= 0,
+};
+#endif
 
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_eth0,
@@ -46,6 +56,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rproc_ca9_a_and_b_dev,
 	&ambarella_rproc_ca9_a_and_arm11_dev,
 #endif /* CONFIG_RPROC_CA9_A */
+#ifdef CONFIG_PERF_EVENTS
+	&pmu_device,
+#endif
 };
 
 static void __init ambarella_init_hyacinth(void)
@@ -54,16 +67,21 @@ static void __init ambarella_init_hyacinth(void)
 
 	ambarella_init_machine("Hyacinth_0");
 
+#ifdef CONFIG_OUTER_CACHE
+	ambcache_l2_enable();
+#endif
+	/* Config ETH */
+	ambarella_eth0_platform_info.mii_id = 0;
+	ambarella_eth0_platform_info.phy_id = 0x001cc915;
+	ambarella_eth0_platform_info.default_tx_ring_size = 128;
+	ambarella_eth0_platform_info.default_rx_ring_size = 64;
+	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
+
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
-
-	ambarella_eth0_platform_info.mii_id = 0;
-	ambarella_eth0_platform_info.phy_id = 0x001cc915;
-
-	pmu_enable_userspace_access();
 }
 
 MACHINE_START(HYACINTH_0, "Hyacinth_0")

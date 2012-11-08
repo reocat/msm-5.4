@@ -27,15 +27,26 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
+#include <asm/pmu.h>
 
 #include <plat/ambcache.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
 
+#include <plat/ambcache.h>
+
 #ifdef CONFIG_RPROC_CA9_B
 extern struct platform_device ambarella_rproc_ca9_b_and_arm11_dev;
 #endif /* CONFIG_RPROC_CA9_B */
+
+#ifdef CONFIG_PERF_EVENTS
+static struct platform_device pmu_device = {
+	.name			= "arm-pmu",
+	.id			= -1,
+	.num_resources		= 0,
+};
+#endif
 
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rtc0,
@@ -44,6 +55,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_RPROC_CA9_B
 	&ambarella_rproc_ca9_b_and_arm11_dev,
 #endif /* CONFIG_RPROC_CA9_B */
+#ifdef CONFIG_PERF_EVENTS
+	&pmu_device,
+#endif
 };
 
 static void __init ambarella_init_hyacinth(void)
@@ -51,6 +65,10 @@ static void __init ambarella_init_hyacinth(void)
 	int i;
 
 	ambarella_init_machine("Hyacinth_1");
+
+#ifdef CONFIG_OUTER_CACHE
+	ambcache_l2_enable();
+#endif
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
