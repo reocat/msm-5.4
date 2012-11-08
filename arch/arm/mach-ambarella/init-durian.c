@@ -51,6 +51,7 @@
 #include <plat/ambinput.h>
 #include <plat/dma.h>
 #include "board-device.h"
+#include <linux/mmc/host.h>
 
 /* ==========================================================================*/
 #include <linux/pda_power.h>
@@ -85,6 +86,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_ir0,
 	&ambarella_rtc0,
 	&ambarella_sd0,
+	&ambarella_sd1,
 	&ambarella_spi0,
 	&ambarella_uart,
 	&ambarella_uart1,
@@ -123,8 +125,23 @@ static struct spi_board_info ambarella_spi_devices[] = {
 	},
 	{
 		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
+		.bus_num	= 0,
+		.chip_select	= 4,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 5,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 6,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 7,
 	}
 };
 
@@ -214,13 +231,17 @@ static void __init ambarella_init_durian(void)
 	ambarella_board_generic.gyro_power.active_delay = 1;
 
 	/* Config SD */
-	fio_default_owner = SELECT_FIO_SDIO;
-
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(75);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(75);
-	ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(76);
-
+	fio_default_owner = SELECT_FIO_SD;
+	ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = SMIO_5;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = SMIO_44;
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
+	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = SMIO_45;
 
 	/* Register audio codec */
 #if defined(CONFIG_CODEC_AMBARELLA_AK4642)
