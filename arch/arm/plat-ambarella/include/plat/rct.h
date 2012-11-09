@@ -394,6 +394,7 @@ enum PLL_CLK_HZ {
         PLL_CLK_230_4MHZ        = 230400000,
         PLL_CLK_240MHZ          = 240000000,
         PLL_CLK_288MHZ          = 288000000,
+        PLL_CLK_296_703MHZ      = 296703000,
         PLL_CLK_297MHZ          = 297000000,
         PLL_CLK_320MHZ          = 320000000,
         PLL_CLK_384MHZ          = 384000000
