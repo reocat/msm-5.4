@@ -35,7 +35,7 @@
 
 #if ((CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) || \
      (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) || \
-     (CHIP_REV == I1)  || (CHIP_REV == A7L))
+     (CHIP_REV == I1))
 #define SD_HAS_INTERNAL_MUXER      	1
 #else
 #define SD_HAS_INTERNAL_MUXER           0
