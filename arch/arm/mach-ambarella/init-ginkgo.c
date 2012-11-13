@@ -219,10 +219,12 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+	ambarella_platform_sd_controller0.slot[0].cd_delay = 1000;
 	ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
 	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = SMIO_44;
 	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
 	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+	ambarella_platform_sd_controller1.slot[0].cd_delay = 500;
 	ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = SMIO_45;
 
 	/* Config ETH */
