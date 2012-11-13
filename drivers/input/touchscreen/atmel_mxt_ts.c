@@ -773,13 +773,14 @@ static void mxt_proc_t9_messages(struct mxt_data *data,
 {
 	struct mxt_finger *finger = data->finger;
 	struct device *dev = &data->client->dev;
+        struct input_dev *input_dev = data->input_dev;
 	u8 status = message[1];
 	int x;
 	int y;
 	int area;
 	int pressure;
 
-	if (data->driver_paused)
+	if (!input_dev || data->driver_paused)
 		return;
 
 	/* Check the touch is present on the screen */
