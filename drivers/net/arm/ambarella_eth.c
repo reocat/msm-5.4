@@ -1194,10 +1194,14 @@ static int ambeth_open(struct net_device *ndev)
 
 	netif_carrier_off(ndev);
 	errorCode = ambeth_phy_start(lp);
+	if (errorCode) {
+		netif_stop_queue(ndev);
+		napi_disable(&lp->napi);
+		free_irq(ndev->irq, ndev);
+	}
 
 ambeth_open_exit:
 	if (errorCode) {
-		ambeth_phy_stop(lp);
 		ambeth_stop_hw(ndev);
 	}
 
