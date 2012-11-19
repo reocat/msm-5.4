@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date June 2010
- * @version 173484
+ * @version 191456
  *
  * @par Introduction:
  * The Ambarella A8 Hardware Abstraction Layer (AMBHAL) provides an API between
@@ -314,7 +314,7 @@
  * that will generate the output clock of the pll.
  * @par Internal PLL Reference Clock
  * When the new clock source is ::AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF the api selects the reference clock frequency
- * based on the system configuration pins (it is either 24 MHz or 27 MHz). In this
+ * based on the system configuration pins (27 MHz). In this
  * case the application does not need to provide anything as the api will figure it out on its
  * own and do the pll settings calculations accordingly.
  * @par External Clock (No PLL) 
@@ -485,7 +485,7 @@ AMB_HAL_RETRY = 0xfffffffeUL
  */
 
 typedef enum {
-/** PLL reference clock from crystal oscillator - either 24 MHz or 27 MHz */
+/** PLL reference clock from crystal oscillator - 27 MHz */
 AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF,
 /* Use spclk_c as reference for pll */
 AMB_PLL_REFERENCE_CLOCK_SOURCE_SPCLK_C,
@@ -555,7 +555,7 @@ unsigned int clock_source_frequency ;
 unsigned int divider ;
 } amb_divider_configuration_t ;
 
-/**
+/*
  * Video Capture Window Size
  *
  * @ingroup mode_group
@@ -932,15 +932,10 @@ static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, am
 
 static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, amb_hal_function_info_index_t amb_hal_function_index, unsigned int arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3)
 {
-  unsigned int rval;
   amb_hal_function_t amb_hal_function = (amb_hal_function_t) ((*((unsigned int*) (((unsigned int*) amb_hal_base_address) + 128 + (amb_hal_function_index*2)))) + ((unsigned int) amb_hal_base_address)) ;
-  AMBARELLA_HAL_OS_LOCK();
-  rval = amb_hal_function (arg0, arg1, arg2, arg3) ;
-  AMBARELLA_HAL_OS_UNLOCK();
 
-  return rval;
+  return amb_hal_function (arg0, arg1, arg2, arg3) ;
 }
-
 
 /**
  * Initialize the ambhal.
@@ -962,7 +957,7 @@ static INLINE unsigned int amb_hal_function_call (void *amb_hal_base_address, am
 
 static INLINE amb_hal_success_t amb_hal_init (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address, void *amb_dramc_base_address, void *amb_dbg_peripherals_base_address)
 {
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  // AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_HAL_INIT, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, (unsigned int) amb_dramc_base_address, (unsigned int) amb_dbg_peripherals_base_address) ;
 }
 
@@ -2915,7 +2910,7 @@ static INLINE amb_sensor_clock_pad_mode_t amb_get_sensor_clock_pad_mode (void *a
 
 static INLINE amb_hal_success_t amb_set_peripherals_base_address (void *amb_hal_base_address, void *amb_apb_peripherals_base_address, void *amb_ahb_peripherals_base_address, void *amb_dramc_base_address, void *amb_dbg_peripherals_base_address)
 {
-  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  // AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS, (unsigned int) amb_apb_peripherals_base_address, (unsigned int) amb_ahb_peripherals_base_address, (unsigned int) amb_dramc_base_address, (unsigned int) amb_dbg_peripherals_base_address) ;
 }
 
