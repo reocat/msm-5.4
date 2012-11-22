@@ -235,7 +235,11 @@ void ambcache_l2_enable_raw()
 			l2x0_init(ambcache_l2_base,
 				((1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT) |
 				(0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT) |
+#if (CHIP_REV == A8)
+				(0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT) |
+#else
 				(0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT) |
+#endif
 				(1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT) |
 				(1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT)),
 				L2X0_AUX_CTRL_MASK);
