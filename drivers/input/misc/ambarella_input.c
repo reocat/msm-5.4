@@ -588,11 +588,27 @@ static int __init ambarella_input_init(void)
 
 static void __exit ambarella_input_exit(void)
 {
+	int i = 0;
+
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
-	platform_driver_unregister_adc();
+	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
+		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
+			break;
+		if (pboard_info->pkeymap[i].type == AMBINPUT_ADC_KEY){
+			platform_driver_unregister_adc();
+			break;
+		}
+	}
 #endif
 #ifdef CONFIG_INPUT_AMBARELLA_IR
-	platform_driver_unregister_ir();
+	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
+		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
+			break;
+		if (pboard_info->pkeymap[i].type == AMBINPUT_IR_KEY){
+			platform_driver_unregister_ir();
+			break;
+		}
+	}
 #endif
 	platform_driver_unregister(&ambarella_input_driver);
 }
