@@ -86,6 +86,14 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_dma,
 };
 
+static struct platform_device *ambarella_pwm_devices[] __initdata = {
+	&ambarella_pwm_platform_device0,
+	&ambarella_pwm_platform_device1,
+	&ambarella_pwm_platform_device2,
+	&ambarella_pwm_platform_device3,
+	&ambarella_pwm_platform_device4,
+};
+
 /* ==========================================================================*/
 static struct spi_board_info ambarella_spi_devices[] = {
 	{
@@ -223,7 +231,7 @@ static void ginkgo_ipcam_sdio_set_vdd(u32 vdd)
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
-	int					i;
+	int					i, ret;
 	int					use_bub_default = 1;
 
 	ambarella_init_machine("ginkgo");
@@ -329,6 +337,14 @@ static void __init ambarella_init_ginkgo(void)
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
+		ret = platform_device_register(ambarella_pwm_devices[i]);
+		if (ret)
+			continue;
+		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
+		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
 
 	spi_register_board_info(ambarella_spi_devices,
