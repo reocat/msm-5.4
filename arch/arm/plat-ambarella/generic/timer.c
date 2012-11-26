@@ -237,7 +237,7 @@ static u32 notrace ambarella_read_sched_clock(void)
 
 #ifdef CONFIG_HAVE_ARM_TWD
 static DEFINE_TWD_LOCAL_TIMER(twd_local_timer,
-                             /*AMBARELLA_VA_PT_WD_BASE*/0xf0000600,
+                             AMBARELLA_PA_PT_WD_BASE,
                              IRQ_LOCALTIMER);
 
 static void __init ambarella_twd_init(void)
