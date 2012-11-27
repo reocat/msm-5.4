@@ -154,7 +154,7 @@
 #define AHB64_BASE			(0xf20c0000)
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
-#define DBGBUS_BASE			(0xf2200000)
+#define DBGBUS_BASE			(0xec000000)
 #endif
 #endif	/* CONFIG_VMSPLIT_3G */
 
