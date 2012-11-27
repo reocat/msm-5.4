@@ -17,6 +17,15 @@
 #include <libelf.h>
 #include <gelf.h>
 #include <elf.h>
+
+#ifndef __GELF_NHDR__
+#if __LIBELF64
+typedef Elf64_Nhdr GElf_Nhdr;
+#else
+typedef Elf32_Nhdr GElf_Nhdr;
+#endif
+#endif
+
 #endif
 
 #include "dso.h"
