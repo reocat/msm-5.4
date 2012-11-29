@@ -1621,11 +1621,15 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 	spin_lock_irqsave(&lp->lock, flags);
 	saddr = (struct sockaddr *)(addr);
 
-	if (netif_running(ndev))
+	if (netif_running(ndev)) {
+		spin_unlock_irqrestore(&lp->lock, flags);
 		return -EBUSY;
+	}
 
-	if (!is_valid_ether_addr(saddr->sa_data))
+	if (!is_valid_ether_addr(saddr->sa_data)) {
+		spin_unlock_irqrestore(&lp->lock, flags);
 		return -EADDRNOTAVAIL;
+	}
 
 	dev_dbg(&lp->ndev->dev, "MAC address[%pM].\n", saddr->sa_data);
 
