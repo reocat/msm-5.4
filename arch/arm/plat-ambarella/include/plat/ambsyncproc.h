@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_SYNC_PROC_H
 #define __PLAT_AMBARELLA_SYNC_PROC_H
 
+#include <linux/fs.h>
+
 /* ==========================================================================*/
 #define AMBA_SYNC_PROC_MAX_ID			(31)
 #define AMBA_SYNC_PROC_PAGE_SIZE		(PAGE_SIZE - 16)
