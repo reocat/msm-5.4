@@ -246,6 +246,7 @@ struct mxt_data {
 	unsigned int max_y;
 	struct bin_attribute mem_access_attr;
 	bool debug_enabled;
+	u8 max_reportid;
 	u32 config_crc;
 	u32 info_crc;
 	u8 bootloader_addr;
@@ -261,6 +262,7 @@ struct mxt_data {
 	u16 T7_address;
 	u8 T9_reportid_min;
 	u8 T9_reportid_max;
+	u16 T44_address;
 };
 
 /* I2C slave address pairs */
@@ -691,19 +693,87 @@ static int mxt_proc_message(struct mxt_data *data, u8 *message)
 	return 1;
 }
 
-static int mxt_read_and_process_message(struct mxt_data *data)
+static int mxt_read_and_process_messages(struct mxt_data *data, u8 count)
 {
 	struct device *dev = &data->client->dev;
 	int ret;
+	int i;
+	u8 num_valid = 0;
 
+	/* Safety check for msg_buf */
+	if (count > data->max_reportid)
+		return -EINVAL;
+
+	/* Process remaining messages if necessary */
 	ret = __mxt_read_reg(data->client, data->T5_address,
-				data->T5_msg_size, data->msg_buf);
+				data->T5_msg_size * count, data->msg_buf);
 	if (ret) {
-		dev_err(dev, "Error %d reading message\n", ret);
+		dev_err(dev, "Failed to read %u messages (%d)\n", count, ret);
 		return ret;
 	}
 
-	return mxt_proc_message(data, data->msg_buf);
+	for (i = 0;  i < count; i++) {
+		ret = mxt_proc_message(data,
+			data->msg_buf + data->T5_msg_size * i);
+
+		if (ret == 1)
+			num_valid++;
+	}
+
+	/* return number of messages read */
+	return num_valid;
+}
+
+static irqreturn_t mxt_process_messages_t44(struct mxt_data *data)
+{
+	struct device *dev = &data->client->dev;
+	int ret;
+	u8 count, num_left;
+
+	/* Read T44 and T5 together */
+	ret = __mxt_read_reg(data->client, data->T44_address,
+		data->T5_msg_size + 1, data->msg_buf);
+	if (ret) {
+		dev_err(dev, "Failed to read T44 and T5 (%d)\n", ret);
+		return IRQ_NONE;
+	}
+
+	count = data->msg_buf[0];
+
+	if (count == 0) {
+		dev_warn(dev, "Interrupt triggered but zero messages\n");
+		return IRQ_NONE;
+	} else if (count > data->max_reportid) {
+		dev_err(dev, "T44 count exceeded max report id\n");
+		count = data->max_reportid;
+	}
+
+	/* Process first message */
+	ret = mxt_proc_message(data, data->msg_buf + 1);
+	if (ret < 0) {
+		dev_warn(dev, "Unexpected invalid message\n");
+		return IRQ_NONE;
+	}
+
+	num_left = count - 1;
+
+	/* Process remaining messages if necessary */
+	if (num_left) {
+		ret = mxt_read_and_process_messages(data, num_left);
+		if (ret < 0) {
+			goto end;
+		} else if (ret != num_left) {
+			dev_warn(dev, "Unexpected invalid message\n");
+		}
+	}
+
+end:
+	if (data->t9_update_input) {
+		mxt_input_sync(data->input_dev);
+		data->t9_update_input = false;
+	}
+
+	return IRQ_HANDLED;
 }
 
 static irqreturn_t mxt_process_messages_until_invalid(struct mxt_data *data)
@@ -711,7 +781,7 @@ static irqreturn_t mxt_process_messages_until_invalid(struct mxt_data *data)
 	int ret;
 
 	do {
-		ret = mxt_read_and_process_message(data);
+		ret = mxt_read_and_process_messages(data, 1);
 		if (ret < 0)
 			return IRQ_NONE;
 	} while (ret > 0);
@@ -728,7 +798,10 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 {
 	struct mxt_data *data = dev_id;
 
-	return mxt_process_messages_until_invalid(data);
+	if (data->T44_address)
+		return mxt_process_messages_t44(data);
+	else
+		return mxt_process_messages_until_invalid(data);
 }
 
 static int mxt_t6_command(struct mxt_data *data, u16 cmd_offset, u8 value, bool wait)
@@ -1136,7 +1209,7 @@ static int mxt_make_highchg(struct mxt_data *data)
 
 	/* Read messages until we force an invalid */
 	do {
-		ret = mxt_read_and_process_message(data);
+		ret = mxt_read_and_process_messages(data, 1);
 		if (ret == 0)
 			return 0;
 		else if (ret < 0)
@@ -1216,8 +1289,14 @@ static int mxt_get_object_table(struct mxt_data *data)
 
 		switch (object->type) {
 		case MXT_GEN_MESSAGE_T5:
-			/* CRC not enabled, therefore don't read last byte */
-			data->T5_msg_size = OBP_SIZE(object) - 1;
+			if (data->info.family_id == 0x80) {
+				/* On mXT224 read and discard unused CRC byte
+				 * otherwise DMA reads are misaligned */
+				data->T5_msg_size = OBP_SIZE(object);
+			} else {
+				/* CRC not enabled, therefore don't read last byte */
+				data->T5_msg_size = OBP_SIZE(object) - 1;
+			}
 			data->T5_address = object->start_address;
 		case MXT_GEN_COMMAND_T6:
 			data->T6_reportid = min_id;
@@ -1230,6 +1309,9 @@ static int mxt_get_object_table(struct mxt_data *data)
 			data->T9_reportid_min = min_id;
 			data->T9_reportid_max = max_id;
 			break;
+		case MXT_SPT_MESSAGECOUNT_T44:
+			data->T44_address = object->start_address;
+			break;
 		}
 
 		end_address = object->start_address
@@ -1239,7 +1321,17 @@ static int mxt_get_object_table(struct mxt_data *data)
 			data->mem_size = end_address + 1;
 	}
 
-	data->msg_buf = kzalloc(data->T5_msg_size, GFP_KERNEL);
+	/* Store maximum reportid */
+	data->max_reportid = reportid;
+
+	/* If T44 exists, T9 position has to be directly after */
+	if (data->T44_address && (data->T5_address != data->T44_address + 1)) {
+		dev_err(&client->dev, "Invalid T44 position\n");
+		error = -EINVAL;
+		goto free_object_table;
+	}
+
+	data->msg_buf = kcalloc(data->max_reportid, data->T5_msg_size, GFP_KERNEL);
 	if (!data->msg_buf) {
 		dev_err(&client->dev, "Failed to allocate message buffer\n");
 		error = -ENOMEM;
