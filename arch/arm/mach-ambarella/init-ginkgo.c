@@ -327,6 +327,8 @@ static void __init ambarella_init_ginkgo(void)
 		platform_device_register(&ambarella_rtc0);
 	}
 
+	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
+
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
