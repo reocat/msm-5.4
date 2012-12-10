@@ -638,6 +638,7 @@ static void mxt_proc_t9_message(struct mxt_data *data, u8 *message)
 	int area;
 	int amplitude;
 	u8 vector;
+	int tool;
 
 	/* do not report events if input device not yet registered */
 	if (!input_dev)
@@ -653,7 +654,16 @@ static void mxt_proc_t9_message(struct mxt_data *data, u8 *message)
 	if (data->max_y < 1024)
 		y >>= 2;
 
-	area = message[5];
+	/* A reported size of zero indicates that the reported touch
+	 * is a stylus from a linked Stylus T47 object. */
+	if (message[5] == 0) {
+		area = 1;
+		tool = MT_TOOL_PEN;
+	} else {
+		area = message[5];
+		tool = MT_TOOL_FINGER;
+	}
+
 	amplitude = message[6];
 	vector = message[7];
 
@@ -677,13 +687,12 @@ static void mxt_proc_t9_message(struct mxt_data *data, u8 *message)
 		 * status messages, indicating all the events that have
 		 * happened */
 		if (status & MXT_T9_RELEASE) {
-			input_mt_report_slot_state(input_dev,
-						   MT_TOOL_FINGER, 0);
+			input_mt_report_slot_state(input_dev, tool, 0);
 			mxt_input_sync(input_dev);
 		}
 
 		/* Touch active */
-		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 1);
+		input_mt_report_slot_state(input_dev, tool, 1);
 		input_report_abs(input_dev, ABS_MT_POSITION_X, x);
 		input_report_abs(input_dev, ABS_MT_POSITION_Y, y);
 		input_report_abs(input_dev, ABS_MT_PRESSURE, amplitude);
@@ -691,7 +700,7 @@ static void mxt_proc_t9_message(struct mxt_data *data, u8 *message)
 		input_report_abs(input_dev, ABS_MT_ORIENTATION, vector);
 	} else {
 		/* Touch no longer active, close out slot */
-		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 0);
+		input_mt_report_slot_state(input_dev, tool, 0);
 	}
 
 	data->t9_update_input = true;
