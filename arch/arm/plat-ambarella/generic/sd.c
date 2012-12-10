@@ -219,7 +219,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.max_blk_mask		= SD_BLK_SZ_128KB,
 	.max_clock		= 24000000,
 	.active_clock		= 0,
-	.wait_tmo		= (1 * HZ),
+	.wait_tmo		= ((5 * HZ) / 2),
 	.pwr_delay		= 1,
 
 	.dma_fix		= 0,
@@ -377,7 +377,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.max_blk_mask		= SD_BLK_SZ_128KB,
 	.max_clock		= 24000000,
 	.active_clock		= 0,
-	.wait_tmo		= (1 * HZ),
+	.wait_tmo		= ((5 * HZ) / 2),
 	.pwr_delay		= 1,
 
 #if (CHIP_REV == S2)
