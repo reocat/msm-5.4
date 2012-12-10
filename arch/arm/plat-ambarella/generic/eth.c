@@ -78,13 +78,13 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 				SUPPORTED_MII,
 	.mii_power	= {
 		.gpio_id	= -1,
-		.active_level	= GPIO_LOW,
-		.active_delay	= 1,
+		.active_level	= GPIO_HIGH,
+		.active_delay	= 200,
 	},
 	.mii_reset	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
-		.active_delay	= 1,
+		.active_delay	= 200,
 	},
 	.mii_retry_limit	= 200,
 	.mii_retry_tmo		= 10,
@@ -178,13 +178,13 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 				SUPPORTED_MII,
 	.mii_power	= {
 		.gpio_id	= -1,
-		.active_level	= GPIO_LOW,
-		.active_delay	= 1,
+		.active_level	= GPIO_HIGH,
+		.active_delay	= 200,
 	},
 	.mii_reset	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,
-		.active_delay	= 1,
+		.active_delay	= 200,
 	},
 	.mii_retry_limit	= 200,
 	.mii_retry_tmo		= 10,

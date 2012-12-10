@@ -462,11 +462,7 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
-			ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
-			ambarella_eth0_platform_info.mii_power.active_delay = 20;
 			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(98);
-			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 
 			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = GPIO(157);
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;

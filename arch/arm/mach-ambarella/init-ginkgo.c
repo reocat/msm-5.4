@@ -292,8 +292,6 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_platform_sd_controller1.slot[0].set_vdd = ginkgo_ipcam_sdio_set_vdd;
 
 			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
-			ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-			ambarella_eth0_platform_info.mii_reset.active_delay = 200;
 
 			/* Config USB over-curent protection */
 			ambarella_board_generic.uhc_use_ocp = 0x1;

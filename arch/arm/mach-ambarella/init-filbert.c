@@ -221,13 +221,9 @@ static void __init ambarella_init_filbert(void)
 
 	/* Config Eth0 */
 	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
-	ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-	ambarella_eth0_platform_info.mii_reset.active_delay = 20;
 
 	/* Config Eth1 */
 	ambarella_eth1_platform_info.mii_reset.gpio_id = GPIO(125);
-	ambarella_eth1_platform_info.mii_reset.active_level = GPIO_LOW;
-	ambarella_eth1_platform_info.mii_reset.active_delay = 20;
 
 	/* Config Vin */
 	ambarella_board_generic.vin0_reset.gpio_id = GPIO(127);
