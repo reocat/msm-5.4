@@ -1120,6 +1120,8 @@ static u32 mxt_calculate_crc(u8 *base, off_t start_off, off_t end_off)
 	return (crc & 0x00FFFFFF);
 }
 
+static int mxt_init_t7_power_cfg(struct mxt_data *data);
+
 static int mxt_check_reg_init(struct mxt_data *data)
 {
 	struct device *dev = &data->client->dev;
@@ -1341,6 +1343,9 @@ static int mxt_check_reg_init(struct mxt_data *data)
 		goto release_mem;
 
 	dev_info(dev, "Config written\n");
+
+	/* T7 config may have changed */
+	mxt_init_t7_power_cfg(data);
 
 release_mem:
 	kfree(config_mem);
@@ -1694,17 +1699,17 @@ retry_probe:
 
 	data->state = APPMODE;
 
+	error = mxt_init_t7_power_cfg(data);
+	if (error) {
+		dev_err(&client->dev, "Failed to initialize power cfg\n");
+		return error;
+	}
+
 	/* Check register init values */
 	error = mxt_check_reg_init(data);
 	if (error) {
 		dev_err(&client->dev, "Error %d initialising configuration\n",
 			error);
-		return error;
-	}
-
-	error = mxt_init_t7_power_cfg(data);
-	if (error) {
-		dev_err(&client->dev, "Failed to initialize power cfg\n");
 		return error;
 	}
 
