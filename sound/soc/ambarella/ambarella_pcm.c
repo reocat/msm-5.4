@@ -97,6 +97,8 @@ static bool ambpcm_dma_filter(struct dma_chan *chan, void *fparam)
 	if (ambarella_dma_channel_id(chan) == prtd->channel)
 		ret = true;
 
+	chan->private = prtd;
+
 	return ret;
 }
 
