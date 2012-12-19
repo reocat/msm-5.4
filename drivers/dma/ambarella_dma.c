@@ -165,8 +165,6 @@ static void ambdma_complete_all(struct ambdma_chan *amb_chan)
 	struct ambdma_desc *amb_desc, *_desc;
 	LIST_HEAD(list);
 
-	BUG_ON(ambdma_chan_is_enabled(amb_chan));
-
 	/* submit queued descriptors ASAP, i.e. before we go through
 	 * the completed ones. */
 	if (!list_empty(&amb_chan->queue))
@@ -216,14 +214,17 @@ static void ambdma_tasklet(unsigned long data)
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 
-	if (!list_empty(&amb_chan->active_list))
-		amb_desc = ambdma_first_active(amb_chan);
+	/* someone might have called terminate all */
+	if (list_empty(&amb_chan->active_list))
+		goto tasklet_out;
 
-	if (amb_desc && (amb_desc->lli->rpt & (DMA_CHANX_STA_OE |
+	amb_desc = ambdma_first_active(amb_chan);
+
+	if ((amb_desc->lli->rpt & (DMA_CHANX_STA_OE |
 			DMA_CHANX_STA_ME | DMA_CHANX_STA_BE |
 			DMA_CHANX_STA_RWE | DMA_CHANX_STA_AE)) != 0x0) {
 		ambdma_handle_error(amb_chan, amb_desc);
-	} else if (amb_desc && (amb_desc->lli->attr & DMA_DESC_ID) == DMA_DESC_ID) {
+	} else if ((amb_desc->lli->attr & DMA_DESC_ID) == DMA_DESC_ID) {
 		/* if it's cyclic dma, we just call callback function. */
 		spin_unlock(&amb_chan->lock);
 		if (amb_desc->txd.callback)
@@ -233,6 +234,7 @@ static void ambdma_tasklet(unsigned long data)
 		ambdma_advance_work(amb_chan);
 	}
 
+tasklet_out:
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 }
 
@@ -560,6 +562,12 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		return NULL;
 	}
 
+	if (!IS_ALIGNED(buf_addr, 8) || !IS_ALIGNED(period_len, 8)) {
+		pr_err("%s: buf_addr/period_len is not 8bytes aligned! (%d,%d)\n",
+			__func__, buf_addr, period_len);
+		return NULL;
+	}
+
 	do {
 		amb_desc = ambdma_get_desc(amb_chan);
 		if (!amb_desc)
@@ -699,6 +707,13 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 
 	if (unlikely(!len)) {
 		pr_info("ambdma_prep_dma_memcpy: length is zero!\n");
+		return NULL;
+	}
+
+	if (!IS_ALIGNED(dst, 8) || !IS_ALIGNED(src, 8)) {
+		pr_err("%s: dst/src is not 8bytes aligned! (%d,%d)\n",
+			__func__, dst, src);
+		return NULL;
 	}
 
 	do{
