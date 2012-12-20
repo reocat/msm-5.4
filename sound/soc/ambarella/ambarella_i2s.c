@@ -110,6 +110,16 @@ static inline void dai_rx_disable(void)
 	amba_clrbitsl(I2S_INIT_REG, DAI_RX_EN);
 }
 
+static inline void dai_tx_fifo_rst(void)
+{
+	amba_setbitsl(I2S_INIT_REG, I2S_TX_FIFO_RESET_BIT);
+}
+
+static inline void dai_rx_fifo_rst(void)
+{
+	amba_setbitsl(I2S_INIT_REG, I2S_RX_FIFO_RESET_BIT);
+}
+
 static inline void dai_fifo_rst(void)
 {
 	amba_setbitsl(I2S_INIT_REG, DAI_FIFO_RST);
@@ -122,17 +132,14 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct ambarella_pcm_dma_params *dma_data;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	u8 slots, word_pos, clksrc, mclk, oversample;
-	u8 rx_enabled = 0, tx_enabled = 0;
 	u32 clock_divider, clock_reg, channels;
+
+	/* Disable tx/rx before initializing */
+	dai_tx_disable();
+	dai_rx_disable();
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		dma_data = &ambarella_i2s_pcm_stereo_out;
-		/* Disable tx/rx before initializing */
-		dai_tx_disable();
-		if(amba_tstbitsl(I2S_INIT_REG, 0x02)) {
-			rx_enabled = 1;
-			dai_rx_disable();
-		}
 		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
 			amba_writel(I2S_TX_CTRL_REG, 0x08);
 		else
@@ -140,12 +147,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
 	} else {
 		dma_data = &ambarella_i2s_pcm_stereo_in;
-		/* Disable tx/rx before initializing */
-		dai_rx_disable();
-		if(amba_tstbitsl(I2S_INIT_REG, 0x04)) {
-			tx_enabled = 1;
-			dai_tx_disable();
-		}
 		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
 			amba_writel(I2S_RX_CTRL_REG, 0x00);
 		else
@@ -185,12 +186,12 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 
 		break;
 	default:
-		return -EINVAL;
+		goto hw_params_exit;
 	}
 
 	switch (params_rate(params)) {
 	case 8000:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
+		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_8000;
 		break;
 	case 11025:
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_11025;
@@ -211,7 +212,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
 		break;
 	default:
-		return -EINVAL;
+		goto hw_params_exit;
 	}
 
 	/* Set clock */
@@ -237,10 +238,8 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 	mutex_unlock(&clock_reg_mutex);
 
-	if(rx_enabled)
-		dai_rx_enable();
-	if(tx_enabled)
-		dai_tx_enable();
+	dai_rx_enable();
+	dai_tx_enable();
 
 	msleep(1);
 
@@ -249,44 +248,22 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		AUDIO_NOTIFY_SETHWPARAMS);
 
 	return 0;
+
+hw_params_exit:
+	dai_rx_enable();
+	dai_tx_enable();
+	return -EINVAL;
 }
 
 static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
 	if(substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		dai_fifo_rst();
+		dai_rx_fifo_rst();
+	else
+		dai_tx_fifo_rst();
+
 	return 0;
-}
-
-static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
-			struct snd_soc_dai *dai)
-{
-	int ret = 0;
-
-	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
-	case SNDRV_PCM_TRIGGER_RESUME:
-	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-			dai_rx_enable();
-		else
-			dai_tx_enable();
-		break;
-	case SNDRV_PCM_TRIGGER_STOP:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
-	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-			dai_tx_disable();
-		else
-			dai_rx_disable();
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
 }
 
 /*
@@ -484,6 +461,8 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	priv_data->amb_i2s_intf.ch = 2;
 
 	/* reset fifo */
+	dai_tx_enable();
+	dai_rx_enable();
 	dai_fifo_rst();
 
 	/* Notify HDMI that the audio interface is initialized */
@@ -507,12 +486,11 @@ static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 }
 
 static struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
-		.prepare = ambarella_i2s_prepare,
-		.trigger = ambarella_i2s_trigger,
-		.hw_params = ambarella_i2s_hw_params,
-		.set_fmt = ambarella_i2s_set_fmt,
-		.set_sysclk = ambarella_i2s_set_sysclk,
-		.set_clkdiv = ambarella_i2s_set_clkdiv,
+	.prepare = ambarella_i2s_prepare,
+	.hw_params = ambarella_i2s_hw_params,
+	.set_fmt = ambarella_i2s_set_fmt,
+	.set_sysclk = ambarella_i2s_set_sysclk,
+	.set_clkdiv = ambarella_i2s_set_clkdiv,
 };
 
 static struct snd_soc_dai_driver ambarella_i2s_dai = {

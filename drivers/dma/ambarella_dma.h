@@ -21,6 +21,12 @@
 #define NR_DESCS_PER_CHANNEL		64
 #define AMBARELLA_DMA_MAX_LENGTH	((1 << 22) - 1)
 
+enum ambdma_status {
+	AMBDMA_STATUS_IDLE = 0,
+	AMBDMA_STATUS_BUSY,
+	AMBDMA_STATUS_STOPPING,
+};
+
 /* lli == Linked List Item; aka DMA buffer descriptor, used by hardware */
 struct ambdma_lli {
 	dma_addr_t			src;
@@ -40,6 +46,7 @@ struct ambdma_desc {
 	struct list_head		tx_list;
 	struct list_head		desc_node;
 	size_t				len;
+	bool				is_cyclic;
 };
 
 struct ambdma_chan {
@@ -55,9 +62,11 @@ struct ambdma_chan {
 	struct list_head		active_list;
 	struct list_head		queue;
 	struct list_head		free_list;
+	struct list_head		stopping_list;
 
 	dma_addr_t			rt_addr;
 	u32				rt_attr;
+	enum ambdma_status		status;
 };
 
 struct ambdma_device {
@@ -87,16 +96,23 @@ static inline struct ambdma_desc *ambdma_first_active(
 			struct ambdma_desc, desc_node);
 }
 
-static inline struct ambdma_desc *ambdma_first_queued(
+static inline struct ambdma_desc *ambdma_first_stopping(
 	struct ambdma_chan *amb_chan)
 {
-	return list_first_entry(&amb_chan->queue,
+	return list_first_entry(&amb_chan->stopping_list,
 			struct ambdma_desc, desc_node);
 }
 
 static inline struct ambdma_chan *to_ambdma_chan(struct dma_chan *chan)
 {
 	return container_of(chan, struct ambdma_chan, chan);
+}
+
+static inline int ambdma_desc_is_error(struct ambdma_desc *amb_desc)
+{
+	return (amb_desc->lli->rpt & (DMA_CHANX_STA_OE | DMA_CHANX_STA_ME |
+			DMA_CHANX_STA_BE | DMA_CHANX_STA_RWE |
+			DMA_CHANX_STA_AE)) != 0x0;
 }
 
 static inline int ambdma_chan_is_enabled(struct ambdma_chan *amb_chan)

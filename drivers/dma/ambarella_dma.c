@@ -51,6 +51,7 @@ static struct ambdma_desc *ambdma_alloc_desc(struct dma_chan *chan, gfp_t gfp_fl
 	amb_desc->txd.flags = DMA_CTRL_ACK;
 	amb_desc->txd.tx_submit = ambdma_tx_submit;
 	amb_desc->txd.phys = phys;
+	amb_desc->is_cyclic = 0;
 
 	return amb_desc;
 }
@@ -109,12 +110,10 @@ static void ambdma_put_desc(struct ambdma_chan *amb_chan,
 	}
 }
 
-static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
+static void ambdma_return_desc(struct ambdma_chan *amb_chan,
 		struct ambdma_desc *amb_desc)
 {
 	struct dma_async_tx_descriptor	*txd = &amb_desc->txd;
-
-	amb_chan->completed_cookie = txd->cookie;
 
 	/* move children to free_list */
 	list_splice_init(&amb_desc->tx_list, &amb_chan->free_list);
@@ -150,6 +149,16 @@ static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
 						DMA_TO_DEVICE);
 		}
 	}
+}
+
+static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
+		struct ambdma_desc *amb_desc)
+{
+	struct dma_async_tx_descriptor	*txd = &amb_desc->txd;
+
+	amb_chan->completed_cookie = txd->cookie;
+
+	ambdma_return_desc(amb_chan, amb_desc);
 
 	spin_unlock(&amb_chan->lock);
 	if (txd->callback && (txd->flags & DMA_PREP_INTERRUPT))
@@ -165,13 +174,14 @@ static void ambdma_complete_all(struct ambdma_chan *amb_chan)
 	struct ambdma_desc *amb_desc, *_desc;
 	LIST_HEAD(list);
 
+	list_splice_init(&amb_chan->active_list, &list);
+
 	/* submit queued descriptors ASAP, i.e. before we go through
 	 * the completed ones. */
-	if (!list_empty(&amb_chan->queue))
-		ambdma_dostart(amb_chan, ambdma_first_queued(amb_chan));
-
-	list_splice_init(&amb_chan->active_list, &list);
-	list_splice_init(&amb_chan->queue, &amb_chan->active_list);
+	if (!list_empty(&amb_chan->queue)) {
+		list_splice_init(&amb_chan->queue, &amb_chan->active_list);
+		ambdma_dostart(amb_chan, ambdma_first_active(amb_chan));
+	}
 
 	list_for_each_entry_safe(amb_desc, _desc, &list, desc_node)
 		ambdma_chain_complete(amb_chan, amb_desc);
@@ -179,8 +189,7 @@ static void ambdma_complete_all(struct ambdma_chan *amb_chan)
 
 static void ambdma_advance_work(struct ambdma_chan *amb_chan)
 {
-	if (list_empty(&amb_chan->active_list) ||
-			list_is_singular(&amb_chan->active_list)) {
+	if (list_empty(&amb_chan->active_list) || list_is_singular(&amb_chan->active_list)) {
 		ambdma_complete_all(amb_chan);
 	} else {
 		ambdma_chain_complete(amb_chan, ambdma_first_active(amb_chan));
@@ -203,6 +212,7 @@ static void ambdma_handle_error(struct ambdma_chan *amb_chan,
 	pr_crit("%s: DMA error on channel %d: 0x%08x\n",
 		__func__, amb_chan->id, bad_desc->lli->rpt);
 
+	/* pretend the descriptor completed successfully */
 	ambdma_chain_complete(amb_chan, bad_desc);
 }
 
@@ -210,28 +220,48 @@ static void ambdma_tasklet(unsigned long data)
 {
 	struct ambdma_chan *amb_chan = (struct ambdma_chan *)data;
 	struct ambdma_desc *amb_desc = NULL;
+	enum ambdma_status old_status;
 	unsigned long flags;
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
+
+	old_status = amb_chan->status;
+	if (!ambdma_chan_is_enabled(amb_chan)) {
+		amb_chan->status = AMBDMA_STATUS_IDLE;
+		if (!list_empty(&amb_chan->stopping_list))
+			ambdma_return_desc(amb_chan, ambdma_first_stopping(amb_chan));
+	}
 
 	/* someone might have called terminate all */
 	if (list_empty(&amb_chan->active_list))
 		goto tasklet_out;
 
+	/* note: if the DMA channel is stopped by DMA_TERMINATE_ALL rather
+	 * than naturally end, then ambdma_first_active() will return the next
+	 * descriptor that need to be started, but not the descriptor that
+	 * invoke this tasklet (IRQ) */
 	amb_desc = ambdma_first_active(amb_chan);
 
-	if ((amb_desc->lli->rpt & (DMA_CHANX_STA_OE |
-			DMA_CHANX_STA_ME | DMA_CHANX_STA_BE |
-			DMA_CHANX_STA_RWE | DMA_CHANX_STA_AE)) != 0x0) {
-		ambdma_handle_error(amb_chan, amb_desc);
-	} else if ((amb_desc->lli->attr & DMA_DESC_ID) == DMA_DESC_ID) {
-		/* if it's cyclic dma, we just call callback function. */
-		spin_unlock(&amb_chan->lock);
-		if (amb_desc->txd.callback)
-			amb_desc->txd.callback(amb_desc->txd.callback_param);
-		spin_lock(&amb_chan->lock);
-	} else {
-		ambdma_advance_work(amb_chan);
+	if (!amb_desc->is_cyclic && amb_chan->status != AMBDMA_STATUS_IDLE) {
+		pr_err("%s: channel(%d) invalid status\n", __func__, amb_chan->id);
+		goto tasklet_out;
+	}
+
+	if (old_status == AMBDMA_STATUS_BUSY) {
+		/* the DMA channel is stopped naturally or by errors.  */
+		if (ambdma_desc_is_error(amb_desc)) {
+			ambdma_handle_error(amb_chan, amb_desc);
+		} else if (amb_desc->is_cyclic) {
+			spin_unlock(&amb_chan->lock);
+			if (amb_desc->txd.callback)
+				amb_desc->txd.callback(amb_desc->txd.callback_param);
+			spin_lock(&amb_chan->lock);
+		} else {
+			ambdma_advance_work(amb_chan);
+		}
+	} else if (old_status == AMBDMA_STATUS_STOPPING) {
+		/* the DMA channel is stopped by DMA_TERMINATE_ALL.  */
+		ambdma_dostart(amb_chan, amb_desc);
 	}
 
 tasklet_out:
@@ -269,25 +299,56 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
+	struct ambdma_desc *first, *amb_desc;
+	u32 force_stop = 0;
 	int i, id = amb_chan->id;
 
+	if (!amb_chan->chan.private)
+		force_stop = 1;
+	else
+		force_stop = *(u32 *)amb_chan->chan.private;
+
 	/* Disable DMA: following sequence is not mentioned at APM.*/
-	if (ambdma_chan_is_enabled(amb_chan)) {
-		for (i = 0; i < 10; i++) {
-			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
-			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
-			amba_writel(DMA_CHAN_CTR_REG(id),
-				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
-			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 
-			udelay(1);
-			if (!ambdma_chan_is_enabled(amb_chan))
-				return 0;
-		}
+	/* we will set DMA channel status to IDLE at ambdma_tasklet() , because:
+	 * 1. if force_stop == 1:
+	 *	a dummy IRQ will be invoked, although DMA channel has been
+	 *	stopped here.
+	 * 2. if force_stop == 0:
+	 *	actually DMA channel is still running at this moment. And
+	 *	normally there are still two IRQs will be invoked untill DMA
+	 *	channel stops.
+	 */
+	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
+		if (force_stop) {
+			for (i = 0; i < 10; i++) {
+				amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
+				amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
+				amba_writel(DMA_CHAN_CTR_REG(id),
+					DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
+				amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 
-		if (ambdma_chan_is_enabled(amb_chan)) {
-			pr_err("%s: stop dma channel(%d) failed\n", __func__, id);
-			return -EIO;
+				udelay(1);
+				if (!ambdma_chan_is_enabled(amb_chan)) {
+					amb_chan->status = AMBDMA_STATUS_STOPPING;
+					return 0;
+				}
+			}
+			if (ambdma_chan_is_enabled(amb_chan)) {
+				pr_err("%s: stop dma channel(%d) failed\n", __func__, id);
+				return -EIO;
+			}
+		} else {
+			first = ambdma_first_active(amb_chan);
+			first->lli->attr |= DMA_DESC_EOC;
+			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
+				amb_desc->lli->attr |= DMA_DESC_EOC;
+			}
+			amb_chan->status = AMBDMA_STATUS_STOPPING;
+			/* active_list is still being used by DMA controller,
+			 * so move it to stopping_list to avoid being
+			 * initialized by next transfer */
+			list_move_tail(&first->desc_node, &amb_chan->stopping_list);
 		}
 	}
 
@@ -312,15 +373,20 @@ static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *fir
 {
 	int id = amb_chan->id;
 
+	/* if DMA channel is not idle right now, the DMA descriptor
+	 * will be started at ambdma_tasklet(). */
+	if (amb_chan->status > AMBDMA_STATUS_IDLE)
+		return;
+
 	if (ambdma_chan_is_enabled(amb_chan)) {
-		pr_err("%s: Attempted to start non-idle channel\n", __func__);
-		/* The tasklet will hopefully advance the queue... */
+		pr_err("%s: channel(%d) should be idle here\n", __func__, id);
 		return;
 	}
 
 	amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 	amba_writel(DMA_CHAN_DA_REG(id), first->txd.phys);
 	amba_writel(DMA_CHAN_CTR_REG(id), DMA_CHANX_CTR_EN | DMA_CHANX_CTR_D);
+	amb_chan->status = AMBDMA_STATUS_BUSY;
 }
 
 static dma_cookie_t ambdma_tx_submit(struct dma_async_tx_descriptor *tx)
@@ -360,8 +426,8 @@ static int ambdma_alloc_chan_resources(struct dma_chan *chan)
 
 	amb_chan = to_ambdma_chan(chan);
 
-	if (ambdma_chan_is_enabled(amb_chan)) {
-		pr_err("%s: DMA channel not idle!\n", __func__);
+	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
+		pr_err("%s: channel(%d) not idle!\n", __func__, amb_chan->id);
 		return -EIO;
 	}
 
@@ -401,7 +467,7 @@ static void ambdma_free_chan_resources(struct dma_chan *chan)
 	spin_lock_irqsave(&amb_chan->lock, flags);
 	BUG_ON(!list_empty(&amb_chan->active_list));
 	BUG_ON(!list_empty(&amb_chan->queue));
-	BUG_ON(ambdma_chan_is_enabled(amb_chan));
+	BUG_ON(amb_chan->status == AMBDMA_STATUS_BUSY);
 
 	list_splice_init(&amb_chan->free_list, &list);
 	amb_chan->descs_allocated = 0;
@@ -436,8 +502,12 @@ static void ambdma_issue_pending(struct dma_chan *chan)
 	spin_lock_irqsave(&amb_chan->lock, flags);
 
 	/* if dma channel is not idle, will active queue list in tasklet. */
-	if (!ambdma_chan_is_enabled(amb_chan))
-		ambdma_advance_work(amb_chan);
+	if (amb_chan->status == AMBDMA_STATUS_IDLE) {
+		if (!list_empty(&amb_chan->active_list))
+			pr_err("%s: active_list should be empty here\n", __func__);
+		else
+			ambdma_advance_work(amb_chan);
+	}
 
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 }
@@ -573,6 +643,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		if (!amb_desc)
 			goto dma_cyclic_err;
 
+		amb_desc->is_cyclic = 1;
+
 		if (period_len > left_len)
 			period_len = left_len;
 
@@ -648,6 +720,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_slave_sg(
 		if (!amb_desc)
 			goto slave_sg_err;
 
+		amb_desc->is_cyclic = 0;
+
 		if (direction == DMA_TO_DEVICE) {
 			amb_desc->lli->src = sg_dma_address(sgent);
 			amb_desc->lli->dst = amb_chan->rt_addr;
@@ -706,7 +780,7 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 	size_t left_len = len, xfer_count;
 
 	if (unlikely(!len)) {
-		pr_info("ambdma_prep_dma_memcpy: length is zero!\n");
+		pr_info("%s: length is zero!\n", __func__);
 		return NULL;
 	}
 
@@ -720,6 +794,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 		amb_desc = ambdma_get_desc(amb_chan);
 		if (!amb_desc)
 			goto dma_memcpy_err;
+
+		amb_desc->is_cyclic = 0;
 
 		amb_desc->lli->src = src;
 		amb_desc->lli->dst = dst;
@@ -856,9 +932,11 @@ static int __devinit ambarella_dma_probe(struct platform_device *pdev)
 		spin_lock_init(&amb_chan->lock);
 		amb_chan->amb_dma = amb_dma;
 		amb_chan->id = i;
+		amb_chan->status = AMBDMA_STATUS_IDLE;
 		INIT_LIST_HEAD(&amb_chan->active_list);
 		INIT_LIST_HEAD(&amb_chan->queue);
 		INIT_LIST_HEAD(&amb_chan->free_list);
+		INIT_LIST_HEAD(&amb_chan->stopping_list);
 
 		tasklet_init(&amb_chan->tasklet, ambdma_tasklet,
 				(unsigned long)amb_chan);

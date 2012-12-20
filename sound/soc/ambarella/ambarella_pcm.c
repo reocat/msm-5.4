@@ -47,6 +47,10 @@
 
 #include "ambarella_pcm.h"
 
+unsigned int force_stop = 1;
+module_param(force_stop, uint, 0644);
+MODULE_PARM_DESC(force_stop, "Stop DMA immediately, only used by cyclic DMA");
+
 #define AMBA_MAX_DESC_NUM		128
 #define AMBA_MIN_DESC_NUM		2
 #define AMBA_PERIOD_BYTES_MAX		(128 * 1024)
@@ -97,7 +101,7 @@ static bool ambpcm_dma_filter(struct dma_chan *chan, void *fparam)
 	if (ambarella_dma_channel_id(chan) == prtd->channel)
 		ret = true;
 
-	chan->private = prtd;
+	chan->private = &force_stop;
 
 	return ret;
 }
@@ -106,9 +110,12 @@ static void ambarella_dai_dma_handler(void *dev_id)
 {
 	struct snd_pcm_substream *substream = dev_id;
 	struct ambarella_runtime_data *prtd = substream->runtime->private_data;
+	unsigned long flags;
 
+	spin_lock_irqsave(&prtd->lock, flags);
 	prtd->pointer_bytes += prtd->period_bytes;
 	prtd->pointer_bytes %= prtd->period_bytes * prtd->periods;
+	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	snd_pcm_period_elapsed(substream);
 }
@@ -169,6 +176,7 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct ambarella_runtime_data *prtd = runtime->private_data;
+	unsigned long flags;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -189,6 +197,14 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		dmaengine_terminate_all(prtd->dma_chan);
+		/* if not force to stop DMA immediately, there will be still
+		 * two periods will be transfered untill DMA stop */
+		spin_lock_irqsave(&prtd->lock, flags);
+		if (!force_stop) {
+			prtd->pointer_bytes += prtd->period_bytes * 2;
+			prtd->pointer_bytes %= prtd->period_bytes * prtd->periods;
+		}
+		spin_unlock_irqrestore(&prtd->lock, flags);
 		break;
 
 	default:
