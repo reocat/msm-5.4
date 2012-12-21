@@ -248,7 +248,7 @@ static void ambdma_tasklet(unsigned long data)
 	}
 
 	if (old_status == AMBDMA_STATUS_BUSY) {
-		/* the DMA channel is stopped naturally or by errors.  */
+		/* the IRQ is triggered by DMA stopping naturally or by errors.*/
 		if (ambdma_desc_is_error(amb_desc)) {
 			ambdma_handle_error(amb_chan, amb_desc);
 		} else if (amb_desc->is_cyclic) {
@@ -300,45 +300,28 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *first, *amb_desc;
-	u32 force_stop = 0;
-	int i, id = amb_chan->id;
+	int id = amb_chan->id;
 
-	if (!amb_chan->chan.private)
-		force_stop = 1;
-	else
-		force_stop = *(u32 *)amb_chan->chan.private;
-
-	/* Disable DMA: following sequence is not mentioned at APM.*/
-
-	/* we will set DMA channel status to IDLE at ambdma_tasklet() , because:
-	 * 1. if force_stop == 1:
-	 *	a dummy IRQ will be invoked, although DMA channel has been
-	 *	stopped here.
-	 * 2. if force_stop == 0:
-	 *	actually DMA channel is still running at this moment. And
-	 *	normally there are still two IRQs will be invoked untill DMA
-	 *	channel stops.
-	 */
 	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
-		if (force_stop) {
-			for (i = 0; i < 10; i++) {
-				amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
-				amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
-				amba_writel(DMA_CHAN_CTR_REG(id),
-					DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
-				amba_writel(DMA_CHAN_STA_REG(id), 0x0);
-
-				udelay(1);
-				if (!ambdma_chan_is_enabled(amb_chan)) {
-					amb_chan->status = AMBDMA_STATUS_STOPPING;
-					return 0;
-				}
-			}
+		if (amb_chan->force_stop) {
+			/* Disable DMA: this sequence is not mentioned at APM.*/
+			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
+			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
+			amba_writel(DMA_CHAN_CTR_REG(id),
+				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
+			udelay(1);
+			/* avoid to trigger dummy IRQ.*/
+			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
 			if (ambdma_chan_is_enabled(amb_chan)) {
-				pr_err("%s: stop dma channel(%d) failed\n", __func__, id);
+				pr_err("%s: stop dma channel(%d) failed\n",
+					__func__, id);
 				return -EIO;
 			}
+			amb_chan->status = AMBDMA_STATUS_IDLE;
 		} else {
+			/* if force_stop == 0, the DMA channel is still running
+			 * at this moment. And normally there are still two IRQs
+			 * will be triggered untill DMA channel stops. */
 			first = ambdma_first_active(amb_chan);
 			first->lli->attr |= DMA_DESC_EOC;
 			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
@@ -450,6 +433,10 @@ static int ambdma_alloc_chan_resources(struct dma_chan *chan)
 	amb_chan->descs_allocated = i;
 	list_splice_init(&tmp_list, &amb_chan->free_list);
 	amb_chan->completed_cookie = chan->cookie = 1;
+	if (!amb_chan->chan.private)
+		amb_chan->force_stop = 1;
+	else
+		amb_chan->force_stop = *(u32 *)amb_chan->chan.private;
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 
 	return amb_chan->descs_allocated;
