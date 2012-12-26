@@ -36,7 +36,7 @@ struct ambarella_wdt_controller {
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_wdt0;
-
+extern struct platform_device			mpcore_wdt;
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

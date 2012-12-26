@@ -53,11 +53,7 @@ static void ambarella_wdt0_start(u32 mode)
 #endif	
 
 		/* Clear the WDT_RST_L_REG to zero */
-#if (RCT_WDT_RESET_VAL == 0)
 		amba_writel(WDT_RST_L_REG, RCT_WDT_RESET_VAL);
-#else
-		amba_writel(WDT_RST_L_REG, 0x1);		
-#endif
 
 		/* Not allow the change of WDT_RST_L_REG via APB */
 #if (RCT_SUPPORT_UNL_WDT_RST_ANAPWR == 1)
@@ -89,6 +85,29 @@ struct platform_device ambarella_wdt0 = {
 		.platform_data		= &ambarella_platform_wdt_controller0,
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	}
+};
+
+//----------------mpcore watchdog------------------------------------
+static struct resource mpcore_wdt_resources[] = {
+	[0] = {
+		.start	= MPCORE_WDT_REG,
+		.end	= MPCORE_WDT_REG + 0x00FF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= LOCAL_WDOG_IRQ,
+		.end	= LOCAL_WDOG_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device mpcore_wdt = {
+	.name		= "mpcore_wdt",
+	.id		= -1,
+	.resource	= mpcore_wdt_resources,
+	.num_resources	= ARRAY_SIZE(mpcore_wdt_resources),
+	.dev		= {
 	}
 };
 
