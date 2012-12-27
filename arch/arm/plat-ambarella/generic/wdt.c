@@ -88,6 +88,7 @@ struct platform_device ambarella_wdt0 = {
 	}
 };
 
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 //----------------mpcore watchdog------------------------------------
 static struct resource mpcore_wdt_resources[] = {
 	[0] = {
@@ -110,4 +111,5 @@ struct platform_device mpcore_wdt = {
 	.dev		= {
 	}
 };
+#endif
 
