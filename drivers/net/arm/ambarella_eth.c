@@ -1655,7 +1655,6 @@ static int ambeth_get_settings(struct net_device *ndev,
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
-	unsigned long				flags;
 
 	if (!netif_running(ndev)) {
 		errorCode = -EINVAL;
@@ -1663,13 +1662,13 @@ static int ambeth_get_settings(struct net_device *ndev,
 	}
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock_irqsave(&lp->lock, flags);
+	spin_lock(&lp->lock);
 	if (lp->phydev) {
 		errorCode = phy_ethtool_gset(lp->phydev, ecmd);
 	} else {
 		errorCode = -EINVAL;
 	}
-	spin_unlock_irqrestore(&lp->lock, flags);
+	spin_unlock(&lp->lock);
 
 ambeth_get_settings_exit:
 	return errorCode;
@@ -1680,7 +1679,6 @@ static int ambeth_set_settings(struct net_device *ndev,
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
-	unsigned long				flags;
 
 	if (!netif_running(ndev)) {
 		errorCode = -EINVAL;
@@ -1688,13 +1686,13 @@ static int ambeth_set_settings(struct net_device *ndev,
 	}
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock_irqsave(&lp->lock, flags);
+	spin_lock(&lp->lock);
 	if (lp->phydev) {
 		errorCode = phy_ethtool_sset(lp->phydev, ecmd);
 	} else {
 		errorCode = -EINVAL;
 	}
-	spin_unlock_irqrestore(&lp->lock, flags);
+	spin_unlock(&lp->lock);
 
 ambeth_get_settings_exit:
 	return errorCode;
@@ -1704,7 +1702,6 @@ static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
-	unsigned long				flags;
 
 	if (!netif_running(ndev)) {
 		errorCode = -EINVAL;
@@ -1712,13 +1709,13 @@ static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 	}
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock_irqsave(&lp->lock, flags);
+	spin_lock(&lp->lock);
 	if (lp->phydev) {
 		errorCode = phy_mii_ioctl(lp->phydev, ifr, cmd);
 	} else {
 		errorCode = -EINVAL;
 	}
-	spin_unlock_irqrestore(&lp->lock, flags);
+	spin_unlock(&lp->lock);
 
 ambeth_get_settings_exit:
 	return errorCode;
