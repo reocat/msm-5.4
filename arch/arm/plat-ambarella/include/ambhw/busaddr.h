@@ -130,7 +130,11 @@
 #endif
 
 #if (CHIP_REV == S2)
-#define CRYPT_UNIT_OFFSET		0x7000
+    #if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+       #define CRYPT_UNIT_OFFSET		0x20000
+    #else
+       #define CRYPT_UNIT_OFFSET		0x7000
+    #endif
 #else
 #define CRYPT_UNIT_OFFSET		0x14000
 #endif
@@ -212,26 +216,30 @@
 #define VIC3_BASE			(AHB_BASE + VIC3_OFFSET)
 #define SPDIF_BASE			(AHB_BASE + SPDIF_OFFSET)
 #define AHB_SECURE_BASE			(AHB_BASE + AHB_SECURE_OFFSET)
-#if !defined(__KERNEL__)
-#if defined(CRYPT_PHYS_BASE)
-#define CRYPT_UNIT_BASE			(CRYPT_PHYS_BASE)
-#else
-#if (CHIP_REV == S2)
-#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
-#else
-#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
-#endif
-#endif
-#else
-#if defined(CRYPT_BASE)
-#define CRYPT_UNIT_BASE			(CRYPT_BASE)
-#else
-#if (CHIP_REV == S2)
-#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
-#else
-#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
-#endif
-#endif
+#if !defined(__KERNEL__) // in amboot
+    #if defined(CRYPT_PHYS_BASE)
+        #define CRYPT_UNIT_BASE			(CRYPT_PHYS_BASE)
+    #else
+        #if (CHIP_REV == S2)
+            #define CRYPT_UNIT_BASE		(AHB64_BASE + CRYPT_UNIT_OFFSET)
+        #else
+            #define CRYPT_UNIT_BASE		(AHB_BASE + CRYPT_UNIT_OFFSET)
+        #endif
+    #endif
+#else // in kernel
+    #if defined(CRYPT_BASE)
+        #define CRYPT_UNIT_BASE			(CRYPT_BASE)
+    #else
+        #if (CHIP_REV == S2)
+            #if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+                #define CRYPT_UNIT_BASE		(AXI_BASE + CRYPT_UNIT_OFFSET)
+            #else
+                #define CRYPT_UNIT_BASE		(AHB64_BASE + CRYPT_UNIT_OFFSET)
+            #endif
+        #else
+            #define CRYPT_UNIT_BASE		(AHB_BASE + CRYPT_UNIT_OFFSET)
+        #endif
+    #endif
 #endif
 
 /* AHB slave registers */

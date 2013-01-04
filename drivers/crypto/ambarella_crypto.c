@@ -3,6 +3,7 @@
  *
  * History:
  *	2009/09/07 - [Qiao Wang]
+ *    2013/01/04 - [Johnson Diao]
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -63,17 +64,27 @@ static md5_data_t g_md5_data __attribute__((__aligned__(4)));
 static sha1_digest_t g_sha1_digest __attribute__((__aligned__(4)));
 static sha1_data_t g_sha1_data __attribute__((__aligned__(4)));
 
-static void __ambarella_crypto_aligned_common64(u32 * src, u32 * dst) {
+static unsigned long long int __ambarella_crypto_aligned_read64(u32 src)
+{
+	long long unsigned int ret;
 	__asm__ __volatile__ (
-	"mov r2, %0 \n\t"
-	"ldmia r2, {r3-r4} \n\t"
-	"mov r2, %1 \n\t"
-	"stmia r2, {r3-r4} \n\t"
-	:
-	: "r"(src) , "r"(dst)
-	: "r2", "r3", "r4", "memory" );
+	"ldrd %0,[%1]\n"
+	: "=&r"(ret)
+	: "r"(src) 
+	 );
+	return ret;
 }
 
+static void __ambarella_crypto_aligned_write64(u32 low, u32 high,u32 dst)
+{
+	__asm__ __volatile__ (
+	"mov r4, %0 \n\t"
+	"mov r5, %1 \n\t"
+	"strd r4, [%2] \n\t"
+	:
+	: "r"(low) , "r"(high),"r"(dst)
+	: "r4", "r5", "memory" );
+}
 
 static int _ambarella_crypto_aligned_read64(u32 * buf,u32 * addr, unsigned int len) {
 	int errCode = -1;
@@ -81,14 +92,13 @@ static int _ambarella_crypto_aligned_read64(u32 * buf,u32 * addr, unsigned int l
 	if ( ( 0 == (((u32) addr) & 0x07) ) && (0 == (len%8))) {
 		/* address and length should be 64 bit aligned */
 		for (i = 0; i < len/8; i++) {
-			__ambarella_crypto_aligned_common64((u32 *)(addr + 2*i),  (u32 *)(buf + 2*i));
+			*(unsigned long long int *)(buf + 2*i) = __ambarella_crypto_aligned_read64((u32)(addr + 2*i));
 		}
 		errCode = 0;
 	};
 	return errCode;
 
 }
-
 
 static int _ambarella_crypto_aligned_write64(u32 * addr,u32 * buf, unsigned int len ) {
 	int errCode = -1;
@@ -96,16 +106,13 @@ static int _ambarella_crypto_aligned_write64(u32 * addr,u32 * buf, unsigned int 
 	if ( ( 0 == (((u32) addr) & 0x07) ) && (0 == (len%8))) {
 		/* address and length should be 64 bit aligned */
 		for (i = 0; i < len/8; i++) {
-			__ambarella_crypto_aligned_common64((u32 *)(buf + 2*i), (u32 *)(addr + 2*i));
+			__ambarella_crypto_aligned_write64(*(u32 *)(buf + 2*i), *(u32 *)(buf + 2*i+1),(u32)(addr + 2*i));
 		}
 		errCode = 0;
 	};
 	return errCode;
 
 }
-
-
-
 
 struct ambarella_platform_crypto_info *platform_info;
 

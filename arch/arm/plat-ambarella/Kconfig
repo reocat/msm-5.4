@@ -334,6 +334,7 @@ config PLAT_AMBARELLA_S2_CORTEX
 	select PL310_ERRATA_588369 if CACHE_PL310
 	select PL310_ERRATA_727915 if CACHE_PL310
 	select HAVE_PWM
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 
 	help
 	  Say Y here if you are using Ambarella S2 Cortex.
