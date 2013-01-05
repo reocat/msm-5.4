@@ -585,7 +585,7 @@
 /* AXI related ... */
 /*******************/
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == I1)
 #define MPCORE_WDT_OFFSET		0x0600
 #define MPCORE_WDT_REG		(AXI_BASE + MPCORE_WDT_OFFSET)
 #endif
