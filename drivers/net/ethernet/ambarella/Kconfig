@@ -1,0 +1,21 @@
+#
+# AMBARELLA network device configuration
+#
+
+config NET_VENDOR_AMBARELLA
+	tristate "Ambarella 10/100/1000 GMAC Ethernet support"
+	depends on PLAT_AMBARELLA
+	select CRC32
+	select PHYLIB
+	select MII
+	help
+	  This driver supports Ambarella 10/100/1000 GMAC Ethernet.
+
+config AMBARELLA_ETH_SUPPORT_IPC
+	bool "Ambarella Media Soc Ethernet with IPC support"
+	depends on NET_VENDOR_AMBARELLA
+	default n
+	help
+  	  Support Checksum Offload Engine.
+	  If unsure, say N.
+

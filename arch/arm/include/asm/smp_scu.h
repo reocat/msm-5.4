@@ -9,6 +9,7 @@
 unsigned int scu_get_core_count(void __iomem *);
 void scu_enable(void __iomem *);
 int scu_power_mode(void __iomem *, unsigned int);
+void scu_disable(void __iomem *);
 #endif
 
 #endif

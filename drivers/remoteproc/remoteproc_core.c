@@ -62,6 +62,7 @@ static const char *rproc_crash_to_string(enum rproc_crash_type type)
 	return "unkown";
 }
 
+#if 0
 /*
  * This is the IOMMU fault handler we register with the IOMMU API
  * (when relevant; not all remote processors access memory through
@@ -145,6 +146,7 @@ static void rproc_disable_iommu(struct rproc *rproc)
 	return;
 }
 
+#endif
 /*
  * Some remote processors will ask us to allocate them physically contiguous
  * memory regions (which we call "carveouts"), and map them to specific
@@ -209,7 +211,12 @@ int rproc_alloc_vring(struct rproc_vdev *rvdev, int i)
 	 * this call will also configure the IOMMU for us
 	 * TODO: let the rproc know the da of this vring
 	 */
+#if 0
 	va = dma_alloc_coherent(dev->parent, size, &dma, GFP_KERNEL);
+#else
+	va = (void*)ambarella_phys_to_virt(rvring->da);
+	dma = rvring->da;
+#endif
 	if (!va) {
 		dev_err(dev->parent, "dma_alloc_coherent failed\n");
 		return -EINVAL;
@@ -816,6 +823,7 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 
 	dev_info(dev, "Booting fw image %s, size %zd\n", name, fw->size);
 
+#if 0
 	/*
 	 * if enabling an IOMMU isn't relevant for this rproc, this is
 	 * just a nop
@@ -826,6 +834,7 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 		return ret;
 	}
 
+#endif
 	rproc->bootaddr = rproc_get_boot_addr(rproc, fw);
 
 	/* look for the resource table */
@@ -864,7 +873,9 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 
 clean_up:
 	rproc_resource_cleanup(rproc);
+#if 0
 	rproc_disable_iommu(rproc);
+#endif
 	return ret;
 }
 
@@ -1105,8 +1116,9 @@ void rproc_shutdown(struct rproc *rproc)
 	/* clean up all acquired resources */
 	rproc_resource_cleanup(rproc);
 
+#if 0
 	rproc_disable_iommu(rproc);
-
+#endif
 	/* if in crash state, unlock crash handler */
 	if (rproc->state == RPROC_CRASHED)
 		complete_all(&rproc->crash_comp);

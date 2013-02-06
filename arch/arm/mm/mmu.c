@@ -384,7 +384,9 @@ static void __init build_mem_type_table(void)
 			 * (Uncached Normal memory)
 			 */
 			mem_types[MT_DEVICE].prot_sect |= PMD_SECT_TEX(1);
+#if !defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
 			mem_types[MT_DEVICE_NONSHARED].prot_sect |= PMD_SECT_TEX(1);
+#endif
 			mem_types[MT_DEVICE_WC].prot_sect |= PMD_SECT_BUFFERABLE;
 		} else if (cpu_is_xsc3()) {
 			/*
@@ -709,7 +711,7 @@ static void __init create_mapping(struct map_desc *md)
 
 	if ((md->type == MT_DEVICE || md->type == MT_ROM) &&
 	    md->virtual >= PAGE_OFFSET &&
-	    (md->virtual < VMALLOC_START || md->virtual >= VMALLOC_END)) {
+	    (md->virtual < VMALLOC_START/* || md->virtual >= VMALLOC_END*/)) {
 		printk(KERN_WARNING "BUG: mapping for 0x%08llx"
 		       " at 0x%08lx out of vmalloc space\n",
 		       (long long)__pfn_to_phys((u64)md->pfn), md->virtual);
@@ -929,6 +931,21 @@ void __init sanity_check_meminfo(void)
 {
 	int i, j, highmem = 0;
 
+#if 0
+#ifdef CONFIG_PLAT_AMBARELLA
+#if defined(CONFIG_VMSPLIT_3G)
+	lowmem_limit = (DEFAULT_MEM_START + SZ_256M + SZ_128M);
+#elif defined(CONFIG_VMSPLIT_2G)
+	lowmem_limit = (DEFAULT_MEM_START + SZ_512M + SZ_256M);
+#else
+	lowmem_limit = (DEFAULT_MEM_START + SZ_1G + SZ_512M);
+#endif
+#else
+	lowmem_limit = __pa(vmalloc_min - 1) + 1;
+#endif
+	memblock_set_current_limit(lowmem_limit);
+
+#endif
 	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {
 		struct membank *bank = &meminfo.bank[j];
 		*bank = meminfo.bank[i];
