@@ -92,8 +92,8 @@ struct platform_device ambarella_wdt0 = {
 //----------------mpcore watchdog------------------------------------
 static struct resource mpcore_wdt_resources[] = {
 	[0] = {
-		.start	= MPCORE_WDT_REG,
-		.end	= MPCORE_WDT_REG + 0x00FF,
+		.start	= AMBARELLA_VA_PT_WD_BASE,
+		.end	= AMBARELLA_VA_PT_WD_BASE + 0x00FF,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {

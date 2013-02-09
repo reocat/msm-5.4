@@ -581,18 +581,6 @@
 
 /*----------------------------------------------------------------------------*/
 
-/*******************/
-/* AXI related ... */
-/*******************/
-
-#if (CHIP_REV == S2) || (CHIP_REV == I1)
-#define MPCORE_WDT_OFFSET		0x0600
-#define MPCORE_WDT_REG		(AXI_BASE + MPCORE_WDT_OFFSET)
-#endif
-
-
-/*----------------------------------------------------------------------------*/
-
 /* Cryptography enginer offset */
 #define CRYPT_OFFSET	0x0
 #define CRTYP_REG(x)	(CRYPT_BASE + (x))
