@@ -43,12 +43,8 @@
 #else
 #define DEFAULT_MEM_START		(0xc0000000)
 #endif
-
-#if defined(CONFIG_PLAT_AMBARELLA_MEM_START_CUSTOM)
-#define PHYS_OFFSET			(CONFIG_AMBARELLA_MEM_START)
-#else
 #define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
-#endif
+
 /* ==========================================================================*/
 #if defined(CONFIG_PLAT_AMBARELLA_AHB_APB_HIGH)
 #define AHB_PHYS_BASE			(0xe0000000)
