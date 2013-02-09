@@ -43,7 +43,9 @@
 #else
 #define DEFAULT_MEM_START		(0xc0000000)
 #endif
+#ifndef CONFIG_ARM_PATCH_PHYS_VIRT
 #define PHYS_OFFSET			(DEFAULT_MEM_START + CONFIG_AMBARELLA_PPM_SIZE)
+#endif
 
 /* ==========================================================================*/
 #if defined(CONFIG_PLAT_AMBARELLA_AHB_APB_HIGH)
