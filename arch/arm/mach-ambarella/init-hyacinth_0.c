@@ -30,6 +30,7 @@
 #include <asm/pmu.h>
 
 #include <plat/ambcache.h>
+
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
@@ -84,14 +85,18 @@ static void __init ambarella_init_hyacinth(void)
 	}
 }
 
+extern struct smp_operations ambarella_smp_ops;
+
 MACHINE_START(HYACINTH_0, "Hyacinth_0")
-	.atag_offset	= 0x100,
-	.restart_mode = 's',
 	.map_io		= ambarella_map_io,
+	.smp		= smp_ops(ambarella_smp_ops),
+	.atag_offset	= 0x100,
+	.restart_mode	= 's',
 	.reserve	= ambarella_memblock_reserve,
 	.init_irq	= ambarella_init_irq,
-	.handle_irq = gic_handle_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_hyacinth,
-	.restart = ambarella_restart_machine,
+#ifdef CONFIG_MULTI_IRQ_HANDLER
+	.handle_irq	= gic_handle_irq,
+#endif
 MACHINE_END
