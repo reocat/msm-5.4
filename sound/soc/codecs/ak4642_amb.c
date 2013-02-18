@@ -352,7 +352,7 @@ static const struct snd_soc_dapm_widget ak4642_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("MIN"),
 };
 
-static const struct snd_soc_dapm_route audio_map[] = {
+static const struct snd_soc_dapm_route ak4642_dapm_routes[] = {
 	/*line out mixer */
 	{"Line Out Mixer", "Line Playback Switch", "DAC"},
 	{"Line Out Mixer", "MIN LO Switch", "MIN Input"},
@@ -392,17 +392,6 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"Right ADC", NULL, "RIN1"},
 	{"Right ADC", NULL, "RIN2"},
 };
-
-static int ak4642_add_widgets(struct snd_soc_codec *codec)
-{
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
-
-	snd_soc_dapm_new_controls(dapm, ak4642_dapm_widgets,
-				  ARRAY_SIZE(ak4642_dapm_widgets));
-	snd_soc_dapm_add_routes(dapm, audio_map, ARRAY_SIZE(audio_map));
-
-	return 0;
-}
 
 static int ak4642_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 	int clk_id, unsigned int freq, int dir)
@@ -537,7 +526,7 @@ static const struct snd_soc_dai_ops ak4642_dai_ops = {
 	.set_sysclk =	ak4642_set_dai_sysclk,
 };
 
-struct snd_soc_dai_driver ak4642_dai = {
+static struct snd_soc_dai_driver ak4642_dai = {
 	.name = "ak4642-hifi",
 	.playback = {
 		.stream_name = "Playback",
@@ -554,7 +543,7 @@ struct snd_soc_dai_driver ak4642_dai = {
 	.ops = &ak4642_dai_ops,
 };
 
-static int ak4642_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int ak4642_suspend(struct snd_soc_codec *codec)
 {
 	ak4642_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
@@ -619,7 +608,6 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 
 	snd_soc_add_codec_controls(codec, ak4642_snd_controls,
 				ARRAY_SIZE(ak4642_snd_controls));
-	ak4642_add_widgets(codec);
 
 	return 0;
 }
@@ -646,12 +634,23 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4642 = {
 	.reg_cache_size = ARRAY_SIZE(ak4642_reg),
 	.reg_word_size = sizeof(u8),
 	.reg_cache_step = 1,
+	.dapm_widgets	= ak4642_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(ak4642_dapm_widgets),
+	.dapm_routes = ak4642_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(ak4642_dapm_routes),
 };
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
 static int ak4642_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
+	struct ak4642_priv *ak4642;
+
+	ak4642 = devm_kzalloc(&i2c->dev, sizeof(struct ak4642_priv), GFP_KERNEL);
+	if (ak4642 == NULL)
+		return -ENOMEM;
+
+	i2c_set_clientdata(i2c, ak4642);
 	return snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_ak4642, &ak4642_dai, 1);
 }
