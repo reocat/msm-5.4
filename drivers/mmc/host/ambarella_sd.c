@@ -1512,7 +1512,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 }
 
 /* ==========================================================================*/
-static int __devinit ambarella_sd_probe(struct platform_device *pdev)
+static int ambarella_sd_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_sd_controller_info	*pinfo;
@@ -1896,7 +1896,7 @@ sd_errorCode_na:
 	return errorCode;
 }
 
-static int __devexit ambarella_sd_remove(struct platform_device *pdev)
+static int ambarella_sd_remove(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_sd_controller_info	*pinfo;
@@ -2041,7 +2041,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 
 static struct platform_driver ambarella_sd_driver = {
 	.probe		= ambarella_sd_probe,
-	.remove		= __devexit_p(ambarella_sd_remove),
+	.remove		= ambarella_sd_remove,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_sd_suspend,
 	.resume		= ambarella_sd_resume,

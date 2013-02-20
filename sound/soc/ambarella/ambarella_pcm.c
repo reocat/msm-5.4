@@ -389,12 +389,12 @@ static struct snd_soc_platform_driver ambarella_soc_platform = {
 	.ops		= &ambarella_pcm_ops,
 };
 
-static int __devinit ambarella_soc_platform_probe(struct platform_device *pdev)
+static int ambarella_soc_platform_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev, &ambarella_soc_platform);
 }
 
-static int __devexit ambarella_soc_platform_remove(struct platform_device *pdev)
+static int ambarella_soc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
@@ -407,7 +407,7 @@ static struct platform_driver ambarella_pcm_driver = {
 	},
 
 	.probe = ambarella_soc_platform_probe,
-	.remove = __devexit_p(ambarella_soc_platform_remove),
+	.remove = ambarella_soc_platform_remove,
 };
 
 module_platform_driver(ambarella_pcm_driver);

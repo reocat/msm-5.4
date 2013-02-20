@@ -241,7 +241,7 @@ mma7455l_spi_probe_exit:
 	return errorCode;
 }
 
-static int __devexit mma7455l_spi_remove(struct spi_device *spi)
+static int mma7455l_spi_remove(struct spi_device *spi)
 {
 	struct mma7455l		*pm = spi_get_drvdata(spi);
 
@@ -261,7 +261,7 @@ static struct spi_driver mma7455l_spi_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= mma7455l_spi_probe,
-	.remove		= __devexit_p(mma7455l_spi_remove),
+	.remove		= mma7455l_spi_remove,
 };
 
 static int __init mma7455l_init(void)

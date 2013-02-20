@@ -1775,7 +1775,7 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 	.get_regs		= ambeth_get_regs,
 };
 
-static int __devinit ambeth_drv_probe(struct platform_device *pdev)
+static int ambeth_drv_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct net_device			*ndev;
@@ -1949,7 +1949,7 @@ ambeth_drv_probe_exit:
 	return errorCode;
 }
 
-static int __devexit ambeth_drv_remove(struct platform_device *pdev)
+static int ambeth_drv_remove(struct platform_device *pdev)
 {
 	struct net_device			*ndev;
 	struct ambeth_info			*lp;
@@ -2058,7 +2058,7 @@ ambeth_drv_resume_exit:
 
 static struct platform_driver ambeth_driver = {
 	.probe		= ambeth_drv_probe,
-	.remove		= __devexit_p(ambeth_drv_remove),
+	.remove		= ambeth_drv_remove,
 #ifdef CONFIG_PM
 	.suspend        = ambeth_drv_suspend,
 	.resume		= ambeth_drv_resume,

@@ -68,7 +68,7 @@ static void ambarella_adc_remove_file(struct platform_device *pdev,u32 number)
 	}
 }
 
-static int __devinit ambarella_adc_temper_probe(struct platform_device *pdev)
+static int ambarella_adc_temper_probe(struct platform_device *pdev)
 {
 	int	retval = 0;
 	u32	i = 0;
@@ -126,7 +126,7 @@ ERROR:
 	return retval;
 }
 
-static int __devexit ambarella_adc_temper_remove(struct platform_device *pdev)
+static int ambarella_adc_temper_remove(struct platform_device *pdev)
 {
 	int	retval = 0;
 	u32	total_channel_number = 0;
@@ -149,7 +149,7 @@ static int __devexit ambarella_adc_temper_remove(struct platform_device *pdev)
 
 static struct platform_driver ambarella_adc_temper_driver = {
 	.probe		= ambarella_adc_temper_probe,
-	.remove		= __devexit_p(ambarella_adc_temper_remove),
+	.remove		= ambarella_adc_temper_remove,
 	.driver		= {
 		.name	= "ambarella-adc-temper",
 		.owner	= THIS_MODULE,

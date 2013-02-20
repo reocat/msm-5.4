@@ -58,7 +58,7 @@ static void ambarella_stop_ohc(struct ohci_ambarella *amb_ohci)
 		amb_ohci->plat_ohci->disable_host(amb_ohci->plat_ohci);
 }
 
-static int __devinit ohci_ambarella_start(struct usb_hcd *hcd)
+static int ohci_ambarella_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
 	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);

@@ -241,7 +241,7 @@ int ambarella_vi_proc_write(struct file *file,
 	return count;
 }
 
-static int __devinit ambarella_setup_keymap(
+static int ambarella_setup_keymap(
 	struct ambarella_input_board_info *pbinfo)
 {
 	int					retval = 0;
@@ -386,7 +386,7 @@ ambarella_setup_keymap_exit:
 	return retval;
 }
 
-static void __devexit ambarella_free_keymap(
+static void ambarella_free_keymap(
 	struct ambarella_input_board_info *pbinfo)
 {
 	int					i;
@@ -426,7 +426,7 @@ static void __devexit ambarella_free_keymap(
 	}
 }
 
-static int __devinit ambarella_input_probe(struct platform_device *pdev)
+static int ambarella_input_probe(struct platform_device *pdev)
 {
 	int					retval;
 	struct proc_dir_entry			*input_file;
@@ -494,7 +494,7 @@ ambarella_input_probe_exit:
 	return retval;
 }
 
-static int __devexit ambarella_input_remove(struct platform_device *pdev)
+static int ambarella_input_remove(struct platform_device *pdev)
 {
 	int					retval = 0;
 	struct ambarella_input_board_info 	*pbinfo;
@@ -538,7 +538,7 @@ static int ambarella_input_resume(struct platform_device *pdev)
 
 static struct platform_driver ambarella_input_driver = {
 	.probe		= ambarella_input_probe,
-	.remove		= __devexit_p(ambarella_input_remove),
+	.remove		= ambarella_input_remove,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_input_suspend,
 	.resume		= ambarella_input_resume,

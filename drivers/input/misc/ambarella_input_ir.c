@@ -395,7 +395,7 @@ void ambarella_ir_init(struct ambarella_ir_info *pirinfo)
 	ambarella_ir_enable(pirinfo);
 }
 
-static int __devinit ambarella_ir_probe(struct platform_device *pdev)
+static int ambarella_ir_probe(struct platform_device *pdev)
 {
 	int					retval;
 	struct resource 			*irq;
@@ -484,7 +484,7 @@ ir_errorCode_na:
 	return retval;
 }
 
-static int __devexit ambarella_ir_remove(struct platform_device *pdev)
+static int ambarella_ir_remove(struct platform_device *pdev)
 {
 	struct ambarella_ir_info	*pirinfo;
 	int				retval = 0;
@@ -537,7 +537,7 @@ static int ambarella_ir_resume(struct platform_device *pdev)
 
 static struct platform_driver ambarella_ir_driver = {
 	.probe		= ambarella_ir_probe,
-	.remove		= __devexit_p(ambarella_ir_remove),
+	.remove		= ambarella_ir_remove,
 #if (defined CONFIG_PM)
 	.suspend	= ambarella_ir_suspend,
 	.resume		= ambarella_ir_resume,

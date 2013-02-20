@@ -121,13 +121,13 @@ static struct snd_soc_codec_driver soc_codec_dev_ambdummy = {
 	.set_bias_level =ambdummy_set_bias_level,
 };
 
-static int __devinit ambdummy_codec_probe(struct platform_device *pdev)
+static int ambdummy_codec_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_ambdummy, &ambdummy_dai, 1);
 }
 
-static int __devexit ambdummy_codec_remove(struct platform_device *pdev)
+static int ambdummy_codec_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
@@ -135,7 +135,7 @@ static int __devexit ambdummy_codec_remove(struct platform_device *pdev)
 
 static struct platform_driver ambdummy_codec_driver = {
 	.probe		= ambdummy_codec_probe,
-	.remove		= __devexit_p(ambdummy_codec_remove),
+	.remove		= ambdummy_codec_remove,
 	.driver		= {
 		.name	= "ambdummy-codec",
 		.owner	= THIS_MODULE,

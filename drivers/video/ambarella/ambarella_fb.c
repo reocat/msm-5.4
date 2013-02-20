@@ -893,7 +893,7 @@ static struct fb_ops ambfb_ops = {
 	.fb_blank	= ambfb_blank,
 };
 
-static int __devinit ambfb_setup(struct device *dev, char *options,
+static int ambfb_setup(struct device *dev, char *options,
 	struct ambarella_platform_fb *ambfb_data)
 {
 	int					retval = -1;
@@ -948,7 +948,7 @@ ambfb_setup_exit:
 	return retval;
 }
 
-static int __devinit ambfb_probe(struct platform_device *pdev)
+static int ambfb_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct fb_info				*info;
@@ -1175,7 +1175,7 @@ ambfb_probe_exit:
 	return errorCode;
 }
 
-static int __devexit ambfb_remove(struct platform_device *pdev)
+static int ambfb_remove(struct platform_device *pdev)
 {
 	struct fb_info				*info;
 	struct ambarella_platform_fb		*ambfb_data = NULL;
@@ -1236,7 +1236,7 @@ static int ambfb_resume(struct platform_device *pdev)
 
 static struct platform_driver ambfb_driver = {
 	.probe		= ambfb_probe,
-	.remove 	= __devexit_p(ambfb_remove),
+	.remove 	= ambfb_remove,
 #ifdef CONFIG_PM
 	.suspend        = ambfb_suspend,
 	.resume		= ambfb_resume,

@@ -542,7 +542,7 @@ static irqreturn_t ambarella_spi_isr(int irq, void *dev_data)
 	return IRQ_HANDLED;
 }
 
-static int __devinit ambarella_spi_probe(struct platform_device *pdev)
+static int ambarella_spi_probe(struct platform_device *pdev)
 {
 	struct ambarella_spi			*priv;
 	struct ambarella_spi_private		*ps;
@@ -667,7 +667,7 @@ ambarella_spi_probe_exit3:
 	return errorCode;
 }
 
-static int __devexit ambarella_spi_remove(struct platform_device *pdev)
+static int ambarella_spi_remove(struct platform_device *pdev)
 {
 
 	struct spi_master		*master = platform_get_drvdata(pdev);
@@ -750,7 +750,7 @@ static const struct dev_pm_ops ambarella_spi_dev_pm_ops = {
 
 static struct platform_driver ambarella_spi_driver = {
 	.probe		= ambarella_spi_probe,
-	.remove		= __devexit_p(ambarella_spi_remove),
+	.remove		= ambarella_spi_remove,
 	.driver		= {
 		.name	= "ambarella-spi",
 		.owner	= THIS_MODULE,

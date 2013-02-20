@@ -1415,7 +1415,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 	amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, timing->timing5);
 }
 
-static int __devinit ambarella_nand_config_flash(
+static int ambarella_nand_config_flash(
 	struct ambarella_nand_info *nand_info)
 {
 	int					errorCode = 0;
@@ -1471,7 +1471,7 @@ static int __devinit ambarella_nand_config_flash(
 	return errorCode;
 }
 
-static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
+static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
 {
 	u32 sys_config, cfg_page_size, cfg_read_confirm;
 	struct nand_chip *chip = &nand_info->chip;
@@ -1522,7 +1522,7 @@ static int __devinit ambarella_nand_init_chip(struct ambarella_nand_info *nand_i
 	return 0;
 }
 
-static int __devinit ambarella_nand_init_chipecc(
+static int ambarella_nand_init_chipecc(
 	struct ambarella_nand_info *nand_info)
 {
 	struct nand_chip *chip = &nand_info->chip;
@@ -1570,7 +1570,7 @@ static int __devinit ambarella_nand_init_chipecc(
 	return 0;
 }
 
-static int __devinit ambarella_nand_get_resource(
+static int ambarella_nand_get_resource(
 	struct ambarella_nand_info *nand_info, struct platform_device *pdev)
 {
 	int					errorCode = 0;

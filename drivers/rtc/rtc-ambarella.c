@@ -314,7 +314,7 @@ static void alarm_polling_timer_func(unsigned long data)
 }
 
 /* ==========================================================================*/
-static int __devinit ambrtc_probe(struct platform_device *pdev)
+static int ambrtc_probe(struct platform_device *pdev)
 {
 	struct rtc_device *rtc;
 	int ret = 0;
@@ -343,7 +343,7 @@ err_nores:
 	return ret;
 }
 
-static int __devexit ambrtc_remove(struct platform_device *pdev)
+static int ambrtc_remove(struct platform_device *pdev)
 {
 	struct rtc_device *rtc = platform_get_drvdata(pdev);
 
@@ -378,7 +378,7 @@ static int ambrtc_resume(struct platform_device *pdev)
 
 static struct platform_driver ambarella_rtc_driver = {
 	.probe		= ambrtc_probe,
-	.remove		= __devexit_p(ambrtc_remove),
+	.remove		= ambrtc_remove,
 #ifdef CONFIG_PM
 	.suspend	= ambrtc_suspend,
 	.resume		= ambrtc_resume,

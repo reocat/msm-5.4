@@ -476,7 +476,7 @@ static const struct i2c_algorithm ambarella_i2c_algo = {
 	.functionality	= ambarella_i2c_func,
 };
 
-static int __devinit ambarella_i2c_probe(struct platform_device *pdev)
+static int ambarella_i2c_probe(struct platform_device *pdev)
 {
 	int					errorCode;
 	struct ambarella_i2c_dev_info		*pinfo;
@@ -570,7 +570,7 @@ i2c_errorCode_na:
 	return errorCode;
 }
 
-static int __devexit ambarella_i2c_remove(struct platform_device *pdev)
+static int ambarella_i2c_remove(struct platform_device *pdev)
 {
 	struct ambarella_i2c_dev_info	*pinfo;
 	int				errorCode = 0;
@@ -644,7 +644,7 @@ static const char ambarella_i2c_name[] = "ambarella-i2c";
 
 static struct platform_driver ambarella_i2c_driver = {
 	.probe		= ambarella_i2c_probe,
-	.remove		= __devexit_p(ambarella_i2c_remove),
+	.remove		= ambarella_i2c_remove,
 	.driver		= {
 		.name	= ambarella_i2c_name,
 		.owner	= THIS_MODULE,

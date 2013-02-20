@@ -267,7 +267,7 @@ static irqreturn_t ambarella_input_adc_irq(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
-static int __devinit ambarella_input_adc_probe(struct platform_device *pdev)
+static int ambarella_input_adc_probe(struct platform_device *pdev)
 {
 	int					retval = 0;
 	struct ambarella_adc_info		*pinfo;
@@ -379,7 +379,7 @@ adc_errorCode_na:
 	return retval;
 }
 
-static int __devexit ambarella_input_adc_remove(struct platform_device *pdev)
+static int ambarella_input_adc_remove(struct platform_device *pdev)
 {
 	struct ambarella_adc_info	*pinfo;
 	int				retval = 0;
@@ -440,7 +440,7 @@ static int ambarella_input_adc_resume(struct platform_device *pdev)
 
 static struct platform_driver ambarella_adc_driver = {
 	.probe		= ambarella_input_adc_probe,
-	.remove		= __devexit_p(ambarella_input_adc_remove),
+	.remove		= ambarella_input_adc_remove,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_input_adc_suspend,
 	.resume		= ambarella_input_adc_resume,

@@ -514,7 +514,7 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.symmetric_rates = 1,
 };
 
-static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
+static int ambarella_i2s_probe(struct platform_device *pdev)
 {
 	struct amb_i2s_priv *priv_data;
 
@@ -555,7 +555,7 @@ static int __devinit ambarella_i2s_probe(struct platform_device *pdev)
 	return snd_soc_register_dai(&pdev->dev, &ambarella_i2s_dai);
 }
 
-static int __devexit ambarella_i2s_remove(struct platform_device *pdev)
+static int ambarella_i2s_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_dai(&pdev->dev);
 
@@ -564,7 +564,7 @@ static int __devexit ambarella_i2s_remove(struct platform_device *pdev)
 
 static struct platform_driver ambarella_i2s_driver = {
 	.probe = ambarella_i2s_probe,
-	.remove = __devexit_p(ambarella_i2s_remove),
+	.remove = ambarella_i2s_remove,
 
 	.driver = {
 		.name = "ambarella-i2s",

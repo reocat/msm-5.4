@@ -2280,7 +2280,7 @@ EXPORT_SYMBOL(usb_gadget_unregister_driver);
  * Description:
  *	Probe udc driver.
  */
-static int __devinit ambarella_udc_probe(struct platform_device *pdev)
+static int ambarella_udc_probe(struct platform_device *pdev)
 {
 	struct ambarella_udc *udc;
 	int retval;
@@ -2423,7 +2423,7 @@ out:
  * Description:
  *	Remove udc driver.
  */
-static int __devexit ambarella_udc_remove(struct platform_device *pdev)
+static int ambarella_udc_remove(struct platform_device *pdev)
 {
 	struct ambarella_udc *udc = platform_get_drvdata(pdev);
 
@@ -2533,7 +2533,7 @@ static struct platform_driver ambarella_udc_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= ambarella_udc_probe,
-	.remove		= __devexit_p(ambarella_udc_remove),
+	.remove		= ambarella_udc_remove,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_udc_suspend,
 	.resume		= ambarella_udc_resume,

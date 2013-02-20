@@ -894,7 +894,7 @@ static irqreturn_t ambarella_md5_sha1_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __devinit ambarella_crypto_probe(struct platform_device *pdev)
+static int ambarella_crypto_probe(struct platform_device *pdev)
 {
 	int	errCode;
 	int	aes_irq, des_irq;
