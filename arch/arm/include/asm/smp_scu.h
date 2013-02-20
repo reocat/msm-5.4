@@ -7,9 +7,16 @@
 
 #ifndef __ASSEMBLER__
 unsigned int scu_get_core_count(void __iomem *);
-void scu_enable(void __iomem *);
 int scu_power_mode(void __iomem *, unsigned int);
-void scu_disable(void __iomem *);
+
+#ifdef CONFIG_SMP
+void scu_enable(void __iomem *scu_base);
+void scu_disable(void __iomem *scu_base);
+#else
+static inline void scu_enable(void __iomem *scu_base) {}
+static inline void scu_disable(void __iomem *scu_base) {}
+#endif
+
 #endif
 
 #endif
