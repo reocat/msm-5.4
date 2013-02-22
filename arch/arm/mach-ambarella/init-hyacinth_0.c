@@ -79,6 +79,8 @@ static void __init ambarella_init_hyacinth(void)
 	ambarella_eth0_platform_info.default_tx_ring_size = 128;
 	ambarella_eth0_platform_info.default_rx_ring_size = 64;
 	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
+	ambarella_eth0_platform_info.phy_supported |=
+				SUPPORTED_Pause | SUPPORTED_Asym_Pause;
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
 
