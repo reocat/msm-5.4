@@ -18,6 +18,14 @@ config RPROC_CA9_B
 	help
 	  TBD:
 
+config RPROC_S2
+    tristate "Enable RPROC Host on S2"
+    depends on MACH_GINKGO
+    select RPROC_SUPPORT
+    help
+      TBD:
+    default n
+
 config RPCLNT_SUPPORT
 	bool
 	select REMOTEPROC

@@ -22,6 +22,7 @@
 
 #include <linux/irqreturn.h>
 #include <linux/firmware.h>
+#include <linux/module.h>
 
 struct rproc;
 

@@ -62,7 +62,6 @@ static const char *rproc_crash_to_string(enum rproc_crash_type type)
 	return "unkown";
 }
 
-#if 0
 /*
  * This is the IOMMU fault handler we register with the IOMMU API
  * (when relevant; not all remote processors access memory through
@@ -146,7 +145,6 @@ static void rproc_disable_iommu(struct rproc *rproc)
 	return;
 }
 
-#endif
 /*
  * Some remote processors will ask us to allocate them physically contiguous
  * memory regions (which we call "carveouts"), and map them to specific
@@ -275,6 +273,7 @@ rproc_parse_vring(struct rproc_vdev *rvdev, struct fw_rsc_vdev *rsc, int i)
 	rvring->len = vring->num;
 	rvring->align = vring->align;
 	rvring->rvdev = rvdev;
+	rvring->da = vring->da;
 
 	return 0;
 }
@@ -823,7 +822,6 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 
 	dev_info(dev, "Booting fw image %s, size %zd\n", name, fw->size);
 
-#if 0
 	/*
 	 * if enabling an IOMMU isn't relevant for this rproc, this is
 	 * just a nop
@@ -834,7 +832,6 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 		return ret;
 	}
 
-#endif
 	rproc->bootaddr = rproc_get_boot_addr(rproc, fw);
 
 	/* look for the resource table */
@@ -873,9 +870,7 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 
 clean_up:
 	rproc_resource_cleanup(rproc);
-#if 0
 	rproc_disable_iommu(rproc);
-#endif
 	return ret;
 }
 
@@ -907,7 +902,8 @@ static void rproc_fw_config_virtio(const struct firmware *fw, void *context)
 		goto out;
 
 out:
-	release_firmware(fw);
+	rproc_fw_release_firmware(rproc, fw);
+
 	/* allow rproc_del() contexts, if any, to proceed */
 	complete_all(&rproc->firmware_loading_complete);
 }
@@ -927,9 +923,13 @@ static int rproc_add_virtio_devices(struct rproc *rproc)
 	 * We're initiating an asynchronous firmware loading, so we can
 	 * be built-in kernel code, without hanging the boot process.
 	 */
+#if 1
+	ret = rproc_fw_request_firmware_nowait(rproc, rproc_fw_config_virtio);
+#else
 	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
 				      rproc->firmware, &rproc->dev, GFP_KERNEL,
 				      rproc, rproc_fw_config_virtio);
+#endif
 	if (ret < 0) {
 		dev_err(&rproc->dev, "request_firmware_nowait err: %d\n", ret);
 		complete_all(&rproc->firmware_loading_complete);
@@ -1050,7 +1050,7 @@ int rproc_boot(struct rproc *rproc)
 	dev_info(dev, "powering up %s\n", rproc->name);
 
 	/* load firmware */
-	ret = request_firmware(&firmware_p, rproc->firmware, dev);
+	ret = rproc_fw_request_firmware(rproc, &firmware_p);
 	if (ret < 0) {
 		dev_err(dev, "request_firmware failed: %d\n", ret);
 		goto downref_rproc;
@@ -1058,7 +1058,7 @@ int rproc_boot(struct rproc *rproc)
 
 	ret = rproc_fw_boot(rproc, firmware_p);
 
-	release_firmware(firmware_p);
+	rproc_fw_release_firmware(rproc, firmware_p);
 
 downref_rproc:
 	if (ret) {
@@ -1116,9 +1116,8 @@ void rproc_shutdown(struct rproc *rproc)
 	/* clean up all acquired resources */
 	rproc_resource_cleanup(rproc);
 
-#if 0
 	rproc_disable_iommu(rproc);
-#endif
+
 	/* if in crash state, unlock crash handler */
 	if (rproc->state == RPROC_CRASHED)
 		complete_all(&rproc->crash_comp);
