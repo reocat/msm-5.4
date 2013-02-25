@@ -28,11 +28,14 @@
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/gic.h>
+#include <asm/gpio.h>
 #include <asm/system_info.h>
 
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
+#include <mach/common.h>
 
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
@@ -49,6 +52,7 @@
 #include <plat/ambinput.h>
 
 #include <linux/mmc/host.h>
+#include <plat/ambcache.h>
 
 #include "board-device.h"
 
@@ -608,6 +612,7 @@ static void __init ambarella_init_elephant(void)
 /* ==========================================================================*/
 MACHINE_START(ELEPHANT, "Elephant")
 	.atag_offset	= 0x100,
+	.smp = smp_ops(ambarella_smp_ops),
 	.restart_mode = 's',
 	.map_io		= ambarella_map_io,
 	.reserve	= ambarella_memblock_reserve,

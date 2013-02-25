@@ -364,7 +364,7 @@ static void __init ambarella_init_ginkgo(void)
 /* ==========================================================================*/
 MACHINE_START(GINKGO, "Ginkgo")
 	.atag_offset	= 0x100,
-//	.smp = smp_ops(ambarella_smp_ops),
+	.smp = smp_ops(ambarella_smp_ops),
 	.restart_mode = 's',
 	.map_io		= ambarella_map_io,
 	.reserve	= ambarella_memblock_reserve,

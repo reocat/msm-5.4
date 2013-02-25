@@ -16,6 +16,8 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>

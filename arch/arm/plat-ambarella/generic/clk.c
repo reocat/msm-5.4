@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
+#include <linux/export.h>
 
 #include <plat/clk.h>
 #include <plat/rct.h>

@@ -201,7 +201,7 @@ static struct i2c_board_info ambarella_wm8994_board_info = {
 	.platform_data	= &ambarella_wm8994_pdata,
 };
 
-int ambarella_init_wm8994(void)
+int __init ambarella_init_wm8994(void)
 {
 	int rval = 0;
 

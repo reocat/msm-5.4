@@ -34,7 +34,7 @@ static struct i2c_board_info ambarella_wm8737_board_info = {
 	.platform_data	= NULL,
 };
 
-int ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr)
+int __init ambarella_init_wm8737(u8 i2c_bus_num, u8 i2c_addr)
 {
 	if (i2c_addr)
 		ambarella_wm8737_board_info.addr = i2c_addr;

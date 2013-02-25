@@ -46,7 +46,7 @@ static int ambarella_ahci_init(struct device *dev, void __iomem *addr)
 
 	ahci_desc = irq_to_desc(SATA_IRQ);
 	if (ahci_desc)
-		ahci_chip = get_irq_desc_chip(ahci_desc);
+		ahci_chip = irq_desc_get_chip(ahci_desc);
 	if (ahci_chip && ahci_chip->irq_set_type)
 		ahci_chip->irq_set_type(&ahci_desc->irq_data,
 			IRQ_TYPE_LEVEL_HIGH);

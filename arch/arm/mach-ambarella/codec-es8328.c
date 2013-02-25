@@ -42,7 +42,7 @@ static struct i2c_board_info ambarella_es8328_board_info = {
 	.platform_data	= &vendor61_es8328_pdata,
 };
 
-int ambarella_init_es8328(u8 i2c_bus_num, u8 i2c_addr)
+int __init ambarella_init_es8328(u8 i2c_bus_num, u8 i2c_addr)
 {
 	if (i2c_addr)
 		ambarella_es8328_board_info.addr = i2c_addr;

@@ -310,7 +310,7 @@ static int md800_es8328_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(dapm, "MICIN");
 
 	/* Add md800 specific controls */
-	snd_soc_add_controls(codec, es8328_md800_controls,
+	snd_soc_add_codec_controls(codec, es8328_md800_controls,
 			ARRAY_SIZE(es8328_md800_controls));
 
 	/* Add md800 specific widgets */
@@ -377,7 +377,7 @@ static int md800_soc_snd_probe(struct platform_device *pdev)
 		goto md800_board_probe_exit1;
 	}
 
-	snd_soc_card_ipcam.dev = &pdev->dev;
+	snd_soc_card_md800.dev = &pdev->dev;
 	errorCode = snd_soc_register_card(&snd_soc_card_md800);
 	if (errorCode) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", errorCode);
