@@ -115,8 +115,14 @@ struct rpmsg_channel_info {
  * can change this without changing anything in the firmware of the remote
  * processor.
  */
-#define RPMSG_NUM_BUFS		(512)
-#define RPMSG_BUF_SIZE		(512)
+
+/*
+ * Keep the following sync'ed to the copy which shared between processors
+ *     arch/arm/plat-ambarella/include/plat/remoteproc_cfg.h
+ */
+#define RPMSG_NUM_BUFS		(CONFIG_RPMSG_NUM_BUFS)
+#define RPMSG_BUF_SIZE		(CONFIG_RPMSG_BUF_SIZE)
+
 #define RPMSG_TOTAL_BUF_SPACE	(RPMSG_NUM_BUFS * RPMSG_BUF_SIZE)
 
 /*
