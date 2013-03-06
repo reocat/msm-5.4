@@ -48,10 +48,6 @@
 /* nand_check_wp will be checked before write, so wait MTD fix */
 #undef AMBARELLA_NAND_WP
 
-//#ifdef CONFIG_MTD_CMDLINE_PARTS
-static const char *part_probes[] = { "cmdlinepart", NULL };
-//#endif
-
 struct ambarella_nand_info {
 	struct nand_chip			chip;
 	struct mtd_info			mtd;
@@ -558,6 +554,7 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 		nand_info->dma_status =
 			amba_readl(nand_info->fdmaregbase + FDMA_STA_OFFSET);
 		amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
 
 		atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
 		wake_up(&nand_info->wq);
@@ -1503,10 +1500,8 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
 	chip->waitfunc = amb_nand_waitfunc;
 	chip->cmdfunc = amb_nand_cmdfunc;
 
-//	chip->options = NAND_NO_AUTOINCR;
 	if (nand_info->plat_nand->flash_bbt) {
 		chip->bbt_options |= NAND_BBT_USE_FLASH;
-//		chip->options |= NAND_SKIP_BBTSCAN;
 		if (nand_info->plat_nand->sets->ecc_bits > 1) {
 			chip->bbt_td = &bbt_main_descr_dsm;
 			chip->bbt_md = &bbt_mirror_descr_dsm;
@@ -1551,7 +1546,7 @@ static int ambarella_nand_init_chipecc(
 			chip->ecc.bytes = NAND_ECC_BCH6_BYTES;
 			chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
 			chip->ecc.size = 2048;
-//			chip->ecc.strength = 6;
+			chip->ecc.strength = 6;
 		} else if (nand_info->plat_nand->sets->ecc_bits == 8)
 			chip->ecc.bytes = NAND_ECC_BCH8_BYTES;
 			/* 8 bit can not supprot on board recently */
@@ -1660,6 +1655,7 @@ static int ambarella_nand_get_resource(
 
 	/* init fdma to avoid dummy irq */
 	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+	amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
 	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
 		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
 
@@ -1702,7 +1698,6 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 {
 	int					errorCode = 0;
 
-//#ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_info				*mtd;
 	struct mtd_partition			*amboot_partitions;
 	int					amboot_nr_partitions = 0;
@@ -1710,9 +1705,6 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 	int					meta_numpages, meta_offpage;
 	int					from, retlen, found, i;
 	int					cmd_nr_partitions = 0;
-//#ifdef CONFIG_MTD_CMDLINE_PARTS
-	struct mtd_partition			*cmd_partitions = NULL;
-//#endif
 
 	mtd = &nand_info->mtd;
 
@@ -1824,79 +1816,17 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 		amboot_nr_partitions++;
 	}
 
-#if 0
-//#ifdef CONFIG_MTD_CMDLINE_PARTS
-	nand_info->mtd.name = "ambnand";
-	/* get partitions definition from cmdline */
-	cmd_nr_partitions = parse_mtd_partitions(&nand_info->mtd,
-				part_probes, &cmd_partitions, NULL);
-	if (cmd_nr_partitions <= 0)
-		goto ambarella_nand_probe_add_partitions;
-
-	if (cmd_nr_partitions > CMDLINE_PART_MAX) {
-		dev_info(nand_info->dev, "Too many partitionings, truncating\n");
-		cmd_nr_partitions = CMDLINE_PART_MAX;
-	}
-
-	/* if cmdline don't define the partition offset, we should modify the
-	 * offset to make it append to the existent partitions. */
-	if (cmd_partitions->offset == 0) {
-		struct mtd_partition *p_cmdpart = cmd_partitions;
-		struct mtd_partition *p_ambpart = &amboot_partitions[0];
-		/* find the last partition getting from amboot */
-		for (i = 1; i < amboot_nr_partitions; i++) {
-			if (amboot_partitions[i].offset > p_ambpart->offset) {
-				p_ambpart = &amboot_partitions[i];
-			}
-		}
-
-		for (i = 0; i < cmd_nr_partitions; i++) {
-			if (i > 0)
-				p_ambpart = cmd_partitions + i - 1;
-
-			p_cmdpart->offset = p_ambpart->offset + p_ambpart->size;
-
-			if (p_cmdpart->offset + p_cmdpart->size >
-					nand_info->mtd.size) {
-				p_cmdpart->size =
-					nand_info->mtd.size - p_cmdpart->offset;
-				dev_info(nand_info->dev,
-					"partitioning exceeds flash size, truncating\n");
-				cmd_nr_partitions = i + 1;
-				break;
-			}
-
-			p_cmdpart++;
-		}
-	}
-
-	/* append the cmdline partitions to partitions from amboot. */
-	for (i = 0; i < cmd_nr_partitions; i++) {
-		memcpy(&amboot_partitions[amboot_nr_partitions + i],
-			cmd_partitions++, sizeof(struct mtd_partition));
-	}
-
-ambarella_nand_probe_add_partitions:
-//#endif
-#endif //if 0
 	errorCode = 0;
 
 	i = 0;
 	if (cmd_nr_partitions >= 0)
 		i = cmd_nr_partitions;
 
-//	add_mtd_partitions(mtd, amboot_partitions, amboot_nr_partitions + i);
-//	mtd_device_register(mtd, amboot_partitions, amboot_nr_partitions + i);
-
 	mtd_device_parse_register(mtd, NULL, 0, amboot_partitions, amboot_nr_partitions);
 
 	kfree(amboot_partitions);
 ambarella_nand_scan_error2:
 	kfree(meta_table);
-
-//#else
-//	add_mtd_device(&nand_info->mtd);
-//#endif
 
 ambarella_nand_scan_error1:
 
