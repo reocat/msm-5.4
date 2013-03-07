@@ -58,6 +58,7 @@ extern int ambsync_proc_hinit(struct ambsync_proc_hinfo *hinfo);
 extern int ambsync_proc_open(struct inode *inode, struct file *file);
 extern int ambsync_proc_release(struct inode *inode, struct file *file);
 extern ssize_t ambsync_proc_read(struct file *file, char __user *buf, size_t size, loff_t *ppos);
+extern ssize_t ambsync_proc_write(struct file *file, const char __user *buf, size_t size, loff_t *ppos);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

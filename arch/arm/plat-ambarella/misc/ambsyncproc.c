@@ -28,6 +28,7 @@
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/export.h>
 
 #include <asm/uaccess.h>
 #include <asm/page.h>
@@ -216,3 +217,28 @@ ambsync_proc_read_exit:
 }
 EXPORT_SYMBOL(ambsync_proc_read);
 
+ssize_t ambsync_proc_write(struct file *file, const char __user *buf,
+	size_t size, loff_t *ppos)
+{
+	int				retval = 0;
+	struct proc_dir_entry		*dp;
+	struct ambsync_proc_hinfo	*hinfo;
+	struct inode			*inode = file->f_path.dentry->d_inode;
+
+	dp = PDE(inode);
+	hinfo = (struct ambsync_proc_hinfo *)dp->data;
+
+	if (!hinfo) {
+		retval = -EPERM;
+		goto ambsync_proc_write_exit;
+	}
+
+	atomic_set(&hinfo->sync_proc_flag, 0xFFFFFFFF);
+	wake_up_all(&hinfo->sync_proc_head);
+
+	retval = size;
+
+ambsync_proc_write_exit:
+	return retval;
+}
+EXPORT_SYMBOL(ambsync_proc_write);
