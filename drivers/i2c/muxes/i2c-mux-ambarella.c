@@ -10,7 +10,7 @@
 
 #include <linux/i2c.h>
 #include <linux/i2c-mux.h>
-#include <linux/ambarella-i2cmux.h>
+#include <linux/i2c-mux-ambarella.h>
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/module.h>

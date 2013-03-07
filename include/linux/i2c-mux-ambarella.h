@@ -8,8 +8,8 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef _LINUX_AMBARELLA_I2CMUX_H
-#define _LINUX_AMBARELLA_I2CMUX_H
+#ifndef _LINUX_I2C_MUX_AMBARELLA_H
+#define _LINUX_I2C_MUX_AMBARELLA_H
 
 struct ambarella_i2cmux_platform_data {
 	int		parent;
