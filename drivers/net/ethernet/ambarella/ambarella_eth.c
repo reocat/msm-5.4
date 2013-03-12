@@ -1,5 +1,5 @@
 /*
- * drivers/net/arm/ambarella_eth.c
+ * /drivers/net/ethernet/ambarella/ambarella_eth.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  * Copyright (C) 2004-2011, Ambarella, Inc.
@@ -358,7 +358,8 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	ambhw_set_hwaddr(lp, lp->ndev->dev_addr);
 	amba_writel(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
 		lp->platform_info->default_dma_bus_mode);
-	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, 0);
+	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
+		lp->platform_info->default_mac_filter);
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 		lp->platform_info->default_dma_opmode);
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
@@ -376,7 +377,7 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 			ETH_DMA_OPMODE_TSF);
 	}
 	if (lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_DUMP) {
+		AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL) {
 		amba_setbitsl(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
 			ETH_MAC_FRAME_FILTER_RA);
 	}
@@ -1256,7 +1257,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		goto ambeth_hard_start_xmit_exit;
 	}
 	if (unlikely(lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_DUMP)) {
+		AMBARELLA_ETH_SUPPORTED_DUMP_TX)) {
 		ambhw_dump_buffer(__func__, skb->data, skb->len);
 	}
 	mapping = dma_map_single(&lp->ndev->dev,
@@ -1409,7 +1410,7 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 			dev_err(&lp->ndev->dev,
 			"RX Error: Rx MAC Address/Payload Checksum.\n");
 			if (lp->platform_info->default_supported &
-				AMBARELLA_ETH_SUPPORTED_DUMP) {
+				AMBARELLA_ETH_SUPPORTED_DUMP_RX) {
 				ambhw_dump_rx(lp, status, entry);
 			}
 		}
@@ -1452,10 +1453,16 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 			}
 		}
 		if (unlikely(lp->platform_info->default_supported &
-			AMBARELLA_ETH_SUPPORTED_DUMP)) {
-			ambhw_dump_buffer(__func__, skb->data, skb->len);
+			AMBARELLA_ETH_SUPPORTED_DUMP_RX)) {
+			ambhw_dump_buffer(__func__, (skb->data - 14),
+				(skb->len + 14));
 		}
-		netif_receive_skb(skb);
+		if (unlikely(lp->platform_info->default_supported &
+			AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE)) {
+			kfree_skb(skb);
+		} else {
+			netif_receive_skb(skb);
+		}
 		lp->rx.rng_rx[entry].skb = NULL;
 		lp->rx.rng_rx[entry].mapping = 0;
 		lp->ndev->last_rx = jiffies;

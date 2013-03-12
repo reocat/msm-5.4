@@ -104,6 +104,7 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 #else
 	.default_supported	= 0,
 #endif
+	.default_mac_filter	= 0,
 	.is_enabled		= rct_is_eth_enabled,
 };
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
@@ -197,6 +198,7 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 				ETH_DMA_OPMODE_RTC_64 |
 				ETH_DMA_OPMODE_FUF,
 	.default_supported	= 0,
+	.default_mac_filter	= 0,
 	.is_enabled		= eth1_is_enabled,
 };
 AMBA_ETH_PARAM_CALL(1, ambarella_eth1_platform_info, 0644);

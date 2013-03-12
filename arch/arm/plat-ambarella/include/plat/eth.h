@@ -29,7 +29,11 @@
 
 #define AMBARELLA_ETH_SUPPORTED_IPC_RX		(1 << 0)
 #define AMBARELLA_ETH_SUPPORTED_IPC_TX		(1 << 1)
-#define AMBARELLA_ETH_SUPPORTED_DUMP		(1 << 31)
+
+#define AMBARELLA_ETH_SUPPORTED_DUMP_TX		(1 << 31)
+#define AMBARELLA_ETH_SUPPORTED_DUMP_RX		(1 << 30)
+#define AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE	(1 << 29)
+#define AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL	(1 << 28)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -53,6 +57,7 @@ struct ambarella_eth_platform_info {
 	u32					default_dma_bus_mode;
 	u32					default_dma_opmode;
 	u32					default_supported;
+	u32					default_mac_filter;
 
 	int					(*is_enabled)(void);
 };
@@ -65,7 +70,8 @@ struct ambarella_eth_platform_info {
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm); \
 	module_param_cb(eth##id##_mii_retry_limit, &param_ops_uint, &(arg.mii_retry_limit), perm); \
-	module_param_cb(eth##id##_mii_retry_tmo, &param_ops_uint, &(arg.mii_retry_tmo), perm);
+	module_param_cb(eth##id##_mii_retry_tmo, &param_ops_uint, &(arg.mii_retry_tmo), perm); \
+	module_param_cb(eth##id##_supported, &param_ops_uint, &(arg.default_supported), perm);
 
 /* ==========================================================================*/
 extern struct platform_device			ambarella_eth0;
