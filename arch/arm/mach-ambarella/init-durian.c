@@ -269,12 +269,12 @@ static void __init ambarella_init_durian(void)
 /* ==========================================================================*/
 MACHINE_START(DURIAN, "Durian")
 	.atag_offset	= 0x100,
-	.restart_mode = 's',
+	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
 	.reserve	= ambarella_memblock_reserve,
 	.init_irq	= ambarella_init_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_durian,
-	.restart = ambarella_restart_machine,
+	.restart	= ambarella_restart_machine,
 MACHINE_END
 

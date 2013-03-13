@@ -74,7 +74,7 @@ static struct snd_soc_dai_driver ambdummy_dai = {
 };
 
 #if defined(CONFIG_PM)
-static int ambdummy_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int ambdummy_suspend(struct snd_soc_codec *codec)
 {
 	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	ambdummy_set_bias_level(codec, SND_SOC_BIAS_OFF);

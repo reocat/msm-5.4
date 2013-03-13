@@ -1840,7 +1840,7 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 			pslotinfo->buf_paddress);
 
 		pslotinfo->plat_info->active_caps = mmc->caps;
-		dev_dbg(&pdev->dev, "SD caps: 0x%lx.\n", mmc->caps);
+		dev_dbg(&pdev->dev, "SD caps: 0x%x.\n", mmc->caps);
 		dev_dbg(&pdev->dev, "SD ocr: 0x%x.\n", mmc->ocr_avail);
 		dev_notice(&pdev->dev, "Slot%u req_size=0x%08X, "
 			"segs=%u, seg_size=0x%08X\n",

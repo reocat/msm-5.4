@@ -32,6 +32,7 @@
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 #include <asm/system_info.h>
+#include <linux/module.h>
 
 #include <mach/hardware.h>
 #include <plat/adc.h>
@@ -229,7 +230,6 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	for (i = 0; i < ADC_NUM_CHANNELS; i++)
 		pr_debug("%s: channel[%d] = %d.\n", __func__, i, adc_data[i]);
 }
-
 EXPORT_SYMBOL(ambarella_adc_get_array);
 
 #if (CHIP_REV == S2)

@@ -32,6 +32,7 @@
 #include <asm/io.h>
 #include <asm/setup.h>
 #include <asm/mach/map.h>
+#include <asm/pgtable.h>
 
 #include <mach/hardware.h>
 #include <mach/board.h>
@@ -443,7 +444,8 @@ static int __init dsp_mem_check(u32 start, u32 size)
 
 	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
 	if (vstart < VMALLOC_END) {
-		pr_err("Ambarella: Bad DSP virtual 0x%08x 0x%08x\n", vstart, VMALLOC_END);
+		pr_err("Ambarella: Bad DSP virtual 0x%08x 0x%08lx\n",
+			vstart, VMALLOC_END);
 		return -EINVAL;
 	}
 	if (vstart >= (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {

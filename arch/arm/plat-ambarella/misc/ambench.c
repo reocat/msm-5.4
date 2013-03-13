@@ -171,7 +171,7 @@ static void ambench_apbread(void)
 	amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 	do {
 		raw_counter++;
-	} while(__raw_readl(TIMER1_STATUS_REG));
+	} while(__raw_readl((const volatile void *)TIMER1_STATUS_REG));
 
 	amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
 	amba_writel(TIMER1_STATUS_REG, APBREAD_RELOAD_NUM);

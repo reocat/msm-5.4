@@ -95,8 +95,6 @@ static int cpu_pmu_request_irq(struct arm_pmu *cpu_pmu, irq_handler_t handler)
 	if (!pmu_device)
 		return -ENODEV;
 
-	return 0;
-
 	irqs = min(pmu_device->num_resources, num_possible_cpus());
 	if (irqs < 1) {
 		pr_err("no irqs for PMUs defined\n");

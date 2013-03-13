@@ -442,7 +442,6 @@ config USB_GOKU
 config USB_AMBARELLA
 	tristate "Ambarella USB Device Controller"
 	depends on PLAT_AMBARELLA
-#	select USB_GADGET_DUALSPEED
 	help
 	   Many AMBARLLA processors (such as the A2/A5S/iONE/S2...) have a
 	   full/high speed USB Device Controller.
@@ -450,13 +449,6 @@ config USB_AMBARELLA
 	   Say "y" to link the driver statically, or "m" to build a
 	   dynamically linked module called "ambarella_udc" and force all
 	   gadget drivers to also be dynamically linked.
-
-#config USB_AMBARELLA
-#	tristate
-#	depends on USB_GADGET_AMBARELLA
-#	default USB_GADGET
-#	select USB_GADGET_SELECTED
-
 
 config USB_EG20T
 	tristate "Intel EG20T PCH/LAPIS Semiconductor IOH(ML7213/ML7831) UDC"

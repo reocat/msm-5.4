@@ -29,6 +29,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/device.h>
+#include <linux/module.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>

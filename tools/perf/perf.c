@@ -54,7 +54,7 @@ static struct cmd_struct commands[] = {
 #endif
 	{ "kmem",	cmd_kmem,	0 },
 	{ "lock",	cmd_lock,	0 },
-//	{ "kvm",	cmd_kvm,	0 },
+	{ "kvm",	cmd_kvm,	0 },
 	{ "test",	cmd_test,	0 },
 #ifdef LIBAUDIT_SUPPORT
 	{ "trace",	cmd_trace,	0 },

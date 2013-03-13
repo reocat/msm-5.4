@@ -30,11 +30,6 @@
 #include <asm/pgtable-2level.h>
 #endif
 
-#ifdef CONFIG_ARCH_AMBARELLA
-#include <mach/vmalloc.h>
-#else
-#define VMALLOC_END		0xff000000UL
-#endif
 /*
  * Just any arbitrary offset to the start of the vmalloc VM area: the
  * current 8MB value just means that there will be a 8MB "hole" after the
@@ -45,7 +40,13 @@
  */
 #define VMALLOC_OFFSET		(8*1024*1024)
 #define VMALLOC_START		(((unsigned long)high_memory + VMALLOC_OFFSET) & ~(VMALLOC_OFFSET-1))
-//#define VMALLOC_END		0xff000000UL
+#if defined(CONFIG_VMSPLIT_3G)
+#define VMALLOC_END		0xe0000000UL
+#elif defined(CONFIG_VMSPLIT_2G)
+#define VMALLOC_END		0xc0000000UL
+#else
+#define VMALLOC_END		0x80000000UL
+#endif
 
 #define LIBRARY_TEXT_START	0x0c000000
 

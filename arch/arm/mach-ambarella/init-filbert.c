@@ -247,10 +247,12 @@ static void __init ambarella_init_filbert(void)
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
+#if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
 	ambarella_tm1510_board_info.irq =
 		ambarella_board_generic.touch_panel_irq.irq_line;
 	ambarella_tm1510_board_info.flags = 0;
 	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
+#endif
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
@@ -267,12 +269,12 @@ static void __init ambarella_init_filbert(void)
 /* ==========================================================================*/
 MACHINE_START(FILBERT, "Filbert")
 	.atag_offset	= 0x100,
-	.restart_mode = 's',
+	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
 	.reserve	= ambarella_memblock_reserve,
 	.init_irq	= ambarella_init_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_filbert,
-	.restart = ambarella_restart_machine,
+	.restart	= ambarella_restart_machine,
 MACHINE_END
 

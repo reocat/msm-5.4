@@ -444,14 +444,14 @@ static void __init ambarella_init_elephant(void)
 
 			ambarella_board_generic.power_control.gpio_id = GPIO(120);
 			ambarella_board_generic.power_control.active_level = GPIO_LOW;
-
+#if defined(CONFIG_PMIC_AMBARELLA_WM831X)
 			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
 			ambarella_spi_devices[12].max_speed_hz = 500000;
 			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
 			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 			use_ambarella_rtc0 = 0;
 			use_ambarella_wdt0= 0;
-
+#endif
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.gsensor_power.active_delay = 10;
@@ -490,10 +490,10 @@ static void __init ambarella_init_elephant(void)
 			ambarella_platform_sd_controller1.max_clock = 12000000;
 			ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
 			ambarella_platform_sd_controller1.slot[0].default_caps |= MMC_CAP_8_BIT_DATA;
-
+#if defined(CONFIG_TOUCH_AMBARELLA_TM1726)
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
-
+#endif
 			//vin0: Rear Sensor vin1: Front Sensor
 			ambarella_board_generic.vin0_power.gpio_id = GPIO(122);
 			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
@@ -515,7 +515,9 @@ static void __init ambarella_init_elephant(void)
 			i2c_register_board_info(2, &ambarella_board_vin_infos[1], 1);
 
 			platform_device_register(&elephant_bt_rfkill);
+#if defined(CONFIG_LCD_AMBARELLA_1P3831)
 			platform_device_register(&lcd_1p3831);
+#endif
 			platform_device_register(&i1evk_cpufreq_device);
 
 			elephant_board_input_info.pkeymap = elephant_keymap_evk;
@@ -558,8 +560,10 @@ static void __init ambarella_init_elephant(void)
 		ambarella_eth0_platform_info.mii_id = 0;
 		ambarella_eth0_platform_info.phy_id = 0x001cc912;
 
+#if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);
+#endif
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
 		i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
@@ -612,14 +616,16 @@ static void __init ambarella_init_elephant(void)
 /* ==========================================================================*/
 MACHINE_START(ELEPHANT, "Elephant")
 	.atag_offset	= 0x100,
-	.smp = smp_ops(ambarella_smp_ops),
-	.restart_mode = 's',
+	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
 	.reserve	= ambarella_memblock_reserve,
 	.init_irq	= ambarella_init_irq,
-	.handle_irq = gic_handle_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_elephant,
-	.restart = ambarella_restart_machine,
+	.restart	= ambarella_restart_machine,
+#if defined(CONFIG_ARM_GIC)
+	.smp		= smp_ops(ambarella_smp_ops),
+	.handle_irq	= gic_handle_irq,
+#endif
 MACHINE_END
 

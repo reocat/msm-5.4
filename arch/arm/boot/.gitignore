@@ -4,6 +4,3 @@ xipImage
 bootpImage
 uImage
 *.dtb
-lib1funcs.S
-piggy.gzip
-vmlinux

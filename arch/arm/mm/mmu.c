@@ -931,21 +931,6 @@ void __init sanity_check_meminfo(void)
 {
 	int i, j, highmem = 0;
 
-#if 0
-#ifdef CONFIG_PLAT_AMBARELLA
-#if defined(CONFIG_VMSPLIT_3G)
-	lowmem_limit = (DEFAULT_MEM_START + SZ_256M + SZ_128M);
-#elif defined(CONFIG_VMSPLIT_2G)
-	lowmem_limit = (DEFAULT_MEM_START + SZ_512M + SZ_256M);
-#else
-	lowmem_limit = (DEFAULT_MEM_START + SZ_1G + SZ_512M);
-#endif
-#else
-	lowmem_limit = __pa(vmalloc_min - 1) + 1;
-#endif
-	memblock_set_current_limit(lowmem_limit);
-
-#endif
 	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {
 		struct membank *bank = &meminfo.bank[j];
 		*bank = meminfo.bank[i];
