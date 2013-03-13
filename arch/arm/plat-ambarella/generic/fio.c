@@ -46,9 +46,10 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-static DECLARE_WAIT_QUEUE_HEAD(fio_lock);
+static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
+static DEFINE_SPINLOCK(fio_lock);
 
-static atomic_t fio_owner = ATOMIC_INIT(SELECT_FIO_FREE);
+static u32 fio_owner = SELECT_FIO_FREE;
 module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
 
 int fio_default_owner = SELECT_FIO_FREE;
@@ -150,32 +151,53 @@ void __fio_select_lock(int module)
 #endif
 }
 
-void fio_select_lock(int module)
+static bool fio_check_free(u32 module)
 {
-	if (atomic_read(&fio_owner) != module) {
-		wait_event(fio_lock, (atomic_cmpxchg(&fio_owner,
-			SELECT_FIO_FREE, module) == SELECT_FIO_FREE));
-	} else {
+	unsigned long flags;
+	bool is_free = 0;
+
+	spin_lock_irqsave(&fio_lock, flags);
+	if (fio_owner == module) {
 		pr_warning("%s: module[%d] reentry!\n", __func__, module);
+		is_free = 1;
+		goto fio_exit;
+	}
+	if (fio_owner == SELECT_FIO_FREE) {
+		is_free = 1;
+		fio_owner = module;
 	}
 
+fio_exit:
+	spin_unlock_irqrestore(&fio_lock, flags);
+
+	return is_free;
+}
+
+void fio_select_lock(int module)
+{
+	wait_event(fio_wait, fio_check_free(module));
 	__fio_select_lock(module);
 }
 
 void fio_unlock(int module)
 {
-	if ((atomic_read(&fio_owner) == module) &&
+	unsigned long flags;
+
+	if ((fio_owner == module) &&
 		(fio_default_owner != SELECT_FIO_FREE) &&
 		(fio_default_owner != module)) {
 		__fio_select_lock(fio_default_owner);
 	}
 
-	if (atomic_cmpxchg(&fio_owner, module, SELECT_FIO_FREE) == module) {
-		wake_up(&fio_lock);
+	spin_lock_irqsave(&fio_lock, flags);
+	if (fio_owner == module) {
+		fio_owner = SELECT_FIO_FREE;
+		wake_up(&fio_wait);
 	} else {
 		pr_err("%s: fio_owner[%d] != module[%d]!.\n",
-			__func__, atomic_read(&fio_owner), module);
+			__func__, fio_owner, module);
 	}
+	spin_unlock_irqrestore(&fio_lock, flags);
 }
 
 int fio_amb_sd0_is_enable(void)
@@ -408,18 +430,18 @@ static struct ambarella_nand_timing ambarella_nand_default_timing = {
 	.timing5	= 0x00202020,
 };
 
-static DEFINE_MUTEX(fio_nand_mtx);
+//static DEFINE_MUTEX(fio_nand_mtx);
 
 static void fio_amb_nand_request(void)
 {
-	mutex_lock(&fio_nand_mtx);
+//	mutex_lock(&fio_nand_mtx);
 	fio_select_lock(SELECT_FIO_FL);
 }
 
 static void fio_amb_nand_release(void)
 {
 	fio_unlock(SELECT_FIO_FL);
-	mutex_unlock(&fio_nand_mtx);
+//	mutex_unlock(&fio_nand_mtx);
 }
 
 static int fio_amb_nand_parse_error(u32 reg)

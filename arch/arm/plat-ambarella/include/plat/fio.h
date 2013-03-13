@@ -25,13 +25,13 @@
 #define __PLAT_AMBARELLA_COMMON_FIO_H
 
 /* ==========================================================================*/
-#define SELECT_FIO_FREE		(0)
-#define SELECT_FIO_FL		(1)
-#define SELECT_FIO_XD		(2)
-#define SELECT_FIO_CF		(3)
-#define SELECT_FIO_SD		(4)
-#define SELECT_FIO_SDIO		(5)
-#define SELECT_FIO_SD2		(6)
+#define SELECT_FIO_FREE		(0x00000000)
+#define SELECT_FIO_FL		(0x00000001)
+#define SELECT_FIO_XD		(0x00000002)
+#define SELECT_FIO_CF		(0x00000004)
+#define SELECT_FIO_SD		(0x00000008)
+#define SELECT_FIO_SDIO		(0x00000010)
+#define SELECT_FIO_SD2		(0x00000020)
 
 #define FIO_OP_NOT_DONE_ER	(-1)	/* operation(xfer) not done error */
 #define FIO_READ_ER		(-2)	/* uncorrected ECC error */
