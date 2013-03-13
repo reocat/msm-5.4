@@ -68,9 +68,18 @@ struct ambarella_gpio_io_info {
 	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm); \
 	module_param_cb(name_prefix##active_delay, &param_ops_int, &(arg.active_delay), perm)
 
-extern int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on);
-extern u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo);
-extern int ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo);
+extern int ambarella_set_gpio_output(
+	struct ambarella_gpio_io_info *pinfo, u32 on);
+extern u32 ambarella_get_gpio_input(
+	struct ambarella_gpio_io_info *pinfo);
+extern int ambarella_set_gpio_reset(
+	struct ambarella_gpio_io_info *pinfo);
+extern int ambarella_set_gpio_output_can_sleep(
+	struct ambarella_gpio_io_info *pinfo, u32 on, int can_sleep);
+extern u32 ambarella_get_gpio_input_can_sleep(
+	struct ambarella_gpio_io_info *pinfo, int can_sleep);
+extern int ambarella_set_gpio_reset_can_sleep(
+	struct ambarella_gpio_io_info *pinfo, int can_sleep);
 
 struct ambarella_gpio_irq_info {
 	int	irq_gpio;

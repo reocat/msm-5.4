@@ -502,19 +502,20 @@ u32 ambarella_gpio_resume(u32 level)
 }
 
 /* ==========================================================================*/
-int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
+int ambarella_set_gpio_output_can_sleep(
+	struct ambarella_gpio_io_info *pinfo, u32 on, int can_sleep)
 {
 	int					retval = 0;
 
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
 		retval = -1;
-		goto ambarella_set_gpio_output_exit;
+		goto ambarella_set_gpio_output_can_sleep_exit;
 	}
 	if (pinfo->gpio_id < 0 ) {
 		pr_debug("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
 		retval = -1;
-		goto ambarella_set_gpio_output_exit;
+		goto ambarella_set_gpio_output_can_sleep_exit;
 	}
 
 	pr_debug("%s: Gpio[%d] %s, level[%s], delay[%dms].\n", __func__,
@@ -541,35 +542,48 @@ int ambarella_set_gpio_output(struct ambarella_gpio_io_info *pinfo, u32 on)
 				!pinfo->active_level);
 		}
 	}
-	mdelay(pinfo->active_delay);
+	if (can_sleep) {
+		msleep(pinfo->active_delay);
+	} else {
+		mdelay(pinfo->active_delay);
+	}
 
-ambarella_set_gpio_output_exit:
+ambarella_set_gpio_output_can_sleep_exit:
 	return retval;
 }
-EXPORT_SYMBOL(ambarella_set_gpio_output);
+EXPORT_SYMBOL(ambarella_set_gpio_output_can_sleep);
 
-u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
+u32 ambarella_get_gpio_input_can_sleep(
+	struct ambarella_gpio_io_info *pinfo, int can_sleep)
 {
 	u32					gpio_value = 0;
 
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
-		goto ambarella_get_gpio_input_exit;
+		goto ambarella_get_gpio_input_can_sleep_exit;
 	}
 	if (pinfo->gpio_id < 0 ) {
 		pr_debug("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
-		goto ambarella_get_gpio_input_exit;
+		goto ambarella_get_gpio_input_can_sleep_exit;
 	}
 
 	if (pinfo->gpio_id >= EXT_GPIO(0)) {
 		pr_debug("%s: try expander gpio id %d.\n",
 			__func__, pinfo->gpio_id);
 		gpio_direction_input(pinfo->gpio_id);
-		mdelay(pinfo->active_delay);
+		if (can_sleep) {
+			msleep(pinfo->active_delay);
+		} else {
+			mdelay(pinfo->active_delay);
+		}
 		gpio_value = gpio_get_value(pinfo->gpio_id);
 	} else {
 		ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_INPUT);
-		mdelay(pinfo->active_delay);
+		if (can_sleep) {
+			msleep(pinfo->active_delay);
+		} else {
+			mdelay(pinfo->active_delay);
+		}
 		gpio_value = ambarella_gpio_get(pinfo->gpio_id);
 	}
 
@@ -578,24 +592,25 @@ u32 ambarella_get_gpio_input(struct ambarella_gpio_io_info *pinfo)
 		pinfo->active_level ? "HIGH" : "LOW",
 		pinfo->active_delay, gpio_value);
 
-ambarella_get_gpio_input_exit:
+ambarella_get_gpio_input_can_sleep_exit:
 	return (gpio_value == pinfo->active_level) ? 1 : 0;
 }
-EXPORT_SYMBOL(ambarella_get_gpio_input);
+EXPORT_SYMBOL(ambarella_get_gpio_input_can_sleep);
 
-int ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
+int ambarella_set_gpio_reset_can_sleep(
+	struct ambarella_gpio_io_info *pinfo, int can_sleep)
 {
 	int					retval = 0;
 
 	if (pinfo == NULL) {
 		pr_err("%s: pinfo is NULL.\n", __func__);
 		retval = -1;
-		goto ambarella_set_gpio_reset_exit;
+		goto ambarella_set_gpio_reset_can_sleep_exit;
 	}
 	if (pinfo->gpio_id < 0 ) {
 		pr_debug("%s: wrong gpio id %d.\n", __func__, pinfo->gpio_id);
 		retval = -1;
-		goto ambarella_set_gpio_reset_exit;
+		goto ambarella_set_gpio_reset_can_sleep_exit;
 	}
 
 	pr_debug("%s: Reset gpio[%d], level[%s], delay[%dms].\n",
@@ -606,19 +621,57 @@ int ambarella_set_gpio_reset(struct ambarella_gpio_io_info *pinfo)
 		pr_debug("%s: try expander gpio id %d.\n",
 			__func__, pinfo->gpio_id);
 		gpio_direction_output(pinfo->gpio_id, pinfo->active_level);
-		mdelay(pinfo->active_delay);
+		if (can_sleep) {
+			msleep(pinfo->active_delay);
+		} else {
+			mdelay(pinfo->active_delay);
+		}
 		gpio_direction_output(pinfo->gpio_id, !pinfo->active_level);
-		mdelay(pinfo->active_delay);
+		if (can_sleep) {
+			msleep(pinfo->active_delay);
+		} else {
+			mdelay(pinfo->active_delay);
+		}
 	} else {
 		ambarella_gpio_config(pinfo->gpio_id, GPIO_FUNC_SW_OUTPUT);
 		ambarella_gpio_set(pinfo->gpio_id, pinfo->active_level);
-		mdelay(pinfo->active_delay);
+		if (can_sleep) {
+			msleep(pinfo->active_delay);
+		} else {
+			mdelay(pinfo->active_delay);
+		}
 		ambarella_gpio_set(pinfo->gpio_id, !pinfo->active_level);
-		mdelay(pinfo->active_delay);
+		if (can_sleep) {
+			msleep(pinfo->active_delay);
+		} else {
+			mdelay(pinfo->active_delay);
+		}
 	}
 
-ambarella_set_gpio_reset_exit:
+ambarella_set_gpio_reset_can_sleep_exit:
 	return retval;
+}
+EXPORT_SYMBOL(ambarella_set_gpio_reset_can_sleep);
+
+/* ==========================================================================*/
+int ambarella_set_gpio_output(
+	struct ambarella_gpio_io_info *pinfo, u32 on)
+{
+	return ambarella_set_gpio_output_can_sleep(pinfo, on, 0);
+}
+EXPORT_SYMBOL(ambarella_set_gpio_output);
+
+u32 ambarella_get_gpio_input(
+	struct ambarella_gpio_io_info *pinfo)
+{
+	return ambarella_get_gpio_input_can_sleep(pinfo, 0);
+}
+EXPORT_SYMBOL(ambarella_get_gpio_input);
+
+int ambarella_set_gpio_reset(
+	struct ambarella_gpio_io_info *pinfo)
+{
+	return ambarella_set_gpio_reset_can_sleep(pinfo, 0);
 }
 EXPORT_SYMBOL(ambarella_set_gpio_reset);
 
