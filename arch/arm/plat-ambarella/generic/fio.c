@@ -157,14 +157,26 @@ static bool fio_check_free(u32 module)
 	bool is_free = 0;
 
 	spin_lock_irqsave(&fio_lock, flags);
-	if (fio_owner == module) {
+
+	if (fio_owner & module) {
 		pr_warning("%s: module[%d] reentry!\n", __func__, module);
 		is_free = 1;
 		goto fio_exit;
 	}
+
+#if (SD_HOST1_HOST2_HAS_MUX == 1)
+	if (module & (SELECT_FIO_SD | SELECT_FIO_SD2)) {
+		if (!(fio_owner & (~(SELECT_FIO_SD | SELECT_FIO_SD2)))) {
+			fio_owner |= module;
+			is_free = 1;
+			goto fio_exit;
+		}
+	} else
+#endif
 	if (fio_owner == SELECT_FIO_FREE) {
 		is_free = 1;
 		fio_owner = module;
+		goto fio_exit;
 	}
 
 fio_exit:
@@ -183,20 +195,32 @@ void fio_unlock(int module)
 {
 	unsigned long flags;
 
-	if ((fio_owner == module) &&
+	if (!(fio_owner & (~module)) &&
 		(fio_default_owner != SELECT_FIO_FREE) &&
 		(fio_default_owner != module)) {
 		__fio_select_lock(fio_default_owner);
 	}
 
 	spin_lock_irqsave(&fio_lock, flags);
+#if (SD_HOST1_HOST2_HAS_MUX == 1)
+	if (module & (SELECT_FIO_SD | SELECT_FIO_SD2)) {
+		if (fio_owner & module) {
+			fio_owner &= (~module);
+			wake_up(&fio_wait);
+		} else {
+			pr_err("%s: fio_owner(0x%x) != module(0x%x)!.\n",
+				__func__, fio_owner, module);
+		}
+	} else
+#endif
 	if (fio_owner == module) {
 		fio_owner = SELECT_FIO_FREE;
 		wake_up(&fio_wait);
 	} else {
-		pr_err("%s: fio_owner[%d] != module[%d]!.\n",
+		pr_err("%s: fio_owner(%d) != module(%d)!.\n",
 			__func__, fio_owner, module);
 	}
+
 	spin_unlock_irqrestore(&fio_lock, flags);
 }
 
@@ -430,18 +454,14 @@ static struct ambarella_nand_timing ambarella_nand_default_timing = {
 	.timing5	= 0x00202020,
 };
 
-//static DEFINE_MUTEX(fio_nand_mtx);
-
 static void fio_amb_nand_request(void)
 {
-//	mutex_lock(&fio_nand_mtx);
 	fio_select_lock(SELECT_FIO_FL);
 }
 
 static void fio_amb_nand_release(void)
 {
 	fio_unlock(SELECT_FIO_FL);
-//	mutex_unlock(&fio_nand_mtx);
 }
 
 static int fio_amb_nand_parse_error(u32 reg)
