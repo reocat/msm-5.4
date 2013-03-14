@@ -317,6 +317,8 @@ static void __init ambarella_init_ginkgo(void)
 #endif
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
+#else
+			platform_device_register(&ambarella_rtc0);
 #endif
 			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
 			use_bub_default = 0;
