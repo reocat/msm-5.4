@@ -65,7 +65,7 @@ struct ambarella_runtime_data {
 
 	struct dma_chan *dma_chan;
 	struct dma_async_tx_descriptor *desc;
-	enum dma_data_direction direction;
+	enum dma_transfer_direction direction;
 
 	int pointer_bytes;
 	int periods;
@@ -144,14 +144,14 @@ static int ambarella_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->pointer_bytes = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		prtd->direction = DMA_TO_DEVICE;
-		slave_config.direction = DMA_TO_DEVICE;
+		prtd->direction = DMA_MEM_TO_DEV;
+		slave_config.direction = DMA_MEM_TO_DEV;
 		slave_config.dst_addr = prtd->dma_data->dev_addr;
 		slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		slave_config.dst_maxburst = 32;
 	} else {
-		prtd->direction = DMA_FROM_DEVICE;
-		slave_config.direction = DMA_FROM_DEVICE;
+		prtd->direction = DMA_DEV_TO_MEM;
+		slave_config.direction = DMA_DEV_TO_MEM;
 		slave_config.src_addr = prtd->dma_data->dev_addr;
 		slave_config.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		slave_config.src_maxburst = 32;

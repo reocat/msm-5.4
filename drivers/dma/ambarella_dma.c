@@ -533,14 +533,14 @@ static int ambdma_device_control(struct dma_chan *chan,
 	case DMA_SLAVE_CONFIG:
 		/* We only support mem to dev or dev to mem transfers */
 		switch (config->direction) {
-		case DMA_TO_DEVICE:
+		case DMA_MEM_TO_DEV:
 			width = config->dst_addr_width;
 			maxburst = config->dst_maxburst;
 			amb_chan->rt_addr = config->dst_addr;
 			amb_chan->rt_attr = DMA_DESC_RM | DMA_DESC_NI |
 					DMA_DESC_IE | DMA_DESC_ST;
 			break;
-		case DMA_FROM_DEVICE:
+		case DMA_DEV_TO_MEM:
 			width = config->src_addr_width;
 			maxburst = config->src_maxburst;
 			amb_chan->rt_addr = config->src_addr;
@@ -609,7 +609,8 @@ static int ambdma_device_control(struct dma_chan *chan,
 
 static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		struct dma_chan *chan, dma_addr_t buf_addr, size_t buf_len,
-		size_t period_len, enum dma_data_direction direction)
+		size_t period_len, enum dma_transfer_direction direction,
+		unsigned long flags, void *context)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
 	struct ambdma_desc *amb_desc, *first = NULL, *prev = NULL;
@@ -636,10 +637,10 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		if (period_len > left_len)
 			period_len = left_len;
 
-		if (direction == DMA_TO_DEVICE) {
+		if (direction == DMA_MEM_TO_DEV) {
 			amb_desc->lli->src = buf_addr;
 			amb_desc->lli->dst = amb_chan->rt_addr;
-		} else if (direction == DMA_FROM_DEVICE) {
+		} else if (direction == DMA_DEV_TO_MEM) {
 			amb_desc->lli->src = amb_chan->rt_addr;
 			amb_desc->lli->dst = buf_addr;
 		} else {
@@ -689,8 +690,9 @@ dma_cyclic_err:
 
 
 static struct dma_async_tx_descriptor *ambdma_prep_slave_sg(
-		struct dma_chan *chan, struct scatterlist *sgl, unsigned int sg_len,
-		enum dma_data_direction direction, unsigned long flags)
+		struct dma_chan *chan, struct scatterlist *sgl,
+		unsigned int sg_len, enum dma_transfer_direction direction,
+		unsigned long flags, void *context)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
 	struct ambdma_desc *amb_desc, *first = NULL, *prev = NULL;
@@ -710,10 +712,10 @@ static struct dma_async_tx_descriptor *ambdma_prep_slave_sg(
 
 		amb_desc->is_cyclic = 0;
 
-		if (direction == DMA_TO_DEVICE) {
+		if (direction == DMA_MEM_TO_DEV) {
 			amb_desc->lli->src = sg_dma_address(sgent);
 			amb_desc->lli->dst = amb_chan->rt_addr;
-		} else if (direction == DMA_FROM_DEVICE) {
+		} else if (direction == DMA_DEV_TO_MEM) {
 			amb_desc->lli->src = amb_chan->rt_addr;
 			amb_desc->lli->dst = sg_dma_address(sgent);
 		} else {
