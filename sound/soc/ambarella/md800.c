@@ -26,7 +26,7 @@
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
-
+#include <linux/delay.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 
