@@ -123,7 +123,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.active_caps	= 0,
 		.default_caps2	= 0,
 		.active_caps2	= 0,
-		.private_caps	= 0,
+		.private_caps	= AMBA_SD_PRIVATE_CAPS_DTO_BY_SDCLK,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -166,6 +166,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.release	= fio_amb_sd0_slot1_release,
 		.set_int	= fio_amb_sd0_set_int,
 		.set_vdd	= NULL,
+		.set_bus_timing	= NULL,
 	},
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.slot[1] = {
@@ -178,7 +179,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.active_caps	= 0,
 		.default_caps2	= 0,
 		.active_caps2	= 0,
-		.private_caps	= 0,
+		.private_caps	= AMBA_SD_PRIVATE_CAPS_DTO_BY_SDCLK,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -211,6 +212,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.release	= fio_amb_sd0_slot2_release,
 		.set_int	= fio_amb_sdio0_set_int,
 		.set_vdd	= NULL,
+		.set_bus_timing	= NULL,
 	},
 #endif
 	.set_pll		= rct_set_sd_pll,
@@ -332,7 +334,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		.active_caps	= 0,
 		.default_caps2	= 0,
 		.active_caps2	= 0,
-		.private_caps	= 0,
+		.private_caps	= AMBA_SD_PRIVATE_CAPS_DTO_BY_SDCLK,
 
 		.ext_power	= {
 			.gpio_id	= -1,
@@ -365,6 +367,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		.release	= fio_amb_sd2_release,
 		.set_int	= fio_amb_sd2_set_int,
 		.set_vdd	= NULL,
+		.set_bus_timing	= NULL,
 	},
 #if (SD_HAS_SDXC_CLOCK == 1)
 	.set_pll		= rct_set_sdxc_pll,

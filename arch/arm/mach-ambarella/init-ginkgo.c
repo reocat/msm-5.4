@@ -220,6 +220,20 @@ static void ginkgo_ipcam_sd_set_vdd(u32 vdd)
 	} else {
 		ambarella_gpio_set(GPIO(22), 1);
 	}
+	msleep(10);
+}
+
+static void ginkgo_ipcam_sd_set_bus_timing(u32 timing)
+{
+	u32 ms_delay_reg;
+
+	pr_debug("%s = %d\n", __func__, timing);
+	ms_delay_reg = amba_readl(MS_DELAY_CTRL_REG);
+	ms_delay_reg &= 0xE3E0E3E0;
+	if (timing == MMC_TIMING_UHS_DDR50) {
+		ms_delay_reg |= ((0x7 << 16) | (0x7 << 10));
+	}
+	amba_writel(MS_DELAY_CTRL_REG, ms_delay_reg);
 }
 
 static void ginkgo_ipcam_sdio_set_vdd(u32 vdd)
@@ -230,6 +244,20 @@ static void ginkgo_ipcam_sdio_set_vdd(u32 vdd)
 	} else {
 		ambarella_gpio_set(GPIO(23), 1);
 	}
+	msleep(10);
+}
+
+static void ginkgo_ipcam_sdio_set_bus_timing(u32 timing)
+{
+	u32 ms_delay_reg;
+
+	pr_debug("%s = %d\n", __func__, timing);
+	ms_delay_reg = amba_readl(MS_DELAY_CTRL_REG);
+	ms_delay_reg &= 0x1C1F1C1F;
+	if (timing == MMC_TIMING_UHS_DDR50) {
+		ms_delay_reg |= ((0x7 << 21) | (0x7 << 13));
+	}
+	amba_writel(MS_DELAY_CTRL_REG, ms_delay_reg);
 }
 
 /* ==========================================================================*/
@@ -285,19 +313,30 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
 			ambarella_board_generic.uport_control.active_delay = 1;
 
-			ambarella_platform_sd_controller0.max_clock = 48000000;
-			ambarella_platform_sd_controller0.slot[0].default_caps |= MMC_CAP_8_BIT_DATA;
-			ambarella_platform_sd_controller0.slot[0].private_caps |= AMBA_SD_PRIVATE_CAPS_VDD_18;
+			ambarella_platform_sd_controller0.max_clock = 128000000;
+			ambarella_platform_sd_controller0.slot[0].default_caps |=
+				(MMC_CAP_8_BIT_DATA);
+			ambarella_platform_sd_controller0.slot[0].private_caps |=
+				(AMBA_SD_PRIVATE_CAPS_VDD_18 |
+				AMBA_SD_PRIVATE_CAPS_DDR);
 			ambarella_platform_sd_controller0.slot[0].ext_power.gpio_id = EXT_GPIO(0);
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller0.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller0.slot[0].set_vdd = ginkgo_ipcam_sd_set_vdd;
+			ambarella_platform_sd_controller0.slot[0].set_vdd =
+				ginkgo_ipcam_sd_set_vdd;
+			ambarella_platform_sd_controller0.slot[0].set_bus_timing =
+				ginkgo_ipcam_sd_set_bus_timing;
 			ambarella_platform_sd_controller1.max_clock = 48000000;
-			ambarella_platform_sd_controller1.slot[0].private_caps |= AMBA_SD_PRIVATE_CAPS_VDD_18;
+			ambarella_platform_sd_controller1.slot[0].private_caps |=
+				(AMBA_SD_PRIVATE_CAPS_VDD_18 |
+				AMBA_SD_PRIVATE_CAPS_DDR);
 			ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = EXT_GPIO(1);
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
 			ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
-			ambarella_platform_sd_controller1.slot[0].set_vdd = ginkgo_ipcam_sdio_set_vdd;
+			ambarella_platform_sd_controller1.slot[0].set_vdd =
+				ginkgo_ipcam_sdio_set_vdd;
+			ambarella_platform_sd_controller1.slot[0].set_bus_timing =
+				ginkgo_ipcam_sdio_set_bus_timing;
 
 			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
 

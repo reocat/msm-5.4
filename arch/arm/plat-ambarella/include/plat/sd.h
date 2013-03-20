@@ -29,6 +29,8 @@
 
 #define AMBA_SD_PRIVATE_CAPS_VDD_18		(0x1 << 0)
 #define AMBA_SD_PRIVATE_CAPS_ADMA		(0x1 << 1)
+#define AMBA_SD_PRIVATE_CAPS_DTO_BY_SDCLK	(0x1 << 2)
+#define AMBA_SD_PRIVATE_CAPS_DDR		(0x1 << 3)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -55,6 +57,7 @@ struct ambarella_sd_slot {
 	void					(*release)(void);
 	void					(*set_int)(u32 mask, u32 on);
 	void					(*set_vdd)(u32 vdd);
+	void					(*set_bus_timing)(u32 timing);
 };
 
 struct ambarella_sd_controller {
