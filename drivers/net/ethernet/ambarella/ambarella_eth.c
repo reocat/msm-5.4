@@ -690,15 +690,14 @@ static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
 	struct sk_buff				*skb;
 
 	if (lp->rx.rng_rx[entry].skb == NULL) {
-		skb = dev_alloc_skb(AMBETH_PACKET_MAXFRAME);
+		skb = netdev_alloc_skb(lp->ndev, AMBETH_PACKET_MAXFRAME);
 		if (skb == NULL) {
 			if (netif_msg_drv(lp))
 				dev_err(&lp->ndev->dev,
-				"RX Error: dev_alloc_skb.\n");
+				"RX Error: netdev_alloc_skb.\n");
 			errorCode = -ENOMEM;
 			goto ambeth_rx_rngmng_skb_exit;
 		}
-		skb->dev = lp->ndev;
 		mapping = dma_map_single(&lp->ndev->dev, skb->data,
 			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
 		lp->rx.rng_rx[entry].skb = skb;
