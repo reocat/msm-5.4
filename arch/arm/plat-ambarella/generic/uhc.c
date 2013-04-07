@@ -84,11 +84,11 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	amba_clrbitsl(GPIO0_AFSEL_REG, pin_clr);
 	ambarella_gpio_raw_unlock(0, &flags);
 
+	ambarella_enable_usb_port(UHC_OWN_PORT);
+
 	/* Reset usb host controller */
 	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
 		pr_info("%s: amb_usb_host_soft_reset fail!\n", __func__);
-
-	ambarella_enable_usb_port(UHC_OWN_PORT);
 }
 
 static void ambarella_disable_usb_host(struct ambarella_uhc_controller *pdata)
