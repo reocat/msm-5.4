@@ -176,7 +176,8 @@ static int __init ambarella_init_uport_switcher(void)
 		/* allow to wake up system when sleeping */
 		rval = enable_irq_wake(ambarella_board_generic.uport_irq.irq_line);
 		if (rval) {
-			pr_err("%s : enable_irq_wake failed\n", __func__);
+			pr_err("%s : enable_irq_wake(%d) = %d\n", __func__,
+				ambarella_board_generic.uport_irq.irq_line, rval);
 			goto uport_switcher_err2;
 		}
 	}
