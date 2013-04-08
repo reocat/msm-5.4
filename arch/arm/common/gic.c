@@ -243,9 +243,13 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 {
 	void __iomem *reg = gic_dist_base(d) + GIC_DIST_TARGET + (gic_irq(d) & ~3);
 	unsigned int shift = (gic_irq(d) % 4) * 8;
-	unsigned int cpu = cpumask_any_and(mask_val, cpu_online_mask);
+	unsigned int cpu,cpu_mask = 0;
 	u32 val, mask, bit;
 
+	for_each_cpu_and(cpu, mask_val, cpu_online_mask)
+		cpu_mask |= 0x1 << cpu;
+	cpu_mask &= 0xff;
+	cpu = cpumask_any_and(mask_val, cpu_online_mask);
 	if (cpu >= NR_GIC_CPU_IF || cpu >= nr_cpu_ids)
 		return -EINVAL;
 
@@ -254,6 +258,7 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 
 	raw_spin_lock(&irq_controller_lock);
 	val = readl_relaxed(reg) & ~mask;
+	val |= (cpu_mask << shift);
 	writel_relaxed(val | bit, reg);
 	raw_spin_unlock(&irq_controller_lock);
 
