@@ -618,9 +618,7 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 	amba_writeb(pinfo->regbase + SD_TMO_OFFSET,
 		CONFIG_SD_AMBARELLA_TIMEOUT_VAL);
 
-	nis_flag = SD_NISEN_REMOVAL	|
-		SD_NISEN_INSERT		|
-		SD_NISEN_DMA		|
+	nis_flag = SD_NISEN_DMA		|
 		SD_NISEN_BLOCK_GAP	|
 		SD_NISEN_XFR_DONE	|
 		SD_NISEN_CMD_DONE;
@@ -638,6 +636,9 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 		eis_flag |= SD_EISEN_ADMA_ERR;
 	} else {
 		eis_flag &= ~SD_EISEN_ADMA_ERR;
+	}
+	if (!ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd)) {
+		nis_flag = (SD_NISEN_REMOVAL | SD_NISEN_INSERT);
 	}
 
 	ambarella_sd_enable_int(mmc, (eis_flag << 16) | nis_flag);
