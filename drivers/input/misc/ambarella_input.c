@@ -103,6 +103,7 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 			input_report_key(pbinfo->pinput_dev,
 				pbinfo->pkeymap[i].gpio_key.key_code,
 				(level == pbinfo->pkeymap[i].gpio_key.active_val) ? 1 : 0);
+			input_sync(pbinfo->pinput_dev);
 			dev_dbg(&pbinfo->pinput_dev->dev,
 				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_key.key_code,
@@ -114,6 +115,7 @@ irqreturn_t ambarella_gpio_irq(int irq, void *devid)
 			input_report_switch(pbinfo->pinput_dev,
 				pbinfo->pkeymap[i].gpio_sw.key_code,
 				(level == pbinfo->pkeymap[i].gpio_key.active_val) ? 1 : 0);
+			input_sync(pbinfo->pinput_dev);
 			dev_dbg(&pbinfo->pinput_dev->dev,
 				"GPIO %d is @ %d:%d\n",
 				pbinfo->pkeymap[i].gpio_sw.key_code,
@@ -561,6 +563,9 @@ static int __init ambarella_input_init(void)
 			retval);
 
 #ifdef CONFIG_INPUT_AMBARELLA_IR
+	if((pboard_info == NULL) ||(pboard_info->pkeymap == NULL)){
+		printk(KERN_ERR "IR key is NOT support! \n");
+	}
 	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
 		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
 			break;
@@ -572,6 +577,9 @@ static int __init ambarella_input_init(void)
 	}
 #endif
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
+	if((pboard_info == NULL) ||(pboard_info->pkeymap == NULL)){
+		printk(KERN_ERR "ADC key is NOT support! \n");
+	}
 	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
 		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
 			break;
@@ -589,6 +597,8 @@ static int __init ambarella_input_init(void)
 static void __exit ambarella_input_exit(void)
 {
 	int i = 0;
+	if((pboard_info == NULL) ||(pboard_info->pkeymap == NULL))
+		goto END;
 
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
 	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
@@ -610,6 +620,7 @@ static void __exit ambarella_input_exit(void)
 		}
 	}
 #endif
+END:
 	platform_driver_unregister(&ambarella_input_driver);
 }
 

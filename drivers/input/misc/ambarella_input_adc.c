@@ -182,6 +182,7 @@ void ambarella_scan_adc(struct work_struct *work)
 				&& pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
 				input_report_key(pinfo->dev,
 					pinfo->adc_key_pressed[adc_index], 0);//key relase
+				input_sync(pinfo->dev);
 				dev_dbg(&pinfo->dev->dev, "key[%d:%d] released %d\n", adc_index,
 					pinfo->adc_key_pressed[adc_index],
 					pinfo->adc_data[adc_index]);
@@ -194,6 +195,7 @@ void ambarella_scan_adc(struct work_struct *work)
 				&& pinfo->pkeymap[i].adc_key.key_code != KEY_RESERVED) {
 				input_report_key(pinfo->dev,
 					pinfo->pkeymap[i].adc_key.key_code, 1);// key press
+				input_sync(pinfo->dev);
 				pinfo->adc_key_pressed[adc_index] =
 					pinfo->pkeymap[i].adc_key.key_code;
 				if (pinfo->support_irq) {

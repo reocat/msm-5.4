@@ -149,6 +149,7 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 				pirinfo->pkeymap[i].ir_key.key_code, 1);
 			input_report_key(pirinfo->pinput_dev,
 				pirinfo->pkeymap[i].ir_key.key_code, 0);
+			input_sync(pirinfo->pinput_dev);
 			dev_dbg(&pirinfo->pinput_dev->dev, "IR_KEY [%d]\n",
 				pirinfo->pkeymap[i].ir_key.key_code);
 			pirinfo->last_ir_flag =
