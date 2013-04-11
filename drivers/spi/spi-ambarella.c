@@ -307,6 +307,7 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *priv)
 		cs_config.cs_id		= priv->c_dev->chip_select;
 		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
 		cs_config.cs_pins	= priv->pinfo->cs_pins;
+		cs_config.cs_high	= priv->pinfo->cs_high;
 		priv->pinfo->cs_activate(&cs_config);
 		priv->chip_select	= 1;
 	}
@@ -326,6 +327,7 @@ static void ambarella_spi_finish_transfer(struct ambarella_spi *priv)
 		cs_config.cs_id		= priv->c_msg->spi->chip_select;
 		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
 		cs_config.cs_pins	= priv->pinfo->cs_pins;
+		cs_config.cs_high	= priv->pinfo->cs_high;
 
 		priv->pinfo->cs_deactivate(&cs_config);
 		priv->chip_select	= 0;
@@ -353,6 +355,7 @@ static void ambarella_spi_finish_message(struct ambarella_spi *priv)
 		cs_config.cs_id		= priv->c_msg->spi->chip_select;
 		cs_config.cs_num	= priv->c_dev->master->num_chipselect;
 		cs_config.cs_pins	= priv->pinfo->cs_pins;
+		cs_config.cs_high	= priv->pinfo->cs_high;
 
 		priv->pinfo->cs_deactivate(&cs_config);
 		priv->chip_select	= 0;
@@ -390,7 +393,7 @@ static void ambarella_spi_handle_message(struct ambarella_spi *priv)
 
 static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 {
-	u32 				ctrlr0, ssi_clk, sckdv, cs_pin;
+	u32 				ctrlr0, ssi_clk, sckdv, cs_pin, cs_high;
 	struct spi_message		*msg;
 	unsigned long			flags;
 
@@ -425,9 +428,14 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 	priv->c_dev		= msg->spi;
 	priv->c_msg		= msg;
 
-	cs_pin = priv->pinfo->cs_pins[priv->c_dev->chip_select];
+	cs_pin	= priv->pinfo->cs_pins[priv->c_dev->chip_select];
+	cs_high	= priv->pinfo->cs_high[priv->c_dev->chip_select];
 	ambarella_gpio_config(cs_pin, GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_set(cs_pin, GPIO_HIGH);
+	if (!cs_high) {
+		ambarella_gpio_set(cs_pin, GPIO_HIGH);
+	} else {
+		ambarella_gpio_set(cs_pin, GPIO_LOW);
+	}
 }
 
 static int ambarella_spi_main_entry(struct spi_device *spi, struct spi_message *msg)
