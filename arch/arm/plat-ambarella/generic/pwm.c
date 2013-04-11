@@ -87,16 +87,6 @@ struct ambarella_pwm_device {
 	struct list_head	node;
 };
 
-static DEFINE_MUTEX(pwm_lock);
-static LIST_HEAD(pwm_list);
-
-static void add_pwm_device(struct ambarella_pwm_device *pwm)
-{
-	mutex_lock(&pwm_lock);
-	list_add_tail(&pwm->node, &pwm_list);
-	mutex_unlock(&pwm_lock);
-}
-
 static struct ambarella_pwm_device ambarella_pwm0 = {
 	.pwm_id		= 0,
 	.gpio_id	= GPIO(16),
@@ -566,6 +556,14 @@ static struct pwm_ops ambarella_pwm_ops = {
 	.disable	= ambarella_pwm_disable,
 };
 
+static struct pwm_lookup ambarella_pwm_lut[] = {
+	PWM_LOOKUP("pwm-backlight.0", 0, "pwm-backlight.0", NULL),
+	PWM_LOOKUP("pwm-backlight.0", 1, "pwm-backlight.1", NULL),
+	PWM_LOOKUP("pwm-backlight.0", 2, "pwm-backlight.2", NULL),
+	PWM_LOOKUP("pwm-backlight.0", 3, "pwm-backlight.3", NULL),
+	PWM_LOOKUP("pwm-backlight.0", 4, "pwm-backlight.4", NULL),
+};
+
 #ifdef CONFIG_AMBARELLA_PWM_PROC
 static u32 pwm_array[PWM_ARRAY_SIZE];
 static const char pwm_proc_name[] = "pwm";
@@ -667,17 +665,13 @@ int __init ambarella_init_pwm(void)
 #endif
 
 	rct_set_pwm_freq_hz(PWM_DEFAULT_FREQUENCY);
-	add_pwm_device(&ambarella_pwm0);
-	add_pwm_device(&ambarella_pwm1);
-	add_pwm_device(&ambarella_pwm2);
-	add_pwm_device(&ambarella_pwm3);
-	add_pwm_device(&ambarella_pwm4);
 
 	ambarella_pwm_chip.dev	= &ambarella_pwm_platform_device0.dev;
 	ambarella_pwm_chip.ops	= &ambarella_pwm_ops;
 	ambarella_pwm_chip.base	= 0;
 	ambarella_pwm_chip.npwm	= 5;
 	pwmchip_add(&ambarella_pwm_chip);
+	pwm_add_table(ambarella_pwm_lut, ARRAY_SIZE(ambarella_pwm_lut));
 
 	return retval;
 }
