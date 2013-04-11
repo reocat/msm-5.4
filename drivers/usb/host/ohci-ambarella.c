@@ -159,8 +159,7 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 	ambarella_start_ohc(amb_ohci);
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
-	ret = usb_add_hcd(hcd, pdev->resource[1].start,
-			IRQF_DISABLED | amb_ohci->plat_ohci->irqflags);
+	ret = usb_add_hcd(hcd, pdev->resource[1].start, amb_ohci->plat_ohci->irqflags);
 	if (ret < 0)
 		goto add_hcd_err;
 
@@ -202,7 +201,6 @@ static int ohci_hcd_ambarella_drv_suspend(struct device *dev)
 	ohci->next_statechange = jiffies;
 
 	ambarella_stop_ohc(amb_ohci);
-	ohci_to_hcd(ohci)->state = HC_STATE_SUSPENDED;
 	return 0;
 }
 

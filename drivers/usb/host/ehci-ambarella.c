@@ -177,8 +177,7 @@ static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 
 	ambarella_start_ehc(amb_ehci);
 
-	ret = usb_add_hcd(hcd, pdev->resource[1].start,
-			IRQF_DISABLED | amb_ehci->plat_ehci->irqflags);
+	ret = usb_add_hcd(hcd, pdev->resource[1].start, amb_ehci->plat_ehci->irqflags);
 	if (ret < 0)
 		goto add_hcd_err;
 
