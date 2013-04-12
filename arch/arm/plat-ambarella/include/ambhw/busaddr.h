@@ -347,7 +347,7 @@
 #if (CHIP_REV == A7L)
 #define SPI_SLAVE_OFFSET		0x1000
 #elif (CHIP_REV == S2)
-#define SPI_SLAVE_OFFSET		0x14000
+#define SPI_SLAVE_OFFSET		0x1e000
 #else
 #define SPI_SLAVE_OFFSET		0x1e000
 #endif
@@ -578,6 +578,7 @@
 #define DSP_TEXT_BASE_ADDR_MEMD		0x300000
 
 #endif
+
 
 /*----------------------------------------------------------------------------*/
 
