@@ -565,28 +565,30 @@ static int __init ambarella_input_init(void)
 #ifdef CONFIG_INPUT_AMBARELLA_IR
 	if((pboard_info == NULL) ||(pboard_info->pkeymap == NULL)){
 		printk(KERN_ERR "IR key is NOT support! \n");
-	}
-	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
-			break;
-		if (pboard_info->pkeymap[i].type == AMBINPUT_IR_KEY){
-			if (platform_driver_register_ir())
-				printk(KERN_ERR "Register ambarella_ir_driver failed!\n");
-			break;
+	}else{
+		for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
+			if (pboard_info->pkeymap[i].type == AMBINPUT_END)
+				break;
+			if (pboard_info->pkeymap[i].type == AMBINPUT_IR_KEY){
+				if (platform_driver_register_ir())
+					printk(KERN_ERR "Register ambarella_ir_driver failed!\n");
+				break;
+			}
 		}
 	}
 #endif
 #ifdef CONFIG_INPUT_AMBARELLA_ADC
 	if((pboard_info == NULL) ||(pboard_info->pkeymap == NULL)){
 		printk(KERN_ERR "ADC key is NOT support! \n");
-	}
-	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
-			break;
-		if (pboard_info->pkeymap[i].type == AMBINPUT_ADC_KEY){
-			if (platform_driver_register_adc())
-				printk(KERN_ERR "Register ambarella_adc_driver failed!\n");
-			break;
+	}else{
+		for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
+			if (pboard_info->pkeymap[i].type == AMBINPUT_END)
+				break;
+			if (pboard_info->pkeymap[i].type == AMBINPUT_ADC_KEY){
+				if (platform_driver_register_adc())
+					printk(KERN_ERR "Register ambarella_adc_driver failed!\n");
+				break;
+			}
 		}
 	}
 #endif
