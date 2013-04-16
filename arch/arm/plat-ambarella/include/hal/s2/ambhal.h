@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date January 2012
- * @version 7140
+ * @version 7163
  *
  * @par Introduction:
  * The Ambarella A7S Hardware Abstraction Layer (ambhal) provides an API between
@@ -526,6 +526,7 @@ AMB_HAL_FUNCTION_INFO_GET_HDMI_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_ENABLE_HDMI_CLOCK_OBSERVATION,
 AMB_HAL_FUNCTION_INFO_GET_HDMI4K_CLOCK_FREQUENCY,
 AMB_HAL_FUNCTION_INFO_ENABLE_HDMI4K_CLOCK_OBSERVATION,
+AMB_HAL_FUNCTION_INFO_AUTO_SELECT_HDMI4K_RANGE,
 AMB_HAL_FUNCTION_INFO_SET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_GET_SENSOR_CLOCK_PAD_MODE,
 AMB_HAL_FUNCTION_INFO_SET_PERIPHERALS_BASE_ADDRESS,
@@ -4145,6 +4146,25 @@ static INLINE amb_hal_success_t amb_enable_hdmi4k_clock_observation (void *amb_h
 {
   AMBHALUNUSED(amb_hal_unused) = 0 ;
   return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_ENABLE_HDMI4K_CLOCK_OBSERVATION, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
+}
+
+/**
+ * Auto select range of hdmi4k pll
+ *
+ * Automatically set the hdmi4k pll range.
+ *
+ * @param[in] amb_hal_base_address Virtual address where ambhal is loaded by OS.
+ *
+ * @retval ::AMB_HAL_SUCCESS Returns success if a valid range was found
+ * @retval ::AMB_HAL_FAIL Returns fail if a valid range was not found
+ *
+ * @ingroup hdmi_group
+ */
+
+static INLINE amb_hal_success_t amb_auto_select_hdmi4k_range (void *amb_hal_base_address)
+{
+  AMBHALUNUSED(amb_hal_unused) = 0 ;
+  return (amb_hal_success_t) amb_hal_function_call (amb_hal_base_address, AMB_HAL_FUNCTION_INFO_AUTO_SELECT_HDMI4K_RANGE, amb_hal_unused, amb_hal_unused, amb_hal_unused, amb_hal_unused) ;
 }
 
 /**
