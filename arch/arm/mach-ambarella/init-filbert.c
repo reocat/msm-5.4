@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-ambarella/init-generic.c
+ * arch/arm/mach-ambarella/init-filbert.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

@@ -88,13 +88,14 @@
 #endif
 
 #if (CHIP_REV == I1) ||  (CHIP_REV == A7L) || (CHIP_REV == A8) || \
-    (CHIP_REV == A9)
+    (CHIP_REV == A7S)
 #define SD_SUPPORT_ACMD23		0
 #else
 #define SD_SUPPORT_ACMD23		1
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == A8)
+#if (CHIP_REV == I1) ||  (CHIP_REV == A7L) || (CHIP_REV == A8) || \
+    (CHIP_REV == A7S)
 #define SD_HAS_SDXC_CLOCK		1
 #else
 #define SD_HAS_SDXC_CLOCK		0
