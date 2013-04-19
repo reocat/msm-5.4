@@ -203,6 +203,14 @@ static void __init ambarella_init_durian(void)
 	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
 	ambarella_board_generic.lcd_backlight.active_delay = 1;
 
+	ambarella_board_generic.lcd_spi_hw.bus_id = 0;
+	ambarella_board_generic.lcd_spi_hw.cs_id = 5;
+
+	ambarella_board_generic.lcd_spi_cfg.spi_mode = 0;
+	ambarella_board_generic.lcd_spi_cfg.cfs_dfs = 16;
+	ambarella_board_generic.lcd_spi_cfg.baud_rate = 5000000;
+	ambarella_board_generic.lcd_spi_cfg.cs_change = 0;
+
 	ambarella_board_generic.vin0_reset.gpio_id = GPIO(118);
 	ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.vin0_reset.active_delay = 100;
