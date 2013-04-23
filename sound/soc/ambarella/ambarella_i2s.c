@@ -125,6 +125,20 @@ static inline void dai_fifo_rst(void)
 	amba_setbitsl(I2S_INIT_REG, DAI_FIFO_RST);
 }
 
+static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
+			struct snd_soc_dai *dai)
+{
+	if(substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		dai_rx_disable();
+		dai_rx_fifo_rst();
+	} else {
+		dai_tx_disable();
+		dai_tx_fifo_rst();
+	}
+
+	return 0;
+}
+
 static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
 				struct snd_soc_dai *cpu_dai)
@@ -151,7 +165,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 			amba_writel(I2S_RX_CTRL_REG, 0x00);
 		else
 			amba_writel(I2S_RX_CTRL_REG, 0x02);
-		amba_writel(I2S_RX_FIFO_GTH_REG, 0x40);
+		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
 	}
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
@@ -255,13 +269,21 @@ hw_params_exit:
 	return -EINVAL;
 }
 
-static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
-			struct snd_soc_dai *dai)
+static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
+		struct snd_soc_dai *cpu_dai)
 {
-	if(substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		dai_rx_fifo_rst();
-	else
-		dai_tx_fifo_rst();
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			dai_tx_enable();
+		else
+			dai_rx_enable();
+		break;
+	default:
+		break;
+	}
 
 	return 0;
 }
@@ -488,6 +510,7 @@ static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 static const struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
 	.prepare = ambarella_i2s_prepare,
 	.hw_params = ambarella_i2s_hw_params,
+	.trigger = ambarella_i2s_trigger,
 	.set_fmt = ambarella_i2s_set_fmt,
 	.set_sysclk = ambarella_i2s_set_sysclk,
 	.set_clkdiv = ambarella_i2s_set_clkdiv,
