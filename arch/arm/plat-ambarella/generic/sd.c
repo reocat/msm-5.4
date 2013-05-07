@@ -107,6 +107,15 @@ void fio_amb_sd0_slot2_release(void)
 }
 #endif
 
+int fio_amb_sd_check_owner(void)
+{
+#if (SD_HOST1_HOST2_HAS_MUX == 1)
+	return 1;
+#else
+	return fio_amb_sd0_is_enable();
+#endif
+}
+
 struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	.num_slots		= 2,
@@ -160,8 +169,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-
-		.check_owner	= fio_amb_sd0_is_enable,
+		.check_owner	= fio_amb_sd_check_owner,
 		.request	= fio_amb_sd0_slot1_request,
 		.release	= fio_amb_sd0_slot1_release,
 		.set_int	= fio_amb_sd0_set_int,
@@ -206,7 +214,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-
 		.check_owner	= fio_amb_sdio0_is_enable,
 		.request	= fio_amb_sd0_slot2_request,
 		.release	= fio_amb_sd0_slot2_release,
@@ -278,9 +285,6 @@ int fio_amb_sd2_check_owner(void)
 {
 #if (FIO_SUPPORT_AHB_CLK_ENA == 1)
 	return fio_amb_sd2_is_enable();
-#endif
-#if (SD_HOST1_HOST2_HAS_MUX == 1)
-	return fio_amb_sd0_is_enable();
 #endif
 	return 1;
 }
@@ -361,7 +365,6 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 			.active_level	= GPIO_HIGH,
 			.active_delay	= 1,
 		},
-
 		.check_owner	= fio_amb_sd2_check_owner,
 		.request	= fio_amb_sd2_request,
 		.release	= fio_amb_sd2_release,

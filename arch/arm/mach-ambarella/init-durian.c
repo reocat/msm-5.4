@@ -181,6 +181,18 @@ static struct platform_device durian_board_input = {
 	}
 };
 
+static void durian_bub_evk_sd_set_vdd(u32 vdd)
+{
+	pr_debug("%s = %dmV\n", __func__, vdd);
+	ambarella_gpio_config(GPIO(22), GPIO_FUNC_SW_OUTPUT);
+	if (vdd == 1800) {
+		ambarella_gpio_set(GPIO(22), 1);
+	} else {
+		ambarella_gpio_set(GPIO(22), 0);
+	}
+	msleep(10);
+}
+
 /* ==========================================================================*/
 static void __init ambarella_init_durian(void)
 {
@@ -242,15 +254,26 @@ static void __init ambarella_init_durian(void)
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
 	ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio = SMIO_5;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_5);
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller0.slot[0].gpio_cd.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 	ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
-	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = SMIO_44;
-	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
-	ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = SMIO_45;
+
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_BUB) {
+		ambarella_platform_sd_controller0.max_clock = 48000000;
+		ambarella_platform_sd_controller0.slot[0].default_caps |=
+			(MMC_CAP_8_BIT_DATA);
+		ambarella_platform_sd_controller0.slot[0].set_vdd =
+			durian_bub_evk_sd_set_vdd;
+		ambarella_platform_sd_controller1.max_clock = 48000000;
+	}
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
+		ambarella_platform_sd_controller0.max_clock = 48000000;
+		ambarella_platform_sd_controller0.slot[0].default_caps |=
+			(MMC_CAP_8_BIT_DATA);
+		ambarella_platform_sd_controller0.slot[0].set_vdd =
+			durian_bub_evk_sd_set_vdd;
+		ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
+		ambarella_platform_sd_controller0.slot[0].fixed_wp = 0;
+		ambarella_platform_sd_controller1.max_clock = 48000000;
+	}
 
 	/* Register audio codec */
 #if defined(CONFIG_CODEC_AMBARELLA_AK4642)
