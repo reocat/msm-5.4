@@ -1939,8 +1939,6 @@ static int ambarella_nand_remove(struct platform_device *pdev)
 	if (nand_info) {
 		ambarella_unregister_event_notifier(&nand_info->system_event);
 
-		platform_set_drvdata(pdev, NULL);
-
 		nand_release(&nand_info->mtd);
 
 		ambarella_nand_put_resource(nand_info);

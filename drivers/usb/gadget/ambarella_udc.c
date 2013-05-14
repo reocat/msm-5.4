@@ -2447,8 +2447,6 @@ static int ambarella_udc_remove(struct platform_device *pdev)
 	dma_pool_free(udc->desc_dma_pool, udc->setup_buf, udc->setup_addr);
 	dma_pool_destroy(udc->desc_dma_pool);
 
-	platform_set_drvdata(pdev, NULL);
-
 	kfree(udc);
 
 	dprintk(DEBUG_NORMAL, "%s: remove ok\n", __func__);

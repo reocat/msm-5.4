@@ -396,7 +396,6 @@ static int ambarella_wdt_remove(struct platform_device *pdev)
 		errorCode = misc_deregister(&pinfo->wdt_dev);
 		ambarella_wdt_stop(pinfo);
 		free_irq(pinfo->irq, pinfo);
-		platform_set_drvdata(pdev, NULL);
 		pwdtinfo = NULL;
 		kfree(pinfo);
 	}

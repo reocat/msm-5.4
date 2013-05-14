@@ -140,8 +140,6 @@ static int ambarella_adc_temper_remove(struct platform_device *pdev)
 
 	hwmon_device_unregister(hwmon);
 
-	platform_set_drvdata(pdev, NULL);
-
 	kfree(hwmon);
 
 	return retval;

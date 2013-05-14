@@ -1205,7 +1205,6 @@ static int ambfb_remove(struct platform_device *pdev)
 			ambfb_data->screen_fix.smem_start = 0;
 			ambfb_data->screen_fix.smem_len = 0;
 		}
-		platform_set_drvdata(pdev, NULL);
 		framebuffer_release(info);
 		mutex_unlock(&ambfb_data->lock);
 	}

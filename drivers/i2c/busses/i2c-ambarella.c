@@ -563,7 +563,6 @@ i2c_errorCode_free_irq:
 	free_irq(pinfo->irq, pinfo);
 
 i2c_errorCode_kzalloc:
-	platform_set_drvdata(pdev, NULL);
 	kfree(pinfo);
 
 i2c_errorCode_na:
@@ -583,8 +582,6 @@ static int ambarella_i2c_remove(struct platform_device *pdev)
 		errorCode = i2c_del_adapter(&pinfo->adap);
 
 		free_irq(pinfo->irq, pinfo);
-
-		platform_set_drvdata(pdev, NULL);
 
 		kfree(pinfo);
 	}

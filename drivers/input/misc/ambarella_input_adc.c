@@ -392,7 +392,6 @@ static int ambarella_input_adc_remove(struct platform_device *pdev)
 		if (pinfo->support_irq)
 			free_irq(pinfo->irq, pinfo);
 		pinfo->pcontroller_info->close();
-		platform_set_drvdata(pdev, NULL);
 		cancel_delayed_work(&pinfo->detect_adc);
 		flush_workqueue(pinfo->workqueue);
 		destroy_workqueue(pinfo->workqueue);

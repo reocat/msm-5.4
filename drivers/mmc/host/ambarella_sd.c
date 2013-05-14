@@ -2091,8 +2091,6 @@ static int ambarella_sd_remove(struct platform_device *pdev)
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo) {
-		platform_set_drvdata(pdev, NULL);
-
 		free_irq(pinfo->irq, pinfo);
 
 		for (i = 0; i < pinfo->pcontroller->num_slots; i++) {

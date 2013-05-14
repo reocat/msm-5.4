@@ -477,7 +477,6 @@ static int ambarella_ir_probe(struct platform_device *pdev)
 	goto ir_errorCode_na;
 
 ir_errorCode_free_platform:
-	platform_set_drvdata(pdev, NULL);
 ir_errorCode_pinfo:
 	kfree(pirinfo);
 
@@ -494,7 +493,6 @@ static int ambarella_ir_remove(struct platform_device *pdev)
 
 	if (pirinfo) {
 		free_irq(pirinfo->irq, pirinfo);
-		platform_set_drvdata(pdev, NULL);
 		kfree(pirinfo);
 	}
 

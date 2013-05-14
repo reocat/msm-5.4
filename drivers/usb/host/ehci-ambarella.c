@@ -200,7 +200,6 @@ static int ehci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 	ambarella_stop_ehc(amb_ehci);
-	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }

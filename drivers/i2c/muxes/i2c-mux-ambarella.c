@@ -102,7 +102,6 @@ static int ambarella_mux_remove(struct platform_device *pdev)
 	mux = platform_get_drvdata(pdev);
 	if (mux) {
 		i2c_del_mux_adapter(mux->adap);
-		platform_set_drvdata(pdev, NULL);
 		i2c_put_adapter(mux->parent);
 		kfree(mux);
 	}

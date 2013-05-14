@@ -348,7 +348,6 @@ static int ambrtc_remove(struct platform_device *pdev)
 	struct rtc_device *rtc = platform_get_drvdata(pdev);
 
 	if (rtc) {
-		platform_set_drvdata(pdev, NULL);
 		rtc_device_unregister(rtc);
 	}
 

@@ -1096,7 +1096,6 @@ crypto_errCode_free_aes_irq:
 	free_irq(pinfo->aes_irq, pinfo);
 
 crypto_errCode_kzalloc:
-	platform_set_drvdata(pdev, NULL);
 	kfree(pinfo);
 
 crypto_errCode_na:
@@ -1124,7 +1123,6 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 		}
 		free_irq(pinfo->aes_irq, pinfo);
 		free_irq(pinfo->des_irq, pinfo);
-		platform_set_drvdata(pdev, NULL);
 		kfree(pinfo);
 	}
 	dev_notice(&pdev->dev, "%s removed.\n", ambdev_name);
