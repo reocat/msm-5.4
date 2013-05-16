@@ -28,42 +28,38 @@
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/gic.h>
 #include <asm/gpio.h>
+#include <asm/system_info.h>
 
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
+#include <mach/common.h>
 
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
 
 #include <linux/i2c.h>
-#include <linux/i2c/ak4183.h>
-#include <linux/i2c/cy8ctmg.h>
 
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
 #include <plat/ambinput.h>
-#include <plat/dma.h>
+#include <plat/ambcache.h>
+
 #include "board-device.h"
 
-#if (AUDIO_CODEC_INSTANCES == 1)
-static struct platform_device ambarella_auc_codec0 = {
-	.name		= "a2auc-codec",
-	.id		= -1,
-};
-#endif
+#include <plat/dma.h>
+
+#include <linux/input.h>
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
 	&ambarella_ahci0,
-#endif
-#if (AUDIO_CODEC_INSTANCES == 1)
-	&ambarella_auc_codec0,
 #endif
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
@@ -95,13 +91,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_ohci0,
 #endif
 	&ambarella_pcm0,
-#ifdef CONFIG_HAVE_PWM
-	&ambarella_pwm_platform_device0,
-	&ambarella_pwm_platform_device1,
-	&ambarella_pwm_platform_device2,
-	&ambarella_pwm_platform_device3,
-	&ambarella_pwm_platform_device4,
-#endif
 	&ambarella_rtc0,
 	&ambarella_sd0,
 #if (SD_INSTANCES >= 2)
@@ -132,37 +121,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 	&ambarella_wdt0,
 	&ambarella_dma,
-};
-
-/* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-#if (SPI_INSTANCES >= 2)
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	}
-#endif
 };
 
 /* ==========================================================================*/
@@ -212,9 +170,6 @@ static void __init ambarella_init_generic(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
-
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 
@@ -237,5 +192,9 @@ MACHINE_START(AMBARELLA, "Ambarella Media SoC")
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_generic,
 	.restart	= ambarella_restart_machine,
+#if defined(CONFIG_ARM_GIC)
+	.smp		= smp_ops(ambarella_smp_ops),
+	.handle_irq	= gic_handle_irq,
+#endif
 MACHINE_END
 
