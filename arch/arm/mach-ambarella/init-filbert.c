@@ -270,8 +270,8 @@ static void __init ambarella_init_filbert(void)
 MACHINE_START(FILBERT, "Filbert")
 	.atag_offset	= 0x100,
 	.restart_mode	= 's',
-	.map_io		= ambarella_map_io,
 	.reserve	= ambarella_memblock_reserve,
+	.map_io		= ambarella_map_io,
 	.init_irq	= ambarella_init_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_filbert,

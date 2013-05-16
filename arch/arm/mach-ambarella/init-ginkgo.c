@@ -403,15 +403,15 @@ static void __init ambarella_init_ginkgo(void)
 MACHINE_START(GINKGO, "Ginkgo")
 	.atag_offset	= 0x100,
 	.restart_mode	= 's',
-	.map_io		= ambarella_map_io,
+	.smp		= smp_ops(ambarella_smp_ops),
 	.reserve	= ambarella_memblock_reserve,
+	.map_io		= ambarella_map_io,
 	.init_irq	= ambarella_init_irq,
 	.timer		= &ambarella_timer,
 	.init_machine	= ambarella_init_ginkgo,
-	.restart	= ambarella_restart_machine,
 #if defined(CONFIG_ARM_GIC)
-	.smp		= smp_ops(ambarella_smp_ops),
 	.handle_irq	= gic_handle_irq,
 #endif
+	.restart	= ambarella_restart_machine,
 MACHINE_END
 
