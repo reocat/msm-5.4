@@ -220,33 +220,100 @@ void ambcache_pli_range(void *addr, unsigned int size)
 EXPORT_SYMBOL(ambcache_pli_range);
 
 #ifdef CONFIG_OUTER_CACHE
+
+static u32 setup_l2_ctrl(void)
+{
+	u32 ctrl = 0;
+
+#ifdef CONFIG_CACHE_PL310_FULL_LINE_OF_ZERO
+	ctrl |= (1 << L2X0_AUX_CTRL_FULL_LINE_OF_ZERO_SHIFT);
+#endif
+	ctrl |= (1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT);
+
+#if (CHIP_REV == A8)
+	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+#else
+	ctrl |= (0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+#endif
+	ctrl |= (1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
+	ctrl |= (1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
+
+#ifdef CONFIG_CACHE_PL310_EARLY_BRESP
+	ctrl |= (1 << L2X0_AUX_CTRL_EARLY_BRESP_SHIFT);
+#endif
+
+	return ctrl;
+}
+
+static void setup_l2_prefetch_ctrl(void)
+{
+	u32 ctrl = 0;
+
+	ctrl = readl(ambcache_l2_base + L2X0_PREFETCH_CTRL);
+
+	ctrl &= ~L2X0_PREFETCH_CTRL_PREFETCH_OFFSET_MASK;
+	ctrl |= (CONFIG_CACHE_PL310_PREFETCH_OFFSET <<
+		 L2X0_PREFETCH_CTRL_PREFETCH_OFFSET_SHIFT);
+
+#ifdef CONFIG_CACHE_PL310_DOUBLE_LINEFILL
+	ctrl |= (1 << L2X0_PREFETCH_CTRL_DOUBLE_LINEFILL_SHIFT);
+#endif
+	writel(ctrl, ambcache_l2_base + L2X0_PREFETCH_CTRL);
+}
+
+/*
+ * The FULL LINE OF ZERO feature mandates the following programming sequence
+ *
+ *   1. Enable the feature in PL310 controller
+ *   2. Enable PL310 controller
+ *   3. Enable the feature in Cortex AUX CONTROL co-processor register
+ *
+ * So this function should be called only after lx20_init(), and since it's
+ * a per-core setting.  This bit should be enabled on all the cores.
+ */
+static void setup_full_line_of_zero(void *dummy)
+{
+#ifdef CONFIG_CACHE_PL310_FULL_LINE_OF_ZERO
+	u32 val;
+
+	/* read aux control register */
+	asm volatile( "mrc	p15, 0, %0, c1, c0, 1" : "=r" (val));
+
+	/* set Full Line of Zero to 1 */
+	val |= 0x8;
+
+        /* write aux control register */
+	asm volatile( "mcr	p15, 0, %0, c1, c0, 1" : : "r" (val));
+#endif
+}
+
+
 /* ==========================================================================*/
 void ambcache_l2_enable_raw()
 {
-	if (!outer_is_enabled()) {
+	if (outer_is_enabled())
+		return;
+
 #if (CHIP_REV == I1)
-		amba_writel((APB_BASE + 0x160200), 0x1);
+	amba_writel((APB_BASE + 0x160200), 0x1);
 #endif
+
 #ifdef CONFIG_CACHE_PL310
-		if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) !=
-			0x00000120) {
-			writel(0x00000120, (ambcache_l2_base +
-				L2X0_DATA_LATENCY_CTRL));
-			l2x0_init(ambcache_l2_base,
-				((1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT) |
-				(0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT) |
-#if (CHIP_REV == A8)
-				(0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT) |
-#else
-				(0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT) |
+	if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) != 0x00000120) {
+
+		u32 ctrl = setup_l2_ctrl();
+
+		writel(0x00000120, (ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
+
+		setup_l2_prefetch_ctrl();
+
+		l2x0_init(ambcache_l2_base, ctrl, L2X0_AUX_CTRL_MASK);
+
+		on_each_cpu(setup_full_line_of_zero, (void*)0, 1);
+	} else
 #endif
-				(1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT) |
-				(1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT)),
-				L2X0_AUX_CTRL_MASK);
-		} else
-#endif
-			outer_enable();
-	}
+		outer_enable();
 }
 EXPORT_SYMBOL(ambcache_l2_enable_raw);
 
