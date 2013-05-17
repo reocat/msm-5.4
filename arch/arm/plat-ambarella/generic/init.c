@@ -197,10 +197,6 @@ void ambarella_restart_machine(char mode, const char *cmd)
 	local_irq_disable();
 	local_fiq_disable();
 	flush_cache_all();
-	__raw_writel(0x02, (volatile void __iomem *)SOFT_RESET_REG);
-#if(CHIP_REV == S2)
-	__raw_writel(0x01, (volatile void __iomem *)SOFT_RESET_REG);
-#else
-	__raw_writel(0x03, (volatile void __iomem *)SOFT_RESET_REG);
-#endif
+	amba_writel(SOFT_RESET_REG, 0x2);
+	amba_writel(SOFT_RESET_REG, 0x3);
 }
