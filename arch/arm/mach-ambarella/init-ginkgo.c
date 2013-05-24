@@ -367,6 +367,43 @@ static void __init ambarella_init_ginkgo(void)
 		}
 	}
 
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_ATB) {
+			ambarella_platform_sd_controller0.max_clock = 128000000;
+			ambarella_platform_sd_controller0.slot[0].default_caps |=
+				(MMC_CAP_8_BIT_DATA);
+			ambarella_platform_sd_controller0.slot[0].private_caps |=
+				(AMBA_SD_PRIVATE_CAPS_VDD_18 |
+				AMBA_SD_PRIVATE_CAPS_DDR);
+			ambarella_platform_sd_controller0.slot[0].set_bus_timing =
+				ginkgo_ipcam_sd_set_bus_timing;
+			ambarella_platform_sd_controller1.max_clock = 48000000;
+			ambarella_platform_sd_controller1.slot[0].private_caps |=
+				(AMBA_SD_PRIVATE_CAPS_VDD_18 |
+				AMBA_SD_PRIVATE_CAPS_DDR);
+			ambarella_platform_sd_controller1.slot[0].set_bus_timing =
+				ginkgo_ipcam_sdio_set_bus_timing;
+
+			/* Config USB over-curent protection */
+			ambarella_board_generic.uhc_use_ocp = 0x1;
+
+			/* Register audio codec
+			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
+			 * used as I2S signals, so we need to prevent
+			 * them from be modified by SPI driver */
+			ambarella_spi0_cs_pins[1] = -1;
+			ambarella_spi0_cs_pins[2] = GPIO(91);
+			ambarella_spi0_cs_pins[3] = -1;
+			ambarella_spi0_cs_pins[4] = -1;
+			ambarella_spi0_cs_pins[5] = -1;
+			ambarella_spi0_cs_pins[6] = -1;
+			ambarella_spi0_cs_pins[7] = -1;
+
+			platform_device_register(&ambarella_rtc0);
+
+			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
+			use_bub_default = 0;
+	}
+
 	if (use_bub_default) {
 		/* Config USB over-curent protection */
 		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
