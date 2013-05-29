@@ -23,10 +23,12 @@
 
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
+#include <linux/ethtool.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
+#include <asm/system_info.h>
 #include <asm/pmu.h>
 
 #include <plat/ambcache.h>
@@ -78,11 +80,39 @@ static void __init ambarella_init_hyacinth(void)
 	ambarella_eth0_platform_info.default_rx_ring_size = 64;
 	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
 
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
+
+		int rev = AMBARELLA_BOARD_REV(system_rev);
+		int vendor = (rev & 0xff0) >> 4;
+		int board = rev & 0xf;
+
+		printk("Hyacinth_0: vendor 0x%02x, board 0x%01x\n", vendor, board);
+
+		switch (vendor) {
+		case 0x48:
+		    platform_device_register(&ambarella_uart2);
+
+		    /* Phy-less, fixed-link */
+		    ambarella_eth0_platform_info.mii_fixed_speed = SPEED_1000;
+		    ambarella_eth0_platform_info.mii_fixed_duplex = DUPLEX_FULL;
+		    break;
+
+		case 0x4D:
+		    platform_device_register(&ambarella_uart2);
+		    platform_device_register(&ambarella_uart3);
+		    break;
+
+		default:
+		    break;
+		}
+	}
+
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
+
 }
 
 extern struct smp_operations ambarella_smp_ops;
