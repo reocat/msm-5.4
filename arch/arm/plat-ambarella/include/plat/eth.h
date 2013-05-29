@@ -51,6 +51,8 @@ struct ambarella_eth_platform_info {
 	struct ambarella_gpio_io_info		mii_reset;
 	u32					mii_retry_limit;
 	u32					mii_retry_tmo;
+	u32					mii_fixed_speed;
+	u32					mii_fixed_duplex;
 
 	u32					default_tx_ring_size;
 	u32					default_rx_ring_size;
@@ -71,6 +73,8 @@ struct ambarella_eth_platform_info {
 	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm); \
 	module_param_cb(eth##id##_mii_retry_limit, &param_ops_uint, &(arg.mii_retry_limit), perm); \
 	module_param_cb(eth##id##_mii_retry_tmo, &param_ops_uint, &(arg.mii_retry_tmo), perm); \
+	module_param_cb(eth##id##_mii_fixed_speed, &param_ops_uint, &(arg.mii_fixed_speed), perm); \
+	module_param_cb(eth##id##_mii_fixed_duplex, &param_ops_uint, &(arg.mii_fixed_duplex), perm); \
 	module_param_cb(eth##id##_supported, &param_ops_uint, &(arg.default_supported), perm);
 
 /* ==========================================================================*/

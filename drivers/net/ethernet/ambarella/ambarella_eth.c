@@ -596,13 +596,33 @@ static int ambeth_phy_start(struct ambeth_info *lp)
 	spin_lock_irqsave(&lp->lock, flags);
 	phydev = lp->phydev;
 	spin_unlock_irqrestore(&lp->lock, flags);
-	if (phydev)
+	if (phydev) {
 		goto ambeth_init_phy_exit;
+	}
 
 	ndev = lp->ndev;
 	lp->oldlink = PHY_DOWN;
 	lp->oldspeed = 0;
 	lp->oldduplex = -1;
+
+	/* Fixed Link mode: we allow all valid mii_fixed_speed,
+	   event HW can not support the speed. */
+	switch (lp->platform_info->mii_fixed_speed) {
+	case SPEED_1000:
+	case SPEED_100:
+	case SPEED_10:
+		lp->oldlink = PHY_RUNNING;
+		lp->oldspeed = lp->platform_info->mii_fixed_speed;
+		lp->oldduplex = lp->platform_info->mii_fixed_duplex;
+		ambhw_set_link_mode_speed(lp);
+		dev_notice(&lp->ndev->dev, "Fixed Link - %d/%s\n", lp->oldspeed,
+			((lp->oldduplex == DUPLEX_FULL) ? "Full" : "Half"));
+		netif_carrier_on(ndev);
+		goto ambeth_init_phy_exit;
+		break;
+	default:
+		break;
+	}
 
 	phy_addr = lp->platform_info->mii_id;
 	if ((phy_addr >= 0) && (phy_addr < PHY_MAX_ADDR)) {
@@ -680,9 +700,11 @@ static void ambeth_phy_stop(struct ambeth_info *lp)
 	spin_lock_irqsave(&lp->lock, flags);
 	phydev = lp->phydev;
 	lp->phydev = NULL;
+	lp->oldlink = PHY_DOWN;
 	spin_unlock_irqrestore(&lp->lock, flags);
-	if (phydev)
+	if (phydev) {
 		phy_disconnect(phydev);
+	}
 }
 
 static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
@@ -1670,13 +1692,55 @@ static int ambeth_get_settings(struct net_device *ndev,
 	}
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock(&lp->lock);
 	if (lp->phydev) {
 		errorCode = phy_ethtool_gset(lp->phydev, ecmd);
 	} else {
 		errorCode = -EINVAL;
+		if (lp->oldlink == PHY_RUNNING) {
+			ethtool_cmd_speed_set(ecmd, lp->oldspeed);
+			ecmd->duplex = lp->oldduplex;
+			ecmd->port = PORT_MII;
+			ecmd->phy_address = 0xFF;
+			ecmd->transceiver = XCVR_EXTERNAL;
+			ecmd->autoneg = AUTONEG_DISABLE;
+			ecmd->supported = SUPPORTED_MII;
+			switch (lp->oldspeed) {
+			case SPEED_1000:
+				if (lp->oldduplex == DUPLEX_FULL) {
+					ecmd->supported |=
+						SUPPORTED_1000baseT_Full;
+				} else {
+					ecmd->supported |=
+						SUPPORTED_1000baseT_Half;
+				}
+				errorCode = 0;
+				break;
+			case SPEED_100:
+				if (lp->oldduplex == DUPLEX_FULL) {
+					ecmd->supported |=
+						SUPPORTED_100baseT_Full;
+				} else {
+					ecmd->supported |=
+						SUPPORTED_100baseT_Half;
+				}
+				errorCode = 0;
+				break;
+			case SPEED_10:
+				if (lp->oldduplex == DUPLEX_FULL) {
+					ecmd->supported |=
+						SUPPORTED_10baseT_Full;
+				} else {
+					ecmd->supported |=
+						SUPPORTED_10baseT_Half;
+				}
+				errorCode = 0;
+				break;
+			default:
+				break;
+			}
+			ecmd->advertising = ecmd->supported;
+		}
 	}
-	spin_unlock(&lp->lock);
 
 ambeth_get_settings_exit:
 	return errorCode;
@@ -1694,19 +1758,17 @@ static int ambeth_set_settings(struct net_device *ndev,
 	}
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock(&lp->lock);
 	if (lp->phydev) {
 		errorCode = phy_ethtool_sset(lp->phydev, ecmd);
 	} else {
 		errorCode = -EINVAL;
 	}
-	spin_unlock(&lp->lock);
 
 ambeth_get_settings_exit:
 	return errorCode;
 }
 
-static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
+static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int ecmd)
 {
 	int					errorCode = 0;
 	struct ambeth_info			*lp;
@@ -1717,13 +1779,11 @@ static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 	}
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock(&lp->lock);
 	if (lp->phydev) {
-		errorCode = phy_mii_ioctl(lp->phydev, ifr, cmd);
+		errorCode = phy_mii_ioctl(lp->phydev, ifr, ecmd);
 	} else {
 		errorCode = -EINVAL;
 	}
-	spin_unlock(&lp->lock);
 
 ambeth_get_settings_exit:
 	return errorCode;

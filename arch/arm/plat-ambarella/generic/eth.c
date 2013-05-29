@@ -88,6 +88,8 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	},
 	.mii_retry_limit	= 200,
 	.mii_retry_tmo		= 10,
+	.mii_fixed_speed	= SPEED_UNKNOWN,
+	.mii_fixed_duplex	= DUPLEX_FULL,
 	.default_tx_ring_size	= 32,
 	.default_rx_ring_size	= 64,
 	.default_dma_bus_mode	= (ETH_DMA_BUS_MODE_FB |
@@ -189,6 +191,8 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 	},
 	.mii_retry_limit	= 200,
 	.mii_retry_tmo		= 10,
+	.mii_fixed_speed	= SPEED_UNKNOWN,
+	.mii_fixed_duplex	= DUPLEX_FULL,
 	.default_tx_ring_size	= 32,
 	.default_rx_ring_size	= 64,
 	.default_dma_bus_mode	= ETH_DMA_BUS_MODE_FB |
