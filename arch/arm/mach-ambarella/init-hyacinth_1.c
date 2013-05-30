@@ -27,6 +27,7 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
+#include <asm/system_info.h>
 #include <asm/pmu.h>
 
 #include <plat/ambcache.h>
@@ -68,6 +69,29 @@ static void __init ambarella_init_hyacinth(void)
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
+
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
+
+		int rev = AMBARELLA_BOARD_REV(system_rev);
+		int vendor = (rev & 0xff0) >> 4;
+		int board = rev & 0xf;
+
+		printk("Hyacinth_1: vendor 0x%02x, board 0x%01x\n", vendor, board);
+
+		switch (vendor) {
+		case 0x48:
+		    platform_device_register(&ambarella_uart2);
+		    break;
+
+		case 0x4D:
+		    platform_device_register(&ambarella_uart2);
+		    platform_device_register(&ambarella_uart3);
+		    break;
+
+		default:
+		    break;
+		}
+	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
