@@ -346,20 +346,35 @@ EXPORT_SYMBOL(ambcache_l2_enable);
 
 int ambcache_l2_disable()
 {
+	int ret_val = 0;
+#if (!defined(CONFIG_SMP) || defined(CONFIG_HOTPLUG_CPU))
 	unsigned long flags;
+#endif
 
 	if (outer_is_enabled()) {
+#if defined(CONFIG_SMP)
+#if defined(CONFIG_HOTPLUG_CPU)
 		disable_nonboot_cpus();
 		local_irq_save(flags);
 		ambcache_l2_disable_raw();
 		local_irq_restore(flags);
 		enable_nonboot_cpus();
-	}
-#if (CHIP_REV == I1)
-	amba_writel((APB_BASE + 0x160200), 0x0);
 #endif
+#else
+		local_irq_save(flags);
+		ambcache_l2_disable_raw();
+		local_irq_restore(flags);
+#endif
+	}
+	if (outer_is_enabled()) {
+		ret_val = -1;
+	} else {
+#if (CHIP_REV == I1)
+		amba_writel((APB_BASE + 0x160200), 0x0);
+#endif
+	}
 
-	return outer_is_enabled() ? -1 : 0;
+	return ret_val;
 }
 EXPORT_SYMBOL(ambcache_l2_disable);
 

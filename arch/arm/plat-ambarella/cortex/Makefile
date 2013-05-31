@@ -21,4 +21,4 @@
 #
 
 obj-$(CONFIG_SMP)				+= smp.o headsmp.o
-obj-$(CONFIG_HOTPLUG_CPU)			+= hotplug.o
+

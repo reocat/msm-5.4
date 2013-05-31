@@ -177,6 +177,8 @@ static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,		0,	3,	400,		600}}},
 	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,			0,	3,	0,		200}}},
 
+	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
+
 	{AMBINPUT_END},
 };
 

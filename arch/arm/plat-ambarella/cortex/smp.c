@@ -48,14 +48,16 @@ extern void ambarella_secondary_startup(void);
 
 static void __iomem *scu_base = __io(AMBARELLA_VA_SCU_BASE);
 static DEFINE_SPINLOCK(boot_lock);
-
+#ifdef CONFIG_HOTPLUG_CPU
+static DECLARE_COMPLETION(cpu_killed);
+#endif
 static unsigned int smp_max_cpus = 0;
 #ifdef CONFIG_OUTER_CACHE
 static unsigned int smp_l2_mode = 0;
 #endif
 
 /* ==========================================================================*/
-static void __cpuinit ambarella_secondary_init(unsigned int cpu)
+static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
 {
 	gic_secondary_init(0);
 
@@ -67,7 +69,8 @@ static void __cpuinit ambarella_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
-static int __cpuinit ambarella_boot_secondary(unsigned int cpu, struct task_struct *idle)
+static int __cpuinit ambarella_smp_boot_secondary(unsigned int cpu,
+	struct task_struct *idle)
 {
 	u32					timeout = 100000;
 	u32					*phead_address;
@@ -180,9 +183,94 @@ u32 arch_smp_resume(u32 level)
 	return 0;
 }
 
+/* ==========================================================================*/
+static inline void cpu_enter_lowpower(void)
+{
+	unsigned int v;
+
+	flush_cache_all();
+	asm volatile(
+	"	mrc	p15, 0, %0, c1, c0, 1\n"
+	"	bic	%0, %0, #(1 << 6)\n"
+	"	bic	%0, %0, #(1 << 0)\n"
+	"	mcr	p15, 0, %0, c1, c0, 1\n"
+	"	mrc	p15, 0, %0, c1, c0, 0\n"
+	"	bic	%0, %0, #(1 << 2)\n"
+	"	mcr	p15, 0, %0, c1, c0, 0\n"
+		: "=&r" (v)
+		: "r" (0)
+		: "cc");
+}
+
+static inline void cpu_leave_lowpower(void)
+{
+	unsigned int v;
+
+	asm volatile(
+	"	mrc	p15, 0, %0, c1, c0, 0\n"
+	"	orr	%0, %0, #(1 << 2)\n"
+	"	mcr	p15, 0, %0, c1, c0, 0\n"
+	"	mrc	p15, 0, %0, c1, c0, 1\n"
+	"	orr	%0, %0, #(1 << 6)\n"
+	"	orr	%0, %0, #(1 << 0)\n"
+	"	mcr	p15, 0, %0, c1, c0, 1\n"
+		: "=&r" (v)
+		:
+		: "cc");
+}
+
+#ifdef CONFIG_HOTPLUG_CPU
+static int ambarella_smp_cpu_kill(unsigned int cpu)
+{
+	return wait_for_completion_timeout(&cpu_killed, 5000);
+}
+
+static void ambarella_smp_cpu_die(unsigned int cpu)
+{
+	u32					*phead_address;
+
+	phead_address = get_ambarella_bstmem_head();
+	BUG_ON(phead_address == (u32 *)AMB_BST_INVALID);
+
+	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
+	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
+	flush_cache_all();
+	complete(&cpu_killed);
+
+	cpu_enter_lowpower();
+	for (;;) {
+		asm volatile("wfi" : : : "memory", "cc");
+		phead_address[PROCESSOR_STATUS_0 + cpu]++;
+		if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
+			phead_address[PROCESSOR_START_0 + cpu] =
+				AMB_BST_INVALID;
+			break;
+		}
+	}
+	cpu_leave_lowpower();
+}
+
+static int ambarella_smp_cpu_disable(unsigned int cpu)
+{
+	u32 *phead_address = get_ambarella_bstmem_head();
+
+	if (phead_address == (u32 *)AMB_BST_INVALID)
+		return -EPERM;
+	if (cpu > (PROCESSOR_STATUS_3 - PROCESSOR_STATUS_0))
+		return -EPERM;
+
+	return cpu == 0 ? -EPERM : 0;
+}
+#endif
+
 struct smp_operations ambarella_smp_ops __initdata = {
 	.smp_init_cpus		= ambarella_smp_init_cpus,
 	.smp_prepare_cpus	= ambarella_smp_prepare_cpus,
-	.smp_secondary_init	= ambarella_secondary_init,
-	.smp_boot_secondary	= ambarella_boot_secondary,
+	.smp_secondary_init	= ambarella_smp_secondary_init,
+	.smp_boot_secondary	= ambarella_smp_boot_secondary,
+#ifdef CONFIG_HOTPLUG_CPU
+	.cpu_kill		= ambarella_smp_cpu_kill,
+	.cpu_die		= ambarella_smp_cpu_die,
+	.cpu_disable		= ambarella_smp_cpu_disable,
+#endif
 };
