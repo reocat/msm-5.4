@@ -4,7 +4,7 @@
  * @author Mahendra Lodha <mlodha@ambarella.com>
  * @author Rudi Rughoonundon <rudir@ambarella.com>
  * @date January 2012
- * @version 7183
+ * @version 7185
  *
  * @par Introduction:
  * The Ambarella A7S Hardware Abstraction Layer (ambhal) provides an API between
