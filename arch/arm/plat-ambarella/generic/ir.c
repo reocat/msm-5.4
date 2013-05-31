@@ -62,7 +62,9 @@ struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
 	.protocol		= AMBA_IR_PROTOCOL_NEC,
 	.debug			= 0,
 };
+#if defined(CONFIG_AMBARELLA_SYS_IR_CALL)
 AMBA_IR_PARAM_CALL(ambarella_platform_ir_controller0, 0644);
+#endif
 
 struct platform_device ambarella_ir0 = {
 	.name		= "ambarella-ir",

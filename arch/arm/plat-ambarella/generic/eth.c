@@ -109,7 +109,9 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	.default_mac_filter	= 0,
 	.is_enabled		= rct_is_eth_enabled,
 };
+#if defined(CONFIG_AMBARELLA_SYS_ETH_CALL)
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);
+#endif
 
 int __init ambarella_init_eth0(const u8 *mac_addr)
 {
@@ -205,7 +207,9 @@ struct ambarella_eth_platform_info ambarella_eth1_platform_info = {
 	.default_mac_filter	= 0,
 	.is_enabled		= eth1_is_enabled,
 };
+#if defined(CONFIG_AMBARELLA_SYS_ETH_CALL)
 AMBA_ETH_PARAM_CALL(1, ambarella_eth1_platform_info, 0644);
+#endif
 
 int __init ambarella_init_eth1(const u8 *mac_addr)
 {

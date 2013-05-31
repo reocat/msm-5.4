@@ -51,13 +51,13 @@
 
 /* ==========================================================================*/
 static int pm_debug_enable_timer_irq = 0;
-module_param(pm_debug_enable_timer_irq, int, 0644);
-
 static int pm_check_power_supply = 1;
-module_param(pm_check_power_supply, int, 0644);
-
 static int pm_force_power_on = 0;
+#if defined(CONFIG_AMBARELLA_SYS_PM_CALL)
+module_param(pm_debug_enable_timer_irq, int, 0644);
+module_param(pm_check_power_supply, int, 0644);
 module_param(pm_force_power_on, int, 0644);
+#endif
 
 /* ==========================================================================*/
 void ambarella_power_off(void)

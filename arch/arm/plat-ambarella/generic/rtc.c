@@ -172,6 +172,7 @@ u32 rtc_get_alat_time(void)
 #endif
 }
 
+#if defined(CONFIG_AMBARELLA_SYS_RTC_CALL)
 int rtc_set_pos(const char *val, const struct kernel_param *kp)
 {
 	u32					bak_curt;
@@ -202,6 +203,7 @@ static struct kernel_param_ops param_ops_rtcpos = {
 	.set = rtc_set_pos,
 	.get = NULL,
 };
+#endif
 
 struct ambarella_rtc_controller ambarella_platform_rtc_controller0 = {
 	.pos0		= 0x80,
@@ -219,8 +221,10 @@ struct ambarella_rtc_controller ambarella_platform_rtc_controller0 = {
 	.reset_delay	= 1,
 #endif
 };
+#if defined(CONFIG_AMBARELLA_SYS_RTC_CALL)
 AMBA_RTC_PARAM_CALL(0, ambarella_platform_rtc_controller0,
 	0644, param_ops_rtcpos);
+#endif
 
 struct platform_device ambarella_rtc0 = {
 	.name		= "ambarella-rtc",

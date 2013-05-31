@@ -22,7 +22,7 @@
 
 obj-y						+= ambasyncproc.o
 obj-y						+= ambcache.o
-obj-y						+= ambench.o
+obj-$(CONFIG_AMBARELLA_SUPPORT_AMBENCH)		+= ambench.o
 obj-y						+= ambevent.o
 obj-y						+= ambfb.o
 obj-y						+= ambsyncproc.o
@@ -31,6 +31,6 @@ obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
 obj-y						+= board.o
 obj-y						+= event.o
 obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= highres_timer.o
-obj-$(CONFIG_PLAT_AMBARELLA_S2)		+= uport_switcher.o
+obj-$(CONFIG_PLAT_AMBARELLA_S2)			+= uport_switcher.o
 obj-$(CONFIG_AMBARELLA_PMUSERENR_EN)		+= pmu.o
 

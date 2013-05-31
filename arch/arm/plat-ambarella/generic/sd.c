@@ -44,6 +44,7 @@
 /* ==========================================================================*/
 typedef void (*mmc_dc_fn)(struct mmc_host *host, unsigned long delay);
 
+#if defined(CONFIG_AMBARELLA_SYS_SD_CALL)
 int ambarella_sd_set_fixed_cd(const char *val, const struct kernel_param *kp)
 {
 	struct ambarella_sd_slot		*pslotinfo;
@@ -70,6 +71,7 @@ static struct kernel_param_ops param_ops_ambarella_sd_cdpos = {
 	.set = ambarella_sd_set_fixed_cd,
 	.get = param_get_int,
 };
+#endif
 
 /* ==========================================================================*/
 struct resource ambarella_sd0_resources[] = {
@@ -238,6 +240,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.support_pll_scaler	= 0,
 #endif
 };
+#if defined(CONFIG_AMBARELLA_SYS_SD_CALL)
 module_param_cb(sd0_max_block, &param_ops_uint,
 	&(ambarella_platform_sd_controller0.max_blk_mask), 0644);
 module_param_cb(sd0_max_clock, &param_ops_uint,
@@ -253,6 +256,7 @@ AMBA_SD_PARAM_CALL(0, 0, ambarella_platform_sd_controller0,
 #if (SD_HAS_INTERNAL_MUXER == 1)
 AMBA_SD_PARAM_CALL(0, 1, ambarella_platform_sd_controller0,
 	&param_ops_ambarella_sd_cdpos, 0644);
+#endif
 #endif
 
 struct platform_device ambarella_sd0 = {
@@ -397,6 +401,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 	.support_pll_scaler	= 0,
 #endif
 };
+#if defined(CONFIG_AMBARELLA_SYS_SD_CALL)
 module_param_cb(sd1_max_block, &param_ops_uint,
 	&(ambarella_platform_sd_controller1.max_blk_mask), 0644);
 module_param_cb(sd1_max_clock, &param_ops_uint,
@@ -409,6 +414,7 @@ module_param_cb(sd1_pwr_delay, &param_ops_uint,
 	&(ambarella_platform_sd_controller1.pwr_delay), 0644);
 AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd_controller1,
 	&param_ops_ambarella_sd_cdpos, 0644);
+#endif
 
 struct platform_device ambarella_sd1 = {
 	.name		= "ambarella-sd",

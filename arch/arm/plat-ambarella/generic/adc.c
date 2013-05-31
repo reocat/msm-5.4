@@ -650,7 +650,9 @@ struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
 
 	.scan_delay		= 20,
 };
+#if defined(CONFIG_AMBARELLA_SYS_ADC_CALL)
 AMBA_ADC_PARAM_CALL(ambarella_platform_adc_controller0, 0644);
+#endif
 
 struct resource ambarella_adc_resources[] = {
 	[0] = {

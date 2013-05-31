@@ -54,12 +54,14 @@ static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 #endif
 #endif
 
+#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 static int cache_check_start = 1;
 module_param(cache_check_start, int, 0644);
 static int cache_check_end = 0;
 module_param(cache_check_end, int, 0644);
 static int cache_check_fail_halt = 0;
 module_param(cache_check_fail_halt, int, 0644);
+#endif
 
 /* ==========================================================================*/
 void ambcache_clean_range(void *addr, unsigned int size)
@@ -73,6 +75,7 @@ void ambcache_clean_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 	if (cache_check_start && (vstart != (u32)addr)) {
 		pr_warn("%s start:0x%08x vs 0x%08x\n",
 			__func__, vstart, (u32)addr);
@@ -85,6 +88,7 @@ void ambcache_clean_range(void *addr, unsigned int size)
 		if (cache_check_fail_halt)
 			BUG();
 	}
+#endif
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 #endif
@@ -112,6 +116,7 @@ void ambcache_inv_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 	if (cache_check_start && (vstart != (u32)addr)) {
 		pr_warn("%s start:0x%08x vs 0x%08x\n",
 			__func__, vstart, (u32)addr);
@@ -124,6 +129,7 @@ void ambcache_inv_range(void *addr, unsigned int size)
 		if (cache_check_fail_halt)
 			BUG();
 	}
+#endif
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 	outer_inv_range(pstart, (pstart + size));
@@ -158,6 +164,7 @@ void ambcache_flush_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
+#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 	if (cache_check_start && (vstart != (u32)addr)) {
 		pr_warn("%s start:0x%08x vs 0x%08x\n",
 			__func__, vstart, (u32)addr);
@@ -170,6 +177,7 @@ void ambcache_flush_range(void *addr, unsigned int size)
 		if (cache_check_fail_halt)
 			BUG();
 	}
+#endif
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 
@@ -353,6 +361,7 @@ int ambcache_l2_disable()
 }
 EXPORT_SYMBOL(ambcache_l2_disable);
 
+#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 /* =========================Debug Only========================================*/
 int cache_l2_set_status(const char *val, const struct kernel_param *kp)
 {
@@ -382,5 +391,6 @@ static struct kernel_param_ops param_ops_cache_l2 = {
 	.get = cache_l2_get_status,
 };
 module_param_cb(cache_l2, &param_ops_cache_l2, &cache_l2_status, 0644);
+#endif
 #endif
 

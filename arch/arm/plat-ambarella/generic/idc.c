@@ -66,7 +66,9 @@ struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 #endif
 	.get_clock	= get_apb_bus_freq_hz,
 };
+#if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
 AMBA_IDC_PARAM_CALL(0, ambarella_idc0_platform_info, 0644);
+#endif
 
 struct platform_device ambarella_idc0 = {
 	.name		= "ambarella-i2c",
@@ -120,7 +122,9 @@ struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
 	.i2c_class	= I2C_CLASS_DDC,
 	.get_clock	= get_apb_bus_freq_hz,
 };
+#if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
 AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);
+#endif
 
 struct platform_device ambarella_idc1 = {
 	.name		= "ambarella-i2c",
@@ -155,7 +159,9 @@ struct ambarella_idc_platform_info ambarella_idc2_platform_info = {
 	.i2c_class	= DEFAULT_I2C_CLASS,
 	.get_clock	= get_apb_bus_freq_hz,
 };
+#if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
 AMBA_IDC_PARAM_CALL(2, ambarella_idc2_platform_info, 0644);
+#endif
 
 struct platform_device ambarella_idc2 = {
 	.name		= "ambarella-i2c",

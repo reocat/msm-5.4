@@ -168,6 +168,10 @@ config PLAT_AMBARELLA_SUPPORT_IR
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_ETH
+	bool
+	default n
+
 config PLAT_AMBARELLA_I1
 	bool
 	select PLAT_AMBARELLA_MEM_START_LOW
@@ -205,6 +209,7 @@ config PLAT_AMBARELLA_A2
 	select PLAT_AMBARELLA_WIRELESS
 	select PLAT_AMBARELLA_SUPPORT_UDC
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A2.
@@ -221,6 +226,7 @@ config PLAT_AMBARELLA_A5S
 	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
 	select PLAT_AMBARELLA_SUPPORT_UDC
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A5S.
@@ -236,6 +242,7 @@ config PLAT_AMBARELLA_A7
 	select PLAT_AMBARELLA_SUPPORT_I2C_MUX
 	select PLAT_AMBARELLA_SUPPORT_UDC
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A7.
@@ -267,6 +274,7 @@ config PLAT_AMBARELLA_I1_ARM11
 	select PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella I1 ARM11.
@@ -284,6 +292,7 @@ config PLAT_AMBARELLA_I1_CORTEX
 	select PLAT_AMBARELLA_DISABLE_8_16_ACCESS
 	select PLAT_AMBARELLA_ADD_REGISTER_LOCK
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select ARM_ERRATA_742230 if SMP
 	select ARM_ERRATA_742231 if SMP
 	select ARM_ERRATA_743622
@@ -310,6 +319,7 @@ config PLAT_AMBARELLA_S2_ARM11
 	select PLAT_AMBARELLA_S2
 	select PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella S2 ARM11.
@@ -325,6 +335,7 @@ config PLAT_AMBARELLA_S2_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_MMAP_AXI
 	select PLAT_AMBARELLA_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select ARM_ERRATA_764369 if SMP
 	select ARM_ERRATA_754322
 	select ARM_ERRATA_775420
@@ -348,6 +359,7 @@ config PLAT_AMBARELLA_A8_ARM11
 	select PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_IR
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	help
 	  Say Y here if you are using Ambarella A8 ARM11.
 
@@ -359,6 +371,7 @@ config PLAT_AMBARELLA_A8_CORTEX
 	select PLAT_AMBARELLA_SUPPORT_MMAP_AXI
 	select PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC
 	select PLAT_AMBARELLA_CORTEX
+	select PLAT_AMBARELLA_SUPPORT_ETH
 	select PLAT_AMBARELLA_PPM_UNCACHED
 	select PLAT_AMBARELLA_SUPPORT_DIRECTMAP_PPM
 	select ARM_ERRATA_754322
@@ -408,49 +421,125 @@ config AMBARELLA_PMUSERENR_EN
 	help
 	  Enable userspcae access to PMU
 
+menu "Sys file system support"
+
+config AMBARELLA_SYS_BOARD_CALL
+	bool "Support Board Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say Y here.
+
+config AMBARELLA_SYS_ADC_CALL
+	bool "Support ADC Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_CACHE_CALL
+	bool "Support Cache Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_BAPI_CALL
+	bool "Support BAPI Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_ETH_CALL
+	bool "Support ETH Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_FIO_CALL
+	bool "Support FIO Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_IDC_CALL
+	bool "Support IDC Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_IR_CALL
+	bool "Support IR Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_PM_CALL
+	bool "Support Power Management Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_RTC_CALL
+	bool "Support RTC Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_SD_CALL
+	bool "Support SD Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+config AMBARELLA_SYS_SPI_CALL
+	bool "Support SPI Configuration"
+	default n
+	depends on SYSFS
+	help
+	  If you are not sure, say N here.
+
+endmenu
+
 menu "Proc file system support"
 
-config AMBARELLA_ADC_PROC
-	bool "Ambarella ADC proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/adc for Ambarella ADC access.
-
-	  If you are not sure, say N here.
-
 config AMBARELLA_PWM_PROC
-	bool "Ambarella PWM proc support"
+	bool "Suport Ambarella PWM proc"
 	default n
 	depends on PROC_FS
 	---help---
-	  Add /proc/ambarella/pwm for Ambarella PWM access.
-
-	  If you are not sure, say N here.
-
-config AMBARELLA_DMA_PROC
-	bool "Ambarella DMA proc support"
-	default n
-	depends on PROC_FS
-	---help---
-	  Add /proc/ambarella/dma for Ambarella DMA debug.
+	  /proc/ambarella/pwm
 
 	  If you are not sure, say N here.
 
 config AMBARELLA_PLL_PROC
-	bool "Ambarella PLL proc support"
+	bool "Suport Ambarella PLL proc"
 	default n
 	depends on PROC_FS
 	---help---
-	  Add /proc/ambarella/pll for Ambarella PLL access.
+	  /proc/ambarella/corepll
+	  /proc/ambarella/mode
+	  /proc/ambarella/performance
 
 	  If you are not sure, say N here.
 
-config AMBARELLA_SKIP_BOARD_CALL
-	bool "Ambarella skip board call"
+config AMBARELLA_SUPPORT_AMBENCH
+	bool "Suport Ambarella Test (ambench)"
 	default n
-	---help---
-	  Skip adding sysfs_params of gpio and other devices.
+	depends on PROC_FS
+	help
+	  /proc/ambarella/ambench
+
+	  If you are not sure, say N here.
+
 endmenu
 
 menu "PPM Configuration"

@@ -60,13 +60,15 @@ extern int in_suspend;
 
 /* ==========================================================================*/
 static u32 sys_bapi_head = 0;
-module_param_cb(bapi_head, &param_ops_uint, &sys_bapi_head, 0444);
 static u32 sys_bapi_reboot = 0;
-module_param_cb(bapi_reboot, &param_ops_uint, &sys_bapi_reboot, 0444);
 static u32 sys_bapi_debug = 0;
-module_param_cb(bapi_debug, &param_ops_uint, &sys_bapi_debug, 0444);
 static u32 sys_bapi_aoss = 0;
+#if defined(CONFIG_AMBARELLA_SYS_BAPI_CALL)
+module_param_cb(bapi_head, &param_ops_uint, &sys_bapi_head, 0444);
+module_param_cb(bapi_reboot, &param_ops_uint, &sys_bapi_reboot, 0444);
+module_param_cb(bapi_debug, &param_ops_uint, &sys_bapi_debug, 0444);
 module_param_cb(bapi_aoss, &param_ops_uint, &sys_bapi_aoss, 0444);
+#endif
 
 /* ==========================================================================*/
 static int __init parse_mem_tag_bapi(const struct tag *tag)

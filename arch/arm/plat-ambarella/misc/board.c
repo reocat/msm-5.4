@@ -488,6 +488,8 @@ struct ambarella_board_info ambarella_board_generic = {
 	},
 	.uhc_use_ocp	= 0x3,
 };
+#if defined(CONFIG_AMBARELLA_SYS_BOARD_CALL)
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);
+#endif
 EXPORT_SYMBOL(ambarella_board_generic);
 

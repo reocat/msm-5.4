@@ -50,10 +50,11 @@ static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
 
 static u32 fio_owner = SELECT_FIO_FREE;
-module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
-
 int fio_default_owner = SELECT_FIO_FREE;
+#if defined(CONFIG_AMBARELLA_SYS_FIO_CALL)
+module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
 module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
+#endif
 
 static DEFINE_SPINLOCK(fio_sd0_int_lock);
 static u32 fio_sd_int = 0;
