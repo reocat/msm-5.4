@@ -48,7 +48,9 @@
 
 /* ==========================================================================*/
 #ifdef CONFIG_OUTER_CACHE
+#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 static u32 cache_l2_status = 0;
+#endif
 #ifdef CONFIG_CACHE_PL310
 static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 #endif
