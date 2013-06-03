@@ -411,7 +411,6 @@ config AMBARELLA_SUPPORT_CLOCKSOURCE
 config AMBARELLA_SUPPORT_BAPI
 	bool "Suport BAPI"
 	default n
-	select ARCH_HAS_SWSUSP_WRITE if HIBERNATION
 	help
 	  If you are not sure, say N here.
 

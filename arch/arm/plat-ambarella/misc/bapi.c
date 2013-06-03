@@ -348,44 +348,6 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 }
 
 /* ==========================================================================*/
-#if defined(CONFIG_ARCH_HAS_SWSUSP_WRITE)
-void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
-{
-	struct ambarella_bapi_aoss_page_info_s	page_info;
-
-	page_info.src = __pfn_to_phys(src_pfn);
-	page_info.dst = __pfn_to_phys(dst_pfn);
-
-	ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_COPY_PAGE, &page_info);
-}
-
-static void ambarella_arch_swsusp_return(void)
-{
-	in_suspend = 0;
-	swsusp_arch_restore_cpu();
-}
-
-int arch_swsusp_write(unsigned int flags)
-{
-	int					retval = 0;
-	struct ambarella_bapi_reboot_info_s	reboot_info;
-
-	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
-	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_HIBERNATE;
-	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
-		&reboot_info);
-	if (retval)
-		goto arch_swsusp_write_exit;
-
-	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE,
-		ambarella_arch_swsusp_return);
-
-arch_swsusp_write_exit:
-	return retval;
-}
-#endif
-
-/* ==========================================================================*/
 static int __init ambarella_bapi_init(void)
 {
 	int					retval = 0;

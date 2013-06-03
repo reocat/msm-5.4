@@ -35,6 +35,7 @@
 #include <asm/cacheflush.h>
 #include <asm/io.h>
 #include <asm/system.h>
+#include <asm/suspend.h>
 
 #include <mach/board.h>
 #include <mach/hardware.h>
@@ -50,11 +51,9 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-static int pm_debug_enable_timer_irq = 0;
 static int pm_check_power_supply = 1;
 static int pm_force_power_on = 0;
 #if defined(CONFIG_AMBARELLA_SYS_PM_CALL)
-module_param(pm_debug_enable_timer_irq, int, 0644);
 module_param(pm_check_power_supply, int, 0644);
 module_param(pm_force_power_on, int, 0644);
 #endif
@@ -154,66 +153,22 @@ ambarella_pm_check_exit:
 }
 
 /* ==========================================================================*/
+static int ambarella_pm_cpu_do_idle(unsigned long unused)
+{
+	cpu_do_idle();
+
+	return 0;
+}
+
 static int ambarella_pm_enter_standby(void)
 {
 	int					retval = 0;
-	struct irq_desc				*pm_desc = NULL;
-	struct irq_chip				*pm_chip = NULL;
 	unsigned long				flags;
 
 	if (ambarella_pm_pre(&flags, 1, 1))
 		BUG();
 
-	if (pm_debug_enable_timer_irq) {
-#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-		pm_desc = irq_to_desc(TIMER6_IRQ);
-#else
-		pm_desc = irq_to_desc(TIMER1_IRQ);
-#endif
-		if (pm_desc)
-			pm_chip = irq_desc_get_chip(pm_desc);
-		if (pm_chip && pm_chip->irq_shutdown)
-			pm_chip->irq_shutdown(&pm_desc->irq_data);
-#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN6);
-		amba_writel(TIMER6_STATUS_REG, 0x800000);
-		amba_writel(TIMER6_RELOAD_REG, 0x800000);
-		amba_writel(TIMER6_MATCH1_REG, 0x0);
-		amba_writel(TIMER6_MATCH2_REG, 0x0);
-		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF6);
-		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL6);
-#else
-		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
-		amba_writel(TIMER1_STATUS_REG, 0x800000);
-		amba_writel(TIMER1_RELOAD_REG, 0x800000);
-		amba_writel(TIMER1_MATCH1_REG, 0x0);
-		amba_writel(TIMER1_MATCH2_REG, 0x0);
-		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_OF1);
-		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_CSL1);
-#endif
-	}
-
-	if (pm_debug_enable_timer_irq) {
-		if (pm_chip && pm_chip->irq_startup)
-			pm_chip->irq_startup(&pm_desc->irq_data);
-#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN6);
-#else
-		amba_setbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
-#endif
-	}
-
-	cpu_do_idle();
-
-	if (pm_debug_enable_timer_irq) {
-#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN6);
-#else
-		amba_clrbitsl(TIMER_CTR_REG, TIMER_CTR_EN1);
-#endif
-		if (pm_chip && pm_chip->irq_shutdown)
-			pm_chip->irq_shutdown(&pm_desc->irq_data);
-	}
+	cpu_suspend(0, ambarella_pm_cpu_do_idle);
 
 	if (ambarella_pm_post(&flags, 1, 1))
 		BUG();
@@ -348,100 +303,12 @@ static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 };
 
 /* ==========================================================================*/
-static int ambarella_pm_hibernation_begin(void)
-{
-	int					retval = -1;
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	int					mode;
-
-	mode = AMBARELLA_BAPI_REBOOT_HIBERNATE;
-	if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT, &mode) != 1) {
-		goto ambarella_pm_hibernation_begin_exit;
-	}
-#endif
-	retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
-
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-ambarella_pm_hibernation_begin_exit:
-#endif
-	return retval;
-}
-
-static void ambarella_pm_hibernation_end(void)
-{
-	ambarella_pm_notify(AMBA_EVENT_POST_PM);
-}
-
-static int ambarella_pm_hibernation_pre_snapshot(void)
-{
-	int					retval = 0;
-
-	retval = ambarella_pm_pre(NULL, 1, 0);
-
-	return retval;
-}
-
-static void ambarella_pm_hibernation_finish(void)
-{
-}
-
-static int ambarella_pm_hibernation_prepare(void)
-{
-	int					retval = 0;
-
-	return retval;
-}
-
-static int ambarella_pm_hibernation_enter(void)
-{
-	int					retval = 0;
-
-	ambarella_power_off();
-
-	return retval;
-}
-
-static void ambarella_pm_hibernation_leave(void)
-{
-	ambarella_pm_post(NULL, 1, 0);
-}
-
-static int ambarella_pm_hibernation_pre_restore(void)
-{
-	int					retval = 0;
-
-	return retval;
-}
-
-static void ambarella_pm_hibernation_restore_cleanup(void)
-{
-}
-
-static void ambarella_pm_hibernation_restore_recover(void)
-{
-}
-
-static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
-	.begin = ambarella_pm_hibernation_begin,
-	.end = ambarella_pm_hibernation_end,
-	.pre_snapshot = ambarella_pm_hibernation_pre_snapshot,
-	.finish = ambarella_pm_hibernation_finish,
-	.prepare = ambarella_pm_hibernation_prepare,
-	.enter = ambarella_pm_hibernation_enter,
-	.leave = ambarella_pm_hibernation_leave,
-	.pre_restore = ambarella_pm_hibernation_pre_restore,
-	.restore_cleanup = ambarella_pm_hibernation_restore_cleanup,
-	.recover = ambarella_pm_hibernation_restore_recover,
-};
-
-/* ==========================================================================*/
 int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
 	pm_power_off_prepare = ambarella_power_off_prepare;
 
 	suspend_set_ops(&ambarella_pm_suspend_ops);
-	hibernation_set_ops(&ambarella_pm_hibernation_ops);
 
 	return 0;
 }
