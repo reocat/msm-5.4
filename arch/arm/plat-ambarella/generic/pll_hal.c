@@ -70,7 +70,7 @@ static struct proc_dir_entry *performance_file = NULL;
 static struct ambarella_pll_info pll_info;
 
 #if (CHIP_REV == A5S)
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM_HP3 + 1)
+
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"3d_playback", AMB_OPERATING_MODE_3D_PLAYBACK},
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
@@ -90,7 +90,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"ipcam_HP2_384MHZ", AMB_OPERATING_MODE_IP_CAM_HP2},
 	{"ipcam_HP3_396MHZ", AMB_OPERATING_MODE_IP_CAM_HP3},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
+
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -105,7 +105,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 
 #elif (CHIP_REV == A7)
 static struct proc_dir_entry *vidcap_file = NULL;
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
+
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
@@ -118,7 +118,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
+
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -128,7 +128,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
-#define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
+
 static struct ambarella_pll_vidcap_info vidcap_list[] = {
 	{"4096x3575", AMB_VIDCAP_4096X3575},
 	{"4000x2250", AMB_VIDCAP_4000X2250},
@@ -141,7 +141,7 @@ static struct ambarella_pll_vidcap_info vidcap_list[] = {
 };
 
 #elif (CHIP_REV == A7L)
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_LOW_POWER + 1)
+
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
@@ -155,7 +155,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"audio_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"audio_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
+
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -168,7 +168,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 
 #elif (CHIP_REV == S2)
 static struct proc_dir_entry *vidcap_file = NULL;
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_IP_CAM + 1)
+
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
@@ -181,7 +181,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
 	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_4KP30)
+
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -191,7 +191,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 	{"4KP30", AMB_PERFORMANCE_4KP30},
 };
-#define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1536X384_SMALL_VB)
+
 static struct ambarella_pll_vidcap_info vidcap_list[] = {
 	{"4kp30", AMB_VIDCAP_4KP30},
 	{"4096x2176_60fps", AMB_VIDCAP_4096X2176_60FPS},
@@ -207,7 +207,7 @@ static struct ambarella_pll_vidcap_info vidcap_list[] = {
 
 #elif (CHIP_REV == I1)
 static struct proc_dir_entry *vidcap_file = NULL;
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
+
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
@@ -222,7 +222,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_2160P60)
+
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -232,7 +232,7 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 	{"2160P60", AMB_PERFORMANCE_2160P60},
 };
-#define AMB_OPERATING_VIDCAP_END		(AMB_VIDCAP_1088X816)
+
 static struct ambarella_pll_vidcap_info vidcap_list[] = {
 	{"2304x1296_60fps", AMB_VIDCAP_2304X1296_60FPS},
 	{"1296x1787", AMB_VIDCAP_1296X1787},
@@ -245,7 +245,7 @@ static struct ambarella_pll_vidcap_info vidcap_list[] = {
 };
 
 #elif (CHIP_REV == A8)
-#define AMB_OPERATING_MODE_END		(AMB_OPERATING_MODE_AUDIO_CAPTURE + 1)
+
 static struct ambarella_pll_mode_info mode_list[] = {
 	{"preview", AMB_OPERATING_MODE_PREVIEW},
 	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
@@ -258,7 +258,7 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
 };
-#define AMB_OPERATING_PERFORMANCE_END		(AMB_PERFORMANCE_480P30)
+
 static struct ambarella_pll_performance_info performance_list[] = {
 	{"480P30", AMB_PERFORMANCE_480P30},
 	{"720P30", AMB_PERFORMANCE_720P30},
@@ -502,7 +502,6 @@ static int ambarella_mode_proc_write(struct file *file,
 	}
 	str[i - 1] = 0;
 
-	mode = AMB_OPERATING_MODE_END;
 	for (i = 0; i < ARRAY_SIZE(mode_list); i++) {
 		if (strlen(str) == strlen(mode_list[i].name)
 			&& strcmp(str, mode_list[i].name) == 0) {
@@ -510,7 +509,7 @@ static int ambarella_mode_proc_write(struct file *file,
 			break;
 		}
 	}
-	if (mode >= AMB_OPERATING_MODE_END) {
+	if (i >= ARRAY_SIZE(mode_list)) {
 		pr_err("%s: invalid mode (%s)!\n", __func__, str);
 		retval = -EINVAL;
 		goto ambarella_mode_proc_write_exit;
@@ -551,7 +550,6 @@ static int ambarella_performance_proc_write(struct file *file,
 	}
 	str[i - 1] = 0;
 
-	performance = AMB_OPERATING_PERFORMANCE_END;
 	for (i = 0; i < ARRAY_SIZE(performance_list); i++) {
 		if (strlen(str) == strlen(performance_list[i].name)
 			&& strcmp(str, performance_list[i].name) == 0) {
@@ -559,7 +557,7 @@ static int ambarella_performance_proc_write(struct file *file,
 			break;
 		}
 	}
-	if (performance >= AMB_OPERATING_PERFORMANCE_END){
+	if (i >= ARRAY_SIZE(performance_list)){
 		pr_err("\n%s: invalid performance (%s)!\n", __func__, str);
 		retval = -EINVAL;
 		goto ambarella_performance_proc_write_exit;
@@ -601,7 +599,6 @@ static int ambarella_vidcap_proc_write(struct file *file,
 	}
 	str[i - 1] = 0;
 
-	vidcap = AMB_OPERATING_VIDCAP_END;
 	for (i = 0; i < ARRAY_SIZE(vidcap_list); i++) {
 		if (strlen(str) == strlen(vidcap_list[i].name)
 			&& strcmp(str, vidcap_list[i].name) == 0) {
@@ -609,7 +606,7 @@ static int ambarella_vidcap_proc_write(struct file *file,
 			break;
 		}
 	}
-	if (vidcap >= AMB_OPERATING_VIDCAP_END){
+	if (i >= ARRAY_SIZE(vidcap_list)){
 		pr_err("\n%s: invalid vidcap (%s)!\n", __func__, str);
 		retval = -EINVAL;
 		goto ambarella_vidcap_proc_write_exit;
