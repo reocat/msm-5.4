@@ -60,9 +60,14 @@
 #define AMBETH_TXDMA_STATUS	(ETH_DMA_STATUS_TI | ETH_DMA_STATUS_TPS | \
 				ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TJT | \
 				ETH_DMA_STATUS_UNF)
-#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE |ETH_DMA_INTEN_TSE | \
+#if defined(CONFIG_NET_VENDOR_AMBARELLA_INTEN_TUE)
+#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TSE | \
 				ETH_DMA_INTEN_TUE | ETH_DMA_INTEN_TJE | \
 				ETH_DMA_INTEN_UNE)
+#else
+#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TSE | \
+				ETH_DMA_INTEN_TJE | ETH_DMA_INTEN_UNE)
+#endif
 #define AMBETH_DMA_INTEN	(ETH_DMA_INTEN_NIE | ETH_DMA_INTEN_AIE | \
 				ETH_DMA_INTEN_FBE | AMBETH_RXDMA_INTEN | \
 				AMBETH_TXDMA_INTEN)
@@ -1471,7 +1476,6 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 				if (netif_msg_rx_err(lp)) {
 					dev_err(&lp->ndev->dev,
 					"RX Error: RDES0_COE[0x%x].\n", status);
-					ambhw_dump(lp);
 				}
 			}
 		}
@@ -1491,12 +1495,12 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 		lp->ndev->last_rx = jiffies;
 		lp->stats.rx_packets++;
 		lp->stats.rx_bytes += pkt_len;
+		lp->rx.cur_rx++;
 	} else {
 		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
 			"RX Error: %u skb[%p], map[0x%08X].\n",
 			entry, skb, mapping);
-			ambhw_dump(lp);
 		}
 	}
 }
@@ -1530,9 +1534,9 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 			ambhw_dma_rx_stop(lp);
 			ambeth_check_rdes0_status(lp, status, entry);
 			rx_budget += lp->rx_count;
+			lp->rx.cur_rx++;
 		}
 		rx_budget--;
-		lp->rx.cur_rx++;
 
 		dirty_diff = (lp->rx.cur_rx - lp->rx.dirty_rx);
 		if (dirty_diff > (lp->rx_count / 4)) {
