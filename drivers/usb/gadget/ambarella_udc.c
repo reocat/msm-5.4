@@ -329,9 +329,7 @@ static void ambarella_init_usb(void)
 	/* device control register */
 	value = USB_DEV_DESC_UPD_PYL |
 		USB_DEV_LITTLE_ENDN |
-		USB_DEV_DMA_MD |
-		USB_DEV_BURST_EN |
-		USB_DEV_BURST_LEN;
+		USB_DEV_DMA_MD;
 
 	amba_setbitsl(USB_DEV_CTRL_REG, value);
 
