@@ -510,9 +510,8 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 /* this dma is used to transfer data between Nand and FIO FIFO. */
 static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 {
-	irqreturn_t				rval = IRQ_NONE;
 	struct ambarella_nand_info		*nand_info;
-	u32					val;
+	u32					val, fio_dma_sta;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
@@ -520,8 +519,12 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 
 	if ((val & (FIO_DMACTR_SD | FIO_DMACTR_CF |
 		FIO_DMACTR_XD | FIO_DMACTR_FL)) ==  FIO_DMACTR_FL) {
-		nand_info->fio_dma_sta =
-			amba_readl(nand_info->regbase + FIO_DMASTA_OFFSET);
+		fio_dma_sta = amba_readl(nand_info->regbase + FIO_DMASTA_OFFSET);
+		/* dummy IRQ by S2 chip */
+		if (fio_dma_sta == 0x0)
+			return IRQ_HANDLED;
+
+		nand_info->fio_dma_sta = fio_dma_sta;
 
 		amba_writel(nand_info->regbase + FIO_DMASTA_OFFSET, 0x0);
 
@@ -532,11 +535,9 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 		}
 		atomic_clear_mask(0x2, (unsigned long *)&nand_info->irq_flag);
 		wake_up(&nand_info->wq);
-
-		rval = IRQ_HANDLED;
 	}
 
-	return rval;
+	return IRQ_HANDLED;
 }
 
 /* this dma is used to transfer data between FIO FIFO and Memory. */
