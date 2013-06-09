@@ -1219,6 +1219,12 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 	}
 
 	if (ep_status & USB_EP_TRN_DMA_CMPL) {
+		/* write dummy desc to try to avoid BNA error */
+		ep->udc->dummy_desc->status =
+			USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
+		amba_writel(ep->ep_reg.dat_desc_ptr_reg,
+			udc->dummy_desc_addr | udc->controller_info->dma_fix);
+
 		if(ep->halted || ep->dma_going == 0 || ep->cancel_transfer == 1
 				|| list_empty(&ep->queue)) {
 			ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL);
