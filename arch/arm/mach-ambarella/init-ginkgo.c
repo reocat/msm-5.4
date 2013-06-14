@@ -402,7 +402,10 @@ static void __init ambarella_init_ginkgo(void)
 
 			platform_device_register(&ambarella_rtc0);
 
-			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
+			ambarella_board_generic.vin0_reset.gpio_id = GPIO(54);
+			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
+			ambarella_board_generic.vin0_reset.active_delay = 500;
+			//i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
 			use_bub_default = 0;
 	}
 
