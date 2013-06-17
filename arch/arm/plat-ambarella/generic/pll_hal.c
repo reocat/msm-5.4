@@ -221,6 +221,8 @@ static struct ambarella_pll_mode_info mode_list[] = {
 	{"lowpower_cortex", AMB_OPERATING_MODE_LOW_POWER_WITH_CORTEX},
 	{"auido_playback", AMB_OPERATING_MODE_AUDIO_PLAYBACK},
 	{"auido_capture", AMB_OPERATING_MODE_AUDIO_CAPTURE},
+	{"duplex", AMB_OPERATING_MODE_DUPLEX},
+	{"nvr", AMB_OPERATING_MODE_NVR},
 };
 
 static struct ambarella_pll_performance_info performance_list[] = {
