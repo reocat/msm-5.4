@@ -998,6 +998,17 @@ void rct_set_hdmi_phy_freq_hz(u32 freq_hz)
 	/* HDMI PHY is turned on/off via operating mode configuration */
 }
 
+void rct_set_hdmi4k_range(void)
+{
+	amb_hal_success_t rval;
+
+	rval = amb_auto_select_hdmi4k_range(HAL_BASE_VP);
+
+	if (rval != AMB_HAL_SUCCESS) {
+		DEBUG_MSG("amb_auto_select_hdmi4k_range() failed");
+	}
+}
+
 int get_ssi_clk_src(void)
 {
 	/* FIXME: */

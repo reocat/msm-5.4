@@ -102,6 +102,7 @@ extern void rct_set_host_clk_freq_hz(u32 freq_hz);
 extern void rct_set_so_freq_hz(u32 freq_hz);
 extern void rct_set_vout_freq_hz(u32 freq_hz);
 extern void rct_set_hdmi_phy_freq_hz(u32 freq_hz);
+extern void rct_set_hdmi4k_range(void);
 extern void rct_set_ms_pll(u32 freq_hz);
 extern u32 get_ms_freq_hz(void);
 extern void rct_enable_ms(void);

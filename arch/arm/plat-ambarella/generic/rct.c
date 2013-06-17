@@ -106,6 +106,9 @@ EXPORT_SYMBOL(rct_rescale_vout2_clk_freq_hz);
 
 #if (VOUT_SUPPORT_ONCHIP_HDMI != 0)
 EXPORT_SYMBOL(rct_set_hdmi_clk_src);
+#if (CHIP_REV == S2)
+EXPORT_SYMBOL(rct_set_hdmi4k_range);
+#endif
 #endif
 
 EXPORT_SYMBOL(ambarella_audio_notify_transition);
