@@ -75,6 +75,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_i2s0,
 	&ambarella_pcm0,
 	&ambarella_dummy_codec0,
+	&ambarella_ambevk_audio_device,
 	&ambarella_idc0,
 	&ambarella_idc1,
 	&ambarella_idc0_mux,
@@ -285,6 +286,28 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_END},
 };
 
+static struct ambarella_key_table elephant_keymap_ipcam_nvr[AMBINPUT_TABLE_SIZE] = {
+        {AMBINPUT_VI_KEY,       {.vi_key        = {0,   0,      0}}},
+        {AMBINPUT_VI_REL,       {.vi_rel        = {0,   0,      0}}},
+        {AMBINPUT_VI_ABS,       {.vi_abs        = {0,   0,      0}}},
+        {AMBINPUT_VI_SW,        {.vi_sw         = {0,   0,      0}}},
+
+	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_POWER,    1,      1,
+		GPIO(40), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
+	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_HOME,     1,      1,
+		GPIO(41), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
+	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_MENU,    1,      1,
+		GPIO(42), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
+	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_ESC,     1,      1,
+		GPIO(43), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
+	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_OK,    1,      1,
+		GPIO(44), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
+	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_END,     1,      1,
+		GPIO(45), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
+
+        {AMBINPUT_END},
+};
+
 static struct ambarella_input_board_info elephant_board_input_info = {
 	.pkeymap		= elephant_keymap,
 	.pinput_dev		= NULL,
@@ -355,6 +378,19 @@ static struct i2c_board_info elephant_board_ext_i2c_info = {
 	.flags			= 0,
 	.platform_data		= &elephant_board_ext_i2c_pdata,
 };
+
+/*==========================================================================*/
+static void elephant_ipcam_nvr_sdxc_set_vdd(u32 vdd)
+{
+	pr_debug("%s = %dmV\n", __func__, vdd);
+	ambarella_gpio_config(GPIO(23), GPIO_FUNC_SW_OUTPUT);
+	if (vdd == 1800) {
+		ambarella_gpio_set(GPIO(23), 0);
+	} else {
+		ambarella_gpio_set(GPIO(23), 1);
+	}
+	msleep(10);
+}
 
 /* ==========================================================================*/
 static void __init ambarella_init_elephant(void)
@@ -536,6 +572,73 @@ static void __init ambarella_init_elephant(void)
 			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__, AMBARELLA_BOARD_REV(system_rev));
 			break;
 		}
+	} else if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
+		ambarella_spi0_cs_pins[4] = -1;
+		ambarella_spi0_cs_pins[5] = -1;
+		ambarella_spi0_cs_pins[6] = -1;
+		ambarella_spi0_cs_pins[7] = -1;
+
+		/* both usb0 and usb1 don't use over-current protection */
+		ambarella_board_generic.uhc_use_ocp = 0;
+
+		ambarella_board_generic.sata_power.gpio_id = GPIO(122);
+		ambarella_board_generic.sata_power.active_level = GPIO_HIGH;
+		ambarella_board_generic.sata_power.active_delay = 1;
+
+		ambarella_eth0_platform_info.mii_id = 1;
+		ambarella_eth0_platform_info.phy_id = 0x001cc915;
+		ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(21);
+		ambarella_eth0_platform_info.phy_irq.irq_line = gpio_to_irq(GPIO(21));
+		ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
+		ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
+		ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+		ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(124);
+		ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
+		ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(125);
+		ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
+
+		ambarella_platform_sd_controller0.max_clock = 24000000;
+		ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
+		ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
+		ambarella_platform_sd_controller0.slot[1].ext_power.gpio_id = GPIO(110);
+		ambarella_platform_sd_controller0.slot[1].ext_power.active_level = GPIO_HIGH;
+		ambarella_platform_sd_controller0.slot[1].ext_power.active_delay = 300;
+		ambarella_platform_sd_controller0.slot[1].fixed_cd = -1;
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_gpio = GPIO(76);
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_line = gpio_to_irq(GPIO(76));
+		ambarella_platform_sd_controller0.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+		ambarella_platform_sd_controller0.slot[1].gpio_wp.gpio_id = GPIO(75);
+
+		ambarella_platform_sd_controller1.max_clock = 24000000;
+		ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
+		ambarella_platform_sd_controller1.slot[0].default_caps |=
+			(MMC_CAP_8_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST);
+		ambarella_platform_sd_controller1.slot[0].ext_power.gpio_id = GPIO(111);
+		ambarella_platform_sd_controller1.slot[0].ext_power.active_level = GPIO_HIGH;
+		ambarella_platform_sd_controller1.slot[0].ext_power.active_delay = 300;
+		ambarella_platform_sd_controller1.slot[0].set_vdd =
+			elephant_ipcam_nvr_sdxc_set_vdd;
+		ambarella_platform_sd_controller1.slot[0].fixed_cd = -1;
+		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_gpio = GPIO(129);
+		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_line = gpio_to_irq(GPIO(129));
+		ambarella_platform_sd_controller1.slot[0].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
+		ambarella_platform_sd_controller1.slot[0].gpio_wp.gpio_id = GPIO(128);
+
+		elephant_board_input_info.pkeymap = elephant_keymap_ipcam_nvr;
+
+		ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH9;
+		ambarella_platform_adc_temper_controller0.temper_curve = amb_temper_curve;
+		platform_device_register(&ambarella_adc_temper);
+
+		ambarella_board_generic.hdmi_extpower.gpio_id = GPIO(104);
+		ambarella_board_generic.hdmi_extpower.active_level = GPIO_HIGH;
+		ambarella_board_generic.hdmi_extpower.active_delay = 1;
+
+#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
+			ambarella_init_ak4642(0, 0x12, GPIO(123));
+#endif
+
+		use_bub_default = 0;
 	}
 
 	if (use_bub_default) {
@@ -589,6 +692,10 @@ static void __init ambarella_init_elephant(void)
 		if (i == 4 && AMBARELLA_BOARD_TYPE(system_rev) ==
 			AMBARELLA_BOARD_TYPE_EVK)
 			continue;
+		if (AMBARELLA_BOARD_TYPE(system_rev) ==
+			AMBARELLA_BOARD_TYPE_IPCAM) {
+			continue;
+		}
 		ret = platform_device_register(ambarella_pwm_devices[i]);
 		if (ret)
 			continue;
