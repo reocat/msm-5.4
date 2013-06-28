@@ -406,6 +406,9 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.vin0_reset.active_delay = 500;
 			//i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
+			ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH7;
+			platform_device_register(&ambarella_adc_temper);
+
 			use_bub_default = 0;
 	}
 
