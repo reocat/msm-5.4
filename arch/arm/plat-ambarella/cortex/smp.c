@@ -184,6 +184,7 @@ u32 arch_smp_resume(u32 level)
 }
 
 /* ==========================================================================*/
+#ifdef CONFIG_HOTPLUG_CPU
 static inline void cpu_enter_lowpower(void)
 {
 	unsigned int v;
@@ -219,7 +220,6 @@ static inline void cpu_leave_lowpower(void)
 		: "cc");
 }
 
-#ifdef CONFIG_HOTPLUG_CPU
 static int ambarella_smp_cpu_kill(unsigned int cpu)
 {
 	return wait_for_completion_timeout(&cpu_killed, 5000);
@@ -234,9 +234,7 @@ static void ambarella_smp_cpu_die(unsigned int cpu)
 
 	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
 	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
-	flush_cache_all();
 	complete(&cpu_killed);
-
 	cpu_enter_lowpower();
 	for (;;) {
 		asm volatile("wfi" : : : "memory", "cc");

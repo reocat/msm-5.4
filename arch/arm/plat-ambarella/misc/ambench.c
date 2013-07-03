@@ -43,7 +43,7 @@
 typedef void (*ambarella_ambench_fn_t)(void);
 
 struct ambarella_ambench_info {
-	char *name;
+	char name[32];
 	ambarella_ambench_fn_t fn;
 };
 
@@ -56,7 +56,7 @@ static struct proc_dir_entry *ambench_file;
 
 static struct ambarella_ambench_info ambench_list[] = {
 	{"APBRead", ambench_apbread},
-	{NULL, NULL},
+	{"", NULL}
 };
 
 /* ==========================================================================*/
@@ -77,9 +77,9 @@ static int ambarella_ambench_proc_write(struct file *file,
 	str[i - 1] = 0;
 
 	for (i = 0; i < ARRAY_SIZE(ambench_list); i++) {
-		if ((ambench_list[i].name == NULL) ||
-			(ambench_list[i].fn == NULL))
+		if (ambench_list[i].fn == NULL) {
 			break;
+		}
 		if (strlen(str) == strlen(ambench_list[i].name)
 			&& strcmp(str, ambench_list[i].name) == 0) {
 			ambench_list[i].fn();
@@ -89,9 +89,9 @@ static int ambarella_ambench_proc_write(struct file *file,
 
 	if (strcmp(str, "all") == 0) {
 		for (i = 0; i < ARRAY_SIZE(ambench_list); i++) {
-			if ((ambench_list[i].name == NULL) ||
-				(ambench_list[i].fn == NULL))
+			if (ambench_list[i].fn == NULL) {
 				break;
+			}
 			ambench_list[i].fn();
 		}
 	}
@@ -118,9 +118,9 @@ static int ambarella_ambench_proc_read(char *page, char **start,
 	for (i = 0; i < ARRAY_SIZE(ambench_list); i++) {
 		if (count <= retlen)
 			break;
-		if ((ambench_list[i].name == NULL) ||
-			(ambench_list[i].fn == NULL))
+		if (ambench_list[i].fn == NULL) {
 			break;
+		}
 		retlen += scnprintf((page + retlen), (count - retlen),
 				"\t%s\n", ambench_list[i].name);
 	}
