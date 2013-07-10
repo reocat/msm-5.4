@@ -281,8 +281,10 @@ static void ambarella_gpio_chip_dbg_show(struct seq_file *s,
 static struct ambarella_gpio_chip ambarella_gpio_banks[] = {
 	AMBARELLA_GPIO_BANK("ambarella-gpio0",
 		GPIO0_BASE, GPIO(0 * GPIO_BANK_SIZE)),
+#if (GPIO_INSTANCES >= 2)
 	AMBARELLA_GPIO_BANK("ambarella-gpio1",
 		GPIO1_BASE, GPIO(1 * GPIO_BANK_SIZE)),
+#endif
 #if (GPIO_INSTANCES >= 3)
 	AMBARELLA_GPIO_BANK("ambarella-gpio2",
 		GPIO2_BASE, GPIO(2 * GPIO_BANK_SIZE)),
@@ -412,7 +414,7 @@ int __init ambarella_init_gpio(void)
 	mutex_lock(&ambarella_gpio_mtx);
 	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
 	memset(ambarella_gpio_freeflag, 0xff, sizeof(ambarella_gpio_freeflag));
-	for (i = GPIO_MAX_LINES + 1; i < AMBGPIO_SIZE; i++) {
+	for (i = GPIO_MAX_LINES; i < AMBGPIO_SIZE; i++) {
 		ambarella_gpio_set_valid(i, 0);
 		__clear_bit(i, ambarella_gpio_freeflag);
 	}
