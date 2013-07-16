@@ -179,6 +179,7 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	unsigned long flags;
 
 	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_START:
 		prtd->desc = prtd->dma_chan->device->device_prep_dma_cyclic(
 				prtd->dma_chan, runtime->dma_addr,
@@ -191,11 +192,12 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		prtd->desc->callback_param = substream;
 		dmaengine_submit(prtd->desc);
 		break;
-	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		//We didn't implement resume function in dma driver.
 		//dmaengine_resume(prtd->dma_chan);
 		break;
+
+	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_STOP:
 		dmaengine_terminate_all(prtd->dma_chan);
 		/* if not force to stop DMA immediately, there will be still
@@ -207,7 +209,6 @@ static int ambarella_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		}
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		break;
-	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		//We didn't implement pause function in dma driver.
 		//dmaengine_pause(prtd->dma_chan);
