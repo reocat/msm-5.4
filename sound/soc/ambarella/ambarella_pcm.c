@@ -47,7 +47,7 @@
 
 #include "ambarella_pcm.h"
 
-unsigned int force_stop = 1;
+unsigned int force_stop = 0;
 module_param(force_stop, uint, 0644);
 MODULE_PARM_DESC(force_stop, "Stop DMA immediately, only used by cyclic DMA");
 
