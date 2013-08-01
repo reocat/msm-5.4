@@ -39,6 +39,11 @@ static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
 	.reg_64 = 1,
 	.md5_sha1 = 1,
 	.md5_sha1_64bit = 1,
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+	.exception = INDEPENDENT_MD5,
+#else
+	.exception = 0,
+#endif
 #elif (CHIP_REV == A7)
 	.mode_switch = 1,
 	.binary_mode = 0,
@@ -46,14 +51,15 @@ static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
 	.reg_64 = 1,
 	.md5_sha1 = 1,
 	.md5_sha1_64bit = 0,
+	.exception = 0,
 #else
 	.mode_switch = 0,
 	.binary_mode = 1,
 	.data_swap = 0,
 	.reg_64 = 0,
 	.md5_sha1 = 0,
+	.exception = 0,
 #endif
-	.reserved = 0,
 };
 
 static struct resource ambarella_crypto_resources[] = {
@@ -76,12 +82,27 @@ static struct resource ambarella_crypto_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 #if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
-	[3] = {
-		.start	= MD5_SHA1_IRQ,
-		.end	= MD5_SHA1_IRQ,
-		.name	= "md5-sha1-irq",
-		.flags	= IORESOURCE_IRQ,
-	},
+	#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+		[3] = {
+			.start	= MD5_IRQ,
+			.end	= MD5_IRQ,
+			.name	= "md5-irq",
+			.flags	= IORESOURCE_IRQ,
+		},
+		[4] = {
+			.start	= SHA1_IRQ,
+			.end	= SHA1_IRQ,
+			.name	= "sha1-irq",
+			.flags	= IORESOURCE_IRQ,
+		},
+	#else
+		[3] = {
+			.start	= MD5_SHA1_IRQ,
+			.end	= MD5_SHA1_IRQ,
+			.name	= "md5-sha1-irq",
+			.flags	= IORESOURCE_IRQ,
+		},
+	#endif
 #endif
 };
 

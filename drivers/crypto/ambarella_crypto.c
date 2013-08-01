@@ -25,6 +25,7 @@
 #include <crypto/algapi.h>
 #include <crypto/aes.h>
 #include <crypto/des.h>
+#include <crypto/scatterwalk.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/types.h>
@@ -34,6 +35,8 @@
 #include <linux/interrupt.h>
 #include <linux/completion.h>
 #include <linux/platform_device.h>
+#include <linux/workqueue.h>
+#include <linux/scatterlist.h>
 
 #include <mach/hardware.h>
 #include <plat/crypto.h>
@@ -42,11 +45,17 @@
 #include <crypto/internal/hash.h>
 #include <crypto/sha.h>
 #include <crypto/md5.h>
+#include <linux/mutex.h>
 
+DEFINE_MUTEX(engine_lock);
+#define AMBA_CIPHER_COPY (1<<4)
 
 static DECLARE_COMPLETION(g_aes_irq_wait);
 static DECLARE_COMPLETION(g_des_irq_wait);
 static DECLARE_COMPLETION(g_md5_sha1_irq_wait);
+
+static struct workqueue_struct *handle_queue;
+static struct work_struct work;
 
 static int config_polling_mode = 0;
 module_param(config_polling_mode, int, S_IRUGO);
@@ -57,20 +66,19 @@ static const char *ambdev_name =
 struct des_ctx {
 	u32 expkey[DES_EXPKEY_WORDS];
 };
-
-
+#define AMBA_AES_BLOCK 16
 static md5_digest_t g_md5_digest __attribute__((__aligned__(4)));
 static md5_data_t g_md5_data __attribute__((__aligned__(4)));
 static sha1_digest_t g_sha1_digest __attribute__((__aligned__(4)));
 static sha1_data_t g_sha1_data __attribute__((__aligned__(4)));
-
+/******************* Basic Function ***************************************/
 static unsigned long long int __ambarella_crypto_aligned_read64(u32 src)
 {
 	long long unsigned int ret;
 	__asm__ __volatile__ (
 	"ldrd %0,[%1]\n"
 	: "=&r"(ret)
-	: "r"(src) 
+	: "r"(src)
 	 );
 	return ret;
 }
@@ -128,7 +136,8 @@ struct ambarella_crypto_dev_info {
 	unsigned int				aes_irq;
 	unsigned int				des_irq;
 
-	unsigned int				md5_sha1_irq;
+	unsigned int				md5_irq;
+	unsigned int 				sha1_irq;
 
 	struct ambarella_platform_crypto_info *platform_info;
 };
@@ -186,8 +195,8 @@ void aes_opcode(u32 flag)
 	amba_writel(CRYPT_A_OPCODE, flag);
 }
 
-void null_fun(u32 flag) {};
-
+void null_fun(u32 flag) {}
+/***************** AES Function **********************************/
 static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 {
 	struct crypto_aes_ctx *ctx=crypto_tfm_ctx(tfm);
@@ -195,6 +204,7 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	__le32 *dst = (__le32 *)out;
 	u32 ready;
 	u32 *offset=NULL;
+	mutex_lock(&engine_lock);
 	switch (ctx->key_length){
 	case 16:
 		offset = (u32*)CRYPT_A_128_96_REG;
@@ -218,17 +228,14 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	//input the src
 	aes_fun.wdata(offset,(u32*)src,16);
 
-	if(likely(config_polling_mode == 0)) {
-		wait_for_completion_interruptible(&g_aes_irq_wait);
-	}else{
-		do{
-			ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
-		}while(ready != 1);
-	}
+	do{
+		ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
+	}while(ready != 1);
 
 	//get the output
 	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
+	mutex_unlock(&engine_lock);
 }
 
 
@@ -239,6 +246,8 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	__le32 *dst = (__le32 *)out;
 	u32 ready;
 	u32 *offset=NULL;
+
+	mutex_lock(&engine_lock);
 	switch (ctx->key_length) {
 	case 16:
 		offset = (u32*)CRYPT_A_128_96_REG;
@@ -262,17 +271,15 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	//input the src
 	aes_fun.wdata(offset,(u32*)src,16);
 
-	if(likely(config_polling_mode == 0)) {
-		wait_for_completion_interruptible(&g_aes_irq_wait);
-	}else{
-		do{
-			ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
-		}while(ready != 1);
-	}
+	do{
+		ready = amba_readl(CRYPT_A_OUTPUT_READY_REG);
+	}while(ready != 1);
+
 
 	//get the output
 	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
+	mutex_unlock(&engine_lock);
 }
 
 static struct crypto_alg aes_alg = {
@@ -296,6 +303,7 @@ static struct crypto_alg aes_alg = {
 	}
 };
 
+/****************** DES Function **************************/
 struct des_fun_t{
 	void (*opcode)(u32);
 	void (*wdata)(u32*,u32*,int);
@@ -358,6 +366,8 @@ static void des_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	__le32 *dst = (__le32 *)out;
 	u32 ready;
 	u32 *offset=NULL;
+
+	do{}while(mutex_trylock(&engine_lock) == 0);
 	//set key
 	des_fun.wdata((u32*)CRYPT_D_HI_REG,ctx->expkey,8);
 
@@ -368,19 +378,17 @@ static void des_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	offset = des_fun.reg_enc();
 
 	//input the src
-	aes_fun.wdata(offset,(u32*)src,8);
+	des_fun.wdata(offset,(u32*)src,8);
 
-	if(likely(config_polling_mode == 0)) {
-		wait_for_completion_interruptible(&g_des_irq_wait);
-	}else{
-		do{
-			ready = amba_readl(CRYPT_D_OUTPUT_READY_REG);
-		}while(ready != 1);
-	}
+	do{
+		ready = amba_readl(CRYPT_D_OUTPUT_READY_REG);
+	}while(ready != 1);
+
 
 	//get the output
 	offset = (u32*)CRYPT_D_OUTPUT_HI_REG;
-	aes_fun.rdata(dst,offset,8);
+	des_fun.rdata(dst,offset,8);
+	mutex_unlock(&engine_lock);
 }
 
 static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
@@ -391,6 +399,7 @@ static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	u32 ready;
 	u32 *offset=NULL;
 
+	do{}while(mutex_trylock(&engine_lock) == 0);
 	//set key
 	des_fun.wdata((u32*)CRYPT_D_HI_REG,ctx->expkey,8);
 
@@ -401,19 +410,16 @@ static void des_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	offset = des_fun.reg_dec();
 
 	//input the src
-	aes_fun.wdata(offset,(u32*)src,8);
+	des_fun.wdata(offset,(u32*)src,8);
 
-	if(likely(config_polling_mode == 0)) {
-		wait_for_completion_interruptible(&g_des_irq_wait);
-	}else{
-		do{
-			ready = amba_readl(CRYPT_D_OUTPUT_READY_REG);
-		}while(ready != 1);
-	}
+	do{
+		ready = amba_readl(CRYPT_D_OUTPUT_READY_REG);
+	}while(ready != 1);
 
 	//get the output
 	offset = (u32*)CRYPT_D_OUTPUT_HI_REG;
-	aes_fun.rdata(dst,offset,8);
+	des_fun.rdata(dst,offset,8);
+	mutex_unlock(&engine_lock);
 
 }
 
@@ -438,38 +444,254 @@ static struct crypto_alg des_alg = {
 		}
 	}
 };
+/******************** ECB(AES) Function ***************************************************/
 
-static int ecb_aes_encrypt(struct blkcipher_desc *desc,
-			   struct scatterlist *dst, struct scatterlist *src,
-			   unsigned int nbytes)
+#define MAX_BLOCK 8192
+#define AES_MAX_KEYLENGTH	(15 * 16)
+#define AES_MAX_KEYLENGTH_U32	(AES_MAX_KEYLENGTH / sizeof(u32))
+struct amba_ecb_ctx {
+	u32 enc_key[AES_MAX_KEYLENGTH_U32];
+	int key_len;
+};
+
+struct request_ops{
+	enum{
+		enc,
+		dec,
+	}op;
+	struct ablkcipher_walk walk;
+};
+
+static struct pri_queue {
+	struct crypto_queue queue;
+	spinlock_t lock;
+
+	enum {
+		IDLE,
+		BUSY,
+	}status;
+
+}amba_queue;
+
+static void  handle_aes_encrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
+{
+	u32 *offset=NULL;
+	__le32 *src = (__le32 *)in;
+	__le32 *dst = (__le32 *)out;
+//	int ready=0;
+
+	switch (ctx->key_len){
+	case 16:
+		offset = (u32*)CRYPT_A_128_96_REG;
+		aes_fun.wdata(offset,ctx->enc_key,16);
+		break;
+	case 24:
+		offset = (u32*)CRYPT_A_192_160_REG;
+		aes_fun.wdata(offset,ctx->enc_key,24);
+		break;
+	case 32:
+		offset = (u32*)CRYPT_A_256_224_REG;
+		aes_fun.wdata(offset,ctx->enc_key,32);
+		break;
+	}
+	aes_fun.opcode(AMBA_HW_ENCRYPT_CMD);
+	offset = aes_fun.reg_enc();
+	aes_fun.wdata(offset,(u32*)src,16);
+
+	wait_for_completion(&g_aes_irq_wait);
+//  try_wait_for_completion is faster than wait_for_completion.
+//  but the fastest is polling CRYPT_A_OUTPUT_READY_REG
+//	do{
+//		ready = try_wait_for_completion(&g_aes_irq_wait);
+//	}while(ready != 1);
+
+	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
+	aes_fun.rdata(dst,offset,16);
+
+}
+static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
+{
+	u32 *offset=NULL;
+	__le32 *src = (__le32 *)in;
+	__le32 *dst = (__le32 *)out;
+//	int ready=0;
+
+	switch (ctx->key_len){
+	case 16:
+		offset = (u32*)CRYPT_A_128_96_REG;
+		aes_fun.wdata(offset,ctx->enc_key,16);
+		break;
+	case 24:
+		offset = (u32*)CRYPT_A_192_160_REG;
+		aes_fun.wdata(offset,ctx->enc_key,24);
+		break;
+	case 32:
+		offset = (u32*)CRYPT_A_256_224_REG;
+		aes_fun.wdata(offset,ctx->enc_key,32);
+		break;
+	}
+
+	aes_fun.opcode(AMBA_HW_DECRYPT_CMD);
+	offset = aes_fun.reg_dec();
+	aes_fun.wdata(offset,(u32*)src,16);
+
+	wait_for_completion(&g_aes_irq_wait);
+//	do{
+//		ready = try_wait_for_completion(&g_aes_irq_wait);
+//	}while(ready != 1);
+
+	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
+	aes_fun.rdata(dst,offset,16);
+}
+
+static int handle_ecb_aes_req(struct ablkcipher_request *req)
+{
+	int nbytes,err;
+	struct amba_ecb_ctx *ctx = crypto_tfm_ctx(req->base.tfm);
+	struct crypto_async_request *base = &req->base;
+	struct request_ops *req_ctx = ablkcipher_request_ctx(req);
+	struct crypto_tfm *tfm = req->base.tfm;
+	struct blkcipher_desc desc = {
+		.tfm = __crypto_blkcipher_cast(tfm),
+		.info = req->info,
+		.flags = req->base.flags,
+	};
+	void (*fun)(struct amba_ecb_ctx *ctx, u8 *out, u8* in);
+	struct blkcipher_walk walk;
+
+	walk.flags |= AMBA_CIPHER_COPY;
+	blkcipher_walk_init(&walk, req->dst, req->src, req->nbytes);
+
+
+	if (req_ctx->op == enc){
+		fun = handle_aes_encrypt;
+	}else{
+		fun = handle_aes_decrypt;
+	}
+
+
+	err = blkcipher_walk_virt(&desc, &walk);
+
+	while ((nbytes = walk.nbytes)) {
+			u8 *wsrc = walk.src.virt.addr;
+			u8 *wdst = walk.dst.virt.addr;
+
+			do {
+				fun(ctx, wdst, wsrc);
+
+				wsrc += AMBA_AES_BLOCK;
+				wdst += AMBA_AES_BLOCK;
+			} while ((nbytes -= AMBA_AES_BLOCK) >= AMBA_AES_BLOCK);
+
+			err = blkcipher_walk_done(&desc, &walk, nbytes);
+	}
+
+
+	local_bh_disable();
+	base->complete(base,err);
+	local_bh_enable();
+	return 0;
+}
+
+static void do_queue(void)
+{
+	struct crypto_async_request *async_req = NULL;
+	struct crypto_async_request *backlog=NULL;
+	spin_lock_irq(&amba_queue.lock);
+	if (amba_queue.status == IDLE){
+		backlog = crypto_get_backlog(&amba_queue.queue);
+		async_req = crypto_dequeue_request(&amba_queue.queue);
+		if(async_req){
+			BUG_ON(amba_queue.status != IDLE);
+			amba_queue.status = BUSY;
+		}
+	}
+	spin_unlock_irq(&amba_queue.lock);
+	if (backlog){
+		backlog->complete(backlog,-EINPROGRESS);
+		backlog = NULL;
+	}
+	if (async_req){
+		struct ablkcipher_request *req =
+				container_of(async_req,
+						struct ablkcipher_request,
+						base);
+		// handle the request
+		handle_ecb_aes_req(req);
+		amba_queue.status = IDLE;
+	}
+	return;
+}
+
+static int ecb_aes_set_key(struct crypto_ablkcipher *cipher,const u8 *key,
+			unsigned int len)
+{
+	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(cipher);
+	struct amba_ecb_ctx *ctx = crypto_tfm_ctx(tfm);
+	switch (len){
+	case 16:
+	case 24:
+	case 32:
+		break;
+	default:
+		crypto_ablkcipher_set_flags(cipher,CRYPTO_TFM_RES_BAD_KEY_LEN);
+		return -EINVAL;
+	}
+	ctx->key_len = len;
+	memcpy(ctx->enc_key,key,len);
+	return 0;
+}
+
+static int amba_handle_req(struct ablkcipher_request *req)
+{
+	int ret;
+	unsigned long flags;
+
+	spin_lock_irqsave(&amba_queue.lock,flags);
+	ret = crypto_enqueue_request(&amba_queue.queue,&req->base);
+	spin_unlock_irqrestore(&amba_queue.lock,flags);
+
+	queue_work(handle_queue,&work);
+
+	return ret;
+}
+
+static int ecb_aes_encrypt(struct ablkcipher_request *req)
+{
+	struct request_ops *req_ctx = ablkcipher_request_ctx(req);
+	req_ctx->op = enc;
+	return amba_handle_req(req);
+}
+
+static int ecb_aes_decrypt(struct ablkcipher_request *req)
+{
+	struct request_ops *req_ctx = ablkcipher_request_ctx(req);
+	req_ctx->op = dec;
+	return amba_handle_req(req);
+}
+
+static int aes_cra_init(struct crypto_tfm *tfm)
 {
 	return 0;
 }
 
-static int ecb_aes_decrypt(struct blkcipher_desc *desc,
-			   struct scatterlist *dst, struct scatterlist *src,
-			   unsigned int nbytes)
-{
-	int err = 0;
-	return err;
-}
 
 static struct crypto_alg ecb_aes_alg = {
 	.cra_name		=	"ecb(aes)",
 	.cra_driver_name	=	"ecb-aes-ambarella",
 	.cra_priority		=	AMBARELLA_COMPOSITE_PRIORITY,
-	.cra_flags		=	CRYPTO_ALG_TYPE_BLKCIPHER,
+	.cra_flags		=	CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 	.cra_blocksize		=	AES_BLOCK_SIZE,
-	.cra_ctxsize		=	sizeof(struct crypto_aes_ctx),
+	.cra_ctxsize		=	sizeof(struct amba_ecb_ctx),
 	.cra_alignmask		=	AMBARELLA_CRYPTO_ALIGNMENT - 1,
-	.cra_type		=	&crypto_blkcipher_type,
+	.cra_type		=	&crypto_ablkcipher_type,
 	.cra_module		=	THIS_MODULE,
-	.cra_list		=	LIST_HEAD_INIT(ecb_aes_alg.cra_list),
+	.cra_init		= aes_cra_init,
 	.cra_u			=	{
-		.blkcipher = {
+		.ablkcipher = {
 			.min_keysize		=	AES_MIN_KEY_SIZE,
 			.max_keysize		=	AES_MAX_KEY_SIZE,
-			.setkey	   		= 	crypto_aes_set_key,
+			.setkey	   		= 	ecb_aes_set_key,
 			.encrypt		=	ecb_aes_encrypt,
 			.decrypt		=	ecb_aes_decrypt,
 		}
@@ -543,10 +765,10 @@ static void ambarella_md5_transform(u32 *hash, u32 const *in)
 
 	md5_sha1_fun.wdata((u32 *)CRYPT_MD5_INPUT_31_0,&(g_md5_data.data[0]),64);
 
-	if(likely(config_polling_mode == 0)) {
-		do {
+	if(unlikely(config_polling_mode == 0)) {
+		do{
 			ready = try_wait_for_completion(&g_md5_sha1_irq_wait);
-		} while (!ready);
+		}while(ready != 1);
 	}else{
 		do{
 			ready = amba_readl(CRYPT_MD5_OUTPUT_READY);
@@ -583,13 +805,12 @@ static inline void ambarella_md5_transform_helper(struct md5_state *ctx)
 static int ambarella_md5_init(struct shash_desc *desc)
 {
 	struct md5_state *mctx = shash_desc_ctx(desc);
-
 	mctx->hash[0] = 0x67452301;
 	mctx->hash[1] = 0xefcdab89;
 	mctx->hash[2] = 0x98badcfe;
 	mctx->hash[3] = 0x10325476;
 	mctx->byte_count = 0;
-
+	mutex_lock(&engine_lock);
 	return 0;
 }
 
@@ -597,7 +818,6 @@ static int ambarella_md5_update(struct shash_desc *desc, const u8 *data, unsigne
 {
 	struct md5_state *mctx = shash_desc_ctx(desc);
 	const u32 avail = sizeof(mctx->block) - (mctx->byte_count & 0x3f);
-
 	mctx->byte_count += len;
 
 	if (avail > len) {
@@ -631,7 +851,6 @@ static int ambarella_md5_final(struct shash_desc *desc, u8 *out)
 	const unsigned int offset = mctx->byte_count & 0x3f;
 	char *p = (char *)mctx->block + offset;
 	int padding = 56 - (offset + 1);
-
 	*p++ = 0x80;
 	if (padding < 0) {
 		memset(p, 0x00, padding + sizeof (u64));
@@ -649,14 +868,13 @@ static int ambarella_md5_final(struct shash_desc *desc, u8 *out)
 	cpu_to_le32_array(mctx->hash, sizeof(mctx->hash) / sizeof(u32));
 	memcpy(out, mctx->hash, sizeof(mctx->hash));
 	memset(mctx, 0, sizeof(*mctx));
-
+	mutex_unlock(&engine_lock);
 	return 0;
 }
 
 static int ambarella_md5_export(struct shash_desc *desc, void *out)
 {
 	struct md5_state *ctx = shash_desc_ctx(desc);
-
 	memcpy(out, ctx, sizeof(*ctx));
 	return 0;
 }
@@ -664,7 +882,6 @@ static int ambarella_md5_export(struct shash_desc *desc, void *out)
 static int ambarella_md5_import(struct shash_desc *desc, const void *in)
 {
 	struct md5_state *ctx = shash_desc_ctx(desc);
-
 	memcpy(ctx, in, sizeof(*ctx));
 	return 0;
 }
@@ -708,11 +925,10 @@ static inline void cpu_to_be32_array(u32 *buf, unsigned int words)
 static int ambarella_sha1_init(struct shash_desc *desc)
 {
 	struct sha1_state *sctx = shash_desc_ctx(desc);
-
 	*sctx = (struct sha1_state){
 		.state = { SHA1_H0, SHA1_H1, SHA1_H2, SHA1_H3, SHA1_H4 },
 	};
-
+	mutex_lock(&engine_lock);
 	return 0;
 }
 
@@ -755,15 +971,15 @@ void ambarella_sha1_transform(__u32 *digest, const char *in, __u32 *W)
     md5_sha1_fun.wdata((u32 *)CRYPT_SHA1_INPUT_31_0,&(g_sha1_data.data[0]),64);
 
     if(likely(config_polling_mode == 0)) {
-        do {
+	do{
             ready = try_wait_for_completion(&g_md5_sha1_irq_wait);
-        } while (!ready);
+        }while(ready != 1);
+
     }else{
         do{
             ready = amba_readl(CRYPT_SHA1_OUTPUT_READY);
         }while(ready != 1);
     }
-
 
     md5_sha1_fun.rdata(&(g_sha1_digest.digest_0),(u32 *)CRYPT_SHA1_OUTPUT_31_0,20);
 
@@ -833,14 +1049,13 @@ static int ambarella_sha1_final(struct shash_desc *desc, u8 *out)
 
 	/* Wipe context */
 	memset(sctx, 0, sizeof *sctx);
-
+	mutex_unlock(&engine_lock);
 	return 0;
 }
 
 static int ambarella_sha1_export(struct shash_desc *desc, void *out)
 {
 	struct sha1_state *sctx = shash_desc_ctx(desc);
-
 	memcpy(out, sctx, sizeof(*sctx));
 	return 0;
 }
@@ -848,7 +1063,6 @@ static int ambarella_sha1_export(struct shash_desc *desc, void *out)
 static int ambarella_sha1_import(struct shash_desc *desc, const void *in)
 {
 	struct sha1_state *sctx = shash_desc_ctx(desc);
-
 	memcpy(sctx, in, sizeof(*sctx));
 	return 0;
 }
@@ -894,14 +1108,14 @@ static irqreturn_t ambarella_md5_sha1_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int ambarella_crypto_probe(struct platform_device *pdev)
+static int  ambarella_crypto_probe(struct platform_device *pdev)
 {
 	int	errCode;
 	int	aes_irq, des_irq;
 	struct resource	*mem = 0;
 	struct ambarella_crypto_dev_info *pinfo = 0;
-	int	md5_sha1_irq = 0;
-
+	int md5_irq = 0;
+	int sha1_irq = 0;
 	platform_info = (struct ambarella_platform_crypto_info *)pdev->dev.platform_data;
 	if (platform_info == NULL) {
 		dev_err(&pdev->dev, "%s: Can't get platform_data!\n", __func__);
@@ -932,11 +1146,27 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 		}
 
 		if (platform_info->md5_sha1 == 1) {
-			md5_sha1_irq = platform_get_irq_byname(pdev,"md5-sha1-irq");
-			if (md5_sha1_irq == -ENXIO) {
-				dev_err(&pdev->dev, "Get crypto md5/sha1 irq resource failed!\n");
-				errCode = -ENXIO;
-				goto crypto_errCode_na;
+			if (platform_info->exception == INDEPENDENT_MD5 ){
+				md5_irq = platform_get_irq_byname(pdev,"md5-irq");
+				if (md5_irq == -ENXIO){
+					dev_err(&pdev->dev, "Get crypto md5 irq resource failed!\n");
+					errCode = -ENXIO;
+					goto crypto_errCode_na;
+				}
+				sha1_irq = platform_get_irq_byname(pdev,"sha1-irq");
+				if (sha1_irq == -ENXIO){
+					dev_err(&pdev->dev, "Get crypto sha1 irq resource failed!\n");
+					errCode = -ENXIO;
+					goto crypto_errCode_na;
+				}
+			}else{
+				md5_irq = platform_get_irq_byname(pdev,"md5-sha1-irq");
+				sha1_irq = md5_irq;
+				if (md5_irq == -ENXIO) {
+					dev_err(&pdev->dev, "Get crypto md5/sha1 irq resource failed!\n");
+					errCode = -ENXIO;
+					goto crypto_errCode_na;
+				}
 			}
 		}
 
@@ -953,7 +1183,8 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 		pinfo->aes_irq = aes_irq;
 		pinfo->des_irq = des_irq;
 		if (platform_info->md5_sha1 == 1) {
-			pinfo->md5_sha1_irq = md5_sha1_irq;
+				pinfo->md5_irq = md5_irq;
+				pinfo->sha1_irq = sha1_irq;
 		}
 		pinfo->platform_info = platform_info;
 
@@ -974,7 +1205,6 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 				"%s: Request aes IRQ failed!\n", __func__);
 			goto crypto_errCode_kzalloc;
 		}
-
 		errCode = request_irq(pinfo->des_irq, ambarella_des_irq,
 			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 		if (errCode) {
@@ -984,13 +1214,47 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 		}
 
 		if (platform_info->md5_sha1 == 1) {
-			errCode = request_irq(pinfo->md5_sha1_irq, ambarella_md5_sha1_irq,
-				IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
-			if (errCode) {
-				dev_err(&pdev->dev,
-					"%s: Request md5/sha1 IRQ failed!\n", __func__);
-				goto crypto_errCode_free_md5_sha1_irq;
+			if(platform_info->exception == INDEPENDENT_MD5){
+				//md5 and sha1 opentions can't  be interleaved,so use the same return irq func
+				errCode = request_irq(pinfo->md5_irq, ambarella_md5_sha1_irq,
+					IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
+				if (errCode) {
+					dev_err(&pdev->dev,
+						"%s: Request md5 IRQ failed!\n", __func__);
+					goto crypto_errCode_free_des_irq;
+				}
+				errCode = request_irq(pinfo->sha1_irq, ambarella_md5_sha1_irq,
+					IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
+				if (errCode) {
+					dev_err(&pdev->dev,
+						"%s: Request sha1 IRQ failed!\n", __func__);
+					goto crypto_errCode_free_md5_irq;
+				}
+			}else{
+				errCode = request_irq(pinfo->md5_irq, ambarella_md5_sha1_irq,
+					IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
+				if (errCode) {
+					dev_err(&pdev->dev,
+						"%s: Request md5/sha1 IRQ failed!\n", __func__);
+					goto crypto_errCode_free_des_irq;
+				}
 			}
+		}
+		//init workqueue
+
+		spin_lock_init(&amba_queue.lock);
+		handle_queue = create_workqueue("Crypto Ablk Workqueue");
+		INIT_WORK(&work,(void *)do_queue);
+		//register ecb aes ,des
+	    if ((errCode = crypto_register_alg(&ecb_aes_alg))) {
+			dev_err(&pdev->dev,"register ecb_aes_alg failed. \n");
+			goto crypto_errCode_free_sha1_irq;
+		}
+		crypto_init_queue(&amba_queue.queue,50);
+	}else {
+		if ((errCode = crypto_register_alg(&aes_alg))) {
+			dev_err(&pdev->dev, "reigster aes_alg  failed.\n");
+				goto crypto_errCode_na;
 		}
 	}
 	//TODO: need to add a7 mode switch.now, it's default as compatibility mode
@@ -1040,69 +1304,71 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 		}
 		if ((errCode = crypto_register_shash(&sha1_alg))) {
 			dev_err(&pdev->dev, "reigster sha1_alg  failed.\n");
-			if(likely(config_polling_mode == 0)) {
-				goto crypto_errCode_free_md5_sha1_irq;
-			} else {
-				goto crypto_errCode_na;
-			}
+			goto crypto_errCode_free_md5_sha1_irq;
 		}
 		if ((errCode = crypto_register_shash(&md5_alg))) {
 			dev_err(&pdev->dev, "reigster md5_alg  failed.\n");
-			if(likely(config_polling_mode == 0)) {
-				goto crypto_errCode_free_md5_sha1_irq;
-			} else {
-				goto crypto_errCode_na;
-			}
-		}
-	}
-
-	if ((errCode = crypto_register_alg(&aes_alg))) {
-		dev_err(&pdev->dev, "reigster aes_alg  failed.\n");
-		if(likely(config_polling_mode == 0)) {
-			goto crypto_errCode_free_des_irq;
-		} else {
-			goto crypto_errCode_na;
+			goto crypto_errCode_free_sha1;
 		}
 	}
 
 	if ((errCode = crypto_register_alg(&des_alg))) {
 		dev_err(&pdev->dev, "reigster des_alg failed.\n");
-
-		crypto_unregister_alg(&aes_alg);
-
-		if(likely(config_polling_mode == 0)) {
-			goto crypto_errCode_free_des_irq;
-		} else {
-			goto crypto_errCode_na;
-		}
+		goto crypto_errCode_free_md5;
 	}
 
-	if(likely(config_polling_mode == 0))
+	if(unlikely(config_polling_mode == 0))
 		dev_notice(&pdev->dev,"%s probed(interrupt mode).\n", ambdev_name);
 	else
 		dev_notice(&pdev->dev,"%s probed(polling mode).\n", ambdev_name);
 
 	goto crypto_errCode_na;
 
-crypto_errCode_free_md5_sha1_irq:
+crypto_errCode_free_md5:
 	if (platform_info->md5_sha1 == 1) {
-		free_irq(pinfo->md5_sha1_irq, pinfo);
+		crypto_unregister_shash(&md5_alg);
 	}
 
+crypto_errCode_free_sha1:
+	if (platform_info->md5_sha1 == 1) {
+		crypto_unregister_shash(&sha1_alg);
+	}
+crypto_errCode_free_sha1_irq:
+	if(platform_info->exception == INDEPENDENT_MD5){
+		free_irq(pinfo->sha1_irq, pinfo);
+	}
+crypto_errCode_free_md5_irq:
+	if(platform_info->exception == INDEPENDENT_MD5){
+		free_irq(pinfo->md5_irq, pinfo);
+	}
+crypto_errCode_free_md5_sha1_irq:
+	if(unlikely(config_polling_mode == 0)){
+		if (platform_info->md5_sha1 == 1 && platform_info->exception == 0) {
+			free_irq(pinfo->md5_irq, pinfo);
+		}
+		destroy_workqueue(handle_queue);
+		crypto_unregister_alg(&ecb_aes_alg);
+	}else{
+		crypto_unregister_alg(&aes_alg);
+	}
 crypto_errCode_free_des_irq:
-	free_irq(pinfo->des_irq, pinfo);
-
+	if(unlikely(config_polling_mode == 0)){
+		free_irq(pinfo->des_irq, pinfo);
+	}
 crypto_errCode_free_aes_irq:
-	free_irq(pinfo->aes_irq, pinfo);
-
+	if(unlikely(config_polling_mode == 0)){
+		free_irq(pinfo->aes_irq, pinfo);
+	}
 crypto_errCode_kzalloc:
-	kfree(pinfo);
-
+	if(unlikely(config_polling_mode == 0)){
+		platform_set_drvdata(pdev, NULL);
+		kfree(pinfo);
+	}
 crypto_errCode_na:
 	return errCode;
 }
 
-static int __exit ambarella_crypto_remove(struct platform_device *pdev)
+static int  ambarella_crypto_remove(struct platform_device *pdev)
 {
 	int errCode = 0;
 	struct ambarella_crypto_dev_info *pinfo;
@@ -1112,19 +1378,27 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 		crypto_unregister_shash(&md5_alg);
 	}
 
-	crypto_unregister_alg(&aes_alg);
 	crypto_unregister_alg(&des_alg);
 
 	pinfo = platform_get_drvdata(pdev);
 
 	if (pinfo && config_polling_mode == 0) {
+		destroy_workqueue(handle_queue);
+		crypto_unregister_alg(&ecb_aes_alg);
 		if (platform_info->md5_sha1 == 1) {
-			free_irq(pinfo->md5_sha1_irq, pinfo);
+			free_irq(pinfo->md5_irq, pinfo);
+			if(platform_info->exception == INDEPENDENT_MD5){
+				free_irq(pinfo->sha1_irq,pinfo);
+			}
 		}
 		free_irq(pinfo->aes_irq, pinfo);
 		free_irq(pinfo->des_irq, pinfo);
+		platform_set_drvdata(pdev, NULL);
 		kfree(pinfo);
+	}else{
+		crypto_unregister_alg(&aes_alg);
 	}
+
 	dev_notice(&pdev->dev, "%s removed.\n", ambdev_name);
 
 	return errCode;
@@ -1133,7 +1407,7 @@ static int __exit ambarella_crypto_remove(struct platform_device *pdev)
 static const char ambarella_crypto_name[] = "ambarella-crypto";
 
 static struct platform_driver ambarella_crypto_driver = {
-	.remove		= __exit_p(ambarella_crypto_remove),
+	.remove		= ambarella_crypto_remove,
 #ifdef CONFIG_PM
 	.suspend	= NULL,
 	.resume		= NULL,

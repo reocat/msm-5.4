@@ -98,6 +98,9 @@
 
 
 
+#define  INDEPENDENT_MD5 1
+
+
 struct ambarella_platform_crypto_info{
 	u32	mode_switch;    /*a7 support mode switch between  "Binary Compatibility Mode" and "Non-Binary Compatibility Mode" */
 				/* TODO: And now, haven't support a7 mode switch,the a7 is default mode ( non-binary compatible mode, do not need opcode)*/
@@ -120,7 +123,8 @@ struct ambarella_platform_crypto_info{
 	u32	md5_sha1_64bit; /* 0:32 bit ,read and write align at 32bit*/
 				/* 1:64 bit ,read and write align at 64bit*/
 /*******MD5&SHA1 END***************************/
-	u32	reserved;
+	u32	exception;/*used for some special exception.*/
+					/*INDEPENDENT_MD5 :  for s2 cortex, MD5 irq is seperated from sha1 irq */
 };
 
 typedef struct md5_digest_s
