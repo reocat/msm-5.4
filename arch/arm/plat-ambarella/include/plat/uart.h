@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_UART_H
-#define __PLAT_AMBARELLA_UART_H
+#ifndef __PLAT_AMBARELLA_UART_H__
+#define __PLAT_AMBARELLA_UART_H__
 
 /* ==========================================================================*/
 #define DEFAULT_AMBARELLA_UART_MCR	(0)
@@ -31,50 +31,51 @@
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI)
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
 #define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(0)
-#elif (CHIP_REV == S2 || CHIP_REV == A8 || CHIP_REV == A7L)
+#elif (CHIP_REV == S2) || (CHIP_REV == A8) || (CHIP_REV == A7L)
 #define UART_FIFO_SIZE			(16)
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI)
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
-#define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(1) // S2 and A8 workaround
+#define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(1)
 #else
 #define UART_FIFO_SIZE			(16)
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI)
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY)
 #define DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM	(0)
 #endif
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 struct ambarella_uart_port_info {
-	void					*port;	//struct uart_port *
-	u32					mcr;
-	u32					fcr;
-	u32					ier;
-	u32					tx_fifo_fix;
-	u32					first_send_num;
+	void *port;	//struct uart_port *
+	u32 mcr;
+	u32 fcr;
+	u32 ier;
+	u32 tx_fifo_fix;
+	u32 first_send_num;
 
-	void					(*stop_tx)(unsigned char __iomem *membase);
-	void					(*set_pll)(void);
-	u32					(*get_pll)(void);
-	u32					(*get_ms)(unsigned char __iomem *membase);
+	void (*stop_tx)(unsigned char __iomem *membase);
+	void (*set_pll)(void);
+	u32 (*get_pll)(void);
+	u32 (*get_ms)(unsigned char __iomem *membase);
 };
 
 struct ambarella_uart_platform_info {
-	const int				total_port_num;
-	int					registed_port_num;
-	struct ambarella_uart_port_info		amba_port[UART_INSTANCES];
+	const int total_port_num;
+	int registed_port_num;
+	struct ambarella_uart_port_info amba_port[UART_INSTANCES];
 };
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_uart;
-extern struct platform_device			ambarella_uart1;
-extern struct platform_device			ambarella_uart2;
-extern struct platform_device			ambarella_uart3;
+extern struct platform_device ambarella_uart;
+extern struct platform_device ambarella_uart1;
+extern struct platform_device ambarella_uart2;
+extern struct platform_device ambarella_uart3;
 
-extern struct ambarella_uart_platform_info	ambarella_uart_ports;
+extern struct ambarella_uart_platform_info ambarella_uart_ports;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_UART_H__ */
 

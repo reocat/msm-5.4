@@ -29,6 +29,7 @@
 #include <linux/interrupt.h>
 #include <linux/clockchips.h>
 #include <linux/delay.h>
+#include <linux/clk.h>
 
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
@@ -38,11 +39,206 @@
 
 #include <mach/hardware.h>
 #include <plat/timer.h>
-
-#include <hal/hal.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
-#define AMBARELLA_TIMER_FREQ			(get_apb_bus_freq_hz())
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk pll_out_core = {
+	.parent		= NULL,
+	.name		= "pll_out_core",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_CORE_CTRL_REG,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_CORE_FRAC_REG,
+	.ctrl2_reg	= PLL_CORE_CTRL2_REG,
+	.ctrl3_reg	= PLL_CORE_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 6,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk pll_out_idsp = {
+	.parent		= NULL,
+	.name		= "pll_out_idsp",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_IDSP_CTRL_REG,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_IDSP_FRAC_REG,
+	.ctrl2_reg	= PLL_IDSP_CTRL2_REG,
+	.ctrl3_reg	= PLL_IDSP_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 4,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static unsigned long ambarella_rct_core_get_rate(struct clk *c)
+{
+	u32 rate;
+	u32 divider;
+
+	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate) {
+		goto ambarella_rct_core_get_rate_exit;
+	}
+	rate = c->parent->ops->get_rate(c->parent);
+	if (c->post_reg != PLL_REG_UNAVAILABLE) {
+		divider = amba_readl(c->post_reg);
+		if (divider) {
+			rate /= divider;
+		}
+	}
+	if (c->divider) {
+		rate /= c->divider;
+	}
+#if (CHIP_REV == I1)
+	if (amba_readl(RCT_REG(0x24C))) {
+		rate <<= 1;
+	}
+#endif
+	c->rate = rate;
+
+ambarella_rct_core_get_rate_exit:
+	return c->rate;
+}
+
+struct clk_ops ambarella_rct_core_ops = {
+	.enable		= NULL,
+	.disable	= NULL,
+	.get_rate	= ambarella_rct_core_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= NULL,
+	.set_parent	= NULL,
+};
+
+static struct clk gclk_core = {
+	.parent		= &pll_out_core,
+	.name		= "gclk_core",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_CORE_POST_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+#if ((CHIP_REV == A5S) || (CHIP_REV == S2))
+	.divider	= 1,
+#else
+	.divider	= 2,
+#endif
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_core_ops,
+};
+
+static unsigned long ambarella_rct_axb_get_rate(struct clk *c)
+{
+	u32 rate;
+	u32 divider;
+
+	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate) {
+		goto ambarella_rct_axb_get_rate_exit;
+	}
+	rate = c->parent->ops->get_rate(c->parent);
+	if (c->post_reg != PLL_REG_UNAVAILABLE) {
+		divider = amba_readl(c->post_reg);
+		if (divider) {
+			rate /= divider;
+		}
+	}
+	if (c->divider) {
+		rate /= c->divider;
+	}
+#if (CHIP_REV == S2)
+	if (amba_readl(RCT_REG(0x24C))) {
+		rate <<= 1;
+	}
+#endif
+	c->rate = rate;
+
+ambarella_rct_axb_get_rate_exit:
+	return c->rate;
+}
+
+struct clk_ops ambarella_rct_axb_ops = {
+	.enable		= NULL,
+	.disable	= NULL,
+	.get_rate	= ambarella_rct_axb_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= NULL,
+	.set_parent	= NULL,
+};
+
+static struct clk gclk_ahb = {
+	.parent		= &pll_out_core,
+	.name		= "gclk_ahb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_CORE_POST_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+#if (CHIP_REV == A5S)
+	.divider	= 1,
+#else
+	.divider	= 2,
+#endif
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_core_ops,
+};
+
+static struct clk gclk_apb = {
+	.parent		= &pll_out_core,
+	.name		= "gclk_apb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_CORE_POST_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+#if (CHIP_REV == A5S)
+	.divider	= 2,
+#else
+	.divider	= 4,
+#endif
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_core_ops,
+};
+#endif
+
+/* ==========================================================================*/
+static u32 ambarella_timer_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return get_apb_bus_freq_hz();
+#else
+	return clk_get_rate(clk_get(NULL, "gclk_apb"));
+#endif
+}
+
+#define AMBARELLA_TIMER_FREQ			(ambarella_timer_get_pll())
 #define AMBARELLA_TIMER_RATING			(300)
 
 struct ambarella_timer_pm_info {
@@ -309,6 +505,14 @@ static struct irqaction ambarella_ce_timer_irq = {
 
 static inline void ambarella_cs_timer_init(void)
 {
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+	ambarella_register_clk(&pll_out_core);
+	ambarella_register_clk(&pll_out_idsp);
+	ambarella_register_clk(&gclk_core);
+	ambarella_register_clk(&gclk_ahb);
+	ambarella_register_clk(&gclk_apb);
+#endif
 #if !defined(CONFIG_MACH_HYACINTH_0) && !defined(CONFIG_MACH_HYACINTH_1)
 	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CS_TIMER_CTR_EN);
 	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CS_TIMER_CTR_OF);

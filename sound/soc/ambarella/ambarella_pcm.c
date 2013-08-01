@@ -36,6 +36,7 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/dmaengine.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>

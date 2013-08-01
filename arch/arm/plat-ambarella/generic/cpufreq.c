@@ -26,7 +26,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/cpufreq.h>
 #include <mach/hardware.h>
-#include <hal/hal.h>
 #include <plat/cpufreq.h>
 
 static struct ambarella_cpufreq_config *cpufreq_config = NULL;

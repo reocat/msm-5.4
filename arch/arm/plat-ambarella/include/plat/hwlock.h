@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_GLOBAL_HW_LOCK_H
-#define __PLAT_AMBARELLA_GLOBAL_HW_LOCK_H
+#ifndef __PLAT_AMBARELLA_HWLOCK_H__
+#define __PLAT_AMBARELLA_HWLOCK_H__
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -39,5 +39,5 @@ extern unsigned long ambarella_global_hw_flags;
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_HWLOCK_H__ */
 

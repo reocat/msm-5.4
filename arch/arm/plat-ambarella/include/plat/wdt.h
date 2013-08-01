@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_WDT_H
-#define __PLAT_AMBARELLA_WDT_H
+#ifndef __PLAT_AMBARELLA_WDT_H__
+#define __PLAT_AMBARELLA_WDT_H__
 
 /* ==========================================================================*/
 
@@ -35,10 +35,11 @@ struct ambarella_wdt_controller {
 };
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_wdt0;
-extern struct platform_device			mpcore_wdt;
+extern struct platform_device ambarella_wdt0;
+extern struct platform_device mpcore_wdt;
+
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_WDT_H__ */
 

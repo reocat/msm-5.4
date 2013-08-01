@@ -19,20 +19,20 @@
 
 #if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6) || \
     (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define NUMBERS_GDMA_INSTANCES	8
 #else
 #define NUMBERS_GDMA_INSTANCES	0
 #endif
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define GDMA_ON_AHB		1
 #else
 #define GDMA_ON_AHB		0
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define GDMA_SUPPORT_ALPHA_BLEND	1
 #else
 #define GDMA_SUPPORT_ALPHA_BLEND	0

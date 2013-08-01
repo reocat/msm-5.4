@@ -31,7 +31,7 @@
 #define HOST_MAX_MODES			5
 #elif  (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
 	(CHIP_REV == A7L) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-	(CHIP_REV == A7S)
+	(CHIP_REV == S2)
 #define HOST_MAX_AHB_CLK_EN_BITS	0
 #define HOST_MAX_MODES			5
 #else
@@ -39,7 +39,7 @@
 #define HOST_MAX_MODES			6
 #endif
 
-#if (CHIP_REV == A5L) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A5L) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define HOST_INSTANCES			0
 #else
 #define HOST_INSTANCES			1

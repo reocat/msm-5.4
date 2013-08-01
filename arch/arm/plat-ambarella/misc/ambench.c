@@ -190,9 +190,17 @@ static void ambench_apbread(void)
 	local_irq_restore(flags);
 	enable_nonboot_cpus();
 
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	raw_counter *= get_apb_bus_freq_hz();
+#else
+	raw_counter *= clk_get_rate(clk_get(NULL, "gclk_apb"));
+#endif
 	do_div(raw_counter, APBREAD_RELOAD_NUM);
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	amba_counter *= get_apb_bus_freq_hz();
+#else
+	amba_counter *= clk_get_rate(clk_get(NULL, "gclk_apb"));
+#endif
 	do_div(amba_counter, APBREAD_RELOAD_NUM);
 	pr_info("CPU[0x%x] APBRead: raw speed %llu/s!\n",
 		cpu_architecture(), raw_counter);

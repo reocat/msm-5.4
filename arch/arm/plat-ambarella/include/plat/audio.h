@@ -21,11 +21,11 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_AUDIO_H
-#define __PLAT_AMBARELLA_AUDIO_H
+#ifndef __PLAT_AMBARELLA_AUDIO_H__
+#define __PLAT_AMBARELLA_AUDIO_H__
 
 /* ==========================================================================*/
-#define DAI_CLOCK_MASK		0x0000001f
+#define DAI_CLOCK_MASK			0x0000001f
 
 #define MAX_MCLK_IDX_NUM		15
 
@@ -38,9 +38,9 @@ struct ambarella_i2s_interface {
 	u8 state;
 	u8 mode;
 	u8 sfreq;
-	u8 clksrc;
+	u32 clksrc;
 	u8 ms_mode;
-	u8 mclk;
+	u32 mclk;
 	u8 ch;
 	u8 oversample;
 	u8 word_order;
@@ -151,8 +151,12 @@ enum DAI_INIT_CTL
 #define DAI_64slots	64
 #define DAI_48slots	48
 
-#define AMBARELLA_CLKSRC_ONCHIP	AUC_CLK_ONCHIP_PLL_27MHZ
-#define AMBARELLA_CLKSRC_EXTERNAL	AUC_CLK_EXTERNAL
+#define AMBARELLA_CLKSRC_ONCHIP			0x0
+#define AMBARELLA_CLKSRC_SP_CLK			0x1
+#define AMBARELLA_CLKSRC_CLK_SI			0x2
+#define AMBARELLA_CLKSRC_EXTERNAL		0x3
+#define AMBARELLA_CLKSRC_LVDS_IDSP_SCLK		0x4
+
 #define AMBARELLA_CLKDIV_LRCLK	0
 
 struct ambarella_i2s_controller {
@@ -160,23 +164,24 @@ struct ambarella_i2s_controller {
 	void					(*aucodec_digitalio_1)(void);
 	void					(*aucodec_digitalio_2)(void);
 	void					(*channel_select)(u32);
-	void					(*set_audio_pll)(u8, u8);
+	void					(*set_audio_pll)(u32, u32);
 };
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_i2s0;
-extern struct platform_device			ambarella_pcm0;
-extern struct platform_device			ambarella_dummy_codec0;
-extern struct platform_device			ambarella_ambevk_audio_device;
-extern struct platform_device			ambarella_ipcam_audio_device;
-extern struct platform_device			ambarella_i1evk_audio_device;
-extern struct platform_device			ambarella_dummy_audio_device;
-extern struct platform_device			ambarella_a5spa2_audio_device;
+extern struct platform_device ambarella_i2s0;
+extern struct platform_device ambarella_pcm0;
+extern struct platform_device ambarella_dummy_codec0;
+extern struct platform_device ambarella_ambevk_audio_device;
+extern struct platform_device ambarella_ipcam_audio_device;
+extern struct platform_device ambarella_i1evk_audio_device;
+extern struct platform_device ambarella_dummy_audio_device;
+extern struct platform_device ambarella_a5spa2_audio_device;
 
 /* ==========================================================================*/
 extern int ambarella_init_audio(void);
 
-extern void ambarella_audio_notify_transition(struct ambarella_i2s_interface *data, unsigned int type);
+extern void ambarella_audio_notify_transition(
+	struct ambarella_i2s_interface *data, unsigned int type);
 extern int ambarella_audio_register_notifier(struct notifier_block *nb);
 extern int ambarella_audio_unregister_notifier(struct notifier_block *nb);
 
@@ -185,5 +190,5 @@ extern struct ambarella_i2s_interface get_audio_i2s_interface(void);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_AUDIO_H__ */
 

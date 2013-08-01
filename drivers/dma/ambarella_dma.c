@@ -11,21 +11,30 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
 */
+
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/platform_device.h>
+#include <linux/types.h>
+#include <linux/mm.h>
 #include <linux/interrupt.h>
+#include <linux/spinlock.h>
+#include <linux/device.h>
+#include <linux/slab.h>
+#include <linux/platform_device.h>
+
+#include <linux/dma-mapping.h>
 #include <linux/dmaengine.h>
 #include <linux/dmapool.h>
 #include <linux/delay.h>
+
 #include <mach/hardware.h>
 #include <plat/dma.h>
 
 #include "ambarella_dma.h"
 
-int ambarella_dma_channel_id(struct dma_chan *chan)
+int ambarella_dma_channel_id(void *chan)
 {
-	return to_ambdma_chan(chan)->id;
+	return to_ambdma_chan((struct dma_chan *)chan)->id;
 }
 EXPORT_SYMBOL(ambarella_dma_channel_id);
 

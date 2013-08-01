@@ -56,8 +56,6 @@ static void enable_phy(void)
 {
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
 	ambarella_enable_usb_port(UDC_OWN_PORT);
-#else
-	_init_usb_pll();
 #endif
 }
 
@@ -70,8 +68,27 @@ static void disable_phy(void)
 
 static void reset_usb(void)
 {
-#if (CHIP_REV == A5S)||(CHIP_REV == A7)||(CHIP_REV == I1)||(CHIP_REV == S2)
-	rct_usb_reset();
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+	amb_usb_subsystem_soft_reset(HAL_BASE_VP);
+#elif (CHIP_REV == I1)||(CHIP_REV == S2)
+	amb_usb_device_soft_reset(HAL_BASE_VP);
+#endif
+#else
+	u32 val;
+
+	val = amba_readl(ANA_PWR_REG);
+	/* force usbphy on */
+	amba_writel(ANA_PWR_REG, val | 0x4);
+	udelay(1);
+	/* UDC soft reset */
+	amba_setbitsl(USB_REFCLK_REG, 0x20000000);
+	udelay(1);
+	amba_clrbitsl(USB_REFCLK_REG, 0x20000000);
+	udelay(1);
+	/* restore ana_pwr_reg */
+	amba_writel(ANA_PWR_REG, val);
+	udelay(1);
 #endif
 }
 

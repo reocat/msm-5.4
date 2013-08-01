@@ -21,8 +21,7 @@
 #define CRYPT_SUPPORT_MD5_SHA1		1
 #define CRYPT_NO_OP_MODE		1
 #define CRYPT_BYTE_SWAP			0
-#elif (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == A7S) || \
-      (CHIP_REV == A9) || (CHIP_REV == S2)
+#elif (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define	CRYPT_SUPPORT_NON_BINARY	0
 #define CRYPT_SUPPORT_MD5_SHA1		1
 #define CRYPT_NO_OP_MODE		1
@@ -57,8 +56,7 @@
 #define BINARY_COMP_REG(x)		CRYPT_UNIT_REG(BINARY_COMP_OFFSET(x))
 #endif
 #else /* (CRYPT_SUPPORT_NON_BINARY == 0)*/
-#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == A7S) || \
-    (CHIP_REV == A9) || (CHIP_REV == S2)
+#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define DES_OFFSET(x)			(x)
 #define AES_OFFSET(x)			((1 << 9) | (x))
 #define SHA1_MD5_OFFSET(x)		((2 << 9) | (x))
@@ -71,8 +69,7 @@
 #endif /* (CRYPT_SUPPORT_NON_BINARY == 0)*/
 
 #if (CRYPT_SUPPORT_NON_BINARY == 0)
-#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == A7S) || \
-    (CHIP_REV == A9) || (CHIP_REV == S2)
+#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define CRYPT_D_HI_OFFSET			0x00
 #define CRYPT_D_LO_OFFSET			0x04
 #define CRYPT_D_INPUT_ENC_HI_OFFSET		0x08
@@ -451,8 +448,7 @@
 #define CRYPT_BINARY_COMP_REG			BINARY_COMP_REG(0x7f)
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == A7S) || \
-    (CHIP_REV == A9) || (CHIP_REV == S2)
+#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define CRYPT_SHA1_INIT_31_0_OFFSET		SHA1_MD5_OFFSET(0x0)
 #define CRYPT_SHA1_INIT_63_32_OFFSET		SHA1_MD5_OFFSET(0x4)
 #define CRYPT_SHA1_INIT_95_64_OFFSET		SHA1_MD5_OFFSET(0x8)

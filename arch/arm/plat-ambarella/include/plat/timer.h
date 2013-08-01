@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_TIMER_H
-#define __PLAT_AMBARELLA_TIMER_H
+#ifndef __PLAT_AMBARELLA_TIMER_H__
+#define __PLAT_AMBARELLA_TIMER_H__
 
 /* ==========================================================================*/
 
@@ -30,7 +30,7 @@
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/
-extern struct sys_timer			ambarella_timer;
+extern struct sys_timer ambarella_timer;
 
 /* ==========================================================================*/
 extern int ambarella_init_tm(void);
@@ -41,5 +41,5 @@ extern u32 ambarella_timer_resume(u32 level);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_TIMER_H__ */
 

@@ -30,7 +30,6 @@
 
 #include <mach/hardware.h>
 #include <plat/eth.h>
-#include <hal/hal.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -52,6 +51,26 @@ static struct resource ambarella_eth0_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+
+static int ambarella_eth0_is_enabled(void)
+{
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
+	return 1;
+#else
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_system_configuration_t cfg;
+
+	cfg = amb_get_system_configuration(HAL_BASE_VP);
+	if (cfg & AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED) {
+		return 1;
+	} else {
+		return 0;
+	}
+#else
+	return ((amba_readl(SYS_CONFIG_REG) & SYS_CONFIG_ENET_SEL) != 0x0);
+#endif
+#endif
+}
 
 struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 	.mac_addr		= {0, 0, 0, 0, 0, 0},
@@ -101,13 +120,13 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 #if (CHIP_REV == I1) || (CHIP_REV == A8)
 	.default_supported	= (AMBARELLA_ETH_SUPPORTED_IPC_RX |
 				AMBARELLA_ETH_SUPPORTED_IPC_TX),
-#elif (CHIP_REV == A7S)
+#elif (CHIP_REV == S2)
 	.default_supported	= AMBARELLA_ETH_SUPPORTED_IPC_RX,
 #else
 	.default_supported	= 0,
 #endif
 	.default_mac_filter	= 0,
-	.is_enabled		= rct_is_eth_enabled,
+	.is_enabled		= ambarella_eth0_is_enabled,
 };
 #if defined(CONFIG_AMBARELLA_SYS_ETH_CALL)
 AMBA_ETH_PARAM_CALL(0, ambarella_eth0_platform_info, 0644);

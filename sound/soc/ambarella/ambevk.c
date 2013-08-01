@@ -50,51 +50,42 @@ static int ambevk_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int errorCode = 0, amb_mclk, mclk, oversample, i2s_mode;
+	int errorCode = 0, mclk, oversample, i2s_mode;
 
 	switch (params_rate(params)) {
 	case 8000:
-		amb_mclk = AudioCodec_2_048M;
 		mclk = 2048000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 11025:
-		amb_mclk = AudioCodec_2_8224M;
 		mclk = 2822400;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 12000:
-		amb_mclk = AudioCodec_3_072M;
 		mclk = 3072000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 16000:
-		amb_mclk = AudioCodec_4_096M;
 		mclk = 4096000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 22050:
-		amb_mclk = AudioCodec_5_6448M;
 		mclk = 5644800;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 24000:
-		amb_mclk = AudioCodec_6_144;
 		mclk = 6144000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 32000:
-		amb_mclk = AudioCodec_8_192M;
 		mclk = 8192000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 44100:
-		amb_mclk = AudioCodec_11_2896M;
 		mclk = 11289600;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 48000:
-		amb_mclk = AudioCodec_12_288M;
 		mclk = 12288000;
 		oversample = AudioCodec_256xfs;
 		break;
@@ -130,7 +121,7 @@ static int ambevk_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
-	errorCode = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, amb_mclk, 0);
+	errorCode = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, mclk, 0);
 	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK configuration\n");
 		goto hw_params_exit;

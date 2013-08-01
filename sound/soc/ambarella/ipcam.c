@@ -143,31 +143,31 @@ static int ipcam_board_hw_params(struct snd_pcm_substream *substream,
 
 	switch (params_rate(params)) {
 	case 8000:
-		mclk = AudioCodec_4_096M;
+		mclk = 4096000;
 		oversample = AudioCodec_512xfs;
 		break;
 	case 11025:
-		mclk = AudioCodec_5_6448M;
+		mclk = 5644800;
 		oversample = AudioCodec_512xfs;
 		break;
 	case 16000:
-		mclk = AudioCodec_4_096M;
+		mclk = 4096000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 22050:
-		mclk = AudioCodec_5_6448M;
+		mclk = 5644800;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 32000:
-		mclk = AudioCodec_8_192M;
+		mclk = 8192000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 44100:
-		mclk = AudioCodec_11_2896M;
+		mclk = 11289600;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 48000:
-		mclk = AudioCodec_12_288M;
+		mclk = 12288000;
 		oversample = AudioCodec_256xfs;
 		break;
 	default:

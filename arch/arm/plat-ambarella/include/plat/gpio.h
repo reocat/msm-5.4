@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_GPIO_H
-#define __PLAT_AMBARELLA_GPIO_H
+#ifndef __PLAT_AMBARELLA_GPIO_H__
+#define __PLAT_AMBARELLA_GPIO_H__
 
 /* ==========================================================================*/
 #define GPIO_BANK_SIZE			32
@@ -113,5 +113,5 @@ extern void ambarella_gpio_raw_unlock(u32 id, unsigned long *pflags);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_GPIO_H__ */
 

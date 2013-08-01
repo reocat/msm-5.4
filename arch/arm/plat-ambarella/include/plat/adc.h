@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_ADC_H
-#define __PLAT_AMBARELLA_ADC_H
+#ifndef __PLAT_AMBARELLA_ADC_H__
+#define __PLAT_AMBARELLA_ADC_H__
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5)
@@ -37,18 +37,19 @@
 #if (CHIP_REV == S2)
 #define ADC_MAX_SLOT_NUMBER	8
 #endif
-#define ADC_CH0		(1 << 0)
-#define ADC_CH1		(1 << 1)
-#define ADC_CH2		(1 << 2)
-#define ADC_CH3		(1 << 3)
-#define ADC_CH4		(1 << 4)
-#define ADC_CH5		(1 << 5)
-#define ADC_CH6		(1 << 6)
-#define ADC_CH7		(1 << 7)
-#define ADC_CH8		(1 << 8)
-#define ADC_CH9		(1 << 9)
-#define ADC_CH10		(1 << 10)
-#define ADC_CH11		(1 << 11)
+#define ADC_CH0				(1 << 0)
+#define ADC_CH1				(1 << 1)
+#define ADC_CH2				(1 << 2)
+#define ADC_CH3				(1 << 3)
+#define ADC_CH4				(1 << 4)
+#define ADC_CH5				(1 << 5)
+#define ADC_CH6				(1 << 6)
+#define ADC_CH7				(1 << 7)
+#define ADC_CH8				(1 << 8)
+#define ADC_CH9				(1 << 9)
+#define ADC_CH10			(1 << 10)
+#define ADC_CH11			(1 << 11)
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -81,8 +82,9 @@ struct ambarella_adc_controller {
 	module_param_cb(adc_scan_delay, &param_ops_int, &arg.scan_delay, perm)
 
 /* ==========================================================================*/
-extern struct platform_device		ambarella_adc0;
-extern struct platform_device		ambarella_adc_temper;
+extern struct platform_device ambarella_adc0;
+extern struct platform_device ambarella_adc_temper;
+
 /* ==========================================================================*/
 extern int ambarella_init_adc(void);
 extern u32 ambarella_adc_suspend(u32 level);
@@ -93,5 +95,5 @@ extern u32 amb_temper_curve(u32 adc_data);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_ADC_H__ */
 

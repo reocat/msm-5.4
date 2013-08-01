@@ -25,7 +25,7 @@
 #define ETH_INSTANCES	1
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7S) || (CHIP_REV == A8)
+#if (CHIP_REV == I1) || (CHIP_REV == S2) || (CHIP_REV == A8)
 #define SUPPORT_GMII	1	// Gbit phy
 #else
 #define SUPPORT_GMII	0	// 10/100 bits phy

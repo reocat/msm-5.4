@@ -21,31 +21,20 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_DMA_H
-#define __PLAT_AMBARELLA_DMA_H
-
-#include <linux/init.h>
-#include <linux/types.h>
-#include <linux/mm.h>
-#include <linux/interrupt.h>
-#include <linux/spinlock.h>
-#include <linux/device.h>
-#include <linux/dma-mapping.h>
-#include <linux/slab.h>
-#include <linux/platform_device.h>
-#include <linux/dmaengine.h>
-
-#include <asm/irq.h>
-#include <mach/hardware.h>
+#ifndef __PLAT_AMBARELLA_DMA_H__
+#define __PLAT_AMBARELLA_DMA_H__
 
 /* ==========================================================================*/
-extern int ambarella_dma_channel_id(struct dma_chan * chan);
-
 #ifndef __ASSEMBLER__
 
-extern struct platform_device		ambarella_dma;
+extern struct platform_device ambarella_dma;
+
+/* ==========================================================================*/
+extern int ambarella_dma_channel_id(void *chan);
+
 #endif /* __ASSEMBLER__ */
 
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_DMA_H__ */
+

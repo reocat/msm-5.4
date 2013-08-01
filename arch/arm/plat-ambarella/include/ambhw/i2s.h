@@ -34,7 +34,7 @@
 #define	I2S_AMBA_IP		1
 #define	I2S_24BITMUX_MODE_REG_BITS	4
 #elif (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-      (CHIP_REV == A7L) || (CHIP_REV == A7S)
+      (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define	I2S_SUPPORT_GATE_SHIFT	1
 #define	I2S_MAX_CHANNELS	6
 #define	I2S_AMBA_IP		1

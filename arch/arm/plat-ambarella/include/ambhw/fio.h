@@ -54,7 +54,7 @@
 #if 	(CHIP_REV == A1) || \
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
 	(CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7)  || \
-	(CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
+	(CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
 	(CHIP_REV == A8)   
 #define FIO_SUPPORT_AHB_CLK_ENA			0
 #else
@@ -96,7 +96,7 @@
 #endif
 
 #if 	(CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-	(CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8)
+	(CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8)
 #define	NAND_DUMMY_XFER				0
 #else
 #define	NAND_DUMMY_XFER				0
@@ -108,18 +108,18 @@
 #define	ONENAND_NOR_SUPPORT			0
 #endif
 
-#if 	(CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == A8)
+#if 	(CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8)
 #define	NAND_PROGRAMMABLE_CMDWORD		1
 #else
 #define	NAND_PROGRAMMABLE_CMDWORD		0
 #endif
 
-#if 	(CHIP_REV == A7S) || (CHIP_REV == A9)
-#define	NAND_DUAL_SPACE_MODE	1
-#define	NAND_READ_ID5			1
+#if (CHIP_REV == S2)
+#define	NAND_DUAL_SPACE_MODE			1
+#define	NAND_READ_ID5				1
 #else
-#define	NAND_DUAL_SPACE_MODE	0
-#define	NAND_READ_ID5			0
+#define	NAND_DUAL_SPACE_MODE			0
+#define	NAND_READ_ID5				0
 #endif
 
 /****************************************************/
@@ -145,7 +145,7 @@
 #define FIO_DMACTR_REG			FIO_REG(0x080)
 #define FIO_DMAADR_REG			FIO_REG(0x084)
 #define FIO_DMASTA_REG			FIO_REG(0x08c)
-#define FIO_DSM_CTR_REG		FIO_REG(0x0a0)
+#define FIO_DSM_CTR_REG			FIO_REG(0x0a0)
 #define FIO_ECC_RPT_STA_REG		FIO_REG(0x0a4)
 
 /* FIO_CTR_REG */
@@ -186,10 +186,10 @@
 #define FIO_DMACTR_BLK_32B		0x02000000
 #define FIO_DMACTR_BLK_16B		0x01000000
 #define FIO_DMACTR_BLK_8B		0x00000000
-#define FIO_DMACTR_TS8B		0x00c00000
-#define FIO_DMACTR_TS4B		0x00800000
-#define FIO_DMACTR_TS2B		0x00400000
-#define FIO_DMACTR_TS1B		0x00000000
+#define FIO_DMACTR_TS8B			0x00c00000
+#define FIO_DMACTR_TS4B			0x00800000
+#define FIO_DMACTR_TS2B			0x00400000
+#define FIO_DMACTR_TS1B			0x00000000
 
 /* FIO_DMASTA_REG */
 #define FIO_DMASTA_RE			0x04000000
@@ -203,7 +203,7 @@
 #define FIO_DSM_SPJP_128B		0x00000005
 
 /* FIO_ECC_RPT_REG */
-#define FIO_ECC_RPT_ERR		0x80000000
+#define FIO_ECC_RPT_ERR			0x80000000
 #define FIO_ECC_RPT_FAIL		0x40000000
 
 /* ---------------------------------------------------------------------- */
@@ -416,7 +416,7 @@
 #define NAND_INT_DI			0x1
 
 /* NAND_EXT_CTR_REG */
-#define NAND_EXT_CTR_I5		0x00800000
+#define NAND_EXT_CTR_I5			0x00800000
 #define NAND_EXT_CTR_SP_2X		0x00000001
 
 /* NOR mode definitions */

@@ -25,9 +25,21 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/wdt.h>
+#include <plat/clk.h>
+
+/* ==========================================================================*/
+static u32 ambarella_wdt_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return get_apb_bus_freq_hz();
+#else
+	return clk_get_rate(clk_get(NULL, "gclk_apb"));
+#endif
+}
 
 /* ==========================================================================*/
 static struct resource ambarella_wdt0_resources[] = {
@@ -72,7 +84,7 @@ static void ambarella_wdt0_start(u32 mode)
 }
 
 static struct ambarella_wdt_controller ambarella_platform_wdt_controller0 = {
-	.get_pll		= get_apb_bus_freq_hz,
+	.get_pll		= ambarella_wdt_get_pll,
 	.start			= ambarella_wdt0_start,
 };
 

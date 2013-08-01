@@ -26,9 +26,11 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/serial_core.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/uart.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -37,12 +39,68 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_uart = {
+	.parent		= NULL,
+	.name		= "gclk_uart",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_UART_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk *ambarella_uart_register_clk(void)
+{
+	struct clk *pgclk_uart = NULL;
+
+	pgclk_uart = clk_get(NULL, "gclk_uart");
+	if (IS_ERR(pgclk_uart)) {
+		ambarella_register_clk(&gclk_uart);
+		pgclk_uart = &gclk_uart;
+		pr_info("SYSCLK:UART[%lu]\n", clk_get_rate(pgclk_uart));
+	}
+
+	return pgclk_uart;
+}
+#endif
+
+static void ambarella_uart_set_pll(void)
+{
+/* Set prop UART clock in BSP, don't set clock by default */
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+	ambarella_uart_register_clk();
+#endif
+}
+
+static u32 ambarella_uart_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_uart_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_uart_register_clk());
+#endif
+}
+
+/* ==========================================================================*/
 static struct uart_port	ambarella_uart_port_resource[] = {
 	[0] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART0_BASE,
-		.mapbase	= (unsigned long)(UART0_BASE - APB_BASE + APB_PHYS_BASE),
+		.mapbase	= (unsigned long)(UART0_BASE -
+				APB_BASE + APB_PHYS_BASE),
 		.irq		= UART0_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -53,7 +111,8 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART1_BASE,
-		.mapbase	= (unsigned long)(UART1_BASE - APB_BASE + APB_PHYS_BASE),
+		.mapbase	= (unsigned long)(UART1_BASE -
+				APB_BASE + APB_PHYS_BASE),
 		.irq		= UART1_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -65,7 +124,8 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART2_BASE,
-		.mapbase	= (unsigned long)(UART2_BASE - APB_BASE + APB_PHYS_BASE),
+		.mapbase	= (unsigned long)(UART2_BASE -
+				APB_BASE + APB_PHYS_BASE),
 		.irq		= UART2_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -77,7 +137,8 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART3_BASE,
-		.mapbase	= (unsigned long)(UART3_BASE - APB_BASE + APB_PHYS_BASE),
+		.mapbase	= (unsigned long)(UART3_BASE -
+				APB_BASE + APB_PHYS_BASE),
 		.irq		= UART3_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
@@ -139,8 +200,8 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
 		.stop_tx	= ambarella_uart_stop_tx,
-		.set_pll	= rct_set_uart_pll,
-		.get_pll	= get_uart_freq_hz,
+		.set_pll	= ambarella_uart_set_pll,
+		.get_pll	= ambarella_uart_get_pll,
 		.get_ms		= NULL,
 		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
@@ -151,8 +212,8 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
 		.stop_tx	= ambarella_uart_stop_tx,
-		.set_pll	= rct_set_uart_pll,
-		.get_pll	= get_uart_freq_hz,
+		.set_pll	= ambarella_uart_set_pll,
+		.get_pll	= ambarella_uart_get_pll,
 		.get_ms		= ambarella_uart_read_ms,
 		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
@@ -164,8 +225,8 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
 		.stop_tx	= ambarella_uart_stop_tx,
-		.set_pll	= rct_set_uart_pll,
-		.get_pll	= get_uart_freq_hz,
+		.set_pll	= ambarella_uart_set_pll,
+		.get_pll	= ambarella_uart_get_pll,
 		.get_ms		= ambarella_uart_read_ms,
 		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},
@@ -177,8 +238,8 @@ struct ambarella_uart_platform_info ambarella_uart_ports = {
 		.fcr		= DEFAULT_AMBARELLA_UART_FCR,
 		.ier		= DEFAULT_AMBARELLA_UART_IER,
 		.stop_tx	= ambarella_uart_stop_tx,
-		.set_pll	= rct_set_uart_pll,
-		.get_pll	= get_uart_freq_hz,
+		.set_pll	= ambarella_uart_set_pll,
+		.get_pll	= ambarella_uart_get_pll,
 		.get_ms		= ambarella_uart_read_ms,
 		.first_send_num	= DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM,
 	},

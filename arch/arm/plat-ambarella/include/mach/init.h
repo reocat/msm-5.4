@@ -38,10 +38,8 @@
 #include <plat/irq.h>
 #include <plat/nand.h>
 #include <plat/clk.h>
-#include <plat/pll.h>
 #include <plat/pm.h>
 #include <plat/pwm.h>
-#include <plat/rct.h>
 #include <plat/rtc.h>
 #include <plat/sd.h>
 #include <plat/spi.h>

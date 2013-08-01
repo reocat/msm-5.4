@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_IR_H
-#define __PLAT_AMBARELLA_IR_H
+#ifndef __PLAT_AMBARELLA_IR_H__
+#define __PLAT_AMBARELLA_IR_H__
 
 /* ==========================================================================*/
 
@@ -49,10 +49,10 @@ struct ambarella_ir_controller {
 	module_param_cb(ir_debug, &param_ops_int, &arg.debug, perm)
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_ir0;
+extern struct platform_device ambarella_ir0;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_IR_H__ */
 

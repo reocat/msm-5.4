@@ -36,51 +36,51 @@
 
 #if (CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
     (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define VIN_SUPPORT_SLVS_MLVS		1
 #else
 #define VIN_SUPPORT_SLVS_MLVS		0
 #endif
 
 #if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define VIN_SPPORT_SEPARATE_SLVS_MLVS	1
 #else
 #define VIN_SPPORT_SEPARATE_SLVS_MLVS	0
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7) || (CHIP_REV == S2)
 #define VIN_SLVS_LANES_MAX		12
 #elif (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define VIN_SLVS_LANES_MAX		8
 #endif
 
-#if (CHIP_REV == A7) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7) || (CHIP_REV == S2)
 #define VIN_CFA_MAX_WIDTH		4096
 #else
 #define VIN_CFA_MAX_WIDTH		3200
 #endif
 
 #if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define VIN_SUPPORT_MIPI		1
 #else
 #define VIN_SUPPORT_MIPI		0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VIN_SUPPORT_CLK_SELECTION	1
 #else
 #define VIN_SUPPORT_CLK_SELECTION	0
 #endif
 
-#if (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VIN_SUPPORT_AMBA_MIPI_PHY	1
 #else
 #define VIN_SUPPORT_AMBA_MIPI_PHY	0
 #endif
 
-#if (CHIP_REV == A7S)
+#if (CHIP_REV == S2)
 #define VIN_SUPPORT_DUAL_SENSOR_INTERFACES	1
 #define VIN_SUPPORT_BIT_WIDE_MASTER_SYNC	1
 #define VIN_SUPPORT_SLVS_SYNC_CODE_REMAP	1
@@ -90,7 +90,7 @@
 #define VIN_SUPPORT_SLVS_SYNC_CODE_REMAP	0
 #endif
 
-#if (CHIP_REV == A7S)
+#if (CHIP_REV == S2)
 #define VIN_INSTANCES			2
 #else
 #define VIN_INSTANCES			1

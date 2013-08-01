@@ -28,6 +28,7 @@
 #include <linux/export.h>
 
 #include <mach/hardware.h>
+#include <plat/event.h>
 
 /* ==========================================================================*/
 static BLOCKING_NOTIFIER_HEAD(blocking_event_list);

@@ -25,23 +25,135 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/export.h>
+#include <linux/delay.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/audio.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
-static struct resource ambarella_i2s0_resources[] = {
-	[0] = {
-		.start	= I2S_BASE,
-		.end	= I2S_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= I2STX_IRQ,
-		.end	= I2SRX_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+void rct_set_audio_pll_hal(u32 clksrc, u32 mclk)
+{
+	int chk_count = 0;
+	amb_hal_success_t success;
+	amb_clock_source_t clk_src_sel;
+
+	switch (clksrc) {
+#if (CHIP_REV == A5S)
+		case AMBARELLA_CLKSRC_SP_CLK:
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_SP_CLK;
+			break;
+#endif
+		case AMBARELLA_CLKSRC_CLK_SI:
+#if (CHIP_REV == S2)
+			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_CLK_SI;
+#else
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI;
+#endif
+			break;
+		case AMBARELLA_CLKSRC_LVDS_IDSP_SCLK:
+#if (CHIP_REV == S2)
+			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
+#else
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
+#endif
+			break;
+		case AMBARELLA_CLKSRC_EXTERNAL:
+			clk_src_sel = AMB_EXTERNAL_CLOCK_SOURCE;
+			break;
+		default:
+		case AMBARELLA_CLKSRC_ONCHIP:
+#if (CHIP_REV == S2)
+			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_CLK_REF;
+#else
+			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF;
+#endif
+			break;
+	}
+
+#if (CHIP_REV == S2)
+	if (clk_src_sel == AMB_REFERENCE_CLOCK_SOURCE_CLK_SI ||
+		clk_src_sel == AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK)
+#else
+	if (clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI ||
+		clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK)
+#endif
+	{
+		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, mclk);
+	} else {
+		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, 0);
+	}
+
+	if (success == AMB_HAL_SUCCESS) {
+		if(clk_src_sel != AMB_EXTERNAL_CLOCK_SOURCE) {
+			success = amb_set_audio_clock_frequency(HAL_BASE_VP, mclk);
+			while (success == AMB_HAL_RETRY) {
+				// do something else or sleep
+				mdelay(10);
+				chk_count ++;
+				success = amb_set_audio_clock_frequency(HAL_BASE_VP, mclk);
+				if (chk_count == 100) {
+					printk("a previous audio pll frequency change request is still outstanding");
+					break;
+				}
+			};
+			if (success == AMB_HAL_FAIL)
+				printk("new audio pll frequency requested is not supported");
+		}
+	} else {
+		printk("new audio pll reference clock source is not supported");
+	}
+
+}
+
+#else
+
+static struct clk gclk_audio = {
+	.parent		= NULL,
+	.name		= "gclk_audio",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_AUDIO_CTRL_REG,
+	.pres_reg	= SCALER_AUDIO_PRE_REG,
+	.post_reg	= SCALER_AUDIO_REG,
+	.frac_reg	= PLL_AUDIO_FRAC_REG,
+	.ctrl2_reg	= PLL_AUDIO_CTRL2_REG,
+	.ctrl3_reg	= PLL_AUDIO_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 7,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
 };
+
+static struct clk *ambarella_audio_register_clk(void)
+{
+	struct clk *pgclk_audio = NULL;
+
+	pgclk_audio = clk_get(NULL, "gclk_audio");
+	if (IS_ERR(pgclk_audio)) {
+		ambarella_register_clk(&gclk_audio);
+		pgclk_audio = &gclk_audio;
+		pr_info("SYSCLK:AUDIO[%lu]\n", clk_get_rate(pgclk_audio));
+	}
+
+	return pgclk_audio;
+}
+
+#endif
+
+static void set_audio_pll(u32 clksrc, u32 mclk)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	rct_set_audio_pll_hal(clksrc, mclk);
+#else
+	clk_set_rate(ambarella_audio_register_clk(), mclk);
+#endif
+}
 
 static void aucodec_digitalio_on_0(void)
 {
@@ -171,21 +283,25 @@ static void i2s_channel_select(u32 ch)
 #endif
 }
 
-static void set_audio_pll(u8 clksrc, u8 mclk)
-{
-#if (RCT_AUDIO_PLL_USE_HAL_API == 0)
-	rct_set_aud_ctrl2_reg();
-	rct_set_pll_frac_mode();
-#endif
-	rct_set_audio_pll_fs(clksrc, mclk);
-}
-
 static struct ambarella_i2s_controller ambarella_platform_i2s_controller0 = {
+	.set_audio_pll		= set_audio_pll,
 	.aucodec_digitalio_0	= aucodec_digitalio_on_0,
 	.aucodec_digitalio_1	= aucodec_digitalio_on_1,
 	.aucodec_digitalio_2	= aucodec_digitalio_on_2,
 	.channel_select		= i2s_channel_select,
-	.set_audio_pll		= set_audio_pll,
+};
+
+static struct resource ambarella_i2s0_resources[] = {
+	[0] = {
+		.start	= I2S_BASE,
+		.end	= I2S_BASE + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= I2STX_IRQ,
+		.end	= I2SRX_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
 };
 
 struct platform_device ambarella_i2s0 = {
@@ -234,4 +350,80 @@ struct platform_device ambarella_a5spa2_audio_device = {
 	.name	= "snd_soc_card_a5sevk",
 	.id		= -1,
 };
+
+/* ==========================================================================*/
+static struct srcu_notifier_head audio_notifier_list;
+static struct notifier_block audio_notify;
+static struct ambarella_i2s_interface audio_i2s_intf;
+
+struct ambarella_i2s_interface get_audio_i2s_interface(void)
+{
+	return audio_i2s_intf;
+}
+EXPORT_SYMBOL(get_audio_i2s_interface);
+
+static int audio_notify_transition(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	switch(val) {
+	case AUDIO_NOTIFY_INIT:
+		audio_i2s_intf.state = AUDIO_NOTIFY_INIT;
+		memcpy(&audio_i2s_intf, data,
+			sizeof(struct ambarella_i2s_interface));
+		break;
+
+	case AUDIO_NOTIFY_SETHWPARAMS:
+		audio_i2s_intf.state = AUDIO_NOTIFY_SETHWPARAMS;
+		memcpy(&audio_i2s_intf, data,
+			sizeof(struct ambarella_i2s_interface));
+		break;
+
+	case AUDIO_NOTIFY_REMOVE:
+		memset(&audio_i2s_intf, 0,
+			sizeof(struct ambarella_i2s_interface));
+		audio_i2s_intf.state = AUDIO_NOTIFY_REMOVE;
+		break;
+	default:
+		audio_i2s_intf.state = AUDIO_NOTIFY_UNKNOWN;
+		break;
+	}
+
+	return 0;
+}
+
+void ambarella_audio_notify_transition (
+	struct ambarella_i2s_interface *data, unsigned int type)
+{
+	srcu_notifier_call_chain(&audio_notifier_list, type, data);
+}
+EXPORT_SYMBOL(ambarella_audio_notify_transition);
+
+int ambarella_audio_register_notifier(struct notifier_block *nb)
+{
+	return srcu_notifier_chain_register( &audio_notifier_list, nb);
+}
+EXPORT_SYMBOL(ambarella_audio_register_notifier);
+
+
+int ambarella_audio_unregister_notifier(struct notifier_block *nb)
+{
+	return srcu_notifier_chain_unregister(&audio_notifier_list, nb);
+}
+EXPORT_SYMBOL(ambarella_audio_unregister_notifier);
+
+
+int __init ambarella_init_audio(void)
+{
+	int retval = 0;
+
+	srcu_init_notifier_head(&audio_notifier_list);
+
+	memset(&audio_i2s_intf, 0, sizeof(struct ambarella_i2s_interface));
+	audio_i2s_intf.state = AUDIO_NOTIFY_UNKNOWN;
+
+	audio_notify.notifier_call = audio_notify_transition;
+	retval = ambarella_audio_register_notifier(&audio_notify);
+
+	return retval;
+}
 

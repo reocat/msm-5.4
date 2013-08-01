@@ -28,15 +28,27 @@
 #include <linux/i2c.h>
 #include <linux/i2c-mux-ambarella.h>
 #include <linux/moduleparam.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/idc.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
+static u32 ambarella_idc_get_clock(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return get_apb_bus_freq_hz();
+#else
+	return clk_get_rate(clk_get(NULL, "gclk_apb"));
+#endif
+}
 
 /* ==========================================================================*/
 #define DEFAULT_I2C_CLASS	(I2C_CLASS_HWMON | I2C_CLASS_SPD)
@@ -64,7 +76,7 @@ struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 #else
 	.i2c_class	= DEFAULT_I2C_CLASS,
 #endif
-	.get_clock	= get_apb_bus_freq_hz,
+	.get_clock	= ambarella_idc_get_clock,
 };
 #if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
 AMBA_IDC_PARAM_CALL(0, ambarella_idc0_platform_info, 0644);
@@ -120,7 +132,7 @@ struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
 	.clk_limit	= 100000,
 	.bulk_write_num	= 60,
 	.i2c_class	= I2C_CLASS_DDC,
-	.get_clock	= get_apb_bus_freq_hz,
+	.get_clock	= ambarella_idc_get_clock,
 };
 #if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
 AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);
@@ -157,7 +169,7 @@ struct ambarella_idc_platform_info ambarella_idc2_platform_info = {
 	.clk_limit	= 100000,
 	.bulk_write_num	= 60,
 	.i2c_class	= DEFAULT_I2C_CLASS,
-	.get_clock	= get_apb_bus_freq_hz,
+	.get_clock	= ambarella_idc_get_clock,
 };
 #if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
 AMBA_IDC_PARAM_CALL(2, ambarella_idc2_platform_info, 0644);

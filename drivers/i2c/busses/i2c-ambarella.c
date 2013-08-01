@@ -38,6 +38,7 @@
 
 #include <mach/hardware.h>
 #include <plat/idc.h>
+#include <plat/event.h>
 
 #ifndef CONFIG_I2C_AMBARELLA_RETRIES
 #define CONFIG_I2C_AMBARELLA_RETRIES		(3)

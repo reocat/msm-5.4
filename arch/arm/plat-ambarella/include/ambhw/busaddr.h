@@ -106,7 +106,7 @@
 #define SIF_OFFSET			0xd000
 //#endif
 
-#if (CHIP_REV == A8) || (CHIP_REV == A9)
+#if (CHIP_REV == A8) || (CHIP_REV == S2)
 #define I2S2_OFFSET			0xc000
 #else
 #define I2S2_OFFSET			0xa000

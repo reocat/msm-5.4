@@ -41,7 +41,6 @@
 #include <plat/ambcache.h>
 #include <mach/common.h>
 #include <mach/smp.h>
-#include <hal/hal.h>
 
 /* ==========================================================================*/
 extern void ambarella_secondary_startup(void);

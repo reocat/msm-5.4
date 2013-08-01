@@ -21,9 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_HAL_H
-#define __PLAT_AMBARELLA_HAL_H
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#ifndef __PLAT_AMBARELLA_HAL_H__
+#define __PLAT_AMBARELLA_HAL_H__
 
 /* ==========================================================================*/
 #ifndef __ASM_ARCH_HARDWARE_H
@@ -41,18 +40,16 @@
 #ifndef __ASSEMBLER__
 
 #include <hal/header.h>
-#if (CHIP_REV == A7)
-#include <hal/a7/ambhal.h>
-#elif (CHIP_REV == A7L)
-#include <hal/a7l/ambhal.h>
-#elif (CHIP_REV == A5S)
+#if (CHIP_REV == A5S)
 #include <hal/a5s/ambhal.h>
 #elif (CHIP_REV == I1)
 #include <hal/i1/ambhal.h>
-#elif (CHIP_REV == S2)
-#include <hal/s2/ambhal.h>
+#elif (CHIP_REV == A7L)
+#include <hal/a7l/ambhal.h>
 #elif (CHIP_REV == A8)
 #include <hal/a8/ambhal.h>
+#elif (CHIP_REV == S2)
+#include <hal/s2/ambhal.h>
 #else
 #error "Undefined CHIP_REV, Can't support HAL!"
 #endif
@@ -70,12 +67,15 @@ extern void ambarella_hal_set_invalid(void);
 extern u32 ambarella_hal_get_size(void);
 extern void *ambarella_hal_get_vp(void);
 
+extern u32 get_apb_bus_freq_hz(void);
+extern u32 get_ahb_bus_freq_hz(void);
+extern u32 get_core_bus_freq_hz(void);
+
 /* ==========================================================================*/
 #define HAL_BASE_VP			(ambarella_hal_get_vp())
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_HAL */
-#endif /* __PLAT_AMBARELLA_HAL_H */
+#endif /* __PLAT_AMBARELLA_HAL_H__ */
 

@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_RTC_H
-#define __PLAT_AMBARELLA_RTC_H
+#ifndef __PLAT_AMBARELLA_RTC_H__
+#define __PLAT_AMBARELLA_RTC_H__
 
 #include <linux/timer.h>
 
@@ -51,10 +51,10 @@ struct ambarella_rtc_controller {
 	module_param_cb(rtc##id##_setpos, &param_ops_rtcpos, NULL, 0200)
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_rtc0;
+extern struct platform_device ambarella_rtc0;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_RTC_H__ */
 

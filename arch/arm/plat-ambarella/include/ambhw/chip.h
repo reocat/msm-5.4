@@ -38,9 +38,7 @@
 #define A7L	7500
 
 #define A8	8000
-#define A9	9000
-#define A7S	A9
-#define S2	A9
+#define S2	9000
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)

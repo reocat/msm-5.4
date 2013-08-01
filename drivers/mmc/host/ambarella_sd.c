@@ -40,7 +40,7 @@
 
 #include <mach/hardware.h>
 #include <plat/sd.h>
-#include <plat/ambcache.h>
+#include <plat/event.h>
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)

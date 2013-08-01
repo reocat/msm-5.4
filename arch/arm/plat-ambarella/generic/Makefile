@@ -36,11 +36,10 @@ obj-y						+= irq.o
 ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
 obj-y						+= pll_hal.o
 else
-obj-y						+= pll_rct.o
+obj-y						+= clk.o
 endif
 obj-y						+= pm.o
 obj-$(CONFIG_HAVE_PWM)				+= pwm.o
-obj-y						+= rct.o
 obj-y						+= hwlock.o
 obj-y						+= rtc.o
 obj-y						+= sd.o

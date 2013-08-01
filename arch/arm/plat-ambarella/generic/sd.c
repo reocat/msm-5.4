@@ -29,17 +29,196 @@
 #include <linux/moduleparam.h>
 #include <linux/mmc/host.h>
 #include <linux/module.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
-#include <hal/hal.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_sd = {
+	.parent		= NULL,
+	.name		= "gclk_sd",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_SD48_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk *ambarella_sd_register_clk(void)
+{
+	struct clk *pgclk_sd = NULL;
+	struct clk *ppll_out_core = NULL;
+
+	pgclk_sd = clk_get(NULL, "gclk_sd");
+	if (IS_ERR(pgclk_sd)) {
+		ppll_out_core = clk_get(NULL, "pll_out_core");
+		if (IS_ERR(ppll_out_core)) {
+			BUG();
+		}
+		gclk_sd.parent = ppll_out_core;
+		ambarella_register_clk(&gclk_sd);
+		pgclk_sd = &gclk_sd;
+		pr_info("SYSCLK:SD[%lu]\n", clk_get_rate(pgclk_sd));
+	}
+
+	return pgclk_sd;
+}
+
+#if (SD_HAS_SDXC_CLOCK == 1)
+static struct clk gclk_sdxc = {
+	.parent		= NULL,
+	.name		= "gclk_sdxc",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_SDXC_CTRL_REG,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_SDXC_POST_REG,
+	.frac_reg	= PLL_SDXC_FRAC_REG,
+	.ctrl2_reg	= PLL_SDXC_CTRL2_REG,
+	.ctrl3_reg	= PLL_SDXC_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 10,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk *ambarella_sdxc_register_clk(void)
+{
+	struct clk *pgclk_sdxc = NULL;
+
+	pgclk_sdxc = clk_get(NULL, "gclk_sdxc");
+	if (IS_ERR(pgclk_sdxc)) {
+		ambarella_register_clk(&gclk_sdxc);
+		pgclk_sdxc = &gclk_sdxc;
+		pr_info("SYSCLK:SDXC[%lu]\n", clk_get_rate(pgclk_sdxc));
+	}
+
+	return pgclk_sdxc;
+}
+#endif
+
+#if (SD_HAS_SDIO_CLOCK == 1)
+static struct clk gclk_sdio = {
+	.parent		= NULL,
+	.name		= "gclk_sdio",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_SDIO_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk *ambarella_sdio_register_clk(void)
+{
+	struct clk *pgclk_sdio = NULL;
+	struct clk *ppll_out_core = NULL;
+
+	pgclk_sdio = clk_get(NULL, "gclk_sdio");
+	if (IS_ERR(pgclk_sdio)) {
+		ppll_out_core = clk_get(NULL, "pll_out_core");
+		if (IS_ERR(ppll_out_core)) {
+			BUG();
+		}
+		gclk_sdio.parent = ppll_out_core;
+		ambarella_register_clk(&gclk_sdio);
+		pgclk_sdio = &gclk_sdio;
+		pr_info("SYSCLK:SDIO[%lu]\n", clk_get_rate(pgclk_sdio));
+	}
+
+	return pgclk_sdio;
+}
+#endif
+
+#endif
+
+static void ambarella_sd_set_pll(u32 freq_hz)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_sd_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	clk_set_rate(ambarella_sd_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_sd_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_sd_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_sd_register_clk());
+#endif
+}
+
+#if (SD_HAS_SDXC_CLOCK == 1)
+static void ambarella_sdxc_set_pll(u32 freq_hz)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_sdxc_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	clk_set_rate(ambarella_sdxc_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_sdxc_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_sdxc_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_sdxc_register_clk());
+#endif
+}
+#endif
+
+#if (SD_HAS_SDIO_CLOCK == 1)
+static void ambarella_sdio_set_pll(u32 freq_hz)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_sdio_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	clk_set_rate(ambarella_sdio_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_sdio_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_sdio_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_sdio_register_clk());
+#endif
+}
+#endif
 
 /* ==========================================================================*/
 typedef void (*mmc_dc_fn)(struct mmc_host *host, unsigned long delay);
@@ -224,9 +403,8 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 		.set_bus_timing	= NULL,
 	},
 #endif
-	.set_pll		= rct_set_sd_pll,
-	.get_pll		= get_sd_freq_hz,
-
+	.set_pll		= ambarella_sd_set_pll,
+	.get_pll		= ambarella_sd_get_pll,
 	.max_blk_mask		= SD_BLK_SZ_128KB,
 	.max_clock		= 24000000,
 	.active_clock		= 0,
@@ -377,13 +555,15 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 		.set_bus_timing	= NULL,
 	},
 #if (SD_HAS_SDXC_CLOCK == 1)
-	.set_pll		= rct_set_sdxc_pll,
-	.get_pll		= get_sdxc_freq_hz,
+	.set_pll		= ambarella_sdxc_set_pll,
+	.get_pll		= ambarella_sdxc_get_pll,
+#elif (SD_HAS_SDIO_CLOCK == 1)
+	.set_pll		= ambarella_sdio_set_pll,
+	.get_pll		= ambarella_sdio_get_pll,
 #else
-	.set_pll		= rct_set_sd_pll,
-	.get_pll		= get_sd_freq_hz,
+	.set_pll		= ambarella_sd_set_pll,
+	.get_pll		= ambarella_sd_get_pll,
 #endif
-
 	.max_blk_mask		= SD_BLK_SZ_128KB,
 	.max_clock		= 24000000,
 	.active_clock		= 0,

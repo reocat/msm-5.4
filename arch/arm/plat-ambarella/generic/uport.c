@@ -20,11 +20,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-
+#include <linux/io.h>
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <plat/uport.h>
-#include <hal/hal.h>
 
 /* S2 share the usb port between UHC and UDC
  * I1 share the usb port1 between UHC and UDC */
@@ -34,6 +33,7 @@ static u32 ambarella_usb_port_owner = 0;
 
 void ambarella_enable_usb_port(int owner)
 {
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 #if (CHIP_REV == A5S)
 	amb_usb_interface_state_t state;
 
@@ -84,13 +84,31 @@ void ambarella_enable_usb_port(int owner)
 			!= AMB_HAL_SUCCESS) {
 		pr_info("%s: amb_set_usb_port_state fail!\n", __func__);
 	}
+#endif
+
+#else
+
+#if (CHIP_REV == A5S)
+	amba_setbitsl(ANA_PWR_REG, 0x4);	/* always on */
+#elif (CHIP_REV == A7)
+	amba_setbitsl(ANA_PWR_REG, 0x2);	/* on */
+#elif (CHIP_REV == I1)
+	ambarella_usb_port_owner |= owner;
+	/* We must enable usb port1 first. Note: no matter usb port1 is
+	 * configured as Host or Slave, we always enable it. */
+	amba_setbitsl(ANA_PWR_REG, 0x2);	/* on */
+	amba_setbitsl(ANA_PWR_REG, 0x1000);	/* on */
+#elif (CHIP_REV == S2)
+	ambarella_usb_port_owner |= owner;
+	amba_setbitsl(ANA_PWR_REG, 0x4);	/* always on */
+#endif
 
 #endif
 }
 
 void ambarella_disable_usb_port(int owner)
 {
-
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 #if (CHIP_REV == A5S) || (CHIP_REV == A7)
 	if (amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_OFF)
 			!= AMB_HAL_SUCCESS) {
@@ -117,6 +135,25 @@ void ambarella_disable_usb_port(int owner)
 	ambarella_usb_port_owner &= (~owner);
 	if (ambarella_usb_port_owner == 0)
 		amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_OFF);
+
+#endif
+
+#else
+
+#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+	amba_clrbitsl(ANA_PWR_REG, 0x6);
+#elif (CHIP_REV == I1)
+	amba_clrbitsl(ANA_PWR_REG, 0x3000);
+	/* We disable usb port when neither UHC nor UDC use it */
+	ambarella_usb_port_owner &= (~owner);
+	if (ambarella_usb_port_owner == 0)
+		amba_clrbitsl(ANA_PWR_REG, 0x6);
+#elif (CHIP_REV == S2)
+	/* We disable usb port when neither UHC nor UDC use it */
+	ambarella_usb_port_owner &= (~owner);
+	if (ambarella_usb_port_owner == 0)
+		amba_clrbitsl(ANA_PWR_REG, 0x6);
+#endif
 
 #endif
 }

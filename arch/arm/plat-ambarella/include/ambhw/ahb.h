@@ -13,7 +13,6 @@
 #include <ambhw/fio.h>
 #include <ambhw/sd.h>
 #include <ambhw/vic.h>
-#include <ambhw/drctl.h>
 #include <ambhw/dma.h>
 #include <ambhw/usbdc.h>
 #include <ambhw/vout.h>

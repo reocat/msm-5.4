@@ -51,7 +51,7 @@
 #endif
 
 #if (CHIP_REV == A5L) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S) || (CHIP_REV == A8)
+    (CHIP_REV == S2) || (CHIP_REV == A8)
 #define SD_HAS_DELAY_CTRL		1
 #else
 #define SD_HAS_DELAY_CTRL		0
@@ -66,7 +66,7 @@
 #endif
 
 #if ((CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) || \
-     (CHIP_REV == I1)  || (CHIP_REV == A7L)) || (CHIP_REV == A7S) || \
+     (CHIP_REV == I1)  || (CHIP_REV == A7L)) || (CHIP_REV == S2) || \
      (CHIP_REV == A8)
 #define SD_HAS_IO_DRIVE_CTRL		1
 #else
@@ -79,7 +79,7 @@
 #elif (CHIP_REV == A8) || (CHIP_REV == A7L)
 #define SD_HOST1_SUPPORT_XC		1
 #define SD_HOST2_SUPPORT_XC		0
-#elif (CHIP_REV == A7S)
+#elif (CHIP_REV == S2)
 #define SD_HOST1_SUPPORT_XC		1
 #define SD_HOST2_SUPPORT_XC		1
 #else
@@ -88,26 +88,31 @@
 #endif
 
 #if (CHIP_REV == I1) ||  (CHIP_REV == A7L) || (CHIP_REV == A8) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define SD_SUPPORT_ACMD23		0
 #else
 #define SD_SUPPORT_ACMD23		1
 #endif
 
-#if (CHIP_REV == I1) ||  (CHIP_REV == A7L) || (CHIP_REV == A8) || \
-    (CHIP_REV == A7S)
+#if (CHIP_REV == I1)
 #define SD_HAS_SDXC_CLOCK		1
 #else
 #define SD_HAS_SDXC_CLOCK		0
 #endif
 
-#if (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
+#define SD_HAS_SDIO_CLOCK		1
+#else
+#define SD_HAS_SDIO_CLOCK		0
+#endif
+
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define SD_HOST1_HOST2_HAS_MUX		1
 #else
 #define SD_HOST1_HOST2_HAS_MUX		0
 #endif
 
-#if (CHIP_REV == A9)
+#if (CHIP_REV == S2)
 #define SD_SUPPORT_ADMA			1
 #else
 #define SD_SUPPORT_ADMA			0
@@ -302,7 +307,7 @@
 #define SD_PWR_3_0V			0x0c
 #define SD_PWR_1_8V			0x0a
 #elif ((CHIP_REV == I1) || (CHIP_REV == A7L)) || (CHIP_REV == A8) ||	\
-       (CHIP_REV == A7S)
+       (CHIP_REV == S2)
 /* SD_PWR_REG only care about bit[3] */
 #define SD_PWR_3_3V			0x08
 #define SD_PWR_3_0V			0x08

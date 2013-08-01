@@ -22,7 +22,7 @@
 	(CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) ||	\
 	(CHIP_REV == A5S) || (CHIP_REV == A5L)
 #define GPIO_INSTANCES	3
-#elif 	(CHIP_REV == A7) || (CHIP_REV == A7S)
+#elif 	(CHIP_REV == A7) || (CHIP_REV == S2)
 #define GPIO_INSTANCES	5
 #elif 	(CHIP_REV == I1)
 #define GPIO_INSTANCES	6
@@ -48,7 +48,7 @@
 #define GPIO_MAX_LINES			192
 #elif 	(CHIP_REV == A8)
 #define GPIO_MAX_LINES			16
-#elif 	(CHIP_REV == A9) || (CHIP_REV == A7S) || (CHIP_REV == S2)
+#elif 	(CHIP_REV == S2)
 #define GPIO_MAX_LINES			138	
 #else
 #define GPIO_MAX_LINES			128
@@ -259,7 +259,7 @@
 #define PWM2		GPIO(46)
 #define NAND_CE1	GPIO(47)
 
-#if (CHIP_REV == A7S)
+#if (CHIP_REV == S2)
 #define SSIO_EN2	GPIO(7)
 #define SSIO_EN3	GPIO(9)
 #else
@@ -314,7 +314,7 @@
 #define SSI_5_N		GPIO(89)
 #define SSI_6_N		GPIO(90)
 #define SSI_7_N		GPIO(91)
-#elif (CHIP_REV == A7S)
+#elif (CHIP_REV == S2)
 #define SSI_4_N		GPIO(82)
 #define SSI_5_N		GPIO(83)
 #define SSI_6_N		GPIO(79)
@@ -329,7 +329,7 @@
 
 /*------------------------------------------------------------------------*/
 /* (CHIP_REV == A3) and later */
-#if (CHIP_REV == A7S)
+#if (CHIP_REV == S2)
 #define I2S1_SO		GPIO(126)
 #define I2S1_SI		GPIO(125)
 #else
@@ -651,7 +651,7 @@
 #define SC_D3		GPIO(142)
 #define SC_D4		GPIO(143)
 
-#elif (CHIP_REV == A7S) /* A7S */
+#elif (CHIP_REV == S2) /* S2 */
 
 #define SD_HS			GPIO(22)
 #define SDIO_HS			GPIO(23)

@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_IDC_H
-#define __PLAT_AMBARELLA_IDC_H
+#ifndef __PLAT_AMBARELLA_IDC_H__
+#define __PLAT_AMBARELLA_IDC_H__
 
 /* ==========================================================================*/
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || (CHIP_REV == A5L)
@@ -74,13 +74,13 @@ struct ambarella_idc_platform_info {
 	module_param_cb(idc##id##_bulk_write_num, &param_ops_int, &(arg.bulk_write_num), perm)
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_idc0;
-extern struct platform_device			ambarella_idc1;
-extern struct platform_device			ambarella_idc2;
-extern struct platform_device			ambarella_idc0_mux;
+extern struct platform_device ambarella_idc0;
+extern struct platform_device ambarella_idc1;
+extern struct platform_device ambarella_idc2;
+extern struct platform_device ambarella_idc0_mux;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_IDC_H__ */
 

@@ -82,7 +82,7 @@
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1) || (CHIP_REV == A7L) ||  (CHIP_REV == A7S)
+    (CHIP_REV == I1) || (CHIP_REV == A7L) ||  (CHIP_REV == S2)
 #define VOUT_SUPPORT_RGB24			1
 #define VOUT_SUPPORT_ANALOG_CSC_SCALER		1
 #define VOUT_SUPPORT_DUAL_VOUT_SYNC		1
@@ -109,7 +109,7 @@
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
+    (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_DISPLAY_SECTIONS		2
 #define VOUT_DIRECT_DSP_INTERFACE	1
 #define VOUT_16B_DVOUT_Y_LOW_BYTE	1
@@ -128,7 +128,7 @@
 
 #if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A6) || \
     (CHIP_REV == A2Q) || (CHIP_REV == A5S) || (CHIP_REV == A7) || \
-    (CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
+    (CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
     (CHIP_REV == A8)
 #define VOUT_SUPPORT_8BIT_SD_DOUT	1
 #else
@@ -142,14 +142,14 @@
 #endif
 
 #if (CHIP_REV == A6) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-    (CHIP_REV == A7S) || (CHIP_REV == A8)
+    (CHIP_REV == S2) || (CHIP_REV == A8)
 #define VOUT_SUPPORT_ORC_MULTI_THREADS	1
 #else
 #define VOUT_SUPPORT_ORC_MULTI_THREADS	0
 #endif
 
 #if (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define VOUT_SUPPORT_DIGITAL_DITHER	1
 #define VOUT_SUPPORT_GAMMA_TABLE	1
 #else
@@ -157,7 +157,7 @@
 #define VOUT_SUPPORT_GAMMA_TABLE	0
 #endif
 
-#if (CHIP_REV == I1) ||  (CHIP_REV == A7S)
+#if (CHIP_REV == I1) ||  (CHIP_REV == S2)
 #define VOUT_DCHAN_ANALOG_OUT		1
 #define VOUT_HALF_PIXEL_SHIFT		1
 #else
@@ -165,7 +165,7 @@
 #define VOUT_HALF_PIXEL_SHIFT		0
 #endif
 
-#if (CHIP_REV == A5L) || (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A5L) || (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_SUPPORT_OSD_16BIT_DIR_MODE 1
 #define VOUT_SUPPORT_OSD_CSC		1
 #elif (CHIP_REV == A8)
@@ -176,13 +176,13 @@
 #define VOUT_SUPPORT_OSD_CSC		0
 #endif
 
-#if (CHIP_REV == A7L) || (CHIP_REV == A7S)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define VOUT_HVLD_POLARITY		1
 #else
 #define VOUT_HVLD_POLARITY		0
 #endif
 
-#if (CHIP_REV == A7S) || (CHIP_REV == A8)
+#if (CHIP_REV == S2) || (CHIP_REV == A8)
 #define VOUT_SUPPORT_4X2K_30P		1
 #define VOUT_SUPPORT_3D_FORMAT		1
 #define VOUT_SUPPORT_HORIZONTAL_REVERSE	1
@@ -886,7 +886,7 @@
 
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || 	\
-    (CHIP_REV == A7L) || (CHIP_REV == A8) || (CHIP_REV == A7S)
+    (CHIP_REV == A7L) || (CHIP_REV == A8) || (CHIP_REV == S2)
 
 /* Display A control regsiters */
 #define VOUT_DA_CONTROL_OFFSET				0x300

@@ -121,6 +121,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 	&ambarella_wdt0,
 	&ambarella_dma,
+	&ambarella_nand,
 };
 
 /* ==========================================================================*/

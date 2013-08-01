@@ -27,7 +27,7 @@
 
 #if (CHIP_REV == A1)
 #define SPI_SUPPORT_TISSP_NSM			0
-#else     	
+#else
 #define SPI_SUPPORT_TISSP_NSM			1
 #endif
 
@@ -42,7 +42,7 @@
 #define SPI_AHB_INSTANCES			0
 #define SPI_SUPPORT_TSSI_MODE			1
 
-#elif (CHIP_REV == A7S || CHIP_REV == S2)
+#elif (CHIP_REV == S2)
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
 #define SPI_INSTANCES				2
 #else
@@ -77,19 +77,19 @@
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1)
 #define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	1
-#else     	
+#else
 #define SPI_EN4_7_ENABLED_BY_GPIO1_AFSEL_REG	0
 #endif
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || \
-    (CHIP_REV == A7L) || (CHIP_REV == A7S) || (CHIP_REV == S2)
+    (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define SPI_SLAVE_INSTANCES			1
-#else     	
+#else
 #define SPI_SLAVE_INSTANCES			0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == A7S) || \
-    (CHIP_REV == A8) || (CHIP_REV == S2)	
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
+    (CHIP_REV == A8)
 #define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
 #define SPI_SUPPORT_MASTER_DELAY_START_TIME	1
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1

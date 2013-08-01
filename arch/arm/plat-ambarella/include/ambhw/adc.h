@@ -79,7 +79,7 @@
 #define ADC_DATA1_OFFSET		0x154
 #define ADC_DATA2_OFFSET		0x158
 #define ADC_DATA3_OFFSET		0x15c
-#else 
+#else
 #define ADC_DATA0_OFFSET		0x04
 #define ADC_DATA1_OFFSET		0x08
 #define ADC_DATA2_OFFSET		0x0c
@@ -310,7 +310,7 @@
 #if (CHIP_REV == A5)
 #define ADC_HI_THRESHOLD_EN		(0x1 << 21)
 #define ADC_LO_THRESHOLD_EN		(0x1 << 20)
-#else 
+#else
 #define ADC_HI_THRESHOLD_EN		(0x1 << 31)
 #define ADC_LO_THRESHOLD_EN		(0x1 << 30)
 #endif

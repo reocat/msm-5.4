@@ -21,17 +21,16 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_AHCI_H
-#define __PLAT_AMBARELLA_AHCI_H
+#ifndef __PLAT_AMBARELLA_AHCI_H__
+#define __PLAT_AMBARELLA_AHCI_H__
 
 /* ==========================================================================*/
 
 #ifndef __ASSEMBLER__
 
-extern struct platform_device			ambarella_ahci0;
+extern struct platform_device ambarella_ahci0;
 
 #endif /* __ASSEMBLER__ */
 
-#endif
-
+#endif /* __PLAT_AMBARELLA_AHCI_H__ */
 

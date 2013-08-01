@@ -67,7 +67,7 @@
 #define PLL_CORE_CTRL_OFFSET		0x00
 #define PLL_CORE_FRAC_OFFSET		0x04
 #define SCALER_SD48_OFFSET		0x0c
-#define SCALER_CORE_PRE_OFFSET		0x10
+#define SCALER_SDIO_OFFSET		0x10
 #define PLL_VIDEO_CTRL_OFFSET		0x14
 #define PLL_VIDEO_FRAC_OFFSET		0x18
 #define SCALER_VIDEO_OFFSET             0x1c
@@ -102,7 +102,7 @@
 #define PLL_CORE_CTRL_REG		RCT_REG(0x00)
 #define PLL_CORE_FRAC_REG		RCT_REG(0x04)
 #define SCALER_SD48_REG			RCT_REG(0x0c)
-#define SCALER_CORE_PRE_REG		RCT_REG(0x10)
+#define SCALER_SDIO_REG			RCT_REG(0x10)
 #define PLL_VIDEO_CTRL_REG		RCT_REG(0x14)
 #define PLL_VIDEO_FRAC_REG		RCT_REG(0x18)
 #define SCALER_VIDEO_REG                RCT_REG(0x1c)
@@ -415,6 +415,9 @@
 #define SCALER_SENSOR_VIN_OFFSET	0x230
 #define SCALER_SENSOR_VIN_REG		RCT_REG(0x230)
 
+#define SCALER_FDET_OFFSET		0x234
+#define SCALER_FDET_REG			RCT_REG(0x234)
+
 #define CORE_CLK_RATIO_1X_OFFSET	0x24c
 #define CORE_CLK_RATIO_1X_REG		RCT_REG(0x24c)
 
@@ -459,10 +462,10 @@
 #define SCALER_SDXC_POST_REG		RCT_REG(0x2a4)
 
 /* GTX */
-#define SCALER_GTX_POST_OFFSET		0x2a8
-#define ENET_GTXCLK_SRC_OFFSET		0x2ac
-#define SCALER_GTX_POST_REG		RCT_REG(0x2a8)
-#define ENET_GTXCLK_SRC_REG		RCT_REG(0x2ac)
+#define SCALER_GTX_POST_OFFSET		0x2c8
+#define ENET_GTXCLK_SRC_OFFSET		0x2cc
+#define SCALER_GTX_POST_REG		RCT_REG(0x2c8)
+#define ENET_GTXCLK_SRC_REG		RCT_REG(0x2cc)
 
 #define ISO_EN_OFFSET			0x2b8
 #define ISO_EN_REG			RCT_REG(0x2b8)
@@ -578,7 +581,7 @@
 	 * 0: ARM waits for FIO 2KB code fetch before execution.
 	 * 1: ARM does not wait for FIO to fetch 2KB code before execution.
 	 */
-#define SYS_CONFIG_ENET_SEL		0x00000080 /* 0: disable, 1: enable */
+#define SYS_CONFIG_ENET_SEL		0x00800000 /* 0: disable, 1: enable */
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020 /* 0: use, 1: doesn't use */
 #define SYS_CONFIG_NAND_FLASH_PAGE	0x00000010 /* 0: 512Byte, 1: 2K Byte */
 #define SYS_CONFIG_PLL_UNLOCK_TRIG_RESET 0x00000010

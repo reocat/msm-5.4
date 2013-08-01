@@ -37,7 +37,6 @@
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <plat/debug.h>
-#include <hal/hal.h>
 
 /* ==========================================================================*/
 u32 ambarella_debug_level = AMBA_DEBUG_NULL;

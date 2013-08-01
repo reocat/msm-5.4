@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_COMMON_FIO_H
-#define __PLAT_AMBARELLA_COMMON_FIO_H
+#ifndef __PLAT_AMBARELLA_COMMON_FIO_H__
+#define __PLAT_AMBARELLA_COMMON_FIO_H__
 
 /* ==========================================================================*/
 #define SELECT_FIO_FREE		(0x00000000)
@@ -70,5 +70,5 @@ extern int ambarella_init_fio(void);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_COMMON_FIO_H__ */
 

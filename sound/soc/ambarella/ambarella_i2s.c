@@ -145,8 +145,8 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct ambarella_pcm_dma_params *dma_data;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
-	u8 slots, word_pos, clksrc, mclk, oversample;
-	u32 clock_divider, clock_reg, channels;
+	u8 slots, word_pos, oversample;
+	u32 clksrc, mclk, clock_divider, clock_reg, channels;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable();
@@ -458,10 +458,10 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	if (default_sfreq == 0) {
-		mclk = AudioCodec_11_2896M;
+		mclk = 11289600;
 		sfreq = AUDIO_SF_44100;
 	} else {
-		mclk = AudioCodec_12_288M;
+		mclk = 12288000;
 		sfreq = AUDIO_SF_48000;
 	}
 

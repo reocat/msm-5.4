@@ -30,14 +30,14 @@
 
 #include <plat/gpio.h>
 #include <plat/atag.h>
-#include <plat/event.h>
 #include <plat/irq.h>
 #include <plat/pm.h>
-#include <plat/pwm.h>
-#include <plat/rct.h>
 #include <plat/hwlock.h>
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 #include <plat/cortex.h>
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#include <hal/hal.h>
 #endif
 
 /* ==========================================================================*/

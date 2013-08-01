@@ -26,15 +26,71 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/moduleparam.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/ir.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_ir = {
+	.parent		= NULL,
+	.name		= "gclk_ir",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_IR_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk *ambarella_ir_register_clk(void)
+{
+	struct clk *pgclk_ir = NULL;
+
+	pgclk_ir = clk_get(NULL, "gclk_ir");
+	if (IS_ERR(pgclk_ir)) {
+		ambarella_register_clk(&gclk_ir);
+		pgclk_ir = &gclk_ir;
+		pr_info("SYSCLK:IR[%lu]\n", clk_get_rate(pgclk_ir));
+	}
+
+	return pgclk_ir;
+}
+#endif
+
+static void ambarella_ir_set_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+	ambarella_ir_register_clk();
+#endif
+}
+
+static u32 ambarella_ir_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_ir_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_ir_register_clk());
+#endif
+}
 
 /* ==========================================================================*/
 struct resource ambarella_ir_resources[] = {
@@ -56,9 +112,8 @@ struct resource ambarella_ir_resources[] = {
 };
 
 struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
-	.set_pll		= rct_set_ir_pll,
-	.get_pll		= get_ir_freq_hz,
-
+	.set_pll		= ambarella_ir_set_pll,
+	.get_pll		= ambarella_ir_get_pll,
 	.protocol		= AMBA_IR_PROTOCOL_NEC,
 	.debug			= 0,
 };

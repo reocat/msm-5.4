@@ -105,14 +105,15 @@ struct ambarella_platform_nand
 	int				(*parse_error)(u32 reg);
 	void				(*request)(void);
 	void				(*release)(void);
+	u32				(*get_pll)(void);
 };
 
 /* ==========================================================================*/
-extern struct platform_device		ambarella_nand;
-extern struct platform_device		ambarella_nor;
+extern struct platform_device ambarella_nand;
 
 /* ==========================================================================*/
-extern void ambarella_init_nand_hotboot(struct ambarella_nand_timing *hot_nand_timing);
+extern void ambarella_init_nand_hotboot(
+	struct ambarella_nand_timing *hot_nand_timing);
 
 #endif //__ASSEMBLER__
 /* ==========================================================================*/

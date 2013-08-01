@@ -30,14 +30,17 @@
 #include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/moduleparam.h>
+#include <linux/clk.h>
 
 #include <asm/io.h>
 #include <asm/setup.h>
 
 #include <mach/hardware.h>
+#include <plat/dma.h>
 #include <plat/fio.h>
 #include <plat/nand.h>
-#include <plat/gpio.h>
+#include <plat/audio.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -470,6 +473,21 @@ static int fio_amb_nand_parse_error(u32 reg)
 	return fio_dma_parse_error(reg);
 }
 
+static u32 ambarella_nand_get_pll(void)
+{
+	u32 nand_pll;
+
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	nand_pll = (get_ahb_bus_freq_hz() / 1000);
+#else
+	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_ahb")) / 1000);
+#endif
+#if (FIO_USE_2X_FREQ == 1)
+	nand_pll <<= 1;
+#endif
+	return nand_pll;
+}
+
 static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.sets		= &ambarella_nand_default_set,
 	.timing		= &ambarella_nand_default_timing,
@@ -483,6 +501,7 @@ static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.parse_error	= fio_amb_nand_parse_error,
 	.request	= fio_amb_nand_request,
 	.release	= fio_amb_nand_release,
+	.get_pll	= ambarella_nand_get_pll,
 };
 
 static int __init parse_nand_tag_cs(const struct tag *tag)
@@ -602,17 +621,6 @@ struct platform_device ambarella_nand = {
 	.num_resources	= ARRAY_SIZE(ambarella_fio_resources),
 	.dev		= {
 		.platform_data		= &ambarella_platform_default_nand,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-
-struct platform_device ambarella_nor = {
-	.name		= "ambarella-nor",
-	.id		= -1,
-	.resource	= ambarella_fio_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_fio_resources),
-	.dev		= {
 		.dma_mask		= &ambarella_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}

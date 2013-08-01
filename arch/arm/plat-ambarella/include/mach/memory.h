@@ -62,7 +62,7 @@
 #if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
 #define AXI_SIZE			(0x00030000)
 #else
-#define AXI_SIZE                       (0x00003000)
+#define AXI_SIZE			(0x00003000)
 #endif
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)

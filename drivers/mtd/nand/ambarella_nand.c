@@ -42,6 +42,8 @@
 #include <mach/board.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
+#include <plat/fio.h>
+#include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 
@@ -49,7 +51,7 @@
 #undef AMBARELLA_NAND_WP
 
 struct ambarella_nand_info {
-	struct nand_chip			chip;
+	struct nand_chip		chip;
 	struct mtd_info			mtd;
 	struct nand_hw_control		controller;
 
@@ -288,7 +290,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 {
 	u32 origin_clk = nand_info->origin_clk;
-	u32 new_clk = get_ahb_bus_freq_hz() / 1000;
+	u32 new_clk;
 	u32 origin_timing, timing_reg = 0;
 	u8 tcls, tals, tcs, tds;
 	u8 tclh, talh, tch, tdh;
@@ -297,6 +299,7 @@ static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
 	u8 trdelay, tclr, twhr, tir;
 	u8 tww, trhz, tar;
 
+	new_clk = nand_info->plat_nand->get_pll();
 	switch (idx) {
 	case 0: /* Calculate timing 0 */
 		origin_timing = nand_info->origin_timing->timing0;
@@ -1904,7 +1907,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, nand_info);
 
-	nand_info->origin_clk = get_ahb_bus_freq_hz() / 1000; /* in Khz */
+	nand_info->origin_clk = nand_info->plat_nand->get_pll();
 	nand_info->origin_timing = plat_nand->timing;
 	memcpy(&nand_info->current_timing, plat_nand->timing,
 			sizeof(struct ambarella_nand_timing));

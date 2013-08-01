@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_SPI_H
-#define __PLAT_AMBARELLA_SPI_H
+#ifndef __PLAT_AMBARELLA_SPI_H__
+#define __PLAT_AMBARELLA_SPI_H__
 
 #define SPI_MASTER_INSTANCES	(SPI_INSTANCES + SPI_AHB_INSTANCES)
 
@@ -70,7 +70,7 @@ typedef struct {
 	u8	bus_id;
 	u8	cs_id;
 	u8	*buffer;
-	u16	n_size;
+	u32	n_size;	// u16	n_size;
 } amba_spi_write_t;
 
 typedef struct {
@@ -98,23 +98,23 @@ typedef struct {
 } amba_spi_write_and_read_t;
 
 struct ambarella_spi_cs_config {
-	u8					bus_id;
-	u8					cs_id;
-	u8					cs_num;
-	int					*cs_pins;
-	int					*cs_high;
+	u8 bus_id;
+	u8 cs_id;
+	u8 cs_num;
+	int *cs_pins;
+	int *cs_high;
 };
 
 struct ambarella_spi_platform_info {
-	int					support_dma;
-	int					fifo_entries;
-	int					cs_num;
-	int					*cs_pins;
-	int					*cs_high;
-	void    				(*cs_activate)  (struct ambarella_spi_cs_config *);
-	void    				(*cs_deactivate)(struct ambarella_spi_cs_config *);
-	void					(*rct_set_ssi_pll)(void);
-	u32					(*get_ssi_freq_hz)(void);
+	int support_dma;
+	int fifo_entries;
+	int cs_num;
+	int *cs_pins;
+	int *cs_high;
+	void (*cs_activate)(struct ambarella_spi_cs_config *);
+	void (*cs_deactivate)(struct ambarella_spi_cs_config *);
+	void (*rct_set_ssi_pll)(void);
+	u32 (*get_ssi_freq_hz)(void);
 };
 
 #define AMBA_SPI_CS_PINS_PARAM_CALL(id, arg, perm) \
@@ -138,12 +138,12 @@ struct ambarella_spi_platform_info {
 	module_param_cb(spi##id##_cs_high_7, &param_ops_int, &(arg[7]), perm)
 
 /* ==========================================================================*/
-extern struct platform_device			ambarella_spi0;
-extern struct platform_device			ambarella_spi1;
-extern struct platform_device			ambarella_spi2;
-extern struct platform_device			ambarella_spi3;
-extern struct platform_device			ambarella_spi4;
-extern struct platform_device			ambarella_spi_slave;
+extern struct platform_device ambarella_spi0;
+extern struct platform_device ambarella_spi1;
+extern struct platform_device ambarella_spi2;
+extern struct platform_device ambarella_spi3;
+extern struct platform_device ambarella_spi4;
+extern struct platform_device ambarella_spi_slave;
 
 /* ==========================================================================*/
 extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,
@@ -158,5 +158,5 @@ extern int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_SPI_H__ */
 

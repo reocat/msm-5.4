@@ -31,12 +31,16 @@
 #include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/proc_fs.h>
+#include <linux/clk.h>
 
 #include <asm/uaccess.h>
 
 #include <mach/hardware.h>
 #include <mach/board.h>
+#include <plat/pwm.h>
+#include <plat/clk.h>
 
+/* ==========================================================================*/
 #define PWM_DEFAULT_FREQUENCY   2200000
 #define PWM_DEFAULT_DIVIDER	1
 
@@ -44,6 +48,66 @@
 #define PWM_MAX_INSTANCES	(4)
 #define PWM_ARRAY_SIZE		(PWM_MAX_INSTANCES * PWM_CMD_SIZE)
 
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_pwm = {
+	.parent		= NULL,
+	.name		= "gclk_pwm",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_PWM_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk *ambarella_pwm_register_clk(void)
+{
+	struct clk *pgclk_pwm = NULL;
+	struct clk *pgclk_apb = NULL;
+
+	pgclk_pwm = clk_get(NULL, "gclk_pwm");
+	if (IS_ERR(pgclk_pwm)) {
+		pgclk_apb = clk_get(NULL, "gclk_apb");
+		if (IS_ERR(pgclk_apb)) {
+			BUG();
+		}
+		gclk_pwm.parent = pgclk_apb;
+		ambarella_register_clk(&gclk_pwm);
+		pgclk_pwm = &gclk_pwm;
+		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_pwm));
+	}
+
+	return pgclk_pwm;
+}
+#endif
+
+static void ambarella_pwm_set_pll(u32 freq_hz)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_pwm_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	clk_set_rate(ambarella_pwm_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_pwm_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_pwm_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_pwm_register_clk());
+#endif
+}
 
 /*================================ PWM Device ================================*/
 struct reg_bit_field {
@@ -91,7 +155,7 @@ static struct ambarella_pwm_device ambarella_pwm0 = {
 	.pwm_id		= 0,
 	.gpio_id	= GPIO(16),
 	.active_level	= 1,
-	.get_clock	= get_pwm_freq_hz,
+	.get_clock	= ambarella_pwm_get_pll,
 	.enable		= {
 		.addr	= PWM_ENABLE_REG,
 		.msb	= 0,
@@ -122,7 +186,7 @@ static struct ambarella_pwm_device ambarella_pwm1 = {
 	.pwm_id		= 1,
 	.gpio_id	= GPIO(45),
 	.active_level	= 1,
-	.get_clock	= get_pwm_freq_hz,
+	.get_clock	= ambarella_pwm_get_pll,
 	.enable		= {
 		.addr	= PWM_B0_ENABLE_REG,
 		.msb	= 0,
@@ -159,7 +223,7 @@ static struct ambarella_pwm_device ambarella_pwm2 = {
 	.pwm_id		= 2,
 	.gpio_id	= GPIO(46),
 	.active_level	= 1,
-	.get_clock	= get_pwm_freq_hz,
+	.get_clock	= ambarella_pwm_get_pll,
 	.enable		= {
 		.addr	= PWM_B1_ENABLE_REG,
 		.msb	= 0,
@@ -195,7 +259,7 @@ static struct ambarella_pwm_device ambarella_pwm3 = {
 	.pwm_id		= 3,
 	.gpio_id	= GPIO(50),
 	.active_level	= 1,
-	.get_clock	= get_pwm_freq_hz,
+	.get_clock	= ambarella_pwm_get_pll,
 	.enable		= {
 		.addr	= PWM_C0_ENABLE_REG,
 		.msb	= 0,
@@ -231,7 +295,7 @@ static struct ambarella_pwm_device ambarella_pwm4 = {
 	.pwm_id		= 4,
 	.gpio_id	= GPIO(51),
 	.active_level	= 1,
-	.get_clock	= get_pwm_freq_hz,
+	.get_clock	= ambarella_pwm_get_pll,
 	.enable		= {
 		.addr	= PWM_C1_ENABLE_REG,
 		.msb	= 0,
@@ -650,7 +714,7 @@ ambarella_pwm_proc_write_exit:
 
 int __init ambarella_init_pwm(void)
 {
-	int					retval = 0;
+	int retval = 0;
 
 #ifdef CONFIG_AMBARELLA_PWM_PROC
 	pwm_file = create_proc_entry(pwm_proc_name, S_IRUGO | S_IWUSR,
@@ -663,9 +727,7 @@ int __init ambarella_init_pwm(void)
 		pwm_file->write_proc = ambarella_pwm_proc_write;
 	}
 #endif
-
-	rct_set_pwm_freq_hz(PWM_DEFAULT_FREQUENCY);
-
+	ambarella_pwm_set_pll(PWM_DEFAULT_FREQUENCY);
 	ambarella_pwm_chip.dev	= &ambarella_pwm_platform_device0.dev;
 	ambarella_pwm_chip.ops	= &ambarella_pwm_ops;
 	ambarella_pwm_chip.base	= 0;

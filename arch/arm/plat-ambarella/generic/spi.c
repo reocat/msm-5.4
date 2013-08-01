@@ -26,15 +26,218 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/moduleparam.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/spi.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
 #define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_ssi = {
+	.parent		= NULL,
+	.name		= "gclk_ssi",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk *ambarella_ssi_register_clk(void)
+{
+	struct clk *pgclk_ssi = NULL;
+	struct clk *pgclk_apb = NULL;
+
+	pgclk_ssi = clk_get(NULL, "gclk_ssi");
+	if (IS_ERR(pgclk_ssi)) {
+		pgclk_apb = clk_get(NULL, "gclk_apb");
+		if (IS_ERR(pgclk_apb)) {
+			BUG();
+		}
+		gclk_ssi.parent = pgclk_apb;
+		ambarella_register_clk(&gclk_ssi);
+		pgclk_ssi = &gclk_ssi;
+		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi));
+	}
+
+	return pgclk_ssi;
+}
+#endif
+
+static void ambarella_ssi_set_pll(void)
+{
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
+	u32 freq_hz = 54000000;
+#elif (CHIP_REV == S2)
+	u32 freq_hz = 60000000;
+#else
+	u32 freq_hz = 13500000;
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_ssi_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	clk_set_rate(ambarella_ssi_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_ssi_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_ssi_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_ssi_register_clk());
+#endif
+}
+
+#if (SPI_MASTER_INSTANCES >= 2)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_ssi2 = {
+	.parent		= NULL,
+	.name		= "gclk_ssi2",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI2_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk *ambarella_ssi2_register_clk(void)
+{
+	struct clk *pgclk_ssi2 = NULL;
+	struct clk *pgclk_apb = NULL;
+
+	pgclk_ssi2 = clk_get(NULL, "gclk_ssi2");
+	if (IS_ERR(pgclk_ssi2)) {
+		pgclk_apb = clk_get(NULL, "gclk_apb");
+		if (IS_ERR(pgclk_apb)) {
+			BUG();
+		}
+		gclk_ssi2.parent = pgclk_apb;
+		ambarella_register_clk(&gclk_ssi2);
+		pgclk_ssi2 = &gclk_ssi2;
+		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi2));
+	}
+
+	return pgclk_ssi2;
+}
+#endif
+
+static void ambarella_ssi2_set_pll(void)
+{
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
+	u32 freq_hz = 54000000;
+#elif (CHIP_REV == S2)
+	u32 freq_hz = 60000000;
+#else
+	u32 freq_hz = 13500000;
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_ssi2_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	clk_set_rate(ambarella_ssi2_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_ssi2_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	return (u32)amb_get_ssi2_clock_frequency(HAL_BASE_VP);
+#else
+	return clk_get_rate(ambarella_ssi2_register_clk());
+#endif
+}
+#endif
+
+#if (SPI_AHB_INSTANCES >= 1)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_ssi_ahb = {
+	.parent		= NULL,
+	.name		= "gclk_ssi_ahb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI_AHB_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk *ambarella_ssi_ahb_register_clk(void)
+{
+	struct clk *pgclk_ssi_ahb = NULL;
+	struct clk *pgclk_apb = NULL;
+
+	pgclk_ssi_ahb = clk_get(NULL, "gclk_ssi_ahb");
+	if (IS_ERR(pgclk_ssi_ahb)) {
+		pgclk_apb = clk_get(NULL, "gclk_apb");
+		if (IS_ERR(pgclk_apb)) {
+			BUG();
+		}
+		gclk_ssi_ahb.parent = pgclk_apb;
+		ambarella_register_clk(&gclk_ssi_ahb);
+		pgclk_ssi_ahb = &gclk_ssi_ahb;
+		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi_ahb));
+	}
+
+	return pgclk_ssi_ahb;
+}
+#endif
+
+static void ambarella_ssi_ahb_set_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	//amb_set_ssi_ahb_clock_frequency(HAL_BASE_VP, freq_hz);
+#else
+	u32 freq_hz = 54000000;
+	clk_set_rate(ambarella_ssi_ahb_register_clk(), freq_hz);
+#endif
+}
+
+static u32 ambarella_ssi_ahb_get_pll(void)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	//return (u32)amb_get_ssi_ahb_clock_frequency(HAL_BASE_VP);
+	return 0;
+#else
+	return clk_get_rate(ambarella_ssi_ahb_register_clk());
+#endif
+}
+#endif
 
 /* ==========================================================================*/
 void ambarella_spi_cs_activate(struct ambarella_spi_cs_config *cs_config)
@@ -112,8 +315,8 @@ struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
 	.cs_high		= ambarella_spi0_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= rct_set_ssi_pll,
-	.get_ssi_freq_hz	= get_ssi_freq_hz,
+	.rct_set_ssi_pll	= ambarella_ssi_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi_get_pll,
 };
 
 struct platform_device ambarella_spi0 = {
@@ -128,8 +331,8 @@ struct platform_device ambarella_spi0 = {
 	}
 };
 
-#if (SPI_MASTER_INSTANCES >= 2 )
-#if  (CHIP_REV == A7S || CHIP_REV == S2)
+#if (SPI_MASTER_INSTANCES >= 2)
+#if (CHIP_REV == S2)
 struct resource ambarella_spi1_resources[] = {
 	[0] = {
 		.start	= AHB64_BASE + 0x4000,
@@ -176,8 +379,8 @@ struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
 	.cs_high		= ambarella_spi1_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= rct_set_ssi2_pll,
-	.get_ssi_freq_hz	= get_ssi2_freq_hz,
+	.rct_set_ssi_pll	= ambarella_ssi2_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi2_get_pll,
 };
 
 struct platform_device ambarella_spi1 = {
@@ -193,7 +396,7 @@ struct platform_device ambarella_spi1 = {
 };
 #endif
 
-#if (SPI_MASTER_INSTANCES >= 3 )
+#if (SPI_MASTER_INSTANCES >= 3)
 struct resource ambarella_spi2_resources[] = {
 	[0] = {
 		.start	= SPI3_BASE,
@@ -223,7 +426,7 @@ AMBA_SPI_CS_HIGH_PARAM_CALL(2, ambarella_spi2_cs_high, 0644);
 #endif
 struct ambarella_spi_platform_info ambarella_spi2_platform_info = {
 	.support_dma		= 0,
-#if (SPI_MASTER_INSTANCES == 5 )
+#if (SPI_MASTER_INSTANCES == 5)
 	.fifo_entries		= 64,
 #else
 	.fifo_entries		= 16,
@@ -233,8 +436,8 @@ struct ambarella_spi_platform_info ambarella_spi2_platform_info = {
 	.cs_high		= ambarella_spi2_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= rct_set_ssi2_pll,
-	.get_ssi_freq_hz	= get_ssi2_freq_hz,
+	.rct_set_ssi_pll	= ambarella_ssi2_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi2_get_pll,
 };
 
 struct platform_device ambarella_spi2 = {
@@ -250,7 +453,7 @@ struct platform_device ambarella_spi2 = {
 };
 #endif
 
-#if (SPI_MASTER_INSTANCES >= 5 )
+#if (SPI_MASTER_INSTANCES >= 5)
 struct resource ambarella_spi3_resources[] = {
 	[0] = {
 		.start	= SPI4_BASE,
@@ -283,8 +486,8 @@ struct ambarella_spi_platform_info ambarella_spi3_platform_info = {
 	.cs_high		= ambarella_spi3_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= rct_set_ssi2_pll,
-	.get_ssi_freq_hz	= get_ssi2_freq_hz,
+	.rct_set_ssi_pll	= ambarella_ssi2_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi2_get_pll,
 };
 
 struct platform_device ambarella_spi3 = {
@@ -325,7 +528,7 @@ AMBA_SPI_CS_HIGH_PARAM_CALL(4, ambarella_spi4_cs_high, 0644);
 #endif
 struct ambarella_spi_platform_info ambarella_spi4_platform_info = {
 	.support_dma		= 0,
-#if (SPI_MASTER_INSTANCES == 5 )
+#if (SPI_MASTER_INSTANCES == 5)
 	.fifo_entries		= 32,
 #else
 	.fifo_entries		= 16,
@@ -335,8 +538,13 @@ struct ambarella_spi_platform_info ambarella_spi4_platform_info = {
 	.cs_high		= ambarella_spi4_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= rct_set_ssi_pll,
-	.get_ssi_freq_hz	= get_ssi_freq_hz,
+#if (SPI_AHB_INSTANCES >= 1)
+	.rct_set_ssi_pll	= ambarella_ssi_ahb_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi_ahb_get_pll,
+#else
+	.rct_set_ssi_pll	= ambarella_ssi2_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi2_get_pll,
+#endif
 };
 
 struct platform_device ambarella_spi4 = {

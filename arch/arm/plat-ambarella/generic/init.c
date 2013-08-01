@@ -28,15 +28,17 @@
 #include <linux/proc_fs.h>
 #include <linux/memblock.h>
 #include <linux/export.h>
+#include <linux/clk.h>
 
 #include <asm/cacheflush.h>
 #include <asm/system_info.h>
+
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/init.h>
 
-#include <hal/hal.h>
 #include <plat/bapi.h>
+#include <plat/clk.h>
 
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
@@ -82,19 +84,77 @@ void __init ambarella_memblock_reserve(void)
 }
 
 /* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+#else
+static struct clk gclk_arm = {
+	.parent		= NULL,
+	.name		= "gclk_arm",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_ARM_ASYNC_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 3) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+static struct clk gclk_cortex = {
+	.parent		= NULL,
+	.name		= "gclk_cortex",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_CORTEX_CTRL_REG,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_CORTEX_FRAC_REG,
+	.ctrl2_reg	= PLL_CORTEX_CTRL2_REG,
+	.ctrl3_reg	= PLL_CORTEX_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 2,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk gclk_axi = {
+	.parent		= &gclk_cortex,
+	.name		= "gclk_axi",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 3,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+#endif
+#endif
+
+/* ==========================================================================*/
 int __init ambarella_init_machine(char *board_name)
 {
-	int					retval = 0;
-	u32 					boot_from;
+	int retval = 0;
 
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	char					*pname;
-	int					version;
-
-	retval = amb_get_chip_name(HAL_BASE_VP, &pname);
-	BUG_ON(retval != AMB_HAL_SUCCESS);
-	retval = amb_get_version(HAL_BASE_VP, &version);
-	BUG_ON(retval != AMB_HAL_SUCCESS);
+	char *pname;
+	int version;
+#else
+	struct clk *ppll_out_idsp = NULL;
 #endif
 
 	ambarella_board_generic.board_chip = AMBARELLA_BOARD_CHIP(system_rev);
@@ -106,18 +166,42 @@ int __init ambarella_init_machine(char *board_name)
 	pr_info("\tboard type:\t\t%d\n", ambarella_board_generic.board_type);
 	pr_info("\tboard revision:\t\t%d\n", ambarella_board_generic.board_rev);
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	ambarella_board_generic.board_poc = amb_get_system_configuration(HAL_BASE_VP);
+	retval = amb_get_chip_name(HAL_BASE_VP, &pname);
+	BUG_ON(retval != AMB_HAL_SUCCESS);
+	retval = amb_get_version(HAL_BASE_VP, &version);
+	BUG_ON(retval != AMB_HAL_SUCCESS);
+
+	ambarella_board_generic.board_poc =
+		amb_get_system_configuration(HAL_BASE_VP);
 	pr_info("\tchip name:\t\t%s\n", pname);
 	pr_info("\tHAL version:\t\t%d\n", version);
 	pr_info("\treference clock:\t%d\n",
 		amb_get_reference_clock_frequency(HAL_BASE_VP));
-	pr_info("\tsystem configuration:\t0x%08x\n", ambarella_board_generic.board_poc);
 	pr_info("\tboot type:\t\t0x%08x\n",
 		amb_get_boot_type(HAL_BASE_VP));
 	pr_info("\thif type:\t\t0x%08x\n",
 		amb_get_hif_type(HAL_BASE_VP));
 #else
 	ambarella_board_generic.board_poc = amba_readl(SYS_CONFIG_REG);
+
+	ppll_out_idsp = clk_get(NULL, "pll_out_idsp");
+	if (IS_ERR(ppll_out_idsp)) {
+		BUG();
+	}
+	gclk_arm.parent = ppll_out_idsp;
+	ambarella_register_clk(&gclk_arm);
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+	ambarella_register_clk(&gclk_cortex);
+	ambarella_register_clk(&gclk_axi);
+#endif
+#endif
+	pr_info("\tsystem configuration:\t0x%08x\n",
+		ambarella_board_generic.board_poc);
+
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
+	amba_writel(SCALER_ARM_ASYNC_REG, 0xF);
+#endif
 #endif
 
 	retval = ambarella_create_proc_dir();
@@ -154,17 +238,6 @@ int __init ambarella_init_machine(char *board_name)
 	retval = ambarella_init_sd();
 	BUG_ON(retval != 0);
 
-	boot_from = rct_boot_from();
-	if ((boot_from & BOOT_FROM_NOR) == BOOT_FROM_NOR) {
-		platform_device_register(&ambarella_nor);
-		device_set_wakeup_capable(&ambarella_nor.dev, 1);
-		device_set_wakeup_enable(&ambarella_nor.dev, 0);
-	} else {
-		platform_device_register(&ambarella_nand);
-		device_set_wakeup_capable(&ambarella_nand.dev, 1);
-		device_set_wakeup_enable(&ambarella_nand.dev, 0);
-	}
-
 #if (ETH_INSTANCES >= 1)
 	retval = ambarella_init_eth0(ambarella_board_generic.eth0_mac);
 	BUG_ON(retval != 0);
@@ -200,3 +273,4 @@ void ambarella_restart_machine(char mode, const char *cmd)
 	amba_writel(SOFT_RESET_REG, 0x2);
 	amba_writel(SOFT_RESET_REG, 0x3);
 }
+

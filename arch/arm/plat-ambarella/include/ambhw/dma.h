@@ -103,7 +103,7 @@
 #endif
 
 /* Dual space mode DMA */
-#if 	(CHIP_REV == A7S) || (CHIP_REV == A9)
+#if (CHIP_REV == S2)
 #define	DMA_DUAL_SPACE_MODE	        	1
 #else
 #undef	DMA_DUAL_SPACE_MODE

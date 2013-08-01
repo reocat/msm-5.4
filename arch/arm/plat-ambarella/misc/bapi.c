@@ -42,8 +42,6 @@
 #include <plat/fb.h>
 #include <mach/smp.h>
 
-#include <hal/hal.h>
-
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX

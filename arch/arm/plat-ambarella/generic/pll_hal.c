@@ -30,24 +30,26 @@
 #include <linux/dma-mapping.h>
 #include <linux/proc_fs.h>
 #include <linux/cpu.h>
+#include <linux/export.h>
 
 #include <asm/uaccess.h>
 #include <asm/localtimer.h>
 
 #include <mach/hardware.h>
 
-#include <plat/pll.h>
 #include <plat/timer.h>
 #include <plat/ambcache.h>
+#include <plat/event.h>
 
-#include <hal/hal.h>
+/* ==========================================================================*/
+#define AMBPLL_MAX_CMD_LENGTH			(32)
 
 /* ==========================================================================*/
 struct ambarella_pll_info {
 	amb_operating_mode_t operating_mode;
 };
 
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 struct ambarella_pll_vidcap_info {
 	char *name;
 	unsigned int vidcap;
@@ -63,6 +65,40 @@ struct ambarella_pll_performance_info {
 	char *name;
 	unsigned int performance;
 };
+
+/* ==========================================================================*/
+static inline unsigned long cpufreq_scale_copy(unsigned long old,
+	u_int div, u_int mult)
+{
+#if BITS_PER_LONG == 32
+
+	u64 result = ((u64) old) * ((u64) mult);
+	do_div(result, div);
+	return (unsigned long) result;
+
+#elif BITS_PER_LONG == 64
+
+	unsigned long result = old * ((u64) mult);
+	result /= div;
+	return result;
+
+#endif
+};
+
+extern unsigned long loops_per_jiffy;
+static inline unsigned int ambarella_adjust_jiffies(unsigned long val,
+	unsigned int oldfreq, unsigned int newfreq)
+{
+	if (((val == AMBA_EVENT_PRE_CPUFREQ) && (oldfreq < newfreq)) ||
+		((val == AMBA_EVENT_POST_CPUFREQ) && (oldfreq != newfreq))) {
+		loops_per_jiffy = cpufreq_scale_copy(loops_per_jiffy,
+			oldfreq, newfreq);
+
+		return newfreq;
+	}
+
+	return oldfreq;
+}
 
 /* ==========================================================================*/
 static struct proc_dir_entry *mode_file = NULL;
@@ -101,43 +137,6 @@ static struct ambarella_pll_performance_info performance_list[] = {
 	{"1080P50", AMB_PERFORMANCE_1080P50},
 	{"1080P60", AMB_PERFORMANCE_1080P60},
 	{"2160P60", AMB_PERFORMANCE_2160P60},
-};
-
-#elif (CHIP_REV == A7)
-static struct proc_dir_entry *vidcap_file = NULL;
-
-static struct ambarella_pll_mode_info mode_list[] = {
-	{"preview", AMB_OPERATING_MODE_PREVIEW},
-	{"still_capture", AMB_OPERATING_MODE_STILL_CAPTURE},
-	{"capture", AMB_OPERATING_MODE_CAPTURE},
-	{"playback", AMB_OPERATING_MODE_PLAYBACK},
-	{"display_and_arm", AMB_OPERATING_MODE_DISPLAY_AND_ARM},
-	{"standby", AMB_OPERATING_MODE_STANDBY},
-	{"lcd_bypass", AMB_OPERATING_MODE_LCD_BYPASS},
-	{"still_preview", AMB_OPERATING_MODE_STILL_PREVIEW},
-	{"lowpower", AMB_OPERATING_MODE_LOW_POWER},
-	{"ipcam", AMB_OPERATING_MODE_IP_CAM},
-};
-
-static struct ambarella_pll_performance_info performance_list[] = {
-	{"480P30", AMB_PERFORMANCE_480P30},
-	{"720P30", AMB_PERFORMANCE_720P30},
-	{"720P60", AMB_PERFORMANCE_720P60},
-	{"1080I60", AMB_PERFORMANCE_1080I60},
-	{"1080P30", AMB_PERFORMANCE_1080P30},
-	{"1080P60", AMB_PERFORMANCE_1080P60},
-	{"2160P60", AMB_PERFORMANCE_2160P60},
-};
-
-static struct ambarella_pll_vidcap_info vidcap_list[] = {
-	{"4096x3575", AMB_VIDCAP_4096X3575},
-	{"4000x2250", AMB_VIDCAP_4000X2250},
-	{"2304x1296", AMB_VIDCAP_2304X1296},
-	{"1984x1116", AMB_VIDCAP_1984X1116},
-	{"2048x1536", AMB_VIDCAP_2048X1536},
-	{"1312x984", AMB_VIDCAP_1312X984},
-	{"1536x384", AMB_VIDCAP_1536X384},
-	{"1536x384_small_vb", AMB_VIDCAP_1536X384_SMALL_VB},
 };
 
 #elif (CHIP_REV == A7L)
@@ -293,7 +292,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 		goto ambarella_pll_proc_read_exit;
 	}
 
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPossible Vidcap:\n");
 	for (i = 0; i < ARRAY_SIZE(vidcap_list); i++) {
@@ -317,7 +316,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nPLL Information:\n"
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			"\tVidcap:\t\t%s\n"
 #endif
 			"\tPerformance:\t%s\n"
@@ -330,7 +329,7 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #if (CHIP_REV == A5S)
 			"\tHDpreview:\t%s\n"
 #endif
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			"\tDigitalGamma:\t%s\n"
 #endif
 			"\tARM:\t\t%u Hz\n"
@@ -359,14 +358,17 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			"\tSSI2:\t\t%u Hz\n"
 #endif
 			"\tUART:\t\t%u Hz\n"
-#if (SUPPORT_GMII == 1 && CHIP_REV != A8)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			"\tGTX:\t\t%u Hz\n"
 #endif
-#if (SD_HAS_SDXC_CLOCK == 1 && CHIP_REV != A8)
+#if (CHIP_REV == I1)
 			"\tSDXC:\t\t%u Hz\n"
 #endif
+#if (CHIP_REV == A7L || CHIP_REV == S2)
+			"\tSDIO:\t\t%u Hz\n"
+#endif
 			"\tSD:\t\t%u Hz\n\n",
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			vidcap_list[operating_mode.vidcap_size].name,
 #endif
 			performance_list[operating_mode.performance].name,
@@ -379,12 +381,12 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #if (CHIP_REV == A5S)
 			operating_mode.hd_preview_state ? "On" : "Off",
 #endif
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			operating_mode.amb_digital_gamma_mode ? "On" : "Off",
 #endif
-			get_arm_bus_freq_hz(),
-			get_dram_freq_hz(),
-			get_idsp_freq_hz(),
+			amb_get_arm_clock_frequency(HAL_BASE_VP),
+			amb_get_ddr_clock_frequency(HAL_BASE_VP),
+			amb_get_idsp_clock_frequency(HAL_BASE_VP),
 			get_core_bus_freq_hz(),
 #if (CHIP_REV == I1 || CHIP_REV == S2 || CHIP_REV == A8)
 			amb_get_cortex_clock_frequency(HAL_BASE_VP),
@@ -395,11 +397,11 @@ static int ambarella_pll_proc_read(char *page, char **start,
 #endif
 			get_ahb_bus_freq_hz(),
 			get_apb_bus_freq_hz(),
-			get_vout_freq_hz(),
+			amb_get_vout_clock_frequency(HAL_BASE_VP),
 #if (CHIP_REV != A8)
-			get_vout2_freq_hz(),
+			amb_get_lcd_clock_frequency(HAL_BASE_VP),
 #endif
-			get_so_freq_hz(),
+			amb_get_sensor_clock_frequency(HAL_BASE_VP),
 			amb_get_hdmi_clock_frequency(HAL_BASE_VP),
 			amb_get_audio_clock_frequency(HAL_BASE_VP),
 			amb_get_adc_clock_frequency(HAL_BASE_VP),
@@ -408,13 +410,16 @@ static int ambarella_pll_proc_read(char *page, char **start,
 			amb_get_ssi2_clock_frequency(HAL_BASE_VP),
 #endif
 			amb_get_uart_clock_frequency(HAL_BASE_VP),
-#if (SUPPORT_GMII == 1 && CHIP_REV != A8)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 			amb_get_gtx_clock_frequency(HAL_BASE_VP),
 #endif
-#if (SD_HAS_SDXC_CLOCK == 1 && CHIP_REV != A8)
-			get_sdxc_freq_hz(),
+#if (CHIP_REV == I1)
+			amb_get_sdxc_clock_frequency(HAL_BASE_VP),
 #endif
-			get_sd_freq_hz());
+#if (CHIP_REV == A7L || CHIP_REV == S2)
+			amb_get_sdio_clock_frequency(HAL_BASE_VP),
+#endif
+			amb_get_sd_clock_frequency(HAL_BASE_VP));
 
 	*eof = 1;
 
@@ -446,7 +451,11 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 			__func__, retval);
 	}
 
-	oldfreq = get_arm_bus_freq_hz();
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+	oldfreq = (unsigned int)amb_get_cortex_clock_frequency(HAL_BASE_VP);
+#else
+	oldfreq = (unsigned int)amb_get_arm_clock_frequency(HAL_BASE_VP);
+#endif
 
 	ambarella_timer_suspend(1);
 	ambcache_pli_range(HAL_BASE_VP, ambarella_hal_get_size());
@@ -458,7 +467,11 @@ int ambarella_set_operating_mode(amb_operating_mode_t *popmode)
 	}
 	ambarella_timer_resume(1);
 
-	newfreq = get_arm_bus_freq_hz();
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+	newfreq = (unsigned int)amb_get_cortex_clock_frequency(HAL_BASE_VP);
+#else
+	newfreq = (unsigned int)amb_get_arm_clock_frequency(HAL_BASE_VP);
+#endif
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
 
 	retval = notifier_to_errno(
@@ -584,7 +597,7 @@ ambarella_performance_proc_write_exit:
 	return retval;
 }
 
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 static int ambarella_vidcap_proc_write(struct file *file,
 	const char __user *buffer, unsigned long count, void *data)
 {
@@ -647,7 +660,7 @@ static int __init ambarella_init_pll_hal(void)
 		goto ambarella_init_pll_hal_exit;
 	}
 
-#if (CHIP_REV == A7 || CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2)
 	vidcap_file = create_proc_entry("vidcap", S_IRUGO | S_IWUSR,
 		get_ambarella_proc_dir());
 	if (vidcap_file == NULL) {
@@ -696,17 +709,38 @@ int __init ambarella_init_pll(void)
 }
 
 /* ==========================================================================*/
-u32 ambarella_pll_suspend(u32 level)
+#if (CHIP_REV == A5S)
+u32 get_core_bus_freq_hz(void)
 {
-	return 0;
+	return (u32)amb_get_core_clock_frequency(HAL_BASE_VP);
 }
 
-u32 ambarella_pll_resume(u32 level)
+u32 get_ahb_bus_freq_hz(void)
 {
-#if 1
-	return 0;
-#else
-	return amb_set_operating_mode(HAL_BASE_VP, &pll_info.operating_mode);
-#endif
+	return get_core_bus_freq_hz();
 }
+
+u32 get_apb_bus_freq_hz(void)
+{
+	return get_core_bus_freq_hz() >> 1;
+}
+#else
+u32 get_core_bus_freq_hz(void)
+{
+	return (u32)amb_get_core_clock_frequency(HAL_BASE_VP);
+}
+
+u32 get_ahb_bus_freq_hz(void)
+{
+	return (u32)amb_get_ahb_clock_frequency(HAL_BASE_VP);
+}
+
+u32 get_apb_bus_freq_hz(void)
+{
+	return (u32)amb_get_apb_clock_frequency(HAL_BASE_VP);
+}
+#endif
+EXPORT_SYMBOL(get_core_bus_freq_hz);
+EXPORT_SYMBOL(get_ahb_bus_freq_hz);
+EXPORT_SYMBOL(get_apb_bus_freq_hz);
 

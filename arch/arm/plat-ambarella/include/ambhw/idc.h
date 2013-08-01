@@ -19,9 +19,9 @@
 
 #if (CHIP_REV == A1) || (CHIP_REV == A2) || 		\
     (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || \
-    (CHIP_REV == A5L)  
+    (CHIP_REV == A5L)
 #define IDC_INSTANCES		1
-#elif (CHIP_REV == A8 || CHIP_REV == A7S || CHIP_REV == S2)  
+#elif (CHIP_REV == A8) || (CHIP_REV == S2)
 #define IDC_INSTANCES		3
 #else
 #define IDC_INSTANCES		2
@@ -35,7 +35,7 @@
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == A5L) || \
     (CHIP_REV == I1)  || (CHIP_REV == A7L) || (CHIP_REV == A8) || \
-    (CHIP_REV == A7S)
+    (CHIP_REV == S2)
 #define IDC_INTERNAL_DELAY_CLK		2
 #else
 #define IDC_INTERNAL_DELAY_CLK		0
@@ -115,7 +115,7 @@
 
 /* Bit/format definition */
 
-/* IDCS_CTRL_REG */ 
+/* IDCS_CTRL_REG */
 #define IDCS_IRQ_EN		0x02
 #define IDCS_IRQ_P_SR_EN	0x04
 #define IDCS_IRQ_FIFO_TH_EN	0x08

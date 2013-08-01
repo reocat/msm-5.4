@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_PWM_H
-#define __PLAT_AMBARELLA_PWM_H
+#ifndef __PLAT_AMBARELLA_PWM_H__
+#define __PLAT_AMBARELLA_PWM_H__
 
 /* ==========================================================================*/
 
@@ -55,5 +55,5 @@ extern int ambarella_init_pwm(void);
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
-#endif
+#endif /* __PLAT_AMBARELLA_PWM_H__ */
 

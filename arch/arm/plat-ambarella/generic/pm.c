@@ -41,7 +41,6 @@
 #include <mach/hardware.h>
 #include <mach/init.h>
 
-#include <hal/hal.h>
 #include <plat/bapi.h>
 
 /* ==========================================================================*/
@@ -64,8 +63,11 @@ void ambarella_power_off(void)
 	if (ambarella_board_generic.power_control.gpio_id >= 0) {
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 0);
+		ambarella_set_gpio_output(
+			&ambarella_board_generic.power_control, 1);
 	} else {
-		rct_power_down();
+		amba_writel((amba_readl(ANA_PWR_REG) | ANA_PWR_POWER_DOWN),
+			ANA_PWR_REG);
 	}
 }
 
@@ -108,7 +110,6 @@ static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend, u32 tm_level)
 		ambarella_timer_suspend(tm_level);
 		ambarella_irq_suspend(0);
 		ambarella_gpio_suspend(0);
-		ambarella_pll_suspend(0);
 	}
 
 	retval = ambarella_pm_notify_raw(AMBA_EVENT_PRE_PM);
@@ -123,7 +124,6 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume, u32 tm_level)
 	retval = ambarella_pm_notify_raw(AMBA_EVENT_POST_PM);
 
 	if (bresume) {
-		ambarella_pll_resume(0);
 		ambarella_gpio_resume(0);
 		ambarella_irq_resume(0);
 		ambarella_timer_resume(tm_level);
