@@ -1758,7 +1758,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 				goto finish;
 			} else if (ep->id == CTRL_IN) {
 			 	printk("the data length of ctrl-in is zero\n");
-			 	BUG();
+				//BUG();
 			}
 		}
 

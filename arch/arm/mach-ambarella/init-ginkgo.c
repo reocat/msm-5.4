@@ -386,7 +386,7 @@ static void __init ambarella_init_ginkgo(void)
 				ginkgo_ipcam_sdio_set_bus_timing;
 
 			/* Config USB over-curent protection */
-			ambarella_board_generic.uhc_use_ocp = 0x1;
+			ambarella_board_generic.uhc_use_ocp = 0x0;
 
 			/* Register audio codec
 			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
