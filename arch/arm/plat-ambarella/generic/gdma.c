@@ -30,8 +30,10 @@
 
 #include <mach/hardware.h>
 
-#define TRANSFER_2D_WIDTH		(1 <<12 )		/* 4096 */
-#define MAX_TRANSFER_2D_HEIGHT		(1 <<11 )		/* 2048 */
+#include <plat/ambcache.h>
+
+#define TRANSFER_2D_WIDTH		(1 << 12 )		/* 4096 */
+#define MAX_TRANSFER_2D_HEIGHT		(1 << 11 )		/* 2048 */
 #define MAX_TRANSFER_SIZE_2D_UNIT	(TRANSFER_2D_WIDTH * MAX_TRANSFER_2D_HEIGHT)	/* 8MB */
 
 #define TRANSFER_1D_WIDTH		TRANSFER_2D_WIDTH
@@ -65,7 +67,7 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 		amba_writel(GDMA_WIDTH_REG, TRANSFER_2D_WIDTH - 1);
 		amba_writel(GDMA_HEIGHT_REG, row_count - 1);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-		amba_writel(GDMA_PIXELFORMAT_REG, 3);
+		amba_writel(GDMA_PIXELFORMAT_REG, 0x303);
 		amba_writel(GDMA_ALPHA_REG, 0);
 		amba_writel(GDMA_CLUT_BASE_REG, 0);
 #endif
@@ -89,9 +91,9 @@ static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 	/* linear copy */
 	amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
 	amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
-	amba_writel(GDMA_WIDTH_REG, TRANSFER_1D_WIDTH - 1);
+	amba_writel(GDMA_WIDTH_REG, size - 1);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-	amba_writel(GDMA_PIXELFORMAT_REG, 3);
+	amba_writel(GDMA_PIXELFORMAT_REG, 0x303);
 	amba_writel(GDMA_ALPHA_REG, 0);
 	amba_writel(GDMA_CLUT_BASE_REG, 0);
 #endif
@@ -168,6 +170,8 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 
 	mutex_lock(&transfer_mutex);
 
+	ambcache_clean_range((void *)ambarella_phys_to_virt((u32)src_addr), size);
+
 	while (remain_size > 0)	{
 		if (remain_size > MAX_TRANSFER_SIZE_ONCE) {
 			remain_size -= MAX_TRANSFER_SIZE_ONCE;
@@ -183,11 +187,94 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 		transferred_size += current_transfer_size;
 	}
 
+	ambcache_inv_range((void *)ambarella_phys_to_virt((u32)dest_addr), size);
+
 	mutex_unlock(&transfer_mutex);
 
 	return 0;
 }
 EXPORT_SYMBOL(dma_memcpy);
+
+static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,u16 src_pitch, u16 dest_pitch, u16 width, u16 height)
+{
+
+	if (height <= 0) {
+		return -1;
+	}
+
+	/* copy rows by 2D copy */
+	while (height > MAX_TRANSFER_2D_HEIGHT) {
+		amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
+		amba_writel(GDMA_SRC_1_PITCH_REG, src_pitch);
+		amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
+		amba_writel(GDMA_DST_PITCH_REG, dest_pitch);
+		amba_writel(GDMA_WIDTH_REG, width - 1);
+		amba_writel(GDMA_HEIGHT_REG, MAX_TRANSFER_2D_HEIGHT - 1);
+#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
+		amba_writel(GDMA_PIXELFORMAT_REG, 0x0);
+		amba_writel(GDMA_ALPHA_REG, 0);
+		amba_writel(GDMA_CLUT_BASE_REG, 0);
+#endif
+
+		/* start 2D copy */
+		amba_writel(GDMA_OPCODE_REG, 1);
+		height = height - MAX_TRANSFER_2D_HEIGHT;
+		src_addr = src_addr + src_pitch * MAX_TRANSFER_2D_HEIGHT;
+		dest_addr = dest_addr + dest_pitch * MAX_TRANSFER_2D_HEIGHT;
+	}
+
+		amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
+		amba_writel(GDMA_SRC_1_PITCH_REG, src_pitch);
+		amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
+		amba_writel(GDMA_DST_PITCH_REG, dest_pitch);
+		amba_writel(GDMA_WIDTH_REG, width - 1);
+		amba_writel(GDMA_HEIGHT_REG, height - 1);
+#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
+		amba_writel(GDMA_PIXELFORMAT_REG, 0x0);
+		amba_writel(GDMA_ALPHA_REG, 0);
+		amba_writel(GDMA_CLUT_BASE_REG, 0);
+#endif
+
+		/* start 2D copy */
+		amba_writel(GDMA_OPCODE_REG, 1);
+
+	return 0;
+
+}
+
+
+
+/* this is synchronous function, will wait till transfer finishes  width =< 4096 */
+int dma_pitch_memcpy(u8 *dest_addr, u8 *src_addr, u16 src_pitch, u16 dest_pitch, u16 width, u16 height)
+{
+
+	int size = src_pitch * height;
+
+	if (size <= 0 || src_pitch <= 0 || dest_pitch <= 0 || width > TRANSFER_2D_WIDTH) {
+		printk(" invalid value \n");
+		return -1;
+	}
+
+#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
+	if (size & 0x1) {
+		printk("Size must be even !\n");
+		return -1;
+	}
+#endif
+
+	mutex_lock(&transfer_mutex);
+	ambcache_clean_range((void *)ambarella_phys_to_virt((u32)src_addr), size);
+
+	transfer_pitch_unit(dest_addr, src_addr, src_pitch, dest_pitch, width, height);
+
+	wait_for_completion(&transfer_completion);
+
+	ambcache_inv_range((void *)ambarella_phys_to_virt((u32)dest_addr), size);
+	mutex_unlock(&transfer_mutex);
+
+	return 0;
+}
+EXPORT_SYMBOL(dma_pitch_memcpy);
 
 static irqreturn_t gdma_interrupt(int irq, void *dev_id)
 {
