@@ -29,7 +29,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
-#include <linux/spinlock.h>
+#include <linux/mutex.h>
 #include <linux/io.h>
 #include <linux/export.h>
 #include <linux/proc_fs.h>
@@ -40,7 +40,7 @@
 
 /* ==========================================================================*/
 static LIST_HEAD(ambarella_all_clocks);
-DEFINE_SPINLOCK(ambarella_clock_lock);
+DEFINE_MUTEX(ambarella_clock_mutex);
 
 /* ==========================================================================*/
 const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE] =
@@ -992,14 +992,14 @@ struct clk *clk_get(struct device *dev, const char *id)
 	struct clk *p;
 	struct clk *clk = ERR_PTR(-ENOENT);
 
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	list_for_each_entry(p, &ambarella_all_clocks, list) {
 		if (strcmp(id, p->name) == 0) {
 			clk = p;
 			break;
 		}
 	}
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 
 	return clk;
 }
@@ -1018,11 +1018,11 @@ int clk_enable(struct clk *clk)
 
 	clk_enable(clk->parent);
 
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	if (clk->ops && clk->ops->enable) {
 		(clk->ops->enable)(clk);
 	}
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 
 	return 0;
 }
@@ -1034,11 +1034,11 @@ void clk_disable(struct clk *clk)
 		return;
 	}
 
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	if (clk->ops && clk->ops->disable) {
 		(clk->ops->disable)(clk);
 	}
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 
 	clk_disable(clk->parent);
 }
@@ -1084,9 +1084,9 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 		return -EINVAL;
 	}
 
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	ret = (clk->ops->set_rate)(clk, rate);
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 
 	return ret;
 }
@@ -1106,11 +1106,11 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 		return -EINVAL;
 	}
 
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	if (clk->ops && clk->ops->set_parent) {
 		ret = (clk->ops->set_parent)(clk, parent);
 	}
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 
 	return ret;
 }
@@ -1118,9 +1118,9 @@ EXPORT_SYMBOL(clk_set_parent);
 
 int ambarella_register_clk(struct clk *clk)
 {
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	list_add(&clk->list, &ambarella_all_clocks);
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 
 	return 0;
 }
@@ -1142,7 +1142,7 @@ static int ambarella_clock_proc_read(char *page, char **start,
 
 	retlen += scnprintf((page + retlen), (count - retlen),
 			"\nClock Information:\n");
-	spin_lock(&ambarella_clock_lock);
+	mutex_lock(&ambarella_clock_mutex);
 	list_for_each_entry(p, &ambarella_all_clocks, list) {
 		if (retlen >= count) {
 			break;
@@ -1151,7 +1151,7 @@ static int ambarella_clock_proc_read(char *page, char **start,
 				"\t%s:\t%lu Hz\n",
 				p->name, p->ops->get_rate(p));
 	}
-	spin_unlock(&ambarella_clock_lock);
+	mutex_unlock(&ambarella_clock_mutex);
 	*eof = 1;
 
 ambarella_clock_proc_read_exit:
