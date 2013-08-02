@@ -59,7 +59,7 @@ unsigned int used_port = 1;
 module_param(used_port, uint, S_IRUGO);
 MODULE_PARM_DESC(used_port, "Select the I2S port.");
 
-unsigned int default_sfreq = 0;
+unsigned int default_sfreq = 1;
 module_param(default_sfreq, uint, S_IRUGO);
 MODULE_PARM_DESC(default_sfreq, "Default sfreq: 0. 44100, 1. 48000.");
 
