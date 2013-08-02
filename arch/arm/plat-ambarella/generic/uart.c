@@ -77,10 +77,13 @@ static struct clk *ambarella_uart_register_clk(void)
 
 static void ambarella_uart_set_pll(void)
 {
-/* Set prop UART clock in BSP, don't set clock by default */
+/* Set prop UART clock in BSP, don't set clock by default in normal mode */
+#if defined(CONFIG_AMBARELLA_RAW_BOOT)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_uart_clock_frequency(HAL_BASE_VP, (115200 * 16));
 #else
-	ambarella_uart_register_clk();
+	clk_set_rate(ambarella_uart_register_clk(), (115200 * 16));
+#endif
 #endif
 }
 

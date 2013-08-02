@@ -373,7 +373,6 @@ config PLAT_AMBARELLA_SUPPORT_HAL
 config AMBARELLA_RAW_BOOT
 	bool "Raw boot mode"
 	default n
-	depends on !PLAT_AMBARELLA_SUPPORT_HAL
 	help
 	  If you are not sure, say N here.
 
