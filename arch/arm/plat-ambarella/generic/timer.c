@@ -211,7 +211,11 @@ static struct clk gclk_apb = {
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_REG_UNAVAILABLE,
 	.pres_reg	= PLL_REG_UNAVAILABLE,
+#if (CHIP_REV == A8)
+	.post_reg	= PLL_REG_UNAVAILABLE,
+#else
 	.post_reg	= SCALER_CORE_POST_REG,
+#endif
 	.frac_reg	= PLL_REG_UNAVAILABLE,
 	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
 	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
