@@ -61,7 +61,7 @@
 #define FIO_SUPPORT_AHB_CLK_ENA			1
 #endif
 
-#if 	(CHIP_REV == A5S)
+#if 	(CHIP_REV == A5S) || (CHIP_REV == S2)
 #define	FIO_USE_2X_FREQ				1
 #else
 #define	FIO_USE_2X_FREQ				0

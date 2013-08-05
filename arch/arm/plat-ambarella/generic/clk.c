@@ -35,6 +35,8 @@
 #include <linux/proc_fs.h>
 #include <linux/clk.h>
 
+#include <asm/uaccess.h>
+
 #include <mach/hardware.h>
 #include <plat/clk.h>
 
@@ -728,6 +730,8 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	union ctrl_reg_u ctrl_reg;
 	union frac_reg_u frac_reg;
 	u64 diff;
+	u64 diff_low;
+	u64 diff_high;
 
 	if (c->extra_scaler > 1) {
 		rate *= c->extra_scaler;
@@ -784,6 +788,33 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			middle = (start + end) / 2;
 			if (middle == start || middle == end) {
 				break;
+			}
+		}
+		if ((middle > 0) && (middle < (table_size - 2))) {
+			if (p_table[middle - 1].multiplier < divident) {
+				diff_low = (divident -
+					p_table[middle - 1].multiplier);
+			} else {
+				diff_low = (p_table[middle - 1].multiplier -
+					divident);
+			}
+			if (p_table[middle].multiplier < divident) {
+				diff = (divident - p_table[middle].multiplier);
+			} else {
+				diff = (p_table[middle].multiplier - divident);
+			}
+			if (p_table[middle + 1].multiplier < divident) {
+				diff_high = (divident -
+					p_table[middle + 1].multiplier);
+			} else {
+				diff_high = (p_table[middle + 1].multiplier -
+					divident);
+			}
+			if (diff_low < diff) {
+				middle--;
+			}
+			if (diff_high < diff) {
+				middle++;
 			}
 		}
 
@@ -1158,21 +1189,165 @@ ambarella_clock_proc_read_exit:
 	return retlen;
 }
 
+static int ambarella_clock_proc_write(struct file *file,
+	const char __user *buffer, unsigned long count, void *data)
+{
+	int ret_val = 0;
+	char str[32];
+	u32 str_len;
+	u32 freq_hz;
+	u32 pre_scaler;
+	u32 ctrl2;
+	u32 ctrl3;
+	u64 divident;
+	u64 divider;
+	const struct pll_table_s *p_table;
+	u32 table_size;
+	u32 start;
+	u32 middle;
+	u32 end;
+	union ctrl_reg_u ctrl_reg;
+	union frac_reg_u frac_reg;
+	u64 diff;
+	u64 diff_low;
+	u64 diff_high;
+	u32 freq_hz_int;
+
+	str_len = (count < sizeof(str)) ? count : sizeof(str);
+	memset(str, 0, sizeof(str));
+	ret_val = copy_from_user(str, buffer, str_len);
+	if (ret_val) {
+		pr_err("%s: copy_from_user() = %d\n", __func__, ret_val);
+		goto ambarella_clock_proc_write_exit;
+	}
+	freq_hz = simple_strtoul(str, NULL, 0);
+
+	pre_scaler = 1;
+	divident = ((u64)freq_hz * pre_scaler * (1000 * 1000 * 1000));
+	divider = (PLL_REFERENCE_CLK / (1000 * 1000));
+	AMBCLK_DO_DIV(divident, divider);
+
+	p_table = ambarella_rct_pll_table;
+	table_size = ((sizeof(ambarella_rct_pll_table) /
+		sizeof(struct pll_table_s)));
+
+	start = 0;
+	end = table_size - 1;
+	middle = (start + end) / 2;
+	while (p_table[middle].multiplier != divident) {
+		if (p_table[middle].multiplier < divident) {
+			start = middle;
+		} else {
+			end = middle;
+		}
+		middle = (start + end) / 2;
+		if (middle == start || middle == end) {
+			break;
+		}
+	}
+	if ((middle > 0) && (middle < (table_size - 2))) {
+		if (p_table[middle - 1].multiplier < divident) {
+			diff_low = (divident - p_table[middle - 1].multiplier);
+		} else {
+			diff_low = (p_table[middle - 1].multiplier - divident);
+		}
+		if (p_table[middle].multiplier < divident) {
+			diff = (divident - p_table[middle].multiplier);
+		} else {
+			diff = (p_table[middle].multiplier - divident);
+		}
+		if (p_table[middle + 1].multiplier < divident) {
+			diff_high = (divident - p_table[middle + 1].multiplier);
+		} else {
+			diff_high = (p_table[middle + 1].multiplier - divident);
+		}
+		if (diff_low < diff) {
+			middle--;
+		}
+		if (diff_high < diff) {
+			middle++;
+		}
+	}
+	pr_debug("divident = [%llu]\n", divident);
+	pr_debug("multiplier[-1] = [%llu]\n", p_table[middle - 1].multiplier);
+	pr_debug("multiplier[0] = [%llu]\n", p_table[middle].multiplier);
+	pr_debug("multiplier[1] = [%llu]\n", p_table[middle + 1].multiplier);
+
+	ctrl_reg.w = 0;
+	ctrl_reg.s.intp = p_table[middle].intp;
+	ctrl_reg.s.sdiv = p_table[middle].sdiv;
+	ctrl_reg.s.sout = p_table[middle].sout;
+	ctrl_reg.s.frac_mode = 0;
+	ctrl_reg.s.force_lock = 1;
+	ctrl_reg.s.write_enable = 0;
+
+	pr_info("post_scaler = [0x%08X]\n", p_table[middle].post);
+
+	divident = (PLL_REFERENCE_CLK * (ctrl_reg.s.intp + 1) *
+		(ctrl_reg.s.sdiv + 1));
+	divider = (pre_scaler * (ctrl_reg.s.sout + 1) * p_table[middle].post);
+	AMBCLK_DO_DIV(divident, divider);
+	freq_hz_int = divident;
+	if (freq_hz_int < freq_hz) {
+		diff = freq_hz - freq_hz_int;
+	} else {
+		diff = freq_hz_int - freq_hz;
+	}
+	divident = (diff * pre_scaler * (p_table[middle].sout + 1) *
+		p_table[middle].post);
+	divident = divident << 32;
+	divider = ((u64)PLL_REFERENCE_CLK * (p_table[middle].sdiv + 1));
+	AMBCLK_DO_DIV_ROUND(divident, divider);
+	if (freq_hz_int <= freq_hz) {
+		frac_reg.s.nega	= 0;
+		frac_reg.s.frac	= divident;
+	} else {
+		frac_reg.s.nega	= 1;
+		frac_reg.s.frac	= 0x80000000 - divident;
+	}
+	pr_info("frac_reg = [0x%08X]\n", frac_reg.w);
+
+	if (diff) {
+		ctrl_reg.s.frac_mode = 1;
+	} else {
+		ctrl_reg.s.frac_mode = 0;
+	}
+	ctrl_reg.s.force_lock = 1;
+	ctrl_reg.s.write_enable	= 0;
+	pr_info("ctrl_reg = [0x%08X]\n", ctrl_reg.w);
+
+	if (ctrl_reg.s.frac_mode) {
+		ctrl2 = 0x3f770000;
+		ctrl3 = 0x00069300;
+	} else {
+		ctrl2 = 0x3f770000;
+		ctrl3 = 0x00068300;
+	}
+	pr_info("ctrl2_reg = [0x%08X]\n", ctrl2);
+	pr_info("ctrl3_reg = [0x%08X]\n", ctrl3);
+
+	ret_val = count;
+
+ambarella_clock_proc_write_exit:
+	return ret_val;
+}
+
 int __init ambarella_init_pll(void)
 {
-	int retval = 0;
+	int ret_val = 0;
 
 	clock_file = create_proc_entry("clock", S_IRUGO,
 		get_ambarella_proc_dir());
 	if (clock_file == NULL) {
-		retval = -ENOMEM;
+		ret_val = -ENOMEM;
 		pr_err("%s: create proc file (clock) fail!\n", __func__);
 		goto ambarella_init_pll_exit;
 	} else {
 		clock_file->read_proc = ambarella_clock_proc_read;
+		clock_file->write_proc = ambarella_clock_proc_write;
 	}
 
 ambarella_init_pll_exit:
-	return retval;
+	return ret_val;
 }
 

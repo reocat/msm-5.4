@@ -273,8 +273,9 @@ static void ginkgo_ipcam_sdio_set_bus_timing(u32 timing)
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
-	int					i, ret;
-	int					use_bub_default = 1;
+	int i, ret;
+	int use_bub_default = 1;
+	u32 core_freq;
 
 	ambarella_init_machine("ginkgo");
 
@@ -298,6 +299,11 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_board_generic.vin1_reset.gpio_id = GPIO(49);
 	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.vin1_reset.active_delay = 1;
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	core_freq = get_core_bus_freq_hz();
+#else
+	core_freq = clk_get_rate(clk_get(NULL, "gclk_core");
+#endif
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
@@ -313,7 +319,23 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
 			ambarella_board_generic.uport_control.active_delay = 1;
 
-			ambarella_platform_sd_controller0.max_clock = 128000000;
+			switch (core_freq) {
+			case 168000000:
+				ambarella_platform_sd_controller0.max_clock = (core_freq / 3);
+				break;
+			case 228000000:
+				ambarella_platform_sd_controller0.max_clock = (core_freq / 2);
+				break;
+			case 264000000:
+				ambarella_platform_sd_controller0.max_clock = ((core_freq << 1) / 5);
+				break;
+			case 384000000:
+				ambarella_platform_sd_controller0.max_clock = (core_freq / 3);
+				break;
+			default:
+				ambarella_platform_sd_controller0.max_clock = 48000000;
+				break;
+			}
 			ambarella_platform_sd_controller0.slot[0].default_caps |=
 				(MMC_CAP_8_BIT_DATA);
 			ambarella_platform_sd_controller0.slot[0].private_caps |=
