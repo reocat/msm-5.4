@@ -79,10 +79,16 @@ static void ambarella_uart_set_pll(void)
 {
 /* Set prop UART clock in BSP, don't set clock by default in normal mode */
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_set_uart_clock_frequency(HAL_BASE_VP, (115200 * 16));
+	u32 uart_freq;
+#if (CHIP_REV == A8)
+	uart_freq = (REF_CLK_FREQ);
 #else
-	clk_set_rate(ambarella_uart_register_clk(), (115200 * 16));
+	uart_freq = (115200 * 16);
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+	amb_set_uart_clock_frequency(HAL_BASE_VP, uart_freq);
+#else
+	clk_set_rate(ambarella_uart_register_clk(), uart_freq);
 #endif
 #endif
 }

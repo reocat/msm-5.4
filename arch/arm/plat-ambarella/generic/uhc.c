@@ -94,17 +94,17 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
 		pr_info("%s: amb_usb_host_soft_reset fail!\n", __func__);
 #else
-	val = amba_readl(ANA_PWR_REG);
+	val = amba_rct_readl(ANA_PWR_REG);
 	/* force usbphy on */
-	amba_writel(ANA_PWR_REG, val | 0x4);
+	amba_rct_writel(ANA_PWR_REG, val | 0x4);
 	udelay(1);
 	/* UHC soft reset */
-	amba_setbitsl(USB_REFCLK_REG, 0x80000000);
+	amba_rct_setbitsl(USB_REFCLK_REG, 0x80000000);
 	udelay(1);
-	amba_clrbitsl(USB_REFCLK_REG, 0x80000000);
+	amba_rct_clrbitsl(USB_REFCLK_REG, 0x80000000);
 	udelay(1);
 	/* restore ana_pwr_reg */
-	amba_writel(ANA_PWR_REG, val);
+	amba_rct_writel(ANA_PWR_REG, val);
 	udelay(1);
 #endif
 }

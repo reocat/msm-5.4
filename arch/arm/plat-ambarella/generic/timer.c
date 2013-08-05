@@ -92,7 +92,7 @@ static unsigned long ambarella_rct_core_get_rate(struct clk *c)
 	}
 	rate = c->parent->ops->get_rate(c->parent);
 	if (c->post_reg != PLL_REG_UNAVAILABLE) {
-		divider = amba_readl(c->post_reg);
+		divider = amba_rct_readl(c->post_reg);
 		if (divider) {
 			rate /= divider;
 		}
@@ -101,7 +101,7 @@ static unsigned long ambarella_rct_core_get_rate(struct clk *c)
 		rate /= c->divider;
 	}
 #if (CHIP_REV == I1)
-	if (amba_readl(RCT_REG(0x24C))) {
+	if (amba_rct_readl(RCT_REG(0x24C))) {
 		rate <<= 1;
 	}
 #endif
@@ -153,7 +153,7 @@ static unsigned long ambarella_rct_axb_get_rate(struct clk *c)
 	}
 	rate = c->parent->ops->get_rate(c->parent);
 	if (c->post_reg != PLL_REG_UNAVAILABLE) {
-		divider = amba_readl(c->post_reg);
+		divider = amba_rct_readl(c->post_reg);
 		if (divider) {
 			rate /= divider;
 		}
@@ -162,7 +162,7 @@ static unsigned long ambarella_rct_axb_get_rate(struct clk *c)
 		rate /= c->divider;
 	}
 #if (CHIP_REV == S2)
-	if (amba_readl(RCT_REG(0x24C))) {
+	if (amba_rct_readl(RCT_REG(0x24C))) {
 		rate <<= 1;
 	}
 #endif

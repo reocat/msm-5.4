@@ -77,17 +77,17 @@ static void reset_usb(void)
 #else
 	u32 val;
 
-	val = amba_readl(ANA_PWR_REG);
+	val = amba_rct_readl(ANA_PWR_REG);
 	/* force usbphy on */
-	amba_writel(ANA_PWR_REG, val | 0x4);
+	amba_rct_writel(ANA_PWR_REG, val | 0x4);
 	udelay(1);
 	/* UDC soft reset */
-	amba_setbitsl(USB_REFCLK_REG, 0x20000000);
+	amba_rct_setbitsl(USB_REFCLK_REG, 0x20000000);
 	udelay(1);
-	amba_clrbitsl(USB_REFCLK_REG, 0x20000000);
+	amba_rct_clrbitsl(USB_REFCLK_REG, 0x20000000);
 	udelay(1);
 	/* restore ana_pwr_reg */
-	amba_writel(ANA_PWR_REG, val);
+	amba_rct_writel(ANA_PWR_REG, val);
 	udelay(1);
 #endif
 }
@@ -109,7 +109,7 @@ static int flush_rxfifo(void)
 				rval = -1;
 				break;
 			}
-			amba_readl (USB_RXFIFO_BASE);
+			amba_readl(USB_RXFIFO_BASE);
 			udelay(5);
 		}
 		/* Switch to DMA mode */

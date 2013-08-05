@@ -26,7 +26,6 @@
 
 /* ==========================================================================*/
 #define PLL_REG_UNAVAILABLE	0
-#define	PLL_REFERENCE_CLK	(24 * 1000 * 1000)
 
 enum PLL_CLK_HZ {
 	PLL_CLK_10D1001MHZ	= 9990010,

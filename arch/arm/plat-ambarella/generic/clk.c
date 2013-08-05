@@ -655,7 +655,7 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 	u64 frac;
 
 	if (c->ctrl_reg != PLL_REG_UNAVAILABLE) {
-		ctrl_reg.w = amba_readl(c->ctrl_reg);
+		ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 		if ((ctrl_reg.s.power_down == 1) ||
 			(ctrl_reg.s.halt_vco == 1)) {
 			c->rate = 0;
@@ -665,17 +665,17 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 		ctrl_reg.w = 0;
 	}
 	if (c->frac_reg != PLL_REG_UNAVAILABLE) {
-		frac_reg.w = amba_readl(c->frac_reg);
+		frac_reg.w = amba_rct_readl(c->frac_reg);
 	} else {
 		frac_reg.w = 0;
 	}
 	if (c->pres_reg != PLL_REG_UNAVAILABLE) {
-		pre_scaler_reg = amba_readl(c->pres_reg);
+		pre_scaler_reg = amba_rct_readl(c->pres_reg);
 	} else {
 		pre_scaler_reg = 1;
 	}
 	if (c->post_reg != PLL_REG_UNAVAILABLE) {
-		post_scaler_reg = amba_readl(c->post_reg);
+		post_scaler_reg = amba_rct_readl(c->post_reg);
 	} else {
 		post_scaler_reg = 1;
 	}
@@ -684,19 +684,19 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 	sdiv = ctrl_reg.s.sdiv;
 	sout = ctrl_reg.s.sout;
 
-	divident = (PLL_REFERENCE_CLK * (pll_int + 1) * (sdiv + 1));
+	divident = (REF_CLK_FREQ * (pll_int + 1) * (sdiv + 1));
 	divider = (pre_scaler_reg * (sout + 1) * post_scaler_reg);
 	if (ctrl_reg.s.frac_mode) {
 		if (frac_reg.s.nega) {
 			/* Negative */
 			frac = (0x80000000 - frac_reg.s.frac);
-			frac = (PLL_REFERENCE_CLK * frac * (sdiv + 1));
+			frac = (REF_CLK_FREQ * frac * (sdiv + 1));
 			frac >>= 32;
 			divident = divident - frac;
 		} else {
 			/* Positive */
 			frac = frac_reg.s.frac;
-			frac = (PLL_REFERENCE_CLK * frac * (sdiv + 1));
+			frac = (REF_CLK_FREQ * frac * (sdiv + 1));
 			frac >>= 32;
 			divident = divident + frac;
 		}
@@ -748,7 +748,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		(c->ctrl3_reg == PLL_REG_UNAVAILABLE) &&
 		(c->pres_reg == PLL_REG_UNAVAILABLE) &&
 		(c->post_reg != PLL_REG_UNAVAILABLE) && c->max_divider) {
-		divider = (PLL_REFERENCE_CLK + (rate >> 1) - 1) / rate;
+		divider = (REF_CLK_FREQ + (rate >> 1) - 1) / rate;
 		if (!divider) {
 			ret_val = -1;
 			goto ambarella_rct_clk_set_rate_exit;
@@ -756,7 +756,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		if (divider > c->max_divider) {
 			divider = c->max_divider;
 		}
-		amba_writel(c->post_reg, divider);
+		amba_rct_writel(c->post_reg, divider);
 		ret_val = 0;
 		goto ambarella_rct_clk_set_rate_exit;
 	}
@@ -764,12 +764,12 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	if ((c->ctrl_reg != PLL_REG_UNAVAILABLE) &&
 		(c->post_reg != PLL_REG_UNAVAILABLE)) {
 		if (c->pres_reg != PLL_REG_UNAVAILABLE) {
-			pre_scaler = amba_readl(c->pres_reg);
+			pre_scaler = amba_rct_readl(c->pres_reg);
 		} else {
 			pre_scaler = 1;
 		}
 		divident = ((u64)rate * pre_scaler * (1000 * 1000 * 1000));
-		divider = (PLL_REFERENCE_CLK / (1000 * 1000));
+		divider = (REF_CLK_FREQ / (1000 * 1000));
 		AMBCLK_DO_DIV(divident, divider);
 
 		p_table = ambarella_rct_pll_table;
@@ -818,20 +818,20 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			}
 		}
 
-		ctrl_reg.w = amba_readl(c->ctrl_reg);
+		ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 		ctrl_reg.s.intp = p_table[middle].intp;
 		ctrl_reg.s.sdiv = p_table[middle].sdiv;
 		ctrl_reg.s.sout = p_table[middle].sout;
 		ctrl_reg.s.frac_mode = 0;
 		ctrl_reg.s.force_lock = 1;
 		ctrl_reg.s.write_enable = 0;
-		amba_writel(c->ctrl_reg, ctrl_reg.w);
+		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 		ctrl_reg.s.write_enable = 1;
-		amba_writel(c->ctrl_reg, ctrl_reg.w);
+		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 		ctrl_reg.s.write_enable = 0;
-		amba_writel(c->ctrl_reg, ctrl_reg.w);
+		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
-		amba_writel(c->post_reg, p_table[middle].post);
+		amba_rct_writel(c->post_reg, p_table[middle].post);
 
 		if (c->frac_mode) {
 			c->rate = ambarella_rct_clk_get_rate(c);
@@ -844,7 +844,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 				(p_table[middle].sout + 1) *
 				p_table[middle].post);
 			divident = divident << 32;
-			divider = ((u64)PLL_REFERENCE_CLK *
+			divider = ((u64)REF_CLK_FREQ *
 				(p_table[middle].sdiv + 1));
 			AMBCLK_DO_DIV_ROUND(divident, divider);
 			if (c->rate <= rate) {
@@ -854,9 +854,9 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 				frac_reg.s.nega	= 1;
 				frac_reg.s.frac	= 0x80000000 - divident;
 			}
-			amba_writel(c->frac_reg, frac_reg.w);
+			amba_rct_writel(c->frac_reg, frac_reg.w);
 
-			ctrl_reg.w = amba_readl(c->ctrl_reg);
+			ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 			if (diff) {
 				ctrl_reg.s.frac_mode = 1;
 			} else {
@@ -864,10 +864,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			}
 			ctrl_reg.s.force_lock = 1;
 			ctrl_reg.s.write_enable = 1;
-			amba_writel(c->ctrl_reg, ctrl_reg.w);
+			amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 			ctrl_reg.s.write_enable	= 0;
-			amba_writel(c->ctrl_reg, ctrl_reg.w);
+			amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 		}
 		if (ctrl_reg.s.frac_mode) {
 			ctrl2 = 0x3f770000;
@@ -878,10 +878,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		}
 
 		if (c->ctrl2_reg != PLL_REG_UNAVAILABLE) {
-			amba_writel(c->ctrl2_reg, ctrl2);
+			amba_rct_writel(c->ctrl2_reg, ctrl2);
 		}
 		if (c->ctrl3_reg != PLL_REG_UNAVAILABLE) {
-			amba_writel(c->ctrl3_reg, ctrl3);
+			amba_rct_writel(c->ctrl3_reg, ctrl3);
 		}
 	}
 	ret_val = 0;
@@ -900,14 +900,14 @@ int ambarella_rct_clk_enable(struct clk *c)
 		return -1;
 	}
 
-	ctrl_reg.w = amba_readl(c->ctrl_reg);
+	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 	ctrl_reg.s.power_down = 0;
 	ctrl_reg.s.halt_vco = 0;
 	ctrl_reg.s.write_enable = 1;
-	amba_writel(c->ctrl_reg, ctrl_reg.w);
+	amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 	ctrl_reg.s.write_enable	= 0;
-	amba_writel(c->ctrl_reg, ctrl_reg.w);
+	amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 	c->rate = ambarella_rct_clk_get_rate(c);
 
@@ -923,14 +923,14 @@ int ambarella_rct_clk_disable(struct clk *c)
 		return -1;
 	}
 
-	ctrl_reg.w = amba_readl(c->ctrl_reg);
+	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 	ctrl_reg.s.power_down = 1;
 	ctrl_reg.s.halt_vco = 1;
 	ctrl_reg.s.write_enable = 1;
-	amba_writel(c->ctrl_reg, ctrl_reg.w);
+	amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 	ctrl_reg.s.write_enable	= 0;
-	amba_writel(c->ctrl_reg, ctrl_reg.w);
+	amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 	c->rate = ambarella_rct_clk_get_rate(c);
 
@@ -963,7 +963,7 @@ unsigned long ambarella_rct_scaler_get_rate(struct clk *c)
 	}
 
 	if (c->post_reg != PLL_REG_UNAVAILABLE) {
-		divider = amba_readl(c->post_reg);
+		divider = amba_rct_readl(c->post_reg);
 		if (divider) {
 			c->rate = c->parent->ops->get_rate(c->parent) / divider;
 			return c->rate;
@@ -1000,7 +1000,7 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 		divider = c->max_divider;
 	}
 
-	amba_writel(c->post_reg, divider);
+	amba_rct_writel(c->post_reg, divider);
 	c->rate = ambarella_rct_scaler_get_rate(c);
 
 	return 0;
@@ -1224,7 +1224,7 @@ static int ambarella_clock_proc_write(struct file *file,
 
 	pre_scaler = 1;
 	divident = ((u64)freq_hz * pre_scaler * (1000 * 1000 * 1000));
-	divider = (PLL_REFERENCE_CLK / (1000 * 1000));
+	divider = (REF_CLK_FREQ / (1000 * 1000));
 	AMBCLK_DO_DIV(divident, divider);
 
 	p_table = ambarella_rct_pll_table;
@@ -1283,7 +1283,7 @@ static int ambarella_clock_proc_write(struct file *file,
 
 	pr_info("post_scaler = [0x%08X]\n", p_table[middle].post);
 
-	divident = (PLL_REFERENCE_CLK * (ctrl_reg.s.intp + 1) *
+	divident = (REF_CLK_FREQ * (ctrl_reg.s.intp + 1) *
 		(ctrl_reg.s.sdiv + 1));
 	divider = (pre_scaler * (ctrl_reg.s.sout + 1) * p_table[middle].post);
 	AMBCLK_DO_DIV(divident, divider);
@@ -1296,7 +1296,7 @@ static int ambarella_clock_proc_write(struct file *file,
 	divident = (diff * pre_scaler * (p_table[middle].sout + 1) *
 		p_table[middle].post);
 	divident = divident << 32;
-	divider = ((u64)PLL_REFERENCE_CLK * (p_table[middle].sdiv + 1));
+	divider = ((u64)REF_CLK_FREQ * (p_table[middle].sdiv + 1));
 	AMBCLK_DO_DIV_ROUND(divident, divider);
 	if (freq_hz_int <= freq_hz) {
 		frac_reg.s.nega	= 0;

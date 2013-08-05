@@ -341,6 +341,27 @@ static inline int amba_test_and_clear_mask(
 
 	return data & mask;
 }
+
+/* ==========================================================================*/
+static inline u32 __amba_rct_readl(volatile void __iomem *address)
+{
+	volatile u32 tmpval;
+
+	AMBARELLA_REG_LOCK();
+	tmpval = __raw_readl(address);
+#if (CHIP_REV == A8)
+	tmpval = __raw_readl(address);
+#endif	/* CHIP_REV */
+	AMBARELLA_REG_UNLOCK();
+
+	return tmpval;
+}
+
+#define amba_rct_readl(v)		__amba_rct_readl((volatile void __iomem *)v)
+#define amba_rct_writel(v,d)		__amba_writel((volatile void __iomem *)v, d)
+#define amba_rct_setbitsl(v, mask)	amba_rct_writel((v),(amba_rct_readl(v) | (mask)))
+#define amba_rct_clrbitsl(v, mask)	amba_rct_writel((v),(amba_rct_readl(v) & ~(mask)))
+
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

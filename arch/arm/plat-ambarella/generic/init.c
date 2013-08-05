@@ -182,7 +182,7 @@ int __init ambarella_init_machine(char *board_name)
 	pr_info("\thif type:\t\t0x%08x\n",
 		amb_get_hif_type(HAL_BASE_VP));
 #else
-	ambarella_board_generic.board_poc = amba_readl(SYS_CONFIG_REG);
+	ambarella_board_generic.board_poc = amba_rct_readl(SYS_CONFIG_REG);
 
 	ppll_out_idsp = clk_get(NULL, "pll_out_idsp");
 	if (IS_ERR(ppll_out_idsp)) {
@@ -200,7 +200,7 @@ int __init ambarella_init_machine(char *board_name)
 
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 #if (CHIP_REV == I1 || CHIP_REV == S2)
-	amba_writel(SCALER_ARM_ASYNC_REG, 0xF);
+	amba_rct_writel(SCALER_ARM_ASYNC_REG, 0xF);
 #endif
 #endif
 
@@ -270,7 +270,7 @@ void ambarella_restart_machine(char mode, const char *cmd)
 	local_irq_disable();
 	local_fiq_disable();
 	flush_cache_all();
-	amba_writel(SOFT_RESET_REG, 0x2);
-	amba_writel(SOFT_RESET_REG, 0x3);
+	amba_rct_writel(SOFT_RESET_REG, 0x2);
+	amba_rct_writel(SOFT_RESET_REG, 0x3);
 }
 

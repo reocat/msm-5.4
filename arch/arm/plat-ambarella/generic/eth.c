@@ -67,7 +67,7 @@ static int ambarella_eth0_is_enabled(void)
 		return 0;
 	}
 #else
-	return ((amba_readl(SYS_CONFIG_REG) & SYS_CONFIG_ENET_SEL) != 0x0);
+	return ((amba_rct_readl(SYS_CONFIG_REG) & SYS_CONFIG_ENET_SEL) != 0x0);
 #endif
 #endif
 }

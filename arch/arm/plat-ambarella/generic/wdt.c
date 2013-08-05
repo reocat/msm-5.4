@@ -61,22 +61,22 @@ static void ambarella_wdt0_start(u32 mode)
 	
 		/* Allow the change of WDT_RST_L_REG via APB */  
 #if (RCT_SUPPORT_UNL_WDT_RST_ANAPWR == 1)
-		amba_writel(ANA_PWR_REG, amba_readl(ANA_PWR_REG) | 0x80);
+		amba_rct_setbitsl(ANA_PWR_REG, 0x80);
 #endif	
 
 		/* Clear the WDT_RST_L_REG to zero */
-		amba_writel(WDT_RST_L_REG, RCT_WDT_RESET_VAL);
+		amba_rct_writel(WDT_RST_L_REG, RCT_WDT_RESET_VAL);
 
 		/* Not allow the change of WDT_RST_L_REG via APB */
 #if (RCT_SUPPORT_UNL_WDT_RST_ANAPWR == 1)
-		amba_writel(ANA_PWR_REG, amba_readl(ANA_PWR_REG) & (~0x80));
+		amba_rct_clrbitsl(ANA_PWR_REG, 0x80);
 #endif
 
 		/* Clear software reset bit. */
 #if defined(RCT_SOFT_OR_DLLRESET_PATTERN)
-		amba_writel(SOFT_RESET_REG, RCT_SOFT_OR_DLLRESET_PATTERN);
+		amba_rct_writel(SOFT_RESET_REG, RCT_SOFT_OR_DLLRESET_PATTERN);
 #else
-		amba_writel(SOFT_RESET_REG, 0x2);
+		amba_rct_writel(SOFT_RESET_REG, 0x2);
 #endif
 	}
 	amba_writel(WDOG_CONTROL_REG, mode);

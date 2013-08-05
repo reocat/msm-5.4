@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/clk.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -55,6 +56,7 @@
 #include "board-device.h"
 
 #include <plat/dma.h>
+#include <plat/clk.h>
 
 #include <linux/input.h>
 /* ==========================================================================*/
@@ -237,12 +239,12 @@ static void ginkgo_ipcam_sd_set_bus_timing(u32 timing)
 	u32 ms_delay_reg;
 
 	pr_debug("%s = %d\n", __func__, timing);
-	ms_delay_reg = amba_readl(MS_DELAY_CTRL_REG);
+	ms_delay_reg = amba_rct_readl(MS_DELAY_CTRL_REG);
 	ms_delay_reg &= 0xE3E0E3E0;
 	if (timing == MMC_TIMING_UHS_DDR50) {
 		ms_delay_reg |= ((0x7 << 16) | (0x7 << 10));
 	}
-	amba_writel(MS_DELAY_CTRL_REG, ms_delay_reg);
+	amba_rct_writel(MS_DELAY_CTRL_REG, ms_delay_reg);
 }
 
 static void ginkgo_ipcam_sdio_set_vdd(u32 vdd)
@@ -262,12 +264,12 @@ static void ginkgo_ipcam_sdio_set_bus_timing(u32 timing)
 	u32 ms_delay_reg;
 
 	pr_debug("%s = %d\n", __func__, timing);
-	ms_delay_reg = amba_readl(MS_DELAY_CTRL_REG);
+	ms_delay_reg = amba_rct_readl(MS_DELAY_CTRL_REG);
 	ms_delay_reg &= 0x1C1F1C1F;
 	if (timing == MMC_TIMING_UHS_DDR50) {
 		ms_delay_reg |= ((0x7 << 21) | (0x7 << 13));
 	}
-	amba_writel(MS_DELAY_CTRL_REG, ms_delay_reg);
+	amba_rct_writel(MS_DELAY_CTRL_REG, ms_delay_reg);
 }
 
 /* ==========================================================================*/
@@ -302,7 +304,7 @@ static void __init ambarella_init_ginkgo(void)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	core_freq = get_core_bus_freq_hz();
 #else
-	core_freq = clk_get_rate(clk_get(NULL, "gclk_core");
+	core_freq = clk_get_rate(clk_get(NULL, "gclk_core"));
 #endif
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
