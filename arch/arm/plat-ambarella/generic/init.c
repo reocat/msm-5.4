@@ -140,7 +140,7 @@ static struct clk gclk_axi = {
 	.divider	= 3,
 	.max_divider	= 0,
 	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_scaler_ops,
 };
 #endif
 #endif

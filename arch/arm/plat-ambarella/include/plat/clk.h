@@ -213,6 +213,9 @@ union frac_reg_u {
 
 #define AMBARELLA_RCT_PLL_TABLE_SIZE		(590)
 extern const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE];
+extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
+	u32 pre_scaler, const struct pll_table_s *p_table, u32 table_size);
+
 extern unsigned long ambarella_rct_clk_get_rate(struct clk *c);
 extern int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate);
 extern int ambarella_rct_clk_enable(struct clk *c);

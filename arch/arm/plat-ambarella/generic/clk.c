@@ -640,6 +640,124 @@ const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE] =
 };
 EXPORT_SYMBOL(ambarella_rct_pll_table);
 
+u32 ambarella_rct_find_pll_table_index(unsigned long rate, u32 pre_scaler,
+	const struct pll_table_s *p_table, u32 table_size)
+{
+	u64 divident;
+	u64 divider;
+	u32 start;
+	u32 middle;
+	u32 end;
+	u32 index_limit;
+	u64 diff = 0;
+	u64 diff_low = 0xFFFFFFFFFFFFFFFF;
+	u64 diff_high = 0xFFFFFFFFFFFFFFFF;
+
+	pr_debug("pre_scaler = [0x%08X]\n", pre_scaler);
+
+	divident = rate;
+	divident *= pre_scaler;
+	divident *= (1000 * 1000 * 1000);
+	divider = (REF_CLK_FREQ / (1000 * 1000));
+	AMBCLK_DO_DIV(divident, divider);
+
+	index_limit = (table_size - 1);
+	start = 0;
+	end = index_limit;
+	middle = table_size / 2;
+	while (p_table[middle].multiplier != divident) {
+		if (p_table[middle].multiplier < divident) {
+			start = middle;
+		} else {
+			end = middle;
+		}
+		middle = (start + end) / 2;
+		if (middle == start || middle == end) {
+			break;
+		}
+	}
+	pr_debug("divident = [%llu]\n", divident);
+	if ((middle > 0) && ((middle + 1) <= index_limit)) {
+		if (p_table[middle - 1].multiplier < divident) {
+			diff_low = (divident -
+				p_table[middle - 1].multiplier);
+		} else {
+			diff_low = (p_table[middle - 1].multiplier -
+				divident);
+		}
+		if (p_table[middle].multiplier < divident) {
+			diff = (divident - p_table[middle].multiplier);
+		} else {
+			diff = (p_table[middle].multiplier - divident);
+		}
+		if (p_table[middle + 1].multiplier < divident) {
+			diff_high = (divident -
+				p_table[middle + 1].multiplier);
+		} else {
+			diff_high = (p_table[middle + 1].multiplier -
+				divident);
+		}
+		pr_debug("multiplier[%u] = [%llu]\n", (middle - 1),
+			p_table[middle - 1].multiplier);
+		pr_debug("multiplier[%u] = [%llu]\n", (middle),
+			p_table[middle].multiplier);
+		pr_debug("multiplier[%u] = [%llu]\n", (middle + 1),
+			p_table[middle + 1].multiplier);
+	} else if ((middle == 0) && ((middle + 1) <= index_limit)) {
+		if (p_table[middle].multiplier < divident) {
+			diff = (divident - p_table[middle].multiplier);
+		} else {
+			diff = (p_table[middle].multiplier - divident);
+		}
+		if (p_table[middle + 1].multiplier < divident) {
+			diff_high = (divident -
+				p_table[middle + 1].multiplier);
+		} else {
+			diff_high = (p_table[middle + 1].multiplier -
+				divident);
+		}
+		pr_debug("multiplier[%u] = [%llu]\n", (middle),
+			p_table[middle].multiplier);
+		pr_debug("multiplier[%u] = [%llu]\n", (middle + 1),
+			p_table[middle + 1].multiplier);
+	} else if ((middle > 0) && ((middle + 1) > index_limit)) {
+		if (p_table[middle - 1].multiplier < divident) {
+			diff_low = (divident -
+				p_table[middle - 1].multiplier);
+		} else {
+			diff_low = (p_table[middle - 1].multiplier -
+				divident);
+		}
+		if (p_table[middle].multiplier < divident) {
+			diff = (divident - p_table[middle].multiplier);
+		} else {
+			diff = (p_table[middle].multiplier - divident);
+		}
+		pr_debug("multiplier[%u] = [%llu]\n", (middle - 1),
+			p_table[middle - 1].multiplier);
+		pr_debug("multiplier[%u] = [%llu]\n", (middle),
+			p_table[middle].multiplier);
+	}
+	pr_debug("diff_low = [%llu]\n", diff_low);
+	pr_debug("diff = [%llu]\n", diff);
+	pr_debug("diff_high = [%llu]\n", diff_high);
+	if (diff_low < diff) {
+		if (middle) {
+			middle--;
+		}
+	}
+	if (diff_high < diff) {
+		middle++;
+		if (middle > index_limit) {
+			middle = index_limit;
+		}
+	}
+	pr_debug("middle = [%u]\n", middle);
+
+	return middle;
+}
+EXPORT_SYMBOL(ambarella_rct_find_pll_table_index);
+
 /* ==========================================================================*/
 unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 {
@@ -722,16 +840,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	u32 ctrl3;
 	u64 divident;
 	u64 divider;
-	const struct pll_table_s *p_table;
-	u32 table_size;
-	u32 start;
 	u32 middle;
-	u32 end;
 	union ctrl_reg_u ctrl_reg;
 	union frac_reg_u frac_reg;
 	u64 diff;
-	u64 diff_low;
-	u64 diff_high;
 
 	if (c->extra_scaler > 1) {
 		rate *= c->extra_scaler;
@@ -768,60 +880,14 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		} else {
 			pre_scaler = 1;
 		}
-		divident = ((u64)rate * pre_scaler * (1000 * 1000 * 1000));
-		divider = (REF_CLK_FREQ / (1000 * 1000));
-		AMBCLK_DO_DIV(divident, divider);
 
-		p_table = ambarella_rct_pll_table;
-		table_size = ((sizeof(ambarella_rct_pll_table) /
-			sizeof(struct pll_table_s)));
-
-		start = 0;
-		end = table_size - 1;
-		middle = (start + end) / 2;
-		while (p_table[middle].multiplier != divident) {
-			if (p_table[middle].multiplier < divident) {
-				start = middle;
-			} else {
-				end = middle;
-			}
-			middle = (start + end) / 2;
-			if (middle == start || middle == end) {
-				break;
-			}
-		}
-		if ((middle > 0) && (middle < (table_size - 2))) {
-			if (p_table[middle - 1].multiplier < divident) {
-				diff_low = (divident -
-					p_table[middle - 1].multiplier);
-			} else {
-				diff_low = (p_table[middle - 1].multiplier -
-					divident);
-			}
-			if (p_table[middle].multiplier < divident) {
-				diff = (divident - p_table[middle].multiplier);
-			} else {
-				diff = (p_table[middle].multiplier - divident);
-			}
-			if (p_table[middle + 1].multiplier < divident) {
-				diff_high = (divident -
-					p_table[middle + 1].multiplier);
-			} else {
-				diff_high = (p_table[middle + 1].multiplier -
-					divident);
-			}
-			if (diff_low < diff) {
-				middle--;
-			}
-			if (diff_high < diff) {
-				middle++;
-			}
-		}
+		middle = ambarella_rct_find_pll_table_index(rate, pre_scaler,
+			ambarella_rct_pll_table, AMBARELLA_RCT_PLL_TABLE_SIZE);
 
 		ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
-		ctrl_reg.s.intp = p_table[middle].intp;
-		ctrl_reg.s.sdiv = p_table[middle].sdiv;
-		ctrl_reg.s.sout = p_table[middle].sout;
+		ctrl_reg.s.intp = ambarella_rct_pll_table[middle].intp;
+		ctrl_reg.s.sdiv = ambarella_rct_pll_table[middle].sdiv;
+		ctrl_reg.s.sout = ambarella_rct_pll_table[middle].sout;
 		ctrl_reg.s.frac_mode = 0;
 		ctrl_reg.s.force_lock = 1;
 		ctrl_reg.s.write_enable = 0;
@@ -831,7 +897,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		ctrl_reg.s.write_enable = 0;
 		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
-		amba_rct_writel(c->post_reg, p_table[middle].post);
+		amba_rct_writel(c->post_reg, ambarella_rct_pll_table[middle].post);
 
 		if (c->frac_mode) {
 			c->rate = ambarella_rct_clk_get_rate(c);
@@ -841,11 +907,11 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 				diff = c->rate - rate;
 			}
 			divident = (diff * pre_scaler *
-				(p_table[middle].sout + 1) *
-				p_table[middle].post);
+				(ambarella_rct_pll_table[middle].sout + 1) *
+				ambarella_rct_pll_table[middle].post);
 			divident = divident << 32;
 			divider = ((u64)REF_CLK_FREQ *
-				(p_table[middle].sdiv + 1));
+				(ambarella_rct_pll_table[middle].sdiv + 1));
 			AMBCLK_DO_DIV_ROUND(divident, divider);
 			if (c->rate <= rate) {
 				frac_reg.s.nega	= 0;
@@ -1201,16 +1267,10 @@ static int ambarella_clock_proc_write(struct file *file,
 	u32 ctrl3;
 	u64 divident;
 	u64 divider;
-	const struct pll_table_s *p_table;
-	u32 table_size;
-	u32 start;
 	u32 middle;
-	u32 end;
 	union ctrl_reg_u ctrl_reg;
 	union frac_reg_u frac_reg;
 	u64 diff;
-	u64 diff_low;
-	u64 diff_high;
 	u32 freq_hz_int;
 
 	str_len = (count < sizeof(str)) ? count : sizeof(str);
@@ -1221,71 +1281,26 @@ static int ambarella_clock_proc_write(struct file *file,
 		goto ambarella_clock_proc_write_exit;
 	}
 	freq_hz = simple_strtoul(str, NULL, 0);
-
 	pre_scaler = 1;
-	divident = ((u64)freq_hz * pre_scaler * (1000 * 1000 * 1000));
-	divider = (REF_CLK_FREQ / (1000 * 1000));
-	AMBCLK_DO_DIV(divident, divider);
 
-	p_table = ambarella_rct_pll_table;
-	table_size = ((sizeof(ambarella_rct_pll_table) /
-		sizeof(struct pll_table_s)));
-
-	start = 0;
-	end = table_size - 1;
-	middle = (start + end) / 2;
-	while (p_table[middle].multiplier != divident) {
-		if (p_table[middle].multiplier < divident) {
-			start = middle;
-		} else {
-			end = middle;
-		}
-		middle = (start + end) / 2;
-		if (middle == start || middle == end) {
-			break;
-		}
-	}
-	if ((middle > 0) && (middle < (table_size - 2))) {
-		if (p_table[middle - 1].multiplier < divident) {
-			diff_low = (divident - p_table[middle - 1].multiplier);
-		} else {
-			diff_low = (p_table[middle - 1].multiplier - divident);
-		}
-		if (p_table[middle].multiplier < divident) {
-			diff = (divident - p_table[middle].multiplier);
-		} else {
-			diff = (p_table[middle].multiplier - divident);
-		}
-		if (p_table[middle + 1].multiplier < divident) {
-			diff_high = (divident - p_table[middle + 1].multiplier);
-		} else {
-			diff_high = (p_table[middle + 1].multiplier - divident);
-		}
-		if (diff_low < diff) {
-			middle--;
-		}
-		if (diff_high < diff) {
-			middle++;
-		}
-	}
-	pr_debug("divident = [%llu]\n", divident);
-	pr_debug("multiplier[-1] = [%llu]\n", p_table[middle - 1].multiplier);
-	pr_debug("multiplier[0] = [%llu]\n", p_table[middle].multiplier);
-	pr_debug("multiplier[1] = [%llu]\n", p_table[middle + 1].multiplier);
+	middle = ambarella_rct_find_pll_table_index(freq_hz, pre_scaler,
+		ambarella_rct_pll_table, AMBARELLA_RCT_PLL_TABLE_SIZE);
 
 	ctrl_reg.w = 0;
-	ctrl_reg.s.intp = p_table[middle].intp;
-	ctrl_reg.s.sdiv = p_table[middle].sdiv;
-	ctrl_reg.s.sout = p_table[middle].sout;
+	ctrl_reg.s.intp = ambarella_rct_pll_table[middle].intp;
+	ctrl_reg.s.sdiv = ambarella_rct_pll_table[middle].sdiv;
+	ctrl_reg.s.sout = ambarella_rct_pll_table[middle].sout;
 	ctrl_reg.s.frac_mode = 0;
 	ctrl_reg.s.force_lock = 1;
 	ctrl_reg.s.write_enable = 0;
 
-	pr_info("post_scaler = [0x%08X]\n", p_table[middle].post);
+	pr_info("post_scaler = [0x%08X]\n",
+		ambarella_rct_pll_table[middle].post);
 
 	divident = (REF_CLK_FREQ * (ctrl_reg.s.intp + 1) *
 		(ctrl_reg.s.sdiv + 1));
-	divider = (pre_scaler * (ctrl_reg.s.sout + 1) * p_table[middle].post);
+	divider = (pre_scaler * (ctrl_reg.s.sout + 1) *
+		ambarella_rct_pll_table[middle].post);
 	AMBCLK_DO_DIV(divident, divider);
 	freq_hz_int = divident;
 	if (freq_hz_int < freq_hz) {
@@ -1293,10 +1308,12 @@ static int ambarella_clock_proc_write(struct file *file,
 	} else {
 		diff = freq_hz_int - freq_hz;
 	}
-	divident = (diff * pre_scaler * (p_table[middle].sout + 1) *
-		p_table[middle].post);
+	divident = (diff * pre_scaler *
+		(ambarella_rct_pll_table[middle].sout + 1) *
+		ambarella_rct_pll_table[middle].post);
 	divident = divident << 32;
-	divider = ((u64)REF_CLK_FREQ * (p_table[middle].sdiv + 1));
+	divider = ((u64)REF_CLK_FREQ *
+		(ambarella_rct_pll_table[middle].sdiv + 1));
 	AMBCLK_DO_DIV_ROUND(divident, divider);
 	if (freq_hz_int <= freq_hz) {
 		frac_reg.s.nega	= 0;
