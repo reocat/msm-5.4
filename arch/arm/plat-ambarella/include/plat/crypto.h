@@ -156,7 +156,7 @@ typedef struct md5_digest_s
 
 typedef struct md5_data_s
 {
-	u32 data[4];
+	u32 data[16];
 } md5_data_t;
 
 typedef struct sha1_digest_s
