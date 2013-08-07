@@ -204,7 +204,7 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	__le32 *dst = (__le32 *)out;
 	u32 ready;
 	u32 *offset=NULL;
-	mutex_lock(&engine_lock);
+	do{}while(mutex_trylock(&engine_lock) == 0);
 	switch (ctx->key_length){
 	case 16:
 		offset = (u32*)CRYPT_A_128_96_REG;
@@ -247,7 +247,7 @@ static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 	u32 ready;
 	u32 *offset=NULL;
 
-	mutex_lock(&engine_lock);
+	do{}while(mutex_trylock(&engine_lock) == 0);
 	switch (ctx->key_length) {
 	case 16:
 		offset = (u32*)CRYPT_A_128_96_REG;
@@ -479,6 +479,7 @@ static void  handle_aes_encrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	__le32 *src = (__le32 *)in;
 	__le32 *dst = (__le32 *)out;
 //	int ready=0;
+	do{}while(mutex_trylock(&engine_lock) == 0);
 
 	switch (ctx->key_len){
 	case 16:
@@ -508,6 +509,8 @@ static void  handle_aes_encrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
 
+	mutex_unlock(&engine_lock);
+
 }
 static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 {
@@ -515,6 +518,8 @@ static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	__le32 *src = (__le32 *)in;
 	__le32 *dst = (__le32 *)out;
 //	int ready=0;
+
+	do{}while(mutex_trylock(&engine_lock) == 0);
 
 	switch (ctx->key_len){
 	case 16:
@@ -542,6 +547,8 @@ static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 
 	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
+
+	mutex_unlock(&engine_lock);
 }
 
 static int handle_ecb_aes_req(struct ablkcipher_request *req)
@@ -748,6 +755,7 @@ struct md5_sha1_fun_t{
 static void ambarella_md5_transform(u32 *hash, u32 const *in)
 {
 	u32 ready;
+	do{}while(mutex_trylock(&engine_lock) == 0);
 
 	memcpy(&g_md5_digest.digest_0, hash, 16);
 
@@ -778,6 +786,8 @@ static void ambarella_md5_transform(u32 *hash, u32 const *in)
 	md5_sha1_fun.rdata(&(g_md5_digest.digest_0),(u32 *)CRYPT_MD5_OUTPUT_31_0, 16);
 
 	memcpy(hash, &g_md5_digest.digest_0, 16);
+
+	mutex_unlock(&engine_lock);
 }
 
 static inline void le32_to_cpu_array(u32 *buf, unsigned int words)
@@ -810,7 +820,6 @@ static int ambarella_md5_init(struct shash_desc *desc)
 	mctx->hash[2] = 0x98badcfe;
 	mctx->hash[3] = 0x10325476;
 	mctx->byte_count = 0;
-	mutex_lock(&engine_lock);
 	return 0;
 }
 
@@ -868,7 +877,6 @@ static int ambarella_md5_final(struct shash_desc *desc, u8 *out)
 	cpu_to_le32_array(mctx->hash, sizeof(mctx->hash) / sizeof(u32));
 	memcpy(out, mctx->hash, sizeof(mctx->hash));
 	memset(mctx, 0, sizeof(*mctx));
-	mutex_unlock(&engine_lock);
 	return 0;
 }
 
@@ -928,7 +936,6 @@ static int ambarella_sha1_init(struct shash_desc *desc)
 	*sctx = (struct sha1_state){
 		.state = { SHA1_H0, SHA1_H1, SHA1_H2, SHA1_H3, SHA1_H4 },
 	};
-	mutex_lock(&engine_lock);
 	return 0;
 }
 
@@ -953,6 +960,9 @@ void md5_sha1_read64(u32 * addr,u32 * buf, unsigned int len )
 void ambarella_sha1_transform(__u32 *digest, const char *in, __u32 *W)
 {
     u32 ready;
+
+    do{}while(mutex_trylock(&engine_lock) == 0);
+
     cpu_to_be32_array(digest, 5);
     memcpy(&g_sha1_digest.digest_0, digest, 16);
     g_sha1_digest.digest_128 = digest[4];
@@ -985,6 +995,8 @@ void ambarella_sha1_transform(__u32 *digest, const char *in, __u32 *W)
 
     memcpy(digest, &g_sha1_digest.digest_0, 20);
     cpu_to_be32_array(digest, 5);
+
+    mutex_unlock(&engine_lock);
 }
 
 
@@ -1049,7 +1061,7 @@ static int ambarella_sha1_final(struct shash_desc *desc, u8 *out)
 
 	/* Wipe context */
 	memset(sctx, 0, sizeof *sctx);
-	mutex_unlock(&engine_lock);
+
 	return 0;
 }
 
