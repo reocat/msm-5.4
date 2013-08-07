@@ -66,8 +66,7 @@ void ambarella_power_off(void)
 		ambarella_set_gpio_output(
 			&ambarella_board_generic.power_control, 1);
 	} else {
-		amba_writel((amba_readl(ANA_PWR_REG) | ANA_PWR_POWER_DOWN),
-			ANA_PWR_REG);
+		amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
 	}
 }
 

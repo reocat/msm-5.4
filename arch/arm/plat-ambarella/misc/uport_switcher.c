@@ -91,7 +91,7 @@ static int ambarella_uport_switcher_proc_read(char *page, char **start,
 	if (off != 0)
 		return 0;
 
-	if (amba_readl(USB_REFCLK_REG) & USB_PORT_IS_HOST)
+	if (amba_rct_readl(USB_REFCLK_REG) & USB_PORT_IS_HOST)
 		controller_status = "HOST";
 	else
 		controller_status = "DEVICE";
