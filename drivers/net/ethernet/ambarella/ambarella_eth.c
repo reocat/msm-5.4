@@ -924,7 +924,6 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 static inline void ambeth_interrupt_rx(struct ambeth_info *lp, u32 irq_status)
 {
 	if (irq_status & AMBETH_RXDMA_STATUS) {
-		dev_vdbg(&lp->ndev->dev, "RX IRQ[0x%x]!\n", irq_status);
 		amba_clrbitsl(lp->regbase + ETH_DMA_INTEN_OFFSET,
 			AMBETH_RXDMA_INTEN);
 		napi_schedule(&lp->napi);
@@ -1052,13 +1051,15 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			lp->tx.rng_tx[entry].mapping = 0;
 			lp->tx.dirty_tx++;
 		}
-
 		dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+		if (dirty_diff && (irq_status & ETH_DMA_STATUS_TU)) {
+			ambhw_dma_tx_poll(lp);
+		}
 		if (likely(dirty_diff < lp->tx_irq_low)) {
-			dev_vdbg(&lp->ndev->dev, "TX Info: Now gap %u.\n",
-				dirty_diff);
 			netif_wake_queue(lp->ndev);
 		}
+		dev_vdbg(&lp->ndev->dev, "cur_tx[%u], dirty_tx[%u], 0x%x.\n",
+			lp->tx.cur_tx, lp->tx.dirty_tx, irq_status);
 	}
 }
 
@@ -1515,6 +1516,8 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 	unsigned int				dirty_diff;
 
 	lp = container_of(napi, struct ambeth_info, napi);
+	dev_vdbg(&lp->ndev->dev, "cur_rx[%u], dirty_rx[%u]\n",
+		lp->rx.cur_rx, lp->rx.dirty_rx);
 
 	if (unlikely(!netif_carrier_ok(lp->ndev)))
 		goto ambeth_poll_complete;
@@ -1555,6 +1558,8 @@ ambeth_poll_complete:
 		spin_unlock_irqrestore(&lp->lock, flags);
 	}
 
+	dev_vdbg(&lp->ndev->dev, "cur_rx[%u], dirty_rx[%u], rx_budget[%u]\n",
+		lp->rx.cur_rx, lp->rx.dirty_rx, rx_budget);
 	return (budget - rx_budget);
 }
 
