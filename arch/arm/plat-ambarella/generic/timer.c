@@ -266,7 +266,7 @@ static void __init ambarella_clocksource_init(void)
 		return;
 	}
 
-	rval = of_property_read_u32(np, "ctrl-offset", &ce_ctrl_offset);
+	rval = of_property_read_u32(np, "ctrl-offset", &cs_ctrl_offset);
 	if (rval < 0) {
 		pr_err("%s: Can't get ctrl offset\n", __func__);
 		return;
