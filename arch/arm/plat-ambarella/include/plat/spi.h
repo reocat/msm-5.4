@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_SPI_H__
 #define __PLAT_AMBARELLA_SPI_H__
 
+#include <linux/spi/spi.h>
+
 #define SPI_MASTER_INSTANCES	(SPI_INSTANCES + SPI_AHB_INSTANCES)
 
 /* ==========================================================================*/
