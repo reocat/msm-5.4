@@ -7,12 +7,12 @@
  *
  */
 
-#include <linux/ambpriv_device.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/pm_runtime.h>
+#include <linux/ambpriv_device.h>
 #include "base.h"
 
 #define to_ambpriv_driver(drv)	(container_of((drv), struct ambpriv_driver, driver))
@@ -583,4 +583,18 @@ int __init ambpriv_bus_init(void)
 }
 
 core_initcall(ambpriv_bus_init);
+
+
+/* i2c function wrapper, should be removed when FDT is ready */
+struct i2c_client *ambpriv_i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
+{
+	return i2c_new_device(adap, info);
+}
+EXPORT_SYMBOL(ambpriv_i2c_new_device);
+
+void ambpriv_i2c_unregister_device(struct i2c_client *client)
+{
+	i2c_unregister_device(client);
+}
+EXPORT_SYMBOL(ambpriv_i2c_unregister_device);
 
