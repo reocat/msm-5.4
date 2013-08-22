@@ -1256,6 +1256,11 @@ MODULE_LICENSE ("GPL");
 #define PLATFORM_DRIVER		ehci_octeon_driver
 #endif
 
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
+#include "ehci-ambarella.c"
+#define	PLATFORM_DRIVER		ehci_hcd_ambarella_driver
+#endif
+
 #ifdef CONFIG_TILE_USB
 #include "ehci-tilegx.c"
 #define	PLATFORM_DRIVER		ehci_hcd_tilegx_driver
