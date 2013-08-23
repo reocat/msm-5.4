@@ -546,6 +546,10 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.symmetric_rates = 1,
 };
 
+static const struct snd_soc_component_driver ambarella_i2s_component = {
+	.name		= "ambarella-i2s",
+};
+
 static int ambarella_i2s_probe(struct platform_device *pdev)
 {
 	struct amb_i2s_priv *priv_data;
@@ -584,12 +588,13 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, priv_data);
 
-	return snd_soc_register_dai(&pdev->dev, &ambarella_i2s_dai);
+	return snd_soc_register_component(&pdev->dev, &ambarella_i2s_component,
+					 &ambarella_i2s_dai, 1);
 }
 
 static int ambarella_i2s_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_dai(&pdev->dev);
+	snd_soc_unregister_component(&pdev->dev);
 
 	return 0;
 }
