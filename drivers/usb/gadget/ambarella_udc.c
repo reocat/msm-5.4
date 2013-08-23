@@ -2007,7 +2007,6 @@ static int ambarella_udc_start(struct usb_gadget *gadget,
 	/* Hook the driver */
 	driver->driver.bus = NULL;
 	udc->driver = driver;
-	udc->gadget.dev.driver = &driver->driver;
 
 	/* Enable udc */
 	spin_lock_irqsave(&udc->lock, flags);
@@ -2028,7 +2027,6 @@ static int ambarella_udc_stop(struct usb_gadget *gadget,
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	udc->driver = NULL;
-	udc->gadget.dev.driver = NULL;
 
 	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_disable(udc);
@@ -2064,13 +2062,10 @@ static void ambarella_init_gadget(struct ambarella_udc *udc,
 
 	spin_lock_init (&udc->lock);
 
-	dev_set_name(&udc->gadget.dev, "gadget");
 	udc->gadget.ops = &ambarella_ops;
 	udc->gadget.name = gadget_name;
 	udc->gadget.max_speed = USB_SPEED_HIGH;
 	udc->gadget.ep0 = &udc->ep[CTRL_IN].ep;
-	udc->gadget.dev.parent = &pdev->dev;
-	udc->gadget.dev.release = ambarella_gadget_release;
 	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 
 	/* set basic ep parameters */
@@ -2391,15 +2386,9 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 	create_proc_files();
 
 	/* Register gadget driver */
-	retval = device_register(&udc->gadget.dev);
+	retval = usb_add_gadget_udc_release(&pdev->dev, &udc->gadget,
+					ambarella_gadget_release);
 	if (retval) {
-		put_device(&udc->gadget.dev);
-		goto err_out6;
-	}
-
-	retval = usb_add_gadget_udc(&pdev->dev, &udc->gadget);
-	if (retval) {
-		device_unregister(&udc->gadget.dev);
 		goto err_out6;
 	}
 
