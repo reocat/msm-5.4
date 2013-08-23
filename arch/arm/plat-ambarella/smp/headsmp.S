@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/cortex/headsmp.S
+ * arch/arm/plat-ambarella/smp/headsmp.S
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

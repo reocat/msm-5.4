@@ -44,7 +44,7 @@
 		.macro	arch_ret_to_user, tmp1, tmp2
 		.endm
 
-#if !defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_VIC)
 
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\base, =(VIC_BASE)
@@ -66,8 +66,9 @@
 #endif
 1000:
 		.endm
+#endif
 
-#else
+#if defined(CONFIG_ARM_GIC)
 #include <plat/cortex.h>
 #include <asm/hardware/gic.h>
 

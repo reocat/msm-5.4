@@ -62,9 +62,7 @@
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
-#endif
 	&ambarella_ehci0,
 	&ambarella_ohci0,
 	&ambarella_eth0,
@@ -81,9 +79,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_sd0,
 	&ambarella_sd1,
 	&ambarella_spi0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
-	&ambarella_spi1,
-#endif
 	&ambarella_spi_slave,
 	&ambarella_uart,
 	&ambarella_uart1,
@@ -93,9 +88,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_wdt0,
 	&ambarella_dma,
 	&ambarella_nand,
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	&mpcore_wdt,
-#endif
 };
 
 static struct platform_device *ambarella_pwm_devices[] __initdata = {

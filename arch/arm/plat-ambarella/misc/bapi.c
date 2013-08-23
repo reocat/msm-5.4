@@ -239,7 +239,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			flush_cache_all();
 			retval = bapi_aoss_entry((u32)bapi_info->aoss_info.fn_pri,
 				bapi_aoss_arg[1], bapi_aoss_arg[2], bapi_aoss_arg[3]);
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX_BST)
 			if (retval != 0x01) {
 				ambarella_swvic_set(AXI_SOFT_IRQ(0));
 				while(1) {};

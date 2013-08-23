@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/cortex/smp.c
+ * arch/arm/plat-ambarella/smp/smp.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

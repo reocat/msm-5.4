@@ -230,6 +230,86 @@ static struct clk gclk_apb = {
 	.extra_scaler	= 0,
 	.ops		= &ambarella_rct_core_ops,
 };
+
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_HAVE_ARM11)
+static struct clk gclk_arm = {
+	.parent		= &pll_out_idsp,
+	.name		= "gclk_arm",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_ARM_ASYNC_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 3) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+static struct clk gclk_cortex = {
+	.parent		= NULL,
+	.name		= "gclk_cortex",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_CORTEX_CTRL_REG,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_CORTEX_FRAC_REG,
+	.ctrl2_reg	= PLL_CORTEX_CTRL2_REG,
+	.ctrl3_reg	= PLL_CORTEX_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 2,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+static struct clk gclk_axi = {
+	.parent		= &gclk_cortex,
+	.name		= "gclk_axi",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 3,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#if defined(CONFIG_HAVE_ARM_TWD)
+static struct clk clk_smp_twd = {
+	.parent		= &gclk_axi,
+	.name		= "smp_twd",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 1,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+#endif
 #endif
 
 /* ==========================================================================*/
@@ -265,17 +345,6 @@ static struct irqaction ambarella_ce_timer_irq;
 
 /* ==========================================================================*/
 #if !defined(CONFIG_MACH_HYACINTH_0) && !defined(CONFIG_MACH_HYACINTH_1)
-#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-#define AMBARELLA_CE_TIMER_STATUS_REG		TIMER8_STATUS_REG
-#define AMBARELLA_CE_TIMER_RELOAD_REG		TIMER8_RELOAD_REG
-#define AMBARELLA_CE_TIMER_MATCH1_REG		TIMER8_MATCH1_REG
-#define AMBARELLA_CE_TIMER_MATCH2_REG		TIMER8_MATCH2_REG
-#define AMBARELLA_CE_TIMER_IRQ			TIMER8_IRQ
-#define AMBARELLA_CE_TIMER_CTR_EN		TIMER_CTR_EN8
-#define AMBARELLA_CE_TIMER_CTR_OF		TIMER_CTR_OF8
-#define AMBARELLA_CE_TIMER_CTR_CSL		TIMER_CTR_CSL8
-#define AMBARELLA_CE_TIMER_CTR_MASK		0xF0000000
-#else
 #define AMBARELLA_CE_TIMER_STATUS_REG		TIMER3_STATUS_REG
 #define AMBARELLA_CE_TIMER_RELOAD_REG		TIMER3_RELOAD_REG
 #define AMBARELLA_CE_TIMER_MATCH1_REG		TIMER3_MATCH1_REG
@@ -285,7 +354,6 @@ static struct irqaction ambarella_ce_timer_irq;
 #define AMBARELLA_CE_TIMER_CTR_OF		TIMER_CTR_OF3
 #define AMBARELLA_CE_TIMER_CTR_CSL		TIMER_CTR_CSL3
 #define AMBARELLA_CE_TIMER_CTR_MASK		0x00000F00
-#endif //INTERVAL_TIMER_INSTANCES
 #else /* defined(CONFIG_MACH_HYACINTH_0) || defined(CONFIG_MACH_HYACINTH_1) */
 #define AMBARELLA_CE_TIMER_AXI0_STATUS_REG	TIMER6_STATUS_REG
 #define AMBARELLA_CE_TIMER_AXI0_RELOAD_REG	TIMER6_RELOAD_REG
@@ -468,16 +536,6 @@ static struct irqaction ambarella_ce_timer_irq = {
 /* ==========================================================================*/
 #if defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE)
 #if !defined(CONFIG_MACH_HYACINTH_0) && !defined(CONFIG_MACH_HYACINTH_1)
-#if (INTERVAL_TIMER_INSTANCES == 8) && defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-#define AMBARELLA_CS_TIMER_STATUS_REG		TIMER7_STATUS_REG
-#define AMBARELLA_CS_TIMER_RELOAD_REG		TIMER7_RELOAD_REG
-#define AMBARELLA_CS_TIMER_MATCH1_REG		TIMER7_MATCH1_REG
-#define AMBARELLA_CS_TIMER_MATCH2_REG		TIMER7_MATCH2_REG
-#define AMBARELLA_CS_TIMER_CTR_EN		TIMER_CTR_EN7
-#define AMBARELLA_CS_TIMER_CTR_OF		TIMER_CTR_OF7
-#define AMBARELLA_CS_TIMER_CTR_CSL		TIMER_CTR_CSL7
-#define AMBARELLA_CS_TIMER_CTR_MASK		0x0F000000
-#else
 #define AMBARELLA_CS_TIMER_STATUS_REG		TIMER2_STATUS_REG
 #define AMBARELLA_CS_TIMER_RELOAD_REG		TIMER2_RELOAD_REG
 #define AMBARELLA_CS_TIMER_MATCH1_REG		TIMER2_MATCH1_REG
@@ -486,7 +544,6 @@ static struct irqaction ambarella_ce_timer_irq = {
 #define AMBARELLA_CS_TIMER_CTR_OF		TIMER_CTR_OF2
 #define AMBARELLA_CS_TIMER_CTR_CSL		TIMER_CTR_CSL2
 #define AMBARELLA_CS_TIMER_CTR_MASK		0x000000F0
-#endif //INTERVAL_TIMER_INSTANCES
 #else /* defined(CONFIG_MACH_HYACINTH_0) || defined(CONFIG_MACH_HYACINTH_1) */
 #define AMBARELLA_CS_TIMER_AXI0_STATUS_REG	TIMER5_STATUS_REG
 #define AMBARELLA_CS_TIMER_AXI0_RELOAD_REG	TIMER5_RELOAD_REG
@@ -516,6 +573,16 @@ static inline void ambarella_cs_timer_init(void)
 	ambarella_register_clk(&gclk_core);
 	ambarella_register_clk(&gclk_ahb);
 	ambarella_register_clk(&gclk_apb);
+#if defined(CONFIG_PLAT_AMBARELLA_HAVE_ARM11)
+	ambarella_register_clk(&gclk_arm);
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+	ambarella_register_clk(&gclk_cortex);
+	ambarella_register_clk(&gclk_axi);
+#if defined(CONFIG_HAVE_ARM_TWD)
+	ambarella_register_clk(&clk_smp_twd);
+#endif
+#endif
 #endif
 #if !defined(CONFIG_MACH_HYACINTH_0) && !defined(CONFIG_MACH_HYACINTH_1)
 	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CS_TIMER_CTR_EN);
@@ -585,10 +652,9 @@ static u32 notrace ambarella_read_sched_clock(void)
 }
 #endif /* defined(CONFIG_AMBARELLA_SUPPORT_CLOCKSOURCE) */
 
-#ifdef CONFIG_HAVE_ARM_TWD
+#if defined(CONFIG_HAVE_ARM_TWD)
 static DEFINE_TWD_LOCAL_TIMER(twd_local_timer,
-                             AMBARELLA_PA_PT_WD_BASE,
-                             IRQ_LOCALTIMER);
+	AMBARELLA_PA_PT_WD_BASE, IRQ_LOCALTIMER);
 
 static void __init ambarella_twd_init(void)
 {

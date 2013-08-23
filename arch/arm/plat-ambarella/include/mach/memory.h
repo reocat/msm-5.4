@@ -177,7 +177,7 @@
 /* ==========================================================================*/
 #define __amb_raw_virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
 #define __amb_raw_phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_DIRECTMAP_PPM)
+#if defined(CONFIG_AMBARELLA_IO_MAP)
 #define __virt_to_phys(x)		(ambarella_virt_to_phys(x))
 #define __phys_to_virt(x)		(ambarella_phys_to_virt(x))
 #else

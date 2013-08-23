@@ -223,7 +223,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= NOLINUX_MEM_V_START,
 			.pfn	= __phys_to_pfn(DEFAULT_MEM_START),
 			.length	= CONFIG_AMBARELLA_PPM_SIZE,
-#if defined(CONFIG_PLAT_AMBARELLA_PPM_UNCACHED)
+#if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
 			.type	= MT_DEVICE,
 #else
 			.type	= MT_MEMORY,
@@ -236,7 +236,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DEFAULT_BSB_BASE,
 			.pfn	= __phys_to_pfn(DEFAULT_BSB_START),
 			.length	= DEFAULT_BSB_SIZE,
+#if defined(CONFIG_AMBARELLA_BSB_UNCACHED)
+			.type	= MT_DEVICE,
+#else
 			.type	= MT_MEMORY,
+#endif
 			},
 	},
 	[AMBARELLA_IO_DESC_DSP_ID] = {
@@ -245,7 +249,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DEFAULT_DSP_BASE,
 			.pfn	= __phys_to_pfn(DEFAULT_DSP_START),
 			.length	= DEFAULT_DSP_SIZE,
+#if defined(CONFIG_AMBARELLA_DSP_UNCACHED)
+			.type	= MT_DEVICE,
+#else
 			.type	= MT_MEMORY,
+#endif
 			},
 	},
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)

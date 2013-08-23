@@ -10,10 +10,6 @@
 #ifndef __AMBHW__CHIP_H__
 #define __AMBHW__CHIP_H__
 
-#if defined(__PRKERNEL_AMB__)
-#include <config.h>
-#endif
-
 #define A1	1000
 #define A2	2000
 
@@ -39,12 +35,12 @@
 
 #define A8	8000
 #define S2	9000
+#define S2L	12000
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
 #define CHIP_MINOR(x)	((x / 10) % 10)
 
-#if defined(__KERNEL__)
 #if	defined(CONFIG_PLAT_AMBARELLA_A1)
 #define CHIP_REV	A1
 #elif	defined(CONFIG_PLAT_AMBARELLA_A2)
@@ -77,92 +73,10 @@
 #define CHIP_REV	S2
 #elif	defined(CONFIG_PLAT_AMBARELLA_A8)
 #define CHIP_REV	A8
+#elif	defined(CONFIG_PLAT_AMBARELLA_S2L)
+#define CHIP_REV	S2L
 #else
 #error "Undefined CHIP_REV"
-#endif
-#else
-#if	defined(CUSTOM_CHIP_REV)
-#define CHIP_REV	CUSTOM_CHIP_REV
-
-#else  /* CUSTOM_CHIP_REV */
-
-#if	defined(CONFIG_ARCH_AMBARELLA_A1) || \
-	defined(CONFIG_ARCH_A1) ||	     \
-	defined(CONFIG_ARCH_MMP2_A1)
-#define CHIP_REV	A1
-#elif	defined(CONFIG_ARCH_AMBARELLA_A2) ||	\
-	defined(CONFIG_ARCH_A2) ||		\
-	defined(CONFIG_ARCH_MMP2_A2)
-#define CHIP_REV	A2
-#elif	defined(CONFIG_ARCH_AMBARELLA_A2S) ||	\
-	defined(CONFIG_ARCH_A2S)
-#define CHIP_REV	A2S
-#elif	defined(CONFIG_ARCH_AMBARELLA_A2M) ||	\
-	defined(CONFIG_ARCH_A2M)
-#define CHIP_REV	A2M
-#elif	defined(CONFIG_ARCH_AMBARELLA_A2Q) ||	\
-	defined(CONFIG_ARCH_A2Q)
-#define CHIP_REV	A2Q
-#elif	defined(CONFIG_ARCH_AMBARELLA_A3) || \
-	defined(CONFIG_ARCH_A3) ||	     \
-	defined(CONFIG_ARCH_MMP2_A3)
-#define CHIP_REV	A3
-#elif	defined(CONFIG_ARCH_AMBARELLA_A5) || \
-	defined(CONFIG_ARCH_A5) ||	     \
-	defined(CONFIG_ARCH_MMP2_A5)
-#define CHIP_REV	A5
-#elif	defined(CONFIG_ARCH_AMBARELLA_A5S) || \
-	defined(CONFIG_ARCH_A5S) ||	      \
-	defined(CONFIG_ARCH_MMP2_A5S)
-#define CHIP_REV	A5S
-#elif	defined(CONFIG_ARCH_AMBARELLA_A5L) ||	\
-	defined(CONFIG_ARCH_A5L) ||	      \
-	defined(CONFIG_ARCH_MMP2_A5L)
-#define CHIP_REV	A5L
-#elif	defined(CONFIG_ARCH_AMBARELLA_A6) || \
-	defined(CONFIG_ARCH_A6) ||	     \
-	defined(CONFIG_ARCH_MMP2_A6)
-#define CHIP_REV	A6
-#elif	defined(CONFIG_ARCH_AMBARELLA_A7) || \
-	defined(CONFIG_ARCH_A7) ||	     \
-	defined(CONFIG_ARCH_MMP2_A7)
-#define CHIP_REV	A7
-#elif	defined(CONFIG_ARCH_AMBARELLA_A7L) || \
-	defined(CONFIG_ARCH_A7L) ||	     \
-	defined(CONFIG_ARCH_MMP2_A7L)
-#define CHIP_REV	A7L
-#elif	defined(CONFIG_ARCH_AMBARELLA_A7M) || \
-	defined(CONFIG_ARCH_A7M) ||	     \
-	defined(CONFIG_ARCH_MMP2_A7M)
-#define CHIP_REV	A7M
-#elif	defined(CONFIG_ARCH_AMBARELLA_I1) || \
-	defined(CONFIG_ARCH_I1) ||	     \
-	defined(CONFIG_ARCH_MMP2_I1)
-#define CHIP_REV	I1
-#elif	defined(CONFIG_ARCH_AMBARELLA_S2) || \
-	defined(CONFIG_ARCH_S2) ||	     \
-	defined(CONFIG_ARCH_MMP2_S2)
-#define CHIP_REV	S2
-#elif	defined(CONFIG_ARCH_AMBARELLA_A8) || \
-	defined(CONFIG_ARCH_A8) ||	     \
-	defined(CONFIG_ARCH_MMP2_A8)
-#define CHIP_REV	A8
-#else
-#error "Undefined CHIP_REV"
-#endif
-#endif /* CUSTOM_CHIP_REV */
-#endif /* __KERNEL__ */
-
-#if (CHIP_REV == A5S) || (CHIP_REV == A5L) || (CHIP_REV == A7) || \
-    (CHIP_REV == A7L)
-#define	BROKEN_UNALIGNED_ACCESS_SUPPORT		1
-#endif
-
-/* Audio ucode. */
-#if (CHIP_REV == A3) || (CHIP_REV == A5) || (CHIP_REV == A6)
-#define HAS_AORC_UCODE	1
-#else
-#define HAS_AORC_UCODE	0
 #endif
 
 #endif

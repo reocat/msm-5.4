@@ -1,5 +1,5 @@
 #
-# arch/arm/plat-ambarella/cortex/Makefile
+# arch/arm/plat-ambarella/smp/Makefile
 #
 # Author: Anthony Ginger <hfjiang@ambarella.com>
 #

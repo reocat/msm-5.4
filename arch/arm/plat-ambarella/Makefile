@@ -24,8 +24,5 @@ ifeq ($(CONFIG_PLAT_AMBARELLA_GENERIC), y)
 obj-y						+= generic/
 obj-y						+= misc/
 endif
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_CORTEX), y)
-obj-y						+= cortex/
-endif
+obj-y						+= smp/
 
