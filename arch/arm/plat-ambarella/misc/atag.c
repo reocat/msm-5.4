@@ -571,11 +571,13 @@ EXPORT_SYMBOL(get_ambarella_dspmem_size);
 
 u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize)
 {
+#if (CHIP_REV != A8)
 	if ((ambarella_bst_info.size == 0) ||
 		(ambarella_bst_info.physaddr < get_ambarella_ppm_phys()) ||
 		((ambarella_bst_info.physaddr + ambarella_bst_info.size) >
 		(get_ambarella_ppm_phys() + get_ambarella_ppm_size())))
 		return AMB_BST_INVALID;
+#endif
 
 	*bstadd = ambarella_bst_info.physaddr;
 	*bstsize = ambarella_bst_info.size;
