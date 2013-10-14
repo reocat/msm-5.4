@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-boss/include/mach/debug-macro.S
+ * arch/arm/plat-ambarella/include/mach/debug-macro.S
  *
  * History:
  *	2006/12/27 - [Charles Chiou] created file
@@ -26,30 +26,29 @@
 
 #include <mach/hardware.h>
 
-.macro	addruart, rx, tmp
-	mrc	p15, 0, \rx, c1, c0
-	tst	\rx, #1			@ MMU enabled?
-	moveq	\rx, #APB_PHYS_BASE	@ physical base address
-	movne	\rx, #APB_BASE		@ virtual address
-	orr	\rx, \rx, #UART_OFFSET
-.endm
+#define AMBA_UART0_BASE_P		(APB_PHYS_BASE + UART_OFFSET)
+#define AMBA_UART0_BASE_V		(APB_BASE + UART_OFFSET)
 
-.macro senduart, rd, rx
+	.macro	addruart, rp, rv, tmp
+	ldr	\rp, =AMBA_UART0_BASE_P
+	ldr	\rv, =AMBA_UART0_BASE_V
+	.endm
+
+	.macro	senduart, rd, rx
 	str	\rd, [\rx, #UART_TH_OFFSET]
-.endm
+	.endm
 
-.macro waituart, rd, rx
+	.macro	waituart, rd, rx
 1001:
 	ldr	\rd, [\rx, #UART_LS_OFFSET]
 	tst	\rd, #UART_LS_TEMT
 	beq	1001b
+	.endm
 
-.endm
-
-.macro busyuart, rd, rx
+	.macro	busyuart, rd, rx
 1002:
 	ldr	\rd, [\rx, #UART_LS_OFFSET]
 	tst	\rd, #UART_LS_TEMT
 	beq	1002b
-.endm
+	.endm
 

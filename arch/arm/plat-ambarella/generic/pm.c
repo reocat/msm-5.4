@@ -107,8 +107,6 @@ static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend, u32 tm_level)
 	if (bsuspend) {
 		ambarella_adc_suspend(0);
 		ambarella_timer_suspend(tm_level);
-		ambarella_irq_suspend(0);
-		ambarella_gpio_suspend(0);
 	}
 
 	retval = ambarella_pm_notify_raw(AMBA_EVENT_PRE_PM);
@@ -123,8 +121,6 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume, u32 tm_level)
 	retval = ambarella_pm_notify_raw(AMBA_EVENT_POST_PM);
 
 	if (bresume) {
-		ambarella_gpio_resume(0);
-		ambarella_irq_resume(0);
 		ambarella_timer_resume(tm_level);
 		ambarella_adc_resume(0);
 	}

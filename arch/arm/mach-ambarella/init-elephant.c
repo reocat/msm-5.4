@@ -92,7 +92,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_udc0,
 	&ambarella_dma,
 	&ambarella_nand,
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	&mpcore_wdt,
+#endif
 };
 
 static struct platform_device *ambarella_pwm_devices[] __initdata = {

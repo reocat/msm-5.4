@@ -70,6 +70,7 @@ config PLAT_AMBARELLA_GENERIC
 config PLAT_AMBARELLA_SUPPORT_VIC
 	bool
 	default n
+	select AMBARELLA_VIC
 
 config PLAT_AMBARELLA_HAVE_ARM11
 	bool

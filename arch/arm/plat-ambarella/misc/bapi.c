@@ -241,7 +241,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				bapi_aoss_arg[1], bapi_aoss_arg[2], bapi_aoss_arg[3]);
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX_BST)
 			if (retval != 0x01) {
-				ambarella_swvic_set(AXI_SOFT_IRQ(0));
+				amba_writel(VIC3_SOFTEN_REG, (0x1 << 10));
 				while(1) {};
 			}
 #endif
