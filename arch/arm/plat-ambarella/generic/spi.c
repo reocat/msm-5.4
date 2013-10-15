@@ -467,7 +467,7 @@ struct resource ambarella_spi3_resources[] = {
 	},
 };
 
-int ambarella_spi3_cs_pins[] = {SSI4_EN0, -1, -1, -1, -1, -1, -1, -1};
+int ambarella_spi3_cs_pins[] = {GPIO(149), -1, -1, -1, -1, -1, -1, -1};
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
 AMBA_SPI_CS_PINS_PARAM_CALL(3, ambarella_spi3_cs_pins, 0644);
 #endif
@@ -515,7 +515,7 @@ struct resource ambarella_spi4_resources[] = {
 	},
 };
 
-int ambarella_spi4_cs_pins[] = {SSI_AHB_EN0, -1, -1, -1, -1, -1, -1, -1};
+int ambarella_spi4_cs_pins[] = {GPIO(159), -1, -1, -1, -1, -1, -1, -1};
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
 AMBA_SPI_CS_PINS_PARAM_CALL(4, ambarella_spi4_cs_pins, 0644);
 #endif

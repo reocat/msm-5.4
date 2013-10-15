@@ -27,6 +27,27 @@
 /* ==========================================================================*/
 
 /* ==========================================================================*/
+#define PWM_CONTROL_OFFSET		0x00
+#define	PWM_ENABLE_OFFSET		0x04
+#define PWM_MODE_OFFSET			0x08
+#define PWM_CONTROL1_OFFSET		0x0c
+
+#define PWM_B0_DATA_OFFSET		0x300
+#define PWM_B0_ENABLE_OFFSET		0x304
+#define PWM_C0_DATA_OFFSET		0x310
+#define PWM_C0_ENABLE_OFFSET		0x314
+#define PWM_B0_DATA1_OFFSET		0x320
+#define PWM_C0_DATA1_OFFSET		0x328
+#define PWM_B1_DATA_OFFSET		0x308
+#define PWM_B1_ENABLE_OFFSET		0x30c
+#define PWM_C1_DATA_OFFSET		0x318
+#define PWM_C1_ENABLE_OFFSET		0x31c
+#define PWM_B1_DATA1_OFFSET		0x324
+#define PWM_C1_DATA1_OFFSET		0x32c
+
+#define	PWM_ST_REG(x)			(STEPPER_BASE + (x))
+
+/* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 /* ==========================================================================*/

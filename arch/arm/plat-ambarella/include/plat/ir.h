@@ -25,6 +25,24 @@
 #define __PLAT_AMBARELLA_IR_H__
 
 /* ==========================================================================*/
+#if (CHIP_REV == A8)
+#define IR_INSTANCES		0
+#else
+#define IR_INSTANCES		1
+#endif
+
+/* ==========================================================================*/
+#define IR_CONTROL_OFFSET		0x00
+#define IR_STATUS_OFFSET		0x04
+#define IR_DATA_OFFSET			0x08
+
+/* IR_CONTROL_REG */
+#define IR_CONTROL_RESET		0x00004000
+#define IR_CONTROL_ENB			0x00002000
+#define IR_CONTROL_LEVINT		0x00001000
+#define IR_CONTROL_INTLEV(x)		(((x) & 0x3f)  << 4)
+#define IR_CONTROL_FIFO_OV		0x00000008
+#define IR_CONTROL_INTENB		0x00000004
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

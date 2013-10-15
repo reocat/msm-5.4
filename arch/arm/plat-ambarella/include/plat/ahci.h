@@ -25,12 +25,19 @@
 #define __PLAT_AMBARELLA_AHCI_H__
 
 /* ==========================================================================*/
+#if (CHIP_REV == I1)
+#define AHCI_INSTANCES	1
+#else
+#define AHCI_INSTANCES	0
+#endif
 
+/* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
 extern struct platform_device ambarella_ahci0;
 
 #endif /* __ASSEMBLER__ */
+/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_AHCI_H__ */
 

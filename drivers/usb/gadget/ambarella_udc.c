@@ -518,7 +518,7 @@ static int ambarella_check_softdis(void)
  */
 static void ambarella_set_softdis(int force)
 {
-	if(force || (amba_readl(VIC_RAW_STA_REG) & 1)) {
+	if(force || (amba_readl(VIC_REG(VIC_RAW_STA_OFFSET)) & 1)) {
 		/* note don't change the order */
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_SOFT_DISCON);
 		amba_setbitsl(USB_DEV_CFG_REG, USB_DEV_REMOTE_WAKEUP_EN);
@@ -1453,7 +1453,7 @@ static void ambarella_vbus_timer(unsigned long data)
 	struct ambarella_udc *udc = (struct ambarella_udc *)data;
 	u32 connected;
 
-	connected = !!(amba_readl(VIC_RAW_STA_REG) & 0x1);
+	connected = !!(amba_readl(VIC_REG(VIC_RAW_STA_OFFSET)) & 0x1);
 
 	if (udc->vbus_status != connected) {
 		udc->vbus_status = connected;

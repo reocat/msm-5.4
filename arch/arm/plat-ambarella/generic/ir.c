@@ -39,6 +39,7 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+#if (IR_INSTANCES >= 1)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 #else
 static struct clk gclk_ir = {
@@ -105,8 +106,8 @@ struct resource ambarella_ir_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	[2] = {
-		.start	= IR_IN,
-		.end	= IR_IN,
+		.start	= GPIO(35),
+		.end	= GPIO(35),
 		.flags	= IORESOURCE_IO,
 	},
 };
@@ -132,4 +133,5 @@ struct platform_device ambarella_ir0 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+#endif
 

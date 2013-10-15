@@ -30,19 +30,31 @@
 #include <linux/dma-mapping.h>
 #include <linux/ahci_platform.h>
 #include <linux/irq.h>
-#include <mach/board.h>
 
+#include <mach/board.h>
+#include <plat/ahci.h>
+
+/* ==========================================================================*/
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX	"ambarella_config."
+
+/* ==========================================================================*/
 /*
  * AHCI: all of the initialization for SATA PHY has been done at Amboot.
  */
+#if (AHCI_INSTANCES >= 1)
 static int ambarella_ahci_init(struct device *dev, void __iomem *addr)
 {
 	int			rval = 0;
 	struct irq_desc		*ahci_desc;
 	struct irq_chip		*ahci_chip = NULL;
 
-	if (ambarella_board_generic.sata_power.gpio_id >= 0)
-		ambarella_set_gpio_output(&ambarella_board_generic.sata_power, 1);
+	if (ambarella_board_generic.sata_power.gpio_id >= 0) {
+		ambarella_set_gpio_output(
+			&ambarella_board_generic.sata_power, 1);
+	}
 
 	ahci_desc = irq_to_desc(SATA_IRQ);
 	if (ahci_desc)
@@ -85,4 +97,6 @@ struct platform_device ambarella_ahci0 = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
 };
+
+#endif
 

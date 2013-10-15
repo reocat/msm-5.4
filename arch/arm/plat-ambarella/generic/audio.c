@@ -162,14 +162,14 @@ static void aucodec_digitalio_on_0(void)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, (0xf << 18) | (0xf << 13));
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), (0xf << 18) | (0xf << 13));
 	ambarella_gpio_raw_unlock(2, &flags);
 
 #elif (CHIP_REV == A2)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, (0x3 << 15) | (0x3 << 20));
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), (0x3 << 15) | (0x3 << 20));
 	ambarella_gpio_raw_unlock(2, &flags);
 
 #elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
@@ -177,24 +177,24 @@ static void aucodec_digitalio_on_0(void)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(1, &flags);
-	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+	amba_clrbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x80000000);
 	ambarella_gpio_raw_unlock(1, &flags);
 
 	/* GPIO77~GPIO81 program as hardware mode */
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x0003e000);
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
 	ambarella_gpio_raw_unlock(2, &flags);
 
 #elif (CHIP_REV == S2)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(3, &flags);
-	amba_clrbitsl(GPIO3_AFSEL_REG, 0x00000030);
+	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000030);
 	ambarella_gpio_raw_unlock(3, &flags);
 
 	/* GPIO77~GPIO81 program as hardware mode */
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x0003e000);
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
 	ambarella_gpio_raw_unlock(2, &flags);
 
 #else
@@ -210,24 +210,24 @@ static void aucodec_digitalio_on_1(void)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(1, &flags);
-	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+	amba_clrbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x80000000);
 	ambarella_gpio_raw_unlock(1, &flags);
 
 	/* GPIO77~GPIO78 and GPIO81~GPIO83 program as hardware mode */
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x000e6000);
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000e6000);
 	ambarella_gpio_raw_unlock(2, &flags);
 
 #elif (CHIP_REV == S2)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(3, &flags);
-	amba_clrbitsl(GPIO3_AFSEL_REG, 0x0000000c);
+	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x0000000c);
 	ambarella_gpio_raw_unlock(3, &flags);
 
 	/* GPIO82~GPIO83 program as hardware mode */
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x000c0000);
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000c0000);
 	ambarella_gpio_raw_unlock(2, &flags);
 
 #else
@@ -243,12 +243,12 @@ static void aucodec_digitalio_on_2(void)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(1, &flags);
-	amba_clrbitsl(GPIO1_AFSEL_REG, 0x80000000);
+	amba_clrbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x80000000);
 	ambarella_gpio_raw_unlock(1, &flags);
 
 	/* GPIO77~GPIO78, GPIO81 and GPIO84~GPIO85 program as hardware mode */
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_AFSEL_REG, 0x00326000);
+	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x00326000);
 	ambarella_gpio_raw_unlock(2, &flags);
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
@@ -261,20 +261,26 @@ static void i2s_channel_select(u32 ch)
 	(CHIP_REV == A5S)||(CHIP_REV == I1)||(CHIP_REV == S2)
 	u32 ch_reg_num;
 
-	ch_reg_num = amba_readl(I2S_CHANNEL_SELECT_REG);
+	ch_reg_num = amba_readl(I2S_REG(I2S_CHANNEL_SELECT_OFFSET));
 
 	switch (ch) {
 	case 2:
-		if (ch_reg_num != 0)
-			amba_writel(I2S_CHANNEL_SELECT_REG, I2S_2CHANNELS_ENB);
+		if (ch_reg_num != 0) {
+			amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET),
+				I2S_2CHANNELS_ENB);
+		}
 		break;
 	case 4:
-		if (ch_reg_num != 1)
-			amba_writel(I2S_CHANNEL_SELECT_REG, I2S_4CHANNELS_ENB);
+		if (ch_reg_num != 1) {
+			amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET),
+				I2S_4CHANNELS_ENB);
+		}
 		break;
 	case 6:
-		if (ch_reg_num != 2)
-			amba_writel(I2S_CHANNEL_SELECT_REG, I2S_6CHANNELS_ENB);
+		if (ch_reg_num != 2) {
+			amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET),
+				I2S_6CHANNELS_ENB);
+		}
 		break;
 	default:
 		printk("Don't support %d channels\n", ch);

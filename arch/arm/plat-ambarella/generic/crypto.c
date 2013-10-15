@@ -44,14 +44,6 @@ static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
 #else
 	.exception = 0,
 #endif
-#elif (CHIP_REV == A7)
-	.mode_switch = 1,
-	.binary_mode = 0,
-	.data_swap = 0,
-	.reg_64 = 1,
-	.md5_sha1 = 1,
-	.md5_sha1_64bit = 0,
-	.exception = 0,
 #else
 	.mode_switch = 0,
 	.binary_mode = 1,

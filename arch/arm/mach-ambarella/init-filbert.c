@@ -257,12 +257,7 @@ static void __init ambarella_init_filbert(void)
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
-
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	i2c_register_board_info(0, &ambarella_board_hdmi_info, 1);
-#else
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-#endif
 
 	platform_device_register(&filbert_board_input);
 }

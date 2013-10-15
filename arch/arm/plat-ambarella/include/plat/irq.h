@@ -21,8 +21,41 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_IRQ_H
-#define __PLAT_AMBARELLA_IRQ_H
+#ifndef __PLAT_AMBARELLA_IRQ_H__
+#define __PLAT_AMBARELLA_IRQ_H__
+
+/* ==========================================================================*/
+#if (CHIP_REV == A5S)
+#define VIC_INSTANCES			(2)
+#define VIC_SUPPORT_CPU_OFFLOAD		(0)
+#define VIC_SUPPORT_REPRIORITIZE	(0)
+#elif (CHIP_REV == A7)
+#define VIC_INSTANCES			(2)
+#define VIC_SUPPORT_CPU_OFFLOAD		(0)
+#define VIC_SUPPORT_REPRIORITIZE	(0)
+#elif (CHIP_REV == A7L)
+#define VIC_INSTANCES			(2)
+#define VIC_SUPPORT_CPU_OFFLOAD		(1)
+#define VIC_SUPPORT_REPRIORITIZE	(1)
+#elif (CHIP_REV == I1)
+#define VIC_INSTANCES			(3)
+#define VIC_SUPPORT_CPU_OFFLOAD		(1)
+#define VIC_SUPPORT_REPRIORITIZE	(1)
+#elif (CHIP_REV == S2)
+#define VIC_INSTANCES			(3)
+#define VIC_SUPPORT_CPU_OFFLOAD		(0)
+#define VIC_SUPPORT_REPRIORITIZE	(0)
+#elif (CHIP_REV == A8)
+#define VIC_INSTANCES			(3)
+#define VIC_SUPPORT_CPU_OFFLOAD		(1)
+#define VIC_SUPPORT_REPRIORITIZE	(1)
+#elif (CHIP_REV == S2L)
+#define VIC_INSTANCES			(3)
+#define VIC_SUPPORT_CPU_OFFLOAD		(1)
+#define VIC_SUPPORT_REPRIORITIZE	(1)
+#else
+#error "Not supported!"
+#endif
 
 /* ==========================================================================*/
 #define NR_VIC_IRQ_SIZE			(32)
@@ -58,8 +91,44 @@
 #define NR_IRQS				EXT_IRQ(CONFIG_AMBARELLA_EXT_IRQ_NUM)
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
+#define VIC_IRQ_STA_OFFSET			(0x00)
+#define VIC_FIQ_STA_OFFSET			(0x04)
+#define VIC_RAW_STA_OFFSET			(0x08)
+#define VIC_INT_SEL_OFFSET			(0x0c)
+#define VIC_INTEN_OFFSET			(0x10)
+#define VIC_INTEN_CLR_OFFSET			(0x14)
+#define VIC_SOFTEN_OFFSET			(0x18)
+#define VIC_SOFTEN_CLR_OFFSET			(0x1c)
+#define VIC_PROTEN_OFFSET			(0x20)
+#define VIC_SENSE_OFFSET			(0x24)
+#define VIC_BOTHEDGE_OFFSET			(0x28)
+#define VIC_EVENT_OFFSET			(0x2c)
+#define VIC_EDGE_CLR_OFFSET			(0x38)
+#define VIC_INT_SEL_INT_OFFSET			(0x3c)
+#define VIC_INT_SEL_CLR_INT_OFFSET		(0x40)
+#define VIC_INT_EN_INT_OFFSET			(0x44)
+#define VIC_INT_EN_CLR_INT_OFFSET		(0x48)
+#define VIC_SOFT_INT_INT_OFFSET			(0x4c)
+#define VIC_SOFT_INT_CLR_INT_OFFSET		(0x50)
+#define VIC_INT_SENSE_INT_OFFSET		(0x54)
+#define VIC_INT_SENSE_CLR_INT_OFFSET		(0x58)
+#define VIC_INT_BOTHEDGE_INT_OFFSET		(0x5c)
+#define VIC_INT_BOTHEDGE_CLR_INT_OFFSET		(0x60)
+#define VIC_INT_EVT_INT_OFFSET			(0x64)
+#define VIC_INT_EVT_CLR_INT_OFFSET		(0x68)
+#define VIC_INT_PENDING_OFFSET			(0x6c)
+#define VIC_INT_RE_PRIORITIZE_EN_OFFSET		(0x70)
+#define VIC_INT_PRIORITY_0_OFFSET		(0x74)
+#define VIC_INT_PRIORITY_1_OFFSET		(0x78)
+#define VIC_INT_PRIORITY_2_OFFSET		(0x7c)
+#define VIC_INT_PRIORITY_3_OFFSET		(0x80)
+#define VIC_INT_PRIORITY_4_OFFSET		(0x84)
+#define VIC_INT_PRIORITY_5_OFFSET		(0x88)
+#define VIC_INT_DELAY_EN_OFFSET			(0x8c)
+#define VIC_INT_DELAY_OFFSET			(0x90)
 
+/* ==========================================================================*/
+#if (CHIP_REV == A5S)
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
 #define VIN_IRQ				VIC_INT_VEC(2)
@@ -112,8 +181,8 @@
 #define GDMA_IRQ			VIC2_INT_VEC(16)
 #define MOTOR_IRQ			VIC2_INT_VEC(17)
 
+/* ==========================================================================*/
 #elif (CHIP_REV == A7)
-
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
 #define VIN_IRQ				VIC_INT_VEC(2)
@@ -173,8 +242,8 @@
 #define MD5_SHA1_IRQ			VIC2_INT_VEC(25)
 #define ROLLERING_SHUTTER_IRQ		VIC2_INT_VEC(26)
 
+/* ==========================================================================*/
 #elif (CHIP_REV == A7L)
-
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define VOUT_IRQ			VIC_INT_VEC(1)
 #define VIN_IRQ				VIC_INT_VEC(2)
@@ -199,7 +268,6 @@
 #define WDT_IRQ				VIC_INT_VEC(21)
 #define IRIF_IRQ			VIC_INT_VEC(22)
 #define CFCD2_IRQ			VIC_INT_VEC(24)
-
 #define UART1_IRQ			VIC_INT_VEC(25)
 #define IDC2_IRQ			VIC_INT_VEC(26)
 #define IDSP_ERROR_IRQ			VIC_INT_VEC(28)
@@ -226,8 +294,8 @@
 #define TIMER7_IRQ			VIC2_INT_VEC(30)
 #define TIMER8_IRQ			VIC2_INT_VEC(31)
 
+/* ==========================================================================*/
 #elif (CHIP_REV == I1)
-
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define ROLLING_SHUTTER_IRQ		VIC_INT_VEC(3)
 #define USBC_IRQ			VIC_INT_VEC(4)
@@ -350,8 +418,8 @@
 #define L2CC_ECNTR_IRQ			SPI_INT_VEC(158)
 #define L2CC_COMBINED_IRQ		SPI_INT_VEC(159)
 
+/* ==========================================================================*/
 #elif (CHIP_REV == S2)
-
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define USBC_IRQ			VIC_INT_VEC(4)
 #define USB_CHARGE_IRQ			VIC_INT_VEC(5)
@@ -473,8 +541,8 @@
 #define L2CC_ECNTR_IRQ			SPI_INT_VEC(158)
 #define L2CC_COMBINED_IRQ		SPI_INT_VEC(159)
 
+/* ==========================================================================*/
 #elif (CHIP_REV == A8)
-
 #define USBVBUS_IRQ			VIC_INT_VEC(0)
 #define ROLLING_SHUTTER_IRQ		VIC_INT_VEC(3)
 #define USBC_IRQ			VIC_INT_VEC(4)
@@ -543,7 +611,7 @@
 #define SPDIF_IRQ			VIC3_INT_VEC(26)
 #define SSI_AHB_IRQ			VIC3_INT_VEC(27)
 #define IDC3_IRQ			VIC3_INT_VEC(28)
-//FIXME
+
 #if defined(CONFIG_ARM_GIC)
 #define VOUT_IRQ			VIC4_INT_VEC(0)
 #define VIN_IRQ				VIC4_INT_VEC(1)
@@ -598,10 +666,89 @@
 #define L2CC_ECNTR_IRQ			SPI_INT_VEC(158)
 #define L2CC_COMBINED_IRQ		SPI_INT_VEC(159)
 
+/* ==========================================================================*/
+#elif (CHIP_REV == S2L)
+#define USBVBUS_IRQ			VIC_INT_VEC(0)
+#define VOUT_IRQ			VIC_INT_VEC(1)
+#define VIN_IRQ				VIC_INT_VEC(2)
+#define CODE_VDSP_0_IRQ			VIC_INT_VEC(3)
+#define USBC_IRQ			VIC_INT_VEC(4)
+#define USB_CHARGE_IRQ			VIC_INT_VEC(5)
+#define SD2CD_IRQ			VIC_INT_VEC(6)
+#define I2STX_IRQ			VIC_INT_VEC(7)
+#define I2SRX_IRQ			VIC_INT_VEC(8)
+#define UART0_IRQ			VIC_INT_VEC(9)
+#define GPIO0_IRQ			VIC_INT_VEC(10)
+#define GPIO1_IRQ			VIC_INT_VEC(11)
+#define TIMER1_IRQ			VIC_INT_VEC(12)
+#define TIMER2_IRQ			VIC_INT_VEC(13)
+#define TIMER3_IRQ			VIC_INT_VEC(14)
+#define DMA_IRQ				VIC_INT_VEC(15)
+#define FIOCMD_IRQ			VIC_INT_VEC(16)
+#define FIODMA_IRQ			VIC_INT_VEC(17)
+#define SD_IRQ				VIC_INT_VEC(18)
+#define IDC_IRQ				VIC_INT_VEC(19)
+#define SD2_IRQ				VIC_INT_VEC(20)
+#define WDT_IRQ				VIC_INT_VEC(21)
+#define IRIF_IRQ			VIC_INT_VEC(22)
+#define SD1CD_IRQ			VIC_INT_VEC(23)
+#define SD0CD_IRQ			VIC_INT_VEC(24)
+#define UART1_IRQ			VIC_INT_VEC(25)
+#define MOTOR_IRQ			VIC_INT_VEC(26)
+#define ETH_IRQ				VIC_INT_VEC(27)
+#define USB_CONNECT_CHANGE_IRQ		VIC_INT_VEC(28)
+#define GPIO3_IRQ			VIC_INT_VEC(29)
+#define GPIO2_IRQ			VIC_INT_VEC(30)
+
+#define ETH_PMT_IRQ			VIC2_INT_VEC(0)
+#define DMA_FIOS_IRQ			VIC2_INT_VEC(1)
+#define ADC_LEVEL_IRQ			VIC2_INT_VEC(2)
+#define SSI_MASTER_IRQ			VIC2_INT_VEC(3)
+#define IDC3_IRQ			VIC2_INT_VEC(4)
+#define SSI1_MASTER_IRQ			VIC2_INT_VEC(5)
+#define SSI_SLAVE_IRQ			VIC2_INT_VEC(6)
+#define USB_EHCI_IRQ			VIC2_INT_VEC(7)
+#define HDMI_IRQ			VIC2_INT_VEC(8)
+#define FIOS_ECC_IRQ			VIC2_INT_VEC(9)
+#define VOUT_TV_SYNC_IRQ		VIC2_INT_VEC(10)
+#define VOUT_LCD_SYNC_IRQ		VIC2_INT_VEC(11)
+#define USB_OHCI_IRQ			VIC2_INT_VEC(12)
+#define NOR_SPI				VIC2_INT_VEC(13)
+#define ORC_VOUT0_IRQ			VIC2_INT_VEC(14)
+#define GDMA_IRQ			VIC2_INT_VEC(18)
+#define IDC2_IRQ			VIC2_INT_VEC(19)
+#define SD1_IRQ				VIC2_INT_VEC(20)
+#define IDSP_PIP_VSYNC_IRQ		VIC2_INT_VEC(21)
+#define IDSP_PIP_SOF_IRQ		VIC2_INT_VEC(22)
+#define IDSP_PIP_MVSYNC_IRQ		VIC2_INT_VEC(23)
+#define IDSP_PIP_LAST_PIXEL_IRQ		VIC2_INT_VEC(24)
+#define IDSP_PIP_DVSYNC_IRQ		VIC2_INT_VEC(25)
+#define VDSP_PIP_CODING_IRQ		VIC2_INT_VEC(26)
+#define TIMER4_IRQ			VIC2_INT_VEC(27)
+#define TIMER5_IRQ			VIC2_INT_VEC(28)
+#define TIMER6_IRQ			VIC2_INT_VEC(29)
+#define TIMER7_IRQ			VIC2_INT_VEC(30)
+#define TIMER8_IRQ			VIC2_INT_VEC(31)
+
+#define IDSP_VIN_MVSYNC_IRQ		VIC3_INT_VEC(0)
+#define IDSP_VIN_VSYNC_IRQ		VIC3_INT_VEC(1)
+#define IDSP_VIN_SOF_IRQ		VIC3_INT_VEC(2)
+#define IDSP_VIN_DVSYNC_IRQ		VIC3_INT_VEC(3)
+#define IDSP_VIN_LAST_PIXEL_IRQ		VIC3_INT_VEC(4)
+#define SCRATCHPAD0_IRQ(x)		VIC3_INT_VEC((x) + 19)	/* 0 <= x <= 6 */
+#define USB_DIGITAL_ID_CHANGE_IRQ	VIC3_INT_VEC(27)
+#define SCRATCHPAD1_IRQ(x)		VIC3_INT_VEC((x) + 28)	/* 0 <= x <= 3 */
+
+//TBD:
+//#define DES_IRQ
+//#define AES_IRQ
+//#define MD5_SHA1_IRQ
+//#define L2CC_ECNTR_IRQ
+//#define L2CC_COMBINED_IRQ
+
+/* ==========================================================================*/
 #else
-
 #error "Not supported!"
-
 #endif
 
 /* ==========================================================================*/

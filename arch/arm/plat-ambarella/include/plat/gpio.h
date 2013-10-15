@@ -25,6 +25,40 @@
 #define __PLAT_AMBARELLA_GPIO_H__
 
 /* ==========================================================================*/
+#if (CHIP_REV == A7L)
+#define GPIO_INSTANCES			4
+#define GPIO_MAX_LINES			128
+#elif (CHIP_REV == A5S)
+#define GPIO_INSTANCES			3
+#define GPIO_MAX_LINES			96
+#elif (CHIP_REV == S2)
+#define GPIO_INSTANCES			5
+#define GPIO_MAX_LINES			138
+#elif (CHIP_REV == I1)
+#define GPIO_INSTANCES			6
+#define GPIO_MAX_LINES			192
+#elif (CHIP_REV == A8)
+#define GPIO_INSTANCES			1
+#define GPIO_MAX_LINES			16
+#else
+#error "Not supported!"
+#endif
+
+/* ==========================================================================*/
+#define GPIO_DATA_OFFSET		0x00
+#define GPIO_DIR_OFFSET			0x04
+#define GPIO_IS_OFFSET			0x08
+#define GPIO_IBE_OFFSET			0x0c
+#define GPIO_IEV_OFFSET			0x10
+#define GPIO_IE_OFFSET			0x14
+#define GPIO_AFSEL_OFFSET		0x18
+#define GPIO_RIS_OFFSET			0x1c
+#define GPIO_MIS_OFFSET			0x20
+#define GPIO_IC_OFFSET			0x24
+#define GPIO_MASK_OFFSET		0x28
+#define GPIO_ENABLE_OFFSET		0x2c
+
+/* ==========================================================================*/
 #define GPIO_BANK_SIZE			32
 #define AMBGPIO_SIZE			(GPIO_INSTANCES * GPIO_BANK_SIZE)
 
@@ -34,6 +68,16 @@
 #define EXT_GPIO(x)			(AMBGPIO_SIZE + x)
 
 #define ARCH_NR_GPIOS			EXT_GPIO(CONFIG_AMBARELLA_EXT_GPIO_NUM)
+
+/* ==========================================================================*/
+#define GPIO(x)				(x)
+
+#define GPIO_HIGH			1
+#define GPIO_LOW			0
+
+#define GPIO_FUNC_SW_INPUT		0
+#define GPIO_FUNC_SW_OUTPUT		1
+#define GPIO_FUNC_HW			2
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

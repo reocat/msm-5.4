@@ -39,6 +39,7 @@
 #include <asm/dma.h>
 
 #include <mach/hardware.h>
+#include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/event.h>
 

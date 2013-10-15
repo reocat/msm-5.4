@@ -26,6 +26,92 @@
 
 #include <linux/spi/spi.h>
 
+/* ==========================================================================*/
+#if (CHIP_REV == A5S)
+#define SPI_INSTANCES				2
+#define SPI_AHB_INSTANCES			0
+#elif (CHIP_REV == S2)
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
+#define SPI_INSTANCES				2
+#else
+#define SPI_INSTANCES				1
+#endif
+#define SPI_AHB_INSTANCES			0
+#elif (CHIP_REV == I1)
+#define SPI_INSTANCES				4
+#define SPI_AHB_INSTANCES			1
+#else
+#define SPI_INSTANCES				1
+#define SPI_AHB_INSTANCES			0
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == I1) || \
+	(CHIP_REV == A7L) || (CHIP_REV == S2)
+#define SPI_SLAVE_INSTANCES			1
+#else
+#define SPI_SLAVE_INSTANCES			0
+#endif
+
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || \
+	(CHIP_REV == S2) || (CHIP_REV == A8)
+#define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
+#define SPI_SUPPORT_MASTER_DELAY_START_TIME	1
+#define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1
+#else
+#define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	0
+#define SPI_SUPPORT_MASTER_DELAY_START_TIME	0
+#define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	0
+#endif
+
+/* ==========================================================================*/
+/* SPI_FIFO_SIZE */
+#define SPI_DATA_FIFO_SIZE_16		0x10
+#define SPI_DATA_FIFO_SIZE_32		0x20
+#define SPI_DATA_FIFO_SIZE_64		0x40
+#define SPI_DATA_FIFO_SIZE_128		0x80
+
+/****************************************************/
+/* Controller registers definitions                 */
+/****************************************************/
+
+#define SPI_CTRLR0_OFFSET		0x00
+#define SPI_CTRLR1_OFFSET		0x04
+#define SPI_SSIENR_OFFSET		0x08
+#define SPI_MWCR_OFFSET			0x0c
+#define SPI_SER_OFFSET			0x10
+#define SPI_BAUDR_OFFSET		0x14
+#define SPI_TXFTLR_OFFSET		0x18
+#define SPI_RXFTLR_OFFSET		0x1c
+#define SPI_TXFLR_OFFSET		0x20
+#define SPI_RXFLR_OFFSET		0x24
+#define SPI_SR_OFFSET			0x28
+#define SPI_IMR_OFFSET			0x2c
+#define SPI_ISR_OFFSET			0x30
+#define SPI_RISR_OFFSET			0x34
+#define SPI_TXOICR_OFFSET		0x38
+#define SPI_RXOICR_OFFSET		0x3c
+#define SPI_RXUICR_OFFSET		0x40
+#define SPI_MSTICR_OFFSET		0x44
+#define SPI_ICR_OFFSET			0x48
+#if (SPI_AHB_INSTANCES >= 1)
+#define SPI_DMAC_OFFSET			0x4c
+#endif
+#define SPI_IDR_OFFSET			0x58
+#define SPI_VERSION_ID_OFFSET		0x5c
+#define SPI_DR_OFFSET			0x60
+
+#if (SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY == 1)
+#define SPI_SSIENPOLR_OFFSET		0x260
+#endif
+#if (SPI_SUPPORT_MASTER_DELAY_START_TIME == 1)
+#define SPI_SCLK_OUT_DLY_OFFSET		0x264
+#endif
+#if (SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE == 1)
+#define SPI_START_BIT_OFFSET		0x268
+#endif
+
+/* ==========================================================================*/
+
 #define SPI_MASTER_INSTANCES	(SPI_INSTANCES + SPI_AHB_INSTANCES)
 
 /* ==========================================================================*/
@@ -50,6 +136,53 @@
 #define SPI_CFS			0x0
 #define SPI_DFS			0xf
 #define SPI_BAUD_RATE		200000
+
+/* ==========================================================================*/
+#define SSI0_CLK	GPIO(2)
+#define SSI0_MOSI	GPIO(3)
+#define SSI0_MISO	GPIO(4)
+#define SSI0_EN0	GPIO(5)
+#define SSI0_EN1	GPIO(6)
+#if (CHIP_REV == S2)
+#define SSIO_EN2	GPIO(7)
+#define SSIO_EN3	GPIO(9)
+#else
+#define SSIO_EN2	GPIO(48)
+#define SSIO_EN3	GPIO(49)
+#endif
+#if (CHIP_REV == A7L)
+#define SSI_4_N		GPIO(88)
+#define SSI_5_N		GPIO(89)
+#define SSI_6_N		GPIO(90)
+#define SSI_7_N		GPIO(91)
+#elif (CHIP_REV == S2)
+#define SSI_4_N		GPIO(82)
+#define SSI_5_N		GPIO(83)
+#define SSI_6_N		GPIO(79)
+#define SSI_7_N		GPIO(80)
+#else
+#define SSI_4_N		GPIO(77)
+#define SSI_5_N		GPIO(78)
+#define SSI_6_N		GPIO(79)
+#define SSI_7_N		GPIO(80)
+#endif
+
+#define SSI2CLK		GPIO(88)
+#define SSI2MOSI	GPIO(89)
+#define SSI2MISO	GPIO(90)
+#define SSI2_0EN	GPIO(91)
+
+#define SSI3_EN0	GPIO(128)
+#define SSI3_EN1	GPIO(129)
+#define SSI3_EN2	GPIO(130)
+#define SSI3_EN3	GPIO(131)
+#define SSI3_EN4	GPIO(132)
+#define SSI3_EN5	GPIO(133)
+#define SSI3_EN6	GPIO(134)
+#define SSI3_EN7	GPIO(135)
+#define SSI3_MOSI	GPIO(136)
+#define SSI3_CLK	GPIO(137)
+#define SSI3_MISO	GPIO(138)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

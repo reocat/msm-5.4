@@ -487,6 +487,17 @@ late_initcall(ambarella_vic_pm_init);
 #endif /* CONFIG_PM */
 
 /* ==========================================================================*/
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
+void ambarella_vic_sw_set(void __iomem *vic_base, unsigned int vic_irq)
+{
+	amba_writel((vic_base + VIC_SOFT_INT_INT_OFFSET), vic_irq);
+}
+
+void ambarella_vic_sw_clr(void __iomem *vic_base, unsigned int vic_irq)
+{
+	amba_writel((vic_base + VIC_SOFT_INT_CLR_INT_OFFSET), vic_irq);
+}
+#else
 void ambarella_vic_sw_set(void __iomem *vic_base, unsigned int vic_irq)
 {
 	amba_writel((vic_base + VIC_SOFTEN_OFFSET), (0x1 << vic_irq));
@@ -496,3 +507,5 @@ void ambarella_vic_sw_clr(void __iomem *vic_base, unsigned int vic_irq)
 {
 	amba_writel((vic_base + VIC_SOFTEN_CLR_OFFSET), (0x1 << vic_irq));
 }
+#endif
+

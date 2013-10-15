@@ -25,26 +25,28 @@
 #define __PLAT_AMBARELLA_IDC_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M) || (CHIP_REV == A2Q) || (CHIP_REV == A5L)
-#define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         1
+#if (CHIP_REV == A8) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+#define IDC_INSTANCES		3
 #else
-#define IDC_SUPPORT_PIN_MUXING_FOR_HDMI         0
+#define IDC_INSTANCES		2
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == A7L)
 #define IDC_SUPPORT_INTERNAL_MUX	1
+#define IDC3_BUS_MUX			GPIO(36)
 #else
 #define IDC_SUPPORT_INTERNAL_MUX	0
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A2S) || (CHIP_REV == A2M)
-#define IDC_PORTS_USING_INTERNAL_MUX 	1
-#elif (CHIP_REV == A5L)
-#define IDC_PORTS_USING_INTERNAL_MUX	2
-#else
-#define IDC_PORTS_USING_INTERNAL_MUX 	0
-#endif
-
+/* ==========================================================================*/
+#define IDC_ENR_OFFSET			0x00
+#define IDC_CTRL_OFFSET			0x04
+#define IDC_DATA_OFFSET			0x08
+#define IDC_STS_OFFSET			0x0c
+#define IDC_PSLL_OFFSET			0x10
+#define IDC_PSLH_OFFSET			0x14
+#define IDC_FMCTRL_OFFSET		0x18
+#define IDC_FMDATA_OFFSET		0x1c
 #define IDC_ENR_REG_ENABLE		(0x01)
 #define IDC_ENR_REG_DISABLE		(0x00)
 

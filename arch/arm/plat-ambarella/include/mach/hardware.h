@@ -26,7 +26,7 @@
 
 /* ==========================================================================*/
 #include <mach/memory.h>
-#include <ambhw/ambhw.h>
+#include <ambhw/rct.h>
 
 #include <plat/gpio.h>
 #include <plat/atag.h>

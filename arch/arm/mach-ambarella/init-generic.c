@@ -58,7 +58,7 @@
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_SATA
+#if (AHCI_INSTANCES >= 1)
 	&ambarella_ahci0,
 #endif
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
@@ -77,14 +77,14 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_i2s0,
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_I2C_MUX
+#if (IDC_SUPPORT_INTERNAL_MUX == 1)
 	&ambarella_idc0_mux,
 #endif
 	&ambarella_idc0,
 #if (IDC_INSTANCES >= 2)
 	&ambarella_idc1,
 #endif
-#ifdef CONFIG_INPUT_AMBARELLA_IR
+#if (IR_INSTANCES >= 1)
 	&ambarella_ir0,
 #endif
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
@@ -173,12 +173,7 @@ static void __init ambarella_init_generic(void)
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
-
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	i2c_register_board_info(0, &ambarella_board_hdmi_info, 1);
-#else
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-#endif
 
 	platform_device_register(&generic_board_input);
 }

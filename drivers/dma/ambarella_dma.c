@@ -284,7 +284,7 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	u32 i, int_src;
 	irqreturn_t ret = IRQ_NONE;
 
-	int_src = amba_readl(DMA_INT_REG);
+	int_src = amba_readl(DMA_REG(DMA_INT_OFFSET));
 
 	if (int_src == 0)
 		return IRQ_HANDLED;

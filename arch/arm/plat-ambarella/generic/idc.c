@@ -69,13 +69,7 @@ struct resource ambarella_idc0_resources[] = {
 struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
 	.clk_limit	= 100000,
 	.bulk_write_num	= 60,
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	.i2c_class	= DEFAULT_I2C_CLASS | I2C_CLASS_DDC,
-#elif (IDC_SUPPORT_INTERNAL_MUX == 1)
 	.i2c_class	= DEFAULT_I2C_CLASS,
-#else
-	.i2c_class	= DEFAULT_I2C_CLASS,
-#endif
 	.get_clock	= ambarella_idc_get_clock,
 };
 #if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
@@ -94,14 +88,11 @@ struct platform_device ambarella_idc0 = {
 	}
 };
 
+#if (IDC_SUPPORT_INTERNAL_MUX == 1)
 static struct ambarella_i2cmux_platform_data ambarella_i2cmux_info = {
 	.parent		= 0,
 	.number		= 2,
-#if (IDC_SUPPORT_PIN_MUXING_FOR_HDMI == 1)
-	.gpio		= IDC_BUS_HDMI,
-#elif (IDC_SUPPORT_INTERNAL_MUX == 1)
 	.gpio		= IDC3_BUS_MUX,
-#endif
 	.select_function	= GPIO_FUNC_HW,
 	.deselect_function	= GPIO_FUNC_SW_INPUT,
 };
@@ -113,6 +104,7 @@ struct platform_device ambarella_idc0_mux = {
 		.platform_data		= &ambarella_i2cmux_info,
 	}
 };
+#endif
 
 #if (IDC_INSTANCES >= 2)
 struct resource ambarella_idc1_resources[] = {

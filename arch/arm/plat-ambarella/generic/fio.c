@@ -38,6 +38,7 @@
 #include <mach/hardware.h>
 #include <plat/dma.h>
 #include <plat/fio.h>
+#include <plat/sd.h>
 #include <plat/nand.h>
 #include <plat/audio.h>
 #include <plat/clk.h>
@@ -89,10 +90,6 @@ void __fio_select_lock(int module)
 	case SELECT_FIO_CF:
 		fio_ctr &= ~FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_CF;
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-		fio_amb_sd2_disable();
-		fio_amb_cf_enable();
-#endif
 		break;
 
 	case SELECT_FIO_SD:
@@ -106,10 +103,6 @@ void __fio_select_lock(int module)
 		break;
 
 	case SELECT_FIO_SD2:
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-		fio_amb_cf_disable();
-		fio_amb_sd2_enable();
-#endif
 #if (SD_HOST1_HOST2_HAS_MUX == 1)
 		fio_ctr &= ~FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
@@ -122,12 +115,12 @@ void __fio_select_lock(int module)
 
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
-	amba_clrbitsl(SD_NISEN_REG, SD_NISEN_CARD);
+	amba_clrbitsl(SD_REG(SD_NISEN_OFFSET), SD_NISEN_CARD);
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 #if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
 	if (module != SELECT_FIO_SDIO) {
 		ambarella_gpio_raw_lock(2, &flags);
-		amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		amba_clrbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
 		ambarella_gpio_raw_unlock(2, &flags);
 	}
 #endif
@@ -137,19 +130,19 @@ void __fio_select_lock(int module)
 #if (SD_HAS_INTERNAL_MUXER == 1)
 	if (module == SELECT_FIO_SD) {
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
-		amba_writel(SD_NISEN_REG, fio_sd_int);
-		amba_writel(SD_NIXEN_REG, fio_sd_int);
+		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sd_int);
+		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sd_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	} else
 	if (module == SELECT_FIO_SDIO) {
 #if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
 		ambarella_gpio_raw_lock(2, &flags);
-		amba_setbitsl(GPIO2_AFSEL_REG, 0x000007e0);
+		amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
 		ambarella_gpio_raw_unlock(2, &flags);
 #endif
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
-		amba_writel(SD_NISEN_REG, fio_sdio_int);
-		amba_writel(SD_NIXEN_REG, fio_sdio_int);
+		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sdio_int);
+		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sdio_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	}
 #endif
@@ -246,15 +239,15 @@ void fio_amb_sd0_set_int(u32 mask, u32 on)
 	u32					int_flag;
 
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
-	int_flag = amba_readl(SD_NISEN_REG);
+	int_flag = amba_readl(SD_REG(SD_NISEN_OFFSET));
 	if (on)
 		int_flag |= mask;
 	else
 		int_flag &= ~mask;
 	fio_sd_int = int_flag;
 	if (fio_amb_sd0_is_enable()) {
-		amba_writel(SD_NISEN_REG, int_flag);
-		amba_writel(SD_NIXEN_REG, int_flag);
+		amba_writel(SD_REG(SD_NISEN_OFFSET), int_flag);
+		amba_writel(SD_REG(SD_NIXEN_OFFSET), int_flag);
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
@@ -277,15 +270,15 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	u32					int_flag;
 
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
-	int_flag = amba_readl(SD_NISEN_REG);
+	int_flag = amba_readl(SD_REG(SD_NISEN_OFFSET));
 	if (on)
 		int_flag |= mask;
 	else
 		int_flag &= ~mask;
 	fio_sdio_int = int_flag;
 	if (fio_amb_sdio0_is_enable()) {
-		amba_writel(SD_NISEN_REG, int_flag);
-		amba_writel(SD_NIXEN_REG, int_flag);
+		amba_writel(SD_REG(SD_NISEN_OFFSET), int_flag);
+		amba_writel(SD_REG(SD_NIXEN_OFFSET), int_flag);
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
@@ -316,123 +309,18 @@ done:
 	return rval;
 }
 
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-void fio_amb_fl_enable(void)
-{
-	amba_setbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
-}
-
-void fio_amb_fl_disable(void)
-{
-	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
-}
-
-int fio_amb_fl_is_enable(void)
-{
-	return amba_tstbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_FLASH_CLK_ENB);
-}
-
-void fio_amb_cf_enable(void)
-{
-	amba_setbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
-}
-
-void fio_amb_cf_disable(void)
-{
-	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
-}
-
-int fio_amb_cf_is_enable(void)
-{
-	return amba_tstbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_CF_CLK_ENB);
-}
-
-void fio_amb_sd2_enable(void)
-{
-	amba_setbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
-}
-
-void fio_amb_sd2_disable(void)
-{
-	amba_clrbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
-}
-
-int fio_amb_sd2_is_enable(void)
-{
-	return amba_tstbitsl(HOST_AHB_CLK_ENABLE_REG, HOST_AHB_SDIO_SEL);
-}
-
-#endif
-
-#if (NAND_DUMMY_XFER == 1)
-void nand_dummy_xfer(void)
-{
-	amba_writel(FIO_CTR_REG, 0x15);
-	amba_writel(NAND_CTR_REG, 0x4080110);
-
-	amba_writel(DMA_FIOS_CHAN0_STA_REG, 0x0);
-	amba_writel(DMA_FIOS_CHAN0_SRC_REG, 0x60000000);
-	amba_writel(DMA_FIOS_CHAN0_DST_REG, 0xc0000000);
-	amba_writel(DMA_FIOS_CHAN0_CTR_REG, 0xae800020);
-
-	amba_writel(FIO_DMAADR_REG, 0x0);
-	amba_writel(FIO_DMACTR_REG, 0x86800020);
-
-	while ((amba_readl(DMA_FIOS_INT_REG) & 0x1) != 0x1);
-	amba_writel(DMA_FIOS_CHAN0_STA_REG, 0x0);
-
-	while ((amba_readl(FIO_STA_REG) & 0x1) != 0x1);
-	amba_writel(FIO_CTR_REG, 0x1);
-	amba_writel(NAND_INT_REG, 0x0);
-
-	while ((amba_readl(FIO_DMASTA_REG) & 0x1000000) != 0x1000000);
-	amba_writel(FIO_DMASTA_REG, 0x0);
-}
-#endif
-
-void enable_fio_dma(void)
-{
-#if ((HOST_MAX_AHB_CLK_EN_BITS == 10) || (I2S_24BITMUX_MODE_REG_BITS == 4))
-	u32 val;
-#endif
-
-#if (HOST_MAX_AHB_CLK_EN_BITS == 10)
-	/* Disable boot-select */
-	val = amba_readl(HOST_AHB_CLK_ENABLE_REG);
-	val &= ~(HOST_AHB_BOOT_SEL);
-	val &= ~(HOST_AHB_FDMA_BURST_DIS);
-	amba_writel(HOST_AHB_CLK_ENABLE_REG, val);
-#endif
-
-#if (I2S_24BITMUX_MODE_REG_BITS == 4)
-	val = amba_readl(I2S_24BITMUX_MODE_REG);
-	val &= ~(I2S_24BITMUX_MODE_DMA_BOOTSEL);
-	val &= ~(I2S_24BITMUX_MODE_FDMA_BURST_DIS);
-	amba_writel(I2S_24BITMUX_MODE_REG, val);
-#endif
-
-#if (NAND_DUMMY_XFER == 1)
-	nand_dummy_xfer();
-#endif
-}
-
-void fio_amb_exit_random_mode(void)
-{
-	amba_clrbitsl(FIO_CTR_REG, FIO_CTR_RR);
-}
-
 int __init ambarella_init_fio(void)
 {
 #if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
-	unsigned long				flags;
+	unsigned long flags;
 
 	//SMIO_38 ~ SMIO_43
 	ambarella_gpio_raw_lock(2, &flags);
-	amba_clrbitsl(GPIO2_AFSEL_REG, 0x000007e0);
-	amba_clrbitsl(GPIO2_DIR_REG, 0x00000780);
-	amba_setbitsl(GPIO2_DIR_REG, 0x00000060);
-	amba_writel(GPIO2_MASK_REG, 0x00000060);
-	amba_writel(GPIO2_DATA_REG, 0x00000040);
+	amba_clrbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
+	amba_clrbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000780);
+	amba_setbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000060);
+	amba_writel(GPIO2_REG(GPIO_MASK_OFFSET), 0x00000060);
+	amba_writel(GPIO2_REG(GPIO_DATA_OFFSET), 0x00000040);
 	ambarella_gpio_raw_unlock(2, &flags);
 #endif
 
@@ -574,8 +462,8 @@ static struct resource ambarella_fio_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	[3] = {
-		.start	= FL_WP,
-		.end	= FL_WP,
+		.start	= GPIO(39),
+		.end	= GPIO(39),
 		.name	= "wp_gpio",
 		.flags	= IORESOURCE_IO,
 	},
@@ -585,7 +473,6 @@ static struct resource ambarella_fio_resources[] = {
 		.name	= "fio_fifo",
 		.flags	= IORESOURCE_MEM,
 	},
-#if (DMA_SUPPORT_DMA_FIOS == 1)
 	[5] = {
 		.start	= DMA_FIOS_BASE,
 		.end	= DMA_FIOS_BASE + 0x0FFF,
@@ -598,20 +485,6 @@ static struct resource ambarella_fio_resources[] = {
 		.name	= "fdma_irq",
 		.flags	= IORESOURCE_IRQ,
 	},
-#else
-	[5] = {
-		.start	= DMA_BASE,
-		.end	= DMA_BASE + 0x0FFF,
-		.name	= "fdma_reg",
-		.flags	= IORESOURCE_MEM,
-	},
-	[6] = {
-		.start	= DMA_IRQ,
-		.end	= DMA_IRQ,
-		.name	= "fdma_irq",
-		.flags	= IORESOURCE_IRQ,
-	},
-#endif
 };
 
 struct platform_device ambarella_nand = {

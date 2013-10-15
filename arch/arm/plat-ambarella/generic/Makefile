@@ -21,23 +21,18 @@
 #
 
 obj-y						+= adc.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SATA)	+= ahci.o
+obj-y						+= ahci.o
 obj-y						+= audio.o
 obj-y						+= crypto.o
 obj-y						+= dma.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_ETH)	+= eth.o
+obj-y						+= eth.o
 obj-y						+= fio.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 obj-y						+= gpio.o
 obj-y						+= idc.o
 obj-y						+= init.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_IR)		+= ir.o
+obj-y						+= ir.o
 obj-y						+= irq.o
-ifeq ($(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL), y)
-obj-y						+= pll_hal.o
-else
 obj-y						+= clk.o
-endif
 obj-y						+= pm.o
 obj-$(CONFIG_HAVE_PWM)				+= pwm.o
 obj-y						+= hwlock.o
@@ -50,5 +45,4 @@ obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UPORT)	+= uport.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UDC)	+= udc.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UHC)	+= uhc.o
-obj-$(CONFIG_CPU_FREQ)				+= cpufreq.o
 

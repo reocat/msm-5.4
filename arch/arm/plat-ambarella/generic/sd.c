@@ -412,11 +412,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller0 = {
 	.pwr_delay		= 1,
 
 	.dma_fix		= 0,
-#if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
-#else
-	.support_pll_scaler	= 0,
-#endif
 };
 #if defined(CONFIG_AMBARELLA_SYS_SD_CALL)
 module_param_cb(sd0_max_block, &param_ops_uint,
@@ -465,17 +461,11 @@ struct resource ambarella_sd1_resources[] = {
 
 int fio_amb_sd2_check_owner(void)
 {
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-	return fio_amb_sd2_is_enable();
-#endif
 	return 1;
 }
 
 void fio_amb_sd2_request(void)
 {
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-	fio_select_lock(SELECT_FIO_SD2);
-#endif
 #if (SD_HOST1_HOST2_HAS_MUX == 1)
 	fio_select_lock(SELECT_FIO_SD2);
 #endif
@@ -483,9 +473,6 @@ void fio_amb_sd2_request(void)
 
 void fio_amb_sd2_release(void)
 {
-#if (FIO_SUPPORT_AHB_CLK_ENA == 1)
-	fio_unlock(SELECT_FIO_SD2);
-#endif
 #if (SD_HOST1_HOST2_HAS_MUX == 1)
 	fio_unlock(SELECT_FIO_SD2);
 #endif
@@ -498,13 +485,13 @@ void fio_amb_sd2_set_int(u32 mask, u32 on)
 	u32					int_flag;
 
 	spin_lock_irqsave(&fio_amb_sd2_int_lock, flags);
-	int_flag = amba_readl(SD2_NISEN_REG);
+	int_flag = amba_readl(SD_REG(SD_NISEN_OFFSET));
 	if (on)
 		int_flag |= mask;
 	else
 		int_flag &= ~mask;
-	amba_writel(SD2_NISEN_REG, int_flag);
-	amba_writel(SD2_NIXEN_REG, int_flag);
+	amba_writel(SD_REG(SD_NISEN_OFFSET), int_flag);
+	amba_writel(SD_REG(SD_NIXEN_OFFSET), int_flag);
 	spin_unlock_irqrestore(&fio_amb_sd2_int_lock, flags);
 }
 
@@ -575,11 +562,7 @@ struct ambarella_sd_controller ambarella_platform_sd_controller1 = {
 #else
 	.dma_fix		= 0,
 #endif
-#if (SD_SUPPORT_PLL_SCALER == 1)
 	.support_pll_scaler	= 1,
-#else
-	.support_pll_scaler	= 0,
-#endif
 };
 #if defined(CONFIG_AMBARELLA_SYS_SD_CALL)
 module_param_cb(sd1_max_block, &param_ops_uint,

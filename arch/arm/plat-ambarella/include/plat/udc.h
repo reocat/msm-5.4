@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_UDC_H
-#define __PLAT_AMBARELLA_UDC_H
+#ifndef __PLAT_AMBARELLA_UDC_H__
+#define __PLAT_AMBARELLA_UDC_H__
 
 /* ==========================================================================*/
 
