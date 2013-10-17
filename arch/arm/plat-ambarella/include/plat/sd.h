@@ -25,37 +25,30 @@
 #define __PLAT_AMBARELLA_SD_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == A8)
-#define SD_INSTANCES			1
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
+#define SD_INSTANCES			2
 #elif (CHIP_REV == S2L)
 #define SD_INSTANCES			3
 #else
-#define SD_INSTANCES			2
+#define SD_INSTANCES			1
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == I1)
-#define SD_HAS_INTERNAL_MUXER      	1
+/* ==========================================================================*/
+#define SD_OFFSET			0x2000
+#if (CHIP_REV == I1)
+#define SD2_OFFSET			0x1B000
 #else
-#define SD_HAS_INTERNAL_MUXER           0
+#define SD2_OFFSET			0xC000
 #endif
+#define SD3_OFFSET			0x1F000
 
-#if (CHIP_REV == A7L) || (CHIP_REV == S2)
-#define SD_HOST1_HOST2_HAS_MUX		1
-#else
-#define SD_HOST1_HOST2_HAS_MUX		0
-#endif
+#define SD_BASE				(AHB_BASE + SD_OFFSET)
+#define SD2_BASE			(AHB_BASE + SD2_OFFSET)
+#define SD3_BASE			(AHB_BASE + SD3_OFFSET)
 
-#if (CHIP_REV == I1) || (CHIP_REV == S2L)
-#define SD_HAS_SDXC_CLOCK		1
-#else
-#define SD_HAS_SDXC_CLOCK		0
-#endif
-
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define SD_HAS_SDIO_CLOCK		1
-#else
-#define SD_HAS_SDIO_CLOCK		0
-#endif
+#define SD_REG(x)			(SD_BASE + (x))
+#define SD2_REG(x)			(SD2_BASE + (x))
+#define SD3_REG(x)			(SD3_BASE + (x))
 
 /* ==========================================================================*/
 #define SD_DMA_ADDR_OFFSET		0x000
@@ -420,6 +413,7 @@ struct ambarella_sd_controller {
 /* ==========================================================================*/
 extern struct platform_device			ambarella_sd0;
 extern struct platform_device			ambarella_sd1;
+extern struct platform_device			ambarella_sd2;
 
 extern int ambarella_init_sd(void);
 extern void ambarella_detect_sd_slot(int bus, int slot, int fixed_cd);

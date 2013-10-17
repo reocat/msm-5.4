@@ -25,18 +25,9 @@
 #ifndef __ASM_ARCH_TIMEX_H
 #define __ASM_ARCH_TIMEX_H
 
-/* ==========================================================================*/
-#include <ambhw/chip.h>
-#include <ambhw/rct.h>
+#include <plat/chip.h>
 
-#define CLOCK_TICK_RATE		REF_CLK_FREQ
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
+#define CLOCK_TICK_RATE				REF_CLK_FREQ
 
-/* ==========================================================================*/
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
-
-#endif
+#endif /* __ASM_ARCH_TIMEX_H */
 

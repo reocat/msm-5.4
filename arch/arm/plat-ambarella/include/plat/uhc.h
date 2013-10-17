@@ -25,6 +25,17 @@
 #define __PLAT_AMBARELLA_UHC_H
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2)
+#define USB_HOST_CTRL_EHCI_OFFSET	0x18000
+#define USB_HOST_CTRL_OHCI_OFFSET	0x19000
+#elif (CHIP_REV == I1)
+#define USB_HOST_CTRL_EHCI_OFFSET	0x17000
+#define USB_HOST_CTRL_OHCI_OFFSET	0x18000
+#endif
+#define USB_HOST_CTRL_EHCI_BASE		(AHB_BASE + USB_HOST_CTRL_EHCI_OFFSET)
+#define USB_HOST_CTRL_OHCI_BASE		(AHB_BASE + USB_HOST_CTRL_OHCI_OFFSET)
+#define USB_HOST_CTRL_EHCI_REG(x)	(USB_HOST_CTRL_EHCI_BASE + (x))
+#define USB_HOST_CTRL_OHCI_REG(x)	(USB_HOST_CTRL_OHCI_BASE + (x))
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

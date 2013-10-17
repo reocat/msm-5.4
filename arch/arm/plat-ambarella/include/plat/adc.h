@@ -50,6 +50,15 @@
 #endif
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#define ADC_OFFSET			0x1D000
+#else
+#define ADC_OFFSET			0xD000
+#endif
+#define ADC_BASE			(APB_BASE + ADC_OFFSET)
+#define ADC_REG(x)			(ADC_BASE + (x))
+
+/* ==========================================================================*/
 #if (CHIP_REV == S2)
 #define ADC_CONTROL_OFFSET		0x004
 #else
@@ -294,22 +303,13 @@
 #endif
 #define ADC_CONTROL_STATUS		0x01
 
-#if (CHIP_REV == A5)
-#define ADC_HI_THRESHOLD_EN		(0x1 << 21)
-#define ADC_LO_THRESHOLD_EN		(0x1 << 20)
-#else
 #define ADC_HI_THRESHOLD_EN		(0x1 << 31)
 #define ADC_LO_THRESHOLD_EN		(0x1 << 30)
-#endif
 
 #define ADC_THRESHOLD_INT_HI		1
 #define ADC_THRESHOLD_INT_LO		0
 
-#if (CHIP_REV == A5)
-#define ADC_VAL_HI(x)			((x) << 10)
-#else
 #define ADC_VAL_HI(x)			((x) << 15)
-#endif
 
 /* ==========================================================================*/
 #define ADC_EN_HI(x)			((x) << 31)

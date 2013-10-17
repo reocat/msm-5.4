@@ -49,8 +49,7 @@ static DEFINE_MUTEX(adc_lock);
 
 struct ambarella_adc_controller ambarella_platform_adc_controller0;
 /* ==========================================================================*/
-#if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) ||\
-     (CHIP_REV == A7) || (CHIP_REV == A5L) || (CHIP_REV == S2))
+#if ((CHIP_REV == A5S) || (CHIP_REV == S2))
 #undef ADC_ONE_SHOT
 #define ADC_ONE_SHOT
 #else
@@ -76,8 +75,7 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 
 #if defined(ADC_ONE_SHOT)
 	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
-#if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
-     (CHIP_REV == A7) || (CHIP_REV == A5L))
+#if (CHIP_REV == A5S)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
 		msleep(1);
 	}
@@ -184,8 +182,7 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 
 #if defined(ADC_ONE_SHOT)
 	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
-#if ((CHIP_REV == A5) || (CHIP_REV == A6) || (CHIP_REV == A5S) || \
-     (CHIP_REV == A7) || (CHIP_REV == A5L))
+#if (CHIP_REV == A5S)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
 		msleep(1);
 	}
@@ -325,32 +322,6 @@ void ambarella_adc_start(void)
 	amba_clrbitsl(ADC16_CTRL_REG, 0x2);
 #endif
 
-#if (CHIP_REV == A5L)
-	amba_writel(ADC_CONTROL_REG, 0x0);
-
-	amba_writel(ADC_DATA0_REG, 0);
-	amba_writel(ADC_DATA1_REG, 0);
-	amba_writel(ADC_DATA2_REG, 0);
-	amba_writel(ADC_DATA3_REG, 0);
-
-	amba_writel(ADC_ENABLE_REG, 0x0);
-#endif
-
-#if (CHIP_REV == A5 || CHIP_REV == A6)
-	/* SCALER_ADC_REG (default=4) */
-	/* clk_au = 27MHz/2 */
-	rct_set_adc_clk_freq_hz(PLL_CLK_13_5MHZ);
-
-	/* ADC Analog (lowest power) */
-	amba_writel(ADC16_CTRL_REG, 0x031cff);
-
-	/* ADC reset */
-	amba_writel(ADC_RESET_REG, 0x1);
-
-	/* Fix nonlinearity */
-	amba_writel(ADC16_CTRL_REG, 0x00031c00);
-#endif
-
 #if (CHIP_REV == A5S)
 	/* stop conversion */
 	amba_writel(ADC_CONTROL_REG, 0x0);
@@ -363,18 +334,9 @@ void ambarella_adc_start(void)
 	amba_writel(ADC_ENABLE_REG, 0x0);
 #endif
 
-#if (CHIP_REV == A7)
-	/* stop conversion */
-	amba_writel(ADC_CONTROL_REG, 0x0);
-
-	amba_writel(ADC_DATA0_REG, 0);
-	amba_writel(ADC_DATA1_REG, 0);
-	amba_writel(ADC_DATA2_REG, 0);
-	amba_writel(ADC_DATA3_REG, 0);
-
-	amba_writel(ADC_ENABLE_REG, 0x1);
-	amba_writel(ADC_CONTROL_REG, 0x1);
-#elif (CHIP_REV != S2)
+#if (CHIP_REV == S2)
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_CLEAR);
+#else
 #if (CHIP_REV != I1)
 	if (amba_readl(ADC_ENABLE_REG) != 0) {
 		pr_err("%s: ADC_ENABLE_REG = %d.\n",
@@ -384,10 +346,6 @@ void ambarella_adc_start(void)
 	}
 #endif
 	amba_writel(ADC_ENABLE_REG, 0x1);
-#endif
-
-#if (CHIP_REV == S2)
-	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_CLEAR);
 #endif
 
 #ifdef ADC_ONE_SHOT
@@ -419,9 +377,6 @@ void ambarella_adc_stop(void)
 	amba_writel(ADC_ENABLE_REG, 0x0);
 #else
 	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
-#endif
-#if (CHIP_REV == A7)
-	amba_writel(ADC_CONTROL_REG, 0x0);
 #endif
 #if defined(ADC16_CTRL_REG)
 	amba_setbitsl(ADC16_CTRL_REG, 0x2);
@@ -661,7 +616,7 @@ struct resource ambarella_adc_resources[] = {
 		.name	= "registers",
 		.flags	= IORESOURCE_MEM,
 	},
-#if (CHIP_REV == A5S || CHIP_REV == A7)
+#if (CHIP_REV == A5S)
 	[1] = {
 		.start	= ADC_LEVEL_IRQ,
 		.end	= ADC_LEVEL_IRQ,

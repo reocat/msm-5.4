@@ -68,7 +68,7 @@ static void __init ambarella_init_hyacinth(void)
 {
 	int i;
 
-	ambarella_init_machine("Hyacinth_0");
+	ambarella_init_machine("Hyacinth_0", REF_CLK_FREQ);
 
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();

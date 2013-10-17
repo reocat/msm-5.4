@@ -46,6 +46,8 @@ static LIST_HEAD(ambarella_all_clocks);
 DEFINE_SPINLOCK(ambarella_clock_lock);
 
 /* ==========================================================================*/
+static unsigned int ambarella_clk_ref_freq = REF_CLK_FREQ;
+
 const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE] =
 {
 	{    16601562500000,	16,	 1,	15,	128},
@@ -659,7 +661,7 @@ u32 ambarella_rct_find_pll_table_index(unsigned long rate, u32 pre_scaler,
 	divident = rate;
 	divident *= pre_scaler;
 	divident *= (1000 * 1000 * 1000);
-	divider = (REF_CLK_FREQ / (1000 * 1000));
+	divider = (ambarella_clk_ref_freq / (1000 * 1000));
 	AMBCLK_DO_DIV(divident, divider);
 
 	index_limit = (table_size - 1);
@@ -803,19 +805,19 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 	sdiv = ctrl_reg.s.sdiv;
 	sout = ctrl_reg.s.sout;
 
-	divident = (REF_CLK_FREQ * (pll_int + 1) * (sdiv + 1));
+	divident = (ambarella_clk_ref_freq * (pll_int + 1) * (sdiv + 1));
 	divider = (pre_scaler_reg * (sout + 1) * post_scaler_reg);
 	if (ctrl_reg.s.frac_mode) {
 		if (frac_reg.s.nega) {
 			/* Negative */
 			frac = (0x80000000 - frac_reg.s.frac);
-			frac = (REF_CLK_FREQ * frac * (sdiv + 1));
+			frac = (ambarella_clk_ref_freq * frac * (sdiv + 1));
 			frac >>= 32;
 			divident = divident - frac;
 		} else {
 			/* Positive */
 			frac = frac_reg.s.frac;
-			frac = (REF_CLK_FREQ * frac * (sdiv + 1));
+			frac = (ambarella_clk_ref_freq * frac * (sdiv + 1));
 			frac >>= 32;
 			divident = divident + frac;
 		}
@@ -861,7 +863,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		(c->ctrl3_reg == PLL_REG_UNAVAILABLE) &&
 		(c->pres_reg == PLL_REG_UNAVAILABLE) &&
 		(c->post_reg != PLL_REG_UNAVAILABLE) && c->max_divider) {
-		divider = (REF_CLK_FREQ + (rate >> 1) - 1) / rate;
+		divider = (ambarella_clk_ref_freq + (rate >> 1) - 1) / rate;
 		if (!divider) {
 			ret_val = -1;
 			goto ambarella_rct_clk_set_rate_exit;
@@ -917,7 +919,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 				(ambarella_rct_pll_table[middle].sout + 1) *
 				ambarella_rct_pll_table[middle].post);
 			divident = divident << 32;
-			divider = ((u64)REF_CLK_FREQ *
+			divider = ((u64)ambarella_clk_ref_freq *
 				(ambarella_rct_pll_table[middle].sdiv + 1));
 			AMBCLK_DO_DIV_ROUND(divident, divider);
 			if (c->rate <= rate) {
@@ -1254,7 +1256,7 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 }
 EXPORT_SYMBOL(clk_set_parent);
 
-int ambarella_register_clk(struct clk *clk)
+int ambarella_clk_add(struct clk *clk)
 {
 	spin_lock(&ambarella_clock_lock);
 	list_add(&clk->list, &ambarella_all_clocks);
@@ -1262,7 +1264,7 @@ int ambarella_register_clk(struct clk *clk)
 
 	return 0;
 }
-EXPORT_SYMBOL(ambarella_register_clk);
+EXPORT_SYMBOL(ambarella_clk_add);
 
 /* ==========================================================================*/
 #if defined(CONFIG_AMBARELLA_PLL_PROC)
@@ -1320,7 +1322,7 @@ static ssize_t ambarella_clock_proc_write(struct file *file,
 	pr_info("post_scaler = [0x%08X]\n",
 		ambarella_rct_pll_table[middle].post);
 
-	divident = (REF_CLK_FREQ * (ctrl_reg.s.intp + 1) *
+	divident = (ambarella_clk_ref_freq * (ctrl_reg.s.intp + 1) *
 		(ctrl_reg.s.sdiv + 1));
 	divider = (pre_scaler * (ctrl_reg.s.sout + 1) *
 		ambarella_rct_pll_table[middle].post);
@@ -1335,7 +1337,7 @@ static ssize_t ambarella_clock_proc_write(struct file *file,
 		(ambarella_rct_pll_table[middle].sout + 1) *
 		ambarella_rct_pll_table[middle].post);
 	divident = divident << 32;
-	divider = ((u64)REF_CLK_FREQ *
+	divider = ((u64)ambarella_clk_ref_freq *
 		(ambarella_rct_pll_table[middle].sdiv + 1));
 	AMBCLK_DO_DIV_ROUND(divident, divider);
 	if (freq_hz_int <= freq_hz) {
@@ -1385,10 +1387,12 @@ static const struct file_operations proc_clock_fops = {
 };
 #endif
 
-int __init ambarella_init_pll(void)
+/* ==========================================================================*/
+int __init ambarella_clk_init(unsigned int ref_freq)
 {
 	int ret_val = 0;
 
+	ambarella_clk_ref_freq = ref_freq;
 #if defined(CONFIG_AMBARELLA_PLL_PROC)
 	proc_create_data("clock", S_IRUGO, get_ambarella_proc_dir(),
 		&proc_clock_fops, NULL);
@@ -1396,4 +1400,11 @@ int __init ambarella_init_pll(void)
 
 	return ret_val;
 }
+
+/* ==========================================================================*/
+unsigned int ambarella_clk_get_ref_freq(void)
+{
+	return ambarella_clk_ref_freq;
+}
+EXPORT_SYMBOL(ambarella_clk_get_ref_freq);
 

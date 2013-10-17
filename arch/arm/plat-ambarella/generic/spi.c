@@ -39,8 +39,6 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk gclk_ssi = {
 	.parent		= NULL,
 	.name		= "gclk_ssi",
@@ -72,14 +70,13 @@ static struct clk *ambarella_ssi_register_clk(void)
 			BUG();
 		}
 		gclk_ssi.parent = pgclk_apb;
-		ambarella_register_clk(&gclk_ssi);
+		ambarella_clk_add(&gclk_ssi);
 		pgclk_ssi = &gclk_ssi;
 		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi));
 	}
 
 	return pgclk_ssi;
 }
-#endif
 
 static void ambarella_ssi_set_pll(void)
 {
@@ -90,25 +87,15 @@ static void ambarella_ssi_set_pll(void)
 #else
 	u32 freq_hz = 13500000;
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_set_ssi_clock_frequency(HAL_BASE_VP, freq_hz);
-#else
 	clk_set_rate(ambarella_ssi_register_clk(), freq_hz);
-#endif
 }
 
 static u32 ambarella_ssi_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return (u32)amb_get_ssi_clock_frequency(HAL_BASE_VP);
-#else
 	return clk_get_rate(ambarella_ssi_register_clk());
-#endif
 }
 
 #if (SPI_MASTER_INSTANCES >= 2)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk gclk_ssi2 = {
 	.parent		= NULL,
 	.name		= "gclk_ssi2",
@@ -140,14 +127,13 @@ static struct clk *ambarella_ssi2_register_clk(void)
 			BUG();
 		}
 		gclk_ssi2.parent = pgclk_apb;
-		ambarella_register_clk(&gclk_ssi2);
+		ambarella_clk_add(&gclk_ssi2);
 		pgclk_ssi2 = &gclk_ssi2;
 		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi2));
 	}
 
 	return pgclk_ssi2;
 }
-#endif
 
 static void ambarella_ssi2_set_pll(void)
 {
@@ -158,26 +144,16 @@ static void ambarella_ssi2_set_pll(void)
 #else
 	u32 freq_hz = 13500000;
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_set_ssi2_clock_frequency(HAL_BASE_VP, freq_hz);
-#else
 	clk_set_rate(ambarella_ssi2_register_clk(), freq_hz);
-#endif
 }
 
 static u32 ambarella_ssi2_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return (u32)amb_get_ssi2_clock_frequency(HAL_BASE_VP);
-#else
 	return clk_get_rate(ambarella_ssi2_register_clk());
-#endif
 }
 #endif
 
 #if (SPI_AHB_INSTANCES >= 1)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk gclk_ssi_ahb = {
 	.parent		= NULL,
 	.name		= "gclk_ssi_ahb",
@@ -209,33 +185,23 @@ static struct clk *ambarella_ssi_ahb_register_clk(void)
 			BUG();
 		}
 		gclk_ssi_ahb.parent = pgclk_apb;
-		ambarella_register_clk(&gclk_ssi_ahb);
+		ambarella_clk_add(&gclk_ssi_ahb);
 		pgclk_ssi_ahb = &gclk_ssi_ahb;
 		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi_ahb));
 	}
 
 	return pgclk_ssi_ahb;
 }
-#endif
 
 static void ambarella_ssi_ahb_set_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	//amb_set_ssi_ahb_clock_frequency(HAL_BASE_VP, freq_hz);
-#else
 	u32 freq_hz = 54000000;
 	clk_set_rate(ambarella_ssi_ahb_register_clk(), freq_hz);
-#endif
 }
 
 static u32 ambarella_ssi_ahb_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	//return (u32)amb_get_ssi_ahb_clock_frequency(HAL_BASE_VP);
-	return 0;
-#else
 	return clk_get_rate(ambarella_ssi_ahb_register_clk());
-#endif
 }
 #endif
 

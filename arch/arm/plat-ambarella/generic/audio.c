@@ -34,83 +34,6 @@
 #include <plat/clk.h>
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-void rct_set_audio_pll_hal(u32 clksrc, u32 mclk)
-{
-	int chk_count = 0;
-	amb_hal_success_t success;
-	amb_clock_source_t clk_src_sel;
-
-	switch (clksrc) {
-#if (CHIP_REV == A5S)
-		case AMBARELLA_CLKSRC_SP_CLK:
-			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_SP_CLK;
-			break;
-#endif
-		case AMBARELLA_CLKSRC_CLK_SI:
-#if (CHIP_REV == S2)
-			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_CLK_SI;
-#else
-			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI;
-#endif
-			break;
-		case AMBARELLA_CLKSRC_LVDS_IDSP_SCLK:
-#if (CHIP_REV == S2)
-			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
-#else
-			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK;
-#endif
-			break;
-		case AMBARELLA_CLKSRC_EXTERNAL:
-			clk_src_sel = AMB_EXTERNAL_CLOCK_SOURCE;
-			break;
-		default:
-		case AMBARELLA_CLKSRC_ONCHIP:
-#if (CHIP_REV == S2)
-			clk_src_sel = AMB_REFERENCE_CLOCK_SOURCE_CLK_REF;
-#else
-			clk_src_sel = AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_REF;
-#endif
-			break;
-	}
-
-#if (CHIP_REV == S2)
-	if (clk_src_sel == AMB_REFERENCE_CLOCK_SOURCE_CLK_SI ||
-		clk_src_sel == AMB_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK)
-#else
-	if (clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_CLK_SI ||
-		clk_src_sel == AMB_PLL_REFERENCE_CLOCK_SOURCE_LVDS_IDSP_SCLK)
-#endif
-	{
-		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, mclk);
-	} else {
-		success = amb_set_audio_clock_source(HAL_BASE_VP, clk_src_sel, 0);
-	}
-
-	if (success == AMB_HAL_SUCCESS) {
-		if(clk_src_sel != AMB_EXTERNAL_CLOCK_SOURCE) {
-			success = amb_set_audio_clock_frequency(HAL_BASE_VP, mclk);
-			while (success == AMB_HAL_RETRY) {
-				// do something else or sleep
-				mdelay(10);
-				chk_count ++;
-				success = amb_set_audio_clock_frequency(HAL_BASE_VP, mclk);
-				if (chk_count == 100) {
-					printk("a previous audio pll frequency change request is still outstanding");
-					break;
-				}
-			};
-			if (success == AMB_HAL_FAIL)
-				printk("new audio pll frequency requested is not supported");
-		}
-	} else {
-		printk("new audio pll reference clock source is not supported");
-	}
-
-}
-
-#else
-
 static struct clk gclk_audio = {
 	.parent		= NULL,
 	.name		= "gclk_audio",
@@ -118,7 +41,7 @@ static struct clk gclk_audio = {
 	.frac_mode	= 1,
 	.ctrl_reg	= PLL_AUDIO_CTRL_REG,
 	.pres_reg	= SCALER_AUDIO_PRE_REG,
-	.post_reg	= SCALER_AUDIO_REG,
+	.post_reg	= SCALER_AUDIO_POST_REG,
 	.frac_reg	= PLL_AUDIO_FRAC_REG,
 	.ctrl2_reg	= PLL_AUDIO_CTRL2_REG,
 	.ctrl3_reg	= PLL_AUDIO_CTRL3_REG,
@@ -136,7 +59,7 @@ static struct clk *ambarella_audio_register_clk(void)
 
 	pgclk_audio = clk_get(NULL, "gclk_audio");
 	if (IS_ERR(pgclk_audio)) {
-		ambarella_register_clk(&gclk_audio);
+		ambarella_clk_add(&gclk_audio);
 		pgclk_audio = &gclk_audio;
 		pr_info("SYSCLK:AUDIO[%lu]\n", clk_get_rate(pgclk_audio));
 	}
@@ -144,36 +67,14 @@ static struct clk *ambarella_audio_register_clk(void)
 	return pgclk_audio;
 }
 
-#endif
-
 static void set_audio_pll(u32 clksrc, u32 mclk)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	rct_set_audio_pll_hal(clksrc, mclk);
-#else
 	clk_set_rate(ambarella_audio_register_clk(), mclk);
-#endif
 }
 
 static void aucodec_digitalio_on_0(void)
 {
-	/* aucodec_digitalio_on */
-#if (CHIP_REV == A2S) || (CHIP_REV == A2M)
-	unsigned long flags;
-
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), (0xf << 18) | (0xf << 13));
-	ambarella_gpio_raw_unlock(2, &flags);
-
-#elif (CHIP_REV == A2)
-	unsigned long flags;
-
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), (0x3 << 15) | (0x3 << 20));
-	ambarella_gpio_raw_unlock(2, &flags);
-
-#elif (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
-	(CHIP_REV == A5S)||(CHIP_REV == I1)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(1, &flags);
@@ -204,9 +105,7 @@ static void aucodec_digitalio_on_0(void)
 
 static void aucodec_digitalio_on_1(void)
 {
-	/* aucodec_digitalio_on */
-#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
-	(CHIP_REV == A5S)||(CHIP_REV == I1)||(CHIP_REV == S2)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(1, &flags);
@@ -237,9 +136,7 @@ static void aucodec_digitalio_on_1(void)
 
 static void aucodec_digitalio_on_2(void)
 {
-	/* aucodec_digitalio_on */
-#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
-	(CHIP_REV == A5S)||(CHIP_REV == I1)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	unsigned long flags;
 
 	ambarella_gpio_raw_lock(1, &flags);
@@ -257,8 +154,7 @@ static void aucodec_digitalio_on_2(void)
 
 static void i2s_channel_select(u32 ch)
 {
-#if (CHIP_REV == A3)||(CHIP_REV == A5)||(CHIP_REV == A6)|| \
-	(CHIP_REV == A5S)||(CHIP_REV == I1)||(CHIP_REV == S2)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == S2)
 	u32 ch_reg_num;
 
 	ch_reg_num = amba_readl(I2S_REG(I2S_CHANNEL_SELECT_OFFSET));

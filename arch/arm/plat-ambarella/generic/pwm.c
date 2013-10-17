@@ -49,8 +49,6 @@
 #define PWM_ARRAY_SIZE		(PWM_MAX_INSTANCES * PWM_CMD_SIZE)
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk gclk_pwm = {
 	.parent		= NULL,
 	.name		= "gclk_pwm",
@@ -82,31 +80,22 @@ static struct clk *ambarella_pwm_register_clk(void)
 			BUG();
 		}
 		gclk_pwm.parent = pgclk_apb;
-		ambarella_register_clk(&gclk_pwm);
+		ambarella_clk_add(&gclk_pwm);
 		pgclk_pwm = &gclk_pwm;
 		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_pwm));
 	}
 
 	return pgclk_pwm;
 }
-#endif
 
 static void ambarella_pwm_set_pll(u32 freq_hz)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_set_pwm_clock_frequency(HAL_BASE_VP, freq_hz);
-#else
 	clk_set_rate(ambarella_pwm_register_clk(), freq_hz);
-#endif
 }
 
 static u32 ambarella_pwm_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return (u32)amb_get_pwm_clock_frequency(HAL_BASE_VP);
-#else
 	return clk_get_rate(ambarella_pwm_register_clk());
-#endif
 }
 
 /*================================ PWM Device ================================*/

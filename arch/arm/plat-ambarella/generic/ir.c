@@ -40,8 +40,6 @@
 
 /* ==========================================================================*/
 #if (IR_INSTANCES >= 1)
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk gclk_ir = {
 	.parent		= NULL,
 	.name		= "gclk_ir",
@@ -67,30 +65,22 @@ static struct clk *ambarella_ir_register_clk(void)
 
 	pgclk_ir = clk_get(NULL, "gclk_ir");
 	if (IS_ERR(pgclk_ir)) {
-		ambarella_register_clk(&gclk_ir);
+		ambarella_clk_add(&gclk_ir);
 		pgclk_ir = &gclk_ir;
 		pr_info("SYSCLK:IR[%lu]\n", clk_get_rate(pgclk_ir));
 	}
 
 	return pgclk_ir;
 }
-#endif
 
 static void ambarella_ir_set_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 	ambarella_ir_register_clk();
-#endif
 }
 
 static u32 ambarella_ir_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return (u32)amb_get_ir_clock_frequency(HAL_BASE_VP);
-#else
 	return clk_get_rate(ambarella_ir_register_clk());
-#endif
 }
 
 /* ==========================================================================*/

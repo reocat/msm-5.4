@@ -25,11 +25,9 @@
 #define __PLAT_AMBARELLA_WDT_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
-#define RCT_WDT_RESET_VAL	0
-#else
-#define RCT_WDT_RESET_VAL	1
-#endif
+#define WDOG_OFFSET			0xC000
+#define WDOG_BASE			(APB_BASE + WDOG_OFFSET)
+#define WDOG_REG(x)			(WDOG_BASE + (x))
 
 /* ==========================================================================*/
 #define WDOG_STATUS_OFFSET		0x00
@@ -51,8 +49,6 @@
 #define WDOG_CTR_INT_EN			0x00000004
 #define WDOG_CTR_RST_EN			0x00000002
 #define WDOG_CTR_EN			0x00000001
-
-#define WDT_RST_L_REG			RCT_REG(0x78)
 
 #define WDT_RESTART_VAL			0x4755
 

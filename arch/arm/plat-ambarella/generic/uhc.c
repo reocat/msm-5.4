@@ -32,6 +32,7 @@
 #include <mach/board.h>
 #include <plat/uport.h>
 #include <plat/uhc.h>
+#include <plat/rct.h>
 
 static atomic_t usb_host_initialized = ATOMIC_INIT(0);
 
@@ -39,9 +40,7 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 {
 	unsigned long flags;
 	u32 pin_set, pin_clr;
-#if !defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 	u32 val;
-#endif
 
 	if (atomic_inc_return(&usb_host_initialized) > 1)
 		return;
@@ -89,11 +88,6 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 
 	ambarella_enable_usb_port(UHC_OWN_PORT);
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	/* Reset usb host controller */
-	if (amb_usb_host_soft_reset(HAL_BASE_VP) != AMB_HAL_SUCCESS)
-		pr_info("%s: amb_usb_host_soft_reset fail!\n", __func__);
-#else
 	val = amba_rct_readl(ANA_PWR_REG);
 	/* force usbphy on */
 	amba_rct_writel(ANA_PWR_REG, val | 0x4);
@@ -106,7 +100,6 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	/* restore ana_pwr_reg */
 	amba_rct_writel(ANA_PWR_REG, val);
 	udelay(1);
-#endif
 }
 
 static void ambarella_disable_usb_host(struct ambarella_uhc_controller *pdata)

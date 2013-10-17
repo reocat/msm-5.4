@@ -50,6 +50,8 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#else
 static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
 
@@ -63,13 +65,16 @@ module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
 static DEFINE_SPINLOCK(fio_sd0_int_lock);
 static u32 fio_sd_int = 0;
 static u32 fio_sdio_int = 0;
+#endif
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#else
 void __fio_select_lock(int module)
 {
 	u32					fio_ctr;
 	u32					fio_dmactr;
-#if (SD_HAS_INTERNAL_MUXER == 1)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	unsigned long				flags;
 #endif
 
@@ -103,7 +108,7 @@ void __fio_select_lock(int module)
 		break;
 
 	case SELECT_FIO_SD2:
-#if (SD_HOST1_HOST2_HAS_MUX == 1)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 		fio_ctr &= ~FIO_CTR_XD;
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
 #endif
@@ -113,7 +118,7 @@ void __fio_select_lock(int module)
 		break;
 	}
 
-#if (SD_HAS_INTERNAL_MUXER == 1)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
 	amba_clrbitsl(SD_REG(SD_NISEN_OFFSET), SD_NISEN_CARD);
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
@@ -127,7 +132,7 @@ void __fio_select_lock(int module)
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
-#if (SD_HAS_INTERNAL_MUXER == 1)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	if (module == SELECT_FIO_SD) {
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
 		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sd_int);
@@ -161,7 +166,7 @@ static bool fio_check_free(u32 module)
 		goto fio_exit;
 	}
 
-#if (SD_HOST1_HOST2_HAS_MUX == 1)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 	if (module & (SELECT_FIO_SD | SELECT_FIO_SD2)) {
 		if (!(fio_owner & (~(SELECT_FIO_SD | SELECT_FIO_SD2)))) {
 			fio_owner |= module;
@@ -199,7 +204,7 @@ void fio_unlock(int module)
 	}
 
 	spin_lock_irqsave(&fio_lock, flags);
-#if (SD_HOST1_HOST2_HAS_MUX == 1)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 	if (module & (SELECT_FIO_SD | SELECT_FIO_SD2)) {
 		if (fio_owner & module) {
 			fio_owner &= (~module);
@@ -282,6 +287,7 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
+#endif
 
 int fio_dma_parse_error(u32 reg)
 {
@@ -348,12 +354,18 @@ static struct ambarella_nand_timing ambarella_nand_default_timing = {
 
 static void fio_amb_nand_request(void)
 {
+#if (CHIP_REV == S2L)
+#else
 	fio_select_lock(SELECT_FIO_FL);
+#endif
 }
 
 static void fio_amb_nand_release(void)
 {
+#if (CHIP_REV == S2L)
+#else
 	fio_unlock(SELECT_FIO_FL);
+#endif
 }
 
 static int fio_amb_nand_parse_error(u32 reg)
@@ -365,15 +377,25 @@ static u32 ambarella_nand_get_pll(void)
 {
 	u32 nand_pll;
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	nand_pll = (get_ahb_bus_freq_hz() / 1000);
-#else
 	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_ahb")) / 1000);
-#endif
 #if (FIO_USE_2X_FREQ == 1)
 	nand_pll <<= 1;
 #endif
 	return nand_pll;
+}
+
+static void ambarella_nand_get_cfg(u32 *ppage_size, u32 *pread_confirm)
+{
+	u32 sys_config;
+
+	sys_config = amba_rct_readl(SYS_CONFIG_REG);
+#if (CHIP_REV == S2)
+	*ppage_size = (sys_config & 0x00000010) ? 2048 : 512;
+	*pread_confirm = (sys_config & 0x00000020) ? 1 : 0;
+#else
+	*ppage_size = (sys_config & 0x00000020) ? 2048 : 512;
+	*pread_confirm = (sys_config & 0x00000040) ? 1 : 0;
+#endif
 }
 
 static struct ambarella_platform_nand ambarella_platform_default_nand = {
@@ -390,6 +412,7 @@ static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.request	= fio_amb_nand_request,
 	.release	= fio_amb_nand_release,
 	.get_pll	= ambarella_nand_get_pll,
+	.get_cfg	= ambarella_nand_get_cfg,
 };
 
 static int __init parse_nand_tag_cs(const struct tag *tag)
@@ -435,12 +458,6 @@ static int __init parse_nand_tag_ecc(const struct tag *tag)
 	return 0;
 }
 __tagtable(ATAG_AMBARELLA_NAND_ECC, parse_nand_tag_ecc);
-
-void __init ambarella_init_nand_hotboot(
-	struct ambarella_nand_timing *hot_nand_timing)
-{
-	ambarella_nand_default_timing = *hot_nand_timing;
-}
 
 static struct resource ambarella_fio_resources[] = {
 	[0] = {

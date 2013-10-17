@@ -96,6 +96,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #if (SD_INSTANCES >= 2)
 	&ambarella_sd1,
 #endif
+#if (SD_INSTANCES >= 3)
+	&ambarella_sd2,
+#endif
 	&ambarella_spi0,
 #if (SPI_INSTANCES >= 2)
 	&ambarella_spi1,
@@ -163,7 +166,7 @@ static void __init ambarella_init_generic(void)
 {
 	int					i;
 
-	ambarella_init_machine("Generic");
+	ambarella_init_machine("Generic", REF_CLK_FREQ);
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {

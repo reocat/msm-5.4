@@ -84,14 +84,9 @@ void __init ambarella_memblock_reserve(void)
 }
 
 /* ==========================================================================*/
-int __init ambarella_init_machine(char *board_name)
+int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 {
 	int ret_val = 0;
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	char *pname;
-	int version;
-#endif
 
 	ambarella_board_generic.board_chip = AMBARELLA_BOARD_CHIP(system_rev);
 	ambarella_board_generic.board_type = AMBARELLA_BOARD_TYPE(system_rev);
@@ -101,25 +96,7 @@ int __init ambarella_init_machine(char *board_name)
 	pr_info("\tchip id:\t\t%d\n", ambarella_board_generic.board_chip);
 	pr_info("\tboard type:\t\t%d\n", ambarella_board_generic.board_type);
 	pr_info("\tboard revision:\t\t%d\n", ambarella_board_generic.board_rev);
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	ret_val = amb_get_chip_name(HAL_BASE_VP, &pname);
-	BUG_ON(ret_val != AMB_HAL_SUCCESS);
-	ret_val = amb_get_version(HAL_BASE_VP, &version);
-	BUG_ON(ret_val != AMB_HAL_SUCCESS);
-
-	ambarella_board_generic.board_poc =
-		amb_get_system_configuration(HAL_BASE_VP);
-	pr_info("\tchip name:\t\t%s\n", pname);
-	pr_info("\tHAL version:\t\t%d\n", version);
-	pr_info("\treference clock:\t%d\n",
-		amb_get_reference_clock_frequency(HAL_BASE_VP));
-	pr_info("\tboot type:\t\t0x%08x\n",
-		amb_get_boot_type(HAL_BASE_VP));
-	pr_info("\thif type:\t\t0x%08x\n",
-		amb_get_hif_type(HAL_BASE_VP));
-#else
 	ambarella_board_generic.board_poc = amba_rct_readl(SYS_CONFIG_REG);
-#endif
 	pr_info("\tsystem configuration:\t0x%08x\n",
 		ambarella_board_generic.board_poc);
 
@@ -134,7 +111,7 @@ int __init ambarella_init_machine(char *board_name)
 	ret_val = ambarella_create_proc_dir();
 	BUG_ON(ret_val != 0);
 
-	ret_val = ambarella_init_pll();
+	ret_val = ambarella_clk_init(ref_freq);
 	BUG_ON(ret_val != 0);
 
 	ret_val = ambarella_init_gpio();
@@ -194,7 +171,7 @@ void ambarella_restart_machine(char mode, const char *cmd)
 	local_irq_disable();
 	local_fiq_disable();
 	flush_cache_all();
-	amba_rct_writel(SOFT_RESET_REG, 0x2);
-	amba_rct_writel(SOFT_RESET_REG, 0x3);
+	amba_rct_writel(SOFT_OR_DLL_RESET_REG, 0x2);
+	amba_rct_writel(SOFT_OR_DLL_RESET_REG, 0x3);
 }
 

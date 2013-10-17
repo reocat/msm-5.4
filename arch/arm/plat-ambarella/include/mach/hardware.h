@@ -25,8 +25,8 @@
 #define __ASM_ARCH_HARDWARE_H
 
 /* ==========================================================================*/
+#include <plat/chip.h>
 #include <mach/memory.h>
-#include <ambhw/rct.h>
 
 #include <plat/gpio.h>
 #include <plat/atag.h>
@@ -35,9 +35,6 @@
 #include <plat/hwlock.h>
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 #include <plat/cortex.h>
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#include <hal/hal.h>
 #endif
 
 /* ==========================================================================*/

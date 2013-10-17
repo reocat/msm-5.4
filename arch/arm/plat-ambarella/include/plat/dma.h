@@ -31,6 +31,10 @@
 #define NUM_DMA_CHANNELS 	5
 #endif
 
+#define DMA_OFFSET			0x5000
+#define DMA_BASE			(AHB_BASE + DMA_OFFSET)
+#define DMA_REG(x)			(DMA_BASE + (x))
+
 // TBD: Fix it!
 #define FIO_DMA_CHAN		0
 #define NULL_DMA_CHAN		0

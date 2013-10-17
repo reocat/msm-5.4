@@ -194,7 +194,7 @@ static void __init ambarella_init_durian(void)
 {
 	int					i;
 
-	ambarella_init_machine("Durian");
+	ambarella_init_machine("Durian", REF_CLK_FREQ);
 
 	/* Config Board */
 	ambarella_board_generic.power_detect.irq_gpio = GPIO(13);
@@ -249,26 +249,26 @@ static void __init ambarella_init_durian(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
-	ambarella_platform_sd_controller0.max_blk_mask = SD_BLK_SZ_512KB;
-	ambarella_platform_sd_controller1.max_blk_mask = SD_BLK_SZ_512KB;
+	ambarella_platform_sd0_controller.max_blk_mask = SD_BLK_SZ_512KB;
+	ambarella_platform_sd1_controller.max_blk_mask = SD_BLK_SZ_512KB;
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_BUB) {
-		ambarella_platform_sd_controller0.max_clock = 48000000;
-		ambarella_platform_sd_controller0.slot[0].default_caps |=
+		ambarella_platform_sd0_controller.max_clock = 48000000;
+		ambarella_platform_sd0_controller.slot[0].default_caps |=
 			(MMC_CAP_8_BIT_DATA);
-		ambarella_platform_sd_controller0.slot[0].set_vdd =
+		ambarella_platform_sd0_controller.slot[0].set_vdd =
 			durian_bub_evk_sd_set_vdd;
-		ambarella_platform_sd_controller1.max_clock = 48000000;
+		ambarella_platform_sd1_controller.max_clock = 48000000;
 	}
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
-		ambarella_platform_sd_controller0.max_clock = 48000000;
-		ambarella_platform_sd_controller0.slot[0].default_caps |=
+		ambarella_platform_sd0_controller.max_clock = 48000000;
+		ambarella_platform_sd0_controller.slot[0].default_caps |=
 			(MMC_CAP_8_BIT_DATA);
-		ambarella_platform_sd_controller0.slot[0].set_vdd =
+		ambarella_platform_sd0_controller.slot[0].set_vdd =
 			durian_bub_evk_sd_set_vdd;
-		ambarella_platform_sd_controller0.slot[0].fixed_cd = 0;
-		ambarella_platform_sd_controller0.slot[0].fixed_wp = 0;
-		ambarella_platform_sd_controller1.max_clock = 48000000;
+		ambarella_platform_sd0_controller.slot[0].fixed_cd = 0;
+		ambarella_platform_sd0_controller.slot[0].fixed_wp = 0;
+		ambarella_platform_sd1_controller.max_clock = 48000000;
 	}
 
 	/* Register audio codec */

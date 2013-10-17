@@ -44,14 +44,6 @@
 #define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		1
 #define RTC_POWER_LOST_DETECT			1
 #define RTC_SW_POWER_LOST_DETECT		0
-#elif (CHIP_REV == A7)
-#define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		1
-#define RTC_POWER_LOST_DETECT			0
-#define RTC_SW_POWER_LOST_DETECT		1
-#elif (CHIP_REV == A5L)
-#define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		0
-#define RTC_POWER_LOST_DETECT			0
-#define RTC_SW_POWER_LOST_DETECT		1
 #else
 #define RTC_SUPPORT_GPIO_PAD_PULL_CTRL		0
 #define RTC_POWER_LOST_DETECT			0
@@ -75,13 +67,15 @@
 #elif (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8) /* FIXME */
 #define RTC_PWR_LOSS_DETECT_BIT			6
 #define RTC_PWC_LOSS_MASK			0x40
-#elif (CHIP_REV == A7) || (CHIP_REV == A5L)
-#define RTC_PWR_LOSS_DETECT_BIT			30
-#define RTC_PWC_LOSS_MASK			0x40000000
 #else
 #define RTC_PWR_LOSS_DETECT_BIT			1
 #define RTC_PWC_LOSS_MASK			0x2
 #endif
+
+/* ==========================================================================*/
+#define RTC_OFFSET			0xD000
+#define RTC_BASE			(APB_BASE + RTC_OFFSET)
+#define RTC_REG(x)			(RTC_BASE + (x))
 
 /* ==========================================================================*/
 #define RTC_POS0_OFFSET			0x20

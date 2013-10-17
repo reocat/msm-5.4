@@ -25,6 +25,13 @@
 #define __PLAT_AMBARELLA_PWM_H__
 
 /* ==========================================================================*/
+#define PWM_OFFSET			0x8000
+#define PWM_BASE			(APB_BASE + PWM_OFFSET)
+#define PWM_REG(x)			(PWM_BASE + (x))
+
+#define STEPPER_OFFSET			0x4000
+#define STEPPER_BASE			(APB_BASE + STEPPER_OFFSET)
+#define	PWM_ST_REG(x)			(STEPPER_BASE + (x))
 
 /* ==========================================================================*/
 #define PWM_CONTROL_OFFSET		0x00
@@ -44,8 +51,6 @@
 #define PWM_C1_ENABLE_OFFSET		0x31c
 #define PWM_B1_DATA1_OFFSET		0x324
 #define PWM_C1_DATA1_OFFSET		0x32c
-
-#define	PWM_ST_REG(x)			(STEPPER_BASE + (x))
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

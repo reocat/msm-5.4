@@ -55,7 +55,7 @@
 
 /* ==========================================================================*/
 extern void ambarella_memblock_reserve(void);
-extern int ambarella_init_machine(char *board_name);
+extern int ambarella_init_machine(char *board_name, unsigned int ref_freq);
 extern void ambarella_map_io(void);
 extern void ambarella_restart_machine(char mode, const char *cmd);
 
@@ -73,8 +73,9 @@ extern struct ambarella_idc_platform_info ambarella_idc1_platform_info;
 
 extern struct ambarella_rtc_controller ambarella_platform_rtc_controller0;
 
-extern struct ambarella_sd_controller ambarella_platform_sd_controller0;
-extern struct ambarella_sd_controller ambarella_platform_sd_controller1;
+extern struct ambarella_sd_controller ambarella_platform_sd0_controller;
+extern struct ambarella_sd_controller ambarella_platform_sd1_controller;
+extern struct ambarella_sd_controller ambarella_platform_sd2_controller;
 
 extern int ambarella_spi0_cs_pins[];
 extern int ambarella_spi1_cs_pins[];

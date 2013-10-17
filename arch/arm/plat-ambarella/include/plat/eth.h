@@ -38,6 +38,22 @@
 #endif
 
 /* ==========================================================================*/
+#define ETH_OFFSET			0xE000
+#define ETH_DMA_OFFSET			0xF000
+#define ETH2_OFFSET			0x18000
+#define ETH2_DMA_OFFSET			0x19000
+
+#define ETH_BASE			(AHB_BASE + ETH_OFFSET)
+#define ETH_DMA_BASE			(AHB_BASE + ETH_DMA_OFFSET)
+#define ETH2_BASE			(AHB_BASE + ETH2_OFFSET)
+#define ETH2_DMA_BASE			(AHB_BASE + ETH2_DMA_OFFSET)
+
+#define ETH_REG(x)			(ETH_BASE + (x))
+#define ETH_DMA_REG(x)			(ETH_DMA_BASE + (x))
+#define ETH2_REG(x)			(ETH2_BASE + (x))
+#define ETH2_DMA_REG(x)			(ETH2_DMA_BASE + (x))
+
+/* ==========================================================================*/
 #define ETH_MAC_CFG_OFFSET		0x0000
 #define ETH_MAC_FRAME_FILTER_OFFSET	0x0004
 #define ETH_MAC_HASH_HI_OFFSET		0x0008

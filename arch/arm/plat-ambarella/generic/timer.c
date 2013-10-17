@@ -42,8 +42,6 @@
 #include <plat/clk.h>
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk pll_out_core = {
 	.parent		= NULL,
 	.name		= "pll_out_core",
@@ -310,16 +308,11 @@ static struct clk clk_smp_twd = {
 };
 #endif
 #endif
-#endif
 
 /* ==========================================================================*/
 static u32 ambarella_timer_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return get_apb_bus_freq_hz();
-#else
 	return clk_get_rate(clk_get(NULL, "gclk_apb"));
-#endif
 }
 
 #define AMBARELLA_TIMER_FREQ			(ambarella_timer_get_pll())
@@ -566,22 +559,19 @@ static struct irqaction ambarella_ce_timer_irq = {
 
 static inline void ambarella_cs_timer_init(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
-	ambarella_register_clk(&pll_out_core);
-	ambarella_register_clk(&pll_out_idsp);
-	ambarella_register_clk(&gclk_core);
-	ambarella_register_clk(&gclk_ahb);
-	ambarella_register_clk(&gclk_apb);
+	ambarella_clk_add(&pll_out_core);
+	ambarella_clk_add(&pll_out_idsp);
+	ambarella_clk_add(&gclk_core);
+	ambarella_clk_add(&gclk_ahb);
+	ambarella_clk_add(&gclk_apb);
 #if defined(CONFIG_PLAT_AMBARELLA_HAVE_ARM11)
-	ambarella_register_clk(&gclk_arm);
+	ambarella_clk_add(&gclk_arm);
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-	ambarella_register_clk(&gclk_cortex);
-	ambarella_register_clk(&gclk_axi);
+	ambarella_clk_add(&gclk_cortex);
+	ambarella_clk_add(&gclk_axi);
 #if defined(CONFIG_HAVE_ARM_TWD)
-	ambarella_register_clk(&clk_smp_twd);
-#endif
+	ambarella_clk_add(&clk_smp_twd);
 #endif
 #endif
 #if !defined(CONFIG_MACH_HYACINTH_0) && !defined(CONFIG_MACH_HYACINTH_1)

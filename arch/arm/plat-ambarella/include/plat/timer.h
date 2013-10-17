@@ -25,6 +25,11 @@
 #define __PLAT_AMBARELLA_TIMER_H__
 
 /* ==========================================================================*/
+#define TIMER_OFFSET			0xB000
+#define TIMER_BASE			(APB_BASE + TIMER_OFFSET)
+#define TIMER_REG(x)			(TIMER_BASE + (x))
+
+/* ==========================================================================*/
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
     (CHIP_REV == A8) || (CHIP_REV == S2L)
 #define INTERVAL_TIMER_INSTANCES		8

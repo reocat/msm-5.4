@@ -33,7 +33,9 @@
 #include <mach/hardware.h>
 #include <plat/uport.h>
 #include <plat/udc.h>
+#include <plat/rct.h>
 
+/* ==========================================================================*/
 /* amb_udc_status will be modified in ambarella_udc.c */
 enum ambarella_udc_status amb_udc_status = AMBARELLA_UDC_STATUS_UNKNOWN;
 EXPORT_SYMBOL(amb_udc_status);
@@ -54,27 +56,16 @@ struct resource ambarella_udc_resources[] = {
 
 static void enable_phy(void)
 {
-#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
 	ambarella_enable_usb_port(UDC_OWN_PORT);
-#endif
 }
 
 static void disable_phy(void)
 {
-#if (CHIP_REV == A5S) || (CHIP_REV == A7) || (CHIP_REV == I1) || (CHIP_REV == S2)
 	ambarella_disable_usb_port(UDC_OWN_PORT);
-#endif
 }
 
 static void reset_usb(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
-	amb_usb_subsystem_soft_reset(HAL_BASE_VP);
-#elif (CHIP_REV == I1)||(CHIP_REV == S2)
-	amb_usb_device_soft_reset(HAL_BASE_VP);
-#endif
-#else
 	u32 val;
 
 	val = amba_rct_readl(ANA_PWR_REG);
@@ -89,7 +80,6 @@ static void reset_usb(void)
 	/* restore ana_pwr_reg */
 	amba_rct_writel(ANA_PWR_REG, val);
 	udelay(1);
-#endif
 }
 
 static int flush_rxfifo(void)
@@ -97,25 +87,6 @@ static int flush_rxfifo(void)
 	int retry_count = 1000;
 	int rval = 0;
 
-#if (CHIP_REV == A2) || (CHIP_REV == A3)
-	retry_count = retry_count * 10;
-	if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)){
-		/* Switch to slave mode */
-		amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
-
-		while (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
-			if (retry_count-- < 0) {
-				printk (KERN_ERR "%s: failed", __func__);
-				rval = -1;
-				break;
-			}
-			amba_readl(USB_RXFIFO_BASE);
-			udelay(5);
-		}
-		/* Switch to DMA mode */
-		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_DMA_MD);
-	}
-#else
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_NAK);
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_FLUSH_RXFIFO);
 	while(!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
@@ -127,17 +98,13 @@ static int flush_rxfifo(void)
 		udelay(5);
 	}
 	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_NAK);
-#endif
+
 	return rval;
 }
 
 static struct ambarella_udc_controller ambarella_platform_udc_controller0 = {
 	.vbus_polled	= 1,	/* need to poll vbus(usb cable) status */
-#if (CHIP_REV == A2)
-	.irqflags	= IRQF_SHARED | IRQF_TRIGGER_HIGH,
-#else
 	.irqflags	= IRQF_DISABLED | IRQF_TRIGGER_HIGH,
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
 	.dma_fix	= 0xC0000000,
 #else

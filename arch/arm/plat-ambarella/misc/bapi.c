@@ -241,12 +241,10 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 				bapi_aoss_arg[1], bapi_aoss_arg[2], bapi_aoss_arg[3]);
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX_BST)
 			if (retval != 0x01) {
-				amba_writel(VIC3_SOFTEN_REG, (0x1 << 10));
+				amba_writel(VIC3_REG(VIC_SOFTEN_OFFSET),
+					(0x1 << 10));
 				while(1) {};
 			}
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-			ambarella_hal_set_invalid();
 #endif
 #ifdef CONFIG_OUTER_CACHE
 			if (l2_mode)

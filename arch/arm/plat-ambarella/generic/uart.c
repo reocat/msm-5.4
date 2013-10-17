@@ -39,8 +39,6 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#else
 static struct clk gclk_uart = {
 	.parent		= NULL,
 	.name		= "gclk_uart",
@@ -66,14 +64,13 @@ static struct clk *ambarella_uart_register_clk(void)
 
 	pgclk_uart = clk_get(NULL, "gclk_uart");
 	if (IS_ERR(pgclk_uart)) {
-		ambarella_register_clk(&gclk_uart);
+		ambarella_clk_add(&gclk_uart);
 		pgclk_uart = &gclk_uart;
 		pr_info("SYSCLK:UART[%lu]\n", clk_get_rate(pgclk_uart));
 	}
 
 	return pgclk_uart;
 }
-#endif
 
 static void ambarella_uart_set_pll(void)
 {
@@ -81,25 +78,17 @@ static void ambarella_uart_set_pll(void)
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
 	u32 uart_freq;
 #if (CHIP_REV == A8)
-	uart_freq = (REF_CLK_FREQ);
+	uart_freq = ambarella_clk_get_ref_freq();
 #else
 	uart_freq = (115200 * 16);
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_set_uart_clock_frequency(HAL_BASE_VP, uart_freq);
-#else
 	clk_set_rate(ambarella_uart_register_clk(), uart_freq);
-#endif
 #endif
 }
 
 static u32 ambarella_uart_get_pll(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return (u32)amb_get_uart_clock_frequency(HAL_BASE_VP);
-#else
 	return clk_get_rate(ambarella_uart_register_clk());
-#endif
 }
 
 /* ==========================================================================*/

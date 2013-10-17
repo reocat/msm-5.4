@@ -24,6 +24,7 @@
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <plat/uport.h>
+#include <plat/rct.h>
 
 /* S2 share the usb port between UHC and UDC
  * I1 share the usb port1 between UHC and UDC */
@@ -33,65 +34,8 @@ static u32 ambarella_usb_port_owner = 0;
 
 void ambarella_enable_usb_port(int owner)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#if (CHIP_REV == A5S)
-	amb_usb_interface_state_t state;
-
-	state = amb_get_usb_interface_state(HAL_BASE_VP);
-	if (state != AMB_USB_ALWAYS_ON && amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ALWAYS_ON)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("amb_set_usb_interface_state() failed");
-	}
-
-#elif (CHIP_REV == A7)
-	amb_usb_interface_state_t state;
-
-	state = amb_get_usb_interface_state(HAL_BASE_VP);
-	if (state != AMB_USB_ON && amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_ON)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("amb_set_usb_interface_state() failed");
-	}
-
-#elif (CHIP_REV == I1)
-	amb_usb_port_state_t state;
-
-	ambarella_usb_port_owner |= owner;
-
-	/* We must enable usb port1 first. Note: no matter usb port1 is
-	 * configured as Host or Slave, we always enable it. */
-	state = amb_get_usb_port1_state(HAL_BASE_VP);
-	if (state != AMB_USB_ON && amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_ON)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
-	}
-
-	/* Then we enable usb port0. */
-	state = amb_get_usb_port0_state(HAL_BASE_VP);
-	if (state != AMB_USB_ON && amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_ON)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
-	}
-
-
-#elif (CHIP_REV == S2)
-	amb_usb_port_state_t state;
-
-	ambarella_usb_port_owner |= owner;
-
-	/* Enable usb port (usbphy), and it may have been enabled before. */
-	state = amb_get_usb_port_state(HAL_BASE_VP);
-	if (state != AMB_USB_ALWAYS_ON && amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_ALWAYS_ON)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("%s: amb_set_usb_port_state fail!\n", __func__);
-	}
-#endif
-
-#else
-
 #if (CHIP_REV == A5S)
 	amba_setbitsl(ANA_PWR_REG, 0x4);	/* always on */
-#elif (CHIP_REV == A7)
-	amba_setbitsl(ANA_PWR_REG, 0x2);	/* on */
 #elif (CHIP_REV == I1)
 	ambarella_usb_port_owner |= owner;
 	/* We must enable usb port1 first. Note: no matter usb port1 is
@@ -102,45 +46,11 @@ void ambarella_enable_usb_port(int owner)
 	ambarella_usb_port_owner |= owner;
 	amba_setbitsl(ANA_PWR_REG, 0x4);	/* always on */
 #endif
-
-#endif
 }
 
 void ambarella_disable_usb_port(int owner)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
-	if (amb_set_usb_interface_state(HAL_BASE_VP, AMB_USB_OFF)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("%s: amb_set_usb_interface_state fail!\n", __func__);
-	}
-
-#elif (CHIP_REV == I1)
-	if (amb_set_usb_port0_state(HAL_BASE_VP, AMB_USB_OFF)
-			!= AMB_HAL_SUCCESS) {
-		pr_info("%s: amb_set_usb_port0_state fail!\n", __func__);
-	}
-
-	/* We disable usb port1 when neither UHC nor UDC use it */
-	ambarella_usb_port_owner &= (~owner);
-	if (ambarella_usb_port_owner == 0) {
-		if (amb_set_usb_port1_state(HAL_BASE_VP, AMB_USB_OFF)
-				!= AMB_HAL_SUCCESS) {
-			pr_info("%s: amb_set_usb_port1_state fail!\n", __func__);
-		}
-	}
-
-#elif (CHIP_REV == S2)
-	/* We disable usb port when neither UHC nor UDC use it */
-	ambarella_usb_port_owner &= (~owner);
-	if (ambarella_usb_port_owner == 0)
-		amb_set_usb_port_state(HAL_BASE_VP, AMB_USB_OFF);
-
-#endif
-
-#else
-
-#if (CHIP_REV == A5S) || (CHIP_REV == A7)
+#if (CHIP_REV == A5S)
 	amba_clrbitsl(ANA_PWR_REG, 0x6);
 #elif (CHIP_REV == I1)
 	amba_clrbitsl(ANA_PWR_REG, 0x3000);
@@ -153,8 +63,6 @@ void ambarella_disable_usb_port(int owner)
 	ambarella_usb_port_owner &= (~owner);
 	if (ambarella_usb_port_owner == 0)
 		amba_clrbitsl(ANA_PWR_REG, 0x6);
-#endif
-
 #endif
 }
 

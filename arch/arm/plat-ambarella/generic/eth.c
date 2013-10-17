@@ -30,6 +30,7 @@
 
 #include <mach/hardware.h>
 #include <plat/eth.h>
+#include <plat/rct.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -57,17 +58,13 @@ static int ambarella_eth0_is_enabled(void)
 #if (CHIP_REV == I1) || (CHIP_REV == A8)
 	return 1;
 #else
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	amb_system_configuration_t cfg;
+	u32 sys_config;
 
-	cfg = amb_get_system_configuration(HAL_BASE_VP);
-	if (cfg & AMB_SYSTEM_CONFIGURATION_ETHERNET_SELECTED) {
-		return 1;
-	} else {
-		return 0;
-	}
+	sys_config = amba_rct_readl(SYS_CONFIG_REG);
+#if (CHIP_REV == S2)
+	return ((amba_rct_readl(SYS_CONFIG_REG) & 0x00800000) != 0x0);
 #else
-	return ((amba_rct_readl(SYS_CONFIG_REG) & SYS_CONFIG_ENET_SEL) != 0x0);
+	return ((amba_rct_readl(SYS_CONFIG_REG) & 0x00000080) != 0x0);
 #endif
 #endif
 }

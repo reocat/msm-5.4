@@ -26,18 +26,29 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
-#define	FIO_USE_2X_FREQ				1
+#define	FIO_USE_2X_FREQ			1
 #else
-#define	FIO_USE_2X_FREQ				0
+#define	FIO_USE_2X_FREQ			0
 #endif
 
 #if (CHIP_REV == S2)
-#define	NAND_DUAL_SPACE_MODE			1
-#define	NAND_READ_ID5				1
+#define	NAND_DUAL_SPACE_MODE		1
+#define	NAND_READ_ID5			1
 #else
-#define	NAND_DUAL_SPACE_MODE			0
-#define	NAND_READ_ID5				0
+#define	NAND_DUAL_SPACE_MODE		0
+#define	NAND_READ_ID5			0
 #endif
+
+/* ==========================================================================*/
+#define FIO_FIFO_OFFSET			0x0000
+#define FIO_OFFSET			0x1000
+#define DMA_FIOS_OFFSET			0x12000
+
+#define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
+#define FIO_BASE			(AHB_BASE + FIO_OFFSET)
+#define DMA_FIOS_BASE			(AHB_BASE + DMA_FIOS_OFFSET)
+
+#define FIO_REG(x)			(FIO_BASE + (x))
 
 /* ==========================================================================*/
 #define FIO_CTR_OFFSET			0x000

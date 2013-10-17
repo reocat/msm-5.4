@@ -32,6 +32,7 @@
 #include <linux/seq_file.h>
 #include <mach/hardware.h>
 #include <mach/board.h>
+#include <plat/rct.h>
 
 /* check RCT_REG(0x88), but not SYS_CONFIG_REG */
 #define USB_PORT_IS_HOST	(0x1 << 5)

@@ -32,6 +32,11 @@
 #endif
 
 /* ==========================================================================*/
+#define IR_OFFSET			0x6000
+#define IR_BASE				(APB_BASE + IR_OFFSET)
+#define IR_REG(x)			(IR_BASE + (x))
+
+/* ==========================================================================*/
 #define IR_CONTROL_OFFSET		0x00
 #define IR_STATUS_OFFSET		0x04
 #define IR_DATA_OFFSET			0x08

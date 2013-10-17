@@ -30,6 +30,8 @@
 #if (CHIP_REV == A5S)
 #define SPI_INSTANCES				2
 #define SPI_AHB_INSTANCES			0
+#define SPI_SLAVE_INSTANCES			1
+#define SPI_AHB_SLAVE_INSTANCES			0
 #elif (CHIP_REV == S2)
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
 #define SPI_INSTANCES				2
@@ -37,19 +39,28 @@
 #define SPI_INSTANCES				1
 #endif
 #define SPI_AHB_INSTANCES			0
+#define SPI_SLAVE_INSTANCES			1
+#define SPI_AHB_SLAVE_INSTANCES			0
 #elif (CHIP_REV == I1)
 #define SPI_INSTANCES				4
 #define SPI_AHB_INSTANCES			1
+#define SPI_SLAVE_INSTANCES			1
+#define SPI_AHB_SLAVE_INSTANCES			0
+#elif (CHIP_REV == S2L)
+#define SPI_INSTANCES				0
+#define SPI_AHB_INSTANCES			2
+#define SPI_SLAVE_INSTANCES			0
+#define SPI_AHB_SLAVE_INSTANCES			1
+#elif (CHIP_REV == A7L)
+#define SPI_INSTANCES				1
+#define SPI_AHB_INSTANCES			0
+#define SPI_SLAVE_INSTANCES			1
+#define SPI_AHB_SLAVE_INSTANCES			0
 #else
 #define SPI_INSTANCES				1
 #define SPI_AHB_INSTANCES			0
-#endif
-
-#if (CHIP_REV == A5S) || (CHIP_REV == I1) || \
-	(CHIP_REV == A7L) || (CHIP_REV == S2)
-#define SPI_SLAVE_INSTANCES			1
-#else
 #define SPI_SLAVE_INSTANCES			0
+#define SPI_AHB_SLAVE_INSTANCES			0
 #endif
 
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || \
@@ -61,6 +72,51 @@
 #define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	0
 #define SPI_SUPPORT_MASTER_DELAY_START_TIME	0
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	0
+#endif
+
+/* ==========================================================================*/
+#define SPI_OFFSET			0x2000
+#define SPI_BASE			(APB_BASE + SPI_OFFSET)
+#define SPI_REG(x)			(SPI_BASE + (x))
+
+#if (SPI_SLAVE_INSTANCES >= 1)
+#if (CHIP_REV == A7L)
+#define SPI_SLAVE_OFFSET		0x1000
+#else
+#define SPI_SLAVE_OFFSET		0x1E000
+#endif
+#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
+#define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
+#endif
+
+#if (SPI_INSTANCES >= 2)
+#define SPI2_OFFSET			0xF000
+#define SPI2_BASE			(APB_BASE + SPI2_OFFSET)
+#define SPI2_REG(x)			(SPI2_BASE + (x))
+#endif
+
+#if (SPI_INSTANCES >= 3)
+#define SPI3_OFFSET			0x15000
+#define SPI3_BASE			(APB_BASE + SPI3_OFFSET)
+#define SPI3_REG(x)			(SPI3_BASE + (x))
+#endif
+
+#if (SPI_INSTANCES >= 4)
+#define SPI4_OFFSET			0x16000
+#define SPI4_BASE			(APB_BASE + SPI4_OFFSET)
+#define SPI4_REG(x)			(SPI4_BASE + (x))
+#endif
+
+#if (SPI_AHB_INSTANCES >= 1)
+#define SSI_DMA_OFFSET			0xD000
+#define SSI_DMA_BASE			(AHB_BASE + SSI_DMA_OFFSET)
+#define SSI_DMA_REG(x)			(SSI_DMA_BASE + (x))
+#endif
+
+#if (SPI_AHB_SLAVE_INSTANCES >= 1)
+#define SPI_AHB_SLAVE_OFFSET		0x26000
+#define SPI_AHB_SLAVE_BASE		(AHB_BASE + SPI_AHB_SLAVE_OFFSET)
+#define SPI_AHB_SLAVE_REG(x)		(SPI_AHB_SLAVE_BASE + (x))
 #endif
 
 /* ==========================================================================*/
@@ -183,6 +239,11 @@
 #define SSI3_MOSI	GPIO(136)
 #define SSI3_CLK	GPIO(137)
 #define SSI3_MISO	GPIO(138)
+
+#define SSI_SLAVE_MISO	GPIO(50)
+#define SSI_SLAVE_EN	GPIO(51)
+#define SSI_SLAVE_MOSI	GPIO(52)
+#define SSI_SLAVE_CLK	GPIO(53)
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

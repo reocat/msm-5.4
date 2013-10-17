@@ -25,7 +25,7 @@
 #define __PLAT_AMBARELLA_UART_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2L)
 #define	UART_INSTANCES			2
 #elif (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define	UART_INSTANCES			4
@@ -34,8 +34,35 @@
 #endif
 
 /* ==========================================================================*/
-#define UART0_BASE			UART_BASE
+#define UART_OFFSET			0x5000
+#if (CHIP_REV == S2L)
+#define UART1_OFFSET			0x32000
+#else
+#define UART1_OFFSET			0x1F000
+#endif
+#if (CHIP_REV == S2)
+#define UART2_OFFSET			0x14000
+#define UART3_OFFSET			0x15000
+#elif (CHIP_REV == I1) || (CHIP_REV == A8)
+#define UART2_OFFSET			0x13000
+#define UART3_OFFSET			0x14000
+#endif
 
+#define UART0_BASE			(APB_BASE + UART_OFFSET)
+#if (CHIP_REV == S2L)
+#define UART1_BASE			(AHB_BASE + UART1_OFFSET)
+#else
+#define UART1_BASE			(APB_BASE + UART1_OFFSET)
+#endif
+#define UART2_BASE			(APB_BASE + UART2_OFFSET)
+#define UART3_BASE			(APB_BASE + UART3_OFFSET)
+
+#define UART0_REG(x)			(UART0_BASE + (x))
+#define UART1_REG(x)			(UART1_BASE + (x))
+#define UART2_REG(x)			(UART2_BASE + (x))
+#define UART3_REG(x)			(UART3_BASE + (x))
+
+/* ==========================================================================*/
 #define UART_RB_OFFSET			0x00
 #define UART_TH_OFFSET			0x00
 #define UART_DLL_OFFSET			0x00

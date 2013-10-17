@@ -29,10 +29,6 @@
 #define VIC_INSTANCES			(2)
 #define VIC_SUPPORT_CPU_OFFLOAD		(0)
 #define VIC_SUPPORT_REPRIORITIZE	(0)
-#elif (CHIP_REV == A7)
-#define VIC_INSTANCES			(2)
-#define VIC_SUPPORT_CPU_OFFLOAD		(0)
-#define VIC_SUPPORT_REPRIORITIZE	(0)
 #elif (CHIP_REV == A7L)
 #define VIC_INSTANCES			(2)
 #define VIC_SUPPORT_CPU_OFFLOAD		(1)
@@ -56,6 +52,19 @@
 #else
 #error "Not supported!"
 #endif
+
+/* ==========================================================================*/
+#define VIC_OFFSET			0x3000
+#define VIC2_OFFSET			0x10000
+#define VIC3_OFFSET			0x1C000
+
+#define VIC_BASE			(AHB_BASE + VIC_OFFSET)
+#define VIC2_BASE			(AHB_BASE + VIC2_OFFSET)
+#define VIC3_BASE			(AHB_BASE + VIC3_OFFSET)
+
+#define VIC_REG(x)			(VIC_BASE + (x))
+#define VIC2_REG(x)			(VIC2_BASE + (x))
+#define VIC3_REG(x)			(VIC3_BASE + (x))
 
 /* ==========================================================================*/
 #define NR_VIC_IRQ_SIZE			(32)
@@ -180,67 +189,6 @@
 #define MS_IRQ				VIC2_INT_VEC(15)
 #define GDMA_IRQ			VIC2_INT_VEC(16)
 #define MOTOR_IRQ			VIC2_INT_VEC(17)
-
-/* ==========================================================================*/
-#elif (CHIP_REV == A7)
-#define USBVBUS_IRQ			VIC_INT_VEC(0)
-#define VOUT_IRQ			VIC_INT_VEC(1)
-#define VIN_IRQ				VIC_INT_VEC(2)
-#define VDSP_IRQ			VIC_INT_VEC(3)
-#define USBC_IRQ			VIC_INT_VEC(4)
-#define HIF_ARM1_IRQ			VIC_INT_VEC(5)
-#define HIF_ARM2_IRQ			VIC_INT_VEC(6)
-#define I2STX_IRQ			VIC_INT_VEC(7)
-#define I2SRX_IRQ			VIC_INT_VEC(8)
-#define UART0_IRQ			VIC_INT_VEC(9)
-#define GPIO0_IRQ			VIC_INT_VEC(10)
-#define GPIO1_IRQ			VIC_INT_VEC(11)
-#define TIMER1_IRQ			VIC_INT_VEC(12)
-#define TIMER2_IRQ			VIC_INT_VEC(13)
-#define TIMER3_IRQ			VIC_INT_VEC(14)
-#define DMA_IRQ				VIC_INT_VEC(15)
-#define FIOCMD_IRQ			VIC_INT_VEC(16)
-#define FIODMA_IRQ			VIC_INT_VEC(17)
-#define SD_IRQ				VIC_INT_VEC(18)
-#define IDC_IRQ				VIC_INT_VEC(19)
-#define SSI_IRQ				VIC_INT_VEC(20)
-#define WDT_IRQ				VIC_INT_VEC(21)
-#define IRIF_IRQ			VIC_INT_VEC(22)
-#define CFCD1_IRQ			VIC_INT_VEC(23)
-#define SD1CD_IRQ			VIC_INT_VEC(24)
-#define UART1_IRQ			VIC_INT_VEC(25)
-#define SSI_SLAVE_IRQ			VIC_INT_VEC(26)
-#define ETH_IRQ				VIC_INT_VEC(27)
-#define IDSP_ERROR_IRQ			VIC_INT_VEC(28)
-#define GPIO3_IRQ			VIC_INT_VEC(29)
-#define GPIO2_IRQ			VIC_INT_VEC(30)
-#define CFCD2_IRQ			VIC_INT_VEC(31)
-
-#define DMA_FIOS_IRQ			VIC2_INT_VEC(1)
-#define ADC_LEVEL_IRQ			VIC2_INT_VEC(2)
-#define IDC2_IRQ			VIC2_INT_VEC(4)
-#define IDSP_LAST_PIXEL_IRQ		VIC2_INT_VEC(5)
-#define IDSP_VSYNC_IRQ			VIC2_INT_VEC(6)
-#define IDSP_SENSOR_VSYNC_IRQ		VIC2_INT_VEC(7)
-#define HDMI_IRQ			VIC2_INT_VEC(8)
-#define SSI2_IRQ			VIC2_INT_VEC(9)
-#define VOUT_TV_SYNC_IRQ		VIC2_INT_VEC(10)
-#define VOUT_LCD_SYNC_IRQ		VIC2_INT_VEC(11)
-#define ORC_VOUT0_IRQ			VIC2_INT_VEC(12)
-#define AES_IRQ				VIC2_INT_VEC(13)
-#define DES_IRQ				VIC2_INT_VEC(14)
-#define MS_IRQ				VIC2_INT_VEC(15)
-#define GPIO4_IRQ			VIC2_INT_VEC(16)
-#define MOTOR_IRQ			VIC2_INT_VEC(17)
-#define GDMA_IRQ			VIC2_INT_VEC(18)
-#define FDET_IRQ			VIC2_INT_VEC(19)
-#define ETH2_IRQ			VIC2_INT_VEC(20)
-#define SSI3_IRQ			VIC2_INT_VEC(21)
-#define CODE_VDSP_3_IRQ			VIC2_INT_VEC(22)
-#define CODE_VDSP_2_IRQ			VIC2_INT_VEC(23)
-#define CODE_VDSP_1_IRQ			VIC2_INT_VEC(24)
-#define MD5_SHA1_IRQ			VIC2_INT_VEC(25)
-#define ROLLERING_SHUTTER_IRQ		VIC2_INT_VEC(26)
 
 /* ==========================================================================*/
 #elif (CHIP_REV == A7L)

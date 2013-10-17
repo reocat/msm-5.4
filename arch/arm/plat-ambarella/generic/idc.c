@@ -43,11 +43,7 @@
 /* ==========================================================================*/
 static u32 ambarella_idc_get_clock(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-	return get_apb_bus_freq_hz();
-#else
 	return clk_get_rate(clk_get(NULL, "gclk_apb"));
-#endif
 }
 
 /* ==========================================================================*/

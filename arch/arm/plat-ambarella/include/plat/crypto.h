@@ -48,6 +48,32 @@
 #endif
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2)
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+#define CRYPT_UNIT_OFFSET		0x20000
+#else
+#define CRYPT_UNIT_OFFSET		0x7000
+#endif
+#else
+#define CRYPT_UNIT_OFFSET		0x14000
+#endif
+#if defined(CRYPT_BASE)
+#define CRYPT_UNIT_BASE			(CRYPT_BASE)
+#else
+#if (CHIP_REV == S2)
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+#define CRYPT_UNIT_BASE			(AXI_BASE + CRYPT_UNIT_OFFSET)
+#else
+#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
+#endif
+#else
+#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#endif
+#endif
+
+#define CRYPT_UNIT_REG(x)		(CRYPT_UNIT_BASE + (x))
+
+/* ==========================================================================*/
 #define DES_OFFSET(x)			(x)
 #define AES_OFFSET(x)			((1 << 9) | (x))
 #define SHA1_MD5_OFFSET(x)		((2 << 9) | (x))
@@ -357,9 +383,6 @@
 #if (CHIP_REV == I1 || CHIP_REV == S2)
 #define CRYPTO_DATA_64BIT (1)
 #define CRYPTO_MODE_SWITCH (0)
-#elif (CHIP_REV == A7)
-#define CRYPTO_DATA_64BIT (1)
-#define CRYPTO_MODE_SWITCH (1)
 #else
 #define CRYPTO_DATA_64BIT (0)
 #define CRYPTO_MODE_SWITCH (0)

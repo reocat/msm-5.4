@@ -1474,14 +1474,10 @@ static int ambarella_nand_config_flash(
 
 static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
 {
-	u32 sys_config, cfg_page_size, cfg_read_confirm;
+	u32 cfg_page_size, cfg_read_confirm;
 	struct nand_chip *chip = &nand_info->chip;
 
-	sys_config = ambarella_board_generic.board_poc;
-
-	cfg_page_size = sys_config & SYS_CONFIG_NAND_FLASH_PAGE ? 2048 : 512;
-	cfg_read_confirm = sys_config & SYS_CONFIG_NAND_READ_CONFIRM ? 1 : 0;
-
+	nand_info->plat_nand->get_cfg(&cfg_page_size, &cfg_read_confirm);
 	if (cfg_read_confirm)
 		nand_info->control_reg = NAND_CTR_RC;
 	if (cfg_page_size == 2048)
@@ -1847,7 +1843,8 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
 	if ((plat_nand == NULL) || (plat_nand->timing == NULL) ||
 		(plat_nand->sets == NULL) || (plat_nand->parse_error == NULL) ||
-		(plat_nand->request == NULL) || (plat_nand->release == NULL)) {
+		(plat_nand->request == NULL) || (plat_nand->release == NULL) ||
+		(plat_nand->get_pll == NULL) || (plat_nand->get_cfg == NULL)) {
 		dev_err(&pdev->dev, "Can't get platform_data!\n");
 		errorCode = - EPERM;
 		goto ambarella_nand_probe_exit;

@@ -268,14 +268,11 @@ struct ambarella_platform_nand
 	void				(*request)(void);
 	void				(*release)(void);
 	u32				(*get_pll)(void);
+	void				(*get_cfg)(u32 *, u32 *);
 };
 
 /* ==========================================================================*/
 extern struct platform_device ambarella_nand;
-
-/* ==========================================================================*/
-extern void ambarella_init_nand_hotboot(
-	struct ambarella_nand_timing *hot_nand_timing);
 
 #endif //__ASSEMBLER__
 /* ==========================================================================*/

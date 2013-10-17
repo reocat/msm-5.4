@@ -40,9 +40,40 @@
 #elif (CHIP_REV == A8)
 #define GPIO_INSTANCES			1
 #define GPIO_MAX_LINES			16
+#elif (CHIP_REV == S2L)
+#define GPIO_INSTANCES			5
+#define GPIO_MAX_LINES			113
 #else
 #error "Not supported!"
 #endif
+
+/* ==========================================================================*/
+#define GPIO0_OFFSET			0x9000
+#define GPIO1_OFFSET			0xA000
+#define GPIO2_OFFSET			0xE000
+#if (CHIP_REV == I1) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+#define GPIO3_OFFSET			0x10000
+#elif (CHIP_REV == A7L)
+#define GPIO3_OFFSET			0x1E000
+#else
+#define GPIO3_OFFSET			0x1F000
+#endif
+#define GPIO4_OFFSET			0x11000
+#define GPIO5_OFFSET			0x12000
+
+#define GPIO0_BASE			(APB_BASE + GPIO0_OFFSET)
+#define GPIO1_BASE			(APB_BASE + GPIO1_OFFSET)
+#define GPIO2_BASE			(APB_BASE + GPIO2_OFFSET)
+#define GPIO3_BASE			(APB_BASE + GPIO3_OFFSET)
+#define GPIO4_BASE			(APB_BASE + GPIO4_OFFSET)
+#define GPIO5_BASE			(APB_BASE + GPIO5_OFFSET)
+
+#define GPIO0_REG(x)			(GPIO0_BASE + (x))
+#define GPIO1_REG(x)			(GPIO1_BASE + (x))
+#define GPIO2_REG(x)			(GPIO2_BASE + (x))
+#define GPIO3_REG(x)			(GPIO3_BASE + (x))
+#define GPIO4_REG(x)			(GPIO4_BASE + (x))
+#define GPIO5_REG(x)			(GPIO5_BASE + (x))
 
 /* ==========================================================================*/
 #define GPIO_DATA_OFFSET		0x00

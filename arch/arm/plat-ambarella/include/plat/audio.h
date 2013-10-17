@@ -25,6 +25,13 @@
 #define __PLAT_AMBARELLA_AUDIO_H__
 
 /* ==========================================================================*/
+#define I2S_OFFSET			0xA000
+#define I2S_BASE			(AHB_BASE + I2S_OFFSET)
+#define I2S_BASE_PHYS 			(AHB_PHYS_BASE + I2S_OFFSET)
+#define I2S_REG(x)			(I2S_BASE + (x))
+#define I2S_REG_PHYS(x)  		(I2S_BASE_PHYS + (x))
+
+/* ==========================================================================*/
 #define I2S_MODE_OFFSET				0x00
 #define I2S_RX_CTRL_OFFSET			0x04
 #define I2S_TX_CTRL_OFFSET			0x08
