@@ -93,6 +93,15 @@ config MACH_HYACINTH_1
 	help
 	  Say Y here if you can't find suitable Board Name.
 
+config MACH_IXORA
+	bool "Ixora"
+	depends on PLAT_AMBARELLA_S2L
+	default n
+	select AMBARELLA_VIN
+	select AMBARELLA_VOUT
+	help
+	  Say Y here if you are using S2L Ixora.
+
 menu "Misc on Board Devices"
 
 comment "Ambarella"

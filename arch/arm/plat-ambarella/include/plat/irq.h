@@ -636,7 +636,7 @@
 #define FIODMA_IRQ			VIC_INT_VEC(17)
 #define SD_IRQ				VIC_INT_VEC(18)
 #define IDC_IRQ				VIC_INT_VEC(19)
-#define SD2_IRQ				VIC_INT_VEC(20)
+#define SD3_IRQ				VIC_INT_VEC(20)
 #define WDT_IRQ				VIC_INT_VEC(21)
 #define IRIF_IRQ			VIC_INT_VEC(22)
 #define SD1CD_IRQ			VIC_INT_VEC(23)
@@ -653,7 +653,7 @@
 #define ADC_LEVEL_IRQ			VIC2_INT_VEC(2)
 #define SSI_MASTER_IRQ			VIC2_INT_VEC(3)
 #define IDC3_IRQ			VIC2_INT_VEC(4)
-#define SSI1_MASTER_IRQ			VIC2_INT_VEC(5)
+#define SSI_IRQ				VIC2_INT_VEC(5)
 #define SSI_SLAVE_IRQ			VIC2_INT_VEC(6)
 #define USB_EHCI_IRQ			VIC2_INT_VEC(7)
 #define HDMI_IRQ			VIC2_INT_VEC(8)
@@ -665,7 +665,7 @@
 #define ORC_VOUT0_IRQ			VIC2_INT_VEC(14)
 #define GDMA_IRQ			VIC2_INT_VEC(18)
 #define IDC2_IRQ			VIC2_INT_VEC(19)
-#define SD1_IRQ				VIC2_INT_VEC(20)
+#define SD2_IRQ				VIC2_INT_VEC(20)
 #define IDSP_PIP_VSYNC_IRQ		VIC2_INT_VEC(21)
 #define IDSP_PIP_SOF_IRQ		VIC2_INT_VEC(22)
 #define IDSP_PIP_MVSYNC_IRQ		VIC2_INT_VEC(23)
@@ -683,16 +683,10 @@
 #define IDSP_VIN_SOF_IRQ		VIC3_INT_VEC(2)
 #define IDSP_VIN_DVSYNC_IRQ		VIC3_INT_VEC(3)
 #define IDSP_VIN_LAST_PIXEL_IRQ		VIC3_INT_VEC(4)
-#define SCRATCHPAD0_IRQ(x)		VIC3_INT_VEC((x) + 19)	/* 0 <= x <= 6 */
+#define DES_IRQ				VIC3_INT_VEC(23)
+#define AES_IRQ				VIC3_INT_VEC(24)
+#define MD5_SHA1_IRQ			VIC3_INT_VEC(25)
 #define USB_DIGITAL_ID_CHANGE_IRQ	VIC3_INT_VEC(27)
-#define SCRATCHPAD1_IRQ(x)		VIC3_INT_VEC((x) + 28)	/* 0 <= x <= 3 */
-
-//TBD:
-//#define DES_IRQ
-//#define AES_IRQ
-//#define MD5_SHA1_IRQ
-//#define L2CC_ECNTR_IRQ
-//#define L2CC_COMBINED_IRQ
 
 /* ==========================================================================*/
 #else

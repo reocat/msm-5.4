@@ -41,7 +41,7 @@
 #define GPIO_INSTANCES			1
 #define GPIO_MAX_LINES			16
 #elif (CHIP_REV == S2L)
-#define GPIO_INSTANCES			5
+#define GPIO_INSTANCES			4
 #define GPIO_MAX_LINES			113
 #else
 #error "Not supported!"

@@ -25,7 +25,7 @@
 #define __PLAT_AMBARELLA_UHC_H
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define USB_HOST_CTRL_EHCI_OFFSET	0x18000
 #define USB_HOST_CTRL_OHCI_OFFSET	0x19000
 #elif (CHIP_REV == I1)

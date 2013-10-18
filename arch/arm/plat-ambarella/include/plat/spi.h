@@ -119,6 +119,9 @@
 #define SPI_AHB_SLAVE_REG(x)		(SPI_AHB_SLAVE_BASE + (x))
 #endif
 
+// Fix it!
+#define SPI_MASTER_INSTANCES		(SPI_INSTANCES)
+
 /* ==========================================================================*/
 /* SPI_FIFO_SIZE */
 #define SPI_DATA_FIFO_SIZE_16		0x10
@@ -165,10 +168,6 @@
 #if (SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE == 1)
 #define SPI_START_BIT_OFFSET		0x268
 #endif
-
-/* ==========================================================================*/
-
-#define SPI_MASTER_INSTANCES	(SPI_INSTANCES + SPI_AHB_INSTANCES)
 
 /* ==========================================================================*/
 /* SPI rw mode */

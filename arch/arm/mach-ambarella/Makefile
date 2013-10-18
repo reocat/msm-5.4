@@ -28,6 +28,7 @@ obj-$(CONFIG_MACH_FILBERT)			+= init-filbert.o
 obj-$(CONFIG_MACH_GINKGO)			+= init-ginkgo.o
 obj-$(CONFIG_MACH_HYACINTH_0)			+= init-hyacinth_0.o
 obj-$(CONFIG_MACH_HYACINTH_1)			+= init-hyacinth_1.o
+obj-$(CONFIG_MACH_IXORA)			+= init-ixora.o
 
 obj-$(CONFIG_AMBARELLA_VIN)			+= vin.o
 obj-$(CONFIG_AMBARELLA_VOUT)			+= vout.o
