@@ -1295,9 +1295,9 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 	case NAND_CMD_READOOB:
 		nand_info->dma_bufpos = column;
 		if (nand_info->plat_nand->sets->ecc_bits > 1) {
-				nand_info->dma_bufpos = mtd->writesize;
-				nand_amb_read_data(nand_info, page_addr,
-					nand_info->dmaaddr, MAIN_ECC);
+			nand_info->dma_bufpos = mtd->writesize;
+			nand_amb_read_data(nand_info, page_addr,
+				nand_info->dmaaddr, MAIN_ECC);
 		} else {
 			nand_amb_read_data(nand_info, page_addr,
 				nand_info->dmaaddr, SPARE_ONLY);
@@ -1327,9 +1327,9 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 					nand_info->seqin_page_addr,
 					nand_info->dmaaddr, MAIN_ECC);
 			} else {
-					nand_amb_write_data(nand_info,
-						nand_info->seqin_page_addr,
-						nand_info->dmaaddr, SPARE_ECC);
+				nand_amb_write_data(nand_info,
+					nand_info->seqin_page_addr,
+					nand_info->dmaaddr, SPARE_ECC);
 			}
 		} else {
 			if (nand_info->seqin_column < mtd->writesize) {
@@ -1526,9 +1526,11 @@ static int ambarella_nand_init_chipecc(
 	if (mtd->writesize == 2048) {
 		chip->ecc.layout = &amb_oobinfo_2048;
 		chip->badblock_pattern = &amb_2048_bbt_descr;
+		chip->ecc.size = 2048;
 	} else if (mtd->writesize == 512) {
 		chip->ecc.layout = &amb_oobinfo_512;
 		chip->badblock_pattern = &amb_512_bbt_descr;
+		chip->ecc.size = 512;
 	} else {
 		dev_err(nand_info->dev,
 			"Unexpected NAND flash writesize %d. Aborting\n",
@@ -1537,7 +1539,6 @@ static int ambarella_nand_init_chipecc(
 	}
 
 	chip->ecc.mode = NAND_ECC_HW;
-	chip->ecc.size = 512;
 
 	printk(KERN_INFO "ambarella nand in ecc-[%d]bit mode\n",
 				nand_info->plat_nand->sets->ecc_bits);
@@ -1545,7 +1546,6 @@ static int ambarella_nand_init_chipecc(
 		if (nand_info->plat_nand->sets->ecc_bits == 6) {
 			chip->ecc.bytes = NAND_ECC_BCH6_BYTES;
 			chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
-			chip->ecc.size = 2048;
 			chip->ecc.strength = 6;
 		} else if (nand_info->plat_nand->sets->ecc_bits == 8)
 			chip->ecc.bytes = NAND_ECC_BCH8_BYTES;
