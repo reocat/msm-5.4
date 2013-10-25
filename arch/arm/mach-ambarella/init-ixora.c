@@ -71,7 +71,6 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_i2s0,
 	&ambarella_pcm0,
 	&ambarella_dummy_codec0,
-	&ambarella_ambevk_audio_device,
 	&ambarella_idc0,
 	&ambarella_idc1,
 	&ambarella_idc2,
@@ -126,6 +125,45 @@ static void __init ambarella_init_ixora(void)
 {
 	int i;
 
+#if defined(CONFIG_AMBARELLA_RAW_BOOT)
+	system_rev = AMBARELLA_BOARD_VERSION(S2L, AMBARELLA_BOARD_TYPE_BUB, 'A');
+
+	amba_writel(GPIO0_REG(GPIO_AFSEL_OFFSET), 0xFF27C7FF);
+	amba_writel(GPIO0_REG(GPIO_DIR_OFFSET), 0x00C01000);
+	amba_writel(GPIO0_REG(GPIO_MASK_OFFSET), 0x00D83800);
+	amba_writel(GPIO0_REG(GPIO_DATA_OFFSET), 0x00C00000);
+	amba_writel(GPIO0_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
+
+	amba_writel(GPIO1_REG(GPIO_AFSEL_OFFSET), 0xFFBD00FF);
+	amba_writel(GPIO1_REG(GPIO_DIR_OFFSET), 0x00400000);
+	amba_writel(GPIO1_REG(GPIO_MASK_OFFSET), 0x0042FF00);
+	amba_writel(GPIO1_REG(GPIO_DATA_OFFSET), 0x00000000);
+	amba_writel(GPIO1_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
+
+	amba_writel(GPIO2_REG(GPIO_AFSEL_OFFSET), 0xFFFFFFFF);
+	amba_writel(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000000);
+	amba_writel(GPIO2_REG(GPIO_MASK_OFFSET), 0x00000000);
+	amba_writel(GPIO2_REG(GPIO_DATA_OFFSET), 0x00000000);
+	amba_writel(GPIO2_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
+
+	amba_writel(GPIO3_REG(GPIO_AFSEL_OFFSET), 0xFFFFFFFF);
+	amba_writel(GPIO3_REG(GPIO_DIR_OFFSET), 0x00000000);
+	amba_writel(GPIO3_REG(GPIO_MASK_OFFSET), 0x00000000);
+	amba_writel(GPIO3_REG(GPIO_DATA_OFFSET), 0x00000000);
+	amba_writel(GPIO3_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
+
+	amba_writel(GPIO4_REG(GPIO_AFSEL_OFFSET), 0xFFFFFFFF);
+	amba_writel(GPIO4_REG(GPIO_DIR_OFFSET), 0x00000000);
+	amba_writel(GPIO4_REG(GPIO_MASK_OFFSET), 0x00000000);
+	amba_writel(GPIO4_REG(GPIO_DATA_OFFSET), 0x00000000);
+	amba_writel(GPIO4_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
+
+	amba_writel(GPIO5_REG(GPIO_AFSEL_OFFSET), 0xFFFFFFFF);
+	amba_writel(GPIO5_REG(GPIO_DIR_OFFSET), 0x00000000);
+	amba_writel(GPIO5_REG(GPIO_MASK_OFFSET), 0x00000000);
+	amba_writel(GPIO5_REG(GPIO_DATA_OFFSET), 0x00000000);
+	amba_writel(GPIO5_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
+#endif
 	ambarella_init_machine("ixora", REF_CLK_FREQ);
 
 #ifdef CONFIG_OUTER_CACHE

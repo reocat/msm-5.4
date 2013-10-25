@@ -315,41 +315,23 @@ done:
 	return rval;
 }
 
-int __init ambarella_init_fio(void)
-{
-#if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
-	unsigned long flags;
-
-	//SMIO_38 ~ SMIO_43
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_clrbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
-	amba_clrbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000780);
-	amba_setbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000060);
-	amba_writel(GPIO2_REG(GPIO_MASK_OFFSET), 0x00000060);
-	amba_writel(GPIO2_REG(GPIO_DATA_OFFSET), 0x00000040);
-	ambarella_gpio_raw_unlock(2, &flags);
-#endif
-
-	return 0;
-}
-
 /* ==========================================================================*/
 static struct ambarella_nand_set ambarella_nand_default_set = {
 	.name		= "ambarella_nand_set",
 	.nr_chips	= 1,
 	.nr_partitions	= 0,
-	.ecc_bits = 0,
+	.ecc_bits	= 0,
 };
 
 static struct ambarella_nand_timing ambarella_nand_default_timing = {
 	.control	= 0,
 	.size		= 0,
-	.timing0	= 0x20202020,
-	.timing1	= 0x20202020,
-	.timing2	= 0x20202020,
-	.timing3	= 0x20202020,
-	.timing4	= 0x20202020,
-	.timing5	= 0x00202020,
+	.timing0	= 0xFFFFFFFF,
+	.timing1	= 0xFFFFFFFF,
+	.timing2	= 0xFFFFFFFF,
+	.timing3	= 0xFFFFFFFF,
+	.timing4	= 0xFFFFFFFF,
+	.timing5	= 0xFFFFFFFF,
 };
 
 static void fio_amb_nand_request(void)
@@ -515,4 +497,53 @@ struct platform_device ambarella_nand = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
+
+/* ==========================================================================*/
+int __init ambarella_init_fio(void)
+{
+#if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
+	unsigned long flags;
+
+	//SMIO_38 ~ SMIO_43
+	ambarella_gpio_raw_lock(2, &flags);
+	amba_clrbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
+	amba_clrbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000780);
+	amba_setbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000060);
+	amba_writel(GPIO2_REG(GPIO_MASK_OFFSET), 0x00000060);
+	amba_writel(GPIO2_REG(GPIO_DATA_OFFSET), 0x00000040);
+	ambarella_gpio_raw_unlock(2, &flags);
+#endif
+#if defined(CONFIG_AMBARELLA_RAW_BOOT)
+#if (NAND_DUAL_SPACE_MODE == 1)
+	u32 sys_config;
+
+	sys_config = amba_rct_readl(SYS_CONFIG_REG);
+	if ((sys_config & SYS_CONFIG_NAND_ECC_BCH_EN) ==
+		SYS_CONFIG_NAND_ECC_BCH_EN) {
+		if ((sys_config & SYS_CONFIG_NAND_ECC_SPARE_2X) ==
+			SYS_CONFIG_NAND_ECC_SPARE_2X) {
+			ambarella_nand_default_set.ecc_bits = 8;
+		} else {
+			ambarella_nand_default_set.ecc_bits = 6;
+		}
+	}
+#endif
+	amba_writel(I2S_24BITMUX_MODE_REG, 0);
+	amba_rct_writel(FIO_RESET_REG, (FIO_RESET_FIO_RST | FIO_RESET_CF_RST |
+		FIO_RESET_XD_RST | FIO_RESET_FLASH_RST));
+	mdelay(100);
+	amba_rct_writel(FIO_RESET_REG, 0);
+	mdelay(100);
+	amba_clrbitsl(FIO_CTR_REG, FIO_CTR_RR);
+
+	amba_setbitsl(NAND_CTR_REG, 0);
+	amba_writel(NAND_CMD_REG, 0xff);
+	mdelay(100);
+	amba_writel(NAND_INT_REG, 0x0);
+	amba_writel(NAND_CMD_REG, 0x90);
+	mdelay(100);
+	amba_writel(NAND_INT_REG, 0x0);
+#endif
+	return 0;
+}
 

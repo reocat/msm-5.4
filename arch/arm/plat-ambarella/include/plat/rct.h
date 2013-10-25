@@ -48,11 +48,17 @@
 /* ==========================================================================*/
 #define PLL_LOCK_OFFSET			0x2C
 #define SOFT_OR_DLL_RESET_OFFSET	0x68
-#define FIO_RESET_OFFSET		0x74
 
 #define PLL_LOCK_REG			RCT_REG(PLL_LOCK_OFFSET)
 #define SOFT_OR_DLL_RESET_REG		RCT_REG(SOFT_OR_DLL_RESET_OFFSET)
+
+/* ==========================================================================*/
+#define FIO_RESET_OFFSET		0x74
 #define FIO_RESET_REG			RCT_REG(FIO_RESET_OFFSET)
+#define FIO_RESET_FIO_RST		0x00000008
+#define FIO_RESET_CF_RST		0x00000004
+#define FIO_RESET_XD_RST		0x00000002
+#define FIO_RESET_FLASH_RST		0x00000001
 
 /* ==========================================================================*/
 #define USB_REFCLK_OFFSET		0x88

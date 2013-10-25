@@ -40,6 +40,12 @@
 #endif
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2)
+#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400 /* 0: disable, 1: enable */
+#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800 /* NAND Spare Area 2x */
+#endif
+
+/* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
 #define DMA_FIOS_OFFSET			0x12000
