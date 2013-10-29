@@ -42,7 +42,7 @@
 
 /* ==========================================================================*/
 static unsigned long epoch = 1970;
-#define ALARM_POLLING_INTERVAL 1000
+
 /* ==========================================================================*/
 u32 __ambrtc_tm2epoch_diff(struct rtc_time *current_tm)
 {
@@ -261,23 +261,14 @@ static int ambrtc_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
+#if defined(CONFIG_RTC_INTF_PROC) || defined(CONFIG_RTC_INTF_PROC_MODULE)
 static int ambrtc_proc(struct device *dev, struct seq_file *seq)
 {
-	seq_printf(seq, "RTC_PWC_ALAT_REG= 0x%08x\n"
-		"RTC_PWC_CURT_REG= 0x%08x\n"
-		"RTC_CURT_REG\t= 0x%08x\n"
-		"RTC_ALAT_REG\t= 0x%08x\n"
-		"RTC_STATUS_REG\t= 0x%08x\n"
-		"RTC_RESET_REG\t= 0x%08x\n",
-		amba_readl(RTC_PWC_ALAT_REG),
-		amba_readl(RTC_PWC_CURT_REG),
-		amba_readl(RTC_CURT_REG),
-		amba_readl(RTC_ALAT_REG),
-		amba_readl(RTC_STATUS_REG),
-		amba_readl(RTC_RESET_REG));
-
 	return 0;
 }
+#else
+#define	ambrtc_proc	NULL
+#endif
 
 static const struct rtc_class_ops ambarella_rtc_ops = {
 	.ioctl		= ambrtc_ioctl,
@@ -288,39 +279,11 @@ static const struct rtc_class_ops ambarella_rtc_ops = {
 	.proc	   	= ambrtc_proc,
 };
 
-static void alarm_polling_timer_func(unsigned long data)
-{
-	struct	ambarella_rtc_controller	*pinfo;
-	struct	rtc_time					tm;
-	struct	rtc_wkalrm				alarm;
-	unsigned long		time = 0;
-	unsigned long		alarmtime = 0;
-	struct	rtc_device *rtc = (struct rtc_device *)data;
-	struct	platform_device *pdev = to_platform_device(rtc->dev.parent);
-
-
-	pinfo = (struct ambarella_rtc_controller *)pdev->dev.platform_data;
-	rtc_read_time(rtc, &tm);
-	rtc_tm_to_time(&tm, &time);
-
-	rtc_read_alarm(rtc, &alarm);
-	rtc_tm_to_time(&(alarm.time), &alarmtime);
-//	printk("%s, time =0x%lx,alarmtime=0x%lx\n",__func__,time,alarmtime);
-	if(alarmtime == time)
-		rtc_update_irq(rtc,1,RTC_IRQF | RTC_UF);
-
-	mod_timer(&pinfo->alarm_polling_timer,
-		jiffies + msecs_to_jiffies(ALARM_POLLING_INTERVAL));
-}
-
 /* ==========================================================================*/
 static int ambrtc_probe(struct platform_device *pdev)
 {
 	struct rtc_device *rtc;
 	int ret = 0;
-	struct ambarella_rtc_controller  *pinfo;
-
-	pinfo = (struct ambarella_rtc_controller *)pdev->dev.platform_data;
 
 	rtc = rtc_device_register(pdev->name,
 		&pdev->dev, &ambarella_rtc_ops, THIS_MODULE);
@@ -332,13 +295,6 @@ static int ambrtc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rtc);
 
-	setup_timer(&pinfo->alarm_polling_timer,
-		alarm_polling_timer_func,
-		(unsigned long)rtc
-		);
-//	mod_timer(&pinfo->alarm_polling_timer,
-//		jiffies + msecs_to_jiffies(ALARM_POLLING_INTERVAL));
-
 err_nores:
 	return ret;
 }
@@ -348,6 +304,7 @@ static int ambrtc_remove(struct platform_device *pdev)
 	struct rtc_device *rtc = platform_get_drvdata(pdev);
 
 	if (rtc) {
+		platform_set_drvdata(pdev, NULL);
 		rtc_device_unregister(rtc);
 	}
 

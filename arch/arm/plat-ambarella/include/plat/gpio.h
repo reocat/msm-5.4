@@ -76,6 +76,46 @@
 #define GPIO5_REG(x)			(GPIO5_BASE + (x))
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#define IOMUX_OFFSET			0x16000
+#endif
+#define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
+#define IOMUX_REG(x)			(IOMUX_BASE + (x))
+#define IOMUX_REG_OFFSET(group, index)	(((group) * 0xC) + ((index) * 4))
+
+/* ==========================================================================*/
+#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
+    (CHIP_REV == A8)
+#define GPIO_PAD_PULL_CTRL_VERSION		1
+#elif (CHIP_REV == S2L)
+#define GPIO_PAD_PULL_CTRL_VERSION		2
+#else
+#define GPIO_PAD_PULL_CTRL_VERSION		0
+#endif
+
+#if (GPIO_PAD_PULL_CTRL_VERSION == 1)
+#define GPIO_PAD_PULL_OFFSET		0xD000
+
+#define GPIO_PAD_PULL_EN_0_OFFSET	0x80
+#define GPIO_PAD_PULL_EN_1_OFFSET	0x84
+#define GPIO_PAD_PULL_EN_2_OFFSET	0x88
+#define GPIO_PAD_PULL_EN_3_OFFSET	0x8C
+#define GPIO_PAD_PULL_EN_4_OFFSET	0x90
+#define GPIO_PAD_PULL_EN_5_OFFSET	0x54
+#define GPIO_PAD_PULL_DIR_0_OFFSET	0x94
+#define GPIO_PAD_PULL_DIR_1_OFFSET	0x98
+#define GPIO_PAD_PULL_DIR_2_OFFSET	0x9C
+#define GPIO_PAD_PULL_DIR_3_OFFSET	0xA0
+#define GPIO_PAD_PULL_DIR_4_OFFSET	0xA4
+#define GPIO_PAD_PULL_DIR_5_OFFSET	0x58
+#elif (GPIO_PAD_PULL_CTRL_VERSION == 2)
+#define GPIO_PAD_PULL_OFFSET		0x16000
+#endif
+
+#define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
+#define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
+
+/* ==========================================================================*/
 #define GPIO_DATA_OFFSET		0x00
 #define GPIO_DIR_OFFSET			0x04
 #define GPIO_IS_OFFSET			0x08

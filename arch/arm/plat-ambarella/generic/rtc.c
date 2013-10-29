@@ -65,30 +65,33 @@ static inline u32 rtc_time_write_fix(u32 tm)
 
 static inline void rtc_update_pos(void)
 {
-	amba_writel(RTC_POS0_REG, ambarella_platform_rtc_controller0.pos0);
-	amba_writel(RTC_POS1_REG, ambarella_platform_rtc_controller0.pos1);
-	amba_writel(RTC_POS2_REG, ambarella_platform_rtc_controller0.pos2);
+	amba_writel(RTC_REG(RTC_POS0_OFFSET),
+		ambarella_platform_rtc_controller0.pos0);
+	amba_writel(RTC_REG(RTC_POS1_OFFSET),
+		ambarella_platform_rtc_controller0.pos1);
+	amba_writel(RTC_REG(RTC_POS2_OFFSET),
+		ambarella_platform_rtc_controller0.pos2);
 }
 
 void rtc_set_curt_time(u32 tm)
 {
 	u32					bak_alat;
 
-	bak_alat = amba_readl(RTC_ALAT_REG);
+	bak_alat = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
 	rtc_update_pos();
 
-	amba_writel(RTC_PWC_ALAT_REG, 0x0);
-	amba_writel(RTC_PWC_CURT_REG, 0x0);
-	amba_writel(RTC_RESET_REG, 0x01);
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), 0x0);
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), 0x0);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x01);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
-	amba_writel(RTC_RESET_REG, 0x00);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x00);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
-	amba_writel(RTC_PWC_CURT_REG, rtc_time_write_fix(tm));
-	amba_writel(RTC_PWC_ALAT_REG, rtc_time_write_fix(bak_alat));
-	amba_writel(RTC_RESET_REG, 0x01);
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), rtc_time_write_fix(tm));
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), rtc_time_write_fix(bak_alat));
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x01);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
-	amba_writel(RTC_RESET_REG, 0x00);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x00);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 }
 
@@ -100,15 +103,15 @@ u32 rtc_check_status(void)
 	u32					rtc_pwc_status;
 #endif
 
-	rtc_status = amba_readl(RTC_STATUS_REG);
-
+	rtc_status = amba_readl(RTC_REG(RTC_STATUS_OFFSET));
 #if (RTC_POWER_LOST_DETECT == 1)
-	rtc_pwc_status = amba_readl(RTC_PWC_REG_STA_REG);
-	amba_setbitsl(RTC_PWC_SET_STATUS_REG, 0x20);
-	if ((rtc_pwc_status & 0x20) == 0x20)
+	rtc_pwc_status = amba_readl(RTC_REG(RTC_PWC_REG_STA_OFFSET));
+	amba_setbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), RTC_PWC_LOSS_MASK);
+	if ((rtc_pwc_status & RTC_PWC_LOSS_MASK) == RTC_PWC_LOSS_MASK) {
 		rtc_status |= RTC_STATUS_PC_RST;
-	else
+	} else {
 		rtc_status &= ~RTC_STATUS_PC_RST;
+	}
 #endif
 
 	if ((rtc_status & RTC_STATUS_PC_RST) != RTC_STATUS_PC_RST) {
@@ -133,9 +136,9 @@ u32 rtc_get_curt_time(void)
 	rtc_check_status();
 
 #if (RTC_SUPPORT_30BITS_PASSED_SECONDS == 1)
-	return (amba_readl(RTC_CURT_REG) | 0x40000000);
+	return (amba_readl(RTC_REG(RTC_CURT_OFFSET)) | 0x40000000);
 #else
-	return amba_readl(RTC_CURT_REG);
+	return amba_readl(RTC_REG(RTC_CURT_OFFSET));
 #endif
 }
 
@@ -143,21 +146,21 @@ void rtc_set_alat_time(u32 tm)
 {
 	u32					bak_curt;
 
-	bak_curt = amba_readl(RTC_CURT_REG);
+	bak_curt = amba_readl(RTC_REG(RTC_CURT_OFFSET));
 	rtc_update_pos();
 
-	amba_writel(RTC_PWC_ALAT_REG, 0x0);
-	amba_writel(RTC_PWC_CURT_REG, 0x0);
-	amba_writel(RTC_RESET_REG, 0x01);
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), 0x0);
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), 0x0);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x01);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
-	amba_writel(RTC_RESET_REG, 0x00);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x00);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
-	amba_writel(RTC_PWC_CURT_REG, rtc_time_write_fix(bak_curt));
-	amba_writel(RTC_PWC_ALAT_REG, rtc_time_write_fix(tm));
-	amba_writel(RTC_RESET_REG, 0x01);
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), rtc_time_write_fix(bak_curt));
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), rtc_time_write_fix(tm));
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x01);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
-	amba_writel(RTC_RESET_REG, 0x00);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x00);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 }
 
@@ -166,9 +169,9 @@ u32 rtc_get_alat_time(void)
 	rtc_check_status();
 
 #if (RTC_SUPPORT_30BITS_PASSED_SECONDS == 1)
-	return (amba_readl(RTC_ALAT_REG) | 0x40000000);
+	return (amba_readl(RTC_REG(RTC_ALAT_OFFSET)) | 0x40000000);
 #else
-	return amba_readl(RTC_ALAT_REG);
+	return amba_readl(RTC_REG(RTC_ALAT_OFFSET));
 #endif
 }
 
@@ -178,22 +181,22 @@ int rtc_set_pos(const char *val, const struct kernel_param *kp)
 	u32					bak_curt;
 	u32					bak_alat;
 
-	bak_curt = amba_readl(RTC_CURT_REG);
-	bak_alat = amba_readl(RTC_ALAT_REG);
+	bak_curt = amba_readl(RTC_REG(RTC_CURT_OFFSET));
+	bak_alat = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
 	rtc_update_pos();
 
-	amba_writel(RTC_PWC_ALAT_REG, 0x0);
-	amba_writel(RTC_PWC_CURT_REG, 0x0);
-	amba_writel(RTC_RESET_REG, 0x01);
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), 0x0);
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), 0x0);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x01);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
-	amba_writel(RTC_RESET_REG, 0x00);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x00);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
-	amba_writel(RTC_PWC_CURT_REG, rtc_time_write_fix(bak_curt));
-	amba_writel(RTC_PWC_ALAT_REG, rtc_time_write_fix(bak_alat));
-	amba_writel(RTC_RESET_REG, 0x01);
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), rtc_time_write_fix(bak_curt));
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), rtc_time_write_fix(bak_alat));
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x01);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
-	amba_writel(RTC_RESET_REG, 0x00);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x00);
 	mdelay(ambarella_platform_rtc_controller0.reset_delay);
 
 	return 0;
