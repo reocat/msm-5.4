@@ -31,7 +31,7 @@
 #define	FIO_USE_2X_FREQ			0
 #endif
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define	NAND_DUAL_SPACE_MODE		1
 #define	NAND_READ_ID5			1
 #else
