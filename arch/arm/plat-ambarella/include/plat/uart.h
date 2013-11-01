@@ -54,14 +54,17 @@
 #else
 #define UART1_BASE			(APB_BASE + UART1_OFFSET)
 #endif
+#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define UART2_BASE			(APB_BASE + UART2_OFFSET)
 #define UART3_BASE			(APB_BASE + UART3_OFFSET)
+#endif
 
 #define UART0_REG(x)			(UART0_BASE + (x))
 #define UART1_REG(x)			(UART1_BASE + (x))
+#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
 #define UART2_REG(x)			(UART2_BASE + (x))
 #define UART3_REG(x)			(UART3_BASE + (x))
-
+#endif
 /* ==========================================================================*/
 #define UART_RB_OFFSET			0x00
 #define UART_TH_OFFSET			0x00

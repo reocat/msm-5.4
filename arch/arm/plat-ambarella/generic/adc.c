@@ -122,9 +122,11 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	case 2:
 		adc_data = amba_readl(ADC_DATA2_REG);
 		break;
+#if (ADC_NUM_CHANNELS >= 4)
 	case 3:
 		adc_data = amba_readl(ADC_DATA3_REG);
 		break;
+#endif
 #if (ADC_NUM_CHANNELS >= 6)
 	case 4:
 		adc_data = amba_readl(ADC_DATA4_REG);
@@ -206,7 +208,9 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	adc_data[0] = amba_readl(ADC_DATA0_REG);
 	adc_data[1] = amba_readl(ADC_DATA1_REG);
 	adc_data[2] = amba_readl(ADC_DATA2_REG);
+#if (ADC_NUM_CHANNELS >= 4)
 	adc_data[3] = amba_readl(ADC_DATA3_REG);
+#endif
 #if (ADC_NUM_CHANNELS >= 6)
 	adc_data[4] = amba_readl(ADC_DATA4_REG);
 	adc_data[5] = amba_readl(ADC_DATA5_REG);
@@ -421,9 +425,11 @@ void adc_set_irq_threshold(u32 ch, u32 h_level, u32 l_level)
 	case 2:
 		irq_control_address = ADC_CHAN2_INTR_REG;
 		break;
+#if (ADC_NUM_CHANNELS >= 4)
 	case 3:
 		irq_control_address = ADC_CHAN3_INTR_REG;
 		break;
+#endif
 #if (ADC_NUM_CHANNELS >= 6)
 	case 4:
 		irq_control_address = ADC_CHAN4_INTR_REG;
@@ -530,7 +536,9 @@ u32 ambarella_adc_suspend(u32 level)
 	ambarella_adc_pm.adc_chan0_intr_reg = amba_readl(ADC_CHAN0_INTR_REG);
 	ambarella_adc_pm.adc_chan1_intr_reg = amba_readl(ADC_CHAN1_INTR_REG);
 	ambarella_adc_pm.adc_chan2_intr_reg = amba_readl(ADC_CHAN2_INTR_REG);
+#if (ADC_NUM_CHANNELS >= 4)
 	ambarella_adc_pm.adc_chan3_intr_reg = amba_readl(ADC_CHAN3_INTR_REG);
+#endif
 #if (ADC_NUM_CHANNELS >= 6)
 	ambarella_adc_pm.adc_chan4_intr_reg = amba_readl(ADC_CHAN4_INTR_REG);
 	ambarella_adc_pm.adc_chan5_intr_reg = amba_readl(ADC_CHAN5_INTR_REG);
@@ -570,7 +578,9 @@ u32 ambarella_adc_resume(u32 level)
 		amba_writel(ADC_CHAN0_INTR_REG, ambarella_adc_pm.adc_chan0_intr_reg);
 		amba_writel(ADC_CHAN1_INTR_REG, ambarella_adc_pm.adc_chan1_intr_reg);
 		amba_writel(ADC_CHAN2_INTR_REG, ambarella_adc_pm.adc_chan2_intr_reg);
+#if (ADC_NUM_CHANNELS >= 4)
 		amba_writel(ADC_CHAN3_INTR_REG, ambarella_adc_pm.adc_chan3_intr_reg);
+#endif
 #if (ADC_NUM_CHANNELS >= 6)
 		amba_writel(ADC_CHAN4_INTR_REG, ambarella_adc_pm.adc_chan4_intr_reg);
 		amba_writel(ADC_CHAN5_INTR_REG, ambarella_adc_pm.adc_chan5_intr_reg);
