@@ -43,6 +43,9 @@
 #if (CHIP_REV == S2)
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400 /* 0: disable, 1: enable */
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800 /* NAND Spare Area 2x */
+#elif (CHIP_REV == S2L)
+#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000 /* 0: disable, 1: enable */
+#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000 /* NAND Spare Area 2x */
 #endif
 
 /* ==========================================================================*/
