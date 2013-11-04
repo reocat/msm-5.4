@@ -95,19 +95,6 @@ static int cpu_pmu_request_irq(struct arm_pmu *cpu_pmu, irq_handler_t handler)
 	if (!pmu_device)
 		return -ENODEV;
 
-#if defeind(CONFIG_PLAT_AMBARELLA)
-#if ((CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2))
-	/*
-	 * Though the PerfEvent interrupt is not connected on I1/A8/S2,
-	 * the counters are still available, and some profiling tools, such
-	 * as 'perf' can live with that and collect statistics.
-	 *
-	 * So we return 0 here for continuing the rest of PMU setup
-	 */
-	return 0;
-#endif
-#endif
-
 	irqs = min(pmu_device->num_resources, num_possible_cpus());
 	if (irqs < 1) {
 		pr_err("no irqs for PMUs defined\n");

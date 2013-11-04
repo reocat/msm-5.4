@@ -476,7 +476,6 @@ static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 		ambarella_ce_timer_enable();
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
-		remove_irq(ambarella_clkevt.irq, &ambarella_ce_timer_irq);
 	case CLOCK_EVT_MODE_SHUTDOWN:
 		ambarella_ce_timer_disable();
 		break;

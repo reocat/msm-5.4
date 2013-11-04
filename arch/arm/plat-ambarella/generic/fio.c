@@ -371,25 +371,15 @@ static void ambarella_nand_get_cfg(u32 *ppage_size, u32 *pread_confirm)
 	u32 sys_config;
 
 	sys_config = amba_rct_readl(SYS_CONFIG_REG);
-#if (CHIP_REV == S2)
-	*ppage_size = (sys_config & 0x00000010) ? 2048 : 512;
-	*pread_confirm = (sys_config & 0x00000020) ? 1 : 0;
-#else
-	*ppage_size = (sys_config & 0x00000020) ? 2048 : 512;
-	*pread_confirm = (sys_config & 0x00000040) ? 1 : 0;
-#endif
+	*ppage_size = (sys_config & SYS_CONFIG_NAND_PAGE_SIZE) ? 2048 : 512;
+	*pread_confirm = (sys_config & SYS_CONFIG_NAND_READ_CONFIRM) ? 1 : 0;
 }
 
 static struct ambarella_platform_nand ambarella_platform_default_nand = {
 	.sets		= &ambarella_nand_default_set,
 	.timing		= &ambarella_nand_default_timing,
 	.flash_bbt	= 1,
-
-#if (NAND_READ_ID5 == 1)
-	.id_cycles = 5,
-#else
-	.id_cycles = 4,
-#endif
+	.id_cycles	= NAND_READ_ID_CYCLES,
 	.parse_error	= fio_amb_nand_parse_error,
 	.request	= fio_amb_nand_request,
 	.release	= fio_amb_nand_release,

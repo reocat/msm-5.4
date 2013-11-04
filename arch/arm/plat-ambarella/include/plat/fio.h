@@ -31,21 +31,28 @@
 #define	FIO_USE_2X_FREQ			0
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2)
 #define	NAND_DUAL_SPACE_MODE		1
-#define	NAND_READ_ID5			1
+#define	NAND_READ_ID_CYCLES		5
+
+#define SYS_CONFIG_NAND_PAGE_SIZE	0x00000010
+#define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020
+#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400
+#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800
+#elif (CHIP_REV == S2L)
+#define	NAND_DUAL_SPACE_MODE		1
+#define	NAND_READ_ID_CYCLES		5
+
+#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
+#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000
+#define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
+#define SYS_CONFIG_NAND_READ_CONFIRM	0x00020000
 #else
 #define	NAND_DUAL_SPACE_MODE		0
-#define	NAND_READ_ID5			0
-#endif
+#define	NAND_READ_ID_CYCLES		4
 
-/* ==========================================================================*/
-#if (CHIP_REV == S2)
-#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400 /* 0: disable, 1: enable */
-#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800 /* NAND Spare Area 2x */
-#elif (CHIP_REV == S2L)
-#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000 /* 0: disable, 1: enable */
-#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000 /* NAND Spare Area 2x */
+#define SYS_CONFIG_NAND_PAGE_SIZE	0x00000020
+#define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040
 #endif
 
 /* ==========================================================================*/

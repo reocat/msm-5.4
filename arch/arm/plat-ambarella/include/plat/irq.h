@@ -189,6 +189,7 @@
 #define MS_IRQ				VIC2_INT_VEC(15)
 #define GDMA_IRQ			VIC2_INT_VEC(16)
 #define MOTOR_IRQ			VIC2_INT_VEC(17)
+#define PMU_IRQ				VIC2_INT_VEC(31)
 
 /* ==========================================================================*/
 #elif (CHIP_REV == A7L)
@@ -221,6 +222,7 @@
 #define IDSP_ERROR_IRQ			VIC_INT_VEC(28)
 #define GPIO2_IRQ			VIC_INT_VEC(30)
 
+#define PMU_IRQ				VIC2_INT_VEC(0)
 #define DMA_FIOS_IRQ			VIC2_INT_VEC(1)
 #define ADC_LEVEL_IRQ			VIC2_INT_VEC(2)
 #define IDSP_LAST_PIXEL_IRQ		VIC2_INT_VEC(5)
@@ -296,7 +298,7 @@
 #define UART2_IRQ			VIC2_INT_VEC(25)
 #define UART3_IRQ			VIC2_INT_VEC(26)
 
-#define GSSI_IRQ			VIC3_INT_VEC(0)
+#define PMU_IRQ				VIC3_INT_VEC(0)
 #define SSI4_IRQ			VIC3_INT_VEC(1)
 #define RNG_IRQ				VIC3_INT_VEC(2)
 #define SD2CD_IRQ			VIC3_INT_VEC(3)
@@ -427,6 +429,7 @@
 #define IDC3_IRQ			VIC3_INT_VEC(26)
 #define UART2_IRQ			VIC3_INT_VEC(27)
 #define UART3_IRQ			VIC3_INT_VEC(28)
+#define PMU_IRQ				VIC3_INT_VEC(31)
 
 #if defined(CONFIG_ARM_GIC)
 #define VOUT_IRQ			VIC4_INT_VEC(0)
@@ -545,7 +548,7 @@
 
 #define GSSI_IRQ			VIC3_INT_VEC(0)
 #define SSI4_IRQ			VIC3_INT_VEC(1)
-#define RNG_IRQ				VIC3_INT_VEC(2)
+#define PMU_IRQ				VIC3_INT_VEC(2)
 #define SD2CD_IRQ			VIC3_INT_VEC(3)
 #define CORTEX_CORE0_IRQ		VIC3_INT_VEC(4)
 #define CORTEX_CORE1_IRQ		VIC3_INT_VEC(5)
@@ -683,16 +686,16 @@
 #define IDSP_VIN_SOF_IRQ		VIC3_INT_VEC(2)
 #define IDSP_VIN_DVSYNC_IRQ		VIC3_INT_VEC(3)
 #define IDSP_VIN_LAST_PIXEL_IRQ		VIC3_INT_VEC(4)
-#define L2CC_IRQ3			VIC3_INT_VEC(21)
+#define L2CC_INTR_IRQ			VIC3_INT_VEC(21)
 #define MD5_IRQ				VIC3_INT_VEC(22)
 #define DES_IRQ				VIC3_INT_VEC(23)
 #define AES_IRQ				VIC3_INT_VEC(24)
 #define SHA1_IRQ			VIC3_INT_VEC(25)
 #define USB_DIGITAL_ID_CHANGE_IRQ	VIC3_INT_VEC(27)
 #define PMU_IRQ				VIC3_INT_VEC(28)
-#define L2CC_IRQ0			VIC3_INT_VEC(29)
-#define L2CC_IRQ1			VIC3_INT_VEC(30)
-#define L2CC_IRQ2			VIC3_INT_VEC(31)
+#define L2CC_DECERR_IRQ			VIC3_INT_VEC(29)
+#define L2CC_SLVERR_IRQ			VIC3_INT_VEC(30)
+#define L2CC_ECNTR_IRQ			VIC3_INT_VEC(31)
 
 /* ==========================================================================*/
 #else
