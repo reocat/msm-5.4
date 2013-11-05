@@ -78,10 +78,10 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2L)
 #define IOMUX_OFFSET			0x16000
-#endif
 #define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
 #define IOMUX_REG(x)			(IOMUX_BASE + (x))
 #define IOMUX_REG_OFFSET(group, index)	(((group) * 0xC) + ((index) * 4))
+#endif
 
 /* ==========================================================================*/
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
