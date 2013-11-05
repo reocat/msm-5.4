@@ -387,7 +387,7 @@
 #define ADC_EN_LO(x)			((x) << 30)
 #define ADC_VAL_LO(x)			((x) & 0x3ff)
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_MAX_SLOT_NUMBER		8
 #endif
 #define ADC_CH0				(1 << 0)
@@ -424,7 +424,7 @@ struct ambarella_adc_controller {
 	u32				scan_delay;
 	u32				(*temper_curve)(u32);
 	u32				adc_temper_channel;
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 	u8				adc_counter;
 	u8				adc_slot_num;
 	u16				adc_slot_period;

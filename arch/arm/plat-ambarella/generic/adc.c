@@ -49,7 +49,7 @@ static DEFINE_MUTEX(adc_lock);
 
 struct ambarella_adc_controller ambarella_platform_adc_controller0;
 /* ==========================================================================*/
-#if ((CHIP_REV == A5S) || (CHIP_REV == S2))
+#if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L))
 #undef ADC_ONE_SHOT
 #define ADC_ONE_SHOT
 #else
@@ -79,7 +79,7 @@ static inline u32 ambarella_adc_get_channel_inline(u32 channel_id)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
 		msleep(1);
 	}
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
 	while (amba_tstbitsl(ADC_STATUS_REG, ADC_CONTROL_STATUS) == 0x0);
 #else
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
@@ -188,7 +188,7 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0) {
 		msleep(1);
 	}
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
 	while (amba_tstbitsl(ADC_STATUS_REG, ADC_CONTROL_STATUS) == 0x0);
 #else
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
@@ -233,7 +233,7 @@ void ambarella_adc_get_array(u32 *adc_data, u32 *array_size)
 }
 EXPORT_SYMBOL(ambarella_adc_get_array);
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 void ambarella_adc_set_slot_ctrl(u8 slot_id, u32 slot_value)
 {
 	switch (slot_id) {
@@ -338,7 +338,7 @@ void ambarella_adc_start(void)
 	amba_writel(ADC_ENABLE_REG, 0x0);
 #endif
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_CLEAR);
 #else
 #if (CHIP_REV != I1)
@@ -364,7 +364,7 @@ void ambarella_adc_start(void)
 	while (amba_tstbitsl(ADC_CONTROL_REG, ADC_CONTROL_STATUS) == 0x0);
 #endif
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 	ambarella_adc_set_config();
 #endif
 
