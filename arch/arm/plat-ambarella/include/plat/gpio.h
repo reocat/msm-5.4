@@ -81,6 +81,7 @@
 #define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
 #define IOMUX_REG(x)			(IOMUX_BASE + (x))
 #define IOMUX_REG_OFFSET(group, index)	(((group) * 0xC) + ((index) * 4))
+#define IOMUX_CTRL_SET_OFFSET		(0xF0)
 #endif
 
 /* ==========================================================================*/

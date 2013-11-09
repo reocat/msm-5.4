@@ -518,7 +518,6 @@ int __init ambarella_init_fio(void)
 		}
 	}
 #endif
-	amba_writel(I2S_24BITMUX_MODE_REG, 0);
 	amba_rct_writel(FIO_RESET_REG, (FIO_RESET_FIO_RST | FIO_RESET_CF_RST |
 		FIO_RESET_XD_RST | FIO_RESET_FLASH_RST));
 	mdelay(100);

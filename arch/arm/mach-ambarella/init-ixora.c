@@ -77,13 +77,13 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_ir0,
 	&ambarella_sd0,
 	&ambarella_sd1,
-	&ambarella_sd2,
+//	&ambarella_sd2,
 	&ambarella_uart,
 	&ambarella_uart1,
 	&ambarella_udc0,
 	&ambarella_wdt0,
 	&ambarella_dma,
-	&ambarella_nand,
+//	&ambarella_nand,
 	&ambarella_rtc0,
 };
 
@@ -153,7 +153,7 @@ static void __init ambarella_init_ixora(void)
 	amba_writel(GPIO3_REG(GPIO_DATA_OFFSET), 0x00000000);
 	amba_writel(GPIO3_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
 
-/*	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF800001F);
+	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF800001F);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x00878000);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 2)), 0x07000000);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 0)), 0x003FFFFF);
@@ -165,16 +165,18 @@ static void __init ambarella_init_ixora(void)
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(3, 0)), 0x0003FFFF);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(3, 1)), 0x00000000);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(3, 2)), 0x00000000);
+	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x00000001);
+	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x00000000);
 
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET), 0x00000000);
+/*	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET), 0x00000000);
 	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_0_OFFSET), 0x00000000);
 	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_1_OFFSET), 0x00000000);
 	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_1_OFFSET), 0x00000000);
 	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_2_OFFSET), 0x00000000);
 	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_2_OFFSET), 0x00000000);
 	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_3_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_3_OFFSET), 0x00000000);
-*/
+	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_3_OFFSET), 0x00000000);*/
+
 
 #endif
 	ambarella_init_machine("ixora", REF_CLK_FREQ);

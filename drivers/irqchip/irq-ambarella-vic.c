@@ -347,6 +347,7 @@ void __init __ambarella_vic_init(struct ambarella_vic_device_s *pvic_device,
 	amba_writel((vic_base + VIC_INTEN_OFFSET), 0x00000000);
 	amba_writel((vic_base + VIC_INTEN_CLR_OFFSET), 0xffffffff);
 	amba_writel((vic_base + VIC_EDGE_CLR_OFFSET), 0xffffffff);
+	amba_writel((vic_base + VIC_INT_PTR0_OFFSET), 0xffffffff);
 
 	pvic_device->vic_base = vic_base;
 	vic_domain = irq_domain_add_legacy(NULL, 32, irq_start, 0,

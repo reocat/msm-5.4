@@ -63,6 +63,8 @@ static int ambarella_eth0_is_enabled(void)
 	sys_config = amba_rct_readl(SYS_CONFIG_REG);
 #if (CHIP_REV == S2)
 	return ((amba_rct_readl(SYS_CONFIG_REG) & 0x00800000) != 0x0);
+#elif (CHIP_REV == S2L)
+	return ((amba_rct_readl(SYS_CONFIG_REG) & 0x00000001) != 0x0);
 #else
 	return ((amba_rct_readl(SYS_CONFIG_REG) & 0x00000080) != 0x0);
 #endif
@@ -119,6 +121,11 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 				AMBARELLA_ETH_SUPPORTED_IPC_TX),
 #elif (CHIP_REV == S2)
 	.default_supported	= AMBARELLA_ETH_SUPPORTED_IPC_RX,
+#elif (CHIP_REV == S2L)
+	.default_supported	= (AMBARELLA_ETH_SUPPORTED_DUMP_TX |
+				AMBARELLA_ETH_SUPPORTED_DUMP_RX |
+				AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE |
+				AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL),
 #else
 	.default_supported	= 0,
 #endif

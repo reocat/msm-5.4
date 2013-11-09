@@ -26,7 +26,7 @@
 
 /* ==========================================================================*/
 #define RCT_OFFSET			0x170000
-#if (CHIP_REV == A8)
+#if (CHIP_REV == A8) || (CHIP_REV == S2L)
 #define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
 #else
 #define RCT_BASE			(APB_BASE + RCT_OFFSET)
@@ -142,10 +142,17 @@
 #define SCALER_ARM_ASYNC_REG		RCT_REG(SCALER_ARM_ASYNC_OFFSET)
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#define PLL_CORTEX_CTRL_OFFSET		0x264
+#define PLL_CORTEX_FRAC_OFFSET		0x268
+#define PLL_CORTEX_CTRL2_OFFSET		0x26C
+#define PLL_CORTEX_CTRL3_OFFSET		0x270
+#else
 #define PLL_CORTEX_CTRL_OFFSET		0x2B0
 #define PLL_CORTEX_FRAC_OFFSET		0x2B4
 #define PLL_CORTEX_CTRL2_OFFSET		0x2B8
 #define PLL_CORTEX_CTRL3_OFFSET		0x2BC
+#endif
 
 #define PLL_CORTEX_CTRL_REG		RCT_REG(PLL_CORTEX_CTRL_OFFSET)
 #define PLL_CORTEX_FRAC_REG		RCT_REG(PLL_CORTEX_FRAC_OFFSET)

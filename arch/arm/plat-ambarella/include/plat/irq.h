@@ -112,6 +112,7 @@
 #define VIC_SENSE_OFFSET			(0x24)
 #define VIC_BOTHEDGE_OFFSET			(0x28)
 #define VIC_EVENT_OFFSET			(0x2c)
+#define VIC_INT_PTR0_OFFSET			(0x30)
 #define VIC_EDGE_CLR_OFFSET			(0x38)
 #define VIC_INT_SEL_INT_OFFSET			(0x3c)
 #define VIC_INT_SEL_CLR_INT_OFFSET		(0x40)
