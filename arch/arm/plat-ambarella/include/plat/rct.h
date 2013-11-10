@@ -137,6 +137,17 @@
 #define PLL_IDSP_CTRL3_REG		RCT_REG(PLL_IDSP_CTRL3_OFFSET)
 
 /* ==========================================================================*/
+#define PLL_DDR_CTRL_OFFSET		0xDC
+#define PLL_DDR_FRAC_OFFSET		0xE0
+#define PLL_DDR_CTRL2_OFFSET		0x110
+#define PLL_DDR_CTRL3_OFFSET		0x114
+
+#define PLL_DDR_CTRL_REG		RCT_REG(PLL_DDR_CTRL_OFFSET)
+#define PLL_DDR_FRAC_REG		RCT_REG(PLL_DDR_FRAC_OFFSET)
+#define PLL_DDR_CTRL2_REG		RCT_REG(PLL_DDR_CTRL2_OFFSET)
+#define PLL_DDR_CTRL3_REG		RCT_REG(PLL_DDR_CTRL3_OFFSET)
+
+/* ==========================================================================*/
 #define SCALER_ARM_ASYNC_OFFSET		0x1F0
 
 #define SCALER_ARM_ASYNC_REG		RCT_REG(SCALER_ARM_ASYNC_OFFSET)
