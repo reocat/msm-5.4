@@ -29,7 +29,6 @@
 #include <asm/mach/arch.h>
 #include <linux/irqchip/arm-gic.h>
 #include <asm/system_info.h>
-#include <asm/pmu.h>
 
 #include <plat/ambcache.h>
 
@@ -42,14 +41,6 @@ extern struct platform_device ambarella_rproc_ca9_a_and_b_dev;
 extern struct platform_device ambarella_rproc_ca9_a_and_arm11_dev;
 #endif /* CONFIG_RPROC_CA9_A */
 
-#ifdef CONFIG_PERF_EVENTS
-static struct platform_device pmu_device = {
-	.name			= "arm-pmu",
-	.id			= -1,
-	.num_resources		= 0,
-};
-#endif
-
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_eth0,
 	&ambarella_rtc0,
@@ -59,9 +50,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rproc_ca9_a_and_b_dev,
 	&ambarella_rproc_ca9_a_and_arm11_dev,
 #endif /* CONFIG_RPROC_CA9_A */
-#ifdef CONFIG_PERF_EVENTS
-	&pmu_device,
-#endif
 };
 
 static void __init ambarella_init_hyacinth(void)
