@@ -122,10 +122,8 @@ struct ambarella_eth_platform_info ambarella_eth0_platform_info = {
 #elif (CHIP_REV == S2)
 	.default_supported	= AMBARELLA_ETH_SUPPORTED_IPC_RX,
 #elif (CHIP_REV == S2L)
-	.default_supported	= (AMBARELLA_ETH_SUPPORTED_DUMP_TX |
-				AMBARELLA_ETH_SUPPORTED_DUMP_RX |
-				AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE |
-				AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL),
+	.default_supported	= (AMBARELLA_ETH_SUPPORTED_IPC_RX |
+				AMBARELLA_ETH_SUPPORTED_IPC_TX),
 #else
 	.default_supported	= 0,
 #endif
