@@ -54,12 +54,12 @@ static int usb_port_control = USB_PORT_NO_CONTROL;
 
 static inline void ambarella_switch_to_host(void)
 {
-	amba_setbitsl(USB_REFCLK_REG, 0x1<<5);
+	amba_setbitsl(USBP1_CTRL_REG, 0x1<<5);
 }
 
 static inline void ambarella_switch_to_device(void)
 {
-	amba_clrbitsl(USB_REFCLK_REG, 0x1<<5);
+	amba_clrbitsl(USBP1_CTRL_REG, 0x1<<5);
 }
 
 static irqreturn_t ambarella_otg_detect_irq(int irq, void *dev_id)
@@ -90,7 +90,7 @@ static int ambarella_uport_switcher_proc_show(struct seq_file *m, void *v)
 	const char *port_status;
 	const char *controller_status;
 
-	if (amba_rct_readl(USB_REFCLK_REG) & USB_PORT_IS_HOST) {
+	if (amba_rct_readl(USBP1_CTRL_REG) & USB_PORT_IS_HOST) {
 		controller_status = "HOST";
 	} else {
 		controller_status = "DEVICE";
@@ -203,7 +203,7 @@ static int __init ambarella_init_uport_switcher(void)
 			pr_err("%s: request uport_switcher gpio failed\n", __func__);
 			goto uport_switcher_err2;
 		}
-		if (amba_readl(USB_REFCLK_REG) & USB_PORT_IS_HOST) {
+		if (amba_readl(USBP1_CTRL_REG) & USB_PORT_IS_HOST) {
 			/* route D+/D- signal to host port */
 			usb_port_control = USB_PORT_TO_HOST;
 			ambarella_set_gpio_output(&ambarella_board_generic.uport_control, 1);

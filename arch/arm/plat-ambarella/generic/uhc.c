@@ -36,6 +36,15 @@
 
 static atomic_t usb_host_initialized = ATOMIC_INIT(0);
 
+static inline int ambarella_usb1_is_host(void)
+{
+#if (CHIP_REV == I1)
+	return !!(ambarella_board_generic.board_poc & 0x00008000);
+#elif (CHIP_REV == S2L)
+	return !(ambarella_board_generic.board_poc & 0x20000000);
+#endif
+}
+
 static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 {
 	unsigned long flags;
@@ -45,24 +54,22 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	if (atomic_inc_return(&usb_host_initialized) > 1)
 		return;
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 	/* Determine the polarity of over-current protect pin
 	 * bit16 == 1: high is normal, low will trigger the ocp interrupt
-	 * bit16 == 0: row is normal, high will trigger the ocp interrupt */
+	 * bit16 == 0: low is normal, high will trigger the ocp interrupt */
 	if ((ambarella_board_generic.uhc_use_ocp & (0x1<<16)) == 0)
 		amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
 	else
 		amba_clrbitsl(AHB_SCRATCHPAD_REG(0xc), 0x1<<13);
 #endif
 
+	/* FIXA12: OCP and PWR pins should be GPIO1234  */
 	pin_set = 0;
 	pin_clr = 0;
 
-#if (CHIP_REV == I1)
-	if (ambarella_board_generic.board_poc & USB1_IS_HOST)
-		pdata->usb1_is_host = 1;
-	else
-		pdata->usb1_is_host = 0;
+#if (CHIP_REV == I1) || (CHIP_REV == S2L)
+	pdata->usb1_is_host = ambarella_usb1_is_host();
 
 	/* GPIO8 and GPIO10 are programmed as hardware mode */
 	if (pdata->usb1_is_host) {
@@ -80,6 +87,7 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 		pin_set |= 0x1 << 7;
 	else
 		pin_clr |= 0x1 << 7;
+
 	ambarella_gpio_raw_lock(0, &flags);
 	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x3);
 	amba_setbitsl(GPIO0_REG(GPIO_AFSEL_OFFSET), pin_set);
@@ -93,9 +101,9 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	amba_rct_writel(ANA_PWR_REG, val | 0x4);
 	udelay(1);
 	/* UHC soft reset */
-	amba_rct_setbitsl(USB_REFCLK_REG, 0x80000000);
+	amba_rct_setbitsl(RCT_REG(0x2cc), 0x1);
 	udelay(1);
-	amba_rct_clrbitsl(USB_REFCLK_REG, 0x80000000);
+	amba_rct_clrbitsl(RCT_REG(0x2cc), 0x1);
 	udelay(1);
 	/* restore ana_pwr_reg */
 	amba_rct_writel(ANA_PWR_REG, val);
@@ -109,7 +117,6 @@ static void ambarella_disable_usb_host(struct ambarella_uhc_controller *pdata)
 
 	ambarella_disable_usb_port(UHC_OWN_PORT);
 }
-
 
 
 /* ==========================================================================*/

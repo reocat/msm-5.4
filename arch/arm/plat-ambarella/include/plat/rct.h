@@ -61,9 +61,13 @@
 #define FIO_RESET_FLASH_RST		0x00000001
 
 /* ==========================================================================*/
-#define USB_REFCLK_OFFSET		0x88
+#if (CHIP_REV == S2L)
+#define USBP1_CTRL_OFFSET		0x45c
+#else
+#define USBP1_CTRL_OFFSET		0x88
+#endif
 
-#define USB_REFCLK_REG			RCT_REG(USB_REFCLK_OFFSET)
+#define USBP1_CTRL_REG			RCT_REG(USBP1_CTRL_OFFSET)
 
 /* ==========================================================================*/
 #define PLL_AUDIO_CTRL_OFFSET		0x54

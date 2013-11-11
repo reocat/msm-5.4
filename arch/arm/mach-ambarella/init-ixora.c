@@ -124,6 +124,7 @@ struct platform_device ixora_board_input = {
 static void __init ambarella_init_ixora(void)
 {
 	int i;
+	int use_bub_default = 1;
 
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
 	system_rev = AMBARELLA_BOARD_VERSION(S2L,
@@ -184,6 +185,11 @@ static void __init ambarella_init_ixora(void)
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
+
+	if (use_bub_default) {
+		/* Config USB over-curent protection */
+		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
+	}
 
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {

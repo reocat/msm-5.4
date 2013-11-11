@@ -27,8 +27,8 @@
 #include <plat/rct.h>
 
 /* S2 share the usb port between UHC and UDC
- * I1 share the usb port1 between UHC and UDC */
-#if (CHIP_REV == I1) || (CHIP_REV == S2)
+ * I1 and S2L share the usb port1 between UHC and UDC */
+#if (CHIP_REV == I1) || (CHIP_REV == S2) || (CHIP_REV == S2L)
 static u32 ambarella_usb_port_owner = 0;
 #endif
 
@@ -36,7 +36,7 @@ void ambarella_enable_usb_port(int owner)
 {
 #if (CHIP_REV == A5S)
 	amba_setbitsl(ANA_PWR_REG, 0x4);	/* always on */
-#elif (CHIP_REV == I1)
+#elif (CHIP_REV == I1) || (CHIP_REV == S2L)
 	ambarella_usb_port_owner |= owner;
 	/* We must enable usb port1 first. Note: no matter usb port1 is
 	 * configured as Host or Slave, we always enable it. */
@@ -52,7 +52,7 @@ void ambarella_disable_usb_port(int owner)
 {
 #if (CHIP_REV == A5S)
 	amba_clrbitsl(ANA_PWR_REG, 0x6);
-#elif (CHIP_REV == I1)
+#elif (CHIP_REV == I1) || (CHIP_REV == S2L)
 	amba_clrbitsl(ANA_PWR_REG, 0x3000);
 	/* We disable usb port when neither UHC nor UDC use it */
 	ambarella_usb_port_owner &= (~owner);

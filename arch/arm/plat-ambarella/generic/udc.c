@@ -73,9 +73,9 @@ static void reset_usb(void)
 	amba_rct_writel(ANA_PWR_REG, val | 0x4);
 	udelay(1);
 	/* UDC soft reset */
-	amba_rct_setbitsl(USB_REFCLK_REG, 0x20000000);
+	amba_rct_setbitsl(USBP1_CTRL_REG, 0x20000000);
 	udelay(1);
-	amba_rct_clrbitsl(USB_REFCLK_REG, 0x20000000);
+	amba_rct_clrbitsl(USBP1_CTRL_REG, 0x20000000);
 	udelay(1);
 	/* restore ana_pwr_reg */
 	amba_rct_writel(ANA_PWR_REG, val);
