@@ -184,6 +184,10 @@ config PLAT_AMBARELLA_SUPPORT_SD
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_RPROC
+	bool
+	default n
+
 config PLAT_AMBARELLA_I1
 	bool
 	select PLAT_AMBARELLA_MEM_START_LOW
