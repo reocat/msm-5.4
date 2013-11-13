@@ -175,8 +175,47 @@
 #define DEFAULT_DEBUG_SIZE		(0x00008000)
 
 /* ==========================================================================*/
+/*
+ * Constants used to force the right instruction encodings and shifts
+ * so that all we need to do is modify the 8-bit constant field.
+ */
+#define __PV_BITS_31_24	0x81000000
+
+#ifdef CONFIG_ARM_PATCH_PHYS_VIRT
+#ifndef __ASSEMBLY__
+extern u32 ambarella_phys_to_virt(u32 paddr);
+extern u32 ambarella_virt_to_phys(u32 vaddr);
+extern unsigned long __pv_phys_offset;
+#define PHYS_OFFSET __pv_phys_offset
+
+#define __pv_stub(from,to,instr,type)			\
+	__asm__("@ __pv_stub\n"				\
+	"1:	" instr "	%0, %1, %2\n"		\
+	"	.pushsection .pv_table,\"a\"\n"		\
+	"	.long	1b\n"				\
+	"	.popsection\n"				\
+	: "=r" (to)					\
+	: "r" (from), "I" (type))
+
+static inline unsigned long __amb_raw_virt_to_phys(unsigned long x)
+{
+	unsigned long t;
+	__pv_stub(x, t, "add", __PV_BITS_31_24);
+	return t;
+}
+
+static inline unsigned long __amb_raw_phys_to_virt(unsigned long x)
+{
+	unsigned long t;
+	__pv_stub(x, t, "sub", __PV_BITS_31_24);
+	return t;
+}
+#endif /* __ASSEMBLY__ */
+#else /* CONFIG_ARM_PATCH_PHYS_VIRT */
 #define __amb_raw_virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
 #define __amb_raw_phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
+#endif /* CONFIG_ARM_PATCH_PHYS_VIRT */
+
 #if defined(CONFIG_AMBARELLA_IO_MAP)
 #define __virt_to_phys(x)		(ambarella_virt_to_phys(x))
 #define __phys_to_virt(x)		(ambarella_phys_to_virt(x))
