@@ -339,6 +339,28 @@ static struct clk clk_smp_twd = {
 };
 #endif
 #endif
+static struct clk gclk_idsp = {
+	.parent		= &pll_out_idsp,
+	.name		= "gclk_idsp",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_IDSP_POST_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 3) - 1,
+#if (CHIP_REV == S2L)
+	.extra_scaler	= 1,
+#else
+	.extra_scaler	= 0,
+#endif
+	.ops		= &ambarella_rct_scaler_ops,
+};
 
 /* ==========================================================================*/
 static u32 ambarella_timer_get_pll(void)
@@ -499,6 +521,7 @@ static inline void ambarella_cs_timer_init(void)
 	ambarella_clk_add(&clk_smp_twd);
 #endif
 #endif
+	ambarella_clk_add(&gclk_idsp);
 	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CS_TIMER_CTR_EN);
 	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CS_TIMER_CTR_OF);
 	amba_clrbitsl(TIMER_CTR_REG, AMBARELLA_CS_TIMER_CTR_CSL);
