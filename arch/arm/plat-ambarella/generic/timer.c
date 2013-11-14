@@ -221,6 +221,8 @@ static struct clk gclk_ahb = {
 	.lock_bit	= 0,
 #if (CHIP_REV == A5S)
 	.divider	= 1,
+#elif (CHIP_REV == S2L)
+	.divider	= 4,
 #else
 	.divider	= 2,
 #endif
@@ -248,6 +250,8 @@ static struct clk gclk_apb = {
 	.lock_bit	= 0,
 #if (CHIP_REV == A5S)
 	.divider	= 2,
+#elif (CHIP_REV == S2L)
+	.divider	= 8,
 #else
 	.divider	= 4,
 #endif
