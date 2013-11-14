@@ -112,6 +112,8 @@ struct ambeth_info {
 	int					oldspeed;
 	int					oldduplex;
 	int					oldlink;
+	int					oldpause;
+	int					oldasym_pause;
 
 	struct net_device_stats			stats;
 	struct napi_struct			napi;
@@ -329,6 +331,8 @@ static inline void ambhw_get_hwaddr(struct ambeth_info *lp, u8 *hwaddr)
 	hwaddr[0] = ((lval >> 0) & 0xff);
 }
 
+static void ambeth_fc_resolve(struct ambeth_info *lp);
+
 static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
 {
 	u32 val;
@@ -357,6 +361,7 @@ static inline void ambhw_set_link_mode_speed(struct ambeth_info *lp)
 		val |= ETH_MAC_CFG_DO;
 	}
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET, val);
+	ambeth_fc_resolve(lp);
 }
 
 static inline int ambhw_enable(struct ambeth_info *lp)
@@ -376,6 +381,17 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 		lp->platform_info->default_dma_opmode);
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
 		(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE));
+
+	/*
+	 * (512 bits / N) * pause_time = actual pause time
+	 * ex:
+	 *     512 bits / 1 Gbps * 1954 = ~0.0010 sec = 1 ms
+	 *     512 bits / 100 Mbps * 1954 = ~0.010 sec = 10 ms
+	 */
+	amba_writel(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET,
+		ETH_MAC_FLOW_CTR_PLT_256 |
+		ETH_MAC_FLOW_CTR_PT(lp->platform_info->pause_time));
+
 	if (lp->platform_info->default_supported &
 		AMBARELLA_ETH_SUPPORTED_IPC_RX) {
 		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
@@ -575,6 +591,12 @@ static void ambeth_adjust_link(struct net_device *ndev)
 				break;
 			}
 		}
+		if (phydev->pause != lp->oldpause ||
+		    phydev->asym_pause != lp->oldasym_pause) {
+			lp->oldpause = phydev->pause;
+			lp->oldasym_pause = phydev->asym_pause;
+			need_update = 1;
+		}
 		if (lp->oldlink != phydev->link) {
 			need_update = 1;
 			lp->oldlink = phydev->link;
@@ -592,6 +614,119 @@ static void ambeth_adjust_link(struct net_device *ndev)
 			phy_print_status(phydev);
 	}
 	spin_unlock_irqrestore(&lp->lock, flags);
+}
+
+static void ambeth_fc_config(struct ambeth_info *lp)
+{
+	u32					sup;
+	u32					flow_ctr;
+	u32					adv;
+
+	sup = lp->phydev->supported;
+	adv = lp->phydev->advertising;
+	flow_ctr = lp->platform_info->flow_ctr;
+
+	sup |= (SUPPORTED_Pause | SUPPORTED_Asym_Pause);
+	adv &= ~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
+
+	sup &= lp->platform_info->phy_supported;
+
+	if (!(sup & (SUPPORTED_Pause | SUPPORTED_Asym_Pause)))
+		goto unsupported;
+
+        if (lp->platform_info->mii_fixed_speed != SPEED_UNKNOWN)
+		goto autoneg_unsupported;
+
+	if (!(sup & SUPPORTED_Autoneg) ||
+	    !(flow_ctr & AMBARELLA_ETH_FC_AUTONEG))
+		goto autoneg_unsupported;
+
+	if (flow_ctr & AMBARELLA_ETH_FC_RX) {
+		/*
+		 * Being able to decode pause frames is sufficently to
+		 * advertise that we support both sym. and asym. pause.
+		 * It doesn't matter if send pause frame or not.
+                 */
+		adv |= (ADVERTISED_Pause | ADVERTISED_Asym_Pause);
+		goto done;
+	}
+
+	if (flow_ctr & AMBARELLA_ETH_FC_TX) {
+		/* Tell the link parter that we do send the pause frame. */
+		adv |= ADVERTISED_Asym_Pause;
+		goto done;
+	}
+	goto done;
+
+autoneg_unsupported:
+	/* Sanitize the config value */
+	lp->platform_info->flow_ctr &= ~AMBARELLA_ETH_FC_AUTONEG;
+
+	/* Advertise nothing about pause frame */
+	adv &= ~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
+	goto done;
+
+unsupported:
+	/* Sanitize the config value */
+	lp->platform_info->flow_ctr &= ~(AMBARELLA_ETH_FC_AUTONEG |
+					 AMBARELLA_ETH_FC_RX |
+					 AMBARELLA_ETH_FC_TX);
+done:
+	lp->phydev->advertising = adv;
+	lp->phydev->supported = sup;
+	dev_info(&lp->ndev->dev, "adv: sym %d, asym: %d\n",
+		 !!(adv & ADVERTISED_Pause),
+		 !!(adv & ADVERTISED_Asym_Pause));
+}
+
+static void ambeth_fc_resolve(struct ambeth_info *lp)
+{
+	u32					flow_ctr;
+	u32					fc;
+	u32					old_fc;
+
+	flow_ctr = lp->platform_info->flow_ctr;
+
+	if (!(flow_ctr & AMBARELLA_ETH_FC_AUTONEG))
+		goto force_setting;
+
+	fc = old_fc = amba_readl(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET);
+
+	dev_info(&lp->ndev->dev, "lp: sym: %d, asym: %d\n",
+		 lp->phydev->pause, lp->phydev->asym_pause);
+	/*
+	 * Decode pause frames only if user specified, and the link
+	 * partner could send them on the same time.
+	 */
+	if ((flow_ctr & AMBARELLA_ETH_FC_RX) &&
+	    (lp->phydev->pause || lp->phydev->asym_pause))
+		fc |= ETH_MAC_FLOW_CTR_RFE;
+	else
+		fc &= ~ETH_MAC_FLOW_CTR_RFE;
+
+	/*
+	 * Send pause frames only if user specified, and the link
+	 * partner can resopnds to them on the same time.
+	 */
+	if ((flow_ctr & AMBARELLA_ETH_FC_TX) && lp->phydev->pause)
+		fc |= ETH_MAC_FLOW_CTR_TFE;
+	else
+		fc &= ~ETH_MAC_FLOW_CTR_TFE;
+
+	if (fc != old_fc)
+		amba_writel(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET, fc);
+
+	return;
+
+force_setting:
+
+	if (flow_ctr & AMBARELLA_ETH_FC_TX)
+		amba_setbitsl(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET,
+			ETH_MAC_FLOW_CTR_TFE);
+
+	if (flow_ctr & AMBARELLA_ETH_FC_RX)
+		amba_setbitsl(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET,
+			ETH_MAC_FLOW_CTR_RFE);
 }
 
 static int ambeth_phy_start(struct ambeth_info *lp)
@@ -696,7 +831,10 @@ ambeth_init_phy_connect:
 	lp->phydev = phydev;
 	spin_unlock_irqrestore(&lp->lock, flags);
 
+	ambeth_fc_config(lp);
 	ret_val = phy_start_aneg(phydev);
+
+	ambeth_fc_resolve(lp);
 
 ambeth_init_phy_exit:
 	return ret_val;
@@ -924,6 +1062,19 @@ static inline void ambeth_check_dma_error(struct ambeth_info *lp,
 			ambhw_dump(lp);
 		}
 	}
+}
+
+static inline void ambeth_pause_frame(struct ambeth_info *lp)
+{
+	u32					fc;
+
+	fc = amba_readl(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET);
+	if (!(fc & ETH_MAC_FLOW_CTR_TFE))
+		return;
+
+	fc |= ETH_MAC_FLOW_CTR_FCBBPA;
+
+	amba_writel(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET, fc);
 }
 
 static inline void ambeth_interrupt_rx(struct ambeth_info *lp, u32 irq_status)
@@ -1897,6 +2048,82 @@ static void ambeth_set_msglevel(struct net_device *ndev, u32 value)
 	lp->msg_enable = value;
 }
 
+static void ambeth_get_pauseparam(struct net_device *ndev,
+				  struct ethtool_pauseparam *pause)
+{
+	struct ambeth_info *lp;
+	u32 flow_ctr;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+	flow_ctr = lp->platform_info->flow_ctr;
+
+	pause->autoneg = (flow_ctr & AMBARELLA_ETH_FC_AUTONEG) ?
+				AUTONEG_ENABLE : AUTONEG_DISABLE;
+
+	pause->rx_pause = (flow_ctr & AMBARELLA_ETH_FC_RX) ? 1 : 0;
+	pause->tx_pause = (flow_ctr & AMBARELLA_ETH_FC_TX) ? 1 : 0;
+}
+
+static int ambeth_set_pauseparam(struct net_device *ndev,
+				 struct ethtool_pauseparam *pause)
+{
+	int ret_val = 0;
+	struct ambeth_info *lp;
+	u32 flow_ctr;
+
+	lp = (struct ambeth_info *)netdev_priv(ndev);
+
+	/*
+	 * Symmeteric pause can respond to recieved pause frames, and
+	 * send pause frames to the link partner.
+	 *
+	 * Asymmetric pause can send pause frames, but can't respond to
+	 * pause frames from the link partner.
+	 *
+	 * Autoneg only advertises and reports the 'cap (or will)' of
+	 * the link partner. The final resolution still has to be done in
+	 * MAC / Driver.
+	 *
+	 * Since our MAC can support both directions independently, we
+	 * advertise our 'cap' to the link partner based on the
+	 * pauseparam specified by the user (ethtool). And take the
+	 * 'cap' of the link partner reported into consideration for
+	 * makeing the final resolution.
+	 */
+
+	flow_ctr = lp->platform_info->flow_ctr;
+
+	if (pause->autoneg)
+		flow_ctr |= AMBARELLA_ETH_FC_AUTONEG;
+	else
+		flow_ctr &= ~AMBARELLA_ETH_FC_AUTONEG;
+
+	if (pause->rx_pause)
+		flow_ctr |= AMBARELLA_ETH_FC_RX;
+	else
+		flow_ctr &= ~AMBARELLA_ETH_FC_RX;
+
+	if (pause->tx_pause)
+		flow_ctr |= AMBARELLA_ETH_FC_TX;
+	else
+		flow_ctr &= ~AMBARELLA_ETH_FC_TX;
+
+	lp->platform_info->flow_ctr = flow_ctr;
+	ambeth_fc_config(lp);
+
+	if (pause->autoneg && lp->phydev->autoneg) {
+
+		ret_val = phy_start_aneg(lp->phydev);
+		if (ret_val)
+			goto done;
+	}
+	else {
+		ambeth_fc_resolve(lp);
+	}
+done:
+	return ret_val;
+}
+
 static const struct ethtool_ops ambeth_ethtool_ops = {
 	.get_settings		= ambeth_get_settings,
 	.set_settings		= ambeth_set_settings,
@@ -1906,6 +2133,8 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 	.set_dump		= ambeth_set_dump,
 	.get_msglevel		= ambeth_get_msglevel,
 	.set_msglevel		= ambeth_set_msglevel,
+	.get_pauseparam		= ambeth_get_pauseparam,
+	.set_pauseparam		= ambeth_set_pauseparam,
 };
 
 /* ==========================================================================*/

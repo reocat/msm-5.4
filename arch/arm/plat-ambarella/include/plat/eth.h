@@ -359,6 +359,10 @@
 #define AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE	(1 << 29)
 #define AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL	(1 << 28)
 
+#define AMBARELLA_ETH_FC_AUTONEG		(1 << 0)
+#define AMBARELLA_ETH_FC_RX			(1 << 1)
+#define AMBARELLA_ETH_FC_TX			(1 << 2)
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
@@ -377,6 +381,8 @@ struct ambarella_eth_platform_info {
 	u32					mii_retry_tmo;
 	u32					mii_fixed_speed;
 	u32					mii_fixed_duplex;
+	u32					flow_ctr;
+	u32					pause_time;
 
 	u32					default_tx_ring_size;
 	u32					default_rx_ring_size;
