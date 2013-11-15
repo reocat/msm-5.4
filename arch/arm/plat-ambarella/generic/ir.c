@@ -75,7 +75,11 @@ static struct clk *ambarella_ir_register_clk(void)
 
 static void ambarella_ir_set_pll(void)
 {
+	u32 ir_freq;
+
 	ambarella_ir_register_clk();
+	ir_freq = 13000;
+	clk_set_rate(ambarella_ir_register_clk(), ir_freq);
 }
 
 static u32 ambarella_ir_get_pll(void)
@@ -95,11 +99,19 @@ struct resource ambarella_ir_resources[] = {
 		.end	= IRIF_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
+#if (CHIP_REV == S2L)
+	[2] = {
+		.start	= GPIO(33),
+		.end	= GPIO(33),
+		.flags	= IORESOURCE_IO,
+	},
+#else
 	[2] = {
 		.start	= GPIO(35),
 		.end	= GPIO(35),
 		.flags	= IORESOURCE_IO,
 	},
+#endif
 };
 
 struct ambarella_ir_controller ambarella_platform_ir_controller0 = {
