@@ -182,7 +182,7 @@ static struct clk *ambarella_ssi_ahb_register_clk(void)
 
 	pgclk_ssi_ahb = clk_get(NULL, "gclk_ssi_ahb");
 	if (IS_ERR(pgclk_ssi_ahb)) {
-		pgclk_ahb = clk_get(NULL, "gclk_ahb");
+		pgclk_ahb = clk_get(NULL, "pll_out_core");
 		if (IS_ERR(pgclk_ahb)) {
 			BUG();
 		}
@@ -200,13 +200,10 @@ static void ambarella_ssi_ahb_set_pll(void)
 	u32 freq_hz = 13500000;
 
 	clk_set_rate(ambarella_ssi_ahb_register_clk(), freq_hz);
-	printk("getrate=%d\n",clk_get_rate(ambarella_ssi_ahb_register_clk()));
 }
 
 static u32 ambarella_ssi_ahb_get_pll(void)
 {
-	printk("2 etrate=%d\n",clk_get_rate(ambarella_ssi_ahb_register_clk()));
-
 	return clk_get_rate(ambarella_ssi_ahb_register_clk());
 }
 #endif
