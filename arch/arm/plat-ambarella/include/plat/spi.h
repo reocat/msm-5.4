@@ -202,8 +202,13 @@
 #define SSI0_CLK	GPIO(2)
 #define SSI0_MOSI	GPIO(3)
 #define SSI0_MISO	GPIO(4)
+#if (CHIP_REV == S2L)
+#define SSI0_EN0	GPIO(37)
+#define SSI0_EN1	GPIO(38)
+#else
 #define SSI0_EN0	GPIO(5)
 #define SSI0_EN1	GPIO(6)
+#endif
 #if (CHIP_REV == S2)
 #define SSIO_EN2	GPIO(7)
 #define SSIO_EN3	GPIO(9)

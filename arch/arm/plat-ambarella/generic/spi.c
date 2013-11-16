@@ -77,7 +77,7 @@ static struct clk *ambarella_ssi_register_clk(void)
 
 	return pgclk_ssi;
 }
-
+#if 0
 static void ambarella_ssi_set_pll(void)
 {
 #if (CHIP_REV == I1) || (CHIP_REV == A8)
@@ -90,10 +90,12 @@ static void ambarella_ssi_set_pll(void)
 	clk_set_rate(ambarella_ssi_register_clk(), freq_hz);
 }
 
+
 static u32 ambarella_ssi_get_pll(void)
 {
 	return clk_get_rate(ambarella_ssi_register_clk());
 }
+#endif
 
 #if (SPI_MASTER_INSTANCES >= 2)
 static struct clk gclk_ssi2 = {
@@ -180,7 +182,6 @@ static struct clk *ambarella_ssi_ahb_register_clk(void)
 
 	pgclk_ssi_ahb = clk_get(NULL, "gclk_ssi_ahb");
 	if (IS_ERR(pgclk_ssi_ahb)) {
-		printk("cddiao cant't get gclk_ssi_ahb\n");
 		pgclk_ahb = clk_get(NULL, "gclk_ahb");
 		if (IS_ERR(pgclk_ahb)) {
 			BUG();
@@ -196,12 +197,16 @@ static struct clk *ambarella_ssi_ahb_register_clk(void)
 
 static void ambarella_ssi_ahb_set_pll(void)
 {
-	u32 freq_hz = 54000000;
+	u32 freq_hz = 13500000;
+
 	clk_set_rate(ambarella_ssi_ahb_register_clk(), freq_hz);
+	printk("getrate=%d\n",clk_get_rate(ambarella_ssi_ahb_register_clk()));
 }
 
 static u32 ambarella_ssi_ahb_get_pll(void)
 {
+	printk("2 etrate=%d\n",clk_get_rate(ambarella_ssi_ahb_register_clk()));
+
 	return clk_get_rate(ambarella_ssi_ahb_register_clk());
 }
 #endif

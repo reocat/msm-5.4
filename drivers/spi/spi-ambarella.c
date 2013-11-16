@@ -418,10 +418,13 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 	amba_writel(priv->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
 	ssi_clk	= priv->pinfo->get_ssi_freq_hz();
-
+	printk("msg->spi->max_speed_hz=%d ssi_clk=%d\n",msg->spi->max_speed_hz,ssi_clk);
 	if(msg->spi->max_speed_hz == 0 || msg->spi->max_speed_hz > ssi_clk / 2)
 	    msg->spi->max_speed_hz = ssi_clk / 2;
+	printk("2 msg->spi->max_speed_hz=%d\n",msg->spi->max_speed_hz);
+
 	sckdv = (u16)(((ssi_clk / msg->spi->max_speed_hz) + 0x01) & 0xfffe);
+	printk("sckdv=%d\n",sckdv);
 	amba_writel(priv->regbase + SPI_BAUDR_OFFSET, sckdv);
 
 	priv->chip_select	= 0;
