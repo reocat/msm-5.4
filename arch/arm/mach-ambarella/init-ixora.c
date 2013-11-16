@@ -177,13 +177,6 @@ struct platform_device ixora_board_input = {
 	}
 };
 
-static struct platform_device *ambarella_pwm_devices[] __initdata = {
-	&ambarella_pwm_platform_device0,
-	/*&ambarella_pwm_platform_device1,
-	&ambarella_pwm_platform_device2,
-	&ambarella_pwm_platform_device3,
-	&ambarella_pwm_platform_device4,*/
-};
 
 
 /* ==========================================================================*/
@@ -258,13 +251,6 @@ static void __init ambarella_init_ixora(void)
 	}
 
 
-	for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
-		ret = platform_device_register(ambarella_pwm_devices[i]);
-		if (ret)
-			continue;
-		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
-	}
 
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {
