@@ -410,7 +410,6 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 
 	ctrlr0	&= 0xfffffff0;
 	ctrlr0	|= (priv->bpw - 1);
-
 	ctrlr0	&= (~((1 << 6) | (1 << 7)));
 	ctrlr0	|= ((msg->spi->mode & (SPI_CPHA | SPI_CPOL)) << 6);
 	if (msg->spi->mode & SPI_LOOP) {
@@ -419,6 +418,7 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 	amba_writel(priv->regbase + SPI_CTRLR0_OFFSET, ctrlr0);
 
 	ssi_clk	= priv->pinfo->get_ssi_freq_hz();
+	
 	if(msg->spi->max_speed_hz == 0 || msg->spi->max_speed_hz > ssi_clk / 2)
 	    msg->spi->max_speed_hz = ssi_clk / 2;
 	sckdv = (u16)(((ssi_clk / msg->spi->max_speed_hz) + 0x01) & 0xfffe);
@@ -436,6 +436,7 @@ static void ambarella_spi_prepare_message(struct ambarella_spi *priv)
 	} else {
 		ambarella_gpio_set(cs_pin, GPIO_LOW);
 	}
+	
 }
 
 static int ambarella_spi_main_entry(struct spi_device *spi, struct spi_message *msg)

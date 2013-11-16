@@ -85,7 +85,59 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_dma,
 	&ambarella_nand,
 	&ambarella_rtc0,
+	&ambarella_spi0,
+	//&ambarella_spi_slave,
 };
+
+/* ==========================================================================*/
+static struct spi_board_info ambarella_spi_devices[] = {
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 0,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 1,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 2,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 3,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 4,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 5,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 6,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 0,
+		.chip_select	= 7,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 1,
+		.chip_select	= 0,
+	},
+};
+
 
 /* ==========================================================================*/
 static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
@@ -125,10 +177,19 @@ struct platform_device ixora_board_input = {
 	}
 };
 
+static struct platform_device *ambarella_pwm_devices[] __initdata = {
+	&ambarella_pwm_platform_device0,
+	/*&ambarella_pwm_platform_device1,
+	&ambarella_pwm_platform_device2,
+	&ambarella_pwm_platform_device3,
+	&ambarella_pwm_platform_device4,*/
+};
+
+
 /* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
-	int i;
+	int i,ret;
 	int use_bub_default = 1;
 
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
@@ -196,6 +257,15 @@ static void __init ambarella_init_ixora(void)
 		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
 	}
 
+
+	for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
+		ret = platform_device_register(ambarella_pwm_devices[i]);
+		if (ret)
+			continue;
+		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
+		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
+	}
+
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {
 		device_set_wakeup_capable(&ixora_devices[i]->dev, 1);
@@ -207,6 +277,9 @@ static void __init ambarella_init_ixora(void)
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
+
+	spi_register_board_info(ambarella_spi_devices,
+		ARRAY_SIZE(ambarella_spi_devices));
 
 	platform_device_register(&ixora_board_input);
 }

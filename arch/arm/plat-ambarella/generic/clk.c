@@ -830,7 +830,10 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 			divident = divident + frac;
 		}
 	}
-
+	if(divider == 0){
+		c->rate = 0;
+		return c->rate;
+	}
 	AMBCLK_DO_DIV(divident, divider);
 	c->rate = divident;
 

@@ -82,7 +82,7 @@ static void ambarella_ssi_set_pll(void)
 {
 #if (CHIP_REV == I1) || (CHIP_REV == A8)
 	u32 freq_hz = 54000000;
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
 	u32 freq_hz = 60000000;
 #else
 	u32 freq_hz = 13500000;
@@ -176,15 +176,16 @@ static struct clk gclk_ssi_ahb = {
 static struct clk *ambarella_ssi_ahb_register_clk(void)
 {
 	struct clk *pgclk_ssi_ahb = NULL;
-	struct clk *pgclk_apb = NULL;
+	struct clk *pgclk_ahb = NULL;
 
 	pgclk_ssi_ahb = clk_get(NULL, "gclk_ssi_ahb");
 	if (IS_ERR(pgclk_ssi_ahb)) {
-		pgclk_apb = clk_get(NULL, "gclk_apb");
-		if (IS_ERR(pgclk_apb)) {
+		printk("cddiao cant't get gclk_ssi_ahb\n");
+		pgclk_ahb = clk_get(NULL, "gclk_ahb");
+		if (IS_ERR(pgclk_ahb)) {
 			BUG();
 		}
-		gclk_ssi_ahb.parent = pgclk_apb;
+		gclk_ssi_ahb.parent = pgclk_ahb;
 		ambarella_clk_add(&gclk_ssi_ahb);
 		pgclk_ssi_ahb = &gclk_ssi_ahb;
 		pr_info("SYSCLK:PWM[%lu]\n", clk_get_rate(pgclk_ssi_ahb));
@@ -249,8 +250,8 @@ struct resource ambarella_spi0_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= SSI_IRQ,
-		.end	= SSI_IRQ,
+		.start	= SSI_MASTER_IRQ,
+		.end	= SSI_MASTER_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
 };
@@ -281,8 +282,8 @@ struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
 	.cs_high		= ambarella_spi0_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= ambarella_ssi_set_pll,
-	.get_ssi_freq_hz	= ambarella_ssi_get_pll,
+	.rct_set_ssi_pll	= ambarella_ssi_ahb_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi_ahb_get_pll,
 };
 
 struct platform_device ambarella_spi0 = {

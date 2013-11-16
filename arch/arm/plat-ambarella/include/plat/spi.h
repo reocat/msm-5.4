@@ -75,9 +75,15 @@
 #endif
 
 /* ==========================================================================*/
+#if  (CHIP_REV == S2L)
+#define SPI_OFFSET			0x20000
+#define SPI_BASE			(AHB_BASE + SPI_OFFSET)
+#define SPI_REG(x)			(SPI_BASE + (x))
+#else
 #define SPI_OFFSET			0x2000
 #define SPI_BASE			(APB_BASE + SPI_OFFSET)
 #define SPI_REG(x)			(SPI_BASE + (x))
+#endif
 
 #if (SPI_SLAVE_INSTANCES >= 1)
 #if (CHIP_REV == A7L)
@@ -120,7 +126,7 @@
 #endif
 
 // Fix it!
-#define SPI_MASTER_INSTANCES		(SPI_INSTANCES)
+#define SPI_MASTER_INSTANCES		(1)//debug spi0 first
 
 /* ==========================================================================*/
 /* SPI_FIFO_SIZE */
