@@ -350,7 +350,7 @@ struct resource ambarella_spi1_resources[] = {
 };
 #endif
 
-int ambarella_spi1_cs_pins[] = {SSI2_0EN, SSI2_1EN, SSI2_2EN, SSI2_3EN};
+int ambarella_spi1_cs_pins[] = {SSI2_0EN, -1,-1,-1};
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
 AMBA_SPI_CS_PINS_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 #endif
