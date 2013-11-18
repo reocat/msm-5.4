@@ -258,10 +258,18 @@ struct resource ambarella_spi0_resources[] = {
 	},
 };
 
+#if (CHIP_REV == S2L)
+int ambarella_spi0_cs_pins[] = {
+	SSI0_EN0, SSI0_EN1,// SSIO_EN2, SSIO_EN3, only support en0 en1 on a12,
+	                   // enc2 is ok, but enc3 seems controled by net phy on hardware
+};
+#else
 int ambarella_spi0_cs_pins[] = {
 	SSI0_EN0, SSI0_EN1, SSIO_EN2, SSIO_EN3,
 	SSI_4_N, SSI_5_N, SSI_6_N, SSI_7_N
 };
+#endif
+
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
 AMBA_SPI_CS_PINS_PARAM_CALL(0, ambarella_spi0_cs_pins, 0644);
 #endif
@@ -314,6 +322,19 @@ struct resource ambarella_spi1_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+#elif (CHIP_REV == S2L)
+struct resource ambarella_spi1_resources[] = {
+	[0] = {
+		.start	= SPI2_BASE,
+		.end	= SPI2_BASE + 0x0FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= SSI_IRQ,
+		.end	= SSI_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
 #else
 struct resource ambarella_spi1_resources[] = {
 	[0] = {
@@ -329,12 +350,11 @@ struct resource ambarella_spi1_resources[] = {
 };
 #endif
 
-int ambarella_spi1_cs_pins[] = {SSI2_0EN, -1, -1, -1, -1, -1, -1, -1};
+int ambarella_spi1_cs_pins[] = {SSI2_0EN, SSI2_1EN, SSI2_2EN, SSI2_3EN};
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
 AMBA_SPI_CS_PINS_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 #endif
 int ambarella_spi1_cs_high[] = {
-	0, 0, 0, 0,
 	0, 0, 0, 0,
 };
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
@@ -348,8 +368,8 @@ struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
 	.cs_high		= ambarella_spi1_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
-	.rct_set_ssi_pll	= ambarella_ssi2_set_pll,
-	.get_ssi_freq_hz	= ambarella_ssi2_get_pll,
+	.rct_set_ssi_pll	= ambarella_ssi_ahb_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi_ahb_get_pll,
 };
 
 struct platform_device ambarella_spi1 = {

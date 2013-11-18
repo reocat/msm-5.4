@@ -75,11 +75,7 @@
 #endif
 
 /* ==========================================================================*/
-#if  (CHIP_REV == S2L)
-#define SPI_OFFSET			0x20000
-#define SPI_BASE			(AHB_BASE + SPI_OFFSET)
-#define SPI_REG(x)			(SPI_BASE + (x))
-#else
+#if (SPI_INSTANCES >= 1)
 #define SPI_OFFSET			0x2000
 #define SPI_BASE			(APB_BASE + SPI_OFFSET)
 #define SPI_REG(x)			(SPI_BASE + (x))
@@ -113,10 +109,20 @@
 #define SPI4_REG(x)			(SPI4_BASE + (x))
 #endif
 
-#if (SPI_AHB_INSTANCES >= 1)
+#if (SPI_AHB_INSTANCES == 1)
 #define SSI_DMA_OFFSET			0xD000
 #define SSI_DMA_BASE			(AHB_BASE + SSI_DMA_OFFSET)
 #define SSI_DMA_REG(x)			(SSI_DMA_BASE + (x))
+#endif
+
+#if (SPI_AHB_INSTANCES == 2)
+#define SPI_OFFSET			0x20000
+#define SPI_BASE			(AHB_BASE + SPI_OFFSET)
+#define SPI_REG(x)			(SPI_BASE + (x))
+
+#define SPI2_OFFSET			0x21000
+#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
+#define SPI2_REG(x)			(SPI2_BASE + (x))
 #endif
 
 #if (SPI_AHB_SLAVE_INSTANCES >= 1)
@@ -126,7 +132,11 @@
 #endif
 
 // Fix it!
-#define SPI_MASTER_INSTANCES		(1)//debug spi0 first
+#if (CHIP_REV == S2L)
+#define SPI_MASTER_INSTANCES		(SPI_AHB_INSTANCES)
+#else
+#define SPI_MASTER_INSTANCES		(SPI_INSTANCES)
+#endif
 
 /* ==========================================================================*/
 /* SPI_FIFO_SIZE */
@@ -212,6 +222,9 @@
 #if (CHIP_REV == S2)
 #define SSIO_EN2	GPIO(7)
 #define SSIO_EN3	GPIO(9)
+#elif (CHIP_REV == S2L)
+#define SSIO_EN2	GPIO(23)
+#define SSIO_EN3	GPIO(26)
 #else
 #define SSIO_EN2	GPIO(48)
 #define SSIO_EN3	GPIO(49)
@@ -233,10 +246,20 @@
 #define SSI_7_N		GPIO(80)
 #endif
 
+#if (CHIP_REV == S2L)
+#define SSI2CLK		GPIO(7)
+#define SSI2MOSI	GPIO(8)
+#define SSI2MISO	GPIO(9)
+#define SSI2_0EN	GPIO(10)
+#define SSI2_1EN	GPIO(11)
+#define SSI2_2EN	GPIO(12)
+#define SSI2_3EN	GPIO(13)
+#else
 #define SSI2CLK		GPIO(88)
 #define SSI2MOSI	GPIO(89)
 #define SSI2MISO	GPIO(90)
 #define SSI2_0EN	GPIO(91)
+#endif
 
 #define SSI3_EN0	GPIO(128)
 #define SSI3_EN1	GPIO(129)

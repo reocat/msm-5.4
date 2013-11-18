@@ -86,6 +86,7 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_nand,
 	&ambarella_rtc0,
 	&ambarella_spi0,
+	&ambarella_spi1,
 	//&ambarella_spi_slave,
 };
 
@@ -101,6 +102,7 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 0,
 		.chip_select	= 1,
 	},
+#if 0
 	{
 		.modalias	= "spidev",
 		.bus_num	= 0,
@@ -111,30 +113,26 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 0,
 		.chip_select	= 3,
 	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 6,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 7,
-	},
+#endif
 	{
 		.modalias	= "spidev",
 		.bus_num	= 1,
 		.chip_select	= 0,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 1,
+		.chip_select	= 1,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 1,
+		.chip_select	= 2,
+	},
+	{
+		.modalias	= "spidev",
+		.bus_num	= 1,
+		.chip_select	= 3,
 	},
 };
 
@@ -216,6 +214,11 @@ static void __init ambarella_init_ixora(void)
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF800001F);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x00878000);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 2)), 0x07000000);
+
+	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF8000017);//debug ssi1
+	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x0087bf88);
+	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 2)), 0x07000000);
+
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 0)), 0x003FFFFF);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 1)), 0xFFC00000);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 2)), 0x00000000);
