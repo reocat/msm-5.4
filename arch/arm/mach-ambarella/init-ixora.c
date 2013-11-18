@@ -180,7 +180,7 @@ struct platform_device ixora_board_input = {
 /* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
-	int i,ret;
+	int i;
 	int use_bub_default = 1;
 
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
