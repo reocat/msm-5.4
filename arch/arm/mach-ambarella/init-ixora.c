@@ -212,7 +212,7 @@ static void __init ambarella_init_ixora(void)
 	amba_writel(GPIO3_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
 
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF800001F);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x00878000);
+	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x00FF8000);
 	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 2)), 0x07000000);
 
 	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF8000017);//debug ssi1
