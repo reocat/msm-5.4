@@ -302,8 +302,6 @@ static void __init ambarella_init_ixora(void)
 		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
 
 		ambarella_platform_sd0_controller.max_clock = 48000000;
-		ambarella_platform_sd0_controller.slot[0].default_caps |=
-			(MMC_CAP_8_BIT_DATA);
 		ambarella_platform_sd0_controller.slot[0].private_caps |=
 			(AMBA_SD_PRIVATE_CAPS_VDD_18 |
 			AMBA_SD_PRIVATE_CAPS_ADMA);
@@ -320,6 +318,8 @@ static void __init ambarella_init_ixora(void)
 			ixora_bub_sdio_set_vdd;
 
 		ambarella_platform_sd2_controller.max_clock = 12000000;
+		ambarella_platform_sd2_controller.slot[0].default_caps |=
+			(MMC_CAP_8_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST);
 		ambarella_platform_sd2_controller.slot[0].private_caps |=
 			(AMBA_SD_PRIVATE_CAPS_ADMA);
 	}
