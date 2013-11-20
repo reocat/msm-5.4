@@ -290,10 +290,11 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 		return IRQ_HANDLED;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-
+#if (CHIP_REV == S2L)
+#else
 		if (i == FIO_DMA_CHAN)
 			continue;
-
+#endif
 		spin_lock(&amb_dma->amb_chan[i].lock);
 		if (int_src & (1 << i)) {
 			amba_writel(DMA_CHAN_STA_REG(i), 0);
@@ -922,10 +923,11 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 	/* init dma_chan struct */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-
+#if (CHIP_REV == S2L)
+#else
 		if (i == FIO_DMA_CHAN)
 			continue;
-
+#endif
 		amb_chan = &amb_dma->amb_chan[i];
 
 		spin_lock_init(&amb_chan->lock);
@@ -1018,10 +1020,11 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 	int i;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-
+#if (CHIP_REV == S2L)
+#else
 		if (i == FIO_DMA_CHAN)
 			continue;
-
+#endif
 		amb_chan = &amb_dma->amb_chan[i];
 		ambdma_stop_channel(amb_chan);
 
