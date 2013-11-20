@@ -35,6 +35,7 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
+#include <linux/mmc/sd.h>
 
 #include <asm/dma.h>
 
@@ -1105,15 +1106,18 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 	case MMC_TIMING_UHS_SDR104:
 		amba_clrbitsl(pinfo->regbase + SD_XC_CTR_OFFSET,
 			SD_XC_CTR_DDR_EN);
+		amba_clrbitsw(pinfo->regbase + SD_HOST2_OFFSET, 0x0004);
 		break;
 	case MMC_TIMING_UHS_DDR50:
 		hostr |= SD_HOST_HIGH_SPEED;
 		amba_setbitsl(pinfo->regbase + SD_XC_CTR_OFFSET,
 			SD_XC_CTR_DDR_EN);
+		amba_setbitsw(pinfo->regbase + SD_HOST2_OFFSET, 0x0004);
 		break;
 	default:
 		amba_clrbitsl(pinfo->regbase + SD_XC_CTR_OFFSET,
 			SD_XC_CTR_DDR_EN);
+		amba_clrbitsw(pinfo->regbase + SD_HOST2_OFFSET, 0x0004);
 		ambsd_err(pslotinfo, "Unknown timing[%d], assume legacy.\n",
 			ios->timing);
 		break;
@@ -1591,57 +1595,50 @@ static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		ambarella_sd_disable_int(mmc, SD_NISEN_CARD);
 }
 
-static int ambarella_sd_start_signal_voltage_switch(struct mmc_host *mmc,
-	struct mmc_ios *ios)
+static int ambarella_sd_ssvs(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	int retval = 0;
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo;
-	u32 counter = 0;
-	u32 sta_reg;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
 	ambarella_sd_request_bus(mmc);
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
-#if 0	//Not necessary in current kernel
+		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
+			(SD_PWR_ON | SD_PWR_3_3V));
 		if (pslotinfo->plat_info->set_vdd) {
 			pslotinfo->plat_info->set_vdd(3300);
 		}
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
-			(SD_PWR_ON | SD_PWR_3_3V));
-#endif
 	} else if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180) {
 		ambarella_sd_clear_clken(mmc);
 		msleep(CONFIG_SD_AMBARELLA_VSW_PRE_SPEC);
+		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
+			(SD_PWR_ON | SD_PWR_1_8V));
 		if (pslotinfo->plat_info->set_vdd) {
 			pslotinfo->plat_info->set_vdd(1800);
 		}
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
-			(SD_PWR_ON | SD_PWR_1_8V));
-		ambarella_sd_set_clken(mmc);
 		msleep(CONFIG_SD_AMBARELLA_VSW_POST_SPEC);
-		while (1) {
-			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-			ambsd_dbg(pslotinfo, "SD_STA_OFFSET = 0x%x.\n",
-				sta_reg);
-			ambsd_dbg(pslotinfo, "SD_CLK_OFFSET = 0x%x.\n",
-				amba_readw(pinfo->regbase + SD_CLK_OFFSET));
-			ambsd_dbg(pslotinfo, "SD_PWR_OFFSET = 0x%x.\n",
-				amba_readb(pinfo->regbase + SD_PWR_OFFSET));
-			if ((sta_reg & 0x1f00000) == 0x1f00000) {
-				break;
-			}
-			counter++;
-			if (counter > CONFIG_SD_AMBARELLA_VSW_WAIT_LIMIT) {
-				retval = -1;
-				ambsd_err(pslotinfo, "SD_STA_OFFSET = 0x%x.\n",
-					sta_reg);
-				break;
-			}
-			msleep(1);
-		}
+		ambarella_sd_set_clken(mmc);
 	}
+	ambarella_sd_release_bus(mmc);
+
+	return retval;
+}
+
+static int ambarella_sd_card_busy(struct mmc_host *mmc)
+{
+	int retval = 0;
+	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
+	struct ambarella_sd_controller_info *pinfo;
+	u32 sta_reg;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+
+	ambarella_sd_request_bus(mmc);
+	sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+	ambsd_dbg(pslotinfo, "SD_STA_OFFSET = 0x%08X.\n", sta_reg);
+	retval = !(sta_reg & 0x1F00000);
 	ambarella_sd_release_bus(mmc);
 
 	return retval;
@@ -1653,7 +1650,8 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.get_ro = ambarella_sd_get_ro,
 	.get_cd = ambarella_sd_get_cd,
 	.enable_sdio_irq = ambarella_sd_enable_sdio_irq,
-	.start_signal_voltage_switch = ambarella_sd_start_signal_voltage_switch,
+	.start_signal_voltage_switch = ambarella_sd_ssvs,
+	.card_busy = ambarella_sd_card_busy,
 };
 
 static int ambarella_sd_system_event(struct notifier_block *nb,

@@ -55,28 +55,29 @@
 #define SD_BLK_SZ_OFFSET		0x004	/* Half word */
 #define SD_BLK_CNT_OFFSET		0x006	/* Half word */
 #define SD_ARG_OFFSET			0x008
-#define SD_XFR_OFFSET			0x00c	/* Half word */
-#define SD_CMD_OFFSET			0x00e	/* Half word */
+#define SD_XFR_OFFSET			0x00C	/* Half word */
+#define SD_CMD_OFFSET			0x00E	/* Half word */
 #define SD_RSP0_OFFSET			0x010
 #define SD_RSP1_OFFSET			0x014
 #define SD_RSP2_OFFSET			0x018
-#define SD_RSP3_OFFSET			0x01c
+#define SD_RSP3_OFFSET			0x01C
 #define SD_DATA_OFFSET			0x020
 #define SD_STA_OFFSET			0x024
 #define SD_HOST_OFFSET			0x028	/* Byte */
 #define SD_PWR_OFFSET			0x029	/* Byte */
-#define SD_GAP_OFFSET			0x02a	/* Byte */
-#define SD_WAK_OFFSET			0x02b	/* Byte */
-#define SD_CLK_OFFSET			0x02c	/* Half word */
-#define SD_TMO_OFFSET			0x02e	/* Byte */
-#define SD_RESET_OFFSET			0x02f	/* Byte */
+#define SD_GAP_OFFSET			0x02A	/* Byte */
+#define SD_WAK_OFFSET			0x02B	/* Byte */
+#define SD_CLK_OFFSET			0x02C	/* Half word */
+#define SD_TMO_OFFSET			0x02E	/* Byte */
+#define SD_RESET_OFFSET			0x02F	/* Byte */
 #define SD_NIS_OFFSET			0x030	/* Half word */
 #define SD_EIS_OFFSET			0x032	/* Half word */
 #define SD_NISEN_OFFSET			0x034	/* Half word */
 #define SD_EISEN_OFFSET			0x036	/* Half word */
 #define SD_NIXEN_OFFSET			0x038	/* Half word */
-#define SD_EIXEN_OFFSET			0x03a	/* Half word */
-#define SD_AC12ES_OFFSET		0x03c	/* Half word */
+#define SD_EIXEN_OFFSET			0x03A	/* Half word */
+#define SD_AC12ES_OFFSET		0x03C	/* Half word */
+#define SD_HOST2_OFFSET			0x03E	/* Half word */
 #define SD_CAP_OFFSET			0x040
 #define SD_CUR_OFFSET			0x048
 #define SD_ADMA_STA_OFFSET		0x054
@@ -84,9 +85,9 @@
 #define SD_XC_CTR_OFFSET		0x060
 #define SD_BOOT_CTR_OFFSET		0x070
 #define SD_BOOT_STA_OFFSET		0x074
-#define SD_VOL_SW_OFFSET		0x07c
-#define SD_SIST_OFFSET			0x0fc	/* Half word */
-#define SD_VER_OFFSET			0x0fe	/* Half word */
+#define SD_VOL_SW_OFFSET		0x07C
+#define SD_SIST_OFFSET			0x0FC	/* Half word */
+#define SD_VER_OFFSET			0x0FE	/* Half word */
 
 /* SD_BLK_SZ_REG */
 #define SD_BLK_SZ_4KB			0x0000

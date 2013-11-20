@@ -139,7 +139,11 @@ static struct clk gclk_sdxc = {
 	.max_divider	= (1 << 16) - 1,
 #endif
 	.extra_scaler	= 0,
+#if (CHIP_REV == I1)
 	.ops		= &ambarella_rct_pll_ops,
+#elif (CHIP_REV == S2L)
+	.ops		= &ambarella_rct_scaler_ops,
+#endif
 };
 
 static struct clk *ambarella_sdxc_register_clk(void)
@@ -751,7 +755,7 @@ AMBA_SD_PARAM_CALL(1, 0, ambarella_platform_sd2_controller,
 
 struct platform_device ambarella_sd2 = {
 	.name		= "ambarella-sd",
-	.id		= 1,
+	.id		= 2,
 	.resource	= ambarella_sd2_resources,
 	.num_resources	= ARRAY_SIZE(ambarella_sd2_resources),
 	.dev		= {
