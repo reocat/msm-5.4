@@ -732,7 +732,17 @@ CONFIG_BQL=y
 # CONFIG_IRDA is not set
 # CONFIG_BT is not set
 # CONFIG_AF_RXRPC is not set
-# CONFIG_WIRELESS is not set
+CONFIG_WIRELESS=y
+CONFIG_CFG80211=y
+# CONFIG_NL80211_TESTMODE is not set
+# CONFIG_CFG80211_DEVELOPER_WARNINGS is not set
+# CONFIG_CFG80211_REG_DEBUG is not set
+# CONFIG_CFG80211_DEFAULT_PS is not set
+# CONFIG_CFG80211_DEBUGFS is not set
+# CONFIG_CFG80211_INTERNAL_REGDB is not set
+# CONFIG_CFG80211_WEXT is not set
+# CONFIG_LIB80211 is not set
+# CONFIG_MAC80211 is not set
 # CONFIG_WIMAX is not set
 # CONFIG_RFKILL is not set
 # CONFIG_NET_9P is not set
@@ -1049,7 +1059,22 @@ CONFIG_PHYLIB=y
 # CONFIG_USB_RTL8152 is not set
 # CONFIG_USB_USBNET is not set
 # CONFIG_USB_IPHETH is not set
-# CONFIG_WLAN is not set
+CONFIG_WLAN=y
+# CONFIG_USB_ZD1201 is not set
+# CONFIG_USB_NET_RNDIS_WLAN is not set
+CONFIG_ATH_CARDS=m
+# CONFIG_ATH_DEBUG is not set
+CONFIG_ATH6KL=m
+CONFIG_ATH6KL_SDIO=m
+# CONFIG_ATH6KL_USB is not set
+# CONFIG_ATH6KL_DEBUG is not set
+# CONFIG_BRCMFMAC is not set
+# CONFIG_HOSTAP is not set
+# CONFIG_LIBERTAS is not set
+# CONFIG_WL_TI is not set
+CONFIG_MWIFIEX=m
+CONFIG_MWIFIEX_SDIO=m
+# CONFIG_MWIFIEX_USB is not set
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers
