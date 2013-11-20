@@ -49,7 +49,7 @@ static struct clk gclk_audio = {
 	.lock_bit	= 7,
 	.divider	= 0,
 	.max_divider	= 0,
-	.extra_scaler	= 0,
+	.extra_scaler	= 1,
 	.ops		= &ambarella_rct_pll_ops,
 };
 
@@ -97,7 +97,20 @@ static void aucodec_digitalio_on_0(void)
 	ambarella_gpio_raw_lock(2, &flags);
 	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
 	ambarella_gpio_raw_unlock(2, &flags);
+#elif (CHIP_REV == S2L)
+	pr_err("aucodec_digitalio_on: S2L maybe not set GPIO Fixed \n");
+#if 0
+	unsigned long flags;
 
+	ambarella_gpio_raw_lock(3, &flags);
+	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000030);
+	ambarella_gpio_raw_unlock(3, &flags);
+
+	/* GPIO77~GPIO81 program as hardware mode */
+	ambarella_gpio_raw_lock(1, &flags);
+	amba_setbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x00003e00);
+	ambarella_gpio_raw_unlock(1, &flags);
+#endif
 #else
 	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
 #endif
@@ -154,7 +167,8 @@ static void aucodec_digitalio_on_2(void)
 
 static void i2s_channel_select(u32 ch)
 {
-#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == S2)
+#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == S2) || \
+	(CHIP_REV == S2L)
 	u32 ch_reg_num;
 
 	ch_reg_num = amba_readl(I2S_REG(I2S_CHANNEL_SELECT_OFFSET));

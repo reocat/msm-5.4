@@ -25,7 +25,11 @@
 #define __PLAT_AMBARELLA_AUDIO_H__
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#define I2S_OFFSET			0x1A000
+#else
 #define I2S_OFFSET			0xA000
+#endif
 #define I2S_BASE			(AHB_BASE + I2S_OFFSET)
 #define I2S_BASE_PHYS 			(AHB_PHYS_BASE + I2S_OFFSET)
 #define I2S_REG(x)			(I2S_BASE + (x))
