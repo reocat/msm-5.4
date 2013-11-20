@@ -105,6 +105,7 @@
 #define CG_HOST_OFFSET			0x48
 #define CG_PWM_OFFSET			0x84
 #define CG_SSI2_OFFSET			0xEC
+#define CG_SSI3_OFFSET			0x518
 #define CG_SSI_AHB_OFFSET		0x2CC
 
 #define CG_UART_REG			RCT_REG(CG_UART_OFFSET)
@@ -115,6 +116,7 @@
 #define CG_PWM_REG			RCT_REG(CG_PWM_OFFSET)
 #define CG_SSI2_REG			RCT_REG(CG_SSI2_OFFSET)
 #define CG_SSI_AHB_REG			RCT_REG(CG_SSI_AHB_OFFSET)
+#define CG_SSI3_REG			RCT_REG(CG_SSI3_OFFSET)
 
 /* ==========================================================================*/
 #define PLL_CORE_CTRL_OFFSET		0x00

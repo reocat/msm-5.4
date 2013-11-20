@@ -53,6 +53,7 @@ module_param(rx_ftlr, int, 0644);
 
 struct ambarella_spi_slave {
 	u32					regbase;
+	struct ambarella_spi_platform_info *pinfo;
 
 	int					irq;
 	int					major;
@@ -90,14 +91,17 @@ static struct ambarella_spi_slave	*priv_array[MAX_SPI_SLAVES] =
 static int ambarella_spi_slave_inithw(struct ambarella_spi_slave *priv)
 {
 	u32 				ctrlr0;
-
+#if 0
 	ambarella_gpio_config(GPIO(33), GPIO_FUNC_SW_OUTPUT);
 	ambarella_gpio_config(GPIO(34), GPIO_FUNC_HW);
 	ambarella_gpio_config(SSI_SLAVE_CLK, GPIO_FUNC_SW_INPUT);
 	ambarella_gpio_config(SSI_SLAVE_EN, GPIO_FUNC_HW);
 	ambarella_gpio_config(SSI_SLAVE_MOSI, GPIO_FUNC_SW_INPUT);
 	ambarella_gpio_config(SSI_SLAVE_MISO, GPIO_FUNC_HW);
-
+#endif
+	if (priv->pinfo->rct_set_ssi_pll){
+		priv->pinfo->rct_set_ssi_pll();
+	}
 	/* Initial Register Settings */
 	ctrlr0 = (SPI_CFS << 12) | (SPI_WRITE_READ << 8) | (priv->mode << 6) |
 				(SPI_FRF << 4) | (priv->bpw - 1);
@@ -446,6 +450,7 @@ static int ambarella_spi_slave_probe(struct platform_device *pdev)
 	struct resource 			*res;
 	int					irq, i, errorCode = 0;
 	int					major_id = 0;
+	struct ambarella_spi_platform_info *pinfo;
 
 
 	/* Get Base Address */
@@ -454,6 +459,7 @@ static int ambarella_spi_slave_probe(struct platform_device *pdev)
 		errorCode = -EINVAL;
 		goto ambarella_spi_slave_probe_exit;
 	}
+	pinfo = (struct ambarella_spi_platform_info *)pdev->dev.platform_data;
 
 	/* Get IRQ NO. */
 	irq = platform_get_irq(pdev, 0);
@@ -477,6 +483,8 @@ static int ambarella_spi_slave_probe(struct platform_device *pdev)
 	priv->r_buf_full	= 0;
 	priv->w_buf_empty	= 1;
 	priv->w_buf_full	= 0;
+
+	priv->pinfo = pinfo;
 	spin_lock_init(&priv->r_buf_lock);
 	spin_lock_init(&priv->w_buf_lock);
 	mutex_init(&priv->um_mtx);

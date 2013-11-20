@@ -152,7 +152,7 @@
 #define SPI_CTRLR0_OFFSET		0x00
 #define SPI_CTRLR1_OFFSET		0x04
 #define SPI_SSIENR_OFFSET		0x08
-#define SPI_MWCR_OFFSET			0x0c
+//#define SPI_MWCR_OFFSET			0x0c
 #define SPI_SER_OFFSET			0x10
 #define SPI_BAUDR_OFFSET		0x14
 #define SPI_TXFTLR_OFFSET		0x18
@@ -169,7 +169,7 @@
 #define SPI_MSTICR_OFFSET		0x44
 #define SPI_ICR_OFFSET			0x48
 #if (SPI_AHB_INSTANCES >= 1)
-#define SPI_DMAC_OFFSET			0x4c
+//#define SPI_DMAC_OFFSET			0x4c
 #endif
 #define SPI_IDR_OFFSET			0x58
 #define SPI_VERSION_ID_OFFSET		0x5c
@@ -182,7 +182,7 @@
 #define SPI_SCLK_OUT_DLY_OFFSET		0x264
 #endif
 #if (SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE == 1)
-#define SPI_START_BIT_OFFSET		0x268
+//#define SPI_START_BIT_OFFSET		0x268
 #endif
 
 /* ==========================================================================*/
@@ -273,10 +273,17 @@
 #define SSI3_CLK	GPIO(137)
 #define SSI3_MISO	GPIO(138)
 
+#if (CHIP_REV == S2L)
+#define SSI_SLAVE_MISO	GPIO(20)
+#define SSI_SLAVE_EN	GPIO(22)
+#define SSI_SLAVE_MOSI	GPIO(21)
+#define SSI_SLAVE_CLK	GPIO(19)
+#else
 #define SSI_SLAVE_MISO	GPIO(50)
 #define SSI_SLAVE_EN	GPIO(51)
 #define SSI_SLAVE_MOSI	GPIO(52)
 #define SSI_SLAVE_CLK	GPIO(53)
+#endif
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
