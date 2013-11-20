@@ -71,6 +71,7 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_i2s0,
 	&ambarella_pcm0,
 	&ambarella_dummy_codec0,
+	&ambarella_dummy_audio_device,
 	&ambarella_idc0,
 	&ambarella_idc1,
 	&ambarella_idc2,
