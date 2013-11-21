@@ -813,8 +813,13 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 	sdiv = ctrl_reg.s.sdiv;
 	sout = ctrl_reg.s.sout;
 
-	divident = (ambarella_clk_ref_freq * (pll_int + 1) * (sdiv + 1));
+	divident = (u64)ambarella_clk_ref_freq;
+	divident *= (u64)(pll_int + 1);
+	divident *= (u64)(sdiv + 1);
 	divider = (pre_scaler_reg * (sout + 1) * post_scaler_reg);
+	if (c->divider) {
+		divider *= c->divider;
+	}
 	if (ctrl_reg.s.frac_mode) {
 		if (frac_reg.s.nega) {
 			/* Negative */
@@ -830,7 +835,7 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 			divident = divident + frac;
 		}
 	}
-	if(divider == 0){
+	if (divider == 0) {
 		c->rate = 0;
 		return c->rate;
 	}
@@ -856,6 +861,9 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	union frac_reg_u frac_reg;
 	u64 diff;
 
+	if (c->divider) {
+		rate *= c->divider;
+	}
 	if (!rate) {
 		ret_val = -1;
 		goto ambarella_rct_clk_set_rate_exit;
@@ -881,9 +889,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		} else if (c->extra_scaler == 1) {
 			post_scaler--;
 			post_scaler <<= 4;
-			amba_rct_writel(c->post_reg, post_scaler);
-			amba_rct_writel(c->post_reg, (post_scaler | 0x1));
-			amba_rct_writel(c->post_reg, post_scaler);
+			amba_rct_writel_en(c->post_reg, post_scaler);
 		}
 		ret_val = 0;
 		goto ambarella_rct_clk_set_rate_exit;
@@ -917,11 +923,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		ctrl_reg.s.force_lock = 1;
 		ctrl_reg.s.force_bypass = 0;
 		ctrl_reg.s.write_enable = 0;
-		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
-		ctrl_reg.s.write_enable = 1;
-		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
-		ctrl_reg.s.write_enable = 0;
-		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
+		amba_rct_writel_en(c->ctrl_reg, ctrl_reg.w);
 
 		post_scaler = ambarella_rct_pll_table[middle].post;
 		if (c->extra_scaler == 0) {
@@ -929,9 +931,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		} else if (c->extra_scaler == 1) {
 			post_scaler--;
 			post_scaler <<= 4;
-			amba_rct_writel(c->post_reg, post_scaler);
-			amba_rct_writel(c->post_reg, (post_scaler | 0x1));
-			amba_rct_writel(c->post_reg, post_scaler);
+			amba_rct_writel_en(c->post_reg, post_scaler);
 		}
 
 		if (c->frac_mode) {
@@ -1093,6 +1093,9 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 	if (!c->max_divider) {
 		return -1;
 	}
+	if (c->divider) {
+		rate *= c->divider;
+	}
 	if (!rate) {
 		return -1;
 	}
@@ -1112,9 +1115,7 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 	} else if (c->extra_scaler == 1) {
 		post_scaler--;
 		post_scaler <<= 4;
-		amba_rct_writel(c->post_reg, post_scaler);
-		amba_rct_writel(c->post_reg, (post_scaler | 0x1));
-		amba_rct_writel(c->post_reg, post_scaler);
+		amba_rct_writel_en(c->post_reg, post_scaler);
 	}
 
 	c->rate = ambarella_rct_scaler_get_rate(c);

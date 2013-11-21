@@ -198,6 +198,15 @@ static inline void __amba_writel(volatile void __iomem *address, u32 value)
 	AMBARELLA_REG_UNLOCK();
 }
 
+static inline void __amba_writel_en(volatile void __iomem *address, u32 value)
+{
+	AMBARELLA_REG_LOCK();
+	__raw_writel(value, address);
+	__raw_writel((value | 0x1), address);
+	__raw_writel(value, address);
+	AMBARELLA_REG_UNLOCK();
+}
+
 #define amba_readl(v)		__amba_readl((volatile void __iomem *)v)
 #define amba_writel(v,d)	__amba_writel((volatile void __iomem *)v, d)
 
@@ -359,6 +368,7 @@ static inline u32 __amba_rct_readl(volatile void __iomem *address)
 
 #define amba_rct_readl(v)		__amba_rct_readl((volatile void __iomem *)v)
 #define amba_rct_writel(v,d)		__amba_writel((volatile void __iomem *)v, d)
+#define amba_rct_writel_en(v,d)		__amba_writel_en((volatile void __iomem *)v, d)
 #define amba_rct_setbitsl(v, mask)	amba_rct_writel((v),(amba_rct_readl(v) | (mask)))
 #define amba_rct_clrbitsl(v, mask)	amba_rct_writel((v),(amba_rct_readl(v) & ~(mask)))
 
