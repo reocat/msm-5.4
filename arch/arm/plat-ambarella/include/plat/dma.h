@@ -54,6 +54,8 @@
 #define I2S_TX_DMA_CHAN		2
 #define MS_AHB_SSI_TX_DMA_CHAN	3
 #define SPDIF_AHB_SSI_DMA_CHAN	4
+#define SSI0_UART_TX_ACK_DMA_CHAN	0xFF
+#define SSI0_UART_RX_ACK_DMA_CHAN	0xFF
 #endif
 /* ==========================================================================*/
 #define DMA_CHAN_CTR_REG(x)		DMA_REG((0x300 + ((x) << 4)))
