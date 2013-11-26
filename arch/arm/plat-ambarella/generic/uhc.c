@@ -51,6 +51,10 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	u32 pin_set, pin_clr;
 	u32 val;
 
+#if (CHIP_REV == I1) || (CHIP_REV == S2L)
+	pdata->usb1_is_host = ambarella_usb1_is_host();
+#endif
+
 	if (atomic_inc_return(&usb_host_initialized) > 1)
 		return;
 
@@ -69,8 +73,6 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	pin_clr = 0;
 
 #if (CHIP_REV == I1) || (CHIP_REV == S2L)
-	pdata->usb1_is_host = ambarella_usb1_is_host();
-
 	/* GPIO8 and GPIO10 are programmed as hardware mode */
 	if (pdata->usb1_is_host) {
 		pin_set |= 0x1 << 10;
@@ -169,6 +171,7 @@ struct resource ambarella_ohci_resources[] = {
 static struct ambarella_uhc_controller ambarella_platform_ohci_data = {
 	.enable_host	= ambarella_enable_usb_host,
 	.disable_host	= ambarella_disable_usb_host,
+	.usb1_is_host	= -1,
 #if (CHIP_REV == I1)
 	.irqflags	= IRQF_TRIGGER_LOW,
 #else
