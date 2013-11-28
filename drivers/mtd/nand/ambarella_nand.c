@@ -96,7 +96,6 @@ struct ambarella_nand_info {
 	u32				area;
 	u32				ecc;
 
-	u32				origin_clk;	/* in Khz */
 	struct ambarella_nand_timing	*origin_timing;
 	struct ambarella_nand_timing	current_timing;
 
@@ -213,15 +212,22 @@ static char part_name[PART_MAX][PART_NAME_LEN];
 #define NAND_TIMING_LSHIFT8BIT(x)	((x) << 8)
 #define NAND_TIMING_LSHIFT0BIT(x)	((x) << 0)
 
-#define NAND_TIMING_CALC_SPDUP(val, new_clk, origin_clk)		\
-	((val) * (new_clk) / (origin_clk))
-#define NAND_TIMING_CALC_SPDDOWN(val, new_clk, origin_clk)	\
-	((val) * (new_clk) / (origin_clk) +			\
-	 (((val) * (new_clk)) % (origin_clk) ? 1 : 0))
-#define NAND_TIMING_CALC_NEW(val, new_clk, origin_clk)		\
-	((new_clk) > (origin_clk) ?				\
-	NAND_TIMING_CALC_SPDUP(val, new_clk, origin_clk) :	\
-	NAND_TIMING_CALC_SPDDOWN(val, new_clk, origin_clk))
+static int nand_timing_calc(u32 clk, int minmax, int val)
+{
+	u32 x;
+	int n,r;
+
+	x = val * clk;
+	n = x / 1000;
+	r = x % 1000;
+
+	if (r != 0)
+		n++;
+
+	if (minmax)
+		n--;
+	return n < 1 ? 1 : n;
+}
 
 static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 {
@@ -287,146 +293,119 @@ static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
 	struct ambarella_nand_timing *timing);
 
-static u32 ambnand_calc_timing(struct ambarella_nand_info *nand_info, u32 idx)
+static void ambnand_calc_timing(struct ambarella_nand_info *nand_info)
 {
-	u32 origin_clk = nand_info->origin_clk;
-	u32 new_clk;
-	u32 origin_timing, timing_reg = 0;
+	struct ambarella_nand_timing *nand_time_para;
+	u32 timing_para;
 	u8 tcls, tals, tcs, tds;
 	u8 tclh, talh, tch, tdh;
 	u8 twp, twh, twb, trr;
 	u8 trp, treh, trb, tceh;
 	u8 trdelay, tclr, twhr, tir;
 	u8 tww, trhz, tar;
+	u32 clk;
 
-	new_clk = nand_info->plat_nand->get_pll();
-	switch (idx) {
-	case 0: /* Calculate timing 0 */
-		origin_timing = nand_info->origin_timing->timing0;
-		if (origin_clk == new_clk)
-			return origin_timing;
+	clk =  nand_info->plat_nand->get_pll();
+	nand_time_para = nand_info->plat_nand->timing;
+	/* timing 0 */
+	timing_para = nand_time_para->timing0;
+	tcls = NAND_TIMING_RSHIFT24BIT(timing_para);
+	tals = NAND_TIMING_RSHIFT16BIT(timing_para);
+	tcs = NAND_TIMING_RSHIFT8BIT(timing_para);
+	tds = NAND_TIMING_RSHIFT0BIT(timing_para);
 
-		tcls = NAND_TIMING_RSHIFT24BIT(origin_timing);
-		tals = NAND_TIMING_RSHIFT16BIT(origin_timing);
-		tcs = NAND_TIMING_RSHIFT8BIT(origin_timing);
-		tds = NAND_TIMING_RSHIFT0BIT(origin_timing);
+	tcls = nand_timing_calc(clk, 0, tcls);
+	tals = nand_timing_calc(clk, 0, tals);
+	tcs = nand_timing_calc(clk, 0, tcs);
+	tds = nand_timing_calc(clk, 0, tds);
 
-		tcls = NAND_TIMING_CALC_NEW(tcls, new_clk, origin_clk);
-		tals = NAND_TIMING_CALC_NEW(tals, new_clk, origin_clk);
-		tcs = NAND_TIMING_CALC_NEW(tcs, new_clk, origin_clk);
-		tds = NAND_TIMING_CALC_NEW(tds, new_clk, origin_clk);
-
-		timing_reg = NAND_TIMING_LSHIFT24BIT(tcls) |
+	nand_info->current_timing.timing0 = NAND_TIMING_LSHIFT24BIT(tcls) |
 			NAND_TIMING_LSHIFT16BIT(tals) |
 			NAND_TIMING_LSHIFT8BIT(tcs) |
 			NAND_TIMING_LSHIFT0BIT(tds);
-		break;
-	case 1: /* Calculate timing 1*/
-		origin_timing = nand_info->origin_timing->timing1;
-		if (origin_clk == new_clk)
-			return origin_timing;
 
-		tclh = NAND_TIMING_RSHIFT24BIT(origin_timing);
-		talh = NAND_TIMING_RSHIFT16BIT(origin_timing);
-		tch = NAND_TIMING_RSHIFT8BIT(origin_timing);
-		tdh = NAND_TIMING_RSHIFT0BIT(origin_timing);
+	/* timing 1 */
+	timing_para = nand_time_para->timing1;
+	tclh = NAND_TIMING_RSHIFT24BIT(timing_para);
+	talh = NAND_TIMING_RSHIFT16BIT(timing_para);
+	tch = NAND_TIMING_RSHIFT8BIT(timing_para);
+	tdh = NAND_TIMING_RSHIFT0BIT(timing_para);
 
-		tclh = NAND_TIMING_CALC_NEW(tclh, new_clk, origin_clk);
-		talh = NAND_TIMING_CALC_NEW(talh, new_clk, origin_clk);
-		tch = NAND_TIMING_CALC_NEW(tch, new_clk, origin_clk);
-		tdh = NAND_TIMING_CALC_NEW(tdh, new_clk, origin_clk);
+	tclh = nand_timing_calc(clk, 0, tclh);
+	talh = nand_timing_calc(clk, 0, talh);
+	tch = nand_timing_calc(clk, 0, tch);
+	tdh = nand_timing_calc(clk, 0, tdh);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(tclh) |
+	nand_info->current_timing.timing1 = NAND_TIMING_LSHIFT24BIT(tclh) |
 			NAND_TIMING_LSHIFT16BIT(talh) |
 			NAND_TIMING_LSHIFT8BIT(tch) |
 			NAND_TIMING_LSHIFT0BIT(tdh);
-		break;
-	case 2: /* Calculate timing 2*/
-		origin_timing = nand_info->origin_timing->timing2;
-		if (origin_clk == new_clk)
-			return origin_timing;
 
-		twp = NAND_TIMING_RSHIFT24BIT(origin_timing);
-		twh = NAND_TIMING_RSHIFT16BIT(origin_timing);
-		twb = NAND_TIMING_RSHIFT8BIT(origin_timing) + 1;
-		trr = NAND_TIMING_RSHIFT0BIT(origin_timing);
+	/* timing 2 */
+	timing_para = nand_time_para->timing2;
+	twp = NAND_TIMING_RSHIFT24BIT(timing_para);
+	twh = NAND_TIMING_RSHIFT16BIT(timing_para);
+	twb = NAND_TIMING_RSHIFT8BIT(timing_para);
+	trr = NAND_TIMING_RSHIFT0BIT(timing_para);
 
-		twp = NAND_TIMING_CALC_NEW(twp, new_clk, origin_clk);
-		twh = NAND_TIMING_CALC_NEW(twh, new_clk, origin_clk);
-		twb = NAND_TIMING_CALC_NEW(twb, new_clk, origin_clk);
-		twb = (twb - 1) ? (twb - 1) : 1;
-		trr = NAND_TIMING_CALC_NEW(trr, new_clk, origin_clk);
+	twp = nand_timing_calc(clk, 0, twp);
+	twh = nand_timing_calc(clk, 0, twh);
+	twb = nand_timing_calc(clk, 1, twb);
+	trr = nand_timing_calc(clk, 0, trr);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(twp) |
+	nand_info->current_timing.timing2 = NAND_TIMING_LSHIFT24BIT(twp) |
 			NAND_TIMING_LSHIFT16BIT(twh) |
 			NAND_TIMING_LSHIFT8BIT(twb) |
 			NAND_TIMING_LSHIFT0BIT(trr);
-		break;
-	case 3: /* Calculate timing 3*/
-		origin_timing = nand_info->origin_timing->timing3;
-		if (origin_clk == new_clk)
-			return origin_timing;
 
-		trp = NAND_TIMING_RSHIFT24BIT(origin_timing);
-		treh = NAND_TIMING_RSHIFT16BIT(origin_timing);
-		trb = NAND_TIMING_RSHIFT8BIT(origin_timing) + 1;
-		tceh = NAND_TIMING_RSHIFT0BIT(origin_timing) + 1;
+	/* timing 3 */
+	timing_para = nand_time_para->timing3;
+	trp = NAND_TIMING_RSHIFT24BIT(timing_para);
+	treh = NAND_TIMING_RSHIFT16BIT(timing_para);
+	trb = NAND_TIMING_RSHIFT8BIT(timing_para);
+	tceh = NAND_TIMING_RSHIFT0BIT(timing_para);
 
-		trp = NAND_TIMING_CALC_NEW(trp, new_clk, origin_clk);
-		treh = NAND_TIMING_CALC_NEW(treh, new_clk, origin_clk);
-		trb = NAND_TIMING_CALC_NEW(trb, new_clk, origin_clk);
-		trb = (trb - 1) ? (trb - 1) : 1;
-		tceh = NAND_TIMING_CALC_NEW(tceh, new_clk, origin_clk);
-		tceh = (tceh - 1) ? (tceh - 1) : 1;
+	trp = nand_timing_calc(clk, 0, trp);
+	treh = nand_timing_calc(clk, 0, treh);
+	trb = nand_timing_calc(clk, 1, trb);
+	tceh = nand_timing_calc(clk, 1, tceh);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(trp) |
+	nand_info->current_timing.timing3 = NAND_TIMING_LSHIFT24BIT(trp) |
 			NAND_TIMING_LSHIFT16BIT(treh) |
 			NAND_TIMING_LSHIFT8BIT(trb) |
 			NAND_TIMING_LSHIFT0BIT(tceh);
-		break;
-	case 4: /* Calculate timing 4*/
-		origin_timing = nand_info->origin_timing->timing4;
-		if (origin_clk == new_clk)
-			return origin_timing;
 
-		trdelay = NAND_TIMING_RSHIFT24BIT(origin_timing) + 1;
-		tclr = NAND_TIMING_RSHIFT16BIT(origin_timing);
-		twhr = NAND_TIMING_RSHIFT8BIT(origin_timing);
-		tir = NAND_TIMING_RSHIFT0BIT(origin_timing);
+	/* timing 4 */
+	timing_para = nand_time_para->timing4;
+	trdelay = NAND_TIMING_RSHIFT24BIT(timing_para);
+	tclr = NAND_TIMING_RSHIFT16BIT(timing_para);
+	twhr = NAND_TIMING_RSHIFT8BIT(timing_para);
+	tir = NAND_TIMING_RSHIFT0BIT(timing_para);
 
-		trdelay = NAND_TIMING_CALC_NEW(trdelay, new_clk, origin_clk);
-		trdelay = (trdelay - 1) ? (trdelay - 1) : 1;
-		tclr = NAND_TIMING_CALC_NEW(tclr, new_clk, origin_clk);
-		twhr = NAND_TIMING_CALC_NEW(twhr, new_clk, origin_clk);
-		tir = NAND_TIMING_CALC_NEW(tir, new_clk, origin_clk);
+	trdelay = nand_timing_calc(clk, 1, trdelay);
+	tclr = nand_timing_calc(clk, 0, tclr);
+	twhr = nand_timing_calc(clk, 0, twhr);
+	tir = nand_timing_calc(clk, 0, tir);
 
-		timing_reg = NAND_TIMING_LSHIFT24BIT(trdelay) |
+	nand_info->current_timing.timing4 = NAND_TIMING_LSHIFT24BIT(trdelay) |
 			NAND_TIMING_LSHIFT16BIT(tclr) |
 			NAND_TIMING_LSHIFT8BIT(twhr) |
 			NAND_TIMING_LSHIFT0BIT(tir);
-		break;
-	case 5: /* Calculate timing 5*/
-		origin_timing = nand_info->origin_timing->timing5;
-		if (origin_clk == new_clk)
-			return origin_timing;
 
-		tww = NAND_TIMING_RSHIFT16BIT(origin_timing);
-		trhz = NAND_TIMING_RSHIFT8BIT(origin_timing) + 1;
-		tar = NAND_TIMING_RSHIFT0BIT(origin_timing) + 1;
+	/* timing 5 */
+	timing_para = nand_time_para->timing5;
+	tww = NAND_TIMING_RSHIFT16BIT(timing_para);
+	trhz = NAND_TIMING_RSHIFT8BIT(timing_para);
+	tar = NAND_TIMING_RSHIFT0BIT(timing_para);
 
-		tww = NAND_TIMING_CALC_NEW(tww, new_clk, origin_clk);
-		trhz = NAND_TIMING_CALC_NEW(trhz, new_clk, origin_clk);
-		trhz = (trhz - 1) ? (trhz - 1) : 1;
-		tar = NAND_TIMING_CALC_NEW(tar, new_clk, origin_clk);
-		tar = (tar - 1) ? (tar - 1) : 1;
+	tww = nand_timing_calc(clk, 0, tww);
+	trhz = nand_timing_calc(clk, 1, trhz);
+	tar = nand_timing_calc(clk, 1, tar);
 
-		timing_reg = NAND_TIMING_LSHIFT16BIT(tww) |
+
+	nand_info->current_timing.timing5 = NAND_TIMING_LSHIFT16BIT(tww) |
 			NAND_TIMING_LSHIFT8BIT(trhz) |
 			NAND_TIMING_LSHIFT0BIT(tar);
-		break;
-	}
-
-	return timing_reg;
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -449,22 +428,8 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 		 * it's big enough to operate
 		 * with NAND, so no need to change it. */
 		if (nand_info->origin_timing->control != 0) {
-			nand_info->current_timing.timing0 = ambnand_calc_timing(nand_info, 0);
-			nand_info->current_timing.timing1 = ambnand_calc_timing(nand_info, 1);
-			nand_info->current_timing.timing2 = ambnand_calc_timing(nand_info, 2);
-			nand_info->current_timing.timing3 = ambnand_calc_timing(nand_info, 3);
-			nand_info->current_timing.timing4 = ambnand_calc_timing(nand_info, 4);
-			nand_info->current_timing.timing5 = ambnand_calc_timing(nand_info, 5);
+			ambnand_calc_timing(nand_info);
 			amb_nand_set_timing(nand_info, &nand_info->current_timing);
-
-			pr_debug("origin reg:\t0x%08x 0x%08x"
-				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
-				nand_info->origin_timing->timing0,
-				nand_info->origin_timing->timing1,
-				nand_info->origin_timing->timing2,
-				nand_info->origin_timing->timing3,
-				nand_info->origin_timing->timing4,
-				nand_info->origin_timing->timing5);
 
 			pr_debug("new reg:\t0x%08x 0x%08x"
 				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
@@ -1421,7 +1386,8 @@ static int ambarella_nand_config_flash(
 {
 	int					errorCode = 0;
 
-	amb_nand_set_timing(nand_info, nand_info->plat_nand->timing);
+	ambnand_calc_timing(nand_info);
+	amb_nand_set_timing(nand_info, &nand_info->current_timing);
 
 	/* control_reg will be uesd when real operation to NAND is performed */
 
@@ -1904,10 +1870,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, nand_info);
 
-	nand_info->origin_clk = nand_info->plat_nand->get_pll();
 	nand_info->origin_timing = plat_nand->timing;
-	memcpy(&nand_info->current_timing, plat_nand->timing,
-			sizeof(struct ambarella_nand_timing));
 
 	nand_info->system_event.notifier_call = ambarella_nand_system_event;
 	ambarella_register_event_notifier(&nand_info->system_event);

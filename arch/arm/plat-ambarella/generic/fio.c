@@ -359,7 +359,7 @@ static u32 ambarella_nand_get_pll(void)
 {
 	u32 nand_pll;
 
-	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_ahb")) / 1000);
+	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
 #if (FIO_USE_2X_FREQ == 1)
 	nand_pll <<= 1;
 #endif
