@@ -400,7 +400,7 @@ static void ambnand_calc_timing(struct ambarella_nand_info *nand_info)
 
 	tww = nand_timing_calc(clk, 0, tww);
 	trhz = nand_timing_calc(clk, 1, trhz);
-	tar = nand_timing_calc(clk, 1, tar);
+	tar = nand_timing_calc(clk, 0, tar);
 
 
 	nand_info->current_timing.timing5 = NAND_TIMING_LSHIFT16BIT(tww) |
