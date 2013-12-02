@@ -101,6 +101,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_sd2,
 #endif
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_SD */
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_SPI)
 	&ambarella_spi0,
 #if (SPI_INSTANCES >= 2)
 	&ambarella_spi1,
@@ -111,6 +112,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #if (SPI_INSTANCES >= 4)
 	&ambarella_spi3,
 #endif
+#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_SPI */
 	&ambarella_uart,
 #if (UART_INSTANCES >= 2)
 	&ambarella_uart1,
