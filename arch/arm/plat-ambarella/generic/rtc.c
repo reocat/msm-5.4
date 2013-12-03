@@ -119,14 +119,17 @@ u32 rtc_check_status(void)
 		pr_warning("=====RTC ever lost power=====\n");
 	}
 
-	if ((rtc_status & RTC_STATUS_WKUP) == RTC_STATUS_WKUP)
+	if ((rtc_status & RTC_STATUS_WKUP) == RTC_STATUS_WKUP) {
 		pr_debug("=====RTC wake up=====\n");
+	}
 
-	if ((rtc_status & RTC_STATUS_ALA_WK) == RTC_STATUS_ALA_WK)
+	if ((rtc_status & RTC_STATUS_ALA_WK) == RTC_STATUS_ALA_WK) {
 		pr_info("=====RTC alarm wake up=====\n");
+	}
 
-	if (need_clear)
+	if (need_clear) {
 		rtc_set_curt_time(0);
+	}
 
 	return rtc_status;
 }

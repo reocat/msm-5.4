@@ -34,25 +34,18 @@
 #endif
 
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
-    (CHIP_REV == A8)
+    (CHIP_REV == A8) || (CHIP_REV == S2L)
 #define RTC_POWER_LOST_DETECT			1
 #else
 #define RTC_POWER_LOST_DETECT			0
 #endif
 
-#if (CHIP_REV == I1)
-#define RTC_PWR_LOSS_DETECT_BIT			5
-#define RTC_PWC_LOSS_MASK			0x20
-#elif (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8) /* FIXME */
-#define RTC_PWR_LOSS_DETECT_BIT			6
-#define RTC_PWC_LOSS_MASK			0x40
-#else
-#define RTC_PWR_LOSS_DETECT_BIT			1
-#define RTC_PWC_LOSS_MASK			0x2
-#endif
-
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#define RTC_OFFSET			0x15000
+#else
 #define RTC_OFFSET			0xD000
+#endif
 #define RTC_BASE			(APB_BASE + RTC_OFFSET)
 #define RTC_REG(x)			(RTC_BASE + (x))
 
@@ -91,11 +84,16 @@
 #define RTC_PWC_DISP3_OFFSET		0xBC
 
 /* ==========================================================================*/
-/* RTC_STATUS_REG */
+/* RTC_STATUS_OFFSET */
 #define RTC_STATUS_WKUP			0x8
 #define RTC_STATUS_ALA_WK		0x4
 #define RTC_STATUS_PC_RST		0x2
 #define RTC_STATUS_RTC_CLK		0x1
+
+/* RTC_PWC_REG_STA_OFFSET */
+#define RTC_PWC_LOSS_MASK		0x20
+#define RTC_PWC_ALARM_MASK		0x8
+#define RTC_PWC_SR_MASK			0x4
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
