@@ -1,8 +1,7 @@
 include ../../scripts/Makefile.include
 
-# Allow setting CC and AR, or setting CROSS_COMPILE as a prefix.
-$(call allow-override,CC,$(CROSS_COMPILE)gcc)
-$(call allow-override,AR,$(CROSS_COMPILE)ar)
+CC = $(CROSS_COMPILE)gcc
+AR = $(CROSS_COMPILE)ar
 
 # guard against environment variables
 LIB_H=
