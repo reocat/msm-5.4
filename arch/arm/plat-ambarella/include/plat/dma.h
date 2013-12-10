@@ -44,8 +44,8 @@
 #define SSI0_NOR_SPI_RX_REQ_DMA_CHAN	1
 #define SSI1_TX_ACK_DMA_CHAN			2
 #define SSI1_RX_ACK_DMA_CHAN			3
-#define SSI0_UART_TX_ACK_DMA_CHAN	4
-#define SSI0_UART_RX_ACK_DMA_CHAN	5
+#define SSIS0_UART_TX_ACK_DMA_CHAN	4
+#define SSIS0_UART_RX_ACK_DMA_CHAN	5
 #define I2S_RX_DMA_CHAN				6
 #define I2S_TX_DMA_CHAN				7
 #else
@@ -54,8 +54,8 @@
 #define I2S_TX_DMA_CHAN		2
 #define MS_AHB_SSI_TX_DMA_CHAN	3
 #define SPDIF_AHB_SSI_DMA_CHAN	4
-#define SSI0_UART_TX_ACK_DMA_CHAN	0xFF
-#define SSI0_UART_RX_ACK_DMA_CHAN	0xFF
+#define SSIS0_UART_TX_ACK_DMA_CHAN	0xFF
+#define SSIS0_UART_RX_ACK_DMA_CHAN	0xFF
 #endif
 /* ==========================================================================*/
 #define DMA_CHAN_CTR_REG(x)		DMA_REG((0x300 + ((x) << 4)))
