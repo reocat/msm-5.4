@@ -77,7 +77,7 @@ static struct clk *ambarella_ssi_register_clk(void)
 
 	return pgclk_ssi;
 }
-#if 0
+
 static void ambarella_ssi_set_pll(void)
 {
 #if (CHIP_REV == I1) || (CHIP_REV == A8)
@@ -95,7 +95,7 @@ static u32 ambarella_ssi_get_pll(void)
 {
 	return clk_get_rate(ambarella_ssi_register_clk());
 }
-#endif
+
 
 #if (SPI_MASTER_INSTANCES >= 2)
 static struct clk gclk_ssi2 = {
@@ -345,8 +345,13 @@ struct ambarella_spi_platform_info ambarella_spi0_platform_info = {
 	.cs_high		= ambarella_spi0_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
+#if (CHIP_REV == S2L)
 	.rct_set_ssi_pll	= ambarella_ssi_ahb_set_pll,
 	.get_ssi_freq_hz	= ambarella_ssi_ahb_get_pll,
+#else
+	.rct_set_ssi_pll	= ambarella_ssi_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi_get_pll,
+#endif
 };
 
 struct platform_device ambarella_spi0 = {
@@ -421,8 +426,13 @@ struct ambarella_spi_platform_info ambarella_spi1_platform_info = {
 	.cs_high		= ambarella_spi1_cs_high,
 	.cs_activate		= ambarella_spi_cs_activate,
 	.cs_deactivate		= ambarella_spi_cs_deactivate,
+#if (CHIP_REV == S2L)
 	.rct_set_ssi_pll	= ambarella_ssi2_ahb_set_pll,
 	.get_ssi_freq_hz	= ambarella_ssi2_ahb_get_pll,
+#else
+	.rct_set_ssi_pll	= ambarella_ssi2_set_pll,
+	.get_ssi_freq_hz	= ambarella_ssi2_get_pll,
+#endif
 };
 
 struct platform_device ambarella_spi1 = {
