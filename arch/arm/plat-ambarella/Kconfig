@@ -108,6 +108,10 @@ config PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	bool
 	default n
 
+config PLAT_AMBARELLA_SUPPORT_GDMA
+	bool
+	default n
+
 config PLAT_AMBARELLA_SUPPORT_GPIO
 	depends on !RPMSG_VGPIO
 	bool
