@@ -222,7 +222,8 @@
 #define FDMA_SPR_SRC_OFFSET	(0x204 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_SPR_DST_OFFSET	(0x208 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_SPR_STA_OFFSET	(0x20c + ((FIO_DMA_CHAN) << 4))
-#define FDMA_DSM_CTR_OFFSET	(0x3a0 + ((FIO_DMA_CHAN) << 4))
+#define FDMA_SPR_DA_OFFSET	(0x280 + ((FIO_DMA_CHAN) << 2))
+#define FDMA_DSM_CTR_OFFSET	(0x3a0 + ((FIO_DMA_CHAN) << 2))
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
