@@ -72,6 +72,7 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_pcm0,
 	&ambarella_dummy_codec0,
 	&ambarella_dummy_audio_device,
+	&ambarella_ambevk_audio_device,
 	&ambarella_idc0,
 	&ambarella_idc1,
 	&ambarella_idc2,
@@ -289,6 +290,9 @@ static void __init ambarella_init_ixora_ipcam(void)
 	ambarella_platform_sd1_controller.slot[0].ext_power.active_level = GPIO_HIGH;
 	ambarella_platform_sd1_controller.slot[0].ext_power.active_delay = 300;
 
+#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
+		ambarella_init_ak4642(0, 0x12, EXT_GPIO(4));
+#endif
 	i2c_register_board_info(2, &ixora_ipcam_gpio_i2c_board_info, 1);
 }
 
