@@ -69,11 +69,11 @@ struct ambarella_pwm_info {
 	module_param_cb(name_prefix##default_duty, &param_ops_int, &(arg.default_duty), perm); \
 	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm)
 
-extern struct platform_device ambarella_pwm_platform_device0;
-extern struct platform_device ambarella_pwm_platform_device1;
-extern struct platform_device ambarella_pwm_platform_device2;
-extern struct platform_device ambarella_pwm_platform_device3;
-extern struct platform_device ambarella_pwm_platform_device4;
+extern struct platform_device ambarella_pwm_backlight_device0;
+extern struct platform_device ambarella_pwm_backlight_device1;
+extern struct platform_device ambarella_pwm_backlight_device2;
+extern struct platform_device ambarella_pwm_backlight_device3;
+extern struct platform_device ambarella_pwm_backlight_device4;
 
 /* ==========================================================================*/
 extern int ambarella_init_pwm(void);

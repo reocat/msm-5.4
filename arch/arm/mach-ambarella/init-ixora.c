@@ -89,6 +89,10 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_spi0,
 	&ambarella_spi1,
 	//&ambarella_spi_slave,
+	&ambarella_pwm_backlight_device0,
+	&ambarella_pwm_backlight_device1,
+	&ambarella_pwm_backlight_device2,
+	&ambarella_pwm_backlight_device3,
 };
 
 /* ==========================================================================*/
