@@ -234,73 +234,88 @@ static void ixora_bub_sdio_set_vdd(u32 vdd)
 }
 
 /* ==========================================================================*/
+static struct pca953x_platform_data ixora_ipcam_gpio_pca953x_platform_data = {
+	.gpio_base		= EXT_GPIO(0),
+	.irq_base		= EXT_IRQ(0),
+	.invert			= 0,
+};
+
+static struct i2c_board_info ixora_ipcam_gpio_i2c_board_info = {
+	.type			= "pca9539",
+	.flags			= 0,
+	.addr			= 0x74,
+	.platform_data		= &ixora_ipcam_gpio_pca953x_platform_data,
+	.irq			= GPIO_INT_VEC(9),
+};
+
+static void ixora_ipcam_sd_set_vdd(u32 vdd)
+{
+	pr_debug("%s = %dmV\n", __func__, vdd);
+	ambarella_gpio_config(GPIO(0), GPIO_FUNC_SW_OUTPUT);
+	if (vdd == 1800) {
+		ambarella_gpio_set(GPIO(0), 0);
+	} else {
+		ambarella_gpio_set(GPIO(0), 1);
+	}
+	msleep(100);
+}
+
+static void __init ambarella_init_ixora_ipcam(void)
+{
+	ambarella_eth0_platform_info.mii_id = 3;
+	ambarella_eth0_platform_info.phy_id = 0x00221560;
+	ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(10);
+	ambarella_eth0_platform_info.phy_irq.irq_line = gpio_to_irq(GPIO(10));
+	ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
+	ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
+	ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
+
+	ambarella_platform_sd0_controller.max_clock = 48000000;
+	ambarella_platform_sd0_controller.slot[0].private_caps |=
+		(AMBA_SD_PRIVATE_CAPS_VDD_18 |
+		AMBA_SD_PRIVATE_CAPS_ADMA);
+	ambarella_platform_sd0_controller.slot[0].set_vdd =
+		ixora_ipcam_sd_set_vdd;
+	ambarella_platform_sd0_controller.slot[0].set_bus_timing =
+		ixora_bub_sd_set_bus_timing;
+	ambarella_platform_sd0_controller.slot[0].ext_power.gpio_id = EXT_GPIO(0);
+	ambarella_platform_sd0_controller.slot[0].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd0_controller.slot[0].ext_power.active_delay = 300;
+
+	ambarella_platform_sd1_controller.max_clock = 24000000;
+	ambarella_platform_sd1_controller.slot[0].private_caps |=
+		(AMBA_SD_PRIVATE_CAPS_ADMA);
+	ambarella_platform_sd1_controller.slot[0].ext_power.gpio_id = EXT_GPIO(1);
+	ambarella_platform_sd1_controller.slot[0].ext_power.active_level = GPIO_HIGH;
+	ambarella_platform_sd1_controller.slot[0].ext_power.active_delay = 300;
+
+	i2c_register_board_info(2, &ixora_ipcam_gpio_i2c_board_info, 1);
+}
+
+/* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
 	int i;
 	int use_bub_default = 1;
 
-#if defined(CONFIG_AMBARELLA_RAW_BOOT)
-	system_rev = AMBARELLA_BOARD_VERSION(S2L,
-		AMBARELLA_BOARD_TYPE_BUB, 'A');
-
-	amba_writel(GPIO0_REG(GPIO_AFSEL_OFFSET), 0x00000000);
-	amba_writel(GPIO0_REG(GPIO_DIR_OFFSET), 0x00000000);
-	amba_writel(GPIO0_REG(GPIO_MASK_OFFSET), 0xFFFFFFFF);
-	amba_writel(GPIO0_REG(GPIO_DATA_OFFSET), 0x00C00000);
-	amba_writel(GPIO0_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
-
-	amba_writel(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x00000000);
-	amba_writel(GPIO1_REG(GPIO_DIR_OFFSET), 0x00000000);
-	amba_writel(GPIO1_REG(GPIO_MASK_OFFSET), 0xFFFFFFFF);
-	amba_writel(GPIO1_REG(GPIO_DATA_OFFSET), 0x00000000);
-	amba_writel(GPIO1_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
-
-	amba_writel(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x00000000);
-	amba_writel(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000000);
-	amba_writel(GPIO2_REG(GPIO_MASK_OFFSET), 0xFFFFFFFF);
-	amba_writel(GPIO2_REG(GPIO_DATA_OFFSET), 0x00000000);
-	amba_writel(GPIO2_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
-
-	amba_writel(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000000);
-	amba_writel(GPIO3_REG(GPIO_DIR_OFFSET), 0x00000000);
-	amba_writel(GPIO3_REG(GPIO_MASK_OFFSET), 0xFFFFFFFF);
-	amba_writel(GPIO3_REG(GPIO_DATA_OFFSET), 0x00000000);
-	amba_writel(GPIO3_REG(GPIO_ENABLE_OFFSET), 0xFFFFFFFF);
-
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF800001F);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x00FF8000);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 2)), 0x07000000);
-
-	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 0)), 0xF8000017);//debug ssi1
-	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 1)), 0x0087bf88);
-	//amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(0, 2)), 0x07000000);
-
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 0)), 0x003FFFFF);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 1)), 0xFFC00000);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(1, 2)), 0x00000000);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(2, 0)), 0xFE000000);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(2, 1)), 0x01FFFFFF);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(2, 2)), 0x00000000);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(3, 0)), 0x0003FFFF);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(3, 1)), 0x00000000);
-	amba_writel(IOMUX_REG(IOMUX_REG_OFFSET(3, 2)), 0x00000000);
-	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x00000001);
-	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x00000000);
-
-/*	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_0_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_1_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_1_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_2_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_2_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_3_OFFSET), 0x00000000);
-	amba_writel(GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_3_OFFSET), 0x00000000);*/
-#endif
 	ambarella_init_machine("ixora", REF_CLK_FREQ);
-
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
+
+	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
+		switch (AMBARELLA_BOARD_REV(system_rev)) {
+		case 'A':
+			ambarella_init_ixora_ipcam();
+			use_bub_default = 0;
+			break;
+
+		default:
+			pr_warn("%s: Unknown IPCAM Rev[%d]\n", __func__,
+				AMBARELLA_BOARD_REV(system_rev));
+			break;
+		}
+	}
 
 	if (use_bub_default) {
 		/* Config USB over-curent protection */
