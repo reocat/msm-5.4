@@ -98,7 +98,7 @@ static struct platform_device *ambarella_pwm_devices[] __initdata = {
 	/*&ambarella_pwm_backlight_device1,
 	&ambarella_pwm_backlight_device2,
 	&ambarella_pwm_backlight_device3,
-	&ambarella_pwm_backlight_device4*/,
+	&ambarella_pwm_backlight_device4,*/
 };
 
 /* ==========================================================================*/
