@@ -105,17 +105,17 @@ struct ambarella_nand_info {
 };
 
 static struct nand_ecclayout amb_oobinfo_512 = {
-	.eccbytes = 6,
-	.eccpos = {5, 6, 7, 8, 9, 10},
+	.eccbytes = 5,
+	.eccpos = {6, 7, 8, 9, 10},
 	.oobfree = {{0, 5}, {11, 5}}
 };
 
 static struct nand_ecclayout amb_oobinfo_2048 = {
-	.eccbytes = 24,
-	.eccpos = { 0, 8, 9, 10,11, 12,
-		16, 24, 25, 26, 27, 28,
-		32, 40, 41, 42, 43, 44,
-		48, 56, 57, 58, 59, 60},
+	.eccbytes = 20,
+	.eccpos = {8, 9, 10,11, 12,
+		24, 25, 26, 27, 28,
+		40, 41, 42, 43, 44,
+		56, 57, 58, 59, 60},
 	.oobfree = {{1, 7}, {13, 3},
 		{17, 7}, {29, 3},
 		{33, 7}, {45, 3},
