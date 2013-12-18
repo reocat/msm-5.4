@@ -28,8 +28,6 @@
 
 #if (CHIP_REV == A7L)
 #define ADC_NUM_CHANNELS	8
-#elif (CHIP_REV == S2L)
-#define ADC_NUM_CHANNELS	3
 #elif (CHIP_REV == I1)
 #define ADC_NUM_CHANNELS	10
 #elif (CHIP_REV == S2)
@@ -50,7 +48,7 @@
 #define ADC_REG(x)			(ADC_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_CONTROL_OFFSET		0x004
 #else
 #define ADC_CONTROL_OFFSET		0x00
@@ -61,15 +59,11 @@
 #define ADC_DATA1_OFFSET		0x04
 #define ADC_DATA2_OFFSET		0x08
 #define ADC_DATA3_OFFSET		0x0c
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_DATA0_OFFSET		0x150
 #define ADC_DATA1_OFFSET		0x154
 #define ADC_DATA2_OFFSET		0x158
 #define ADC_DATA3_OFFSET		0x15c
-#elif (CHIP_REV == S2L)
-#define ADC_DATA0_OFFSET		0x154
-#define ADC_DATA1_OFFSET		0x158
-#define ADC_DATA2_OFFSET		0x15c
 #else
 #define ADC_DATA0_OFFSET		0x04
 #define ADC_DATA1_OFFSET		0x08
@@ -84,15 +78,11 @@
 #endif
 #define ADC_ENABLE_OFFSET		0x18
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_CHAN0_INTR_OFFSET		0x120
 #define ADC_CHAN1_INTR_OFFSET		0x124
 #define ADC_CHAN2_INTR_OFFSET		0x128
 #define ADC_CHAN3_INTR_OFFSET		0x12c
-#elif (CHIP_REV == S2L)
-#define ADC_CHAN0_INTR_OFFSET		0x124
-#define ADC_CHAN1_INTR_OFFSET		0x128
-#define ADC_CHAN2_INTR_OFFSET		0x12c
 #else
 #define ADC_CHAN0_INTR_OFFSET		0x44
 #define ADC_CHAN1_INTR_OFFSET		0x48
@@ -423,7 +413,9 @@ struct ambarella_adc_controller {
 	u32				(*read_channel)(u32);
 	u32				scan_delay;
 	u32				(*temper_curve)(u32);
+	u32				(*setpll)(u32);
 	u32				adc_temper_channel;
+
 #if (CHIP_REV == S2) || (CHIP_REV == S2L)
 	u8				adc_counter;
 	u8				adc_slot_num;

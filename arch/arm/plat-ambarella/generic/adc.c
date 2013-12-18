@@ -33,9 +33,12 @@
 #include <asm/uaccess.h>
 #include <asm/system_info.h>
 #include <linux/module.h>
+#include <linux/clk.h>
 
 #include <mach/hardware.h>
 #include <plat/adc.h>
+#include <plat/clk.h>
+#include <plat/rct.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -62,6 +65,47 @@ struct ambarella_adc_controller ambarella_platform_adc_controller0;
 
 
 /* ==========================================================================*/
+
+static struct clk gclk_adc = {
+	.parent		= NULL,
+	.name		= "gclk_adc",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_ADC_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 2,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+
+static struct clk *ambarella_adc_register_clk(void)
+{
+	struct clk *pgclk_adc = NULL;
+
+	pgclk_adc =  clk_get(NULL, "gclk_adc");
+	if(IS_ERR(pgclk_adc)){
+		ambarella_clk_add(&gclk_adc);
+		pgclk_adc = &gclk_adc;
+	}
+	return pgclk_adc;
+}
+
+static u32 set_adc_pll(u32 clk)
+{
+	amba_writel(SCALER_ADC_REG, 0x00010002);
+	amba_writel(SCALER_ADC_REG, 0x00000002);
+	return 0;
+	//return clk_set_rate(ambarella_adc_register_clk(), clk);
+}
+
 u32 ambarella_adc_get_instances(void)
 {
 	return ADC_NUM_CHANNELS;
@@ -314,7 +358,7 @@ void ambarella_adc_set_config(void)
 		ambarella_adc_set_slot_ctrl(i, ambarella_platform_adc_controller0.adc_slot_ctrl[i]);
 
 	//temporary config fifo_0 with channel 3
-	ambarella_adc_set_fifo_ctrl(0,3);
+	//ambarella_adc_set_fifo_ctrl(0,3);
 }
 #endif
 
@@ -612,8 +656,8 @@ struct ambarella_adc_controller ambarella_platform_adc_controller0 = {
 	.reset			= ambarella_adc_start,
 	.stop			= ambarella_adc_stop,
 	.get_channel_num	= ambarella_adc_get_instances,
-
-	.scan_delay		= 20,
+	.setpll			= set_adc_pll,
+	.scan_delay		= 2,
 };
 #if defined(CONFIG_AMBARELLA_SYS_ADC_CALL)
 AMBA_ADC_PARAM_CALL(ambarella_platform_adc_controller0, 0644);

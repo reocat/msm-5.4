@@ -301,11 +301,14 @@ static int ambarella_input_adc_probe(struct platform_device *pdev)
 		(pinfo->pcontroller_info->stop == NULL) ||
 		(pinfo->pcontroller_info->open == NULL) ||
 		(pinfo->pcontroller_info->close == NULL) ||
+		(pinfo->pcontroller_info->setpll == NULL) ||
 		(pinfo->pcontroller_info->get_channel_num == NULL) ) {
 		dev_err(&pdev->dev, "Platform data is NULL!\n");
 		retval = -ENXIO;
 		goto adc_errorCode_pinfo;
 	}
+
+	pinfo->pcontroller_info->setpll(6000000);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
