@@ -42,6 +42,8 @@ static inline int ambarella_usb1_is_host(void)
 	return !!(ambarella_board_generic.board_poc & 0x00008000);
 #elif (CHIP_REV == S2L)
 	return !(ambarella_board_generic.board_poc & 0x20000000);
+#else
+	return -1;
 #endif
 }
 
@@ -51,9 +53,7 @@ static void ambarella_enable_usb_host(struct ambarella_uhc_controller *pdata)
 	u32 pin_set, pin_clr;
 	u32 val;
 
-#if (CHIP_REV == I1) || (CHIP_REV == S2L)
 	pdata->usb1_is_host = ambarella_usb1_is_host();
-#endif
 
 	if (atomic_inc_return(&usb_host_initialized) > 1)
 		return;
