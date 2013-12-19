@@ -48,27 +48,28 @@
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2)
-#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
-#define CRYPT_UNIT_OFFSET		0x20000
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+	#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX) || defined(CONFIG_PLAT_AMBARELLA_S2L)
+		#define CRYPT_UNIT_OFFSET		0x20000
+	#else
+		#define CRYPT_UNIT_OFFSET		0x7000
+	#endif
 #else
-#define CRYPT_UNIT_OFFSET		0x7000
+	#define CRYPT_UNIT_OFFSET		0x14000
 #endif
-#else
-#define CRYPT_UNIT_OFFSET		0x14000
-#endif
+
 #if defined(CRYPT_BASE)
-#define CRYPT_UNIT_BASE			(CRYPT_BASE)
+	#define CRYPT_UNIT_BASE			(CRYPT_BASE)
 #else
-#if (CHIP_REV == S2)
-#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
-#define CRYPT_UNIT_BASE			(AXI_BASE + CRYPT_UNIT_OFFSET)
-#else
-#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
-#endif
-#else
-#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
-#endif
+	#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+		#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)|| defined(CONFIG_PLAT_AMBARELLA_S2L)
+			#define CRYPT_UNIT_BASE			(AXI_BASE + CRYPT_UNIT_OFFSET)
+		#else
+			#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
+		#endif
+	#else
+		#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+	#endif
 #endif
 
 #define CRYPT_UNIT_REG(x)		(CRYPT_UNIT_BASE + (x))
@@ -83,7 +84,7 @@
 #define SHA1_MD5_REG(x)			CRYPT_UNIT_REG(SHA1_MD5_OFFSET(x))
 #define BINARY_COMP_REG(x)		CRYPT_UNIT_REG(BINARY_COMP_OFFSET(x))
 
-#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2)
+#if (CHIP_REV == I1) || (CHIP_REV == A8) || (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define CRYPT_D_HI_OFFSET			0x00
 #define CRYPT_D_LO_OFFSET			0x04
 #define CRYPT_D_INPUT_ENC_HI_OFFSET		0x08
@@ -380,7 +381,7 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2 || CHIP_REV == S2L)
 #define CRYPTO_DATA_64BIT (1)
 #define CRYPTO_MODE_SWITCH (0)
 #else

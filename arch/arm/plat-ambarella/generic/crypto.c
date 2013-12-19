@@ -32,14 +32,14 @@
 /* ==========================================================================*/
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 static struct ambarella_platform_crypto_info ambarella_platform_crypto = {
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if (CHIP_REV == I1 || CHIP_REV == S2 || CHIP_REV == S2L)
 	.mode_switch = 0,
 	.binary_mode = 0,
 	.data_swap = 1,
 	.reg_64 = 1,
 	.md5_sha1 = 1,
 	.md5_sha1_64bit = 1,
-#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX) || defined(CONFIG_PLAT_AMBARELLA_S2L)
 	.exception = INDEPENDENT_MD5,
 #else
 	.exception = 0,
@@ -74,7 +74,7 @@ static struct resource ambarella_crypto_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 #if  (CRYPT_SUPPORT_MD5_SHA1 == 1)
-	#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+	#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)|| defined(CONFIG_PLAT_AMBARELLA_S2L)
 		[3] = {
 			.start	= MD5_IRQ,
 			.end	= MD5_IRQ,
