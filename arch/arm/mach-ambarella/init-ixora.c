@@ -88,7 +88,7 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_nand,
 	&ambarella_rtc0,
 	&ambarella_spi0,
-	&ambarella_spi1,
+	//&ambarella_spi1,
 	//&ambarella_spi_slave,
 	&ambarella_pwm_backlight_device0,
 	&ambarella_pwm_backlight_device1,
@@ -108,18 +108,19 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 0,
 		.chip_select	= 1,
 	},
-#if 0
+
 	{
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 2,
 	},
+#if 0
 	{
 		.modalias	= "spidev",
 		.bus_num	= 0,
 		.chip_select	= 3,
 	},
-#endif
+
 	{
 		.modalias	= "spidev",
 		.bus_num	= 1,
@@ -140,6 +141,7 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.bus_num	= 1,
 		.chip_select	= 3,
 	},
+#endif
 };
 
 

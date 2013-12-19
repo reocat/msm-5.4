@@ -39,6 +39,7 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+#if (SPI_INSTANCES >= 1) // a5s, s2, ione a7l
 static struct clk gclk_ssi = {
 	.parent		= NULL,
 	.name		= "gclk_ssi",
@@ -82,7 +83,7 @@ static void ambarella_ssi_set_pll(void)
 {
 #if (CHIP_REV == I1) || (CHIP_REV == A8)
 	u32 freq_hz = 54000000;
-#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
+#elif (CHIP_REV == S2)
 	u32 freq_hz = 60000000;
 #else
 	u32 freq_hz = 13500000;
@@ -90,14 +91,13 @@ static void ambarella_ssi_set_pll(void)
 	clk_set_rate(ambarella_ssi_register_clk(), freq_hz);
 }
 
-
 static u32 ambarella_ssi_get_pll(void)
 {
 	return clk_get_rate(ambarella_ssi_register_clk());
 }
+#endif
 
-
-#if (SPI_MASTER_INSTANCES >= 2)
+#if (SPI_INSTANCES >= 2) // a5s, s2ahb,ione
 static struct clk gclk_ssi2 = {
 	.parent		= NULL,
 	.name		= "gclk_ssi2",
@@ -163,7 +163,11 @@ static struct clk gclk_ssi_ahb = {
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_REG_UNAVAILABLE,
 	.pres_reg	= PLL_REG_UNAVAILABLE,
+#if (CHIP_REV == S2L)
 	.post_reg	= CG_SSI_REG,
+#else // ione
+	.post_reg	= CG_SSI_AHB_REG,
+#endif
 	.frac_reg	= PLL_REG_UNAVAILABLE,
 	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
 	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
@@ -182,7 +186,12 @@ static struct clk *ambarella_ssi_ahb_register_clk(void)
 
 	pgclk_ssi_ahb = clk_get(NULL, "gclk_ssi_ahb");
 	if (IS_ERR(pgclk_ssi_ahb)) {
+#if (CHIP_REV == S2L)
 		pgclk_ahb = clk_get(NULL, "pll_out_core");
+#else // ione
+		pgclk_ahb = clk_get(NULL, "gclk_apb");
+#endif
+
 		if (IS_ERR(pgclk_ahb)) {
 			BUG();
 		}
@@ -197,8 +206,7 @@ static struct clk *ambarella_ssi_ahb_register_clk(void)
 
 static void ambarella_ssi_ahb_set_pll(void)
 {
-	u32 freq_hz = 13500000;
-
+	u32 freq_hz = 54000000;
 	clk_set_rate(ambarella_ssi_ahb_register_clk(), freq_hz);
 }
 
@@ -206,7 +214,7 @@ static u32 ambarella_ssi_ahb_get_pll(void)
 {
 	return clk_get_rate(ambarella_ssi_ahb_register_clk());
 }
-
+#if (CHIP_REV == S2L)
 static struct clk gclk_ssi2_ahb = {
 	.parent		= NULL,
 	.name		= "gclk_ssi2_ahb",
@@ -249,7 +257,7 @@ static struct clk *ambarella_ssi2_ahb_register_clk(void)
 
 static void ambarella_ssi2_ahb_set_pll(void)
 {
-	u32 freq_hz = 13500000;
+	u32 freq_hz = 54000000;
 
 	clk_set_rate(ambarella_ssi2_ahb_register_clk(), freq_hz);
 }
@@ -258,7 +266,7 @@ static u32 ambarella_ssi2_ahb_get_pll(void)
 {
 	return clk_get_rate(ambarella_ssi2_ahb_register_clk());
 }
-
+#endif
 #endif
 
 /* ==========================================================================*/
@@ -305,16 +313,20 @@ struct resource ambarella_spi0_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
+#if (CHIP_REV == S2L)
 		.start	= SSI_MASTER_IRQ,
 		.end	= SSI_MASTER_IRQ,
+#else
+		.start	= SSI_IRQ,
+		.end	= SSI_IRQ,
+#endif
 		.flags	= IORESOURCE_IRQ,
 	},
 };
 
 #if (CHIP_REV == S2L)
 int ambarella_spi0_cs_pins[] = {
-	SSI0_EN0, SSI0_EN1,// SSIO_EN2, SSIO_EN3, only support en0 en1 on a12,
-	                   // enc2 is ok, but enc3 seems controled by net phy on hardware
+	SSI0_EN0, SSI0_EN1, SSIO_EN2, SSIO_EN3,
 };
 #else
 int ambarella_spi0_cs_pins[] = {
@@ -408,11 +420,12 @@ struct resource ambarella_spi1_resources[] = {
 };
 #endif
 
-int ambarella_spi1_cs_pins[] = {SSI2_0EN, -1,-1,-1};
+int ambarella_spi1_cs_pins[] = {SSI2_0EN, -1, -1, -1, -1, -1, -1, -1};
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
 AMBA_SPI_CS_PINS_PARAM_CALL(1, ambarella_spi1_cs_pins, 0644);
 #endif
 int ambarella_spi1_cs_high[] = {
+	0, 0, 0, 0,
 	0, 0, 0, 0,
 };
 #if defined(CONFIG_AMBARELLA_SYS_SPI_CALL)
