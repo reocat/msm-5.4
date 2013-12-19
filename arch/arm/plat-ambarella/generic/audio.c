@@ -49,7 +49,11 @@ static struct clk gclk_audio = {
 	.lock_bit	= 7,
 	.divider	= 0,
 	.max_divider	= 0,
+#if (CHIP_REV == S2L)
 	.extra_scaler	= 1,
+#else
+	.extra_scaler	= 0,
+#endif
 	.ops		= &ambarella_rct_pll_ops,
 };
 
