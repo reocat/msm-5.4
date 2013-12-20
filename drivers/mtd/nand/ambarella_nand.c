@@ -1519,7 +1519,7 @@ static int ambarella_nand_init_chipecc(
 			/* ecc bit part maybe need optimize
 			when nand supports internel ecc bit itself */
 	} else {
-		chip->ecc.bytes = 6;
+		chip->ecc.bytes = 5;
 		chip->ecc.strength = 1;	/* 1 bit only ECC-HW */
 	}
 
