@@ -65,7 +65,7 @@ struct ambarella_adc_controller ambarella_platform_adc_controller0;
 
 
 /* ==========================================================================*/
-
+#if 0
 static struct clk gclk_adc = {
 	.parent		= NULL,
 	.name		= "gclk_adc",
@@ -97,6 +97,7 @@ static struct clk *ambarella_adc_register_clk(void)
 	}
 	return pgclk_adc;
 }
+#endif
 
 static u32 set_adc_pll(u32 clk)
 {
@@ -308,6 +309,7 @@ void ambarella_adc_set_slot_ctrl(u8 slot_id, u32 slot_value)
 	}
 }
 
+#if 0
 static int ambarella_adc_set_fifo_ctrl(u32 fifo_id, u16 fifo_cid)
 {
 	u32 reg=0;
@@ -340,7 +342,7 @@ static int ambarella_adc_set_fifo_ctrl(u32 fifo_id, u16 fifo_cid)
 	amba_writel(ADC_FIFO_CTRL_REG, ADC_FIFO_CONTROL_CLEAR);
 	return 0;
 }
-
+#endif
 void ambarella_adc_set_config(void)
 {
 	int i = 0;

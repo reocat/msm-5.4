@@ -222,10 +222,9 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S2L)
 #define SCALER_ADC_OFFSET		0x09C
 #define SCALER_ADC_REG			RCT_REG(SCALER_ADC_OFFSET)
-#endif
+
 
 /* ==========================================================================*/
 #endif /* __PLAT_AMBARELLA_RCT_H__ */
