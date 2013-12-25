@@ -153,50 +153,27 @@ static struct nand_bbt_descr amb_2048_bbt_descr = {
 static uint8_t bbt_pattern[] = { 'B', 'b', 't', '0' };
 static uint8_t mirror_pattern[] = { '1', 't', 'b', 'B' };
 
-static struct nand_bbt_descr bbt_main_descr = {
+static struct nand_bbt_descr bbt_main_no_oob_descr = {
 	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
-	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
-	.offs = 1,
+	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP
+	    | NAND_BBT_NO_OOB,
+	.offs = 0,
 	.len = 4,
-	.veroffs = 13,
-	.maxblocks = 4,
+	.veroffs = 4,
+	.maxblocks = NAND_BBT_SCAN_MAXBLOCKS,
 	.pattern = bbt_pattern,
 };
 
-static struct nand_bbt_descr bbt_mirror_descr = {
+static struct nand_bbt_descr bbt_mirror_no_oob_descr = {
 	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
-	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
-	.offs = 1,
+	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP
+	    | NAND_BBT_NO_OOB,
+	.offs = 0,
 	.len = 4,
-	.veroffs = 13,
-	.maxblocks = 4,
+	.veroffs = 4,
+	.maxblocks = NAND_BBT_SCAN_MAXBLOCKS,
 	.pattern = mirror_pattern,
 };
-
-/* bbt pattern for dual space mode */
-static u8 bbt_pattern_dsm[] = { 'B', 'b', 't', '2' };
-static u8 mirror_pattern_dsm[] = { '3', 't', 'b', 'B' };
-
-static struct nand_bbt_descr bbt_main_descr_dsm = {
-	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
-	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
-	.offs = 1,
-	.len = 4,
-	.veroffs = 5,
-	.maxblocks = 4,
-	.pattern = bbt_pattern_dsm,
-};
-
-static struct nand_bbt_descr bbt_mirror_descr_dsm = {
-	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
-	    | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
-	.offs = 1,
-	.len = 4,
-	.veroffs = 5,
-	.maxblocks = 4,
-	.pattern = mirror_pattern_dsm,
-};
-
 
 /* ==========================================================================*/
 static char part_name[PART_MAX][PART_NAME_LEN];
@@ -1301,11 +1278,12 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 				nand_amb_write_data(nand_info,
 					nand_info->seqin_page_addr,
 					nand_info->dmaaddr, MAIN_ECC);
+			} else {
+				nand_amb_write_data(nand_info,
+					nand_info->seqin_page_addr,
+					nand_info->dmaaddr + mtd->writesize,
+					SPARE_ONLY);
 			}
-			nand_amb_write_data(nand_info,
-				nand_info->seqin_page_addr,
-				nand_info->dmaaddr + mtd->writesize,
-				SPARE_ONLY);
 		}
 		break;
 	default:
@@ -1467,14 +1445,9 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
 	chip->cmdfunc = amb_nand_cmdfunc;
 
 	if (nand_info->plat_nand->flash_bbt) {
-		chip->bbt_options |= NAND_BBT_USE_FLASH;
-		if (nand_info->plat_nand->sets->ecc_bits > 1) {
-			chip->bbt_td = &bbt_main_descr_dsm;
-			chip->bbt_md = &bbt_mirror_descr_dsm;
-		} else {
-			chip->bbt_td = &bbt_main_descr;
-			chip->bbt_md = &bbt_mirror_descr;
-		}
+		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+			chip->bbt_td = &bbt_main_no_oob_descr;
+			chip->bbt_md = &bbt_mirror_no_oob_descr;
 	}
 
 	nand_info->mtd.priv = chip;
