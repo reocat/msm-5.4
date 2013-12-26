@@ -45,11 +45,11 @@
 #endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_DISABLE_8_16_ACCESS)
-static inline u8 __amba_readb(const volatile void __iomem *address)
+static inline u8 __amba_readb(volatile void __iomem *address)
 {
-	u32					tmpreg;
-	u32					index;
-	volatile void __iomem			*base;
+	u32 tmpreg;
+	u32 index;
+	volatile void __iomem *base;
 
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
@@ -81,11 +81,11 @@ static inline u8 __amba_readb(const volatile void __iomem *address)
 	return (u8)tmpreg;
 }
 
-static inline void __amba_writeb(const volatile void __iomem *address, u8 value)
+static inline void __amba_writeb(volatile void __iomem *address, u8 value)
 {
-	u32					tmpreg;
-	u32					index;
-	volatile void __iomem			*base;
+	u32 tmpreg;
+	u32 index;
+	volatile void __iomem *base;
 
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
@@ -117,11 +117,11 @@ static inline void __amba_writeb(const volatile void __iomem *address, u8 value)
 	AMBARELLA_REG_UNLOCK();
 }
 
-static inline u16 __amba_readw(const volatile void __iomem *address)
+static inline u16 __amba_readw(volatile void __iomem *address)
 {
-	u32					tmpreg;
-	u32					index;
-	volatile void __iomem			*base;
+	u32 tmpreg;
+	u32 index;
+	volatile void __iomem *base;
 
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
@@ -143,11 +143,11 @@ static inline u16 __amba_readw(const volatile void __iomem *address)
 	return (u16)tmpreg;
 }
 
-static inline void __amba_writew(const volatile void __iomem *address, u16 value)
+static inline void __amba_writew(volatile void __iomem *address, u16 value)
 {
-	u32					tmpreg;
-	u32					index;
-	volatile void __iomem			*base;
+	u32 tmpreg;
+	u32 index;
+	volatile void __iomem *base;
 
 	index = (u32)address & 0x03;
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
@@ -169,10 +169,10 @@ static inline void __amba_writew(const volatile void __iomem *address, u16 value
 	AMBARELLA_REG_UNLOCK();
 }
 
-#define amba_readb(v)		__amba_readb((const volatile void __iomem *)v)
-#define amba_readw(v)		__amba_readw((const volatile void __iomem *)v)
-#define amba_writeb(v,d)	__amba_writeb((const volatile void __iomem *)v, d)
-#define amba_writew(v,d)	__amba_writew((const volatile void __iomem *)v, d)
+#define amba_readb(v)		__amba_readb((volatile void __iomem *)v)
+#define amba_readw(v)		__amba_readw((volatile void __iomem *)v)
+#define amba_writeb(v,d)	__amba_writeb((volatile void __iomem *)v, d)
+#define amba_writew(v,d)	__amba_writew((volatile void __iomem *)v, d)
 #else
 #define amba_readb(v)		__raw_readb(v)
 #define amba_readw(v)		__raw_readw(v)
@@ -182,7 +182,7 @@ static inline void __amba_writew(const volatile void __iomem *address, u16 value
 
 static inline u32 __amba_readl(volatile void __iomem *address)
 {
-	u32					tmpval;
+	u32 tmpval;
 
 	AMBARELLA_REG_LOCK();
 	tmpval = __raw_readl(address);
@@ -210,49 +210,32 @@ static inline void __amba_writel_en(volatile void __iomem *address, u32 value)
 #define amba_readl(v)		__amba_readl((volatile void __iomem *)v)
 #define amba_writel(v,d)	__amba_writel((volatile void __iomem *)v, d)
 
-static inline void __amba_read2w(const volatile void __iomem *address,
+static inline void __amba_read2w(volatile void __iomem *address,
 	u16 *value1, u16 *value2)
 {
-	u32					tmpreg;
-	u32					index;
-	volatile void __iomem			*base;
+	volatile void __iomem *base;
+	u32 tmpreg;
 
-	index = (u32)address & 0x03;
+	BUG_ON((u32)address & 0x03);
+
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
 	tmpreg = amba_readl(base);
-
-	switch (index) {
-	case 0:
-		*value1 = (u16)tmpreg;
-		*value2 = (u16)(tmpreg >> 16);
-		break;
-
-	default:
-		BUG_ON(1);
-		break;
-	}
+	*value1 = (u16)tmpreg;
+	*value2 = (u16)(tmpreg >> 16);
 }
 
-static inline void __amba_write2w(const volatile void __iomem *address,
+static inline void __amba_write2w(volatile void __iomem *address,
 	u16 value1, u16 value2)
 {
-	u32					tmpreg;
-	u32					index;
-	volatile void __iomem			*base;
+	volatile void __iomem *base;
+	u32 tmpreg;
 
-	index = (u32)address & 0x03;
+	BUG_ON((u32)address & 0x03);
+
 	base = (volatile void __iomem *)((u32)address & 0xFFFFFFFC);
 	tmpreg = value2;
 	tmpreg <<= 16;
 	tmpreg |= value1;
-	switch (index) {
-	case 0:
-		break;
-
-	default:
-		BUG_ON(1);
-		break;
-	}
 	amba_writel(base, tmpreg);
 }
 
@@ -272,23 +255,23 @@ static inline void __amba_write2w(const volatile void __iomem *address,
 #define amba_tstbitsl(v, mask)	(amba_readl(v) & (mask))
 
 static inline void amba_change_bit(
-	const volatile void __iomem *vaddress,
+	volatile void __iomem *vaddress,
 	unsigned int bit)
 {
-	u32					mask = 1UL << (bit & 31);
-	u32					data;
+	u32 mask = 1UL << (bit & 31);
+	u32 data;
 
 	data = amba_readl(vaddress);
 	data ^= mask;
 	amba_writel(vaddress, data);
 }
 static inline int amba_test_and_set_bit(
-	const volatile void __iomem *vaddress,
+	volatile void __iomem *vaddress,
 	unsigned int bit)
 {
-	u32					mask = 1UL << (bit & 31);
-	u32					data;
-	u32					tmp;
+	u32 mask = 1UL << (bit & 31);
+	u32 data;
+	u32 tmp;
 
 	data = amba_readl(vaddress);
 	tmp = data | mask;
@@ -297,12 +280,12 @@ static inline int amba_test_and_set_bit(
 	return data & mask;
 }
 static inline int amba_test_and_clear_bit(
-	const volatile void __iomem *vaddress,
+	volatile void __iomem *vaddress,
 	unsigned int bit)
 {
-	u32					mask = 1UL << (bit & 31);
-	u32					data;
-	u32					tmp;
+	u32 mask = 1UL << (bit & 31);
+	u32 data;
+	u32 tmp;
 
 	data = amba_readl(vaddress);
 	tmp = data & ~mask;
@@ -311,12 +294,12 @@ static inline int amba_test_and_clear_bit(
 	return data & mask;
 }
 static inline int amba_test_and_change_bit(
-	const volatile void __iomem *vaddress,
+	volatile void __iomem *vaddress,
 	unsigned int bit)
 {
-	u32					mask = 1UL << (bit & 31);
-	u32					data;
-	u32					tmp;
+	u32 mask = 1UL << (bit & 31);
+	u32 data;
+	u32 tmp;
 
 	data = amba_readl(vaddress);
 	tmp = data ^ mask;
@@ -325,11 +308,11 @@ static inline int amba_test_and_change_bit(
 	return data & mask;
 }
 static inline int amba_test_and_set_mask(
-	const volatile void __iomem *vaddress,
+	volatile void __iomem *vaddress,
 	unsigned int mask)
 {
-	u32					data;
-	u32					tmp;
+	u32 data;
+	u32 tmp;
 
 	data = amba_readl(vaddress);
 	tmp = data | mask;
@@ -338,11 +321,11 @@ static inline int amba_test_and_set_mask(
 	return data & mask;
 }
 static inline int amba_test_and_clear_mask(
-	const volatile void __iomem *vaddress,
+	volatile void __iomem *vaddress,
 	unsigned int mask)
 {
-	u32					data;
-	u32					tmp;
+	u32 data;
+	u32 tmp;
 
 	data = amba_readl(vaddress);
 	tmp = data & ~mask;
