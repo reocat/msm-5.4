@@ -788,7 +788,7 @@ ambeth_init_phy_default:
 	if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq)) {
 		ambarella_gpio_config(lp->platform_info->phy_irq.irq_gpio,
 			lp->platform_info->phy_irq.irq_gpio_mode);
-		phydev->irq = lp->platform_info->phy_irq.irq_line;
+		phydev->irq = gpio_to_irq(lp->platform_info->phy_irq.irq_gpio);
 		phydev->irq_flags = lp->platform_info->phy_irq.irq_type;
 	}
 	goto ambeth_init_phy_connect;
@@ -2235,7 +2235,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"gpio_request %d for IRQ %d fail %d.\n",
 				lp->platform_info->phy_irq.irq_gpio,
-				lp->platform_info->phy_irq.irq_line,
+				gpio_to_irq(lp->platform_info->phy_irq.irq_gpio),
 				ret_val);
 			goto ambeth_drv_probe_free_mii_reset;
 		}

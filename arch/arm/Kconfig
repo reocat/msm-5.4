@@ -304,6 +304,8 @@ config ARCH_AMBARELLA
 	select NEED_MACH_GPIO_H
 	select NEED_MACH_IO_H
 	select NEED_MACH_MEMORY_H
+	select PINCTRL
+	select PINCTRL_AMB
 	help
 	  Support for Ambarella Media Processor.
 

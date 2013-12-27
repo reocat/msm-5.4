@@ -154,6 +154,9 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	BUG_ON(ret_val != 0);
 #endif
 
+	ret_val = ambarella_init_pinctrl();
+	BUG_ON(ret_val != 0);
+
 	return ret_val;
 }
 

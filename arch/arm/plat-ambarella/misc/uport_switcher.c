@@ -169,8 +169,10 @@ static int __init ambarella_init_uport_switcher(void)
 {
 	int ret_val = 0;
 	int otg_gpio_val = -1;
+	int irq_line = 0;
 
 	if (ambarella_is_valid_gpio_irq(&ambarella_board_generic.uport_irq)) {
+		irq_line = gpio_to_irq(ambarella_board_generic.uport_irq.irq_gpio);
 		ambarella_gpio_config(ambarella_board_generic.uport_irq.irq_gpio,
 			GPIO_FUNC_SW_INPUT);
 		otg_gpio_val = ambarella_gpio_get(
@@ -178,8 +180,7 @@ static int __init ambarella_init_uport_switcher(void)
 		if (otg_gpio_val == ambarella_board_generic.uport_irq.irq_gpio_val)
 			usb_detect_otg_flag = USB_DETECT_DEVICE_OTG;
 
-		ret_val = request_irq(ambarella_board_generic.uport_irq.irq_line,
-				ambarella_otg_detect_irq,
+		ret_val = request_irq(irq_line, ambarella_otg_detect_irq,
 				ambarella_board_generic.uport_irq.irq_type,
 				"usb_detect_otg", NULL);
 		if (ret_val) {
@@ -188,10 +189,10 @@ static int __init ambarella_init_uport_switcher(void)
 		}
 
 		/* allow to wake up system when sleeping */
-		ret_val = enable_irq_wake(ambarella_board_generic.uport_irq.irq_line);
+		ret_val = enable_irq_wake(irq_line);
 		if (ret_val) {
-			pr_err("%s : enable_irq_wake(%d) = %d\n", __func__,
-				ambarella_board_generic.uport_irq.irq_line, ret_val);
+			pr_err("%s : enable_irq_wake(%d) = %d\n",
+					__func__, irq_line, ret_val);
 			goto uport_switcher_err2;
 		}
 	}
@@ -226,7 +227,7 @@ static int __init ambarella_init_uport_switcher(void)
 	return 0;
 
 uport_switcher_err2:
-	free_irq(ambarella_board_generic.uport_irq.irq_line, NULL);
+	free_irq(irq_line, NULL);
 uport_switcher_err1:
 	return ret_val;
 }

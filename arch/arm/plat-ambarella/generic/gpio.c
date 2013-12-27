@@ -44,22 +44,9 @@
 
 /* ==========================================================================*/
 struct ambarella_gpio_chip {
-	struct gpio_chip	chip;
 	u32			base_reg;
 	spinlock_t		lock;
-	struct {
-		u32 data_reg;
-		u32 dir_reg;
-		u32 is_reg;
-		u32 ibe_reg;
-		u32 iev_reg;
-		u32 ie_reg;
-		u32 afsel_reg;
-		u32 mask_reg;
-	}			pm_info;
 };
-#define to_ambarella_gpio_chip(c) \
-	container_of(c, struct ambarella_gpio_chip, chip)
 
 static inline int ambarella_gpio_inline_config(
 	struct ambarella_gpio_chip *agchip, u32 offset, int func)
@@ -130,209 +117,21 @@ static DEFINE_MUTEX(ambarella_gpio_mtx);
 static unsigned long ambarella_gpio_valid[BITS_TO_LONGS(AMBGPIO_SIZE)];
 static unsigned long ambarella_gpio_freeflag[BITS_TO_LONGS(AMBGPIO_SIZE)];
 
-static int ambarella_gpio_request(struct gpio_chip *chip, unsigned offset)
-{
-	int					retval = 0;
-
-	mutex_lock(&ambarella_gpio_mtx);
-
-	if (test_bit((chip->base + offset), ambarella_gpio_valid)) {
-		if (test_bit((chip->base + offset), ambarella_gpio_freeflag)) {
-			__clear_bit((chip->base + offset),
-				ambarella_gpio_freeflag);
-		} else {
-			retval = -EACCES;
-		}
-	} else {
-		retval = -EPERM;
-	}
-
-	mutex_unlock(&ambarella_gpio_mtx);
-
-	return retval;
-}
-
-static void ambarella_gpio_free(struct gpio_chip *chip, unsigned offset)
-{
-	mutex_lock(&ambarella_gpio_mtx);
-
-	__set_bit((chip->base + offset), ambarella_gpio_freeflag);
-
-	mutex_unlock(&ambarella_gpio_mtx);
-}
-
-static int ambarella_gpio_chip_direction_input(struct gpio_chip *chip,
-	unsigned offset)
-{
-	int					retval = 0;
-	struct ambarella_gpio_chip		*agchip;
-
-	agchip = to_ambarella_gpio_chip(chip);
-	retval = ambarella_gpio_inline_config(agchip,
-		offset, GPIO_FUNC_SW_INPUT);
-
-	return retval;
-}
-
-static int ambarella_gpio_chip_get(struct gpio_chip *chip,
-	unsigned offset)
-{
-	int					retval = 0;
-	struct ambarella_gpio_chip		*agchip;
-
-	agchip = to_ambarella_gpio_chip(chip);
-	retval = ambarella_gpio_inline_get(agchip,
-		offset);
-
-	return retval;
-}
-
-static int ambarella_gpio_chip_direction_output(struct gpio_chip *chip,
-	unsigned offset, int val)
-{
-	int					retval = 0;
-	struct ambarella_gpio_chip		*agchip;
-
-	agchip = to_ambarella_gpio_chip(chip);
-	retval = ambarella_gpio_inline_config(agchip,
-		offset, GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_inline_set(agchip, offset, val);
-
-	return retval;
-}
-
-static void ambarella_gpio_chip_set(struct gpio_chip *chip,
-	unsigned offset, int val)
-{
-	struct ambarella_gpio_chip		*agchip;
-
-	agchip = to_ambarella_gpio_chip(chip);
-	ambarella_gpio_inline_set(agchip, offset, val);
-}
-
-static int ambarella_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
-{
-	if ((chip->base + offset) < GPIO_MAX_LINES)
-		return GPIO_INT_VEC(chip->base + offset);
-
-	return -EINVAL;
-}
-
-static void ambarella_gpio_chip_dbg_show(struct seq_file *s,
-	struct gpio_chip *chip)
-{
-	int					i;
-	struct ambarella_gpio_chip		*agchip;
-	u32					afsel;
-	u32					mask;
-	u32					data;
-	u32					dir;
-	unsigned long				flags;
-
-	agchip = to_ambarella_gpio_chip(chip);
-
-	spin_lock_irqsave(&agchip->lock, flags);
-	afsel = amba_readl(agchip->base_reg + GPIO_AFSEL_OFFSET);
-	dir = amba_readl(agchip->base_reg + GPIO_DIR_OFFSET);
-	mask = amba_readl(agchip->base_reg + GPIO_MASK_OFFSET);
-	amba_writel(agchip->base_reg + GPIO_MASK_OFFSET, ~afsel);
-	data = amba_readl(agchip->base_reg + GPIO_DATA_OFFSET);
-	amba_writel(agchip->base_reg + GPIO_MASK_OFFSET, mask);
-	spin_unlock_irqrestore(&agchip->lock, flags);
-
-	seq_printf(s, "GPIO_BASE:\t0x%08X\n", agchip->base_reg);
-	seq_printf(s, "GPIO_AFSEL:\t0x%08X\n", afsel);
-	seq_printf(s, "GPIO_DIR:\t0x%08X\n", dir);
-	seq_printf(s, "GPIO_MASK:\t0x%08X:0x%08X\n", mask, ~afsel);
-	seq_printf(s, "GPIO_DATA:\t0x%08X\n", data);
-	for (i = 0; i < chip->ngpio; i++) {
-		seq_printf(s, "GPIO %d: ", (chip->base + i));
-		if (afsel & (1 << i)) {
-			seq_printf(s, "HW\n");
-		} else {
-			seq_printf(s, "%s\t%s\n",
-				(dir & (1 << i)) ? "out" : "in",
-				(data & (1 << i)) ? "set" : "clear");
-		}
-	}
-}
-
-#define AMBARELLA_GPIO_BANK(name, reg_base, base_gpio)			\
-{									\
-	.chip = {							\
-		.label			= name,				\
-		.owner			= THIS_MODULE,			\
-		.request		= ambarella_gpio_request,	\
-		.free			= ambarella_gpio_free,		\
-		.direction_input	= ambarella_gpio_chip_direction_input,	\
-		.get			= ambarella_gpio_chip_get,	\
-		.direction_output	= ambarella_gpio_chip_direction_output, \
-		.set			= ambarella_gpio_chip_set,	\
-		.to_irq			= ambarella_gpio_to_irq,	\
-		.dbg_show		= ambarella_gpio_chip_dbg_show,	\
-		.base			= base_gpio,			\
-		.ngpio			= GPIO_BANK_SIZE,		\
-		.can_sleep		= 0,				\
-		.exported		= 0,				\
-	},								\
-	.base_reg			= reg_base,			\
-}
-
-static struct ambarella_gpio_chip ambarella_gpio_banks[] = {
-	AMBARELLA_GPIO_BANK("ambarella-gpio0",
-		GPIO0_BASE, GPIO(0 * GPIO_BANK_SIZE)),
-#if (GPIO_INSTANCES >= 2)
-	AMBARELLA_GPIO_BANK("ambarella-gpio1",
-		GPIO1_BASE, GPIO(1 * GPIO_BANK_SIZE)),
-#endif
-#if (GPIO_INSTANCES >= 3)
-	AMBARELLA_GPIO_BANK("ambarella-gpio2",
-		GPIO2_BASE, GPIO(2 * GPIO_BANK_SIZE)),
-#endif
-#if (GPIO_INSTANCES >= 4)
-	AMBARELLA_GPIO_BANK("ambarella-gpio3",
-		GPIO3_BASE, GPIO(3 * GPIO_BANK_SIZE)),
-#endif
-#if (GPIO_INSTANCES >= 5)
-	AMBARELLA_GPIO_BANK("ambarella-gpio4",
-		GPIO4_BASE, GPIO(4 * GPIO_BANK_SIZE)),
-#endif
-#if (GPIO_INSTANCES >= 6)
-	AMBARELLA_GPIO_BANK("ambarella-gpio5",
-		GPIO5_BASE, GPIO(5 * GPIO_BANK_SIZE)),
-#endif
+static u32 gpio_base_reg[] = {
+	GPIO0_BASE,
+	GPIO1_BASE,
+	GPIO2_BASE,
+	GPIO3_BASE,
+	GPIO4_BASE,
+	GPIO5_BASE,
 };
+
+static struct ambarella_gpio_chip ambarella_gpio_banks[GPIO_INSTANCES];
 
 /* ==========================================================================*/
 static struct ambarella_gpio_chip *ambarella_gpio_id_to_chip(int id)
 {
-	struct ambarella_gpio_chip		*chip = NULL;
-
-	if (id < 0) {
-		chip = NULL;
-	} else if (id < (1 * GPIO_BANK_SIZE)) {
-		chip = &ambarella_gpio_banks[0];
-	} else if (id < (2 * GPIO_BANK_SIZE)) {
-		chip = &ambarella_gpio_banks[1];
-#if (GPIO_INSTANCES >= 3)
-	} else if (id < (3 * GPIO_BANK_SIZE)) {
-		chip = &ambarella_gpio_banks[2];
-#endif
-#if (GPIO_INSTANCES >= 4)
-	} else if (id < (4 * GPIO_BANK_SIZE)) {
-		chip = &ambarella_gpio_banks[3];
-#endif
-#if (GPIO_INSTANCES >= 5)
-	} else if (id < (5 * GPIO_BANK_SIZE)) {
-		chip = &ambarella_gpio_banks[4];
-#endif
-#if (GPIO_INSTANCES >= 6)
-	} else if (id < (6 * GPIO_BANK_SIZE)) {
-		chip = &ambarella_gpio_banks[5];
-#endif
-	}
-
-	return chip;
+	return (id < 0) ? NULL : &ambarella_gpio_banks[id / GPIO_BANK_SIZE];
 }
 
 void ambarella_gpio_config(int id, int func)
@@ -420,14 +219,9 @@ int __init ambarella_init_gpio(void)
 	}
 	mutex_unlock(&ambarella_gpio_mtx);
 
-	for (i = 0; i < ARRAY_SIZE(ambarella_gpio_banks); i++) {
+	for (i = 0; i < GPIO_INSTANCES; i++) {
 		spin_lock_init(&ambarella_gpio_banks[i].lock);
-		retval = gpiochip_add(&ambarella_gpio_banks[i].chip);
-		if (retval) {
-			pr_err("%s: gpiochip_add %s fail %d.\n", __func__,
-				ambarella_gpio_banks[i].chip.label, retval);
-			break;
-		}
+		ambarella_gpio_banks[i].base_reg = gpio_base_reg[i];
 	}
 
 	return retval;
@@ -636,8 +430,8 @@ int ambarella_is_valid_gpio_irq(struct ambarella_gpio_irq_info *pinfo)
 		goto ambarella_is_valid_gpio_irq_exit;
 
 	if ((pinfo->irq_gpio_mode != GPIO_FUNC_HW) &&
-		((pinfo->irq_line < GPIO_INT_VEC(0)) ||
-		(pinfo->irq_line >= NR_IRQS)))
+		((gpio_to_irq(pinfo->irq_gpio) < GPIO_INT_VEC(0)) ||
+		(gpio_to_irq(pinfo->irq_gpio) >= NR_IRQS)))
 		goto ambarella_is_valid_gpio_irq_exit;
 
 	bvalid = 1;

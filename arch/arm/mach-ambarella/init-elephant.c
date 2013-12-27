@@ -496,7 +496,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_eth0_platform_info.mii_id = 0;
 			ambarella_eth0_platform_info.phy_id = 0x001cc912;
 			ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(21);
-			ambarella_eth0_platform_info.phy_irq.irq_line = gpio_to_irq(GPIO(21));
 			ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
 			ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
@@ -583,7 +582,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_eth0_platform_info.mii_id = 1;
 		ambarella_eth0_platform_info.phy_id = 0x001cc915;
 		ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(21);
-		ambarella_eth0_platform_info.phy_irq.irq_line = gpio_to_irq(GPIO(21));
 		ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
 		ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;

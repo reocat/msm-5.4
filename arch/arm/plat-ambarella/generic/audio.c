@@ -78,46 +78,48 @@ static void set_audio_pll(u32 clksrc, u32 mclk)
 
 static void aucodec_digitalio_on_0(void)
 {
-#if (CHIP_REV == A5S) || (CHIP_REV == I1)
-	unsigned long flags;
+//#if (CHIP_REV == A5S) || (CHIP_REV == I1)
+//	unsigned long flags;
 
-	ambarella_gpio_raw_lock(1, &flags);
-	amba_clrbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x80000000);
-	ambarella_gpio_raw_unlock(1, &flags);
+//	ambarella_gpio_raw_lock(1, &flags);
+//	amba_clrbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x80000000);
+//	ambarella_gpio_raw_unlock(1, &flags);
 
-	/* GPIO77~GPIO81 program as hardware mode */
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
-	ambarella_gpio_raw_unlock(2, &flags);
+//	/* GPIO77~GPIO81 program as hardware mode */
+//	ambarella_gpio_raw_lock(2, &flags);
+//	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
+//	ambarella_gpio_raw_unlock(2, &flags);
 
-#elif (CHIP_REV == S2)
-	unsigned long flags;
+//#elif (CHIP_REV == S2)
+//	unsigned long flags;
 
-	ambarella_gpio_raw_lock(3, &flags);
-	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000030);
-	ambarella_gpio_raw_unlock(3, &flags);
+//	ambarella_gpio_raw_lock(3, &flags);
+//	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000030);
+//	ambarella_gpio_raw_unlock(3, &flags);
 
-	/* GPIO77~GPIO81 program as hardware mode */
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
-	ambarella_gpio_raw_unlock(2, &flags);
-#elif (CHIP_REV == S2L)
-	pr_err("aucodec_digitalio_on: S2L maybe not set GPIO Fixed \n");
-#if 0
-	unsigned long flags;
+//	/* GPIO77~GPIO81 program as hardware mode */
+//	ambarella_gpio_raw_lock(2, &flags);
+//	amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x0003e000);
+//	ambarella_gpio_raw_unlock(2, &flags);
+//#elif (CHIP_REV == S2L)
+//	pr_err("aucodec_digitalio_on: S2L maybe not set GPIO Fixed \n");
+//#if 0
+//	unsigned long flags;
 
-	ambarella_gpio_raw_lock(3, &flags);
-	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000030);
-	ambarella_gpio_raw_unlock(3, &flags);
+//	ambarella_gpio_raw_lock(3, &flags);
+//	amba_clrbitsl(GPIO3_REG(GPIO_AFSEL_OFFSET), 0x00000030);
+//	ambarella_gpio_raw_unlock(3, &flags);
 
-	/* GPIO77~GPIO81 program as hardware mode */
-	ambarella_gpio_raw_lock(1, &flags);
-	amba_setbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x00003e00);
-	ambarella_gpio_raw_unlock(1, &flags);
-#endif
-#else
-	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
-#endif
+//	/* GPIO77~GPIO81 program as hardware mode */
+//	ambarella_gpio_raw_lock(1, &flags);
+//	amba_setbitsl(GPIO1_REG(GPIO_AFSEL_OFFSET), 0x00003e00);
+//	ambarella_gpio_raw_unlock(1, &flags);
+//#endif
+//#else
+//	pr_err("aucodec_digitalio_on: Unknown Chip Architecture\n");
+//#endif
+
+	pr_err("NO aucodec_digitalio_on\n");
 }
 
 static void aucodec_digitalio_on_1(void)

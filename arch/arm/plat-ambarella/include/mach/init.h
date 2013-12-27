@@ -49,6 +49,7 @@
 #include <plat/uhc.h>
 #include <plat/ahci.h>
 #include <plat/wdt.h>
+#include <plat/pinctrl.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

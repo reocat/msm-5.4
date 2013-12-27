@@ -61,6 +61,7 @@
 #include <linux/input.h>
 /* ==========================================================================*/
 static struct platform_device *ixora_devices[] __initdata = {
+	&ambarella_pinctrl0,
 	&ambarella_adc0,
 	&ambarella_crypto,
 	&ambarella_ehci0,
@@ -282,7 +283,6 @@ static void __init ambarella_init_ixora_ipcam(void)
 	ambarella_eth0_platform_info.mii_id = 3;
 	ambarella_eth0_platform_info.phy_id = 0x00221560;
 	ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(10);
-	ambarella_eth0_platform_info.phy_irq.irq_line = gpio_to_irq(GPIO(10));
 	ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
 	ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
 	ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;

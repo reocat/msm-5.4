@@ -61,6 +61,7 @@
 #include <linux/input.h>
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
+	&ambarella_pinctrl0,
 	&ambarella_adc0,
 	&ambarella_crypto,
 	&ambarella_ehci0,
@@ -301,7 +302,6 @@ static void __init ambarella_init_ginkgo(void)
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
 			ambarella_board_generic.uport_irq.irq_gpio = GPIO(49);
-			ambarella_board_generic.uport_irq.irq_line = gpio_to_irq(49);
 			ambarella_board_generic.uport_irq.irq_type = IRQ_TYPE_EDGE_BOTH;
 			ambarella_board_generic.uport_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.uport_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;

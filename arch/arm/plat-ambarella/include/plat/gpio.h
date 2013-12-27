@@ -76,15 +76,6 @@
 #define GPIO5_REG(x)			(GPIO5_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L)
-#define IOMUX_OFFSET			0x16000
-#define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
-#define IOMUX_REG(x)			(IOMUX_BASE + (x))
-#define IOMUX_REG_OFFSET(group, index)	(((group) * 0xC) + ((index) * 4))
-#define IOMUX_CTRL_SET_OFFSET		(0xF0)
-#endif
-
-/* ==========================================================================*/
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
     (CHIP_REV == A8)
 #define GPIO_PAD_PULL_CTRL_VERSION		1
@@ -96,6 +87,9 @@
 
 #if (GPIO_PAD_PULL_CTRL_VERSION == 1)
 #define GPIO_PAD_PULL_OFFSET		0xD000
+#elif (GPIO_PAD_PULL_CTRL_VERSION == 2)
+#define GPIO_PAD_PULL_OFFSET		0x15000
+#endif
 
 #define GPIO_PAD_PULL_EN_0_OFFSET	0x80
 #define GPIO_PAD_PULL_EN_1_OFFSET	0x84
@@ -109,9 +103,6 @@
 #define GPIO_PAD_PULL_DIR_3_OFFSET	0xA0
 #define GPIO_PAD_PULL_DIR_4_OFFSET	0xA4
 #define GPIO_PAD_PULL_DIR_5_OFFSET	0x58
-#elif (GPIO_PAD_PULL_CTRL_VERSION == 2)
-#define GPIO_PAD_PULL_OFFSET		0x16000
-#endif
 
 #define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
 #define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
@@ -129,6 +120,32 @@
 #define GPIO_IC_OFFSET			0x24
 #define GPIO_MASK_OFFSET		0x28
 #define GPIO_ENABLE_OFFSET		0x2c
+
+/* ==========================================================================*/
+
+
+#if (CHIP_REV == S2L)
+
+#define IOMUX_REG0_0_OFFSET		0x00
+#define IOMUX_REG0_1_OFFSET		0x04
+#define IOMUX_REG0_2_OFFSET		0x08
+#define IOMUX_REG1_0_OFFSET		0x0c
+#define IOMUX_REG1_1_OFFSET		0x10
+#define IOMUX_REG1_2_OFFSET		0x14
+#define IOMUX_REG2_0_OFFSET		0x18
+#define IOMUX_REG2_1_OFFSET		0x1c
+#define IOMUX_REG2_2_OFFSET		0x20
+#define IOMUX_REG3_0_OFFSET		0x24
+#define IOMUX_REG3_1_OFFSET		0x28
+#define IOMUX_REG3_2_OFFSET		0x2c
+#define IOMUX_CTRL_SET_OFFSET		0xf0
+#define IOMUX_REG_OFFSET(bank, n)	(((bank) * 0xc) + ((n) * 4))
+
+#define IOMUX_OFFSET			0x16000
+#define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
+#define IOMUX_REG(x)			(IOMUX_BASE + (x))
+
+#endif
 
 /* ==========================================================================*/
 #define GPIO_BANK_SIZE			32
