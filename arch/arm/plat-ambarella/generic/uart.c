@@ -109,8 +109,13 @@ static struct uart_port	ambarella_uart_port_resource[] = {
 		.type		= PORT_UART00,
 		.iotype		= UPIO_MEM,
 		.membase	= (void *)UART1_BASE,
+#if (CHIP_REV == S2L)
 		.mapbase	= (unsigned long)(UART1_BASE -
 				AHB_BASE + AHB_PHYS_BASE),
+#else
+		.mapbase	= (unsigned long)(UART1_BASE -
+				APB_BASE + APB_PHYS_BASE),
+#endif
 		.irq		= UART1_IRQ,
 		.uartclk	= 27000000,
 		.fifosize	= UART_FIFO_SIZE,
