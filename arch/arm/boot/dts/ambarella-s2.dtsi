@@ -19,16 +19,16 @@
 
 / {
 	aliases {
-		serial0 = &uart1;
-		serial1 = &uart2;
-		serial2 = &uart3;
-		serial3 = &uart4;
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
 	};
 
 	soc {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "ambarella,s2";
+		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
 		ranges;
 
@@ -83,32 +83,39 @@
 				ctrl-offset = <28>;		/* bit offset in timer-ctrl reg */
 			};
 
-			uart1: uart@d4030000 {
-				compatible = "mrvl,mmp-uart";
-				reg = <0xd4030000 0x1000>;
-				interrupts = <27>;
-				status = "disabled";
+			uart0: uart@0x70005000 {
+				compatible = "ambarella,s2-uart";
+				reg = <0x70005000 0x100>;
+				interrupts = <0 9 0x04>;
+				status = "ok";
+				amb,tx-fifo-fix;
 			};
 
-			uart2: uart@d4017000 {
-				compatible = "mrvl,mmp-uart";
-				reg = <0xd4017000 0x1000>;
-				interrupts = <28>;
-				status = "disabled";
+			uart1: uart@0x7001f000 {
+				compatible = "ambarella,s2-uart";
+				reg = <0x7001f000 0x100>;
+				interrupts = <0 25 0x04>;
+				status = "ok";
+				amb,msr-used;	/* use Modem Status Register */
+				amb,tx-fifo-fix;
 			};
 
-			uart3: uart@d4018000 {
-				compatible = "mrvl,mmp-uart";
-				reg = <0xd4018000 0x1000>;
-				interrupts = <24>;
-				status = "disabled";
+			uart2: uart@0x70014000 {
+				compatible = "ambarella,s2-uart";
+				reg = <0x70014000 0x100>;
+				interrupts = <0 91 0x04>;
+				status = "ok";
+				amb,msr-used;	/* use Modem Status Register */
+				amb,tx-fifo-fix;
 			};
 
-			uart4: uart@d4016000 {
-				compatible = "mrvl,mmp-uart";
-				reg = <0xd4016000 0x1000>;
-				interrupts = <46>;
-				status = "disabled";
+			uart3: uart@0x70015000 {
+				compatible = "ambarella,s2-uart";
+				reg = <0x70015000 0x100>;
+				interrupts = <0 92 0x04>;
+				status = "ok";
+				amb,msr-used;	/* use Modem Status Register */
+				amb,tx-fifo-fix;
 			};
 		};
 	};

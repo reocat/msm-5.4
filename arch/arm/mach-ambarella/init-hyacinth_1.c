@@ -41,8 +41,6 @@ extern struct platform_device ambarella_rproc_ca9_b_and_arm11_dev;
 
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_rtc0,
-	&ambarella_uart,
-	&ambarella_uart1,
 #ifdef CONFIG_RPROC_CA9_B
 	&ambarella_rproc_ca9_b_and_arm11_dev,
 #endif /* CONFIG_RPROC_CA9_B */
@@ -65,20 +63,6 @@ static void __init ambarella_init_hyacinth(void)
 		int board = rev & 0xf;
 
 		printk("Hyacinth_1: vendor 0x%02x, board 0x%01x\n", vendor, board);
-
-		switch (vendor) {
-		case 0x48:
-		    platform_device_register(&ambarella_uart2);
-		    break;
-
-		case 0x4D:
-		    platform_device_register(&ambarella_uart2);
-		    platform_device_register(&ambarella_uart3);
-		    break;
-
-		default:
-		    break;
-		}
 	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
