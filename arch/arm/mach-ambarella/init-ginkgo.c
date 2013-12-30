@@ -26,9 +26,10 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/clk.h>
-
+#include <linux/of_platform.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <linux/irqchip.h>
 #include <linux/irqchip/arm-gic.h>
 #include <asm/gpio.h>
 #include <asm/system_info.h>
@@ -460,15 +461,28 @@ static void __init ambarella_init_ginkgo(void)
 }
 
 /* ==========================================================================*/
-MACHINE_START(GINKGO, "Ginkgo")
-	.atag_offset	= 0x100,
-	.restart_mode	= 's',
-	.smp		= smp_ops(ambarella_smp_ops),
-	.reserve	= ambarella_memblock_reserve,
-	.map_io		= ambarella_map_io,
-	.init_irq	= ambarella_init_irq,
-	.init_time	= ambarella_timer_init,
-	.init_machine	= ambarella_init_ginkgo,
-	.restart	= ambarella_restart_machine,
+static void __init ambarella_init_ginkgo_dt(void)
+{
+	of_platform_populate(NULL, of_default_bus_match_table,
+			NULL, NULL);
+}
+
+
+static const char * const s2_dt_board_compat[] = {
+	"ambarella,s2",
+	"ambarella,ginkgo",
+	NULL,
+};
+
+DT_MACHINE_START(GINKGO_DT, "Ambarella S2 SoC with Flattened Device Tree")
+	.restart_mode	=	's',
+	.smp		=	smp_ops(ambarella_smp_ops),
+	.reserve	=	ambarella_memblock_reserve,
+	.map_io		=	ambarella_map_io,
+	.init_irq	=	irqchip_init,
+	.init_time	=	ambarella_timer_init,
+	.init_machine	=	ambarella_init_ginkgo_dt,
+	.restart	=	ambarella_restart_machine,
+	.dt_compat	=	s2_dt_board_compat,
 MACHINE_END
 

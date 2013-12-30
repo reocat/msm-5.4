@@ -1,0 +1,102 @@
+/*
+ * Copyright (C) 2013 Ambarella,Inc. - http://www.ambarella.com/
+ * Author: Cao Rongrong <rrcao@ambarella.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/*
+ * Carveout for multimedia usecases
+ * It should be the last 48MB of the first 512MB memory part
+ * In theory, it should not even exist. That zone should be reserved
+ * dynamically during the .reserve callback.
+/memreserve/ 0x9d000000 0x03000000;
+ */
+
+/include/ "skeleton.dtsi"
+
+/ {
+	aliases {
+		serial0 = &uart1;
+		serial1 = &uart2;
+		serial2 = &uart3;
+		serial3 = &uart4;
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "ambarella,s2";
+		interrupt-parent = <&gic>;
+		ranges;
+
+		cpus {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cpu@0 {
+				compatible = "arm,cortex-a9";
+			};
+			cpu@1 {
+				compatible = "arm,cortex-a9";
+			};
+		};
+
+		gic: interrupt-controller@0xf0001000 {
+			compatible = "arm,cortex-a9-gic";
+			interrupt-controller;
+			#interrupt-cells = <3>;
+			reg = <0xf0001000 0x1000>,
+				  <0xf0000100 0x0100>;
+		};
+
+		local-timer@0xf0000600 {
+			compatible = "arm,cortex-a9-twd-timer";
+			reg = <0xf0000600 0x20>;
+			interrupts = <1 13 0x304>;
+		};
+
+		apb@d4000000 {	/* APB */
+			compatible = "mrvl,apb-bus", "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xd4000000 0x00200000>;
+			ranges;
+
+			timer0: timer@d4014000 {
+				compatible = "mrvl,mmp-timer";
+				reg = <0xd4014000 0x100>;
+				interrupts = <13>;
+			};
+
+			uart1: uart@d4030000 {
+				compatible = "mrvl,mmp-uart";
+				reg = <0xd4030000 0x1000>;
+				interrupts = <27>;
+				status = "disabled";
+			};
+
+			uart2: uart@d4017000 {
+				compatible = "mrvl,mmp-uart";
+				reg = <0xd4017000 0x1000>;
+				interrupts = <28>;
+				status = "disabled";
+			};
+
+			uart3: uart@d4018000 {
+				compatible = "mrvl,mmp-uart";
+				reg = <0xd4018000 0x1000>;
+				interrupts = <24>;
+				status = "disabled";
+			};
+
+			uart4: uart@d4016000 {
+				compatible = "mrvl,mmp-uart";
+				reg = <0xd4016000 0x1000>;
+				interrupts = <46>;
+				status = "disabled";
+			};
+		};
+	};
+};
