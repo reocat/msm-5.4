@@ -85,7 +85,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_udc0,
 	&ambarella_wdt0,
 	&ambarella_dma,
-	&ambarella_nand,
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	&mpcore_wdt,
 #endif
@@ -459,6 +458,8 @@ static void __init ambarella_init_ginkgo(void)
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo_dt(void)
 {
+	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
+
 	of_platform_populate(NULL, of_default_bus_match_table,
 			NULL, NULL);
 }
@@ -470,7 +471,7 @@ static const char * const s2_dt_board_compat[] = {
 	NULL,
 };
 
-DT_MACHINE_START(GINKGO_DT, "Ambarella S2 SoC with Flattened Device Tree")
+DT_MACHINE_START(GINKGO_DT, "Ambarella S2 SoC with FDT")
 	.restart_mode	=	's',
 	.smp		=	smp_ops(ambarella_smp_ops),
 	.reserve	=	ambarella_memblock_reserve,

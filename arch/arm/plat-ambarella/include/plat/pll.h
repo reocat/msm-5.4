@@ -29,5 +29,7 @@ extern u32 ambarella_timer_get_pll(void);
 extern void ambarella_uart_set_pll(void);
 extern u32 ambarella_uart_get_pll(void);
 
+extern u32 ambarella_nand_get_pll(void);
+
 #endif
 

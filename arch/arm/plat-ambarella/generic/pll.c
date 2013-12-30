@@ -65,6 +65,18 @@ u32 ambarella_uart_get_pll(void)
 }
 EXPORT_SYMBOL(ambarella_uart_get_pll);
 
+u32 ambarella_nand_get_pll(void)
+{
+	u32 nand_pll;
+
+	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
+#if (FIO_USE_2X_FREQ == 1)
+	nand_pll <<= 1;
+#endif
+	return nand_pll;
+}
+EXPORT_SYMBOL(ambarella_nand_get_pll);
+
 
 /* ==========================================================================*/
 static struct clk pll_out_core = {

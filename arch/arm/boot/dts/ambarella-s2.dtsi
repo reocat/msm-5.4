@@ -23,6 +23,7 @@
 		serial1 = &uart1;
 		serial2 = &uart2;
 		serial3 = &uart3;
+		nand = &nand0;
 	};
 
 	soc {
@@ -61,7 +62,7 @@
 			compatible = "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			reg = <0x70000000 0x00200000>;
+			reg = <0x70000000 0x01000000>;
 			ranges;
 
 			timer-ctrl@0x7000b030 {
@@ -116,6 +117,30 @@
 				status = "ok";
 				amb,msr-used;	/* use Modem Status Register */
 				amb,tx-fifo-fix;
+			};
+		};
+
+		ahb@0x60000000 {	/* AHB */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x60000000 0x01000000>;
+			ranges;
+
+			nand0: nand@0x60001000 {
+				compatible = "ambarella,s2-nand";
+				reg = <0x60001000 0x1000>,	/* fio reg address */
+				      <0x60012000 0x1000>;	/* fdma reg address */
+				interrupts = <0 16 0x04>,	/* fio_cmd_irq */
+					     <0 17 0x04>,	/* fio_dma_irq */
+					     <0 33 0x04>;	/* fdma_irq */
+				amb,fifo-base = <0x60000000>;
+				/* nand timing, will be updated by Amboot */
+				amb,timing = <0x20202020 0x20202020
+					      0x20202020 0x20202020
+					      0x20202020 0x00202020>;
+				amb,ecc-bits = <1>;
+				amb,wp-gpio = <39>;
 			};
 		};
 	};

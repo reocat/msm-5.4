@@ -118,9 +118,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 	&ambarella_wdt0,
 	&ambarella_dma,
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)
-	&ambarella_nand,
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_FIO */
 };
 
 /* ==========================================================================*/
