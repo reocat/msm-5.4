@@ -417,12 +417,6 @@ config AMBARELLA_RAW_BOOT
 	help
 	  If you are not sure, say N here.
 
-config AMBARELLA_SUPPORT_CLOCKSOURCE
-	bool "Suport clocksource"
-	default y
-	help
-	  If you are not sure, say Y here.
-
 config AMBARELLA_SUPPORT_BAPI
 	bool "Suport BAPI"
 	depends on !AMBARELLA_RAW_BOOT

@@ -140,6 +140,15 @@
 #define TIMER_CTR_CSL1			0x00000002
 #define TIMER_CTR_EN1			0x00000001
 
+#define TIMER_STATUS_OFFSET		0x00
+#define TIMER_RELOAD_OFFSET		0x04
+#define TIMER_MATCH1_OFFSET		0x08
+#define TIMER_MATCH2_OFFSET		0x0c
+
+#define TIMER_CTRL_OF			0x4
+#define TIMER_CTRL_CSL			0x2
+#define TIMER_CTRL_EN			0x1
+
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
