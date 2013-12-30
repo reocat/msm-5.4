@@ -63,24 +63,24 @@
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_pinctrl0,
-	&ambarella_adc0,
-	&ambarella_crypto,
-	&ambarella_ehci0,
-	&ambarella_ohci0,
+	//&ambarella_adc0,
+	//&ambarella_crypto,
+	//&ambarella_ehci0,
+	//&ambarella_ohci0,
 	&ambarella_eth0,
-	&ambarella_fb0,
-	&ambarella_fb1,
-	&ambarella_i2s0,
-	&ambarella_pcm0,
-	&ambarella_dummy_codec0,
-	&ambarella_ambevk_audio_device,
-	&ambarella_idc0,
-	&ambarella_idc1,
-	&ambarella_idc2,
-	&ambarella_ir0,
-	&ambarella_sd0,
-	&ambarella_sd1,
-	&ambarella_spi0,
+//	&ambarella_fb0,
+//	&ambarella_fb1,
+//	&ambarella_i2s0,
+//	&ambarella_pcm0,
+//	&ambarella_dummy_codec0,
+//	&ambarella_ambevk_audio_device,
+	//&ambarella_idc0,
+	//&ambarella_idc1,
+	//&ambarella_idc2,
+	//&ambarella_ir0,
+	//&ambarella_sd0,
+	//&ambarella_sd1,
+	//&ambarella_spi0,
 	&ambarella_spi_slave,
 	&ambarella_udc0,
 	&ambarella_wdt0,
@@ -271,7 +271,6 @@ static void __init ambarella_init_ginkgo(void)
 	int use_bub_default = 1;
 	u32 core_freq;
 
-	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
@@ -459,6 +458,9 @@ static void __init ambarella_init_ginkgo(void)
 static void __init ambarella_init_ginkgo_dt(void)
 {
 	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
+
+	ambarella_init_ginkgo();
+//	platform_device_register(&ambarella_pinctrl0);
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			NULL, NULL);

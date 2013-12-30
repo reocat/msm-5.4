@@ -36,6 +36,7 @@
 #include <asm/uaccess.h>
 #include <mach/hardware.h>
 #include <plat/clk.h>
+#include <plat/fio.h>
 
 u32 ambarella_timer_get_pll(void)
 {
