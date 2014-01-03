@@ -1456,10 +1456,12 @@ static int ambarella_nand_init_chipecc(
 		chip->ecc.layout = &amb_oobinfo_2048;
 		chip->badblock_pattern = &amb_2048_bbt_descr;
 		chip->ecc.size = 2048;
+		chip->ecc.bytes = 20;
 	} else if (mtd->writesize == 512) {
 		chip->ecc.layout = &amb_oobinfo_512;
 		chip->badblock_pattern = &amb_512_bbt_descr;
 		chip->ecc.size = 512;
+		chip->ecc.bytes = 5;
 	} else {
 		dev_err(nand_info->dev,
 			"Unexpected NAND flash writesize %d. Aborting\n",
@@ -1482,7 +1484,6 @@ static int ambarella_nand_init_chipecc(
 			/* ecc bit part maybe need optimize
 			when nand supports internel ecc bit itself */
 	} else {
-		chip->ecc.bytes = 5;
 		chip->ecc.strength = 1;	/* 1 bit only ECC-HW */
 	}
 
