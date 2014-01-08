@@ -330,6 +330,17 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 			NR_VIC_IRQS, &amb_irq_domain_ops, NULL);
 	BUG_ON(!ambvic_data.domain);
 
+	// WORKAROUND only, will be removed finally
+	for (i = 0; i < NR_VIC_IRQS; i++) {
+		u32 irq;
+		if (i != 27)
+			continue;
+		irq = irq_create_mapping(ambvic_data.domain, i);
+		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
+		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);
+		set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+	}
+
 	return 0;
 }
 
