@@ -473,7 +473,7 @@ static const char * const s2_dt_board_compat[] = {
 	NULL,
 };
 
-DT_MACHINE_START(GINKGO_DT, "Ambarella S2 SoC with FDT")
+DT_MACHINE_START(GINKGO_DT, "Ambarella S2 (Flattened Device Tree)")
 	.restart_mode	=	's',
 	.smp		=	smp_ops(ambarella_smp_ops),
 	.reserve	=	ambarella_memblock_reserve,

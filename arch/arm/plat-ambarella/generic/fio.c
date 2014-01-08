@@ -52,8 +52,8 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L)
-#else
+#if (CHIP_REV != S2L)
+
 static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
 
@@ -67,11 +67,7 @@ module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
 static DEFINE_SPINLOCK(fio_sd0_int_lock);
 static u32 fio_sd_int = 0;
 static u32 fio_sdio_int = 0;
-#endif
 
-/* ==========================================================================*/
-#if (CHIP_REV == S2L)
-#else
 void __fio_select_lock(int module)
 {
 	u32					fio_ctr;
@@ -191,16 +187,13 @@ fio_exit:
 
 void fio_select_lock(int module)
 {
-#if (CHIP_REV != S2L)
 	wait_event(fio_wait, fio_check_free(module));
 	__fio_select_lock(module);
-#endif
 }
 EXPORT_SYMBOL(fio_select_lock);
 
 void fio_unlock(int module)
 {
-#if (CHIP_REV != S2L)
 	unsigned long flags;
 
 	if (!(fio_owner & (~module)) &&
@@ -230,7 +223,6 @@ void fio_unlock(int module)
 	}
 
 	spin_unlock_irqrestore(&fio_lock, flags);
-#endif
 }
 EXPORT_SYMBOL(fio_unlock);
 

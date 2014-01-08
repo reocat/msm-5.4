@@ -20,33 +20,22 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-
-#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
-#include <linux/device.h>
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
 #include <linux/interrupt.h>
 #include <linux/syscore_ops.h>
-
-#include <linux/irqchip/irq-ambarella-gpio.h>
-#include <linux/irqchip/chained_irq.h>
-
 #include <asm/exception.h>
-#include <asm/irq.h>
-#include <asm/mach/irq.h>
+#include "irqchip.h"
 
-/* ==========================================================================*/
-struct ambarella_vic_device_s {
-	void __iomem *vic_base;
-#if defined(CONFIG_AMBARELLA_VIC_DOMAIN)
-	struct irq_domain *domain;
-#else
-	unsigned int irq_start;
-#endif
-};
-struct ambarella_vic_pm_s {
+#define HWIRQ_TO_BANK(hwirq)	((hwirq) >> 5)
+#define HWIRQ_TO_OFFSET(hwirq)	((hwirq) & 0x1f)
+
+struct ambvic_pm_reg {
 	u32 int_sel_reg;
 	u32 inten_reg;
 	u32 soften_reg;
@@ -55,103 +44,86 @@ struct ambarella_vic_pm_s {
 	u32 bothedge_reg;
 	u32 event_reg;
 };
-struct ambarella_vic_info_s {
-	struct ambarella_vic_device_s device_info[VIC_INSTANCES];
-	unsigned int device_num;
-	struct ambarella_vic_pm_s device_pm[VIC_INSTANCES];
+
+struct ambvic_chip_data {
+	void __iomem *reg_base[VIC_INSTANCES];
+	struct irq_domain *domain;
+	struct ambvic_pm_reg pm_reg[VIC_INSTANCES];
 };
 
-static struct ambarella_vic_info_s amba_vic_info
-	__attribute__ ((aligned(32))) =
-{
-	.device_num = 0,
-};
+static struct ambvic_chip_data ambvic_data;
 
 /* ==========================================================================*/
 #if (VIC_SUPPORT_CPU_OFFLOAD == 1)
-static void ambarella_vic_ack_irq(struct irq_data *data)
-{
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
 
-	amba_writel((vic_base + VIC_EDGE_CLR_OFFSET), (0x1 << vic_irq));
+static void ambvic_ack_irq(struct irq_data *data)
+{
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
+
+	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
 }
 
-static void ambarella_vic_mask_irq(struct irq_data *data)
+static void ambvic_mask_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_INT_EN_CLR_INT_OFFSET), vic_irq);
+	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
 }
 
-static void ambarella_vic_unmask_irq(struct irq_data *data)
+static void ambvic_unmask_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_INT_EN_INT_OFFSET), vic_irq);
+	amba_writel(reg_base + VIC_INT_EN_INT_OFFSET, offset);
 }
 
-static void ambarella_vic_mask_ack_irq(struct irq_data *data)
+static void ambvic_mask_ack_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_INT_EN_CLR_INT_OFFSET), vic_irq);
-	amba_writel((vic_base + VIC_EDGE_CLR_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
+	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
 }
 
-static int ambarella_vic_set_type_irq(struct irq_data *data, unsigned int type)
+static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	struct irq_desc *desc = irq_to_desc(data->irq);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
-		amba_writel((vic_base + VIC_INT_SENSE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_EVT_INT_OFFSET),
-			vic_irq);
+		amba_writel(reg_base + VIC_INT_SENSE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_EVT_INT_OFFSET, offset);
 		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
-		amba_writel((vic_base + VIC_INT_SENSE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_EVT_CLR_INT_OFFSET),
-			vic_irq);
+		amba_writel(reg_base + VIC_INT_SENSE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_EVT_CLR_INT_OFFSET, offset);
 		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_EDGE_BOTH:
-		amba_writel((vic_base + VIC_INT_SENSE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_BOTHEDGE_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_EVT_CLR_INT_OFFSET),
-			vic_irq);
+		amba_writel(reg_base + VIC_INT_SENSE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_BOTHEDGE_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_EVT_CLR_INT_OFFSET, offset);
 		desc->handle_irq = handle_edge_irq;
 		break;
 	case IRQ_TYPE_LEVEL_HIGH:
-		amba_writel((vic_base + VIC_INT_SENSE_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_EVT_INT_OFFSET),
-			vic_irq);
+		amba_writel(reg_base + VIC_INT_SENSE_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_EVT_INT_OFFSET, offset);
 		desc->handle_irq = handle_level_irq;
 		break;
 	case IRQ_TYPE_LEVEL_LOW:
-		amba_writel((vic_base + VIC_INT_SENSE_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET),
-			vic_irq);
-		amba_writel((vic_base + VIC_INT_EVT_CLR_INT_OFFSET),
-			vic_irq);
+		amba_writel(reg_base + VIC_INT_SENSE_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_BOTHEDGE_CLR_INT_OFFSET, offset);
+		amba_writel(reg_base + VIC_INT_EVT_CLR_INT_OFFSET, offset);
 		desc->handle_irq = handle_level_irq;
 		break;
 	default:
@@ -160,60 +132,58 @@ static int ambarella_vic_set_type_irq(struct irq_data *data, unsigned int type)
 		return -EINVAL;
 	}
 
-	ambarella_vic_ack_irq(data);
+	/* clear obsolete irq */
+	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
 
 	return 0;
 }
+
 #else
-static void ambarella_vic_ack_irq(struct irq_data *data)
+static void ambvic_ack_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_EDGE_CLR_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
 }
 
-static void ambarella_vic_mask_irq(struct irq_data *data)
+static void ambvic_mask_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_INTEN_CLR_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0x1 << offset);
 }
 
-static void ambarella_vic_unmask_irq(struct irq_data *data)
+static void ambvic_unmask_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_INTEN_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_INTEN_OFFSET, 0x1 << offset);
 }
 
-static void ambarella_vic_mask_ack_irq(struct irq_data *data)
+static void ambvic_mask_ack_irq(struct irq_data *data)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
-	amba_writel((vic_base + VIC_INTEN_CLR_OFFSET), (0x1 << vic_irq));
-	amba_writel((vic_base + VIC_EDGE_CLR_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0x1 << offset);
+	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
 }
 
-static int ambarella_vic_set_type_irq(struct irq_data *data, unsigned int type)
+static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
 {
-	void __iomem *vic_base = irq_data_get_irq_chip_data(data);
-	unsigned int vic_irq = data->hwirq;
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	struct irq_desc *desc = irq_to_desc(data->irq);
-	u32 mask;
-	u32 bit;
-	u32 sense;
-	u32 bothedges;
-	u32 event;
+	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
+	u32 mask, bit, sense, bothedges, event;
 
-	mask = ~(0x1 << vic_irq);
-	bit = (0x1 << vic_irq);
-	sense = amba_readl(vic_base + VIC_SENSE_OFFSET);
-	bothedges = amba_readl(vic_base + VIC_BOTHEDGE_OFFSET);
-	event = amba_readl(vic_base + VIC_EVENT_OFFSET);
+	mask = ~(0x1 << offset);
+	bit = (0x1 << offset);
+	sense = amba_readl(reg_base + VIC_SENSE_OFFSET);
+	bothedges = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
+	event = amba_readl(reg_base + VIC_EVENT_OFFSET);
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
 		sense &= mask;
@@ -251,262 +221,203 @@ static int ambarella_vic_set_type_irq(struct irq_data *data, unsigned int type)
 		return -EINVAL;
 	}
 
-	amba_writel((vic_base + VIC_SENSE_OFFSET), sense);
-	amba_writel((vic_base + VIC_BOTHEDGE_OFFSET), bothedges);
-	amba_writel((vic_base + VIC_EVENT_OFFSET), event);
-
-	ambarella_vic_ack_irq(data);
+	amba_writel(reg_base + VIC_SENSE_OFFSET, sense);
+	amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, bothedges);
+	amba_writel(reg_base + VIC_EVENT_OFFSET, event);
+	/* clear obsolete irq */
+	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
 
 	return 0;
 }
+
 #endif
 
-static struct irq_chip ambarella_vic_chip = {
+static struct irq_chip ambvic_chip = {
 	.name		= "VIC",
-	.irq_ack	= ambarella_vic_ack_irq,
-	.irq_mask	= ambarella_vic_mask_irq,
-	.irq_mask_ack	= ambarella_vic_mask_ack_irq,
-	.irq_unmask	= ambarella_vic_unmask_irq,
-	.irq_set_type	= ambarella_vic_set_type_irq,
+	.irq_ack	= ambvic_ack_irq,
+	.irq_mask	= ambvic_mask_irq,
+	.irq_mask_ack	= ambvic_mask_ack_irq,
+	.irq_unmask	= ambvic_unmask_irq,
+	.irq_set_type	= ambvic_set_type_irq,
 	.flags		= (IRQCHIP_SET_TYPE_MASKED | IRQCHIP_MASK_ON_SUSPEND |
 			IRQCHIP_SKIP_SET_WAKE),
 };
 
 /* ==========================================================================*/
-static int ambarella_vic_irqdomain_map(struct irq_domain *d,
-	unsigned int irq, irq_hw_number_t hwirq)
+
+static int ambvic_handle_one(struct pt_regs *regs,
+		struct irq_domain *domain, u32 bank)
 {
-	struct ambarella_vic_device_s *pvic_device;
-
-	pvic_device = (struct ambarella_vic_device_s *)d->host_data;
-	irq_set_chip_and_handler(irq, &ambarella_vic_chip, handle_level_irq);
-	irq_set_chip_data(irq, pvic_device->vic_base);
-	set_irq_flags(irq, (IRQF_VALID | IRQF_PROBE));
-
-	return 0;
-}
-
-static int ambarella_vic_handle_one(
-	struct ambarella_vic_device_s *pvic_device,
-	struct pt_regs *regs)
-{
-#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
-	unsigned int hwirq;
-#else
-	unsigned int vic_irq;
-	unsigned int hwirq;
-#endif
-	unsigned int irq;
+	void __iomem *reg_base = ambvic_data.reg_base[bank];
+	u32 irq, hwirq;
 	int handled = 0;
 
-#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
-	while ((hwirq = amba_readl(pvic_device->vic_base +
-		VIC_INT_PENDING_OFFSET))) {
+	do {
+#if (VIC_SUPPORT_CPU_OFFLOAD == 0)
+		u32 irq_sta;
+
+		irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
+		if (irq_sta == 0)
+			break;
+		hwirq = ffs(irq_sta) - 1;
 #else
-	while ((vic_irq = amba_readl(pvic_device->vic_base +
-		VIC_IRQ_STA_OFFSET))) {
-		hwirq = (ffs(vic_irq) - 1);
+		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
+		if (hwirq == 0)
+			break;
 #endif
-#if defined(CONFIG_AMBARELLA_VIC_DOMAIN)
-		irq = irq_find_mapping(pvic_device->domain, hwirq);
-#else
-		irq = (pvic_device->irq_start + hwirq);
-#endif
+		hwirq += bank * NR_VIC_IRQ_SIZE;
+		irq = irq_find_mapping(domain, hwirq);
 		handle_IRQ(irq, regs);
 		handled = 1;
-	}
+	} while (1);
 
 	return handled;
 }
 
-static asmlinkage void __exception_irq_entry ambarella_vic_handle_irq(
-	struct pt_regs *regs)
+static asmlinkage void __exception_irq_entry ambvic_handle_irq(struct pt_regs *regs)
 {
-	int i;
-	int handled = 0;
+	int i, handled;
 
 	do {
 		handled = 0;
-		for (i = 0; i < amba_vic_info.device_num; i++) {
-			handled |= ambarella_vic_handle_one(
-				&amba_vic_info.device_info[i], regs);
+		for (i = 0; i < VIC_INSTANCES; i++) {
+			handled |= ambvic_handle_one(regs, ambvic_data.domain, i);
 		}
 	} while (handled);
 }
 
-static struct irq_domain_ops ambarella_vic_irqdomain_ops = {
-	.map = ambarella_vic_irqdomain_map,
+static int ambvic_irq_domain_map(struct irq_domain *d,
+		unsigned int irq, irq_hw_number_t hwirq)
+{
+	if (hwirq > NR_VIC_IRQS)
+		return -EPERM;
+
+	irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
+	irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(hwirq)]);
+	set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+
+	return 0;
+}
+
+static struct irq_domain_ops amb_irq_domain_ops = {
+	.map = ambvic_irq_domain_map,
+	.xlate = irq_domain_xlate_onecell,
 };
 
-void __init __ambarella_vic_init(struct ambarella_vic_device_s *pvic_device,
-	void __iomem *vic_base, unsigned int irq_start)
+int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 {
-	struct irq_domain *vic_domain;
+	void __iomem *reg_base;
+	int i;
 
-	amba_writel((vic_base + VIC_INT_SEL_OFFSET), 0x00000000);
-	amba_writel((vic_base + VIC_INTEN_OFFSET), 0x00000000);
-	amba_writel((vic_base + VIC_INTEN_CLR_OFFSET), 0xffffffff);
-	amba_writel((vic_base + VIC_EDGE_CLR_OFFSET), 0xffffffff);
-	amba_writel((vic_base + VIC_INT_PTR0_OFFSET), 0xffffffff);
+	memset(&ambvic_data, 0, sizeof(struct ambvic_chip_data));
 
-	pvic_device->vic_base = vic_base;
-	vic_domain = irq_domain_add_legacy(NULL, 32, irq_start, 0,
-		&ambarella_vic_irqdomain_ops, pvic_device);
-	irq_create_strict_mappings(vic_domain, irq_start, 0, 32);
-#if defined(CONFIG_AMBARELLA_VIC_DOMAIN)
-	pvic_device->domain = vic_domain;
-#else
-	pvic_device->irq_start = irq_start;
-#endif
-}
+	for (i = 0; i < VIC_INSTANCES; i++) {
+		reg_base = of_iomap(np, i);
+		BUG_ON(!reg_base);
 
-void __init ambarella_vic_init_irq(void __iomem *vic_base,
-	unsigned int irq_start)
-{
-	if (amba_vic_info.device_num) {
-		pr_err("%s: already inited!\n", __func__);
-		return;
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, 0x00000000);
+		amba_writel(reg_base + VIC_INTEN_OFFSET, 0x00000000);
+		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, 0xffffffff);
+
+		ambvic_data.reg_base[i] = reg_base;
 	}
 
-	memset(&amba_vic_info, 0, sizeof(amba_vic_info));
-	__ambarella_vic_init(&amba_vic_info.device_info[
-		amba_vic_info.device_num], vic_base, irq_start);
-	amba_vic_info.device_num++;
-	set_handle_irq(ambarella_vic_handle_irq);
+	set_handle_irq(ambvic_handle_irq);
+
+	ambvic_data.domain = irq_domain_add_linear(np,
+			NR_VIC_IRQS, &amb_irq_domain_ops, NULL);
+	BUG_ON(!ambvic_data.domain);
+
+	return 0;
 }
 
-void __init ambarella_vic_add_irq(void __iomem *vic_base,
-	unsigned int irq_start)
-{
-	if (amba_vic_info.device_num >= VIC_INSTANCES) {
-		pr_err("%s: No more space for new VIC!\n", __func__);
-		return;
-	}
-
-	__ambarella_vic_init(&amba_vic_info.device_info[
-		amba_vic_info.device_num], vic_base, irq_start);
-	amba_vic_info.device_num++;
-}
+IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
 
 /* ==========================================================================*/
 #if defined(CONFIG_PM)
-static void ambarella_vic_suspend_one(
-	struct ambarella_vic_device_s *pvic_device,
-	struct ambarella_vic_pm_s *pvic_pm)
-{
-	pvic_pm->int_sel_reg =
-		amba_readl(pvic_device->vic_base + VIC_INT_SEL_OFFSET);
-	pvic_pm->inten_reg =
-		amba_readl(pvic_device->vic_base + VIC_INTEN_OFFSET);
-	pvic_pm->soften_reg =
-		amba_readl(pvic_device->vic_base + VIC_SOFTEN_OFFSET);
-	pvic_pm->proten_reg =
-		amba_readl(pvic_device->vic_base + VIC_PROTEN_OFFSET);
-	pvic_pm->sense_reg =
-		amba_readl(pvic_device->vic_base + VIC_SENSE_OFFSET);
-	pvic_pm->bothedge_reg =
-		amba_readl(pvic_device->vic_base + VIC_BOTHEDGE_OFFSET);
-	pvic_pm->event_reg =
-		amba_readl(pvic_device->vic_base + VIC_EVENT_OFFSET);
 
-	pr_debug("%s: suspending VIC[%p]\n",
-		__func__, pvic_device->vic_base);
-	pr_debug("int_sel_reg[0x%08X]\n", pvic_pm->int_sel_reg);
-	pr_debug("inten_reg[0x%08X]\n", pvic_pm->inten_reg);
-	pr_debug("soften_reg[0x%08X]\n", pvic_pm->soften_reg);
-	pr_debug("proten_reg[0x%08X]\n", pvic_pm->proten_reg);
-	pr_debug("sense_reg[0x%08X]\n", pvic_pm->sense_reg);
-	pr_debug("bothedge_reg[0x%08X]\n", pvic_pm->bothedge_reg);
-	pr_debug("event_reg[0x%08X]\n", pvic_pm->event_reg);
-}
-
-static int ambarella_vic_suspend(void)
+static int ambvic_suspend(void)
 {
+	struct ambvic_pm_reg *pm_reg;
+	void __iomem *reg_base;
 	int i;
 
-	for (i = 0; i < amba_vic_info.device_num; i++) {
-		ambarella_vic_suspend_one(&amba_vic_info.device_info[i],
-			&amba_vic_info.device_pm[i]);
+	for (i = 0; i < VIC_INSTANCES; i++) {
+		reg_base = ambvic_data.reg_base[i];
+		pm_reg = &ambvic_data.pm_reg[i];
+
+		pm_reg->int_sel_reg = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
+		pm_reg->inten_reg = amba_readl(reg_base + VIC_INTEN_OFFSET);
+		pm_reg->soften_reg = amba_readl(reg_base + VIC_SOFTEN_OFFSET);
+		pm_reg->proten_reg = amba_readl(reg_base + VIC_PROTEN_OFFSET);
+		pm_reg->sense_reg = amba_readl(reg_base + VIC_SENSE_OFFSET);
+		pm_reg->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
+		pm_reg->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
 	}
 
 	return 0;
 }
 
-static void ambarella_vic_resume_one(
-	struct ambarella_vic_device_s *pvic_device,
-	struct ambarella_vic_pm_s *pvic_pm)
+static void ambvic_resume(void)
 {
-	pr_debug("%s: resuming VIC[%p]\n",
-		__func__, pvic_device->vic_base);
-
-	amba_writel((pvic_device->vic_base + VIC_INT_SEL_OFFSET),
-		pvic_pm->int_sel_reg);
-	amba_writel((pvic_device->vic_base + VIC_INTEN_CLR_OFFSET),
-		0xffffffff);
-	amba_writel((pvic_device->vic_base + VIC_EDGE_CLR_OFFSET),
-		0xffffffff);
-	amba_writel((pvic_device->vic_base + VIC_INTEN_OFFSET),
-		pvic_pm->inten_reg);
-	amba_writel((pvic_device->vic_base + VIC_SOFTEN_CLR_OFFSET),
-		0xffffffff);
-	amba_writel((pvic_device->vic_base + VIC_SOFTEN_OFFSET),
-		pvic_pm->soften_reg);
-	amba_writel((pvic_device->vic_base + VIC_PROTEN_OFFSET),
-		pvic_pm->proten_reg);
-	amba_writel((pvic_device->vic_base + VIC_SENSE_OFFSET),
-		pvic_pm->sense_reg);
-	amba_writel((pvic_device->vic_base + VIC_BOTHEDGE_OFFSET),
-		pvic_pm->bothedge_reg);
-	amba_writel((pvic_device->vic_base + VIC_EVENT_OFFSET),
-		pvic_pm->event_reg);
-}
-
-static void ambarella_vic_resume(void)
-{
+	struct ambvic_pm_reg *pm_reg;
+	void __iomem *reg_base;
 	int i;
 
-	for (i = (amba_vic_info.device_num - 1); i >= 0; i--) {
-		ambarella_vic_resume_one(&amba_vic_info.device_info[i],
-			&amba_vic_info.device_pm[i]);
+	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
+		reg_base = ambvic_data.reg_base[i];
+		pm_reg = &ambvic_data.pm_reg[i];
+
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_reg->int_sel_reg);
+		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_INTEN_OFFSET, pm_reg->inten_reg);
+		amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_reg->soften_reg);
+		amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_reg->proten_reg);
+		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_reg->sense_reg);
+		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_reg->bothedge_reg);
+		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_reg->event_reg);
 	}
 }
 
-struct syscore_ops ambarella_vic_syscore_ops = {
-	.suspend	= ambarella_vic_suspend,
-	.resume		= ambarella_vic_resume,
+struct syscore_ops ambvic_syscore_ops = {
+	.suspend	= ambvic_suspend,
+	.resume		= ambvic_resume,
 };
 
-static int __init ambarella_vic_pm_init(void)
+static int __init ambvic_pm_init(void)
 {
-	if (amba_vic_info.device_num > 0) {
-		register_syscore_ops(&ambarella_vic_syscore_ops);
-	}
-
+	register_syscore_ops(&ambvic_syscore_ops);
 	return 0;
 }
-late_initcall(ambarella_vic_pm_init);
+late_initcall(ambvic_pm_init);
 #endif /* CONFIG_PM */
+
 
 /* ==========================================================================*/
 #if (VIC_SUPPORT_CPU_OFFLOAD == 1)
-void ambarella_vic_sw_set(void __iomem *vic_base, unsigned int vic_irq)
+void ambvic_sw_set(void __iomem *reg_base, u32 offset)
 {
-	amba_writel((vic_base + VIC_SOFT_INT_INT_OFFSET), vic_irq);
+	amba_writel(reg_base + VIC_SOFT_INT_INT_OFFSET, offset);
 }
 
-void ambarella_vic_sw_clr(void __iomem *vic_base, unsigned int vic_irq)
+void ambvic_sw_clr(void __iomem *reg_base, u32 offset)
 {
-	amba_writel((vic_base + VIC_SOFT_INT_CLR_INT_OFFSET), vic_irq);
+	amba_writel(reg_base + VIC_SOFT_INT_CLR_INT_OFFSET, offset);
 }
 #else
-void ambarella_vic_sw_set(void __iomem *vic_base, unsigned int vic_irq)
+void ambvic_sw_set(void __iomem *reg_base, u32 offset)
 {
-	amba_writel((vic_base + VIC_SOFTEN_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_SOFTEN_OFFSET, 0x1 << offset);
 }
 
-void ambarella_vic_sw_clr(void __iomem *vic_base, unsigned int vic_irq)
+void ambvic_sw_clr(void __iomem *reg_base, u32 offset)
 {
-	amba_writel((vic_base + VIC_SOFTEN_CLR_OFFSET), (0x1 << vic_irq));
+	amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0x1 << offset);
 }
 #endif
+
 

@@ -24,11 +24,8 @@
 #ifndef __IRQ_AMBARELLA_VIC_H__
 #define __IRQ_AMBARELLA_VIC_H__
 
-void ambarella_vic_init_irq(void __iomem *vic_base, unsigned int irq_start);
-void ambarella_vic_add_irq(void __iomem *vic_base, unsigned int irq_start);
-
-void ambarella_vic_sw_set(void __iomem *vic_base, unsigned int vic_irq);
-void ambarella_vic_sw_clr(void __iomem *vic_base, unsigned int vic_irq);
+void ambvic_sw_set(void __iomem *vic_base, unsigned int vic_irq);
+void ambvic_sw_clr(void __iomem *vic_base, unsigned int vic_irq);
 
 #endif // __IRQ_AMBARELLA_VIC_H__
 

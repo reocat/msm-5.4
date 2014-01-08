@@ -163,8 +163,13 @@
 extern int fio_amb_sd0_is_enable(void);
 extern int fio_amb_sdio0_is_enable(void);
 
+#if (CHIP_REV == S2L)
+static inline void fio_select_lock(int module) { }
+static inline void fio_unlock(int module) { }
+#else
 extern void fio_select_lock(int module);
 extern void fio_unlock(int module);
+#endif
 extern void fio_amb_sd0_set_int(u32 mask, u32 on);
 extern void fio_amb_sdio0_set_int(u32 mask, u32 on);
 

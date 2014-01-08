@@ -1,0 +1,119 @@
+/*
+ * Copyright (C) 2013 Ambarella,Inc. - http://www.ambarella.com/
+ * Author: Cao Rongrong <rrcao@ambarella.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/*
+ * Carveout for multimedia usecases
+ * It should be the last 48MB of the first 512MB memory part
+ * In theory, it should not even exist. That zone should be reserved
+ * dynamically during the .reserve callback.
+/memreserve/ 0x9d000000 0x03000000;
+ */
+
+/include/ "skeleton.dtsi"
+
+/ {
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		nand = &nand0;
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		interrupt-parent = <&intc>;
+		ranges;
+
+		cpus {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			cpu@0 {
+				compatible = "arm,cortex-a9";
+			};
+		};
+
+		intc: interrupt-controller@0xe0003000 {
+			compatible = "ambarella,vic";
+			interrupt-controller;
+			#interrupt-cells = <1>;
+			reg = <0xe0003000 0x1000>,
+				<0xe0010000 0x1000>,
+				<0xe001c000 0x1000>;
+		};
+
+		apb@0xe8000000 {	/* APB */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xe8000000 0x01000000>;
+			ranges;
+
+			timer-ctrl@0xe800b030 {
+				compatible = "ambarella,timer-ctrl";
+				reg = <0xe800b030 0x4>;
+			};
+
+			timer7: timer@0xe800b064 {
+				compatible = "ambarella,clock-source";
+				reg = <0xe800b064 0x10>;
+				interrupts = <62>;
+				ctrl-offset = <24>;		/* bit offset in timer-ctrl reg */
+			};
+
+			timer8: timer@0xe800b074 {
+				compatible = "ambarella,clock-event";
+				reg = <0xe800b074 0x10>;
+				interrupts = <63>;
+				ctrl-offset = <28>;		/* bit offset in timer-ctrl reg */
+			};
+
+			uart0: uart@0xe8005000 {
+				compatible = "ambarella,s2l-uart";
+				reg = <0xe8005000 0x1000>;
+				interrupts = <9>;
+				status = "ok";
+				/* amb,tx-fifo-fix; */
+			};
+		};
+
+		ahb@0xe0000000 {	/* AHB */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xe0000000 0x01000000>;
+			ranges;
+
+			nand0: nand@0xe0001000 {
+				compatible = "ambarella,s2l-nand";
+				reg = <0xe0001000 0x1000>,	/* fio reg address */
+				      <0xe0012000 0x1000>;	/* fdma reg address */
+				interrupts = <16>,	/* fio_cmd_irq */
+					     <17>,	/* fio_dma_irq */
+					     <33>;	/* fdma_irq */
+				amb,fifo-base = <0xe0000000>;
+				/* nand timing, will be updated by Amboot */
+				amb,timing = <0x20202020 0x20202020
+					      0x20202020 0x20202020
+					      0x20202020 0x00202020>;
+				amb,ecc-bits = <1>;
+				amb,wp-gpio = <39>;
+			};
+
+			uart1: uart@0xe0032000 {
+				compatible = "ambarella,s2l-uart";
+				reg = <0xe0032000 0x1000>;
+				interrupts = <25>;
+				status = "ok";
+				amb,msr-used;	/* use Modem Status Register */
+				/* amb,tx-fifo-fix; */
+			};
+		};
+	};
+};

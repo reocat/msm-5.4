@@ -1922,6 +1922,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 #endif
 
 static const struct of_device_id ambarella_nand_of_match[] = {
+	{.compatible = "ambarella,s2l-nand", },
 	{.compatible = "ambarella,s2-nand", },
 	{.compatible = "ambarella,i1-nand", },
 	{.compatible = "ambarella,a7l-nand", },

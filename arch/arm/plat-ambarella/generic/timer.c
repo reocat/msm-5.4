@@ -58,8 +58,6 @@ struct ambarella_timer_pm_info {
 };
 
 struct ambarella_timer_pm_info ambarella_timer_pm;
-static struct clock_event_device ambarella_clkevt;
-static struct irqaction ambarella_ce_timer_irq;
 
 /* ==========================================================================*/
 
