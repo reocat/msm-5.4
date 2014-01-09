@@ -332,8 +332,13 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 
 	// WORKAROUND only, will be removed finally
 	for (i = 0; i < NR_VIC_IRQS; i++) {
-		u32 irq;
-		if (i != 27)
+		u32 irq, j;
+		u32 irq_dt[] = {62, 63, 9, 16, 25};
+
+		for (j = 0; j < ARRAY_SIZE(irq_dt); j++)
+			if (i == irq_dt[j])
+				break;
+		if (j < ARRAY_SIZE(irq_dt))
 			continue;
 		irq = irq_create_mapping(ambvic_data.domain, i);
 		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
