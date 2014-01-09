@@ -214,7 +214,7 @@ union frac_reg_u {
 	do_div((divident), (divider));			\
 	} while (0)
 
-#define AMBARELLA_RCT_PLL_TABLE_SIZE		(594)
+#define AMBARELLA_RCT_PLL_TABLE_SIZE		(590)
 extern const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE];
 extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
 	u32 pre_scaler, const struct pll_table_s *p_table, u32 table_size);
