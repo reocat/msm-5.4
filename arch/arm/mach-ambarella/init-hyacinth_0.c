@@ -44,8 +44,6 @@ extern struct platform_device ambarella_rproc_ca9_a_and_arm11_dev;
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_eth0,
 	&ambarella_rtc0,
-	&ambarella_uart,
-	&ambarella_uart1,
 #ifdef CONFIG_RPROC_CA9_A
 	&ambarella_rproc_ca9_a_and_b_dev,
 	&ambarella_rproc_ca9_a_and_arm11_dev,
@@ -78,16 +76,9 @@ static void __init ambarella_init_hyacinth(void)
 
 		switch (vendor) {
 		case 0x48:
-		    platform_device_register(&ambarella_uart2);
-
 		    /* Phy-less, fixed-link */
 		    ambarella_eth0_platform_info.mii_fixed_speed = SPEED_1000;
 		    ambarella_eth0_platform_info.mii_fixed_duplex = DUPLEX_FULL;
-		    break;
-
-		case 0x4D:
-		    platform_device_register(&ambarella_uart2);
-		    platform_device_register(&ambarella_uart3);
 		    break;
 
 		default:

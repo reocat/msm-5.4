@@ -26,9 +26,10 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/clk.h>
-
+#include <linux/of_platform.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <linux/irqchip.h>
 #include <linux/irqchip/arm-gic.h>
 #include <asm/gpio.h>
 #include <asm/system_info.h>
@@ -62,33 +63,28 @@
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_pinctrl0,
-	&ambarella_adc0,
-	&ambarella_crypto,
-	&ambarella_ehci0,
-	&ambarella_ohci0,
+	//&ambarella_adc0,
+	//&ambarella_crypto,
+	//&ambarella_ehci0,
+	//&ambarella_ohci0,
 	&ambarella_eth0,
-	&ambarella_fb0,
-	&ambarella_fb1,
-	&ambarella_i2s0,
-	&ambarella_pcm0,
-	&ambarella_dummy_codec0,
-	&ambarella_ambevk_audio_device,
-	&ambarella_idc0,
-	&ambarella_idc1,
-	&ambarella_idc2,
-	&ambarella_ir0,
-	&ambarella_sd0,
-	&ambarella_sd1,
-	&ambarella_spi0,
+//	&ambarella_fb0,
+//	&ambarella_fb1,
+//	&ambarella_i2s0,
+//	&ambarella_pcm0,
+//	&ambarella_dummy_codec0,
+//	&ambarella_ambevk_audio_device,
+	//&ambarella_idc0,
+	//&ambarella_idc1,
+	//&ambarella_idc2,
+	//&ambarella_ir0,
+	//&ambarella_sd0,
+	//&ambarella_sd1,
+	//&ambarella_spi0,
 	&ambarella_spi_slave,
-	&ambarella_uart,
-	&ambarella_uart1,
-	&ambarella_uart2,
-	&ambarella_uart3,
 	&ambarella_udc0,
 	&ambarella_wdt0,
 	&ambarella_dma,
-	&ambarella_nand,
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	&mpcore_wdt,
 #endif
@@ -275,7 +271,6 @@ static void __init ambarella_init_ginkgo(void)
 	int use_bub_default = 1;
 	u32 core_freq;
 
-	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
@@ -460,15 +455,34 @@ static void __init ambarella_init_ginkgo(void)
 }
 
 /* ==========================================================================*/
-MACHINE_START(GINKGO, "Ginkgo")
-	.atag_offset	= 0x100,
-	.restart_mode	= 's',
-	.smp		= smp_ops(ambarella_smp_ops),
-	.reserve	= ambarella_memblock_reserve,
-	.map_io		= ambarella_map_io,
-	.init_irq	= ambarella_init_irq,
-	.init_time	= ambarella_timer_init,
-	.init_machine	= ambarella_init_ginkgo,
-	.restart	= ambarella_restart_machine,
+static void __init ambarella_init_ginkgo_dt(void)
+{
+	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
+
+	ambarella_init_ginkgo();
+//	platform_device_register(&ambarella_pinctrl0);
+
+	of_platform_populate(NULL, of_default_bus_match_table,
+			NULL, NULL);
+}
+
+
+static const char * const s2_dt_board_compat[] = {
+	"ambarella,s2",
+	"ambarella,ginkgo",
+	NULL,
+};
+
+DT_MACHINE_START(GINKGO_DT, "Ambarella S2 (Flattened Device Tree)")
+	.restart_mode	=	's',
+	.smp		=	smp_ops(ambarella_smp_ops),
+	.reserve	=	ambarella_memblock_reserve,
+	.map_io		=	ambarella_map_io,
+	.init_early	=	ambarella_init_early,
+	.init_irq	=	irqchip_init,
+	.init_time	=	ambarella_timer_init,
+	.init_machine	=	ambarella_init_ginkgo_dt,
+	.restart	=	ambarella_restart_machine,
+	.dt_compat	=	s2_dt_board_compat,
 MACHINE_END
 

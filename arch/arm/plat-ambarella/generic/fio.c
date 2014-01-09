@@ -24,6 +24,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
@@ -42,6 +43,7 @@
 #include <plat/nand.h>
 #include <plat/audio.h>
 #include <plat/clk.h>
+#include <plat/pll.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
@@ -50,8 +52,8 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L)
-#else
+#if (CHIP_REV != S2L)
+
 static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
 
@@ -65,11 +67,7 @@ module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
 static DEFINE_SPINLOCK(fio_sd0_int_lock);
 static u32 fio_sd_int = 0;
 static u32 fio_sdio_int = 0;
-#endif
 
-/* ==========================================================================*/
-#if (CHIP_REV == S2L)
-#else
 void __fio_select_lock(int module)
 {
 	u32					fio_ctr;
@@ -192,6 +190,7 @@ void fio_select_lock(int module)
 	wait_event(fio_wait, fio_check_free(module));
 	__fio_select_lock(module);
 }
+EXPORT_SYMBOL(fio_select_lock);
 
 void fio_unlock(int module)
 {
@@ -225,6 +224,7 @@ void fio_unlock(int module)
 
 	spin_unlock_irqrestore(&fio_lock, flags);
 }
+EXPORT_SYMBOL(fio_unlock);
 
 int fio_amb_sd0_is_enable(void)
 {
@@ -288,205 +288,6 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
 #endif
-
-int fio_dma_parse_error(u32 reg)
-{
-	int rval = 0;
-
-	if (reg & FIO_DMASTA_RE) {
-		pr_err("%s: fio dma read error 0x%x.\n", __func__, reg);
-		rval = FIO_READ_ER;
-		goto done;
-	}
-
-	if (reg & FIO_DMASTA_AE) {
-		pr_err("%s: fio dma address error 0x%x.\n", __func__, reg);
-		rval = FIO_ADDR_ER;
-		goto done;
-	}
-
-	if (!(reg & FIO_DMASTA_DN)) {
-		pr_err("%s: fio dma operation not done error 0x%x.\n",
-			__func__, reg);
-		rval = FIO_OP_NOT_DONE_ER;
-	}
-
-done:
-	return rval;
-}
-
-/* ==========================================================================*/
-static struct ambarella_nand_set ambarella_nand_default_set = {
-	.name		= "ambarella_nand_set",
-	.nr_chips	= 1,
-	.nr_partitions	= 0,
-	.ecc_bits	= 0,
-};
-
-static struct ambarella_nand_timing ambarella_nand_default_timing = {
-	.control	= 0,
-	.size		= 0,
-	.timing0	= 0xFFFFFFFF,
-	.timing1	= 0xFFFFFFFF,
-	.timing2	= 0xFFFFFFFF,
-	.timing3	= 0xFFFFFFFF,
-	.timing4	= 0xFFFFFFFF,
-	.timing5	= 0xFFFFFFFF,
-};
-
-static void fio_amb_nand_request(void)
-{
-#if (CHIP_REV == S2L)
-#else
-	fio_select_lock(SELECT_FIO_FL);
-#endif
-}
-
-static void fio_amb_nand_release(void)
-{
-#if (CHIP_REV == S2L)
-#else
-	fio_unlock(SELECT_FIO_FL);
-#endif
-}
-
-static int fio_amb_nand_parse_error(u32 reg)
-{
-	return fio_dma_parse_error(reg);
-}
-
-static u32 ambarella_nand_get_pll(void)
-{
-	u32 nand_pll;
-
-	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
-#if (FIO_USE_2X_FREQ == 1)
-	nand_pll <<= 1;
-#endif
-	return nand_pll;
-}
-
-static void ambarella_nand_get_cfg(u32 *ppage_size, u32 *pread_confirm)
-{
-	u32 sys_config;
-
-	sys_config = amba_rct_readl(SYS_CONFIG_REG);
-	*ppage_size = (sys_config & SYS_CONFIG_NAND_PAGE_SIZE) ? 2048 : 512;
-	*pread_confirm = (sys_config & SYS_CONFIG_NAND_READ_CONFIRM) ? 1 : 0;
-}
-
-static struct ambarella_platform_nand ambarella_platform_default_nand = {
-	.sets		= &ambarella_nand_default_set,
-	.timing		= &ambarella_nand_default_timing,
-	.flash_bbt	= 1,
-	.id_cycles	= NAND_READ_ID_CYCLES,
-	.parse_error	= fio_amb_nand_parse_error,
-	.request	= fio_amb_nand_request,
-	.release	= fio_amb_nand_release,
-	.get_pll	= ambarella_nand_get_pll,
-	.get_cfg	= ambarella_nand_get_cfg,
-};
-
-static int __init parse_nand_tag_cs(const struct tag *tag)
-{
-	ambarella_nand_default_timing.control = tag->u.serialnr.low;
-	ambarella_nand_default_timing.size = tag->u.serialnr.high;
-
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_NAND_CS, parse_nand_tag_cs);
-
-static int __init parse_nand_tag_t0(const struct tag *tag)
-{
-	ambarella_nand_default_timing.timing0 = tag->u.serialnr.low;
-	ambarella_nand_default_timing.timing1 = tag->u.serialnr.high;
-
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_NAND_T0, parse_nand_tag_t0);
-
-static int __init parse_nand_tag_t1(const struct tag *tag)
-{
-	ambarella_nand_default_timing.timing2 = tag->u.serialnr.low;
-	ambarella_nand_default_timing.timing3 = tag->u.serialnr.high;
-
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_NAND_T1, parse_nand_tag_t1);
-
-static int __init parse_nand_tag_t2(const struct tag *tag)
-{
-	ambarella_nand_default_timing.timing4 = tag->u.serialnr.low;
-	ambarella_nand_default_timing.timing5 = tag->u.serialnr.high;
-
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_NAND_T2, parse_nand_tag_t2);
-
-static int __init parse_nand_tag_ecc(const struct tag *tag)
-{
-	ambarella_nand_default_set.ecc_bits = tag->u.serialnr.low;
-
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_NAND_ECC, parse_nand_tag_ecc);
-
-static struct resource ambarella_fio_resources[] = {
-	[0] = {
-		.start	= FIO_BASE,
-		.end	= FIO_BASE + 0x0FFF,
-		.name	= "fio_reg",
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= FIOCMD_IRQ,
-		.end	= FIOCMD_IRQ,
-		.name	= "fio_cmd_irq",
-		.flags	= IORESOURCE_IRQ,
-	},
-	[2] = {
-		.start	= FIODMA_IRQ,
-		.end	= FIODMA_IRQ,
-		.name	= "fio_dma_irq",
-		.flags	= IORESOURCE_IRQ,
-	},
-	[3] = {
-		.start	= GPIO(39),
-		.end	= GPIO(39),
-		.name	= "wp_gpio",
-		.flags	= IORESOURCE_IO,
-	},
-	[4] = {
-		.start	= FIO_FIFO_BASE,
-		.end	= FIO_FIFO_BASE + 0x0FFF,
-		.name	= "fio_fifo",
-		.flags	= IORESOURCE_MEM,
-	},
-	[5] = {
-		.start	= DMA_FIOS_BASE,
-		.end	= DMA_FIOS_BASE + 0x0FFF,
-		.name	= "fdma_reg",
-		.flags	= IORESOURCE_MEM,
-	},
-	[6] = {
-		.start	= DMA_FIOS_IRQ,
-		.end	= DMA_FIOS_IRQ,
-		.name	= "fdma_irq",
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device ambarella_nand = {
-	.name		= "ambarella-nand",
-	.id		= -1,
-	.resource	= ambarella_fio_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_fio_resources),
-	.dev		= {
-		.platform_data		= &ambarella_platform_default_nand,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
 
 /* ==========================================================================*/
 int __init ambarella_init_fio(void)

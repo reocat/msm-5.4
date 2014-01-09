@@ -48,15 +48,7 @@ void __init ambarella_init_irq(void)
 	gic_init(0, LOCAL_TIMER_IRQ, __io(AMBARELLA_VA_GIC_DIST_BASE),
 		__io(AMBARELLA_VA_GIC_CPU_BASE));
 #endif /* CONFIG_ARM_GIC */
-#if defined(CONFIG_AMBARELLA_VIC)
-	ambarella_vic_init_irq((void __iomem *)VIC_REG(0), VIC_INT_VEC(0));
-#if (VIC_INSTANCES >= 2)
-	ambarella_vic_add_irq((void __iomem *)VIC2_REG(0), VIC2_INT_VEC(0));
-#endif
-#if (VIC_INSTANCES >= 3)
-	ambarella_vic_add_irq((void __iomem *)VIC3_REG(0), VIC3_INT_VEC(0));
-#endif
-#endif /* CONFIG_AMBARELLA_VIC */
+
 #if defined(CONFIG_AMBARELLA_GVIC)
 	ambarella_gvic_init_irq((void __iomem *)GPIO0_REG(0),
 		GPIO_INT_VEC(32 * 0), GPIO0_IRQ, IRQ_TYPE_LEVEL_HIGH);

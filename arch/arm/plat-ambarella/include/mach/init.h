@@ -56,6 +56,7 @@
 
 /* ==========================================================================*/
 extern void ambarella_memblock_reserve(void);
+extern void ambarella_init_early(void);
 extern int ambarella_init_machine(char *board_name, unsigned int ref_freq);
 extern void ambarella_map_io(void);
 extern void ambarella_restart_machine(char mode, const char *cmd);

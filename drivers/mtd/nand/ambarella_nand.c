@@ -33,6 +33,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/semaphore.h>
 #include <linux/slab.h>
+#include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -40,6 +41,7 @@
 #include <asm/dma.h>
 #include <mach/dma.h>
 #include <mach/board.h>
+#include <plat/pll.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
 #include <plat/fio.h>
@@ -50,6 +52,16 @@
 /* nand_check_wp will be checked before write, so wait MTD fix */
 #undef AMBARELLA_NAND_WP
 
+struct ambarella_nand_timing
+{
+	u32	timing0;		/**< Timing param. */
+	u32	timing1;		/**< Timing param. */
+	u32	timing2;		/**< Timing param. */
+	u32	timing3;		/**< Timing param. */
+	u32	timing4;		/**< Timing param. */
+	u32	timing5;		/**< Timing param. */
+};
+
 struct ambarella_nand_info {
 	struct nand_chip		chip;
 	struct mtd_info			mtd;
@@ -58,7 +70,9 @@ struct ambarella_nand_info {
 	struct device			*dev;
 	wait_queue_head_t		wq;
 
-	struct ambarella_platform_nand	*plat_nand;
+	unsigned char __iomem		*regbase;
+	unsigned char __iomem		*fdmaregbase;
+	u32				dmabase;
 	int				suspend;
 	/* dma irq for transferring data between Nand and FIFO */
 	int				dma_irq;
@@ -66,9 +80,9 @@ struct ambarella_nand_info {
 	/* fdma irq for transferring data between FIFO and Dram */
 	int				fdma_irq;
 	int				wp_gpio;
-	unsigned char __iomem		*regbase;
-	unsigned char __iomem		*fdmaregbase;
-	u32				dmabase;
+	u32				ecc_bits;
+	/* if or not support to read id in 5 cycles */
+	u32				id_cycles_5;
 
 	dma_addr_t			dmaaddr;
 	u8				*dmabuf;
@@ -95,9 +109,7 @@ struct ambarella_nand_info {
 	u32				slen;
 	u32				area;
 	u32				ecc;
-
-	struct ambarella_nand_timing	*origin_timing;
-	struct ambarella_nand_timing	current_timing;
+	struct ambarella_nand_timing	timing;
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
@@ -211,12 +223,12 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 	u32 fio_dsm_ctr = 0, fio_ctr_reg = 0, dma_dsm_ctr = 0;
 	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
 
-	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+	if (nand_info->ecc_bits > 1) {
 			fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
 			dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
 			fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO);
 
-			if (nand_info->plat_nand->sets->ecc_bits == 6) {
+			if (nand_info->ecc_bits == 6) {
 			  fio_dsm_ctr |= FIO_DSM_SPJP_64B;
 				dma_dsm_ctr |= DMA_DSM_SPJP_64B;
 				fio_ctr_reg |= FIO_CTR_ECC_6BIT;
@@ -256,7 +268,7 @@ static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 	u8 *bsp;
 
 	bsp = nand_info->dmabuf + nand_info->mtd.writesize;
-	if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+	if (nand_info->ecc_bits > 0x1) {
 		for (i = 0; i < nand_info->mtd.oobsize; i++) {
 				if (bsp[i] != 0xff)
 					break;
@@ -267,122 +279,129 @@ static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 	return -1;
 }
 
-static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
-	struct ambarella_nand_timing *timing);
-
-static void ambnand_calc_timing(struct ambarella_nand_info *nand_info)
+static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
-	struct ambarella_nand_timing *nand_time_para;
-	u32 timing_para;
 	u8 tcls, tals, tcs, tds;
 	u8 tclh, talh, tch, tdh;
 	u8 twp, twh, twb, trr;
 	u8 trp, treh, trb, tceh;
 	u8 trdelay, tclr, twhr, tir;
 	u8 tww, trhz, tar;
-	u32 clk;
+	u32 t, clk, val;
 
-	clk =  nand_info->plat_nand->get_pll();
-	nand_time_para = nand_info->plat_nand->timing;
+	clk = ambarella_nand_get_pll();
+
 	/* timing 0 */
-	timing_para = nand_time_para->timing0;
-	tcls = NAND_TIMING_RSHIFT24BIT(timing_para);
-	tals = NAND_TIMING_RSHIFT16BIT(timing_para);
-	tcs = NAND_TIMING_RSHIFT8BIT(timing_para);
-	tds = NAND_TIMING_RSHIFT0BIT(timing_para);
+	t = nand_info->timing.timing0;
+	tcls = NAND_TIMING_RSHIFT24BIT(t);
+	tals = NAND_TIMING_RSHIFT16BIT(t);
+	tcs = NAND_TIMING_RSHIFT8BIT(t);
+	tds = NAND_TIMING_RSHIFT0BIT(t);
 
 	tcls = nand_timing_calc(clk, 0, tcls);
 	tals = nand_timing_calc(clk, 0, tals);
 	tcs = nand_timing_calc(clk, 0, tcs);
 	tds = nand_timing_calc(clk, 0, tds);
 
-	nand_info->current_timing.timing0 = NAND_TIMING_LSHIFT24BIT(tcls) |
-			NAND_TIMING_LSHIFT16BIT(tals) |
-			NAND_TIMING_LSHIFT8BIT(tcs) |
-			NAND_TIMING_LSHIFT0BIT(tds);
+	val = NAND_TIMING_LSHIFT24BIT(tcls) |
+		NAND_TIMING_LSHIFT16BIT(tals) |
+		NAND_TIMING_LSHIFT8BIT(tcs) |
+		NAND_TIMING_LSHIFT0BIT(tds);
+
+	amba_writel(nand_info->regbase + FLASH_TIM0_OFFSET, val);
 
 	/* timing 1 */
-	timing_para = nand_time_para->timing1;
-	tclh = NAND_TIMING_RSHIFT24BIT(timing_para);
-	talh = NAND_TIMING_RSHIFT16BIT(timing_para);
-	tch = NAND_TIMING_RSHIFT8BIT(timing_para);
-	tdh = NAND_TIMING_RSHIFT0BIT(timing_para);
+	t = nand_info->timing.timing1;
+	tclh = NAND_TIMING_RSHIFT24BIT(t);
+	talh = NAND_TIMING_RSHIFT16BIT(t);
+	tch = NAND_TIMING_RSHIFT8BIT(t);
+	tdh = NAND_TIMING_RSHIFT0BIT(t);
 
 	tclh = nand_timing_calc(clk, 0, tclh);
 	talh = nand_timing_calc(clk, 0, talh);
 	tch = nand_timing_calc(clk, 0, tch);
 	tdh = nand_timing_calc(clk, 0, tdh);
 
-	nand_info->current_timing.timing1 = NAND_TIMING_LSHIFT24BIT(tclh) |
-			NAND_TIMING_LSHIFT16BIT(talh) |
-			NAND_TIMING_LSHIFT8BIT(tch) |
-			NAND_TIMING_LSHIFT0BIT(tdh);
+	val = NAND_TIMING_LSHIFT24BIT(tclh) |
+		NAND_TIMING_LSHIFT16BIT(talh) |
+		NAND_TIMING_LSHIFT8BIT(tch) |
+		NAND_TIMING_LSHIFT0BIT(tdh);
+
+	amba_writel(nand_info->regbase + FLASH_TIM1_OFFSET, val);
 
 	/* timing 2 */
-	timing_para = nand_time_para->timing2;
-	twp = NAND_TIMING_RSHIFT24BIT(timing_para);
-	twh = NAND_TIMING_RSHIFT16BIT(timing_para);
-	twb = NAND_TIMING_RSHIFT8BIT(timing_para);
-	trr = NAND_TIMING_RSHIFT0BIT(timing_para);
+	t = nand_info->timing.timing2;
+	twp = NAND_TIMING_RSHIFT24BIT(t);
+	twh = NAND_TIMING_RSHIFT16BIT(t);
+	twb = NAND_TIMING_RSHIFT8BIT(t);
+	trr = NAND_TIMING_RSHIFT0BIT(t);
 
 	twp = nand_timing_calc(clk, 0, twp);
 	twh = nand_timing_calc(clk, 0, twh);
 	twb = nand_timing_calc(clk, 1, twb);
 	trr = nand_timing_calc(clk, 0, trr);
 
-	nand_info->current_timing.timing2 = NAND_TIMING_LSHIFT24BIT(twp) |
-			NAND_TIMING_LSHIFT16BIT(twh) |
-			NAND_TIMING_LSHIFT8BIT(twb) |
-			NAND_TIMING_LSHIFT0BIT(trr);
+	val = NAND_TIMING_LSHIFT24BIT(twp) |
+		NAND_TIMING_LSHIFT16BIT(twh) |
+		NAND_TIMING_LSHIFT8BIT(twb) |
+		NAND_TIMING_LSHIFT0BIT(trr);
+
+	amba_writel(nand_info->regbase + FLASH_TIM2_OFFSET, val);
 
 	/* timing 3 */
-	timing_para = nand_time_para->timing3;
-	trp = NAND_TIMING_RSHIFT24BIT(timing_para);
-	treh = NAND_TIMING_RSHIFT16BIT(timing_para);
-	trb = NAND_TIMING_RSHIFT8BIT(timing_para);
-	tceh = NAND_TIMING_RSHIFT0BIT(timing_para);
+	t = nand_info->timing.timing3;
+	trp = NAND_TIMING_RSHIFT24BIT(t);
+	treh = NAND_TIMING_RSHIFT16BIT(t);
+	trb = NAND_TIMING_RSHIFT8BIT(t);
+	tceh = NAND_TIMING_RSHIFT0BIT(t);
 
 	trp = nand_timing_calc(clk, 0, trp);
 	treh = nand_timing_calc(clk, 0, treh);
 	trb = nand_timing_calc(clk, 1, trb);
 	tceh = nand_timing_calc(clk, 1, tceh);
 
-	nand_info->current_timing.timing3 = NAND_TIMING_LSHIFT24BIT(trp) |
-			NAND_TIMING_LSHIFT16BIT(treh) |
-			NAND_TIMING_LSHIFT8BIT(trb) |
-			NAND_TIMING_LSHIFT0BIT(tceh);
+	val = NAND_TIMING_LSHIFT24BIT(trp) |
+		NAND_TIMING_LSHIFT16BIT(treh) |
+		NAND_TIMING_LSHIFT8BIT(trb) |
+		NAND_TIMING_LSHIFT0BIT(tceh);
+
+	amba_writel(nand_info->regbase + FLASH_TIM3_OFFSET, val);
 
 	/* timing 4 */
-	timing_para = nand_time_para->timing4;
-	trdelay = NAND_TIMING_RSHIFT24BIT(timing_para);
-	tclr = NAND_TIMING_RSHIFT16BIT(timing_para);
-	twhr = NAND_TIMING_RSHIFT8BIT(timing_para);
-	tir = NAND_TIMING_RSHIFT0BIT(timing_para);
+	t = nand_info->timing.timing4;
+	trdelay = NAND_TIMING_RSHIFT24BIT(t);
+	tclr = NAND_TIMING_RSHIFT16BIT(t);
+	twhr = NAND_TIMING_RSHIFT8BIT(t);
+	tir = NAND_TIMING_RSHIFT0BIT(t);
 
 	trdelay = nand_timing_calc(clk, 1, trdelay);
 	tclr = nand_timing_calc(clk, 0, tclr);
 	twhr = nand_timing_calc(clk, 0, twhr);
 	tir = nand_timing_calc(clk, 0, tir);
 
-	nand_info->current_timing.timing4 = NAND_TIMING_LSHIFT24BIT(trdelay) |
-			NAND_TIMING_LSHIFT16BIT(tclr) |
-			NAND_TIMING_LSHIFT8BIT(twhr) |
-			NAND_TIMING_LSHIFT0BIT(tir);
+	val = NAND_TIMING_LSHIFT24BIT(trdelay) |
+		NAND_TIMING_LSHIFT16BIT(tclr) |
+		NAND_TIMING_LSHIFT8BIT(twhr) |
+		NAND_TIMING_LSHIFT0BIT(tir);
+
+	amba_writel(nand_info->regbase + FLASH_TIM4_OFFSET, val);
 
 	/* timing 5 */
-	timing_para = nand_time_para->timing5;
-	tww = NAND_TIMING_RSHIFT16BIT(timing_para);
-	trhz = NAND_TIMING_RSHIFT8BIT(timing_para);
-	tar = NAND_TIMING_RSHIFT0BIT(timing_para);
+	t = nand_info->timing.timing5;
+	tww = NAND_TIMING_RSHIFT16BIT(t);
+	trhz = NAND_TIMING_RSHIFT8BIT(t);
+	tar = NAND_TIMING_RSHIFT0BIT(t);
 
 	tww = nand_timing_calc(clk, 0, tww);
 	trhz = nand_timing_calc(clk, 1, trhz);
 	tar = nand_timing_calc(clk, 0, tar);
 
 
-	nand_info->current_timing.timing5 = NAND_TIMING_LSHIFT16BIT(tww) |
-			NAND_TIMING_LSHIFT8BIT(trhz) |
-			NAND_TIMING_LSHIFT0BIT(tar);
+	val = NAND_TIMING_LSHIFT16BIT(tww) |
+		NAND_TIMING_LSHIFT8BIT(trhz) |
+		NAND_TIMING_LSHIFT0BIT(tar);
+
+	amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, val);
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -401,22 +420,7 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 
 	case AMBA_EVENT_POST_CPUFREQ:
 		pr_debug("%s: Post Change\n", __func__);
-		/* The timming register is default value,
-		 * it's big enough to operate
-		 * with NAND, so no need to change it. */
-		if (nand_info->origin_timing->control != 0) {
-			ambnand_calc_timing(nand_info);
-			amb_nand_set_timing(nand_info, &nand_info->current_timing);
-
-			pr_debug("new reg:\t0x%08x 0x%08x"
-				" 0x%08x 0x%08x 0x%08x 0x%08x\n",
-				nand_info->current_timing.timing0,
-				nand_info->current_timing.timing1,
-				nand_info->current_timing.timing2,
-				nand_info->current_timing.timing3,
-				nand_info->current_timing.timing4,
-				nand_info->current_timing.timing5);
-		}
+		amb_nand_set_timing(nand_info);
 		up(&nand_info->system_event_sem);
 		break;
 
@@ -473,7 +477,7 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 
 		amba_writel(nand_info->regbase + FIO_DMASTA_OFFSET, 0x0);
 
-		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+		if (nand_info->ecc_bits > 0x1) {
 			nand_info->fio_ecc_sta =
 				amba_readl(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
 			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
@@ -531,7 +535,7 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->dmabase);
 	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->buf_phys);
 
-	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+	if (nand_info->ecc_bits > 1) {
 		/* Setup spare external DMA engine transfer */
 		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0x0);
 		amba_writel(nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET, nand_info->dmabase);
@@ -564,7 +568,7 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 	u32					ctrl_val, dma_burst_val, fio_burst_val;
 	u32					size = 0;
 
-	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+	if (nand_info->ecc_bits > 1) {
 		dma_burst_val = DMA_NODC_MN_BURST_SIZE8;
 		fio_burst_val = FIO_MN_BURST_SIZE8;
 	} else {
@@ -587,7 +591,7 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->buf_phys);
 	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->dmabase);
 
-	if (nand_info->plat_nand->sets->ecc_bits > 1) {
+	if (nand_info->ecc_bits > 1) {
 		/* Setup spare external DMA engine transfer */
 		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0x0);
 		amba_writel(nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET, nand_info->spare_buf_phys);
@@ -630,7 +634,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 	nand_ctr_reg = nand_info->control_reg | NAND_CTR_WAS;
 
-	nand_info->plat_nand->request();
+	fio_select_lock(SELECT_FIO_FL);
 
 #ifdef AMBARELLA_NAND_WP
 	if ((cmd == NAND_AMB_CMD_ERASE ||
@@ -651,8 +655,8 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_READID;
 
-		if (nand_info->plat_nand->id_cycles == 5) {
-			u32	nand_ext_ctr_reg = 0;
+		if (nand_info->id_cycles_5) {
+			u32 nand_ext_ctr_reg = 0;
 
 			nand_ext_ctr_reg = amba_readl(nand_info->regbase + FLASH_EX_CTR_OFFSET);
 			nand_ext_ctr_reg |= NAND_EXT_CTR_I5;
@@ -700,7 +704,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	case NAND_AMB_CMD_READ:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 
-		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+		if (nand_info->ecc_bits > 0x1) {
 			/* Setup FIO DMA Control Register */
 			nand_amb_enable_bch(nand_info);
 			/* in dual space mode,enable the SE bit */
@@ -753,7 +757,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	case NAND_AMB_CMD_PROGRAM:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 
-		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+		if (nand_info->ecc_bits > 0x1) {
 			/* Setup FIO DMA Control Register */
 			nand_amb_enable_bch(nand_info);
 			/* in dual space mode,enable the SE bit */
@@ -828,7 +832,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			goto nand_amb_request_done;
 		}
 
-		if (nand_info->plat_nand->sets->ecc_bits > 0x1) {
+		if (nand_info->ecc_bits > 0x1) {
 			if (cmd == NAND_AMB_CMD_READ) {
 				int ret = 0;
 				struct mtd_info		*mtd;
@@ -856,19 +860,22 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				}
 			}
 		}
-		errorCode = nand_info->plat_nand->parse_error(
-			nand_info->fio_dma_sta);
-		if (errorCode) {
+
+		if ((nand_info->fio_dma_sta & FIO_DMASTA_RE)
+			|| (nand_info->fio_dma_sta & FIO_DMASTA_AE)
+			|| !(nand_info->fio_dma_sta & FIO_DMASTA_DN)) {
 			u32 block_addr;
 			block_addr = nand_info->addr /
 					nand_info->mtd.erasesize *
 					nand_info->mtd.erasesize;
 			dev_err(nand_info->dev,
-				"%s: cmd=0x%x, addr_hi=0x%x, "
+				"%s: dma_status=0x%08x, cmd=0x%x, addr_hi=0x%x, "
 				"addr=0x%x, dst=0x%x, buf=0x%x, "
 				"len=0x%x, area=0x%x, ecc=0x%x, "
 				"block addr=0x%x!\n",
-				__func__, cmd,
+				__func__,
+				nand_info->fio_dma_sta,
+				cmd,
 				nand_info->addr_hi,
 				nand_info->addr,
 				nand_info->dst,
@@ -877,6 +884,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_info->area,
 				nand_info->ecc,
 				block_addr);
+			errorCode = -EIO;
 			goto nand_amb_request_done;
 		}
 	} else {
@@ -894,7 +902,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			if (cmd == NAND_AMB_CMD_READID) {
 				u32 id = amba_readl(nand_info->regbase +
 					FLASH_ID_OFFSET);
-				if (nand_info->plat_nand->id_cycles == 5) {
+				if (nand_info->id_cycles_5) {
 					u32 id_5 = amba_readl(nand_info->regbase +
 					FLASH_EX_ID_OFFSET);
 					nand_info->dmabuf[4] = (unsigned char) (id_5 & 0xFF);
@@ -927,10 +935,10 @@ nand_amb_request_done:
 
 	if ((cmd == NAND_AMB_CMD_READ ||
 		cmd == NAND_AMB_CMD_PROGRAM) &&
-		nand_info->plat_nand->sets->ecc_bits > 0x1)
+		nand_info->ecc_bits > 0x1)
 		nand_amb_disable_bch(nand_info);
 
-	nand_info->plat_nand->release();
+	fio_unlock(SELECT_FIO_FL);
 
 nand_amb_request_exit:
 	return errorCode;
@@ -977,7 +985,7 @@ int nand_amb_erase(struct ambarella_nand_info *nand_info, u32 page_addr)
 	nand_info->addr = addr;
 
 	/* Fix dual space mode bug */
-	if (nand_info->plat_nand->sets->ecc_bits > 1)
+	if (nand_info->ecc_bits > 1)
 		amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
 	errorCode = nand_amb_request(nand_info);
@@ -1024,7 +1032,7 @@ int nand_amb_read_data(struct ambarella_nand_info *nand_info,
 	}
 
 	nand_info->slen = 0;
-	if(nand_info->plat_nand->sets->ecc_bits > 1) {
+	if(nand_info->ecc_bits > 1) {
 		/* when use BCH, the EG and EC should be 0 */
 		ecc = 0;
 		len = nand_info->mtd.writesize;
@@ -1085,7 +1093,7 @@ int nand_amb_write_data(struct ambarella_nand_info *nand_info,
 	}
 
 	nand_info->slen = 0;
-	if(nand_info->plat_nand->sets->ecc_bits > 1) {
+	if(nand_info->ecc_bits > 1) {
 		/* when use BCH, the EG and EC should be 0 */
 		ecc = 0;
 		len = nand_info->mtd.writesize;
@@ -1236,7 +1244,7 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		break;
 	case NAND_CMD_READOOB:
 		nand_info->dma_bufpos = column;
-		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		if (nand_info->ecc_bits > 1) {
 			nand_info->dma_bufpos = mtd->writesize;
 			nand_amb_read_data(nand_info, page_addr,
 				nand_info->dmaaddr, MAIN_ECC);
@@ -1247,7 +1255,7 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		break;
 	case NAND_CMD_READ0:
 		nand_info->dma_bufpos = column;
-		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		if (nand_info->ecc_bits > 1) {
 			nand_amb_read_data(nand_info, page_addr,
 				nand_info->dmaaddr, MAIN_ECC);
 		} else {
@@ -1263,7 +1271,7 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		nand_info->seqin_page_addr = page_addr;
 		break;
 	case NAND_CMD_PAGEPROG:
-		if (nand_info->plat_nand->sets->ecc_bits > 1) {
+		if (nand_info->ecc_bits > 1) {
 			if (nand_info->seqin_column < mtd->writesize) {
 				nand_amb_write_data(nand_info,
 					nand_info->seqin_page_addr,
@@ -1348,24 +1356,12 @@ static int amb_nand_write_oob_std(struct mtd_info *mtd,
 }
 
 /* ==========================================================================*/
-static void amb_nand_set_timing(struct ambarella_nand_info *nand_info,
-	struct ambarella_nand_timing *timing)
-{
-	amba_writel(nand_info->regbase + FLASH_TIM0_OFFSET, timing->timing0);
-	amba_writel(nand_info->regbase + FLASH_TIM1_OFFSET, timing->timing1);
-	amba_writel(nand_info->regbase + FLASH_TIM2_OFFSET, timing->timing2);
-	amba_writel(nand_info->regbase + FLASH_TIM3_OFFSET, timing->timing3);
-	amba_writel(nand_info->regbase + FLASH_TIM4_OFFSET, timing->timing4);
-	amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, timing->timing5);
-}
 
-static int ambarella_nand_config_flash(
-	struct ambarella_nand_info *nand_info)
+static int ambarella_nand_config_flash(struct ambarella_nand_info *nand_info)
 {
 	int					errorCode = 0;
 
-	ambnand_calc_timing(nand_info);
-	amb_nand_set_timing(nand_info, &nand_info->current_timing);
+	amb_nand_set_timing(nand_info);
 
 	/* control_reg will be uesd when real operation to NAND is performed */
 
@@ -1410,27 +1406,23 @@ static int ambarella_nand_config_flash(
 		break;
 	}
 
-	printk("%s: 0x%08x, 0x%08x\n", __func__,
-		nand_info->plat_nand->timing->control, nand_info->control_reg);
-
 	return errorCode;
 }
 
 static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
 {
-	u32 cfg_page_size, cfg_read_confirm;
 	struct nand_chip *chip = &nand_info->chip;
 
-	nand_info->plat_nand->get_cfg(&cfg_page_size, &cfg_read_confirm);
-	if (cfg_read_confirm)
-		nand_info->control_reg = NAND_CTR_RC;
-	if (cfg_page_size == 2048)
+	nand_info->control_reg = 0;
+	if (ambarella_board_generic.board_poc & SYS_CONFIG_NAND_READ_CONFIRM)
+		nand_info->control_reg |= NAND_CTR_RC;
+	if (ambarella_board_generic.board_poc & SYS_CONFIG_NAND_PAGE_SIZE)
 		nand_info->control_reg |= (NAND_CTR_C2 | NAND_CTR_SZ_8G);
 	/*
 	  * Always use P3 and I4 to support all NAND,
-	  * but we will adjust them after read ID from NAND.
-	  */
+	  * but we will adjust them after read ID from NAND. */
 	nand_info->control_reg |= (NAND_CTR_P3 | NAND_CTR_I4 | NAND_CTR_IE);
+	nand_info->id_cycles_5 = NAND_READ_ID5;
 
 	chip->chip_delay = 0;
 	chip->controller = &nand_info->controller;
@@ -1444,11 +1436,9 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
 	chip->waitfunc = amb_nand_waitfunc;
 	chip->cmdfunc = amb_nand_cmdfunc;
 
-	if (nand_info->plat_nand->flash_bbt) {
-		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
-			chip->bbt_td = &bbt_main_no_oob_descr;
-			chip->bbt_md = &bbt_mirror_no_oob_descr;
-	}
+	chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+		chip->bbt_td = &bbt_main_no_oob_descr;
+		chip->bbt_md = &bbt_mirror_no_oob_descr;
 
 	nand_info->mtd.priv = chip;
 	nand_info->mtd.owner = THIS_MODULE;
@@ -1481,14 +1471,14 @@ static int ambarella_nand_init_chipecc(
 
 	chip->ecc.mode = NAND_ECC_HW;
 
-	printk(KERN_INFO "ambarella nand in ecc-[%d]bit mode\n",
-				nand_info->plat_nand->sets->ecc_bits);
-	if (nand_info->plat_nand->sets->ecc_bits > 1) {
-		if (nand_info->plat_nand->sets->ecc_bits == 6) {
+	dev_info(nand_info->dev, "in ecc-[%d]bit mode\n", nand_info->ecc_bits);
+
+	if (nand_info->ecc_bits > 1) {
+		if (nand_info->ecc_bits == 6) {
 			chip->ecc.bytes = NAND_ECC_BCH6_BYTES;
 			chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
 			chip->ecc.strength = 6;
-		} else if (nand_info->plat_nand->sets->ecc_bits == 8)
+		} else if (nand_info->ecc_bits == 8)
 			chip->ecc.bytes = NAND_ECC_BCH8_BYTES;
 			/* 8 bit can not supprot on board recently */
 			/* ecc bit part maybe need optimize
@@ -1509,68 +1499,88 @@ static int ambarella_nand_get_resource(
 	struct ambarella_nand_info *nand_info, struct platform_device *pdev)
 {
 	int					errorCode = 0;
+	struct device_node 			*np = pdev->dev.of_node;
 	struct resource				*res;
 
-	res = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "fio_reg");
-	if (res == NULL) {
-		dev_err(&pdev->dev, "Get reg_res failed!\n");
-		errorCode = -ENXIO;
-		goto nand_get_resource_err_exit;
-	}
-	nand_info->regbase = (unsigned char __iomem *)res->start;
-
-	res = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "fio_fifo");
-	if (res == NULL) {
-		dev_err(&pdev->dev, "Get dma_res failed!\n");
-		errorCode = -ENXIO;
-		goto nand_get_resource_err_exit;
-	}
-	nand_info->dmabase = ambarella_virt_to_phys(res->start);
-
-	res = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "fdma_reg");
-	if (res == NULL) {
-		dev_err(&pdev->dev, "Get dmareg_res failed!\n");
-		errorCode = -ENXIO;
-		goto nand_get_resource_err_exit;
-	}
-	nand_info->fdmaregbase = (unsigned char __iomem *)res->start;
-
-	nand_info->cmd_irq = platform_get_irq_byname(pdev, "fio_cmd_irq");
-	if (nand_info->cmd_irq <= 0) {
-		dev_err(&pdev->dev, "Get cmd_irq failed!\n");
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for fio_reg!\n");
 		errorCode = -ENXIO;
 		goto nand_get_resource_err_exit;
 	}
 
-	nand_info->dma_irq = platform_get_irq_byname(pdev, "fio_dma_irq");
-	if (nand_info->dma_irq <= 0) {
-		dev_err(&pdev->dev, "Get dma_irq failed!\n");
+	nand_info->regbase =
+		devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!nand_info->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		errorCode = -ENOMEM;
+		goto nand_get_resource_err_exit;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for fdma_reg!\n");
 		errorCode = -ENXIO;
 		goto nand_get_resource_err_exit;
 	}
 
-	nand_info->fdma_irq = platform_get_irq_byname(pdev, "fdma_irq");
-	if (nand_info->fdma_irq <= 0) {
-		dev_err(&pdev->dev, "Get fdma_irq failed!\n");
-		errorCode = -ENXIO;
+	nand_info->fdmaregbase =
+		devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!nand_info->fdmaregbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		errorCode = -ENOMEM;
 		goto nand_get_resource_err_exit;
 	}
 
-	res = platform_get_resource_byname(pdev,
-		IORESOURCE_IO, "wp_gpio");
-	if (res == NULL) {
+	nand_info->cmd_irq = platform_get_irq(pdev, 0);
+	if (nand_info->cmd_irq < 0) {
+		dev_err(&pdev->dev, "no irq for cmd_irq!\n");
+		errorCode = -ENODEV;
+		goto nand_get_resource_err_exit;
+	}
+
+	nand_info->dma_irq = platform_get_irq(pdev, 1);
+	if (nand_info->dma_irq < 0) {
+		dev_err(&pdev->dev, "no irq for dma_irq!\n");
+		errorCode = -ENODEV;
+		goto nand_get_resource_err_exit;
+	}
+
+	nand_info->fdma_irq = platform_get_irq(pdev, 2);
+	if (nand_info->fdma_irq < 0) {
+		dev_err(&pdev->dev, "no irq for fdma_irq!\n");
+		errorCode = -ENODEV;
+		goto nand_get_resource_err_exit;
+	}
+
+	errorCode = of_property_read_u32(np, "amb,fifo-base", &nand_info->dmabase);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Get fifo-base failed!\n");
+		goto nand_get_resource_err_exit;
+	}
+
+	errorCode = of_property_read_u32(np, "amb,ecc-bits", &nand_info->ecc_bits);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Get ecc-bits failed!\n");
+		goto nand_get_resource_err_exit;
+	}
+
+	errorCode = of_property_read_u32_array(np, "amb,timing",
+			(u32 *)&nand_info->timing, 6);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Get timing failed!\n");
+		goto nand_get_resource_err_exit;
+	}
+
+	errorCode = of_property_read_u32(np, "amb,wp-gpio", &nand_info->wp_gpio);
+	if (errorCode < 0) {
 		nand_info->wp_gpio = -1;
 	} else {
-		nand_info->wp_gpio = res->start;
-
 		errorCode = gpio_request_one(nand_info->wp_gpio,
 				GPIOF_OUT_INIT_HIGH, pdev->name);
 		if (errorCode < 0) {
-			dev_err(&pdev->dev, "Could not get WP GPIO %d\n",
-				nand_info->wp_gpio);
+			dev_err(&pdev->dev, "Could not get WP GPIO %d, %d\n",
+				nand_info->wp_gpio, errorCode);
 			goto nand_get_resource_err_exit;
 		}
 	}
@@ -1699,7 +1709,7 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 		goto ambarella_nand_scan_error2;
 	}
 
-	dev_info(nand_info->dev, "%s: Partition infomation found!\n", __func__);
+	dev_info(nand_info->dev, "Partition infomation found!\n");
 
 	amboot_partitions = kzalloc(
 		PART_MAX + CMDLINE_PART_MAX * sizeof(struct mtd_partition),
@@ -1778,17 +1788,6 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	int					errorCode = 0;
 	struct ambarella_nand_info		*nand_info;
 	struct mtd_info				*mtd;
-	struct ambarella_platform_nand		*plat_nand;
-
-	plat_nand = (struct ambarella_platform_nand *)pdev->dev.platform_data;
-	if ((plat_nand == NULL) || (plat_nand->timing == NULL) ||
-		(plat_nand->sets == NULL) || (plat_nand->parse_error == NULL) ||
-		(plat_nand->request == NULL) || (plat_nand->release == NULL) ||
-		(plat_nand->get_pll == NULL) || (plat_nand->get_cfg == NULL)) {
-		dev_err(&pdev->dev, "Can't get platform_data!\n");
-		errorCode = - EPERM;
-		goto ambarella_nand_probe_exit;
-	}
 
 	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
 	if (nand_info == NULL) {
@@ -1797,7 +1796,6 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_exit;
 	}
 
-	nand_info->plat_nand = plat_nand;
 	nand_info->dev = &pdev->dev;
 	spin_lock_init(&nand_info->controller.lock);
 	init_waitqueue_head(&nand_info->controller.wq);
@@ -1822,7 +1820,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	ambarella_nand_init_chip(nand_info);
 
 	mtd = &nand_info->mtd;
-	errorCode = nand_scan_ident(mtd, plat_nand->sets->nr_chips, NULL);
+	errorCode = nand_scan_ident(mtd, 1, NULL);
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
 
@@ -1843,8 +1841,6 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_mtd_error;
 
 	platform_set_drvdata(pdev, nand_info);
-
-	nand_info->origin_timing = plat_nand->timing;
 
 	nand_info->system_event.notifier_call = ambarella_nand_system_event;
 	ambarella_register_event_notifier(&nand_info->system_event);
@@ -1915,7 +1911,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = platform_get_drvdata(pdev);
-	amb_nand_set_timing(nand_info, &nand_info->current_timing);
+	amb_nand_set_timing(nand_info);
 	nand_info->suspend = 0;
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
@@ -1925,6 +1921,16 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	return errorCode;
 }
 #endif
+
+static const struct of_device_id ambarella_nand_of_match[] = {
+	{.compatible = "ambarella,s2l-nand", },
+	{.compatible = "ambarella,s2-nand", },
+	{.compatible = "ambarella,i1-nand", },
+	{.compatible = "ambarella,a7l-nand", },
+	{.compatible = "ambarella,a5s-nand", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_nand_of_match);
 
 static struct platform_driver amb_nand_driver = {
 	.probe		= ambarella_nand_probe,
@@ -1936,6 +1942,7 @@ static struct platform_driver amb_nand_driver = {
 	.driver = {
 		.name	= "ambarella-nand",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_nand_of_match,
 	},
 };
 module_platform_driver(amb_nand_driver);

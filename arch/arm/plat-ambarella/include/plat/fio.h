@@ -33,7 +33,7 @@
 
 #if (CHIP_REV == S2)
 #define	NAND_DUAL_SPACE_MODE		1
-#define	NAND_READ_ID_CYCLES		5
+#define	NAND_READ_ID5			1
 
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00000010
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020
@@ -41,7 +41,7 @@
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800
 #elif (CHIP_REV == S2L)
 #define	NAND_DUAL_SPACE_MODE		1
-#define	NAND_READ_ID_CYCLES		5
+#define	NAND_READ_ID5			1
 
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000
@@ -49,7 +49,7 @@
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00040000
 #else
 #define	NAND_DUAL_SPACE_MODE		0
-#define	NAND_READ_ID_CYCLES		4
+#define	NAND_READ_ID5			0
 
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00000020
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040
@@ -160,25 +160,16 @@
 /* ==========================================================================*/
 
 /* ==========================================================================*/
-extern void fio_amb_fl_enable(void);
-extern void fio_amb_fl_disable(void);
-extern int fio_amb_fl_is_enable(void);
-
 extern int fio_amb_sd0_is_enable(void);
 extern int fio_amb_sdio0_is_enable(void);
 
-extern void fio_amb_cf_enable(void);
-extern void fio_amb_cf_disable(void);
-extern int fio_amb_cf_is_enable(void);
-
-extern void fio_amb_sd2_enable(void);
-extern void fio_amb_sd2_disable(void);
-extern int fio_amb_sd2_is_enable(void);
-
-extern int fio_dma_parse_error(u32 reg);
-
+#if (CHIP_REV == S2L)
+static inline void fio_select_lock(int module) { }
+static inline void fio_unlock(int module) { }
+#else
 extern void fio_select_lock(int module);
 extern void fio_unlock(int module);
+#endif
 extern void fio_amb_sd0_set_int(u32 mask, u32 on);
 extern void fio_amb_sdio0_set_int(u32 mask, u32 on);
 

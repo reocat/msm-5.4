@@ -24,8 +24,10 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
+#include <linux/of_platform.h>
 #include <linux/dma-mapping.h>
 #include <linux/clk.h>
+#include <linux/irqchip.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -78,19 +80,18 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_idc1,
 	&ambarella_idc2,
 	&ambarella_ir0,
-	&ambarella_sd0,
-	&ambarella_sd1,
-//	&ambarella_sd2,
-	&ambarella_uart,
-	&ambarella_uart1,
-	&ambarella_udc0,
-	&ambarella_wdt0,
+//	&ambarella_sd0,
+//	&ambarella_sd1,
+////	&ambarella_sd2,
+//	&ambarella_uart,
+//	&ambarella_uart1,
+//	&ambarella_udc0,
+//	&ambarella_wdt0,
 	&ambarella_dma,
-	&ambarella_nand,
+//	&ambarella_nand,
 	&ambarella_rtc0,
 	&ambarella_spi0,
-	//&ambarella_spi1,
-	//&ambarella_spi_slave,
+	&ambarella_spi1,
 	&ambarella_pwm_backlight_device0,
 	&ambarella_pwm_backlight_device1,
 	&ambarella_pwm_backlight_device2,
@@ -383,15 +384,31 @@ static void __init ambarella_init_ixora(void)
 }
 
 /* ==========================================================================*/
-MACHINE_START(IXORA, "Ixora")
-	.atag_offset	= 0x100,
-	.restart_mode	= 's',
-	.smp		= smp_ops(ambarella_smp_ops),
-	.reserve	= ambarella_memblock_reserve,
-	.map_io		= ambarella_map_io,
-	.init_irq	= ambarella_init_irq,
-	.init_time	= ambarella_timer_init,
-	.init_machine	= ambarella_init_ixora,
-	.restart	= ambarella_restart_machine,
+static void __init ambarella_init_ixora_dt(void)
+{
+	ambarella_init_ixora();
+
+	of_platform_populate(NULL, of_default_bus_match_table,
+			NULL, NULL);
+}
+
+
+static const char * const s2l_dt_board_compat[] = {
+	"ambarella,s2l",
+	"ambarella,hawthorn",
+	"ambarella,ixora",
+	NULL,
+};
+
+DT_MACHINE_START(IXORA_DT, "Ambarella S2L (Flattened Device Tree)")
+	.restart_mode	=	's',
+	.reserve	=	ambarella_memblock_reserve,
+	.map_io		=	ambarella_map_io,
+	.init_early	=	ambarella_init_early,
+	.init_irq	=	irqchip_init,
+	.init_time	=	ambarella_timer_init,
+	.init_machine	=	ambarella_init_ixora_dt,
+	.restart	=	ambarella_restart_machine,
+	.dt_compat	=	s2l_dt_board_compat,
 MACHINE_END
 

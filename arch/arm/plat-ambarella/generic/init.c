@@ -114,6 +114,9 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ret_val = ambarella_clk_init(ref_freq);
 	BUG_ON(ret_val != 0);
 
+	ret_val = ambarella_init_pinctrl();
+	BUG_ON(ret_val != 0);
+
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)
 	ret_val = ambarella_init_gpio();
 	BUG_ON(ret_val != 0);
@@ -153,9 +156,6 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ret_val = ambarella_init_eth1(ambarella_board_generic.eth1_mac);
 	BUG_ON(ret_val != 0);
 #endif
-
-	ret_val = ambarella_init_pinctrl();
-	BUG_ON(ret_val != 0);
 
 	return ret_val;
 }

@@ -113,24 +113,11 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_spi3,
 #endif
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_SPI */
-	&ambarella_uart,
-#if (UART_INSTANCES >= 2)
-	&ambarella_uart1,
-#endif
-#if (UART_INSTANCES >= 3)
-	&ambarella_uart2,
-#endif
-#if (UART_INSTANCES >= 4)
-	&ambarella_uart3,
-#endif
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UDC
 	&ambarella_udc0,
 #endif
 	&ambarella_wdt0,
 	&ambarella_dma,
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)
-	&ambarella_nand,
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_FIO */
 };
 
 /* ==========================================================================*/

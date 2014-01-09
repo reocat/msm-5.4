@@ -1,9 +1,9 @@
 /*
- *  linux/irqchip/irq-ambarella-vic.h
+ * arch/arm/plat-ambarella/include/plat/pll.h
  *
- * Author: Anthony Ginger <hfjiang@ambarella.com>
+ * Author: Cao Rongrong <rrcao@ambarella.com>
  *
- * Copyright (C) 2004-2013, Ambarella, Inc.
+ * Copyright (C) 2012-2016, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +21,15 @@
  *
  */
 
-#ifndef __IRQ_AMBARELLA_VIC_H__
-#define __IRQ_AMBARELLA_VIC_H__
+#ifndef __PLAT_AMBARELLA_PLL_H
+#define __PLAT_AMBARELLA_PLL_H
 
-void ambvic_sw_set(void __iomem *vic_base, unsigned int vic_irq);
-void ambvic_sw_clr(void __iomem *vic_base, unsigned int vic_irq);
+extern u32 ambarella_timer_get_pll(void);
 
-#endif // __IRQ_AMBARELLA_VIC_H__
+extern void ambarella_uart_set_pll(void);
+extern u32 ambarella_uart_get_pll(void);
+
+extern u32 ambarella_nand_get_pll(void);
+
+#endif
 
