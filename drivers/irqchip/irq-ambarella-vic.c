@@ -331,7 +331,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 	BUG_ON(!ambvic_data.domain);
 
 	// WORKAROUND only, will be removed finally
-	for (i = 0; i < NR_VIC_IRQS; i++) {
+	for (i = 1; i < NR_VIC_IRQS; i++) {
 		u32 irq, j;
 		u32 irq_dt[] = {62, 63, 9, 16, 25};
 

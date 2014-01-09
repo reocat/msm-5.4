@@ -20,14 +20,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/string.h>
 #include <linux/bootmem.h>
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/module.h>
 
+#include <asm/system_info.h>
 #include <asm/page.h>
 #include <asm/io.h>
 #include <asm/setup.h>
@@ -432,6 +433,13 @@ static int __init parse_mem_tag_dsp(const struct tag *tag)
 	return dsp_mem_check(tag->u.mem.start, tag->u.mem.size);
 }
 __tagtable(ATAG_AMBARELLA_DSP, parse_mem_tag_dsp);
+
+static int __init parse_system_revision(char *p)
+{
+	system_rev = simple_strtoul(p, NULL, 0);
+	return 0;
+}
+early_param("system_rev", parse_system_revision);
 
 /* ==========================================================================*/
 static int __init bsb_mem_check(u32 start, u32 size)
