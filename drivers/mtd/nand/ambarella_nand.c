@@ -52,16 +52,6 @@
 /* nand_check_wp will be checked before write, so wait MTD fix */
 #undef AMBARELLA_NAND_WP
 
-struct ambarella_nand_timing
-{
-	u32	timing0;		/**< Timing param. */
-	u32	timing1;		/**< Timing param. */
-	u32	timing2;		/**< Timing param. */
-	u32	timing3;		/**< Timing param. */
-	u32	timing4;		/**< Timing param. */
-	u32	timing5;		/**< Timing param. */
-};
-
 struct ambarella_nand_info {
 	struct nand_chip		chip;
 	struct mtd_info			mtd;
@@ -109,7 +99,7 @@ struct ambarella_nand_info {
 	u32				slen;
 	u32				area;
 	u32				ecc;
-	struct ambarella_nand_timing	timing;
+	u32				timing[6];
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
@@ -287,12 +277,27 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	u8 trp, treh, trb, tceh;
 	u8 trdelay, tclr, twhr, tir;
 	u8 tww, trhz, tar;
-	u32 t, clk, val;
+	u32 i, t, clk, val;
+
+	for (i = 0; i < ARRAY_SIZE(nand_info->timing); i++) {
+		if (nand_info->timing[i] != 0x0)
+			break;
+	}
+	/* if the timing is not setup by Amboot, we use the default timing */
+	if (i == ARRAY_SIZE(nand_info->timing)) {
+		amba_writel(nand_info->regbase + FLASH_TIM0_OFFSET, 0x20202020);
+		amba_writel(nand_info->regbase + FLASH_TIM1_OFFSET, 0x20202020);
+		amba_writel(nand_info->regbase + FLASH_TIM2_OFFSET, 0x20204020);
+		amba_writel(nand_info->regbase + FLASH_TIM3_OFFSET, 0x20202020);
+		amba_writel(nand_info->regbase + FLASH_TIM4_OFFSET, 0x20202020);
+		amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, 0x20202020);
+		return;
+	}
 
 	clk = ambarella_nand_get_pll();
 
 	/* timing 0 */
-	t = nand_info->timing.timing0;
+	t = nand_info->timing[0];
 	tcls = NAND_TIMING_RSHIFT24BIT(t);
 	tals = NAND_TIMING_RSHIFT16BIT(t);
 	tcs = NAND_TIMING_RSHIFT8BIT(t);
@@ -311,7 +316,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->regbase + FLASH_TIM0_OFFSET, val);
 
 	/* timing 1 */
-	t = nand_info->timing.timing1;
+	t = nand_info->timing[1];
 	tclh = NAND_TIMING_RSHIFT24BIT(t);
 	talh = NAND_TIMING_RSHIFT16BIT(t);
 	tch = NAND_TIMING_RSHIFT8BIT(t);
@@ -330,7 +335,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->regbase + FLASH_TIM1_OFFSET, val);
 
 	/* timing 2 */
-	t = nand_info->timing.timing2;
+	t = nand_info->timing[2];
 	twp = NAND_TIMING_RSHIFT24BIT(t);
 	twh = NAND_TIMING_RSHIFT16BIT(t);
 	twb = NAND_TIMING_RSHIFT8BIT(t);
@@ -349,7 +354,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->regbase + FLASH_TIM2_OFFSET, val);
 
 	/* timing 3 */
-	t = nand_info->timing.timing3;
+	t = nand_info->timing[3];
 	trp = NAND_TIMING_RSHIFT24BIT(t);
 	treh = NAND_TIMING_RSHIFT16BIT(t);
 	trb = NAND_TIMING_RSHIFT8BIT(t);
@@ -368,7 +373,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->regbase + FLASH_TIM3_OFFSET, val);
 
 	/* timing 4 */
-	t = nand_info->timing.timing4;
+	t = nand_info->timing[4];
 	trdelay = NAND_TIMING_RSHIFT24BIT(t);
 	tclr = NAND_TIMING_RSHIFT16BIT(t);
 	twhr = NAND_TIMING_RSHIFT8BIT(t);
@@ -387,7 +392,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->regbase + FLASH_TIM4_OFFSET, val);
 
 	/* timing 5 */
-	t = nand_info->timing.timing5;
+	t = nand_info->timing[5];
 	tww = NAND_TIMING_RSHIFT16BIT(t);
 	trhz = NAND_TIMING_RSHIFT8BIT(t);
 	tar = NAND_TIMING_RSHIFT0BIT(t);
@@ -1566,7 +1571,7 @@ static int ambarella_nand_get_resource(
 	}
 
 	errorCode = of_property_read_u32_array(np, "amb,timing",
-			(u32 *)&nand_info->timing, 6);
+			nand_info->timing, 6);
 	if (errorCode < 0) {
 		dev_err(&pdev->dev, "Get timing failed!\n");
 		goto nand_get_resource_err_exit;

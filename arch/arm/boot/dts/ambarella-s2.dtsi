@@ -136,9 +136,9 @@
 					     <0 33 0x04>;	/* fdma_irq */
 				amb,fifo-base = <0x60000000>;
 				/* nand timing, will be updated by Amboot */
-				amb,timing = <0x20202020 0x20202020
-					      0x20202020 0x20202020
-					      0x20202020 0x00202020>;
+				amb,timing = <0x00000000 0x00000000
+					      0x00000000 0x00000000
+					      0x00000000 0x00000000>;
 				amb,ecc-bits = <1>;
 				amb,wp-gpio = <39>;
 			};
