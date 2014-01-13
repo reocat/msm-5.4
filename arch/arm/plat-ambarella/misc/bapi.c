@@ -48,7 +48,6 @@
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
-static struct ambarella_bapi_tag_s bapi_tag;
 static struct ambarella_bapi_s *bapi_info = NULL;
 static ambarella_bapi_aoss_call_t bapi_aoss_entry = NULL;
 static u32 bapi_aoss_arg[4];
@@ -66,18 +65,6 @@ module_param_cb(bapi_reboot, &param_ops_uint, &sys_bapi_reboot, 0444);
 module_param_cb(bapi_debug, &param_ops_uint, &sys_bapi_debug, 0444);
 module_param_cb(bapi_aoss, &param_ops_uint, &sys_bapi_aoss, 0444);
 #endif
-
-/* ==========================================================================*/
-static int __init parse_mem_tag_bapi(const struct tag *tag)
-{
-	bapi_tag.magic = tag->u.mem.size;
-	bapi_tag.pbapi_info = tag->u.mem.start;
-
-	pr_debug("%s: magic=0x%08x pbapi_info=0x%08x\n", __func__,
-		bapi_tag.magic, bapi_tag.pbapi_info);
-	return 0;
-}
-__tagtable(ATAG_AMBARELLA_BAPI, parse_mem_tag_bapi);
 
 /* ==========================================================================*/
 static int ambarella_bapi_check_bapi_info(enum ambarella_bapi_cmd_e cmd)
@@ -160,15 +147,8 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 
 	switch(cmd) {
 	case AMBARELLA_BAPI_CMD_INIT:
-		if ((bapi_tag.magic == DEFAULT_BAPI_TAG_MAGIC) &&
-			(bapi_tag.pbapi_info != 0)) {
-			bapi_info = (struct ambarella_bapi_s *)
-				ambarella_phys_to_virt(bapi_tag.pbapi_info);
-			pr_debug("%s: bapi_info & 0x%p\n", __func__, bapi_info);
-		} else {
-			bapi_info = NULL;
-			retval = -ENXIO;
-		}
+		bapi_info = (struct ambarella_bapi_s *)
+				(get_ambarella_ppm_virt() + DEFAULT_BAPI_OFFSET);
 		retval = ambarella_bapi_check_bapi_info(cmd);
 		if (!retval) {
 			sys_bapi_head = ambarella_virt_to_phys((u32)bapi_info);
