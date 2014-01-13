@@ -348,7 +348,8 @@ void __init ambarella_map_io(void)
 		ios = ambarella_io_desc[i].io_desc.length;
 		iov = ambarella_io_desc[i].io_desc.virtual;
 		if (ios > 0) {
-			iotable_init(&(ambarella_io_desc[i].io_desc), 1);
+			if (i != AMBARELLA_IO_DESC_DSP_ID && i != AMBARELLA_IO_DESC_BSB_ID)
+				iotable_init(&(ambarella_io_desc[i].io_desc), 1);
 			pr_info("Ambarella: %s\t= 0x%08x[0x%08x],0x%08x %d\n",
 				ambarella_io_desc[i].name, iop, iov, ios,
 				ambarella_io_desc[i].io_desc.type);
@@ -406,7 +407,7 @@ static int __init dsp_mem_check(u32 start, u32 size)
 		size = tmp;
 	}
 
-	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual = vstart;
+//	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual = vstart;
 	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.pfn =
 		__phys_to_pfn(start);
 	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.length = size;
@@ -480,7 +481,7 @@ static int __init bsb_mem_check(u32 start, u32 size)
 		size = tmp;
 	}
 
-	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual = vstart;
+//	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual = vstart;
 	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.pfn =
 		__phys_to_pfn(start);
 	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.length = size;
@@ -539,43 +540,18 @@ u32 get_ambarella_ppm_size(void)
 }
 EXPORT_SYMBOL(get_ambarella_ppm_size);
 
-u32 get_ambarella_bsbmem_phys(void)
-{
-	return __pfn_to_phys(
-		ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.pfn);
-}
-EXPORT_SYMBOL(get_ambarella_bsbmem_phys);
-
-u32 get_ambarella_bsbmem_virt(void)
-{
-	return ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual;
-}
-EXPORT_SYMBOL(get_ambarella_bsbmem_virt);
-
-u32 get_ambarella_bsbmem_size(void)
-{
-	return ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.length;
-}
-EXPORT_SYMBOL(get_ambarella_bsbmem_size);
-
-u32 get_ambarella_dspmem_phys(void)
+u32 get_ambarella_iavmem_phys(void)
 {
 	return __pfn_to_phys(
 		ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.pfn);
 }
-EXPORT_SYMBOL(get_ambarella_dspmem_phys);
+EXPORT_SYMBOL(get_ambarella_iavmem_phys);
 
-u32 get_ambarella_dspmem_virt(void)
-{
-	return ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual;
-}
-EXPORT_SYMBOL(get_ambarella_dspmem_virt);
-
-u32 get_ambarella_dspmem_size(void)
+u32 get_ambarella_iavmem_size(void)
 {
 	return ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.length;
 }
-EXPORT_SYMBOL(get_ambarella_dspmem_size);
+EXPORT_SYMBOL(get_ambarella_iavmem_size);
 
 u32 get_ambarella_bstmem_info(u32 *bstadd, u32 *bstsize)
 {
