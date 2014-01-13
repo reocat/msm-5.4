@@ -27,6 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/module.h>
+#include <linux/of_fdt.h>
 
 #include <asm/system_info.h>
 #include <asm/page.h>
@@ -163,97 +164,73 @@ static int __init parse_usb_eth1_tag_mac(const struct tag *tag)
 __tagtable(ATAG_AMBARELLA_USB_ETH1, parse_usb_eth1_tag_mac);
 
 /* ==========================================================================*/
-#define AMBARELLA_IO_DESC_AHB_ID	0
-#define AMBARELLA_IO_DESC_APB_ID	1
-#define AMBARELLA_IO_DESC_PPM_ID	2
-#define AMBARELLA_IO_DESC_BSB_ID	3
-#define AMBARELLA_IO_DESC_DSP_ID	4
+enum {
+	AMBARELLA_IO_DESC_AHB_ID = 0,
+	AMBARELLA_IO_DESC_APB_ID,
+	AMBARELLA_IO_DESC_PPM_ID,
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
-#define AMBARELLA_IO_DESC_AXI_ID	5
+	AMBARELLA_IO_DESC_AXI_ID,
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-#define AMBARELLA_IO_DESC_DDD_ID	6
+	AMBARELLA_IO_DESC_DDD_ID,
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
-#define AMBARELLA_IO_DESC_DRAMC_ID	7
+	AMBARELLA_IO_DESC_DRAMC_ID,
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-#define AMBARELLA_IO_DESC_CRYPT_ID	8
+	AMBARELLA_IO_DESC_CRYPT_ID,
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
-#define AMBARELLA_IO_DESC_AHB64_ID	9
+	AMBARELLA_IO_DESC_AHB64_ID,
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
-#define AMBARELLA_IO_DESC_DBGBUS_ID	10
+	AMBARELLA_IO_DESC_DBGBUS_ID,
 #endif
+	AMBARELLA_IO_DESC_DSP_ID,
+};
 
 struct ambarella_mem_map_desc {
-	char		name[32];
+	char		name[8];
 	struct map_desc	io_desc;
 };
+
 static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 	[AMBARELLA_IO_DESC_AHB_ID] = {
 		.name		= "AHB",
 		.io_desc	= {
-			.virtual= AHB_BASE,
-			.pfn	= __phys_to_pfn(AHB_PHYS_BASE),
-			.length	= AHB_SIZE,
+			.virtual	= AHB_BASE,
+			.pfn		= __phys_to_pfn(AHB_PHYS_BASE),
+			.length		= AHB_SIZE,
 #if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
-			.type	= MT_DEVICE_NONSHARED,
+			.type		= MT_DEVICE_NONSHARED,
 #else
-			.type	= MT_DEVICE,
+			.type		= MT_DEVICE,
 #endif
 			},
 	},
 	[AMBARELLA_IO_DESC_APB_ID] = {
 		.name		= "APB",
 		.io_desc	= {
-			.virtual= APB_BASE,
-			.pfn	= __phys_to_pfn(APB_PHYS_BASE),
-			.length	= APB_SIZE,
+			.virtual	= APB_BASE,
+			.pfn		= __phys_to_pfn(APB_PHYS_BASE),
+			.length		= APB_SIZE,
 #if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
-			.type	= MT_DEVICE_NONSHARED,
+			.type		= MT_DEVICE_NONSHARED,
 #else
-			.type	= MT_DEVICE,
+			.type		= MT_DEVICE,
 #endif
 			},
 	},
 	[AMBARELLA_IO_DESC_PPM_ID] = {
 		.name		= "PPM",	/*Private Physical Memory*/
-		.io_desc	= {
-			.virtual= NOLINUX_MEM_V_START,
-			.pfn	= __phys_to_pfn(DEFAULT_MEM_START),
-			.length	= CONFIG_AMBARELLA_PPM_SIZE,
+		.io_desc		= {
+			.virtual	= AHB_BASE - CONFIG_AMBARELLA_PPM_SIZE,
+			.pfn		= __phys_to_pfn(DEFAULT_MEM_START),
+			.length		= CONFIG_AMBARELLA_PPM_SIZE,
 #if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
-			.type	= MT_DEVICE,
+			.type		= MT_DEVICE,
 #else
-			.type	= MT_MEMORY,
-#endif
-			},
-	},
-	[AMBARELLA_IO_DESC_BSB_ID] = {
-		.name		= "BSB",	/*Bit Stream Buffer*/
-		.io_desc	= {
-			.virtual= DEFAULT_BSB_BASE,
-			.pfn	= __phys_to_pfn(DEFAULT_BSB_START),
-			.length	= DEFAULT_BSB_SIZE,
-#if defined(CONFIG_AMBARELLA_BSB_UNCACHED)
-			.type	= MT_DEVICE,
-#else
-			.type	= MT_MEMORY,
-#endif
-			},
-	},
-	[AMBARELLA_IO_DESC_DSP_ID] = {
-		.name		= "DSP",
-		.io_desc	= {
-			.virtual= DEFAULT_DSP_BASE,
-			.pfn	= __phys_to_pfn(DEFAULT_DSP_START),
-			.length	= DEFAULT_DSP_SIZE,
-#if defined(CONFIG_AMBARELLA_DSP_UNCACHED)
-			.type	= MT_DEVICE,
-#else
-			.type	= MT_MEMORY,
+			.type		= MT_MEMORY,
 #endif
 			},
 	},
@@ -261,10 +238,10 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 	[AMBARELLA_IO_DESC_AXI_ID] = {
 		.name		= "AXI",
 		.io_desc	= {
-			.virtual= AXI_BASE,
-			.pfn	= __phys_to_pfn(AXI_PHYS_BASE),
-			.length	= AXI_SIZE,
-			.type	= MT_DEVICE,
+			.virtual	= AXI_BASE,
+			.pfn		= __phys_to_pfn(AXI_PHYS_BASE),
+			.length		= AXI_SIZE,
+			.type		= MT_DEVICE,
 			},
 	},
 #endif
@@ -331,6 +308,14 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			},
 	},
 #endif
+	[AMBARELLA_IO_DESC_DSP_ID] = {
+		.name		= "IAV",
+		.io_desc	= {
+			.virtual	= 0x00000000,
+			.pfn		= 0x00000000,
+			.length		= 0x00000000,
+			},
+	},
 };
 
 static struct ambarella_mem_rev_desc ambarella_bst_info = {
@@ -338,102 +323,50 @@ static struct ambarella_mem_rev_desc ambarella_bst_info = {
 	.size				= DEFAULT_BST_SIZE,
 };
 
+static int __init ambarella_dt_scan_iavmem(unsigned long node,
+			const char *uname,  int depth, void *data)
+{
+	const char *type;
+	__be32 *reg;
+	unsigned long len;
+	struct ambarella_mem_map_desc *iavmem_desc;
+
+	type = of_get_flat_dt_prop(node, "device_type", NULL);
+	if (type == NULL || strcmp(type, "iavmem") != 0)
+		return 0;
+
+	reg = of_get_flat_dt_prop(node, "reg", &len);
+	if (WARN_ON(!reg || (len != 2 * sizeof(unsigned long))))
+		return 0;
+
+	iavmem_desc = &ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID];
+	iavmem_desc->io_desc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
+	iavmem_desc->io_desc.length = be32_to_cpu(reg[1]);
+
+	return 1;
+}
+
 void __init ambarella_map_io(void)
 {
-	int					i;
-	u32					iop, ios, iov;
+	u32 i, iop, ios, iov;
 
-	for (i = 0; i < ARRAY_SIZE(ambarella_io_desc); i++) {
+	for (i = 0; i < AMBARELLA_IO_DESC_DSP_ID; i++) {
 		iop = __pfn_to_phys(ambarella_io_desc[i].io_desc.pfn);
 		ios = ambarella_io_desc[i].io_desc.length;
 		iov = ambarella_io_desc[i].io_desc.virtual;
 		if (ios > 0) {
-			if (i != AMBARELLA_IO_DESC_DSP_ID && i != AMBARELLA_IO_DESC_BSB_ID)
-				iotable_init(&(ambarella_io_desc[i].io_desc), 1);
-			pr_info("Ambarella: %s\t= 0x%08x[0x%08x],0x%08x %d\n",
+			iotable_init(&(ambarella_io_desc[i].io_desc), 1);
+			pr_info("Ambarella: %8s = 0x%08x[0x%08x],0x%08x %d\n",
 				ambarella_io_desc[i].name, iop, iov, ios,
 				ambarella_io_desc[i].io_desc.type);
 		}
 	}
 
-	if (ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length == 0) {
-		iov = __amb_raw_phys_to_virt(DEFAULT_MEM_START);
-		ios = SZ_1M;
-		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.virtual =
-			iov;
-		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length =
-			ios;
-		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.pfn =
-			__phys_to_pfn(DEFAULT_MEM_START);
-	}
+	/* scan and hold the memory information for IAV */
+	of_scan_flat_dt(ambarella_dt_scan_iavmem, NULL);
 }
 
 /* ==========================================================================*/
-static int __init dsp_mem_check(u32 start, u32 size)
-{
-	u32					vstart;
-	u32					tmp;
-
-	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
-		pr_err("Ambarella: Bad DSP mem start 0x%08x\n", start);
-		return -EINVAL;
-	}
-
-	if (size & MEM_MAP_CHECK_MASK) {
-		pr_err("Ambarella: Bad DSP mem size 0x%08x\n", size);
-		return -EINVAL;
-	}
-
-	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
-	if (vstart >= (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
-		tmp = vstart - NOLINUX_MEM_V_SIZE;
-		if (tmp < NOLINUX_MEM_V_START) {
-			tmp = NOLINUX_MEM_V_START;
-		}
-		pr_info("%s: Change DSP start form 0x%08x to 0x%08x\n",
-			__func__, vstart, tmp);
-		vstart = tmp;
-	}
-	if (size > NOLINUX_MEM_V_SIZE) {
-		tmp = NOLINUX_MEM_V_SIZE;
-		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",
-			__func__, size, tmp);
-		size = tmp;
-	}
-	if ((vstart + size) > (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
-		tmp = (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE) - vstart;
-		pr_info("%s: Change DSP size form 0x%08x to 0x%08x\n",
-			__func__, size, tmp);
-		size = tmp;
-	}
-
-//	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.virtual = vstart;
-	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.pfn =
-		__phys_to_pfn(start);
-	ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.length = size;
-
-	return 0;
-}
-
-static int __init early_dsp(char *p)
-{
-	unsigned long				start = 0;
-	unsigned long				size = 0;
-	char					*endp;
-
-	start = memparse(p, &endp);
-	if (*endp == ',')
-		size = memparse(endp + 1, NULL);
-
-	return dsp_mem_check(start, size);
-}
-early_param("dsp", early_dsp);
-
-static int __init parse_mem_tag_dsp(const struct tag *tag)
-{
-	return dsp_mem_check(tag->u.mem.start, tag->u.mem.size);
-}
-__tagtable(ATAG_AMBARELLA_DSP, parse_mem_tag_dsp);
 
 static int __init parse_system_revision(char *p)
 {
@@ -441,76 +374,6 @@ static int __init parse_system_revision(char *p)
 	return 0;
 }
 early_param("system_rev", parse_system_revision);
-
-/* ==========================================================================*/
-static int __init bsb_mem_check(u32 start, u32 size)
-{
-	u32					vstart;
-	u32					tmp;
-
-	if ((start & MEM_MAP_CHECK_MASK) || (start < DEFAULT_MEM_START)) {
-		pr_err("Ambarella: Bad BSB mem start 0x%08x\n", start);
-		return -EINVAL;
-	}
-
-	if (size & MEM_MAP_CHECK_MASK) {
-		pr_err("Ambarella: Bad BSB mem size 0x%08x\n", size);
-		return -EINVAL;
-	}
-
-	vstart = (start - DEFAULT_MEM_START) + NOLINUX_MEM_V_START;
-	if (vstart >= (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
-		tmp = vstart - NOLINUX_MEM_V_SIZE;
-		if (tmp < NOLINUX_MEM_V_START) {
-			tmp = NOLINUX_MEM_V_START;
-		}
-		pr_info("%s: Change BSB start form 0x%08x to 0x%08x\n",
-			__func__, vstart, tmp);
-		vstart = tmp;
-	}
-	if (size > NOLINUX_MEM_V_SIZE) {
-		tmp = NOLINUX_MEM_V_SIZE;
-		pr_info("%s: Change BSB size form 0x%08x to 0x%08x\n",
-			__func__, size, tmp);
-		size = tmp;
-	}
-	if ((vstart + size) > (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE)) {
-		tmp = (NOLINUX_MEM_V_START + NOLINUX_MEM_V_SIZE) - vstart;
-		pr_info("%s: Change BSB size form 0x%08x to 0x%08x\n",
-			__func__, size, tmp);
-		size = tmp;
-	}
-
-//	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.virtual = vstart;
-	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.pfn =
-		__phys_to_pfn(start);
-	ambarella_io_desc[AMBARELLA_IO_DESC_BSB_ID].io_desc.length = size;
-
-	high_memory = __va(__pfn_to_phys(__phys_to_pfn(start)));
-
-	return 0;
-}
-
-static int __init early_bsb(char *p)
-{
-	unsigned long				start = 0;
-	unsigned long				size = 0;
-	char					*endp;
-
-	start = memparse(p, &endp);
-	if (*endp == ',')
-		size = memparse(endp + 1, NULL);
-
-	return bsb_mem_check(start, size);
-}
-early_param("bsb", early_bsb);
-
-/* ==========================================================================*/
-static int __init parse_mem_tag_bsb(const struct tag *tag)
-{
-	return bsb_mem_check(tag->u.mem.start, tag->u.mem.size);
-}
-__tagtable(ATAG_AMBARELLA_BSB, parse_mem_tag_bsb);
 
 static int __init parse_mem_tag_bst(const struct tag *tag)
 {
