@@ -29,93 +29,97 @@
 #include <linux/smp.h>
 #include <linux/io.h>
 #include <linux/bootmem.h>
+#include <linux/of_fdt.h>
 
 #include <asm/cacheflush.h>
-#include <asm/mach-types.h>
-#include <asm/localtimer.h>
-#include <asm/unified.h>
+#include <asm/smp_plat.h>
 #include <asm/smp_scu.h>
-#include <linux/irqchip/arm-gic.h>
-
 #include <mach/hardware.h>
-#include <plat/ambcache.h>
 #include <mach/common.h>
-
-/* ==========================================================================*/
-extern void ambarella_secondary_startup(void);
 
 static void __iomem *scu_base = __io(AMBARELLA_VA_SCU_BASE);
 static DEFINE_SPINLOCK(boot_lock);
-#ifdef CONFIG_HOTPLUG_CPU
-static DECLARE_COMPLETION(cpu_killed);
-#endif
-#ifdef CONFIG_OUTER_CACHE
-static unsigned int smp_l2_mode = 0;
-#endif
 
-/* ==========================================================================*/
+static u32 *cpux_jump_virt = NULL;
+extern void ambarella_secondary_startup(void);
+
+
+/* Write pen_release in a way that is guaranteed to be visible to all
+ * observers, irrespective of whether they're taking part in coherency
+ * or not.  This is necessary for the hotplug code to work reliably. */
+static void write_pen_release(int val)
+{
+	pen_release = val;
+	smp_wmb();
+	__cpuc_flush_dcache_area((void *)&pen_release, sizeof(pen_release));
+	outer_clean_range(__pa(&pen_release), __pa(&pen_release + 1));
+}
+
+static void write_cpux_jump_addr(unsigned int cpu, int addr)
+{
+	cpux_jump_virt[cpu] = addr;
+	smp_wmb();
+	__cpuc_flush_dcache_area(
+		&cpux_jump_virt[cpu], sizeof(cpux_jump_virt[cpu]));
+	outer_clean_range(
+		__pa(&cpux_jump_virt[cpu]), __pa(&cpux_jump_virt[cpu] + 1));
+}
+
+/* running on CPU1 */
 static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
 {
+	/* let the primary processor know we're out of the
+	 * pen, then head off into the C entry point */
+	write_pen_release(-1);
+
+	/* Synchronise with the boot thread. */
 	spin_lock(&boot_lock);
-#ifdef CONFIG_OUTER_CACHE
-	if (smp_l2_mode)
-		ambcache_l2_enable_raw();
-#endif
 	spin_unlock(&boot_lock);
 }
 
+/* running on CPU0 */
 static int __cpuinit ambarella_smp_boot_secondary(unsigned int cpu,
 	struct task_struct *idle)
 {
-	u32 timeout = 100000;
-	u32 *phead_address;
-	int retval = 0;
+	unsigned long timeout;
+	unsigned long phys_cpu = cpu_logical_map(cpu);
 
+	BUG_ON(cpux_jump_virt == NULL);
+
+	/* Set synchronisation state between this boot processor
+	 * and the secondary one */
 	spin_lock(&boot_lock);
 
-	phead_address = get_ambarella_bstmem_head();
-	if (phead_address == (u32 *)AMB_BST_INVALID) {
-		pr_err("Can't find SMP BST Header!\n");
-		retval = -EPERM;
-		goto boot_secondary_exit;
-	}
+	/* The secondary processor is waiting to be released from
+	 * the holding pen - release it, then wait for it to flag
+	 * that it has been released by resetting pen_release.
+	 *
+	 * Note that "pen_release" is the hardware CPU ID, whereas
+	 * "cpu" is Linux's internal ID. */
+	write_pen_release(phys_cpu);
 
-#ifdef CONFIG_OUTER_CACHE
-	smp_l2_mode = outer_is_enabled();
-	if (smp_l2_mode)
-		ambcache_l2_disable_raw();
-#endif
+	/* Send the secondary CPU a soft interrupt, thereby causing
+	 * the boot monitor to read the system wide flags register,
+	 * and branch to the address found there. */
+	timeout = jiffies + (1 * HZ);
+	while (time_before(jiffies, timeout)) {
+		smp_rmb();
+		write_cpux_jump_addr(cpu, virt_to_phys(ambarella_secondary_startup));
 
-	phead_address[PROCESSOR_START_0 + cpu] =
-		virt_to_phys(ambarella_secondary_startup);
-	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
-	ambcache_flush_range((void *)(phead_address),
-		AMBARELLA_BST_HEAD_CACHE_SIZE);
-	arch_send_wakeup_ipi_mask(cpumask_of(cpu));
-	while (timeout) {
-		ambcache_inv_range((void *)(phead_address),
-			AMBARELLA_BST_HEAD_CACHE_SIZE);
-		if (phead_address[PROCESSOR_START_0 + cpu] == AMB_BST_INVALID)
+		arch_send_wakeup_ipi_mask(cpumask_of(cpu));
+
+		if (pen_release == -1)
 			break;
+
 		udelay(10);
-		timeout--;
-	}
-	if (phead_address[PROCESSOR_STATUS_0 + cpu] > 0) {
-		pr_err("CPU%d: spurious wakeup %d times.\n", cpu,
-			phead_address[PROCESSOR_STATUS_0 + cpu]);
-	}
-	if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
-		pr_err("CPU%d: tmo[%d] [0x%08x].\n", cpu, timeout,
-			phead_address[PROCESSOR_START_0 + cpu]);
-		retval = -EPERM;
 	}
 
-boot_secondary_exit:
 	spin_unlock(&boot_lock);
 
-	return retval;
+	return pen_release != -1 ? -ENOSYS : 0;
 }
 
+/* running on CPU0 */
 static void __init ambarella_smp_init_cpus(void)
 {
 	int i;
@@ -127,40 +131,41 @@ static void __init ambarella_smp_init_cpus(void)
 			ncores, nr_cpu_ids);
 		ncores = nr_cpu_ids;
 	}
+
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
 }
 
+/* running on CPU0 */
 static void __init ambarella_smp_prepare_cpus(unsigned int max_cpus)
 {
-	int i;
-	u32 bstadd;
-	u32 bstsize;
-	u32 *phead_address;
+	u32 cpux_jump, start_limit, end_limit;
+	int i, rval;
 
-	if (get_ambarella_bstmem_info(&bstadd, &bstsize) != AMB_BST_MAGIC) {
-		pr_err("Can't find SMP BST!\n");
+	rval = of_property_read_u32(of_chosen, "ambarella,cpux_jump", &cpux_jump);
+	if (rval < 0) {
+		pr_err("No jump address for secondary cpu!\n");
 		return;
 	}
-	phead_address = get_ambarella_bstmem_head();
-	if (phead_address == (u32 *)AMB_BST_INVALID) {
-		pr_err("Can't find SMP BST Head!\n");
+
+	start_limit = get_ambarella_ppm_phys();
+	end_limit = get_ambarella_ppm_phys() + get_ambarella_ppm_size();
+	if (cpux_jump < start_limit || cpux_jump > end_limit) {
+		pr_err("Invalid secondary cpu jump address, 0x%08x!\n", cpux_jump);
 		return;
 	}
+
+	cpux_jump_virt = (u32 *)ambarella_phys_to_virt(cpux_jump);
 
 	for (i = 0; i < max_cpus; i++)
 		set_cpu_present(i, true);
+
 	scu_enable(scu_base);
-	for (i = 1; i < max_cpus; i++) {
-		phead_address[PROCESSOR_START_0 + i] =
-			virt_to_phys(ambarella_secondary_startup);
-		phead_address[PROCESSOR_STATUS_0 + i] = AMB_BST_START_COUNTER;
-	}
-	ambcache_flush_range((void *)(phead_address),
-		AMBARELLA_BST_HEAD_CACHE_SIZE);
+
+	for (i = 1; i < max_cpus; i++)
+		write_cpux_jump_addr(i, virt_to_phys(ambarella_secondary_startup));
 }
 
-/* ==========================================================================*/
 #ifdef CONFIG_HOTPLUG_CPU
 static inline void cpu_enter_lowpower(void)
 {
@@ -197,43 +202,43 @@ static inline void cpu_leave_lowpower(void)
 		: "cc");
 }
 
-static int ambarella_smp_cpu_kill(unsigned int cpu)
+static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 {
-	return wait_for_completion_timeout(&cpu_killed, 5000);
-}
-
-static void ambarella_smp_cpu_die(unsigned int cpu)
-{
-	u32 *phead_address;
-
-	phead_address = get_ambarella_bstmem_head();
-	BUG_ON(phead_address == (u32 *)AMB_BST_INVALID);
-
-	phead_address[PROCESSOR_STATUS_0 + cpu] = AMB_BST_START_COUNTER;
-	phead_address[PROCESSOR_START_0 + cpu] = AMB_BST_INVALID;
-	complete(&cpu_killed);
-	cpu_enter_lowpower();
 	for (;;) {
-		asm volatile("wfi" : : : "memory", "cc");
-		phead_address[PROCESSOR_STATUS_0 + cpu]++;
-		if (phead_address[PROCESSOR_START_0 + cpu] != AMB_BST_INVALID) {
-			phead_address[PROCESSOR_START_0 + cpu] =
-				AMB_BST_INVALID;
+		wfi();
+
+		if (pen_release == cpu) {
+			/* OK, proper wakeup, we're done */
 			break;
 		}
+
+		/* Getting here, means that we have come out of WFI without
+		 * having been woken up - this shouldn't happen
+		 *
+		 * Just note it happening - when we're woken, we can report
+		 * its occurrence. */
+		(*spurious)++;
 	}
-	cpu_leave_lowpower();
 }
 
+/* running on CPU1 */
+static void ambarella_smp_cpu_die(unsigned int cpu)
+{
+	int spurious = 0;
+
+	cpu_enter_lowpower();
+
+	platform_do_lowpower(cpu, &spurious);
+
+	cpu_leave_lowpower();
+
+	if (spurious)
+		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
+}
+
+/* running on CPU1 */
 static int ambarella_smp_cpu_disable(unsigned int cpu)
 {
-	u32 *phead_address = get_ambarella_bstmem_head();
-
-	if (phead_address == (u32 *)AMB_BST_INVALID)
-		return -EPERM;
-	if (cpu > (PROCESSOR_STATUS_3 - PROCESSOR_STATUS_0))
-		return -EPERM;
-
 	return cpu == 0 ? -EPERM : 0;
 }
 #endif
@@ -241,11 +246,11 @@ static int ambarella_smp_cpu_disable(unsigned int cpu)
 struct smp_operations ambarella_smp_ops __initdata = {
 	.smp_init_cpus		= ambarella_smp_init_cpus,
 	.smp_prepare_cpus	= ambarella_smp_prepare_cpus,
-	.smp_secondary_init	= ambarella_smp_secondary_init,
 	.smp_boot_secondary	= ambarella_smp_boot_secondary,
+	.smp_secondary_init	= ambarella_smp_secondary_init,
 #ifdef CONFIG_HOTPLUG_CPU
-	.cpu_kill		= ambarella_smp_cpu_kill,
-	.cpu_die		= ambarella_smp_cpu_die,
 	.cpu_disable		= ambarella_smp_cpu_disable,
+	.cpu_die		= ambarella_smp_cpu_die,
 #endif
 };
+
