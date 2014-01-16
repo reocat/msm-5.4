@@ -36,6 +36,7 @@
 #include <asm/tlbflush.h>
 
 #include <mach/hardware.h>
+#include <mach/init.h>
 #include <plat/bapi.h>
 #include <plat/ambcache.h>
 #include <plat/debug.h>
@@ -152,11 +153,10 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 		retval = ambarella_bapi_check_bapi_info(cmd);
 		if (!retval) {
 			sys_bapi_head = ambarella_virt_to_phys((u32)bapi_info);
-			ambarella_debug_info = (u32)bapi_info->debug;
 			sys_bapi_reboot = ambarella_virt_to_phys(
 				(u32)&bapi_info->reboot_info);
 			sys_bapi_debug = ambarella_virt_to_phys(
-				ambarella_debug_info);
+				(u32)bapi_info->debug);
 			sys_bapi_aoss = ambarella_virt_to_phys(
 				(u32)&bapi_info->aoss_info);
 		}

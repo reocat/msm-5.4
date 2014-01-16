@@ -36,6 +36,7 @@
 #include <asm/smp_scu.h>
 #include <mach/hardware.h>
 #include <mach/common.h>
+#include <mach/init.h>
 
 static void __iomem *scu_base = __io(AMBARELLA_VA_SCU_BASE);
 static DEFINE_SPINLOCK(boot_lock);

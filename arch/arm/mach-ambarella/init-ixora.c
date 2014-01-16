@@ -399,7 +399,6 @@ static const char * const s2l_dt_board_compat[] = {
 
 DT_MACHINE_START(IXORA_DT, "Ambarella S2L (Flattened Device Tree)")
 	.restart_mode	=	's',
-	.reserve	=	ambarella_memblock_reserve,
 	.map_io		=	ambarella_map_io,
 	.init_early	=	ambarella_init_early,
 	.init_irq	=	irqchip_init,

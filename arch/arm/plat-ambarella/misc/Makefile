@@ -26,7 +26,6 @@ obj-$(CONFIG_AMBARELLA_SUPPORT_AMBENCH)		+= ambench.o
 obj-y						+= ambevent.o
 obj-y						+= ambfb.o
 obj-y						+= ambsyncproc.o
-obj-y						+= atag.o
 obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
 obj-y						+= board.o
 obj-y						+= event.o

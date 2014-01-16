@@ -476,7 +476,6 @@ static const char * const s2_dt_board_compat[] = {
 DT_MACHINE_START(GINKGO_DT, "Ambarella S2 (Flattened Device Tree)")
 	.restart_mode	=	's',
 	.smp		=	smp_ops(ambarella_smp_ops),
-	.reserve	=	ambarella_memblock_reserve,
 	.map_io		=	ambarella_map_io,
 	.init_early	=	ambarella_init_early,
 	.init_irq	=	irqchip_init,

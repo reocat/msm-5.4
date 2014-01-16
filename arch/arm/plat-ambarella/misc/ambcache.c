@@ -33,8 +33,8 @@
 #include <asm/io.h>
 
 #include <mach/hardware.h>
+#include <mach/init.h>
 #include <plat/ambcache.h>
-#include <plat/atag.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX

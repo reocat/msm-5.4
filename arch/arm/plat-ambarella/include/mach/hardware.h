@@ -29,7 +29,6 @@
 #include <mach/memory.h>
 
 #include <plat/gpio.h>
-#include <plat/atag.h>
 #include <plat/irq.h>
 #include <plat/pm.h>
 #include <plat/hwlock.h>

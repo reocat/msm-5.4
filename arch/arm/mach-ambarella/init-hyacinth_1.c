@@ -79,7 +79,6 @@ MACHINE_START(HYACINTH_1, "Hyacinth_1")
 	.smp		= smp_ops(ambarella_smp_ops),
 	.atag_offset	= 0x100,
 	.restart_mode	= 's',
-	.reserve	= ambarella_memblock_reserve,
 	.init_irq	= ambarella_init_irq,
 	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_hyacinth,

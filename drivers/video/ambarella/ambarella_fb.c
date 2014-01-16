@@ -47,6 +47,7 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
+#include <mach/init.h>
 #include <plat/fb.h>
 
 /* video=amb0fb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,

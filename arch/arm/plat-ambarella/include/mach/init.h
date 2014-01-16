@@ -25,8 +25,8 @@
 #define __ASM_ARCH_INIT_H
 
 /* ==========================================================================*/
+#include <plat/gpio.h>
 #include <plat/adc.h>
-#include <plat/atag.h>
 #include <plat/audio.h>
 #include <plat/crypto.h>
 #include <plat/dma.h>
@@ -54,8 +54,19 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
+#define AMBARELLA_BOARD_TYPE_AUTO		(0)
+#define AMBARELLA_BOARD_TYPE_BUB		(1)
+#define AMBARELLA_BOARD_TYPE_EVK		(2)
+#define AMBARELLA_BOARD_TYPE_IPCAM		(3)
+#define AMBARELLA_BOARD_TYPE_VENDOR		(4)
+#define AMBARELLA_BOARD_TYPE_ATB		(5)
+
+#define AMBARELLA_BOARD_VERSION(c,t,r)		(((c) << 16) + ((t) << 12) + (r))
+#define AMBARELLA_BOARD_CHIP(v)			(((v) >> 16) & 0xFFFF)
+#define AMBARELLA_BOARD_TYPE(v)			(((v) >> 12) & 0xF)
+#define AMBARELLA_BOARD_REV(v)			(((v) >> 0) & 0xFFF)
+
 /* ==========================================================================*/
-extern void ambarella_memblock_reserve(void);
 extern void ambarella_init_early(void);
 extern int ambarella_init_machine(char *board_name, unsigned int ref_freq);
 extern void ambarella_map_io(void);
@@ -91,6 +102,24 @@ extern struct ambarella_ir_controller ambarella_platform_ir_controller0;
 
 extern struct ambarella_adc_controller ambarella_platform_adc_controller0;
 extern struct ambarella_adc_controller ambarella_platform_adc_temper_controller0;
+
+extern u32 ambarella_phys_to_virt(u32 paddr);
+extern u32 ambarella_virt_to_phys(u32 vaddr);
+
+extern u32 get_ambarella_iavmem_phys(void);
+extern u32 get_ambarella_iavmem_size(void);
+
+extern u32 get_ambarella_ppm_phys(void);
+extern u32 get_ambarella_ppm_virt(void);
+extern u32 get_ambarella_ppm_size(void);
+
+extern u32 get_ambarella_ahb_phys(void);
+extern u32 get_ambarella_ahb_virt(void);
+extern u32 get_ambarella_ahb_size(void);
+
+extern u32 get_ambarella_apb_phys(void);
+extern u32 get_ambarella_apb_virt(void);
+extern u32 get_ambarella_apb_size(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

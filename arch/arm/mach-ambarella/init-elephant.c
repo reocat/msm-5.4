@@ -713,7 +713,6 @@ MACHINE_START(ELEPHANT, "Elephant")
 	.atag_offset	= 0x100,
 	.restart_mode	= 's',
 	.smp		= smp_ops(ambarella_smp_ops),
-	.reserve	= ambarella_memblock_reserve,
 	.map_io		= ambarella_map_io,
 	.init_irq	= ambarella_init_irq,
 	.init_time	= ambarella_timer_init,
