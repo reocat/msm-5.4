@@ -24,6 +24,10 @@
 		nand = &nand0;
 	};
 
+	chosen {
+		linux,stdout-path = &uart0;
+	};
+
 	soc {
 		#address-cells = <1>;
 		#size-cells = <1>;

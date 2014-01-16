@@ -29,6 +29,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/of_address.h>
 #include <linux/console.h>
 #include <linux/sysrq.h>
 #include <linux/serial_reg.h>
@@ -723,7 +724,26 @@ static struct console serial_ambarella_console = {
 
 static int __init serial_ambarella_console_init(void)
 {
+	struct device_node *np;
+	const char *name;
+	int id;
+
 	ambarella_uart_of_enumerate();
+
+	name = of_get_property(of_chosen, "linux,stdout-path", NULL);
+	if (name == NULL)
+		return -ENODEV;
+
+	np = of_find_node_by_path(name);
+	if (!np)
+		return -ENODEV;
+
+	id = of_alias_get_id(np, "serial");
+	if (id < 0 || id >= serial_ambarella_reg.nr)
+		return -ENODEV;
+
+	ambarella_port[id].port.membase = of_iomap(np, 0);
+
 	register_console(&serial_ambarella_console);
 
 	return 0;
