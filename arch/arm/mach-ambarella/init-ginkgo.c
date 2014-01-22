@@ -62,7 +62,6 @@
 #include <linux/input.h>
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_pinctrl0,
 	//&ambarella_adc0,
 	//&ambarella_crypto,
 	//&ambarella_ehci0,
@@ -460,7 +459,6 @@ static void __init ambarella_init_ginkgo_dt(void)
 	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
 
 	ambarella_init_ginkgo();
-//	platform_device_register(&ambarella_pinctrl0);
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			NULL, NULL);

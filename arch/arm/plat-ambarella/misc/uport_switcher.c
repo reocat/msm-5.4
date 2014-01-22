@@ -197,30 +197,30 @@ static int __init ambarella_init_uport_switcher(void)
 		}
 	}
 
-	if (ambarella_board_generic.uport_control.gpio_id >= 0) {
-		ret_val = gpio_request(ambarella_board_generic.uport_control.gpio_id,
-				"uport_switcher");
-		if (ret_val) {
-			pr_err("%s: request uport_switcher gpio failed\n", __func__);
-			goto uport_switcher_err2;
-		}
-		if (amba_readl(USBP1_CTRL_REG) & USB_PORT_IS_HOST) {
-			/* route D+/D- signal to host port */
-			usb_port_control = USB_PORT_TO_HOST;
-			ambarella_set_gpio_output(&ambarella_board_generic.uport_control, 1);
-		} else {
-			/* route D+/D- signal to device port */
-			usb_port_control = USB_PORT_TO_DEVICE;
-			ambarella_set_gpio_output(&ambarella_board_generic.uport_control, 0);
-		}
-	}
+	//if (ambarella_board_generic.uport_control.gpio_id >= 0) {
+	//	ret_val = gpio_request(ambarella_board_generic.uport_control.gpio_id,
+	//			"uport_switcher");
+	//	if (ret_val) {
+	//		pr_err("%s: request uport_switcher gpio failed\n", __func__);
+	//		goto uport_switcher_err2;
+	//	}
+	//	if (amba_readl(USBP1_CTRL_REG) & USB_PORT_IS_HOST) {
+	//		/* route D+/D- signal to host port */
+	//		usb_port_control = USB_PORT_TO_HOST;
+	//		ambarella_set_gpio_output(&ambarella_board_generic.uport_control, 1);
+	//	} else {
+	//		/* route D+/D- signal to device port */
+	//		usb_port_control = USB_PORT_TO_DEVICE;
+	//		ambarella_set_gpio_output(&ambarella_board_generic.uport_control, 0);
+	//	}
+	//}
 
-	if (usb_port_control == USB_PORT_TO_DEVICE) {
-		/* if otg device is detected, we switch to host mode */
-		if (usb_detect_otg_flag == USB_DETECT_DEVICE_OTG) {
-			ambarella_switch_to_host();
-		}
-	}
+	//if (usb_port_control == USB_PORT_TO_DEVICE) {
+	//	/* if otg device is detected, we switch to host mode */
+	//	if (usb_detect_otg_flag == USB_DETECT_DEVICE_OTG) {
+	//		ambarella_switch_to_host();
+	//	}
+	//}
 
 	proc_create_data("uport", (S_IRUGO | S_IWUSR),
 		get_ambarella_proc_dir(), &proc_uport_switcher_fops, NULL);

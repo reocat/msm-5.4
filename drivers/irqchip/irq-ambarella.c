@@ -1,5 +1,5 @@
 /*
- *  drivers/irqchip/irq-ambarella-vic.c
+ * drivers/irqchip/irq-ambarella.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -307,7 +307,7 @@ static struct irq_domain_ops amb_irq_domain_ops = {
 int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 {
 	void __iomem *reg_base;
-	int i;
+	int i, irq;
 
 	memset(&ambvic_data, 0, sizeof(struct ambvic_chip_data));
 
@@ -332,14 +332,6 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 
 	// WORKAROUND only, will be removed finally
 	for (i = 1; i < NR_VIC_IRQS; i++) {
-		u32 irq, j;
-		u32 irq_dt[] = {62, 63, 9, 16, 25};
-
-		for (j = 0; j < ARRAY_SIZE(irq_dt); j++)
-			if (i == irq_dt[j])
-				break;
-		if (j < ARRAY_SIZE(irq_dt))
-			continue;
 		irq = irq_create_mapping(ambvic_data.domain, i);
 		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
 		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);

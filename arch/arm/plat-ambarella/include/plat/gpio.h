@@ -123,9 +123,6 @@
 
 /* ==========================================================================*/
 
-
-#if (CHIP_REV == S2L)
-
 #define IOMUX_REG0_0_OFFSET		0x00
 #define IOMUX_REG0_1_OFFSET		0x04
 #define IOMUX_REG0_2_OFFSET		0x08
@@ -144,8 +141,6 @@
 #define IOMUX_OFFSET			0x16000
 #define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
 #define IOMUX_REG(x)			(IOMUX_BASE + (x))
-
-#endif
 
 /* ==========================================================================*/
 #define GPIO_BANK_SIZE			32

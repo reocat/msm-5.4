@@ -29,23 +29,7 @@
 #include <plat/gpio.h>
 #include <plat/pinctrl.h>
 
-/* Pin control settings */
-static struct pinctrl_map __initdata amb_pinmux_map[] = {
-	PIN_MAP_MUX_GROUP_DEFAULT("ambarella-i2s.0", "amb-pinctrl", NULL, "i2s0"),
-};
-
-int __init ambarella_init_pinctrl(void)
-{
-	int					retval = 0;
-
-	/* Initialize pinmuxing */
-	pinctrl_register_mappings(amb_pinmux_map,
-			ARRAY_SIZE(amb_pinmux_map));
-
-	return retval;
-}
-
-static int ambarella_pinctrl_set_altfunc(int pin,
+int ambarella_pinctrl_set_altfunc(int pin,
 			enum amb_pin_altfunc altfunc, u32 multi_alt)
 {
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_IOMUX
@@ -74,51 +58,4 @@ static int ambarella_pinctrl_set_altfunc(int pin,
 #endif
 	return 0;
 }
-
-static struct ambarella_platform_pinctrl amb_pinctrl_pdata = {
-	.set_pin_altfunc = ambarella_pinctrl_set_altfunc,
-};
-
-static struct resource ambarella_pinctrl0_resources[] = {
-	[0] = {
-		.start	= GPIO0_BASE,
-		.end	= GPIO0_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= GPIO1_BASE,
-		.end	= GPIO1_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[2] = {
-		.start	= GPIO2_BASE,
-		.end	= GPIO2_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[3] = {
-		.start	= GPIO3_BASE,
-		.end	= GPIO3_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[4] = {
-		.start	= GPIO4_BASE,
-		.end	= GPIO4_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[5] = {
-		.start	= GPIO5_BASE,
-		.end	= GPIO5_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
-struct platform_device ambarella_pinctrl0 = {
-	.name		= "amb-pinctrl",
-	.id		= -1,
-	.resource	= ambarella_pinctrl0_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_pinctrl0_resources),
-	.dev		= {
-		.platform_data		= &amb_pinctrl_pdata,
-	}
-};
 

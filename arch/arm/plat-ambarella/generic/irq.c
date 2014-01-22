@@ -38,40 +38,10 @@
 #include <mach/hardware.h>
 
 #include <linux/irqchip/arm-gic.h>
-#include <linux/irqchip/irq-ambarella-vic.h>
-#include <linux/irqchip/irq-ambarella-gpio.h>
 
 /* ==========================================================================*/
 void __init ambarella_init_irq(void)
 {
-#if defined(CONFIG_ARM_GIC)
-	gic_init(0, LOCAL_TIMER_IRQ, __io(AMBARELLA_VA_GIC_DIST_BASE),
-		__io(AMBARELLA_VA_GIC_CPU_BASE));
-#endif /* CONFIG_ARM_GIC */
 
-#if defined(CONFIG_AMBARELLA_GVIC)
-	ambarella_gvic_init_irq((void __iomem *)GPIO0_REG(0),
-		GPIO_INT_VEC(32 * 0), GPIO0_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#if (GPIO_INSTANCES >= 2)
-	ambarella_gvic_add_irq((void __iomem *)GPIO1_REG(0),
-		GPIO_INT_VEC(32 * 1), GPIO1_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#if (GPIO_INSTANCES >= 3)
-	ambarella_gvic_add_irq((void __iomem *)GPIO2_REG(0),
-		GPIO_INT_VEC(32 * 2), GPIO2_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#if (GPIO_INSTANCES >= 4)
-	ambarella_gvic_add_irq((void __iomem *)GPIO3_REG(0),
-		GPIO_INT_VEC(32 * 3), GPIO3_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#if (GPIO_INSTANCES >= 5)
-	ambarella_gvic_add_irq((void __iomem *)GPIO4_REG(0),
-		GPIO_INT_VEC(32 * 4), GPIO4_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#if (GPIO_INSTANCES >= 6)
-	ambarella_gvic_add_irq((void __iomem *)GPIO5_REG(0),
-		GPIO_INT_VEC(32 * 5), GPIO5_IRQ, IRQ_TYPE_LEVEL_HIGH);
-#endif
-#endif /* CONFIG_AMBARELLA_GVIC */
 }
 

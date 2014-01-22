@@ -31,12 +31,6 @@ config AMBARELLA_VIC
 	select IRQ_DOMAIN
 	select MULTI_IRQ_HANDLER
 
-config AMBARELLA_GVIC
-	bool
-	depends on PLAT_AMBARELLA
-	select IRQ_DOMAIN
-	default y
-
 config RENESAS_INTC_IRQPIN
 	bool
 	select IRQ_DOMAIN

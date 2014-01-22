@@ -63,7 +63,6 @@
 #include <linux/input.h>
 /* ==========================================================================*/
 static struct platform_device *ixora_devices[] __initdata = {
-	&ambarella_pinctrl0,
 	&ambarella_adc0,
 	&ambarella_crypto,
 	&ambarella_ehci0,

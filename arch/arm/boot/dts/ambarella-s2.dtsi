@@ -122,6 +122,39 @@
 				amb,msr-used;	/* use Modem Status Register */
 				/* amb,tx-fifo-fix; */
 			};
+
+			pinctrl: pinctrl@0x70009000 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "ambarella,pinctrl", "simple-bus";
+				reg = <0x70009000 0x1000>,
+				      <0x7000a000 0x1000>,
+				      <0x7000e000 0x1000>,
+				      <0x70010000 0x1000>,
+				      <0x70011000 0x1000>;
+				reg-names = "gpio0", "gpio1", "gpio2", "gpio3", "gpio4";
+				#gpio-range-cells = <3>;
+
+				gpio: gpio@0 {
+					compatible = "ambarella,gpio";
+					/* gpio interrupts to vic */
+					interrupts = <0 10 0x04>,
+						     <0 11 0x04>,
+						     <0 30 0x04>,
+						     <0 29 0x04>,
+						     <0 48 0x04>;
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&pinctrl 0 0 160>;
+					interrupt-controller;
+					#interrupt-cells = <2>;
+				};
+
+				i2s0_pins: i2s0@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x4d01 0x4e01 0x4f01 0x5001 0x5101>;
+				};
+			};
 		};
 
 		ahb@0x60000000 {	/* AHB */
@@ -138,13 +171,13 @@
 				interrupts = <0 16 0x04>,	/* fio_cmd_irq */
 					     <0 17 0x04>,	/* fio_dma_irq */
 					     <0 33 0x04>;	/* fdma_irq */
+				gpios = <&gpio 39 0x0>;
 				amb,fifo-base = <0x60000000>;
 				/* nand timing, will be updated by Amboot */
 				amb,timing = <0x00000000 0x00000000
 					      0x00000000 0x00000000
 					      0x00000000 0x00000000>;
 				amb,ecc-bits = <1>;
-				amb,wp-gpio = <39>;
 			};
 		};
 	};

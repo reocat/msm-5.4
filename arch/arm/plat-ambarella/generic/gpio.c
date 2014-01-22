@@ -113,9 +113,6 @@ static inline int ambarella_gpio_inline_get(
 }
 
 /* ==========================================================================*/
-static DEFINE_MUTEX(ambarella_gpio_mtx);
-static unsigned long ambarella_gpio_valid[BITS_TO_LONGS(AMBGPIO_SIZE)];
-static unsigned long ambarella_gpio_freeflag[BITS_TO_LONGS(AMBGPIO_SIZE)];
 
 static u32 gpio_base_reg[] = {
 	GPIO0_BASE,
@@ -195,36 +192,17 @@ void ambarella_gpio_raw_unlock(u32 id, unsigned long *pflags)
 }
 
 /* ==========================================================================*/
-void __init ambarella_gpio_set_valid(unsigned pin, int valid)
-{
-	if (likely(pin >=0 && pin < AMBGPIO_SIZE)) {
-		if (valid)
-			__set_bit(pin, ambarella_gpio_valid);
-		else
-			__clear_bit(pin, ambarella_gpio_valid);
-	}
-}
 
 int __init ambarella_init_gpio(void)
 {
-	int					retval = 0;
-	int					i;
-
-	mutex_lock(&ambarella_gpio_mtx);
-	memset(ambarella_gpio_valid, 0xff, sizeof(ambarella_gpio_valid));
-	memset(ambarella_gpio_freeflag, 0xff, sizeof(ambarella_gpio_freeflag));
-	for (i = GPIO_MAX_LINES; i < AMBGPIO_SIZE; i++) {
-		ambarella_gpio_set_valid(i, 0);
-		__clear_bit(i, ambarella_gpio_freeflag);
-	}
-	mutex_unlock(&ambarella_gpio_mtx);
+	int i;
 
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		spin_lock_init(&ambarella_gpio_banks[i].lock);
 		ambarella_gpio_banks[i].base_reg = gpio_base_reg[i];
 	}
 
-	return retval;
+	return 0;
 }
 
 /* ==========================================================================*/

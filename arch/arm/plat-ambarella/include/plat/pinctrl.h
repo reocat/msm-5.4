@@ -39,14 +39,6 @@ enum amb_pin_altfunc {
 	AMB_ALTFUNC_HW_5,
 };
 
-struct ambarella_platform_pinctrl {
-	int (*set_pin_altfunc)(int pin, enum amb_pin_altfunc altfunc, u32 multi_alt);
-};
-
-extern int ambarella_init_pinctrl(void);
-
-extern struct platform_device ambarella_pinctrl0;
-
 #endif /* __ASSEMBLER__ */
 
 #endif

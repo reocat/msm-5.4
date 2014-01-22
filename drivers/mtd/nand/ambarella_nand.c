@@ -34,7 +34,7 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/io.h>
-#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
@@ -645,7 +645,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	if ((cmd == NAND_AMB_CMD_ERASE ||
 		cmd == NAND_AMB_CMD_COPYBACK ||
 		cmd == NAND_AMB_CMD_PROGRAM) &&
-		nand_info->wp_gpio >= 0)
+		gpio_is_valid(nand_info->wp_gpio))
 		gpio_direction_output(nand_info->wp_gpio, GPIO_HIGH);
 #endif
 
@@ -934,7 +934,7 @@ nand_amb_request_done:
 	if ((cmd == NAND_AMB_CMD_ERASE ||
 		cmd == NAND_AMB_CMD_COPYBACK ||
 		cmd == NAND_AMB_CMD_PROGRAM) &&
-		nand_info->wp_gpio >= 0)
+		gpio_is_valid(nand_info->wp_gpio))
 		gpio_direction_output(nand_info->wp_gpio, GPIO_LOW);
 #endif
 
@@ -1503,9 +1503,9 @@ static int ambarella_nand_init_chipecc(
 static int ambarella_nand_get_resource(
 	struct ambarella_nand_info *nand_info, struct platform_device *pdev)
 {
-	int					errorCode = 0;
-	struct device_node 			*np = pdev->dev.of_node;
-	struct resource				*res;
+	struct device_node *np = pdev->dev.of_node;
+	struct resource *res;
+	int errorCode = 0;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -1558,6 +1558,17 @@ static int ambarella_nand_get_resource(
 		goto nand_get_resource_err_exit;
 	}
 
+	nand_info->wp_gpio = of_get_gpio(np, 0);
+	if (gpio_is_valid(nand_info->wp_gpio)) {
+		errorCode = gpio_request_one(nand_info->wp_gpio,
+					GPIOF_OUT_INIT_HIGH, pdev->name);
+		if (errorCode < 0) {
+			dev_err(&pdev->dev, "Could not get WP GPIO %d, %d\n",
+				nand_info->wp_gpio, errorCode);
+			goto nand_get_resource_err_exit;
+		}
+	}
+
 	errorCode = of_property_read_u32(np, "amb,fifo-base", &nand_info->dmabase);
 	if (errorCode < 0) {
 		dev_err(&pdev->dev, "Get fifo-base failed!\n");
@@ -1575,19 +1586,6 @@ static int ambarella_nand_get_resource(
 	if (errorCode < 0) {
 		dev_err(&pdev->dev, "Get timing failed!\n");
 		goto nand_get_resource_err_exit;
-	}
-
-	errorCode = of_property_read_u32(np, "amb,wp-gpio", &nand_info->wp_gpio);
-	if (errorCode < 0) {
-		nand_info->wp_gpio = -1;
-	} else {
-		errorCode = gpio_request_one(nand_info->wp_gpio,
-				GPIOF_OUT_INIT_HIGH, pdev->name);
-		if (errorCode < 0) {
-			dev_err(&pdev->dev, "Could not get WP GPIO %d, %d\n",
-				nand_info->wp_gpio, errorCode);
-			goto nand_get_resource_err_exit;
-		}
 	}
 
 	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
@@ -1632,7 +1630,7 @@ nand_get_resource_free_fiocmd_irq:
 	free_irq(nand_info->cmd_irq, nand_info);
 
 nand_get_resource_free_wp_gpio:
-	if (nand_info->wp_gpio >= 0)
+	if (gpio_is_valid(nand_info->wp_gpio))
 		gpio_free(nand_info->wp_gpio);
 
 nand_get_resource_err_exit:
@@ -1645,7 +1643,7 @@ static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
 	free_irq(nand_info->dma_irq, nand_info);
 	free_irq(nand_info->cmd_irq, nand_info);
 
-	if (nand_info->wp_gpio >= 0)
+	if (gpio_is_valid(nand_info->wp_gpio))
 		gpio_free(nand_info->wp_gpio);
 }
 

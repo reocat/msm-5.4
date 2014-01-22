@@ -48,8 +48,8 @@
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			reg = <0xe0003000 0x1000>,
-				<0xe0010000 0x1000>,
-				<0xe001c000 0x1000>;
+			      <0xe0010000 0x1000>,
+			      <0xe001c000 0x1000>;
 		};
 
 		apb@0xe8000000 {	/* APB */
@@ -85,6 +85,34 @@
 				status = "ok";
 				/* amb,tx-fifo-fix; */
 			};
+
+			pinctrl: pinctrl@0xe8009000 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "ambarella,pinctrl", "simple-bus";
+				reg = <0xe8009000 0x1000>,
+				      <0xe800a000 0x1000>,
+				      <0xe800e000 0x1000>,
+				      <0xe8010000 0x1000>,
+				      <0xe8016000 0x1000>;
+				reg-names = "gpio0", "gpio1", "gpio2", "gpio3", "iomux";
+				#gpio-range-cells = <3>;
+
+				gpio: gpio@0 {
+					compatible = "ambarella,gpio";
+					interrupts = <10 11 30 29>;	/* gpio interrupts to vic */
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&pinctrl 0 0 128>;
+					interrupt-controller;
+					#interrupt-cells = <2>;
+				};
+
+				i2s0_pins: i2s0@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x4d01 0x4e01 0x4f01 0x5001 0x5101>;
+				};
+			};
 		};
 
 		ahb@0xe0000000 {	/* AHB */
@@ -101,13 +129,13 @@
 				interrupts = <16>,	/* fio_cmd_irq */
 					     <17>,	/* fio_dma_irq */
 					     <33>;	/* fdma_irq */
+				gpios = <&gpio 54 0x0>;
 				amb,fifo-base = <0xe0000000>;
 				/* nand timing, will be updated by Amboot */
 				amb,timing = <0x00000000 0x00000000
 					      0x00000000 0x00000000
 					      0x00000000 0x00000000>;
 				amb,ecc-bits = <1>;
-				amb,wp-gpio = <39>;
 			};
 
 			uart1: uart@0xe0032000 {
