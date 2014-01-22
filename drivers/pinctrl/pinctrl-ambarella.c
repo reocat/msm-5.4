@@ -35,8 +35,8 @@
 #define PIN_NAME_LENGTH		8
 #define SUFFIX_LENGTH		4
 
-#define MUXIDS_TO_PINID(m)	((m) >> 16)
-#define MUXIDS_TO_ALT(m)	((m) & 0xf)
+#define MUXIDS_TO_PINID(m)	((m) & 0xfff)
+#define MUXIDS_TO_ALT(m)	(((m) >> 12) & 0xf)
 
 #define CFG_PULL_PRESENT	(1 << 1)
 #define CFG_PULL_SHIFT		0
@@ -47,8 +47,6 @@ struct ambpin_group {
 	unsigned int		*pins;
 	unsigned		num_pins;
 	u8			*alt;
-	int			*altfunc;
-	int			multi_alt;
 	u32			config;
 };
 
@@ -504,8 +502,8 @@ static int amb_pinctrl_parse_group(struct amb_pinctrl_soc_data *soc,
 	of_property_read_u32_array(np, prop_name, grp->pins, grp->num_pins);
 
 	for (i = 0; i < grp->num_pins; i++) {
-		grp->pins[i] = MUXIDS_TO_PINID(grp->pins[i]);
 		grp->alt[i] = MUXIDS_TO_ALT(grp->pins[i]);
+		grp->pins[i] = MUXIDS_TO_PINID(grp->pins[i]);
 	}
 
 	if (out_name)

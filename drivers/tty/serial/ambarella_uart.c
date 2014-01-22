@@ -37,6 +37,7 @@
 #include <linux/tty_flip.h>
 #include <linux/serial.h>
 #include <linux/serial_core.h>
+#include <linux/pinctrl/consumer.h>
 #include <mach/hardware.h>
 #include <plat/uart.h>
 #include <plat/pll.h>
@@ -771,6 +772,7 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 {
 	struct ambarella_uart_port *amb_port;
 	struct resource *mem;
+	struct pinctrl *pinctrl;
 	int irq, id, rval = 0;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -789,6 +791,12 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 	if (id < 0 || id >= serial_ambarella_reg.nr) {
 		dev_err(&pdev->dev, "Invalid uart ID %d!\n", id);
 		return -ENXIO;
+	}
+
+	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(&pdev->dev, "Failed to request pinctrl\n");
+		return PTR_ERR(pinctrl);
 	}
 
 	ambarella_uart_set_pll();

@@ -92,6 +92,8 @@
 				compatible = "ambarella,s2-uart";
 				reg = <0x70005000 0x100>;
 				interrupts = <0 9 0x04>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&uart0_pins>;
 				status = "ok";
 				/* amb,tx-fifo-fix; */
 			};
@@ -100,7 +102,7 @@
 				compatible = "ambarella,s2-uart";
 				reg = <0x7001f000 0x100>;
 				interrupts = <0 25 0x04>;
-				status = "ok";
+				status = "disabled";
 				amb,msr-used;	/* use Modem Status Register */
 				/* amb,tx-fifo-fix; */
 			};
@@ -109,7 +111,7 @@
 				compatible = "ambarella,s2-uart";
 				reg = <0x70014000 0x100>;
 				interrupts = <0 91 0x04>;
-				status = "ok";
+				status = "disabled";
 				amb,msr-used;	/* use Modem Status Register */
 				/* amb,tx-fifo-fix; */
 			};
@@ -118,7 +120,7 @@
 				compatible = "ambarella,s2-uart";
 				reg = <0x70015000 0x100>;
 				interrupts = <0 92 0x04>;
-				status = "ok";
+				status = "disabled";
 				amb,msr-used;	/* use Modem Status Register */
 				/* amb,tx-fifo-fix; */
 			};
@@ -150,9 +152,38 @@
 					#interrupt-cells = <2>;
 				};
 
+				uart0_pins: uart0@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x100e 0x100f>;
+				};
+
+				uart1_pins: uart1@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x1034 0x1035>,
+							 /* virtual pins, just for configuration purpose */
+							 <0x1021 0x0022 0x1032 0x1033 0x1034 0x1035>;
+				};
+
+				uart1_4pins: uart1_4pins@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x1032 0x1033 0x1034 0x1035>,
+							 /* virtual pins, just for configuration purpose */
+							 <0x1021 0x0022 0x1032 0x1033 0x1034 0x1035>;
+				};
+
+				uart2_pins: uart2@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x100a 0x1012>;
+				};
+
+				uart3_pins: uart3@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x1013 0x1014>;
+				};
+
 				i2s0_pins: i2s0@0 {
 					reg = <0>;
-					amb,pinmux-ids = <0x4d01 0x4e01 0x4f01 0x5001 0x5101>;
+					amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>;
 				};
 			};
 		};
