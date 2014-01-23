@@ -35,7 +35,7 @@
 			};
 		};
 
-		intc: interrupt-controller@0xe0003000 {
+		intc: interrupt-controller@e0003000 {
 			compatible = "ambarella,vic";
 			interrupt-controller;
 			#interrupt-cells = <1>;
@@ -44,33 +44,33 @@
 			      <0xe001c000 0x1000>;
 		};
 
-		apb@0xe8000000 {	/* APB */
+		apb@e8000000 {	/* APB */
 			compatible = "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0xe8000000 0x01000000>;
 			ranges;
 
-			timer-ctrl@0xe800b030 {
+			timer-ctrl@e800b030 {
 				compatible = "ambarella,timer-ctrl";
 				reg = <0xe800b030 0x4>;
 			};
 
-			timer7: timer@0xe800b064 {
+			timer7: timer@e800b064 {
 				compatible = "ambarella,clock-source";
 				reg = <0xe800b064 0x10>;
 				interrupts = <62>;
 				ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 			};
 
-			timer8: timer@0xe800b074 {
+			timer8: timer@e800b074 {
 				compatible = "ambarella,clock-event";
 				reg = <0xe800b074 0x10>;
 				interrupts = <63>;
 				ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 			};
 
-			uart0: uart@0xe8005000 {
+			uart0: uart@e8005000 {
 				compatible = "ambarella,s2l-uart";
 				reg = <0xe8005000 0x1000>;
 				interrupts = <9>;
@@ -80,7 +80,7 @@
 				/* amb,tx-fifo-fix; */
 			};
 
-			i2c0: i2c@0xe8003000 {
+			i2c0: i2c@e8003000 {
 				compatible = "ambarella,i2c";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -94,7 +94,7 @@
 				status = "disabled";
 		        };
 
-			i2c1: i2c@0xe8001000 {
+			i2c1: i2c@e8001000 {
 				compatible = "ambarella,i2c";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -108,7 +108,7 @@
 				status = "disabled";
 		        };
 
-			i2c2: i2c@0xe8007000 {
+			i2c2: i2c@e8007000 {
 				compatible = "ambarella,i2c";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -122,7 +122,7 @@
 				status = "disabled";
 		        };
 
-			pinctrl: pinctrl@0xe8009000 {
+			pinctrl: pinctrl@e8009000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "ambarella,pinctrl", "simple-bus";
@@ -221,14 +221,14 @@
 			};
 		};
 
-		ahb@0xe0000000 {	/* AHB */
+		ahb@e0000000 {	/* AHB */
 			compatible = "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0xe0000000 0x01000000>;
 			ranges;
 
-			nand0: nand@0xe0001000 {
+			nand0: nand@e0001000 {
 				compatible = "ambarella,s2l-nand";
 				reg = <0xe0001000 0x1000>, /* fio reg address */
 				      <0xe0012000 0x1000>; /* fdma reg address */
@@ -244,7 +244,7 @@
 				amb,ecc-bits = <1>;
 			};
 
-			uart1: uart@0xe0032000 {
+			uart1: uart@e0032000 {
 				compatible = "ambarella,s2l-uart";
 				reg = <0xe0032000 0x1000>;
 				interrupts = <25>;

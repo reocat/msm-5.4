@@ -40,7 +40,7 @@
 			};
 		};
 
-		gic: interrupt-controller@0xf0001000 {
+		gic: interrupt-controller@f0001000 {
 			compatible = "arm,cortex-a9-gic";
 			interrupt-controller;
 			#interrupt-cells = <3>;
@@ -48,39 +48,39 @@
 				  <0xf0000100 0x0100>;
 		};
 
-		local-timer@0xf0000600 {
+		local-timer@f0000600 {
 			compatible = "arm,cortex-a9-twd-timer";
 			reg = <0xf0000600 0x20>;
 			interrupts = <1 13 0x304>;
 		};
 
-		apb@0x70000000 {	/* APB */
+		apb@70000000 {	/* APB */
 			compatible = "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x70000000 0x01000000>;
 			ranges;
 
-			timer-ctrl@0x7000b030 {
+			timer-ctrl@7000b030 {
 				compatible = "ambarella,timer-ctrl";
 				reg = <0x7000b030 0x4>;
 			};
 
-			timer7: timer@0x7000b064 {
+			timer7: timer@7000b064 {
 				compatible = "ambarella,clock-source";
 				reg = <0x7000b064 0x10>;
 				interrupts = <0 108 0x04>;
 				ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 			};
 
-			timer8: timer@0x7000b074 {
+			timer8: timer@7000b074 {
 				compatible = "ambarella,clock-event";
 				reg = <0x7000b074 0x10>;
 				interrupts = <0 109 0x04>;
 				ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 			};
 
-			uart0: uart@0x70005000 {
+			uart0: uart@70005000 {
 				compatible = "ambarella,s2-uart";
 				reg = <0x70005000 0x100>;
 				interrupts = <0 9 0x04>;
@@ -90,7 +90,7 @@
 				/* amb,tx-fifo-fix; */
 			};
 
-			uart1: uart@0x7001f000 {
+			uart1: uart@7001f000 {
 				compatible = "ambarella,s2-uart";
 				reg = <0x7001f000 0x100>;
 				interrupts = <0 25 0x04>;
@@ -99,7 +99,7 @@
 				/* amb,tx-fifo-fix; */
 			};
 
-			uart2: uart@0x70014000 {
+			uart2: uart@70014000 {
 				compatible = "ambarella,s2-uart";
 				reg = <0x70014000 0x100>;
 				interrupts = <0 91 0x04>;
@@ -108,7 +108,7 @@
 				/* amb,tx-fifo-fix; */
 			};
 
-			uart3: uart@0x70015000 {
+			uart3: uart@70015000 {
 				compatible = "ambarella,s2-uart";
 				reg = <0x70015000 0x100>;
 				interrupts = <0 92 0x04>;
@@ -117,7 +117,7 @@
 				/* amb,tx-fifo-fix; */
 			};
 
-			i2c0: i2c@0x70003000 {
+			i2c0: i2c@70003000 {
 				compatible = "ambarella,i2c";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -131,7 +131,7 @@
 				status = "disabled";
 		        };
 
-			i2c1: i2c@0x70007000 {
+			i2c1: i2c@70007000 {
 				compatible = "ambarella,i2c";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -145,7 +145,7 @@
 				status = "disabled";
 		        };
 
-			i2c2: i2c@0x70013000 {
+			i2c2: i2c@70013000 {
 				compatible = "ambarella,i2c";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -159,7 +159,7 @@
 				status = "disabled";
 		        };
 
-			pinctrl: pinctrl@0x70009000 {
+			pinctrl: pinctrl@70009000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "ambarella,pinctrl", "simple-bus";
@@ -237,14 +237,14 @@
 			};
 		};
 
-		ahb@0x60000000 {	/* AHB */
+		ahb@60000000 {	/* AHB */
 			compatible = "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x60000000 0x01000000>;
 			ranges;
 
-			nand0: nand@0x60001000 {
+			nand0: nand@60001000 {
 				compatible = "ambarella,s2-nand";
 				reg = <0x60001000 0x1000>,	/* fio reg address */
 				      <0x60012000 0x1000>;	/* fdma reg address */
