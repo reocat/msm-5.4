@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/clk.h>
 #include <linux/console.h>
 #include <linux/sysrq.h>
 #include <linux/serial_reg.h>
@@ -40,7 +41,6 @@
 #include <linux/pinctrl/consumer.h>
 #include <mach/hardware.h>
 #include <plat/uart.h>
-#include <plat/pll.h>
 
 struct ambarella_uart_port {
 	struct uart_port port;
@@ -479,7 +479,7 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
-	port->uartclk = ambarella_uart_get_pll();
+	port->uartclk = clk_get_rate(clk_get(NULL, "gclk_uart"));
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
 		lc |= UART_LC_CLS_5_BITS;
@@ -701,8 +701,7 @@ static int __init serial_ambarella_console_setup(struct console *co,
 		return -ENODEV;
 	}
 
-	ambarella_uart_set_pll();
-	port->uartclk = ambarella_uart_get_pll();
+	port->uartclk = clk_get_rate(clk_get(NULL, "gclk_uart"));
 	port->ops = &serial_ambarella_pops;
 	port->private_data = &ambarella_port[co->index];
 	port->line = co->index;
@@ -799,8 +798,6 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 		return PTR_ERR(pinctrl);
 	}
 
-	ambarella_uart_set_pll();
-
 	amb_port = &ambarella_port[id];
 	amb_port->mcr = DEFAULT_AMBARELLA_UART_MCR;
 	amb_port->fcr = DEFAULT_AMBARELLA_UART_FCR;
@@ -819,7 +816,7 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 	amb_port->port.type = PORT_UART00;
 	amb_port->port.iotype = UPIO_MEM;
 	amb_port->port.fifosize = UART_FIFO_SIZE;
-	amb_port->port.uartclk = ambarella_uart_get_pll();
+	amb_port->port.uartclk = clk_get_rate(clk_get(NULL, "gclk_uart"));
 	amb_port->port.ops = &serial_ambarella_pops;
 	amb_port->port.private_data = amb_port;
 	amb_port->port.irq = irq;

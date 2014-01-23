@@ -31,7 +31,6 @@
 #include <asm/smp_twd.h>
 #include <asm/sched_clock.h>
 #include <plat/timer.h>
-#include <plat/pll.h>
 
 static void __iomem *timer_ctrl_reg = NULL;
 static void __iomem *ce_base = NULL;
@@ -39,8 +38,8 @@ static u32 ce_ctrl_offset = -1;
 static void __iomem *cs_base = NULL;
 static u32 cs_ctrl_offset = -1;
 
-#define AMBARELLA_TIMER_FREQ			(ambarella_timer_get_pll())
-#define AMBARELLA_TIMER_RATING			(300)
+#define AMBARELLA_TIMER_FREQ		clk_get_rate(clk_get(NULL, "gclk_apb"))
+#define AMBARELLA_TIMER_RATING		(300)
 
 /* ==========================================================================*/
 

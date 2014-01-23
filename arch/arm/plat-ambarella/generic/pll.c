@@ -38,46 +38,6 @@
 #include <plat/clk.h>
 #include <plat/fio.h>
 
-u32 ambarella_timer_get_pll(void)
-{
-	return clk_get_rate(clk_get(NULL, "gclk_apb"));
-}
-EXPORT_SYMBOL(ambarella_timer_get_pll);
-
-void ambarella_uart_set_pll(void)
-{
-/* Set prop UART clock in BSP, don't set clock by default in normal mode */
-#if defined(CONFIG_AMBARELLA_RAW_BOOT)
-
-#if (CHIP_REV == A8)
-	u32 uart_freq = (REF_CLK_FREQ);
-#else
-	u32 uart_freq = (115200 * 16);
-#endif
-	clk_set_rate(clk_get(NULL, "gclk_uart"), uart_freq);
-
-#endif
-}
-EXPORT_SYMBOL(ambarella_uart_set_pll);
-
-u32 ambarella_uart_get_pll(void)
-{
-	return clk_get_rate(clk_get(NULL, "gclk_uart"));
-}
-EXPORT_SYMBOL(ambarella_uart_get_pll);
-
-u32 ambarella_nand_get_pll(void)
-{
-	u32 nand_pll;
-
-	nand_pll = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
-#if (FIO_USE_2X_FREQ == 1)
-	nand_pll <<= 1;
-#endif
-	return nand_pll;
-}
-EXPORT_SYMBOL(ambarella_nand_get_pll);
-
 
 /* ==========================================================================*/
 static struct clk pll_out_core = {

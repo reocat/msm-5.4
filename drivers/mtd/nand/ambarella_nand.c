@@ -34,6 +34,7 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/io.h>
+#include <linux/clk.h>
 #include <linux/of_gpio.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -41,7 +42,6 @@
 #include <asm/dma.h>
 #include <mach/dma.h>
 #include <mach/board.h>
-#include <plat/pll.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
 #include <plat/fio.h>
@@ -73,6 +73,7 @@ struct ambarella_nand_info {
 	u32				ecc_bits;
 	/* if or not support to read id in 5 cycles */
 	u32				id_cycles_5;
+	u32				pllx2;
 
 	dma_addr_t			dmaaddr;
 	u8				*dmabuf;
@@ -294,7 +295,9 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		return;
 	}
 
-	clk = ambarella_nand_get_pll();
+	clk = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
+	if (nand_info->pllx2)
+		clk <<= 1;
 
 	/* timing 0 */
 	t = nand_info->timing[0];
@@ -1587,6 +1590,11 @@ static int ambarella_nand_get_resource(
 		dev_err(&pdev->dev, "Get timing failed!\n");
 		goto nand_get_resource_err_exit;
 	}
+
+	if (of_find_property(np, "amb,use-2x-pll", NULL))
+		nand_info->pllx2 = 1;
+	else
+		nand_info->pllx2 = 0;
 
 	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,

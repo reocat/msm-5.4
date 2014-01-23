@@ -43,7 +43,6 @@
 #include <plat/nand.h>
 #include <plat/audio.h>
 #include <plat/clk.h>
-#include <plat/pll.h>
 
 /* ==========================================================================*/
 #ifdef MODULE_PARAM_PREFIX
