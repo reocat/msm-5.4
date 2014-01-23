@@ -75,9 +75,6 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_dummy_codec0,
 	&ambarella_dummy_audio_device,
 	&ambarella_ambevk_audio_device,
-	&ambarella_idc0,
-	&ambarella_idc1,
-	&ambarella_idc2,
 	&ambarella_ir0,
 	&ambarella_sd0,
 	&ambarella_sd1,
@@ -302,17 +299,11 @@ static void __init ambarella_init_ixora_ipcam(void)
 	ambarella_platform_sd1_controller.slot[0].ext_power.gpio_id = EXT_GPIO(1);
 	ambarella_platform_sd1_controller.slot[0].ext_power.active_level = GPIO_HIGH;
 	ambarella_platform_sd1_controller.slot[0].ext_power.active_delay = 300;
-
-#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
-	ambarella_init_ak4642(0, 0x12, EXT_GPIO(4));
-#endif
-	i2c_register_board_info(2, &ixora_ipcam_gpio_i2c_board_info, 1);
 }
 
 /* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
-	int i;
 	int use_bub_default = 1;
 
 	ambarella_init_machine("ixora", REF_CLK_FREQ);
@@ -361,13 +352,28 @@ static void __init ambarella_init_ixora(void)
 			(AMBA_SD_PRIVATE_CAPS_ADMA);
 	}
 
+	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
+}
+
+/* ==========================================================================*/
+static void __init ambarella_init_ixora_dt(void)
+{
+	int i;
+
+	ambarella_init_ixora();
+
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+
+#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
+	ambarella_init_ak4642(0, 0x12, EXT_GPIO(4));
+#endif
+	i2c_register_board_info(2, &ixora_ipcam_gpio_i2c_board_info, 1);
+
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {
 		device_set_wakeup_capable(&ixora_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ixora_devices[i]->dev, 0);
 	}
-
-	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
@@ -377,15 +383,6 @@ static void __init ambarella_init_ixora(void)
 		ARRAY_SIZE(ambarella_spi_devices));
 
 	platform_device_register(&ixora_board_input);
-}
-
-/* ==========================================================================*/
-static void __init ambarella_init_ixora_dt(void)
-{
-	ambarella_init_ixora();
-
-	of_platform_populate(NULL, of_default_bus_match_table,
-			NULL, NULL);
 }
 
 

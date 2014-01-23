@@ -7,14 +7,6 @@
  * published by the Free Software Foundation.
  */
 
-/*
- * Carveout for multimedia usecases
- * It should be the last 48MB of the first 512MB memory part
- * In theory, it should not even exist. That zone should be reserved
- * dynamically during the .reserve callback.
-/memreserve/ 0x9d000000 0x03000000;
- */
-
 /include/ "skeleton.dtsi"
 
 / {
@@ -68,14 +60,14 @@
 				compatible = "ambarella,clock-source";
 				reg = <0xe800b064 0x10>;
 				interrupts = <62>;
-				ctrl-offset = <24>;		/* bit offset in timer-ctrl reg */
+				ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 			};
 
 			timer8: timer@0xe800b074 {
 				compatible = "ambarella,clock-event";
 				reg = <0xe800b074 0x10>;
 				interrupts = <63>;
-				ctrl-offset = <28>;		/* bit offset in timer-ctrl reg */
+				ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 			};
 
 			uart0: uart@0xe8005000 {
@@ -87,6 +79,48 @@
 				status = "ok";
 				/* amb,tx-fifo-fix; */
 			};
+
+			i2c0: i2c@0xe8003000 {
+				compatible = "ambarella,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0xe8003000 0x1000>;
+				interrupts = <19>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c0_pins>;
+				clock-frequency = <100000>;
+				amb,i2c-class = <0x81>;
+				amb,bulk-num = <60>;
+				status = "disabled";
+		        };
+
+			i2c1: i2c@0xe8001000 {
+				compatible = "ambarella,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0xe8001000 0x1000>;
+				interrupts = <51>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c1_pins>;
+				clock-frequency = <100000>;
+				amb,i2c-class = <0x08>;
+				amb,bulk-num = <60>;
+				status = "disabled";
+		        };
+
+			i2c2: i2c@0xe8007000 {
+				compatible = "ambarella,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0xe8007000 0x1000>;
+				interrupts = <36>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c2_pins>;
+				clock-frequency = <100000>;
+				amb,i2c-class = <0x81>;
+				amb,bulk-num = <60>;
+				status = "disabled";
+		        };
 
 			pinctrl: pinctrl@0xe8009000 {
 				#address-cells = <1>;
@@ -102,7 +136,7 @@
 
 				gpio: gpio@0 {
 					compatible = "ambarella,gpio";
-					interrupts = <10 11 30 29>;	/* gpio interrupts to vic */
+					interrupts = <10 11 30 29>; /* gpio interrupts to vic */
 					gpio-controller;
 					#gpio-cells = <2>;
 					gpio-ranges = <&pinctrl 0 0 128>;
@@ -165,6 +199,21 @@
 					amb,pinmux-ids = <0x3024 0x3025>;
 				};
 
+				i2c0_pins: i2c0@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x101b 0x101c>;
+				};
+
+				i2c1_pins: i2c1@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x101d 0x101e>;
+				};
+
+				i2c2_pins: i2c2@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x101f 0x1020>;
+				};
+
 				i2s0_pins: i2s0@0 {
 					reg = <0>;
 					amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>;
@@ -181,8 +230,8 @@
 
 			nand0: nand@0xe0001000 {
 				compatible = "ambarella,s2l-nand";
-				reg = <0xe0001000 0x1000>,	/* fio reg address */
-				      <0xe0012000 0x1000>;	/* fdma reg address */
+				reg = <0xe0001000 0x1000>, /* fio reg address */
+				      <0xe0012000 0x1000>; /* fdma reg address */
 				interrupts = <16>,	/* fio_cmd_irq */
 					     <17>,	/* fio_dma_irq */
 					     <33>;	/* fdma_irq */

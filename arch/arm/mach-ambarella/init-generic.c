@@ -80,10 +80,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #if (IDC_SUPPORT_INTERNAL_MUX == 1)
 	&ambarella_idc0_mux,
 #endif
-	&ambarella_idc0,
-#if (IDC_INSTANCES >= 2)
-	&ambarella_idc1,
-#endif
 #if (IR_INSTANCES >= 1)
 	&ambarella_ir0,
 #endif

@@ -28,12 +28,14 @@
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
+#include <linux/of_i2c.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-
+#include <linux/pinctrl/consumer.h>
+#include <linux/clk.h>
 #include <asm/dma.h>
 
 #include <mach/hardware.h>
@@ -68,19 +70,18 @@ struct ambarella_i2c_dev_info {
 	unsigned char __iomem 			*regbase;
 
 	struct device				*dev;
-	struct resource				*mem;
 	unsigned int				irq;
 	struct i2c_adapter			adap;
-
 	enum ambarella_i2c_state		state;
+
+	u32					clk_limit;
+	u32					bulk_num;
 
 	struct i2c_msg				*msgs;
 	__u16					msg_num;
 	__u16					msg_addr;
 	wait_queue_head_t			msg_wait;
 	unsigned int				msg_index;
-
-	struct ambarella_idc_platform_info	*platform_info;
 
 	struct notifier_block			system_event;
 	struct semaphore			system_event_sem;
@@ -91,15 +92,11 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	unsigned int				apb_clk;
 	__u32					idc_prescale;
 
-	apb_clk = pinfo->platform_info->get_clock();
+	apb_clk = clk_get_rate(clk_get(NULL, "gclk_apb"));
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 
-	if ((pinfo->platform_info->clk_limit < 1000) ||
-		(pinfo->platform_info->clk_limit > 400000))
-		pinfo->platform_info->clk_limit = 100000;
-
-	idc_prescale = (apb_clk / pinfo->platform_info->clk_limit) >> 2;
+	idc_prescale = (apb_clk / pinfo->clk_limit) >> 2;
 
 	dev_dbg(pinfo->dev, "apb_clk[%dHz]\n", apb_clk);
 	dev_dbg(pinfo->dev, "idc_prescale[%d]\n", idc_prescale);
@@ -224,7 +221,7 @@ static inline void ambarella_i2c_start_current_msg(
 
 	if (pinfo->msgs->flags & I2C_M_RD) {
 		ambarella_i2c_start_single_msg(pinfo);
-	} else if (pinfo->msgs->len > pinfo->platform_info->bulk_write_num) {
+	} else if (pinfo->msgs->len > pinfo->bulk_num) {
 		ambarella_i2c_start_bulk_msg_write(pinfo);
 	} else {
 		ambarella_i2c_start_single_msg(pinfo);
@@ -477,97 +474,115 @@ static const struct i2c_algorithm ambarella_i2c_algo = {
 	.functionality	= ambarella_i2c_func,
 };
 
+
+static int id_tmp = 0;
 static int ambarella_i2c_probe(struct platform_device *pdev)
 {
+	struct device_node 			*np = pdev->dev.of_node;
 	int					errorCode;
 	struct ambarella_i2c_dev_info		*pinfo;
 	struct i2c_adapter			*adap;
-	struct resource				*irq;
+	struct pinctrl				*pinctrl;
 	struct resource				*mem;
-	struct ambarella_idc_platform_info	*platform_info;
+	u32					i2c_class = 0;
 
-	platform_info =
-		(struct ambarella_idc_platform_info *)pdev->dev.platform_data;
-	if (platform_info == NULL) {
-		dev_err(&pdev->dev, "%s: Can't get platform_data!\n", __func__);
-		errorCode = - EPERM;
-		goto i2c_errorCode_na;
+	pinfo = devm_kzalloc(&pdev->dev, sizeof(*pinfo), GFP_KERNEL);
+	if (pinfo == NULL) {
+		dev_err(&pdev->dev, "Out of memory!\n");
+		return -ENOMEM;
+	}
+	pinfo->dev = &pdev->dev;
+
+	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(&pdev->dev, "Failed to request pinctrl\n");
+		return PTR_ERR(pinctrl);
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
 		dev_err(&pdev->dev, "Get I2C mem resource failed!\n");
-		errorCode = -ENXIO;
-		goto i2c_errorCode_na;
+		return -ENXIO;
 	}
 
-	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (irq == NULL) {
-		dev_err(&pdev->dev, "Get I2C irq resource failed!\n");
-		errorCode = -ENXIO;
-		goto i2c_errorCode_na;
+	pinfo->regbase = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
+	if (!pinfo->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
 	}
 
-	pinfo = kzalloc(sizeof(struct ambarella_i2c_dev_info), GFP_KERNEL);
-	if (pinfo == NULL) {
-		dev_err(&pdev->dev, "Out of memory!\n");
-		errorCode = -ENOMEM;
-		goto i2c_errorCode_na;
+	pinfo->irq = platform_get_irq(pdev, 0);
+	if (pinfo->irq < 0) {
+		dev_err(&pdev->dev, "no irq for i2c%d!\n", pdev->id);
+		return -ENODEV;
 	}
 
-	pinfo->regbase = (unsigned char __iomem *)mem->start;
-	pinfo->mem = mem;
-	pinfo->dev = &pdev->dev;
-	pinfo->irq = irq->start;
+	errorCode = of_property_read_u32(np, "amb,i2c-class", &i2c_class);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Get i2c_class failed!\n");
+		return -ENODEV;
+	}
+
+	i2c_class &= (I2C_CLASS_HWMON | I2C_CLASS_DDC | I2C_CLASS_SPD);
+	if (i2c_class == 0){
+		dev_err(&pdev->dev, "Invalid i2c_class (0x%x)!\n", i2c_class);
+		return -EINVAL;
+	}
+
+	errorCode = of_property_read_u32(np, "clock-frequency", &pinfo->clk_limit);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Get clock-frequenc failed!\n");
+		return -ENODEV;
+	}
+
+	if (pinfo->clk_limit < 1000 || pinfo->clk_limit > 400000)
+		pinfo->clk_limit = 100000;
+
+	errorCode = of_property_read_u32(np, "amb,bulk-num", &pinfo->bulk_num);
+	if (errorCode < 0) {
+		dev_err(&pdev->dev, "Get bulk-num failed!\n");
+		return -ENODEV;
+	}
+
 	init_waitqueue_head(&pinfo->msg_wait);
 	sema_init(&pinfo->system_event_sem, 1);
-	pinfo->platform_info = platform_info;
 
 	ambarella_i2c_hw_init(pinfo);
 
 	platform_set_drvdata(pdev, pinfo);
 
-	errorCode = request_irq(pinfo->irq,
-		ambarella_i2c_irq, IRQF_TRIGGER_HIGH,
-		dev_name(&pdev->dev), pinfo);
+	errorCode = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_i2c_irq,
+				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), pinfo);
 	if (errorCode) {
-		dev_err(&pdev->dev, "%s: Request IRQ failed!\n", __func__);
-		goto i2c_errorCode_kzalloc;
+		dev_err(&pdev->dev, "Request IRQ failed!\n");
+		return errorCode;
 	}
 
 	adap = &pinfo->adap;
 	i2c_set_adapdata(adap, pinfo);
 	adap->owner = THIS_MODULE;
-	adap->class = platform_info->i2c_class;
+	adap->dev.parent = &pdev->dev;
+	adap->dev.of_node = np;
+	adap->class = i2c_class;
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 	adap->algo = &ambarella_i2c_algo;
-	adap->dev.parent = &pdev->dev;
-	adap->nr = pdev->id;
+	adap->nr = id_tmp++;
 	adap->retries = CONFIG_I2C_AMBARELLA_RETRIES;
+
 	errorCode = i2c_add_numbered_adapter(adap);
 	if (errorCode) {
-		dev_err(&pdev->dev,
-			"%s: Adding I2C adapter failed!\n", __func__);
-		goto i2c_errorCode_free_irq;
+		dev_err(&pdev->dev, "Adding I2C adapter failed!\n");
+		return errorCode;
 	}
+
+	of_i2c_register_devices(adap);
 
 	pinfo->system_event.notifier_call = ambarella_i2c_system_event;
 	ambarella_register_event_notifier(&pinfo->system_event);
 
-	dev_notice(&pdev->dev,
-		"Ambarella Media Processor I2C adapter[%s] probed!\n",
-		dev_name(&pinfo->adap.dev));
+	dev_info(&pdev->dev, "Ambarella I2C adapter probed!\n");
 
-	goto i2c_errorCode_na;
-
-i2c_errorCode_free_irq:
-	free_irq(pinfo->irq, pinfo);
-
-i2c_errorCode_kzalloc:
-	kfree(pinfo);
-
-i2c_errorCode_na:
-	return errorCode;
+	return 0;
 }
 
 static int ambarella_i2c_remove(struct platform_device *pdev)
@@ -579,8 +594,6 @@ static int ambarella_i2c_remove(struct platform_device *pdev)
 	if (pinfo) {
 		ambarella_unregister_event_notifier(&pinfo->system_event);
 		i2c_del_adapter(&pinfo->adap);
-		free_irq(pinfo->irq, pinfo);
-		kfree(pinfo);
 	}
 
 	dev_notice(&pdev->dev,
@@ -634,14 +647,19 @@ static const struct dev_pm_ops ambarella_i2c_dev_pm_ops = {
 };
 #endif
 
-static const char ambarella_i2c_name[] = "ambarella-i2c";
+static const struct of_device_id ambarella_i2c_of_match[] = {
+	{.compatible = "ambarella,i2c", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_i2c_of_match);
 
 static struct platform_driver ambarella_i2c_driver = {
 	.probe		= ambarella_i2c_probe,
 	.remove		= ambarella_i2c_remove,
 	.driver		= {
-		.name	= ambarella_i2c_name,
+		.name	= "ambarella-i2c",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_i2c_of_match,
 #ifdef CONFIG_PM
 		.pm	= &ambarella_i2c_dev_pm_ops,
 #endif

@@ -29,60 +29,8 @@
 #include <linux/i2c-mux-ambarella.h>
 #include <linux/moduleparam.h>
 #include <linux/clk.h>
-
 #include <mach/hardware.h>
 #include <plat/idc.h>
-#include <plat/clk.h>
-
-/* ==========================================================================*/
-#ifdef MODULE_PARAM_PREFIX
-#undef MODULE_PARAM_PREFIX
-#endif
-#define MODULE_PARAM_PREFIX	"ambarella_config."
-
-/* ==========================================================================*/
-static u32 ambarella_idc_get_clock(void)
-{
-	return clk_get_rate(clk_get(NULL, "gclk_apb"));
-}
-
-/* ==========================================================================*/
-#define DEFAULT_I2C_CLASS	(I2C_CLASS_HWMON | I2C_CLASS_SPD)
-
-struct resource ambarella_idc0_resources[] = {
-	[0] = {
-		.start	= IDC_BASE,
-		.end	= IDC_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= IDC_IRQ,
-		.end	= IDC_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct ambarella_idc_platform_info ambarella_idc0_platform_info = {
-	.clk_limit	= 100000,
-	.bulk_write_num	= 60,
-	.i2c_class	= DEFAULT_I2C_CLASS,
-	.get_clock	= ambarella_idc_get_clock,
-};
-#if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
-AMBA_IDC_PARAM_CALL(0, ambarella_idc0_platform_info, 0644);
-#endif
-
-struct platform_device ambarella_idc0 = {
-	.name		= "ambarella-i2c",
-	.id		= 0,
-	.resource	= ambarella_idc0_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_idc0_resources),
-	.dev		= {
-		.platform_data		= &ambarella_idc0_platform_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
 
 #if (IDC_SUPPORT_INTERNAL_MUX == 1)
 static struct ambarella_i2cmux_platform_data ambarella_i2cmux_info = {
@@ -102,77 +50,5 @@ struct platform_device ambarella_idc0_mux = {
 };
 #endif
 
-#if (IDC_INSTANCES >= 2)
-struct resource ambarella_idc1_resources[] = {
-	[0] = {
-		.start	= IDC2_BASE,
-		.end	= IDC2_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= IDC2_IRQ,
-		.end	= IDC2_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
 
-struct ambarella_idc_platform_info ambarella_idc1_platform_info = {
-	.clk_limit	= 100000,
-	.bulk_write_num	= 60,
-	.i2c_class	= I2C_CLASS_DDC,
-	.get_clock	= ambarella_idc_get_clock,
-};
-#if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
-AMBA_IDC_PARAM_CALL(1, ambarella_idc1_platform_info, 0644);
-#endif
-
-struct platform_device ambarella_idc1 = {
-	.name		= "ambarella-i2c",
-	.id		= 1,
-	.resource	= ambarella_idc1_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_idc1_resources),
-	.dev		= {
-		.platform_data		= &ambarella_idc1_platform_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-#endif
-
-#if (IDC_INSTANCES >= 3)
-struct resource ambarella_idc2_resources[] = {
-	[0] = {
-		.start	= IDC3_BASE,
-		.end	= IDC3_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= IDC3_IRQ,
-		.end	= IDC3_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct ambarella_idc_platform_info ambarella_idc2_platform_info = {
-	.clk_limit	= 100000,
-	.bulk_write_num	= 60,
-	.i2c_class	= DEFAULT_I2C_CLASS,
-	.get_clock	= ambarella_idc_get_clock,
-};
-#if defined(CONFIG_AMBARELLA_SYS_IDC_CALL)
-AMBA_IDC_PARAM_CALL(2, ambarella_idc2_platform_info, 0644);
-#endif
-
-struct platform_device ambarella_idc2 = {
-	.name		= "ambarella-i2c",
-	.id		= 2,
-	.resource	= ambarella_idc2_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_idc2_resources),
-	.dev		= {
-		.platform_data		= &ambarella_idc2_platform_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-#endif
 

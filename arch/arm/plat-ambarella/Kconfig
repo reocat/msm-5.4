@@ -469,12 +469,6 @@ config AMBARELLA_SYS_FIO_CALL
 	help
 	  If you are not sure, say N here.
 
-config AMBARELLA_SYS_IDC_CALL
-	bool "Support IDC Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
 config AMBARELLA_SYS_IR_CALL
 	bool "Support IR Configuration"
 	default n

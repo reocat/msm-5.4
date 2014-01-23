@@ -7,14 +7,6 @@
  * published by the Free Software Foundation.
  */
 
-/*
- * Carveout for multimedia usecases
- * It should be the last 48MB of the first 512MB memory part
- * In theory, it should not even exist. That zone should be reserved
- * dynamically during the .reserve callback.
-/memreserve/ 0x9d000000 0x03000000;
- */
-
 /include/ "skeleton.dtsi"
 
 / {
@@ -78,14 +70,14 @@
 				compatible = "ambarella,clock-source";
 				reg = <0x7000b064 0x10>;
 				interrupts = <0 108 0x04>;
-				ctrl-offset = <24>;		/* bit offset in timer-ctrl reg */
+				ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 			};
 
 			timer8: timer@0x7000b074 {
 				compatible = "ambarella,clock-event";
 				reg = <0x7000b074 0x10>;
 				interrupts = <0 109 0x04>;
-				ctrl-offset = <28>;		/* bit offset in timer-ctrl reg */
+				ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 			};
 
 			uart0: uart@0x70005000 {
@@ -124,6 +116,48 @@
 				amb,msr-used;	/* use Modem Status Register */
 				/* amb,tx-fifo-fix; */
 			};
+
+			i2c0: i2c@0x70003000 {
+				compatible = "ambarella,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x70003000 0x1000>;
+				interrupts = <0 19 0x04>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c0_pins>;
+				clock-frequency = <100000>;
+				amb,i2c-class = <0x81>;
+				amb,bulk-num = <60>;
+				status = "disabled";
+		        };
+
+			i2c1: i2c@0x70007000 {
+				compatible = "ambarella,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x70007000 0x1000>;
+				interrupts = <0 36 0x04>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c1_pins>;
+				clock-frequency = <100000>;
+				amb,i2c-class = <0x08>;
+				amb,bulk-num = <60>;
+				status = "disabled";
+		        };
+
+			i2c2: i2c@0x70013000 {
+				compatible = "ambarella,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x70013000 0x1000>;
+				interrupts = <0 90 0x04>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c2_pins>;
+				clock-frequency = <100000>;
+				amb,i2c-class = <0x81>;
+				amb,bulk-num = <60>;
+				status = "disabled";
+		        };
 
 			pinctrl: pinctrl@0x70009000 {
 				#address-cells = <1>;
@@ -179,6 +213,21 @@
 				uart3_pins: uart3@0 {
 					reg = <0>;
 					amb,pinmux-ids = <0x1013 0x1014>;
+				};
+
+				i2c0_pins: i2c0@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x1000 0x1001>;
+				};
+
+				i2c1_pins: i2c1@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x1056 0x1057>;
+				};
+
+				i2c2_pins: i2c2@0 {
+					reg = <0>;
+					amb,pinmux-ids = <0x1024 0x1025>;
 				};
 
 				i2s0_pins: i2s0@0 {
