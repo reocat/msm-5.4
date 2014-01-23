@@ -51,7 +51,7 @@ struct ambvic_chip_data {
 	struct ambvic_pm_reg pm_reg[VIC_INSTANCES];
 };
 
-static struct ambvic_chip_data ambvic_data;
+static struct ambvic_chip_data ambvic_data __read_mostly;
 
 /* ==========================================================================*/
 #if (VIC_SUPPORT_CPU_OFFLOAD == 1)
