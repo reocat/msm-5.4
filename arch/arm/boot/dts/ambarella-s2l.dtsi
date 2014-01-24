@@ -231,7 +231,6 @@
 			interrupts = <16>,	/* fio_cmd_irq */
 				     <17>,	/* fio_dma_irq */
 				     <33>;	/* fdma_irq */
-			gpios = <&gpio 54 0x0>;
 			amb,fifo-base = <0xe0000000>;
 			/* nand timing, will be updated by Amboot */
 			amb,timing = <0x00000000 0x00000000
