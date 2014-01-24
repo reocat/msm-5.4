@@ -196,20 +196,6 @@ struct platform_device ginkgo_board_input = {
 	}
 };
 
-static struct pca953x_platform_data ginkgo_ipcam_gpio_pca953x_platform_data = {
-	.gpio_base		= EXT_GPIO(0),
-	.irq_base		= EXT_IRQ(0),
-	.invert			= 0,
-};
-
-static struct i2c_board_info ginkgo_ipcam_gpio_i2c_board_info = {
-	.type			= "pca9539",
-	.flags			= 0,
-	.addr			= 0x74,
-	.platform_data		= &ginkgo_ipcam_gpio_pca953x_platform_data,
-	.irq			= GPIO_INT_VEC(11),
-};
-
 static void ginkgo_ipcam_sd_set_vdd(u32 vdd)
 {
 	pr_debug("%s = %dmV\n", __func__, vdd);
@@ -364,7 +350,6 @@ static void __init ambarella_init_ginkgo(void)
 #else
 			platform_device_register(&ambarella_rtc0);
 #endif
-			i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
 			use_bub_default = 0;
 			break;
 
@@ -411,7 +396,6 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.vin0_reset.gpio_id = GPIO(54);
 			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.vin0_reset.active_delay = 500;
-			//i2c_register_board_info(2, &ginkgo_ipcam_gpio_i2c_board_info, 1);
 			ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH7;
 			platform_device_register(&ambarella_adc_temper);
 

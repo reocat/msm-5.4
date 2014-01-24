@@ -246,20 +246,6 @@ static void ixora_bub_sdio_set_vdd(u32 vdd)
 }
 
 /* ==========================================================================*/
-static struct pca953x_platform_data ixora_ipcam_gpio_pca953x_platform_data = {
-	.gpio_base		= EXT_GPIO(0),
-	.irq_base		= EXT_IRQ(0),
-	.invert			= 0,
-};
-
-static struct i2c_board_info ixora_ipcam_gpio_i2c_board_info = {
-	.type			= "pca9539",
-	.flags			= 0,
-	.addr			= 0x74,
-	.platform_data		= &ixora_ipcam_gpio_pca953x_platform_data,
-	.irq			= GPIO_INT_VEC(9),
-};
-
 static void ixora_ipcam_sd_set_vdd(u32 vdd)
 {
 	pr_debug("%s = %dmV\n", __func__, vdd);
@@ -367,7 +353,6 @@ static void __init ambarella_init_ixora_dt(void)
 #if defined(CONFIG_CODEC_AMBARELLA_AK4642)
 	ambarella_init_ak4642(0, 0x12, EXT_GPIO(4));
 #endif
-	i2c_register_board_info(2, &ixora_ipcam_gpio_i2c_board_info, 1);
 
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {
