@@ -364,6 +364,10 @@ static void __init ambarella_init_ixora_dt(void)
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 
+#if defined(CONFIG_VOUT_CONVERTER_IT66121)
+	ambarella_init_it66121(0, 0x98>>1);
+#endif
+
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
 
