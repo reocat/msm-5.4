@@ -291,11 +291,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_platform_sd0_controller.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
 		ambarella_platform_sd0_controller.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
 		ambarella_platform_sd0_controller.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
-
-		/* Register audio codec */
-#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
-		ambarella_init_ak4642(0, 0x12, GPIO(12));
-#endif
 	}
 
 	/* Register devices */

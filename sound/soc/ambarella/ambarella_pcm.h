@@ -29,10 +29,8 @@
 #ifndef _AMBARELLA_PCM_H
 #define _AMBARELLA_PCM_H
 
-struct ambarella_pcm_dma_params {
-	char *name;			/* stream identifier */
-	u32 dev_addr;			/* device physical address for DMA */
-};
+int ambarella_pcm_platform_register(struct device *dev);
+void ambarella_pcm_platform_unregister(struct device *dev);
 
 #endif /* _AMBARELLA_PCM_H */
 

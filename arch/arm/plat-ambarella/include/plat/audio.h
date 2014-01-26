@@ -271,14 +271,6 @@ enum DAI_INIT_CTL
 
 #define AMBARELLA_CLKDIV_LRCLK	0
 
-struct ambarella_i2s_controller {
-	void					(*aucodec_digitalio_0)(void);
-	void					(*aucodec_digitalio_1)(void);
-	void					(*aucodec_digitalio_2)(void);
-	void					(*channel_select)(u32);
-	void					(*set_audio_pll)(u32, u32);
-};
-
 /* ==========================================================================*/
 extern struct platform_device ambarella_i2s0;
 extern struct platform_device ambarella_pcm0;

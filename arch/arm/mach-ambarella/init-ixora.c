@@ -70,11 +70,11 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
-	&ambarella_i2s0,
-	&ambarella_pcm0,
-	&ambarella_dummy_codec0,
-	&ambarella_dummy_audio_device,
-	&ambarella_ambevk_audio_device,
+//	&ambarella_i2s0,
+//	&ambarella_pcm0,
+//	&ambarella_dummy_codec0,
+//	&ambarella_dummy_audio_device,
+//	&ambarella_ambevk_audio_device,
 	&ambarella_ir0,
 	&ambarella_sd0,
 	&ambarella_sd1,
@@ -349,10 +349,6 @@ static void __init ambarella_init_ixora_dt(void)
 	ambarella_init_ixora();
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
-
-#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
-	ambarella_init_ak4642(0, 0x12, EXT_GPIO(4));
-#endif
 
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {

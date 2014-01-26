@@ -342,9 +342,6 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_spi0_cs_pins[5] = -1;
 			ambarella_spi0_cs_pins[6] = -1;
 			ambarella_spi0_cs_pins[7] = -1;
-#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
-			ambarella_init_ak4642(0, 0x12, EXT_GPIO(3));
-#endif
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 #else

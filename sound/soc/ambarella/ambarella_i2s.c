@@ -28,40 +28,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-#include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
-#include <linux/slab.h>
 #include <linux/delay.h>
-#include <linux/dma-mapping.h>
-
+#include <linux/clk.h>
+#include <linux/pinctrl/consumer.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-
-#include <mach/hardware.h>
+#include <sound/dmaengine_pcm.h>
+#include <plat/dma.h>
 #include <plat/audio.h>
-
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
-
-/*
-  * The I2S ports are mux with the GPIOs.
-  * A3, A5, A5S and A6 support 5.1(6) channels, so we need to
-  * select the proper port to used and free the unused pins (GPIOs)
-  * for other usage.
-  * 1: 2 channels
-  * 2: 4 channels
-  * 3: 6 channels
-  */
-unsigned int used_port = 1;
-module_param(used_port, uint, S_IRUGO);
-MODULE_PARM_DESC(used_port, "Select the I2S port.");
-
-unsigned int default_sfreq = 1;
-module_param(default_sfreq, uint, S_IRUGO);
-MODULE_PARM_DESC(default_sfreq, "Default sfreq: 0. 44100, 1. 48000.");
 
 static DEFINE_MUTEX(clock_reg_mutex);
 static int enable_ext_i2s = 1;
@@ -76,18 +55,6 @@ static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
 	{ 17, 8 }, // 1152xfs
 	{ 23, 11 }, // 1536xfs
 	{ 35, 17 } // 2304xfs
-};
-
-
-/* FIXME HERE for PCM interface */
-static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_out = {
-	.name			= "I2S PCM Stereo out",
-	.dev_addr		= I2S_TX_LEFT_DATA_DMA_REG,
-};
-
-static struct ambarella_pcm_dma_params ambarella_i2s_pcm_stereo_in = {
-	.name			= "I2S PCM Stereo in",
-	.dev_addr		= I2S_RX_DATA_DMA_REG,
 };
 
 static inline void dai_tx_enable(void)
@@ -143,24 +110,21 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
 				struct snd_soc_dai *cpu_dai)
 {
-	struct ambarella_pcm_dma_params *dma_data;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	u8 slots, word_pos, oversample;
-	u32 clksrc, mclk, clock_divider, clock_reg, channels;
+	u32 clock_divider, clock_reg, channels;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable();
 	dai_rx_disable();
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		dma_data = &ambarella_i2s_pcm_stereo_out;
 		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
 			amba_writel(I2S_TX_CTRL_REG, 0x08);
 		else
 			amba_writel(I2S_TX_CTRL_REG, 0x28);
 		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
 	} else {
-		dma_data = &ambarella_i2s_pcm_stereo_in;
 		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
 			amba_writel(I2S_RX_CTRL_REG, 0x00);
 		else
@@ -168,12 +132,20 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
 	}
 
-	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
-
-	/* Set channels */
 	channels = params_channels(params);
-	if (priv_data->controller_info->channel_select)
-		priv_data->controller_info->channel_select(channels);
+	/* Set channels */
+	switch (channels) {
+	case 2:
+		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_2CHANNELS_ENB);
+		break;
+	case 4:
+		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_4CHANNELS_ENB);
+		break;
+	case 6:
+		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_6CHANNELS_ENB);
+		break;
+	}
+
 	priv_data->amb_i2s_intf.ch = channels;
 
 	/* Set format */
@@ -230,10 +202,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* Set clock */
-	clksrc = priv_data->amb_i2s_intf.clksrc;
-	mclk = priv_data->amb_i2s_intf.mclk;
-	if (priv_data->controller_info->set_audio_pll)
-		priv_data->controller_info->set_audio_pll(clksrc, mclk);
+	clk_set_rate(priv_data->mclk, priv_data->amb_i2s_intf.mclk);
 
 	mutex_lock(&clock_reg_mutex);
 	clock_reg = amba_readl(I2S_CLOCK_REG);
@@ -347,10 +316,11 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 
 	switch (clk_id) {
 	case AMBARELLA_CLKSRC_ONCHIP:
-	case AMBARELLA_CLKSRC_EXTERNAL:
 		priv_data->amb_i2s_intf.clksrc = clk_id;
 		priv_data->amb_i2s_intf.mclk = freq;
 		break;
+
+	case AMBARELLA_CLKSRC_EXTERNAL:
 	default:
 		printk("CLK SOURCE (%d) is not supported yet\n", clk_id);
 		return -EINVAL;
@@ -453,36 +423,34 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
-	u32 mclk, sfreq;
-	u32 clock_divider, clock_reg;
+	u32 sfreq, clock_divider;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
-	if (default_sfreq == 0) {
-		mclk = 11289600;
+	dai->capture_dma_data = &priv_data->capture_dma_data;
+	dai->playback_dma_data = &priv_data->playback_dma_data;
+
+	if (priv_data->default_mclk == 12288000) {
+		sfreq = AUDIO_SF_48000;
+	} else if (priv_data->default_mclk == 11289600){
 		sfreq = AUDIO_SF_44100;
 	} else {
-		mclk = 12288000;
+		dev_warn(dai->dev, "Please sepcify the default mclk\n");
+		priv_data->default_mclk = 12288000;
 		sfreq = AUDIO_SF_48000;
 	}
 
-	/* Disable internal codec (only for A2) except  IPcam Board */
-	if (strcmp(dai->card->name, "A2IPcam"))
-		clock_reg = 0x400;
-
-	if (priv_data->controller_info->set_audio_pll)
-		priv_data->controller_info->set_audio_pll(AMBARELLA_CLKSRC_ONCHIP, mclk);
+	clk_set_rate(priv_data->mclk, priv_data->default_mclk);
 
 	/* Dai default smapling rate, polarity configuration.
 	 * Note: Just be configured, actually BCLK and LRCLK will not
 	 * output to outside at this time. */
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
-	clock_reg |= clock_divider | I2S_CLK_TX_PO_FALL;
-	amba_writel(I2S_CLOCK_REG, clock_reg);
+	amba_writel(I2S_CLOCK_REG, clock_divider | I2S_CLK_TX_PO_FALL);
 
 	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
 	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
 	priv_data->amb_i2s_intf.ms_mode = DAI_MASTER;
-	priv_data->amb_i2s_intf.mclk = mclk;
+	priv_data->amb_i2s_intf.mclk = priv_data->default_mclk;
 	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
 	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
 	priv_data->amb_i2s_intf.sfreq = sfreq;
@@ -552,52 +520,80 @@ static const struct snd_soc_component_driver ambarella_i2s_component = {
 
 static int ambarella_i2s_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct amb_i2s_priv *priv_data;
+	struct pinctrl *pinctrl;
+	int channels, rval;
 
-	priv_data = devm_kzalloc(&pdev->dev, sizeof(struct amb_i2s_priv),
-			GFP_KERNEL);
+	priv_data = devm_kzalloc(&pdev->dev, sizeof(*priv_data), GFP_KERNEL);
 	if (priv_data == NULL)
 		return -ENOMEM;
 
-	priv_data->controller_info = pdev->dev.platform_data;
-	/* aucodec_digitalio_on */
-	switch(used_port) {
-	case 3:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		if (priv_data->controller_info->aucodec_digitalio_2)
-			priv_data->controller_info->aucodec_digitalio_2();
+	priv_data->playback_dma_data.addr = I2S_TX_LEFT_DATA_DMA_REG;
+	priv_data->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	priv_data->playback_dma_data.maxburst = 32;
+	priv_data->playback_dma_data.filter_data = (void *)I2S_TX_DMA_CHAN;
 
-	case 2:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		if (priv_data->controller_info->aucodec_digitalio_1)
-			priv_data->controller_info->aucodec_digitalio_1();
+	priv_data->capture_dma_data.addr = I2S_RX_DATA_DMA_REG;
+	priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	priv_data->capture_dma_data.maxburst = 32;
+	priv_data->capture_dma_data.filter_data = (void *)I2S_RX_DMA_CHAN;
 
-	case 1:
-		ambarella_i2s_dai.playback.channels_max += 2;
-		ambarella_i2s_dai.capture.channels_max += 2;
-		if (priv_data->controller_info->aucodec_digitalio_0)
-			priv_data->controller_info->aucodec_digitalio_0();
-		break;
-
-	default:
-		printk("%s: Need to select proper I2S port.\n", __func__);
-		return -EINVAL;
+	priv_data->mclk = clk_get(&pdev->dev, "gclk_audio");
+	if (IS_ERR(priv_data->mclk)) {
+		dev_err(&pdev->dev, "Get audio clk failed!\n");
+		return PTR_ERR(priv_data->mclk);
 	}
 
 	dev_set_drvdata(&pdev->dev, priv_data);
 
-	return snd_soc_register_component(&pdev->dev, &ambarella_i2s_component,
-					 &ambarella_i2s_dai, 1);
+	rval = of_property_read_u32(np, "amb,i2s-channels", &channels);
+	if (rval < 0) {
+		dev_err(&pdev->dev, "Get channels failed! %d\n", rval);
+		return -ENXIO;
+	}
+
+	of_property_read_u32(np, "amb,default-mclk", &priv_data->default_mclk);
+
+	ambarella_i2s_dai.playback.channels_max = channels;
+	ambarella_i2s_dai.capture.channels_max = channels;
+
+	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pinctrl))
+		return PTR_ERR(pinctrl);
+
+
+
+	rval = snd_soc_register_component(&pdev->dev,
+			&ambarella_i2s_component,  &ambarella_i2s_dai, 1);
+	if (rval < 0){
+		dev_err(&pdev->dev, "register DAI failed\n");
+		return rval;
+	}
+
+	rval = ambarella_pcm_platform_register(&pdev->dev);
+	if (rval) {
+		dev_err(&pdev->dev, "register PCM failed: %d\n", rval);
+		snd_soc_unregister_component(&pdev->dev);
+		return rval;
+	}
+
+	return 0;
 }
 
 static int ambarella_i2s_remove(struct platform_device *pdev)
 {
+	ambarella_pcm_platform_unregister(&pdev->dev);
 	snd_soc_unregister_component(&pdev->dev);
 
 	return 0;
 }
+
+static const struct of_device_id ambarella_i2s_dt_ids[] = {
+	{ .compatible = "ambarella,i2s", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, ambarella_i2s_dt_ids);
 
 static struct platform_driver ambarella_i2s_driver = {
 	.probe = ambarella_i2s_probe,
@@ -606,6 +602,7 @@ static struct platform_driver ambarella_i2s_driver = {
 	.driver = {
 		.name = "ambarella-i2s",
 		.owner = THIS_MODULE,
+		.of_match_table = ambarella_i2s_dt_ids,
 	},
 };
 

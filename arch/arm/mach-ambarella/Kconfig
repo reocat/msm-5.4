@@ -174,10 +174,6 @@ config CODEC_AMBARELLA_ES8328
 	bool "es8328"
 	default n
 
-config CODEC_AMBARELLA_AK4642
-	bool "ak4642"
-	default n
-
 comment "PMIC"
 
 config PMIC_AMBARELLA_WM831X

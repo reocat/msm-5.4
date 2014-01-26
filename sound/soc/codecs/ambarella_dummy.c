@@ -16,6 +16,7 @@
 */
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/of.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
@@ -133,12 +134,19 @@ static int ambdummy_codec_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static struct of_device_id ambdummy_of_match[] = {
+	{ .compatible = "ambarella,dummycodec",},
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambdummy_of_match);
+
 static struct platform_driver ambdummy_codec_driver = {
 	.probe		= ambdummy_codec_probe,
 	.remove		= ambdummy_codec_remove,
 	.driver		= {
 		.name	= "ambdummy-codec",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambdummy_of_match,
 	},
 };
 

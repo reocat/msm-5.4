@@ -266,11 +266,6 @@ static void __init ambarella_init_durian(void)
 		ambarella_platform_sd1_controller.max_clock = 48000000;
 	}
 
-	/* Register audio codec */
-#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
-	ambarella_init_ak4642(0, 0x12, GPIO(102));
-#endif
-
 	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {

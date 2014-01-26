@@ -620,10 +620,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.hdmi_extpower.active_level = GPIO_HIGH;
 		ambarella_board_generic.hdmi_extpower.active_delay = 1;
 
-#if defined(CONFIG_CODEC_AMBARELLA_AK4642)
-			ambarella_init_ak4642(0, 0x12, GPIO(123));
-#endif
-
 		use_bub_default = 0;
 	}
 

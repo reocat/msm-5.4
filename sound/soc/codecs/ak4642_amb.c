@@ -26,20 +26,22 @@
 #include <linux/delay.h>
 #include <linux/pm.h>
 #include <linux/i2c.h>
+#include <linux/of_gpio.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/initval.h>
-#include <sound/ak4642_amb.h>
 
 #include "ak4642_amb.h"
 
-#define AK4642_VERSION "0.2"
+#define AK4642_VERSION "0.3"
 
 
 /* codec private data */
 struct ak4642_priv {
+	unsigned int rst_pin;
+	unsigned int rst_active;
 	unsigned int sysclk;
 };
 
@@ -559,14 +561,10 @@ static int ak4642_resume(struct snd_soc_codec *codec)
 
 static int ak4642_probe(struct snd_soc_codec *codec)
 {
-	struct ak4642_platform_data *ak4642_pdata;
+	struct ak4642_priv *ak4642;
 	int ret;
 
 	dev_info(codec->dev, "AK4642 Audio Codec %s", AK4642_VERSION);
-
-	ak4642_pdata = codec->dev->platform_data;
-	if (!ak4642_pdata)
-		return -EINVAL;
 
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_I2C);
 	if (ret < 0) {
@@ -574,18 +572,18 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 		return ret;
 	}
 
-	if (gpio_is_valid(ak4642_pdata->rst_pin)) {
-		ret = gpio_request(ak4642_pdata->rst_pin, "ak4642 reset");
-		if (ret < 0)
-			return ret;
-	} else {
-		return -ENODEV;
+	ak4642 = snd_soc_codec_get_drvdata(codec);
+
+	ret = devm_gpio_request(codec->dev, ak4642->rst_pin, "ak4642 reset");
+	if (ret < 0){
+		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
+		return ret;
 	}
 
 	/* Reset AK4642 codec */
-	gpio_direction_output(ak4642_pdata->rst_pin, GPIO_LOW);
-	msleep(ak4642_pdata->rst_delay);
-	gpio_direction_output(ak4642_pdata->rst_pin, GPIO_HIGH);
+	gpio_direction_output(ak4642->rst_pin, ak4642->rst_active);
+	msleep(1);
+	gpio_direction_output(ak4642->rst_pin, !ak4642->rst_active);
 
 	/* power on device */
 	ak4642_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
@@ -614,41 +612,46 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 
 static int ak4642_remove(struct snd_soc_codec *codec)
 {
-	struct ak4642_platform_data *ak4642_pdata;
-
 	ak4642_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-	ak4642_pdata = codec->dev->platform_data;
-	gpio_free(ak4642_pdata->rst_pin);
-
 	return 0;
 }
 
 static struct snd_soc_codec_driver soc_codec_dev_ak4642 = {
-	.probe			=	ak4642_probe,
-	.remove			=	ak4642_remove,
-	.suspend		=	ak4642_suspend,
-	.resume			=	ak4642_resume,
-	.set_bias_level = ak4642_set_bias_level,
-	.reg_cache_default = ak4642_reg,
-	.reg_cache_size = ARRAY_SIZE(ak4642_reg),
-	.reg_word_size = sizeof(u8),
-	.reg_cache_step = 1,
-	.dapm_widgets	= ak4642_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(ak4642_dapm_widgets),
-	.dapm_routes = ak4642_dapm_routes,
-	.num_dapm_routes = ARRAY_SIZE(ak4642_dapm_routes),
+	.probe			= ak4642_probe,
+	.remove			= ak4642_remove,
+	.suspend		= ak4642_suspend,
+	.resume			= ak4642_resume,
+	.set_bias_level		= ak4642_set_bias_level,
+	.reg_cache_default	= ak4642_reg,
+	.reg_cache_size		= ARRAY_SIZE(ak4642_reg),
+	.reg_word_size		= sizeof(u8),
+	.reg_cache_step		= 1,
+	.dapm_widgets		= ak4642_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(ak4642_dapm_widgets),
+	.dapm_routes		= ak4642_dapm_routes,
+	.num_dapm_routes	= ARRAY_SIZE(ak4642_dapm_routes),
 };
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
 static int ak4642_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
+	struct device_node *np = i2c->dev.of_node;
 	struct ak4642_priv *ak4642;
+	enum of_gpio_flags flags;
+	int rst_pin;
 
 	ak4642 = devm_kzalloc(&i2c->dev, sizeof(struct ak4642_priv), GFP_KERNEL);
 	if (ak4642 == NULL)
 		return -ENOMEM;
+
+
+	rst_pin = of_get_gpio_flags(np, 0, &flags);
+	if (rst_pin < 0 || !gpio_is_valid(rst_pin))
+		return -ENXIO;
+
+	ak4642->rst_pin = rst_pin;
+	ak4642->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
 	i2c_set_clientdata(i2c, ak4642);
 	return snd_soc_register_codec(&i2c->dev,
@@ -661,6 +664,12 @@ static int ak4642_i2c_remove(struct i2c_client *i2c)
 	return 0;
 }
 
+static struct of_device_id ak4642_of_match[] = {
+	{ .compatible = "ambarella,ak4642",},
+	{},
+};
+MODULE_DEVICE_TABLE(of, ak4642_of_match);
+
 static const struct i2c_device_id ak4642_i2c_id[] = {
 	{ "ak4642", 0 },
 	{ }
@@ -671,6 +680,7 @@ static struct i2c_driver ak4642_i2c_driver = {
 	.driver = {
 		.name = "ak4642-codec",
 		.owner = THIS_MODULE,
+		.of_match_table = ak4642_of_match,
 	},
 	.probe		=	ak4642_i2c_probe,
 	.remove		=	ak4642_i2c_remove,

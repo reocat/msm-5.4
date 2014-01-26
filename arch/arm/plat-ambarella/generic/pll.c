@@ -380,7 +380,28 @@ static struct clk gclk_uart = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
-
+static struct clk gclk_audio = {
+	.parent		= NULL,
+	.name		= "gclk_audio",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_AUDIO_CTRL_REG,
+	.pres_reg	= SCALER_AUDIO_PRE_REG,
+	.post_reg	= SCALER_AUDIO_POST_REG,
+	.frac_reg	= PLL_AUDIO_FRAC_REG,
+	.ctrl2_reg	= PLL_AUDIO_CTRL2_REG,
+	.ctrl3_reg	= PLL_AUDIO_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 7,
+	.divider	= 0,
+	.max_divider	= 0,
+#if (CHIP_REV == S2L)
+	.extra_scaler	= 1,
+#else
+	.extra_scaler	= 0,
+#endif
+	.ops		= &ambarella_rct_pll_ops,
+};
 
 void ambarella_init_early(void)
 {
@@ -403,5 +424,6 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&gclk_idsp);
 
 	ambarella_clk_add(&gclk_uart);
+	ambarella_clk_add(&gclk_audio);
 }
 
