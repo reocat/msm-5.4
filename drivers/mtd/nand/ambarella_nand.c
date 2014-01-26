@@ -134,6 +134,16 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc6 = {
 	.oobfree = {{1, 5}, {17, 5},
 			{33, 5}, {49, 5}}
 };
+
+static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
+	.eccbytes = 52,
+	.eccpos = {19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+		51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+		83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+		115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127},
+	.oobfree = {{2, 17}, {34, 17},
+			{66, 17}, {98, 17}}
+};
 static uint8_t amb_scan_ff_pattern[] = { 0xff, };
 
 static struct nand_bbt_descr amb_512_bbt_descr = {
@@ -1486,11 +1496,15 @@ static int ambarella_nand_init_chipecc(
 			chip->ecc.bytes = NAND_ECC_BCH6_BYTES;
 			chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
 			chip->ecc.strength = 6;
-		} else if (nand_info->ecc_bits == 8)
+		} else if (nand_info->ecc_bits == 8) {
+			BUG_ON(nand_info->mtd.oobsize < 128);
 			chip->ecc.bytes = NAND_ECC_BCH8_BYTES;
 			/* 8 bit can not supprot on board recently */
 			/* ecc bit part maybe need optimize
 			when nand supports internel ecc bit itself */
+			chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc8;
+			chip->ecc.strength = 8;
+		}
 	} else {
 		chip->ecc.strength = 1;	/* 1 bit only ECC-HW */
 	}
