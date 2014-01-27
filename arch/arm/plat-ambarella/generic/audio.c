@@ -23,74 +23,9 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/platform_device.h>
-#include <linux/dma-mapping.h>
 #include <linux/export.h>
-#include <linux/delay.h>
-#include <linux/clk.h>
-
-#include <mach/hardware.h>
+#include <linux/notifier.h>
 #include <plat/audio.h>
-#include <plat/clk.h>
-
-static struct resource ambarella_i2s0_resources[] = {
-	[0] = {
-		.start	= I2S_BASE,
-		.end	= I2S_BASE + 0x0FFF,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= I2STX_IRQ,
-		.end	= I2SRX_IRQ,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device ambarella_i2s0 = {
-	.name		= "ambarella-i2s",
-	.id		= 0,
-	.resource	= ambarella_i2s0_resources,
-	.num_resources	= ARRAY_SIZE(ambarella_i2s0_resources),
-	.dev		= {
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-
-struct platform_device ambarella_pcm0 = {
-	.name		= "ambarella-pcm-audio",
-	.id		= -1,
-};
-
-struct platform_device ambarella_dummy_codec0 = {
-	.name		= "ambdummy-codec",
-	.id		= -1,
-};
-
-struct platform_device ambarella_ambevk_audio_device = {
-	.name	= "snd_soc_card_ambevk",
-	.id		= -1,
-};
-
-struct platform_device ambarella_ipcam_audio_device = {
-	.name	= "snd_soc_card_ipcam",
-	.id		= -1,
-};
-
-struct platform_device ambarella_i1evk_audio_device = {
-	.name	= "snd_soc_card_i1evk",
-	.id		= -1,
-};
-
-struct platform_device ambarella_dummy_audio_device = {
-	.name	= "snd_soc_card_ambdummy",
-	.id		= -1,
-};
-
-struct platform_device ambarella_a5spa2_audio_device = {
-	.name	= "snd_soc_card_a5sevk",
-	.id		= -1,
-};
 
 /* ==========================================================================*/
 static struct srcu_notifier_head audio_notifier_list;

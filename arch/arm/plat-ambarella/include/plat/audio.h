@@ -272,16 +272,6 @@ enum DAI_INIT_CTL
 #define AMBARELLA_CLKDIV_LRCLK	0
 
 /* ==========================================================================*/
-extern struct platform_device ambarella_i2s0;
-extern struct platform_device ambarella_pcm0;
-extern struct platform_device ambarella_dummy_codec0;
-extern struct platform_device ambarella_ambevk_audio_device;
-extern struct platform_device ambarella_ipcam_audio_device;
-extern struct platform_device ambarella_i1evk_audio_device;
-extern struct platform_device ambarella_dummy_audio_device;
-extern struct platform_device ambarella_a5spa2_audio_device;
-
-/* ==========================================================================*/
 extern int ambarella_init_audio(void);
 
 extern void ambarella_audio_notify_transition(

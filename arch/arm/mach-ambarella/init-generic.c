@@ -64,7 +64,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
 #endif
-	&ambarella_dummy_codec0,
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
 	&ambarella_ehci0,
 #endif
@@ -76,7 +75,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 	&ambarella_fb0,
 	&ambarella_fb1,
-	&ambarella_i2s0,
 #if (IDC_SUPPORT_INTERNAL_MUX == 1)
 	&ambarella_idc0_mux,
 #endif
@@ -86,7 +84,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
 	&ambarella_ohci0,
 #endif
-	&ambarella_pcm0,
 	&ambarella_rtc0,
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_SD)
 	&ambarella_sd0,
