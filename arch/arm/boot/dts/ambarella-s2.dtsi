@@ -254,5 +254,14 @@
 				      0x00000000 0x00000000>;
 			amb,ecc-bits = <1>;
 		};
+
+		i2s0: i2s@6000a000 {
+			compatible = "ambarella,i2s";
+			reg = <0x6000a000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2s0_pins>;
+			amb,i2s-channels = <2>;
+			amb,default-mclk = <12288000>;
+		};
 	};
 };
