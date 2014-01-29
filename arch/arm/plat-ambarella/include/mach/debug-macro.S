@@ -25,13 +25,15 @@
  */
 
 #include <mach/hardware.h>
+#include <plat/uart.h>
 
-#define AMBA_UART0_BASE_P		(APB_PHYS_BASE + UART_OFFSET)
-#define AMBA_UART0_BASE_V		(APB_BASE + UART_OFFSET)
+#define AMBA_UART_BASE_P		(APB_PHYS_BASE + UART_OFFSET)
+#define AMBA_UART_BASE_V		(APB_BASE + UART_OFFSET)
 
+#if defined(CONFIG_AMBARELLA_DEBUG_LL_UART0)
 	.macro	addruart, rp, rv, tmp
-	ldr	\rp, =AMBA_UART0_BASE_P
-	ldr	\rv, =AMBA_UART0_BASE_V
+	ldr	\rp, =AMBA_UART_BASE_P
+	ldr	\rv, =AMBA_UART_BASE_V
 	.endm
 
 	.macro	senduart, rd, rx
@@ -51,4 +53,19 @@
 	tst	\rd, #UART_LS_TEMT
 	beq	1002b
 	.endm
+#elif defined(CONFIG_DEBUG_LL_UART_NONE)
+	.macro	addruart, rp, rv, tmp
+	ldr	\rp, =AMBA_UART_BASE_P
+	ldr	\rv, =AMBA_UART_BASE_V
+	.endm
+
+	.macro	senduart,rd,rx
+	.endm
+
+	.macro	waituart,rd,rx
+	.endm
+
+	.macro	busyuart,rd,rx
+	.endm
+#endif
 
