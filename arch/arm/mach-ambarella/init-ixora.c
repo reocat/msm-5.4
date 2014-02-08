@@ -65,12 +65,11 @@
 static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_adc0,
 	&ambarella_crypto,
-	&ambarella_ehci0,
-	&ambarella_ohci0,
+	//&ambarella_ehci0,
+	//&ambarella_ohci0,
 	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
-//	&ambarella_dummy_audio_device,
 	&ambarella_ir0,
 	&ambarella_sd0,
 	&ambarella_sd1,
@@ -308,9 +307,6 @@ static void __init ambarella_init_ixora(void)
 	}
 
 	if (use_bub_default) {
-		/* Config USB over-curent protection */
-		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
-
 		ambarella_platform_sd0_controller.max_clock = 48000000;
 		ambarella_platform_sd0_controller.slot[0].private_caps |=
 			(AMBA_SD_PRIVATE_CAPS_VDD_18 |
@@ -333,6 +329,9 @@ static void __init ambarella_init_ixora(void)
 		ambarella_platform_sd2_controller.slot[0].private_caps |=
 			(AMBA_SD_PRIVATE_CAPS_ADMA);
 	}
+
+	/* Config USB over-curent protection */
+	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
 
 	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
 }

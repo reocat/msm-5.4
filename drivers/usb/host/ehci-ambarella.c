@@ -2,9 +2,6 @@
 * linux/drivers/usb/host/ehci-ambarella.c
 * driver for High speed (USB2.0) USB host controller on Ambarella processors
 *
-* Note:
-* At present, only iONE can support USB host controller
-*
 * History:
 *	2010/08/11 - [Cao Rongrong] created file
 *
@@ -26,252 +23,187 @@
 * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 * Boston, MA  02111-1307, USA.
 */
-
-
 #include <linux/platform_device.h>
 #include <mach/hardware.h>
 #include <plat/uhc.h>
+#include <plat/rct.h>
 
 extern int usb_disabled(void);
 
-struct ehci_ambarella {
-	struct ehci_hcd ehci;
-	struct ambarella_uhc_controller *plat_ehci;
+struct ehci_ambarella_priv {
+	struct usb_phy *phy;
+	u32 nports;
 };
 
-static struct ehci_ambarella *hcd_to_ehci_ambarella(struct usb_hcd *hcd)
-{
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-
-	return container_of(ehci, struct ehci_ambarella, ehci);
-}
-
-static void ambarella_start_ehc(struct ehci_ambarella *amb_ehci)
-{
-	if (amb_ehci && amb_ehci->plat_ehci->enable_host)
-		amb_ehci->plat_ehci->enable_host(amb_ehci->plat_ehci);
-}
-
-static void ambarella_stop_ehc(struct ehci_ambarella *amb_ehci)
-{
-	if (amb_ehci && amb_ehci->plat_ehci->disable_host)
-		amb_ehci->plat_ehci->disable_host(amb_ehci->plat_ehci);
-
-}
+static struct hc_driver __read_mostly ehci_ambarella_hc_driver;
 
 static int ambarella_ehci_setup(struct usb_hcd *hcd)
 {
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
-	int retval = 0;
+	struct ehci_ambarella_priv *priv;
+	int ret = 0;
 
 	/* registers start at offset 0x0 */
 	ehci->caps = hcd->regs;
-	ehci->regs = hcd->regs +
-		HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
-	dbg_hcs_params(ehci, "reset");
-	dbg_hcc_params(ehci, "reset");
 
-	/* cache this readonly data; minimize chip reads */
-	ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
+	ret = ehci_setup(hcd);
+	if (ret)
+		return ret;
 
 	/* EHCI will still detect 2 ports even though usb port1 is configured
 	 * as device port, so we fake the port number manually and report
 	 * it to EHCI.*/
-	if (amb_ehci->plat_ehci->usb1_is_host == 0) {
-		ehci->hcs_params &= ~0xf;
-		ehci->hcs_params |= 0x1;
-	}
+	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
+	ehci->hcs_params &= ~0xf;
+	ehci->hcs_params |= priv->nports;
 
-	ehci->has_synopsys_hc_bug = 1;
-
-	retval = ehci_halt(ehci);
-	if (retval)
-		return retval;
-
-	/* data structure init */
-	retval = ehci_init(hcd);
-	if (retval)
-		return retval;
-
-	ehci->sbrn = 0x20;
-
-	ehci_reset(ehci);
-
-	return retval;
+	return 0;
 }
 
-static const struct hc_driver ehci_ambarella_hc_driver = {
-	.description		= hcd_name,
-	.product_desc		= "Ambarella EHCI",
-	.hcd_priv_size		= sizeof(struct ehci_ambarella),
-
-	/*
-	 * generic hardware linkage
-	 */
-	.irq			= ehci_irq,
-	.flags			= HCD_MEMORY | HCD_USB2,
-
-	/*
-	 * basic lifecycle operations
-	 */
-	.reset			= ambarella_ehci_setup,
-	.start			= ehci_run,
-	.stop			= ehci_stop,
-	.shutdown		= ehci_shutdown,
-
-	/*
-	 * managing i/o requests and associated device resources
-	 */
-	.urb_enqueue		= ehci_urb_enqueue,
-	.urb_dequeue		= ehci_urb_dequeue,
-	.endpoint_disable	= ehci_endpoint_disable,
-	.endpoint_reset		= ehci_endpoint_reset,
-
-	/*
-	 * scheduling support
-	 */
-	.get_frame_number	= ehci_get_frame,
-
-	/*
-	 * root hub support
-	 */
-	.hub_status_data	= ehci_hub_status_data,
-	.hub_control		= ehci_hub_control,
-	.bus_suspend		= ehci_bus_suspend,
-	.bus_resume		= ehci_bus_resume,
-	.relinquish_port	= ehci_relinquish_port,
-	.port_handed_over	= ehci_port_handed_over,
-
-	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
+static const struct ehci_driver_overrides ehci_ambarella_overrides __initdata = {
+	.reset = ambarella_ehci_setup,
+	.extra_priv_size = sizeof(struct ehci_ambarella_priv),
 };
 
-static int ehci_hcd_ambarella_drv_probe(struct platform_device *pdev)
+static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
+	struct ehci_ambarella_priv *priv;
 	struct usb_hcd *hcd;
-	struct ehci_ambarella *amb_ehci;
-	int ret;
+	struct usb_phy *phy;
+	struct resource *res;
+	int irq, poc, ret;
 
-	if (usb_disabled())
-		return -ENODEV;
+	/* Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	if (!pdev->dev.dma_mask)
+		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
+	if (!pdev->dev.coherent_dma_mask)
+		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 
-	if (pdev->resource[1].flags != IORESOURCE_IRQ) {
-		pr_debug("resource[1] is not IORESOURCE_IRQ");
-		return -ENOMEM;
-	}
+	ehci_init_driver(&ehci_ambarella_hc_driver, &ehci_ambarella_overrides);
+
 	hcd = usb_create_hcd(&ehci_ambarella_hc_driver, &pdev->dev, "AmbUSB");
 	if (!hcd)
 		return -ENOMEM;
 
-	hcd->rsrc_start = pdev->resource[0].start;
-	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
-	hcd->regs = (void __iomem *)pdev->resource[0].start;
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(&pdev->dev, "Unable to get IRQ resource\n");
+		ret = irq;
+		goto amb_ehci_err;
+	}
 
-	amb_ehci = hcd_to_ehci_ambarella(hcd);
-	amb_ehci->plat_ehci =
-		(struct ambarella_uhc_controller *)pdev->dev.platform_data;
-	if (amb_ehci == NULL) {
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to get memory resource\n");
 		ret = -ENODEV;
 		goto amb_ehci_err;
 	}
 
-	ambarella_start_ehc(amb_ehci);
+	hcd->rsrc_start = res->start;
+	hcd->rsrc_len = resource_size(res);
+	hcd->regs = devm_ioremap(&pdev->dev, hcd->rsrc_start, hcd->rsrc_len);
+	if (!hcd->regs) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		ret = -ENOMEM;
+		goto amb_ehci_err;
+	}
 
-	ret = usb_add_hcd(hcd, pdev->resource[1].start, amb_ehci->plat_ehci->irqflags);
+	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
+
+	poc = get_ambarella_poc();
+
+	if (of_device_is_compatible(np, "ambarella,ehci-v2")) {
+		if (poc & SYS_CONFIG_USB1_IS_HOST)
+			priv->nports = 2;
+		else
+			priv->nports = 1;
+	} else if (of_device_is_compatible(np, "ambarella,ehci-v3")) {
+		if (!(poc & SYS_CONFIG_USB1_IS_HOST))
+			priv->nports = 2;
+		else
+			priv->nports = 1;
+	} else {
+		priv->nports = 1;
+	}
+
+	/* get the PHY device */
+	phy = devm_usb_get_phy_by_phandle(&pdev->dev, "amb,usbphy", 0);
+	if (IS_ERR(phy)) {
+		ret = PTR_ERR(phy);
+		dev_err(&pdev->dev, "Can't get USB PHY %d\n", ret);
+		goto amb_ehci_err;
+	}
+
+	priv->phy = phy;
+
+	usb_phy_init(phy);
+
+	ret = otg_set_host(phy->otg, &hcd->self);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Can't set PHY to host\n");
+		goto amb_ehci_err;
+	}
+
+	ret = usb_add_hcd(hcd, irq, IRQF_TRIGGER_HIGH);
 	if (ret < 0)
-		goto add_hcd_err;
+		goto amb_ehci_err;
 
 	platform_set_drvdata(pdev, hcd);
 
-	return ret;
+	return 0;
 
-add_hcd_err:
-	ambarella_stop_ehc(amb_ehci);
 amb_ehci_err:
 	usb_put_hcd(hcd);
 	return ret;
 }
 
-static int ehci_hcd_ambarella_drv_remove(struct platform_device *pdev)
+static int ehci_ambarella_drv_remove(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
-	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
+	struct ehci_ambarella_priv *priv;
+
+	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
+
+	otg_set_host(priv->phy->otg, NULL);
+	usb_put_phy(priv->phy);
 
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
-	ambarella_stop_ehc(amb_ehci);
 
 	return 0;
 }
 
 #ifdef CONFIG_PM
 
-static int ehci_hcd_ambarella_drv_resume(struct device *dev)
+static int ehci_ambarella_drv_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
+	struct ehci_ambarella_priv *priv;
 
-	ambarella_start_ehc(amb_ehci);
+	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
 
-	if (time_before(jiffies, ehci->next_statechange))
-		msleep(100);
+	usb_phy_init(priv->phy);
 
-	/* Mark hardware accessible again as we are out of D3 state by now */
-	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-
-	usb_root_hub_lost_power(hcd->self.root_hub);
-
-	/* Else reset, to cope with power loss or flush-to-storage
-	 * style "resume" having let BIOS kick in during reboot. */
-	ehci_halt(ehci);
-	ehci_reset(ehci);
-
-	/* emptying the schedule aborts any urbs */
-	spin_lock_irq(&ehci->lock);
-#if 0
-	if (ehci->async_unlink)
-		end_unlink_async(ehci);
-#endif
-	ehci_work(ehci);
-	spin_unlock_irq(&ehci->lock);
-
-	ehci_writel(ehci, ehci->command, &ehci->regs->command);
-	ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
-	ehci_readl(ehci, &ehci->regs->command);	/* unblock posted writes */
+	ehci_resume(hcd, false);
 
 	return 0;
 }
 
-static int ehci_hcd_ambarella_drv_suspend(struct device *dev)
+static int ehci_ambarella_drv_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	struct ehci_ambarella *amb_ehci = hcd_to_ehci_ambarella(hcd);
-	unsigned long flags;
+	bool do_wakeup = device_may_wakeup(dev);
 
-	if (time_before(jiffies, ehci->next_statechange))
-		msleep(10);
-
-	/* Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible.  The PM and USB cores make sure that
-	 * the root hub is either suspended or stopped. */
-	ehci_prepare_ports_for_controller_suspend(ehci, device_may_wakeup(dev));
-
-	spin_lock_irqsave(&ehci->lock, flags);
-	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
-	ehci_readl(ehci, &ehci->regs->intr_enable);
-	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-	spin_unlock_irqrestore(&ehci->lock, flags);
-
-	ambarella_stop_ehc(amb_ehci);
-
-	return 0;
+	return ehci_suspend(hcd, do_wakeup);;
 }
 
 static struct dev_pm_ops ambarella_ehci_pmops = {
-	.suspend	= ehci_hcd_ambarella_drv_suspend,
-	.resume		= ehci_hcd_ambarella_drv_resume,
+	.suspend	= ehci_ambarella_drv_suspend,
+	.resume		= ehci_ambarella_drv_resume,
 };
 
 #define AMBARELLA_EHCI_PMOPS &ambarella_ehci_pmops
@@ -280,13 +212,22 @@ static struct dev_pm_ops ambarella_ehci_pmops = {
 #define AMBARELLA_EHCI_PMOPS NULL
 #endif
 
+
+static struct of_device_id ambarella_ehci_dt_ids[] = {
+	{ .compatible = "ambarella,ehci-v1", },
+	{ .compatible = "ambarella,ehci-v2", },
+	{ .compatible = "ambarella,ehci-v3", },
+	{ },
+};
+
 static struct platform_driver ehci_hcd_ambarella_driver = {
-	.probe		= ehci_hcd_ambarella_drv_probe,
-	.remove		= ehci_hcd_ambarella_drv_remove,
+	.probe		= ehci_ambarella_drv_probe,
+	.remove		= ehci_ambarella_drv_remove,
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver = {
 		.name	= "ambarella-ehci",
 		.owner	= THIS_MODULE,
+		.of_match_table = of_match_ptr(ambarella_ehci_dt_ids),
 		.pm	= AMBARELLA_EHCI_PMOPS,
 	}
 };

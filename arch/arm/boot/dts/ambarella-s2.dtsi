@@ -230,6 +230,15 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>;
 			};
+
+			usb_host_pins: uhc0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1007 0x1009>,
+						/* virtual pins, just for
+						   configuration purpose. But not
+						   mentioned in APM, need test*/
+						 <0x1060 0x1061>;
+			};
 		};
 	};
 
@@ -262,6 +271,26 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+		};
+
+		usbphy: usbphy@6001b00c {
+			compatible = "ambarella,usbphy";
+			reg = <0x6001b00c 0x4 0x70170050 0x4>;
+		};
+
+		ehci@60018000 {
+			compatible = "ambarella,ehci-v1";
+			reg = <0x60018000 0x1000>;
+			interrupts = <0 73 0x04>;
+			amb,usbphy = <&usbphy>;
+		};
+
+		ohci@60019000 {
+			compatible = "ambarella,ohci-v1";
+			reg = <0x60019000 0x1000>;
+			interrupts = <0 89 0x04>;
+			amb,usbphy = <&usbphy>;
+			status = "disabled";
 		};
 	};
 };

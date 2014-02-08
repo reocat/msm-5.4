@@ -51,6 +51,8 @@ extern u64 ambarella_dmamask;
 extern int ambarella_create_proc_dir(void);
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
 
+extern u32 get_ambarella_poc(void);
+
 #endif
 /* ==========================================================================*/
 

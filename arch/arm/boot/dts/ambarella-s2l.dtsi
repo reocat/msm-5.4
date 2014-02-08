@@ -205,6 +205,16 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>;
 			};
+
+			usb_host0_pins: uhc0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1001 0x1003>;
+			};
+
+			usb_host1_pins: uhc1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1002 0x1004>;
+			};
 		};
 	};
 
@@ -257,6 +267,26 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+		};
+
+		usbphy: usbphy@e001b00c {
+			compatible = "ambarella,usbphy";
+			reg = <0xe001b00c 0x4 0xec170050 0x4>;
+		};
+
+		ehci@e0018000 {
+			compatible = "ambarella,ehci-v3";
+			reg = <0xe0018000 0x1000>;
+			interrupts = <39>;
+			amb,usbphy = <&usbphy>;
+		};
+
+		ohci@e0019000 {
+			compatible = "ambarella,ohci-v3";
+			reg = <0xe0019000 0x1000>;
+			interrupts = <44>;
+			amb,usbphy = <&usbphy>;
+			status = "disabled";
 		};
 	};
 };

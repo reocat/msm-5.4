@@ -2,9 +2,6 @@
 * linux/drivers/usb/host/ohci-ambarella.c
 * driver for Full speed (USB1.1) USB host controller on Ambarella processors
 *
-* Note:
-* At present, only iONE can support USB host controller
-*
 * History:
 *	2010/08/11 - [Cao Rongrong] created file
 *
@@ -35,7 +32,8 @@ extern int usb_disabled(void);
 
 struct ohci_ambarella {
 	struct ohci_hcd ohci;
-	struct ambarella_uhc_controller *plat_ohci;
+	struct usb_phy *phy;
+	u32 nports;
 };
 
 
@@ -46,31 +44,16 @@ static struct ohci_ambarella *hcd_to_ohci_ambarella(struct usb_hcd *hcd)
 	return container_of(ohci, struct ohci_ambarella, ohci);
 }
 
-static void ambarella_start_ohc(struct ohci_ambarella *amb_ohci)
-{
-	if (amb_ohci && amb_ohci->plat_ohci->enable_host)
-		amb_ohci->plat_ohci->enable_host(amb_ohci->plat_ohci);
-}
-
-static void ambarella_stop_ohc(struct ohci_ambarella *amb_ohci)
-{
-	if (amb_ohci && amb_ohci->plat_ohci->enable_host)
-		amb_ohci->plat_ohci->disable_host(amb_ohci->plat_ohci);
-}
-
 static int ohci_ambarella_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
 	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 	int ret;
 
-	ohci_dbg(ohci, "ohci_ambarella_start, ohci:%p", ohci);
-
 	/* OHCI will still detect 2 ports even though usb port1 is configured
 	 * as device port, so we fake the port number manually and report
 	 * it to OHCI.*/
-	if (amb_ohci->plat_ohci->usb1_is_host == 0)
-		ohci->num_ports = 1;
+	ohci->num_ports = amb_ohci->nports;
 
 	if ((ret = ohci_init(ohci)) < 0)
 		return ret;
@@ -128,47 +111,92 @@ static const struct hc_driver ohci_ambarella_hc_driver = {
 
 static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 {
-	int ret;
-	struct usb_hcd *hcd;
+	struct device_node *np = pdev->dev.of_node;
 	struct ohci_ambarella *amb_ohci;
+	struct usb_hcd *hcd;
+	struct resource *res;
+	struct usb_phy *phy;
+	int irq, poc, ret;
 
 	if (usb_disabled())
 		return -ENODEV;
 
-	if (pdev->resource[1].flags != IORESOURCE_IRQ) {
-		pr_debug("resource[1] is not IORESOURCE_IRQ\n");
-		return -ENOMEM;
-	}
+	/* Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	if (!pdev->dev.dma_mask)
+		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
+	if (!pdev->dev.coherent_dma_mask)
+		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 
 	hcd = usb_create_hcd(&ohci_ambarella_hc_driver, &pdev->dev, "AmbUSB");
 	if (!hcd)
 		return -ENOMEM;
 
-	hcd->rsrc_start = pdev->resource[0].start;
-	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
-	hcd->regs = (void __iomem *)pdev->resource[0].start;
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(&pdev->dev, "Unable to get IRQ resource\n");
+		ret = irq;
+		goto amb_ohci_err;
+	}
 
-	amb_ohci = hcd_to_ohci_ambarella(hcd);
-	amb_ohci->plat_ohci =
-		(struct ambarella_uhc_controller *)pdev->dev.platform_data;
-	if (amb_ohci == NULL) {
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to get memory resource\n");
 		ret = -ENODEV;
 		goto amb_ohci_err;
 	}
 
-	ambarella_start_ohc(amb_ohci);
+	hcd->rsrc_start = res->start;
+	hcd->rsrc_len = resource_size(res);
+	hcd->regs = devm_ioremap(&pdev->dev, hcd->rsrc_start, hcd->rsrc_len);
+	if (!hcd->regs) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		ret = -ENOMEM;
+		goto amb_ohci_err;
+	}
+
+	amb_ohci = hcd_to_ohci_ambarella(hcd);
+
+	poc = get_ambarella_poc();
+
+	if (of_device_is_compatible(np, "ambarella,ohci-v2")) {
+		if (poc & SYS_CONFIG_USB1_IS_HOST)
+			amb_ohci->nports = 2;
+		else
+			amb_ohci->nports = 1;
+	} else if (of_device_is_compatible(np, "ambarella,ohci-v3")) {
+		if (!(poc & SYS_CONFIG_USB1_IS_HOST))
+			amb_ohci->nports = 2;
+		else
+			amb_ohci->nports = 1;
+	} else {
+		amb_ohci->nports = 1;
+	}
+
+	/* get the PHY device */
+	phy = devm_usb_get_phy_by_phandle(&pdev->dev, "amb,usbphy", 0);
+	if (IS_ERR(phy)) {
+		ret = PTR_ERR(phy);
+		dev_err(&pdev->dev, "Can't get USB PHY %d\n", ret);
+		goto amb_ohci_err;
+	}
+
+	amb_ohci->phy = phy;
+
+	usb_phy_init(phy);
+
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
-	ret = usb_add_hcd(hcd, pdev->resource[1].start, amb_ohci->plat_ohci->irqflags);
+	ret = usb_add_hcd(hcd, irq, IRQF_TRIGGER_HIGH);
 	if (ret < 0)
-		goto add_hcd_err;
+		goto amb_ohci_err;
 
 	platform_set_drvdata(pdev, hcd);
 
-	return ret;
+	return 0;
 
-add_hcd_err:
-	ambarella_stop_ohc(amb_ohci);
 amb_ohci_err:
 	usb_put_hcd(hcd);
 	return ret;
@@ -179,8 +207,8 @@ static int ohci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 
+	usb_put_phy(amb_ohci->phy);
 	usb_remove_hcd(hcd);
-	ambarella_stop_ohc(amb_ohci);
 	usb_put_hcd(hcd);
 
 	return 0;
@@ -193,13 +221,11 @@ static int ohci_hcd_ambarella_drv_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
-	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 
 	if (time_before(jiffies, ohci->next_statechange))
 		msleep(5);
 	ohci->next_statechange = jiffies;
 
-	ambarella_stop_ohc(amb_ohci);
 	return 0;
 }
 
@@ -207,14 +233,13 @@ static int ohci_hcd_ambarella_drv_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
-	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 
 	if (time_before(jiffies, ohci->next_statechange))
 		msleep(5);
 	ohci->next_statechange = jiffies;
 
-	ambarella_start_ohc(amb_ohci);
 	ohci_resume(hcd, false);
+
 	return 0;
 }
 
@@ -229,6 +254,14 @@ static struct dev_pm_ops ambarella_ohci_pmops = {
 #define AMBARELLA_OHCI_PMOPS NULL
 #endif
 
+static const struct of_device_id ambarella_ohci_dt_ids[] = {
+	{ .compatible = "ambarella,ohci-v1", },
+	{ .compatible = "ambarella,ohci-v2", },
+	{ .compatible = "ambarella,ohci-v3", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_ohci_dt_ids);
+
 static struct platform_driver ohci_hcd_ambarella_driver = {
 	.probe		= ohci_hcd_ambarella_drv_probe,
 	.remove		= ohci_hcd_ambarella_drv_remove,
@@ -237,6 +270,7 @@ static struct platform_driver ohci_hcd_ambarella_driver = {
 		.name	= "ambarella-ohci",
 		.owner	= THIS_MODULE,
 		.pm	= AMBARELLA_OHCI_PMOPS,
+		.of_match_table = of_match_ptr(ambarella_ohci_dt_ids),
 	},
 };
 

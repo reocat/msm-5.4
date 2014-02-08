@@ -64,9 +64,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
 #endif
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
-	&ambarella_ehci0,
-#endif
 #if (ETH_INSTANCES >= 1)
 	&ambarella_eth0,
 #endif
@@ -80,9 +77,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 #if (IR_INSTANCES >= 1)
 	&ambarella_ir0,
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
-	&ambarella_ohci0,
 #endif
 	&ambarella_rtc0,
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_SD)
