@@ -303,6 +303,8 @@ void __init ambarella_timer_init(void)
 
 	ambarella_clockevent_init();
 	ambarella_clocksource_init();
+
+	clocksource_of_init();
 }
 
 u32 ambarella_timer_suspend(u32 level)
