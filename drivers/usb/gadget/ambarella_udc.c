@@ -27,14 +27,16 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/otg.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
-
+#include <linux/of.h>
 #include <mach/hardware.h>
 #include <plat/udc.h>
 #include "ambarella_udc.h"
@@ -282,8 +284,20 @@ static void ambarella_ep_fifo_flush(struct ambarella_ep *ep)
 	if(ep->dir == USB_DIR_IN)  /* Empty Tx FIFO */
 		amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_FLUSH);
 	else { 			  /* Empty RX FIFO */
-		if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS))
-			ep->udc->controller_info->flush_rxfifo();
+		if (!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
+			int retry_count = 1000;
+
+			amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_NAK);
+			amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_FLUSH_RXFIFO);
+			while(!(amba_readl(USB_DEV_STS_REG) & USB_DEV_RXFIFO_EMPTY_STS)) {
+				if (retry_count-- < 0) {
+					printk (KERN_ERR "%s: failed", __func__);
+					break;
+				}
+				udelay(5);
+			}
+			amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_NAK);
+		}
 	}
 }
 
@@ -293,9 +307,8 @@ static void ambarella_ep_fifo_flush(struct ambarella_ep *ep)
  * Description:
  *	 Empty Tx/Rx FIFO of DMA
  */
-static void ambarella_udc_fifo_flush(void)
+static void ambarella_udc_fifo_flush(struct ambarella_udc *udc)
 {
-	struct ambarella_udc *udc = the_controller;
 	struct ambarella_ep *ep;
 	u32 ep_id;
 
@@ -307,7 +320,22 @@ static void ambarella_udc_fifo_flush(void)
 	}
 }
 
-static void ambarella_init_usb(void)
+static void ambarella_udc_reset(void __iomem *reset_reg, struct device_node *np)
+{
+	if (of_device_is_compatible(np, "ambarella,udc-v1"))
+		amba_rct_setbitsl(reset_reg, 0x20000000);
+	else
+		amba_rct_writel(reset_reg, 0x2);
+
+	msleep(1);
+
+	if (of_device_is_compatible(np, "ambarella,udc-v1"))
+		amba_rct_clrbitsl(reset_reg, 0x20000000);
+	else
+		amba_rct_writel(reset_reg, 0x0);
+};
+
+static void ambarella_init_usb(struct ambarella_udc *udc)
 {
 	u32 value;
 
@@ -316,7 +344,7 @@ static void ambarella_init_usb(void)
 	/* disable Tx and Rx DMA */
 	amba_clrbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 	/* flush dma fifo, may used in AMboot */
-	ambarella_udc_fifo_flush();
+	ambarella_udc_fifo_flush(udc);
 
 	/* device config register */
 	value = USB_DEV_SPD_HI |
@@ -356,8 +384,7 @@ static void init_setup_descriptor(struct ambarella_udc *udc)
 	udc->setup_buf->data0	= 0xffffffff;
 	udc->setup_buf->data1	= 0xffffffff;
 
-	amba_writel(ep->ep_reg.setup_buf_ptr_reg,
-		udc->setup_addr | udc->controller_info->dma_fix);
+	amba_writel(ep->ep_reg.setup_buf_ptr_reg, udc->setup_addr | udc->dma_fix);
 }
 
 
@@ -370,11 +397,9 @@ static int init_null_pkt_desc(struct ambarella_udc *udc)
 		return -ENOMEM;
 	}
 
-	udc->dummy_desc->data_ptr =
-		udc->dummy_desc_addr | udc->controller_info->dma_fix;
+	udc->dummy_desc->data_ptr = udc->dummy_desc_addr | udc->dma_fix;
 	udc->dummy_desc->reserved = 0xffffffff;
-	udc->dummy_desc->next_desc_ptr =
-		udc->dummy_desc_addr | udc->controller_info->dma_fix;
+	udc->dummy_desc->next_desc_ptr = udc->dummy_desc_addr | udc->dma_fix;
 	udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 
 	return 0;
@@ -637,7 +662,7 @@ static int ambarella_reuse_descriptor(struct ambarella_ep *ep,
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
 		data_desc->reserved = 0xffffffff;
 		buf_dma_address = start_address + i * ep->ep.maxpacket;
-		data_desc->data_ptr = buf_dma_address | udc->controller_info->dma_fix;
+		data_desc->data_ptr = buf_dma_address | udc->dma_fix;
 		data_desc->last_aux = 0;
 
 		next_data_desc = data_desc->next_desc_virt;
@@ -699,14 +724,14 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 		data_desc->status = USB_DMA_BUF_HOST_RDY | data_transmit;
 		data_desc->reserved = 0xffffffff;
 		buf_dma_address = start_address + i * ep->ep.maxpacket;
-		data_desc->data_ptr = buf_dma_address | udc->controller_info->dma_fix;
+		data_desc->data_ptr = buf_dma_address | udc->dma_fix;
 		data_desc->next_desc_ptr = 0;
 		data_desc->rsvd1 = 0xffffffff;
 		data_desc->last_aux = 0;
 		data_desc->cur_desc_addr = desc_phys;
 
 		if(prev_data_desc){
-			prev_data_desc->next_desc_ptr = desc_phys | udc->controller_info->dma_fix;
+			prev_data_desc->next_desc_ptr = desc_phys | udc->dma_fix;
 			prev_data_desc->next_desc_virt = data_desc;
 		}
 
@@ -762,8 +787,7 @@ static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	dprintk(DEBUG_NORMAL, "Enter. %s Tx DMA\n", ep->ep.name);
 
 	ep->data_desc = req->data_desc;
-	amba_writel(ep_reg->dat_desc_ptr_reg,
-		req->data_desc_addr | udc->controller_info->dma_fix);
+	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr | udc->dma_fix);
 	/* set Poll command to transfer data to Tx FIFO */
 	amba_setbitsl(ep_reg->ctrl_reg, USB_EP_POLL_DEMAND);
 	ep->dma_going = 1;
@@ -784,12 +808,12 @@ static void ambarella_set_rx_dma(struct ambarella_ep *ep,
 	if(req){
 		ep->data_desc = req->data_desc;
 		amba_writel(ep_reg->dat_desc_ptr_reg,
-			req->data_desc_addr | udc->controller_info->dma_fix);
+				req->data_desc_addr | udc->dma_fix);
 	} else {
 		/* receive zero-length-packet */
 		udc->dummy_desc->status = USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 		amba_writel(ep_reg->dat_desc_ptr_reg,
-			udc->dummy_desc_addr | udc->controller_info->dma_fix);
+				udc->dummy_desc_addr | udc->dma_fix);
 	}
 
 	/* enable dma completion interrupt for next RX data */
@@ -1228,7 +1252,7 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		ep->udc->dummy_desc->status =
 			USB_DMA_BUF_HOST_RDY | USB_DMA_LAST;
 		amba_writel(ep->ep_reg.dat_desc_ptr_reg,
-			udc->dummy_desc_addr | udc->controller_info->dma_fix);
+			udc->dummy_desc_addr | udc->dma_fix);
 
 		if(ep->halted || ep->dma_going == 0 || ep->cancel_transfer == 1
 				|| list_empty(&ep->queue)) {
@@ -1414,39 +1438,6 @@ static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 
 	return IRQ_RETVAL(handled);
 }
-
-
-#if 0
-/*
-* ambarella_udc_vbus_irq - VBUS interrupt handler
-*/
-static irqreturn_t ambarella_udc_vbus_irq(int irq, void *_dev)
-{
-	struct ambarella_udc	*udc = _dev;
-	//unsigned int		value;
-
-	dprintk(DEBUG_NORMAL, "%s()\n", __func__);
-
-	amba_writel(VIC_INTEN_CLR_REG, (0x1 << USBVBUS_IRQ));
-
-	/* make sure vbus register is intialized before calling this */
-	if(ambarella_check_connected(udc)&& !udc->pre_vbus_status) {
-		dprintk(DEBUG_NORMAL, "usb cable is inserted\n");
-		udc->pre_vbus_status = 1;
-		ambarella_udc_vbus_session(&udc->gadget, 1);
-
-	} else if (!ambarella_check_connected(udc) && udc->pre_vbus_status) {
-		dprintk(DEBUG_NORMAL, "usb cable is removed\n");
-		udc->pre_vbus_status = 0;
-		ambarella_udc_vbus_session(&udc->gadget, 0);
-	}else
-		printk(KERN_ERR "Incorrect vbus interrupt!\n");
-
-	//amba_writel(VIC_INTEN_REG, (0x1 << USBVBUS_IRQ));
-
-	return IRQ_HANDLED;
-}
-#endif
 
 static void ambarella_vbus_timer(unsigned long data)
 {
@@ -2095,14 +2086,13 @@ static void ambarella_udc_enable(struct ambarella_udc *udc)
 		return;
 
 	udc->udc_is_enabled = 1;
-	udc->controller_info->enable_phy();
 
 	/* Disable Tx and Rx DMA */
 	amba_clrbitsl(USB_DEV_CTRL_REG,
 		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	/* flush all of dma fifo */
-	ambarella_udc_fifo_flush();
+	ambarella_udc_fifo_flush(udc);
 
 	/* initialize ep0 register */
 	init_ep0(udc);
@@ -2151,7 +2141,6 @@ static void ambarella_udc_disable(struct ambarella_udc *udc)
 	amb_udc_status = AMBARELLA_UDC_STATUS_DISABLED;
 	schedule_work(&udc->uevent_work);
 
-	udc->controller_info->disable_phy();
 	udc->udc_is_enabled = 0;
 }
 
@@ -2182,145 +2171,87 @@ static void ambarella_udc_reinit(struct ambarella_udc *udc)
 		INIT_LIST_HEAD (&ep->queue);
 	}
 }
-#if 0
-/* Called by gadget driver to register itself */
-int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
-		int (*bind)(struct usb_gadget *))
-{
-	unsigned long flags;
-	struct ambarella_udc *udc = the_controller;
-	int retval;
 
-	/* Sanity checks */
-	if (!udc)
-		return -ENODEV;
-
-	if (udc->driver)
-		return -EBUSY;
-
-	if (!driver || !bind || !driver->setup
-			|| driver->speed != USB_SPEED_HIGH) {
-		printk(KERN_ERR "Invalid driver: bind %p setup %p speed %d\n",
-			bind, driver->setup, driver->speed);
-		return -EINVAL;
-	}
-#if defined(MODULE)
-	if (!driver->unbind) {
-		printk(KERN_ERR "Invalid driver: no unbind method\n");
-		return -EINVAL;
-	}
-#endif
-
-	/* Hook the driver */
-	driver->driver.bus = NULL;
-	udc->driver = driver;
-	udc->gadget.dev.driver = &driver->driver;
-	udc->gadget.ep0 = &udc->ep[CTRL_IN].ep;
-
-	/* Bind the driver */
-	if ((retval = device_add(&udc->gadget.dev)) != 0) {
-		printk(KERN_ERR "Error in device_add() : %d\n",retval);
-		goto register_error;
-	}
-
-	dprintk(DEBUG_NORMAL, "binding gadget driver '%s'\n",
-		driver->driver.name);
-
-	if ((retval = bind(&udc->gadget)) != 0) {
-		device_del(&udc->gadget.dev);
-		goto register_error;
-	}
-
-	/* Enable udc */
-	spin_lock_irqsave(&udc->lock, flags);
-	ambarella_udc_enable(udc);
-	spin_unlock_irqrestore(&udc->lock, flags);
-
-	return 0;
-
-register_error:
-	udc->driver = NULL;
-	udc->gadget.dev.driver = NULL;
-	return retval;
-}
-EXPORT_SYMBOL(usb_gadget_probe_driver);
-
-/*
- *	usb_gadget_unregister_driver
- */
-int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
-{
-	unsigned long flags;
-	struct ambarella_udc *udc = the_controller;
-
-	if (!udc)
-		return -ENODEV;
-
-	if (!driver || driver != udc->driver || !driver->unbind)
-		return -EINVAL;
-
-	spin_lock_irqsave(&udc->lock, flags);
-	ambarella_stop_activity(udc);
-	spin_unlock_irqrestore(&udc->lock, flags);
-
-	if (driver->unbind)
-		driver->unbind(&udc->gadget);
-
-	device_del(&udc->gadget.dev);
-	udc->driver = NULL;
-	udc->gadget.dev.driver = NULL;
-
-	spin_lock_irqsave(&udc->lock, flags);
-	ambarella_udc_disable(udc);
-	spin_unlock_irqrestore(&udc->lock, flags);
-
-	return 0;
-}
-EXPORT_SYMBOL(usb_gadget_unregister_driver);
-#endif
-/*---------------------------------------------------------------------------*/
-/*
- * Name: ambarella_udc_probe
- * Description:
- *	Probe udc driver.
- */
 static int ambarella_udc_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_udc *udc;
+	struct resource *res;
+	struct usb_phy *phy;
 	int retval;
 
-	dprintk(DEBUG_NORMAL, "%s()\n", __func__);
+	printk(KERN_INFO "%s: version %s\n", gadget_name, DRIVER_VERSION);
 
-	udc = kzalloc(sizeof(struct ambarella_udc), GFP_KERNEL);
+	udc = devm_kzalloc(&pdev->dev, sizeof(struct ambarella_udc), GFP_KERNEL);
 	if (!udc) {
-		retval = -ENOMEM;
-		goto out;
+		dev_err(&pdev->dev, "failed to allocate memory\n");
+		return -ENOMEM;
 	}
-	the_controller = udc;
-	platform_set_drvdata(pdev, udc);
-
-	udc->controller_info = pdev->dev.platform_data;
-	if (udc->controller_info == NULL) {
-		retval = -ENODEV;
-		goto err_out1;
-	}
-
 	udc->dev = &pdev->dev;
-	udc->pre_uevent_status = AMBARELLA_UDC_STATUS_UNKNOWN;
-	udc->pre_uevent_vbus = 0;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (res == NULL) {
+		dev_err(&pdev->dev, "no mem resource for base_reg!\n");
+		return -ENXIO;
+	}
+
+	udc->base_reg = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (udc->base_reg == NULL) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (res == NULL) {
+		dev_err(&pdev->dev, "no mem resource for reset_reg!\n");
+		return -ENXIO;
+	}
+
+	udc->reset_reg = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (udc->reset_reg == NULL) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
+
+	udc->irq = platform_get_irq(pdev, 0);
+	if (udc->irq < 0) {
+		dev_err(&pdev->dev, "no irq!\n");
+		return -ENODEV;
+	}
+
+	if (of_find_property(np, "amb,dma-addr-fix", NULL))
+		udc->dma_fix = 0xc0000000;
+	else
+		udc->dma_fix = 0;
+
+	/* get the PHY device */
+	phy = devm_usb_get_phy_by_phandle(&pdev->dev, "amb,usbphy", 0);
+	if (IS_ERR(phy)) {
+		dev_err(&pdev->dev, "Can't get USB PHY %ld\n", PTR_ERR(phy));
+		return -ENXIO;
+	}
+
+	udc->phy = phy;
+
+	usb_phy_init(phy);
+
+	retval = otg_set_peripheral(phy->otg, &udc->gadget);
+	if (retval < 0) {
+		dev_err(&pdev->dev, "Can't set PHY to peripheral\n");
+		return retval;
+	}
+
+	ambarella_udc_reset(udc->reset_reg, np);
+
 	udc->udc_is_enabled = 0;
 	udc->vbus_status = 0;
-	/* Initial USB PLL */
-	udc->controller_info->enable_phy();
-	/* Reset USB */
-	udc->controller_info->reset_usb();
 
 	ambarella_init_gadget(udc, pdev);
 	ambarella_udc_reinit(udc);
 	ambarella_regaddr_map(udc);
 
 	/*initial usb hardware, and set soft disconnect */
-	ambarella_init_usb();
+	ambarella_init_usb(udc);
 	ambarella_set_softdis(1);
 	udelay(50);
 
@@ -2347,32 +2278,19 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 	}
 
 	/* irq setup after old hardware state is cleaned up */
-	retval = request_irq(USBC_IRQ, ambarella_udc_irq,
-			udc->controller_info->irqflags,
-			dev_name(&pdev->dev), udc);
+	retval = devm_request_irq(&pdev->dev, udc->irq, ambarella_udc_irq,
+				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), udc);
 	if (retval != 0) {
 		pr_err("%s: cannot get irq %i, err %d\n", __func__, USBC_IRQ, retval);
 		goto err_out4;
 	}
 
-#if 0
-	retval = request_irq(USBVBUS_IRQ, ambarella_udc_vbus_irq,
-			0, dev_name(&pdev->dev), udc);
-	if (retval != 0) {
-		dprintk(DEBUG_NORMAL, "can't get vbus irq %i, err %d\n",
-			USBVBUS_IRQ, retval);
-		retval = -EBUSY;
-		free_irq(USBC_IRQ, udc);
-		return retval;
-	}
-#endif
+	setup_timer(&udc->vbus_timer,
+		ambarella_vbus_timer, (unsigned long)udc);
+	mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
 
-	if (udc->controller_info->vbus_polled) {
-		setup_timer(&udc->vbus_timer,
-			ambarella_vbus_timer, (unsigned long)udc);
-		mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
-	}
-
+	udc->pre_uevent_status = AMBARELLA_UDC_STATUS_UNKNOWN;
+	udc->pre_uevent_vbus = 0;
 	INIT_WORK(&udc->uevent_work, ambarella_uevent_work);
 
 #ifdef CONFIG_PROC_FS
@@ -2391,6 +2309,10 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 	if (retval) {
 		goto err_out6;
 	}
+
+
+	the_controller = udc;
+	platform_set_drvdata(pdev, udc);
 
 	dprintk(DEBUG_NORMAL, "probe ok\n");
 
@@ -2430,8 +2352,7 @@ static int ambarella_udc_remove(struct platform_device *pdev)
 
 	device_unregister(&udc->gadget.dev);
 
-	if (udc->controller_info->vbus_polled)
-		del_timer_sync(&udc->vbus_timer);
+	del_timer_sync(&udc->vbus_timer);
 
 	remove_proc_entry("udc", get_ambarella_proc_dir());
 	remove_proc_files();
@@ -2461,8 +2382,7 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	udc->sys_suspended = 1;
 	disable_irq(USBC_IRQ);
 
-	if (udc->controller_info->vbus_polled)
-		del_timer_sync(&udc->vbus_timer);
+	del_timer_sync(&udc->vbus_timer);
 
 	spin_lock_irqsave(&udc->lock, flags);
 	ambarella_udc_set_pullup(udc, 0);
@@ -2471,7 +2391,6 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	amb_udc_status = AMBARELLA_UDC_STATUS_SUSPEND;
 	schedule_work(&udc->uevent_work);
 
-	udc->controller_info->disable_phy();
 	udc->udc_is_enabled = 0;
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
@@ -2490,11 +2409,11 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	udc->sys_suspended = 0;
 
 	/* Initial USB PLL */
-	udc->controller_info->enable_phy();
+	usb_phy_init(udc->phy);
 	/* Reset USB */
-	udc->controller_info->reset_usb();
+	ambarella_udc_reset(udc->reset_reg, pdev->dev.of_node);
 	/*initial usb hardware */
-	ambarella_init_usb();
+	ambarella_init_usb(udc);
 	/* Set soft disconnected and delay 50 microseconds at least,
 	 * or it will report full speed device to host. */
 	ambarella_set_softdis(1);
@@ -2508,11 +2427,9 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 	schedule_work(&udc->uevent_work);
 	spin_unlock_irqrestore(&udc->lock, flags);
 
-	if (udc->controller_info->vbus_polled) {
-		setup_timer(&udc->vbus_timer,
-			ambarella_vbus_timer, (unsigned long)udc);
-		mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
-	}
+	setup_timer(&udc->vbus_timer,
+		ambarella_vbus_timer, (unsigned long)udc);
+	mod_timer(&udc->vbus_timer, jiffies + VBUS_POLL_TIMEOUT);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
@@ -2520,12 +2437,20 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 }
 #endif
 
+static const struct of_device_id ambarella_udc_dt_ids[] = {
+	{ .compatible = "ambarella,udc-v1" },
+	{ .compatible = "ambarella,udc-v2" },
+	{ /* sentinel */ }
+};
+
+MODULE_DEVICE_TABLE(of, ambarella_udc_dt_ids);
+
 static struct platform_driver ambarella_udc_driver = {
 	.driver		= {
 		.name	= "ambarella-udc",
 		.owner	= THIS_MODULE,
+		.of_match_table	= ambarella_udc_dt_ids,
 	},
-	.probe		= ambarella_udc_probe,
 	.remove		= ambarella_udc_remove,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_udc_suspend,
@@ -2533,24 +2458,7 @@ static struct platform_driver ambarella_udc_driver = {
 #endif
 };
 
-
-static int __init udc_init(void)
-{
-	int retval = 0;
-
-	printk(KERN_INFO "%s: version %s\n", gadget_name, DRIVER_VERSION);
-	retval = platform_driver_register(&ambarella_udc_driver);
-
-	return retval;
-}
-
-static void __exit udc_exit(void)
-{
-	platform_driver_unregister(&ambarella_udc_driver);
-}
-
-module_init(udc_init);
-module_exit(udc_exit);
+module_platform_driver_probe(ambarella_udc_driver, ambarella_udc_probe);
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);

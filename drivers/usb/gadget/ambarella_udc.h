@@ -127,12 +127,16 @@ struct ambarella_ep {
 struct ambarella_udc {
 	spinlock_t			lock;
 	struct device			*dev;
+	void __iomem			*base_reg;
+	void __iomem			*reset_reg;
+	int				irq;
+	struct usb_phy			*phy;
+
 	struct proc_dir_entry		*proc_file;
 	struct work_struct		uevent_work;
 	struct timer_list		vbus_timer;
 	enum ambarella_udc_status	pre_uevent_status;
 
-	struct ambarella_udc_controller	*controller_info;
 	struct usb_gadget		gadget;
 	struct usb_gadget_driver	*driver;
 
@@ -140,8 +144,8 @@ struct ambarella_udc {
 
 	struct ambarella_ep		ep[EP_NUM_MAX];
 	u32				setup[2];
-	dma_addr_t			setup_addr;	/* setup_desc Physical Address */
-	struct ambarella_setup_desc	*setup_buf; /* for Control OUT ep only */
+	dma_addr_t			setup_addr;
+	struct ambarella_setup_desc	*setup_buf;
 	dma_addr_t			dummy_desc_addr;
 	struct ambarella_data_desc	*dummy_desc;
 
@@ -157,6 +161,9 @@ struct ambarella_udc {
 					vbus_status : 1,
 					pre_uevent_vbus : 1,
 					udc_is_enabled : 1;
+
+	/* dma_fix is only used for S2 chip, due to its DMA engine fault */
+	u32				dma_fix;
 };
 
 /* Function Declaration  */

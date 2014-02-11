@@ -274,6 +274,13 @@
 			reg = <0xe001b00c 0x4 0xec170050 0x4>;
 		};
 
+		udc@e0006000 {
+			compatible = "ambarella,udc-v2";
+			reg = <0xe0006000 0x2000 0xec1702cc 0x4>;
+			interrupts = <4>;
+			amb,usbphy = <&usbphy>;
+		};
+
 		ehci@e0018000 {
 			compatible = "ambarella,ehci-v3";
 			reg = <0xe0018000 0x1000>;
