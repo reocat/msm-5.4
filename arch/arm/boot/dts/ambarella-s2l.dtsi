@@ -206,14 +206,14 @@
 				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>;
 			};
 
-			usb_host0_pins: uhc0@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x1001 0x1003>;
-			};
-
-			usb_host1_pins: uhc1@0 {
+			usb_host0_pins: uhc0@0 { /* USB0: host/device configurable */
 				reg = <0>;
 				amb,pinmux-ids = <0x1002 0x1004>;
+			};
+
+			usb_host1_pins: uhc1@0 { /* USB1: host only */
+				reg = <0>;
+				amb,pinmux-ids = <0x1001 0x1003>;
 			};
 		};
 	};
