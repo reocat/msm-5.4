@@ -407,24 +407,6 @@
 #define	USB_DMA_BUF_HOST_BUSY		0xc0000000		// 11
 
 /* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-enum ambarella_udc_status {
-	AMBARELLA_UDC_STATUS_UNKNOWN = -1,
-	AMBARELLA_UDC_STATUS_ENABLED = 0,
-	AMBARELLA_UDC_STATUS_CONFIGURED,
-	AMBARELLA_UDC_STATUS_SUSPEND,
-	AMBARELLA_UDC_STATUS_RESUME,
-	AMBARELLA_UDC_STATUS_DISABLED,
-	AMBARELLA_UDC_STATUS_BUSSUSPEND,
-};
-
-extern enum ambarella_udc_status amb_udc_status;
-
-/* ==========================================================================*/
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif
 

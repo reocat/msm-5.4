@@ -284,7 +284,7 @@
 		udc@60006000 {
 			compatible = "ambarella,udc-v1";
 			reg = <0x60006000 0x2000 0x70170088 0x4>;
-			interrupts = <4>;
+			interrupts = <0 4 0x04>;
 			amb,usbphy = <&usbphy>;
 			amb,dma-addr-fix;
 		};

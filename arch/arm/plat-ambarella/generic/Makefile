@@ -43,7 +43,6 @@ obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SPI)	+= spi.o
 obj-y						+= timer.o
 obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UPORT)	+= uport.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UDC)	+= udc.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_UHC)	+= uhc.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 obj-y						+= pinctrl.o

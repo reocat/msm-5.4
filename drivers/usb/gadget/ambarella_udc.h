@@ -135,7 +135,7 @@ struct ambarella_udc {
 	struct proc_dir_entry		*proc_file;
 	struct work_struct		uevent_work;
 	struct timer_list		vbus_timer;
-	enum ambarella_udc_status	pre_uevent_status;
+	enum usb_device_state		pre_state;
 
 	struct usb_gadget		gadget;
 	struct usb_gadget_driver	*driver;
@@ -159,7 +159,6 @@ struct ambarella_udc {
 					sys_suspended : 1,
 					reset_by_host : 1,
 					vbus_status : 1,
-					pre_uevent_vbus : 1,
 					udc_is_enabled : 1;
 
 	/* dma_fix is only used for S2 chip, due to its DMA engine fault */
@@ -187,8 +186,6 @@ static void ambarella_stop_activity(struct ambarella_udc *udc);
 static void ambarella_udc_enable(struct ambarella_udc *udc);
 
 static void ambarella_udc_disable(struct ambarella_udc *udc);
-
-static int ambarella_check_connected(struct ambarella_udc *udc);
 
 static int ambarella_udc_vbus_session(struct usb_gadget *gadget, int is_active);
 
