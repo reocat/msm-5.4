@@ -67,12 +67,11 @@ static const struct ehci_driver_overrides ehci_ambarella_overrides __initdata = 
 
 static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
 	struct ehci_ambarella_priv *priv;
 	struct usb_hcd *hcd;
 	struct usb_phy *phy;
 	struct resource *res;
-	int irq, poc, ret;
+	int irq, ret;
 
 	/* Right now device-tree probed devices don't get dma_mask set.
 	 * Since shared usb code relies on it, set it here for now.
@@ -114,22 +113,6 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 
 	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
 
-	poc = get_ambarella_poc();
-
-	if (of_device_is_compatible(np, "ambarella,ehci-v2")) {
-		if (poc & SYS_CONFIG_USB1_IS_HOST)
-			priv->nports = 2;
-		else
-			priv->nports = 1;
-	} else if (of_device_is_compatible(np, "ambarella,ehci-v3")) {
-		if (!(poc & SYS_CONFIG_USB1_IS_HOST))
-			priv->nports = 2;
-		else
-			priv->nports = 1;
-	} else {
-		priv->nports = 1;
-	}
-
 	/* get the PHY device */
 	phy = devm_usb_get_phy_by_phandle(&pdev->dev, "amb,usbphy", 0);
 	if (IS_ERR(phy)) {
@@ -138,9 +121,15 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 		goto amb_ehci_err;
 	}
 
-	priv->phy = phy;
+	ret = of_property_read_u32(phy->dev->of_node,
+				"amb,host-phy-num", &priv->nports);
+	if (ret < 0){
+		dev_err(&pdev->dev, "Can't get host phy num %d\n", ret);
+		goto amb_ehci_err;
+	}
 
 	usb_phy_init(phy);
+	priv->phy = phy;
 
 	ret = otg_set_host(phy->otg, &hcd->self);
 	if (ret < 0) {

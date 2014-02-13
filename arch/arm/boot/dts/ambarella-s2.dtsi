@@ -276,11 +276,6 @@
 			amb,default-mclk = <12288000>;
 		};
 
-		usbphy: usbphy@6001b00c {
-			compatible = "ambarella,usbphy";
-			reg = <0x6001b00c 0x4 0x70170050 0x4>;
-		};
-
 		udc@60006000 {
 			compatible = "ambarella,udc-v1";
 			reg = <0x60006000 0x2000 0x70170088 0x4>;
@@ -302,6 +297,21 @@
 			interrupts = <0 89 0x04>;
 			amb,usbphy = <&usbphy>;
 			status = "disabled";
+		};
+	};
+
+	rct@70170000 {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x70170000 0x1000>;
+		ranges;
+
+		usbphy: usbphy@70170050 {
+			compatible = "ambarella,usbphy";
+			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
+			amb,host-phy-num = <1>;
+			amb,owner-offset = <5>;
 		};
 	};
 };

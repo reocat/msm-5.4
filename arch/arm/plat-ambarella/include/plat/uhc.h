@@ -45,12 +45,6 @@
 #define SYS_CONFIG_USB1_IS_HOST		0x00000000
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == S2L)
-#define ANA_PWR_USB_PHY_ENABLE		0x1002
-#else
-#define ANA_PWR_USB_PHY_ENABLE		0x4
-#endif
-
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 

@@ -111,12 +111,11 @@ static const struct hc_driver ohci_ambarella_hc_driver = {
 
 static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
 	struct ohci_ambarella *amb_ohci;
 	struct usb_hcd *hcd;
 	struct resource *res;
 	struct usb_phy *phy;
-	int irq, poc, ret;
+	int irq, ret;
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -159,22 +158,6 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 
 	amb_ohci = hcd_to_ohci_ambarella(hcd);
 
-	poc = get_ambarella_poc();
-
-	if (of_device_is_compatible(np, "ambarella,ohci-v2")) {
-		if (poc & SYS_CONFIG_USB1_IS_HOST)
-			amb_ohci->nports = 2;
-		else
-			amb_ohci->nports = 1;
-	} else if (of_device_is_compatible(np, "ambarella,ohci-v3")) {
-		if (!(poc & SYS_CONFIG_USB1_IS_HOST))
-			amb_ohci->nports = 2;
-		else
-			amb_ohci->nports = 1;
-	} else {
-		amb_ohci->nports = 1;
-	}
-
 	/* get the PHY device */
 	phy = devm_usb_get_phy_by_phandle(&pdev->dev, "amb,usbphy", 0);
 	if (IS_ERR(phy)) {
@@ -183,9 +166,15 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 		goto amb_ohci_err;
 	}
 
-	amb_ohci->phy = phy;
+	ret = of_property_read_u32(phy->dev->of_node,
+				"amb,host-phy-num", &amb_ohci->nports);
+	if (ret < 0){
+		dev_err(&pdev->dev, "Can't get host phy num %d\n", ret);
+		goto amb_ohci_err;
+	}
 
 	usb_phy_init(phy);
+	amb_ohci->phy = phy;
 
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
