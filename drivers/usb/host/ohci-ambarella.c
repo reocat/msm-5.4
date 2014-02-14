@@ -26,7 +26,6 @@
 
 #include <linux/platform_device.h>
 #include <mach/hardware.h>
-#include <plat/uhc.h>
 
 extern int usb_disabled(void);
 

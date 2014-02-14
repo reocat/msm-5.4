@@ -1149,7 +1149,7 @@ MODULE_LICENSE ("GPL");
 #define DAVINCI_PLATFORM_DRIVER	ohci_hcd_da8xx_driver
 #endif
 
-#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_UHC
+#ifdef CONFIG_USB_EHCI_AMBARELLA
 #include "ohci-ambarella.c"
 #define PLATFORM_DRIVER		ohci_hcd_ambarella_driver
 #endif
