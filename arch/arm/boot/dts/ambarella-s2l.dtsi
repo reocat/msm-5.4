@@ -277,14 +277,14 @@
 		};
 
 		ehci@e0018000 {
-			compatible = "ambarella,ehci-v3";
+			compatible = "ambarella,ehci";
 			reg = <0xe0018000 0x1000>;
 			interrupts = <39>;
 			amb,usbphy = <&usbphy>;
 		};
 
 		ohci@e0019000 {
-			compatible = "ambarella,ohci-v3";
+			compatible = "ambarella,ohci";
 			reg = <0xe0019000 0x1000>;
 			interrupts = <44>;
 			amb,usbphy = <&usbphy>;

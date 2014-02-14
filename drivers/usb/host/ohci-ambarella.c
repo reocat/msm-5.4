@@ -244,9 +244,7 @@ static struct dev_pm_ops ambarella_ohci_pmops = {
 #endif
 
 static const struct of_device_id ambarella_ohci_dt_ids[] = {
-	{ .compatible = "ambarella,ohci-v1", },
-	{ .compatible = "ambarella,ohci-v2", },
-	{ .compatible = "ambarella,ohci-v3", },
+	{ .compatible = "ambarella,ohci", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ambarella_ohci_dt_ids);

@@ -203,9 +203,7 @@ static struct dev_pm_ops ambarella_ehci_pmops = {
 
 
 static struct of_device_id ambarella_ehci_dt_ids[] = {
-	{ .compatible = "ambarella,ehci-v1", },
-	{ .compatible = "ambarella,ehci-v2", },
-	{ .compatible = "ambarella,ehci-v3", },
+	{ .compatible = "ambarella,ehci", },
 	{ },
 };
 
