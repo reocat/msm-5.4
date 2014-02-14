@@ -344,33 +344,6 @@ static int ambarella_phy_init(struct usb_phy *phy)
 	return 0;
 }
 
-static int ambarella_otg_set_host(struct usb_otg *otg, struct usb_bus *host)
-{
-	struct ambarella_phy *amb_phy;
-
-	if (!otg)
-		return -ENODEV;
-
-	amb_phy = to_ambarella_phy(otg->phy);
-	amb_phy->phy.otg->host = host;
-
-	return 0;
-}
-
-static int ambarella_otg_set_peripheral(struct usb_otg *otg,
-					struct usb_gadget *gadget)
-{
-	struct ambarella_phy *amb_phy;
-
-	if (!otg)
-		return -ENODEV;
-
-	amb_phy = to_ambarella_phy(otg->phy);
-	amb_phy->phy.otg->gadget = gadget;
-
-	return 0;
-}
-
 static int ambarella_phy_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -393,10 +366,6 @@ static int ambarella_phy_probe(struct platform_device *pdev)
 	amb_phy->phy.dev = &pdev->dev;
 	amb_phy->phy.label = DRIVER_NAME;
 	amb_phy->phy.init = ambarella_phy_init;
-
-	amb_phy->phy.otg->phy = &amb_phy->phy;
-	amb_phy->phy.otg->set_host = ambarella_otg_set_host;
-	amb_phy->phy.otg->set_peripheral = ambarella_otg_set_peripheral;
 
 	/* get register for usb phy power on */
 	amb_phy->ana_reg = ambarella_phy_get_reg(pdev, 0);

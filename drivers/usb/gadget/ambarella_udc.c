@@ -2130,15 +2130,8 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	udc->phy = phy;
-
 	usb_phy_init(phy);
-
-	retval = otg_set_peripheral(phy->otg, &udc->gadget);
-	if (retval < 0) {
-		dev_err(&pdev->dev, "Can't set PHY to peripheral\n");
-		return retval;
-	}
+	udc->phy = phy;
 
 	ambarella_udc_reset(udc->reset_reg, np);
 
@@ -2243,8 +2236,6 @@ static int ambarella_udc_remove(struct platform_device *pdev)
 	dma_pool_free(udc->desc_dma_pool, udc->dummy_desc, udc->dummy_desc_addr);
 	dma_pool_free(udc->desc_dma_pool, udc->setup_buf, udc->setup_addr);
 	dma_pool_destroy(udc->desc_dma_pool);
-
-	otg_set_peripheral(udc->phy->otg, NULL);
 
 	return 0;
 }

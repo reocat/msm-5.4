@@ -130,12 +130,6 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 	usb_phy_init(phy);
 	priv->phy = phy;
 
-	ret = otg_set_host(phy->otg, &hcd->self);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Can't set PHY to host\n");
-		goto amb_ehci_err;
-	}
-
 	ret = usb_add_hcd(hcd, irq, IRQF_TRIGGER_HIGH);
 	if (ret < 0)
 		goto amb_ehci_err;
@@ -156,9 +150,7 @@ static int ehci_ambarella_drv_remove(struct platform_device *pdev)
 
 	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
 
-	otg_set_host(priv->phy->otg, NULL);
 	usb_put_phy(priv->phy);
-
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 
