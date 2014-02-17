@@ -235,18 +235,13 @@
 		};
 
 		nand0: nand@e0001000 {
-			compatible = "ambarella,s2l-nand";
+			compatible = "ambarella,nand-v2";
 			reg = <0xe0001000 0x1000>, /* fio reg address */
-			      <0xe0012000 0x1000>; /* fdma reg address */
+			      <0xe0012000 0x1000>, /* fdma reg address */
+			      <0xe0000000 0x4>;    /* fifo base */
 			interrupts = <16>,	/* fio_cmd_irq */
 				     <17>,	/* fio_dma_irq */
 				     <33>;	/* fdma_irq */
-			amb,fifo-base = <0xe0000000>;
-			/* nand timing, will be updated by Amboot */
-			amb,timing = <0x00000000 0x00000000
-				      0x00000000 0x00000000
-				      0x00000000 0x00000000>;
-			amb,ecc-bits = <1>;
 			/* amb,use-2x-pll; */
 		};
 

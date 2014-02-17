@@ -294,16 +294,9 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		if (nand_info->timing[i] != 0x0)
 			break;
 	}
-	/* if the timing is not setup by Amboot, we use the default timing */
-	if (i == ARRAY_SIZE(nand_info->timing)) {
-		amba_writel(nand_info->regbase + FLASH_TIM0_OFFSET, 0x20202020);
-		amba_writel(nand_info->regbase + FLASH_TIM1_OFFSET, 0x20202020);
-		amba_writel(nand_info->regbase + FLASH_TIM2_OFFSET, 0x20204020);
-		amba_writel(nand_info->regbase + FLASH_TIM3_OFFSET, 0x20202020);
-		amba_writel(nand_info->regbase + FLASH_TIM4_OFFSET, 0x20202020);
-		amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, 0x20202020);
+	/* if the timing is not setup by Amboot, we leave the timing unchanged */
+	if (i == ARRAY_SIZE(nand_info->timing))
 		return;
-	}
 
 	clk = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
 	if (nand_info->pllx2)
@@ -1427,14 +1420,29 @@ static int ambarella_nand_config_flash(struct ambarella_nand_info *nand_info)
 	return errorCode;
 }
 
-static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info)
+static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
+		struct device_node *np)
 {
 	struct nand_chip *chip = &nand_info->chip;
+	u32 poc = get_ambarella_poc();
+
+	if (of_device_is_compatible(np, "ambarella,nand-v1")) {
+		nand_info->ecc_bits = 1;
+	} else if (poc & SYS_CONFIG_NAND_ECC_BCH_EN) {
+		if (poc & SYS_CONFIG_NAND_ECC_SPARE_2X)
+			nand_info->ecc_bits = 8;
+		else
+			nand_info->ecc_bits = 6;
+	} else {
+		nand_info->ecc_bits = 1;
+	}
+
+	dev_info(nand_info->dev, "in ecc-[%d]bit mode\n", nand_info->ecc_bits);
 
 	nand_info->control_reg = 0;
-	if (ambarella_board_generic.board_poc & SYS_CONFIG_NAND_READ_CONFIRM)
+	if (poc & SYS_CONFIG_NAND_READ_CONFIRM)
 		nand_info->control_reg |= NAND_CTR_RC;
-	if (ambarella_board_generic.board_poc & SYS_CONFIG_NAND_PAGE_SIZE)
+	if (poc & SYS_CONFIG_NAND_PAGE_SIZE)
 		nand_info->control_reg |= (NAND_CTR_C2 | NAND_CTR_SZ_8G);
 	/*
 	  * Always use P3 and I4 to support all NAND,
@@ -1488,8 +1496,6 @@ static int ambarella_nand_init_chipecc(
 	}
 
 	chip->ecc.mode = NAND_ECC_HW;
-
-	dev_info(nand_info->dev, "in ecc-[%d]bit mode\n", nand_info->ecc_bits);
 
 	if (nand_info->ecc_bits > 1) {
 		if (nand_info->ecc_bits == 6) {
@@ -1554,6 +1560,14 @@ static int ambarella_nand_get_resource(
 		goto nand_get_resource_err_exit;
 	}
 
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for fifo base!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+	nand_info->dmabase = res->start;
+
 	nand_info->cmd_irq = platform_get_irq(pdev, 0);
 	if (nand_info->cmd_irq < 0) {
 		dev_err(&pdev->dev, "no irq for cmd_irq!\n");
@@ -1586,23 +1600,11 @@ static int ambarella_nand_get_resource(
 		}
 	}
 
-	errorCode = of_property_read_u32(np, "amb,fifo-base", &nand_info->dmabase);
-	if (errorCode < 0) {
-		dev_err(&pdev->dev, "Get fifo-base failed!\n");
-		goto nand_get_resource_err_exit;
-	}
-
-	errorCode = of_property_read_u32(np, "amb,ecc-bits", &nand_info->ecc_bits);
-	if (errorCode < 0) {
-		dev_err(&pdev->dev, "Get ecc-bits failed!\n");
-		goto nand_get_resource_err_exit;
-	}
-
 	errorCode = of_property_read_u32_array(np, "amb,timing",
 			nand_info->timing, 6);
 	if (errorCode < 0) {
-		dev_err(&pdev->dev, "Get timing failed!\n");
-		goto nand_get_resource_err_exit;
+		dev_dbg(&pdev->dev, "No timing defined!\n");
+		memset(nand_info->timing, 0x0, sizeof(nand_info->timing));
 	}
 
 	if (of_find_property(np, "amb,use-2x-pll", NULL))
@@ -1842,7 +1844,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	if (errorCode < 0)
 		goto ambarella_nand_probe_free_dma;
 
-	ambarella_nand_init_chip(nand_info);
+	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
 
 	mtd = &nand_info->mtd;
 	errorCode = nand_scan_ident(mtd, 1, NULL);
@@ -1948,11 +1950,8 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 #endif
 
 static const struct of_device_id ambarella_nand_of_match[] = {
-	{.compatible = "ambarella,s2l-nand", },
-	{.compatible = "ambarella,s2-nand", },
-	{.compatible = "ambarella,i1-nand", },
-	{.compatible = "ambarella,a7l-nand", },
-	{.compatible = "ambarella,a5s-nand", },
+	{.compatible = "ambarella,nand-v1", },
+	{.compatible = "ambarella,nand-v2", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ambarella_nand_of_match);

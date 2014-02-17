@@ -304,20 +304,6 @@ int __init ambarella_init_fio(void)
 	ambarella_gpio_raw_unlock(2, &flags);
 #endif
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
-#if (NAND_DUAL_SPACE_MODE == 1)
-	u32 sys_config;
-
-	sys_config = amba_rct_readl(SYS_CONFIG_REG);
-	if ((sys_config & SYS_CONFIG_NAND_ECC_BCH_EN) ==
-		SYS_CONFIG_NAND_ECC_BCH_EN) {
-		if ((sys_config & SYS_CONFIG_NAND_ECC_SPARE_2X) ==
-			SYS_CONFIG_NAND_ECC_SPARE_2X) {
-			ambarella_nand_default_set.ecc_bits = 8;
-		} else {
-			ambarella_nand_default_set.ecc_bits = 6;
-		}
-	}
-#endif
 	amba_rct_writel(FIO_RESET_REG, (FIO_RESET_FIO_RST | FIO_RESET_CF_RST |
 		FIO_RESET_XD_RST | FIO_RESET_FLASH_RST));
 	mdelay(100);
