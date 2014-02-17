@@ -57,21 +57,16 @@
 		reg = <0x70000000 0x01000000>;
 		ranges;
 
-		timer-ctrl@7000b030 {
-			compatible = "ambarella,timer-ctrl";
-			reg = <0x7000b030 0x4>;
-		};
-
 		timer7: timer@7000b064 {
 			compatible = "ambarella,clock-source";
-			reg = <0x7000b064 0x10>;
+			reg = <0x7000b064 0x10 0x7000b030 0x4>;
 			interrupts = <0 108 0x04>;
 			ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 		};
 
 		timer8: timer@7000b074 {
 			compatible = "ambarella,clock-event";
-			reg = <0x7000b074 0x10>;
+			reg = <0x7000b074 0x10 0x7000b030 0x4>;
 			interrupts = <0 109 0x04>;
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 		};

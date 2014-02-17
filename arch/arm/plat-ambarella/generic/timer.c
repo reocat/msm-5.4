@@ -184,12 +184,6 @@ static u32 notrace ambarella_read_sched_clock(void)
 }
 
 /* ==========================================================================*/
-
-static const struct of_device_id timer_ctrl_match[] __initconst = {
-	{ .compatible = "ambarella,timer-ctrl" },
-	{ },
-};
-
 static const struct of_device_id clock_event_match[] __initconst = {
 	{ .compatible = "ambarella,clock-event" },
 	{ },
@@ -215,6 +209,12 @@ static void __init ambarella_clockevent_init(void)
 	ce_base = of_iomap(np, 0);
 	if (!ce_base) {
 		pr_err("%s: Failed to map event base\n", __func__);
+		return;
+	}
+
+	timer_ctrl_reg = of_iomap(np, 1);
+	if (!timer_ctrl_reg) {
+		pr_err("%s: Failed to map timer-ctrl base\n", __func__);
 		return;
 	}
 
@@ -263,6 +263,12 @@ static void __init ambarella_clocksource_init(void)
 		return;
 	}
 
+	timer_ctrl_reg = of_iomap(np, 1);
+	if (!timer_ctrl_reg) {
+		pr_err("%s: Failed to map timer-ctrl base\n", __func__);
+		return;
+	}
+
 	rval = of_property_read_u32(np, "ctrl-offset", &cs_ctrl_offset);
 	if (rval < 0) {
 		pr_err("%s: Can't get ctrl offset\n", __func__);
@@ -285,22 +291,6 @@ static void __init ambarella_clocksource_init(void)
 
 void __init ambarella_timer_init(void)
 {
-	struct device_node *np;
-
-	np = of_find_matching_node(NULL, timer_ctrl_match);
-	if (!np) {
-		pr_err("Can't find timer ctrl node\n");
-		return;
-	}
-
-	timer_ctrl_reg = of_iomap(np, 0);
-	if (!timer_ctrl_reg) {
-		pr_err("%s: Failed to map timer ctrl reg\n", __func__);
-		return;
-	}
-
-	of_node_put(np);
-
 	ambarella_clockevent_init();
 	ambarella_clocksource_init();
 
