@@ -301,7 +301,7 @@ static int ambvic_irq_domain_map(struct irq_domain *d,
 
 static struct irq_domain_ops amb_irq_domain_ops = {
 	.map = ambvic_irq_domain_map,
-	.xlate = irq_domain_xlate_onecell,
+	.xlate = irq_domain_xlate_twocell,
 };
 
 int __init ambvic_of_init(struct device_node *np, struct device_node *parent)

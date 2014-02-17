@@ -130,7 +130,7 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 	usb_phy_init(phy);
 	priv->phy = phy;
 
-	ret = usb_add_hcd(hcd, irq, IRQF_TRIGGER_HIGH);
+	ret = usb_add_hcd(hcd, irq, 0);
 	if (ret < 0)
 		goto amb_ehci_err;
 

@@ -46,21 +46,21 @@
 		timer7: timer@e800b064 {
 			compatible = "ambarella,clock-source";
 			reg = <0xe800b064 0x10>;
-			interrupts = <62>;
+			interrupts = <62 0x1>;
 			ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 		};
 
 		timer8: timer@e800b074 {
 			compatible = "ambarella,clock-event";
 			reg = <0xe800b074 0x10>;
-			interrupts = <63>;
+			interrupts = <63 0x1>;
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 		};
 
 		uart0: uart@e8005000 {
 			compatible = "ambarella,s2l-uart";
 			reg = <0xe8005000 0x1000>;
-			interrupts = <9>;
+			interrupts = <9 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins>;
 			status = "ok";
@@ -72,7 +72,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe8003000 0x1000>;
-			interrupts = <19>;
+			interrupts = <19 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
 			clock-frequency = <100000>;
@@ -86,7 +86,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe8001000 0x1000>;
-			interrupts = <51>;
+			interrupts = <51 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
 			clock-frequency = <100000>;
@@ -100,7 +100,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe8007000 0x1000>;
-			interrupts = <36>;
+			interrupts = <36 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c2_pins>;
 			clock-frequency = <100000>;
@@ -123,7 +123,8 @@
 
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
-				interrupts = <10 11 30 29>; /* gpio interrupts to vic */
+				/* gpio interrupts to vic */
+				interrupts = <10 0x4 11 0x4 30 0x4 29 0x4>;
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinctrl 0 0 128>;
@@ -228,7 +229,7 @@
 		intc: interrupt-controller@e0003000 {
 			compatible = "ambarella,vic";
 			interrupt-controller;
-			#interrupt-cells = <1>;
+			#interrupt-cells = <2>;
 			reg = <0xe0003000 0x1000>,
 			      <0xe0010000 0x1000>,
 			      <0xe001c000 0x1000>;
@@ -239,16 +240,16 @@
 			reg = <0xe0001000 0x1000>, /* fio reg address */
 			      <0xe0012000 0x1000>, /* fdma reg address */
 			      <0xe0000000 0x4>;    /* fifo base */
-			interrupts = <16>,	/* fio_cmd_irq */
-				     <17>,	/* fio_dma_irq */
-				     <33>;	/* fdma_irq */
+			interrupts = <16 0x4>,	/* fio_cmd_irq */
+				     <17 0x4>,	/* fio_dma_irq */
+				     <33 0x4>;	/* fdma_irq */
 			/* amb,use-2x-pll; */
 		};
 
 		uart1: uart@e0032000 {
 			compatible = "ambarella,s2l-uart";
 			reg = <0xe0032000 0x1000>;
-			interrupts = <25>;
+			interrupts = <25 0x4>;
 			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,tx-fifo-fix; */
@@ -267,21 +268,21 @@
 		udc@e0006000 {
 			compatible = "ambarella,udc-v2";
 			reg = <0xe0006000 0x2000 0xec1702cc 0x4>;
-			interrupts = <4>;
+			interrupts = <4 0x4>;
 			amb,usbphy = <&usbphy>;
 		};
 
 		ehci@e0018000 {
 			compatible = "ambarella,ehci";
 			reg = <0xe0018000 0x1000>;
-			interrupts = <39>;
+			interrupts = <39 0x4>;
 			amb,usbphy = <&usbphy>;
 		};
 
 		ohci@e0019000 {
 			compatible = "ambarella,ohci";
 			reg = <0xe0019000 0x1000>;
-			interrupts = <44>;
+			interrupts = <44 0x4>;
 			amb,usbphy = <&usbphy>;
 			status = "disabled";
 		};
