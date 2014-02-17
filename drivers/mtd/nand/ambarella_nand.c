@@ -48,6 +48,7 @@
 #include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
+#define DRIVER_NAME "amba_nand"
 
 /* nand_check_wp will be checked before write, so wait MTD fix */
 #undef AMBARELLA_NAND_WP
@@ -234,9 +235,15 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 				dma_dsm_ctr |= DMA_DSM_SPJP_64B;
 				fio_ctr_reg |= FIO_CTR_ECC_6BIT;
 			} else {
+				u32 nand_ext_ctr_reg = 0;
 				fio_dsm_ctr |= FIO_DSM_SPJP_128B;
 				dma_dsm_ctr |= DMA_DSM_SPJP_128B;
 				fio_ctr_reg |= FIO_CTR_ECC_8BIT;
+				nand_ext_ctr_reg = amba_readl(nand_info->regbase +
+						FLASH_EX_CTR_OFFSET);
+				nand_ext_ctr_reg |= NAND_EXT_CTR_SP_2X;
+				amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
+							nand_ext_ctr_reg);
 			}
 	}
 
@@ -257,6 +264,14 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 			 FIO_CTR_ECC_6BIT |
 			 FIO_CTR_ECC_8BIT);
 
+	if (nand_info->ecc_bits == 8) {
+		u32 nand_ext_ctr_reg = 0;
+		nand_ext_ctr_reg = amba_readl(nand_info->regbase +
+					FLASH_EX_CTR_OFFSET);
+		nand_ext_ctr_reg &= ~NAND_EXT_CTR_SP_2X;
+		amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
+					nand_ext_ctr_reg);
+	}
 	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
 
 	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, 0);
@@ -1863,6 +1878,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
 
+	mtd->name = DRIVER_NAME;
 	errorCode = ambarella_nand_scan_partitions(nand_info);
 	if (errorCode)
 		goto ambarella_nand_probe_mtd_error;
