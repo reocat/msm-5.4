@@ -1424,7 +1424,7 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 		struct device_node *np)
 {
 	struct nand_chip *chip = &nand_info->chip;
-	u32 poc = get_ambarella_poc();
+	u32 poc = ambarella_get_poc();
 
 	if (of_device_is_compatible(np, "ambarella,nand-v1")) {
 		nand_info->ecc_bits = 1;

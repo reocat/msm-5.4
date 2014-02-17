@@ -487,10 +487,10 @@ u32 get_ambarella_apb_size(void)
 }
 EXPORT_SYMBOL(get_ambarella_apb_size);
 
-u32 get_ambarella_poc(void)
+u32 ambarella_get_poc(void)
 {
 	return amba_rct_readl(SYS_CONFIG_REG);
 }
-EXPORT_SYMBOL(get_ambarella_poc);
+EXPORT_SYMBOL(ambarella_get_poc);
 
 
