@@ -283,12 +283,8 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	pr_info("\tsystem configuration:\t0x%08x\n",
 		ambarella_board_generic.board_poc);
 
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-#if !defined(CONFIG_AMBARELLA_RAW_BOOT)
-#if (CHIP_REV == I1 || CHIP_REV == S2)
+#if defined(CONFIG_PLAT_AMBARELLA_LOWER_ARM_PLL)
 	amba_rct_writel(SCALER_ARM_ASYNC_REG, 0xF);
-#endif
-#endif
 #endif
 
 	ret_val = ambarella_create_proc_dir();

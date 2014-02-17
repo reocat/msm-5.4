@@ -394,6 +394,13 @@ config AMBARELLA_RAW_BOOT
 	help
 	  If you are not sure, say N here.
 
+config PLAT_AMBARELLA_LOWER_ARM_PLL
+	bool "Lower ARM11 PLL when use Cortex only"
+	default n
+	depends on (PLAT_AMBARELLA_I1_CORTEX || PLAT_AMBARELLA_S2_CORTEX)
+	help
+	  If you are not sure, say N here.
+
 config AMBARELLA_SUPPORT_BAPI
 	bool "Suport BAPI"
 	depends on !AMBARELLA_RAW_BOOT
