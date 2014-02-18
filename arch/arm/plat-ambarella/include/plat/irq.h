@@ -706,7 +706,6 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-extern void ambarella_init_irq(void);
 extern void ambvic_sw_set(void __iomem *vic_base, unsigned int vic_irq);
 extern void ambvic_sw_clr(void __iomem *vic_base, unsigned int vic_irq);
 

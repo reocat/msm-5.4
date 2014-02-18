@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/irqchip.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -702,7 +703,7 @@ MACHINE_START(ELEPHANT, "Elephant")
 	.restart_mode	= 's',
 	.smp		= smp_ops(ambarella_smp_ops),
 	.map_io		= ambarella_map_io,
-	.init_irq	= ambarella_init_irq,
+	.init_irq	= irqchip_init,
 	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_elephant,
 	.restart	= ambarella_restart_machine,

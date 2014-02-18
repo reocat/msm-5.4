@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/irqchip.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
 #include <linux/i2c.h>
@@ -337,7 +338,7 @@ MACHINE_START(COCONUT, "Coconut")
 	.atag_offset	= 0x100,
 	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
-	.init_irq	= ambarella_init_irq,
+	.init_irq	= irqchip_init,
 	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_coconut,
 	.restart	= ambarella_restart_machine,

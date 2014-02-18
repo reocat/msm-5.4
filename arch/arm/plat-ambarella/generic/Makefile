@@ -31,7 +31,6 @@ obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)	+= gpio.o
 obj-y						+= idc.o
 obj-y						+= init.o
 obj-y						+= ir.o
-obj-y						+= irq.o
 obj-y						+= clk.o
 obj-y						+= pll.o
 obj-y						+= pm.o
@@ -43,5 +42,4 @@ obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_SPI)	+= spi.o
 obj-y						+= timer.o
 obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
-obj-y						+= pinctrl.o
 

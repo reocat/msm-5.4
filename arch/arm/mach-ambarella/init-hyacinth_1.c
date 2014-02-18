@@ -23,6 +23,7 @@
 
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
+#include <linux/irqchip.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -79,7 +80,7 @@ MACHINE_START(HYACINTH_1, "Hyacinth_1")
 	.smp		= smp_ops(ambarella_smp_ops),
 	.atag_offset	= 0x100,
 	.restart_mode	= 's',
-	.init_irq	= ambarella_init_irq,
+	.init_irq	= irqchip_init,
 	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_hyacinth,
 MACHINE_END
