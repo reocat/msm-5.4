@@ -163,13 +163,15 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 			seq_printf(s, "GPIO_DATA:\t0x%08X\n", data);
 		}
 
-		seq_printf(s, "GPIO %d: ", i);
+		seq_printf(s, " gpio-%-3d", gc->base + i);
 		if (afsel & (1 << offset)) {
-			seq_printf(s, "HW\n");
+			seq_printf(s, " [HW  ]\n");
 		} else {
-			seq_printf(s, "%s\t%s\n",
-				(dir & (1 << offset)) ? "out" : "in",
-				(data & (1 << offset)) ? "set" : "clear");
+			const char *label = gpiochip_is_requested(gc, i);
+			label = label ? : "";
+			seq_printf(s, " [GPIO] (%-20.20s) %s %s\n", label,
+				(dir & (1 << offset)) ? "out" : "in ",
+				(data & (1 << offset)) ? "hi" : "lo");
 		}
 	}
 }
