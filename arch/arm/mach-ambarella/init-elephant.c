@@ -526,9 +526,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_spi0_cs_pins[6] = -1;
 		ambarella_spi0_cs_pins[7] = -1;
 
-		/* both usb0 and usb1 don't use over-current protection */
-		ambarella_board_generic.uhc_use_ocp = 0;
-
 		ambarella_board_generic.sata_power.gpio_id = GPIO(122);
 		ambarella_board_generic.sata_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.sata_power.active_delay = 1;

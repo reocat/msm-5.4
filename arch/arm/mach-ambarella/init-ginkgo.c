@@ -215,20 +215,7 @@ static void __init ambarella_init_ginkgo(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
-			ambarella_board_generic.uport_irq.irq_gpio = GPIO(49);
-			ambarella_board_generic.uport_irq.irq_type = IRQ_TYPE_EDGE_BOTH;
-			ambarella_board_generic.uport_irq.irq_gpio_val = GPIO_LOW;
-			ambarella_board_generic.uport_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-			/* EXT_GPIO(12) => the 4th gpio of second port */
-			ambarella_board_generic.uport_control.gpio_id = EXT_GPIO(12);
-			ambarella_board_generic.uport_control.active_level = GPIO_HIGH;
-			ambarella_board_generic.uport_control.active_delay = 1;
-
 			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
-
-			/* Config USB over-curent protection */
-			ambarella_board_generic.uhc_use_ocp = 0x1;
 
 			/* Register audio codec
 			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
@@ -255,9 +242,6 @@ static void __init ambarella_init_ginkgo(void)
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_ATB) {
 
-			/* Config USB over-curent protection */
-			ambarella_board_generic.uhc_use_ocp = 0x0;
-
 			/* Register audio codec
 			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
 			 * used as I2S signals, so we need to prevent
@@ -282,8 +266,6 @@ static void __init ambarella_init_ginkgo(void)
 	}
 
 	if (use_bub_default) {
-		/* Config USB over-curent protection */
-		ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x1;
 		platform_device_register(&ambarella_rtc0);
 	}
 

@@ -473,18 +473,6 @@ struct ambarella_board_info ambarella_board_generic = {
 		.active_level	= GPIO_LOW,
 		.active_delay	= 1,
 	},
-	.uport_irq	= {
-		.irq_gpio	= -1,
-		.irq_type	= -1,
-		.irq_gpio_val	= GPIO_LOW,
-		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
-	},
-	.uport_control	= {
-		.gpio_id	= -1,
-		.active_level	= GPIO_HIGH,
-		.active_delay	= 1,
-	},
-	.uhc_use_ocp	= 0x3,
 };
 #if defined(CONFIG_AMBARELLA_SYS_BOARD_CALL)
 AMBA_BOARD_CALL(ambarella_board_generic, 0644);

@@ -216,9 +216,6 @@ static void __init ambarella_init_ixora(void)
 		}
 	}
 
-	/* Config USB over-curent protection */
-	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
-
 	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
 }
 
