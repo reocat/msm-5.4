@@ -79,8 +79,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_idc0_mux,
 	&ambarella_ir0,
 	&ambarella_rtc0,
-	&ambarella_sd0,
-	&ambarella_sd1,
 	&ambarella_spi0,
 	&ambarella_wdt0,
 	&ambarella_pwm_backlight_device0,
@@ -241,27 +239,6 @@ static void __init ambarella_init_durian(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
-	ambarella_platform_sd0_controller.max_blk_mask = SD_BLK_SZ_512KB;
-	ambarella_platform_sd1_controller.max_blk_mask = SD_BLK_SZ_512KB;
-
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_BUB) {
-		ambarella_platform_sd0_controller.max_clock = 48000000;
-		ambarella_platform_sd0_controller.slot[0].default_caps |=
-			(MMC_CAP_8_BIT_DATA);
-		ambarella_platform_sd0_controller.slot[0].set_vdd =
-			durian_bub_evk_sd_set_vdd;
-		ambarella_platform_sd1_controller.max_clock = 48000000;
-	}
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
-		ambarella_platform_sd0_controller.max_clock = 48000000;
-		ambarella_platform_sd0_controller.slot[0].default_caps |=
-			(MMC_CAP_8_BIT_DATA);
-		ambarella_platform_sd0_controller.slot[0].set_vdd =
-			durian_bub_evk_sd_set_vdd;
-		ambarella_platform_sd0_controller.slot[0].fixed_cd = 0;
-		ambarella_platform_sd0_controller.slot[0].fixed_wp = 0;
-		ambarella_platform_sd1_controller.max_clock = 48000000;
-	}
 
 	/* Register devices */
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));

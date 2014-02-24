@@ -64,7 +64,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_pwm_backlight_device3,
 	&ambarella_pwm_backlight_device4,
 	&ambarella_rtc0,
-	&ambarella_sd0,
 	&ambarella_spi0,
 	&ambarella_spi1,
 	&ambarella_spi2,
@@ -225,14 +224,6 @@ static void __init ambarella_init_filbert(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SDIO;
-	ambarella_platform_sd0_controller.max_blk_mask = SD_BLK_SZ_512KB;
-	ambarella_platform_sd0_controller.slot[1].ext_power.gpio_id = GPIO(54);
-	ambarella_platform_sd0_controller.slot[1].ext_power.active_level = GPIO_HIGH;
-	ambarella_platform_sd0_controller.slot[1].ext_power.active_delay = 300;
-	ambarella_platform_sd0_controller.slot[1].gpio_cd.irq_gpio = GPIO(SMIO_44);
-	ambarella_platform_sd0_controller.slot[1].gpio_cd.irq_line = gpio_to_irq(SMIO_44);
-	ambarella_platform_sd0_controller.slot[1].gpio_cd.irq_type = IRQ_TYPE_EDGE_BOTH;
-	ambarella_platform_sd0_controller.slot[1].gpio_wp.gpio_id = GPIO(SMIO_45);
 
 	spi2_pdata = (struct ambarella_spi_platform_info *)ambarella_spi2.dev.platform_data;
 	spi2_pdata->cs_num = 7;

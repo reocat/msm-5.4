@@ -80,15 +80,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_ir0,
 #endif
 	&ambarella_rtc0,
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_SD)
-	&ambarella_sd0,
-#if (SD_INSTANCES >= 2)
-	&ambarella_sd1,
-#endif
-#if (SD_INSTANCES >= 3)
-	&ambarella_sd2,
-#endif
-#endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_SD */
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_SPI)
 	&ambarella_spi0,
 #if (SPI_INSTANCES >= 2)

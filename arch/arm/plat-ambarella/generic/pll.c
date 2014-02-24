@@ -403,6 +403,94 @@ static struct clk gclk_audio = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
+#if (CHIP_REV == S2L)
+static struct clk pll_out_sd = {
+	.parent		= NULL,
+	.name		= "pll_out_sd",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_SD_CTRL_REG,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= PLL_SD_FRAC_REG,
+	.ctrl2_reg	= PLL_SD_CTRL2_REG,
+	.ctrl3_reg	= PLL_SD_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 12,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk gclk_sdxc = {
+	.parent		= &pll_out_sd,
+	.name		= "gclk_sdxc",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_SDXC_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+static struct clk gclk_sdio = {
+#if (CHIP_REV == S2L)
+	.parent		= &pll_out_sd,
+#else
+	.parent		= &pll_out_core,
+#endif
+	.name		= "gclk_sdio",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_SDIO_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+static struct clk gclk_sd = {
+#if (CHIP_REV == S2L)
+	.parent		= &pll_out_sd,
+#else
+	.parent		= &pll_out_core,
+#endif
+	.name		= "gclk_sd",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_SD48_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
@@ -425,5 +513,13 @@ void ambarella_init_early(void)
 
 	ambarella_clk_add(&gclk_uart);
 	ambarella_clk_add(&gclk_audio);
+#if (CHIP_REV == S2L)
+	ambarella_clk_add(&pll_out_sd);
+	ambarella_clk_add(&gclk_sdxc);
+#endif
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+	ambarella_clk_add(&gclk_sdio);
+#endif
+	ambarella_clk_add(&gclk_sd);
 }
 

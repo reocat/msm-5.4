@@ -151,9 +151,9 @@
 	        };
 
 		pinctrl: pinctrl@70009000 {
+			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			compatible = "ambarella,pinctrl", "simple-bus";
 			reg = <0x70009000 0x1000>,
 			      <0x7000a000 0x1000>,
 			      <0x7000e000 0x1000>,
@@ -288,6 +288,49 @@
 			interrupts = <0 89 0x04>;
 			amb,usbphy = <&usbphy>;
 			status = "disabled";
+		};
+
+		sdmmc0@60002000 {
+			compatible = "ambarella,sdmmc";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x60002000 0x1000>,
+			      <0x60001000 0x80>, /* fio reg address */
+			      <0x701701d0 0x4>;
+			interrupts = <0 18 0x4>;
+			amb,clk-name = "gclk_sd";
+			amb,wait-tmo = <2500>; /* in millisecond */
+			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
+			amb,timing-magic = <1>; /* see codes for its meaning */
+
+			slot@0 {
+				reg = <0>;
+				max-frequency = <48000000>;
+				bus-width = <8>;
+				amb,caps-ddr;
+			};
+		};
+
+		sdmmc1@6000c000 {
+			compatible = "ambarella,sdmmc";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x6000c000 0x1000>,
+			      <0x60001000 0x80>, /* fio reg address */
+			      <0x701701d0 0x4>;
+			interrupts = <0 52 0x4>;
+			amb,dma-addr-fix;
+			amb,clk-name = "gclk_sdio";
+			amb,wait-tmo = <2500>; /* in millisecond */
+			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
+			amb,timing-magic = <2>; /* see codes for its meaning */
+
+			slot@0 {
+				reg = <0>;
+				max-frequency = <48000000>;
+				bus-width = <8>;
+				amb,caps-ddr;
+			};
 		};
 	};
 

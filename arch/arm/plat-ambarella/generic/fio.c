@@ -57,6 +57,7 @@ static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
 
 static u32 fio_owner = SELECT_FIO_FREE;
+static atomic_t fio_sd_owner_cnt = ATOMIC_INIT(0);
 int fio_default_owner = SELECT_FIO_FREE;
 #if defined(CONFIG_AMBARELLA_SYS_FIO_CALL)
 module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
@@ -74,6 +75,9 @@ void __fio_select_lock(int module)
 #if (CHIP_REV == A5S) || (CHIP_REV == I1)
 	unsigned long				flags;
 #endif
+
+	if (module == SELECT_FIO_FREE)
+		return;
 
 	fio_ctr = amba_readl(FIO_CTR_REG);
 	fio_dmactr = amba_readl(FIO_DMACTR_REG);
@@ -104,13 +108,6 @@ void __fio_select_lock(int module)
 		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
 		break;
 
-	case SELECT_FIO_SD2:
-#if (CHIP_REV == A7L) || (CHIP_REV == S2)
-		fio_ctr &= ~FIO_CTR_XD;
-		fio_dmactr = (fio_dmactr & 0xcfffffff) | FIO_DMACTR_SD;
-#endif
-		break;
-
 	default:
 		break;
 	}
@@ -135,8 +132,7 @@ void __fio_select_lock(int module)
 		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sd_int);
 		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sd_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
-	} else
-	if (module == SELECT_FIO_SDIO) {
+	} else if (module == SELECT_FIO_SDIO) {
 #if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
 		ambarella_gpio_raw_lock(2, &flags);
 		amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
@@ -153,36 +149,27 @@ void __fio_select_lock(int module)
 static bool fio_check_free(u32 module)
 {
 	unsigned long flags;
-	bool is_free = 0;
+	bool is_free = false;
 
 	spin_lock_irqsave(&fio_lock, flags);
 
-	if (fio_owner & module) {
-		pr_warning("%s: module[%d] reentry!\n", __func__, module);
-		is_free = 1;
-		goto fio_exit;
-	}
-
-#if (CHIP_REV == A7L) || (CHIP_REV == S2)
-	if (module & (SELECT_FIO_SD | SELECT_FIO_SD2)) {
-		if (!(fio_owner & (~(SELECT_FIO_SD | SELECT_FIO_SD2)))) {
-			fio_owner |= module;
-			is_free = 1;
-			goto fio_exit;
-		}
-	} else
-#endif
 	if (fio_owner == SELECT_FIO_FREE) {
-		is_free = 1;
+		is_free = true;
 		fio_owner = module;
-		goto fio_exit;
+	} else if (fio_owner == module) {
+		is_free = true;
+		if (fio_owner != SELECT_FIO_SD)
+			pr_warning("%s: module[%d] reentry!\n", __func__, module);
 	}
 
-fio_exit:
+	if (is_free && module == SELECT_FIO_SD)
+		atomic_inc(&fio_sd_owner_cnt);
+
 	spin_unlock_irqrestore(&fio_lock, flags);
 
 	return is_free;
 }
+
 
 void fio_select_lock(int module)
 {
@@ -195,37 +182,24 @@ void fio_unlock(int module)
 {
 	unsigned long flags;
 
-	if (!(fio_owner & (~module)) &&
-		(fio_default_owner != SELECT_FIO_FREE) &&
-		(fio_default_owner != module)) {
-		__fio_select_lock(fio_default_owner);
-	}
+	BUG_ON(fio_owner != module);
 
 	spin_lock_irqsave(&fio_lock, flags);
-#if (CHIP_REV == A7L) || (CHIP_REV == S2)
-	if (module & (SELECT_FIO_SD | SELECT_FIO_SD2)) {
-		if (fio_owner & module) {
-			fio_owner &= (~module);
-			wake_up(&fio_wait);
-		} else {
-			pr_err("%s: fio_owner(0x%x) != module(0x%x)!.\n",
-				__func__, fio_owner, module);
-		}
-	} else
-#endif
-	if (fio_owner == module) {
+
+	if (module != SELECT_FIO_SD || atomic_dec_and_test(&fio_sd_owner_cnt))
 		fio_owner = SELECT_FIO_FREE;
+
+	if (fio_owner == SELECT_FIO_FREE) {
+		if (fio_default_owner != module)
+			__fio_select_lock(fio_default_owner);
 		wake_up(&fio_wait);
-	} else {
-		pr_err("%s: fio_owner(%d) != module(%d)!.\n",
-			__func__, fio_owner, module);
 	}
 
 	spin_unlock_irqrestore(&fio_lock, flags);
 }
 EXPORT_SYMBOL(fio_unlock);
 
-int fio_amb_sd0_is_enable(void)
+static int fio_amb_sd0_is_enable(void)
 {
 	u32 fio_ctr;
 	u32 fio_dmactr;
@@ -255,8 +229,9 @@ void fio_amb_sd0_set_int(u32 mask, u32 on)
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
+EXPORT_SYMBOL(fio_amb_sd0_set_int);
 
-int fio_amb_sdio0_is_enable(void)
+static int fio_amb_sdio0_is_enable(void)
 {
 	u32 fio_ctr;
 	u32 fio_dmactr;
@@ -286,6 +261,7 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
+EXPORT_SYMBOL(fio_amb_sdio0_set_int);
 #endif
 
 /* ==========================================================================*/

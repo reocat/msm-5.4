@@ -82,10 +82,6 @@ extern struct ambarella_eth_platform_info ambarella_eth1_platform_info;
 
 extern struct ambarella_rtc_controller ambarella_platform_rtc_controller0;
 
-extern struct ambarella_sd_controller ambarella_platform_sd0_controller;
-extern struct ambarella_sd_controller ambarella_platform_sd1_controller;
-extern struct ambarella_sd_controller ambarella_platform_sd2_controller;
-
 extern int ambarella_spi0_cs_pins[];
 extern int ambarella_spi1_cs_pins[];
 extern int ambarella_spi2_cs_pins[];

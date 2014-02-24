@@ -69,9 +69,6 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_ir0,
-	&ambarella_sd0,
-	&ambarella_sd1,
-	&ambarella_sd2,
 	&ambarella_wdt0,
 	&ambarella_dma,
 	&ambarella_rtc0,
@@ -184,72 +181,7 @@ struct platform_device ixora_board_input = {
 	}
 };
 
-static void ixora_bub_sd_set_vdd(u32 vdd)
-{
-	pr_debug("%s = %dmV\n", __func__, vdd);
-	ambarella_gpio_config(GPIO(0), GPIO_FUNC_SW_OUTPUT);
-	if (vdd == 1800) {
-		ambarella_gpio_set(GPIO(0), 1);
-	} else {
-		ambarella_gpio_set(GPIO(0), 0);
-	}
-	msleep(100);
-}
-
-static void ixora_bub_sd_set_bus_timing(u32 timing)
-{
-	u32 sd_phy_ctrl_0_reg;
-	u32 sd_phy_ctrl_1_reg;
-
-	pr_debug("%s = %d\n", __func__, timing);
-	sd_phy_ctrl_0_reg = amba_rct_readl(RCT_REG(0x4C0));
-	sd_phy_ctrl_1_reg = amba_rct_readl(RCT_REG(0x4C4));
-	pr_debug("sd_phy_ctrl_0_reg = 0x%08X\n", sd_phy_ctrl_0_reg);
-	pr_debug("sd_phy_ctrl_1_reg = 0x%08X\n", sd_phy_ctrl_1_reg);
-	switch (timing) {
-	case MMC_TIMING_LEGACY:
-	case MMC_TIMING_MMC_HS:
-	case MMC_TIMING_SD_HS:
-	case MMC_TIMING_UHS_SDR12:
-	case MMC_TIMING_UHS_SDR25:
-	case MMC_TIMING_UHS_SDR50:
-		break;
-	case MMC_TIMING_UHS_SDR104:
-		break;
-	case MMC_TIMING_UHS_DDR50:
-		break;
-	default:
-		break;
-	}
-	pr_debug("sd_phy_ctrl_0_reg = 0x%08X\n", sd_phy_ctrl_0_reg);
-	pr_debug("sd_phy_ctrl_1_reg = 0x%08X\n", sd_phy_ctrl_1_reg);
-}
-
-static void ixora_bub_sdio_set_vdd(u32 vdd)
-{
-	pr_debug("%s = %dmV\n", __func__, vdd);
-	ambarella_gpio_config(GPIO(11), GPIO_FUNC_SW_OUTPUT);
-	if (vdd == 1800) {
-		ambarella_gpio_set(GPIO(11), 1);
-	} else {
-		ambarella_gpio_set(GPIO(11), 0);
-	}
-	msleep(100);
-}
-
 /* ==========================================================================*/
-static void ixora_ipcam_sd_set_vdd(u32 vdd)
-{
-	pr_debug("%s = %dmV\n", __func__, vdd);
-	ambarella_gpio_config(GPIO(0), GPIO_FUNC_SW_OUTPUT);
-	if (vdd == 1800) {
-		ambarella_gpio_set(GPIO(0), 0);
-	} else {
-		ambarella_gpio_set(GPIO(0), 1);
-	}
-	msleep(100);
-}
-
 static void __init ambarella_init_ixora_ipcam(void)
 {
 	ambarella_eth0_platform_info.mii_id = 3;
@@ -258,25 +190,6 @@ static void __init ambarella_init_ixora_ipcam(void)
 	ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
 	ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
 	ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	ambarella_platform_sd0_controller.max_clock = 48000000;
-	ambarella_platform_sd0_controller.slot[0].private_caps |=
-		(AMBA_SD_PRIVATE_CAPS_VDD_18 |
-		AMBA_SD_PRIVATE_CAPS_ADMA);
-	ambarella_platform_sd0_controller.slot[0].set_vdd =
-		ixora_ipcam_sd_set_vdd;
-	ambarella_platform_sd0_controller.slot[0].set_bus_timing =
-		ixora_bub_sd_set_bus_timing;
-	ambarella_platform_sd0_controller.slot[0].ext_power.gpio_id = EXT_GPIO(0);
-	ambarella_platform_sd0_controller.slot[0].ext_power.active_level = GPIO_HIGH;
-	ambarella_platform_sd0_controller.slot[0].ext_power.active_delay = 300;
-
-	ambarella_platform_sd1_controller.max_clock = 24000000;
-	ambarella_platform_sd1_controller.slot[0].private_caps |=
-		(AMBA_SD_PRIVATE_CAPS_ADMA);
-	ambarella_platform_sd1_controller.slot[0].ext_power.gpio_id = EXT_GPIO(1);
-	ambarella_platform_sd1_controller.slot[0].ext_power.active_level = GPIO_HIGH;
-	ambarella_platform_sd1_controller.slot[0].ext_power.active_delay = 300;
 }
 
 /* ==========================================================================*/
@@ -303,30 +216,6 @@ static void __init ambarella_init_ixora(void)
 		}
 	}
 
-	if (use_bub_default) {
-		ambarella_platform_sd0_controller.max_clock = 48000000;
-		ambarella_platform_sd0_controller.slot[0].private_caps |=
-			(AMBA_SD_PRIVATE_CAPS_VDD_18 |
-			AMBA_SD_PRIVATE_CAPS_ADMA);
-		ambarella_platform_sd0_controller.slot[0].set_vdd =
-			ixora_bub_sd_set_vdd;
-		ambarella_platform_sd0_controller.slot[0].set_bus_timing =
-			ixora_bub_sd_set_bus_timing;
-
-		ambarella_platform_sd1_controller.max_clock = 48000000;
-		ambarella_platform_sd1_controller.slot[0].private_caps |=
-			(AMBA_SD_PRIVATE_CAPS_VDD_18 |
-			AMBA_SD_PRIVATE_CAPS_ADMA);
-		ambarella_platform_sd1_controller.slot[0].set_vdd =
-			ixora_bub_sdio_set_vdd;
-
-		ambarella_platform_sd2_controller.max_clock = 12000000;
-		ambarella_platform_sd2_controller.slot[0].default_caps |=
-			(MMC_CAP_8_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST);
-		ambarella_platform_sd2_controller.slot[0].private_caps |=
-			(AMBA_SD_PRIVATE_CAPS_ADMA);
-	}
-
 	/* Config USB over-curent protection */
 	ambarella_board_generic.uhc_use_ocp = (0x1 << 16) | 0x3;
 
@@ -334,13 +223,18 @@ static void __init ambarella_init_ixora(void)
 }
 
 /* ==========================================================================*/
+
+static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
+	{}
+};
+
 static void __init ambarella_init_ixora_dt(void)
 {
 	int i;
 
 	ambarella_init_ixora();
 
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+	of_platform_populate(NULL, of_default_bus_match_table, ambarella_auxdata_lookup, NULL);
 
 	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
 	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {

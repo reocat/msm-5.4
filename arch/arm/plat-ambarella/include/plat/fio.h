@@ -150,7 +150,6 @@
 #define SELECT_FIO_CF		(0x00000004)
 #define SELECT_FIO_SD		(0x00000008)
 #define SELECT_FIO_SDIO		(0x00000010)
-#define SELECT_FIO_SD2		(0x00000020)
 
 #define FIO_OP_NOT_DONE_ER	(-1)	/* operation(xfer) not done error */
 #define FIO_READ_ER		(-2)	/* uncorrected ECC error */
@@ -161,19 +160,17 @@
 
 /* ==========================================================================*/
 
-/* ==========================================================================*/
-extern int fio_amb_sd0_is_enable(void);
-extern int fio_amb_sdio0_is_enable(void);
-
 #if (CHIP_REV == S2L)
 static inline void fio_select_lock(int module) { }
 static inline void fio_unlock(int module) { }
+static inline void fio_amb_sd0_set_int(u32 mask, u32 on){ }
+static inline void fio_amb_sdio0_set_int(u32 mask, u32 on){ }
 #else
 extern void fio_select_lock(int module);
 extern void fio_unlock(int module);
-#endif
 extern void fio_amb_sd0_set_int(u32 mask, u32 on);
 extern void fio_amb_sdio0_set_int(u32 mask, u32 on);
+#endif
 
 extern int ambarella_init_fio(void);
 
