@@ -31,6 +31,11 @@
 #define BOOT_DEV_ONENAND	0x4
 #define BOOT_DEV_SNOR		0x5
 
+#define PART_DEV_AUTO		(0x00)
+#define PART_DEV_NAND		(0x01)
+#define PART_DEV_EMMC		(0x02)
+#define PART_DEV_SNOR		(0x04)
+
 #define FW_MODEL_NAME_SIZE	128
 
 #define PART_MAX_WITH_RSV	32
@@ -39,7 +44,7 @@
 #define CMDLINE_PART_MAX	8
 
 #define HAS_IMG_PARTS		15
-#define HAS_NO_IMG_PARTS	0
+#define HAS_NO_IMG_PARTS	1
 #define TOTAL_FW_PARTS		(HAS_IMG_PARTS + HAS_NO_IMG_PARTS)
 
 /* ==========================================================================*/
@@ -72,9 +77,9 @@ typedef struct fldev_s
 	char	sn[32];		/**< Serial number */
 	u8	usbdl_mode;	/**< USB download mode */
 	u8	auto_boot;	/**< Automatic boot */
-	char	cmdline[FLDEV_CMD_LINE_SIZE];	/**< Boot command line options */
 	u8	rsv[2];
 	u32	splash_id;
+	char	cmdline[FLDEV_CMD_LINE_SIZE];
 
 	/* This section contains networking related settings */
 	netdev_t eth[2];
@@ -82,18 +87,19 @@ typedef struct fldev_s
 	netdev_t usb_eth[2];
 
 	/* This section contains update by network  related settings */
-	u8	auto_dl;	/**< Automatic download? */
+	u32	auto_dl;	/**< Automatic download? */
 	u32	tftpd;		/**< Boot loader's TFTP server */
 	u32	pri_addr;	/**< RTOS download address */
 	char	pri_file[32];	/**< RTOS file name */
-	u8	pri_comp;	/**< RTOS compressed? */
+	u32	pri_comp;	/**< RTOS compressed? */
+	u32	dtb_addr;	/**< DTB download address */
+	char	dtb_file[32];	/**< DTB file name */
 	u32	rmd_addr;	/**< Ramdisk download address */
 	char	rmd_file[32];	/**< Ramdisk file name */
-	u8	rmd_comp;	/**< Ramdisk compressed? */
+	u32	rmd_comp;	/**< Ramdisk compressed? */
 	u32	dsp_addr;	/**< DSP download address */
 	char	dsp_file[32];	/**< DSP file name */
-	u8	dsp_comp;	/**< DSP compressed? */
-	u8	rsv2[2];
+	u32	dsp_comp;	/**< DSP compressed? */
 
 	u32	magic;		/**< Magic number */
 } __attribute__((packed)) fldev_t;
@@ -120,14 +126,13 @@ typedef struct flpart_table_s
 #define PTB_META_MAGIC		0x33219fbd
 /* For second version of flpart_meta_t */
 #define PTB_META_MAGIC2		0x4432a0ce
+#define PTB_META_MAGIC3		0x42405891
 #define PART_NAME_LEN		8
-#define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN + sizeof(u32)) * \
-				 PART_MAX + sizeof(u32) + sizeof(u32) + \
-				 FW_MODEL_NAME_SIZE + (sizeof(u32) * 4))
-
+#define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN + \
+				sizeof(u32)) * PART_MAX + sizeof(u32) + \
+				sizeof(u32) + FW_MODEL_NAME_SIZE)
 #define PTB_META_SIZE		2048
 #define PTB_META_PAD_SIZE	(PTB_META_SIZE - PTB_META_ACTURAL_LEN)
-
 typedef struct flpart_meta_s
 {
 	struct {
@@ -135,14 +140,10 @@ typedef struct flpart_meta_s
 		u32	nblk;
 		char	name[PART_NAME_LEN];
 	} part_info[PART_MAX];
-	u32	magic;				/**< Magic number */
-	u32	part_dev[PART_MAX];
-	u8	model_name[FW_MODEL_NAME_SIZE];
-	struct {
-		u32	sblk;
-		u32	nblk;
-	} sm_stg[2];
-	u8 	rsv[PTB_META_PAD_SIZE];
+	u32		magic;
+	u32		part_dev[PART_MAX];
+	u8		model_name[FW_MODEL_NAME_SIZE];
+	u8 		rsv[PTB_META_PAD_SIZE];
 	/* This meta crc32 doesn't include itself. */
 	/* It's only calc data before this field.  */
 	u32 	crc32;

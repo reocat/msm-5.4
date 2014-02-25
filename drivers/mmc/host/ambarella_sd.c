@@ -1810,7 +1810,6 @@ static int ambarella_sd_get_resource(struct platform_device *pdev,
 			struct ambarella_sd_controller_info *pinfo)
 {
 	struct resource *mem;
-	int retval;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
@@ -1854,14 +1853,6 @@ static int ambarella_sd_get_resource(struct platform_device *pdev,
 	if (pinfo->irq < 0) {
 		dev_err(&pdev->dev, "Get SD/MMC irq resource failed!\n");
 		return -ENXIO;
-	}
-
-	retval = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_sd_irq,
-				IRQF_SHARED | IRQF_TRIGGER_HIGH,
-				dev_name(&pdev->dev), pinfo);
-	if (retval < 0) {
-		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", pinfo->irq);
-		return retval;
 	}
 
 	return 0;
@@ -1908,8 +1899,15 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 		pinfo->slot_num++;
 	}
 
-	platform_set_drvdata(pdev, pinfo);
+	retval = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_sd_irq,
+				IRQF_SHARED | IRQF_TRIGGER_HIGH,
+				dev_name(&pdev->dev), pinfo);
+	if (retval < 0) {
+		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", pinfo->irq);
+		goto ambarella_sd_probe_free_host;
+	}
 
+	platform_set_drvdata(pdev, pinfo);
 	dev_info(&pdev->dev, "%u slots @ %luHz\n",
 			pinfo->slot_num, clk_get_rate(pinfo->clk));
 

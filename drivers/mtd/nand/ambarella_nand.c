@@ -1721,7 +1721,7 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 		goto ambarella_nand_scan_error1;
 
 	found = 0;
-	for (from = mtd->erasesize; from < mtd->size; from += mtd->erasesize) {
+	for (from = 0; from < mtd->size; from += mtd->erasesize) {
 		if (mtd->_block_isbad(mtd, from)) {
 			continue;
 		}
@@ -1742,16 +1742,19 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 		} else if (meta_table->magic == PTB_META_MAGIC2) {
 			found = 2;
 			break;
+		} else if (meta_table->magic == PTB_META_MAGIC3) {
+			found = 3;
+			break;
 		}
 	}
 
 	if (found == 0) {
-		dev_err(nand_info->dev, "%s: meta appears damaged...\n", __func__);
+		dev_err(nand_info->dev,
+			"%s: meta appears damaged...\n", __func__);
 		errorCode = -EINVAL;
 		goto ambarella_nand_scan_error2;
 	}
-
-	dev_info(nand_info->dev, "Partition infomation found!\n");
+	dev_info(nand_info->dev, "PTB V%d\n", found);
 
 	amboot_partitions = kzalloc(
 		PART_MAX + CMDLINE_PART_MAX * sizeof(struct mtd_partition),
@@ -1761,7 +1764,13 @@ static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
 
 	/* if this partition isn't located in NAND, fake its nblk to 0, this
 	 * feature start from the second version of flpart_meta_t. */
-	if (found > 1) {
+	if (found == 3) {
+		for (i = 0; i < PART_MAX; i++) {
+			if ((meta_table->part_dev[i] & PART_DEV_NAND) !=
+				PART_DEV_NAND)
+				meta_table->part_info[i].nblk = 0;
+		}
+	} else if (found > 1) {
 		for (i = 0; i < PART_MAX; i++) {
 			if (meta_table->part_dev[i] != BOOT_DEV_NAND)
 				meta_table->part_info[i].nblk = 0;
