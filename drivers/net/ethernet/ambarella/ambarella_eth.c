@@ -26,6 +26,10 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
+#include <linux/of.h>
+#include <linux/of_net.h>
+#include <linux/of_mdio.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -45,11 +49,16 @@
 #include <plat/eth.h>
 
 /* ==========================================================================*/
-#define AMBETH_PACKET_MAXFRAME	(1536)
-#define AMBETH_RX_COPYBREAK	(1518)
-#define AMBETH_RX_RNG_MIN	(8)
-#define AMBETH_TX_RNG_MIN	(4)
-#define AMBETH_PHY_REG_SIZE	(32)
+#define AMBETH_NAPI_WEIGHT		32
+#define AMBETH_TX_WATCHDOG		(2 * HZ)
+#define AMBETH_MII_RETRY_CNT		200
+#define AMBETH_FC_PAUSE_TIME		1954
+
+#define AMBETH_PACKET_MAXFRAME		(1536)
+#define AMBETH_RX_COPYBREAK		(1518)
+#define AMBETH_RX_RNG_MIN		(8)
+#define AMBETH_TX_RNG_MIN		(4)
+#define AMBETH_PHY_REG_SIZE		(32)
 
 #define AMBETH_RXDMA_STATUS	(ETH_DMA_STATUS_OVF | ETH_DMA_STATUS_RI | \
 				ETH_DMA_STATUS_RU | ETH_DMA_STATUS_RPS | \
@@ -74,56 +83,71 @@
 
 /* ==========================================================================*/
 struct ambeth_desc {
-	u32					status;
-	u32					length;
-	u32					buffer1;
-	u32					buffer2;
+	u32				status;
+	u32				length;
+	u32				buffer1;
+	u32				buffer2;
 } __attribute((packed));
 
 struct ambeth_rng_info {
-	struct sk_buff				*skb;
-	dma_addr_t				mapping;
+	struct sk_buff			*skb;
+	dma_addr_t			mapping;
 };
 
 struct ambeth_tx_rngmng {
-	unsigned int				cur_tx;
-	unsigned int				dirty_tx;
-	struct ambeth_rng_info			*rng_tx;
-	struct ambeth_desc			*desc_tx;
+	unsigned int			cur_tx;
+	unsigned int			dirty_tx;
+	struct ambeth_rng_info		*rng_tx;
+	struct ambeth_desc		*desc_tx;
 };
 
 struct ambeth_rx_rngmng {
-	unsigned int				cur_rx;
-	unsigned int				dirty_rx;
-	struct ambeth_rng_info			*rng_rx;
-	struct ambeth_desc			*desc_rx;
+	unsigned int			cur_rx;
+	unsigned int			dirty_rx;
+	struct ambeth_rng_info		*rng_rx;
+	struct ambeth_desc		*desc_rx;
 };
 
 struct ambeth_info {
-	unsigned int				rx_count;
-	struct ambeth_rx_rngmng			rx;
-	unsigned int				tx_count;
-	unsigned int				tx_irq_low;
-	unsigned int				tx_irq_high;
-	struct ambeth_tx_rngmng			tx;
-	dma_addr_t				rx_dma_desc;
-	dma_addr_t				tx_dma_desc;
-	spinlock_t				lock;
-	int					oldspeed;
-	int					oldduplex;
-	int					oldlink;
-	int					oldpause;
-	int					oldasym_pause;
+	unsigned int			rx_count;
+	struct ambeth_rx_rngmng		rx;
+	unsigned int			tx_count;
+	unsigned int			tx_irq_low;
+	unsigned int			tx_irq_high;
+	struct ambeth_tx_rngmng		tx;
+	dma_addr_t			rx_dma_desc;
+	dma_addr_t			tx_dma_desc;
+	spinlock_t			lock;
+	int				oldspeed;
+	int				oldduplex;
+	int				oldlink;
+	int				oldpause;
+	int				oldasym_pause;
+	u32				flow_ctr;
 
-	struct net_device_stats			stats;
-	struct napi_struct			napi;
-	struct net_device			*ndev;
-	struct mii_bus				new_bus;
-	struct phy_device			*phydev;
-	uint32_t				msg_enable;
+	struct net_device_stats		stats;
+	struct napi_struct		napi;
+	struct net_device		*ndev;
 
-	unsigned char __iomem			*regbase;
-	struct ambarella_eth_platform_info	*platform_info;
+	struct mii_bus			new_bus;
+	struct phy_device		*phydev;
+	int				pwr_gpio;
+	u8				pwr_gpio_active;
+	int				rst_gpio;
+	u8				rst_gpio_active;
+	u32				phy_supported;
+	u32				fixed_speed; /* only for phy-less */
+
+	unsigned char __iomem		*regbase;
+	u32				msg_enable;
+
+	u32				phy_enabled : 1,
+					ipc_tx : 1,
+					ipc_rx : 1,
+					dump_tx : 1,
+					dump_rx : 1,
+					dump_rx_free : 1,
+					dump_rx_all : 1;
 };
 
 /* ==========================================================================*/
@@ -374,11 +398,14 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 
 	ambhw_set_hwaddr(lp, lp->ndev->dev_addr);
 	amba_writel(lp->regbase + ETH_DMA_BUS_MODE_OFFSET,
-		lp->platform_info->default_dma_bus_mode);
-	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
-		lp->platform_info->default_mac_filter);
+				ETH_DMA_BUS_MODE_FB |
+				ETH_DMA_BUS_MODE_PBL_32 |
+				ETH_DMA_BUS_MODE_DA_RX);
+	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, 0);
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-		lp->platform_info->default_dma_opmode);
+				ETH_DMA_OPMODE_TTC_256 |
+				ETH_DMA_OPMODE_RTC_64 |
+				ETH_DMA_OPMODE_FUF);
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
 		(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE));
 
@@ -390,25 +417,25 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	 */
 	amba_writel(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET,
 		ETH_MAC_FLOW_CTR_PLT_256 |
-		ETH_MAC_FLOW_CTR_PT(lp->platform_info->pause_time));
+		ETH_MAC_FLOW_CTR_PT(AMBETH_FC_PAUSE_TIME));
 
-	if (lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_IPC_RX) {
+	if (lp->ipc_rx) {
 		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-			ETH_DMA_OPMODE_RSF);
+				ETH_DMA_OPMODE_RSF);
 		amba_setbitsl(lp->regbase + ETH_MAC_CFG_OFFSET,
-			ETH_MAC_CFG_IPC);
+				ETH_MAC_CFG_IPC);
 	}
-	if (lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_IPC_TX) {
+
+	if (lp->ipc_tx){
 		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-			ETH_DMA_OPMODE_TSF);
+				ETH_DMA_OPMODE_TSF);
 	}
-	if (lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL) {
+
+	if (lp->dump_rx_all) {
 		amba_setbitsl(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
-			ETH_MAC_FRAME_FILTER_RA);
+				ETH_MAC_FRAME_FILTER_RA);
 	}
+
 	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET,
 		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
 
@@ -442,19 +469,16 @@ static void ambhw_dump_buffer(const char *msg,
 static int ambhw_mdio_read(struct mii_bus *bus,
 	int mii_id, int regnum)
 {
-	struct ambeth_info *lp;
-	int val;
-	int limit;
+	struct ambeth_info *lp = bus->priv;
+	int val, cnt;
 
-	lp = (struct ambeth_info *)bus->priv;
-
-	for (limit = lp->platform_info->mii_retry_limit; limit > 0; limit--) {
+	for (cnt = AMBETH_MII_RETRY_CNT; cnt > 0; cnt--) {
 		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
-		udelay(lp->platform_info->mii_retry_tmo);
+		udelay(10);
 	}
-	if ((limit <= 0) && netif_msg_hw(lp)) {
+	if ((cnt <= 0) && netif_msg_hw(lp)) {
 		dev_err(&lp->ndev->dev, "MII Error: Preread tmo!\n");
 		val = 0xFFFFFFFF;
 		goto ambhw_mdio_read_exit;
@@ -464,13 +488,13 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 	val |= ETH_MAC_GMII_ADDR_CR_250_300MHZ | ETH_MAC_GMII_ADDR_GB;
 	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET, val);
 
-	for (limit = lp->platform_info->mii_retry_limit; limit > 0; limit--) {
+	for (cnt = AMBETH_MII_RETRY_CNT; cnt > 0; cnt--) {
 		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
-		udelay(lp->platform_info->mii_retry_tmo);
+		udelay(10);
 	}
-	if ((limit <= 0) && netif_msg_hw(lp)) {
+	if ((cnt <= 0) && netif_msg_hw(lp)) {
 		dev_err(&lp->ndev->dev, "MII Error: Postread tmo!\n");
 		val = 0xFFFFFFFF;
 		goto ambhw_mdio_read_exit;
@@ -481,7 +505,7 @@ static int ambhw_mdio_read(struct mii_bus *bus,
 ambhw_mdio_read_exit:
 	if (netif_msg_hw(lp))
 		dev_info(&lp->ndev->dev,
-			"MII Read: id[0x%02x], add[0x%02x], val[0x%04x].\n",
+			"MII Read: addr[0x%02x], reg[0x%02x], val[0x%04x].\n",
 			mii_id, regnum, val);
 
 	return val;
@@ -493,7 +517,7 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 	int ret_val = 0;
 	struct ambeth_info *lp;
 	int val;
-	int limit = 0;
+	int cnt = 0;
 
 	lp = (struct ambeth_info *)bus->priv;
 
@@ -502,13 +526,13 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 			"MII Write: id[0x%02x], add[0x%02x], val[0x%04x].\n",
 			mii_id, regnum, value);
 
-	for (limit = lp->platform_info->mii_retry_limit; limit > 0; limit--) {
+	for (cnt = AMBETH_MII_RETRY_CNT; cnt > 0; cnt--) {
 		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
-		udelay(lp->platform_info->mii_retry_tmo);
+		udelay(10);
 	}
-	if ((limit <= 0) && netif_msg_hw(lp)) {
+	if ((cnt <= 0) && netif_msg_hw(lp)) {
 		dev_err(&lp->ndev->dev, "MII Error: Prewrite tmo!\n");
 		ret_val = -EIO;
 		goto ambhw_mdio_write_exit;
@@ -521,13 +545,13 @@ static int ambhw_mdio_write(struct mii_bus *bus,
 		ETH_MAC_GMII_ADDR_GB;
 	amba_writel(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET, val);
 
-	for (limit = lp->platform_info->mii_retry_limit; limit > 0; limit--) {
+	for (cnt = AMBETH_MII_RETRY_CNT; cnt > 0; cnt--) {
 		if (!amba_tstbitsl(lp->regbase + ETH_MAC_GMII_ADDR_OFFSET,
 			ETH_MAC_GMII_ADDR_GB))
 			break;
-		udelay(lp->platform_info->mii_retry_tmo);
+		udelay(10);
 	}
-	if ((limit <= 0) && netif_msg_hw(lp)) {
+	if ((cnt <= 0) && netif_msg_hw(lp)) {
 		dev_err(&lp->ndev->dev, "MII Error: Postwrite tmo!\n");
 		ret_val = -EIO;
 		goto ambhw_mdio_write_exit;
@@ -539,21 +563,25 @@ ambhw_mdio_write_exit:
 
 static int ambhw_mdio_reset(struct mii_bus *bus)
 {
+	struct ambeth_info *lp = bus->priv;
 	int ret_val = 0;
-	struct ambeth_info *lp;
 
-	lp = (struct ambeth_info *)bus->priv;
-
-	if (netif_msg_hw(lp))
+	if (netif_msg_hw(lp)) {
 		dev_info(&lp->ndev->dev, "MII Info: Power gpio = %d, "
-			"Reset gpio = %d.\n",
-			lp->platform_info->mii_power.gpio_id,
-			lp->platform_info->mii_reset.gpio_id);
+			"Reset gpio = %d.\n", lp->pwr_gpio, lp->rst_gpio);
+	}
 
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
-	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
-	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 0);
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, !lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio))
+		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio))
+		gpio_set_value_cansleep(lp->rst_gpio, !lp->rst_gpio_active);
+
+	/* waiting for PHY working stable, this delay is a must */
+	msleep(50);
 
 	return ret_val;
 }
@@ -561,15 +589,13 @@ static int ambhw_mdio_reset(struct mii_bus *bus)
 /* ==========================================================================*/
 static void ambeth_adjust_link(struct net_device *ndev)
 {
-	struct ambeth_info *lp;
-	unsigned long flags;
-	struct phy_device *phydev;
+	struct ambeth_info *lp = netdev_priv(ndev);
+	struct phy_device *phydev = lp->phydev;
 	int need_update = 0;
-
-	lp = (struct ambeth_info *)netdev_priv(ndev);
+	unsigned long flags;
 
 	spin_lock_irqsave(&lp->lock, flags);
-	phydev = lp->phydev;
+
 	if (phydev->link) {
 		if (phydev->duplex != lp->oldduplex) {
 			need_update = 1;
@@ -618,23 +644,21 @@ static void ambeth_adjust_link(struct net_device *ndev)
 
 static void ambeth_fc_config(struct ambeth_info *lp)
 {
-	u32					sup;
-	u32					flow_ctr;
-	u32					adv;
+	u32 sup, adv, flow_ctr;
 
 	sup = lp->phydev->supported;
 	adv = lp->phydev->advertising;
-	flow_ctr = lp->platform_info->flow_ctr;
+	flow_ctr = lp->flow_ctr;
 
 	sup |= (SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 	adv &= ~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
 
-	sup &= lp->platform_info->phy_supported;
+	sup &= lp->phy_supported;
 
 	if (!(sup & (SUPPORTED_Pause | SUPPORTED_Asym_Pause)))
 		goto unsupported;
 
-        if (lp->platform_info->mii_fixed_speed != SPEED_UNKNOWN)
+        if (lp->fixed_speed != SPEED_UNKNOWN)
 		goto autoneg_unsupported;
 
 	if (!(sup & SUPPORTED_Autoneg) ||
@@ -660,7 +684,7 @@ static void ambeth_fc_config(struct ambeth_info *lp)
 
 autoneg_unsupported:
 	/* Sanitize the config value */
-	lp->platform_info->flow_ctr &= ~AMBARELLA_ETH_FC_AUTONEG;
+	lp->flow_ctr &= ~AMBARELLA_ETH_FC_AUTONEG;
 
 	/* Advertise nothing about pause frame */
 	adv &= ~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
@@ -668,7 +692,7 @@ autoneg_unsupported:
 
 unsupported:
 	/* Sanitize the config value */
-	lp->platform_info->flow_ctr &= ~(AMBARELLA_ETH_FC_AUTONEG |
+	lp->flow_ctr &= ~(AMBARELLA_ETH_FC_AUTONEG |
 					 AMBARELLA_ETH_FC_RX |
 					 AMBARELLA_ETH_FC_TX);
 done:
@@ -681,11 +705,9 @@ done:
 
 static void ambeth_fc_resolve(struct ambeth_info *lp)
 {
-	u32					flow_ctr;
-	u32					fc;
-	u32					old_fc;
+	u32 flow_ctr, fc, old_fc;
 
-	flow_ctr = lp->platform_info->flow_ctr;
+	flow_ctr = lp->flow_ctr;
 
 	if (!(flow_ctr & AMBARELLA_ETH_FC_AUTONEG))
 		goto force_setting;
@@ -731,34 +753,28 @@ force_setting:
 
 static int ambeth_phy_start(struct ambeth_info *lp)
 {
+	struct net_device *ndev = lp->ndev;
+	struct phy_device *phydev = lp->phydev;
+	phy_interface_t intf;
 	int ret_val = 0;
-	struct phy_device *phydev;
-	phy_interface_t interface;
-	struct net_device *ndev;
-	int phy_addr;
 	unsigned long flags;
 
-	spin_lock_irqsave(&lp->lock, flags);
-	phydev = lp->phydev;
-	spin_unlock_irqrestore(&lp->lock, flags);
-	if (phydev) {
-		goto ambeth_init_phy_exit;
-	}
+	if (lp->phy_enabled)
+		return 0;
 
-	ndev = lp->ndev;
 	lp->oldlink = PHY_DOWN;
 	lp->oldspeed = 0;
 	lp->oldduplex = -1;
 
-	/* Fixed Link mode: we allow all valid mii_fixed_speed,
-	   event HW can not support the speed. */
-	switch (lp->platform_info->mii_fixed_speed) {
+	/* Fixed Link mode: we allow all valid fixed_speed,
+	   even HW can not support the speed. */
+	switch (lp->fixed_speed) {
 	case SPEED_1000:
 	case SPEED_100:
 	case SPEED_10:
 		lp->oldlink = PHY_RUNNING;
-		lp->oldspeed = lp->platform_info->mii_fixed_speed;
-		lp->oldduplex = lp->platform_info->mii_fixed_duplex;
+		lp->oldspeed = lp->fixed_speed;
+		lp->oldduplex = DUPLEX_FULL;
 		ambhw_set_link_mode_speed(lp);
 		dev_notice(&lp->ndev->dev, "Fixed Link - %d/%s\n", lp->oldspeed,
 			((lp->oldduplex == DUPLEX_FULL) ? "Full" : "Half"));
@@ -769,66 +785,18 @@ static int ambeth_phy_start(struct ambeth_info *lp)
 		break;
 	}
 
-	phy_addr = lp->platform_info->mii_id;
-	if ((phy_addr >= 0) && (phy_addr < PHY_MAX_ADDR)) {
-		if (lp->new_bus.phy_map[phy_addr]) {
-			phydev = lp->new_bus.phy_map[phy_addr];
-			if (phydev->phy_id == lp->platform_info->phy_id) {
-				goto ambeth_init_phy_default;
-			}
-		}
-		dev_notice(&lp->ndev->dev,
-			"Could not find default PHY in %d.\n", phy_addr);
-	}
-	goto ambeth_init_phy_scan;
-
-ambeth_init_phy_default:
-	if (netif_msg_hw(lp))
-		dev_info(&lp->ndev->dev, "Find default PHY in %d!\n", phy_addr);
-	if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq)) {
-		ambarella_gpio_config(lp->platform_info->phy_irq.irq_gpio,
-			lp->platform_info->phy_irq.irq_gpio_mode);
-		phydev->irq = gpio_to_irq(lp->platform_info->phy_irq.irq_gpio);
-		phydev->irq_flags = lp->platform_info->phy_irq.irq_type;
-	}
-	goto ambeth_init_phy_connect;
-
-ambeth_init_phy_scan:
-	for (phy_addr = 0; phy_addr < PHY_MAX_ADDR; phy_addr++) {
-		if (lp->new_bus.phy_map[phy_addr]) {
-			phydev = lp->new_bus.phy_map[phy_addr];
-			if (phydev->phy_id == lp->platform_info->phy_id)
-				goto ambeth_init_phy_connect;
-		}
-	}
-	if (!phydev) {
-		if (netif_msg_drv(lp))
-			dev_err(&lp->ndev->dev, "No PHY device.\n");
-		ret_val = -ENODEV;
-		goto ambeth_init_phy_exit;
-	} else {
-		if (netif_msg_drv(lp))
-			dev_notice(&lp->ndev->dev,
-			"Try PHY[%d] whose id is 0x%08x!\n",
-			phydev->addr, phydev->phy_id);
-	}
-
-ambeth_init_phy_connect:
-	interface = ambhw_get_interface(lp);
-	phydev = phy_connect(ndev, dev_name(&phydev->dev),
-		&ambeth_adjust_link, interface);
-	if (IS_ERR(phydev)) {
-		if (netif_msg_drv(lp))
-			dev_err(&lp->ndev->dev, "Could not attach to PHY!\n");
-		ret_val = PTR_ERR(phydev);
+	intf = ambhw_get_interface(lp);
+	ret_val = phy_connect_direct(ndev, phydev, &ambeth_adjust_link, intf);
+	if (ret_val) {
+		dev_err(&lp->ndev->dev, "Could not attach to PHY!\n");
 		goto ambeth_init_phy_exit;
 	}
 
-	phydev->supported &= lp->platform_info->phy_supported;
+	phydev->supported &= lp->phy_supported;
 	phydev->advertising = phydev->supported;
 
 	spin_lock_irqsave(&lp->lock, flags);
-	lp->phydev = phydev;
+	lp->phy_enabled = 1;
 	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ambeth_fc_config(lp);
@@ -842,17 +810,14 @@ ambeth_init_phy_exit:
 
 static void ambeth_phy_stop(struct ambeth_info *lp)
 {
-	struct phy_device *phydev;
 	unsigned long flags;
 
 	spin_lock_irqsave(&lp->lock, flags);
-	phydev = lp->phydev;
-	lp->phydev = NULL;
+	lp->phy_enabled = 0;
 	lp->oldlink = PHY_DOWN;
 	spin_unlock_irqrestore(&lp->lock, flags);
-	if (phydev) {
-		phy_disconnect(phydev);
-	}
+
+	phy_disconnect(lp->phydev);
 }
 
 static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
@@ -1248,8 +1213,13 @@ static int ambeth_start_hw(struct net_device *ndev)
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
-	ambarella_set_gpio_reset(&lp->platform_info->mii_reset);
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio)) {
+		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
+		msleep(200);
+		gpio_set_value_cansleep(lp->rst_gpio, !lp->rst_gpio_active);
+	}
 
 	spin_lock_irqsave(&lp->lock, flags);
 	ret_val = ambhw_enable(lp);
@@ -1350,8 +1320,10 @@ static void ambeth_stop_hw(struct net_device *ndev)
 		lp->rx.rng_rx = NULL;
 	}
 
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
-	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, !lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio))
+		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 }
 
 static int ambeth_open(struct net_device *ndev)
@@ -1396,10 +1368,8 @@ ambeth_open_exit:
 
 static int ambeth_stop(struct net_device *ndev)
 {
+	struct ambeth_info *lp = netdev_priv(ndev);
 	int ret_val = 0;
-	struct ambeth_info *lp;
-
-	lp = (struct ambeth_info *)netdev_priv(ndev);
 
 	netif_stop_queue(ndev);
 	napi_disable(&lp->napi);
@@ -1441,17 +1411,14 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		dev_err(&lp->ndev->dev, "TX Error: TX OV.\n");
 		goto ambeth_hard_start_xmit_exit;
 	}
-	if (unlikely(lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_DUMP_TX)) {
+	if (unlikely(lp->dump_tx))
 		ambhw_dump_buffer(__func__, skb->data, skb->len);
-	}
+
 	mapping = dma_map_single(&lp->ndev->dev,
 		skb->data, skb->len, DMA_TO_DEVICE);
-	if ((lp->platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_IPC_TX) &&
-		(skb->ip_summed == CHECKSUM_PARTIAL)) {
+	if (lp->ipc_tx && (skb->ip_summed == CHECKSUM_PARTIAL))
 		tx_flag |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
-	}
+
 	lp->tx.rng_tx[entry].skb = skb;
 	lp->tx.rng_tx[entry].mapping = mapping;
 	lp->tx.desc_tx[entry].buffer1 = mapping;
@@ -1594,10 +1561,8 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
 			"RX Error: Rx MAC Address/Payload Checksum.\n");
-			if (lp->platform_info->default_supported &
-				AMBARELLA_ETH_SUPPORTED_DUMP_RX) {
+			if (lp->dump_rx)
 				ambhw_dump_rx(lp, status, entry);
-			}
 		}
 	}
 }
@@ -1623,8 +1588,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, lp->ndev);
-		if (lp->platform_info->default_supported &
-			AMBARELLA_ETH_SUPPORTED_IPC_RX) {
+		if (lp->ipc_rx) {
 			if ((status & ETH_RDES0_COE_MASK) ==
 				ETH_RDES0_COE_NOCHKERROR) {
 				skb->ip_summed = CHECKSUM_UNNECESSARY;
@@ -1636,17 +1600,15 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 				}
 			}
 		}
-		if (unlikely(lp->platform_info->default_supported &
-			AMBARELLA_ETH_SUPPORTED_DUMP_RX)) {
+		if (unlikely(lp->dump_rx)) {
 			ambhw_dump_buffer(__func__, (skb->data - 14),
 				(skb->len + 14));
 		}
-		if (unlikely(lp->platform_info->default_supported &
-			AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE)) {
+		if (unlikely(lp->dump_rx_free))
 			kfree_skb(skb);
-		} else {
+		else
 			netif_receive_skb(skb);
-		}
+
 		lp->rx.rng_rx[entry].skb = NULL;
 		lp->rx.rng_rx[entry].mapping = 0;
 		lp->ndev->last_rx = jiffies;
@@ -1808,22 +1770,18 @@ static void ambeth_set_multicast_list(struct net_device *ndev)
 
 static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 {
-	struct ambeth_info *lp;
+	struct ambeth_info *lp = (struct ambeth_info *)netdev_priv(ndev);
+	struct sockaddr *saddr = addr;
 	unsigned long flags;
-	struct sockaddr *saddr;
 
-	lp = (struct ambeth_info *)netdev_priv(ndev);
+	if (!is_valid_ether_addr(saddr->sa_data))
+		return -EADDRNOTAVAIL;
+
 	spin_lock_irqsave(&lp->lock, flags);
-	saddr = (struct sockaddr *)(addr);
 
 	if (netif_running(ndev)) {
 		spin_unlock_irqrestore(&lp->lock, flags);
 		return -EBUSY;
-	}
-
-	if (!is_valid_ether_addr(saddr->sa_data)) {
-		spin_unlock_irqrestore(&lp->lock, flags);
-		return -EADDRNOTAVAIL;
 	}
 
 	dev_dbg(&lp->ndev->dev, "MAC address[%pM].\n", saddr->sa_data);
@@ -1831,7 +1789,6 @@ static int ambeth_set_mac_address(struct net_device *ndev, void *addr)
 	memcpy(ndev->dev_addr, saddr->sa_data, ndev->addr_len);
 	ambhw_set_hwaddr(lp, ndev->dev_addr);
 	ambhw_get_hwaddr(lp, ndev->dev_addr);
-	memcpy(lp->platform_info->mac_addr, ndev->dev_addr, AMBETH_MAC_SIZE);
 
 	spin_unlock_irqrestore(&lp->lock, flags);
 
@@ -1847,23 +1804,15 @@ static void ambeth_poll_controller(struct net_device *ndev)
 
 static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int ecmd)
 {
-	int ret_val = 0;
-	struct ambeth_info *lp;
+	struct ambeth_info *lp = netdev_priv(ndev);
 
-	if (!netif_running(ndev)) {
-		ret_val = -EINVAL;
-		goto ambeth_get_settings_exit;
-	}
+	if (!netif_running(ndev))
+		return -EINVAL;
 
-	lp = (struct ambeth_info *)netdev_priv(ndev);
-	if (lp->phydev) {
-		ret_val = phy_mii_ioctl(lp->phydev, ifr, ecmd);
-	} else {
-		ret_val = -EINVAL;
-	}
+	if (!lp->phydev)
+		return -ENODEV;
 
-ambeth_get_settings_exit:
-	return ret_val;
+	return phy_mii_ioctl(lp->phydev, ifr, ecmd);
 }
 
 static const struct net_device_ops ambeth_netdev_ops = {
@@ -1886,16 +1835,13 @@ static const struct net_device_ops ambeth_netdev_ops = {
 static int ambeth_get_settings(struct net_device *ndev,
 	struct ethtool_cmd *ecmd)
 {
+	struct ambeth_info *lp = netdev_priv(ndev);
 	int ret_val = 0;
-	struct ambeth_info *lp;
 
-	if (!netif_running(ndev)) {
-		ret_val = -EINVAL;
-		goto ambeth_get_settings_exit;
-	}
+	if (!netif_running(ndev))
+		return -EINVAL;
 
-	lp = (struct ambeth_info *)netdev_priv(ndev);
-	if (lp->phydev) {
+	if (lp->phy_enabled) {
 		ret_val = phy_ethtool_gset(lp->phydev, ecmd);
 	} else {
 		ret_val = -EINVAL;
@@ -1945,30 +1891,18 @@ static int ambeth_get_settings(struct net_device *ndev,
 		}
 	}
 
-ambeth_get_settings_exit:
 	return ret_val;
 }
 
 static int ambeth_set_settings(struct net_device *ndev,
 	struct ethtool_cmd *ecmd)
 {
-	int ret_val = 0;
-	struct ambeth_info *lp;
+	struct ambeth_info *lp = netdev_priv(ndev);
 
-	if (!netif_running(ndev)) {
-		ret_val = -EINVAL;
-		goto ambeth_get_settings_exit;
-	}
+	if (!netif_running(ndev) || !lp->phy_enabled)
+		return -EINVAL;
 
-	lp = (struct ambeth_info *)netdev_priv(ndev);
-	if (lp->phydev) {
-		ret_val = phy_ethtool_sset(lp->phydev, ecmd);
-	} else {
-		ret_val = -EINVAL;
-	}
-
-ambeth_get_settings_exit:
-	return ret_val;
+	return phy_ethtool_sset(lp->phydev, ecmd);
 }
 
 static int ambeth_get_dump_flag(struct net_device *ndev,
@@ -1987,7 +1921,7 @@ static int ambeth_get_dump_flag(struct net_device *ndev,
 static int ambeth_get_dump_data(struct net_device *ndev,
 	struct ethtool_dump *ed, void *pdata)
 {
-	struct ambeth_info *lp;
+	struct ambeth_info *lp = netdev_priv(ndev);
 	int i;
 	u16 *regbuf;
 
@@ -1995,8 +1929,8 @@ static int ambeth_get_dump_data(struct net_device *ndev,
 		"flag[0x%08X], len[0x%08X]\n",
 		__func__, ed->cmd, ed->version,
 		ed->flag, ed->len);
-	lp = (struct ambeth_info *)netdev_priv(ndev);
-	if (lp->phydev == NULL) {
+
+	if (!lp->phy_enabled) {
 		return -EINVAL;
 	}
 	regbuf = (u16 *)pdata;
@@ -2010,7 +1944,7 @@ static int ambeth_get_dump_data(struct net_device *ndev,
 
 static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 {
-	struct ambeth_info *lp;
+	struct ambeth_info *lp = netdev_priv(ndev);
 	u16 dbg_address;
 	u16 dbg_value;
 
@@ -2018,8 +1952,8 @@ static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 		"flag[0x%08X], len[0x%08X]\n",
 		__func__, ed->cmd, ed->version,
 		ed->flag, ed->len);
-	lp = (struct ambeth_info *)netdev_priv(ndev);
-	if (lp->phydev == NULL) {
+
+	if (!lp->phy_enabled) {
 		return -EINVAL;
 	}
 	dbg_address = ((ed->flag & 0xFFFF0000) >> 16);
@@ -2055,7 +1989,7 @@ static void ambeth_get_pauseparam(struct net_device *ndev,
 	u32 flow_ctr;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	flow_ctr = lp->platform_info->flow_ctr;
+	flow_ctr = lp->flow_ctr;
 
 	pause->autoneg = (flow_ctr & AMBARELLA_ETH_FC_AUTONEG) ?
 				AUTONEG_ENABLE : AUTONEG_DISABLE;
@@ -2067,11 +2001,9 @@ static void ambeth_get_pauseparam(struct net_device *ndev,
 static int ambeth_set_pauseparam(struct net_device *ndev,
 				 struct ethtool_pauseparam *pause)
 {
-	int ret_val = 0;
-	struct ambeth_info *lp;
+	struct ambeth_info *lp = netdev_priv(ndev);
 	u32 flow_ctr;
-
-	lp = (struct ambeth_info *)netdev_priv(ndev);
+	int ret_val = 0;
 
 	/*
 	 * Symmeteric pause can respond to recieved pause frames, and
@@ -2091,7 +2023,7 @@ static int ambeth_set_pauseparam(struct net_device *ndev,
 	 * makeing the final resolution.
 	 */
 
-	flow_ctr = lp->platform_info->flow_ctr;
+	flow_ctr = lp->flow_ctr;
 
 	if (pause->autoneg)
 		flow_ctr |= AMBARELLA_ETH_FC_AUTONEG;
@@ -2108,7 +2040,7 @@ static int ambeth_set_pauseparam(struct net_device *ndev,
 	else
 		flow_ctr &= ~AMBARELLA_ETH_FC_TX;
 
-	lp->platform_info->flow_ctr = flow_ctr;
+	lp->flow_ctr = flow_ctr;
 	ambeth_fc_config(lp);
 
 	if (pause->autoneg && lp->phydev->autoneg) {
@@ -2138,142 +2070,170 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 };
 
 /* ==========================================================================*/
+static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
+{
+	enum of_gpio_flags flags;
+	int gmii, ret_val;
+
+	lp->pwr_gpio = of_get_named_gpio_flags(np, "pwr-gpios", 0, &flags);
+	lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+	lp->rst_gpio = of_get_named_gpio_flags(np, "rst-gpios", 0, &flags);
+	lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
+	if (ret_val < 0)
+		lp->fixed_speed = SPEED_UNKNOWN;
+
+	gmii = !!of_find_property(np, "amb,support-gmii", NULL);
+	lp->phy_supported = gmii ? PHY_GBIT_FEATURES : PHY_BASIC_FEATURES;
+
+	ret_val = of_property_read_u32(np, "amb,tx-ring-size", &lp->tx_count);
+	if (ret_val < 0 || lp->tx_count < AMBETH_TX_RNG_MIN)
+		lp->tx_count = AMBETH_TX_RNG_MIN;
+
+	ret_val = of_property_read_u32(np, "amb,rx-ring-size", &lp->rx_count);
+	if (ret_val < 0 || lp->rx_count < AMBETH_RX_RNG_MIN)
+		lp->rx_count = AMBETH_RX_RNG_MIN;
+
+	lp->tx_irq_low = ((lp->tx_count * 1) / 4);
+	lp->tx_irq_high = ((lp->tx_count * 3) / 4);
+
+	lp->ipc_tx = !!of_find_property(np, "amb,ipc-tx", NULL);
+	lp->ipc_rx = !!of_find_property(np, "amb,ipc-rx", NULL);
+	lp->dump_tx = !!of_find_property(np, "amb,dump-tx", NULL);
+	lp->dump_rx = !!of_find_property(np, "amb,dump-rx", NULL);
+	lp->dump_rx_free = !!of_find_property(np, "amb,dump-rx-free", NULL);
+	lp->dump_rx_all = !!of_find_property(np, "amb,dump-rx-all", NULL);
+
+	return 0;
+}
+
 static int ambeth_drv_probe(struct platform_device *pdev)
 {
-	int ret_val = 0;
+	struct device_node *np = pdev->dev.of_node;
 	struct net_device *ndev;
 	struct ambeth_info *lp;
-	struct ambarella_eth_platform_info *platform_info;
-	struct resource *reg_res;
-	struct resource *irq_res;
-	int i;
+	struct resource *res;
+	const char *macaddr;
+	int ret_val = 0;
 
-	platform_info =
-		(struct ambarella_eth_platform_info *)pdev->dev.platform_data;
-	if (platform_info == NULL) {
-		dev_err(&pdev->dev, "Can't get platform_data!\n");
-		ret_val = - EPERM;
-		goto ambeth_drv_probe_exit;
-	}
-	if (platform_info->is_enabled) {
-		if (!platform_info->is_enabled()) {
-			dev_err(&pdev->dev, "Not enabled, check HW config!\n");
-			ret_val = -EPERM;
-			goto ambeth_drv_probe_exit;
-		}
-	}
-
-	reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (reg_res == NULL) {
-		dev_err(&pdev->dev, "Get reg_res failed!\n");
-		ret_val = -ENXIO;
-		goto ambeth_drv_probe_exit;
-	}
-
-	irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (irq_res == NULL) {
-		dev_err(&pdev->dev, "Get irq_res failed!\n");
-		ret_val = -ENXIO;
-		goto ambeth_drv_probe_exit;
+	if (!(ambarella_get_poc() & SYS_CONFIG_ETH_ENABLE)) {
+		dev_err(&pdev->dev, "Not enabled, check HW config!\n");
+		return -EPERM;
 	}
 
 	ndev = alloc_etherdev(sizeof(struct ambeth_info));
 	if (ndev == NULL) {
 		dev_err(&pdev->dev, "alloc_etherdev fail.\n");
-		ret_val = -ENOMEM;
-		goto ambeth_drv_probe_exit;
+		return -ENOMEM;
 	}
+	lp = netdev_priv(ndev);
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for fio_reg!\n");
+		ret_val = -ENXIO;
+		goto ambeth_drv_probe_free_netdev;
+	}
+
+	lp->regbase = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!lp->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		ret_val = -ENOMEM;
+		goto ambeth_drv_probe_free_netdev;
+	}
+
+	ndev->irq = platform_get_irq(pdev, 0);
+	if (ndev->irq < 0) {
+		dev_err(&pdev->dev, "no irq for ethernet!\n");
+		ret_val = -ENODEV;
+		goto ambeth_drv_probe_free_netdev;
+	}
+
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	ndev->dev.dma_mask = pdev->dev.dma_mask;
 	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
-	ndev->irq = irq_res->start;
-	if (platform_info->default_supported &
-		AMBARELLA_ETH_SUPPORTED_IPC_TX) {
+	if (lp->ipc_tx)
 		ndev->features |= NETIF_F_HW_CSUM;
-	}
-	lp = netdev_priv(ndev);
+
 	spin_lock_init(&lp->lock);
 	lp->ndev = ndev;
-	lp->regbase = (unsigned char __iomem *)reg_res->start;
-	lp->platform_info = platform_info;
-	lp->rx_count = lp->platform_info->default_rx_ring_size;
-	if (lp->rx_count < AMBETH_RX_RNG_MIN)
-		lp->rx_count = AMBETH_RX_RNG_MIN;
-	lp->tx_count = lp->platform_info->default_tx_ring_size;
-	if (lp->tx_count < AMBETH_TX_RNG_MIN)
-		lp->tx_count = AMBETH_TX_RNG_MIN;
-	lp->tx_irq_low = ((lp->tx_count * 1) / 4);
-	lp->tx_irq_high = ((lp->tx_count * 3) / 4);
 	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV);
 
-	if (lp->platform_info->mii_power.gpio_id != -1) {
-		ret_val = gpio_request(lp->platform_info->mii_power.gpio_id,
-			pdev->name);
-		if (ret_val) {
-			dev_err(&pdev->dev, "gpio_request %d fail %d.\n",
-				lp->platform_info->mii_power.gpio_id,
-				ret_val);
+	ambeth_of_parse(np, lp);
+
+	/* request gpio for PHY power control */
+	if (gpio_is_valid(lp->pwr_gpio)) {
+		ret_val = devm_gpio_request(&pdev->dev, lp->pwr_gpio, "phy reset");
+		if (ret_val < 0) {
+			dev_err(&pdev->dev, "Failed to request pwr-gpios!\n");
 			goto ambeth_drv_probe_free_netdev;
 		}
+		gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
 	}
 
-	if (lp->platform_info->mii_reset.gpio_id != -1) {
-		ret_val = gpio_request(lp->platform_info->mii_reset.gpio_id,
-			pdev->name);
-		if (ret_val) {
-			dev_err(&pdev->dev, "gpio_request %d fail %d.\n",
-				lp->platform_info->mii_reset.gpio_id,
-				ret_val);
-			goto ambeth_drv_probe_free_mii_power;
+	/* request gpio for PHY reset control */
+	if (gpio_is_valid(lp->rst_gpio)) {
+		ret_val = devm_gpio_request(&pdev->dev, lp->rst_gpio, "phy power");
+		if (ret_val < 0) {
+			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
+			goto ambeth_drv_probe_free_netdev;
 		}
-	}
-
-	if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq)) {
-		ret_val = gpio_request(lp->platform_info->phy_irq.irq_gpio,
-			pdev->name);
-		if (ret_val) {
-			dev_err(&pdev->dev,
-				"gpio_request %d for IRQ %d fail %d.\n",
-				lp->platform_info->phy_irq.irq_gpio,
-				gpio_to_irq(lp->platform_info->phy_irq.irq_gpio),
-				ret_val);
-			goto ambeth_drv_probe_free_mii_reset;
-		}
+		gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
 	}
 
 	lp->new_bus.name = "Ambarella MII Bus",
 	lp->new_bus.read = &ambhw_mdio_read,
 	lp->new_bus.write = &ambhw_mdio_write,
 	lp->new_bus.reset = &ambhw_mdio_reset,
-	snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%x", pdev->id);
+	snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%s", pdev->name);
 	lp->new_bus.priv = lp;
 	lp->new_bus.irq = kmalloc(sizeof(int)*PHY_MAX_ADDR, GFP_KERNEL);
 	if (lp->new_bus.irq == NULL) {
 		dev_err(&pdev->dev, "alloc new_bus.irq fail.\n");
 		ret_val = -ENOMEM;
-		goto ambeth_drv_probe_free_mii_gpio_irq;
+		goto ambeth_drv_probe_free_netdev;
 	}
-	for(i = 0; i < PHY_MAX_ADDR; ++i)
-		lp->new_bus.irq[i] = PHY_POLL;
+
 	lp->new_bus.parent = &pdev->dev;
 	lp->new_bus.state = MDIOBUS_ALLOCATED;
-	ret_val = mdiobus_register(&lp->new_bus);
-	if (ret_val) {
+
+	ret_val = of_mdiobus_register(&lp->new_bus, pdev->dev.of_node);
+	if (ret_val < 0) {
 		dev_err(&pdev->dev, "mdiobus_register fail%d.\n", ret_val);
 		goto ambeth_drv_probe_kfree_mdiobus;
 	}
 
+	lp->phydev = phy_find_first(&lp->new_bus);
+	if (lp->phydev == NULL) {
+		dev_err(&pdev->dev, "No PHY device.\n");
+		goto ambeth_drv_probe_kfree_mdiobus;
+	}
+
+	if (netif_msg_drv(lp)) {
+		dev_info(&pdev->dev, "Ethernet PHY[%d]: 0x%08x!\n",
+				lp->phydev->addr, lp->phydev->phy_id);
+	}
+
 	ether_setup(ndev);
 	ndev->netdev_ops = &ambeth_netdev_ops;
-	ndev->watchdog_timeo = lp->platform_info->watchdog_timeo;
-	netif_napi_add(ndev, &lp->napi, ambeth_napi,
-		lp->platform_info->napi_weight);
-	if (!is_valid_ether_addr(lp->platform_info->mac_addr))
-		random_ether_addr(lp->platform_info->mac_addr);
-	memcpy(ndev->dev_addr, lp->platform_info->mac_addr, AMBETH_MAC_SIZE);
+	ndev->watchdog_timeo = AMBETH_TX_WATCHDOG;
+	netif_napi_add(ndev, &lp->napi, ambeth_napi, AMBETH_NAPI_WEIGHT);
+
+	macaddr = of_get_mac_address(pdev->dev.of_node);
+	if (macaddr)
+		memcpy(ndev->dev_addr, macaddr, ETH_ALEN);
+
+	if (!is_valid_ether_addr(ndev->dev_addr))
+		eth_hw_addr_random(ndev);
+
 	ambhw_disable(lp);
-	ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
-	ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
+
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, !lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio))
+		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 
 	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
 	ret_val = register_netdev(ndev);
@@ -2284,7 +2244,8 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ndev);
 	dev_notice(&pdev->dev, "MAC Address[%pM].\n", ndev->dev_addr);
-	goto ambeth_drv_probe_exit;
+
+	return 0;
 
 ambeth_drv_probe_netif_napi_del:
 	netif_napi_del(&lp->napi);
@@ -2293,47 +2254,23 @@ ambeth_drv_probe_netif_napi_del:
 ambeth_drv_probe_kfree_mdiobus:
 	kfree(lp->new_bus.irq);
 
-ambeth_drv_probe_free_mii_gpio_irq:
-	if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq))
-		gpio_free(lp->platform_info->phy_irq.irq_gpio);
-
-ambeth_drv_probe_free_mii_reset:
-	if (lp->platform_info->mii_reset.gpio_id != -1)
-		gpio_free(lp->platform_info->mii_reset.gpio_id);
-
-ambeth_drv_probe_free_mii_power:
-	if (lp->platform_info->mii_power.gpio_id != -1)
-		gpio_free(lp->platform_info->mii_power.gpio_id);
-
 ambeth_drv_probe_free_netdev:
 	free_netdev(ndev);
-
-ambeth_drv_probe_exit:
 	return ret_val;
 }
 
 static int ambeth_drv_remove(struct platform_device *pdev)
 {
-	struct net_device *ndev;
-	struct ambeth_info *lp;
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct ambeth_info *lp = netdev_priv(ndev);
 
-	ndev = platform_get_drvdata(pdev);
-	if (ndev) {
-		lp = (struct ambeth_info *)netdev_priv(ndev);
-		unregister_netdev(ndev);
-		netif_napi_del(&lp->napi);
-		if (lp->platform_info->mii_power.gpio_id != -1)
-			gpio_free(lp->platform_info->mii_power.gpio_id);
-		if (lp->platform_info->mii_reset.gpio_id != -1)
-			gpio_free(lp->platform_info->mii_reset.gpio_id);
-		if (ambarella_is_valid_gpio_irq(&lp->platform_info->phy_irq))
-			gpio_free(lp->platform_info->phy_irq.irq_gpio);
-		mdiobus_unregister(&lp->new_bus);
-		kfree(lp->new_bus.irq);
-		platform_set_drvdata(pdev, NULL);
-		free_netdev(ndev);
-		dev_notice(&pdev->dev, "Removed.\n");
-	}
+	unregister_netdev(ndev);
+	netif_napi_del(&lp->napi);
+	mdiobus_unregister(&lp->new_bus);
+	kfree(lp->new_bus.irq);
+	platform_set_drvdata(pdev, NULL);
+	free_netdev(ndev);
+	dev_notice(&pdev->dev, "Removed.\n");
 
 	return 0;
 }
@@ -2341,83 +2278,86 @@ static int ambeth_drv_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct ambeth_info *lp = netdev_priv(ndev);
 	int ret_val = 0;
-	struct net_device *ndev;
-	struct ambeth_info *lp;
 	unsigned long flags;
 
-	ndev = platform_get_drvdata(pdev);
-	if (ndev) {
-		if (!netif_running(ndev))
-			goto ambeth_drv_suspend_exit;
+	if (!netif_running(ndev))
+		goto ambeth_drv_suspend_exit;
 
-		lp = (struct ambeth_info *)netdev_priv(ndev);
+	napi_disable(&lp->napi);
+	netif_device_detach(ndev);
+	disable_irq(ndev->irq);
 
-		napi_disable(&lp->napi);
-		netif_device_detach(ndev);
-		disable_irq(ndev->irq);
+	ambeth_phy_stop(lp);
 
-		ambeth_phy_stop(lp);
+	spin_lock_irqsave(&lp->lock, flags);
+	ambhw_disable(lp);
+	spin_unlock_irqrestore(&lp->lock, flags);
 
-		spin_lock_irqsave(&lp->lock, flags);
-		ambhw_disable(lp);
-		spin_unlock_irqrestore(&lp->lock, flags);
-
-		ambarella_set_gpio_output(&lp->platform_info->mii_power, 0);
-		ambarella_set_gpio_output(&lp->platform_info->mii_reset, 1);
-	}
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, !lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio))
+		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 
 ambeth_drv_suspend_exit:
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, ret_val, state.event);
+
 	return ret_val;
 }
 
 static int ambeth_drv_resume(struct platform_device *pdev)
 {
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct ambeth_info *lp = netdev_priv(ndev);
 	int ret_val = 0;
-	struct net_device *ndev;
-	struct ambeth_info *lp;
 	unsigned long flags;
 
-	ndev = platform_get_drvdata(pdev);
-	if (ndev) {
-		if (!netif_running(ndev))
-			goto ambeth_drv_resume_exit;
+	if (!netif_running(ndev))
+		goto ambeth_drv_resume_exit;
 
-		lp = (struct ambeth_info *)netdev_priv(ndev);
-
-		ambarella_set_gpio_output(&lp->platform_info->mii_power, 1);
-		ambarella_set_gpio_reset(&lp->platform_info->mii_reset);
-
-		spin_lock_irqsave(&lp->lock, flags);
-		ret_val = ambhw_enable(lp);
-		ambhw_set_link_mode_speed(lp);
-		ambeth_rx_rngmng_init(lp);
-		ambeth_tx_rngmng_init(lp);
-		ambhw_set_dma_desc(lp);
-		ambhw_dma_rx_start(lp);
-		ambhw_dma_tx_start(lp);
-		ambhw_dma_int_enable(lp);
-		spin_unlock_irqrestore(&lp->lock, flags);
-
-		if (ret_val) {
-			dev_err(&pdev->dev, "ambhw_enable.\n");
-		} else {
-			ambeth_set_multicast_list(ndev);
-			netif_carrier_off(ndev);
-			ret_val = ambeth_phy_start(lp);
-			enable_irq(ndev->irq);
-			netif_device_attach(ndev);
-			napi_enable(&lp->napi);
-		}
+	if (gpio_is_valid(lp->pwr_gpio))
+		gpio_set_value_cansleep(lp->pwr_gpio, lp->pwr_gpio_active);
+	if (gpio_is_valid(lp->rst_gpio)) {
+		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
+		msleep(10);
+		gpio_set_value_cansleep(lp->rst_gpio, !lp->rst_gpio_active);
 	}
 
+	spin_lock_irqsave(&lp->lock, flags);
+	ret_val = ambhw_enable(lp);
+	ambhw_set_link_mode_speed(lp);
+	ambeth_rx_rngmng_init(lp);
+	ambeth_tx_rngmng_init(lp);
+	ambhw_set_dma_desc(lp);
+	ambhw_dma_rx_start(lp);
+	ambhw_dma_tx_start(lp);
+	ambhw_dma_int_enable(lp);
+	spin_unlock_irqrestore(&lp->lock, flags);
+
+	if (ret_val) {
+		dev_err(&pdev->dev, "ambhw_enable.\n");
+	} else {
+		ambeth_set_multicast_list(ndev);
+		netif_carrier_off(ndev);
+		ret_val = ambeth_phy_start(lp);
+		enable_irq(ndev->irq);
+		netif_device_attach(ndev);
+		napi_enable(&lp->napi);
+	}
 ambeth_drv_resume_exit:
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, ret_val);
 	return ret_val;
 }
 #endif
+
+static const struct of_device_id ambarella_eth_dt_ids[] = {
+	{ .compatible = "ambarella,eth" },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, ambarella_eth_dt_ids);
 
 static struct platform_driver ambeth_driver = {
 	.probe		= ambeth_drv_probe,
@@ -2429,21 +2369,11 @@ static struct platform_driver ambeth_driver = {
 	.driver = {
 		.name	= "ambarella-eth",
 		.owner	= THIS_MODULE,
+		.of_match_table	= ambarella_eth_dt_ids,
 	},
 };
 
-static int __init ambeth_init(void)
-{
-	return platform_driver_register(&ambeth_driver);
-}
-
-static void __exit ambeth_exit(void)
-{
-	platform_driver_unregister(&ambeth_driver);
-}
-
-module_init(ambeth_init);
-module_exit(ambeth_exit);
+module_platform_driver(ambeth_driver);
 
 MODULE_DESCRIPTION("Ambarella Media Processor Ethernet Driver");
 MODULE_AUTHOR("Anthony Ginger, <hfjiang@ambarella.com>");

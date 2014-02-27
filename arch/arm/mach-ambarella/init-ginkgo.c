@@ -64,7 +64,6 @@
 static struct platform_device *ambarella_devices[] __initdata = {
 	//&ambarella_adc0,
 	//&ambarella_crypto,
-	&ambarella_eth0,
 //	&ambarella_fb0,
 //	&ambarella_fb1,
 	//&ambarella_ir0,
@@ -200,13 +199,6 @@ static void __init ambarella_init_ginkgo(void)
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
 
-	/* Config ETH */
-	ambarella_eth0_platform_info.mii_id = 1;
-	ambarella_eth0_platform_info.phy_id = 0x001cc915;
-	ambarella_eth0_platform_info.default_tx_ring_size = 64;
-	ambarella_eth0_platform_info.default_rx_ring_size = 64;
-	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
-
 	/* Config Vin */
 	ambarella_board_generic.vin1_reset.gpio_id = GPIO(49);
 	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
@@ -215,8 +207,6 @@ static void __init ambarella_init_ginkgo(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
-			ambarella_eth0_platform_info.mii_reset.gpio_id = EXT_GPIO(2);
-
 			/* Register audio codec
 			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
 			 * used as I2S signals, so we need to prevent

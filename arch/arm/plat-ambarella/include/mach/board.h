@@ -38,7 +38,6 @@ struct ambarella_board_info {
 	u32					board_rev;
 	u32					board_poc;
 
-	u8					eth0_mac[6];
 	u8					eth1_mac[6];
 	u8					wifi0_mac[6];
 	u8					wifi1_mac[6];

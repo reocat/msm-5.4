@@ -319,15 +319,6 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ret_val = ambarella_init_audio();
 	BUG_ON(ret_val != 0);
 
-#if (ETH_INSTANCES >= 1)
-	ret_val = ambarella_init_eth0(ambarella_board_generic.eth0_mac);
-	BUG_ON(ret_val != 0);
-#endif
-#if (ETH_INSTANCES >= 2)
-	ret_val = ambarella_init_eth1(ambarella_board_generic.eth1_mac);
-	BUG_ON(ret_val != 0);
-#endif
-
 	return ret_val;
 }
 

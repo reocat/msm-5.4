@@ -43,7 +43,6 @@ extern struct platform_device ambarella_rproc_ca9_a_and_arm11_dev;
 #endif /* CONFIG_RPROC_CA9_A */
 
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_eth0,
 	&ambarella_rtc0,
 #ifdef CONFIG_RPROC_CA9_A
 	&ambarella_rproc_ca9_a_and_b_dev,
@@ -60,13 +59,6 @@ static void __init ambarella_init_hyacinth(void)
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
-	/* Config ETH */
-	ambarella_eth0_platform_info.mii_id = 0;
-	ambarella_eth0_platform_info.phy_id = 0x001cc915;
-	ambarella_eth0_platform_info.default_tx_ring_size = 128;
-	ambarella_eth0_platform_info.default_rx_ring_size = 64;
-	ambarella_eth0_platform_info.default_dma_opmode |= ETH_DMA_OPMODE_TSF;
-
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_VENDOR) {
 
 		int rev = AMBARELLA_BOARD_REV(system_rev);
@@ -74,17 +66,6 @@ static void __init ambarella_init_hyacinth(void)
 		int board = rev & 0xf;
 
 		printk("Hyacinth_0: vendor 0x%02x, board 0x%01x\n", vendor, board);
-
-		switch (vendor) {
-		case 0x48:
-		    /* Phy-less, fixed-link */
-		    ambarella_eth0_platform_info.mii_fixed_speed = SPEED_1000;
-		    ambarella_eth0_platform_info.mii_fixed_duplex = DUPLEX_FULL;
-		    break;
-
-		default:
-		    break;
-		}
 	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));

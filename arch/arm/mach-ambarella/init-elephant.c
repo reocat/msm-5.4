@@ -66,7 +66,6 @@
 
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
-	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_idc0_mux,
@@ -465,15 +464,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.gsensor_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.gsensor_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-			ambarella_eth0_platform_info.mii_id = 0;
-			ambarella_eth0_platform_info.phy_id = 0x001cc912;
-			ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(21);
-			ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
-			ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
-			ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-			ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(97);
-			ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(98);
-
 #if defined(CONFIG_TOUCH_AMBARELLA_TM1726)
 			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
 			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
@@ -530,17 +520,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.sata_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.sata_power.active_delay = 1;
 
-		ambarella_eth0_platform_info.mii_id = 1;
-		ambarella_eth0_platform_info.phy_id = 0x001cc915;
-		ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(21);
-		ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
-		ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
-		ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-		ambarella_eth0_platform_info.mii_power.gpio_id = GPIO(124);
-		ambarella_eth0_platform_info.mii_power.active_level = GPIO_HIGH;
-		ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(125);
-		ambarella_eth0_platform_info.mii_reset.active_level = GPIO_LOW;
-
 		elephant_board_input_info.pkeymap = elephant_keymap_ipcam_nvr;
 
 		ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH9;
@@ -572,9 +551,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.vin0_reset.gpio_id = GPIO(12);
 		ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 		ambarella_board_generic.vin0_reset.active_delay = 100;
-
-		ambarella_eth0_platform_info.mii_id = 0;
-		ambarella_eth0_platform_info.phy_id = 0x001cc912;
 
 #if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
 		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;

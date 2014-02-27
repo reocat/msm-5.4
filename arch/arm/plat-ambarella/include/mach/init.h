@@ -77,9 +77,6 @@ extern struct platform_device ambarella_fb1;
 extern int ambarella_init_fb(void);
 
 /* ==========================================================================*/
-extern struct ambarella_eth_platform_info ambarella_eth0_platform_info;
-extern struct ambarella_eth_platform_info ambarella_eth1_platform_info;
-
 extern struct ambarella_rtc_controller ambarella_platform_rtc_controller0;
 
 extern int ambarella_spi0_cs_pins[];

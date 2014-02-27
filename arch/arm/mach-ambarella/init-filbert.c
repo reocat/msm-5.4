@@ -53,8 +53,6 @@
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
 	&ambarella_crypto,
-	&ambarella_eth0,
-	&ambarella_eth1,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_ir0,
@@ -210,12 +208,6 @@ static void __init ambarella_init_filbert(void)
 	/* config audio */
 	ambarella_board_generic.audio_reset.gpio_id = GPIO(12);
 	ambarella_board_generic.audio_reset.active_level = GPIO_LOW;
-
-	/* Config Eth0 */
-	ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(124);
-
-	/* Config Eth1 */
-	ambarella_eth1_platform_info.mii_reset.gpio_id = GPIO(125);
 
 	/* Config Vin */
 	ambarella_board_generic.vin0_reset.gpio_id = GPIO(127);

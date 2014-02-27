@@ -349,73 +349,22 @@
 #define ETH_TDES1_TBS1x(x)		((x) & 0x000007ff)
 
 /* ==========================================================================*/
-#define AMBETH_MAC_SIZE				(6)
-
-#define AMBARELLA_ETH_SUPPORTED_IPC_RX		(1 << 0)
-#define AMBARELLA_ETH_SUPPORTED_IPC_TX		(1 << 1)
-
-#define AMBARELLA_ETH_SUPPORTED_DUMP_TX		(1 << 31)
-#define AMBARELLA_ETH_SUPPORTED_DUMP_RX		(1 << 30)
-#define AMBARELLA_ETH_SUPPORTED_DUMP_RX_FREE	(1 << 29)
-#define AMBARELLA_ETH_SUPPORTED_DUMP_RX_ALL	(1 << 28)
 
 #define AMBARELLA_ETH_FC_AUTONEG		(1 << 0)
 #define AMBARELLA_ETH_FC_RX			(1 << 1)
 #define AMBARELLA_ETH_FC_TX			(1 << 2)
 
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
 
-struct ambarella_eth_platform_info {
-	u8					mac_addr[AMBETH_MAC_SIZE];
-	u32					napi_weight;
-	u32					watchdog_timeo;
+#if (CHIP_REV == I1) || (CHIP_REV == A8)
+#define SYS_CONFIG_ETH_ENABLE		0xffffffff
+#elif (CHIP_REV == S2)
+#define SYS_CONFIG_ETH_ENABLE		0x00800000
+#elif (CHIP_REV == S2L)
+#define SYS_CONFIG_ETH_ENABLE		0x00000001
+#else
+#define SYS_CONFIG_ETH_ENABLE		0x00000080
+#endif
 
-	u32					phy_id;
-	struct ambarella_gpio_irq_info		phy_irq;
-	u32					phy_supported;
-	u32					mii_id;
-	struct ambarella_gpio_io_info		mii_power;
-	struct ambarella_gpio_io_info		mii_reset;
-	u32					mii_retry_limit;
-	u32					mii_retry_tmo;
-	u32					mii_fixed_speed;
-	u32					mii_fixed_duplex;
-	u32					flow_ctr;
-	u32					pause_time;
-
-	u32					default_tx_ring_size;
-	u32					default_rx_ring_size;
-	u32					default_dma_bus_mode;
-	u32					default_dma_opmode;
-	u32					default_supported;
-	u32					default_mac_filter;
-
-	int					(*is_enabled)(void);
-};
-#define AMBA_ETH_PARAM_CALL(id, arg, perm) \
-	module_param_cb(eth##id##_napi_weight, &param_ops_uint, &(arg.napi_weight), perm); \
-	module_param_cb(eth##id##_watchdog_timeo, &param_ops_uint, &(arg.watchdog_timeo), perm); \
-	module_param_cb(eth##id##_phy_id, &param_ops_uint, &(arg.phy_id), perm); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(eth##id##_phy_irq_, arg.phy_irq, perm); \
-	module_param_cb(eth##id##_mii_id, &param_ops_uint, &(arg.mii_id), perm); \
-	AMBA_GPIO_IO_MODULE_PARAM_CALL(eth##id##_mii_power_, arg.mii_power, perm); \
-	AMBA_GPIO_RESET_MODULE_PARAM_CALL(eth##id##_mii_reset_, arg.mii_reset, perm); \
-	module_param_cb(eth##id##_mii_retry_limit, &param_ops_uint, &(arg.mii_retry_limit), perm); \
-	module_param_cb(eth##id##_mii_retry_tmo, &param_ops_uint, &(arg.mii_retry_tmo), perm); \
-	module_param_cb(eth##id##_mii_fixed_speed, &param_ops_uint, &(arg.mii_fixed_speed), perm); \
-	module_param_cb(eth##id##_mii_fixed_duplex, &param_ops_uint, &(arg.mii_fixed_duplex), perm); \
-	module_param_cb(eth##id##_supported, &param_ops_uint, &(arg.default_supported), perm);
-
-/* ==========================================================================*/
-extern struct platform_device			ambarella_eth0;
-extern struct platform_device			ambarella_eth1;
-
-/* ==========================================================================*/
-extern int ambarella_init_eth0(const u8 *mac_addr);
-extern int ambarella_init_eth1(const u8 *mac_addr);
-
-#endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
 #endif

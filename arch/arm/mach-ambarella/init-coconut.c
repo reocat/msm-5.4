@@ -72,7 +72,6 @@ static struct platform_device ambarella_power_supply = {
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_adc0,
 	&ambarella_crypto,
-	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_idc0_mux,
@@ -263,11 +262,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_board_generic.flash_enable.gpio_id = GPIO(82);
 		ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
 		ambarella_board_generic.flash_enable.active_delay = 1;
-
-		/* Config ETH */
-		ambarella_eth0_platform_info.mii_reset.gpio_id = GPIO(7);
-		ambarella_eth0_platform_info.mii_id = 1;
-		ambarella_eth0_platform_info.phy_id = 0x00008201;
 
 		/* Config SD */
 		fio_default_owner = SELECT_FIO_SDIO;

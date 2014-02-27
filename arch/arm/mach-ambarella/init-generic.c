@@ -65,12 +65,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	&ambarella_crypto,
 #endif
-#if (ETH_INSTANCES >= 1)
-	&ambarella_eth0,
-#endif
-#if (ETH_INSTANCES >= 2)
-	&ambarella_eth1,
-#endif
 	&ambarella_fb0,
 	&ambarella_fb1,
 #if (IDC_SUPPORT_INTERNAL_MUX == 1)

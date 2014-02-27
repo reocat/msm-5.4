@@ -65,7 +65,6 @@
 static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_adc0,
 	&ambarella_crypto,
-	&ambarella_eth0,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_ir0,
@@ -182,17 +181,6 @@ struct platform_device ixora_board_input = {
 };
 
 /* ==========================================================================*/
-static void __init ambarella_init_ixora_ipcam(void)
-{
-	ambarella_eth0_platform_info.mii_id = 3;
-	ambarella_eth0_platform_info.phy_id = 0x00221560;
-	ambarella_eth0_platform_info.phy_irq.irq_gpio = GPIO(10);
-	ambarella_eth0_platform_info.phy_irq.irq_type = IRQF_TRIGGER_LOW;
-	ambarella_eth0_platform_info.phy_irq.irq_gpio_val = GPIO_LOW;
-	ambarella_eth0_platform_info.phy_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-}
-
-/* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
 	int use_bub_default = 1;
@@ -205,7 +193,6 @@ static void __init ambarella_init_ixora(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
-			ambarella_init_ixora_ipcam();
 			use_bub_default = 0;
 			break;
 
