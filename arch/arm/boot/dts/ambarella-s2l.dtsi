@@ -53,7 +53,7 @@
 		};
 
 		uart0: uart@e8005000 {
-			compatible = "ambarella,s2l-uart";
+			compatible = "ambarella,uart";
 			reg = <0xe8005000 0x1000>;
 			interrupts = <9 0x4>;
 			pinctrl-names = "default";
@@ -242,7 +242,7 @@
 		};
 
 		uart1: uart@e0032000 {
-			compatible = "ambarella,s2l-uart";
+			compatible = "ambarella,uart";
 			reg = <0xe0032000 0x1000>;
 			interrupts = <25 0x4>;
 			status = "disabled";
