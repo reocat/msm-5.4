@@ -312,6 +312,7 @@
 			amb,clk-name = "gclk_sdio";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			status = "disabled";
 
 			slot@0 {
 				reg = <0>;
