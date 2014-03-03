@@ -64,13 +64,6 @@ struct ambarella_board_info ambarella_board_generic = {
 	.wifi1_mac		= {0, 0, 0, 0, 0, 0},
 	.usb_eth0_mac		= {0, 0, 0, 0, 0, 0},
 	.usb_eth1_mac		= {0, 0, 0, 0, 0, 0},
-	.power_detect	= {
-		.irq_gpio	= -1,
-		.irq_line	= -1,
-		.irq_type	= -1,
-		.irq_gpio_val	= GPIO_LOW,
-		.irq_gpio_mode	= GPIO_FUNC_SW_INPUT,
-	},
 	.power_control	= {
 		.gpio_id	= -1,
 		.active_level	= GPIO_LOW,

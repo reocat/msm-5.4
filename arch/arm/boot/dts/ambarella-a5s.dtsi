@@ -1,0 +1,252 @@
+/*
+ * Copyright (C) 2013 Ambarella,Inc. - http://www.ambarella.com/
+ * Author: Cao Rongrong <rrcao@ambarella.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/include/ "skeleton.dtsi"
+
+/ {
+	compatible = "ambarella,a5s";
+	interrupt-parent = <&intc>;
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		nand = &nand0;
+	};
+
+	chosen {
+		linux,stdout-path = &uart0;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cpu@0 {
+			compatible = "arm,arm1136";
+		};
+	};
+
+	apb@70000000 {	/* APB */
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x70000000 0x01000000>;
+		ranges;
+
+		timer2: timer@7000b010 {
+			compatible = "ambarella,clock-source";
+			reg = <0x7000b010 0x10 0x7000b030 0x4>;
+			interrupts = <13 0x1>;
+			ctrl-offset = <4>; /* bit offset in timer-ctrl reg */
+		};
+
+		timer3: timer@7000b020 {
+			compatible = "ambarella,clock-event";
+			reg = <0x7000b020 0x10 0x7000b030 0x4>;
+			interrupts = <14 0x1>;
+			ctrl-offset = <8>; /* bit offset in timer-ctrl reg */
+		};
+
+		uart0: uart@70005000 {
+			compatible = "ambarella,uart";
+			reg = <0x70005000 0x1000>;
+			interrupts = <9 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart0_pins>;
+			status = "ok";
+		};
+
+		uart1: uart@7001f000 {
+			compatible = "ambarella,s2l-uart";
+			reg = <0x7001f000 0x1000>;
+			interrupts = <25 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins>;
+			amb,msr-used;	/* use Modem Status Register */
+			status = "disabled";
+		};
+
+		i2c0: i2c@70003000 {
+			compatible = "ambarella,i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70003000 0x1000>;
+			interrupts = <19 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2c0_pins>;
+			clock-frequency = <100000>;
+			amb,i2c-class = <0x81>;
+			amb,bulk-num = <60>;
+			status = "disabled";
+	        };
+
+		i2c1: i2c@70007000 {
+			compatible = "ambarella,i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70007000 0x1000>;
+			interrupts = <36 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2c1_pins>;
+			clock-frequency = <100000>;
+			amb,i2c-class = <0x08>;
+			amb,bulk-num = <60>;
+			status = "disabled";
+	        };
+
+		pinctrl: pinctrl@70009000 {
+			compatible = "ambarella,pinctrl", "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70009000 0x1000>,
+			      <0x7000a000 0x1000>,
+			      <0x7000e000 0x1000>;
+			reg-names = "gpio0", "gpio1", "gpio2";
+			#gpio-range-cells = <3>;
+
+			gpio: gpio@0 {
+				compatible = "ambarella,gpio";
+				/* gpio interrupts to vic */
+				interrupts = <10 0x4 11 0x4 30 0x4>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				gpio-ranges = <&pinctrl 0 0 96>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+			};
+
+			uart0_pins: uart0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x100e 0x100f>;
+			};
+
+			uart1_pins: uart1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1032 0x1034>,
+						 /* virtual pins, just for config */
+						 <0x1021 0x0022>;
+			};
+
+			uart1_flow_pins: uart1_flow@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1033 0x1035>,
+						 /* virtual pins, just for config */
+						 <0x0021 0x1022>;
+			};
+
+			i2c0_pins: i2c0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1000 0x1001>;
+			};
+
+			i2c1_pins: i2c1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1056 0x1057>;
+			};
+
+			i2s0_pins: i2s0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>,
+						 /* virtual pins, just for config */
+						 <0x003f>;
+			};
+		};
+	};
+
+	ahb@60000000 {	/* AHB */
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x60000000 0x01000000>;
+		ranges;
+
+		intc: interrupt-controller@60003000 {
+			compatible = "ambarella,vic";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			reg = <0x60003000 0x1000>,
+			      <0x60010000 0x1000>;
+		};
+
+		nand0: nand@60001000 {
+			compatible = "ambarella,nand-v2";
+			reg = <0x60001000 0x1000>, /* fio reg address */
+			      <0x60012000 0x1000>, /* fdma reg address */
+			      <0x60000000 0x4>;    /* fifo base */
+			interrupts = <16 0x4>,	/* fio_cmd_irq */
+				     <17 0x4>,	/* fio_dma_irq */
+				     <33 0x4>;	/* fdma_irq */
+			amb,use-2x-pll;
+		};
+
+		i2s0: i2s@6000a000 {
+			compatible = "ambarella,i2s";
+			reg = <0x6000a000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2s0_pins>;
+			amb,i2s-channels = <2>;
+			amb,default-mclk = <12288000>;
+		};
+
+		udc@60006000 {
+			compatible = "ambarella,udc-v1";
+			reg = <0x60006000 0x2000 0x70170088 0x4>;
+			interrupts = <4 0x4>;
+			amb,usbphy = <&usbphy>;
+		};
+
+		sdmmc0@60002000 {
+			compatible = "ambarella,sdmmc";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x60002000 0x1000>,
+			      <0x60001000 0x80>; /* fio reg address */
+			interrupts = <18 0x4>;
+			amb,clk-name = "gclk_sd";
+			amb,wait-tmo = <2500>; /* in millisecond */
+			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
+
+			slot@0 {
+				reg = <0>;
+				max-frequency = <24000000>;
+				bus-width = <4>;
+				cap-sdio-irq;
+			};
+
+			slot@1 {
+				reg = <1>;
+				max-frequency = <24000000>;
+				bus-width = <4>;
+				cap-sdio-irq;
+			};
+		};
+
+		mac0: ethernet@6000e000 {
+			compatible = "ambarella,eth";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x6000e000 0x2000>;
+			interrupts = <27 0x4>;
+			amb,tx-ring-size = <32>;
+			amb,rx-ring-size = <64>;
+		};
+	};
+
+	rct@70170000 {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x70170000 0x1000>;
+		ranges;
+
+		usbphy: usbphy@70170050 {
+			compatible = "ambarella,usbphy";
+			reg = <0x70170050 0x4>;
+		};
+	};
+};

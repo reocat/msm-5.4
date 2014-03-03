@@ -190,13 +190,6 @@ static void __init ambarella_init_filbert(void)
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
-	/* config board */
-	ambarella_board_generic.power_detect.irq_gpio = GPIO(135);
-	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(135);
-	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
 	/* config LCD */
 	ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
 	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;

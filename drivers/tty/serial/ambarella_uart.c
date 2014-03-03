@@ -888,9 +888,7 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 static const struct of_device_id ambarella_serial_of_match[] = {
 	{ .compatible = "ambarella,s2l-uart" },
 	{ .compatible = "ambarella,s2-uart" },
-	{ .compatible = "ambarella,i1-uart" },
-	{ .compatible = "ambarella,a5s-uart" },
-	{ .compatible = "ambarella,a7l-uart" },
+	{ .compatible = "ambarella,uart" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ambarella_serial_of_match);

@@ -44,7 +44,6 @@ struct ambarella_board_info {
 	u8					usb_eth0_mac[6];
 	u8					usb_eth1_mac[6];
 
-	struct ambarella_gpio_irq_info		power_detect;
 	struct ambarella_gpio_io_info		power_control;
 	struct ambarella_gpio_io_info		debug_led0;
 	struct ambarella_gpio_io_info		debug_switch;
@@ -142,7 +141,6 @@ struct ambarella_board_info {
 	module_param_cb(board_type, &param_ops_uint, &(arg.board_type), 0444); \
 	module_param_cb(board_rev, &param_ops_uint, &(arg.board_rev), 0444); \
 	module_param_cb(board_poc, &param_ops_uint, &(arg.board_poc), 0444); \
-	AMBA_GPIO_IRQ_MODULE_PARAM_CALL(board_##power_detect##_, arg.power_detect, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##power_control##_, arg.power_control, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##debug_led0##_, arg.debug_led0, perm); \
 	AMBA_GPIO_IO_MODULE_PARAM_CALL(board_##debug_switch##_, arg.debug_switch, perm); \

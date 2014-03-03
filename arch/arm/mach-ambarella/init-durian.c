@@ -39,9 +39,6 @@
 #include <linux/spi/spidev.h>
 
 #include <linux/i2c.h>
-
-#include <sound/ak4642_amb.h>
-
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
@@ -187,12 +184,6 @@ static void __init ambarella_init_durian(void)
 	ambarella_init_machine("Durian", REF_CLK_FREQ);
 
 	/* Config Board */
-	ambarella_board_generic.power_detect.irq_gpio = GPIO(13);
-	ambarella_board_generic.power_detect.irq_line = gpio_to_irq(13);
-	ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_FALLING;
-	ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
-	ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
 	ambarella_board_generic.lcd_reset.gpio_id = GPIO(113);
 	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.lcd_reset.active_delay = 1;

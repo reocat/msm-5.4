@@ -308,6 +308,7 @@
 				max-frequency = <48000000>;
 				bus-width = <8>;
 				amb,caps-ddr;
+				cap-sdio-irq;
 			};
 		};
 
@@ -330,6 +331,7 @@
 				max-frequency = <48000000>;
 				bus-width = <8>;
 				amb,caps-ddr;
+				cap-sdio-irq;
 			};
 		};
 

@@ -28,13 +28,13 @@
 #include <linux/irqchip.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
+#include <linux/of_platform.h>
 #include <linux/i2c.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/pda_power.h>
-#include <sound/ak4642_amb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -180,8 +180,6 @@ static void __init ambarella_init_coconut(void)
 {
 	int					i;
 
-	ambarella_init_machine("Coconut", REF_CLK_FREQ);
-
 	/* Config Board */
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
 		//vin0: Sensor
@@ -194,7 +192,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_board_generic.vin0_reset.active_delay = 1;
 
 		ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(95);
-		ambarella_board_generic.vin0_vsync.irq_line = gpio_to_irq(95);
 		ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
 		ambarella_board_generic.vin0_vsync.irq_gpio_val = GPIO_HIGH;
 		ambarella_board_generic.vin0_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
@@ -208,12 +205,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_board_generic.wifi_sd_bus = 0;
 		ambarella_board_generic.wifi_sd_slot = 1;
 	} else {
-		ambarella_board_generic.power_detect.irq_gpio = GPIO(11);
-		ambarella_board_generic.power_detect.irq_line = gpio_to_irq(11);
-		ambarella_board_generic.power_detect.irq_type = IRQF_TRIGGER_FALLING;
-		ambarella_board_generic.power_detect.irq_gpio_val = GPIO_LOW;
-		ambarella_board_generic.power_detect.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
 		ambarella_board_generic.debug_led0.gpio_id = GPIO(83);
 		ambarella_board_generic.debug_led0.active_level = GPIO_LOW;
 		ambarella_board_generic.debug_led0.active_delay = 0;
@@ -223,7 +214,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_board_generic.rs485.active_delay = 1;
 
 		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
-		ambarella_board_generic.touch_panel_irq.irq_line = gpio_to_irq(84);
 		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
@@ -240,7 +230,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_board_generic.lcd_spi_hw.cs_id = 1;
 
 		ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(95);
-		ambarella_board_generic.vin0_vsync.irq_line = gpio_to_irq(95);
 		ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
 		ambarella_board_generic.vin0_vsync.irq_gpio_val = GPIO_HIGH;
 		ambarella_board_generic.vin0_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
@@ -250,7 +239,6 @@ static void __init ambarella_init_coconut(void)
 		ambarella_board_generic.vin0_reset.active_delay = 200;
 
 		ambarella_board_generic.flash_charge_ready.irq_gpio = GPIO(13);
-		ambarella_board_generic.flash_charge_ready.irq_line = gpio_to_irq(13);
 		ambarella_board_generic.flash_charge_ready.irq_type = IRQF_TRIGGER_RISING;
 		ambarella_board_generic.flash_charge_ready.irq_gpio_val = GPIO_HIGH;
 		ambarella_board_generic.flash_charge_ready.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
@@ -312,13 +300,35 @@ static void __init ambarella_init_coconut(void)
 }
 
 /* ==========================================================================*/
-MACHINE_START(COCONUT, "Coconut")
-	.atag_offset	= 0x100,
-	.restart_mode	= 's',
-	.map_io		= ambarella_map_io,
-	.init_irq	= irqchip_init,
-	.init_time	= ambarella_timer_init,
-	.init_machine	= ambarella_init_coconut,
-	.restart	= ambarella_restart_machine,
+static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
+	{}
+};
+
+static void __init ambarella_init_coconut_dt(void)
+{
+	ambarella_init_machine("coconut", REF_CLK_FREQ);
+
+	ambarella_init_coconut();
+
+	of_platform_populate(NULL, of_default_bus_match_table,
+			ambarella_auxdata_lookup, NULL);
+}
+
+
+static const char * const a5s_dt_board_compat[] = {
+	"ambarella,a5s",
+	"ambarella,coconut",
+	NULL,
+};
+
+DT_MACHINE_START(COCONUT_DT, "Ambarella A5S (Flattened Device Tree)")
+	.restart_mode	=	's',
+	.map_io		=	ambarella_map_io,
+	.init_early	=	ambarella_init_early,
+	.init_irq	=	irqchip_init,
+	.init_time	=	ambarella_timer_init,
+	.init_machine	=	ambarella_init_coconut_dt,
+	.restart	=	ambarella_restart_machine,
+	.dt_compat	=	a5s_dt_board_compat,
 MACHINE_END
 
