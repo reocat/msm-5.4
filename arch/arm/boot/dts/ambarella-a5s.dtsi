@@ -19,6 +19,15 @@
 		nand = &nand0;
 	};
 
+	/* the memory node will be overwritten in Amboot,
+	 * here is just the default value. */
+	memory {
+		device_type = "memory";
+		reg = <0xc0200000 0x07e00000>; /* 126M */
+	};
+
+	iavmem { device_type = "iavmem"; reg = <0 0>; };
+
 	chosen {
 		linux,stdout-path = &uart0;
 	};
