@@ -237,6 +237,12 @@
 			      <0xe001c000 0x1000>;
 		};
 
+		dma@e0005000 {
+			compatible = "ambarella,dma";
+			reg = <0xe0005000 0x1000>;
+			interrupts = <15 0x4>;
+		};
+
 		nand0: nand@e0001000 {
 			compatible = "ambarella,nand-v2";
 			reg = <0xe0001000 0x1000>, /* fio reg address */
@@ -245,7 +251,6 @@
 			interrupts = <16 0x4>,	/* fio_cmd_irq */
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
-			/* amb,use-2x-pll; */
 		};
 
 		uart1: uart@e0032000 {

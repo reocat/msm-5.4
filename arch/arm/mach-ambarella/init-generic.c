@@ -87,7 +87,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #endif
 #endif /* CONFIG_PLAT_AMBARELLA_SUPPORT_SPI */
 	&ambarella_wdt0,
-	&ambarella_dma,
 };
 
 /* ==========================================================================*/

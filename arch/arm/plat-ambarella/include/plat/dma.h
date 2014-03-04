@@ -234,9 +234,6 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-extern struct platform_device ambarella_dma;
-
-/* ==========================================================================*/
 extern int ambarella_dma_channel_id(void *chan);
 
 #endif /* __ASSEMBLER__ */

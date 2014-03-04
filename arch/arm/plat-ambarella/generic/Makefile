@@ -24,7 +24,6 @@ obj-y						+= adc.o
 obj-y						+= ahci.o
 obj-y						+= audio.o
 obj-y						+= crypto.o
-obj-y						+= dma.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)	+= fio.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)	+= gpio.o
 obj-y						+= idc.o

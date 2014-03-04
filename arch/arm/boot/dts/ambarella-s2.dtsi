@@ -254,6 +254,12 @@
 		reg = <0x60000000 0x01000000>;
 		ranges;
 
+		dma@60005000 {
+			compatible = "ambarella,dma";
+			reg = <0x60005000 0x1000>;
+			interrupts = <0 15 0x4>;
+		};
+
 		nand0: nand@60001000 {
 			compatible = "ambarella,nand-v2";
 			reg = <0x60001000 0x1000>, /* fio reg address */
@@ -262,7 +268,6 @@
 			interrupts = <0 16 0x04>,	/* fio_cmd_irq */
 				     <0 17 0x04>,	/* fio_dma_irq */
 				     <0 33 0x04>;	/* fdma_irq */
-			/* amb,use-2x-pll; */
 		};
 
 		i2s0: i2s@6000a000 {

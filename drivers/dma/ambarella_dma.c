@@ -1048,6 +1048,12 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id ambarella_dma_dt_ids[] = {
+	{.compatible = "ambarella,dma", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_dma_dt_ids);
+
 static struct platform_driver ambarella_dma_driver = {
 	.probe		= ambarella_dma_probe,
 	.remove		= ambarella_dma_remove,
@@ -1055,6 +1061,7 @@ static struct platform_driver ambarella_dma_driver = {
 	.driver		= {
 		.name	= "ambarella-dma",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_dma_dt_ids,
 	},
 };
 
