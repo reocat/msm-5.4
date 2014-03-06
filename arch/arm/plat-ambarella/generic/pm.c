@@ -105,7 +105,6 @@ static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend, u32 tm_level)
 		local_irq_save(*irqflag);
 
 	if (bsuspend) {
-		ambarella_adc_suspend(0);
 		ambarella_timer_suspend(tm_level);
 	}
 
@@ -122,7 +121,6 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume, u32 tm_level)
 
 	if (bresume) {
 		ambarella_timer_resume(tm_level);
-		ambarella_adc_resume(0);
 	}
 
 	if (irqflag)

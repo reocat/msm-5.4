@@ -107,8 +107,7 @@ config INPUT_AMBARELLA_IR
 	default n
 
 config INPUT_AMBARELLA_ADC
-	bool "Support Ambarella Soc ADC"
-	depends on INPUT_AMBARELLA
+	tristate "Support Ambarella Soc ADC"
 	default n
 
 config INPUT_PCSPKR

@@ -65,7 +65,6 @@
 #include <linux/pda_power.h>
 
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_adc0,
 	&ambarella_fb0,
 	&ambarella_fb1,
 	&ambarella_idc0_mux,
@@ -242,20 +241,6 @@ static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_A,	3,	0x001a0075}}},	//A
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_D,	3,	0x001a0074}}},	//D
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_SEARCH,	3,	0x001a007e}}},	//SEARCH
-
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	2,	3000,	4095}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HOME,		0,	2,	1820,	2250}}},	//HOME
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,		0,	2,	1450,	1750}}},	//MENU
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,		0,	2,	1050,	1350}}},	//ESC
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_SEARCH,		0,	2,	700,	900}}},		//SEARCH
-	//{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HP,		0,	2,	300,	500}}},		//FOCUS, do not use
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,		0,	2,	0,	100}}},		//CAMERA
-
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	4,	3000,	4095}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEDOWN,	0,	4,	1750,	2150}}},	//VOLUME DOWN
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VOLUMEUP,	0,	4,	1300,	1650}}},	//VOLUME UP
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_STOP,		0,	4,	850,	1100}}},	//STOP
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	4,	400,	600}}},		//RECORD
 
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_SEND,	0,	0,	GPIO(187),
 							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},		//CALL (GPIO_K2)
@@ -498,10 +483,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.pwm0_config.max_duty = 255;
 			ambarella_board_generic.pwm0_config.default_duty = 255;
 
-			ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH9;
-			ambarella_platform_adc_temper_controller0.temper_curve = amb_temper_curve;
-			platform_device_register(&ambarella_adc_temper);
-
 			use_bub_default = 0;
 			break;
 
@@ -520,10 +501,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.sata_power.active_delay = 1;
 
 		elephant_board_input_info.pkeymap = elephant_keymap_ipcam_nvr;
-
-		ambarella_platform_adc_temper_controller0.adc_temper_channel = ADC_CH9;
-		ambarella_platform_adc_temper_controller0.temper_curve = amb_temper_curve;
-		platform_device_register(&ambarella_adc_temper);
 
 		ambarella_board_generic.hdmi_extpower.gpio_id = GPIO(104);
 		ambarella_board_generic.hdmi_extpower.active_level = GPIO_HIGH;

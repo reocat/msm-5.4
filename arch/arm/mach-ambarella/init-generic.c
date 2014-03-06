@@ -58,7 +58,6 @@
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_adc0,
 #if (AHCI_INSTANCES >= 1)
 	&ambarella_ahci0,
 #endif

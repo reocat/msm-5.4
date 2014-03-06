@@ -49,9 +49,6 @@
 extern int platform_driver_register_ir(void);
 extern void platform_driver_unregister_ir(void);
 
-extern int platform_driver_register_adc(void);
-extern void platform_driver_unregister_adc(void);
-
 /* ========================================================================= */
 static int abx_active_pressure = 0;
 
@@ -69,6 +66,8 @@ struct ambarella_input_board_info *ambarella_input_get_board_info(void)
 
 	return pboard_info;
 }
+
+EXPORT_SYMBOL(ambarella_input_get_board_info);
 
 /* ========================================================================= */
 irqreturn_t ambarella_gpio_irq(int irq, void *devid)
@@ -666,24 +665,6 @@ static int __init ambarella_input_init(void)
 		}
 	}
 #endif
-#ifdef CONFIG_INPUT_AMBARELLA_ADC
-	if (pboard_info->pkeymap == NULL) {
-		printk(KERN_ERR "ADC key is NOT support! \n");
-	} else {
-		for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-			if (pboard_info->pkeymap[i].type == AMBINPUT_END)
-				break;
-			if (pboard_info->pkeymap[i].type == AMBINPUT_ADC_KEY){
-				tmp_val = platform_driver_register_adc();
-				if (tmp_val) {
-					pr_err("platform_driver_register_adc ="
-						" %d!\n", tmp_val);
-				}
-				break;
-			}
-		}
-	}
-#endif
 
 ambarella_input_init_exit:
 	return ret_val;
@@ -697,16 +678,6 @@ static void __exit ambarella_input_exit(void)
 		goto ambarella_input_exit_unregister;
 	}
 
-#ifdef CONFIG_INPUT_AMBARELLA_ADC
-	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
-			break;
-		if (pboard_info->pkeymap[i].type == AMBINPUT_ADC_KEY){
-			platform_driver_unregister_adc();
-			break;
-		}
-	}
-#endif
 #ifdef CONFIG_INPUT_AMBARELLA_IR
 	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
 		if (pboard_info->pkeymap[i].type == AMBINPUT_END)

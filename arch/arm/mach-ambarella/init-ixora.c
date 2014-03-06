@@ -63,7 +63,6 @@
 #include <linux/input.h>
 /* ==========================================================================*/
 static struct platform_device *ixora_devices[] __initdata = {
-	&ambarella_adc0,
 	&ambarella_crypto,
 	&ambarella_fb0,
 	&ambarella_fb1,
@@ -133,20 +132,6 @@ static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_POWER,		1,		0x0100bcbd}}},	//POWER
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEUP,	1,		0x01000405}}},	//VOLUME_UP
 	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEDOWN,	1,		0x01008485}}},	//VOLUME_DOWN
-
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	1,	3100,	4095}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MODE,		0,	1,	2700,	3100}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DELETE,		0,	1,	1800,	2400}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,		0,	1,	1000,	1350}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HP,			0,	1,	300,		800}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,		0,	1,	0,		200}}},
-
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,	0,	3,	3100,	4095}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_MENU,		0,	3,	2800,	3100}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RIGHT,		0,	3,	2000,	2800}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_LEFT,			0,	3,	1000,	2000}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,		0,	3,	400,		1000}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,			0,	3,	0,		400}}},
 
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},

@@ -70,7 +70,6 @@ static struct platform_device ambarella_power_supply = {
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_adc0,
 	&ambarella_crypto,
 	&ambarella_fb0,
 	&ambarella_fb1,
@@ -122,28 +121,6 @@ static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,0,	0,	983,	1023}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {14,		0,	0,	880,	920,}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_END,	0,	0,	780,	820,}}},	//DEL
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {127,		0,	0,	690,	730,}}},	//MENU
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_OK,	0,	0,	620,	640,}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RIGHT,	0,	0,	490,	530,}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_LEFT,	0,	0,	360,	400,}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_DOWN,	0,	0,	250,	300,}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_UP,	0,	0,	120,	160,}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_ESC,	0,	0,	0,	40,}}},		//S1
-
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RESERVED,0,	1,	983,	1023}}},
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {228,		0,	1,	880,	920,}}},	//POUND
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PHONE,	0,	1,	780,	820,}}},	//S13
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {227,		0,	1,	690,	730,}}},	//STAR
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_RECORD,	0,	1,	620,	640,}}},	//S11
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_PLAY,	0,	1,	490,	530,}}},	//S10
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_POWER,	0,	1,	360,	400,}}},	//HOME	WAKE
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_VIDEO,	0,	1,	250,	300,}}},	//S15
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_HP,	0,	1,	120,	160,}}},	//FOCUS
-	{AMBINPUT_ADC_KEY,	{.adc_key	= {KEY_CAMERA,	0,	1,	0,	40,}}},		//CAMERA
 
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_CAMERA,	0,	0,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},

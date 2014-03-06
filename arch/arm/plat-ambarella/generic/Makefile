@@ -20,7 +20,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= adc.o
 obj-y						+= ahci.o
 obj-y						+= audio.o
 obj-y						+= crypto.o

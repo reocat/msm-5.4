@@ -135,7 +135,7 @@
 #define ADC_CHAN9_INTR_OFFSET		0x124
 #endif
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_STATUS_OFFSET		0x000
 #define ADC_SLOT_NUM_OFFSET		0x00c
 #define ADC_SLOT_PERIOD_OFFSET		0x010
@@ -167,41 +167,6 @@
 #define ADC_EC_ADC_OFFSET		0x1C0
 #define ADC_EC_REFVAL_OFFSET		0x1C4
 #define ADC_EC_RESHAPE_OFFSET		0x1C8
-
-#define ADC_FIFO_DATA0_OFFSET		0x200
-#define ADC_FIFO_DATA1_OFFSET		0x280
-#define ADC_FIFO_DATA2_OFFSET		0x300
-#define ADC_FIFO_DATA3_OFFSET		0x380
-#endif
-
-#if (CHIP_REV == S2L)
-#define ADC_STATUS_OFFSET		0x000
-#define ADC_SLOT_NUM_OFFSET		0x00c
-#define ADC_SLOT_PERIOD_OFFSET		0x010
-#define ADC_CTRL_INTR_TABLE_OFFSET		0x044
-#define ADC_DATA_INTR_TABLE_OFFSET		0x048
-#define ADC_FIFO_INTR_TABLE_OFFSET		0x04c
-#define ADC_ERR_STATUS_OFFSET		0x050
-
-#define ADC_SLOT_CTRL_0_OFFSET		0x100
-#define ADC_SLOT_CTRL_1_OFFSET		0x104
-#define ADC_SLOT_CTRL_2_OFFSET		0x108
-#define ADC_SLOT_CTRL_3_OFFSET		0x10c
-#define ADC_SLOT_CTRL_4_OFFSET		0x110
-#define ADC_SLOT_CTRL_5_OFFSET		0x114
-#define ADC_SLOT_CTRL_6_OFFSET		0x118
-#define ADC_SLOT_CTRL_7_OFFSET		0x11c
-
-#define ADC_FIFO_CTRL_0_OFFSET		0x180
-#define ADC_FIFO_CTRL_1_OFFSET		0x184
-#define ADC_FIFO_CTRL_2_OFFSET		0x188
-#define ADC_FIFO_CTRL_3_OFFSET		0x18C
-#define ADC_FIFO_CTRL_OFFSET		0x190
-
-#define ADC_FIFO_STATUS_0_OFFSET		0x1a0
-#define ADC_FIFO_STATUS_1_OFFSET		0x1a4
-#define ADC_FIFO_STATUS_2_OFFSET		0x1a8
-#define ADC_FIFO_STATUS_3_OFFSET		0x1ac
 
 #define ADC_FIFO_DATA0_OFFSET		0x200
 #define ADC_FIFO_DATA1_OFFSET		0x280
@@ -255,7 +220,7 @@
 #define ADC_DATA5_SAMPLE3_REG		ADC_REG(ADC_DATA5_SAMPLE3_OFFSET)
 
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_STATUS_REG			ADC_REG(ADC_STATUS_OFFSET)
 #define ADC_SLOT_NUM_REG			ADC_REG(ADC_SLOT_NUM_OFFSET)
 #define ADC_SLOT_PERIOD_REG			ADC_REG(ADC_SLOT_PERIOD_OFFSET)
@@ -293,56 +258,21 @@
 #define ADC_FIFO_DATA2_REG			ADC_REG(ADC_FIFO_DATA2_OFFSET)
 #define ADC_FIFO_DATA3_REG			ADC_REG(ADC_FIFO_DATA3_OFFSET)
 
+#endif
+
+#if (CHIP_REV == S2)
 #define ADC_DATA10_REG			ADC_REG(ADC_DATA10_OFFSET)
 #define ADC_DATA11_REG			ADC_REG(ADC_DATA11_OFFSET)
 #define ADC_CHAN10_INTR_REG		ADC_REG(ADC_CHAN10_INTR_OFFSET)
 #define ADC_CHAN11_INTR_REG		ADC_REG(ADC_CHAN11_INTR_OFFSET)
 #endif
 
-#if (CHIP_REV == S2L)
-#define ADC_STATUS_REG			ADC_REG(ADC_STATUS_OFFSET)
-#define ADC_SLOT_NUM_REG			ADC_REG(ADC_SLOT_NUM_OFFSET)
-#define ADC_SLOT_PERIOD_REG			ADC_REG(ADC_SLOT_PERIOD_OFFSET)
-#define ADC_CTRL_INTR_TABLE_REG			ADC_REG(ADC_CTRL_INTR_TABLE_OFFSET)
-#define ADC_DATA_INTR_TABLE_REG			ADC_REG(ADC_DATA_INTR_TABLE_OFFSET)
-#define ADC_FIFO_INTR_TABLE_REG			ADC_REG(ADC_FIFO_INTR_TABLE_OFFSET)
-#define ADC_ERR_STATUS_REG			ADC_REG(ADC_ERR_STATUS_OFFSET)
-
-#define ADC_SLOT_CTRL_0_REG			ADC_REG(ADC_SLOT_CTRL_0_OFFSET)
-#define ADC_SLOT_CTRL_1_REG			ADC_REG(ADC_SLOT_CTRL_1_OFFSET)
-#define ADC_SLOT_CTRL_2_REG			ADC_REG(ADC_SLOT_CTRL_2_OFFSET)
-#define ADC_SLOT_CTRL_3_REG			ADC_REG(ADC_SLOT_CTRL_3_OFFSET)
-#define ADC_SLOT_CTRL_4_REG			ADC_REG(ADC_SLOT_CTRL_4_OFFSET)
-#define ADC_SLOT_CTRL_5_REG			ADC_REG(ADC_SLOT_CTRL_5_OFFSET)
-#define ADC_SLOT_CTRL_6_REG			ADC_REG(ADC_SLOT_CTRL_6_OFFSET)
-#define ADC_SLOT_CTRL_7_REG			ADC_REG(ADC_SLOT_CTRL_7_OFFSET)
-
-#define ADC_FIFO_STATUS_0_REG			ADC_REG(ADC_FIFO_STATUS_0_OFFSET)
-#define ADC_FIFO_STATUS_1_REG			ADC_REG(ADC_FIFO_STATUS_1_OFFSET)
-#define ADC_FIFO_STATUS_2_REG			ADC_REG(ADC_FIFO_STATUS_2_OFFSET)
-#define ADC_FIFO_STATUS_3_REG			ADC_REG(ADC_FIFO_STATUS_3_OFFSET)
-
-#define ADC_FIFO_CTRL_0_REG		ADC_REG(ADC_FIFO_CTRL_0_OFFSET)
-#define ADC_FIFO_CTRL_1_REG		ADC_REG(ADC_FIFO_CTRL_1_OFFSET)
-#define ADC_FIFO_CTRL_2_REG		ADC_REG(ADC_FIFO_CTRL_2_OFFSET)
-#define ADC_FIFO_CTRL_3_REG		ADC_REG(ADC_FIFO_CTRL_3_OFFSET)
-#define ADC_FIFO_CTRL_REG		ADC_REG(ADC_FIFO_CTRL_OFFSET)
-
-#define ADC_FIFO_DATA0_REG			ADC_REG(ADC_FIFO_DATA0_OFFSET)
-#define ADC_FIFO_DATA1_REG			ADC_REG(ADC_FIFO_DATA1_OFFSET)
-#define ADC_FIFO_DATA2_REG			ADC_REG(ADC_FIFO_DATA2_OFFSET)
-#define ADC_FIFO_DATA3_REG			ADC_REG(ADC_FIFO_DATA3_OFFSET)
-
-#endif
-
 /* ADC_CONTROL_REG */
 #define ADC_CONTROL_GYRO_SAMPLE_MODE	0x08
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define ADC_CONTROL_CLEAR		0x01
-#define ADC_CONTROL_MODE		0x02
+/* valid only for S2/S2L */
+#define ADC_CONTROL_RESET		0x01
 #define ADC_CONTROL_ENABLE		0x04
-#define ADC_CONTROL_START		0x08
 #define ADC_FIFO_INT_EN		(0x1 << 31)
 #define ADC_FIFO_UNDR_INT_EN	(0x1 << 30)
 #define ADC_FIFO_DEPTH			0x80
@@ -350,6 +280,10 @@
 #define ADC_FIFO_CLEAR			0x1
 #define ADC_FIFO_ID_SHIFT		12
 #define ADC_FIFO_CONTROL_CLEAR		0x01
+
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#define ADC_CONTROL_MODE		0x02
+#define ADC_CONTROL_START		0x08
 #else
 #define ADC_CONTROL_MODE		0x04
 #define ADC_CONTROL_START		0x02
@@ -392,53 +326,6 @@
 #define ADC_CH9				(1 << 9)
 #define ADC_CH10			(1 << 10)
 #define ADC_CH11			(1 << 11)
-
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-enum ambarella_adc_mode{
-	AMBA_ADC_IRQ_MODE,
-	AMBA_ADC_POL_MODE
-};
-
-struct ambarella_adc_controller {
-	u32				(*open)(void);
-	u32				(*close)(void);
-	void				(*read_channels)(u32*, u32*);
-	u32				(*is_irq_supported)(void);
-	void				(*set_irq_threshold)(u32, u32, u32);
-	void				(*reset)(void);
-	void				(*stop)(void);
-	u32				(*get_channel_num)(void);
-	u32				(*read_channel)(u32);
-	u32				scan_delay;
-	u32				(*temper_curve)(u32);
-	u32				(*setpll)(u32);
-	u32				adc_temper_channel;
-
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
-	u8				adc_counter;
-	u8				adc_slot_num;
-	u16				adc_slot_period;
-	u16				adc_slot_ctrl[ADC_MAX_SLOT_NUMBER];
-#endif
-};
-#define AMBA_ADC_PARAM_CALL(arg, perm) \
-	module_param_cb(adc_scan_delay, &param_ops_int, &arg.scan_delay, perm)
-
-/* ==========================================================================*/
-extern struct platform_device ambarella_adc0;
-extern struct platform_device ambarella_adc_temper;
-
-/* ==========================================================================*/
-extern int ambarella_init_adc(void);
-extern u32 ambarella_adc_suspend(u32 level);
-extern u32 ambarella_adc_resume(u32 level);
-extern void ambarella_adc_get_array(u32 *adc_data, u32 *array_size);
-extern u32 amb_temper_curve(u32 adc_data);
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_ADC_H__ */
 

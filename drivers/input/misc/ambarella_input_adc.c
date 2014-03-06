@@ -21,426 +21,311 @@
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/moduleparam.h>
+#include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/slab.h>
-
-#include <asm/irq.h>
-#include <asm/io.h>
-#include <asm/uaccess.h>
-#include <asm/mach-types.h>
-
+#include <linux/of.h>
 #include <mach/hardware.h>
 #include <plat/adc.h>
+#include <plat/rct.h>
 
-#include <plat/ambinput.h>
+struct ambarella_adc_keymap {
+	u32 key_code;
+	u32 channel : 4;
+	u32 low_level : 12;
+	u32 high_level : 12;
+};
 
-/* ========================================================================= */
-#define CONFIG_AMBARELLA_ADC_WAIT_COUNTER_LIMIT	(100000)
-#define	AMBA_ADC_NO_KEY_PRESSED			(0)
+struct ambarella_adc_info {
+	void __iomem *regbase;
+	unsigned int irq;
 
-/* ========================================================================= */
-extern struct ambarella_input_board_info *ambarella_input_get_board_info(void);
+	struct input_dev *indev;
+	struct delayed_work work;
 
-/* ========================================================================= */
-int ambarella_setup_adc_key(struct ambarella_adc_info *pinfo)
+	u32 old_key[ADC_NUM_CHANNELS];
+	struct ambarella_adc_keymap *keymap;
+	u32 key_num;
+
+	/* for pm */
+	u32 control_reg;
+	u32 enable_reg;
+	u32 ch_intr_reg[ADC_NUM_CHANNELS];
+};
+
+static void ambarella_adc_read_level(struct ambarella_adc_info *pinfo, u32 *data)
 {
-	int				retval = 0;
-	int				i;
+	int i;
 
-	pinfo->adc_channel_num = pinfo->pcontroller_info->get_channel_num();
-	if (pinfo->adc_channel_num == 0) {
-		dev_err(&pinfo->dev->dev, "Wrong adc_channel_num\n");
-		retval = -EINVAL;
-		goto ambarella_setup_adc_key_exit;
-	}
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_START);
 
-	pinfo->adc_channel_info = kzalloc(sizeof(struct ambarella_adc_channel_info) *
-		pinfo->adc_channel_num, GFP_KERNEL);
-	if (!pinfo->adc_channel_info) {
-		dev_err(&pinfo->dev->dev,
-			"Fail to malloc adc_channel_info info\n");
-		retval = -ENOMEM;
-		goto ambarella_setup_adc_key_exit;
-	}
+	while (amba_tstbitsl(ADC_STATUS_REG, ADC_CONTROL_STATUS) == 0x0);
 
-	pinfo->adc_key_pressed = kzalloc(sizeof(u32) * pinfo->adc_channel_num, GFP_KERNEL);
-	if (!pinfo->adc_key_pressed) {
-		dev_err(&pinfo->dev->dev, "Failed to allocate adc_key_pressed!\n");
-		retval = -ENOMEM;
-		goto ambarella_setup_adc_key_free_adc_channel_info;
-	}
-
-	pinfo->adc_data = kzalloc(sizeof(u32) * pinfo->adc_channel_num, GFP_KERNEL);
-	if (!pinfo->adc_data) {
-		dev_err(&pinfo->dev->dev, "Failed to allocate adc_data!\n");
-		retval = -ENOMEM;
-		goto ambarella_setup_adc_key_free_adc_key_pressed;
-	}
-
-	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-		if (pinfo->pkeymap[i].type == AMBINPUT_END)
-			break;
-
-		if ((pinfo->pkeymap[i].type & AMBINPUT_SOURCE_MASK) != AMBINPUT_SOURCE_ADC)
-			continue;
-
-		if (pinfo->pkeymap[i].adc_key.chan < pinfo->adc_channel_num) {
-			pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_channel_used = 1;
-		} else {
-			dev_err(&pinfo->dev->dev, "The adc adc_channel_info [%d] is not exist\n",
-				pinfo->pkeymap[i].adc_key.chan);
-			continue;
-		}
-
-		if (pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
-			if (pinfo->pkeymap[i].adc_key.irq_trig) {
-				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_high_trig
-					= pinfo->pkeymap[i].adc_key.high_level;
-				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_low_trig
-					= 0;
-			} else {
-				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_low_trig
-					= pinfo->pkeymap[i].adc_key.low_level;
-				pinfo->adc_channel_info[pinfo->pkeymap[i].adc_key.chan].adc_high_trig
-					= 0;
-			}
-		}
-	}
-
-	if (pinfo->support_irq) {
-		for (i = 0; i < pinfo->adc_channel_num; i++) {
-			if (pinfo->adc_channel_info[i].adc_channel_used) {
-				pinfo->pcontroller_info->set_irq_threshold(i,
-					pinfo->adc_channel_info[i].adc_high_trig,
-					pinfo->adc_channel_info[i].adc_low_trig);
-				dev_dbg(&pinfo->dev->dev, "adc_channel_info %d is used\n", i);
-				dev_dbg(&pinfo->dev->dev, "adc_high_trig [%d], adc_low_trig [%d]\n",
-					pinfo->adc_channel_info[i].adc_high_trig,
-					pinfo->adc_channel_info[i].adc_low_trig);
-
-				/* here, we suppose that all the adc_channel_info use the same trigger */
-				pinfo->irqflags = (!!pinfo->adc_channel_info[i].adc_high_trig) * IRQF_TRIGGER_HIGH
-					+ (!!pinfo->adc_channel_info[i].adc_low_trig) * IRQF_TRIGGER_LOW;
-			}
-		}
-	}
-
-	goto ambarella_setup_adc_key_exit;
-
-ambarella_setup_adc_key_free_adc_key_pressed:
-	kfree(pinfo->adc_key_pressed);
-	pinfo->adc_key_pressed = NULL;
-
-ambarella_setup_adc_key_free_adc_channel_info:
-	kfree(pinfo->adc_channel_info);
-	pinfo->adc_channel_info = NULL;
-
-ambarella_setup_adc_key_exit:
-	return retval;
+	/* note: only available for s2/s2l, because the register definition
+	 * for a5s/iONE are different. */
+	for (i = 0; i < ADC_NUM_CHANNELS; i++)
+		data[i] = amba_readl(pinfo->regbase + ADC_DATA0_OFFSET + i * 4);
 }
 
-void ambarella_scan_adc(struct work_struct *work)
+static void ambarella_scan_adc_key(struct work_struct *work)
 {
-	int				i;
-	struct ambarella_adc_info	*pinfo;
-	int				adc_index;
-	u32				adc_size;
+	struct ambarella_adc_info *pinfo;
+	struct input_dev *indev;
+	struct ambarella_adc_keymap *keymap;
+	u32 i, ch, low_level, high_level;
+	u32 level[ADC_NUM_CHANNELS];
 
-	pinfo = container_of(work, struct ambarella_adc_info, detect_adc.work);
+	pinfo = container_of(work, struct ambarella_adc_info, work.work);
+	keymap = pinfo->keymap;
+	indev = pinfo->indev;
 
-	if (unlikely(pinfo->pkeymap == NULL)) {
-		dev_err(&pinfo->dev->dev, "pinfo->pkeymap is null");
-		return;
-	}
+	ambarella_adc_read_level(pinfo, level);
 
-	adc_size = pinfo->adc_channel_num;
-	pinfo->pcontroller_info->read_channels(pinfo->adc_data, &adc_size);
+	for (i = 0; i < pinfo->key_num; i++, keymap++) {
+		low_level = keymap->low_level;
+		high_level = keymap->high_level;
+		ch = keymap->channel;
 
-	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-		if (pinfo->pkeymap[i].type == AMBINPUT_END)
+		if (level[ch] < low_level || level[ch] > high_level)
+			continue;
+
+		if (pinfo->old_key[ch] == KEY_RESERVED
+				&& keymap->key_code != KEY_RESERVED) {
+			input_report_key(indev, keymap->key_code, 1);
+			input_sync(indev);
+			pinfo->old_key[ch] = keymap->key_code;
+
+			dev_dbg(&indev->dev, "key[%d:%d] pressed %d\n",
+					ch, pinfo->old_key[ch], level[ch]);
 			break;
+		} else if (pinfo->old_key[ch] != KEY_RESERVED
+				&& keymap->key_code == KEY_RESERVED) {
+			input_report_key(indev, pinfo->old_key[ch], 0);
+			input_sync(indev);
 
-		if ((pinfo->pkeymap[i].type & AMBINPUT_SOURCE_MASK) != AMBINPUT_SOURCE_ADC)
-			continue;
+			dev_dbg(&indev->dev, "key[%d:%d] released %d\n",
+					ch, pinfo->old_key[ch],level[ch]);
 
-		adc_index = pinfo->pkeymap[i].adc_key.chan;
-		if (adc_index >= adc_size)
-			continue;
-
-		if ((pinfo->pkeymap[i].adc_key.low_level > pinfo->adc_data[adc_index]) ||
-			(pinfo->pkeymap[i].adc_key.high_level < pinfo->adc_data[adc_index]))
-			continue;
-
-		/* scan the key and stop when the first key action is detected. If you want to
-		   monitor multi-key in different ADC channels, remove "break" */
-		if (pinfo->pkeymap[i].type == AMBINPUT_ADC_KEY) {
-			if (pinfo->adc_key_pressed[adc_index] != AMBA_ADC_NO_KEY_PRESSED
-				&& pinfo->pkeymap[i].adc_key.key_code == KEY_RESERVED) {
-				input_report_key(pinfo->dev,
-					pinfo->adc_key_pressed[adc_index], 0);//key relase
-				input_sync(pinfo->dev);
-				dev_dbg(&pinfo->dev->dev, "key[%d:%d] released %d\n", adc_index,
-					pinfo->adc_key_pressed[adc_index],
-					pinfo->adc_data[adc_index]);
-				pinfo->adc_key_pressed[adc_index] = AMBA_ADC_NO_KEY_PRESSED;
-				if (pinfo->support_irq) {
-					pinfo->work_mode = AMBA_ADC_IRQ_MODE;
-				}
-				break;
-			} else if (pinfo->adc_key_pressed[adc_index] == AMBA_ADC_NO_KEY_PRESSED
-				&& pinfo->pkeymap[i].adc_key.key_code != KEY_RESERVED) {
-				input_report_key(pinfo->dev,
-					pinfo->pkeymap[i].adc_key.key_code, 1);// key press
-				input_sync(pinfo->dev);
-				pinfo->adc_key_pressed[adc_index] =
-					pinfo->pkeymap[i].adc_key.key_code;
-				if (pinfo->support_irq) {
-					pinfo->work_mode = AMBA_ADC_POL_MODE;
-				}
-				dev_dbg(&pinfo->dev->dev, "key[%d:%d] pressed %d\n", adc_index,
-					pinfo->adc_key_pressed[adc_index],
-					pinfo->adc_data[adc_index]);
-				break;
-			}
-		}
-
-		if (pinfo->pkeymap[i].type == AMBINPUT_ADC_REL) {
-			if (pinfo->pkeymap[i].adc_rel.key_code == REL_X) {
-				input_report_rel(pinfo->dev,
-					REL_X,
-					pinfo->pkeymap[i].adc_rel.rel_step);
-				input_report_rel(pinfo->dev,
-					REL_Y, 0);
-				input_sync(pinfo->dev);
-				dev_dbg(&pinfo->dev->dev, "report REL_X %d & %d\n",
-					pinfo->pkeymap[i].adc_rel.rel_step,
-					pinfo->adc_data[adc_index]);
-				break;
-			} else if (pinfo->pkeymap[i].adc_rel.key_code == REL_Y) {
-				input_report_rel(pinfo->dev,
-					REL_X, 0);
-				input_report_rel(pinfo->dev,
-					REL_Y,
-					pinfo->pkeymap[i].adc_rel.rel_step);
-				input_sync(pinfo->dev);
-				dev_dbg(&pinfo->dev->dev, "report REL_Y %d & %d\n",
-					pinfo->pkeymap[i].adc_rel.rel_step,
-					pinfo->adc_data[adc_index]);
-				break;
-			}
-		}
-
-		if (pinfo->pkeymap[i].type == AMBINPUT_ADC_REL) {
-			input_report_abs(pinfo->dev,
-				ABS_X, pinfo->pkeymap[i].adc_abs.abs_x);
-			input_report_abs(pinfo->dev,
-				ABS_Y, pinfo->pkeymap[i].adc_abs.abs_y);
-			input_sync(pinfo->dev);
-			dev_dbg(&pinfo->dev->dev, "report ABS %d:%d & %d\n",
-				pinfo->pkeymap[i].adc_abs.abs_x,
-				pinfo->pkeymap[i].adc_abs.abs_y,
-				pinfo->adc_data[adc_index]);
+			pinfo->old_key[ch] = 0;
 			break;
 		}
 	}
 
-	if (pinfo->work_mode == AMBA_ADC_POL_MODE)
-		queue_delayed_work(pinfo->workqueue, &pinfo->detect_adc,
-			pinfo->pcontroller_info->scan_delay);
-	else
-		enable_irq(pinfo->irq);
+	queue_delayed_work(system_freezable_wq,
+				&pinfo->work, msecs_to_jiffies(20));
 }
 
-static irqreturn_t ambarella_input_adc_irq(int irq, void *devid)
+static int ambarella_adc_of_parse(struct platform_device *pdev,
+					struct ambarella_adc_info *pinfo)
 {
-	struct ambarella_adc_info	*pinfo;
+	struct device_node *np = pdev->dev.of_node;
+	struct ambarella_adc_keymap *keymap;
+	const __be32 *prop;
+	int i, size;
 
-	pinfo = (struct ambarella_adc_info *)devid;
+	prop = of_get_property(np, "amb,keymap", &size);
+	if (!prop || size % (sizeof(__be32) * 2)) {
+		dev_err(&pdev->dev, "Invalid keymap!\n");
+		return -ENOENT;
+	}
 
-	dev_dbg(&pinfo->dev->dev, "%s:%d\n", __func__, __LINE__);
+	/* cells is 2 for each keymap */
+	size /= sizeof(__be32) * 2;
 
-	disable_irq_nosync(pinfo->irq);
-	queue_delayed_work(pinfo->workqueue, &pinfo->detect_adc, 0);
+	pinfo->key_num = size;
+	pinfo->keymap = devm_kzalloc(&pdev->dev,
+			sizeof(struct ambarella_adc_keymap) * size, GFP_KERNEL);
+	if (pinfo->keymap == NULL){
+		dev_err(&pdev->dev, "No memory!\n");
+		return -ENOMEM;
+	}
 
-	return IRQ_HANDLED;
+	keymap = pinfo->keymap;
+
+	for (i = 0; i < size; i++) {
+		u32 propval = be32_to_cpup(prop + i * 2);
+
+		keymap->channel = propval >> 28;
+		if (keymap->channel >= ADC_NUM_CHANNELS) {
+			dev_err(&pdev->dev, "Invalid channel: %d\n",
+						keymap->channel);
+			return -EINVAL;
+		}
+
+		keymap->low_level = propval & 0xfff;
+		keymap->high_level = (propval >> 16) & 0xfff;
+
+		propval = be32_to_cpup(prop + i * 2 + 1);
+		keymap->key_code = be32_to_cpup(prop + i * 2 + 1);
+
+		keymap++;
+	}
+
+	return 0;
 }
 
 static int ambarella_input_adc_probe(struct platform_device *pdev)
 {
-	int					retval = 0;
-	struct ambarella_adc_info		*pinfo;
-	int					irq;
-	struct resource 			*mem;
-	struct ambarella_input_board_info	*pboard_info;
+	struct device_node *np = pdev->dev.of_node;
+	struct input_dev *indev;
+	struct ambarella_adc_info *pinfo;
+	struct resource *mem;
+	int i, rval = 0;
 
-	pboard_info = ambarella_input_get_board_info();
-	if (pboard_info == NULL){
-		dev_err(&pdev->dev, "pboard_info is NULL!\n");
-		retval = -ENOMEM;
-		goto adc_errorCode_na;
+	if (of_device_is_compatible(np, "ambarella,adc-v1")) {
+		dev_err(&pdev->dev, "Not implemented yet for adc-v1!\n");
+		return -ENODEV;
 	}
 
-	pinfo = kmalloc(sizeof(struct ambarella_adc_info), GFP_KERNEL);
+	pinfo = devm_kzalloc(&pdev->dev,
+			sizeof(struct ambarella_adc_info), GFP_KERNEL);
 	if (!pinfo) {
 		dev_err(&pdev->dev, "Failed to allocate pinfo!\n");
-		retval = -ENOMEM;
-		goto adc_errorCode_na;
+		return -ENOMEM;
 	}
-
-	pinfo->pcontroller_info =
-		(struct ambarella_adc_controller *)pdev->dev.platform_data;
-	if ((pinfo->pcontroller_info == NULL) ||
-		(pinfo->pcontroller_info->read_channels == NULL) ||
-		(pinfo->pcontroller_info->is_irq_supported == NULL) ||
-		(pinfo->pcontroller_info->set_irq_threshold == NULL) ||
-		(pinfo->pcontroller_info->reset == NULL) ||
-		(pinfo->pcontroller_info->stop == NULL) ||
-		(pinfo->pcontroller_info->open == NULL) ||
-		(pinfo->pcontroller_info->close == NULL) ||
-		(pinfo->pcontroller_info->setpll == NULL) ||
-		(pinfo->pcontroller_info->get_channel_num == NULL) ) {
-		dev_err(&pdev->dev, "Platform data is NULL!\n");
-		retval = -ENXIO;
-		goto adc_errorCode_pinfo;
-	}
-
-	pinfo->pcontroller_info->setpll(6000000);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
 		dev_err(&pdev->dev, "Get mem resource failed!\n");
-		retval = -ENXIO;
-		goto adc_errorCode_pinfo;
+		return -ENXIO;
 	}
 
-	pinfo->support_irq = pinfo->pcontroller_info->is_irq_supported();
-	if (pinfo->support_irq) {
-		irq = platform_get_irq_byname(pdev, "adc-level-irq");
-		if (irq == -ENXIO) {
-			dev_err(&pdev->dev, "Get irq resource failed!\n");
-			retval = -ENXIO;
-			goto adc_errorCode_pinfo;
-		} else {
-			pinfo->irq = irq;
-		}
+	pinfo->regbase = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
+	if (!pinfo->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
 	}
 
-	pinfo->regbase = (unsigned char __iomem *)mem->start;
-	pinfo->id = pdev->id;
-	pinfo->mem = mem;
-	pinfo->dev = pboard_info->pinput_dev;
-	pinfo->pkeymap = pboard_info->pkeymap;
-
-	pinfo->pcontroller_info->open();
-
-	retval = ambarella_setup_adc_key(pinfo);
-	if (retval) {
-		dev_err(&pdev->dev, "ambarella_setup_adc_key failed!\n");
-		goto adc_errorCode_pinfo;
+	/* currently irq mode is not supported */
+	pinfo->irq = platform_get_irq(pdev, 0);
+	if (pinfo->irq < 0) {
+		dev_err(&pdev->dev, "Get irq resource failed!\n");
+		return -ENXIO;
 	}
 
-	pinfo->workqueue = create_singlethread_workqueue("amba_adc");
-	if (!pinfo->workqueue) {
-		retval = -ENOMEM;
-		dev_err(&pdev->dev, "Create ADC workqueue failed!\n");
-		goto adc_errorCode_setup_adc_key;
-	}
-	INIT_DELAYED_WORK(&pinfo->detect_adc, ambarella_scan_adc);
+	for (i = 0; i < ADC_NUM_CHANNELS; i++)
+		pinfo->old_key[i] = KEY_RESERVED;
 
-	if (pinfo->support_irq) {// irq mode
-		pinfo->work_mode = AMBA_ADC_IRQ_MODE;
-		retval = request_irq(pinfo->irq, ambarella_input_adc_irq,
-			pinfo->irqflags, dev_name(&pdev->dev), pinfo);
-		if (retval) {
-			dev_err(&pdev->dev, "Request IRQ failed!\n");
-			goto adc_errorCode_free_queue;
-		}
-	} else {//polling mode
-		pinfo->work_mode = AMBA_ADC_POL_MODE;
-		queue_delayed_work(pinfo->workqueue, &pinfo->detect_adc,
-			pinfo->pcontroller_info->scan_delay);
+	rval = ambarella_adc_of_parse(pdev, pinfo);
+	if (rval < 0)
+		return rval;
+
+	indev = input_allocate_device();
+	if (!indev) {
+		dev_err(&pdev->dev, "input_allocate_device fail!\n");
+		return -ENOMEM;
 	}
+
+	indev->name = "AmbADC";
+	indev->phys = "ambarella/adc/input0";
+	indev->id.bustype = BUS_HOST;
+
+	rval = input_register_device(indev);
+	if (rval) {
+		dev_err(&pdev->dev, "Register input_dev failed!\n");
+		input_free_device(indev);
+		return rval;
+	}
+
+	pinfo->indev = indev;
+
+	amba_writel(SCALER_ADC_REG, 0x00010002);
+	amba_writel(SCALER_ADC_REG, 0x00000002);
+
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_RESET);
+	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_MODE); /* single mode */
+	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
+	msleep(1);
+
+	amba_writel(ADC_SLOT_NUM_REG, 0);
+	amba_writel(ADC_SLOT_PERIOD_REG, 60);
+	amba_writel(ADC_SLOT_CTRL_0_REG, 0xfff);
+
+	INIT_DELAYED_WORK(&pinfo->work, ambarella_scan_adc_key);
+	queue_delayed_work(system_freezable_wq,
+				&pinfo->work, msecs_to_jiffies(20));
 
 	platform_set_drvdata(pdev, pinfo);
-	dev_notice(&pdev->dev, "ADC Host Controller [%s mode] probed!\n",
-		(pinfo->support_irq) ? "interrupt" : "polling");
+	dev_notice(&pdev->dev, "ADC Host Controller [Polling] probed!\n");
 
-	goto adc_errorCode_na;
-
-adc_errorCode_free_queue:
-	destroy_workqueue(pinfo->workqueue);
-adc_errorCode_setup_adc_key:
-	kfree(pinfo->adc_key_pressed);
-	pinfo->adc_key_pressed = NULL;
-	kfree(pinfo->adc_channel_info);
-	pinfo->adc_channel_info = NULL;
-adc_errorCode_pinfo:
-	kfree(pinfo);
-adc_errorCode_na:
-	return retval;
+	return 0;
 }
 
 static int ambarella_input_adc_remove(struct platform_device *pdev)
 {
 	struct ambarella_adc_info	*pinfo;
-	int				retval = 0;
+	int rval = 0;
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (pinfo) {
-		if (pinfo->support_irq)
-			free_irq(pinfo->irq, pinfo);
-		pinfo->pcontroller_info->close();
-		cancel_delayed_work(&pinfo->detect_adc);
-		flush_workqueue(pinfo->workqueue);
-		destroy_workqueue(pinfo->workqueue);
-		kfree(pinfo->adc_data);
-		kfree(pinfo->adc_key_pressed);
-		kfree(pinfo->adc_channel_info);
-		kfree(pinfo);
-	}
+	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
+	cancel_delayed_work_sync(&pinfo->work);
+
+	input_unregister_device(pinfo->indev);
+	input_free_device(pinfo->indev);
 
 	dev_notice(&pdev->dev, "Remove Ambarella Media Processor ADC Host Controller.\n");
 
-	return retval;
+	return rval;
 }
 
 #if (defined CONFIG_PM)
 static int ambarella_input_adc_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
-	int					retval = 0;
-	struct ambarella_adc_info		*pinfo;
+	struct ambarella_adc_info *pinfo;
+	void __iomem *reg;
+	int i, rval = 0;
 
 	pinfo = platform_get_drvdata(pdev);
+	reg = pinfo->regbase;
 
-	if (pinfo->support_irq)
-		disable_irq(pinfo->irq);
+	pinfo->control_reg = amba_readl(reg + ADC_CONTROL_OFFSET);
+	pinfo->enable_reg = amba_readl(reg + ADC_ENABLE_OFFSET);
+
+	for (i = 0; i < ADC_NUM_CHANNELS; i++) {
+		pinfo->ch_intr_reg[i] =
+			amba_readl(reg + ADC_CHAN0_INTR_OFFSET + i * 4);
+	}
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
-		__func__, retval, state.event);
-	return retval;
+		__func__, rval, state.event);
+
+	return rval;
 }
 
 static int ambarella_input_adc_resume(struct platform_device *pdev)
 {
-	int					retval = 0;
-	struct ambarella_adc_info		*pinfo;
+	struct ambarella_adc_info *pinfo;
+	void __iomem *reg;
+	int i, rval = 0;
 
 	pinfo = platform_get_drvdata(pdev);
+	reg = pinfo->regbase;
 
-	if (pinfo->support_irq)
-		enable_irq(pinfo->irq);
+	for (i = 0; i < ADC_NUM_CHANNELS; i++) {
+		amba_writel(reg + ADC_CHAN0_INTR_OFFSET + i * 4,
+				pinfo->ch_intr_reg[i]);
+	}
 
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
+	amba_writel(reg + ADC_ENABLE_OFFSET, pinfo->enable_reg);
+	amba_writel(reg + ADC_CONTROL_OFFSET, pinfo->control_reg);
 
-	return retval;
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, rval);
+
+	return rval;
 }
 #endif
+
+static const struct of_device_id ambarella_adc_dt_ids[] = {
+	{.compatible = "ambarella,adc-v1", },
+	{.compatible = "ambarella,adc-v2", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_adc_dt_ids);
 
 static struct platform_driver ambarella_adc_driver = {
 	.probe		= ambarella_input_adc_probe,
@@ -452,16 +337,13 @@ static struct platform_driver ambarella_adc_driver = {
 	.driver		= {
 		.name	= "ambarella-adc",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_adc_dt_ids,
 	},
 };
 
-int platform_driver_register_adc(void)
-{
-	return platform_driver_register(&ambarella_adc_driver);
-}
+module_platform_driver(ambarella_adc_driver);
 
-void platform_driver_unregister_adc(void)
-{
-	platform_driver_unregister(&ambarella_adc_driver);
-}
+MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
+MODULE_DESCRIPTION("Ambarella ADC Input Driver");
+MODULE_LICENSE("GPL");
 

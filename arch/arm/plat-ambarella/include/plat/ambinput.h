@@ -42,9 +42,6 @@
 #define	AMBINPUT_IR_REL		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_REL)
 #define	AMBINPUT_IR_ABS		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_ABS)
 #define	AMBINPUT_IR_SW		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_SW)
-#define	AMBINPUT_ADC_KEY	(AMBINPUT_SOURCE_ADC | AMBINPUT_TYPE_KEY)
-#define	AMBINPUT_ADC_REL	(AMBINPUT_SOURCE_ADC | AMBINPUT_TYPE_REL)
-#define	AMBINPUT_ADC_ABS	(AMBINPUT_SOURCE_ADC | AMBINPUT_TYPE_ABS)
 #define	AMBINPUT_GPIO_KEY	(AMBINPUT_SOURCE_GPIO | AMBINPUT_TYPE_KEY)
 #define	AMBINPUT_GPIO_REL	(AMBINPUT_SOURCE_GPIO | AMBINPUT_TYPE_REL)
 #define	AMBINPUT_GPIO_ABS	(AMBINPUT_SOURCE_GPIO | AMBINPUT_TYPE_ABS)
@@ -156,36 +153,6 @@ struct ambarella_key_table {
 	};
 };
 
-struct ambarella_adc_channel_info{
-	u32				adc_channel_used;
-	u32 				adc_high_trig;
-	u32 				adc_low_trig;
-};
-
-struct ambarella_adc_info {
-	struct input_dev		*dev;
-	unsigned char __iomem 		*regbase;
-
-	u32				id;
-	struct resource			*mem;
-	unsigned int			support_irq;
-	unsigned long			irqflags;
-	unsigned int			work_mode;
-	unsigned int			irq;
-
-	struct workqueue_struct		*workqueue;
-
-	struct delayed_work		detect_adc;
-	u32				*adc_key_pressed;
-	u32				*adc_data;
-
-	struct ambarella_key_table	*pkeymap;
-	struct ambarella_adc_controller	*pcontroller_info;
-
-	u32				adc_channel_num;
-	struct ambarella_adc_channel_info	*adc_channel_info;
-};
-
 /* ==========================================================================*/
 struct ambarella_input_board_info {
 	struct ambarella_key_table		*pkeymap;
@@ -198,6 +165,8 @@ struct ambarella_input_board_info {
 	int					abx_max_pressure;
 	int					abx_max_width;
 };
+
+struct ambarella_input_board_info *ambarella_input_get_board_info(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

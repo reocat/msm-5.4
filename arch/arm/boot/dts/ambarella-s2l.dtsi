@@ -111,6 +111,12 @@
 			status = "disabled";
 	        };
 
+		adc@e801d000 {
+			compatible = "ambarella,adc-v2";
+			reg = <0xe801d000 0x1000>;
+			interrupts = <34 0x4>;
+		};
+
 		pinctrl: pinctrl@e8009000 {
 			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;

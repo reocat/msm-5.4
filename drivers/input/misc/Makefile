@@ -18,10 +18,8 @@ ambarella_general_input-objs		:= ambarella_input.o
 ifeq ($(CONFIG_INPUT_AMBARELLA_IR), y)
 ambarella_general_input-objs		+= ambarella_input_ir.o
 endif
-ifeq ($(CONFIG_INPUT_AMBARELLA_ADC), y)
-ambarella_general_input-objs		+= ambarella_input_adc.o
-endif
-obj-$(CONFIG_INPUT_AMBARELLA)		:= ambarella_general_input.o
+obj-$(CONFIG_INPUT_AMBARELLA_ADC)	+= ambarella_input_adc.o
+obj-$(CONFIG_INPUT_AMBARELLA)		+= ambarella_general_input.o
 
 obj-$(CONFIG_INPUT_APANEL)		+= apanel.o
 obj-$(CONFIG_INPUT_ARIZONA_HAPTICS)	+= arizona-haptics.o
