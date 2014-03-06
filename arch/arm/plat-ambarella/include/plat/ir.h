@@ -49,9 +49,6 @@
 #define IR_CONTROL_FIFO_OV		0x00000008
 #define IR_CONTROL_INTENB		0x00000004
 
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
 enum ambarella_ir_protocol {
 	AMBA_IR_PROTOCOL_NEC = 0,
 	AMBA_IR_PROTOCOL_PANASONIC = 1,
@@ -59,23 +56,6 @@ enum ambarella_ir_protocol {
 	AMBA_IR_PROTOCOL_PHILIPS = 3,
 	AMBA_IR_PROTOCOL_END
 };
-
-struct ambarella_ir_controller {
-	void					(*set_pll)(void);
-	u32					(*get_pll)(void);
-
-	int					protocol;
-	int					debug;
-};
-#define AMBA_IR_PARAM_CALL(arg, perm) \
-	module_param_cb(ir_protocol, &param_ops_int, &arg.protocol, perm); \
-	module_param_cb(ir_debug, &param_ops_int, &arg.debug, perm)
-
-/* ==========================================================================*/
-extern struct platform_device ambarella_ir0;
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_IR_H__ */
 

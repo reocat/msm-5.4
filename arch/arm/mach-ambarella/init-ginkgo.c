@@ -65,7 +65,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	//&ambarella_crypto,
 //	&ambarella_fb0,
 //	&ambarella_fb1,
-	//&ambarella_ir0,
 	//&ambarella_spi0,
 	&ambarella_spi_slave,
 	&ambarella_wdt0,
@@ -137,10 +136,6 @@ static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
 	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_POWER,		1,		0x0100bcbd}}},	//POWER
-	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEUP,	1,		0x01000405}}},	//VOLUME_UP
-	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEDOWN,	1,		0x01008485}}},	//VOLUME_DOWN
 
 	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
 
@@ -240,8 +235,6 @@ static void __init ambarella_init_ginkgo(void)
 	if (use_bub_default) {
 		platform_device_register(&ambarella_rtc0);
 	}
-
-	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {

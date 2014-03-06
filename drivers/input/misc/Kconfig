@@ -102,8 +102,7 @@ config INPUT_AMBARELLA
 	  IR, ADC and GPIO. ambvi is default, GPIO, IR and ADC need config.
 
 config INPUT_AMBARELLA_IR
-	bool "Support Ambarella Soc IR"
-	depends on INPUT_AMBARELLA
+	tristate "Support Ambarella Soc IR"
 	default n
 
 config INPUT_AMBARELLA_ADC

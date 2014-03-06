@@ -124,7 +124,7 @@ static int ambarella_adc_of_parse(struct platform_device *pdev,
 	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_adc_keymap *keymap;
 	const __be32 *prop;
-	int i, size;
+	u32 propval, i, size;
 
 	prop = of_get_property(np, "amb,keymap", &size);
 	if (!prop || size % (sizeof(__be32) * 2)) {
@@ -146,8 +146,9 @@ static int ambarella_adc_of_parse(struct platform_device *pdev,
 	keymap = pinfo->keymap;
 
 	for (i = 0; i < size; i++) {
-		u32 propval = be32_to_cpup(prop + i * 2);
-
+		propval = be32_to_cpup(prop + i * 2);
+		keymap->low_level = propval & 0xfff;
+		keymap->high_level = (propval >> 16) & 0xfff;
 		keymap->channel = propval >> 28;
 		if (keymap->channel >= ADC_NUM_CHANNELS) {
 			dev_err(&pdev->dev, "Invalid channel: %d\n",
@@ -155,11 +156,8 @@ static int ambarella_adc_of_parse(struct platform_device *pdev,
 			return -EINVAL;
 		}
 
-		keymap->low_level = propval & 0xfff;
-		keymap->high_level = (propval >> 16) & 0xfff;
-
 		propval = be32_to_cpup(prop + i * 2 + 1);
-		keymap->key_code = be32_to_cpup(prop + i * 2 + 1);
+		keymap->key_code = propval;
 
 		keymap++;
 	}

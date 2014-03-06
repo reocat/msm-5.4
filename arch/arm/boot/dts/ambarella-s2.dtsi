@@ -163,6 +163,14 @@
 			interrupts = <0 34 0x4>;
 		};
 
+		ir@70006000 {
+			compatible = "ambarella,ir";
+			reg = <0x70006000 0x1000>;
+			interrupts = <0 22 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&ir_pins>;
+		};
+
 		pinctrl: pinctrl@70009000 {
 			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;
@@ -232,6 +240,11 @@
 			i2c2_pins: i2c2@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1024 0x1025>;
+			};
+
+			ir_pins: ir0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1023>;
 			};
 
 			i2s0_pins: i2s0@0 {

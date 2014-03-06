@@ -414,12 +414,6 @@ config AMBARELLA_SYS_BOARD_CALL
 	help
 	  If you are not sure, say Y here.
 
-config AMBARELLA_SYS_ADC_CALL
-	bool "Support ADC Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
 config AMBARELLA_SYS_CACHE_CALL
 	bool "Support Cache Configuration"
 	default n
@@ -432,20 +426,8 @@ config AMBARELLA_SYS_BAPI_CALL
 	help
 	  If you are not sure, say N here.
 
-config AMBARELLA_SYS_ETH_CALL
-	bool "Support ETH Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
 config AMBARELLA_SYS_FIO_CALL
 	bool "Support FIO Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
-config AMBARELLA_SYS_IR_CALL
-	bool "Support IR Configuration"
 	default n
 	help
 	  If you are not sure, say N here.
@@ -458,12 +440,6 @@ config AMBARELLA_SYS_PM_CALL
 
 config AMBARELLA_SYS_RTC_CALL
 	bool "Support RTC Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
-config AMBARELLA_SYS_SD_CALL
-	bool "Support SD Configuration"
 	default n
 	help
 	  If you are not sure, say N here.

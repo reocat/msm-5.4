@@ -143,11 +143,11 @@ static int ambarella_ir_nec_find_head(struct ambarella_ir_info *pinfo)
 
 	while(i--) {
 		if(ambarella_ir_nec_pulse_leader_code(pinfo)) {
-			dev_dbg(&pinfo->pinput_dev->dev, "find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->indev->dev, "find leader code, i [%d]\n", i);
 			val = 1;
 			break;
 		} else {
-			dev_dbg(&pinfo->pinput_dev->dev, "didn't  find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->indev->dev, "didn't  find leader code, i [%d]\n", i);
 			ambarella_ir_move_read_ptr(pinfo, 1);
 		}
 	}
@@ -188,11 +188,11 @@ static int ambarella_ir_nec_find_subsequent(struct ambarella_ir_info *pinfo)
 
 	while(i--) {
 		if(ambarella_ir_nec_pulse_subsequent_code(pinfo)) {
-			dev_dbg(&pinfo->pinput_dev->dev, "find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->indev->dev, "find leader code, i [%d]\n", i);
 			val = 1;
 			break;
 		} else {
-			dev_dbg(&pinfo->pinput_dev->dev, "didn't  find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->indev->dev, "didn't  find leader code, i [%d]\n", i);
 			ambarella_ir_move_read_ptr(pinfo, 1);
 		}
 	}
@@ -262,7 +262,7 @@ static int ambarella_ir_nec_pulse_data_translate(struct ambarella_ir_info *pinfo
 		} else if (ambarella_ir_nec_pulse_code_1(pinfo)) {
 			*data |= 1 << i;
 		} else {
-			dev_dbg(&pinfo->pinput_dev->dev, "%d ERROR, the waveform can't match\n", i);
+			dev_dbg(&pinfo->indev->dev, "%d ERROR, the waveform can't match\n", i);
 			return -1;
 		}
 		ambarella_ir_move_read_ptr(pinfo, 2);
@@ -298,8 +298,8 @@ static int ambarella_ir_nec_pulse_decode(struct ambarella_ir_info *pinfo, u32 *u
 	if (rval < 0)
 		return rval;
 
-	dev_dbg(&pinfo->pinput_dev->dev, "addr\tinv_addr\tdata\tinv_data\n");
-	dev_dbg(&pinfo->pinput_dev->dev, "0x%x\t0x%x\t\t0x%x\t0x%x\n", addr, inv_addr, data, inv_data);
+	dev_dbg(&pinfo->indev->dev, "addr\tinv_addr\tdata\tinv_data\n");
+	dev_dbg(&pinfo->indev->dev, "0x%x\t0x%x\t\t0x%x\t0x%x\n", addr, inv_addr, data, inv_data);
 
 	*uid = (addr << 24) | (inv_addr << 16) | (data << 8) | inv_data;
 
@@ -315,7 +315,7 @@ int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
 		+ pinfo->frame_info.frame_head_size) {
 
-		dev_dbg(&pinfo->pinput_dev->dev, "go to decode statge\n");
+		dev_dbg(&pinfo->indev->dev, "go to decode statge\n");
 		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
 		rval = ambarella_ir_nec_pulse_decode(pinfo, uid);
 	} else {
@@ -323,7 +323,7 @@ int ambarella_ir_nec_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	}
 
 	if (rval >= 0) {
-		dev_dbg(&pinfo->pinput_dev->dev, "buffer[%d]-->mornal key\n", cur_ptr);
+		dev_dbg(&pinfo->indev->dev, "buffer[%d]-->mornal key\n", cur_ptr);
 		return 0;
 	}
 

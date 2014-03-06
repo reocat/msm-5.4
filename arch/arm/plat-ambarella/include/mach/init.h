@@ -87,8 +87,6 @@ extern int ambarella_spi4_cs_pins[];
 
 extern int fio_default_owner;
 
-extern struct ambarella_ir_controller ambarella_platform_ir_controller0;
-
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
 

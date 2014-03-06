@@ -27,8 +27,6 @@
 #define AMBINPUT_TABLE_SIZE	(256)
 
 #define AMBINPUT_SOURCE_MASK	(0x0F)
-#define AMBINPUT_SOURCE_IR	(0x01)
-#define AMBINPUT_SOURCE_ADC	(0x02)
 #define AMBINPUT_SOURCE_GPIO	(0x04)
 #define AMBINPUT_SOURCE_VI	(0x08)
 
@@ -38,10 +36,6 @@
 #define AMBINPUT_TYPE_ABS	(0x40)
 #define AMBINPUT_TYPE_SW	(0x80)
 
-#define	AMBINPUT_IR_KEY		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_KEY)
-#define	AMBINPUT_IR_REL		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_REL)
-#define	AMBINPUT_IR_ABS		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_ABS)
-#define	AMBINPUT_IR_SW		(AMBINPUT_SOURCE_IR | AMBINPUT_TYPE_SW)
 #define	AMBINPUT_GPIO_KEY	(AMBINPUT_SOURCE_GPIO | AMBINPUT_TYPE_KEY)
 #define	AMBINPUT_GPIO_REL	(AMBINPUT_SOURCE_GPIO | AMBINPUT_TYPE_REL)
 #define	AMBINPUT_GPIO_ABS	(AMBINPUT_SOURCE_GPIO | AMBINPUT_TYPE_ABS)
@@ -165,8 +159,6 @@ struct ambarella_input_board_info {
 	int					abx_max_pressure;
 	int					abx_max_width;
 };
-
-struct ambarella_input_board_info *ambarella_input_get_board_info(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

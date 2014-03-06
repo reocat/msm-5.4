@@ -69,9 +69,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 #if (IDC_SUPPORT_INTERNAL_MUX == 1)
 	&ambarella_idc0_mux,
 #endif
-#if (IR_INSTANCES >= 1)
-	&ambarella_ir0,
-#endif
 	&ambarella_rtc0,
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_SPI)
 	&ambarella_spi0,

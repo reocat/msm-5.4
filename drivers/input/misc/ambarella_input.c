@@ -45,9 +45,6 @@
 #define AMBVI_BUFFER_SIZE			(32)
 #define AMBVI_NAME				"ambvi"
 
-/* ========================================================================= */
-extern int platform_driver_register_ir(void);
-extern void platform_driver_unregister_ir(void);
 
 /* ========================================================================= */
 static int abx_active_pressure = 0;
@@ -58,16 +55,6 @@ static struct ambarella_input_board_info *pboard_info = NULL;
 static char *ambarella_keymap = NULL;
 MODULE_PARM_DESC(ambarella_keymap, "Ambarella Input's key map");
 module_param(ambarella_keymap, charp, 0644);
-
-struct ambarella_input_board_info *ambarella_input_get_board_info(void)
-{
-	mutex_lock(&pboard_info_lock);
-	mutex_unlock(&pboard_info_lock);
-
-	return pboard_info;
-}
-
-EXPORT_SYMBOL(ambarella_input_get_board_info);
 
 /* ========================================================================= */
 irqreturn_t ambarella_gpio_irq(int irq, void *devid)
@@ -340,11 +327,6 @@ static int ambarella_setup_keymap(
 			break;
 
 		switch (pbinfo->pkeymap[i].type & AMBINPUT_SOURCE_MASK) {
-		case AMBINPUT_SOURCE_IR:
-			break;
-
-		case AMBINPUT_SOURCE_ADC:
-			break;
 
 		case AMBINPUT_SOURCE_GPIO:
 			ambarella_gpio_config(pbinfo->pkeymap[i].gpio_key.id,
@@ -467,11 +449,6 @@ static void ambarella_free_keymap(struct ambarella_input_board_info *pbinfo)
 			break;
 
 		switch (pbinfo->pkeymap[i].type & AMBINPUT_SOURCE_MASK) {
-		case AMBINPUT_SOURCE_IR:
-			break;
-
-		case AMBINPUT_SOURCE_ADC:
-			break;
 
 		case AMBINPUT_SOURCE_VI:
 			break;
@@ -633,8 +610,6 @@ static struct platform_driver ambarella_input_driver = {
 static int __init ambarella_input_init(void)
 {
 	int ret_val = 0;
-	int i;
-	int tmp_val;
 
 	mutex_lock(&pboard_info_lock);
 
@@ -647,47 +622,16 @@ static int __init ambarella_input_init(void)
 		goto ambarella_input_init_exit;
 	}
 
-#ifdef CONFIG_INPUT_AMBARELLA_IR
-	if (pboard_info->pkeymap == NULL) {
-		printk(KERN_ERR "IR key is NOT support! \n");
-	} else {
-		for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-			if (pboard_info->pkeymap[i].type == AMBINPUT_END)
-				break;
-			if (pboard_info->pkeymap[i].type == AMBINPUT_IR_KEY){
-				tmp_val = platform_driver_register_ir();
-				if (tmp_val) {
-					pr_err("platform_driver_register_ir ="
-						" %d!\n", tmp_val);
-				}
-				break;
-			}
-		}
-	}
-#endif
-
 ambarella_input_init_exit:
 	return ret_val;
 }
 
 static void __exit ambarella_input_exit(void)
 {
-	int i = 0;
-
 	if ((pboard_info == NULL) || (pboard_info->pkeymap == NULL)) {
 		goto ambarella_input_exit_unregister;
 	}
 
-#ifdef CONFIG_INPUT_AMBARELLA_IR
-	for (i = 0; i < AMBINPUT_TABLE_SIZE; i++) {
-		if (pboard_info->pkeymap[i].type == AMBINPUT_END)
-			break;
-		if (pboard_info->pkeymap[i].type == AMBINPUT_IR_KEY){
-			platform_driver_unregister_ir();
-			break;
-		}
-	}
-#endif
 ambarella_input_exit_unregister:
 	platform_driver_unregister(&ambarella_input_driver);
 }

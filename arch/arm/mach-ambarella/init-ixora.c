@@ -66,7 +66,6 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_crypto,
 	&ambarella_fb0,
 	&ambarella_fb1,
-	&ambarella_ir0,
 	&ambarella_wdt0,
 	&ambarella_rtc0,
 	&ambarella_spi0,
@@ -129,10 +128,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 /* ==========================================================================*/
 static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
 
-	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_POWER,		1,		0x0100bcbd}}},	//POWER
-	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEUP,	1,		0x01000405}}},	//VOLUME_UP
-	{AMBINPUT_IR_KEY,	{.ir_key	= {KEY_VOLUMEDOWN,	1,		0x01008485}}},	//VOLUME_DOWN
-
 	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
 	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
 	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
@@ -186,8 +181,6 @@ static void __init ambarella_init_ixora(void)
 			break;
 		}
 	}
-
-	ambarella_platform_ir_controller0.protocol = AMBA_IR_PROTOCOL_PANASONIC;
 }
 
 /* ==========================================================================*/

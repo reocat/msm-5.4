@@ -491,6 +491,25 @@ static struct clk gclk_sd = {
 	.ops		= &ambarella_rct_scaler_ops,
 };
 
+static struct clk gclk_ir = {
+	.parent		= NULL,
+	.name		= "gclk_ir",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_IR_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
@@ -521,5 +540,6 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&gclk_sdio);
 #endif
 	ambarella_clk_add(&gclk_sd);
+	ambarella_clk_add(&gclk_ir);
 }
 
