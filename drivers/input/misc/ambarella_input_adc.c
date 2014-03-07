@@ -43,7 +43,7 @@ struct ambarella_adc_info {
 	void __iomem *regbase;
 	unsigned int irq;
 
-	struct input_dev *indev;
+	struct input_dev *input;
 	struct delayed_work work;
 
 	u32 old_key[ADC_NUM_CHANNELS];
@@ -73,14 +73,14 @@ static void ambarella_adc_read_level(struct ambarella_adc_info *pinfo, u32 *data
 static void ambarella_scan_adc_key(struct work_struct *work)
 {
 	struct ambarella_adc_info *pinfo;
-	struct input_dev *indev;
+	struct input_dev *input;
 	struct ambarella_adc_keymap *keymap;
 	u32 i, ch, low_level, high_level;
 	u32 level[ADC_NUM_CHANNELS];
 
 	pinfo = container_of(work, struct ambarella_adc_info, work.work);
 	keymap = pinfo->keymap;
-	indev = pinfo->indev;
+	input = pinfo->input;
 
 	ambarella_adc_read_level(pinfo, level);
 
@@ -94,19 +94,19 @@ static void ambarella_scan_adc_key(struct work_struct *work)
 
 		if (pinfo->old_key[ch] == KEY_RESERVED
 				&& keymap->key_code != KEY_RESERVED) {
-			input_report_key(indev, keymap->key_code, 1);
-			input_sync(indev);
+			input_report_key(input, keymap->key_code, 1);
+			input_sync(input);
 			pinfo->old_key[ch] = keymap->key_code;
 
-			dev_dbg(&indev->dev, "key[%d:%d] pressed %d\n",
+			dev_dbg(&input->dev, "key[%d:%d] pressed %d\n",
 					ch, pinfo->old_key[ch], level[ch]);
 			break;
 		} else if (pinfo->old_key[ch] != KEY_RESERVED
 				&& keymap->key_code == KEY_RESERVED) {
-			input_report_key(indev, pinfo->old_key[ch], 0);
-			input_sync(indev);
+			input_report_key(input, pinfo->old_key[ch], 0);
+			input_sync(input);
 
-			dev_dbg(&indev->dev, "key[%d:%d] released %d\n",
+			dev_dbg(&input->dev, "key[%d:%d] released %d\n",
 					ch, pinfo->old_key[ch],level[ch]);
 
 			pinfo->old_key[ch] = 0;
@@ -159,6 +159,8 @@ static int ambarella_adc_of_parse(struct platform_device *pdev,
 		propval = be32_to_cpup(prop + i * 2 + 1);
 		keymap->key_code = propval;
 
+		input_set_capability(pinfo->input, EV_KEY, keymap->key_code);
+
 		keymap++;
 	}
 
@@ -168,7 +170,7 @@ static int ambarella_adc_of_parse(struct platform_device *pdev,
 static int ambarella_input_adc_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct input_dev *indev;
+	struct input_dev *input;
 	struct ambarella_adc_info *pinfo;
 	struct resource *mem;
 	int i, rval = 0;
@@ -204,31 +206,30 @@ static int ambarella_input_adc_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	input = input_allocate_device();
+	if (!input) {
+		dev_err(&pdev->dev, "input_allocate_device fail!\n");
+		return -ENOMEM;
+	}
+
+	input->name = "AmbADC";
+	input->phys = "ambadc/input0";
+	input->id.bustype = BUS_HOST;
+
+	rval = input_register_device(input);
+	if (rval) {
+		dev_err(&pdev->dev, "Register input_dev failed!\n");
+		goto adc_err0;
+	}
+
+	pinfo->input = input;
+
 	for (i = 0; i < ADC_NUM_CHANNELS; i++)
 		pinfo->old_key[i] = KEY_RESERVED;
 
 	rval = ambarella_adc_of_parse(pdev, pinfo);
 	if (rval < 0)
-		return rval;
-
-	indev = input_allocate_device();
-	if (!indev) {
-		dev_err(&pdev->dev, "input_allocate_device fail!\n");
-		return -ENOMEM;
-	}
-
-	indev->name = "AmbADC";
-	indev->phys = "ambarella/adc/input0";
-	indev->id.bustype = BUS_HOST;
-
-	rval = input_register_device(indev);
-	if (rval) {
-		dev_err(&pdev->dev, "Register input_dev failed!\n");
-		input_free_device(indev);
-		return rval;
-	}
-
-	pinfo->indev = indev;
+		goto adc_err1;
 
 	amba_writel(SCALER_ADC_REG, 0x00010002);
 	amba_writel(SCALER_ADC_REG, 0x00000002);
@@ -250,6 +251,12 @@ static int ambarella_input_adc_probe(struct platform_device *pdev)
 	dev_notice(&pdev->dev, "ADC Host Controller [Polling] probed!\n");
 
 	return 0;
+
+adc_err1:
+	input_unregister_device(input);
+adc_err0:
+	input_free_device(input);
+	return rval;
 }
 
 static int ambarella_input_adc_remove(struct platform_device *pdev)
@@ -262,8 +269,8 @@ static int ambarella_input_adc_remove(struct platform_device *pdev)
 	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
 	cancel_delayed_work_sync(&pinfo->work);
 
-	input_unregister_device(pinfo->indev);
-	input_free_device(pinfo->indev);
+	input_unregister_device(pinfo->input);
+	input_free_device(pinfo->input);
 
 	dev_notice(&pdev->dev, "Remove Ambarella Media Processor ADC Host Controller.\n");
 

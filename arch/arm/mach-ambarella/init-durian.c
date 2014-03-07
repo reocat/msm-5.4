@@ -44,7 +44,6 @@
 #include <linux/delay.h>
 
 #include <linux/input.h>
-#include <plat/ambinput.h>
 #include <plat/dma.h>
 #include "board-device.h"
 #include <linux/mmc/host.h>
@@ -128,39 +127,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 	}
 };
 
-/* ==========================================================================*/
-static struct ambarella_key_table durian_keymap[AMBINPUT_TABLE_SIZE] = {
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_END}
-};
-
-static struct ambarella_input_board_info durian_board_input_info = {
-	.pkeymap		= durian_keymap,
-	.pinput_dev		= NULL,
-	.pdev			= NULL,
-
-	.abx_max_x		= 4095,
-	.abx_max_y		= 4095,
-	.abx_max_pressure	= 4095,
-	.abx_max_width		= 16,
-};
-
-static struct platform_device durian_board_input = {
-	.name		= "ambarella-input",
-	.id		= -1,
-	.resource	= NULL,
-	.num_resources	= 0,
-	.dev		= {
-		.platform_data		= &durian_board_input_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-
 static void durian_bub_evk_sd_set_vdd(u32 vdd)
 {
 	pr_debug("%s = %dmV\n", __func__, vdd);
@@ -241,8 +207,6 @@ static void __init ambarella_init_durian(void)
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-
-	platform_device_register(&durian_board_input);
 }
 
 /* ==========================================================================*/

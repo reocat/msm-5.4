@@ -27,7 +27,6 @@ obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)	+= fio.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)	+= gpio.o
 obj-y						+= idc.o
 obj-y						+= init.o
-obj-y						+= ir.o
 obj-y						+= clk.o
 obj-y						+= pll.o
 obj-y						+= pm.o

@@ -39,9 +39,6 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/system_info.h>
-
-#include <plat/ambinput.h>
-
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <mach/board.h>
@@ -111,42 +108,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 		.modalias	= "spidev",
 		.bus_num	= 1,
 		.chip_select	= 0,
-	}
-};
-
-/* ==========================================================================*/
-static struct ambarella_key_table coconut_keymap[AMBINPUT_TABLE_SIZE] = {
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_CAMERA,	0,	0,	GPIO(13),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(11),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-
-	{AMBINPUT_END}
-};
-
-static struct ambarella_input_board_info coconut_board_input_info = {
-	.pkeymap		= coconut_keymap,
-	.pinput_dev		= NULL,
-	.pdev			= NULL,
-
-	.abx_max_x		= 4095,
-	.abx_max_y		= 4095,
-	.abx_max_pressure	= 4095,
-	.abx_max_width		= 16,
-};
-
-static struct platform_device coconut_board_input = {
-	.name		= "ambarella-input",
-	.id		= -1,
-	.resource	= NULL,
-	.num_resources	= 0,
-	.dev		= {
-		.platform_data		= &coconut_board_input_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	}
 };
 
@@ -270,8 +231,6 @@ static void __init ambarella_init_coconut(void)
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 	}
 #endif
-
-	platform_device_register(&coconut_board_input);
 }
 
 /* ==========================================================================*/

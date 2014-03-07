@@ -93,21 +93,17 @@ config INPUT_BMA150
 	  To compile this driver as a module, choose M here: the
 	  module will be called bma150.
 
-config INPUT_AMBARELLA
-	tristate "Ambarella Input"
-	depends on PLAT_AMBARELLA
-	default n
-	help
-	  Ambarella general input. It can support Virtual input from proc,
-	  IR, ADC and GPIO. ambvi is default, GPIO, IR and ADC need config.
-
 config INPUT_AMBARELLA_IR
 	tristate "Support Ambarella Soc IR"
 	default n
+	help
+	  Say Y here if your Ambarella Boards have Keys with IR.
 
 config INPUT_AMBARELLA_ADC
 	tristate "Support Ambarella Soc ADC"
 	default n
+	help
+	  Say Y here if your Ambarella Boards have Keys with ADC.
 
 config INPUT_PCSPKR
 	tristate "PC Speaker support"

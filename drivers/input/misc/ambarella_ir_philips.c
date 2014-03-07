@@ -26,8 +26,6 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 
-#include <plat/ambinput.h>
-
 /**
  * Shift-Coded Signals (RC-5)vary the order of pulse space to code the
  * information. In this case if the space width is short (approximately 550us)
@@ -115,11 +113,11 @@ static int ambarella_ir_philips_find_head(struct ambarella_ir_info *pinfo)
 
 	while(i--) {
 		if(ambarella_ir_philips_shift_leader_code(pinfo)) {
-			dev_dbg(&pinfo->indev->dev, "find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->input->dev, "find leader code, i [%d]\n", i);
 			val = 1;
 			break;
 		} else {
-			dev_dbg(&pinfo->indev->dev, "didn't  find leader code, i [%d]\n", i);
+			dev_dbg(&pinfo->input->dev, "didn't  find leader code, i [%d]\n", i);
 			ambarella_ir_move_read_ptr(pinfo, 1);
 		}
 	}
@@ -169,11 +167,11 @@ static int ambarella_ir_philips_shift_decode(struct ambarella_ir_info *pinfo, u3
 	else if (ambarella_ir_philips_shift_repeat_code(pinfo))
 		val = 0;
 	else {
-		dev_dbg(&pinfo->indev->dev, "Err->toggle code doesn't match");
+		dev_dbg(&pinfo->input->dev, "Err->toggle code doesn't match");
 		return (-1);
 	}
 
-	dev_dbg(&pinfo->indev->dev, "toggle code:%d", val);
+	dev_dbg(&pinfo->input->dev, "toggle code:%d", val);
 
 	/* address */
 	for (i = 0; i < 5; i++) {
@@ -181,7 +179,7 @@ static int ambarella_ir_philips_shift_decode(struct ambarella_ir_info *pinfo, u3
 			val = 1 - val;
 		} else if (ambarella_ir_philips_shift_repeat_code(pinfo)) {
 		}else {
-			dev_dbg(&pinfo->indev->dev, "Err->addr code(%d) doesn't match", i);
+			dev_dbg(&pinfo->input->dev, "Err->addr code(%d) doesn't match", i);
 			return (-1);
 		}
 		addr = (addr << 1) | val;
@@ -194,7 +192,7 @@ static int ambarella_ir_philips_shift_decode(struct ambarella_ir_info *pinfo, u3
 			val = 1 - val;
 		} else if (ambarella_ir_philips_shift_repeat_code(pinfo)) {
 		}else {
-			dev_dbg(&pinfo->indev->dev, "Err->data code(%d) doesn't match", i);
+			dev_dbg(&pinfo->input->dev, "Err->data code(%d) doesn't match", i);
 			return (-1);
 		}
 		data = (data << 1) | val;
@@ -215,7 +213,7 @@ int ambarella_ir_philips_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 		&& ambarella_ir_get_tick_size(pinfo) >= pinfo->frame_info.frame_data_size
 		+ pinfo->frame_info.frame_head_size) {
 
-		dev_dbg(&pinfo->indev->dev, "go to decode statge\n");
+		dev_dbg(&pinfo->input->dev, "go to decode statge\n");
 		ambarella_ir_move_read_ptr(pinfo, pinfo->frame_info.frame_head_size);//move ptr to data
 		rval = ambarella_ir_philips_shift_decode(pinfo, uid);
 	} else {
@@ -223,7 +221,7 @@ int ambarella_ir_philips_parse(struct ambarella_ir_info *pinfo, u32 *uid)
 	}
 
 	if (rval >= 0) {
-		dev_dbg(&pinfo->indev->dev, "buffer[%d]-->mornal key\n", cur_ptr);
+		dev_dbg(&pinfo->input->dev, "buffer[%d]-->mornal key\n", cur_ptr);
 		return 0;
 	}
 

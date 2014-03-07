@@ -51,8 +51,6 @@
 #include <linux/delay.h>
 
 #include <linux/mmc/host.h>
-
-#include <plat/ambinput.h>
 #include <plat/ambcache.h>
 
 #include "board-device.h"
@@ -126,40 +124,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 
 
 /* ==========================================================================*/
-static struct ambarella_key_table generic_keymap[AMBINPUT_TABLE_SIZE] = {
-
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_END},
-};
-
-static struct ambarella_input_board_info ixora_board_input_info = {
-	.pkeymap		= generic_keymap,
-	.pinput_dev		= NULL,
-	.pdev			= NULL,
-
-	.abx_max_x		= 4095,
-	.abx_max_y		= 4095,
-	.abx_max_pressure	= 4095,
-	.abx_max_width		= 16,
-};
-
-struct platform_device ixora_board_input = {
-	.name		= "ambarella-input",
-	.id		= -1,
-	.resource	= NULL,
-	.num_resources	= 0,
-	.dev		= {
-		.platform_data		= &ixora_board_input_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
 	int use_bub_default = 1;
@@ -213,8 +177,6 @@ static void __init ambarella_init_ixora_dt(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
-
-	platform_device_register(&ixora_board_input);
 }
 
 

@@ -46,7 +46,7 @@ struct ambarella_ir_frame_info {
 };
 
 struct ambarella_ir_info {
-	struct input_dev		*indev;
+	struct input_dev		*input;
 	unsigned char __iomem 		*regbase;
 	unsigned int			irq;
 
@@ -114,16 +114,16 @@ void ambarella_ir_move_read_ptr(struct ambarella_ir_info *pirinfo, int offset)
 static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 {
 	struct ambarella_ir_keymap *keymap = pirinfo->keymap;
-	struct input_dev *indev = pirinfo->indev;
+	struct input_dev *input = pirinfo->input;
 	int i;
 
 	for (i = 0; i < pirinfo->key_num; i++, keymap++) {
 		if (keymap->key_raw == uid) {
-			input_report_key(indev, keymap->key_code, 1);
-			input_sync(indev);
-			input_report_key(indev, keymap->key_code, 0);
-			input_sync(indev);
-			dev_info(&indev->dev, "IR_KEY [%d]\n", keymap->key_code);
+			input_report_key(input, keymap->key_code, 1);
+			input_sync(input);
+			input_report_key(input, keymap->key_code, 0);
+			input_sync(input);
+			dev_dbg(&input->dev, "IR_KEY [%d]\n", keymap->key_code);
 			break;
 		}
 	}
@@ -151,7 +151,7 @@ static inline int ambarella_ir_update_buffer(struct ambarella_ir_info *pirinfo)
 	int				size;
 
 	count = amba_readl(pirinfo->regbase + IR_STATUS_OFFSET);
-	dev_dbg(&pirinfo->indev->dev, "size we got is [%d]\n", count);
+	dev_dbg(&pirinfo->input->dev, "size we got is [%d]\n", count);
 	for (; count > 0; count--) {
 		ambarella_ir_write_data(pirinfo,
 			amba_readl(pirinfo->regbase + IR_DATA_OFFSET));
@@ -180,7 +180,7 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		amba_setbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
 					IR_CONTROL_FIFO_OV);
 
-		dev_err(&pirinfo->indev->dev,
+		dev_err(&pirinfo->input->dev,
 			"IR_CONTROL_FIFO_OV overflow\n");
 
 		goto ambarella_ir_irq_exit;
@@ -211,7 +211,7 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 		pirinfo->frame_data_to_received -= HW_FIFO_BUFFER;
 	}
 
-	dev_dbg(&pirinfo->indev->dev,
+	dev_dbg(&pirinfo->input->dev,
 		"line[%d],frame_data_to_received[%d]\n", __LINE__, edges);
 	amba_clrbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
 		IR_CONTROL_INTLEV(0x3F));
@@ -263,31 +263,31 @@ void ambarella_ir_set_protocol(struct ambarella_ir_info *pirinfo,
 
 	switch (protocol_id) {
 	case AMBA_IR_PROTOCOL_NEC:
-		dev_notice(&pirinfo->indev->dev,
+		dev_notice(&pirinfo->input->dev,
 			"Protocol NEC[%d]\n", protocol_id);
 		pirinfo->ir_parse = ambarella_ir_nec_parse;
 		ambarella_ir_get_nec_info(&pirinfo->frame_info);
 		break;
 	case AMBA_IR_PROTOCOL_PANASONIC:
-		dev_notice(&pirinfo->indev->dev,
+		dev_notice(&pirinfo->input->dev,
 			"Protocol PANASONIC[%d]\n", protocol_id);
 		pirinfo->ir_parse = ambarella_ir_panasonic_parse;
 		ambarella_ir_get_panasonic_info(&pirinfo->frame_info);
 		break;
 	case AMBA_IR_PROTOCOL_SONY:
-		dev_notice(&pirinfo->indev->dev,
+		dev_notice(&pirinfo->input->dev,
 			"Protocol SONY[%d]\n", protocol_id);
 		pirinfo->ir_parse = ambarella_ir_sony_parse;
 		ambarella_ir_get_sony_info(&pirinfo->frame_info);
 		break;
 	case AMBA_IR_PROTOCOL_PHILIPS:
-		dev_notice(&pirinfo->indev->dev,
+		dev_notice(&pirinfo->input->dev,
 			"Protocol PHILIPS[%d]\n", protocol_id);
 		pirinfo->ir_parse = ambarella_ir_philips_parse;
 		ambarella_ir_get_philips_info(&pirinfo->frame_info);
 		break;
 	default:
-		dev_notice(&pirinfo->indev->dev,
+		dev_notice(&pirinfo->input->dev,
 			"Protocol default NEC[%d]\n", protocol_id);
 		pirinfo->ir_parse = ambarella_ir_nec_parse;
 		ambarella_ir_get_nec_info(&pirinfo->frame_info);
@@ -341,6 +341,7 @@ static int ambarella_ir_of_parse(struct platform_device *pdev,
 	for (i = 0; i < size; i++) {
 		keymap->key_raw = be32_to_cpup(prop + i * 2);
 		keymap->key_code = be32_to_cpup(prop + i * 2 + 1);
+		input_set_capability(pirinfo->input, EV_KEY, keymap->key_code);
 		keymap++;
 	}
 
@@ -350,7 +351,7 @@ static int ambarella_ir_of_parse(struct platform_device *pdev,
 static int ambarella_ir_probe(struct platform_device *pdev)
 {
 	struct ambarella_ir_info *pirinfo;
-	struct input_dev *indev;
+	struct input_dev *input;
 	struct resource *mem;
 	int retval;
 
@@ -380,27 +381,27 @@ static int ambarella_ir_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	retval = ambarella_ir_of_parse(pdev, pirinfo);
-	if (retval)
-		return retval;
-
-	indev = input_allocate_device();
-	if (!indev) {
+	input = input_allocate_device();
+	if (!input) {
 		dev_err(&pdev->dev, "input_allocate_device fail!\n");
 		return -ENOMEM;
 	}
 
-	indev->name = "AmbIR";
-	indev->phys = "ambarella/ir/input0";
-	indev->id.bustype = BUS_HOST;
+	input->name = "AmbIR";
+	input->phys = "ambir/input0";
+	input->id.bustype = BUS_HOST;
 
-	retval = input_register_device(indev);
+	retval = input_register_device(input);
 	if (retval) {
 		dev_err(&pdev->dev, "Register input_dev failed!\n");
 		goto ir_err0;
 	}
 
-	pirinfo->indev = indev;
+	pirinfo->input = input;
+
+	retval = ambarella_ir_of_parse(pdev, pirinfo);
+	if (retval)
+		goto ir_err1;
 
 	platform_set_drvdata(pdev, pirinfo);
 
@@ -419,9 +420,9 @@ static int ambarella_ir_probe(struct platform_device *pdev)
 	return 0;
 
 ir_err1:
-	input_unregister_device(indev);
+	input_unregister_device(input);
 ir_err0:
-	input_free_device(indev);
+	input_free_device(input);
 	return retval;
 }
 
@@ -432,8 +433,8 @@ static int ambarella_ir_remove(struct platform_device *pdev)
 
 	pirinfo = platform_get_drvdata(pdev);
 
-	input_unregister_device(pirinfo->indev);
-	input_free_device(pirinfo->indev);
+	input_unregister_device(pirinfo->input);
+	input_free_device(pirinfo->input);
 
 	dev_notice(&pdev->dev, "Remove Ambarella IR Host Controller.\n");
 

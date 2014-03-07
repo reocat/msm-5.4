@@ -50,8 +50,6 @@
 #include <linux/delay.h>
 
 #include <linux/input.h>
-#include <plat/ambinput.h>
-
 #include <linux/mmc/host.h>
 #include <plat/ambcache.h>
 
@@ -187,78 +185,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 };
 
 /* ==========================================================================*/
-static struct ambarella_key_table elephant_keymap[AMBINPUT_TABLE_SIZE] = {
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_HOME,	1,	1,	GPIO(120),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_MENU,	1,	1,	GPIO(121),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_ESC,	1,	1,	GPIO(122),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_POWER,	1,	1,	GPIO(123),	IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},
-
-	{AMBINPUT_END},
-};
-
-static struct ambarella_key_table elephant_keymap_evk[AMBINPUT_TABLE_SIZE] = {
-	{AMBINPUT_VI_KEY,	{.vi_key	= {0,	0,	0}}},
-	{AMBINPUT_VI_REL,	{.vi_rel	= {0,	0,	0}}},
-	{AMBINPUT_VI_ABS,	{.vi_abs	= {0,	0,	0}}},
-	{AMBINPUT_VI_SW,	{.vi_sw		= {0,	0,	0}}},
-
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_SEND,	0,	0,	GPIO(187),
-							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},		//CALL (GPIO_K2)
-	{AMBINPUT_GPIO_KEY,	{.gpio_key	= {KEY_END,	0,	0,	GPIO(191),
-							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING}}},		//ENDCALL (GPIO_K1)
-
-	{AMBINPUT_END},
-};
-
-static struct ambarella_key_table elephant_keymap_ipcam_nvr[AMBINPUT_TABLE_SIZE] = {
-        {AMBINPUT_VI_KEY,       {.vi_key        = {0,   0,      0}}},
-        {AMBINPUT_VI_REL,       {.vi_rel        = {0,   0,      0}}},
-        {AMBINPUT_VI_ABS,       {.vi_abs        = {0,   0,      0}}},
-        {AMBINPUT_VI_SW,        {.vi_sw         = {0,   0,      0}}},
-
-	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_POWER,    1,      1,
-		GPIO(40), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
-	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_HOME,     1,      1,
-		GPIO(41), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
-	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_MENU,    1,      1,
-		GPIO(42), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
-	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_ESC,     1,      1,
-		GPIO(43), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
-	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_OK,    1,      1,
-		GPIO(44), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
-	{AMBINPUT_GPIO_KEY,     {.gpio_key      = {KEY_END,     1,      1,
-		GPIO(45), (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING)}}},
-
-        {AMBINPUT_END},
-};
-
-static struct ambarella_input_board_info elephant_board_input_info = {
-	.pkeymap		= elephant_keymap,
-	.pinput_dev		= NULL,
-	.pdev			= NULL,
-
-	.abx_max_x		= 4095,
-	.abx_max_y		= 4095,
-	.abx_max_pressure	= 4095,
-	.abx_max_width		= 16,
-};
-
-struct platform_device elephant_board_input = {
-	.name		= "ambarella-input",
-	.id		= -1,
-	.resource	= NULL,
-	.num_resources	= 0,
-	.dev		= {
-		.platform_data		= &elephant_board_input_info,
-		.dma_mask		= &ambarella_dmamask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	}
-};
 
 static struct rfkill_gpio_platform_data elephant_board_bt_info = {
 	.name		= "bt-gpio",
@@ -443,8 +369,6 @@ static void __init ambarella_init_elephant(void)
 #endif
 			platform_device_register(&i1evk_cpufreq_device);
 
-			elephant_board_input_info.pkeymap = elephant_keymap_evk;
-
 			ambarella_board_generic.pwm0_config.max_duty = 255;
 			ambarella_board_generic.pwm0_config.default_duty = 255;
 
@@ -464,8 +388,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.sata_power.gpio_id = GPIO(122);
 		ambarella_board_generic.sata_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.sata_power.active_delay = 1;
-
-		elephant_board_input_info.pkeymap = elephant_keymap_ipcam_nvr;
 
 		ambarella_board_generic.hdmi_extpower.gpio_id = GPIO(104);
 		ambarella_board_generic.hdmi_extpower.active_level = GPIO_HIGH;
@@ -533,8 +455,6 @@ static void __init ambarella_init_elephant(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
-
-	platform_device_register(&elephant_board_input);
 
 	if (use_ambarella_rtc0){
 		platform_device_register(&ambarella_rtc0);
