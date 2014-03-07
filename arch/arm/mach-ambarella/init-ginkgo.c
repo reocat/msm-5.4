@@ -60,7 +60,6 @@
 #include <linux/input.h>
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	//&ambarella_crypto,
 //	&ambarella_fb0,
 //	&ambarella_fb1,
 	//&ambarella_spi0,

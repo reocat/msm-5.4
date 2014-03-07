@@ -22,30 +22,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-#include <crypto/algapi.h>
-#include <crypto/aes.h>
-#include <crypto/des.h>
-#include <crypto/scatterwalk.h>
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/types.h>
-#include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/completion.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
-#include <linux/scatterlist.h>
-
-#include <mach/hardware.h>
-#include <plat/crypto.h>
-
+#include <linux/of.h>
 #include <linux/cryptohash.h>
-#include <crypto/internal/hash.h>
+#include <crypto/algapi.h>
+#include <crypto/aes.h>
+#include <crypto/des.h>
 #include <crypto/sha.h>
 #include <crypto/md5.h>
-#include <linux/mutex.h>
+#include <crypto/internal/hash.h>
+#include <mach/hardware.h>
+#include <plat/crypto.h>
 
 DEFINE_MUTEX(engine_lock);
 #define AMBA_CIPHER_COPY (1<<4)
@@ -122,24 +116,17 @@ static int _ambarella_crypto_aligned_write64(u32 * addr,u32 * buf, unsigned int 
 
 }
 
-struct ambarella_platform_crypto_info *platform_info;
-
 //merge temp buffer
 #define MAX_MERGE_SIZE 8
 __attribute__ ((aligned (4))) u32 merg[MAX_MERGE_SIZE]={};
 
-struct ambarella_crypto_dev_info {
-	unsigned char __iomem 		*regbase;
+struct ambarella_crypto_info {
+	void __iomem *regbase;
 
-	struct platform_device		*pdev;
-	struct resource				*mem;
-	unsigned int				aes_irq;
-	unsigned int				des_irq;
-
-	unsigned int				md5_irq;
-	unsigned int 				sha1_irq;
-
-	struct ambarella_platform_crypto_info *platform_info;
+	bool binary_mode;
+	bool cap_md5_sha1;
+	bool data_swap;
+	bool reg_64bit;
 };
 struct aes_fun_t{
 	void (*opcode)(u32);
@@ -1120,157 +1107,138 @@ static irqreturn_t ambarella_md5_sha1_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int  ambarella_crypto_probe(struct platform_device *pdev)
+static int ambarella_crypto_of_parse(struct platform_device *pdev,
+			struct ambarella_crypto_info *pinfo)
 {
-	int	errCode;
-	int	aes_irq, des_irq;
+	struct device_node *np = pdev->dev.of_node;
+
+	pinfo->binary_mode = !!of_find_property(np, "amb,binary-mode", NULL);
+	pinfo->cap_md5_sha1 = !!of_find_property(np, "amb,cap-md5-sha1", NULL);
+	pinfo->data_swap = !!of_find_property(np, "amb,data-swap", NULL);
+	pinfo->reg_64bit = !!of_find_property(np, "amb,reg-64bit", NULL);
+
+	return 0;
+}
+
+static int ambarella_crypto_probe(struct platform_device *pdev)
+{
 	struct resource	*mem = 0;
-	struct ambarella_crypto_dev_info *pinfo = 0;
-	int md5_irq = 0;
-	int sha1_irq = 0;
-	platform_info = (struct ambarella_platform_crypto_info *)pdev->dev.platform_data;
-	if (platform_info == NULL) {
-		dev_err(&pdev->dev, "%s: Can't get platform_data!\n", __func__);
-		errCode = - EPERM;
-		goto crypto_errCode_na;
+	struct ambarella_crypto_info *pinfo = 0;
+	int aes_irq, des_irq, md5_irq, sha1_irq;
+	int errCode;
+
+	pinfo = devm_kzalloc(&pdev->dev, sizeof(*pinfo), GFP_KERNEL);
+	if (pinfo == NULL) {
+		dev_err(&pdev->dev, "Out of memory!\n");
+		return -ENOMEM;
 	}
 
-	if(likely(config_polling_mode == 0)) {
-		mem = platform_get_resource_byname(pdev, IORESOURCE_MEM, "registers");
-		if (mem == NULL) {
-			dev_err(&pdev->dev, "Get crypto mem resource failed!\n");
-			errCode = -ENXIO;
-			goto crypto_errCode_na;
-		}
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (mem == NULL) {
+		dev_err(&pdev->dev, "Get crypto mem resource failed!\n");
+		return -ENXIO;
+	}
 
+	pinfo->regbase = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
+	if (!pinfo->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
+
+	platform_set_drvdata(pdev, pinfo);
+
+	ambarella_crypto_of_parse(pdev, pinfo);
+
+	if(likely(config_polling_mode == 0)) {
 		aes_irq = platform_get_irq_byname(pdev,"aes-irq");
-		if (aes_irq == -ENXIO) {
-			dev_err(&pdev->dev, "Get crypto aes irq resource failed!\n");
-			errCode = -ENXIO;
-			goto crypto_errCode_na;
+		if (aes_irq < 0) {
+			dev_err(&pdev->dev, "Get crypto aes irq failed!\n");
+			return aes_irq;
 		}
 
 		des_irq = platform_get_irq_byname(pdev,"des-irq");
-		if (des_irq == -ENXIO) {
-			dev_err(&pdev->dev, "Get crypto des irq resource failed!\n");
-			errCode = -ENXIO;
-			goto crypto_errCode_na;
+		if (des_irq < 0) {
+			dev_err(&pdev->dev, "Get crypto des irq failed!\n");
+			return aes_irq;
 		}
 
-		if (platform_info->md5_sha1 == 1) {
-			if (platform_info->exception == INDEPENDENT_MD5 ){
-				md5_irq = platform_get_irq_byname(pdev,"md5-irq");
-				if (md5_irq == -ENXIO){
-					dev_err(&pdev->dev, "Get crypto md5 irq resource failed!\n");
-					errCode = -ENXIO;
-					goto crypto_errCode_na;
-				}
-				sha1_irq = platform_get_irq_byname(pdev,"sha1-irq");
-				if (sha1_irq == -ENXIO){
-					dev_err(&pdev->dev, "Get crypto sha1 irq resource failed!\n");
-					errCode = -ENXIO;
-					goto crypto_errCode_na;
-				}
-			}else{
-				md5_irq = platform_get_irq_byname(pdev,"md5-sha1-irq");
-				sha1_irq = md5_irq;
-				if (md5_irq == -ENXIO) {
-					dev_err(&pdev->dev, "Get crypto md5/sha1 irq resource failed!\n");
-					errCode = -ENXIO;
-					goto crypto_errCode_na;
-				}
-			}
+		errCode = devm_request_irq(&pdev->dev, aes_irq,
+					ambarella_aes_irq, IRQF_TRIGGER_RISING,
+					dev_name(&pdev->dev), pinfo);
+		if (errCode < 0) {
+			dev_err(&pdev->dev, "Request aes irq failed!\n");
+			return errCode;
 		}
-
-		pinfo = kzalloc(sizeof(struct ambarella_crypto_dev_info), GFP_KERNEL);
-		if (pinfo == NULL) {
-			dev_err(&pdev->dev, "Out of memory!\n");
-			errCode = -ENOMEM;
-			goto crypto_errCode_na;
+		errCode = devm_request_irq(&pdev->dev, des_irq,
+					ambarella_des_irq, IRQF_TRIGGER_RISING,
+					dev_name(&pdev->dev), pinfo);
+		if (errCode < 0) {
+			dev_err(&pdev->dev, "Request des irq failed!\n");
+			return errCode;
 		}
-
-		pinfo->regbase = (unsigned char __iomem *)mem->start;
-		pinfo->mem = mem;
-		pinfo->pdev = pdev;
-		pinfo->aes_irq = aes_irq;
-		pinfo->des_irq = des_irq;
-		if (platform_info->md5_sha1 == 1) {
-				pinfo->md5_irq = md5_irq;
-				pinfo->sha1_irq = sha1_irq;
-		}
-		pinfo->platform_info = platform_info;
-
-		platform_set_drvdata(pdev, pinfo);
 
 		amba_writel(CRYPT_A_INT_EN_REG, 0x0001);
 		amba_writel(CRYPT_D_INT_EN_REG, 0x0001);
 
-		if (platform_info->md5_sha1 == 1) {
+		if (pinfo->cap_md5_sha1 == 1) {
+			md5_irq = platform_get_irq_byname(pdev,"md5-irq");
+			if (md5_irq < 0){
+				dev_err(&pdev->dev, "Get crypto md5 irq failed!\n");
+				return md5_irq;
+			}
+
+			sha1_irq = platform_get_irq_byname(pdev,"sha1-irq");
+			if (sha1_irq < 0){
+				dev_err(&pdev->dev, "Get crypto sha1 irq failed!\n");
+				return sha1_irq;
+			}
+
+			/* md5 and sha1 opentions can't be interleaved, so we
+			 * use the same return irq func */
+			errCode = devm_request_irq(&pdev->dev, md5_irq,
+						ambarella_md5_sha1_irq,
+						IRQF_TRIGGER_RISING,
+						dev_name(&pdev->dev), pinfo);
+			if (errCode < 0) {
+				dev_err(&pdev->dev, "Request md5 irq failed!\n");
+				return errCode;
+			}
+
+			errCode = devm_request_irq(&pdev->dev, sha1_irq,
+						ambarella_md5_sha1_irq,
+						IRQF_TRIGGER_RISING,
+						dev_name(&pdev->dev), pinfo);
+			if (errCode < 0) {
+				dev_err(&pdev->dev, "Request sha1 irq failed!\n");
+				return errCode;
+			}
+
 			amba_writel(CRYPT_MD5_INT_EN, 0x0001);
 			amba_writel(CRYPT_SHA1_INT_EN, 0x0001);
-		}
-
-		errCode = request_irq(pinfo->aes_irq, ambarella_aes_irq,
-			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
-		if (errCode) {
-			dev_err(&pdev->dev,
-				"%s: Request aes IRQ failed!\n", __func__);
-			goto crypto_errCode_kzalloc;
-		}
-		errCode = request_irq(pinfo->des_irq, ambarella_des_irq,
-			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
-		if (errCode) {
-			dev_err(&pdev->dev,
-				"%s: Request des IRQ failed!\n", __func__);
-			goto crypto_errCode_free_aes_irq;
-		}
-
-		if (platform_info->md5_sha1 == 1) {
-			if(platform_info->exception == INDEPENDENT_MD5){
-				//md5 and sha1 opentions can't  be interleaved,so use the same return irq func
-				errCode = request_irq(pinfo->md5_irq, ambarella_md5_sha1_irq,
-					IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
-				if (errCode) {
-					dev_err(&pdev->dev,
-						"%s: Request md5 IRQ failed!\n", __func__);
-					goto crypto_errCode_free_des_irq;
-				}
-				errCode = request_irq(pinfo->sha1_irq, ambarella_md5_sha1_irq,
-					IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
-				if (errCode) {
-					dev_err(&pdev->dev,
-						"%s: Request sha1 IRQ failed!\n", __func__);
-					goto crypto_errCode_free_md5_irq;
-				}
-			}else{
-				errCode = request_irq(pinfo->md5_irq, ambarella_md5_sha1_irq,
-					IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
-				if (errCode) {
-					dev_err(&pdev->dev,
-						"%s: Request md5/sha1 IRQ failed!\n", __func__);
-					goto crypto_errCode_free_des_irq;
-				}
-			}
 		}
 		//init workqueue
 
 		spin_lock_init(&amba_queue.lock);
 		handle_queue = create_workqueue("Crypto Ablk Workqueue");
 		INIT_WORK(&work,(void *)do_queue);
+
 		//register ecb aes ,des
-	    if ((errCode = crypto_register_alg(&ecb_aes_alg))) {
+		errCode = crypto_register_alg(&ecb_aes_alg);
+		if (errCode <0) {
 			dev_err(&pdev->dev,"register ecb_aes_alg failed. \n");
-			goto crypto_errCode_free_sha1_irq;
+			return errCode;
 		}
+
 		crypto_init_queue(&amba_queue.queue,50);
-	}else {
-		if ((errCode = crypto_register_alg(&aes_alg))) {
+	} else {
+		errCode = crypto_register_alg(&aes_alg);
+		if (errCode <0) {
 			dev_err(&pdev->dev, "reigster aes_alg  failed.\n");
-				goto crypto_errCode_na;
+			return errCode;
 		}
 	}
 
-	if (platform_info->binary_mode == 1){
+	if (pinfo->binary_mode){
 		aes_fun.opcode = aes_opcode;
 		des_fun.opcode = des_opcode;
 	}else{
@@ -1278,7 +1246,7 @@ static int  ambarella_crypto_probe(struct platform_device *pdev)
 		des_fun.opcode = null_fun;
 	}
 
-	if (platform_info->data_swap == 1){
+	if (pinfo->data_swap){
 		aes_fun.wdata = swap_write;
 		aes_fun.rdata = swap_read;
 		des_fun.wdata = swap_write;
@@ -1290,7 +1258,7 @@ static int  ambarella_crypto_probe(struct platform_device *pdev)
 		des_fun.rdata = (void*)memcpy;
 	}
 
-	if (platform_info->reg_64 == 1){
+	if (pinfo->reg_64bit){
 		aes_fun.reg_enc = aes_reg_enc_64;
 		aes_fun.reg_dec = aes_reg_dec_64;
 		des_fun.reg_enc = des_reg_enc_64;
@@ -1302,14 +1270,10 @@ static int  ambarella_crypto_probe(struct platform_device *pdev)
 		des_fun.reg_dec = des_reg_enc_dec_32;
 	}
 
-	if (platform_info->md5_sha1 == 1) {
-		if (platform_info->md5_sha1_64bit == 1) {
-			md5_sha1_fun.wdata = (void*)md5_sha1_write64;
-			md5_sha1_fun.rdata = (void*)md5_sha1_read64;
-		}else{
-			md5_sha1_fun.wdata = (void*)memcpy;
-			md5_sha1_fun.rdata = (void*)memcpy;
-		}
+	if (pinfo->cap_md5_sha1) {
+		md5_sha1_fun.wdata = (void*)md5_sha1_write64;
+		md5_sha1_fun.rdata = (void*)md5_sha1_read64;
+
 		if ((errCode = crypto_register_shash(&sha1_alg))) {
 			dev_err(&pdev->dev, "reigster sha1_alg  failed.\n");
 			goto crypto_errCode_free_md5_sha1_irq;
@@ -1325,85 +1289,49 @@ static int  ambarella_crypto_probe(struct platform_device *pdev)
 		goto crypto_errCode_free_md5;
 	}
 
-	if(unlikely(config_polling_mode == 0))
-		dev_notice(&pdev->dev,"%s probed(interrupt mode).\n", ambdev_name);
-	else
-		dev_notice(&pdev->dev,"%s probed(polling mode).\n", ambdev_name);
+	dev_notice(&pdev->dev,"%s probed(%s mode).\n", ambdev_name,
+		config_polling_mode ? "polling" : "interrupt");
 
-	goto crypto_errCode_na;
+	return 0;
 
 crypto_errCode_free_md5:
-	if (platform_info->md5_sha1 == 1) {
+	if (pinfo->cap_md5_sha1)
 		crypto_unregister_shash(&md5_alg);
-	}
 
 crypto_errCode_free_sha1:
-	if (platform_info->md5_sha1 == 1) {
+	if (pinfo->cap_md5_sha1)
 		crypto_unregister_shash(&sha1_alg);
-	}
-crypto_errCode_free_sha1_irq:
-	if(platform_info->exception == INDEPENDENT_MD5){
-		free_irq(pinfo->sha1_irq, pinfo);
-	}
-crypto_errCode_free_md5_irq:
-	if(platform_info->exception == INDEPENDENT_MD5){
-		free_irq(pinfo->md5_irq, pinfo);
-	}
+
 crypto_errCode_free_md5_sha1_irq:
 	if(unlikely(config_polling_mode == 0)){
-		if (platform_info->md5_sha1 == 1 && platform_info->exception == 0) {
-			free_irq(pinfo->md5_irq, pinfo);
-		}
 		destroy_workqueue(handle_queue);
 		crypto_unregister_alg(&ecb_aes_alg);
 	}else{
 		crypto_unregister_alg(&aes_alg);
 	}
-crypto_errCode_free_des_irq:
-	if(unlikely(config_polling_mode == 0)){
-		free_irq(pinfo->des_irq, pinfo);
-	}
-crypto_errCode_free_aes_irq:
-	if(unlikely(config_polling_mode == 0)){
-		free_irq(pinfo->aes_irq, pinfo);
-	}
-crypto_errCode_kzalloc:
-	if(unlikely(config_polling_mode == 0)){
-		platform_set_drvdata(pdev, NULL);
-		kfree(pinfo);
-	}
-crypto_errCode_na:
+
 	return errCode;
 }
 
-static int  ambarella_crypto_remove(struct platform_device *pdev)
+static int ambarella_crypto_remove(struct platform_device *pdev)
 {
+	struct ambarella_crypto_info *pinfo;
 	int errCode = 0;
-	struct ambarella_crypto_dev_info *pinfo;
-
-	if (platform_info->md5_sha1 == 1) {
-		crypto_unregister_shash(&sha1_alg);
-		crypto_unregister_shash(&md5_alg);
-	}
-
-	crypto_unregister_alg(&des_alg);
 
 	pinfo = platform_get_drvdata(pdev);
 
-	if (pinfo && config_polling_mode == 0) {
+	if (pinfo->cap_md5_sha1) {
+		crypto_unregister_shash(&sha1_alg);
+		crypto_unregister_shash(&md5_alg);
+	}
+	crypto_unregister_alg(&des_alg);
+
+	if (config_polling_mode == 0) {
 		destroy_workqueue(handle_queue);
 		crypto_unregister_alg(&ecb_aes_alg);
-		if (platform_info->md5_sha1 == 1) {
-			free_irq(pinfo->md5_irq, pinfo);
-			if(platform_info->exception == INDEPENDENT_MD5){
-				free_irq(pinfo->sha1_irq,pinfo);
-			}
-		}
-		free_irq(pinfo->aes_irq, pinfo);
-		free_irq(pinfo->des_irq, pinfo);
+
 		platform_set_drvdata(pdev, NULL);
-		kfree(pinfo);
-	}else{
+	} else {
 		crypto_unregister_alg(&aes_alg);
 	}
 
@@ -1412,33 +1340,27 @@ static int  ambarella_crypto_remove(struct platform_device *pdev)
 	return errCode;
 }
 
-static const char ambarella_crypto_name[] = "ambarella-crypto";
+static const struct of_device_id ambarella_crypto_dt_ids[] = {
+	{.compatible = "ambarella,crypto", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_crypto_dt_ids);
 
 static struct platform_driver ambarella_crypto_driver = {
+	.probe		= ambarella_crypto_probe,
 	.remove		= ambarella_crypto_remove,
 #ifdef CONFIG_PM
 	.suspend	= NULL,
 	.resume		= NULL,
 #endif
 	.driver		= {
-		.name	= ambarella_crypto_name,
+		.name	= "ambarella-crypto",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_crypto_dt_ids,
 	},
 };
 
-static int __init ambarella_crypto_init(void)
-{
-	return platform_driver_probe(&ambarella_crypto_driver,
-		ambarella_crypto_probe);
-}
-
-static void __exit ambarella_crypto_exit(void)
-{
-	platform_driver_unregister(&ambarella_crypto_driver);
-}
-
-module_init(ambarella_crypto_init);
-module_exit(ambarella_crypto_exit);
+module_platform_driver(ambarella_crypto_driver);
 
 MODULE_DESCRIPTION("Ambarella Cryptography Engine");
 MODULE_LICENSE("GPL");

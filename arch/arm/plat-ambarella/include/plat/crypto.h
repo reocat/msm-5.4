@@ -49,27 +49,27 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2L)
-	#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX) || defined(CONFIG_PLAT_AMBARELLA_S2L)
-		#define CRYPT_UNIT_OFFSET		0x20000
-	#else
-		#define CRYPT_UNIT_OFFSET		0x7000
-	#endif
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX) || defined(CONFIG_PLAT_AMBARELLA_S2L)
+#define CRYPT_UNIT_OFFSET		0x20000
 #else
-	#define CRYPT_UNIT_OFFSET		0x14000
+#define CRYPT_UNIT_OFFSET		0x7000
+#endif
+#else
+#define CRYPT_UNIT_OFFSET		0x14000
 #endif
 
 #if defined(CRYPT_BASE)
-	#define CRYPT_UNIT_BASE			(CRYPT_BASE)
+#define CRYPT_UNIT_BASE			(CRYPT_BASE)
 #else
-	#if (CHIP_REV == S2) || (CHIP_REV == S2L)
-		#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)|| defined(CONFIG_PLAT_AMBARELLA_S2L)
-			#define CRYPT_UNIT_BASE			(AXI_BASE + CRYPT_UNIT_OFFSET)
-		#else
-			#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
-		#endif
-	#else
-		#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
-	#endif
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)|| defined(CONFIG_PLAT_AMBARELLA_S2L)
+#define CRYPT_UNIT_BASE			(AXI_BASE + CRYPT_UNIT_OFFSET)
+#else
+#define CRYPT_UNIT_BASE			(AHB64_BASE + CRYPT_UNIT_OFFSET)
+#endif
+#else
+#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#endif
 #endif
 
 #define CRYPT_UNIT_REG(x)		(CRYPT_UNIT_BASE + (x))
@@ -434,32 +434,6 @@
 
 #define INDEPENDENT_MD5 1
 
-struct ambarella_platform_crypto_info{
-	u32	mode_switch;    /*a7 support mode switch between  "Binary Compatibility Mode" and "Non-Binary Compatibility Mode" */
-				/* TODO: And now, haven't support a7 mode switch,the a7 is default mode ( non-binary compatible mode, do not need opcode)*/
-				/* For iONE,this flag is 0, and default mode is non-binary compatible mode, do not need opcode*/
-				/* For a5s, this flag is 0, and default mode is binary compatibility mode,  need opcode*/
-				/* For a7,  this flag is 1, and default mode is non-binary compatible mode, do not need opcode*/
-				/* 1: support switch*/
-				/* 0: do not support switch */
-/*******AES&DES START***************************/
-	u32	binary_mode;    /* 1: binary compatibility mode need opcode*/
-				/* 0: non-binary compatible mode do not need opcode*/
-	u32	data_swap;      /*swap from little to big endian 0:do not need swap  1:need swap */
-	u32	reg_64;         /*64 bit register,get the 64bit address*/
-				/* 0: 32-bit ,get the 32bit register address ,for a5s*/
-				/* 1: 64-bit ,get the 64bit register address ,for ione */
-/*******AES&DES END***************************/
-	u32	md5_sha1;       /* 0:do not support md5 or sha1*/
-				/* 1:support md5 and sha1*/
-/*******MD5&SHA1 START***************************/
-	u32	md5_sha1_64bit; /* 0:32 bit ,read and write align at 32bit*/
-				/* 1:64 bit ,read and write align at 64bit*/
-/*******MD5&SHA1 END***************************/
-	u32	exception;/*used for some special exception.*/
-					/*INDEPENDENT_MD5 :  for s2 cortex, MD5 irq is seperated from sha1 irq */
-};
-
 typedef struct md5_digest_s
 {
 	u32 digest_0;
@@ -507,10 +481,6 @@ typedef struct sha1_data_s
 {
 	u32 data[16];
 } sha1_data_t;
-
-
-/* ==========================================================================*/
-extern struct platform_device  ambarella_crypto;
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

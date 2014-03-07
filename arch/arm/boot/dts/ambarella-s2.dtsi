@@ -379,6 +379,24 @@
 		};
 	};
 
+	axi@f0000000 {	/* AXI */
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0xf0000000 0x00030000>;
+		ranges;
+
+		crypto@f0020000 {
+			compatible = "ambarella,crypto";
+			reg = <0xf0020000 0x8000>;
+			interrupts = <0 122 0x1>, <0 121 0x1>, <0 120 0x1>, <0 123 0x1>;
+			interrupt-names = "aes-irq", "des-irq", "md5-irq", "sha1-irq";
+			amb,cap-md5-sha1;
+			amb,data-swap;
+			amb,reg-64bit;
+		};
+	};
+
 	rct@70170000 {
 		compatible = "simple-bus";
 		#address-cells = <1>;

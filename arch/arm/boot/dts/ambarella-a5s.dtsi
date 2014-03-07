@@ -267,6 +267,14 @@
 			amb,tx-ring-size = <32>;
 			amb,rx-ring-size = <64>;
 		};
+
+		crypto@60014000 {
+			compatible = "ambarella,crypto";
+			reg = <0x60014000 0x1000>;
+			interrupts = <45 0x1>, <46 0x1>;
+			interrupt-names = "aes-irq", "des-irq";
+			amb,binary-mode;
+		};
 	};
 
 	rct@70170000 {
