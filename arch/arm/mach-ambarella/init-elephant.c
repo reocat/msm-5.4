@@ -260,15 +260,6 @@ static void __init ambarella_init_elephant(void)
 		case 'C':
 		case 'B':
 #if defined(CONFIG_CODEC_AMBARELLA_WM8994)
-		 	/* the cs_pin of spi0.1 is used to determine wm8994's
-		 	 * I2C address, and the cs_pin of spi0.4, spi0,5, spi0.6
-		 	 * spi0.7 are used as I2S signals, so we need to prevent
-		 	 * them from be modified by SPI driver */
-			ambarella_spi0_cs_pins[1] = -1;
-			ambarella_spi0_cs_pins[4] = -1;
-			ambarella_spi0_cs_pins[5] = -1;
-			ambarella_spi0_cs_pins[6] = -1;
-			ambarella_spi0_cs_pins[7] = -1;
 			ambarella_init_wm8994();
 #endif
 		case 'A':
@@ -375,11 +366,6 @@ static void __init ambarella_init_elephant(void)
 			break;
 		}
 	} else if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
-		ambarella_spi0_cs_pins[4] = -1;
-		ambarella_spi0_cs_pins[5] = -1;
-		ambarella_spi0_cs_pins[6] = -1;
-		ambarella_spi0_cs_pins[7] = -1;
-
 		ambarella_board_generic.sata_power.gpio_id = GPIO(122);
 		ambarella_board_generic.sata_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.sata_power.active_delay = 1;

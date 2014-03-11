@@ -147,14 +147,6 @@ static void __init ambarella_init_ginkgo(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
-			/* Register audio codec
-			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
-			 * used as I2S signals, so we need to prevent
-			 * them from be modified by SPI driver */
-			ambarella_spi0_cs_pins[4] = -1;
-			ambarella_spi0_cs_pins[5] = -1;
-			ambarella_spi0_cs_pins[6] = -1;
-			ambarella_spi0_cs_pins[7] = -1;
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 #else
@@ -171,19 +163,6 @@ static void __init ambarella_init_ginkgo(void)
 	}
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_ATB) {
-
-			/* Register audio codec
-			 * the cs_pin of spi0.4, spi0,5, spi0.6 and spi0.7 are
-			 * used as I2S signals, so we need to prevent
-			 * them from be modified by SPI driver */
-			ambarella_spi0_cs_pins[1] = -1;
-			ambarella_spi0_cs_pins[2] = GPIO(91);
-			ambarella_spi0_cs_pins[3] = -1;
-			ambarella_spi0_cs_pins[4] = -1;
-			ambarella_spi0_cs_pins[5] = -1;
-			ambarella_spi0_cs_pins[6] = -1;
-			ambarella_spi0_cs_pins[7] = -1;
-
 			platform_device_register(&ambarella_rtc0);
 
 			ambarella_board_generic.vin0_reset.gpio_id = GPIO(54);

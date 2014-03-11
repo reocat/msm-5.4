@@ -79,12 +79,6 @@ extern int ambarella_init_fb(void);
 /* ==========================================================================*/
 extern struct ambarella_rtc_controller ambarella_platform_rtc_controller0;
 
-extern int ambarella_spi0_cs_pins[];
-extern int ambarella_spi1_cs_pins[];
-extern int ambarella_spi2_cs_pins[];
-extern int ambarella_spi3_cs_pins[];
-extern int ambarella_spi4_cs_pins[];
-
 extern int fio_default_owner;
 
 extern u32 ambarella_phys_to_virt(u32 paddr);
