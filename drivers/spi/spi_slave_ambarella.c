@@ -21,22 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-
-#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/err.h>
+#include <linux/clk.h>
+#include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spidev.h>
 #include <linux/fs.h>
+#include <linux/of.h>
 #include <linux/ioctl.h>
-#include <asm/io.h>
 #include <asm/uaccess.h>
-#include <mach/io.h>
 #include <plat/spi.h>
-#include <plat/ambcache.h>
 
 #define MAX_SPI_SLAVES		8
 
@@ -52,10 +49,8 @@ static int rx_ftlr = 8;
 module_param(rx_ftlr, int, 0644);
 
 struct ambarella_spi_slave {
-	u32					regbase;
-	struct ambarella_spi_platform_info *pinfo;
+	void __iomem				*regbase;
 
-	int					irq;
 	int					major;
 	char					dev_name[32];
 	struct class				*psClass;
@@ -85,23 +80,19 @@ struct ambarella_spi_slave {
 };
 
 DEFINE_MUTEX(g_mtx);
+static int amb_slave_id = 0;
 static struct ambarella_spi_slave	*priv_array[MAX_SPI_SLAVES] =
 	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 static int ambarella_spi_slave_inithw(struct ambarella_spi_slave *priv)
 {
-	u32 				ctrlr0;
-#if 0
-	ambarella_gpio_config(GPIO(33), GPIO_FUNC_SW_OUTPUT);
-	ambarella_gpio_config(GPIO(34), GPIO_FUNC_HW);
-	ambarella_gpio_config(SSI_SLAVE_CLK, GPIO_FUNC_SW_INPUT);
-	ambarella_gpio_config(SSI_SLAVE_EN, GPIO_FUNC_HW);
-	ambarella_gpio_config(SSI_SLAVE_MOSI, GPIO_FUNC_SW_INPUT);
-	ambarella_gpio_config(SSI_SLAVE_MISO, GPIO_FUNC_HW);
-#endif
-	if (priv->pinfo->rct_set_ssi_pll){
-		priv->pinfo->rct_set_ssi_pll();
-	}
+	struct clk *clk;
+	u32 ctrlr0;
+
+	clk = clk_get(NULL, "gclk_ssi_slave");
+	if (!IS_ERR_OR_NULL(clk))
+		clk_set_rate(clk, 13500000);
+
 	/* Initial Register Settings */
 	ctrlr0 = (SPI_CFS << 12) | (SPI_WRITE_READ << 8) | (priv->mode << 6) |
 				(SPI_FRF << 4) | (priv->bpw - 1);
@@ -448,43 +439,46 @@ static int ambarella_spi_slave_probe(struct platform_device *pdev)
 {
 	struct ambarella_spi_slave		*priv = NULL;
 	struct resource 			*res;
-	int					irq, i, errorCode = 0;
+	int					irq, i, rval = 0;
 	int					major_id = 0;
-	struct ambarella_spi_platform_info *pinfo;
-
+	void __iomem				*reg;
 
 	/* Get Base Address */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
-		errorCode = -EINVAL;
-		goto ambarella_spi_slave_probe_exit;
+		dev_err(&pdev->dev, "get mem resource failed\n");
+		return -ENOENT;
 	}
-	pinfo = (struct ambarella_spi_platform_info *)pdev->dev.platform_data;
+
+	reg = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!reg) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
 
 	/* Get IRQ NO. */
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
-		errorCode = -EINVAL;
-		goto ambarella_spi_slave_probe_exit;
+		dev_err(&pdev->dev, "get irq failed\n");
+		return -ENOENT;
 	}
 
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
-		errorCode = -ENOMEM;
-		goto ambarella_spi_slave_probe_exit;
+		dev_err(&pdev->dev, "no memory\n");
+		return -ENOMEM;
 	}
 
-	priv->regbase		= (u32)res->start;
+	priv->regbase = reg;
 
-	priv->mode		= 3;
-	priv->bpw		= 16;
+	priv->mode = 3;
+	priv->bpw = 16;
 
-	priv->r_buf_empty	= 1;
-	priv->r_buf_full	= 0;
-	priv->w_buf_empty	= 1;
-	priv->w_buf_full	= 0;
+	priv->r_buf_empty = 1;
+	priv->r_buf_full = 0;
+	priv->w_buf_empty = 1;
+	priv->w_buf_full = 0;
 
-	priv->pinfo = pinfo;
 	spin_lock_init(&priv->r_buf_lock);
 	spin_lock_init(&priv->w_buf_lock);
 	mutex_init(&priv->um_mtx);
@@ -492,28 +486,27 @@ static int ambarella_spi_slave_probe(struct platform_device *pdev)
 	ambarella_spi_slave_inithw(priv);
 
 	/* Request IRQ */
-	errorCode = request_irq(irq, ambarella_spi_slave_isr, IRQF_TRIGGER_HIGH,
-			dev_name(&pdev->dev), priv);
-	if (errorCode) {
-		errorCode = -EIO;
+	rval = devm_request_irq(&pdev->dev, irq, ambarella_spi_slave_isr,
+				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), priv);
+	if (rval) {
+		rval = -EIO;
 		goto ambarella_spi_slave_probe_exit;
-	} else {
-		priv->irq		= irq;
 	}
 
+	pdev->id = amb_slave_id++;
 	sprintf(priv->dev_name, "slave_spi%d", pdev->id);
 	major_id = register_chrdev(0, priv->dev_name, &spi_slave_fops);
 	if (major_id <= 0) {
-		errorCode = -EIO;
+		rval = -EIO;
 		printk("Error: %s: Unable to get major number\n", __FILE__);
 		goto ambarella_spi_slave_probe_exit;
-	} else {
-		priv->major = major_id;
 	}
+
+	priv->major = major_id;
 
 	priv->psClass = class_create(THIS_MODULE, priv->dev_name);
 	if (IS_ERR(priv->psClass)) {
-		errorCode = -EIO;
+		rval = -EIO;
 		printk("Error: %s: Unable to create class\n", __FILE__);
 		goto ambarella_spi_slave_probe_exit;
 	}
@@ -521,30 +514,35 @@ static int ambarella_spi_slave_probe(struct platform_device *pdev)
 	priv->psDev = device_create(priv->psClass, NULL, MKDEV(major_id, 0),
 					priv, priv->dev_name);
 	if (IS_ERR(priv->psDev)) {
-		errorCode = -EIO;
+		rval = -EIO;
 		printk("Error: %s: Unable to create device\n", __FILE__);
 		goto ambarella_spi_slave_probe_exit;
 	}
 
-	pdev->dev.platform_data	= priv;
+	platform_set_drvdata(pdev, priv);
+
 	if (pdev->id < MAX_SPI_SLAVES) {
 		mutex_lock(&g_mtx);
 		priv_array[pdev->id] = priv;
 		mutex_unlock(&g_mtx);
 	} else {
-		errorCode = -EIO;
+		rval = -EIO;
 		printk("Error: %s: platform device id %d is greater than %d\n",
 			__FILE__, pdev->id, MAX_SPI_SLAVES - 1);
 		goto ambarella_spi_slave_probe_exit;
 	}
+
 	dev_info(&pdev->dev, "Ambarella SPI Slave Controller %d created!\n", pdev->id);
+
 	amba_writel(priv->regbase + SPI_SSIENR_OFFSET, 1);
 	for (i = 0; i < 16; i++) {
 		amba_writel(priv->regbase + SPI_DR_OFFSET, i);
 	}
 
+	return 0;
+
 ambarella_spi_slave_probe_exit:
-	if (priv && errorCode < 0) {
+	if (rval < 0) {
 		if (priv->psDev) {
 			device_destroy(priv->psClass, MKDEV(major_id, 0));
 		}
@@ -554,46 +552,34 @@ ambarella_spi_slave_probe_exit:
 		if (major_id > 0) {
 			unregister_chrdev(major_id, priv->dev_name);
 		}
-		if (priv->irq > 0) {
-			free_irq(priv->irq, priv);
-		}
-		kfree(priv);
 	}
-	return errorCode;
+
+	return rval;
 }
 
 static int ambarella_spi_slave_remove(struct platform_device *pdev)
 {
 	struct ambarella_spi_slave	*priv;
 
-	priv	= (struct ambarella_spi_slave *)pdev->dev.platform_data;
+	priv = platform_get_drvdata(pdev);
 
-	if (priv) {
-		mutex_lock(&g_mtx);
-		priv_array[pdev->id] = NULL;
-		mutex_unlock(&g_mtx);
+	mutex_lock(&g_mtx);
+	priv_array[pdev->id] = NULL;
+	mutex_unlock(&g_mtx);
 
-		mutex_lock(&priv->um_mtx);
+	mutex_lock(&priv->um_mtx);
 
-		if (priv->psDev) {
-			device_destroy(priv->psClass, MKDEV(priv->major, 0));
-		}
-		if (priv->psClass) {
-			class_destroy(priv->psClass);
-		}
-		if (priv->major > 0) {
-			unregister_chrdev(priv->major, priv->dev_name);
-		}
-		if (priv->irq > 0) {
-			free_irq(priv->irq, priv);
-		}
-
-		priv->count++;
-
-		mutex_unlock(&priv->um_mtx);
-		kfree(priv);
-
+	if (priv->psDev) {
+		device_destroy(priv->psClass, MKDEV(priv->major, 0));
 	}
+	if (priv->psClass) {
+		class_destroy(priv->psClass);
+	}
+	if (priv->major > 0) {
+		unregister_chrdev(priv->major, priv->dev_name);
+	}
+
+	mutex_unlock(&priv->um_mtx);
 
 	return 0;
 }
@@ -615,12 +601,19 @@ static const struct dev_pm_ops ambarella_spi_slave_dev_pm_ops = {
 };
 #endif
 
+static const struct of_device_id ambarella_spi_slave_dt_ids[] = {
+	{.compatible = "ambarella,spi-slave", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_spi_slave_dt_ids);
+
 static struct platform_driver ambarella_spi_slave_driver = {
 	.probe		= ambarella_spi_slave_probe,
 	.remove		= ambarella_spi_slave_remove,
 	.driver		= {
 		.name	= "ambarella-spi-slave",
 		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_spi_slave_dt_ids,
 #ifdef CONFIG_PM
 		.pm	= &ambarella_spi_slave_dev_pm_ops,
 #endif

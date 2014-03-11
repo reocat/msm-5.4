@@ -412,6 +412,12 @@
 			amb,clk-freq = <54000000>;
 			status = "disabled";
 		};
+
+		spi_slave@e0026000 {
+			compatible = "ambarella,spi-slave";
+			reg = <0xe0026000 0x1000>;
+			interrupts = <38 0x4>;
+		};
 	};
 
 	axi@f0000000 {	/* AXI */

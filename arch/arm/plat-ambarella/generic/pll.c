@@ -605,6 +605,27 @@ static struct clk gclk_ssi2_ahb = {
 };
 #endif
 
+#if ( SPI_AHB_SLAVE_INSTANCES >= 1)
+static struct clk gclk_ssi_slave = {
+	.parent		= &pll_out_core,
+	.name		= "gclk_ssi_slave",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI3_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
@@ -648,6 +669,9 @@ void ambarella_init_early(void)
 #endif
 #if (SPI_AHB_INSTANCES >= 2)
 	ambarella_clk_add(&gclk_ssi2_ahb);
+#endif
+#if (SPI_AHB_SLAVE_INSTANCES >= 1)
+	ambarella_clk_add(&gclk_ssi_slave);
 #endif
 }
 

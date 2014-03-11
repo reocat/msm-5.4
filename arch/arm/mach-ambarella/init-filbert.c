@@ -61,84 +61,9 @@ static struct platform_device *ambarella_devices[] __initdata = {
 };
 
 /* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 6,
-	},
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_filbert(void)
 {
 	int					i;
-	struct ambarella_spi_platform_info	*spi2_pdata;
 
 	ambarella_init_machine("Filbert", REF_CLK_FREQ);
 
@@ -167,12 +92,6 @@ static void __init ambarella_init_filbert(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SDIO;
-
-	spi2_pdata = (struct ambarella_spi_platform_info *)ambarella_spi2.dev.platform_data;
-	spi2_pdata->cs_num = 7;
-	spi2_pdata->cs_pins[7] = -1;
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
 
 #if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
 	ambarella_tm1510_board_info.irq =

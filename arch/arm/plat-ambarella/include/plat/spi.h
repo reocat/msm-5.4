@@ -363,35 +363,6 @@ typedef struct {
 	u16	n_size;
 } amba_spi_write_and_read_t;
 
-struct ambarella_spi_platform_info {
-	int fifo_entries;
-	void (*rct_set_ssi_pll)(void);
-	u32 (*get_ssi_freq_hz)(void);
-};
-
-#define AMBA_SPI_CS_PINS_PARAM_CALL(id, arg, perm) \
-	module_param_cb(spi##id##_cs0, &param_ops_int, &(arg[0]), perm); \
-	module_param_cb(spi##id##_cs1, &param_ops_int, &(arg[1]), perm); \
-	module_param_cb(spi##id##_cs2, &param_ops_int, &(arg[2]), perm); \
-	module_param_cb(spi##id##_cs3, &param_ops_int, &(arg[3]), perm); \
-	module_param_cb(spi##id##_cs4, &param_ops_int, &(arg[4]), perm); \
-	module_param_cb(spi##id##_cs5, &param_ops_int, &(arg[5]), perm); \
-	module_param_cb(spi##id##_cs6, &param_ops_int, &(arg[6]), perm); \
-	module_param_cb(spi##id##_cs7, &param_ops_int, &(arg[7]), perm)
-
-#define AMBA_SPI_CS_HIGH_PARAM_CALL(id, arg, perm) \
-	module_param_cb(spi##id##_cs_high_0, &param_ops_int, &(arg[0]), perm); \
-	module_param_cb(spi##id##_cs_high_1, &param_ops_int, &(arg[1]), perm); \
-	module_param_cb(spi##id##_cs_high_2, &param_ops_int, &(arg[2]), perm); \
-	module_param_cb(spi##id##_cs_high_3, &param_ops_int, &(arg[3]), perm); \
-	module_param_cb(spi##id##_cs_high_4, &param_ops_int, &(arg[4]), perm); \
-	module_param_cb(spi##id##_cs_high_5, &param_ops_int, &(arg[5]), perm); \
-	module_param_cb(spi##id##_cs_high_6, &param_ops_int, &(arg[6]), perm); \
-	module_param_cb(spi##id##_cs_high_7, &param_ops_int, &(arg[7]), perm)
-
-/* ==========================================================================*/
-extern struct platform_device ambarella_spi_slave;
-
 /* ==========================================================================*/
 extern int ambarella_spi_write(amba_spi_cfg_t *spi_cfg,
 	amba_spi_write_t *spi_write);

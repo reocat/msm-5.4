@@ -171,6 +171,12 @@
 			amb,clk-freq = <60000000>;
 		};
 
+		spi_slave@7001e000 {
+			compatible = "ambarella,spi-slave";
+			reg = <0x7001e000 0x1000>;
+			interrupts = <0 26 0x4>;
+		};
+
 		adc@7000d000 {
 			compatible = "ambarella,adc-v2";
 			reg = <0x7000d000 0x1000>;
