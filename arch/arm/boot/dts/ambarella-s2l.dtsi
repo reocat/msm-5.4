@@ -17,6 +17,8 @@
 		serial0 = &uart0;
 		serial1 = &uart1;
 		nand = &nand0;
+		spi0 = &spi0;
+		spi1 = &spi1;
 	};
 
 	/* the memory node will be overwritten in Amboot,
@@ -385,6 +387,27 @@
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
+		};
+
+		spi0: spi@e0020000 {
+			compatible = "ambarella,spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xe0020000 0x1000>;
+			interrupts = <35 0x4>;
+			amb,clk-name = "gclk_ssi_ahb";
+			amb,clk-freq = <54000000>;
+		};
+
+		spi1: spi@e0021000 {
+			compatible = "ambarella,spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xe0021000 0x1000>;
+			interrupts = <37 0x4>;
+			amb,clk-name = "gclk_ssi2_ahb";
+			amb,clk-freq = <54000000>;
+			status = "disabled";
 		};
 	};
 

@@ -65,62 +65,11 @@ static struct platform_device *ixora_devices[] __initdata = {
 	&ambarella_fb1,
 	&ambarella_wdt0,
 	&ambarella_rtc0,
-	&ambarella_spi0,
-	&ambarella_spi1,
 	&ambarella_pwm_backlight_device0,
 	&ambarella_pwm_backlight_device1,
 	&ambarella_pwm_backlight_device2,
 	&ambarella_pwm_backlight_device3,
 };
-
-/* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-#if 0
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 3,
-	},
-#endif
-};
-
 
 /* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
@@ -147,7 +96,6 @@ static void __init ambarella_init_ixora(void)
 }
 
 /* ==========================================================================*/
-
 static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
 	{}
 };
@@ -173,9 +121,6 @@ static void __init ambarella_init_ixora_dt(void)
 #if defined(CONFIG_VOUT_CONVERTER_IT66121)
 	ambarella_init_it66121(0, 0x98>>1);
 #endif
-
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
 }
 
 

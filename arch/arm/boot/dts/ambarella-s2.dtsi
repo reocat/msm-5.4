@@ -19,6 +19,7 @@
 		serial2 = &uart2;
 		serial3 = &uart3;
 		nand = &nand0;
+		spi0 = &spi0;
 	};
 
 	/* the memory node will be overwritten in Amboot,
@@ -156,6 +157,16 @@
 			amb,bulk-num = <60>;
 			status = "disabled";
 	        };
+
+		spi0: spi@70002000 {
+			compatible = "ambarella,spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70002000 0x1000>;
+			interrupts = <0 20 0x4>;
+			amb,clk-name = "gclk_ssi";
+			amb,clk-freq = <60000000>;
+		};
 
 		adc@7000d000 {
 			compatible = "ambarella,adc-v2";

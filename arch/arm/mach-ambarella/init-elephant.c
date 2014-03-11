@@ -67,11 +67,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb1,
 	&ambarella_idc0_mux,
 	&ambarella_ahci0,
-	&ambarella_spi0,
-	&ambarella_spi1,
-	&ambarella_spi2,
-	&ambarella_spi3,
-	&ambarella_spi4,
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	&mpcore_wdt,
 #endif

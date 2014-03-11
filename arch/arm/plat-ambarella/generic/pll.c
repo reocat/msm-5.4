@@ -37,6 +37,7 @@
 #include <mach/hardware.h>
 #include <plat/clk.h>
 #include <plat/fio.h>
+#include <plat/spi.h>
 
 
 /* ==========================================================================*/
@@ -441,6 +442,7 @@ static struct clk gclk_sdxc = {
 	.extra_scaler	= 0,
 	.ops		= &ambarella_rct_scaler_ops,
 };
+
 #endif
 
 #if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
@@ -510,6 +512,99 @@ static struct clk gclk_ir = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
+#if (SPI_INSTANCES >= 1) // a5s, s2, ione a7l
+static struct clk gclk_ssi = {
+	.parent		= &gclk_apb,
+	.name		= "gclk_ssi",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+#if (SPI_INSTANCES >= 2)
+static struct clk gclk_ssi2 = {
+	.parent		= &gclk_apb,
+	.name		= "gclk_ssi2",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI2_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+#if (SPI_AHB_INSTANCES >= 1)
+static struct clk gclk_ssi_ahb = {
+#if (CHIP_REV == S2L)
+	.parent		= &pll_out_core,
+#else // ione
+	.parent		= &gclk_apb,
+#endif
+	.name		= "gclk_ssi_ahb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+#if (CHIP_REV == S2L)
+	.post_reg	= CG_SSI_REG,
+#else // ione
+	.post_reg	= CG_SSI_AHB_REG,
+#endif
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+
+#if (SPI_AHB_INSTANCES >= 2)
+static struct clk gclk_ssi2_ahb = {
+	.parent		= &pll_out_core,
+	.name		= "gclk_ssi2_ahb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= CG_SSI2_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
@@ -541,5 +636,18 @@ void ambarella_init_early(void)
 #endif
 	ambarella_clk_add(&gclk_sd);
 	ambarella_clk_add(&gclk_ir);
+
+#if (SPI_INSTANCES >= 1)
+	ambarella_clk_add(&gclk_ssi);
+#endif
+#if (SPI_INSTANCES >= 2)
+	ambarella_clk_add(&gclk_ssi2);
+#endif
+#if (SPI_AHB_INSTANCES >= 1)
+	ambarella_clk_add(&gclk_ssi_ahb);
+#endif
+#if (SPI_AHB_INSTANCES >= 2)
+	ambarella_clk_add(&gclk_ssi2_ahb);
+#endif
 }
 
