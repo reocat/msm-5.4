@@ -77,55 +77,6 @@ static struct platform_device *ambarella_pwm_devices[] __initdata = {
 };
 
 /* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 6,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 7,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	},
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
 	int i, ret;
@@ -188,9 +139,6 @@ static void __init ambarella_init_ginkgo(void)
 		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
-
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));

@@ -79,34 +79,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_power_supply,
 };
 
-/* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	}
-};
 
 /* ==========================================================================*/
 static void __init ambarella_init_coconut(void)
@@ -194,9 +166,6 @@ static void __init ambarella_init_coconut(void)
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
-
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
 
 #if defined(CONFIG_TOUCH_AMBARELLA_AK4183)
 	ambarella_ak4183_board_info.irq =

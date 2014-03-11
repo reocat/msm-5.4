@@ -81,105 +81,6 @@ static struct platform_device *ambarella_pwm_devices[] __initdata = {
 };
 
 /* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	[0] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	[1] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	[2] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	[3] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-	[4] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 4,
-	},
-	[5] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 5,
-	},
-	[6] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 6,
-	},
-	[7] = {
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 7,
-	},
-	[8] = {
-		.modalias	= "spidev",
-		.bus_num	= 1,
-		.chip_select	= 0,
-	},
-	[9] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 0,
-	},
-	[10] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 1,
-	},
-	[11] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 2,
-	},
-	[12] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 3,
-	},
-	[13] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 4,
-	},
-	[14] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 5,
-	},
-	[15] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 6,
-	},
-	[16] = {
-		.modalias	= "spidev",
-		.bus_num	= 2,
-		.chip_select	= 7,
-	},
-	[17] = {
-		.modalias	= "spidev",
-		.bus_num	= 3,
-		.chip_select	= 0,
-	},
-	[18] = {
-		.modalias	= "spidev",
-		.bus_num	= 4,
-		.chip_select	= 0,
-	}
-};
-
-/* ==========================================================================*/
 
 static struct rfkill_gpio_platform_data elephant_board_bt_info = {
 	.name		= "bt-gpio",
@@ -308,10 +209,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.power_control.gpio_id = GPIO(120);
 			ambarella_board_generic.power_control.active_level = GPIO_LOW;
 #if defined(CONFIG_PMIC_AMBARELLA_WM831X)
-			memcpy(ambarella_spi_devices[12].modalias, "wm8310", 6);
-			ambarella_spi_devices[12].max_speed_hz = 500000;
-			ambarella_spi_devices[12].platform_data = &wm8310_default_pdata;
-			ambarella_spi_devices[12].irq = ambarella_board_generic.pmic_irq.irq_line;
 			use_ambarella_rtc0 = 0;
 			use_ambarella_wdt0= 0;
 #endif
@@ -433,9 +330,6 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
-
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
 
 	if (use_ambarella_rtc0){
 		platform_device_register(&ambarella_rtc0);
