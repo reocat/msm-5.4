@@ -67,9 +67,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_fb1,
 	&ambarella_idc0_mux,
 	&ambarella_ahci0,
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
-	&mpcore_wdt,
-#endif
 };
 
 static struct platform_device *ambarella_pwm_devices[] __initdata = {
@@ -336,9 +333,6 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_capable(&ambarella_rtc0.dev, 1);
 		device_set_wakeup_enable(&ambarella_rtc0.dev, 1);
 	}
-
-	if (use_ambarella_wdt0)
-		platform_device_register(&ambarella_wdt0);
 
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }

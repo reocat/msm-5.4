@@ -893,6 +893,7 @@ CONFIG_MTD_CFI_I2=y
 #
 # Self-contained MTD device drivers
 #
+# CONFIG_MTD_AMBARELLA_SPI_NOR is not set
 # CONFIG_MTD_DATAFLASH is not set
 # CONFIG_MTD_M25P80 is not set
 # CONFIG_MTD_SST25L is not set
@@ -1467,7 +1468,7 @@ CONFIG_GPIO_PCA953X_IRQ=y
 # CONFIG_HWMON is not set
 # CONFIG_THERMAL is not set
 CONFIG_WATCHDOG=y
-# CONFIG_WATCHDOG_CORE is not set
+CONFIG_WATCHDOG_CORE=y
 # CONFIG_WATCHDOG_NOWAYOUT is not set
 
 #

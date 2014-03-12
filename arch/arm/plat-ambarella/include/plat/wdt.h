@@ -50,21 +50,12 @@
 #define WDOG_CTR_RST_EN			0x00000002
 #define WDOG_CTR_EN			0x00000001
 
+/* WDOG_RESTART_REG only works with magic 0x4755.
+ * Set this value would transferred the value in
+ * WDOG_RELOAD_REG into WDOG_STATUS_REG and would
+ * not trigger the underflow event. */
 #define WDT_RESTART_VAL			0x4755
 
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-struct ambarella_wdt_controller {
-	u32	(*get_pll)(void);
-	void	(*start)(u32 mode);
-};
-
-/* ==========================================================================*/
-extern struct platform_device ambarella_wdt0;
-extern struct platform_device mpcore_wdt;
-
-#endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_WDT_H__ */

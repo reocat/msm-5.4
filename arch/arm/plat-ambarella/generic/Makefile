@@ -33,6 +33,5 @@ obj-$(CONFIG_HAVE_PWM)				+= pwm.o
 obj-y						+= hwlock.o
 obj-y						+= rtc.o
 obj-y						+= timer.o
-obj-y						+= wdt.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
 

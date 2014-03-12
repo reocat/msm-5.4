@@ -130,6 +130,13 @@
 			pinctrl-0 = <&ir_pins>;
 		};
 
+		wdt@e800c000 {
+			compatible = "ambarella,wdt";
+			reg = <0xe800c000 0x1000>;
+			/* interrupts = <21 0x4>; */
+			timeout-sec = <15>;
+		};
+
 		pinctrl: pinctrl@e8009000 {
 			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;
