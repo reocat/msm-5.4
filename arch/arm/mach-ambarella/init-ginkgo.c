@@ -95,8 +95,6 @@ static void __init ambarella_init_ginkgo(void)
 		case 'A':
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
-#else
-			platform_device_register(&ambarella_rtc0);
 #endif
 			use_bub_default = 0;
 			break;
@@ -109,17 +107,11 @@ static void __init ambarella_init_ginkgo(void)
 	}
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_ATB) {
-			platform_device_register(&ambarella_rtc0);
-
 			ambarella_board_generic.vin0_reset.gpio_id = GPIO(54);
 			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.vin0_reset.active_delay = 500;
 
 			use_bub_default = 0;
-	}
-
-	if (use_bub_default) {
-		platform_device_register(&ambarella_rtc0);
 	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));

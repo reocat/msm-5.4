@@ -328,12 +328,6 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
 
-	if (use_ambarella_rtc0){
-		platform_device_register(&ambarella_rtc0);
-		device_set_wakeup_capable(&ambarella_rtc0.dev, 1);
-		device_set_wakeup_enable(&ambarella_rtc0.dev, 1);
-	}
-
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 

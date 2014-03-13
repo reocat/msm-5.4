@@ -77,8 +77,6 @@ extern struct platform_device ambarella_fb1;
 extern int ambarella_init_fb(void);
 
 /* ==========================================================================*/
-extern struct ambarella_rtc_controller ambarella_platform_rtc_controller0;
-
 extern int fio_default_owner;
 
 extern u32 ambarella_phys_to_virt(u32 paddr);

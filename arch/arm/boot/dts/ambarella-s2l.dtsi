@@ -137,6 +137,11 @@
 			timeout-sec = <15>;
 		};
 
+		rtc@e8015000 {
+			compatible = "ambarella,rtc-v2";
+			reg = <0xe8015000 0x1000>;
+		};
+
 		pinctrl: pinctrl@e8009000 {
 			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;

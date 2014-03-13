@@ -43,7 +43,6 @@ extern struct platform_device ambarella_rproc_ca9_a_and_arm11_dev;
 #endif /* CONFIG_RPROC_CA9_A */
 
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_rtc0,
 #ifdef CONFIG_RPROC_CA9_A
 	&ambarella_rproc_ca9_a_and_b_dev,
 	&ambarella_rproc_ca9_a_and_arm11_dev,

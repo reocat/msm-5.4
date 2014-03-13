@@ -96,32 +96,6 @@
 #define RTC_PWC_SR_MASK			0x4
 
 /* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-struct ambarella_rtc_controller {
-	u8					pos0;
-	u8					pos1;
-	u8					pos2;
-	int					(*check_capacity)(u32);
-	u32					(*check_status)(void);
-	void					(*set_curt_time)(u32);
-	u32					(*get_curt_time)(void);
-	void					(*set_alat_time)(u32);
-	u32					(*get_alat_time)(void);
-	u32					reset_delay;
-	struct  timer_list          alarm_polling_timer;
-};
-#define AMBA_RTC_PARAM_CALL(id, arg, perm, param_ops_rtcpos) \
-	module_param_cb(rtc##id##_pos0, &param_ops_byte, &(arg.pos0), perm); \
-	module_param_cb(rtc##id##_pos1, &param_ops_byte, &(arg.pos1), perm); \
-	module_param_cb(rtc##id##_pos2, &param_ops_byte, &(arg.pos2), perm); \
-	module_param_cb(rtc##id##_setpos, &param_ops_rtcpos, NULL, 0200)
-
-/* ==========================================================================*/
-extern struct platform_device ambarella_rtc0;
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_RTC_H__ */
 

@@ -190,10 +190,6 @@ static void __init ambarella_init_coconut(void)
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
 		i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
-	} else {
-#endif
-		platform_device_register(&ambarella_rtc0);
-#if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 	}
 #endif
 }
