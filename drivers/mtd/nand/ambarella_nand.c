@@ -1257,28 +1257,30 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		nand_info->seqin_page_addr = page_addr;
 		break;
 	case NAND_CMD_PAGEPROG:
-	{
-		u8 mn_area, sp_area;
-		mn_area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
-		sp_area = nand_amb_is_hw_bch(nand_info) ? SPARE_ECC : SPARE_ONLY;
+		{
+			u8 mn_area, sp_area;
+			u32 offset;
+			mn_area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
+			sp_area = nand_amb_is_hw_bch(nand_info) ? SPARE_ECC : SPARE_ONLY;
+			offset = nand_amb_is_hw_bch(nand_info) ? 0 : mtd->writesize;
 
-		if (nand_info->seqin_column < mtd->writesize) {
-			nand_amb_write_data(nand_info,
-				nand_info->seqin_page_addr,
-				nand_info->dmaaddr, mn_area);
-			if (nand_info->soft_ecc) {
+			if (nand_info->seqin_column < mtd->writesize) {
 				nand_amb_write_data(nand_info,
 					nand_info->seqin_page_addr,
-					nand_info->dmaaddr + mtd->writesize,
+					nand_info->dmaaddr, mn_area);
+				if (nand_info->soft_ecc) {
+					nand_amb_write_data(nand_info,
+						nand_info->seqin_page_addr,
+						nand_info->dmaaddr + mtd->writesize,
+						sp_area);
+				}
+			} else {
+				nand_amb_write_data(nand_info,
+					nand_info->seqin_page_addr,
+					nand_info->dmaaddr + offset,
 					sp_area);
 			}
-		} else {
-			nand_amb_write_data(nand_info,
-				nand_info->seqin_page_addr,
-				nand_info->dmaaddr + mtd->writesize,
-				sp_area);
 		}
-	}
 		break;
 	default:
 		dev_err(nand_info->dev, "%s: 0x%x, %d, %d\n",
