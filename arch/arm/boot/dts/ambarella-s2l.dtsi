@@ -287,6 +287,7 @@
 			interrupts = <16 0x4>,	/* fio_cmd_irq */
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
+			/* amb,soft-ecc = <1>; */
 		};
 
 		uart1: uart@e0032000 {
