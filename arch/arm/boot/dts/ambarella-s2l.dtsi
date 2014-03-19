@@ -22,6 +22,7 @@
 		i2c2 = &i2c2;
 		spi0 = &spi0;
 		spi1 = &spi1;
+		ethernet0 = &mac0;
 	};
 
 	/* the memory node will be overwritten in Amboot,
