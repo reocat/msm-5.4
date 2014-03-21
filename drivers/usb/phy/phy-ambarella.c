@@ -205,7 +205,7 @@ static irqreturn_t ambarella_otg_detect_irq(int irq, void *dev_id)
 {
 	struct ambarella_phy *amb_phy = dev_id;
 
-	if (gpio_get_value(amb_phy->gpio_id) == amb_phy->id_is_otg)
+	if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
 		amb_phy->port_type = PORT_TYPE_OTG;
 	else
 		amb_phy->port_type = PORT_TYPE_DEVICE;
@@ -234,24 +234,18 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 		return rval;
 	}
 
-	if (gpio_get_value(amb_phy->gpio_id) == amb_phy->id_is_otg)
+	if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
 		amb_phy->port_type = PORT_TYPE_OTG;
 	else
 		amb_phy->port_type = PORT_TYPE_DEVICE;
 
 	irq = gpio_to_irq(amb_phy->gpio_id);
 
-	rval = devm_request_irq(phy->dev, irq, ambarella_otg_detect_irq,
+	rval = devm_request_threaded_irq(phy->dev, irq, NULL,
+			ambarella_otg_detect_irq,
 			IRQ_TYPE_EDGE_BOTH, "usb_otg_id", amb_phy);
 	if (rval) {
-		dev_err(phy->dev, "request usb_otg_id irq failed\n");
-		return rval;
-	}
-
-	/* allow to wake up system when sleeping */
-	rval = enable_irq_wake(irq);
-	if (rval) {
-		dev_err(phy->dev, "enable_irq_wake failed\n");
+		dev_err(phy->dev, "request usb_otg_id irq failed: %d\n", rval);
 		return rval;
 	}
 
