@@ -63,8 +63,6 @@
 #include <linux/pda_power.h>
 
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_fb0,
-	&ambarella_fb1,
 	&ambarella_idc0_mux,
 	&ambarella_ahci0,
 };

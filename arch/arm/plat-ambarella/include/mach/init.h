@@ -72,8 +72,6 @@ extern void ambarella_map_io(void);
 extern void ambarella_restart_machine(char mode, const char *cmd);
 
 /* ==========================================================================*/
-extern struct platform_device ambarella_fb0;
-extern struct platform_device ambarella_fb1;
 extern int ambarella_init_fb(void);
 
 /* ==========================================================================*/

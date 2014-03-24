@@ -25,8 +25,7 @@
 #define __PLAT_AMBARELLA_FB_H
 
 /* ==========================================================================*/
-#define AMBARELLA_CLUT_BYTES			(3)
-#define AMBARELLA_CLUT_TABLE_SIZE		(256 * AMBARELLA_CLUT_BYTES)
+#define AMBARELLA_CLUT_TABLE_SIZE		(256 * 3)
 #define AMBARELLA_BLEND_TABLE_SIZE		(256)
 
 /* ==========================================================================*/
@@ -132,6 +131,8 @@ struct ambarella_platform_fb {
 };
 
 /* ==========================================================================*/
+
+extern struct ambarella_platform_fb *ambfb_data_ptr[];
 
 /* ==========================================================================*/
 extern int ambarella_fb_get_platform_info(u32, struct ambarella_platform_fb *);

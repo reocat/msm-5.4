@@ -67,8 +67,6 @@ static struct platform_device ambarella_power_supply = {
 
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_fb0,
-	&ambarella_fb1,
 	&ambarella_idc0_mux,
 	&ambarella_power_supply,
 };

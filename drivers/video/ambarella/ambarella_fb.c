@@ -53,566 +53,7 @@
 /* video=amb0fb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,
    <color_format>,<conversion_buffer>[,<prealloc_start>,<prealloc_length>] */
 
-static const struct ambarella_fb_color_table_s {
-	enum ambarella_fb_color_format	color_format;
-	int				bits_per_pixel;
-	struct fb_bitfield		red;
-	struct fb_bitfield		green;
-	struct fb_bitfield		blue;
-	struct fb_bitfield		transp;
-} ambarella_fb_color_format_table[] =
-{
-	{
-		.color_format = AMBFB_COLOR_CLUT_8BPP,
-		.bits_per_pixel = 8,
-		.red =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_RGB565,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 11,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 5,
-				.length = 6,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 0,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_BGR565,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 0,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 5,
-				.length = 6,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 11,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_AGBR4444,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 0,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 8,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 4,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 12,
-				.length = 4,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_RGBA4444,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 12,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 8,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 4,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 4,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_BGRA4444,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 4,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 8,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 12,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 4,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_ABGR4444,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 0,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 4,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 8,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 12,
-				.length = 4,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_ARGB4444,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 8,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 4,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 0,
-				.length = 4,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 12,
-				.length = 4,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_AGBR1555,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 0,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 10,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 5,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 15,
-				.length = 1,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_GBR1555,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 0,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 10,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 5,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 0,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_RGBA5551,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 11,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 6,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 1,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 1,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_BGRA5551,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 1,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 6,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 11,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 1,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_ABGR1555,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 0,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 5,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 10,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 15,
-				.length = 1,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_ARGB1555,
-		.bits_per_pixel = 16,
-		.red =
-			{
-				.offset = 10,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 5,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 0,
-				.length = 5,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 15,
-				.length = 1,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_AGBR8888,
-		.bits_per_pixel = 32,
-		.red =
-			{
-				.offset = 0,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 16,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 8,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 24,
-				.length = 8,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_RGBA8888,
-		.bits_per_pixel = 32,
-		.red =
-			{
-				.offset = 24,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 16,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 8,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 8,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_BGRA8888,
-		.bits_per_pixel = 32,
-		.red =
-			{
-				.offset = 8,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 16,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 24,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 0,
-				.length = 8,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_ABGR8888,
-		.bits_per_pixel = 32,
-		.red =
-			{
-				.offset = 0,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 8,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 16,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 24,
-				.length = 8,
-				.msb_right = 0,
-		},
-	},
-
-	{
-		.color_format = AMBFB_COLOR_ARGB8888,
-		.bits_per_pixel = 32,
-		.red =
-			{
-				.offset = 16,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.green =
-			{
-				.offset = 8,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.blue =
-			{
-				.offset = 0,
-				.length = 8,
-				.msb_right = 0,
-			},
-		.transp =
-			{
-				.offset = 24,
-				.length = 8,
-				.msb_right = 0,
-		},
-	},
-};
+#include "ambarella_fb_tbl.c"
 
 /* ========================================================================== */
 #ifdef CONFIG_PROC_FS
@@ -751,7 +192,7 @@ static int ambfb_set_par(struct fb_info *info)
 	int					res_changed = 0;
 	int					color_format_changed = 0;
 	enum ambarella_fb_color_format		new_color_format;
-	const struct ambarella_fb_color_table_s	*pTable;
+	const struct ambarella_fb_color_table	*pTable;
 
 	ambfb_data = (struct ambarella_platform_fb *)info->par;
 	mutex_lock(&ambfb_data->lock);
@@ -967,12 +408,7 @@ static int ambfb_probe(struct platform_device *pdev)
 	u32					framesize;
 	u32					line_length;
 
-	ambfb_data = (struct ambarella_platform_fb *)pdev->dev.platform_data;
-	if (ambfb_data == NULL) {
-		dev_err(&pdev->dev, "%s: ambfb_data is NULL!\n", __func__);
-		errorCode = -ENODEV;
-		goto ambfb_probe_exit;
-	}
+	ambfb_data = ambfb_data_ptr[pdev->id];
 
 	if (ambfb_data->use_prealloc) {
 		dev_info(&pdev->dev, "%s: use prealloc.\n", __func__);
@@ -1113,19 +549,11 @@ static int ambfb_probe(struct platform_device *pdev)
 		goto ambfb_probe_release_framebuffer;
 	}
 	for (i = info->cmap.start; i < info->cmap.len; i++) {
-		info->cmap.red[i] =
-			ambfb_data->clut_table[i * AMBARELLA_CLUT_BYTES + 0];
-		info->cmap.red[i] <<= 8;
-		info->cmap.green[i] =
-			ambfb_data->clut_table[i * AMBARELLA_CLUT_BYTES + 1];
-		info->cmap.green[i] <<= 8;
-		info->cmap.blue[i] =
-			ambfb_data->clut_table[i * AMBARELLA_CLUT_BYTES + 2];
-		info->cmap.blue[i] <<= 8;
-		if (info->cmap.transp) {
-			info->cmap.transp[i] = ambfb_data->blend_table[i];
-			info->cmap.transp[i] <<= 8;
-		}
+		info->cmap.red[i] = i << 8;
+		info->cmap.green[i] = 128 << 8;
+		info->cmap.blue[i] = 128 << 8;
+		if (info->cmap.transp)
+			info->cmap.transp[i] = 12 << 8;
 	}
 
 	platform_set_drvdata(pdev, info);
@@ -1254,14 +682,28 @@ static struct platform_driver ambfb_driver = {
 	},
 };
 
+static struct platform_device ambarella_fb0 = {
+	.name			= "ambarella-fb",
+	.id			= 0,
+};
+
+static struct platform_device ambarella_fb1 = {
+	.name			= "ambarella-fb",
+	.id			= 1,
+};
+
 static int __init ambavoutfb_init(void)
 {
+	platform_device_register(&ambarella_fb0);
+	platform_device_register(&ambarella_fb1);
 	return platform_driver_register(&ambfb_driver);
 }
 
 static void __exit ambavoutfb_exit(void)
 {
 	platform_driver_unregister(&ambfb_driver);
+	platform_device_unregister(&ambarella_fb1);
+	platform_device_unregister(&ambarella_fb0);
 }
 
 MODULE_LICENSE("GPL");
