@@ -204,6 +204,12 @@
 			reg = <0x7000d000 0x1000>;
 		};
 
+		pwm: pwm@70004000 {
+			compatible = "ambarella,pwm";
+			reg = <0x70004000 0x1000 0x70008000 0x10>;
+			#pwm-cells = <3>;
+		};
+
 		pinctrl: pinctrl@70009000 {
 			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;
@@ -295,6 +301,37 @@
 						   configuration purpose. But not
 						   mentioned in APM, need test*/
 						 <0x1060 0x1061>;
+			};
+
+			pwm0_pins: pwm0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x102d>;
+			};
+
+			pwm1_pins: pwm1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x102e>;
+			};
+
+			pwm2_pins: pwm2@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1032>,
+						/* virtual pins, just for
+						   configuration purpose.*/
+						 <0x0021 0x0022>;
+			};
+
+			pwm3_pins: pwm3@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1033>,
+						/* virtual pins, just for
+						   configuration purpose.*/
+						 <0x0022 0x0003>;
+			};
+
+			pwm5_pins: pwm5@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1010>;
 			};
 		};
 	};

@@ -24,6 +24,14 @@
 #ifndef __PLAT_AMBARELLA_PWM_H__
 #define __PLAT_AMBARELLA_PWM_H__
 
+#if (CHIP_REV == A8)
+#define PWM_INSTANCES			0
+#elif (CHIP_REV == S2L)
+#define PWM_INSTANCES			4
+#else
+#define PWM_INSTANCES			5
+#endif
+
 /* ==========================================================================*/
 #define PWM_OFFSET			0x8000
 #define PWM_BASE			(APB_BASE + PWM_OFFSET)
@@ -39,18 +47,27 @@
 #define PWM_MODE_OFFSET			0x08
 #define PWM_CONTROL1_OFFSET		0x0c
 
-#define PWM_B0_DATA_OFFSET		0x300
 #define PWM_B0_ENABLE_OFFSET		0x304
-#define PWM_C0_DATA_OFFSET		0x310
-#define PWM_C0_ENABLE_OFFSET		0x314
-#define PWM_B0_DATA1_OFFSET		0x320
-#define PWM_C0_DATA1_OFFSET		0x328
-#define PWM_B1_DATA_OFFSET		0x308
 #define PWM_B1_ENABLE_OFFSET		0x30c
-#define PWM_C1_DATA_OFFSET		0x318
+#define PWM_C0_ENABLE_OFFSET		0x314
 #define PWM_C1_ENABLE_OFFSET		0x31c
+#define PWM_B0_DATA1_OFFSET		0x320
 #define PWM_B1_DATA1_OFFSET		0x324
+#define PWM_C0_DATA1_OFFSET		0x328
 #define PWM_C1_DATA1_OFFSET		0x32c
+
+#define PWM_CLK_SRC_BIT			(0x1 << 31)
+#define PWM_INV_EN_BIT			(0x1 << 31)
+#define PWM_DIVIDER_MASK		(0x7ffffffe)
+#define PWM_PWM_EN_BIT			(0x1)
+
+#define PWM_PWM_TICKS_MAX_BITS		16
+#if (CHIP_REV == S2L)
+#define PWM_ST_TICKS_MAX_BITS		16
+#else
+#define PWM_ST_TICKS_MAX_BITS		10
+#endif
+
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -68,15 +85,6 @@ struct ambarella_pwm_info {
 	module_param_cb(name_prefix##max_duty, &param_ops_int, &(arg.max_duty), perm); \
 	module_param_cb(name_prefix##default_duty, &param_ops_int, &(arg.default_duty), perm); \
 	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm)
-
-extern struct platform_device ambarella_pwm_backlight_device0;
-extern struct platform_device ambarella_pwm_backlight_device1;
-extern struct platform_device ambarella_pwm_backlight_device2;
-extern struct platform_device ambarella_pwm_backlight_device3;
-extern struct platform_device ambarella_pwm_backlight_device4;
-
-/* ==========================================================================*/
-extern int ambarella_init_pwm(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

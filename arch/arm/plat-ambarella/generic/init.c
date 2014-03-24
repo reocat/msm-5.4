@@ -303,10 +303,6 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	BUG_ON(ret_val != 0);
 #endif /*CONFIG_PLAT_AMBARELLA_SUPPORT_FIO */
 
-#if defined(CONFIG_HAVE_PWM)
-	ret_val = ambarella_init_pwm();
-	BUG_ON(ret_val != 0);
-#endif
 	ret_val = ambarella_init_fb();
 	BUG_ON(ret_val != 0);
 

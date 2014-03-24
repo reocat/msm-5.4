@@ -64,14 +64,6 @@ static struct platform_device *ambarella_devices[] __initdata = {
 //	&ambarella_fb1,
 };
 
-static struct platform_device *ambarella_pwm_devices[] __initdata = {
-	&ambarella_pwm_backlight_device0,
-	/*&ambarella_pwm_backlight_device1,
-	&ambarella_pwm_backlight_device2,
-	&ambarella_pwm_backlight_device3,
-	&ambarella_pwm_backlight_device4,*/
-};
-
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
@@ -118,14 +110,6 @@ static void __init ambarella_init_ginkgo(void)
 	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
-	}
-
-	for (i = 0; i < ARRAY_SIZE(ambarella_pwm_devices); i++) {
-		ret = platform_device_register(ambarella_pwm_devices[i]);
-		if (ret)
-			continue;
-		device_set_wakeup_capable(&ambarella_pwm_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_pwm_devices[i]->dev, 0);
 	}
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,

@@ -143,6 +143,12 @@
 			reg = <0xe8015000 0x1000>;
 		};
 
+		pwm: pwm@e8008000 {
+			compatible = "ambarella,pwm";
+			reg = <0xe8008000 0x1000>;
+			#pwm-cells = <3>;
+		};
+
 		pinctrl: pinctrl@e8009000 {
 			compatible = "ambarella,pinctrl", "simple-bus";
 			#address-cells = <1>;
@@ -254,6 +260,71 @@
 			usb_host1_pins: uhc1@0 { /* USB1: host only */
 				reg = <0>;
 				amb,pinmux-ids = <0x1001 0x1003>;
+			};
+
+			pwm0_pins_a: pwm0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x4007>;
+			};
+
+			pwm0_pins_b: pwm0@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x5013>;
+			};
+
+			pwm0_pins_c: pwm0@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x1071>;
+			};
+
+			pwm1_pins_a: pwm1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1005>;
+			};
+
+			pwm1_pins_b: pwm1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x4008>;
+			};
+
+			pwm1_pins_c: pwm1@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5014>;
+			};
+
+			pwm1_pins_d: pwm1@3 {
+				reg = <3>;
+				amb,pinmux-ids = <0x5017>;
+			};
+
+			pwm2_pins_a: pwm2@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1006>;
+			};
+
+			pwm2_pins_b: pwm2@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x4009>;
+			};
+
+			pwm2_pins_c: pwm2@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5015>;
+			};
+
+			pwm3_pins_a: pwm3@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x400a>;
+			};
+
+			pwm3_pins_b: pwm3@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x200e>;
+			};
+
+			pwm3_pins_c: pwm3@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5016>;
 			};
 		};
 	};

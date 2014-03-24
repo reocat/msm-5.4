@@ -207,7 +207,6 @@ config PLAT_AMBARELLA_A5S
 	select PLAT_AMBARELLA_SUPPORT_GPIO
 	select PLAT_AMBARELLA_SUPPORT_VIC
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A5S.
 
@@ -221,7 +220,6 @@ config PLAT_AMBARELLA_A7L
 	select PLAT_AMBARELLA_SUPPORT_GPIO
 	select PLAT_AMBARELLA_SUPPORT_VIC
 	select PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC
-	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella A7l.
 
@@ -236,7 +234,6 @@ config PLAT_AMBARELLA_I1_ARM11
 	select PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC
 	select PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
-	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella I1 ARM11.
 
@@ -264,7 +261,6 @@ config PLAT_AMBARELLA_I1_CORTEX
 	select PL310_ERRATA_753970 if CACHE_PL310
 	select PL310_ERRATA_769419 if CACHE_PL310
 	select ARCH_HAS_CPUFREQ
-	select HAVE_PWM
 
 	help
 	  Say Y here if you are using Ambarella I1 Cortex.
@@ -279,7 +275,6 @@ config PLAT_AMBARELLA_S2_ARM11
 	select PLAT_AMBARELLA_SUPPORT_VIC
 	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	select PLAT_AMBARELLA_SUPPORT_MMAP_AHB64
-	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella S2 ARM11.
 
@@ -301,7 +296,6 @@ config PLAT_AMBARELLA_S2_CORTEX
 	select PL310_ERRATA_727915 if CACHE_PL310
 	select PL310_ERRATA_753970 if CACHE_PL310
 	select PL310_ERRATA_769419 if CACHE_PL310
-	select HAVE_PWM
 
 	help
 	  Say Y here if you are using Ambarella S2 Cortex.
@@ -361,7 +355,6 @@ config PLAT_AMBARELLA_S2L
 	select PLAT_AMBARELLA_SUPPORT_IOMUX
 	select PL310_ERRATA_588369 if CACHE_PL310
 	select PL310_ERRATA_727915 if CACHE_PL310
-	select HAVE_PWM
 	help
 	  Say Y here if you are using Ambarella S2L.
 
