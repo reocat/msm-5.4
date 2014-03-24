@@ -55,37 +55,13 @@
 
 #include "board-device.h"
 
-#include <plat/dma.h>
-#include <plat/clk.h>
-
-#include <linux/input.h>
-/* ==========================================================================*/
-static struct platform_device *ixora_devices[] __initdata = {
-
-};
-
 /* ==========================================================================*/
 static void __init ambarella_init_ixora(void)
 {
-	int use_bub_default = 1;
-
 	ambarella_init_machine("ixora", REF_CLK_FREQ);
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
-
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
-		switch (AMBARELLA_BOARD_REV(system_rev)) {
-		case 'A':
-			use_bub_default = 0;
-			break;
-
-		default:
-			pr_warn("%s: Unknown IPCAM Rev[%d]\n", __func__,
-				AMBARELLA_BOARD_REV(system_rev));
-			break;
-		}
-	}
 }
 
 /* ==========================================================================*/
@@ -95,17 +71,9 @@ static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
 
 static void __init ambarella_init_ixora_dt(void)
 {
-	int i;
-
 	ambarella_init_ixora();
 
 	of_platform_populate(NULL, of_default_bus_match_table, ambarella_auxdata_lookup, NULL);
-
-	platform_add_devices(ixora_devices, ARRAY_SIZE(ixora_devices));
-	for (i = 0; i < ARRAY_SIZE(ixora_devices); i++) {
-		device_set_wakeup_capable(&ixora_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ixora_devices[i]->dev, 0);
-	}
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));

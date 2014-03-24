@@ -58,16 +58,11 @@
 #include <plat/clk.h>
 
 #include <linux/input.h>
-/* ==========================================================================*/
-static struct platform_device *ambarella_devices[] __initdata = {
-
-};
 
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
-	int i, ret;
-	int use_bub_default = 1;
+	int ret;
 
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
@@ -87,7 +82,6 @@ static void __init ambarella_init_ginkgo(void)
 #if defined(CONFIG_RTC_AMBARELLA_IS112022M)
 			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
 #endif
-			use_bub_default = 0;
 			break;
 
 		default:
@@ -101,14 +95,6 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.vin0_reset.gpio_id = GPIO(54);
 			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.vin0_reset.active_delay = 500;
-
-			use_bub_default = 0;
-	}
-
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 
 	i2c_register_board_info(0, ambarella_board_vin_infos,

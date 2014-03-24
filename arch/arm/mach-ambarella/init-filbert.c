@@ -48,22 +48,9 @@
 #include "board-device.h"
 
 /* ==========================================================================*/
-static struct platform_device *ambarella_devices[] __initdata = {
-
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_filbert(void)
 {
-	int					i;
-
 	ambarella_init_machine("Filbert", REF_CLK_FREQ);
-
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
-	}
 
 	/* config LCD */
 	ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
