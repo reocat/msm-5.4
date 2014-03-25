@@ -23,57 +23,16 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/platform_device.h>
 #include <linux/of_platform.h>
-#include <linux/dma-mapping.h>
-#include <linux/clk.h>
 #include <linux/irqchip.h>
-
-#include <asm/mach-types.h>
 #include <asm/mach/arch.h>
-#include <linux/irqchip/arm-gic.h>
-#include <asm/gpio.h>
-#include <asm/system_info.h>
-
-#include <mach/hardware.h>
 #include <mach/init.h>
-#include <mach/board.h>
-#include <mach/common.h>
-
-#include <linux/spi/spi.h>
-#include <linux/spi/spidev.h>
-
-#include <linux/i2c.h>
-#include <linux/i2c/pca953x.h>
-
-#include <linux/irq.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
-
-#include <linux/mmc/host.h>
-#include <plat/ambcache.h>
-
-#include "board-device.h"
-
-/* ==========================================================================*/
-static void __init ambarella_init_ixora(void)
-{
-	ambarella_init_machine("ixora", REF_CLK_FREQ);
-#ifdef CONFIG_OUTER_CACHE
-	ambcache_l2_enable();
-#endif
-}
-
-/* ==========================================================================*/
-static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
-	{}
-};
 
 static void __init ambarella_init_ixora_dt(void)
 {
-	ambarella_init_ixora();
+	ambarella_init_machine("ixora", REF_CLK_FREQ);
 
-	of_platform_populate(NULL, of_default_bus_match_table, ambarella_auxdata_lookup, NULL);
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
 

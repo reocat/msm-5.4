@@ -38,6 +38,7 @@
 #include <plat/debug.h>
 #include <plat/bapi.h>
 #include <plat/clk.h>
+#include <plat/ambcache.h>
 
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
@@ -311,6 +312,10 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 
 	ret_val = ambarella_init_audio();
 	BUG_ON(ret_val != 0);
+
+#ifdef CONFIG_OUTER_CACHE
+	ambcache_l2_enable();
+#endif
 
 	return ret_val;
 }
