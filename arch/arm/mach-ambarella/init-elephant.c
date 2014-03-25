@@ -231,9 +231,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.vin1_af_power.active_delay = 1;
 
 			platform_device_register(&elephant_bt_rfkill);
-#if defined(CONFIG_LCD_AMBARELLA_1P3831)
-			platform_device_register(&lcd_1p3831);
-#endif
 			platform_device_register(&i1evk_cpufreq_device);
 
 			ambarella_board_generic.pwm0_config.max_duty = 255;

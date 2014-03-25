@@ -120,12 +120,6 @@ config TOUCH_AMBARELLA_NT11001
 	bool "nt11001"
 	default n
 
-comment "LCD"
-
-config LCD_AMBARELLA_1P3831
-	bool "1p3831"
-	default n
-
 comment "Audio Codec"
 
 config CODEC_AMBARELLA_WM8994

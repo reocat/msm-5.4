@@ -62,10 +62,6 @@
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
-#ifdef CONFIG_OUTER_CACHE
-	ambcache_l2_enable();
-#endif
-
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
 
@@ -74,17 +70,6 @@ static void __init ambarella_init_ginkgo(void)
 	ambarella_board_generic.vin1_reset.active_level = GPIO_LOW;
 	ambarella_board_generic.vin1_reset.active_delay = 1;
 
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
-		switch (AMBARELLA_BOARD_REV(system_rev)) {
-		case 'A':
-			break;
-
-		default:
-			pr_warn("%s: Unknown EVK Rev[%d]\n", __func__,
-				AMBARELLA_BOARD_REV(system_rev));
-			break;
-		}
-	}
 
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_ATB) {
 			ambarella_board_generic.vin0_reset.gpio_id = GPIO(54);
@@ -93,20 +78,13 @@ static void __init ambarella_init_ginkgo(void)
 	}
 }
 
-/* ==========================================================================*/
-
-static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
-	{}
-};
-
 static void __init ambarella_init_ginkgo_dt(void)
 {
 	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
 
 	ambarella_init_ginkgo();
 
-	of_platform_populate(NULL, of_default_bus_match_table,
-			ambarella_auxdata_lookup, NULL);
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
 
