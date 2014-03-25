@@ -76,10 +76,6 @@ static void __init ambarella_init_generic(void)
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
-
-	i2c_register_board_info(0, ambarella_board_vin_infos,
-		ARRAY_SIZE(ambarella_board_vin_infos));
-	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 
 /* ==========================================================================*/

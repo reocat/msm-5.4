@@ -78,10 +78,6 @@ static void __init ambarella_init_filbert(void)
 	ambarella_tm1510_board_info.flags = 0;
 	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
 #endif
-
-	i2c_register_board_info(0, ambarella_board_vin_infos,
-		ARRAY_SIZE(ambarella_board_vin_infos));
-	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 
 /* ==========================================================================*/

@@ -30,9 +30,6 @@ obj-$(CONFIG_MACH_HYACINTH_0)			+= init-hyacinth_0.o
 obj-$(CONFIG_MACH_HYACINTH_1)			+= init-hyacinth_1.o
 obj-$(CONFIG_MACH_IXORA)			+= init-ixora.o
 
-obj-$(CONFIG_AMBARELLA_VIN)			+= vin.o
-obj-$(CONFIG_AMBARELLA_VOUT)			+= vout.o
-
 obj-$(CONFIG_TOUCH_AMBARELLA_AK4183)		+= touch-ak4183.o
 obj-$(CONFIG_TOUCH_AMBARELLA_CHACHA_MT4D)	+= touch-chacha_mt4d.o
 obj-$(CONFIG_TOUCH_AMBARELLA_TM1510)		+= touch-tm1510.o

@@ -172,10 +172,6 @@ static void __init ambarella_init_durian(void)
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
-
-	i2c_register_board_info(0, ambarella_board_vin_infos,
-		ARRAY_SIZE(ambarella_board_vin_infos));
-	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 
 /* ==========================================================================*/

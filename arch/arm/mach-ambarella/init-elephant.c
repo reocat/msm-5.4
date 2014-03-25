@@ -217,7 +217,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.vin0_power.gpio_id = GPIO(122);
 			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.vin0_power.active_delay = 1;
-			i2c_register_board_info(0, &ambarella_board_vin_infos[0], 1);
 
 			ambarella_board_generic.vin1_power.gpio_id = GPIO(121);
 			ambarella_board_generic.vin1_power.active_level = GPIO_HIGH;
@@ -230,8 +229,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.vin1_af_power.gpio_id = GPIO(124);
 			ambarella_board_generic.vin1_af_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.vin1_af_power.active_delay = 1;
-
-			i2c_register_board_info(2, &ambarella_board_vin_infos[1], 1);
 
 			platform_device_register(&elephant_bt_rfkill);
 #if defined(CONFIG_LCD_AMBARELLA_1P3831)
@@ -287,8 +284,6 @@ static void __init ambarella_init_elephant(void)
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
 		i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
-
-		i2c_register_board_info(2, ambarella_board_vin_infos, ARRAY_SIZE(ambarella_board_vin_infos));
 	}
 
 	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
@@ -296,8 +291,6 @@ static void __init ambarella_init_elephant(void)
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
-
-	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 
 /* ==========================================================================*/

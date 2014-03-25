@@ -91,10 +91,6 @@ static void __init ambarella_init_ginkgo(void)
 			ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 			ambarella_board_generic.vin0_reset.active_delay = 500;
 	}
-
-	i2c_register_board_info(0, ambarella_board_vin_infos,
-		ARRAY_SIZE(ambarella_board_vin_infos));
-	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
 }
 
 /* ==========================================================================*/

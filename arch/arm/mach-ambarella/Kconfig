@@ -28,8 +28,6 @@ comment "Ambarella Board"
 config MACH_AMBARELLA
 	bool "Generic"
 	default y
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	help
 	  Say Y here if you can't find suitable Board Name.
 
@@ -37,8 +35,6 @@ config MACH_COCONUT
 	bool "Coconut"
 	depends on PLAT_AMBARELLA_A5S
 	default n
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	help
 	  Say Y here if you are using A5S Coconut.
 
@@ -46,8 +42,6 @@ config MACH_DURIAN
 	bool "Durian"
 	depends on PLAT_AMBARELLA_A7L
 	default n
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	help
 	  Say Y here if you are using A7L Durian.
 
@@ -55,8 +49,6 @@ config MACH_ELEPHANT
 	bool "Elephant"
 	depends on PLAT_AMBARELLA_I1
 	default n
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	select CPUFREQ_AMBARELLA_DEVICE
 	help
 	  Say Y here if you are using iOne Elephant.
@@ -65,8 +57,6 @@ config MACH_FILBERT
 	bool "Filbert"
 	depends on PLAT_AMBARELLA_A7
 	default n
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	help
 	  Say Y here if you are using A7 Filbert.
 
@@ -74,8 +64,6 @@ config MACH_GINKGO
 	bool "Ginkgo"
 	depends on PLAT_AMBARELLA_S2
 	default n
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	help
 	  Say Y here if you are using S2 ginkgo.
 
@@ -97,22 +85,10 @@ config MACH_IXORA
 	bool "Ixora"
 	depends on PLAT_AMBARELLA_S2L
 	default n
-	select AMBARELLA_VIN
-	select AMBARELLA_VOUT
 	help
 	  Say Y here if you are using S2L Ixora.
 
 menu "Misc on Board Devices"
-
-comment "Ambarella"
-
-config AMBARELLA_VIN
-	bool "Suport Vin"
-	default y
-
-config AMBARELLA_VOUT
-	bool "Suport Vout"
-	default y
 
 comment "Touch"
 
