@@ -514,16 +514,6 @@ config AMBARELLA_DSP_UNCACHED
 
 endmenu
 
-menu "FIO Configuration"
-
-config AMBARELLA_FIO_FORCE_SDIO_GPIO
-	bool "Force SDIO Pins to GPIO mode when idle"
-	default n
-	help
-	  If you are not sure, say N here.
-
-endmenu
-
 config AMBARELLA_TIMER_HZ
 	int "Kernel HZ (jiffies per second)"
 	range 100 1000

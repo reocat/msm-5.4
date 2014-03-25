@@ -221,9 +221,6 @@ extern void ambarella_gpio_config(int id, int func);
 extern void ambarella_gpio_set(int id, int value);
 extern int ambarella_gpio_get(int id);
 
-extern void ambarella_gpio_raw_lock(u32 id, unsigned long *pflags);
-extern void ambarella_gpio_raw_unlock(u32 id, unsigned long *pflags);
-
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

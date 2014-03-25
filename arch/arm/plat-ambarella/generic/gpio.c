@@ -181,17 +181,6 @@ int ambarella_gpio_get(int id)
 EXPORT_SYMBOL(ambarella_gpio_get);
 
 /* ==========================================================================*/
-void ambarella_gpio_raw_lock(u32 id, unsigned long *pflags)
-{
-	spin_lock_irqsave(&ambarella_gpio_banks[id].lock, *pflags);
-}
-
-void ambarella_gpio_raw_unlock(u32 id, unsigned long *pflags)
-{
-	spin_unlock_irqrestore(&ambarella_gpio_banks[id].lock, *pflags);
-}
-
-/* ==========================================================================*/
 
 int __init ambarella_init_gpio(void)
 {

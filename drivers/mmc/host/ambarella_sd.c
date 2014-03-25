@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/of_gpio.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/mmc/slot-gpio.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
@@ -128,7 +129,12 @@ struct ambarella_sd_mmc_info {
 	u8				v18_gpio_active;
 	u32				no_1_8_v : 1,
 					caps_ddr : 1,
-					caps_adma : 1;
+					caps_adma : 1,
+					force_gpio : 1;
+
+	struct pinctrl			*pinctrl;
+	struct pinctrl_state		*state_work;
+	struct pinctrl_state		*state_idle;
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
@@ -424,20 +430,27 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 
 	down(&pslotinfo->system_event_sem);
 
-	if (pslotinfo->slot_id == 0)
+	if (pslotinfo->slot_id == 0) {
 		fio_select_lock(SELECT_FIO_SD);
-	else
+	} else {
 		fio_select_lock(SELECT_FIO_SDIO);
+		if (pslotinfo->force_gpio)
+			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_work);
+	}
+
 }
 
 static void ambarella_sd_release_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 
-	if (pslotinfo->slot_id == 0)
+	if (pslotinfo->slot_id == 0) {
 		fio_unlock(SELECT_FIO_SD);
-	else
+	} else {
+		if (pslotinfo->force_gpio)
+			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_idle);
 		fio_unlock(SELECT_FIO_SDIO);
+	}
 
 	up(&pslotinfo->system_event_sem);
 }
@@ -1531,11 +1544,11 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 static int ambarella_sd_init_slot(struct device_node *np, int id,
 			struct ambarella_sd_controller_info *pinfo)
 {
-	int retval = 0;
 	struct ambarella_sd_mmc_info *pslotinfo = NULL;
 	struct mmc_host *mmc;
 	enum of_gpio_flags flags;
 	u32 gpio_init_flag, hc_cap, hc_timeout_clk;
+	int retval = 0;
 
 	mmc = mmc_alloc_host(sizeof(*mmc), pinfo->dev);
 	if (!mmc) {
@@ -1553,6 +1566,31 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	pslotinfo->no_1_8_v = !!of_find_property(np, "no-1-8-v", NULL);
 	pslotinfo->caps_ddr = !!of_find_property(np, "amb,caps-ddr", NULL);
 	pslotinfo->caps_adma = !!of_find_property(np, "amb,caps-adma", NULL);
+	pslotinfo->force_gpio = !!of_find_property(np, "amb,force-gpio", NULL);
+	if (pslotinfo->force_gpio) {
+		pslotinfo->pinctrl = devm_pinctrl_get(pinfo->dev);
+		if (IS_ERR(pslotinfo->pinctrl)) {
+			retval = PTR_ERR(pslotinfo->pinctrl);
+			dev_err(pinfo->dev, "Can't get pinctrl: %d\n", retval);
+			goto init_slot_err1;
+		}
+
+		pslotinfo->state_work =
+			pinctrl_lookup_state(pslotinfo->pinctrl, "work");
+		if (IS_ERR(pslotinfo->state_work)) {
+			retval = PTR_ERR(pslotinfo->state_work);
+			dev_err(pinfo->dev, "Can't get pinctrl state: work\n");
+			goto init_slot_err1;
+		}
+
+		pslotinfo->state_idle =
+			pinctrl_lookup_state(pslotinfo->pinctrl, "idle");
+		if (IS_ERR(pslotinfo->state_idle)) {
+			retval = PTR_ERR(pslotinfo->state_idle);
+			dev_err(pinfo->dev, "Can't get pinctrl state: idle\n");
+			goto init_slot_err1;
+		}
+	}
 
 	/* request gpio for external power control */
 	pslotinfo->pwr_gpio = of_get_named_gpio_flags(np, "pwr-gpios", 0, &flags);

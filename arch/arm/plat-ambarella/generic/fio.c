@@ -116,13 +116,6 @@ void __fio_select_lock(int module)
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
 	amba_clrbitsl(SD_REG(SD_NISEN_OFFSET), SD_NISEN_CARD);
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
-#if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
-	if (module != SELECT_FIO_SDIO) {
-		ambarella_gpio_raw_lock(2, &flags);
-		amba_clrbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
-		ambarella_gpio_raw_unlock(2, &flags);
-	}
-#endif
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
@@ -133,11 +126,6 @@ void __fio_select_lock(int module)
 		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sd_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	} else if (module == SELECT_FIO_SDIO) {
-#if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
-		ambarella_gpio_raw_lock(2, &flags);
-		amba_setbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
-		ambarella_gpio_raw_unlock(2, &flags);
-#endif
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
 		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sdio_int);
 		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sdio_int);
@@ -267,18 +255,6 @@ EXPORT_SYMBOL(fio_amb_sdio0_set_int);
 /* ==========================================================================*/
 int __init ambarella_init_fio(void)
 {
-#if defined(CONFIG_AMBARELLA_FIO_FORCE_SDIO_GPIO)
-	unsigned long flags;
-
-	//SMIO_38 ~ SMIO_43
-	ambarella_gpio_raw_lock(2, &flags);
-	amba_clrbitsl(GPIO2_REG(GPIO_AFSEL_OFFSET), 0x000007e0);
-	amba_clrbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000780);
-	amba_setbitsl(GPIO2_REG(GPIO_DIR_OFFSET), 0x00000060);
-	amba_writel(GPIO2_REG(GPIO_MASK_OFFSET), 0x00000060);
-	amba_writel(GPIO2_REG(GPIO_DATA_OFFSET), 0x00000040);
-	ambarella_gpio_raw_unlock(2, &flags);
-#endif
 #if defined(CONFIG_AMBARELLA_RAW_BOOT)
 	amba_rct_writel(FIO_RESET_REG, (FIO_RESET_FIO_RST | FIO_RESET_CF_RST |
 		FIO_RESET_XD_RST | FIO_RESET_FLASH_RST));

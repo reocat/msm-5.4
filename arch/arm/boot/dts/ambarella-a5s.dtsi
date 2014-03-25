@@ -284,6 +284,18 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1010>;
 			};
+
+			sdio_pins: sdio@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1045 0x1046 0x1047
+						  0x1048 0x1049 0x104a>;
+			};
+
+			sdio_pins_idle: sdio_idle@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x0045 0x0046 0x0047
+						  0x0048 0x0049 0x004a>;
+			};
 		};
 	};
 
@@ -351,6 +363,7 @@
 				max-frequency = <24000000>;
 				bus-width = <4>;
 				cap-sdio-irq;
+				no-1-8-v;
 			};
 
 			slot@1 {
@@ -358,6 +371,12 @@
 				max-frequency = <24000000>;
 				bus-width = <4>;
 				cap-sdio-irq;
+				no-1-8-v;
+
+				amb,force-gpio;
+				pinctrl-names = "work", "idle";
+				pinctrl-0 = <&sdio_pins>;
+				pinctrl-1 = <&sdio_pins_idle>;
 			};
 		};
 
