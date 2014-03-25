@@ -45,8 +45,6 @@
 
 #include <plat/dma.h>
 
-#include "board-device.h"
-
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_idc0_mux,
@@ -139,24 +137,6 @@ static void __init ambarella_init_coconut(void)
 		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
 		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
-
-#if defined(CONFIG_TOUCH_AMBARELLA_AK4183)
-	ambarella_ak4183_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	i2c_register_board_info(0, &ambarella_ak4183_board_info, 1);
-#endif
-#if defined(CONFIG_TOUCH_AMBARELLA_CHACHA_MT4D)
-	ambarella_chacha_mt4d_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_chacha_mt4d_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_chacha_mt4d_board_info, 1);
-#endif
-#if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
-	ambarella_tm1510_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
-#endif
 }
 
 /* ==========================================================================*/

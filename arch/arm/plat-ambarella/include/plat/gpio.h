@@ -198,8 +198,6 @@ struct ambarella_gpio_io_info {
 
 extern int ambarella_set_gpio_output(
 	struct ambarella_gpio_io_info *pinfo, u32 on);
-extern int ambarella_set_gpio_reset(
-	struct ambarella_gpio_io_info *pinfo);
 
 struct ambarella_gpio_irq_info {
 	int	irq_gpio;

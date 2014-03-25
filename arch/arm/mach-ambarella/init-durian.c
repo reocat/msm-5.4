@@ -45,7 +45,6 @@
 
 #include <linux/input.h>
 #include <plat/dma.h>
-#include "board-device.h"
 #include <linux/mmc/host.h>
 
 static struct platform_device *ambarella_devices[] __initdata = {

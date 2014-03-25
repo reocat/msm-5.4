@@ -45,7 +45,6 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <plat/dma.h>
-#include "board-device.h"
 
 /* ==========================================================================*/
 static void __init ambarella_init_filbert(void)
@@ -71,13 +70,6 @@ static void __init ambarella_init_filbert(void)
 
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SDIO;
-
-#if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
-	ambarella_tm1510_board_info.irq =
-		ambarella_board_generic.touch_panel_irq.irq_line;
-	ambarella_tm1510_board_info.flags = 0;
-	i2c_register_board_info(0, &ambarella_tm1510_board_info, 1);
-#endif
 }
 
 /* ==========================================================================*/

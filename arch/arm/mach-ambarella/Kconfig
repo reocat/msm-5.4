@@ -88,57 +88,5 @@ config MACH_IXORA
 	help
 	  Say Y here if you are using S2L Ixora.
 
-menu "Misc on Board Devices"
-
-comment "Touch"
-
-config TOUCH_AMBARELLA_AK4183
-	bool "ak4183"
-	default n
-
-config TOUCH_AMBARELLA_CHACHA_MT4D
-	bool "chacha_mt4d"
-	default n
-
-config TOUCH_AMBARELLA_TM1510
-	bool "tm1510"
-	default n
-
-config TOUCH_AMBARELLA_TM1726
-	bool "tm1726"
-	default n
-
-config TOUCH_AMBARELLA_TM1927
-        bool "tm1927"
-        default n
-
-config TOUCH_AMBARELLA_FT540
-        bool "ft540"
-        default n
-
-config TOUCH_AMBARELLA_NT11001
-	bool "nt11001"
-	default n
-
-comment "Audio Codec"
-
-config CODEC_AMBARELLA_WM8994
-	bool "wm8994"
-	default n
-
-comment "PMIC"
-
-config PMIC_AMBARELLA_WM831X
-	bool "wm831x"
-	default n
-
-comment "cpufreq-dev"
-
-config CPUFREQ_AMBARELLA_DEVICE
-	bool "cpufreq-dev"
-	default n
-
-endmenu
-
 endif
 

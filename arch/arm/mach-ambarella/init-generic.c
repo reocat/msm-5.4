@@ -48,8 +48,6 @@
 #include <linux/delay.h>
 #include <plat/ambcache.h>
 
-#include "board-device.h"
-
 #include <plat/dma.h>
 
 #include <linux/input.h>

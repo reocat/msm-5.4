@@ -30,16 +30,3 @@ obj-$(CONFIG_MACH_HYACINTH_0)			+= init-hyacinth_0.o
 obj-$(CONFIG_MACH_HYACINTH_1)			+= init-hyacinth_1.o
 obj-$(CONFIG_MACH_IXORA)			+= init-ixora.o
 
-obj-$(CONFIG_TOUCH_AMBARELLA_AK4183)		+= touch-ak4183.o
-obj-$(CONFIG_TOUCH_AMBARELLA_CHACHA_MT4D)	+= touch-chacha_mt4d.o
-obj-$(CONFIG_TOUCH_AMBARELLA_TM1510)		+= touch-tm1510.o
-obj-$(CONFIG_TOUCH_AMBARELLA_TM1726)		+= touch-tm1726.o
-obj-$(CONFIG_TOUCH_AMBARELLA_TM1927)		+= touch-tm1927.o
-obj-$(CONFIG_TOUCH_AMBARELLA_NT11001)		+= touch-nt11001.o
-obj-$(CONFIG_TOUCH_AMBARELLA_FT540)		+= touch-ft540.o
-
-obj-$(CONFIG_CODEC_AMBARELLA_WM8994)		+= codec-wm8994.o
-
-obj-$(CONFIG_PMIC_AMBARELLA_WM831X)		+= wm831x-config.o
-obj-$(CONFIG_CPUFREQ_AMBARELLA_DEVICE)		+= cpufreq-dev.o
-

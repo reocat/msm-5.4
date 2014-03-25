@@ -52,8 +52,6 @@
 #include <linux/mmc/host.h>
 #include <plat/ambcache.h>
 
-#include "board-device.h"
-
 #include <plat/dma.h>
 #include <plat/clk.h>
 

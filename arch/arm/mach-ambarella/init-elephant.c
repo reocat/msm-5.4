@@ -53,8 +53,6 @@
 #include <linux/mmc/host.h>
 #include <plat/ambcache.h>
 
-#include "board-device.h"
-
 #include <plat/dma.h>
 #include <linux/rfkill-gpio.h>
 
@@ -135,8 +133,6 @@ static void __init ambarella_init_elephant(void)
 {
 	int					i, ret;
 	int					use_bub_default = 1;
-	int					use_ambarella_rtc0 = 1;
-	int					use_ambarella_wdt0 = 1;
 
 	ambarella_init_machine("Elephant", REF_CLK_FREQ);
 
@@ -147,9 +143,6 @@ static void __init ambarella_init_elephant(void)
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'C':
 		case 'B':
-#if defined(CONFIG_CODEC_AMBARELLA_WM8994)
-			ambarella_init_wm8994();
-#endif
 		case 'A':
 			ambarella_board_generic.lcd_reset.gpio_id = GPIO(105);
 			ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
@@ -195,10 +188,7 @@ static void __init ambarella_init_elephant(void)
 
 			ambarella_board_generic.power_control.gpio_id = GPIO(120);
 			ambarella_board_generic.power_control.active_level = GPIO_LOW;
-#if defined(CONFIG_PMIC_AMBARELLA_WM831X)
-			use_ambarella_rtc0 = 0;
-			use_ambarella_wdt0= 0;
-#endif
+
 			ambarella_board_generic.gsensor_power.gpio_id = GPIO(151);
 			ambarella_board_generic.gsensor_power.active_level = GPIO_HIGH;
 			ambarella_board_generic.gsensor_power.active_delay = 10;
@@ -209,10 +199,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.gsensor_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.gsensor_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
 
-#if defined(CONFIG_TOUCH_AMBARELLA_TM1726)
-			ambarella_tm1726_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
-			i2c_register_board_info(2, &ambarella_tm1726_board_info, 1);
-#endif
 			//vin0: Rear Sensor vin1: Front Sensor
 			ambarella_board_generic.vin0_power.gpio_id = GPIO(122);
 			ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
@@ -231,7 +217,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.vin1_af_power.active_delay = 1;
 
 			platform_device_register(&elephant_bt_rfkill);
-			platform_device_register(&i1evk_cpufreq_device);
 
 			ambarella_board_generic.pwm0_config.max_duty = 255;
 			ambarella_board_generic.pwm0_config.default_duty = 255;
@@ -273,11 +258,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.vin0_reset.gpio_id = GPIO(12);
 		ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
 		ambarella_board_generic.vin0_reset.active_delay = 100;
-
-#if defined(CONFIG_TOUCH_AMBARELLA_TM1510)
-		ambarella_tm1510_board_info.irq = ambarella_board_generic.touch_panel_irq.irq_line;
-		i2c_register_board_info(2, &ambarella_tm1510_board_info, 1);
-#endif
 
 		i2c_register_board_info(0, &elephant_board_ext_gpio_info, 1);
 		i2c_register_board_info(0, &elephant_board_ext_i2c_info, 1);
