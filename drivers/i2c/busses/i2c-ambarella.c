@@ -34,7 +34,6 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/clk.h>
 #include <asm/dma.h>
 
@@ -482,7 +481,6 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	int					errorCode;
 	struct ambarella_i2c_dev_info		*pinfo;
 	struct i2c_adapter			*adap;
-	struct pinctrl				*pinctrl;
 	struct resource				*mem;
 	u32					i2c_class = 0;
 
@@ -492,12 +490,6 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	pinfo->dev = &pdev->dev;
-
-	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
-	if (IS_ERR(pinctrl)) {
-		dev_err(&pdev->dev, "Failed to request pinctrl\n");
-		return PTR_ERR(pinctrl);
-	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {

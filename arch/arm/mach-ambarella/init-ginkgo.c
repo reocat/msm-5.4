@@ -62,8 +62,6 @@
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
-	int ret;
-
 #ifdef CONFIG_OUTER_CACHE
 	ambcache_l2_enable();
 #endif
@@ -79,9 +77,6 @@ static void __init ambarella_init_ginkgo(void)
 	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_IPCAM) {
 		switch (AMBARELLA_BOARD_REV(system_rev)) {
 		case 'A':
-#if defined(CONFIG_RTC_AMBARELLA_IS112022M)
-			i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
-#endif
 			break;
 
 		default:

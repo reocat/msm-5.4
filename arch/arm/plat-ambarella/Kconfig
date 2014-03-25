@@ -422,18 +422,6 @@ config AMBARELLA_SYS_PM_CALL
 	help
 	  If you are not sure, say N here.
 
-config AMBARELLA_SYS_RTC_CALL
-	bool "Support RTC Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
-config AMBARELLA_SYS_SPI_CALL
-	bool "Support SPI Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
 endmenu
 
 menu "Proc file system support"

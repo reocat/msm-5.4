@@ -48,29 +48,8 @@
 #include "board-device.h"
 #include <linux/mmc/host.h>
 
-/* ==========================================================================*/
-#include <linux/pda_power.h>
-static int ambarella_power_is_ac_online(void)
-{
-	return 1;
-}
-
-static struct pda_power_pdata  ambarella_power_supply_info = {
-	.is_ac_online    = ambarella_power_is_ac_online,
-};
-
-static struct platform_device ambarella_power_supply = {
-	.name = "pda-power",
-	.id   = -1,
-	.dev  = {
-		.platform_data = &ambarella_power_supply_info,
-	},
-};
-
-/* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_idc0_mux,
-	&ambarella_power_supply,
 };
 
 /* ==========================================================================*/

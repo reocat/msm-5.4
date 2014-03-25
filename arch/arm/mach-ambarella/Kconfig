@@ -154,12 +154,6 @@ config VOUT_CONVERTER_IT66121
 	bool "it66121"
 	default n
 
-comment "RTC"
-
-config RTC_AMBARELLA_IS112022M
-	bool "is112022m"
-	default n
-
 comment "Audio Codec"
 
 config CODEC_AMBARELLA_WM8994

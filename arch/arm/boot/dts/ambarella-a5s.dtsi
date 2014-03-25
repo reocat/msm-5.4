@@ -111,6 +111,24 @@
 			status = "disabled";
 	        };
 
+		i2cmux {
+			compatible = "i2c-mux-pinctrl";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c-parent = <&i2c0>;
+
+			pinctrl-names = "i2c2", "idle";
+			pinctrl-0 = <&i2c2_pins>;
+			pinctrl-1 = <&i2c2_pins_idle>;
+
+			i2c@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+
 		spi0: spi@70002000 {
 			compatible = "ambarella,spi";
 			#address-cells = <1>;
@@ -218,6 +236,16 @@
 			i2c1_pins: i2c1@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1056 0x1057>;
+			};
+
+			i2c2_pins: i2c2@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1024>;
+			};
+
+			i2c2_pins_idle: i2c2_idle@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x0024>;
 			};
 
 			ir_pins: ir0@0 {

@@ -48,27 +48,8 @@
 #include "board-device.h"
 
 /* ==========================================================================*/
-static int ambarella_power_is_ac_online(void)
-{
-	return 1;
-}
-
-static struct pda_power_pdata  ambarella_power_supply_info = {
-	.is_ac_online    = ambarella_power_is_ac_online,
-};
-
-static struct platform_device ambarella_power_supply = {
-	.name = "pda-power",
-	.id   = -1,
-	.dev  = {
-		.platform_data = &ambarella_power_supply_info,
-	},
-};
-
-/* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 	&ambarella_idc0_mux,
-	&ambarella_power_supply,
 };
 
 
@@ -179,12 +160,6 @@ static void __init ambarella_init_coconut(void)
 	i2c_register_board_info(0, ambarella_board_vin_infos,
 		ARRAY_SIZE(ambarella_board_vin_infos));
 	i2c_register_board_info(1, &ambarella_board_hdmi_info, 1);
-
-#if defined(CONFIG_RTC_AMBARELLA_IS112022M)
-	if (AMBARELLA_BOARD_REV(system_rev) >= 17) {
-		i2c_register_board_info(2, &ambarella_isl12022m_board_info, 1);
-	}
-#endif
 }
 
 /* ==========================================================================*/
