@@ -150,10 +150,6 @@ config LCD_AMBARELLA_1P3831
 	bool "1p3831"
 	default n
 
-config VOUT_CONVERTER_IT66121
-	bool "it66121"
-	default n
-
 comment "Audio Codec"
 
 config CODEC_AMBARELLA_WM8994
