@@ -86,12 +86,6 @@
 #define IDC_FMCTRL_IF			(0x02)
 
 /* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-extern struct platform_device ambarella_idc0_mux;
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_IDC_H__ */
 

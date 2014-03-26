@@ -53,27 +53,9 @@
 #include <linux/input.h>
 
 /* ==========================================================================*/
-static struct platform_device *ambarella_devices[] __initdata = {
-#if (AHCI_INSTANCES >= 1)
-	&ambarella_ahci0,
-#endif
-#if (IDC_SUPPORT_INTERNAL_MUX == 1)
-	&ambarella_idc0_mux,
-#endif
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_generic(void)
 {
-	int					i;
-
 	ambarella_init_machine("Generic", REF_CLK_FREQ);
-
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
-	}
 }
 
 /* ==========================================================================*/

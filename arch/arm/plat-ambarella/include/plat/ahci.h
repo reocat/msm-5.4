@@ -36,12 +36,6 @@
 #endif
 
 /* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-extern struct platform_device ambarella_ahci0;
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_AHCI_H__ */
 

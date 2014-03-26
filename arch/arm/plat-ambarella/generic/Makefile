@@ -22,7 +22,6 @@
 
 obj-y						+= audio.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)	+= fio.o
-obj-y						+= idc.o
 obj-y						+= init.o
 obj-y						+= clk.o
 obj-y						+= pll.o

@@ -46,12 +46,6 @@
 #include <plat/dma.h>
 
 /* ==========================================================================*/
-static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_idc0_mux,
-};
-
-
-/* ==========================================================================*/
 static void __init ambarella_init_coconut(void)
 {
 	int					i;
@@ -129,13 +123,6 @@ static void __init ambarella_init_coconut(void)
 
 		/* Config SD */
 		fio_default_owner = SELECT_FIO_SDIO;
-	}
-
-	/* Register devices */
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
 	}
 }
 

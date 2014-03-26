@@ -47,10 +47,6 @@
 #include <plat/dma.h>
 #include <linux/mmc/host.h>
 
-static struct platform_device *ambarella_devices[] __initdata = {
-	&ambarella_idc0_mux,
-};
-
 /* ==========================================================================*/
 static struct spi_board_info ambarella_spi_devices[] = {
 	{
@@ -150,12 +146,6 @@ static void __init ambarella_init_durian(void)
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
 
-	/* Register devices */
-	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
-	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
-		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
-		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
-	}
 
 	spi_register_board_info(ambarella_spi_devices,
 		ARRAY_SIZE(ambarella_spi_devices));
