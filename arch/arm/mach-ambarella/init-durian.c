@@ -48,107 +48,14 @@
 #include <linux/mmc/host.h>
 
 /* ==========================================================================*/
-static struct spi_board_info ambarella_spi_devices[] = {
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 0,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 1,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 2,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 3,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 4,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 5,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 6,
-	},
-	{
-		.modalias	= "spidev",
-		.bus_num	= 0,
-		.chip_select	= 7,
-	}
-};
-
-/* ==========================================================================*/
 static void __init ambarella_init_durian(void)
 {
 	int					i;
 
 	ambarella_init_machine("Durian", REF_CLK_FREQ);
 
-	/* Config Board */
-	ambarella_board_generic.lcd_reset.gpio_id = GPIO(113);
-	ambarella_board_generic.lcd_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.lcd_reset.active_delay = 1;
-
-	ambarella_board_generic.lcd_backlight.gpio_id = GPIO(47);
-	ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-	ambarella_board_generic.lcd_backlight.active_delay = 1;
-
-	ambarella_board_generic.lcd_spi_hw.bus_id = 0;
-	ambarella_board_generic.lcd_spi_hw.cs_id = 5;
-
-	ambarella_board_generic.lcd_spi_cfg.spi_mode = 0;
-	ambarella_board_generic.lcd_spi_cfg.cfs_dfs = 16;
-	ambarella_board_generic.lcd_spi_cfg.baud_rate = 5000000;
-	ambarella_board_generic.lcd_spi_cfg.cs_change = 0;
-
-	ambarella_board_generic.vin0_reset.gpio_id = GPIO(118);
-	ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
-	ambarella_board_generic.vin0_reset.active_delay = 100;
-
-	ambarella_board_generic.flash_charge_ready.irq_gpio = GPIO(51);
-	ambarella_board_generic.flash_charge_ready.irq_line = gpio_to_irq(51);
-	ambarella_board_generic.flash_charge_ready.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.flash_charge_ready.irq_gpio_val = GPIO_HIGH;
-	ambarella_board_generic.flash_charge_ready.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	ambarella_board_generic.flash_trigger.gpio_id = GPIO(54);
-	ambarella_board_generic.flash_trigger.active_level = GPIO_LOW;
-	ambarella_board_generic.flash_trigger.active_delay = 1;
-
-	ambarella_board_generic.flash_enable.gpio_id = GPIO(11);
-	ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
-	ambarella_board_generic.flash_enable.active_delay = 1;
-
-	ambarella_board_generic.gyro_irq.irq_gpio = GPIO(53);
-	ambarella_board_generic.gyro_irq.irq_line = gpio_to_irq(53);
-	ambarella_board_generic.gyro_irq.irq_type = IRQF_TRIGGER_RISING;
-	ambarella_board_generic.gyro_irq.irq_gpio_val = GPIO_HIGH;
-	ambarella_board_generic.gyro_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-	ambarella_board_generic.gyro_power.gpio_id = EXT_GPIO(46);
-	ambarella_board_generic.gyro_power.active_level = GPIO_HIGH;
-	ambarella_board_generic.gyro_power.active_delay = 1;
-
 	/* Config SD */
 	fio_default_owner = SELECT_FIO_SD;
-
-
-	spi_register_board_info(ambarella_spi_devices,
-		ARRAY_SIZE(ambarella_spi_devices));
 }
 
 /* ==========================================================================*/

@@ -43,102 +43,13 @@
 #include <mach/init.h>
 #include <mach/board.h>
 
-#include <plat/dma.h>
-
-/* ==========================================================================*/
-static void __init ambarella_init_coconut(void)
-{
-	int					i;
-
-	/* Config Board */
-	if (AMBARELLA_BOARD_TYPE(system_rev) == AMBARELLA_BOARD_TYPE_EVK) {
-		//vin0: Sensor
-		ambarella_board_generic.vin0_power.gpio_id = GPIO(82);
-		ambarella_board_generic.vin0_power.active_level = GPIO_HIGH;
-		ambarella_board_generic.vin0_power.active_delay = 1;
-
-		ambarella_board_generic.vin0_reset.gpio_id = GPIO(83);
-		ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
-		ambarella_board_generic.vin0_reset.active_delay = 1;
-
-		ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(95);
-		ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
-		ambarella_board_generic.vin0_vsync.irq_gpio_val = GPIO_HIGH;
-		ambarella_board_generic.vin0_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-		/* Config SD */
-		fio_default_owner = SELECT_FIO_SDIO;
-
-		ambarella_board_generic.wifi_power.gpio_id = GPIO(84);
-		ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
-		ambarella_board_generic.wifi_power.active_delay = 300;
-		ambarella_board_generic.wifi_sd_bus = 0;
-		ambarella_board_generic.wifi_sd_slot = 1;
-	} else {
-		ambarella_board_generic.debug_led0.gpio_id = GPIO(83);
-		ambarella_board_generic.debug_led0.active_level = GPIO_LOW;
-		ambarella_board_generic.debug_led0.active_delay = 0;
-
-		ambarella_board_generic.rs485.gpio_id = GPIO(31);
-		ambarella_board_generic.rs485.active_level = GPIO_LOW;
-		ambarella_board_generic.rs485.active_delay = 1;
-
-		ambarella_board_generic.touch_panel_irq.irq_gpio = GPIO(84);
-		ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
-		ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
-		ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-		if (AMBARELLA_BOARD_REV(system_rev) > 10) {
-			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(85);
-		} else {
-			ambarella_board_generic.lcd_backlight.gpio_id = GPIO(45);
-		}
-		ambarella_board_generic.lcd_backlight.active_level = GPIO_HIGH;
-		ambarella_board_generic.lcd_backlight.active_delay = 1;
-
-		ambarella_board_generic.lcd_spi_hw.bus_id = 0;
-		ambarella_board_generic.lcd_spi_hw.cs_id = 1;
-
-		ambarella_board_generic.vin0_vsync.irq_gpio = GPIO(95);
-		ambarella_board_generic.vin0_vsync.irq_type = IRQF_TRIGGER_RISING;
-		ambarella_board_generic.vin0_vsync.irq_gpio_val = GPIO_HIGH;
-		ambarella_board_generic.vin0_vsync.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-		ambarella_board_generic.vin0_reset.gpio_id = GPIO(93);
-		ambarella_board_generic.vin0_reset.active_level = GPIO_LOW;
-		ambarella_board_generic.vin0_reset.active_delay = 200;
-
-		ambarella_board_generic.flash_charge_ready.irq_gpio = GPIO(13);
-		ambarella_board_generic.flash_charge_ready.irq_type = IRQF_TRIGGER_RISING;
-		ambarella_board_generic.flash_charge_ready.irq_gpio_val = GPIO_HIGH;
-		ambarella_board_generic.flash_charge_ready.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-		ambarella_board_generic.flash_trigger.gpio_id = GPIO(46);
-		ambarella_board_generic.flash_trigger.active_level = GPIO_LOW;
-		ambarella_board_generic.flash_trigger.active_delay = 1;
-
-		ambarella_board_generic.flash_enable.gpio_id = GPIO(82);
-		ambarella_board_generic.flash_enable.active_level = GPIO_LOW;
-		ambarella_board_generic.flash_enable.active_delay = 1;
-
-		/* Config SD */
-		fio_default_owner = SELECT_FIO_SDIO;
-	}
-}
-
-/* ==========================================================================*/
-static struct of_dev_auxdata ambarella_auxdata_lookup[] __initdata = {
-	{}
-};
-
 static void __init ambarella_init_coconut_dt(void)
 {
 	ambarella_init_machine("coconut", REF_CLK_FREQ);
 
-	ambarella_init_coconut();
+	fio_default_owner = SELECT_FIO_SDIO;
 
-	of_platform_populate(NULL, of_default_bus_match_table,
-			ambarella_auxdata_lookup, NULL);
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
 
