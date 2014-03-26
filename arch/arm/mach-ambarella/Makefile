@@ -22,11 +22,6 @@
 
 obj-$(CONFIG_MACH_COCONUT)			+= init-coconut.o
 obj-$(CONFIG_MACH_DURIAN)			+= init-durian.o
-obj-$(CONFIG_MACH_ELEPHANT)			+= init-elephant.o
-obj-$(CONFIG_MACH_AMBARELLA)			+= init-generic.o
-obj-$(CONFIG_MACH_FILBERT)			+= init-filbert.o
 obj-$(CONFIG_MACH_GINKGO)			+= init-ginkgo.o
-obj-$(CONFIG_MACH_HYACINTH_0)			+= init-hyacinth_0.o
-obj-$(CONFIG_MACH_HYACINTH_1)			+= init-hyacinth_1.o
 obj-$(CONFIG_MACH_IXORA)			+= init-ixora.o
 

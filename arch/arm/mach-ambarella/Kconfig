@@ -45,41 +45,12 @@ config MACH_DURIAN
 	help
 	  Say Y here if you are using A7L Durian.
 
-config MACH_ELEPHANT
-	bool "Elephant"
-	depends on PLAT_AMBARELLA_I1
-	default n
-	select CPUFREQ_AMBARELLA_DEVICE
-	help
-	  Say Y here if you are using iOne Elephant.
-
-config MACH_FILBERT
-	bool "Filbert"
-	depends on PLAT_AMBARELLA_A7
-	default n
-	help
-	  Say Y here if you are using A7 Filbert.
-
 config MACH_GINKGO
 	bool "Ginkgo"
 	depends on PLAT_AMBARELLA_S2
 	default n
 	help
 	  Say Y here if you are using S2 ginkgo.
-
-config MACH_HYACINTH_0
-	bool "Hyacinth_0"
-	depends on PLAT_AMBARELLA_A8
-	default n
-	help
-	  Say Y here if you can't find suitable Board Name.
-
-config MACH_HYACINTH_1
-	bool "Hyacinth_1"
-	depends on PLAT_AMBARELLA_A8
-	default n
-	help
-	  Say Y here if you can't find suitable Board Name.
 
 config MACH_IXORA
 	bool "Ixora"
