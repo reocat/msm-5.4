@@ -1285,26 +1285,27 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 	case NAND_CMD_READOOB:
 		nand_info->dma_bufpos = column;
 		if (nand_info->ecc_bits > 1) {
-			u8 mn_area_ecc = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
+			u8 area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
 			nand_info->dma_bufpos = mtd->writesize;
 			nand_amb_read_data(nand_info, page_addr,
-					nand_info->dmaaddr, mn_area_ecc);
+					nand_info->dmaaddr, area);
 		} else {
 			nand_amb_read_data(nand_info, page_addr,
 					nand_info->dmaaddr, SPARE_ONLY);
 		}
 		break;
 	case NAND_CMD_READ0:
+	{
+		u8 area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
+
 		nand_info->dma_bufpos = column;
-		{
-			u8 area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
+		nand_amb_read_data(nand_info, page_addr, nand_info->dmaaddr, area);
+		if (nand_info->ecc_bits == 1)
 			nand_amb_read_data(nand_info, page_addr,
-					nand_info->dmaaddr, area);
-			if (nand_info->ecc_bits == 1)
-				nand_amb_read_data(nand_info, page_addr,
-					nand_info->dmaaddr + mtd->writesize, SPARE_ONLY);
-		}
+				nand_info->dmaaddr + mtd->writesize, SPARE_ONLY);
+
 		break;
+	}
 	case NAND_CMD_SEQIN:
 		nand_info->dma_bufpos = column;
 		nand_info->seqin_column = column;
@@ -1312,29 +1313,28 @@ static void amb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		break;
 	case NAND_CMD_PAGEPROG:
 	{
-		u8 mn_area, sp_area;
-		u32 offset;
-			mn_area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
-			sp_area = nand_amb_is_hw_bch(nand_info) ? SPARE_ECC : SPARE_ONLY;
-			offset = (nand_info->ecc_bits > 1) ? 0 : mtd->writesize;
+		u32 mn_area, sp_area, offset;
 
-			if (nand_info->seqin_column < mtd->writesize) {
+		mn_area = nand_info->soft_ecc ? MAIN_ONLY : MAIN_ECC;
+		sp_area = nand_amb_is_hw_bch(nand_info) ? SPARE_ECC : SPARE_ONLY;
+		offset = (nand_info->ecc_bits > 1) ? 0 : mtd->writesize;
+
+		if (nand_info->seqin_column < mtd->writesize) {
+			nand_amb_write_data(nand_info,
+				nand_info->seqin_page_addr,
+				nand_info->dmaaddr, mn_area);
+			if (nand_info->soft_ecc && nand_info->ecc_bits == 1) {
 				nand_amb_write_data(nand_info,
 					nand_info->seqin_page_addr,
-					nand_info->dmaaddr, mn_area);
-				if (nand_info->soft_ecc
-					&&nand_info->ecc_bits == 1) {
-					nand_amb_write_data(nand_info,
-						nand_info->seqin_page_addr,
-						nand_info->dmaaddr + mtd->writesize,
-						sp_area);
-				}
-			} else {
-				nand_amb_write_data(nand_info,
-					nand_info->seqin_page_addr,
-					nand_info->dmaaddr + offset,
+					nand_info->dmaaddr + mtd->writesize,
 					sp_area);
 			}
+		} else {
+			nand_amb_write_data(nand_info,
+				nand_info->seqin_page_addr,
+				nand_info->dmaaddr + offset,
+				sp_area);
+		}
 		break;
 	}
 	default:
