@@ -182,35 +182,6 @@ static inline int irq_to_gpio(unsigned irq)
 }
 
 /* ==========================================================================*/
-struct ambarella_gpio_io_info {
-	int	gpio_id;
-	int	active_level;
-	int	active_delay;		//ms
-};
-#define AMBA_GPIO_IO_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_cb(name_prefix##gpio_id, &param_ops_int, &(arg.gpio_id), perm); \
-	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm); \
-	module_param_cb(name_prefix##active_delay, &param_ops_int, &(arg.active_delay), perm)
-#define AMBA_GPIO_RESET_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_cb(name_prefix##gpio_id, &param_ops_int, &(arg.gpio_id), perm); \
-	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm); \
-	module_param_cb(name_prefix##active_delay, &param_ops_int, &(arg.active_delay), perm)
-
-struct ambarella_gpio_irq_info {
-	int	irq_gpio;
-	int	irq_line;
-	int	irq_type;
-	int	irq_gpio_val;
-	int	irq_gpio_mode;
-};
-#define AMBA_GPIO_IRQ_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_cb(name_prefix##irq_gpio, &param_ops_int, &(arg.irq_gpio), perm); \
-	module_param_cb(name_prefix##irq_line, &param_ops_int, &(arg.irq_line), perm); \
-	module_param_cb(name_prefix##irq_type, &param_ops_int, &(arg.irq_type), perm); \
-	module_param_cb(name_prefix##irq_gpio_val, &param_ops_int, &(arg.irq_gpio_val), perm); \
-	module_param_cb(name_prefix##irq_gpio_mode, &param_ops_int, &(arg.irq_gpio_mode), perm)
-
-/* ==========================================================================*/
 extern int ambarella_gpio_request(int gpio);
 extern int ambarella_gpio_set(int gpio, int value);
 extern int ambarella_gpio_get(int gpio);

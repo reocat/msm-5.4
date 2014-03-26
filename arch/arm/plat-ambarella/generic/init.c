@@ -33,7 +33,6 @@
 #include <asm/system_info.h>
 #include <asm/mach/map.h>
 #include <mach/hardware.h>
-#include <mach/board.h>
 #include <mach/init.h>
 #include <plat/debug.h>
 #include <plat/bapi.h>
@@ -271,18 +270,6 @@ EXPORT_SYMBOL(get_ambarella_proc_dir);
 int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 {
 	int ret_val = 0;
-
-	ambarella_board_generic.board_chip = AMBARELLA_BOARD_CHIP(system_rev);
-	ambarella_board_generic.board_type = AMBARELLA_BOARD_TYPE(system_rev);
-	ambarella_board_generic.board_rev = AMBARELLA_BOARD_REV(system_rev);
-
-	pr_info("Ambarella %s:\n", board_name);
-	pr_info("\tchip id:\t\t%d\n", ambarella_board_generic.board_chip);
-	pr_info("\tboard type:\t\t%d\n", ambarella_board_generic.board_type);
-	pr_info("\tboard revision:\t\t%d\n", ambarella_board_generic.board_rev);
-	ambarella_board_generic.board_poc = amba_rct_readl(SYS_CONFIG_REG);
-	pr_info("\tsystem configuration:\t0x%08x\n",
-		ambarella_board_generic.board_poc);
 
 #if defined(CONFIG_PLAT_AMBARELLA_LOWER_ARM_PLL)
 	amba_rct_writel(SCALER_ARM_ASYNC_REG, 0xF);

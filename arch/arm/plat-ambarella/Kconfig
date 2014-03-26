@@ -378,12 +378,6 @@ config AMBARELLA_PMUSERENR_EN
 menu "Sys file system support"
 depends on SYSFS
 
-config AMBARELLA_SYS_BOARD_CALL
-	bool "Support Board Configuration"
-	default n
-	help
-	  If you are not sure, say Y here.
-
 config AMBARELLA_SYS_CACHE_CALL
 	bool "Support Cache Configuration"
 	default n

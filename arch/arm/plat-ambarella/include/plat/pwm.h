@@ -68,26 +68,5 @@
 #define PWM_ST_TICKS_MAX_BITS		10
 #endif
 
-
-/* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-/* ==========================================================================*/
-struct ambarella_pwm_info {
-	unsigned int period_ns;
-	unsigned int max_duty;
-	unsigned int default_duty;
-	unsigned int active_level;
-};
-
-#define AMBA_PWM_MODULE_PARAM_CALL(name_prefix, arg, perm) \
-	module_param_cb(name_prefix##period_ns, &param_ops_int, &(arg.period_ns), perm); \
-	module_param_cb(name_prefix##max_duty, &param_ops_int, &(arg.max_duty), perm); \
-	module_param_cb(name_prefix##default_duty, &param_ops_int, &(arg.default_duty), perm); \
-	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm)
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
-
 #endif /* __PLAT_AMBARELLA_PWM_H__ */
 

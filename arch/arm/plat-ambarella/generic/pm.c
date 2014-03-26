@@ -37,7 +37,6 @@
 #include <asm/system.h>
 #include <asm/suspend.h>
 
-#include <mach/board.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
 

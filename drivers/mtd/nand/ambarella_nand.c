@@ -44,7 +44,6 @@
 #include <linux/mtd/partitions.h>
 #include <asm/dma.h>
 #include <mach/dma.h>
-#include <mach/board.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
 #include <plat/fio.h>
