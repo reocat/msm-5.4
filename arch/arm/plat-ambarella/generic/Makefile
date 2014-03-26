@@ -20,10 +20,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= ahci.o
 obj-y						+= audio.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)	+= fio.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)	+= gpio.o
 obj-y						+= idc.o
 obj-y						+= init.o
 obj-y						+= clk.o

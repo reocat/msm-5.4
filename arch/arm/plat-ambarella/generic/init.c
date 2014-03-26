@@ -294,11 +294,6 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ret_val = ambarella_clk_init(ref_freq);
 	BUG_ON(ret_val != 0);
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)
-	ret_val = ambarella_init_gpio();
-	BUG_ON(ret_val != 0);
-#endif /*CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO */
-
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)
 	ret_val = ambarella_init_fio();
 	BUG_ON(ret_val != 0);

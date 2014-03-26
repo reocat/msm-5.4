@@ -60,14 +60,7 @@ module_param(pm_force_power_on, int, 0644);
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
-	if (ambarella_board_generic.power_control.gpio_id >= 0) {
-		ambarella_set_gpio_output(
-			&ambarella_board_generic.power_control, 0);
-		ambarella_set_gpio_output(
-			&ambarella_board_generic.power_control, 1);
-	} else {
-		amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
-	}
+	amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
 }
 
 void ambarella_power_off_prepare(void)

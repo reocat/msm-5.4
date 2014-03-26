@@ -115,19 +115,6 @@ static struct i2c_board_info elephant_board_ext_i2c_info = {
 	.platform_data		= &elephant_board_ext_i2c_pdata,
 };
 
-/*==========================================================================*/
-static void elephant_ipcam_nvr_sdxc_set_vdd(u32 vdd)
-{
-	pr_debug("%s = %dmV\n", __func__, vdd);
-	ambarella_gpio_config(GPIO(23), GPIO_FUNC_SW_OUTPUT);
-	if (vdd == 1800) {
-		ambarella_gpio_set(GPIO(23), 0);
-	} else {
-		ambarella_gpio_set(GPIO(23), 1);
-	}
-	msleep(10);
-}
-
 /* ==========================================================================*/
 static void __init ambarella_init_elephant(void)
 {
@@ -165,10 +152,6 @@ static void __init ambarella_init_elephant(void)
 			ambarella_board_generic.touch_panel_irq.irq_type = IRQF_TRIGGER_FALLING;
 			ambarella_board_generic.touch_panel_irq.irq_gpio_val = GPIO_LOW;
 			ambarella_board_generic.touch_panel_irq.irq_gpio_mode = GPIO_FUNC_SW_INPUT;
-
-			ambarella_board_generic.hdmi_extpower.gpio_id = GPIO(104);
-			ambarella_board_generic.hdmi_extpower.active_level = GPIO_HIGH;
-			ambarella_board_generic.hdmi_extpower.active_delay = 1;
 
 			ambarella_board_generic.wifi_power.gpio_id = GPIO(109);
 			ambarella_board_generic.wifi_power.active_level = GPIO_HIGH;
@@ -232,10 +215,6 @@ static void __init ambarella_init_elephant(void)
 		ambarella_board_generic.sata_power.gpio_id = GPIO(122);
 		ambarella_board_generic.sata_power.active_level = GPIO_HIGH;
 		ambarella_board_generic.sata_power.active_delay = 1;
-
-		ambarella_board_generic.hdmi_extpower.gpio_id = GPIO(104);
-		ambarella_board_generic.hdmi_extpower.active_level = GPIO_HIGH;
-		ambarella_board_generic.hdmi_extpower.active_delay = 1;
 
 		use_bub_default = 0;
 	}

@@ -196,9 +196,6 @@ struct ambarella_gpio_io_info {
 	module_param_cb(name_prefix##active_level, &param_ops_int, &(arg.active_level), perm); \
 	module_param_cb(name_prefix##active_delay, &param_ops_int, &(arg.active_delay), perm)
 
-extern int ambarella_set_gpio_output(
-	struct ambarella_gpio_io_info *pinfo, u32 on);
-
 struct ambarella_gpio_irq_info {
 	int	irq_gpio;
 	int	irq_line;
@@ -214,12 +211,10 @@ struct ambarella_gpio_irq_info {
 	module_param_cb(name_prefix##irq_gpio_mode, &param_ops_int, &(arg.irq_gpio_mode), perm)
 
 /* ==========================================================================*/
-extern int ambarella_init_gpio(void);
-extern void ambarella_gpio_set_valid(unsigned pin, int valid);
-
-extern void ambarella_gpio_config(int id, int func);
-extern void ambarella_gpio_set(int id, int value);
-extern int ambarella_gpio_get(int id);
+extern int ambarella_gpio_request(int gpio);
+extern int ambarella_gpio_set(int gpio, int value);
+extern int ambarella_gpio_get(int gpio);
+extern void ambarella_gpio_free(int gpio);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

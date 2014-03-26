@@ -95,18 +95,6 @@ static struct spi_board_info ambarella_spi_devices[] = {
 	}
 };
 
-static void durian_bub_evk_sd_set_vdd(u32 vdd)
-{
-	pr_debug("%s = %dmV\n", __func__, vdd);
-	ambarella_gpio_config(GPIO(22), GPIO_FUNC_SW_OUTPUT);
-	if (vdd == 1800) {
-		ambarella_gpio_set(GPIO(22), 1);
-	} else {
-		ambarella_gpio_set(GPIO(22), 0);
-	}
-	msleep(10);
-}
-
 /* ==========================================================================*/
 static void __init ambarella_init_durian(void)
 {

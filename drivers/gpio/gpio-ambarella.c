@@ -536,3 +536,38 @@ MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella SoC GPIO driver");
 MODULE_LICENSE("GPL v2");
 
+/* gpio function wrapper, should be removed finally */
+int ambarella_gpio_request(int gpio)
+{
+	char label[8];
+
+	snprintf(label, 8, "gpio%d", gpio);
+
+	return gpio_request(gpio, label);
+}
+EXPORT_SYMBOL(ambarella_gpio_request);
+
+int ambarella_gpio_get(int gpio)
+{
+	int rval;
+
+	rval = gpio_direction_input(gpio);
+	if (rval < 0)
+		return rval;
+
+	return gpio_get_value_cansleep(gpio);
+}
+EXPORT_SYMBOL(ambarella_gpio_get);
+
+int ambarella_gpio_set(int gpio, int value)
+{
+	return gpio_direction_output(gpio, value);
+}
+EXPORT_SYMBOL(ambarella_gpio_set);
+
+void ambarella_gpio_free(int gpio)
+{
+	gpio_free(gpio);
+}
+EXPORT_SYMBOL(ambarella_gpio_free);
+
