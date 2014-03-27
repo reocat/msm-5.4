@@ -240,7 +240,7 @@ const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE] =
 	{    82524269819260,	17,	 1,	14,	 29},
 	{    83333335816860,	16,	 1,	14,	 27},
 	{    84158413112164,	18,	 1,	14,	 30},
-	{    85000000894070,	16,	 1,	15,	 25},
+	{    85000000894070,	16,	 0,	13,	 14},
 	{    85858583450317,	17,	 1,	14,	 28},
 	{    86734697222710,	16,	 1,	14,	 26},
 	{    87628863751888,	18,	 1,	15,	 27},
@@ -276,7 +276,7 @@ const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE] =
 	{   114478111267090,	17,	 1,	14,	 21},
 	{   115646257996559,	16,	 1,	13,	 21},
 	{   116838485002518,	17,	 1,	13,	 22},
-	{   118055552244186,	16,	 1,	15,	 18},
+	{   118055552244186,	16,	 0,	11,	 12},
 	{   119298242032528,	16,	 1,	14,	 19},
 	{   120567373931408,	16,	 1,	13,	 20},
 	{   121863797307014,	17,	 1,	13,	 21},
@@ -887,6 +887,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			amba_rct_writel(c->post_reg, post_scaler);
 		} else if (c->extra_scaler == 1) {
 			post_scaler--;
+			if (post_scaler > 15){
+				printk("post_scaler can't bigger than 15\r\n");
+				goto ambarella_rct_clk_set_rate_exit;
+			}
 			post_scaler <<= 4;
 			amba_rct_writel_en(c->post_reg, post_scaler);
 		}
