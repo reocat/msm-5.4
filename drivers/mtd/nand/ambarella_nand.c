@@ -52,8 +52,6 @@
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 #define AMB_SOFT_BCH_EXTRA_SIZE		6
 
-/* nand_check_wp will be checked before write, so wait MTD fix */
-#undef AMBARELLA_NAND_WP
 
 struct ambarella_nand_info {
 	struct nand_chip		chip;
@@ -78,6 +76,7 @@ struct ambarella_nand_info {
 	bool				id_cycles_5;
 	bool				pllx2;
 	bool				soft_ecc;
+	bool				nand_wp;
 
 	/* used for software BCH */
 	struct bch_control		*bch;
@@ -672,13 +671,10 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 	fio_select_lock(SELECT_FIO_FL);
 
-#ifdef AMBARELLA_NAND_WP
-	if ((cmd == NAND_AMB_CMD_ERASE ||
-		cmd == NAND_AMB_CMD_COPYBACK ||
-		cmd == NAND_AMB_CMD_PROGRAM) &&
-		gpio_is_valid(nand_info->wp_gpio))
-		gpio_direction_output(nand_info->wp_gpio, GPIO_HIGH);
-#endif
+	if ((nand_info->nand_wp) &&
+		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
+		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS))
+			nand_ctr_reg &= ~NAND_CTR_WP;
 
 	switch (cmd) {
 	case NAND_AMB_CMD_RESET:
@@ -969,13 +965,12 @@ nand_amb_request_done:
 	if (nand_info->err_code == 0)
 		nand_info->err_code = errorCode;
 
-#ifdef AMBARELLA_NAND_WP
-	if ((cmd == NAND_AMB_CMD_ERASE ||
-		cmd == NAND_AMB_CMD_COPYBACK ||
-		cmd == NAND_AMB_CMD_PROGRAM) &&
-		gpio_is_valid(nand_info->wp_gpio))
-		gpio_direction_output(nand_info->wp_gpio, GPIO_LOW);
-#endif
+	if ((nand_info->nand_wp) &&
+		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
+		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS)) {
+			nand_ctr_reg |= NAND_CTR_WP;
+			amba_writel(nand_info->regbase + FLASH_CTR_OFFSET, nand_ctr_reg);
+	}
 
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
 		&& nand_amb_is_hw_bch(nand_info))
@@ -1597,6 +1592,9 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 	nand_info->control_reg |= (NAND_CTR_P3 | NAND_CTR_I4 | NAND_CTR_IE);
 	nand_info->id_cycles_5 = NAND_READ_ID5;
 
+	if(nand_info->nand_wp)
+		nand_info->control_reg |= NAND_CTR_WP;
+
 	chip->chip_delay = 0;
 	chip->controller = &nand_info->controller;
 	chip->read_byte = amb_nand_read_byte;
@@ -1738,16 +1736,7 @@ static int ambarella_nand_get_resource(
 		goto nand_get_resource_err_exit;
 	}
 
-	nand_info->wp_gpio = of_get_gpio(np, 0);
-	if (gpio_is_valid(nand_info->wp_gpio)) {
-		errorCode = gpio_request_one(nand_info->wp_gpio,
-					GPIOF_OUT_INIT_HIGH, pdev->name);
-		if (errorCode < 0) {
-			dev_err(&pdev->dev, "Could not get WP GPIO %d, %d\n",
-				nand_info->wp_gpio, errorCode);
-			goto nand_get_resource_err_exit;
-		}
-	}
+	nand_info->nand_wp = !!of_find_property(np, "amb,enable-wp", NULL);
 
 	errorCode = of_property_read_u32_array(np, "amb,timing",
 			nand_info->timing, 6);
