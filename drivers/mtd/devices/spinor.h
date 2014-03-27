@@ -31,7 +31,7 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/dmaengine.h>
-#include <mach/dma.h>
+#include <plat/dma.h>
 
 #include <plat/ptb.h>
 #include <linux/spi/spi.h>

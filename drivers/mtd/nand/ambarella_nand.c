@@ -37,13 +37,11 @@
 #include <linux/bch.h>
 #include <linux/io.h>
 #include <linux/clk.h>
-#include <linux/of_gpio.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
-#include <asm/dma.h>
-#include <mach/dma.h>
+#include <plat/dma.h>
 #include <plat/nand.h>
 #include <plat/ptb.h>
 #include <plat/fio.h>
