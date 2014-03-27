@@ -40,7 +40,12 @@
 
 #define PART_MAX_WITH_RSV	32
 
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 #define PART_MAX		20
+#else
+#define PART_MAX		15
+#endif
+
 #define CMDLINE_PART_MAX	8
 
 #define HAS_IMG_PARTS		15
@@ -63,6 +68,7 @@ typedef struct flpart_s
 
 #define FLDEV_CMD_LINE_SIZE	1024
 
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 typedef struct netdev_s
 {
 	/* This section contains networking related settings */
@@ -71,7 +77,19 @@ typedef struct netdev_s
 	u32	mask;		/**< Boot loader's LAN mask */
 	u32	gw;		/**< Boot loader's LAN gateway */
 } __attribute__((packed)) netdev_t;
+#else
+typedef struct netdev_s
+{
+	/* This section contains networking related settings */
+	u8	mac[6];		/**< MAC address*/
+	u8	rsv[2];
+	u32	ip;		/**< Boot loader's LAN IP */
+	u32	mask;		/**< Boot loader's LAN mask */
+	u32	gw;		/**< Boot loader's LAN gateway */
+} __attribute__((packed)) netdev_t;
+#endif
 
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 typedef struct fldev_s
 {
 	char	sn[32];		/**< Serial number */
@@ -103,8 +121,25 @@ typedef struct fldev_s
 
 	u32	magic;		/**< Magic number */
 } __attribute__((packed)) fldev_t;
+#else
+typedef struct fldev_s
+{
+	char	sn[32];		/**< Serial number */
+	u8	usbdl_mode;	/**< USB download mode */
+	u8	auto_boot;	/**< Automatic boot */
+	u8	rsv[2];
+	char	cmdline[FLDEV_CMD_LINE_SIZE];	/**< Boot command line options */
+	u32	splash_id;
 
+	/* This section contains networking related settings */
+	netdev_t wifi[2];
 
+	u32	magic;		/**< Magic number */
+} __attribute__((packed)) fldev_t;
+
+#endif
+
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 #define PTB_SIZE		4096
 #define PTB_PAD_SIZE		\
 	(PTB_SIZE - PART_MAX_WITH_RSV * sizeof(flpart_t) - sizeof(fldev_t))
@@ -116,7 +151,19 @@ typedef struct flpart_table_s
 	fldev_t		dev;			/**< Device properties */
 	u8		rsv[PTB_PAD_SIZE];	/**< Padding to 2048 bytes */
 } __attribute__((packed)) flpart_table_t;
+#else
+#define PTB_SIZE		4096
+#define PTB_PAD_SIZE		\
+	(PTB_SIZE - PART_MAX_WITH_RSV * sizeof(flpart_t) - sizeof(fldev_t))
 
+typedef struct flpart_table_s
+{
+	flpart_t	part[PART_MAX_WITH_RSV];/** Partitions */
+	/* ------------------------------------------ */
+	fldev_t		dev;			/**< Device properties */
+	u8		rsv[PTB_PAD_SIZE];	/**< Padding to 2048 bytes */
+} __attribute__((packed)) flpart_table_t;
+#endif
 
 /**
  * The meta data table is a region in flash after partition table.
@@ -127,12 +174,21 @@ typedef struct flpart_table_s
 /* For second version of flpart_meta_t */
 #define PTB_META_MAGIC2		0x4432a0ce
 #define PTB_META_MAGIC3		0x42405891
+
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 #define PART_NAME_LEN		8
 #define PTB_META_ACTURAL_LEN	((sizeof(u32) * 2 + PART_NAME_LEN + \
 				sizeof(u32)) * PART_MAX + sizeof(u32) + \
 				sizeof(u32) + FW_MODEL_NAME_SIZE)
+#else
+#define PART_NAME_LEN		32
+#define PTB_META_ACTURAL_LEN            \
+    ((sizeof(u32) * 2 + PART_NAME_LEN + sizeof(u32)) * PART_MAX + \
+     sizeof(u32) + sizeof(u32) + FW_MODEL_NAME_SIZE)
+#endif
 #define PTB_META_SIZE		2048
 #define PTB_META_PAD_SIZE	(PTB_META_SIZE - PTB_META_ACTURAL_LEN)
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 typedef struct flpart_meta_s
 {
 	struct {
@@ -148,6 +204,32 @@ typedef struct flpart_meta_s
 	/* It's only calc data before this field.  */
 	u32 	crc32;
 } __attribute__((packed)) flpart_meta_t;
+#else
+typedef struct flpart_meta_s
+{
+	struct {
+		u32	sblk;
+		u32	nblk;
+		char	name[PART_NAME_LEN];
+	} part_info[PART_MAX];
+
+	u32	magic;				/**< Magic number */
+	u32	part_dev[PART_MAX];
+	u8	model_name[FW_MODEL_NAME_SIZE];
+
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
+	struct {
+		u32	sblk;
+		u32	nblk;
+	} sm_stg[2];
+#endif
+	/* This meta crc32 doesn't include itself. */
+	/* It's only calc data before this field.  */
+	u32 	crc32;
+
+	u8 	rsv[PTB_META_PAD_SIZE];
+} __attribute__((packed)) flpart_meta_t;
+#endif
 
 #endif /* __ASSEMBLER__ */
 

@@ -1,0 +1,262 @@
+#include "ambafs.h"
+#include <linux/pagemap.h>
+
+struct readdir_db {
+	struct ambafs_stat *stat;
+	unsigned            nlink;
+	unsigned            offset;
+	struct ambafs_msg   msg;
+};
+
+/*
+ * find a inode by its path
+ */
+static ino_t ambafs_inode_lookup(struct dentry *dir, char *name)
+{
+	struct qstr qname;
+
+	qname.name = name;
+	qname.len = strlen(name);
+
+	return find_inode_number(dir, &qname);
+}
+
+/*
+ * update the inode field
+ */
+static void ambafs_update_inode(struct super_block *sb,
+		struct inode *inode, struct ambafs_stat *stat)
+{
+	struct timespec ftime;
+
+	ftime.tv_sec = stat->atime;
+	ftime.tv_nsec = 0;
+
+	inode->i_uid = inode->i_gid = 0;
+	inode->i_blocks = 0;
+	inode->i_atime = inode->i_mtime = inode->i_ctime = ftime;
+	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
+	inode->i_size = stat->size;
+
+	inode->i_mode = 0644;
+	if (stat->type == AMBAFS_STAT_FILE) {
+		inode->i_mode |= S_IFREG;
+		inode->i_fop = &ambafs_file_ops;
+		inode->i_mapping->a_ops = &ambafs_aops;
+		inode->i_mapping->backing_dev_info = &ambafs_bdi;
+	} else {
+		inode->i_mode |= S_IFDIR;
+		inode->i_fop = &ambafs_dir_ops;
+		inode->i_op = &ambafs_dir_inode_ops;
+	}
+}
+
+/*
+ *  create a new inode based on @stat coming from remote core
+ */
+struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
+{
+	struct inode *inode;
+
+	inode = new_inode(sb);
+	if (!inode)
+		return NULL;
+
+	ambafs_update_inode(sb, inode, stat);
+
+	/*AMBAFS_DMSG("%s %s size=%d ino=%d\n", __FUNCTION__,
+	  stat->name, (int)inode->i_size, (int)inode->i_ino);*/
+	return inode;
+}
+
+/*
+ * create a new inode and add the corresponding dentry
+ */
+static ino_t ambafs_inode_create(struct dentry *dir, struct ambafs_stat* stat)
+{
+	struct inode *inode;
+	struct dentry *dentry;
+
+	inode = ambafs_new_inode(dir->d_sb, stat);
+	if (!inode)
+		return 0;
+
+	dentry = d_alloc_name(dir, stat->name);
+	if (!dentry) {
+		iput(inode);
+		return 0;
+	}
+
+	d_add(dentry, inode);
+	inode->i_private = dentry;
+	dput(dentry);
+	return inode->i_ino;
+}
+
+/*
+ * put full path of @dir into @buf
+ */
+int ambafs_get_full_path(struct dentry *dir, char *buf, int len)
+{
+        char *src, *dst;
+	char *root = (char*)dir->d_sb->s_fs_info;
+
+	dst = buf;
+	strcpy(dst, root);
+	dst += strlen(dst);
+
+	src = dentry_path_raw(dir, buf, len);
+	len = strlen(src);
+	if (len > 1) {
+		// if this is not root dir, copy the string
+		// need to use memmov since dst and src might overlap
+		memmove(dst, src, len+1);
+		dst += len;
+	}
+
+	return dst - buf;
+}
+
+/*
+ * process return msg for readdir
+ *   Here we parse each @stat and then fill it to user-space buffer by
+ *   filldir. If the directory has tons of files and filldir fails,
+ *   we save the context at the point of failure so we can resume the
+ *   time we got called.
+ */
+static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
+			void *dirent, filldir_t filldir)
+{
+	ino_t ino;
+	int stat_idx = 0, stat_len;
+	struct ambafs_msg  *msg  = &dir_db->msg;
+	struct ambafs_stat *stat = dir_db->stat;
+
+	while (stat_idx < msg->flag) {
+		if (stat->type == AMBAFS_STAT_DIR)
+			dir_db->nlink++;
+
+		if (!strcmp(stat->name, ".") || !strcmp(stat->name, ".."))
+			goto next_stat;
+
+		ino = ambafs_inode_lookup(dir, stat->name);
+		if (!ino) {
+			ino = ambafs_inode_create(dir, stat);
+			if (!ino) {
+				AMBAFS_EMSG("readdir fail for new node\n");
+				BUG();
+			}
+		} else {
+			//ambafs_update_inode(inode, stat);
+		}
+
+		if (filldir(dirent, stat->name, strlen(stat->name),
+			    dir_db->offset++,  ino,
+			    stat->type == AMBAFS_STAT_FILE ? DT_REG : DT_DIR)) {
+			/*AMBAFS_DMSG("filldir paused at %s\n", stat->name);*/
+			dir_db->stat = stat;
+			msg->flag -= stat_idx;
+			if (stat->type == AMBAFS_STAT_DIR)
+				dir_db->nlink--;
+			return 1;
+		}
+
+next_stat:
+		stat_idx++;
+		stat_len = offsetof(struct ambafs_stat, name);
+		stat_len += strlen(stat->name) + 1;
+		stat_len = (stat_len + 7) & ~7;
+		stat = (struct ambafs_stat*)((char*)stat + stat_len);
+	}
+
+	msg->flag = 0;
+	dir_db->stat = (struct ambafs_stat*)msg->parameter;
+	return 0;
+}
+
+/*
+ * Kick off a readdir operation
+ *   We allocate a page to hold all info because filldir might fail.
+ */
+static int start_readdir(struct file *file)
+{
+	struct readdir_db  *dir_db;
+	struct ambafs_msg  *msg;
+	struct dentry      *dir = file->f_dentry;
+	char *path;
+
+	dir_db = (struct readdir_db*)get_zeroed_page(GFP_KERNEL);
+	if (!dir_db)
+		return -ENOMEM;
+	file->f_pos = (loff_t)((unsigned)dir_db);
+
+	msg = &dir_db->msg;
+	path = (char*)msg->parameter;
+	ambafs_get_full_path(dir, path, 2048);
+	strcat(path, "/*");
+	//AMBAFS_DMSG("readdir start %s\n", path);
+
+	msg->cmd = AMBAFS_CMD_LS_INIT;
+	msg->flag = 16;
+	ambafs_rpmsg_exec(msg, strlen(path) + 1);
+        dir_db->stat = (struct ambafs_stat*)msg->parameter;
+
+	return (msg->flag != 0) ? 0 : -ENODEV;
+}
+
+/*
+ * send LS_INIT/LS_NEXT/LS_EXIT rpmsg to get the directory info
+ *    f_pos == 0: readdir is started
+ *    f_pos == LLONG_MAX: readdir is completely finished.
+ *    otherwise, f_pos holds the page address
+ */
+static int ambafs_dir_readdir(struct file *file, void *dirent, filldir_t filldir)
+{
+	struct readdir_db  *dir_db;
+	struct ambafs_msg  *msg;
+	struct dentry      *dir = file->f_dentry;
+
+	if (file->f_pos == LLONG_MAX)
+		return 0;
+
+	if (file->f_pos == 0) {
+		if (start_readdir(file)) {
+			printk(KERN_ERR "start_readdir nodev\n");
+			goto ls_exit;
+		}
+	}
+
+	dir_db = (struct readdir_db*)((unsigned)file->f_pos);
+	msg = &(dir_db->msg);
+	if (msg->flag)
+		fill_dir_from_msg(dir_db, dir, dirent, filldir);
+
+        while (1) {
+		msg->flag = 16;
+		msg->cmd = AMBAFS_CMD_LS_NEXT;
+		ambafs_rpmsg_exec(msg, 4);
+	        if (msg->flag == 0)
+			break;
+
+		if (fill_dir_from_msg(dir_db, dir, dirent, filldir))
+			return 1;
+	}
+	set_nlink(file->f_dentry->d_inode, dir_db->nlink);
+
+ls_exit:
+	/* note that LS_EXIT doesn't expect a reply */
+	//AMBAFS_DMSG("readdir end\n");
+	dir_db = (struct readdir_db*)((unsigned)file->f_pos);
+	msg = &(dir_db->msg);
+	msg->cmd = AMBAFS_CMD_LS_EXIT;
+	ambafs_rpmsg_send(msg, 4, NULL, 0);
+	free_page((unsigned long)file->f_pos);
+	file->f_pos = LLONG_MAX;
+	return 0;
+}
+
+const struct file_operations ambafs_dir_ops = {
+	.read    = generic_read_dir,
+	.readdir = ambafs_dir_readdir,
+};
+

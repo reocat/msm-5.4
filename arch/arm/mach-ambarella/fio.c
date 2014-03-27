@@ -151,6 +151,22 @@ static bool fio_check_free(u32 module)
 
 void fio_select_lock(int module)
 {
+
+#if defined(CONFIG_AMBALINK_LOCK)
+		switch (module) {
+		case SELECT_FIO_SD:
+		case SELECT_FIO_SDIO:
+			aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
+			break;
+		case SELECT_FIO_SD2:
+			aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
+			break;
+		default:
+			aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
+			aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
+		}
+#endif	/* CONFIG_AMBALINK_LOCK */
+
 	wait_event(fio_wait, fio_check_free(module));
 	__fio_select_lock(module);
 }
@@ -174,6 +190,21 @@ void fio_unlock(int module)
 	}
 
 	spin_unlock_irqrestore(&fio_lock, flags);
+#if defined(CONFIG_AMBALINK_LOCK)
+	switch (module) {
+	case SELECT_FIO_SD:
+	case SELECT_FIO_SDIO:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD0);
+		return;
+	case SELECT_FIO_SD2:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD1);
+		return;
+	default:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD0);
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD1);
+		return;
+	}
+#endif	/* CONFIG_AMBALINK_LOCK */
 }
 EXPORT_SYMBOL(fio_unlock);
 

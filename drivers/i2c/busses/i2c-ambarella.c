@@ -34,6 +34,7 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/aipc/ipc_mutex.h>
 #include <linux/clk.h>
 #include <asm/dma.h>
 
@@ -128,7 +129,19 @@ static int ambarella_i2c_system_event(struct notifier_block *nb,
 
 	case AMBA_EVENT_POST_CPUFREQ:
 		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
+#if defined(CONFIG_AMBALINK_LOCK)
+		if (pdev->id == 2) {
+			aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+			enable_irq(pinfo->irq);
+		}
+#endif
 		ambarella_i2c_set_clk(pinfo);
+#if defined(CONFIG_AMBALINK_LOCK)
+		if (pdev->id == 2) {
+			disable_irq(pinfo->irq);
+			aipc_mutex_unlock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+		}
+#endif
 		up(&pinfo->system_event_sem);
 		break;
 
@@ -424,6 +437,14 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	pinfo = (struct ambarella_i2c_dev_info *)i2c_get_adapdata(adap);
 
+#if defined(CONFIG_AMBALINK_LOCK)
+	if (adap->nr == 2) {
+		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+		ambarella_i2c_set_clk(pinfo);
+		enable_irq(pinfo->irq);
+	}
+#endif
+
 	down(&pinfo->system_event_sem);
 
 	for (retryCount = 0; retryCount < adap->retries; retryCount++) {
@@ -456,6 +477,13 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	}
 
 	up(&pinfo->system_event_sem);
+
+#if defined(CONFIG_AMBALINK_LOCK)
+	if (adap->nr == 2) {
+		disable_irq(pinfo->irq);
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+	}
+#endif
 
 	if (errorCode)
 		return errorCode;
@@ -539,7 +567,20 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	init_waitqueue_head(&pinfo->msg_wait);
 	sema_init(&pinfo->system_event_sem, 1);
 
+#if defined(CONFIG_AMBALINK_LOCK)
+	if (pdev->id == 2) {
+		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+		enable_irq(pinfo->irq);
+	}
+#endif
 	ambarella_i2c_hw_init(pinfo);
+
+#if defined(CONFIG_AMBALINK_LOCK)
+	if (pdev->id == 2) {
+		disable_irq(pinfo->irq);
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+	}
+#endif
 
 	platform_set_drvdata(pdev, pinfo);
 
@@ -549,6 +590,12 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Request IRQ failed!\n");
 		return errorCode;
 	}
+
+#if defined(CONFIG_AMBALINK_LOCK)
+	if (pdev->id == 2) {
+		disable_irq(pinfo->irq);
+	}
+#endif
 
 	adap = &pinfo->adap;
 	i2c_set_adapdata(adap, pinfo);

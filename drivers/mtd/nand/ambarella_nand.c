@@ -48,6 +48,16 @@
 #include <plat/fio.h>
 #include <plat/event.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+#include <plat/ambalink_cfg.h>
+/*
+ * NAND DSM bug: doing copyback after a read command will be failed.
+ * We need to save the last NAND command of Linux to notify ThreadX to
+ * workaround this bug.
+ */
+u32 ambalink_nand_last_cmd_addr;
+#endif
+
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 #define AMB_SOFT_BCH_EXTRA_SIZE		6
 
@@ -301,6 +311,7 @@ static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u8 tcls, tals, tcs, tds;
 	u8 tclh, talh, tch, tdh;
 	u8 twp, twh, twb, trr;
@@ -432,6 +443,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT0BIT(tar);
 
 	amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, val);
+#endif
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -450,7 +462,9 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 
 	case AMBA_EVENT_POST_CPUFREQ:
 		pr_debug("%s: Post Change\n", __func__);
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 		amb_nand_set_timing(nand_info);
+#endif
 		up(&nand_info->system_event_sem);
 		break;
 
@@ -527,6 +541,11 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 	u32					int_src;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
+
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+		if (nand_info->cmd == 0)
+			return IRQ_HANDLED;
+#endif
 
 	int_src = amba_readl(nand_info->fdmaregbase + FDMA_INT_OFFSET);
 
@@ -666,6 +685,22 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 	fio_select_lock(SELECT_FIO_FL);
 
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	enable_irq(nand_info->cmd_irq);
+	enable_irq(nand_info->dma_irq);
+	enable_irq(nand_info->fdma_irq);
+	/* Write current command to the magic address to notify ThreadX. */
+	amba_writel(ambalink_nand_last_cmd_addr, cmd);
+#endif
+
+#ifdef AMBARELLA_NAND_WP
+	if ((cmd == NAND_AMB_CMD_ERASE ||
+		cmd == NAND_AMB_CMD_COPYBACK ||
+		cmd == NAND_AMB_CMD_PROGRAM) &&
+		gpio_is_valid(nand_info->wp_gpio))
+		gpio_direction_output(nand_info->wp_gpio, GPIO_HIGH);
+#endif
+	
 	if ((nand_info->nand_wp) &&
 		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
 		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS))
@@ -970,6 +1005,13 @@ nand_amb_request_done:
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
 		&& nand_amb_is_hw_bch(nand_info))
 		nand_amb_disable_bch(nand_info);
+
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+		nand_info->cmd = 0;
+		disable_irq(nand_info->cmd_irq);
+		disable_irq(nand_info->dma_irq);
+		disable_irq(nand_info->fdma_irq);
+#endif
 
 	fio_unlock(SELECT_FIO_FL);
 
@@ -1768,11 +1810,13 @@ static int ambarella_nand_get_resource(
 		goto nand_get_resource_free_fiocmd_irq;
 	}
 
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	/* init fdma to avoid dummy irq */
 	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
 	amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
 	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
 		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+#endif
 
 	errorCode = request_irq(nand_info->fdma_irq, ambarella_fdma_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
@@ -1836,6 +1880,23 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	errorCode = ambarella_nand_get_resource(nand_info, pdev);
 	if (errorCode < 0)
 		goto ambarella_nand_probe_free_dma;
+
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	/*
+	 * Disablle the IRQs, which by default are enabled when requested.
+	 * Otherwise, it causes the unbalenced IRQ enable/disable checking
+	 * failed when the first time nand_amb_request() is called.
+	 */
+	disable_irq(nand_info->cmd_irq);
+	disable_irq(nand_info->dma_irq);
+	disable_irq(nand_info->fdma_irq);
+	/*
+	 * NAND DSM bug: doing copyback after a read command will be failed.
+	 * We need to save the last NAND command of Linux to notify ThreadX to
+	 * workaround this bug.
+	 */
+	ambalink_nand_last_cmd_addr = ambarella_phys_to_virt(AIPC_MUTEX_ADDR) - 0x4;
+#endif
 
 	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
 

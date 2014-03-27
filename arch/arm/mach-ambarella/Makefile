@@ -30,4 +30,4 @@ obj-y						+= timer.o
 obj-y						+= soc/
 obj-y						+= smp/
 obj-y						+= misc/
-
+obj-y						+= init.o

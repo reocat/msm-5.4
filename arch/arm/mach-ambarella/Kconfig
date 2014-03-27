@@ -256,7 +256,7 @@ config PLAT_AMBARELLA_S2_CORTEX
 	select PLAT_AMBARELLA_CORTEX_SMP
 	select PLAT_AMBARELLA_CORTEX_BST
 	select PLAT_AMBARELLA_MEM_START_LOW
-	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
+	select PLAT_AMBARELLA_SUPPORT_HW_CRYPTO if !PLAT_AMBARELLA_AMBALINK
 	select PLAT_AMBARELLA_SUPPORT_MMAP_AXI
 	select ARM_ERRATA_754322
 	select ARM_ERRATA_764369 if SMP
@@ -475,7 +475,38 @@ config AMBARELLA_EXT_GPIO_NUM
 	help
 	  Depends on your HW design.
 
+
+config AMBARELLA_SDIO_MAX_CLK
+	int "Maximum clock rate of SDIO"
+	range 1 50000000
+	default 48000000
+	depends on PLAT_AMBARELLA_AMBALINK && MACH_GINKGO
+	help
+	  Maximum clock rate of SDIO.
+
+config AMBARELLA_SDIO_CD_PIN
+	bool "Enable card detection pin of SDIO socket"
+	default n
+	depends on PLAT_AMBARELLA_AMBALINK && MACH_GINKGO
+	help
+	  Enable card detection pin of SDIO socket.
+	  The card detection pin of SDIO is GPIO-75.
+	  For most embedded application, CD pin is fixed.
+
+	  If unsure, say N.
+
+config AMBARELLA_SDIO_EGPIO_WIFI_EN
+	int "External GPIO pin number for enabling Wi-Fi (power)"
+	range 0 256
+	default 1
+	depends on PLAT_AMBARELLA_AMBALINK && MACH_GINKGO
+	help
+	  External GPIO pin number for enabling Wi-Fi (power).
+	  High as enable.
+
 endmenu
+
+source "arch/arm/plat-ambarella/ambalink/Kconfig"
 
 endif
 

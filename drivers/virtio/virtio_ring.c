@@ -24,6 +24,12 @@
 #include <linux/module.h>
 #include <linux/hrtimer.h>
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+#define SG_PHYS(sg) (page_to_phys(sg_page(sg)) + sg->offset - DEFAULT_MEM_START)
+#else
+#define SG_PHYS(sg) sg_phys(sg)
+#endif
+
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
 #define BAD_RING(_vq, fmt, args...)				\
@@ -145,7 +151,7 @@ static inline int vring_add_indirect(struct vring_virtqueue *vq,
 	for (n = 0; n < out_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_out)) {
 			desc[i].flags = VRING_DESC_F_NEXT;
-			desc[i].addr = sg_phys(sg);
+			desc[i].addr = SG_PHYS(sg);
 			desc[i].len = sg->length;
 			desc[i].next = i+1;
 			i++;
@@ -154,7 +160,7 @@ static inline int vring_add_indirect(struct vring_virtqueue *vq,
 	for (; n < (out_sgs + in_sgs); n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_in)) {
 			desc[i].flags = VRING_DESC_F_NEXT|VRING_DESC_F_WRITE;
-			desc[i].addr = sg_phys(sg);
+			desc[i].addr = SG_PHYS(sg);
 			desc[i].len = sg->length;
 			desc[i].next = i+1;
 			i++;
@@ -248,7 +254,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	for (n = 0; n < out_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_out)) {
 			vq->vring.desc[i].flags = VRING_DESC_F_NEXT;
-			vq->vring.desc[i].addr = sg_phys(sg);
+			vq->vring.desc[i].addr = SG_PHYS(sg);
 			vq->vring.desc[i].len = sg->length;
 			prev = i;
 			i = vq->vring.desc[i].next;
@@ -257,7 +263,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	for (; n < (out_sgs + in_sgs); n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_in)) {
 			vq->vring.desc[i].flags = VRING_DESC_F_NEXT|VRING_DESC_F_WRITE;
-			vq->vring.desc[i].addr = sg_phys(sg);
+			vq->vring.desc[i].addr = SG_PHYS(sg);
 			vq->vring.desc[i].len = sg->length;
 			prev = i;
 			i = vq->vring.desc[i].next;
