@@ -20,8 +20,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-$(CONFIG_MACH_COCONUT)			+= init-coconut.o
-obj-$(CONFIG_MACH_DURIAN)			+= init-durian.o
-obj-$(CONFIG_MACH_GINKGO)			+= init-ginkgo.o
-obj-$(CONFIG_MACH_IXORA)			+= init-ixora.o
+obj-y						+= fio.o
+obj-y						+= init.o
+obj-y						+= clk.o
+obj-y						+= pll.o
+obj-y						+= pm.o
+obj-y						+= timer.o
+
+obj-y						+= soc/
+obj-y						+= smp/
+obj-y						+= misc/
 

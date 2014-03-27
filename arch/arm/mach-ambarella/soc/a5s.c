@@ -38,28 +38,19 @@
 #include <mach/hardware.h>
 #include <mach/init.h>
 
-static void __init ambarella_init_coconut_dt(void)
-{
-	ambarella_init_machine("coconut", REF_CLK_FREQ);
-
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
-}
-
-
 static const char * const a5s_dt_board_compat[] = {
 	"ambarella,a5s",
-	"ambarella,coconut",
 	NULL,
 };
 
-DT_MACHINE_START(COCONUT_DT, "Ambarella A5S (Flattened Device Tree)")
-	.restart_mode	=	's',
-	.map_io		=	ambarella_map_io,
-	.init_early	=	ambarella_init_early,
-	.init_irq	=	irqchip_init,
-	.init_time	=	ambarella_timer_init,
-	.init_machine	=	ambarella_init_coconut_dt,
-	.restart	=	ambarella_restart_machine,
-	.dt_compat	=	a5s_dt_board_compat,
+DT_MACHINE_START(A5S_DT, "Ambarella A5S (Flattened Device Tree)")
+	.restart_mode	= 's',
+	.map_io		= ambarella_map_io,
+	.init_early	= ambarella_init_early,
+	.init_irq	= irqchip_init,
+	.init_time	= ambarella_timer_init,
+	.init_machine	= ambarella_init_machine,
+	.restart	= ambarella_restart_machine,
+	.dt_compat	= a5s_dt_board_compat,
 MACHINE_END
 

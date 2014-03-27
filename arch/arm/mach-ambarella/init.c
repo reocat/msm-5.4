@@ -29,6 +29,7 @@
 #include <linux/export.h>
 #include <linux/clk.h>
 #include <linux/of_fdt.h>
+#include <linux/of_platform.h>
 #include <asm/cacheflush.h>
 #include <asm/system_info.h>
 #include <asm/mach/map.h>
@@ -267,7 +268,7 @@ EXPORT_SYMBOL(get_ambarella_proc_dir);
 
 
 /* ==========================================================================*/
-int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
+void __init ambarella_init_machine(void)
 {
 	int ret_val = 0;
 
@@ -278,13 +279,11 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ret_val = ambarella_create_proc_dir();
 	BUG_ON(ret_val != 0);
 
-	ret_val = ambarella_clk_init(ref_freq);
+	ret_val = ambarella_clk_init();
 	BUG_ON(ret_val != 0);
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)
 	ret_val = ambarella_init_fio();
 	BUG_ON(ret_val != 0);
-#endif /*CONFIG_PLAT_AMBARELLA_SUPPORT_FIO */
 
 	ret_val = ambarella_init_fb();
 	BUG_ON(ret_val != 0);
@@ -299,7 +298,7 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ambcache_l2_enable();
 #endif
 
-	return ret_val;
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
 void ambarella_restart_machine(char mode, const char *cmd)

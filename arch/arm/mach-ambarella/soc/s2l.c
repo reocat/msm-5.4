@@ -1,9 +1,9 @@
 /*
- * arch/arm/mach-ambarella/init-durian.c
+ * arch/arm/mach-ambarella/init-ixora.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
- * Copyright (C) 2004-2010, Ambarella, Inc.
+ * Copyright (C) 2004-2013, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,38 +23,24 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/platform_device.h>
-#include <linux/dma-mapping.h>
+#include <linux/of_platform.h>
 #include <linux/irqchip.h>
-
-#include <asm/mach-types.h>
 #include <asm/mach/arch.h>
-#include <asm/system_info.h>
-
-#include <mach/hardware.h>
 #include <mach/init.h>
-#include <linux/irq.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
 
-#include <linux/input.h>
+static const char * const s2l_dt_board_compat[] = {
+	"ambarella,s2l",
+	NULL,
+};
 
-/* ==========================================================================*/
-static void __init ambarella_init_durian(void)
-{
-	int					i;
-
-	ambarella_init_machine("Durian", REF_CLK_FREQ);
-}
-
-/* ==========================================================================*/
-MACHINE_START(DURIAN, "Durian")
-	.atag_offset	= 0x100,
+DT_MACHINE_START(S2L_DT, "Ambarella S2L (Flattened Device Tree)")
 	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
+	.init_early	= ambarella_init_early,
 	.init_irq	= irqchip_init,
 	.init_time	= ambarella_timer_init,
-	.init_machine	= ambarella_init_durian,
+	.init_machine	= ambarella_init_machine,
 	.restart	= ambarella_restart_machine,
+	.dt_compat	= s2l_dt_board_compat,
 MACHINE_END
 

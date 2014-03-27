@@ -43,18 +43,8 @@
 #include <plat/bapi.h>
 
 /* ==========================================================================*/
-#ifdef MODULE_PARAM_PREFIX
-#undef MODULE_PARAM_PREFIX
-#endif
-#define MODULE_PARAM_PREFIX	"ambarella_config."
-
-/* ==========================================================================*/
 static int pm_check_power_supply = 1;
 static int pm_force_power_on = 0;
-#if defined(CONFIG_AMBARELLA_SYS_PM_CALL)
-module_param(pm_check_power_supply, int, 0644);
-module_param(pm_force_power_on, int, 0644);
-#endif
 
 /* ==========================================================================*/
 void ambarella_power_off(void)

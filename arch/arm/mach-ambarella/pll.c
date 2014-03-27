@@ -22,25 +22,13 @@
  */
 
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/list.h>
-#include <linux/errno.h>
-#include <linux/err.h>
-#include <linux/platform_device.h>
-#include <linux/delay.h>
-#include <linux/mutex.h>
 #include <linux/io.h>
-#include <linux/export.h>
 #include <linux/clk.h>
-#include <asm/uaccess.h>
-#include <mach/hardware.h>
 #include <plat/clk.h>
 #include <plat/fio.h>
 #include <plat/spi.h>
 
-
-/* ==========================================================================*/
 static struct clk pll_out_core = {
 	.parent		= NULL,
 	.name		= "pll_out_core",

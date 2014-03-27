@@ -1,12 +1,9 @@
 /*
- * arch/arm/plat-ambarella/include/mach/irqs.h
+ * arch/arm/mach-ambarella/init-durian.c
  *
- * History:
- *	2007/01/27 - [Charles Chiou] created file
- *	2008/02/19 - [Allen Wang] changed to use capabilities and chip ID	
- *	2008/05/13 - [Allen Wang] added capabilities of A2S and A2M silicons	 
+ * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2004-2010, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,21 +21,33 @@
  *
  */
 
-#ifndef __ASM_ARCH_IRQS_H
-#define __ASM_ARCH_IRQS_H
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/platform_device.h>
+#include <linux/dma-mapping.h>
+#include <linux/irqchip.h>
 
-/* ==========================================================================*/
+#include <asm/mach-types.h>
+#include <asm/mach/arch.h>
+#include <asm/system_info.h>
+
 #include <mach/hardware.h>
-#include <plat/irq.h>
+#include <mach/init.h>
+#include <linux/irq.h>
+#include <linux/interrupt.h>
+#include <linux/delay.h>
+
+#include <linux/input.h>
 
 /* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-#define IRQ_LOCALTIMER		29
-/* ==========================================================================*/
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
-
-#endif
+MACHINE_START(A7L_DT, "Durian")
+	.atag_offset	= 0x100,
+	.restart_mode	= 's',
+	.map_io		= ambarella_map_io,
+	.init_early	= ambarella_init_early,
+	.init_irq	= irqchip_init,
+	.init_time	= ambarella_timer_init,
+	.init_machine	= ambarella_init_machine,
+	.restart	= ambarella_restart_machine,
+MACHINE_END
 

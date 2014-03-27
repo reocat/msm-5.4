@@ -929,7 +929,6 @@ endmenu
 #
 source "arch/arm/mach-mvebu/Kconfig"
 
-source "arch/arm/plat-ambarella/Kconfig"
 source "arch/arm/mach-ambarella/Kconfig"
 
 source "arch/arm/mach-at91/Kconfig"

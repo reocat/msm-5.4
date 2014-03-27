@@ -1,9 +1,9 @@
 #
-# arch/arm/plat-ambarella/generic/Makefile
+# arch/arm/mach-ambarella/soc/Makefile
 #
-# Author: Anthony Ginger <hfjiang@ambarella.com>
+# Author: Cao Rongrong <rrcao@ambarella.com>
 #
-# Copyright (C) 2004-2011, Ambarella, Inc.
+# Copyright (C) 2012-2016, Ambarella, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,13 +20,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= audio.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)	+= fio.o
-obj-y						+= init.o
-obj-y						+= clk.o
-obj-y						+= pll.o
-obj-y						+= pm.o
-obj-y						+= hwlock.o
-obj-y						+= timer.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
+obj-$(CONFIG_PLAT_AMBARELLA_A5S)			+= a5s.o
+obj-$(CONFIG_PLAT_AMBARELLA_A7L)			+= a7l.o
+obj-$(CONFIG_PLAT_AMBARELLA_S2_CORTEX)			+= s2-cortex.o
+obj-$(CONFIG_PLAT_AMBARELLA_S2L)			+= s2l.o
 

@@ -42,29 +42,21 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
-static void __init ambarella_init_ginkgo_dt(void)
-{
-	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
-
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
-}
-
 
 static const char * const s2_dt_board_compat[] = {
 	"ambarella,s2",
-	"ambarella,ginkgo",
 	NULL,
 };
 
-DT_MACHINE_START(GINKGO_DT, "Ambarella S2 (Flattened Device Tree)")
-	.restart_mode	=	's',
-	.smp		=	smp_ops(ambarella_smp_ops),
-	.map_io		=	ambarella_map_io,
-	.init_early	=	ambarella_init_early,
-	.init_irq	=	irqchip_init,
-	.init_time	=	ambarella_timer_init,
-	.init_machine	=	ambarella_init_ginkgo_dt,
-	.restart	=	ambarella_restart_machine,
-	.dt_compat	=	s2_dt_board_compat,
+DT_MACHINE_START(S2_DT, "Ambarella S2 (Flattened Device Tree)")
+	.restart_mode	= 's',
+	.smp		= smp_ops(ambarella_smp_ops),
+	.map_io		= ambarella_map_io,
+	.init_early	= ambarella_init_early,
+	.init_irq	= irqchip_init,
+	.init_time	= ambarella_timer_init,
+	.init_machine	= ambarella_init_machine,
+	.restart	= ambarella_restart_machine,
+	.dt_compat	= s2_dt_board_compat,
 MACHINE_END
 

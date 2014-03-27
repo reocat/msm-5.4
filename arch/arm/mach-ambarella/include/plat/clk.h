@@ -25,7 +25,6 @@
 #define __PLAT_AMBARELLA_CLK_H__
 
 #include <plat/rct.h>
-/* ==========================================================================*/
 
 /* ==========================================================================*/
 #define PLL_REG_UNAVAILABLE	0
@@ -229,7 +228,7 @@ extern unsigned long ambarella_rct_scaler_get_rate(struct clk *c);
 extern int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate);
 extern struct clk_ops ambarella_rct_scaler_ops;
 
-extern int ambarella_clk_init(unsigned int ref_freq);
+extern int ambarella_clk_init(void);
 extern int ambarella_clk_add(struct clk *clk);
 extern unsigned int ambarella_clk_get_ref_freq(void);
 

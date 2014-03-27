@@ -1433,11 +1433,11 @@ static const struct file_operations proc_clock_fops = {
 #endif
 
 /* ==========================================================================*/
-int __init ambarella_clk_init(unsigned int ref_freq)
+int __init ambarella_clk_init(void)
 {
 	int ret_val = 0;
 
-	ambarella_clk_ref_freq = ref_freq;
+	ambarella_clk_ref_freq = REF_CLK_FREQ;
 #if defined(CONFIG_AMBARELLA_PLL_PROC)
 	proc_create_data("clock", S_IRUGO, get_ambarella_proc_dir(),
 		&proc_clock_fops, NULL);
