@@ -41,6 +41,7 @@
 #include <linux/slab.h>
 #include <linux/irqchip/chained_irq.h>
 #include <linux/irqchip/arm-gic.h>
+#include <linux/syscore_ops.h>
 
 #include <asm/irq.h>
 #include <asm/exception.h>
@@ -629,6 +630,14 @@ static struct notifier_block gic_notifier_block = {
 	.notifier_call = gic_notifier,
 };
 
+u32 gic_suspend(u32 level);
+u32 gic_resume(u32 level);
+
+struct syscore_ops gic_syscore_ops = {
+	.suspend	= gic_suspend,
+	.resume		= gic_resume,
+};
+
 static void __init gic_pm_init(struct gic_chip_data *gic)
 {
 	gic->saved_ppi_enable = __alloc_percpu(DIV_ROUND_UP(32, 32) * 4,
@@ -641,6 +650,8 @@ static void __init gic_pm_init(struct gic_chip_data *gic)
 
 	if (gic == &gic_data[0])
 		cpu_pm_register_notifier(&gic_notifier_block);
+
+	register_syscore_ops(&gic_syscore_ops);
 }
 #else
 static void __init gic_pm_init(struct gic_chip_data *gic)
@@ -973,16 +984,5 @@ gic_dist_pm_exit:
 	return retval;
 }
 
-struct syscore_ops gic_syscore_ops = {
-	.suspend	= gic_suspend,
-	.resume		= gic_resume,
-};
-
-static int __init gic_pm_init(void)
-{
-	register_syscore_ops(&gic_syscore_ops);
-	return 0;
-}
-late_initcall(gic_pm_init);
 #endif /* CONFIG_PM */
 

@@ -272,6 +272,7 @@ EXPORT_SYMBOL(ambarella_set_gpio_output);
 /* ==========================================================================*/
 u32 ambarella_gpio_suspend(u32 level)
 {
+#if 0
 	u32					i;
 	unsigned long				flags;
 
@@ -298,12 +299,13 @@ u32 ambarella_gpio_suspend(u32 level)
 		                                                   ambarella_gpio_banks[i].base_reg + GPIO_DATA_OFFSET);
 		spin_unlock_irqrestore(&ambarella_gpio_banks[i].lock, flags);
 	}
-
+#endif
 	return 0;
 }
 
 u32 ambarella_gpio_resume(u32 level)
 {
+#if 0
 	u32					i;
 	unsigned long				flags;
 
@@ -341,7 +343,7 @@ u32 ambarella_gpio_resume(u32 level)
 		aipc_spin_unlock(AMBA_IPC_SPINLOCK_GPIO);
 #endif
 	}
-
+#endif
 	return 0;
 }
 
