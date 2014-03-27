@@ -26,28 +26,21 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/irqchip.h>
-#include <linux/spi/spi.h>
-#include <linux/spi/spidev.h>
 #include <linux/of_platform.h>
-#include <linux/i2c.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/input.h>
-#include <linux/pda_power.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/system_info.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
-#include <mach/board.h>
 
 static void __init ambarella_init_coconut_dt(void)
 {
 	ambarella_init_machine("coconut", REF_CLK_FREQ);
-
-	fio_default_owner = SELECT_FIO_SDIO;
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }

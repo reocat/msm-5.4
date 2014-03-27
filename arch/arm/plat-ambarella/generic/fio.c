@@ -26,47 +26,37 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/platform_device.h>
-#include <linux/dma-mapping.h>
 #include <linux/sched.h>
-#include <linux/delay.h>
-#include <linux/moduleparam.h>
-#include <linux/clk.h>
-
 #include <asm/io.h>
 #include <asm/setup.h>
-
 #include <mach/hardware.h>
-#include <plat/dma.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/nand.h>
-#include <plat/audio.h>
-#include <plat/clk.h>
 
-/* ==========================================================================*/
-#ifdef MODULE_PARAM_PREFIX
-#undef MODULE_PARAM_PREFIX
-#endif
-#define MODULE_PARAM_PREFIX	"ambarella_config."
 
-/* ==========================================================================*/
 #if (CHIP_REV != S2L)
 
 static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
+static DEFINE_SPINLOCK(fio_sd0_int_lock);
 
 static u32 fio_owner = SELECT_FIO_FREE;
-static atomic_t fio_sd_owner_cnt = ATOMIC_INIT(0);
-int fio_default_owner = SELECT_FIO_FREE;
-#if defined(CONFIG_AMBARELLA_SYS_FIO_CALL)
-module_param_cb(fio_owner, &param_ops_int, &fio_owner, 0644);
-module_param_cb(fio_default_owner, &param_ops_int, &fio_default_owner, 0644);
+static u32 fio_sd_owner_cnt = 0;
+#if (CHIP_REV == A5S)
+static u32 fio_default_owner = SELECT_FIO_SDIO;
+#else
+static u32 fio_default_owner = SELECT_FIO_SD;
 #endif
-
-static DEFINE_SPINLOCK(fio_sd0_int_lock);
 static u32 fio_sd_int = 0;
 static u32 fio_sdio_int = 0;
+
+static int __init fio_default_owner_init(char *p)
+{
+	fio_default_owner = simple_strtoul(p, NULL, 0);
+	return 0;
+}
+early_param("fio_default_owner", fio_default_owner_init);
 
 void __fio_select_lock(int module)
 {
@@ -151,7 +141,7 @@ static bool fio_check_free(u32 module)
 	}
 
 	if (is_free && module == SELECT_FIO_SD)
-		atomic_inc(&fio_sd_owner_cnt);
+		fio_sd_owner_cnt++;
 
 	spin_unlock_irqrestore(&fio_lock, flags);
 
@@ -174,7 +164,7 @@ void fio_unlock(int module)
 
 	spin_lock_irqsave(&fio_lock, flags);
 
-	if (module != SELECT_FIO_SD || atomic_dec_and_test(&fio_sd_owner_cnt))
+	if (module != SELECT_FIO_SD || --fio_sd_owner_cnt == 0)
 		fio_owner = SELECT_FIO_FREE;
 
 	if (fio_owner == SELECT_FIO_FREE) {

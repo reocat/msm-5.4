@@ -390,12 +390,6 @@ config AMBARELLA_SYS_BAPI_CALL
 	help
 	  If you are not sure, say N here.
 
-config AMBARELLA_SYS_FIO_CALL
-	bool "Support FIO Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
 config AMBARELLA_SYS_PM_CALL
 	bool "Support Power Management Configuration"
 	default n

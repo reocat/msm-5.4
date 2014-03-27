@@ -33,19 +33,11 @@
 
 #include <mach/hardware.h>
 #include <mach/init.h>
-#include <mach/board.h>
-
-#include <linux/spi/spi.h>
-#include <linux/spi/spidev.h>
-
-#include <linux/i2c.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
 #include <linux/input.h>
-#include <plat/dma.h>
-#include <linux/mmc/host.h>
 
 /* ==========================================================================*/
 static void __init ambarella_init_durian(void)
@@ -53,9 +45,6 @@ static void __init ambarella_init_durian(void)
 	int					i;
 
 	ambarella_init_machine("Durian", REF_CLK_FREQ);
-
-	/* Config SD */
-	fio_default_owner = SELECT_FIO_SD;
 }
 
 /* ==========================================================================*/

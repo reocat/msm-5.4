@@ -36,30 +36,15 @@
 
 #include <mach/hardware.h>
 #include <mach/init.h>
-#include <mach/board.h>
 #include <mach/common.h>
-
-#include <linux/spi/spi.h>
-#include <linux/spi/spidev.h>
-
-#include <linux/i2c.h>
-#include <linux/i2c/pca953x.h>
 
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
-#include <linux/mmc/host.h>
-#include <plat/ambcache.h>
-
-#include <plat/dma.h>
-#include <plat/clk.h>
-
 static void __init ambarella_init_ginkgo_dt(void)
 {
 	ambarella_init_machine("ginkgo", REF_CLK_FREQ);
-
-	fio_default_owner = SELECT_FIO_SD;
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
