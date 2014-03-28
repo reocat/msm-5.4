@@ -26,14 +26,16 @@
  */
 
 #include <linux/module.h>
+#include <linux/of.h>
+#include <sound/core.h>
+#include <sound/pcm.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <plat/audio.h>
-
-#include "ambarella_i2s.h"
 #include <linux/mfd/wm8994/core.h>
 #include <linux/mfd/wm8994/registers.h>
 #include "../codecs/wm8994.h"
+#include "ambarella_i2s.h"
 
 /* Headset jack */
 static struct snd_soc_jack hs_jack;

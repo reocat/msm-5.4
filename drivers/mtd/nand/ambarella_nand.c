@@ -36,6 +36,7 @@
 #include <linux/bitrev.h>
 #include <linux/bch.h>
 #include <linux/io.h>
+#include <linux/of.h>
 #include <linux/clk.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -68,7 +69,6 @@ struct ambarella_nand_info {
 	int				cmd_irq;
 	/* fdma irq for transferring data between FIFO and Dram */
 	int				fdma_irq;
-	int				wp_gpio;
 	u32				ecc_bits;
 	/* if or not support to read id in 5 cycles */
 	bool				id_cycles_5;
@@ -1756,7 +1756,7 @@ static int ambarella_nand_get_resource(
 	if (errorCode < 0) {
 		dev_err(&pdev->dev, "Could not register fio_cmd_irq %d!\n",
 			nand_info->cmd_irq);
-		goto nand_get_resource_free_wp_gpio;
+		goto nand_get_resource_err_exit;
 	}
 
 	errorCode = request_irq(nand_info->dma_irq, nand_fiodma_isr_handler,
@@ -1791,10 +1791,6 @@ nand_get_resource_free_fiodma_irq:
 nand_get_resource_free_fiocmd_irq:
 	free_irq(nand_info->cmd_irq, nand_info);
 
-nand_get_resource_free_wp_gpio:
-	if (gpio_is_valid(nand_info->wp_gpio))
-		gpio_free(nand_info->wp_gpio);
-
 nand_get_resource_err_exit:
 	return errorCode;
 }
@@ -1804,9 +1800,6 @@ static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
 	free_irq(nand_info->fdma_irq, nand_info);
 	free_irq(nand_info->dma_irq, nand_info);
 	free_irq(nand_info->cmd_irq, nand_info);
-
-	if (gpio_is_valid(nand_info->wp_gpio))
-		gpio_free(nand_info->wp_gpio);
 }
 
 static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)

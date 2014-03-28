@@ -28,13 +28,13 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/gpio.h>
 #include <linux/init.h>
-
+#include <sound/core.h>
+#include <sound/pcm.h>
 #include <sound/soc.h>
-
 #include <plat/audio.h>
-
 #include "../codecs/ambarella_dummy.h"
 
 static unsigned int dummy_dai_fmt = 0;

@@ -24,6 +24,7 @@
 * Boston, MA  02111-1307, USA.
 */
 #include <linux/platform_device.h>
+#include <linux/of.h>
 #include <mach/hardware.h>
 #include <plat/rct.h>
 

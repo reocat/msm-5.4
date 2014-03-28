@@ -165,23 +165,7 @@
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
-#include <asm-generic/gpio.h>
-#include <plat/irq.h>
 
-#define gpio_get_value	__gpio_get_value
-#define gpio_set_value	__gpio_set_value
-#define gpio_cansleep	__gpio_cansleep
-#define gpio_to_irq	__gpio_to_irq
-
-static inline int irq_to_gpio(unsigned irq)
-{
-	if ((irq > GPIO_INT_VEC(0)) && (irq < NR_IRQS))
-		return irq - GPIO_INT_VEC(0);
-
-	return -EINVAL;
-}
-
-/* ==========================================================================*/
 extern int ambarella_gpio_request(int gpio);
 extern int ambarella_gpio_set(int gpio, int value);
 extern int ambarella_gpio_get(int gpio);

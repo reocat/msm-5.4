@@ -30,10 +30,11 @@
  */
 
 #include <linux/module.h>
+#include <linux/of.h>
+#include <sound/core.h>
+#include <sound/pcm.h>
 #include <sound/soc.h>
-
 #include <plat/audio.h>
-
 #include "../codecs/ak4954_amb.h"
 
 static unsigned int dai_fmt = 0;

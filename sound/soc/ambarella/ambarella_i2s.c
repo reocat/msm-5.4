@@ -31,6 +31,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
+#include <linux/of.h>
 #include <linux/pinctrl/consumer.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
