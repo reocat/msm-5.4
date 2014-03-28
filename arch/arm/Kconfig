@@ -304,6 +304,7 @@ config ARCH_AMBARELLA
 	select NEED_MACH_GPIO_H
 	select NEED_MACH_IO_H
 	select NEED_MACH_MEMORY_H
+	select PLAT_AMBARELLA
 	select USE_OF
 	select PINCTRL
 	select PINCTRL_AMB
