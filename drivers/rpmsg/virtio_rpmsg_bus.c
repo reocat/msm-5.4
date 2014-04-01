@@ -34,7 +34,10 @@
 #include <linux/rpmsg.h>
 #include <linux/mutex.h>
 #include <linux/remoteproc.h>
+
+#include <mach/init.h>
 #include <plat/remoteproc.h>
+#include <plat/remoteproc_cfg.h>
 
 /**
  * struct virtproc_info - virtual remote processor state
@@ -115,7 +118,7 @@ struct rpmsg_channel_info {
  * can change this without changing anything in the firmware of the remote
  * processor.
  */
-
+#if 0
 /*
  * Keep the following sync'ed to the copy which shared between processors
  *     arch/arm/plat-ambarella/include/plat/remoteproc_cfg.h
@@ -124,7 +127,7 @@ struct rpmsg_channel_info {
 #define RPMSG_BUF_SIZE		(CONFIG_RPMSG_BUF_SIZE)
 
 #define RPMSG_TOTAL_BUF_SPACE	(RPMSG_NUM_BUFS * RPMSG_BUF_SIZE)
-
+#endif
 /*
  * Local addresses are dynamically allocated on-demand.
  * We do not dynamically assign addresses from the low 1024 range,

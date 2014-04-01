@@ -52,8 +52,6 @@
 #include <linux/mmc/host.h>
 #include <plat/ambcache.h>
 
-#include "board-device.h"
-
 #include <plat/dma.h>
 #include <plat/clk.h>
 
@@ -63,7 +61,7 @@ static struct platform_device *ambarella_devices[] __initdata = {
 //	&ambarella_fb0,
 //	&ambarella_fb1,
 };
-
+#if 0
 static struct platform_device *ambarella_pwm_devices[] __initdata = {
 	//&ambarella_pwm_backlight_device0,
 	/*&ambarella_pwm_backlight_device1,
@@ -71,11 +69,11 @@ static struct platform_device *ambarella_pwm_devices[] __initdata = {
 	&ambarella_pwm_backlight_device3,
 	&ambarella_pwm_backlight_device4,*/
 };
-
+#endif
 /* ==========================================================================*/
 static void __init ambarella_init_ginkgo(void)
 {
-	int i, ret;
+	int i;
 	int use_bub_default = 1;
 
 #ifdef CONFIG_OUTER_CACHE

@@ -13,6 +13,8 @@
 #include <linux/clk.h>
 #include <linux/remoteproc.h>
 
+#include <mach/init.h>
+
 #include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
 #include <plat/timer.h>

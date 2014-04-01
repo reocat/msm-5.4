@@ -2,7 +2,7 @@
  * arch/arm/plat-ambarella/misc/aipc_mutex.c
  *
  * Authors:
- *	Joey Li <jli@ambarella.com>
+ *  Joey Li <jli@ambarella.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -26,8 +26,10 @@
 #include <asm/uaccess.h>
 
 #include <linux/aipc/ipc_mutex.h>
+#include <mach/init.h>
 #include <mach/hardware.h>
 #include <mach/io.h>
+#include <plat/rct.h>
 #include <plat/ambalink_cfg.h>
 
 extern void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags);
@@ -59,39 +61,34 @@ typedef struct {
 static amutex_db lock_set;
 static int ipc_mutex_inited = 0;
 
-static int procfs_mutex_read(char *page, char **start,
-			off_t off, int count, int *eof, void *data)
+static int procfs_mutex_show(struct seq_file *m, void *v)
 {
 	int len;
 
-	len = scnprintf(page+off, count,
-			"\n"
-			"usage: echo id [op] > /proc/ambarella/mutex\n"
-			"    \"echo n +\" to lock mutex n\n"
-			"    \"echo n -\" to unlock mutex n\n"
-			"\n");
-	if (eof)
-		*eof = 1;
+	len = seq_printf(m,
+	                 "\n"
+	                 "usage: echo id [op] > /proc/ambarella/mutex\n"
+	                 "    \"echo n +\" to lock mutex n\n"
+	                 "    \"echo n -\" to unlock mutex n\n"
+	                 "\n");
 
 	return len;
 }
 
 static int procfs_mutex_write(struct file *file,
-		const char __user *buffer, unsigned long count, void *data)
+                              const char __user *buffer, unsigned long count, void *data)
 {
 	unsigned char str[128], op;
 	int  id = 0;
 
 	//memset(str, 0, sizeof(str));
-	if (copy_from_user(str, buffer, count))
-	{
+	if (copy_from_user(str, buffer, count)) {
 		printk(KERN_ERR "copy_from_user failed, aborting\n");
 		return -EFAULT;
 	}
 	sscanf(str, "%d %c", &id, &op);
 
-	switch(op)
-	{
+	switch (op) {
 	case '+':
 		printk("try to lock mutex %d, %p\n", id, current);
 		aipc_mutex_lock(id);
@@ -109,15 +106,25 @@ static int procfs_mutex_write(struct file *file,
 	return count;
 }
 
+static int procfs_mutex_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, procfs_mutex_show, PDE_DATA(inode));
+}
+
+static const struct file_operations proc_ipc_mutex_fops = {
+	.open = procfs_mutex_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.write = procfs_mutex_write,
+};
+
 static void init_procfs(void)
 {
-	struct proc_dir_entry *aipc_dir;
 	struct proc_dir_entry *aipc_dev;
 
-	aipc_dir = get_ambarella_proc_dir();
-	aipc_dev = create_proc_entry("mutex", S_IRUGO | S_IWUSR, aipc_dir);
-	aipc_dev->write_proc = procfs_mutex_write;
-	aipc_dev->read_proc = procfs_mutex_read;
+	aipc_dev = proc_create_data("mutex", S_IRUGO | S_IWUSR,
+	                            get_ambarella_proc_dir(),
+	                            &proc_ipc_mutex_fops, NULL);
 }
 
 static irqreturn_t ipc_mutex_isr(int irq, void *dev_id)
@@ -130,10 +137,8 @@ static irqreturn_t ipc_mutex_isr(int irq, void *dev_id)
 	amba_writel(AHB_SCRATCHPAD_REG(0x14), 0x1 << (irq - AXI_SOFT_IRQ(0)));
 
 	// wake up
-	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++)
-	{
-		if (lock_set.share[i].wait_list & AMBALINK_CORE_LOCAL)
-		{
+	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++) {
+		if (lock_set.share[i].wait_list & AMBALINK_CORE_LOCAL) {
 			complete_all(&lock_set.local[i].completion);
 		}
 	}
@@ -149,20 +154,18 @@ static int aipc_mutex_init(void)
 	//memset(lock_set.share, 0, sizeof(amutex_share_t)*AMBA_IPC_NUM_MUTEX);
 
 	// init local part of aipc mutex memory
-	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++)
-	{
+	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++) {
 		lock_set.local[i].count = 0;
 		mutex_init(&lock_set.local[i].mutex);
 		init_completion(&lock_set.local[i].completion);
 	}
 
 	// IRQ handling
-	ret = request_irq(MUTEX_IRQ_LOCAL, ipc_mutex_isr, 
-			IRQF_SHARED | IRQF_TRIGGER_HIGH, "aipc_mutex", &lock_set);
-	if (ret)
-	{
-		printk(KERN_ERR "aipc_mutex_init err %d while requesting irq %d\n", 
-			ret, MUTEX_IRQ_LOCAL);
+	ret = request_irq(MUTEX_IRQ_LOCAL, ipc_mutex_isr,
+	                  IRQF_SHARED | IRQF_TRIGGER_HIGH, "aipc_mutex", &lock_set);
+	if (ret) {
+		printk(KERN_ERR "aipc_mutex_init err %d while requesting irq %d\n",
+		       ret, MUTEX_IRQ_LOCAL);
 		return 1;
 	}
 
@@ -191,8 +194,7 @@ void aipc_mutex_lock(int id)
 		return;
 	}
 
-	if (id < 0 || id >= AMBA_IPC_NUM_MUTEX)
-	{
+	if (id < 0 || id >= AMBA_IPC_NUM_MUTEX) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
@@ -202,8 +204,7 @@ void aipc_mutex_lock(int id)
 	// check repeatedly until we become the owner
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
 	{
-		while (OWNER_IS_REMOTE(share))
-		{
+		while (OWNER_IS_REMOTE(share)) {
 			share->wait_list |= AMBALINK_CORE_LOCAL;
 			__aipc_spin_unlock_irqrestore(&share->slock, flags);
 
@@ -236,16 +237,14 @@ void aipc_mutex_unlock(int id)
 		return;
 	}
 
-	if (id < 0 || id >= AMBA_IPC_NUM_MUTEX)
-	{
+	if (id < 0 || id >= AMBA_IPC_NUM_MUTEX) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
 	share = &lock_set.share[id];
 	local = &lock_set.local[id];
 
-	if (!OWNER_IS_LOCAL(share))
-	{
+	if (!OWNER_IS_LOCAL(share)) {
 		// we are not the owner, there must be something wrong
 		printk(KERN_ERR "aipc_mutex_unlock(%d) non-owner error\n", id);
 		BUG();
@@ -256,16 +255,14 @@ void aipc_mutex_unlock(int id)
 	mutex_unlock(&local->mutex);
 
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
-	if (--local->count == 0)
-	{
-		// We are done with the mutex, 
+	if (--local->count == 0) {
+		// We are done with the mutex,
 		// now let other waiting core(s) to grab it
 		share->owner = 0;
-		if (share->wait_list)
-		{
+		if (share->wait_list) {
 			// notify remote waiting core(s)
-			amba_writel(AHB_SCRATCHPAD_REG(0x10), 
-				0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ(0)));
+			amba_writel(AHB_SCRATCHPAD_REG(0x10),
+			            0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ(0)));
 			//printk("wakeup tx\n");
 		}
 	}

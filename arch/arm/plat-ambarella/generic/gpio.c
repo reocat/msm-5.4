@@ -41,6 +41,10 @@
 
 #include <mach/hardware.h>
 #include <plat/gpio.h>
+#if defined(CONFIG_AMBALINK_LOCK)
+#include <linux/aipc/ipc_slock.h>
+#include <plat/ambalink_cfg.h>
+#endif
 
 /* ==========================================================================*/
 struct ambarella_gpio_chip {
@@ -194,7 +198,7 @@ int ambarella_gpio_get(int id)
 	offset = id & 0x1f;
 
 #if defined(CONFIG_AMBALINK_LOCK)
-	aipc_spin_lock(AMBA_IPC_SPINLOCK_GPIO)
+	aipc_spin_lock(AMBA_IPC_SPINLOCK_GPIO);
 #endif
 	val = ambarella_gpio_inline_get(chip, offset);
 

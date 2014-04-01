@@ -42,6 +42,7 @@
 #include <linux/virtio_ring.h>
 #include <asm/byteorder.h>
 
+#include <mach/init.h>
 #include "remoteproc_internal.h"
 
 typedef int (*rproc_handle_resources_t)(struct rproc *rproc,

@@ -10,11 +10,13 @@
 #include <linux/err.h>
 #include <linux/remoteproc.h>
 #include <linux/aipc_msg.h>
+
+#include <mach/init.h>
 #if RPC_DEBUG
 #include <asm/uaccess.h>
 #include <linux/proc_fs.h>
 #include <plat/ambalink_cfg.h>
-#endif 
+#endif
 #include "aipc_priv.h"
 
 #define chnl_tx_name "aipc_rpc"
@@ -23,7 +25,7 @@ static struct rpmsg_channel *chnl_tx;
 
 #if RPC_DEBUG
 #define RPMSG_RPC_TIMER_PROC
-#define PROFILE_TIMER					ambalink_phys_to_virt(APB_PHYS_BASE + TIMER_OFFSET + 0x54) //timer 6
+#define PROFILE_TIMER                   ambalink_phys_to_virt(APB_PHYS_BASE + TIMER_OFFSET + 0x54) //timer 6
 #endif
 
 #ifdef RPMSG_RPC_TIMER_PROC
@@ -33,12 +35,12 @@ static struct proc_dir_entry *rpc_file = NULL;
 /*
  * calculate the time
  */
-static unsigned int calc_timer_diff(unsigned int start, unsigned int end){
+static unsigned int calc_timer_diff(unsigned int start, unsigned int end)
+{
 	unsigned int diff;
-	if(end <= start) {
+	if (end <= start) {
 		diff = start - end;
-	}
-	else{
+	} else {
 		diff = 0xFFFFFFFF - end + 1 + start;
 	}
 	return diff;
@@ -47,17 +49,16 @@ static unsigned int calc_timer_diff(unsigned int start, unsigned int end){
 /*
  * get time
  */
-static int rpmsg_rpc_proc_read(char *page, char **start,
-	off_t off, int count, int *eof, void *data)
+static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 {
-	sprintf(page, "%u", amba_readl(PROFILE_TIMER));
-	return strlen(page)+1;
+	return seq_printf(m, "%u", amba_readl(PROFILE_TIMER));
 }
+
 /*
  * access the rpc statistics in shared memory
  */
 static int rpmsg_rpc_proc_write(struct file *file,
-	const char __user *buffer, unsigned long count, void *data)
+                                const char __user *buffer, unsigned long count, void *data)
 {
 	char buf[50];
 	unsigned int addr, result, cur_time, diff;
@@ -72,60 +73,71 @@ static int rpmsg_rpc_proc_write(struct file *file,
 
 	memset(buf, 0x0, sizeof(buf));
 
-	if(copy_from_user(buf, buffer, count)){
+	if (copy_from_user(buf, buffer, count)) {
 		pr_err("%s: copy_from_user fail!\n", __func__);
 		retval = -EFAULT;
 		goto rpmsg_rpc_write_exit;
 	}
 
 	/* access to the statistics in shared memory*/
-	sscanf(buf,"%d %u %u", &cond, &addr, &result);
+	sscanf(buf, "%d %u %u", &cond, &addr, &result);
 	value = (unsigned int *) ambarella_phys_to_virt(addr + RPC_PROFILE_ADDR);
-	switch (cond){
-		case 1:	//add the result 
-			*value += result;
-			break;
-		case 2:	//identify whether the result is larger than value
-			if(*value < result){
-				*value = result;
-			}
-			break;
-		case 3:	//identify whether the result is smaller than value
-			if(*value > result){
-				*value = result;
-			}
-			break;
-		case 4:	//calculate injection time
-			//value is LuLastInjectTime & sec_value is LuTotalInjectTime
-			sec_value = (unsigned int *) ambarella_phys_to_virt(result + RPC_PROFILE_ADDR);	
-			cur_time = amba_readl(PROFILE_TIMER);
-			if( *value != 0){
-				//calculate the duration from last to current injection.
-				diff = calc_timer_diff(*value, cur_time);
-			}
-			else {
-				diff = 0;
-			}
-			*sec_value += diff; //sum up the injection time
-			*value = cur_time;
-			break;
+	switch (cond) {
+	case 1: //add the result
+		*value += result;
+		break;
+	case 2: //identify whether the result is larger than value
+		if (*value < result) {
+			*value = result;
+		}
+		break;
+	case 3: //identify whether the result is smaller than value
+		if (*value > result) {
+			*value = result;
+		}
+		break;
+	case 4: //calculate injection time
+		//value is LuLastInjectTime & sec_value is LuTotalInjectTime
+		sec_value = (unsigned int *) ambarella_phys_to_virt(result + RPC_PROFILE_ADDR);
+		cur_time = amba_readl(PROFILE_TIMER);
+		if ( *value != 0) {
+			//calculate the duration from last to current injection.
+			diff = calc_timer_diff(*value, cur_time);
+		} else {
+			diff = 0;
+		}
+		*sec_value += diff; //sum up the injection time
+		*value = cur_time;
+		break;
 	}
 	retval = count;
 
 rpmsg_rpc_write_exit:
 	return retval;
 }
+
+static int rpmsg_rpc_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, rpmsg_rpc_proc_show, PDE_DATA(inode));
+}
+
+static const struct file_operations proc_rpmsg_rpc_fops = {
+	.open = rpmsg_rpc_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.write = rpmsg_rpc_proc_write,
+};
 #endif
 /*
  * forward incoming packet from remote to router
  */
 static void rpmsg_rpc_recv(struct rpmsg_channel *rpdev, void *data, int len,
-			void *priv, u32 src)
+                           void *priv, u32 src)
 {
 #if RPC_DEBUG
 	struct aipc_pkt *pkt = (struct aipc_pkt *)data;
 	pkt->xprt.lk_to_lu_start = amba_readl(PROFILE_TIMER);
-#endif	
+#endif
 	DMSG("rpmsg_rpc recv %d bytes\n", len);
 	aipc_router_send((struct aipc_pkt*)data, len);
 }
@@ -135,10 +147,9 @@ static void rpmsg_rpc_recv(struct rpmsg_channel *rpdev, void *data, int len,
  */
 static void rpmsg_rpc_send_tx(struct aipc_pkt *pkt, int len, int port)
 {
-	if (chnl_tx)
-	{
+	if (chnl_tx) {
 #if RPC_DEBUG
-    	pkt->xprt.lu_to_lk_end = amba_readl(PROFILE_TIMER);
+		pkt->xprt.lu_to_lk_end = amba_readl(PROFILE_TIMER);
 #endif
 		rpmsg_send(chnl_tx, pkt, len);
 	}
@@ -149,13 +160,12 @@ static int rpmsg_rpc_probe(struct rpmsg_channel *rpdev)
 	int ret = 0;
 	struct rpmsg_ns_msg nsm;
 #ifdef RPMSG_RPC_TIMER_PROC
-	rpc_file = create_proc_entry(proc_name, S_IRUGO | S_IWUSR, NULL);
-	if(rpc_file == NULL){
+	rpc_file = proc_create_data(proc_name, S_IRUGO | S_IWUSR,
+	                            get_ambarella_proc_dir(),
+	                            &proc_rpmsg_rpc_fops, NULL);
+	if (rpc_file == NULL) {
 		pr_err("%s: %s fail!\n", __func__, proc_name);
 		ret = -ENOMEM;
-	} else{
-		rpc_file->read_proc = rpmsg_rpc_proc_read;
-		rpc_file->write_proc = rpmsg_rpc_proc_write;
 	}
 #endif
 	if (!strcmp(rpdev->id.name, chnl_tx_name))
@@ -174,18 +184,18 @@ static void rpmsg_rpc_remove(struct rpmsg_channel *rpdev)
 }
 
 static struct rpmsg_device_id rpmsg_rpc_id_table[] = {
-	{ .name	= chnl_tx_name, },
+	{ .name = chnl_tx_name, },
 	{ },
 };
 MODULE_DEVICE_TABLE(rpmsg, rpmsg_rpc_id_table);
 
 static struct rpmsg_driver rpmsg_rpc_driver = {
-	.drv.name	= KBUILD_MODNAME,
-	.drv.owner	= THIS_MODULE,
-	.id_table	= rpmsg_rpc_id_table,
-	.probe		= rpmsg_rpc_probe,
-	.callback	= rpmsg_rpc_recv,
-	.remove		= rpmsg_rpc_remove,
+	.drv.name   = KBUILD_MODNAME,
+	.drv.owner  = THIS_MODULE,
+	.id_table   = rpmsg_rpc_id_table,
+	.probe      = rpmsg_rpc_probe,
+	.callback   = rpmsg_rpc_recv,
+	.remove     = rpmsg_rpc_remove,
 };
 
 static int __init rpmsg_rpc_init(void)

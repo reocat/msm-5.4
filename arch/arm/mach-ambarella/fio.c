@@ -27,6 +27,12 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
+#include <linux/moduleparam.h>
+#include <linux/clk.h>
+#if defined(CONFIG_AMBALINK_LOCK)
+#include <linux/aipc/ipc_mutex.h>
+#endif
 #include <asm/io.h>
 #include <asm/setup.h>
 #include <mach/hardware.h>
@@ -155,10 +161,9 @@ void fio_select_lock(int module)
 #if defined(CONFIG_AMBALINK_LOCK)
 		switch (module) {
 		case SELECT_FIO_SD:
-		case SELECT_FIO_SDIO:
 			aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
 			break;
-		case SELECT_FIO_SD2:
+		case SELECT_FIO_SDIO:
 			aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
 			break;
 		default:
@@ -193,10 +198,9 @@ void fio_unlock(int module)
 #if defined(CONFIG_AMBALINK_LOCK)
 	switch (module) {
 	case SELECT_FIO_SD:
-	case SELECT_FIO_SDIO:
 		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD0);
 		return;
-	case SELECT_FIO_SD2:
+	case SELECT_FIO_SDIO:
 		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD1);
 		return;
 	default:

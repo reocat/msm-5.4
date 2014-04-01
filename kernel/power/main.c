@@ -355,7 +355,7 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 }
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
-int amba_state_store(int suspend_to)
+int amba_state_store(void *suspend_to)
 {
 	int error;
 
@@ -368,7 +368,7 @@ int amba_state_store(int suspend_to)
 		goto out;
 	}
 
-	wowlan_resume_from_ram = suspend_to;
+	wowlan_resume_from_ram = *((int *) suspend_to);
 	error = hibernate();
 
  out:

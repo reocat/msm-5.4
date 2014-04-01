@@ -13,6 +13,7 @@
 #include <linux/kthread.h>
 
 #include <linux/remoteproc.h>
+#include <mach/init.h>
 #include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
 
@@ -20,19 +21,19 @@
 typedef u32 UINT32;
 
 typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
-	LINK_CTRL_CMD_HIBER_PREPARE_FROM_LINUX = 0,
-        LINK_CTRL_CMD_HIBER_ENTER_FROM_LINUX,
-        LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX,
-        LINK_CTRL_CMD_HIBER_ACK,
-        LINK_CTRL_CMD_SUSPEND
+    LINK_CTRL_CMD_HIBER_PREPARE_FROM_LINUX = 0,
+    LINK_CTRL_CMD_HIBER_ENTER_FROM_LINUX,
+    LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX,
+    LINK_CTRL_CMD_HIBER_ACK,
+    LINK_CTRL_CMD_SUSPEND
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
 /*---------------------------------------------------------------------------*\
  * LinkCtrlSuspendLinux related data structure.
 \*---------------------------------------------------------------------------*/
 typedef enum _AMBA_RPDEV_LINK_CTRL_SUSPEND_TARGET_e_ {
-        LINK_CTRL_CMD_SUSPEND_TO_DISK = 0,
-        LINK_CTRL_CMD_SUSPEND_TO_DRAM
+    LINK_CTRL_CMD_SUSPEND_TO_DISK = 0,
+    LINK_CTRL_CMD_SUSPEND_TO_DRAM
 } AMBA_RPDEV_LINK_CTRL_SUSPEND_TARGET_e;
 
 typedef struct _AMBA_RPDEV_LINK_CTRL_CMD_s_ {
@@ -56,11 +57,12 @@ static int rpmsg_linkctrl_ack(void *data)
 /*----------------------------------------------------------------------------*/
 static int rpmsg_linkctrl_suspend(void *data)
 {
-	extern int amba_state_store(int suspend_to);
+	extern int amba_state_store(void * suspend_to);
 	AMBA_RPDEV_LINK_CTRL_CMD_s *ctrl_cmd = (AMBA_RPDEV_LINK_CTRL_CMD_s *) data;
 	struct task_struct *task;
 
-	task = kthread_run(amba_state_store, ctrl_cmd->Param1, "linkctrl_suspend");
+	task = kthread_run(amba_state_store, (void *) &ctrl_cmd->Param1,
+	                   "linkctrl_suspend");
 	if (IS_ERR(task))
 		return PTR_ERR(task);
 
@@ -174,18 +176,18 @@ static void rpmsg_linkctrl_remove(struct rpmsg_channel *rpdev)
 }
 
 static struct rpmsg_device_id rpmsg_linkctrl_id_table[] = {
-	{ .name	= "AmbaRpdev_LinkCtrl", },
+	{ .name = "AmbaRpdev_LinkCtrl", },
 	{ },
 };
 MODULE_DEVICE_TABLE(rpmsg, rpmsg_linkctrl_id_table);
 
 static struct rpmsg_driver rpmsg_linkctrl_driver = {
-	.drv.name	= KBUILD_MODNAME,
-	.drv.owner	= THIS_MODULE,
-	.id_table	= rpmsg_linkctrl_id_table,
-	.probe		= rpmsg_linkctrl_probe,
-	.callback	= rpmsg_linkctrl_cb,
-	.remove		= rpmsg_linkctrl_remove,
+	.drv.name   = KBUILD_MODNAME,
+	.drv.owner  = THIS_MODULE,
+	.id_table   = rpmsg_linkctrl_id_table,
+	.probe      = rpmsg_linkctrl_probe,
+	.callback   = rpmsg_linkctrl_cb,
+	.remove     = rpmsg_linkctrl_remove,
 };
 
 static int __init rpmsg_linkctrl_init(void)

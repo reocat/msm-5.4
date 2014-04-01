@@ -13,7 +13,6 @@
 #ifndef __PLAT_AMBARELLA_REMOTEPROC_CFG_H
 #define __PLAT_AMBARELLA_REMOTEPROC_CFG_H
 
-
 /*
  * [Copy from the virtio_ring.h]
  *
@@ -56,23 +55,17 @@
  *   26 * 2K + 10 + 4K = 56 K + 10 bytes
  */
 
+#ifdef CONFIG_MACH_GINKGO
+
+#include <plat/ambalink_cfg.h>
+
+#elif defined(CONFIG_MACH_HYACINTH_0) || defined(CONFIG_MACH_HYACINTH_1)
 #define RPMSG_VRING_BASE		(CONFIG_RPMSG_VRING_BASE)
 #define RPMSG_NUM_BUFS			(CONFIG_RPMSG_NUM_BUFS)
 #define RPMSG_BUF_SIZE			(CONFIG_RPMSG_BUF_SIZE)
 
 #define RPMSG_TOTAL_BUF_SPACE		(RPMSG_NUM_BUFS * RPMSG_BUF_SIZE)
 
-#ifdef CONFIG_MACH_GINKGO
-
-#define VRING_C0_TO_C1			(0x21000000)
-#define VRING_C1_TO_C0			(0x21020000)
-#define VRING_C0_AND_C1_BUF		(0x20000000)
-#define VRING_IRQ_C0_TO_C1_KICK		(106)
-#define VRING_IRQ_C0_TO_C1_ACK		(107)
-#define VRING_IRQ_C1_TO_C0_KICK		(108)
-#define VRING_IRQ_C1_TO_C0_ACK		(109)
-
-#elif defined(CONFIG_MACH_HYACINTH_0) || defined(CONFIG_MACH_HYACINTH_1)
 /*
  * On A8, we allocate 4096 4K-byte buffers for each RPMSG bus.
  * The buffers are partitioned into two dedicated halves for TX and RX.

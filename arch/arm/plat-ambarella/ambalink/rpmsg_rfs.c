@@ -12,6 +12,7 @@
 #include <linux/remoteproc.h>
 #include <linux/syscalls.h>
 #include <asm/uaccess.h>
+#include <mach/init.h>
 #include <plat/ambalink_cfg.h>
 #include "aipc_priv.h"
 
@@ -121,7 +122,7 @@ static void rfs_read(struct aipc_rfs_msg *msg)
 	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
 	msg->parameter[0] = ret;
 }
-	
+
 /*
  * process WRITE command
  */
@@ -152,7 +153,7 @@ static void rfs_write(struct aipc_rfs_msg *msg)
 static void rfs_close(struct aipc_rfs_msg *msg)
 {
 	struct aipc_rfs_close *param = (struct aipc_rfs_close*)msg->parameter;
-	
+
 	if (param->filp) {
 		//DMSG("rfs_close %p\n", param->filp);
 		filp_close(param->filp, NULL);

@@ -21,8 +21,8 @@ typedef u32 UINT32;
 #endif
 
 typedef struct _AMBA_RPDEV_SD_MSG_s_ {
-    UINT32  Cmd;
-    UINT32  Param;
+	UINT32  Cmd;
+	UINT32  Param;
 } AMBA_RPDEV_SD_MSG_s;
 
 DECLARE_COMPLETION(sd0_comp);
@@ -37,13 +37,13 @@ static struct proc_dir_entry *rpmsg_proc_dir = NULL;
 static struct proc_dir_entry *sd_file = NULL;
 
 static int rpmsg_sd_proc_read(char *page, char **start,
-	off_t off, int count, int *eof, void *data)
+                              off_t off, int count, int *eof, void *data)
 {
 	return 0;
 }
 
 static int rpmsg_sd_proc_write(struct file *file,
-	const char __user *buffer, unsigned long count, void *data)
+                               const char __user *buffer, unsigned long count, void *data)
 {
 	int retval, i;
 	char sd_buf[256];
@@ -208,7 +208,7 @@ static PROC_FUNC proc_list[] = {
 };
 
 static void rpmsg_sd_cb(struct rpmsg_channel *rpdev, void *data, int len,
-			void *priv, u32 src)
+                        void *priv, u32 src)
 {
 	AMBA_RPDEV_SD_MSG_s *msg = (AMBA_RPDEV_SD_MSG_s *) data;
 
@@ -224,10 +224,15 @@ static void rpmsg_sd_cb(struct rpmsg_channel *rpdev, void *data, int len,
 		break;
 	default:
 		printk("%s err: cmd = [%d], data = [0x%08x]",
-			__func__, msg->Cmd, msg->Param);
+		       __func__, msg->Cmd, msg->Param);
 		break;
 	}
 }
+
+static const struct file_operations proc_rpmsg_sd_fops = {
+	.read = seq_read,
+	.write = rpmsg_sd_proc_write,
+};
 
 static int rpmsg_sd_probe(struct rpmsg_channel *rpdev)
 {
@@ -238,13 +243,14 @@ static int rpmsg_sd_probe(struct rpmsg_channel *rpdev)
 
 #ifdef AMBARELLA_RPMSG_SD_PROC
 	rpmsg_proc_dir = proc_mkdir("rpmsg_sd", get_ambarella_proc_dir());
-	sd_file = create_proc_entry(sd_proc_name, S_IRUGO | S_IWUSR, rpmsg_proc_dir);
+
+	sd_file = proc_create_data(sd_proc_name, S_IRUGO | S_IWUSR,
+	                           rpmsg_proc_dir,
+	                           &proc_rpmsg_sd_fops, NULL);
 	if (sd_file == NULL) {
 		pr_err("%s: %s fail!\n", __func__, sd_proc_name);
 		ret = -ENOMEM;
 	} else {
-		sd_file->read_proc = rpmsg_sd_proc_read;
-		sd_file->write_proc = rpmsg_sd_proc_write;
 		sd_file->data = (void *) rpdev;
 	}
 #endif
@@ -264,18 +270,18 @@ static void rpmsg_sd_remove(struct rpmsg_channel *rpdev)
 }
 
 static struct rpmsg_device_id rpmsg_sd_id_table[] = {
-	{ .name	= "AmbaRpdev_SD", },
+	{ .name = "AmbaRpdev_SD", },
 	{ },
 };
 MODULE_DEVICE_TABLE(rpmsg, rpmsg_sd_id_table);
 
 static struct rpmsg_driver rpmsg_sd_driver = {
-	.drv.name	= KBUILD_MODNAME,
-	.drv.owner	= THIS_MODULE,
-	.id_table	= rpmsg_sd_id_table,
-	.probe		= rpmsg_sd_probe,
-	.callback	= rpmsg_sd_cb,
-	.remove		= rpmsg_sd_remove,
+	.drv.name   = KBUILD_MODNAME,
+	.drv.owner  = THIS_MODULE,
+	.id_table   = rpmsg_sd_id_table,
+	.probe      = rpmsg_sd_probe,
+	.callback   = rpmsg_sd_cb,
+	.remove     = rpmsg_sd_remove,
 };
 
 static int __init rpmsg_sd_init(void)

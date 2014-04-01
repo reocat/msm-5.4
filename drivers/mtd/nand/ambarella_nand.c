@@ -44,6 +44,9 @@
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
 #include <plat/dma.h>
+#include <mach/init.h>
+#include <mach/dma.h>
+#include <mach/board.h>
 #include <plat/nand.h>
 #include <plat/fio.h>
 #include <plat/event.h>

@@ -41,13 +41,13 @@ config RPCLNT_CA9_B
 
 config RPMSG_VRING_BASE
 	hex "Base address (Physical) used for the rpmsg & remoteproc"
-	depends on REMOTEPROC
+	depends on (REMOTEPROC && !PLAT_AMBARELLA_AMBALINK)
 	default 0x5C000000 if MACH_HYACINTH_0 || MACH_HYACINTH_1
 	default 0x20000000 if MACH_GINKO
 
 config RPMSG_NUM_BUFS
 	int "Number of buffers for each RPMSG bus"
-	depends on REMOTEPROC
+	depends on (REMOTEPROC && !PLAT_AMBARELLA_AMBALINK)
 	default 4096
 	help
 	  The buffers are partitioned into dedicated halves for TX
@@ -55,7 +55,7 @@ config RPMSG_NUM_BUFS
 
 config RPMSG_BUF_SIZE
 	int "Buffer size (in bytes) for each RPMSG message"
-	depends on REMOTEPROC
+	depends on (REMOTEPROC && !PLAT_AMBARELLA_AMBALINK)
 	default 4096
 	help
 	  The first 16 bytes are used by the rpmsg header internally.

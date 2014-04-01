@@ -245,6 +245,33 @@ void __init ambarella_map_io(void)
 	of_scan_flat_dt(ambarella_dt_scan_iavmem, NULL);
 }
 
+int arch_pfn_is_nosave(unsigned long pfn)
+{
+	int					i;
+	unsigned long				nosave_begin_pfn;
+	unsigned long				nosave_end_pfn;
+
+	nosave_begin_pfn =
+		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.pfn;
+	nosave_end_pfn = PFN_PHYS(nosave_begin_pfn) +
+		ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].io_desc.length;
+	nosave_end_pfn = PFN_UP(nosave_end_pfn);
+
+	if ((pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn))
+		return 1;
+#if 0
+	for (i = 0; i < ambarella_reserve_mem_info.counter; i++) {
+		nosave_begin_pfn = __phys_to_pfn(
+			ambarella_reserve_mem_info.desc[i].physaddr);
+		nosave_end_pfn = __phys_to_pfn(
+			ambarella_reserve_mem_info.desc[i].physaddr +
+			ambarella_reserve_mem_info.desc[i].size);
+		if ((pfn >= nosave_begin_pfn) && (pfn < nosave_end_pfn))
+			return 1;
+	}
+#endif
+	return 0;
+}
 /* ==========================================================================*/
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
 
@@ -308,12 +335,14 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	BUG_ON(ret_val != 0);
 #endif
 
+#if defined(CONFIG_SUSPEND) || defined(CONFIG_HIBERNATION)
+	ret_val = ambarella_init_pm();
+	BUG_ON(ret_val != 0);
+#endif
+
 #if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	/* FIXME: need to turn on pm support */
 	ret_val = ambarella_init_fb();
-	BUG_ON(ret_val != 0);
-
-	ret_val = ambarella_init_pm();
 	BUG_ON(ret_val != 0);
 
 	ret_val = ambarella_init_audio();

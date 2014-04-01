@@ -2,7 +2,7 @@
  * arch/arm/plat-ambarella/misc/aipc_slock.c
  *
  * Authors:
- *	Joey Li <jli@ambarella.com>
+ *  Joey Li <jli@ambarella.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -23,6 +23,7 @@
 #include <asm/uaccess.h>
 
 #include <mach/hardware.h>
+#include <mach/init.h>
 #include <plat/ambalink_cfg.h>
 #include <linux/aipc/ipc_slock.h>
 
@@ -38,33 +39,29 @@ typedef struct {
 
 static aspinlock_db lock_set;
 
-static int procfs_spinlock_read(char *page, char **start,
-				off_t off, int count, int *eof, void *data)
+static int procfs_spinlock_show(struct seq_file *m, void *v)
 {
 	int len;
 
-	len = scnprintf(page+off, count,
-			"\n"
-			"usage: echo id [t] > /proc/ambarella/spinlock\n"
-			"    id is the spinlock id\n"
-			"    t is the duration(ms) which spinlock is locked. Default is 0\n"
-			"\n");
-	if (eof)
-		*eof = 1;
+	len = seq_printf(m,
+	                 "\n"
+	                 "usage: echo id [t] > /proc/ambarella/spinlock\n"
+	                 "    id is the spinlock id\n"
+	                 "    t is the duration(ms) which spinlock is locked. Default is 0\n"
+	                 "\n");
 
 	return len;
 }
 
 static int procfs_spinlock_write(struct file *file,
-				const char __user *buffer, unsigned long count, void *data)
+                                 const char __user *buffer, unsigned long count, void *data)
 {
 	char str[128];
 	int  id = 0, delay = 0;
 	unsigned long flags;
 
 	//memset(str, 0, sizeof(str));
-	if (copy_from_user(str, buffer, count))
-	{
+	if (copy_from_user(str, buffer, count)) {
 		printk(KERN_ERR "copy_from_user failed, aborting\n");
 		return -EFAULT;
 	}
@@ -79,15 +76,25 @@ static int procfs_spinlock_write(struct file *file,
 	return count;
 }
 
+static int procfs_spinlock_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, procfs_spinlock_show, PDE_DATA(inode));
+}
+
+static const struct file_operations proc_ipc_slock_fops = {
+	.open = procfs_spinlock_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.write = procfs_spinlock_write,
+};
+
 static void init_procfs(void)
 {
-	struct proc_dir_entry *aipc_dir;
 	struct proc_dir_entry *aipc_dev;
 
-	aipc_dir = get_ambarella_proc_dir();
-	aipc_dev = create_proc_entry("spinlock", S_IRUGO | S_IWUSR, aipc_dir);
-	aipc_dev->write_proc = procfs_spinlock_write;
-	aipc_dev->read_proc = procfs_spinlock_read;
+	aipc_dev = proc_create_data("spinlock", S_IRUGO | S_IWUSR,
+	                            get_ambarella_proc_dir(),
+	                            &proc_ipc_slock_fops, NULL);
 }
 
 static int aipc_spin_lock_init(void)
@@ -116,14 +123,14 @@ void __aipc_spin_lock(unsigned long *lock)
 
 	//spin to get the lock
 	__asm__ __volatile__(
-		"1:	ldrex	%0, [%1]\n"
-		"	teq	%0, #0\n"
-		"	strexeq	%0, %2, [%1]\n"
-		"	teqeq	%0, #0\n"
-		"	bne	1b"
-		: "=&r" (tmp)
-		: "r" (lock), "r" (1)
-		: "cc");
+	    "1:	ldrex	%0, [%1]\n"
+	    "	teq	%0, #0\n"
+	    "	strexeq	%0, %2, [%1]\n"
+	    "	teqeq	%0, #0\n"
+	    "	bne	1b"
+	    : "=&r" (tmp)
+	    : "r" (lock), "r" (1)
+	    : "cc");
 
 	// set memory barrier here
 	dmb();
@@ -135,10 +142,10 @@ void __aipc_spin_unlock(unsigned long *lock)
 
 	// release the lock
 	__asm__ __volatile__(
-		"	str	%1, [%0]\n"
-		:
-		: "r" (lock), "r" (0)
-		: "cc");
+	    "	str	%1, [%0]\n"
+	    :
+	    : "r" (lock), "r" (0)
+	    : "cc");
 }
 
 void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags)
@@ -150,14 +157,14 @@ void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags)
 
 	//spin to get the lock
 	__asm__ __volatile__(
-		"1:	ldrex	%0, [%1]\n"
-		"	teq	%0, #0\n"
-		"	strexeq	%0, %2, [%1]\n"
-		"	teqeq	%0, #0\n"
-		"	bne	1b"
-		: "=&r" (tmp)
-		: "r" (lock), "r" (1)
-		: "cc");
+	    "1:	ldrex	%0, [%1]\n"
+	    "	teq	%0, #0\n"
+	    "	strexeq	%0, %2, [%1]\n"
+	    "	teqeq	%0, #0\n"
+	    "	bne	1b"
+	    : "=&r" (tmp)
+	    : "r" (lock), "r" (1)
+	    : "cc");
 
 	// set memory barrier here
 	dmb();
@@ -169,10 +176,10 @@ void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags)
 
 	// release the lock
 	__asm__ __volatile__(
-		"	str	%1, [%0]\n"
-		:
-		: "r" (lock), "r" (0)
-		: "cc");
+	    "	str	%1, [%0]\n"
+	    :
+	    : "r" (lock), "r" (0)
+	    : "cc");
 
 	preempt_enable();
 	local_irq_restore(flags);
@@ -180,8 +187,7 @@ void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags)
 
 void aipc_spin_lock(int id)
 {
-	if (id < 0 || id >= lock_set.size)
-	{
+	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
@@ -190,8 +196,7 @@ void aipc_spin_lock(int id)
 
 void aipc_spin_unlock(int id)
 {
-	if (id < 0 || id >= lock_set.size)
-	{
+	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
@@ -200,8 +205,7 @@ void aipc_spin_unlock(int id)
 
 void aipc_spin_lock_irqsave(int id, unsigned long *flags)
 {
-	if (id < 0 || id >= lock_set.size)
-	{
+	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
@@ -210,8 +214,7 @@ void aipc_spin_lock_irqsave(int id, unsigned long *flags)
 
 void aipc_spin_unlock_irqrestore(int id, unsigned long flags)
 {
-	if (id < 0 || id >= lock_set.size)
-	{
+	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
