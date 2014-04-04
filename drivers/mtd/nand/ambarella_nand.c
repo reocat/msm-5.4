@@ -44,7 +44,6 @@
 #include <linux/mtd/partitions.h>
 #include <plat/dma.h>
 #include <plat/nand.h>
-#include <plat/ptb.h>
 #include <plat/fio.h>
 #include <plat/event.h>
 
@@ -152,9 +151,6 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
 	.oobfree = {{2, 17}, {34, 17},
 			{66, 17}, {98, 17}}
 };
-
-/* ==========================================================================*/
-static char part_name[PART_MAX][PART_NAME_LEN];
 
 /* ==========================================================================*/
 #define NAND_TIMING_RSHIFT24BIT(x)	(((x) & 0xff000000) >> 24)
@@ -1802,159 +1798,12 @@ static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
 	free_irq(nand_info->cmd_irq, nand_info);
 }
 
-static int ambarella_nand_scan_partitions(struct ambarella_nand_info *nand_info)
-{
-	int					errorCode = 0;
-
-	struct mtd_info				*mtd;
-	struct mtd_partition			*amboot_partitions;
-	int					amboot_nr_partitions = 0;
-	flpart_meta_t				*meta_table;
-	int					meta_numpages, meta_offpage;
-	int					from, retlen, found, i;
-	int					cmd_nr_partitions = 0;
-
-	mtd = &nand_info->mtd;
-
-	/* struct flpart_table_t contains the meta data containing partition info.
-	 * meta_offpage indicate the offset from each block
-	 * meta_numpages indicate the size of the meta data */
-	meta_offpage = sizeof(flpart_table_t) / mtd->writesize;
-	meta_numpages = sizeof(flpart_meta_t) / mtd->writesize;
-	if (sizeof(flpart_meta_t) % mtd->writesize)
-		meta_numpages++;
-
-	if (meta_numpages * mtd->writesize > AMBARELLA_NAND_DMA_BUFFER_SIZE) {
-		dev_err(nand_info->dev,
-			"%s: The size of meta data is too large\n", __func__);
-		errorCode = -ENOMEM;
-		goto ambarella_nand_scan_error1;
-	}
-
-	/* find the meta data, start from the second block */
-	meta_table = kzalloc(sizeof(flpart_meta_t), GFP_KERNEL);
-	if (meta_table == NULL)
-		goto ambarella_nand_scan_error1;
-
-	found = 0;
-	for (from = 0; from < mtd->size; from += mtd->erasesize) {
-		if (mtd->_block_isbad(mtd, from)) {
-			continue;
-		}
-
-		errorCode = mtd->_read(mtd,
-			from + meta_offpage * mtd->writesize,
-			meta_numpages * mtd->writesize,
-			&retlen, (u8 *)meta_table);
-		if (errorCode < 0) {
-			dev_info(nand_info->dev,
-				"%s: Can't meta data!\n", __func__);
-			goto ambarella_nand_scan_error2;
-		}
-
-		if (meta_table->magic == PTB_META_MAGIC) {
-			found = 1;
-			break;
-		} else if (meta_table->magic == PTB_META_MAGIC2) {
-			found = 2;
-			break;
-		} else if (meta_table->magic == PTB_META_MAGIC3) {
-			found = 3;
-			break;
-		}
-	}
-
-	if (found == 0) {
-		dev_err(nand_info->dev,
-			"%s: meta appears damaged...\n", __func__);
-		errorCode = -EINVAL;
-		goto ambarella_nand_scan_error2;
-	}
-	dev_info(nand_info->dev, "PTB V%d\n", found);
-
-	amboot_partitions = kzalloc(
-		PART_MAX + CMDLINE_PART_MAX * sizeof(struct mtd_partition),
-		GFP_KERNEL);
-	if (amboot_partitions == NULL)
-		goto ambarella_nand_scan_error2;
-
-	/* if this partition isn't located in NAND, fake its nblk to 0, this
-	 * feature start from the second version of flpart_meta_t. */
-	if (found == 3) {
-		for (i = 0; i < PART_MAX; i++) {
-			if ((meta_table->part_dev[i] & PART_DEV_NAND) !=
-				PART_DEV_NAND)
-				meta_table->part_info[i].nblk = 0;
-		}
-	} else if (found > 1) {
-		for (i = 0; i < PART_MAX; i++) {
-			if (meta_table->part_dev[i] != BOOT_DEV_NAND)
-				meta_table->part_info[i].nblk = 0;
-		}
-	}
-
-	amboot_nr_partitions = 0;
-	found = 0;
-	for (i = 0; i < PART_MAX; i++) {
-#ifdef CONFIG_MTD_NAND_AMBARELLA_ENABLE_FULL_PTB
-		/*
-		 * find swp partition, and then take it as a benchmark to adjust
-		 * each partitions's offset.
-		 * adjust rules:
-		 * 1. before swp partition:
-		 *	if the partition's nblk (size) is 0, make its sblk and
-		 *	nblk equal to the previous one;
-		 * 2. after swp partition:
-		 *	if the partition's nblk (size) is 0, skip the partition;
-		 */
-		if (!found && !strncmp(meta_table->part_info[i].name, "swp", 3)) {
-			found = 1;
-		}
-		if (found) {
-			if (meta_table->part_info[i].nblk == 0)
-				continue;
-		} else {
-			/* bst partition should be always exist */
-			if (i > 0 && meta_table->part_info[i].nblk == 0) {
-				meta_table->part_info[i].sblk =
-					meta_table->part_info[i-1].sblk;
-				meta_table->part_info[i].nblk =
-					meta_table->part_info[i-1].nblk;
-			}
-		}
-#else
-		if (meta_table->part_info[i].nblk == 0)
-			continue;
-#endif
-		strcpy(part_name[i], meta_table->part_info[i].name);
-		amboot_partitions[amboot_nr_partitions].name = part_name[i];
-		amboot_partitions[amboot_nr_partitions].offset = meta_table->part_info[i].sblk * mtd->erasesize;
-		amboot_partitions[amboot_nr_partitions].size = meta_table->part_info[i].nblk * mtd->erasesize;
-		amboot_nr_partitions++;
-	}
-
-	errorCode = 0;
-
-	i = 0;
-	if (cmd_nr_partitions >= 0)
-		i = cmd_nr_partitions;
-
-	mtd_device_parse_register(mtd, NULL, 0, amboot_partitions, amboot_nr_partitions);
-
-	kfree(amboot_partitions);
-ambarella_nand_scan_error2:
-	kfree(meta_table);
-
-ambarella_nand_scan_error1:
-
-	return errorCode;
-}
-
 static int ambarella_nand_probe(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_nand_info		*nand_info;
 	struct mtd_info				*mtd;
+	struct mtd_part_parser_data		ppdata = {};
 
 	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
 	if (nand_info == NULL) {
@@ -2004,8 +1853,10 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_mtd_error;
 
 	mtd->name = "amba_nand";
-	errorCode = ambarella_nand_scan_partitions(nand_info);
-	if (errorCode)
+
+	ppdata.of_node = pdev->dev.of_node;
+	errorCode = mtd_device_parse_register(mtd, NULL, &ppdata, NULL, 0);
+	if (errorCode < 0)
 		goto ambarella_nand_probe_mtd_error;
 
 	platform_set_drvdata(pdev, nand_info);

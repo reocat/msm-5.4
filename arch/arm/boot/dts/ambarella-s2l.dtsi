@@ -353,6 +353,8 @@
 
 		nand0: nand@e0001000 {
 			compatible = "ambarella,nand-v2";
+			#address-cells = <1>;
+			#size-cells = <1>;
 			reg = <0xe0001000 0x1000>, /* fio reg address */
 			      <0xe0012000 0x1000>, /* fdma reg address */
 			      <0xe0000000 0x4>;    /* fifo base */
