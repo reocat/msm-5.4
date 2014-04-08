@@ -37,6 +37,7 @@
 #include <linux/bch.h>
 #include <linux/io.h>
 #include <linux/of.h>
+#include <linux/of_mtd.h>
 #include <linux/clk.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -1601,7 +1602,10 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 	chip->waitfunc = amb_nand_waitfunc;
 	chip->cmdfunc = amb_nand_cmdfunc;
 	chip->options |= NAND_NO_SUBPAGE_WRITE;
-	chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+	if (of_get_nand_on_flash_bbt(np)) {
+		printk(KERN_INFO "ambarella_nand: Use On Flash BBT\n");
+		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+	}
 
 	nand_info->mtd.priv = chip;
 	nand_info->mtd.owner = THIS_MODULE;

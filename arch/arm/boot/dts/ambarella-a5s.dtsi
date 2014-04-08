@@ -331,6 +331,7 @@
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
 			amb,use-2x-pll;
+			nand-on-flash-bbt;
 		};
 
 		i2s0: i2s@6000a000 {

@@ -359,6 +359,7 @@
 			interrupts = <0 16 0x04>,	/* fio_cmd_irq */
 				     <0 17 0x04>,	/* fio_dma_irq */
 				     <0 33 0x04>;	/* fdma_irq */
+			nand-on-flash-bbt;
 		};
 
 		i2s0: i2s@6000a000 {
