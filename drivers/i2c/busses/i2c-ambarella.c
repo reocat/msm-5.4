@@ -570,6 +570,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 #if defined(CONFIG_AMBALINK_LOCK)
 	if (pdev->id == 2) {
 		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+		disable_irq(pinfo->irq);
 		enable_irq(pinfo->irq);
 	}
 #endif
@@ -605,7 +606,12 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	adap->class = i2c_class;
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 	adap->algo = &ambarella_i2c_algo;
+#if 0
 	adap->nr = id_tmp++;
+#else
+	id_tmp++;
+	adap->nr = pdev->id;
+#endif
 	adap->retries = CONFIG_I2C_AMBARELLA_RETRIES;
 
 	errorCode = i2c_add_numbered_adapter(adap);

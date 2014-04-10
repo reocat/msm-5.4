@@ -86,6 +86,7 @@
 #endif
 
 #if defined(CONFIG_VMSPLIT_3G)
+#define NOLINUX_MEM_V_START             (0xe0000000)
 #define AHB_BASE			(0xf0000000)
 #define APB_BASE			(0xf1000000)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
@@ -107,6 +108,7 @@
 #define DBGBUS_BASE			(0xf2200000)
 #endif
 #elif defined(CONFIG_VMSPLIT_2G)
+#define NOLINUX_MEM_V_START             (0xc0000000)
 #define AHB_BASE			(0xe0000000)
 #define APB_BASE			(0xe8000000)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
@@ -128,6 +130,7 @@
 #define DBGBUS_BASE			(0xec000000)
 #endif
 #else /* CONFIG_VMSPLIT_1G */
+#define NOLINUX_MEM_V_START             (0x80000000)
 #define AHB_BASE			(0xe0000000)
 #define APB_BASE			(0xe8000000)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
@@ -169,8 +172,6 @@
 
 #ifdef CONFIG_ARM_PATCH_PHYS_VIRT
 #ifndef __ASSEMBLY__
-extern u32 ambarella_phys_to_virt(u32 paddr);
-extern u32 ambarella_virt_to_phys(u32 vaddr);
 extern unsigned long __pv_phys_offset;
 #define PHYS_OFFSET __pv_phys_offset
 
@@ -202,7 +203,11 @@ static inline unsigned long __amb_raw_phys_to_virt(unsigned long x)
 #define __amb_raw_phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
 #endif /* CONFIG_ARM_PATCH_PHYS_VIRT */
 
+#ifndef __ASSEMBLY__
 #if defined(CONFIG_AMBARELLA_IO_MAP)
+extern unsigned int ambarella_phys_to_virt(unsigned int paddr);
+extern unsigned int ambarella_virt_to_phys(unsigned int vaddr);
+
 #define __virt_to_phys(x)		(ambarella_virt_to_phys(x))
 #define __phys_to_virt(x)		(ambarella_phys_to_virt(x))
 #else
@@ -213,6 +218,7 @@ static inline unsigned long __amb_raw_phys_to_virt(unsigned long x)
 #define __bus_to_virt(x)		__phys_to_virt(x)
 #define __pfn_to_bus(x)			__pfn_to_phys(x)
 #define __bus_to_pfn(x)			__phys_to_pfn(x)
+#endif /* __ASSEMBLY__ */
 
 
 /* ==========================================================================*/

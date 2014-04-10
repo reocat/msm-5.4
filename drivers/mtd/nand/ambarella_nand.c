@@ -290,8 +290,11 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 	}
 	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
 
+	/* do not disable dual-space mode at run time. */
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, 0);
 	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, 0);
+#endif
 }
 
 static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
@@ -746,6 +749,11 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		break;
 
 	case NAND_AMB_CMD_ERASE:
+		/* Move dual space mode work around from nand_amb_erase to here.
+		 * Make sure nand register access is atomic. */
+		if (nand_amb_is_hw_bch(nand_info))
+			amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
+
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_ERASE;
 		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
@@ -1061,10 +1069,6 @@ int nand_amb_erase(struct ambarella_nand_info *nand_info, u32 page_addr)
 	nand_info->cmd = NAND_AMB_CMD_ERASE;
 	nand_info->addr_hi = addr_hi;
 	nand_info->addr = addr;
-
-	/* Fix dual space mode bug */
-	if (nand_info->ecc_bits > 1)
-		amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
 
 	errorCode = nand_amb_request(nand_info);
 
@@ -1647,9 +1651,14 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 	chip->waitfunc = amb_nand_waitfunc;
 	chip->cmdfunc = amb_nand_cmdfunc;
 	chip->options |= NAND_NO_SUBPAGE_WRITE;
+	
 	if (of_get_nand_on_flash_bbt(np)) {
 		printk(KERN_INFO "ambarella_nand: Use On Flash BBT\n");
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		chip->bbt_options |= NAND_BBT_USE_FLASH;
+#else
 		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+#endif
 	}
 
 	nand_info->mtd.priv = chip;
@@ -1795,6 +1804,10 @@ static int ambarella_nand_get_resource(
 	if (nand_info->ecc_bits > 0)
 		nand_info->soft_ecc = true;
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	fio_select_lock(SELECT_FIO_FL);
+#endif
+
 	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			"fio_cmd_irq", nand_info);
@@ -1893,6 +1906,8 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	disable_irq(nand_info->cmd_irq);
 	disable_irq(nand_info->dma_irq);
 	disable_irq(nand_info->fdma_irq);
+
+	fio_unlock(SELECT_FIO_FL);
 	/*
 	 * NAND DSM bug: doing copyback after a read command will be failed.
 	 * We need to save the last NAND command of Linux to notify ThreadX to

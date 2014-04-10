@@ -56,10 +56,18 @@
 #include <plat/clk.h>
 
 #include <linux/input.h>
+
+#ifdef CONFIG_RPROC_S2
+extern struct platform_device ambarella_rproc_cortex_dev;
+#endif
+
 /* ==========================================================================*/
 static struct platform_device *ambarella_devices[] __initdata = {
 //	&ambarella_fb0,
 //	&ambarella_fb1,
+#ifdef CONFIG_RPROC_S2
+	&ambarella_rproc_cortex_dev,
+#endif
 };
 #if 0
 static struct platform_device *ambarella_pwm_devices[] __initdata = {

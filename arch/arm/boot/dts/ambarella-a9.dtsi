@@ -16,14 +16,7 @@
 	aliases {
 		serial0 = &uart0;
 		serial1 = &uart1;
-		serial2 = &uart2;
-		serial3 = &uart3;
 		nand = &nand0;
-		i2c0 = &i2c0;
-		i2c1 = &i2c1;
-		i2c2 = &i2c2;
-		spi0 = &spi0;
-		ethernet0 = &mac0;
 	};
 
 	/* the memory node will be overwritten in Amboot,
@@ -83,32 +76,24 @@
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 		};
 
+		uart0: uart@70005000 {
+			compatible = "ambarella,uart";
+			reg = <0x70005000 0x100>;
+			interrupts = <0 9 0x04>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart0_pins>;
+			status = "disable";
+			/* amb,tx-fifo-fix; */
+		};
+
 		uart1: uart@7001f000 {
 			compatible = "ambarella,uart";
 			reg = <0x7001f000 0x100>;
 			interrupts = <0 25 0x04>;
-			status = "disabled";
-			amb,msr-used;	/* use Modem Status Register */
-			/* amb,tx-fifo-fix; */
-		};
-
-		i2c2: i2c@70013000 {
-			compatible = "ambarella,i2c";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0x70013000 0x1000>;
-			interrupts = <0 90 0x04>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&i2c2_pins>;
-			clock-frequency = <100000>;
-			amb,i2c-class = <0x81>;
-			amb,bulk-num = <60>;
-			status = "disabled";
-	        };
-
-		rtc@7000d000 {
-			compatible = "ambarella,rtc-v2";
-			reg = <0x7000d000 0x1000>;
+			pinctrl-0 = <&uart1_pins>;
+			status = "ok";
+			/* amb,tx-fifo-fix; */
 		};
 
 		pinctrl: pinctrl@70009000 {
@@ -126,16 +111,23 @@
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
 				/* gpio interrupts to vic */
+				/*
 				interrupts = <0 10 0x04>,
 					     <0 11 0x04>,
 					     <0 30 0x04>,
 					     <0 29 0x04>,
 					     <0 48 0x04>;
+				*/
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinctrl 0 0 160>;
 				interrupt-controller;
 				#interrupt-cells = <2>;
+			};
+
+			uart0_pins: uart0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x100e 0x100f>;
 			};
 
 			uart1_pins: uart1@0 {
@@ -152,19 +144,6 @@
 						 <0x1021 0x0022 0x1032 0x1033 0x1034 0x1035>;
 			};
 
-			i2c2_pins: i2c2@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x1024 0x1025>;
-			};
-
-			usb_host_pins: uhc0@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x1007 0x1009>,
-						/* virtual pins, just for
-						   configuration purpose. But not
-						   mentioned in APM, need test*/
-						 <0x1060 0x1061>;
-			};
 		};
 	};
 
@@ -191,63 +170,6 @@
 				     <0 33 0x04>;	/* fdma_irq */
 		};
 
-		udc@60006000 {
-			compatible = "ambarella,udc-v1";
-			reg = <0x60006000 0x2000 0x70170088 0x4>;
-			interrupts = <0 4 0x04>;
-			amb,usbphy = <&usbphy>;
-			amb,dma-addr-fix;
-		};
-
-		ehci@60018000 {
-			compatible = "ambarella,ehci";
-			reg = <0x60018000 0x1000>;
-			interrupts = <0 73 0x04>;
-			amb,usbphy = <&usbphy>;
-		};
-
-		ohci@60019000 {
-			compatible = "ambarella,ohci";
-			reg = <0x60019000 0x1000>;
-			interrupts = <0 89 0x04>;
-			amb,usbphy = <&usbphy>;
-			status = "disabled";
-		};
-
-		sdmmc1@6000c000 {
-			compatible = "ambarella,sdmmc";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0x6000c000 0x1000>,
-			      <0x60001000 0x80>, /* fio reg address */
-			      <0x701701d0 0x4>;
-			interrupts = <0 52 0x4>;
-			amb,dma-addr-fix;
-			amb,clk-name = "gclk_sdio";
-			amb,wait-tmo = <2500>; /* in millisecond */
-			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
-			amb,timing-magic = <2>; /* see codes for its meaning */
-
-			slot@0 {
-				reg = <0>;
-				max-frequency = <48000000>;
-				bus-width = <8>;
-				amb,caps-ddr;
-				cap-sdio-irq;
-			};
-		};
-
-		mac0: ethernet@6000e000 {
-			compatible = "ambarella,eth";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0x6000e000 0x2000>;
-			interrupts = <0 27 0x4>;
-			amb,support-gmii;
-			amb,tx-ring-size = <64>;
-			amb,rx-ring-size = <64>;
-			amb,ipc-rx;
-		};
 	};
 
 	axi@f0000000 {	/* AXI */
@@ -256,16 +178,6 @@
 		#size-cells = <1>;
 		reg = <0xf0000000 0x00030000>;
 		ranges;
-
-		crypto@f0020000 {
-			compatible = "ambarella,crypto";
-			reg = <0xf0020000 0x8000>;
-			interrupts = <0 122 0x1>, <0 121 0x1>, <0 120 0x1>, <0 123 0x1>;
-			interrupt-names = "aes-irq", "des-irq", "md5-irq", "sha1-irq";
-			amb,cap-md5-sha1;
-			amb,data-swap;
-			amb,reg-64bit;
-		};
 	};
 
 	rct@70170000 {

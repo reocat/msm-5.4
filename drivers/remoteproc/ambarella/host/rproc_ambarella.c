@@ -177,7 +177,7 @@ static struct platform_device_id id_table[] = {
 	{ "ca9_a_and_b", 0},
 	{ "ca9_a_and_arm11", 0},
 	{ "ca9_b_and_arm11", 0},
-    { "c0_and_c1", 0},
+	{ "c0_and_c1", 0},
 	{ /* sentinel */ }
 };
 
