@@ -65,7 +65,7 @@
 #define JEDEC_MFR(_jedec_id)    ((_jedec_id) >> 16)
 
 static char part_name[PART_MAX][PART_NAME_LEN];
-#define BOOT_DEV_SPI_NOR    0x6
+#define PART_DEV_SPINOR		(0x08)
 
 
 /****************************************************************************/
@@ -501,6 +501,9 @@ static int ambarella_spinor_scan_partitions(struct amb_norflash *flash,
         } else if (meta_table->magic == PTB_META_MAGIC2) {
             found = 2;
             break;
+        } else if (meta_table->magic == PTB_META_MAGIC3) {
+			found = 3;
+			break;
         }
     }
 
@@ -511,18 +514,18 @@ static int ambarella_spinor_scan_partitions(struct amb_norflash *flash,
     }
 
     dev_info(flash->dev, "Partition infomation found!\n");
-
     amboot_partitions = kzalloc(
         PART_MAX + CMDLINE_PART_MAX * sizeof(struct mtd_partition),
         GFP_KERNEL);
-    if (amboot_partitions == NULL)
+    if (amboot_partitions == NULL) {
         goto ambarella_spinor_scan_error2;
+    }
 
     /* if this partition isn't located in NAND, fake its nblk to 0, this
      * feature start from the second version of flpart_meta_t. */
     if (found > 1) {
         for (i = 0; i < PART_MAX; i++) {
-            if (meta_table->part_dev[i] != BOOT_DEV_SPI_NOR)
+            if (meta_table->part_dev[i] != PART_DEV_SPINOR)
                 meta_table->part_info[i].nblk = 0;
         }
     }
@@ -560,6 +563,7 @@ static int ambarella_spinor_scan_partitions(struct amb_norflash *flash,
         if (meta_table->part_info[i].nblk == 0)
             continue;
 #endif
+
         strcpy(part_name[i], meta_table->part_info[i].name);
         amboot_partitions[amboot_nr_partitions].name = part_name[i];
         amboot_partitions[amboot_nr_partitions].offset = meta_table->part_info[i].sblk * mtd->erasesize;

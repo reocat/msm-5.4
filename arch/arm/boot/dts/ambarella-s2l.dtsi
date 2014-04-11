@@ -22,6 +22,7 @@
 		i2c2 = &i2c2;
 		spi0 = &spi0;
 		spi1 = &spi1;
+		spinor = &spinor0;
 		ethernet0 = &mac0;
 	};
 
@@ -365,6 +366,11 @@
 			/* amb,soft-ecc = <1>; */
 		};
 
+		spinor0: spinor@e0031000 {
+			compatible = "ambarella,s2l-spinor";
+			reg = <0xe0031000 0x2ff>,/* spi nor controller*/
+				  <0xe0005300 0x20>;/*dma reg*/
+		};
 		uart1: uart@e0032000 {
 			compatible = "ambarella,uart";
 			reg = <0xe0032000 0x1000>;
