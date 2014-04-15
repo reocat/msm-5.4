@@ -29,6 +29,7 @@
 #include <linux/smp.h>
 #include <linux/io.h>
 #include <linux/bootmem.h>
+#include <linux/of.h>
 #include <linux/of_fdt.h>
 
 #include <asm/cacheflush.h>
