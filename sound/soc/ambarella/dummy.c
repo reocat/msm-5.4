@@ -129,10 +129,7 @@ static struct snd_soc_ops ambarella_dummy_board_ops = {
 static struct snd_soc_dai_link ambarella_dummy_dai_link = {
 	.name = "AMB-DUMMY",
 	.stream_name = "AMB-DUMMY-STREAM",
-	.cpu_dai_name = "ambarella-i2s.0",
-	.platform_name = "ambarella-pcm-audio",
 	.codec_dai_name = "AMBARELLA_DUMMY_CODEC",
-	.codec_name = "ambdummy-codec",
 	.ops = &ambarella_dummy_board_ops,
 };
 
@@ -145,10 +142,33 @@ static struct snd_soc_card snd_soc_card_ambarella_dummy = {
 
 static int ambdummy_soc_snd_probe(struct platform_device *pdev)
 {
+
+	struct device_node *np = pdev->dev.of_node;
+	struct device_node *cpup_np, *codec_np;
+	struct snd_soc_card *card = &snd_soc_card_ambarella_dummy;
 	int errorCode = 0;
 
-	snd_soc_card_ambarella_dummy.dev = &pdev->dev;
-	errorCode = snd_soc_register_card(&snd_soc_card_ambarella_dummy);
+	card->dev = &pdev->dev;
+	if (snd_soc_of_parse_card_name(card, "amb,model")) {
+		dev_err(&pdev->dev, "Card name is not provided\n");
+		return -ENODEV;
+	}
+	cpup_np = of_parse_phandle(np, "amb,i2s-controllers", 0);
+	codec_np = of_parse_phandle(np, "amb,audio-codec", 0);
+	if (!cpup_np || !codec_np) {
+		dev_err(&pdev->dev, "phandle missing or invalid\n");
+		return -EINVAL;
+	}
+
+	ambarella_dummy_dai_link.codec_of_node = codec_np;
+	ambarella_dummy_dai_link.cpu_of_node = cpup_np;
+	ambarella_dummy_dai_link.platform_of_node = cpup_np;
+
+	of_node_put(codec_np);
+	of_node_put(cpup_np);
+
+
+	errorCode = snd_soc_register_card(card);
 	if (errorCode)
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", errorCode);
 
@@ -174,10 +194,17 @@ static int ambdummy_soc_snd_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id ambdummy_dt_ids[] = {
+	{ .compatible = "ambarella,ambdummy-dummycodec", },
+	{ /* sentinel */ }
+};
+
+
 static struct platform_driver ambdummy_soc_snd_driver = {
 	.driver = {
 		.name = "snd_soc_card_ambdummy",
 		.owner = THIS_MODULE,
+		.of_match_table = ambdummy_dt_ids,
 	},
 	.probe	= ambdummy_soc_snd_probe,
 	.remove = ambdummy_soc_snd_remove,
