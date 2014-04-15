@@ -416,7 +416,6 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		return rval;
 	}
 
-#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	/* Initialize GPIO irq */
 	amb_gpio->domain = irq_domain_add_linear(np, amb_gpio->gc->ngpio,
 					&amb_gpio_irq_domain_ops, amb_gpio);
@@ -425,6 +424,7 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		return -ENOSYS;
 	}
 
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		irq_set_irq_type(amb_gpio->irq[i], IRQ_TYPE_LEVEL_HIGH);
 		irq_set_handler_data(amb_gpio->irq[i], amb_gpio);
