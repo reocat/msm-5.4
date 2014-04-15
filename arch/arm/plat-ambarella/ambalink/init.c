@@ -112,7 +112,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.pfn        = __phys_to_pfn(DEFAULT_MEM_START),
 			.length     = CONFIG_AMBARELLA_PPM_SIZE,
 #if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
-			.type       = MT_DEVICE,
+			.type       = MT_MEMORY_SHARED,
 #else
 			.type       = MT_MEMORY,
 #endif
@@ -125,7 +125,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.pfn        = 0,
 			.length     = 0,
 #if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
-			.type       = MT_DEVICE,
+			.type       = MT_MEMORY_SHARED,
 #else
 			.type       = MT_MEMORY,
 #endif
@@ -261,7 +261,9 @@ void __init ambarella_map_io(void)
 
 int arch_pfn_is_nosave(unsigned long pfn)
 {
+#if 0
 	int                 i;
+#endif
 	unsigned long               nosave_begin_pfn;
 	unsigned long               nosave_end_pfn;
 
@@ -354,7 +356,6 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 #endif
 
 #if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-	/* FIXME: need to turn on pm support */
 	ret_val = ambarella_init_fb();
 	BUG_ON(ret_val != 0);
 

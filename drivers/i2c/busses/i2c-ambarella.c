@@ -130,14 +130,14 @@ static int ambarella_i2c_system_event(struct notifier_block *nb,
 	case AMBA_EVENT_POST_CPUFREQ:
 		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
 #if defined(CONFIG_AMBALINK_LOCK)
-		if (pdev->id == 2) {
+		if (!strcmp(pdev->name, "70013000.i2c")) {
 			aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 			enable_irq(pinfo->irq);
 		}
 #endif
 		ambarella_i2c_set_clk(pinfo);
 #if defined(CONFIG_AMBALINK_LOCK)
-		if (pdev->id == 2) {
+		if (!strcmp(pdev->name, "70013000.i2c")) {
 			disable_irq(pinfo->irq);
 			aipc_mutex_unlock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 		}
@@ -438,7 +438,7 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	pinfo = (struct ambarella_i2c_dev_info *)i2c_get_adapdata(adap);
 
 #if defined(CONFIG_AMBALINK_LOCK)
-	if (adap->nr == 2) {
+	if (!strcmp(adap->name, "70013000.i2c")) {
 		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 		ambarella_i2c_set_clk(pinfo);
 		enable_irq(pinfo->irq);
@@ -479,7 +479,7 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	up(&pinfo->system_event_sem);
 
 #if defined(CONFIG_AMBALINK_LOCK)
-	if (adap->nr == 2) {
+	if (!strcmp(adap->name, "70013000.i2c")) {
 		disable_irq(pinfo->irq);
 		aipc_mutex_unlock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 	}
@@ -568,7 +568,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	sema_init(&pinfo->system_event_sem, 1);
 
 #if defined(CONFIG_AMBALINK_LOCK)
-	if (pdev->id == 2) {
+	if (!strcmp(pdev->name, "70013000.i2c")) {
 		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 		disable_irq(pinfo->irq);
 		enable_irq(pinfo->irq);
@@ -577,7 +577,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	ambarella_i2c_hw_init(pinfo);
 
 #if defined(CONFIG_AMBALINK_LOCK)
-	if (pdev->id == 2) {
+	if (!strcmp(pdev->name, "70013000.i2c")) {
 		disable_irq(pinfo->irq);
 		aipc_mutex_unlock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 	}
@@ -593,7 +593,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_AMBALINK_LOCK)
-	if (pdev->id == 2) {
+	if (!strcmp(pdev->name, "70013000.i2c")) {
 		disable_irq(pinfo->irq);
 	}
 #endif
@@ -606,12 +606,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	adap->class = i2c_class;
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 	adap->algo = &ambarella_i2c_algo;
-#if 0
 	adap->nr = id_tmp++;
-#else
-	id_tmp++;
-	adap->nr = pdev->id;
-#endif
 	adap->retries = CONFIG_I2C_AMBARELLA_RETRIES;
 
 	errorCode = i2c_add_numbered_adapter(adap);
