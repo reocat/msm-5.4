@@ -79,16 +79,22 @@ void ambcache_clean_range(void *addr, unsigned int size)
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 #if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 	if (cache_check_start && (vstart != (u32)addr)) {
-		pr_warn("%s start:0x%08x vs 0x%08x\n",
-			__func__, vstart, (u32)addr);
-		if (cache_check_fail_halt)
-			BUG();
+		if (cache_check_fail_halt) {
+			panic("%s start:0x%08x vs 0x%08x\n",
+				__func__, vstart, (u32)addr);
+		} else {
+			pr_warn("%s start:0x%08x vs 0x%08x\n",
+				__func__, vstart, (u32)addr);
+		}
 	}
 	if (cache_check_end && (vend != ((u32)addr + size))) {
-		pr_warn("%s start:0x%08x vs 0x%08x\n",
-			__func__, vend, ((u32)addr + size));
-		if (cache_check_fail_halt)
-			BUG();
+		if (cache_check_fail_halt) {
+			panic("%s end:0x%08x vs 0x%08x\n",
+				__func__, vend, ((u32)addr + size));
+		} else {
+			pr_warn("%s end:0x%08x vs 0x%08x\n",
+				__func__, vend, ((u32)addr + size));
+		}
 	}
 #endif
 #ifdef CONFIG_OUTER_CACHE
@@ -120,16 +126,22 @@ void ambcache_inv_range(void *addr, unsigned int size)
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 #if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 	if (cache_check_start && (vstart != (u32)addr)) {
-		pr_warn("%s start:0x%08x vs 0x%08x\n",
-			__func__, vstart, (u32)addr);
-		if (cache_check_fail_halt)
-			BUG();
+		if (cache_check_fail_halt) {
+			panic("%s start:0x%08x vs 0x%08x\n",
+				__func__, vstart, (u32)addr);
+		} else {
+			pr_warn("%s start:0x%08x vs 0x%08x\n",
+				__func__, vstart, (u32)addr);
+		}
 	}
 	if (cache_check_end && (vend != ((u32)addr + size))) {
-		pr_warn("%s start:0x%08x vs 0x%08x\n",
-			__func__, vend, ((u32)addr + size));
-		if (cache_check_fail_halt)
-			BUG();
+		if (cache_check_fail_halt) {
+			panic("%s end:0x%08x vs 0x%08x\n",
+				__func__, vend, ((u32)addr + size));
+		} else {
+			pr_warn("%s end:0x%08x vs 0x%08x\n",
+				__func__, vend, ((u32)addr + size));
+		}
 	}
 #endif
 #ifdef CONFIG_OUTER_CACHE
@@ -168,16 +180,22 @@ void ambcache_flush_range(void *addr, unsigned int size)
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
 #if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
 	if (cache_check_start && (vstart != (u32)addr)) {
-		pr_warn("%s start:0x%08x vs 0x%08x\n",
-			__func__, vstart, (u32)addr);
-		if (cache_check_fail_halt)
-			BUG();
+		if (cache_check_fail_halt) {
+			panic("%s start:0x%08x vs 0x%08x\n",
+				__func__, vstart, (u32)addr);
+		} else {
+			pr_warn("%s start:0x%08x vs 0x%08x\n",
+				__func__, vstart, (u32)addr);
+		}
 	}
 	if (cache_check_end && (vend != ((u32)addr + size))) {
-		pr_warn("%s start:0x%08x vs 0x%08x\n",
-			__func__, vend, ((u32)addr + size));
-		if (cache_check_fail_halt)
-			BUG();
+		if (cache_check_fail_halt) {
+			panic("%s end:0x%08x vs 0x%08x\n",
+				__func__, vend, ((u32)addr + size));
+		} else {
+			pr_warn("%s end:0x%08x vs 0x%08x\n",
+				__func__, vend, ((u32)addr + size));
+		}
 	}
 #endif
 #ifdef CONFIG_OUTER_CACHE
@@ -236,23 +254,25 @@ static u32 setup_l2_ctrl(void)
 	u32 ctrl = 0;
 
 #ifdef CONFIG_CACHE_PL310_FULL_LINE_OF_ZERO
-	ctrl |= (1 << L2X0_AUX_CTRL_FULL_LINE_OF_ZERO_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_FULL_LINE_OF_ZERO_SHIFT);
 #endif
 #if (CHIP_REV == A8)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #elif (CHIP_REV == S2L)
 	ctrl |= (0x0 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #else
 	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 #endif
 	ctrl |= (0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT);
-	ctrl |= (1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
-	ctrl |= (1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #ifdef CONFIG_CACHE_PL310_EARLY_BRESP
-	ctrl |= (1 << L2X0_AUX_CTRL_EARLY_BRESP_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_EARLY_BRESP_SHIFT);
 #endif
 
 	return ctrl;

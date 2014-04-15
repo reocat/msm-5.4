@@ -69,7 +69,7 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 		amba_writel(GDMA_WIDTH_REG, TRANSFER_2D_WIDTH - 1);
 		amba_writel(GDMA_HEIGHT_REG, row_count - 1);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-		amba_writel(GDMA_PIXELFORMAT_REG, 0xb03);
+		amba_writel(GDMA_PIXELFORMAT_REG, 0x800);
 		amba_writel(GDMA_ALPHA_REG, 0);
 		amba_writel(GDMA_CLUT_BASE_REG, 0);
 #endif
@@ -95,7 +95,7 @@ static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 	amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
 	amba_writel(GDMA_WIDTH_REG, size - 1);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-	amba_writel(GDMA_PIXELFORMAT_REG, 0xb03);
+	amba_writel(GDMA_PIXELFORMAT_REG, 0x800);
 	amba_writel(GDMA_ALPHA_REG, 0);
 	amba_writel(GDMA_CLUT_BASE_REG, 0);
 #endif
