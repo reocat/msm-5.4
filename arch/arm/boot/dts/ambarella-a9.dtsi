@@ -349,12 +349,15 @@
 
 		nand0: nand@60001000 {
 			compatible = "ambarella,nand-v2";
+			#address-cells = <1>;
+			#size-cells = <1>;
 			reg = <0x60001000 0x1000>, /* fio reg address */
 			      <0x60012000 0x1000>, /* fdma reg address */
 			      <0x60000000 0x4>;    /* fifo base */
 			interrupts = <0 16 0x04>,	/* fio_cmd_irq */
 				     <0 17 0x04>,	/* fio_dma_irq */
 				     <0 33 0x04>;	/* fdma_irq */
+			nand-on-flash-bbt;
 		};
 
 		i2s0: i2s@6000a000 {

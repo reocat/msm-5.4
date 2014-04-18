@@ -43,10 +43,8 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
-#include <plat/dma.h>
 #include <mach/init.h>
-#include <mach/dma.h>
-#include <mach/board.h>
+#include <plat/dma.h>
 #include <plat/nand.h>
 #include <plat/fio.h>
 #include <plat/event.h>
@@ -706,7 +704,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		gpio_is_valid(nand_info->wp_gpio))
 		gpio_direction_output(nand_info->wp_gpio, GPIO_HIGH);
 #endif
-	
+
 	if ((nand_info->nand_wp) &&
 		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
 		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS))
@@ -1651,7 +1649,7 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 	chip->waitfunc = amb_nand_waitfunc;
 	chip->cmdfunc = amb_nand_cmdfunc;
 	chip->options |= NAND_NO_SUBPAGE_WRITE;
-	
+
 	if (of_get_nand_on_flash_bbt(np)) {
 		printk(KERN_INFO "ambarella_nand: Use On Flash BBT\n");
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK

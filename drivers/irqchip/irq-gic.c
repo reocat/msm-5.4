@@ -501,7 +501,9 @@ static void gic_dist_save(unsigned int gic_nr)
 static void gic_dist_restore(unsigned int gic_nr)
 {
 	unsigned int gic_irqs;
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	unsigned int i;
+#endif
 	void __iomem *dist_base;
 
 	if (gic_nr >= MAX_GIC_NR)
@@ -630,8 +632,8 @@ static struct notifier_block gic_notifier_block = {
 	.notifier_call = gic_notifier,
 };
 
-u32 gic_suspend(u32 level);
-u32 gic_resume(u32 level);
+int gic_suspend(void);
+void gic_resume(void);
 
 struct syscore_ops gic_syscore_ops = {
 	.suspend	= gic_suspend,
@@ -893,7 +895,7 @@ struct gic_info_s {
 };
 static struct gic_info_s gic_pm_info;
 
-u32 gic_suspend(u32 level)
+int gic_suspend(void)
 {
 	int					retval = 0;
 	u32					gic_irqs;
@@ -931,7 +933,7 @@ gic_dist_pm_exit:
 	return retval;
 }
 
-u32 gic_resume(u32 level)
+void gic_resume(void)
 {
 	int					retval = 0;
 	u32					gic_irqs;

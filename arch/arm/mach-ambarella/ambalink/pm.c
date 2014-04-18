@@ -37,7 +37,6 @@
 #include <asm/system.h>
 #include <asm/suspend.h>
 
-#include <mach/board.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
 
@@ -100,15 +99,7 @@ int rpmsg_linkctrl_cmd_hiber_exit(void);
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
-	if (ambarella_board_generic.power_control.gpio_id >= 0) {
-		ambarella_set_gpio_output(
-			&ambarella_board_generic.power_control, 0);
-		ambarella_set_gpio_output(
-			&ambarella_board_generic.power_control, 1);
-	} else {
-		amba_writel((amba_readl(ANA_PWR_REG) | ANA_PWR_POWER_DOWN),
-			ANA_PWR_REG);
-	}
+	amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
 }
 
 void ambarella_power_off_prepare(void)

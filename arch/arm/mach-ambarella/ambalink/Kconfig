@@ -1,6 +1,7 @@
 menuconfig PLAT_AMBARELLA_AMBALINK
 	bool "AmbaLink Support"
 	default n
+	select PLAT_AMBARELLA_SUPPORT_RPROC
 
 if PLAT_AMBARELLA_AMBALINK
 choice
@@ -36,8 +37,8 @@ config AMBALINK_LOCK
 config AMBALINK_RPC
 	bool "Amba RPC support"
 	depends on RPMSG
-	default y
 	depends on RPROC_SUPPORT
+	default y
 	help 
 	  Amblink Remote Procedure Call
 
@@ -68,6 +69,6 @@ config RPMSG_LINKCTRL
 	  A rpmsg server to handle the message between client and server for 
 	  control purpose, such as suspend, resume.
 
-source "arch/arm/plat-ambarella/ambalink/ambafs/Kconfig"
+source "arch/arm/mach-ambarella/ambalink/ambafs/Kconfig"
 
 endif #PLAT_AMBARELLA_AMBALINK

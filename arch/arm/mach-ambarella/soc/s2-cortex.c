@@ -42,6 +42,80 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
+#ifdef CONFIG_ARM_GIC
+static void gic_irq_disable(struct irq_data *d)
+{
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	u32 line = d->hwirq;
+
+	/* Disable in BOSS. */
+	boss_disable_irq(line);
+#endif
+}
+
+static void gic_irq_enable(struct irq_data *d)
+{
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	u32 line = d->hwirq;
+
+	/* Enable in BOSS. */
+	boss_enable_irq(line);
+#endif
+}
+
+static void ginkgo_amp_mask(struct irq_data *d)
+{
+	void __iomem *addr;
+	u32 line = d->hwirq;
+	u32 base = (u32)__io(AMBARELLA_VA_GIC_DIST_BASE);
+	u32 mask;
+
+	// set distribution to core0
+	//printk("{{{{ gic mask line %d }}}}\n", line);
+	addr = (void __iomem *) (base + GIC_DIST_TARGET + (line >> 2) * 4);
+	mask = readl_relaxed(addr);
+	mask &= ~(0xFF << ((line % 4) * 8));
+
+	/* Direct the interrupt to Core-0. */
+	mask |= (0x1 << ((line % 4) * 8));
+	writel_relaxed(mask, addr);
+}
+
+static void ginkgo_amp_unmask(struct irq_data *d)
+{
+	void __iomem *addr;
+	u32 line = d->hwirq;
+	u32 base = (u32)__io(AMBARELLA_VA_GIC_DIST_BASE);
+	u32 mask;
+
+	// set distribution to core1
+	//printk("{{{{ gic unmask line %d }}}}\n", line);
+	addr = (void __iomem *) (base + GIC_DIST_TARGET + (line >> 2) * 4);
+	mask = readl_relaxed(addr);
+	mask &= ~(0xFF << ((line % 4) * 8));
+
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Direct the interrupt to Core-1. */
+	mask |= (0x2 << ((line % 4) * 8));
+	writel_relaxed(mask, addr);
+#endif
+}
+#endif
+
+static void __init ambarella_ambalink_init_irq(void)
+{
+#ifdef CONFIG_ARM_GIC
+	// In case of AMP, we disable general gic_dist_init in gic.c
+	// Instead, we distribute irq to core-1 on the fly when an irq
+	// is unmasked in ginkgo_amp_unmask.
+	gic_arch_extn.irq_disable = gic_irq_disable;
+	gic_arch_extn.irq_enable = gic_irq_enable;
+
+	gic_arch_extn.irq_mask = ginkgo_amp_mask;
+	gic_arch_extn.irq_unmask = ginkgo_amp_unmask;
+#endif
+	irqchip_init();
+}
 
 static const char * const s2_dt_board_compat[] = {
 	"ambarella,s2",
@@ -53,7 +127,7 @@ DT_MACHINE_START(S2_DT, "Ambarella S2 (Flattened Device Tree)")
 	.smp		= smp_ops(ambarella_smp_ops),
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
-	.init_irq	= irqchip_init,
+	.init_irq	= ambarella_ambalink_init_irq,
 	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_machine,
 	.restart	= ambarella_restart_machine,

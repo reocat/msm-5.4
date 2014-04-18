@@ -19,12 +19,12 @@ config RPROC_CA9_B
 	  TBD:
 
 config RPROC_S2
-    tristate "Enable RPROC Host on S2"
-    depends on MACH_GINKGO
-    select RPROC_SUPPORT
-    help
-      TBD:
-    default n
+	tristate "Enable RPROC Host on S2"
+	depends on PLAT_AMBARELLA_AMBALINK
+	select RPROC_SUPPORT
+	help
+	  TBD:
+	default n
 
 config RPCLNT_SUPPORT
 	bool

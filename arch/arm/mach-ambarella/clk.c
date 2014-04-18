@@ -35,6 +35,9 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/clk.h>
+#ifdef CONFIG_RPMSG_CLK
+#include <linux/aipc/ipc_mutex.h>
+#endif
 
 #include <asm/uaccess.h>
 
@@ -45,6 +48,10 @@
 static LIST_HEAD(ambarella_all_clocks);
 DEFINE_SPINLOCK(ambarella_clock_lock);
 
+#ifdef CONFIG_RPMSG_CLK
+extern int rpmsg_clk_set(void *data, unsigned long rate);
+extern int rpmsg_clk_get(void *data);
+#endif
 /* ==========================================================================*/
 static unsigned int ambarella_clk_ref_freq = REF_CLK_FREQ;
 
@@ -774,6 +781,14 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 	u64 divider;
 	u64 frac;
 
+#if defined(CONFIG_RPMSG_CLK)
+	c->rate = rpmsg_clk_get(c);
+
+	if (c->rate != 0) {
+		return c->rate;
+	}
+#endif
+
 	if (c->ctrl_reg != PLL_REG_UNAVAILABLE) {
 		ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 		if ((ctrl_reg.s.power_down == 1) ||
@@ -860,9 +875,20 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	union frac_reg_u frac_reg;
 	u64 diff;
 
+#if defined(CONFIG_RPMSG_CLK)
+	rpmsg_clk_set(c, rate);
+
+	c->rate = rpmsg_clk_get(c);
+
+	if (c->rate != 0) {
+		return 0;
+	}
+#endif
+
 	if (c->divider) {
 		rate *= c->divider;
 	}
+
 	if (!rate) {
 		ret_val = -1;
 		goto ambarella_rct_clk_set_rate_exit;
@@ -998,6 +1024,8 @@ EXPORT_SYMBOL(ambarella_rct_clk_set_rate);
 
 int ambarella_rct_clk_enable(struct clk *c)
 {
+#if defined(CONFIG_RPMSG_CLK)
+#else
 	union ctrl_reg_u ctrl_reg;
 
 	if (c->ctrl_reg == PLL_REG_UNAVAILABLE) {
@@ -1014,13 +1042,15 @@ int ambarella_rct_clk_enable(struct clk *c)
 	amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 	c->rate = ambarella_rct_clk_get_rate(c);
-
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(ambarella_rct_clk_enable);
 
 int ambarella_rct_clk_disable(struct clk *c)
 {
+#if defined(CONFIG_RPMSG_CLK)
+#else
 	union ctrl_reg_u ctrl_reg;
 
 	if (c->ctrl_reg == PLL_REG_UNAVAILABLE) {
@@ -1037,6 +1067,7 @@ int ambarella_rct_clk_disable(struct clk *c)
 	amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 
 	c->rate = ambarella_rct_clk_get_rate(c);
+#endif
 
 	return 0;
 }
@@ -1056,6 +1087,14 @@ EXPORT_SYMBOL(ambarella_rct_pll_ops);
 unsigned long ambarella_rct_scaler_get_rate(struct clk *c)
 {
 	u32 divider;
+
+#if defined(CONFIG_RPMSG_CLK)
+	c->rate = rpmsg_clk_get(c);
+
+	if (c->rate != 0) {
+		return c->rate;
+	}
+#endif
 
 	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate) {
 		return 0;
@@ -1086,6 +1125,16 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 {
 	u32 divider;
 	u32 post_scaler;
+
+#if defined(CONFIG_RPMSG_CLK)
+	rpmsg_clk_set(c, rate);
+
+	c->rate = rpmsg_clk_get(c);
+
+	if (c->rate != 0) {
+		return 0;
+	}
+#endif
 
 	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate) {
 		return -1;

@@ -55,7 +55,7 @@
  *   26 * 2K + 10 + 4K = 56 K + 10 bytes
  */
 
-#ifdef CONFIG_MACH_GINKGO
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 
 #include <plat/ambalink_cfg.h>
 

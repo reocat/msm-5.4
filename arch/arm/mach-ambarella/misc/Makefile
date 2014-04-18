@@ -1,5 +1,5 @@
 #
-# arch/arm/mach-ambarella/Makefile
+# arch/arm/plat-ambarella/misc/Makefile
 #
 # Author: Anthony Ginger <hfjiang@ambarella.com>
 #
@@ -20,18 +20,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= fio.o
-obj-y						+= clk.o
-obj-y						+= pll.o
-obj-y						+= timer.o
-
-obj-y						+= soc/
-obj-y						+= smp/
-obj-y						+= misc/
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_AMBALINK), y)
-obj-y                                           += ambalink/
-else
-obj-y						+= pm.o
-obj-y						+= init.o
-endif
+obj-y						+= hwlock.o
+obj-y						+= audio.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
+obj-y						+= ambasyncproc.o
+obj-y						+= ambcache.o
+obj-$(CONFIG_AMBARELLA_SUPPORT_AMBENCH)		+= ambench.o
+obj-y						+= ambevent.o
+obj-y						+= ambfb.o
+obj-y						+= ambsyncproc.o
+obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
+obj-y						+= event.o
+obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= highres_timer.o
+obj-y						+= pmu.o

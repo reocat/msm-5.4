@@ -29,16 +29,20 @@
 #include <linux/export.h>
 #include <linux/clk.h>
 #include <linux/of_fdt.h>
+#include <linux/of_platform.h>
 #include <asm/cacheflush.h>
 #include <asm/system_info.h>
 #include <asm/mach/map.h>
 #include <mach/hardware.h>
-#include <mach/board.h>
 #include <mach/init.h>
 #include <plat/debug.h>
 #include <plat/bapi.h>
 #include <plat/clk.h>
+#include <plat/ambcache.h>
 
+#ifdef CONFIG_RPROC_S2
+extern struct platform_device ambarella_rproc_cortex_dev;
+#endif
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
 EXPORT_SYMBOL(ambarella_dmamask);
@@ -47,6 +51,12 @@ u32 ambarella_debug_level = AMBA_DEBUG_NULL;
 EXPORT_SYMBOL(ambarella_debug_level);
 
 /* ==========================================================================*/
+static struct platform_device *ambarella_devices[] __initdata = {
+#ifdef CONFIG_RPROC_S2
+	&ambarella_rproc_cortex_dev,
+#endif
+};
+
 enum {
         AMBARELLA_IO_DESC_AHB_ID = 0,
         AMBARELLA_IO_DESC_APB_ID,
@@ -302,28 +312,17 @@ int __init ambarella_create_proc_dir(void)
 	return ret_val;
 }
 
-struct proc_dir_entry *get_ambarella_proc_dir(void) {
+struct proc_dir_entry *get_ambarella_proc_dir(void)
+{
 	return ambarella_proc_dir;
 }
 EXPORT_SYMBOL(get_ambarella_proc_dir);
 
 
 /* ==========================================================================*/
-int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
+void __init ambarella_init_machine(void)
 {
-	int ret_val = 0;
-
-	ambarella_board_generic.board_chip = AMBARELLA_BOARD_CHIP(system_rev);
-	ambarella_board_generic.board_type = AMBARELLA_BOARD_TYPE(system_rev);
-	ambarella_board_generic.board_rev = AMBARELLA_BOARD_REV(system_rev);
-
-	pr_info("Ambarella %s:\n", board_name);
-	pr_info("\tchip id:\t\t%d\n", ambarella_board_generic.board_chip);
-	pr_info("\tboard type:\t\t%d\n", ambarella_board_generic.board_type);
-	pr_info("\tboard revision:\t\t%d\n", ambarella_board_generic.board_rev);
-	ambarella_board_generic.board_poc = amba_rct_readl(SYS_CONFIG_REG);
-	pr_info("\tsystem configuration:\t0x%08x\n",
-	        ambarella_board_generic.board_poc);
+	int i, ret_val = 0;
 
 #if defined(CONFIG_PLAT_AMBARELLA_LOWER_ARM_PLL)
 	amba_rct_writel(SCALER_ARM_ASYNC_REG, 0xF);
@@ -332,30 +331,16 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	ret_val = ambarella_create_proc_dir();
 	BUG_ON(ret_val != 0);
 
-	ret_val = ambarella_clk_init(ref_freq);
+	ret_val = ambarella_clk_init();
 	BUG_ON(ret_val != 0);
 
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO)
-	ret_val = ambarella_init_gpio();
-	BUG_ON(ret_val != 0);
-#endif /*CONFIG_PLAT_AMBARELLA_SUPPORT_GPIO */
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_FIO)
 	ret_val = ambarella_init_fio();
 	BUG_ON(ret_val != 0);
-#endif /*CONFIG_PLAT_AMBARELLA_SUPPORT_FIO */
 
-#if defined(CONFIG_HAVE_PWM)
-	ret_val = ambarella_init_pwm();
-	BUG_ON(ret_val != 0);
-#endif
-
-#if defined(CONFIG_SUSPEND) || defined(CONFIG_HIBERNATION)
 	ret_val = ambarella_init_pm();
 	BUG_ON(ret_val != 0);
-#endif
 
-#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	ret_val = ambarella_init_fb();
 	BUG_ON(ret_val != 0);
 
@@ -363,7 +348,17 @@ int __init ambarella_init_machine(char *board_name, unsigned int ref_freq)
 	BUG_ON(ret_val != 0);
 #endif
 
-	return ret_val;
+#ifdef CONFIG_OUTER_CACHE
+	ambcache_l2_enable();
+#endif
+
+	platform_add_devices(ambarella_devices, ARRAY_SIZE(ambarella_devices));
+	for (i = 0; i < ARRAY_SIZE(ambarella_devices); i++) {
+		device_set_wakeup_capable(&ambarella_devices[i]->dev, 1);
+		device_set_wakeup_enable(&ambarella_devices[i]->dev, 0);
+	}
+
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
 void ambarella_restart_machine(char mode, const char *cmd)
