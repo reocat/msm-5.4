@@ -175,8 +175,8 @@ static int ambarella_input_adc_probe(struct platform_device *pdev)
 	struct resource *mem;
 	int i, rval = 0;
 
-	if (of_device_is_compatible(np, "ambarella,adc-v1")) {
-		dev_err(&pdev->dev, "Not implemented yet for adc-v1!\n");
+	if (of_device_is_compatible(np, "ambarella,adc-old")) {
+		dev_err(&pdev->dev, "Not implemented yet for adc-old(a5s)!\n");
 		return -ENODEV;
 	}
 
@@ -326,8 +326,8 @@ static int ambarella_input_adc_resume(struct platform_device *pdev)
 #endif
 
 static const struct of_device_id ambarella_adc_dt_ids[] = {
-	{.compatible = "ambarella,adc-v1", },
-	{.compatible = "ambarella,adc-v2", },
+	{.compatible = "ambarella,adc", },
+	{.compatible = "ambarella,adc-old", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ambarella_adc_dt_ids);

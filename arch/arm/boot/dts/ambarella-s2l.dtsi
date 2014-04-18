@@ -119,7 +119,7 @@
 	        };
 
 		adc@e801d000 {
-			compatible = "ambarella,adc-v2";
+			compatible = "ambarella,adc";
 			reg = <0xe801d000 0x1000>;
 			interrupts = <34 0x4>;
 		};
