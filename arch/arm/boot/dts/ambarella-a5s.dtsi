@@ -157,7 +157,7 @@
 		};
 
 		adc@7000d000 {
-			compatible = "ambarella,adc-v1";
+			compatible = "ambarella,adc-old";
 			reg = <0x7000d000 0x1000>;
 			interrupts = <34 0x4>;
 		};
