@@ -46,11 +46,14 @@
 
 /* ==========================================================================*/
 static LIST_HEAD(ambarella_all_clocks);
-DEFINE_SPINLOCK(ambarella_clock_lock);
 
 #ifdef CONFIG_RPMSG_CLK
+DEFINE_MUTEX(ambarella_clock_mutex);
+
 extern int rpmsg_clk_set(void *data, unsigned long rate);
 extern int rpmsg_clk_get(void *data);
+#else
+DEFINE_SPINLOCK(ambarella_clock_lock);
 #endif
 /* ==========================================================================*/
 static unsigned int ambarella_clk_ref_freq = REF_CLK_FREQ;
@@ -1192,7 +1195,11 @@ struct clk *clk_get_sys(const char *dev_id, const char *con_id)
 	struct clk *p;
 	struct clk *clk = ERR_PTR(-ENOENT);
 
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	list_for_each_entry(p, &ambarella_all_clocks, list) {
 		if (dev_id && (strcmp(p->name, dev_id) == 0)) {
 			clk = p;
@@ -1203,7 +1210,11 @@ struct clk *clk_get_sys(const char *dev_id, const char *con_id)
 			break;
 		}
 	}
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return clk;
 }
@@ -1218,14 +1229,22 @@ struct clk *clk_get(struct device *dev, const char *id)
 		return clk;
 	}
 
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	list_for_each_entry(p, &ambarella_all_clocks, list) {
 		if (strcmp(p->name, id) == 0) {
 			clk = p;
 			break;
 		}
 	}
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return clk;
 }
@@ -1244,11 +1263,19 @@ int clk_enable(struct clk *clk)
 
 	clk_enable(clk->parent);
 
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	if (clk->ops && clk->ops->enable) {
 		(clk->ops->enable)(clk);
 	}
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return 0;
 }
@@ -1260,11 +1287,19 @@ void clk_disable(struct clk *clk)
 		return;
 	}
 
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	if (clk->ops && clk->ops->disable) {
 		(clk->ops->disable)(clk);
 	}
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	clk_disable(clk->parent);
 }
@@ -1314,9 +1349,17 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	ret = (clk->ops->set_rate)(clk, rate);
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return ret;
 }
@@ -1340,11 +1383,19 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	if (clk->ops && clk->ops->set_parent) {
 		ret = (clk->ops->set_parent)(clk, parent);
 	}
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return ret;
 }
@@ -1352,9 +1403,17 @@ EXPORT_SYMBOL(clk_set_parent);
 
 int ambarella_clk_add(struct clk *clk)
 {
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	list_add(&clk->list, &ambarella_all_clocks);
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return 0;
 }
@@ -1368,12 +1427,20 @@ static int ambarella_clock_proc_show(struct seq_file *m, void *v)
 	struct clk *p;
 
 	retlen += seq_printf(m, "\nClock Information:\n");
+#ifdef CONFIG_RPMSG_CLK
+	mutex_lock(&ambarella_clock_mutex);
+#else
 	spin_lock(&ambarella_clock_lock);
+#endif
 	list_for_each_entry(p, &ambarella_all_clocks, list) {
 		retlen += seq_printf(m, "\t%s:\t%lu Hz\n",
 			p->name, p->ops->get_rate(p));
 	}
+#ifdef CONFIG_RPMSG_CLK
+	mutex_unlock(&ambarella_clock_mutex);
+#else
 	spin_unlock(&ambarella_clock_lock);
+#endif
 
 	return retlen;
 }
