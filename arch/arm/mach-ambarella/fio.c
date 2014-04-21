@@ -157,19 +157,18 @@ static bool fio_check_free(u32 module)
 
 void fio_select_lock(int module)
 {
-
 #if defined(CONFIG_AMBALINK_LOCK)
-		switch (module) {
-		case SELECT_FIO_SD:
-			aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
-			break;
-		case SELECT_FIO_SDIO:
-			aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
-			break;
-		default:
-			aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
-			aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
-		}
+	switch (module) {
+	case SELECT_FIO_SD:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
+		break;
+	case SELECT_FIO_SDIO:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
+		break;
+	default:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
+	}
 #endif	/* CONFIG_AMBALINK_LOCK */
 
 	wait_event(fio_wait, fio_check_free(module));
