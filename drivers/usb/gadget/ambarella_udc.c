@@ -311,17 +311,9 @@ static void ambarella_udc_fifo_flush(struct ambarella_udc *udc)
 
 static void ambarella_udc_reset(void __iomem *reset_reg, struct device_node *np)
 {
-	if (of_device_is_compatible(np, "ambarella,udc-v1"))
-		amba_rct_setbitsl(reset_reg, 0x20000000);
-	else
-		amba_rct_writel(reset_reg, 0x2);
-
+	amba_rct_setbitsl(reset_reg, UDC_SOFT_RESET);
 	msleep(1);
-
-	if (of_device_is_compatible(np, "ambarella,udc-v1"))
-		amba_rct_clrbitsl(reset_reg, 0x20000000);
-	else
-		amba_rct_writel(reset_reg, 0x0);
+	amba_rct_clrbitsl(reset_reg, UDC_SOFT_RESET);
 };
 
 static void ambarella_init_usb(struct ambarella_udc *udc)
@@ -2299,8 +2291,7 @@ static int ambarella_udc_resume(struct platform_device *pdev)
 #endif
 
 static const struct of_device_id ambarella_udc_dt_ids[] = {
-	{ .compatible = "ambarella,udc-v1" },
-	{ .compatible = "ambarella,udc-v2" },
+	{ .compatible = "ambarella,udc" },
 	{ /* sentinel */ }
 };
 

@@ -140,7 +140,7 @@
 		};
 
 		rtc@e8015000 {
-			compatible = "ambarella,rtc-v2";
+			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
 		};
 
@@ -353,7 +353,7 @@
 		};
 
 		nand0: nand@e0001000 {
-			compatible = "ambarella,nand-v2";
+			compatible = "ambarella,nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0xe0001000 0x1000>, /* fio reg address */
@@ -367,10 +367,11 @@
 		};
 
 		spinor0: spinor@e0031000 {
-			compatible = "ambarella,s2l-spinor";
-			reg = <0xe0031000 0x2ff>,/* spi nor controller*/
-				  <0xe0005300 0x20>;/*dma reg*/
+			compatible = "ambarella,spinor";
+			reg = <0xe0031000 0x2ff>, /* spi nor controller */
+			      <0xe0005300 0x20>;  /* dma reg */
 		};
+
 		uart1: uart@e0032000 {
 			compatible = "ambarella,uart";
 			reg = <0xe0032000 0x1000>;
@@ -391,7 +392,7 @@
 		};
 
 		udc@e0006000 {
-			compatible = "ambarella,udc-v2";
+			compatible = "ambarella,udc";
 			reg = <0xe0006000 0x2000 0xec1702cc 0x4>;
 			interrupts = <4 0x4>;
 			amb,usbphy = <&usbphy>;

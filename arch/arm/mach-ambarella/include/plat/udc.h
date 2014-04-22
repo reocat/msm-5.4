@@ -408,5 +408,11 @@
 
 /* ==========================================================================*/
 
+#if (CHIP_REV == A5S) || (CHIP_REV == S2)
+#define UDC_SOFT_RESET			0x20000000
+#elif (CHIP_REV == A7L) || (CHIP_REV == S2L)
+#define UDC_SOFT_RESET			0x2
+#endif
+
 #endif
 
