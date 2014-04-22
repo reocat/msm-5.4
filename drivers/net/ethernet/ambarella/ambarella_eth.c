@@ -2154,14 +2154,15 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	ndev->dev.dma_mask = pdev->dev.dma_mask;
 	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
-	if (lp->ipc_tx)
-		ndev->features |= NETIF_F_HW_CSUM;
 
 	spin_lock_init(&lp->lock);
 	lp->ndev = ndev;
 	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV);
 
 	ambeth_of_parse(np, lp);
+
+	if (lp->ipc_tx)
+		ndev->features |= NETIF_F_HW_CSUM;
 
 	/* request gpio for PHY power control */
 	if (gpio_is_valid(lp->pwr_gpio)) {
