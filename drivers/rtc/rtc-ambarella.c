@@ -47,16 +47,16 @@ struct ambarella_rtc {
 	void __iomem		*reg;
 	struct device		*dev;
 
-	/* limitation for rtc-v1:
+	/* limitation for old rtc:
 	 * 1. cannot detect power lost
 	 * 2. the msb 2bits are reserved. */
-	bool			is_v1;
+	bool			is_limited;
 };
 
 
 static inline void ambrtc_reset_rtc(struct ambarella_rtc *ambrtc)
 {
-	u32 delay = ambrtc->is_v1 ? 3 : 1;
+	u32 delay = ambrtc->is_limited ? 3 : 1;
 
 	amba_writel(ambrtc->reg + RTC_RESET_OFFSET, 0x01);
 	msleep(delay);
@@ -75,10 +75,10 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 		reg_offs = RTC_ALAT_OFFSET;
 
 	val_sec = amba_readl(ambrtc->reg + reg_offs);
-	/* because rtc-v1 cannot use the msb 2bits, we add 0x40000000
+	/* because old rtc cannot use the msb 2bits, we add 0x40000000
 	 * here, this is a pure software workaround. And the result is that
 	 * the time must be started at least from 2004.01.10 13:38:00 */
-	if (ambrtc->is_v1)
+	if (ambrtc->is_limited)
 		val_sec |= 0x40000000;
 
 	return val_sec;
@@ -89,7 +89,7 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 {
 	u32 time_val, alarm_val;
 
-	if (ambrtc->is_v1 && secs < 0x40000000) {
+	if (ambrtc->is_limited && secs < 0x40000000) {
 		dev_err(ambrtc->dev,
 			"Invalid date[0x%lx](2004.01.10 13:38:00 ~ )\n", secs);
 		return -EINVAL;
@@ -103,7 +103,7 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 		time_val = amba_readl(ambrtc->reg + RTC_CURT_OFFSET);
 	}
 
-	if (ambrtc->is_v1) {
+	if (ambrtc->is_limited) {
 		time_val &= 0x3fffffff;
 		alarm_val &= 0x3fffffff;
 	}
@@ -189,7 +189,7 @@ static int ambrtc_ioctl(struct device *dev, unsigned int cmd,
 
 	ambrtc = dev_get_drvdata(dev);
 
-	if (ambrtc->is_v1)
+	if (ambrtc->is_limited)
 		return -ENOIOCTLCMD;
 
 	switch (cmd) {
@@ -217,7 +217,7 @@ static void ambrtc_check_power_lost(struct ambarella_rtc *ambrtc)
 {
 	u32 status, need_rst, time_sec;
 
-	if (ambrtc->is_v1) {
+	if (ambrtc->is_limited) {
 		status = amba_readl(ambrtc->reg + RTC_STATUS_OFFSET);
 		need_rst = !(status & RTC_STATUS_PC_RST);
 	} else {
@@ -229,7 +229,7 @@ static void ambrtc_check_power_lost(struct ambarella_rtc *ambrtc)
 
 	if (need_rst) {
 		dev_warn(ambrtc->dev, "=====RTC ever lost power=====\n");
-		time_sec = ambrtc->is_v1 ? 0x40000000 : 0;
+		time_sec = ambrtc->is_limited ? 0x40000000 : 0;
 		ambrtc_set_alarm_or_time(ambrtc, AMBRTC_TIME, time_sec);
 	}
 }
@@ -263,9 +263,8 @@ static int ambrtc_probe(struct platform_device *pdev)
 
 	ambrtc->reg = reg;
 	ambrtc->dev = &pdev->dev;
-
-	ambrtc->is_v1 = of_device_is_compatible(pdev->dev.of_node,
-						"ambarella,rtc-v1");
+	ambrtc->is_limited = !!of_find_property(pdev->dev.of_node,
+				"amb,is-limited", NULL);
 
 	ambrtc_check_power_lost(ambrtc);
 
@@ -287,8 +286,7 @@ static int ambrtc_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id ambarella_rtc_dt_ids[] = {
-	{.compatible = "ambarella,rtc-v1", },
-	{.compatible = "ambarella,rtc-v2", },
+	{.compatible = "ambarella,rtc", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ambarella_rtc_dt_ids);

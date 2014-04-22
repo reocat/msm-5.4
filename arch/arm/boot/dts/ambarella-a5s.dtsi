@@ -178,8 +178,9 @@
 		};
 
 		rtc@7000d000 {
-			compatible = "ambarella,rtc-v1";
+			compatible = "ambarella,rtc";
 			reg = <0x7000d000 0x1000>;
+			amb,is-limited;
 		};
 
 		pwm: pwm@70004000 {
@@ -321,7 +322,7 @@
 		};
 
 		nand0: nand@60001000 {
-			compatible = "ambarella,nand-v2";
+			compatible = "ambarella,nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x60001000 0x1000>, /* fio reg address */
@@ -330,6 +331,7 @@
 			interrupts = <16 0x4>,	/* fio_cmd_irq */
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
+			amb,no-bch;
 			amb,use-2x-pll;
 			nand-on-flash-bbt;
 		};
@@ -344,7 +346,7 @@
 		};
 
 		udc@60006000 {
-			compatible = "ambarella,udc-v1";
+			compatible = "ambarella,udc";
 			reg = <0x60006000 0x2000 0x70170088 0x4>;
 			interrupts = <4 0x4>;
 			amb,usbphy = <&usbphy>;

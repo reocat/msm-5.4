@@ -200,7 +200,7 @@
 		};
 
 		rtc@7000d000 {
-			compatible = "ambarella,rtc-v2";
+			compatible = "ambarella,rtc";
 			reg = <0x7000d000 0x1000>;
 		};
 
@@ -350,7 +350,7 @@
 		};
 
 		nand0: nand@60001000 {
-			compatible = "ambarella,nand-v2";
+			compatible = "ambarella,nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x60001000 0x1000>, /* fio reg address */
@@ -372,7 +372,7 @@
 		};
 
 		udc@60006000 {
-			compatible = "ambarella,udc-v1";
+			compatible = "ambarella,udc";
 			reg = <0x60006000 0x2000 0x70170088 0x4>;
 			interrupts = <0 4 0x04>;
 			amb,usbphy = <&usbphy>;

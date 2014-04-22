@@ -755,7 +755,7 @@ static int amb_spi_nor_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id ambarella_spi_nor_of_match[] = {
-    {.compatible = "ambarella,s2l-spinor", },
+    {.compatible = "ambarella,spinor", },
     {},
 };
 MODULE_DEVICE_TABLE(of, ambarella_spi_nor_of_match);
