@@ -250,7 +250,7 @@
 
 			i2s0_pins: i2s0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>;
+				amb,pinmux-ids = <0x1029 0x102a 0x102b 0x102c 0x102d>;
 			};
 
 			usb_host0_pins: uhc0@0 { /* USB0: host/device configurable */
