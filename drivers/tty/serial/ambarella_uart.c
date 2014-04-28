@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/of_irq.h>
 #include <linux/clk.h>
 #include <linux/console.h>
 #include <linux/sysrq.h>
@@ -452,6 +453,10 @@ static int serial_ambarella_startup(struct uart_port *port)
 		UART_FC_XMITR | UART_FC_RCVRR));
 	amba_writel(port->membase + UART_IE_OFFSET, amb_port->ier);
 	spin_unlock_irqrestore(&port->lock, flags);
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(port->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 	rval = request_irq(port->irq, serial_ambarella_irq,
 		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
 
@@ -546,6 +551,9 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 		__serial_ambarella_disable_ms(port);
 	serial_ambarella_set_mctrl(port, port->mctrl);
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(port->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 	enable_irq(port->irq);
 }
 
@@ -743,6 +751,11 @@ static int __init serial_ambarella_console_init(void)
 		return -ENODEV;
 
 	ambarella_port[id].port.membase = of_iomap(np, 0);
+
+	ambarella_port[id].port.irq = irq_of_parse_and_map(np, 0);
+	if (ambarella_port[id].port.irq <= 0) {
+		pr_err("%s: Can't get irq\n", __func__);
+	}
 
 	register_console(&serial_ambarella_console);
 

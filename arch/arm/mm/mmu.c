@@ -837,8 +837,16 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 	svm = early_alloc_aligned(sizeof(*svm) * nr, __alignof__(*svm));
 
 	for (md = io_desc; nr; md++, nr--) {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		/* Create vm for AHB, APB, AXI for ioremap w/ device tree. */
+		/* But do not overwrite the value created by RTOS. */
+		if (md->virtual != AHB_BASE &&
+		    md->virtual != APB_BASE &&
+		    md->virtual != AXI_BASE)
+			create_mapping(md);
+#else
 		create_mapping(md);
-
+#endif
 		vm = &svm->vm;
 		vm->addr = (void *)(md->virtual & PAGE_MASK);
 		vm->size = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
@@ -1138,6 +1146,12 @@ static inline void prepare_page_table(void)
 	for (addr = __phys_to_virt(end);
 	     addr < VMALLOC_START; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#define CONSISTENT_BASE		(CONSISTENT_END - CONSISTENT_DMA_SIZE)
+	for (addr = CONSISTENT_BASE; addr < CONSISTENT_END; addr += PGDIR_SIZE)
+		pmd_clear(pmd_off_k(addr));
+#endif
 }
 
 #ifdef CONFIG_ARM_LPAE
@@ -1153,11 +1167,15 @@ static inline void prepare_page_table(void)
  */
 void __init arm_mm_memblock_reserve(void)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	/*
 	 * Reserve the page tables.  These are already in use,
 	 * and can only be in node 0.
 	 */
 	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_PG_DIR_SIZE);
+#else
+	memblock_reserve((phys_addr_t) init_mm.pgd, SWAPPER_PG_DIR_SIZE);
+#endif
 
 #ifdef CONFIG_SA1111
 	/*
@@ -1177,7 +1195,9 @@ void __init arm_mm_memblock_reserve(void)
  */
 static void __init devicemaps_init(struct machine_desc *mdesc)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	struct map_desc map;
+#endif  /* CONFIG_PLAT_AMBARELLA_BOSS */
 	unsigned long addr;
 	void *vectors;
 
@@ -1188,6 +1208,10 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 
 	early_trap_init(vectors);
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	for (addr = VMALLOC_START; addr < NOLINUX_MEM_V_START; addr += PMD_SIZE)
+		pmd_clear(pmd_off_k(addr));
+#else
 	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 
@@ -1237,6 +1261,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 		map.type = MT_LOW_VECTORS;
 		create_mapping(&map);
 	}
+#endif  /* CONFIG_PLAT_AMBARELLA_BOSS */
 
 	/*
 	 * Ask the machine support to map in the statically mapped devices.

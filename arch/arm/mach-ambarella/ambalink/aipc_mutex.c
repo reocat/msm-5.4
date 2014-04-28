@@ -75,8 +75,8 @@ static int procfs_mutex_show(struct seq_file *m, void *v)
 	return len;
 }
 
-static int procfs_mutex_write(struct file *file,
-                              const char __user *buffer, unsigned long count, void *data)
+static ssize_t procfs_mutex_write(struct file *file,
+                              const char __user *buffer, size_t count, loff_t *data)
 {
 	unsigned char str[128], op;
 	int  id = 0;
@@ -150,7 +150,11 @@ static int aipc_mutex_init(void)
 	int i, ret;
 
 	// init shared part of aipc mutex memory
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	lock_set.share = (amutex_share_t*) AIPC_MUTEX_ADDR;
+#else
 	lock_set.share = (amutex_share_t*)ambarella_phys_to_virt(AIPC_MUTEX_ADDR);
+#endif
 	//memset(lock_set.share, 0, sizeof(amutex_share_t)*AMBA_IPC_NUM_MUTEX);
 
 	// init local part of aipc mutex memory
@@ -159,6 +163,10 @@ static int aipc_mutex_init(void)
 		mutex_init(&lock_set.local[i].mutex);
 		init_completion(&lock_set.local[i].completion);
 	}
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(MUTEX_IRQ_LOCAL, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 
 	// IRQ handling
 	ret = request_irq(MUTEX_IRQ_LOCAL, ipc_mutex_isr,
@@ -202,24 +210,40 @@ void aipc_mutex_lock(int id)
 	local = &lock_set.local[id];
 
 	// check repeatedly until we become the owner
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	flags = arm_irq_save();
+#else
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
+#endif
 	{
 		while (OWNER_IS_REMOTE(share)) {
 			share->wait_list |= AMBALINK_CORE_LOCAL;
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+			arm_irq_restore(flags);
+#else
 			__aipc_spin_unlock_irqrestore(&share->slock, flags);
+#endif
 
 			// wait for remote owner to finish
 			wait_for_completion(&local->completion);
 
 			// lock and check again
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+                       flags = arm_irq_save();
+#else
 			__aipc_spin_lock_irqsave(&share->slock, &flags);
+#endif
 		}
 		// set ourself as owner (note that we might be owner already)
 		share->owner = AMBALINK_CORE_LOCAL;
 		share->wait_list &= ~AMBALINK_CORE_LOCAL;
 		local->count++;
 	}
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+       arm_irq_restore(flags);
+#else
 	__aipc_spin_unlock_irqrestore(&share->slock, flags);
+#endif
 
 	// lock the local mutex
 	mutex_lock(&local->mutex);
@@ -254,7 +278,11 @@ void aipc_mutex_unlock(int id)
 	// unlock local mutex
 	mutex_unlock(&local->mutex);
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+       flags = arm_irq_save();
+#else
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
+#endif
 	if (--local->count == 0) {
 		// We are done with the mutex,
 		// now let other waiting core(s) to grab it
@@ -266,7 +294,11 @@ void aipc_mutex_unlock(int id)
 			//printk("wakeup tx\n");
 		}
 	}
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+       arm_irq_restore(flags);
+#else
 	__aipc_spin_unlock_irqrestore(&share->slock, flags);
+#endif
 }
 
 subsys_initcall(aipc_mutex_init);

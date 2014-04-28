@@ -210,7 +210,11 @@ int rproc_alloc_vring(struct rproc_vdev *rvdev, int i)
 #if 0
 	va = dma_alloc_coherent(dev->parent, size, &dma, GFP_KERNEL);
 #else
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	va = (void*) (rvring->da);
+#else
 	va = (void*)ambarella_phys_to_virt(rvring->da);
+#endif
 	dma = rvring->da;
 #endif
 	if (!va) {

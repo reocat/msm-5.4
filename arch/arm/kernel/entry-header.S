@@ -22,7 +22,7 @@
 @
 #define S_OFF		8
 
-/* 
+/*
  * The SWI code relies on the fact that R0 is at the bottom of the stack
  * (due to slow/fast restore user regs).
  */
@@ -74,24 +74,7 @@
 	.endm
 
 #ifndef CONFIG_THUMB2_KERNEL
-	.macro	svc_exit, rpsr, irq = 0
-	.if	\irq != 0
-	@ IRQs already off
-#ifdef CONFIG_TRACE_IRQFLAGS
-	@ The parent context IRQs must have been enabled to get here in
-	@ the first place, so there's no point checking the PSR I bit.
-	bl	trace_hardirqs_on
-#endif
-	.else
-	@ IRQs off again before pulling preserved data off the stack
-	disable_irq_notrace
-#ifdef CONFIG_TRACE_IRQFLAGS
-	tst	\rpsr, #PSR_I_BIT
-	bleq	trace_hardirqs_on
-	tst	\rpsr, #PSR_I_BIT
-	blne	trace_hardirqs_off
-#endif
-	.endif
+	.macro	svc_exit, rpsr
 	msr	spsr_cxsf, \rpsr
 #if defined(CONFIG_CPU_V6)
 	ldr	r0, [sp]
@@ -137,24 +120,7 @@
 	mov	pc, \reg
 	.endm
 #else	/* CONFIG_THUMB2_KERNEL */
-	.macro	svc_exit, rpsr, irq = 0
-	.if	\irq != 0
-	@ IRQs already off
-#ifdef CONFIG_TRACE_IRQFLAGS
-	@ The parent context IRQs must have been enabled to get here in
-	@ the first place, so there's no point checking the PSR I bit.
-	bl	trace_hardirqs_on
-#endif
-	.else
-	@ IRQs off again before pulling preserved data off the stack
-	disable_irq_notrace
-#ifdef CONFIG_TRACE_IRQFLAGS
-	tst	\rpsr, #PSR_I_BIT
-	bleq	trace_hardirqs_on
-	tst	\rpsr, #PSR_I_BIT
-	blne	trace_hardirqs_off
-#endif
-	.endif
+	.macro	svc_exit, rpsr
 	ldr	lr, [sp, #S_SP]			@ top of the stack
 	ldrd	r0, r1, [sp, #S_LR]		@ calling lr and pc
 	clrex					@ clear the exclusive monitor

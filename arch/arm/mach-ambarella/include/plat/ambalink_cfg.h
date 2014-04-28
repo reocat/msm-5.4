@@ -56,10 +56,17 @@
 #define AMBALINK_CORE_LOCAL         0x2
 #define ERG_SIZE                    8
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#define ambalink_virt_to_phys(x)    ambarella_virt_to_phys(x)
+#define ambalink_phys_to_virt(x)    ambarella_phys_to_virt(x)
+#define ambalink_page_to_phys(x)    (page_to_phys(x) -  DEFAULT_MEM_START)
+#define ambalink_phys_to_page(x)    phys_to_page((x) +  DEFAULT_MEM_START)
+#else
 #define ambalink_virt_to_phys(x)    (ambarella_virt_to_phys(x) -  DEFAULT_MEM_START)
 #define ambalink_phys_to_virt(x)    ambarella_phys_to_virt((x) +  DEFAULT_MEM_START)
 #define ambalink_page_to_phys(x)    (page_to_phys(x) -  DEFAULT_MEM_START)
 #define ambalink_phys_to_page(x)    phys_to_page((x) +  DEFAULT_MEM_START)
+#endif
 
 #else
 #error "CONFIG_AMBAKLINK_SHM_ADDR is not defined"

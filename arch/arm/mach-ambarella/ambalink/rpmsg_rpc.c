@@ -57,8 +57,8 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 /*
  * access the rpc statistics in shared memory
  */
-static int rpmsg_rpc_proc_write(struct file *file,
-                                const char __user *buffer, unsigned long count, void *data)
+ static ssize_t rpmsg_rpc_proc_write(struct file *file,
+                                const char __user *buffer, size_t count, loff_t *data)
 {
 	char buf[50];
 	unsigned int addr, result, cur_time, diff;

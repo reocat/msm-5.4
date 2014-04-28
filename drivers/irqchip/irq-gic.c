@@ -49,6 +49,11 @@
 
 #include "irqchip.h"
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#include <plat/ambcache.h>
+#include <mach/boss.h>
+#endif
+
 union gic_base {
 	void __iomem *common_base;
 	void __percpu __iomem **percpu_base;
@@ -288,13 +293,23 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 	void __iomem *cpu_base = gic_data_cpu_base(gic);
 
 	do {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		irqstat = *boss->irqno;
+#else
 		irqstat = readl_relaxed(cpu_base + GIC_CPU_INTACK);
+#endif
 		irqnr = irqstat & ~0x1c00;
 
 		if (likely(irqnr > 15 && irqnr < 1021)) {
 			irqnr = irq_find_mapping(gic->domain, irqnr);
 			handle_IRQ(irqnr, regs);
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+			/* Linux will continue to process interrupt, */
+			/* but we must enter IRQ from AmbaBoss_Irq in BOSS system. */
+			break;
+#else
 			continue;
+#endif
 		}
 		if (irqnr < 16) {
 			writel_relaxed(irqstat, cpu_base + GIC_CPU_EOI);
@@ -419,8 +434,10 @@ static void __init gic_dist_init(struct gic_chip_data *gic)
 
 static void __cpuinit gic_cpu_init(struct gic_chip_data *gic)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	void __iomem *dist_base = gic_data_dist_base(gic);
 	void __iomem *base = gic_data_cpu_base(gic);
+#endif
 	unsigned int cpu_mask, cpu = smp_processor_id();
 	int i;
 
@@ -439,6 +456,7 @@ static void __cpuinit gic_cpu_init(struct gic_chip_data *gic)
 		if (i != cpu)
 			gic_cpu_map[i] &= ~cpu_mask;
 
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	/*
 	 * Deal with the banked PPI and SGI interrupts - disable all
 	 * PPI interrupts, ensure all SGI interrupts are enabled.
@@ -454,6 +472,7 @@ static void __cpuinit gic_cpu_init(struct gic_chip_data *gic)
 
 	writel_relaxed(0xf0, base + GIC_CPU_PRIMASK);
 	writel_relaxed(1, base + GIC_CPU_CTRL);
+#endif
 }
 
 #ifdef CONFIG_CPU_PM
@@ -835,6 +854,7 @@ void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 	set_handle_irq(gic_handle_irq);
 
 	gic_chip.flags |= gic_arch_extn.flags;
+
 	gic_dist_init(gic);
 	gic_cpu_init(gic);
 	gic_pm_init(gic);
@@ -935,7 +955,6 @@ gic_dist_pm_exit:
 
 void gic_resume(void)
 {
-	int					retval = 0;
 	u32					gic_irqs;
 	int					i;
 
@@ -983,7 +1002,7 @@ void gic_resume(void)
 	writel_relaxed(gic_pm_info.gic_dist.gic_dist_ctrl , dist_base + GIC_DIST_CTRL);
 
 gic_dist_pm_exit:
-	return retval;
+	return;
 }
 
 #endif /* CONFIG_PM */

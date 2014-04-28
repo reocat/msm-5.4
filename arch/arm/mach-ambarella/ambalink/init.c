@@ -40,6 +40,21 @@
 #include <plat/clk.h>
 #include <plat/ambcache.h>
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+#include <asm/cacheflush.h>
+
+#include <linux/aipc/ipc_slock.h>
+#include <linux/aipc/ipc_mutex.h>
+#include <linux/proc_fs.h>
+
+#include <mach/boss.h>
+#include <plat/ambcache.h>
+#include <plat/ambalink_cfg.h>
+
+struct boss_s *boss = NULL;
+EXPORT_SYMBOL(boss);
+#endif
+
 #ifdef CONFIG_RPROC_S2
 extern struct platform_device ambarella_rproc_cortex_dev;
 #endif
@@ -249,6 +264,30 @@ static int __init ambarella_dt_scan_iavmem(unsigned long node,
 	return 1;
 }
 
+int __init early_ambarella_dt_scan_ppm2(unsigned long node,
+					const char *uname, int depth, void *data)
+{
+	const char *type;
+	__be32 *reg;
+	unsigned long len;
+	struct ambarella_mem_map_desc *ppm2_desc;
+
+	type = of_get_flat_dt_prop(node, "device_type", NULL);
+	if (type == NULL || strcmp(type, "ppm2") != 0)
+		return 0;
+
+	reg = of_get_flat_dt_prop(node, "reg", &len);
+	if (WARN_ON(!reg || (len != 2 * sizeof(unsigned long))))
+		return 0;
+
+	ppm2_desc = &ambarella_io_desc[AMBARELLA_IO_DESC_PPM2_ID];
+	ppm2_desc->io_desc.virtual = NOLINUX_MEM_V_START + 0x04000000;
+	ppm2_desc->io_desc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
+	ppm2_desc->io_desc.length = be32_to_cpu(reg[1]);
+
+	return 1;
+}
+
 void __init ambarella_map_io(void)
 {
 	u32 i, iop, ios, iov;
@@ -264,6 +303,27 @@ void __init ambarella_map_io(void)
 			        ambarella_io_desc[i].io_desc.type);
 		}
 	}
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	if (boss != NULL) {
+		u32 virt, phys;
+		//int rval;
+
+		virt = boss->smem_addr;
+		phys = ambarella_virt_to_phys(virt);
+		//boss->smem_addr = virt;
+
+		pr_notice ("aipc: smem: 0x%08x [0x%08x], 0x%08x\n", virt, phys,
+			    boss->smem_size);
+
+		//rval = ipc_smem_init();
+		//K_ASSERT(rval == 0);
+
+		//boss->log_buf_ptr = ipc_virt_to_phys (boss_log_buf_ptr);
+		//boss->log_buf_len_ptr = ipc_virt_to_phys (boss_log_buf_len_ptr);
+		//boss->log_buf_last_ptr = ipc_virt_to_phys (boss_log_buf_last_ptr);
+	}
+#endif
 
 	/* scan and hold the memory information for IAV */
 	of_scan_flat_dt(ambarella_dt_scan_iavmem, NULL);
@@ -394,17 +454,33 @@ static int __init parse_system_revision(char *p)
 }
 early_param("system_rev", parse_system_revision);
 
-static int __init parse_ppm2_size(char *p)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+static int __init early_boss(char *p)
 {
-	ambarella_io_desc[AMBARELLA_IO_DESC_PPM2_ID].io_desc.virtual =
-	        NOLINUX_MEM_V_START + 0x04000000;
-	ambarella_io_desc[AMBARELLA_IO_DESC_PPM2_ID].io_desc.pfn =
-	        __phys_to_pfn(DEFAULT_MEM_START + 0x04000000);
-	ambarella_io_desc[AMBARELLA_IO_DESC_PPM2_ID].io_desc.length =
-	        simple_strtoul(p, NULL, 0);;
-	return 0;
+       //extern unsigned int boss_log_buf_ptr;
+       //extern unsigned int boss_log_buf_len_ptr;
+       //extern unsigned int boss_log_buf_last_ptr;
+       unsigned long vaddr, paddr;
+       char *endp;
+
+       vaddr = memparse(p, &endp);
+       paddr = ambarella_virt_to_phys(vaddr);
+
+       printk (KERN_NOTICE "boss: %08lx [%08lx]\n", vaddr, paddr);
+#if 0
+       printk (KERN_NOTICE "boss: printk: %08x [%08x], %08x [%08x], %08x [%08x]\n",
+               (u32) boss_log_buf_ptr, ipc_virt_to_phys (boss_log_buf_ptr),
+               (u32) boss_log_buf_len_ptr, ipc_virt_to_phys (boss_log_buf_len_ptr),
+               (u32) boss_log_buf_last_ptr, ipc_virt_to_phys (boss_log_buf_last_ptr));
+#endif
+       boss = (struct boss_s *) vaddr;
+
+       aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+
+       return 0;
 }
-early_param("ppm2_size", parse_ppm2_size);
+early_param("boss", early_boss);
+#endif
 
 u32 ambarella_phys_to_virt(u32 paddr)
 {

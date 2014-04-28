@@ -53,8 +53,8 @@ static int procfs_spinlock_show(struct seq_file *m, void *v)
 	return len;
 }
 
-static int procfs_spinlock_write(struct file *file,
-                                 const char __user *buffer, unsigned long count, void *data)
+static ssize_t procfs_spinlock_write(struct file *file,
+                                 const char __user *buffer, size_t count, loff_t *data)
 {
 	char str[128];
 	int  id = 0, delay = 0;
@@ -97,18 +97,32 @@ static void init_procfs(void)
 	                            &proc_ipc_slock_fops, NULL);
 }
 
-static int aipc_spin_lock_init(void)
+int aipc_spin_lock_setup(u32 addr)
 {
-	lock_set.lock = (aspinlock_t*)ambarella_phys_to_virt(AIPC_SLOCK_ADDR);
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	lock_set.lock = (aspinlock_t*) addr;
+#else
+	lock_set.lock = (aspinlock_t*) ambarella_phys_to_virt(AIPC_SLOCK_ADDR);
+#endif
 	lock_set.size = AIPC_SLOCK_SIZE / sizeof(aspinlock_t);
 
 	/* Reserve one spinlock space for BCH NAND controller workaround. */
 	lock_set.size -= 1;
 	//memset(lock_set.lock, 0, lock_set.size);
 
-	init_procfs();
-
 	printk("%s done\n", __func__);
+
+	return 0;
+}
+EXPORT_SYMBOL(aipc_spin_lock_setup);
+
+static int aipc_spin_lock_init(void)
+{
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	/* Call aipc_spin_lock_setup from atag.c eraly_boss() if BOSS. */
+	aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+#endif
+	init_procfs();
 
 	return 0;
 }

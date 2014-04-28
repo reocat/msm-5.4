@@ -58,7 +58,12 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 #define AXI_PHYS_BASE			(0xf0000000)
 #if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX) || defined(CONFIG_PLAT_AMBARELLA_S2L)
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+/* At least 1MB to sync with RTOS. */
+#define AXI_SIZE			(0x00100000)
+#else
 #define AXI_SIZE			(0x00030000)
+#endif
 #else
 #define AXI_SIZE			(0x00003000)
 #endif
@@ -107,8 +112,12 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xf2200000)
 #endif
-#elif defined(CONFIG_VMSPLIT_2G)
+#elif defined(CONFIG_VMSPLIT_2G)       /* CONFIG_VMSPLIT_2G */
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#define NOLINUX_MEM_V_START		(0xa0000000)
+#else
 #define NOLINUX_MEM_V_START             (0xc0000000)
+#endif
 #define AHB_BASE			(0xe0000000)
 #define APB_BASE			(0xe8000000)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
@@ -220,6 +229,8 @@ extern unsigned int ambarella_virt_to_phys(unsigned int vaddr);
 #define __bus_to_pfn(x)			__phys_to_pfn(x)
 #endif /* __ASSEMBLY__ */
 
+/* ==========================================================================*/
+#define CONSISTENT_DMA_SIZE             SZ_8M
 
 /* ==========================================================================*/
 #define MAX_PHYSMEM_BITS		32

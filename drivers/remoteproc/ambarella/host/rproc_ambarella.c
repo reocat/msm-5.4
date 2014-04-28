@@ -132,7 +132,13 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
-	ret = request_irq(pdata->svq_rx_irq, rproc_ambarella_isr, IRQF_SHARED,
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(pdata->svq_rx_irq, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(pdata->rvq_rx_irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
+
+	ret = request_irq(pdata->svq_rx_irq, rproc_ambarella_isr,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			"rproc-svq_rx", pdata);
 	if (ret)
 		goto free_rproc;

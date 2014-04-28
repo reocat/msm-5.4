@@ -39,7 +39,10 @@
 
 #include <mach/hardware.h>
 #include <mach/init.h>
-
+#include <mach/system.h>
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+#include <mach/boss.h>
+#endif
 #include <plat/bapi.h>
 #include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
@@ -472,9 +475,10 @@ int arch_swsusp_write(unsigned int flags)
 			disable_irq(AMBALINK_AMP_SUSPEND_KICK);
 			pm_abaoss_outcoming(pm_fn_pri, 0x0, 0x0, 0x0);
 #else
+			local_irq_disable();
 			/* Single core. */
-			//boss->state = BOSS_STATE_SUSPENDED;
-			//arch_idle();
+			boss->state = BOSS_STATE_SUSPENDED;
+			arch_idle();
 #endif
 			while(1) {};
 		}

@@ -1008,7 +1008,11 @@ static int rpmsg_probe(struct virtio_device *vdev)
 				&vrp->bufs_dma, GFP_KERNEL);
 #else
 	pdata = rproc->priv;
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	bufs_va = (void *) pdata->buf_addr_pa;
+#else
 	bufs_va = (void *)ambarella_phys_to_virt((unsigned long)pdata->buf_addr_pa);
+#endif
 #endif
 	if (!bufs_va) {
 		err = -ENOMEM;

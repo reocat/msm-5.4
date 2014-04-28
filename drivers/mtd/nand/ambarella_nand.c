@@ -690,6 +690,11 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	fio_select_lock(SELECT_FIO_FL);
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(nand_info->cmd_irq, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(nand_info->dma_irq, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(nand_info->fdma_irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 	enable_irq(nand_info->cmd_irq);
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->fdma_irq);
@@ -1911,7 +1916,11 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	 * We need to save the last NAND command of Linux to notify ThreadX to
 	 * workaround this bug.
 	 */
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	ambalink_nand_last_cmd_addr = AIPC_MUTEX_ADDR - 0x4;
+#else
 	ambalink_nand_last_cmd_addr = ambarella_phys_to_virt(AIPC_MUTEX_ADDR) - 0x4;
+#endif
 #endif
 
 	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
@@ -1996,9 +2005,12 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 1;
+
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	disable_irq(nand_info->dma_irq);
 	disable_irq(nand_info->cmd_irq);
-
+	disable_irq(nand_info->fdma_irq);
+#endif
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, errorCode, state.event);
 
@@ -2013,9 +2025,19 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	nand_info = platform_get_drvdata(pdev);
 	amb_nand_set_timing(nand_info);
 	nand_info->suspend = 0;
-	enable_irq(nand_info->dma_irq);
-	enable_irq(nand_info->cmd_irq);
 
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
+#if defined(CONFIG_AMBALINK_LOCK)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(nand_info->cmd_irq, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(nand_info->dma_irq, BOSS_IRQ_OWNER_LINUX, 1);
+	boss_set_irq_owner(nand_info->fdma_irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
+	enable_irq(nand_info->cmd_irq);
+	enable_irq(nand_info->dma_irq);
+	enable_irq(nand_info->fdma_irq);
+#endif
+#endif
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;

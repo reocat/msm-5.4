@@ -1,5 +1,5 @@
 #
-# arch/arm/mach-ambarella/Makefile
+# arch/arm/plat-ambarella/boss/Makefile
 #
 # Author: Anthony Ginger <hfjiang@ambarella.com>
 #
@@ -20,23 +20,5 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= fio.o
-obj-y						+= clk.o
-obj-y						+= pll.o
-
-obj-y						+= soc/
-obj-y						+= smp/
-obj-y						+= misc/
-
-
-ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
-obj-y						+= boss/
-else
+obj-y						+= boss.o
 obj-y						+= timer.o
-endif
-ifeq ($(CONFIG_PLAT_AMBARELLA_AMBALINK), y)
-obj-y                                           += ambalink/
-else
-obj-y						+= pm.o
-obj-y						+= init.o
-endif

@@ -427,6 +427,11 @@ static void ambarella_sd_post_adma_to_sg(void *data)
 static void ambarella_sd_request_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
+#if defined(CONFIG_RPMSG_SD) || defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	struct ambarella_sd_controller_info	*pinfo;
+
+	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+#endif
 
 	down(&pslotinfo->system_event_sem);
 
@@ -438,6 +443,14 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_work);
 	}
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
+#if defined(CONFIG_RPMSG_SD)
+	disable_irq(pinfo->irq);
+	enable_irq(pinfo->irq);
+	//enable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
+#endif
 }
 
 static void ambarella_sd_release_bus(struct mmc_host *mmc)
@@ -1688,6 +1701,15 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	dev_dbg(pinfo->dev, "HW%s support Suspend/Resume!\n",
 			(hc_cap & SD_CAP_SUS_RES) ? "" : " do not");
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
+#if defined(CONFIG_RPMSG_SD)
+	INIT_DELAYED_WORK(&pslotinfo->detect, ambarella_sd_cd_detect);
+	disable_irq(pinfo->irq);
+	enable_irq(pinfo->irq);
+#endif
+
 	mmc->ocr_avail = 0;
 	if (hc_cap & SD_CAP_VOL_3_3V)
 		mmc->ocr_avail |= MMC_VDD_32_33 | MMC_VDD_33_34;
@@ -1702,6 +1724,9 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 			mmc->caps |= MMC_CAP_UHS_SDR25;
 			if (pslotinfo->caps_ddr)
 				mmc->caps |= MMC_CAP_UHS_DDR50;
+#if defined(CONFIG_RPMSG_SD) && !defined(CONFIG_PLAT_AMBARELLA_BOSS)
+			disable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
+#endif
 		}
 
 		if (mmc->f_max > 50000000)
@@ -1983,26 +2008,65 @@ static int ambarella_sd_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+extern int wowlan_resume_from_ram;
+static u32 sd_nisen;
+static u32 sd_eisen;
+static u32 sd_nixen;
+static u32 sd_eixen;
+
 static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	struct ambarella_sd_controller_info *pinfo;
+	struct ambarella_sd_mmc_info *pslotinfo;
 	int retval = 0, i;
 
 	pinfo = platform_get_drvdata(pdev);
 
-	for (i = 0; i < pinfo->slot_num; i++) {
-		retval = mmc_suspend_host(pinfo->pslotinfo[i]->mmc);
-		if (retval) {
-			ambsd_err(pinfo->pslotinfo[i],
-				"mmc_suspend_host[%d] failed[%d]!\n", i, retval);
+	if (0 == wowlan_resume_from_ram) {
+		for (i = 0; i < pinfo->slot_num; i++) {
+			pslotinfo = pinfo->pslotinfo[i];
+			if (pslotinfo->mmc) {
+				retval = mmc_suspend_host(pslotinfo->mmc);
+				if (retval) {
+					ambsd_err(pslotinfo,
+					"mmc_suspend_host[%d] failed[%d]!\n",
+					i, retval);
+				}
+				down(&pslotinfo->system_event_sem);
+			}
+		}
+
+		disable_irq(pinfo->irq);
+		for (i = 0; i < pinfo->slot_num; i++) {
+			pslotinfo = pinfo->pslotinfo[i];
+#if 0
+			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
+				disable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
+#endif
+		}
+
+		dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
+			__func__, retval, state.event);
+	}
+#if (CHIP_REV == S2)
+	else {
+		if (SD2_IRQ == (pinfo->irq)) {
+			pslotinfo = pinfo->pslotinfo[0];
+
+			pr_debug("%s[%u]: Pre Change\n", __func__, pslotinfo->slot_id);
+			down(&pslotinfo->system_event_sem);
+
+			/* for SR WOWLAN, disable sdio irq and backup sd registers */
+			ambarella_sd_enable_sdio_irq(pslotinfo->mmc, 0);
+
+			sd_nisen = amba_readw(pinfo->regbase + SD_NISEN_OFFSET);
+			sd_eisen = amba_readw(pinfo->regbase + SD_EISEN_OFFSET);
+			sd_nixen = amba_readw(pinfo->regbase + SD_NIXEN_OFFSET);
+			sd_eixen = amba_readw(pinfo->regbase + SD_EIXEN_OFFSET);
 		}
 	}
-
-	disable_irq(pinfo->irq);
-
-	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n", __func__,
-				retval, state.event);
+#endif
 
 	return retval;
 }
@@ -2015,24 +2079,69 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 
 	pinfo = platform_get_drvdata(pdev);
 
-	for (i = 0; i < pinfo->slot_num; i++) {
-		pslotinfo = pinfo->pslotinfo[i];
-		clk_set_rate(pinfo->clk, pslotinfo->mmc->f_max);
-		ambarella_sd_reset_all(pslotinfo->mmc);
-	}
-	enable_irq(pinfo->irq);
-
-	for (i = 0; i < pinfo->slot_num; i++) {
-		pslotinfo = pinfo->pslotinfo[i];
-		retval = mmc_resume_host(pslotinfo->mmc);
-		if (retval) {
-			ambsd_err(pslotinfo,
-			"mmc_resume_host[%d] failed[%d]!\n",
-			i, retval);
+	if (0 == wowlan_resume_from_ram) {
+		for (i = 0; i < pinfo->slot_num; i++) {
+			pslotinfo = pinfo->pslotinfo[i];
+			clk_set_rate(pinfo->clk, pslotinfo->mmc->f_max);
+			ambarella_sd_reset_all(pslotinfo->mmc);
+#if 0
+			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+				boss_set_irq_owner(pslotinfo->plat_info->gpio_cd.irq_line,
+						   BOSS_IRQ_OWNER_LINUX, 1);
+#endif
+				enable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
+#endif
 		}
-	}
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+		boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
+		enable_irq(pinfo->irq);
 
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
+		for (i = 0; i < pinfo->slot_num; i++) {
+			pslotinfo = pinfo->pslotinfo[i];
+			if (pslotinfo->mmc) {
+				retval = mmc_resume_host(pslotinfo->mmc);
+				if (retval) {
+					ambsd_err(pslotinfo,
+					"mmc_resume_host[%d] failed[%d]!\n",
+					i, retval);
+				}
+			}
+		}
+
+		dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
+	}
+#if (CHIP_REV == S2)
+        else {
+                if (SD2_IRQ == (pinfo->irq)) {
+                        //struct irq_desc *desc;
+
+                        /* for SR WOWLAN, restore vic, registers, clock, enable irq  */
+                        //desc = irq_to_desc(pinfo->irq);
+                        //desc->irq_data.chip->irq_set_type(&desc->irq_data, IRQF_TRIGGER_HIGH);
+
+                        amba_writew(pinfo->regbase + SD_NISEN_OFFSET, sd_nisen);
+                        amba_writew(pinfo->regbase + SD_EISEN_OFFSET, sd_eisen);
+                        amba_writew(pinfo->regbase + SD_NIXEN_OFFSET, sd_nixen);
+                        amba_writew(pinfo->regbase + SD_EIXEN_OFFSET, sd_eixen);
+
+                        pslotinfo = pinfo->pslotinfo[0];
+                        mdelay(10);
+                        ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+                        mdelay(10);
+
+                        /* prevent first cmd err */
+                        //ambarella_sd_reset_all(pslotinfo->mmc);
+
+                        pr_debug("%s[%u]: Post Change\n", __func__, pslotinfo->slot_id);
+                        up(&pslotinfo->system_event_sem);
+
+                        printk("ambarella_sd_enable_sdio_irq 1\n");
+                        ambarella_sd_enable_sdio_irq(pslotinfo->mmc, 1);
+                }
+        }
+#endif
 
 	return retval;
 }

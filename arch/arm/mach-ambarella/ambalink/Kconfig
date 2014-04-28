@@ -8,19 +8,29 @@ choice
 	prompt "Link Topology"
 config AMBALINK_SINGLE_CORE
 	bool "Uni_Core"
+	select PLAT_AMBARELLA_BOSS
 	help 
 	  AmbaLink on uni-core platform
 
 config AMBALINK_MULTIPLE_CORE
 	bool "Multi_Core"
+	select PLAT_AMBARELLA_PPM_UNCACHED
 	help
 	  AmbaLink on multiple-core (dual-core Cortex) platform
 
 config AMBALINK_AMP_MULTIPLE_CORE
 	bool "AMP_Multi_Core"
+	select PLAT_AMBARELLA_PPM_UNCACHED
 	help
 	  AmbaLink on AMP multiple-core (ARM11 + Cortex) platform
 endchoice #"Ambalink Topology"
+
+config PLAT_AMBARELLA_BOSS
+       bool "Ambarella BOSS"
+       default n
+       depends on AMBALINK_SINGLE_CORE
+       help
+         Enable single core BOSS support.
 
 config AMBALINK_SHMADDR
 	hex "shared memory address"

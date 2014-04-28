@@ -132,6 +132,9 @@ static int ambarella_i2c_system_event(struct notifier_block *nb,
 #if defined(CONFIG_AMBALINK_LOCK)
 		if (!strcmp(pdev->name, "70013000.i2c")) {
 			aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+			boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 			enable_irq(pinfo->irq);
 		}
 #endif
@@ -441,6 +444,9 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	if (!strcmp(adap->name, "70013000.i2c")) {
 		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 		ambarella_i2c_set_clk(pinfo);
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+		boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 		enable_irq(pinfo->irq);
 	}
 #endif
@@ -571,6 +577,9 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	if (!strcmp(pdev->name, "70013000.i2c")) {
 		aipc_mutex_lock(AMBA_IPC_MUTEX_I2C_CHANNEL2);
 		disable_irq(pinfo->irq);
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+		boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 		enable_irq(pinfo->irq);
 	}
 #endif
