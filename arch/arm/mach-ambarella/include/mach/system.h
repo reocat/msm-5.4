@@ -43,7 +43,7 @@ static inline void arch_idle(void)
 #if defined(CONFIG_ARM_GIC)
 	if (boss && (BOSS_STATE_TURBO != boss->state) ) {
 		*boss->gidle = 1;
-		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_CLEAR_OFFSET),
+		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_SET_OFFSET),
 				1 << (BOSS_VIRT_RIRQ_INT_VEC - AXI_SOFT_IRQ(0)));
 #else
 	if (boss && (BOSS_STATE_TURBO != boss->state) ) {
