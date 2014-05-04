@@ -10,9 +10,11 @@ snd-soc-ambevk-objs := ambevk.o
 snd-soc-i1evk-objs := i1evk.o
 snd-soc-dummy-objs := dummy.o
 snd-soc-s2lmkiwi-objs := s2lmkiwi.o
+snd-soc-ambcloudcam-objs := ambcloudcam.o
 
 obj-$(CONFIG_AMBEVK_BOARD)		+= snd-soc-ambevk.o
 obj-$(CONFIG_I1EVK_BOARD)		+= snd-soc-i1evk.o
 obj-$(CONFIG_AMBARELLA_DUMMY_BOARD)	+= snd-soc-dummy.o
 obj-$(CONFIG_S2LMKIWI_BOARD)		+= snd-soc-s2lmkiwi.o
+obj-$(CONFIG_STRAWBERRY_BOARD)		+= snd-soc-ambcloudcam.o
 
