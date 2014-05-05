@@ -243,7 +243,8 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 
 	rval = devm_request_threaded_irq(phy->dev, irq, NULL,
 			ambarella_otg_detect_irq,
-			IRQ_TYPE_EDGE_BOTH, "usb_otg_id", amb_phy);
+			IRQ_TYPE_EDGE_BOTH | IRQF_ONESHOT,
+			"usb_otg_id", amb_phy);
 	if (rval) {
 		dev_err(phy->dev, "request usb_otg_id irq failed: %d\n", rval);
 		return rval;
