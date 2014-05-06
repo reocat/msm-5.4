@@ -394,6 +394,18 @@ static int ambarella_phy_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int ambarella_phy_shutdown(struct platform_device *pdev)
+{
+	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
+
+	if (gpio_is_valid(amb_phy->gpio_md)) {
+		gpio_direction_output(amb_phy->gpio_md,
+					!amb_phy->md_host_active);
+	}
+
+	return 0;
+}
+
 static const struct of_device_id ambarella_phy_dt_ids[] = {
 	{ .compatible = "ambarella,usbphy", },
 	{ /* sentinel */ }
@@ -403,6 +415,7 @@ MODULE_DEVICE_TABLE(of, ambarella_phy_dt_ids);
 static struct platform_driver ambarella_phy_driver = {
 	.probe = ambarella_phy_probe,
 	.remove = ambarella_phy_remove,
+	.shutdown = ambarella_phy_shutdown,
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner	= THIS_MODULE,
