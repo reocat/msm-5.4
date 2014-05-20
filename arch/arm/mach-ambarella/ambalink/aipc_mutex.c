@@ -134,7 +134,11 @@ static irqreturn_t ipc_mutex_isr(int irq, void *dev_id)
 	//printk("isr %d", irq);
 
 	// clear the irq
+#ifdef CONFIG_ARM_GIC
 	amba_writel(AHB_SCRATCHPAD_REG(0x14), 0x1 << (irq - AXI_SOFT_IRQ(0)));
+#else
+	amba_writel(VIC3_REG(VIC_SOFT_INT_CLR_INT_OFFSET), irq % 32);
+#endif
 
 	// wake up
 	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++) {
@@ -289,8 +293,13 @@ void aipc_mutex_unlock(int id)
 		share->owner = 0;
 		if (share->wait_list) {
 			// notify remote waiting core(s)
+#ifdef CONFIG_ARM_GIC
 			amba_writel(AHB_SCRATCHPAD_REG(0x10),
 			            0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ(0)));
+#else
+			amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
+				    MUTEX_IRQ_REMOTE % 32);
+#endif
 			//printk("wakeup tx\n");
 		}
 	}

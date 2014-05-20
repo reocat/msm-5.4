@@ -80,11 +80,13 @@ void boss_local_irq_enable(void)
 #ifdef CONFIG_ARM_GIC
 	for (i = 0; i < 8; i++) {
 		amba_writel(GIC_SET_ENABLE_REG(i << 2),
-			    boss->gic_mask[i] & boss->guest_gic_en[i]);
+			    boss->int_mask[i] & boss->guest_int_en[i]);
 	}
 #else
-	amba_writel(VIC_INTEN_REG, boss->vic1mask & boss->guest_vic1_en);
-	amba_writel(VIC2_INTEN_REG, boss->vic2mask & boss->guest_vic2_en);
+	/* S2L has 3 VIC instances. */
+	amba_writel(VIC_REG(VIC_INTEN_OFFSET), boss->int_mask[0] & boss->guest_int_en[0]);
+	amba_writel(VIC2_REG(VIC_INTEN_OFFSET), boss->int_mask[1] & boss->guest_int_en[1]);
+	amba_writel(VIC3_REG(VIC_INTEN_OFFSET), boss->int_mask[2] & boss->guest_int_en[2]);
 #endif
 
 	arm_irq_enable();
@@ -105,11 +107,13 @@ void boss_local_irq_disable(void)
 
 #ifdef CONFIG_ARM_GIC
 	for (i = 0; i < 8; i++) {
-		amba_writel(GIC_CLEAR_ENABLE_REG(i << 2), boss->gic_mask[i]);
+		amba_writel(GIC_CLEAR_ENABLE_REG(i << 2), boss->int_mask[i]);
 	}
 #else
-	amba_writel(VIC_INTEN_CLR_REG, boss->vic1mask);
-	amba_writel(VIC2_INTEN_CLR_REG, boss->vic2mask);
+	/* S2L has 3 VIC instances. */
+	amba_writel(VIC_REG(VIC_INTEN_CLR_OFFSET), boss->int_mask[0]);
+	amba_writel(VIC2_REG(VIC_INTEN_CLR_OFFSET), boss->int_mask[1]);
+	amba_writel(VIC3_REG(VIC_INTEN_CLR_OFFSET), boss->int_mask[2]);
 #endif
 
 	boss->guest_irq_mask = 1;
@@ -214,27 +218,9 @@ int boss_get_irq_owner(int irq)
 	local_irq_save(flags);
 	preempt_disable();
 
-#if defined(CONFIG_ARM_GIC)
-	if (boss->gic_mask[irq >> 5] & (0x1 << (irq % 32))) {
+	if (boss->int_mask[irq >> 5] & (0x1 << (irq % 32))) {
 		owner = BOSS_IRQ_OWNER_LINUX;
 	}
-#else
-	if (irq < 32) {
-		if (boss->vic1mask & (0x1 << irq)) {
-			owner = BOSS_IRQ_OWNER_LINUX;
-		}
-	}
-	else if (irq < 64) {
-		if (boss->vic2mask & (0x1 << (irq - 32))) {
-			owner = BOSS_IRQ_OWNER_LINUX;
-		}
-	}
-	else if (irq < 96) {
-		if (boss->vic3mask & (0x1 << (irq - 64))) {
-			owner = BOSS_IRQ_OWNER_LINUX;
-		}
-	}
-#endif
 
 	preempt_enable();
 	local_irq_restore(flags);
@@ -254,16 +240,15 @@ void boss_set_irq_owner(int irq, int owner, int update)
 	preempt_disable();
 
 #if defined(CONFIG_ARM_GIC)
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if (owner == BOSS_IRQ_OWNER_RTOS) {
-		BOSS_INT_SET_RTOS(boss->gic_mask[irq >> 5], (irq % 32));
-		BOSS_INT_SET(boss->root_gic_en[irq >> 5], (irq % 32));
+		BOSS_INT_SET_RTOS(boss->int_mask[irq >> 5], (irq % 32));
+		BOSS_INT_SET(boss->root_int_en[irq >> 5], (irq % 32));
 		if (update) {
 			amba_writel(GIC_SET_ENABLE_REG((irq >> 5) << 2), 1 << (irq % 32));
 		}
 	} else {
-		BOSS_INT_SET_LINUX(boss->gic_mask[irq >> 5], (irq % 32));
-		BOSS_INT_SET(boss->guest_gic_en[irq >> 5], (irq % 32));
+		BOSS_INT_SET_LINUX(boss->int_mask[irq >> 5], (irq % 32));
+		BOSS_INT_SET(boss->guest_int_en[irq >> 5], (irq % 32));
 		if (update) {
 			if (boss->guest_irq_mask) {
 				amba_writel(GIC_CLEAR_ENABLE_REG((irq >> 5) << 2), 1 << (irq % 32));
@@ -272,69 +257,73 @@ void boss_set_irq_owner(int irq, int owner, int update)
 			}
 		}
 	}
-#else   /* !CONFIG_PLAT_AMBARELLA_BOSS */
-#endif  /* CONFIG_PLAT_AMBARELLA_BOSS */
 #else   /* !CONFIG_ARM_GIC */
-    if (irq < 32) {
-        if (owner == BOSS_IRQ_OWNER_RTOS) {
-            BOSS_INT_SET_RTOS(boss->vic1mask, irq);
-            BOSS_INT_SET(boss->root_vic1_en, irq);
-            if (update) {
-                amba_writel(VIC_INTEN_REG, 1 << irq);
-            }
-        } else {
-            BOSS_INT_SET_LINUX(boss->vic1mask, irq);
-            BOSS_INT_SET(boss->guest_vic1_en, irq);
-            if (update) {
-                if (boss->guest_irq_mask) {
-                    amba_writel(VIC_INTEN_CLR_REG, 1 << irq);
-                } else {
-                    amba_writel(VIC_INTEN_REG, 1 << irq);
-                }
-            }
-        }
-    }
-    else if (irq < 64) {
-        if (owner == BOSS_IRQ_OWNER_RTOS) {
-            BOSS_INT_SET_RTOS(boss->vic2mask, irq - 32);
-            BOSS_INT_SET(boss->root_vic2_en, irq - 32);
-            if (update) {
-                amba_writel(VIC2_INTEN_REG, 1 << (irq - 32));
-            }
-        } else {
-            BOSS_INT_SET_LINUX(boss->vic2mask, irq - 32);
-            BOSS_INT_SET(boss->guest_vic2_en, irq - 32);
-            if (update) {
-                if (boss->guest_irq_mask) {
-                    amba_writel(VIC2_INTEN_CLR_REG, 1 << (irq - 32));
-                } else {
-                    amba_writel(VIC2_INTEN_REG, 1 << (irq - 32));
-                }
-            }
-        }
-    }
-#if (VIC_INSTANCES >= 3)
-    else if (irq < 96) {
-        if (owner == BOSS_IRQ_OWNER_RTOS) {
-            BOSS_INT_SET_RTOS(boss->vic3mask, irq - 64);
-            BOSS_INT_SET(boss->root_vic3_en, irq - 64);
-            if (update) {
-                amba_writel(VIC3_INTEN_REG, 1 << (irq - 64));
-            }
-        } else {
-            BOSS_INT_SET_LINUX(boss->vic3mask, irq - 64);
-            BOSS_INT_SET(boss->guest_vic3_en, irq - 64);
-            if (update) {
-                if (boss->guest_irq_mask) {
-                    amba_writel(VIC3_INTEN_CLR_REG, 1 << (irq - 64));
-                } else {
-                    amba_writel(VIC3_INTEN_REG, 1 << (irq - 64));
-                }
-            }
-        }
+	if (owner == BOSS_IRQ_OWNER_RTOS) {
+		BOSS_INT_SET_RTOS(boss->int_mask[irq >> 5], (irq % 32));
+		BOSS_INT_SET(boss->root_int_en[irq >> 5], (irq % 32));
 
-    }
-#endif  /* VIC_INSTANCES >= 3 */
+		if (update) {
+			switch (irq >> 5) {
+			case 0:
+				amba_writel(VIC_REG(VIC_INTEN_OFFSET),
+					    1 << (irq % 32));
+				break;
+			case 1:
+				amba_writel(VIC2_REG(VIC_INTEN_OFFSET),
+					    1 << (irq % 32));
+				break;
+			case 2:
+				amba_writel(VIC3_REG(VIC_INTEN_OFFSET),
+					    1 << (irq % 32));
+				break;
+			default:
+				printk(KERN_ERR "%s: VIC group error (%d)!",
+					__func__, irq >> 5);
+			}
+		}
+	} else {
+		BOSS_INT_SET_LINUX(boss->int_mask[irq >> 5], (irq % 32));
+		BOSS_INT_SET(boss->guest_int_en[irq >> 5], (irq % 32));
+		if (update) {
+			if (boss->guest_irq_mask) {
+				switch (irq >> 5) {
+				case 0:
+					amba_writel(VIC_REG(VIC_INTEN_CLR_OFFSET),
+						    1 << (irq % 32));
+					break;
+				case 1:
+					amba_writel(VIC2_REG(VIC_INTEN_CLR_OFFSET),
+						    1 << (irq % 32));
+					break;
+				case 2:
+					amba_writel(VIC3_REG(VIC_INTEN_CLR_OFFSET),
+						    1 << (irq % 32));
+					break;
+				default:
+					printk(KERN_ERR "%s: VIC group error (%d)!",
+						__func__, irq >> 5);
+				}
+			} else {
+				switch (irq >> 5) {
+				case 0:
+					amba_writel(VIC_REG(VIC_INTEN_OFFSET),
+						    1 << (irq % 32));
+					break;
+				case 1:
+					amba_writel(VIC2_REG(VIC_INTEN_OFFSET),
+						    1 << (irq % 32));
+					break;
+				case 2:
+					amba_writel(VIC3_REG(VIC_INTEN_OFFSET),
+						    1 << (irq % 32));
+					break;
+				default:
+					printk(KERN_ERR "%s: VIC group error (%d)!",
+						__func__, irq >> 5);
+				}
+			}
+		}
+	}
 #endif  /* CONFIG_ARM_GIC */
 
 	preempt_enable();
@@ -352,29 +341,11 @@ void boss_enable_irq(int irq)
 	local_irq_save(flags);
 	preempt_disable();
 
-#if defined(CONFIG_ARM_GIC)
-	if (boss->gic_mask[LOCAL_TIMER_IRQ >> 5] & (LOCAL_TIMER_IRQ % 32)) {
+	if (boss->int_mask[SYSTEM_TIMER_IRQ >> 5] & (1 << (SYSTEM_TIMER_IRQ % 32))) {
 		for (;;);
 	}
 
-	BOSS_INT_SET(boss->guest_gic_en[irq >> 5], (irq % 32));
-#else   /* !CONFIG_ARM_GIC */
-	if (boss->vic1mask & (1 << 12)) {
-		for (;;);
-	}
-
-	if (irq < 32) {
-		BOSS_INT_SET(boss->guest_vic1_en, irq);
-	}
-	else if (irq < 64) {
-		BOSS_INT_SET(boss->guest_vic2_en, irq - 32);
-	}
-#if (VIC_INSTANCES >= 3)
-	else if (irq < 96) {
-		BOSS_INT_SET(boss->guest_vic3_en, irq - 64);
-	}
-#endif
-#endif  /* CONFIG_ARM_GIC */
+	BOSS_INT_SET(boss->guest_int_en[irq >> 5], (irq % 32));
 
 	preempt_enable();
 	local_irq_restore(flags);
@@ -391,29 +362,11 @@ void boss_disable_irq(int irq)
 	local_irq_save(flags);
 	preempt_disable();
 
-#if defined(CONFIG_ARM_GIC)
-	if (boss->gic_mask[LOCAL_TIMER_IRQ >> 5] & (LOCAL_TIMER_IRQ % 32)) {
+	if (boss->int_mask[SYSTEM_TIMER_IRQ >> 5] & (1 << (SYSTEM_TIMER_IRQ % 32))) {
 		for (;;);
 	}
 
-	BOSS_INT_CLR(boss->guest_gic_en[irq >> 5], (irq % 32));
-#else   /* !CONFIG_ARM_GIC */
-	if (boss->vic1mask & (1 << 12)) {
-		for (;;);
-	}
-
-	if (irq < 32) {
-		BOSS_INT_CLR(boss->guest_vic1_en, irq);
-	}
-	else if (irq < 64) {
-		BOSS_INT_CLR(boss->guest_vic2_en, irq - 32);
-	}
-#if (VIC_INSTANCES >= 3)
-	else if (irq < 96) {
-		BOSS_INT_CLR(boss->guest_vic3_en, irq - 64);
-	}
-#endif
-#endif  /* CONFIG_ARM_GIC */
+	BOSS_INT_CLR(boss->guest_int_en[irq >> 5], (irq % 32));
 
 	preempt_enable();
 	local_irq_restore(flags);

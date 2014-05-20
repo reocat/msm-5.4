@@ -15,7 +15,11 @@
 static void rpmsg_send_irq(int irq)
 {
 	if (irq > 0) {
+#ifdef CONFIG_ARM_GIC
 		amba_writel(AHB_SCRATCHPAD_REG(0x10), 0x1 << (irq - AXI_SOFT_IRQ(0)));
+#else
+		amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET), irq % 32);
+#endif
 	}
 	else {
 		irq = -irq;
@@ -25,7 +29,11 @@ static void rpmsg_send_irq(int irq)
 
 static void rpmsg_ack_irq(int irq)
 {
+#ifdef CONFIG_ARM_GIC
 	amba_writel(AHB_SCRATCHPAD_REG(0x14), 0x1 << (irq - AXI_SOFT_IRQ(0)));
+#else
+	amba_writel(VIC3_REG(VIC_SOFT_INT_CLR_INT_OFFSET), irq % 32);
+#endif
 }
 
 static void ambarella_rproc_kick(struct rproc *rproc, int vqid)

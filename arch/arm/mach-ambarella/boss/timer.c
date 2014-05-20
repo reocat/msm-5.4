@@ -241,8 +241,12 @@ static struct clock_event_device boss_clkevt = {
 static irqreturn_t boss_ce_timer_interrupt(int irq, void *dev_id)
 {
 	// clear the softirq
+#ifdef CONFIG_ARM_GIC
 	amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_CLEAR_OFFSET),
 	            0x1 << (irq - AXI_SOFT_IRQ(0)));
+#else
+	amba_writel(VIC3_REG(VIC_SOFT_INT_CLR_INT_OFFSET), irq % 32);
+#endif
 
 	boss_clkevt.event_handler(&boss_clkevt);
 
@@ -467,7 +471,6 @@ u32 ambarella_timer_resume(u32 level)
 	}
 
 	amba_setbitsl(timer_ctrl_reg,
-
 			(ambarella_timer_pm.timer_ctr_reg & timer_ctr_mask));
 #ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	if (level)

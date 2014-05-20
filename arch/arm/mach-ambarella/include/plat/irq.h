@@ -687,6 +687,7 @@
 #define IDSP_VIN_SOF_IRQ		VIC3_INT_VEC(2)
 #define IDSP_VIN_DVSYNC_IRQ		VIC3_INT_VEC(3)
 #define IDSP_VIN_LAST_PIXEL_IRQ		VIC3_INT_VEC(4)
+#define VIC_SOFT_IRQ(x)             	VIC3_INT_VEC((x) + 5)	/* 0 <= x <= 13 */
 #define L2CC_INTR_IRQ			VIC3_INT_VEC(21)
 #define MD5_IRQ				VIC3_INT_VEC(22)
 #define DES_IRQ				VIC3_INT_VEC(23)

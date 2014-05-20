@@ -67,14 +67,8 @@
 #define BOSS_VIRT_GIRQ_INT_VEC		(32 + 18)	/* Virtual 'guest IRQ' irq */
 #define BOSS_VIRT_RIRQ_INT_VEC		(32 + 23)	/* Virtual 'root IRQ' irq */
 #elif (CHIP_REV == S2)
-#if 0
-#define BOSS_VIRT_H2G_INT_REQ_VEC	AXI_SOFT_IRQ(0)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_H2G_INT_RLY_VEC	AXI_SOFT_IRQ(2)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_INT_REQ_VEC	3		/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_G2H_INT_RLY_VEC	(32 + 32 + 4)	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_H2G_MTX_VEC		AXI_SOFT_IRQ(1)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_MTX_VEC		(32 + 32 + 0)	/* Virtual 'guest-to-host' irq */
-#endif
+#define SYSTEM_TIMER_IRQ                29
+
 #define GIC_SET_ENABLE_OFFSET		0x100
 #define GIC_CLEAR_ENABLE_OFFSET		0x180
 #define GIC_INT_ACK_OFFSET		0x0C
@@ -91,11 +85,17 @@
 #define BOSS_VIRT_TIMER_INT_VEC		AXI_SOFT_IRQ(7) /* Virtual 'timer' to guest irq */
 #define BOSS_VIRT_GIRQ_INT_VEC		AXI_SOFT_IRQ(8) /* Virtual 'guest IRQ' irq */
 #define BOSS_VIRT_RIRQ_INT_VEC		AXI_SOFT_IRQ(9) /* Virtual 'root IRQ' irq */
+#elif (CHIP_REV == S2L)
+#define SYSTEM_TIMER_IRQ                63
+
+#define BOSS_VIRT_TIMER_INT_VEC		VIC_SOFT_IRQ(7) /* Virtual 'timer' to guest irq */
+#define BOSS_VIRT_GIRQ_INT_VEC		VIC_SOFT_IRQ(8) /* Virtual 'guest IRQ' irq */
+#define BOSS_VIRT_RIRQ_INT_VEC		VIC_SOFT_IRQ(9) /* Virtual 'root IRQ' irq */
 #else
 #error "Boss is not supported on this chip!"
 #endif
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 /* Keep these in sync with data structure below */
 /* 0x0 */
 #define BOSS_ROOT_CTX_OFFSET            0
@@ -107,16 +107,16 @@
 #define BOSS_NVTIMER_OFFSET             (BOSS_CVTIMER_OFFSET + 4)
 #define BOSS_IRQNO_OFFSET               (BOSS_NVTIMER_OFFSET + 4)
 /* 0x20 */
-#define BOSS_GIC0MASK_OFFSET            (BOSS_IRQNO_OFFSET + 4)
-#define BOSS_GIC1MASK_OFFSET            (BOSS_GIC0MASK_OFFSET + 4)
-#define BOSS_GIC2MASK_OFFSET            (BOSS_GIC1MASK_OFFSET + 4)
-#define BOSS_GIC3MASK_OFFSET            (BOSS_GIC2MASK_OFFSET + 4)
-#define BOSS_GIC4MASK_OFFSET            (BOSS_GIC3MASK_OFFSET + 4)
-#define BOSS_GIC5MASK_OFFSET            (BOSS_GIC4MASK_OFFSET + 4)
-#define BOSS_GIC6MASK_OFFSET            (BOSS_GIC5MASK_OFFSET + 4)
-#define BOSS_GIC7MASK_OFFSET            (BOSS_GIC6MASK_OFFSET + 4)
+#define BOSS_INT0MASK_OFFSET            (BOSS_IRQNO_OFFSET + 4)
+#define BOSS_INT1MASK_OFFSET            (BOSS_INT0MASK_OFFSET + 4)
+#define BOSS_INT2MASK_OFFSET            (BOSS_INT1MASK_OFFSET + 4)
+#define BOSS_INT3MASK_OFFSET            (BOSS_INT2MASK_OFFSET + 4)
+#define BOSS_INT4MASK_OFFSET            (BOSS_INT3MASK_OFFSET + 4)
+#define BOSS_INT5MASK_OFFSET            (BOSS_INT4MASK_OFFSET + 4)
+#define BOSS_INT6MASK_OFFSET            (BOSS_INT5MASK_OFFSET + 4)
+#define BOSS_INT7MASK_OFFSET            (BOSS_INT6MASK_OFFSET + 4)
 /* 0x30 */
-#define BOSS_GPIO0MASK_OFFSET           (BOSS_GIC7MASK_OFFSET + 4)
+#define BOSS_GPIO0MASK_OFFSET           (BOSS_INT7MASK_OFFSET + 4)
 #define BOSS_GPIO1MASK_OFFSET           (BOSS_GPIO0MASK_OFFSET + 4)
 #define BOSS_GPIO2MASK_OFFSET           (BOSS_GPIO1MASK_OFFSET + 4)
 #define BOSS_GPIO3MASK_OFFSET           (BOSS_GPIO2MASK_OFFSET + 4)
@@ -125,25 +125,25 @@
 #define BOSS_ROOT_IRQ_MASK_OFFSET       (BOSS_GPIO5MASK_OFFSET + 4)
 #define BOSS_GUEST_IRQ_MASK_OFFSET      (BOSS_ROOT_IRQ_MASK_OFFSET + 4)
 /* 0x40 */
-#define BOSS_ROOT_GIC0_EN_OFFSET        (BOSS_GUEST_IRQ_MASK_OFFSET + 4)
-#define BOSS_ROOT_GIC1_EN_OFFSET        (BOSS_ROOT_GIC0_EN_OFFSET + 4)
-#define BOSS_ROOT_GIC2_EN_OFFSET        (BOSS_ROOT_GIC1_EN_OFFSET + 4)
-#define BOSS_ROOT_GIC3_EN_OFFSET        (BOSS_ROOT_GIC2_EN_OFFSET + 4)
-#define BOSS_ROOT_GIC4_EN_OFFSET        (BOSS_ROOT_GIC3_EN_OFFSET + 4)
-#define BOSS_ROOT_GIC5_EN_OFFSET        (BOSS_ROOT_GIC4_EN_OFFSET + 4)
-#define BOSS_ROOT_GIC6_EN_OFFSET        (BOSS_ROOT_GIC5_EN_OFFSET + 4)
-#define BOSS_ROOT_GIC7_EN_OFFSET        (BOSS_ROOT_GIC6_EN_OFFSET + 4)
+#define BOSS_ROOT_INT0_EN_OFFSET        (BOSS_GUEST_IRQ_MASK_OFFSET + 4)
+#define BOSS_ROOT_INT1_EN_OFFSET        (BOSS_ROOT_INT0_EN_OFFSET + 4)
+#define BOSS_ROOT_INT2_EN_OFFSET        (BOSS_ROOT_INT1_EN_OFFSET + 4)
+#define BOSS_ROOT_INT3_EN_OFFSET        (BOSS_ROOT_INT2_EN_OFFSET + 4)
+#define BOSS_ROOT_INT4_EN_OFFSET        (BOSS_ROOT_INT3_EN_OFFSET + 4)
+#define BOSS_ROOT_INT5_EN_OFFSET        (BOSS_ROOT_INT4_EN_OFFSET + 4)
+#define BOSS_ROOT_INT6_EN_OFFSET        (BOSS_ROOT_INT5_EN_OFFSET + 4)
+#define BOSS_ROOT_INT7_EN_OFFSET        (BOSS_ROOT_INT6_EN_OFFSET + 4)
 /* 0x60 */
-#define BOSS_GUEST_GIC0_EN_OFFSET       (BOSS_ROOT_GIC7_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC1_EN_OFFSET       (BOSS_GUEST_GIC0_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC2_EN_OFFSET       (BOSS_GUEST_GIC1_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC3_EN_OFFSET       (BOSS_GUEST_GIC2_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC4_EN_OFFSET       (BOSS_GUEST_GIC3_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC5_EN_OFFSET       (BOSS_GUEST_GIC4_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC6_EN_OFFSET       (BOSS_GUEST_GIC5_EN_OFFSET + 4)
-#define BOSS_GUEST_GIC7_EN_OFFSET       (BOSS_GUEST_GIC6_EN_OFFSET + 4)
+#define BOSS_GUEST_INT0_EN_OFFSET       (BOSS_ROOT_INT7_EN_OFFSET + 4)
+#define BOSS_GUEST_INT1_EN_OFFSET       (BOSS_GUEST_INT0_EN_OFFSET + 4)
+#define BOSS_GUEST_INT2_EN_OFFSET       (BOSS_GUEST_INT1_EN_OFFSET + 4)
+#define BOSS_GUEST_INT3_EN_OFFSET       (BOSS_GUEST_INT2_EN_OFFSET + 4)
+#define BOSS_GUEST_INT4_EN_OFFSET       (BOSS_GUEST_INT3_EN_OFFSET + 4)
+#define BOSS_GUEST_INT5_EN_OFFSET       (BOSS_GUEST_INT4_EN_OFFSET + 4)
+#define BOSS_GUEST_INT6_EN_OFFSET       (BOSS_GUEST_INT5_EN_OFFSET + 4)
+#define BOSS_GUEST_INT7_EN_OFFSET       (BOSS_GUEST_INT6_EN_OFFSET + 4)
 /* 0x80 */
-#define BOSS_LOG_BUF_PTR_OFFSET         (BOSS_GUEST_GIC7_EN_OFFSET + 4)
+#define BOSS_LOG_BUF_PTR_OFFSET         (BOSS_GUEST_INT7_EN_OFFSET + 4)
 #define BOSS_LOG_BUF_LEN_PTR_OFFSET     (BOSS_LOG_BUF_PTR_OFFSET + 4)
 #define BOSS_LOG_BUF_LAST_PTR_OFFSET    (BOSS_LOG_BUF_LEN_PTR_OFFSET + 4)
 #define BOSS_STATE_OFFSET               (BOSS_LOG_BUF_LAST_PTR_OFFSET + 4)
@@ -229,7 +229,6 @@ struct boss_context_s
 	unsigned int cp15_dac;
 };
 
-#if defined(CONFIG_ARM_GIC)
 /*
  * The data structure for BOSS.
  */
@@ -256,15 +255,15 @@ struct boss_s
 	 * it subscribes to.
 	 */
 
-	unsigned int gic_mask[8];           /* GIC bitmask */
+	unsigned int int_mask[8];           /* GIC bitmask */
 	unsigned int gpio_mask[6];          /* GPIO bitmask */
 
 	/* IRQ status */
 	unsigned int root_irq_mask;         /* Root IRQ status */
 	unsigned int guest_irq_mask;        /* If guest IRQ is masked? */
 
-	unsigned int root_gic_en[8];        /* Root GIC enable */
-	unsigned int guest_gic_en[8];       /* Guest GIC enable */
+	unsigned int root_int_en[8];        /* Root GIC enable */
+	unsigned int guest_int_en[8];       /* Guest GIC enable */
 
 	/*
 	 * The following 3 variables are initialized to 0 and expected to
@@ -298,88 +297,6 @@ struct boss_s
 	 */
 	//struct ipc_buf_s ipc_buf;	/* IPC buffer */
 };
-
-#else
-/*
- * The data structure for BOSS.
- */
-struct boss_s
-{
-	struct boss_context_s *root_ctx;	/* Root context */
-	struct boss_context_s *guest_ctx;	/* Guest context */
-	unsigned int *mode;			/* BOSS mode */
-	unsigned int *gidle;			/* Guest idle flag */
-
-	/*
-	 * The following 3 fields are used by BOSS to manage the
-	 * vtimer interrupt to the guest OS.
-	 */
-	unsigned int *envtimer;		/* vtimer enabled? */
-	unsigned int *cvtimer;		/* vtimer counter */
-	unsigned int *nvtimer;		/* Number of vtimer delivered */
-	unsigned int *irqno;		/* IRQ number computed by BOSS */
-
-	/*
-	 * The following 2 fields are zero-initialized by the root OS.
-	 * The guest OS may modify the VIC controllers, but should set
-	 * the bitmasks below to indicate to the root OS which lines that
-	 * it subscribes to.
-	 */
-	unsigned int vic1mask;		/* VIC1 bitmask */
-	unsigned int vic2mask;		/* VIC2 bitmask */
-	unsigned int vic3mask;		/* VIC3 bitmask */
-	unsigned int gpio0mask;		/* GPIO0 bitmask */
-	unsigned int gpio1mask;		/* GPIO1 bitmask */
-	unsigned int gpio2mask;		/* GPIO2 bitmask */
-	unsigned int gpio3mask;		/* GPIO3 bitmask */
-	unsigned int gpio4mask;		/* GPIO4 bitmask */
-	unsigned int gpio5mask;		/* GPIO5 bitmask */
-
-	/* IRQ status */
-	unsigned int root_irq_mask;	/* Root IRQ status */
-	unsigned int guest_irq_mask;	/* If guest IRQ is masked? */
-
-	unsigned int root_vic1_en;	/* Root VIC1 enable */
-	unsigned int root_vic2_en;	/* Root VIC2 enable */
-	unsigned int root_vic3_en;	/* Root VIC3 enable */
-
-	unsigned int guest_vic1_en;	/* Guest VIC1 enable */
-	unsigned int guest_vic2_en;	/* Guest VIC2 enable */
-	unsigned int guest_vic3_en;	/* Guest VIC3 enable */
-
-	/*
-	 * The following 3 variables are initialized to 0 and expected to
-	 * be filled in by the guest OS and maintained thereafter to trigger
-	 * log buffer updates and dumps by the root OS.
-	 */
-	unsigned int log_buf_ptr;	/* Guest OS log buffer address */
-	unsigned int log_buf_len_ptr;	/* Guest OS log buffer length */
-	unsigned int log_buf_last_ptr;	/* Index to latest updated buf. */
-
-	unsigned int state;		/* BOSS state */
-	unsigned int lock;		/* BOSS lock */
-
-	unsigned int smem_addr;	/* Shared memory address */
-	unsigned int smem_size;	/* Shared memory length */
-
-	unsigned int ipc_log_lock;
-	unsigned int ipc_log_level;
-	unsigned int ipc_log_ptr;
-	unsigned int ipc_log_size;
-	unsigned int ipc_log_total;
-
-	/* device ownership */
-	unsigned int device_owner_mask;
-
-	/*
-	 * The following fields are used by the IPC drivers.
-	 * The IPC binder on the root OS sets up the pointers and the sizes of
-	 * the circular buffers so that the corresponding IPC binder on the
-	 * remote OS can retrieve these when it boots up.
-	 */
-	struct ipc_buf_s ipc_buf;	/* IPC buffer */
-};
-#endif
 
 typedef struct boss_obj_s {
 	unsigned int	ready;

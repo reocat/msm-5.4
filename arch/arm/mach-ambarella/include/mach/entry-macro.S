@@ -55,10 +55,10 @@
 		bne     2f
 
 1:
-		mov     \reg3, #BOSS_GIC0MASK_OFFSET
+		mov     \reg3, #BOSS_INT0MASK_OFFSET
 		add     \reg3, \reg3, \reg4
 		ldr     \reg2, [\reg1, \reg3]
-		mov     \reg3, #BOSS_GUEST_GIC0_EN_OFFSET
+		mov     \reg3, #BOSS_GUEST_INT0_EN_OFFSET
 		add     \reg3, \reg3, \reg4
 		ldr     \reg3, [\reg1, \reg3]
 		and     \reg2, \reg2, \reg3
@@ -75,10 +75,10 @@
 		str     \reg2, [\reg1, #BOSS_GUEST_IRQ_MASK_OFFSET]
 		b       3f
 2:
-		mov     \reg3, #BOSS_GIC0MASK_OFFSET
+		mov     \reg3, #BOSS_INT0MASK_OFFSET
 		add     \reg3, \reg3, \reg4
 		ldr     \reg2, [\reg1, \reg3]
-		mov     \reg3, #BOSS_GUEST_GIC0_EN_OFFSET
+		mov     \reg3, #BOSS_GUEST_INT0_EN_OFFSET
 		add     \reg3, \reg3, \reg4
 		ldr     \reg3, [\reg1, \reg3]
 		and     \reg2, \reg2, \reg3
@@ -96,22 +96,28 @@
 		.endm
 
 #else   /* !CONFIG_ARM_GIC */
-		.macro boss_int_update, reg1, reg2, reg3
+		.macro boss_int_update, reg1, reg2, reg3, reg4
 		tst \reg1, #0x80
 		ldr \reg1, =boss            @ reg1: boss
 		ldr \reg1, [\reg1]
 		bne 1f
 
-		ldr \reg2, [\reg1, #BOSS_VIC1MASK_OFFSET]
-		ldr \reg3, [\reg1, #BOSS_GUEST_VIC1_EN_OFFSET]
+		ldr \reg2, [\reg1, #BOSS_INT0MASK_OFFSET]
+		ldr \reg3, [\reg1, #BOSS_GUEST_INT0_EN_OFFSET]
 		and \reg2, \reg2, \reg3
 		ldr \reg3, =VIC_BASE
 		str \reg2, [\reg3, #VIC_INTEN_OFFSET]
 
-		ldr \reg2, [\reg1, #BOSS_VIC2MASK_OFFSET]
-		ldr \reg3, [\reg1, #BOSS_GUEST_VIC2_EN_OFFSET]
+		ldr \reg2, [\reg1, #BOSS_INT1MASK_OFFSET]
+		ldr \reg3, [\reg1, #BOSS_GUEST_INT1_EN_OFFSET]
 		and \reg2, \reg2, \reg3
 		ldr \reg3, =VIC2_BASE
+		str \reg2, [\reg3, #VIC_INTEN_OFFSET]
+
+		ldr \reg2, [\reg1, #BOSS_INT2MASK_OFFSET]
+		ldr \reg3, [\reg1, #BOSS_GUEST_INT2_EN_OFFSET]
+		and \reg2, \reg2, \reg3
+		ldr \reg3, =VIC3_BASE
 		str \reg2, [\reg3, #VIC_INTEN_OFFSET]
 
 		mov \reg2, #0
@@ -119,16 +125,22 @@
 		b   2f
 1:
 
-		ldr \reg2, [\reg1, #BOSS_VIC1MASK_OFFSET]
-		ldr \reg3, [\reg1, #BOSS_GUEST_VIC1_EN_OFFSET]
+		ldr \reg2, [\reg1, #BOSS_INT0MASK_OFFSET]
+		ldr \reg3, [\reg1, #BOSS_GUEST_INT0_EN_OFFSET]
 		and \reg2, \reg2, \reg3
 		ldr \reg3, =VIC_BASE
 		str \reg2, [\reg3, #VIC_INTEN_CLR_OFFSET]
 
-		ldr \reg2, [\reg1, #BOSS_VIC2MASK_OFFSET]
-		ldr \reg3, [\reg1, #BOSS_GUEST_VIC2_EN_OFFSET]
+		ldr \reg2, [\reg1, #BOSS_INT1MASK_OFFSET]
+		ldr \reg3, [\reg1, #BOSS_GUEST_INT1_EN_OFFSET]
 		and \reg2, \reg2, \reg3
 		ldr \reg3, =VIC2_BASE
+		str \reg2, [\reg3, #VIC_INTEN_CLR_OFFSET]
+
+		ldr \reg2, [\reg1, #BOSS_INT2MASK_OFFSET]
+		ldr \reg3, [\reg1, #BOSS_GUEST_INT2_EN_OFFSET]
+		and \reg2, \reg2, \reg3
+		ldr \reg3, =VIC3_BASE
 		str \reg2, [\reg3, #VIC_INTEN_CLR_OFFSET]
 
 		mov \reg2, #1

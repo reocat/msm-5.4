@@ -219,7 +219,8 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		},
 	},
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS) && !defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	/* if running BOSS, it is already mapped in APB at RTOS side. */
 	[AMBARELLA_IO_DESC_DBGBUS_ID] = {
 		.name       = "DBGBUS",
 		.io_desc    = {

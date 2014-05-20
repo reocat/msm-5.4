@@ -26,7 +26,63 @@
 #include <linux/of_platform.h>
 #include <linux/irqchip.h>
 #include <asm/mach/arch.h>
+#include <asm/io.h>
+#include <asm/cacheflush.h>
+
 #include <mach/init.h>
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#include <mach/io.h>
+#include <mach/boss.h>
+#endif
+
+static void __init ambarella_ambalink_init_irq(void)
+{
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/*
+	 * We should set up the BOSS vectors so that it knows how to properly
+	 * jump to Linux vectors.
+	 */
+	unsigned long vectors = CONFIG_VECTORS_BASE;
+	unsigned int backed, linst;
+	unsigned int off;
+
+	/* Swap entries in backup and the one installed by early_tap_init() */
+	for (off = 0; off < 0x20; off += 4) {
+		linst = amba_readl((void *) vectors + off);
+		backed = amba_readl((void *) vectors + off + 0x20);
+
+		/* Need to modify the address field by subtracting 0x20 */
+		/* Just assume that the instructions installed in Linux */
+		/* vector that need modification are either LDR or B */
+		if ((linst & 0x0f000000) == 0x0a000000) {   /* B */
+			linst -= 0x8;
+		}
+		if ((linst & 0x0ff00000) == 0x05900000) {   /* LDR */
+			linst -= 0x20;
+		}
+
+		amba_writel((void *) vectors + off, backed);
+		amba_writel((void *) vectors + off + 0x20, linst);
+	}
+
+	flush_icache_range(vectors, vectors + PAGE_SIZE);
+
+	/* Install addresses for our vector to BOSS */
+	for (off = 0; off < 0x20; off += 4) {
+		amba_writel((void *) vectors + off + 0x1020,
+			    vectors + off + 0x20);
+	}
+
+	clean_dcache_area((void *) vectors + 0x1000, PAGE_SIZE);
+#endif
+
+	irqchip_init();
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	boss_set_ready(1);
+#endif
+}
+
 
 static const char * const s2l_dt_board_compat[] = {
 	"ambarella,s2l",
@@ -37,7 +93,7 @@ DT_MACHINE_START(S2L_DT, "Ambarella S2L (Flattened Device Tree)")
 	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
-	.init_irq	= irqchip_init,
+	.init_irq	= ambarella_ambalink_init_irq,
 	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_machine,
 	.restart	= ambarella_restart_machine,

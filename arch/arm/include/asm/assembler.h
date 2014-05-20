@@ -97,10 +97,10 @@
 
 	mov     r3, #0
 1:
-	mov     r2, #BOSS_GIC0MASK_OFFSET
+	mov     r2, #BOSS_INT0MASK_OFFSET
 	add     r2, r2, r3
 	ldr     r1, [r0, r2]
-	mov     r2, #BOSS_GUEST_GIC0_EN_OFFSET
+	mov     r2, #BOSS_GUEST_INT0_EN_OFFSET
 	add     r2, r2, r3
 	ldr     r2, [r0, r2]
 	and     r1, r1, r2
@@ -118,16 +118,41 @@
 
 	ldmfd   sp!, {r0-r3}
 #else
-	/* VIC version... */
+	stmfd	sp!, {r0-r2}
+
+	ldr	r0, =boss
+	ldr	r0, [r0]
+
+	ldr	r1, [r0, #BOSS_INT0MASK_OFFSET]
+	ldr	r2, [r0, #BOSS_GUEST_INT0_EN_OFFSET]
+	and	r1, r1, r2
+	ldr	r2, =VIC_BASE
+	str	r1, [r2, #VIC_INTEN_CLR_OFFSET]
+
+	ldr	r1, [r0, #BOSS_INT1MASK_OFFSET]
+	ldr	r2, [r0, #BOSS_GUEST_INT1_EN_OFFSET]
+	and	r1, r1, r2
+	ldr	r2, =VIC2_BASE
+	str	r1, [r2, #VIC_INTEN_CLR_OFFSET]
+
+	ldr	r1, [r0, #BOSS_INT2MASK_OFFSET]
+	ldr	r2, [r0, #BOSS_GUEST_INT2_EN_OFFSET]
+	and	r1, r1, r2
+	ldr	r2, =VIC3_BASE
+	str	r1, [r2, #VIC_INTEN_CLR_OFFSET]
+
+	mov	r1, #1
+	str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
+
+	ldmfd	sp!, {r0-r2}
 #endif	/* CONFIG_ARM_GIC */
 #endif	/* CONFIG_PLAT_AMBARELLA_BOSS */
 	.endm
 
 	.macro	enable_irq_notrace
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-#if defined(CONFIG_ARM_GIC)
 	cpsid	i
-
+#if defined(CONFIG_ARM_GIC)
 	stmfd   sp!, {r0-r3}
 
 	ldr     r0, =boss
@@ -135,10 +160,10 @@
 
 	mov     r3, #0
 1:
-	mov     r2, #BOSS_GIC0MASK_OFFSET
+	mov     r2, #BOSS_INT0MASK_OFFSET
 	add     r2, r2, r3
 	ldr     r1, [r0, r2]
-	mov     r2, #BOSS_GUEST_GIC0_EN_OFFSET
+	mov     r2, #BOSS_GUEST_INT0_EN_OFFSET
 
 	add     r2, r2, r3
 	ldr     r2, [r0, r2]
@@ -157,7 +182,33 @@
 
 	ldmfd   sp!, {r0-r3}
 #else
-	/* VIC version... */
+	stmfd	sp!, {r0-r2}
+
+	ldr	r0, =boss
+	ldr	r0, [r0]
+
+	ldr	r1, [r0, #BOSS_INT0MASK_OFFSET]
+	ldr	r2, [r0, #BOSS_GUEST_INT0_EN_OFFSET]
+	and	r1, r1, r2
+	ldr	r2, =VIC_BASE
+	str	r1, [r2, #VIC_INTEN_OFFSET]
+
+	ldr	r1, [r0, #BOSS_INT1MASK_OFFSET]
+	ldr	r2, [r0, #BOSS_GUEST_INT1_EN_OFFSET]
+	and	r1, r1, r2
+	ldr	r2, =VIC2_BASE
+	str	r1, [r2, #VIC_INTEN_OFFSET]
+
+	ldr	r1, [r0, #BOSS_INT2MASK_OFFSET]
+	ldr	r2, [r0, #BOSS_GUEST_INT2_EN_OFFSET]
+	and	r1, r1, r2
+	ldr	r2, =VIC3_BASE
+	str	r1, [r2, #VIC_INTEN_OFFSET]
+
+	mov	r1, #0
+	str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
+
+	ldmfd	sp!, {r0-r2}
 #endif	/* CONFIG_ARM_GIC */
 #endif	/* CONFIG_PLAT_AMBARELLA_BOSS */
 	cpsie	i

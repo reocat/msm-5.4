@@ -48,19 +48,8 @@ static inline void arch_idle(void)
 #else
 	if (boss && (BOSS_STATE_TURBO != boss->state) ) {
 		*boss->gidle = 1;
-		if (BOSS_VIRT_RIRQ_INT_VEC < 32) {
-			amba_writel(VIC_SOFTEN_REG, 1 << BOSS_VIRT_RIRQ_INT_VEC);
-		}
-#if (VIC_INSTANCES >= 2)
-		else if (BOSS_VIRT_RIRQ_INT_VEC < 64) {
-			amba_writel(VIC2_SOFTEN_REG, 1 << (BOSS_VIRT_RIRQ_INT_VEC - 32));
-		}
-#endif
-#if (VIC_INSTANCES >= 3)
-		else if (BOSS_VIRT_RIRQ_INT_VEC < 96) {
-			amba_writel(VIC3_SOFTEN_REG, 1 << (BOSS_VIRT_RIRQ_INT_VEC - 64));
-		}
-#endif
+		amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
+			    BOSS_VIRT_RIRQ_INT_VEC % 32);
 #endif  /* CONFIG_ARM_GIC */
 	} else
 		cpu_do_idle();

@@ -32,6 +32,11 @@
 #include <asm/exception.h>
 #include "irqchip.h"
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#include <mach/boss.h>
+#endif
+
+
 #define HWIRQ_TO_BANK(hwirq)	((hwirq) >> 5)
 #define HWIRQ_TO_OFFSET(hwirq)	((hwirq) & 0x1f)
 
@@ -70,12 +75,22 @@ static void ambvic_mask_irq(struct irq_data *data)
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
 	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Disable in BOSS. */
+	boss_disable_irq(data->hwirq);
+#endif
 }
 
 static void ambvic_unmask_irq(struct irq_data *data)
 {
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Enable in BOSS. */
+	boss_enable_irq(data->hwirq);
+#endif
 
 	amba_writel(reg_base + VIC_INT_EN_INT_OFFSET, offset);
 }
@@ -87,6 +102,11 @@ static void ambvic_mask_ack_irq(struct irq_data *data)
 
 	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Disable in BOSS. */
+	boss_disable_irq(data->hwirq);
+#endif
 }
 
 static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
@@ -261,7 +281,11 @@ static int ambvic_handle_one(struct pt_regs *regs,
 			break;
 		hwirq = ffs(irq_sta) - 1;
 #else
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		hwirq = *boss->irqno;
+#else
 		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
+#endif
 		if (hwirq == 0)
 			break;
 #endif
@@ -269,6 +293,11 @@ static int ambvic_handle_one(struct pt_regs *regs,
 		irq = irq_find_mapping(domain, hwirq);
 		handle_IRQ(irq, regs);
 		handled = 1;
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		/* Linux will continue to process interrupt, */
+		/* but we must enter IRQ from AmbaBoss_Irq in BOSS system. */
+		break;
+#endif
 	} while (1);
 
 	return handled;
@@ -276,6 +305,9 @@ static int ambvic_handle_one(struct pt_regs *regs,
 
 static asmlinkage void __exception_irq_entry ambvic_handle_irq(struct pt_regs *regs)
 {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	ambvic_handle_one(regs, ambvic_data.domain, 0);
+#else
 	int i, handled;
 
 	do {
@@ -284,6 +316,7 @@ static asmlinkage void __exception_irq_entry ambvic_handle_irq(struct pt_regs *r
 			handled |= ambvic_handle_one(regs, ambvic_data.domain, i);
 		}
 	} while (handled);
+#endif
 }
 
 static int ambvic_irq_domain_map(struct irq_domain *d,
@@ -314,13 +347,13 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 	for (i = 0; i < VIC_INSTANCES; i++) {
 		reg_base = of_iomap(np, i);
 		BUG_ON(!reg_base);
-
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 		amba_writel(reg_base + VIC_INT_SEL_OFFSET, 0x00000000);
 		amba_writel(reg_base + VIC_INTEN_OFFSET, 0x00000000);
 		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, 0xffffffff);
-
+#endif
 		ambvic_data.reg_base[i] = reg_base;
 	}
 
@@ -348,6 +381,7 @@ IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
 
 static int ambvic_suspend(void)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	struct ambvic_pm_reg *pm_reg;
 	void __iomem *reg_base;
 	int i;
@@ -364,12 +398,14 @@ static int ambvic_suspend(void)
 		pm_reg->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
 		pm_reg->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
 	}
+#endif
 
 	return 0;
 }
 
 static void ambvic_resume(void)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	struct ambvic_pm_reg *pm_reg;
 	void __iomem *reg_base;
 	int i;
@@ -389,6 +425,8 @@ static void ambvic_resume(void)
 		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_reg->bothedge_reg);
 		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_reg->event_reg);
 	}
+#else
+#endif
 }
 
 struct syscore_ops ambvic_syscore_ops = {
