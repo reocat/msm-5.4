@@ -394,7 +394,7 @@ static int ambarella_phy_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int ambarella_phy_shutdown(struct platform_device *pdev)
+static void ambarella_phy_shutdown(struct platform_device *pdev)
 {
 	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
 
@@ -403,7 +403,6 @@ static int ambarella_phy_shutdown(struct platform_device *pdev)
 					!amb_phy->md_host_active);
 	}
 
-	return 0;
 }
 
 static const struct of_device_id ambarella_phy_dt_ids[] = {
