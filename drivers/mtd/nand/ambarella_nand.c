@@ -1462,8 +1462,7 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *buf,
 			for (i = 0; i < count; i++) {
 				if (errloc[i] < (amb_eccsize * 8)) {
 					/* error is located in data, correct it */
-					buf[errloc[i] >> 3] = bitrev8(buf[errloc[i] >> 3]);
-					buf[errloc[i] >> 3] ^= (1 << (errloc[i] & 7));
+					buf[errloc[i] >> 3] ^= (128 >> (errloc[i] & 7));
 				}
 				/* else error in ecc, no action needed */
 
