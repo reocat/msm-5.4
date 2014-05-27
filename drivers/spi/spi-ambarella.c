@@ -750,8 +750,10 @@ static const struct dev_pm_ops ambarella_spi_dev_pm_ops = {
 	.suspend_noirq = ambarella_spi_suspend_noirq,
 	.resume_noirq = ambarella_spi_resume_noirq,
 };
+
+#define pambarella_spi_dev_pm_ops	&ambarella_spi_dev_pm_ops
 #else
-#define ambarella_spi_dev_pm_ops	NULL
+#define pambarella_spi_dev_pm_ops	NULL
 #endif
 
 static const struct of_device_id ambarella_spi_dt_ids[] = {
@@ -766,7 +768,7 @@ static struct platform_driver ambarella_spi_driver = {
 	.driver		= {
 		.name	= "ambarella-spi",
 		.owner	= THIS_MODULE,
-		.pm	= &ambarella_spi_dev_pm_ops,
+		.pm	= pambarella_spi_dev_pm_ops,
 		.of_match_table = ambarella_spi_dt_ids,
 	},
 };
