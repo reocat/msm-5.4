@@ -160,7 +160,8 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S2L)
+/* We still need to lock each module for dual-OSes driver! */
+#if 0//(CHIP_REV == S2L)
 static inline void fio_select_lock(int module) { }
 static inline void fio_unlock(int module) { }
 static inline void fio_amb_sd0_set_int(u32 mask, u32 on){ }

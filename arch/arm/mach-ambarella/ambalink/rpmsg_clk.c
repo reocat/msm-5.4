@@ -320,7 +320,7 @@ static int rpmsg_clk_probe(struct rpmsg_channel *rpdev)
 
 	rpmsg_send(rpdev, &nsm, sizeof(nsm));
 
-	rpmsg_clk_inited = 1;
+	//rpmsg_clk_inited = 1;
 
 	return ret;
 }

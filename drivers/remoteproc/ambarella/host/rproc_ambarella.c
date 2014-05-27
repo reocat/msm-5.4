@@ -151,7 +151,8 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_rproc;
 
-	ret = request_irq(pdata->rvq_rx_irq, rproc_ambarella_isr, IRQF_SHARED,
+	ret = request_irq(pdata->rvq_rx_irq, rproc_ambarella_isr,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			"rproc-rvq_rx", pdata);
 	if (ret)
 		goto free_rproc;

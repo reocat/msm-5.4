@@ -40,7 +40,7 @@
 #include <plat/sd.h>
 #include <plat/nand.h>
 
-
+/* We still need to lock each module for dual-OSes driver! */
 #if (CHIP_REV != S2L)
 
 static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
@@ -273,6 +273,55 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
+EXPORT_SYMBOL(fio_amb_sdio0_set_int);
+#else
+void fio_select_lock(int module)
+{
+#if defined(CONFIG_AMBALINK_LOCK)
+	switch (module) {
+	case SELECT_FIO_FL:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+		break;
+	case SELECT_FIO_SD:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
+		break;
+	case SELECT_FIO_SDIO:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
+		break;
+	default:
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD1);
+		aipc_mutex_lock(AMBA_IPC_MUTEX_SD0);
+	}
+#endif	/* CONFIG_AMBALINK_LOCK */
+}
+EXPORT_SYMBOL(fio_select_lock);
+
+void fio_unlock(int module)
+{
+#if defined(CONFIG_AMBALINK_LOCK)
+	switch (module) {
+	case SELECT_FIO_FL:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+		break;
+	case SELECT_FIO_SD:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD0);
+		break;
+	case SELECT_FIO_SDIO:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD1);
+		break;
+	default:
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD0);
+		aipc_mutex_unlock(AMBA_IPC_MUTEX_SD1);
+		break;
+	}
+#endif	/* CONFIG_AMBALINK_LOCK */
+}
+EXPORT_SYMBOL(fio_unlock);
+
+void fio_amb_sd0_set_int(u32 mask, u32 on){ }
+EXPORT_SYMBOL(fio_amb_sd0_set_int);
+
+void fio_amb_sdio0_set_int(u32 mask, u32 on){ }
 EXPORT_SYMBOL(fio_amb_sdio0_set_int);
 #endif
 

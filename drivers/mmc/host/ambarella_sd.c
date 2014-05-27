@@ -1782,6 +1782,8 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	dev_notice(pinfo->dev, "Slot%u use %sDMA\n", pslotinfo->slot_id,
 		pslotinfo->use_adma ? "A" :"");
 
+	mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
+
 	ambarella_sd_release_bus(mmc);
 
 	retval = mmc_add_host(pslotinfo->mmc);
@@ -2101,6 +2103,8 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 		for (i = 0; i < pinfo->slot_num; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
 			if (pslotinfo->mmc) {
+				up(&pslotinfo->system_event_sem);
+
 				retval = mmc_resume_host(pslotinfo->mmc);
 				if (retval) {
 					ambsd_err(pslotinfo,
@@ -2112,7 +2116,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 
 		dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 	}
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
         else {
                 if (SD2_IRQ == (pinfo->irq)) {
                         //struct irq_desc *desc;
@@ -2129,6 +2133,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
                         pslotinfo = pinfo->pslotinfo[0];
                         mdelay(10);
                         ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+			ambarella_sd_set_bus(pslotinfo->mmc, &pinfo->controller_ios);
                         mdelay(10);
 
                         /* prevent first cmd err */

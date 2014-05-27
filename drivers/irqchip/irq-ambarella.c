@@ -381,7 +381,6 @@ IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
 
 static int ambvic_suspend(void)
 {
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	struct ambvic_pm_reg *pm_reg;
 	void __iomem *reg_base;
 	int i;
@@ -398,18 +397,17 @@ static int ambvic_suspend(void)
 		pm_reg->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
 		pm_reg->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
 	}
-#endif
 
 	return 0;
 }
 
 static void ambvic_resume(void)
 {
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	struct ambvic_pm_reg *pm_reg;
 	void __iomem *reg_base;
 	int i;
 
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
 		pm_reg = &ambvic_data.pm_reg[i];
@@ -426,6 +424,22 @@ static void ambvic_resume(void)
 		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_reg->event_reg);
 	}
 #else
+	/* Should we only restore the setting of Linux's driver?  */
+	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
+		reg_base = ambvic_data.reg_base[i];
+		pm_reg = &ambvic_data.pm_reg[i];
+
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_reg->int_sel_reg);
+		//amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
+		//amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
+		//amba_writel(reg_base + VIC_INTEN_OFFSET, pm_reg->inten_reg);
+		//amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_reg->soften_reg);
+		//amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_reg->proten_reg);
+		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_reg->sense_reg);
+		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_reg->bothedge_reg);
+		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_reg->event_reg);
+	}
 #endif
 }
 
