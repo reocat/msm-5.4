@@ -2019,9 +2019,12 @@ static u32 sd_eixen;
 static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
+	int retval = 0;
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 	struct ambarella_sd_controller_info *pinfo;
 	struct ambarella_sd_mmc_info *pslotinfo;
-	int retval = 0, i;
+	int i;
 
 	pinfo = platform_get_drvdata(pdev);
 
@@ -2051,7 +2054,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 		dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 			__func__, retval, state.event);
 	}
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 	else {
 		if (SD2_IRQ == (pinfo->irq)) {
 			pslotinfo = pinfo->pslotinfo[0];
@@ -2069,15 +2072,18 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 		}
 	}
 #endif
-
+#endif
 	return retval;
 }
 
 static int ambarella_sd_resume(struct platform_device *pdev)
 {
+	int retval = 0;
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 	struct ambarella_sd_controller_info *pinfo;
 	struct ambarella_sd_mmc_info *pslotinfo;
-	int retval = 0, i;
+	int i;
 
 	pinfo = platform_get_drvdata(pdev);
 
@@ -2146,6 +2152,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
                         ambarella_sd_enable_sdio_irq(pslotinfo->mmc, 1);
                 }
         }
+#endif
 #endif
 
 	return retval;

@@ -53,7 +53,7 @@
 #define AHB_PHYS_BASE			(0x60000000)
 #define APB_PHYS_BASE			(0x70000000)
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_S2L) && defined(CONFIG_PLAT_AMBARELLA_BOSS)
 #define AHB_SIZE			(0x08000000)
 #define APB_SIZE			(0x08000000)
 #else
