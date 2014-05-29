@@ -223,6 +223,9 @@ static int __init ambarella_dt_scan_iavmem(unsigned long node,
 	iavmem_desc->io_desc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
 	iavmem_desc->io_desc.length = be32_to_cpu(reg[1]);
 
+	pr_info("Ambarella:   IAVMEM = 0x%08x[          ],0x%08x\n",
+			be32_to_cpu(reg[0]), be32_to_cpu(reg[1]));
+
 	return 1;
 }
 
