@@ -507,8 +507,6 @@ static const struct i2c_algorithm ambarella_i2c_algo = {
 	.functionality	= ambarella_i2c_func,
 };
 
-
-static int id_tmp = 0;
 static int ambarella_i2c_probe(struct platform_device *pdev)
 {
 	struct device_node 			*np = pdev->dev.of_node;
@@ -615,7 +613,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	adap->class = i2c_class;
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 	adap->algo = &ambarella_i2c_algo;
-	adap->nr = id_tmp++;
+	adap->nr = of_alias_get_id(np, "i2c");
 	adap->retries = CONFIG_I2C_AMBARELLA_RETRIES;
 
 	errorCode = i2c_add_numbered_adapter(adap);
@@ -629,7 +627,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	pinfo->system_event.notifier_call = ambarella_i2c_system_event;
 	ambarella_register_event_notifier(&pinfo->system_event);
 
-	dev_info(&pdev->dev, "Ambarella I2C adapter probed!\n");
+	dev_info(&pdev->dev, "Ambarella I2C adapter[%d] probed!\n", adap->nr);
 
 	return 0;
 }
