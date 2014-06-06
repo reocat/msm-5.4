@@ -89,12 +89,15 @@
 	.macro	disable_irq_notrace
 	cpsid	i
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	stmfd	sp!, {r0-r3}
+
+	ldr	r0, =boss
+	ldr	r0, [r0]
+
+	mov	r1, #1
+	str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
+
 #if defined(CONFIG_ARM_GIC)
-	stmfd   sp!, {r0-r3}
-
-	ldr     r0, =boss
-	ldr     r0, [r0]
-
 	mov     r3, #0
 1:
 	mov     r2, #BOSS_INT0MASK_OFFSET
@@ -112,17 +115,7 @@
 	add     r3, r3, #4
 	cmp     r3, #32
 	bne     1b
-
-	mov     r1, #1
-	str     r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
-
-	ldmfd   sp!, {r0-r3}
 #else
-	stmfd	sp!, {r0-r2}
-
-	ldr	r0, =boss
-	ldr	r0, [r0]
-
 	ldr	r1, [r0, #BOSS_INT0MASK_OFFSET]
 	ldr	r2, [r0, #BOSS_GUEST_INT0_EN_OFFSET]
 	and	r1, r1, r2
@@ -140,24 +133,25 @@
 	and	r1, r1, r2
 	ldr	r2, =VIC3_BASE
 	str	r1, [r2, #VIC_INTEN_CLR_OFFSET]
-
-	mov	r1, #1
-	str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
-
-	ldmfd	sp!, {r0-r2}
 #endif	/* CONFIG_ARM_GIC */
+
+	ldmfd	sp!, {r0-r3}
 #endif	/* CONFIG_PLAT_AMBARELLA_BOSS */
 	.endm
 
 	.macro	enable_irq_notrace
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	cpsid	i
+
+	stmfd	sp!, {r0-r3}
+
+	ldr	r0, =boss
+	ldr	r0, [r0]
+
+	mov	r1, #0
+	str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
+
 #if defined(CONFIG_ARM_GIC)
-	stmfd   sp!, {r0-r3}
-
-	ldr     r0, =boss
-	ldr     r0, [r0]
-
 	mov     r3, #0
 1:
 	mov     r2, #BOSS_INT0MASK_OFFSET
@@ -176,17 +170,7 @@
 	add     r3, r3, #4
 	cmp     r3, #32
 	bne     1b
-
-	mov     r1, #0
-	str     r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
-
-	ldmfd   sp!, {r0-r3}
 #else
-	stmfd	sp!, {r0-r2}
-
-	ldr	r0, =boss
-	ldr	r0, [r0]
-
 	ldr	r1, [r0, #BOSS_INT0MASK_OFFSET]
 	ldr	r2, [r0, #BOSS_GUEST_INT0_EN_OFFSET]
 	and	r1, r1, r2
@@ -204,12 +188,9 @@
 	and	r1, r1, r2
 	ldr	r2, =VIC3_BASE
 	str	r1, [r2, #VIC_INTEN_OFFSET]
-
-	mov	r1, #0
-	str	r1, [r0, #BOSS_GUEST_IRQ_MASK_OFFSET]
-
-	ldmfd	sp!, {r0-r2}
 #endif	/* CONFIG_ARM_GIC */
+
+	ldmfd	sp!, {r0-r3}
 #endif	/* CONFIG_PLAT_AMBARELLA_BOSS */
 	cpsie	i
 	.endm

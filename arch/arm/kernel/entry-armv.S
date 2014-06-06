@@ -20,7 +20,7 @@
 #include <asm/glue-df.h>
 #include <asm/glue-pf.h>
 #include <asm/vfpmacros.h>
-#if !defined(CONFIG_MULTI_IRQ_HANDLER) || defined(CONFIG_PLAT_AMBARELLA_BOSS)
+#ifndef CONFIG_MULTI_IRQ_HANDLER
 #include <mach/entry-macro.S>
 #endif
 #include <asm/thread_notify.h>
@@ -192,24 +192,6 @@ __dabt_svc:
 	svc_entry
 	mov	r2, sp
 	dabt_helper
-
-	@
-	@ IRQs off again before pulling preserved data off the stack
-	@
-	disable_irq_notrace
-
-#ifdef CONFIG_TRACE_IRQFLAGS
-	tst	r5, #PSR_I_BIT
-	bleq	trace_hardirqs_on
-	tst	r5, #PSR_I_BIT
-	blne	trace_hardirqs_off
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	stmfd   sp!, {r0-r1, r3, r5}
-	mov     r3, #0
-	boss_int_update r5, r0, r1, r3
-	ldmfd   sp!, {r0-r1, r3, r5}
-#endif
 	svc_exit r5				@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__dabt_svc)
@@ -229,18 +211,7 @@ __irq_svc:
 	blne	svc_preempt
 #endif
 
-#ifdef CONFIG_TRACE_IRQFLAGS
-	@ The parent context IRQs must have been enabled to get here in
-	@ the first place, so there's no point checking the PSR I bit.
-	bl	trace_hardirqs_on
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	stmfd   sp!, {r0-r1, r3, r5}
-	mov     r3, #0
-	boss_int_update r5, r0, r1, r3
-	ldmfd   sp!, {r0-r1, r3, r5}
-#endif
-	svc_exit r5					@ return from exception
+	svc_exit r5, irq = 1			@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__irq_svc)
 
@@ -307,28 +278,8 @@ __und_svc_fault:
 	mov	r0, sp				@ struct pt_regs *regs
 	bl	__und_fault
 
-	@
-	@ IRQs off again before pulling preserved data off the stack
-	@
 __und_svc_finish:
-	disable_irq_notrace
-
-	@
-	@ restore SPSR and restart the instruction
-	@
 	ldr	r5, [sp, #S_PSR]		@ Get SVC cpsr
-#ifdef CONFIG_TRACE_IRQFLAGS
-	tst	r5, #PSR_I_BIT
-	bleq	trace_hardirqs_on
-	tst	r5, #PSR_I_BIT
-	blne	trace_hardirqs_off
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	stmfd   sp!, {r0-r1, r3, r5}
-	mov     r3, #0
-	boss_int_update r5, r0, r1, r3
-	ldmfd   sp!, {r0-r1, r3, r5}
-#endif
 	svc_exit r5				@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__und_svc)
@@ -338,24 +289,6 @@ __pabt_svc:
 	svc_entry
 	mov	r2, sp				@ regs
 	pabt_helper
-
-	@
-	@ IRQs off again before pulling preserved data off the stack
-	@
-	disable_irq_notrace
-
-#ifdef CONFIG_TRACE_IRQFLAGS
-	tst	r5, #PSR_I_BIT
-	bleq	trace_hardirqs_on
-	tst	r5, #PSR_I_BIT
-	blne	trace_hardirqs_off
-#endif
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	stmfd   sp!, {r0-r1, r3, r5}
-	mov     r3, #0
-	boss_int_update r5, r0, r1, r3
-	ldmfd   sp!, {r0-r1, r3, r5}
-#endif
 	svc_exit r5				@ return from exception
  UNWIND(.fnend		)
 ENDPROC(__pabt_svc)

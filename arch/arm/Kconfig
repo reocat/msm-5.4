@@ -308,7 +308,6 @@ config ARCH_AMBARELLA
 	select USE_OF
 	select PINCTRL
 	select PINCTRL_AMB
-	select NEED_RET_TO_USER if PLAT_AMBARELLA_BOSS
 	help
 	  Support for Ambarella Media Processor.
 
