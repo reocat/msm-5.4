@@ -52,6 +52,11 @@
 
 #define CONFIG_I2C_AMBARELLA_BULK_RETRY_NUM	(4)
 
+/* must keep consistent with the name in device tree source, and the name
+ * of corresponding i2c client will be overwritten when it's in used. */
+#define AMBARELLA_I2C_VIN_FDT_NAME		"ambvin"
+#define AMBARELLA_I2C_VIN_MAX_NUM		8
+
 enum ambarella_i2c_state {
 	AMBA_I2C_STATE_IDLE,
 	AMBA_I2C_STATE_START,
@@ -86,6 +91,50 @@ struct ambarella_i2c_dev_info {
 	struct notifier_block			system_event;
 	struct semaphore			system_event_sem;
 };
+
+int ambpriv_i2c_update_addr(const char *name, int bus, int addr)
+{
+	struct device_node *np;
+	struct i2c_adapter *adap;
+	struct i2c_client *client;
+	char buf[32];
+	int i;
+
+	adap = i2c_get_adapter(bus);
+	if (!adap) {
+		pr_err("No such i2c controller: %d\n", bus);
+		return -ENODEV;
+	}
+
+	for (i = 0; i < AMBARELLA_I2C_VIN_MAX_NUM; i++) {
+		snprintf(buf, 32, "%s%d", AMBARELLA_I2C_VIN_FDT_NAME, i);
+		np = of_get_child_by_name(adap->dev.of_node, buf);
+		if (!np) {
+			pr_err("ambpriv i2c: No FDT node named [%s]\n", buf);
+			return -ENODEV;
+		}
+
+		client = of_find_i2c_device_by_node(np);
+		if (!client) {
+			pr_err("failed to find i2c client\n");
+			return -ENODEV;
+		}
+
+		if (!strcmp(client->name, AMBARELLA_I2C_VIN_FDT_NAME))
+			break;
+	}
+
+	if (i >= AMBARELLA_I2C_VIN_MAX_NUM) {
+		pr_err("fake vin sensor in device tree is not enough.\n");
+		return -ENODEV;
+	}
+
+	client->addr = addr;
+	strlcpy(client->name, name, I2C_NAME_SIZE);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambpriv_i2c_update_addr);
 
 static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 {
