@@ -60,7 +60,6 @@ struct ambarella_spi {
 
 	u8					rw_mode, bpw, chip_select;
 	u32					ridx, widx, len;
-	u32					bus_id;
 	u32					clk_freq;
 };
 
@@ -312,7 +311,7 @@ static void ambarella_spi_finish_transfer(struct ambarella_spi *ambspi)
 	if (ambspi->c_xfer->cs_change) {
 		struct spi_device *spi = ambspi->c_msg->spi;
 		gpio_set_value(spi->cs_gpio, !(spi->mode & SPI_CS_HIGH));
-		ambspi->chip_select	= 0;
+		ambspi->chip_select = 0;
 	}
 	ambarella_spi_stop(ambspi);
 
@@ -826,7 +825,7 @@ int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_write)
 	}
 
 	if (!found) {
-		pr_err("No spi device found!\n");
+		pr_err("No spi vin in FDT: bus = %d, cs = %d!\n", bus_id, cs_id);
 		return -ENODEV;
 	}
 
@@ -894,7 +893,7 @@ int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_read)
 	}
 
 	if (!found){
-		pr_err("No spi device found!\n");
+		pr_err("No spi vin in FDT: bus = %d, cs = %d!\n", bus_id, cs_id);
 		return -ENODEV;
 	}
 
@@ -968,7 +967,7 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 	}
 
 	if (!found){
-		pr_err("No spi device found!\n");
+		pr_err("No spi vin in FDT: bus = %d, cs = %d!\n", bus_id, cs_id);
 		return -ENODEV;
 	}
 
@@ -1058,7 +1057,7 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 	}
 
 	if (!found){
-		pr_err("No spi device found!\n");
+		pr_err("No spi vin in FDT: bus = %d, cs = %d!\n", bus_id, cs_id);
 		return -ENODEV;
 	}
 
