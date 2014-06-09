@@ -116,11 +116,7 @@ static void cpu_idle_loop(void)
 			}
 			arch_cpu_idle_exit();
 		}
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-		if (boss) {
-			*boss->gidle = 0;
-		}
-#endif
+
 		tick_nohz_idle_exit();
 		schedule_preempt_disabled();
 	}

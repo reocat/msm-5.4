@@ -142,7 +142,6 @@ static struct clock_event_device ambarella_clkevt = {
 	.mode		= CLOCK_EVT_MODE_UNUSED,
 };
 
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 static irqreturn_t ambarella_ce_timer_interrupt(int irq, void *dev_id)
 {
 	struct clock_event_device *clkevt = &ambarella_clkevt;
@@ -156,7 +155,6 @@ static struct irqaction ambarella_ce_timer_irq = {
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_TRIGGER_RISING,
 	.handler	= ambarella_ce_timer_interrupt,
 };
-#endif
 
 /* ==========================================================================*/
 static inline void ambarella_cs_timer_init(void)
@@ -200,7 +198,7 @@ static const struct of_device_id clock_source_match[] __initconst = {
 	{ },
 };
 
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if 0//def CONFIG_PLAT_AMBARELLA_BOSS
 static void boss_ce_timer_set_mode(enum clock_event_mode mode,
                                    struct clock_event_device *evt)
 {
@@ -302,7 +300,10 @@ static void __init ambarella_clockevent_init(void)
 	clkevt->cpumask = cpumask_of(0);
 	clkevt->irq = irq;
 
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	boss_set_irq_owner(clkevt->irq, BOSS_IRQ_OWNER_LINUX, 0);
+#endif
+
 	rval = setup_irq(clkevt->irq, &ambarella_ce_timer_irq);
 	if (rval) {
 		printk(KERN_ERR "Failed to register timer IRQ: %d\n", rval);
@@ -310,7 +311,6 @@ static void __init ambarella_clockevent_init(void)
 	}
 
 	clockevents_config_and_register(clkevt, AMBARELLA_TIMER_FREQ, 1, 0xffffffff);
-#endif
 }
 
 static void __init ambarella_clocksource_init(void)
@@ -360,7 +360,7 @@ static void __init ambarella_clocksource_init(void)
 void __init ambarella_timer_init(void)
 {
 
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if 0//def CONFIG_PLAT_AMBARELLA_BOSS
 	boss_set_irq_owner(BOSS_VIRT_TIMER_INT_VEC, BOSS_IRQ_OWNER_LINUX, 0);
 	setup_irq(boss_clkevt.irq, &boss_ce_timer_irq);
 
@@ -401,9 +401,7 @@ u32 ambarella_timer_suspend(u32 level)
 		amba_readl(cs_base + TIMER_MATCH2_OFFSET);
 
 	if (level) {
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 		disable_irq(clkevt->irq);
-#endif
 		timer_ctr_mask = 0xf << ce_ctrl_offset | 0xf << cs_ctrl_offset;
 		amba_clrbitsl(timer_ctrl_reg, timer_ctr_mask);
 	}
@@ -472,10 +470,8 @@ u32 ambarella_timer_resume(u32 level)
 
 	amba_setbitsl(timer_ctrl_reg,
 			(ambarella_timer_pm.timer_ctr_reg & timer_ctr_mask));
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	if (level)
 		enable_irq(clkevt->irq);
-#endif
 
 	return 0;
 }
