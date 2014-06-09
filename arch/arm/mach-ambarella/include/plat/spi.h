@@ -318,12 +318,6 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-struct ambarella_spi_hw_info {
-	int	bus_id;
-	int	cs_id;
-};
-typedef struct ambarella_spi_hw_info amba_spi_hw_t;
-
 struct ambarella_spi_cfg_info {
 	u8	spi_mode;
 	u8	cfs_dfs;
