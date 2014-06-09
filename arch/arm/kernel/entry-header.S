@@ -85,6 +85,10 @@
 	@
 	.macro  boss_ret_prefix, rpsr
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	@ Force to disable interrupt while doing boss interrupt update.
+	@ Normally, interrupt is disabled before calling this macro,
+	@ but sometimes interrupt is not disabled while called by restore_user_regs.
+	cpsid	i
 	tst	\rpsr, #0x80
 	ldr	r4, =boss
 	ldr	r4, [r4]
