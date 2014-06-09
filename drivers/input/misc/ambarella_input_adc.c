@@ -167,6 +167,28 @@ static int ambarella_adc_of_parse(struct platform_device *pdev,
 	return 0;
 }
 
+static ssize_t adc_show(struct device *dev, struct device_attribute *attr,
+                        char *buf)
+{
+        ssize_t ret = 0;
+        int i;
+        int total_channel = ADC_NUM_CHANNELS;
+        u32   *adc_data;
+        struct ambarella_adc_info	*pinfo;
+
+        pinfo = dev_get_drvdata(dev);
+
+        adc_data = kzalloc(sizeof(u32) * total_channel, GFP_KERNEL);
+
+        ambarella_adc_read_level(pinfo, adc_data);
+
+        for(i = 0; i < total_channel; i++ ) {
+                ret += sprintf(&buf[ret], "adc%d=0x%x\n", i, adc_data[i]);
+        }
+        return ret;
+}
+static DEVICE_ATTR(adcsys, 0444, adc_show, NULL);
+
 static int ambarella_input_adc_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -247,6 +269,12 @@ static int ambarella_input_adc_probe(struct platform_device *pdev)
 	queue_delayed_work(system_freezable_wq,
 				&pinfo->work, msecs_to_jiffies(20));
 
+        rval = device_create_file(&pdev->dev, &dev_attr_adcsys);
+        if (rval != 0) {
+            dev_err(&pdev->dev, "can not create file : %d\n", rval);
+            return rval;
+        }
+
 	platform_set_drvdata(pdev, pinfo);
 	dev_notice(&pdev->dev, "ADC Host Controller [Polling] probed!\n");
 
@@ -269,6 +297,7 @@ static int ambarella_input_adc_remove(struct platform_device *pdev)
 	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_ENABLE);
 	cancel_delayed_work_sync(&pinfo->work);
 
+        device_remove_file(&pdev->dev, &dev_attr_adcsys);
 	input_unregister_device(pinfo->input);
 	input_free_device(pinfo->input);
 
