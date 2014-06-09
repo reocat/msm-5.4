@@ -366,6 +366,9 @@ static void amb_gpio_handle_irq(unsigned int irq, struct irq_desc *desc)
 			break;
 	}
 
+	if (i == GPIO_INSTANCES)
+		return;
+
 	gpio_mis = amba_readl(amb_gpio->regbase[i] + GPIO_MIS_OFFSET);
 	if (gpio_mis) {
 		gpio_hwirq = i * GPIO_BANK_SIZE + ffs(gpio_mis) - 1;
