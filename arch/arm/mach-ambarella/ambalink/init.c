@@ -282,7 +282,7 @@ int __init early_ambarella_dt_scan_ppm2(unsigned long node,
 		return 0;
 
 	ppm2_desc = &ambarella_io_desc[AMBARELLA_IO_DESC_PPM2_ID];
-	ppm2_desc->io_desc.virtual = NOLINUX_MEM_V_START + 0x04000000;
+	ppm2_desc->io_desc.virtual = NOLINUX_MEM_V_START + be32_to_cpu(reg[0]);
 	ppm2_desc->io_desc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
 	ppm2_desc->io_desc.length = be32_to_cpu(reg[1]);
 

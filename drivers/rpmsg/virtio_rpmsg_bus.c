@@ -102,33 +102,6 @@ struct rpmsg_channel_info {
 #define to_rpmsg_driver(d) container_of(d, struct rpmsg_driver, drv)
 
 /*
- * We're allocating 512 buffers of 512 bytes for communications, and then
- * using the first 256 buffers for RX, and the last 256 buffers for TX.
- *
- * Each buffer will have 16 bytes for the msg header and 496 bytes for
- * the payload.
- *
- * This will require a total space of 256KB for the buffers.
- *
- * We might also want to add support for user-provided buffers in time.
- * This will allow bigger buffer size flexibility, and can also be used
- * to achieve zero-copy messaging.
- *
- * Note that these numbers are purely a decision of this driver - we
- * can change this without changing anything in the firmware of the remote
- * processor.
- */
-#if 0
-/*
- * Keep the following sync'ed to the copy which shared between processors
- *     arch/arm/plat-ambarella/include/plat/remoteproc_cfg.h
- */
-#define RPMSG_NUM_BUFS		(CONFIG_RPMSG_NUM_BUFS)
-#define RPMSG_BUF_SIZE		(CONFIG_RPMSG_BUF_SIZE)
-
-#define RPMSG_TOTAL_BUF_SPACE	(RPMSG_NUM_BUFS * RPMSG_BUF_SIZE)
-#endif
-/*
  * Local addresses are dynamically allocated on-demand.
  * We do not dynamically assign addresses from the low 1024 range,
  * in order to reserve that address range for predefined services.
