@@ -1373,7 +1373,6 @@ static int ambeth_stop(struct net_device *ndev)
 
 	netif_stop_queue(ndev);
 	napi_disable(&lp->napi);
-	flush_scheduled_work();
 	free_irq(ndev->irq, ndev);
 	ambeth_phy_stop(lp);
 	netif_carrier_off(ndev);
