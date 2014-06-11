@@ -275,6 +275,8 @@ static int ambrtc_probe(struct platform_device *pdev)
 		return PTR_ERR(ambrtc->rtc);
 	}
 
+	ambrtc->rtc->uie_unsupported = 1;
+
 	return 0;
 }
 
