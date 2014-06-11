@@ -584,18 +584,3 @@ int __init ambpriv_bus_init(void)
 
 core_initcall(ambpriv_bus_init);
 
-
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-/* i2c function wrapper, should be removed when FDT is ready */
-struct i2c_client *ambpriv_i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
-{
-	return i2c_new_device(adap, info);
-}
-EXPORT_SYMBOL(ambpriv_i2c_new_device);
-
-void ambpriv_i2c_unregister_device(struct i2c_client *client)
-{
-	i2c_unregister_device(client);
-}
-EXPORT_SYMBOL(ambpriv_i2c_unregister_device);
-#endif

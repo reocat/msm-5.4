@@ -62,13 +62,5 @@ extern struct ambpriv_device *ambpriv_create_bundle(struct ambpriv_driver *drive
 
 extern int ambpriv_i2c_update_addr(const char *name, int bus, int addr);
 
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-/* i2c function wrapper, should be removed when FDT is ready */
-#include <linux/i2c.h>
-extern struct i2c_client *ambpriv_i2c_new_device(struct i2c_adapter *adap,
-					struct i2c_board_info const *info);
-extern void ambpriv_i2c_unregister_device(struct i2c_client *client);
-#endif
-
 #endif /* _PLATFORM_DEVICE_H_ */
 
