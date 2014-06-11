@@ -653,11 +653,15 @@ static void serial_ambarella_console_write(struct console *co,
 	const char *s, unsigned int count)
 {
 	struct uart_port *port;
+	struct ambarella_uart_port *amb_port;
+
 	int locked = 1;
-	u32 ie;
+	u32 ie = 0;
 	unsigned long flags;
 
 	port = &ambarella_port[co->index].port;
+
+	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (!port->suspended) {
 		local_irq_save(flags);
@@ -670,15 +674,19 @@ static void serial_ambarella_console_write(struct console *co,
 			locked = 1;
 		}
 
-		ie = amba_readl(port->membase + UART_IE_OFFSET);
-		amba_writel(port->membase + UART_IE_OFFSET,
-			ie & ~UART_IE_ETBEI);
-
+		if(!amb_port->first_send_num){
+			ie = amba_readl(port->membase + UART_IE_OFFSET);
+			amba_writel(port->membase + UART_IE_OFFSET,
+				ie & ~UART_IE_ETBEI);
+		}
 		uart_console_write(port, s, count,
 			serial_ambarella_console_putchar);
 
 		wait_for_tx(port);
-		amba_writel(port->membase + UART_IE_OFFSET, ie);
+
+		if(!amb_port->first_send_num){
+			amba_writel(port->membase + UART_IE_OFFSET, ie);
+		}
 
 		if (locked)
 			spin_unlock(&port->lock);
