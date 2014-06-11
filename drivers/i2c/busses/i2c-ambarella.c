@@ -285,8 +285,6 @@ static inline void ambarella_i2c_stop(
 	__u32 *pack_control)
 {
 	if(state != AMBA_I2C_STATE_IDLE) {
-		dev_warn(pinfo->dev, "ambarella_i2c_stop[%d] from %d to %d\n",
-			pinfo->msg_num, pinfo->state, state);
 		*pack_control |= IDC_CTRL_ACK;
 	}
 
@@ -323,6 +321,7 @@ ambarella_i2c_check_ack_enter:
 			goto ambarella_i2c_check_ack_enter;
 		}
 		retVal = 0;
+		*pack_control = 0;
 		ambarella_i2c_stop(pinfo,
 			AMBA_I2C_STATE_NO_ACK, pack_control);
 	}
@@ -350,7 +349,7 @@ static irqreturn_t ambarella_i2c_irq(int irqno, void *dev_id)
 	switch (pinfo->state) {
 	case AMBA_I2C_STATE_START:
 		if (ambarella_i2c_check_ack(pinfo, &control_reg,
-			0) == IDC_CTRL_ACK) {
+			1) == IDC_CTRL_ACK) {
 			if (pinfo->msgs->flags & I2C_M_RD) {
 				if (pinfo->msgs->len == 1)
 					ack_control |= IDC_CTRL_ACK;
@@ -359,6 +358,8 @@ static irqreturn_t ambarella_i2c_irq(int irqno, void *dev_id)
 				pinfo->state = AMBA_I2C_STATE_WRITE;
 				goto amba_i2c_irq_write;
 			}
+		} else {
+			ack_control = control_reg;
 		}
 		break;
 	case AMBA_I2C_STATE_START_TEN:
@@ -406,7 +407,7 @@ amba_i2c_irq_write:
 		break;
 	case AMBA_I2C_STATE_WRITE_WAIT_ACK:
 		if (ambarella_i2c_check_ack(pinfo, &control_reg,
-			0) == IDC_CTRL_ACK) {
+			1) == IDC_CTRL_ACK) {
 			pinfo->state = AMBA_I2C_STATE_WRITE;
 			pinfo->msg_index++;
 
@@ -422,6 +423,8 @@ amba_i2c_irq_write:
 			} else {
 				goto amba_i2c_irq_write;
 			}
+		} else {
+			ack_control = control_reg;
 		}
 		break;
 	case AMBA_I2C_STATE_BULK_WRITE:
@@ -487,17 +490,10 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 			pinfo->msg_num == 0, CONFIG_I2C_AMBARELLA_ACK_TIMEOUT);
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
-			dev_err(pinfo->dev,
-				"No ACK from address 0x%x, %d:%d!\n",
-				pinfo->msg_addr, pinfo->msg_num,
-				pinfo->msg_index);
 		}
 		dev_dbg(pinfo->dev, "%ld jiffies left.\n", timeout);
 
 		if (pinfo->state != AMBA_I2C_STATE_IDLE) {
-			dev_err(pinfo->dev,
-				"I2C state 0x%x, please check address 0x%x!\n",
-				pinfo->state, pinfo->msg_addr);
 			errorCode = -EBUSY;
 		} else {
 			break;
@@ -506,8 +502,15 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	up(&pinfo->system_event_sem);
 
-	if (errorCode)
+	if (errorCode) {
+		if (pinfo->state == AMBA_I2C_STATE_NO_ACK) {
+			dev_err(pinfo->dev,
+				"No ACK from address 0x%x, %d:%d!\n",
+				pinfo->msg_addr, pinfo->msg_num,
+				pinfo->msg_index);
+		}
 		return errorCode;
+	}
 
 	return num;
 }
