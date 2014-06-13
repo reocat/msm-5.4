@@ -131,6 +131,9 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 	usb_phy_init(phy);
 	priv->phy = phy;
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        boss_set_irq_owner(irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 	ret = usb_add_hcd(hcd, irq, 0);
 	if (ret < 0)
 		goto amb_ehci_err;

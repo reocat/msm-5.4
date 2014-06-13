@@ -178,6 +178,9 @@ static int ohci_hcd_ambarella_drv_probe(struct platform_device *pdev)
 
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        boss_set_irq_owner(irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 	ret = usb_add_hcd(hcd, irq, IRQF_TRIGGER_HIGH);
 	if (ret < 0)
 		goto amb_ohci_err;

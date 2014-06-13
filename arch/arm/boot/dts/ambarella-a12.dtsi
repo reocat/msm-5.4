@@ -34,7 +34,6 @@
 	};
 
 	chosen {
-		linux,stdout-path = &uart1;
 	};
 
 	cpus {

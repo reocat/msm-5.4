@@ -68,6 +68,10 @@ struct ambarella_phy {
 
 #define to_ambarella_phy(p) container_of((p), struct ambarella_phy, phy)
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+static u32 ambarella_ocp_polarity = 0;
+#endif
+
 static inline bool ambarella_usb0_is_host(struct ambarella_phy *amb_phy)
 {
 	bool is_host;
@@ -82,6 +86,11 @@ static inline bool ambarella_usb0_is_host(struct ambarella_phy *amb_phy)
 
 static inline void ambarella_switch_to_host(struct ambarella_phy *amb_phy)
 {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Re-configure the ocp-polarity after resumed. */
+	amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
+	amba_setbitsl(amb_phy->pol_reg, ambarella_ocp_polarity << 13);
+#endif
 	if (amb_phy->owner_invert)
 		amba_rct_clrbitsl(amb_phy->own_reg, amb_phy->owner_val);
 	else
@@ -90,6 +99,11 @@ static inline void ambarella_switch_to_host(struct ambarella_phy *amb_phy)
 
 static inline void ambarella_switch_to_device(struct ambarella_phy *amb_phy)
 {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Re-configure the ocp-polarity after resumed. */
+	amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
+	amba_setbitsl(amb_phy->pol_reg, ambarella_ocp_polarity << 13);
+#endif
 	if (amb_phy->owner_invert)
 		amba_rct_setbitsl(amb_phy->own_reg, amb_phy->owner_val);
 	else
@@ -167,20 +181,31 @@ static int ambarella_phy_proc_write(struct file *file,
 	str[n - 1] = '\0';
 
 	if (!strcasecmp(str, "host")) {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+                /* A12 Dragonfly does not have GPIO for port switching. */
+                /* Please use jumper to switch the port manually. */
+                amb_phy->phy_route = PHY_TO_HOST_PORT;
+#else
 		if (gpio_is_valid(amb_phy->gpio_md)) {
 			amb_phy->phy_route = PHY_TO_HOST_PORT;
 			gpio_direction_output(amb_phy->gpio_md,
 						amb_phy->md_host_active);
 		}
+#endif
 
 		ambarella_switch_to_host(amb_phy);
 	} else if (!strcasecmp(str, "device")) {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+                /* A12 Dragonfly does not have GPIO for port switching. */
+                /* Please use jumper to switch the port manually. */
+                amb_phy->phy_route = PHY_TO_DEVICE_PORT;
+#else
 		if (gpio_is_valid(amb_phy->gpio_md)) {
 			amb_phy->phy_route = PHY_TO_DEVICE_PORT;
 			gpio_direction_output(amb_phy->gpio_md,
 						!amb_phy->md_host_active);
 		}
-
+#endif
 		ambarella_check_otg(amb_phy);
 	} else {
 		pr_err("Invalid argument!\n");
@@ -306,6 +331,7 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 	if (rval == 0) {
 		amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
 		amba_setbitsl(amb_phy->pol_reg, ocp << 13);
+		ambarella_ocp_polarity = ocp;
 	}
 
 	amb_phy->gpio_id = of_get_named_gpio_flags(np, "id-gpios", 0, &flags);

@@ -2158,6 +2158,9 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 		goto err_out2;
 	}
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        boss_set_irq_owner(udc->irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 	/* irq setup after old hardware state is cleaned up */
 	retval = devm_request_irq(&pdev->dev, udc->irq, ambarella_udc_irq,
 				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), udc);
