@@ -48,7 +48,6 @@ struct ambarella_uart_port {
 	struct uart_port port;
 	u32 initialized;
 	u32 mcr;
-	u32 first_send_num;
 	u32 msr_used;
 	u32 tx_fifo_fix;
 };
@@ -642,15 +641,10 @@ static void serial_ambarella_console_write(struct console *co,
 	const char *s, unsigned int count)
 {
 	struct uart_port *port;
-	struct ambarella_uart_port *amb_port;
-
-	int locked = 1;
-	u32 ie = 0;
+	int locked = 1, ie;
 	unsigned long flags;
 
 	port = &ambarella_port[co->index].port;
-
-	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (!port->suspended) {
 		local_irq_save(flags);
@@ -663,19 +657,14 @@ static void serial_ambarella_console_write(struct console *co,
 			locked = 1;
 		}
 
-		if(!amb_port->first_send_num){
-			ie = amba_readl(port->membase + UART_IE_OFFSET);
-			amba_writel(port->membase + UART_IE_OFFSET,
-				ie & ~UART_IE_ETBEI);
-		}
+		ie = amba_readl(port->membase + UART_IE_OFFSET);
+		amba_writel(port->membase + UART_IE_OFFSET, ie & ~UART_IE_ETBEI);
+
 		uart_console_write(port, s, count,
 			serial_ambarella_console_putchar);
-
 		wait_for_tx(port);
 
-		if(!amb_port->first_send_num){
-			amba_writel(port->membase + UART_IE_OFFSET, ie);
-		}
+		amba_writel(port->membase + UART_IE_OFFSET, ie);
 
 		if (locked)
 			spin_unlock(&port->lock);
@@ -804,7 +793,6 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 
 	amb_port = &ambarella_port[id];
 	amb_port->mcr = DEFAULT_AMBARELLA_UART_MCR;
-	amb_port->first_send_num = DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM;
 	if (of_find_property(pdev->dev.of_node, "amb,msr-used", NULL))
 		amb_port->msr_used = 1;
 	else
