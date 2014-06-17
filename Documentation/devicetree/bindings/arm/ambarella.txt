@@ -683,7 +683,7 @@ ii) Description
 ---------------
 The pins controlled by Ambarella SoC chip are organized in banks, each bank
 has 32 pins.  Each pin has at least 2 multiplexing functions, and generally,
-the last function is GPIO.
+the first function is GPIO.
 
 The PINCTRL node acts as a container for an arbitrary number of subnodes. And
 these subnodes will fall into two categories.
