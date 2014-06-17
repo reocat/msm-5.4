@@ -40,14 +40,14 @@
 #include <linux/serial.h>
 #include <linux/serial_core.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/delay.h>
 #include <mach/hardware.h>
 #include <plat/uart.h>
 
 struct ambarella_uart_port {
 	struct uart_port port;
+	u32 initialized;
 	u32 mcr;
-	u32 fcr;
-	u32 ier;
 	u32 first_send_num;
 	u32 msr_used;
 	u32 tx_fifo_fix;
@@ -127,6 +127,35 @@ static inline void wait_for_rx(struct uart_port *port)
 }
 
 /* ==========================================================================*/
+static void serial_ambarella_hw_setup(struct uart_port *port)
+{
+	struct ambarella_uart_port *amb_port;
+	unsigned long flags;
+
+	amb_port = (struct ambarella_uart_port *)(port->private_data);
+
+	spin_lock_irqsave(&port->lock, flags);
+	if (amb_port->initialized == 1) {
+		spin_unlock_irqrestore(&port->lock, flags);
+		return;
+	}
+	amb_port->initialized = 1;
+	spin_unlock_irqrestore(&port->lock, flags);
+
+	/* reset the whole UART */
+	amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
+	mdelay(1);
+	amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
+
+	amba_writel(port->membase + UART_IE_OFFSET,
+		DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME);
+	amba_writel(port->membase + UART_FC_OFFSET,
+		UART_FC_FIFOE | UART_FC_RX_2_TO_FULL |
+		UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR);
+	amba_writel(port->membase + UART_IE_OFFSET,
+		DEFAULT_AMBARELLA_UART_IER);
+}
+
 static inline void serial_ambarella_receive_chars(struct uart_port *port,
 	u32 tmo)
 {
@@ -193,37 +222,6 @@ ignore_char:
 	spin_unlock(&port->lock);
 	tty_flip_buffer_push(&port->state->port);
 	spin_lock(&port->lock);
-}
-
-static void serial_ambarella_transmit_chars_first(struct uart_port *port)
-{
-	struct circ_buf *xmit = &port->state->xmit;
-	struct ambarella_uart_port *amb_port;
-	int count;
-
-	amb_port = (struct ambarella_uart_port *)(port->private_data);
-
-	if (port->x_char) {
-		amba_writel(port->membase + UART_TH_OFFSET, port->x_char);
-		port->icount.tx++;
-		port->x_char = 0;
-		return;
-	}
-
-	if (uart_tx_stopped(port) || uart_circ_empty(xmit)) {
-		__serial_ambarella_stop_tx(port, amb_port->tx_fifo_fix);
-		return;
-	}
-
-	count = amb_port->first_send_num;
-	while (count-- > 0) {
-		amba_writel(port->membase + UART_TH_OFFSET,
-			xmit->buf[xmit->tail]);
-		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
-		port->icount.tx++;
-		if (uart_circ_empty(xmit))
-			break;
-	}
 }
 
 static void serial_ambarella_transmit_chars(struct uart_port *port)
@@ -330,15 +328,10 @@ static void serial_ambarella_enable_ms(struct uart_port *port)
 
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
-	struct ambarella_uart_port *amb_port;
-
-	amb_port = (struct ambarella_uart_port *)(port->private_data);
-
 	wait_for_tx(port);
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
 
-	if(amb_port->first_send_num)
-		serial_ambarella_transmit_chars_first(port);
+	serial_ambarella_transmit_chars(port);
 }
 
 static void serial_ambarella_stop_tx(struct uart_port *port)
@@ -440,19 +433,8 @@ static void serial_ambarella_break_ctl(struct uart_port *port, int break_state)
 static int serial_ambarella_startup(struct uart_port *port)
 {
 	int rval = 0;
-	struct ambarella_uart_port *amb_port;
-	unsigned long flags;
 
-	amb_port = (struct ambarella_uart_port *)(port->private_data);
-
-	spin_lock_irqsave(&port->lock, flags);
-	amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
-	amba_writel(port->membase + UART_IE_OFFSET, amb_port->ier |
-		UART_IE_PTIME);
-	amba_writel(port->membase + UART_FC_OFFSET, (amb_port->fcr |
-		UART_FC_XMITR | UART_FC_RCVRR));
-	amba_writel(port->membase + UART_IE_OFFSET, amb_port->ier);
-	spin_unlock_irqrestore(&port->lock, flags);
+	serial_ambarella_hw_setup(port);
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	boss_set_irq_owner(port->irq, BOSS_IRQ_OWNER_LINUX, 1);
@@ -471,7 +453,6 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&port->lock, flags);
 	amba_clrbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
-	amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
@@ -722,6 +703,8 @@ static int __init serial_ambarella_console_setup(struct console *co,
 	port->private_data = &ambarella_port[co->index];
 	port->line = co->index;
 
+	serial_ambarella_hw_setup(port);
+
 	if (options)
 		uart_parse_options(options, &baud, &parity, &bits, &flow);
 
@@ -821,8 +804,6 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 
 	amb_port = &ambarella_port[id];
 	amb_port->mcr = DEFAULT_AMBARELLA_UART_MCR;
-	amb_port->fcr = DEFAULT_AMBARELLA_UART_FCR;
-	amb_port->ier = DEFAULT_AMBARELLA_UART_IER;
 	amb_port->first_send_num = DEFAULT_AMBARELLA_UART_FIRST_SEND_NUM;
 	if (of_find_property(pdev->dev.of_node, "amb,msr-used", NULL))
 		amb_port->msr_used = 1;
