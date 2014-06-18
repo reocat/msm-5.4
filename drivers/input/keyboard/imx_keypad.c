@@ -282,11 +282,6 @@ static void imx_keypad_check_for_events(unsigned long data)
 		reg_val = readw(keypad->mmio_base + KPSR);
 		reg_val |= KBD_STAT_KPKR | KBD_STAT_KRSS;
 		writew(reg_val, keypad->mmio_base + KPSR);
-
-		reg_val = readw(keypad->mmio_base + KPSR);
-		reg_val |= KBD_STAT_KRIE;
-		reg_val &= ~KBD_STAT_KDIE;
-		writew(reg_val, keypad->mmio_base + KPSR);
 	}
 }
 
