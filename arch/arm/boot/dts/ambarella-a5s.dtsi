@@ -70,6 +70,7 @@
 			interrupts = <9 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins>;
+			amb,less-reg;
 			status = "ok";
 		};
 
@@ -79,6 +80,7 @@
 			interrupts = <25 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins>;
+			amb,less-reg;
 			amb,msr-used;	/* use Modem Status Register */
 			status = "disabled";
 		};

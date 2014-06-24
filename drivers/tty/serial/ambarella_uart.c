@@ -43,12 +43,15 @@
 #include <mach/hardware.h>
 #include <plat/uart.h>
 
+#define AMBARELLA_UART_RESET_FLAG		0 /* bit 0 */
+
 struct ambarella_uart_port {
 	struct uart_port port;
-	u32 initialized;
+	unsigned long flags;
+	u32 msr_used : 1;
+	u32 tx_fifo_fix : 1;
+	u32 less_reg : 1;
 	u32 mcr;
-	u32 msr_used;
-	u32 tx_fifo_fix;
 };
 
 static struct ambarella_uart_port ambarella_port[UART_INSTANCES];
@@ -124,6 +127,11 @@ static inline void wait_for_rx(struct uart_port *port)
 	}
 }
 
+static inline int tx_fifo_is_full(struct uart_port *port)
+{
+	return !(amba_readl(port->membase + UART_US_OFFSET) & UART_US_TFNF);
+}
+
 /* ==========================================================================*/
 static void serial_ambarella_hw_setup(struct uart_port *port)
 {
@@ -132,19 +140,14 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
-	spin_lock_irqsave(&port->lock, flags);
-	if (amb_port->initialized == 1) {
-		spin_unlock_irqrestore(&port->lock, flags);
-		return;
+	if (!test_and_set_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags)) {
+		/* reset the whole UART only once */
+		amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
+		mdelay(1);
+		amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
 	}
-	amb_port->initialized = 1;
-	spin_unlock_irqrestore(&port->lock, flags);
 
-	/* reset the whole UART */
-	amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
-	mdelay(1);
-	amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
-
+	spin_lock_irqsave(&port->lock, flags);
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET,
@@ -152,6 +155,7 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 		UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR);
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER);
+	spin_unlock_irqrestore(&port->lock, flags);
 }
 
 static inline void serial_ambarella_receive_chars(struct uart_port *port,
@@ -244,13 +248,15 @@ static void serial_ambarella_transmit_chars(struct uart_port *port)
 
 	count = port->fifosize;
 	while (count-- > 0) {
-		amba_writel(port->membase + UART_TH_OFFSET,
-			xmit->buf[xmit->tail]);
+		if (!amb_port->less_reg && tx_fifo_is_full(port))
+			break;
+		amba_writel(port->membase + UART_TH_OFFSET, xmit->buf[xmit->tail]);
 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
 		port->icount.tx++;
 		if (uart_circ_empty(xmit))
 			break;
 	}
+
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(port);
 	if (uart_circ_empty(xmit))
@@ -308,6 +314,7 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 		break;
 
 	case UART_II_NO_INT_PENDING:
+		break;
 	default:
 		printk(KERN_DEBUG "%s: 0x%x\n", __func__, ii);
 		break;
@@ -326,8 +333,17 @@ static void serial_ambarella_enable_ms(struct uart_port *port)
 
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
-	wait_for_tx(port);
+	struct ambarella_uart_port *amb_port;
+
+	amb_port = (struct ambarella_uart_port *)(port->private_data);
+
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+
+	/* if FIFO status register is not provided, we have no idea about
+	 * the Tx FIFO is full or not, so we need to wait for the Tx Empty
+	 * Interrupt comming, then we can start to transfer data. */
+	if (amb_port->less_reg)
+		return;
 
 	serial_ambarella_transmit_chars(port);
 }
@@ -634,7 +650,7 @@ static void serial_ambarella_console_write(struct console *co,
 	const char *s, unsigned int count)
 {
 	struct uart_port *port;
-	int locked = 1, ie;
+	int locked = 1;
 	unsigned long flags;
 
 	port = &ambarella_port[co->index].port;
@@ -650,14 +666,9 @@ static void serial_ambarella_console_write(struct console *co,
 			locked = 1;
 		}
 
-		ie = amba_readl(port->membase + UART_IE_OFFSET);
-		amba_writel(port->membase + UART_IE_OFFSET, ie & ~UART_IE_ETBEI);
-
 		uart_console_write(port, s, count,
 			serial_ambarella_console_putchar);
 		wait_for_tx(port);
-
-		amba_writel(port->membase + UART_IE_OFFSET, ie);
 
 		if (locked)
 			spin_unlock(&port->lock);
@@ -781,14 +792,21 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 
 	amb_port = &ambarella_port[id];
 	amb_port->mcr = DEFAULT_AMBARELLA_UART_MCR;
+	/* check if using modem status register,  available for non-uart0. */
 	if (of_find_property(pdev->dev.of_node, "amb,msr-used", NULL))
 		amb_port->msr_used = 1;
 	else
 		amb_port->msr_used = 0;
+	/* check if workaround for tx fifo is needed */
 	if (of_find_property(pdev->dev.of_node, "amb,tx-fifo-fix", NULL))
 		amb_port->tx_fifo_fix = 1;
 	else
 		amb_port->tx_fifo_fix = 0;
+	/* check if registers like FIFO status register are NOT provided. */
+	if (of_find_property(pdev->dev.of_node, "amb,less-reg", NULL))
+		amb_port->less_reg = 1;
+	else
+		amb_port->less_reg = 0;
 
 	amb_port->port.dev = &pdev->dev;
 	amb_port->port.type = PORT_UART00;

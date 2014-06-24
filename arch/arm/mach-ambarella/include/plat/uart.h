@@ -78,6 +78,7 @@
 #define UART_LS_OFFSET			0x14
 #define UART_MS_OFFSET			0x18
 #define UART_SC_OFFSET			0x1c	/* Byte */
+#define UART_US_OFFSET			0x7c
 #define UART_TFL_OFFSET			0x80
 #define UART_RFL_OFFSET			0x84
 #define UART_SRR_OFFSET			0x88
@@ -156,6 +157,13 @@
 #define UART_MS_TERI			0x04
 #define UART_MS_DDSR			0x02
 #define UART_MS_DCTS			0x01
+
+/* UART[x]_US_REG */
+#define UART_US_RFF			0x10
+#define UART_US_RFNE			0x08
+#define UART_US_TFE			0x04
+#define UART_US_TFNF			0x02
+#define UART_US_BUSY			0x01
 
 /* ==========================================================================*/
 #define UART_FIFO_SIZE			(16)
