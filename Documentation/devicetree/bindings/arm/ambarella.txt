@@ -834,6 +834,8 @@ Required properties:
 Optional properties:
 - amb,tx-fifo-fix: should be specified for A7L, iONE and A8
 - amb,msr-used: use Modem Status Register, should be specified for non-UART0.
+- amb,less-reg: registers like FIFO status register are NOT provided, should be
+  specified for A5S.
 
 ii) Example
 -----------
