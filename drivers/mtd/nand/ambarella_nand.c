@@ -932,7 +932,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 									nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
-						mtd->ecc_stats.corrected++;
+						//mtd->ecc_stats.corrected++;
 				}
 			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
