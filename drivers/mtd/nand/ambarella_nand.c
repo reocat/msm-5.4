@@ -191,6 +191,19 @@ static inline int nand_amb_is_sw_bch(struct ambarella_nand_info *nand_info)
 	return nand_info->soft_ecc && nand_info->ecc_bits > 1;
 }
 
+static void nand_amb_corrected_recovery(struct ambarella_nand_info *nand_info)
+{
+	u32 fio_ctr_reg, fio_dmactr_reg;
+
+	/* FIO reset will just reset FIO registers, but will not affect
+	 * Nand controller. */
+	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+	fio_dmactr_reg = amba_readl(nand_info->regbase + FIO_DMACTR_OFFSET);
+	ambarella_fio_rct_reset();
+	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
+	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, fio_dmactr_reg);
+}
+
 static void nand_amb_enable_dsm(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_dsm_ctr = 0, fio_ctr_reg = 0, dma_dsm_ctr = 0;
@@ -869,29 +882,31 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 		if (nand_amb_is_hw_bch(nand_info)) {
 			if (cmd == NAND_AMB_CMD_READ) {
-				int ret = 0;
-				struct mtd_info		*mtd;
-				mtd = &nand_info->mtd;
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
-				/* Workaround for page never used, BCH will be failed */
+					int ret = 0;
+					/* Workaround for page never used, BCH will be failed */
 					if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
 						ret = nand_bch_spare_cmp(nand_info);
 
 					if (ret < 0) {
-						mtd->ecc_stats.failed++;
-						printk(KERN_ERR "read BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
-									nand_info->fio_ecc_sta, nand_info->addr);
+						nand_info->mtd.ecc_stats.failed++;
+						dev_err(nand_info->dev,
+							"BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
+							nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
-						//mtd->ecc_stats.corrected++;
+					nand_info->mtd.ecc_stats.corrected++;
+					/* once bitflip and data corrected happened, BCH will keep on
+					 * to report bitflip in following read operations, even though
+					 * there is no bitflip happened really. So this is a workaround
+					 * to get it back. */
+					nand_amb_corrected_recovery(nand_info);
 				}
 			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
-					printk(KERN_ERR "nand_amb_dsm_request program failed (0x%08x)!\n",
-								nand_info->fio_ecc_sta);
-				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
-					printk(KERN_ERR "program BCH code corrected (0x%08x)!\n",
-								nand_info->fio_ecc_sta);
+					dev_err(nand_info->dev,
+						"BCH program program failed (0x%08x)!\n",
+						nand_info->fio_ecc_sta);
 				}
 			}
 		}
@@ -1420,7 +1435,7 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *buf,
 		} else if (count < 0) {
 			count = nand_bch_spare_cmp(nand_info);
 			if (count < 0)
-				printk(KERN_ERR "ecc unrecoverable error\n");
+				dev_err(nand_info->dev, "ecc unrecoverable error\n");
 		}
 
 		errorCode = count;

@@ -27,12 +27,14 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
 #include <asm/io.h>
 #include <asm/setup.h>
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/nand.h>
+#include <plat/rct.h>
 
 
 #if (CHIP_REV != S2L)
@@ -241,6 +243,15 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 }
 EXPORT_SYMBOL(fio_amb_sdio0_set_int);
 #endif
+
+void ambarella_fio_rct_reset(void)
+{
+	amba_rct_writel(FIO_RESET_REG, FIO_RESET_FIO_RST);
+	mdelay(1);
+	amba_rct_writel(FIO_RESET_REG, 0x0);
+	mdelay(1);
+}
+EXPORT_SYMBOL(ambarella_fio_rct_reset);
 
 /* ==========================================================================*/
 int __init ambarella_init_fio(void)

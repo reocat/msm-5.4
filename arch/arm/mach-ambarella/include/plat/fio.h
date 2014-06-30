@@ -173,6 +173,7 @@ extern void fio_amb_sdio0_set_int(u32 mask, u32 on);
 #endif
 
 extern int ambarella_init_fio(void);
+extern void ambarella_fio_rct_reset(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
