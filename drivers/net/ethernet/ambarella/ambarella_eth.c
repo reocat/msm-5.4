@@ -2165,7 +2165,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	/* request gpio for PHY power control */
 	if (gpio_is_valid(lp->pwr_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev, lp->pwr_gpio, "phy reset");
+		ret_val = devm_gpio_request(&pdev->dev, lp->pwr_gpio, "phy power");
 		if (ret_val < 0) {
 			dev_err(&pdev->dev, "Failed to request pwr-gpios!\n");
 			goto ambeth_drv_probe_free_netdev;
@@ -2175,7 +2175,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	/* request gpio for PHY reset control */
 	if (gpio_is_valid(lp->rst_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev, lp->rst_gpio, "phy power");
+		ret_val = devm_gpio_request(&pdev->dev, lp->rst_gpio, "phy reset");
 		if (ret_val < 0) {
 			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
 			goto ambeth_drv_probe_free_netdev;
