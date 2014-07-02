@@ -481,7 +481,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-offset = <5>;
 		};
 	};
 };

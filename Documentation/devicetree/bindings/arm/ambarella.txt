@@ -654,8 +654,9 @@ Required properties:
 
 Optional properties:
 - amb,host-phy-num: specifies the PHY number used for host.
-- amb,owner-offset: specifies the bit that means the PHY is owned by USB host
-  or USB device, and the value is packed as: invert << 12 | offset.
+- amb,owner-mask: Mask IDDIG0, should be specified for S2L.
+- amb,owner-invert: the owner bit for USB PHY is inverted, should be specified
+  for S2L.
 - amb,ocp-polarity: specifies the polarity of over current protection pin.
 - id-gpios: specifies the input GPIO used for OTG detection.
 - md-gpios: specifies the output GPIO to control external circuit to switch to
