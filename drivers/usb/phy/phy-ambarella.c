@@ -36,6 +36,7 @@
 #include <linux/io.h>
 #include <linux/of_gpio.h>
 #include <asm/uaccess.h>
+#include <plat/rct.h>
 
 #define DRIVER_NAME "ambarella_phy"
 
@@ -56,7 +57,6 @@ struct ambarella_phy {
 	void __iomem *own_reg;
 	u8 host_phy_num;
 	bool owner_invert;
-	u32 owner_val;
 
 	int gpio_id;
 	bool id_is_otg;
@@ -77,9 +77,9 @@ static inline bool ambarella_usb0_is_host(struct ambarella_phy *amb_phy)
 	bool is_host;
 
 	if (amb_phy->owner_invert)
-		is_host = !(amba_rct_readl(amb_phy->own_reg) & amb_phy->owner_val);
+		is_host = !(amba_rct_readl(amb_phy->own_reg) & USB0_IS_HOST_MASK);
 	else
-		is_host = !!(amba_rct_readl(amb_phy->own_reg) & amb_phy->owner_val);
+		is_host = !!(amba_rct_readl(amb_phy->own_reg) & USB0_IS_HOST_MASK);
 
 	return is_host;
 };
@@ -92,9 +92,9 @@ static inline void ambarella_switch_to_host(struct ambarella_phy *amb_phy)
 	amba_setbitsl(amb_phy->pol_reg, ambarella_ocp_polarity << 13);
 #endif
 	if (amb_phy->owner_invert)
-		amba_rct_clrbitsl(amb_phy->own_reg, amb_phy->owner_val);
+		amba_rct_clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 	else
-		amba_rct_setbitsl(amb_phy->own_reg, amb_phy->owner_val);
+		amba_rct_setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 }
 
 static inline void ambarella_switch_to_device(struct ambarella_phy *amb_phy)
@@ -105,9 +105,9 @@ static inline void ambarella_switch_to_device(struct ambarella_phy *amb_phy)
 	amba_setbitsl(amb_phy->pol_reg, ambarella_ocp_polarity << 13);
 #endif
 	if (amb_phy->owner_invert)
-		amba_rct_setbitsl(amb_phy->own_reg, amb_phy->owner_val);
+		amba_rct_setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 	else
-		amba_rct_clrbitsl(amb_phy->own_reg, amb_phy->owner_val);
+		amba_rct_clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 }
 
 static inline void ambarella_check_otg(struct ambarella_phy *amb_phy)
@@ -309,7 +309,7 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 {
 	struct device_node *np = pdev->dev.of_node;
 	enum of_gpio_flags flags;
-	int ocp, owner_offset, rval;
+	int ocp, rval;
 
 	/* get register for overcurrent polarity */
 	amb_phy->pol_reg = ambarella_phy_get_reg(pdev, 1);
@@ -321,18 +321,17 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 	if (!amb_phy->own_reg)
 		return -ENXIO;
 
-	rval = of_property_read_u32(np, "amb,owner-offset", &owner_offset);
-	if (rval == 0) {
-		amb_phy->owner_invert = !!(owner_offset & 0x1000);
-		amb_phy->owner_val = 0x1 << (owner_offset & 0xff);
-	}
-
+	/* see RCT Programming Guide for detailed info about ocp and owner */
 	rval = of_property_read_u32(np, "amb,ocp-polarity", &ocp);
 	if (rval == 0) {
 		amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
 		amba_setbitsl(amb_phy->pol_reg, ocp << 13);
 		ambarella_ocp_polarity = ocp;
 	}
+
+	amb_phy->owner_invert = !!of_find_property(np, "amb,owner-invert", NULL);
+	if (of_find_property(np, "amb,owner-mask", NULL))
+		amba_setbitsl(amb_phy->own_reg, 0x1);
 
 	amb_phy->gpio_id = of_get_named_gpio_flags(np, "id-gpios", 0, &flags);
 	amb_phy->id_is_otg = !!(flags & OF_GPIO_ACTIVE_LOW);

@@ -63,8 +63,11 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2L)
 #define USBP1_CTRL_OFFSET		0x45c
+#define USBP0_SEL_OFFSET		0x2c0
+#define USB0_IS_HOST_MASK		0x00000002
 #else
 #define USBP1_CTRL_OFFSET		0x88
+#define USB0_IS_HOST_MASK		0x00000020
 #endif
 
 #define USBP1_CTRL_REG			RCT_REG(USBP1_CTRL_OFFSET)
