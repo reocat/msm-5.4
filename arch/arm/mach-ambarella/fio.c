@@ -275,7 +275,7 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
 EXPORT_SYMBOL(fio_amb_sdio0_set_int);
-#else
+#else	/* (CHIP_REV != S2L) */
 void fio_select_lock(int module)
 {
 #if defined(CONFIG_AMBALINK_LOCK)
@@ -324,7 +324,7 @@ EXPORT_SYMBOL(fio_amb_sd0_set_int);
 
 void fio_amb_sdio0_set_int(u32 mask, u32 on){ }
 EXPORT_SYMBOL(fio_amb_sdio0_set_int);
-#endif
+#endif	/* (CHIP_REV != S2L) */
 
 void ambarella_fio_rct_reset(void)
 {

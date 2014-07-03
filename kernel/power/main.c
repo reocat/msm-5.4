@@ -368,7 +368,7 @@ int amba_state_store(void *suspend_to)
 		goto out;
 	}
 
-	wowlan_resume_from_ram = *((int *) suspend_to);
+	wowlan_resume_from_ram = (int) suspend_to;
 	error = hibernate();
 
  out:

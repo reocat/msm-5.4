@@ -25,7 +25,6 @@ static struct rpmsg_channel *chnl_tx;
 
 #if RPC_DEBUG
 #define RPMSG_RPC_TIMER_PROC
-#define PROFILE_TIMER                   ambalink_phys_to_virt(APB_PHYS_BASE + TIMER_OFFSET + 0x54) //timer 6
 #endif
 
 #ifdef RPMSG_RPC_TIMER_PROC

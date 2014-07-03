@@ -1525,6 +1525,9 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.card_busy = ambarella_sd_card_busy,
 };
 
+static int pre_notified = 0;
+static int sd_suspended = 0;
+
 static int ambarella_sd_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -1536,14 +1539,20 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 
 	switch (val) {
 	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_debug("%s[%u]: Pre Change\n", __func__, pslotinfo->slot_id);
-		down(&pslotinfo->system_event_sem);
+		if (!sd_suspended) {
+			pr_debug("%s[%u]: Pre Change\n", __func__, pslotinfo->slot_id);
+			down(&pslotinfo->system_event_sem);
+			pre_notified = 1;
+		}
 		break;
 
 	case AMBA_EVENT_POST_CPUFREQ:
-		pr_debug("%s[%u]: Post Change\n", __func__, pslotinfo->slot_id);
-		ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
-		up(&pslotinfo->system_event_sem);
+		if (pre_notified) {
+			pr_debug("%s[%u]: Post Change\n", __func__, pslotinfo->slot_id);
+			ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+			pre_notified = 0;
+			up(&pslotinfo->system_event_sem);
+		}
 		break;
 
 	default:
@@ -2026,6 +2035,8 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	struct ambarella_sd_mmc_info *pslotinfo;
 	int i;
 
+	sd_suspended = 1;
+
 	pinfo = platform_get_drvdata(pdev);
 
 	if (0 == wowlan_resume_from_ram) {
@@ -2154,6 +2165,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
         }
 #endif
 #endif
+	sd_suspended = 0;
 
 	return retval;
 }

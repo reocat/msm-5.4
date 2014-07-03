@@ -366,8 +366,8 @@
 
 		spinor0: spinor@e0031000 {
 			compatible = "ambarella,spinor";
-			reg = <0xe0031000 0x2ff>,/* spi nor controller*/
-				  <0xe0005300 0x20>;/*dma reg*/
+			reg = <0xe0031000 0x2ff>,	/* spi nor controller*/
+                              <0xe0005300 0x20>;	/*dma reg*/
 		};
 		uart1: uart@e0032000 {
 			compatible = "ambarella,uart";
@@ -541,7 +541,8 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xec170050 0x4 0xe001b00c 0x4 0xec1702c0 0x4>;
 			amb,host-phy-num = <2>;
-			amb,owner-offset = <0x1001>;
+			amb,owner-mask;
+			amb,owner-invert;
 		};
 	};
 };

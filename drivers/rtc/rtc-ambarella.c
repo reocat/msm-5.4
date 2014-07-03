@@ -87,6 +87,7 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 		int time_alarm, unsigned long secs)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 time_val, alarm_val;
 
 	if (ambrtc->is_limited && secs < 0x40000000) {
@@ -121,6 +122,7 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 	amba_writel(ambrtc->reg + RTC_PWC_CURT_OFFSET, time_val);
 	amba_writel(ambrtc->reg + RTC_PWC_ALAT_OFFSET, alarm_val);
 	ambrtc_reset_rtc(ambrtc);
+#endif
 
 	return 0;
 }

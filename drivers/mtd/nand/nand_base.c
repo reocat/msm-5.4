@@ -3086,6 +3086,19 @@ static void nand_decode_ext_id(struct mtd_info *mtd, struct nand_chip *chip,
 		extid >>= 2;
 		/* Get buswidth information */
 		*busw = (extid & 0x01) ? NAND_BUSWIDTH_16 : 0;
+
+		/*
+		 * Spansion S34ML02G2 and S34ML04G2 have 2x spare.
+		 * We use ECC Level in 5th ID to determine the spare size.
+		 * - ID byte 5, bit[1:0]: 00b -> 1 bit / 512 bytes
+		 *                        01b -> 2 bit / 512 bytes
+		 *                        10b -> 4 bit / 512 bytes
+		 *                        11b -> 8 bit / 512 bytes
+		 */
+		if (id_len >= 5 && id_data[0] == NAND_MFR_AMD &&
+			((id_data[4] & 0x3) > 0x0)) {
+			mtd->oobsize = 32 * (mtd->writesize >> 9);
+		}
 	}
 }
 

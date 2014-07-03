@@ -44,11 +44,11 @@ static void resume_irqs(bool want_early)
 {
 	struct irq_desc *desc;
 	int irq;
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-        unsigned long flags;
-#endif
 
 	for_each_irq_desc(irq, desc) {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		unsigned long boss_flags;
+#endif
 		unsigned long flags;
 		bool is_early = desc->action &&
 			desc->action->flags & IRQF_EARLY_RESUME;
@@ -61,13 +61,13 @@ static void resume_irqs(bool want_early)
                 /* Spinlock recursion is happened if an interrupt is pending */
                 /* and we enable it at this point. */
                 /* So we disable interrupt before enable the irq. */
-                flags = arm_irq_save();
+                boss_flags = arm_irq_save();
 #endif
 		raw_spin_lock_irqsave(&desc->lock, flags);
 		__enable_irq(desc, irq, true);
 		raw_spin_unlock_irqrestore(&desc->lock, flags);
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
-                arm_irq_restore(flags);
+                arm_irq_restore(boss_flags);
 #endif
 	}
 }

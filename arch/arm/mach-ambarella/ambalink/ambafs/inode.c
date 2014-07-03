@@ -18,13 +18,12 @@ static void invalidate_page(struct page *page)
 	__asm__ __volatile__ (
 		"add r1, %0, #4096\n\t"
 	"1:\n\t"
-		"mcr p15, 0, r0, c7, c6, 1\n\t"
+		"mcr p15, 0, %0, c7, c6, 1\n\t"
 		"add %0, %0, #32\n\t"
 		"cmp %0, r1\n\t"
 		"blo 1b\n\t"
-		: "=r" (addr)
+		: "+r" (addr)
 		);
-
 	dsb();
 }
 
@@ -103,24 +102,45 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 
 	//AMBAFS_DMSG("ambafs_readpages %d\n", nr_pages);
 	while (nr_pages) {
+		struct page *page;
+		loff_t offset;
+
 		io_pages = min_t(unsigned, nr_pages, MAX_NR_PAGES);
 		prepare_read_msg(msg, filp);
-		for (page_idx = 0; page_idx < io_pages; page_idx++) {
-			struct page *page;
 
+		// add first page
+		page = list_entry(pages->prev, struct page, lru);
+		list_del(&page->lru);
+		offset = page_offset(page);
+		if (!add_to_page_cache_lru(page, mapping,
+						page->index, GFP_KERNEL)) {
+			msg_len = insert_page_info(msg, page);
+		} else {
+			AMBAFS_EMSG("ambafs_readpages lru error\n");
+		}
+		page_cache_release(page);
+
+		// add pages one by one if continuous
+		for (page_idx = 1; page_idx < io_pages; page_idx++) {
 			page = list_entry(pages->prev, struct page, lru);
+			if (offset + PAGE_SIZE != page_offset(page)) {
+				AMBAFS_DMSG("ambafs_readpages with holes\n");
+				break;
+			}
+			offset += PAGE_SIZE;
 			list_del(&page->lru);
 
 			if (!add_to_page_cache_lru(page, mapping,
 				      page->index, GFP_KERNEL)) {
-		                msg_len = insert_page_info(msg, page);
+				msg_len = insert_page_info(msg, page);
 			} else {
 				AMBAFS_EMSG("ambafs_readpages lru error\n");
 			}
 			page_cache_release(page);
-		}
-		nr_pages -= io_pages;
 
+		}
+
+		nr_pages -= page_idx;
 		if (msg_len)
 			ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
 	}
@@ -257,8 +277,10 @@ static int ambafs_write_begin(struct file *file, struct address_space *mapping,
 
 	index = pos >> PAGE_CACHE_SHIFT;
 	page = grab_cache_page_write_begin(mapping, index, flags);
-	if (!page)
+	if (!page) {
+		AMBAFS_DMSG("%s: oom\n", __func__);
 		return -ENOMEM;
+	}
 
 	*pagep = page;
 
@@ -266,12 +288,13 @@ static int ambafs_write_begin(struct file *file, struct address_space *mapping,
 		int buf[16], msg_len;
 		struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 
-		AMBAFS_DMSG("Read-for-Write, pos=%d, len=%u\n", (int)pos, len);
+		//AMBAFS_DMSG("Read-for-Write, pos=%d, len=%u\n", (int)pos, len);
 		zero_user_segment(page, pos, PAGE_CACHE_SIZE);
 
 		prepare_read_msg(msg, file);
 		msg_len = insert_page_info(msg, page);
 		ambafs_rpmsg_exec(msg, msg_len);
+		invalidate_page(page);
 	}
 
 	return 0;
@@ -295,11 +318,12 @@ static int ambafs_write_end(struct file *file, struct address_space *mapping,
 				MAX_NR_PAGES, pages);
 
         if (nr_pages == MAX_NR_PAGES) {
-		perform_writepages(mapping,
-		        pages, nr_pages, file->private_data);
+		//AMBAFS_DMSG("%s: write %d page 0x%08x\n", __func__, nr_pages, (int)page_index(pages));
+		perform_writepages(mapping, pages, nr_pages, file->private_data);
 	}
 
 	release_pages(pages, nr_pages, 0);
+
 	return copied;
 }
 

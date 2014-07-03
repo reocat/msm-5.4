@@ -48,6 +48,12 @@ struct amb_gpio_regs {
 };
 
 struct amb_gpio_regs amb_gpio_pm[GPIO_INSTANCES];
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+#define skip_mask_gpio(regval, saved, mask)	((saved & ~mask) | (regval & mask))
+
+static u32 ambalink_gpio_skip_mask[GPIO_INSTANCES];
+#endif
 #endif
 
 struct amb_gpio_chip {
@@ -56,6 +62,25 @@ struct amb_gpio_chip {
 	struct gpio_chip		*gc;
 	struct irq_domain		*domain;
 };
+
+static void amb_gpio_raw_lock(unsigned long *pflags)
+{
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	local_irq_save(*pflags);
+#elif defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	aipc_spin_lock_irqsave(AMBA_IPC_SPINLOCK_GPIO, pflags);
+#endif
+}
+
+static void amb_gpio_raw_unlock(unsigned long *pflags)
+{
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	local_irq_restore(*pflags);
+#elif defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	aipc_spin_unlock_irqrestore(AMBA_IPC_SPINLOCK_GPIO, *pflags);
+#endif
+}
 
 /* gpiolib gpio_request callback function */
 static int amb_gpio_request(struct gpio_chip *gc, unsigned pin)
@@ -75,16 +100,30 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
 	void __iomem *regbase;
 	u32 bank, offset, mask;
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	u32 mask_bak;
+	unsigned long flags;
+#endif
 
 	bank = PINID_TO_BANK(pin);
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->regbase[bank];
 	mask = (0x1 << offset);
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_lock(&flags);
+	mask_bak = amba_readl(regbase + GPIO_MASK_OFFSET);
+#endif
+
 	amba_writel(regbase + GPIO_MASK_OFFSET, mask);
 	if (value == GPIO_LOW)
 		mask = 0;
 	amba_writel(regbase + GPIO_DATA_OFFSET, mask);
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amba_writel(regbase + GPIO_MASK_OFFSET, mask_bak);
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 /* gpiolib gpio_get callback function */
@@ -93,14 +132,29 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
 	void __iomem *regbase;
 	u32 bank, offset, mask, data;
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	u32 mask_bak;
+	unsigned long flags;
+#endif
 
 	bank = PINID_TO_BANK(pin);
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->regbase[bank];
 	mask = (0x1 << offset);
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_lock(&flags);
+	mask_bak = amba_readl(regbase + GPIO_MASK_OFFSET);
+#endif
+
 	amba_writel(regbase + GPIO_MASK_OFFSET, mask);
 	data = amba_readl(regbase + GPIO_DATA_OFFSET);
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amba_writel(regbase + GPIO_MASK_OFFSET, mask_bak);
+	amb_gpio_raw_unlock(&flags);
+#endif
+
 	data = (data >> offset) & 0x1;
 
 	return (data ? GPIO_HIGH : GPIO_LOW);
@@ -141,6 +195,10 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 	void __iomem *regbase;
 	u32 afsel = 0, data = 0, dir = 0, mask = 0;
 	u32 i, bank, offset;
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	u32 mask_bak;
+	unsigned long flags;
+#endif
 
 	for (i = 0; i < gc->ngpio; i++) {
 		offset = PINID_TO_OFFSET(i);
@@ -148,12 +206,21 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 			bank = PINID_TO_BANK(i);
 			regbase = amb_gpio->regbase[bank];
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+			amb_gpio_raw_lock(&flags);
+			mask_bak = amba_readl(regbase + GPIO_MASK_OFFSET);
+#endif
 			afsel = amba_readl(regbase + GPIO_AFSEL_OFFSET);
 			dir = amba_readl(regbase + GPIO_DIR_OFFSET);
 			mask = amba_readl(regbase + GPIO_MASK_OFFSET);
 			amba_writel(regbase + GPIO_MASK_OFFSET, ~afsel);
 			data = amba_readl(regbase + GPIO_DATA_OFFSET);
 			amba_writel(regbase + GPIO_MASK_OFFSET, mask);
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+			amba_writel(regbase + GPIO_MASK_OFFSET, mask_bak);
+			amb_gpio_raw_unlock(&flags);
+#endif
 
 			seq_printf(s, "\nGPIO[%d]:\t[%d - %d]\n",
 				bank, i, i + GPIO_BANK_SIZE - 1);
@@ -196,51 +263,93 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
 
+	amb_gpio_raw_lock(&flags);
+#endif
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
 	amba_setbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 static void amb_gpio_irq_disable(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
 
+	amb_gpio_raw_lock(&flags);
+#endif
 	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 static void amb_gpio_irq_ack(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
 
+	amb_gpio_raw_lock(&flags);
+#endif
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 static void amb_gpio_irq_mask(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
 
+	amb_gpio_raw_lock(&flags);
+#endif
 	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 static void amb_gpio_irq_mask_ack(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
 
+	amb_gpio_raw_lock(&flags);
+#endif
 	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 static void amb_gpio_irq_unmask(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
 
+	amb_gpio_raw_lock(&flags);
+#endif
 	amba_setbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 }
 
 static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
@@ -249,6 +358,11 @@ static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
 	struct irq_desc *desc = irq_to_desc(data->irq);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
 	u32 mask, bit, sense, bothedges, event;
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
+
+	amb_gpio_raw_lock(&flags);
+#endif
 
 	mask = ~(0x1 << offset);
 	bit = (0x1 << offset);
@@ -298,6 +412,10 @@ static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
 	amba_writel(regbase + GPIO_IEV_OFFSET, event);
 	/* clear obsolete irq */
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	amb_gpio_raw_unlock(&flags);
+#endif
 
 	return 0;
 }
@@ -349,6 +467,7 @@ const struct irq_domain_ops amb_gpio_irq_domain_ops = {
 	.xlate = irq_domain_xlate_twocell,
 };
 
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 static void amb_gpio_handle_irq(unsigned int irq, struct irq_desc *desc)
 {
 	struct irq_chip *irqchip;
@@ -378,6 +497,7 @@ static void amb_gpio_handle_irq(unsigned int irq, struct irq_desc *desc)
 
 	chained_irq_exit(irqchip, desc);
 }
+#endif
 
 static int amb_gpio_probe(struct platform_device *pdev)
 {
@@ -428,11 +548,16 @@ static int amb_gpio_probe(struct platform_device *pdev)
 	}
 
 #if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	/* We do not hook the IRQ if running dual OSes system. */
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		irq_set_irq_type(amb_gpio->irq[i], IRQ_TYPE_LEVEL_HIGH);
 		irq_set_handler_data(amb_gpio->irq[i], amb_gpio);
 		irq_set_chained_handler(amb_gpio->irq[i], amb_gpio_handle_irq);
 	}
+#else
+#ifdef CONFIG_PM
+	memset(ambalink_gpio_skip_mask, 0x0, sizeof(u32) * GPIO_INSTANCES);
+#endif
 #endif
 
 	platform_set_drvdata(pdev, amb_gpio);
@@ -449,6 +574,9 @@ static int amb_gpio_irq_suspend(void)
 	struct amb_gpio_regs *pm;
 	void __iomem *regbase;
 	int i;
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
+#endif
 
 	amb_gpio = dev_get_drvdata(amb_gc.dev);
 	if (amb_gpio == NULL) {
@@ -459,6 +587,9 @@ static int amb_gpio_irq_suspend(void)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		regbase = amb_gpio->regbase[i];
 		pm = &amb_gpio_pm[i];
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		amb_gpio_raw_lock(&flags);
+#endif
 		pm->afsel = amba_readl(regbase + GPIO_AFSEL_OFFSET);
 		pm->dir = amba_readl(regbase + GPIO_DIR_OFFSET);
 		pm->is = amba_readl(regbase + GPIO_IS_OFFSET);
@@ -474,11 +605,84 @@ static int amb_gpio_irq_suspend(void)
 			pr_info("gpio_irq[%p]: irq_wake[0x%08X]\n",
 						regbase, pm->irq_wake_mask);
 		}
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		amb_gpio_raw_unlock(&flags);
+#endif
 	}
 
 	return 0;
 }
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+
+void ambarella_gpio_create_skip_mask(u32 gpio)
+{
+	ambalink_gpio_skip_mask[gpio >> 5] |= 1 << (gpio % 32);
+}
+EXPORT_SYMBOL(ambarella_gpio_create_skip_mask);
+
+static void amb_gpio_irq_resume(void)
+{
+	struct amb_gpio_chip *amb_gpio;
+	struct amb_gpio_regs *pm;
+	void __iomem *regbase;
+	int i;
+	u32 val;
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	unsigned long flags;
+#endif
+
+	amb_gpio = dev_get_drvdata(amb_gc.dev);
+	if (amb_gpio == NULL) {
+		pr_err("No device for ambarella gpio irq\n");
+		return;
+	}
+
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		regbase = amb_gpio->regbase[i];
+		pm = &amb_gpio_pm[i];
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		amb_gpio_raw_lock(&flags);
+#endif
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_AFSEL_OFFSET),
+					pm->afsel, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_AFSEL_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_DIR_OFFSET),
+					pm->dir, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_DIR_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_MASK_OFFSET),
+					pm->mask, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_MASK_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_DATA_OFFSET),
+					pm->data, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_DATA_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_IS_OFFSET),
+					pm->is, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_IS_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_IBE_OFFSET),
+					pm->ibe, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_IBE_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_IEV_OFFSET),
+					pm->iev, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_IEV_OFFSET, val);
+
+		val = skip_mask_gpio(amba_readl(regbase + GPIO_IE_OFFSET),
+					pm->ie, ambalink_gpio_skip_mask[i]);
+		amba_writel(regbase + GPIO_IE_OFFSET, val);
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		amb_gpio_raw_unlock(&flags);
+#endif
+	}
+}
+#else	/* CONFIG_PLAT_AMBARELLA_AMBALINK */
 static void amb_gpio_irq_resume(void)
 {
 	struct amb_gpio_chip *amb_gpio;
@@ -505,6 +709,7 @@ static void amb_gpio_irq_resume(void)
 		amba_writel(regbase + GPIO_IE_OFFSET, pm->ie);
 	}
 }
+#endif	/* CONFIG_PLAT_AMBARELLA_AMBALINK */
 
 struct syscore_ops amb_gpio_irq_syscore_ops = {
 	.suspend	= amb_gpio_irq_suspend,

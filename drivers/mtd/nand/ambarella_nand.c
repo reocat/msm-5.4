@@ -164,6 +164,59 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
 			{66, 17}, {98, 17}}
 };
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+/*
+ * The generic flash bbt decriptors overlap with our ecc
+ * hardware, so define some Ambarella specific ones.
+ */
+static uint8_t bbt_pattern[] = { 'B', 'b', 't', '0' };
+static uint8_t mirror_pattern[] = { '1', 't', 'b', 'B' };
+
+static struct nand_bbt_descr bbt_main_descr = {
+	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+		| NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+	.offs = 1,
+	.len = 4,
+	.veroffs = 13,
+	.maxblocks = 4,
+	.pattern = bbt_pattern,
+};
+
+static struct nand_bbt_descr bbt_mirror_descr = {
+	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+		| NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+	.offs = 1,
+	.len = 4,
+	.veroffs = 13,
+	.maxblocks = 4,
+	.pattern = mirror_pattern,
+};
+
+/* bbt pattern for dual space mode */
+static u8 bbt_pattern_dsm[] = { 'B', 'b', 't', '2' };
+static u8 mirror_pattern_dsm[] = { '3', 't', 'b', 'B' };
+
+static struct nand_bbt_descr bbt_main_descr_dsm = {
+       .options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+           | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+       .offs = 1,
+       .len = 4,
+       .veroffs = 5,
+       .maxblocks = 4,
+       .pattern = bbt_pattern_dsm,
+};
+
+static struct nand_bbt_descr bbt_mirror_descr_dsm = {
+       .options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
+           | NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
+       .offs = 1,
+       .len = 4,
+       .veroffs = 5,
+       .maxblocks = 4,
+       .pattern = mirror_pattern_dsm,
+};
+#endif
+
 /* ==========================================================================*/
 #define NAND_TIMING_RSHIFT24BIT(x)	(((x) & 0xff000000) >> 24)
 #define NAND_TIMING_RSHIFT16BIT(x)	(((x) & 0x00ff0000) >> 16)
@@ -175,6 +228,7 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
 #define NAND_TIMING_LSHIFT8BIT(x)	((x) << 8)
 #define NAND_TIMING_LSHIFT0BIT(x)	((x) << 0)
 
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 static int nand_timing_calc(u32 clk, int minmax, int val)
 {
 	u32 x;
@@ -191,6 +245,7 @@ static int nand_timing_calc(u32 clk, int minmax, int val)
 		n--;
 	return n < 1 ? 1 : n;
 }
+#endif
 
 static inline int nand_amb_is_hw_bch(struct ambarella_nand_info *nand_info)
 {
@@ -291,6 +346,7 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 			 FIO_CTR_ECC_6BIT |
 			 FIO_CTR_ECC_8BIT);
 
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	if (nand_info->ecc_bits == 8) {
 		u32 nand_ext_ctr_reg = 0;
 		nand_ext_ctr_reg = amba_readl(nand_info->regbase +
@@ -302,7 +358,6 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
 
 	/* do not disable dual-space mode at run time. */
-#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, 0);
 	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, 0);
 #endif
@@ -463,6 +518,8 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 #endif
 }
 
+static int pre_notified = 0;
+
 static int ambarella_nand_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -474,7 +531,10 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 	switch (val) {
 	case AMBA_EVENT_PRE_CPUFREQ:
 		pr_debug("%s: Pre Change\n", __func__);
-		down(&nand_info->system_event_sem);
+		if (!nand_info->suspend) {
+			down(&nand_info->system_event_sem);
+			pre_notified = 1;
+		}
 		break;
 
 	case AMBA_EVENT_POST_CPUFREQ:
@@ -482,7 +542,10 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 #if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 		amb_nand_set_timing(nand_info);
 #endif
-		up(&nand_info->system_event_sem);
+		if (pre_notified) {
+			pre_notified = 0;
+			up(&nand_info->system_event_sem);
+		}
 		break;
 
 	default:
@@ -699,6 +762,8 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	cmd = nand_info->cmd;
 
 	nand_ctr_reg = nand_info->control_reg | NAND_CTR_WAS;
+
+	down(&nand_info->system_event_sem);
 
 	fio_select_lock(SELECT_FIO_FL);
 
@@ -1043,6 +1108,8 @@ nand_amb_request_done:
 #endif
 
 	fio_unlock(SELECT_FIO_FL);
+
+	up(&nand_info->system_event_sem);
 
 nand_amb_request_exit:
 	return errorCode;
@@ -1673,6 +1740,13 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 		printk(KERN_INFO "ambarella_nand: Use On Flash BBT\n");
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 		chip->bbt_options |= NAND_BBT_USE_FLASH;
+		if (nand_info->ecc_bits > 1) {
+			chip->bbt_td = &bbt_main_descr_dsm;
+			chip->bbt_md = &bbt_mirror_descr_dsm;
+		} else {
+			chip->bbt_td = &bbt_main_descr;
+			chip->bbt_md = &bbt_mirror_descr;
+		}
 #else
 		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
 #endif
@@ -1821,10 +1895,6 @@ static int ambarella_nand_get_resource(
 	if (nand_info->ecc_bits > 0)
 		nand_info->soft_ecc = true;
 
-#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
-	fio_select_lock(SELECT_FIO_FL);
-#endif
-
 	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			"fio_cmd_irq", nand_info);
@@ -1909,6 +1979,10 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 		goto ambarella_nand_probe_free_info;
 	}
 	BUG_ON(nand_info->dmaaddr & 0x7);
+
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	fio_select_lock(SELECT_FIO_FL);
+#endif
 
 	errorCode = ambarella_nand_get_resource(nand_info, pdev);
 	if (errorCode < 0)
@@ -2020,6 +2094,8 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 	nand_info = platform_get_drvdata(pdev);
 	nand_info->suspend = 1;
 
+	down(&nand_info->system_event_sem);
+
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	disable_irq(nand_info->dma_irq);
 	disable_irq(nand_info->cmd_irq);
@@ -2038,7 +2114,6 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	nand_info = platform_get_drvdata(pdev);
 	amb_nand_set_timing(nand_info);
-	nand_info->suspend = 0;
 
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 #if defined(CONFIG_AMBALINK_LOCK)
@@ -2052,6 +2127,10 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	enable_irq(nand_info->fdma_irq);
 #endif
 #endif
+	up(&nand_info->system_event_sem);
+
+	nand_info->suspend = 0;
+
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
 	return errorCode;

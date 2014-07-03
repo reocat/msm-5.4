@@ -236,14 +236,14 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 		       __func__, retval);
 	}
 
-	rpmsg_clk_ack_threadx(data);
-
 	/* Disable rpmsg_clk because some driver will get the clock again. */
 	rpmsg_clk_inited = 0;
 
 	oldfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
 	ambarella_timer_suspend(1);
+
+	rpmsg_clk_ack_threadx(data);
 
 	return 0;
 }
