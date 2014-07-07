@@ -79,10 +79,10 @@ static bool ambarella_pcm_dma_filter(struct dma_chan *chan, void *param)
 	struct snd_dmaengine_dai_dma_data *dma_params = param;
 	bool ret = false;
 
-	if (ambarella_dma_channel_id(chan) == (int)dma_params->filter_data)
+	if (ambarella_dma_channel_id(chan) == (int)dma_params->filter_data) {
 		ret = true;
-
-	chan->private = &force_stop;
+		chan->private = &force_stop;
+	}
 
 	return ret;
 }
