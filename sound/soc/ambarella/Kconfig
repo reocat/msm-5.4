@@ -46,6 +46,15 @@ config S2LMKIWI_BOARD
 	  Say Y if you want to add ak4954 audio codec support for
 	  SoC audio on Ambarella KIWI Board.
 
+config S2LRDB_BOARD
+	tristate "S2LRDB Board [With ES8388 Codec] "
+	depends on SND_AMBARELLA_SOC
+	select SND_AMBARELLA_SOC_I2S
+	select SND_SOC_ES8388
+	help
+	  Say Y if you want to add ES8388 audio codec support for
+	  SoC audio on Ambarella S2L RDB Board.
+
 config STRAWBERRY_BOARD
 	tristate "STRAWBERRY Board [With WM8940 Codec] "
 	depends on SND_AMBARELLA_SOC
