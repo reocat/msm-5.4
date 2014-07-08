@@ -57,7 +57,6 @@ struct ambdma_chan {
 	struct tasklet_struct		tasklet;
 	spinlock_t			lock;
 
-	dma_cookie_t			completed_cookie;
 	u32				descs_allocated;
 	struct list_head		active_list;
 	struct list_head		queue;
@@ -114,6 +113,11 @@ static inline int ambdma_desc_is_error(struct ambdma_desc *amb_desc)
 	return (amb_desc->lli->rpt & (DMA_CHANX_STA_OE | DMA_CHANX_STA_ME |
 			DMA_CHANX_STA_BE | DMA_CHANX_STA_RWE |
 			DMA_CHANX_STA_AE)) != 0x0;
+}
+
+static inline int ambdma_desc_transfer_count(struct ambdma_desc *amb_desc)
+{
+	return amb_desc->lli->rpt & AMBARELLA_DMA_MAX_LENGTH;
 }
 
 static inline int ambdma_chan_is_enabled(struct ambdma_chan *amb_chan)
