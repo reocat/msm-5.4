@@ -23,13 +23,13 @@
 #include <linux/platform_device.h>
 
 #include <linux/dma-mapping.h>
-#include <linux/dmaengine.h>
 #include <linux/dmapool.h>
 #include <linux/delay.h>
 
 #include <mach/hardware.h>
 #include <plat/dma.h>
 
+#include "dmaengine.h"
 #include "ambarella_dma.h"
 
 int ambarella_dma_channel_id(void *chan)
@@ -166,7 +166,7 @@ static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
 {
 	struct dma_async_tx_descriptor	*txd = &amb_desc->txd;
 
-	amb_chan->completed_cookie = txd->cookie;
+	dma_cookie_complete(txd);
 
 	ambdma_return_desc(amb_chan, amb_desc);
 
@@ -349,20 +349,6 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 	return 0;
 }
 
-static dma_cookie_t ambdma_assign_cookie(struct ambdma_chan *amb_chan,
-		struct ambdma_desc *amb_desc)
-{
-	dma_cookie_t cookie = amb_chan->chan.cookie;
-
-	if (++cookie < 0)
-		cookie = 1;
-
-	amb_chan->chan.cookie = cookie;
-	amb_desc->txd.cookie = cookie;
-
-	return cookie;
-}
-
 static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *first)
 {
 	int id = amb_chan->id;
@@ -387,7 +373,7 @@ static dma_cookie_t ambdma_tx_submit(struct dma_async_tx_descriptor *tx)
 {
 	struct ambdma_desc *amb_desc;
 	struct ambdma_chan *amb_chan;
-	dma_cookie_t cookie = 0;
+	dma_cookie_t cookie;
 	unsigned long flags;
 
 	amb_desc = to_ambdma_desc(tx);
@@ -395,7 +381,7 @@ static dma_cookie_t ambdma_tx_submit(struct dma_async_tx_descriptor *tx)
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 
-	cookie = ambdma_assign_cookie(amb_chan, amb_desc);
+	cookie = dma_cookie_assign(tx);
 
 	if (list_empty(&amb_chan->active_list)) {
 		list_add_tail(&amb_desc->desc_node, &amb_chan->active_list);
@@ -443,7 +429,7 @@ static int ambdma_alloc_chan_resources(struct dma_chan *chan)
 	spin_lock_irqsave(&amb_chan->lock, flags);
 	amb_chan->descs_allocated = i;
 	list_splice_init(&tmp_list, &amb_chan->free_list);
-	amb_chan->completed_cookie = chan->cookie = 1;
+	dma_cookie_init(chan);
 	if (!amb_chan->chan.private)
 		amb_chan->force_stop = 1;
 	else
@@ -475,21 +461,66 @@ static void ambdma_free_chan_resources(struct dma_chan *chan)
 		ambdma_free_desc(chan, amb_desc);
 }
 
+/* If this function is called when the dma channel is transferring data,
+ * you may get inaccuracy result. */
+static u32 ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
+{
+	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
+	struct ambdma_desc *first = NULL, *amb_desc;
+	unsigned long flags;
+	u32 count = 0;
+
+	spin_lock_irqsave(&amb_chan->lock, flags);
+
+	/* according to the cookie, find amb_desc in active_list. */
+	if (!list_empty(&amb_chan->active_list)) {
+		amb_desc = ambdma_first_active(amb_chan);
+		if (amb_desc->txd.cookie == cookie)
+			first = amb_desc;
+	}
+
+	/* if it's in active list, we should get the count for non-completed
+	 * desc from the dma channel status register, and get the count for
+	 * completed desc from the "rpt" field in desc. */
+	if (first) {
+		count = amba_readl(DMA_CHAN_STA_REG(amb_chan->id));
+		count &= AMBARELLA_DMA_MAX_LENGTH;
+
+		count += ambdma_desc_transfer_count(first);
+		if (!list_empty(&first->tx_list)) {
+			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
+				count += ambdma_desc_transfer_count(amb_desc);
+			}
+		}
+	} else if (!list_empty(&amb_chan->queue)) {
+		/* if it's in queue list, all of the desc have not been started,
+		 * so the transferred count is always 0.  */
+		list_for_each_entry(amb_desc, &amb_chan->queue, desc_node) {
+			if (amb_desc->txd.cookie == cookie) {
+				first = amb_desc;
+				count = 0;
+				break;
+			}
+		}
+	}
+
+	spin_unlock_irqrestore(&amb_chan->lock, flags);
+
+	BUG_ON(!first);
+
+	return first->len - count;
+}
+
 static enum dma_status ambdma_tx_status(struct dma_chan *chan,
 		dma_cookie_t cookie, struct dma_tx_state *txstate)
 {
-	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
-	dma_cookie_t last_used, last_complete;
-	unsigned long flags;
+	enum dma_status ret;
 
-	spin_lock_irqsave(&amb_chan->lock, flags);
-	last_used = chan->cookie;
-	last_complete = amb_chan->completed_cookie;
-	spin_unlock_irqrestore(&amb_chan->lock, flags);
+	ret = dma_cookie_status(chan, cookie, txstate);
+	if (ret != DMA_SUCCESS)
+		dma_set_residue(txstate, ambdma_get_bytes_left(chan, cookie));
 
-	dma_set_tx_state(txstate, last_complete, last_used, 0);
-
-	return dma_async_is_complete(cookie, last_complete, last_used);
+	return ret;
 }
 
 static void ambdma_issue_pending(struct dma_chan *chan)
@@ -941,8 +972,8 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 		tasklet_init(&amb_chan->tasklet, ambdma_tasklet,
 				(unsigned long)amb_chan);
+		dma_cookie_init(&amb_chan->chan);
 
-		amb_chan->chan.cookie = amb_chan->completed_cookie = 1;
 		if (i == I2S_TX_DMA_CHAN || i == I2S_RX_DMA_CHAN ||
 			i == SSIS0_UART_TX_ACK_DMA_CHAN || i == SSIS0_UART_RX_ACK_DMA_CHAN) {
 			amb_chan->chan.device = &amb_dma->dma_slave;
