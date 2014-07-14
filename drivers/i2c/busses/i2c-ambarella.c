@@ -594,7 +594,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pinfo);
 
 	errorCode = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_i2c_irq,
-				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), pinfo);
+				IRQF_TRIGGER_RISING, dev_name(&pdev->dev), pinfo);
 	if (errorCode) {
 		dev_err(&pdev->dev, "Request IRQ failed!\n");
 		return errorCode;
