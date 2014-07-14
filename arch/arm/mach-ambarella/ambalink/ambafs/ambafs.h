@@ -69,8 +69,9 @@ extern int  ambafs_rpmsg_exec(struct ambafs_msg *, int);
 extern int  ambafs_rpmsg_send(struct ambafs_msg *msg, int len,
 			void (*cb)(void*, struct ambafs_msg*, int), void*);
 
-extern struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat);
-
+extern struct inode* ambafs_new_inode(struct super_block *, struct ambafs_stat*);
+extern void   ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat);
+extern struct ambafs_stat* ambafs_get_stat(struct inode *, void *buf, int size);
 extern int   ambafs_get_full_path(struct dentry *dir, char *buf, int len);
 extern void* ambafs_remote_open(struct dentry *dentry, int mode);
 extern void  ambafs_remote_close(void *fp);
@@ -78,6 +79,7 @@ extern void  ambafs_remote_close(void *fp);
 extern const struct file_operations  ambafs_dir_ops;
 extern const struct file_operations  ambafs_file_ops;
 extern const struct inode_operations ambafs_dir_inode_ops;
+extern const struct inode_operations ambafs_file_inode_ops;
 extern const struct address_space_operations ambafs_aops;
 extern       struct backing_dev_info ambafs_bdi;
 #endif  //__AMBAFS_H__

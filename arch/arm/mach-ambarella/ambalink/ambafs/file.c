@@ -1,5 +1,58 @@
 #include "ambafs.h"
 #include <linux/aio.h>
+#include <linux/pagemap.h>
+#include <linux/pagevec.h>
+
+/*
+ * invalidate the page cache contents for an inode
+ */
+static void clear_cache_contents(struct address_space *mapping)
+{
+	struct pagevec pv;
+	pgoff_t start = 0;
+	int loop;
+
+	pagevec_init(&pv, 0);
+	while(1) {
+
+		pv.nr = find_get_pages_contig(mapping, start,
+				PAGEVEC_SIZE, pv.pages);
+		if (pv.nr == 0)
+			break;
+
+		for (loop = 0; loop < pv.nr; loop++)
+			ClearPageUptodate(pv.pages[loop]);
+
+		start = pv.pages[loop-1]->index + 1;
+		__pagevec_release(&pv);
+	}
+}
+
+/*
+ * check inode stats again remote
+ */
+static void check_stat(struct inode *inode, int isOpen)
+{
+	int buf[128];
+	struct ambafs_stat *stat;
+	struct dentry *dentry = (struct dentry*)inode->i_private;
+
+	stat = ambafs_get_stat(inode, buf, sizeof(buf));
+	if (stat->type != AMBAFS_STAT_FILE) {
+		printk("failed to get stat\n");
+		return;
+	}
+
+	if (isOpen) {
+		if (inode->i_size == stat->size &&
+		    inode->i_mtime.tv_sec == stat->mtime)
+			return;
+
+		AMBAFS_DMSG("refresh inode\n");
+		clear_cache_contents(inode->i_mapping);
+	}
+	ambafs_update_inode(inode, stat);
+}
 
 /*
  * request remote core to open a file, returns remote filp
@@ -34,6 +87,7 @@ void ambafs_remote_close(void *fp)
 
 static int ambafs_file_open(struct inode *inode, struct file *filp)
 {
+	check_stat(inode, true);
 	filp->private_data = ambafs_remote_open(filp->f_dentry, filp->f_mode);
 	return 0;
 }
@@ -48,6 +102,7 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 	filemap_write_and_wait(inode->i_mapping);
 	mapping->private_data = NULL;
 	ambafs_remote_close(fp);
+	check_stat(inode, false);
 	return 0;
 }
 

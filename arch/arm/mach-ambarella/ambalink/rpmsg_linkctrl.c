@@ -21,12 +21,12 @@
 typedef u32 UINT32;
 
 typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
-    LINK_CTRL_CMD_HIBER_PREPARE_FROM_LINUX = 0,
-    LINK_CTRL_CMD_HIBER_ENTER_FROM_LINUX,
-    LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX,
-    LINK_CTRL_CMD_HIBER_ACK,
-    LINK_CTRL_CMD_SUSPEND,
-    LINK_CTRL_CMD_GPIO_SKIP_LIST
+	LINK_CTRL_CMD_HIBER_PREPARE_FROM_LINUX = 0,
+	LINK_CTRL_CMD_HIBER_ENTER_FROM_LINUX,
+	LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX,
+	LINK_CTRL_CMD_HIBER_ACK,
+	LINK_CTRL_CMD_SUSPEND,
+	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
 /*---------------------------------------------------------------------------*\
@@ -71,9 +71,9 @@ static int rpmsg_linkctrl_suspend(void *data)
 }
 
 /*----------------------------------------------------------------------------*/
-static int rpmsg_linkctrl_gpio_skip_list(void *data)
+static int rpmsg_linkctrl_gpio_linux_only_list(void *data)
 {
-	extern void ambarella_gpio_create_skip_mask(u32 gpio);
+	extern void ambarella_gpio_create_linux_only_mask(u32 gpio);
 	AMBA_RPDEV_LINK_CTRL_CMD_s *ctrl_cmd = (AMBA_RPDEV_LINK_CTRL_CMD_s *) data;
 	u8 *p;
 	int ret;
@@ -89,7 +89,7 @@ static int rpmsg_linkctrl_gpio_skip_list(void *data)
 			continue;
 		}
 
-		ambarella_gpio_create_skip_mask(gpio);
+		ambarella_gpio_create_linux_only_mask(gpio);
 	}
 
 	return 0;
@@ -159,7 +159,7 @@ typedef int (*PROC_FUNC)(void *data);
 static PROC_FUNC linkctrl_proc_list[] = {
 	rpmsg_linkctrl_ack,
 	rpmsg_linkctrl_suspend,
-	rpmsg_linkctrl_gpio_skip_list,
+	rpmsg_linkctrl_gpio_linux_only_list,
 };
 
 static void rpmsg_linkctrl_cb(struct rpmsg_channel *rpdev, void *data, int len,
@@ -178,7 +178,7 @@ static void rpmsg_linkctrl_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	case LINK_CTRL_CMD_SUSPEND:
 		linkctrl_proc_list[1](data);
 		break;
-	case LINK_CTRL_CMD_GPIO_SKIP_LIST:
+	case LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST:
 		linkctrl_proc_list[2](data);
 		break;
 	default:

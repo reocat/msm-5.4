@@ -11,44 +11,41 @@ struct readdir_db {
 /*
  * find a inode by its path
  */
-static ino_t ambafs_inode_lookup(struct dentry *dir, char *name)
+static struct inode* ambafs_inode_lookup(struct dentry *dir, char *name)
 {
 	struct qstr qname;
+	struct inode *inode = NULL;
+	struct dentry *dentry;
 
 	qname.name = name;
-	qname.len = strlen(name);
+	qname.len  = strlen(name);
+	qname.hash = full_name_hash(qname.name, qname.len);
 
-	return find_inode_number(dir, &qname);
+	dentry = d_lookup(dir, &qname);
+	if (dentry) {
+		inode = dentry->d_inode;
+		dput(dentry);
+	}
+
+	return inode;
 }
 
 /*
  * update the inode field
  */
-static void ambafs_update_inode(struct super_block *sb,
-		struct inode *inode, struct ambafs_stat *stat)
+void ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat)
 {
 	struct timespec ftime;
+	struct dentry *dentry = (struct dentry *)inode->i_private;
+	
+	if (dentry)
+		dentry->d_time = jiffies;
 
 	ftime.tv_sec = stat->atime;
 	ftime.tv_nsec = 0;
 
-	inode->i_uid = inode->i_gid = 0;
-	inode->i_blocks = 0;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = ftime;
-	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
 	inode->i_size = stat->size;
-
-	inode->i_mode = 0644;
-	if (stat->type == AMBAFS_STAT_FILE) {
-		inode->i_mode |= S_IFREG;
-		inode->i_fop = &ambafs_file_ops;
-		inode->i_mapping->a_ops = &ambafs_aops;
-		inode->i_mapping->backing_dev_info = &ambafs_bdi;
-	} else {
-		inode->i_mode |= S_IFDIR;
-		inode->i_fop = &ambafs_dir_ops;
-		inode->i_op = &ambafs_dir_inode_ops;
-	}
 }
 
 /*
@@ -62,24 +59,37 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 	if (!inode)
 		return NULL;
 
-	ambafs_update_inode(sb, inode, stat);
+	inode->i_uid = inode->i_gid = 0;
+	inode->i_blocks = 0;
+	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
 
-	/*AMBAFS_DMSG("%s %s size=%d ino=%d\n", __FUNCTION__,
-	  stat->name, (int)inode->i_size, (int)inode->i_ino);*/
+	inode->i_mode = 0644;
+	if (stat->type == AMBAFS_STAT_FILE) {
+		inode->i_mode |= S_IFREG;
+		inode->i_fop = &ambafs_file_ops;
+		inode->i_op = &ambafs_file_inode_ops;
+		inode->i_mapping->a_ops = &ambafs_aops;
+		inode->i_mapping->backing_dev_info = &ambafs_bdi;
+	} else {
+		inode->i_mode |= S_IFDIR;
+		inode->i_fop = &ambafs_dir_ops;
+		inode->i_op = &ambafs_dir_inode_ops;
+	}
+
 	return inode;
 }
 
 /*
  * create a new inode and add the corresponding dentry
  */
-static ino_t ambafs_inode_create(struct dentry *dir, struct ambafs_stat* stat)
+static struct inode* ambafs_inode_create(struct dentry *dir, struct ambafs_stat* stat)
 {
 	struct inode *inode;
 	struct dentry *dentry;
 
 	inode = ambafs_new_inode(dir->d_sb, stat);
 	if (!inode)
-		return 0;
+		return NULL;
 
 	dentry = d_alloc_name(dir, stat->name);
 	if (!dentry) {
@@ -90,7 +100,7 @@ static ino_t ambafs_inode_create(struct dentry *dir, struct ambafs_stat* stat)
 	d_add(dentry, inode);
 	inode->i_private = dentry;
 	dput(dentry);
-	return inode->i_ino;
+	return inode;
 }
 
 /*
@@ -127,7 +137,7 @@ int ambafs_get_full_path(struct dentry *dir, char *buf, int len)
 static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 			void *dirent, filldir_t filldir)
 {
-	ino_t ino;
+	struct inode *inode;
 	int stat_idx = 0, stat_len;
 	struct ambafs_msg  *msg  = &dir_db->msg;
 	struct ambafs_stat *stat = dir_db->stat;
@@ -139,19 +149,18 @@ static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 		if (!strcmp(stat->name, ".") || !strcmp(stat->name, ".."))
 			goto next_stat;
 
-		ino = ambafs_inode_lookup(dir, stat->name);
-		if (!ino) {
-			ino = ambafs_inode_create(dir, stat);
-			if (!ino) {
+		inode = ambafs_inode_lookup(dir, stat->name);
+		if (!inode) {
+			inode = ambafs_inode_create(dir, stat);
+			if (!inode) {
 				AMBAFS_EMSG("readdir fail for new node\n");
 				BUG();
 			}
-		} else {
-			//ambafs_update_inode(inode, stat);
 		}
+		ambafs_update_inode(inode, stat);
 
 		if (filldir(dirent, stat->name, strlen(stat->name),
-			    dir_db->offset++,  ino,
+			    dir_db->offset++,  inode->i_ino,
 			    stat->type == AMBAFS_STAT_FILE ? DT_REG : DT_DIR)) {
 			/*AMBAFS_DMSG("filldir paused at %s\n", stat->name);*/
 			dir_db->stat = stat;

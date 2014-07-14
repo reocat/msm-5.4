@@ -50,9 +50,9 @@ struct amb_gpio_regs {
 struct amb_gpio_regs amb_gpio_pm[GPIO_INSTANCES];
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
-#define skip_mask_gpio(regval, saved, mask)	((saved & ~mask) | (regval & mask))
+#define linux_only_mask_gpio(regval, saved, mask)	((saved & ~mask) | (regval & mask))
 
-static u32 ambalink_gpio_skip_mask[GPIO_INSTANCES];
+static u32 ambalink_gpio_linux_only_mask[GPIO_INSTANCES];
 #endif
 #endif
 
@@ -556,7 +556,7 @@ static int amb_gpio_probe(struct platform_device *pdev)
 	}
 #else
 #ifdef CONFIG_PM
-	memset(ambalink_gpio_skip_mask, 0x0, sizeof(u32) * GPIO_INSTANCES);
+	memset(ambalink_gpio_linux_only_mask, 0x0, sizeof(u32) * GPIO_INSTANCES);
 #endif
 #endif
 
@@ -615,11 +615,11 @@ static int amb_gpio_irq_suspend(void)
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 
-void ambarella_gpio_create_skip_mask(u32 gpio)
+void ambarella_gpio_create_linux_only_mask(u32 gpio)
 {
-	ambalink_gpio_skip_mask[gpio >> 5] |= 1 << (gpio % 32);
+	ambalink_gpio_linux_only_mask[gpio >> 5] |= 1 << (gpio % 32);
 }
-EXPORT_SYMBOL(ambarella_gpio_create_skip_mask);
+EXPORT_SYMBOL(ambarella_gpio_create_linux_only_mask);
 
 static void amb_gpio_irq_resume(void)
 {
@@ -645,36 +645,36 @@ static void amb_gpio_irq_resume(void)
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 		amb_gpio_raw_lock(&flags);
 #endif
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_AFSEL_OFFSET),
-					pm->afsel, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_AFSEL_OFFSET),
+					pm->afsel, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_AFSEL_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_DIR_OFFSET),
-					pm->dir, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_DIR_OFFSET),
+					pm->dir, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_DIR_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_MASK_OFFSET),
-					pm->mask, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_MASK_OFFSET),
+					pm->mask, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_MASK_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_DATA_OFFSET),
-					pm->data, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_DATA_OFFSET),
+					pm->data, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_DATA_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_IS_OFFSET),
-					pm->is, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_IS_OFFSET),
+					pm->is, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_IS_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_IBE_OFFSET),
-					pm->ibe, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_IBE_OFFSET),
+					pm->ibe, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_IBE_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_IEV_OFFSET),
-					pm->iev, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_IEV_OFFSET),
+					pm->iev, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_IEV_OFFSET, val);
 
-		val = skip_mask_gpio(amba_readl(regbase + GPIO_IE_OFFSET),
-					pm->ie, ambalink_gpio_skip_mask[i]);
+		val = linux_only_mask_gpio(amba_readl(regbase + GPIO_IE_OFFSET),
+					pm->ie, ambalink_gpio_linux_only_mask[i]);
 		amba_writel(regbase + GPIO_IE_OFFSET, val);
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK

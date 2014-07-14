@@ -74,7 +74,12 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 	else
 		reg_offs = RTC_ALAT_OFFSET;
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	/* Synchronize to ThreadX system time (TAI time spec).*/
+	val_sec = amba_readl(ambrtc->reg + reg_offs) + 10;
+#else
 	val_sec = amba_readl(ambrtc->reg + reg_offs);
+#endif
 	/* because old rtc cannot use the msb 2bits, we add 0x40000000
 	 * here, this is a pure software workaround. And the result is that
 	 * the time must be started at least from 2004.01.10 13:38:00 */

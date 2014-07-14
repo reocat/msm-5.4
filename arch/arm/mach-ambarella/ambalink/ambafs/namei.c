@@ -4,6 +4,8 @@
 #include <asm/page.h>
 #include "ambafs.h"
 
+#define CACHE_VALIDITY_INTERVAL (2*HZ)
+
 /*
  * helper function to trigger/wait a remote command excution
  */
@@ -53,6 +55,7 @@ static struct dentry *ambafs_lookup(struct inode *inode,
 		if (inode) {
 			struct dentry *new = d_splice_alias(inode, dentry);
 			inode->i_private = dentry;
+			ambafs_update_inode(inode, stat);
 			return new;
 		}
 	}
@@ -76,6 +79,7 @@ static int ambafs_create(struct inode *inode, struct dentry *dentry, umode_t mod
 		struct inode *child = ambafs_new_inode(dentry->d_sb, stat);
 		if (child) {
 			ambafs_attach_inode(dentry, child);
+			ambafs_update_inode(child, stat);
 			return 0;
 		}
 	}
@@ -116,6 +120,7 @@ static int ambafs_mkdir(struct inode *inode,
 		struct inode *child = ambafs_new_inode(dentry->d_sb, stat);
 		if (child) {
 			ambafs_attach_inode(dentry, child);
+			ambafs_update_inode(child, stat);
 			inc_nlink(child);
 			inc_nlink(inode);
 			return 0;
@@ -196,4 +201,45 @@ const struct inode_operations ambafs_dir_inode_ops = {
 	.mkdir  = ambafs_mkdir,
 	.rmdir  = ambafs_rmdir,
 	.rename = ambafs_rename,
+};
+
+/*
+ * get inode stat
+ */
+struct ambafs_stat* ambafs_get_stat(struct inode *inode, void *buf, int size)
+{
+	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
+	struct dentry *dir = (struct dentry*) inode->i_private;
+	char *path = (char*)msg->parameter;
+	int len;
+
+	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
+	AMBAFS_DMSG("ambafs_getattr %s\n", path);
+	msg->cmd = AMBAFS_CMD_STAT;
+	ambafs_rpmsg_exec(msg, len+1);
+
+	return (struct ambafs_stat*)msg->parameter;
+}
+
+/*
+ * get file attriubte, for cache consistency
+ */
+static int ambafs_getattr(struct vfsmount *mnt, struct dentry *dentry,
+		struct kstat *stat)
+{
+	if (jiffies - dentry->d_time >= CACHE_VALIDITY_INTERVAL) {
+		int buf[128];
+		struct ambafs_stat *astat;
+
+		astat = ambafs_get_stat(dentry->d_inode, buf, sizeof(buf));
+		if (astat->type == AMBAFS_STAT_FILE) {
+			ambafs_update_inode(dentry->d_inode, astat);
+		}
+	}
+	return simple_getattr(mnt, dentry, stat);
+}
+
+
+const struct inode_operations ambafs_file_inode_ops = {
+	.getattr = ambafs_getattr,
 };
