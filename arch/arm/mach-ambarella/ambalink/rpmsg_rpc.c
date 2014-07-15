@@ -80,7 +80,7 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 
 	/* access to the statistics in shared memory*/
 	sscanf(buf, "%d %u %u", &cond, &addr, &result);
-	value = (unsigned int *) ambarella_phys_to_virt(addr + RPC_PROFILE_ADDR);
+	value = (unsigned int *) (addr + RPC_PROFILE_ADDR);
 	switch (cond) {
 	case 1: //add the result
 		*value += result;
@@ -97,7 +97,7 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 		break;
 	case 4: //calculate injection time
 		//value is LuLastInjectTime & sec_value is LuTotalInjectTime
-		sec_value = (unsigned int *) ambarella_phys_to_virt(result + RPC_PROFILE_ADDR);
+		sec_value = (unsigned int *) (result + RPC_PROFILE_ADDR);
 		cur_time = amba_readl(PROFILE_TIMER);
 		if ( *value != 0) {
 			//calculate the duration from last to current injection.
