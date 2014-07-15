@@ -8,7 +8,7 @@
  * Based on es8328.c from Everest Semiconductor
  *
  * History:
- *	2014/7/01 - [Ken He] Created file
+ *	2014/07/01 - [Ken He] Created file
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +21,7 @@
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
@@ -33,6 +34,8 @@
 
 /* codec private data */
 struct es8388_priv {
+	unsigned int aud_rst_pin;
+	unsigned int aud_rst_active;
 	struct regmap *regmap;
 	unsigned int sysclk;
 };
@@ -96,6 +99,80 @@ static struct reg_default  es8388_reg_defaults[] = {
 	{ 52, 0x00 },
 };
 
+static int spk_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	int i;
+	struct snd_soc_codec *codec = w->codec;
+	struct es8388_priv *es8388 = snd_soc_codec_get_drvdata(codec);
+	//printk("%s %d  *****\n", __FUNCTION__, __LINE__);
+
+	switch (event) {
+		case SND_SOC_DAPM_PRE_PMU:
+			gpio_direction_output(es8388->aud_rst_pin, 0);
+			break;
+		case SND_SOC_DAPM_POST_PMU:
+			//Add speaker amplifier mute control
+			mdelay(100);
+			for( i = 0; i < 0x1d; i++)
+			{
+				snd_soc_write(codec, ES8388_DACCONTROL24, i);    //LOUT1/ROUT1 VOLUME
+				snd_soc_write(codec, ES8388_DACCONTROL25, i);
+				snd_soc_write(codec, ES8388_DACCONTROL26, i);    //LOUT2/ROUT2 VOLUME
+				snd_soc_write(codec, ES8388_DACCONTROL27, i);
+				mdelay(5);
+			}
+			gpio_direction_output(es8388->aud_rst_pin, 1);
+			break;
+		case SND_SOC_DAPM_PRE_PMD:
+			gpio_direction_output(es8388->aud_rst_pin, 0);
+			snd_soc_write(codec, ES8388_DACPOWER, 0x00);
+			mdelay(100);
+			for( i = 0; i < 0x1d; i++)
+			{
+				snd_soc_write(codec, ES8388_DACCONTROL24, 0x1d-i);    //LOUT1/ROUT1 VOLUME
+				snd_soc_write(codec, ES8388_DACCONTROL25,  0x1d-i);
+				snd_soc_write(codec, ES8388_DACCONTROL26,  0x1d-i);    //LOUT2/ROUT2 VOLUME
+				snd_soc_write(codec, ES8388_DACCONTROL27,  0x1d-i);
+				mdelay(5);
+			}
+			break;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
+static int adc_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	unsigned int regv;
+	struct snd_soc_codec *codec = w->codec;
+	//printk("%s %d****************     *****\n", __FUNCTION__, __LINE__);
+
+	switch (event) {
+		case SND_SOC_DAPM_POST_PMU:
+			snd_soc_write(codec, ES8388_ADCPOWER, 0x00);
+			snd_soc_write(codec, ES8388_CHIPPOWER, 0x00);
+			mdelay(100);
+			regv = snd_soc_read(codec, ES8388_ADCCONTROL3);
+			regv &= 0xFB;
+			snd_soc_write(codec, ES8388_ADCCONTROL3, regv);
+			break;
+		case SND_SOC_DAPM_POST_PMD:
+			regv = snd_soc_read(codec, ES8388_ADCCONTROL3);
+			regv |= 0x4;
+			snd_soc_write(codec, ES8388_ADCCONTROL3, regv);
+			snd_soc_write(codec, ES8388_ADCPOWER, 0xF9);
+			break;
+		default:
+			break;
+		}
+	return 0;
+}
+
+
 /* DAC/ADC Volume: min -96.0dB (0xC0) ~ max 0dB (0x00)  ( 0.5 dB step ) */
 static const DECLARE_TLV_DB_SCALE(digital_tlv, -9600, 50, 0);
 /* Analog Out Volume: min -30.0dB (0x00) ~ max 3dB (0x21)  ( 1 dB step ) */
@@ -124,14 +201,14 @@ static const char *es8388_line_texts[] = { "Line 1", "Line 2", "Differential"};
 static const unsigned int es8388_line_values[] = { 0, 1, 3};
 
 static const struct soc_enum es8388_lline_enum =
-	SOC_VALUE_ENUM_SINGLE(ES8388_ADCCONTROL2, 6, 3,
+	SOC_VALUE_ENUM_SINGLE(ES8388_ADCCONTROL2, 6, 4,
 		ARRAY_SIZE(es8388_line_texts), es8388_line_texts,
 		es8388_line_values);
 static const struct snd_kcontrol_new es8388_left_line_controls =
 	SOC_DAPM_VALUE_ENUM("Route", es8388_lline_enum);
 
 static const struct soc_enum es8388_rline_enum =
-	SOC_VALUE_ENUM_SINGLE(ES8388_ADCCONTROL2, 4, 3,
+	SOC_VALUE_ENUM_SINGLE(ES8388_ADCCONTROL2, 4, 4,
 		ARRAY_SIZE(es8388_line_texts), es8388_line_texts,
 		es8388_line_values);
 static const struct snd_kcontrol_new es8388_right_line_controls =
@@ -159,10 +236,21 @@ static const struct snd_kcontrol_new es8388_diffmux_controls =
 #endif
 /* Mono ADC Mux */
 static const char *es8388_mono_mux[] = {"Stereo", "Mono (Left)", "Mono (Right)", "NONE"};
-static const struct soc_enum monomux =
+static const unsigned int es8388_monomux_values[] = { 0, 1, 2, 3};
+/*static const struct soc_enum monomux =
 	SOC_ENUM_SINGLE(ES8388_ADCCONTROL3, 3, 4, es8388_mono_mux);
 static const struct snd_kcontrol_new es8388_monomux_controls =
 	SOC_DAPM_ENUM("Route", monomux);
+*/
+static const struct soc_enum monomux =
+	SOC_VALUE_ENUM_SINGLE(ES8388_ADCCONTROL3, 3, 4,
+		ARRAY_SIZE(es8388_mono_mux), es8388_mono_mux,
+		es8388_monomux_values);
+static const struct snd_kcontrol_new es8388_monomux_controls =
+	SOC_DAPM_VALUE_ENUM("Route", monomux);
+
+static const struct snd_kcontrol_new adc_switch_ctl =
+SOC_DAPM_SINGLE("Switch",ES8388_ADCCONTROL7, 2, 1, 1);
 
 static const struct snd_soc_dapm_widget es8388_dapm_widgets[] = {
 	/* DAC Part */
@@ -176,9 +264,12 @@ static const struct snd_soc_dapm_widget es8388_dapm_widgets[] = {
 
 	SND_SOC_DAPM_DAC("Left DAC"  , "Left Playback" , ES8388_DACPOWER, 7, 1),
 	SND_SOC_DAPM_DAC("Right DAC" , "Right Playback", ES8388_DACPOWER, 6, 1),
-	SND_SOC_DAPM_PGA("Left Out 1" , ES8388_DACPOWER, 5, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("Right Out 1", ES8388_DACPOWER, 4, 0, NULL, 0),
-	/* SND_SOC_DAPM_PGA("Left Out 2" , ES8388_DACPOWER, 3, 0, NULL, 0), */
+	SND_SOC_DAPM_PGA_E("Left Out 1", ES8388_DACPOWER, 5, 0, NULL,
+         0, spk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_PGA_E("Right Out 1", ES8388_DACPOWER, 4, 0, NULL,
+         0, spk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD),
+
+	 /* SND_SOC_DAPM_PGA("Left Out 2" , ES8388_DACPOWER, 3, 0, NULL, 0), */
 	/* SND_SOC_DAPM_PGA("Right Out 2", ES8388_DACPOWER, 2, 0, NULL, 0), */
 
 	SND_SOC_DAPM_OUTPUT("LOUT1"),
@@ -195,11 +286,14 @@ static const struct snd_soc_dapm_widget es8388_dapm_widgets[] = {
 
 	SND_SOC_DAPM_MUX("Left ADC Mux", SND_SOC_NOPM, 0, 0, &es8388_monomux_controls),
 	SND_SOC_DAPM_MUX("Right ADC Mux", SND_SOC_NOPM, 0, 0, &es8388_monomux_controls),
-
+//SND_SOC_DAPM_MUX("Left ADC Mux", ES8388_ADCPOWER, 7, 1, &es8388_monomux_controls),
+//SND_SOC_DAPM_MUX("Right ADC Mux", ES8388_ADCPOWER, 6, 1, &es8388_monomux_controls),
 	SND_SOC_DAPM_PGA("Left Analog Input" , ES8388_ADCPOWER, 7, 1, NULL, 0),
 	SND_SOC_DAPM_PGA("Right Analog Input", ES8388_ADCPOWER, 6, 1, NULL, 0),
-	SND_SOC_DAPM_ADC("Left ADC" , "Left Capture" , ES8388_ADCPOWER, 5, 1),
-	SND_SOC_DAPM_ADC("Right ADC", "Right Capture", ES8388_ADCPOWER, 4, 1),
+	SND_SOC_DAPM_ADC_E("Left ADC" , "Left Capture" , ES8388_ADCPOWER, 5, 1,
+	                   adc_event, SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_ADC_E("Right ADC", "Right Capture", ES8388_ADCPOWER, 4, 1,
+	                   adc_event, SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_MICBIAS("Mic Bias", ES8388_ADCPOWER, 3, 1),
 
@@ -323,7 +417,7 @@ static int es8388_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 	}
 
-	snd_soc_write(codec, ES8388_IFACE    , iface);
+	snd_soc_write(codec, ES8388_IFACE, iface);
 	snd_soc_write(codec, ES8388_ADC_IFACE, adciface);
 	snd_soc_write(codec, ES8388_DAC_IFACE, daciface);
 
@@ -516,7 +610,7 @@ static int es8388_probe(struct snd_soc_codec *codec)
 {
 	struct es8388_priv *es8388 = snd_soc_codec_get_drvdata(codec);
 	int ret = 0;
-	int i = 0;
+	//int i = 0;
 
 	dev_info(codec->dev, "ES8388 Audio Codec %s", ES8388_VERSION);
 	codec->control_data = es8388->regmap;
@@ -527,8 +621,21 @@ static int es8388_probe(struct snd_soc_codec *codec)
 		return ret;
 	}
 
-	es8388_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	ret = devm_gpio_request(codec->dev, es8388->aud_rst_pin, "es8388 aud reset");
+	if (ret < 0){
+		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
+		return ret;
+	}
 
+	/* Reset NS4890 aud */
+	gpio_direction_output(es8388->aud_rst_pin, es8388->aud_rst_active);
+	msleep(1);
+
+	es8388_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+#ifdef CONFIG_SND_SOC_ES8388S
+	snd_soc_write(codec, 0x35,0xA0);   //Enable Diff PGA for ES8388S
+	snd_soc_write(codec, 0x38,0x02);
+#endif
 	snd_soc_write(codec, ES8388_MASTERMODE,0x00);
 	snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
 	snd_soc_write(codec, ES8388_DACCONTROL23, 0x00);
@@ -540,20 +647,20 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	//-------------ADC---------------------------//
 	snd_soc_write(codec, ES8388_ADCCONTROL1, 0x88);
 	snd_soc_write(codec, ES8388_ADCCONTROL2, 0xF0);
-	snd_soc_write(codec, ES8388_ADCCONTROL3, 0x02);
+	snd_soc_write(codec, ES8388_ADCCONTROL3, 0x06);  //adc output in tri-state
 	snd_soc_write(codec, ES8388_ADCCONTROL4, 0x0C);
-	snd_soc_write(codec, ES8388_ADCCONTROL5, 0x02);
-	snd_soc_write(codec, ES8388_ADCCONTROL7, 0xF0);
+	snd_soc_write(codec, ES8388_ADCCONTROL5, 0x66);  //compitable with ES8388S
+	snd_soc_write(codec, ES8388_ADCCONTROL7, 0x30);
 	snd_soc_write(codec, ES8388_ADCCONTROL8, 0x00);
 	snd_soc_write(codec, ES8388_ADCCONTROL9, 0x00);
-	snd_soc_write(codec, ES8388_ADCCONTROL10, 0xDA);
+	snd_soc_write(codec, ES8388_ADCCONTROL10, 0xD2);
 	snd_soc_write(codec, ES8388_ADCCONTROL11, 0xB0);
 	snd_soc_write(codec, ES8388_ADCCONTROL12, 0x12);
 	snd_soc_write(codec, ES8388_ADCCONTROL13, 0x06);
 	snd_soc_write(codec, ES8388_ADCCONTROL14, 0x11);
 	//-------------DAC-----------------------------//
 	snd_soc_write(codec, ES8388_DACCONTROL1, 0x18);
-	snd_soc_write(codec, ES8388_DACCONTROL2, 0x02);
+	snd_soc_write(codec, ES8388_DACCONTROL2, 0x82);  //compitable with ES8388S
 	snd_soc_write(codec, ES8388_DACCONTROL3, 0x76);
 	snd_soc_write(codec, ES8388_DACCONTROL4, 0x00);
 	snd_soc_write(codec, ES8388_DACCONTROL5, 0x00);
@@ -561,14 +668,13 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, ES8388_DACCONTROL20, 0xB8);
 
 	snd_soc_write(codec, ES8388_CHIPPOWER, 0x00);
-	snd_soc_write(codec, ES8388_CONTROL1, 0x37);
+	snd_soc_write(codec, ES8388_CONTROL1, 0x36);
 	snd_soc_write(codec, ES8388_CONTROL2, 0x72);
-	snd_soc_write(codec, ES8388_DACPOWER, 0x3C);
-	snd_soc_write(codec, ES8388_ADCPOWER, 0xF9);
+	snd_soc_write(codec, ES8388_DACPOWER, 0x00);    //only start up DAC, disable LOUT/ROUT
+	snd_soc_write(codec, ES8388_ADCPOWER, 0x09);
 	snd_soc_write(codec, ES8388_CONTROL1, 0x32);
 	snd_soc_write(codec, ES8388_DACCONTROL3, 0x72);
-
-	snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
+/*
 	for( i = 0; i < 0x1d; i++)
 	{
 		snd_soc_write(codec, ES8388_DACCONTROL24, i);    //LOUT1/ROUT1 VOLUME
@@ -577,7 +683,7 @@ static int es8388_probe(struct snd_soc_codec *codec)
 		snd_soc_write(codec, ES8388_DACCONTROL27, i);
 		msleep(5);
 	}
-
+*/
 	return ret;
 }
 
@@ -585,7 +691,59 @@ static bool es8388_volatile_register(struct device *dev,
 							unsigned int reg)
 {
 	switch (reg) {
-		case 0:
+		case ES8388_CONTROL1:
+		case ES8388_CONTROL2:
+		case ES8388_CHIPPOWER:
+		case ES8388_ADCPOWER:
+		case ES8388_DACPOWER:
+		case ES8388_CHIPLOPOW1:
+		case ES8388_CHIPLOPOW2:
+		case ES8388_ANAVOLMANAG:
+		case ES8388_MASTERMODE:
+		case ES8388_ADCCONTROL1:
+		case ES8388_ADCCONTROL2:
+		case ES8388_ADCCONTROL3:
+		case ES8388_ADCCONTROL4:
+		case ES8388_ADCCONTROL5:
+		case ES8388_ADCCONTROL6:
+		case ES8388_ADCCONTROL7:
+		case ES8388_ADCCONTROL8:
+		case ES8388_ADCCONTROL9:
+		case ES8388_ADCCONTROL10:
+		case ES8388_ADCCONTROL11:
+		case ES8388_ADCCONTROL12:
+		case ES8388_ADCCONTROL13:
+		case ES8388_ADCCONTROL14:
+		case ES8388_DACCONTROL1:
+		case ES8388_DACCONTROL2:
+		case ES8388_DACCONTROL3:
+		case ES8388_DACCONTROL4:
+		case ES8388_DACCONTROL5:
+		case ES8388_DACCONTROL6:
+		case ES8388_DACCONTROL7:
+		case ES8388_DACCONTROL8:
+		case ES8388_DACCONTROL9:
+		case ES8388_DACCONTROL10:
+		case ES8388_DACCONTROL11:
+		case ES8388_DACCONTROL12:
+		case ES8388_DACCONTROL13:
+		case ES8388_DACCONTROL14:
+		case ES8388_DACCONTROL15:
+		case ES8388_DACCONTROL16:
+		case ES8388_DACCONTROL17:
+		case ES8388_DACCONTROL18:
+		case ES8388_DACCONTROL19:
+		case ES8388_DACCONTROL20:
+		case ES8388_DACCONTROL21:
+		case ES8388_DACCONTROL22:
+		case ES8388_DACCONTROL23:
+		case ES8388_DACCONTROL24:
+		case ES8388_DACCONTROL25:
+		case ES8388_DACCONTROL26:
+		case ES8388_DACCONTROL27:
+		case ES8388_DACCONTROL28:
+		case ES8388_DACCONTROL29:
+		case ES8388_DACCONTROL30:
 		return true;
 
 	default:
@@ -627,12 +785,22 @@ static struct regmap_config es8388_regmap = {
 static int es8388_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
+	struct device_node *np = i2c->dev.of_node;
 	struct es8388_priv *es8388;
 	int ret = 0;
+	enum of_gpio_flags flags;
+	int rst_pin;
 
 	es8388 = devm_kzalloc(&i2c->dev, sizeof(struct es8388_priv), GFP_KERNEL);
 	if (es8388 == NULL)
 		return -ENOMEM;
+
+	rst_pin = of_get_gpio_flags(np, 0, &flags);
+	if (rst_pin < 0 || !gpio_is_valid(rst_pin))
+		return -ENXIO;
+
+	es8388->aud_rst_pin = rst_pin;
+	es8388->aud_rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
 	i2c_set_clientdata(i2c, es8388);
 	es8388->regmap = devm_regmap_init_i2c(i2c, &es8388_regmap);
