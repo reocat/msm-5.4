@@ -532,7 +532,7 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, ES8388_MASTERMODE,0x00);
 	snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
 	snd_soc_write(codec, ES8388_DACCONTROL23, 0x00);
-	snd_soc_write(codec, ES8388_ANAVOLMANAG, 0x74);
+//	snd_soc_write(codec, ES8388_ANAVOLMANAG, 0x74);
 	snd_soc_write(codec, ES8388_DACCONTROL21, 0x80);
 	snd_soc_write(codec, ES8388_CONTROL1, 0x30);
 	snd_soc_write(codec, ES8388_CHIPLOPOW2, 0xFF);
@@ -543,13 +543,14 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, ES8388_ADCCONTROL3, 0x02);
 	snd_soc_write(codec, ES8388_ADCCONTROL4, 0x0C);
 	snd_soc_write(codec, ES8388_ADCCONTROL5, 0x02);
+	snd_soc_write(codec, ES8388_ADCCONTROL7, 0xF0);
 	snd_soc_write(codec, ES8388_ADCCONTROL8, 0x00);
 	snd_soc_write(codec, ES8388_ADCCONTROL9, 0x00);
-	snd_soc_write(codec, ES8388_ADCCONTROL10, 0xE2);
+	snd_soc_write(codec, ES8388_ADCCONTROL10, 0xDA);
 	snd_soc_write(codec, ES8388_ADCCONTROL11, 0xB0);
 	snd_soc_write(codec, ES8388_ADCCONTROL12, 0x12);
 	snd_soc_write(codec, ES8388_ADCCONTROL13, 0x06);
-	snd_soc_write(codec, ES8388_ADCCONTROL14, 0xC3);
+	snd_soc_write(codec, ES8388_ADCCONTROL14, 0x11);
 	//-------------DAC-----------------------------//
 	snd_soc_write(codec, ES8388_DACCONTROL1, 0x18);
 	snd_soc_write(codec, ES8388_DACCONTROL2, 0x02);
@@ -563,10 +564,11 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, ES8388_CONTROL1, 0x37);
 	snd_soc_write(codec, ES8388_CONTROL2, 0x72);
 	snd_soc_write(codec, ES8388_DACPOWER, 0x3C);
-	snd_soc_write(codec, ES8388_ADCPOWER, 0x09);
+	snd_soc_write(codec, ES8388_ADCPOWER, 0xF9);
 	snd_soc_write(codec, ES8388_CONTROL1, 0x32);
 	snd_soc_write(codec, ES8388_DACCONTROL3, 0x72);
 
+	snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
 	for( i = 0; i < 0x1d; i++)
 	{
 		snd_soc_write(codec, ES8388_DACCONTROL24, i);    //LOUT1/ROUT1 VOLUME
