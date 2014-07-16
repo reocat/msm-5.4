@@ -496,6 +496,25 @@ static struct clk gclk_ir = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
+static struct clk gclk_adc = {
+	.parent		= NULL,
+	.name		= "gclk_adc",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= SCALER_ADC_REG,
+	.frac_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
+	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.lock_bit	= 0,
+	.divider	= 2,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
 #if (SPI_INSTANCES >= 1) // a5s, s2, ione a7l
 static struct clk gclk_ssi = {
 	.parent		= &gclk_apb,
@@ -652,6 +671,7 @@ void ambarella_init_early(void)
 #endif
 	ambarella_clk_add(&gclk_sd);
 	ambarella_clk_add(&gclk_ir);
+	ambarella_clk_add(&gclk_adc);
 
 #if (SPI_INSTANCES >= 1)
 	ambarella_clk_add(&gclk_ssi);

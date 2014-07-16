@@ -265,15 +265,6 @@
 #define ADC_CHAN11_INTR_REG		ADC_REG(ADC_CHAN11_INTR_OFFSET)
 #endif
 
-#if (CHIP_REV == A7L)
-#error "ADC_DATA_REG/ADC_CHAN_INTR_REG(ch) Not Implemented"
-#else
-#define ADC_DATA_OFFSET(ch)		(ADC_DATA0_OFFSET + (ch) * 4)
-#define ADC_DATA_REG(ch)		ADC_REG(ADC_DATA_OFFSET(ch))
-#define ADC_CHAN_INTR_OFFSET(ch)	(ADC_CHAN0_INTR_OFFSET + (ch) * 4)
-#define ADC_CHAN_INTR_REG(ch)		ADC_REG(ADC_CHAN_INTR_OFFSET(ch))
-#endif
-
 #define ADC16_CTRL_OFFSET		0x198
 #define ADC16_CTRL_REG			RCT_REG(ADC16_CTRL_OFFSET)
 
@@ -290,12 +281,11 @@
 #define ADC_FIFO_ID_SHIFT		12
 #define ADC_FIFO_CONTROL_CLEAR		0x01
 
-#define ADC_CTRL_SCALER_POWERDOWN	0x100
-#define ADC_CTRL_POWERDOWN		0x2
-#define ADC_CTRL_CLK_SOURCE_SCALER	0x0
-#define ADC_CTRL_CLK_SOURCE_AUDIO	0x1
-#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define ADC_CONTROL_ENABLE		0x04
+#define ADC_CTRL_SCALER_POWERDOWN   0x100
+#define ADC_CTRL_POWERDOWN  0x2
+#define ADC_CTRL_CLK_SOURCE_SCALER  0x0
+#define ADC_CTRL_CLK_SOURCE_AUDIO  0x1
+#if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_CONTROL_MODE		0x02
 #define ADC_CONTROL_START		0x08
 #else
@@ -308,7 +298,7 @@
 #if (CHIP_REV == A5S)
 #define ADC_EN_HI(x)			((x) << 31)
 #define ADC_EN_LO(x)			((x) << 30)
-#elif (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_EN_HI(x)			((x) << 31)
 #define ADC_EN_LO(x)			((x) << 31)
 #else
@@ -336,42 +326,25 @@
 #define ADC_CH10			(1 << 10)
 #define ADC_CH11			(1 << 11)
 
-enum {
-	AMBADC_ONESHOT = 0,
-	AMBADC_CONTINUOUS,
+struct ambarella_adc_keymap {
+    u32 key_code;
+    u32 channel : 4;
+    u32 low_level : 12;
+    u32 high_level : 12;
 };
 
-struct ambadc_host {
-	struct device *dev;
-	u32 irq;
-	u32 clk;
-	bool polling_mode;
-	bool keep_start;
-	struct delayed_work work;
+struct ambarella_adc_client {
+    struct platform_device *pdev;
+    struct ambarella_adc_keymap *adc_keymap;
+    void (*set_irq_threshold)(u32 ch, u32 h_level, u32 l_level);
+    void (*readdata)(u32 *data);
+    void *nb;
+    bool irq_support;
 };
 
-struct ambadc_client;
-typedef int (*ambadc_client_callback)(struct ambadc_client *client,
-			u32 ch, u32 level);
-typedef int (*ambadc_read_level)(u32 ch);
-
-struct ambadc_client {
-	struct device *dev;
-	struct ambadc_host *host;
-	struct list_head node;
-	/* specify the channel this client is interested in */
-	unsigned long channel_mask[BITS_TO_LONGS(ADC_NUM_CHANNELS)];
-	u32 mode;
-	ambadc_client_callback callback;
-};
-
-extern struct ambadc_client *ambarella_adc_register_client(struct device *dev,
-			u32 mode, ambadc_client_callback callback);
-extern void ambarella_adc_unregister_client(struct ambadc_client *client);
-
-extern int ambarella_adc_set_threshold(struct ambadc_client *client,
-			u32 ch, u32 low, u32 high);
-extern int ambarella_adc_read_level(u32 ch);
-
+extern struct ambarella_adc_client *ambarella_adc_register(
+                    struct platform_device *pdev,
+                    void *nb);
+extern int ambarella_adc_unregister(struct ambarella_adc_client *client);
 #endif /* __PLAT_AMBARELLA_ADC_H__ */
 
