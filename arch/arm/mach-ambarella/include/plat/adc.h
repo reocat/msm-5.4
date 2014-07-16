@@ -267,6 +267,9 @@
 #define ADC_CHAN11_INTR_REG		ADC_REG(ADC_CHAN11_INTR_OFFSET)
 #endif
 
+#define ADC16_CTRL_OFFSET		0x198
+#define ADC16_CTRL_REG			RCT_REG(ADC16_CTRL_OFFSET)
+
 /* ADC_CONTROL_REG */
 #define ADC_CONTROL_GYRO_SAMPLE_MODE	0x08
 
@@ -281,6 +284,10 @@
 #define ADC_FIFO_ID_SHIFT		12
 #define ADC_FIFO_CONTROL_CLEAR		0x01
 
+#define ADC_CTRL_SCALER_POWERDOWN   0x100
+#define ADC_CTRL_POWERDOWN  0x2
+#define ADC_CTRL_CLK_SOURCE_SCALER  0x0
+#define ADC_CTRL_CLK_SOURCE_AUDIO  0x1
 #if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_CONTROL_MODE		0x02
 #define ADC_CONTROL_START		0x08
@@ -291,25 +298,19 @@
 #define ADC_CONTROL_STATUS		0x01
 
 #if (CHIP_REV == A5S)
-#define ADC_HI_THRESHOLD_EN		(0x1 << 21)
-#define ADC_LO_THRESHOLD_EN		(0x1 << 20)
+#define ADC_EN_HI(x)			((x) << 31)
+#define ADC_EN_LO(x)			((x) << 30)
 #elif (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define ADC_HI_THRESHOLD_EN		(0x1 << 31)
-#define ADC_LO_THRESHOLD_EN		(0x1 << 31)
+#define ADC_EN_HI(x)			((x) << 31)
+#define ADC_EN_LO(x)			((x) << 31)
 #else
 #define ADC_HI_THRESHOLD_EN		(0x1 << 31)
 #define ADC_LO_THRESHOLD_EN		(0x1 << 30)
 #endif
 
-#define ADC_THRESHOLD_INT_HI		1
-#define ADC_THRESHOLD_INT_LO		0
-
-#define ADC_VAL_HI(x)			((x) << 15)
-
+#define ADC_VAL_HI(x)			(((x) & 0xfff) << 16)
+#define ADC_VAL_LO(x)			((x) & 0xfff)
 /* ==========================================================================*/
-#define ADC_EN_HI(x)			((x) << 31)
-#define ADC_EN_LO(x)			((x) << 30)
-#define ADC_VAL_LO(x)			((x) & 0x3ff)
 
 #if (CHIP_REV == S2) || (CHIP_REV == S2L)
 #define ADC_MAX_SLOT_NUMBER		8
@@ -327,5 +328,25 @@
 #define ADC_CH10			(1 << 10)
 #define ADC_CH11			(1 << 11)
 
+struct ambarella_adc_keymap {
+    u32 key_code;
+    u32 channel : 4;
+    u32 low_level : 12;
+    u32 high_level : 12;
+};
+
+struct ambarella_adc_client {
+    struct platform_device *pdev;
+    struct ambarella_adc_keymap *adc_keymap;
+    void (*set_irq_threshold)(u32 ch, u32 h_level, u32 l_level);
+    void (*readdata)(u32 *data);
+    void *nb;
+    bool irq_support;
+};
+
+extern struct ambarella_adc_client *ambarella_adc_register(
+                    struct platform_device *pdev,
+                    void *nb);
+extern int ambarella_adc_unregister(struct ambarella_adc_client *client);
 #endif /* __PLAT_AMBARELLA_ADC_H__ */
 
