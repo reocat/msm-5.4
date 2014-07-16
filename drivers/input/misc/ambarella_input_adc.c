@@ -38,11 +38,6 @@
 #include <plat/rct.h>
 #include <plat/event.h>
 
-#undef dev_dbg
-#define dev_dbg(dev, format, arg...)		\
-	dev_printk(KERN_INFO, dev, format, ##arg)
-
-
 struct ambarella_input_adckey_info {
     struct input_dev *input;
     struct ambarella_adc_keymap *keymap;
