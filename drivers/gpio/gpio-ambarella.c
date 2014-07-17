@@ -33,6 +33,7 @@
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
 #include <plat/pinctrl.h>
+#include <plat/service.h>
 
 #if defined(CONFIG_PM)
 struct amb_gpio_regs {
@@ -55,7 +56,10 @@ struct amb_gpio_chip {
 	void __iomem			*regbase[GPIO_INSTANCES];
 	struct gpio_chip		*gc;
 	struct irq_domain		*domain;
+	struct ambarella_service	gpio_service;
 };
+
+static int ambarella_gpio_service(void *arg, void *result);
 
 /* gpiolib gpio_request callback function */
 static int amb_gpio_request(struct gpio_chip *gc, unsigned pin)
@@ -437,6 +441,11 @@ static int amb_gpio_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "Ambarella GPIO driver registered\n");
 
+	/* register ambarella gpio service for private operation */
+	amb_gpio->gpio_service.service = AMBARELLA_SERVICE_GPIO;
+	amb_gpio->gpio_service.func = ambarella_gpio_service;
+	ambarella_register_service(&amb_gpio->gpio_service);
+
 	return 0;
 }
 
@@ -540,38 +549,42 @@ MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella SoC GPIO driver");
 MODULE_LICENSE("GPL v2");
 
-/* gpio function wrapper, should be removed finally */
-int ambarella_gpio_request(int gpio)
+static int ambarella_gpio_service(void *arg, void *result)
 {
-	char label[8];
+	struct ambsvc_gpio *gpio_svc = arg;
+	u32 *value = result;
+	int rval = 0;
 
-	snprintf(label, 8, "gpio%d", gpio);
+	BUG_ON(!gpio_svc);
 
-	return gpio_request(gpio, label);
+	switch (gpio_svc->svc_id) {
+	case AMBSVC_GPIO_REQUEST:
+	{
+		char label[8];
+		snprintf(label, 8, "gpio%d", gpio_svc->gpio);
+		rval = gpio_request(gpio_svc->gpio, label);
+		break;
+	}
+	case AMBSVC_GPIO_OUTPUT:
+		rval = gpio_direction_output(gpio_svc->gpio, gpio_svc->value);
+		break;
+
+	case AMBSVC_GPIO_INPUT:
+		rval = gpio_direction_input(gpio_svc->gpio);
+		if (rval >= 0 && value)
+			*value = gpio_get_value_cansleep(gpio_svc->gpio);
+		break;
+
+	case AMBSVC_GPIO_FREE:
+		gpio_free(gpio_svc->gpio);
+		break;
+
+	default:
+		pr_err("%s: Invalid gpio service (%d)\n", __func__, gpio_svc->svc_id);
+		rval = -EINVAL;
+		break;
+	}
+
+	return rval;
 }
-EXPORT_SYMBOL(ambarella_gpio_request);
-
-int ambarella_gpio_get(int gpio)
-{
-	int rval;
-
-	rval = gpio_direction_input(gpio);
-	if (rval < 0)
-		return rval;
-
-	return gpio_get_value_cansleep(gpio);
-}
-EXPORT_SYMBOL(ambarella_gpio_get);
-
-int ambarella_gpio_set(int gpio, int value)
-{
-	return gpio_direction_output(gpio, value);
-}
-EXPORT_SYMBOL(ambarella_gpio_set);
-
-void ambarella_gpio_free(int gpio)
-{
-	gpio_free(gpio);
-}
-EXPORT_SYMBOL(ambarella_gpio_free);
 
