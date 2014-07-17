@@ -78,17 +78,13 @@
 /* ==========================================================================*/
 #if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
     (CHIP_REV == A8)
-#define GPIO_PAD_PULL_CTRL_VERSION		1
+#define GPIO_PAD_PULL_CTRL_SUPPORT		1
+#define GPIO_PAD_PULL_OFFSET			0xD000
 #elif (CHIP_REV == S2L)
-#define GPIO_PAD_PULL_CTRL_VERSION		2
+#define GPIO_PAD_PULL_CTRL_SUPPORT		1
+#define GPIO_PAD_PULL_OFFSET			0x15000
 #else
-#define GPIO_PAD_PULL_CTRL_VERSION		0
-#endif
-
-#if (GPIO_PAD_PULL_CTRL_VERSION == 1)
-#define GPIO_PAD_PULL_OFFSET		0xD000
-#elif (GPIO_PAD_PULL_CTRL_VERSION == 2)
-#define GPIO_PAD_PULL_OFFSET		0x15000
+#define GPIO_PAD_PULL_CTRL_SUPPORT		0
 #endif
 
 #define GPIO_PAD_PULL_EN_0_OFFSET	0x80
