@@ -162,10 +162,19 @@
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 
-extern int ambarella_gpio_request(int gpio);
-extern int ambarella_gpio_set(int gpio, int value);
-extern int ambarella_gpio_get(int gpio);
-extern void ambarella_gpio_free(int gpio);
+/* gpio service for private operation */
+enum ambsvc_gpio_service_id {
+	AMBSVC_GPIO_REQUEST = 0,
+	AMBSVC_GPIO_OUTPUT,
+	AMBSVC_GPIO_INPUT,
+	AMBSVC_GPIO_FREE,
+};
+
+struct ambsvc_gpio {
+	int svc_id;
+	int gpio;
+	int value;
+};
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
