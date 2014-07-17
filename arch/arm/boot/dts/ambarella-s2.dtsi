@@ -289,17 +289,16 @@
 			i2s0_pins: i2s0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>,
-						/* virtual pins, just for
-						   configuration purpose.*/
+						 /* virtual pins, just for configuration purpose.*/
 						 <0x0064 0x0065>;
 			};
 
 			usb_host_pins: uhc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1007 0x1009>,
-						/* virtual pins, just for
-						   configuration purpose. But not
-						   mentioned in APM, need test*/
+						 /* virtual pins, just for configuration purpose.
+						   EHCI_PRT_PWR and APP_PRT_OVCURR share the hw
+						   mode with SPI enable pin. */
 						 <0x1060 0x1061>;
 			};
 
