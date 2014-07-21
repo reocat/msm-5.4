@@ -34,6 +34,7 @@ else
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= pm.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= sleep.o
 obj-y						+= init.o
+obj-y						+= adc.o
 endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)

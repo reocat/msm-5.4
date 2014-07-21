@@ -7,6 +7,7 @@
  *  @History        ::
  *      Date        Name             Comments
  *      07/16/2014  Bing-Liang Hu    irq or polling depend on adc irq support
+ *      07/21/2014  Cao Rongrong     re-design the mechanism with ADC
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,336 +27,242 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/io.h>
 #include <linux/platform_device.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/slab.h>
 #include <linux/of.h>
-#include <mach/hardware.h>
 #include <plat/adc.h>
-#include <plat/rct.h>
-#include <plat/event.h>
 
-struct ambarella_input_adckey_info {
-    struct input_dev *input;
-    struct ambarella_adc_keymap *keymap;
-
-    struct ambarella_adc_client *client;
-    struct notifier_block   system_event;
-    u32 key_num;
-    u32 old_key[ADC_NUM_CHANNELS];
-    struct delayed_work work;
+struct ambadc_keymap {
+	u32 key_code;
+	u32 channel : 4;
+	u32 low_level : 12;
+	u32 high_level : 12;
 };
 
-static int ambarella_scan_adc_key_irq(struct notifier_block *nb,
-                                      unsigned long val,
-                                      void *data)
+struct ambarella_adckey {
+	struct input_dev *input;
+	struct ambadc_client *adc_client;
+
+	struct ambadc_keymap *keymap;
+	u32 key_num;
+	u32 key_saved[ADC_NUM_CHANNELS]; /* save the key currently pressed */
+};
+
+static void ambarella_adckey_filter_out(struct ambadc_client *client,
+		struct ambadc_keymap *keymap)
 {
-    u32 i, ch, low_level, high_level;
-    u32 *level;
-    struct input_dev *input;
-    struct ambarella_input_adckey_info *pinfo;
-    struct ambarella_adc_keymap *keymap;
-    struct ambarella_adc_client *adc_client;
-
-    if(val != AMBA_EVENT_ADC_INTERRUPT)
-        return -1;
-
-    pinfo = container_of(nb, struct ambarella_input_adckey_info, system_event);
-    keymap = pinfo->keymap;
-    input = pinfo->input;
-    level = data;
-    adc_client = pinfo->client;
-
-    for (i = 0; i < pinfo->key_num; i++, keymap++) {
-        low_level = keymap->low_level;
-        high_level = keymap->high_level;
-        ch = keymap->channel;
-
-        if (level[ch] < low_level || level[ch] > high_level)
-            continue;
-
-        if (pinfo->old_key[ch] == KEY_RESERVED
-            && keymap->key_code != KEY_RESERVED) {
-            input_report_key(input, keymap->key_code, 1);
-            input_sync(input);
-            pinfo->old_key[ch] = keymap->key_code;
-            if(adc_client->set_irq_threshold != NULL) {
-                adc_client->set_irq_threshold(keymap->channel,
-                                              keymap->high_level,
-                                              keymap->low_level);
-            }
-            dev_dbg(&input->dev, "key[%d:%d] pressed %d\n",
-                    ch, pinfo->old_key[ch], level[ch]);
-            break;
-        } else if (pinfo->old_key[ch] != KEY_RESERVED
-                   && keymap->key_code == KEY_RESERVED) {
-            input_report_key(input, pinfo->old_key[ch], 0);
-            input_sync(input);
-            if(adc_client->set_irq_threshold != NULL) {
-                adc_client->set_irq_threshold(keymap->channel,
-                                              keymap->high_level,
-                                              keymap->low_level);
-            }
-            dev_dbg(&input->dev, "key[%d:%d] released %d\n",
-                    ch, pinfo->old_key[ch], level[ch]);
-
-            pinfo->old_key[ch] = KEY_RESERVED;
-            break;
-        }
-    }
-
-    return 0;
+	/* we expect the adc level which is out of current key's range. */
+	ambarella_adc_set_threshold(client,
+		keymap->channel, keymap->low_level, keymap->high_level);
 }
 
-static void ambarella_scan_adc_key_polling(struct work_struct *work)
+static int ambarella_adckey_callback(struct ambadc_client *client,
+		u32 ch, u32 level)
 {
-    u32 i, ch, low_level, high_level;
-    u32 level[ADC_NUM_CHANNELS];
-    struct input_dev *input;
-    struct ambarella_input_adckey_info *pinfo;
-    struct ambarella_adc_keymap *keymap;
-    struct ambarella_adc_client *adc_client;
+	struct ambarella_adckey *adckey;
+	struct ambadc_keymap *keymap;
+	struct input_dev *input;
+	u32 i;
 
+	adckey = dev_get_drvdata(client->dev);
+	keymap = adckey->keymap;
+	input = adckey->input;
 
-    pinfo = container_of(work, struct ambarella_input_adckey_info, work.work);
-    keymap = pinfo->keymap;
-    input = pinfo->input;
-    adc_client = pinfo->client;
-    adc_client->readdata(level);
+	for (i = 0; i < adckey->key_num; i++, keymap++) {
+		if (ch != keymap->channel
+			|| level < keymap->low_level
+			|| level > keymap->high_level)
+			continue;
 
-    for (i = 0; i < pinfo->key_num; i++, keymap++) {
-        low_level = keymap->low_level;
-        high_level = keymap->high_level;
-        ch = keymap->channel;
+		if (adckey->key_saved[ch] == KEY_RESERVED
+			&& keymap->key_code != KEY_RESERVED) {
+			input_report_key(input, keymap->key_code, 1);
+			input_sync(input);
+			adckey->key_saved[ch] = keymap->key_code;
+			ambarella_adckey_filter_out(client, keymap);
 
-        if (level[ch] < low_level || level[ch] > high_level)
-            continue;
+			dev_dbg(&input->dev, "key[%d:%d] pressed %d\n",
+				ch, adckey->key_saved[ch], level);
+			break;
+		} else if (adckey->key_saved[ch] != KEY_RESERVED
+			&& keymap->key_code == KEY_RESERVED) {
+			input_report_key(input, adckey->key_saved[ch], 0);
+			input_sync(input);
+			adckey->key_saved[ch] = KEY_RESERVED;
+			ambarella_adckey_filter_out(client, keymap);
 
-        if (pinfo->old_key[ch] == KEY_RESERVED
-            && keymap->key_code != KEY_RESERVED) {
-            input_report_key(input, keymap->key_code, 1);
-            input_sync(input);
-            pinfo->old_key[ch] = keymap->key_code;
-            dev_dbg(&input->dev, "key[%d:%d] pressed %d\n",
-                    ch, pinfo->old_key[ch], level[ch]);
-            break;
-        } else if (pinfo->old_key[ch] != KEY_RESERVED
-                   && keymap->key_code == KEY_RESERVED) {
-            input_report_key(input, pinfo->old_key[ch], 0);
-            input_sync(input);
-            dev_dbg(&input->dev, "key[%d:%d] released %d\n",
-                    ch, pinfo->old_key[ch], level[ch]);
+			dev_dbg(&input->dev, "key[%d:%d] released %d\n",
+				ch, adckey->key_saved[ch], level);
+			break;
+		}
+	}
 
-            pinfo->old_key[ch] = KEY_RESERVED;
-            break;
-        }
-    }
-
-    queue_delayed_work(system_freezable_wq,
-                       &pinfo->work,
-                       msecs_to_jiffies(20));
+	return 0;
 }
 
-
-static int ambarella_adckeymap_parse(struct platform_device *pdev,
-                                     const __be32 *prop,
-                                     struct ambarella_input_adckey_info *pinfo)
+static int ambarella_adckey_of_parse(struct platform_device *pdev,
+		struct ambarella_adckey *adckey)
 {
-    struct ambarella_adc_keymap *keymap;
-    u32 propval, i, size = 0;
+	struct device_node *np = pdev->dev.of_node;
+	struct ambadc_keymap *keymap;
+	const __be32 *prop;
+	u32 propval, i, size;
 
-    /* cells is 2 for each keymap */
-    size = pinfo->key_num;
+	prop = of_get_property(np, "amb,keymap", &size);
+	if (!prop || size % (sizeof(__be32) * 2)) {
+		dev_err(&pdev->dev, "Invalid keymap!\n");
+		return -ENOENT;
+	}
 
-    pinfo->keymap = devm_kzalloc(&pdev->dev,
-                                 sizeof(struct ambarella_adc_keymap) * size,
-                                 GFP_KERNEL);
-    if (pinfo->keymap == NULL) {
-        dev_err(&pdev->dev, "No memory for keymap!\n");
-        return -ENOMEM;
-    }
+	/* cells is 2 for each keymap */
+	size /= sizeof(__be32) * 2;
+	adckey->key_num = size;
 
-    keymap = pinfo->keymap;
+	adckey->keymap = devm_kzalloc(&pdev->dev,
+			sizeof(struct ambadc_keymap) * size, GFP_KERNEL);
+	if (adckey->keymap == NULL){
+		dev_err(&pdev->dev, "No memory for keymap!\n");
+		return -ENOMEM;
+	}
 
-    for (i = 0; i < size; i++) {
-        propval = be32_to_cpup(prop + i * 2);
-        keymap->low_level = propval & 0xfff;
-        keymap->high_level = (propval >> 16) & 0xfff;
-        keymap->channel = propval >> 28;
-        if (keymap->channel >= ADC_NUM_CHANNELS) {
-            dev_err(&pdev->dev, "Invalid channel: %d\n",
-                    keymap->channel);
-            return -EINVAL;
-        }
+	keymap = adckey->keymap;
 
-        propval = be32_to_cpup(prop + i * 2 + 1);
-        keymap->key_code = propval;
+	for (i = 0; i < adckey->key_num; i++, keymap++) {
+		propval = be32_to_cpup(prop + i * 2);
+		keymap->low_level = propval & 0xfff;
+		keymap->high_level = (propval >> 16) & 0xfff;
+		keymap->channel = propval >> 28;
+		if (keymap->channel >= ADC_NUM_CHANNELS) {
+			dev_err(&pdev->dev, "Invalid channel: %d\n", keymap->channel);
+			return -EINVAL;
+		}
 
-        keymap++;
-    }
+		propval = be32_to_cpup(prop + i * 2 + 1);
+		keymap->key_code = propval;
 
-    return 0;
+		if (keymap->key_code == KEY_RESERVED)
+			ambarella_adckey_filter_out(adckey->adc_client, keymap);
+
+		input_set_capability(adckey->input, EV_KEY, keymap->key_code);
+	}
+
+	for (i = 0; i < ADC_NUM_CHANNELS; i++)
+		adckey->key_saved[i] = KEY_RESERVED;
+
+	return 0;
 }
 
-static int ambarella_input_key_setup(struct platform_device *pdev,
-                                     struct ambarella_input_adckey_info *pinfo)
+static int ambarella_adckey_probe(struct platform_device *pdev)
 {
-    u32 i, num;
-    struct ambarella_adc_keymap *keymap;
-    struct ambarella_adc_client *adc_client;
+	struct ambarella_adckey *adckey;
+	struct input_dev *input;
+	int rval = 0;
 
-    adc_client = pinfo->client;
-    num = pinfo->key_num;
-    keymap = pinfo->keymap;
-    for (i = 0; i < ADC_NUM_CHANNELS; i++)
-        pinfo->old_key[i] = KEY_RESERVED;
+	adckey = devm_kzalloc(&pdev->dev,
+			     sizeof(struct ambarella_adckey),
+			     GFP_KERNEL);
+	if (!adckey) {
+		dev_err(&pdev->dev, "Failed to allocate adckey!\n");
+		return -ENOMEM;
+	}
 
-    for (i = 0; i < num; i++) {
-        input_set_capability(pinfo->input, EV_KEY, keymap->key_code);
-        if((keymap->key_code == KEY_RESERVED) &&
-           (adc_client->set_irq_threshold != NULL)) {
-            adc_client->set_irq_threshold(keymap->channel,
-                                          keymap->high_level,
-                                          keymap->low_level);
-        }
-        keymap++;
-    }
+	input = input_allocate_device();
+	if (!input) {
+		dev_err(&pdev->dev, "input_allocate_device fail!\n");
+		return -ENOMEM;
+	}
 
-    return 0;
+	input->name = "AmbADCkey";
+	input->phys = "ambadckey/input0";
+	input->id.bustype = BUS_HOST;
+	input->dev.parent = &pdev->dev;
+
+	rval = input_register_device(input);
+	if (rval < 0) {
+		dev_err(&pdev->dev, "Register input_dev failed!\n");
+		goto adckey_probe_err0;
+	}
+
+	adckey->input = input;
+
+	adckey->adc_client = ambarella_adc_register_client(&pdev->dev,
+					AMBADC_CONTINUOUS,
+					ambarella_adckey_callback);
+	if (!adckey->adc_client) {
+		dev_err(&pdev->dev, "Register adc client failed!\n");
+		goto adckey_probe_err1;
+	}
+
+	rval = ambarella_adckey_of_parse(pdev, adckey);
+	if (rval < 0)
+		goto adckey_probe_err2;
+
+	platform_set_drvdata(pdev, adckey);
+
+	dev_info(&pdev->dev, "ADC key input driver probed!\n");
+
+	return 0;
+
+adckey_probe_err2:
+	ambarella_adc_unregister_client(adckey->adc_client);
+adckey_probe_err1:
+	input_unregister_device(adckey->input);
+adckey_probe_err0:
+	input_free_device(input);
+	return rval;
 }
 
-static int ambarella_input_adckey_probe(struct platform_device *pdev)
+static int ambarella_adckey_remove(struct platform_device *pdev)
 {
-    int rval = 0;
-    u32 size = 0;
-    const __be32 *prop;
-    struct input_dev *input;
-    struct ambarella_input_adckey_info *pinfo;
-    struct ambarella_adc_client *adc_client;
-    struct device_node *np = pdev->dev.of_node;
+	struct ambarella_adckey *adckey;
+	int rval = 0;
 
-    pinfo = devm_kzalloc(&pdev->dev,
-                         sizeof(struct ambarella_input_adckey_info),
-                         GFP_KERNEL);
-    if (!pinfo) {
-        dev_err(&pdev->dev, "Failed to allocate pinfo!\n");
-        return -ENOMEM;
-    }
+	adckey = platform_get_drvdata(pdev);
 
-    // get adc keymap data if adc used for keybutton
-    prop = of_get_property(np, "amb,adckeymap", &size);
-    if(!prop) {
-        dev_err(&pdev->dev, "no adc keymap info \n");
-        return -EINVAL;
-    } else {
-        //get adc key level value
-        size /= sizeof(__be32) * 2;
-        pinfo->key_num = size;
-        rval = ambarella_adckeymap_parse(pdev, prop, pinfo);
-        if(rval)
-            return rval;
-    }
+	ambarella_adc_unregister_client(adckey->adc_client);
+	input_unregister_device(adckey->input);
+	input_free_device(adckey->input);
 
-    input = input_allocate_device();
-    if (!input) {
-        dev_err(&pdev->dev, "input_allocate_device fail!\n");
-        return -ENOMEM;
-    }
+	dev_info(&pdev->dev, "Remove Ambarella ADC Key driver.\n");
 
-    input->name = "AmbADCkey";
-    input->phys = "ambadckey/input0";
-    input->id.bustype = BUS_HOST;
-    rval = input_register_device(input);
-    if (rval) {
-        dev_err(&pdev->dev, "Register input_dev failed!\n");
-        goto INPUT_REGISTER_ERR;
-    }
-
-    pinfo->input = input;
-    pinfo->system_event.notifier_call = ambarella_scan_adc_key_irq;
-    adc_client = ambarella_adc_register(
-                     pdev,
-                     &pinfo->system_event);
-    if(!adc_client) {
-        dev_err(&pdev->dev, "Failed to register adc client\n");
-        rval = PTR_ERR(adc_client);
-        goto CLIENT_REGISTER_ERR;
-    }
-
-    pinfo->client = adc_client;
-    ambarella_input_key_setup(pdev, pinfo);
-
-    if(!adc_client->irq_support) {
-        INIT_DELAYED_WORK(&pinfo->work, ambarella_scan_adc_key_polling);
-        queue_delayed_work(system_freezable_wq,
-                           &pinfo->work,
-                           msecs_to_jiffies(20));
-    }
-
-    platform_set_drvdata(pdev, pinfo);
-    dev_notice(&pdev->dev, "ADC key input driver probed!\n");
-
-    return 0;
-
-CLIENT_REGISTER_ERR:
-    input_unregister_device(pinfo->input);
-INPUT_REGISTER_ERR:
-    input_free_device(input);
-    return rval;
-}
-
-static int ambarella_input_adckey_remove(struct platform_device *pdev)
-{
-    struct ambarella_input_adckey_info	*pinfo;
-    int rval = 0;
-    pinfo = platform_get_drvdata(pdev);
-    cancel_delayed_work_sync(&pinfo->work);
-    ambarella_adc_unregister(pinfo->client);
-    input_unregister_device(pinfo->input);
-    input_free_device(pinfo->input);
-    dev_notice(&pdev->dev,
-               "Remove Ambarella ADC Key driver.\n");
-
-    return rval;
+	return rval;
 }
 
 #ifdef CONFIG_PM
-static int ambarella_input_adckey_suspend(struct platform_device *pdev,
-                                          pm_message_t state)
+static int ambarella_adckey_suspend(struct platform_device *pdev,
+		pm_message_t state)
 {
-    return 0;
+	return 0;
 }
 
-static int ambarella_input_adckey_resume(struct platform_device *pdev)
+static int ambarella_adckey_resume(struct platform_device *pdev)
 {
-    return 0;
+	return 0;
 }
 #endif
 
-static const struct of_device_id ambarella_input_adckey_dt_ids[] = {
-    {.compatible = "ambarella,input_adckey", },
-    {},
+static const struct of_device_id ambarella_adckey_dt_ids[] = {
+	{.compatible = "ambarella,input_adckey", },
+	{},
 };
-MODULE_DEVICE_TABLE(of, ambarella_input_adckey_dt_ids);
+MODULE_DEVICE_TABLE(of, ambarella_adckey_dt_ids);
 
-static struct platform_driver ambarella_input_adckey_driver = {
-    .probe		= ambarella_input_adckey_probe,
-    .remove		= ambarella_input_adckey_remove,
+static struct platform_driver ambarella_adckey_driver = {
+	.probe		= ambarella_adckey_probe,
+	.remove		= ambarella_adckey_remove,
 #ifdef CONFIG_PM
-    .suspend	= ambarella_input_adckey_suspend,
-    .resume		= ambarella_input_adckey_resume,
+	.suspend	= ambarella_adckey_suspend,
+	.resume		= ambarella_adckey_resume,
 #endif
-    .driver		= {
-        .name	= "ambarella-input-adc",
-        .owner	= THIS_MODULE,
-        .of_match_table = ambarella_input_adckey_dt_ids,
-    },
+	.driver		= {
+		.name	= "ambarella-adckey",
+		.owner	= THIS_MODULE,
+		.of_match_table = ambarella_adckey_dt_ids,
+	},
 };
 
-module_platform_driver(ambarella_input_adckey_driver);
+module_platform_driver(ambarella_adckey_driver);
 
 MODULE_AUTHOR("Bing-Liang Hu <blhu@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella ADC key Driver");

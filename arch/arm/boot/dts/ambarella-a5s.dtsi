@@ -161,9 +161,11 @@
 		};
 
 		adc@7000d000 {
-			compatible = "ambarella,adc-old";
+			compatible = "ambarella,adc";
 			reg = <0x7000d000 0x1000>;
 			interrupts = <34 0x4>;
+			clock-frequency = <3000000>;
+			amb,polling-mode;
 		};
 
 		ir@70006000 {

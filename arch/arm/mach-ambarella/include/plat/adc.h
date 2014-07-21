@@ -140,9 +140,9 @@
 #define ADC_STATUS_OFFSET		0x000
 #define ADC_SLOT_NUM_OFFSET		0x00c
 #define ADC_SLOT_PERIOD_OFFSET		0x010
-#define ADC_CTRL_INTR_TABLE_OFFSET		0x044
-#define ADC_DATA_INTR_TABLE_OFFSET		0x048
-#define ADC_FIFO_INTR_TABLE_OFFSET		0x04c
+#define ADC_CTRL_INTR_TABLE_OFFSET	0x044
+#define ADC_DATA_INTR_TABLE_OFFSET	0x048
+#define ADC_FIFO_INTR_TABLE_OFFSET	0x04c
 #define ADC_ERR_STATUS_OFFSET		0x050
 
 #define ADC_SLOT_CTRL_0_OFFSET		0x100
@@ -160,10 +160,10 @@
 #define ADC_FIFO_CTRL_3_OFFSET		0x18C
 #define ADC_FIFO_CTRL_OFFSET		0x190
 
-#define ADC_FIFO_STATUS_0_OFFSET		0x1a0
-#define ADC_FIFO_STATUS_1_OFFSET		0x1a4
-#define ADC_FIFO_STATUS_2_OFFSET		0x1a8
-#define ADC_FIFO_STATUS_3_OFFSET		0x1ac
+#define ADC_FIFO_STATUS_0_OFFSET	0x1a0
+#define ADC_FIFO_STATUS_1_OFFSET	0x1a4
+#define ADC_FIFO_STATUS_2_OFFSET	0x1a8
+#define ADC_FIFO_STATUS_3_OFFSET	0x1ac
 
 #define ADC_EC_ADC_OFFSET		0x1C0
 #define ADC_EC_REFVAL_OFFSET		0x1C4
@@ -222,21 +222,21 @@
 
 /* S2, S2L and S3 */
 #define ADC_STATUS_REG			ADC_REG(ADC_STATUS_OFFSET)
-#define ADC_SLOT_NUM_REG			ADC_REG(ADC_SLOT_NUM_OFFSET)
-#define ADC_SLOT_PERIOD_REG			ADC_REG(ADC_SLOT_PERIOD_OFFSET)
-#define ADC_CTRL_INTR_TABLE_REG			ADC_REG(ADC_CTRL_INTR_TABLE_OFFSET)
-#define ADC_DATA_INTR_TABLE_REG			ADC_REG(ADC_DATA_INTR_TABLE_OFFSET)
-#define ADC_FIFO_INTR_TABLE_REG			ADC_REG(ADC_FIFO_INTR_TABLE_OFFSET)
-#define ADC_ERR_STATUS_REG			ADC_REG(ADC_ERR_STATUS_OFFSET)
+#define ADC_SLOT_NUM_REG		ADC_REG(ADC_SLOT_NUM_OFFSET)
+#define ADC_SLOT_PERIOD_REG		ADC_REG(ADC_SLOT_PERIOD_OFFSET)
+#define ADC_CTRL_INTR_TABLE_REG		ADC_REG(ADC_CTRL_INTR_TABLE_OFFSET)
+#define ADC_DATA_INTR_TABLE_REG		ADC_REG(ADC_DATA_INTR_TABLE_OFFSET)
+#define ADC_FIFO_INTR_TABLE_REG		ADC_REG(ADC_FIFO_INTR_TABLE_OFFSET)
+#define ADC_ERR_STATUS_REG		ADC_REG(ADC_ERR_STATUS_OFFSET)
 
-#define ADC_SLOT_CTRL_0_REG			ADC_REG(ADC_SLOT_CTRL_0_OFFSET)
-#define ADC_SLOT_CTRL_1_REG			ADC_REG(ADC_SLOT_CTRL_1_OFFSET)
-#define ADC_SLOT_CTRL_2_REG			ADC_REG(ADC_SLOT_CTRL_2_OFFSET)
-#define ADC_SLOT_CTRL_3_REG			ADC_REG(ADC_SLOT_CTRL_3_OFFSET)
-#define ADC_SLOT_CTRL_4_REG			ADC_REG(ADC_SLOT_CTRL_4_OFFSET)
-#define ADC_SLOT_CTRL_5_REG			ADC_REG(ADC_SLOT_CTRL_5_OFFSET)
-#define ADC_SLOT_CTRL_6_REG			ADC_REG(ADC_SLOT_CTRL_6_OFFSET)
-#define ADC_SLOT_CTRL_7_REG			ADC_REG(ADC_SLOT_CTRL_7_OFFSET)
+#define ADC_SLOT_CTRL_0_REG		ADC_REG(ADC_SLOT_CTRL_0_OFFSET)
+#define ADC_SLOT_CTRL_1_REG		ADC_REG(ADC_SLOT_CTRL_1_OFFSET)
+#define ADC_SLOT_CTRL_2_REG		ADC_REG(ADC_SLOT_CTRL_2_OFFSET)
+#define ADC_SLOT_CTRL_3_REG		ADC_REG(ADC_SLOT_CTRL_3_OFFSET)
+#define ADC_SLOT_CTRL_4_REG		ADC_REG(ADC_SLOT_CTRL_4_OFFSET)
+#define ADC_SLOT_CTRL_5_REG		ADC_REG(ADC_SLOT_CTRL_5_OFFSET)
+#define ADC_SLOT_CTRL_6_REG		ADC_REG(ADC_SLOT_CTRL_6_OFFSET)
+#define ADC_SLOT_CTRL_7_REG		ADC_REG(ADC_SLOT_CTRL_7_OFFSET)
 
 #define ADC_FIFO_CTRL_0_REG		ADC_REG(ADC_FIFO_CTRL_0_OFFSET)
 #define ADC_FIFO_CTRL_1_REG		ADC_REG(ADC_FIFO_CTRL_1_OFFSET)
@@ -244,25 +244,34 @@
 #define ADC_FIFO_CTRL_3_REG		ADC_REG(ADC_FIFO_CTRL_3_OFFSET)
 #define ADC_FIFO_CTRL_REG		ADC_REG(ADC_FIFO_CTRL_OFFSET)
 
-#define ADC_FIFO_STATUS_0_REG			ADC_REG(ADC_FIFO_STATUS_0_OFFSET)
-#define ADC_FIFO_STATUS_1_REG			ADC_REG(ADC_FIFO_STATUS_1_OFFSET)
-#define ADC_FIFO_STATUS_2_REG			ADC_REG(ADC_FIFO_STATUS_2_OFFSET)
-#define ADC_FIFO_STATUS_3_REG			ADC_REG(ADC_FIFO_STATUS_3_OFFSET)
+#define ADC_FIFO_STATUS_0_REG		ADC_REG(ADC_FIFO_STATUS_0_OFFSET)
+#define ADC_FIFO_STATUS_1_REG		ADC_REG(ADC_FIFO_STATUS_1_OFFSET)
+#define ADC_FIFO_STATUS_2_REG		ADC_REG(ADC_FIFO_STATUS_2_OFFSET)
+#define ADC_FIFO_STATUS_3_REG		ADC_REG(ADC_FIFO_STATUS_3_OFFSET)
 
 #define ADC_EC_ADC_REG			ADC_REG(ADC_EC_ADC_OFFSET)
-#define ADC_EC_REFVAL_REG			ADC_REG(ADC_EC_REFVAL_OFFSET)
-#define ADC_EC_RESHAPE_REG			ADC_REG(ADC_EC_RESHAPE_OFFSET)
+#define ADC_EC_REFVAL_REG		ADC_REG(ADC_EC_REFVAL_OFFSET)
+#define ADC_EC_RESHAPE_REG		ADC_REG(ADC_EC_RESHAPE_OFFSET)
 
-#define ADC_FIFO_DATA0_REG			ADC_REG(ADC_FIFO_DATA0_OFFSET)
-#define ADC_FIFO_DATA1_REG			ADC_REG(ADC_FIFO_DATA1_OFFSET)
-#define ADC_FIFO_DATA2_REG			ADC_REG(ADC_FIFO_DATA2_OFFSET)
-#define ADC_FIFO_DATA3_REG			ADC_REG(ADC_FIFO_DATA3_OFFSET)
+#define ADC_FIFO_DATA0_REG		ADC_REG(ADC_FIFO_DATA0_OFFSET)
+#define ADC_FIFO_DATA1_REG		ADC_REG(ADC_FIFO_DATA1_OFFSET)
+#define ADC_FIFO_DATA2_REG		ADC_REG(ADC_FIFO_DATA2_OFFSET)
+#define ADC_FIFO_DATA3_REG		ADC_REG(ADC_FIFO_DATA3_OFFSET)
 
 #if (CHIP_REV == S2)
 #define ADC_DATA10_REG			ADC_REG(ADC_DATA10_OFFSET)
 #define ADC_DATA11_REG			ADC_REG(ADC_DATA11_OFFSET)
 #define ADC_CHAN10_INTR_REG		ADC_REG(ADC_CHAN10_INTR_OFFSET)
 #define ADC_CHAN11_INTR_REG		ADC_REG(ADC_CHAN11_INTR_OFFSET)
+#endif
+
+#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#error "ADC_DATA_REG/ADC_CHAN_INTR_REG(ch) Not Implemented"
+#else
+#define ADC_DATA_OFFSET(ch)		(ADC_DATA0_OFFSET + (ch) * 4)
+#define ADC_DATA_REG(ch)		ADC_REG(ADC_DATA_OFFSET(ch))
+#define ADC_CHAN_INTR_OFFSET(ch)	(ADC_CHAN0_INTR_OFFSET + (ch) * 4)
+#define ADC_CHAN_INTR_REG(ch)		ADC_REG(ADC_CHAN_INTR_OFFSET(ch))
 #endif
 
 #define ADC16_CTRL_OFFSET		0x198
@@ -281,11 +290,12 @@
 #define ADC_FIFO_ID_SHIFT		12
 #define ADC_FIFO_CONTROL_CLEAR		0x01
 
-#define ADC_CTRL_SCALER_POWERDOWN   0x100
-#define ADC_CTRL_POWERDOWN  0x2
-#define ADC_CTRL_CLK_SOURCE_SCALER  0x0
-#define ADC_CTRL_CLK_SOURCE_AUDIO  0x1
+#define ADC_CTRL_SCALER_POWERDOWN	0x100
+#define ADC_CTRL_POWERDOWN		0x2
+#define ADC_CTRL_CLK_SOURCE_SCALER	0x0
+#define ADC_CTRL_CLK_SOURCE_AUDIO	0x1
 #if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#define ADC_CONTROL_ENABLE		0x04
 #define ADC_CONTROL_MODE		0x02
 #define ADC_CONTROL_START		0x08
 #else
@@ -326,25 +336,42 @@
 #define ADC_CH10			(1 << 10)
 #define ADC_CH11			(1 << 11)
 
-struct ambarella_adc_keymap {
-    u32 key_code;
-    u32 channel : 4;
-    u32 low_level : 12;
-    u32 high_level : 12;
+enum {
+	AMBADC_ONESHOT = 0,
+	AMBADC_CONTINUOUS,
 };
 
-struct ambarella_adc_client {
-    struct platform_device *pdev;
-    struct ambarella_adc_keymap *adc_keymap;
-    void (*set_irq_threshold)(u32 ch, u32 h_level, u32 l_level);
-    void (*readdata)(u32 *data);
-    void *nb;
-    bool irq_support;
+struct ambadc_host {
+	struct device *dev;
+	u32 irq;
+	u32 clk;
+	bool polling_mode;
+	bool keep_start;
+	struct delayed_work work;
 };
 
-extern struct ambarella_adc_client *ambarella_adc_register(
-                    struct platform_device *pdev,
-                    void *nb);
-extern int ambarella_adc_unregister(struct ambarella_adc_client *client);
+struct ambadc_client;
+typedef int (*ambadc_client_callback)(struct ambadc_client *client,
+			u32 ch, u32 level);
+typedef int (*ambadc_read_level)(u32 ch);
+
+struct ambadc_client {
+	struct device *dev;
+	struct ambadc_host *host;
+	struct list_head node;
+	/* specify the channel this client is interested in */
+	unsigned long channel_mask[BITS_TO_LONGS(ADC_NUM_CHANNELS)];
+	u32 mode;
+	ambadc_client_callback callback;
+};
+
+extern struct ambadc_client *ambarella_adc_register_client(struct device *dev,
+			u32 mode, ambadc_client_callback callback);
+extern void ambarella_adc_unregister_client(struct ambadc_client *client);
+
+extern int ambarella_adc_set_threshold(struct ambadc_client *client,
+			u32 ch, u32 low, u32 high);
+extern int ambarella_adc_read_level(u32 ch);
+
 #endif /* __PLAT_AMBARELLA_ADC_H__ */
 
