@@ -55,7 +55,6 @@
 
 #define AMBA_EVENT_POST_VIN_LOSS	(AMBA_EVENT_ID_VIN_LOSS | AMBA_EVENT_POST)
 
-#define AMBA_EVENT_ADC_INTERRUPT		(0xFF)
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
 

@@ -26,6 +26,7 @@ obj-y						+= clk.o
 obj-y						+= pll.o
 obj-y						+= pm.o
 obj-y						+= timer.o
+obj-y						+= adc.o
 
 obj-y						+= soc/
 obj-y						+= smp/
