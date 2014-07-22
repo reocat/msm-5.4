@@ -25,7 +25,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
 #include <linux/delay.h>
-
+#include <linux/of.h>
 #include <mach/hardware.h>
 #include <plat/dma.h>
 
@@ -654,6 +654,7 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		unsigned long flags, void *context)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
+	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *amb_desc, *first = NULL, *prev = NULL;
 	int left_len = buf_len;
 
@@ -662,9 +663,10 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		return NULL;
 	}
 
-	if (!IS_ALIGNED(buf_addr, 8) || !IS_ALIGNED(period_len, 8)) {
-		pr_err("%s: buf_addr/period_len is not 8bytes aligned! (%d,%d)\n",
-			__func__, buf_addr, period_len);
+	if (!IS_ALIGNED(buf_addr, 1<<(amb_dma->copy_align)) ||
+		!IS_ALIGNED(period_len, 1<<(amb_dma->copy_align))) {
+		pr_err("%s: buf_addr/period_len is not %dbytes aligned! (%d,%d)\n",
+			__func__, 1<<(amb_dma->copy_align), buf_addr, period_len);
 		return NULL;
 	}
 
@@ -807,6 +809,7 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 		size_t len, unsigned long flags)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
+	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *amb_desc = NULL, *first = NULL, *prev = NULL;
 	size_t left_len = len, xfer_count;
 
@@ -815,9 +818,10 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 		return NULL;
 	}
 
-	if (!IS_ALIGNED(dst, 8) || !IS_ALIGNED(src, 8)) {
-		pr_err("%s: dst/src is not 8bytes aligned! (%d,%d)\n",
-			__func__, dst, src);
+	if (!IS_ALIGNED(dst, 1<<(amb_dma->copy_align)) ||
+		!IS_ALIGNED(src, 1<<(amb_dma->copy_align))) {
+		pr_err("%s: dst/src is not %dbytes aligned! (%d,%d)\n",
+			__func__, 1<<(amb_dma->copy_align), dst, src);
 		return NULL;
 	}
 
@@ -876,6 +880,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 {
 	struct ambdma_device *amb_dma;
 	struct ambdma_chan *amb_chan;
+	struct device_node *np = pdev->dev.of_node;
 	int i, ret = 0;
 
 	/* alloc the amba dma engine struct */
@@ -926,6 +931,8 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dummy_lli->rpt_addr =
 		amb_dma->dummy_lli_phys + sizeof(struct ambdma_lli) - 4;
 
+	of_property_read_u32(np, "amb,copy_align", &amb_dma->copy_align);
+
 	/* Init dma_device struct */
 	dma_cap_zero(amb_dma->dma_slave.cap_mask);
 	dma_cap_set(DMA_PRIVATE, amb_dma->dma_slave.cap_mask);
@@ -950,7 +957,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_memcpy.device_issue_pending = ambdma_issue_pending;
 	amb_dma->dma_memcpy.device_prep_dma_memcpy = ambdma_prep_dma_memcpy;
 	amb_dma->dma_memcpy.dev = &pdev->dev;
-	amb_dma->dma_memcpy.copy_align = 3; /* 2^3 = 8 bytes for copy alignment */
+	amb_dma->dma_memcpy.copy_align = (u8)(amb_dma->copy_align);
 
 	/* init dma_chan struct */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
