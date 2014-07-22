@@ -80,6 +80,7 @@ struct ambdma_device {
 	dma_addr_t			dummy_lli_phys;
 	u32				*dummy_data;
 	dma_addr_t			dummy_data_phys;
+	u32				copy_align;
 };
 
 
