@@ -378,8 +378,12 @@
 			compatible = "ambarella,uart";
 			reg = <0xe0032000 0x1000>;
 			interrupts = <25 0x4>;
-			status = "disabled";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins_c &uart1_flow_pins_c>;
+			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
 			/* amb,tx-fifo-fix; */
 			/* need to selcec pinctrl setup in board dts */
 		};

@@ -78,6 +78,7 @@
 #define UART_LS_OFFSET			0x14
 #define UART_MS_OFFSET			0x18
 #define UART_SC_OFFSET			0x1c	/* Byte */
+#define UART_DMAE_OFFSET		0x28
 #define UART_US_OFFSET			0x7c
 #define UART_TFL_OFFSET			0x80
 #define UART_RFL_OFFSET			0x84
