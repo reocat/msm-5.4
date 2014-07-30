@@ -32,7 +32,13 @@
 /* ==========================================================================*/
 
 /* ==========================================================================*/
+#ifdef CONFIG_PLAT_AMBARELLA_SUPPORT_PM
 extern int ambarella_init_pm(void);
+extern int ambarella_finish_suspend(unsigned long);
+extern void ambarella_cpu_resume(void);
+#else
+static inline int ambarella_init_pm(void){return 0;}
+#endif
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

@@ -41,22 +41,77 @@ static u32 cs_ctrl_offset = -1;
 #define AMBARELLA_TIMER_FREQ		clk_get_rate(clk_get(NULL, "gclk_apb"))
 #define AMBARELLA_TIMER_RATING		(300)
 
-/* ==========================================================================*/
+static struct clock_event_device ambarella_clkevt;
+static struct clocksource ambarella_clksrc;
+static u32 ambarella_read_sched_clock(void);
 
-struct ambarella_timer_pm_info {
-	u32 timer_clk;
-	u32 timer_ctr_reg;
-	u32 timer_ce_status_reg;
-	u32 timer_ce_reload_reg;
-	u32 timer_ce_match1_reg;
-	u32 timer_ce_match2_reg;
-	u32 timer_cs_status_reg;
-	u32 timer_cs_reload_reg;
-	u32 timer_cs_match1_reg;
-	u32 timer_cs_match2_reg;
+/* ==========================================================================*/
+struct amb_timer_pm_reg {
+	u32 clk_rate;
+	u32 ctrl_reg;
+	u32 status_reg;
+	u32 reload_reg;
+	u32 match1_reg;
+	u32 match2_reg;
 };
 
-struct ambarella_timer_pm_info ambarella_timer_pm;
+static struct amb_timer_pm_reg amb_timer_ce_pm;
+static struct amb_timer_pm_reg amb_timer_cs_pm;
+
+static void ambarella_timer_suspend(u32 is_ce)
+{
+	struct amb_timer_pm_reg *amb_timer_pm;
+	void __iomem *regbase;
+	u32 ctrl_offset;
+
+	amb_timer_pm = is_ce ? &amb_timer_ce_pm : &amb_timer_cs_pm;
+	regbase = is_ce ? ce_base : cs_base;
+	ctrl_offset = is_ce ? ce_ctrl_offset : cs_ctrl_offset;
+
+	amb_timer_pm->clk_rate = AMBARELLA_TIMER_FREQ;
+	amb_timer_pm->ctrl_reg = (amba_readl(timer_ctrl_reg) >> ctrl_offset) & 0xf;
+	amb_timer_pm->status_reg = amba_readl(regbase + TIMER_STATUS_OFFSET);
+	amb_timer_pm->reload_reg = amba_readl(regbase + TIMER_RELOAD_OFFSET);
+	amb_timer_pm->match1_reg = amba_readl(regbase + TIMER_MATCH1_OFFSET);
+	amb_timer_pm->match2_reg = amba_readl(regbase + TIMER_MATCH2_OFFSET);
+
+	amba_clrbitsl(timer_ctrl_reg, 0xf << ctrl_offset);
+}
+
+static void ambarella_timer_resume(u32 is_ce)
+{
+	struct clock_event_device *clkevt = &ambarella_clkevt;
+	struct clocksource *clksrc = &ambarella_clksrc;
+	struct amb_timer_pm_reg *amb_timer_pm;
+	void __iomem *regbase;
+	u32 ctrl_offset, clk_rate;
+
+	amb_timer_pm = is_ce ? &amb_timer_ce_pm : &amb_timer_cs_pm;
+	regbase = is_ce ? ce_base : cs_base;
+	ctrl_offset = is_ce ? ce_ctrl_offset : cs_ctrl_offset;
+
+	amba_clrbitsl(timer_ctrl_reg, 0xf << ctrl_offset);
+
+	amba_writel(regbase + TIMER_STATUS_OFFSET, amb_timer_pm->status_reg);
+	amba_writel(regbase + TIMER_RELOAD_OFFSET, amb_timer_pm->reload_reg);
+	amba_writel(regbase + TIMER_MATCH1_OFFSET, amb_timer_pm->match1_reg);
+	amba_writel(regbase + TIMER_MATCH2_OFFSET, amb_timer_pm->match2_reg);
+
+	clk_rate = AMBARELLA_TIMER_FREQ;
+	if (amb_timer_pm->clk_rate == clk_rate)
+		goto resume_exit;
+
+	amb_timer_pm->clk_rate = clk_rate;
+
+	if (is_ce)
+		clockevents_update_freq(clkevt, clk_rate);
+	else
+		__clocksource_updatefreq_hz(clksrc, clk_rate);
+
+resume_exit:
+	amba_setbitsl(timer_ctrl_reg, amb_timer_pm->ctrl_reg << ctrl_offset);
+}
+
 
 /* ==========================================================================*/
 
@@ -129,6 +184,16 @@ static int ambarella_ce_timer_set_next_event(unsigned long delta,
 	return 0;
 }
 
+static void ambarella_ce_timer_suspend(struct clock_event_device *dev)
+{
+	ambarella_timer_suspend(1);
+}
+
+static void ambarella_ce_timer_resume(struct clock_event_device *dev)
+{
+	ambarella_timer_resume(1);
+}
+
 static struct clock_event_device ambarella_clkevt = {
 	.name		= "ambarella-clkevt",
 	.features	= CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
@@ -136,6 +201,8 @@ static struct clock_event_device ambarella_clkevt = {
 	.set_next_event	= ambarella_ce_timer_set_next_event,
 	.set_mode	= ambarella_ce_timer_set_mode,
 	.mode		= CLOCK_EVT_MODE_UNUSED,
+	.suspend	= ambarella_ce_timer_suspend,
+	.resume		= ambarella_ce_timer_resume,
 };
 
 static irqreturn_t ambarella_ce_timer_interrupt(int irq, void *dev_id)
@@ -170,12 +237,24 @@ static cycle_t ambarella_cs_timer_read(struct clocksource *cs)
 	return (-(u32)amba_readl(cs_base + TIMER_STATUS_OFFSET));
 }
 
-static struct clocksource ambarella_cs_timer_clksrc = {
+static void ambarella_cs_timer_suspend(struct clocksource *dev)
+{
+	ambarella_timer_suspend(0);
+}
+
+static void ambarella_cs_timer_resume(struct clocksource *dev)
+{
+	ambarella_timer_resume(0);
+}
+
+static struct clocksource ambarella_clksrc = {
 	.name		= "ambarella-cs-timer",
 	.rating		= AMBARELLA_TIMER_RATING,
 	.read		= ambarella_cs_timer_read,
 	.mask		= CLOCKSOURCE_MASK(32),
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
+	.suspend	= ambarella_cs_timer_suspend,
+	.resume		= ambarella_cs_timer_resume,
 };
 
 static u32 notrace ambarella_read_sched_clock(void)
@@ -277,7 +356,7 @@ static void __init ambarella_clocksource_init(void)
 
 	of_node_put(np);
 
-	clksrc = &ambarella_cs_timer_clksrc;
+	clksrc = &ambarella_clksrc;
 
 	ambarella_cs_timer_init();
 
@@ -297,104 +376,3 @@ void __init ambarella_timer_init(void)
 	clocksource_of_init();
 }
 
-u32 ambarella_timer_suspend(u32 level)
-{
-	struct clock_event_device *clkevt = &ambarella_clkevt;
-	u32 timer_ctr_mask;
-
-	ambarella_timer_pm.timer_ctr_reg = amba_readl(timer_ctrl_reg);
-	ambarella_timer_pm.timer_clk = AMBARELLA_TIMER_FREQ;
-
-	ambarella_timer_pm.timer_ce_status_reg =
-		amba_readl(ce_base + TIMER_STATUS_OFFSET);
-	ambarella_timer_pm.timer_ce_reload_reg =
-		amba_readl(ce_base + TIMER_RELOAD_OFFSET);
-	ambarella_timer_pm.timer_ce_match1_reg =
-		amba_readl(ce_base + TIMER_MATCH1_OFFSET);
-	ambarella_timer_pm.timer_ce_match2_reg =
-		amba_readl(ce_base + TIMER_MATCH2_OFFSET);
-
-	ambarella_timer_pm.timer_cs_status_reg =
-		amba_readl(cs_base + TIMER_STATUS_OFFSET);
-	ambarella_timer_pm.timer_cs_reload_reg =
-		amba_readl(cs_base + TIMER_RELOAD_OFFSET);
-	ambarella_timer_pm.timer_cs_match1_reg =
-		amba_readl(cs_base + TIMER_MATCH1_OFFSET);
-	ambarella_timer_pm.timer_cs_match2_reg =
-		amba_readl(cs_base + TIMER_MATCH2_OFFSET);
-
-	if (level) {
-		disable_irq(clkevt->irq);
-		timer_ctr_mask = 0xf << ce_ctrl_offset | 0xf << cs_ctrl_offset;
-		amba_clrbitsl(timer_ctrl_reg, timer_ctr_mask);
-	}
-
-	return 0;
-}
-
-u32 ambarella_timer_resume(u32 level)
-{
-	struct clock_event_device *clkevt = &ambarella_clkevt;
-	struct clocksource *clksrc = &ambarella_cs_timer_clksrc;
-	u32 timer_ctr_mask;
-
-	timer_ctr_mask = 0xf << ce_ctrl_offset | 0xf << cs_ctrl_offset;
-	amba_clrbitsl(timer_ctrl_reg, timer_ctr_mask);
-
-	amba_writel(cs_base + TIMER_STATUS_OFFSET,
-			ambarella_timer_pm.timer_cs_status_reg);
-	amba_writel(cs_base + TIMER_RELOAD_OFFSET,
-			ambarella_timer_pm.timer_cs_reload_reg);
-	amba_writel(cs_base + TIMER_MATCH1_OFFSET,
-			ambarella_timer_pm.timer_cs_match1_reg);
-	amba_writel(cs_base + TIMER_MATCH2_OFFSET,
-			ambarella_timer_pm.timer_cs_match2_reg);
-
-	if ((ambarella_timer_pm.timer_ce_status_reg == 0) &&
-		(ambarella_timer_pm.timer_ce_reload_reg == 0)){
-		amba_writel(ce_base + TIMER_STATUS_OFFSET,
-				AMBARELLA_TIMER_FREQ / HZ);
-	} else {
-		amba_writel(ce_base + TIMER_STATUS_OFFSET,
-				ambarella_timer_pm.timer_ce_status_reg);
-	}
-	amba_writel(ce_base + TIMER_RELOAD_OFFSET,
-			ambarella_timer_pm.timer_ce_reload_reg);
-	amba_writel(ce_base + TIMER_MATCH1_OFFSET,
-			ambarella_timer_pm.timer_ce_match1_reg);
-	amba_writel(ce_base + TIMER_MATCH2_OFFSET,
-			ambarella_timer_pm.timer_ce_match2_reg);
-
-	if (ambarella_timer_pm.timer_clk != AMBARELLA_TIMER_FREQ) {
-		clockevents_config(clkevt, AMBARELLA_TIMER_FREQ);
-
-		switch (ambarella_clkevt.mode) {
-		case CLOCK_EVT_MODE_PERIODIC:
-			ambarella_ce_timer_set_periodic();
-			break;
-		case CLOCK_EVT_MODE_ONESHOT:
-		case CLOCK_EVT_MODE_UNUSED:
-		case CLOCK_EVT_MODE_SHUTDOWN:
-		case CLOCK_EVT_MODE_RESUME:
-			break;
-		}
-
-		clocksource_change_rating(clksrc, 0);
-		clksrc->mult = clocksource_hz2mult(
-			AMBARELLA_TIMER_FREQ, clksrc->shift);
-		pr_debug("%s: mult = %u, shift = %u\n",
-			clksrc->name, clksrc->mult, clksrc->shift);
-		clocksource_change_rating(clksrc, AMBARELLA_TIMER_RATING);
-#if defined(CONFIG_HAVE_SCHED_CLOCK)
-		setup_sched_clock(ambarella_read_sched_clock,
-			32, AMBARELLA_TIMER_FREQ);
-#endif
-	}
-
-	amba_setbitsl(timer_ctrl_reg,
-			(ambarella_timer_pm.timer_ctr_reg & timer_ctr_mask));
-	if (level)
-		enable_irq(clkevt->irq);
-
-	return 0;
-}

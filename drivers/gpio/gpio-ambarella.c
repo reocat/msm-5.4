@@ -405,6 +405,8 @@ static int amb_gpio_probe(struct platform_device *pdev)
 			return -ENOMEM;
 		}
 
+		amba_writel(amb_gpio->regbase[i] + GPIO_ENABLE_OFFSET, 0xffffffff);
+
 		amb_gpio->irq[i] = irq_of_parse_and_map(np, i);
 		if (amb_gpio->irq[i] == 0) {
 			dev_err(&pdev->dev, "no irq for gpio[%d]!\n", i);
@@ -510,6 +512,7 @@ static void amb_gpio_irq_resume(void)
 		amba_writel(regbase + GPIO_IBE_OFFSET, pm->ibe);
 		amba_writel(regbase + GPIO_IEV_OFFSET, pm->iev);
 		amba_writel(regbase + GPIO_IE_OFFSET, pm->ie);
+		amba_writel(regbase + GPIO_ENABLE_OFFSET, 0xffffffff);
 	}
 }
 

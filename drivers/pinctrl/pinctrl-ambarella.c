@@ -27,9 +27,11 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/slab.h>
+#include <linux/syscore_ops.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinmux.h>
 #include <linux/pinctrl/pinconf.h>
+#include <plat/rct.h>
 #include <plat/pinctrl.h>
 #include "core.h"
 
@@ -70,6 +72,8 @@ struct amb_pinctrl_soc_data {
 	struct ambpin_group		*groups;
 	unsigned int			nr_groups;
 };
+
+void __iomem *amb_iomux_base = NULL;
 
 /* check if the selector is a valid pin group selector */
 static int amb_get_group_count(struct pinctrl_dev *pctldev)
@@ -685,6 +689,8 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "devm_ioremap() failed\n");
 			return -ENOMEM;
 		}
+
+		amb_iomux_base = soc->iomux_base;
 	}
 
 	rval = amb_pinctrl_register(soc);
@@ -696,6 +702,94 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 
 	return 0;
 }
+
+#if defined(CONFIG_PM)
+
+static u32 amb_iomux_pm_reg[GPIO_INSTANCES][3];
+#if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
+static u32 amb_pull_pm_reg[2][GPIO_INSTANCES];
+#endif
+#if (GPIO_PAD_DS_SUPPORT > 0)
+static u32 amb_ds_pm_reg[GPIO_INSTANCES][2];
+#endif
+
+static int amb_pinctrl_suspend(void)
+{
+	u32 i, j, reg;
+
+#if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET + i * 4);
+		amb_pull_pm_reg[0][i] = amba_readl(reg);
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_0_OFFSET + i * 4);
+		amb_pull_pm_reg[1][i] = amba_readl(reg);
+	}
+#endif
+
+#if (GPIO_PAD_DS_SUPPORT > 0)
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		for (j = 0; j < 2; j++) {
+			reg = RCT_REG(GPIO_DS_OFFSET(i, j));
+			amb_ds_pm_reg[i][j] = amba_readl(reg);
+		}
+	}
+#endif
+
+	if (amb_iomux_base == NULL)
+		return 0;
+
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		for (j = 0; j < 3; j++) {
+			reg = (u32)amb_iomux_base + IOMUX_REG_OFFSET(i, j);
+			amb_iomux_pm_reg[i][j] = amba_readl(reg);
+		}
+	}
+
+	return 0;
+}
+
+static void amb_pinctrl_resume(void)
+{
+	u32 i, j, reg;
+
+#if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET + i * 4);
+		amba_writel(reg, amb_pull_pm_reg[0][i]);
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_0_OFFSET + i * 4);
+		amba_writel(reg, amb_pull_pm_reg[1][i]);
+	}
+#endif
+
+#if (GPIO_PAD_DS_SUPPORT > 0)
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		for (j = 0; j < 2; j++) {
+			reg = RCT_REG(GPIO_DS_OFFSET(i, j));
+			amba_writel(reg, amb_ds_pm_reg[i][j]);
+		}
+	}
+#endif
+
+	if (amb_iomux_base == NULL)
+		return;
+
+	for (i = 0; i < GPIO_INSTANCES; i++) {
+		for (j = 0; j < 3; j++) {
+			reg = (u32)amb_iomux_base + IOMUX_REG_OFFSET(i, j);
+			amba_writel(reg, amb_iomux_pm_reg[i][j]);
+		}
+	}
+
+	amba_writel(amb_iomux_base + IOMUX_CTRL_SET_OFFSET, 0x1);
+	amba_writel(amb_iomux_base + IOMUX_CTRL_SET_OFFSET, 0x0);
+}
+
+static struct syscore_ops amb_pinctrl_syscore_ops = {
+	.suspend	= amb_pinctrl_suspend,
+	.resume		= amb_pinctrl_resume,
+};
+
+#endif /* CONFIG_PM */
 
 static const struct of_device_id amb_pinctrl_dt_match[] = {
 	{ .compatible = "ambarella,pinctrl" },
@@ -714,6 +808,9 @@ static struct platform_driver amb_pinctrl_driver = {
 
 static int __init amb_pinctrl_drv_register(void)
 {
+#ifdef CONFIG_PM
+	register_syscore_ops(&amb_pinctrl_syscore_ops);
+#endif
 	return platform_driver_register(&amb_pinctrl_driver);
 }
 postcore_initcall(amb_pinctrl_drv_register);
@@ -721,4 +818,5 @@ postcore_initcall(amb_pinctrl_drv_register);
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella SoC pinctrl driver");
 MODULE_LICENSE("GPL v2");
+
 

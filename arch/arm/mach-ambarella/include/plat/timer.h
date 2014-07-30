@@ -158,9 +158,6 @@ extern struct sys_timer ambarella_timer;
 /* ==========================================================================*/
 extern void ambarella_timer_init(void);
 
-extern u32 ambarella_timer_suspend(u32 level);
-extern u32 ambarella_timer_resume(u32 level);
-
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

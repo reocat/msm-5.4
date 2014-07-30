@@ -31,6 +31,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/clk.h>
+#include <linux/syscore_ops.h>
 #include <linux/console.h>
 #include <linux/sysrq.h>
 #include <linux/serial_reg.h>
@@ -41,6 +42,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/delay.h>
 #include <mach/hardware.h>
+#include <plat/clk.h>
 #include <plat/uart.h>
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
@@ -56,6 +58,7 @@
 
 struct ambarella_uart_port {
 	struct uart_port port;
+	struct clk *uart_pll;
 	unsigned long flags;
 	u32 msr_used : 1;
 	u32 tx_fifo_fix : 1;
@@ -63,24 +66,25 @@ struct ambarella_uart_port {
 	u32 txdma_used:1;
 	u32 rxdma_used:1;
 	u32 mcr;
-
-	struct dma_chan	*rx_dma_chan;
-	struct dma_chan	*tx_dma_chan;
-	dma_addr_t	rx_dma_buf_phys;
-	dma_addr_t	buf_phys_a;
-	dma_addr_t	buf_phys_b;
-	dma_addr_t	tx_dma_buf_phys;
-	unsigned char	*rx_dma_buf_virt;
-	unsigned char	*buf_virt_a;
-	unsigned char	*buf_virt_b;
-	unsigned char	*tx_dma_buf_virt;
-	bool			use_buf_b;
-	struct dma_async_tx_descriptor	*tx_dma_desc;
-	struct dma_async_tx_descriptor	*rx_dma_desc;
-	dma_cookie_t	tx_cookie;
-	dma_cookie_t	rx_cookie;
-	int	tx_bytes_requested;
-	int	rx_bytes_requested;
+	u32 c_cflag;
+	/* following are for dma transfer */
+	struct dma_chan *rx_dma_chan;
+	struct dma_chan *tx_dma_chan;
+	unsigned char *rx_dma_buf_virt;
+	unsigned char *tx_dma_buf_virt;
+	dma_addr_t rx_dma_buf_phys;
+	dma_addr_t tx_dma_buf_phys;
+	dma_addr_t buf_phys_a;
+	dma_addr_t buf_phys_b;
+	unsigned char *buf_virt_a;
+	unsigned char *buf_virt_b;
+	bool use_buf_b;
+	struct dma_async_tx_descriptor *tx_dma_desc;
+	struct dma_async_tx_descriptor *rx_dma_desc;
+	dma_cookie_t tx_cookie;
+	dma_cookie_t rx_cookie;
+	int tx_bytes_requested;
+	int rx_bytes_requested;
 };
 
 static struct ambarella_uart_port ambarella_port[UART_INSTANCES];
@@ -175,6 +179,8 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (!test_and_set_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags)) {
+		clk_set_rate(amb_port->uart_pll, ambarella_clk_get_ref_freq());
+		port->uartclk = clk_get_rate(amb_port->uart_pll);
 		/* reset the whole UART only once */
 		amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
 		mdelay(1);
@@ -990,8 +996,9 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 	u32 lc = 0x0;
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
+	amb_port->c_cflag = termios->c_cflag;
 
-	port->uartclk = clk_get_rate(clk_get(NULL, "gclk_uart"));
+	port->uartclk = clk_get_rate(amb_port->uart_pll);
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
 		lc |= UART_LC_CLS_5_BITS;
@@ -1194,11 +1201,15 @@ static void serial_ambarella_console_write(struct console *co,
 static int __init serial_ambarella_console_setup(struct console *co,
 	char *options)
 {
+	struct ambarella_uart_port *amb_port;
 	struct uart_port *port;
 	int baud = 115200, bits = 8, parity = 'n', flow = 'n';
 
 	if (co->index < 0 || co->index >= serial_ambarella_reg.nr)
 		co->index = 0;
+
+	amb_port = &ambarella_port[co->index];
+	amb_port->uart_pll = clk_get(NULL, "gclk_uart");
 
 	port = &ambarella_port[co->index].port;
 	if (!port->membase) {
@@ -1206,7 +1217,6 @@ static int __init serial_ambarella_console_setup(struct console *co,
 		return -ENODEV;
 	}
 
-	port->uartclk = clk_get_rate(clk_get(NULL, "gclk_uart"));
 	port->ops = &serial_ambarella_pops;
 	port->private_data = &ambarella_port[co->index];
 	port->line = co->index;
@@ -1228,6 +1238,46 @@ static struct console serial_ambarella_console = {
 	.index		= -1,
 	.data		= &serial_ambarella_reg,
 };
+
+#ifdef CONFIG_PM
+/* when no_console_suspend is specified in cmdline, Linux thought the console
+ * would never suspend. But actually we may put system into STR and power off
+ * the SoC, so the console must be initialized when system exit STR.
+ *
+ * NOTE: We MUST ensure that no information will be output via UART until
+ * syscore_resume() is completed, otherwise the UART may be in deadloop.
+ */
+static void serial_ambarella_console_resume(void)
+{
+	struct console *co = &serial_ambarella_console;
+	struct ambarella_uart_port *amb_port;
+	struct uart_port *port;
+	struct ktermios termios;
+
+	if (console_suspend_enabled)
+		return;
+
+	if (co->index < 0 || co->index >= serial_ambarella_reg.nr)
+		return;
+
+	amb_port = &ambarella_port[co->index];
+
+	port = &ambarella_port[co->index].port;
+	if (!port->membase)
+		return;
+
+	clear_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags);
+	serial_ambarella_hw_setup(port);
+
+	memset(&termios, 0, sizeof(struct ktermios));
+	termios.c_cflag = amb_port->c_cflag;
+	port->ops->set_termios(port, &termios, NULL);
+}
+
+static struct syscore_ops ambarella_console_syscore_ops = {
+	.resume	 = serial_ambarella_console_resume,
+};
+#endif
 
 static int __init serial_ambarella_console_init(void)
 {
@@ -1252,6 +1302,10 @@ static int __init serial_ambarella_console_init(void)
 	ambarella_port[id].port.membase = of_iomap(np, 0);
 
 	register_console(&serial_ambarella_console);
+
+#ifdef CONFIG_PM
+	register_syscore_ops(&ambarella_console_syscore_ops);
+#endif
 
 	return 0;
 }
@@ -1306,6 +1360,13 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 	}
 
 	amb_port = &ambarella_port[id];
+
+	amb_port->uart_pll = clk_get(NULL, "gclk_uart");
+	if (IS_ERR(amb_port->uart_pll)) {
+		dev_err(&pdev->dev, "Get uart clk failed!\n");
+		return PTR_ERR(amb_port->uart_pll);
+	}
+
 	amb_port->mcr = DEFAULT_AMBARELLA_UART_MCR;
 	/* check if using modem status register,  available for non-uart0. */
 	if (of_find_property(pdev->dev.of_node, "amb,msr-used", NULL))
@@ -1341,7 +1402,7 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 	amb_port->port.type = PORT_UART00;
 	amb_port->port.iotype = UPIO_MEM;
 	amb_port->port.fifosize = UART_FIFO_SIZE;
-	amb_port->port.uartclk = clk_get_rate(clk_get(NULL, "gclk_uart"));
+	amb_port->port.uartclk = clk_get_rate(amb_port->uart_pll);
 	amb_port->port.ops = &serial_ambarella_pops;
 	amb_port->port.private_data = amb_port;
 	amb_port->port.irq = irq;
@@ -1402,6 +1463,10 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 	int rval = 0;
 
 	amb_port = platform_get_drvdata(pdev);
+
+	clear_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags);
+	serial_ambarella_hw_setup(&amb_port->port);
+
 	rval = uart_resume_port(&serial_ambarella_reg, &amb_port->port);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, rval);

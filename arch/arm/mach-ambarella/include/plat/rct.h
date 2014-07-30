@@ -28,8 +28,10 @@
 #define RCT_OFFSET			0x170000
 #if (CHIP_REV == A8) || (CHIP_REV == S2L)
 #define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
+#define RCT_PHYS_BASE			(DBGBUS_PHYS_BASE + RCT_OFFSET)
 #else
 #define RCT_BASE			(APB_BASE + RCT_OFFSET)
+#define RCT_PHYS_BASE			(APB_PHYS_BASE + RCT_OFFSET)
 #endif
 #define RCT_REG(x)			(RCT_BASE + (x))
 
@@ -228,7 +230,36 @@
 #define SCALER_ADC_OFFSET		0x09C
 #define SCALER_ADC_REG			RCT_REG(SCALER_ADC_OFFSET)
 
+/* ==========================================================================*/
+
+#if (CHIP_REV == S2L)
+#define GPIO_PAD_DS_SUPPORT		1
+#else
+#define GPIO_PAD_DS_SUPPORT		0
+#endif
+
+#if (GPIO_PAD_DS_SUPPORT == 1)
+#define GPIO_DS0_0_OFFSET		0x314
+#define GPIO_DS1_0_OFFSET		0x318
+#define GPIO_DS0_1_OFFSET		0x31C
+#define GPIO_DS1_1_OFFSET		0x320
+#define GPIO_DS0_2_OFFSET		0x324
+#define GPIO_DS1_2_OFFSET		0x328
+#define GPIO_DS0_3_OFFSET		0x32C
+#define GPIO_DS1_3_OFFSET		0x330
+#define GPIO_DS_OFFSET(bank, n)		(0x314 + ((bank) * 8) + ((n) * 4))
+
+#define GPIO_DS0_0_REG			RCT_REG(GPIO_DS0_0_OFFSET)
+#define GPIO_DS1_0_REG			RCT_REG(GPIO_DS1_0_OFFSET)
+#define GPIO_DS0_1_REG			RCT_REG(GPIO_DS0_1_OFFSET)
+#define GPIO_DS1_1_REG			RCT_REG(GPIO_DS1_1_OFFSET)
+#define GPIO_DS0_2_REG			RCT_REG(GPIO_DS0_2_OFFSET)
+#define GPIO_DS1_2_REG			RCT_REG(GPIO_DS1_2_OFFSET)
+#define GPIO_DS0_3_REG			RCT_REG(GPIO_DS0_3_OFFSET)
+#define GPIO_DS1_3_REG			RCT_REG(GPIO_DS1_3_OFFSET)
+#endif
 
 /* ==========================================================================*/
+
 #endif /* __PLAT_AMBARELLA_RCT_H__ */
 
