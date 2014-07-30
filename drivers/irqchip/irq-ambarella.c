@@ -40,20 +40,9 @@
 #define HWIRQ_TO_BANK(hwirq)	((hwirq) >> 5)
 #define HWIRQ_TO_OFFSET(hwirq)	((hwirq) & 0x1f)
 
-struct ambvic_pm_reg {
-	u32 int_sel_reg;
-	u32 inten_reg;
-	u32 soften_reg;
-	u32 proten_reg;
-	u32 sense_reg;
-	u32 bothedge_reg;
-	u32 event_reg;
-};
-
 struct ambvic_chip_data {
 	void __iomem *reg_base[VIC_INSTANCES];
 	struct irq_domain *domain;
-	struct ambvic_pm_reg pm_reg[VIC_INSTANCES];
 };
 
 static struct ambvic_chip_data ambvic_data __read_mostly;
@@ -339,65 +328,39 @@ static struct irq_domain_ops amb_irq_domain_ops = {
 	.xlate = irq_domain_xlate_twocell,
 };
 
-int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
-{
-	void __iomem *reg_base;
-	int i, irq;
-
-	memset(&ambvic_data, 0, sizeof(struct ambvic_chip_data));
-
-	for (i = 0; i < VIC_INSTANCES; i++) {
-		reg_base = of_iomap(np, i);
-		BUG_ON(!reg_base);
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
-		amba_writel(reg_base + VIC_INT_SEL_OFFSET, 0x00000000);
-		amba_writel(reg_base + VIC_INTEN_OFFSET, 0x00000000);
-		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
-		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
-		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, 0xffffffff);
-#endif
-		ambvic_data.reg_base[i] = reg_base;
-	}
-
-	set_handle_irq(ambvic_handle_irq);
-
-	ambvic_data.domain = irq_domain_add_linear(np,
-			NR_VIC_IRQS, &amb_irq_domain_ops, NULL);
-	BUG_ON(!ambvic_data.domain);
-
-	// WORKAROUND only, will be removed finally
-	for (i = 1; i < NR_VIC_IRQS; i++) {
-		irq = irq_create_mapping(ambvic_data.domain, i);
-		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
-		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);
-		set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
-	}
-
-	return 0;
-}
-
-IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
-
-/* ==========================================================================*/
 #if defined(CONFIG_PM)
+
+struct ambvic_pm_reg {
+	u32 int_sel_reg;
+	u32 inten_reg;
+	u32 soften_reg;
+	u32 proten_reg;
+	u32 sense_reg;
+	u32 bothedge_reg;
+	u32 event_reg;
+	u32 int_ptr0_reg;
+};
+
+static struct ambvic_pm_reg ambvic_pm[VIC_INSTANCES];
 
 static int ambvic_suspend(void)
 {
-	struct ambvic_pm_reg *pm_reg;
+	struct ambvic_pm_reg *pm_val;
 	void __iomem *reg_base;
 	int i;
 
 	for (i = 0; i < VIC_INSTANCES; i++) {
 		reg_base = ambvic_data.reg_base[i];
-		pm_reg = &ambvic_data.pm_reg[i];
+		pm_val = &ambvic_pm[i];
 
-		pm_reg->int_sel_reg = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
-		pm_reg->inten_reg = amba_readl(reg_base + VIC_INTEN_OFFSET);
-		pm_reg->soften_reg = amba_readl(reg_base + VIC_SOFTEN_OFFSET);
-		pm_reg->proten_reg = amba_readl(reg_base + VIC_PROTEN_OFFSET);
-		pm_reg->sense_reg = amba_readl(reg_base + VIC_SENSE_OFFSET);
-		pm_reg->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
-		pm_reg->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
+		pm_val->int_sel_reg = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
+		pm_val->inten_reg = amba_readl(reg_base + VIC_INTEN_OFFSET);
+		pm_val->soften_reg = amba_readl(reg_base + VIC_SOFTEN_OFFSET);
+		pm_val->proten_reg = amba_readl(reg_base + VIC_PROTEN_OFFSET);
+		pm_val->sense_reg = amba_readl(reg_base + VIC_SENSE_OFFSET);
+		pm_val->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
+		pm_val->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
+		pm_val->int_ptr0_reg = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
 	}
 
 	return 0;
@@ -405,25 +368,26 @@ static int ambvic_suspend(void)
 
 static void ambvic_resume(void)
 {
-	struct ambvic_pm_reg *pm_reg;
+	struct ambvic_pm_reg *pm_val;
 	void __iomem *reg_base;
 	int i;
 
 #ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
-		pm_reg = &ambvic_data.pm_reg[i];
+		pm_val = &ambvic_pm[i];
 
-		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_reg->int_sel_reg);
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_val->int_sel_reg);
 		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
-		amba_writel(reg_base + VIC_INTEN_OFFSET, pm_reg->inten_reg);
+		amba_writel(reg_base + VIC_INTEN_OFFSET, pm_val->inten_reg);
 		amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0xffffffff);
-		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_reg->soften_reg);
-		amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_reg->proten_reg);
-		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_reg->sense_reg);
-		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_reg->bothedge_reg);
-		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_reg->event_reg);
+		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_val->soften_reg);
+		amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_val->proten_reg);
+		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_val->sense_reg);
+		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_val->bothedge_reg);
+		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_val->event_reg);
+		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, pm_val->int_ptr0_reg);
 	}
 #else
 	/* Should we only restore the setting of Linux's driver?  */
@@ -450,14 +414,51 @@ struct syscore_ops ambvic_syscore_ops = {
 	.resume		= ambvic_resume,
 };
 
-static int __init ambvic_pm_init(void)
+#endif
+
+int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 {
+	void __iomem *reg_base;
+	int i, irq;
+
+	memset(&ambvic_data, 0, sizeof(struct ambvic_chip_data));
+
+	for (i = 0; i < VIC_INSTANCES; i++) {
+		reg_base = of_iomap(np, i);
+		BUG_ON(!reg_base);
+
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, 0x00000000);
+		amba_writel(reg_base + VIC_INTEN_OFFSET, 0x00000000);
+		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, 0xffffffff);
+#endif
+
+		ambvic_data.reg_base[i] = reg_base;
+	}
+
+	set_handle_irq(ambvic_handle_irq);
+
+	ambvic_data.domain = irq_domain_add_linear(np,
+			NR_VIC_IRQS, &amb_irq_domain_ops, NULL);
+	BUG_ON(!ambvic_data.domain);
+
+	// WORKAROUND only, will be removed finally
+	for (i = 1; i < NR_VIC_IRQS; i++) {
+		irq = irq_create_mapping(ambvic_data.domain, i);
+		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
+		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);
+		set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+	}
+
+#if defined(CONFIG_PM)
 	register_syscore_ops(&ambvic_syscore_ops);
+#endif
 	return 0;
 }
-late_initcall(ambvic_pm_init);
-#endif /* CONFIG_PM */
 
+IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
 
 /* ==========================================================================*/
 #if (VIC_SUPPORT_CPU_OFFLOAD == 1)

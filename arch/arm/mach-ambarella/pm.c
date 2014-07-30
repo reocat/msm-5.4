@@ -31,20 +31,17 @@
 #include <linux/irq.h>
 #include <linux/cpu.h>
 #include <linux/power_supply.h>
-
 #include <asm/cacheflush.h>
 #include <asm/io.h>
 #include <asm/system.h>
 #include <asm/suspend.h>
-
 #include <mach/hardware.h>
 #include <mach/init.h>
+#include <plat/drctl.h>
+#include <plat/rtc.h>
+#include <plat/ambcache.h>
 
-#include <plat/bapi.h>
-
-/* ==========================================================================*/
-static int pm_check_power_supply = 1;
-static int pm_force_power_on = 0;
+#define SREF_MAGIC_PATTERN		0x43525230
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
@@ -57,224 +54,107 @@ void ambarella_power_off_prepare(void)
 }
 
 /* ==========================================================================*/
-static int ambarella_pm_notify(unsigned long val)
+static void ambarella_set_cpu_jump(int cpu, void *jump_fn)
 {
-	int					retval = 0;
+	u32 addr_phys;
+	u32 *addr_virt;
 
-	retval = notifier_to_errno(ambarella_set_event(val, NULL));
-	if (retval)
-		pr_debug("%s: 0x%08lx fail(%d)\n",__func__, val, retval);
+	/* must keep consistent with check_selfrefresh.c in bst. */
+	addr_phys = get_ambarella_ppm_phys() + 0x000f1000;
+	addr_virt = (u32 *)ambarella_phys_to_virt(addr_phys);
+	*addr_virt++ = SREF_MAGIC_PATTERN;
+	*addr_virt = virt_to_phys(jump_fn);
 
-	return retval;
+	__cpuc_flush_dcache_area(addr_virt, sizeof(u32) * 2);
+	outer_clean_range(addr_phys, addr_phys + sizeof(u32) * 2);
 }
 
-static int ambarella_pm_notify_raw(unsigned long val)
-{
-	int					retval = 0;
-
-	retval = notifier_to_errno(ambarella_set_raw_event(val, NULL));
-	if (retval)
-		pr_debug("%s: 0x%08lx fail(%d)\n",__func__, val, retval);
-
-	return retval;
-}
-
-static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend, u32 tm_level)
-{
-	int					retval = 0;
-
-	if (irqflag)
-		local_irq_save(*irqflag);
-
-	if (bsuspend) {
-		ambarella_timer_suspend(tm_level);
-	}
-
-	retval = ambarella_pm_notify_raw(AMBA_EVENT_PRE_PM);
-
-	return retval;
-}
-
-static int ambarella_pm_post(unsigned long *irqflag, u32 bresume, u32 tm_level)
-{
-	int					retval = 0;
-
-	retval = ambarella_pm_notify_raw(AMBA_EVENT_POST_PM);
-
-	if (bresume) {
-		ambarella_timer_resume(tm_level);
-	}
-
-	if (irqflag)
-		local_irq_restore(*irqflag);
-
-	return retval;
-}
-
-static int ambarella_pm_check(suspend_state_t state)
-{
-	int					retval = 0;
-
-	retval = ambarella_pm_notify_raw(AMBA_EVENT_CHECK_PM);
-	if (retval)
-		goto ambarella_pm_check_exit;
-
-	retval = ambarella_pm_notify(AMBA_EVENT_CHECK_PM);
-	if (retval)
-		goto ambarella_pm_check_exit;
-
-ambarella_pm_check_exit:
-	return retval;
-}
-
-/* ==========================================================================*/
-static int ambarella_pm_cpu_do_idle(unsigned long unused)
+static int ambarella_cpu_do_idle(unsigned long unused)
 {
 	cpu_do_idle();
-
 	return 0;
 }
 
 static int ambarella_pm_enter_standby(void)
 {
-	int					retval = 0;
-	unsigned long				flags;
-
-	if (ambarella_pm_pre(&flags, 1, 1))
-		BUG();
-
-	cpu_suspend(0, ambarella_pm_cpu_do_idle);
-
-	if (ambarella_pm_post(&flags, 1, 1))
-		BUG();
-
-	return retval;
+	cpu_suspend(0, ambarella_cpu_do_idle);
+	return 0;
 }
 
 static int ambarella_pm_enter_mem(void)
 {
-	int					retval = 0;
-	unsigned long				flags;
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	struct ambarella_bapi_reboot_info_s	reboot_info;
-#endif
+	u32 l2_enabled;
 
-	if (ambarella_pm_pre(&flags, 1, 1))
-		BUG();
+	/* ensure the power for DRAM keeps on when power off PWC */
+	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x1);
+	amba_setbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
+	mdelay(3);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
 
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
-	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_SELFREFERESH;
-	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
-		&reboot_info);
-	if (retval)
-		goto ambarella_pm_enter_mem_exit_bapi;
-	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE, NULL);
-ambarella_pm_enter_mem_exit_bapi:
-#endif
+	ambarella_set_cpu_jump(0, ambarella_cpu_resume);
 
-	if (ambarella_pm_post(&flags, 1, 1))
-		BUG();
+	l2_enabled = outer_is_enabled();
+	if (l2_enabled)
+		ambcache_l2_disable_raw();
 
-	return retval;
+	cpu_suspend(0, ambarella_finish_suspend);
+
+	if (l2_enabled)
+		ambcache_l2_enable_raw();
+
+	/* ensure to power off all powers when power off PWC */
+	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);
+	amba_clrbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
+	mdelay(3);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
+
+	return 0;
 }
 
-static int ambarella_pm_suspend_valid(suspend_state_t state)
+static int ambarella_pm_suspend_enter(suspend_state_t state)
 {
-	int					retval = 0;
-	int					valid = 0;
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	int					mode;
-#endif
-
-	retval = ambarella_pm_check(state);
-	if (retval)
-		goto ambarella_pm_valid_exit;
+	int rval = 0;
 
 	switch (state) {
-	case PM_SUSPEND_ON:
-		valid = 1;
-		break;
-
 	case PM_SUSPEND_STANDBY:
-		valid = 1;
+		rval = ambarella_pm_enter_standby();
 		break;
-
 	case PM_SUSPEND_MEM:
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-		mode = AMBARELLA_BAPI_REBOOT_SELFREFERESH;
-		if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT,
-			&mode) == 1) {
-			valid = 1;
-		}
-#endif
-		if (pm_check_power_supply &&
-			(power_supply_is_system_supplied() > 0))
-			valid = 0;
-		if (pm_force_power_on)
-			valid = 0;
+		rval = ambarella_pm_enter_mem();
 		break;
-
+	case PM_SUSPEND_ON:
 	default:
 		break;
 	}
 
-ambarella_pm_valid_exit:
+	return rval;
+}
+
+static int ambarella_pm_suspend_valid(suspend_state_t state)
+{
+	int valid;
+
+	switch (state) {
+	case PM_SUSPEND_ON:
+	case PM_SUSPEND_STANDBY:
+	case PM_SUSPEND_MEM:
+		valid = 1;
+		break;
+	default:
+		valid = 0;
+		break;
+	}
+
 	pr_debug("%s: state[%d]=%d\n", __func__, state, valid);
 
 	return valid;
 }
 
-static int ambarella_pm_suspend_begin(suspend_state_t state)
-{
-	int					retval = 0;
-
-	switch (state) {
-	case PM_SUSPEND_STANDBY:
-	case PM_SUSPEND_MEM:
-		retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
-		break;
-
-	default:
-		break;
-	}
-
-	return retval;
-}
-
-static int ambarella_pm_suspend_enter(suspend_state_t state)
-{
-	int					retval = 0;
-
-	switch (state) {
-	case PM_SUSPEND_ON:
-		break;
-
-	case PM_SUSPEND_STANDBY:
-		retval = ambarella_pm_enter_standby();
-		break;
-
-	case PM_SUSPEND_MEM:
-		retval = ambarella_pm_enter_mem();
-		break;
-
-	default:
-		break;
-	}
-
-	return retval;
-}
-
-static void ambarella_pm_suspend_end(void)
-{
-	ambarella_pm_notify(AMBA_EVENT_POST_PM);
-}
-
 static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 	.valid		= ambarella_pm_suspend_valid,
-	.begin		= ambarella_pm_suspend_begin,
 	.enter		= ambarella_pm_suspend_enter,
-	.end		= ambarella_pm_suspend_end,
 };
 
 /* ==========================================================================*/

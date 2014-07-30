@@ -28,15 +28,16 @@ obj-y						+= soc/
 obj-y						+= smp/
 obj-y						+= misc/
 
+ifeq ($(CONFIG_PLAT_AMBARELLA_AMBALINK), y)
+obj-y						+= ambalink/
+else
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= pm.o
+obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= sleep.o
+obj-y						+= init.o
+endif
 
 ifeq ($(CONFIG_PLAT_AMBARELLA_BOSS), y)
 obj-y						+= boss/
 else
 obj-y						+= timer.o
-endif
-ifeq ($(CONFIG_PLAT_AMBARELLA_AMBALINK), y)
-obj-y                                           += ambalink/
-else
-obj-y						+= pm.o
-obj-y						+= init.o
 endif

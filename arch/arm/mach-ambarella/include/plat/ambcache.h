@@ -31,10 +31,17 @@ extern void ambcache_clean_range(void *addr, unsigned int size);
 extern void ambcache_inv_range(void *addr, unsigned int size);
 extern void ambcache_flush_range(void *addr, unsigned int size);
 extern void ambcache_pli_range(void *addr, unsigned int size);
+#ifdef CONFIG_OUTER_CACHE
 extern int ambcache_l2_enable(void);
 extern int ambcache_l2_disable(void);
 extern void ambcache_l2_enable_raw(void);
 extern void ambcache_l2_disable_raw(void);
+#else
+static inline int ambcache_l2_enable(void) { return -1; }
+static inline int ambcache_l2_disable(void) { return 0; }
+static inline void ambcache_l2_enable_raw(void) { }
+static inline void ambcache_l2_disable_raw(void) { }
+#endif
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

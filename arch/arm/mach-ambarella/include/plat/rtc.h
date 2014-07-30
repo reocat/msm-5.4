@@ -24,8 +24,6 @@
 #ifndef __PLAT_AMBARELLA_RTC_H__
 #define __PLAT_AMBARELLA_RTC_H__
 
-#include <linux/timer.h>
-
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
 #define RTC_SUPPORT_30BITS_PASSED_SECONDS	1

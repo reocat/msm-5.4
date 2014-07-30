@@ -118,6 +118,11 @@
 #define GPIO_ENABLE_OFFSET		0x2c
 
 /* ==========================================================================*/
+#if (CHIP_REV == S2L)
+#define	IOMUX_SUPPORT			1
+#else
+#define	IOMUX_SUPPORT			0
+#endif
 
 #define IOMUX_REG0_0_OFFSET		0x00
 #define IOMUX_REG0_1_OFFSET		0x04
