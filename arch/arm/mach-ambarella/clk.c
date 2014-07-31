@@ -808,6 +808,14 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 		post_scaler_reg = 1;
 	}
 
+	if (ctrl_reg.s.bypass || ctrl_reg.s.force_bypass) {
+		pll_int = ambarella_clk_ref_freq;
+		pll_int /= pre_scaler_reg;
+		pll_int /= post_scaler_reg;
+		c->rate = pll_int;
+		return c->rate;
+	}
+
 	pll_int = ctrl_reg.s.intp;
 	sdiv = ctrl_reg.s.sdiv;
 	sout = ctrl_reg.s.sout;
