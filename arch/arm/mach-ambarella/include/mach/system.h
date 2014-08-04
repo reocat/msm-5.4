@@ -41,7 +41,8 @@ static inline void arch_idle(void)
 {
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if (boss && (BOSS_STATE_TURBO != boss->state) ) {
-		local_irq_enable();
+		if (boss->state == BOSS_STATE_READY)
+			local_irq_enable();
 #if defined(CONFIG_ARM_GIC)
 		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_SET_OFFSET),
 				1 << (BOSS_VIRT_RIRQ_INT_VEC - AXI_SOFT_IRQ(0)));
