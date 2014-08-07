@@ -131,6 +131,7 @@ static const struct file_operations proc_ambench_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambarella_ambench_proc_write,
+	.release = single_release,
 };
 
 /* ==========================================================================*/

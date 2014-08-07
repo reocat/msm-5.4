@@ -116,6 +116,7 @@ static const struct file_operations proc_ipc_mutex_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = procfs_mutex_write,
+	.release = single_release,
 };
 
 static void init_procfs(void)

@@ -125,6 +125,7 @@ static const struct file_operations proc_rpmsg_rpc_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = rpmsg_rpc_proc_write,
+	.release = single_release,
 };
 #endif
 /*
@@ -159,9 +160,9 @@ static int rpmsg_rpc_probe(struct rpmsg_channel *rpdev)
 	int ret = 0;
 	struct rpmsg_ns_msg nsm;
 #ifdef RPMSG_RPC_TIMER_PROC
-	rpc_file = proc_create_data(proc_name, S_IRUGO | S_IWUSR,
+	rpc_file = proc_create(proc_name, S_IRUGO | S_IWUSR,
 	                            get_ambarella_proc_dir(),
-	                            &proc_rpmsg_rpc_fops, NULL);
+	                            &proc_rpmsg_rpc_fops);
 	if (rpc_file == NULL) {
 		pr_err("%s: %s fail!\n", __func__, proc_name);
 		ret = -ENOMEM;

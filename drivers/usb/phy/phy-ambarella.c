@@ -224,6 +224,7 @@ static const struct file_operations proc_phy_switcher_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambarella_phy_proc_write,
+	.release = single_release,
 };
 
 static irqreturn_t ambarella_otg_detect_irq(int irq, void *dev_id)
