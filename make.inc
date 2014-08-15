@@ -58,8 +58,8 @@ menuconfig_public_linux: $(DOT_CONFIG)
 defconfig_public_linux: $(DOT_CONFIG)
 	@echo "Build Linux with $(KERNEL_DEFCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR)
-	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
-		cp -dpRf $(WORK_DIR)/config/kernel/$(KERNEL_DEFCONFIG) $(LINUX_OUT_DIR)/.config; \
+	@if [ -f $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
+		cp -dpRf $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_DEFCONFIG) $(LINUX_OUT_DIR)/.config; \
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) $(KERNEL_DEFCONFIG); \
 	fi
@@ -104,8 +104,8 @@ menuconfig_public_linux_2: $(DOT_CONFIG)
 defconfig_public_linux_2: $(DOT_CONFIG)
 	@echo "Build Linux_2 with $(KERNEL_2NDCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR_2)
-	@if [ -f $(WORK_DIR)/config/kernel/$(KERNEL_2NDCONFIG) ]; then \
-		cp -dpRf $(WORK_DIR)/config/kernel/$(KERNEL_2NDCONFIG) $(LINUX_OUT_DIR_2)/.config; \
+	@if [ -f $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_2NDCONFIG) ]; then \
+		cp -dpRf $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_2NDCONFIG) $(LINUX_OUT_DIR_2)/.config; \
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) $(KERNEL_2NDCONFIG); \
 	fi
