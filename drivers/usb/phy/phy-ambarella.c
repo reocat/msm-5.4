@@ -397,7 +397,7 @@ static void ambarella_phy_shutdown(struct platform_device *pdev)
 {
 	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
 
-	if (gpio_is_valid(amb_phy->gpio_md)) {
+	if (amb_phy->host_phy_num && gpio_is_valid(amb_phy->gpio_md)) {
 		gpio_direction_output(amb_phy->gpio_md,
 					!amb_phy->md_host_active);
 	}
