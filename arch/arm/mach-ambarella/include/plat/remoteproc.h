@@ -41,4 +41,72 @@ struct ambarella_rproc_pdata {
 	struct resource_table *(*gen_rsc_table)(int *tablesz);
 };
 
+/*
+ * The rpmsg profiling related data structure use the same definition in dual-OSes.
+ * This data structure
+ */
+#define RPMSG_DEBUG			1
+
+#if RPMSG_DEBUG
+/******************************The defintion is shared between dual-OSes*******************************/
+typedef struct {
+	unsigned int ToGetSvqBuffer;
+	unsigned int GetSvqBuffer;
+	unsigned int SvqToSendInterrupt;
+	unsigned int SvqSendInterrupt;
+} AMBA_RPMSG_PROFILE_s;
+
+typedef struct _AMBA_RPMSG_STATISTIC_s_ {
+	/**********************************ThreadX side**************************/
+	unsigned int TxLastInjectTime;
+	unsigned int TxTotalInjectTime;
+	unsigned int TxSendRpmsgTime;
+	unsigned int TxResponseTime;
+	unsigned int MaxTxResponseTime;
+	unsigned int TxRecvRpmsgTime;
+	unsigned int TxRecvCallBackTime;
+	unsigned int TxReleaseVqTime;
+	unsigned int TxToLxRpmsgTime;
+	unsigned int MaxTxToLxRpmsgTime;
+	unsigned int MinTxToLxRpmsgTime;
+	unsigned int MaxTxRecvCBTime;
+	unsigned int MinTxRecvCBTime;
+	int TxToLxCount;
+	int TxToLxWakeUpCount;
+	/************************************************************************/
+	/**********************************Linux side****************************/
+	unsigned int LxLastInjectTime;
+	unsigned int LxTotalInjectTime;
+	unsigned int LxSendRpmsgTime;
+	unsigned int LxResponseTime;
+	unsigned int MaxLxResponseTime;
+	unsigned int LxRecvRpmsgTime;
+	unsigned int LxRecvCallBackTime;
+	unsigned int LxReleaseVqTime;
+	unsigned int LxToTxRpmsgTime;
+	unsigned int MaxLxToTxRpmsgTime;
+	unsigned int MinLxToTxRpmsgTime;
+	unsigned int MaxLxRecvCBTime;
+	unsigned int MinLxRecvCBTime;
+	int LxRvqIsrCount;
+	int LxToTxCount;
+	/************************************************************************/
+} AMBA_RPMSG_STATISTIC_s;
+/*******************************************************************************************************/
+
+struct profile_data{
+	unsigned int ToGetSvqBuffer;
+	unsigned int GetSvqBuffer;
+	unsigned int SvqToSendInterrupt;
+	unsigned int SvqSendInterrupt;
+	unsigned int ToGetRvqBuffer;
+	unsigned int GetRvqBuffer;
+	unsigned int ToRecvData;
+	unsigned int RecvData;
+	unsigned int ReleaseRvq;
+	unsigned int RvqToSendInterrupt;
+	unsigned int RvqSendInterrupt;
+} ;
+#endif /* The data structure of RPMSG profiling. */
+
 #endif /* __PLAT_AMBARELLA_REMOTEPROC_H */

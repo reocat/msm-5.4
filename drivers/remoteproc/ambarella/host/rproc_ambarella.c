@@ -4,13 +4,18 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/remoteproc.h>
+#include <plat/rct.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 
 #include <plat/remoteproc.h>
-#include <plat/rct.h>
+#include <plat/ambalink_cfg.h>
 
 #include "../../remoteproc_internal.h"
+
+#if RPMSG_DEBUG
+static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
+#endif
 
 static void rpmsg_send_irq(int irq)
 {
@@ -90,6 +95,9 @@ static irqreturn_t rproc_ambarella_isr(int irq, void *dev_id)
 	struct rproc_vring *rvring;
 
 	if (irq == pdata->rvq_rx_irq) {
+#if RPMSG_DEBUG
+		rpmsg_stat->LxRvqIsrCount++;
+#endif
 		rvring = idr_find(&pdata->rproc->notifyids, 0);
 		virtqueue_disable_cb(rvring->vq);
 		schedule_work(&pdata->rvq_work);
@@ -139,6 +147,9 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto free_rproc;
 	}
+#if RPMSG_DEBUG
+	rpmsg_stat = (AMBA_RPMSG_STATISTIC_s *) (RPMSG_PROFILE_ADDR);
+#endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	boss_set_irq_owner(pdata->svq_rx_irq, BOSS_IRQ_OWNER_LINUX, 1);

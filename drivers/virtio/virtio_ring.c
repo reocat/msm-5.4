@@ -617,6 +617,82 @@ void *virtqueue_get_buf(struct virtqueue *_vq, unsigned int *len)
 EXPORT_SYMBOL_GPL(virtqueue_get_buf);
 
 /**
+ * virtqueue_get_buf_index - get the next used buffer
+ * almost the same to virtqueue_get_buf, the only difference is to
+ * return the index of the available buffer.
+ * @vq: the struct virtqueue we're talking about.
+ * @len: the length written into the buffer
+ * @idx: the index for the available buffer
+ * If the driver wrote data into the buffer, @len will be set to the
+ * amount written.  This means you don't need to clear the buffer
+ * beforehand to ensure there's no data leakage in the case of short
+ * writes.
+ *
+ * Caller must ensure we don't call this with other virtqueue
+ * operations at the same time (except where noted).
+ *
+ * Returns NULL if there are no used buffers, or the "data" token
+ * handed to virtqueue_add_buf().
+ */
+void *virtqueue_get_buf_index(struct virtqueue *_vq, unsigned int *len, unsigned int *idx)
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	void *ret;
+	unsigned int i;
+	u16 last_used;
+
+	START_USE(vq);
+
+	if (unlikely(vq->broken)) {
+		END_USE(vq);
+		return NULL;
+	}
+
+	if (!more_used(vq)) {
+		pr_debug("No more buffers in queue\n");
+		END_USE(vq);
+		return NULL;
+	}
+
+	/* Only get used array entries after they have been exposed by host. */
+	virtio_rmb(vq->weak_barriers);
+
+	last_used = (vq->last_used_idx & (vq->vring.num - 1));
+	i = vq->vring.used->ring[last_used].id;
+	*len = vq->vring.used->ring[last_used].len;
+
+	if (unlikely(i >= vq->vring.num)) {
+		BAD_RING(vq, "id %u out of range\n", i);
+		return NULL;
+	}
+	if (unlikely(!vq->data[i])) {
+		BAD_RING(vq, "id %u is not a head!\n", i);
+		return NULL;
+	}
+
+	/* detach_buf clears data, so grab it now. */
+	*idx = i;
+	ret = vq->data[i];
+	detach_buf(vq, i);
+	vq->last_used_idx++;
+	/* If we expect an interrupt for the next entry, tell host
+	 * by writing event index and flush out the write before
+	 * the read in the next get_buf call. */
+	if (!(vq->vring.avail->flags & VRING_AVAIL_F_NO_INTERRUPT)) {
+		vring_used_event(&vq->vring) = vq->last_used_idx;
+		virtio_mb(vq->weak_barriers);
+	}
+
+#ifdef DEBUG
+	vq->last_add_time_valid = false;
+#endif
+
+	END_USE(vq);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(virtqueue_get_buf_index);
+
+/**
  * virtqueue_disable_cb - disable callbacks
  * @vq: the struct virtqueue we're talking about.
  *

@@ -136,6 +136,27 @@ rpmsg_show_attr(announce, announce ? "true" : "false", "%s\n");
  */
 static unsigned int rpmsg_dev_index;
 
+
+
+#if RPMSG_DEBUG
+
+static AMBA_RPMSG_PROFILE_s *svq_profile, *rvq_profile;
+static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
+
+
+/* The counter is decreasing, so start will large than end normally.*/
+static unsigned int calc_timer_diff(unsigned int start, unsigned int end){
+	unsigned int diff;
+	if(end <= start) {
+		diff = start - end;
+	}
+	else{
+		diff = 0xFFFFFFFF - end + 1 + start;
+	}
+	return diff;
+}
+#endif
+
 static ssize_t modalias_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
@@ -562,7 +583,7 @@ static int rpmsg_destroy_channel(struct virtproc_info *vrp,
 }
 
 /* super simple buffer "allocator" that is just enough for now */
-static void *get_a_tx_buf(struct virtproc_info *vrp)
+static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
 {
 	unsigned int len;
 	void *ret;
@@ -575,10 +596,13 @@ static void *get_a_tx_buf(struct virtproc_info *vrp)
 	 * (half of our buffers are used for sending messages)
 	 */
 	if (vrp->last_sbuf < RPMSG_NUM_BUFS / 2)
+	{
+		*idx = vrp->last_sbuf;
 		ret = vrp->sbufs + RPMSG_BUF_SIZE * vrp->last_sbuf++;
+	}
 	/* or recycle a used one */
 	else
-		ret = virtqueue_get_buf(vrp->svq, &len);
+		ret = virtqueue_get_buf_index(vrp->svq, &len, idx);
 
 	rpmsg_tx_unlock(&vrp->tx_lock);
 
@@ -682,7 +706,21 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	struct device *dev = &rpdev->dev;
 	struct scatterlist sg;
 	struct rpmsg_hdr *msg;
-	int err;
+	int err, idx;
+
+#if RPMSG_DEBUG
+	unsigned int prev_time, current_time, diff;
+	prev_time = amba_readl(PROFILE_TIMER);
+	/* calculate rpmsg injection rate */
+	if( rpmsg_stat->LxLastInjectTime != 0 ){
+		diff = calc_timer_diff(rpmsg_stat->LxLastInjectTime, prev_time);
+	}
+	else{
+		diff = 0;
+	}
+	rpmsg_stat->LxTotalInjectTime += diff;
+	rpmsg_stat->LxLastInjectTime = prev_time;
+#endif
 
 	/* bcasting isn't allowed */
 	if (src == RPMSG_ADDR_ANY || dst == RPMSG_ADDR_ANY) {
@@ -705,7 +743,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	}
 
 	/* grab a buffer */
-	msg = get_a_tx_buf(vrp);
+	msg = get_a_tx_buf(vrp, &idx);
 	if (!msg && !wait)
 		return -ENOMEM;
 
@@ -721,7 +759,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 		 * if later this happens to be required, it'd be easy to add.
 		 */
 		err = wait_event_interruptible_timeout(vrp->sendq,
-					(msg = get_a_tx_buf(vrp)),
+					(msg = get_a_tx_buf(vrp, &idx)),
 					msecs_to_jiffies(15000));
 
 		/* disable "tx-complete" interrupts if we're the last sleeper */
@@ -733,7 +771,12 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 			return -ERESTARTSYS;
 		}
 	}
-
+#if RPMSG_DEBUG
+	current_time = amba_readl(PROFILE_TIMER);
+	svq_profile[idx].ToGetSvqBuffer = prev_time;
+	svq_profile[idx].GetSvqBuffer = current_time;
+//	printk("idx %d to_get_svq_buf %u\n", idx, svq_profile[idx].ToGetSvqBuffer);
+#endif
 	msg->len = len;
 	msg->flags = 0;
 	msg->src = src;
@@ -765,8 +808,20 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 		goto out;
 	}
 
+#if RPMSG_DEBUG
+	current_time = amba_readl(PROFILE_TIMER);
+	svq_profile[idx].SvqToSendInterrupt = current_time;
+//	printk("idx %d svq_send_interrupt %u, addr is %x\n", idx, svq_profile[idx].SvqToSendInterrupt, &svq_profile[idx].SvqToSendInterrupt);
+#endif
+
+
 	/* tell the remote processor it has a pending message to read */
 	virtqueue_kick(vrp->svq);
+#if RPMSG_DEBUG
+	svq_profile[idx].SvqSendInterrupt = amba_readl(PROFILE_TIMER);
+//	printk("idx %d svq_send_interrupt %u, addr is %x\n", idx, svq_profile[idx].SvqSendInterrupt, &svq_profile[idx].SvqSendInterrupt);
+#endif
+
 out:
 	rpmsg_tx_unlock(&vrp->tx_lock);
 	return err;
@@ -843,30 +898,79 @@ static void rpmsg_recv_done(struct virtqueue *rvq)
 	struct virtproc_info *vrp = rvq->vdev->priv;
 	struct device *dev = &rvq->vdev->dev;
 	struct rpmsg_hdr *msg;
-	unsigned int len, msgs_received = 0;
+	unsigned int len, idx, msgs_received = 0;
 	int err;
+	unsigned int to_get_buf, to_recv_data, recv_data_done, diff;
 
-	msg = virtqueue_get_buf(rvq, &len);
+#if RPMSG_DEBUG
+	idx = 0;
+	to_get_buf = amba_readl(PROFILE_TIMER);
+	//calculate the response time.
+#endif
+	msg = virtqueue_get_buf_index(rvq, &len, &idx);
 	if (!msg) {
 		dev_err(dev, "uhm, incoming signal, but no used buffer ?\n");
 		return;
 	}
+#if RPMSG_DEBUG
+	diff = calc_timer_diff(rvq_profile[idx].SvqToSendInterrupt, to_get_buf);
+
+	rpmsg_stat->LxResponseTime += diff;
+	if(diff > rpmsg_stat->MaxLxResponseTime){
+		rpmsg_stat->MaxLxResponseTime = diff;
+	}
+#endif
 
 	while (msg) {
+#if RPMSG_DEBUG
+		to_recv_data = amba_readl(PROFILE_TIMER);
+#endif
 		err = rpmsg_recv_single(vrp, dev, msg, len);
 		if (err)
 			break;
+#if RPMSG_DEBUG
+		recv_data_done = amba_readl(PROFILE_TIMER);
+		diff = calc_timer_diff(to_recv_data, recv_data_done);
+		rpmsg_stat->LxRecvCallBackTime += diff;
+		if(diff > rpmsg_stat->MaxLxRecvCBTime){
+			rpmsg_stat->MaxLxRecvCBTime = diff;
+		}
+		if(diff < rpmsg_stat->MinLxRecvCBTime){
+			rpmsg_stat->MinLxRecvCBTime = diff;
+		}
 
+
+		diff = calc_timer_diff(rvq_profile[idx].ToGetSvqBuffer, rvq_profile[idx].SvqToSendInterrupt);
+		rpmsg_stat->TxSendRpmsgTime += diff;
+
+		diff = calc_timer_diff(to_get_buf, to_recv_data);
+		rpmsg_stat->LxRecvRpmsgTime += diff;
+
+		diff = calc_timer_diff(rvq_profile[idx].ToGetSvqBuffer, to_recv_data);
+		rpmsg_stat->TxToLxRpmsgTime += diff;
+		if(diff > rpmsg_stat->MaxTxToLxRpmsgTime){
+			rpmsg_stat->MaxTxToLxRpmsgTime = diff;
+		}
+		if(diff < rpmsg_stat->MinTxToLxRpmsgTime){
+			rpmsg_stat->MinTxToLxRpmsgTime = diff;
+		}
+		to_get_buf = amba_readl(PROFILE_TIMER);
+#endif
 		msgs_received++;
 
-		msg = virtqueue_get_buf(rvq, &len);
+		msg = virtqueue_get_buf_index(rvq, &len, &idx);
 	};
 
 	dev_dbg(dev, "Received %u messages\n", msgs_received);
 
 	/* tell the remote processor we added another available rx buffer */
-	if (msgs_received)
+	if (msgs_received) {
+#if RPMSG_DEBUG
+		rpmsg_stat->TxToLxCount += msgs_received;
+		rpmsg_stat->TxToLxWakeUpCount++;
+#endif
 		virtqueue_kick(vrp->rvq);
+	}
 }
 
 /*
@@ -1100,6 +1204,16 @@ static struct virtio_driver virtio_ipc_driver = {
 static int __init rpmsg_init(void)
 {
 	int ret;
+	unsigned int profile_addr;
+
+#if RPMSG_DEBUG
+	/* The starting addr for storing profiling data. */
+	rpmsg_stat = (AMBA_RPMSG_STATISTIC_s *) (RPMSG_PROFILE_ADDR);
+	profile_addr = (RPMSG_PROFILE_ADDR + sizeof(AMBA_RPMSG_STATISTIC_s));
+	svq_profile = (AMBA_RPMSG_PROFILE_s *) profile_addr;
+	profile_addr = (RPMSG_PROFILE_ADDR + sizeof(AMBA_RPMSG_STATISTIC_s) + sizeof(AMBA_RPMSG_PROFILE_s)*(RPMSG_BUF_SIZE/2));
+	rvq_profile = (AMBA_RPMSG_PROFILE_s *) profile_addr;
+#endif
 
 	ret = bus_register(&rpmsg_bus);
 	if (ret) {
