@@ -39,7 +39,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		cpu@0 {
+			device_type = "cpu";
 			compatible = "arm,arm1136";
+			reg = <0>;
 		};
 	};
 

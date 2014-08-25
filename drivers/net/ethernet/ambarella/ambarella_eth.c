@@ -2208,6 +2208,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	lp->phydev = phy_find_first(&lp->new_bus);
 	if (lp->phydev == NULL) {
 		dev_err(&pdev->dev, "No PHY device.\n");
+		ret_val = -ENODEV;
 		goto ambeth_drv_probe_kfree_mdiobus;
 	}
 
