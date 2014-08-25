@@ -459,7 +459,10 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 		break;
 
 	case UART_II_THR_EMPTY:
-		serial_ambarella_start_tx(port);
+		if (amb_port->txdma_used)
+			serial_ambarella_start_tx(port);
+		else
+			serial_ambarella_transmit_chars(port);
 		break;
 
 	case UART_II_RCV_STATUS:
@@ -581,8 +584,7 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 		if (tty->hw_stopped || dma_status == DMA_IN_PROGRESS || !tx_fifo_is_empty(port))
 			return;
 		serial_ambarella_start_next_tx(amb_port);
-	}
-	else {
+	} else {
 		/* if FIFO status register is not provided, we have no idea about
 	 	* the Tx FIFO is full or not, so we need to wait for the Tx Empty
 		 * Interrupt comming, then we can start to transfer data. */
