@@ -563,9 +563,7 @@ static int ambarella_gpio_service(void *arg, void *result)
 	switch (gpio_svc->svc_id) {
 	case AMBSVC_GPIO_REQUEST:
 	{
-		char label[8];
-		snprintf(label, 8, "gpio%d", gpio_svc->gpio);
-		rval = gpio_request(gpio_svc->gpio, label);
+		rval = gpio_request(gpio_svc->gpio, "gpio");
 		break;
 	}
 	case AMBSVC_GPIO_OUTPUT:
