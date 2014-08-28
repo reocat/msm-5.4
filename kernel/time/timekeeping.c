@@ -962,6 +962,12 @@ static void timekeeping_resume(void)
 
 	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	/* In BOSS, interrupt is not really disabled. */
+	/* We will get "!irqs_disabled()" warning in the following function. */
+	/* Just disable Linux's interrupt to prevent this warning. */
+	boss_local_irq_disable();
+#endif
 	/* Resume hrtimers */
 	hrtimers_resume();
 }

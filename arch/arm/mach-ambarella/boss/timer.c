@@ -94,7 +94,8 @@ static inline void ambarella_ce_timer_set_periodic(void)
 
 static inline void ambarella_ce_timer_set_oneshot(void)
 {
-	amba_writel(ce_base + TIMER_STATUS_OFFSET, 0x0);
+	/* Do not fire the CE interrupt immediately. */
+	amba_writel(ce_base + TIMER_STATUS_OFFSET, 0xffffffff);
 	amba_writel(ce_base + TIMER_RELOAD_OFFSET, 0xffffffff);
 	amba_writel(ce_base + TIMER_MATCH1_OFFSET, 0x0);
 	amba_writel(ce_base + TIMER_MATCH2_OFFSET, 0x0);
@@ -119,6 +120,9 @@ static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
 		ambarella_ce_timer_disable();
+#if !defined(CONFIG_ARM_GIC)
+		amba_writel(VIC2_BASE + VIC_EDGE_CLR_OFFSET, 0x1 << (clkevt->irq % 32));
+#endif
 		break;
 	case CLOCK_EVT_MODE_RESUME:
 		break;
