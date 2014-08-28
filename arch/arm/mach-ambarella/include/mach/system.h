@@ -43,13 +43,13 @@ static inline void arch_idle(void)
 	if (boss && (BOSS_STATE_TURBO != boss->state) ) {
 		if (boss->state == BOSS_STATE_READY)
 			local_irq_enable();
-#if defined(CONFIG_ARM_GIC)
-		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_SET_OFFSET),
-				1 << (BOSS_VIRT_RIRQ_INT_VEC - AXI_SOFT_IRQ(0)));
-#else
+#ifdef CONFIG_PLAT_AMBARELLA_S2L
 		amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
 			    BOSS_VIRT_RIRQ_INT_VEC % 32);
-#endif  /* CONFIG_ARM_GIC */
+#else
+		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_SET_OFFSET),
+			    1 << (BOSS_VIRT_RIRQ_INT_VEC - AXI_SOFT_IRQ(0)));
+#endif  /* CONFIG_PLAT_AMBARELLA_S2L */
 	} else
 		cpu_do_idle();
 #else   /* !CONFIG_PLAT_AMBARELLA_BOSS */

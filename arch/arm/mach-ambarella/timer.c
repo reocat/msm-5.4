@@ -115,6 +115,9 @@ static void ambarella_ce_timer_set_mode(enum clock_event_mode mode,
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
 		ambarella_ce_timer_disable();
+#if !defined(CONFIG_ARM_GIC)
+		amba_writel(VIC2_BASE + VIC_EDGE_CLR_OFFSET, 0x1 << (clkevt->irq % 32));
+#endif
 		break;
 	case CLOCK_EVT_MODE_RESUME:
 		break;

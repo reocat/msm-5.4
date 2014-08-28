@@ -92,8 +92,13 @@ struct rpmsg_channel_info {
 };
 
 #if defined(CONFIG_RPMSG_TX_SPINLOCK)
+#if 1
+#define rpmsg_tx_lock(x, y)	spin_lock_irqsave(x, y)
+#define rpmsg_tx_unlock(x, y)	spin_unlock_irqrestore(x, y)
+#else
 #define rpmsg_tx_lock(x)	spin_lock_irq(x)
 #define rpmsg_tx_unlock(x)	spin_unlock_irq(x)
+#endif
 #else
 #define rpmsg_tx_lock(x)	mutex_lock(x)
 #define rpmsg_tx_unlock(x)	mutex_unlock(x)
@@ -587,9 +592,10 @@ static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
 {
 	unsigned int len;
 	void *ret;
+	unsigned int flags;
 
 	/* support multiple concurrent senders */
-	rpmsg_tx_lock(&vrp->tx_lock);
+	rpmsg_tx_lock(&vrp->tx_lock, flags);
 
 	/*
 	 * either pick the next unused tx buffer
@@ -604,7 +610,7 @@ static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
 	else
 		ret = virtqueue_get_buf_index(vrp->svq, &len, idx);
 
-	rpmsg_tx_unlock(&vrp->tx_lock);
+	rpmsg_tx_unlock(&vrp->tx_lock, flags);
 
 	return ret;
 }
@@ -627,15 +633,17 @@ static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
  */
 static void rpmsg_upref_sleepers(struct virtproc_info *vrp)
 {
+	unsigned int flags;
+
 	/* support multiple concurrent senders */
-	rpmsg_tx_lock(&vrp->tx_lock);
+	rpmsg_tx_lock(&vrp->tx_lock, flags);
 
 	/* are we the first sleeping context waiting for tx buffers ? */
 	if (atomic_inc_return(&vrp->sleepers) == 1)
 		/* enable "tx-complete" interrupts before dozing off */
 		virtqueue_enable_cb(vrp->svq);
 
-	rpmsg_tx_unlock(&vrp->tx_lock);
+	rpmsg_tx_unlock(&vrp->tx_lock, flags);
 }
 
 /**
@@ -654,15 +662,17 @@ static void rpmsg_upref_sleepers(struct virtproc_info *vrp)
  */
 static void rpmsg_downref_sleepers(struct virtproc_info *vrp)
 {
+	unsigned int flags;
+
 	/* support multiple concurrent senders */
-	rpmsg_tx_lock(&vrp->tx_lock);
+	rpmsg_tx_lock(&vrp->tx_lock, flags);
 
 	/* are we the last sleeping context waiting for tx buffers ? */
 	if (atomic_dec_and_test(&vrp->sleepers))
 		/* disable "tx-complete" interrupts */
 		virtqueue_disable_cb(vrp->svq);
 
-	rpmsg_tx_unlock(&vrp->tx_lock);
+	rpmsg_tx_unlock(&vrp->tx_lock, flags);
 }
 
 /**
@@ -707,6 +717,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	struct scatterlist sg;
 	struct rpmsg_hdr *msg;
 	int err, idx;
+	unsigned int flags;
 
 #if RPMSG_DEBUG
 	unsigned int prev_time, current_time, diff;
@@ -794,7 +805,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 
 	sg_init_one(&sg, msg, sizeof(*msg) + len);
 
-	rpmsg_tx_lock(&vrp->tx_lock);
+	rpmsg_tx_lock(&vrp->tx_lock, flags);
 
 	/* add message to the remote processor's virtqueue */
 	err = virtqueue_add_outbuf(vrp->svq, &sg, 1, msg, GFP_KERNEL);
@@ -823,7 +834,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 #endif
 
 out:
-	rpmsg_tx_unlock(&vrp->tx_lock);
+	rpmsg_tx_unlock(&vrp->tx_lock, flags);
 	return err;
 }
 EXPORT_SYMBOL(rpmsg_send_offchannel_raw);

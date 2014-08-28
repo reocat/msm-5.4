@@ -50,7 +50,7 @@ struct amb_gpio_regs {
 struct amb_gpio_regs amb_gpio_pm[GPIO_INSTANCES];
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
-#define linux_only_mask_gpio(regval, saved, mask)	((saved & ~mask) | (regval & mask))
+#define linux_only_mask_gpio(regval, saved, mask)      ((regval & ~mask) | (saved & mask))
 
 static u32 ambalink_gpio_linux_only_mask[GPIO_INSTANCES];
 #endif

@@ -30,6 +30,12 @@
 
 #define AMBAFS_INO_MAX_RESERVED  256
 
+/* This is used in i_opflags to skip ambafs_get_stat() while doing ambafs_getattr().
+   ambafs_dir_readdir() just get ambafs_stat information, thus no need ambafs_get_stat() again.
+   This improves a lots while "ls" 9999 files in one dir. */
+#define AMBAFS_IOP_SKIP_GET_STAT	0x0100
+
+
 #define AMBAFS_DMSG(...)         printk(__VA_ARGS__)
 #define AMBAFS_EMSG(...)         printk(KERN_ERR __VA_ARGS__)
 

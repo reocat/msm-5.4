@@ -327,6 +327,10 @@ static int create_image(int platform_mode)
 	return error;
 }
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+extern int pm_hibernation_recover;
+#endif
+
 /**
  * hibernation_snapshot - Quiesce devices and create a hibernation image.
  * @platform_mode: If set, use platform driver to prepare for the transition.
@@ -339,13 +343,21 @@ int hibernation_snapshot(int platform_mode)
 	int error;
 
 	error = platform_begin(platform_mode);
-	if (error)
+	if (error) {
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		pm_hibernation_recover = 1;
+#endif
 		goto Close;
+	}
 
 	/* Preallocate image memory before shutting down devices. */
 	error = hibernate_preallocate_memory();
-	if (error)
+	if (error) {
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+		pm_hibernation_recover = 1;
+#endif
 		goto Close;
+	}
 
 	error = freeze_kernel_threads();
 	if (error)

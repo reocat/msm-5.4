@@ -188,6 +188,8 @@ static int ehci_ambarella_drv_suspend(struct device *dev)
 static struct dev_pm_ops ambarella_ehci_pmops = {
 	.suspend	= ehci_ambarella_drv_suspend,
 	.resume		= ehci_ambarella_drv_resume,
+	.freeze         = ehci_ambarella_drv_suspend,
+	.restore        = ehci_ambarella_drv_resume,
 };
 
 #define AMBARELLA_EHCI_PMOPS &ambarella_ehci_pmops

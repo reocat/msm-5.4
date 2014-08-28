@@ -26,7 +26,8 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
 	LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX,
 	LINK_CTRL_CMD_HIBER_ACK,
 	LINK_CTRL_CMD_SUSPEND,
-	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST
+	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST,
+	LINK_CTRL_CMD_STANDBY_LINUX_DONE
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
 /*---------------------------------------------------------------------------*\
@@ -135,7 +136,7 @@ int rpmsg_linkctrl_cmd_hiber_enter(int flag)
 }
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_hiber_enter);
 
-int rpmsg_linkctrl_cmd_hiber_exit(void)
+int rpmsg_linkctrl_cmd_hiber_exit(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
@@ -145,6 +146,7 @@ int rpmsg_linkctrl_cmd_hiber_exit(void)
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX;
+	ctrl_cmd.Param1 = flag;
 
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 

@@ -20,10 +20,10 @@ static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
 static void rpmsg_send_irq(int irq)
 {
 	if (irq > 0) {
-#ifdef CONFIG_ARM_GIC
-		amba_writel(AHB_SCRATCHPAD_REG(0x10), 0x1 << (irq - AXI_SOFT_IRQ(0)));
-#else
+#ifdef CONFIG_PLAT_AMBARELLA_S2L
 		amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET), irq % 32);
+#else
+		amba_writel(AHB_SCRATCHPAD_REG(0x10), 0x1 << (irq - AXI_SOFT_IRQ(0)));
 #endif
 	}
 	else {
@@ -34,10 +34,10 @@ static void rpmsg_send_irq(int irq)
 
 static void rpmsg_ack_irq(int irq)
 {
-#ifdef CONFIG_ARM_GIC
-	amba_writel(AHB_SCRATCHPAD_REG(0x14), 0x1 << (irq - AXI_SOFT_IRQ(0)));
-#else
+#ifdef CONFIG_PLAT_AMBARELLA_S2L
 	amba_writel(VIC3_REG(VIC_SOFT_INT_CLR_INT_OFFSET), irq % 32);
+#else
+	amba_writel(AHB_SCRATCHPAD_REG(0x14), 0x1 << (irq - AXI_SOFT_IRQ(0)));
 #endif
 }
 

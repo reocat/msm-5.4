@@ -88,16 +88,22 @@ extern int in_suspend;
 #define MODULE_PARAM_PREFIX	"ambarella_config."
 
 /* ==========================================================================*/
+int pm_hibernation_recover = 0;
+
+#if defined(CONFIG_AMBARELLA_SYS_PM_CALL)
 static int pm_check_power_supply = 1;
 static int pm_force_power_on = 0;
-#if defined(CONFIG_AMBARELLA_SYS_PM_CALL)
+
 module_param(pm_check_power_supply, int, 0644);
 module_param(pm_force_power_on, int, 0644);
 #endif
 
 int rpmsg_linkctrl_cmd_hiber_prepare(u32 info);
 int rpmsg_linkctrl_cmd_hiber_enter(int flag);
-int rpmsg_linkctrl_cmd_hiber_exit(void);
+int rpmsg_linkctrl_cmd_hiber_exit(int flag);
+
+extern int hibernation_start;
+extern int wowlan_resume_from_ram;
 
 /* ==========================================================================*/
 void ambarella_power_off(void)
@@ -181,6 +187,132 @@ ambarella_pm_check_exit:
 }
 
 /* ==========================================================================*/
+int ambarella_pm_linkctrl_prepare(void)
+{
+	int retval = 0;
+#if defined(CONFIG_RPMSG_LINKCTRL)
+	u32 phy_addr;
+
+	pm_abcopy_page = 0;
+
+	phy_addr = ambalink_virt_to_phys((u32) &pm_abcheck_info);
+	ambcache_flush_range(&pm_abcheck_info, sizeof(pm_abcheck_info));
+
+	rpmsg_linkctrl_cmd_hiber_prepare(phy_addr);
+
+	pm_abcheck_info.aoss_info = (struct ambernation_aoss_info *)
+				ambalink_phys_to_virt((u32) pm_abcheck_info.aoss_info);
+#endif
+	return retval;
+
+}
+
+
+int notify_suspend_done(int suspend_mode)
+{
+	// Set suspendMode variable to aoss share memory
+	pm_abcheck_info.aoss_info->fn_pri[0] = wowlan_resume_from_ram;
+	ambcache_flush_range(pm_abcheck_info.aoss_info, 32);
+
+	if (suspend_mode > 1) {
+		// standby and suspend to mem
+#ifdef CONFIG_PLAT_AMBARELLA_S2L
+		amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
+			    AMBALINK_AMP_SUSPEND_KICK % 32);
+#else
+		amba_writel(AHB_SCRATCHPAD_REG(0x10),
+			    0x1 << (AMBALINK_AMP_SUSPEND_KICK - AXI_SOFT_IRQ(0)));
+#endif
+	} else {
+		// hiber to NAND and hiber to ram
+#if defined(CONFIG_RPMSG_LINKCTRL)
+		rpmsg_linkctrl_cmd_hiber_enter(suspend_mode);
+#endif
+	}
+
+	return 0;
+}
+
+static inline int ambarella_pm_linkctrl_enter(void)
+{
+	int					retval = 0;
+	int					i;
+#ifdef CONFIG_OUTER_CACHE
+	int					l2_mode = 0;
+#endif
+	ambnation_aoss_call_t			pm_abaoss_entry = NULL;
+	ambnation_aoss_call_t			pm_abaoss_outcoming = NULL;
+	u32					pm_abaoss_arg[4];
+	u32					pm_fn_pri;
+
+	if (pm_abcheck_info.aoss_info) {
+		for (i = 0; i < 4; i++) {
+			pm_abaoss_arg[i] = ambalink_phys_to_virt(
+				pm_abcheck_info.aoss_info->fn_pri[i]);
+		}
+		pm_abaoss_entry = (ambnation_aoss_call_t)pm_abaoss_arg[0];
+		pm_abaoss_outcoming = (ambnation_aoss_call_t)pm_abaoss_arg[2];
+		pm_fn_pri = (u32)pm_abcheck_info.aoss_info->fn_pri;
+
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX) && defined(CONFIG_SMP)
+		arch_smp_suspend(0);
+#endif
+
+#ifdef CONFIG_OUTER_CACHE
+		l2_mode = outer_is_enabled();
+		if (l2_mode)
+			ambcache_l2_disable_raw();
+#endif
+		flush_cache_all();
+		retval = pm_abaoss_entry(pm_fn_pri, pm_abaoss_arg[1],
+			pm_abaoss_arg[2], pm_abaoss_arg[3]);
+		printk("pm_abaoss_entry returned 0x%x\n",retval);
+
+		if (retval != 0x01) {
+			notify_suspend_done(wowlan_resume_from_ram);
+#if defined(CONFIG_AMBALINK_MULTIPLE_CORE)
+			// Linux on cortex core 1
+			sev();
+			wfe();
+			wfe();
+			pm_abaoss_outcoming(pm_fn_pri, 0x0, 0x0, 0x0);
+#elif defined (CONFIG_AMBALINK_AMP_MULTIPLE_CORE)
+			/* ARM11 */
+			/* Enable AMBALINK_AMP_SUSPEND_KICK IRQ for wake up event. */
+			enable_irq(AMBALINK_AMP_SUSPEND_KICK);
+			local_irq_disable();
+			cpu_do_idle();
+			local_irq_enable();
+			disable_irq(AMBALINK_AMP_SUSPEND_KICK);
+			pm_abaoss_outcoming(pm_fn_pri, 0x0, 0x0, 0x0);
+#else
+			/* Single core. BOSS */
+			local_irq_disable();
+			boss->state = BOSS_STATE_SUSPENDED;
+			arch_idle();
+			/* In BOSS, we do not do real idle. */
+			/* So blocking Linux to prevent it free running. */
+			while(1) {};
+#endif
+		}
+
+#if defined(CONFIG_SMP)
+		arch_smp_resume(0);
+#endif
+
+#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
+		set_ambarella_hal_invalid();
+#endif
+#ifdef CONFIG_OUTER_CACHE
+		if (l2_mode)
+			ambcache_l2_enable_raw();
+#endif
+	}
+
+	return retval;
+}
+
+/* ==========================================================================*/
 static int ambarella_pm_cpu_do_idle(unsigned long unused)
 {
 	cpu_do_idle();
@@ -196,6 +328,10 @@ static int ambarella_pm_enter_standby(void)
 	if (ambarella_pm_pre(&flags, 1, 1))
 		BUG();
 
+	// interrupt the other OS suspend is done.
+	notify_suspend_done(2);
+
+	// any interrupt to wake up linux.
 	cpu_suspend(0, ambarella_pm_cpu_do_idle);
 
 	if (ambarella_pm_post(&flags, 1, 1))
@@ -208,23 +344,11 @@ static int ambarella_pm_enter_mem(void)
 {
 	int					retval = 0;
 	unsigned long				flags;
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	struct ambarella_bapi_reboot_info_s	reboot_info;
-#endif
 
 	if (ambarella_pm_pre(&flags, 1, 1))
 		BUG();
 
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	reboot_info.magic = DEFAULT_BAPI_REBOOT_MAGIC;
-	reboot_info.mode = AMBARELLA_BAPI_CMD_REBOOT_SELFREFERESH;
-	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_SET_REBOOT_INFO,
-		&reboot_info);
-	if (retval)
-		goto ambarella_pm_enter_mem_exit_bapi;
-	retval = ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_AOSS_SAVE, NULL);
-ambarella_pm_enter_mem_exit_bapi:
-#endif
+	ambarella_pm_linkctrl_enter();
 
 	if (ambarella_pm_post(&flags, 1, 1))
 		BUG();
@@ -236,9 +360,6 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 {
 	int					retval = 0;
 	int					valid = 0;
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-	int					mode;
-#endif
 
 	retval = ambarella_pm_check(state);
 	if (retval)
@@ -250,22 +371,13 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 		break;
 
 	case PM_SUSPEND_STANDBY:
+		hibernation_start = 1;
 		valid = 1;
 		break;
 
 	case PM_SUSPEND_MEM:
-#if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
-		mode = AMBARELLA_BAPI_REBOOT_SELFREFERESH;
-		if (ambarella_bapi_cmd(AMBARELLA_BAPI_CMD_CHECK_REBOOT,
-			&mode) == 1) {
-			valid = 1;
-		}
-#endif
-		if (pm_check_power_supply &&
-			(power_supply_is_system_supplied() > 0))
-			valid = 0;
-		if (pm_force_power_on)
-			valid = 0;
+		valid  = 1;
+		retval = ambarella_pm_linkctrl_prepare();
 		break;
 
 	default:
@@ -287,7 +399,6 @@ static int ambarella_pm_suspend_begin(suspend_state_t state)
 	case PM_SUSPEND_MEM:
 		retval = ambarella_pm_notify(AMBA_EVENT_PRE_PM);
 		break;
-
 	default:
 		break;
 	}
@@ -333,30 +444,22 @@ static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 /* ==========================================================================*/
 static int ambarella_pm_hibernation_begin(void)
 {
-	int					retval = 0;
-	u32 phy_addr;
-
-	pm_abcopy_page = 0;
-
-	phy_addr = ambalink_virt_to_phys((u32) &pm_abcheck_info);
-	ambcache_flush_range(&pm_abcheck_info, sizeof(pm_abcheck_info));
-#if defined(CONFIG_RPMSG_LINKCTRL)
-	rpmsg_linkctrl_cmd_hiber_prepare(phy_addr);
-#endif
-
-	pm_abcheck_info.aoss_info = (struct ambernation_aoss_info *)
-				ambalink_phys_to_virt((u32) pm_abcheck_info.aoss_info);
-
-	return retval;
+	return ambarella_pm_linkctrl_prepare();
 }
 
 static void ambarella_pm_hibernation_end(void)
 {
 	int					retval = 0;
 
+	if (pm_hibernation_recover) {
+		pm_hibernation_recover = 0;
+		printk("Skip hibernation_end to hibernation_recover\r\n");
+		return;
+	}
+
 	retval = ambarella_pm_post(NULL, 0, 0);
 #if defined(CONFIG_RPMSG_LINKCTRL)
-	rpmsg_linkctrl_cmd_hiber_exit();
+	rpmsg_linkctrl_cmd_hiber_exit(wowlan_resume_from_ram);
 #endif
 }
 
@@ -404,6 +507,7 @@ static void ambarella_pm_hibernation_restore_cleanup(void)
 static void ambarella_pm_hibernation_restore_recover(void)
 {
 	ambarella_pm_post(NULL, 0, 0);
+	pm_hibernation_recover = 1;
 }
 
 static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
@@ -422,83 +526,14 @@ static struct platform_hibernation_ops ambarella_pm_hibernation_ops = {
 int arch_swsusp_write(unsigned int flags)
 {
 	int					retval = 0;
-	int					i;
-#ifdef CONFIG_OUTER_CACHE
-	int					l2_mode = 0;
-#endif
-	ambnation_aoss_call_t			pm_abaoss_entry = NULL;
-	ambnation_aoss_call_t			pm_abaoss_outcoming = NULL;
-	u32					pm_abaoss_arg[4];
-	u32					pm_fn_pri;
-	extern int wowlan_resume_from_ram;
 
-	if (pm_abcheck_info.aoss_info) {
-		for (i = 0; i < 4; i++) {
-			pm_abaoss_arg[i] = ambalink_phys_to_virt(
-				pm_abcheck_info.aoss_info->fn_pri[i]);
-		}
-		pm_abaoss_entry = (ambnation_aoss_call_t)pm_abaoss_arg[0];
-		pm_abaoss_outcoming = (ambnation_aoss_call_t)pm_abaoss_arg[2];
-		pm_fn_pri = (u32)pm_abcheck_info.aoss_info->fn_pri;
+	retval = ambarella_pm_linkctrl_enter();
 
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX) && defined(CONFIG_SMP)
-		arch_smp_suspend(0);
-#endif
-#ifdef CONFIG_OUTER_CACHE
-		l2_mode = outer_is_enabled();
-		if (l2_mode)
-			ambcache_l2_disable_raw();
-#endif
-		flush_cache_all();
-		retval = pm_abaoss_entry(pm_fn_pri, pm_abaoss_arg[1],
-			pm_abaoss_arg[2], pm_abaoss_arg[3]);
-		printk("pm_abaoss_entry returned 0x%x\n",retval);
-
-		if (retval != 0x01) {
-#if defined(CONFIG_RPMSG_LINKCTRL)
-			rpmsg_linkctrl_cmd_hiber_enter(wowlan_resume_from_ram);
-#endif
-#if defined(CONFIG_AMBALINK_MULTIPLE_CORE)
-			local_irq_disable();
-			sev();
-			wfe();
-			wfe();
-			local_irq_enable();
-			pm_abaoss_outcoming(pm_fn_pri, 0x0, 0x0, 0x0);
-#elif defined (CONFIG_AMBALINK_AMP_MULTIPLE_CORE)
-			/* ARM11 */
-			/* Enable AMBALINK_AMP_SUSPEND_KICK IRQ for wake up event. */
-			enable_irq(AMBALINK_AMP_SUSPEND_KICK);
-			local_irq_disable();
-			cpu_do_idle();
-			local_irq_enable();
-			disable_irq(AMBALINK_AMP_SUSPEND_KICK);
-			pm_abaoss_outcoming(pm_fn_pri, 0x0, 0x0, 0x0);
-#else
-			local_irq_disable();
-			/* Single core. */
-			boss->state = BOSS_STATE_SUSPENDED;
-			arch_idle();
-#endif
-			while(1) {};
-		}
-#if defined(CONFIG_SMP)
-		arch_smp_resume(0);
-#endif
-
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
-		set_ambarella_hal_invalid();
-#endif
-#ifdef CONFIG_OUTER_CACHE
-		if (l2_mode)
-			ambcache_l2_enable_raw();
-#endif
-		pm_abcopy_page = 0;
-		pm_abcheck_info.aoss_info->copy_pages = 0;
-		in_suspend = 0;
-		//in_suspend_ipc_svc = 0;
-		swsusp_arch_restore_cpu();
-	}
+	pm_abcopy_page = 0;
+	pm_abcheck_info.aoss_info->copy_pages = 0;
+	in_suspend = 0;
+	//in_suspend_ipc_svc = 0;
+	swsusp_arch_restore_cpu();
 
 	return retval;
 }

@@ -19,7 +19,7 @@
 #define RPMSG_NUM_BUFS                  (2048)
 #define RPMSG_BUF_SIZE                  (2048)
 #define VRING_SIZE                      0xA000
-#define RPC_RPMSG_PROFILE_SIZE          0x9000
+#define RPC_RPMSG_PROFILE_SIZE          0xA000
 
 /*
  * for RPMSG module
@@ -30,15 +30,7 @@
 #define VRING_C0_TO_C1                  (VRING_C0_AND_C1_BUF + RPMSG_TOTAL_BUF_SPACE)
 #define VRING_C1_TO_C0                  (VRING_C0_TO_C1 + VRING_SIZE)
 
-#ifdef CONFIG_ARM_GIC
-#define VRING_IRQ_C0_TO_C1_KICK         AXI_SOFT_IRQ(0)
-#define VRING_IRQ_C0_TO_C1_ACK          AXI_SOFT_IRQ(1)
-#define VRING_IRQ_C1_TO_C0_KICK         AXI_SOFT_IRQ(2)
-#define VRING_IRQ_C1_TO_C0_ACK          AXI_SOFT_IRQ(3)
-#define MUTEX_IRQ_REMOTE                AXI_SOFT_IRQ(4)
-#define MUTEX_IRQ_LOCAL                 AXI_SOFT_IRQ(5)
-#define AMBALINK_AMP_SUSPEND_KICK       AXI_SOFT_IRQ(6)
-#else
+#ifdef CONFIG_PLAT_AMBARELLA_S2L
 #define VRING_IRQ_C0_TO_C1_KICK         VIC_SOFT_IRQ(0)
 #define VRING_IRQ_C0_TO_C1_ACK          VIC_SOFT_IRQ(1)
 #define VRING_IRQ_C1_TO_C0_KICK         VIC_SOFT_IRQ(2)
@@ -46,6 +38,14 @@
 #define MUTEX_IRQ_REMOTE                VIC_SOFT_IRQ(4)
 #define MUTEX_IRQ_LOCAL                 VIC_SOFT_IRQ(5)
 #define AMBALINK_AMP_SUSPEND_KICK       VIC_SOFT_IRQ(6)
+#else
+#define VRING_IRQ_C0_TO_C1_KICK         AXI_SOFT_IRQ(0)
+#define VRING_IRQ_C0_TO_C1_ACK          AXI_SOFT_IRQ(1)
+#define VRING_IRQ_C1_TO_C0_KICK         AXI_SOFT_IRQ(2)
+#define VRING_IRQ_C1_TO_C0_ACK          AXI_SOFT_IRQ(3)
+#define MUTEX_IRQ_REMOTE                AXI_SOFT_IRQ(4)
+#define MUTEX_IRQ_LOCAL                 AXI_SOFT_IRQ(5)
+#define AMBALINK_AMP_SUSPEND_KICK       AXI_SOFT_IRQ(6)
 #endif
 
 /*

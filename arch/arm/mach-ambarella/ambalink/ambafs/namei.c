@@ -4,8 +4,6 @@
 #include <asm/page.h>
 #include "ambafs.h"
 
-#define CACHE_VALIDITY_INTERVAL (2*HZ)
-
 /*
  * helper function to trigger/wait a remote command excution
  */
@@ -39,9 +37,9 @@ static void ambafs_attach_inode(struct dentry *dentry, struct inode *inode)
 }
 
 /*
- * lookup for a specific @dentry under dir @inode 
- */ 
-static struct dentry *ambafs_lookup(struct inode *inode, 
+ * lookup for a specific @dentry under dir @inode
+ */
+static struct dentry *ambafs_lookup(struct inode *inode,
 	            struct dentry *dentry, unsigned int flags)
 {
 	int buf[128];
@@ -107,7 +105,7 @@ static int ambafs_unlink(struct inode *inode, struct dentry *dentry)
 /*
  * make a new dir @dentry under dir @inode
  */
-static int ambafs_mkdir(struct inode *inode, 
+static int ambafs_mkdir(struct inode *inode,
 			struct dentry *dentry, umode_t mode)
 {
 	int buf[128];
@@ -210,15 +208,18 @@ struct ambafs_stat* ambafs_get_stat(struct inode *inode, void *buf, int size)
 {
 	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
 	struct dentry *dir = (struct dentry*) inode->i_private;
+	struct ambafs_stat *stat = (struct ambafs_stat*)msg->parameter;
 	char *path = (char*)msg->parameter;
 	int len;
 
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
-	AMBAFS_DMSG("ambafs_getattr %s\n", path);
+	//AMBAFS_DMSG("ambafs_getattr %s\n", path);
 	msg->cmd = AMBAFS_CMD_STAT;
 	ambafs_rpmsg_exec(msg, len+1);
+	if (!msg->flag)
+		stat->type = AMBAFS_STAT_NULL;
 
-	return (struct ambafs_stat*)msg->parameter;
+	return stat;
 }
 
 /*
@@ -227,11 +228,17 @@ struct ambafs_stat* ambafs_get_stat(struct inode *inode, void *buf, int size)
 static int ambafs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		struct kstat *stat)
 {
-	if (jiffies - dentry->d_time >= CACHE_VALIDITY_INTERVAL) {
+	if (dentry->d_inode->i_opflags & AMBAFS_IOP_SKIP_GET_STAT) {
+		dentry->d_inode->i_opflags &= ~AMBAFS_IOP_SKIP_GET_STAT;
+	} else {
 		int buf[128];
 		struct ambafs_stat *astat;
 
 		astat = ambafs_get_stat(dentry->d_inode, buf, sizeof(buf));
+		if (astat->type == AMBAFS_STAT_NULL) {
+			return -ENOENT;
+		}
+
 		if (astat->type == AMBAFS_STAT_FILE) {
 			ambafs_update_inode(dentry->d_inode, astat);
 		}

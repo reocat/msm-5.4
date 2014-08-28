@@ -1,5 +1,7 @@
 #include "ambafs.h"
 #include <linux/pagemap.h>
+#include <linux/pagemap.h>
+#include <linux/pagevec.h>
 
 struct readdir_db {
 	struct ambafs_stat *stat;
@@ -7,6 +9,32 @@ struct readdir_db {
 	unsigned            offset;
 	struct ambafs_msg   msg;
 };
+
+/*
+ * invalidate the page cache contents for an inode
+ */
+static void clear_cache_contents(struct address_space *mapping)
+{
+	struct pagevec pv;
+	pgoff_t start = 0;
+	int loop;
+
+	//AMBAFS_DMSG("clearing cache contents\n");
+	pagevec_init(&pv, 0);
+
+	while(1) {
+		pv.nr = find_get_pages_contig(mapping, start,
+				PAGEVEC_SIZE, pv.pages);
+		if (pv.nr == 0)
+			break;
+
+		for (loop = 0; loop < pv.nr; loop++)
+			ClearPageUptodate(pv.pages[loop]);
+
+		start = pv.pages[loop-1]->index + 1;
+		__pagevec_release(&pv);
+	}
+}
 
 /*
  * find a inode by its path
@@ -37,7 +65,18 @@ void ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat)
 {
 	struct timespec ftime;
 	struct dentry *dentry = (struct dentry *)inode->i_private;
-	
+
+	if (inode->i_size == stat->size &&
+	    inode->i_mtime.tv_sec == stat->mtime) {
+		/* stat is the same */
+		return;
+	}
+
+	if (inode->i_size != 0) {
+		/* purge page cache for the inode */
+		clear_cache_contents(inode->i_mapping);
+	}
+
 	if (dentry)
 		dentry->d_time = jiffies;
 
@@ -158,6 +197,7 @@ static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 			}
 		}
 		ambafs_update_inode(inode, stat);
+		inode->i_opflags |= AMBAFS_IOP_SKIP_GET_STAT;
 
 		if (filldir(dirent, stat->name, strlen(stat->name),
 			    dir_db->offset++,  inode->i_ino,
@@ -193,6 +233,7 @@ static int start_readdir(struct file *file)
 	struct ambafs_msg  *msg;
 	struct dentry      *dir = file->f_dentry;
 	char *path;
+	int ret;
 
 	dir_db = (struct readdir_db*)get_zeroed_page(GFP_KERNEL);
 	if (!dir_db)
@@ -210,7 +251,13 @@ static int start_readdir(struct file *file)
 	ambafs_rpmsg_exec(msg, strlen(path) + 1);
         dir_db->stat = (struct ambafs_stat*)msg->parameter;
 
-	return (msg->flag != 0) ? 0 : -ENODEV;
+	// When msg->flag = 0, the error code is save in dir_db->stat->type.
+	if (msg->flag == 0 && dir_db->stat->type < 0)
+		ret = -EIO;
+	else
+		ret = msg->flag;
+
+	return ret;
 }
 
 /*
@@ -224,19 +271,23 @@ static int ambafs_dir_readdir(struct file *file, void *dirent, filldir_t filldir
 	struct readdir_db  *dir_db;
 	struct ambafs_msg  *msg;
 	struct dentry      *dir = file->f_dentry;
+	int ret;
 
 	if (file->f_pos == LLONG_MAX)
 		return 0;
 
 	if (file->f_pos == 0) {
-		if (start_readdir(file)) {
-			printk(KERN_ERR "start_readdir nodev\n");
+		if ((ret = start_readdir(file)) <= 0) {
+			if (ret < 0)
+				printk(KERN_ERR "start_readdir nodev\n");
 			goto ls_exit;
 		}
 	}
 
+
 	dir_db = (struct readdir_db*)((unsigned)file->f_pos);
 	msg = &(dir_db->msg);
+
 	if (msg->flag)
 		fill_dir_from_msg(dir_db, dir, dirent, filldir);
 
