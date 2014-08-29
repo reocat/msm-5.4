@@ -350,8 +350,16 @@ static int ambarella_pm_enter_mem(void)
 
 	ambarella_pm_linkctrl_enter();
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	/* Do not enable the ce interrupt here, */
+	/* otherwise we'll get a warning while resuming. */
+	/* We will enable the ce interrupt later (ambarella_pm_suspend_end). */
+	if (ambarella_pm_post(&flags, 1, 0))
+		BUG();
+#else
 	if (ambarella_pm_post(&flags, 1, 1))
 		BUG();
+#endif
 
 	return retval;
 }
@@ -431,6 +439,11 @@ static int ambarella_pm_suspend_enter(suspend_state_t state)
 
 static void ambarella_pm_suspend_end(void)
 {
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	/* Enable the ce iterrupt here instead of ambarella_pm_enter_mem(). */
+	ambarella_timer_suspend(0);
+	ambarella_timer_resume(1);
+#endif
 	ambarella_pm_notify(AMBA_EVENT_POST_PM);
 }
 
