@@ -62,6 +62,8 @@ struct ambarella_phy {
 	bool id_is_otg;
 	int gpio_md;
 	bool md_host_active;
+	int gpio_hub;
+	bool hub_active;
 	u8 port_type;	/* the behavior of the device port working */
 	u8 phy_route;	/* route D+/D- signal to device or host port */
 };
@@ -224,6 +226,16 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 	proc_create_data("usbphy0", S_IRUGO|S_IWUSR,
 		get_ambarella_proc_dir(), &proc_phy_switcher_fops, amb_phy);
 
+	/* request gpio for PHY HUB reset */
+	if (gpio_is_valid(amb_phy->gpio_hub)) {
+		rval = devm_gpio_request(phy->dev, amb_phy->gpio_hub, "hub reset");
+		if (rval < 0) {
+			dev_err(phy->dev, "Failed to request hub reset pin %d\n", rval);
+			return rval;
+		}
+		gpio_direction_output(amb_phy->gpio_hub, !amb_phy->hub_active);
+	}
+
 	if (!gpio_is_valid(amb_phy->gpio_id))
 		return 0;
 
@@ -312,6 +324,9 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 
 	amb_phy->gpio_md = of_get_named_gpio_flags(np, "md-gpios", 0, &flags);
 	amb_phy->md_host_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+	amb_phy->gpio_hub = of_get_named_gpio_flags(np, "hub-gpios", 0, &flags);
+	amb_phy->hub_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
 	ambarella_init_phy_switcher(amb_phy);
 
