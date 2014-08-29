@@ -201,24 +201,54 @@ const struct inode_operations ambafs_dir_inode_ops = {
 	.rename = ambafs_rename,
 };
 
+static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
+{
+	struct inode *inode = dentry->d_inode;
+	int valid = 1;
+
+	if (inode && S_ISDIR(inode->i_mode)) {
+		/* Always invalidate dir dentry cache. */
+		valid = 0;
+	}
+
+	//AMBAFS_DMSG("%s: flags = 0x%x, valid = %d\r\n", __func__, flags, valid);
+
+	return valid;
+}
+
+const struct dentry_operations ambafs_dentry_ops = {
+	.d_revalidate	= ambafs_d_revalidate,
+};
+
 /*
  * get inode stat
  */
-struct ambafs_stat* ambafs_get_stat(struct inode *inode, void *buf, int size)
+struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, struct inode *inode, void *buf, int size)
 {
 	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
-	struct dentry *dir = (struct dentry*) inode->i_private;
+	struct dentry *dir;
 	struct ambafs_stat *stat = (struct ambafs_stat*)msg->parameter;
 	char *path = (char*)msg->parameter;
 	int len;
 
+	if (dentry) {
+		dir = dentry;
+	} else if (inode && inode->i_private) {
+		dir = (struct dentry*) inode->i_private;
+	} else {
+		stat->type = AMBAFS_STAT_NULL;
+		goto exit;
+	}
+
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
 	//AMBAFS_DMSG("ambafs_getattr %s\n", path);
+
 	msg->cmd = AMBAFS_CMD_STAT;
 	ambafs_rpmsg_exec(msg, len+1);
 	if (!msg->flag)
 		stat->type = AMBAFS_STAT_NULL;
 
+exit:
 	return stat;
 }
 
@@ -228,13 +258,13 @@ struct ambafs_stat* ambafs_get_stat(struct inode *inode, void *buf, int size)
 static int ambafs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		struct kstat *stat)
 {
-	if (dentry->d_inode->i_opflags & AMBAFS_IOP_SKIP_GET_STAT) {
+	if (dentry->d_inode && (dentry->d_inode->i_opflags & AMBAFS_IOP_SKIP_GET_STAT)) {
 		dentry->d_inode->i_opflags &= ~AMBAFS_IOP_SKIP_GET_STAT;
 	} else {
 		int buf[128];
 		struct ambafs_stat *astat;
 
-		astat = ambafs_get_stat(dentry->d_inode, buf, sizeof(buf));
+		astat = ambafs_get_stat(NULL, dentry->d_inode, buf, sizeof(buf));
 		if (astat->type == AMBAFS_STAT_NULL) {
 			return -ENOENT;
 		}

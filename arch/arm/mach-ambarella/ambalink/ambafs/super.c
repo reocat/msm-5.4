@@ -64,6 +64,7 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 	sb->s_blocksize_bits = PAGE_CACHE_SHIFT;
 	sb->s_magic = AMBAFS_MAGIC;
 	sb->s_op = &ambafs_super_ops;
+	sb->s_d_op = &ambafs_dentry_ops;
 	/* sb->s_bdi = &ambafs_bdi; */
 
 	/* make root inode and dentry */

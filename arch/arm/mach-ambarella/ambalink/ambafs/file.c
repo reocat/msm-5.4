@@ -10,7 +10,7 @@ static int check_stat(struct inode *inode)
 	struct ambafs_stat *stat;
 	struct dentry *dentry = (struct dentry*)inode->i_private;
 
-	stat = ambafs_get_stat(inode, buf, sizeof(buf));
+	stat = ambafs_get_stat(dentry, NULL, buf, sizeof(buf));
 	if (stat->type != AMBAFS_STAT_FILE) {
 		//AMBAFS_EMSG("failed to get stat\n");
 		return -ENOENT;
@@ -56,8 +56,14 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 	int ret;
 
 	ret = check_stat(inode);
-	if (ret < 0)
+	if ((ret < 0) && (filp->f_mode & FMODE_READ)) {
+		/*
+		 *  We are here for the case, RTOS delete the file without notify linux to drop inode.
+		 *  For read, just return failure.
+		 *  For write, just reuse the inode to write the file.
+		 */
 		return ret;
+	}
 
 	filp->private_data = ambafs_remote_open(filp->f_dentry, filp->f_mode);
 	return 0;
@@ -80,9 +86,9 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 /*
  * Sync the file to backing device
  *   The @file is just a place-holder and very likely a newly-created file.
- *   Since the remote FS only allows one file for write, we basically can't 
- *   do fsync at all with @file. 
- *   We can call generic_file_fsync since it fools the VFS that the file 
+ *   Since the remote FS only allows one file for write, we basically can't
+ *   do fsync at all with @file.
+ *   We can call generic_file_fsync since it fools the VFS that the file
  *   is synced.
  *   We can't return an error either, otherwise many user-space application
  *   will simply fail.

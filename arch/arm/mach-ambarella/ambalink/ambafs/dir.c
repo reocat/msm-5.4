@@ -101,8 +101,8 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 	inode->i_uid = inode->i_gid = 0;
 	inode->i_blocks = 0;
 	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
+	inode->i_mode = 0744;
 
-	inode->i_mode = 0644;
 	if (stat->type == AMBAFS_STAT_FILE) {
 		inode->i_mode |= S_IFREG;
 		inode->i_fop = &ambafs_file_ops;

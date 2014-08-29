@@ -190,7 +190,7 @@ static void perform_writepages(struct address_space *mapping,
 		io->bh[page_idx].addr = (void*)ambalink_page_to_phys(page);
 		io->bh[page_idx].offset = page_offset(page);
 		io->bh[page_idx].len = page->mapping->host->i_size - page_offset(page);
-		io->bh[page_idx].len = (io->bh[page_idx].len < 4096) ? io->bh[page_idx].len : 4096;
+		io->bh[page_idx].len = (io->bh[page_idx].len < 4096) ? (io->bh[page_idx].len) : 4096;
 	}
 
 	msg->cmd = AMBAFS_CMD_WRITE;
