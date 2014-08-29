@@ -662,6 +662,7 @@ Optional properties:
 - id-gpios: specifies the input GPIO used for OTG detection.
 - md-gpios: specifies the output GPIO to control external circuit to switch to
   host mode or device mode.
+- hub-gpios: specifies the GPIO to reset the usb hub.
 
 ii) Example
 -----------
