@@ -1,9 +1,9 @@
 /*
- * arch/arm/plat-ambarella/include/plat/ahci.h
+ * arch/arm/mach-ambarella/soc/s3.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
- * Copyright (C) 2004-2010, Ambarella, Inc.
+ * Copyright (C) 2012-2016, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +21,26 @@
  *
  */
 
-#ifndef __PLAT_AMBARELLA_AHCI_H__
-#define __PLAT_AMBARELLA_AHCI_H__
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/of_platform.h>
+#include <linux/irqchip.h>
+#include <asm/mach/arch.h>
+#include <mach/init.h>
 
-/* ==========================================================================*/
+static const char * const s3_dt_board_compat[] = {
+	"ambarella,s3",
+	NULL,
+};
 
-#define SATA_OFFSET			0x1A000
-
-/* ==========================================================================*/
-
-#endif /* __PLAT_AMBARELLA_AHCI_H__ */
+DT_MACHINE_START(S3_DT, "Ambarella S3 (Flattened Device Tree)")
+	.restart_mode	= 's',
+	.map_io		= ambarella_map_io,
+	.init_early	= ambarella_init_early,
+	.init_irq	= irqchip_init,
+	.init_time	= ambarella_timer_init,
+	.init_machine	= ambarella_init_machine,
+	.restart	= ambarella_restart_machine,
+	.dt_compat	= s3_dt_board_compat,
+MACHINE_END
 

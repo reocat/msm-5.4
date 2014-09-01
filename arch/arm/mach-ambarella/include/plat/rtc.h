@@ -31,15 +31,14 @@
 #define RTC_SUPPORT_30BITS_PASSED_SECONDS	0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
-    (CHIP_REV == A8) || (CHIP_REV == S2L)
-#define RTC_POWER_LOST_DETECT			1
-#else
+#if (CHIP_REV == A5S)
 #define RTC_POWER_LOST_DETECT			0
+#else
+#define RTC_POWER_LOST_DETECT			1
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define RTC_OFFSET			0x15000
 #else
 #define RTC_OFFSET			0xD000

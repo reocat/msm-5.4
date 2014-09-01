@@ -46,6 +46,7 @@
 #endif
 
 /* ==========================================================================*/
+/* Physical Address and Size */
 #if defined(CONFIG_PLAT_AMBARELLA_AHB_APB_HIGH)
 #define AHB_PHYS_BASE			(0xe0000000)
 #define APB_PHYS_BASE			(0xe8000000)
@@ -63,7 +64,7 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 #define AXI_PHYS_BASE			(0xf0000000)
 #if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX) || defined(CONFIG_PLAT_AMBARELLA_S2L)
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 /* At least 1MB to sync with RTOS. */
 #define AXI_SIZE			(0x00100000)
 #else
@@ -73,18 +74,12 @@
 #define AXI_SIZE			(0x00003000)
 #endif
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-#define DDD_PHYS_BASE			(0xf0020000)
-#define DDD_SIZE			(0x00000e00)
-#endif
+
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 #define DRAMC_PHYS_BASE			(0xdffe0000)
 #define DRAMC_SIZE			(0x00020000)
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-#define CRYPT_PHYS_BASE			(0xfffef000)
-#define CRYPT_SIZE			(0x00001000)
-#endif
+
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
 #define AHB64_PHYS_BASE			(0x80000000)
 #define AHB64_SIZE			(0x00020000)
@@ -95,6 +90,7 @@
 #define DBGBUS_SIZE			(0x00200000)
 #endif
 
+/* Virtual Address */
 #if defined(CONFIG_VMSPLIT_3G)
 #define NOLINUX_MEM_V_START             (0xe0000000)
 #define AHB_BASE			(0xf0000000)
@@ -102,14 +98,8 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 #define AXI_BASE			(0xf2000000)
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-#define DDD_BASE			(0xf2020000)
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 #define DRAMC_BASE			(0xf2040000)
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-#define CRYPT_BASE			(0xf2080000)
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
 #define AHB64_BASE			(0xf20c0000)
@@ -117,6 +107,7 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xf2200000)
 #endif
+
 #elif defined(CONFIG_VMSPLIT_2G)       /* CONFIG_VMSPLIT_2G */
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 #define NOLINUX_MEM_V_START		(0xa0000000)
@@ -128,14 +119,8 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 #define AXI_BASE			(0xf0000000)
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-#define DDD_BASE			(0xf0020000)
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 #define DRAMC_BASE			(0xef000000)
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-#define CRYPT_BASE			(0xee000000)
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
 #define AHB64_BASE			(0xed000000)
@@ -143,6 +128,7 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xec000000)
 #endif
+
 #else /* CONFIG_VMSPLIT_1G */
 #define NOLINUX_MEM_V_START             (0x80000000)
 #define AHB_BASE			(0xe0000000)
@@ -150,14 +136,8 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 #define AXI_BASE			(0xf0000000)
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-#define DDD_BASE			(0xf0020000)
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 #define DRAMC_BASE			(0xef000000)
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-#define CRYPT_BASE			(0xee000000)
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
 #define AHB64_BASE			(0xed000000)

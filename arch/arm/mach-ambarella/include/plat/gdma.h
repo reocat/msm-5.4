@@ -28,8 +28,8 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2) ||\
-    (CHIP_REV == S2L)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
+    (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define NUMBERS_GDMA_INSTANCES	8
 #else
 #define NUMBERS_GDMA_INSTANCES	0
@@ -40,13 +40,13 @@
 #define GDMA_REG(x)		(GDMA_BASE + (x))
 
 #if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2) ||\
-    (CHIP_REV == S2L)
+    (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define GDMA_ON_AHB		1
 #else
 #define GDMA_ON_AHB		0
 #endif
 
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define GDMA_SUPPORT_ALPHA_BLEND	1
 #else
 #define GDMA_SUPPORT_ALPHA_BLEND	0

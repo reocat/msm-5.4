@@ -25,21 +25,21 @@
 #define __PLAT_AMBARELLA_ADC_H__
 
 /* ==========================================================================*/
-
 #if (CHIP_REV == A7L)
-#define ADC_NUM_CHANNELS	8
-#elif (CHIP_REV == I1)
-#define ADC_NUM_CHANNELS	10
+#define ADC_NUM_CHANNELS		8
 #elif (CHIP_REV == S2)
-#define ADC_NUM_CHANNELS	12
+#define ADC_NUM_CHANNELS		12
+#elif (CHIP_REV == S3)
+#define ADC_NUM_CHANNELS		5
 #else
-#define ADC_NUM_CHANNELS	4
+#define ADC_NUM_CHANNELS		4
 #endif
 
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_SUPPORT_THRESHOLD_INT	1
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_OFFSET			0x1D000
 #else
 #define ADC_OFFSET			0xD000
@@ -48,18 +48,14 @@
 #define ADC_REG(x)			(ADC_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define ADC_CONTROL_OFFSET		0x004
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#define ADC_CONTROL_OFFSET		0x04
+#define ADC_ENABLE_OFFSET		ADC_CONTROL_OFFSET
 #else
 #define ADC_CONTROL_OFFSET		0x00
 #endif
 
-#if (CHIP_REV == A5S)
-#define ADC_DATA0_OFFSET		0x10
-#define ADC_DATA1_OFFSET		0x04
-#define ADC_DATA2_OFFSET		0x08
-#define ADC_DATA3_OFFSET		0x0c
-#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_DATA0_OFFSET		0x150
 #define ADC_DATA1_OFFSET		0x154
 #define ADC_DATA2_OFFSET		0x158
@@ -71,14 +67,14 @@
 #define ADC_DATA3_OFFSET		0x10
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_COUNTER_OFFSET		0x008
 #else
-#define ADC_COUNTER_OFFSET		0x14	/* A7, I1 */
+#define ADC_COUNTER_OFFSET		0x14	/* A7 */
 #endif
 #define ADC_ENABLE_OFFSET		0x18
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_CHAN0_INTR_OFFSET		0x120
 #define ADC_CHAN1_INTR_OFFSET		0x124
 #define ADC_CHAN2_INTR_OFFSET		0x128
@@ -90,7 +86,7 @@
 #define ADC_CHAN3_INTR_OFFSET		0x50
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A7L)
 #define ADC_DATA4_OFFSET		0x100
 #define ADC_DATA5_OFFSET		0x104
 #define ADC_DATA6_OFFSET		0x108
@@ -99,7 +95,7 @@
 #define ADC_CHAN5_INTR_OFFSET		0x114
 #define ADC_CHAN6_INTR_OFFSET		0x118
 #define ADC_CHAN7_INTR_OFFSET		0x11c
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S3)
 #define ADC_DATA4_OFFSET		0x160
 #define ADC_DATA5_OFFSET		0x164
 #define ADC_DATA6_OFFSET		0x168
@@ -135,7 +131,7 @@
 #define ADC_CHAN9_INTR_OFFSET		0x124
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+/* S2, S2L and S3 */
 #define ADC_STATUS_OFFSET		0x000
 #define ADC_SLOT_NUM_OFFSET		0x00c
 #define ADC_SLOT_PERIOD_OFFSET		0x010
@@ -220,7 +216,7 @@
 #define ADC_DATA5_SAMPLE3_REG		ADC_REG(ADC_DATA5_SAMPLE3_OFFSET)
 
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+/* S2, S2L and S3 */
 #define ADC_STATUS_REG			ADC_REG(ADC_STATUS_OFFSET)
 #define ADC_SLOT_NUM_REG			ADC_REG(ADC_SLOT_NUM_OFFSET)
 #define ADC_SLOT_PERIOD_REG			ADC_REG(ADC_SLOT_PERIOD_OFFSET)
@@ -267,13 +263,24 @@
 #define ADC_CHAN11_INTR_REG		ADC_REG(ADC_CHAN11_INTR_OFFSET)
 #endif
 
+#if (CHIP_REV == A7L)
+#error "ADC_DATA_REG/ADC_CHAN_INTR_REG(ch) Not Implemented"
+#else
+#define ADC_DATA_OFFSET(ch)		(ADC_DATA0_OFFSET + (ch) * 4)
+#define ADC_DATA_REG(ch)		ADC_REG(ADC_DATA_OFFSET(ch))
+#define ADC_CHAN_INTR_OFFSET(ch)	(ADC_CHAN0_INTR_OFFSET + (ch) * 4)
+#define ADC_CHAN_INTR_REG(ch)		ADC_REG(ADC_CHAN_INTR_OFFSET(ch))
+#endif
+
+#define ADC16_CTRL_OFFSET		0x198
+#define ADC16_CTRL_REG			RCT_REG(ADC16_CTRL_OFFSET)
+
 /* ADC_CONTROL_REG */
 #define ADC_CONTROL_GYRO_SAMPLE_MODE	0x08
 
-/* valid only for S2/S2L */
+/* valid only for S2/S2L/S3 */
 #define ADC_CONTROL_RESET		0x01
-#define ADC_CONTROL_ENABLE		0x04
-#define ADC_FIFO_INT_EN		(0x1 << 31)
+#define ADC_FIFO_INT_EN			(0x1 << 31)
 #define ADC_FIFO_UNDR_INT_EN	(0x1 << 30)
 #define ADC_FIFO_DEPTH			0x80
 #define ADC_FIFO_TH				((ADC_FIFO_DEPTH >> 2) << 16)
@@ -281,7 +288,12 @@
 #define ADC_FIFO_ID_SHIFT		12
 #define ADC_FIFO_CONTROL_CLEAR		0x01
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#define ADC_CTRL_SCALER_POWERDOWN	0x100
+#define ADC_CTRL_POWERDOWN		0x2
+#define ADC_CTRL_CLK_SOURCE_SCALER	0x0
+#define ADC_CTRL_CLK_SOURCE_AUDIO	0x1
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#define ADC_CONTROL_ENABLE		0x04
 #define ADC_CONTROL_MODE		0x02
 #define ADC_CONTROL_START		0x08
 #else
@@ -291,11 +303,11 @@
 #define ADC_CONTROL_STATUS		0x01
 
 #if (CHIP_REV == A5S)
-#define ADC_HI_THRESHOLD_EN		(0x1 << 21)
-#define ADC_LO_THRESHOLD_EN		(0x1 << 20)
-#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define ADC_HI_THRESHOLD_EN		(0x1 << 31)
-#define ADC_LO_THRESHOLD_EN		(0x1 << 31)
+#define ADC_EN_HI(x)			((x) << 31)
+#define ADC_EN_LO(x)			((x) << 30)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#define ADC_EN_HI(x)			((x) << 31)
+#define ADC_EN_LO(x)			((x) << 31)
 #else
 #define ADC_HI_THRESHOLD_EN		(0x1 << 31)
 #define ADC_LO_THRESHOLD_EN		(0x1 << 30)
@@ -311,7 +323,7 @@
 #define ADC_EN_LO(x)			((x) << 30)
 #define ADC_VAL_LO(x)			((x) & 0x3ff)
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_MAX_SLOT_NUMBER		8
 #endif
 #define ADC_CH0				(1 << 0)

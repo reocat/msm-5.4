@@ -25,9 +25,9 @@
 #define __PLAT_AMBARELLA_SD_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2)
 #define SD_INSTANCES			2
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			1
@@ -35,11 +35,7 @@
 
 /* ==========================================================================*/
 #define SD_OFFSET			0x2000
-#if (CHIP_REV == I1)
-#define SD2_OFFSET			0x1B000
-#else
 #define SD2_OFFSET			0xC000
-#endif
 #define SD3_OFFSET			0x1F000
 
 #define SD_BASE				(AHB_BASE + SD_OFFSET)
@@ -331,20 +327,20 @@
 #define SD_ADMA_TBL_ATTR_VALID		(0x0001)
 
 /* ==========================================================================*/
-#define SMIO_2		GPIO(64)
-#define SMIO_3		GPIO(65)
-#define SMIO_4		GPIO(66)
-#define SMIO_5		GPIO(67)
-#define SD1_CD		GPIO(67)
-#define SMIO_6		GPIO(68)
-#define SMIO_38		GPIO(69)
-#define SMIO_39		GPIO(70)
-#define SMIO_40		GPIO(71)
-#define SMIO_41		GPIO(72)
-#define SMIO_42		GPIO(73)
-#define SMIO_43		GPIO(74)
-#define SMIO_44		GPIO(75)
-#define SMIO_45		GPIO(76)
+#define SMIO_2				GPIO(64)
+#define SMIO_3				GPIO(65)
+#define SMIO_4				GPIO(66)
+#define SMIO_5				GPIO(67)
+#define SD1_CD				GPIO(67)
+#define SMIO_6				GPIO(68)
+#define SMIO_38				GPIO(69)
+#define SMIO_39				GPIO(70)
+#define SMIO_40				GPIO(71)
+#define SMIO_41				GPIO(72)
+#define SMIO_42				GPIO(73)
+#define SMIO_43				GPIO(74)
+#define SMIO_44				GPIO(75)
+#define SMIO_45				GPIO(76)
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)

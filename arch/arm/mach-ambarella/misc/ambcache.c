@@ -266,6 +266,11 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
+#elif (CHIP_REV == S3)
+	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #else
 	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
@@ -327,10 +332,6 @@ void ambcache_l2_enable_raw()
 	if (outer_is_enabled())
 		return;
 
-#if (CHIP_REV == I1)
-	amba_writel((APB_BASE + 0x160200), 0x1);
-#endif
-
 #ifdef CONFIG_CACHE_PL310
 	if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) != 0x00000120) {
 
@@ -388,13 +389,8 @@ int ambcache_l2_disable()
 		local_irq_restore(flags);
 #endif
 	}
-	if (outer_is_enabled()) {
+	if (outer_is_enabled())
 		ret_val = -1;
-	} else {
-#if (CHIP_REV == I1)
-		amba_writel((APB_BASE + 0x160200), 0x0);
-#endif
-	}
 
 	return ret_val;
 }

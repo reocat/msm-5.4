@@ -41,12 +41,7 @@
 #define SPI_AHB_INSTANCES			0
 #define SPI_SLAVE_INSTANCES			1
 #define SPI_AHB_SLAVE_INSTANCES			0
-#elif (CHIP_REV == I1)
-#define SPI_INSTANCES				4
-#define SPI_AHB_INSTANCES			1
-#define SPI_SLAVE_INSTANCES			1
-#define SPI_AHB_SLAVE_INSTANCES			0
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SPI_INSTANCES				0
 #define SPI_AHB_INSTANCES			2
 #define SPI_SLAVE_INSTANCES			0
@@ -63,18 +58,17 @@
 #define SPI_AHB_SLAVE_INSTANCES			0
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-	(CHIP_REV == S2) || (CHIP_REV == A8) || (CHIP_REV == S2L)
-#define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
-#define SPI_SUPPORT_MASTER_DELAY_START_TIME	1 // S2L only support ssi0, remember to fix it
-#define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1 // S2 and S2L is not explain this in PRM
-#else
+#if (CHIP_REV == A5S)
 #define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	0
 #define SPI_SUPPORT_MASTER_DELAY_START_TIME	0
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	0
+#else
+#define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
+#define SPI_SUPPORT_MASTER_DELAY_START_TIME	1 // S2L only support ssi0, remember to fix it
+#define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1 // S2 and S2L is not explain this in PRM
 #endif
 
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SPI_TARGET_FRAME	1
 #else
 #define SPI_TARGET_FRAME	0
@@ -136,8 +130,6 @@
 #define SPI_AHB_SLAVE_BASE		(AHB_BASE + SPI_AHB_SLAVE_OFFSET)
 #define SPI_AHB_SLAVE_REG(x)		(SPI_AHB_SLAVE_BASE + (x))
 #endif
-
-
 
 #define SPI_MASTER_INSTANCES		(SPI_INSTANCES + SPI_AHB_INSTANCES)
 
@@ -217,103 +209,6 @@
 #define SPI_CFS			0x0
 #define SPI_DFS			0xf
 #define SPI_BAUD_RATE		200000
-
-/* ==========================================================================*/
-
-#if (CHIP_REV == S2L)
-//#define SSI0_CLK	GPIO(34) // not used in kernel
-//#define SSI0_MOSI	GPIO(35) // not used in kernel
-//#define SSI0_MISO	GPIO(36) // not used in kernel
-#define SSI0_EN0	GPIO(37) // used in spi.c
-#define SSI0_EN1	GPIO(38) // used in spi.c
-#else
-//#define SSI0_CLK	GPIO(2) // not used in kernel
-//#define SSI0_MOSI	GPIO(3) // not used in kernel
-//#define SSI0_MISO	GPIO(4) // not used in kernel
-#define SSI0_EN0	GPIO(5) // used in spi.c
-#define SSI0_EN1	GPIO(6) // used in spi.c
-#endif
-#if (CHIP_REV == S2)
-#define SSIO_EN2	GPIO(7)
-#define SSIO_EN3	GPIO(9)
-#elif (CHIP_REV == S2L)
-#define SSIO_EN2	GPIO(23)
-#define SSIO_EN3	GPIO(26)
-#else
-#define SSIO_EN2	GPIO(48)
-#define SSIO_EN3	GPIO(49)
-#endif
-#if (CHIP_REV == A7L)
-#define SSI_4_N		GPIO(88)
-#define SSI_5_N		GPIO(89)
-#define SSI_6_N		GPIO(90)
-#define SSI_7_N		GPIO(91)
-#elif (CHIP_REV == S2)
-#define SSI_4_N		GPIO(82)
-#define SSI_5_N		GPIO(83)
-#define SSI_6_N		GPIO(79)
-#define SSI_7_N		GPIO(80)
-#elif (CHIP_REV == S2L)
-#define SSI_4_N		(-1)
-#define SSI_5_N		(-1)
-#define SSI_6_N		(-1)
-#define SSI_7_N		(-1)
-#else
-#define SSI_4_N		GPIO(77)
-#define SSI_5_N		GPIO(78)
-#define SSI_6_N		GPIO(79)
-#define SSI_7_N		GPIO(80)
-#endif
-
-#if (CHIP_REV == S2L)
-//#define SSI2CLK	GPIO(7) // not used in kernel
-//#define SSI2MOSI	GPIO(8) // not used in kernel
-//#define SSI2MISO	GPIO(9) // not used in kernel
-#define SSI2_0EN	GPIO(10)
-#define SSI2_1EN	GPIO(11)
-#define SSI2_2EN	GPIO(12)
-#define SSI2_3EN	GPIO(13)
-#else
-//#define SSI2CLK	GPIO(88) // not used in kernel
-//#define SSI2MOSI	GPIO(89) // not used in kernel
-//#define SSI2MISO	GPIO(90) // not used in kernel
-#define SSI2_0EN	GPIO(91)
-#endif
-
-#if (CHIP_REV == S2L)
-#define SSI3_EN0	(-1)
-#define SSI3_EN1	(-1)
-#define SSI3_EN2	(-1)
-#define SSI3_EN3	(-1)
-#define SSI3_EN4	(-1)
-#define SSI3_EN5	(-1)
-#define SSI3_EN6	(-1)
-#define SSI3_EN7	(-1)
-#else
-#define SSI3_EN0	GPIO(128)
-#define SSI3_EN1	GPIO(129)
-#define SSI3_EN2	GPIO(130)
-#define SSI3_EN3	GPIO(131)
-#define SSI3_EN4	GPIO(132)
-#define SSI3_EN5	GPIO(133)
-#define SSI3_EN6	GPIO(134)
-#define SSI3_EN7	GPIO(135)
-#endif
-//#define SSI3_MOSI	GPIO(136) // not used in kernel
-//#define SSI3_CLK	GPIO(137) // not used in kernel
-//#define SSI3_MISO	GPIO(138) // not used in kernel
-
-#if (CHIP_REV == S2L)
-#define SSI_SLAVE_MISO	GPIO(20)
-#define SSI_SLAVE_EN	GPIO(22)
-#define SSI_SLAVE_MOSI	GPIO(21)
-#define SSI_SLAVE_CLK	GPIO(19)
-#else
-#define SSI_SLAVE_MISO	GPIO(50)
-#define SSI_SLAVE_EN	GPIO(51)
-#define SSI_SLAVE_MOSI	GPIO(52)
-#define SSI_SLAVE_CLK	GPIO(53)
-#endif
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__

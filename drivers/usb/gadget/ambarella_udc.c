@@ -38,6 +38,7 @@
 #include <linux/seq_file.h>
 #include <linux/of.h>
 #include <mach/hardware.h>
+#include <plat/rct.h>
 #include <plat/udc.h>
 #include "ambarella_udc.h"
 

@@ -31,7 +31,7 @@
 #define ETH_INSTANCES	1
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == S2) || (CHIP_REV == A8)
+#if (CHIP_REV == S2) || (CHIP_REV == A8)
 #define SUPPORT_GMII	1
 #else
 #define SUPPORT_GMII	0
@@ -355,11 +355,11 @@
 #define AMBARELLA_ETH_FC_TX			(1 << 2)
 
 
-#if (CHIP_REV == I1) || (CHIP_REV == A8)
+#if (CHIP_REV == A8)
 #define SYS_CONFIG_ETH_ENABLE		0xffffffff
 #elif (CHIP_REV == S2)
 #define SYS_CONFIG_ETH_ENABLE		0x00800000
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SYS_CONFIG_ETH_ENABLE		0x00000001
 #else
 #define SYS_CONFIG_ETH_ENABLE		0x00000080
