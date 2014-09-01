@@ -327,7 +327,9 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 	if (rval == 0) {
 		amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
 		amba_setbitsl(amb_phy->pol_reg, ocp << 13);
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
 		ambarella_ocp_polarity = ocp;
+#endif
 	}
 
 	amb_phy->owner_invert = !!of_find_property(np, "amb,owner-invert", NULL);

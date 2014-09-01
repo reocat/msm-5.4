@@ -331,7 +331,7 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 	/* Check hibernation first. */
 	if (len == 4 && !strncmp(buf, "disk", len)) {
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
-				/* Suspend to NAND. */
+		/* Suspend to NAND. */
 		wowlan_resume_from_ram = 0;
 #endif
 		return PM_SUSPEND_MAX;
@@ -348,11 +348,12 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 #ifdef CONFIG_SUSPEND
 	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
 		if (*s && len == strlen(*s) && !strncmp(buf, *s, len)) {
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 			if (state == PM_SUSPEND_STANDBY)
 				wowlan_resume_from_ram = 2;
 			else if (state == PM_SUSPEND_MEM)
 				wowlan_resume_from_ram = 3;
-
+#endif
 			return state;
 		}
 #endif
@@ -375,7 +376,7 @@ int amba_state_store(void *suspend_to)
 	}
 
 	wowlan_resume_from_ram = (int) suspend_to;
-	
+
 	if (wowlan_resume_from_ram == 2)
 		error = pm_suspend(PM_SUSPEND_STANDBY);
 	else if (wowlan_resume_from_ram == 3)
