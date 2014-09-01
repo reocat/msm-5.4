@@ -40,15 +40,6 @@
 #define USB_CLR_REG(adr, val)	(USB_WRITE_REG((adr), (USB_READ_REG(adr) & ~(val))))
 
 //-------------------------------------
-// USB global definitions
-//-------------------------------------
-//#define USB_BASE	0x30040000	// base address of usb device
-//#define USB_BASE	0x60006000	// for mmp2_amb
-#define USB_IRQ		4		// irq number of usb device
-#define INT_USB		USB_IRQ
-#define PUD_INT_USB	USB_IRQ
-
-//-------------------------------------
 // USB RxFIFO and TxFIFO depth (single or multiple)
 //-------------------------------------
 #define USB_RXFIFO_DEPTH_CTRLOUT	(256 << 16)	// shared
@@ -407,12 +398,6 @@
 #define	USB_DMA_BUF_HOST_BUSY		0xc0000000		// 11
 
 /* ==========================================================================*/
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2)
-#define UDC_SOFT_RESET			0x20000000
-#elif (CHIP_REV == A7L) || (CHIP_REV == S2L)
-#define UDC_SOFT_RESET			0x2
-#endif
 
 #endif
 

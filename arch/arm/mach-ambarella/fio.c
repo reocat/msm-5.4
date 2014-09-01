@@ -36,8 +36,7 @@
 #include <plat/nand.h>
 #include <plat/rct.h>
 
-
-#if (CHIP_REV != S2L)
+#if (FIO_INDEPENDENT_SD == 0)
 
 static DECLARE_WAIT_QUEUE_HEAD(fio_wait);
 static DEFINE_SPINLOCK(fio_lock);
@@ -64,7 +63,7 @@ void __fio_select_lock(int module)
 {
 	u32					fio_ctr;
 	u32					fio_dmactr;
-#if (CHIP_REV == A5S) || (CHIP_REV == I1)
+#if (CHIP_REV == A5S)
 	unsigned long				flags;
 #endif
 
@@ -104,14 +103,14 @@ void __fio_select_lock(int module)
 		break;
 	}
 
-#if (CHIP_REV == A5S) || (CHIP_REV == I1)
+#if (CHIP_REV == A5S)
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
 	amba_clrbitsl(SD_REG(SD_NISEN_OFFSET), SD_NISEN_CARD);
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
 	amba_writel(FIO_DMACTR_REG, fio_dmactr);
-#if (CHIP_REV == A5S) || (CHIP_REV == I1)
+#if (CHIP_REV == A5S)
 	if (module == SELECT_FIO_SD) {
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
 		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sd_int);

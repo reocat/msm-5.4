@@ -104,11 +104,7 @@ static unsigned long ambarella_rct_core_get_rate(struct clk *c)
 	if (c->divider) {
 		rate /= c->divider;
 	}
-#if (CHIP_REV == I1)
-	if (amba_rct_readl(RCT_REG(0x24C))) {
-		rate <<= 1;
-	}
-#endif
+
 	c->rate = rate;
 
 ambarella_rct_core_get_rate_exit:
@@ -131,7 +127,7 @@ static struct clk gclk_core = {
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_REG_UNAVAILABLE,
 	.pres_reg	= PLL_REG_UNAVAILABLE,
-#if ((CHIP_REV == A8) || (CHIP_REV == S2L))
+#if (CHIP_REV == A8) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.post_reg	= PLL_REG_UNAVAILABLE,
 #else
 	.post_reg	= SCALER_CORE_POST_REG,
@@ -196,7 +192,7 @@ static struct clk gclk_ahb = {
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_REG_UNAVAILABLE,
 	.pres_reg	= PLL_REG_UNAVAILABLE,
-#if ((CHIP_REV == A8) || (CHIP_REV == S2L))
+#if (CHIP_REV == A8) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.post_reg	= PLL_REG_UNAVAILABLE,
 #else
 	.post_reg	= SCALER_CORE_POST_REG,
@@ -225,7 +221,7 @@ static struct clk gclk_apb = {
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_REG_UNAVAILABLE,
 	.pres_reg	= PLL_REG_UNAVAILABLE,
-#if ((CHIP_REV == A8) || (CHIP_REV == S2L))
+#if (CHIP_REV == A8) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.post_reg	= PLL_REG_UNAVAILABLE,
 #else
 	.post_reg	= SCALER_CORE_POST_REG,
@@ -237,7 +233,7 @@ static struct clk gclk_apb = {
 	.lock_bit	= 0,
 #if (CHIP_REV == A5S)
 	.divider	= 2,
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.divider	= 8,
 #else
 	.divider	= 4,
@@ -342,7 +338,7 @@ static struct clk gclk_idsp = {
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 3) - 1,
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.extra_scaler	= 1,
 #else
 	.extra_scaler	= 0,
@@ -384,7 +380,7 @@ static struct clk gclk_audio = {
 	.lock_bit	= 7,
 	.divider	= 0,
 	.max_divider	= 0,
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.extra_scaler	= 1,
 #else
 	.extra_scaler	= 0,
@@ -392,7 +388,7 @@ static struct clk gclk_audio = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 static struct clk pll_out_sd = {
 	.parent		= NULL,
 	.name		= "pll_out_sd",
@@ -433,9 +429,9 @@ static struct clk gclk_sdxc = {
 
 #endif
 
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 static struct clk gclk_sdio = {
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.parent		= &pll_out_sd,
 #else
 	.parent		= &pll_out_core,
@@ -459,7 +455,7 @@ static struct clk gclk_sdio = {
 #endif
 
 static struct clk gclk_sd = {
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.parent		= &pll_out_sd,
 #else
 	.parent		= &pll_out_core,
@@ -563,21 +559,13 @@ static struct clk gclk_ssi2 = {
 
 #if (SPI_AHB_INSTANCES >= 1)
 static struct clk gclk_ssi_ahb = {
-#if (CHIP_REV == S2L)
 	.parent		= &pll_out_core,
-#else // ione
-	.parent		= &gclk_apb,
-#endif
 	.name		= "gclk_ssi_ahb",
 	.rate		= 0,
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_REG_UNAVAILABLE,
 	.pres_reg	= PLL_REG_UNAVAILABLE,
-#if (CHIP_REV == S2L)
 	.post_reg	= CG_SSI_REG,
-#else // ione
-	.post_reg	= CG_SSI_AHB_REG,
-#endif
 	.frac_reg	= PLL_REG_UNAVAILABLE,
 	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
 	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
@@ -674,11 +662,11 @@ void ambarella_init_early(void)
 
 	ambarella_clk_add(&gclk_uart);
 	ambarella_clk_add(&gclk_audio);
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 	ambarella_clk_add(&pll_out_sd);
 	ambarella_clk_add(&gclk_sdxc);
 #endif
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 	ambarella_clk_add(&gclk_sdio);
 #endif
 	ambarella_clk_add(&gclk_sd);

@@ -13,13 +13,12 @@
 #ifndef __AMBHW__DRCTRL_H__
 #define __AMBHW__DRCTRL_H__
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || \
-	(CHIP_REV == A8) || (CHIP_REV == S2L)
-#define DRAM_DRAM_OFFSET 		0x0000
-#define DRAM_DDRC_OFFSET  		0x0800
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2)
 #define DRAM_DRAM_OFFSET 		0x4000
 #define DRAM_DDRC_OFFSET  		DRAM_DRAM_OFFSET
+#else
+#define DRAM_DRAM_OFFSET 		0x0000
+#define DRAM_DDRC_OFFSET  		0x0800
 #endif
 
 #define DDRC_REG(x)			(DRAMC_BASE + DRAM_DDRC_OFFSET + (x))

@@ -39,7 +39,7 @@
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define	NAND_DUAL_SPACE_MODE		1
 #define	NAND_READ_ID5			1
 
@@ -57,15 +57,18 @@
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000000
 #endif
 
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#define	FIO_INDEPENDENT_SD		1
+#else
+#define	FIO_INDEPENDENT_SD		0
+#endif
+
 /* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
-#define DMA_FIOS_OFFSET			0x12000
 
 #define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
-#define DMA_FIOS_BASE			(AHB_BASE + DMA_FIOS_OFFSET)
-
 #define FIO_REG(x)			(FIO_BASE + (x))
 
 /* ==========================================================================*/
@@ -160,7 +163,7 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S2L)
+#if (FIO_INDEPENDENT_SD == 1)
 static inline void fio_select_lock(int module) { }
 static inline void fio_unlock(int module) { }
 static inline void fio_amb_sd0_set_int(u32 mask, u32 on){ }

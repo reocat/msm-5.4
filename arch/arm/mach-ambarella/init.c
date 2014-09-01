@@ -55,9 +55,6 @@ enum {
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 	AMBARELLA_IO_DESC_AXI_ID,
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-	AMBARELLA_IO_DESC_DDD_ID,
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 	AMBARELLA_IO_DESC_DRAMC_ID,
 #endif
@@ -126,17 +123,6 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.pfn		= __phys_to_pfn(AXI_PHYS_BASE),
 			.length		= AXI_SIZE,
 			.type		= MT_DEVICE,
-			},
-	},
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-	[AMBARELLA_IO_DESC_DDD_ID] = {
-		.name		= "DDD",
-		.io_desc	= {
-			.virtual= DDD_BASE,
-			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
-			.length	= DDD_SIZE,
-			.type	= MT_DEVICE,
 			},
 	},
 #endif

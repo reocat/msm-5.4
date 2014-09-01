@@ -800,9 +800,9 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 	int ret, chan_id;
 
 	if (dma_to_memory) {
-		chan_id = SSIS0_UART_RX_ACK_DMA_CHAN;
+		chan_id = UART_RX_DMA_CHAN;
 	} else {
-		chan_id = SSIS0_UART_TX_ACK_DMA_CHAN;
+		chan_id = UART_TX_DMA_CHAN;
 	}
 
 	dma_cap_zero(mask);

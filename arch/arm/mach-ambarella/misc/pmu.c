@@ -40,7 +40,7 @@ static void pmu_set_userspace_access(void *en)
 /* ==========================================================================*/
 #if defined(PMU_IRQ)
 /*
- * PMU Interrupt is not connected to A5S/A7L/I1/A8/S2,
+ * PMU Interrupt is not connected to A5S/A7L/A8/S2,
  * the counters are still available, and some profiling tools,
  * such as 'perf' can live with that and collect statistics.
  *

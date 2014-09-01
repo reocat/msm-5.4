@@ -21,14 +21,13 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
-
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
 #include <linux/delay.h>
 #include <linux/of.h>
 #include <mach/hardware.h>
 #include <plat/dma.h>
-
+#include <plat/rct.h>
 #include "dmaengine.h"
 #include "ambarella_dma.h"
 
@@ -290,11 +289,6 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 		return IRQ_HANDLED;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-#if (CHIP_REV == S2L)
-#else
-		if (i == FIO_DMA_CHAN)
-			continue;
-#endif
 		spin_lock(&amb_dma->amb_chan[i].lock);
 		if (int_src & (1 << i)) {
 			amba_writel(DMA_CHAN_STA_REG(i), 0);
@@ -881,7 +875,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	struct ambdma_device *amb_dma;
 	struct ambdma_chan *amb_chan;
 	struct device_node *np = pdev->dev.of_node;
-	int i, ret = 0;
+	int val, i, ret = 0;
 
 	/* alloc the amba dma engine struct */
 	amb_dma = kzalloc(sizeof(*amb_dma), GFP_KERNEL);
@@ -961,11 +955,6 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 	/* init dma_chan struct */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-#if (CHIP_REV == S2L)
-#else
-		if (i == FIO_DMA_CHAN)
-			continue;
-#endif
 		amb_chan = &amb_dma->amb_chan[i];
 
 		spin_lock_init(&amb_chan->lock);
@@ -982,7 +971,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		dma_cookie_init(&amb_chan->chan);
 
 		if (i == I2S_TX_DMA_CHAN || i == I2S_RX_DMA_CHAN ||
-			i == SSIS0_UART_TX_ACK_DMA_CHAN || i == SSIS0_UART_RX_ACK_DMA_CHAN) {
+			i == UART_TX_DMA_CHAN || i == UART_RX_DMA_CHAN) {
 			amb_chan->chan.device = &amb_dma->dma_slave;
 			list_add_tail(&amb_chan->chan.device_node,
 					&amb_dma->dma_slave.channels);
@@ -993,13 +982,38 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		}
 	}
 
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+	val = 0;
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		switch(i) {
+		case NOR_SPI_TX_DMA_CHAN:
+			val |= NOR_SPI_TX_DMA_REQ_IDX << (i * 4);
+		case NOR_SPI_RX_DMA_CHAN:
+			val |= NOR_SPI_RX_DMA_REQ_IDX << (i * 4);
+		case SSI1_TX_DMA_CHAN:
+			val |= SSI1_TX_DMA_REQ_IDX << (i * 4);
+		case SSI1_RX_DMA_CHAN:
+			val |= SSI1_RX_DMA_REQ_IDX << (i * 4);
+		case UART_TX_DMA_CHAN:
+			val |= UART_TX_DMA_REQ_IDX << (i * 4);
+		case UART_RX_DMA_CHAN:
+			val |= UART_RX_DMA_REQ_IDX << (i * 4);
+		case I2S_RX_DMA_CHAN:
+			val |= I2S_RX_DMA_REQ_IDX << (i * 4);
+		case I2S_TX_DMA_CHAN:
+			val |= I2S_TX_DMA_REQ_IDX << (i * 4);
+		}
+	}
+	amba_writel(AHBSP_DMA_CHANNEL_SEL_REG, val);
+#endif
+
 	/* although FIOS DMA has its own driver, we also init FIOS DMA
 	 * status here, orelse dummy FIOS DMA interrupts may occurred
 	 * without its driver installed. */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		amba_writel(DMA_CHAN_STA_REG(i), 0);
-		amba_writel(DMA_CHAN_CTR_REG(i),
-			DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+		val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI;
+		amba_writel(DMA_CHAN_CTR_REG(i), val);
 	}
 
 	ret = request_irq(amb_dma->dma_irq, ambdma_dma_irq_handler,
@@ -1059,11 +1073,6 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 	int i;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-#if (CHIP_REV == S2L)
-#else
-		if (i == FIO_DMA_CHAN)
-			continue;
-#endif
 		amb_chan = &amb_dma->amb_chan[i];
 		ambdma_stop_channel(amb_chan);
 

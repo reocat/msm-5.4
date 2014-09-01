@@ -211,6 +211,8 @@
 #define NAND_ECC_BCH6_BYTES	40	/* 10Bytes/512Bytes, so 40B/2048B */
 #define NAND_ECC_BCH8_BYTES	52	/* 13Bytes/512Bytes, so 52B/2048B */
 
+
+#define FIO_DMA_CHAN		0
 #define FDMA_CTR_OFFSET		(0x300 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_SRC_OFFSET		(0x304 + ((FIO_DMA_CHAN) << 4))
 #define FDMA_DST_OFFSET		(0x308 + ((FIO_DMA_CHAN) << 4))
