@@ -22,7 +22,6 @@
 		i2c2 = &i2c2;
 		spi0 = &spi0;
 		spi1 = &spi1;
-		spinor = &spinor0;
 		ethernet0 = &mac0;
 	};
 
