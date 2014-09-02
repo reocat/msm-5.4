@@ -23,6 +23,7 @@
 #define AMBAFS_CMD_RESERVED0     15
 #define AMBAFS_CMD_RESERVED1     16
 #define AMBAFS_CMD_VOLSIZE       17
+#define AMBAFS_CMD_QUICK_STAT	 18
 
 #define AMBAFS_STAT_NULL         0
 #define AMBAFS_STAT_FILE         1
@@ -55,6 +56,17 @@ struct ambafs_stat {
 	unsigned long   mtime;
 	unsigned long   ctime;
 	char            name[0];
+};
+
+struct ambafs_qstat {
+	void*           statp;
+	int             type;
+	int64_t         size;
+	unsigned long   atime;
+	unsigned long   mtime;
+	unsigned long   ctime;
+#define AMBAFS_QSTAT_MAGIC	0x99998888
+	u32		magic;
 };
 
 struct ambafs_bh {

@@ -2,6 +2,8 @@
 #include <linux/pagemap.h>
 #include <linux/writeback.h>
 #include <asm/page.h>
+#include <plat/ambcache.h>
+#include <plat/ambalink_cfg.h>
 #include "ambafs.h"
 
 /*
@@ -112,7 +114,7 @@ static int ambafs_mkdir(struct inode *inode,
 	struct ambafs_msg  *msg  = (struct ambafs_msg *)buf;
 	struct ambafs_stat *stat = (struct ambafs_stat*)msg->parameter;
 
-	AMBAFS_DMSG("ambafs_create %s\n", dentry->d_name.name);
+	//AMBAFS_DMSG("ambafs_create %s\n", dentry->d_name.name);
 	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_MKDIR);
 	if (stat->type == AMBAFS_STAT_DIR) {
 		struct inode *child = ambafs_new_inode(dentry->d_sb, stat);
@@ -136,7 +138,7 @@ static int ambafs_rmdir(struct inode *inode, struct dentry *dentry)
 	int buf[128];
 	struct ambafs_msg  *msg  = (struct ambafs_msg *)buf;
 
-	AMBAFS_DMSG("ambafs_unlink %s\n", dentry->d_name.name);
+	//AMBAFS_DMSG("ambafs_unlink %s\n", dentry->d_name.name);
 	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_RMDIR);
 	if (msg->flag == 0) {
 		clear_nlink(dentry->d_inode);
@@ -158,8 +160,8 @@ static int ambafs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	char *path, *end = (char*)buf + sizeof(buf);
 	int len;
 
-	AMBAFS_DMSG("ambafs_rename %s-->%s\n",
-		old_dentry->d_name.name, new_dentry->d_name.name);
+	//AMBAFS_DMSG("ambafs_rename %s-->%s\n",
+	//	old_dentry->d_name.name, new_dentry->d_name.name);
 
 	/* get new path */
 	path = (char*)msg->parameter;
@@ -201,14 +203,63 @@ const struct inode_operations ambafs_dir_inode_ops = {
 	.rename = ambafs_rename,
 };
 
+/*
+ * ambafs quick stat.
+ */
+struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode, void *buf, int size)
+{
+	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
+	struct dentry *dir;
+	struct ambafs_qstat *stat = (struct ambafs_qstat*)msg->parameter;
+	char *path = (char*)&(msg->parameter[1]);
+	int len;
+
+
+	if (dentry) {
+		dir = dentry;
+	} else if (inode && inode->i_private) {
+		dir = (struct dentry*) inode->i_private;
+	} else {
+		stat->type = AMBAFS_STAT_NULL;
+		goto exit;
+	}
+
+	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
+	msg->parameter[0] = (int) ambalink_virt_to_phys((u32) stat);
+	//AMBAFS_DMSG("%s: path = %s, quick_stat result phy address = 0x%x \r\n", __func__, path, msg->parameter[0]);
+
+	msg->cmd = AMBAFS_CMD_QUICK_STAT;
+	ambafs_rpmsg_send(msg, len + 1 + 4, NULL, NULL);
+
+	while (1) {
+		ambcache_inv_range(stat, 32);
+		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
+			stat->magic = 0x0;
+			ambcache_clean_range(stat, 32);
+			break;
+		}
+	}
+
+	//AMBAFS_DMSG("%s:  stat->type = 0x%x\r\n", __func__, stat->type);
+
+exit:
+	return stat;
+}
+
+
 static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
 	struct inode *inode = dentry->d_inode;
 	int valid = 1;
 
 	if (inode && S_ISDIR(inode->i_mode)) {
-		/* Always invalidate dir dentry cache. */
-		valid = 0;
+		static int buf[128] __attribute__((aligned(32)));
+		struct ambafs_qstat *astat;
+
+		astat = ambafs_get_qstat(NULL, dentry->d_inode, buf, sizeof(buf));
+		if (astat->type == AMBAFS_STAT_NULL) {
+			valid = 0;
+		}
 	}
 
 	//AMBAFS_DMSG("%s: flags = 0x%x, valid = %d\r\n", __func__, flags, valid);
@@ -241,7 +292,7 @@ struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, struct inode *inode, 
 	}
 
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
-	//AMBAFS_DMSG("ambafs_getattr %s\n", path);
+	//AMBAFS_DMSG("%s:  %s \r\n", __func__, path);
 
 	msg->cmd = AMBAFS_CMD_STAT;
 	ambafs_rpmsg_exec(msg, len+1);
