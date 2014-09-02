@@ -368,11 +368,24 @@ static void __init ambarella_clocksource_init(void)
 	setup_sched_clock(ambarella_read_sched_clock, 32, AMBARELLA_TIMER_FREQ);
 }
 
+#ifdef CONFIG_HAVE_ARM_TWD
+static DEFINE_TWD_LOCAL_TIMER(twd_local_timer, AMBARELLA_VA_PT_WD_BASE, IRQ_LOCALTIMER);
+
+static void __init ambarella_smp_twd_init(void)
+{
+	int err = twd_local_timer_register(&twd_local_timer);
+	if (err)
+		pr_err("twd_local_timer_register failed %d\n", err);
+}
+#else
+#define ambarella_smp_twd_init()	do {} while(0)
+#endif
+
 void __init ambarella_timer_init(void)
 {
 	ambarella_clockevent_init();
 	ambarella_clocksource_init();
 
-	clocksource_of_init();
+	ambarella_smp_twd_init();
 }
 
