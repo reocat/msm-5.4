@@ -393,9 +393,6 @@ menu "Memory Configuration"
 config AMBARELLA_PPM_SIZE
 	hex "PPM SIZE"
 	default 0x00000000
-	range 0x00000000 0x10000000 if VMSPLIT_3G
-	range 0x00000000 0x20000000 if VMSPLIT_2G
-	range 0x00000000 0x60000000 if VMSPLIT_1G
 	help
 	  Specify the size from the start of physical DRAM address to reserve.
 
