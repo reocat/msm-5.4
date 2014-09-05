@@ -76,15 +76,23 @@
 		timer7: timer@7000b064 {
 			compatible = "ambarella,clock-source";
 			reg = <0x7000b064 0x10 0x7000b030 0x4>;
-			interrupts = <0 108 0x04>;
+			interrupts = <0 108 0x1>;
 			ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 		};
 
 		timer8: timer@7000b074 {
 			compatible = "ambarella,clock-event";
 			reg = <0x7000b074 0x10 0x7000b030 0x4>;
-			interrupts = <0 109 0x04>;
+			interrupts = <0 109 0x1>;
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
+		};
+
+		/* local_timer is not used, just for debug purpose */
+		local_timer: timer@7000b054 {
+			compatible = "ambarella,local-clock-event";
+			reg = <0x7000b054 0x10 0x7000b030 0x4 0x7000b044 0x10 0x7000b030 0x4>;
+			interrupts = <0 107 0x1 0 106 0x1>;
+			ctrl-offset = <20 16>; /* bit offset in timer-ctrl reg */
 		};
 
 		uart0: uart@70005000 {
