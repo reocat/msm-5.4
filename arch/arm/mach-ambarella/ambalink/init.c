@@ -58,6 +58,12 @@ EXPORT_SYMBOL(boss);
 #ifdef CONFIG_RPROC_S2
 extern struct platform_device ambarella_rproc_cortex_dev;
 #endif
+#ifdef CONFIG_AMBARELLA_HEAPMEM
+extern struct platform_device amba_heapmem;
+#endif
+#ifdef CONFIG_AMBARELLA_DSPMEM
+extern struct platform_device amba_dspmem;
+#endif
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
 EXPORT_SYMBOL(ambarella_dmamask);
@@ -69,6 +75,12 @@ EXPORT_SYMBOL(ambarella_debug_level);
 static struct platform_device *ambarella_devices[] __initdata = {
 #ifdef CONFIG_RPROC_S2
 	&ambarella_rproc_cortex_dev,
+#endif
+#ifdef CONFIG_AMBARELLA_HEAPMEM
+	&amba_heapmem,
+#endif
+#ifdef CONFIG_AMBARELLA_DSPMEM
+	&amba_dspmem,
 #endif
 };
 

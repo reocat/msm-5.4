@@ -27,7 +27,8 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
 	LINK_CTRL_CMD_HIBER_ACK,
 	LINK_CTRL_CMD_SUSPEND,
 	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST,
-	LINK_CTRL_CMD_STANDBY_LINUX_DONE
+	LINK_CTRL_CMD_STANDBY_LINUX_DONE,
+	LINK_CTRL_CMD_GET_MEM_INFO
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
 /*---------------------------------------------------------------------------*\
@@ -44,9 +45,22 @@ typedef struct _AMBA_RPDEV_LINK_CTRL_CMD_s_ {
 	UINT32  Param2;
 } AMBA_RPDEV_LINK_CTRL_CMD_s;
 
+typedef enum _AMBA_RPDEV_LINK_CTRL_MEMTYPE_e_ {
+	LINK_CTRL_MEMTYPE_HEAP = 0,
+	LINK_CTRL_MEMTYPE_DSP
+} AMBA_RPDEV_LINK_CTRL_MEMTYPE_e;
+
+struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ {
+        void *base_addr;
+	UINT32 size;
+	UINT32 padding[6];
+} __attribute__((aligned(32), packed));
+typedef struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ AMBA_RPDEV_LINK_CTRL_MEMINFO_t;
+
 DECLARE_COMPLETION(linkctrl_comp);
 struct rpmsg_channel *rpdev_linkctrl;
 int hibernation_start = 0;
+static AMBA_RPDEV_LINK_CTRL_MEMINFO_t rpdev_meminfo;
 
 /*----------------------------------------------------------------------------*/
 static int rpmsg_linkctrl_ack(void *data)
@@ -97,6 +111,36 @@ static int rpmsg_linkctrl_gpio_linux_only_list(void *data)
 }
 
 /*----------------------------------------------------------------------------*/
+int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size)
+{
+	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
+	u32 phy_addr;
+
+	printk("%s: type=%d\n", __func__, type);
+
+	phy_addr = ambalink_virt_to_phys((u32) &rpdev_meminfo);
+	ambcache_flush_range(&rpdev_meminfo, sizeof(AMBA_RPDEV_LINK_CTRL_MEMINFO_t));
+
+	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
+	ctrl_cmd.Cmd = LINK_CTRL_CMD_GET_MEM_INFO;
+	ctrl_cmd.Param1 = (u32)type;
+	ctrl_cmd.Param2 = phy_addr;
+
+	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
+
+	wait_for_completion(&linkctrl_comp);
+
+	ambcache_inv_range((void *) ambalink_phys_to_virt(phy_addr), 32);
+
+	printk("%s: type=%u, base=%p, size=0x%08x\n", __func__ ,
+		type, rpdev_meminfo.base_addr, rpdev_meminfo.size);
+
+	*base = rpdev_meminfo.base_addr;
+	*size = rpdev_meminfo.size;
+
+	return 0;
+}
+EXPORT_SYMBOL(rpmsg_linkctrl_cmd_get_mem_info);
 
 int rpmsg_linkctrl_cmd_hiber_prepare(u32 info)
 {
@@ -151,6 +195,19 @@ int rpmsg_linkctrl_cmd_hiber_exit(int flag)
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 
 	hibernation_start = 0;
+
+	/*do {
+		void *base_addr;
+		int size;
+
+		//Get Heap meminfo
+		rpmsg_linkctrl_cmd_get_mem_info(0,&base_addr,&size);
+		printk("%s: HEAP Base=%p, size=0x%08x\n",__FUNCTION__, base_addr, size);
+
+		//Get Dsp meminfo
+		rpmsg_linkctrl_cmd_get_mem_info(1,&base_addr,&size);
+		printk("%s: DSP Base=%p, size=0x%08x\n",__FUNCTION__, base_addr, size);
+	}while(0);*/
 
 	return 0;
 }
