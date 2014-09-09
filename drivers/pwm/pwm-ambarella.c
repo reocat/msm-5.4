@@ -112,7 +112,7 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		off = 1;
 
 	reg = base + ambpwm_data_offset[pwm->hwpwm];
-	if (ambpwm->polarity == PWM_POLARITY_NORMAL)
+	if (ambpwm->polarity[pwm->hwpwm] == PWM_POLARITY_NORMAL)
 		amba_writel(reg, (on - 1) << tick_bits | (off - 1));
 	else
 		amba_writel(reg, (off - 1) << tick_bits | (on - 1));
