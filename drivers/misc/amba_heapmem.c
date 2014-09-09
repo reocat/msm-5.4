@@ -20,6 +20,7 @@
 #include <linux/mm.h>
 #include <linux/uaccess.h>
 #include <misc/amba_heapmem.h>
+#include <plat/ambalink_cfg.h>
 
 extern int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size);
 
@@ -41,11 +42,21 @@ static long amba_heap_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	mutex_lock(&amba_heap_mutex);
 	switch (cmd) {
 	case AMBA_HEAPMEM_GET_PHY_BASE:
+		if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_size)<0){
+			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
+			ret = -EINVAL;
+			break;
+		}
 		if(copy_to_user((void **)arg, &heap_baseaddr, sizeof(void *))){
 			ret = -EFAULT;
 		}
 		break;
 	case AMBA_HEAPMEM_GET_SIZE:
+		if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_size)<0){
+			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
+			ret = -EINVAL;
+			break;
+		}
 		if(copy_to_user((unsigned int *)arg, &heap_size, sizeof(unsigned int))){
 			ret = -EFAULT;
 		}
@@ -90,8 +101,9 @@ static int amba_heap_mmap(struct file *filp, struct vm_area_struct *vma)
 	size = vma->vm_end - vma->vm_start;
 	if(size==heap_size) {
 		printk("%s: heap_baseaddr=%p, heap_size=%x\n",__func__, heap_baseaddr, heap_size);
-		baseaddr=(int)heap_baseaddr;
+		baseaddr=(int)ambalink_phys_to_virt((u32)heap_baseaddr);
 	} else {
+		printk("%s: wrong size(%x)! heap_size=%x\n",__func__, size, heap_size);
 		rval = -EINVAL;
 		goto Done;
 	}

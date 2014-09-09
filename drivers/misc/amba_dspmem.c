@@ -20,6 +20,7 @@
 #include <linux/mm.h>
 #include <linux/uaccess.h>
 #include <misc/amba_dspmem.h>
+#include <plat/ambalink_cfg.h>
 
 extern int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size);
 
@@ -41,11 +42,21 @@ static long amba_dspmem_ioctl(struct file *filp, unsigned int cmd, unsigned long
 	mutex_lock(&amba_dspmem_mutex);
 	switch (cmd) {
 	case AMBA_DSPMEM_GET_PHY_BASE:
+		if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_size)<0){
+			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
+			ret = -EINVAL;
+			break;
+		}
 		if(copy_to_user((void **)arg, &dsp_baseaddr, sizeof(void *))){
 			ret = -EFAULT;
 		}
 		break;
 	case AMBA_DSPMEM_GET_SIZE:
+		if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_size)<0){
+			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
+			ret = -EINVAL;
+			break;
+		}
 		if(copy_to_user((unsigned int *)arg, &dsp_size, sizeof(unsigned int))){
 			ret = -EFAULT;
 		}
@@ -90,8 +101,9 @@ static int amba_dspmem_mmap(struct file *filp, struct vm_area_struct *vma)
 	size = vma->vm_end - vma->vm_start;
 	if(size==dsp_size) {
 		printk("%s: dsp_baseaddr=%p, dsp_size=%x\n",__func__, dsp_baseaddr, dsp_size);
-		baseaddr=(int)dsp_baseaddr;
+		baseaddr=(int)ambalink_phys_to_virt((u32)dsp_baseaddr);
 	} else {
+		printk("%s: wrong size(%x)! dsp_size=%x\n",__func__, size, dsp_size);
 		rval = -EINVAL;
 		goto Done;
 	}
