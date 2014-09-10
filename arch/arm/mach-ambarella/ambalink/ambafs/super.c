@@ -127,7 +127,8 @@ static struct dentry *ambafs_mount(struct file_system_type *fst,
 	sb = d_root->d_sb;
 	sb->s_fs_info = path;
 
-	//AMBAFS_DMSG("%s %s\n", __FUNCTION__, path);
+	AMBAFS_DMSG("%s %s\n", __FUNCTION__, path);
+
 	return d_root;
 }
 
@@ -138,7 +139,8 @@ static void ambafs_umount(struct super_block *sb)
 {
 	void *fs_info = sb->s_fs_info;
 
-	//AMBAFS_DMSG("%s\n", __FUNCTION__);
+	AMBAFS_DMSG("%s\n", __FUNCTION__);
+
 	generic_shutdown_super(sb);
 	kfree(fs_info);
 }

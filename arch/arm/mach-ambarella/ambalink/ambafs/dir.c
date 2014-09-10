@@ -19,7 +19,7 @@ static void clear_cache_contents(struct address_space *mapping)
 	pgoff_t start = 0;
 	int loop;
 
-	//AMBAFS_DMSG("clearing cache contents\n");
+	AMBAFS_DMSG("%s \r\n", __func__);
 	pagevec_init(&pv, 0);
 
 	while(1) {
@@ -66,11 +66,16 @@ void ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat)
 	struct timespec ftime;
 	struct dentry *dentry = (struct dentry *)inode->i_private;
 
-	if (inode->i_size == stat->size &&
-	    inode->i_mtime.tv_sec == stat->mtime) {
-		/* stat is the same */
+	AMBAFS_DMSG("%s: 1 inode->i_size = %lld,  stat->size = %lld, inode->i_mtime.tv_sec = %ld, stat->mtime = %ld, inode->i_opflags = 0x%x\r\n",
+			__func__,  inode->i_size, stat->size, inode->i_mtime.tv_sec, stat->mtime, inode->i_opflags);
+	if ((inode->i_size == stat->size && inode->i_mtime.tv_sec == stat->mtime) /* no modification */ ||
+	    (inode->i_mtime.tv_sec > stat->mtime) /* linux modifcation */ ||
+	    ((inode->i_opflags & AMBAFS_IOP_CREATE_FOR_WRITE) && (inode->i_size > 0)) /* linux modification */ ) {
 		return;
 	}
+
+	AMBAFS_DMSG("%s: 2 inode->i_size = %lld,  stat->size = %lld, inode->i_mtime.tv_sec = %ld, stat->mtime = %ld\r\n",
+			__func__,  inode->i_size, stat->size, inode->i_mtime.tv_sec, stat->mtime);
 
 	if (inode->i_size != 0) {
 		/* purge page cache for the inode */
@@ -94,6 +99,7 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 {
 	struct inode *inode;
 
+	AMBAFS_DMSG("%s \r\n", __func__);
 	inode = new_inode(sb);
 	if (!inode)
 		return NULL;
@@ -102,6 +108,8 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 	inode->i_blocks = 0;
 	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
 	inode->i_mode = 0744;
+	inode->i_atime = inode->i_mtime = inode->i_ctime = (struct timespec) {0, 0};
+	inode->i_size = 0;
 
 	if (stat->type == AMBAFS_STAT_FILE) {
 		inode->i_mode |= S_IFREG;
@@ -126,6 +134,8 @@ static struct inode* ambafs_inode_create(struct dentry *dir, struct ambafs_stat*
 	struct inode *inode;
 	struct dentry *dentry;
 
+
+	AMBAFS_DMSG("%s \r\n", __func__);
 	inode = ambafs_new_inode(dir->d_sb, stat);
 	if (!inode)
 		return NULL;
@@ -181,6 +191,7 @@ static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 	struct ambafs_msg  *msg  = &dir_db->msg;
 	struct ambafs_stat *stat = dir_db->stat;
 
+	AMBAFS_DMSG("%s \r\n", __func__);
 	while (stat_idx < msg->flag) {
 		if (stat->type == AMBAFS_STAT_DIR)
 			dir_db->nlink++;
@@ -202,7 +213,8 @@ static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 		if (filldir(dirent, stat->name, strlen(stat->name),
 			    dir_db->offset++,  inode->i_ino,
 			    stat->type == AMBAFS_STAT_FILE ? DT_REG : DT_DIR)) {
-			/*AMBAFS_DMSG("filldir paused at %s\n", stat->name);*/
+
+			AMBAFS_DMSG("filldir paused at %s\n", stat->name);
 			dir_db->stat = stat;
 			msg->flag -= stat_idx;
 			if (stat->type == AMBAFS_STAT_DIR)
@@ -244,8 +256,8 @@ static int start_readdir(struct file *file)
 	path = (char*)msg->parameter;
 	ambafs_get_full_path(dir, path, 2048);
 	strcat(path, "/*");
-	//AMBAFS_DMSG("readdir start %s\n", path);
 
+	AMBAFS_DMSG("%s %s\r\n", __func__, path);
 	msg->cmd = AMBAFS_CMD_LS_INIT;
 	msg->flag = 16;
 	ambafs_rpmsg_exec(msg, strlen(path) + 1);
@@ -276,6 +288,7 @@ static int ambafs_dir_readdir(struct file *file, void *dirent, filldir_t filldir
 	if (file->f_pos == LLONG_MAX)
 		return 0;
 
+	AMBAFS_DMSG("%s \r\n", __func__);
 	if (file->f_pos == 0) {
 		if ((ret = start_readdir(file)) <= 0) {
 			if (ret < 0)
@@ -305,7 +318,8 @@ static int ambafs_dir_readdir(struct file *file, void *dirent, filldir_t filldir
 
 ls_exit:
 	/* note that LS_EXIT doesn't expect a reply */
-	//AMBAFS_DMSG("readdir end\n");
+	AMBAFS_DMSG("readdir end\n");
+
 	dir_db = (struct readdir_db*)((unsigned)file->f_pos);
 	msg = &(dir_db->msg);
 	msg->cmd = AMBAFS_CMD_LS_EXIT;

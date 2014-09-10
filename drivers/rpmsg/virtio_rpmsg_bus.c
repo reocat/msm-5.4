@@ -592,7 +592,7 @@ static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
 {
 	unsigned int len;
 	void *ret;
-	unsigned int flags;
+	unsigned long flags;
 
 	/* support multiple concurrent senders */
 	rpmsg_tx_lock(&vrp->tx_lock, flags);
@@ -633,7 +633,7 @@ static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
  */
 static void rpmsg_upref_sleepers(struct virtproc_info *vrp)
 {
-	unsigned int flags;
+	unsigned long flags;
 
 	/* support multiple concurrent senders */
 	rpmsg_tx_lock(&vrp->tx_lock, flags);
@@ -662,7 +662,7 @@ static void rpmsg_upref_sleepers(struct virtproc_info *vrp)
  */
 static void rpmsg_downref_sleepers(struct virtproc_info *vrp)
 {
-	unsigned int flags;
+	unsigned long flags;
 
 	/* support multiple concurrent senders */
 	rpmsg_tx_lock(&vrp->tx_lock, flags);
@@ -717,7 +717,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	struct scatterlist sg;
 	struct rpmsg_hdr *msg;
 	int err, idx;
-	unsigned int flags;
+	unsigned long flags;
 
 #if RPMSG_DEBUG
 	unsigned int prev_time, current_time, diff;

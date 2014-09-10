@@ -35,7 +35,7 @@ static void readpage_cb(void *priv, struct ambafs_msg *msg, int len)
 	struct ambafs_io *io = (struct ambafs_io*) msg->parameter;
 	int page_idx, nr_pages = io->total;
 
-	//AMBAFS_DMSG("readpage_cb with count %d\n", nr_pages);
+	AMBAFS_DMSG("readpage_cb with count %d\n", nr_pages);
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page;
 		page = ambalink_phys_to_page((phys_addr_t)io->bh[page_idx].addr);
@@ -80,7 +80,7 @@ static int ambafs_readpage(struct file *file, struct page *page)
 	int buf[16], msg_len;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 
-	//AMBAFS_DMSG("ambafs_readpage %d\n", (int)page_offset(page));
+	AMBAFS_DMSG("ambafs_readpage %d\n", (int)page_offset(page));
 	prepare_read_msg(msg, file);
 	msg_len = insert_page_info(msg, page);
 	ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
@@ -100,7 +100,7 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	unsigned page_idx, io_pages;
 
-	//AMBAFS_DMSG("ambafs_readpages %d\n", nr_pages);
+	AMBAFS_DMSG("ambafs_readpages %d\n", nr_pages);
 	while (nr_pages) {
 		struct page *page;
 		loff_t offset;
@@ -156,7 +156,7 @@ static void writepage_cb(void *priv, struct ambafs_msg *msg, int len)
 	struct ambafs_io *io = (struct ambafs_io*) msg->parameter;
 	int page_idx, nr_pages = io->total;
 
-	//AMBAFS_DMSG("writepage_cb %d\t", nr_pages);
+	AMBAFS_DMSG("writepage_cb %d\n", nr_pages);
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page;
 		page = ambalink_phys_to_page((phys_addr_t)io->bh[page_idx].addr);
@@ -175,6 +175,7 @@ static void perform_writepages(struct address_space *mapping,
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	struct ambafs_io  *io  = (struct ambafs_io*)  msg->parameter;
 
+	AMBAFS_DMSG("%s: %d \r\n", __func__, nr_pages);
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page = pages[page_idx];
 
@@ -191,6 +192,11 @@ static void perform_writepages(struct address_space *mapping,
 		io->bh[page_idx].offset = page_offset(page);
 		io->bh[page_idx].len = page->mapping->host->i_size - page_offset(page);
 		io->bh[page_idx].len = (io->bh[page_idx].len < 4096) ? (io->bh[page_idx].len) : 4096;
+
+		AMBAFS_DMSG("%s: i_size = %d, page_offset = %lld, io->bh[%d].len = %d \r\n",
+			  __func__, (int) page->mapping->host->i_size,	page_offset(page), page_idx, io->bh[page_idx].len);
+		AMBAFS_DMSG("%s: %s \r\n", __func__, (char *) ambalink_phys_to_virt((u32) io->bh[page_idx].addr));
+
 	}
 
 	msg->cmd = AMBAFS_CMD_WRITE;
@@ -213,13 +219,13 @@ static int ambafs_writepages(struct address_space *mapping,
 
 	index = wbc->range_start >> PAGE_CACHE_SHIFT;
 	end = wbc->range_end >> PAGE_CACHE_SHIFT;
-	//AMBAFS_DMSG("%s %d %d\n", __FUNCTION__, (int)index, (int)end);
+	AMBAFS_DMSG("%s %d %d\n", __FUNCTION__, (int)index, (int)end);
 
 	if (mapping->private_data)
 		fp = mapping->private_data;
 	else
 		fp = ambafs_remote_open(
-			(struct dentry*)mapping->host->i_private, 0x1F);
+			(struct dentry*)mapping->host->i_private, O_RDWR);
 
 	if (!fp)
 		return -EPERM;
@@ -247,7 +253,6 @@ static int ambafs_writepages(struct address_space *mapping,
 				break;
 			}
 
-			//AMBAFS_DMSG("write page %d\n", (int)page_index(page));
 		        perform_writepages(mapping, &page, 1, fp);
 
 			if (--wbc->nr_to_write <= 0 &&
@@ -275,6 +280,7 @@ static int ambafs_write_begin(struct file *file, struct address_space *mapping,
 	struct page *page;
 	pgoff_t index;
 
+	AMBAFS_DMSG("%s: \r\n", __func__);
 	index = pos >> PAGE_CACHE_SHIFT;
 	page = grab_cache_page_write_begin(mapping, index, flags);
 	if (!page) {
@@ -288,7 +294,7 @@ static int ambafs_write_begin(struct file *file, struct address_space *mapping,
 		int buf[16], msg_len;
 		struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 
-		//AMBAFS_DMSG("Read-for-Write, pos=%d, len=%u\n", (int)pos, len);
+		AMBAFS_DMSG("Read-for-Write, pos=%d, len=%u\n", (int)pos, len);
 		zero_user_segment(page, pos, PAGE_CACHE_SIZE);
 
 		prepare_read_msg(msg, file);
@@ -311,6 +317,7 @@ static int ambafs_write_end(struct file *file, struct address_space *mapping,
 	pgoff_t index = 0;
 	int nr_pages;
 
+	AMBAFS_DMSG("%s: \r\n", __func__);
 	simple_write_end(file, mapping, pos, len, copied, page, fsdata);
 
 	/* check if we have enough pages to warrant a write */
@@ -318,7 +325,7 @@ static int ambafs_write_end(struct file *file, struct address_space *mapping,
 				MAX_NR_PAGES, pages);
 
         if (nr_pages == MAX_NR_PAGES) {
-		//AMBAFS_DMSG("%s: write %d page 0x%08x\n", __func__, nr_pages, (int)page_index(pages));
+		AMBAFS_DMSG("%s: write %d page 0x%08x\n", __func__, nr_pages, (int)page_index((struct page *)pages));
 		perform_writepages(mapping, pages, nr_pages, file->private_data);
 	}
 

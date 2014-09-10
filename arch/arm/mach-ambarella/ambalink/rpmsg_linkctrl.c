@@ -27,7 +27,6 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
 	LINK_CTRL_CMD_HIBER_ACK,
 	LINK_CTRL_CMD_SUSPEND,
 	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST,
-	LINK_CTRL_CMD_STANDBY_LINUX_DONE,
 	LINK_CTRL_CMD_GET_MEM_INFO
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
@@ -98,7 +97,7 @@ static int rpmsg_linkctrl_gpio_linux_only_list(void *data)
 
 	ambcache_inv_range((void *) virt, strlen((char*) virt));
 
-	while(p = strsep((char **) &virt, ", ")) {
+	while((p = (u8 *) strsep((char **) &virt, ", "))) {
 		ret = kstrtouint(p, 0, &gpio);
 		if (ret < 0) {
 			continue;

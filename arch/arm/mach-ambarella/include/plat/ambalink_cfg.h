@@ -84,11 +84,17 @@
 #define ambalink_phys_to_virt(x)        ambarella_phys_to_virt(x)
 #define ambalink_page_to_phys(x)        (page_to_phys(x) -  DEFAULT_MEM_START)
 #define ambalink_phys_to_page(x)        phys_to_page((x) +  DEFAULT_MEM_START)
+
+/* address translation in loadable kernel module. Note: Just follow the above formula without DEFAULT_MEM_START. */
+#define ambalink_lkm_virt_to_phys(x)	(__pfn_to_phys(vmalloc_to_pfn((void *) (x))) + ((u32)(x) & (~PAGE_MASK)))
 #else
 #define ambalink_virt_to_phys(x)        (ambarella_virt_to_phys(x) -  DEFAULT_MEM_START)
 #define ambalink_phys_to_virt(x)        ambarella_phys_to_virt((x) +  DEFAULT_MEM_START)
 #define ambalink_page_to_phys(x)        (page_to_phys(x) -  DEFAULT_MEM_START)
 #define ambalink_phys_to_page(x)        phys_to_page((x) +  DEFAULT_MEM_START)
+
+/* address translation in loadable kernel module */
+#define ambalink_lkm_virt_to_phys(x)	(__pfn_to_phys(vmalloc_to_pfn((void *) (x))) + ((u32)(x) & (~PAGE_MASK)) - DEFAULT_MEM_START)
 #endif
 
 #else

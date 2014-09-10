@@ -10,9 +10,10 @@ static int check_stat(struct inode *inode)
 	struct ambafs_stat *stat;
 	struct dentry *dentry = (struct dentry*)inode->i_private;
 
+	AMBAFS_DMSG("%s \r\n", __func__);
 	stat = ambafs_get_stat(dentry, NULL, buf, sizeof(buf));
 	if (stat->type != AMBAFS_STAT_FILE) {
-		//AMBAFS_EMSG("failed to get stat\n");
+		AMBAFS_DMSG("%s: ambafs_get_stat() failed\n", __func__);
 		return -ENOENT;
 	}
 
@@ -23,17 +24,38 @@ static int check_stat(struct inode *inode)
 /*
  * request remote core to open a file, returns remote filp
  */
-void* ambafs_remote_open(struct dentry *dentry, int mode)
+void* ambafs_remote_open(struct dentry *dentry, int flags)
 {
 	int buf[128];
 	struct ambafs_msg *msg  = (struct ambafs_msg*) buf;
 	char *path = (char*)&msg->parameter[1];
+	char *mode;
 
 	ambafs_get_full_path(dentry, path, (char*)buf + sizeof(buf) - path);
-	//AMBAFS_DMSG("%s %s %X\n", __FUNCTION__, path, mode);
+
+	if ((flags & O_WRONLY) && (flags & O_APPEND)) {
+		/* read, write, error if file not exist. We have read-for-write in ambafs, use r+ instead of a */
+		mode = "r+";
+	} else if ((flags & O_WRONLY) || (flags & O_TRUNC) || (flags & O_CREAT)) {
+		/* write, create if file not exist,  destory file content if file exist */
+		mode = "w";
+	} else if (flags & O_RDWR) {
+		if ((flags & O_TRUNC) || (flags & O_CREAT)) {
+			/* read, write, create if file not exist,  destory file content if file exist */
+			mode = "w+";
+		} else {
+			/* read, write, error if file not exist, */
+			mode = "r+";
+		}
+	} else {
+		/* read, error if file not exist, */
+		mode = "r";
+	}
+
 	msg->cmd = AMBAFS_CMD_OPEN;
-	msg->parameter[0] = (int)mode;
+	strncpy((char *)&msg->parameter[0], mode, 4);
 	ambafs_rpmsg_exec(msg, 4 + strlen(path) + 1);
+	AMBAFS_DMSG("%s %s %s 0x%x\n", __FUNCTION__, path, mode, msg->parameter[0]);
 	return (void*)msg->parameter[0];
 }
 
@@ -45,7 +67,7 @@ void ambafs_remote_close(void *fp)
 	int buf[16];
 	struct ambafs_msg  *msg  = (struct ambafs_msg  *)buf;
 
-	//AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
+	AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
 	msg->cmd = AMBAFS_CMD_CLOSE;
         msg->parameter[0] = (int)fp;
 	ambafs_rpmsg_exec(msg, 4);
@@ -54,6 +76,10 @@ void ambafs_remote_close(void *fp)
 static int ambafs_file_open(struct inode *inode, struct file *filp)
 {
 	int ret;
+
+	AMBAFS_DMSG("%s f_mode = 0x%x, f_flags = 0x%x\r\n", __func__, filp->f_mode, filp->f_flags);
+	AMBAFS_DMSG("%s O_APPEND = 0x%x O_TRUNC = 0x%x O_CREAT = 0x%x  O_RDWR = 0x%x O_WRONLY=0x%x\r\n",
+		__func__, O_APPEND, O_TRUNC, O_CREAT, O_RDWR, O_WRONLY);
 
 	ret = check_stat(inode);
 	if ((ret < 0) && (filp->f_mode & FMODE_READ)) {
@@ -65,7 +91,10 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 		return ret;
 	}
 
-	filp->private_data = ambafs_remote_open(filp->f_dentry, filp->f_mode);
+	if (filp->f_flags & (O_CREAT | O_TRUNC))
+		inode->i_opflags |= AMBAFS_IOP_CREATE_FOR_WRITE;
+
+	filp->private_data = ambafs_remote_open(filp->f_dentry, filp->f_flags);
 	return 0;
 }
 
@@ -74,11 +103,14 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 	struct address_space *mapping = &inode->i_data;
 	void *fp = filp->private_data;
 
-	//AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
+	AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
 	mapping->private_data = fp;
+	AMBAFS_DMSG("%s: before filemap_write_and_wait\n", __FUNCTION__);
 	filemap_write_and_wait(inode->i_mapping);
+	AMBAFS_DMSG("%s after filemap_write_and_wait\n", __FUNCTION__);
 	mapping->private_data = NULL;
 	ambafs_remote_close(fp);
+	inode->i_opflags &= ~AMBAFS_IOP_CREATE_FOR_WRITE;
 	check_stat(inode);
 	return 0;
 }
@@ -96,8 +128,9 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 static int ambafs_file_fsync(struct file *file, loff_t start,  loff_t end,
 			int datasync)
 {
-	/*AMBAFS_DMSG("ambafs_file_fsync start=%d end=%d sync=%d\n",
-	    (int)start, (int)end, datasync);*/
+
+	AMBAFS_DMSG("%s: start=%d end=%d sync=%d\r\n", __func__, (int)start, (int)end, datasync);
+
 	//return generic_file_fsync(file, start, end, datasync);
 	return 0;
 }

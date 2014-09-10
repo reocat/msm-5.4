@@ -31,13 +31,28 @@
 
 #define AMBAFS_INO_MAX_RESERVED  256
 
+
 /* This is used in i_opflags to skip ambafs_get_stat() while doing ambafs_getattr().
-   ambafs_dir_readdir() just get ambafs_stat information, thus no need ambafs_get_stat() again.
-   This improves a lots while "ls" 9999 files in one dir. */
-#define AMBAFS_IOP_SKIP_GET_STAT	0x0100
+ * ambafs_dir_readdir() just get ambafs_stat information, thus no need ambafs_get_stat() again.
+ * This improves a lots while "ls" 9999 files in one dir.
+ */
+#define AMBAFS_IOP_SKIP_GET_STAT       0x0100
 
+/*
+ * This is used in i_opflags to skip clear_cache_contents() while ambafs_update_inode().
+ * The case for linux create a new file to write, the inode contents should not be cleared.
+ * Linux would update the inode size and time and it is different from the ThreadX stat size and time,
+ * so we need a flag to skip clear_cache_contents().
+ */
+#define AMBAFS_IOP_CREATE_FOR_WRITE      0x0200
 
+//#define ENABLE_AMBAFS_DEBUG_MSG		1
+#ifdef ENABLE_AMBAFS_DEBUG_MSG
 #define AMBAFS_DMSG(...)         printk(__VA_ARGS__)
+#else
+#define AMBAFS_DMSG(...)
+#endif
+
 #define AMBAFS_EMSG(...)         printk(KERN_ERR __VA_ARGS__)
 
 struct ambafs_msg {
@@ -92,7 +107,7 @@ extern void   ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat)
 extern struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, struct inode *inode, void *buf, int size);
 
 extern int   ambafs_get_full_path(struct dentry *dir, char *buf, int len);
-extern void* ambafs_remote_open(struct dentry *dentry, int mode);
+extern void* ambafs_remote_open(struct dentry *dentry, int flags);
 extern void  ambafs_remote_close(void *fp);
 
 extern const struct file_operations  ambafs_dir_ops;
