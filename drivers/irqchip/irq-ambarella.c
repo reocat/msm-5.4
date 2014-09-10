@@ -40,6 +40,21 @@ struct ambvic_chip_data {
 	struct irq_domain *domain;
 };
 
+#ifdef CONFIG_SMP
+
+static DEFINE_RAW_SPINLOCK(irq_controller_lock);
+
+#define IPI0_IRQ_MASK		((1 << IPI01_IRQ) | (1 << IPI02_IRQ) | \
+				 (1 << IPI03_IRQ) | (1 << IPI04_IRQ) | \
+				 (1 << IPI05_IRQ) | (1 << IPI06_IRQ))
+#define IPI1_IRQ_MASK		((1 << IPI11_IRQ) | (1 << IPI12_IRQ) | \
+				 (1 << IPI13_IRQ) | (1 << IPI14_IRQ) | \
+				 (1 << IPI15_IRQ) | (1 << IPI16_IRQ))
+#define IPI_IRQ_MASK		(IPI0_IRQ_MASK | IPI1_IRQ_MASK)
+#define AMBVIC_IRQ_IS_IPI(irq)	((irq) < 32 && ((1 << (irq)) & IPI_IRQ_MASK))
+
+#endif
+
 static struct ambvic_chip_data ambvic_data __read_mostly;
 
 /* ==========================================================================*/
@@ -221,6 +236,33 @@ static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
 
 #endif
 
+#ifdef CONFIG_SMP
+static int ambvic_set_affinity(struct irq_data *data,
+		const struct cpumask *mask_val, bool force)
+{
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 cpu = cpumask_any_and(mask_val, cpu_online_mask);
+	u32 mask = 1 << HWIRQ_TO_OFFSET(data->hwirq);
+	u32 val;
+
+	if (cpu >= nr_cpu_ids)
+		return -EINVAL;
+
+	raw_spin_lock(&irq_controller_lock);
+
+	val = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+	if (cpu == 0)
+		val |= mask;
+	else
+		val &= ~mask;
+	amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val);
+
+	raw_spin_unlock(&irq_controller_lock);
+
+	return 0;
+}
+#endif
+
 static struct irq_chip ambvic_chip = {
 	.name		= "VIC",
 	.irq_ack	= ambvic_ack_irq,
@@ -228,11 +270,53 @@ static struct irq_chip ambvic_chip = {
 	.irq_mask_ack	= ambvic_mask_ack_irq,
 	.irq_unmask	= ambvic_unmask_irq,
 	.irq_set_type	= ambvic_set_type_irq,
+#ifdef CONFIG_SMP
+	.irq_set_affinity = ambvic_set_affinity,
+#endif
 	.flags		= (IRQCHIP_SET_TYPE_MASKED | IRQCHIP_MASK_ON_SUSPEND |
 			IRQCHIP_SKIP_SET_WAKE),
 };
 
 /* ==========================================================================*/
+#ifdef CONFIG_SMP
+void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
+{
+	int cpu;
+
+	/* currently we only support dual cores, so we just pick the
+	 * first cpu we find in 'mask'.. */
+	cpu = cpumask_any(mask);
+
+	/*
+	 * Ensure that stores to Normal memory are visible to the
+	 * other CPUs before issuing the IPI.
+	 */
+	dsb();
+
+	/* submit softirq. Note: this always happens on VIC0, and we reserve
+	 * VIC0.0 to keep HWIRQ == IRQ, so we will use VIC0.1 ~ VIC0.6 and
+	 * VIC0.17 ~ VIC0.22 as IPI.*/
+	ambvic_sw_set(ambvic_data.reg_base[0], irq + ((cpu == 0) ? 1 : 17));
+}
+#endif
+
+static inline int ambvic_handle_ipi(struct pt_regs *regs,
+		struct irq_domain *domain, u32 hwirq)
+{
+#ifdef CONFIG_SMP
+	/* IPI Handling */
+	if (AMBVIC_IRQ_IS_IPI(hwirq)) {
+		ambvic_sw_clr(ambvic_data.reg_base[0], hwirq);
+		if ((1 << hwirq) & IPI0_IRQ_MASK)
+			handle_IPI(hwirq - 1, regs);
+		else
+			handle_IPI(hwirq - 17, regs);
+
+		return 1;
+	}
+#endif
+	return 0;
+}
 
 static int ambvic_handle_one(struct pt_regs *regs,
 		struct irq_domain *domain, u32 bank)
@@ -255,6 +339,12 @@ static int ambvic_handle_one(struct pt_regs *regs,
 			break;
 #endif
 		hwirq += bank * NR_VIC_IRQ_SIZE;
+
+		if (ambvic_handle_ipi(regs, domain, hwirq)) {
+			handled = 1;
+			continue;
+		}
+
 		irq = irq_find_mapping(domain, hwirq);
 		handle_IRQ(irq, regs);
 		handled = 1;

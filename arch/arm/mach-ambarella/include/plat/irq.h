@@ -725,6 +725,10 @@
 
 #ifndef __ASSEMBLER__
 
+#ifdef CONFIG_PLAT_AMBARELLA_VIC_SMP
+struct cpumask;
+extern void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq);
+#endif
 extern void ambvic_sw_set(void __iomem *vic_base, unsigned int vic_irq);
 extern void ambvic_sw_clr(void __iomem *vic_base, unsigned int vic_irq);
 
