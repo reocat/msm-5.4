@@ -374,7 +374,7 @@
 			reg = <0xe0032000 0x1000>;
 			interrupts = <25 0x4>;
 			status = "disabled";
-			/* amb,msr-used; */	/* use Modem Status Register */
+			amb,msr-used;	/* use Modem Status Register */
 			/* amb,tx-fifo-fix; */
 			/* need to selcec pinctrl setup in board dts */
 		};
