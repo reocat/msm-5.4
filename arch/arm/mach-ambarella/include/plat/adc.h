@@ -37,6 +37,11 @@
 
 #if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_SUPPORT_THRESHOLD_INT	1
+#define ADC_SUPPORT_SLOT		1
+#else
+#define ADC_SUPPORT_THRESHOLD_INT	0
+#define ADC_SUPPORT_SLOT		0
+#endif
 
 /* ==========================================================================*/
 #if (CHIP_REV == S2L) || (CHIP_REV == S3)
@@ -53,6 +58,7 @@
 #define ADC_ENABLE_OFFSET		ADC_CONTROL_OFFSET
 #else
 #define ADC_CONTROL_OFFSET		0x00
+#define ADC_ENABLE_OFFSET		0x18
 #endif
 
 #if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
@@ -72,7 +78,6 @@
 #else
 #define ADC_COUNTER_OFFSET		0x14	/* A7 */
 #endif
-#define ADC_ENABLE_OFFSET		0x18
 
 #if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_CHAN0_INTR_OFFSET		0x120
@@ -168,7 +173,6 @@
 #define ADC_FIFO_DATA1_OFFSET		0x280
 #define ADC_FIFO_DATA2_OFFSET		0x300
 #define ADC_FIFO_DATA3_OFFSET		0x380
-#endif
 
 /* A7 */
 #define ADC_DATA4_SAMPLE0_OFFSET	0x60
@@ -254,8 +258,6 @@
 #define ADC_FIFO_DATA2_REG			ADC_REG(ADC_FIFO_DATA2_OFFSET)
 #define ADC_FIFO_DATA3_REG			ADC_REG(ADC_FIFO_DATA3_OFFSET)
 
-#endif
-
 #if (CHIP_REV == S2)
 #define ADC_DATA10_REG			ADC_REG(ADC_DATA10_OFFSET)
 #define ADC_DATA11_REG			ADC_REG(ADC_DATA11_OFFSET)
@@ -297,6 +299,7 @@
 #define ADC_CONTROL_MODE		0x02
 #define ADC_CONTROL_START		0x08
 #else
+#define ADC_CONTROL_ENABLE		0x01
 #define ADC_CONTROL_MODE		0x04
 #define ADC_CONTROL_START		0x02
 #endif
@@ -313,15 +316,9 @@
 #define ADC_LO_THRESHOLD_EN		(0x1 << 30)
 #endif
 
-#define ADC_THRESHOLD_INT_HI		1
-#define ADC_THRESHOLD_INT_LO		0
-
-#define ADC_VAL_HI(x)			((x) << 15)
-
+#define ADC_VAL_HI(x)			(((x) & 0xfff) << 16)
+#define ADC_VAL_LO(x)			((x) & 0xfff)
 /* ==========================================================================*/
-#define ADC_EN_HI(x)			((x) << 31)
-#define ADC_EN_LO(x)			((x) << 30)
-#define ADC_VAL_LO(x)			((x) & 0x3ff)
 
 #if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_MAX_SLOT_NUMBER		8
@@ -338,6 +335,43 @@
 #define ADC_CH9				(1 << 9)
 #define ADC_CH10			(1 << 10)
 #define ADC_CH11			(1 << 11)
+
+enum {
+	AMBADC_ONESHOT = 0,
+	AMBADC_CONTINUOUS,
+};
+
+struct ambadc_host {
+	struct device *dev;
+	u32 irq;
+	u32 clk;
+	bool polling_mode;
+	bool keep_start;
+	struct delayed_work work;
+};
+
+struct ambadc_client;
+typedef int (*ambadc_client_callback)(struct ambadc_client *client,
+			u32 ch, u32 level);
+typedef int (*ambadc_read_level)(u32 ch);
+
+struct ambadc_client {
+	struct device *dev;
+	struct ambadc_host *host;
+	struct list_head node;
+	/* specify the channel this client is interested in */
+	unsigned long channel_mask[BITS_TO_LONGS(ADC_NUM_CHANNELS)];
+	u32 mode;
+	ambadc_client_callback callback;
+};
+
+extern struct ambadc_client *ambarella_adc_register_client(struct device *dev,
+			u32 mode, ambadc_client_callback callback);
+extern void ambarella_adc_unregister_client(struct ambadc_client *client);
+
+extern int ambarella_adc_set_threshold(struct ambadc_client *client,
+			u32 ch, u32 low, u32 high);
+extern int ambarella_adc_read_level(u32 ch);
 
 #endif /* __PLAT_AMBARELLA_ADC_H__ */
 

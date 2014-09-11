@@ -12,6 +12,7 @@
 #include <linux/err.h>
 #include <linux/clk.h>
 #include <linux/remoteproc.h>
+#include <linux/clockchips.h>
 
 #include <mach/init.h>
 
@@ -241,7 +242,13 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 
 	oldfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
+#if 1
+	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
+	clocksource_suspend();
+	clockevents_suspend();
+#else
 	ambarella_timer_suspend(1);
+#endif
 
 	rpmsg_clk_ack_threadx(data);
 
@@ -253,11 +260,21 @@ static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
 
+#if 1
+	clockevents_resume();
+	clocksource_resume();
+
+	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
+
+	/* Resume hrtimers */
+	hrtimers_resume();
+#else
 	ambarella_timer_resume(1);
 
 	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
+#endif
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));

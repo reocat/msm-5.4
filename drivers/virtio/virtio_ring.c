@@ -521,7 +521,7 @@ static void detach_buf(struct vring_virtqueue *vq, unsigned int head)
 	/* Free the indirect table */
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 	if (vq->vring.desc[i].flags & VRING_DESC_F_INDIRECT)
-		kfree(vq->vring.desc[i].addr);
+		kfree((void *) (u32) vq->vring.desc[i].addr);
 #else
 	if (vq->vring.desc[i].flags & VRING_DESC_F_INDIRECT)
 		kfree(phys_to_virt(vq->vring.desc[i].addr));

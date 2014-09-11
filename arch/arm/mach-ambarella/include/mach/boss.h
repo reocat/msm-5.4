@@ -55,17 +55,6 @@
 #define BOSS_VIRT_GIRQ_INT_VEC		(32 + 22)	/* Virtual 'guest IRQ' irq */
 /* FIXME: BUG: VIC2_20 on A7 is temporarily borrowed from ETH2 IRQ */
 #define BOSS_VIRT_RIRQ_INT_VEC		(32 + 20)	/* Virtual 'root IRQ' irq */
-#elif (CHIP_REV == I1)
-#define BOSS_VIRT_H2G_INT_REQ_VEC	AXI_SOFT_IRQ(0)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_H2G_INT_RLY_VEC	AXI_SOFT_IRQ(2)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_INT_REQ_VEC	3		/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_G2H_INT_RLY_VEC	(32 + 32 + 4)	/* Virtual 'guest-to-host' irq */
-#define BOSS_VIRT_H2G_MTX_VEC		AXI_SOFT_IRQ(1)	/* Virtual 'host-to-guest' irq */
-#define BOSS_VIRT_G2H_MTX_VEC		(32 + 32 + 0)	/* Virtual 'guest-to-host' irq */
-
-#define BOSS_VIRT_TIMER_INT_VEC		(32 + 15)	/* Virtual 'timer' to guest irq */
-#define BOSS_VIRT_GIRQ_INT_VEC		(32 + 18)	/* Virtual 'guest IRQ' irq */
-#define BOSS_VIRT_RIRQ_INT_VEC		(32 + 23)	/* Virtual 'root IRQ' irq */
 #elif (CHIP_REV == S2)
 #define SYSTEM_TIMER_IRQ                29
 

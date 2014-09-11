@@ -483,18 +483,18 @@ static void ambvic_resume(void)
 	/* Should we only restore the setting of Linux's driver?  */
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
-		pm_reg = &ambvic_data.pm_reg[i];
+		pm_val = &ambvic_pm[i];
 
-		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_reg->int_sel_reg);
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_val->int_sel_reg);
 		//amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
 		//amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
 		//amba_writel(reg_base + VIC_INTEN_OFFSET, pm_reg->inten_reg);
 		//amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0xffffffff);
-		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_reg->soften_reg);
+		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_val->soften_reg);
 		//amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_reg->proten_reg);
-		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_reg->sense_reg);
-		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_reg->bothedge_reg);
-		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_reg->event_reg);
+		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_val->sense_reg);
+		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_val->bothedge_reg);
+		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_val->event_reg);
 	}
 #endif
 }

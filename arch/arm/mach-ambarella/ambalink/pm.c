@@ -145,10 +145,6 @@ static int ambarella_pm_pre(unsigned long *irqflag, u32 bsuspend, u32 tm_level)
 	if (irqflag)
 		local_irq_save(*irqflag);
 
-	if (bsuspend) {
-		ambarella_timer_suspend(tm_level);
-	}
-
 	retval = ambarella_pm_notify_raw(AMBA_EVENT_PRE_PM);
 
 	return retval;
@@ -159,10 +155,6 @@ static int ambarella_pm_post(unsigned long *irqflag, u32 bresume, u32 tm_level)
 	int					retval = 0;
 
 	retval = ambarella_pm_notify_raw(AMBA_EVENT_POST_PM);
-
-	if (bresume) {
-		ambarella_timer_resume(tm_level);
-	}
 
 	if (irqflag)
 		local_irq_restore(*irqflag);
@@ -439,11 +431,6 @@ static int ambarella_pm_suspend_enter(suspend_state_t state)
 
 static void ambarella_pm_suspend_end(void)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	/* Enable the ce iterrupt here instead of ambarella_pm_enter_mem(). */
-	ambarella_timer_suspend(0);
-	ambarella_timer_resume(1);
-#endif
 	ambarella_pm_notify(AMBA_EVENT_POST_PM);
 }
 

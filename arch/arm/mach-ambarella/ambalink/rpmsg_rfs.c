@@ -690,9 +690,8 @@ static void rfs_chdir(struct aipc_rfs_msg *msg)
 	if(ret < 0){
 		DMSG("rfs_chdir error: %d", ret);
 	}
-	msg->parameter[0];
-
 }
+
 static void (*msg_handler[])(struct aipc_rfs_msg*) = {
 	rfs_open,
 	rfs_close,
