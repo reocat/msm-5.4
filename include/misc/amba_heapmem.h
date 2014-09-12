@@ -12,9 +12,15 @@
 
 #define AMBA_HEAPMEM_NAME_DEF		"dev/amba_heapmem"
 
+struct AMBA_HEAPMEM_INFO_s {
+	unsigned int base;
+	unsigned int phys;
+	unsigned int size;
+};
+
 #define __AMBA_HEAPMEM		0x99
 
-#define AMBA_HEAPMEM_GET_PHY_BASE	_IOR(__AMBA_HEAPMEM, 1, unsigned int)
-#define AMBA_HEAPMEM_GET_SIZE		_IOR(__AMBA_HEAPMEM, 2, unsigned int)
+#define AMBA_HEAPMEM_GET_INFO		_IOR(__AMBA_HEAPMEM, 1, struct AMBA_HEAPMEM_INFO_s)
+#define AMBA_HEAPMEM_ACCESS_TEST 	_IOR(__AMBA_HEAPMEM, 2, unsigned int)
 
 #endif	/* _MISC_AMBA_HEAPMEM_H */

@@ -22,10 +22,12 @@
 #include <misc/amba_heapmem.h>
 #include <plat/ambalink_cfg.h>
 
-extern int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size);
+extern int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size);
 
 static void *heap_baseaddr = NULL;
+static void *heap_physaddr = NULL;
 static unsigned int heap_size = 0;
+
 struct amba_heapmem_dev {
 	struct miscdevice *misc_dev;
 };
@@ -36,30 +38,39 @@ static DEFINE_MUTEX(amba_heap_mutex);
 static long amba_heap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	long ret = 0;
+	struct AMBA_HEAPMEM_INFO_s minfo;
 
 	printk("%s\n",__func__);
 
 	mutex_lock(&amba_heap_mutex);
 	switch (cmd) {
-	case AMBA_HEAPMEM_GET_PHY_BASE:
-		if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_size)<0){
+	case AMBA_HEAPMEM_GET_INFO:
+		if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_physaddr, &heap_size)<0){
 			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
 			ret = -EINVAL;
 			break;
 		}
-		if(copy_to_user((void **)arg, &heap_baseaddr, sizeof(void *))){
+		minfo.base = (unsigned int)heap_baseaddr;
+		minfo.phys = (unsigned int)heap_physaddr;
+		minfo.size = heap_size;
+
+		if(copy_to_user((void **)arg, &minfo, sizeof(struct AMBA_HEAPMEM_INFO_s))){
 			ret = -EFAULT;
 		}
 		break;
-	case AMBA_HEAPMEM_GET_SIZE:
-		if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_size)<0){
-			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
-			ret = -EINVAL;
-			break;
-		}
-		if(copy_to_user((unsigned int *)arg, &heap_size, sizeof(unsigned int))){
-			ret = -EFAULT;
-		}
+	case AMBA_HEAPMEM_ACCESS_TEST:
+		do {
+			unsigned int test_addr;
+			unsigned int *tptr;
+
+			if (copy_from_user(&test_addr, arg, sizeof(unsigned int))<0){
+				ret = -EFAULT;
+				break;
+			}
+			tptr = (unsigned int *)test_addr;
+			printk("%s: write %p as 0xfeedda0b\n",__FUNCTION__, tptr);
+			*tptr = 0xfeedda0b;
+		} while(0);
 		break;
 	default:
 		printk("%s: unknown command 0x%08x", __func__, cmd);
@@ -77,7 +88,9 @@ static long amba_heap_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 static pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
 				     unsigned long size, pgprot_t vma_prot)
 {
-	if (file->f_flags & O_DSYNC){
+	/* Do not need to set as noncached since A12 just has one CPU! */
+	if(0){
+	//if (file->f_flags & O_DSYNC){
 		printk("phys_mem_access_prot: set as noncached\n");
 		return pgprot_noncached(vma_prot);
 	}
@@ -89,10 +102,10 @@ static int amba_heap_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	int rval;
 	unsigned long size;
-	int baseaddr;
+	u32 baseaddr;
 
 	mutex_lock(&amba_heap_mutex);
-	if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_size)<0){
+	if(rpmsg_linkctrl_cmd_get_mem_info(0, &heap_baseaddr, &heap_physaddr, &heap_size)<0){
 		printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
 		rval = -EINVAL;
 		goto Done;
@@ -100,8 +113,12 @@ static int amba_heap_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	size = vma->vm_end - vma->vm_start;
 	if(size==heap_size) {
-		printk("%s: heap_baseaddr=%p, heap_size=%x\n",__func__, heap_baseaddr, heap_size);
-		baseaddr=(int)ambalink_phys_to_virt((u32)heap_baseaddr);
+		printk("%s: heap_baseaddr=%p, heap_physaddr=%p, heap_size=%x\n",
+			__func__, heap_baseaddr, heap_physaddr, heap_size);
+
+		/* For MMAP, it needs to use physical address directly! */
+		//baseaddr=(int)ambalink_phys_to_virt((u32)heap_physaddr);
+		baseaddr = (u32)heap_physaddr;
 	} else {
 		printk("%s: wrong size(%x)! heap_size=%x\n",__func__, size, heap_size);
 		rval = -EINVAL;

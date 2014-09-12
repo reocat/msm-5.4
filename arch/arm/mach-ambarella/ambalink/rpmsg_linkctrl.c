@@ -51,8 +51,13 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_MEMTYPE_e_ {
 
 struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ {
         void *base_addr;
+	void *phys_addr;
 	UINT32 size;
-	UINT32 padding[6];
+	UINT32 padding;
+	UINT32 padding1;
+	UINT32 padding2;
+	UINT32 padding3;
+	UINT32 padding4;
 } __attribute__((aligned(32), packed));
 typedef struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ AMBA_RPDEV_LINK_CTRL_MEMINFO_t;
 
@@ -110,12 +115,12 @@ static int rpmsg_linkctrl_gpio_linux_only_list(void *data)
 }
 
 /*----------------------------------------------------------------------------*/
-int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size)
+int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 	u32 phy_addr;
 
-	printk("%s: type=%d\n", __func__, type);
+	//printk("%s: type=%d\n", __func__, type);
 
 	phy_addr = ambalink_virt_to_phys((u32) &rpdev_meminfo);
 	ambcache_flush_range(&rpdev_meminfo, sizeof(AMBA_RPDEV_LINK_CTRL_MEMINFO_t));
@@ -131,11 +136,12 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size)
 
 	ambcache_inv_range((void *) ambalink_phys_to_virt(phy_addr), 32);
 
-	printk("%s: type=%u, base=%p, size=0x%08x\n", __func__ ,
-		type, rpdev_meminfo.base_addr, rpdev_meminfo.size);
-
 	*base = rpdev_meminfo.base_addr;
+	*phys = rpdev_meminfo.phys_addr;
 	*size = rpdev_meminfo.size;
+
+	printk("%s: type=%u, base=%p, phys=%p size=0x%08x\n", __func__ ,
+		type, rpdev_meminfo.base_addr, rpdev_meminfo.phys_addr, rpdev_meminfo.size);
 
 	return 0;
 }
