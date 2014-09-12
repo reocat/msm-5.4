@@ -50,6 +50,7 @@
 #include <linux/dmapool.h>
 #include <plat/dma.h>
 #include <linux/slab.h>
+#include <linux/proc_fs.h>
 
 #define AMBA_UART_RX_DMA_BUFFER_SIZE 4096
 #define AMBA_UART_MIN_DMA			16
@@ -172,6 +173,9 @@ static inline int tx_fifo_is_empty(struct uart_port *port)
 }
 
 /* ==========================================================================*/
+#ifndef DEFAULT_AMBARELLA_UART_FCR
+#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_QUARTER_FULL | UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR)
+#endif
 static void serial_ambarella_hw_setup(struct uart_port *port)
 {
 	struct ambarella_uart_port *amb_port;
@@ -192,8 +196,7 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET,
-		UART_FC_FIFOE | UART_FC_RX_2_TO_FULL |
-		UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR);
+		DEFAULT_AMBARELLA_UART_FCR);
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER);
 
@@ -695,7 +698,9 @@ static void serial_ambarella_stop_rx(struct uart_port *port)
 	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ERBFI);
 }
 
-static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
+/* modify for brcm bluesleep driver */
+/*static unsigned int serial_ambarella_tx_empty(struct uart_port *port)*/
+unsigned int serial_ambarella_tx_empty(struct uart_port *port)
 {
 	unsigned int lsr;
 	unsigned long flags;
@@ -994,6 +999,9 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
+/* cf. bluez_utils-4.101_1/tools/hciattach.c for Ambarella patch. */
+#define B750000 0020001
+
 static void serial_ambarella_set_termios(struct uart_port *port,
 	struct ktermios *termios, struct ktermios *old)
 {
@@ -1033,7 +1041,11 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 			lc |= (UART_LC_PEN | UART_LC_EVEN_PARITY);
 	}
 
-	baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
+	if ((termios->c_cflag & (B750000 | CBAUD | CBAUDEX)) == B750000)
+		baud = 750000;
+	else
+		baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
+
 	quot = uart_get_divisor(port, baud);
 
 	disable_irq(port->irq);
@@ -1512,6 +1524,95 @@ static void ambarella_uart_of_enumerate(void)
 	}
 }
 
+#if (UART_INSTANCES >= 2)
+/* Because Linux can access UART1 only, for console or BT. */
+static const char uart1_proc_name[] = "uart1_rcvr";
+static u32 fcr = DEFAULT_AMBARELLA_UART_FCR;
+
+static int ambarella_uart1_proc_read(struct seq_file *m, void *v)
+{
+	int retlen;
+	int rcvr;
+
+	rcvr = (fcr & (0x03 << 6)) >> 6;
+	retlen = seq_printf(m, "UART1, Rx Trigger: %d, ", rcvr);
+	switch (rcvr) {
+	case 0x00:
+		retlen += seq_printf(m, "One character in the FIFO.\n");
+		break;
+	case 0x01:
+		retlen += seq_printf(m, "FIFO 1/4 full.\n");
+		break;
+	case 0x02:
+		retlen += seq_printf(m, "FIFO 1/2 full.\n");
+		break;
+	case 0x03:
+		retlen += seq_printf(m, "FIFO 2 less than full.\n");
+		break;
+	default:
+		retlen += seq_printf(m, "Unknown.\n");
+		break;
+	}
+
+	return retlen;
+}
+
+static int ambarella_uart1_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ambarella_uart1_proc_read, NULL);
+}
+
+static ssize_t ambarella_uart1_proc_write(struct file *file,
+                                const char __user *buffer, size_t count, loff_t *data)
+{
+	unsigned char v;
+
+	if (count != 2) {
+		/* One character with null space. */
+		printk(KERN_ERR "Only valid value: 0-3\n");
+		return -EFAULT;
+	}
+
+	if (copy_from_user(&v, buffer, 1)) {
+		printk(KERN_ERR "%s: copy_from_user fail!\n", __func__);
+		return -EFAULT;
+	}
+	v = v - '0';
+
+	if (v < 4) {
+		fcr &= ~(0x03 << 6);
+		fcr |= (v << 6);
+
+#if 1 // Run-time change?!
+		{
+			/* Apply new and reset FIFO. */
+			amba_writel(ambarella_port[1].port.membase + UART_FC_OFFSET,
+					fcr | UART_FC_XMITR | UART_FC_RCVRR);
+		}
+#endif
+	} else {
+		printk(KERN_ERR "Only valid value: 0-3\n");
+		return -EFAULT;
+	}
+
+	return count;
+}
+
+static const struct file_operations serial_ambarella_proc_fops = {
+	.open = ambarella_uart1_proc_open,
+	.read = seq_read,
+	.write = ambarella_uart1_proc_write,
+	.llseek	= seq_lseek,
+	.release = single_release,
+};
+
+static void serial_ambarella_proc_init(void)
+{
+
+	proc_create(uart1_proc_name, S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+		&serial_ambarella_proc_fops);
+}
+#endif /* (UART_INSTANCES >= 2) */
 
 static struct platform_driver serial_ambarella_driver = {
 	.probe		= serial_ambarella_probe,
@@ -1531,7 +1632,9 @@ int __init serial_ambarella_init(void)
 	int rval;
 
 	ambarella_uart_of_enumerate();
-
+#if (UART_INSTANCES >= 2)
+	serial_ambarella_proc_init();
+#endif
 	rval = uart_register_driver(&serial_ambarella_reg);
 	if (rval < 0)
 		return rval;
