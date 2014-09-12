@@ -8,9 +8,7 @@
 #ifndef _MISC_AMBA_HEAPMEM_H
 #define _MISC_AMBA_HEAPMEM_H
 
-#include <linux/limits.h>
 #include <linux/ioctl.h>
-#include <linux/compat.h>
 
 #define AMBA_HEAPMEM_NAME_DEF		"dev/amba_heapmem"
 

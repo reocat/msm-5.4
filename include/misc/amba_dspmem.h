@@ -8,9 +8,7 @@
 #ifndef _MISC_AMBA_DSPMEM_H
 #define _MISC_AMBA_DSPMEM_H
 
-#include <linux/limits.h>
 #include <linux/ioctl.h>
-#include <linux/compat.h>
 
 #define AMBA_DSPMEM_NAME_DEF		"dev/amba_dspmem"
 
