@@ -12,9 +12,14 @@
 
 #define AMBA_DSPMEM_NAME_DEF		"dev/amba_dspmem"
 
+struct AMBA_DSPMEM_INFO_s {
+	unsigned int base;
+	unsigned int phys;
+	unsigned int size;
+};
+
 #define __AMBA_DSPMEM		0x99
 
-#define AMBA_DSPMEM_GET_PHY_BASE	_IOR(__AMBA_DSPMEM, 1, unsigned int)
-#define AMBA_DSPMEM_GET_SIZE		_IOR(__AMBA_DSPMEM, 2, unsigned int)
+#define AMBA_DSPMEM_GET_INFO	_IOR(__AMBA_DSPMEM, 1, struct AMBA_DSPMEM_INFO_s)
 
 #endif	/* _MISC_AMBA_DSPMEM_H */

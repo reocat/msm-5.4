@@ -22,10 +22,12 @@
 #include <misc/amba_dspmem.h>
 #include <plat/ambalink_cfg.h>
 
-extern int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, u32 *size);
+extern int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size);
 
 static void *dsp_baseaddr = NULL;
+static void *dsp_physaddr = NULL;
 static unsigned int dsp_size = 0;
+
 struct amba_dspmem_dev {
 	struct miscdevice *misc_dev;
 };
@@ -36,28 +38,23 @@ static DEFINE_MUTEX(amba_dspmem_mutex);
 static long amba_dspmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	long ret = 0;
+	struct AMBA_DSPMEM_INFO_s minfo;
 
 	printk("%s\n",__func__);
 
 	mutex_lock(&amba_dspmem_mutex);
 	switch (cmd) {
-	case AMBA_DSPMEM_GET_PHY_BASE:
-		if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_size)<0){
+	case AMBA_DSPMEM_GET_INFO:
+		if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_physaddr, &dsp_size)<0){
 			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
 			ret = -EINVAL;
 			break;
 		}
-		if(copy_to_user((void **)arg, &dsp_baseaddr, sizeof(void *))){
-			ret = -EFAULT;
-		}
-		break;
-	case AMBA_DSPMEM_GET_SIZE:
-		if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_size)<0){
-			printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
-			ret = -EINVAL;
-			break;
-		}
-		if(copy_to_user((unsigned int *)arg, &dsp_size, sizeof(unsigned int))){
+		minfo.base = (unsigned int)dsp_baseaddr;
+		minfo.phys = (unsigned int)dsp_physaddr;
+		minfo.size = dsp_size;
+
+		if(copy_to_user((void **)arg, &minfo, sizeof(struct AMBA_DSPMEM_INFO_s))){
 			ret = -EFAULT;
 		}
 		break;
@@ -77,7 +74,9 @@ static long amba_dspmem_ioctl(struct file *filp, unsigned int cmd, unsigned long
 static pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
 				     unsigned long size, pgprot_t vma_prot)
 {
-	if (file->f_flags & O_DSYNC){
+	/* Do not need to set as noncached since A12 just has one CPU! */
+	if(0){
+	//if (file->f_flags & O_DSYNC){
 		printk("phys_mem_access_prot: set as noncached\n");
 		return pgprot_noncached(vma_prot);
 	}
@@ -89,10 +88,10 @@ static int amba_dspmem_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	int rval;
 	unsigned long size;
-	int baseaddr;
+	u32 baseaddr;
 
 	mutex_lock(&amba_dspmem_mutex);
-	if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_size)<0){
+	if(rpmsg_linkctrl_cmd_get_mem_info(1, &dsp_baseaddr, &dsp_physaddr, &dsp_size)<0){
 		printk("rpmsg_linkctrl_cmd_get_mem_info() fail\n");
 		rval = -EINVAL;
 		goto Done;
@@ -100,8 +99,12 @@ static int amba_dspmem_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	size = vma->vm_end - vma->vm_start;
 	if(size==dsp_size) {
-		printk("%s: dsp_baseaddr=%p, dsp_size=%x\n",__func__, dsp_baseaddr, dsp_size);
-		baseaddr=(int)ambalink_phys_to_virt((u32)dsp_baseaddr);
+		printk("%s: dsp_baseaddr=%p, dsp_physaddr=%p, dsp_size=%x\n",
+			__func__, dsp_baseaddr, dsp_physaddr, dsp_size);
+
+		/* For MMAP, it needs to use physical address directly! */
+		//baseaddr=(int)ambalink_phys_to_virt((u32)dsp_physaddr);
+		baseaddr=(u32)dsp_physaddr;
 	} else {
 		printk("%s: wrong size(%x)! dsp_size=%x\n",__func__, size, dsp_size);
 		rval = -EINVAL;
