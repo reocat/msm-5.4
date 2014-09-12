@@ -32,6 +32,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
+#include <linux/aipc/ipc_slock.h>
 #include <plat/pinctrl.h>
 #include <plat/service.h>
 
