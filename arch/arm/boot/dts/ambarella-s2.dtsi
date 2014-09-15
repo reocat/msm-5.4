@@ -373,6 +373,7 @@
 				     <0 17 0x04>,	/* fio_dma_irq */
 				     <0 33 0x04>;	/* fdma_irq */
 			nand-on-flash-bbt;
+			amb,enable-wp;
 		};
 
 		i2s0: i2s@6000a000 {

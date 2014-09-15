@@ -366,6 +366,7 @@
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
 			nand-on-flash-bbt;
+			amb,enable-wp;
 			/* amb,soft-ecc = <1>; */
 		};
 
@@ -386,7 +387,7 @@
 			amb,txdma-used;
 			amb,rxdma-used;
 			/* amb,tx-fifo-fix; */
-			/* need to selcec pinctrl setup in board dts */
+			/* need to select pinctrl setup in board dts */
 		};
 
 		i2s0: i2s@e001a000 {

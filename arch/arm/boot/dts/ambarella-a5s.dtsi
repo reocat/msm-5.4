@@ -338,6 +338,7 @@
 			interrupts = <16 0x4>,	/* fio_cmd_irq */
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
+			amb,enable-wp;
 			amb,no-bch;
 			amb,use-2x-pll;
 			nand-on-flash-bbt;
