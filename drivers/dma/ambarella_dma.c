@@ -288,6 +288,20 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+	for (i = UART_TX_DMA_CHAN; i <= UART_RX_DMA_CHAN; i++) {
+		spin_lock(&amb_dma->amb_chan[i].lock);
+		if (int_src & (1 << i)) {
+			amba_writel(DMA_CHAN_STA_REG(i), 0);
+			tasklet_schedule(&amb_dma->amb_chan[i].tasklet);
+			ret = IRQ_HANDLED;
+		}
+		spin_unlock(&amb_dma->amb_chan[i].lock);
+	}
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	boss_set_irq_owner(amb_dma->dma_irq, BOSS_IRQ_OWNER_RTOS, 0);
+#endif
+#else
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		spin_lock(&amb_dma->amb_chan[i].lock);
 		if (int_src & (1 << i)) {
@@ -297,6 +311,7 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 		}
 		spin_unlock(&amb_dma->amb_chan[i].lock);
 	}
+#endif
 
 	return ret;
 }
@@ -306,17 +321,27 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *first, *amb_desc;
 	int id = amb_chan->id;
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	unsigned long flags;
+#endif
 
 	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
 		if (amb_chan->force_stop) {
 			/* Disable DMA: this sequence is not mentioned at APM.*/
 			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
 			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+			/* Need to make it atomic to avoid context switching to RTOS. */
+			flags = arm_irq_save();
+#endif
 			amba_writel(DMA_CHAN_CTR_REG(id),
 				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
 			udelay(1);
 			/* avoid to trigger dummy IRQ.*/
 			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+			arm_irq_restore(flags);
+#endif
 			if (ambdma_chan_is_enabled(amb_chan)) {
 				pr_err("%s: stop dma channel(%d) failed\n",
 					__func__, id);
@@ -562,8 +587,8 @@ static int ambdma_device_control(struct dma_chan *chan,
 			/* move myself to free_list */
 			list_move_tail(&amb_desc->desc_node, &amb_chan->free_list);
 		}
-		spin_unlock_irqrestore(&amb_chan->lock, flags);
 
+		spin_unlock_irqrestore(&amb_chan->lock, flags);
 		break;
 	case DMA_SLAVE_CONFIG:
 		/* We only support mem to dev or dev to mem transfers */
@@ -953,6 +978,37 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_memcpy.dev = &pdev->dev;
 	amb_dma->dma_memcpy.copy_align = (u8)(amb_dma->copy_align);
 
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+	/* init dma_chan struct */
+	/* Only init UART DMA channels. */
+	for (i = UART_TX_DMA_CHAN; i <= UART_RX_DMA_CHAN; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
+
+		spin_lock_init(&amb_chan->lock);
+		amb_chan->amb_dma = amb_dma;
+		amb_chan->id = i;
+		amb_chan->status = AMBDMA_STATUS_IDLE;
+		INIT_LIST_HEAD(&amb_chan->active_list);
+		INIT_LIST_HEAD(&amb_chan->queue);
+		INIT_LIST_HEAD(&amb_chan->free_list);
+		INIT_LIST_HEAD(&amb_chan->stopping_list);
+
+		tasklet_init(&amb_chan->tasklet, ambdma_tasklet,
+				(unsigned long)amb_chan);
+		dma_cookie_init(&amb_chan->chan);
+
+		if (i == I2S_TX_DMA_CHAN || i == I2S_RX_DMA_CHAN ||
+			i == UART_TX_DMA_CHAN || i == UART_RX_DMA_CHAN) {
+			amb_chan->chan.device = &amb_dma->dma_slave;
+			list_add_tail(&amb_chan->chan.device_node,
+					&amb_dma->dma_slave.channels);
+		} else {
+			amb_chan->chan.device = &amb_dma->dma_memcpy;
+			list_add_tail(&amb_chan->chan.device_node,
+					&amb_dma->dma_memcpy.channels);
+		}
+	}
+#else
 	/* init dma_chan struct */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		amb_chan = &amb_dma->amb_chan[i];
@@ -981,6 +1037,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 					&amb_dma->dma_memcpy.channels);
 		}
 	}
+#endif
 
 #if (DMA_SUPPORT_SELECT_CHANNEL == 1)
 	val = 0;
@@ -1007,6 +1064,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amba_writel(AHBSP_DMA_CHANNEL_SEL_REG, val);
 #endif
 
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	/* although FIOS DMA has its own driver, we also init FIOS DMA
 	 * status here, orelse dummy FIOS DMA interrupts may occurred
 	 * without its driver installed. */
@@ -1015,6 +1073,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI;
 		amba_writel(DMA_CHAN_CTR_REG(i), val);
 	}
+#endif
 
 	ret = request_irq(amb_dma->dma_irq, ambdma_dma_irq_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,

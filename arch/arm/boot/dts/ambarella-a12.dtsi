@@ -379,6 +379,9 @@
 			pinctrl-0 = <&uart1_pins_b &uart1_flow_pins_c>;
 			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
+			/* If you are using uart dma in BOSS, please select DMA in linux menuconfig */
+			/* also set the variable AmbaLinkCtrl.AmbaLinkUartDmaOwner to OWNER_LINUX */
+			/* in SoC\A12\Workshop\A12EVK\src\AmbaLinkMemoryCfg.c */
 			/* amb,txdma-used; */
 			/* amb,rxdma-used; */
 			/* amb,tx-fifo-fix; */
