@@ -235,6 +235,11 @@
 						 <0x0021 0x1022>;
 			};
 
+			nand0_pins: nand0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1027>; /* just WP is shared with GPIO */
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1000 0x1001>;
@@ -338,6 +343,8 @@
 			interrupts = <16 0x4>,	/* fio_cmd_irq */
 				     <17 0x4>,	/* fio_dma_irq */
 				     <33 0x4>;	/* fdma_irq */
+			pinctrl-names = "default";
+			pinctrl-0 = <&nand0_pins>;
 			amb,enable-wp;
 			amb,no-bch;
 			amb,use-2x-pll;
