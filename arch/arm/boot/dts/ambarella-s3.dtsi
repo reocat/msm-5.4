@@ -229,6 +229,14 @@
 				amb,pinmux-ids = <0x10c5 0x10c6>;
 			};
 
+			nand0_pins: nand0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2073 0x2074 0x2075 0x207a
+						  0x207b 0x207c 0x207d 0x207e
+						  0x207f 0x2080 0x2081 0x2082
+						  0x2083 0x2084 0x2085>;
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1014 0x1015>;
@@ -355,6 +363,8 @@
 			interrupts = <72 0x4>,	/* fio_cmd_irq */
 				     <73 0x4>,	/* fio_dma_irq */
 				     <70 0x4>;	/* fdma_irq */
+			pinctrl-names = "default";
+			pinctrl-0 = <&nand0_pins>;
 			nand-on-flash-bbt;
 			amb,enable-wp;
 			/* amb,soft-ecc = <1>; */
