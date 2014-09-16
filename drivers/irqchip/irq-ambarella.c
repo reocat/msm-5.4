@@ -243,19 +243,26 @@ static int ambvic_set_affinity(struct irq_data *data,
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	u32 cpu = cpumask_any_and(mask_val, cpu_online_mask);
 	u32 mask = 1 << HWIRQ_TO_OFFSET(data->hwirq);
-	u32 val;
+	u32 val0, val1;
 
 	if (cpu >= nr_cpu_ids)
 		return -EINVAL;
 
 	raw_spin_lock(&irq_controller_lock);
 
-	val = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
-	if (cpu == 0)
-		val |= mask;
-	else
-		val &= ~mask;
-	amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val);
+	val0 = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+	val1 = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
+
+	if (cpu == 0) {
+		val0 |= mask;
+		val1 &= ~mask;
+	} else {
+		val0 &= ~mask;
+		val1 |= mask;
+	}
+
+	amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val0);
+	amba_writel(reg_base + VIC_INT_PTR1_OFFSET, val1);
 
 	raw_spin_unlock(&irq_controller_lock);
 
@@ -395,6 +402,7 @@ struct ambvic_pm_reg {
 	u32 bothedge_reg;
 	u32 event_reg;
 	u32 int_ptr0_reg;
+	u32 int_ptr1_reg;
 };
 
 static struct ambvic_pm_reg ambvic_pm[VIC_INSTANCES];
@@ -417,6 +425,7 @@ static int ambvic_suspend(void)
 		pm_val->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
 		pm_val->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
 		pm_val->int_ptr0_reg = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+		pm_val->int_ptr1_reg = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
 	}
 
 	return 0;
@@ -443,6 +452,7 @@ static void ambvic_resume(void)
 		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_val->bothedge_reg);
 		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_val->event_reg);
 		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, pm_val->int_ptr0_reg);
+		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, pm_val->int_ptr1_reg);
 	}
 }
 
@@ -469,6 +479,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, 0x00000000);
 
 		ambvic_data.reg_base[i] = reg_base;
 	}
