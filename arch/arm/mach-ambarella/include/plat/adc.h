@@ -265,7 +265,7 @@
 #define ADC_CHAN11_INTR_REG		ADC_REG(ADC_CHAN11_INTR_OFFSET)
 #endif
 
-#if (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A7L)
 #error "ADC_DATA_REG/ADC_CHAN_INTR_REG(ch) Not Implemented"
 #else
 #define ADC_DATA_OFFSET(ch)		(ADC_DATA0_OFFSET + (ch) * 4)
@@ -294,7 +294,7 @@
 #define ADC_CTRL_POWERDOWN		0x2
 #define ADC_CTRL_CLK_SOURCE_SCALER	0x0
 #define ADC_CTRL_CLK_SOURCE_AUDIO	0x1
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_CONTROL_ENABLE		0x04
 #define ADC_CONTROL_MODE		0x02
 #define ADC_CONTROL_START		0x08
@@ -308,7 +308,7 @@
 #if (CHIP_REV == A5S)
 #define ADC_EN_HI(x)			((x) << 31)
 #define ADC_EN_LO(x)			((x) << 30)
-#elif (CHIP_REV == S2) || (CHIP_REV == S2L)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define ADC_EN_HI(x)			((x) << 31)
 #define ADC_EN_LO(x)			((x) << 31)
 #else

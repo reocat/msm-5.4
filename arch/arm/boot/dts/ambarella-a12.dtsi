@@ -120,6 +120,7 @@
 			compatible = "ambarella,adc";
 			reg = <0xe801d000 0x1000>;
 			interrupts = <34 0x4>;
+			clock-frequency = <3000000>;
 		};
 
 		ir@e8006000 {
