@@ -1076,7 +1076,13 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 
 		ambarella_stop_activity(udc);
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+		/* Set a default value for RESET irq. */
+		/* Otherwise we will get -ESHUTDOWN in ambarella_udc_queue(). */
+		udc->gadget.speed = USB_SPEED_HIGH;
+#else
 		udc->gadget.speed = USB_SPEED_UNKNOWN;
+#endif
 		udc->auto_ack_0_pkt = 0;
 		udc->remote_wakeup_en = 0;
 

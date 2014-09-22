@@ -105,6 +105,10 @@ static inline void ambarella_switch_to_device(struct ambarella_phy *amb_phy)
 	/* Re-configure the ocp-polarity after resumed. */
 	amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
 	amba_setbitsl(amb_phy->pol_reg, ambarella_ocp_polarity << 13);
+
+	/* Set USB VBUS as high-level trigger. */
+	amba_setbitsl(VIC_REG(VIC_SENSE_OFFSET), 0x1);
+	amba_setbitsl(VIC_REG(VIC_EVENT_OFFSET), 0x1);
 #endif
 	if (amb_phy->owner_invert)
 		amba_rct_setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
@@ -261,6 +265,15 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 		}
 		gpio_direction_output(amb_phy->gpio_hub, !amb_phy->hub_active);
 	}
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* A12 Dragonfly does not has a GPIO for switcher. */
+	/* Force USB0 to run device mode. */
+	amb_phy->port_type = PORT_TYPE_DEVICE;
+	amb_phy->phy_route = PHY_TO_DEVICE_PORT;
+
+	ambarella_switch_to_device(amb_phy);
+#endif
 
 	if (!gpio_is_valid(amb_phy->gpio_id))
 		return 0;
