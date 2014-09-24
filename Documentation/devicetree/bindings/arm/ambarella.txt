@@ -43,9 +43,10 @@ Table of Contents
     31) - SOUND node
 
   III - Misc Node definition
-    1)  - GPIO KEY node
-    2)  - ADC KEY node
-    3)  - BACKLIGHT node
+    1)  - BOGUS BUS node
+    2)  - GPIO KEY node
+    3)  - ADC KEY node
+    4)  - PWM BACKLIGHT node
 
 
 
@@ -1162,7 +1163,16 @@ III - Misc Node definition
 ++++++++++++++++++++++++++
 
 
-1)  - GPIO KEY node
+1)  - BOGUS BUS node
+====================
+
+i) Purpose
+----------
+No real meaning, just make the name of devices under bogus bus more reasonable.
+
+
+
+2)  - GPIO KEY node
 ===================
 
 i) Reference
@@ -1171,7 +1181,7 @@ Please see Documentation/devicetree/bindings/gpio/gpio_keys.txt
 
 
 
-2)  - ADC KEY node
+3)  - ADC KEY node
 ====================
 
 
@@ -1208,11 +1218,17 @@ ii) Example
 
 
 
-3)  - BACKLIGHT node
-====================
+4)  - PWM BACKLIGHT node
+========================
 
 i) Reference
 ------------
 Please see Documentation/devicetree/bindings/video/backlight/pwm-backlight.txt
 
+ii) Properties
+--------------
+Required properties:
+- reg: specifies the pwm channel, no real meaning, just make the device name
+  more reasonable. It take effect only when putting the PWM BACKLIGHT node under
+  bogus_bus node.
 
