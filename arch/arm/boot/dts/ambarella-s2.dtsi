@@ -498,4 +498,10 @@
 			amb,host-phy-num = <1>;
 		};
 	};
+
+	bogus_bus {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
 };

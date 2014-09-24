@@ -555,4 +555,10 @@
 			amb,owner-invert;
 		};
 	};
+
+	bogus_bus {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
 };

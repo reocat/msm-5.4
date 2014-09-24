@@ -432,4 +432,10 @@
 			reg = <0x70170050 0x4>;
 		};
 	};
+
+	bogus_bus {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
 };
