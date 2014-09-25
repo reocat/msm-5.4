@@ -167,11 +167,6 @@ static inline int tx_fifo_is_full(struct uart_port *port)
 	return !(amba_readl(port->membase + UART_US_OFFSET) & UART_US_TFNF);
 }
 
-static inline int tx_fifo_is_empty(struct uart_port *port)
-{
-	return !!(amba_readl(port->membase + UART_US_OFFSET) & UART_US_TFE);
-}
-
 /* ==========================================================================*/
 #ifndef DEFAULT_AMBARELLA_UART_FCR
 #define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_QUARTER_FULL | UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR)
@@ -517,8 +512,8 @@ static void serial_ambarella_tx_dma_complete(void *args)
 	amb_port->port.icount.tx += count;
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&amb_port->port);
-	spin_unlock_irqrestore(&amb_port->port.lock, flags);
 	serial_ambarella_start_next_tx(amb_port);
+	spin_unlock_irqrestore(&amb_port->port.lock, flags);
 }
 
 static int serial_ambarella_start_tx_dma(struct ambarella_uart_port *amb_port,
@@ -560,14 +555,16 @@ static void serial_ambarella_start_next_tx(struct ambarella_uart_port *amb_port)
 	port = &amb_port->port;
 
 	tail = (unsigned long)&xmit->buf[xmit->tail];
-	count = uart_circ_chars_pending(xmit);
+	count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
 	if (!count)
 		return;
 
 	if (count < AMBA_UART_MIN_DMA)
 		serial_ambarella_transmit_chars(port);
-	else
+	else {
+		wait_for_tx(port);
 		serial_ambarella_start_tx_dma(amb_port, count);
+	}
 }
 
 static void serial_ambarella_start_tx(struct uart_port *port)
@@ -585,7 +582,7 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 		int dma_status;
 
 		dma_status = dmaengine_tx_status(amb_port->tx_dma_chan, amb_port->tx_cookie, &state);
-		if (tty->hw_stopped || dma_status == DMA_IN_PROGRESS || !tx_fifo_is_empty(port))
+		if (tty->hw_stopped || dma_status == DMA_IN_PROGRESS)
 			return;
 		serial_ambarella_start_next_tx(amb_port);
 	} else {
