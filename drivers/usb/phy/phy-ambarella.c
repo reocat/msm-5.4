@@ -387,6 +387,12 @@ static int ambarella_phy_init(struct usb_phy *phy)
 	else
 		ana_val = 0x1002;
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Re-configure the ocp-polarity after resumed. */
+	amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
+	amba_setbitsl(amb_phy->pol_reg, ambarella_ocp_polarity << 13);
+#endif
+
 	if (!(amba_readl(amb_phy->ana_reg) & ana_val)) {
 		amba_setbitsl(amb_phy->ana_reg, ana_val);
 		mdelay(1);
