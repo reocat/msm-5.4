@@ -1,6 +1,11 @@
 #include "ambafs.h"
 #include <linux/aio.h>
+#include <linux/statfs.h>
 
+#define REMOTE_EXFAT	3
+#define MAX_FILE_SIZE_EXFAT             (0x1fffffffc00uLL)
+
+static int fs_type = 0;
 /*
  * check inode stats again remote
  */
@@ -19,6 +24,29 @@ static int check_stat(struct inode *inode)
 
 	ambafs_update_inode(inode, stat);
 	return 0;
+}
+
+static int check_remote_type(struct dentry *dentry, struct kstatfs *buf)
+{
+	int tmp[128];
+	struct ambafs_msg *msg = (struct ambafs_msg *)tmp;
+
+	buf->f_namelen = NAME_MAX;
+
+	msg->cmd = AMBAFS_CMD_VOLSIZE;
+	strcpy((char*)msg->parameter, dentry->d_sb->s_fs_info);
+	ambafs_rpmsg_exec(msg, strlen((char*)msg->parameter)+1);
+
+	if (msg->flag == 0) {
+		buf->f_bsize = msg->parameter[2];
+		buf->f_blocks = msg->parameter[0];
+		buf->f_bavail = buf->f_bfree = msg->parameter[1];
+		buf->f_type = msg->parameter[3];
+	} else {
+		buf->f_bsize = buf->f_bavail = buf->f_bfree = buf->f_blocks = 0;
+	}
+
+	return msg->flag;
 }
 
 /*
@@ -76,10 +104,22 @@ void ambafs_remote_close(void *fp)
 static int ambafs_file_open(struct inode *inode, struct file *filp)
 {
 	int ret;
+	struct kstatfs stat;
 
 	AMBAFS_DMSG("%s f_mode = 0x%x, f_flags = 0x%x\r\n", __func__, filp->f_mode, filp->f_flags);
 	AMBAFS_DMSG("%s O_APPEND = 0x%x O_TRUNC = 0x%x O_CREAT = 0x%x  O_RDWR = 0x%x O_WRONLY=0x%x\r\n",
 		__func__, O_APPEND, O_TRUNC, O_CREAT, O_RDWR, O_WRONLY);
+
+	if (!fs_type) {
+		ret = check_remote_type(filp->f_dentry, &stat);
+		if (stat.f_type == REMOTE_EXFAT) {
+			inode->i_sb->s_maxbytes = MAX_FILE_SIZE_EXFAT;
+		}
+
+		if (ret == 0) {
+			fs_type = 1;
+		}
+	}
 
 	ret = check_stat(inode);
 	if ((ret < 0) && (filp->f_mode & FMODE_READ)) {

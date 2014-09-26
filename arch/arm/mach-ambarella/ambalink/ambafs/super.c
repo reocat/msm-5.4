@@ -16,6 +16,9 @@
 #include "ambafs.h"
 
 #define AMBAFS_MAGIC 0x414D4241
+#define MAX_FILE_SIZE_FAT               (0xFFFFFFFFuL)
+
+
 
 static int ambafs_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
@@ -78,6 +81,7 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 	root->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
 	root->i_op = &ambafs_dir_inode_ops;
 	root->i_fop = &ambafs_dir_ops;
+	root->i_sb->s_maxbytes = MAX_FILE_SIZE_FAT;
 
 	d_root = d_make_root(root);
 	if (! d_root)
