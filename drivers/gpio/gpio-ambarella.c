@@ -580,6 +580,10 @@ static int ambarella_gpio_service(void *arg, void *result)
 		gpio_free(gpio_svc->gpio);
 		break;
 
+	case AMBSVC_GPIO_TO_IRQ:
+		*value = gpio_to_irq(gpio_svc->gpio);
+		break;
+
 	default:
 		pr_err("%s: Invalid gpio service (%d)\n", __func__, gpio_svc->svc_id);
 		rval = -EINVAL;

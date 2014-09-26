@@ -173,6 +173,7 @@ enum ambsvc_gpio_service_id {
 	AMBSVC_GPIO_OUTPUT,
 	AMBSVC_GPIO_INPUT,
 	AMBSVC_GPIO_FREE,
+	AMBSVC_GPIO_TO_IRQ,
 };
 
 struct ambsvc_gpio {
