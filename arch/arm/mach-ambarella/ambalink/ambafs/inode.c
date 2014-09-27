@@ -96,7 +96,7 @@ static int ambafs_readpage(struct file *file, struct page *page)
 static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 			struct list_head *pages, unsigned nr_pages)
 {
-	int buf[192], msg_len = 0;
+	int buf[192], msg_len = 0, error = 0;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	unsigned page_idx, io_pages;
 
@@ -112,30 +112,60 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 		page = list_entry(pages->prev, struct page, lru);
 		list_del(&page->lru);
 		offset = page_offset(page);
+#if 0
 		if (!add_to_page_cache_lru(page, mapping,
 						page->index, GFP_KERNEL)) {
 			msg_len = insert_page_info(msg, page);
 		} else {
 			AMBAFS_EMSG("ambafs_readpages lru error\n");
 		}
+#else
+		do {
+			error = add_to_page_cache_lru(page, mapping,
+						page->index, GFP_KERNEL);
+		} while (error);
+
+		if (!error) {
+			msg_len = insert_page_info(msg, page);
+		} else {
+			AMBAFS_EMSG("ambafs_readpages lru error\n");
+		}
+#endif
 		page_cache_release(page);
 
 		// add pages one by one if continuous
 		for (page_idx = 1; page_idx < io_pages; page_idx++) {
 			page = list_entry(pages->prev, struct page, lru);
 			if (offset + PAGE_SIZE != page_offset(page)) {
-				AMBAFS_DMSG("ambafs_readpages with holes\n");
+				AMBAFS_EMSG("ambafs_readpages with holes\n");
 				break;
 			}
 			offset += PAGE_SIZE;
 			list_del(&page->lru);
 
-			if (!add_to_page_cache_lru(page, mapping,
-				      page->index, GFP_KERNEL)) {
+#if 0
+			error = add_to_page_cache_lru(page, mapping,
+				      page->index, GFP_KERNEL);
+
+			//if (!add_to_page_cache_lru(page, mapping,
+			//	      page->index, GFP_KERNEL)) {
+			if (!error) {
 				msg_len = insert_page_info(msg, page);
 			} else {
-				AMBAFS_EMSG("ambafs_readpages lru error\n");
+				AMBAFS_EMSG("ambafs_readpages lru error (%d)\n", error);
 			}
+#else
+			do {
+				error = add_to_page_cache_lru(page, mapping,
+						page->index, GFP_KERNEL);
+			} while (error);
+
+			if (!error) {
+				msg_len = insert_page_info(msg, page);
+			} else {
+				AMBAFS_EMSG("ambafs_readpages lru error (%d)\n", error);
+			}
+#endif
 			page_cache_release(page);
 
 		}
