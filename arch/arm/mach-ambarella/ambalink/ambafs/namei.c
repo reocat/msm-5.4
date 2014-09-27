@@ -229,7 +229,12 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	}
 
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
-	msg->parameter[0] = (int) ambalink_lkm_virt_to_phys(stat);
+
+#if defined(CONFIG_AMBALINK_VFS_MODULE)
+    msg->parameter[0] = (int) ambalink_lkm_virt_to_phys(stat);
+#else
+    msg->parameter[0] = (int) ambalink_virt_to_phys(stat);
+#endif
 
 	AMBAFS_DMSG("%s: path = %s, quick_stat result phy address = 0x%x \r\n", __func__, path, msg->parameter[0]);
 
