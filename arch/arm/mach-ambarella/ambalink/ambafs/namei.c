@@ -1,6 +1,7 @@
 #include <linux/kernel.h>
 #include <linux/pagemap.h>
 #include <linux/writeback.h>
+#include <linux/spinlock.h>
 #include <asm/page.h>
 #include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
@@ -216,7 +217,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	struct dentry *dir;
 	struct ambafs_qstat *stat = (struct ambafs_qstat*)msg->parameter;
 	char *path = (char*)&(msg->parameter[1]);
-	int len;
+	int len, i;
 
 
 	if (dentry) {
@@ -231,9 +232,9 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
 
 #if defined(CONFIG_AMBALINK_VFS_MODULE)
-    msg->parameter[0] = (int) ambalink_lkm_virt_to_phys(stat);
+        msg->parameter[0] = (int) ambalink_lkm_virt_to_phys(stat);
 #else
-    msg->parameter[0] = (int) ambalink_virt_to_phys(stat);
+        msg->parameter[0] = (int) ambalink_virt_to_phys(stat);
 #endif
 
 	AMBAFS_DMSG("%s: path = %s, quick_stat result phy address = 0x%x \r\n", __func__, path, msg->parameter[0]);
@@ -241,7 +242,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	msg->cmd = AMBAFS_CMD_QUICK_STAT;
 	ambafs_rpmsg_send(msg, len + 1 + 4, NULL, NULL);
 
-	while (1) {
+	for (i = 0; i < 65536; i++) {
 		ambcache_inv_range(stat, 32);
 		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
 			stat->magic = 0x0;
@@ -249,11 +250,12 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 			break;
 		}
 	}
-
+	
+	if (i == 65536)
+		stat->type = AMBAFS_STAT_NULL;
 exit:
 	return stat;
 }
-
 
 static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
@@ -262,8 +264,11 @@ static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 
 	if (inode && S_ISDIR(inode->i_mode)) {
 		static int buf[128] __attribute__((aligned(32)));
+		//int buf[160];
+		//void *align_buf;
 		struct ambafs_qstat *astat;
-
+				
+		//align_buf = (((u32) buf) & (~0x1f)) + 0x20;
 		//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) buf)));
 		astat = ambafs_get_qstat(NULL, dentry->d_inode, buf, sizeof(buf));
 		if (astat->type == AMBAFS_STAT_NULL) {

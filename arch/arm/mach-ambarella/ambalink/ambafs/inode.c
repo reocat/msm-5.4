@@ -99,7 +99,8 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 	int buf[192], msg_len = 0, error = 0;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	unsigned page_idx, io_pages;
-
+	u32 i;
+	
 	AMBAFS_DMSG("ambafs_readpages %d\n", nr_pages);
 	while (nr_pages) {
 		struct page *page;
@@ -120,10 +121,12 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 			AMBAFS_EMSG("ambafs_readpages lru error\n");
 		}
 #else
-		do {
+		for (i = 0; i < 0xffffffff; i++) {
 			error = add_to_page_cache_lru(page, mapping,
 						page->index, GFP_KERNEL);
-		} while (error);
+			if (!error)
+				break;
+		}
 
 		if (!error) {
 			msg_len = insert_page_info(msg, page);
@@ -155,10 +158,12 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 				AMBAFS_EMSG("ambafs_readpages lru error (%d)\n", error);
 			}
 #else
-			do {
+			for (i = 0; i < 0xffffffff; i++) {
 				error = add_to_page_cache_lru(page, mapping,
 						page->index, GFP_KERNEL);
-			} while (error);
+				if (!error)
+					break;
+			}
 
 			if (!error) {
 				msg_len = insert_page_info(msg, page);
