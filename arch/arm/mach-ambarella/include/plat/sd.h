@@ -349,5 +349,11 @@
 #define AMBA_SD_MAX_SLOT_NUM			(1)
 #endif
 
+#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2)
+#define sd_addr_is_unlign(addr)		(unlikely((addr) & 0x3))
+#else
+#define sd_addr_is_unlign(addr)		0
+#endif
+
 #endif
 
