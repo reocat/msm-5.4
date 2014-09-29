@@ -22,6 +22,7 @@
 #include <linux/i2c.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/of_device.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
@@ -632,10 +633,7 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	msleep(1);
 
 	es8388_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-#ifdef CONFIG_SND_SOC_ES8388S
-	snd_soc_write(codec, 0x35,0xA0);   //Enable Diff PGA for ES8388S
-	snd_soc_write(codec, 0x38,0x02);
-#endif
+
 	snd_soc_write(codec, ES8388_MASTERMODE,0x00);
 	snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
 	snd_soc_write(codec, ES8388_DACCONTROL23, 0x00);
@@ -684,6 +682,68 @@ static int es8388_probe(struct snd_soc_codec *codec)
 		msleep(5);
 	}
 */
+	return ret;
+}
+
+static int es8388s_probe(struct snd_soc_codec *codec)
+{
+	struct es8388_priv *es8388 = snd_soc_codec_get_drvdata(codec);
+	int ret = 0;
+
+	dev_info(codec->dev, "ES8388s Audio Codec %s", ES8388_VERSION);
+	codec->control_data = es8388->regmap;
+
+	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
+	if (ret != 0) {
+		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
+		return ret;
+	}
+
+	es8388_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+	/* Enable Diff PGA for ES8388S */
+	snd_soc_write(codec, 0x35,0xA0);
+	snd_soc_write(codec, 0x38,0x02);
+
+	snd_soc_write(codec, ES8388_MASTERMODE,0x00);
+	snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
+	snd_soc_write(codec, ES8388_DACCONTROL23, 0x00);
+//	snd_soc_write(codec, ES8388_ANAVOLMANAG, 0x74);
+	snd_soc_write(codec, ES8388_DACCONTROL21, 0x80);
+	snd_soc_write(codec, ES8388_CONTROL1, 0x30);
+	snd_soc_write(codec, ES8388_CHIPLOPOW2, 0xFF);
+	snd_soc_write(codec, ES8388_CHIPLOPOW1, 0x00);
+	//-------------ADC---------------------------//
+	snd_soc_write(codec, ES8388_ADCCONTROL1, 0x40);
+	snd_soc_write(codec, ES8388_ADCCONTROL2, 0xF0);
+	snd_soc_write(codec, ES8388_ADCCONTROL3, 0x82);  /* adc output in tri-state */
+	snd_soc_write(codec, ES8388_ADCCONTROL4, 0x4C);
+	snd_soc_write(codec, ES8388_ADCCONTROL5, 0x02);  /* compitable with ES8388S */
+	snd_soc_write(codec, ES8388_ADCCONTROL6, 0x2c);
+	snd_soc_write(codec, ES8388_ADCCONTROL8, 0x00);
+	snd_soc_write(codec, ES8388_ADCCONTROL9, 0x00);
+	snd_soc_write(codec, ES8388_ADCCONTROL10, 0xDa);
+	snd_soc_write(codec, ES8388_ADCCONTROL11, 0xB0);
+	snd_soc_write(codec, ES8388_ADCCONTROL12, 0x12);
+	snd_soc_write(codec, ES8388_ADCCONTROL13, 0x06);
+	snd_soc_write(codec, ES8388_ADCCONTROL14, 0x11);
+	//-------------DAC-----------------------------//
+	snd_soc_write(codec, ES8388_DACCONTROL1, 0x18);
+	snd_soc_write(codec, ES8388_DACCONTROL2, 0x02);  /* compitable with ES8388S */
+	snd_soc_write(codec, ES8388_DACCONTROL3, 0x76);
+	snd_soc_write(codec, ES8388_DACCONTROL4, 0x00);
+	snd_soc_write(codec, ES8388_DACCONTROL5, 0x00);
+	snd_soc_write(codec, ES8388_DACCONTROL17, 0xB8);
+	snd_soc_write(codec, ES8388_DACCONTROL20, 0xB8);
+
+	snd_soc_write(codec, ES8388_CHIPPOWER, 0x00);
+	snd_soc_write(codec, ES8388_CONTROL1, 0x36);
+	snd_soc_write(codec, ES8388_CONTROL2, 0x72);
+	snd_soc_write(codec, ES8388_DACPOWER, 0x00);    //only start up DAC, disable LOUT/ROUT
+	snd_soc_write(codec, ES8388_ADCPOWER, 0x09);
+	snd_soc_write(codec, ES8388_CONTROL1, 0x32);
+	snd_soc_write(codec, ES8388_DACCONTROL3, 0x72);
+
 	return ret;
 }
 
@@ -770,6 +830,22 @@ static struct snd_soc_codec_driver soc_codec_dev_es8388 = {
 	.num_controls = ARRAY_SIZE(es8388_snd_controls),
 };
 
+static struct snd_soc_codec_driver soc_codec_dev_es8388s = {
+	.probe =	es8388s_probe,
+	.remove =	es8388_remove,
+	.suspend =	es8388_suspend,
+	.resume =	es8388_resume,
+	.set_bias_level = es8388_set_bias_level,
+
+	.dapm_widgets = es8388_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(es8388_dapm_widgets),
+	.dapm_routes = audio_map,
+	.num_dapm_routes = ARRAY_SIZE(audio_map),
+
+	.controls = es8388_snd_controls,
+	.num_controls = ARRAY_SIZE(es8388_snd_controls),
+};
+
 static struct regmap_config es8388_regmap = {
 	.reg_bits = 8,
 	.val_bits = 8,
@@ -782,6 +858,7 @@ static struct regmap_config es8388_regmap = {
 };
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
+static struct of_device_id es8388_of_match[];
 static int es8388_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
@@ -790,6 +867,7 @@ static int es8388_i2c_probe(struct i2c_client *i2c,
 	int ret = 0;
 	enum of_gpio_flags flags;
 	int rst_pin;
+	const struct snd_soc_codec_driver *driver;
 
 	es8388 = devm_kzalloc(&i2c->dev, sizeof(struct es8388_priv), GFP_KERNEL);
 	if (es8388 == NULL)
@@ -810,8 +888,24 @@ static int es8388_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
+	driver = NULL;
+	if (np) {
+		const struct of_device_id *of_id;
+
+		of_id = of_match_device(es8388_of_match, &i2c->dev);
+		if (of_id)
+			driver = of_id->data;
+	} else {
+		driver = (struct snd_soc_codec_driver *)id->driver_data;
+	}
+
+	if (!driver) {
+		dev_err(&i2c->dev, "no driver\n");
+		return -EINVAL;
+	}
+
 	ret =  snd_soc_register_codec(&i2c->dev,
-			&soc_codec_dev_es8388, &es8388_dai, 1);
+			driver, &es8388_dai, 1);
 
 	return ret;
 }
@@ -823,12 +917,14 @@ static int es8388_i2c_remove(struct i2c_client *i2c)
 }
 
 static struct of_device_id es8388_of_match[] = {
-	{ .compatible = "ambarella,es8388",},
+	{ .compatible = "ambarella,es8388", .data = &soc_codec_dev_es8388},
+	{ .compatible = "ambarella,es8388s",.data = &soc_codec_dev_es8388s},
 	{},
 };
 MODULE_DEVICE_TABLE(of, es8388_of_match);
 static const struct i2c_device_id es8388_i2c_id[] = {
-	{ "es8388", 0 },
+	{ "es8388", (kernel_ulong_t)&soc_codec_dev_es8388},
+	{ "es8388s",(kernel_ulong_t)&soc_codec_dev_es8388s},
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, es8388_i2c_id);
