@@ -229,7 +229,7 @@ static void ambarella_sd_pre_sg_to_adma(void *data)
 		remain_size = sg_dma_len(&pslotinfo->sg[i]);
 		current_addr = sg_dma_address(&pslotinfo->sg[i]);
 		current_addr |= pslotinfo->pinfo->dma_fix;
-		if (unlikely(current_addr & 0x3)) {
+		if (sd_addr_is_unlign(current_addr)) {
 			ambsd_err(pslotinfo, "Please disable ADMA\n");
 			BUG();
 		}
@@ -336,11 +336,11 @@ static void ambarella_sd_pre_adma_to_sg(void *data)
 		remain_size = sg_dma_len(&pslotinfo->sg[i]);
 		current_addr = sg_dma_address(&pslotinfo->sg[i]);
 		current_addr |= pslotinfo->pinfo->dma_fix;
-
-		if (unlikely(current_addr & 0x3)) {
+		if (sd_addr_is_unlign(current_addr)) {
 			ambsd_err(pslotinfo, "Please disable ADMA\n");
 			BUG();
 		}
+
 		while (unlikely(remain_size > SD_ADMA_TBL_LINE_MAX_LEN)) {
 			*(u32 *)(pslotinfo->buf_vaddress + offset) =
 				(SD_ADMA_TBL_ATTR_TRAN |
