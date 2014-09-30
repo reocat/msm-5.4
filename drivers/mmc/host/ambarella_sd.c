@@ -1688,7 +1688,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 
 	dev_dbg(pinfo->dev, "SD max_blk_size: %u.\n", mmc->max_blk_size);
 
-	mmc->caps = MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
+	mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
 			MMC_CAP_ERASE | MMC_CAP_BUS_WIDTH_TEST;
 
 	if (mmc->f_max > 25000000) {
