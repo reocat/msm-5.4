@@ -140,11 +140,11 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		},
 	},
 	[AMBARELLA_IO_DESC_PPM_ID] = {
-		.name       = "PPM",    /*Private Physical Memory*/
+		.name       = "PPM",    /* Private Physical Memory (shared memory) */
 		.io_desc        = {
-			.virtual    = NOLINUX_MEM_V_START,
-			.pfn        = __phys_to_pfn(DEFAULT_MEM_START),
-			.length     = CONFIG_AMBARELLA_PPM_SIZE,
+			.virtual    = CONFIG_AMBALINK_SHMADDR,
+			.pfn        = __phys_to_pfn(CONFIG_AMBALINK_SHMADDR - NOLINUX_MEM_V_START),
+			.length     = (CONFIG_AMBARELLA_ZRELADDR - CONFIG_AMBALINK_SHMADDR - CONFIG_AMBARELLA_TEXTOFS),
 #if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
 			.type       = MT_MEMORY_SHARED,
 #else
@@ -153,7 +153,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		},
 	},
 	[AMBARELLA_IO_DESC_PPM2_ID] = {
-		.name       = "PPM2",   /*Private Physical Memory*/
+		.name       = "PPM2",   /* Private Physical Memory (RTOS memory) */
 		.io_desc        = {
 			.virtual    = 0,
 			.pfn        = 0,

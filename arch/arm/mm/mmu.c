@@ -837,14 +837,9 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 	svm = early_alloc_aligned(sizeof(*svm) * nr, __alignof__(*svm));
 
 	for (md = io_desc; nr; md++, nr--) {
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-		/* Create vm for AHB, APB, AXI for ioremap w/ device tree. */
-		/* But do not overwrite the value created by RTOS. */
-		if (md->virtual != AHB_BASE &&
-		    md->virtual != APB_BASE &&
-		    md->virtual != AXI_BASE)
-			create_mapping(md);
-#else
+		/* Should not change the MMU setting created by RTOS. */
+		/* Only create vm for RTOS memory, AHB, APB, and AXI. */
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 		create_mapping(md);
 #endif
 		vm = &svm->vm;
