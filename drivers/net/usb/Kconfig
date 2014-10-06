@@ -470,12 +470,6 @@ config USB_NET_QMI_WWAN
 	  To compile this driver as a module, choose M here: the
 	  module will be called qmi_wwan.
 
-config USB_NET_U8300
-	tristate "NDIS driver for Longsung U8300"
-	depends on USB_USBNET
-	help
-	  Add NDIS driver support for Longsung U8300
-
 config USB_HSO
 	tristate "Option USB High Speed Mobile Devices"
 	depends on USB && RFKILL && TTY
