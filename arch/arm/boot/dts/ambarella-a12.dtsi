@@ -396,8 +396,8 @@
 			/* If you are using uart dma in BOSS, please select DMA in linux menuconfig */
 			/* also set the variable AmbaLinkCtrl.AmbaLinkUartDmaOwner to OWNER_LINUX */
 			/* in SoC\A12\Workshop\A12EVK\src\AmbaLinkMemoryCfg.c */
-			amb,txdma-used;
-			amb,rxdma-used;
+			/* amb,txdma-used; */
+			/* amb,rxdma-used; */
 			/* amb,tx-fifo-fix; */
 			/* need to select pinctrl setup in board dts */
 		};
