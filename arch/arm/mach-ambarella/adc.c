@@ -56,6 +56,58 @@ static ssize_t ambarella_adc_show(struct device *dev,
 }
 static DEVICE_ATTR(adcsys, 0444, ambarella_adc_show, NULL);
 
+static int ambarella_adc_fifo_ctrl(u32 fid, u16 fcid)
+{
+	u32 reg=0;
+	u32 reg_val=0;
+
+	switch(fid) {
+	case 0:
+		reg = ADC_FIFO_CTRL_0_REG;
+		reg_val = ADC_FIFO_OVER_INT_EN
+                        | ADC_FIFO_UNDR_INT_EN
+                        | ADC_FIFO_TH
+			| (fcid << ADC_FIFO_ID_SHIFT)
+			| ADC_FIFO_DEPTH;
+		break;
+	case 1:
+		reg = ADC_FIFO_CTRL_1_REG;
+		reg_val = ADC_FIFO_OVER_INT_EN
+                        | ADC_FIFO_UNDR_INT_EN
+                        | ADC_FIFO_TH
+			| (fcid << ADC_FIFO_ID_SHIFT)
+			| ADC_FIFO_DEPTH;
+		break;
+	case 2:
+		reg = ADC_FIFO_CTRL_2_REG;
+		reg_val = ADC_FIFO_OVER_INT_EN
+                        | ADC_FIFO_UNDR_INT_EN
+                        | ADC_FIFO_TH
+			| (fcid << ADC_FIFO_ID_SHIFT)
+			| ADC_FIFO_DEPTH;
+		break;
+		break;
+	case 3:
+		reg = ADC_FIFO_CTRL_3_REG;
+		reg_val = ADC_FIFO_OVER_INT_EN
+                        | ADC_FIFO_UNDR_INT_EN
+                        | ADC_FIFO_TH
+			| (fcid << ADC_FIFO_ID_SHIFT)
+			| ADC_FIFO_DEPTH;
+		break;
+		break;
+	default:
+		pr_err("%s: invalid fifo NO = %d.\n",
+			__func__, fid);
+		return -1;
+	}
+
+	amba_writel(reg, reg_val);
+
+	amba_writel(ADC_FIFO_CTRL_REG, ADC_FIFO_CONTROL_CLEAR);
+	return 0;
+}
+
 static void ambarella_adc_enable(void)
 {
 	/* select adc scaler as clk_adc and power up adc */
@@ -68,6 +120,10 @@ static void ambarella_adc_enable(void)
 	amba_writel(ADC_SLOT_PERIOD_REG, 0xffff);
 	amba_writel(ADC_SLOT_CTRL_0_REG, 0x0fff);
 #endif
+        //test fifo read in fifo_0
+        if(ambarella_adc->fifo_mode){
+                ambarella_adc_fifo_ctrl(0,1);
+        }
 	amba_setbitsl(ADC_ENABLE_REG, ADC_CONTROL_ENABLE);
 }
 
@@ -85,6 +141,13 @@ static void ambarella_adc_start(void)
 static void ambarella_adc_stop(void)
 {
 	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_MODE | ADC_CONTROL_START);
+}
+
+static void ambarella_adc_reset(void)
+{
+        ambarella_adc_disable();
+        ambarella_adc_enable();
+        ambarella_adc_start();
 }
 
 struct ambadc_client *ambarella_adc_register_client(struct device *dev,
@@ -158,7 +221,8 @@ EXPORT_SYMBOL(ambarella_adc_unregister_client);
 int ambarella_adc_read_level(u32 ch)
 {
 	struct ambadc_host *amb_adc = ambarella_adc;
-	int data;
+	int data=0;
+        u32 i,count;
 
 	if (ch >= ADC_NUM_CHANNELS)
 		return -EINVAL;
@@ -169,8 +233,20 @@ int ambarella_adc_read_level(u32 ch)
 	if (!amb_adc->keep_start)
 		ambarella_adc_start();
 
-	data = amba_readl(ADC_DATA_REG(ch));
+        if(!ambarella_adc->fifo_mode){
+                data = amba_readl(ADC_DATA_REG(ch));
+        }else{
+                count = 0x7ff & amba_readl(ADC_FIFO_STATUS_0_REG);
+                if(count > 4)
+                count -= 4;
 
+                for(i=0;i<count;i++){
+                        data = amba_readl(ADC_FIFO_DATA0_REG + i*4);
+                        // printk("call back [0x%x]=0x%x,count=0x%x,0x%x\n",
+                        //  (ADC_FIFO_DATA0_REG + i*4),data,count,ch);
+                }
+                //data = data/count;
+        }
 	if (!amb_adc->keep_start)
 		ambarella_adc_stop();
 
@@ -200,7 +276,8 @@ int ambarella_adc_set_threshold(struct ambadc_client *client,
 	else
 		clear_bit(ch, client->channel_mask);
 
-	amba_writel(ADC_CHAN_INTR_REG(ch), value);
+        if(!ambarella_adc->fifo_mode)
+                amba_writel(ADC_CHAN_INTR_REG(ch), value);
 
 	return 0;
 }
@@ -237,17 +314,38 @@ static void ambarella_adc_polling_work(struct work_struct *work)
 
 static irqreturn_t ambarella_adc_irq(int irq, void *dev_id)
 {
-	u32 i, int_src;
+	u32 i, int_src,rval,chanNo;
+        struct ambadc_host *amb_adc = dev_id;
 
-	int_src = amba_readl(ADC_DATA_INTR_TABLE_REG);
-	amba_writel(ADC_DATA_INTR_TABLE_REG, int_src);
+        chanNo = 0;
+        if(!amb_adc->fifo_mode){
+                int_src = amba_readl(ADC_DATA_INTR_TABLE_REG);
+                amba_writel(ADC_DATA_INTR_TABLE_REG, int_src);
+                chanNo = int_src;
+        }else{
+                rval = amba_readl(ADC_CTRL_INTR_TABLE_REG);
+                if(rval){
+                        ambarella_adc_reset();
+                        return IRQ_HANDLED;
+                }
+                rval = amba_readl(ADC_FIFO_INTR_TABLE_REG);
+                amba_writel(ADC_FIFO_INTR_TABLE_REG, rval);
 
-	for (i = 0; i < ADC_NUM_CHANNELS; i++) {
-		if ((int_src & (1 << i)) == 0)
-			continue;
+                for(i=0;i<ADC_FIFO_NUMBER;i++){
+                        if((rval & (1 << i)) == 0)
+                                continue;
+                        rval = amba_readl(ADC_FIFO_CTRL_X_REG(i));
+                        rval = (rval & (0x0000f000)) >> 12;
+                        chanNo = 1 << rval;
+                }
+        }
 
-		ambarella_adc_client_callback(i);
-	}
+        for (i = 0; i < ADC_NUM_CHANNELS; i++) {
+                if ((chanNo & (1 << i)) == 0)
+                        continue;
+
+                ambarella_adc_client_callback(i);
+        }
 
 	return IRQ_HANDLED;
 }
@@ -270,6 +368,8 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Get clock-frequency failed!\n");
 		return -ENODEV;
 	}
+
+        amb_adc->fifo_mode=1;//test fifo mode
 
 	amb_adc->polling_mode = !!of_find_property(np, "amb,polling-mode", NULL);
 	if (amb_adc->polling_mode) {
@@ -295,11 +395,11 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	ambarella_adc_enable();
-
 	amb_adc->dev = &pdev->dev;
 
 	ambarella_adc = amb_adc;
+
+	ambarella_adc_enable();
 
 	ret = device_create_file(&pdev->dev, &dev_attr_adcsys);
 	if (ret != 0) {

@@ -270,6 +270,8 @@
 #else
 #define ADC_DATA_OFFSET(ch)		(ADC_DATA0_OFFSET + (ch) * 4)
 #define ADC_DATA_REG(ch)		ADC_REG(ADC_DATA_OFFSET(ch))
+#define ADC_FIFO_CTRL_X_OFFSET(fifoNo)	(ADC_FIFO_CTRL_0_OFFSET + (fifoNo) * 4)
+#define ADC_FIFO_CTRL_X_REG(fifoNo)	ADC_REG(ADC_FIFO_CTRL_X_OFFSET(fifoNo))
 #define ADC_CHAN_INTR_OFFSET(ch)	(ADC_CHAN0_INTR_OFFSET + (ch) * 4)
 #define ADC_CHAN_INTR_REG(ch)		ADC_REG(ADC_CHAN_INTR_OFFSET(ch))
 #endif
@@ -282,13 +284,14 @@
 
 /* valid only for S2/S2L/S3 */
 #define ADC_CONTROL_RESET		0x01
-#define ADC_FIFO_INT_EN			(0x1 << 31)
-#define ADC_FIFO_UNDR_INT_EN	(0x1 << 30)
+#define ADC_FIFO_OVER_INT_EN		(0x1 << 31)
+#define ADC_FIFO_UNDR_INT_EN	        (0x1 << 31)
 #define ADC_FIFO_DEPTH			0x80
-#define ADC_FIFO_TH				((ADC_FIFO_DEPTH >> 2) << 16)
+#define ADC_FIFO_TH			(((ADC_FIFO_DEPTH >> 2)-1) << 16)
 #define ADC_FIFO_CLEAR			0x1
 #define ADC_FIFO_ID_SHIFT		12
 #define ADC_FIFO_CONTROL_CLEAR		0x01
+#define ADC_FIFO_NUMBER		        0x04
 
 #define ADC_CTRL_SCALER_POWERDOWN	0x100
 #define ADC_CTRL_POWERDOWN		0x2
@@ -347,6 +350,7 @@ struct ambadc_host {
 	u32 clk;
 	bool polling_mode;
 	bool keep_start;
+        bool fifo_mode;
 	struct delayed_work work;
 };
 

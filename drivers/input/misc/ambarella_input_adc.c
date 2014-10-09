@@ -33,6 +33,9 @@
 #include <linux/of.h>
 #include <plat/adc.h>
 
+#undef dev_dbg
+#define dev_dbg(dev, fmt,arg...) dev_printk(KERN_INFO,dev,fmt,##arg)
+
 struct ambadc_keymap {
 	u32 key_code;
 	u32 channel : 4;
@@ -66,8 +69,8 @@ static int ambarella_adckey_callback(struct ambadc_client *client,
 	u32 i;
 
 	adckey = dev_get_drvdata(client->dev);
-       if(adckey == NULL)
-              return -EAGAIN;
+        if(adckey == NULL)
+                return -EAGAIN;
 
 	keymap = adckey->keymap;
 	input = adckey->input;
