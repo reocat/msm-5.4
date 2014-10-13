@@ -325,6 +325,34 @@ void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	 * VIC0.17 ~ VIC0.22 as IPI.*/
 	ambvic_sw_set(ambvic_data.reg_base[0], irq + ((cpu == 0) ? 1 : 17));
 }
+
+void ambvic_smp_softirq_init(void)
+{
+	void __iomem *reg_base = ambvic_data.reg_base[0];
+	u32 val;
+
+	raw_spin_lock(&irq_controller_lock);
+
+	/* Clear pending IPIs */
+	amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, IPI_IRQ_MASK);
+
+	/* Enable all of IPIs */
+	val = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+	val |= IPI0_IRQ_MASK;
+	val &= ~IPI1_IRQ_MASK;
+	amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val);
+
+	val = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
+	val |= IPI1_IRQ_MASK;
+	val &= ~IPI0_IRQ_MASK;
+	amba_writel(reg_base + VIC_INT_PTR1_OFFSET, val);
+
+	amba_writel(reg_base + VIC_SENSE_OFFSET, IPI_IRQ_MASK);
+	amba_writel(reg_base + VIC_EVENT_OFFSET, IPI_IRQ_MASK);
+	amba_writel(reg_base + VIC_INTEN_OFFSET, IPI_IRQ_MASK);
+
+	raw_spin_unlock(&irq_controller_lock);
+}
 #endif
 
 static inline int ambvic_handle_ipi(struct pt_regs *regs,
@@ -333,6 +361,7 @@ static inline int ambvic_handle_ipi(struct pt_regs *regs,
 #ifdef CONFIG_SMP
 	/* IPI Handling */
 	if (AMBVIC_IRQ_IS_IPI(hwirq)) {
+		printk("***********  hwirq = %d\n", hwirq);
 		ambvic_sw_clr(ambvic_data.reg_base[0], hwirq);
 		if ((1 << hwirq) & IPI0_IRQ_MASK)
 			handle_IPI(hwirq - 1, regs);
@@ -551,6 +580,19 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);
 		set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
 	}
+
+#ifdef CONFIG_SMP
+	ambvic_smp_softirq_init();
+#if 0
+	/*
+	 * Set the default affinity from all CPUs to the boot cpu.
+	 * This is required since the MPIC doesn't limit several CPUs
+	 * from acknowledging the same interrupt.
+	 */
+	cpumask_clear(irq_default_affinity);
+	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
+#endif
+#endif
 
 #if defined(CONFIG_PM)
 	register_syscore_ops(&ambvic_syscore_ops);
