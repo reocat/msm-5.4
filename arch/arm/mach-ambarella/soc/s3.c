@@ -27,6 +27,7 @@
 #include <linux/irqchip.h>
 #include <asm/mach/arch.h>
 #include <mach/init.h>
+#include <mach/common.h>
 
 static const char * const s3_dt_board_compat[] = {
 	"ambarella,s3",
@@ -35,6 +36,7 @@ static const char * const s3_dt_board_compat[] = {
 
 DT_MACHINE_START(S3_DT, "Ambarella S3 (Flattened Device Tree)")
 	.restart_mode	= 's',
+	.smp		= smp_ops(ambarella_smp_ops),
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
 	.init_irq	= irqchip_init,
