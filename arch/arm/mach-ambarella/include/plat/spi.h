@@ -196,6 +196,8 @@
 /* Tx FIFO empty interrupt mask */
 #define SPI_TXEIS_MASK		0x00000001
 #define SPI_TXOIS_MASK 		0x00000002
+#define SPI_RXFIS_MASK 		0x00000010
+#define SPI_FCRIS_MASK 		0x00000100
 
 /* SPI Parameters */
 #define SPI_DUMMY_DATA		0xffff
@@ -209,6 +211,50 @@
 #define SPI_CFS			0x0
 #define SPI_DFS			0xf
 #define SPI_BAUD_RATE		200000
+
+/* ==========================================================================*/
+typedef union {
+	struct {
+		u32		dfs	: 4;	/* [3:0] */
+		u32		frf	: 2;	/* [5:4] */
+		u32		scph	: 1;	/* [6] */
+		u32		scpol	: 1;	/* [7] */
+		u32		tmod	: 2;	/* [9:8] */
+		u32		slv_oe	: 1;	/* [10] */
+		u32		srl	: 1;	/* [11] */
+		u32		reserv1	: 5;	/* [16:12] */
+		u32		residue	: 1;	/* [17] */
+		u32		tx_lsb	: 1;	/* [18] */
+		u32		rx_lsb	: 1;	/* [19] */
+		u32		reserv2	: 1;	/* [20] */
+		u32		fc_en	: 1;	/* [21] */
+		u32		rxd_mg	: 4;	/* [25:22] */
+		u32		byte_ws	: 1;	/* [26] */
+		u32		hold	: 1;	/* [27] */
+		u32		reserv3	: 4;	/* [31:28] */
+	} s;
+	u32	w;
+} spi_ctrl0_reg_t;
+
+typedef union {
+	struct {
+		u32		busy	: 1;	/* [0] */
+		u32		tfnf	: 1;	/* [1] */
+		u32		tfe	: 1;	/* [2] */
+		u32		rfne	: 1;	/* [3] */
+		u32		rff	: 1;	/* [4] */
+		u32		txe	: 1;	/* [5] */
+		u32		dcol	: 1;	/* [6] */
+		u32		reserve	: 25;	/* [31:7] */
+	} s;
+	u32	w;
+} spi_status_reg_t;
+
+struct ambarella_spi_hw_info {
+	int	bus_id;
+	int	cs_id;
+};
+typedef struct ambarella_spi_hw_info amba_spi_hw_t;
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
