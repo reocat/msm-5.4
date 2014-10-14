@@ -369,7 +369,7 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-        amb_adc->fifo_mode=1;//test fifo mode
+        //amb_adc->fifo_mode=1;//test fifo mode
 
 	amb_adc->polling_mode = !!of_find_property(np, "amb,polling-mode", NULL);
 	if (amb_adc->polling_mode) {
@@ -400,6 +400,10 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 	ambarella_adc = amb_adc;
 
 	ambarella_adc_enable();
+        if(amb_adc->fifo_mode == 1){
+		ambarella_adc_start();
+		amb_adc->keep_start = true;
+	}
 
 	ret = device_create_file(&pdev->dev, &dev_attr_adcsys);
 	if (ret != 0) {
