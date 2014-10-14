@@ -1027,7 +1027,9 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		dma_cookie_init(&amb_chan->chan);
 
 		if (i == I2S_TX_DMA_CHAN || i == I2S_RX_DMA_CHAN ||
-			i == UART_TX_DMA_CHAN || i == UART_RX_DMA_CHAN) {
+			i == UART_TX_DMA_CHAN || i == UART_RX_DMA_CHAN ||
+			i == NOR_SPI_TX_DMA_CHAN || i == NOR_SPI_RX_DMA_CHAN ||
+			i == SSI1_TX_DMA_CHAN || i == SSI1_RX_DMA_CHAN) {
 			amb_chan->chan.device = &amb_dma->dma_slave;
 			list_add_tail(&amb_chan->chan.device_node,
 					&amb_dma->dma_slave.channels);
