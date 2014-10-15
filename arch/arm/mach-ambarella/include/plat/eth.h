@@ -31,12 +31,6 @@
 #define ETH_INSTANCES	1
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == A8)
-#define SUPPORT_GMII	1
-#else
-#define SUPPORT_GMII	0
-#endif
-
 /* ==========================================================================*/
 #define ETH_OFFSET			0xE000
 #define ETH_DMA_OFFSET			0xF000
