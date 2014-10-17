@@ -70,8 +70,9 @@ static void write_cpux_jump_addr(unsigned int cpu, int addr)
 /* running on CPU1 */
 static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
 {
+#if defined(CONFIG_AMBARELLA_VIC)
 	ambvic_smp_softirq_init();
-
+#endif
 	/* let the primary processor know we're out of the
 	 * pen, then head off into the C entry point */
 	write_pen_release(-1);

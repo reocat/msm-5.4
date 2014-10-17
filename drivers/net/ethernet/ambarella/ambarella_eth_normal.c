@@ -1,5 +1,5 @@
 /*
- * /drivers/net/ethernet/ambarella/ambarella_eth.c
+ * /drivers/net/ethernet/ambarella/ambarella_eth_normal.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  * Copyright (C) 2004-2011, Ambarella, Inc.
@@ -856,8 +856,8 @@ static inline void ambeth_rx_rngmng_init(struct ambeth_info *lp)
 		if (ambeth_rx_rngmng_check_skb(lp, i))
 			break;
 		lp->rx.desc_rx[i].status = ETH_RDES0_OWN;
-		lp->rx.desc_rx[i].length =
-			ETH_RDES1_RCH | AMBETH_PACKET_MAXFRAME;
+		lp->rx.desc_rx[i].length = (ETH_RDES1_RCH |
+			ETH_RDES1_RBS1x(AMBETH_PACKET_MAXFRAME));
 		lp->rx.desc_rx[i].buffer2 = (u32)lp->rx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
 	}
@@ -2088,7 +2088,23 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->fixed_speed = SPEED_UNKNOWN;
 
 	gmii = !!of_find_property(np, "amb,support-gmii", NULL);
-	lp->phy_supported = gmii ? PHY_GBIT_FEATURES : PHY_BASIC_FEATURES;
+	if (gmii) {
+		lp->phy_supported = (	SUPPORTED_10baseT_Half | \
+					SUPPORTED_10baseT_Full | \
+					SUPPORTED_100baseT_Half | \
+					SUPPORTED_100baseT_Full | \
+					SUPPORTED_Autoneg | \
+					SUPPORTED_MII);
+	} else {
+		lp->phy_supported = (	SUPPORTED_10baseT_Half | \
+					SUPPORTED_10baseT_Full | \
+					SUPPORTED_100baseT_Half | \
+					SUPPORTED_100baseT_Full | \
+					SUPPORTED_1000baseT_Half | \
+					SUPPORTED_1000baseT_Full | \
+					SUPPORTED_Autoneg | \
+					SUPPORTED_MII);
+	}
 
 	ret_val = of_property_read_u32(np, "amb,tx-ring-size", &lp->tx_count);
 	if (ret_val < 0 || lp->tx_count < AMBETH_TX_RNG_MIN)
@@ -2168,7 +2184,8 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	/* request gpio for PHY power control */
 	if (gpio_is_valid(lp->pwr_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev, lp->pwr_gpio, "phy power");
+		ret_val = devm_gpio_request(&pdev->dev,
+			lp->pwr_gpio, "phy power");
 		if (ret_val < 0) {
 			dev_err(&pdev->dev, "Failed to request pwr-gpios!\n");
 			goto ambeth_drv_probe_free_netdev;
@@ -2178,7 +2195,8 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	/* request gpio for PHY reset control */
 	if (gpio_is_valid(lp->rst_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev, lp->rst_gpio, "phy reset");
+		ret_val = devm_gpio_request(&pdev->dev,
+			lp->rst_gpio, "phy reset");
 		if (ret_val < 0) {
 			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
 			goto ambeth_drv_probe_free_netdev;
