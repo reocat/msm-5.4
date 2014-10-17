@@ -2090,6 +2090,8 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 					SUPPORTED_10baseT_Full | \
 					SUPPORTED_100baseT_Half | \
 					SUPPORTED_100baseT_Full | \
+					SUPPORTED_1000baseT_Half | \
+					SUPPORTED_1000baseT_Full | \
 					SUPPORTED_Autoneg | \
 					SUPPORTED_MII);
 	} else {
@@ -2097,8 +2099,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 					SUPPORTED_10baseT_Full | \
 					SUPPORTED_100baseT_Half | \
 					SUPPORTED_100baseT_Full | \
-					SUPPORTED_1000baseT_Half | \
-					SUPPORTED_1000baseT_Full | \
 					SUPPORTED_Autoneg | \
 					SUPPORTED_MII);
 	}
