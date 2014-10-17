@@ -133,6 +133,10 @@ static const struct usb_device_id id_table[] = {
 	{USB_DEVICE_INTERFACE_NUMBER(0x1199, 0x901c, 0)},	/* Sierra Wireless EM7700 Device Management */
 	{USB_DEVICE_INTERFACE_NUMBER(0x1199, 0x901c, 2)},	/* Sierra Wireless EM7700 NMEA */
 	{USB_DEVICE_INTERFACE_NUMBER(0x1199, 0x901c, 3)},	/* Sierra Wireless EM7700 Modem */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0x0918, 0)},	/* WNC D16 0918-0 */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0x0918, 2)},	/* WNC D16 0918-2 */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0xd181, 0)},	/* WNC D16 d181-0 */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0xd181, 2)},	/* WNC D16 d181-2 */
 
 	{ }				/* Terminating entry */
 };
