@@ -441,6 +441,8 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 				ETH_MAC_FRAME_FILTER_RA);
 	}
 
+	amba_writel(lp->regbase + ETH_MAC_INTERRUPT_MASK_OFFSET,
+		0xFFFFFFFF);
 	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET,
 		amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET));
 
@@ -1058,6 +1060,41 @@ static inline void ambeth_interrupt_rx(struct ambeth_info *lp, u32 irq_status)
 	}
 }
 
+static inline void ambeth_interrupt_gmac(struct ambeth_info *lp, u32 irq_status)
+{
+	u32 tmp_reg;
+
+	if (irq_status & ETH_DMA_STATUS_GPI) {
+		dev_vdbg(&lp->ndev->dev, "ETH_DMA_STATUS_GPI\n");
+	}
+	if (irq_status & ETH_DMA_STATUS_GMI) {
+		dev_vdbg(&lp->ndev->dev, "ETH_DMA_STATUS_GMI\n");
+	}
+	if (irq_status & ETH_DMA_STATUS_GLI) {
+		dev_vdbg(&lp->ndev->dev, "ETH_DMA_STATUS_GLI\n");
+		tmp_reg = amba_readl(lp->regbase +
+			ETH_MAC_INTERRUPT_STATUS_OFFSET);
+		dev_vdbg(&lp->ndev->dev,
+			"ETH_MAC_INTERRUPT_STATUS_OFFSET = 0x%08X\n",tmp_reg);
+		tmp_reg = amba_readl(lp->regbase +
+			ETH_MAC_INTERRUPT_MASK_OFFSET);
+		dev_vdbg(&lp->ndev->dev,
+			"ETH_MAC_INTERRUPT_MASK_OFFSET = 0x%08X\n",tmp_reg);
+		tmp_reg = amba_readl(lp->regbase +
+			ETH_MAC_AN_STATUS_OFFSET);
+		dev_vdbg(&lp->ndev->dev,
+			"ETH_MAC_AN_STATUS_OFFSET = 0x%08X\n",tmp_reg);
+		tmp_reg = amba_readl(lp->regbase +
+			ETH_MAC_RGMII_CS_OFFSET);
+		dev_vdbg(&lp->ndev->dev,
+			"ETH_MAC_RGMII_CS_OFFSET = 0x%08X\n",tmp_reg);
+		tmp_reg = amba_readl(lp->regbase +
+			ETH_MAC_GPIO_OFFSET);
+		dev_vdbg(&lp->ndev->dev,
+			"ETH_MAC_GPIO_OFFSET = 0x%08X\n",tmp_reg);
+	}
+}
+
 static inline u32 ambeth_check_tdes0_status(struct ambeth_info *lp,
 	unsigned int status)
 {
@@ -1204,6 +1241,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 	spin_lock_irqsave(&lp->lock, flags);
 	irq_status = amba_readl(lp->regbase + ETH_DMA_STATUS_OFFSET);
 	ambeth_check_dma_error(lp, irq_status);
+	ambeth_interrupt_gmac(lp, irq_status);
 	ambeth_interrupt_rx(lp, irq_status);
 	ambeth_interrupt_tx(lp, irq_status);
 	amba_writel(lp->regbase + ETH_DMA_STATUS_OFFSET, irq_status);
