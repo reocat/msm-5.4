@@ -1655,7 +1655,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 		retval = devm_gpio_request_one(pinfo->dev, pslotinfo->v18_gpio,
 				gpio_init_flag, "sd ext power");
 		if (retval < 0) {
-			dev_err(pinfo->dev, "Failed to request pwr-gpios!\n");
+			dev_err(pinfo->dev, "Failed to request v18-gpios!\n");
 			goto init_slot_err1;
 		}
 	}
