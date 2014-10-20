@@ -1544,6 +1544,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 static int ambarella_sd_init_slot(struct device_node *np, int id,
 			struct ambarella_sd_controller_info *pinfo)
 {
+	struct device_node *save_np;
 	struct ambarella_sd_mmc_info *pslotinfo = NULL;
 	struct mmc_host *mmc;
 	enum of_gpio_flags flags;
@@ -1560,8 +1561,11 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 
 	/* in order to use mmc_of_parse(), we reassign the parent
 	 * of_node, this should be a workaroud. */
+	save_np = mmc->parent->of_node;
 	mmc->parent->of_node = np;
 	mmc_of_parse(mmc);
+	mmc->parent->of_node = save_np;
+
 	/* our own extra property */
 	pslotinfo->no_1_8_v = !!of_find_property(np, "no-1-8-v", NULL);
 	pslotinfo->caps_ddr = !!of_find_property(np, "amb,caps-ddr", NULL);
