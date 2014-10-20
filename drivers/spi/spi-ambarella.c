@@ -481,28 +481,6 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 		goto ambarella_spi_probe_exit;
 	}
 
-	for_each_available_child_of_node(pdev->dev.of_node, nc) {
-		struct spi_device	*spi;
-
-		spi = ambarella_spi_of_find_device(nc);
-		if (!spi) {
-			continue;
-		}
-
-		if (gpio_is_valid(spi->cs_gpio)) {
-			err = devm_gpio_request(&pdev->dev,
-					spi->cs_gpio, dev_name(&spi->dev));
-			if (err < 0) {
-				dev_err(&pdev->dev, "can't get CS: %d\n", err);
-				goto ambarella_spi_probe_exit;
-			}
-			gpio_direction_output(spi->cs_gpio, 1);
-			bus->cs_pins[spi->chip_select] = spi->cs_gpio;
-		} else {
-			bus->cs_pins[spi->chip_select] = -1;
-		}
-	}
-
 	clk_set_rate(bus->clk, bus->clk_freq);
 	amba_writel(reg + SPI_SSIENR_OFFSET, 0);
 	amba_writel(reg + SPI_IMR_OFFSET, 0);
@@ -522,6 +500,28 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	err = spi_register_master(master);
 	if (err) {
 		goto ambarella_spi_probe_exit;
+	}
+
+	for_each_available_child_of_node(master->dev.of_node, nc) {
+		struct spi_device	*spi;
+
+		spi = ambarella_spi_of_find_device(nc);
+		if (!spi) {
+			continue;
+		}
+
+		if (gpio_is_valid(spi->cs_gpio)) {
+			err = devm_gpio_request(&pdev->dev,
+					spi->cs_gpio, dev_name(&spi->dev));
+			if (err < 0) {
+				dev_err(&pdev->dev, "can't get CS: %d\n", err);
+				goto ambarella_spi_probe_exit;
+			}
+			gpio_direction_output(spi->cs_gpio, 1);
+			bus->cs_pins[spi->chip_select] = spi->cs_gpio;
+		} else {
+			bus->cs_pins[spi->chip_select] = -1;
+		}
 	}
 
 	chan_id = 2 * master->bus_num;
