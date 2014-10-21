@@ -153,7 +153,7 @@ static inline void ambarella_ce_timer_set_periodic
 static inline void ambarella_ce_timer_set_oneshot
 		(void __iomem *base_reg, void __iomem *ctrl_reg, u32 offs)
 {
-	amba_writel(base_reg + TIMER_STATUS_OFFSET, 0x0);
+	amba_writel(base_reg + TIMER_STATUS_OFFSET, AMBARELLA_TIMER_FREQ / HZ);
 	amba_writel(base_reg + TIMER_RELOAD_OFFSET, 0xffffffff);
 	amba_writel(base_reg + TIMER_MATCH1_OFFSET, 0x0);
 	amba_writel(base_reg + TIMER_MATCH2_OFFSET, 0x0);
