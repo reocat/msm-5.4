@@ -141,26 +141,27 @@ rpmsg_show_attr(announce, announce ? "true" : "false", "%s\n");
  */
 static unsigned int rpmsg_dev_index;
 
-
-
 #if RPMSG_DEBUG
-
-static AMBA_RPMSG_PROFILE_s *svq_profile, *rvq_profile;
-static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
-
-
-/* The counter is decreasing, so start will large than end normally.*/
-static unsigned int calc_timer_diff(unsigned int start, unsigned int end){
-	unsigned int diff;
-	if(end <= start) {
-		diff = start - end;
-	}
-	else{
-		diff = 0xFFFFFFFF - end + 1 + start;
-	}
-	return diff;
-}
+AMBA_RPMSG_PROFILE_s *svq_profile, *rvq_profile;
+AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
 #endif
+
+static inline unsigned int get_time(void)
+{
+#if RPMSG_DEBUG
+    return amba_readl(PROFILE_TIMER);
+#else
+    return 0;
+#endif
+}
+
+static inline void rpmsg_pkt_count(unsigned int msgs_received)
+{
+#if RPMSG_DEBUG
+	rpmsg_stat->TxToLxCount += msgs_received;
+	rpmsg_stat->TxToLxWakeUpCount++;
+#endif
+}
 
 static ssize_t modalias_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
@@ -675,6 +676,9 @@ static void rpmsg_downref_sleepers(struct virtproc_info *vrp)
 	rpmsg_tx_unlock(&vrp->tx_lock, flags);
 }
 
+extern unsigned int to_get_svq_buf_profile(void);
+extern void get_svq_buf_done_profile(unsigned int to_get_buf, int idx);
+
 /**
  * rpmsg_send_offchannel_raw() - send a message across to the remote processor
  * @rpdev: the rpmsg channel
@@ -718,21 +722,10 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	struct rpmsg_hdr *msg;
 	int err, idx;
 	unsigned long flags;
+	unsigned int prev_time;
 
-#if RPMSG_DEBUG
-	unsigned int prev_time, current_time, diff;
-	prev_time = amba_readl(PROFILE_TIMER);
-	/* calculate rpmsg injection rate */
-	if( rpmsg_stat->LxLastInjectTime != 0 ){
-		diff = calc_timer_diff(rpmsg_stat->LxLastInjectTime, prev_time);
-	}
-	else{
-		diff = 0;
-	}
-	rpmsg_stat->LxTotalInjectTime += diff;
-	rpmsg_stat->LxLastInjectTime = prev_time;
-#endif
 
+	prev_time = to_get_svq_buf_profile();
 	/* bcasting isn't allowed */
 	if (src == RPMSG_ADDR_ANY || dst == RPMSG_ADDR_ANY) {
 		dev_err(dev, "invalid addr (src 0x%x, dst 0x%x)\n", src, dst);
@@ -782,12 +775,8 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 			return -ERESTARTSYS;
 		}
 	}
-#if RPMSG_DEBUG
-	current_time = amba_readl(PROFILE_TIMER);
-	svq_profile[idx].ToGetSvqBuffer = prev_time;
-	svq_profile[idx].GetSvqBuffer = current_time;
-//	printk("idx %d to_get_svq_buf %u\n", idx, svq_profile[idx].ToGetSvqBuffer);
-#endif
+	get_svq_buf_done_profile(prev_time, idx);
+
 	msg->len = len;
 	msg->flags = 0;
 	msg->src = src;
@@ -819,19 +808,15 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 		goto out;
 	}
 
-#if RPMSG_DEBUG
-	current_time = amba_readl(PROFILE_TIMER);
-	svq_profile[idx].SvqToSendInterrupt = current_time;
+	svq_profile[idx].SvqToSendInterrupt = get_time();
 //	printk("idx %d svq_send_interrupt %u, addr is %x\n", idx, svq_profile[idx].SvqToSendInterrupt, &svq_profile[idx].SvqToSendInterrupt);
-#endif
-
 
 	/* tell the remote processor it has a pending message to read */
 	virtqueue_kick(vrp->svq);
-#if RPMSG_DEBUG
-	svq_profile[idx].SvqSendInterrupt = amba_readl(PROFILE_TIMER);
+
+	svq_profile[idx].SvqSendInterrupt = get_time();
 //	printk("idx %d svq_send_interrupt %u, addr is %x\n", idx, svq_profile[idx].SvqSendInterrupt, &svq_profile[idx].SvqSendInterrupt);
-#endif
+
 
 out:
 	rpmsg_tx_unlock(&vrp->tx_lock, flags);
@@ -902,7 +887,9 @@ static int rpmsg_recv_single(struct virtproc_info *vrp, struct device *dev,
 
 	return 0;
 }
-
+extern void lnx_response_profile(unsigned int to_get_buf, int idx);
+extern unsigned int finish_rpmsg_profile(unsigned int to_get_buf, unsigned int to_recv_data,
+	int idx);
 /* called when an rx buffer is used, and it's time to digest a message */
 static void rpmsg_recv_done(struct virtqueue *rvq)
 {
@@ -911,64 +898,28 @@ static void rpmsg_recv_done(struct virtqueue *rvq)
 	struct rpmsg_hdr *msg;
 	unsigned int len, idx, msgs_received = 0;
 	int err;
-	unsigned int to_get_buf, to_recv_data, recv_data_done, diff;
+	unsigned int to_get_buf, to_recv_data;
 
-#if RPMSG_DEBUG
-	idx = 0;
-	to_get_buf = amba_readl(PROFILE_TIMER);
+	to_get_buf = get_time();
 	//calculate the response time.
-#endif
+
 	msg = virtqueue_get_buf_index(rvq, &len, &idx);
 	if (!msg) {
 		dev_err(dev, "uhm, incoming signal, but no used buffer ?\n");
 		return;
 	}
-#if RPMSG_DEBUG
-	diff = calc_timer_diff(rvq_profile[idx].SvqToSendInterrupt, to_get_buf);
-
-	rpmsg_stat->LxResponseTime += diff;
-	if(diff > rpmsg_stat->MaxLxResponseTime){
-		rpmsg_stat->MaxLxResponseTime = diff;
-	}
-#endif
+	lnx_response_profile(to_get_buf, idx);
 
 	while (msg) {
-#if RPMSG_DEBUG
-		to_recv_data = amba_readl(PROFILE_TIMER);
-#endif
+		to_recv_data = get_time();
+
 		err = rpmsg_recv_single(vrp, dev, msg, len);
 		if (err)
 			break;
-#if RPMSG_DEBUG
-		recv_data_done = amba_readl(PROFILE_TIMER);
-		diff = calc_timer_diff(to_recv_data, recv_data_done);
-		rpmsg_stat->LxRecvCallBackTime += diff;
-		if(diff > rpmsg_stat->MaxLxRecvCBTime){
-			rpmsg_stat->MaxLxRecvCBTime = diff;
-		}
-		if(diff < rpmsg_stat->MinLxRecvCBTime){
-			rpmsg_stat->MinLxRecvCBTime = diff;
-		}
 
+		to_get_buf = finish_rpmsg_profile(to_get_buf, to_recv_data, idx);
 
-		diff = calc_timer_diff(rvq_profile[idx].ToGetSvqBuffer, rvq_profile[idx].SvqToSendInterrupt);
-		rpmsg_stat->TxSendRpmsgTime += diff;
-
-		diff = calc_timer_diff(to_get_buf, to_recv_data);
-		rpmsg_stat->LxRecvRpmsgTime += diff;
-
-		diff = calc_timer_diff(rvq_profile[idx].ToGetSvqBuffer, to_recv_data);
-		rpmsg_stat->TxToLxRpmsgTime += diff;
-		if(diff > rpmsg_stat->MaxTxToLxRpmsgTime){
-			rpmsg_stat->MaxTxToLxRpmsgTime = diff;
-		}
-		if(diff < rpmsg_stat->MinTxToLxRpmsgTime){
-			rpmsg_stat->MinTxToLxRpmsgTime = diff;
-		}
-		to_get_buf = amba_readl(PROFILE_TIMER);
-#endif
 		msgs_received++;
-
 		msg = virtqueue_get_buf_index(rvq, &len, &idx);
 	};
 
@@ -976,10 +927,7 @@ static void rpmsg_recv_done(struct virtqueue *rvq)
 
 	/* tell the remote processor we added another available rx buffer */
 	if (msgs_received) {
-#if RPMSG_DEBUG
-		rpmsg_stat->TxToLxCount += msgs_received;
-		rpmsg_stat->TxToLxWakeUpCount++;
-#endif
+		rpmsg_pkt_count(msgs_received);
 		virtqueue_kick(vrp->rvq);
 	}
 }
