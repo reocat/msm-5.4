@@ -235,11 +235,10 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 		amba_writel(virt + SPI_RXFTLR_OFFSET, 4 - 1);
 	}
 	amba_writel(virt + SPI_SSIENR_OFFSET, 1);
-
+	amba_writel(bus->virt + 0x4c, 0x03);
 
 	switch (bus->rw) {
 	case SPI_WRITE_ONLY:
-		amba_writel(bus->virt + 0x4c, 0x02);
 
 		tx_cfg.dst_addr			= bus->phys + SPI_DR_OFFSET;
 		if (spi->bits_per_word <= 8) {
@@ -260,16 +259,38 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 			DMA_COMPL_SKIP_SRC_UNMAP | DMA_COMPL_SKIP_DEST_UNMAP | DMA_CTRL_ACK);
 		BUG_ON (!txd);
 
-		txd->callback		= ambarella_spi_next_transfer;
-		txd->callback_param	= bus;
+		txd->callback		= NULL;
+		txd->callback_param	= NULL;
 		dmaengine_submit(txd);
 
 		dma_async_issue_pending(bus->txc);
 
+		rx_cfg.src_addr			= bus->phys + SPI_DR_OFFSET;
+		if (spi->bits_per_word <= 8) {
+			rx_cfg.src_addr_width	= DMA_SLAVE_BUSWIDTH_1_BYTE;
+		} else {
+			rx_cfg.src_addr_width	= DMA_SLAVE_BUSWIDTH_2_BYTES;
+		}
+		rx_cfg.src_maxburst		= 8;
+		rx_cfg.direction		= DMA_DEV_TO_MEM;
+		ret = dmaengine_slave_config(bus->rxc, &rx_cfg);
+		BUG_ON(ret < 0);
+
+		rxd = dmaengine_prep_slave_single(bus->rxc, txa, len,
+			DMA_DEV_TO_MEM,	DMA_PREP_INTERRUPT | DMA_CTRL_ACK |
+			DMA_COMPL_SKIP_SRC_UNMAP | DMA_COMPL_SKIP_DEST_UNMAP);
+		BUG_ON(!rxd);
+
+		rxd->callback		= ambarella_spi_next_transfer;
+		rxd->callback_param	= bus;
+		dma_sync_single_for_device(NULL, txa, len, DMA_FROM_DEVICE);
+
+		dmaengine_submit(rxd);
+		dma_async_issue_pending(bus->rxc);
+
 		break;
 
 	case SPI_WRITE_READ:
-		amba_writel(bus->virt + 0x4c, 0x03);
 
 		tx_cfg.dst_addr			= bus->phys + SPI_DR_OFFSET;
 		if (spi->bits_per_word <= 8) {
@@ -323,8 +344,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 
 	case SPI_READ_ONLY:
 		memset(bus->xfer->rx_buf, 0xff, len);
-
-		amba_writel(bus->virt + 0x4c, 0x03);
 
 		tx_cfg.dst_addr			= bus->phys + SPI_DR_OFFSET;
 		if (spi->bits_per_word <= 8) {
