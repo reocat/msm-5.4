@@ -47,7 +47,9 @@
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/event.h>
-
+#include <linux/proc_fs.h>
+static struct mmc_host *G_mmc[AMBA_SD_MAX_SLOT_NUM];
+static char G_mmc_fixed_cd[AMBA_SD_MAX_SLOT_NUM];
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
 #define CONFIG_SD_AMBARELLA_WAIT_TIMEOUT	(HZ / 100)
@@ -1105,10 +1107,14 @@ static u32 ambarella_sd_check_cd(struct mmc_host *mmc)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 	int cdpin;
 
-	cdpin = mmc_gpio_get_cd(mmc);
-	if (cdpin < 0) {
-		cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-		cdpin &= SD_STA_CARD_INSERTED;
+	if (1 == G_mmc_fixed_cd[pslotinfo->slot_id] || 0 == G_mmc_fixed_cd[pslotinfo->slot_id])
+		cdpin = (u32)G_mmc_fixed_cd[pslotinfo->slot_id];
+	else {
+		cdpin = mmc_gpio_get_cd(mmc);
+		if (cdpin < 0) {
+			cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			cdpin &= SD_STA_CARD_INSERTED;
+		}
 	}
 
 	return !!cdpin;
@@ -1808,6 +1814,9 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	pslotinfo->system_event.notifier_call = ambarella_sd_system_event;
 	ambarella_register_event_notifier(&pslotinfo->system_event);
 
+	G_mmc[pslotinfo->slot_id] = mmc;
+	G_mmc_fixed_cd[pslotinfo->slot_id] = -1;
+
 	return 0;
 
 init_slot_err2:
@@ -2195,6 +2204,65 @@ static struct platform_driver ambarella_sd_driver = {
 	},
 };
 
+static int ambarella_proc_read(struct seq_file *m, void *v)
+{
+	int mmci;
+	int retlen = 0;
+
+	for(mmci=0; mmci<AMBA_SD_MAX_SLOT_NUM; mmci++) {
+		if (G_mmc[mmci])
+			retlen += seq_printf(m, "mmc%d fixed_cd=%d\n", mmci, G_mmc_fixed_cd[mmci]);
+	}
+
+	return retlen;
+}
+
+static int mmc_ambarella_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ambarella_proc_read, NULL);
+}
+
+static ssize_t mmc_ambarella_proc_write(struct file *file,
+                                const char __user *buffer, size_t count, loff_t *data)
+{
+	char input[4];
+	int mmci;
+	struct mmc_host *mmc;
+	struct ambarella_sd_mmc_info *pslotinfo;
+
+	if (count != 4) {
+		printk(KERN_ERR "0 0=remove mmc0; 0 1=insert mmc0; 0 2=mmc0 auto\n");
+		return -EFAULT;
+	}
+
+	if (copy_from_user(input, buffer, 3)) {
+		printk(KERN_ERR "%s: copy_from_user fail!\n", __func__);
+		return -EFAULT;
+	}
+
+	mmci = input[0] - '0';
+	mmc = G_mmc[mmci];
+	if (!mmc) {
+		printk(KERN_ERR "%s: err!\n", __func__);
+		return -EFAULT;
+	}
+
+	pslotinfo = mmc_priv(mmc);
+
+	G_mmc_fixed_cd[mmci] = input[2] - '0';
+	mmc_detect_change(mmc, 10);
+
+	return count;
+}
+
+static const struct file_operations mmc_ambarella_proc_fops = {
+	.open = mmc_ambarella_proc_open,
+	.read = seq_read,
+	.write = mmc_ambarella_proc_write,
+	.llseek	= seq_lseek,
+	.release = single_release,
+};
+
 static int __init ambarella_sd_init(void)
 {
 	int retval = 0;
@@ -2204,6 +2272,10 @@ static int __init ambarella_sd_init(void)
 		printk(KERN_ERR "%s: Register failed %d!\n",
 			__func__, retval);
 	}
+
+	/* to implement the function of pre-3.10 /sys/module/ambarella_config/parameters/sd1_slot0_fixed_cd */
+	proc_create("mmc_fixed_cd", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+		&mmc_ambarella_proc_fops);
 
 	return retval;
 }
