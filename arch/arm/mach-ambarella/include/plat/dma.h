@@ -111,6 +111,9 @@
 /* ==========================================================================*/
 
 #define DMA_INT_OFFSET			0x3f0
+#define DMA_PAUSE_SET_OFFSET		0x3f4
+#define DMA_PAUSE_CLR_OFFSET		0x3f8
+#define DMA_EARLY_END_OFFSET		0x3fc
 
 /* ==========================================================================*/
 

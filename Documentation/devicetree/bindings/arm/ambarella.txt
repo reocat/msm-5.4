@@ -290,6 +290,10 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the DMA controller.
 
+Optional properties:
+- amb,copy-align: specifies alignment requirement for previous chips.
+- amb,support-prs: should be specified for SoC that supports PAUSE/RESUME/STOP.
+
 ii) Example
 -----------
 	dma@e0005000 {
