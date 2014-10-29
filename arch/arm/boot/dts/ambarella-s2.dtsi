@@ -358,7 +358,7 @@
 			compatible = "ambarella,dma";
 			reg = <0x60005000 0x1000>;
 			interrupts = <0 15 0x4>;
-			amb,copy_align = <3>;
+			amb,copy-align = <3>;
 		};
 
 		nand0: nand@60001000 {

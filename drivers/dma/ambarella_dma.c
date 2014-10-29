@@ -326,7 +326,25 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 #endif
 
 	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
-		if (amb_chan->force_stop) {
+		if (amb_chan->force_stop == 0 || amb_dma->support_prs) {
+			/* if force_stop == 0, the DMA channel is still running
+			 * at this moment. And if the chip doesn't support early
+			 * end, normally there are still two IRQs will be triggered
+			 * untill DMA channel stops. */
+			first = ambdma_first_active(amb_chan);
+			first->lli->attr |= DMA_DESC_EOC;
+			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
+				amb_desc->lli->attr |= DMA_DESC_EOC;
+			}
+			amb_chan->status = AMBDMA_STATUS_STOPPING;
+			/* active_list is still being used by DMA controller,
+			 * so move it to stopping_list to avoid being
+			 * initialized by next transfer */
+			list_move_tail(&first->desc_node, &amb_chan->stopping_list);
+
+			if (amb_dma->support_prs)
+				amba_setbitsl(DMA_REG(DMA_EARLY_END_OFFSET), 0x1 << id);
+		} else {
 			/* Disable DMA: this sequence is not mentioned at APM.*/
 			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
 			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
@@ -348,20 +366,6 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 				return -EIO;
 			}
 			amb_chan->status = AMBDMA_STATUS_IDLE;
-		} else {
-			/* if force_stop == 0, the DMA channel is still running
-			 * at this moment. And normally there are still two IRQs
-			 * will be triggered untill DMA channel stops. */
-			first = ambdma_first_active(amb_chan);
-			first->lli->attr |= DMA_DESC_EOC;
-			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
-				amb_desc->lli->attr |= DMA_DESC_EOC;
-			}
-			amb_chan->status = AMBDMA_STATUS_STOPPING;
-			/* active_list is still being used by DMA controller,
-			 * so move it to stopping_list to avoid being
-			 * initialized by next transfer */
-			list_move_tail(&first->desc_node, &amb_chan->stopping_list);
 		}
 	}
 
@@ -950,7 +954,8 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dummy_lli->rpt_addr =
 		amb_dma->dummy_lli_phys + sizeof(struct ambdma_lli) - 4;
 
-	of_property_read_u32(np, "amb,copy_align", &amb_dma->copy_align);
+	of_property_read_u32(np, "amb,copy-align", &amb_dma->copy_align);
+	amb_dma->support_prs = !!of_find_property(np, "amb,support-prs", NULL);
 
 	/* Init dma_device struct */
 	dma_cap_zero(amb_dma->dma_slave.cap_mask);
@@ -1045,20 +1050,28 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		switch(i) {
 		case NOR_SPI_TX_DMA_CHAN:
 			val |= NOR_SPI_TX_DMA_REQ_IDX << (i * 4);
+			break;
 		case NOR_SPI_RX_DMA_CHAN:
 			val |= NOR_SPI_RX_DMA_REQ_IDX << (i * 4);
+			break;
 		case SSI1_TX_DMA_CHAN:
 			val |= SSI1_TX_DMA_REQ_IDX << (i * 4);
+			break;
 		case SSI1_RX_DMA_CHAN:
 			val |= SSI1_RX_DMA_REQ_IDX << (i * 4);
+			break;
 		case UART_TX_DMA_CHAN:
 			val |= UART_TX_DMA_REQ_IDX << (i * 4);
+			break;
 		case UART_RX_DMA_CHAN:
 			val |= UART_RX_DMA_REQ_IDX << (i * 4);
+			break;
 		case I2S_RX_DMA_CHAN:
 			val |= I2S_RX_DMA_REQ_IDX << (i * 4);
+			break;
 		case I2S_TX_DMA_CHAN:
 			val |= I2S_TX_DMA_REQ_IDX << (i * 4);
+			break;
 		}
 	}
 	amba_writel(AHBSP_DMA_CHANNEL_SEL_REG, val);

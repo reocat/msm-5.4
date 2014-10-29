@@ -350,7 +350,9 @@
 			compatible = "ambarella,dma";
 			reg = <0xe0005000 0x1000>;
 			interrupts = <69 0x4>;
-			amb,copy_align = <0>;
+			amb,copy-align = <0>;
+			/* support pause/resume/stop */
+			amb,support-prs;
 		};
 
 		nand0: nand@e0001000 {
