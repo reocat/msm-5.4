@@ -599,8 +599,8 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 static void serial_ambarella_copy_rx_to_tty(struct ambarella_uart_port *amb_port,
 		struct tty_port *tty, int count)
 {
-	dma_addr_t	old_buf_phys;
-	unsigned char	*old_buf_virt;
+	dma_addr_t old_buf_phys;
+	unsigned char *old_buf_virt;
 
 	amb_port->port.icount.rx += count;
 	if (!tty) {
@@ -620,10 +620,8 @@ static void serial_ambarella_copy_rx_to_tty(struct ambarella_uart_port *amb_port
 	dma_sync_single_for_cpu(amb_port->port.dev, old_buf_phys,
 		AMBA_UART_RX_DMA_BUFFER_SIZE, DMA_FROM_DEVICE);
 
-	tty_insert_flip_string(tty,	((unsigned char *)(old_buf_virt)), count);
+	tty_insert_flip_string(tty, old_buf_virt, count);
 }
-
-static int serial_ambarella_start_rx_dma(struct ambarella_uart_port *amb_port);
 
 static void serial_ambarella_rx_dma_complete(void *args)
 {
@@ -852,12 +850,12 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 	}
 
 	if (dma_to_memory) {
-		dma_sconfig.src_addr = amb_port->port.mapbase + 0x40;
+		dma_sconfig.src_addr = amb_port->port.mapbase + UART_DMAF_OFFSET;
 		dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 		dma_sconfig.src_maxburst = 8;
 		dma_sconfig.direction = DMA_DEV_TO_MEM;
 	} else {
-		dma_sconfig.dst_addr = amb_port->port.mapbase + 0x40;
+		dma_sconfig.dst_addr = amb_port->port.mapbase + UART_DMAF_OFFSET;
 		dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 		dma_sconfig.dst_maxburst = 16;
 		dma_sconfig.direction = DMA_MEM_TO_DEV;
