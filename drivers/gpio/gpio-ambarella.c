@@ -61,6 +61,7 @@ static u32 ambalink_gpio_linux_only_mask[GPIO_INSTANCES];
 struct amb_gpio_chip {
 	int				irq[GPIO_INSTANCES];
 	void __iomem			*regbase[GPIO_INSTANCES];
+	void __iomem			*iomux_base;
 	struct gpio_chip		*gc;
 	struct irq_domain		*domain;
 	struct ambarella_service	gpio_service;
@@ -197,8 +198,10 @@ static int amb_gpio_to_irq(struct gpio_chip *gc, unsigned pin)
 static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 {
 	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
+	void __iomem *iomux_base = amb_gpio->iomux_base;
 	void __iomem *regbase;
 	u32 afsel = 0, data = 0, dir = 0, mask = 0;
+	u32 iomux0 = 0, iomux1 = 0, iomux2 = 0, alt = 0;
 	u32 i, bank, offset;
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 mask_bak;
@@ -234,17 +237,41 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 			seq_printf(s, "GPIO_DIR:\t0x%08X\n", dir);
 			seq_printf(s, "GPIO_MASK:\t0x%08X:0x%08X\n", mask, ~afsel);
 			seq_printf(s, "GPIO_DATA:\t0x%08X\n", data);
+
+			if (iomux_base != NULL) {
+				iomux0 = amba_readl(iomux_base + bank * 12);
+				iomux1 = amba_readl(iomux_base + bank * 12 + 4);
+				iomux2 = amba_readl(iomux_base + bank * 12 + 8);
+				seq_printf(s, "IOMUX_REG%d_0:\t0x%08X\n", bank, iomux0);
+				seq_printf(s, "IOMUX_REG%d_1:\t0x%08X\n", bank, iomux1);
+				seq_printf(s, "IOMUX_REG%d_2:\t0x%08X\n", bank, iomux2);
+			}
 		}
 
 		seq_printf(s, " gpio-%-3d", gc->base + i);
-		if (afsel & (1 << offset)) {
-			seq_printf(s, " [HW  ]\n");
+		if (iomux_base != NULL) {
+			alt = ((iomux2 >> offset) & 1) << 2;
+			alt |= ((iomux1 >> offset) & 1) << 1;
+			alt |= ((iomux0 >> offset) & 1) << 0;
+			if (alt != 0)
+				seq_printf(s, " [HW  ] (alt%d)\n", alt);
+			else {
+				const char *label = gpiochip_is_requested(gc, i);
+				label = label ? : "";
+				seq_printf(s, " [GPIO] (%-20.20s) %s %s\n", label,
+					(dir & (1 << offset)) ? "out" : "in ",
+					(data & (1 << offset)) ? "hi" : "lo");
+			}
 		} else {
-			const char *label = gpiochip_is_requested(gc, i);
-			label = label ? : "";
-			seq_printf(s, " [GPIO] (%-20.20s) %s %s\n", label,
-				(dir & (1 << offset)) ? "out" : "in ",
-				(data & (1 << offset)) ? "hi" : "lo");
+			if (afsel & (1 << offset)) {
+				seq_printf(s, " [HW  ]\n");
+			} else {
+				const char *label = gpiochip_is_requested(gc, i);
+				label = label ? : "";
+				seq_printf(s, " [GPIO] (%-20.20s) %s %s\n", label,
+					(dir & (1 << offset)) ? "out" : "in ",
+					(data & (1 << offset)) ? "hi" : "lo");
+			}
 		}
 	}
 }
@@ -534,6 +561,9 @@ static int amb_gpio_probe(struct platform_device *pdev)
 			return -ENXIO;
 		}
 	}
+
+	/* iomux_base will get NULL if not existed */
+	amb_gpio->iomux_base = of_iomap(parent, i);
 
 	of_node_put(parent);
 
