@@ -372,6 +372,42 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 	return 0;
 }
 
+static int ambdma_pause_channel(struct ambdma_chan *amb_chan)
+{
+	struct ambdma_device *amb_dma = amb_chan->amb_dma;
+	int id = amb_chan->id;
+
+	if (amb_dma->support_prs) {
+		u32 val;
+		val = amba_readl(DMA_REG(DMA_PAUSE_SET_OFFSET));
+		if (val & (1<<id)) {
+			return 0;
+		} else {
+			amba_writel(DMA_REG(DMA_PAUSE_SET_OFFSET), val | (1 << id));
+			return 0;
+		}
+	} else
+		return 0;
+}
+
+static int ambdma_resume_channel(struct ambdma_chan *amb_chan)
+{
+	struct ambdma_device *amb_dma = amb_chan->amb_dma;
+	int id = amb_chan->id;
+
+	if (amb_dma->support_prs) {
+		u32 val;
+		val = amba_readl(DMA_REG(DMA_PAUSE_CLR_OFFSET));
+		if (val & (1<<id)) {
+			return 0;
+		} else {
+			amba_writel(DMA_REG(DMA_PAUSE_CLR_OFFSET), val | (1 << id));
+			return 0;
+		}
+	} else
+		return 0;
+}
+
 static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *first)
 {
 	int id = amb_chan->id;
@@ -663,6 +699,16 @@ static int ambdma_device_control(struct dma_chan *chan,
 			break;
 		}
 
+		break;
+	case DMA_PAUSE:
+		spin_lock_irqsave(&amb_chan->lock, flags);
+		ret = ambdma_pause_channel(amb_chan);
+		spin_unlock_irqrestore(&amb_chan->lock, flags);
+		break;
+	case DMA_RESUME:
+		spin_lock_irqsave(&amb_chan->lock, flags);
+		ret = ambdma_resume_channel(amb_chan);
+		spin_unlock_irqrestore(&amb_chan->lock, flags);
 		break;
 	default:
 		ret = -ENXIO;
