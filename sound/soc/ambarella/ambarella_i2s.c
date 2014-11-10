@@ -114,6 +114,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	u8 slots, word_pos, oversample;
 	u32 clock_divider, clock_reg, channels;
+	int value;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable();
@@ -136,6 +137,13 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	channels = params_channels(params);
 	/* Set channels */
 	switch (channels) {
+	case 1:
+		/*set mono mode for I2S*/
+		value = amba_readl(I2S_TX_CTRL_REG);
+		value |= 0x3;
+		amba_writel(I2S_TX_CTRL_REG, value);
+		amba_writel(I2S_CHANNEL_SELECT_REG, I2S_2CHANNELS_ENB);
+		break;
 	case 2:
 		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_2CHANNELS_ENB);
 		break;
@@ -148,6 +156,14 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	priv_data->amb_i2s_intf.ch = channels;
+
+	/*set width of the dst for dma transmittion to support mono channel */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if(channels == 1)
+			priv_data->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		else
+			priv_data->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	}
 
 	/* Set format */
 	switch (params_format(params)) {
@@ -500,13 +516,13 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.suspend = ambarella_i2s_dai_suspend,
 	.resume = ambarella_i2s_dai_resume,
 	.playback = {
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.capture = {
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
