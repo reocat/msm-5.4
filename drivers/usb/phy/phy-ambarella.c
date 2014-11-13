@@ -397,7 +397,11 @@ static int ambarella_phy_init(struct usb_phy *phy)
 		amba_setbitsl(amb_phy->ana_reg, ana_val);
 		mdelay(1);
 	}
-
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	/* Make sure we enabled Bit 12 for USBP1 */
+	if (!amba_test_and_set_bit(amb_phy->ana_reg, 12))
+		mdelay(1);
+#endif
 	return 0;
 }
 
