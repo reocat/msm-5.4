@@ -78,6 +78,11 @@ static void ambvic_mask_irq(struct irq_data *data)
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	if (boss_get_irq_owner(data->hwirq) != BOSS_IRQ_OWNER_LINUX)
+		return;
+#endif
+
 	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
 
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
@@ -92,6 +97,9 @@ static void ambvic_unmask_irq(struct irq_data *data)
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
+	if (boss_get_irq_owner(data->hwirq) != BOSS_IRQ_OWNER_LINUX)
+		return;
+
 	/* Enable in BOSS. */
 	boss_enable_irq(data->hwirq);
 #endif
