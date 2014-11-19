@@ -119,6 +119,7 @@ static const struct watchdog_ops ambwdt_ops = {
 
 static int ambarella_wdt_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_wdt *ambwdt;
 	struct resource *mem;
 	void __iomem *reg;
@@ -169,6 +170,14 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 	ambwdt->wdd.min_timeout = 0;
 	ambwdt->wdd.max_timeout = max_timeout;
 	ambwdt->wdd.bootstatus = amba_readl(WDT_RST_L_REG) ? 0 : WDIOF_CARDRESET;
+
+	if (!of_find_property(np, "amb,non-bootstatus", NULL)) {
+		/* WDT_RST_L_REG cannot be restored by "reboot" command,
+		 * so reset it manually */
+		amba_setbitsl(UNLOCK_WDT_RST_L_REG, UNLOCK_WDT_RST_L_VAL);
+		amba_writel(WDT_RST_L_REG, 0x1);
+		amba_clrbitsl(UNLOCK_WDT_RST_L_REG, UNLOCK_WDT_RST_L_VAL);
+	}
 
 	watchdog_init_timeout(&ambwdt->wdd, heartbeat, &pdev->dev);
 	watchdog_set_nowayout(&ambwdt->wdd, nowayout);

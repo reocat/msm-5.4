@@ -181,6 +181,7 @@
 			reg = <0x7000c000 0x1000>;
 			/* interrupts = <21 0x4>; */
 			timeout-sec = <15>;
+			amb,non-bootstatus;
 		};
 
 		rtc@7000d000 {
