@@ -1048,6 +1048,8 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for wdt, normally not used.
 - timeout-sec: the watchdog timeout in seconds.
+- amb,non-bootstatus: don't support to report boot status, should be
+  specified only for A5S.
 
 ii) Example
 -----------
