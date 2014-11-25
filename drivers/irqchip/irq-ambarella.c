@@ -120,6 +120,8 @@ static void ambvic_mask_ack_irq(struct irq_data *data)
 	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
 #if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#else
+	amba_writel(reg_base + VIC_INT_EDGE_CLR_OFFSET, offset);
 #endif
 
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
@@ -412,6 +414,8 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 		hwirq = *boss->irqno;
 #else
 		hwirq = amba_readl(scratchpad);
+
+#endif
 		if (hwirq == 0x60) {
 			break;
 		}
@@ -422,8 +426,6 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 			smp_processor_id(), __func__,
 			bank, hwirq);
 #endif
-#endif
-
 		hwirq += bank * NR_VIC_IRQ_SIZE;
 
 		if (ambvic_handle_ipi(regs, domain, hwirq)) {
@@ -447,27 +449,30 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 static int ambvic_handle_one(struct pt_regs *regs,
 		struct irq_domain *domain, u32 bank)
 {
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	void __iomem *reg_base = ambvic_data.reg_base[bank];
-#endif
 	u32 irq;
 	u32 hwirq;
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	u32 irq_sta;
+#endif
 	int handled = 0;
 
 	do {
 #if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 		hwirq = *boss->irqno;
+		if (hwirq == 0) {
+			break;
+		}
 #else
 		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
-#endif
 		if (hwirq == 0) {
 			irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
 			if (irq_sta == 0) {
 				break;
 			}
 		}
+#endif
 #else
 		irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
 		if (irq_sta == 0) {
