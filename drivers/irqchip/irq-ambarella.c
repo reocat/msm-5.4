@@ -32,10 +32,11 @@
 #include <asm/exception.h>
 #include "irqchip.h"
 
+#include <plat/rct.h>
+
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 #include <mach/boss.h>
 #endif
-
 
 #define HWIRQ_TO_BANK(hwirq)	((hwirq) >> 5)
 #define HWIRQ_TO_OFFSET(hwirq)	((hwirq) & 0x1f)
@@ -63,14 +64,18 @@ static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 static struct ambvic_chip_data ambvic_data __read_mostly;
 
 /* ==========================================================================*/
-#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 1)
 
 static void ambvic_ack_irq(struct irq_data *data)
 {
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#else
+	amba_writel(reg_base + VIC_INT_EDGE_CLR_OFFSET, offset);
+#endif
 }
 
 static void ambvic_mask_irq(struct irq_data *data)
@@ -113,7 +118,9 @@ static void ambvic_mask_ack_irq(struct irq_data *data)
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
 	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#endif
 
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 	/* Disable in BOSS. */
@@ -165,7 +172,11 @@ static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
 	}
 
 	/* clear obsolete irq */
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#else
+	amba_writel(reg_base + VIC_INT_EDGE_CLR_OFFSET, offset);
+#endif
 
 	return 0;
 }
@@ -369,7 +380,7 @@ static inline int ambvic_handle_ipi(struct pt_regs *regs,
 #ifdef CONFIG_SMP
 	/* IPI Handling */
 	if (AMBVIC_IRQ_IS_IPI(hwirq)) {
-		printk("***********  hwirq = %d\n", hwirq);
+		//printk("***********  hwirq = %d\n", hwirq);
 		ambvic_sw_clr(ambvic_data.reg_base[0], hwirq);
 		if ((1 << hwirq) & IPI0_IRQ_MASK)
 			handle_IPI(hwirq - 1, regs);
@@ -382,31 +393,87 @@ static inline int ambvic_handle_ipi(struct pt_regs *regs,
 	return 0;
 }
 
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 2)
+static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
+	struct irq_domain *domain)
+{
+	u32 scratchpad;
+	u32 bank;
+	u32 irq, hwirq;
+	int handled = 0;
+
+	if (smp_processor_id()) {
+		scratchpad = AHB_SCRATCHPAD_REG(0x40);
+	} else {
+		scratchpad = AHB_SCRATCHPAD_REG(0x3C);
+	}
+	do {
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		hwirq = *boss->irqno;
+#else
+		hwirq = amba_readl(scratchpad);
+		if (hwirq == 0x60) {
+			break;
+		}
+		bank = (hwirq >> 5) & 0x3;
+		hwirq &= 0x1F;
+#if 0
+		printk("CPU%d_%s: %d_%d\n",
+			smp_processor_id(), __func__,
+			bank, hwirq);
+#endif
+#endif
+
+		hwirq += bank * NR_VIC_IRQ_SIZE;
+
+		if (ambvic_handle_ipi(regs, domain, hwirq)) {
+			handled = 1;
+			continue;
+		}
+
+		irq = irq_find_mapping(domain, hwirq);
+		handle_IRQ(irq, regs);
+		handled = 1;
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+		/* Linux will continue to process interrupt, */
+		/* but we must enter IRQ from AmbaBoss_Irq in BOSS system. */
+		break;
+#endif
+	} while (1);
+
+	return handled;
+}
+#else
 static int ambvic_handle_one(struct pt_regs *regs,
 		struct irq_domain *domain, u32 bank)
 {
 #ifndef CONFIG_PLAT_AMBARELLA_BOSS
 	void __iomem *reg_base = ambvic_data.reg_base[bank];
 #endif
-	u32 irq, hwirq;
+	u32 irq;
+	u32 hwirq;
+	u32 irq_sta;
 	int handled = 0;
 
 	do {
-#if (VIC_SUPPORT_CPU_OFFLOAD == 0)
-		u32 irq_sta;
-
-		irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
-		if (irq_sta == 0)
-			break;
-		hwirq = ffs(irq_sta) - 1;
-#else
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 		hwirq = *boss->irqno;
 #else
 		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
 #endif
-		if (hwirq == 0)
+		if (hwirq == 0) {
+			irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
+			if (irq_sta == 0) {
+				break;
+			}
+		}
+#else
+		irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
+		if (irq_sta == 0) {
 			break;
+		}
+		hwirq = ffs(irq_sta) - 1;
 #endif
 		hwirq += bank * NR_VIC_IRQ_SIZE;
 
@@ -427,19 +494,32 @@ static int ambvic_handle_one(struct pt_regs *regs,
 
 	return handled;
 }
+#endif
 
 static asmlinkage void __exception_irq_entry ambvic_handle_irq(struct pt_regs *regs)
 {
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	ambvic_handle_one(regs, ambvic_data.domain, 0);
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 2)
+	ambvic_handle_scratchpad_vic(regs, ambvic_data.domain);
 #else
-	int i, handled;
+	ambvic_handle_one(regs, ambvic_data.domain, 0);
+#endif
+#else
+	int handled;
 
 	do {
 		handled = 0;
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 2)
+		handled = ambvic_handle_scratchpad_vic(regs, ambvic_data.domain);
+#else
+{
+		int i;
+
 		for (i = 0; i < VIC_INSTANCES; i++) {
 			handled |= ambvic_handle_one(regs, ambvic_data.domain, i);
 		}
+}
+#endif
 	} while (handled);
 #endif
 }
@@ -461,6 +541,7 @@ static struct irq_domain_ops amb_irq_domain_ops = {
 	.map = ambvic_irq_domain_map,
 	.xlate = irq_domain_xlate_twocell,
 };
+
 
 #if defined(CONFIG_PM)
 
@@ -611,7 +692,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
 
 /* ==========================================================================*/
-#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 1)
 void ambvic_sw_set(void __iomem *reg_base, u32 offset)
 {
 	amba_writel(reg_base + VIC_SOFT_INT_INT_OFFSET, offset);
