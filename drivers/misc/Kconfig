@@ -529,11 +529,11 @@ config SRAM
 
 config AMBARELLA_HEAPMEM
 	bool "Ambarella heap mem driver"
-	default n
+	default y
 
 config AMBARELLA_DSPMEM
 	bool "Ambarella DSP mem driver"
-	default n
+	default y
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
