@@ -51,8 +51,8 @@ ENTRY(swsusp_arch_restore_image)
 #else
 	mov	r6, #4
 2000:
-	ldr	r3, [r1], r6
-	str	r3, [r0], r6
+	ldr	r3, [r1, r6]
+	str	r3, [r0, r6]
 	subs	r2, r2, r6
 	bne	2000b
 #endif
