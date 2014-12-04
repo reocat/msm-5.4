@@ -79,6 +79,15 @@
 	};
 };
 
+&aips3 {
+	sema4: sema4@02290000 { /* sema4 */
+		compatible = "fsl,imx6sx-sema4";
+		reg = <0x02290000 0x4000>;
+		interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
+		status = "okay";
+	};
+};
+
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
