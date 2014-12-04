@@ -25,6 +25,8 @@
 #include <linux/dmapool.h>
 #include <linux/delay.h>
 #include <linux/of.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <mach/hardware.h>
 #include <plat/dma.h>
 #include <plat/rct.h>
@@ -36,6 +38,80 @@ int ambarella_dma_channel_id(void *chan)
 	return to_ambdma_chan((struct dma_chan *)chan)->id;
 }
 EXPORT_SYMBOL(ambarella_dma_channel_id);
+
+static int ambdma_proc_show(struct seq_file *m, void *v)
+{
+	struct ambdma_device *amb_dma = m->private;
+	struct ambdma_chan *amb_chan;
+	const char *sw_status;
+	const char *hw_status;
+	int i, len = 0;
+
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
+
+		switch(amb_chan->status) {
+		case AMBDMA_STATUS_IDLE:
+			sw_status = "idle";
+			break;
+		case AMBDMA_STATUS_BUSY:
+			sw_status = "busy";
+			break;
+		case AMBDMA_STATUS_STOPPING:
+			sw_status = "stopping";
+			break;
+		default:
+			sw_status = "unknown";
+			break;
+		}
+
+		if (ambdma_chan_is_enabled(amb_chan))
+			hw_status = "running";
+		else
+			hw_status = "stopped";
+
+		len += seq_printf(m, "channel %d:   %s, %d, %s, %s\n",
+			amb_chan->id, dma_chan_name(&amb_chan->chan),
+			amb_chan->chan.client_count, sw_status, hw_status);
+	}
+
+	len += seq_printf(m, "\nInput channel ID to stop specific dma channel:\n");
+	len += seq_printf(m, "    example: echo 3 > dma\n\n");
+
+	return len;
+}
+
+static int ambdma_proc_write(struct file *file,
+	const char __user *buffer, size_t count, loff_t *ppos)
+{
+	struct ambdma_device *amb_dma = PDE_DATA(file_inode(file));
+	int id, ret;
+
+	ret = kstrtouint_from_user(buffer, count, 0, &id);
+	if (ret)
+		return ret;
+
+	if (id >= NUM_DMA_CHANNELS) {
+		printk("Invalid channel id\n");
+		return -EINVAL;
+	}
+
+	dmaengine_terminate_all(&amb_dma->amb_chan[id].chan);
+
+	return count;
+}
+
+static int ambdma_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ambdma_proc_show, PDE_DATA(inode));
+}
+
+static const struct file_operations proc_ambdma_fops = {
+	.open = ambdma_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.write = ambdma_proc_write,
+};
 
 static struct ambdma_desc *ambdma_alloc_desc(struct dma_chan *chan, gfp_t gfp_flags)
 {
@@ -1058,6 +1134,14 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	 * status here, orelse dummy FIOS DMA interrupts may occurred
 	 * without its driver installed. */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		/* I2S_RX_DMA_CHAN may be used for fastboot in Amboot */
+		if (i == I2S_RX_DMA_CHAN
+			&& ambdma_chan_is_enabled(&amb_dma->amb_chan[i])) {
+			amb_dma->amb_chan[i].status = AMBDMA_STATUS_BUSY;
+			amb_dma->amb_chan[i].force_stop = 1;
+			continue;
+		}
+
 		amba_writel(DMA_CHAN_STA_REG(i), 0);
 		val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI;
 		amba_writel(DMA_CHAN_CTR_REG(i), val);
@@ -1082,6 +1166,9 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 			"failed to register memcpy DMA device: %d\n", ret);
 		goto ambdma_dma_probe_exit6;
 	}
+
+	proc_create_data("dma", S_IRUGO|S_IWUSR,
+		get_ambarella_proc_dir(), &proc_ambdma_fops, amb_dma);
 
 	platform_set_drvdata(pdev, amb_dma);
 
