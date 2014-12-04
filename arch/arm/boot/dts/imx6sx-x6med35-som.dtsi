@@ -94,6 +94,13 @@
 		interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
 		status = "okay";
 	};
+
+	mu: mailbox@02294000 { /* mu */
+		compatible = "fsl,imx6sx-mu";
+		reg = <0x02294000 0x4000>;
+		interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+		status = "okay";
+	};
 };
 
 &i2c2 {
