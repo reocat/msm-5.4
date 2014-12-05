@@ -64,7 +64,6 @@
 
 #define JEDEC_MFR(_jedec_id)    ((_jedec_id) >> 16)
 
-static char part_name[PART_MAX][PART_NAME_LEN];
 #define PART_DEV_SPINOR		(0x08)
 
 
@@ -457,137 +456,6 @@ static const struct spi_device_id *jedec_probe(struct spi_device *spi)
 }
 #endif
 
-static int ambarella_spinor_scan_partitions(struct amb_norflash *flash,
-                    struct flash_platform_data *data, struct flash_info *info)
-{
-    int                    errorCode = 0;
-    struct mtd_info        *mtd;
-    struct mtd_partition   *amboot_partitions;
-    int                    amboot_nr_partitions = 0;
-    flpart_meta_t          *meta_table;
-    int                    meta_offset;
-    int                    from, retlen, found, i;
-    int                    cmd_nr_partitions = 0;
-
-    mtd = &flash->mtd;
-
-    /* struct flpart_table_t contains the meta data containing partition info.
-     * meta_offpage indicate the offset from each block
-     * meta_numpages indicate the size of the meta data */
-    meta_offset = sizeof(flpart_table_t);
-
-    /* find the meta data, start from the second block */
-    meta_table = kzalloc(sizeof(flpart_meta_t), GFP_KERNEL);
-    if (meta_table == NULL) {
-        goto ambarella_spinor_scan_error1;
-    }
-
-    found = 0;
-    for (from = info->sector_size;
-                from < (info->sector_size * info->n_sectors);
-                from += info->sector_size) {
-
-        errorCode = mtd_read(mtd, from + meta_offset,
-                                sizeof(flpart_meta_t),
-                                  &retlen, (u8 *)meta_table);
-        if (errorCode < 0) {
-            dev_info(flash->dev,
-                "%s: Can't meta data!\n", __func__);
-            goto ambarella_spinor_scan_error2;
-        }
-        if (meta_table->magic == PTB_META_MAGIC) {
-            found = 1;
-            break;
-        } else if (meta_table->magic == PTB_META_MAGIC2) {
-            found = 2;
-            break;
-        } else if (meta_table->magic == PTB_META_MAGIC3) {
-			found = 3;
-			break;
-        }
-    }
-
-    if (found == 0) {
-        dev_err(flash->dev, "%s: meta appears damaged...\n", __func__);
-        errorCode = -EINVAL;
-        goto ambarella_spinor_scan_error2;
-    }
-
-    dev_info(flash->dev, "Partition infomation found!\n");
-    amboot_partitions = kzalloc(
-        PART_MAX + CMDLINE_PART_MAX * sizeof(struct mtd_partition),
-        GFP_KERNEL);
-    if (amboot_partitions == NULL) {
-        goto ambarella_spinor_scan_error2;
-    }
-
-    /* if this partition isn't located in NAND, fake its nblk to 0, this
-     * feature start from the second version of flpart_meta_t. */
-    if (found > 1) {
-        for (i = 0; i < PART_MAX; i++) {
-            if (meta_table->part_dev[i] != PART_DEV_SPINOR)
-                meta_table->part_info[i].nblk = 0;
-        }
-    }
-
-    amboot_nr_partitions = 0;
-    found = 0;
-    for (i = 0; i < PART_MAX; i++) {
-#ifdef CONFIG_MTD_NAND_AMBARELLA_ENABLE_FULL_PTB
-        /*
-         * find swp partition, and then take it as a benchmark to adjust
-         * each partitions's offset.
-         * adjust rules:
-         * 1. before swp partition:
-         *    if the partition's nblk (size) is 0, make its sblk and
-         *    nblk equal to the previous one;
-         * 2. after swp partition:
-         *    if the partition's nblk (size) is 0, skip the partition;
-         */
-        if (!found && !strncmp(meta_table->part_info[i].name, "swp", 3)) {
-            found = 1;
-        }
-        if (found) {
-            if (meta_table->part_info[i].nblk == 0)
-                continue;
-        } else {
-            /* bst partition should be always exist */
-            if (i > 0 && meta_table->part_info[i].nblk == 0) {
-                meta_table->part_info[i].sblk =
-                    meta_table->part_info[i-1].sblk;
-                meta_table->part_info[i].nblk =
-                    meta_table->part_info[i-1].nblk;
-            }
-        }
-#else
-        if (meta_table->part_info[i].nblk == 0)
-            continue;
-#endif
-
-        strcpy(part_name[i], meta_table->part_info[i].name);
-        amboot_partitions[amboot_nr_partitions].name = part_name[i];
-        amboot_partitions[amboot_nr_partitions].offset = meta_table->part_info[i].sblk * mtd->erasesize;
-        amboot_partitions[amboot_nr_partitions].size = meta_table->part_info[i].nblk * mtd->erasesize;
-        amboot_nr_partitions++;
-    }
-
-    errorCode = 0;
-
-    i = 0;
-    if (cmd_nr_partitions >= 0)
-        i = cmd_nr_partitions;
-
-    mtd_device_parse_register(mtd, NULL, 0, amboot_partitions, amboot_nr_partitions);
-
-    kfree(amboot_partitions);
-ambarella_spinor_scan_error2:
-    kfree(meta_table);
-
-ambarella_spinor_scan_error1:
-
-    return errorCode;
-}
-
 static int amb_get_resource(struct amb_norflash    *flash, struct platform_device *pdev)
 {
     struct resource *res;
@@ -638,6 +506,7 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
     unsigned            i;
     int errCode = 0;
 
+	struct mtd_part_parser_data		ppdata = {};
     info = (void *)&amb_ids[0].driver_data;
 
     flash = kzalloc(sizeof(struct amb_norflash), GFP_KERNEL);
@@ -723,7 +592,11 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
                 flash->mtd.eraseregions[i].numblocks);
 
     ambspi_dma_config(flash);
-    ambarella_spinor_scan_partitions(flash, &data, info);
+	ppdata.of_node = pdev->dev.of_node;
+	errCode = mtd_device_parse_register(&flash->mtd, NULL, &ppdata, NULL, 0);
+	if (errCode < 0)
+		goto amb_spi_nor_probe_free_command;
+
     printk("SPI NOR Controller probed\r\n");
     return 0;
 
