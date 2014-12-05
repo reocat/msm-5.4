@@ -207,10 +207,14 @@ static irqreturn_t ambarella_otg_detect_irq(int irq, void *dev_id)
 {
 	struct ambarella_phy *amb_phy = dev_id;
 
-	if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
-		amb_phy->port_type = PORT_TYPE_OTG;
-	else
+	if (gpio_is_valid(amb_phy->gpio_id)) {
+		if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
+			amb_phy->port_type = PORT_TYPE_OTG;
+		else
+			amb_phy->port_type = PORT_TYPE_DEVICE;
+	} else {
 		amb_phy->port_type = PORT_TYPE_DEVICE;
+	}
 
 	ambarella_check_otg(amb_phy);
 
@@ -236,30 +240,32 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 		gpio_direction_output(amb_phy->gpio_hub, !amb_phy->hub_active);
 	}
 
-	if (!gpio_is_valid(amb_phy->gpio_id))
-		return 0;
-
-	rval = devm_gpio_request_one(phy->dev,
+	if (gpio_is_valid(amb_phy->gpio_id)) {
+		rval = devm_gpio_request_one(phy->dev,
 			amb_phy->gpio_id, GPIOF_DIR_IN, "otg_id");
-	if (rval < 0){
-		dev_err(phy->dev, "Failed to request id pin %d\n", rval);
-		return rval;
-	}
+		if (rval < 0){
+			dev_err(phy->dev, "Failed to request id pin %d\n", rval);
+			return rval;
+		}
 
-	if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
-		amb_phy->port_type = PORT_TYPE_OTG;
-	else
-		amb_phy->port_type = PORT_TYPE_DEVICE;
+		if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
+			amb_phy->port_type = PORT_TYPE_OTG;
+		else
+			amb_phy->port_type = PORT_TYPE_DEVICE;
 
-	irq = gpio_to_irq(amb_phy->gpio_id);
+		irq = gpio_to_irq(amb_phy->gpio_id);
 
-	rval = devm_request_threaded_irq(phy->dev, irq, NULL,
+		rval = devm_request_threaded_irq(phy->dev, irq, NULL,
 			ambarella_otg_detect_irq,
 			IRQ_TYPE_EDGE_BOTH | IRQF_ONESHOT,
 			"usb_otg_id", amb_phy);
-	if (rval) {
-		dev_err(phy->dev, "request usb_otg_id irq failed: %d\n", rval);
-		return rval;
+		if (rval) {
+			dev_err(phy->dev, "request usb_otg_id irq failed: %d\n", rval);
+			return rval;
+		}
+
+	} else {
+		amb_phy->port_type = PORT_TYPE_DEVICE;
 	}
 
 	/* rotue D+/D- signal to host or device port if control gpio existed */
