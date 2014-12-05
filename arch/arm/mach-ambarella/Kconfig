@@ -111,10 +111,6 @@ config PLAT_AMBARELLA_SUPPORT_HW_CRYPTO
 	bool
 	default n
 
-config PLAT_AMBARELLA_SUPPORT_GDMA
-	bool
-	default n
-
 config PLAT_AMBARELLA_SUPPORT_MMAP_AXI
 	bool
 	default n
@@ -313,6 +309,12 @@ config AMBARELLA_PMUSERENR_EN
 	default n
 	help
 	  Enable userspcae access to PMU
+
+config PLAT_AMBARELLA_SUPPORT_GDMA
+	bool "Enable gdma"
+	default n
+	help
+	  Enable gdma
 
 menu "Sys file system support"
 depends on SYSFS
