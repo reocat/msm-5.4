@@ -423,7 +423,7 @@ static int ambvic_handle_one(struct pt_regs *regs,
 		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
 		if (hwirq == 0) {
 			irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
-			if (irq_sta == 0) {
+			if ((irq_sta & 0x00000001) == 0) {
 				break;
 			}
 		}
