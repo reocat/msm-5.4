@@ -2169,9 +2169,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx_free = !!of_find_property(np, "amb,dump-rx-free", NULL);
 	lp->dump_rx_all = !!of_find_property(np, "amb,dump-rx-all", NULL);
 
-	lp->ipc_tx = 0;
-	lp->ipc_rx = 0;
-
 	return 0;
 }
 
