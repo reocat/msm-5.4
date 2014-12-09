@@ -12,7 +12,9 @@ snd-soc-dummy-objs := dummy.o
 snd-soc-s2lmkiwi-objs := s2lmkiwi.o
 snd-soc-ambcloudcam-objs := ambcloudcam.o
 snd-soc-s2lrdb-objs := s2lrdb.o
+snd-soc-ak7719-objs := amb_ak7719.o
 
+obj-$(CONFIG_AK7719_DSP)		+= snd-soc-ak7719.o
 obj-$(CONFIG_AMBEVK_BOARD)		+= snd-soc-ambevk.o
 obj-$(CONFIG_I1EVK_BOARD)		+= snd-soc-i1evk.o
 obj-$(CONFIG_AMBARELLA_DUMMY_BOARD)	+= snd-soc-dummy.o
