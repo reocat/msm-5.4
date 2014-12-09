@@ -10,7 +10,7 @@
 
 #include <linux/ioctl.h>
 
-#define AMBA_DSPMEM_NAME_DEF		"dev/amba_dspmem"
+#define AMBA_DSPMEM_NAME_DEF		"/dev/amba_dspmem"
 
 struct AMBA_DSPMEM_INFO_s {
 	unsigned int base;

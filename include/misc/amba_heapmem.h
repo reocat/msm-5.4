@@ -10,7 +10,7 @@
 
 #include <linux/ioctl.h>
 
-#define AMBA_HEAPMEM_NAME_DEF		"dev/amba_heapmem"
+#define AMBA_HEAPMEM_NAME_DEF		"/dev/amba_heapmem"
 
 struct AMBA_HEAPMEM_INFO_s {
 	unsigned int base;
