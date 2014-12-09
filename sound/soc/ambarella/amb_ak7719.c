@@ -6129,10 +6129,11 @@ static int ak7719_write_reg(struct ak7719_data *ak7719,
 static int ak7719_write_command(struct ak7719_data *ak7719, u8 cmdvalue,
 		u32 subaddr, u8 *pbuf, unsigned int length)
 {
-	int ret, i;
+	int ret;
+	u8 *bufcmd = NULL;
+	struct i2c_msg msg[1];
 	struct i2c_client *client;
 	client = ak7719->client;
-	u8 *bufcmd = NULL;
 
 	bufcmd = kmalloc(length+3, GFP_KERNEL);
 	if (!bufcmd) {
@@ -6144,14 +6145,12 @@ static int ak7719_write_command(struct ak7719_data *ak7719, u8 cmdvalue,
 	bufcmd[2] = subaddr & 0xff;
 	memcpy(bufcmd + 3, pbuf, length);
 
-	struct i2c_msg msg = {
-		.addr	= client->addr,
-		.flags	= 0,
-		.len	= length + 3,
-		.buf	= bufcmd,
-	};
+	msg[0].addr = client->addr;
+	msg[0].len = length +3;
+	msg[0].flags = 0;
+	msg[0].buf = bufcmd;
 
-	ret = i2c_transfer(client->adapter, &msg, 1);
+	ret = i2c_transfer(client->adapter, msg, 1);
 	udelay(100);
 
 	kfree(bufcmd);
@@ -6182,7 +6181,6 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	struct device_node *np = i2c->dev.of_node;
 	struct ak7719_data *ak7719;
 	int rst_pin;
-	u8 ak7719_id[4]={0},i=0;
 
 	ak7719 = devm_kzalloc(&i2c->dev, sizeof(struct ak7719_data), GFP_KERNEL);
 	if (ak7719 == NULL)
