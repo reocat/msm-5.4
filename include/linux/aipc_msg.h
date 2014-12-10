@@ -64,13 +64,13 @@ struct aipc_msg {
 struct aipc_xprt {
 	unsigned char   client_addr;      /* client address */
 	unsigned char   server_addr;      /* server address */
-	unsigned short  xid;              /* transaction ID */
+	unsigned int	xid;              /* transaction ID */
 	unsigned int    client_port;      /* client port    */
 	unsigned int    server_port;      /* server port    */
-	int             private; 
+	int             private;
 #if RPC_DEBUG
 	/* RPC profiling in ThreadX side */
-	unsigned int	tx_rpc_send_start;	
+	unsigned int	tx_rpc_send_start;
 	unsigned int	tx_rpc_send_end;
 	unsigned int	tx_rpc_recv_start;
 	unsigned int	tx_rpc_recv_end;
