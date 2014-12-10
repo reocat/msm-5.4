@@ -66,6 +66,12 @@ struct ambarella_phy {
 	bool hub_active;
 	u8 port_type;	/* the behavior of the device port working */
 	u8 phy_route;	/* route D+/D- signal to device or host port */
+
+#ifdef CONFIG_PM
+	u32 pol_val;
+	u32 ana_val;
+	u32 own_val;
+#endif
 };
 
 #define to_ambarella_phy(p) container_of((p), struct ambarella_phy, phy)
@@ -425,6 +431,32 @@ static void ambarella_phy_shutdown(struct platform_device *pdev)
 
 }
 
+#ifdef CONFIG_PM
+static int ambarella_phy_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
+
+	amb_phy->ana_val = amba_readl(amb_phy->ana_reg);
+	amb_phy->pol_val = amba_readl(amb_phy->pol_reg);
+	amb_phy->own_val = amba_readl(amb_phy->own_reg);
+
+	return 0;
+}
+
+static int ambarella_phy_resume(struct platform_device *pdev)
+{
+	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
+
+	amba_writel(amb_phy->ana_reg, amb_phy->ana_val);
+	mdelay(1);
+	amba_writel(amb_phy->pol_reg, amb_phy->pol_val);
+	amba_writel(amb_phy->own_reg, amb_phy->own_val);
+
+	return 0;
+}
+#endif
+
 static const struct of_device_id ambarella_phy_dt_ids[] = {
 	{ .compatible = "ambarella,usbphy", },
 	{ /* sentinel */ }
@@ -435,6 +467,10 @@ static struct platform_driver ambarella_phy_driver = {
 	.probe = ambarella_phy_probe,
 	.remove = ambarella_phy_remove,
 	.shutdown = ambarella_phy_shutdown,
+#ifdef CONFIG_PM
+	.suspend = ambarella_phy_suspend,
+	.resume	 = ambarella_phy_resume,
+#endif
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner	= THIS_MODULE,
