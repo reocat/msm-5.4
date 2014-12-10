@@ -13,6 +13,7 @@
 #include <linux/clk.h>
 #include <linux/remoteproc.h>
 #include <linux/clockchips.h>
+#include <linux/cpufreq.h>
 
 #include <mach/init.h>
 
@@ -87,32 +88,14 @@ extern int hibernation_start;
 u32 oldfreq, newfreq;
 
 /* -------------------------------------------------------------------------- */
-static inline unsigned long cpufreq_scale_copy(unsigned long old,
-                                               u_int div, u_int mult)
-{
-#if BITS_PER_LONG == 32
-
-	u64 result = ((u64) old) * ((u64) mult);
-	do_div(result, div);
-	return (unsigned long) result;
-
-#elif BITS_PER_LONG == 64
-
-	unsigned long result = old * ((u64) mult);
-	result /= div;
-	return result;
-
-#endif
-};
-
 extern unsigned long loops_per_jiffy;
 static inline unsigned int ambarella_adjust_jiffies(unsigned long val,
                                                     unsigned int oldfreq, unsigned int newfreq)
 {
 	if (((val == AMBA_EVENT_PRE_CPUFREQ) && (oldfreq < newfreq)) ||
 	    ((val == AMBA_EVENT_POST_CPUFREQ) && (oldfreq != newfreq))) {
-		loops_per_jiffy = cpufreq_scale_copy(loops_per_jiffy,
-		                                     oldfreq, newfreq);
+		loops_per_jiffy = cpufreq_scale(loops_per_jiffy,
+						oldfreq, newfreq);
 
 		return newfreq;
 	}
@@ -229,6 +212,8 @@ static int rpmsg_clk_ack_threadx(void *data)
 static int rpmsg_clk_changed_pre_notify(void *data)
 {
 	int retval = 0;
+	unsigned long flags;
+	extern int syscore_suspend(void);
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
@@ -242,13 +227,11 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 
 	oldfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
-#if 1
-	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
-	clocksource_suspend();
-	clockevents_suspend();
-#else
-	ambarella_timer_suspend(1);
-#endif
+	flags = arm_irq_save();
+
+	syscore_suspend();
+
+	arm_irq_restore(flags);
 
 	rpmsg_clk_ack_threadx(data);
 
@@ -259,22 +242,18 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
+	unsigned long flags;
+	extern void syscore_resume(void);
 
-#if 1
-	clockevents_resume();
-	clocksource_resume();
+	flags = arm_irq_save();
 
-	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
+	syscore_resume();
 
-	/* Resume hrtimers */
-	hrtimers_resume();
-#else
-	ambarella_timer_resume(1);
+	arm_irq_restore(flags);
 
 	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
 	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
-#endif
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));

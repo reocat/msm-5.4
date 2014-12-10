@@ -449,10 +449,10 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 static int ambvic_handle_one(struct pt_regs *regs,
 		struct irq_domain *domain, u32 bank)
 {
-	void __iomem *reg_base = ambvic_data.reg_base[bank];
 	u32 irq;
 	u32 hwirq;
 #ifndef CONFIG_PLAT_AMBARELLA_BOSS
+	void __iomem *reg_base = ambvic_data.reg_base[bank];
 	u32 irq_sta;
 #endif
 	int handled = 0;
