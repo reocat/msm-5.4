@@ -661,7 +661,6 @@ static void ambeth_fc_config(struct ambeth_info *lp)
 	adv &= ~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
 
 	sup &= lp->phy_supported;
-
 	if (!(sup & (SUPPORTED_Pause | SUPPORTED_Asym_Pause)))
 		goto unsupported;
 
@@ -720,7 +719,6 @@ static void ambeth_fc_resolve(struct ambeth_info *lp)
 		goto force_setting;
 
 	fc = old_fc = amba_readl(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET);
-
 	dev_info(&lp->ndev->dev, "lp: sym: %d, asym: %d\n",
 		 lp->phydev->pause, lp->phydev->asym_pause);
 	/*
@@ -748,7 +746,6 @@ static void ambeth_fc_resolve(struct ambeth_info *lp)
 	return;
 
 force_setting:
-
 	if (flow_ctr & AMBARELLA_ETH_FC_TX)
 		amba_setbitsl(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET,
 			ETH_MAC_FLOW_CTR_TFE);
@@ -1705,7 +1702,6 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 			lp->rx.cur_rx++;
 		}
 		rx_budget--;
-
 		dirty_diff = (lp->rx.cur_rx - lp->rx.dirty_rx);
 		if (dirty_diff > (lp->rx_count / 4)) {
 			ambeth_rx_rngmng_refill(lp);
@@ -2088,6 +2084,12 @@ static int ambeth_set_pauseparam(struct net_device *ndev,
 		flow_ctr &= ~AMBARELLA_ETH_FC_TX;
 
 	lp->flow_ctr = flow_ctr;
+
+	if(lp->flow_ctr & (AMBARELLA_ETH_FC_TX | AMBARELLA_ETH_FC_RX))
+		lp->phy_supported |= SUPPORTED_Pause;
+	else
+		lp->phy_supported &= ~SUPPORTED_Pause;
+
 	ambeth_fc_config(lp);
 
 	if (pause->autoneg && lp->phydev->autoneg) {
