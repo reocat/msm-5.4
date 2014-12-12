@@ -267,6 +267,7 @@ static struct platform_driver ambcloudcam_soc_snd_driver = {
 	.driver = {
 		.name = "snd_soc_card_ambcloudcam",
 		.owner = THIS_MODULE,
+		.pm = &snd_soc_pm_ops,
 		.of_match_table = ambcloudcam_dt_ids,
 	},
 	.probe = ambcloudcam_soc_snd_probe,

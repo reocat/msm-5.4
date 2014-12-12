@@ -249,6 +249,7 @@ static struct platform_driver ambevk_soc_snd_driver = {
 	.driver = {
 		.name = "snd_soc_card_ambevk",
 		.owner = THIS_MODULE,
+		.pm = &snd_soc_pm_ops,
 		.of_match_table = ambevk_dt_ids,
 	},
 	.probe = ambevk_soc_snd_probe,
