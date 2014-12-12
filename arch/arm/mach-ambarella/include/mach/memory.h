@@ -77,8 +77,6 @@
 #define DBGBUS_SIZE			(0x00200000)
 #define DBGFMEM_PHYS_BASE		(0xee000000)
 #define DBGFMEM_SIZE		(0x01000000)
-#define DBGIDSPMEM_PHYS_BASE		(0x30000000)
-#define DBGIDSPMEM_SIZE		(0x10000000)
 #endif
 
 /* Virtual Address */
@@ -114,7 +112,6 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xec000000)
 #define DBGFMEM_BASE		(0xee000000)
-#define DBGIDSPMEM_BASE		(0xc0000000)
 #endif
 
 #else /* CONFIG_VMSPLIT_1G */
