@@ -67,7 +67,6 @@ enum {
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 	AMBARELLA_IO_DESC_DBGBUS_ID,
 	AMBARELLA_IO_DESC_DBGFMEM_ID,
-	AMBARELLA_IO_DESC_DBGIDSPMEM_ID,
 #endif
 	AMBARELLA_IO_DESC_DSP_ID,
 };
@@ -185,15 +184,6 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DBGFMEM_BASE,
 			.pfn	= __phys_to_pfn(DBGFMEM_PHYS_BASE),
 			.length	= DBGFMEM_SIZE,
-			.type	= MT_DEVICE,
-			},
-	},
-	[AMBARELLA_IO_DESC_DBGIDSPMEM_ID] = {
-		.name		= "DBGIDSPMEM",
-		.io_desc	= {
-			.virtual= DBGIDSPMEM_BASE,
-			.pfn	= __phys_to_pfn(DBGIDSPMEM_PHYS_BASE),
-			.length	= DBGIDSPMEM_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},
