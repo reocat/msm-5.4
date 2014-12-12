@@ -46,7 +46,8 @@ ENTRY(ambarella_finish_suspend)
 	 */
 	.align	L1_CACHE_SHIFT
 	ldr	r0, =(DRAMC_BASE + DRAM_DDRC_OFFSET)
-	mov	r1, #0x1
+	ldr	r1, [r0, #DDRC_CTL_OFFSET]
+	bic	r1, r1, #0x1
 	str	r1, [r0, #DDRC_CTL_OFFSET]
 	mov	r1, #0x80000000
 	str	r1, [r0, #DDRC_SELF_REF_OFFSET]

@@ -107,7 +107,7 @@ static int ambarella_pm_enter_mem(void)
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);
 	amba_clrbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
 	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
-	mdelay(3);
+	while(amba_readl(RTC_REG(RTC_PWC_REG_STA_OFFSET)) & 0x04);
 	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
 
 	return 0;

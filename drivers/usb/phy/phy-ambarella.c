@@ -69,7 +69,6 @@ struct ambarella_phy {
 
 #ifdef CONFIG_PM
 	u32 pol_val;
-	u32 ana_val;
 	u32 own_val;
 #endif
 };
@@ -437,7 +436,6 @@ static int ambarella_phy_suspend(struct platform_device *pdev,
 {
 	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
 
-	amb_phy->ana_val = amba_readl(amb_phy->ana_reg);
 	amb_phy->pol_val = amba_readl(amb_phy->pol_reg);
 	amb_phy->own_val = amba_readl(amb_phy->own_reg);
 
@@ -448,8 +446,6 @@ static int ambarella_phy_resume(struct platform_device *pdev)
 {
 	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
 
-	amba_writel(amb_phy->ana_reg, amb_phy->ana_val);
-	mdelay(1);
 	amba_writel(amb_phy->pol_reg, amb_phy->pol_val);
 	amba_writel(amb_phy->own_reg, amb_phy->own_val);
 

@@ -189,6 +189,7 @@ static void ambarella_udc_disable(struct ambarella_udc *udc);
 
 static int ambarella_udc_vbus_session(struct usb_gadget *gadget, int is_active);
 
+static int ambarella_udc_set_pullup(struct ambarella_udc *udc, int is_on);
 
 #endif
 
