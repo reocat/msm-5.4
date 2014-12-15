@@ -985,6 +985,9 @@ Required properties:
 - amb,polling-mode: specified if ADC is working in polling mode, must be
   specified for A5S.
 
+Optional properties:
+- amb,print-key: print Key code when key is pressed, for debug purpose.
+
 ii) Example
 -----------
 	adc@e801d000 {

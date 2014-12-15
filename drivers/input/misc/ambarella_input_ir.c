@@ -123,7 +123,8 @@ static int ambarella_input_report_ir(struct ambarella_ir_info *pirinfo, u32 uid)
 			input_sync(input);
 			input_report_key(input, keymap->key_code, 0);
 			input_sync(input);
-			dev_dbg(&input->dev, "IR_KEY [%d]\n", keymap->key_code);
+			if(pirinfo->print_key)
+				dev_info(&input->dev, "IR_KEY [%d]\n", keymap->key_code);
 			break;
 		}
 	}
@@ -193,9 +194,10 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 
 	rval = pirinfo->ir_parse(pirinfo, &uid);
 
-	if (rval == 0) {// yes, we find the key
+	if (rval == 0) {
+		/* yes, we find the key */
 		if(pirinfo->print_key)
-			printk(KERN_NOTICE "uid = 0x%08x\n", uid);
+			dev_info(&pirinfo->input->dev, "uid = 0x%08x\n", uid);
 		ambarella_input_report_ir(pirinfo, uid);
 	}
 
