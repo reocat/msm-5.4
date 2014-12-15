@@ -465,6 +465,7 @@ static int ambarella_ir_resume(struct platform_device *pdev)
 
 	pirinfo = platform_get_drvdata(pdev);
 
+	clk_set_rate(clk_get(NULL, "gclk_ir"), 13000);
 	ambarella_ir_enable(pirinfo);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
