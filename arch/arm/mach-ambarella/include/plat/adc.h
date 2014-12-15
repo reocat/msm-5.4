@@ -363,8 +363,7 @@ struct ambadc_client {
 	struct device *dev;
 	struct ambadc_host *host;
 	struct list_head node;
-	/* specify the channel this client is interested in */
-	unsigned long channel_mask[BITS_TO_LONGS(ADC_NUM_CHANNELS)];
+	u32 threshold[ADC_NUM_CHANNELS];
 	u32 mode;
 	ambadc_client_callback callback;
 };

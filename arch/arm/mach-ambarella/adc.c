@@ -235,10 +235,10 @@ int ambarella_adc_read_level(u32 ch)
 
         if(!ambarella_adc->fifo_mode){
                 data = amba_readl(ADC_DATA_REG(ch));
-        }else{
+        } else {
                 count = 0x7ff & amba_readl(ADC_FIFO_STATUS_0_REG);
                 if(count > 4)
-                count -= 4;
+			count -= 4;
 
                 for(i=0;i<count;i++){
                         data = amba_readl(ADC_FIFO_DATA0_REG + i*4);
@@ -247,6 +247,7 @@ int ambarella_adc_read_level(u32 ch)
                 }
                 //data = data/count;
         }
+
 	if (!amb_adc->keep_start)
 		ambarella_adc_stop();
 
@@ -257,7 +258,8 @@ EXPORT_SYMBOL(ambarella_adc_read_level);
 int ambarella_adc_set_threshold(struct ambadc_client *client,
 		u32 ch, u32 low, u32 high)
 {
-	u32 value;
+	struct ambadc_client *_client;
+	int value, rval = 0;
 
 	if (ch >= ADC_NUM_CHANNELS)
 		return -EINVAL;
@@ -271,15 +273,35 @@ int ambarella_adc_set_threshold(struct ambadc_client *client,
 	value = ADC_EN_HI(!!high) | ADC_EN_LO(!!low) |
 		    ADC_VAL_HI(high) | ADC_VAL_LO(low);
 
-	if (value != 0)
-		set_bit(ch, client->channel_mask);
-	else
-		clear_bit(ch, client->channel_mask);
+	mutex_lock(&client_mutex);
+
+	/* it's not allowed that more than one clients want to set different
+	 * threshold for the same adc channel. */
+	list_for_each_entry(_client, &client_list, node) {
+		if (_client == client)
+			continue;
+		/* check if other clients set the threshold for this channel */
+		if (_client->threshold[ch] && (_client->threshold[ch] != value)) {
+			if (value == 0) {
+				rval = 0;
+				goto exit;
+			} else {
+				rval = -EBUSY;
+				goto exit;
+			}
+		}
+	}
 
         if(!ambarella_adc->fifo_mode)
                 amba_writel(ADC_CHAN_INTR_REG(ch), value);
 
-	return 0;
+exit:
+	if (rval == 0)
+		client->threshold[ch] = value;
+
+	mutex_unlock(&client_mutex);
+
+	return rval;
 }
 EXPORT_SYMBOL(ambarella_adc_set_threshold);
 
@@ -291,7 +313,7 @@ static void ambarella_adc_client_callback(u32 ch)
 	data = ambarella_adc_read_level(ch);
 
 	list_for_each_entry(client, &client_list, node) {
-		if (client->callback && test_bit(ch, client->channel_mask))
+		if (client->callback && client->threshold[ch])
 			client->callback(client, ch, data);
 	}
 }
@@ -401,8 +423,8 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 
 	ambarella_adc_enable();
         if(amb_adc->fifo_mode == 1){
-		ambarella_adc_start();
 		amb_adc->keep_start = true;
+		ambarella_adc_start();
 	}
 
 	ret = device_create_file(&pdev->dev, &dev_attr_adcsys);
@@ -436,10 +458,27 @@ static int ambarella_adc_suspend(struct platform_device *pdev,
 static int ambarella_adc_resume(struct platform_device *pdev)
 {
 	struct ambadc_host *amb_adc = platform_get_drvdata(pdev);
+	struct ambadc_client *client;
+	u32 ch;
 
 	clk_set_rate(clk_get(NULL, "gclk_adc"), amb_adc->clk);
 	ambarella_adc_enable();
 
+	if (amb_adc->keep_start)
+		ambarella_adc_start();
+
+        if(ambarella_adc->fifo_mode)
+		goto exit;
+
+	for (ch = 0; ch < ADC_NUM_CHANNELS; ch++) {
+		list_for_each_entry(client, &client_list, node) {
+			if (client->threshold[ch] == 0)
+				continue;
+			amba_writel(ADC_CHAN_INTR_REG(ch), client->threshold[ch]);
+		}
+	}
+
+exit:
 	return 0;
 }
 #endif
