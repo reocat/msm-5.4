@@ -104,7 +104,7 @@ int rpmsg_sdinfo_get(void *data)
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
-	if (sdinfo->slot_id == SD_HOST0_SD || sdinfo->slot_id == SD_HOST0_SDIO) {
+	if (sdinfo->slot_id == SD_HOST_0) {
 		wait_for_completion(&sd0_comp);
 	} else {
 		wait_for_completion(&sd1_comp);
@@ -133,7 +133,7 @@ int rpmsg_sdresp_get(void *data)
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
-	if (sdresp->slot_id == SD_HOST0_SD || sdresp->slot_id == SD_HOST0_SDIO) {
+	if (sdresp->slot_id == SD_HOST_0) {
 		wait_for_completion(&sd0_comp);
 	} else {
 		wait_for_completion(&sd1_comp);
@@ -191,7 +191,7 @@ static int rpmsg_sd_ack(void *data)
 {
 	AMBA_RPDEV_SD_MSG_s *msg = (AMBA_RPDEV_SD_MSG_s *) data;
 
-	if (msg->Param == SD_HOST0_SD || msg->Param == SD_HOST0_SDIO) {
+	if (msg->Param == SD_HOST_0) {
 		complete(&sd0_comp);
 	} else {
 		complete(&sd1_comp);
@@ -229,17 +229,19 @@ static void rpmsg_sd_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	}
 }
 
+#ifdef AMBARELLA_RPMSG_SD_PROC
 static const struct file_operations proc_rpmsg_sd_fops = {
 	.read = seq_read,
 	.write = rpmsg_sd_proc_write,
 };
+#endif
 
 static int rpmsg_sd_probe(struct rpmsg_channel *rpdev)
 {
 	int ret = 0;
 	struct rpmsg_ns_msg nsm;
 
-	//printk("%s: probed", __func__);
+	//printk("%s: probed\n", __func__);
 
 #ifdef AMBARELLA_RPMSG_SD_PROC
 	rpmsg_proc_dir = proc_mkdir("rpmsg_sd", get_ambarella_proc_dir());

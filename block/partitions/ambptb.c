@@ -38,7 +38,14 @@ int ambptb_partition(struct parsed_partitions *state)
 	char ptb_tmp[1 + BDEVNAME_SIZE + 1];
 	int result = 0;
 
+	if (get_capacity(state->bdev->bd_disk) < 0x20000) {
+		result = -1;
+		goto ambptb_partition_exit;
+	}
+
 	sect_size = bdev_logical_block_size(state->bdev);
+
+	/* bst + ptb */
 	sect_address = (2048 + sizeof(flpart_table_t)) / sect_size;
 	sect_offset = sizeof(flpart_table_t) % sect_size;
 
@@ -82,11 +89,11 @@ int ambptb_partition(struct parsed_partitions *state)
 					ptb_meta->part_info[i].sblk;
 				state->parts[slot].size =
 					ptb_meta->part_info[i].nblk;
-				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
+				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s,",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				pr_info("%s: %s [p%d]\n", __func__,
-					ptb_meta->part_info[i].name, slot);
+				pr_info("%s: [p%d] %s\n", __func__, slot,
+					ptb_meta->part_info[i].name);
 				slot++;
 			}
 		}

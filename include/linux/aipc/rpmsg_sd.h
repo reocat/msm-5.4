@@ -34,9 +34,9 @@ typedef enum _AMBA_RPDEV_SD_CMD_e_ {
  * The slot IDs
  */
 typedef enum _ambarella_slot_id {
-	SD_HOST0_SD = 0,
-	SD_HOST1_SD,
-	SD_HOST0_SDIO,
+	SD_HOST_0 = 0,
+	SD_HOST_1,
+	SD_HOST_2,
 
 	SD_MAX_CARD      /* Total number of slot IDs */
 } ambarella_slot_id;

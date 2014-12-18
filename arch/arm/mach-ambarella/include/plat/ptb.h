@@ -25,11 +25,19 @@
 #define __PLAT_AMBARELLA_PTB_H
 
 /* ==========================================================================*/
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 #define BOOT_DEV_NAND		0x1
 #define BOOT_DEV_NOR		0x2
 #define BOOT_DEV_SM		0x3
 #define BOOT_DEV_ONENAND	0x4
 #define BOOT_DEV_SNOR		0x5
+#else
+#define BOOT_DEV_NAND		0x0
+#define BOOT_DEV_SM		0x1
+#define BOOT_DEV_NOR		0x2
+#define BOOT_DEV_ONENAND	0x3
+#define BOOT_DEV_SNOR		0x4
+#endif
 
 #define PART_DEV_AUTO		(0x00)
 #define PART_DEV_NAND		(0x01)

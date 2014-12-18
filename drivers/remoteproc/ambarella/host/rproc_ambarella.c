@@ -228,7 +228,7 @@ static void ambarella_rproc_driver_fini(void)
 	platform_driver_unregister(&ambarella_rproc_driver);
 }
 
-module_init(ambarella_rproc_driver_init);
+subsys_initcall(ambarella_rproc_driver_init);
 module_exit(ambarella_rproc_driver_fini);
 
 MODULE_DESCRIPTION("Ambarella Remote Processor control driver");
