@@ -40,13 +40,14 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
-
+#include <linux/debugfs.h>
 #include <asm/dma.h>
-
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/event.h>
+
+static struct mmc_host *G_mmc[AMBA_SD_MAX_SLOT_NUM];
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
@@ -122,6 +123,7 @@ struct ambarella_sd_mmc_info {
 	u32				slot_id;
 	struct ambarella_sd_controller_info *pinfo;
 	u32				valid;
+	int				fixed_cd;
 
 	int				pwr_gpio;
 	u8				pwr_gpio_active;
@@ -138,6 +140,8 @@ struct ambarella_sd_mmc_info {
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
+
+	struct dentry			*debugfs;
 };
 
 struct ambarella_sd_controller_info {
@@ -185,6 +189,93 @@ static void ambarella_sd_show_info(struct ambarella_sd_mmc_info *pslotinfo)
 	ambsd_dbg(pslotinfo, "Exit %s\n", __func__);
 }
 #endif
+
+void ambarella_detect_sd_slot(int slotid, int fixed_cd)
+{
+	struct mmc_host *mmc;
+	struct ambarella_sd_mmc_info *pslotinfo;
+
+	if (slotid >= AMBA_SD_MAX_SLOT_NUM) {
+		pr_err("%s: Invalid slotid: %d\n", __func__, slotid);
+		return;
+	}
+
+	mmc = G_mmc[slotid];
+	pslotinfo = mmc_priv(mmc);
+	pslotinfo->fixed_cd = fixed_cd;
+
+	mmc_detect_change(mmc, 0);
+}
+EXPORT_SYMBOL(ambarella_detect_sd_slot);
+
+static ssize_t fixed_cd_get(struct file *file, char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	struct ambarella_sd_mmc_info *pslotinfo = file->private_data;
+	char tmp[4];
+
+	snprintf(tmp, sizeof(tmp), "%d\n", pslotinfo->fixed_cd);
+	tmp[3] = '\n';
+
+	return simple_read_from_buffer(buf, count, ppos, tmp, sizeof(tmp));
+}
+
+static ssize_t fixed_cd_set(struct file *file, const char __user *buf,
+		size_t size, loff_t *ppos)
+{
+	struct ambarella_sd_mmc_info *pslotinfo = file->private_data;
+	char tmp[20];
+	ssize_t len;
+
+	len = simple_write_to_buffer(tmp, sizeof(tmp) - 1, ppos, buf, size);
+	if (len >= 0) {
+		tmp[len] = '\0';
+		pslotinfo->fixed_cd = !!simple_strtoul(tmp, NULL, 0);
+	}
+
+	mmc_detect_change(pslotinfo->mmc, 0);
+
+	return len;
+}
+
+static const struct file_operations fixed_cd_fops = {
+	.read	= fixed_cd_get,
+	.write	= fixed_cd_set,
+	.open	= simple_open,
+	.llseek	= default_llseek,
+};
+
+static void ambarella_sd_add_debugfs(struct ambarella_sd_mmc_info *pslotinfo)
+{
+	struct mmc_host *mmc = pslotinfo->mmc;
+	struct dentry *root, *fixed_cd;
+
+	if (!mmc->debugfs_root)
+		return;
+
+	root = debugfs_create_dir("ambhost", mmc->debugfs_root);
+	if (IS_ERR_OR_NULL(root))
+		goto err;
+
+	pslotinfo->debugfs = root;
+
+	fixed_cd = debugfs_create_file("fixed_cd", S_IWUSR | S_IRUGO,
+			pslotinfo->debugfs, pslotinfo, &fixed_cd_fops);
+	if (IS_ERR_OR_NULL(fixed_cd))
+		goto err;
+
+	return;
+
+err:
+	debugfs_remove_recursive(root);
+	pslotinfo->debugfs = NULL;
+	dev_err(pslotinfo->pinfo->dev, "failed to add debugfs\n");
+}
+
+static void ambarella_sd_remove_debugfs(struct ambarella_sd_mmc_info *pslotinfo)
+{
+	debugfs_remove_recursive(pslotinfo->debugfs);
+}
 
 static void ambarella_sd_check_dma_boundary(u32 address, u32 size, u32 max_size)
 {
@@ -1092,10 +1183,14 @@ static u32 ambarella_sd_check_cd(struct mmc_host *mmc)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 	int cdpin;
 
-	cdpin = mmc_gpio_get_cd(mmc);
-	if (cdpin < 0) {
-		cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-		cdpin &= SD_STA_CARD_INSERTED;
+	if (pslotinfo->fixed_cd == -1) {
+		cdpin = mmc_gpio_get_cd(mmc);
+		if (cdpin < 0) {
+			cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			cdpin &= SD_STA_CARD_INSERTED;
+		}
+	} else {
+		cdpin = pslotinfo->fixed_cd;
 	}
 
 	return !!cdpin;
@@ -1541,6 +1636,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 }
 
 /* ==========================================================================*/
+
 static int ambarella_sd_init_slot(struct device_node *np, int id,
 			struct ambarella_sd_controller_info *pinfo)
 {
@@ -1642,6 +1738,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	pslotinfo->state = AMBA_SD_STATE_ERR;
 	pslotinfo->slot_id = id;
 	pslotinfo->pinfo = pinfo;
+	pslotinfo->fixed_cd = -1;
 	pinfo->pslotinfo[id] = pslotinfo;
 	sema_init(&pslotinfo->system_event_sem, 1);
 
@@ -1769,8 +1866,13 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 		goto init_slot_err2;
 	}
 
+	ambarella_sd_add_debugfs(pslotinfo);
+
 	pslotinfo->system_event.notifier_call = ambarella_sd_system_event;
 	ambarella_register_event_notifier(&pslotinfo->system_event);
+
+	G_mmc[pslotinfo->slot_id] = mmc;
+	pslotinfo->fixed_cd = -1;
 
 	return 0;
 
@@ -1790,6 +1892,8 @@ static int ambarella_sd_free_slot(struct ambarella_sd_mmc_info *pslotinfo)
 	int retval = 0;
 
 	ambarella_unregister_event_notifier(&pslotinfo->system_event);
+
+	ambarella_sd_remove_debugfs(pslotinfo);
 
 	mmc_remove_host(pslotinfo->mmc);
 

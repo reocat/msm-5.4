@@ -361,3 +361,5 @@
 
 #endif
 
+extern void ambarella_detect_sd_slot(int slotid, int fixed_cd);
+
