@@ -390,18 +390,20 @@ struct flash_info {
     u16        page_size;
     u16        addr_width;
 
+	u32			max_clk_hz;
     u16        flags;
 #define    SECT_4K        0x01        /* OPCODE_BE_4K works uniformly */
 };
 
 
-#define INFO(_jedec_id, _ext_id, _sector_size, _n_sectors, _flags)    \
+#define INFO(_jedec_id, _ext_id, _sector_size, _n_sectors, _page_size, _max_clk_hz, _flags)    \
     {                                                                 \
         .jedec_id = (_jedec_id),                                      \
         .ext_id = (_ext_id),                                          \
         .sector_size = (_sector_size),                                \
         .n_sectors = (_n_sectors),                                    \
-        .page_size = 512,                                             \
+        .page_size = (_page_size),                                      \
+		.max_clk_hz = (_max_clk_hz),                                    \
         .flags = (_flags), }
 
 
@@ -411,7 +413,7 @@ struct ambid_t {
 };
 
 static const struct ambid_t amb_ids[] = {
-    { "s70fl01gs", INFO(0x010221, 0x4d00, 256 * 1024, 256, 0) },
+    { "s70fl01gs", INFO(0x010221, 0x4d00, 256 * 1024, 256, 512, 50000000, 0) },
     { },
 };
 
@@ -549,17 +551,17 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
     flash->command = kzalloc(5, GFP_KERNEL);
     if(!flash->command) {
         dev_err((const struct device *)&flash->dev,
-            "SPI NOR driver molloc command error\r\n");
+            "SPI NOR driver malloc command error\r\n");
         errCode = -ENOMEM;
         goto amb_spi_nor_probe_free_flash;
     }
     if (flash->page_size > AMBA_SPINOR_DMA_BUFF_SIZE) {
         dev_err((const struct device *)&flash->dev,
-            "SPI NOR dirver buff size should bigger than nor flash page size \r\n");
+            "SPI NOR driver buff size should bigger than nor flash page size \r\n");
         errCode = -EINVAL;
         goto amb_spi_nor_probe_free_command;
     }
-
+	flash->clk = info->max_clk_hz;
     amb_get_resource(flash, pdev);
     ambspi_init(flash);
 
