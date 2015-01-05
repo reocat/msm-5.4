@@ -415,14 +415,28 @@ int ambspi_read_data(struct amb_norflash *flash, u32 from, u32 len)
 }
 EXPORT_SYMBOL_GPL(ambspi_read_data);
 
+static u32 get_ssi3_freq_hz(void)
+{
+	u32 val;
+
+	val = amba_rct_readl(CG_SSI3_REG);
+	if (val & 0x01000000)
+		return 0;
+
+	if (val == 0)
+		val = 1;
+
+	return (clk_get_rate(clk_get(NULL, "gclk_core")) << 1) / val;
+}
+
 int ambspi_init(struct amb_norflash *flash)
 {
-    u32 tmp = 0;
-    int i;
+    u32 divider, tmp = 0;
 
+	divider = get_ssi3_freq_hz() / flash->clk;
     tmp = amba_readl(flash->regbase + REG08);
     REGPREP(tmp, REG08_CHIPSEL_MASK, REG08_CHIPSEL_SHIFT, ~(1 << SPINOR_DEV));
-    REGPREP(tmp, REG08_CLKDIV_MASK, REG08_CLKDIV_SHIFT, 2);
+    REGPREP(tmp, REG08_CLKDIV_MASK, REG08_CLKDIV_SHIFT, divider);
     REGPREP(tmp, REG08_FLOWCON_MASK, REG08_FLOWCON_SHIFT, 1);
     REGPREP(tmp, REG08_HOLDPIN_MASK, REG08_HOLDPIN_SHIFT, 3);
     amba_writel(flash->regbase + REG08, tmp);
@@ -457,7 +471,7 @@ int ambspi_init(struct amb_norflash *flash)
     /* after reset fifo, the 0x28 will become 0x10,
     *so , read REG200 times to clear the 0x28,  this is a bug in hardware
     */
-    for (i = 0; i <= 200; i++){
+	while (amba_readl(flash->regbase + REG28) != 0) {
         tmp = amba_readl(flash->regbase + REG200);
     }
 
