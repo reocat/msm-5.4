@@ -29,9 +29,11 @@
 #include <linux/mtd/partitions.h>
 #include <linux/of_platform.h>
 
+#include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmaengine.h>
 #include <plat/dma.h>
+#include <plat/rct.h>
 
 #include <plat/ptb.h>
 #include <linux/spi/spi.h>
@@ -214,6 +216,7 @@ struct amb_norflash {
     u8                           *command;
     u8                           dummy;
     u32                          addr;
+	u32							 clk;
     bool                         fast_read;
 };
 //the buffer size must align to 32 and smaller than the max size of DMA
