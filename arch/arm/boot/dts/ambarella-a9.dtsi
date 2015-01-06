@@ -41,10 +41,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		cpu@0 {
+			device_type = "cpu";
 			compatible = "arm,cortex-a9";
-		};
-		cpu@1 {
-			compatible = "arm,cortex-a9";
+			reg = <0>;
 		};
 	};
 
@@ -54,12 +53,6 @@
 		#interrupt-cells = <3>;
 		reg = <0xf0001000 0x1000>,
 			  <0xf0000100 0x0100>;
-	};
-
-	local-timer@f0000600 {
-		compatible = "arm,cortex-a9-twd-timer";
-		reg = <0xf0000600 0x20>;
-		interrupts = <1 13 0x304>;
 	};
 
 	apb@70000000 {	/* APB */
@@ -72,14 +65,14 @@
 		timer7: timer@7000b064 {
 			compatible = "ambarella,clock-source";
 			reg = <0x7000b064 0x10 0x7000b030 0x4>;
-			interrupts = <0 108 0x01>;
+			interrupts = <0 108 0x1>;
 			ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 		};
 
 		timer8: timer@7000b074 {
 			compatible = "ambarella,clock-event";
 			reg = <0x7000b074 0x10 0x7000b030 0x4>;
-			interrupts = <0 109 0x01>;
+			interrupts = <0 109 0x1>;
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 		};
 
@@ -177,9 +170,10 @@
 		};
 
 		adc@7000d000 {
-			compatible = "ambarella,adc-v2";
+			compatible = "ambarella,adc";
 			reg = <0x7000d000 0x1000>;
 			interrupts = <0 34 0x4>;
+			clock-frequency = <3000000>;
 		};
 
 		ir@70006000 {
@@ -198,7 +192,7 @@
 		};
 
 		rtc@7000d000 {
-			compatible = "ambarella,rtc-v2";
+			compatible = "ambarella,rtc";
 			reg = <0x7000d000 0x1000>;
 		};
 
@@ -264,6 +258,11 @@
 				amb,pinmux-ids = <0x1013 0x1014>;
 			};
 
+			nand0_pins: nand0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1027>; /* just WP is shared with GPIO */
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1000 0x1001>;
@@ -287,17 +286,16 @@
 			i2s0_pins: i2s0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x104d 0x104e 0x104f 0x1050 0x1051>,
-						/* virtual pins, just for
-						   configuration purpose.*/
+						 /* virtual pins, just for configuration purpose.*/
 						 <0x0064 0x0065>;
 			};
 
 			usb_host_pins: uhc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1007 0x1009>,
-						/* virtual pins, just for
-						   configuration purpose. But not
-						   mentioned in APM, need test*/
+						 /* virtual pins, just for configuration purpose.
+						   EHCI_PRT_PWR and APP_PRT_OVCURR share the hw
+						   mode with SPI enable pin. */
 						 <0x1060 0x1061>;
 			};
 
@@ -345,10 +343,11 @@
 			compatible = "ambarella,dma";
 			reg = <0x60005000 0x1000>;
 			interrupts = <0 15 0x4>;
+			amb,copy-align = <3>;
 		};
 
 		nand0: nand@60001000 {
-			compatible = "ambarella,nand-v2";
+			compatible = "ambarella,nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x60001000 0x1000>, /* fio reg address */
@@ -357,6 +356,8 @@
 			interrupts = <0 16 0x04>,	/* fio_cmd_irq */
 				     <0 17 0x04>,	/* fio_dma_irq */
 				     <0 33 0x04>;	/* fdma_irq */
+			pinctrl-names = "default";
+			pinctrl-0 = <&nand0_pins>;
 			nand-on-flash-bbt;
 		};
 
@@ -370,7 +371,7 @@
 		};
 
 		udc@60006000 {
-			compatible = "ambarella,udc-v1";
+			compatible = "ambarella,udc";
 			reg = <0x60006000 0x2000 0x70170088 0x4>;
 			interrupts = <0 4 0x04>;
 			amb,usbphy = <&usbphy>;
@@ -479,7 +480,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-offset = <5>;
 		};
 	};
 };

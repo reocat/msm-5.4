@@ -227,11 +227,15 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 
 	oldfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	flags = arm_irq_save();
+#endif
 
 	syscore_suspend();
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	arm_irq_restore(flags);
+#endif
 
 	rpmsg_clk_ack_threadx(data);
 
@@ -245,11 +249,15 @@ static int rpmsg_clk_changed_post_notify(void *data)
 	unsigned long flags;
 	extern void syscore_resume(void);
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	flags = arm_irq_save();
+#endif
 
 	syscore_resume();
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	arm_irq_restore(flags);
+#endif
 
 	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 

@@ -2004,11 +2004,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	 * We need to save the last NAND command of Linux to notify ThreadX to
 	 * workaround this bug.
 	 */
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
 	ambalink_nand_last_cmd_addr = AIPC_MUTEX_ADDR - 0x4;
-#else
-	ambalink_nand_last_cmd_addr = ambarella_phys_to_virt(AIPC_MUTEX_ADDR) - 0x4;
-#endif
 #endif
 
 	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
@@ -2156,6 +2152,7 @@ static struct platform_driver amb_nand_driver = {
 		.of_match_table = ambarella_nand_of_match,
 	},
 };
+
 module_platform_driver(amb_nand_driver);
 
 MODULE_AUTHOR("Cao Rongrong & Chien-Yang Chen");

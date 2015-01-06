@@ -100,11 +100,7 @@ static void init_procfs(void)
 
 int aipc_spin_lock_setup(u32 addr)
 {
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
 	lock_set.lock = (aspinlock_t*) addr;
-#else
-	lock_set.lock = (aspinlock_t*) ambarella_phys_to_virt(AIPC_SLOCK_ADDR);
-#endif
 	lock_set.size = AIPC_SLOCK_SIZE / sizeof(aspinlock_t);
 
 	/* Reserve one spinlock space for BCH NAND controller workaround. */

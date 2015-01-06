@@ -144,7 +144,14 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		.io_desc        = {
 			.virtual    = CONFIG_AMBALINK_SHMADDR,
 			.pfn        = __phys_to_pfn(CONFIG_AMBALINK_SHMADDR - NOLINUX_MEM_V_START),
+#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
+			/* Should be removed after RTOS virtual address is enabled. */
+			.length     = (CONFIG_AMBARELLA_ZRELADDR -
+					(CONFIG_AMBALINK_SHMADDR - NOLINUX_MEM_V_START) -
+					CONFIG_AMBARELLA_TEXTOFS),
+#else
 			.length     = (CONFIG_AMBARELLA_ZRELADDR - CONFIG_AMBALINK_SHMADDR - CONFIG_AMBARELLA_TEXTOFS),
+#endif
 #if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
 			.type       = MT_MEMORY_SHARED,
 #else
@@ -306,21 +313,12 @@ void __init ambarella_map_io(void)
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if (boss != NULL) {
 		u32 virt, phys;
-		//int rval;
 
 		virt = boss->smem_addr;
 		phys = ambarella_virt_to_phys(virt);
-		//boss->smem_addr = virt;
 
 		pr_notice ("aipc: smem: 0x%08x [0x%08x], 0x%08x\n", virt, phys,
 			    boss->smem_size);
-
-		//rval = ipc_smem_init();
-		//K_ASSERT(rval == 0);
-
-		//boss->log_buf_ptr = ipc_virt_to_phys (boss_log_buf_ptr);
-		//boss->log_buf_len_ptr = ipc_virt_to_phys (boss_log_buf_len_ptr);
-		//boss->log_buf_last_ptr = ipc_virt_to_phys (boss_log_buf_last_ptr);
 	}
 #endif
 
@@ -456,9 +454,6 @@ early_param("system_rev", parse_system_revision);
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 static int __init early_boss(char *p)
 {
-       //extern unsigned int boss_log_buf_ptr;
-       //extern unsigned int boss_log_buf_len_ptr;
-       //extern unsigned int boss_log_buf_last_ptr;
        unsigned long vaddr, paddr;
        char *endp;
 

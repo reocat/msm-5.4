@@ -155,11 +155,7 @@ static int aipc_mutex_init(void)
 	int i, ret;
 
 	// init shared part of aipc mutex memory
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
 	lock_set.share = (amutex_share_t*) AIPC_MUTEX_ADDR;
-#else
-	lock_set.share = (amutex_share_t*)ambarella_phys_to_virt(AIPC_MUTEX_ADDR);
-#endif
 	//memset(lock_set.share, 0, sizeof(amutex_share_t)*AMBA_IPC_NUM_MUTEX);
 
 	// init local part of aipc mutex memory
