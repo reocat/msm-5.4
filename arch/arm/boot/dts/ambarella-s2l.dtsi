@@ -35,6 +35,9 @@
 
 	chosen {
 		linux,stdout-path = &uart0;
+		/* the gpio used to disconnect RESET signal to
+		 * dram, used for self-refresh, can be overwritten. */
+		ambarella,dram-reset-ctrl = <5>;
 	};
 
 	cpus {
