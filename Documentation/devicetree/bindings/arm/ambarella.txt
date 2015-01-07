@@ -290,6 +290,10 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the DMA controller.
 
+Optional properties:
+- amb,copy-align: specifies alignment requirement for previous chips.
+- amb,support-prs: should be specified for SoC that supports PAUSE/RESUME/STOP.
+
 ii) Example
 -----------
 	dma@e0005000 {
@@ -981,6 +985,9 @@ Required properties:
 - amb,polling-mode: specified if ADC is working in polling mode, must be
   specified for A5S.
 
+Optional properties:
+- amb,print-key: print Key code when key is pressed, for debug purpose.
+
 ii) Example
 -----------
 	adc@e801d000 {
@@ -1118,16 +1125,24 @@ i) Properties
 Required properties:
 - compatible: should be "ambarella,iav".
 
-Optional properties:
+ii) Subnode
+-----------
+The IAV node may contain subnodes which represent the VIN controller, whose
+name must be vincN (N = 0, 1).
+
+And the optional properties of subnodes:
 - vinrst-gpios: specifies the GPIO to reset VIN.
 - vinpwr-gpios: specifies the GPIO to control the power of VIN.
 
-ii) Example
------------
+iii) Example
+------------
 	iav {
 		compatible = "ambarella,iav";
-		vinrst-gpios = <&pca9539 8 0>;
-		/* vinpwr-gpios = <>; */
+
+		/* node for vin controller */
+		vinc0 {
+			vinrst-gpios = <&pca9539 7 0>;
+			vinpwr-gpios = <&gpio 8 1>, <&gpio 9 1>, <&gpio 10 1>;/
 	};
 
 

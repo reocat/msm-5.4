@@ -34,15 +34,15 @@
 #elif (CHIP_REV == S2)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			138
-#elif (CHIP_REV == I1)
-#define GPIO_INSTANCES			6
-#define GPIO_MAX_LINES			192
 #elif (CHIP_REV == A8)
 #define GPIO_INSTANCES			1
 #define GPIO_MAX_LINES			16
 #elif (CHIP_REV == S2L)
 #define GPIO_INSTANCES			4
 #define GPIO_MAX_LINES			113
+#elif (CHIP_REV == S3)
+#define GPIO_INSTANCES			7
+#define GPIO_MAX_LINES			201
 #else
 #error "Not supported!"
 #endif
@@ -51,7 +51,7 @@
 #define GPIO0_OFFSET			0x9000
 #define GPIO1_OFFSET			0xA000
 #define GPIO2_OFFSET			0xE000
-#if (CHIP_REV == I1) || (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define GPIO3_OFFSET			0x10000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1E000
@@ -59,7 +59,12 @@
 #define GPIO3_OFFSET			0x1F000
 #endif
 #define GPIO4_OFFSET			0x11000
+#if (CHIP_REV == S3)
+#define GPIO5_OFFSET			0xD000
+#else
 #define GPIO5_OFFSET			0x12000
+#endif
+#define GPIO6_OFFSET			0x14000
 
 #define GPIO0_BASE			(APB_BASE + GPIO0_OFFSET)
 #define GPIO1_BASE			(APB_BASE + GPIO1_OFFSET)
@@ -67,6 +72,7 @@
 #define GPIO3_BASE			(APB_BASE + GPIO3_OFFSET)
 #define GPIO4_BASE			(APB_BASE + GPIO4_OFFSET)
 #define GPIO5_BASE			(APB_BASE + GPIO5_OFFSET)
+#define GPIO6_BASE			(APB_BASE + GPIO6_OFFSET)
 
 #define GPIO0_REG(x)			(GPIO0_BASE + (x))
 #define GPIO1_REG(x)			(GPIO1_BASE + (x))
@@ -74,13 +80,13 @@
 #define GPIO3_REG(x)			(GPIO3_BASE + (x))
 #define GPIO4_REG(x)			(GPIO4_BASE + (x))
 #define GPIO5_REG(x)			(GPIO5_BASE + (x))
+#define GPIO6_REG(x)			(GPIO6_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == I1) || (CHIP_REV == A7L) || (CHIP_REV == S2) || \
-    (CHIP_REV == A8)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8)
 #define GPIO_PAD_PULL_CTRL_SUPPORT		1
 #define GPIO_PAD_PULL_OFFSET			0xD000
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define GPIO_PAD_PULL_CTRL_SUPPORT		1
 #define GPIO_PAD_PULL_OFFSET			0x15000
 #else
@@ -92,13 +98,16 @@
 #define GPIO_PAD_PULL_EN_2_OFFSET	0x88
 #define GPIO_PAD_PULL_EN_3_OFFSET	0x8C
 #define GPIO_PAD_PULL_EN_4_OFFSET	0x90
-#define GPIO_PAD_PULL_EN_5_OFFSET	0x54
+#define GPIO_PAD_PULL_EN_5_OFFSET	0x100
+#define GPIO_PAD_PULL_EN_6_OFFSET	0x104
+
 #define GPIO_PAD_PULL_DIR_0_OFFSET	0x94
 #define GPIO_PAD_PULL_DIR_1_OFFSET	0x98
 #define GPIO_PAD_PULL_DIR_2_OFFSET	0x9C
 #define GPIO_PAD_PULL_DIR_3_OFFSET	0xA0
 #define GPIO_PAD_PULL_DIR_4_OFFSET	0xA4
-#define GPIO_PAD_PULL_DIR_5_OFFSET	0x58
+#define GPIO_PAD_PULL_DIR_5_OFFSET	0x10C
+#define GPIO_PAD_PULL_DIR_6_OFFSET	0x110
 
 #define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
 #define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
@@ -118,7 +127,7 @@
 #define GPIO_ENABLE_OFFSET		0x2c
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define	IOMUX_SUPPORT			1
 #else
 #define	IOMUX_SUPPORT			0
@@ -136,6 +145,15 @@
 #define IOMUX_REG3_0_OFFSET		0x24
 #define IOMUX_REG3_1_OFFSET		0x28
 #define IOMUX_REG3_2_OFFSET		0x2c
+#define IOMUX_REG4_0_OFFSET		0x30
+#define IOMUX_REG4_1_OFFSET		0x34
+#define IOMUX_REG4_2_OFFSET		0x38
+#define IOMUX_REG5_0_OFFSET		0x3c
+#define IOMUX_REG5_1_OFFSET		0x40
+#define IOMUX_REG5_2_OFFSET		0x44
+#define IOMUX_REG6_0_OFFSET		0x48
+#define IOMUX_REG6_1_OFFSET		0x4c
+#define IOMUX_REG6_2_OFFSET		0x50
 #define IOMUX_CTRL_SET_OFFSET		0xf0
 #define IOMUX_REG_OFFSET(bank, n)	(((bank) * 0xc) + ((n) * 4))
 

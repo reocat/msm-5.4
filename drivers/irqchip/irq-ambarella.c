@@ -32,6 +32,8 @@
 #include <asm/exception.h>
 #include "irqchip.h"
 
+#include <plat/rct.h>
+
 #define HWIRQ_TO_BANK(hwirq)	((hwirq) >> 5)
 #define HWIRQ_TO_OFFSET(hwirq)	((hwirq) & 0x1f)
 
@@ -40,17 +42,36 @@ struct ambvic_chip_data {
 	struct irq_domain *domain;
 };
 
+#ifdef CONFIG_SMP
+
+static DEFINE_RAW_SPINLOCK(irq_controller_lock);
+
+#define IPI0_IRQ_MASK		((1 << IPI01_IRQ) | (1 << IPI02_IRQ) | \
+				 (1 << IPI03_IRQ) | (1 << IPI04_IRQ) | \
+				 (1 << IPI05_IRQ) | (1 << IPI06_IRQ))
+#define IPI1_IRQ_MASK		((1 << IPI11_IRQ) | (1 << IPI12_IRQ) | \
+				 (1 << IPI13_IRQ) | (1 << IPI14_IRQ) | \
+				 (1 << IPI15_IRQ) | (1 << IPI16_IRQ))
+#define IPI_IRQ_MASK		(IPI0_IRQ_MASK | IPI1_IRQ_MASK)
+#define AMBVIC_IRQ_IS_IPI(irq)	((irq) < 32 && ((1 << (irq)) & IPI_IRQ_MASK))
+
+#endif
+
 static struct ambvic_chip_data ambvic_data __read_mostly;
 
 /* ==========================================================================*/
-#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 1)
 
 static void ambvic_ack_irq(struct irq_data *data)
 {
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#else
+	amba_writel(reg_base + VIC_INT_EDGE_CLR_OFFSET, offset);
+#endif
 }
 
 static void ambvic_mask_irq(struct irq_data *data)
@@ -75,7 +96,11 @@ static void ambvic_mask_ack_irq(struct irq_data *data)
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
 	amba_writel(reg_base + VIC_INT_EN_CLR_INT_OFFSET, offset);
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#else
+	amba_writel(reg_base + VIC_INT_EDGE_CLR_OFFSET, offset);
+#endif
 }
 
 static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
@@ -122,7 +147,11 @@ static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
 	}
 
 	/* clear obsolete irq */
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
 	amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0x1 << offset);
+#else
+	amba_writel(reg_base + VIC_INT_EDGE_CLR_OFFSET, offset);
+#endif
 
 	return 0;
 }
@@ -221,6 +250,40 @@ static int ambvic_set_type_irq(struct irq_data *data, unsigned int type)
 
 #endif
 
+#ifdef CONFIG_SMP
+static int ambvic_set_affinity(struct irq_data *data,
+		const struct cpumask *mask_val, bool force)
+{
+	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
+	u32 cpu = cpumask_any_and(mask_val, cpu_online_mask);
+	u32 mask = 1 << HWIRQ_TO_OFFSET(data->hwirq);
+	u32 val0, val1;
+
+	if (cpu >= nr_cpu_ids)
+		return -EINVAL;
+
+	raw_spin_lock(&irq_controller_lock);
+
+	val0 = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+	val1 = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
+
+	if (cpu == 0) {
+		val0 |= mask;
+		val1 &= ~mask;
+	} else {
+		val0 &= ~mask;
+		val1 |= mask;
+	}
+
+	amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val0);
+	amba_writel(reg_base + VIC_INT_PTR1_OFFSET, val1);
+
+	raw_spin_unlock(&irq_controller_lock);
+
+	return 0;
+}
+#endif
+
 static struct irq_chip ambvic_chip = {
 	.name		= "VIC",
 	.irq_ack	= ambvic_ack_irq,
@@ -228,33 +291,116 @@ static struct irq_chip ambvic_chip = {
 	.irq_mask_ack	= ambvic_mask_ack_irq,
 	.irq_unmask	= ambvic_unmask_irq,
 	.irq_set_type	= ambvic_set_type_irq,
+#ifdef CONFIG_SMP
+	.irq_set_affinity = ambvic_set_affinity,
+#endif
 	.flags		= (IRQCHIP_SET_TYPE_MASKED | IRQCHIP_MASK_ON_SUSPEND |
 			IRQCHIP_SKIP_SET_WAKE),
 };
 
 /* ==========================================================================*/
-
-static int ambvic_handle_one(struct pt_regs *regs,
-		struct irq_domain *domain, u32 bank)
+#ifdef CONFIG_SMP
+void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 {
-	void __iomem *reg_base = ambvic_data.reg_base[bank];
+	int cpu;
+
+	/* currently we only support dual cores, so we just pick the
+	 * first cpu we find in 'mask'.. */
+	cpu = cpumask_any(mask);
+
+	/*
+	 * Ensure that stores to Normal memory are visible to the
+	 * other CPUs before issuing the IPI.
+	 */
+	dsb();
+
+	/* submit softirq. Note: this always happens on VIC0, and we reserve
+	 * VIC0.0 to keep HWIRQ == IRQ, so we will use VIC0.1 ~ VIC0.6 and
+	 * VIC0.17 ~ VIC0.22 as IPI.*/
+	ambvic_sw_set(ambvic_data.reg_base[0], irq + ((cpu == 0) ? 1 : 17));
+}
+
+void ambvic_smp_softirq_init(void)
+{
+	void __iomem *reg_base = ambvic_data.reg_base[0];
+	u32 val;
+
+	raw_spin_lock(&irq_controller_lock);
+
+	/* Clear pending IPIs */
+	amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, IPI_IRQ_MASK);
+
+	/* Enable all of IPIs */
+	val = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+	val |= IPI0_IRQ_MASK;
+	val &= ~IPI1_IRQ_MASK;
+	amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val);
+
+	val = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
+	val |= IPI1_IRQ_MASK;
+	val &= ~IPI0_IRQ_MASK;
+	amba_writel(reg_base + VIC_INT_PTR1_OFFSET, val);
+
+	amba_writel(reg_base + VIC_SENSE_OFFSET, IPI_IRQ_MASK);
+	amba_writel(reg_base + VIC_EVENT_OFFSET, IPI_IRQ_MASK);
+	amba_writel(reg_base + VIC_INTEN_OFFSET, IPI_IRQ_MASK);
+
+	raw_spin_unlock(&irq_controller_lock);
+}
+#endif
+
+static inline int ambvic_handle_ipi(struct pt_regs *regs,
+		struct irq_domain *domain, u32 hwirq)
+{
+#ifdef CONFIG_SMP
+	/* IPI Handling */
+	if (AMBVIC_IRQ_IS_IPI(hwirq)) {
+		//printk("***********  hwirq = %d\n", hwirq);
+		ambvic_sw_clr(ambvic_data.reg_base[0], hwirq);
+		if ((1 << hwirq) & IPI0_IRQ_MASK)
+			handle_IPI(hwirq - 1, regs);
+		else
+			handle_IPI(hwirq - 17, regs);
+
+		return 1;
+	}
+#endif
+	return 0;
+}
+
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 2)
+static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
+	struct irq_domain *domain)
+{
+	u32 scratchpad;
+	u32 bank;
 	u32 irq, hwirq;
 	int handled = 0;
 
+	if (smp_processor_id()) {
+		scratchpad = AHB_SCRATCHPAD_REG(0x40);
+	} else {
+		scratchpad = AHB_SCRATCHPAD_REG(0x3C);
+	}
 	do {
-#if (VIC_SUPPORT_CPU_OFFLOAD == 0)
-		u32 irq_sta;
-
-		irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
-		if (irq_sta == 0)
+		hwirq = amba_readl(scratchpad);
+		if (hwirq == 0x60) {
 			break;
-		hwirq = ffs(irq_sta) - 1;
-#else
-		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
-		if (hwirq == 0)
-			break;
+		}
+		bank = (hwirq >> 5) & 0x3;
+		hwirq &= 0x1F;
+#if 0
+		printk("CPU%d_%s: %d_%d\n",
+			smp_processor_id(), __func__,
+			bank, hwirq);
 #endif
 		hwirq += bank * NR_VIC_IRQ_SIZE;
+
+		if (ambvic_handle_ipi(regs, domain, hwirq)) {
+			handled = 1;
+			continue;
+		}
+
 		irq = irq_find_mapping(domain, hwirq);
 		handle_IRQ(irq, regs);
 		handled = 1;
@@ -262,16 +408,65 @@ static int ambvic_handle_one(struct pt_regs *regs,
 
 	return handled;
 }
+#else
+static int ambvic_handle_one(struct pt_regs *regs,
+	struct irq_domain *domain, u32 bank)
+{
+	void __iomem *reg_base = ambvic_data.reg_base[bank];
+	u32 irq;
+	u32 hwirq;
+	u32 irq_sta;
+	int handled = 0;
+
+	do {
+#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
+		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
+		if (hwirq == 0) {
+			irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
+			if ((irq_sta & 0x00000001) == 0) {
+				break;
+			}
+		}
+#else
+		irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
+		if (irq_sta == 0) {
+			break;
+		}
+		hwirq = ffs(irq_sta) - 1;
+#endif
+		hwirq += bank * NR_VIC_IRQ_SIZE;
+
+		if (ambvic_handle_ipi(regs, domain, hwirq)) {
+			handled = 1;
+			continue;
+		}
+
+		irq = irq_find_mapping(domain, hwirq);
+		handle_IRQ(irq, regs);
+		handled = 1;
+	} while (1);
+
+	return handled;
+}
+#endif
 
 static asmlinkage void __exception_irq_entry ambvic_handle_irq(struct pt_regs *regs)
 {
-	int i, handled;
+	int handled;
 
 	do {
 		handled = 0;
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 2)
+		handled = ambvic_handle_scratchpad_vic(regs, ambvic_data.domain);
+#else
+{
+		int i;
+
 		for (i = 0; i < VIC_INSTANCES; i++) {
 			handled |= ambvic_handle_one(regs, ambvic_data.domain, i);
 		}
+}
+#endif
 	} while (handled);
 }
 
@@ -305,6 +500,7 @@ struct ambvic_pm_reg {
 	u32 bothedge_reg;
 	u32 event_reg;
 	u32 int_ptr0_reg;
+	u32 int_ptr1_reg;
 };
 
 static struct ambvic_pm_reg ambvic_pm[VIC_INSTANCES];
@@ -327,6 +523,7 @@ static int ambvic_suspend(void)
 		pm_val->bothedge_reg = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
 		pm_val->event_reg = amba_readl(reg_base + VIC_EVENT_OFFSET);
 		pm_val->int_ptr0_reg = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+		pm_val->int_ptr1_reg = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
 	}
 
 	return 0;
@@ -353,6 +550,7 @@ static void ambvic_resume(void)
 		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_val->bothedge_reg);
 		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_val->event_reg);
 		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, pm_val->int_ptr0_reg);
+		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, pm_val->int_ptr1_reg);
 	}
 }
 
@@ -379,6 +577,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, 0xffffffff);
+		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, 0x00000000);
 
 		ambvic_data.reg_base[i] = reg_base;
 	}
@@ -397,6 +596,19 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 		set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
 	}
 
+#ifdef CONFIG_SMP
+	ambvic_smp_softirq_init();
+#if 0
+	/*
+	 * Set the default affinity from all CPUs to the boot cpu.
+	 * This is required since the MPIC doesn't limit several CPUs
+	 * from acknowledging the same interrupt.
+	 */
+	cpumask_clear(irq_default_affinity);
+	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
+#endif
+#endif
+
 #if defined(CONFIG_PM)
 	register_syscore_ops(&ambvic_syscore_ops);
 #endif
@@ -406,7 +618,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 IRQCHIP_DECLARE(ambvic, "ambarella,vic", ambvic_of_init);
 
 /* ==========================================================================*/
-#if (VIC_SUPPORT_CPU_OFFLOAD == 1)
+#if (VIC_SUPPORT_CPU_OFFLOAD >= 1)
 void ambvic_sw_set(void __iomem *reg_base, u32 offset)
 {
 	amba_writel(reg_base + VIC_SOFT_INT_INT_OFFSET, offset);

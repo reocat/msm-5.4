@@ -266,6 +266,11 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
+#elif (CHIP_REV == S3)
+	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
+	ctrl |= (0x3 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
+	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #else
 	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
@@ -283,11 +288,9 @@ static void setup_l2_prefetch_ctrl(void)
 	u32 ctrl = 0;
 
 	ctrl = readl(ambcache_l2_base + L2X0_PREFETCH_CTRL);
-
 	ctrl &= ~L2X0_PREFETCH_CTRL_PREFETCH_OFFSET_MASK;
 	ctrl |= (CONFIG_CACHE_PL310_PREFETCH_OFFSET <<
 		 L2X0_PREFETCH_CTRL_PREFETCH_OFFSET_SHIFT);
-
 #ifdef CONFIG_CACHE_PL310_DOUBLE_LINEFILL
 	ctrl |= (1 << L2X0_PREFETCH_CTRL_DOUBLE_LINEFILL_SHIFT);
 #endif
@@ -322,27 +325,23 @@ static void setup_full_line_of_zero(void *dummy)
 
 
 /* ==========================================================================*/
+static int ambcache_l2_init = 0;
 void ambcache_l2_enable_raw()
 {
 	if (outer_is_enabled())
 		return;
 
-#if (CHIP_REV == I1)
-	amba_writel((APB_BASE + 0x160200), 0x1);
-#endif
-
 #ifdef CONFIG_CACHE_PL310
-	if (readl(ambcache_l2_base + L2X0_DATA_LATENCY_CTRL) != 0x00000120) {
-
+	if (ambcache_l2_init == 0) {
 		u32 ctrl = setup_l2_ctrl();
-
-		writel(0x00000120, (ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
-
+#if(CHIP_REV == S3)
+		writel(0x00000222, (ambcache_l2_base + L2X0_TAG_LATENCY_CTRL));
+		writel(0x00000222, (ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
+#endif
 		setup_l2_prefetch_ctrl();
-
 		l2x0_init(ambcache_l2_base, ctrl, L2X0_AUX_CTRL_MASK);
-
 		on_each_cpu(setup_full_line_of_zero, (void*)0, 1);
+		ambcache_l2_init = 1;
 	} else
 #endif
 		outer_enable();
@@ -388,13 +387,8 @@ int ambcache_l2_disable()
 		local_irq_restore(flags);
 #endif
 	}
-	if (outer_is_enabled()) {
+	if (outer_is_enabled())
 		ret_val = -1;
-	} else {
-#if (CHIP_REV == I1)
-		amba_writel((APB_BASE + 0x160200), 0x0);
-#endif
-	}
 
 	return ret_val;
 }

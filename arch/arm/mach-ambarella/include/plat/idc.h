@@ -25,16 +25,12 @@
 #define __PLAT_AMBARELLA_IDC_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A8) || (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define IDC_INSTANCES		3
-#else
-#define IDC_INSTANCES		2
-#endif
-
-#if (CHIP_REV == A5S) || (CHIP_REV == I1) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5S) || (CHIP_REV == A7L)
+#define IDC_INSTANCES			2
 #define IDC_SUPPORT_INTERNAL_MUX	1
 #define IDC3_BUS_MUX			GPIO(36)
 #else
+#define IDC_INSTANCES			3
 #define IDC_SUPPORT_INTERNAL_MUX	0
 #endif
 
@@ -43,7 +39,7 @@
 #define IDC_BASE			(APB_BASE + IDC_OFFSET)
 #define IDC_REG(x)			(IDC_BASE + (x))
 
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define IDC2_OFFSET			0x1000
 #else
 #define IDC2_OFFSET			0x7000
@@ -55,7 +51,7 @@
 #define IDC3_OFFSET			0x13000
 #elif (CHIP_REV == A8)
 #define IDC3_OFFSET			0xE000
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define IDC3_OFFSET			0x7000
 #endif
 #define IDC3_BASE			(APB_BASE + IDC3_OFFSET)

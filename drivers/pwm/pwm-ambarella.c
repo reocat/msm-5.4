@@ -229,6 +229,20 @@ static int ambarella_pwm_remove(struct platform_device *pdev)
 	return pwmchip_remove(&ambpwm->chip);
 }
 
+#ifdef CONFIG_PM
+static int ambarella_pwm_suspend(struct platform_device *pdev,
+				 pm_message_t state)
+{
+	return 0;
+}
+
+static int ambarella_pwm_resume(struct platform_device *pdev)
+{
+	clk_set_rate(clk_get(NULL, "gclk_pwm"), PWM_DEFAULT_FREQUENCY);
+	return 0;
+}
+#endif
+
 static const struct of_device_id ambarella_pwm_dt_ids[] = {
 	{ .compatible = "ambarella,pwm", },
 	{ /* sentinel */ }
@@ -242,6 +256,10 @@ static struct platform_driver ambarella_pwm_driver = {
 	},
 	.probe = ambarella_pwm_probe,
 	.remove = ambarella_pwm_remove,
+#ifdef CONFIG_PM
+	.suspend	= ambarella_pwm_suspend,
+	.resume		= ambarella_pwm_resume,
+#endif
 };
 module_platform_driver(ambarella_pwm_driver);
 

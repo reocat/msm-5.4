@@ -26,7 +26,7 @@
 
 #if (CHIP_REV == A8)
 #define PWM_INSTANCES			0
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define PWM_INSTANCES			4
 #else
 #define PWM_INSTANCES			5
@@ -62,7 +62,7 @@
 #define PWM_PWM_EN_BIT			(0x1)
 
 #define PWM_PWM_TICKS_MAX_BITS		16
-#if (CHIP_REV == S2L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define PWM_ST_TICKS_MAX_BITS		16
 #else
 #define PWM_ST_TICKS_MAX_BITS		10

@@ -46,7 +46,8 @@ ENTRY(ambarella_finish_suspend)
 	 */
 	.align	L1_CACHE_SHIFT
 	ldr	r0, =(DRAMC_BASE + DRAM_DDRC_OFFSET)
-	mov	r1, #0x1
+	ldr	r1, [r0, #DDRC_CTL_OFFSET]
+	bic	r1, r1, #0x1
 	str	r1, [r0, #DDRC_CTL_OFFSET]
 	mov	r1, #0x80000000
 	str	r1, [r0, #DDRC_SELF_REF_OFFSET]
@@ -65,6 +66,11 @@ ENTRY(ambarella_finish_suspend)
 
 ENDPROC(ambarella_finish_suspend)
 
+#if (CHIP_REV == S3)
+#define	IOMUX_UART0_PIN_CFG	0x00000030
+#else
+#define	IOMUX_UART0_PIN_CFG	0x00000180
+#endif
 
 ENTRY(ambarella_cpu_resume)
 	/*
@@ -95,15 +101,15 @@ ENTRY(ambarella_cpu_resume)
 	ldr	r0, =(APB_PHYS_BASE + IOMUX_OFFSET)
 	/* read-modify-write */
 	ldr	r1, [r0, #IOMUX_REG1_0_OFFSET]
-	orr	r1, r1, #0x00000180
+	orr	r1, r1, #IOMUX_UART0_PIN_CFG
 	str	r1, [r0, #IOMUX_REG1_0_OFFSET]
 	/* read-modify-write */
 	ldr	r1, [r0, #IOMUX_REG1_1_OFFSET]
-	bic	r1, r1, #0x00000180
+	bic	r1, r1, #IOMUX_UART0_PIN_CFG
 	str	r1, [r0, #IOMUX_REG1_1_OFFSET]
 	/* read-modify-write */
 	ldr	r1, [r0, #IOMUX_REG1_2_OFFSET]
-	bic	r1, r1, #0x00000180
+	bic	r1, r1, #IOMUX_UART0_PIN_CFG
 	str	r1, [r0, #IOMUX_REG1_2_OFFSET]
 	ldr	r1, =0x00000001
 	str	r1, [r0, #IOMUX_CTRL_SET_OFFSET]

@@ -70,6 +70,9 @@ static void write_cpux_jump_addr(unsigned int cpu, int addr)
 /* running on CPU1 */
 static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
 {
+#if defined(CONFIG_AMBARELLA_VIC)
+	ambvic_smp_softirq_init();
+#endif
 	/* let the primary processor know we're out of the
 	 * pen, then head off into the C entry point */
 	write_pen_release(-1);
@@ -136,6 +139,10 @@ static void __init ambarella_smp_init_cpus(void)
 
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
+
+#ifdef CONFIG_PLAT_AMBARELLA_VIC_SMP
+	set_smp_cross_call(ambvic_raise_softirq);
+#endif
 }
 
 /* running on CPU0 */

@@ -55,9 +55,6 @@ enum {
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
 	AMBARELLA_IO_DESC_AXI_ID,
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-	AMBARELLA_IO_DESC_DDD_ID,
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 	AMBARELLA_IO_DESC_DRAMC_ID,
 #endif
@@ -69,6 +66,7 @@ enum {
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 	AMBARELLA_IO_DESC_DBGBUS_ID,
+	AMBARELLA_IO_DESC_DBGFMEM_ID,
 #endif
 	AMBARELLA_IO_DESC_DSP_ID,
 };
@@ -129,17 +127,6 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			},
 	},
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DDD)
-	[AMBARELLA_IO_DESC_DDD_ID] = {
-		.name		= "DDD",
-		.io_desc	= {
-			.virtual= DDD_BASE,
-			.pfn	= __phys_to_pfn(DDD_PHYS_BASE),
-			.length	= DDD_SIZE,
-			.type	= MT_DEVICE,
-			},
-	},
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
 	[AMBARELLA_IO_DESC_DRAMC_ID] = {
 		.name		= "DRAMC",
@@ -188,6 +175,15 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual= DBGBUS_BASE,
 			.pfn	= __phys_to_pfn(DBGBUS_PHYS_BASE),
 			.length	= DBGBUS_SIZE,
+			.type	= MT_DEVICE,
+			},
+	},
+	[AMBARELLA_IO_DESC_DBGFMEM_ID] = {
+		.name		= "DBGFMEM",
+		.io_desc	= {
+			.virtual= DBGFMEM_BASE,
+			.pfn	= __phys_to_pfn(DBGFMEM_PHYS_BASE),
+			.length	= DBGFMEM_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},
