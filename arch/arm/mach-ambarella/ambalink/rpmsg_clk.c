@@ -212,8 +212,12 @@ static int rpmsg_clk_ack_threadx(void *data)
 static int rpmsg_clk_changed_pre_notify(void *data)
 {
 	int retval = 0;
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
 	extern int syscore_suspend(void);
+#else
+        extern void clockevents_suspend(void);
+#endif
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
@@ -229,12 +233,14 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	flags = arm_irq_save();
-#endif
 
 	syscore_suspend();
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	arm_irq_restore(flags);
+#else
+	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
+	clocksource_suspend();
+	clockevents_suspend();
 #endif
 
 	rpmsg_clk_ack_threadx(data);
@@ -246,17 +252,18 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
 	extern void syscore_resume(void);
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	flags = arm_irq_save();
-#endif
 
 	syscore_resume();
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	arm_irq_restore(flags);
+#else
+	clockevents_resume();
+	clocksource_resume();
 #endif
 
 	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
@@ -272,6 +279,10 @@ static int rpmsg_clk_changed_post_notify(void *data)
 
 	/* Enable rpmsg_clk here because some driver will get the clock. */
 	rpmsg_clk_inited = 1;
+
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
+#endif
 
 	rpmsg_clk_ack_threadx(data);
 
