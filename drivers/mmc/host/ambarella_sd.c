@@ -2341,8 +2341,11 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	if (0 == wowlan_resume_from_ram) {
 		for (i = 0; i < pinfo->slot_num; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
+                        up(&pslotinfo->system_event_sem);
+                        ambarella_sd_request_bus(pslotinfo->mmc);
 			clk_set_rate(pinfo->clk, pslotinfo->mmc->f_max);
 			ambarella_sd_reset_all(pslotinfo->mmc);
+                        ambarella_sd_release_bus(pslotinfo->mmc);
 #if 0
 			if (ambarella_is_valid_gpio_irq(&pslotinfo->plat_info->gpio_cd))
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
@@ -2352,16 +2355,17 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 				enable_irq(pslotinfo->plat_info->gpio_cd.irq_line);
 #endif
 		}
+
+                ambarella_sd_request_bus(pslotinfo->mmc);
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 		boss_set_irq_owner(pinfo->irq, BOSS_IRQ_OWNER_LINUX, 1);
 #endif
 		enable_irq(pinfo->irq);
+                ambarella_sd_release_bus(pslotinfo->mmc);
 
 		for (i = 0; i < pinfo->slot_num; i++) {
 			pslotinfo = pinfo->pslotinfo[i];
 			if (pslotinfo->mmc) {
-				up(&pslotinfo->system_event_sem);
-
 				retval = mmc_resume_host(pslotinfo->mmc);
 				if (retval) {
 					ambsd_err(pslotinfo,
