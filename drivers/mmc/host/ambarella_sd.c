@@ -595,12 +595,14 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 
 	down(&pslotinfo->system_event_sem);
 
-	if (pslotinfo->slot_id == 0) {
+	if (pinfo->regbase == SD_BASE) {
 		fio_select_lock(SELECT_FIO_SD);
-	} else {
+	} else if (pinfo->regbase == SD2_BASE) {
 		fio_select_lock(SELECT_FIO_SDIO);
 		if (pslotinfo->force_gpio)
 			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_work);
+	} else {
+	        //fio_select_lock(SELECT_FIO_SD2);
 	}
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
@@ -616,13 +618,20 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 static void ambarella_sd_release_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
+#if defined(CONFIG_RPMSG_SD) || defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        struct ambarella_sd_controller_info     *pinfo;
 
-	if (pslotinfo->slot_id == 0) {
+        pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
+#endif
+
+	if (pinfo->regbase == SD_BASE) {
 		fio_unlock(SELECT_FIO_SD);
-	} else {
+	} else if (pinfo->regbase == SD2_BASE) {
 		if (pslotinfo->force_gpio)
 			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_idle);
 		fio_unlock(SELECT_FIO_SDIO);
+	} else {
+	        //fio_unlock(SELECT_FIO_SD2);
 	}
 
 	up(&pslotinfo->system_event_sem);
@@ -634,7 +643,7 @@ static void ambarella_sd_enable_int(struct mmc_host *mmc, u32 mask)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	if (pinfo->slot_num > 1) {
-		if (pslotinfo->slot_id == 0)
+		if (pinfo->regbase == SD_BASE)
 			fio_amb_sd0_set_int(mask, 1);
 		else
 			fio_amb_sdio0_set_int(mask, 1);
@@ -651,7 +660,7 @@ static void ambarella_sd_disable_int(struct mmc_host *mmc, u32 mask)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	if (pinfo->slot_num > 1) {
-		if (pslotinfo->slot_id == 0)
+		if (pinfo->regbase == SD_BASE)
 			fio_amb_sd0_set_int(mask, 0);
 		else
 			fio_amb_sdio0_set_int(mask, 0);
