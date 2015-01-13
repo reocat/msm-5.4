@@ -587,11 +587,9 @@ static void ambarella_sd_post_adma_to_sg(void *data)
 static void ambarella_sd_request_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
-#if defined(CONFIG_RPMSG_SD) || defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	struct ambarella_sd_controller_info	*pinfo;
 
 	pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
-#endif
 
 	down(&pslotinfo->system_event_sem);
 
@@ -618,11 +616,9 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 static void ambarella_sd_release_bus(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
-#if defined(CONFIG_RPMSG_SD) || defined(CONFIG_PLAT_AMBARELLA_BOSS)
         struct ambarella_sd_controller_info     *pinfo;
 
         pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
-#endif
 
 	if (pinfo->regbase == SD_BASE) {
 		fio_unlock(SELECT_FIO_SD);
