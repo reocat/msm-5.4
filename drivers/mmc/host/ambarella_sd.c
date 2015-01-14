@@ -593,9 +593,9 @@ static void ambarella_sd_request_bus(struct mmc_host *mmc)
 
 	down(&pslotinfo->system_event_sem);
 
-	if (pinfo->regbase == SD_BASE) {
+	if ((u32) pinfo->regbase == SD_BASE) {
 		fio_select_lock(SELECT_FIO_SD);
-	} else if (pinfo->regbase == SD2_BASE) {
+	} else if ((u32) pinfo->regbase == SD2_BASE) {
 		fio_select_lock(SELECT_FIO_SDIO);
 		if (pslotinfo->force_gpio)
 			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_work);
@@ -620,9 +620,9 @@ static void ambarella_sd_release_bus(struct mmc_host *mmc)
 
         pinfo = (struct ambarella_sd_controller_info *)pslotinfo->pinfo;
 
-	if (pinfo->regbase == SD_BASE) {
+	if ((u32) pinfo->regbase == SD_BASE) {
 		fio_unlock(SELECT_FIO_SD);
-	} else if (pinfo->regbase == SD2_BASE) {
+	} else if ((u32) pinfo->regbase == SD2_BASE) {
 		if (pslotinfo->force_gpio)
 			pinctrl_select_state(pslotinfo->pinctrl, pslotinfo->state_idle);
 		fio_unlock(SELECT_FIO_SDIO);
@@ -639,7 +639,7 @@ static void ambarella_sd_enable_int(struct mmc_host *mmc, u32 mask)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	if (pinfo->slot_num > 1) {
-		if (pinfo->regbase == SD_BASE)
+		if ((u32) pinfo->regbase == SD_BASE)
 			fio_amb_sd0_set_int(mask, 1);
 		else
 			fio_amb_sdio0_set_int(mask, 1);
@@ -656,7 +656,7 @@ static void ambarella_sd_disable_int(struct mmc_host *mmc, u32 mask)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	if (pinfo->slot_num > 1) {
-		if (pinfo->regbase == SD_BASE)
+		if ((u32) pinfo->regbase == SD_BASE)
 			fio_amb_sd0_set_int(mask, 0);
 		else
 			fio_amb_sdio0_set_int(mask, 0);
@@ -1744,7 +1744,7 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.card_busy = ambarella_sd_card_busy,
 };
 
-static int pre_notified = 0;
+static int pre_notified[3] = {0};
 static int sd_suspended = 0;
 
 static int ambarella_sd_system_event(struct notifier_block *nb,
@@ -1761,17 +1761,33 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 		if (!sd_suspended) {
 			pr_debug("%s[%u]: Pre Change\n", __func__, pslotinfo->slot_id);
 			down(&pslotinfo->system_event_sem);
-			pre_notified = 1;
+                        if ((u32) pinfo->regbase == SD_BASE) {
+                                pre_notified[0] = 1;
+                        } else if ((u32) pinfo->regbase == SD2_BASE) {
+                                pre_notified[1] = 1;
+                        } else {
+                                pre_notified[2] = 1;
+                        }
 		}
 		break;
 
 	case AMBA_EVENT_POST_CPUFREQ:
-		if (pre_notified) {
-			pr_debug("%s[%u]: Post Change\n", __func__, pslotinfo->slot_id);
-			ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
-			pre_notified = 0;
-			up(&pslotinfo->system_event_sem);
-		}
+                if (((u32) pinfo->regbase == SD_BASE) && pre_notified[0]) {
+                        pr_debug("%s[%u]: Post Change\n", __func__, (u32) pinfo->regbase);
+                        pre_notified[0] = 0;
+                        ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+                        up(&pslotinfo->system_event_sem);
+                } else if (((u32) pinfo->regbase == SD2_BASE) && pre_notified[1]) {
+                        pr_debug("%s[%u]: Post Change\n", __func__, (u32) pinfo->regbase);
+                        pre_notified[1] = 0;
+                        ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+                        up(&pslotinfo->system_event_sem);
+                } else if (pre_notified[2]) {
+                        pr_debug("%s[%u]: Post Change\n", __func__, (u32) pinfo->regbase);
+                        pre_notified[2] = 0;
+                        ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+                        up(&pslotinfo->system_event_sem);
+                }
 		break;
 
 	default:
@@ -2342,6 +2358,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	int i;
 
 	pinfo = platform_get_drvdata(pdev);
+        pslotinfo = pinfo->pslotinfo[0];
 
 	if (0 == wowlan_resume_from_ram) {
 		for (i = 0; i < pinfo->slot_num; i++) {

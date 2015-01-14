@@ -1101,10 +1101,10 @@ nand_amb_request_done:
 		nand_amb_disable_bch(nand_info);
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-		nand_info->cmd = 0;
-		disable_irq(nand_info->cmd_irq);
-		disable_irq(nand_info->dma_irq);
-		disable_irq(nand_info->fdma_irq);
+	nand_info->cmd = 0;
+	disable_irq(nand_info->cmd_irq);
+	disable_irq(nand_info->dma_irq);
+	disable_irq(nand_info->fdma_irq);
 #endif
 
 	fio_unlock(SELECT_FIO_FL);
