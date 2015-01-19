@@ -288,6 +288,9 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
+	if (boss_get_irq_owner(amb_dma->dma_irq) != BOSS_IRQ_OWNER_LINUX)
+		return IRQ_HANDLED;
+
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && defined(CONFIG_PLAT_AMBARELLA_S2L)
 	for (i = UART_TX_DMA_CHAN; i <= UART_RX_DMA_CHAN; i++) {
 		spin_lock(&amb_dma->amb_chan[i].lock);
@@ -299,7 +302,12 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 		spin_unlock(&amb_dma->amb_chan[i].lock);
 	}
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	boss_set_irq_owner(amb_dma->dma_irq, BOSS_IRQ_OWNER_RTOS, 0);
+	/* for UART DMA, skip context switch back and forth
+	   because linux is the owner */
+	if ((int_src != (1 << UART_TX_DMA_CHAN)) &&
+		(int_src != (1 << UART_RX_DMA_CHAN)) &&
+		(int_src != (1 << UART_TX_DMA_CHAN | 1 << UART_RX_DMA_CHAN)))
+		boss_set_irq_owner(amb_dma->dma_irq, BOSS_IRQ_OWNER_RTOS, 0);
 #endif
 #else
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
@@ -553,7 +561,11 @@ static u32 ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 
-	BUG_ON(!first);
+	//BUG_ON(!first);
+	if (!first) {
+		printk("WARNING: empty dma chan\n");
+		return 0;
+	}
 
 	return first->len - count;
 }

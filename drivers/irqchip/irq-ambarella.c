@@ -102,7 +102,11 @@ static void ambvic_unmask_irq(struct irq_data *data)
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
 
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	if (boss_get_irq_owner(data->hwirq) != BOSS_IRQ_OWNER_LINUX)
+/* If DMA IRQ owner is pre-set to RTOS at ambdma_dma_irq_handler,
+   we cannot skip irq enable */
+#define UART_DMA_IRQ 0xf
+	if ((boss_get_irq_owner(data->hwirq) != BOSS_IRQ_OWNER_LINUX) &&
+		(UART_DMA_IRQ != data->hwirq))
 		return;
 
 	/* Enable in BOSS. */
