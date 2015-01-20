@@ -56,7 +56,7 @@
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_S2L) && defined(CONFIG_PLAT_AMBARELLA_BOSS)
 #define AHB_SIZE			(0x08000000)
-#define APB_SIZE			(0x08000000)
+#define APB_SIZE			(0x01000000)
 #else
 #define AHB_SIZE			(0x01000000)
 #define APB_SIZE			(0x01000000)

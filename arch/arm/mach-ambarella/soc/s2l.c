@@ -45,6 +45,7 @@ static void __init ambarella_ambalink_init_irq(void)
 	unsigned long vectors = CONFIG_VECTORS_BASE;
 	unsigned int backed, linst;
 	unsigned int off;
+        register unsigned int x;
 
 	/* Swap entries in backup and the one installed by early_tap_init() */
 	for (off = 0; off < 0x20; off += 4) {
@@ -74,6 +75,12 @@ static void __init ambarella_ambalink_init_irq(void)
 	}
 
 	clean_dcache_area((void *) vectors + 0x1000, PAGE_SIZE);
+
+        /* Set TTBR0 as cacheable (cacheable, inner WB not shareable, outer WB not shareable). */
+        x = 0x0;
+        asm volatile("mrc   p15, 0, %0, c2, c0, 0": "=r" (x));
+        x |= 0x59;
+        asm volatile("mcr   p15, 0, %0, c2, c0, 0": : "r" (x));
 #endif
 
 	irqchip_init();
