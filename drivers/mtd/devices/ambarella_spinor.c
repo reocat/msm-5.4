@@ -629,6 +629,25 @@ static int amb_spi_nor_remove(struct platform_device *pdev)
     return 0;
 }
 
+static int amb_spi_nor_shutdown(struct platform_device *pdev)
+{
+	struct amb_norflash    *flash = platform_get_drvdata(pdev);
+
+	/* Wait until finished previous write command. */
+	if (wait_till_ready(flash))
+		return 1;
+
+	/* Send write enable, then erase commands. */
+	//write_enable(flash);
+
+	/* Set up command buffer. */
+	/* FL01GS use 0xF0 as reset enable command */
+	flash->command[0] = 0xF0;
+	ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
+
+	return 0;
+}
+
 static const struct of_device_id ambarella_spi_nor_of_match[] = {
     {.compatible = "ambarella,spinor", },
     {},
@@ -636,18 +655,19 @@ static const struct of_device_id ambarella_spi_nor_of_match[] = {
 MODULE_DEVICE_TABLE(of, ambarella_spi_nor_of_match);
 
 static struct platform_driver amb_spi_nor_driver = {
-    .driver = {
-        .name = "ambarella-spinor",
-        .owner = THIS_MODULE,
-        .of_match_table = ambarella_spi_nor_of_match,
-    },
-    .probe = amb_spi_nor_probe,
-    .remove = amb_spi_nor_remove,
+	.driver = {
+		.name = "ambarella-spinor",
+		.owner = THIS_MODULE,
+		.of_match_table = ambarella_spi_nor_of_match,
+	},
+	.probe = amb_spi_nor_probe,
+	.remove = amb_spi_nor_remove,
+	.shutdown = amb_spi_nor_shutdown,
 
-    /* REVISIT: many of these chips have deep power-down modes, which
-     * should clearly be entered on suspend() to minimize power use.
-     * And also when they're otherwise idle...
-     */
+	/* REVISIT: many of these chips have deep power-down modes, which
+	 * should clearly be entered on suspend() to minimize power use.
+	 * And also when they're otherwise idle...
+	 */
 };
 
 module_platform_driver(amb_spi_nor_driver);
