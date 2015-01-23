@@ -145,9 +145,15 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 
 	AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
 	mapping->private_data = fp;
-	AMBAFS_DMSG("%s: before filemap_write_and_wait\n", __FUNCTION__);
-	filemap_write_and_wait(inode->i_mapping);
-	AMBAFS_DMSG("%s after filemap_write_and_wait\n", __FUNCTION__);
+
+	/* When the file pointer has write permission,
+	   the page cache sync is allowed */
+	if(filp->f_mode & FMODE_WRITE) {
+		AMBAFS_DMSG("%s: before filemap_write_and_wait\n", __FUNCTION__);
+		filemap_write_and_wait(inode->i_mapping);
+		AMBAFS_DMSG("%s after filemap_write_and_wait\n", __FUNCTION__);
+	}
+
 	mapping->private_data = NULL;
 	ambafs_remote_close(fp);
 	inode->i_opflags &= ~AMBAFS_IOP_CREATE_FOR_WRITE;
