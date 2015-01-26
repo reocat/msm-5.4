@@ -144,8 +144,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 		.io_desc        = {
 			.virtual    = CONFIG_AMBALINK_SHMADDR,
 			.pfn        = __phys_to_pfn(CONFIG_AMBALINK_SHMADDR - NOLINUX_MEM_V_START),
-#if defined(CONFIG_PLAT_AMBARELLA_S2_CORTEX)
-			/* Should be removed after RTOS virtual address is enabled. */
+#if (CONFIG_AMBARELLA_ZRELADDR < CONFIG_AMBALINK_SHMADDR)
 			.length     = (CONFIG_AMBARELLA_ZRELADDR -
 					(CONFIG_AMBALINK_SHMADDR - NOLINUX_MEM_V_START) -
 					CONFIG_AMBARELLA_TEXTOFS),

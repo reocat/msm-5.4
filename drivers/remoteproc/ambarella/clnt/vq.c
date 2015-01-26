@@ -246,11 +246,7 @@ int vq_get_avail_buf(struct vq *vq, void **buf, int *len)
 	desc		= &vq->vring.desc[idx];
 	vq_flush_d_cache_region(desc, sizeof(*desc));
 
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	*buf		= (void*) (desc->addr);
-#else
 	*buf		= (void*)ambarella_phys_to_virt(desc->addr);
-#endif
 	*len		= desc->len;
 
 	vq_flush_d_cache_region(*buf, *len);

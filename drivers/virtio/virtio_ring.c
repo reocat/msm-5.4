@@ -151,11 +151,7 @@ static inline int vring_add_indirect(struct vring_virtqueue *vq,
 	for (n = 0; n < out_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_out)) {
 			desc[i].flags = VRING_DESC_F_NEXT;
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-			desc[i].addr = ambarella_phys_to_virt(SG_PHYS(sg));
-#else
 			desc[i].addr = SG_PHYS(sg);
-#endif
 			desc[i].len = sg->length;
 			desc[i].next = i+1;
 			i++;
@@ -164,11 +160,7 @@ static inline int vring_add_indirect(struct vring_virtqueue *vq,
 	for (; n < (out_sgs + in_sgs); n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_in)) {
 			desc[i].flags = VRING_DESC_F_NEXT|VRING_DESC_F_WRITE;
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-			desc[i].addr = ambarella_phys_to_virt(SG_PHYS(sg));
-#else
 			desc[i].addr = SG_PHYS(sg);
-#endif
 			desc[i].len = sg->length;
 			desc[i].next = i+1;
 			i++;
@@ -262,11 +254,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	for (n = 0; n < out_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_out)) {
 			vq->vring.desc[i].flags = VRING_DESC_F_NEXT;
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-			vq->vring.desc[i].addr = ambarella_phys_to_virt(SG_PHYS(sg));
-#else
 			vq->vring.desc[i].addr = SG_PHYS(sg);
-#endif
 			vq->vring.desc[i].len = sg->length;
 			prev = i;
 			i = vq->vring.desc[i].next;
@@ -275,11 +263,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	for (; n < (out_sgs + in_sgs); n++) {
 		for (sg = sgs[n]; sg; sg = next(sg, &total_in)) {
 			vq->vring.desc[i].flags = VRING_DESC_F_NEXT|VRING_DESC_F_WRITE;
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-			vq->vring.desc[i].addr = ambarella_phys_to_virt(SG_PHYS(sg));
-#else
 			vq->vring.desc[i].addr = SG_PHYS(sg);
-#endif
 			vq->vring.desc[i].len = sg->length;
 			prev = i;
 			i = vq->vring.desc[i].next;
@@ -519,13 +503,8 @@ static void detach_buf(struct vring_virtqueue *vq, unsigned int head)
 	i = head;
 
 	/* Free the indirect table */
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
-	if (vq->vring.desc[i].flags & VRING_DESC_F_INDIRECT)
-		kfree((void *) (u32) vq->vring.desc[i].addr);
-#else
 	if (vq->vring.desc[i].flags & VRING_DESC_F_INDIRECT)
 		kfree(phys_to_virt(vq->vring.desc[i].addr));
-#endif
 
 	while (vq->vring.desc[i].flags & VRING_DESC_F_NEXT) {
 		i = vq->vring.desc[i].next;
