@@ -40,7 +40,7 @@ static long amba_heap_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	long ret = 0;
 	struct AMBA_HEAPMEM_INFO_s minfo;
 
-	printk("%s\n",__func__);
+	//printk("%s\n",__func__);
 
 	mutex_lock(&amba_heap_mutex);
 	switch (cmd) {
@@ -63,12 +63,15 @@ static long amba_heap_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			unsigned int test_addr;
 			unsigned int *tptr;
 
-			if (copy_from_user(&test_addr, arg, sizeof(unsigned int))<0){
+			ret = copy_from_user(&test_addr, (void *)arg, sizeof(unsigned int));
+			if (ret<0){
 				ret = -EFAULT;
 				break;
+			} else {
+				ret = 0;
 			}
 			tptr = (unsigned int *)test_addr;
-			printk("%s: write %p as 0xfeedda0b\n",__FUNCTION__, tptr);
+			//printk("%s: write %p as 0xfeedda0b\n",__FUNCTION__, tptr);
 			*tptr = 0xfeedda0b;
 		} while(0);
 		break;
@@ -113,14 +116,14 @@ static int amba_heap_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	size = vma->vm_end - vma->vm_start;
 	if(size==heap_size) {
-		printk("%s: heap_baseaddr=%p, heap_physaddr=%p, heap_size=%x\n",
-			__func__, heap_baseaddr, heap_physaddr, heap_size);
+		//printk("%s: heap_baseaddr=%p, heap_physaddr=%p, heap_size=%x\n",
+		//	__func__, heap_baseaddr, heap_physaddr, heap_size);
 
 		/* For MMAP, it needs to use physical address directly! */
 		//baseaddr=(int)ambalink_phys_to_virt((u32)heap_physaddr);
 		baseaddr = (u32)heap_physaddr;
 	} else {
-		printk("%s: wrong size(%x)! heap_size=%x\n",__func__, size, heap_size);
+		printk("%s: wrong size(%x)! heap_size=%x\n",__func__, (unsigned int)size, heap_size);
 		rval = -EINVAL;
 		goto Done;
 	}
@@ -152,13 +155,13 @@ Done:
 
 static int amba_heap_open(struct inode *inode, struct file *filp)
 {
-printk("%s\n",__func__);
+//printk("%s\n",__func__);
 	return 0;
 }
 
 static int amba_heap_release(struct inode *inode, struct file *filp)
 {
-printk("%s\n",__func__);
+//printk("%s\n",__func__);
 	return 0;
 }
 

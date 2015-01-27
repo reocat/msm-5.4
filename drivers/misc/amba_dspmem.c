@@ -40,7 +40,7 @@ static long amba_dspmem_ioctl(struct file *filp, unsigned int cmd, unsigned long
 	long ret = 0;
 	struct AMBA_DSPMEM_INFO_s minfo;
 
-	printk("%s\n",__func__);
+	//printk("%s\n",__func__);
 
 	mutex_lock(&amba_dspmem_mutex);
 	switch (cmd) {
@@ -99,14 +99,14 @@ static int amba_dspmem_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	size = vma->vm_end - vma->vm_start;
 	if(size==dsp_size) {
-		printk("%s: dsp_baseaddr=%p, dsp_physaddr=%p, dsp_size=%x\n",
-			__func__, dsp_baseaddr, dsp_physaddr, dsp_size);
+		//printk("%s: dsp_baseaddr=%p, dsp_physaddr=%p, dsp_size=%x\n",
+		//	__func__, dsp_baseaddr, dsp_physaddr, dsp_size);
 
 		/* For MMAP, it needs to use physical address directly! */
 		//baseaddr=(int)ambalink_phys_to_virt((u32)dsp_physaddr);
 		baseaddr=(u32)dsp_physaddr;
 	} else {
-		printk("%s: wrong size(%x)! dsp_size=%x\n",__func__, size, dsp_size);
+		printk("%s: wrong size(%x)! dsp_size=%x\n",__func__, (unsigned int)size, dsp_size);
 		rval = -EINVAL;
 		goto Done;
 	}
@@ -138,13 +138,13 @@ Done:
 
 static int amba_dspmem_open(struct inode *inode, struct file *filp)
 {
-printk("%s\n",__func__);
+//printk("%s\n",__func__);
 	return 0;
 }
 
 static int amba_dspmem_release(struct inode *inode, struct file *filp)
 {
-printk("%s\n",__func__);
+//printk("%s\n",__func__);
 	return 0;
 }
 

@@ -140,8 +140,8 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 	*phys = rpdev_meminfo.phys_addr;
 	*size = rpdev_meminfo.size;
 
-	printk("%s: type=%u, base=%p, phys=%p size=0x%08x\n", __func__ ,
-		type, rpdev_meminfo.base_addr, rpdev_meminfo.phys_addr, rpdev_meminfo.size);
+	//printk("%s: type=%u, base=%p, phys=%p size=0x%08x\n", __func__ ,
+	//	type, rpdev_meminfo.base_addr, rpdev_meminfo.phys_addr, rpdev_meminfo.size);
 
 	return 0;
 }
