@@ -1343,8 +1343,13 @@ static inline void ambarella_sd_prepare_tmo(
 	pslotinfo->wait_tmo = pinfo->default_wait_tmo;
 	if ((pslotinfo->wait_tmo > 0) && (pslotinfo->wait_tmo <
 		CONFIG_SD_AMBARELLA_MAX_TIMEOUT)) {
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+		/* quick recovery from cmd53 timeout */
+		pslotinfo->sta_counter = 0;
+#else
 		pslotinfo->sta_counter = CONFIG_SD_AMBARELLA_MAX_TIMEOUT;
 		pslotinfo->sta_counter /= pslotinfo->wait_tmo;
+#endif
 	} else {
 		pslotinfo->sta_counter = 1;
 		pslotinfo->wait_tmo = (1 * HZ);
@@ -1477,7 +1482,11 @@ static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo
 				ambsd_warn(pslotinfo,
 					"Wait SD_STA_CMD_INHIBIT_DAT...\n");
 				pslotinfo->state = AMBA_SD_STATE_ERR;
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+				/* system will hang after reset */
+#else
 				pinfo->reset_error = 1;
+#endif
 				goto ambarella_sd_send_cmd_exit;
 			}
 		}
@@ -1559,7 +1568,7 @@ ambarella_sd_send_cmd_exit:
 					SD_BLK_CNT_OFFSET);
 				if (tmpreg) {
 					ambsd_rtdbg(pslotinfo,
-						"SD_DMA_ADDR_OFFSET[0x%08X]\n",
+						"SD_DMA_ADDR_OFFSET[0x%08x]\n",
 						amba_readl(pinfo->regbase +
 						SD_DMA_ADDR_OFFSET));
 					amba_writel((pinfo->regbase +
@@ -1568,11 +1577,11 @@ ambarella_sd_send_cmd_exit:
 						SD_DMA_ADDR_OFFSET));
 				} else {
 					ambsd_rtdbg(pslotinfo,
-						"SD_DATA_OFFSET[0x%08X]\n",
+						"SD_DATA_OFFSET[0x%08x]\n",
 						amba_readl(pinfo->regbase +
 						SD_DATA_OFFSET));
 					ambsd_rtdbg(pslotinfo,
-						"SD_STA_OFFSET[0x%08X]\n",
+						"SD_STA_OFFSET[0x%08x]\n",
 						amba_readl(pinfo->regbase +
 						SD_STA_OFFSET));
 				}
@@ -1727,7 +1736,7 @@ static int ambarella_sd_card_busy(struct mmc_host *mmc)
 
 	ambarella_sd_request_bus(mmc);
 	sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-	ambsd_dbg(pslotinfo, "SD_STA_OFFSET = 0x%08X.\n", sta_reg);
+	ambsd_dbg(pslotinfo, "SD_STA_OFFSET = 0x%08x.\n", sta_reg);
 	retval = !(sta_reg & 0x1F00000);
 	ambarella_sd_release_bus(mmc);
 
@@ -2016,8 +2025,8 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 		pslotinfo->slot_id, pslotinfo->buf_vaddress,
 		pslotinfo->buf_paddress);
 
-	dev_notice(pinfo->dev, "Slot%u req_size=0x%08X, "
-		"segs=%u, seg_size=0x%08X\n",
+	dev_notice(pinfo->dev, "Slot%u req_size=0x%08x, "
+		"segs=%u, seg_size=0x%08x\n",
 		pslotinfo->slot_id, mmc->max_req_size,
 		mmc->max_segs, mmc->max_seg_size);
 
