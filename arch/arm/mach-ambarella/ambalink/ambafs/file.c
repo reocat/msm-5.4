@@ -156,7 +156,12 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 
 	mapping->private_data = NULL;
 	ambafs_remote_close(fp);
-	inode->i_opflags &= ~AMBAFS_IOP_CREATE_FOR_WRITE;
+	/* Another file pointer might be keeping writing, so the
+	file pointer with read-only permission cannot remove
+	AMBAFS_IOP_CREATE_FOR_WRITE */
+	if(filp->f_mode & FMODE_WRITE) {
+		inode->i_opflags &= ~AMBAFS_IOP_CREATE_FOR_WRITE;
+	}
 	check_stat(inode);
 	return 0;
 }
