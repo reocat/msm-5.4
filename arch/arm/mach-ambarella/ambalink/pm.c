@@ -444,7 +444,19 @@ static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 /* ==========================================================================*/
 static int ambarella_pm_hibernation_begin(void)
 {
-	return ambarella_pm_linkctrl_prepare();
+        ambarella_pm_linkctrl_prepare();
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+        /*
+         * Disable VRING_IRQ_C0_TO_C1_KICK.
+         * RTOS resume ipc related service quickly then send this irq to linux.
+         * But Linux is not ready to receive the irq.
+         * Then we got a hang!
+         */
+	boss_disable_irq(VRING_IRQ_C0_TO_C1_KICK);
+#endif
+
+	return 0;
 }
 
 static void ambarella_pm_hibernation_end(void)
@@ -456,6 +468,14 @@ static void ambarella_pm_hibernation_end(void)
 		printk("Skip hibernation_end to hibernation_recover\r\n");
 		return;
 	}
+
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+        /*
+         * Enable VRING_IRQ_C0_TO_C1_KICK here.
+         * Linux is ready to receive the irq.
+         */
+        boss_enable_irq(VRING_IRQ_C0_TO_C1_KICK);
+#endif
 
 	retval = ambarella_pm_post(NULL, 0, 0);
 #if defined(CONFIG_RPMSG_LINKCTRL)

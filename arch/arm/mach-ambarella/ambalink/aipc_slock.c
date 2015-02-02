@@ -163,8 +163,12 @@ void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags)
 {
 	unsigned int tmp;
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2)
+        *flags = arm_irq_save();
+#else
 	local_irq_save(*flags);
 	preempt_disable();
+#endif
 
 	//spin to get the lock
 	__asm__ __volatile__(
@@ -192,8 +196,12 @@ void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags)
 	    : "r" (lock), "r" (0)
 	    : "cc");
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2)
+        arm_irq_restore(flags);
+#else
 	preempt_enable();
 	local_irq_restore(flags);
+#endif
 }
 
 void aipc_spin_lock(int id)

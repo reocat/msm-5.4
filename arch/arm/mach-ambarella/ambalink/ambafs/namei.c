@@ -243,14 +243,18 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	ambafs_rpmsg_send(msg, len + 1 + 4, NULL, NULL);
 
 	for (i = 0; i < 65536; i++) {
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+                /* In SMP BOSS, the cache is synced by SCU. */
+                /* We can't invalidate the cache otherwise the data will be missing. */
 		ambcache_inv_range(stat, 32);
+#endif
 		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
 			stat->magic = 0x0;
 			ambcache_clean_range(stat, 32);
 			break;
 		}
 	}
-	
+
 	if (i == 65536)
 		stat->type = AMBAFS_STAT_NULL;
 exit:
@@ -267,7 +271,7 @@ static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 		//int buf[160];
 		//void *align_buf;
 		struct ambafs_qstat *astat;
-				
+
 		//align_buf = (((u32) buf) & (~0x1f)) + 0x20;
 		//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) buf)));
 		astat = ambafs_get_qstat(NULL, dentry->d_inode, buf, sizeof(buf));

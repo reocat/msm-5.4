@@ -211,7 +211,7 @@ void aipc_mutex_lock(int id)
 	local = &lock_set.local[id];
 
 	// check repeatedly until we become the owner
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
 	flags = arm_irq_save();
 #else
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
@@ -219,7 +219,7 @@ void aipc_mutex_lock(int id)
 	{
 		while (OWNER_IS_REMOTE(share)) {
 			share->wait_list |= AMBALINK_CORE_LOCAL;
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
 			arm_irq_restore(flags);
 #else
 			__aipc_spin_unlock_irqrestore(&share->slock, flags);
@@ -229,7 +229,7 @@ void aipc_mutex_lock(int id)
 			wait_for_completion(&local->completion);
 
 			// lock and check again
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
                        flags = arm_irq_save();
 #else
 			__aipc_spin_lock_irqsave(&share->slock, &flags);
@@ -240,7 +240,7 @@ void aipc_mutex_lock(int id)
 		share->wait_list &= ~AMBALINK_CORE_LOCAL;
 		local->count++;
 	}
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
        arm_irq_restore(flags);
 #else
 	__aipc_spin_unlock_irqrestore(&share->slock, flags);
@@ -279,7 +279,7 @@ void aipc_mutex_unlock(int id)
 	// unlock local mutex
 	mutex_unlock(&local->mutex);
 
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
        flags = arm_irq_save();
 #else
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
@@ -300,7 +300,7 @@ void aipc_mutex_unlock(int id)
 			//printk("wakeup tx\n");
 		}
 	}
-#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
        arm_irq_restore(flags);
 #else
 	__aipc_spin_unlock_irqrestore(&share->slock, flags);

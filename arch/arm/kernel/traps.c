@@ -833,7 +833,13 @@ void __init early_trap_init(void *vectors_base)
 	 * into the vector page, mapped at 0xffff0000, and ensure these
 	 * are visible to the instruction stream.
 	 */
+#ifdef CONFIG_PLAT_AMBARELLA_BOSS
+        /* Install Linux vector to offset 0x20. */
+        /* The jump address will be fixed in ambarella_ambalink_init_irq(). */
+        memcpy((void *)vectors + 0x20, __vectors_start, __vectors_end - __vectors_start);
+#else
 	memcpy((void *)vectors, __vectors_start, __vectors_end - __vectors_start);
+#endif
 	memcpy((void *)vectors + 0x200, __stubs_start, __stubs_end - __stubs_start);
 	memcpy((void *)vectors + 0x1000 - kuser_sz, __kuser_helper_start, kuser_sz);
 

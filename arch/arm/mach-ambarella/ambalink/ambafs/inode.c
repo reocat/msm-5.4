@@ -13,8 +13,11 @@
  */
 static void invalidate_page(struct page *page)
 {
-	void *addr = page_address(page);
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        void *addr = page_address(page);
 
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
 	__asm__ __volatile__ (
 		"add r1, %0, #4096\n\t"
 	"1:\n\t"
@@ -25,6 +28,7 @@ static void invalidate_page(struct page *page)
 		: "+r" (addr)
 		);
 	dsb();
+#endif
 }
 
 /*
@@ -100,7 +104,7 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	unsigned page_idx, io_pages;
 	u32 i;
-	
+
 	AMBAFS_DMSG("ambafs_readpages %d\n", nr_pages);
 	while (nr_pages) {
 		struct page *page;

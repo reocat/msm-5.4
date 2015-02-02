@@ -110,7 +110,11 @@ int rpmsg_sdinfo_get(void *data)
 		wait_for_completion(&sd1_comp);
 	}
 
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) sdinfo, sizeof(struct rpdev_sdinfo));
+#endif
 
 	return 0;
 }
@@ -139,7 +143,11 @@ int rpmsg_sdresp_get(void *data)
 		wait_for_completion(&sd1_comp);
 	}
 
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) sdresp, sizeof(struct rpdev_sdresp));
+#endif
 
 	return 0;
 }

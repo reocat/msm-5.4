@@ -100,8 +100,11 @@ static int rpmsg_linkctrl_gpio_linux_only_list(void *data)
 
 	virt = ambalink_phys_to_virt(ctrl_cmd->Param1);
 
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) virt, strlen((char*) virt));
-
+#endif
 	while((p = (u8 *) strsep((char **) &virt, ", "))) {
 		ret = kstrtouint(p, 0, &gpio);
 		if (ret < 0) {
@@ -134,7 +137,11 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 
 	wait_for_completion(&linkctrl_comp);
 
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) ambalink_phys_to_virt(phy_addr), 32);
+#endif
 
 	*base = rpdev_meminfo.base_addr;
 	*phys = rpdev_meminfo.phys_addr;
@@ -160,8 +167,11 @@ int rpmsg_linkctrl_cmd_hiber_prepare(u32 info)
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 
 	wait_for_completion(&linkctrl_comp);
-
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) ambalink_phys_to_virt(info), 32);
+#endif
 
 	hibernation_start = 1;
 
