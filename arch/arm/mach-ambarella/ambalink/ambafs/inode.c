@@ -4,6 +4,7 @@
 #include <linux/delay.h>
 #include <asm/page.h>
 #include <plat/ambalink_cfg.h>
+#include <plat/ambcache.h>
 #include "ambafs.h"
 
 #define MAX_NR_PAGES 32
@@ -18,16 +19,7 @@ static void invalidate_page(struct page *page)
 
         /* In SMP BOSS, the cache is synced by SCU. */
         /* We can't invalidate the cache otherwise the data will be missing. */
-	__asm__ __volatile__ (
-		"add r1, %0, #4096\n\t"
-	"1:\n\t"
-		"mcr p15, 0, %0, c7, c6, 1\n\t"
-		"add %0, %0, #32\n\t"
-		"cmp %0, r1\n\t"
-		"blo 1b\n\t"
-		: "+r" (addr)
-		);
-	dsb();
+        ambcache_inv_range(addr, PAGE_SIZE);
 #endif
 }
 
