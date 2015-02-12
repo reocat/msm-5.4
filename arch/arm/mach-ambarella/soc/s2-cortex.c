@@ -47,6 +47,8 @@
 #include <linux/delay.h>
 
 #ifdef CONFIG_ARM_GIC
+u32 gic_resume_mask[32];
+
 static void gic_irq_disable(struct irq_data *d)
 {
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
@@ -91,6 +93,8 @@ static void ginkgo_amp_unmask(struct irq_data *d)
 	u32 line = d->hwirq;
 	u32 base = (u32)__io(AMBARELLA_VA_GIC_DIST_BASE);
 	u32 mask;
+
+        gic_resume_mask[line >> 5] |= (1 << (line % 32));
 
 	// set distribution to core1
 	//printk("{{{{ gic unmask line %d }}}}\n", line);
@@ -153,6 +157,8 @@ static void __init ambarella_ambalink_init_irq(void)
 #endif
 
 #ifdef CONFIG_ARM_GIC
+        memset(gic_resume_mask, 0x0, sizeof(u32) * 32);
+
 	// In case of AMP, we disable general gic_dist_init in gic.c
 	// Instead, we distribute irq to core-1 on the fly when an irq
 	// is unmasked in ginkgo_amp_unmask.

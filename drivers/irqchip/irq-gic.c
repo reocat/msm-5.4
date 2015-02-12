@@ -953,6 +953,7 @@ gic_dist_pm_exit:
 	return retval;
 }
 
+extern u32 gic_resume_mask[32];
 void gic_resume(void)
 {
 	u32					gic_irqs;
@@ -991,8 +992,13 @@ void gic_resume(void)
 #endif
 
 	for (i = 0; i < gic_irqs; i += 32) {
-		 writel_relaxed(0xFFFFFFFF, dist_base + GIC_DIST_ENABLE_CLEAR + i * 4 / 32);
-		 writel_relaxed(gic_pm_info.gic_dist.gic_dist_enable_set[i / 32], dist_base + GIC_DIST_ENABLE_SET + i * 4 / 32);
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
+                writel_relaxed(0xFFFFFFFF, dist_base + GIC_DIST_ENABLE_CLEAR + i * 4 / 32);
+                writel_relaxed(gic_pm_info.gic_dist.gic_dist_enable_set[i / 32], dist_base + GIC_DIST_ENABLE_SET + i * 4 / 32);
+#else
+                writel_relaxed((gic_pm_info.gic_dist.gic_dist_enable_set[i / 32] & gic_resume_mask[i / 32]),
+                                dist_base + GIC_DIST_ENABLE_SET + i * 4 / 32);
+#endif
 	}
 
 	writel_relaxed(gic_pm_info.gic_cpu_primask, cpu_base + GIC_CPU_PRIMASK);
