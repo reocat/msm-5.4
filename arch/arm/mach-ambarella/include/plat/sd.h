@@ -33,6 +33,17 @@
 #define SD_INSTANCES			1
 #endif
 
+/**
+ * The slot IDs
+ */
+typedef enum _ambarella_slot_id {
+        SD_HOST_0 = 0,
+        SD_HOST_1,
+        SD_HOST_2,
+
+        SD_MAX_CARD      /* Total number of slot IDs */
+} ambarella_slot_id;
+
 /* ==========================================================================*/
 #define SD_OFFSET			0x2000
 #define SD2_OFFSET			0xC000

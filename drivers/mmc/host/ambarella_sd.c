@@ -674,7 +674,9 @@ static void ambarella_sd_set_iclk(struct mmc_host *mmc, u16 clk_div)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 #if defined(CONFIG_RPMSG_SD)
-	if (clk_div == 0) {
+        struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(mmc);
+
+        if (clk_div == 0 && sdinfo->is_init && sdinfo->from_rpmsg) {
 		clk_div = amba_readw(pinfo->regbase + SD_CLK_OFFSET);
 	} else {
 		clk_div <<= 8;
@@ -1287,7 +1289,8 @@ static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 
 #if defined(CONFIG_RPMSG_SD)
-	if ((amba_readw(pinfo->regbase + SD_CLK_OFFSET) & SD_CLK_EN) == 0) {
+	if (((amba_readw(pinfo->regbase + SD_CLK_OFFSET) & SD_CLK_EN) == 0) &&
+            sdinfo->is_init && sdinfo->from_rpmsg) {
 		/* RTOS will on/off clock every sd request,
 		 * if clock is disable, that means RTOS has ever access sd
 		 * controller and we need to set to correct clock again. */
@@ -1318,10 +1321,13 @@ static u32 ambarella_sd_check_cd(struct mmc_host *mmc)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
-	int cdpin;
+	int cdpin, id = 0;
 
-	if (1 == G_mmc_fixed_cd[pslotinfo->slot_id] || 0 == G_mmc_fixed_cd[pslotinfo->slot_id])
-		cdpin = (u32)G_mmc_fixed_cd[pslotinfo->slot_id];
+	id = ((u32) pinfo->regbase == SD_BASE) ? SD_HOST_0 :
+             ((u32) pinfo->regbase == SD2_BASE) ? SD_HOST_1 : SD_HOST_2;
+
+	if (1 == G_mmc_fixed_cd[id] || 0 == G_mmc_fixed_cd[id])
+		cdpin = (u32)G_mmc_fixed_cd[id];
 	else {
 		cdpin = mmc_gpio_get_cd(mmc);
 		if (cdpin < 0) {
@@ -2066,8 +2072,11 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	pslotinfo->system_event.notifier_call = ambarella_sd_system_event;
 	ambarella_register_event_notifier(&pslotinfo->system_event);
 
-	G_mmc[pslotinfo->slot_id] = mmc;
-	G_mmc_fixed_cd[pslotinfo->slot_id] = -1;
+	retval = ((u32) pinfo->regbase == SD_BASE) ? SD_HOST_0 :
+		 ((u32) pinfo->regbase == SD2_BASE) ? SD_HOST_1 : SD_HOST_2;
+
+	G_mmc[retval] = mmc;
+	G_mmc_fixed_cd[retval] = -1;
 
 	return 0;
 

@@ -15,6 +15,7 @@
 #include <linux/aipc/rpmsg_sd.h>
 #include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
+#include <plat/sd.h>
 
 #ifndef UINT32
 typedef u32 UINT32;

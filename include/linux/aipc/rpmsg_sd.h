@@ -30,17 +30,6 @@ typedef enum _AMBA_RPDEV_SD_CMD_e_ {
 	SD_RPMSG_ACK
 } AMBA_RPDEV_SD_CMD_e;
 
-/**
- * The slot IDs
- */
-typedef enum _ambarella_slot_id {
-	SD_HOST_0 = 0,
-	SD_HOST_1,
-	SD_HOST_2,
-
-	SD_MAX_CARD      /* Total number of slot IDs */
-} ambarella_slot_id;
-
 struct rpdev_sdinfo {
 
 	u32 slot_id;	/**< from LK */
