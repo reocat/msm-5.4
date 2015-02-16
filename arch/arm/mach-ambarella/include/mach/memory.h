@@ -130,7 +130,11 @@
 #endif
 
 #else /* CONFIG_VMSPLIT_1G */
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) || defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+#define NOLINUX_MEM_V_START		(0xa0000000)
+#else
 #define NOLINUX_MEM_V_START             (0x80000000)
+#endif
 #define AHB_BASE			(0xe0000000)
 #define APB_BASE			(0xe8000000)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
