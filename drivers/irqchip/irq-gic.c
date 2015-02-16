@@ -958,10 +958,12 @@ void gic_resume(void)
 {
 	u32					gic_irqs;
 	int					i;
-
 	struct gic_chip_data *gic = &gic_data[0];
 	void __iomem *cpu_base = gic_data_cpu_base(gic);
 	void __iomem *dist_base = gic_data_dist_base(gic);
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+        u32 regval, mask, resume_val;
+#endif
 
 //	cpu_base = gic_data[0].cpu_base;
 //	dist_base = gic_data[0].dist_base;
@@ -974,8 +976,23 @@ void gic_resume(void)
 		gic_irqs = 1020;
 
 	writel_relaxed(0, dist_base + GIC_DIST_CTRL);
-	for (i = 0; i < gic_irqs; i += 16)
-		writel_relaxed(gic_pm_info.gic_dist.gic_dist_config[i / 16], dist_base + GIC_DIST_CONFIG + i * 4 / 16);
+	for (i = 0; i < gic_irqs; i += 16) {
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
+                writel_relaxed(gic_pm_info.gic_dist.gic_dist_config[i / 16], dist_base + GIC_DIST_CONFIG + i * 4 / 16);
+#else
+                mask = 0;
+                for (regval = (i % 32); regval < ((i % 32) + 16); regval++) {
+                        resume_val = (((gic_resume_mask[i / 32] >> regval) & 0x1) ? 0x3 : 0x0);
+                        mask |= resume_val << ((regval % 16) << 1);
+                }
+
+                regval = (readl_relaxed(dist_base + GIC_DIST_CONFIG + i * 4 / 16) & ~mask);
+                resume_val = gic_pm_info.gic_dist.gic_dist_config[i / 16] & mask;
+
+                writel_relaxed(regval | resume_val, dist_base + GIC_DIST_CONFIG + i * 4 / 16);
+#endif
+	}
+
 	for (i = 0; i < gic_irqs; i += 4) {
 		writel_relaxed(gic_pm_info.gic_dist.gic_dist_pri[i / 4], dist_base + GIC_DIST_PRI + i * 4 / 4);
 #ifndef CONFIG_PLAT_AMBARELLA_AMBALINK

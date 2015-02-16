@@ -43,7 +43,7 @@ static void __init ambarella_ambalink_init_irq(void)
          * jump to Linux vectors.
          */
         unsigned long vectors = CONFIG_VECTORS_BASE;
-        unsigned int backed, linst;
+        unsigned int linst;
         unsigned int off;
         register unsigned int x;
 
