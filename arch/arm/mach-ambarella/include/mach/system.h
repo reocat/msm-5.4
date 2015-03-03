@@ -40,7 +40,7 @@
 static inline void arch_idle(void)
 {
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	if (boss && (BOSS_STATE_TURBO != boss->state) ) {
+	if (boss && (BOSS_STATE_TURBO != boss->state) && !boss->force_schedule) {
 		if (boss->state == BOSS_STATE_READY)
 			local_irq_enable();
 #ifdef CONFIG_PLAT_AMBARELLA_S2L

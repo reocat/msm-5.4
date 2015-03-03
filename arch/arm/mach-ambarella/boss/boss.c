@@ -388,3 +388,17 @@ int boss_get_device_owner(int device)
 	return ((boss->device_owner_mask >> device) & 1);
 }
 EXPORT_SYMBOL(boss_get_device_owner);
+
+int boss_force_schedule_enable(int enable)
+{
+        if (boss == NULL) {
+                /* Should not be here!! */
+                printk(KERN_ERR "%s: boss is NULL.", __func__);
+                return 0;
+        }
+
+        boss->force_schedule = enable;
+
+	return 0;
+}
+EXPORT_SYMBOL(boss_force_schedule_enable);

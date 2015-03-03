@@ -278,6 +278,9 @@ struct boss_s
 	/* device ownership */
 	unsigned int device_owner_mask;
 
+	/* Give all RTOS free time to Linux. */
+	unsigned int force_schedule;
+
 	/*
 	 * The following fields are used by the IPC drivers.
 	 * The IPC binder on the root OS sets up the pointers and the sizes of
