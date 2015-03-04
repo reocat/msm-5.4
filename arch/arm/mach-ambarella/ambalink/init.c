@@ -473,7 +473,9 @@ static int __init early_boss(char *p)
        return 0;
 }
 early_param("boss", early_boss);
+#endif
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) || defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 char wifi_mac[20];
 EXPORT_SYMBOL(wifi_mac);
 static int __init early_wifi_mac(char *p)
