@@ -92,6 +92,7 @@
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
 			amb,bulk-num = <60>;
+			/* amb,duty-cycle = <0>; */
 			status = "disabled";
 	        };
 
