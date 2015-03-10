@@ -190,7 +190,13 @@ static int ambarella_phy_proc_write(struct file *file,
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
                 /* A12 Dragonfly does not have GPIO for port switching. */
                 /* Please use jumper to switch the port manually. */
-                amb_phy->phy_route = PHY_TO_HOST_PORT;
+                if (gpio_is_valid(amb_phy->gpio_md)) {
+			amb_phy->phy_route = PHY_TO_HOST_PORT;
+			gpio_direction_output(amb_phy->gpio_md,
+						amb_phy->md_host_active);
+                } else {
+                        amb_phy->phy_route = PHY_TO_HOST_PORT;
+                }
 #else
 		if (gpio_is_valid(amb_phy->gpio_md)) {
 			amb_phy->phy_route = PHY_TO_HOST_PORT;
@@ -204,7 +210,13 @@ static int ambarella_phy_proc_write(struct file *file,
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
                 /* A12 Dragonfly does not have GPIO for port switching. */
                 /* Please use jumper to switch the port manually. */
-                amb_phy->phy_route = PHY_TO_DEVICE_PORT;
+                if (gpio_is_valid(amb_phy->gpio_md)) {
+                        amb_phy->phy_route = PHY_TO_DEVICE_PORT;
+                        gpio_direction_output(amb_phy->gpio_md,
+                                                !amb_phy->md_host_active);
+                } else {
+                        amb_phy->phy_route = PHY_TO_DEVICE_PORT;
+                }
 #else
 		if (gpio_is_valid(amb_phy->gpio_md)) {
 			amb_phy->phy_route = PHY_TO_DEVICE_PORT;

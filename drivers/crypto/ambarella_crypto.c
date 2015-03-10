@@ -1162,6 +1162,10 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 			return aes_irq;
 		}
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+                boss_set_irq_owner(aes_irq, BOSS_IRQ_OWNER_LINUX, 1);
+                boss_set_irq_owner(des_irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 		errCode = devm_request_irq(&pdev->dev, aes_irq,
 					ambarella_aes_irq, IRQF_TRIGGER_RISING,
 					dev_name(&pdev->dev), pinfo);
@@ -1193,6 +1197,10 @@ static int ambarella_crypto_probe(struct platform_device *pdev)
 				return sha1_irq;
 			}
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+                        boss_set_irq_owner(md5_irq, BOSS_IRQ_OWNER_LINUX, 1);
+                        boss_set_irq_owner(sha1_irq, BOSS_IRQ_OWNER_LINUX, 1);
+#endif
 			/* md5 and sha1 opentions can't be interleaved, so we
 			 * use the same return irq func */
 			errCode = devm_request_irq(&pdev->dev, md5_irq,
