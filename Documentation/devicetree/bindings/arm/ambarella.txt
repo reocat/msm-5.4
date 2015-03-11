@@ -882,6 +882,10 @@ Required properties:
   b) 0x08: I2C controller dedicated to HDMI
 - amb,bulk-num: the maximal number of data which can be transfered in a
   single msg, recommended value is 60.
+- amb,duty-cycle: the duty cycle of clock, and the value can be:
+    0 = duty cycle 1:1, this is the default setting.
+    1 = duty cycle 2:3.
+    2 = duty cycle 1:2.
 
 ii) Subnode
 -----------
@@ -907,6 +911,7 @@ iii) Example
 		clock-frequency = <100000>;
 		amb,i2c-class = <0x81>;
 		amb,bulk-num = <60>;
+		amb,duty-cycle = <0>;
 		status = "ok";
 
 		ak4642: codec@12 {

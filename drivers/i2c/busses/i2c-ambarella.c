@@ -80,6 +80,7 @@ struct ambarella_i2c_dev_info {
 
 	u32					clk_limit;
 	u32					bulk_num;
+	u32					duty_cycle;
 
 	struct i2c_msg				*msgs;
 	__u16					msg_num;
@@ -144,10 +145,11 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 
-	idc_prescale = (apb_clk / pinfo->clk_limit) >> 2;
+	idc_prescale =( ((apb_clk / pinfo->clk_limit) - 2)/(4 + pinfo->duty_cycle)) - 1;
 
 	dev_dbg(pinfo->dev, "apb_clk[%dHz]\n", apb_clk);
 	dev_dbg(pinfo->dev, "idc_prescale[%d]\n", idc_prescale);
+	dev_dbg(pinfo->dev, "duty_cycle[%d]\n", pinfo->duty_cycle);
 	dev_dbg(pinfo->dev, "clk[%dHz]\n",
 		(apb_clk / ((idc_prescale + 1) << 2)));
 
@@ -155,6 +157,8 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 		(idc_prescale & 0xff));
 	amba_writeb(pinfo->regbase + IDC_PSLH_OFFSET,
 		((idc_prescale & 0xff00) >> 8));
+
+	amba_writeb(pinfo->regbase + IDC_DUTYCYCLE_OFFSET, pinfo->duty_cycle);
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_ENABLE);
 }
@@ -585,6 +589,15 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Get bulk-num failed!\n");
 		return -ENODEV;
 	}
+
+	errorCode = of_property_read_u32(np, "amb,duty-cycle", &pinfo->duty_cycle);
+	if (errorCode < 0) {
+		dev_dbg(&pdev->dev, "Missing duty-cycle, assuming 1:1!\n");
+		pinfo->duty_cycle = 0;
+	}
+
+	if (pinfo->duty_cycle > 2)
+		pinfo->duty_cycle = 2;
 
 	init_waitqueue_head(&pinfo->msg_wait);
 	sema_init(&pinfo->system_event_sem, 1);
