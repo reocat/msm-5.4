@@ -50,8 +50,11 @@ static inline void arch_idle(void)
 		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_SET_OFFSET),
 			    1 << (BOSS_VIRT_RIRQ_INT_VEC - AXI_SOFT_IRQ(0)));
 #endif  /* CONFIG_PLAT_AMBARELLA_S2L */
-	} else
+	} else {
+	        if (boss->force_schedule)
+                        local_irq_enable();
 		cpu_do_idle();
+        }
 #else   /* !CONFIG_PLAT_AMBARELLA_BOSS */
 	cpu_do_idle();
 #endif  /* CONFIG_PLAT_AMBARELLA_BOSS */
