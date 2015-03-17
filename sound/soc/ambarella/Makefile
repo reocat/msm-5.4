@@ -13,6 +13,7 @@ snd-soc-s2lmkiwi-objs := s2lmkiwi.o
 snd-soc-ambcloudcam-objs := ambcloudcam.o
 snd-soc-s2lrdb-objs := s2lrdb.o
 snd-soc-ak7719-objs := amb_ak7719.o
+snd-soc-s2lmelektra-objs := s2lmelektra.o
 
 obj-$(CONFIG_AK7719_DSP)		+= snd-soc-ak7719.o
 obj-$(CONFIG_AMBEVK_BOARD)		+= snd-soc-ambevk.o
@@ -21,3 +22,4 @@ obj-$(CONFIG_AMBARELLA_DUMMY_BOARD)	+= snd-soc-dummy.o
 obj-$(CONFIG_S2LMKIWI_BOARD)		+= snd-soc-s2lmkiwi.o
 obj-$(CONFIG_STRAWBERRY_BOARD)		+= snd-soc-ambcloudcam.o
 obj-$(CONFIG_S2LRDB_BOARD)		+= snd-soc-s2lrdb.o
+obj-$(CONFIG_S2LMELEKTRA_BOARD)		+= snd-soc-s2lmelektra.o

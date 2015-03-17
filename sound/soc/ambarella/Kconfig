@@ -74,6 +74,15 @@ config STRAWBERRY_BOARD
 	  Say Y if you want to add wm8940 audio codec support for
 	  SoC audio on Ambarella STRAWBERRY Board.
 
+config S2LMELEKTRA_BOARD
+	tristate "S2LMELEKTRA Board [With WM8974 Codec] "
+	depends on SND_AMBARELLA_SOC
+	select SND_AMBARELLA_SOC_I2S
+	select SND_SOC_WM8974_AMB
+	help
+	  Say Y if you want to add wm8974 audio codec support for
+	  SoC audio on Ambarella ELEKTRA Board.
+
 config AMBARELLA_DUMMY_BOARD
 	tristate "Ambarella Dummy Board [With Dummy Codec]"
 	select SND_AMBARELLA_SOC_I2S
