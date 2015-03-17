@@ -23,6 +23,8 @@
 #include <plat/clk.h>
 #include <plat/event.h>
 
+#include <mach/boss.h>
+
 #ifndef UINT32
 typedef u32 UINT32;
 #endif
@@ -247,7 +249,25 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 	clockevents_suspend();
 #endif
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        /*
+         * We need to disable BOSS in Linux (gidle = 1 and state = suspended).
+         * This is used to prevent Linux is scheduled
+         * while timer is suspended during clock is changing.
+         * We need to make it atomic because rpmsg will kick RTOS and
+         * trigger a context switch to RTOS.
+         */
+        flags = arm_irq_save();
+#endif
+
 	rpmsg_clk_ack_threadx(data);
+
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+        boss->state = BOSS_STATE_SUSPENDED;
+        *boss->gidle = 1;
+
+	arm_irq_restore(flags);
+#endif
 
 	return 0;
 }
@@ -259,6 +279,12 @@ static int rpmsg_clk_changed_post_notify(void *data)
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
 	extern void syscore_resume(void);
+
+        /*
+         * We will Re-enable BOSS at RTOS (gidle = 0 and state = ready).
+         * This is used to prevent Linux is scheduled
+         * while timer is suspended during clock is changing.
+         */
 
 	flags = arm_irq_save();
 
