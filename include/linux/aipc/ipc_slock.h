@@ -22,6 +22,7 @@
 typedef enum _AMBA_IPC_SPINLOCK_IDX_e_ {
     AMBA_IPC_SPINLOCK_GPIO,
     AMBA_IPC_SPINLOCK_BOSS,
+    AMBA_IPC_SPINLOCK_L2C,
 
     AMBA_IPC_NUM_SPINLOCK      /* Total number of global spin lock */
 } AMBA_IPC_SPINLOCK_IDX_e;
