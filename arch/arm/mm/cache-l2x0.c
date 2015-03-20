@@ -22,6 +22,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/aipc/ipc_slock.h>
 
 #include <asm/cacheflush.h>
 #include <asm/hardware/cache-l2x0.h>
@@ -30,7 +31,9 @@
 #define CACHE_LINE_SIZE		32
 
 static void __iomem *l2x0_base;
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 static DEFINE_RAW_SPINLOCK(l2x0_lock);
+#endif
 static u32 l2x0_way_mask;	/* Bitmask of active ways */
 static u32 l2x0_size;
 static unsigned long sync_reg_offset = L2X0_CACHE_SYNC;
