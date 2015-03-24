@@ -41,6 +41,11 @@
 #define SPI_AHB_INSTANCES			0
 #define SPI_SLAVE_INSTANCES			1
 #define SPI_AHB_SLAVE_INSTANCES			0
+#elif (CHIP_REV == S2E)
+#define SPI_INSTANCES				2
+#define SPI_AHB_INSTANCES			0
+#define SPI_SLAVE_INSTANCES			1
+#define SPI_AHB_SLAVE_INSTANCES			0
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SPI_INSTANCES				0
 #define SPI_AHB_INSTANCES			2
@@ -164,9 +169,7 @@
 #define SPI_RXUICR_OFFSET		0x40
 #define SPI_MSTICR_OFFSET		0x44
 #define SPI_ICR_OFFSET			0x48
-#if (SPI_AHB_INSTANCES == 1)
 #define SPI_DMAC_OFFSET			0x4c
-#endif
 #define SPI_IDR_OFFSET			0x58
 #define SPI_VERSION_ID_OFFSET		0x5c
 #define SPI_DR_OFFSET			0x60

@@ -52,28 +52,19 @@
 #define FIO_RESET_FLASH_RST		0x00000001
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define USBP1_CTRL_OFFSET		0x45c
-#define USB0_IS_HOST_MASK		0x00000002
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define USBC_CTRL_OFFSET		0xFFF /* non-existed */
 #define USBP1_CTRL_OFFSET		0x88
 #define USB0_IS_HOST_MASK		0x00000020
-#endif
-
-#define USBP1_CTRL_REG			RCT_REG(USBP1_CTRL_OFFSET)
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2)
 #define UDC_SOFT_RESET			0x20000000
-#elif (CHIP_REV == A7L) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#else
+#define USBC_CTRL_OFFSET		0x2CC
+#define USBP1_CTRL_OFFSET		0x45c
+#define USB0_IS_HOST_MASK		0x00000002
 #define UDC_SOFT_RESET			0x2
 #endif
-
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define USBC_CTRL_OFFSET		0x2CC
-#else
-#define USBC_CTRL_OFFSET		0x2C8
-#endif
 #define USBC_CTRL_REG			RCT_REG(USBC_CTRL_OFFSET)
+#define USBP1_CTRL_REG			RCT_REG(USBP1_CTRL_OFFSET)
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define USBP0_SEL_OFFSET		0x2c0
@@ -103,12 +94,11 @@
 #define SYS_CONFIG_OFFSET		0x34
 #define SYS_CONFIG_REG			RCT_REG(SYS_CONFIG_OFFSET)
 
-#if (CHIP_REV == S2)
 #define WDT_RST_L_OFFSET		0x78
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define UNLOCK_WDT_RST_L_OFFSET		0x50
 #define UNLOCK_WDT_RST_L_VAL		0x80
 #else
-#define WDT_RST_L_OFFSET		0x78
 #define UNLOCK_WDT_RST_L_OFFSET		0x260
 #define UNLOCK_WDT_RST_L_VAL		0x01
 #endif
@@ -183,7 +173,7 @@
 #define PLL_SENSOR_FRAC_OFFSET		0x28
 #define PLL_SENSOR_CTRL2_OFFSET		0x11C
 #define PLL_SENSOR_CTRL3_OFFSET		0x120
-#define SCALER_SENSOR_PRE_OFFSET 0x4c
+#define SCALER_SENSOR_PRE_OFFSET	0x4C
 #define SCALER_SENSOR_POST_OFFSET	0x30
 #define CLK_SI_INPUT_MODE_OFFSET	0xBC
 
@@ -259,7 +249,7 @@
 #define PLL_CORTEX_CTRL2_REG		RCT_REG(PLL_CORTEX_CTRL2_OFFSET)
 #define PLL_CORTEX_CTRL3_REG		RCT_REG(PLL_CORTEX_CTRL3_OFFSET)
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SCALER_GTX_POST_OFFSET		0x2C8
 #define ENET_GTXCLK_SRC_OFFSET		0x2CC
 #endif
@@ -274,14 +264,12 @@
 #define SCALER_SDIO_OFFSET		0x334
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SCALER_SDIO_OFFSET		0x430
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SCALER_SDIO_OFFSET		0x10
 #endif
 #define SCALER_SDIO_REG			RCT_REG(SCALER_SDIO_OFFSET)
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SCALER_SDXC_OFFSET		0x434
-#endif
 #define SCALER_SDXC_REG			RCT_REG(SCALER_SDXC_OFFSET)
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3)
@@ -289,16 +277,26 @@
 #define PLL_SD_FRAC_OFFSET		0x4B0
 #define PLL_SD_CTRL2_OFFSET		0x4B4
 #define PLL_SD_CTRL3_OFFSET		0x4B8
+#elif (CHIP_REV == S2E)
+#define PLL_SD_CTRL_OFFSET		0x354
+#define PLL_SD_FRAC_OFFSET		0x360
+#define PLL_SD_CTRL2_OFFSET		0x358
+#define PLL_SD_CTRL3_OFFSET		0x35C
+#endif
 #define PLL_SD_CTRL_REG			RCT_REG(PLL_SD_CTRL_OFFSET)
 #define PLL_SD_FRAC_REG			RCT_REG(PLL_SD_FRAC_OFFSET)
 #define PLL_SD_CTRL2_REG		RCT_REG(PLL_SD_CTRL2_OFFSET)
 #define PLL_SD_CTRL3_REG		RCT_REG(PLL_SD_CTRL3_OFFSET)
-#endif
 
 #define MS_DELAY_CTRL_OFFSET		0x1D0
 #define MS_DELAY_CTRL_REG		RCT_REG(MS_DELAY_CTRL_OFFSET)
 
 /* ==========================================================================*/
+#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define ADC_SOFT_RESET			0x0
+#else
+#define ADC_SOFT_RESET			0x10000
+#endif
 #define SCALER_ADC_OFFSET		0x09C
 #define SCALER_ADC_REG			RCT_REG(SCALER_ADC_OFFSET)
 
@@ -409,7 +407,7 @@
 /* ==========================================================================*/
 
 /* Secure and Scratchpad */
-#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define AHB_SCRATCHPAD_OFFSET		0x1B000
 #define AHB_SECURE_OFFSET		0x1D000
 #else

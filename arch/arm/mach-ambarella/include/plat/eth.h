@@ -31,6 +31,17 @@
 #define ETH_INSTANCES	1
 #endif
 
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
+#define SUPPORT_GMII	1
+#else
+#define SUPPORT_GMII	0
+#endif
+
+#if (CHIP_REV == S3)
+#define ETH_ENHANCED 1
+#else
+#define ETH_ENHANCED 0
+#endif
 /* ==========================================================================*/
 #define ETH_OFFSET			0xE000
 #define ETH_DMA_OFFSET			0xF000
@@ -51,11 +62,11 @@
 #define ETH_MAC_CFG_OFFSET		0x0000
 #define ETH_MAC_FRAME_FILTER_OFFSET	0x0004
 #define ETH_MAC_HASH_HI_OFFSET		0x0008
-#define ETH_MAC_HASH_LO_OFFSET		0x000C
+#define ETH_MAC_HASH_LO_OFFSET		0x000c
 #define ETH_MAC_GMII_ADDR_OFFSET	0x0010
 #define ETH_MAC_GMII_DATA_OFFSET	0x0014
 #define ETH_MAC_FLOW_CTR_OFFSET		0x0018
-#define ETH_MAC_VLAN_TAG_OFFSET		0x001C
+#define ETH_MAC_VLAN_TAG_OFFSET		0x001c
 #define ETH_MAC_VERSION_OFFSET		0x0020
 #define ETH_MAC_DEBUG_OFFSET		0x0024
 #define ETH_MAC_WKUPFMFILTER_OFFSET	0x0028
@@ -67,7 +78,7 @@
 #define ETH_MAC_MAC0_HI_OFFSET		0x0040
 #define ETH_MAC_MAC0_LO_OFFSET		0x0044
 #define ETH_MAC_MAC1_HI_OFFSET		0x0048
-#define ETH_MAC_MAC1_LO_OFFSET		0x004C
+#define ETH_MAC_MAC1_LO_OFFSET		0x004c
 #define ETH_MAC_MAC2_HI_OFFSET		0x0050
 #define ETH_MAC_MAC2_LO_OFFSET		0x0054
 #define ETH_MAC_AN_STATUS_OFFSET	0x00C4
@@ -173,7 +184,7 @@
 #define ETH_DMA_BUS_MODE_PBL_2		0x00000200
 #define ETH_DMA_BUS_MODE_PBL_1		0x00000100
 #define ETH_DMA_BUS_MODE_ATDS		0x00000080
-#define ETH_DMA_BUS_MODE_DSL(len)	((len & 0x1F) << 2)
+#define ETH_DMA_BUS_MODE_DSL(len)	((len & 0x1f) << 2)
 #define ETH_DMA_BUS_MODE_DA_RX		0x00000002
 #define ETH_DMA_BUS_MODE_DA_TX		0x00000000
 #define ETH_DMA_BUS_MODE_SWR		0x00000001
@@ -275,10 +286,10 @@
 #define ETH_DMA_MISS_FRAME_BOCNT_FRAME		0x00001000
 #define ETH_DMA_MISS_FRAME_BOCNT_HOST(v)	((v) & 0x0000ffff)
 
-/* ==========================================================================*/
+/* Receive Descriptor 0 (RDES0) */
 #define ETH_RDES0_OWN			0x80000000
 #define ETH_RDES0_AFM			0x40000000
-#define ETH_RDES0_FL(v)			(((v) & 0x3FFF0000) >> 16)
+#define ETH_RDES0_FL(v)			(((v) & 0x3fff0000) >> 16)
 #define ETH_RDES0_ES			0x00008000
 #define ETH_RDES0_DE			0x00004000
 #define ETH_RDES0_SAF			0x00002000
@@ -306,14 +317,16 @@
 #define ETH_RDES0_COE_HDRCHKERROR	0x000000a0	/* Bit(5:7:0)=>6 Ip header checksum error detected for Ipv4 frames			*/
 #define ETH_RDES0_COE_HDRPLCHKERROR	0x000000a1	/* Bit(5:7:0)=>7 Payload & Ip header checksum error detected for Ipv4/Ipv6 frames	*/
 
+/* Receive Descriptor 1 (RDES1) */
 #define ETH_RDES1_DIC			0x80000000
 #define ETH_RDES1_RER			0x02000000
 #define ETH_RDES1_RCH			0x01000000
-#define ETH_RDES1_RBS2(v)		(((v) & 0x003FF800) >> 11)
-#define ETH_RDES1_RBS1(v)		((v) & 0x000007FF)
-#define ETH_RDES1_RBS2x(x)		(((x) << 11) & 0x003FF800)
-#define ETH_RDES1_RBS1x(x)		((x) & 0x000007FF)
+#define ETH_RDES1_RBS2(v)		(((v) & 0x003ff800) >> 11)	/* Receive Buffer 2 Size */
+#define ETH_RDES1_RBS1(v)		((v) & 0x000007ff)		/* Receive Buffer 1 Size */
+#define ETH_RDES1_RBS2x(x)		(((x) << 11) & 0x003ff800)	/* Receive Buffer 2 Size */
+#define ETH_RDES1_RBS1x(x)		((x) & 0x000007ff)		/* Receive Buffer 1 Size */
 
+/* Transmit Descriptor 0 (TDES0) */
 #define ETH_TDES0_OWN			0x80000000
 #define ETH_TDES0_TTSS			0x00020000
 #define ETH_TDES0_IHE			0x00010000
@@ -336,6 +349,7 @@
 					ETH_TDES0_FF | ETH_TDES0_JT | \
 					ETH_TDES0_ES)
 
+/* Transmit Descriptor 1 (TDES1) */
 #define ETH_TDES1_IC			0x80000000
 #define ETH_TDES1_LS			0x40000000
 #define ETH_TDES1_FS			0x20000000
@@ -345,10 +359,10 @@
 #define ETH_TDES1_TER			0x02000000
 #define ETH_TDES1_TCH			0x01000000
 #define ETH_TDES1_DP			0x00800000
-#define ETH_TDES1_TBS2(v)		(((v) & 0x003FF800) >> 11)
-#define ETH_TDES1_TBS1(v)		((v) & 0x000007FF)
-#define ETH_TDES1_TBS2x(x)		(((x) << 11) & 0x003FF800)
-#define ETH_TDES1_TBS1x(x)		((x) & 0x000007FF)
+#define ETH_TDES1_TBS2(v)		(((v) & 0x003ff800) >> 11)
+#define ETH_TDES1_TBS1(v)		((v) & 0x000007ff)
+#define ETH_TDES1_TBS2x(x)		(((x) << 11) & 0x003ff800)
+#define ETH_TDES1_TBS1x(x)		((x) & 0x000007ff)
 
 /* ==========================================================================*/
 #define ETH_ENHANCED_RDES0_OWN		0x80000000
@@ -431,7 +445,7 @@
 
 #if (CHIP_REV == A8)
 #define SYS_CONFIG_ETH_ENABLE		0xffffffff
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SYS_CONFIG_ETH_ENABLE		0x00800000
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SYS_CONFIG_ETH_ENABLE		0x00000001
