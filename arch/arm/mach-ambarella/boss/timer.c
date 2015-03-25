@@ -117,9 +117,12 @@ static void ambarella_timer_resume(u32 is_ce)
 		clocksource_change_rating(clksrc, 0);
 		__clocksource_updatefreq_hz(clksrc, AMBARELLA_TIMER_FREQ);
 		clocksource_change_rating(clksrc, AMBARELLA_TIMER_RATING);
-
-		setup_sched_clock(ambarella_read_sched_clock,
-		                  32, AMBARELLA_TIMER_FREQ);
+#ifndef CONFIG_PLAT_AMBARELLA_BOSS
+                /* In BOSS, we will cal syscore_resume to resume cs. */
+                /* Do NOT re-init sched-clock! */
+                setup_sched_clock(ambarella_read_sched_clock,
+                                  32, AMBARELLA_TIMER_FREQ);
+#endif
 	}
 
 resume_exit:
