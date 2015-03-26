@@ -1134,8 +1134,9 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	 * status here, orelse dummy FIOS DMA interrupts may occurred
 	 * without its driver installed. */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-		/* I2S_RX_DMA_CHAN may be used for fastboot in Amboot */
-		if (i == I2S_RX_DMA_CHAN
+		/* I2S_RX_DMA_CHAN and I2S_TX_DMA_CHAN may be used
+		 * for fastboot in Amboot */
+		if ((i == I2S_RX_DMA_CHAN || i == I2S_TX_DMA_CHAN)
 			&& ambdma_chan_is_enabled(&amb_dma->amb_chan[i])) {
 			amb_dma->amb_chan[i].status = AMBDMA_STATUS_BUSY;
 			amb_dma->amb_chan[i].force_stop = 1;
