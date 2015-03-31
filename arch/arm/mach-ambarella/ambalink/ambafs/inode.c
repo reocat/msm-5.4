@@ -24,19 +24,40 @@ static void invalidate_page(struct page *page)
 }
 
 /*
+ * clean the cache for a page
+ */
+static void clean_page(struct page *page)
+{
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+        void *addr = page_address(page);
+
+        /* In SMP BOSS, the cache is synced by SCU. */
+        /* We can't invalidate the cache otherwise the data will be missing. */
+        ambcache_clean_range(addr, PAGE_SIZE);
+#endif
+}
+
+/*
  * RPMSG callback when read data is ready
  */
 static void readpage_cb(void *priv, struct ambafs_msg *msg, int len)
 {
 	struct ambafs_io *io = (struct ambafs_io*) msg->parameter;
 	int page_idx, nr_pages = io->total;
+	int read_ok = (msg->flag == 0xFF) ? 0 : 1;
 
-	AMBAFS_DMSG("readpage_cb with count %d\n", nr_pages);
+	if (!read_ok)
+		AMBAFS_EMSG("readpage failed\n");
+
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page;
 		page = ambalink_phys_to_page((phys_addr_t)io->bh[page_idx].addr);
-		invalidate_page(page);
-		SetPageUptodate(page);
+		if (read_ok) {
+			invalidate_page(page);
+			SetPageUptodate(page);
+		} else {
+			SetPageError(page);
+		}
 		unlock_page(page);
 	}
 }
@@ -61,6 +82,7 @@ static int insert_page_info(struct ambafs_msg *msg, struct page *page)
 	struct ambafs_io  *io  = (struct ambafs_io*)  msg->parameter;
 	int idx = io->total++;
 
+	clean_page(page);
 	io->bh[idx].addr = (void*)ambalink_page_to_phys(page);
 	io->bh[idx].len = 4096;
 	io->bh[idx].offset = page_offset(page);
@@ -92,89 +114,51 @@ static int ambafs_readpage(struct file *file, struct page *page)
 static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 			struct list_head *pages, unsigned nr_pages)
 {
-	int buf[192], msg_len = 0, error = 0;
+	int buf[192], io_pages = 0, err, msg_len;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
-	unsigned page_idx, io_pages;
-	u32 i;
+	struct page *page;
+	loff_t offset;
 
 	AMBAFS_DMSG("ambafs_readpages %d\n", nr_pages);
-	while (nr_pages) {
-		struct page *page;
-		loff_t offset;
-
-		io_pages = min_t(unsigned, nr_pages, MAX_NR_PAGES);
-		prepare_read_msg(msg, filp);
-
-		// add first page
+	while (nr_pages--) {
+		// Add the current page to cache & lru list.
 		page = list_entry(pages->prev, struct page, lru);
 		list_del(&page->lru);
-		offset = page_offset(page);
-#if 0
-		if (!add_to_page_cache_lru(page, mapping,
-						page->index, GFP_KERNEL)) {
-			msg_len = insert_page_info(msg, page);
-		} else {
-			AMBAFS_EMSG("ambafs_readpages lru error\n");
-		}
-#else
-		for (i = 0; i < 0xffffffff; i++) {
-			error = add_to_page_cache_lru(page, mapping,
-						page->index, GFP_KERNEL);
-			if (!error)
-				break;
-		}
-
-		if (!error) {
-			msg_len = insert_page_info(msg, page);
-		} else {
-			AMBAFS_EMSG("ambafs_readpages lru error\n");
-		}
-#endif
+		err = add_to_page_cache_lru(page, mapping, page->index, GFP_KERNEL);
 		page_cache_release(page);
-
-		// add pages one by one if continuous
-		for (page_idx = 1; page_idx < io_pages; page_idx++) {
-			page = list_entry(pages->prev, struct page, lru);
-			if (offset + PAGE_SIZE != page_offset(page)) {
-				AMBAFS_EMSG("ambafs_readpages with holes\n");
-				break;
-			}
-			offset += PAGE_SIZE;
-			list_del(&page->lru);
-
-#if 0
-			error = add_to_page_cache_lru(page, mapping,
-				      page->index, GFP_KERNEL);
-
-			//if (!add_to_page_cache_lru(page, mapping,
-			//	      page->index, GFP_KERNEL)) {
-			if (!error) {
-				msg_len = insert_page_info(msg, page);
-			} else {
-				AMBAFS_EMSG("ambafs_readpages lru error (%d)\n", error);
-			}
-#else
-			for (i = 0; i < 0xffffffff; i++) {
-				error = add_to_page_cache_lru(page, mapping,
-						page->index, GFP_KERNEL);
-				if (!error)
-					break;
-			}
-
-			if (!error) {
-				msg_len = insert_page_info(msg, page);
-			} else {
-				AMBAFS_EMSG("ambafs_readpages lru error (%d)\n", error);
-			}
-#endif
-			page_cache_release(page);
-
+		if (err) {
+			// EEXIST is unlikely but permitted error
+			if (err != -EEXIST)
+				AMBAFS_EMSG("ambafs lru error(%d)\n", err);
+			// Skip the reading for this page
+			continue;
 		}
 
-		nr_pages -= page_idx;
-		if (msg_len)
-			ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
+		if (io_pages == 0 || offset + PAGE_SIZE != page_offset(page) ) {
+			// send the previous pages
+			if (io_pages) {
+				ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
+				AMBAFS_EMSG("Info: hole in ambafs_readpages\n");
+			}
+
+			// start a new message with current page
+			prepare_read_msg(msg, filp);
+			msg_len = insert_page_info(msg, page);
+			offset = page_offset(page);
+			io_pages = 1;
+		} else {
+			// continuing page
+			msg_len = insert_page_info(msg, page);
+			offset += PAGE_SIZE;
+			if (++io_pages == MAX_NR_PAGES) {
+				ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
+				io_pages = 0;
+			}
+		}
 	}
+
+	if (io_pages)
+		ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
 
 	return 0;
 }
