@@ -178,7 +178,7 @@ static struct nand_bbt_descr bbt_main_descr = {
 	.offs = 1,
 	.len = 4,
 	.veroffs = 13,
-	.maxblocks = 4,
+	.maxblocks = 64,
 	.pattern = bbt_pattern,
 };
 
@@ -188,7 +188,7 @@ static struct nand_bbt_descr bbt_mirror_descr = {
 	.offs = 1,
 	.len = 4,
 	.veroffs = 13,
-	.maxblocks = 4,
+	.maxblocks = 64,
 	.pattern = mirror_pattern,
 };
 
@@ -202,7 +202,7 @@ static struct nand_bbt_descr bbt_main_descr_dsm = {
        .offs = 1,
        .len = 4,
        .veroffs = 5,
-       .maxblocks = 4,
+       .maxblocks = 64,
        .pattern = bbt_pattern_dsm,
 };
 
@@ -212,7 +212,7 @@ static struct nand_bbt_descr bbt_mirror_descr_dsm = {
        .offs = 1,
        .len = 4,
        .veroffs = 5,
-       .maxblocks = 4,
+       .maxblocks = 64,
        .pattern = mirror_pattern_dsm,
 };
 #endif
