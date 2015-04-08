@@ -335,11 +335,11 @@ static int ambafs_write_end(struct file *file, struct address_space *mapping,
 	AMBAFS_DMSG("%s: \r\n", __func__);
 	simple_write_end(file, mapping, pos, len, copied, page, fsdata);
 
-	/* check if we have enough pages to warrant a write */
 	nr_pages = find_get_pages_tag(mapping, &index, PAGECACHE_TAG_DIRTY,
 				MAX_NR_PAGES, pages);
 
-        if (nr_pages == MAX_NR_PAGES) {
+	/* trigger page-write if we have enough dirty pages, or are forced by O_SYNC */
+	if ((nr_pages == MAX_NR_PAGES) || (file->f_flags & O_SYNC)) {
 		AMBAFS_DMSG("%s: write %d page 0x%08x\n", __func__, nr_pages, (int)page_index((struct page *)pages));
 		perform_writepages(mapping, pages, nr_pages, file->private_data);
 	}
