@@ -23,8 +23,6 @@
 #include <plat/clk.h>
 #include <plat/event.h>
 
-#include <mach/boss.h>
-
 #ifndef UINT32
 typedef u32 UINT32;
 #endif
@@ -191,7 +189,6 @@ int rpmsg_clk_get(void *data)
         /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) &clk_pkg, sizeof(clk_pkg));
 #endif
-
 	return clk_pkg.rate;
 }
 EXPORT_SYMBOL(rpmsg_clk_get);
@@ -218,12 +215,8 @@ static int rpmsg_clk_ack_threadx(void *data)
 static int rpmsg_clk_changed_pre_notify(void *data)
 {
 	int retval = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
-	extern int syscore_suspend(void);
-#else
-        extern void clockevents_suspend(void);
-#endif
+	extern void clockevents_suspend(void);
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
@@ -237,37 +230,20 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 
 	oldfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	flags = arm_irq_save();
 
-	syscore_suspend();
-
-	arm_irq_restore(flags);
-#else
 	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
 	clocksource_suspend();
 	clockevents_suspend();
-#endif
-
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-        /*
-         * We need to disable BOSS in Linux (gidle = 1 and state = suspended).
-         * This is used to prevent Linux is scheduled
-         * while timer is suspended during clock is changing.
-         * We need to make it atomic because rpmsg will kick RTOS and
-         * trigger a context switch to RTOS.
-         */
-        flags = arm_irq_save();
-#endif
 
 	rpmsg_clk_ack_threadx(data);
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-        boss->state = BOSS_STATE_SUSPENDED;
-        *boss->gidle = 1;
+	boss->state = BOSS_STATE_SUSPENDED;
+	*boss->gidle = 1;
+#endif
 
 	arm_irq_restore(flags);
-#endif
 
 	return 0;
 }
@@ -276,25 +252,12 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
-	extern void syscore_resume(void);
-
-        /*
-         * We will Re-enable BOSS at RTOS (gidle = 0 and state = ready).
-         * This is used to prevent Linux is scheduled
-         * while timer is suspended during clock is changing.
-         */
 
 	flags = arm_irq_save();
-
-	syscore_resume();
-
-	arm_irq_restore(flags);
-#else
 	clockevents_resume();
 	clocksource_resume();
-#endif
+	arm_irq_restore(flags);
 
 	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
 
@@ -310,9 +273,7 @@ static int rpmsg_clk_changed_post_notify(void *data)
 	/* Enable rpmsg_clk here because some driver will get the clock. */
 	rpmsg_clk_inited = 1;
 
-#if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
-        clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
-#endif
+	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
 
 	rpmsg_clk_ack_threadx(data);
 
