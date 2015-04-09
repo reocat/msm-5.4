@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 
 #include <mach/hardware.h>
+#include <mach/init.h>
 
 #include <plat/ambcache.h>
 #include <plat/gdma.h>
@@ -47,6 +48,20 @@
 
 static struct completion	transfer_completion;
 static struct mutex		transfer_mutex;
+
+struct gdma_param {
+	u32 dest_addr;
+	u32 dest_virt_addr;
+	u32 src_addr;
+	u32 src_virt_addr;
+	u8 dest_non_cached;
+	u8 src_non_cached;
+	u8 reserved[2];
+	u16 src_pitch;
+	u16 dest_pitch;
+	u16 width;
+	u16 height;
+};
 
 /* handle 8MB at one time */
 static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
@@ -244,15 +259,13 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,u16 src_pitch,
 
 }
 
-
-
 /* this is synchronous function, will wait till transfer finishes  width =< 4096 */
-int dma_pitch_memcpy(u8 *dest_addr, u8 *src_addr, u16 src_pitch, u16 dest_pitch, u16 width, u16 height)
+int dma_pitch_memcpy(struct gdma_param *params)
 {
+	int size = params->src_pitch * params->height;
 
-	int size = src_pitch * height;
-
-	if (size <= 0 || src_pitch <= 0 || dest_pitch <= 0 || width > TRANSFER_2D_WIDTH) {
+	if (size <= 0 || params->src_pitch <= 0 || params->dest_pitch <= 0
+		|| params->width > TRANSFER_2D_WIDTH) {
 		printk(" invalid value \n");
 		return -1;
 	}
@@ -265,17 +278,22 @@ int dma_pitch_memcpy(u8 *dest_addr, u8 *src_addr, u16 src_pitch, u16 dest_pitch,
 #endif
 
 	mutex_lock(&transfer_mutex);
-	ambcache_clean_range((void *)ambarella_phys_to_virt((u32)src_addr), size);
-
-	transfer_pitch_unit(dest_addr, src_addr, src_pitch, dest_pitch, width, height);
+	if (!params->src_non_cached) {
+		ambcache_clean_range((void *)params->src_virt_addr, size);
+	}
+	transfer_pitch_unit((u8 *)params->dest_addr, (u8 *)params->src_addr,
+		params->src_pitch, params->dest_pitch, params->width, params->height);
 
 	wait_for_completion(&transfer_completion);
 
-	ambcache_inv_range((void *)ambarella_phys_to_virt((u32)dest_addr), size);
+	if (!params->dest_non_cached) {
+		ambcache_inv_range((void *)params->dest_virt_addr, size);
+	}
 	mutex_unlock(&transfer_mutex);
 
 	return 0;
 }
+
 EXPORT_SYMBOL(dma_pitch_memcpy);
 
 static irqreturn_t gdma_interrupt(int irq, void *dev_id)

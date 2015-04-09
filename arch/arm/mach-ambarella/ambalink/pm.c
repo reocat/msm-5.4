@@ -377,7 +377,12 @@ static int ambarella_pm_suspend_valid(suspend_state_t state)
 
 	case PM_SUSPEND_MEM:
 		valid  = 1;
-		retval = ambarella_pm_linkctrl_prepare();
+                if (wowlan_resume_from_ram == 3) {
+                        /* Kernel 3.10.73 will call this func to
+                           check the supported pm state while booting.
+                           Add this to prevent enter prepare while booting. */
+                        retval = ambarella_pm_linkctrl_prepare();
+                }
 		break;
 
 	default:

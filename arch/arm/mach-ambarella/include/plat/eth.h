@@ -31,6 +31,17 @@
 #define ETH_INSTANCES	1
 #endif
 
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
+#define SUPPORT_GMII	1
+#else
+#define SUPPORT_GMII	0
+#endif
+
+#if (CHIP_REV == S3)
+#define ETH_ENHANCED 1
+#else
+#define ETH_ENHANCED 0
+#endif
 /* ==========================================================================*/
 #define ETH_OFFSET			0xE000
 #define ETH_DMA_OFFSET			0xF000
@@ -173,7 +184,7 @@
 #define ETH_DMA_BUS_MODE_PBL_2		0x00000200
 #define ETH_DMA_BUS_MODE_PBL_1		0x00000100
 #define ETH_DMA_BUS_MODE_ATDS		0x00000080
-#define ETH_DMA_BUS_MODE_DSL(len)	((len & 0x1F) << 2)
+#define ETH_DMA_BUS_MODE_DSL(len)	((len & 0x1f) << 2)
 #define ETH_DMA_BUS_MODE_DA_RX		0x00000002
 #define ETH_DMA_BUS_MODE_DA_TX		0x00000000
 #define ETH_DMA_BUS_MODE_SWR		0x00000001
@@ -431,7 +442,7 @@
 
 #if (CHIP_REV == A8)
 #define SYS_CONFIG_ETH_ENABLE		0xffffffff
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SYS_CONFIG_ETH_ENABLE		0x00800000
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SYS_CONFIG_ETH_ENABLE		0x00000001

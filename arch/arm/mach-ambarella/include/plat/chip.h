@@ -29,6 +29,7 @@
 #define A7L		(7500)
 #define A8		(8000)
 #define S2		(9000)
+#define S2E		(9100)
 #define S2L		(12000)
 #define S3		(11000)
 
@@ -42,6 +43,8 @@
 #define CHIP_REV	A7L
 #elif	defined(CONFIG_PLAT_AMBARELLA_S2)
 #define CHIP_REV	S2
+#elif	defined(CONFIG_PLAT_AMBARELLA_S2E)
+#define CHIP_REV	S2E
 #elif	defined(CONFIG_PLAT_AMBARELLA_A8)
 #define CHIP_REV	A8
 #elif	defined(CONFIG_PLAT_AMBARELLA_S2L)

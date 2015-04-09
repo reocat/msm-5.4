@@ -163,6 +163,7 @@ struct ambarella_platform_fb *ambfb_data_ptr[] = {
 	&ambarella_platform_fb0,
 	&ambarella_platform_fb1,
 };
+EXPORT_SYMBOL(ambfb_data_ptr);
 
 int ambarella_fb_get_platform_info(u32 fb_id,
 	struct ambarella_platform_fb *platform_info)

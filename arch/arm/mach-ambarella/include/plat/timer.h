@@ -34,7 +34,8 @@
 #define TIMER1_REG(x)			(TIMER1_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8) || (CHIP_REV == S2L)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
+		(CHIP_REV == A8) || (CHIP_REV == S2L)
 #define INTERVAL_TIMER_INSTANCES		8
 #elif (CHIP_REV == S3)
 #define INTERVAL_TIMER_INSTANCES		20

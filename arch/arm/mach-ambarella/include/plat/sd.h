@@ -25,7 +25,7 @@
 #define __PLAT_AMBARELLA_SD_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SD_INSTANCES			2
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SD_INSTANCES			3

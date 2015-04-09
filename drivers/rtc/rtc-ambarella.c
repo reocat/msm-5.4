@@ -80,7 +80,8 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 #else
 	val_sec = amba_readl(ambrtc->reg + reg_offs);
 #endif
-	/* because old rtc cannot use the msb 2bits, we add 0x40000000
+
+        /* because old rtc cannot use the msb 2bits, we add 0x40000000
 	 * here, this is a pure software workaround. And the result is that
 	 * the time must be started at least from 2004.01.10 13:38:00 */
 	if (ambrtc->is_limited)
@@ -107,6 +108,8 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 	} else {
 		alarm_val = secs;
 		time_val = amba_readl(ambrtc->reg + RTC_CURT_OFFSET);
+                // only for wakeup ambarella internal PWC
+                amba_writel(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET, 0x8);
 	}
 
 	if (ambrtc->is_limited) {
@@ -247,6 +250,7 @@ static int ambrtc_probe(struct platform_device *pdev)
 	struct ambarella_rtc *ambrtc;
 	struct resource *mem;
 	void __iomem *reg;
+        struct device_node *np = pdev->dev.of_node;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
@@ -274,6 +278,8 @@ static int ambrtc_probe(struct platform_device *pdev)
 				"amb,is-limited", NULL);
 
 	ambrtc_check_power_lost(ambrtc);
+
+        pdev->dev.power.can_wakeup = !!of_get_property(np, "rtc,wakeup", NULL);
 
 	ambrtc->rtc = devm_rtc_device_register(&pdev->dev, "rtc-ambarella",
 				     &ambarella_rtc_ops, THIS_MODULE);

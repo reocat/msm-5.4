@@ -31,6 +31,7 @@
 #include <linux/irq.h>
 #include <linux/cpu.h>
 #include <linux/power_supply.h>
+#include <linux/of.h>
 #include <asm/cacheflush.h>
 #include <asm/io.h>
 #include <asm/system.h>
@@ -43,6 +44,8 @@
 
 #define SREF_MAGIC_PATTERN		0x43525230
 
+static int dram_reset_ctrl = -1;
+
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
@@ -54,12 +57,41 @@ void ambarella_power_off_prepare(void)
 }
 
 /* ==========================================================================*/
+static void ambarella_disconnect_dram_reset(void)
+{
+	u32 bank, offset;
+	u32 gpio_regbase[] = {GPIO0_BASE, GPIO1_BASE, GPIO2_BASE, GPIO3_BASE,
+				GPIO4_BASE, GPIO5_BASE, GPIO6_BASE};
+
+	if (dram_reset_ctrl == -1)
+		return;
+
+	bank = PINID_TO_BANK(dram_reset_ctrl);
+	offset = PINID_TO_OFFSET(dram_reset_ctrl);
+
+#if (IOMUX_SUPPORT > 0)
+	/* configure the pin as GPIO mode */
+	amba_clrbitsl(IOMUX_REG(IOMUX_REG_OFFSET(bank, 0)), 0x1 << offset);
+	amba_clrbitsl(IOMUX_REG(IOMUX_REG_OFFSET(bank, 1)), 0x1 << offset);
+	amba_clrbitsl(IOMUX_REG(IOMUX_REG_OFFSET(bank, 2)), 0x1 << offset);
+	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x1);
+	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x0);
+#endif
+
+	/* pull low the gpio */
+	amba_writel(gpio_regbase[bank] + GPIO_ENABLE_OFFSET, 0xffffffff);
+	amba_clrbitsl(gpio_regbase[bank] + GPIO_AFSEL_OFFSET, 0x1 << offset);
+	amba_setbitsl(gpio_regbase[bank] + GPIO_MASK_OFFSET, 0x1 << offset);
+	amba_setbitsl(gpio_regbase[bank] + GPIO_DIR_OFFSET, 0x1 << offset);
+	amba_clrbitsl(gpio_regbase[bank] + GPIO_DATA_OFFSET, 0x1 << offset);
+}
+
 static void ambarella_set_cpu_jump(int cpu, void *jump_fn)
 {
 	u32 addr_phys;
 	u32 *addr_virt;
 
-	/* must keep consistent with check_selfrefresh.c in bst. */
+	/* must keep consistent with self_refresh.c in bst. */
 	addr_phys = get_ambarella_ppm_phys() + 0x000f1000;
 	addr_virt = (u32 *)ambarella_phys_to_virt(addr_phys);
 	*addr_virt++ = SREF_MAGIC_PATTERN;
@@ -85,6 +117,8 @@ static int ambarella_pm_enter_mem(void)
 {
 	u32 l2_enabled;
 
+	ambarella_disconnect_dram_reset();
+
 	/* ensure the power for DRAM keeps on when power off PWC */
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x1);
 	amba_setbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
@@ -107,7 +141,7 @@ static int ambarella_pm_enter_mem(void)
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);
 	amba_clrbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
 	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
-	mdelay(3);
+	while(amba_readl(RTC_REG(RTC_PWC_REG_STA_OFFSET)) & 0x04);
 	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
 
 	return 0;
@@ -164,6 +198,9 @@ int __init ambarella_init_pm(void)
 	pm_power_off_prepare = ambarella_power_off_prepare;
 
 	suspend_set_ops(&ambarella_pm_suspend_ops);
+
+	of_property_read_u32(of_chosen, "ambarella,dram-reset-ctrl", &dram_reset_ctrl);
+	WARN(dram_reset_ctrl >= GPIO_MAX_LINES, "Invalid GPIO: %d\n", dram_reset_ctrl);
 
 	return 0;
 }
