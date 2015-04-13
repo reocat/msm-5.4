@@ -1035,6 +1035,8 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 			ms_delay &= 0xe3e0e3e0;
 			if (ios->timing == MMC_TIMING_UHS_DDR50)
 				ms_delay |= ((0x7 << 16) | (0x7 << 10));
+			else if(ios->timing == MMC_TIMING_UHS_SDR50)
+				ms_delay = 0x00020800;
 			amba_rct_writel(pinfo->timing_reg, ms_delay);
 			break;
 		case 2:
