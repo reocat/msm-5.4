@@ -168,9 +168,6 @@ static inline int tx_fifo_is_full(struct uart_port *port)
 }
 
 /* ==========================================================================*/
-#ifndef DEFAULT_AMBARELLA_UART_FCR
-#define DEFAULT_AMBARELLA_UART_FCR	(UART_FC_FIFOE | UART_FC_RX_QUARTER_FULL | UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR)
-#endif
 static void serial_ambarella_hw_setup(struct uart_port *port)
 {
 	struct ambarella_uart_port *amb_port;
@@ -191,7 +188,8 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET,
-		DEFAULT_AMBARELLA_UART_FCR);
+		UART_FC_FIFOE | UART_FC_RX_2_TO_FULL |
+		UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR);
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER);
 
@@ -1522,7 +1520,8 @@ static void ambarella_uart_of_enumerate(void)
 #if (UART_INSTANCES >= 2)
 /* Because Linux can access UART1 only, for console or BT. */
 static const char uart1_proc_name[] = "uart1_rcvr";
-static u32 fcr = DEFAULT_AMBARELLA_UART_FCR;
+static u32 fcr = (UART_FC_FIFOE | UART_FC_RX_QUARTER_FULL | UART_FC_TX_EMPTY |
+                  UART_FC_XMITR | UART_FC_RCVRR);
 
 static int ambarella_uart1_proc_read(struct seq_file *m, void *v)
 {

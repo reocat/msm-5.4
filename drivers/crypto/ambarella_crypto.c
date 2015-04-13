@@ -465,8 +465,7 @@ static void  handle_aes_encrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	u32 *offset=NULL;
 	__le32 *src = (__le32 *)in;
 	__le32 *dst = (__le32 *)out;
-//	int ready=0;
-	do{}while(mutex_trylock(&engine_lock) == 0);
+	int ready=0;
 
 	switch (ctx->key_len){
 	case 16:
@@ -486,17 +485,12 @@ static void  handle_aes_encrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	offset = aes_fun.reg_enc();
 	aes_fun.wdata(offset,(u32*)src,16);
 
-	wait_for_completion(&g_aes_irq_wait);
-//  try_wait_for_completion is faster than wait_for_completion.
-//  but the fastest is polling CRYPT_A_OUTPUT_READY_REG
-//	do{
-//		ready = try_wait_for_completion(&g_aes_irq_wait);
-//	}while(ready != 1);
+	do{
+		ready = try_wait_for_completion(&g_aes_irq_wait);
+	}while(ready != 1);
 
 	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
-
-	mutex_unlock(&engine_lock);
 
 }
 static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
@@ -504,9 +498,8 @@ static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	u32 *offset=NULL;
 	__le32 *src = (__le32 *)in;
 	__le32 *dst = (__le32 *)out;
-//	int ready=0;
+	int ready = 0;
 
-	do{}while(mutex_trylock(&engine_lock) == 0);
 
 	switch (ctx->key_len){
 	case 16:
@@ -527,15 +520,13 @@ static void handle_aes_decrypt(struct amba_ecb_ctx *ctx, u8 *out, u8* in)
 	offset = aes_fun.reg_dec();
 	aes_fun.wdata(offset,(u32*)src,16);
 
-	wait_for_completion(&g_aes_irq_wait);
-//	do{
-//		ready = try_wait_for_completion(&g_aes_irq_wait);
-//	}while(ready != 1);
+	do{
+		ready = try_wait_for_completion(&g_aes_irq_wait);
+	}while(ready != 1);
 
 	offset = (u32*)CRYPT_A_OUTPUT_96_REG;
 	aes_fun.rdata(dst,offset,16);
 
-	mutex_unlock(&engine_lock);
 }
 
 static int handle_ecb_aes_req(struct ablkcipher_request *req)

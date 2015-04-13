@@ -88,6 +88,8 @@
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_PHYS_BASE		(0xec000000)
 #define DBGBUS_SIZE			(0x00200000)
+#define DBGFMEM_PHYS_BASE		(0xee000000)
+#define DBGFMEM_SIZE			(0x01000000)
 #endif
 
 /* Virtual Address */
@@ -106,6 +108,7 @@
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xf2200000)
+#define DBGFMEM_BASE		(0xf3000000)
 #endif
 
 #elif defined(CONFIG_VMSPLIT_2G)       /* CONFIG_VMSPLIT_2G */
@@ -127,6 +130,7 @@
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xec000000)
+#define DBGFMEM_BASE		(0xee000000)
 #endif
 
 #else /* CONFIG_VMSPLIT_1G */
@@ -148,6 +152,7 @@
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 #define DBGBUS_BASE			(0xec000000)
+#define DBGFMEM_BASE		(0xee000000)
 #endif
 #endif	/* CONFIG_VMSPLIT_3G */
 

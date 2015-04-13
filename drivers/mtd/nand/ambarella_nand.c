@@ -1633,11 +1633,26 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 	return 0;
 }
 
+static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
+{
+	/* reset FIO by RCT */
+	ambarella_fio_rct_reset();
+
+	/* Exit random read mode */
+	amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET, FIO_CTR_RR);
+
+	/* init fdma to avoid dummy irq */
+	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+	amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
+	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
+		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+
+	amb_nand_set_timing(nand_info);
+}
+
 static int ambarella_nand_config_flash(struct ambarella_nand_info *nand_info)
 {
 	int					errorCode = 0;
-
-	amb_nand_set_timing(nand_info);
 
 	/* control_reg will be uesd when real operation to NAND is performed */
 
@@ -1895,6 +1910,8 @@ static int ambarella_nand_get_resource(
 	if (nand_info->ecc_bits > 0)
 		nand_info->soft_ecc = true;
 
+	ambarella_nand_init_hw(nand_info);
+
 	errorCode = request_irq(nand_info->cmd_irq, nand_fiocmd_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			"fio_cmd_irq", nand_info);
@@ -1912,14 +1929,6 @@ static int ambarella_nand_get_resource(
 			nand_info->dma_irq);
 		goto nand_get_resource_free_fiocmd_irq;
 	}
-
-#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-	/* init fdma to avoid dummy irq */
-	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
-	amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
-	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
-		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
-#endif
 
 	errorCode = request_irq(nand_info->fdma_irq, ambarella_fdma_isr_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
@@ -2109,23 +2118,15 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = platform_get_drvdata(pdev);
-	amb_nand_set_timing(nand_info);
+	ambarella_nand_init_hw(nand_info);
+	nand_info->suspend = 0;
 
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
-#if defined(CONFIG_AMBALINK_LOCK)
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	boss_set_irq_owner(nand_info->cmd_irq, BOSS_IRQ_OWNER_LINUX, 1);
-	boss_set_irq_owner(nand_info->dma_irq, BOSS_IRQ_OWNER_LINUX, 1);
-	boss_set_irq_owner(nand_info->fdma_irq, BOSS_IRQ_OWNER_LINUX, 1);
-#endif
-	enable_irq(nand_info->cmd_irq);
 	enable_irq(nand_info->dma_irq);
+	enable_irq(nand_info->cmd_irq);
 	enable_irq(nand_info->fdma_irq);
 #endif
-#endif
 	up(&nand_info->system_event_sem);
-
-	nand_info->suspend = 0;
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 

@@ -66,6 +66,11 @@ struct ambarella_phy {
 	bool hub_active;
 	u8 port_type;	/* the behavior of the device port working */
 	u8 phy_route;	/* route D+/D- signal to device or host port */
+
+#ifdef CONFIG_PM
+	u32 pol_val;
+	u32 own_val;
+#endif
 };
 
 #define to_ambarella_phy(p) container_of((p), struct ambarella_phy, phy)
@@ -249,10 +254,14 @@ static irqreturn_t ambarella_otg_detect_irq(int irq, void *dev_id)
 {
 	struct ambarella_phy *amb_phy = dev_id;
 
-	if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
-		amb_phy->port_type = PORT_TYPE_OTG;
-	else
+	if (gpio_is_valid(amb_phy->gpio_id)) {
+		if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
+			amb_phy->port_type = PORT_TYPE_OTG;
+		else
+			amb_phy->port_type = PORT_TYPE_DEVICE;
+	} else {
 		amb_phy->port_type = PORT_TYPE_DEVICE;
+	}
 
 	ambarella_check_otg(amb_phy);
 
@@ -290,27 +299,32 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 	if (!gpio_is_valid(amb_phy->gpio_id))
 		return 0;
 
-	rval = devm_gpio_request_one(phy->dev,
+	if (gpio_is_valid(amb_phy->gpio_id)) {
+		rval = devm_gpio_request_one(phy->dev,
 			amb_phy->gpio_id, GPIOF_DIR_IN, "otg_id");
-	if (rval < 0){
-		dev_err(phy->dev, "Failed to request id pin %d\n", rval);
-		return rval;
-	}
+		if (rval < 0){
+			dev_err(phy->dev, "Failed to request id pin %d\n", rval);
+			return rval;
+		}
 
-	if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
-		amb_phy->port_type = PORT_TYPE_OTG;
-	else
-		amb_phy->port_type = PORT_TYPE_DEVICE;
+		if (gpio_get_value_cansleep(amb_phy->gpio_id) == amb_phy->id_is_otg)
+			amb_phy->port_type = PORT_TYPE_OTG;
+		else
+			amb_phy->port_type = PORT_TYPE_DEVICE;
 
-	irq = gpio_to_irq(amb_phy->gpio_id);
+		irq = gpio_to_irq(amb_phy->gpio_id);
 
-	rval = devm_request_threaded_irq(phy->dev, irq, NULL,
+		rval = devm_request_threaded_irq(phy->dev, irq, NULL,
 			ambarella_otg_detect_irq,
 			IRQ_TYPE_EDGE_BOTH | IRQF_ONESHOT,
 			"usb_otg_id", amb_phy);
-	if (rval) {
-		dev_err(phy->dev, "request usb_otg_id irq failed: %d\n", rval);
-		return rval;
+		if (rval) {
+			dev_err(phy->dev, "request usb_otg_id irq failed: %d\n", rval);
+			return rval;
+		}
+
+	} else {
+		amb_phy->port_type = PORT_TYPE_DEVICE;
 	}
 
 	/* rotue D+/D- signal to host or device port if control gpio existed */
@@ -483,6 +497,29 @@ static void ambarella_phy_shutdown(struct platform_device *pdev)
 
 }
 
+#ifdef CONFIG_PM
+static int ambarella_phy_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
+
+	amb_phy->pol_val = amba_readl(amb_phy->pol_reg);
+	amb_phy->own_val = amba_readl(amb_phy->own_reg);
+
+	return 0;
+}
+
+static int ambarella_phy_resume(struct platform_device *pdev)
+{
+	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
+
+	amba_writel(amb_phy->pol_reg, amb_phy->pol_val);
+	amba_writel(amb_phy->own_reg, amb_phy->own_val);
+
+	return 0;
+}
+#endif
+
 static const struct of_device_id ambarella_phy_dt_ids[] = {
 	{ .compatible = "ambarella,usbphy", },
 	{ /* sentinel */ }
@@ -493,6 +530,10 @@ static struct platform_driver ambarella_phy_driver = {
 	.probe = ambarella_phy_probe,
 	.remove = ambarella_phy_remove,
 	.shutdown = ambarella_phy_shutdown,
+#ifdef CONFIG_PM
+	.suspend = ambarella_phy_suspend,
+	.resume	 = ambarella_phy_resume,
+#endif
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner	= THIS_MODULE,

@@ -1334,6 +1334,7 @@ static irqreturn_t ambarella_udc_irq(int irq, void *_dev)
 	if (!udc->driver) {
 		amba_writel(USB_DEV_INTR_REG, amba_readl(USB_DEV_INTR_REG));
 		amba_writel(USB_DEV_EP_INTR_REG, amba_readl(USB_DEV_EP_INTR_REG));
+		ambarella_udc_set_pullup(udc, 0);
 	}
 
 	/* 1. check if device interrupt */
@@ -2262,6 +2263,7 @@ static int ambarella_udc_suspend(struct platform_device *pdev, pm_message_t mess
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	udc->udc_is_enabled = 0;
+	udc->vbus_status = 0;
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, message.event);

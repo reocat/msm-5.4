@@ -280,11 +280,11 @@ static int ambevk_board_hw_params(struct snd_pcm_substream *substream,
 	}
 	/* set the I2S system clock*/
 	if (clk_fmt == 0) {
-		errorCode = snd_soc_dai_set_sysclk(codec_dai, AK4954_MCLK_IN, clk.mclk, 0);
+		errorCode = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
 	} else if (clk_fmt == 1) {
-		errorCode = snd_soc_dai_set_sysclk(codec_dai, AK4954_BCLK_IN, clk.bclk, 0);
+		errorCode = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.bclk, 0);
 	} else if (clk_fmt == 2) {
-		errorCode = snd_soc_dai_set_sysclk(codec_dai, AK4954_MCLK_IN_BCLK_OUT, clk.mclk, 0);
+		errorCode = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
 	} else {
 		pr_err("clk_fmt is wrong\n");
 		return -1;
@@ -421,6 +421,7 @@ static struct platform_driver ambevk_soc_snd_driver = {
 	.driver = {
 		.name = "snd_soc_card_s2lmkiwi",
 		.owner = THIS_MODULE,
+		.pm = &snd_soc_pm_ops,
 		.of_match_table = ambevk_dt_ids,
 	},
 	.probe = ambevk_soc_snd_probe,

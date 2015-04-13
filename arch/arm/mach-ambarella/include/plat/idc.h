@@ -47,7 +47,7 @@
 #define IDC2_BASE			(APB_BASE + IDC2_OFFSET)
 #define IDC2_REG(x)			(IDC2_BASE + (x))
 
-#if (CHIP_REV == S2)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define IDC3_OFFSET			0x13000
 #elif (CHIP_REV == A8)
 #define IDC3_OFFSET			0xE000
@@ -66,6 +66,7 @@
 #define IDC_PSLH_OFFSET			0x14
 #define IDC_FMCTRL_OFFSET		0x18
 #define IDC_FMDATA_OFFSET		0x1c
+#define IDC_DUTYCYCLE_OFFSET	0x24
 #define IDC_ENR_REG_ENABLE		(0x01)
 #define IDC_ENR_REG_DISABLE		(0x00)
 

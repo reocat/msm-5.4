@@ -33,9 +33,6 @@
 #include <linux/of.h>
 #include <plat/adc.h>
 
-#undef dev_dbg
-#define dev_dbg(dev, fmt,arg...) dev_printk(KERN_INFO,dev,fmt,##arg)
-
 struct ambadc_keymap {
 	u32 key_code;
 	u32 channel : 4;
@@ -50,6 +47,7 @@ struct ambarella_adckey {
 	struct ambadc_keymap *keymap;
 	u32 key_num;
 	u32 key_saved[ADC_NUM_CHANNELS]; /* save the key currently pressed */
+	u32 print_key : 1;
 };
 
 static void ambarella_adckey_filter_out(struct ambadc_client *client,
@@ -88,8 +86,10 @@ static int ambarella_adckey_callback(struct ambadc_client *client,
 			adckey->key_saved[ch] = keymap->key_code;
 			ambarella_adckey_filter_out(client, keymap);
 
-			dev_dbg(&input->dev, "key[%d:%d] pressed %d\n",
-				ch, adckey->key_saved[ch], level);
+			if (adckey->print_key) {
+				dev_info(&input->dev, "key[%d:%d] pressed %d\n",
+					ch, adckey->key_saved[ch], level);
+			}
 			break;
 		} else if (adckey->key_saved[ch] != KEY_RESERVED
 			&& keymap->key_code == KEY_RESERVED) {
@@ -98,8 +98,10 @@ static int ambarella_adckey_callback(struct ambadc_client *client,
 			adckey->key_saved[ch] = KEY_RESERVED;
 			ambarella_adckey_filter_out(client, keymap);
 
-			dev_dbg(&input->dev, "key[%d:%d] released %d\n",
-				ch, adckey->key_saved[ch], level);
+			if (adckey->print_key) {
+				dev_info(&input->dev, "key[%d:%d] released %d\n",
+					ch, adckey->key_saved[ch], level);
+			}
 			break;
 		}
 	}
@@ -114,6 +116,8 @@ static int ambarella_adckey_of_parse(struct platform_device *pdev,
 	struct ambadc_keymap *keymap;
 	const __be32 *prop;
 	u32 propval, i, size;
+
+	adckey->print_key = !!of_find_property(np, "amb,print-key", NULL);
 
 	prop = of_get_property(np, "amb,keymap", &size);
 	if (!prop || size % (sizeof(__be32) * 2)) {
