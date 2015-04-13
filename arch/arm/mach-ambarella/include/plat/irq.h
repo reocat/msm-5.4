@@ -57,6 +57,19 @@
 #error "Not supported!"
 #endif
 
+#if (VIC_SUPPORT_CPU_OFFLOAD == 2)
+#if (CHIP_REV == S3)
+#define VIC_NULL_PRI_IRQ_VAL		(0x00000060)
+#define VIC_NULL_PRI_IRQ_FIX		(0)
+#elif (CHIP_REV == S2E)
+#define VIC_NULL_PRI_IRQ_VAL		(0x00000040)
+#define VIC_NULL_PRI_IRQ_FIX		(1)
+#else
+#define VIC_NULL_PRI_IRQ_VAL		(0xffffffff)
+#define VIC_NULL_PRI_IRQ_FIX		(0)
+#endif
+#endif
+
 #if (CHIP_REV == S3)
 #define VIC_2NDGEN_BITASSIGNMENT	(1)
 #endif
