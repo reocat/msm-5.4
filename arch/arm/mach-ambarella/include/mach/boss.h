@@ -74,7 +74,7 @@
 #define BOSS_VIRT_TIMER_INT_VEC		AXI_SOFT_IRQ(7) /* Virtual 'timer' to guest irq */
 #define BOSS_VIRT_GIRQ_INT_VEC		AXI_SOFT_IRQ(8) /* Virtual 'guest IRQ' irq */
 #define BOSS_VIRT_RIRQ_INT_VEC		AXI_SOFT_IRQ(9) /* Virtual 'root IRQ' irq */
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S2E)
 #define SYSTEM_TIMER_IRQ                63
 
 #define BOSS_VIRT_TIMER_INT_VEC		VIC_SOFT_IRQ(7) /* Virtual 'timer' to guest irq */
@@ -84,7 +84,7 @@
 #error "Boss is not supported on this chip!"
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S2E)
 /* Keep these in sync with data structure below */
 /* 0x0 */
 #define BOSS_ROOT_CTX_OFFSET            0

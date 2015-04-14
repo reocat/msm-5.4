@@ -2118,7 +2118,9 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = platform_get_drvdata(pdev);
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	ambarella_nand_init_hw(nand_info);
+#endif
 	nand_info->suspend = 0;
 
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS)

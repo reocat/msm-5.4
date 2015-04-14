@@ -9,18 +9,16 @@ choice
 config AMBALINK_SINGLE_CORE
 	bool "Uni_Core"
 	select PLAT_AMBARELLA_BOSS
-	help 
+	help
 	  AmbaLink on uni-core platform
 
 config AMBALINK_MULTIPLE_CORE
 	bool "Multi_Core"
-	select PLAT_AMBARELLA_PPM_UNCACHED
 	help
 	  AmbaLink on multiple-core (dual-core Cortex) platform
 
 config AMBALINK_AMP_MULTIPLE_CORE
 	bool "AMP_Multi_Core"
-	select PLAT_AMBARELLA_PPM_UNCACHED
 	help
 	  AmbaLink on AMP multiple-core (ARM11 + Cortex) platform
 endchoice #"Ambalink Topology"
@@ -28,9 +26,8 @@ endchoice #"Ambalink Topology"
 config PLAT_AMBARELLA_BOSS
        bool "Ambarella BOSS"
        default n
-       depends on AMBALINK_SINGLE_CORE
        help
-         Enable single core BOSS support.
+         Enable BOSS support.
 
 config AMBALINK_SHMADDR
 	hex "shared memory address"
@@ -49,7 +46,7 @@ config AMBALINK_RPC
 	depends on RPMSG
 	depends on RPROC_SUPPORT
 	default y
-	help 
+	help
 	  Amblink Remote Procedure Call
 
 config AMBALINK_RFS
@@ -76,7 +73,7 @@ config RPMSG_LINKCTRL
 	tristate "Amba Link Control"
 	depends on RPMSG
 	help
-	  A rpmsg server to handle the message between client and server for 
+	  A rpmsg server to handle the message between client and server for
 	  control purpose, such as suspend, resume.
 
 source "arch/arm/mach-ambarella/ambalink/ambafs/Kconfig"

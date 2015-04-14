@@ -71,7 +71,7 @@ static inline void cache_wait(void __iomem *reg, unsigned long mask)
 
 static inline void l2x0_cache_lock(unsigned long *flags)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
         *flags = arm_irq_save();
 #elif defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
         aipc_spin_lock_irqsave(AMBA_IPC_SPINLOCK_L2C, flags);
@@ -82,7 +82,7 @@ static inline void l2x0_cache_lock(unsigned long *flags)
 
 static inline void l2x0_cache_unlock(unsigned long flags)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
         arm_irq_restore(flags);
 #elif defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
         aipc_spin_unlock_irqrestore(AMBA_IPC_SPINLOCK_L2C, flags);

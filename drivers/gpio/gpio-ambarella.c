@@ -69,7 +69,7 @@ struct amb_gpio_chip {
 
 static void amb_gpio_raw_lock(unsigned long *pflags)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
 	*pflags = arm_irq_save();
 #elif defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	aipc_spin_lock_irqsave(AMBA_IPC_SPINLOCK_GPIO, pflags);
@@ -78,7 +78,7 @@ static void amb_gpio_raw_lock(unsigned long *pflags)
 
 static void amb_gpio_raw_unlock(unsigned long *pflags)
 {
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
 	arm_irq_restore(*pflags);
 #elif defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	aipc_spin_unlock_irqrestore(AMBA_IPC_SPINLOCK_GPIO, *pflags);

@@ -83,7 +83,7 @@ void boss_local_irq_enable(void)
 			    boss->int_mask[i] & boss->guest_int_en[i]);
 	}
 #else
-	/* S2L has 3 VIC instances. */
+	/* S2L/S2E has 3 VIC instances. */
 	amba_writel(VIC_REG(VIC_INTEN_OFFSET), boss->int_mask[0] & boss->guest_int_en[0]);
 	amba_writel(VIC2_REG(VIC_INTEN_OFFSET), boss->int_mask[1] & boss->guest_int_en[1]);
 	amba_writel(VIC3_REG(VIC_INTEN_OFFSET), boss->int_mask[2] & boss->guest_int_en[2]);
@@ -110,7 +110,7 @@ void boss_local_irq_disable(void)
 		amba_writel(GIC_CLEAR_ENABLE_REG(i << 2), boss->int_mask[i]);
 	}
 #else
-	/* S2L has 3 VIC instances. */
+	/* S2L/S2E has 3 VIC instances. */
 	amba_writel(VIC_REG(VIC_INTEN_CLR_OFFSET), boss->int_mask[0]);
 	amba_writel(VIC2_REG(VIC_INTEN_CLR_OFFSET), boss->int_mask[1]);
 	amba_writel(VIC3_REG(VIC_INTEN_CLR_OFFSET), boss->int_mask[2]);

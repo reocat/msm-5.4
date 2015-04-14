@@ -163,7 +163,7 @@ void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags)
 {
 	unsigned int tmp;
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_MULTIPLE_CORE)
         *flags = arm_irq_save();
 #else
 	local_irq_save(*flags);
@@ -196,7 +196,7 @@ void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags)
 	    : "r" (lock), "r" (0)
 	    : "cc");
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_MULTIPLE_CORE)
         arm_irq_restore(flags);
 #else
 	preempt_enable();

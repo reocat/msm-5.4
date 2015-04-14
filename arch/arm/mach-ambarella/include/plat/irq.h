@@ -475,6 +475,7 @@
 #define I2S1_TX_IRQ			VIC3_INT_VEC(8)
 #define USB_EHCI_IRQ			VIC3_INT_VEC(9)
 #define IPI00_IRQ			VIC3_INT_VEC(10)
+#define VIC_SOFT_IRQ(x)             	VIC3_INT_VEC((x) + 10)	/* 0 <= x <= 13 */
 #define IPI01_IRQ			VIC3_INT_VEC(11)
 #define IPI02_IRQ			VIC3_INT_VEC(12)
 #define IPI03_IRQ			VIC3_INT_VEC(13)

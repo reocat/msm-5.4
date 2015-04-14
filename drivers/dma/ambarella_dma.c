@@ -364,10 +364,12 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	if (boss_get_irq_owner(amb_dma->dma_irq) != BOSS_IRQ_OWNER_LINUX)
 		return IRQ_HANDLED;
+#endif
 
-#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && ((CHIP_REV == S2L) || (CHIP_REV == S2E))
 	for (i = UART_TX_DMA_CHAN; i <= UART_RX_DMA_CHAN; i++) {
 		spin_lock(&amb_dma->amb_chan[i].lock);
 		if (int_src & (1 << i)) {
@@ -1105,7 +1107,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_memcpy.dev = &pdev->dev;
 	amb_dma->dma_memcpy.copy_align = (u8)(amb_dma->copy_align);
 
-#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && defined(CONFIG_PLAT_AMBARELLA_S2L)
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && ((CHIP_REV == S2L) || (CHIP_REV == S2E))
 	/* init dma_chan struct */
 	/* Only init UART DMA channels. */
 	for (i = UART_TX_DMA_CHAN; i <= UART_RX_DMA_CHAN; i++) {

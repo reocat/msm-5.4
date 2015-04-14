@@ -186,7 +186,7 @@ int rpmsg_clk_get(void *data)
 
 	wait_for_completion(&clk_comp);
 
-#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || defined(CONFIG_AMBALINK_SINGLE_CORE)
         /* In SMP BOSS, the cache is synced by SCU. */
         /* We can't invalidate the cache otherwise the data will be missing. */
 	ambcache_inv_range((void *) &clk_pkg, sizeof(clk_pkg));

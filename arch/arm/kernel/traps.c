@@ -866,7 +866,7 @@ void __init early_trap_init(void *vectors_base)
         memcpy((void *)vectors + 0x20, __vectors_start, __vectors_end - __vectors_start);
         memcpy((void *)vectors + 0x200, __stubs_start, __stubs_end - __stubs_start);
 
-        kuser_init(vectors);
+        kuser_init((void *)vectors);
 
         flush_icache_range(vectors, vectors + PAGE_SIZE);
 #else

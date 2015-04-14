@@ -135,10 +135,10 @@ static irqreturn_t ipc_mutex_isr(int irq, void *dev_id)
 	//printk("isr %d", irq);
 
 	// clear the irq
-#ifdef CONFIG_PLAT_AMBARELLA_S2L
-	amba_writel(VIC3_REG(VIC_SOFT_INT_CLR_INT_OFFSET), irq % 32);
-#else
+#if defined(CONFIG_ARM_GIC)
 	amba_writel(AHB_SCRATCHPAD_REG(0x14), 0x1 << (irq - AXI_SOFT_IRQ(0)));
+#else
+        amba_writel(VIC3_REG(VIC_SOFT_INT_CLR_INT_OFFSET), irq % 32);
 #endif
 
 	// wake up
@@ -211,7 +211,7 @@ void aipc_mutex_lock(int id)
 	local = &lock_set.local[id];
 
 	// check repeatedly until we become the owner
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
 	flags = arm_irq_save();
 #else
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
@@ -219,7 +219,7 @@ void aipc_mutex_lock(int id)
 	{
 		while (OWNER_IS_REMOTE(share)) {
 			share->wait_list |= AMBALINK_CORE_LOCAL;
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
 			arm_irq_restore(flags);
 #else
 			__aipc_spin_unlock_irqrestore(&share->slock, flags);
@@ -229,7 +229,7 @@ void aipc_mutex_lock(int id)
 			wait_for_completion(&local->completion);
 
 			// lock and check again
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
                        flags = arm_irq_save();
 #else
 			__aipc_spin_lock_irqsave(&share->slock, &flags);
@@ -240,7 +240,7 @@ void aipc_mutex_lock(int id)
 		share->wait_list &= ~AMBALINK_CORE_LOCAL;
 		local->count++;
 	}
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
        arm_irq_restore(flags);
 #else
 	__aipc_spin_unlock_irqrestore(&share->slock, flags);
@@ -279,7 +279,7 @@ void aipc_mutex_unlock(int id)
 	// unlock local mutex
 	mutex_unlock(&local->mutex);
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
        flags = arm_irq_save();
 #else
 	__aipc_spin_lock_irqsave(&share->slock, &flags);
@@ -290,17 +290,17 @@ void aipc_mutex_unlock(int id)
 		share->owner = 0;
 		if (share->wait_list) {
 			// notify remote waiting core(s)
-#ifdef CONFIG_PLAT_AMBARELLA_S2L
-			amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
-				    MUTEX_IRQ_REMOTE % 32);
-#else
+#if defined(CONFIG_ARM_GIC)
 			amba_writel(AHB_SCRATCHPAD_REG(0x10),
 				    0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ(0)));
+#else
+                        amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
+				    MUTEX_IRQ_REMOTE % 32);
 #endif
 			//printk("wakeup tx\n");
 		}
 	}
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS) && defined(CONFIG_AMBALINK_SINGLE_CORE)
        arm_irq_restore(flags);
 #else
 	__aipc_spin_unlock_irqrestore(&share->slock, flags);

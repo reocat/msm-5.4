@@ -60,12 +60,6 @@
 #define	FIO_INDEPENDENT_SD		0
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define	FIO_INDEPENDENT_SD		1
-#else
-#define	FIO_INDEPENDENT_SD		0
-#endif
-
 /* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000

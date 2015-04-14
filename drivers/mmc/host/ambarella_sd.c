@@ -2346,7 +2346,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 		dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 			__func__, retval, state.event);
 	}
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S2E)
 	else {
 		if (SD2_IRQ == (pinfo->irq)) {
 			pslotinfo = pinfo->pslotinfo[0];
@@ -2419,7 +2419,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 
 		dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 	}
-#if (CHIP_REV == S2) || (CHIP_REV == S2L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S2E)
         else {
                 if (SD2_IRQ == (pinfo->irq)) {
                         //struct irq_desc *desc;

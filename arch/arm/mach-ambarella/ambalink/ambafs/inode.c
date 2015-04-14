@@ -14,7 +14,7 @@
  */
 static void invalidate_page(struct page *page)
 {
-#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || defined(CONFIG_AMBALINK_SINGLE_CORE)
         void *addr = page_address(page);
 
         /* In SMP BOSS, the cache is synced by SCU. */
@@ -28,7 +28,7 @@ static void invalidate_page(struct page *page)
  */
 static void clean_page(struct page *page)
 {
-#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || defined(CONFIG_AMBALINK_SINGLE_CORE)
         void *addr = page_address(page);
 
         /* In SMP BOSS, the cache is synced by SCU. */

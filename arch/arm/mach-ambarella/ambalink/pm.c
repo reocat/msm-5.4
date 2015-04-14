@@ -208,12 +208,12 @@ int notify_suspend_done(int suspend_mode)
 
 	if (suspend_mode > 1) {
 		// standby and suspend to mem
-#ifdef CONFIG_PLAT_AMBARELLA_S2L
-		amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
-			    AMBALINK_AMP_SUSPEND_KICK % 32);
-#else
+#if defined(CONFIG_ARM_GIC)
 		amba_writel(AHB_SCRATCHPAD_REG(0x10),
 			    0x1 << (AMBALINK_AMP_SUSPEND_KICK - AXI_SOFT_IRQ(0)));
+#else
+                amba_writel(VIC3_REG(VIC_SOFT_INT_INT_OFFSET),
+                            AMBALINK_AMP_SUSPEND_KICK % 32);
 #endif
 	} else {
 		// hiber to NAND and hiber to ram
@@ -262,7 +262,7 @@ static inline int ambarella_pm_linkctrl_enter(void)
 
 		if (retval != 0x01) {
 			notify_suspend_done(wowlan_resume_from_ram);
-#if defined(CONFIG_AMBALINK_MULTIPLE_CORE)
+#if defined(CONFIG_AMBALINK_MULTIPLE_CORE) && !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 			// Linux on cortex core 1
 			sev();
 			wfe();
