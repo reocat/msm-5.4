@@ -331,8 +331,10 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1033>,
 						/* virtual pins, just for
-						   configuration purpose.*/
-						 <0x0022 0x0003>;
+						   configuration purpose.
+						   <0x0022>: kernel may throw out error,
+						   			ignore it.*/
+						 <0x0022 0x0023>;
 			};
 
 			pwm5_pins: pwm5@0 {
