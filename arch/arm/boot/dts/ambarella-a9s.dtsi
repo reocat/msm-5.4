@@ -40,10 +40,10 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		cpu@a00 {
+		cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
-			reg = <0xa00>;
+			reg = <0x0>;
 		};
 	};
 

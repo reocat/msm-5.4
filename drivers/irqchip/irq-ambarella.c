@@ -110,6 +110,10 @@ static void ambvic_unmask_irq(struct irq_data *data)
 {
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
 	u32 offset = HWIRQ_TO_OFFSET(data->hwirq);
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	u32 mask = 1 << HWIRQ_TO_OFFSET(data->hwirq);
+	u32 val0;
+#endif
 
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 /* If DMA IRQ owner is pre-set to RTOS at ambdma_dma_irq_handler,
@@ -121,6 +125,34 @@ static void ambvic_unmask_irq(struct irq_data *data)
 
 	/* Enable in BOSS. */
 	boss_enable_irq(data->hwirq);
+#endif
+
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	/* Using IRQ for Linux. */
+	val0 = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
+	val0 &= ~mask;
+	amba_writel(reg_base + VIC_INT_SEL_OFFSET, val0);
+
+#if defined(CONFIG_AMBALINK_MULTIPLE_CORE)
+	/*
+	 * We need to set the interrupt target.
+	 * Actually, this work can be done by irq_set_affinity(),
+	 * but the API is SMP related in kernel.
+	 * So we use irq_enable/disable to achieve this work.
+	 */
+	{
+		u32 val1;
+
+		val0 = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+		val1 = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
+
+		val0 &= ~mask;
+		val1 |= mask;
+
+		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, val0);
+		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, val1);
+	}
+#endif
 #endif
 
 	amba_writel(reg_base + VIC_INT_EN_INT_OFFSET, offset);
@@ -417,11 +449,17 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 	u32 irq, hwirq;
 	int handled = 0;
 
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && defined(CONFIG_AMBALINK_MULTIPLE_CORE)
+	/* Interrupt is ent to Core-1 in multiple core AmbaLink. */
+	scratchpad = AHB_SCRATCHPAD_REG(0x40);
+#else
 	if (smp_processor_id()) {
 		scratchpad = AHB_SCRATCHPAD_REG(0x40);
 	} else {
 		scratchpad = AHB_SCRATCHPAD_REG(0x3C);
 	}
+#endif
+
 	do {
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 		hwirq = *boss->irqno;
@@ -612,7 +650,7 @@ static void ambvic_resume(void)
 	void __iomem *reg_base;
 	int i;
 
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
 		pm_val = &ambvic_pm[i];
@@ -668,7 +706,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 		reg_base = of_iomap(np, i);
 		BUG_ON(!reg_base);
 
-#ifndef CONFIG_PLAT_AMBARELLA_BOSS
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 		amba_writel(reg_base + VIC_INT_SEL_OFFSET, 0x00000000);
 		amba_writel(reg_base + VIC_INTEN_OFFSET, 0x00000000);
 		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);

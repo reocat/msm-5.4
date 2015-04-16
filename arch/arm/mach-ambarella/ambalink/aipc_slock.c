@@ -38,6 +38,7 @@ typedef struct {
 } aspinlock_db;
 
 static aspinlock_db lock_set;
+static int lock_inited = 0;
 
 static int procfs_spinlock_show(struct seq_file *m, void *v)
 {
@@ -106,6 +107,8 @@ int aipc_spin_lock_setup(u32 addr)
 	/* Reserve one spinlock space for BCH NAND controller workaround. */
 	lock_set.size -= 1;
 	//memset(lock_set.lock, 0, lock_set.size);
+
+	lock_inited = 1;
 
 	printk("%s done\n", __func__);
 
@@ -206,6 +209,9 @@ void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags)
 
 void aipc_spin_lock(int id)
 {
+	if (!lock_inited)
+		aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+
 	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
@@ -224,6 +230,9 @@ void aipc_spin_unlock(int id)
 
 void aipc_spin_lock_irqsave(int id, unsigned long *flags)
 {
+	if (!lock_inited)
+		aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+
 	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
