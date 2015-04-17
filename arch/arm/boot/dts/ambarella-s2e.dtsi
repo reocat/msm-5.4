@@ -95,8 +95,12 @@
 			compatible = "ambarella,uart";
 			reg = <0x7001f000 0x100>;
 			interrupts = <25 0x04>;
-			status = "disabled";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins>;
+			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
 			/* amb,tx-fifo-fix; */
 		};
 
