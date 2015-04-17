@@ -388,11 +388,8 @@ static void serial_ambarella_handle_rx_pio(struct ambarella_uart_port *amb_port,
 		ch = (unsigned char) amba_readl(amb_port->port.membase + UART_RB_OFFSET);
 		amb_port->port.icount.rx++;
 
-		spin_lock_irqsave(&amb_port->port.lock, flags);
 		if (!uart_handle_sysrq_char(&amb_port->port, ch) && tty)
 			tty_insert_flip_char(tty, ch, flag);
-		spin_unlock_irqrestore(&amb_port->port.lock, flags);
-
 	} while (1);
 
 	return;
@@ -425,12 +422,10 @@ static void serial_ambarella_dma_rx_irq(struct ambarella_uart_port *amb_port)
 
 	serial_ambarella_handle_rx_pio(amb_port, port);
 
-	spin_lock_irqsave(&port->lock, flags);
 	if (tty) {
 		tty_flip_buffer_push(port);
 		tty_kref_put(tty);
 	}
-	spin_unlock_irqrestore(&port->lock, flags);
 }
 
 static void serial_ambarella_start_tx(struct uart_port *port);
@@ -469,8 +464,9 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 			struct ambarella_uart_port *amb_port;
 			amb_port = (struct ambarella_uart_port *)(port->private_data);
 			serial_ambarella_dma_rx_irq(amb_port);
-		} else
+		} else {
 			serial_ambarella_receive_chars(port, 1);
+		}
 		break;
 
 	case UART_II_NO_INT_PENDING:
@@ -555,9 +551,9 @@ static void serial_ambarella_start_next_tx(struct ambarella_uart_port *amb_port)
 	if (!count)
 		return;
 
-	if (count < AMBA_UART_MIN_DMA)
+	if (count < AMBA_UART_MIN_DMA) {
 		serial_ambarella_transmit_chars(port);
-	else {
+	} else {
 		wait_for_tx(port);
 		serial_ambarella_start_tx_dma(amb_port, count);
 	}
@@ -794,11 +790,10 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 	unsigned char *dma_buf;
 	int ret, chan_id;
 
-	if (dma_to_memory) {
+	if (dma_to_memory)
 		chan_id = UART_RX_DMA_CHAN;
-	} else {
+	else
 		chan_id = UART_TX_DMA_CHAN;
-	}
 
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
@@ -922,13 +917,11 @@ static void serial_ambarella_hw_deinit(struct ambarella_uart_port *amb_port)
 	struct uart_port *port = &amb_port->port;
 	unsigned long flags;
 
-	spin_lock_irqsave(&amb_port->port.lock, flags);
 	/* Disable interrupts */
 	amba_writel(port->membase + UART_IE_OFFSET, 0);
 	/* Reset the Rx and Tx FIFOs */
 	amba_writel(port->membase + UART_SRR_OFFSET,
 		UART_FCR_CLEAR_XMIT| UART_FCR_CLEAR_RCVR);
-	spin_unlock_irqrestore(&amb_port->port.lock, flags);
 }
 
 static void serial_ambarella_dma_channel_free(struct ambarella_uart_port *amb_port,
@@ -1391,9 +1384,9 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 	if (of_find_property(pdev->dev.of_node, "amb,rxdma-used", NULL)) {
 		amb_port->rxdma_used = 1;
 		dev_info(&pdev->dev,"Serial[%d] use rxdma\n", id);
-	}
-	else
+	} else {
 		amb_port->rxdma_used = 0;
+	}
 
 	amb_port->port.dev = &pdev->dev;
 	amb_port->port.type = PORT_UART00;
