@@ -377,7 +377,7 @@ static void serial_ambarella_handle_rx_pio(struct ambarella_uart_port *amb_port,
 {
 	do {
 		char flag = TTY_NORMAL;
-		unsigned long lsr = 0, flags;
+		unsigned long lsr = 0;
 		unsigned char ch;
 
 		lsr = amba_readl(amb_port->port.membase + UART_LS_OFFSET);
@@ -404,7 +404,6 @@ static void serial_ambarella_dma_rx_irq(struct ambarella_uart_port *amb_port)
 	struct tty_port *port = &amb_port->port.state->port;
 	struct tty_struct *tty = tty_port_tty_get(&amb_port->port.state->port);
 	struct dma_tx_state state;
-	unsigned long flags;
 	size_t pending;
 
 	dmaengine_tx_status(amb_port->rx_dma_chan, amb_port->rx_cookie, &state);
@@ -915,7 +914,6 @@ static int serial_ambarella_startup(struct uart_port *port)
 static void serial_ambarella_hw_deinit(struct ambarella_uart_port *amb_port)
 {
 	struct uart_port *port = &amb_port->port;
-	unsigned long flags;
 
 	/* Disable interrupts */
 	amba_writel(port->membase + UART_IE_OFFSET, 0);
