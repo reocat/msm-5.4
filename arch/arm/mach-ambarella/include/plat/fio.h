@@ -60,6 +60,11 @@
 #define	FIO_INDEPENDENT_SD		0
 #endif
 
+#if (CHIP_REV == S2E)
+#define NAND_ECC_RPT_NUM_SUPPORT	1
+#else
+#define NAND_ECC_RPT_NUM_SUPPORT	0
+#endif
 /* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
