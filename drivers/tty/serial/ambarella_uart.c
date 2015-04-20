@@ -85,6 +85,7 @@ struct ambarella_uart_port {
 	dma_cookie_t rx_cookie;
 	int tx_bytes_requested;
 	int rx_bytes_requested;
+	int tx_in_progress;
 };
 
 static struct ambarella_uart_port ambarella_port[UART_INSTANCES];
@@ -500,6 +501,7 @@ static void serial_ambarella_tx_dma_complete(void *args)
 	count = amb_port->tx_bytes_requested - state.residue;
 	spin_lock_irqsave(&amb_port->port.lock, flags);
 	xmit->tail = (xmit->tail + count) & (UART_XMIT_SIZE - 1);
+	amb_port->tx_in_progress = 0;
 	amb_port->port.icount.tx += count;
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&amb_port->port);
@@ -531,6 +533,7 @@ static int serial_ambarella_start_tx_dma(struct ambarella_uart_port *amb_port,
 	amb_port->tx_dma_desc->callback = serial_ambarella_tx_dma_complete;
 	amb_port->tx_dma_desc->callback_param = amb_port;
 	amb_port->tx_bytes_requested = tx_bytes;
+	amb_port->tx_in_progress = 1;
 	amb_port->tx_cookie = dmaengine_submit(amb_port->tx_dma_desc);
 	dma_async_issue_pending(amb_port->tx_dma_chan);
 
@@ -569,11 +572,7 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
 
 	if (amb_port->txdma_used) {
-		struct dma_tx_state state;
-		int dma_status;
-
-		dma_status = dmaengine_tx_status(amb_port->tx_dma_chan, amb_port->tx_cookie, &state);
-		if (tty->hw_stopped || dma_status == DMA_IN_PROGRESS)
+		if (tty->hw_stopped ||amb_port->tx_in_progress)
 			return;
 		serial_ambarella_start_next_tx(amb_port);
 	} else {
@@ -964,6 +963,7 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 		if (amb_port->txdma_used) {
 			dmaengine_terminate_all(amb_port->tx_dma_chan);
 			serial_ambarella_dma_channel_free(amb_port, false);
+			amb_port->tx_in_progress = 0;
 		}
 		if (amb_port->rxdma_used) {
 			dmaengine_terminate_all(amb_port->rx_dma_chan);
