@@ -553,12 +553,11 @@ static void serial_ambarella_start_next_tx(struct ambarella_uart_port *amb_port)
 	if (!count)
 		return;
 
-	if (count < AMBA_UART_MIN_DMA) {
+	wait_for_tx(port);
+	if (count < AMBA_UART_MIN_DMA)
 		serial_ambarella_transmit_chars(port);
-	} else {
-		wait_for_tx(port);
+	else
 		serial_ambarella_start_tx_dma(amb_port, count);
-	}
 }
 
 static void serial_ambarella_start_tx(struct uart_port *port)
