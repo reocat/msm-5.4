@@ -39,7 +39,10 @@ typedef enum _AMBA_CLK_IDX_e_ {
         AMBA_CLK_SDIO,
         AMBA_CLK_SD48,
         AMBA_CLK_UART,
+#if !defined(CONFIG_PLAT_AMBARELLA_S2E)
+	/* The ARM APIN in RTOS is removed. */
         AMBA_CLK_ARM,
+#endif
         AMBA_CLK_AHB,
         AMBA_CLK_APB,
         AMBA_CLK_AXI,
