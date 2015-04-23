@@ -76,6 +76,12 @@ config RPMSG_LINKCTRL
 	  A rpmsg server to handle the message between client and server for
 	  control purpose, such as suspend, resume.
 
+config RPMSG_VFFS
+	bool "Amba FUSE VFFS"
+	depends on RPMSG
+	default n
+	help
+	  A user space file system for RTOS accessing Linux, called FUSE VFFS.
 source "arch/arm/mach-ambarella/ambalink/ambafs/Kconfig"
 
 endif #PLAT_AMBARELLA_AMBALINK

@@ -32,3 +32,4 @@ obj-y                      			+= ambafs/
 obj-y                         			+= rpmsg_clk.o
 obj-$(CONFIG_RPMSG_SD)                          += rpmsg_sd.o
 obj-y				                += rpmsg_linkctrl.o
+obj-$(CONFIG_RPMSG_VFFS)			+= rpmsg_vffs.o
