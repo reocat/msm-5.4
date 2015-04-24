@@ -81,7 +81,10 @@ static clk_name ambarella_clk[] = {
 	{AMBA_CLK_SDIO, "gclk_sdio"},
 	{AMBA_CLK_SD48, "gclk_sd"},
 	{AMBA_CLK_UART, "gclk_uart"},
+#if !defined(CONFIG_PLAT_AMBARELLA_S2E)
+	/* The ARM APIN in RTOS is removed. */
 	{AMBA_CLK_ARM, "gclk_arm"},
+#endif
 	{AMBA_CLK_AHB, "gclk_ahb"},
 	{AMBA_CLK_APB, "gclk_apb"},
 	{AMBA_CLK_AXI, "gclk_axi"},
@@ -218,7 +221,9 @@ static int rpmsg_clk_ack_threadx(void *data)
 static int rpmsg_clk_changed_pre_notify(void *data)
 {
 	int retval = 0;
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
+#endif
 	extern void clockevents_suspend(void);
 
 	retval = notifier_to_errno(
@@ -259,9 +264,9 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	unsigned long flags;
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	flags = arm_irq_save();
 #endif
 
