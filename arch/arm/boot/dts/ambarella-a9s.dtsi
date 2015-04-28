@@ -375,7 +375,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&nand0_pins>;
 			nand-on-flash-bbt;
-			amb,enable-wp;
+			/* amb,enable-wp; */
 			/* amb,soft-ecc = <1>; */
 		};
 

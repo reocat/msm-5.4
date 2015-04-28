@@ -73,6 +73,10 @@ static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 
 static struct ambvic_chip_data ambvic_data __read_mostly;
 
+#if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+u32 vic_linux_only[4];
+#endif
+
 /* ==========================================================================*/
 #if (VIC_SUPPORT_CPU_OFFLOAD >= 1)
 
@@ -128,6 +132,9 @@ static void ambvic_unmask_irq(struct irq_data *data)
 #endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	/* Saved the IRQ used in Linux for resuming purpose.. */
+	vic_linux_only[HWIRQ_TO_BANK(data->hwirq)] |= mask;
+
 	/* Using IRQ for Linux. */
 	val0 = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
 	val0 &= ~mask;
@@ -650,7 +657,59 @@ static void ambvic_resume(void)
 	void __iomem *reg_base;
 	int i;
 
-#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	u32 cur_val, resume_mask, resume_val;
+
+	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
+		reg_base = ambvic_data.reg_base[i];
+		pm_val = &ambvic_pm[i];
+		resume_mask = vic_linux_only[i];
+
+		/* Only restore the setting of Linux's driver.	*/
+		/* Read back and clear Linux's bit then OR the Linux only suspended value. */
+
+		cur_val = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->int_sel_reg & resume_mask);
+		amba_writel(reg_base + VIC_INT_SEL_OFFSET, resume_val);
+
+		amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, (0xffffffff & resume_mask));
+		amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, (0xffffffff & resume_mask));
+
+		cur_val = amba_readl(reg_base + VIC_INTEN_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->inten_reg & resume_mask);
+		amba_writel(reg_base + VIC_INTEN_OFFSET, resume_val);
+
+		amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, (0xffffffff & resume_mask));
+
+		cur_val = amba_readl(reg_base + VIC_SOFTEN_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->soften_reg & resume_mask);
+		amba_writel(reg_base + VIC_SOFTEN_OFFSET, resume_val);
+
+		cur_val = amba_readl(reg_base + VIC_PROTEN_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->proten_reg & resume_mask);
+		amba_writel(reg_base + VIC_PROTEN_OFFSET, resume_val);
+
+		cur_val = amba_readl(reg_base + VIC_SENSE_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->sense_reg & resume_mask);
+		amba_writel(reg_base + VIC_SENSE_OFFSET, resume_val);
+
+		cur_val = amba_readl(reg_base + VIC_BOTHEDGE_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->bothedge_reg & resume_mask);
+		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, resume_val);
+
+		cur_val = amba_readl(reg_base + VIC_EVENT_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->event_reg & resume_mask);
+		amba_writel(reg_base + VIC_EVENT_OFFSET, resume_val);
+
+		cur_val = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->int_ptr0_reg & resume_mask);
+		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, resume_val);
+
+		cur_val = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
+		resume_val = (cur_val & ~resume_mask) | (pm_val->int_ptr1_reg & resume_mask);
+		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, resume_val);
+	}
+#else
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
 		pm_val = &ambvic_pm[i];
@@ -662,25 +721,6 @@ static void ambvic_resume(void)
 		amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0xffffffff);
 		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_val->soften_reg);
 		amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_val->proten_reg);
-		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_val->sense_reg);
-		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_val->bothedge_reg);
-		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_val->event_reg);
-		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, pm_val->int_ptr0_reg);
-		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, pm_val->int_ptr1_reg);
-	}
-#else
-	/* Should we only restore the setting of Linux's driver?  */
-	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
-		reg_base = ambvic_data.reg_base[i];
-		pm_val = &ambvic_pm[i];
-
-		amba_writel(reg_base + VIC_INT_SEL_OFFSET, pm_val->int_sel_reg);
-		//amba_writel(reg_base + VIC_INTEN_CLR_OFFSET, 0xffffffff);
-		//amba_writel(reg_base + VIC_EDGE_CLR_OFFSET, 0xffffffff);
-		//amba_writel(reg_base + VIC_INTEN_OFFSET, pm_reg->inten_reg);
-		//amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, 0xffffffff);
-		amba_writel(reg_base + VIC_SOFTEN_OFFSET, pm_val->soften_reg);
-		//amba_writel(reg_base + VIC_PROTEN_OFFSET, pm_reg->proten_reg);
 		amba_writel(reg_base + VIC_SENSE_OFFSET, pm_val->sense_reg);
 		amba_writel(reg_base + VIC_BOTHEDGE_OFFSET, pm_val->bothedge_reg);
 		amba_writel(reg_base + VIC_EVENT_OFFSET, pm_val->event_reg);
