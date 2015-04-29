@@ -334,9 +334,15 @@ void ambcache_l2_enable_raw()
 #ifdef CONFIG_CACHE_PL310
 	if (ambcache_l2_init == 0) {
 		u32 ctrl = setup_l2_ctrl();
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
+		/*
+		 * L2 is enabled in RTOS,
+		 * writing to these registers will cause AXI slave error!
+		 */
 #if (CHIP_REV == S2E) || (CHIP_REV == S3)
 		writel(0x00000222, (ambcache_l2_base + L2X0_TAG_LATENCY_CTRL));
 		writel(0x00000222, (ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
+#endif
 #endif
 		setup_l2_prefetch_ctrl();
 		l2x0_init(ambcache_l2_base, ctrl, L2X0_AUX_CTRL_MASK);
