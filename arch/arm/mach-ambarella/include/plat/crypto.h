@@ -25,8 +25,13 @@
 #define __PLAT_AMBARELLA_CRYPTO_H__
 
 /* ==========================================================================*/
+#if (CHIP_REV == A5S)
+#define CRYPT_UNIT_OFFSET		0x14000
+#define CRYPT_UNIT_BASE			(AHB_BASE + CRYPT_UNIT_OFFSET)
+#else
 #define CRYPT_UNIT_OFFSET		0x20000
 #define CRYPT_UNIT_BASE			(AXI_BASE + CRYPT_UNIT_OFFSET)
+#endif
 
 #define CRYPT_UNIT_REG(x)		(CRYPT_UNIT_BASE + (x))
 
