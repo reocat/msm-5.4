@@ -39,6 +39,7 @@
 
 struct ambvic_chip_data {
 	void __iomem *reg_base[VIC_INSTANCES];
+	void __iomem *ipi_reg_base;
 	struct irq_domain *domain;
 };
 
@@ -46,14 +47,23 @@ struct ambvic_chip_data {
 
 static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 
-#define IPI0_IRQ_MASK		((1 << IPI01_IRQ) | (1 << IPI02_IRQ) | \
-				 (1 << IPI03_IRQ) | (1 << IPI04_IRQ) | \
-				 (1 << IPI05_IRQ) | (1 << IPI06_IRQ))
-#define IPI1_IRQ_MASK		((1 << IPI11_IRQ) | (1 << IPI12_IRQ) | \
-				 (1 << IPI13_IRQ) | (1 << IPI14_IRQ) | \
-				 (1 << IPI15_IRQ) | (1 << IPI16_IRQ))
+#define IPI0_IRQ_MASK		((1 << (IPI01_IRQ % 32)) | \
+				 (1 << (IPI02_IRQ % 32)) | \
+				 (1 << (IPI03_IRQ % 32)) | \
+				 (1 << (IPI04_IRQ % 32)) | \
+				 (1 << (IPI05_IRQ % 32)) | \
+				 (1 << (IPI06_IRQ % 32)))
+#define IPI1_IRQ_MASK		((1 << (IPI11_IRQ % 32)) | \
+				 (1 << (IPI12_IRQ % 32)) | \
+				 (1 << (IPI13_IRQ % 32)) | \
+				 (1 << (IPI14_IRQ % 32)) | \
+				 (1 << (IPI15_IRQ % 32)) | \
+				 (1 << (IPI16_IRQ % 32)))
 #define IPI_IRQ_MASK		(IPI0_IRQ_MASK | IPI1_IRQ_MASK)
-#define AMBVIC_IRQ_IS_IPI(irq)	((irq) < 32 && ((1 << (irq)) & IPI_IRQ_MASK))
+
+#define AMBVIC_IRQ_IS_IPI0(irq)	(((irq) >= IPI01_IRQ && (irq) <= IPI06_IRQ))
+#define AMBVIC_IRQ_IS_IPI1(irq)	(((irq) >= IPI11_IRQ && (irq) <= IPI16_IRQ))
+#define AMBVIC_IRQ_IS_IPI(irq)	(AMBVIC_IRQ_IS_IPI0(irq) || AMBVIC_IRQ_IS_IPI1(irq))
 
 #endif
 
@@ -300,9 +310,9 @@ static struct irq_chip ambvic_chip = {
 
 /* ==========================================================================*/
 #ifdef CONFIG_SMP
-void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
+static void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 {
-	int cpu;
+	int cpu, softirq;
 
 	/* currently we only support dual cores, so we just pick the
 	 * first cpu we find in 'mask'.. */
@@ -314,15 +324,14 @@ void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	 */
 	dsb();
 
-	/* submit softirq. Note: this always happens on VIC0, and we reserve
-	 * VIC0.0 to keep HWIRQ == IRQ, so we will use VIC0.1 ~ VIC0.6 and
-	 * VIC0.17 ~ VIC0.22 as IPI.*/
-	ambvic_sw_set(ambvic_data.reg_base[0], irq + ((cpu == 0) ? 1 : 17));
+	/* submit softirq */
+	softirq = irq + ((cpu == 0) ? (IPI01_IRQ % 32) : (IPI11_IRQ % 32));
+	ambvic_sw_set(ambvic_data.ipi_reg_base, softirq);
 }
 
-void ambvic_smp_softirq_init(void)
+static void ambvic_smp_softirq_init(void)
 {
-	void __iomem *reg_base = ambvic_data.reg_base[0];
+	void __iomem *reg_base = ambvic_data.ipi_reg_base;
 	u32 val;
 
 	raw_spin_lock(&irq_controller_lock);
@@ -356,11 +365,11 @@ static inline int ambvic_handle_ipi(struct pt_regs *regs,
 	/* IPI Handling */
 	if (AMBVIC_IRQ_IS_IPI(hwirq)) {
 		//printk("***********  hwirq = %d\n", hwirq);
-		ambvic_sw_clr(ambvic_data.reg_base[0], hwirq);
-		if ((1 << hwirq) & IPI0_IRQ_MASK)
-			handle_IPI(hwirq - 1, regs);
+		ambvic_sw_clr(ambvic_data.ipi_reg_base, hwirq % 32);
+		if (AMBVIC_IRQ_IS_IPI0(hwirq))
+			handle_IPI(hwirq - IPI01_IRQ, regs);
 		else
-			handle_IPI(hwirq - 17, regs);
+			handle_IPI(hwirq - IPI11_IRQ, regs);
 
 		return 1;
 	}
@@ -384,8 +393,14 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 	}
 	do {
 		hwirq = amba_readl(scratchpad);
-		if (hwirq == 0x60) {
+		if (hwirq == VIC_NULL_PRI_IRQ_VAL) {
+#if (VIC_NULL_PRI_IRQ_FIX == 1)
+			void __iomem *reg_base = ambvic_data.reg_base[2];
+			if ((amba_readl(reg_base + VIC_IRQ_STA_OFFSET) & 0x1) == 0)
+				break;
+#else
 			break;
+#endif
 		}
 		bank = (hwirq >> 5) & 0x3;
 		hwirq &= 0x1F;
@@ -597,7 +612,9 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 	}
 
 #ifdef CONFIG_SMP
+	ambvic_data.ipi_reg_base = ambvic_data.reg_base[IPI01_IRQ / 32];
 	ambvic_smp_softirq_init();
+	set_smp_cross_call(ambvic_raise_softirq);
 #if 0
 	/*
 	 * Set the default affinity from all CPUs to the boot cpu.

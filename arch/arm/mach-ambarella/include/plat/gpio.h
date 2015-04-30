@@ -31,7 +31,7 @@
 #elif (CHIP_REV == A5S)
 #define GPIO_INSTANCES			3
 #define GPIO_MAX_LINES			96
-#elif (CHIP_REV == S2)
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			138
 #elif (CHIP_REV == A8)
@@ -51,7 +51,7 @@
 #define GPIO0_OFFSET			0x9000
 #define GPIO1_OFFSET			0xA000
 #define GPIO2_OFFSET			0xE000
-#if (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define GPIO3_OFFSET			0x10000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1E000
@@ -83,7 +83,7 @@
 #define GPIO6_REG(x)			(GPIO6_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == A8)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
 #define GPIO_PAD_PULL_CTRL_SUPPORT		1
 #define GPIO_PAD_PULL_OFFSET			0xD000
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)

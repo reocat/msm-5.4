@@ -266,7 +266,7 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
-#elif (CHIP_REV == S3)
+#elif (CHIP_REV == S2E) || (CHIP_REV == S3)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x3 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
@@ -334,7 +334,7 @@ void ambcache_l2_enable_raw()
 #ifdef CONFIG_CACHE_PL310
 	if (ambcache_l2_init == 0) {
 		u32 ctrl = setup_l2_ctrl();
-#if(CHIP_REV == S3)
+#if (CHIP_REV == S2E) || (CHIP_REV == S3)
 		writel(0x00000222, (ambcache_l2_base + L2X0_TAG_LATENCY_CTRL));
 		writel(0x00000222, (ambcache_l2_base + L2X0_DATA_LATENCY_CTRL));
 #endif

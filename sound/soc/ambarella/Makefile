@@ -7,6 +7,7 @@ obj-$(CONFIG_SND_AMBARELLA_SOC_I2S)	+= snd-soc-ambarella-i2s.o
 
 # AMBARELLA Machine Support
 snd-soc-ambevk-objs := ambevk.o
+snd-soc-ambevk-ak4951-objs := ambevk_ak4951.o
 snd-soc-i1evk-objs := i1evk.o
 snd-soc-dummy-objs := dummy.o
 snd-soc-s2lmkiwi-objs := s2lmkiwi.o
@@ -17,6 +18,7 @@ snd-soc-s2lmelektra-objs := s2lmelektra.o
 
 obj-$(CONFIG_AK7719_DSP)		+= snd-soc-ak7719.o
 obj-$(CONFIG_AMBEVK_BOARD)		+= snd-soc-ambevk.o
+obj-$(CONFIG_AMBEVK_AK4951_BOARD)	+= snd-soc-ambevk-ak4951.o
 obj-$(CONFIG_I1EVK_BOARD)		+= snd-soc-i1evk.o
 obj-$(CONFIG_AMBARELLA_DUMMY_BOARD)	+= snd-soc-dummy.o
 obj-$(CONFIG_S2LMKIWI_BOARD)		+= snd-soc-s2lmkiwi.o

@@ -76,7 +76,7 @@
 #define DBGBUS_PHYS_BASE		(0xec000000)
 #define DBGBUS_SIZE			(0x00200000)
 #define DBGFMEM_PHYS_BASE		(0xee000000)
-#define DBGFMEM_SIZE		(0x01000000)
+#define DBGFMEM_SIZE			(0x01000000)
 #endif
 
 /* Virtual Address */

@@ -27,7 +27,7 @@
 /* ==========================================================================*/
 #if (CHIP_REV == A5S) || (CHIP_REV == A7L)
 #define NUM_DMA_CHANNELS 		4
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S2E) || (CHIP_REV == S3)
 #define NUM_DMA_CHANNELS 		8
 #else
 #define NUM_DMA_CHANNELS 		5
@@ -68,6 +68,19 @@
 #define UART_RX_DMA_CHAN		5
 #define I2S_RX_DMA_CHAN			6
 #define I2S_TX_DMA_CHAN			7
+
+#elif (CHIP_REV == S2E)
+#define NOR_SPI_TX_DMA_CHAN		0
+#define I2S_RX_DMA_CHAN			1
+#define I2S_TX_DMA_CHAN			2
+#define I2S1_RX_DMA_CHAN		3
+#define I2S1_TX_DMA_CHAN		4
+#define UART_RX_DMA_CHAN		5
+#define UART_TX_DMA_CHAN		6
+#define NOR_SPI_RX_DMA_CHAN		7
+/* non-existed dma channel */
+#define SSI1_TX_DMA_CHAN		INVALID_DMA_CHAN
+#define SSI1_RX_DMA_CHAN		INVALID_DMA_CHAN
 
 #else
 #define I2S_RX_DMA_CHAN			1

@@ -895,6 +895,11 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 							nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
+					if (NAND_ECC_RPT_NUM_SUPPORT) {
+						dev_info(nand_info->dev, "BCH correct [%d]bit in block[%d]\n",
+						((nand_info->fio_ecc_sta >> 16) & 0x000F),
+						(nand_info->fio_ecc_sta & 0x00007FFF));
+					}
 					nand_info->mtd.ecc_stats.corrected++;
 					/* once bitflip and data corrected happened, BCH will keep on
 					 * to report bitflip in following read operations, even though

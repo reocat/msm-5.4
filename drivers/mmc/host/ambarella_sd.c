@@ -91,6 +91,12 @@ enum ambarella_sd_state {
 	AMBA_SD_STATE_ERR
 };
 
+struct ambarella_sd_phy_timing {
+	u32				mode;
+	u32				val0;
+	u32				val1;
+};
+
 struct ambarella_sd_mmc_info {
 	struct mmc_host			*mmc;
 	struct mmc_request		*mrq;
@@ -158,8 +164,10 @@ struct ambarella_sd_controller_info {
 
 	struct clk			*clk;
 	u32				default_wait_tmo;
-	u32				timing_magic;
 	u8				slot_num;
+	u32				soft_phy : 1;
+	struct ambarella_sd_phy_timing	*phy_timing;
+	u32				phy_timing_num;
 
 	struct ambarella_sd_mmc_info	*pslotinfo[AMBA_SD_MAX_SLOT_NUM];
 	struct mmc_ios			controller_ios;
@@ -1069,6 +1077,39 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 		amba_readb(pinfo->regbase + SD_PWR_OFFSET));
 }
 
+static void ambarella_sd_set_phy_timing(
+		struct ambarella_sd_controller_info *pinfo, int mode)
+{
+	u32 i, val0, val1;
+
+	if (pinfo->timing_reg == NULL || pinfo->phy_timing_num == 0)
+		return;
+
+	for (i = 0; i < pinfo->phy_timing_num; i++) {
+		if (pinfo->phy_timing[i].mode & (0x1 << mode))
+			break;
+	}
+
+	/* phy setting is not defined in DTS for this mode, so we use the
+	 * default phy setting defined for DS mode. */
+	if (i >= pinfo->phy_timing_num)
+		i = 0;
+
+	val0 = pinfo->phy_timing[i].val0;
+	val1 = pinfo->phy_timing[i].val1;
+
+	if (pinfo->soft_phy) {
+		amba_writel(pinfo->timing_reg, val0 | 0x02000000);
+		amba_writel(pinfo->timing_reg, val0);
+		amba_writel(pinfo->regbase + SD_LAT_CTRL_OFFSET, val1);
+	} else {
+		u32 ms_delay = amba_rct_readl(pinfo->timing_reg);
+		ms_delay &= val0;
+		ms_delay |= val1;
+		amba_rct_writel(pinfo->timing_reg, ms_delay);
+	}
+}
+
 static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
@@ -1119,30 +1160,11 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 		break;
 	}
 
-	if (pinfo->timing_reg != NULL) {
-		u32 ms_delay = amba_rct_readl(pinfo->timing_reg);
-		switch(pinfo->timing_magic) {
-		case 1:
-			ms_delay &= 0xe3e0e3e0;
-			if (ios->timing == MMC_TIMING_UHS_DDR50)
-				ms_delay |= ((0x7 << 16) | (0x7 << 10));
-			amba_rct_writel(pinfo->timing_reg, ms_delay);
-			break;
-		case 2:
-			ms_delay &= 0x1c1f1c1f;
-			if (ios->timing == MMC_TIMING_UHS_DDR50)
-				ms_delay |= ((0x7 << 21) | (0x7 << 13));
-			amba_rct_writel(pinfo->timing_reg, ms_delay);
-			break;
-		default:
-			dev_warn(pinfo->dev, "invalid timing-magic\n");
-			break;
-		}
-	}
-
 	amba_writeb(pinfo->regbase + SD_HOST_OFFSET, hostr);
 
 	ambsd_dbg(pslotinfo, "hostr = 0x%x.\n", hostr);
+
+	ambarella_sd_set_phy_timing(pinfo, ios->timing);
 }
 
 static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
@@ -1916,25 +1938,25 @@ static int ambarella_sd_free_slot(struct ambarella_sd_mmc_info *pslotinfo)
 static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 {
 	struct device_node *np = pinfo->dev->of_node;
+	const __be32 *prop;
 	const char *clk_name;
-	int tmo, retval = 0;
+	int psize, tmo, retval = 0;
 
 	retval = of_property_read_string(np, "amb,clk-name", &clk_name);
 	if (retval < 0) {
 		dev_err(pinfo->dev, "Get pll-name failed! %d\n", retval);
-		return retval;
+		goto pasre_err;
 	}
 
 	pinfo->clk = clk_get(NULL, clk_name);
 	if (IS_ERR(pinfo->clk)) {
 		dev_err(pinfo->dev, "Get PLL failed!\n");
-		return PTR_ERR(pinfo->clk);
+		retval = PTR_ERR(pinfo->clk);
+		goto pasre_err;
 	}
 
 	if (of_find_property(np, "amb,dma-addr-fix", NULL))
 		pinfo->dma_fix = 0xc0000000;
-
-	of_property_read_u32(np, "amb,timing-magic", &pinfo->timing_magic);
 
 	retval = of_property_read_u32(np, "amb,wait-tmo", &tmo);
 	if (retval < 0)
@@ -1949,7 +1971,40 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 	if (retval < 0)
 		pinfo->max_blk_sz = 0x20000;
 
-	return 0;
+	/* below are properties for phy timing */
+	if (pinfo->timing_reg == NULL) {
+		retval = 0;
+		goto pasre_err;
+	}
+
+	pinfo->soft_phy = !!of_find_property(np, "amb,soft-phy", NULL);
+
+	/* amb,phy-timing must be provided when timing_reg is given */
+	prop = of_get_property(np, "amb,phy-timing", &psize);
+	if (!prop) {
+		retval = -EINVAL;
+		goto pasre_err;
+	}
+
+	psize /= sizeof(u32);
+	BUG_ON(psize % 3);
+	pinfo->phy_timing_num = psize / 3;
+
+	pinfo->phy_timing = devm_kzalloc(pinfo->dev, psize, GFP_KERNEL);
+	if (pinfo->phy_timing == NULL) {
+		retval = -ENOMEM;
+		goto pasre_err;
+	}
+
+	retval = of_property_read_u32_array(np, "amb,phy-timing",
+			(u32 *)pinfo->phy_timing, psize);
+
+	/* bit0 of mode must be set, and the phy setting in first row with
+	 * bit0 set is the default one. */
+	BUG_ON(!(pinfo->phy_timing[0].mode & 0x1));
+
+pasre_err:
+	return retval;
 }
 
 static int ambarella_sd_get_resource(struct platform_device *pdev,

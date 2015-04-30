@@ -25,7 +25,7 @@
 #define __PLAT_AMBARELLA_SD_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2)
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SD_INSTANCES			2
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define SD_INSTANCES			3
@@ -34,17 +34,19 @@
 #endif
 
 /* ==========================================================================*/
-#define SD_OFFSET			0x2000
-#define SD2_OFFSET			0xC000
-#define SD3_OFFSET			0x1F000
+#define SD0_OFFSET			0x2000
+#define SD1_OFFSET			0xC000
+#define SD2_OFFSET			0x1F000
 
-#define SD_BASE				(AHB_BASE + SD_OFFSET)
+#define SD0_BASE			(AHB_BASE + SD0_OFFSET)
+#define SD1_BASE			(AHB_BASE + SD1_OFFSET)
 #define SD2_BASE			(AHB_BASE + SD2_OFFSET)
-#define SD3_BASE			(AHB_BASE + SD3_OFFSET)
+#define SD_BASE(id)			((id == 0) ? SD0_BASE : \
+					 (id == 1) ? SD1_BASE : SD2_BASE)
 
-#define SD_REG(x)			(SD_BASE + (x))
-#define SD2_REG(x)			(SD2_BASE + (x))
-#define SD3_REG(x)			(SD3_BASE + (x))
+#define SD0_REG(x)			(SD0_BASE + (x))
+#define SD2_REG(x)			(SD1_BASE + (x))
+#define SD3_REG(x)			(SD2_BASE + (x))
 
 /* ==========================================================================*/
 #define SD_DMA_ADDR_OFFSET		0x000
@@ -82,6 +84,7 @@
 #define SD_BOOT_CTR_OFFSET		0x070
 #define SD_BOOT_STA_OFFSET		0x074
 #define SD_VOL_SW_OFFSET		0x07C
+#define SD_LAT_CTRL_OFFSET		0x0F8
 #define SD_SIST_OFFSET			0x0FC	/* Half word */
 #define SD_VER_OFFSET			0x0FE	/* Half word */
 

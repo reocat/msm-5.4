@@ -31,45 +31,50 @@
 #define	FIO_USE_2X_FREQ			0
 #endif
 
-#if (CHIP_REV == S2)
-#define	NAND_DUAL_SPACE_MODE		1
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define	NAND_READ_ID5			1
-
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00000010
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define	NAND_DUAL_SPACE_MODE		1
-#define	NAND_READ_ID5			1
 
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
+#define	NAND_READ_ID5			1
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00020000
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000
-#else
-#define	NAND_DUAL_SPACE_MODE		0
-#define	NAND_READ_ID5			0
 
+#else
+#define	NAND_READ_ID5			0
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00000020
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000000
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000000
+
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define	FIO_INDEPENDENT_SD		1
 #else
 #define	FIO_INDEPENDENT_SD		0
 #endif
 
+#if (CHIP_REV == S2E)
+#define NAND_ECC_RPT_NUM_SUPPORT	1
+#else
+#define NAND_ECC_RPT_NUM_SUPPORT	0
+#endif
 /* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
+#define FIO_4K_OFFSET			0x30000
 
 #define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
+#define FIO_4K_BASE			(AHB_BASE + FIO_4K_OFFSET)
 #define FIO_REG(x)			(FIO_BASE + (x))
+#define FIO_4K_REG(x)			(FIO_4K_BASE + (x))
 
 /* ==========================================================================*/
 #define FIO_CTR_OFFSET			0x000

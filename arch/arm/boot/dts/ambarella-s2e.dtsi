@@ -10,8 +10,8 @@
 /include/ "skeleton.dtsi"
 
 / {
-	compatible = "ambarella,s2";
-	interrupt-parent = <&gic>;
+	compatible = "ambarella,s2e";
+	interrupt-parent = <&intc>;
 
 	aliases {
 		serial0 = &uart0;
@@ -40,24 +40,16 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		cpu@0 {
+		cpu@a00 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
-			reg = <0>;
+			reg = <0xa00>;
 		};
-		cpu@1 {
+		cpu@a01 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
-			reg = <1>;
+			reg = <0xa01>;
 		};
-	};
-
-	gic: interrupt-controller@f0001000 {
-		compatible = "arm,cortex-a9-gic";
-		interrupt-controller;
-		#interrupt-cells = <3>;
-		reg = <0xf0001000 0x1000>,
-			  <0xf0000100 0x0100>;
 	};
 
 	apb@70000000 {	/* APB */
@@ -70,29 +62,29 @@
 		timer7: timer@7000b064 {
 			compatible = "ambarella,clock-source";
 			reg = <0x7000b064 0x10 0x7000b030 0x4>;
-			interrupts = <0 108 0x1>;
+			interrupts = <62 0x1>;
 			ctrl-offset = <24>; /* bit offset in timer-ctrl reg */
 		};
 
 		timer8: timer@7000b074 {
 			compatible = "ambarella,clock-event";
 			reg = <0x7000b074 0x10 0x7000b030 0x4>;
-			interrupts = <0 109 0x1>;
+			interrupts = <63 0x1>;
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 		};
 
-		/* local_timer is not used, just for debug purpose */
+		/* timer6 and timer5 */
 		local_timer: timer@7000b054 {
 			compatible = "ambarella,local-clock-event";
 			reg = <0x7000b054 0x10 0x7000b030 0x4 0x7000b044 0x10 0x7000b030 0x4>;
-			interrupts = <0 107 0x1 0 106 0x1>;
+			interrupts = <61 0x1 60 0x1>;
 			ctrl-offset = <20 16>; /* bit offset in timer-ctrl reg */
 		};
 
 		uart0: uart@70005000 {
 			compatible = "ambarella,uart";
 			reg = <0x70005000 0x100>;
-			interrupts = <0 9 0x04>;
+			interrupts = <9 0x04>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins>;
 			status = "ok";
@@ -102,16 +94,20 @@
 		uart1: uart@7001f000 {
 			compatible = "ambarella,uart";
 			reg = <0x7001f000 0x100>;
-			interrupts = <0 25 0x04>;
-			status = "disabled";
+			interrupts = <25 0x04>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins>;
+			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
 			/* amb,tx-fifo-fix; */
 		};
 
 		uart2: uart@70014000 {
 			compatible = "ambarella,uart";
 			reg = <0x70014000 0x100>;
-			interrupts = <0 91 0x04>;
+			interrupts = <91 0x04>;
 			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,tx-fifo-fix; */
@@ -120,7 +116,7 @@
 		uart3: uart@70015000 {
 			compatible = "ambarella,uart";
 			reg = <0x70015000 0x100>;
-			interrupts = <0 92 0x04>;
+			interrupts = <92 0x04>;
 			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,tx-fifo-fix; */
@@ -131,7 +127,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70003000 0x1000>;
-			interrupts = <0 19 0x04>;
+			interrupts = <19 0x04>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
 			clock-frequency = <100000>;
@@ -145,7 +141,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70007000 0x1000>;
-			interrupts = <0 36 0x04>;
+			interrupts = <36 0x04>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
 			clock-frequency = <100000>;
@@ -159,7 +155,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70013000 0x1000>;
-			interrupts = <0 90 0x04>;
+			interrupts = <90 0x04>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c2_pins>;
 			clock-frequency = <100000>;
@@ -173,7 +169,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70002000 0x1000>;
-			interrupts = <0 20 0x4>;
+			interrupts = <20 0x4>;
 			amb,clk-name = "gclk_ssi";
 			amb,clk-freq = <60000000>;
 		};
@@ -181,20 +177,21 @@
 		spi_slave@7001e000 {
 			compatible = "ambarella,spi-slave";
 			reg = <0x7001e000 0x1000>;
-			interrupts = <0 26 0x4>;
+			interrupts = <26 0x4>;
+			status = "disabled";
 		};
 
 		adc@7000d000 {
 			compatible = "ambarella,adc";
 			reg = <0x7000d000 0x1000>;
-			interrupts = <0 34 0x4>;
+			interrupts = <34 0x4>;
 			clock-frequency = <3000000>;
 		};
 
 		ir@70006000 {
 			compatible = "ambarella,ir";
 			reg = <0x70006000 0x1000>;
-			interrupts = <0 22 0x4>;
+			interrupts = <22 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
 		};
@@ -202,7 +199,7 @@
 		wdt@7000c000 {
 			compatible = "ambarella,wdt";
 			reg = <0x7000c000 0x1000>;
-			/* interrupts = <0 101 0x4>; */
+			/* interrupts = <21 0x4>; */
 			timeout-sec = <15>;
 		};
 
@@ -232,11 +229,11 @@
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
 				/* gpio interrupts to vic */
-				interrupts = <0 10 0x04>,
-					     <0 11 0x04>,
-					     <0 30 0x04>,
-					     <0 29 0x04>,
-					     <0 48 0x04>;
+				interrupts = <10 0x04>,
+					     <11 0x04>,
+					     <30 0x04>,
+					     <29 0x04>,
+					     <48 0x04>;
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinctrl 0 0 160>;
@@ -253,14 +250,14 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1034 0x1035>,
 						 /* virtual pins, just for configuration purpose */
-						 <0x1021 0x0022 0x1032 0x1033 0x1034 0x1035>;
+						 <0x1021 0x0022 0x1032 0x1033>;
 			};
 
 			uart1_4pins: uart1_4pins@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1032 0x1033 0x1034 0x1035>,
 						 /* virtual pins, just for configuration purpose */
-						 <0x1021 0x0022 0x1032 0x1033 0x1034 0x1035>;
+						 <0x1021 0x0022>;
 			};
 
 			uart2_pins: uart2@0 {
@@ -290,7 +287,9 @@
 
 			i2c2_pins: i2c2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1024 0x1025>;
+				amb,pinmux-ids = <0x1024 0x1025>,
+						 /* virtual pins, just for configuration purpose */
+						 <0x1011>;
 			};
 
 			ir_pins: ir0@0 {
@@ -336,8 +335,10 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1033>,
 						/* virtual pins, just for
-						   configuration purpose.*/
-						 <0x0022 0x0003>;
+						   configuration purpose.
+						   <0x0022>: kernel may throw out error,
+						   			ignore it.*/
+						 <0x0022 0x0023>;
 			};
 
 			pwm5_pins: pwm5@0 {
@@ -354,11 +355,22 @@
 		reg = <0x60000000 0x01000000>;
 		ranges;
 
+		intc: interrupt-controller@60003000 {
+			compatible = "ambarella,vic";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			reg = <0x60003000 0x1000>,
+			      <0x60010000 0x1000>,
+			      <0x6001c000 0x1000>;
+		};
+
 		dma@60005000 {
 			compatible = "ambarella,dma";
 			reg = <0x60005000 0x1000>;
-			interrupts = <0 15 0x4>;
-			amb,copy-align = <3>;
+			interrupts = <15 0x4>;
+			amb,copy-align = <0>;
+			/* support pause/resume/stop */
+			amb,support-prs;
 		};
 
 		nand0: nand@60001000 {
@@ -368,13 +380,21 @@
 			reg = <0x60001000 0x1000>, /* fio reg address */
 			      <0x60012000 0x1000>, /* fdma reg address */
 			      <0x60000000 0x4>;    /* fifo base */
-			interrupts = <0 16 0x04>,	/* fio_cmd_irq */
-				     <0 17 0x04>,	/* fio_dma_irq */
-				     <0 33 0x04>;	/* fdma_irq */
+			interrupts = <16 0x04>,	/* fio_cmd_irq */
+				     <17 0x04>,	/* fio_dma_irq */
+				     <33 0x04>;	/* fdma_irq */
 			pinctrl-names = "default";
 			pinctrl-0 = <&nand0_pins>;
 			nand-on-flash-bbt;
 			amb,enable-wp;
+			/* amb,soft-ecc = <1>; */
+		};
+
+		spinor0: spinor@6000d000 {
+			compatible = "ambarella,spinor";
+			reg = <0x6000d000 0x2ff>, /* spi nor controller */
+			      <0x60005300 0x20>;  /* dma reg */
+			status = "disabled";
 		};
 
 		i2s0: i2s@6000a000 {
@@ -389,24 +409,22 @@
 		udc@60006000 {
 			compatible = "ambarella,udc";
 			reg = <0x60006000 0x2000 0x70170088 0x4>;
-			interrupts = <0 4 0x04>;
+			interrupts = <4 0x04>;
 			amb,usbphy = <&usbphy>;
-			amb,dma-addr-fix;
 		};
 
 		ehci@60018000 {
 			compatible = "ambarella,ehci";
 			reg = <0x60018000 0x1000>;
-			interrupts = <0 73 0x04>;
+			interrupts = <73 0x04>;
 			amb,usbphy = <&usbphy>;
 		};
 
 		ohci@60019000 {
 			compatible = "ambarella,ohci";
 			reg = <0x60019000 0x1000>;
-			interrupts = <0 89 0x04>;
+			interrupts = <89 0x04>;
 			amb,usbphy = <&usbphy>;
-			status = "disabled";
 		};
 
 		sdmmc0@60002000 {
@@ -415,18 +433,21 @@
 			#size-cells = <0>;
 			reg = <0x60002000 0x1000>,
 			      <0x60001000 0x80>, /* fio reg address */
-			      <0x701701d0 0x4>;
-			interrupts = <0 18 0x4>;
+			      <0x70170340 0x8>;
+			interrupts = <18 0x4>;
 			amb,clk-name = "gclk_sd";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
-			amb,phy-timing = <0x00000001 0xe3e0e3e0 0x00000000>,
-					 <0x00000080 0xe3e0e3e0 0x00071c00>;
+			amb,soft-phy;
+			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
+					 <0x000000a0 0x00000005 0x00001111>,
+					 <0x00000040 0x00000001 0x00001111>;
 
 			slot@0 {
 				reg = <0>;
-				max-frequency = <48000000>;
+				max-frequency = <50000000>;
 				bus-width = <8>;
+				amb,caps-adma;
 				amb,caps-ddr;
 				cap-sdio-irq;
 			};
@@ -439,8 +460,7 @@
 			reg = <0x6000c000 0x1000>,
 			      <0x60001000 0x80>, /* fio reg address */
 			      <0x701701d0 0x4>;
-			interrupts = <0 52 0x4>;
-			amb,dma-addr-fix;
+			interrupts = <52 0x4>;
 			amb,clk-name = "gclk_sdio";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
@@ -449,8 +469,9 @@
 
 			slot@0 {
 				reg = <0>;
-				max-frequency = <48000000>;
+				max-frequency = <50000000>;
 				bus-width = <8>;
+				amb,caps-adma;
 				amb,caps-ddr;
 				cap-sdio-irq;
 			};
@@ -461,7 +482,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x6000e000 0x2000>;
-			interrupts = <0 27 0x4>;
+			interrupts = <27 0x4>;
 			amb,support-gmii;
 			amb,tx-ring-size = <64>;
 			amb,rx-ring-size = <64>;
@@ -479,7 +500,7 @@
 		crypto@f0020000 {
 			compatible = "ambarella,crypto";
 			reg = <0xf0020000 0x8000>;
-			interrupts = <0 122 0x1>, <0 121 0x1>, <0 120 0x1>, <0 123 0x1>;
+			interrupts = <44 0x1>, <45 0x1>, <47 0x1>, <88 0x1>;
 			interrupt-names = "aes-irq", "des-irq", "md5-irq", "sha1-irq";
 			amb,cap-md5-sha1;
 			amb,data-swap;
@@ -497,7 +518,7 @@
 		usbphy: usbphy@70170050 {
 			compatible = "ambarella,usbphy";
 			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
-			amb,host-phy-num = <1>;
+			amb,host-phy-num = <2>;
 		};
 	};
 

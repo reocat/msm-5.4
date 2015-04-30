@@ -1111,8 +1111,7 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 		return -1;
 	}
 
-	divider = ((c->parent->ops->get_rate(c->parent) + (rate >> 2) - 1) /
-		rate);
+	divider = ((c->parent->ops->get_rate(c->parent) + rate - 1) / rate);
 	if (!divider) {
 		return -1;
 	}

@@ -483,8 +483,36 @@ Required properties:
 
 Optional properties:
 - amb,dma-addr-fix: should be specified only for S2.
-- amb,timing-magic: magic value used for tuning SD controller timing, should
-  be specified when timing register is provided in "reg" property.
+- amb,soft-phy: should be specified for SD controllers supporting soft phy.
+- amb,phy-timing: an integer array which is used to specify the SD phy timing,
+  the size of the array is different according to corresponding phy register
+  for each chips or SD controllers, and the values are gotten by SD shmoo in
+  Amboot.
+  For the SD controller supporting soft SD phy, like S2E SD0, the array is
+  orgnized as: <mode phy_ctrl0_val latency_ctrl_val>
+  For the SD controller only supporting ms delay mux, like S2E SD1, the array
+  is orgnized as: <mode ms_delay_ctrl_mask ms_delay_ctrl_val>
+  Here mode is the ORed value of SD card working modes like sdr104, ddr50 and
+  etc., and the later 2 items are values written to corresponding phy registers.
+  Following is the definition of each bits for mode:
+  bit0: specify the default phy timing setting, so bit0 must be reserved as 1, and
+  followed by default phy timing setting. PS: it's a MUST to define the default phy
+  timing setting with bit0 set, and it MUST be placed in the first row.
+  bit1: MMC HS; bit2: SD HS;
+  bit3: SDR12; bit4: SDR25; bit5: SDR50; bit6: SDR104; bit7: DDR50
+  bit8: MMC HS200
+  In fact, the definition for each bit of mode comes from the following
+  definition which are defined in include/linux/mmc/host.h:
+    #define MMC_TIMING_LEGACY	0
+    #define MMC_TIMING_MMC_HS	1
+    #define MMC_TIMING_SD_HS	2
+    #define MMC_TIMING_UHS_SDR12	3
+    #define MMC_TIMING_UHS_SDR25	4
+    #define MMC_TIMING_UHS_SDR50	5
+    #define MMC_TIMING_UHS_SDR104	6
+    #define MMC_TIMING_UHS_DDR50	7
+    #define MMC_TIMING_MMC_HS200	8
+
 
 iii) Subnode
 ------------
