@@ -59,6 +59,11 @@
 #define WM8974_MCLKDIV		1
 #define WM8974_BCLKDIV		2
 
+/* Clock source */
+#define WM8974_MCLKIN		0
+#define WM8974_PLLOUT		1
+#define WM8974_MCLKIN_BCLKOUT	2
+
 /* PLL Out dividers */
 #define WM8974_OPCLKDIV_1	(0 << 4)
 #define WM8974_OPCLKDIV_2	(1 << 4)

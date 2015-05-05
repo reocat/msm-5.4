@@ -1,15 +1,10 @@
 /*
- * sound/soc/s2lmkiwi.c
+ * sound/soc/ambarella_board.c
  *
- * Author: Cao Rongrong <rrcao@ambarella.com>
- *		  Diao Chengdong<cddiao@ambarella.com>
+ * Author: XianqingZheng <xqzheng@ambarella.com>
+ *
  * History:
- *	2009/08/20 - [Cao Rongrong] Created file
- *	2011/03/20 - [Cao Rongrong] Port to 2.6.38,
- *				    merge coconut and durian into a5sevk
- *	2012/06/27 - [Cao Rongrong] Rename to ambevk.c
- *	2013/01/18 - [Ken He] Port to 3.8
- *    2014/03/21 - [Diao Chengdong] modify for kiwi
+ *	2015/04/28 - [XianqingZheng] Created file
  *
  * Copyright (C) 2014-2018, Ambarella, Inc.
  *
@@ -35,9 +30,9 @@
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <plat/audio.h>
-#include "../codecs/ak4954_amb.h"
+#include <linux/slab.h>
 
-static unsigned int dai_fmt = 0;
+static unsigned int dai_fmt;
 module_param(dai_fmt, uint, 0644);
 MODULE_PARM_DESC(dai_fmt, "DAI format.");
 /* clk_fmt :
@@ -65,8 +60,7 @@ MODULE_PARM_DESC(dai_fmt, "DAI format.");
 * There are one connection we are not used, it is like clk_fmt=0,but power on the codec PLL.
 * It is a waster of power, so we do not use it.
 */
-
-static unsigned int clk_fmt = 1;
+static unsigned int clk_fmt;
 module_param(clk_fmt, uint, 0664);
 
 struct amb_clk {
@@ -74,38 +68,53 @@ struct amb_clk {
 	int oversample;
 	int bclk;
 };
-
 static int clk_0_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 {
-	int ret = 0;
-
 	switch (params_rate(params)) {
 	case 8000:
+		clk->mclk = 2048000;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 11025:
+		clk->mclk = 2822400;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 12000:
+		clk->mclk = 3072000;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 16000:
+		clk->mclk = 4096000;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 22050:
+		clk->mclk = 5644800;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 24000:
+		clk->mclk = 6144000;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 32000:
+		clk->mclk = 8192000;
+		clk->oversample = AudioCodec_256xfs;
+		break;
 	case 44100:
-		ret = -EINVAL;
+		clk->mclk = 11289600;
+		clk->oversample = AudioCodec_256xfs;
 		break;
 	case 48000:
 		clk->mclk = 12288000;
 		clk->oversample = AudioCodec_256xfs;
 		break;
 	default:
-		ret = -EINVAL;
-		break;
+		return -EINVAL;
 	}
-
-	return ret;
+	return 0;
 }
 
 static int clk_1_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 {
-	int ret= 0;
-
 	switch (params_rate(params)) {
 	case 8000:
 		clk->mclk = 12288000;
@@ -113,7 +122,9 @@ static int clk_1_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 		clk->bclk = 8000;
 		break;
 	case 11025:
-		ret = -EINVAL;
+		clk->mclk = 2822400;
+		clk->oversample = AudioCodec_256xfs;
+		clk->bclk = 11025;
 		break;
 	case 12000:
 		clk->mclk = 12288000;
@@ -126,7 +137,9 @@ static int clk_1_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 		clk->bclk = 16000;
 		break;
 	case 22050:
-		ret = -EINVAL;
+		clk->mclk = 5644800;
+		clk->oversample = AudioCodec_256xfs;
+		clk->bclk = 22050;
 		break;
 	case 24000:
 		clk->mclk = 12288000;
@@ -139,7 +152,9 @@ static int clk_1_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 		clk->bclk = 32000;
 		break;
 	case 44100:
-		ret = -EINVAL;
+		clk->mclk = 11289600;
+		clk->oversample = AudioCodec_256xfs;
+		clk->bclk = 44100;
 		break;
 	case 48000:
 		clk->mclk = 12288000;
@@ -147,25 +162,26 @@ static int clk_1_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 		clk->bclk = 48000;
 		break;
 	default:
-		ret = -EINVAL;
-		break;
+		return -EINVAL;
 	}
-
-	return ret;
+	return 0;
 }
 
-/* The range of MCLK in ak4954 is 11MHz ot 27MHz */
+/*
+* The range of MCLK in ak4954 is 11MHz ot 27MHz
+*
+*
+*/
 static int clk_2_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 {
-	int ret = 0;
-
 	switch (params_rate(params)) {
 	case 8000:
 		clk->mclk = 12288000;
 		clk->oversample = AudioCodec_1536xfs;
 		break;
 	case 11025:
-		ret = -EINVAL;
+		clk->mclk = 11289600;
+		clk->oversample = AudioCodec_1024xfs;
 		break;
 	case 12000:
 		clk->mclk = 12288000;
@@ -176,7 +192,8 @@ static int clk_2_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 		clk->oversample = AudioCodec_768xfs;
 		break;
 	case 22050:
-		ret = -EINVAL;
+		clk->mclk = 11289600;
+		clk->oversample = AudioCodec_512xfs;
 		break;
 	case 24000:
 		clk->mclk = 12288000;
@@ -187,49 +204,38 @@ static int clk_2_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 		clk->oversample = AudioCodec_384xfs;
 		break;
 	case 44100:
-		ret = -EINVAL;
+		clk->mclk = 11289600;
+		clk->oversample = AudioCodec_256xfs;
 		break;
 	case 48000:
 		clk->mclk = 12288000;
 		clk->oversample = AudioCodec_256xfs;
 		break;
 	default:
-		ret = -EINVAL;
-		break;
+		return -EINVAL;
 	}
+	return 0;
 
-	return ret;
+
 }
-
-static int ambevk_board_hw_params(struct snd_pcm_substream *substream,
+static int amba_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int rval = 0;
-	int i2s_mode;
-	struct amb_clk clk={0};
+	int errorCode = 0, i2s_mode;
+	struct amb_clk clk={0, 0, 0};
 
-	switch(clk_fmt) {
-	case 0:
-		rval = clk_0_config(params, &clk);
-		break;
-	case 1:
-		rval = clk_1_config(params, &clk);
-		break;
-	case 2:
-		rval = clk_2_config(params, &clk);
-		break;
-	default:
-		pr_err("clk_fmt is wrong, just 0, 1, 2 is available!\n");
-		goto hw_params_exit;
-	}
-
-	if (rval < 0) {
-		pr_err("Please set mclk to be 12.288MHz, "
-			"if it is not supported by audio codec, please try other sample rate\n");
-		goto hw_params_exit;
+	if (clk_fmt == 0) {
+		errorCode = clk_0_config(params, &clk);
+	} else if (clk_fmt == 1) {
+		errorCode = clk_1_config(params, &clk);
+	} else if (clk_fmt == 2) {
+		errorCode = clk_2_config(params, &clk);
+	} else {
+		pr_err("clk_fmt is wrong\n");
+		return -1;
 	}
 
 	if (dai_fmt == 0)
@@ -239,78 +245,73 @@ static int ambevk_board_hw_params(struct snd_pcm_substream *substream,
 
 	/* set the I2S system data format*/
 	if (clk_fmt == 2) {
-		rval = snd_soc_dai_set_fmt(codec_dai,
+		errorCode = snd_soc_dai_set_fmt(codec_dai,
 			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM);
-		if (rval < 0) {
+		if (errorCode < 0) {
 			pr_err("can't set codec DAI configuration\n");
 			goto hw_params_exit;
 		}
 
-		rval = snd_soc_dai_set_fmt(cpu_dai,
+		errorCode = snd_soc_dai_set_fmt(cpu_dai,
 			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM);
-		if (rval < 0) {
+		if (errorCode < 0) {
 			pr_err("can't set cpu DAI configuration\n");
 			goto hw_params_exit;
 		}
 	} else {
-		rval = snd_soc_dai_set_fmt(codec_dai,
+		errorCode = snd_soc_dai_set_fmt(codec_dai,
 			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-		if (rval < 0) {
+		if (errorCode < 0) {
 			pr_err("can't set codec DAI configuration\n");
 			goto hw_params_exit;
 		}
 
-		rval = snd_soc_dai_set_fmt(cpu_dai,
+		errorCode = snd_soc_dai_set_fmt(cpu_dai,
 			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-		if (rval < 0) {
+		if (errorCode < 0) {
 			pr_err("can't set cpu DAI configuration\n");
 			goto hw_params_exit;
 		}
 	}
-
 	/* set the I2S system clock*/
-	switch(clk_fmt) {
-	case 0:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
-		break;
-	case 1:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.bclk, 0);
-		break;
-	case 2:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
-		break;
-	default:
-		pr_err("clk_fmt is wrong, just 0, 1, 2 is available!\n");
-		goto hw_params_exit;
+	if (clk_fmt == 0) {
+		errorCode = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
+	} else if (clk_fmt == 1) {
+		errorCode = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.bclk, 0);
+	} else if (clk_fmt == 2) {
+		errorCode = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
+	} else {
+		pr_err("clk_fmt is wrong\n");
+		return -1;
 	}
 
-	if (rval < 0) {
+	if (errorCode < 0) {
 		pr_err("can't set codec MCLK configuration\n");
 		goto hw_params_exit;
 	}
 
-	rval = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, clk.mclk, 0);
-	if (rval < 0) {
+	errorCode = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, clk.mclk, 0);
+	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK configuration\n");
 		goto hw_params_exit;
 	}
 
-	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.oversample);
-	if (rval < 0) {
+	errorCode = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.oversample);
+	if (errorCode < 0) {
 		pr_err("can't set cpu MCLK/SF ratio\n");
 		goto hw_params_exit;
 	}
 
 hw_params_exit:
-	return rval;
+	return errorCode;
 }
 
-static struct snd_soc_ops ambevk_board_ops = {
-	.hw_params = ambevk_board_hw_params,
+static struct snd_soc_ops amba_board_ops = {
+	.hw_params = amba_board_hw_params,
 };
 
 /* ambevk machine dapm widgets */
-static const struct snd_soc_dapm_widget ambevk_dapm_widgets[] = {
+static const struct snd_soc_dapm_widget amba_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic internal", NULL),
 	SND_SOC_DAPM_MIC("Mic external", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
@@ -319,61 +320,46 @@ static const struct snd_soc_dapm_widget ambevk_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Speaker", NULL),
 };
 
-/* ambevk machine audio map (connections to ak4954 pins) */
-static const struct snd_soc_dapm_route ambevk_audio_map[] = {
-	/* Line In is connected to LLIN1, RLIN1 */
-	{"LIN2", NULL, "Mic internal"},
-	{"RIN2", NULL, "Mic external"},
-	{"LIN3", NULL, "Line In"},
-	{"RIN3", NULL, "Line In"},
-
-	/* Line Out is connected to LLOUT, RLOUT */
-	{"Line Out", NULL, "SPKLO"},
-	{"Line Out", NULL, "SPKLO"},
-	{"HP Jack", NULL, "HPR"},
-	{"HP Jack", NULL, "HPL"},
-
-	/* Speaker is connected to SPP, SPN */
-	{"Speaker", NULL, "SPKLO"},
-	{"Speaker", NULL, "SPKLO"},
-};
-
-static int ambevk_ak4954_init(struct snd_soc_pcm_runtime *rtd)
+static int amba_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
 	return 0;
 }
 
-static struct snd_soc_dai_link ambevk_dai_link = {
-	.name = "ak4954",
-	.stream_name = "ak4954 PCM",
-	.codec_dai_name = "ak4954-hifi",
-	.init = ambevk_ak4954_init,
-	.ops = &ambevk_board_ops,
+static struct snd_soc_dai_link amba_dai_link = {
+	.init = amba_codec_init,
+	.ops = &amba_board_ops,
 };
+
 
 /* ambevk audio machine driver */
-static struct snd_soc_card snd_soc_card_ambevk = {
+static struct snd_soc_card snd_soc_card_amba = {
 	.owner = THIS_MODULE,
-	.dai_link = &ambevk_dai_link,
+	.dai_link = &amba_dai_link,
 	.num_links = 1,
 
-	.dapm_widgets = ambevk_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(ambevk_dapm_widgets),
-	.dapm_routes = ambevk_audio_map,
-	.num_dapm_routes = ARRAY_SIZE(ambevk_audio_map),
+	.dapm_widgets = amba_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(amba_dapm_widgets),
 };
 
-static int ambevk_soc_snd_probe(struct platform_device *pdev)
+static int amba_soc_snd_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *cpup_np, *codec_np;
-	struct snd_soc_card *card = &snd_soc_card_ambevk;
+	struct snd_soc_card *card = &snd_soc_card_amba;
 	int rval = 0;
 
 	card->dev = &pdev->dev;
+
 	if (snd_soc_of_parse_card_name(card, "amb,model")) {
 		dev_err(&pdev->dev, "Card name is not provided\n");
 		return -ENODEV;
+	}
+
+	rval = snd_soc_of_parse_audio_routing(card,
+			"amb,audio-routing");
+	if(rval) {
+		dev_err(&pdev->dev, "amb,audio-routing is invalid\n");
+		return -EINVAL;
 	}
 
 	cpup_np = of_parse_phandle(np, "amb,i2s-controllers", 0);
@@ -383,12 +369,36 @@ static int ambevk_soc_snd_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ambevk_dai_link.codec_of_node = codec_np;
-	ambevk_dai_link.cpu_of_node = cpup_np;
-	ambevk_dai_link.platform_of_node = cpup_np;
+	amba_dai_link.codec_of_node = codec_np;
+	amba_dai_link.cpu_of_node = cpup_np;
+	amba_dai_link.platform_of_node = cpup_np;
 
 	of_node_put(codec_np);
 	of_node_put(cpup_np);
+
+	/*get dai_fmt and clk_fmt from device tree*/
+	of_property_read_u32(np, "amb,dai_fmt", &dai_fmt);
+	of_property_read_u32(np, "amb,clk_fmt", &clk_fmt);
+
+	/*get parameter from code_np to fill struct snd_soc_dai_link*/
+	rval = of_property_read_string_index(np, "amb,codec-name", 0, &card->dai_link->name);
+	if(rval < 0) {
+		dev_err(&pdev->dev, "codec-name got from device tree is invalid\n");
+		return -EINVAL;
+	}
+
+	rval = of_property_read_string_index(np, "amb,stream-name", 0, &card->dai_link->stream_name);
+	if(rval < 0) {
+		dev_err(&pdev->dev, "stream-name got from device tree is invalid\n");
+		return -EINVAL;
+	}
+
+	rval = of_property_read_string_index(np, "amb,codec-dai-name", 0, &card->dai_link->codec_dai_name);
+
+	if(rval < 0) {
+		dev_err(&pdev->dev, "codec-dai-name got from device tree is invalid\n");
+		return -EINVAL;
+	}
 
 	rval = snd_soc_register_card(card);
 	if (rval)
@@ -397,34 +407,36 @@ static int ambevk_soc_snd_probe(struct platform_device *pdev)
 	return rval;
 }
 
-static int ambevk_soc_snd_remove(struct platform_device *pdev)
+static int amba_soc_snd_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_card(&snd_soc_card_ambevk);
+	snd_soc_unregister_card(&snd_soc_card_amba);
+	if(snd_soc_card_amba.dapm_routes != NULL)
+		kfree(snd_soc_card_amba.dapm_routes);
 
 	return 0;
 }
 
-static const struct of_device_id ambevk_dt_ids[] = {
-	{ .compatible = "ambarella,s2lmkiwi-ak4954", },
+static const struct of_device_id amba_dt_ids[] = {
+	{ .compatible = "ambarella,audio-board", },
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, ambevk_dt_ids);
+MODULE_DEVICE_TABLE(of, amba_dt_ids);
 
-static struct platform_driver ambevk_soc_snd_driver = {
+static struct platform_driver amba_soc_snd_driver = {
 	.driver = {
-		.name = "snd_soc_card_s2lmkiwi",
+		.name = "snd_soc_card_amba",
 		.owner = THIS_MODULE,
 		.pm = &snd_soc_pm_ops,
-		.of_match_table = ambevk_dt_ids,
+		.of_match_table = amba_dt_ids,
 	},
-	.probe = ambevk_soc_snd_probe,
-	.remove = ambevk_soc_snd_remove,
+	.probe = amba_soc_snd_probe,
+	.remove = amba_soc_snd_remove,
 };
 
-module_platform_driver(ambevk_soc_snd_driver);
+module_platform_driver(amba_soc_snd_driver);
 
-MODULE_AUTHOR("Diao Chengdong<cddiao@ambarella.com>");
-MODULE_DESCRIPTION("Amabrella Board with AK4954 Codec for ALSA");
+MODULE_AUTHOR("XianqingZheng<xqzheng@ambarella.com>");
+MODULE_DESCRIPTION("Amabrella Board for ALSA");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("snd-soc-s2lkiwi");
+MODULE_ALIAS("snd-soc-amba");
 
