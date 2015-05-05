@@ -264,17 +264,16 @@ static int rpmsg_clk_changed_pre_notify(void *data)
 static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	unsigned long flags;
 
-	flags = arm_irq_save();
+#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	local_irq_disable();
 #endif
 
 	clockevents_resume();
 	clocksource_resume();
 
 #if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	arm_irq_restore(flags);
+	local_irq_enable();
 #endif
 
 	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
