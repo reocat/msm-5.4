@@ -286,7 +286,7 @@ static int amba_board_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	if (errorCode < 0) {
-		pr_err("can't set cpu MCLK configuration\n");
+		pr_err("can't set codec MCLK configuration\n");
 		goto hw_params_exit;
 	}
 

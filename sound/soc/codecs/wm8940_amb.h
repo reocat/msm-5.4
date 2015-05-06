@@ -74,6 +74,11 @@ struct wm8940_setup_data {
 #define WM8940_MCLKDIV 1
 #define WM8940_OPCLKDIV 2
 
+/* Clock source */
+#define WM8940_MCLKIN		0
+#define WM8940_PLLOUT		1
+#define WM8940_MCLKIN_BCLKOUT	2
+
 /* MCLK clock dividers */
 #define WM8940_MCLKDIV_1	0
 #define WM8940_MCLKDIV_1_5	1
