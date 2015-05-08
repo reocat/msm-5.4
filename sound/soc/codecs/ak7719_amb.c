@@ -35,7 +35,7 @@
 #include <plat/audio.h>
 
 #define DRIVER_NAME "AK7719"
-#define BY_PASS_DSP
+//#define BY_PASS_DSP
 
 struct ak7719_data {
 	unsigned int rst_pin;
