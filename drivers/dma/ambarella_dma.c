@@ -1110,7 +1110,11 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK) && ((CHIP_REV == S2L) || (CHIP_REV == S2E))
 	/* init dma_chan struct */
 	/* Only init UART DMA channels. */
+#if (CHIP_REV == S2L)
 	for (i = UART_TX_DMA_CHAN; i <= UART_RX_DMA_CHAN; i++) {
+#elif (CHIP_REV == S2E)
+	for (i = UART_RX_DMA_CHAN; i <= UART_TX_DMA_CHAN; i++) {
+#endif
 		amb_chan = &amb_dma->amb_chan[i];
 
 		spin_lock_init(&amb_chan->lock);
