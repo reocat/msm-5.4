@@ -132,8 +132,13 @@ static void ambvic_unmask_irq(struct irq_data *data)
 #endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-	/* Saved the IRQ used in Linux for resuming purpose.. */
-	vic_linux_only[HWIRQ_TO_BANK(data->hwirq)] |= mask;
+	/* Saved the IRQ used in Linux for resuming purpose. */
+	/* Skip shared IRQs because RTOS may access the resource at the same time. */
+	if (data->hwirq != FIOCMD_IRQ &&
+		data->hwirq != FIODMA_IRQ &&
+		data->hwirq != DMA_FIOS_IRQ) {
+		vic_linux_only[HWIRQ_TO_BANK(data->hwirq)] |= mask;
+	}
 
 	/* Using IRQ for Linux. */
 	val0 = amba_readl(reg_base + VIC_INT_SEL_OFFSET);

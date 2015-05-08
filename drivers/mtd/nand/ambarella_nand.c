@@ -2124,6 +2124,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	nand_info->suspend = 0;
 
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS)
+	/* This is used to decrease desc->depth which is increased by suspend. */
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
 	enable_irq(nand_info->fdma_irq);
