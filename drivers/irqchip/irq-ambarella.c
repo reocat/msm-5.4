@@ -679,7 +679,10 @@ static void ambvic_resume(void)
 		resume_val = (cur_val & ~resume_mask) | (pm_val->inten_reg & resume_mask);
 		amba_writel(reg_base + VIC_INTEN_OFFSET, resume_val);
 
+#if 0
+		/* do not clear SOFT IRQ because RTOS may send a wake up IRQ to Linux. */
 		amba_writel(reg_base + VIC_SOFTEN_CLR_OFFSET, (0xffffffff & resume_mask));
+#endif
 
 		cur_val = amba_readl(reg_base + VIC_SOFTEN_OFFSET);
 		resume_val = (cur_val & ~resume_mask) | (pm_val->soften_reg & resume_mask);
