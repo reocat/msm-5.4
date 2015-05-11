@@ -6176,6 +6176,7 @@ static void ak7719_download_dsp_pro(struct ak7719_data *ak7719)
 #endif
 	ak7719_write_command(ak7719, 0xB4, 0, cram_data, ARRAY_SIZE(cram_data));
 }
+
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
 static int ak7719_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
@@ -6187,13 +6188,14 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	int rst_pin;
 
 	ak7719 = devm_kzalloc(&i2c->dev, sizeof(struct ak7719_data), GFP_KERNEL);
-	if (ak7719 == NULL)
+	if (!ak7719)
 		return -ENOMEM;
 
 	rst_pin = of_get_gpio_flags(np, 0, &flags);
 	if (rst_pin < 0 || !gpio_is_valid(rst_pin)) {
 		printk("ak7719 rst pin is not working");
-		return -ENXIO;
+		rval = -ENXIO;
+		goto out;
 	}
 
 	ak7719->rst_pin = rst_pin;
@@ -6205,7 +6207,7 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	rval = devm_gpio_request(&i2c->dev, ak7719->rst_pin, "ak7719 reset");
 	if (rval < 0){
 		dev_err(&i2c->dev, "Failed to request rst_pin: %d\n", rval);
-		return rval;
+		goto out;
 	}
 
 	/* Reset AK7719 dsp */
@@ -6238,11 +6240,18 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	ak7719_write_reg(ak7719, 0xc6, 0x0);
 	ak7719_write_reg(ak7719, 0xc6, 0x4);
 
+	return 0;
+
+out:
+	devm_kfree(&i2c->dev, ak7719);
 	return rval;
 }
 
 static int ak7719_i2c_remove(struct i2c_client *client)
 {
+	struct ak7719_data *ak7719 = i2c_get_clientdata(client);
+	devm_gpio_free(&client->dev, ak7719->rst_pin);
+	devm_kfree(&client->dev, ak7719);
 	return 0;
 }
 
