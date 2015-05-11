@@ -49,6 +49,7 @@
 #include <plat/ahci.h>
 #include <plat/wdt.h>
 #include <plat/pinctrl.h>
+#include <linux/reboot.h>
 
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
@@ -69,7 +70,7 @@
 extern void ambarella_init_early(void);
 extern void ambarella_init_machine(void);
 extern void ambarella_map_io(void);
-extern void ambarella_restart_machine(char mode, const char *cmd);
+extern void ambarella_restart_machine(enum reboot_mode mode, const char *cmd);
 
 /* ==========================================================================*/
 extern int ambarella_init_fb(void);

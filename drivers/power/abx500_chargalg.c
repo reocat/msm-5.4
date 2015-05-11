@@ -2035,7 +2035,6 @@ static int abx500_chargalg_remove(struct platform_device *pdev)
 	destroy_workqueue(di->chargalg_wq);
 
 	power_supply_unregister(&di->chargalg_psy);
-	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
@@ -2157,7 +2156,6 @@ static struct platform_driver abx500_chargalg_driver = {
 	.resume = abx500_chargalg_resume,
 	.driver = {
 		.name = "ab8500-chargalg",
-		.owner = THIS_MODULE,
 		.of_match_table = ab8500_chargalg_match,
 	},
 };

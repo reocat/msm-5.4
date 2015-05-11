@@ -14,12 +14,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/module.h>
 #include <linux/usb.h>
 
 #include "comedidev.h"
@@ -33,6 +30,18 @@ struct usb_interface *comedi_to_usb_interface(struct comedi_device *dev)
 	return dev->hw_dev ? to_usb_interface(dev->hw_dev) : NULL;
 }
 EXPORT_SYMBOL_GPL(comedi_to_usb_interface);
+
+/**
+ * comedi_to_usb_dev() - comedi_device pointer to usb_device pointer.
+ * @dev: comedi_device struct
+ */
+struct usb_device *comedi_to_usb_dev(struct comedi_device *dev)
+{
+	struct usb_interface *intf = comedi_to_usb_interface(dev);
+
+	return intf ? interface_to_usbdev(intf) : NULL;
+}
+EXPORT_SYMBOL_GPL(comedi_to_usb_dev);
 
 /**
  * comedi_usb_auto_config() - Configure/probe a comedi USB driver.
@@ -106,3 +115,18 @@ void comedi_usb_driver_unregister(struct comedi_driver *comedi_driver,
 	comedi_driver_unregister(comedi_driver);
 }
 EXPORT_SYMBOL_GPL(comedi_usb_driver_unregister);
+
+static int __init comedi_usb_init(void)
+{
+	return 0;
+}
+module_init(comedi_usb_init);
+
+static void __exit comedi_usb_exit(void)
+{
+}
+module_exit(comedi_usb_exit);
+
+MODULE_AUTHOR("http://www.comedi.org");
+MODULE_DESCRIPTION("Comedi USB interface module");
+MODULE_LICENSE("GPL");

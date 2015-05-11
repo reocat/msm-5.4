@@ -14,6 +14,8 @@
 #define _UAPI_LINUX_IF_BRIDGE_H
 
 #include <linux/types.h>
+#include <linux/if_ether.h>
+#include <linux/in6.h>
 
 #define SYSFS_BRIDGE_ATTR	"bridge"
 #define SYSFS_BRIDGE_FDB	"brforward"
@@ -88,7 +90,7 @@ struct __port_info {
 };
 
 struct __fdb_entry {
-	__u8 mac_addr[6];
+	__u8 mac_addr[ETH_ALEN];
 	__u8 port_no;
 	__u8 is_local;
 	__u32 ageing_timer_value;
@@ -103,6 +105,7 @@ struct __fdb_entry {
 
 #define BRIDGE_MODE_VEB		0	/* Default loopback mode */
 #define BRIDGE_MODE_VEPA	1	/* 802.1Qbg defined VEPA mode */
+#define BRIDGE_MODE_UNDEF	0xFFFF  /* mode undefined */
 
 /* Bridge management nested attributes
  * [IFLA_AF_SPEC] = {

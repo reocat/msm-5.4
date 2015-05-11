@@ -34,7 +34,7 @@
 #include <linux/of.h>
 #include <asm/cacheflush.h>
 #include <asm/io.h>
-#include <asm/system.h>
+//#include <asm/system.h>
 #include <asm/suspend.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
@@ -147,7 +147,7 @@ static int ambarella_pm_enter_mem(void)
 	return 0;
 }
 
-static int ambarella_pm_suspend_enter(suspend_state_t state)
+static __init int ambarella_pm_suspend_enter(suspend_state_t state)
 {
 	int rval = 0;
 

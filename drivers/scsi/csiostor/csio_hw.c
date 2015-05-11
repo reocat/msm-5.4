@@ -47,7 +47,6 @@
 #include "csio_lnode.h"
 #include "csio_rnode.h"
 
-int csio_force_master;
 int csio_dbg_level = 0xFEFF;
 unsigned int csio_port_mask = 0xf;
 
@@ -650,10 +649,10 @@ static void
 csio_hw_print_fw_version(struct csio_hw *hw, char *str)
 {
 	csio_info(hw, "%s: %u.%u.%u.%u\n", str,
-		    FW_HDR_FW_VER_MAJOR_GET(hw->fwrev),
-		    FW_HDR_FW_VER_MINOR_GET(hw->fwrev),
-		    FW_HDR_FW_VER_MICRO_GET(hw->fwrev),
-		    FW_HDR_FW_VER_BUILD_GET(hw->fwrev));
+		    FW_HDR_FW_VER_MAJOR_G(hw->fwrev),
+		    FW_HDR_FW_VER_MINOR_G(hw->fwrev),
+		    FW_HDR_FW_VER_MICRO_G(hw->fwrev),
+		    FW_HDR_FW_VER_BUILD_G(hw->fwrev));
 }
 
 /*
@@ -706,9 +705,9 @@ csio_hw_check_fw_version(struct csio_hw *hw)
 	if (ret)
 		return ret;
 
-	major = FW_HDR_FW_VER_MAJOR_GET(hw->fwrev);
-	minor = FW_HDR_FW_VER_MINOR_GET(hw->fwrev);
-	micro = FW_HDR_FW_VER_MICRO_GET(hw->fwrev);
+	major = FW_HDR_FW_VER_MAJOR_G(hw->fwrev);
+	minor = FW_HDR_FW_VER_MINOR_G(hw->fwrev);
+	micro = FW_HDR_FW_VER_MICRO_G(hw->fwrev);
 
 	if (major != FW_VERSION_MAJOR(hw)) {	/* major mismatch - fail */
 		csio_err(hw, "card FW has major version %u, driver wants %u\n",
@@ -852,22 +851,6 @@ csio_hw_get_flash_params(struct csio_hw *hw)
 	return 0;
 }
 
-static void
-csio_set_pcie_completion_timeout(struct csio_hw *hw, u8 range)
-{
-	uint16_t val;
-	int pcie_cap;
-
-	if (!csio_pci_capability(hw->pdev, PCI_CAP_ID_EXP, &pcie_cap)) {
-		pci_read_config_word(hw->pdev,
-				     pcie_cap + PCI_EXP_DEVCTL2, &val);
-		val &= 0xfff0;
-		val |= range ;
-		pci_write_config_word(hw->pdev,
-				      pcie_cap + PCI_EXP_DEVCTL2, val);
-	}
-}
-
 /*****************************************************************************/
 /* HW State machine assists                                                  */
 /*****************************************************************************/
@@ -905,7 +888,6 @@ csio_do_hello(struct csio_hw *hw, enum csio_dev_state *state)
 {
 	struct csio_mb	*mbp;
 	int	rv = 0;
-	enum csio_dev_master master;
 	enum fw_retval retval;
 	uint8_t mpfn;
 	char state_str[16];
@@ -920,11 +902,9 @@ csio_do_hello(struct csio_hw *hw, enum csio_dev_state *state)
 		goto out;
 	}
 
-	master = csio_force_master ? CSIO_MASTER_MUST : CSIO_MASTER_MAY;
-
 retry:
 	csio_mb_hello(hw, mbp, CSIO_MB_DEFAULT_TMO, hw->pfn,
-		      hw->pfn, master, NULL);
+		      hw->pfn, CSIO_MASTER_MAY, NULL);
 
 	rv = csio_mb_issue(hw, mbp);
 	if (rv) {
@@ -1186,7 +1166,7 @@ csio_hw_fw_halt(struct csio_hw *hw, uint32_t mbox, int32_t force)
 		}
 
 		csio_mb_reset(hw, mbp, CSIO_MB_DEFAULT_TMO,
-			      PIORSTMODE | PIORST, FW_RESET_CMD_HALT(1),
+			      PIORSTMODE | PIORST, FW_RESET_CMD_HALT_F,
 			      NULL);
 
 		if (csio_mb_issue(hw, mbp)) {
@@ -1386,13 +1366,13 @@ csio_hw_fw_config_file(struct csio_hw *hw,
 	caps_cmd = (struct fw_caps_config_cmd *)(mbp->mb);
 	CSIO_INIT_MBP(mbp, caps_cmd, CSIO_MB_DEFAULT_TMO, hw, NULL, 1);
 	caps_cmd->op_to_write =
-		htonl(FW_CMD_OP(FW_CAPS_CONFIG_CMD) |
-		      FW_CMD_REQUEST |
-		      FW_CMD_READ);
+		htonl(FW_CMD_OP_V(FW_CAPS_CONFIG_CMD) |
+		      FW_CMD_REQUEST_F |
+		      FW_CMD_READ_F);
 	caps_cmd->cfvalid_to_len16 =
-		htonl(FW_CAPS_CONFIG_CMD_CFVALID |
-		      FW_CAPS_CONFIG_CMD_MEMTYPE_CF(mtype) |
-		      FW_CAPS_CONFIG_CMD_MEMADDR64K_CF(maddr >> 16) |
+		htonl(FW_CAPS_CONFIG_CMD_CFVALID_F |
+		      FW_CAPS_CONFIG_CMD_MEMTYPE_CF_V(mtype) |
+		      FW_CAPS_CONFIG_CMD_MEMADDR64K_CF_V(maddr >> 16) |
 		      FW_LEN16(*caps_cmd));
 
 	if (csio_mb_issue(hw, mbp)) {
@@ -1423,9 +1403,9 @@ csio_hw_fw_config_file(struct csio_hw *hw,
 	 * And now tell the firmware to use the configuration we just loaded.
 	 */
 	caps_cmd->op_to_write =
-		htonl(FW_CMD_OP(FW_CAPS_CONFIG_CMD) |
-		      FW_CMD_REQUEST |
-		      FW_CMD_WRITE);
+		htonl(FW_CMD_OP_V(FW_CAPS_CONFIG_CMD) |
+		      FW_CMD_REQUEST_F |
+		      FW_CMD_WRITE_F);
 	caps_cmd->cfvalid_to_len16 = htonl(FW_LEN16(*caps_cmd));
 
 	if (csio_mb_issue(hw, mbp)) {
@@ -1597,87 +1577,6 @@ out:
 	return rv;
 }
 
-static int
-csio_config_global_rss(struct csio_hw *hw)
-{
-	struct csio_mb	*mbp;
-	enum fw_retval retval;
-
-	mbp = mempool_alloc(hw->mb_mempool, GFP_ATOMIC);
-	if (!mbp) {
-		CSIO_INC_STATS(hw, n_err_nomem);
-		return -ENOMEM;
-	}
-
-	csio_rss_glb_config(hw, mbp, CSIO_MB_DEFAULT_TMO,
-			    FW_RSS_GLB_CONFIG_CMD_MODE_BASICVIRTUAL,
-			    FW_RSS_GLB_CONFIG_CMD_TNLMAPEN |
-			    FW_RSS_GLB_CONFIG_CMD_HASHTOEPLITZ |
-			    FW_RSS_GLB_CONFIG_CMD_TNLALLLKP,
-			    NULL);
-
-	if (csio_mb_issue(hw, mbp)) {
-		csio_err(hw, "Issue of FW_RSS_GLB_CONFIG_CMD failed!\n");
-		mempool_free(mbp, hw->mb_mempool);
-		return -EINVAL;
-	}
-
-	retval = csio_mb_fw_retval(mbp);
-	if (retval != FW_SUCCESS) {
-		csio_err(hw, "FW_RSS_GLB_CONFIG_CMD returned 0x%x!\n", retval);
-		mempool_free(mbp, hw->mb_mempool);
-		return -EINVAL;
-	}
-
-	mempool_free(mbp, hw->mb_mempool);
-
-	return 0;
-}
-
-/*
- * csio_config_pfvf - Configure Physical/Virtual functions settings.
- * @hw: HW module
- *
- */
-static int
-csio_config_pfvf(struct csio_hw *hw)
-{
-	struct csio_mb	*mbp;
-	enum fw_retval retval;
-
-	mbp = mempool_alloc(hw->mb_mempool, GFP_ATOMIC);
-	if (!mbp) {
-		CSIO_INC_STATS(hw, n_err_nomem);
-		return -ENOMEM;
-	}
-
-	/*
-	 * For now, allow all PFs to access to all ports using a pmask
-	 * value of 0xF (M_FW_PFVF_CMD_PMASK). Once we have VFs, we will
-	 * need to provide access based on some rule.
-	 */
-	csio_mb_pfvf(hw, mbp, CSIO_MB_DEFAULT_TMO, hw->pfn, 0, CSIO_NEQ,
-		     CSIO_NETH_CTRL, CSIO_NIQ_FLINT, 0, 0, CSIO_NVI, CSIO_CMASK,
-		     CSIO_PMASK, CSIO_NEXACTF, CSIO_R_CAPS, CSIO_WX_CAPS, NULL);
-
-	if (csio_mb_issue(hw, mbp)) {
-		csio_err(hw, "Issue of FW_PFVF_CMD failed!\n");
-		mempool_free(mbp, hw->mb_mempool);
-		return -EINVAL;
-	}
-
-	retval = csio_mb_fw_retval(mbp);
-	if (retval != FW_SUCCESS) {
-		csio_err(hw, "FW_PFVF_CMD returned 0x%x!\n", retval);
-		mempool_free(mbp, hw->mb_mempool);
-		return -EINVAL;
-	}
-
-	mempool_free(mbp, hw->mb_mempool);
-
-	return 0;
-}
-
 /*
  * csio_enable_ports - Bring up all available ports.
  * @hw: HW module.
@@ -1775,7 +1674,7 @@ csio_get_fcoe_resinfo(struct csio_hw *hw)
 	}
 
 	rsp = (struct fw_fcoe_res_info_cmd *)(mbp->mb);
-	retval = FW_CMD_RETVAL_GET(ntohl(rsp->retval_len16));
+	retval = FW_CMD_RETVAL_G(ntohl(rsp->retval_len16));
 	if (retval != FW_SUCCESS) {
 		csio_err(hw, "FW_FCOE_RES_INFO_CMD failed with ret x%x\n",
 			 retval);
@@ -1820,8 +1719,8 @@ csio_hw_check_fwconfig(struct csio_hw *hw, u32 *param)
 	 * Find out whether we're dealing with a version of
 	 * the firmware which has configuration file support.
 	 */
-	_param[0] = (FW_PARAMS_MNEM(FW_PARAMS_MNEM_DEV) |
-		     FW_PARAMS_PARAM_X(FW_PARAMS_PARAM_DEV_CF));
+	_param[0] = (FW_PARAMS_MNEM_V(FW_PARAMS_MNEM_DEV) |
+		     FW_PARAMS_PARAM_X_V(FW_PARAMS_PARAM_DEV_CF));
 
 	csio_mb_params(hw, mbp, CSIO_MB_DEFAULT_TMO, hw->pfn, 0,
 		       ARRAY_SIZE(_param), _param, NULL, false, NULL);
@@ -1878,8 +1777,8 @@ csio_hw_flash_config(struct csio_hw *hw, u32 *fw_cfg_param, char *path)
 		goto leave;
 	}
 
-	mtype = FW_PARAMS_PARAM_Y_GET(*fw_cfg_param);
-	maddr = FW_PARAMS_PARAM_Z_GET(*fw_cfg_param) << 16;
+	mtype = FW_PARAMS_PARAM_Y_G(*fw_cfg_param);
+	maddr = FW_PARAMS_PARAM_Z_G(*fw_cfg_param) << 16;
 
 	ret = csio_memory_write(hw, mtype, maddr,
 				cf->size + value_to_add, cfg_data);
@@ -1968,8 +1867,8 @@ csio_hw_use_fwconfig(struct csio_hw *hw, int reset, u32 *fw_cfg_param)
 			goto bye;
 		}
 	} else {
-		mtype = FW_PARAMS_PARAM_Y_GET(*fw_cfg_param);
-		maddr = FW_PARAMS_PARAM_Z_GET(*fw_cfg_param) << 16;
+		mtype = FW_PARAMS_PARAM_Y_G(*fw_cfg_param);
+		maddr = FW_PARAMS_PARAM_Z_G(*fw_cfg_param) << 16;
 		using_flash = 0;
 	}
 
@@ -2056,16 +1955,6 @@ csio_hw_no_fwconfig(struct csio_hw *hw, int reset)
 	if (rv != 0)
 		goto out;
 
-	/* Config Global RSS command */
-	rv = csio_config_global_rss(hw);
-	if (rv != 0)
-		goto out;
-
-	/* Configure PF/VF capabilities of device */
-	rv = csio_config_pfvf(hw);
-	if (rv != 0)
-		goto out;
-
 	/* device parameters */
 	rv = csio_get_device_params(hw);
 	if (rv != 0)
@@ -2105,13 +1994,13 @@ csio_hw_flash_fw(struct csio_hw *hw)
 
 	hdr = (const struct fw_hdr *)fw->data;
 	fw_ver = ntohl(hdr->fw_ver);
-	if (FW_HDR_FW_VER_MAJOR_GET(fw_ver) != FW_VERSION_MAJOR(hw))
+	if (FW_HDR_FW_VER_MAJOR_G(fw_ver) != FW_VERSION_MAJOR(hw))
 		return -EINVAL;      /* wrong major version, won't do */
 
 	/*
 	 * If the flash FW is unusable or we found something newer, load it.
 	 */
-	if (FW_HDR_FW_VER_MAJOR_GET(hw->fwrev) != FW_VERSION_MAJOR(hw) ||
+	if (FW_HDR_FW_VER_MAJOR_G(hw->fwrev) != FW_VERSION_MAJOR(hw) ||
 	    fw_ver > hw->fwrev) {
 		ret = csio_hw_fw_upgrade(hw, hw->pfn, fw->data, fw->size,
 				    /*force=*/false);
@@ -2160,8 +2049,10 @@ csio_hw_configure(struct csio_hw *hw)
 		goto out;
 	}
 
-	/* Set pci completion timeout value to 4 seconds. */
-	csio_set_pcie_completion_timeout(hw, 0xd);
+	/* Set PCIe completion timeout to 4 seconds */
+	if (pci_is_pcie(hw->pdev))
+		pcie_capability_clear_and_set_word(hw->pdev, PCI_EXP_DEVCTL2,
+				PCI_EXP_DEVCTL2_COMP_TIMEOUT, 0xd);
 
 	hw->chip_ops->chip_set_mem_win(hw, MEMWIN_CSIOSTOR);
 

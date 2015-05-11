@@ -111,9 +111,9 @@ static const char usbhsh_hcd_name[] = "renesas_usbhs host";
 	container_of(usbhs_mod_get(priv, USBHS_HOST), struct usbhsh_hpriv, mod)
 
 #define __usbhsh_for_each_udev(start, pos, h, i)	\
-	for (i = start, pos = (h)->udev + i;		\
-	     i < USBHSH_DEVICE_MAX;			\
-	     i++, pos = (h)->udev + i)
+	for ((i) = start;						\
+	     ((i) < USBHSH_DEVICE_MAX) && ((pos) = (h)->udev + (i));	\
+	     (i)++)
 
 #define usbhsh_for_each_udev(pos, hpriv, i)	\
 	__usbhsh_for_each_udev(1, pos, hpriv, i)
@@ -1469,13 +1469,14 @@ static int usbhsh_start(struct usbhs_priv *priv)
 	ret = usb_add_hcd(hcd, 0, 0);
 	if (ret < 0)
 		return 0;
+	device_wakeup_enable(hcd->self.controller);
 
 	/*
 	 * pipe initialize and enable DCP
 	 */
+	usbhs_fifo_init(priv);
 	usbhs_pipe_init(priv,
 			usbhsh_dma_map_ctrl);
-	usbhs_fifo_init(priv);
 	usbhsh_pipe_init_for_host(priv);
 
 	/*

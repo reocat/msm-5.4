@@ -235,9 +235,9 @@ static inline void __pte_clear(pte_t *ptep)
 #define pte_donemigrate(x) hv_pte_set_present(hv_pte_clear_migrating(x))
 
 #define pte_ERROR(e) \
-	pr_err("%s:%d: bad pte 0x%016llx.\n", __FILE__, __LINE__, pte_val(e))
+	pr_err("%s:%d: bad pte 0x%016llx\n", __FILE__, __LINE__, pte_val(e))
 #define pgd_ERROR(e) \
-	pr_err("%s:%d: bad pgd 0x%016llx.\n", __FILE__, __LINE__, pgd_val(e))
+	pr_err("%s:%d: bad pgd 0x%016llx\n", __FILE__, __LINE__, pgd_val(e))
 
 /* Return PA and protection info for a given kernel VA. */
 int va_to_cpa_and_pte(void *va, phys_addr_t *cpa, pte_t *pte);
@@ -361,9 +361,6 @@ do {						\
 #ifdef CONFIG_FLATMEM
 #define kern_addr_valid(addr)	(1)
 #endif /* CONFIG_FLATMEM */
-
-#define io_remap_pfn_range(vma, vaddr, pfn, size, prot)		\
-		remap_pfn_range(vma, vaddr, pfn, size, prot)
 
 extern void vmalloc_sync_all(void);
 

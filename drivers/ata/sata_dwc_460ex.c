@@ -29,8 +29,9 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/device.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/libata.h>
@@ -460,8 +461,7 @@ static irqreturn_t dma_dwc_interrupt(int irq, void *hsdev_instance)
 	int chan;
 	u32 tfr_reg, err_reg;
 	unsigned long flags;
-	struct sata_dwc_device *hsdev =
-		(struct sata_dwc_device *)hsdev_instance;
+	struct sata_dwc_device *hsdev = hsdev_instance;
 	struct ata_host *host = (struct ata_host *)hsdev->host;
 	struct ata_port *ap;
 	struct sata_dwc_device_port *hsdevp;
@@ -1805,7 +1805,6 @@ MODULE_DEVICE_TABLE(of, sata_dwc_match);
 static struct platform_driver sata_dwc_driver = {
 	.driver = {
 		.name = DRV_NAME,
-		.owner = THIS_MODULE,
 		.of_match_table = sata_dwc_match,
 	},
 	.probe = sata_dwc_probe,

@@ -314,10 +314,8 @@ static int cp210x_get_config(struct usb_serial_port *port, u8 request,
 	length = (((size - 1) | 3) + 1) / 4;
 
 	buf = kcalloc(length, sizeof(__le32), GFP_KERNEL);
-	if (!buf) {
-		dev_err(&port->dev, "%s - out of memory.\n", __func__);
+	if (!buf)
 		return -ENOMEM;
-	}
 
 	/* Issue the request, attempting to read 'size' bytes */
 	result = usb_control_msg(serial->dev, usb_rcvctrlpipe(serial->dev, 0),
@@ -361,10 +359,8 @@ static int cp210x_set_config(struct usb_serial_port *port, u8 request,
 	length = (((size - 1) | 3) + 1) / 4;
 
 	buf = kmalloc(length * sizeof(__le32), GFP_KERNEL);
-	if (!buf) {
-		dev_err(&port->dev, "%s - out of memory.\n", __func__);
+	if (!buf)
 		return -ENOMEM;
-	}
 
 	/* Array of integers into bytes */
 	for (i = 0; i < length; i++)
@@ -679,11 +675,6 @@ static void cp210x_set_termios(struct tty_struct *tty,
 	unsigned int bits;
 	unsigned int modem_ctl[4];
 
-	dev_dbg(dev, "%s - port %d\n", __func__, port->number);
-
-	if (!tty)
-		return;
-
 	cflag = tty->termios.c_cflag;
 	old_cflag = old_termios->c_cflag;
 
@@ -871,9 +862,6 @@ static int cp210x_startup(struct usb_serial *serial)
 {
 	struct usb_host_interface *cur_altsetting;
 	struct cp210x_serial_private *spriv;
-
-	/* cp210x buffers behave strangely unless device is reset */
-	usb_reset_device(serial->dev);
 
 	spriv = kzalloc(sizeof(*spriv), GFP_KERNEL);
 	if (!spriv)

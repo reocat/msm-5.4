@@ -214,7 +214,7 @@ int nsm_monitor(const struct nlm_host *host)
 	if (unlikely(res.status != 0))
 		status = -EIO;
 	if (unlikely(status < 0)) {
-		printk(KERN_NOTICE "lockd: cannot monitor %s\n", nsm->sm_name);
+		pr_notice_ratelimited("lockd: cannot monitor %s\n", nsm->sm_name);
 		return status;
 	}
 
@@ -312,11 +312,9 @@ static struct nsm_handle *nsm_lookup_priv(const struct nsm_private *priv)
 static void nsm_init_private(struct nsm_handle *nsm)
 {
 	u64 *p = (u64 *)&nsm->sm_priv.data;
-	struct timespec ts;
 	s64 ns;
 
-	ktime_get_ts(&ts);
-	ns = timespec_to_ns(&ts);
+	ns = ktime_get_ns();
 	put_unaligned(ns, p);
 	put_unaligned((unsigned long)nsm, p + 1);
 }

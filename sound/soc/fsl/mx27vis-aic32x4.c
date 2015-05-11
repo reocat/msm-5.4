@@ -161,7 +161,7 @@ static struct snd_soc_dai_link mx27vis_aic32x4_dai = {
 	.name		= "tlv320aic32x4",
 	.stream_name	= "TLV320AIC32X4",
 	.codec_dai_name	= "tlv320aic32x4-hifi",
-	.platform_name	= "imx-pcm-audio.0",
+	.platform_name	= "imx-ssi.0",
 	.codec_name	= "tlv320aic32x4.0-0018",
 	.cpu_dai_name	= "imx-ssi.0",
 	.ops		= &mx27vis_aic32x4_snd_ops,
@@ -229,7 +229,6 @@ static int mx27vis_aic32x4_remove(struct platform_device *pdev)
 static struct platform_driver mx27vis_aic32x4_audio_driver = {
 	.driver = {
 		.name = "mx27vis",
-		.owner = THIS_MODULE,
 	},
 	.probe = mx27vis_aic32x4_probe,
 	.remove = mx27vis_aic32x4_remove,

@@ -112,7 +112,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 #if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
 			.type		= MT_DEVICE,
 #else
-			.type		= MT_MEMORY,
+			.type		= MT_MEMORY_RWX,
 #endif
 			},
 	},
@@ -203,8 +203,8 @@ static int __init ambarella_dt_scan_iavmem(unsigned long node,
 			const char *uname,  int depth, void *data)
 {
 	const char *type;
-	__be32 *reg;
-	unsigned long len;
+	const __be32 *reg;
+	int len;
 	struct ambarella_mem_map_desc *iavmem_desc;
 
 	type = of_get_flat_dt_prop(node, "device_type", NULL);
@@ -300,7 +300,7 @@ void __init ambarella_init_machine(void)
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
-void ambarella_restart_machine(char mode, const char *cmd)
+void __init ambarella_restart_machine(enum reboot_mode mode, const char *cmd)
 {
 #if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
 	struct ambarella_bapi_reboot_info_s	reboot_info;

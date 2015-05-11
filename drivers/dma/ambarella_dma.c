@@ -205,6 +205,7 @@ static void ambdma_return_desc(struct ambdma_chan *amb_chan,
 	/* move myself to free_list */
 	list_move_tail(&amb_desc->desc_node, &amb_chan->free_list);
 
+#if 0
 	/* unmap dma addresses if required */
 	if (!amb_chan->chan.private) {
 		if (!(txd->flags & DMA_COMPL_SKIP_DEST_UNMAP)) {
@@ -234,6 +235,7 @@ static void ambdma_return_desc(struct ambdma_chan *amb_chan,
 						DMA_TO_DEVICE);
 		}
 	}
+#endif
 }
 
 static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
@@ -615,7 +617,7 @@ static enum dma_status ambdma_tx_status(struct dma_chan *chan,
 	enum dma_status ret;
 
 	ret = dma_cookie_status(chan, cookie, txstate);
-	if (ret != DMA_SUCCESS)
+	if (ret != DMA_COMPLETE)
 		dma_set_residue(txstate, ambdma_get_bytes_left(chan, cookie));
 
 	return ret;

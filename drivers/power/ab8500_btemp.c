@@ -1045,7 +1045,6 @@ static int ab8500_btemp_remove(struct platform_device *pdev)
 
 	flush_scheduled_work();
 	power_supply_unregister(&di->btemp_psy);
-	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
@@ -1196,7 +1195,6 @@ static struct platform_driver ab8500_btemp_driver = {
 	.resume = ab8500_btemp_resume,
 	.driver = {
 		.name = "ab8500-btemp",
-		.owner = THIS_MODULE,
 		.of_match_table = ab8500_btemp_match,
 	},
 };

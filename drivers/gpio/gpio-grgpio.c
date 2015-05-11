@@ -235,8 +235,8 @@ static irqreturn_t grgpio_irq_handler(int irq, void *dev)
  * This function will be called as a consequence of the call to
  * irq_create_mapping in grgpio_to_irq
  */
-int grgpio_irq_map(struct irq_domain *d, unsigned int irq,
-		   irq_hw_number_t hwirq)
+static int grgpio_irq_map(struct irq_domain *d, unsigned int irq,
+			  irq_hw_number_t hwirq)
 {
 	struct grgpio_priv *priv = d->host_data;
 	struct grgpio_lirq *lirq;
@@ -291,7 +291,7 @@ int grgpio_irq_map(struct irq_domain *d, unsigned int irq,
 	return ret;
 }
 
-void grgpio_irq_unmap(struct irq_domain *d, unsigned int irq)
+static void grgpio_irq_unmap(struct irq_domain *d, unsigned int irq)
 {
 	struct grgpio_priv *priv = d->host_data;
 	int index;
@@ -441,6 +441,8 @@ static int grgpio_probe(struct platform_device *ofdev)
 	err = gpiochip_add(gc);
 	if (err) {
 		dev_err(&ofdev->dev, "Could not add gpiochip\n");
+		if (priv->domain)
+			irq_domain_remove(priv->domain);
 		return err;
 	}
 
@@ -468,9 +470,7 @@ static int grgpio_remove(struct platform_device *ofdev)
 		}
 	}
 
-	ret = gpiochip_remove(&priv->bgc.gc);
-	if (ret)
-		goto out;
+	gpiochip_remove(&priv->bgc.gc);
 
 	if (priv->domain)
 		irq_domain_remove(priv->domain);
@@ -481,7 +481,7 @@ out:
 	return ret;
 }
 
-static struct of_device_id grgpio_match[] = {
+static const struct of_device_id grgpio_match[] = {
 	{.name = "GAISLER_GPIO"},
 	{.name = "01_01a"},
 	{},
@@ -492,7 +492,6 @@ MODULE_DEVICE_TABLE(of, grgpio_match);
 static struct platform_driver grgpio_driver = {
 	.driver = {
 		.name = "grgpio",
-		.owner = THIS_MODULE,
 		.of_match_table = grgpio_match,
 	},
 	.probe = grgpio_probe,

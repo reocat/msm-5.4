@@ -168,7 +168,7 @@ struct ambadc_client *ambarella_adc_register_client(struct device *dev,
 	}
 
 	client->dev = dev;
-	client->dev->parent = amb_adc->dev;
+	//client->dev->parent = amb_adc->dev;
 	client->mode = mode;
 	client->callback = callback;
 	client->host = amb_adc;

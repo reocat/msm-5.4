@@ -227,6 +227,18 @@ static int mxs_gpio_to_irq(struct gpio_chip *gc, unsigned offset)
 	return irq_find_mapping(port->domain, offset);
 }
 
+static int mxs_gpio_get_direction(struct gpio_chip *gc, unsigned offset)
+{
+	struct bgpio_chip *bgc = to_bgpio_chip(gc);
+	struct mxs_gpio_port *port =
+		container_of(bgc, struct mxs_gpio_port, bgc);
+	u32 mask = 1 << offset;
+	u32 dir;
+
+	dir = readl(port->base + PINCTRL_DOE(port));
+	return !(dir & mask);
+}
+
 static struct platform_device_id mxs_gpio_ids[] = {
 	{
 		.name = "imx23-gpio",
@@ -255,7 +267,6 @@ static int mxs_gpio_probe(struct platform_device *pdev)
 	struct device_node *parent;
 	static void __iomem *base;
 	struct mxs_gpio_port *port;
-	struct resource *iores = NULL;
 	int irq_base;
 	int err;
 
@@ -263,16 +274,10 @@ static int mxs_gpio_probe(struct platform_device *pdev)
 	if (!port)
 		return -ENOMEM;
 
-	if (np) {
-		port->id = of_alias_get_id(np, "gpio");
-		if (port->id < 0)
-			return port->id;
-		port->devid = (enum mxs_gpio_id) of_id->data;
-	} else {
-		port->id = pdev->id;
-		port->devid = pdev->id_entry->driver_data;
-	}
-
+	port->id = of_alias_get_id(np, "gpio");
+	if (port->id < 0)
+		return port->id;
+	port->devid = (enum mxs_gpio_id) of_id->data;
 	port->irq = platform_get_irq(pdev, 0);
 	if (port->irq < 0)
 		return port->irq;
@@ -282,18 +287,11 @@ static int mxs_gpio_probe(struct platform_device *pdev)
 	 * share the same one
 	 */
 	if (!base) {
-		if (np) {
-			parent = of_get_parent(np);
-			base = of_iomap(parent, 0);
-			of_node_put(parent);
-			if (!base)
-				return -EADDRNOTAVAIL;
-		} else {
-			iores = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-			base = devm_ioremap_resource(&pdev->dev, iores);
-			if (IS_ERR(base))
-				return PTR_ERR(base);
-		}
+		parent = of_get_parent(np);
+		base = of_iomap(parent, 0);
+		of_node_put(parent);
+		if (!base)
+			return -EADDRNOTAVAIL;
 	}
 	port->base = base;
 
@@ -334,6 +332,7 @@ static int mxs_gpio_probe(struct platform_device *pdev)
 		goto out_irqdesc_free;
 
 	port->bgc.gc.to_irq = mxs_gpio_to_irq;
+	port->bgc.gc.get_direction = mxs_gpio_get_direction;
 	port->bgc.gc.base = port->id * 32;
 
 	err = gpiochip_add(&port->bgc.gc);
@@ -352,7 +351,6 @@ out_irqdesc_free:
 static struct platform_driver mxs_gpio_driver = {
 	.driver		= {
 		.name	= "gpio-mxs",
-		.owner	= THIS_MODULE,
 		.of_match_table = mxs_gpio_dt_ids,
 	},
 	.probe		= mxs_gpio_probe,

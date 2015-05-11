@@ -198,10 +198,12 @@ static int fm_v4l2_vidioc_querycap(struct file *file, void *priv,
 	strlcpy(capability->card, FM_DRV_CARD_SHORT_NAME,
 			sizeof(capability->card));
 	sprintf(capability->bus_info, "UART");
-	capability->capabilities = V4L2_CAP_HW_FREQ_SEEK | V4L2_CAP_TUNER |
+	capability->device_caps = V4L2_CAP_HW_FREQ_SEEK | V4L2_CAP_TUNER |
 		V4L2_CAP_RADIO | V4L2_CAP_MODULATOR |
 		V4L2_CAP_AUDIO | V4L2_CAP_READWRITE |
 		V4L2_CAP_RDS_CAPTURE;
+	capability->capabilities = capability->device_caps |
+		V4L2_CAP_DEVICE_CAPS;
 
 	return 0;
 }
@@ -533,6 +535,11 @@ int fm_v4l2_init_video_device(struct fmdev *fmdev, int radio_nr)
 	struct v4l2_ctrl *ctrl;
 	int ret;
 
+	strlcpy(fmdev->v4l2_dev.name, FM_DRV_NAME, sizeof(fmdev->v4l2_dev.name));
+	ret = v4l2_device_register(NULL, &fmdev->v4l2_dev);
+	if (ret < 0)
+		return ret;
+
 	/* Init mutex for core locking */
 	mutex_init(&fmdev->mutex);
 
@@ -549,6 +556,7 @@ int fm_v4l2_init_video_device(struct fmdev *fmdev, int radio_nr)
 	video_set_drvdata(gradio_dev, fmdev);
 
 	gradio_dev->lock = &fmdev->mutex;
+	gradio_dev->v4l2_dev = &fmdev->v4l2_dev;
 
 	/* Register with V4L2 subsystem as RADIO device */
 	if (video_register_device(gradio_dev, VFL_TYPE_RADIO, radio_nr)) {
@@ -610,6 +618,8 @@ void *fm_v4l2_deinit_video_device(void)
 
 	/* Unregister RADIO device from V4L2 subsystem */
 	video_unregister_device(gradio_dev);
+
+	v4l2_device_unregister(&fmdev->v4l2_dev);
 
 	return fmdev;
 }

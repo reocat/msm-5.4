@@ -14,7 +14,7 @@
  */
 
 /dts-v1/;
-/include/ "armada-370.dtsi"
+#include "armada-370.dtsi"
 
 / {
 	model = "Marvell Armada 370 Evaluation Board";
@@ -30,9 +30,11 @@
 	};
 
 	soc {
+		ranges = <MBUS_ID(0xf0, 0x01) 0 0xd0000000 0x100000
+			  MBUS_ID(0x01, 0xe0) 0 0xfff00000 0x100000>;
+
 		internal-regs {
 			serial@12000 {
-				clock-frequency = <200000000>;
 				status = "okay";
 			};
 			sata@a0000 {
@@ -41,6 +43,8 @@
 			};
 
 			mdio {
+				pinctrl-0 = <&mdio_pins>;
+				pinctrl-names = "default";
 				phy0: ethernet-phy@0 {
 					reg = <0>;
 				};
@@ -51,14 +55,36 @@
 			};
 
 			ethernet@70000 {
+				pinctrl-0 = <&ge0_rgmii_pins>;
+				pinctrl-names = "default";
 				status = "okay";
 				phy = <&phy0>;
 				phy-mode = "rgmii-id";
 			};
 			ethernet@74000 {
+				pinctrl-0 = <&ge1_rgmii_pins>;
+				pinctrl-names = "default";
 				status = "okay";
 				phy = <&phy1>;
 				phy-mode = "rgmii-id";
+			};
+
+			i2c@11000 {
+				pinctrl-0 = <&i2c0_pins>;
+				pinctrl-names = "default";
+				clock-frequency = <100000>;
+				status = "okay";
+				audio_codec: audio-codec@4a {
+					#sound-dai-cells = <0>;
+					compatible = "cirrus,cs42l51";
+					reg = <0x4a>;
+				};
+			};
+
+			audio-controller@30000 {
+				pinctrl-0 = <&i2s_pins2>;
+				pinctrl-names = "default";
+				status = "okay";
 			};
 
 			mvsdio@d4000 {
@@ -74,6 +100,7 @@
 				 */
 				status = "disabled";
 				/* No CD or WP GPIOs */
+				broken-cd;
 			};
 
 			usb@50000 {
@@ -85,6 +112,8 @@
 			};
 
 			spi0: spi@10600 {
+				pinctrl-0 = <&spi0_pins2>;
+				pinctrl-names = "default";
 				status = "okay";
 
 				spi-flash@0 {
@@ -95,23 +124,82 @@
 					spi-max-frequency = <50000000>;
 				};
 			};
+		};
 
-			pcie-controller {
+		pcie-controller {
+			status = "okay";
+			/*
+			 * The two PCIe units are accessible through
+			 * both standard PCIe slots and mini-PCIe
+			 * slots on the board.
+			 */
+			pcie@1,0 {
+				/* Port 0, Lane 0 */
 				status = "okay";
-				/*
-				 * The two PCIe units are accessible through
-				 * both standard PCIe slots and mini-PCIe
-				 * slots on the board.
-				 */
-				pcie@1,0 {
-					/* Port 0, Lane 0 */
-					status = "okay";
-				};
-				pcie@2,0 {
-					/* Port 1, Lane 0 */
-					status = "okay";
-				};
+			};
+
+			pcie@2,0 {
+				/* Port 1, Lane 0 */
+				status = "okay";
 			};
 		};
+	};
+
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "Armada 370 DB Audio";
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,widgets =
+			"Headphone", "Out Jack",
+			"Line", "In Jack";
+		simple-audio-card,routing =
+			"Out Jack", "HPL",
+			"Out Jack", "HPR",
+			"AIN1L", "In Jack",
+			"AIN1L", "In Jack";
+		status = "okay";
+
+		simple-audio-card,dai-link@0 {
+			format = "i2s";
+			cpu {
+				sound-dai = <&audio_controller 0>;
+			};
+
+			codec {
+				sound-dai = <&audio_codec>;
+			};
+		};
+
+		simple-audio-card,dai-link@1 {
+			format = "i2s";
+			cpu {
+				sound-dai = <&audio_controller 1>;
+			};
+
+			codec {
+				sound-dai = <&spdif_out>;
+			};
+		};
+
+		simple-audio-card,dai-link@2 {
+			format = "i2s";
+			cpu {
+				sound-dai = <&audio_controller 1>;
+			};
+
+			codec {
+				sound-dai = <&spdif_in>;
+			};
+		};
+	};
+
+	spdif_out: spdif-out {
+		#sound-dai-cells = <0>;
+		compatible = "linux,spdif-dit";
+	};
+
+	spdif_in: spdif-in {
+		#sound-dai-cells = <0>;
+		compatible = "linux,spdif-dir";
 	};
 };

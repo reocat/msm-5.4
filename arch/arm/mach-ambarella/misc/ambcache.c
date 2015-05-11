@@ -45,7 +45,7 @@
 /* ==========================================================================*/
 #define CACHE_LINE_SIZE		32
 #define CACHE_LINE_MASK		~(CACHE_LINE_SIZE - 1)
-
+#define CONFIG_CACHE_PL310_PREFETCH_OFFSET      0
 /* ==========================================================================*/
 #ifdef CONFIG_OUTER_CACHE
 #if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
@@ -262,10 +262,10 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #elif (CHIP_REV == S2L)
-	ctrl |= (0x0 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
+	ctrl |= (0x0 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
+	ctrl |= (0x1 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= L310_AUX_CTRL_DATA_PREFETCH;
+	ctrl |= L310_AUX_CTRL_INSTR_PREFETCH;
 #elif (CHIP_REV == S2E) || (CHIP_REV == S3)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x3 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
@@ -287,14 +287,14 @@ static void setup_l2_prefetch_ctrl(void)
 {
 	u32 ctrl = 0;
 
-	ctrl = readl(ambcache_l2_base + L2X0_PREFETCH_CTRL);
+	ctrl = readl(ambcache_l2_base + L310_PREFETCH_CTRL);
 	ctrl &= ~L2X0_PREFETCH_CTRL_PREFETCH_OFFSET_MASK;
 	ctrl |= (CONFIG_CACHE_PL310_PREFETCH_OFFSET <<
 		 L2X0_PREFETCH_CTRL_PREFETCH_OFFSET_SHIFT);
 #ifdef CONFIG_CACHE_PL310_DOUBLE_LINEFILL
 	ctrl |= (1 << L2X0_PREFETCH_CTRL_DOUBLE_LINEFILL_SHIFT);
 #endif
-	writel(ctrl, ambcache_l2_base + L2X0_PREFETCH_CTRL);
+	writel(ctrl, ambcache_l2_base + L310_PREFETCH_CTRL);
 }
 
 /*
@@ -326,7 +326,7 @@ static void setup_full_line_of_zero(void *dummy)
 
 /* ==========================================================================*/
 static int ambcache_l2_init = 0;
-void ambcache_l2_enable_raw()
+void __init ambcache_l2_enable_raw()
 {
 	if (outer_is_enabled())
 		return;
@@ -353,12 +353,12 @@ void ambcache_l2_disable_raw()
 	flush_cache_all();
 	outer_flush_all();
 	outer_disable();
-	outer_inv_all();
+	//outer_inv_all();
 	flush_cache_all();
 }
 EXPORT_SYMBOL(ambcache_l2_disable_raw);
 
-int ambcache_l2_enable()
+__init int ambcache_l2_enable()
 {
 	ambcache_l2_enable_raw();
 	return outer_is_enabled() ? 0 : -1;

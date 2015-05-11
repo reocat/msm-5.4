@@ -705,7 +705,7 @@ static int stb0899_send_diseqc_msg(struct dvb_frontend *fe, struct dvb_diseqc_ma
 	struct stb0899_state *state = fe->demodulator_priv;
 	u8 reg, i;
 
-	if (cmd->msg_len > 8)
+	if (cmd->msg_len > sizeof(cmd->msg))
 		return -EINVAL;
 
 	/* enable FIFO precharge	*/
@@ -1628,19 +1628,18 @@ static struct dvb_frontend_ops stb0899_ops = {
 struct dvb_frontend *stb0899_attach(struct stb0899_config *config, struct i2c_adapter *i2c)
 {
 	struct stb0899_state *state = NULL;
-	enum stb0899_inversion inversion;
 
 	state = kzalloc(sizeof (struct stb0899_state), GFP_KERNEL);
 	if (state == NULL)
 		goto error;
 
-	inversion				= config->inversion;
 	state->verbose				= &verbose;
 	state->config				= config;
 	state->i2c				= i2c;
 	state->frontend.ops			= stb0899_ops;
 	state->frontend.demodulator_priv	= state;
-	state->internal.inversion		= inversion;
+	/* use configured inversion as default -- we'll later autodetect inversion */
+	state->internal.inversion		= config->inversion;
 
 	stb0899_wakeup(&state->frontend);
 	if (stb0899_get_dev_id(state) == -ENODEV) {

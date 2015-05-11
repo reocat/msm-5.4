@@ -18,14 +18,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/kernel.h>
-#include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/i2c/pcf857x.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -306,7 +305,7 @@ static int pcf857x_probe(struct i2c_client *client,
 	spin_lock_init(&gpio->slock);
 
 	gpio->chip.base			= pdata ? pdata->gpio_base : -1;
-	gpio->chip.can_sleep		= 1;
+	gpio->chip.can_sleep		= true;
 	gpio->chip.dev			= &client->dev;
 	gpio->chip.owner		= THIS_MODULE;
 	gpio->chip.get			= pcf857x_get;
@@ -427,7 +426,7 @@ fail_irq_domain:
 
 static int pcf857x_remove(struct i2c_client *client)
 {
-	struct pcf857x_platform_data	*pdata = client->dev.platform_data;
+	struct pcf857x_platform_data	*pdata = dev_get_platdata(&client->dev);
 	struct pcf857x			*gpio = i2c_get_clientdata(client);
 	int				status = 0;
 
@@ -445,9 +444,7 @@ static int pcf857x_remove(struct i2c_client *client)
 	if (client->irq)
 		pcf857x_irq_domain_cleanup(gpio);
 
-	status = gpiochip_remove(&gpio->chip);
-	if (status)
-		dev_err(&client->dev, "%s --> %d\n", "remove", status);
+	gpiochip_remove(&gpio->chip);
 	return status;
 }
 

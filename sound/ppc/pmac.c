@@ -28,6 +28,8 @@
 #include <linux/interrupt.h>
 #include <linux/pci.h>
 #include <linux/dma-mapping.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
 #include <sound/core.h>
 #include "pmac.h"
 #include <sound/pcm_params.h>
@@ -885,8 +887,7 @@ static int snd_pmac_free(struct snd_pmac *chip)
 		}
 	}
 
-	if (chip->pdev)
-		pci_dev_put(chip->pdev);
+	pci_dev_put(chip->pdev);
 	of_node_put(chip->node);
 	kfree(chip);
 	return 0;
@@ -990,9 +991,9 @@ static int snd_pmac_detect(struct snd_pmac *chip)
 		return -ENODEV;
 
 	if (!sound) {
-		sound = of_find_node_by_name(NULL, "sound");
-		while (sound && sound->parent != chip->node)
-			sound = of_find_node_by_name(sound, "sound");
+		for_each_node_by_name(sound, "sound")
+			if (sound->parent == chip->node)
+				break;
 	}
 	if (! sound) {
 		of_node_put(chip->node);

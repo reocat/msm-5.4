@@ -29,7 +29,6 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_net.h>
-#include <linux/pinctrl/consumer.h>
 
 #include "macb.h"
 
@@ -305,11 +304,10 @@ MODULE_DEVICE_TABLE(of, at91ether_dt_ids);
 /* Detect MAC & PHY and perform ethernet interface initialization */
 static int __init at91ether_probe(struct platform_device *pdev)
 {
-	struct macb_platform_data *board_data = pdev->dev.platform_data;
+	struct macb_platform_data *board_data = dev_get_platdata(&pdev->dev);
 	struct resource *regs;
 	struct net_device *dev;
 	struct phy_device *phydev;
-	struct pinctrl *pinctrl;
 	struct macb *lp;
 	int res;
 	u32 reg;
@@ -318,15 +316,6 @@ static int __init at91ether_probe(struct platform_device *pdev)
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!regs)
 		return -ENOENT;
-
-	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
-	if (IS_ERR(pinctrl)) {
-		res = PTR_ERR(pinctrl);
-		if (res == -EPROBE_DEFER)
-			return res;
-
-		dev_warn(&pdev->dev, "No pinctrl provided\n");
-	}
 
 	dev = alloc_etherdev(sizeof(struct macb));
 	if (!dev)
@@ -351,7 +340,10 @@ static int __init at91ether_probe(struct platform_device *pdev)
 		res = PTR_ERR(lp->pclk);
 		goto err_free_dev;
 	}
-	clk_enable(lp->pclk);
+	clk_prepare_enable(lp->pclk);
+
+	lp->hclk = ERR_PTR(-ENOENT);
+	lp->tx_clk = ERR_PTR(-ENOENT);
 
 	/* Install the interrupt handler */
 	dev->irq = platform_get_irq(pdev, 0);
@@ -359,7 +351,6 @@ static int __init at91ether_probe(struct platform_device *pdev)
 	if (res)
 		goto err_disable_clock;
 
-	ether_setup(dev);
 	dev->netdev_ops = &at91ether_netdev_ops;
 	dev->ethtool_ops = &macb_ethtool_ops;
 	platform_set_drvdata(pdev, dev);
@@ -415,7 +406,7 @@ static int __init at91ether_probe(struct platform_device *pdev)
 err_out_unregister_netdev:
 	unregister_netdev(dev);
 err_disable_clock:
-	clk_disable(lp->pclk);
+	clk_disable_unprepare(lp->pclk);
 err_free_dev:
 	free_netdev(dev);
 	return res;
@@ -433,9 +424,8 @@ static int at91ether_remove(struct platform_device *pdev)
 	kfree(lp->mii_bus->irq);
 	mdiobus_free(lp->mii_bus);
 	unregister_netdev(dev);
-	clk_disable(lp->pclk);
+	clk_disable_unprepare(lp->pclk);
 	free_netdev(dev);
-	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
@@ -450,7 +440,7 @@ static int at91ether_suspend(struct platform_device *pdev, pm_message_t mesg)
 		netif_stop_queue(net_dev);
 		netif_device_detach(net_dev);
 
-		clk_disable(lp->pclk);
+		clk_disable_unprepare(lp->pclk);
 	}
 	return 0;
 }
@@ -461,7 +451,7 @@ static int at91ether_resume(struct platform_device *pdev)
 	struct macb *lp = netdev_priv(net_dev);
 
 	if (netif_running(net_dev)) {
-		clk_enable(lp->pclk);
+		clk_prepare_enable(lp->pclk);
 
 		netif_device_attach(net_dev);
 		netif_start_queue(net_dev);
@@ -479,7 +469,6 @@ static struct platform_driver at91ether_driver = {
 	.resume		= at91ether_resume,
 	.driver		= {
 		.name	= "at91_ether",
-		.owner	= THIS_MODULE,
 		.of_match_table	= of_match_ptr(at91ether_dt_ids),
 	},
 };

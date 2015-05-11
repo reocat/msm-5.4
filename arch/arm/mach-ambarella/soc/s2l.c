@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/irqchip.h>
 #include <asm/mach/arch.h>
+#include <plat/chip.h>
 #include <mach/init.h>
 
 static const char * const s2l_dt_board_compat[] = {
@@ -34,7 +35,7 @@ static const char * const s2l_dt_board_compat[] = {
 };
 
 DT_MACHINE_START(S2L_DT, "Ambarella S2L (Flattened Device Tree)")
-	.restart_mode	= 's',
+        .reboot_mode    = REBOOT_SOFT,
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
 	.init_irq	= irqchip_init,

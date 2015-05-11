@@ -153,6 +153,21 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
 			{66, 17}, {98, 17}}
 };
 
+static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
+{
+	unsigned long tmp, tmp2;
+
+	__asm__ __volatile__("@ atomic_clear_mask\n"
+"1:	ldrex	%0, [%3]\n"
+"	bic	%0, %0, %4\n"
+"	strex	%1, %0, [%3]\n"
+"	teq	%1, #0\n"
+"	bne	1b"
+	: "=&r" (tmp), "=&r" (tmp2), "+Qo" (*addr)
+	: "r" (addr), "Ir" (mask)
+	: "cc");
+}
+
 /* ==========================================================================*/
 #define NAND_TIMING_RSHIFT24BIT(x)	(((x) & 0xff000000) >> 24)
 #define NAND_TIMING_RSHIFT16BIT(x)	(((x) & 0x00ff0000) >> 16)

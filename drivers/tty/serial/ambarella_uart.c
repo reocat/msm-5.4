@@ -526,8 +526,8 @@ static int serial_ambarella_start_tx_dma(struct ambarella_uart_port *amb_port,
 	tx_phys_addr = amb_port->tx_dma_buf_phys + xmit->tail;
 	amb_port->tx_dma_desc = dmaengine_prep_slave_single(amb_port->tx_dma_chan,
 				tx_phys_addr, tx_bytes, DMA_MEM_TO_DEV,
-				DMA_PREP_INTERRUPT | DMA_COMPL_SKIP_SRC_UNMAP |
-				DMA_COMPL_SKIP_DEST_UNMAP | DMA_CTRL_ACK);
+				DMA_PREP_INTERRUPT |
+				DMA_CTRL_ACK);
 	if (!amb_port->tx_dma_desc) {
 		dev_err(amb_port->port.dev, "Not able to get desc for Tx\n");
 		return -EIO;
@@ -656,8 +656,7 @@ static int serial_ambarella_start_rx_dma(struct ambarella_uart_port *amb_port)
 
 	amb_port->rx_dma_desc = dmaengine_prep_slave_single(amb_port->rx_dma_chan,
 				amb_port->rx_dma_buf_phys, count, DMA_DEV_TO_MEM,
-				DMA_PREP_INTERRUPT | DMA_CTRL_ACK| DMA_COMPL_SKIP_SRC_UNMAP |
-				DMA_COMPL_SKIP_DEST_UNMAP);
+				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 
 	if (!amb_port->rx_dma_desc) {
 		dev_err(amb_port->port.dev, "Not able to get desc for Rx\n");

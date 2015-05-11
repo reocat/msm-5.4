@@ -29,8 +29,8 @@
 #include <linux/of_irq.h>
 #include <asm/mach/time.h>
 #include <asm/smp_twd.h>
-#include <asm/sched_clock.h>
-#include <asm/localtimer.h>
+#include <linux/sched_clock.h>
+//#include <asm/localtimer.h>
 #include <plat/timer.h>
 
 static void __iomem *ce_base = NULL;
@@ -46,7 +46,7 @@ static u32 cs_ctrl_offset = -1;
 
 static struct clock_event_device ambarella_clkevt;
 static struct clocksource ambarella_clksrc;
-static u32 ambarella_read_sched_clock(void);
+static u64 ambarella_read_sched_clock(void);
 
 /* ==========================================================================*/
 struct amb_timer_pm_reg {
@@ -280,9 +280,9 @@ static struct clocksource ambarella_clksrc = {
 	.resume		= ambarella_cs_timer_resume,
 };
 
-static u32 notrace ambarella_read_sched_clock(void)
+static u64 notrace ambarella_read_sched_clock(void)
 {
-	return (-(u32)amba_readl(cs_base + TIMER_STATUS_OFFSET));
+	return (-(u64)amba_readl(cs_base + TIMER_STATUS_OFFSET));
 }
 
 /* ==========================================================================*/
@@ -388,7 +388,7 @@ static void __init ambarella_clocksource_init(void)
 	pr_debug("%s: mult = %u, shift = %u\n",
 		clksrc->name, clksrc->mult, clksrc->shift);
 
-	setup_sched_clock(ambarella_read_sched_clock, 32, AMBARELLA_TIMER_FREQ);
+	sched_clock_register(ambarella_read_sched_clock, 32, AMBARELLA_TIMER_FREQ);
 }
 
 #ifdef CONFIG_HAVE_ARM_TWD

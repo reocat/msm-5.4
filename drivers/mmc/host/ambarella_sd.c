@@ -1659,7 +1659,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	if (hc_timeout_clk == 0)
 		hc_timeout_clk = 24000;
 
-	mmc->max_discard_to = (1 << 27) / hc_timeout_clk;
+	mmc->max_busy_timeout = (1 << 27) / hc_timeout_clk;
 
 	if (hc_cap & SD_CAP_MAX_2KB_BLK)
 		mmc->max_blk_size = 2048;
@@ -1994,7 +1994,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	int retval = 0, i;
 
 	pinfo = platform_get_drvdata(pdev);
-
+#if 0
 	for (i = 0; i < pinfo->slot_num; i++) {
 		retval = mmc_suspend_host(pinfo->pslotinfo[i]->mmc);
 		if (retval) {
@@ -2002,7 +2002,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 				"mmc_suspend_host[%d] failed[%d]!\n", i, retval);
 		}
 	}
-
+#endif
 	disable_irq(pinfo->irq);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n", __func__,
@@ -2025,7 +2025,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 		ambarella_sd_reset_all(pslotinfo->mmc);
 	}
 	enable_irq(pinfo->irq);
-
+#if 0
 	for (i = 0; i < pinfo->slot_num; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
 		retval = mmc_resume_host(pslotinfo->mmc);
@@ -2035,7 +2035,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 			i, retval);
 		}
 	}
-
+#endif
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, retval);
 
 	return retval;

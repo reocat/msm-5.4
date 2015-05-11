@@ -13,9 +13,6 @@
 
 #include <asm/setup.h>
 
-#define io_remap_pfn_range(vma, vaddr, pfn, size, prot)		\
-		remap_pfn_range(vma, vaddr, pfn, size, prot)
-
 #ifndef __ASSEMBLY__
 extern int mem_init_done;
 #endif
@@ -568,6 +565,7 @@ void consistent_free(size_t size, void *vaddr);
 void consistent_sync(void *vaddr, size_t size, int direction);
 void consistent_sync_page(struct page *page, unsigned long offset,
 	size_t size, int direction);
+unsigned long consistent_virt_to_pfn(void *vaddr);
 
 void setup_memory(void);
 #endif /* __ASSEMBLY__ */

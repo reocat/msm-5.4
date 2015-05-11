@@ -31,6 +31,7 @@
 #include <linux/input.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <plat/chip.h>
 #include <plat/adc.h>
 
 struct ambadc_keymap {

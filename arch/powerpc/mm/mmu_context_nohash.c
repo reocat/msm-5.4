@@ -112,8 +112,10 @@ static unsigned int steal_context_smp(unsigned int id)
 		 */
 		for_each_cpu(cpu, mm_cpumask(mm)) {
 			for (i = cpu_first_thread_sibling(cpu);
-			     i <= cpu_last_thread_sibling(cpu); i++)
-				__set_bit(id, stale_map[i]);
+			     i <= cpu_last_thread_sibling(cpu); i++) {
+				if (stale_map[i])
+					__set_bit(id, stale_map[i]);
+			}
 			cpu = i - 1;
 		}
 		return id;
@@ -272,7 +274,8 @@ void switch_mmu_context(struct mm_struct *prev, struct mm_struct *next)
 		/* XXX This clear should ultimately be part of local_flush_tlb_mm */
 		for (i = cpu_first_thread_sibling(cpu);
 		     i <= cpu_last_thread_sibling(cpu); i++) {
-			__clear_bit(id, stale_map[i]);
+			if (stale_map[i])
+				__clear_bit(id, stale_map[i]);
 		}
 	}
 
@@ -329,8 +332,8 @@ void destroy_context(struct mm_struct *mm)
 
 #ifdef CONFIG_SMP
 
-static int __cpuinit mmu_context_cpu_notify(struct notifier_block *self,
-					    unsigned long action, void *hcpu)
+static int mmu_context_cpu_notify(struct notifier_block *self,
+				  unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned int)(long)hcpu;
 
@@ -363,7 +366,7 @@ static int __cpuinit mmu_context_cpu_notify(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block __cpuinitdata mmu_context_cpu_nb = {
+static struct notifier_block mmu_context_cpu_nb = {
 	.notifier_call	= mmu_context_cpu_notify,
 };
 
@@ -407,17 +410,7 @@ void __init mmu_context_init(void)
 	} else if (mmu_has_feature(MMU_FTR_TYPE_47x)) {
 		first_context = 1;
 		last_context = 65535;
-	} else
-#ifdef CONFIG_PPC_BOOK3E_MMU
-	if (mmu_has_feature(MMU_FTR_TYPE_3E)) {
-		u32 mmucfg = mfspr(SPRN_MMUCFG);
-		u32 pid_bits = (mmucfg & MMUCFG_PIDSIZE_MASK)
-				>> MMUCFG_PIDSIZE_SHIFT;
-		first_context = 1;
-		last_context = (1UL << (pid_bits + 1)) - 1;
-	} else
-#endif
-	{
+	} else {
 		first_context = 1;
 		last_context = 255;
 	}
@@ -428,12 +421,12 @@ void __init mmu_context_init(void)
 	/*
 	 * Allocate the maps used by context management
 	 */
-	context_map = alloc_bootmem(CTX_MAP_SIZE);
-	context_mm = alloc_bootmem(sizeof(void *) * (last_context + 1));
+	context_map = memblock_virt_alloc(CTX_MAP_SIZE, 0);
+	context_mm = memblock_virt_alloc(sizeof(void *) * (last_context + 1), 0);
 #ifndef CONFIG_SMP
-	stale_map[0] = alloc_bootmem(CTX_MAP_SIZE);
+	stale_map[0] = memblock_virt_alloc(CTX_MAP_SIZE, 0);
 #else
-	stale_map[boot_cpuid] = alloc_bootmem(CTX_MAP_SIZE);
+	stale_map[boot_cpuid] = memblock_virt_alloc(CTX_MAP_SIZE, 0);
 
 	register_cpu_notifier(&mmu_context_cpu_nb);
 #endif

@@ -2254,7 +2254,9 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	if (gpio_is_valid(lp->rst_gpio))
 		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 
-	SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
+	//SET_ETHTOOL_OPS(ndev, &ambeth_ethtool_ops);
+        ndev->ethtool_ops = &ambeth_ethtool_ops;
+
 	ret_val = register_netdev(ndev);
 	if (ret_val) {
 		dev_err(&pdev->dev, " register_netdev fail%d.\n", ret_val);
