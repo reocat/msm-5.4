@@ -101,6 +101,9 @@ static void init_procfs(void)
 
 int aipc_spin_lock_setup(u32 addr)
 {
+	if (lock_inited)
+		goto done;
+
 	lock_set.lock = (aspinlock_t*) addr;
 	lock_set.size = AIPC_SLOCK_SIZE / sizeof(aspinlock_t);
 
@@ -112,6 +115,7 @@ int aipc_spin_lock_setup(u32 addr)
 
 	printk("%s done\n", __func__);
 
+done:
 	return 0;
 }
 EXPORT_SYMBOL(aipc_spin_lock_setup);
