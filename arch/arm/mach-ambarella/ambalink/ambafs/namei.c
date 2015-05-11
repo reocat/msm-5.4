@@ -246,11 +246,11 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 #if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || defined(CONFIG_AMBALINK_SINGLE_CORE)
                 /* In SMP BOSS, the cache is synced by SCU. */
                 /* We can't invalidate the cache otherwise the data will be missing. */
-		ambcache_inv_range(stat, 32);
+		ambcache_inv_range(&stat->statp, 32);
 #endif
 		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
 			stat->magic = 0x0;
-			ambcache_clean_range(stat, 32);
+			ambcache_clean_range(&stat->statp, 32);
 			break;
 		}
 	}

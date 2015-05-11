@@ -74,6 +74,7 @@ struct ambafs_stat {
 };
 
 struct ambafs_qstat {
+	u32		padding[6];
 	void*           statp;
 	int             type;
 	int64_t         size;
