@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/export.h>
 #include <linux/notifier.h>
+#include <mach/hardware.h>
 #include <plat/audio.h>
 
 /* ==========================================================================*/
