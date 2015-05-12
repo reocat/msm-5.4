@@ -12,6 +12,8 @@
 ## without the prior consent of Ambarella, Inc.
 ##
 
+ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"3.19")
+
 ARCH := arm
 export ARCH
 
@@ -109,6 +111,10 @@ defconfig_public_linux_2: $(DOT_CONFIG)
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) $(KERNEL_2NDCONFIG); \
 	fi
+
+endif
+
+#####
 
 endif
 
