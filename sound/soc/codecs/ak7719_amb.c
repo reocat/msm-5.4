@@ -49,6 +49,9 @@
 static int crc_timeout = 10;
 module_param(crc_timeout, uint, 0664);
 
+static int aec = 1;
+module_param(aec, uint, 0664);
+
 struct ak7719_data {
 	unsigned int rst_pin;
 	unsigned int rst_active;
@@ -63,8 +66,6 @@ struct ak7719_workqueue{
 
 static struct ak7719_workqueue ak7719_work;
 static struct workqueue_struct *ak7719_wq;
-
-#ifndef BY_PASS_DSP
 
 u8 pram_data[] = {
 	0x0C, 0xB4, 0xED, 0x1E, 0x42,
@@ -3869,7 +3870,7 @@ u8 pram_data[] = {
 	0x0B, 0x73, 0xCA, 0x62, 0xDE,
 	0x03, 0x41, 0xB9, 0xF4, 0x59
 };
-#else
+
 static unsigned char ak77dspPRAM[] = {
 	0x0C, 0x94, 0xED, 0x1E, 0x74,
 	0x04, 0xA8, 0x9C, 0x6D, 0x55,
@@ -3883,7 +3884,6 @@ static unsigned char ak77dspPRAM[] = {
 	0x05, 0x79, 0x77, 0x0B, 0x3C,
 	0x08, 0xAE, 0xA2, 0x43, 0x38
 };
-#endif
 
 u8 cram_data[] = {
 	0x7F, 0xFF, 0xF0,
@@ -6255,17 +6255,18 @@ static int ak7719_ram_download_crc(struct ak7719_data *ak7719, u8 cmd, u8 *data,
 static void ak7719_download_dsp_pro(struct ak7719_data *ak7719)
 {
 	int ret;
-#ifndef BY_PASS_DSP
-	/* pram data is ak7719 dsp binary */
-	ret = ak7719_ram_download_crc(ak7719, 0xB8, pram_data, ARRAY_SIZE(pram_data), 0xc4a9);
-	if(ret < 0) {
-		printk("ak7719:write dsp binary failed!!!\n");
+
+	if(aec == 1) {
+		/* pram data is ak7719 dsp binary */
+		ret = ak7719_ram_download_crc(ak7719, 0xB8, pram_data, ARRAY_SIZE(pram_data), 0xc4a9);
+		if(ret < 0) {
+			printk("ak7719:write dsp binary failed!!!\n");
+		}
+	} else if(aec == 0) {
+		/* ak77dspPRAM is ak7719 bypass dsp binary */
+		ak7719_ram_download_crc(ak7719, 0xB8, ak77dspPRAM, ARRAY_SIZE(ak77dspPRAM), 0x5bf4);
 	}
 
-#else
-	/* ak77dspPRAM is ak7719 bypass dsp binary */
-	ak7719_ram_download_crc(ak7719, 0xB8, ak77dspPRAM, ARRAY_SIZE(ak77dspPRAM), 0x5bf4);
-#endif
 	ret = ak7719_ram_download_crc(ak7719, 0xB4, cram_data, ARRAY_SIZE(cram_data), 0x50df);
 	if(ret < 0)
 		printk("ak7719:write cram data failed\n");
