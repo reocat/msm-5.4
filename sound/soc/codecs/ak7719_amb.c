@@ -6299,7 +6299,8 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	rst_pin = of_get_gpio_flags(np, 0, &flags);
 	if (rst_pin < 0 || !gpio_is_valid(rst_pin)) {
 		printk("ak7719 rst pin is not working");
-		return -ENXIO;
+		rval = -ENXIO;
+		goto out;
 	}
 
 	ak7719->rst_pin = rst_pin;
@@ -6311,7 +6312,7 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	rval = devm_gpio_request(&i2c->dev, ak7719->rst_pin, "ak7719 reset");
 	if (rval < 0){
 		dev_err(&i2c->dev, "Failed to request rst_pin: %d\n", rval);
-		return rval;
+		goto out;
 	}
 
 	/* Reset AK7719 dsp */
@@ -6344,7 +6345,8 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	ak7719_work.data = ak7719;
  	INIT_WORK(&(ak7719_work.download_binary), ak7719_download_work);
 	queue_work(ak7719_wq, &(ak7719_work.download_binary));
-
+out:
+	devm_kfree(&i2c->dev, ak7719);
 	return rval;
 }
 
