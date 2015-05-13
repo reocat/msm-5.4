@@ -29,13 +29,25 @@
 #include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/skbuff.h>
+#include <linux/workqueue.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <plat/audio.h>
 
 #define DRIVER_NAME "AK7719"
+#define CRC16_CCITT (0x1021)
 //#define BY_PASS_DSP
+//#define AK7719_DEBUG
+
+#ifdef AK7719_DEBUG
+#define akdbgprt printk
+#else
+#define akdbgprt(format, arg...) do {} while (0)
+#endif
+
+static int crc_timeout = 10;
+module_param(crc_timeout, uint, 0664);
 
 struct ak7719_data {
 	unsigned int rst_pin;
@@ -43,6 +55,14 @@ struct ak7719_data {
 	struct i2c_client	*client;
 	struct device		*dev;
 };
+
+struct ak7719_workqueue{
+	struct ak7719_data *data;
+	struct work_struct download_binary;
+};
+
+static struct ak7719_workqueue ak7719_work;
+static struct workqueue_struct *ak7719_wq;
 
 #ifndef BY_PASS_DSP
 
@@ -6130,8 +6150,28 @@ static int ak7719_write_reg(struct ak7719_data *ak7719,
 	return i2c_smbus_write_byte_data(ak7719->client, reg, value);
 }
 
+/*used to calculate the crc value for PRAM or CRAM binary*/
+unsigned short calc_crc(const char *str, unsigned short length)
+{
+	unsigned short crc = 0x0000;
+	int i, j;
+	for(i = 0; i < length; i++){
+		crc ^= *str++ << 8;
+		for(j = 0; j < 8; j++){
+			if(crc & 0x8000){
+				crc <<= 1;
+				crc ^= CRC16_CCITT;
+			} else {
+				crc <<= 1;
+			}
+		}
+	}
+
+	return crc;
+}
+
 static int ak7719_write_command(struct ak7719_data *ak7719, u8 cmdvalue,
-		u32 subaddr, u8 *pbuf, unsigned int length)
+		u32 subaddr, u8 *pbuf, unsigned int length, u16 *crc_val)
 {
 	int ret;
 	u8 *bufcmd = NULL;
@@ -6141,7 +6181,6 @@ static int ak7719_write_command(struct ak7719_data *ak7719, u8 cmdvalue,
 
 	bufcmd = kmalloc(length+3, GFP_KERNEL);
 	if (!bufcmd) {
-		printk("Ak7719 dsp program malloc buffer failed \n");
 		return -ENOMEM;
 	}
 	bufcmd[0] = cmdvalue;
@@ -6149,6 +6188,11 @@ static int ak7719_write_command(struct ak7719_data *ak7719, u8 cmdvalue,
 	bufcmd[2] = subaddr & 0xff;
 	memcpy(bufcmd + 3, pbuf, length);
 
+	/*calculate the crc value for the writing data*/
+	if(*crc_val == 0)
+		*crc_val = calc_crc(bufcmd, length+3);
+
+	/*begin to encapsulate the message for i2c*/
 	msg[0].addr = client->addr;
 	msg[0].len = length +3;
 	msg[0].flags = 0;
@@ -6165,16 +6209,75 @@ static int ak7719_write_command(struct ak7719_data *ak7719, u8 cmdvalue,
 	return 0;
 }
 
+unsigned short ak7719_ram_read(struct ak7719_data *ak7719, char *sbuf, u8 slen, char *rbuf, u8 rlen){
+	int ret;
+
+	ret = i2c_smbus_read_i2c_block_data(ak7719->client, sbuf[0], rlen, rbuf);
+
+	return 0;
+}
+
+static int ak7719_ram_download_crc(struct ak7719_data *ak7719, u8 cmd, u8 *data, int len ,u16 crc_value)
+{
+	u16 crc_val = crc_value;
+	u16 crc_flag = 1;
+	char crc_tx[1] = { 0x72 };
+	char crc_rx[2];
+	int ret, ret1, timeout = crc_timeout; //timeout = 3; chane 3 times to 10 times
+
+	do {	/*write PRAM or CRAM and get crc value*/
+		ret1 = ak7719_write_command(ak7719, cmd, 0, data, len, &crc_val);
+		if (ret1 != 0) {
+			pr_err(" write ram error in function  %s\n ",__FUNCTION__);
+			continue;
+		}
+
+		/*get the crc value by command 0x72*/
+		 do {
+			ret = ak7719_ram_read(ak7719, crc_tx, 1, crc_rx, 2);
+			if(ret != 0)
+				pr_err("%s:  read crc err\n",__FUNCTION__);
+		 } while (ret != 0);
+
+		ret  =  (crc_rx[0] << 8) + crc_rx[1];
+		akdbgprt("pram : crc flag ret=%x \n" ,ret);
+		crc_flag  =  (crc_val == ret);
+		timeout--;
+		udelay(10);
+	} while (crc_flag == 0 && timeout > 0);
+
+	akdbgprt("crc_flag = %d timeout = %d\n", crc_flag, timeout);
+	if(timeout == 0)
+		return -1;
+	return 0;
+}
+
 static void ak7719_download_dsp_pro(struct ak7719_data *ak7719)
 {
+	int ret;
 #ifndef BY_PASS_DSP
 	/* pram data is ak7719 dsp binary */
-	ak7719_write_command(ak7719, 0xB8, 0, pram_data, ARRAY_SIZE(pram_data));
+	ret = ak7719_ram_download_crc(ak7719, 0xB8, pram_data, ARRAY_SIZE(pram_data), 0xc4a9);
+	if(ret < 0) {
+		printk("ak7719:write dsp binary failed!!!\n");
+	}
+
 #else
 	/* ak77dspPRAM is ak7719 bypass dsp binary */
-	ak7719_write_command(ak7719, 0xB8, 0, ak77dspPRAM, ARRAY_SIZE(ak77dspPRAM));
+	ak7719_ram_download_crc(ak7719, 0xB8, ak77dspPRAM, ARRAY_SIZE(ak77dspPRAM), 0x5bf4);
 #endif
-	ak7719_write_command(ak7719, 0xB4, 0, cram_data, ARRAY_SIZE(cram_data));
+	ret = ak7719_ram_download_crc(ak7719, 0xB4, cram_data, ARRAY_SIZE(cram_data), 0x50df);
+	if(ret < 0)
+		printk("ak7719:write cram data failed\n");
+
+	ak7719_write_reg(ak7719, 0xc6, 0x0);
+	ak7719_write_reg(ak7719, 0xc6, 0x4);
+
+}
+
+static void ak7719_download_work(struct work_struct *work){
+	struct ak7719_workqueue *ak7719_work = container_of(work,struct ak7719_workqueue, download_binary);
+	ak7719_download_dsp_pro(ak7719_work->data);
 }
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
@@ -6188,14 +6291,15 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	int rst_pin;
 
 	ak7719 = devm_kzalloc(&i2c->dev, sizeof(struct ak7719_data), GFP_KERNEL);
-	if (!ak7719)
+	if (ak7719 == NULL) {
+		printk("kzalloc for ak7719 is failed\n");
 		return -ENOMEM;
+	}
 
 	rst_pin = of_get_gpio_flags(np, 0, &flags);
 	if (rst_pin < 0 || !gpio_is_valid(rst_pin)) {
 		printk("ak7719 rst pin is not working");
-		rval = -ENXIO;
-		goto out;
+		return -ENXIO;
 	}
 
 	ak7719->rst_pin = rst_pin;
@@ -6207,7 +6311,7 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	rval = devm_gpio_request(&i2c->dev, ak7719->rst_pin, "ak7719 reset");
 	if (rval < 0){
 		dev_err(&i2c->dev, "Failed to request rst_pin: %d\n", rval);
-		goto out;
+		return rval;
 	}
 
 	/* Reset AK7719 dsp */
@@ -6222,7 +6326,7 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	ak7719_write_reg(ak7719, 0xd1, 0x1);
 	ak7719_write_reg(ak7719, 0xc0, 0x20);
 	ak7719_write_reg(ak7719, 0xc1, 0x30);
-	ak7719_write_reg(ak7719, 0xc2, 0x60);
+	ak7719_write_reg(ak7719, 0xc2, 0x64);
 	ak7719_write_reg(ak7719, 0xc3, 0xb2);
 	ak7719_write_reg(ak7719, 0xc4, 0xf0);
 	ak7719_write_reg(ak7719, 0xc5, 0x0);
@@ -6236,27 +6340,27 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	ak7719_write_reg(ak7719, 0xc6, 0x20);
 	msleep(1);
 
-	ak7719_download_dsp_pro(ak7719);
-	ak7719_write_reg(ak7719, 0xc6, 0x0);
-	ak7719_write_reg(ak7719, 0xc6, 0x4);
+	ak7719_wq = create_workqueue("ak7719_workqueue");
+	ak7719_work.data = ak7719;
+ 	INIT_WORK(&(ak7719_work.download_binary), ak7719_download_work);
+	queue_work(ak7719_wq, &(ak7719_work.download_binary));
 
-	return 0;
-
-out:
-	devm_kfree(&i2c->dev, ak7719);
 	return rval;
 }
 
 static int ak7719_i2c_remove(struct i2c_client *client)
-{
-	struct ak7719_data *ak7719 = i2c_get_clientdata(client);
+{	struct ak7719_data *ak7719 = NULL;
+
+	destroy_workqueue(ak7719_wq);
+	ak7719 = i2c_get_clientdata(client);
 	devm_gpio_free(&client->dev, ak7719->rst_pin);
 	devm_kfree(&client->dev, ak7719);
+
 	return 0;
 }
 
 static const struct of_device_id ak7719_dt_ids[] = {
-	{ .compatible = "ambarella, ak7719", },
+	{ .compatible = "ambarella,ak7719",},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, ak7719_dt_ids);
