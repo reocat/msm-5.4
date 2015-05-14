@@ -659,7 +659,7 @@ static void ambvic_resume(void)
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 cur_val, resume_mask, resume_val;
-	/* We only resume the soft interrupt used for rpmsg. */
+	/* We only resume the soft interrupt used for rpmsg and clock event interrupt. */
 	/* Hardware interrupt should be resumed by drivers. */
 	cur_val = 1 << HWIRQ_TO_OFFSET(VRING_IRQ_C0_TO_C1_ACK);
 	vic_linux_only[HWIRQ_TO_BANK(VRING_IRQ_C0_TO_C1_ACK)] |= cur_val;
@@ -667,6 +667,8 @@ static void ambvic_resume(void)
 	vic_linux_only[HWIRQ_TO_BANK(VRING_IRQ_C0_TO_C1_KICK)] |= cur_val;
 	cur_val = 1 << HWIRQ_TO_OFFSET(MUTEX_IRQ_LOCAL);
 	vic_linux_only[HWIRQ_TO_BANK(MUTEX_IRQ_LOCAL)] |= cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(TIMER7_IRQ);
+	vic_linux_only[HWIRQ_TO_BANK(TIMER7_IRQ)] |= cur_val;
 
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
@@ -712,6 +714,7 @@ static void ambvic_resume(void)
 		resume_val = (cur_val & ~resume_mask) | (pm_val->event_reg & resume_mask);
 		amba_writel(reg_base + VIC_EVENT_OFFSET, resume_val);
 
+#if defined(CONFIG_AMBALINK_MULTIPLE_CORE) && !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 		cur_val = amba_readl(reg_base + VIC_INT_PTR0_OFFSET);
 		resume_val = (cur_val & ~resume_mask) | (pm_val->int_ptr0_reg & resume_mask);
 		amba_writel(reg_base + VIC_INT_PTR0_OFFSET, resume_val);
@@ -719,6 +722,7 @@ static void ambvic_resume(void)
 		cur_val = amba_readl(reg_base + VIC_INT_PTR1_OFFSET);
 		resume_val = (cur_val & ~resume_mask) | (pm_val->int_ptr1_reg & resume_mask);
 		amba_writel(reg_base + VIC_INT_PTR1_OFFSET, resume_val);
+#endif
 	}
 #else
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
