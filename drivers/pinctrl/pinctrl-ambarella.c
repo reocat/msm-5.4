@@ -750,6 +750,10 @@ static int amb_pinctrl_suspend(void)
 
 static void amb_pinctrl_resume(void)
 {
+	/* Do not resume IOMUX, GPIO DS, and GPIO PULL  registers. */
+	/* All these registers should be handled at RTOS side. */
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
+
 	u32 i, j, reg;
 
 #if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
@@ -782,6 +786,7 @@ static void amb_pinctrl_resume(void)
 
 	amba_writel(amb_iomux_base + IOMUX_CTRL_SET_OFFSET, 0x1);
 	amba_writel(amb_iomux_base + IOMUX_CTRL_SET_OFFSET, 0x0);
+#endif
 }
 
 static struct syscore_ops amb_pinctrl_syscore_ops = {
