@@ -34,6 +34,9 @@
 
 #include <plat/rct.h>
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+#include <plat/ambalink_cfg.h>
+#endif
 #ifdef CONFIG_PLAT_AMBARELLA_BOSS
 #include <mach/boss.h>
 #endif
@@ -74,7 +77,7 @@ static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 static struct ambvic_chip_data ambvic_data __read_mostly;
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-u32 vic_linux_only[4];
+u32 vic_linux_only[4] = {0};
 #endif
 
 /* ==========================================================================*/
@@ -132,20 +135,12 @@ static void ambvic_unmask_irq(struct irq_data *data)
 #endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-	/* Saved the IRQ used in Linux for resuming purpose. */
-	/* Skip shared IRQs because RTOS may access the resource at the same time. */
-	if (data->hwirq != FIOCMD_IRQ &&
-		data->hwirq != FIODMA_IRQ &&
-		data->hwirq != DMA_FIOS_IRQ) {
-		vic_linux_only[HWIRQ_TO_BANK(data->hwirq)] |= mask;
-	}
-
 	/* Using IRQ for Linux. */
 	val0 = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
 	val0 &= ~mask;
 	amba_writel(reg_base + VIC_INT_SEL_OFFSET, val0);
 
-#if defined(CONFIG_AMBALINK_MULTIPLE_CORE)
+#if defined(CONFIG_AMBALINK_MULTIPLE_CORE) && !defined(CONFIG_PLAT_AMBARELLA_BOSS)
 	/*
 	 * We need to set the interrupt target.
 	 * Actually, this work can be done by irq_set_affinity(),
@@ -664,6 +659,14 @@ static void ambvic_resume(void)
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 cur_val, resume_mask, resume_val;
+	/* We only resume the soft interrupt used for rpmsg. */
+	/* Hardware interrupt should be resumed by drivers. */
+	cur_val = 1 << HWIRQ_TO_OFFSET(VRING_IRQ_C0_TO_C1_ACK);
+	vic_linux_only[HWIRQ_TO_BANK(VRING_IRQ_C0_TO_C1_ACK)] |= cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(VRING_IRQ_C0_TO_C1_KICK);
+	vic_linux_only[HWIRQ_TO_BANK(VRING_IRQ_C0_TO_C1_KICK)] |= cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(MUTEX_IRQ_LOCAL);
+	vic_linux_only[HWIRQ_TO_BANK(MUTEX_IRQ_LOCAL)] |= cur_val;
 
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
