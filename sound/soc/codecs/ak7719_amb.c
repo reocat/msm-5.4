@@ -6346,6 +6346,8 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	ak7719_work.data = ak7719;
 	INIT_WORK(&(ak7719_work.download_binary), ak7719_download_work);
 	queue_work(ak7719_wq, &(ak7719_work.download_binary));
+
+	return 0;
 out:
 	devm_kfree(&i2c->dev, ak7719);
 	return rval;
@@ -6355,6 +6357,8 @@ static int ak7719_i2c_remove(struct i2c_client *client)
 {	struct ak7719_data *ak7719 = NULL;
 
 	destroy_workqueue(ak7719_wq);
+	ak7719_wq = NULL;
+	ak7719_work.data = NULL;
 	ak7719 = i2c_get_clientdata(client);
 	devm_gpio_free(&client->dev, ak7719->rst_pin);
 	devm_kfree(&client->dev, ak7719);
