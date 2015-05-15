@@ -135,6 +135,9 @@ static void ambvic_unmask_irq(struct irq_data *data)
 #endif
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+	/* Saved the IRQ used in Linux for resuming purpose. */
+	vic_linux_only[HWIRQ_TO_BANK(data->hwirq)] |= mask;
+
 	/* Using IRQ for Linux. */
 	val0 = amba_readl(reg_base + VIC_INT_SEL_OFFSET);
 	val0 &= ~mask;
@@ -659,16 +662,18 @@ static void ambvic_resume(void)
 
 #ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 cur_val, resume_mask, resume_val;
-	/* We only resume the soft interrupt used for rpmsg and clock event interrupt. */
-	/* Hardware interrupt should be resumed by drivers. */
-	cur_val = 1 << HWIRQ_TO_OFFSET(VRING_IRQ_C0_TO_C1_ACK);
-	vic_linux_only[HWIRQ_TO_BANK(VRING_IRQ_C0_TO_C1_ACK)] |= cur_val;
-	cur_val = 1 << HWIRQ_TO_OFFSET(VRING_IRQ_C0_TO_C1_KICK);
-	vic_linux_only[HWIRQ_TO_BANK(VRING_IRQ_C0_TO_C1_KICK)] |= cur_val;
-	cur_val = 1 << HWIRQ_TO_OFFSET(MUTEX_IRQ_LOCAL);
-	vic_linux_only[HWIRQ_TO_BANK(MUTEX_IRQ_LOCAL)] |= cur_val;
-	cur_val = 1 << HWIRQ_TO_OFFSET(TIMER7_IRQ);
-	vic_linux_only[HWIRQ_TO_BANK(TIMER7_IRQ)] |= cur_val;
+	/* Skip shared IRQs because RTOS may access the resource at the same time. */
+	/* NAND related IRQs, SD IRQ, DMA IRQ. */
+	cur_val = 1 << HWIRQ_TO_OFFSET(FIOCMD_IRQ);
+	vic_linux_only[HWIRQ_TO_BANK(FIOCMD_IRQ)] &= ~cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(FIODMA_IRQ);
+	vic_linux_only[HWIRQ_TO_BANK(FIODMA_IRQ)] &= ~cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(DMA_FIOS_IRQ);
+	vic_linux_only[HWIRQ_TO_BANK(DMA_FIOS_IRQ)] &= ~cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(SD_IRQ);
+	vic_linux_only[HWIRQ_TO_BANK(SD_IRQ)] &= ~cur_val;
+	cur_val = 1 << HWIRQ_TO_OFFSET(DMA_IRQ);
+	vic_linux_only[HWIRQ_TO_BANK(DMA_IRQ)] &= ~cur_val;
 
 	for (i = VIC_INSTANCES - 1; i >= 0; i--) {
 		reg_base = ambvic_data.reg_base[i];
