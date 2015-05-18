@@ -421,6 +421,12 @@ int vffs_rpmsg_fsnext(struct vffs_fsfind *fsfind)
 
 	vffs_rpmsg_exec(msg, 8);
 
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+	        /* In SMP BOSS, the cache is synced by SCU. */
+	        /* We can't invalidate the cache otherwise the data will be missing. */
+	ambcache_inv_range((void *) fsfind, sizeof(struct vffs_fsfind));
+#endif
+
 	return 0;
 }
 
@@ -984,6 +990,11 @@ static int vffs_proc_fs_fsfirst_write(struct file *file,
 		DEBUG_MSG("fsfirst_write: %s %d\n", pathname, rval);
 		return -rval;
 	}
+#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
+	        /* In SMP BOSS, the cache is synced by SCU. */
+	        /* We can't invalidate the cache otherwise the data will be missing. */
+	ambcache_inv_range((void *) &last_fsfind, sizeof(last_fsfind));
+#endif
 	return count;
 }
 
@@ -998,17 +1009,9 @@ static int vffs_proc_fs_fsnext_bin_read(struct file *filp, char *buf,
 	if (*offp > 0)
 		goto done;
 
-	rval = vffs_rpmsg_fsnext(&last_fsfind);
-	if (rval < 0)
-		goto done;
+	vffs_rpmsg_fsnext(&last_fsfind);
 
 	len = sizeof(last_fsfind);
-#if !defined(CONFIG_PLAT_AMBARELLA_BOSS) || !defined(CONFIG_PLAT_AMBARELLA_S2)
-	        /* In SMP BOSS, the cache is synced by SCU. */
-	        /* We can't invalidate the cache otherwise the data will be missing. */
-	ambcache_inv_range((void *) &last_fsfind, sizeof(last_fsfind));
-#endif
-
 	rval = copy_to_user(buf, &last_fsfind, len);
 
 	if(rval) {
