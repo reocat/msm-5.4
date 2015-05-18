@@ -229,7 +229,7 @@ static inline int ambarella_pm_linkctrl_enter(void)
 {
 	int					retval = 0;
 	int					i;
-#ifdef CONFIG_OUTER_CACHE
+#if defined(CONFIG_OUTER_CACHE) && !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	int					l2_mode = 0;
 #endif
 	ambnation_aoss_call_t			pm_abaoss_entry = NULL;
