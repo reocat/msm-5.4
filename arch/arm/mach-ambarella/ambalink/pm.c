@@ -250,7 +250,7 @@ static inline int ambarella_pm_linkctrl_enter(void)
 		arch_smp_suspend(0);
 #endif
 
-#ifdef CONFIG_OUTER_CACHE
+#if defined(CONFIG_OUTER_CACHE) && !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 		l2_mode = outer_is_enabled();
 		if (l2_mode)
 			ambcache_l2_disable_raw();
@@ -295,7 +295,7 @@ static inline int ambarella_pm_linkctrl_enter(void)
 #if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_HAL)
 		set_ambarella_hal_invalid();
 #endif
-#ifdef CONFIG_OUTER_CACHE
+#if defined(CONFIG_OUTER_CACHE) && !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 		if (l2_mode)
 			ambcache_l2_enable_raw();
 #endif
