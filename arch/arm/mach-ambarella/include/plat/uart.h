@@ -177,5 +177,15 @@
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI)
 #endif
 
+#if (CHIP_REV == S2L)
+#define DEFAULT_GCLK_UART			(60000000)
+#else
+#define DEFAULT_GCLK_UART			(ambarella_clk_get_ref_freq())
+#endif
+
+#define UART_CLK_SRC_REF			(0x0)
+#define UART_CLK_SRC_GCLK_CORE	(0x1)
+#define UART_CLK_SRC_GCLK_IDSP	(0x3)
+
 #endif /* __PLAT_AMBARELLA_UART_H__ */
 
