@@ -348,12 +348,7 @@ static struct clk gclk_idsp = {
 };
 
 static struct clk gclk_uart = {
-#if (CHIP_REV == S2L)
-	/* use gclk_core as uart clock for S2L */
-	.parent		= &gclk_core,
-#else
 	.parent		= NULL,
-#endif
 	.name		= "gclk_uart",
 	.rate		= 0,
 	.frac_mode	= 0,
@@ -368,12 +363,7 @@ static struct clk gclk_uart = {
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
 	.extra_scaler	= 0,
-#if (CHIP_REV == S2L)
-	/* use gclk_core as uart clock for S2L */
-	.ops		= &ambarella_rct_scaler_ops,
-#else
 	.ops		= &ambarella_rct_pll_ops,
-#endif
 };
 
 static struct clk gclk_audio = {
