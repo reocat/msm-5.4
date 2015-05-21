@@ -886,6 +886,7 @@ static int ak4951_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 	}
 	snd_soc_write(codec, AK4951_05_MODE_CONTROL1, pll);
 	snd_soc_write(codec, AK4951_01_POWER_MANAGEMENT2, pllpwr);
+	msleep(5); //AKM suggested
 
 	ak4951->sysclk = freq;
 	ak4951->clkid = clk_id;
@@ -995,7 +996,8 @@ static int ak4951_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_STANDBY:
 		reg = snd_soc_read(codec, AK4951_00_POWER_MANAGEMENT1);	// * for AK4951
 		snd_soc_write(codec, AK4951_00_POWER_MANAGEMENT1,			// * for AK4951
-				reg | AK4951_PMVCM);
+				reg | AK4951_PMVCM | AK4951_PMPFIL);
+		msleep(250);	//AKM suggested
 		break;
 	case SND_SOC_BIAS_OFF:
 		snd_soc_write(codec, AK4951_00_POWER_MANAGEMENT1, 0x00);	// * for AK4951
@@ -1089,6 +1091,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x3);//Mic Gain 0x10100110
 	snd_soc_update_bits(codec,AK4951_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_update_bits(codec,AK4951_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
+	snd_soc_write(codec, AK4951_0B_ALC_MODE_CONTROL1, 0x20);	//enable ALC
 
 	/*Enable LIN3*/
 	//snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
