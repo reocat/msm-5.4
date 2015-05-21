@@ -1190,14 +1190,67 @@ Required properties:
 - amb,model: board description.
 - amb,i2s-controllers: specifies the phandle to I2S controller.
 - amb,audio-codec: specifies the phandle to audio codec.
+- amb,dai_fmt: specifies the mode of codec and cpu. If it is 0, the mode is I2S, otherwise it is DSP mode.
+- amb,clk_fmt:
+	0 : mclk, bclk provided by cpu
+	1 : bclk provide by cpu, mclk is not used
+	2 : mclk provided by cpu, bclk is provided by codec
+There are four type of connection:
+clk_fmt=0:
+cpu :                   codec:
+	MCLK    ------>  MCKI
+	BCLK    ------>  BICK
+	LRCK    ------>  LRCK
+clk_fmt=1:
+cpu :                   codec:
+	MCLK   is not used
+	BCLK    ------> BICK
+	LRCK    ------> LRCK
+clk_fmt=2:
+cpu :                   codec:
+	MCLK   ------> MCKI
+	BCLK   <------ BICK
+	LRCK   <------ LRCK
+There are one connection we are not used, it is like clk_fmt=0,but power on the codec PLL.
+It is a waster of power, so we do not use it.
+
+- amb,codec-name: specifies the name of the codec.
+- amb,stream-name: specifies the name of the stream.
+- amb,codec-dai-name: specifies the DAI name within the codec, it must be consistent with the codec driver.
+- amb,audio-routing: specifies the route map for audio codec.
+usage:
+	amb,audio-routing = "sink", source",/*This is route 0*/
+			 "sink", "source";/*This is route 1*/
+	sink and source dapm widget should be based on codec driver and our board.
+	dapm widget on board:
+	"Mic internal": board internal Mic, used to connect Mic of codec.
+	"Mic external": used to connect Mic of codec with the external Mic of our board.
+	"Line In": used to connect to line in of codec dapm widget.
+	"Line Out": used to connect line out of codec dapm widget.
+	"HP Jack": used to connect the headphone of codec dapm widget.
+	"Speaker": used to connect the speaker of codec dapm widget.
 
 ii) Example
 -----------
 	sound {
-		compatible = "ambarella,ambevk-ak4642";
-		amb,model = "ak4642 @ AMBEVK";
+		compatible = "ambarella,audio-board";
+		amb,model = "ak4642 @ Ambarella";
 		amb,i2s-controllers = <&i2s0>;
 		amb,audio-codec = <&ak4642>;
+		amb,dai_fmt = <0>;
+		amb,codec-name = "ak4642";
+		amb,stream-name = "ak4642 PCM";
+		amb,codec-dai-name = "ak4642-hifi";
+		amb,audio-routing = "LIN1", "Mic internal",
+				    "RIN1", "Mic internal",
+				    "LIN2", "Line In",
+				    "RIN2", "Line In",
+				    "Line Out", "LOUT",
+				    "Line Out", "ROUT",
+				    "HP Jack", "HPL",
+				    "HP Jack", "HPR",
+				    "Speaker", "SPP",
+				    "Speaker", "SPN";
 	};
 
 

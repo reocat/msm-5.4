@@ -1049,7 +1049,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	int ret = 0;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
-
+	codec->control_data = ak4951->regmap;
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
 	if (ret != 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);

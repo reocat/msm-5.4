@@ -598,7 +598,6 @@ static int wm8940_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 
 	}
 
-
 	wm8940->sysclk = freq;
 }
 
