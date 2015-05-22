@@ -116,7 +116,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70003000 0x1000>;
-			interrupts = <0 19 0x04>;
+			/* interrupts = <0 19 0x04>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
 			clock-frequency = <100000>;
@@ -130,7 +130,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70007000 0x1000>;
-			interrupts = <0 36 0x04>;
+			/* interrupts = <0 36 0x04>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
 			clock-frequency = <100000>;
@@ -144,7 +144,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70013000 0x1000>;
-			interrupts = <0 90 0x04>;
+			/* interrupts = <0 90 0x04>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c2_pins>;
 			clock-frequency = <100000>;
@@ -158,7 +158,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x70002000 0x1000>;
-			interrupts = <0 20 0x4>;
+			/* interrupts = <0 20 0x4>; */
 			amb,clk-name = "gclk_ssi";
 			amb,clk-freq = <60000000>;
 		};
@@ -166,20 +166,20 @@
 		spi_slave@7001e000 {
 			compatible = "ambarella,spi-slave";
 			reg = <0x7001e000 0x1000>;
-			interrupts = <0 26 0x4>;
+			/* interrupts = <0 26 0x4>; */
 		};
 
 		adc@7000d000 {
 			compatible = "ambarella,adc";
 			reg = <0x7000d000 0x1000>;
-			interrupts = <0 34 0x4>;
+			/* interrupts = <0 34 0x4>; */
 			clock-frequency = <3000000>;
 		};
 
 		ir@70006000 {
 			compatible = "ambarella,ir";
 			reg = <0x70006000 0x1000>;
-			interrupts = <0 22 0x4>;
+			/* interrupts = <0 22 0x4>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
 		};
@@ -217,11 +217,11 @@
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
 				/* gpio interrupts to vic */
-				interrupts = <0 10 0x04>,
-					     <0 11 0x04>,
-					     <0 30 0x04>,
-					     <0 29 0x04>,
-					     <0 48 0x04>;
+				interrupts = <0 10 0x00>,
+					     <0 11 0x00>,
+					     <0 30 0x00>,
+					     <0 29 0x00>,
+					     <0 48 0x00>;
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinctrl 0 0 160>;

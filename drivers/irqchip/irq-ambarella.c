@@ -377,8 +377,12 @@ static struct irq_chip ambvic_chip = {
 #ifdef CONFIG_SMP
 	.irq_set_affinity = ambvic_set_affinity,
 #endif
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	.flags		= (IRQCHIP_SET_TYPE_MASKED | IRQCHIP_MASK_ON_SUSPEND |
 			IRQCHIP_SKIP_SET_WAKE),
+#else
+	.flags		= (IRQCHIP_MASK_ON_SUSPEND | IRQCHIP_SKIP_SET_WAKE),
+#endif
 };
 
 /* ==========================================================================*/

@@ -81,7 +81,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe8003000 0x1000>;
-			interrupts = <19 0x4>;
+			/* interrupts = <19 0x4>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
 			clock-frequency = <100000>;
@@ -95,7 +95,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe8001000 0x1000>;
-			interrupts = <51 0x4>;
+			/* interrupts = <51 0x4>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
 			clock-frequency = <100000>;
@@ -109,7 +109,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe8007000 0x1000>;
-			interrupts = <36 0x4>;
+			/* interrupts = <36 0x4>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c2_pins>;
 			clock-frequency = <100000>;
@@ -121,14 +121,14 @@
 		adc@e801d000 {
 			compatible = "ambarella,adc";
 			reg = <0xe801d000 0x1000>;
-			interrupts = <34 0x4>;
+			/* interrupts = <34 0x4>; */
 			clock-frequency = <3000000>;
 		};
 
 		ir@e8006000 {
 			compatible = "ambarella,ir";
 			reg = <0xe8006000 0x1000>;
-			interrupts = <22 0x4>;
+			/* interrupts = <22 0x4>; */
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
 		};
@@ -166,7 +166,7 @@
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
 				/* gpio interrupts to vic */
-				interrupts = <10 0x4 11 0x4 30 0x4 29 0x4>;
+				interrupts = <10 0x0 11 0x0 30 0x0 29 0x0>;
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinctrl 0 0 128>;
@@ -509,7 +509,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe0020000 0x1000>;
-			interrupts = <35 0x4>;
+			/* interrupts = <35 0x4>; */
 			amb,clk-name = "gclk_ssi_ahb";
 			amb,clk-freq = <54000000>;
 		};
@@ -519,7 +519,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe0021000 0x1000>;
-			interrupts = <37 0x4>;
+			/* interrupts = <37 0x4>; */
 			amb,clk-name = "gclk_ssi2_ahb";
 			amb,clk-freq = <54000000>;
 			status = "disabled";
@@ -528,7 +528,7 @@
 		spi_slave@e0026000 {
 			compatible = "ambarella,spi-slave";
 			reg = <0xe0026000 0x1000>;
-			interrupts = <38 0x4>;
+			/* interrupts = <38 0x4>; */
 		};
 	};
 
