@@ -204,7 +204,7 @@ int notify_suspend_done(int suspend_mode)
 {
 	// Set suspendMode variable to aoss share memory
 	pm_abcheck_info.aoss_info->fn_pri[0] = wowlan_resume_from_ram;
-	ambcache_flush_range(pm_abcheck_info.aoss_info, 32);
+	ambcache_flush_range(pm_abcheck_info.aoss_info, sizeof(struct ambernation_aoss_info));
 
 	if (suspend_mode > 1) {
 		// standby and suspend to mem
@@ -229,9 +229,7 @@ static inline int ambarella_pm_linkctrl_enter(void)
 {
 	int					retval = 0;
 	int					i;
-#if defined(CONFIG_OUTER_CACHE) && !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 	int					l2_mode = 0;
-#endif
 	ambnation_aoss_call_t			pm_abaoss_entry = NULL;
 	ambnation_aoss_call_t			pm_abaoss_outcoming = NULL;
 	u32					pm_abaoss_arg[4];
@@ -250,10 +248,16 @@ static inline int ambarella_pm_linkctrl_enter(void)
 		arch_smp_suspend(0);
 #endif
 
-#if defined(CONFIG_OUTER_CACHE) && !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
+#if defined(CONFIG_OUTER_CACHE)
 		l2_mode = outer_is_enabled();
-		if (l2_mode)
+		if (l2_mode) {
+#if !defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
 			ambcache_l2_disable_raw();
+#else
+			flush_cache_all();
+			outer_flush_all();
+#endif
+		}
 #endif
 		flush_cache_all();
 		retval = pm_abaoss_entry(pm_fn_pri, pm_abaoss_arg[1],
