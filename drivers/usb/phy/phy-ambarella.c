@@ -409,7 +409,7 @@ static int ambarella_phy_init(struct usb_phy *phy)
 	/* If there are 2 PHYs, no matter which PHY need to be initialized,
 	 * we initialize all of them at the same time */
 	if (amb_phy->host_phy_num < 2)
-		ana_val = 0x4;
+		ana_val = 0x6;
 	else
 		ana_val = 0x1002;
 
