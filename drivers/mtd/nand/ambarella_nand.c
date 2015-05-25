@@ -337,6 +337,7 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 
 static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 fio_ctr_reg = 0;
 
 	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
@@ -346,7 +347,6 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 			 FIO_CTR_ECC_6BIT |
 			 FIO_CTR_ECC_8BIT);
 
-#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	if (nand_info->ecc_bits == 8) {
 		u32 nand_ext_ctr_reg = 0;
 		nand_ext_ctr_reg = amba_readl(nand_info->regbase +
@@ -623,8 +623,8 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
 #if defined(CONFIG_PLAT_AMBARELLA_AMBALINK)
-		if (nand_info->cmd == 0)
-			return IRQ_HANDLED;
+	if (nand_info->cmd == 0)
+		return IRQ_HANDLED;
 #endif
 
 	int_src = amba_readl(nand_info->fdmaregbase + FDMA_INT_OFFSET);
