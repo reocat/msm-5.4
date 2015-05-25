@@ -257,8 +257,8 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_FULL_LINE_OF_ZERO_SHIFT);
 #endif
 #if (CHIP_REV == A8)
-	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
+	ctrl |= (0x1 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #elif (CHIP_REV == S2L)
@@ -267,13 +267,13 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= L310_AUX_CTRL_DATA_PREFETCH;
 	ctrl |= L310_AUX_CTRL_INSTR_PREFETCH;
 #elif (CHIP_REV == S2E) || (CHIP_REV == S3)
-	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
-	ctrl |= (0x3 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
+	ctrl |= (0x3 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
 #else
-	ctrl |= (0x1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
-	ctrl |= (0x2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
+	ctrl |= (0x1 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
+	ctrl |= (0x2 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
 #endif
 	ctrl |= (0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT);
 #ifdef CONFIG_CACHE_PL310_EARLY_BRESP
@@ -326,7 +326,7 @@ static void setup_full_line_of_zero(void *dummy)
 
 /* ==========================================================================*/
 static int ambcache_l2_init = 0;
-void __init ambcache_l2_enable_raw()
+void ambcache_l2_enable_raw()
 {
 	if (outer_is_enabled())
 		return;
@@ -358,7 +358,7 @@ void ambcache_l2_disable_raw()
 }
 EXPORT_SYMBOL(ambcache_l2_disable_raw);
 
-__init int ambcache_l2_enable()
+int ambcache_l2_enable()
 {
 	ambcache_l2_enable_raw();
 	return outer_is_enabled() ? 0 : -1;

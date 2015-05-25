@@ -300,7 +300,7 @@ void __init ambarella_init_machine(void)
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
-void __init ambarella_restart_machine(enum reboot_mode mode, const char *cmd)
+void ambarella_restart_machine(enum reboot_mode mode, const char *cmd)
 {
 #if defined(CONFIG_AMBARELLA_SUPPORT_BAPI)
 	struct ambarella_bapi_reboot_info_s	reboot_info;

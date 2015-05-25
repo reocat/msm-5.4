@@ -25,6 +25,7 @@
 #define __ASM_ARCH_INIT_H
 
 /* ==========================================================================*/
+#include <plat/chip.h>
 #include <plat/gpio.h>
 #include <plat/adc.h>
 #include <plat/audio.h>

@@ -296,7 +296,7 @@ static void l2c210_resume(void)
 		l2c_enable(base, l2x0_saved_regs.aux_ctrl, 1);
 }
 
-static const struct l2c_init_data l2c210_data __initconst = {
+static const struct l2c_init_data l2c210_data = {
 	.type = "L2C-210",
 	.way_size_0 = SZ_8K,
 	.num_lock = 1,
@@ -800,7 +800,7 @@ static void l2c310_disable(void)
 	l2c_disable();
 }
 
-static const struct l2c_init_data l2c310_init_fns __initconst = {
+static const struct l2c_init_data l2c310_init_fns = {
 	.type = "L2C-310",
 	.way_size_0 = SZ_8K,
 	.num_lock = 8,
@@ -818,7 +818,7 @@ static const struct l2c_init_data l2c310_init_fns __initconst = {
 	},
 };
 
-static void __init __l2c_init(const struct l2c_init_data *data,
+static void __l2c_init(const struct l2c_init_data *data,
 	u32 aux_val, u32 aux_mask, u32 cache_id)
 {
 	struct outer_cache_fns fns;
@@ -912,7 +912,7 @@ static void __init __l2c_init(const struct l2c_init_data *data,
 		data->type, cache_id, aux);
 }
 
-void __init l2x0_init(void __iomem *base, u32 aux_val, u32 aux_mask)
+void l2x0_init(void __iomem *base, u32 aux_val, u32 aux_mask)
 {
 	const struct l2c_init_data *data;
 	u32 cache_id;

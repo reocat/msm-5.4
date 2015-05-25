@@ -142,7 +142,7 @@ ambarella_bapi_aoss_increase_page_info_exit:
 	return retval;
 }
 
-__init int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
+int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 {
 	int						retval = 0;
 
