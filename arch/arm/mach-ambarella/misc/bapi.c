@@ -214,7 +214,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 #ifdef CONFIG_OUTER_CACHE
 			l2_mode = outer_is_enabled();
 			if (l2_mode)
-				ambcache_l2_disable_raw();
+				outer_disable();
 #endif
 			flush_cache_all();
 			retval = bapi_aoss_entry((u32)bapi_info->aoss_info.fn_pri,
@@ -226,7 +226,7 @@ int ambarella_bapi_cmd(enum ambarella_bapi_cmd_e cmd, void *args)
 			}
 #ifdef CONFIG_OUTER_CACHE
 			if (l2_mode)
-				ambcache_l2_enable_raw();
+				outer_resume();
 #endif
 			aoss_copy_page = 0;
 			bapi_info->aoss_info.copy_pages = 0;

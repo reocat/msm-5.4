@@ -130,12 +130,12 @@ static int ambarella_pm_enter_mem(void)
 
 	l2_enabled = outer_is_enabled();
 	if (l2_enabled)
-		ambcache_l2_disable_raw();
+		outer_disable();
 
 	cpu_suspend(0, ambarella_finish_suspend);
 
 	if (l2_enabled)
-		ambcache_l2_enable_raw();
+		outer_resume();
 
 	/* ensure to power off all powers when power off PWC */
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);

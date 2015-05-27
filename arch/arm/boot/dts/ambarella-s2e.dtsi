@@ -449,6 +449,45 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x6000c000 0x1000>,
+			};
+		};
+
+		mac0: ethernet@6000e000 {
+			compatible = "ambarella,eth";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x6000e000 0x2000>;
+			interrupts = <27 0x4>;
+			amb,support-gmii;
+			amb,tx-ring-size = <64>;
+			amb,rx-ring-size = <64>;
+			amb,ipc-rx;
+		};
+	};
+
+	axi@f0000000 {	/* AXI */
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0xf0000000 0x00030000>;
+		ranges;
+
+		crypto@f0020000 {
+			compatible = "ambarella,crypto";
+			reg = <0xf0020000 0x8000>;
+			interrupts = <44 0x1>, <45 0x1>, <47 0x1>, <88 0x1>;
+			interrupt-names = "aes-irq", "des-irq", "md5-irq", "sha1-irq";
+			amb,cap-md5-sha1;
+			amb,data-swap;
+			amb,reg-64bit;
+		};
+
+		l2-cache@f0002000 {
+			compatible = "arm,pl310-cache";
+			reg = <0xf0002000 0x1000>;
+			arm,tag_latency = <3 3 3>;
+			arm,data_latency = <3 3 3>;
+		};
 			      <0x60001000 0x80>, /* fio reg address */
 			      <0x701701d0 0x4>;
 			interrupts = <52 0x4>;
@@ -495,6 +534,13 @@
 			amb,cap-md5-sha1;
 			amb,data-swap;
 			amb,reg-64bit;
+		};
+
+		l2-cache@f0002000 {
+			compatible = "arm,pl310-cache";
+			reg = <0xf0002000 0x1000>;
+			arm,tag_latency = <3 3 3>;
+			arm,data_latency = <3 3 3>;
 		};
 	};
 

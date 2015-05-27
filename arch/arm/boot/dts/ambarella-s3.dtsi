@@ -540,6 +540,13 @@
 			amb,data-swap;
 			amb,reg-64bit;
 		};
+
+		l2-cache@f0002000 {
+			compatible = "arm,pl310-cache";
+			reg = <0xf0002000 0x1000>;
+			arm,tag_latency = <3 3 3>;
+			arm,data_latency = <3 3 3>;
+		};
 	};
 
 	rct@ec170000 {
