@@ -22,6 +22,7 @@
  * Default clock is from APB.
  */
 
+#include <linux/semaphore.h>
 #include <linux/interrupt.h>
 #include <linux/clockchips.h>
 #include <linux/clk.h>
@@ -32,6 +33,7 @@
 #include <asm/sched_clock.h>
 #include <asm/localtimer.h>
 #include <plat/timer.h>
+#include <plat/event.h>
 
 static void __iomem *ce_base = NULL;
 static void __iomem *ce_ctrl_reg = NULL;
@@ -286,6 +288,42 @@ static u32 notrace ambarella_read_sched_clock(void)
 }
 
 /* ==========================================================================*/
+/*define a event struct to update timer*/
+struct ambarella_timer_notifier {
+	struct notifier_block 		system_event;
+	struct semaphore		system_event_sem;
+} amba_timer_notifier;
+
+static int ambarella_timer_system_event(struct notifier_block *nb,
+	unsigned long val, void *data)
+{
+	unsigned long flags;
+
+	switch (val) {
+	case AMBA_EVENT_PRE_CPUFREQ:
+		down(&(amba_timer_notifier.system_event_sem));
+		break;
+
+	case AMBA_EVENT_POST_CPUFREQ:
+		local_irq_save(flags);
+		/* I try to update timer using clockevents_update_freq(&ambarella_clkevt, AMBARELLA_TIMER_FREQ)
+		 * and __clocksource_updatefreq_hz(&ambarella_clksrc, AMBARELLA_TIMER_FREQ), but they both can not work,
+		 * So I try the clocksource_unregister(), and then call clocksource_register_hz(), it seems like it is
+		 * ok for updating the timer.
+		 */
+		clocksource_unregister(&ambarella_clksrc);
+		clocksource_register_hz(&ambarella_clksrc, AMBARELLA_TIMER_FREQ);
+		local_irq_restore(flags);
+		up(&(amba_timer_notifier.system_event_sem));
+		break;
+
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+/* ==========================================================================*/
 static const struct of_device_id clock_event_match[] __initconst = {
 	{ .compatible = "ambarella,clock-event" },
 	{ },
@@ -389,6 +427,11 @@ static void __init ambarella_clocksource_init(void)
 		clksrc->name, clksrc->mult, clksrc->shift);
 
 	setup_sched_clock(ambarella_read_sched_clock, 32, AMBARELLA_TIMER_FREQ);
+
+	/*add notifier to update the timer when the cpu frequency is changed*/
+	sema_init(&amba_timer_notifier.system_event_sem, 1);
+	amba_timer_notifier.system_event.notifier_call = ambarella_timer_system_event;
+	ambarella_register_event_notifier(&amba_timer_notifier.system_event);
 }
 
 #ifdef CONFIG_HAVE_ARM_TWD
