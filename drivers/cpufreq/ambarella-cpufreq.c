@@ -21,6 +21,14 @@
 #include <linux/types.h>
 #include <plat/event.h>
 
+#define amba_cpufreq_debug			//used at debug mode
+
+#ifdef amba_cpufreq_debug
+#define amba_cpufreq_prt printk
+#else
+#define amba_cpufreq_prt(format, arg...) do {} while (0)
+#endif
+
 /* Ambarella CPUFreq driver data structure */
 static struct {
 	struct clk *core_clk;
@@ -53,7 +61,7 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	freqs.old = amba_cpufreq_get(0);
 	newfreq = amba_cpufreq.freq_tbl[index].frequency * 1000;
 	freqs.new = newfreq / 1000;
-	printk("prepare to switch the frequency from %d KHz to %d KHz\n",freqs.old, freqs.new);
+	amba_cpufreq_prt("prepare to switch the frequency from %d KHz to %d KHz\n",freqs.old, freqs.new);
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 	ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL);
 
@@ -61,15 +69,16 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	clk_set_rate(amba_cpufreq.cortex_clk, newfreq);
 	/* Get current rate after clk_set_rate, in case of failure */
 	if (ret) {
-		printk("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
+		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
 		freqs.new = clk_get_rate(amba_cpufreq.core_clk) / 1000;
 	}
 
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 	ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL);
 
-	cur_freq = clk_get_rate(amba_cpufreq.core_clk) / 1000;
-	printk("current frequency of core clock is:%d KHz\n", cur_freq);
+/*	cur_freq = clk_get_rate(amba_cpufreq.core_clk) / 1000;
+	amba_cpufreq_prt("current frequency of core clock is:%d KHz\n", cur_freq);
+*/
 
 	return ret;
 }
