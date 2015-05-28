@@ -302,6 +302,7 @@ config ARCH_MULTIPLATFORM
 config ARCH_AMBARELLA
 	bool "Ambarella"
 	depends on MMU
+	select ARCH_HAS_CPUFREQ
 	select NEED_MACH_GPIO_H
 	select NEED_MACH_IO_H
 	select NEED_MACH_MEMORY_H
