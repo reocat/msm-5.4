@@ -347,6 +347,9 @@ static int bluesleep_start(void)
 	int retval;
 	unsigned long irq_flags;
 
+	/* in case RTOS changed it */
+	gpio_direction_output(bsi->ext_wake, DEV_WAKEUP);
+
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	if (test_bit(BT_PROTO, &flags)) {
