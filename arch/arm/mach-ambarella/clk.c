@@ -534,8 +534,8 @@ const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE] =
 	{  1888888835906982,	16,	 1,	 8,	  2},
 	{  1904761910438538,	20,	 1,	10,	  2},
 	{  1919999957084656,	23,	 1,	 4,	  5},
-	{  2000000000000000,	17,	 1,	 8,	  2},
-	{  2086956501007080,	 36,	10,	12,	15 },
+	{  2000000000000000,	0,	 1,	 0,	  2},
+	{  2086956501007080,	36,	10,	12,	15 },
 	{  2105263233184814,	20,	 1,	 9,	  2},
 	{  2125000000000000,	16,	 1,	15,	  1},
 	{  2190476179122924,	23,	 1,	10,	  2},
@@ -919,7 +919,6 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 
 		middle = ambarella_rct_find_pll_table_index(rate, pre_scaler,
 			ambarella_rct_pll_table, AMBARELLA_RCT_PLL_TABLE_SIZE);
-
 		ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 		ctrl_reg.s.intp = ambarella_rct_pll_table[middle].intp;
 		ctrl_reg.s.sdiv = ambarella_rct_pll_table[middle].sdiv;

@@ -170,6 +170,12 @@ i) Reference
 ------------
 Please see Documentation/devicetree/bindings/arm/cpus.txt
 
+ii) Properties
+- cpufreq_tbl: Table of frequencies gclk_cortex and pll_out_core could be transitioned
+  into, in the unit of nanoseconds.
+- clock-latency: Specify the possible maximum transition latency for clock, in
+  unit of nanoseconds.
+
 
 4) - TWD node
 =============
