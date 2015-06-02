@@ -43,20 +43,17 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		clock-latency = <100000>;
+		cpufreq_tbl = <
+				/*core_clk	cortex_clk*/
+				24000		24000
+				96000		504000
+				432000		1008000>;
+
 		cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <0>;
-			clock-latency = <100000>;
-			cpufreq_tbl = < 48000	96000
-					144000	192000
-					240000	288000
-					336000	384000
-					432000	480000
-					528000	576000
-					624000	672000
-					720000	768000
-					816000	864000>;
 		};
 	};
 
