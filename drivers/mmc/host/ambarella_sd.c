@@ -47,7 +47,7 @@
 #include <plat/sd.h>
 #include <plat/event.h>
 
-static struct mmc_host *G_mmc[AMBA_SD_MAX_SLOT_NUM];
+static struct mmc_host *G_mmc[SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM];
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
@@ -203,7 +203,7 @@ void ambarella_detect_sd_slot(int slotid, int fixed_cd)
 	struct mmc_host *mmc;
 	struct ambarella_sd_mmc_info *pslotinfo;
 
-	if (slotid >= AMBA_SD_MAX_SLOT_NUM) {
+	if (slotid >= SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM) {
 		pr_err("%s: Invalid slotid: %d\n", __func__, slotid);
 		return;
 	}
@@ -1667,7 +1667,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	struct mmc_host *mmc;
 	enum of_gpio_flags flags;
 	u32 gpio_init_flag, hc_cap, hc_timeout_clk;
-	int retval = 0;
+	int global_id, retval = 0;
 
 	mmc = mmc_alloc_host(sizeof(*mmc), pinfo->dev);
 	if (!mmc) {
@@ -1893,7 +1893,10 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	pslotinfo->system_event.notifier_call = ambarella_sd_system_event;
 	ambarella_register_event_notifier(&pslotinfo->system_event);
 
-	G_mmc[pslotinfo->slot_id] = mmc;
+	retval = of_property_read_u32(np, "global-id", &global_id);
+	if (retval < 0 || global_id >= SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM)
+		global_id = 0;
+	G_mmc[global_id] = mmc;
 	pslotinfo->fixed_cd = -1;
 
 	return 0;
