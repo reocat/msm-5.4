@@ -528,6 +528,8 @@ this controller.
 The unit address of subnodes should be its index of the slot. And the subnode
 should contain the following properties.
 - reg: index of the slot, normally the same as the unit address.
+- global-id: specify the global id for each slot, it should be unique for all
+  of the slots.
 - amb,caps-adma: should be specified if hardware supports ADMA.
 - amb,caps-ddr: should be specified if hardware supports DDR.
 - no-1-8-v: should be specified if the slot don't have 1.8V circuit.
