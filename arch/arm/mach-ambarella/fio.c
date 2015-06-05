@@ -105,7 +105,7 @@ void __fio_select_lock(int module)
 
 #if (CHIP_REV == A5S)
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
-	amba_clrbitsl(SD_REG(SD_NISEN_OFFSET), SD_NISEN_CARD);
+	amba_clrbitsl(SD0_REG(SD_NISEN_OFFSET), SD_NISEN_CARD);
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 #endif
 	amba_writel(FIO_CTR_REG, fio_ctr);
@@ -113,13 +113,13 @@ void __fio_select_lock(int module)
 #if (CHIP_REV == A5S)
 	if (module == SELECT_FIO_SD) {
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
-		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sd_int);
-		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sd_int);
+		amba_writel(SD0_REG(SD_NISEN_OFFSET), fio_sd_int);
+		amba_writel(SD0_REG(SD_NIXEN_OFFSET), fio_sd_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	} else if (module == SELECT_FIO_SDIO) {
 		spin_lock_irqsave(&fio_sd0_int_lock, flags);
-		amba_writel(SD_REG(SD_NISEN_OFFSET), fio_sdio_int);
-		amba_writel(SD_REG(SD_NIXEN_OFFSET), fio_sdio_int);
+		amba_writel(SD0_REG(SD_NISEN_OFFSET), fio_sdio_int);
+		amba_writel(SD0_REG(SD_NIXEN_OFFSET), fio_sdio_int);
 		spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 	}
 #endif
@@ -196,15 +196,15 @@ void fio_amb_sd0_set_int(u32 mask, u32 on)
 	u32					int_flag;
 
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
-	int_flag = amba_readl(SD_REG(SD_NISEN_OFFSET));
+	int_flag = amba_readl(SD0_REG(SD_NISEN_OFFSET));
 	if (on)
 		int_flag |= mask;
 	else
 		int_flag &= ~mask;
 	fio_sd_int = int_flag;
 	if (fio_amb_sd0_is_enable()) {
-		amba_writel(SD_REG(SD_NISEN_OFFSET), int_flag);
-		amba_writel(SD_REG(SD_NIXEN_OFFSET), int_flag);
+		amba_writel(SD0_REG(SD_NISEN_OFFSET), int_flag);
+		amba_writel(SD0_REG(SD_NIXEN_OFFSET), int_flag);
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }
@@ -228,15 +228,15 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 	u32					int_flag;
 
 	spin_lock_irqsave(&fio_sd0_int_lock, flags);
-	int_flag = amba_readl(SD_REG(SD_NISEN_OFFSET));
+	int_flag = amba_readl(SD0_REG(SD_NISEN_OFFSET));
 	if (on)
 		int_flag |= mask;
 	else
 		int_flag &= ~mask;
 	fio_sdio_int = int_flag;
 	if (fio_amb_sdio0_is_enable()) {
-		amba_writel(SD_REG(SD_NISEN_OFFSET), int_flag);
-		amba_writel(SD_REG(SD_NIXEN_OFFSET), int_flag);
+		amba_writel(SD0_REG(SD_NISEN_OFFSET), int_flag);
+		amba_writel(SD0_REG(SD_NIXEN_OFFSET), int_flag);
 	}
 	spin_unlock_irqrestore(&fio_sd0_int_lock, flags);
 }

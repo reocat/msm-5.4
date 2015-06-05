@@ -89,7 +89,7 @@ static int ambarella_spi_slave_inithw(struct ambarella_spi_slave *priv)
 	struct clk *clk;
 	u32 ctrlr0;
 
-	clk = clk_get(NULL, "gclk_ssi_slave");
+	clk = clk_get(NULL, "gclk_ssi2");
 	if (!IS_ERR_OR_NULL(clk))
 		clk_set_rate(clk, 13500000);
 

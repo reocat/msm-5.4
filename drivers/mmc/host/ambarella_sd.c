@@ -40,13 +40,14 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
-
+#include <linux/debugfs.h>
 #include <asm/dma.h>
-
 #include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/event.h>
+
+static struct mmc_host *G_mmc[SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM];
 
 /* ==========================================================================*/
 #define CONFIG_SD_AMBARELLA_TIMEOUT_VAL		(0xe)
@@ -90,6 +91,12 @@ enum ambarella_sd_state {
 	AMBA_SD_STATE_ERR
 };
 
+struct ambarella_sd_phy_timing {
+	u32				mode;
+	u32				val0;
+	u32				val1;
+};
+
 struct ambarella_sd_mmc_info {
 	struct mmc_host			*mmc;
 	struct mmc_request		*mrq;
@@ -122,6 +129,7 @@ struct ambarella_sd_mmc_info {
 	u32				slot_id;
 	struct ambarella_sd_controller_info *pinfo;
 	u32				valid;
+	int				fixed_cd;
 
 	int				pwr_gpio;
 	u8				pwr_gpio_active;
@@ -138,6 +146,8 @@ struct ambarella_sd_mmc_info {
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
+
+	struct dentry			*debugfs;
 };
 
 struct ambarella_sd_controller_info {
@@ -154,8 +164,10 @@ struct ambarella_sd_controller_info {
 
 	struct clk			*clk;
 	u32				default_wait_tmo;
-	u32				timing_magic;
 	u8				slot_num;
+	u32				soft_phy : 1;
+	struct ambarella_sd_phy_timing	*phy_timing;
+	u32				phy_timing_num;
 
 	struct ambarella_sd_mmc_info	*pslotinfo[AMBA_SD_MAX_SLOT_NUM];
 	struct mmc_ios			controller_ios;
@@ -185,6 +197,93 @@ static void ambarella_sd_show_info(struct ambarella_sd_mmc_info *pslotinfo)
 	ambsd_dbg(pslotinfo, "Exit %s\n", __func__);
 }
 #endif
+
+void ambarella_detect_sd_slot(int slotid, int fixed_cd)
+{
+	struct mmc_host *mmc;
+	struct ambarella_sd_mmc_info *pslotinfo;
+
+	if (slotid >= SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM) {
+		pr_err("%s: Invalid slotid: %d\n", __func__, slotid);
+		return;
+	}
+
+	mmc = G_mmc[slotid];
+	pslotinfo = mmc_priv(mmc);
+	pslotinfo->fixed_cd = fixed_cd;
+
+	mmc_detect_change(mmc, 0);
+}
+EXPORT_SYMBOL(ambarella_detect_sd_slot);
+
+static ssize_t fixed_cd_get(struct file *file, char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	struct ambarella_sd_mmc_info *pslotinfo = file->private_data;
+	char tmp[4];
+
+	snprintf(tmp, sizeof(tmp), "%d\n", pslotinfo->fixed_cd);
+	tmp[3] = '\n';
+
+	return simple_read_from_buffer(buf, count, ppos, tmp, sizeof(tmp));
+}
+
+static ssize_t fixed_cd_set(struct file *file, const char __user *buf,
+		size_t size, loff_t *ppos)
+{
+	struct ambarella_sd_mmc_info *pslotinfo = file->private_data;
+	char tmp[20];
+	ssize_t len;
+
+	len = simple_write_to_buffer(tmp, sizeof(tmp) - 1, ppos, buf, size);
+	if (len >= 0) {
+		tmp[len] = '\0';
+		pslotinfo->fixed_cd = !!simple_strtoul(tmp, NULL, 0);
+	}
+
+	mmc_detect_change(pslotinfo->mmc, 0);
+
+	return len;
+}
+
+static const struct file_operations fixed_cd_fops = {
+	.read	= fixed_cd_get,
+	.write	= fixed_cd_set,
+	.open	= simple_open,
+	.llseek	= default_llseek,
+};
+
+static void ambarella_sd_add_debugfs(struct ambarella_sd_mmc_info *pslotinfo)
+{
+	struct mmc_host *mmc = pslotinfo->mmc;
+	struct dentry *root, *fixed_cd;
+
+	if (!mmc->debugfs_root)
+		return;
+
+	root = debugfs_create_dir("ambhost", mmc->debugfs_root);
+	if (IS_ERR_OR_NULL(root))
+		goto err;
+
+	pslotinfo->debugfs = root;
+
+	fixed_cd = debugfs_create_file("fixed_cd", S_IWUSR | S_IRUGO,
+			pslotinfo->debugfs, pslotinfo, &fixed_cd_fops);
+	if (IS_ERR_OR_NULL(fixed_cd))
+		goto err;
+
+	return;
+
+err:
+	debugfs_remove_recursive(root);
+	pslotinfo->debugfs = NULL;
+	dev_err(pslotinfo->pinfo->dev, "failed to add debugfs\n");
+}
+
+static void ambarella_sd_remove_debugfs(struct ambarella_sd_mmc_info *pslotinfo)
+{
+	debugfs_remove_recursive(pslotinfo->debugfs);
+}
 
 static void ambarella_sd_check_dma_boundary(u32 address, u32 size, u32 max_size)
 {
@@ -978,6 +1077,39 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 		amba_readb(pinfo->regbase + SD_PWR_OFFSET));
 }
 
+static void ambarella_sd_set_phy_timing(
+		struct ambarella_sd_controller_info *pinfo, int mode)
+{
+	u32 i, val0, val1;
+
+	if (pinfo->timing_reg == NULL || pinfo->phy_timing_num == 0)
+		return;
+
+	for (i = 0; i < pinfo->phy_timing_num; i++) {
+		if (pinfo->phy_timing[i].mode & (0x1 << mode))
+			break;
+	}
+
+	/* phy setting is not defined in DTS for this mode, so we use the
+	 * default phy setting defined for DS mode. */
+	if (i >= pinfo->phy_timing_num)
+		i = 0;
+
+	val0 = pinfo->phy_timing[i].val0;
+	val1 = pinfo->phy_timing[i].val1;
+
+	if (pinfo->soft_phy) {
+		amba_writel(pinfo->timing_reg, val0 | 0x02000000);
+		amba_writel(pinfo->timing_reg, val0);
+		amba_writel(pinfo->regbase + SD_LAT_CTRL_OFFSET, val1);
+	} else {
+		u32 ms_delay = amba_rct_readl(pinfo->timing_reg);
+		ms_delay &= val0;
+		ms_delay |= val1;
+		amba_rct_writel(pinfo->timing_reg, ms_delay);
+	}
+}
+
 static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
@@ -1028,30 +1160,11 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 		break;
 	}
 
-	if (pinfo->timing_reg != NULL) {
-		u32 ms_delay = amba_rct_readl(pinfo->timing_reg);
-		switch(pinfo->timing_magic) {
-		case 1:
-			ms_delay &= 0xe3e0e3e0;
-			if (ios->timing == MMC_TIMING_UHS_DDR50)
-				ms_delay |= ((0x7 << 16) | (0x7 << 10));
-			amba_rct_writel(pinfo->timing_reg, ms_delay);
-			break;
-		case 2:
-			ms_delay &= 0x1c1f1c1f;
-			if (ios->timing == MMC_TIMING_UHS_DDR50)
-				ms_delay |= ((0x7 << 21) | (0x7 << 13));
-			amba_rct_writel(pinfo->timing_reg, ms_delay);
-			break;
-		default:
-			dev_warn(pinfo->dev, "invalid timing-magic\n");
-			break;
-		}
-	}
-
 	amba_writeb(pinfo->regbase + SD_HOST_OFFSET, hostr);
 
 	ambsd_dbg(pslotinfo, "hostr = 0x%x.\n", hostr);
+
+	ambarella_sd_set_phy_timing(pinfo, ios->timing);
 }
 
 static void ambarella_sd_check_ios(struct mmc_host *mmc, struct mmc_ios *ios)
@@ -1092,10 +1205,14 @@ static u32 ambarella_sd_check_cd(struct mmc_host *mmc)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 	int cdpin;
 
-	cdpin = mmc_gpio_get_cd(mmc);
-	if (cdpin < 0) {
-		cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
-		cdpin &= SD_STA_CARD_INSERTED;
+	if (pslotinfo->fixed_cd == -1) {
+		cdpin = mmc_gpio_get_cd(mmc);
+		if (cdpin < 0) {
+			cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			cdpin &= SD_STA_CARD_INSERTED;
+		}
+	} else {
+		cdpin = pslotinfo->fixed_cd;
 	}
 
 	return !!cdpin;
@@ -1541,6 +1658,7 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 }
 
 /* ==========================================================================*/
+
 static int ambarella_sd_init_slot(struct device_node *np, int id,
 			struct ambarella_sd_controller_info *pinfo)
 {
@@ -1549,7 +1667,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	struct mmc_host *mmc;
 	enum of_gpio_flags flags;
 	u32 gpio_init_flag, hc_cap, hc_timeout_clk;
-	int retval = 0;
+	int global_id, retval = 0;
 
 	mmc = mmc_alloc_host(sizeof(*mmc), pinfo->dev);
 	if (!mmc) {
@@ -1642,6 +1760,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	pslotinfo->state = AMBA_SD_STATE_ERR;
 	pslotinfo->slot_id = id;
 	pslotinfo->pinfo = pinfo;
+	pslotinfo->fixed_cd = -1;
 	pinfo->pslotinfo[id] = pslotinfo;
 	sema_init(&pslotinfo->system_event_sem, 1);
 
@@ -1769,8 +1888,16 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 		goto init_slot_err2;
 	}
 
+	ambarella_sd_add_debugfs(pslotinfo);
+
 	pslotinfo->system_event.notifier_call = ambarella_sd_system_event;
 	ambarella_register_event_notifier(&pslotinfo->system_event);
+
+	retval = of_property_read_u32(np, "global-id", &global_id);
+	if (retval < 0 || global_id >= SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM)
+		global_id = 0;
+	G_mmc[global_id] = mmc;
+	pslotinfo->fixed_cd = -1;
 
 	return 0;
 
@@ -1790,6 +1917,8 @@ static int ambarella_sd_free_slot(struct ambarella_sd_mmc_info *pslotinfo)
 	int retval = 0;
 
 	ambarella_unregister_event_notifier(&pslotinfo->system_event);
+
+	ambarella_sd_remove_debugfs(pslotinfo);
 
 	mmc_remove_host(pslotinfo->mmc);
 
@@ -1812,25 +1941,25 @@ static int ambarella_sd_free_slot(struct ambarella_sd_mmc_info *pslotinfo)
 static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 {
 	struct device_node *np = pinfo->dev->of_node;
+	const __be32 *prop;
 	const char *clk_name;
-	int tmo, retval = 0;
+	int psize, tmo, retval = 0;
 
 	retval = of_property_read_string(np, "amb,clk-name", &clk_name);
 	if (retval < 0) {
 		dev_err(pinfo->dev, "Get pll-name failed! %d\n", retval);
-		return retval;
+		goto pasre_err;
 	}
 
 	pinfo->clk = clk_get(NULL, clk_name);
 	if (IS_ERR(pinfo->clk)) {
 		dev_err(pinfo->dev, "Get PLL failed!\n");
-		return PTR_ERR(pinfo->clk);
+		retval = PTR_ERR(pinfo->clk);
+		goto pasre_err;
 	}
 
 	if (of_find_property(np, "amb,dma-addr-fix", NULL))
 		pinfo->dma_fix = 0xc0000000;
-
-	of_property_read_u32(np, "amb,timing-magic", &pinfo->timing_magic);
 
 	retval = of_property_read_u32(np, "amb,wait-tmo", &tmo);
 	if (retval < 0)
@@ -1845,7 +1974,40 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 	if (retval < 0)
 		pinfo->max_blk_sz = 0x20000;
 
-	return 0;
+	/* below are properties for phy timing */
+	if (pinfo->timing_reg == NULL) {
+		retval = 0;
+		goto pasre_err;
+	}
+
+	pinfo->soft_phy = !!of_find_property(np, "amb,soft-phy", NULL);
+
+	/* amb,phy-timing must be provided when timing_reg is given */
+	prop = of_get_property(np, "amb,phy-timing", &psize);
+	if (!prop) {
+		retval = -EINVAL;
+		goto pasre_err;
+	}
+
+	psize /= sizeof(u32);
+	BUG_ON(psize % 3);
+	pinfo->phy_timing_num = psize / 3;
+
+	pinfo->phy_timing = devm_kzalloc(pinfo->dev, psize, GFP_KERNEL);
+	if (pinfo->phy_timing == NULL) {
+		retval = -ENOMEM;
+		goto pasre_err;
+	}
+
+	retval = of_property_read_u32_array(np, "amb,phy-timing",
+			(u32 *)pinfo->phy_timing, psize);
+
+	/* bit0 of mode must be set, and the phy setting in first row with
+	 * bit0 set is the default one. */
+	BUG_ON(!(pinfo->phy_timing[0].mode & 0x1));
+
+pasre_err:
+	return retval;
 }
 
 static int ambarella_sd_get_resource(struct platform_device *pdev,

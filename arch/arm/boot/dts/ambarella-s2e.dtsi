@@ -40,15 +40,15 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		cpu@0 {
+		cpu@a00 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
-			reg = <0>;
+			reg = <0xa00>;
 		};
-		cpu@1 {
+		cpu@a01 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
-			reg = <1>;
+			reg = <0xa01>;
 		};
 	};
 
@@ -95,8 +95,12 @@
 			compatible = "ambarella,uart";
 			reg = <0x7001f000 0x100>;
 			interrupts = <25 0x04>;
-			status = "disabled";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart1_pins>;
+			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
 			/* amb,tx-fifo-fix; */
 		};
 
@@ -166,7 +170,6 @@
 			#size-cells = <0>;
 			reg = <0x70002000 0x1000>;
 			interrupts = <20 0x4>;
-			amb,clk-name = "gclk_ssi";
 			amb,clk-freq = <60000000>;
 		};
 
@@ -331,8 +334,10 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1033>,
 						/* virtual pins, just for
-						   configuration purpose.*/
-						 <0x0022 0x0003>;
+						   configuration purpose.
+						   <0x0022>: kernel may throw out error,
+						   			ignore it.*/
+						 <0x0022 0x0023>;
 			};
 
 			pwm5_pins: pwm5@0 {
@@ -427,16 +432,20 @@
 			#size-cells = <0>;
 			reg = <0x60002000 0x1000>,
 			      <0x60001000 0x80>, /* fio reg address */
-			      <0x701701d0 0x4>;
+			      <0x70170340 0x8>;
 			interrupts = <18 0x4>;
 			amb,clk-name = "gclk_sd";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
-			amb,timing-magic = <1>; /* see codes for its meaning */
+			amb,soft-phy;
+			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
+					 <0x000000a0 0x00000005 0x00001111>,
+					 <0x00000040 0x00000001 0x00001111>;
 
 			slot@0 {
 				reg = <0>;
-				max-frequency = <48000000>;
+				global-id = <0>;
+				max-frequency = <50000000>;
 				bus-width = <8>;
 				amb,caps-adma;
 				amb,caps-ddr;
@@ -494,11 +503,13 @@
 			amb,clk-name = "gclk_sdio";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
-			amb,timing-magic = <2>; /* see codes for its meaning */
+			amb,phy-timing = <0x00000001 0x1c1f1c1f 0x00000000>,
+					 <0x00000080 0x1c1f1c1f 0x00e0e000>;
 
 			slot@0 {
 				reg = <0>;
-				max-frequency = <48000000>;
+				global-id = <1>;
+				max-frequency = <50000000>;
 				bus-width = <8>;
 				amb,caps-adma;
 				amb,caps-ddr;

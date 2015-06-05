@@ -393,9 +393,14 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 	}
 	do {
 		hwirq = amba_readl(scratchpad);
-		if (hwirq == 0x60) {
-			/* usb vbus irq */
+		if (hwirq == VIC_NULL_PRI_IRQ_VAL) {
+#if (VIC_NULL_PRI_IRQ_FIX == 1)
+			void __iomem *reg_base = ambvic_data.reg_base[2];
+			if ((amba_readl(reg_base + VIC_IRQ_STA_OFFSET) & 0x1) == 0)
+				break;
+#else
 			break;
+#endif
 		}
 		bank = (hwirq >> 5) & 0x3;
 		hwirq &= 0x1F;

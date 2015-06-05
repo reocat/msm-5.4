@@ -170,6 +170,12 @@ i) Reference
 ------------
 Please see Documentation/devicetree/bindings/arm/cpus.txt
 
+ii) Properties
+- cpufreq_tbl: Table of frequencies gclk_cortex and pll_out_core could be transitioned
+  into, in the unit of nanoseconds.
+- clock-latency: Specify the possible maximum transition latency for clock, in
+  unit of nanoseconds.
+
 
 4) - TWD node
 =============
@@ -483,8 +489,36 @@ Required properties:
 
 Optional properties:
 - amb,dma-addr-fix: should be specified only for S2.
-- amb,timing-magic: magic value used for tuning SD controller timing, should
-  be specified when timing register is provided in "reg" property.
+- amb,soft-phy: should be specified for SD controllers supporting soft phy.
+- amb,phy-timing: an integer array which is used to specify the SD phy timing,
+  the size of the array is different according to corresponding phy register
+  for each chips or SD controllers, and the values are gotten by SD shmoo in
+  Amboot.
+  For the SD controller supporting soft SD phy, like S2E SD0, the array is
+  orgnized as: <mode phy_ctrl0_val latency_ctrl_val>
+  For the SD controller only supporting ms delay mux, like S2E SD1, the array
+  is orgnized as: <mode ms_delay_ctrl_mask ms_delay_ctrl_val>
+  Here mode is the ORed value of SD card working modes like sdr104, ddr50 and
+  etc., and the later 2 items are values written to corresponding phy registers.
+  Following is the definition of each bits for mode:
+  bit0: specify the default phy timing setting, so bit0 must be reserved as 1, and
+  followed by default phy timing setting. PS: it's a MUST to define the default phy
+  timing setting with bit0 set, and it MUST be placed in the first row.
+  bit1: MMC HS; bit2: SD HS;
+  bit3: SDR12; bit4: SDR25; bit5: SDR50; bit6: SDR104; bit7: DDR50
+  bit8: MMC HS200
+  In fact, the definition for each bit of mode comes from the following
+  definition which are defined in include/linux/mmc/host.h:
+    #define MMC_TIMING_LEGACY	0
+    #define MMC_TIMING_MMC_HS	1
+    #define MMC_TIMING_SD_HS	2
+    #define MMC_TIMING_UHS_SDR12	3
+    #define MMC_TIMING_UHS_SDR25	4
+    #define MMC_TIMING_UHS_SDR50	5
+    #define MMC_TIMING_UHS_SDR104	6
+    #define MMC_TIMING_UHS_DDR50	7
+    #define MMC_TIMING_MMC_HS200	8
+
 
 iii) Subnode
 ------------
@@ -494,6 +528,8 @@ this controller.
 The unit address of subnodes should be its index of the slot. And the subnode
 should contain the following properties.
 - reg: index of the slot, normally the same as the unit address.
+- global-id: specify the global id for each slot, it should be unique for all
+  of the slots.
 - amb,caps-adma: should be specified if hardware supports ADMA.
 - amb,caps-ddr: should be specified if hardware supports DDR.
 - no-1-8-v: should be specified if the slot don't have 1.8V circuit.
@@ -588,8 +624,6 @@ Required properties:
 - #size-cells: should be 0.
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the SPI controller.
-- amb,clk-name: specifies the PLL name of the SPI controller, should be one of
-  these strings: "gclk_ssi", "gclk_ssi_ahb", "gclk_ssi2_ahb".
 - amb,clk-freq: specifies the PLL frequence in HZ.
 
 Optional properties:
@@ -1162,14 +1196,67 @@ Required properties:
 - amb,model: board description.
 - amb,i2s-controllers: specifies the phandle to I2S controller.
 - amb,audio-codec: specifies the phandle to audio codec.
+- amb,dai_fmt: specifies the mode of codec and cpu. If it is 0, the mode is I2S, otherwise it is DSP mode.
+- amb,clk_fmt:
+	0 : mclk, bclk provided by cpu
+	1 : bclk provide by cpu, mclk is not used
+	2 : mclk provided by cpu, bclk is provided by codec
+There are four type of connection:
+clk_fmt=0:
+cpu :                   codec:
+	MCLK    ------>  MCKI
+	BCLK    ------>  BICK
+	LRCK    ------>  LRCK
+clk_fmt=1:
+cpu :                   codec:
+	MCLK   is not used
+	BCLK    ------> BICK
+	LRCK    ------> LRCK
+clk_fmt=2:
+cpu :                   codec:
+	MCLK   ------> MCKI
+	BCLK   <------ BICK
+	LRCK   <------ LRCK
+There are one connection we are not used, it is like clk_fmt=0,but power on the codec PLL.
+It is a waster of power, so we do not use it.
+
+- amb,codec-name: specifies the name of the codec.
+- amb,stream-name: specifies the name of the stream.
+- amb,codec-dai-name: specifies the DAI name within the codec, it must be consistent with the codec driver.
+- amb,audio-routing: specifies the route map for audio codec.
+usage:
+	amb,audio-routing = "sink", source",/*This is route 0*/
+			 "sink", "source";/*This is route 1*/
+	sink and source dapm widget should be based on codec driver and our board.
+	dapm widget on board:
+	"Mic internal": board internal Mic, used to connect Mic of codec.
+	"Mic external": used to connect Mic of codec with the external Mic of our board.
+	"Line In": used to connect to line in of codec dapm widget.
+	"Line Out": used to connect line out of codec dapm widget.
+	"HP Jack": used to connect the headphone of codec dapm widget.
+	"Speaker": used to connect the speaker of codec dapm widget.
 
 ii) Example
 -----------
 	sound {
-		compatible = "ambarella,ambevk-ak4642";
-		amb,model = "ak4642 @ AMBEVK";
+		compatible = "ambarella,audio-board";
+		amb,model = "ak4642 @ Ambarella";
 		amb,i2s-controllers = <&i2s0>;
 		amb,audio-codec = <&ak4642>;
+		amb,dai_fmt = <0>;
+		amb,codec-name = "ak4642";
+		amb,stream-name = "ak4642 PCM";
+		amb,codec-dai-name = "ak4642-hifi";
+		amb,audio-routing = "LIN1", "Mic internal",
+				    "RIN1", "Mic internal",
+				    "LIN2", "Line In",
+				    "RIN2", "Line In",
+				    "Line Out", "LOUT",
+				    "Line Out", "ROUT",
+				    "HP Jack", "HPL",
+		 		    "HP Jack", "HPR",
+				    "Speaker", "SPP",
+				    "Speaker", "SPN";
 	};
 
 

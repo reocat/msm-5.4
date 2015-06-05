@@ -600,9 +600,9 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, AK4642_LIVOL, 0x91);	/* Input 0db */
 	snd_soc_write(codec, AK4642_RIVOL, 0x91);	/* Input 0db */
 	/* Mic-Amp 0db */
-	snd_soc_update_bits(codec, AK4642_SIG1, 0x01, 0);
+	snd_soc_update_bits(codec, AK4642_SIG1, 0x01, 0x01);
 	/* Mic-Amp 0db */
-	snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0);
+	snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0x20);
 
 	snd_soc_add_codec_controls(codec, ak4642_snd_controls,
 				ARRAY_SIZE(ak4642_snd_controls));

@@ -12,7 +12,16 @@ struct swsusp_info {
 	unsigned long		image_pages;
 	unsigned long		pages;
 	unsigned long		size;
+#ifdef CONFIG_ARCH_AMBARELLA
+	unsigned long       magic;
+	unsigned long       addr;
+#endif
 } __aligned(PAGE_SIZE);
+
+#ifdef CONFIG_ARCH_AMBARELLA
+int swsusp_write_mtd(int flags);
+#endif
+
 
 #ifdef CONFIG_HIBERNATION
 /* kernel/power/snapshot.c */
