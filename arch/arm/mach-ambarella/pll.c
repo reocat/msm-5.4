@@ -506,10 +506,6 @@ void ambarella_init_early(void)
 #if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 	ambarella_clk_add(&pll_out_sd);
 #endif
-	ambarella_clk_add(&gclk_ddr);
-	ambarella_clk_add(&gclk_core);
-	ambarella_clk_add(&gclk_ahb);
-	ambarella_clk_add(&gclk_apb);
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	ambarella_clk_add(&gclk_cortex);
 	ambarella_clk_add(&gclk_axi);
@@ -517,6 +513,10 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&clk_smp_twd);
 #endif
 #endif
+	ambarella_clk_add(&gclk_ddr);
+	ambarella_clk_add(&gclk_core);
+	ambarella_clk_add(&gclk_ahb);
+	ambarella_clk_add(&gclk_apb);
 	ambarella_clk_add(&gclk_idsp);
 
 	ambarella_clk_add(&gclk_uart);

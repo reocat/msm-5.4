@@ -44,10 +44,10 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clock-latency = <100000>;
+		/* the highest frequency is gotten in runtime */
 		cpufreq_tbl = < /*core_clk	cortex_clk*/
 				24000		24000
-				108000		504000
-				432000		1008000>;
+				108000		504000>;
 
 		cpu@0 {
 			device_type = "cpu";
