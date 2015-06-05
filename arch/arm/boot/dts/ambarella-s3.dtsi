@@ -501,7 +501,6 @@
 			interrupts = <80 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&spi0_pins>;
-			amb,clk-name = "gclk_ssi_ahb";
 			amb,clk-freq = <54000000>;
 		};
 
@@ -511,7 +510,6 @@
 			#size-cells = <0>;
 			reg = <0xe0021000 0x1000>;
 			interrupts = <79 0x4>;
-			amb,clk-name = "gclk_ssi2_ahb";
 			amb,clk-freq = <54000000>;
 			status = "disabled";
 			/* need to select pinctrl setup in board dts */

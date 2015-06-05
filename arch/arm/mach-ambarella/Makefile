@@ -22,8 +22,7 @@
 
 obj-y						+= fio.o
 obj-y						+= init.o
-obj-y						+= clk.o
-obj-y						+= pll.o
+obj-y						+= pll.o clk.o clk_table.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= pm.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= sleep.o
 obj-y						+= timer.o

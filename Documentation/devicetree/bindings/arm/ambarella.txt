@@ -624,8 +624,6 @@ Required properties:
 - #size-cells: should be 0.
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the SPI controller.
-- amb,clk-name: specifies the PLL name of the SPI controller, should be one of
-  these strings: "gclk_ssi", "gclk_ssi_ahb", "gclk_ssi2_ahb".
 - amb,clk-freq: specifies the PLL frequence in HZ.
 
 Optional properties:
