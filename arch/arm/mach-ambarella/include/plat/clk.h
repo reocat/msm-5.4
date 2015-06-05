@@ -27,8 +27,6 @@
 #include <plat/rct.h>
 
 /* ==========================================================================*/
-#define PLL_REG_UNAVAILABLE	0
-
 enum PLL_CLK_HZ {
 	PLL_CLK_10D1001MHZ	= 9990010,
 	PLL_CLK_10MHZ		= 10000000,
@@ -216,8 +214,13 @@ union frac_reg_u {
 	do_div((divident), (divider));			\
 	} while (0)
 
-#define AMBARELLA_RCT_PLL_TABLE_SIZE		(590)
-extern const struct pll_table_s ambarella_rct_pll_table[AMBARELLA_RCT_PLL_TABLE_SIZE];
+extern struct clk_ops ambarella_rct_pll_ops;
+extern struct clk_ops ambarella_rct_scaler_ops;
+
+#define AMBARELLA_PLL_FRAC_TABLE_SIZE		(590)
+extern const struct pll_table_s ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
+#define AMBARELLA_PLL_INT_TABLE_SIZE		(93)
+extern const struct pll_table_s ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
 extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
 	u32 pre_scaler, const struct pll_table_s *p_table, u32 table_size);
 
@@ -225,11 +228,9 @@ extern unsigned long ambarella_rct_clk_get_rate(struct clk *c);
 extern int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate);
 extern int ambarella_rct_clk_enable(struct clk *c);
 extern int ambarella_rct_clk_disable(struct clk *c);
-extern struct clk_ops ambarella_rct_pll_ops;
 
 extern unsigned long ambarella_rct_scaler_get_rate(struct clk *c);
 extern int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate);
-extern struct clk_ops ambarella_rct_scaler_ops;
 
 extern int ambarella_clk_init(void);
 extern int ambarella_clk_add(struct clk *clk);

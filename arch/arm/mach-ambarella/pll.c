@@ -1,5 +1,5 @@
 /*
- * arch/arm/plat-ambarella/generic/clk.c
+ * arch/arm/mach-ambarella/pll.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -25,10 +25,31 @@
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/clk.h>
+#include <mach/init.h>
 #include <plat/clk.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/spi.h>
+
+struct clk_ops ambarella_rct_pll_ops = {
+	.enable		= ambarella_rct_clk_enable,
+	.disable	= ambarella_rct_clk_disable,
+	.get_rate	= ambarella_rct_clk_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= ambarella_rct_clk_set_rate,
+	.set_parent	= NULL,
+};
+EXPORT_SYMBOL(ambarella_rct_pll_ops);
+
+struct clk_ops ambarella_rct_scaler_ops = {
+	.enable		= NULL,
+	.disable	= NULL,
+	.get_rate	= ambarella_rct_scaler_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= ambarella_rct_scaler_set_rate,
+	.set_parent	= NULL,
+};
+EXPORT_SYMBOL(ambarella_rct_scaler_ops);
 
 static struct clk pll_out_core = {
 	.parent		= NULL,
@@ -36,8 +57,8 @@ static struct clk pll_out_core = {
 	.rate		= 0,
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_CORE_CTRL_REG,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= -1,
+	.post_reg	= -1,
 	.frac_reg	= PLL_CORE_FRAC_REG,
 	.ctrl2_reg	= PLL_CORE_CTRL2_REG,
 	.ctrl3_reg	= PLL_CORE_CTRL3_REG,
@@ -49,223 +70,96 @@ static struct clk pll_out_core = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
-static struct clk pll_out_idsp = {
-	.parent		= NULL,
-	.name		= "pll_out_idsp",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_IDSP_CTRL_REG,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
-	.frac_reg	= PLL_IDSP_FRAC_REG,
-	.ctrl2_reg	= PLL_IDSP_CTRL2_REG,
-	.ctrl3_reg	= PLL_IDSP_CTRL3_REG,
-	.lock_reg	= PLL_LOCK_REG,
-	.lock_bit	= 4,
-	.divider	= 0,
-	.max_divider	= 0,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_pll_ops,
-};
-
-static struct clk pll_out_ddr = {
-	.parent		= NULL,
-	.name		= "pll_out_ddr",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_DDR_CTRL_REG,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
-	.frac_reg	= PLL_DDR_FRAC_REG,
-	.ctrl2_reg	= PLL_DDR_CTRL2_REG,
-	.ctrl3_reg	= PLL_DDR_CTRL3_REG,
-	.lock_reg	= PLL_LOCK_REG,
-	.lock_bit	= 5,
-	.divider	= 0,
-	.max_divider	= 0,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_pll_ops,
-};
-
-static unsigned long ambarella_rct_core_get_rate(struct clk *c)
-{
-	u32 rate;
-	u32 divider;
-
-	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate) {
-		goto ambarella_rct_core_get_rate_exit;
-	}
-	rate = c->parent->ops->get_rate(c->parent);
-	if (c->post_reg != PLL_REG_UNAVAILABLE) {
-		divider = amba_rct_readl(c->post_reg);
-		if (divider) {
-			rate /= divider;
-		}
-	}
-	if (c->divider) {
-		rate /= c->divider;
-	}
-
-	c->rate = rate;
-
-ambarella_rct_core_get_rate_exit:
-	return c->rate;
-}
-
-struct clk_ops ambarella_rct_core_ops = {
-	.enable		= NULL,
-	.disable	= NULL,
-	.get_rate	= ambarella_rct_core_get_rate,
-	.round_rate	= NULL,
-	.set_rate	= NULL,
-	.set_parent	= NULL,
-};
-
 static struct clk gclk_core = {
 	.parent		= &pll_out_core,
 	.name		= "gclk_core",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 #if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
 	.post_reg	= SCALER_CORE_POST_REG,
 #else
-	.post_reg	= PLL_REG_UNAVAILABLE,
+	.post_reg	= -1,
 #endif
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 #if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
-	.divider	= 1,
-#else
-	.divider	= 2,
-#endif
-	.max_divider	= (1 << 4) - 1,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_core_ops,
-};
-
-static unsigned long ambarella_rct_axb_get_rate(struct clk *c)
-{
-	u32 rate;
-	u32 divider;
-
-	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate) {
-		goto ambarella_rct_axb_get_rate_exit;
-	}
-	rate = c->parent->ops->get_rate(c->parent);
-	if (c->post_reg != PLL_REG_UNAVAILABLE) {
-		divider = amba_rct_readl(c->post_reg);
-		if (divider) {
-			rate /= divider;
-		}
-	}
-	if (c->divider) {
-		rate /= c->divider;
-	}
-#if (CHIP_REV == S2)
-	if (amba_rct_readl(RCT_REG(0x24C))) {
-		rate <<= 1;
-	}
-#endif
-	c->rate = rate;
-
-ambarella_rct_axb_get_rate_exit:
-	return c->rate;
-}
-
-struct clk_ops ambarella_rct_axb_ops = {
-	.enable		= NULL,
-	.disable	= NULL,
-	.get_rate	= ambarella_rct_axb_get_rate,
-	.round_rate	= NULL,
-	.set_rate	= NULL,
-	.set_parent	= NULL,
-};
-
-static struct clk gclk_ahb = {
-	.parent		= &pll_out_core,
-	.name		= "gclk_ahb",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-#if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
-	.post_reg	= SCALER_CORE_POST_REG,
-#else
-	.post_reg	= PLL_REG_UNAVAILABLE,
-#endif
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
-	.lock_bit	= 0,
-#if (CHIP_REV == A5S)
-	.divider	= 1,
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
-	.divider	= 4,
-#else
-	.divider	= 2,
-#endif
-	.max_divider	= (1 << 4) - 1,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_core_ops,
-};
-
-static struct clk gclk_apb = {
-	.parent		= &pll_out_core,
-	.name		= "gclk_apb",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-#if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
-	.post_reg	= SCALER_CORE_POST_REG,
-#else
-	.post_reg	= PLL_REG_UNAVAILABLE,
-#endif
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
-	.lock_bit	= 0,
-#if (CHIP_REV == A5S)
-	.divider	= 2,
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
-	.divider	= 8,
-#else
-	.divider	= 4,
-#endif
-	.max_divider	= (1 << 4) - 1,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_core_ops,
-};
-
-/* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_HAVE_ARM11)
-static struct clk gclk_arm = {
-	.parent		= &pll_out_idsp,
-	.name		= "gclk_arm",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= SCALER_ARM_ASYNC_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
-	.lock_bit	= 0,
 	.divider	= 0,
-	.max_divider	= (1 << 3) - 1,
+	.max_divider	= (1 << 4) - 1,
+#else
+	.divider	= 2,
+	.max_divider	= 0,
+#endif
 	.extra_scaler	= 0,
 	.ops		= &ambarella_rct_scaler_ops,
 };
-#endif
 
+static struct clk gclk_ahb = {
+	.parent		= &gclk_core,
+	.name		= "gclk_ahb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+#if (CHIP_REV == A5S)
+	.divider	= 1,
+#else
+	.divider	= 2,
+#endif
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_apb = {
+	.parent		= &gclk_ahb,
+	.name		= "gclk_apb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 2,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_ddr = {
+	.parent		= NULL,
+	.name		= "gclk_ddr",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_DDR_CTRL_REG,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= PLL_DDR_FRAC_REG,
+	.ctrl2_reg	= PLL_DDR_CTRL2_REG,
+	.ctrl3_reg	= PLL_DDR_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 5,
+	.divider	= 2,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+/* ==========================================================================*/
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 static struct clk gclk_cortex = {
 	.parent		= NULL,
@@ -273,8 +167,8 @@ static struct clk gclk_cortex = {
 	.rate		= 0,
 	.frac_mode	= 0,
 	.ctrl_reg	= PLL_CORTEX_CTRL_REG,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= -1,
+	.post_reg	= -1,
 	.frac_reg	= PLL_CORTEX_FRAC_REG,
 	.ctrl2_reg	= PLL_CORTEX_CTRL2_REG,
 	.ctrl3_reg	= PLL_CORTEX_CTRL3_REG,
@@ -290,13 +184,13 @@ static struct clk gclk_axi = {
 	.name		= "gclk_axi",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 3,
 	.max_divider	= 0,
@@ -309,13 +203,13 @@ static struct clk clk_smp_twd = {
 	.name		= "smp_twd",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 1,
 	.max_divider	= 0,
@@ -324,27 +218,28 @@ static struct clk clk_smp_twd = {
 };
 #endif
 #endif
+
 static struct clk gclk_idsp = {
-	.parent		= &pll_out_idsp,
+	.parent		= NULL,
 	.name		= "gclk_idsp",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= PLL_IDSP_CTRL_REG,
+	.pres_reg	= -1,
 	.post_reg	= SCALER_IDSP_POST_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
-	.lock_bit	= 0,
+	.frac_reg	= PLL_IDSP_FRAC_REG,
+	.ctrl2_reg	= PLL_IDSP_CTRL2_REG,
+	.ctrl3_reg	= PLL_IDSP_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 4,
 	.divider	= 0,
-	.max_divider	= (1 << 3) - 1,
+	.max_divider	= (1 << 4) - 1,
 #if (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.extra_scaler	= 1,
 #else
 	.extra_scaler	= 0,
 #endif
-	.ops		= &ambarella_rct_scaler_ops,
+	.ops		= &ambarella_rct_pll_ops,
 };
 
 static struct clk gclk_uart = {
@@ -352,18 +247,18 @@ static struct clk gclk_uart = {
 	.name		= "gclk_uart",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= CG_UART_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
 	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_scaler_ops,
 };
 
 static struct clk gclk_audio = {
@@ -380,10 +275,11 @@ static struct clk gclk_audio = {
 	.lock_reg	= PLL_LOCK_REG,
 	.lock_bit	= 7,
 	.divider	= 0,
-	.max_divider	= 0,
 #if (CHIP_REV == S2L) || (CHIP_REV == S3)
+	.max_divider	= (1 << 4) - 1,
 	.extra_scaler	= 1,
 #else
+	.max_divider	= (1 << 16) - 1,
 	.extra_scaler	= 0,
 #endif
 	.ops		= &ambarella_rct_pll_ops,
@@ -394,10 +290,10 @@ static struct clk pll_out_sd = {
 	.parent		= NULL,
 	.name		= "pll_out_sd",
 	.rate		= 0,
-	.frac_mode	= 0,
+	.frac_mode	= 1,
 	.ctrl_reg	= PLL_SD_CTRL_REG,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= PLL_REG_UNAVAILABLE,
+	.pres_reg	= -1,
+	.post_reg	= -1,
 	.frac_reg	= PLL_SD_FRAC_REG,
 	.ctrl2_reg	= PLL_SD_CTRL2_REG,
 	.ctrl3_reg	= PLL_SD_CTRL3_REG,
@@ -416,13 +312,13 @@ static struct clk gclk_sdxc = {
 	.name		= "gclk_sdxc",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= SCALER_SDXC_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 16) - 1,
@@ -441,13 +337,13 @@ static struct clk gclk_sdio = {
 	.name		= "gclk_sdio",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= SCALER_SDIO_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 16) - 1,
@@ -465,13 +361,13 @@ static struct clk gclk_sd = {
 	.name		= "gclk_sd",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= SCALER_SD48_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 16) - 1,
@@ -484,18 +380,18 @@ static struct clk gclk_ir = {
 	.name		= "gclk_ir",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= CG_IR_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
 	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_scaler_ops,
 };
 
 static struct clk gclk_adc = {
@@ -503,118 +399,80 @@ static struct clk gclk_adc = {
 	.name		= "gclk_adc",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= SCALER_ADC_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 2,
 	.max_divider	= (1 << 16) - 1,
 	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_scaler_ops,
 };
 
-#if (SPI_INSTANCES >= 1) // a5s, s2, ione a7l
-static struct clk gclk_ssi = {
+static struct clk gclk_ssi = {	/* for SSI master */
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 	.parent		= &gclk_apb,
+#else
+	.parent		= &pll_out_core,
+#endif
 	.name		= "gclk_ssi",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= CG_SSI_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
 	.extra_scaler	= 0,
 	.ops		= &ambarella_rct_scaler_ops,
 };
-#endif
 
-#if (SPI_INSTANCES >= 2)
-static struct clk gclk_ssi2 = {
+static struct clk gclk_ssi2 = {	/* for SSI slave */
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 	.parent		= &gclk_apb,
+#else
+	.parent		= &pll_out_core,
+#endif
 	.name		= "gclk_ssi2",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= CG_SSI2_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
 	.extra_scaler	= 0,
 	.ops		= &ambarella_rct_scaler_ops,
 };
-#endif
 
-#if (SPI_AHB_INSTANCES >= 1)
-static struct clk gclk_ssi_ahb = {
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+static struct clk gclk_ssi3 = {	/* for SPINOR */
+	/* TODO: parent is determined by CLK_REF_SSI3_REG */
 	.parent		= &pll_out_core,
-	.name		= "gclk_ssi_ahb",
+	.name		= "gclk_ssi3",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= CG_SSI_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
-	.lock_bit	= 0,
-	.divider	= 0,
-	.max_divider	= (1 << 24) - 1,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_scaler_ops,
-};
-#endif
-
-
-#if (SPI_AHB_INSTANCES >= 2)
-static struct clk gclk_ssi2_ahb = {
-	.parent		= &pll_out_core,
-	.name		= "gclk_ssi2_ahb",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
-	.post_reg	= CG_SSI2_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
-	.lock_bit	= 0,
-	.divider	= 0,
-	.max_divider	= (1 << 24) - 1,
-	.extra_scaler	= 0,
-	.ops		= &ambarella_rct_scaler_ops,
-};
-#endif
-
-#if ( SPI_AHB_SLAVE_INSTANCES >= 1)
-static struct clk gclk_ssi_slave = {
-	.parent		= &pll_out_core,
-	.name		= "gclk_ssi_slave",
-	.rate		= 0,
-	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= CG_SSI3_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
@@ -628,13 +486,13 @@ static struct clk gclk_pwm = {
 	.name		= "gclk_pwm",
 	.rate		= 0,
 	.frac_mode	= 0,
-	.ctrl_reg	= PLL_REG_UNAVAILABLE,
-	.pres_reg	= PLL_REG_UNAVAILABLE,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
 	.post_reg	= CG_PWM_REG,
-	.frac_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl2_reg	= PLL_REG_UNAVAILABLE,
-	.ctrl3_reg	= PLL_REG_UNAVAILABLE,
-	.lock_reg	= PLL_REG_UNAVAILABLE,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
 	.lock_bit	= 0,
 	.divider	= 0,
 	.max_divider	= (1 << 24) - 1,
@@ -645,14 +503,13 @@ static struct clk gclk_pwm = {
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
-	ambarella_clk_add(&pll_out_idsp);
-	ambarella_clk_add(&pll_out_ddr);
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+	ambarella_clk_add(&pll_out_sd);
+#endif
+	ambarella_clk_add(&gclk_ddr);
 	ambarella_clk_add(&gclk_core);
 	ambarella_clk_add(&gclk_ahb);
 	ambarella_clk_add(&gclk_apb);
-#if defined(CONFIG_PLAT_AMBARELLA_HAVE_ARM11)
-	ambarella_clk_add(&gclk_arm);
-#endif
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 	ambarella_clk_add(&gclk_cortex);
 	ambarella_clk_add(&gclk_axi);
@@ -664,9 +521,6 @@ void ambarella_init_early(void)
 
 	ambarella_clk_add(&gclk_uart);
 	ambarella_clk_add(&gclk_audio);
-#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
-	ambarella_clk_add(&pll_out_sd);
-#endif
 #if (SD_INSTANCES >= 3)
 	ambarella_clk_add(&gclk_sdxc);
 #endif
@@ -676,21 +530,10 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&gclk_sd);
 	ambarella_clk_add(&gclk_ir);
 	ambarella_clk_add(&gclk_adc);
-
-#if (SPI_INSTANCES >= 1)
 	ambarella_clk_add(&gclk_ssi);
-#endif
-#if (SPI_INSTANCES >= 2)
 	ambarella_clk_add(&gclk_ssi2);
-#endif
-#if (SPI_AHB_INSTANCES >= 1)
-	ambarella_clk_add(&gclk_ssi_ahb);
-#endif
-#if (SPI_AHB_INSTANCES >= 2)
-	ambarella_clk_add(&gclk_ssi2_ahb);
-#endif
-#if (SPI_AHB_SLAVE_INSTANCES >= 1)
-	ambarella_clk_add(&gclk_ssi_slave);
+#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+	ambarella_clk_add(&gclk_ssi3);
 #endif
 	ambarella_clk_add(&gclk_pwm);
 }
