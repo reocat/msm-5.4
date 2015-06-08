@@ -40,6 +40,11 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		clock-latency = <100000>;
+		/* the highest frequency is gotten in runtime */
+		cpufreq_tbl = < /*core_clk	cortex_clk*/
+				24000		24000
+				108000		504000>;
 		cpu@a00 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
