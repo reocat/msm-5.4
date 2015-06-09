@@ -78,16 +78,9 @@ static int ambarella_spi_of_parse(struct platform_device *pdev,
 {
 	struct device_node		*np = pdev->dev.of_node;
 	struct ambarella_spi		*bus = spi_master_get_devdata(master);
-	const char			*clk_name;
 	int				rval;
 
-	rval = of_property_read_string(np, "amb,clk-name", &clk_name);
-	if (rval < 0) {
-		dev_err(&pdev->dev, "Get clk-name failed! %d\n", rval);
-		return rval;
-	}
-
-	bus->clk = clk_get(NULL, clk_name);
+	bus->clk = clk_get(NULL, "gclk_ssi");
 	if (IS_ERR(bus->clk)) {
 		dev_err(&pdev->dev, "Get PLL failed!\n");
 		return PTR_ERR(bus->clk);
