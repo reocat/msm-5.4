@@ -78,7 +78,7 @@ config SPI_AMBARELLA
 config SPI_AMBARELLA_DMA
         boolean "Enable DMA"
         depends on SPI_AMBARELLA
-        default y
+        default n
         help
           This selects whether DMA is enabled in the Ambarella SPI driver.
 
