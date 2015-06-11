@@ -278,6 +278,7 @@ static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		else
 			dai_rx_enable();
 		break;
+	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
 			dai_tx_disable();
