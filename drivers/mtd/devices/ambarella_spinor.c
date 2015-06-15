@@ -81,7 +81,7 @@ static int read_sr(struct amb_norflash *flash)
     ssize_t retval = 0;
     u8 code = OPCODE_RDSR;
     u8 val;
-    ambspi_read_reg(flash, 1, code, &val);
+    retval = ambspi_read_reg(flash, 1, code, &val);
 
     if (retval < 0) {
         dev_err((const struct device *)&flash->dev, "error %d reading SR\n",
@@ -414,28 +414,31 @@ struct ambid_t {
 
 static const struct ambid_t amb_ids[] = {
     { "s70fl01gs", INFO(0x010221, 0x4d00, 256 * 1024, 256, 512, 50000000, 0) },
+	{ "n25q256a", INFO(0x20ba19, 0, 64 * 1024, 512, 256, 50000000, 0) },
+	{ "mx25l25645g", INFO(0xc22019, 0, 64 * 1024, 512, 256, 50000000, 0) },
+	{ "w25q128", INFO(0xef4018, 0, 64 * 1024, 256, 256, 50000000, 0) },
     { },
 };
 
-#if 0
-static const struct spi_device_id *jedec_probe(struct spi_device *spi)
+static const struct ambid_t *jedec_probe(struct amb_norflash *flash)
 {
-    int            tmp;
-    u8            code = OPCODE_RDID;
-    u8            id[5];
-    u32            jedec;
-    u16                     ext_jedec;
-    struct flash_info    *info;
+    int	retval;
+    u8	code = OPCODE_RDID;
+    u8	id[5];
+    u32	jedec;
+    u16	ext_jedec;
+    struct flash_info	*info;
+	int		tmp;
 
     /* JEDEC also defines an optional "extended device information"
      * string for after vendor-specific data, after the three bytes
      * we use here.  Supporting some chips might require using it.
      */
-    tmp = spi_write_then_read(spi, &code, 1, id, 5);
-    if (tmp < 0) {
-        pr_debug("%s: error %d reading JEDEC ID\n",
-                dev_name(&spi->dev), tmp);
-        return ERR_PTR(tmp);
+    retval = ambspi_read_reg(flash, 5, code, id);
+	if (retval < 0) {
+        dev_err((const struct device *)&flash->dev, "error %d reading id\n",
+                (int) retval);
+        return ERR_PTR(retval);
     }
     jedec = id[0];
     jedec = jedec << 8;
@@ -446,17 +449,16 @@ static const struct spi_device_id *jedec_probe(struct spi_device *spi)
     ext_jedec = id[3] << 8 | id[4];
 
     for (tmp = 0; tmp < ARRAY_SIZE(amb_ids) - 1; tmp++) {
-        info = (void *)amb_ids[tmp].driver_data;
+        info = (void *)&amb_ids[tmp].driver_data;
         if (info->jedec_id == jedec) {
             if (info->ext_id != 0 && info->ext_id != ext_jedec)
                 continue;
             return &amb_ids[tmp];
         }
     }
-    dev_err(&spi->dev, "unrecognized JEDEC id %06x\n", jedec);
+    dev_err((const struct device *)&flash->dev, "unrecognized JEDEC id %06x\n", jedec);
     return ERR_PTR(-ENODEV);
 }
-#endif
 
 static int amb_get_resource(struct amb_norflash    *flash, struct platform_device *pdev)
 {
@@ -502,14 +504,13 @@ spinor_get_resource_err_exit:
 
 static int    amb_spi_nor_probe(struct platform_device *pdev)
 {
-    struct flash_platform_data    data;
-    struct amb_norflash            *flash;
-    struct flash_info        *info;
-    unsigned            i;
-    int errCode = 0;
-
-	struct mtd_part_parser_data		ppdata = {};
-    info = (void *)&amb_ids[0].driver_data;
+	struct mtd_part_parser_data	ppdata;
+	struct flash_platform_data    data;
+	struct amb_norflash            *flash;
+	struct flash_info        *info;
+	unsigned            i;
+	int errCode = 0;
+	const struct ambid_t *ambid = NULL;;
 
     flash = kzalloc(sizeof(struct amb_norflash), GFP_KERNEL);
     if (!flash) {
@@ -520,9 +521,22 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
     mutex_init(&flash->lock);
     platform_set_drvdata(pdev, flash);
     flash->dev = &pdev->dev;
-    data.type = kzalloc(sizeof(32), GFP_KERNEL);
-    strcpy(data.type, (const char *)&amb_ids[0].name);
 
+	/* set 50Mhz as default spi clock */
+	flash->clk = 50000000;
+    amb_get_resource(flash, pdev);
+    ambspi_init(flash);
+
+	ambid = jedec_probe(flash);
+	if (IS_ERR(ambid))
+			return PTR_ERR(ambid);
+	else {
+		info = (void *)&ambid->driver_data;
+	}
+	data.type = kzalloc(sizeof(32), GFP_KERNEL);
+    strcpy(data.type, ambid->name);
+
+	flash->mtd.name = "amba_spinor";
     flash->mtd.type = MTD_NORFLASH;
     flash->mtd.writesize = 1;
     flash->mtd.flags = MTD_CAP_NORFLASH;
@@ -562,7 +576,6 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
         goto amb_spi_nor_probe_free_command;
     }
 	flash->clk = info->max_clk_hz;
-    amb_get_resource(flash, pdev);
     ambspi_init(flash);
 
     if (info->addr_width)
@@ -576,6 +589,7 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
             flash->addr_width = 3;
     }
 
+	flash->jedec_id	= info->jedec_id;
     pr_debug("mtd .name = %s, .size = 0x%llx (%lldMiB) "
             ".erasesize = 0x%.8x (%uKiB) .numeraseregions = %d\n",
         flash->mtd.name,
@@ -629,23 +643,33 @@ static int amb_spi_nor_remove(struct platform_device *pdev)
     return 0;
 }
 
-static int amb_spi_nor_shutdown(struct platform_device *pdev)
+static void amb_spi_nor_shutdown(struct platform_device *pdev)
 {
 	struct amb_norflash    *flash = platform_get_drvdata(pdev);
 
 	/* Wait until finished previous write command. */
 	if (wait_till_ready(flash))
-		return 1;
+		return;
 
 	/* Send write enable, then erase commands. */
 	//write_enable(flash);
-
-	/* Set up command buffer. */
-	/* FL01GS use 0xF0 as reset enable command */
-	flash->command[0] = 0xF0;
-	ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
-
-	return 0;
+	switch (JEDEC_MFR(flash->jedec_id)) {
+		case CFI_MFR_MACRONIX:
+		case 0xEF /* winbond */:
+			return;
+		case CFI_MFR_ST: /*Micron*/
+			flash->command[0] = 0x66;
+			ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
+			flash->command[0] = 0x99;
+			ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
+			return;
+		default:
+			/* Spansion style */
+			/* Set up command buffer. */
+			/* FL01GS use 0xF0 as reset enable command */
+			flash->command[0] = 0xF0;
+			ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
+	}
 }
 
 static const struct of_device_id ambarella_spi_nor_of_match[] = {
