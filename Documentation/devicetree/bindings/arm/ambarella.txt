@@ -626,6 +626,7 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the SPI controller.
 - amb,clk-freq: specifies the PLL frequence in HZ.
+- amb,dma-used: use dma for TX/RX, should be specified if SPI channel supports dma mode.
 
 Optional properties:
 - cs-gpios: gpios chip select. Please see Reference for detailed.

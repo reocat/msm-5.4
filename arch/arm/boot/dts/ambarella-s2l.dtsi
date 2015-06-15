@@ -585,6 +585,7 @@
 			reg = <0xe0020000 0x1000>;
 			interrupts = <35 0x4>;
 			amb,clk-freq = <54000000>;
+			amb,dma-used;
 		};
 
 		spi1: spi@e0021000 {

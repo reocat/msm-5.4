@@ -75,13 +75,6 @@ config SPI_AMBARELLA
         help
           This selects a driver for the Ambarella SPI Controller.
 
-config SPI_AMBARELLA_DMA
-        boolean "Enable DMA"
-        depends on SPI_AMBARELLA
-        default n
-        help
-          This selects whether DMA is enabled in the Ambarella SPI driver.
-
 config SPI_ATH79
 	tristate "Atheros AR71XX/AR724X/AR913X SPI controller driver"
 	depends on ATH79 && GPIOLIB
