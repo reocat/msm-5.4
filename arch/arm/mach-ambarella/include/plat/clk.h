@@ -150,6 +150,7 @@ struct clk {
 	u32			frac_mode;
 	u32			ctrl_reg;
 	u32			pres_reg;
+	u32			pres_val;
 	u32			post_reg;
 	u32			frac_reg;
 	u32			ctrl2_reg;
