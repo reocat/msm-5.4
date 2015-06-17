@@ -255,10 +255,18 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		rate *= c->divider;
 
 	if (c->pres_reg != -1) {
-		pre_scaler = amba_rct_readl(c->pres_reg);
-		if (c->extra_scaler == 1) {
-			pre_scaler >>= 4;
-			pre_scaler++;
+		if (c->pres_val) {
+			pre_scaler = c->pres_val;
+			if (c->extra_scaler == 1)
+				amba_rct_writel_en(c->pres_reg, (pre_scaler - 1) << 4);
+			else
+				amba_rct_writel(c->pres_reg, pre_scaler);
+		} else {
+			pre_scaler = amba_rct_readl(c->pres_reg);
+			if (c->extra_scaler == 1) {
+				pre_scaler >>= 4;
+				pre_scaler++;
+			}
 		}
 	} else {
 		pre_scaler = 1;
@@ -288,13 +296,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 
 	if (c->post_reg != -1) {
 		post_scaler = min(post, c->max_divider);
-		if (c->extra_scaler == 1) {
-			post_scaler--;
-			post_scaler <<= 4;
-			amba_rct_writel_en(c->post_reg, post_scaler);
-		} else {
+		if (c->extra_scaler == 1)
+			amba_rct_writel_en(c->post_reg, (post_scaler - 1) << 4);
+		else
 			amba_rct_writel(c->post_reg, post_scaler);
-		}
 	}
 
 	if (c->frac_mode) {
