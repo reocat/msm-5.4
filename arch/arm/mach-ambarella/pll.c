@@ -67,6 +67,8 @@ static struct clk pll_out_core = {
 	.divider	= 0,
 	.max_divider	= 0,
 	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
 	.ops		= &ambarella_rct_pll_ops,
 };
 
@@ -156,6 +158,8 @@ static struct clk gclk_ddr = {
 	.divider	= 2,
 	.max_divider	= 0,
 	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
 	.ops		= &ambarella_rct_pll_ops,
 };
 
@@ -177,6 +181,8 @@ static struct clk gclk_cortex = {
 	.divider	= 0,
 	.max_divider	= 0,
 	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
 	.ops		= &ambarella_rct_pll_ops,
 };
 static struct clk gclk_axi = {
@@ -239,6 +245,8 @@ static struct clk gclk_idsp = {
 #else
 	.extra_scaler	= 0,
 #endif
+	.table		= ambarella_pll_frac_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_frac_table),
 	.ops		= &ambarella_rct_pll_ops,
 };
 
@@ -282,6 +290,8 @@ static struct clk gclk_audio = {
 	.max_divider	= (1 << 16) - 1,
 	.extra_scaler	= 0,
 #endif
+	.table		= ambarella_pll_frac_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_frac_table),
 	.ops		= &ambarella_rct_pll_ops,
 };
 
@@ -302,6 +312,8 @@ static struct clk pll_out_sd = {
 	.divider	= 0,
 	.max_divider	= 0,
 	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
 	.ops		= &ambarella_rct_pll_ops,
 };
 #endif
