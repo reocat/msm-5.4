@@ -46,7 +46,7 @@ DEFINE_SPINLOCK(ambarella_clock_lock);
 static unsigned int ambarella_clk_ref_freq = REF_CLK_FREQ;
 
 u32 ambarella_rct_find_pll_table_index(unsigned long rate, u32 pre_scaler,
-	const struct pll_table_s *p_table, u32 table_size)
+	const struct pll_table *table, u32 table_size)
 {
 	u64 dividend;
 	u64 divider;
@@ -63,15 +63,15 @@ u32 ambarella_rct_find_pll_table_index(unsigned long rate, u32 pre_scaler,
 	dividend = rate;
 	dividend *= pre_scaler;
 	dividend *= (1000 * 1000 * 1000);
-	divider = (ambarella_clk_ref_freq / (1000 * 1000));
+	divider = ambarella_clk_ref_freq / (1000 * 1000);
 	AMBCLK_DO_DIV(dividend, divider);
 
 	index_limit = (table_size - 1);
 	start = 0;
 	end = index_limit;
 	middle = table_size / 2;
-	while (p_table[middle].multiplier != dividend) {
-		if (p_table[middle].multiplier < dividend) {
+	while (table[middle].multiplier != dividend) {
+		if (table[middle].multiplier < dividend) {
 			start = middle;
 		} else {
 			end = middle;
@@ -82,57 +82,57 @@ u32 ambarella_rct_find_pll_table_index(unsigned long rate, u32 pre_scaler,
 		}
 	}
 	if ((middle > 0) && ((middle + 1) <= index_limit)) {
-		if (p_table[middle - 1].multiplier < dividend) {
-			diff_low = dividend - p_table[middle - 1].multiplier;
+		if (table[middle - 1].multiplier < dividend) {
+			diff_low = dividend - table[middle - 1].multiplier;
 		} else {
-			diff_low = p_table[middle - 1].multiplier - dividend;
+			diff_low = table[middle - 1].multiplier - dividend;
 		}
-		if (p_table[middle].multiplier < dividend) {
-			diff = dividend - p_table[middle].multiplier;
+		if (table[middle].multiplier < dividend) {
+			diff = dividend - table[middle].multiplier;
 		} else {
-			diff = p_table[middle].multiplier - dividend;
+			diff = table[middle].multiplier - dividend;
 		}
-		if (p_table[middle + 1].multiplier < dividend) {
-			diff_high = dividend - p_table[middle + 1].multiplier;
+		if (table[middle + 1].multiplier < dividend) {
+			diff_high = dividend - table[middle + 1].multiplier;
 		} else {
-			diff_high = p_table[middle + 1].multiplier - dividend;
+			diff_high = table[middle + 1].multiplier - dividend;
 		}
 		pr_debug("multiplier[%u] = [%llu]\n", (middle - 1),
-			p_table[middle - 1].multiplier);
+			table[middle - 1].multiplier);
 		pr_debug("multiplier[%u] = [%llu]\n", (middle),
-			p_table[middle].multiplier);
+			table[middle].multiplier);
 		pr_debug("multiplier[%u] = [%llu]\n", (middle + 1),
-			p_table[middle + 1].multiplier);
+			table[middle + 1].multiplier);
 	} else if ((middle == 0) && ((middle + 1) <= index_limit)) {
-		if (p_table[middle].multiplier < dividend) {
-			diff = dividend - p_table[middle].multiplier;
+		if (table[middle].multiplier < dividend) {
+			diff = dividend - table[middle].multiplier;
 		} else {
-			diff = p_table[middle].multiplier - dividend;
+			diff = table[middle].multiplier - dividend;
 		}
-		if (p_table[middle + 1].multiplier < dividend) {
-			diff_high = dividend - p_table[middle + 1].multiplier;
+		if (table[middle + 1].multiplier < dividend) {
+			diff_high = dividend - table[middle + 1].multiplier;
 		} else {
-			diff_high = p_table[middle + 1].multiplier - dividend;
+			diff_high = table[middle + 1].multiplier - dividend;
 		}
 		pr_debug("multiplier[%u] = [%llu]\n", (middle),
-			p_table[middle].multiplier);
+			table[middle].multiplier);
 		pr_debug("multiplier[%u] = [%llu]\n", (middle + 1),
-			p_table[middle + 1].multiplier);
+			table[middle + 1].multiplier);
 	} else if ((middle > 0) && ((middle + 1) > index_limit)) {
-		if (p_table[middle - 1].multiplier < dividend) {
-			diff_low = dividend - p_table[middle - 1].multiplier;
+		if (table[middle - 1].multiplier < dividend) {
+			diff_low = dividend - table[middle - 1].multiplier;
 		} else {
-			diff_low = p_table[middle - 1].multiplier - dividend;
+			diff_low = table[middle - 1].multiplier - dividend;
 		}
-		if (p_table[middle].multiplier < dividend) {
-			diff = dividend - p_table[middle].multiplier;
+		if (table[middle].multiplier < dividend) {
+			diff = dividend - table[middle].multiplier;
 		} else {
-			diff = p_table[middle].multiplier - dividend;
+			diff = table[middle].multiplier - dividend;
 		}
 		pr_debug("multiplier[%u] = [%llu]\n", (middle - 1),
-			p_table[middle - 1].multiplier);
+			table[middle - 1].multiplier);
 		pr_debug("multiplier[%u] = [%llu]\n", (middle),
-			p_table[middle].multiplier);
+			table[middle].multiplier);
 	}
 	pr_debug("diff_low = [%llu]\n", diff_low);
 	pr_debug("diff = [%llu]\n", diff);
@@ -238,18 +238,18 @@ EXPORT_SYMBOL(ambarella_rct_clk_get_rate);
 
 int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 {
-	const struct pll_table_s *pll_table;
-	u32 pre_scaler, post_scaler, middle, table_size;
+	u32 pre_scaler, post_scaler, middle;
 	u32 intp, sdiv, sout, post, ctrl2, ctrl3;
 	u64 dividend, divider, diff;
 	union ctrl_reg_u ctrl_reg;
 	union frac_reg_u frac_reg;
 
-	if (!rate || c->ctrl_reg == -1 || c->ctrl2_reg == -1 || c->ctrl3_reg == -1)
+	if (!rate)
 		return -1;
 
-	if (c->post_reg != -1 && !c->max_divider)
-		return -1;
+	BUG_ON(c->ctrl_reg == -1 || c->ctrl2_reg == -1 || c->ctrl3_reg == -1);
+	BUG_ON(c->post_reg != -1 && !c->max_divider);
+	BUG_ON(!c->table || c->table_size == 0);
 
 	if (c->divider)
 		rate *= c->divider;
@@ -264,20 +264,12 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		pre_scaler = 1;
 	}
 
-	if (c->post_reg == -1) {
-		pll_table = ambarella_pll_int_table;
-		table_size = AMBARELLA_PLL_INT_TABLE_SIZE;
-	} else {
-		pll_table = ambarella_pll_frac_table;
-		table_size = AMBARELLA_PLL_FRAC_TABLE_SIZE;
-	}
-
 	middle = ambarella_rct_find_pll_table_index(rate,
-			pre_scaler, pll_table, table_size);
-	intp = pll_table[middle].intp;
-	sdiv = pll_table[middle].sdiv;
-	sout = pll_table[middle].sout;
-	post = pll_table[middle].post;
+			pre_scaler, c->table, c->table_size);
+	intp = c->table[middle].intp;
+	sdiv = c->table[middle].sdiv;
+	sout = c->table[middle].sout;
+	post = c->table[middle].post;
 
 	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 	ctrl_reg.s.intp = intp;
@@ -339,14 +331,8 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
 	}
 
-	if (ctrl_reg.s.frac_mode) {
-		ctrl2 = 0x3f770000;
-		ctrl3 = 0x00069300;
-	} else {
-		ctrl2 = 0x3f770000;
-		ctrl3 = 0x00068300;
-	}
-
+	ctrl2 = c->ctrl2_val ? c->ctrl2_val : 0x3f770000;
+	ctrl3 = c->ctrl3_val ? c->ctrl3_val : ctrl_reg.s.frac_mode ? 0x00069300 : 0x00068300;
 	amba_rct_writel(c->ctrl2_reg, ctrl2);
 	amba_rct_writel(c->ctrl3_reg, ctrl3);
 
@@ -436,8 +422,10 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 {
 	u32 parent_rate, divider, post_scaler;
 
-	if (c->post_reg == -1 || !c->max_divider || !rate)
+	if (!rate)
 		return -1;
+
+	BUG_ON(c->post_reg == -1 || !c->max_divider);
 
 	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate)
 		parent_rate = ambarella_clk_ref_freq;

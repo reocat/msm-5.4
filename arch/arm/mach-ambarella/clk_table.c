@@ -23,7 +23,7 @@
 #include <linux/module.h>
 #include <plat/clk.h>
 
-const struct pll_table_s ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE] =
+struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE] =
 {
 	{    1000000000000000,   13,    0,   13,    1},
 	{    1500000000000000,   13,    2,   27,    1},
@@ -122,7 +122,7 @@ const struct pll_table_s ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE] =
 EXPORT_SYMBOL(ambarella_pll_int_table);
 
 
-const struct pll_table_s ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE] =
+struct pll_table ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE] =
 {
 	{    16601562500000,	  0,	 0,	 3,	15 },
 	{    16732282936573,	  0,	 0,	 3,	15 },
@@ -717,7 +717,7 @@ const struct pll_table_s ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE]
 };
 EXPORT_SYMBOL(ambarella_pll_frac_table);
 
-const struct pll_table_s ambarella_pll_vout_table[AMBARELLA_PLL_VOUT_TABLE_SIZE] = {
+struct pll_table ambarella_pll_vout_table[AMBARELLA_PLL_VOUT_TABLE_SIZE] = {
 	{  1000000000000000,   9,  0,  0, 10},// 0.000000
 	{  1007407426834106,  46,  2, 13, 10},// 0.026262
 	{  1014925360679626,  65,  1, 12, 10},// 0.045250
