@@ -3,9 +3,9 @@ menu "Self-contained MTD device drivers"
 	depends on HAS_IOMEM
 
 config MTD_AMBARELLA_SPI_NOR
-	tristate "Support SPI Flash chips (FL01GS)"
+	tristate "Ambarella Support SPI Nor Flash chips"
 	help
-	  Support Ambarella SPI NOR controler and FL01gs
+	  Support Ambarella SPI NOR controler
 
 config MTD_PMC551
 	tristate "Ramix PMC551 PCI Mezzanine RAM card support"
