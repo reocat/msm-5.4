@@ -550,7 +550,9 @@ static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 	struct ambarella_spi *bus;
 	dma_cap_mask_t	mask;
 	int chan_id;
+#if (CHIP_REV == S2L)
 	u32 val;
+#endif
 
 	bus = spi_master_get_devdata(master);
 
