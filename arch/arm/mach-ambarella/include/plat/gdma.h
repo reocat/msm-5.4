@@ -39,6 +39,20 @@
 #define GDMA_SUPPORT_ALPHA_BLEND	1
 #endif
 
+struct gdma_param {
+	u32 dest_addr;
+	u32 dest_virt_addr;
+	u32 src_addr;
+	u32 src_virt_addr;
+	u8 dest_non_cached;
+	u8 src_non_cached;
+	u8 reserved[2];
+	u16 src_pitch;
+	u16 dest_pitch;
+	u16 width;
+	u16 height;
+};
+
 /****************************************************/
 /* Controller registers definitions                 */
 /****************************************************/

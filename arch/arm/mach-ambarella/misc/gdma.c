@@ -49,19 +49,6 @@
 static struct completion	transfer_completion;
 static struct mutex		transfer_mutex;
 
-struct gdma_param {
-	u32 dest_addr;
-	u32 dest_virt_addr;
-	u32 src_addr;
-	u32 src_virt_addr;
-	u8 dest_non_cached;
-	u8 src_non_cached;
-	u8 reserved[2];
-	u16 src_pitch;
-	u16 dest_pitch;
-	u16 width;
-	u16 height;
-};
 
 /* handle 8MB at one time */
 static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
