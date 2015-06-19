@@ -122,8 +122,8 @@ struct mtd_info *mtd_probe_dev(void)
 		return NULL;
 	}else{
 
-		/* Makesure the swp partition has 32M at least */
-		if(info->size < 0x2000000)
+		/* Makesure the swp partition has 64M at least */
+		if(info->size < 0x4000000)
 			return NULL;
 
 		printk("MTD name: %s\n", 		info->name);
