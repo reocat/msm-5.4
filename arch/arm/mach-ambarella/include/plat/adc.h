@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_ADC_H__
 #define __PLAT_AMBARELLA_ADC_H__
 
+#include <linux/workqueue.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == A7L)
 #define ADC_NUM_CHANNELS		8
