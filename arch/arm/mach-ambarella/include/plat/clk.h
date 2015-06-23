@@ -168,7 +168,7 @@ struct clk {
 };
 
 struct pll_table {
-	u64	multiplier;
+	u64	multiplier; /* pll_out / (ref_clk / pre_scaler) */
 
 	u32	intp;
 	u32	sdiv;

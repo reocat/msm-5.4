@@ -250,10 +250,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	BUG_ON(c->ctrl_reg == -1 || c->ctrl2_reg == -1 || c->ctrl3_reg == -1);
 	BUG_ON(c->post_reg != -1 && !c->max_divider);
 	BUG_ON(!c->table || c->table_size == 0);
-
+#if 0
 	if (c->divider)
 		rate *= c->divider;
-
+#endif
 	if (c->pres_reg != -1) {
 		if (c->pres_val) {
 			pre_scaler = c->pres_val;
@@ -310,6 +310,8 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			diff = c->rate - rate;
 
 		dividend = diff * pre_scaler * (sout + 1) * post;
+		if (c->divider)
+			dividend *= c->divider;
 		dividend = dividend << 32;
 		divider = (u64)ambarella_clk_ref_freq * (sdiv + 1);
 		AMBCLK_DO_DIV_ROUND(dividend, divider);
