@@ -279,6 +279,23 @@
 				amb,pinmux-ids = <0x1027>; /* just WP is shared with GPIO */
 			};
 
+			sdmmc0_pins: sdmmc0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1041 0x1042 0x1043 0x1044>;
+			};
+
+			sdmmc1_pins_1bit: sdmmc1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1045 0x1046 0x1047
+						  0x104b 0x104c>;
+			};
+
+			sdmmc1_pins_4bit: sdmmc1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x1045 0x1046 0x1047 0x1048
+						  0x1049 0x104a 0x104b 0x104c>;
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1000 0x1001>;
@@ -452,6 +469,8 @@
 				global-id = <0>;
 				max-frequency = <50000000>;
 				bus-width = <8>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc0_pins>;
 				amb,caps-adma;
 				amb,caps-ddr;
 				cap-sdio-irq;
@@ -476,7 +495,9 @@
 				reg = <0>;
 				global-id = <1>;
 				max-frequency = <50000000>;
-				bus-width = <8>;
+				bus-width = <4>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc0_pins_4bit>;
 				amb,caps-adma;
 				amb,caps-ddr;
 				cap-sdio-irq;
