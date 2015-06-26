@@ -237,6 +237,60 @@
 						  0x2083 0x2084 0x2085>;
 			};
 
+			sdmmc0_pins_1bit: sdmmc0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2076 0x2077 0x2078 0x2079
+						  0x2086 0x209a>;
+			};
+
+			sdmmc0_pins_4bit: sdmmc0@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x2076 0x2077 0x2078 0x2079
+						  0x2086 0x2087 0x2088 0x2089
+						  0x209a>;
+			};
+
+			sdmmc0_pins_8bit: sdmmc0@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x2076 0x2077 0x2078 0x2079
+						  0x2086 0x2087 0x2088 0x2089
+						  0x208a 0x208b 0x208c 0x208d
+						  0x209a>;
+			};
+
+			sdmmc1_pins_1bit: sdmmc1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x5000 0x5001 0x5002 0x5003
+						  0x5004>;
+			};
+
+			sdmmc1_pins_4bit: sdmmc1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x5000 0x5001 0x5002 0x5003
+						  0x5004 0x5005 0x5006 0x5007>;
+			};
+
+			sdmmc2_pins_1bit: sdmmc2@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x208e 0x208f 0x2090 0x2094
+						  0x2095 0x209b>;
+			};
+
+			sdmmc2_pins_4bit: sdmmc2@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x208e 0x208f 0x2090 0x2091
+						  0x2092 0x2093 0x2094 0x2095
+						  0x209b>;
+			};
+
+			sdmmc2_pins_8bit: sdmmc2@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x208e 0x208f 0x2090 0x2091
+						  0x2092 0x2093 0x2094 0x2095
+						  0x2096 0x2097 0x2098 0x2099
+						  0x209b>;
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1014 0x1015>;
@@ -432,6 +486,8 @@
 				global-id = <0>;
 				max-frequency = <48000000>;
 				bus-width = <8>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc0_pins_8bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
@@ -453,7 +509,9 @@
 				reg = <0>;
 				global-id = <1>;
 				max-frequency = <48000000>;
-				bus-width = <8>;
+				bus-width = <4>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc1_pins_4bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
@@ -476,6 +534,8 @@
 				global-id = <2>;
 				max-frequency = <12000000>;
 				bus-width = <8>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc2_pins_8bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};

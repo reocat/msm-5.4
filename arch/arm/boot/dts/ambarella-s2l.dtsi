@@ -248,6 +248,56 @@
 						  0x2046 0x2047 0x2048>;
 			};
 
+			sdmmc0_pins_1bit: sdmmc0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
+						  0x2049>;
+			};
+
+			sdmmc0_pins_4bit: sdmmc0@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
+						  0x2049 0x204a 0x204b 0x204c>;
+			};
+
+			sdmmc0_pins_8bit: sdmmc0@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
+						  0x2049 0x204a 0x204b 0x204c
+						  0x204d 0x204e 0x204f 0x2050>;
+			};
+
+			sdmmc1_pins_1bit: sdmmc1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2051 0x2052 0x2053 0x2057
+						  0x2058>;
+			};
+
+			sdmmc1_pins_4bit: sdmmc1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x2051 0x2052 0x2053 0x2054
+						  0x2055 0x2056 0x2057 0x2058>;
+			};
+
+			sdmmc2_pins_1bit: sdmmc2@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x5007 0x5008 0x5009 0x500a
+						  0x5012>;
+			};
+
+			sdmmc2_pins_4bit: sdmmc2@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x5007 0x5008 0x5009 0x500a
+						  0x500b 0x500c 0x500d 0x5012>;
+			};
+
+			sdmmc2_pins_8bit: sdmmc2@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5007 0x5008 0x5009 0x500a
+						  0x500b 0x500c 0x500d 0x500e
+						  0x500f 0x5010 0x5011 0x5012>;
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x101b 0x101c>;
@@ -460,6 +510,8 @@
 				global-id = <0>;
 				max-frequency = <50000000>;
 				bus-width = <8>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc0_pins_8bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
@@ -481,7 +533,9 @@
 				reg = <0>;
 				global-id = <1>;
 				max-frequency = <50000000>;
-				bus-width = <8>;
+				bus-width = <4>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc1_pins_4bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
@@ -504,6 +558,8 @@
 				global-id = <2>;
 				max-frequency = <50000000>;
 				bus-width = <8>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&sdmmc2_pins_8bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};

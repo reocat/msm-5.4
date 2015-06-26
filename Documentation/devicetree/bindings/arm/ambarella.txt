@@ -537,9 +537,8 @@ should contain the following properties.
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
 - amb,force-gpio: force the SD/MMC pins to switch to GPIO mode when in idle,
   should be specified only for A5S SDIO slot.
-- pinctrl-names: should be specified only when amb,force-gpio is true, and
-  should contain only two values - "work", "idle".
-- pinctrl-0/1: should be specified only when amb,force-gpio is true.
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this controller.
 - properties provided by Kernel, please see Reference above.
 
 iv) Example
@@ -559,6 +558,8 @@ iv) Example
 			reg = <0>;
 			max-frequency = <48000000>;
 			bus-width = <8>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&sdmmc1_pins_8bit>;
 			amb,caps-adma;
 			cap-sdio-irq;
 		};
@@ -1248,16 +1249,16 @@ ii) Example
 		amb,codec-name = "ak4642";
 		amb,stream-name = "ak4642 PCM";
 		amb,codec-dai-name = "ak4642-hifi";
-		amb,audio-routing = "LIN1", "Mic internal",
-				    "RIN1", "Mic internal",
-				    "LIN2", "Line In",
-				    "RIN2", "Line In",
-				    "Line Out", "LOUT",
-				    "Line Out", "ROUT",
-				    "HP Jack", "HPL",
-		 		    "HP Jack", "HPR",
-				    "Speaker", "SPP",
-				    "Speaker", "SPN";
+		amb,audio-routing = "LIN1",	"Mic internal",
+				    "RIN1",	"Mic internal",
+				    "LIN2",	"Line In",
+				    "RIN2",	"Line In",
+				    "Line Out",	"LOUT",
+				    "Line Out",	"ROUT",
+				    "HP Jack",	"HPL",
+				    "HP Jack",	"HPR",
+				    "Speaker",	"SPP",
+				    "Speaker",	"SPN";
 	};
 
 
