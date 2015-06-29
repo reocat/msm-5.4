@@ -277,7 +277,7 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	intp = c->table[middle].intp;
 	sdiv = c->table[middle].sdiv;
 	sout = c->table[middle].sout;
-	post = c->table[middle].post;
+	post = c->post_val ? c->post_val : c->table[middle].post;
 
 	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 	ctrl_reg.s.intp = intp;
