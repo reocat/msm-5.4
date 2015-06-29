@@ -126,6 +126,16 @@
 #define CG_SSI3_REG			RCT_REG(CG_SSI3_OFFSET)
 #define CLK_REF_SSI3_REG		RCT_REG(CLK_REF_SSI3_OFFSET)
 
+#define UART_CLK_SRC_CLK_REF		0x00
+#define UART_CLK_SRC_CORE		0x01
+#define UART_CLK_SRC_IDSP		0x03
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define UART_CLK_SRC_SEL_OFFSET		0x320
+#else
+#define UART_CLK_SRC_SEL_OFFSET		0x1C8
+#endif
+#define UART_CLK_SRC_SEL_REG		RCT_REG(UART_CLK_SRC_SEL_OFFSET)
+
 /* ==========================================================================*/
 #define PLL_CORE_CTRL_OFFSET		0x00
 #define PLL_CORE_FRAC_OFFSET		0x04

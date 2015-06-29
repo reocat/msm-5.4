@@ -251,7 +251,11 @@ static struct clk gclk_idsp = {
 };
 
 static struct clk gclk_uart = {
+#if (CHIP_REV == S2E)
+	.parent		= &gclk_idsp,
+#else
 	.parent		= NULL,
+#endif
 	.name		= "gclk_uart",
 	.rate		= 0,
 	.frac_mode	= 0,
@@ -531,6 +535,9 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&gclk_apb);
 	ambarella_clk_add(&gclk_idsp);
 
+#if (CHIP_REV == S2E)
+	amba_rct_writel(UART_CLK_SRC_SEL_REG, UART_CLK_SRC_IDSP);
+#endif
 	ambarella_clk_add(&gclk_uart);
 	ambarella_clk_add(&gclk_audio);
 #if (SD_INSTANCES >= 3)
