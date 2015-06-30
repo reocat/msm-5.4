@@ -176,8 +176,8 @@ ssize_t ambsync_proc_read(struct file *file, char __user *buf,
 	start = pinfo->page;
 	len = 0;
 	while (1) {
-		wait_event_interruptible(hinfo->sync_proc_head,
-			(atomic_read(&hinfo->sync_proc_flag) & pinfo->mask));
+		wait_event_interruptible_timeout(hinfo->sync_proc_head,
+			(atomic_read(&hinfo->sync_proc_flag) & pinfo->mask), hinfo->tmo);
 		atomic_clear_mask(pinfo->mask,
 			(unsigned long *)&hinfo->sync_proc_flag);
 
