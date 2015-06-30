@@ -43,6 +43,7 @@ struct ambsync_proc_pinfo {
 
 struct ambsync_proc_hinfo {
 	u32					maxid;
+	u32					tmo;
 	wait_queue_head_t			sync_proc_head;
 	atomic_t				sync_proc_flag;
 	struct idr				sync_proc_idr;
