@@ -674,7 +674,7 @@ static int wm8974_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, WM8974_ADD, 0x0000);
 	snd_soc_write(codec, WM8974_INPUT, 0x0103);
 	snd_soc_write(codec, WM8974_INPPGA, 0x003f);	/*set PGA gain max 35.25db*/
-	snd_soc_write(codec, WM8974_ADCBOOST, 0x0170);	/*set PGB2BOOST, MICP2BOOSTVOL gain*/
+	snd_soc_write(codec, WM8974_ADCBOOST, 0x0100);	/*set PGB2BOOST, MICP2BOOSTVOL gain*/
 	snd_soc_write(codec, WM8974_ADC, 0x0188);	/*Enable high pass filter, select audio mode*/
 	snd_soc_write(codec, WM8974_ADCVOL, 0x00ff);	/*Set ADC vol, 0db*/
 
