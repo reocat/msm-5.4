@@ -183,7 +183,6 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 		amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
 	}
 
-	spin_lock_irqsave(&port->lock, flags);
 	amba_writel(port->membase + UART_IE_OFFSET,
 		DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME);
 	amba_writel(port->membase + UART_FC_OFFSET,
@@ -206,7 +205,6 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 		amba_writel(port->membase + UART_DMAE_OFFSET,
 			(amb_port->txdma_used << 1) | amb_port->rxdma_used);
 	}
-	spin_unlock_irqrestore(&port->lock, flags);
 }
 
 static inline void serial_ambarella_receive_chars(struct uart_port *port,
