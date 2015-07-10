@@ -170,7 +170,6 @@ static inline int tx_fifo_is_full(struct uart_port *port)
 static void serial_ambarella_hw_setup(struct uart_port *port)
 {
 	struct ambarella_uart_port *amb_port;
-	unsigned long flags;
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
