@@ -49,7 +49,6 @@
 #include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
-#define AMB_SOFT_BCH_EXTRA_SIZE		6
 
 
 struct ambarella_nand_info {
@@ -82,6 +81,7 @@ struct ambarella_nand_info {
 	u8				*bch_data;
 	u8				read_ecc_rev[13];
 	u8				calc_ecc_rev[13];
+	u8				soft_bch_extra_size;
 
 	dma_addr_t			dmaaddr;
 	u8				*dmabuf;
@@ -1382,7 +1382,7 @@ static int amb_nand_calculate_ecc(struct mtd_info *mtd,
 
 		memset(code, 0, nand_info->chip.ecc.bytes);
 
-		amb_eccsize = nand_info->chip.ecc.size + AMB_SOFT_BCH_EXTRA_SIZE;
+		amb_eccsize = nand_info->chip.ecc.size + nand_info->soft_bch_extra_size;
 		encode_bch(nand_info->bch, nand_info->bch_data, amb_eccsize, code);
 
 		/* make it be compatible with hw bch */
@@ -1420,7 +1420,7 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *buf,
 			nand_info->calc_ecc_rev[i] = bitrev8(calc_ecc[i]);
 		}
 
-		amb_eccsize = chip->ecc.size + AMB_SOFT_BCH_EXTRA_SIZE;
+		amb_eccsize = chip->ecc.size + nand_info->soft_bch_extra_size;
 		count = decode_bch(nand_info->bch, NULL,
 					amb_eccsize,
 					nand_info->read_ecc_rev,
@@ -1490,7 +1490,7 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 	struct nand_chip *chip = &nand_info->chip;
 	u32 amb_eccsize, eccbytes, m, t;
 
-	amb_eccsize = chip->ecc.size + AMB_SOFT_BCH_EXTRA_SIZE;
+	amb_eccsize = chip->ecc.size + nand_info->soft_bch_extra_size;
 	eccbytes = chip->ecc.bytes;
 
 	m = fls(1 + 8 * amb_eccsize);
@@ -1514,7 +1514,7 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 	 * words, we don't support to write anything except for ECC code
 	 * into spare are. */
 	memset(nand_info->bch_data + chip->ecc.size,
-				0xff, AMB_SOFT_BCH_EXTRA_SIZE);
+				0xff, nand_info->soft_bch_extra_size);
 
 	return 0;
 }
@@ -1658,8 +1658,6 @@ static int ambarella_nand_init_chipecc(struct ambarella_nand_info *nand_info)
 		&& nand_info->ecc_bits != 6
 		&& nand_info->ecc_bits != 8);
 	BUG_ON(mtd->writesize != 2048 && mtd->writesize != 512);
-	/* We support 1-bit and 6-bit ecc,recently. */
-	BUG_ON(nand_info->soft_ecc && nand_info->ecc_bits > 6);
 	BUG_ON(nand_info->ecc_bits == 8 && mtd->oobsize < 128);
 
 	chip->ecc.mode = NAND_ECC_HW;
@@ -1670,11 +1668,13 @@ static int ambarella_nand_init_chipecc(struct ambarella_nand_info *nand_info)
 		chip->ecc.size = 512;
 		chip->ecc.bytes = 13;
 		chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc8;
+		nand_info->soft_bch_extra_size = 19;
 		break;
 	case 6:
 		chip->ecc.size = 512;
 		chip->ecc.bytes = 10;
 		chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
+		nand_info->soft_bch_extra_size = 6;
 		break;
 	case 1:
 		chip->ecc.size = 512;
