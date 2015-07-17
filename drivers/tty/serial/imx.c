@@ -432,13 +432,16 @@ static void imx_stop_rx(struct uart_port *port)
 
 	ucr1 = readl(sport->port.membase + UCR1);
 	ucr2 = readl(sport->port.membase + UCR2);
+	ucr4 = readl(sport->port.membase + UCR4);
 
 	if (sport->dma_is_enabled) {
 		ucr1 &= ~(UCR1_RXDMAEN | UCR1_ATDMAEN);
 	} else {
 		ucr1 &= ~UCR1_RRDYEN;
+		ucr4 &= ~UCR4_OREN;
 	}
 	writel(ucr1, port->membase + UCR1);
+	writel(ucr4, port->membase + UCR4);
 
 	ucr2 &= ~UCR2_RXEN;
 	writel(ucr2, port->membase + UCR2);
