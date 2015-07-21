@@ -410,7 +410,8 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 				ETH_DMA_OPMODE_TTC_256 |
 				ETH_DMA_OPMODE_RTC_64 |
-				ETH_DMA_OPMODE_FUF);
+				ETH_DMA_OPMODE_FUF |
+				ETH_DMA_OPMODE_TSF);
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
 		(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE));
 
@@ -429,11 +430,6 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 				ETH_DMA_OPMODE_RSF);
 		amba_setbitsl(lp->regbase + ETH_MAC_CFG_OFFSET,
 				ETH_MAC_CFG_IPC);
-	}
-
-	if (lp->ipc_tx){
-		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-				ETH_DMA_OPMODE_TSF);
 	}
 
 	if (lp->dump_rx_all) {
