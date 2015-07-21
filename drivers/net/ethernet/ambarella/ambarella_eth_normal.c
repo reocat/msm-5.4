@@ -427,11 +427,6 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 				ETH_MAC_CFG_IPC);
 	}
 
-	if (lp->ipc_tx){
-		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-				ETH_DMA_OPMODE_TSF);
-	}
-
 	if (lp->dump_rx_all) {
 		amba_setbitsl(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET,
 				ETH_MAC_FRAME_FILTER_RA);
