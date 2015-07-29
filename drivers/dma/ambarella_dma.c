@@ -641,127 +641,146 @@ static void ambdma_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 }
 
-static int ambdma_device_control(struct dma_chan *chan,
-		enum dma_ctrl_cmd cmd, 	unsigned long arg)
+
+static int ambdma_pause(struct dma_chan *chan)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
-	struct dma_slave_config *config = (void *)arg;
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&amb_chan->lock, flags);
+	ret = ambdma_pause_channel(amb_chan);
+	spin_unlock_irqrestore(&amb_chan->lock, flags);
+
+	return ret;
+}
+
+static int ambdma_resume(struct dma_chan *chan)
+{
+
+	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&amb_chan->lock, flags);
+	ret = ambdma_resume_channel(amb_chan);
+	spin_unlock_irqrestore(&amb_chan->lock, flags);
+
+	return ret;
+}
+static int ambdma_config(struct dma_chan *chan,
+			 struct dma_slave_config *dmaengine_cfg)
+{
+	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
+	struct dma_slave_config *config = dmaengine_cfg;
 	enum dma_slave_buswidth width = 0;
-	int ret = 0, maxburst;
+	int maxburst;
+
+	/* We only support mem to dev or dev to mem transfers */
+	switch (config->direction) {
+	case DMA_MEM_TO_DEV:
+		width = config->dst_addr_width;
+		maxburst = config->dst_maxburst;
+		amb_chan->rt_addr = config->dst_addr;
+		amb_chan->rt_attr = DMA_DESC_RM | DMA_DESC_NI |
+			DMA_DESC_IE | DMA_DESC_ST;
+		break;
+	case DMA_DEV_TO_MEM:
+		width = config->src_addr_width;
+		maxburst = config->src_maxburst;
+		amb_chan->rt_addr = config->src_addr;
+		amb_chan->rt_attr = DMA_DESC_WM | DMA_DESC_NI |
+			DMA_DESC_IE | DMA_DESC_ST;
+		break;
+	default:
+		return -ENXIO;
+	}
+
+	/* bus width for descriptor mode control_info [ts fileds] */
+	switch (width) {
+	case DMA_SLAVE_BUSWIDTH_8_BYTES:
+		amb_chan->rt_attr |= DMA_DESC_TS_8B;
+		break;
+	case DMA_SLAVE_BUSWIDTH_4_BYTES:
+		amb_chan->rt_attr |= DMA_DESC_TS_4B;
+		break;
+	case DMA_SLAVE_BUSWIDTH_2_BYTES:
+		amb_chan->rt_attr |= DMA_DESC_TS_2B;
+		break;
+	case DMA_SLAVE_BUSWIDTH_1_BYTE:
+		amb_chan->rt_attr |= DMA_DESC_TS_1B;
+		break;
+	default:
+		break;
+	}
+
+	/* burst for descriptor mode control_info [blk fileds] */
+	switch (maxburst) {
+	case 1024:
+		amb_chan->rt_attr |= DMA_DESC_BLK_1024B;
+		break;
+	case 512:
+		amb_chan->rt_attr |= DMA_DESC_BLK_512B;
+		break;
+	case 256:
+		amb_chan->rt_attr |= DMA_DESC_BLK_256B;
+		break;
+	case 128:
+		amb_chan->rt_attr |= DMA_DESC_BLK_128B;
+		break;
+	case 64:
+		amb_chan->rt_attr |= DMA_DESC_BLK_64B;
+		break;
+	case 32:
+		amb_chan->rt_attr |= DMA_DESC_BLK_32B;
+		break;
+	case 16:
+		amb_chan->rt_attr |= DMA_DESC_BLK_16B;
+		break;
+	case 8:
+		amb_chan->rt_attr |= DMA_DESC_BLK_8B;
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+
+
+}
+
+static int ambdma_terminate_all(struct dma_chan *chan)
+{
+
+	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
 	struct ambdma_desc *amb_desc, *_desc;
 	LIST_HEAD(list);
 	unsigned long flags;
 
-	switch (cmd) {
-	case DMA_TERMINATE_ALL:
-		spin_lock_irqsave(&amb_chan->lock, flags);
-		ambdma_stop_channel(amb_chan);
+	spin_lock_irqsave(&amb_chan->lock, flags);
+	ambdma_stop_channel(amb_chan);
 
-		/* active_list entries will end up before queued entries */
-		list_splice_init(&amb_chan->queue, &list);
-		list_splice_init(&amb_chan->active_list, &list);
+	/* active_list entries will end up before queued entries */
+	list_splice_init(&amb_chan->queue, &list);
+	list_splice_init(&amb_chan->active_list, &list);
 
-		/* Flush all pending and queued descriptors */
-		list_for_each_entry_safe(amb_desc, _desc, &list, desc_node) {
-			/* move children to free_list */
-			list_splice_init(&amb_desc->tx_list, &amb_chan->free_list);
-			/* move myself to free_list */
-			list_move_tail(&amb_desc->desc_node, &amb_chan->free_list);
-		}
-		spin_unlock_irqrestore(&amb_chan->lock, flags);
-
-		break;
-	case DMA_SLAVE_CONFIG:
-		/* We only support mem to dev or dev to mem transfers */
-		switch (config->direction) {
-		case DMA_MEM_TO_DEV:
-			width = config->dst_addr_width;
-			maxburst = config->dst_maxburst;
-			amb_chan->rt_addr = config->dst_addr;
-			amb_chan->rt_attr = DMA_DESC_RM | DMA_DESC_NI |
-					DMA_DESC_IE | DMA_DESC_ST;
-			break;
-		case DMA_DEV_TO_MEM:
-			width = config->src_addr_width;
-			maxburst = config->src_maxburst;
-			amb_chan->rt_addr = config->src_addr;
-			amb_chan->rt_attr = DMA_DESC_WM | DMA_DESC_NI |
-					DMA_DESC_IE | DMA_DESC_ST;
-			break;
-		default:
-			return -ENXIO;
-		}
-
-		/* bus width for descriptor mode control_info [ts fileds] */
-		switch (width) {
-		case DMA_SLAVE_BUSWIDTH_8_BYTES:
-			amb_chan->rt_attr |= DMA_DESC_TS_8B;
-			break;
-		case DMA_SLAVE_BUSWIDTH_4_BYTES:
-			amb_chan->rt_attr |= DMA_DESC_TS_4B;
-			break;
-		case DMA_SLAVE_BUSWIDTH_2_BYTES:
-			amb_chan->rt_attr |= DMA_DESC_TS_2B;
-			break;
-		case DMA_SLAVE_BUSWIDTH_1_BYTE:
-			amb_chan->rt_attr |= DMA_DESC_TS_1B;
-			break;
-		default:
-			break;
-		}
-
-		/* burst for descriptor mode control_info [blk fileds] */
-		switch (maxburst) {
-		case 1024:
-			amb_chan->rt_attr |= DMA_DESC_BLK_1024B;
-			break;
-		case 512:
-			amb_chan->rt_attr |= DMA_DESC_BLK_512B;
-			break;
-		case 256:
-			amb_chan->rt_attr |= DMA_DESC_BLK_256B;
-			break;
-		case 128:
-			amb_chan->rt_attr |= DMA_DESC_BLK_128B;
-			break;
-		case 64:
-			amb_chan->rt_attr |= DMA_DESC_BLK_64B;
-			break;
-		case 32:
-			amb_chan->rt_attr |= DMA_DESC_BLK_32B;
-			break;
-		case 16:
-			amb_chan->rt_attr |= DMA_DESC_BLK_16B;
-			break;
-		case 8:
-			amb_chan->rt_attr |= DMA_DESC_BLK_8B;
-			break;
-		default:
-			break;
-		}
-
-		break;
-	case DMA_PAUSE:
-		spin_lock_irqsave(&amb_chan->lock, flags);
-		ret = ambdma_pause_channel(amb_chan);
-		spin_unlock_irqrestore(&amb_chan->lock, flags);
-		break;
-	case DMA_RESUME:
-		spin_lock_irqsave(&amb_chan->lock, flags);
-		ret = ambdma_resume_channel(amb_chan);
-		spin_unlock_irqrestore(&amb_chan->lock, flags);
-		break;
-	default:
-		ret = -ENXIO;
+	/* Flush all pending and queued descriptors */
+	list_for_each_entry_safe(amb_desc, _desc, &list, desc_node) {
+		/* move children to free_list */
+		list_splice_init(&amb_desc->tx_list, &amb_chan->free_list);
+		/* move myself to free_list */
+		list_move_tail(&amb_desc->desc_node, &amb_chan->free_list);
 	}
+	spin_unlock_irqrestore(&amb_chan->lock, flags);
 
-	return ret;
+	return 0;
+
 }
 
 static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		struct dma_chan *chan, dma_addr_t buf_addr, size_t buf_len,
 		size_t period_len, enum dma_transfer_direction direction,
-		unsigned long flags, void *context)
+		unsigned long flags)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
@@ -1056,7 +1075,10 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_slave.device_issue_pending = ambdma_issue_pending;
 	amb_dma->dma_slave.device_prep_dma_cyclic = ambdma_prep_dma_cyclic;
 	amb_dma->dma_slave.device_prep_slave_sg = ambdma_prep_slave_sg;
-	amb_dma->dma_slave.device_control = ambdma_device_control;
+	amb_dma->dma_slave.device_pause = ambdma_pause;
+	amb_dma->dma_slave.device_resume = ambdma_resume;
+	amb_dma->dma_slave.device_config = ambdma_config;
+	amb_dma->dma_slave.device_terminate_all = ambdma_terminate_all;
 	amb_dma->dma_slave.dev = &pdev->dev;
 
 	dma_cap_zero(amb_dma->dma_memcpy.cap_mask);

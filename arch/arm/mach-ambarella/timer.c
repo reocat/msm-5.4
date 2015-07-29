@@ -115,7 +115,7 @@ static void ambarella_timer_resume(u32 is_ce)
 	if (is_ce)
 		clockevents_update_freq(clkevt, clk_rate);
 	else
-		__clocksource_updatefreq_hz(clksrc, clk_rate);
+		__clocksource_update_freq_hz(clksrc, clk_rate);
 
 resume_exit:
 	amba_setbitsl(ctrl_reg, amb_timer_pm->ctrl_reg << ctrl_offset);

@@ -117,7 +117,7 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 	phy = devm_usb_get_phy_by_phandle(&pdev->dev, "amb,usbphy", 0);
 	if (IS_ERR(phy)) {
 		ret = PTR_ERR(phy);
-		dev_err(&pdev->dev, "Can't get USB PHY %d\n", ret);
+		dev_err(&pdev->dev, "Can't get USB PHY .. %d\n", ret);
 		goto amb_ehci_err;
 	}
 

@@ -2153,7 +2153,7 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	struct ambarella_sd_controller_info *pinfo;
-	int retval = 0, i;
+	int retval = 0;
 
 	pinfo = platform_get_drvdata(pdev);
 #if 0

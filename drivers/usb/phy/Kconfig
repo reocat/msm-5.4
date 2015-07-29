@@ -12,6 +12,7 @@ config USB_PHY
 config USB_AMBARELLA_PHY
 	bool "Ambarella USB PHY support"
 	depends on ARCH_AMBARELLA
+	select USB_PHY
 	help
 	  Enable this to support the Ambarella USB PHY.
 	  Ambarella USB Phy is used by either UDC or EHCI/OHCI.
@@ -126,7 +127,7 @@ config TAHVO_USB
 
 config TAHVO_USB_HOST_BY_DEFAULT
 	depends on TAHVO_USB
-	boolean "Device in USB host mode by default"
+	bool "Device in USB host mode by default"
 	help
 	  Say Y here, if you want the device to enter USB host mode
 	  by default on bootup.
@@ -146,7 +147,7 @@ config USB_ISP1301
 
 config USB_MSM_OTG
 	tristate "Qualcomm on-chip USB OTG controller support"
-	depends on (USB || USB_GADGET) && (ARCH_MSM || ARCH_QCOM || COMPILE_TEST)
+	depends on (USB || USB_GADGET) && (ARCH_QCOM || COMPILE_TEST)
 	depends on RESET_CONTROLLER
 	select USB_PHY
 	help
@@ -209,13 +210,13 @@ config USB_RCAR_GEN2_PHY
 config USB_ULPI
 	bool "Generic ULPI Transceiver Driver"
 	depends on ARM || ARM64
+	select USB_ULPI_VIEWPORT
 	help
 	  Enable this to support ULPI connected USB OTG transceivers which
 	  are likely found on embedded boards.
 
 config USB_ULPI_VIEWPORT
 	bool
-	depends on USB_ULPI
 	help
 	  Provides read/write operations to the ULPI phy register set for
 	  controllers with a viewport register (e.g. Chipidea/ARC controllers).

@@ -315,6 +315,7 @@ static int amb_pinmux_enable(struct pinctrl_dev *pctldev,
 	return 0;
 }
 
+#if 0
 /* disable a specified pinmux by writing to registers */
 static void amb_pinmux_disable(struct pinctrl_dev *pctldev,
 			unsigned selector, unsigned group)
@@ -329,6 +330,7 @@ static void amb_pinmux_disable(struct pinctrl_dev *pctldev,
 	dev_dbg(soc->dev,
 		"disable group %s, %u pins\n", grp->name, grp->num_pins);
 }
+#endif
 
 static int amb_pinmux_gpio_request_enable(struct pinctrl_dev *pctldev,
 			struct pinctrl_gpio_range *range, unsigned pin)
@@ -403,7 +405,9 @@ static const struct pinmux_ops amb_pinmux_ops = {
 	.get_function_name	= amb_pinmux_get_fname,
 	.get_function_groups	= amb_pinmux_get_groups,
 	.set_mux                = amb_pinmux_enable,
-	//.disable		= amb_pinmux_disable,
+#if 0
+	.disable		= amb_pinmux_disable,
+#endif
 	.gpio_request_enable	= amb_pinmux_gpio_request_enable,
 	.gpio_disable_free	= amb_pinmux_gpio_disable_free,
 	.gpio_set_direction	= amb_pinmux_gpio_set_direction,
@@ -411,7 +415,7 @@ static const struct pinmux_ops amb_pinmux_ops = {
 
 /* set the pin config settings for a specified pin */
 static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
-			unsigned long config)
+			unsigned long *config, unsigned num_configs)
 {
 	return 0;
 }
@@ -425,7 +429,7 @@ static int amb_pinconf_get(struct pinctrl_dev *pctldev,
 
 /* set the pin config settings for a specified pin group */
 static int amb_pinconf_group_set(struct pinctrl_dev *pctldev,
-			unsigned group, unsigned long config)
+			unsigned group, unsigned long *config, unsigned num_configs)
 {
 	struct amb_pinctrl_soc_data *soc;
 	const unsigned int *pins;
@@ -435,7 +439,7 @@ static int amb_pinconf_group_set(struct pinctrl_dev *pctldev,
 	pins = soc->groups[group].pins;
 
 	for (cnt = 0; cnt < soc->groups[group].num_pins; cnt++)
-		amb_pinconf_set(pctldev, pins[cnt], config);
+		amb_pinconf_set(pctldev, pins[cnt], config, num_configs);
 
 	return 0;
 }
