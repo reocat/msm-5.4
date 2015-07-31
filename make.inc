@@ -16,7 +16,7 @@
 ## GNU General Public License for more details.
 ##
 
-ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"3.19")
+ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"4.1")
 
 ARCH := arm
 export ARCH

@@ -198,7 +198,9 @@ static void ambdma_put_desc(struct ambdma_chan *amb_chan,
 static void ambdma_return_desc(struct ambdma_chan *amb_chan,
 		struct ambdma_desc *amb_desc)
 {
+#if 0
 	struct dma_async_tx_descriptor	*txd = &amb_desc->txd;
+#endif
 
 	/* move children to free_list */
 	list_splice_init(&amb_desc->tx_list, &amb_chan->free_list);
