@@ -25,6 +25,7 @@
 #include <linux/dmapool.h>
 #include <linux/delay.h>
 #include <linux/of.h>
+#include <linux/of_dma.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <mach/hardware.h>
@@ -984,11 +985,55 @@ dma_memcpy_err:
 	return NULL;
 }
 
+struct amba_dma_filter_param {
+	struct device_node *of_node;
+	unsigned int chan_id;
+	unsigned int dma_type;
+	//unsigned int force_stop;
+};
+
+static bool amba_dma_filter_fn(struct dma_chan *chan, void *fn_param)
+{
+	struct amba_dma_filter_param *param = fn_param;
+	//struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
+	//struct ambdma_device *amb_dma = amb_chan->amb_dma;
+
+	if (chan->chan_id != param->chan_id)
+		return false;
+
+	//amb_chan->chan.private = &param->force_stop;
+	return true;
+}
+
+static struct dma_chan *amb_dma_xlate(struct of_phandle_args *dma_spec,
+			       struct of_dma *ofdma)
+{
+	struct ambdma_device *amb_dma = ofdma->of_dma_data;
+	dma_cap_mask_t mask;
+	struct amba_dma_filter_param param;
+
+	if (dma_spec->args_count != 2)
+		return NULL;
+	if (dma_spec->args[1] == 1)
+		mask = amb_dma->dma_slave.cap_mask;
+	else
+		mask = amb_dma->dma_memcpy.cap_mask;
+
+	param.of_node = ofdma->of_node;
+	param.chan_id = dma_spec->args[0];
+
+	if (param.chan_id >= amb_dma->nr_channels)
+		return NULL;
+
+	return dma_request_channel(mask, amba_dma_filter_fn, &param);
+}
+
 static int ambarella_dma_probe(struct platform_device *pdev)
 {
 	struct ambdma_device *amb_dma;
 	struct ambdma_chan *amb_chan;
 	struct device_node *np = pdev->dev.of_node;
+	const char *prop_name = "dma-trans-type";
 	int val, i, ret = 0;
 
 	/* alloc the amba dma engine struct */
@@ -1041,6 +1086,22 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 	of_property_read_u32(np, "amb,copy-align", &amb_dma->copy_align);
 	amb_dma->support_prs = !!of_find_property(np, "amb,support-prs", NULL);
+	ret = of_property_read_u32(np, "dma-channels", &amb_dma->nr_channels);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to read dma-channels\n");
+		return ret;
+	}
+	ret = of_property_read_u32(np, "dma-requests", &amb_dma->dma_requests);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to read dma-requests\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32_array(np, prop_name, amb_dma->dma_channel_type, amb_dma->nr_channels);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to read dma-trans-type\n");
+		return ret;
+	}
 
 	/* Init dma_device struct */
 	dma_cap_zero(amb_dma->dma_slave.cap_mask);
@@ -1085,9 +1146,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 				(unsigned long)amb_chan);
 		dma_cookie_init(&amb_chan->chan);
 
-		if (i == I2S_TX_DMA_CHAN || i == I2S_RX_DMA_CHAN ||
-			i == UART_TX_DMA_CHAN || i == UART_RX_DMA_CHAN ||
-			i == NOR_SPI_TX_DMA_CHAN || i == NOR_SPI_RX_DMA_CHAN) {
+		if (amb_dma->dma_channel_type[i] != 0) {
 			amb_chan->chan.device = &amb_dma->dma_slave;
 			list_add_tail(&amb_chan->chan.device_node,
 					&amb_dma->dma_slave.channels);
@@ -1174,6 +1233,15 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, amb_dma);
 
+	if (np) {
+		ret = of_dma_controller_register(np, amb_dma_xlate, amb_dma);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"failed to register controller\n");
+			goto ambdma_dma_probe_exit6;
+		}
+	}
+
 	dev_info(&pdev->dev, "Ambarella DMA Engine \n");
 
 	return 0;
@@ -1215,6 +1283,9 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 		tasklet_disable(&amb_chan->tasklet);
 		tasklet_kill(&amb_chan->tasklet);
 	}
+
+	if (pdev->dev.of_node)
+		of_dma_controller_free(pdev->dev.of_node);
 
 	dma_async_device_unregister(&amb_dma->dma_memcpy);
 	dma_async_device_unregister(&amb_dma->dma_slave);

@@ -416,10 +416,14 @@
 			      <0xe001c000 0x1000>;
 		};
 
-		dma@e0005000 {
+		dma: dma@e0005000 {
 			compatible = "ambarella,dma";
 			reg = <0xe0005000 0x1000>;
 			interrupts = <15 0x4>;
+			#dma-cells = <2>;
+			dma-channels = <8>;
+			dma-requests = <12>;
+			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 			amb,copy-align = <0>;
 		};
 

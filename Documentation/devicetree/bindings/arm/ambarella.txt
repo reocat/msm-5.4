@@ -295,6 +295,14 @@ Required properties:
 - compatible: should be "ambarella,dma".
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the DMA controller.
+- #dma-cells: Must be at least 1. Used to provide DMA controller
+			specific information. See DMA client binding below for
+			more details.
+- dma-channels: 	Number of DMA channels supported by the controller.
+- dma-requests: 	Number of DMA requests signals supported by the
+			controller.
+- dma-trans-type:   specifies the dma channel use type.
+					0 for memcpy, 1 for slave.
 
 Optional properties:
 - amb,copy-align: specifies alignment requirement for previous chips.
@@ -306,6 +314,10 @@ ii) Example
 		compatible = "ambarella,dma";
 		reg = <0xe0005000 0x1000>;
 		interrupts = <15 0x4>;
+		#dma-cells = <2>;
+		dma-channels = <8>;
+		dma-requests = <12>;
+		dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 	};
 
 

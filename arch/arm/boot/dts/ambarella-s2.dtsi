@@ -370,10 +370,14 @@
 		reg = <0x60000000 0x01000000>;
 		ranges;
 
-		dma@60005000 {
+		dma: dma@60005000 {
 			compatible = "ambarella,dma";
 			reg = <0x60005000 0x1000>;
 			interrupts = <0 15 0x4>;
+			#dma-cells = <2>;
+			dma-channels = <5>;
+			dma-requests = <5>;
+			dma-trans-type = <0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 			amb,copy-align = <3>;
 		};
 
