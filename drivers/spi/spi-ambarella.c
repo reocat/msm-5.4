@@ -114,15 +114,6 @@ static struct spi_device *ambarella_spi_of_find_device(struct device_node *np)
 	return to_spi_device(dev);
 }
 
-static bool ambarella_spi_dma_filter(struct dma_chan *chan, void *fparam)
-{
-	if (ambarella_dma_channel_id(chan) == *(int *)fparam) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
 static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *spi)
 {
 	u32			virt;
@@ -548,8 +539,6 @@ static irqreturn_t ambarella_spi_isr(int irq, void *dev_data)
 static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 {
 	struct ambarella_spi *bus;
-	dma_cap_mask_t	mask;
-	int chan_id;
 #if (CHIP_REV == S2L)
 	u32 val;
 #endif
@@ -565,21 +554,15 @@ static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 	amba_writel(AHB_SCRATCHPAD_REG(0x0c), val);
 #endif
 
-	chan_id = 2 * master->bus_num;
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-	bus->txc = dma_request_channel(mask, ambarella_spi_dma_filter, &chan_id);
+	bus->txc = dma_request_slave_channel(&master->dev, "tx");
 	if (!bus->txc) {
-		dev_err(&master->dev, "can't request DMA channel %d\n", chan_id);
+		dev_err(&master->dev, "can't request DMA TX channel \n");
 		return -EPERM;
 	}
 
-	chan_id = 2 * master->bus_num + 1;
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-	bus->rxc = dma_request_channel(mask, ambarella_spi_dma_filter, &chan_id);
+	bus->rxc = dma_request_slave_channel(&master->dev, "rx");
 	if (!bus->rxc) {
-		dev_err(&master->dev, "can't request DMA channel %d\n", chan_id);
+		dev_err(&master->dev, "can't request DMA RX channel \n");
 		return -EPERM;
 	}
 
