@@ -566,8 +566,8 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <54000000>;
-			dmas = <&dma 0 1
-					&dma 1 1>;
+			dmas = <&dma 0 1>,
+				   <&dma 1 1>;
 			dma-names = "tx", "rx";
 		};
 
