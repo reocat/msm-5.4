@@ -31,6 +31,7 @@ struct amb_i2s_priv {
 	struct clk *mclk;
 	u32 default_mclk;
 	u32 clock_reg;
+	u32 bclk_reverse;
 	struct ambarella_i2s_interface amb_i2s_intf;
 
 	struct snd_dmaengine_dai_dma_data playback_dma_data;

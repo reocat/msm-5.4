@@ -59,8 +59,8 @@ static int ambarella_dummy_board_hw_params(struct snd_pcm_substream *substream,
 
 	switch (params_rate(params)) {
 	case 8000:
-		mclk = 4096000;
-		oversample = AudioCodec_512xfs;
+		mclk = 12288000;
+		oversample = AudioCodec_1536xfs;
 		break;
 	case 11025:
 		mclk = 5644800;
@@ -79,7 +79,7 @@ static int ambarella_dummy_board_hw_params(struct snd_pcm_substream *substream,
 		oversample = AudioCodec_256xfs;
 		break;
 	case 44100:
-		mclk = 11289600;
+		mclk = 12296000;
 		oversample = AudioCodec_256xfs;
 		break;
 	case 48000:
