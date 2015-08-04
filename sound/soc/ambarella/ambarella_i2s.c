@@ -163,6 +163,8 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	channels = params_channels(params);
 	/* Set channels */
 	switch (channels) {
+	case 1:
+		/*set mono mode for I2S*/
 	case 2:
 		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_2CHANNELS_ENB);
 		break;
@@ -173,7 +175,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_6CHANNELS_ENB);
 		break;
 	}
-
 	priv_data->amb_i2s_intf.ch = channels;
 
 	/* Set format */
@@ -245,6 +246,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	/* Disable output BCLK and LRCLK to disable external codec */
 	if (enable_ext_i2s == 0)
 		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
+
+	/*data change at rising edge*/
+	if(priv_data->bclk_reverse)
+		clock_reg &= ~(1<< 6);
 
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 	mutex_unlock(&clock_reg_mutex);
@@ -529,13 +534,13 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.suspend = ambarella_i2s_dai_suspend,
 	.resume = ambarella_i2s_dai_resume,
 	.playback = {
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.capture = {
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
@@ -584,6 +589,7 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	}
 
 	of_property_read_u32(np, "amb,default-mclk", &priv_data->default_mclk);
+	of_property_read_u32(np, "bclk_reverse", &priv_data->bclk_reverse);
 
 	ambarella_i2s_dai.playback.channels_max = channels;
 	ambarella_i2s_dai.capture.channels_max = channels;

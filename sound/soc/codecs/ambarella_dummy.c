@@ -22,7 +22,7 @@
 #include <sound/initval.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
-
+#include <linux/of_gpio.h>
 #include "ambarella_dummy.h"
 
 static inline unsigned int ambdummy_codec_read(struct snd_soc_codec *codec,
@@ -61,13 +61,13 @@ static struct snd_soc_dai_driver ambdummy_dai = {
 	.name = "AMBARELLA_DUMMY_CODEC",
 	.playback = {
 		.stream_name = "Playback",
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 6,
 		.rates = AMBDUMMY_RATES,
 		.formats = AMBDUMMY_FORMATS,},
 	.capture = {
 		.stream_name = "Capture",
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 6,
 		.rates = AMBDUMMY_RATES,
 		.formats = AMBDUMMY_FORMATS,},
@@ -124,6 +124,26 @@ static struct snd_soc_codec_driver soc_codec_dev_ambdummy = {
 
 static int ambdummy_codec_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
+	int  ret;
+	unsigned int gpio_pin, gpio_active;
+	enum of_gpio_flags flags;
+
+	gpio_pin = of_get_gpio_flags(np, 0, &flags);
+	if (gpio_pin < 0 || !gpio_is_valid(gpio_pin)) {
+		printk("request gpio for dummy codec is fail\n");
+	} else {
+		gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		ret = devm_gpio_request(&pdev->dev, gpio_pin, "dummycodec_switch");
+		if (ret < 0){
+			printk("Failed to request gpio_pin: %d\n", ret);
+			return ret;
+		}
+
+		gpio_direction_output(gpio_pin, gpio_active);
+	}
+
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_ambdummy, &ambdummy_dai, 1);
 }
