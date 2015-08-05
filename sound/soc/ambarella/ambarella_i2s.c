@@ -163,8 +163,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	channels = params_channels(params);
 	/* Set channels */
 	switch (channels) {
-	case 1:
-		/*set mono mode for I2S*/
 	case 2:
 		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_2CHANNELS_ENB);
 		break;
@@ -534,13 +532,13 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.suspend = ambarella_i2s_dai_suspend,
 	.resume = ambarella_i2s_dai_resume,
 	.playback = {
-		.channels_min = 1,
+		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.capture = {
-		.channels_min = 1,
+		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
@@ -573,7 +571,6 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	priv_data->capture_dma_data.maxburst = 32;
 	priv_data->capture_dma_data.filter_data = (void *)I2S_RX_DMA_CHAN;
-
 	priv_data->mclk = clk_get(&pdev->dev, "gclk_audio");
 	if (IS_ERR(priv_data->mclk)) {
 		dev_err(&pdev->dev, "Get audio clk failed!\n");
@@ -589,7 +586,11 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	}
 
 	of_property_read_u32(np, "amb,default-mclk", &priv_data->default_mclk);
-	of_property_read_u32(np, "bclk_reverse", &priv_data->bclk_reverse);
+	rval = of_property_read_u32(np, "bclk_reverse", &priv_data->bclk_reverse);
+	if (rval < 0) {
+		/*The default value for bclk should not be reversed*/
+		priv_data->bclk_reverse = 0;
+	}
 
 	ambarella_i2s_dai.playback.channels_max = channels;
 	ambarella_i2s_dai.capture.channels_max = channels;

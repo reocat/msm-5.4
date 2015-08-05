@@ -393,6 +393,7 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
+- bclk_reverse: control i2s_clk(BCLK) to reverse.
 - amb,i2s-channels: should be one of these values: 2, 4, 6.
 - amb,default-mclk: specifies the initial mclk frequency in HZ.
 
@@ -403,6 +404,7 @@ ii) Example
 		reg = <0xe001a000 0x1000>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s0_pins>;
+		bclk_reverse = <0>;
 		amb,i2s-channels = <2>;
 		amb,default-mclk = <12288000>;
 	};
