@@ -23,12 +23,27 @@
 * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 * Boston, MA  02111-1307, USA.
 */
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/io.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
+#include <linux/usb/ulpi.h>
+#include <linux/pm_runtime.h>
+#include <linux/gpio.h>
+#include <linux/clk.h>
+#include <linux/usb.h>
+#include <linux/usb/hcd.h>
 #include <linux/of.h>
+#include <linux/dma-mapping.h>
 #include <mach/hardware.h>
 #include <plat/rct.h>
 
-extern int usb_disabled(void);
+#include "ehci.h"
+
+#define DRIVER_DESC "AMBARELLA-EHCI Host Controller driver"
+static const char hcd_name[] = "ehci-ambarella";
+
 
 struct ehci_ambarella_priv {
 	struct usb_phy *phy;
@@ -73,6 +88,9 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 	struct resource *res;
 	int irq, ret;
 
+	if (usb_disabled())
+		return -ENODEV;
+
 	/* Right now device-tree probed devices don't get dma_mask set.
 	 * Since shared usb code relies on it, set it here for now.
 	 * Once we have dma capability bindings this can go away.
@@ -81,8 +99,6 @@ static int ehci_ambarella_drv_probe(struct platform_device *pdev)
 		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
 	if (!pdev->dev.coherent_dma_mask)
 		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
-
-	ehci_init_driver(&ehci_ambarella_hc_driver, &ehci_ambarella_overrides);
 
 	hcd = usb_create_hcd(&ehci_ambarella_hc_driver, &pdev->dev, "AmbUSB");
 	if (!hcd)
@@ -207,11 +223,29 @@ static struct platform_driver ehci_hcd_ambarella_driver = {
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver = {
 		.name	= "ambarella-ehci",
-		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(ambarella_ehci_dt_ids),
 		.pm	= AMBARELLA_EHCI_PMOPS,
 	}
 };
 
-MODULE_ALIAS("platform:ambarella-ehci");
+static int __init ehci_ambarella_init(void)
+{
+	if (usb_disabled())
+		return -ENODEV;
 
+	pr_info("%s: " DRIVER_DESC "\n", hcd_name);
+
+	ehci_init_driver(&ehci_ambarella_hc_driver, &ehci_ambarella_overrides);
+	return platform_driver_register(&ehci_hcd_ambarella_driver);
+}
+module_init(ehci_ambarella_init);
+
+static void __exit ehci_ambarella_cleanup(void)
+{
+	platform_driver_unregister(&ehci_hcd_ambarella_driver);
+}
+module_exit(ehci_ambarella_cleanup);
+
+MODULE_ALIAS("platform:ambarella-ehci");
+MODULE_DESCRIPTION(DRIVER_DESC);
+MODULE_LICENSE("GPL");
