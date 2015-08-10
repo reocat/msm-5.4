@@ -96,7 +96,9 @@ AFLAGS_resume-imx6.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6) += resume-imx6.o
 endif
 obj-$(CONFIG_SOC_IMX6) += pm-imx6.o
-obj-$(CONFIG_SOC_IMX7D) += pm-imx7.o
+AFLAGS_smp_wfe.o :=-Wa,-march=armv7-a
+AFLAGS_ddr3_freq_imx7d.o :=-Wa,-march=armv7-a
+obj-$(CONFIG_SOC_IMX7D) += pm-imx7.o busfreq-imx.o busfreq_ddr3.o ddr3_freq_imx7d.o smp_wfe.o
 
 obj-$(CONFIG_SOC_IMX1) += mach-imx1.o
 obj-$(CONFIG_SOC_IMX50) += mach-imx50.o
