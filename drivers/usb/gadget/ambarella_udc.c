@@ -2220,8 +2220,6 @@ static int ambarella_udc_remove(struct platform_device *pdev)
 	if (udc->driver)
 		return -EBUSY;
 
-	device_unregister(&udc->gadget.dev);
-
 	del_timer_sync(&udc->vbus_timer);
 
 	remove_proc_entry("udc", get_ambarella_proc_dir());
