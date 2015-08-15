@@ -80,6 +80,7 @@ int ksz80x1r_config_aneg(struct phy_device *phydev)
 	result = genphy_config_aneg(phydev);
 	if(result > 0)
 		ksz80x1r_prevent_loss(phydev);
+	return result;
 }
 
 
