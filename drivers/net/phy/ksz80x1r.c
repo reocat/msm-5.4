@@ -59,6 +59,32 @@ static int ksz80x1r_config_init(struct phy_device *phydev)
 	return phy_write(phydev, MII_KSZ80X1R_CTRL, regval);
 }
 
+void ksz80x1r_prevent_loss(struct phy_device *phydev) {
+	phy_write(phydev, 0x0d, 0x001c);
+	phy_write(phydev, 0x0e, 0x0008);
+	phy_write(phydev, 0x0d, 0x401c);
+	phy_write(phydev, 0x0e, 0x0067);
+	phy_write(phydev, 0x0d, 0x001c);
+	phy_write(phydev, 0x0e, 0x0009);
+	phy_write(phydev, 0x0d, 0x401c);
+	phy_write(phydev, 0x0e, 0xffff);
+	phy_write(phydev, 0x0d, 0x001c);
+	phy_write(phydev, 0x0e, 0x000a);
+	phy_write(phydev, 0x0d, 0x401c);
+	phy_write(phydev, 0x0e, 0xffff);
+}
+
+int ksz80x1r_config_aneg(struct phy_device *phydev)
+{
+	int result;
+
+	result = genphy_config_aneg(phydev);
+	if(result > 0)
+		ksz80x1r_prevent_loss(phydev);
+
+	return result;
+}
+
 static int ksz80x1r_ack_interrupt(struct phy_device *phydev)
 {
 	int rc;
@@ -95,7 +121,7 @@ static struct phy_driver ksz80x1r_driver = {
 	.features	= (PHY_BASIC_FEATURES | SUPPORTED_Pause),
 	.flags		= PHY_HAS_MAGICANEG | PHY_HAS_INTERRUPT,
 	.config_init	= ksz80x1r_config_init,
-	.config_aneg	= genphy_config_aneg,
+	.config_aneg	= ksz80x1r_config_aneg,
 	.read_status	= genphy_read_status,
 	.ack_interrupt	= ksz80x1r_ack_interrupt,
 	.config_intr	= ksz80x1r_config_intr,
