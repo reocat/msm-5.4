@@ -43,6 +43,10 @@
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
 
+static unsigned int bclk_reverse = 0;
+module_param(bclk_reverse, uint, 0644);
+MODULE_PARM_DESC(bclk_reverse, "bclk_reverse.");
+
 static DEFINE_MUTEX(clock_reg_mutex);
 static int enable_ext_i2s = 1;
 
@@ -245,9 +249,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (enable_ext_i2s == 0)
 		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
 
-	/*data change at rising edge*/
-	if(priv_data->bclk_reverse)
+	if (bclk_reverse)
 		clock_reg &= ~(1<< 6);
+	else
+		clock_reg |= (1<< 6);
 
 	amba_writel(I2S_CLOCK_REG, clock_reg);
 	mutex_unlock(&clock_reg_mutex);
@@ -586,11 +591,6 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	}
 
 	of_property_read_u32(np, "amb,default-mclk", &priv_data->default_mclk);
-	rval = of_property_read_u32(np, "bclk_reverse", &priv_data->bclk_reverse);
-	if (rval < 0) {
-		/*The default value for bclk should not be reversed*/
-		priv_data->bclk_reverse = 0;
-	}
 
 	ambarella_i2s_dai.playback.channels_max = channels;
 	ambarella_i2s_dai.capture.channels_max = channels;

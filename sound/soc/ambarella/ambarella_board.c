@@ -246,11 +246,13 @@ static int amba_board_hw_params(struct snd_pcm_substream *substream,
 			goto hw_params_exit;
 		}
 	} else {
-		rval = snd_soc_dai_set_fmt(codec_dai,
-			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-		if (rval < 0) {
-			pr_err("can't set codec DAI configuration\n");
-			goto hw_params_exit;
+		if (dai_fmt == 0) {
+			rval = snd_soc_dai_set_fmt(codec_dai,
+				i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+			if (rval < 0) {
+				pr_err("can't set codec DAI configuration\n");
+				goto hw_params_exit;
+			}
 		}
 
 		rval = snd_soc_dai_set_fmt(cpu_dai,
@@ -262,24 +264,26 @@ static int amba_board_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* set the I2S system clock*/
-	switch(clk_fmt) {
-	case 0:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
-		break;
-	case 1:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.bclk, 0);
-		break;
-	case 2:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
-		break;
-	default:
-		pr_err("clk_fmt is wrong, just 0, 1, 2 is available!\n");
-		goto hw_params_exit;
-	}
+	if (dai_fmt == 0) {
+		switch(clk_fmt) {
+		case 0:
+			rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
+			break;
+		case 1:
+			rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.bclk, 0);
+			break;
+		case 2:
+			rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
+			break;
+		default:
+			pr_err("clk_fmt is wrong, just 0, 1, 2 is available!\n");
+			goto hw_params_exit;
+		}
 
-	if (rval < 0) {
-		pr_err("can't set codec MCLK configuration\n");
-		goto hw_params_exit;
+		if (rval < 0) {
+			pr_err("can't set codec MCLK configuration\n");
+			goto hw_params_exit;
+		}
 	}
 
 	rval = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, clk.mclk, 0);
