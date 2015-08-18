@@ -36,7 +36,11 @@ USB device controller on Ambarella processors
 
 #define CTRL_OUT_UDC_IDX	11
 
+#define ISO_FRAME_ADVANCE	2
+#define ISO_MAX_PACKET		3
+
 #define IS_EP0(ep)		(ep->id == CTRL_IN || ep->id == CTRL_OUT)
+#define IS_ISO_IN_EP(ep)	(!IS_EP0(ep) && usb_endpoint_is_isoc_in(ep->ep.desc))
 
 #define UDC_DMA_MAXPACKET	65536
 
@@ -88,6 +92,7 @@ struct ambarella_request {
 	struct usb_request	req;
 
 	int			desc_count;
+	int			active_desc_count;
 	dma_addr_t		data_desc_addr; /* data_desc Physical Address */
 	struct ambarella_data_desc 	*data_desc;
 
@@ -190,6 +195,8 @@ static void ambarella_udc_disable(struct ambarella_udc *udc);
 static int ambarella_udc_vbus_session(struct usb_gadget *gadget, int is_active);
 
 static int ambarella_udc_set_pullup(struct ambarella_udc *udc, int is_on);
+
+static int ambarella_udc_get_frame(struct usb_gadget *_gadget);
 
 #endif
 
