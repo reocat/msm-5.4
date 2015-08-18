@@ -43,7 +43,7 @@
 #include "ambarella_udc.h"
 
 #define DRIVER_DESC	"Ambarella USB Device Controller Gadget"
-#define DRIVER_VERSION	"2 August 2011"
+#define DRIVER_VERSION	"12 August 2015"
 #define DRIVER_AUTHOR	"Cao Rongrong <rrcao@ambarella.com>"
 
 #define	DMA_ADDR_INVALID	(~(dma_addr_t)0)
@@ -53,16 +53,15 @@ static const char		driver_desc[] = DRIVER_DESC;
 static const char 		ep0name [] = "ep0";
 
 static const char *amb_ep_string[] = {
-	ep0name,
-	"ep1in-bulk", "ep2in-bulk", "ep3in-bulk", "ep4in-int",
-	"ep5in-bulk", "ep6in-bulk", "ep7in-bulk", "ep8in-bulk",
-	"ep9in-bulk", "ep10in-bulk", "ep11in-bulk", "ep12in-bulk",
-	"ep13in-bulk", "ep14in-bulk", "ep15in-bulk",
+	"ep0in", "ep1in", "ep2in", "ep3in",
+	"ep4in", "ep5in", "ep6in", "ep7in",
+	"ep8in", "ep9in", "ep10in", "ep11in",
+	"ep12in", "ep13in", "ep14in", "ep15in",
 
-	"ep0-out", "ep1out-bulk", "ep2out-bulk", "ep3out-bulk",
-	"ep4out-bulk", "ep5out-bulk", "ep6out-bulk", "ep7out-bulk",
-	"ep8out-bulk", "ep9out-bulk", "ep10out-bulk", "ep11out-bulk",
-	"ep12out-bulk", "ep13out-bulk", "ep14out-bulk", "ep15out-bulk"
+	"ep0out", "ep1out", "ep2out", "ep3out",
+	"ep4out", "ep5out", "ep6out", "ep7out",
+	"ep8out", "ep9out", "ep10out", "ep11out",
+	"ep12out", "ep13out", "ep14out", "ep15out"
 };
 
 /*************************** DEBUG FUNCTION ***************************/
@@ -640,6 +639,8 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 	if(desc_count == 0)
 		desc_count = 1;
 
+	req->active_desc_count = desc_count;
+
 	if (desc_count <= req->desc_count) {
 		ambarella_reuse_descriptor(ep, req, desc_count, start_address);
 		return 0;
@@ -697,7 +698,6 @@ static int ambarella_prepare_descriptor(struct ambarella_ep *ep,
 	return 0;
 }
 
-
 static void ambarella_clr_ep_nak(struct ambarella_ep *ep)
 {
 	struct ambarella_ep_reg *ep_reg = &ep->ep_reg;
@@ -711,23 +711,49 @@ static void ambarella_clr_ep_nak(struct ambarella_ep *ep)
 	}
 }
 
+static void ambarella_set_ep_nak(struct ambarella_ep *ep)
+{
+	amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_SET_NAK);
+}
+
 static void ambarella_enable_rx_dma(struct ambarella_ep *ep)
 {
 	ep->dma_going = 1;
 	amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_RCV_DMA_EN);
 }
 
+static void ambarella_patch_iso_desc(struct ambarella_udc *udc,
+	struct ambarella_request * req)
+{
+	struct ambarella_data_desc *data_desc;
+	u32 current_frame, max_packet_num, i, j;
 
-/*
- * Name: ambarella_set_tx_dma
- * Description:
- *	Set data descriptor and Prepare Tx-FIFO for IN endpoint
- */
+	current_frame = ambarella_udc_get_frame(&udc->gadget);
+	data_desc = req->data_desc;
+
+	/* according to USB2.0 spec, each microframe can send 3 packets at most */
+	for (i = 0; i < req->active_desc_count; i += j) {
+		if ((req->active_desc_count - i) >= ISO_FRAME_ADVANCE)
+			max_packet_num = ISO_FRAME_ADVANCE;
+		else
+			max_packet_num = req->active_desc_count - i;
+
+		for (j = 0; j < max_packet_num; j++) {
+			data_desc->status |= ((current_frame + ISO_FRAME_ADVANCE) << 16);
+			data_desc->status |= (max_packet_num << 14);
+			data_desc = data_desc->next_desc_virt;
+		}
+	}
+}
+
 static void ambarella_set_tx_dma(struct ambarella_ep *ep,
 	struct ambarella_request * req)
 {
 	struct ambarella_udc *udc = ep->udc;
 	struct ambarella_ep_reg *ep_reg = &ep->ep_reg;
+
+	if (IS_ISO_IN_EP(ep))
+		ambarella_patch_iso_desc(udc, req);
 
 	ep->data_desc = req->data_desc;
 	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr | udc->dma_fix);
@@ -942,6 +968,9 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 	if(!list_empty(&ep->queue) && !ep->halted && !ep->cancel_transfer){
 		need_queue = 1;
 	} else if (!IS_EP0(ep) && (ep->dir == USB_DIR_IN) && !ep->cancel_transfer) {
+		/* ep->ep.desc = NULL when ep disabled */
+		if (!ep->ep.desc || IS_ISO_IN_EP(ep))
+			ambarella_set_ep_nak(ep);
 		amba_setbitsl(USB_DEV_EP_INTR_MSK_REG, 1 << ep->id);
 	}
 
@@ -970,6 +999,11 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 
 		switch(ep->dir) {
 		case USB_DIR_IN:
+			/* no need to wait for IN-token for ISO transfer */
+			if (IS_ISO_IN_EP(ep)) {
+				amba_writel(ep->ep_reg.sts_reg, USB_EP_IN_PKT);
+				ambarella_set_tx_dma(ep, req);
+			}
 			ambarella_clr_ep_nak(ep);
 			break;
 		case USB_DIR_OUT:
@@ -1003,9 +1037,6 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		struct usb_ctrlrequest crq;
 		u32 i, ret, csr_config;
 
-		dprintk(DEBUG_NORMAL, "set_config or set_interface IRQ"
-			" - device intr reg = 0x%x\n", amba_readl(USB_DEV_INTR_REG));
-
 		if(int_value & USB_DEV_SET_CFG) {
 			/* Ack the SC interrupt */
 			amba_writel(USB_DEV_INTR_REG, USB_DEV_SET_CFG);
@@ -1017,7 +1048,6 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 			crq.wIndex = 0x0000;
 			crq.wLength = 0x0000;
 		} else if(int_value & USB_DEV_SET_INTF){
-			printk("set interface\n");
 			/* Ack the SI interrupt */
 			amba_writel(USB_DEV_INTR_REG, USB_DEV_SET_INTF);
 			udc->cur_intf = (amba_readl(USB_DEV_STS_REG) & USB_DEV_INTF_NUM) >> 4;
@@ -1049,7 +1079,9 @@ static void udc_device_interrupt(struct ambarella_udc *udc, u32 int_value)
 		if(ret < 0)
 			printk(KERN_ERR "set config failed. (%d)\n", ret);
 
-		/* told UDC the configuration is done, and to ack HOST */
+		/* told UDC the configuration is done, and to ack HOST
+		 * UDC has to ack the host quickly, or Host will think failed,
+		 * do don't add much debug message when receive SC/SI irq.*/
 		amba_setbitsl(USB_DEV_CTRL_REG, USB_DEV_CSR_DONE);
 		udelay(150);
 		usb_gadget_set_state(&udc->gadget, USB_STATE_CONFIGURED);
@@ -1205,12 +1237,15 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		}
 		ambarella_handle_data_in(&udc->ep[ep_id]);
 	} else if(ep_status & USB_EP_IN_PKT) {
+		if (IS_ISO_IN_EP(ep))
+			goto finish;
+
 		if(!ep->halted && !ep->cancel_transfer && !list_empty(&ep->queue)){
 			req = list_first_entry(&ep->queue,
 				struct ambarella_request, queue);
 			ambarella_set_tx_dma(ep, req);
 		} else if (ep->dma_going == 0 || ep->halted || ep->cancel_transfer) {
-			amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_SET_NAK);
+			ambarella_set_ep_nak(ep);
 		}
 		ep->cancel_transfer = 0;
 	} else if (ep_status != 0){
@@ -1220,6 +1255,7 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		return;
 	}
 
+finish:
 	if (ep_status != 0) {
 		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_TXFIFO_EMPTY);
 //		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_RCV_CLR_STALL);
@@ -1298,7 +1334,7 @@ static void udc_epout_interrupt(struct ambarella_udc *udc, u32 ep_id)
 			/* received data */
 			if((desc_status & USB_DMA_BUF_STS) == USB_DMA_BUF_DMA_DONE) {
 				amba_setbitsl(USB_DEV_EP_INTR_MSK_REG, 1 << ep_id);
-				amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_SET_NAK);
+				ambarella_set_ep_nak(ep);
 			}
 		}
 
@@ -1409,7 +1445,7 @@ static void ambarella_stop_activity(struct ambarella_udc *udc)
 		if(ep->ep.desc == NULL && !IS_EP0(ep))
 			continue;
 
-		amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_SET_NAK);
+		ambarella_set_ep_nak(ep);
 
 		ep->halted = 1;
 		ambarella_ep_nuke(ep, -ESHUTDOWN);
@@ -1423,12 +1459,6 @@ static void ambarella_stop_activity(struct ambarella_udc *udc)
 	ambarella_udc_reinit(udc);
 }
 
-
-/*
- * Name: ambarella_udc_ep_enable
- * Description:
- *	Enable endpoint
- */
 static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 				 const struct usb_endpoint_descriptor *desc)
 {
@@ -1479,20 +1509,21 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	type = (desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) << 4;
 	amba_writel(ep->ep_reg.ctrl_reg, type | USB_EP_SET_NAK);
 
-	if(ep->dir == USB_DIR_IN)
-		amba_writel(ep->ep_reg.buf_sz_reg, max_packet / 2);
+	if(ep->dir == USB_DIR_IN) {
+		/* NOTE: total IN fifo size must be less than 576 * 4B */
+		tmp = max_packet / 4;
+		if (IS_ISO_IN_EP(ep))
+			tmp *= max_packet > 1024 ? 1 : max_packet > 512 ? 2 : 3;
+		else
+			tmp *= 2;
+		amba_writel(ep->ep_reg.buf_sz_reg, tmp);
+	}
 	amba_writel(ep->ep_reg.max_pkt_sz_reg, max_packet);
 
-	/* print some debug message */
-	dprintk (DEBUG_NORMAL, "enable %s, address = 0x%02x, max_packet = 0x%02x\n",
-			ep->ep.name, desc->bEndpointAddress, max_packet);
-
 	spin_unlock_irqrestore(&udc->lock, flags);
-	ambarella_udc_set_halt(_ep, 0);
 
 	return 0;
 }
-
 
 static int ambarella_udc_ep_disable(struct usb_ep *_ep)
 {
@@ -1511,7 +1542,7 @@ static int ambarella_udc_ep_disable(struct usb_ep *_ep)
 	ep->halted = 1;
 	ambarella_ep_nuke(ep, -ESHUTDOWN);
 
-	amba_setbitsl(ep->ep_reg.ctrl_reg, USB_EP_SET_NAK);
+	ambarella_set_ep_nak(ep);
 
 	if(ep->dir == USB_DIR_IN){
 		/* clear DMA poll demand bit */
@@ -1677,24 +1708,22 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 				ep->dma_going = 0;
 				goto finish;
 			} else if (ep->id == CTRL_IN) {
-			 	printk("the data length of ctrl-in is zero\n");
+				//printk("the data length of ctrl-in is zero\n");
 				//BUG();
 			}
 		}
 
-		switch(ep->dir) {
-		case USB_DIR_IN:
+		if (ep->dir == USB_DIR_IN) {
+			/* no need to wait for IN-token for ISO transfer */
+			if (IS_ISO_IN_EP(ep)) {
+				amba_writel(ep->ep_reg.sts_reg, USB_EP_IN_PKT);
+				ambarella_set_tx_dma(ep, req);
+			}
 			/* enable dma completion interrupt for current TX data */
 			amba_clrbitsl(USB_DEV_EP_INTR_MSK_REG, 1 << ep->id);
 			ambarella_clr_ep_nak(ep);
-			break;
-		case USB_DIR_OUT:
+		} else {
 			ambarella_set_rx_dma(ep, req);
-			break;
-		default:
-			pr_err("%s: bulk or intr queue error\n", __func__);
-			BUG();
-			return -EL2HLT;
 		}
 	}
 
@@ -1778,8 +1807,9 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 		pr_err("%s: %s, -ESHUTDOWN\n", __func__, _ep->name);
 		return -ESHUTDOWN;
 	}
-	if (ep->ep.desc /* not ep0 */
-		&& (ep->ep.desc->bmAttributes & 0x03) == USB_ENDPOINT_XFER_ISOC){
+	/* isochronous transfer never halts because there is no handshake
+	 * to report a halt condition */
+	if (ep->ep.desc /* not ep0 */ && IS_ISO_IN_EP(ep)) {
 		pr_err("%s: %s, -EINVAL 2\n", __func__, _ep->name);
 		return -EINVAL;
 	}
@@ -1805,7 +1835,7 @@ static int ambarella_udc_set_halt(struct usb_ep *_ep, int value)
 		amba_clrbitsl(ep->ep_reg.ctrl_reg, USB_EP_STALL);
 	}
 
-	ep->halted = value ? 1 : 0;
+	ep->halted = !!value;
 
 	spin_unlock_irqrestore(&ep->udc->lock, flags);
 
@@ -1832,7 +1862,7 @@ static const struct usb_ep_ops ambarella_ep_ops = {
 
 static int ambarella_udc_get_frame(struct usb_gadget *_gadget)
 {
-	return amba_readl(USB_DEV_STS_REG) >> 18;
+	return (amba_readl(USB_DEV_STS_REG) >> 18) & 0x7ff;
 }
 
 
