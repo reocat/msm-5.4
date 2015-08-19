@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_FB_H
 #define __PLAT_AMBARELLA_FB_H
 
+#define AMBARELLA_FB_MAX_NUM			2
+
 /* ==========================================================================*/
 #define AMBARELLA_CLUT_TABLE_SIZE		(256 * 3)
 #define AMBARELLA_BLEND_TABLE_SIZE		(256)
