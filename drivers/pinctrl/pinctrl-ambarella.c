@@ -3,6 +3,7 @@
  *
  * History:
  *	2013/12/18 - [Cao Rongrong] created file
+ *	2015/08/18 - [Zheng Xianqing] modified file
  *
  * Copyright (C) 2012-2016, Ambarella, Inc.
  *
@@ -31,7 +32,9 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinmux.h>
 #include <linux/pinctrl/pinconf.h>
+#include <linux/pinctrl/pinconf-generic.h>
 #include <plat/rct.h>
+#include <plat/rtc.h>
 #include <plat/pinctrl.h>
 #include "core.h"
 
@@ -44,6 +47,15 @@
 #define CFG_PULL_PRESENT	(1 << 1)
 #define CFG_PULL_SHIFT		0
 #define CONFIG_TO_PULL(c)	((c) >> CFG_PULL_SHIFT & 0x1)
+
+//#define amba_pinctrl_debug	//used at debug mode
+
+#ifdef amba_pinctrl_debug
+#define amba_pin_ptk printk
+#else
+#define amba_pin_ptk(format, arg...) do {} while (0)
+#endif
+
 
 struct ambpin_group {
 	const char		*name;
@@ -112,32 +124,84 @@ static void amb_pin_dbg_show(struct pinctrl_dev *pctldev,
 	seq_printf(s, " %s", dev_name(pctldev->dev));
 }
 
+static void amb_dt_free_map(struct pinctrl_dev *pctldev,
+			struct pinctrl_map *map, unsigned num_maps)
+{
+	u32 i;
+
+	for (i = 0; i < num_maps; i++) {
+		if (map[i].type == PIN_MAP_TYPE_MUX_GROUP)
+			kfree(map[i].data.mux.group);
+		if (map[i].type == PIN_MAP_TYPE_CONFIGS_PIN) {
+			if(map[i].data.configs.group_or_pin)
+				kfree(map[i].data.configs.group_or_pin);
+			kfree(map[i].data.configs.configs);
+		}
+	}
+
+	kfree(map);
+}
+
 static int amb_dt_node_to_map(struct pinctrl_dev *pctldev,
 			struct device_node *np,
 			struct pinctrl_map **map, unsigned *num_maps)
 {
+	struct amb_pinctrl_soc_data *soc;
 	struct pinctrl_map *new_map;
-	char *grp_name = NULL;
+	struct property *pins, *drive, *pulls;
+	char *grp_name = NULL, *pin_names = NULL;
 	unsigned new_num = 1;
-	unsigned long config = 0;
 	unsigned long *pconfig;
 	int length = strlen(np->name) + SUFFIX_LENGTH;
 	bool purecfg = false;
-	u32 val, reg;
-	int ret, i = 0;
+	u32 val, reg, pin;
+	u16 strength;
+	int ret, i = 0, j = 0, cur, err;
+	int num_pins, num_pulls, num_drive, maps_per_pin;
+
+	enum pin_config_param pull = PIN_CONFIG_END;
+	soc = pinctrl_dev_get_drvdata(pctldev);
 
 	/* Check for pin config node which has no 'reg' property */
 	if (of_property_read_u32(np, "reg", &reg))
 		purecfg = true;
 
-	ret = of_property_read_u32(np, "amb,pull-up", &val);
-	if (!ret)
-		config |= val << CFG_PULL_SHIFT | CFG_PULL_PRESENT;
+	pins = of_find_property(np, "amb,pinmux-ids", NULL);
+	if (!pins) {
+		dev_err(soc->dev, "missing amb,pinmux-ids property\n");
+		return -EINVAL;
+	}
 
-	/* Check for group node which has both mux and config settings */
-	if (!purecfg && config)
-		new_num = 2;
+	drive = of_find_property(np, "amb,drive-strength", NULL);
+	pulls = of_find_property(np, "amb,pull-up", NULL);
 
+	/*
+	 * The following lines calculate how many values are defined for each
+	 * of the properties.
+	 */
+	num_pins = pins->length / sizeof(u32);
+	num_drive = drive ? (drive->length / sizeof(u32)) : 0;
+	num_pulls = pulls ? (pulls->length / sizeof(u32)) : 0;
+
+	if (num_drive > 1 && num_drive!= num_pins) {
+		dev_err(soc->dev, "amb,drive-strength must have 1 or %d entries\n",
+			num_pins);
+		return -EINVAL;
+	}
+
+	if (num_pulls > 1 && num_pulls != num_pins) {
+		dev_err(soc->dev, "amb,pull-up must have 1 or %d entries\n",
+			num_pins);
+		return -EINVAL;
+	}
+
+	maps_per_pin = 0;
+	if (num_drive)
+		maps_per_pin++;
+	if (num_pulls)
+		maps_per_pin++;
+
+	new_num += num_pins * maps_per_pin;
 	new_map = kzalloc(sizeof(struct pinctrl_map) * new_num, GFP_KERNEL);
 	if (!new_map)
 		return -ENOMEM;
@@ -150,25 +214,77 @@ static int amb_dt_node_to_map(struct pinctrl_dev *pctldev,
 		grp_name = kzalloc(length, GFP_KERNEL);
 		if (!grp_name) {
 			ret = -ENOMEM;
-			goto free;
+			goto fail;
 		}
 		snprintf(grp_name, length, "%s.%d", np->name, reg);
 		new_map[i].data.mux.group = grp_name;
 		i++;
 	}
+	cur = i;
+	if(maps_per_pin) {
+		for(i = 0; i < num_pins; i++) {
+			j = 0;
+			pconfig = kzalloc(maps_per_pin * sizeof(*pconfig), GFP_KERNEL);
+			if(!pconfig) {
+				ret = -ENOMEM;
+				goto fail;
+			}
+			/*get gpio from each group*/
+			err = of_property_read_u32_index(np, "amb,pinmux-ids", i, &val);
+			if (err)
+				goto fail;
 
-	if (config) {
-		pconfig = kmemdup(&config, sizeof(config), GFP_KERNEL);
-		if (!pconfig) {
-			ret = -ENOMEM;
-			goto free_group;
+			pin = val & 0xff;
+			if (pin >= (AMBGPIO_SIZE)) {
+				dev_err(soc->dev, "invalid amb,pinmux-ids value\n");
+				err = -EINVAL;
+				goto fail;
+			}
+
+			pin_names = kzalloc(PIN_NAME_LENGTH, GFP_KERNEL);
+			if (!pin_names) {
+				ret = -ENOMEM;
+				goto fail;
+			}
+
+			sprintf(pin_names, "io%d", pin);
+			/*map drive strength*/
+			if (num_drive) {
+				err = of_property_read_u32_index(np, "amb,drive-strength",
+							(num_drive > 1 ? i : 0), &val);
+				if (err)
+					goto fail;
+				strength = val;
+				pconfig[j] = pinconf_to_config_packed(PIN_CONFIG_DRIVE_STRENGTH, strength);
+				new_map[cur].type = PIN_MAP_TYPE_CONFIGS_PIN;
+				new_map[cur].data.configs.group_or_pin = pin_names;
+				new_map[cur].data.configs.configs = pconfig++;
+				new_map[cur].data.configs.num_configs = 1;
+				cur++;
+
+			}
+			/*map gpio pull*/
+			if (num_pulls) {
+				err = of_property_read_u32_index(np, "amb,pull-up",
+							(num_pulls > 1 ? i : 0), &val);
+				if (err)
+					goto fail;
+				if (val == 0)
+					pull = PIN_CONFIG_BIAS_DISABLE;
+				else if (val == 1)
+					pull = PIN_CONFIG_BIAS_PULL_DOWN;
+				else
+					pull = PIN_CONFIG_BIAS_PULL_UP;
+
+				pconfig[j] = pinconf_to_config_packed(pull, 0);
+				new_map[cur].type = PIN_MAP_TYPE_CONFIGS_PIN;
+				new_map[cur].data.configs.group_or_pin = pin_names;
+				new_map[cur].data.configs.configs = pconfig;
+				new_map[cur].data.configs.num_configs = 1;
+				cur++;
+
+			}
 		}
-
-		new_map[i].type = PIN_MAP_TYPE_CONFIGS_GROUP;
-		new_map[i].data.configs.group_or_pin =
-					purecfg ? np->name : grp_name;
-		new_map[i].data.configs.configs = pconfig;
-		new_map[i].data.configs.num_configs = 1;
 	}
 
 	*map = new_map;
@@ -176,27 +292,11 @@ static int amb_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	return 0;
 
-free_group:
-	if (!purecfg)
-		kfree(grp_name);
-free:
-	kfree(new_map);
+fail:
+	amb_dt_free_map(pctldev, new_map, new_num);
+	if(pin_names)
+		kfree(pin_names);
 	return ret;
-}
-
-static void amb_dt_free_map(struct pinctrl_dev *pctldev,
-			struct pinctrl_map *map, unsigned num_maps)
-{
-	u32 i;
-
-	for (i = 0; i < num_maps; i++) {
-		if (map[i].type == PIN_MAP_TYPE_MUX_GROUP)
-			kfree(map[i].data.mux.group);
-		if (map[i].type == PIN_MAP_TYPE_CONFIGS_GROUP)
-			kfree(map[i].data.configs.configs);
-	}
-
-	kfree(map);
 }
 
 /* list of pinctrl callbacks for the pinctrl core */
@@ -409,10 +509,156 @@ static const struct pinmux_ops amb_pinmux_ops = {
 	.gpio_set_direction	= amb_pinmux_gpio_set_direction,
 };
 
+static int amb_pin_gpio_pull(u32 bank, u32 mask, u8 level){
+	u32 gpio_pull_en, gpio_pull_sel;
+	switch(bank){
+		case 0:
+			gpio_pull_en = RTC_REG(RTC_GPIO_EN_0_OFFSET);
+			gpio_pull_sel = RTC_REG(RTC_GPIO_SEL_0_OFFSET);
+			break;
+		case 1:
+			gpio_pull_en = RTC_REG(RTC_GPIO_EN_1_OFFSET);
+			gpio_pull_sel = RTC_REG(RTC_GPIO_SEL_1_OFFSET);
+			break;
+		case 2:
+			gpio_pull_en = RTC_REG(RTC_GPIO_EN_2_OFFSET);
+			gpio_pull_sel = RTC_REG(RTC_GPIO_SEL_2_OFFSET);
+			break;
+		case 3:
+			gpio_pull_en = RTC_REG(RTC_GPIO_EN_3_OFFSET);
+			gpio_pull_sel = RTC_REG(RTC_GPIO_SEL_3_OFFSET);
+			break;
+		case 4:
+			gpio_pull_en = RTC_REG(RTC_GPIO_EN_4_OFFSET);
+			gpio_pull_sel = RTC_REG(RTC_GPIO_SEL_4_OFFSET);
+			break;
+		default:
+			gpio_pull_en = RTC_REG(RTC_GPIO_EN_0_OFFSET);
+			gpio_pull_sel = RTC_REG(RTC_GPIO_SEL_0_OFFSET);
+			break;
+	}
+
+	if(level == 2) {
+		amba_setbitsl(gpio_pull_en, mask);
+		amba_setbitsl(gpio_pull_sel, mask);
+
+	} else if(level == 1) {
+		amba_setbitsl(gpio_pull_en, mask);
+		amba_clrbitsl(gpio_pull_sel, mask);
+	} else {
+		amba_clrbitsl(gpio_pull_en, mask);
+	}
+
+	return 0;
+}
+
+static int amb_pin_driver_strength(u32 bank, u32 mask, u8 level){
+	u32 gpio_ds0, gpio_ds1;
+
+	switch(bank) {
+		case 0:
+			gpio_ds0 = GPIO_DS0_0_REG;
+			gpio_ds1 = GPIO_DS1_0_REG;
+			break;
+		case 1:
+			gpio_ds0 = GPIO_DS0_1_REG;
+			gpio_ds1 = GPIO_DS1_1_REG;
+			break;
+		case 2:
+			gpio_ds0 = GPIO_DS0_2_REG;
+			gpio_ds1 = GPIO_DS1_2_REG;
+			break;
+		case 3:
+			gpio_ds0 = GPIO_DS0_3_REG;
+			gpio_ds1 = GPIO_DS1_3_REG;
+			break;
+		case 4:
+			gpio_ds0 = GPIO_DS0_4_REG;
+			gpio_ds1 = GPIO_DS1_4_REG;
+			break;
+		default:
+			gpio_ds0 = GPIO_DS0_0_REG;
+			gpio_ds1 = GPIO_DS1_0_REG;
+			break;
+	}
+
+	switch(level) {
+		case 0:
+			amba_clrbitsl(gpio_ds0, mask);
+			amba_clrbitsl(gpio_ds1, mask);
+			break;
+		case 1:
+			amba_clrbitsl(gpio_ds0, mask);
+			amba_setbitsl(gpio_ds1, mask);
+			break;
+		case 2:
+			amba_setbitsl(gpio_ds0, mask);
+			amba_clrbitsl(gpio_ds1, mask);
+			break;
+		case 3:
+			amba_setbitsl(gpio_ds0, mask);
+			amba_setbitsl(gpio_ds1, mask);
+			break;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
 /* set the pin config settings for a specified pin */
 static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 			unsigned long config)
 {
+	struct amb_pinctrl_soc_data *soc;
+	void __iomem *regbase;
+	u32 bank, offset, mask;
+	u16 strength;
+	u8 level;
+	enum pin_config_param param = pinconf_to_config_param(config);
+	soc = pinctrl_dev_get_drvdata(pctldev);
+
+	bank = PINID_TO_BANK(pin);
+	offset = PINID_TO_OFFSET(pin);
+	regbase = soc->regbase[bank];
+	mask = (0x1 << offset);
+
+	switch (param) {
+	case PIN_CONFIG_BIAS_DISABLE:
+		level = 0;
+		amba_pin_ptk("pinctrl: pin[%d] set pull disable [%d]\n", pin, level);
+		amb_pin_gpio_pull(bank, mask, level);
+		break;
+	case PIN_CONFIG_BIAS_PULL_DOWN:
+		level = 1;
+		amba_pin_ptk("pinctrl: pin[%d] set pull down[%d]\n", pin, level);
+		amb_pin_gpio_pull(bank, mask, level);
+		break;
+	case PIN_CONFIG_BIAS_PULL_UP:
+		level = 2;
+		amba_pin_ptk("pinctrl: pin[%d] set pull up[%d]\n", pin, level);
+		amb_pin_gpio_pull(bank, mask, level);
+		break;
+	case PIN_CONFIG_DRIVE_STRENGTH:
+		strength = pinconf_to_config_argument(config);
+		amba_pin_ptk("pinctrl: pin[%d] set drive strength[%d]\n", pin, strength);
+		if (strength > 4)
+			return -EINVAL;
+		/*
+		 * We convert from mA to what the register expects:
+		 *   0: 2mA
+		 *   1: 4mA
+		 *   2: 8mA
+		 *   3: 12mA
+		 */
+		level = strength;
+		amb_pin_driver_strength(bank, mask, level);
+		break;
+	default:
+		dev_err(soc->dev, "unknown pinconf param\n");
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
