@@ -516,14 +516,14 @@
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
 					 <0x000000e0 0x00000001 0x00001111>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&sdmmc0_pins_8bit>;
 
 			slot@0 {
 				reg = <0>;
 				global-id = <0>;
 				max-frequency = <50000000>;
 				bus-width = <8>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&sdmmc0_pins_8bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
@@ -539,6 +539,8 @@
 			amb,clk-name = "gclk_sdio";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			pinctrl-names = "default";
+			pinctrl-0 = <&sdmmc1_pins_4bit>;
 			status = "disabled";
 
 			slot@0 {
@@ -546,8 +548,6 @@
 				global-id = <1>;
 				max-frequency = <50000000>;
 				bus-width = <4>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&sdmmc1_pins_4bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
@@ -563,6 +563,8 @@
 			amb,clk-name = "gclk_sdxc";
 			amb,wait-tmo = <2500>; /* in millisecond */
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			pinctrl-names = "default";
+			pinctrl-0 = <&sdmmc2_pins_8bit>;
 			status = "disabled";
 
 			slot@0 {
@@ -570,8 +572,6 @@
 				global-id = <2>;
 				max-frequency = <50000000>;
 				bus-width = <8>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&sdmmc2_pins_8bit>;
 				amb,caps-adma;
 				cap-sdio-irq;
 			};
