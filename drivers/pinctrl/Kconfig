@@ -225,7 +225,7 @@ config PINCTRL_AMB
 	bool
 	depends on PLAT_AMBARELLA
 	select PINMUX
-	select GENERIC_PINCONF
+	select PINCONF
 
 source "drivers/pinctrl/mvebu/Kconfig"
 source "drivers/pinctrl/sh-pfc/Kconfig"

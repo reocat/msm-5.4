@@ -799,24 +799,6 @@ Required subnode-properties:
   there is no real hardware pins mapping to the corresponding register address.
   So the registers for the "virtual pins" can be used for the selection of 3rd
   or 4th function for other real pins.
-- amb,drive-strength: used to set drive strength for the pin, its value should
-  be 0:2mA, 1:4mA, 2:8mA, 3:12mA.
-- amb,pull-up: used to set the internal pull up or pull down for the pin, its
-  value should be 0, 1, 2, which respectively means diable internal pull, internal
-  pull down, internal pull up.
-  The number of their value should be 1 or the number of amb,pinmux-ids, when it is
-  1, it means all the pin of this group will set the same drive-strength or pull-up,
-  for example:
-  XXX_pins: XXX0@0 {
-	reg = <0>;
-	amb,pinmux-ids = <0x1029 0x102a 0x102b 0x102c 0x102d>;
-	amb,drive-strength = <0 1 2 3 0>;
-	amb,pull-up = <2>;
-  };
-  In this example,amb,drive-strength means set the io: 41[0x29] 42[0x2a] 43 44 45 as
-  the following drive strength:2mA, 4mA, 8mA, 12mA.
-  amb,pull-up means set the io:41,42,43,44,45 as the following internal function:
-  internal pull up.
 
 v) Example
 ----------
