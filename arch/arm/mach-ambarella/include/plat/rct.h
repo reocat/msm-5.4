@@ -454,9 +454,13 @@
 #define GPIO_DS1_5_OFFSET		0x444
 #define GPIO_DS0_6_OFFSET		0x448
 #define GPIO_DS1_6_OFFSET		0x44C
-#define GPIO_DS_OFFSET(bank, n)		((bank) >= 4 ? \
-					(0x438 + (((bank) - 4) * 8) + ((n) * 4)) : \
-					(0x314 + ((bank) * 8) + ((n) * 4)))
+
+#define GPIO_DS0_OFFSET(bank)		((bank) >= 4 ? \
+					(0x438 + (((bank) - 4) * 8)) : \
+					(0x314 + ((bank) * 8)))
+#define GPIO_DS1_OFFSET(bank)		((bank) >= 4 ? \
+					(0x438 + (((bank) - 4) * 8) + 4) : \
+					(0x314 + ((bank) * 8) + 4))
 
 #define GPIO_DS0_0_REG			RCT_REG(GPIO_DS0_0_OFFSET)
 #define GPIO_DS1_0_REG			RCT_REG(GPIO_DS1_0_OFFSET)

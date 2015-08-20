@@ -40,17 +40,28 @@
 
 #define MUXIDS_TO_PINID(m)	((m) & 0xfff)
 #define MUXIDS_TO_ALT(m)	(((m) >> 12) & 0xf)
+#define MUXIDS_TO_CONF(m)	(((m) >> 16) & 0xffff)
 
-#define CFG_PULL_PRESENT	(1 << 1)
-#define CFG_PULL_SHIFT		0
-#define CONFIG_TO_PULL(c)	((c) >> CFG_PULL_SHIFT & 0x1)
+/*
+ * bit1~0: 00: pull down, 01: pull up, 1x: clear pull up/down
+ * bit2:   reserved
+ * bit3:   1: config pull up/down, 0: leave pull up/down as default value
+ * bit5~4: drive strength value
+ * bit6:   reserved
+ * bit7:   1: config drive strength, 0: leave drive strength as default value
+ */
+#define CONF_TO_PULL_VAL(c)	(((c) >> 0) & 0x1)
+#define CONF_TO_PULL_CLR(c)	(((c) >> 1) & 0x1)
+#define CFG_PULL_PRESENT(c)	(((c) >> 3) & 0x1)
+#define CONF_TO_DS_VAL(c)	(((c) >> 4) & 0x3)
+#define CFG_DS_PRESENT(c)	(((c) >> 7) & 0x1)
 
 struct ambpin_group {
 	const char		*name;
 	unsigned int		*pins;
 	unsigned		num_pins;
 	u8			*alt;
-	u32			config;
+	unsigned long		*conf;
 };
 
 struct ambpin_function {
@@ -116,72 +127,61 @@ static int amb_dt_node_to_map(struct pinctrl_dev *pctldev,
 			struct device_node *np,
 			struct pinctrl_map **map, unsigned *num_maps)
 {
+	struct amb_pinctrl_soc_data *soc = pinctrl_dev_get_drvdata(pctldev);
+	struct ambpin_group *grp = NULL;
 	struct pinctrl_map *new_map;
 	char *grp_name = NULL;
-	unsigned new_num = 1;
-	unsigned long config = 0;
-	unsigned long *pconfig;
 	int length = strlen(np->name) + SUFFIX_LENGTH;
-	bool purecfg = false;
-	u32 val, reg;
-	int ret, i = 0;
+	u32 i, reg, new_num = 1;
 
 	/* Check for pin config node which has no 'reg' property */
 	if (of_property_read_u32(np, "reg", &reg))
-		purecfg = true;
+		return -EINVAL;
 
-	ret = of_property_read_u32(np, "amb,pull-up", &val);
-	if (!ret)
-		config |= val << CFG_PULL_SHIFT | CFG_PULL_PRESENT;
-
-	/* Check for group node which has both mux and config settings */
-	if (!purecfg && config)
-		new_num = 2;
-
-	new_map = kzalloc(sizeof(struct pinctrl_map) * new_num, GFP_KERNEL);
-	if (!new_map)
+	/* Compose group name */
+	grp_name = devm_kzalloc(soc->dev, length, GFP_KERNEL);
+	if (!grp_name)
 		return -ENOMEM;
 
-	if (!purecfg) {
-		new_map[i].type = PIN_MAP_TYPE_MUX_GROUP;
-		new_map[i].data.mux.function = np->name;
+	snprintf(grp_name, length, "%s.%d", np->name, reg);
 
-		/* Compose group name */
-		grp_name = kzalloc(length, GFP_KERNEL);
-		if (!grp_name) {
-			ret = -ENOMEM;
-			goto free;
+	/* find the group of this node by name */
+	for (i = 0; i < soc->nr_groups; i++) {
+		if (!strcmp(soc->groups[i].name, grp_name)) {
+			grp = &soc->groups[i];
+			break;
 		}
-		snprintf(grp_name, length, "%s.%d", np->name, reg);
-		new_map[i].data.mux.group = grp_name;
-		i++;
+	}
+	if (grp == NULL){
+		dev_err(soc->dev, "unable to find group for node %s\n", np->name);
+		return -EINVAL;
 	}
 
-	if (config) {
-		pconfig = kmemdup(&config, sizeof(config), GFP_KERNEL);
-		if (!pconfig) {
-			ret = -ENOMEM;
-			goto free_group;
-		}
-
-		new_map[i].type = PIN_MAP_TYPE_CONFIGS_GROUP;
-		new_map[i].data.configs.group_or_pin =
-					purecfg ? np->name : grp_name;
-		new_map[i].data.configs.configs = pconfig;
-		new_map[i].data.configs.num_configs = 1;
-	}
+	new_num += grp->num_pins;
+	new_map = devm_kzalloc(soc->dev,
+				sizeof(struct pinctrl_map) * new_num, GFP_KERNEL);
+	if (!new_map)
+		return -ENOMEM;
 
 	*map = new_map;
 	*num_maps = new_num;
 
-	return 0;
+	/* create mux map */
+	new_map[0].type = PIN_MAP_TYPE_MUX_GROUP;
+	new_map[0].data.mux.group = grp_name;
+	new_map[0].data.mux.function = np->name;
 
-free_group:
-	if (!purecfg)
-		kfree(grp_name);
-free:
-	kfree(new_map);
-	return ret;
+	/* create config map */
+	new_map++;
+	for (i = 0; i < grp->num_pins; i++) {
+		new_map[i].type = PIN_MAP_TYPE_CONFIGS_PIN;
+		new_map[i].data.configs.group_or_pin =
+				pin_get_name(pctldev, grp->pins[i]);
+		new_map[i].data.configs.configs = &grp->conf[i];
+		new_map[i].data.configs.num_configs = 1;
+	}
+
+	return 0;
 }
 
 static void amb_dt_free_map(struct pinctrl_dev *pctldev,
@@ -413,6 +413,36 @@ static const struct pinmux_ops amb_pinmux_ops = {
 static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 			unsigned long config)
 {
+	struct amb_pinctrl_soc_data *soc;
+	u32 bank, offset, reg, val;
+
+	soc = pinctrl_dev_get_drvdata(pctldev);
+	bank = PINID_TO_BANK(pin);
+	offset = PINID_TO_OFFSET(pin);
+
+	if (CFG_PULL_PRESENT(config)) {
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(bank));
+		amba_clrbitsl(reg, 1 << offset);
+		amba_setbitsl(reg, CONF_TO_PULL_VAL(config) << offset);
+
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(bank));
+		if (CONF_TO_PULL_CLR(config))
+			amba_clrbitsl(reg, 1 << offset);
+		else
+			amba_setbitsl(reg, 1 << offset);
+	}
+
+	if (CFG_DS_PRESENT(config)) {
+		amba_clrbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), 1 << offset);
+		amba_clrbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), 1 << offset);
+		/* set bit1 of DS value to DS0 reg, and set bit0 of DS value to DS1 reg,
+		 * because bit[1:0] = 00 is 2mA, 10 is 4mA, 01 is 8mA, 11 is 12mA */
+		val = (CONF_TO_DS_VAL(config) >> 1) & 0x1;
+		amba_setbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), val << offset);
+		val = CONF_TO_DS_VAL(config) & 0x1;
+		amba_setbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), val << offset);
+	}
+
 	return 0;
 }
 
@@ -420,45 +450,13 @@ static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 static int amb_pinconf_get(struct pinctrl_dev *pctldev,
 			unsigned int pin, unsigned long *config)
 {
-	return 0;
-}
-
-/* set the pin config settings for a specified pin group */
-static int amb_pinconf_group_set(struct pinctrl_dev *pctldev,
-			unsigned group, unsigned long config)
-{
-	struct amb_pinctrl_soc_data *soc;
-	const unsigned int *pins;
-	unsigned int cnt;
-
-	soc = pinctrl_dev_get_drvdata(pctldev);
-	pins = soc->groups[group].pins;
-
-	for (cnt = 0; cnt < soc->groups[group].num_pins; cnt++)
-		amb_pinconf_set(pctldev, pins[cnt], config);
-
-	return 0;
-}
-
-/* get the pin config settings for a specified pin group */
-static int amb_pinconf_group_get(struct pinctrl_dev *pctldev,
-			unsigned int group, unsigned long *config)
-{
-	struct amb_pinctrl_soc_data *soc;
-	const unsigned int *pins;
-
-	soc = pinctrl_dev_get_drvdata(pctldev);
-	pins = soc->groups[group].pins;
-	amb_pinconf_get(pctldev, pins[0], config);
-	return 0;
+	return -ENOTSUPP;
 }
 
 /* list of pinconfig callbacks for pinconfig vertical in the pinctrl code */
 static const struct pinconf_ops amb_pinconf_ops = {
 	.pin_config_get		= amb_pinconf_get,
 	.pin_config_set		= amb_pinconf_set,
-	.pin_config_group_get	= amb_pinconf_group_get,
-	.pin_config_group_set	= amb_pinconf_group_set,
 };
 
 static struct pinctrl_desc amb_pinctrl_desc = {
@@ -483,9 +481,9 @@ static int amb_pinctrl_parse_group(struct amb_pinctrl_soc_data *soc,
 		return -ENOMEM;
 
 	if (of_property_read_u32(np, "reg", &val))
-		snprintf(grp_name, length, "%s", np->name);
-	else
-		snprintf(grp_name, length, "%s.%d", np->name, val);
+		return -EINVAL;
+
+	snprintf(grp_name, length, "%s.%d", np->name, val);
 
 	grp->name = grp_name;
 
@@ -504,10 +502,16 @@ static int amb_pinctrl_parse_group(struct amb_pinctrl_soc_data *soc,
 	if (!grp->alt)
 		return -ENOMEM;
 
+	grp->conf = devm_kzalloc(soc->dev,
+				grp->num_pins * sizeof(unsigned long), GFP_KERNEL);
+	if (!grp->conf)
+		return -ENOMEM;
+
 	of_property_read_u32_array(np, prop_name, grp->pins, grp->num_pins);
 
 	for (i = 0; i < grp->num_pins; i++) {
 		grp->alt[i] = MUXIDS_TO_ALT(grp->pins[i]);
+		grp->conf[i] = MUXIDS_TO_CONF(grp->pins[i]);
 		grp->pins[i] = MUXIDS_TO_PINID(grp->pins[i]);
 	}
 
@@ -526,7 +530,6 @@ static int amb_pinctrl_parse_dt(struct amb_pinctrl_soc_data *soc)
 	const char *fn;
 	int i = 0, idxf = 0, idxg = 0;
 	int ret;
-	u32 val;
 
 	child = of_get_next_child(np, NULL);
 	if (!child) {
@@ -540,9 +543,6 @@ static int amb_pinctrl_parse_dt(struct amb_pinctrl_soc_data *soc)
 		if (of_device_is_compatible(child, gpio_compat))
 			continue;
 		soc->nr_groups++;
-		/* Skip pure pinconf node */
-		if (of_property_read_u32(child, "reg", &val))
-			continue;
 		if (strcmp(fn, child->name)) {
 			fn = child->name;
 			soc->nr_functions++;
@@ -565,8 +565,6 @@ static int amb_pinctrl_parse_dt(struct amb_pinctrl_soc_data *soc)
 	for_each_child_of_node(np, child) {
 		if (of_device_is_compatible(child, gpio_compat))
 			continue;
-		if (of_property_read_u32(child, "reg", &val))
-			continue;
 		if (strcmp(fn, child->name)) {
 			f = &soc->functions[idxf++];
 			f->name = fn = child->name;
@@ -580,12 +578,6 @@ static int amb_pinctrl_parse_dt(struct amb_pinctrl_soc_data *soc)
 	for_each_child_of_node(np, child) {
 		if (of_device_is_compatible(child, gpio_compat))
 			continue;
-		if (of_property_read_u32(child, "reg", &val)) {
-			ret = amb_pinctrl_parse_group(soc, child, idxg++, NULL);
-			if (ret)
-				return ret;
-			continue;
-		}
 
 		if (strcmp(fn, child->name)) {
 			f = &soc->functions[idxf++];
@@ -719,19 +711,17 @@ static int amb_pinctrl_suspend(void)
 
 #if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET + i * 4);
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(i));
 		amb_pull_pm_reg[0][i] = amba_readl(reg);
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_0_OFFSET + i * 4);
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(i));
 		amb_pull_pm_reg[1][i] = amba_readl(reg);
 	}
 #endif
 
 #if (GPIO_PAD_DS_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
-		for (j = 0; j < 2; j++) {
-			reg = RCT_REG(GPIO_DS_OFFSET(i, j));
-			amb_ds_pm_reg[i][j] = amba_readl(reg);
-		}
+		amb_ds_pm_reg[i][0] = amba_readl(RCT_REG(GPIO_DS0_OFFSET(i)));
+		amb_ds_pm_reg[i][1] = amba_readl(RCT_REG(GPIO_DS1_OFFSET(i)));
 	}
 #endif
 
@@ -754,19 +744,17 @@ static void amb_pinctrl_resume(void)
 
 #if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_0_OFFSET + i * 4);
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(i));
 		amba_writel(reg, amb_pull_pm_reg[0][i]);
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_0_OFFSET + i * 4);
+		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(i));
 		amba_writel(reg, amb_pull_pm_reg[1][i]);
 	}
 #endif
 
 #if (GPIO_PAD_DS_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
-		for (j = 0; j < 2; j++) {
-			reg = RCT_REG(GPIO_DS_OFFSET(i, j));
-			amba_writel(reg, amb_ds_pm_reg[i][j]);
-		}
+		amba_writel(RCT_REG(GPIO_DS0_OFFSET(i)), amb_ds_pm_reg[i][0]);
+		amba_writel(RCT_REG(GPIO_DS1_OFFSET(i)), amb_ds_pm_reg[i][1]);
 	}
 #endif
 

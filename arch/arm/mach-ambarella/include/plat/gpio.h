@@ -109,6 +109,13 @@
 #define GPIO_PAD_PULL_DIR_5_OFFSET	0x10C
 #define GPIO_PAD_PULL_DIR_6_OFFSET	0x110
 
+#define GPIO_PAD_PULL_EN_OFFSET(bank)	((bank) >= 5 ? \
+					(0x100 + (((bank) - 5) * 4)) : \
+					(0x80 + ((bank) * 4)))
+#define GPIO_PAD_PULL_DIR_OFFSET(bank)	((bank) >= 5 ? \
+					(0x10C + (((bank) - 5) * 4)) : \
+					(0x94 + ((bank) * 4)))
+
 #define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
 #define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
 
