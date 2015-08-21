@@ -83,14 +83,16 @@
 #define GPIO6_REG(x)			(GPIO6_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
-#define GPIO_PAD_PULL_CTRL_SUPPORT		1
-#define GPIO_PAD_PULL_OFFSET			0xD000
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define GPIO_PAD_PULL_CTRL_SUPPORT		1
-#define GPIO_PAD_PULL_OFFSET			0x15000
-#else
+#if (CHIP_REV == A5S)
 #define GPIO_PAD_PULL_CTRL_SUPPORT		0
+#else
+#define GPIO_PAD_PULL_CTRL_SUPPORT		1
+#endif
+
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
+#define GPIO_PAD_PULL_OFFSET			0xD000
+#else
+#define GPIO_PAD_PULL_OFFSET			0x15000
 #endif
 
 #define GPIO_PAD_PULL_EN_0_OFFSET	0x80

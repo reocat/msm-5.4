@@ -433,13 +433,27 @@
 #define IOCTRL_DRIVE_STRENGTH_18MA	0x3
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define GPIO_PAD_DS_SUPPORT		1
-#else
+#if (CHIP_REV == A5S)
 #define GPIO_PAD_DS_SUPPORT		0
+#else
+#define GPIO_PAD_DS_SUPPORT		1
 #endif
 
-#if (GPIO_PAD_DS_SUPPORT == 1)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define GPIO_DS0_0_OFFSET		0x270
+#define GPIO_DS0_1_OFFSET		0x274
+#define GPIO_DS0_2_OFFSET		0x278
+#define GPIO_DS0_3_OFFSET		0x27C
+#define GPIO_DS0_4_OFFSET		0x280
+#define GPIO_DS1_0_OFFSET		0x284
+#define GPIO_DS1_1_OFFSET		0x288
+#define GPIO_DS1_2_OFFSET		0x28C
+#define GPIO_DS1_3_OFFSET		0x290
+#define GPIO_DS1_4_OFFSET		0x294
+#define GPIO_DS0_OFFSET(bank)		(0x270 + ((bank) * 4))
+#define GPIO_DS1_OFFSET(bank)		(0x284 + ((bank) * 4))
+
+#else
 #define GPIO_DS0_0_OFFSET		0x314
 #define GPIO_DS1_0_OFFSET		0x318
 #define GPIO_DS0_1_OFFSET		0x31C
@@ -454,13 +468,13 @@
 #define GPIO_DS1_5_OFFSET		0x444
 #define GPIO_DS0_6_OFFSET		0x448
 #define GPIO_DS1_6_OFFSET		0x44C
-
 #define GPIO_DS0_OFFSET(bank)		((bank) >= 4 ? \
 					(0x438 + (((bank) - 4) * 8)) : \
 					(0x314 + ((bank) * 8)))
 #define GPIO_DS1_OFFSET(bank)		((bank) >= 4 ? \
 					(0x438 + (((bank) - 4) * 8) + 4) : \
 					(0x314 + ((bank) * 8) + 4))
+#endif
 
 #define GPIO_DS0_0_REG			RCT_REG(GPIO_DS0_0_OFFSET)
 #define GPIO_DS1_0_REG			RCT_REG(GPIO_DS1_0_OFFSET)
@@ -476,7 +490,6 @@
 #define GPIO_DS1_5_REG			RCT_REG(GPIO_DS1_5_OFFSET)
 #define GPIO_DS0_6_REG			RCT_REG(GPIO_DS0_6_OFFSET)
 #define GPIO_DS1_6_REG			RCT_REG(GPIO_DS1_6_OFFSET)
-#endif
 
 /* ==========================================================================*/
 #define RCT_TIMER_OFFSET		0x254
