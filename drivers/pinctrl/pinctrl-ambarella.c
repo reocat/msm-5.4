@@ -698,32 +698,24 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 #if defined(CONFIG_PM)
 
 static u32 amb_iomux_pm_reg[GPIO_INSTANCES][3];
-#if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
 static u32 amb_pull_pm_reg[2][GPIO_INSTANCES];
-#endif
-#if (GPIO_PAD_DS_SUPPORT > 0)
 static u32 amb_ds_pm_reg[GPIO_INSTANCES][2];
-#endif
 
 static int amb_pinctrl_suspend(void)
 {
 	u32 i, j, reg;
 
-#if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(i));
 		amb_pull_pm_reg[0][i] = amba_readl(reg);
 		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(i));
 		amb_pull_pm_reg[1][i] = amba_readl(reg);
 	}
-#endif
 
-#if (GPIO_PAD_DS_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		amb_ds_pm_reg[i][0] = amba_readl(RCT_REG(GPIO_DS0_OFFSET(i)));
 		amb_ds_pm_reg[i][1] = amba_readl(RCT_REG(GPIO_DS1_OFFSET(i)));
 	}
-#endif
 
 	if (amb_iomux_base == NULL)
 		return 0;
@@ -742,21 +734,17 @@ static void amb_pinctrl_resume(void)
 {
 	u32 i, j, reg;
 
-#if (GPIO_PAD_PULL_CTRL_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(i));
 		amba_writel(reg, amb_pull_pm_reg[0][i]);
 		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(i));
 		amba_writel(reg, amb_pull_pm_reg[1][i]);
 	}
-#endif
 
-#if (GPIO_PAD_DS_SUPPORT > 0)
 	for (i = 0; i < GPIO_INSTANCES; i++) {
 		amba_writel(RCT_REG(GPIO_DS0_OFFSET(i)), amb_ds_pm_reg[i][0]);
 		amba_writel(RCT_REG(GPIO_DS1_OFFSET(i)), amb_ds_pm_reg[i][1]);
 	}
-#endif
 
 	if (amb_iomux_base == NULL)
 		return;
