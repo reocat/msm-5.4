@@ -2183,6 +2183,9 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 
 	for (i = 0; i < pinfo->slot_num; i++) {
 		pslotinfo = pinfo->pslotinfo[i];
+		if (gpio_is_valid(pslotinfo->pwr_gpio)){
+			gpio_direction_output(pslotinfo->pwr_gpio, pslotinfo->pwr_gpio_active);
+		}
 		clk_set_rate(pinfo->clk, pslotinfo->mmc->f_max);
 		ambarella_sd_reset_all(pslotinfo->mmc);
 	}
