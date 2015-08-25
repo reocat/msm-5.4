@@ -187,16 +187,6 @@ static int amb_dt_node_to_map(struct pinctrl_dev *pctldev,
 static void amb_dt_free_map(struct pinctrl_dev *pctldev,
 			struct pinctrl_map *map, unsigned num_maps)
 {
-	u32 i;
-
-	for (i = 0; i < num_maps; i++) {
-		if (map[i].type == PIN_MAP_TYPE_MUX_GROUP)
-			kfree(map[i].data.mux.group);
-		if (map[i].type == PIN_MAP_TYPE_CONFIGS_GROUP)
-			kfree(map[i].data.configs.configs);
-	}
-
-	kfree(map);
 }
 
 /* list of pinctrl callbacks for the pinctrl core */
