@@ -25,14 +25,6 @@ config AMBA_BOARD
 	help
 	  Say Y if you want to use ALSA driver on Ambarella General Board.
 
-config AMBARELLA_DUMMY_BOARD
-	tristate "Ambarella Dummy Board [With Dummy Codec]"
-	select SND_AMBARELLA_SOC_I2S
-	select SND_SOC_AMBARELLA_DUMMY
-	help
-	  Say Y if you want to add dummy audio codec support for
-	  SoC audio on Ambarella Board. Generally, it's for HDMI.
-
 endif
 
 menuconfig SND_AMBARELLA_CODEC
@@ -80,6 +72,11 @@ config SND_SOC_WM8940_AMB
 	tristate "WM8940 for Ambarella"
 	help
 		Support WM8940 for strawnerry
+
+config SND_SOC_AMBARELLA_DUMMY
+	tristate "Dummy Codec for Ambarella"
+	help
+		Support Dummy Codec for Ambarella
 
 endif
 
