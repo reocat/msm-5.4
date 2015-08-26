@@ -519,7 +519,6 @@
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc2_pins_8bit>;
-			status = "disabled";
 
 			slot@0 {
 				reg = <0>;
