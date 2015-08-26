@@ -240,7 +240,7 @@ static struct clk gclk_idsp = {
 	.lock_bit	= 4,
 	.divider	= 0,
 	.max_divider	= (1 << 4) - 1,
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 	.extra_scaler	= 1,
 #else
 	.extra_scaler	= 0,
@@ -287,7 +287,7 @@ static struct clk gclk_audio = {
 	.lock_reg	= PLL_LOCK_REG,
 	.lock_bit	= 7,
 	.divider	= 0,
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 	.max_divider	= (1 << 4) - 1,
 	.extra_scaler	= 1,
 #else
@@ -299,7 +299,7 @@ static struct clk gclk_audio = {
 	.ops		= &ambarella_rct_pll_ops,
 };
 
-#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 static struct clk pll_out_sd = {
 	.parent		= NULL,
 	.name		= "pll_out_sd",
@@ -322,7 +322,7 @@ static struct clk pll_out_sd = {
 };
 #endif
 
-#if (SD_INSTANCES >= 3)
+#if (SD_SUPPORT_SDXC == 1)
 static struct clk gclk_sdxc = {
 	.parent		= &pll_out_sd,
 	.name		= "gclk_sdxc",
@@ -343,7 +343,7 @@ static struct clk gclk_sdxc = {
 };
 #endif
 
-#if (SD_INSTANCES >= 2)
+#if (SD_SUPPORT_SDIO == 1)
 static struct clk gclk_sdio = {
 #if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 	.parent		= &pll_out_sd,
@@ -369,7 +369,7 @@ static struct clk gclk_sdio = {
 #endif
 
 static struct clk gclk_sd = {
-#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 	.parent		= &pll_out_sd,
 #else
 	.parent		= &pll_out_core,
@@ -475,7 +475,7 @@ static struct clk gclk_ssi2 = {	/* for SSI slave */
 	.ops		= &ambarella_rct_scaler_ops,
 };
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 static struct clk gclk_ssi3 = {	/* for SPINOR */
 	/* TODO: parent is determined by CLK_REF_SSI3_REG */
 	.parent		= &pll_out_core,
@@ -519,7 +519,7 @@ static struct clk gclk_pwm = {
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
-#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 	ambarella_clk_add(&pll_out_sd);
 #endif
 #if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
@@ -540,10 +540,10 @@ void ambarella_init_early(void)
 #endif
 	ambarella_clk_add(&gclk_uart);
 	ambarella_clk_add(&gclk_audio);
-#if (SD_INSTANCES >= 3)
+#if (SD_SUPPORT_SDXC == 1)
 	ambarella_clk_add(&gclk_sdxc);
 #endif
-#if (SD_INSTANCES >= 2)
+#if (SD_SUPPORT_SDIO == 1)
 	ambarella_clk_add(&gclk_sdio);
 #endif
 	ambarella_clk_add(&gclk_sd);
@@ -551,7 +551,7 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&gclk_adc);
 	ambarella_clk_add(&gclk_ssi);
 	ambarella_clk_add(&gclk_ssi2);
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 	ambarella_clk_add(&gclk_ssi3);
 #endif
 	ambarella_clk_add(&gclk_pwm);

@@ -311,9 +311,9 @@ static void ambarella_udc_fifo_flush(struct ambarella_udc *udc)
 
 static void ambarella_udc_reset(void __iomem *reset_reg, struct device_node *np)
 {
-	amba_rct_setbitsl(reset_reg, UDC_SOFT_RESET);
+	amba_rct_setbitsl(reset_reg, UDC_SOFT_RESET_MASK);
 	msleep(1);
-	amba_rct_clrbitsl(reset_reg, UDC_SOFT_RESET);
+	amba_rct_clrbitsl(reset_reg, UDC_SOFT_RESET_MASK);
 };
 
 static void ambarella_init_usb(struct ambarella_udc *udc)

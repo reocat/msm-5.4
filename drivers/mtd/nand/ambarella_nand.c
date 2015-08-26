@@ -46,6 +46,7 @@
 #include <plat/dma.h>
 #include <plat/nand.h>
 #include <plat/fio.h>
+#include <plat/rct.h>
 #include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
