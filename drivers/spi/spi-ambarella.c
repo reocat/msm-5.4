@@ -550,20 +550,18 @@ static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 	struct ambarella_spi *bus;
 	dma_cap_mask_t	mask;
 	int chan_id;
-#if (CHIP_REV == S2L)
 	u32 val;
-#endif
 
 	bus = spi_master_get_devdata(master);
 
 	amba_writel(bus->virt + 0x4c, 0);
-	/* Enable DMA Channel 0/1 as SSI0 Tx and Rx */
-#if (CHIP_REV == S2L)
-	val	 = amba_readl(AHB_SCRATCHPAD_REG(0x0c));
-	val	&= 0xff9fffff;
-	val	|= 0x00200000;
-	amba_writel(AHB_SCRATCHPAD_REG(0x0c), val);
-#endif
+	if (bus->dma_used) {
+		/* Enable DMA Channel 0/1 as SSI0 Tx and Rx */
+		val	 = amba_readl(AHB_SCRATCHPAD_REG(0x0c));
+		val	&= 0xff9fffff;
+		val	|= 0x00200000;
+		amba_writel(AHB_SCRATCHPAD_REG(0x0c), val);
+	}
 
 	chan_id = 2 * master->bus_num;
 	dma_cap_zero(mask);
