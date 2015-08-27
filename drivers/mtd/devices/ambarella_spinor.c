@@ -659,7 +659,8 @@ static void amb_spi_nor_shutdown(struct platform_device *pdev)
 	//write_enable(flash);
 	switch (JEDEC_MFR(flash->jedec_id)) {
 		case CFI_MFR_MACRONIX:
-		case 0xEF /* winbond */:
+		case 0xEF: /* winbond */
+		case 0xC8: /* GD */
 		case CFI_MFR_ST: /*Micron*/
 			flash->command[0] = 0x66;
 			ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
