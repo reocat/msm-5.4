@@ -539,20 +539,18 @@ static irqreturn_t ambarella_spi_isr(int irq, void *dev_data)
 static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 {
 	struct ambarella_spi *bus;
-#if (CHIP_REV == S2L)
 	u32 val;
-#endif
 
 	bus = spi_master_get_devdata(master);
 
 	amba_writel(bus->virt + 0x4c, 0);
-	/* Enable DMA Channel 0/1 as SSI0 Tx and Rx */
-#if (CHIP_REV == S2L)
-	val	 = amba_readl(AHB_SCRATCHPAD_REG(0x0c));
-	val	&= 0xff9fffff;
-	val	|= 0x00200000;
-	amba_writel(AHB_SCRATCHPAD_REG(0x0c), val);
-#endif
+	if (bus->dma_used) {
+		/* Enable DMA Channel 0/1 as SSI0 Tx and Rx */
+		val	 = amba_readl(AHB_SCRATCHPAD_REG(0x0c));
+		val	&= 0xff9fffff;
+		val	|= 0x00200000;
+		amba_writel(AHB_SCRATCHPAD_REG(0x0c), val);
+	}
 
 	bus->txc = dma_request_slave_channel(&master->dev, "tx");
 	if (!bus->txc) {
