@@ -261,7 +261,7 @@ static inline void serial_ambarella_receive_chars(struct uart_port *port,
 		} else {
 			if (tmo) {
 				ch = amba_readl(port->membase + UART_RB_OFFSET);
-				printk(KERN_DEBUG "False TMO get %d\n", ch);
+				/* printk(KERN_DEBUG "False TMO get %d\n", ch); */
 			}
 		}
 
