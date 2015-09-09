@@ -288,25 +288,9 @@ static int amba_codec_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static struct snd_soc_dai_link amba_dai_link[] = {
-	{
-		.init = amba_codec_init,
-		.ops = &amba_general_board_ops,
-	},
-	{
-		.init = amba_codec_init,
-		.ops = &amba_dummy_board_ops,
-	},
-
-};
-
-
 /* ambevk audio machine driver */
 static struct snd_soc_card snd_soc_card_amba = {
 	.owner = THIS_MODULE,
-	.dai_link = amba_dai_link,
-	.num_links = 2,
-
 	.dapm_widgets = amba_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(amba_dapm_widgets),
 };
@@ -315,6 +299,7 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *cpup_np, *codec_np, *dummy_codec_np;
+	struct snd_soc_dai_link *amba_dai_link;
 	struct snd_soc_card *card = &snd_soc_card_amba;
 	int rval = 0;
 
@@ -341,13 +326,27 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 	}
 
 	if(codec_np) {
+		/*alloc two amba_dai_link for audio codec and dummy codec*/
+		amba_dai_link = devm_kzalloc(&pdev->dev, 2 * sizeof(*amba_dai_link), GFP_KERNEL);
+		if (amba_dai_link == NULL) {
+			dev_err(&pdev->dev, "alloc memory for amba_dai_link fail!\n");
+			return -ENOMEM;
+		}
+
 		amba_dai_link[0].codec_of_node = codec_np;
 		amba_dai_link[0].cpu_of_node = cpup_np;
 		amba_dai_link[0].platform_of_node = cpup_np;
+		amba_dai_link[0].init = amba_codec_init;
+		amba_dai_link[0].ops = &amba_general_board_ops;
 
 		amba_dai_link[1].codec_of_node = dummy_codec_np;
 		amba_dai_link[1].cpu_of_node = cpup_np;
 		amba_dai_link[1].platform_of_node = cpup_np;
+		amba_dai_link[1].init = amba_codec_init;
+		amba_dai_link[1].ops = &amba_dummy_board_ops;
+
+		card->dai_link = amba_dai_link;
+		card->num_links = 2;
 
 		/*get parameter from code_np to fill struct snd_soc_dai_link*/
 		rval = of_property_read_string_index(np, "amb,codec-name", 0, &card->dai_link[0].name);
@@ -373,11 +372,20 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 		card->dai_link[1].codec_dai_name = "AMBARELLA_DUMMY_CODEC";
 
 	} else {
+		/*alloc only one amba_dai_link for dummy codec*/
+		amba_dai_link = devm_kzalloc(&pdev->dev, sizeof(*amba_dai_link), GFP_KERNEL);
+		if (amba_dai_link == NULL) {
+			dev_err(&pdev->dev, "alloc memory for amba_dai_link fail!\n");
+			return -ENOMEM;
+		}
+
 		amba_dai_link[0].codec_of_node = dummy_codec_np;
 		amba_dai_link[0].cpu_of_node = cpup_np;
 		amba_dai_link[0].platform_of_node = cpup_np;
+		amba_dai_link[0].init = amba_codec_init;
 		amba_dai_link[0].ops = &amba_dummy_board_ops;
-		snd_soc_card_amba.num_links = 1;
+		card->dai_link = amba_dai_link;
+		card->num_links = 1;
 		card->dai_link[0].name = "AMB-DUMMY";
 		card->dai_link[0].stream_name = "AMB-DUMMY-STREAM";
 		card->dai_link[0].codec_dai_name = "AMBARELLA_DUMMY_CODEC";

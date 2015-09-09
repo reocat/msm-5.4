@@ -22,6 +22,7 @@ config AMBA_BOARD
 	tristate "Ambarella General Board"
 	depends on SND_AMBARELLA_SOC
 	select SND_AMBARELLA_SOC_I2S
+	select SND_SOC_AMBARELLA_DUMMY
 	help
 	  Say Y if you want to use ALSA driver on Ambarella General Board.
 
