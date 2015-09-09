@@ -7,7 +7,6 @@ ccflags-y				+= -I$(srctree)/drivers/usb/gadget/udc
 
 obj-$(CONFIG_USB_LIBCOMPOSITE)	+= libcomposite.o
 libcomposite-y			:= usbstring.o config.o epautoconf.o
-obj-$(CONFIG_USB_AMBARELLA)	+= ambarella_udc.o
 g_amb_stream-y			:= amb_stream.o
 
 obj-$(CONFIG_USB_AMB_STREAM)	+= g_amb_stream.o
