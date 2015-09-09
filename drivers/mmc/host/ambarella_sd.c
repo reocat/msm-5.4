@@ -2092,6 +2092,9 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 
 	pinfo->slot_num = 0;
 	for_each_child_of_node(pdev->dev.of_node, slot_np) {
+		if (!slot_np->name || of_node_cmp(slot_np->name, "slot"))
+			continue;
+
 		retval = of_property_read_u32(slot_np, "reg", &slot_id);
 		if (retval < 0 || slot_id >= AMBA_SD_MAX_SLOT_NUM)
 			goto ambarella_sd_probe_free_host;
