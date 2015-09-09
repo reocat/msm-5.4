@@ -522,7 +522,7 @@ static u32 ambarella_check_bna_error (struct ambarella_ep *ep, u32 ep_status)
 
 	/* Error: Buffer Not Available */
 	if (ep_status & USB_EP_BUF_NOT_AVAIL) {
-		printk(KERN_ERR "[USB]:BNA error in %s\n", ep->ep.name);
+		//printk(KERN_ERR "[USB]:BNA error in %s\n", ep->ep.name);
 		amba_writel(ep->ep_reg.sts_reg, USB_EP_BUF_NOT_AVAIL);
 		retval = 1;
 	}
@@ -552,7 +552,7 @@ static u32 ambarella_check_dma_error (struct ambarella_ep *ep)
 		sts_tmp1 = ep->last_data_desc->status & USB_DMA_BUF_STS;
 		sts_tmp2 = ep->last_data_desc->status & USB_DMA_RXTX_STS;
 		if ((sts_tmp1 != USB_DMA_BUF_DMA_DONE) || (sts_tmp2 != USB_DMA_RXTX_SUCC)){
-			printk(KERN_ERR "%s: DMA failed\n", ep->ep.name);
+			//printk(KERN_ERR "%s: DMA failed\n", ep->ep.name);
 			retval = 1;
 		}
 	}
@@ -723,7 +723,7 @@ static void ambarella_enable_rx_dma(struct ambarella_ep *ep)
 }
 
 static void ambarella_patch_iso_desc(struct ambarella_udc *udc,
-	struct ambarella_request * req)
+	struct ambarella_request * req, struct ambarella_ep *ep, int frame_fix)
 {
 	struct ambarella_data_desc *data_desc;
 	u32 current_frame, max_packet_num, i, j;
@@ -733,13 +733,13 @@ static void ambarella_patch_iso_desc(struct ambarella_udc *udc,
 
 	/* according to USB2.0 spec, each microframe can send 3 packets at most */
 	for (i = 0; i < req->active_desc_count; i += j) {
-		if ((req->active_desc_count - i) >= ISO_FRAME_ADVANCE)
-			max_packet_num = ISO_FRAME_ADVANCE;
+		if ((req->active_desc_count - i) >= ISO_MAX_PACKET)
+			max_packet_num = ISO_MAX_PACKET;
 		else
 			max_packet_num = req->active_desc_count - i;
 
 		for (j = 0; j < max_packet_num; j++) {
-			data_desc->status |= ((current_frame + ISO_FRAME_ADVANCE) << 16);
+			data_desc->status |= ((current_frame + ep->frame_offset + frame_fix) << 16);
 			data_desc->status |= (max_packet_num << 14);
 			data_desc = data_desc->next_desc_virt;
 		}
@@ -747,13 +747,13 @@ static void ambarella_patch_iso_desc(struct ambarella_udc *udc,
 }
 
 static void ambarella_set_tx_dma(struct ambarella_ep *ep,
-	struct ambarella_request * req)
+	struct ambarella_request * req, int frame_fix)
 {
 	struct ambarella_udc *udc = ep->udc;
 	struct ambarella_ep_reg *ep_reg = &ep->ep_reg;
 
 	if (IS_ISO_IN_EP(ep))
-		ambarella_patch_iso_desc(udc, req);
+		ambarella_patch_iso_desc(udc, req, ep, frame_fix);
 
 	ep->data_desc = req->data_desc;
 	amba_writel(ep_reg->dat_desc_ptr_reg, req->data_desc_addr | udc->dma_fix);
@@ -1002,7 +1002,7 @@ static void ambarella_udc_done(struct ambarella_ep *ep,
 			/* no need to wait for IN-token for ISO transfer */
 			if (IS_ISO_IN_EP(ep)) {
 				amba_writel(ep->ep_reg.sts_reg, USB_EP_IN_PKT);
-				ambarella_set_tx_dma(ep, req);
+				ambarella_set_tx_dma(ep, next_req, 1);
 			}
 			ambarella_clr_ep_nak(ep);
 			break;
@@ -1237,13 +1237,15 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		}
 		ambarella_handle_data_in(&udc->ep[ep_id]);
 	} else if(ep_status & USB_EP_IN_PKT) {
+#if 0
 		if (IS_ISO_IN_EP(ep))
 			goto finish;
+#endif
 
 		if(!ep->halted && !ep->cancel_transfer && !list_empty(&ep->queue)){
 			req = list_first_entry(&ep->queue,
 				struct ambarella_request, queue);
-			ambarella_set_tx_dma(ep, req);
+			ambarella_set_tx_dma(ep, req, 0);
 		} else if (ep->dma_going == 0 || ep->halted || ep->cancel_transfer) {
 			ambarella_set_ep_nak(ep);
 		}
@@ -1488,6 +1490,7 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	ep->ctrl_sts_phase = 0;
 	ep->dma_going = 0;
 	ep->cancel_transfer = 0;
+	ep->frame_offset =  (1 << (desc->bInterval - 1));
 
 	if(ep->dir == USB_DIR_IN){
 		idx = ep->id;
@@ -1715,10 +1718,12 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 
 		if (ep->dir == USB_DIR_IN) {
 			/* no need to wait for IN-token for ISO transfer */
+#if 0
 			if (IS_ISO_IN_EP(ep)) {
 				amba_writel(ep->ep_reg.sts_reg, USB_EP_IN_PKT);
 				ambarella_set_tx_dma(ep, req);
 			}
+#endif
 			/* enable dma completion interrupt for current TX data */
 			amba_clrbitsl(USB_DEV_EP_INTR_MSK_REG, 1 << ep->id);
 			ambarella_clr_ep_nak(ep);
