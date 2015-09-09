@@ -1056,7 +1056,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	}
 
 	akdbgprt("\t[AK4951] %s(%d) ak4951=%x\n",__FUNCTION__,__LINE__, (int)ak4951);
-#if 0
+
 	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
 	if (ret < 0){
 		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
@@ -1067,7 +1067,6 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
 	msleep(1);
 	gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
-#endif
 
 	/*The 0x00 register no Ack for the dummy command:write 0x00 to 0x00*/
 	ak4951->i2c_clt->flags |= I2C_M_IGNORE_NAK;
