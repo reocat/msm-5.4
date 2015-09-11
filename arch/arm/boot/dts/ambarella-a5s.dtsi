@@ -140,6 +140,7 @@
 			reg = <0x70002000 0x1000>;
 			interrupts = <20 0x4>;
 			amb,clk-freq = <13500000>;
+			amb,msb-first-only;
 		};
 
 		spi1: spi@7000f000 {
@@ -149,6 +150,7 @@
 			reg = <0x7000f000 0x1000>;
 			interrupts = <41 0x4>;
 			amb,clk-freq = <13500000>;
+			amb,msb-first-only;
 		};
 
 		spi_slave@7001e000 {
