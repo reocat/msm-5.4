@@ -228,6 +228,8 @@ extern struct pll_table ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
 extern struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
 #define AMBARELLA_PLL_VOUT_TABLE_SIZE		(797)
 extern struct pll_table ambarella_pll_vout_table[AMBARELLA_PLL_VOUT_TABLE_SIZE];
+#define AMBARELLA_PLL_VOUT2_TABLE_SIZE		(793)
+extern struct pll_table ambarella_pll_vout2_table[AMBARELLA_PLL_VOUT2_TABLE_SIZE];
 
 extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
 		u32 pre_scaler, const struct pll_table *table, u32 table_size);
