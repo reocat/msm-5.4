@@ -544,6 +544,9 @@ should contain the following properties.
 - reg: index of the slot, normally the same as the unit address.
 - global-id: specify the global id for each slot, it should be unique for all
   of the slots.
+- amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
+always present
+- amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
 - amb,caps-adma: should be specified if hardware supports ADMA.
 - amb,caps-ddr: should be specified if hardware supports DDR.
 - no-1-8-v: should be specified if the slot don't have 1.8V circuit.
