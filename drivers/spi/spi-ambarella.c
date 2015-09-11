@@ -68,6 +68,7 @@ struct ambarella_spi {
 	int					rw ;
 	int					irq;
 	u32					dma_used:1;
+	u32					msb_first_only:1;
 	u32					ridx, widx;
 
 	struct tasklet_struct	tasklet;
@@ -147,6 +148,13 @@ static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *sp
 		cr0.s.srl = 1;
 	} else {
 		cr0.s.srl = 0;
+	}
+	if (spi->mode & SPI_LSB_FIRST) {
+		cr0.s.tx_lsb = 1;
+		cr0.s.rx_lsb = 1;
+	} else {
+		cr0.s.tx_lsb = 0;
+		cr0.s.rx_lsb = 0;
 	}
 
 	cr0.s.hold		= 0;
@@ -513,6 +521,12 @@ static int ambarella_spi_one_message(struct spi_master *master, struct spi_messa
 		}
 	}
 
+	if ((spi->mode & SPI_LSB_FIRST) && bus->msb_first_only) {
+		dev_err(&master->dev, "SPI[%d] only supports msb first tx-rx", master->bus_num);
+		err = -EINVAL;
+		goto ambarella_spi_transfer_exit;
+	}
+
 	bus->n_xfer	= 0;
 	bus->xfer_id	= 0;
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
@@ -640,6 +654,14 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	err = spi_register_master(master);
 	if (err) {
 		goto ambarella_spi_probe_exit;
+	}
+
+	/* check if hw only supports msb first tx/rx */
+	if (of_find_property(pdev->dev.of_node, "amb,msb-first-only", NULL)) {
+		bus->msb_first_only = 1;
+		dev_info(&pdev->dev,"SPI[%d] only supports msb first tx-rx\n", master->bus_num);
+	} else {
+		bus->msb_first_only = 0;
 	}
 
 	/* check if using dma */
