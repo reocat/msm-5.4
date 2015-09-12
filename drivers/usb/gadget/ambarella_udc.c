@@ -1257,7 +1257,7 @@ static void udc_epin_interrupt(struct ambarella_udc *udc, u32 ep_id)
 		return;
 	}
 
-finish:
+//finish:
 	if (ep_status != 0) {
 		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_TXFIFO_EMPTY);
 //		ep_status &= (USB_EP_IN_PKT | USB_EP_TRN_DMA_CMPL | USB_EP_RCV_CLR_STALL);
