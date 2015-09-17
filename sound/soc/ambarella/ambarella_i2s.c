@@ -107,7 +107,6 @@ static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
 		dai_tx_disable();
 		dai_tx_fifo_rst();
 	}
-
 	return 0;
 }
 
@@ -143,26 +142,12 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *cpu_dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
-	u8 slots, word_pos, oversample;
-	u32 clock_divider, clock_reg, channels;
+	u8 slots, word_len, word_pos, oversample, double_rate;
+	u32 clock_divider, clock_reg, channels, tx_ctrl = 0, multi24 = 0;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable();
 	dai_rx_disable();
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
-			amba_writel(I2S_TX_CTRL_REG, 0x08);
-		else
-			amba_writel(I2S_TX_CTRL_REG, 0x28);
-		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
-	} else {
-		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
-			amba_writel(I2S_RX_CTRL_REG, 0x00);
-		else
-			amba_writel(I2S_RX_CTRL_REG, 0x02);
-		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
-	}
 
 	channels = params_channels(params);
 	/* Set channels */
@@ -180,8 +165,12 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	priv_data->amb_i2s_intf.ch = channels;
 
 	/* Set format */
+	double_rate = 0;
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
+		priv_data->amb_i2s_intf.word_len = DAI_16bits;
+		word_len = 0x0f;
+		tx_ctrl |= 0x08; /* set unison bit (LR both in TX_LEFT_DATA) */
 		if (priv_data->amb_i2s_intf.mode == DAI_DSP_Mode) {
 			slots = channels - 1;
 			word_pos = 0x0f;
@@ -191,20 +180,49 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 			word_pos = 0;
 			priv_data->amb_i2s_intf.slots = DAI_32slots;
 		}
-		priv_data->amb_i2s_intf.word_len = DAI_16bits;
-		priv_data->amb_i2s_intf.word_pos = word_pos;
-		priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
-
-		amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
-		amba_writel(I2S_WLEN_REG, 0x0f);
-		amba_writel(I2S_WPOS_REG, word_pos);
-		amba_writel(I2S_SLOT_REG, slots);
-		amba_writel(I2S_24BITMUX_MODE_REG, 0);
-
+		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		double_rate = 1;
+		priv_data->amb_i2s_intf.word_len = DAI_24bits;
+		word_len = 0x17;
+		multi24 = 0x1; /* multi_24_en bit */
+		if (priv_data->amb_i2s_intf.mode == DAI_DSP_Mode) {
+			slots = channels - 1;
+			word_pos = 0x00; /* ignored, but set it to something */
+			priv_data->amb_i2s_intf.slots = slots;
+		} else {
+			slots = 0;
+			word_pos = 0; /* ignored, but set it to something */
+			priv_data->amb_i2s_intf.slots = DAI_32slots;
+		}
+		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		break;
 	default:
 		goto hw_params_exit;
 	}
+
+	priv_data->amb_i2s_intf.word_pos = word_pos;
+	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (priv_data->amb_i2s_intf.ms_mode != DAI_SLAVE)
+			tx_ctrl |= 0x20;
+		amba_writel(I2S_TX_CTRL_REG, tx_ctrl);
+		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
+	} else {
+		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
+			amba_writel(I2S_RX_CTRL_REG, 0x00);
+		else
+			amba_writel(I2S_RX_CTRL_REG, 0x02);
+		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
+	}
+
+	amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
+	amba_writel(I2S_WLEN_REG, word_len);
+	amba_writel(I2S_WPOS_REG, word_pos);
+	amba_writel(I2S_SLOT_REG, slots);
+	amba_writel(I2S_24BITMUX_MODE_REG, multi24);
 
 	switch (params_rate(params)) {
 	case 8000:
@@ -238,7 +256,15 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	mutex_lock(&clock_reg_mutex);
 	clock_reg = amba_readl(I2S_CLOCK_REG);
 	oversample = priv_data->amb_i2s_intf.oversample;
-	clock_divider = DAI_Clock_Divide_Table[oversample][slots >> 6];
+
+	/* In 16 bit mode, the channel width is 16 bits, and in 24 bit
+	 * mode then channel width is 32 bits (see Ambarella S2L Hardware
+         * Programming Manual, Table 9-1); consequently we need to adjust
+	 * the clock divider accordingly, by referencing 'double_rate' here.
+	 */
+
+	clock_divider = DAI_Clock_Divide_Table[oversample][double_rate];
+
 	clock_reg &= ~DAI_CLOCK_MASK;
 	clock_reg |= clock_divider;
 	if (priv_data->amb_i2s_intf.ms_mode == DAI_MASTER)
@@ -265,7 +291,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	/* Notify HDMI that the audio interface is changed */
 	ambarella_audio_notify_transition(&priv_data->amb_i2s_intf,
 		AUDIO_NOTIFY_SETHWPARAMS);
-
 	return 0;
 
 hw_params_exit:
@@ -540,13 +565,13 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE),
 	},
 	.capture = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE),
 	},
 	.ops = &ambarella_i2s_dai_ops,
 	.symmetric_rates = 1,

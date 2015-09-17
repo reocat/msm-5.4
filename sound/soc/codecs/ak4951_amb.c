@@ -763,9 +763,7 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int oversample = 0;
 	u8 	fs = 0;
-
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
-
 	oversample = ak4951->sysclk / rate;
 	switch (oversample) {
 	case 256:
@@ -819,7 +817,6 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 	default:
 		return -EINVAL;
 	}
-
 	snd_soc_write(codec, AK4951_06_MODE_CONTROL2, fs);
 
 	return 0;
@@ -1012,9 +1009,9 @@ static int ak4951_set_bias_level(struct snd_soc_codec *codec,
 				SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 |\
 				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |\
 				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200 |\
-			    SNDRV_PCM_RATE_96000)
+				SNDRV_PCM_RATE_96000)
 
-#define AK4951_FORMATS		SNDRV_PCM_FMTBIT_S16_LE
+#define AK4951_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
 
 static struct snd_soc_dai_ops ak4951_dai_ops = {
 	.hw_params	= ak4951_hw_params,
@@ -1090,7 +1087,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec,AK4951_08_DIGITL_MIC,0x01,0x00);//AMIC
 	snd_soc_update_bits(codec,AK4951_1D_DIGITAL_FILTER_MODE,0x02,0x02);//ADC output
 	snd_soc_update_bits(codec,AK4951_1D_DIGITAL_FILTER_MODE,0x01,0x01);//ALC output
-	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x3);//Mic Gain 0x10100110
+	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x42);//Mic Gain 0x10100110
 	snd_soc_update_bits(codec,AK4951_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_update_bits(codec,AK4951_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_write(codec, AK4951_0B_ALC_MODE_CONTROL1, 0x20);	//enable ALC
