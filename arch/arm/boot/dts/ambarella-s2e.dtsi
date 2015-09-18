@@ -363,7 +363,7 @@
 						 <0x0022 0x0023>;
 			};
 
-			pwm5_pins: pwm5@0 {
+			pwmVD_pins: pwmVD@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1010>;
 			};
