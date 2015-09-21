@@ -248,6 +248,14 @@
 						  0x2046 0x2047 0x2048>;
 			};
 
+			spinor0_pins: spinor0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x3037 0x3038 0x303d 0x303e
+						  0x303f 0x3040 0x3041 0x3042
+						  0x3043 0x3044 0x3045 0x3046
+						  0x3047>;
+			};
+
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
@@ -448,6 +456,9 @@
 			compatible = "ambarella,spinor";
 			reg = <0xe0031000 0x2ff>, /* spi nor controller */
 			      <0xe0005300 0x20>;  /* dma reg */
+			pinctrl-names = "default";
+			pinctrl-0 = <&spinor0_pins>;
+			status = "disabled";
 		};
 
 		uart1: uart@e0032000 {
