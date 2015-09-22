@@ -17,6 +17,7 @@
 		serial0 = &uart0;
 		serial1 = &uart1;
 		nand = &nand0;
+		spinor = &spinor0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -237,6 +238,15 @@
 						  0x2083 0x2084 0x2085>;
 			};
 
+			spinor0_pins: spinor0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x3076 0x3077 0x3078 0x3079
+						  0x307d 0x307e 0x307f 0x3080
+						  0x3081 0x3082 0x3083 0x3084
+						  0x3086 0x3087 0x3088 0x3089
+						  0x308c>;
+			};
+
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2076 0x2077 0x2078 0x2079
@@ -424,6 +434,15 @@
 			nand-on-flash-bbt;
 			amb,enable-wp;
 			/* amb,soft-ecc = <1>; */
+		};
+
+		spinor0: spinor@e0031000 {
+			compatible = "ambarella,spinor";
+			reg = <0xe0031000 0x2ff>, /* spi nor controller */
+			      <0xe0005300 0x20>;  /* dma reg */
+			pinctrl-names = "default";
+			pinctrl-0 = <&spinor0_pins>;
+			status = "disabled";
 		};
 
 		uart1: uart@e0032000 {
