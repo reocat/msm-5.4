@@ -2149,6 +2149,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 					SUPPORTED_MII);
 	}
 
+	/*enable flow control*/
+	lp->phy_supported |= SUPPORTED_Pause | SUPPORTED_Asym_Pause;
+
 	ret_val = of_property_read_u32(np, "amb,tx-ring-size", &lp->tx_count);
 	if (ret_val < 0 || lp->tx_count < AMBETH_TX_RNG_MIN)
 		lp->tx_count = AMBETH_TX_RNG_MIN;
