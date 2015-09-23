@@ -306,6 +306,13 @@
 						  0x500f 0x5010 0x5011 0x5012>;
 			};
 
+			eth_pins: eth0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x4018 0x4019 0x401a 0x102e 0x102f
+						  0x1030 0x1031 0x1032 0x1033 0x1034
+						  0x1035>;
+			};
+
 			i2c0_pins: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x101b 0x101c>;
@@ -591,6 +598,8 @@
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
+			pinctrl-names = "default";
+			pinctrl-0 = <&eth_pins>;
 		};
 
 		spi0: spi@e0020000 {
