@@ -40,6 +40,9 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
+#include <linux/io.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
 
 #include <asm/sizes.h>
 #include <asm/io.h>
@@ -296,11 +299,17 @@ static int ambfb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
 	unsigned long size = vma->vm_end - vma->vm_start;
 	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
+       struct ambarella_platform_fb *ambfb_data = NULL;
+
+       ambfb_data = ambfb_data_ptr[info->dev->id];
 
 	if (offset + size > info->fix.smem_len)
 		return -EINVAL;
 
 	offset += info->fix.smem_start;
+
+       if(ambfb_data->conversion_buf.available)
+                vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 	if (remap_pfn_range(vma, vma->vm_start, offset >> PAGE_SHIFT,
 			    size, vma->vm_page_prot))
 		return -EAGAIN;
@@ -397,31 +406,27 @@ ambfb_setup_exit:
 	return retval;
 }
 
+//do not support amboot BAPI
 static int ambfb_probe(struct platform_device *pdev)
 {
-	int					errorCode = 0;
-	struct fb_info				*info;
-	char					fb_name[64];
-	char					*option;
-	struct ambarella_platform_fb		*ambfb_data = NULL;
-	u32					i;
-	u32					framesize;
-	u32					line_length;
+	int                                errorCode = 0;
+	struct fb_info                     *info;
+	char                               fb_name[64];
+	char                               *option;
+	struct ambarella_platform_fb       *ambfb_data = NULL;
+	u32                                i,framesize,line_length;
 
 	ambfb_data = ambfb_data_ptr[pdev->id];
 
-	if (ambfb_data->use_prealloc) {
-		dev_info(&pdev->dev, "%s: use prealloc.\n", __func__);
-	} else {
-		snprintf(fb_name, sizeof(fb_name), "amb%dfb", pdev->id);
-		if (fb_get_options(fb_name, &option)) {
-			errorCode = -ENODEV;
-			goto ambfb_probe_exit;
-		}
-		if (ambfb_setup(&pdev->dev, option, ambfb_data)) {
-			errorCode = -ENODEV;
-			goto ambfb_probe_exit;
-		}
+	snprintf(fb_name, sizeof(fb_name), "amb%dfb", pdev->id);
+	if (fb_get_options(fb_name, &option)) {
+              dev_err(&pdev->dev, "%s: get fb options fail!\n", __func__);
+		errorCode = -ENODEV;
+		goto ambfb_probe_exit;
+	}
+	if (ambfb_setup(&pdev->dev, option, ambfb_data)) {
+		errorCode = -ENODEV;
+		goto ambfb_probe_exit;
 	}
 
 	info = framebuffer_alloc(sizeof(ambfb_data), &pdev->dev);
@@ -430,6 +435,16 @@ static int ambfb_probe(struct platform_device *pdev)
 		errorCode = -ENOMEM;
 		goto ambfb_probe_exit;
 	}
+
+       if(get_ambarella_fbmem_size()){
+              ambfb_data->use_prealloc =1;
+              ambfb_data->conversion_buf.available = 1;
+              ambfb_data->screen_fix.smem_start = get_ambarella_fbmem_phys();
+              ambfb_data->screen_fix.smem_len = get_ambarella_fbmem_size();
+       }else{
+              ambfb_data->use_prealloc =0;
+              ambfb_data->conversion_buf.available = 0;
+       }
 
 	mutex_lock(&ambfb_data->lock);
 
@@ -452,7 +467,12 @@ static int ambfb_probe(struct platform_device *pdev)
 		info->var.green = ambarella_fb_color_format_table[i].green;
 		info->var.blue = ambarella_fb_color_format_table[i].blue;
 		info->var.transp = ambarella_fb_color_format_table[i].transp;
-	}
+	}else{
+              dev_err(&pdev->dev, "%s: do not support color formate:%d!\n",
+                     __func__,ambfb_data->color_format);
+              errorCode = -EINVAL;
+              goto ambfb_probe_release_framebuffer;
+       }
 
 	/* Malloc Framebuffer Memory */
 	line_length = (info->var.xres_virtual *
@@ -464,46 +484,21 @@ static int ambfb_probe(struct platform_device *pdev)
 			(line_length > ambfb_data->prealloc_line_length) ?
 			line_length : ambfb_data->prealloc_line_length;
 	}
+
 	framesize = info->fix.line_length * info->var.yres_virtual;
 	if (framesize % PAGE_SIZE) {
 		framesize /= PAGE_SIZE;
 		framesize++;
 		framesize *= PAGE_SIZE;
 	}
+
 	if (ambfb_data->use_prealloc == 0) {
 		info->screen_base = kzalloc(framesize, GFP_KERNEL);
 		if (info->screen_base == NULL) {
-			dev_err(&pdev->dev, "%s(%d): Can't get fbmem!\n",
-				__func__, __LINE__);
+			dev_err(&pdev->dev, "%s(%d): Can't get %d bytes fbmem!\n",
+				__func__, __LINE__,framesize);
 			errorCode = -ENOMEM;
 			goto ambfb_probe_release_framebuffer;
-		}
-		if (ambfb_data->conversion_buf.available) {
-			ambfb_data->conversion_buf.ping_buf =
-				kzalloc(framesize, GFP_KERNEL);
-			if (ambfb_data->conversion_buf.ping_buf == NULL) {
-				ambfb_data->conversion_buf.available = 0;
-				dev_err(&pdev->dev, "%s(%d): Can't get fbmem!\n",
-					__func__, __LINE__);
-				errorCode = -ENOMEM;
-				goto ambfb_probe_release_framebuffer;
-			} else {
-				ambfb_data->conversion_buf.ping_buf_size
-					= framesize;
-			}
-
-			ambfb_data->conversion_buf.pong_buf =
-				kzalloc(framesize, GFP_KERNEL);
-			if (ambfb_data->conversion_buf.pong_buf == NULL) {
-				ambfb_data->conversion_buf.available = 0;
-				dev_err(&pdev->dev, "%s(%d): Can't get fbmem!\n",
-					__func__, __LINE__);
-				errorCode = -ENOMEM;
-				goto ambfb_probe_release_framebuffer;
-			} else {
-				ambfb_data->conversion_buf.pong_buf_size
-					= framesize;
-			}
 		}
 		info->fix.smem_start = virt_to_phys(info->screen_base);
 		info->fix.smem_len = framesize;
@@ -516,9 +511,13 @@ static int ambfb_probe(struct platform_device *pdev)
 			goto ambfb_probe_release_framebuffer;
 		}
 
-		info->screen_base = (char __iomem *)
-			ambarella_phys_to_virt(info->fix.smem_start);
-		//memset(info->screen_base, 0, info->fix.smem_len);
+              info->screen_base = ioremap(info->fix.smem_start,info->fix.smem_len);
+              memset(info->screen_base, 0, info->fix.smem_len);
+              if (!info->screen_base) {
+                     dev_err(&pdev->dev, "%s: ioremap() failed\n",__func__);
+                     errorCode = -ENOMEM;
+                     goto ambfb_probe_exit;
+              }
 
 		if (ambfb_data->conversion_buf.available) {
 			if (info->fix.smem_len < 3 * framesize) {
@@ -532,12 +531,18 @@ static int ambfb_probe(struct platform_device *pdev)
 			} else {
 				ambfb_data->conversion_buf.ping_buf =
 					info->screen_base + framesize;
+                                ambfb_data->conversion_buf.ping_buf_phy =
+                                        info->fix.smem_start + framesize;
 				ambfb_data->conversion_buf.ping_buf_size =
 					framesize;
-				ambfb_data->conversion_buf.ping_buf =
-					info->screen_base + framesize;
-				ambfb_data->conversion_buf.ping_buf_size =
+				ambfb_data->conversion_buf.pong_buf =
+					ambfb_data->conversion_buf.ping_buf + framesize;
+                                ambfb_data->conversion_buf.pong_buf_phy =
+                                        ambfb_data->conversion_buf.ping_buf_phy + framesize;
+				ambfb_data->conversion_buf.pong_buf_size =
 					framesize;
+                                ambfb_data->conversion_buf.base_buf_phy =
+                                        ambfb_data->screen_fix.smem_start;
 			}
 		}
 	}
@@ -587,12 +592,12 @@ static int ambfb_probe(struct platform_device *pdev)
 	mutex_unlock(&ambfb_data->lock);
 
 	dev_info(&pdev->dev,
-		"probe p[%dx%d] v[%dx%d] c[%d] b[%d] l[%d] @ [0x%08lx:0x%08x]!\n",
+		"probe p[%dx%d] v[%dx%d] c[%d] b[%d] l[%d] @ [0x%08lx:0x%08x],base:0x%p!\n",
 		info->var.xres, info->var.yres, info->var.xres_virtual,
 		info->var.yres_virtual, ambfb_data->color_format,
 		ambfb_data->conversion_buf.available,
 		info->fix.line_length,
-		info->fix.smem_start, info->fix.smem_len);
+		info->fix.smem_start, info->fix.smem_len,info->screen_base);
 	goto ambfb_probe_exit;
 
 ambfb_probe_unregister_framebuffer:
@@ -682,14 +687,24 @@ static struct platform_driver ambfb_driver = {
 	},
 };
 
+static void ambfb_dev_release(struct device *dev)
+{
+}
+
 static struct platform_device ambarella_fb0 = {
 	.name			= "ambarella-fb",
 	.id			= 0,
+	.dev		= {
+		.release      = &ambfb_dev_release,
+	}
 };
 
 static struct platform_device ambarella_fb1 = {
 	.name			= "ambarella-fb",
 	.id			= 1,
+	.dev		= {
+		.release      = &ambfb_dev_release,
+	}
 };
 
 static int __init ambavoutfb_init(void)

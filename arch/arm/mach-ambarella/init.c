@@ -68,6 +68,7 @@ enum {
 	AMBARELLA_IO_DESC_DBGBUS_ID,
 	AMBARELLA_IO_DESC_DBGFMEM_ID,
 #endif
+	AMBARELLA_IO_DESC_FRAMEBUF_ID,
 	AMBARELLA_IO_DESC_DSP_ID,
 };
 
@@ -196,6 +197,14 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.length		= 0x00000000,
 			},
 	},
+	[AMBARELLA_IO_DESC_FRAMEBUF_ID] = {
+		.name		= "FRAMEBUF",
+		.io_desc	= {
+			.virtual	= 0x00000000,
+			.pfn		= 0x00000000,
+			.length		= 0x00000000,
+			},
+	},
 };
 
 
@@ -225,6 +234,32 @@ static int __init ambarella_dt_scan_iavmem(unsigned long node,
 	return 1;
 }
 
+static int __init ambarella_dt_scan_fbmem(unsigned long node,
+			const char *uname,  int depth, void *data)
+{
+	const char *type;
+	__be32 *reg;
+	unsigned long len;
+	struct ambarella_mem_map_desc *fbmem_desc;
+
+	type = of_get_flat_dt_prop(node, "device_type", NULL);
+	if (type == NULL || strcmp(type, "fbmem") != 0)
+		return 0;
+
+	reg = of_get_flat_dt_prop(node, "reg", &len);
+	if (WARN_ON(!reg || (len != 2 * sizeof(unsigned long))))
+		return 0;
+
+	fbmem_desc = &ambarella_io_desc[AMBARELLA_IO_DESC_FRAMEBUF_ID];
+	fbmem_desc->io_desc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
+	fbmem_desc->io_desc.length = be32_to_cpu(reg[1]);
+
+	pr_info("Ambarella:   FBMEM = 0x%08x[          ],0x%08x\n",
+			be32_to_cpu(reg[0]), be32_to_cpu(reg[1]));
+
+	return 1;
+}
+
 void __init ambarella_map_io(void)
 {
 	u32 i, iop, ios, iov;
@@ -243,6 +278,8 @@ void __init ambarella_map_io(void)
 
 	/* scan and hold the memory information for IAV */
 	of_scan_flat_dt(ambarella_dt_scan_iavmem, NULL);
+	/* scan and hold the memory information for FRAMEBUFFER */
+	of_scan_flat_dt(ambarella_dt_scan_fbmem, NULL);
 }
 
 /* ==========================================================================*/
@@ -376,6 +413,19 @@ u32 ambarella_virt_to_phys(u32 vaddr)
 	return __amb_raw_virt_to_phys(vaddr);
 }
 EXPORT_SYMBOL(ambarella_virt_to_phys);
+
+u32 get_ambarella_fbmem_phys(void)
+{
+	return __pfn_to_phys(
+		ambarella_io_desc[AMBARELLA_IO_DESC_FRAMEBUF_ID].io_desc.pfn);
+}
+EXPORT_SYMBOL(get_ambarella_fbmem_phys);
+
+u32 get_ambarella_fbmem_size(void)
+{
+	return ambarella_io_desc[AMBARELLA_IO_DESC_FRAMEBUF_ID].io_desc.length;
+}
+EXPORT_SYMBOL(get_ambarella_fbmem_size);
 
 u32 get_ambarella_iavmem_phys(void)
 {

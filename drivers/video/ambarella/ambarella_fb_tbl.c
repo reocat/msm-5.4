@@ -560,5 +560,63 @@ static const struct ambarella_fb_color_table ambarella_fb_color_format_table[] =
 				.msb_right = 0,
 		},
 	},
+
+	{
+		.color_format = AMBFB_COLOR_AYUV8888,
+		.bits_per_pixel = 32,
+		.red =
+			{
+				.offset = 0,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 16,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 8,
+				.length = 8,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 24,
+				.length = 8,
+				.msb_right = 0,
+		},
+	},
+
+	{
+		.color_format = AMBFB_COLOR_VYU565,
+		.bits_per_pixel = 16,
+		.red =
+			{
+				.offset = 0,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.green =
+			{
+				.offset = 5,
+				.length = 6,
+				.msb_right = 0,
+			},
+		.blue =
+			{
+				.offset = 11,
+				.length = 5,
+				.msb_right = 0,
+			},
+		.transp =
+			{
+				.offset = 0,
+				.length = 0,
+				.msb_right = 0,
+		},
+	},
 };
 
