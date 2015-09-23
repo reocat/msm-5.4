@@ -595,7 +595,7 @@ static const struct ambarella_fb_color_table ambarella_fb_color_format_table[] =
 		.bits_per_pixel = 16,
 		.red =
 			{
-				.offset = 0,
+				.offset = 11,
 				.length = 5,
 				.msb_right = 0,
 			},
@@ -607,7 +607,7 @@ static const struct ambarella_fb_color_table ambarella_fb_color_format_table[] =
 			},
 		.blue =
 			{
-				.offset = 11,
+				.offset = 0,
 				.length = 5,
 				.msb_right = 0,
 			},
