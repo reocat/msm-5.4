@@ -81,6 +81,9 @@ extern u32 ambarella_virt_to_phys(u32 vaddr);
 extern u32 get_ambarella_iavmem_phys(void);
 extern u32 get_ambarella_iavmem_size(void);
 
+extern u32 get_ambarella_fbmem_phys(void);
+extern u32 get_ambarella_fbmem_size(void);
+
 extern u32 get_ambarella_ppm_phys(void);
 extern u32 get_ambarella_ppm_virt(void);
 extern u32 get_ambarella_ppm_size(void);

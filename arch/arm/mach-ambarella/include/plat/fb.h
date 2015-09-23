@@ -51,12 +51,13 @@ enum ambarella_fb_color_format {
 	AMBFB_COLOR_ABGR1555,
 	AMBFB_COLOR_ARGB1555,
 	AMBFB_COLOR_AGBR8888,	//AYUV 8:8:8:8
+	AMBFB_COLOR_AYUV8888,
 	AMBFB_COLOR_RGBA8888,
 	AMBFB_COLOR_BGRA8888,
 	AMBFB_COLOR_ABGR8888,
 	AMBFB_COLOR_ARGB8888,
 
-	AMBFB_COLOR_YUV565,
+	AMBFB_COLOR_VYU565,
 	AMBFB_COLOR_AYUV4444,
 	AMBFB_COLOR_AYUV1555,
 	AMBFB_COLOR_YUV555,
@@ -89,10 +90,13 @@ typedef int (*ambarella_fb_blank_fn)(int blank_mode, struct fb_info *info);
 
 struct ambarella_fb_cvs_buf {		//Conversion Buffer
 	int				available;
+	u32				base_buf_phy;
 	u8				*ping_buf;
+	u32				ping_buf_phy;
 	u32				ping_buf_size;
 	u8				*pong_buf;
 	u32				pong_buf_size;
+	u32				pong_buf_phy;
 };
 
 struct ambarella_fb_iav_info {
