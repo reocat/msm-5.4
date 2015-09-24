@@ -363,7 +363,7 @@
 				amb,pinmux-ids = <0x20c3 0x20c4 0x20c5>;
 			};
 
-			spi_slave_pins: spi_slave0@0 {
+			spi_slave_pins: spi_slave@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1020 0x1021 0x1022 0x1023>;
 			};
@@ -624,9 +624,10 @@
 			#size-cells = <0>;
 			reg = <0xe0021000 0x1000>;
 			interrupts = <79 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pins_a>;
 			amb,clk-freq = <54000000>;
 			status = "disabled";
-			/* need to select pinctrl setup in board dts */
 		};
 
 		spi_slave@e0026000 {
