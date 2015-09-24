@@ -254,7 +254,7 @@ static int __init ambarella_dt_scan_fbmem(unsigned long node,
 	fbmem_desc->io_desc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
 	fbmem_desc->io_desc.length = be32_to_cpu(reg[1]);
 
-	pr_info("Ambarella:   FBMEM = 0x%08x[          ],0x%08x\n",
+	pr_info("Ambarella:    FBMEM = 0x%08x[          ],0x%08x\n",
 			be32_to_cpu(reg[0]), be32_to_cpu(reg[1]));
 
 	return 1;
