@@ -23,7 +23,6 @@
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
 		spi0 = &spi0;
-		spi1 = &spi1;
 		ethernet0 = &mac0;
 	};
 
@@ -179,18 +178,6 @@
 			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <60000000>;
 			amb,msb-first-only;
-		};
-
-		spi1: spi@80004000 {
-			compatible = "ambarella,spi";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0x80004000 0x1000>;
-			interrupts = <0 53 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&spi1_pins>;
-			amb,clk-freq = <54000000>;
-			status = "disabled";
 		};
 
 		spi_slave@7001e000 {
@@ -392,11 +379,6 @@
 			spi0_pins: spi0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1002 0x1003 0x1004>;
-			};
-
-			spi1_pins: spi1@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x1058 0x1059 0x105A>;
 			};
 
 			spi_slave_pins: spi_slave@0 {
