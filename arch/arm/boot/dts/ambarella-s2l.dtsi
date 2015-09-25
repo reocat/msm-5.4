@@ -98,6 +98,7 @@
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
 			amb,bulk-num = <60>;
+			/* amb,duty-cycle = <0>; */
 			status = "disabled";
 	        };
 
@@ -412,6 +413,31 @@
 				reg = <2>;
 				amb,pinmux-ids = <0x5016>;
 			};
+
+			spi_slave_pins_a: spi_slave@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x4022 0x4023 0x4024 0x4025>;
+			};
+
+			spi_slave_pins_b: spi_slave@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3013 0x3014 0x3015 0x3016>;
+			};
+
+			spi0_pins: spi0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1022 0x1023 0x1024>;
+			};
+
+			spi1_pins_a: spi1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2007 0x2008 0x2009>;
+			};
+
+			spi1_pins_b: spi1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x402e 0x402f 0x4030>;
+			};
 		};
 	};
 
@@ -608,6 +634,8 @@
 			#size-cells = <0>;
 			reg = <0xe0020000 0x1000>;
 			interrupts = <35 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <54000000>;
 			amb,dma-used;
 			dmas = <&dma 0 1>,
@@ -621,6 +649,8 @@
 			#size-cells = <0>;
 			reg = <0xe0021000 0x1000>;
 			interrupts = <37 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pins_a>;
 			amb,clk-freq = <54000000>;
 			status = "disabled";
 		};
@@ -629,6 +659,9 @@
 			compatible = "ambarella,spi-slave";
 			reg = <0xe0026000 0x1000>;
 			interrupts = <38 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi_slave_pins_a>;
+			status = "disabled";
 		};
 	};
 

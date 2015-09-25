@@ -139,6 +139,8 @@
 			#size-cells = <0>;
 			reg = <0x70002000 0x1000>;
 			interrupts = <20 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <13500000>;
 			amb,msb-first-only;
 		};
@@ -149,6 +151,8 @@
 			#size-cells = <0>;
 			reg = <0x7000f000 0x1000>;
 			interrupts = <41 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pins>;
 			amb,clk-freq = <13500000>;
 			amb,msb-first-only;
 		};
@@ -157,6 +161,8 @@
 			compatible = "ambarella,spi-slave";
 			reg = <0x7001e000 0x1000>;
 			interrupts = <26 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi_slave_pins>;
 			amb,id = <0>;
 		};
 
@@ -308,6 +314,24 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x0045 0x0046 0x0047
 						  0x0048 0x0049 0x004a>;
+			};
+
+			spi0_pins: spi0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1002 0x1003 0x1004>;
+			};
+
+			spi1_pins: spi1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1058 0x1059 0x105A>;
+			};
+
+			spi_slave_pins: spi_slave@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1032 0x1033 0x1034 0x1035>,
+					/* virtual pins, just for
+					   configuration purpose.*/
+					<0x0021 0x1022>;
 			};
 		};
 	};
