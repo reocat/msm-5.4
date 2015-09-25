@@ -394,6 +394,51 @@
 				reg = <2>;
 				amb,pinmux-ids = <0x5017>;
 			};
+
+			spi_slave_pins_a: spi_slave@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x3001 0x3002 0x3003 0x3004>;
+			};
+
+			spi_slave_pins_b: spi_slave@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3010 0x3011 0x3012 0x3013>;
+			};
+
+			spi_slave_pins_c: spi_slave@1 {
+				reg = <2>;
+				amb,pinmux-ids = <0x3014 0x3015 0x3016 0x3017>;
+			};
+
+			spi_slave_pins_d: spi_slave@1 {
+				reg = <3>;
+				amb,pinmux-ids = <0x4023 0x4024 0x4025 0x4026>;
+			};
+
+			spi_slave_pins_e: spi_slave@1 {
+				reg = <4>;
+				amb,pinmux-ids = <0x504e 0x504f 0x5050 0x5051>;
+			};
+
+			spi_slave_pins_f: spi_slave@1 {
+				reg = <5>;
+				amb,pinmux-ids = <0x5054 0x5055 0x5056 0x5057>;
+			};
+
+			spi0_pins: spi0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1023 0x1024 0x1025>;
+			};
+
+			spi1_pins_a: spi1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2008 0x2009 0x200a>;
+			};
+
+			spi1_pins_b: spi1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x402f 0x4030 0x4031>;
+			};
 		};
 	};
 
@@ -567,6 +612,8 @@
 			#size-cells = <0>;
 			reg = <0xe0020000 0x1000>;
 			interrupts = <78 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <54000000>;
 			amb,dma-used;
 			dmas = <&dma 0 1>, <&dma 1 1>;
@@ -579,6 +626,8 @@
 			#size-cells = <0>;
 			reg = <0xe0021000 0x1000>;
 			interrupts = <77 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pins_a>;
 			amb,clk-freq = <54000000>;
 			status = "disabled";
 		};
@@ -587,6 +636,9 @@
 			compatible = "ambarella,spi-slave";
 			reg = <0xe0026000 0x1000>;
 			interrupts = <79 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi_slave_pins_a>;
+			status = "disabled";
 		};
 	};
 
