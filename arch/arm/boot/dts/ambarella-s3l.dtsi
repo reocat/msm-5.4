@@ -405,22 +405,22 @@
 				amb,pinmux-ids = <0x3010 0x3011 0x3012 0x3013>;
 			};
 
-			spi_slave_pins_c: spi_slave@1 {
+			spi_slave_pins_c: spi_slave@2 {
 				reg = <2>;
 				amb,pinmux-ids = <0x3014 0x3015 0x3016 0x3017>;
 			};
 
-			spi_slave_pins_d: spi_slave@1 {
+			spi_slave_pins_d: spi_slave@3 {
 				reg = <3>;
 				amb,pinmux-ids = <0x4023 0x4024 0x4025 0x4026>;
 			};
 
-			spi_slave_pins_e: spi_slave@1 {
+			spi_slave_pins_e: spi_slave@4 {
 				reg = <4>;
 				amb,pinmux-ids = <0x504e 0x504f 0x5050 0x5051>;
 			};
 
-			spi_slave_pins_f: spi_slave@1 {
+			spi_slave_pins_f: spi_slave@5 {
 				reg = <5>;
 				amb,pinmux-ids = <0x5054 0x5055 0x5056 0x5057>;
 			};
