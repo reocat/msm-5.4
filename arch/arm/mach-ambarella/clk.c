@@ -735,7 +735,7 @@ static struct clk gclk_vo = {
 	.post_reg	= -1,
 	.frac_reg	= PLL_HDMI_FRAC_REG,
 	.ctrl2_reg	= PLL_HDMI_CTRL2_REG,
-#if (CHIP_REV == S2E)
+#if (CHIP_REV == S2E) || (CHIP_REV == S3L)
 	.ctrl2_val	= 0x3f770b00,
 #endif
 	.ctrl3_reg	= PLL_HDMI_CTRL3_REG,
