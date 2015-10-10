@@ -289,6 +289,13 @@
 #define PLL_CORTEX_CTRL2_REG		RCT_REG(PLL_CORTEX_CTRL2_OFFSET)
 #define PLL_CORTEX_CTRL3_REG		RCT_REG(PLL_CORTEX_CTRL3_OFFSET)
 
+/* ==========================================================================*/
+
+#if (CHIP_REV == S3L)
+#define ENET_CLK_SRC_SEL_OFFSET		0x544
+#endif
+#define ENET_CLK_SRC_SEL_REG		RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
+
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SCALER_GTX_POST_OFFSET		0x2C8
 #define ENET_GTXCLK_SRC_OFFSET		0x2CC
@@ -512,6 +519,13 @@
 
 #define RCT_TIMER_REG			RCT_REG(RCT_TIMER_OFFSET)
 #define RCT_TIMER_CTRL_REG		RCT_REG(RCT_TIMER_CTRL_OFFSET)
+
+/* ==========================================================================*/
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+#define AHB_MISC_OFFSET			0x21c
+#endif
+#define AHB_MISC_REG			RCT_REG(AHB_MISC_OFFSET)
 
 /* ==========================================================================*/
 
