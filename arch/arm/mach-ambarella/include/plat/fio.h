@@ -43,6 +43,13 @@
 #define	FIO_INDEPENDENT_SD		1
 #endif
 
+/* For BCH mode */
+#if (CHIP_REV == S3L)
+#define FIO_SUPPORT_SKIP_BLANK_ECC	1
+#else
+#define FIO_SUPPORT_SKIP_BLANK_ECC	0
+#endif
+
 /* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
@@ -75,6 +82,7 @@
 #define FIO_CTR_DA			0x00020000
 #define FIO_CTR_DR			0x00010000
 #define FIO_CTR_SX			0x00000100
+#define FIO_CTR_SKIP_BLANK	0x00000080
 #define FIO_CTR_ECC_8BIT		0x00000060
 #define FIO_CTR_ECC_6BIT		0x00000040
 #define FIO_CTR_RS			0x00000010
