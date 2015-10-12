@@ -896,10 +896,10 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 							dev_err(nand_info->dev,
 								"BCH real corrected failed (0x%08x), addr is 0x[%x]!\n",
 								nand_info->fio_ecc_sta, nand_info->addr);
-							} else {
-								dev_err(nand_info->dev,
-								"Should not be here \n");
-							}
+						} else {
+							dev_err(nand_info->dev,
+							"Should not be here \n");
+						}
 					} else {
 						/* Workaround for page never used, BCH will be failed */
 						if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
