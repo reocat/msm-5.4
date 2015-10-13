@@ -502,8 +502,8 @@
 			reg = <0xe0032000 0x1000>;
 			interrupts = <80 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&uart1_pins_b &uart1_flow_pins_c>;
-			status = "disabled";
+			pinctrl-0 = <&uart1_pins_c &uart1_flow_pins_d>;
+			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
