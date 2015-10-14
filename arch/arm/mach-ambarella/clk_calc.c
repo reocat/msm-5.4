@@ -64,8 +64,13 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		/* fvco should be less than 1.5GHz, so we use 63 [(1 << 6) - 1] as
 		 * max_numerator, although the actual bit width of pll_intp is 7 */
 		rational_best_approximation(rate, REF_CLK_FREQ,
-				(1 << 6) - 1, (1 << 4) - 1,
+				(1 << 7) - 1, (1 << 4) - 1,
 				&intp, &pre_scaler);
+		//TODO: temporary solution for s3l 4Kp30 hdmi vout
+		if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
+			intp = 0x63;
+			pre_scaler = 4;
+		}
 		BUG_ON(intp == 0 || pre_scaler == 0);
 	}
 
@@ -95,6 +100,12 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			sdiv *= 2;
 			sout *= 2;
 		}
+	}
+
+	if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
+		sdiv = 5;
+		sout = 1;
+		c->frac_mode = 0;
 	}
 
 	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
@@ -141,6 +152,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 
 	ctrl2 = c->ctrl2_val ? c->ctrl2_val : 0x3f770000;
 	ctrl3 = c->ctrl3_val ? c->ctrl3_val : ctrl_reg.s.frac_mode ? 0x00069300 : 0x00068300;
+	if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
+		ctrl2 = 0x3f700e00;
+		ctrl3 = 0x00068306;
+	}
 	amba_rct_writel(c->ctrl2_reg, ctrl2);
 	amba_rct_writel(c->ctrl3_reg, ctrl3);
 
