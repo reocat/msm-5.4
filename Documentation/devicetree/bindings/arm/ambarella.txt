@@ -499,6 +499,8 @@ Required properties:
 - amb,clk-name: specifies the PLL name of this SD controller, should be one
   of these strings: "gclk_sd", "gclk_sdio", "gclk_sdxc".
 - amb,wait-tmo: specifies the timeout in millisecond to wait for CMD complete.
+- amb,switch-vol-tmo: specifies the timeout to enable clk after switch voltage
+  from 3.3v to 1.8v.
 - amb,max-blk-size: specifies the maximal block size, should be multiple of 4k.
 
 Optional properties:

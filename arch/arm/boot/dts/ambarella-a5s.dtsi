@@ -405,7 +405,8 @@
 			      <0x60001000 0x80>; /* fio reg address */
 			interrupts = <18 0x4>;
 			amb,clk-name = "gclk_sd";
-			amb,wait-tmo = <2500>; /* in millisecond */
+			amb,wait-tmo = <10000>; /* in millisecond */
+			amb,switch_vol_tmo = <20>;
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
 			status = "disabled";
 

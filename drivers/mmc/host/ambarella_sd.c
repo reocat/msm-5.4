@@ -55,7 +55,6 @@ static struct mmc_host *G_mmc[SD_INSTANCES * AMBA_SD_MAX_SLOT_NUM];
 #define CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT	(100000)
 #define CONFIG_SD_AMBARELLA_MAX_TIMEOUT		(10 * HZ)
 #define CONFIG_SD_AMBARELLA_VSW_PRE_SPEC	(5)
-#define CONFIG_SD_AMBARELLA_VSW_POST_SPEC	(1)
 #define CONFIG_SD_AMBARELLA_VSW_WAIT_LIMIT	(1000)
 
 #undef CONFIG_SD_AMBARELLA_DEBUG
@@ -165,6 +164,7 @@ struct ambarella_sd_controller_info {
 
 	struct clk			*clk;
 	u32				default_wait_tmo;
+	u32				switch_voltage_tmo;
 	u8				slot_num;
 	u32				soft_phy : 1;
 	struct ambarella_sd_phy_timing	*phy_timing;
@@ -1226,15 +1226,8 @@ static inline void ambarella_sd_prepare_tmo(
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	pslotinfo->tmo = CONFIG_SD_AMBARELLA_TIMEOUT_VAL;
-	pslotinfo->wait_tmo = pinfo->default_wait_tmo;
-	if ((pslotinfo->wait_tmo > 0) && (pslotinfo->wait_tmo <
-		CONFIG_SD_AMBARELLA_MAX_TIMEOUT)) {
-		pslotinfo->sta_counter = CONFIG_SD_AMBARELLA_MAX_TIMEOUT;
-		pslotinfo->sta_counter /= pslotinfo->wait_tmo;
-	} else {
-		pslotinfo->sta_counter = 1;
-		pslotinfo->wait_tmo = (1 * HZ);
-	}
+	pslotinfo->wait_tmo = min_t(u32, pinfo->default_wait_tmo, CONFIG_SD_AMBARELLA_MAX_TIMEOUT);
+	pslotinfo->sta_counter = pinfo->default_wait_tmo / CONFIG_SD_AMBARELLA_MAX_TIMEOUT + 1;
 
 	ambsd_dbg(pslotinfo, "timeout_ns = %u, timeout_clks = %u, "
 		"wait_tmo = %u, tmo = %u, sta_counter = %u.\n",
@@ -1597,10 +1590,8 @@ static int ambarella_sd_ssvs(struct mmc_host *mmc, struct mmc_ios *ios)
 		if (gpio_is_valid(pslotinfo->v18_gpio)) {
 			gpio_set_value_cansleep(pslotinfo->v18_gpio,
 						pslotinfo->v18_gpio_active);
-			msleep(10);
+			msleep(pinfo->switch_voltage_tmo);
 		}
-
-		msleep(CONFIG_SD_AMBARELLA_VSW_POST_SPEC);
 		ambarella_sd_set_clken(mmc);
 	}
 	ambarella_sd_release_bus(mmc);
@@ -1950,7 +1941,7 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 	struct device_node *np = pinfo->dev->of_node;
 	const __be32 *prop;
 	const char *clk_name;
-	int psize, tmo, retval = 0;
+	int psize, tmo, switch_vol_tmo, retval = 0;
 
 	retval = of_property_read_string(np, "amb,clk-name", &clk_name);
 	if (retval < 0) {
@@ -1970,12 +1961,18 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 
 	retval = of_property_read_u32(np, "amb,wait-tmo", &tmo);
 	if (retval < 0)
-		tmo = 0x20000;
+		tmo = 0x10000;
 
 	pinfo->default_wait_tmo = msecs_to_jiffies(tmo);
 
 	if (pinfo->default_wait_tmo < CONFIG_SD_AMBARELLA_WAIT_TIMEOUT)
 		pinfo->default_wait_tmo = CONFIG_SD_AMBARELLA_WAIT_TIMEOUT;
+
+	retval = of_property_read_u32(np, "amb,switch-vol-tmo", &switch_vol_tmo);
+	if (retval < 0)
+		switch_vol_tmo = 100;
+
+	pinfo->switch_voltage_tmo = switch_vol_tmo;
 
 	retval = of_property_read_u32(np, "amb,max-blk-size", &pinfo->max_blk_sz);
 	if (retval < 0)
