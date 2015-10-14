@@ -192,7 +192,9 @@ static int ambrtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 static irqreturn_t ambrtc_alarm_irq(int irq, void *dev_id)
 {
 	struct ambarella_rtc *ambrtc = (struct ambarella_rtc *)dev_id;
-	rtc_update_irq(ambrtc->rtc, 1, RTC_IRQF | RTC_AF);
+
+	if(ambrtc->rtc)
+		rtc_update_irq(ambrtc->rtc, 1, RTC_IRQF | RTC_AF);
 
 	return IRQ_HANDLED;
 }
