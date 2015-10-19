@@ -489,9 +489,6 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 	val = amba_readl(nand_info->regbase + FIO_STA_OFFSET);
 
 	if (val & FIO_STA_FI) {
-		amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET,
-			(FIO_CTR_RS | FIO_CTR_SE | FIO_CTR_CO));
-
 		amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0x0);
 
 		atomic_clear_mask(0x1, (unsigned long *)&nand_info->irq_flag);
@@ -769,6 +766,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
 			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_RS);
 
 			if (nand_info->area == SPARE_ONLY ||
 				nand_info->area == SPARE_ECC  ||
@@ -826,6 +824,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
 			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_RS);
 
 			if (nand_info->area == SPARE_ONLY ||
 				nand_info->area == SPARE_ECC  ||
