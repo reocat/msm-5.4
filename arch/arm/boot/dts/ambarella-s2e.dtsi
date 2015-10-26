@@ -431,10 +431,14 @@
 			      <0x6001c000 0x1000>;
 		};
 
-		dma@60005000 {
+		dma: dma@60005000 {
 			compatible = "ambarella,dma";
 			reg = <0x60005000 0x1000>;
 			interrupts = <15 0x4>;
+			#dma-cells = <2>;
+			dma-channels = <8>;
+			dma-requests = <8>;
+			dma-trans-type = <1 1 1 1 1 1 1 1>; /* 0-memcpy ,1-slave*/
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
@@ -469,7 +473,6 @@
 			reg = <0x6000a000 0x1000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2s0_pins>;
-			bclk_reverse = <0>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
 		};
@@ -504,7 +507,8 @@
 			      <0x70170340 0x8>;
 			interrupts = <18 0x4>;
 			amb,clk-name = "gclk_sd";
-			amb,wait-tmo = <2500>; /* in millisecond */
+			amb,wait-tmo = <10000>; /* in millisecond */
+			amb,switch_vol_tmo = <20>;
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
@@ -533,7 +537,8 @@
 			      <0x701701d0 0x4>;
 			interrupts = <52 0x4>;
 			amb,clk-name = "gclk_sdio";
-			amb,wait-tmo = <2500>; /* in millisecond */
+			amb,wait-tmo = <10000>; /* in millisecond */
+			amb,switch_vol_tmo = <20>;
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
 			amb,phy-timing = <0x00000001 0x1c1f1c1f 0x00000000>,
 					 <0x00000080 0x1c1f1c1f 0x00e0e000>;
@@ -594,7 +599,7 @@
 		usbphy: usbphy@70170050 {
 			compatible = "ambarella,usbphy";
 			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
-			amb,host-phy-num = <2>;
+			amb,host-phy-num = <1>;
 		};
 	};
 

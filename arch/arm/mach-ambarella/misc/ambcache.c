@@ -261,7 +261,7 @@ static u32 setup_l2_ctrl(void)
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3L)
 	ctrl |= (0x0 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT);
 	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);

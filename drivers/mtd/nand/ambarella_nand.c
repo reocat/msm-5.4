@@ -46,6 +46,7 @@
 #include <plat/dma.h>
 #include <plat/nand.h>
 #include <plat/fio.h>
+#include <plat/rct.h>
 #include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
@@ -261,6 +262,9 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 		amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
 					nand_ext_ctr_reg);
 	}
+
+	if (FIO_SUPPORT_SKIP_BLANK_ECC)
+			fio_ctr_reg |= FIO_CTR_SKIP_BLANK;
 
 	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg | FIO_CTR_RR);
 	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, fio_dsm_ctr);
@@ -883,15 +887,29 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			if (cmd == NAND_AMB_CMD_READ) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
 					int ret = 0;
-					/* Workaround for page never used, BCH will be failed */
-					if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
-						ret = nand_bch_spare_cmp(nand_info);
 
-					if (ret < 0) {
-						nand_info->mtd.ecc_stats.failed++;
-						dev_err(nand_info->dev,
-							"BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
-							nand_info->fio_ecc_sta, nand_info->addr);
+					if (FIO_SUPPORT_SKIP_BLANK_ECC) {
+						fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+						if (fio_ctr_reg & FIO_CTR_SKIP_BLANK) {
+							nand_info->mtd.ecc_stats.failed++;
+							dev_err(nand_info->dev,
+								"BCH real corrected failed (0x%08x), addr is 0x[%x]!\n",
+								nand_info->fio_ecc_sta, nand_info->addr);
+						} else {
+							dev_err(nand_info->dev,
+							"Should not be here \n");
+						}
+					} else {
+						/* Workaround for page never used, BCH will be failed */
+						if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
+							ret = nand_bch_spare_cmp(nand_info);
+
+						if (ret < 0) {
+							nand_info->mtd.ecc_stats.failed++;
+							dev_err(nand_info->dev,
+								"BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
+								nand_info->fio_ecc_sta, nand_info->addr);
+						}
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
 					if (NAND_ECC_RPT_NUM_SUPPORT) {

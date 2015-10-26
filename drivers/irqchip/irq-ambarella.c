@@ -382,15 +382,14 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 	struct irq_domain *domain)
 {
 	u32 scratchpad;
-	u32 bank;
 	u32 irq, hwirq;
 	int handled = 0;
 
-	if (smp_processor_id()) {
-		scratchpad = AHB_SCRATCHPAD_REG(0x40);
-	} else {
-		scratchpad = AHB_SCRATCHPAD_REG(0x3C);
-	}
+	if (smp_processor_id())
+		scratchpad = AHBSP_PRI_IRQ_C1_REG;
+	else
+		scratchpad = AHBSP_PRI_IRQ_C0_REG;
+
 	do {
 		hwirq = amba_readl(scratchpad);
 		if (hwirq == VIC_NULL_PRI_IRQ_VAL) {
@@ -402,15 +401,11 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 			break;
 #endif
 		}
-		bank = (hwirq >> 5) & 0x3;
-		hwirq &= 0x1F;
 #if 0
 		printk("CPU%d_%s: %d_%d\n",
 			smp_processor_id(), __func__,
-			bank, hwirq);
+			(hwirq >> 5) & 0x3, hwirq & 0x1F);
 #endif
-		hwirq += bank * NR_VIC_IRQ_SIZE;
-
 		if (ambvic_handle_ipi(regs, domain, hwirq)) {
 			handled = 1;
 			continue;

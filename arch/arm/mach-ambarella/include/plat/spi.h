@@ -46,7 +46,7 @@
 #define SPI_AHB_INSTANCES			0
 #define SPI_SLAVE_INSTANCES			1
 #define SPI_AHB_SLAVE_INSTANCES			0
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define SPI_INSTANCES				0
 #define SPI_AHB_INSTANCES			2
 #define SPI_SLAVE_INSTANCES			0
@@ -73,7 +73,7 @@
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1 // S2 and S2L is not explain this in PRM
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define SPI_TARGET_FRAME	1
 #else
 #define SPI_TARGET_FRAME	0

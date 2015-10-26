@@ -74,8 +74,6 @@ struct amb_clk {
 
 static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 {
-	int ret= 0;
-
 	switch (params_rate(params)) {
 	case 8000:
 		clk->mclk = 12288000;
@@ -123,11 +121,9 @@ static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk
 		clk->bclk = 48000;
 		break;
 	default:
-		ret = -EINVAL;
-		break;
+		return -EINVAL;
 	}
-
-	return ret;
+	return 0;
 }
 
 static int amba_general_board_hw_params(struct snd_pcm_substream *substream,

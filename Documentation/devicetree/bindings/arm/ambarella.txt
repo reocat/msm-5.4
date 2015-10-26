@@ -295,6 +295,14 @@ Required properties:
 - compatible: should be "ambarella,dma".
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the DMA controller.
+- #dma-cells: Must be at least 1. Used to provide DMA controller
+			specific information. See DMA client binding below for
+			more details.
+- dma-channels: 	Number of DMA channels supported by the controller.
+- dma-requests: 	Number of DMA requests signals supported by the
+			controller.
+- dma-trans-type:   specifies the dma channel use type.
+					0 for memcpy, 1 for slave.
 
 Optional properties:
 - amb,copy-align: specifies alignment requirement for previous chips.
@@ -306,6 +314,10 @@ ii) Example
 		compatible = "ambarella,dma";
 		reg = <0xe0005000 0x1000>;
 		interrupts = <15 0x4>;
+		#dma-cells = <2>;
+		dma-channels = <8>;
+		dma-requests = <12>;
+		dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 	};
 
 
@@ -393,7 +405,6 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
-- bclk_reverse: control i2s_clk(BCLK) to reverse.
 - amb,i2s-channels: should be one of these values: 2, 4, 6.
 - amb,default-mclk: specifies the initial mclk frequency in HZ.
 
@@ -404,7 +415,6 @@ ii) Example
 		reg = <0xe001a000 0x1000>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s0_pins>;
-		bclk_reverse = <0>;
 		amb,i2s-channels = <2>;
 		amb,default-mclk = <12288000>;
 	};
@@ -487,6 +497,8 @@ Required properties:
 - amb,clk-name: specifies the PLL name of this SD controller, should be one
   of these strings: "gclk_sd", "gclk_sdio", "gclk_sdxc".
 - amb,wait-tmo: specifies the timeout in millisecond to wait for CMD complete.
+- amb,switch-vol-tmo: specifies the timeout to enable clk after switch voltage
+  from 3.3v to 1.8v.
 - amb,max-blk-size: specifies the maximal block size, should be multiple of 4k.
 
 Optional properties:
@@ -633,6 +645,21 @@ Required properties:
 - amb,clk-freq: specifies the PLL frequence in HZ.
 - amb,dma-used: use dma for TX/RX, should be specified if SPI channel supports dma mode.
 - amb,msb-first-only: HW only supports msb first tx/rx, for A5S/S2/S2E, please set this flag.
+- dmas:			List of one or more DMA specifiers, each consisting of
+			- A phandle pointing to DMA controller node
+			- A number of integer cells, as determined by the
+			  #dma-cells property in the node referenced by phandle
+			  containing DMA controller specific information. This
+			  typically contains a DMA request line number or a
+			  channel number, but can contain any data that is
+			  required for configuring a channel.
+			- A flag for dma channel usage. 0 for memcpy, 1 for slave.
+- dma-names: 		Contains one identifier string for each DMA specifier in
+			the dmas property. The specific strings that can be used
+			are defined in the binding of the DMA client device.
+			Multiple DMA specifiers can be used to represent
+			alternatives and in this case the dma-names for those
+			DMA specifiers must be identical (see examples).
 
 Optional properties:
 - cs-gpios: gpios chip select. Please see Reference for detailed.

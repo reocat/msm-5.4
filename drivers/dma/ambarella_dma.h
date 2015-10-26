@@ -83,6 +83,9 @@ struct ambdma_device {
 	u32				copy_align;
 	/* support pause/resume/stop */
 	u32				support_prs : 1;
+	u32				nr_channels;
+	u32				dma_requests;
+	u32				dma_channel_type[NUM_DMA_CHANNELS];
 };
 
 
