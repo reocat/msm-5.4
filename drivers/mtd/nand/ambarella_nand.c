@@ -245,7 +245,7 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 
 	fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
 	dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
-	fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO);
+	fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO | FIO_CTR_SKIP_BLANK);
 
 	if (nand_info->ecc_bits == 6) {
 	  fio_dsm_ctr |= FIO_DSM_SPJP_64B;
@@ -262,9 +262,6 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 		amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
 					nand_ext_ctr_reg);
 	}
-
-	if (FIO_SUPPORT_SKIP_BLANK_ECC)
-			fio_ctr_reg |= FIO_CTR_SKIP_BLANK;
 
 	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg | FIO_CTR_RR);
 	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, fio_dsm_ctr);
@@ -886,30 +883,20 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		if (nand_amb_is_hw_bch(nand_info)) {
 			if (cmd == NAND_AMB_CMD_READ) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
-					int ret = 0;
+					int ret;
 
-					if (FIO_SUPPORT_SKIP_BLANK_ECC) {
-						fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
-						if (fio_ctr_reg & FIO_CTR_SKIP_BLANK) {
-							nand_info->mtd.ecc_stats.failed++;
-							dev_err(nand_info->dev,
-								"BCH real corrected failed (0x%08x), addr is 0x[%x]!\n",
-								nand_info->fio_ecc_sta, nand_info->addr);
-						} else {
-							dev_err(nand_info->dev,
-							"Should not be here \n");
-						}
-					} else {
-						/* Workaround for page never used, BCH will be failed */
-						if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
-							ret = nand_bch_spare_cmp(nand_info);
+					/* Workaround for some chips which will
+					 * report ECC failed for blank page. */
+					if (FIO_SUPPORT_SKIP_BLANK_ECC)
+						ret = -1;
+					else
+						ret = nand_bch_spare_cmp(nand_info);
 
-						if (ret < 0) {
-							nand_info->mtd.ecc_stats.failed++;
-							dev_err(nand_info->dev,
-								"BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
-								nand_info->fio_ecc_sta, nand_info->addr);
-						}
+					if (ret < 0) {
+						nand_info->mtd.ecc_stats.failed++;
+						dev_err(nand_info->dev,
+							"BCH corrected failed (0x%08x), addr is 0x[%x]!\n",
+							nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
 					if (NAND_ECC_RPT_NUM_SUPPORT) {
