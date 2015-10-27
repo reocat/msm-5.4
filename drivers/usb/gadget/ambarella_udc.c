@@ -1516,9 +1516,11 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	if(ep->dir == USB_DIR_IN) {
 		/* NOTE: total IN fifo size must be less than 576 * 4B */
 		tmp = max_packet / 4;
+#if 0
 		if (IS_ISO_IN_EP(ep))
 			tmp *= max_packet > 1024 ? 1 : max_packet > 512 ? 2 : 3;
 		else
+#endif
 			tmp *= 2;
 		amba_writel(ep->ep_reg.buf_sz_reg, tmp);
 	}
@@ -1624,6 +1626,10 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 		pr_err("%s: _ep is NULL\n", __func__);
 		return -EINVAL;
 	}
+
+	/* enable Tx and Rx DMA */
+	amba_setbitsl(USB_DEV_CTRL_REG,
+		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	ep = to_ambarella_ep(_ep);
 	if (unlikely (!ep->ep.desc && !IS_EP0(ep))) {
