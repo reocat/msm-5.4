@@ -491,7 +491,7 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 		ambarella_i2c_start_current_msg(pinfo);
 		timeout = wait_event_timeout(pinfo->msg_wait,
-			pinfo->msg_num == 0, CONFIG_I2C_AMBARELLA_ACK_TIMEOUT);
+			pinfo->msg_num == 0, adap->timeout);
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
 		}
