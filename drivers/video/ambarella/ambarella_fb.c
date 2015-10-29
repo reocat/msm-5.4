@@ -406,7 +406,6 @@ ambfb_setup_exit:
 	return retval;
 }
 
-//do not support amboot BAPI
 static int ambfb_probe(struct platform_device *pdev)
 {
 	int                                errorCode = 0;

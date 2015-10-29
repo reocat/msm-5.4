@@ -29,7 +29,6 @@ obj-$(CONFIG_AMBARELLA_SUPPORT_AMBENCH)		+= ambench.o
 obj-y						+= ambevent.o
 obj-y						+= ambfb.o
 obj-y						+= ambsyncproc.o
-obj-$(CONFIG_AMBARELLA_SUPPORT_BAPI)		+= bapi.o
 obj-y						+= event.o
 obj-y						+= service.o
 obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= highres_timer.o

@@ -335,13 +335,6 @@ config PLAT_AMBARELLA_LOWER_ARM_PLL
 	help
 	  If you are not sure, say N here.
 
-config AMBARELLA_SUPPORT_BAPI
-	bool "Suport BAPI"
-	depends on !AMBARELLA_RAW_BOOT
-	default n
-	help
-	  If you are not sure, say N here.
-
 config AMBARELLA_PMUSERENR_EN
 	bool "Enable userspcae access to PMU"
 	default n
@@ -359,12 +352,6 @@ depends on SYSFS
 
 config AMBARELLA_SYS_CACHE_CALL
 	bool "Support Cache Configuration"
-	default n
-	help
-	  If you are not sure, say N here.
-
-config AMBARELLA_SYS_BAPI_CALL
-	bool "Support BAPI Configuration"
 	default n
 	help
 	  If you are not sure, say N here.

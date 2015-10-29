@@ -43,6 +43,7 @@
 #include <plat/ambcache.h>
 
 #define SREF_MAGIC_PATTERN		0x43525230
+#define SREF_CPU_JUMP_ADDR		0x000f1000
 
 static int dram_reset_ctrl = -1;
 
@@ -92,7 +93,7 @@ static void ambarella_set_cpu_jump(int cpu, void *jump_fn)
 	u32 *addr_virt;
 
 	/* must keep consistent with self_refresh.c in bst. */
-	addr_phys = get_ambarella_ppm_phys() + 0x000f1000;
+	addr_phys = get_ambarella_ppm_phys() + SREF_CPU_JUMP_ADDR;
 	addr_virt = (u32 *)ambarella_phys_to_virt(addr_phys);
 	*addr_virt++ = SREF_MAGIC_PATTERN;
 	*addr_virt = virt_to_phys(jump_fn);
