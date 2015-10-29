@@ -178,7 +178,7 @@ static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *sp
 
 static void ambarella_spi_stop(struct ambarella_spi *bus)
 {
-    if (!bus || !bus->msg || !bus->msg_spi)
+    if (!bus || !bus->msg || !bus->msg->spi)
         return;
    
 	gpio_set_value(bus->msg->spi->cs_gpio, 1);
