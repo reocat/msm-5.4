@@ -690,7 +690,7 @@ int ohci_setup(struct usb_hcd *hcd)
 	struct ohci_hcd		*ohci = hcd_to_ohci(hcd);
 
 	ohci_hcd_init(ohci);
-	
+
 	return ohci_init(ohci);
 }
 EXPORT_SYMBOL_GPL(ohci_setup);
@@ -1224,7 +1224,7 @@ MODULE_LICENSE ("GPL");
 #define DAVINCI_PLATFORM_DRIVER	ohci_hcd_da8xx_driver
 #endif
 
-#ifdef CONFIG_USB_EHCI_AMBARELLA
+#ifdef CONFIG_USB_OHCI_AMBARELLA
 #include "ohci-ambarella.c"
 #define PLATFORM_DRIVER		ohci_hcd_ambarella_driver
 #endif

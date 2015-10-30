@@ -46,10 +46,10 @@
 #include <plat/dma.h>
 #include <plat/nand.h>
 #include <plat/fio.h>
+#include <plat/rct.h>
 #include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
-#define AMB_SOFT_BCH_EXTRA_SIZE		6
 
 
 struct ambarella_nand_info {
@@ -82,6 +82,7 @@ struct ambarella_nand_info {
 	u8				*bch_data;
 	u8				read_ecc_rev[13];
 	u8				calc_ecc_rev[13];
+	u8				soft_bch_extra_size;
 
 	dma_addr_t			dmaaddr;
 	u8				*dmabuf;
@@ -152,21 +153,6 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
 	.oobfree = {{2, 17}, {34, 17},
 			{66, 17}, {98, 17}}
 };
-
-static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
-{
-	unsigned long tmp, tmp2;
-
-	__asm__ __volatile__("@ atomic_clear_mask\n"
-"1:	ldrex	%0, [%3]\n"
-"	bic	%0, %0, %4\n"
-"	strex	%1, %0, [%3]\n"
-"	teq	%1, #0\n"
-"	bne	1b"
-	: "=&r" (tmp), "=&r" (tmp2), "+Qo" (*addr)
-	: "r" (addr), "Ir" (mask)
-	: "cc");
-}
 
 /* ==========================================================================*/
 #define NAND_TIMING_RSHIFT24BIT(x)	(((x) & 0xff000000) >> 24)
@@ -259,7 +245,7 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 
 	fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
 	dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
-	fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO);
+	fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO | FIO_CTR_SKIP_BLANK);
 
 	if (nand_info->ecc_bits == 6) {
 	  fio_dsm_ctr |= FIO_DSM_SPJP_64B;
@@ -500,9 +486,6 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 	val = amba_readl(nand_info->regbase + FIO_STA_OFFSET);
 
 	if (val & FIO_STA_FI) {
-		amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET,
-			(FIO_CTR_RS | FIO_CTR_SE | FIO_CTR_CO));
-
 		amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0x0);
 
 		atomic_clear_mask(0x1, (unsigned long *)&nand_info->irq_flag);
@@ -780,6 +763,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
 			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_RS);
 
 			if (nand_info->area == SPARE_ONLY ||
 				nand_info->area == SPARE_ECC  ||
@@ -837,6 +821,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
 			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_RS);
 
 			if (nand_info->area == SPARE_ONLY ||
 				nand_info->area == SPARE_ECC  ||
@@ -898,9 +883,13 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		if (nand_amb_is_hw_bch(nand_info)) {
 			if (cmd == NAND_AMB_CMD_READ) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
-					int ret = 0;
-					/* Workaround for page never used, BCH will be failed */
-					if (nand_info->area == MAIN_ECC || nand_info->area == SPARE_ECC)
+					int ret;
+
+					/* Workaround for some chips which will
+					 * report ECC failed for blank page. */
+					if (FIO_SUPPORT_SKIP_BLANK_ECC)
+						ret = -1;
+					else
 						ret = nand_bch_spare_cmp(nand_info);
 
 					if (ret < 0) {
@@ -1397,7 +1386,7 @@ static int amb_nand_calculate_ecc(struct mtd_info *mtd,
 
 		memset(code, 0, nand_info->chip.ecc.bytes);
 
-		amb_eccsize = nand_info->chip.ecc.size + AMB_SOFT_BCH_EXTRA_SIZE;
+		amb_eccsize = nand_info->chip.ecc.size + nand_info->soft_bch_extra_size;
 		encode_bch(nand_info->bch, nand_info->bch_data, amb_eccsize, code);
 
 		/* make it be compatible with hw bch */
@@ -1435,7 +1424,7 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *buf,
 			nand_info->calc_ecc_rev[i] = bitrev8(calc_ecc[i]);
 		}
 
-		amb_eccsize = chip->ecc.size + AMB_SOFT_BCH_EXTRA_SIZE;
+		amb_eccsize = chip->ecc.size + nand_info->soft_bch_extra_size;
 		count = decode_bch(nand_info->bch, NULL,
 					amb_eccsize,
 					nand_info->read_ecc_rev,
@@ -1505,7 +1494,7 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 	struct nand_chip *chip = &nand_info->chip;
 	u32 amb_eccsize, eccbytes, m, t;
 
-	amb_eccsize = chip->ecc.size + AMB_SOFT_BCH_EXTRA_SIZE;
+	amb_eccsize = chip->ecc.size + nand_info->soft_bch_extra_size;
 	eccbytes = chip->ecc.bytes;
 
 	m = fls(1 + 8 * amb_eccsize);
@@ -1529,7 +1518,7 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 	 * words, we don't support to write anything except for ECC code
 	 * into spare are. */
 	memset(nand_info->bch_data + chip->ecc.size,
-				0xff, AMB_SOFT_BCH_EXTRA_SIZE);
+				0xff, nand_info->soft_bch_extra_size);
 
 	return 0;
 }
@@ -1673,8 +1662,6 @@ static int ambarella_nand_init_chipecc(struct ambarella_nand_info *nand_info)
 		&& nand_info->ecc_bits != 6
 		&& nand_info->ecc_bits != 8);
 	BUG_ON(mtd->writesize != 2048 && mtd->writesize != 512);
-	/* We support 1-bit and 6-bit ecc,recently. */
-	BUG_ON(nand_info->soft_ecc && nand_info->ecc_bits > 6);
 	BUG_ON(nand_info->ecc_bits == 8 && mtd->oobsize < 128);
 
 	chip->ecc.mode = NAND_ECC_HW;
@@ -1685,11 +1672,13 @@ static int ambarella_nand_init_chipecc(struct ambarella_nand_info *nand_info)
 		chip->ecc.size = 512;
 		chip->ecc.bytes = 13;
 		chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc8;
+		nand_info->soft_bch_extra_size = 19;
 		break;
 	case 6:
 		chip->ecc.size = 512;
 		chip->ecc.bytes = 10;
 		chip->ecc.layout = &amb_oobinfo_2048_dsm_ecc6;
+		nand_info->soft_bch_extra_size = 6;
 		break;
 	case 1:
 		chip->ecc.size = 512;

@@ -22,7 +22,7 @@
 #include <sound/initval.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
-
+#include <linux/of_gpio.h>
 #include "ambarella_dummy.h"
 
 static inline unsigned int ambdummy_codec_read(struct snd_soc_codec *codec,
@@ -51,7 +51,7 @@ static int ambdummy_set_bias_level(struct snd_soc_codec *codec,
 
 #define AMBDUMMY_RATES SNDRV_PCM_RATE_8000_48000
 
-#define AMBDUMMY_FORMATS SNDRV_PCM_FMTBIT_S16_LE
+#define AMBDUMMY_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
 
 static struct snd_soc_dai_ops ambdummy_dai_ops = {
 	.digital_mute = ambdummy_mute,

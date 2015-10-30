@@ -36,6 +36,7 @@
 #include <linux/clk.h>
 #include <asm/uaccess.h>
 #include <mach/hardware.h>
+#include <plat/sd.h>
 #include <plat/clk.h>
 
 /* ==========================================================================*/
@@ -45,316 +46,35 @@ DEFINE_SPINLOCK(ambarella_clock_lock);
 /* ==========================================================================*/
 static unsigned int ambarella_clk_ref_freq = REF_CLK_FREQ;
 
-u32 ambarella_rct_find_pll_table_index(unsigned long rate, u32 pre_scaler,
-	const struct pll_table_s *p_table, u32 table_size)
+unsigned int ambarella_clk_get_ref_freq(void)
 {
-	u64 dividend;
-	u64 divider;
-	u32 start;
-	u32 middle;
-	u32 end;
-	u32 index_limit;
-	u64 diff = 0;
-	u64 diff_low = 0xFFFFFFFFFFFFFFFF;
-	u64 diff_high = 0xFFFFFFFFFFFFFFFF;
-
-	pr_debug("pre_scaler = [0x%08X]\n", pre_scaler);
-
-	dividend = rate;
-	dividend *= pre_scaler;
-	dividend *= (1000 * 1000 * 1000);
-	divider = (ambarella_clk_ref_freq / (1000 * 1000));
-	AMBCLK_DO_DIV(dividend, divider);
-
-	index_limit = (table_size - 1);
-	start = 0;
-	end = index_limit;
-	middle = table_size / 2;
-	while (p_table[middle].multiplier != dividend) {
-		if (p_table[middle].multiplier < dividend) {
-			start = middle;
-		} else {
-			end = middle;
-		}
-		middle = (start + end) / 2;
-		if (middle == start || middle == end) {
-			break;
-		}
-	}
-	if ((middle > 0) && ((middle + 1) <= index_limit)) {
-		if (p_table[middle - 1].multiplier < dividend) {
-			diff_low = dividend - p_table[middle - 1].multiplier;
-		} else {
-			diff_low = p_table[middle - 1].multiplier - dividend;
-		}
-		if (p_table[middle].multiplier < dividend) {
-			diff = dividend - p_table[middle].multiplier;
-		} else {
-			diff = p_table[middle].multiplier - dividend;
-		}
-		if (p_table[middle + 1].multiplier < dividend) {
-			diff_high = dividend - p_table[middle + 1].multiplier;
-		} else {
-			diff_high = p_table[middle + 1].multiplier - dividend;
-		}
-		pr_debug("multiplier[%u] = [%llu]\n", (middle - 1),
-			p_table[middle - 1].multiplier);
-		pr_debug("multiplier[%u] = [%llu]\n", (middle),
-			p_table[middle].multiplier);
-		pr_debug("multiplier[%u] = [%llu]\n", (middle + 1),
-			p_table[middle + 1].multiplier);
-	} else if ((middle == 0) && ((middle + 1) <= index_limit)) {
-		if (p_table[middle].multiplier < dividend) {
-			diff = dividend - p_table[middle].multiplier;
-		} else {
-			diff = p_table[middle].multiplier - dividend;
-		}
-		if (p_table[middle + 1].multiplier < dividend) {
-			diff_high = dividend - p_table[middle + 1].multiplier;
-		} else {
-			diff_high = p_table[middle + 1].multiplier - dividend;
-		}
-		pr_debug("multiplier[%u] = [%llu]\n", (middle),
-			p_table[middle].multiplier);
-		pr_debug("multiplier[%u] = [%llu]\n", (middle + 1),
-			p_table[middle + 1].multiplier);
-	} else if ((middle > 0) && ((middle + 1) > index_limit)) {
-		if (p_table[middle - 1].multiplier < dividend) {
-			diff_low = dividend - p_table[middle - 1].multiplier;
-		} else {
-			diff_low = p_table[middle - 1].multiplier - dividend;
-		}
-		if (p_table[middle].multiplier < dividend) {
-			diff = dividend - p_table[middle].multiplier;
-		} else {
-			diff = p_table[middle].multiplier - dividend;
-		}
-		pr_debug("multiplier[%u] = [%llu]\n", (middle - 1),
-			p_table[middle - 1].multiplier);
-		pr_debug("multiplier[%u] = [%llu]\n", (middle),
-			p_table[middle].multiplier);
-	}
-	pr_debug("diff_low = [%llu]\n", diff_low);
-	pr_debug("diff = [%llu]\n", diff);
-	pr_debug("diff_high = [%llu]\n", diff_high);
-	if (diff_low < diff) {
-		if (middle) {
-			middle--;
-		}
-	}
-	if (diff_high < diff) {
-		middle++;
-		if (middle > index_limit) {
-			middle = index_limit;
-		}
-	}
-	pr_debug("middle = [%u]\n", middle);
-
-	return middle;
+	return ambarella_clk_ref_freq;
 }
-EXPORT_SYMBOL(ambarella_rct_find_pll_table_index);
+EXPORT_SYMBOL(ambarella_clk_get_ref_freq);
 
 /* ==========================================================================*/
-unsigned long ambarella_rct_clk_get_rate(struct clk *c)
-{
-	u32 pre_scaler, post_scaler, intp, sdiv, sout;
-	u64 dividend, divider, frac;
-	union ctrl_reg_u ctrl_reg;
-	union frac_reg_u frac_reg;
 
-	BUG_ON(c->ctrl_reg == -1 || c->frac_reg == -1);
+struct clk_ops ambarella_rct_scaler_ops = {
+	.enable		= NULL,
+	.disable	= NULL,
+	.get_rate	= ambarella_rct_scaler_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= ambarella_rct_scaler_set_rate,
+	.set_parent	= NULL,
+};
+EXPORT_SYMBOL(ambarella_rct_scaler_ops);
 
-	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
-	if ((ctrl_reg.s.power_down == 1) || (ctrl_reg.s.halt_vco == 1)) {
-		c->rate = 0;
-		return c->rate;
-	}
+struct clk_ops ambarella_rct_pll_ops = {
+	.enable		= ambarella_rct_clk_enable,
+	.disable	= ambarella_rct_clk_disable,
+	.get_rate	= ambarella_rct_clk_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= ambarella_rct_clk_set_rate,
+	.set_parent	= NULL,
+};
+EXPORT_SYMBOL(ambarella_rct_pll_ops);
 
-	frac_reg.w = amba_rct_readl(c->frac_reg);
-
-	if (c->pres_reg != -1) {
-		pre_scaler = amba_rct_readl(c->pres_reg);
-		if (c->extra_scaler == 1) {
-			pre_scaler >>= 4;
-			pre_scaler++;
-		}
-	} else {
-		pre_scaler = 1;
-	}
-
-	if (c->post_reg != -1) {
-		post_scaler = amba_rct_readl(c->post_reg);
-		if (c->extra_scaler == 1) {
-			post_scaler >>= 4;
-			post_scaler++;
-		}
-	} else {
-		post_scaler = 1;
-	}
-
-	if (ctrl_reg.s.bypass || ctrl_reg.s.force_bypass) {
-		c->rate = ambarella_clk_ref_freq / pre_scaler / post_scaler;
-		return c->rate;
-	}
-
-	intp = ctrl_reg.s.intp;
-	sdiv = ctrl_reg.s.sdiv;
-	sout = ctrl_reg.s.sout;
-
-	dividend = (u64)ambarella_clk_ref_freq;
-	dividend *= (u64)(intp + 1);
-	dividend *= (u64)(sdiv + 1);
-	if (ctrl_reg.s.frac_mode) {
-		if (frac_reg.s.nega) {
-			/* Negative */
-			frac = (0x80000000 - frac_reg.s.frac);
-			frac = (ambarella_clk_ref_freq * frac * (sdiv + 1));
-			frac >>= 32;
-			dividend = dividend - frac;
-		} else {
-			/* Positive */
-			frac = frac_reg.s.frac;
-			frac = (ambarella_clk_ref_freq * frac * (sdiv + 1));
-			frac >>= 32;
-			dividend = dividend + frac;
-		}
-	}
-
-	divider = (pre_scaler * (sout + 1) * post_scaler);
-	if (c->divider)
-		divider *= c->divider;
-
-	if (divider == 0) {
-		c->rate = 0;
-		return c->rate;
-	}
-
-	AMBCLK_DO_DIV(dividend, divider);
-	c->rate = dividend;
-
-	return c->rate;
-}
-EXPORT_SYMBOL(ambarella_rct_clk_get_rate);
-
-int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
-{
-	const struct pll_table_s *pll_table;
-	u32 pre_scaler, post_scaler, middle, table_size;
-	u32 intp, sdiv, sout, post, ctrl2, ctrl3;
-	u64 dividend, divider, diff;
-	union ctrl_reg_u ctrl_reg;
-	union frac_reg_u frac_reg;
-
-	if (!rate || c->ctrl_reg == -1 || c->ctrl2_reg == -1 || c->ctrl3_reg == -1)
-		return -1;
-
-	if (c->post_reg != -1 && !c->max_divider)
-		return -1;
-
-	if (c->divider)
-		rate *= c->divider;
-
-	if (c->pres_reg != -1) {
-		pre_scaler = amba_rct_readl(c->pres_reg);
-		if (c->extra_scaler == 1) {
-			pre_scaler >>= 4;
-			pre_scaler++;
-		}
-	} else {
-		pre_scaler = 1;
-	}
-
-	if (c->post_reg == -1) {
-		pll_table = ambarella_pll_int_table;
-		table_size = AMBARELLA_PLL_INT_TABLE_SIZE;
-	} else {
-		pll_table = ambarella_pll_frac_table;
-		table_size = AMBARELLA_PLL_FRAC_TABLE_SIZE;
-	}
-
-	middle = ambarella_rct_find_pll_table_index(rate,
-			pre_scaler, pll_table, table_size);
-	intp = pll_table[middle].intp;
-	sdiv = pll_table[middle].sdiv;
-	sout = pll_table[middle].sout;
-	post = pll_table[middle].post;
-
-	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
-	ctrl_reg.s.intp = intp;
-	ctrl_reg.s.sdiv = sdiv;
-	ctrl_reg.s.sout = sout;
-	ctrl_reg.s.bypass = 0;
-	ctrl_reg.s.frac_mode = 0;
-	ctrl_reg.s.force_reset = 0;
-	ctrl_reg.s.power_down = 0;
-	ctrl_reg.s.halt_vco = 0;
-	ctrl_reg.s.tristate = 0;
-	ctrl_reg.s.force_lock = 1;
-	ctrl_reg.s.force_bypass = 0;
-	ctrl_reg.s.write_enable = 0;
-	amba_rct_writel_en(c->ctrl_reg, ctrl_reg.w);
-
-	if (c->post_reg != -1) {
-		post_scaler = min(post, c->max_divider);
-		if (c->extra_scaler == 1) {
-			post_scaler--;
-			post_scaler <<= 4;
-			amba_rct_writel_en(c->post_reg, post_scaler);
-		} else {
-			amba_rct_writel(c->post_reg, post_scaler);
-		}
-	}
-
-	if (c->frac_mode) {
-		c->rate = ambarella_rct_clk_get_rate(c);
-		if (c->rate < rate)
-			diff = rate - c->rate;
-		else
-			diff = c->rate - rate;
-
-		dividend = diff * pre_scaler * (sout + 1) * post;
-		dividend = dividend << 32;
-		divider = (u64)ambarella_clk_ref_freq * (sdiv + 1);
-		AMBCLK_DO_DIV_ROUND(dividend, divider);
-		if (c->rate <= rate) {
-			frac_reg.s.nega	= 0;
-			frac_reg.s.frac	= dividend;
-		} else {
-			frac_reg.s.nega	= 1;
-			frac_reg.s.frac	= 0x80000000 - dividend;
-		}
-		amba_rct_writel(c->frac_reg, frac_reg.w);
-
-		ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
-		if (diff)
-			ctrl_reg.s.frac_mode = 1;
-		else
-			ctrl_reg.s.frac_mode = 0;
-
-		ctrl_reg.s.force_lock = 1;
-		ctrl_reg.s.write_enable = 1;
-		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
-
-		ctrl_reg.s.write_enable	= 0;
-		amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
-	}
-
-	if (ctrl_reg.s.frac_mode) {
-		ctrl2 = 0x3f770000;
-		ctrl3 = 0x00069300;
-	} else {
-		ctrl2 = 0x3f770000;
-		ctrl3 = 0x00068300;
-	}
-
-	amba_rct_writel(c->ctrl2_reg, ctrl2);
-	amba_rct_writel(c->ctrl3_reg, ctrl3);
-
-	c->rate = ambarella_rct_clk_get_rate(c);
-
-	return 0;
-}
-EXPORT_SYMBOL(ambarella_rct_clk_set_rate);
+/* ==========================================================================*/
 
 int ambarella_rct_clk_enable(struct clk *c)
 {
@@ -409,7 +129,7 @@ unsigned long ambarella_rct_scaler_get_rate(struct clk *c)
 	u32 parent_rate, divider;
 
 	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate)
-		parent_rate = ambarella_clk_ref_freq;
+		parent_rate = ambarella_clk_get_ref_freq();
 	else
 		parent_rate = c->parent->ops->get_rate(c->parent);
 
@@ -436,11 +156,13 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 {
 	u32 parent_rate, divider, post_scaler;
 
-	if (c->post_reg == -1 || !c->max_divider || !rate)
+	if (!rate)
 		return -1;
 
+	BUG_ON(c->post_reg == -1 || !c->max_divider);
+
 	if (!c->parent || !c->parent->ops || !c->parent->ops->get_rate)
-		parent_rate = ambarella_clk_ref_freq;
+		parent_rate = ambarella_clk_get_ref_freq();
 	else
 		parent_rate = c->parent->ops->get_rate(c->parent);
 
@@ -466,6 +188,86 @@ int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate)
 }
 EXPORT_SYMBOL(ambarella_rct_scaler_set_rate);
 
+unsigned long ambarella_rct_clk_get_rate(struct clk *c)
+{
+	u32 pre_scaler, post_scaler, intp, sdiv, sout;
+	u64 dividend, divider, frac;
+	union ctrl_reg_u ctrl_reg;
+	union frac_reg_u frac_reg;
+
+	BUG_ON(c->ctrl_reg == -1 || c->frac_reg == -1);
+
+	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
+	if ((ctrl_reg.s.power_down == 1) || (ctrl_reg.s.halt_vco == 1)) {
+		c->rate = 0;
+		return c->rate;
+	}
+
+	frac_reg.w = amba_rct_readl(c->frac_reg);
+
+	if (c->pres_reg != -1) {
+		pre_scaler = amba_rct_readl(c->pres_reg);
+		if (c->extra_scaler == 1) {
+			pre_scaler >>= 4;
+			pre_scaler++;
+		}
+	} else {
+		pre_scaler = 1;
+	}
+
+	if (c->post_reg != -1) {
+		post_scaler = amba_rct_readl(c->post_reg);
+		if (c->extra_scaler == 1) {
+			post_scaler >>= 4;
+			post_scaler++;
+		}
+	} else {
+		post_scaler = 1;
+	}
+
+	if (ctrl_reg.s.bypass || ctrl_reg.s.force_bypass) {
+		c->rate = ambarella_clk_get_ref_freq() / pre_scaler / post_scaler;
+		return c->rate;
+	}
+
+	intp = ctrl_reg.s.intp + 1;
+	sdiv = ctrl_reg.s.sdiv + 1;
+	sout = ctrl_reg.s.sout + 1;
+
+	dividend = (u64)ambarella_clk_get_ref_freq();
+	dividend *= (u64)intp;
+	dividend *= (u64)sdiv;
+	if (ctrl_reg.s.frac_mode) {
+		if (frac_reg.s.nega) {
+			/* Negative */
+			frac = (0x80000000 - frac_reg.s.frac);
+			frac = (ambarella_clk_get_ref_freq() * frac * sdiv);
+			frac >>= 32;
+			dividend = dividend - frac;
+		} else {
+			/* Positive */
+			frac = frac_reg.s.frac;
+			frac = (ambarella_clk_get_ref_freq() * frac * sdiv);
+			frac >>= 32;
+			dividend = dividend + frac;
+		}
+	}
+
+	divider = pre_scaler * sout * post_scaler;
+	if (c->divider)
+		divider *= c->divider;
+
+	if (divider == 0) {
+		c->rate = 0;
+		return c->rate;
+	}
+
+	AMBCLK_DO_DIV(dividend, divider);
+	c->rate = dividend;
+
+	return c->rate;
+}
+EXPORT_SYMBOL(ambarella_rct_clk_get_rate);
 
 /* ==========================================================================*/
 struct clk *clk_get_sys(const char *dev_id, const char *con_id)
@@ -633,7 +435,19 @@ EXPORT_SYMBOL(clk_set_parent);
 
 int ambarella_clk_add(struct clk *clk)
 {
+	struct clk *p;
+
+	if (IS_ERR(clk) || (clk == NULL))
+		return -EINVAL;
+
 	spin_lock(&ambarella_clock_lock);
+	list_for_each_entry(p, &ambarella_all_clocks, list) {
+		if (clk == p) {
+			pr_err("clk %s is existed\n", clk->name);
+			spin_unlock(&ambarella_clock_lock);
+			return -EEXIST;
+		}
+	}
 	list_add(&clk->list, &ambarella_all_clocks);
 	spin_unlock(&ambarella_clock_lock);
 
@@ -676,7 +490,6 @@ int __init ambarella_clk_init(void)
 {
 	int ret_val = 0;
 
-	ambarella_clk_ref_freq = REF_CLK_FREQ;
 #if defined(CONFIG_AMBARELLA_PLL_PROC)
 	proc_create_data("clock", S_IRUGO, get_ambarella_proc_dir(),
 		&proc_clock_fops, NULL);
@@ -686,9 +499,596 @@ int __init ambarella_clk_init(void)
 }
 
 /* ==========================================================================*/
-unsigned int ambarella_clk_get_ref_freq(void)
+
+static struct clk pll_out_core = {
+	.parent		= NULL,
+	.name		= "pll_out_core",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_CORE_CTRL_REG,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= PLL_CORE_FRAC_REG,
+	.ctrl2_reg	= PLL_CORE_CTRL2_REG,
+	.ctrl3_reg	= PLL_CORE_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 6,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk gclk_core = {
+	.parent		= &pll_out_core,
+	.name		= "gclk_core",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+#if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
+	.post_reg	= SCALER_CORE_POST_REG,
+#else
+	.post_reg	= -1,
+#endif
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+#if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
+	.divider	= 0,
+	.max_divider	= (1 << 4) - 1,
+#else
+	.divider	= 2,
+	.max_divider	= 0,
+#endif
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_ahb = {
+	.parent		= &gclk_core,
+	.name		= "gclk_ahb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+#if (CHIP_REV == A5S)
+	.divider	= 1,
+#else
+	.divider	= 2,
+#endif
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_apb = {
+	.parent		= &gclk_ahb,
+	.name		= "gclk_apb",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 2,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_ddr = {
+	.parent		= NULL,
+	.name		= "gclk_ddr",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_DDR_CTRL_REG,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= PLL_DDR_FRAC_REG,
+	.ctrl2_reg	= PLL_DDR_CTRL2_REG,
+	.ctrl3_reg	= PLL_DDR_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 5,
+	.divider	= 2,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+/* ==========================================================================*/
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+static struct clk gclk_cortex = {
+	.parent		= NULL,
+	.name		= "gclk_cortex",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_CORTEX_CTRL_REG,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= PLL_CORTEX_FRAC_REG,
+	.ctrl2_reg	= PLL_CORTEX_CTRL2_REG,
+	.ctrl3_reg	= PLL_CORTEX_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 2,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
+	.ops		= &ambarella_rct_pll_ops,
+};
+static struct clk gclk_axi = {
+	.parent		= &gclk_cortex,
+	.name		= "gclk_axi",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 3,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#if defined(CONFIG_HAVE_ARM_TWD)
+static struct clk clk_smp_twd = {
+	.parent		= &gclk_axi,
+	.name		= "smp_twd",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 1,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+#endif
+
+static struct clk gclk_idsp = {
+	.parent		= NULL,
+	.name		= "gclk_idsp",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= PLL_IDSP_CTRL_REG,
+	.pres_reg	= -1,
+	.post_reg	= SCALER_IDSP_POST_REG,
+	.frac_reg	= PLL_IDSP_FRAC_REG,
+	.ctrl2_reg	= PLL_IDSP_CTRL2_REG,
+	.ctrl3_reg	= PLL_IDSP_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 4,
+	.divider	= 0,
+	.max_divider	= (1 << 4) - 1,
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	.extra_scaler	= 1,
+#else
+	.extra_scaler	= 0,
+#endif
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+#ifdef CONFIG_AMBARELLA_CALC_PLL
+static struct clk gclk_so = {
+	.parent		= NULL,
+	.name		= "gclk_so",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_SENSOR_CTRL_REG,
+	.pres_reg	= SCALER_SENSOR_PRE_REG,
+	.post_reg	= SCALER_SENSOR_POST_REG,
+	.frac_reg	= PLL_SENSOR_FRAC_REG,
+	.ctrl2_reg	= PLL_SENSOR_CTRL2_REG,
+	.ctrl3_reg	= PLL_SENSOR_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 3,
+	.divider	= 0,
+	.max_divider	= (1 << 4) - 1,
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 1,
+#else
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+#endif
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk gclk_vo = {
+	.parent		= NULL,
+	.name		= "gclk_vo",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_HDMI_CTRL_REG,
+	.pres_reg	= SCALER_HDMI_PRE_REG,
+	.post_reg	= -1,
+	.frac_reg	= PLL_HDMI_FRAC_REG,
+	.ctrl2_reg	= PLL_HDMI_CTRL2_REG,
+#if (CHIP_REV == S2E) || (CHIP_REV == S3L)
+	.ctrl2_val	= 0x3f770b00,
+#endif
+	.ctrl3_reg	= PLL_HDMI_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 8,
+	.divider	= 10,
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 1,
+#else
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+#endif
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+static struct clk gclk_vo2 = {
+	.parent		= NULL,
+	.name		= "gclk_vo2",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_VIDEO2_CTRL_REG,
+	.pres_reg	= SCALER_VIDEO2_PRE_REG,
+	.post_reg	= SCALER_VIDEO2_POST_REG,
+	.frac_reg	= PLL_VIDEO2_FRAC_REG,
+	.ctrl2_reg	= PLL_VIDEO2_CTRL2_REG,
+	.ctrl3_reg	= PLL_VIDEO2_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 0,
+	.divider	= 0,
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 1,
+#else
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+#endif
+	.ops		= &ambarella_rct_pll_ops,
+};
+#endif
+
+static struct clk gclk_uart = {
+#if (CHIP_REV == S2E)
+	.parent		= &gclk_idsp,
+#else
+	.parent		= NULL,
+#endif
+	.name		= "gclk_uart",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= CG_UART_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_audio = {
+	.parent		= NULL,
+	.name		= "gclk_audio",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_AUDIO_CTRL_REG,
+	.pres_reg	= SCALER_AUDIO_PRE_REG,
+	.post_reg	= SCALER_AUDIO_POST_REG,
+	.frac_reg	= PLL_AUDIO_FRAC_REG,
+	.ctrl2_reg	= PLL_AUDIO_CTRL2_REG,
+	.ctrl3_reg	= PLL_AUDIO_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 7,
+	.divider	= 0,
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	.max_divider	= (1 << 4) - 1,
+	.extra_scaler	= 1,
+#else
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+#endif
+	.table		= ambarella_pll_frac_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_frac_table),
+	.ops		= &ambarella_rct_pll_ops,
+};
+
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+static struct clk pll_out_sd = {
+	.parent		= NULL,
+	.name		= "pll_out_sd",
+	.rate		= 0,
+	.frac_mode	= 1,
+	.ctrl_reg	= PLL_SD_CTRL_REG,
+	.pres_reg	= -1,
+	.post_reg	= -1,
+	.frac_reg	= PLL_SD_FRAC_REG,
+	.ctrl2_reg	= PLL_SD_CTRL2_REG,
+	.ctrl3_reg	= PLL_SD_CTRL3_REG,
+	.lock_reg	= PLL_LOCK_REG,
+	.lock_bit	= 12,
+	.divider	= 0,
+	.max_divider	= 0,
+	.extra_scaler	= 0,
+	.table		= ambarella_pll_int_table,
+	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
+	.ops		= &ambarella_rct_pll_ops,
+};
+#endif
+
+#if (SD_SUPPORT_SDXC == 1)
+static struct clk gclk_sdxc = {
+	.parent		= &pll_out_sd,
+	.name		= "gclk_sdxc",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= SCALER_SDXC_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+#if (SD_SUPPORT_SDIO == 1)
+static struct clk gclk_sdio = {
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
+	.parent		= &pll_out_sd,
+#else
+	.parent		= &pll_out_core,
+#endif
+	.name		= "gclk_sdio",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= SCALER_SDIO_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+static struct clk gclk_sd = {
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	.parent		= &pll_out_sd,
+#else
+	.parent		= &pll_out_core,
+#endif
+	.name		= "gclk_sd",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= SCALER_SD48_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_ir = {
+	.parent		= NULL,
+	.name		= "gclk_ir",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= CG_IR_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_adc = {
+	.parent		= NULL,
+	.name		= "gclk_adc",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= SCALER_ADC_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 2,
+	.max_divider	= (1 << 16) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_ssi = {	/* for SSI master */
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
+	.parent		= &gclk_apb,
+#else
+	.parent		= &pll_out_core,
+#endif
+	.name		= "gclk_ssi",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= CG_SSI_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+static struct clk gclk_ssi2 = {	/* for SSI slave */
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
+	.parent		= &gclk_apb,
+#else
+	.parent		= &pll_out_core,
+#endif
+	.name		= "gclk_ssi2",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= CG_SSI2_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+static struct clk gclk_ssi3 = {	/* for SPINOR */
+	/* TODO: parent is determined by CLK_REF_SSI3_REG */
+	.parent		= &pll_out_core,
+	.name		= "gclk_ssi3",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= CG_SSI3_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+#endif
+
+static struct clk gclk_pwm = {
+	.parent		= &gclk_apb,
+	.name		= "gclk_pwm",
+	.rate		= 0,
+	.frac_mode	= 0,
+	.ctrl_reg	= -1,
+	.pres_reg	= -1,
+	.post_reg	= CG_PWM_REG,
+	.frac_reg	= -1,
+	.ctrl2_reg	= -1,
+	.ctrl3_reg	= -1,
+	.lock_reg	= -1,
+	.lock_bit	= 0,
+	.divider	= 0,
+	.max_divider	= (1 << 24) - 1,
+	.extra_scaler	= 0,
+	.ops		= &ambarella_rct_scaler_ops,
+};
+
+void ambarella_init_early(void)
 {
-	return ambarella_clk_ref_freq;
+	ambarella_clk_add(&pll_out_core);
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	ambarella_clk_add(&pll_out_sd);
+#endif
+#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+	ambarella_clk_add(&gclk_cortex);
+	ambarella_clk_add(&gclk_axi);
+#if defined(CONFIG_HAVE_ARM_TWD)
+	ambarella_clk_add(&clk_smp_twd);
+#endif
+#endif
+	ambarella_clk_add(&gclk_ddr);
+	ambarella_clk_add(&gclk_core);
+	ambarella_clk_add(&gclk_ahb);
+	ambarella_clk_add(&gclk_apb);
+	ambarella_clk_add(&gclk_idsp);
+#ifdef CONFIG_AMBARELLA_CALC_PLL
+	amba_rct_writel(CLK_SI_INPUT_MODE_REG, 0x0);
+#if (CHIP_REV == S2E)
+	amba_rct_setbitsl(HDMI_CLOCK_CTRL_REG, 0x1);
+#endif
+	ambarella_clk_add(&gclk_so);
+	ambarella_clk_add(&gclk_vo2);	/* for lcd */
+	ambarella_clk_add(&gclk_vo);	/* for tv */
+#endif
+#if (CHIP_REV == S2E)
+	amba_rct_writel(UART_CLK_SRC_SEL_REG, UART_CLK_SRC_IDSP);
+#endif
+	ambarella_clk_add(&gclk_uart);
+	ambarella_clk_add(&gclk_audio);
+#if (SD_SUPPORT_SDXC == 1)
+	ambarella_clk_add(&gclk_sdxc);
+#endif
+#if (SD_SUPPORT_SDIO == 1)
+	ambarella_clk_add(&gclk_sdio);
+#endif
+	ambarella_clk_add(&gclk_sd);
+	ambarella_clk_add(&gclk_ir);
+	ambarella_clk_add(&gclk_adc);
+	ambarella_clk_add(&gclk_ssi);
+	ambarella_clk_add(&gclk_ssi2);
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
+	ambarella_clk_add(&gclk_ssi3);
+#endif
+	ambarella_clk_add(&gclk_pwm);
 }
-EXPORT_SYMBOL(ambarella_clk_get_ref_freq);
 

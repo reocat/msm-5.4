@@ -426,7 +426,6 @@ config USB_CONFIGFS_F_HID
 
 	  For more information, see Documentation/usb/gadget_hid.txt.
 
-
 config USB_CONFIGFS_F_UVC
 	bool "USB Webcam function"
 	depends on USB_CONFIGFS
@@ -451,20 +450,6 @@ config USB_CONFIGFS_F_PRINTER
 
 	  For more information, see Documentation/usb/gadget_printer.txt
 	  which includes sample code for accessing the device file.
-
-config USB_AMB_STREAM
-	tristate "Gadget Ambarella Data Streaming"
-	depends on USB_GADGET_AMBARELLA
-	help
-	  Gadget Ambarella Data Streaming is a single-configuration
-	  single-interface device.
-	  The driver needs two bulk-capable endpoints, and one interrupt-capable
-	  endpoint is optional. It may need special protocol that can be
-	  designed at top layer to transfer data with host.
-
-	  Say "y" to link the driver statically, or "m" to build a
-	  dynamically linked module called "g_amb_stream".
-
 
 source "drivers/usb/gadget/legacy/Kconfig"
 

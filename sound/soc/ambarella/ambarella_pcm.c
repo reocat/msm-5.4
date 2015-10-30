@@ -63,7 +63,7 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 				  SNDRV_PCM_INFO_RESUME |
 				  SNDRV_PCM_INFO_BATCH |
 				  SNDRV_PCM_INFO_JOINT_DUPLEX,
-	.formats		= SNDRV_PCM_FMTBIT_S16_LE,
+	.formats		= SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
 	.rates			= SNDRV_PCM_RATE_8000_48000,
 	.rate_min		= 8000,
 	.rate_max		= 48000,

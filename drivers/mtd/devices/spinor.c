@@ -436,7 +436,7 @@ static u32 get_ssi3_freq_hz(void)
 int ambspi_init(struct amb_norflash *flash)
 {
     u32 divider, tmp = 0;
-
+#if 0
 	divider = get_ssi3_freq_hz() / flash->clk;
     tmp = amba_readl(flash->regbase + REG08);
     REGPREP(tmp, REG08_CHIPSEL_MASK, REG08_CHIPSEL_SHIFT, ~(1 << SPINOR_DEV));
@@ -461,7 +461,7 @@ int ambspi_init(struct amb_norflash *flash)
     REGPREP(tmp, REG04_LSBFRT_MASK, REG04_LSBFRT_SHIFT, 0);
     REGPREP(tmp, REG04_CMDDTR_MASK, REG04_CMDDTR_SHIFT, 0);
     amba_writel(flash->regbase + REG04, tmp);
-
+#endif
     tmp = 0x20;
     amba_writel(flash->regbase + REG30, tmp);
 

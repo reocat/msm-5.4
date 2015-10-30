@@ -295,6 +295,14 @@ Required properties:
 - compatible: should be "ambarella,dma".
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the DMA controller.
+- #dma-cells: Must be at least 1. Used to provide DMA controller
+			specific information. See DMA client binding below for
+			more details.
+- dma-channels: 	Number of DMA channels supported by the controller.
+- dma-requests: 	Number of DMA requests signals supported by the
+			controller.
+- dma-trans-type:   specifies the dma channel use type.
+					0 for memcpy, 1 for slave.
 
 Optional properties:
 - amb,copy-align: specifies alignment requirement for previous chips.
@@ -306,6 +314,10 @@ ii) Example
 		compatible = "ambarella,dma";
 		reg = <0xe0005000 0x1000>;
 		interrupts = <15 0x4>;
+		#dma-cells = <2>;
+		dma-channels = <8>;
+		dma-requests = <12>;
+		dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 	};
 
 
@@ -485,6 +497,8 @@ Required properties:
 - amb,clk-name: specifies the PLL name of this SD controller, should be one
   of these strings: "gclk_sd", "gclk_sdio", "gclk_sdxc".
 - amb,wait-tmo: specifies the timeout in millisecond to wait for CMD complete.
+- amb,switch-vol-tmo: specifies the timeout to enable clk after switch voltage
+  from 3.3v to 1.8v.
 - amb,max-blk-size: specifies the maximal block size, should be multiple of 4k.
 
 Optional properties:
@@ -530,6 +544,9 @@ should contain the following properties.
 - reg: index of the slot, normally the same as the unit address.
 - global-id: specify the global id for each slot, it should be unique for all
   of the slots.
+- amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
+always present
+- amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
 - amb,caps-adma: should be specified if hardware supports ADMA.
 - amb,caps-ddr: should be specified if hardware supports DDR.
 - no-1-8-v: should be specified if the slot don't have 1.8V circuit.
@@ -537,9 +554,8 @@ should contain the following properties.
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
 - amb,force-gpio: force the SD/MMC pins to switch to GPIO mode when in idle,
   should be specified only for A5S SDIO slot.
-- pinctrl-names: should be specified only when amb,force-gpio is true, and
-  should contain only two values - "work", "idle".
-- pinctrl-0/1: should be specified only when amb,force-gpio is true.
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this controller.
 - properties provided by Kernel, please see Reference above.
 
 iv) Example
@@ -559,6 +575,8 @@ iv) Example
 			reg = <0>;
 			max-frequency = <48000000>;
 			bus-width = <8>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&sdmmc1_pins_8bit>;
 			amb,caps-adma;
 			cap-sdio-irq;
 		};
@@ -625,6 +643,23 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the SPI controller.
 - amb,clk-freq: specifies the PLL frequence in HZ.
+- amb,dma-used: use dma for TX/RX, should be specified if SPI channel supports dma mode.
+- amb,msb-first-only: HW only supports msb first tx/rx, for A5S/S2/S2E, please set this flag.
+- dmas:			List of one or more DMA specifiers, each consisting of
+			- A phandle pointing to DMA controller node
+			- A number of integer cells, as determined by the
+			  #dma-cells property in the node referenced by phandle
+			  containing DMA controller specific information. This
+			  typically contains a DMA request line number or a
+			  channel number, but can contain any data that is
+			  required for configuring a channel.
+			- A flag for dma channel usage. 0 for memcpy, 1 for slave.
+- dma-names: 		Contains one identifier string for each DMA specifier in
+			the dmas property. The specific strings that can be used
+			are defined in the binding of the DMA client device.
+			Multiple DMA specifiers can be used to represent
+			alternatives and in this case the dma-names for those
+			DMA specifiers must be identical (see examples).
 
 Optional properties:
 - cs-gpios: gpios chip select. Please see Reference for detailed.
@@ -760,8 +795,8 @@ should only have one group node pointed in there.
 Required subnode-properties:
 - reg: Should be the index of the group nodes for same function.
 - amb,pinmux-ids: an integer array. Each integer in the array specifies a pin
-  with given mux function, with pin id and mux packed as:
-    mux << 12 | pin id
+  with given mux function, with pin id and mux and config packed as:
+    config << 16 | mux << 12 | pin id
   Here mux means function of this pin, and pin id is identical to gpio id. For
   the SoC supporting IOMUX, like S2L, the maximal value of mux is 5. However,
   for the SoC not supporting IOMUX, like A5S, S2, the third or fourth function
@@ -769,6 +804,14 @@ Required subnode-properties:
   there is no real hardware pins mapping to the corresponding register address.
   So the registers for the "virtual pins" can be used for the selection of 3rd
   or 4th function for other real pins.
+  Further more, config is used to configure pull up/down and drive strength of
+  the pin, and it's orgnization is:
+  bit1~0: 00: pull down, 01: pull up, 1x: clear pull up/down
+  bit2:   reserved
+  bit3:   0: leave pull up/down as default value, 1: config pull up/down
+  bit5~4: drive strength value, 0: 2mA, 1: 4mA, 2: 8mA, 3: 12mA
+  bit6:   reserved
+  bit7:   0: leave drive strength as default value, 1: config drive strength
 
 v) Example
 ----------
@@ -788,11 +831,21 @@ v) Example
 			reg = <0>;
 			amb,pinmux-ids = <0x1027 0x1028>;
 		};
+
+		sdmmc0_pins_4bit: sdmmc0@1 {
+			reg = <1>;
+			amb,pinmux-ids = <0x00092039 0x00b0203a 0x00aa203b 0x0000203c
+					  0x00002049 0x0000204a 0x0000204b 0x0000204c>;
+		};
 	}
 
 In this example, uart0_pins defines a group of pins used by uart0 controller,
 according to the definition, uart0 uses 2 pins which are pin39(0x27) and
 pin40(0x28), i.e., GPIO39 and GPIO40. And, pin39/pin40 use function 1.
+And, sdmmc0_pins_4bit defines a group of pins used by sd0 controller, according
+to the definition, sd0 uses 8 pins. And pin57 enables pull up, pin58 configure
+drive strength to 12mA, pin59 clear pull up/down and configure drive strength
+to 8mA, while other pins leave pull up/down and drive strength as default value.
 
 
 20) - GPIO node
@@ -1247,16 +1300,16 @@ ii) Example
 		amb,codec-name = "ak4642";
 		amb,stream-name = "ak4642 PCM";
 		amb,codec-dai-name = "ak4642-hifi";
-		amb,audio-routing = "LIN1", "Mic internal",
-				    "RIN1", "Mic internal",
-				    "LIN2", "Line In",
-				    "RIN2", "Line In",
-				    "Line Out", "LOUT",
-				    "Line Out", "ROUT",
-				    "HP Jack", "HPL",
-		 		    "HP Jack", "HPR",
-				    "Speaker", "SPP",
-				    "Speaker", "SPN";
+		amb,audio-routing = "LIN1",	"Mic internal",
+				    "RIN1",	"Mic internal",
+				    "LIN2",	"Line In",
+				    "RIN2",	"Line In",
+				    "Line Out",	"LOUT",
+				    "Line Out",	"ROUT",
+				    "HP Jack",	"HPL",
+				    "HP Jack",	"HPR",
+				    "Speaker",	"SPP",
+				    "Speaker",	"SPN";
 	};
 
 

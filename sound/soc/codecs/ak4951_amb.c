@@ -56,6 +56,7 @@ struct ak4951_priv {
 	unsigned int clkid;
 	struct regmap *regmap;
 	struct snd_soc_codec codec;
+	struct i2c_client* i2c_clt;
 	u8 reg_cache[AK4951_MAX_REGISTERS];
 	int onStereo;
 	int mic;
@@ -762,9 +763,7 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int oversample = 0;
 	u8 	fs = 0;
-
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
-
 	oversample = ak4951->sysclk / rate;
 	switch (oversample) {
 	case 256:
@@ -818,7 +817,6 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 	default:
 		return -EINVAL;
 	}
-
 	snd_soc_write(codec, AK4951_06_MODE_CONTROL2, fs);
 
 	return 0;
@@ -1009,9 +1007,9 @@ static int ak4951_set_bias_level(struct snd_soc_codec *codec,
 				SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 |\
 				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |\
 				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200 |\
-			    SNDRV_PCM_RATE_96000)
+				SNDRV_PCM_RATE_96000)
 
-#define AK4951_FORMATS		SNDRV_PCM_FMTBIT_S16_LE
+#define AK4951_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
 
 static struct snd_soc_dai_ops ak4951_dai_ops = {
 	.hw_params	= ak4951_hw_params,
@@ -1055,7 +1053,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	}
 
 	akdbgprt("\t[AK4951] %s(%d) ak4951=%x\n",__FUNCTION__,__LINE__, (int)ak4951);
-#if 0
+
 	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
 	if (ret < 0){
 		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
@@ -1066,12 +1064,13 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
 	msleep(1);
 	gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
-#endif
-	snd_soc_write(codec, AK4951_00_POWER_MANAGEMENT1, 0x00);
-	snd_soc_write(codec, AK4951_00_POWER_MANAGEMENT1, 0x00);
+
+	/*The 0x00 register no Ack for the dummy command:write 0x00 to 0x00*/
+	ak4951->i2c_clt->flags |= I2C_M_IGNORE_NAK;
+	i2c_smbus_write_byte_data(ak4951->i2c_clt, (u8)(AK4951_00_POWER_MANAGEMENT1 & 0xFF), 0x00);
+	ak4951->i2c_clt->flags &= ~I2C_M_IGNORE_NAK;
 
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
 	akdbgprt("\t[AK4951 bias] %s(%d)\n",__FUNCTION__,__LINE__);
 
 	ak4951->onStereo = 0;
@@ -1086,13 +1085,12 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec,AK4951_08_DIGITL_MIC,0x01,0x00);//AMIC
 	snd_soc_update_bits(codec,AK4951_1D_DIGITAL_FILTER_MODE,0x02,0x02);//ADC output
 	snd_soc_update_bits(codec,AK4951_1D_DIGITAL_FILTER_MODE,0x01,0x01);//ALC output
-	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x3);//Mic Gain 0x10100110
+	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x42);//Mic Gain 0x10100110
 	snd_soc_update_bits(codec,AK4951_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_update_bits(codec,AK4951_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 
 	/*Enable LIN3*/
 	//snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
-
     return ret;
 
 }
@@ -1172,11 +1170,11 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 	if (rst_pin < 0 || !gpio_is_valid(rst_pin))
 		return -ENXIO;
 
+	ak4951->i2c_clt = i2c;
 	ak4951->rst_pin = rst_pin;
 	ak4951->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 	codec = &ak4951->codec;
 	i2c_set_clientdata(i2c, ak4951);
-
 	ak4951->regmap = devm_regmap_init_i2c(i2c, &ak4951_regmap);
 	if (IS_ERR(ak4951->regmap)) {
 		ret = PTR_ERR(ak4951->regmap);

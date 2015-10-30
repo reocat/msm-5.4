@@ -447,7 +447,7 @@
 #define SYS_CONFIG_ETH_ENABLE		0xffffffff
 #elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SYS_CONFIG_ETH_ENABLE		0x00800000
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define SYS_CONFIG_ETH_ENABLE		0x00000001
 #else
 #define SYS_CONFIG_ETH_ENABLE		0x00000080

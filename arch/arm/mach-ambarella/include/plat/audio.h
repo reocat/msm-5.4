@@ -25,7 +25,7 @@
 #define __PLAT_AMBARELLA_AUDIO_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define I2S_OFFSET			0x1A000
 #else
 #define I2S_OFFSET			0xA000

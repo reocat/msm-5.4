@@ -55,6 +55,7 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	unsigned long cortex_newfreq, core_newfreq;
 	int index, ret;
 	unsigned int cur_freq;
+
 	if (cpufreq_frequency_table_target(policy, amba_cpufreq.cortex_clktbl,
 				target_freq, relation, &index))
 		return -EINVAL;
@@ -160,17 +161,16 @@ static int amba_cpufreq_driver_init(void)
 		goto out_put_node;
 	}
 
-	cnt = prop->length / sizeof(u32);
-	cnt = cnt / 2;
+	cnt = prop->length / sizeof(u32) / 2;
 	val = prop->value;
 
-	cortex_freqtbl = kmalloc(sizeof(*cortex_freqtbl) * (cnt + 1), GFP_KERNEL);
+	cortex_freqtbl = kmalloc(sizeof(*cortex_freqtbl) * (cnt + 2), GFP_KERNEL);
 	if (!cortex_freqtbl) {
 		ret = -ENOMEM;
 		goto out_put_node;
 	}
 
-	core_freqtbl = kmalloc(sizeof(*core_freqtbl) * (cnt + 1), GFP_KERNEL);
+	core_freqtbl = kmalloc(sizeof(*core_freqtbl) * (cnt + 2), GFP_KERNEL);
 	if (!core_freqtbl) {
 		ret = -ENOMEM;
 		goto out_put_node;
@@ -186,6 +186,13 @@ static int amba_cpufreq_driver_init(void)
 
 	}
 
+	cortex_freqtbl[i].index = i;
+	cortex_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_cortex")) / 1000;
+
+	core_freqtbl[i].index = i;
+	core_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000;
+
+	i++;
 	cortex_freqtbl[i].index = i;
 	cortex_freqtbl[i].frequency = CPUFREQ_TABLE_END;
 

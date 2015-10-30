@@ -405,7 +405,8 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	amba_writel(lp->regbase + ETH_DMA_OPMODE_OFFSET,
 				ETH_DMA_OPMODE_TTC_256 |
 				ETH_DMA_OPMODE_RTC_64 |
-				ETH_DMA_OPMODE_FUF);
+				ETH_DMA_OPMODE_FUF |
+				ETH_DMA_OPMODE_TSF);
 	amba_writel(lp->regbase + ETH_MAC_CFG_OFFSET,
 		(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE));
 
@@ -424,11 +425,6 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 				ETH_DMA_OPMODE_RSF);
 		amba_setbitsl(lp->regbase + ETH_MAC_CFG_OFFSET,
 				ETH_MAC_CFG_IPC);
-	}
-
-	if (lp->ipc_tx){
-		amba_setbitsl(lp->regbase + ETH_DMA_OPMODE_OFFSET,
-				ETH_DMA_OPMODE_TSF);
 	}
 
 	if (lp->dump_rx_all) {
@@ -2102,6 +2098,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 					SUPPORTED_Autoneg | \
 					SUPPORTED_MII);
 	}
+
+	/*enable flow control*/
+	lp->phy_supported |= SUPPORTED_Pause | SUPPORTED_Asym_Pause;
 
 	ret_val = of_property_read_u32(np, "amb,tx-ring-size", &lp->tx_count);
 	if (ret_val < 0 || lp->tx_count < AMBETH_TX_RNG_MIN)

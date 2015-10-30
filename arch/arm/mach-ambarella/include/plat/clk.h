@@ -150,21 +150,26 @@ struct clk {
 	u32			frac_mode;
 	u32			ctrl_reg;
 	u32			pres_reg;
+	u32			pres_val;
 	u32			post_reg;
+	u32			post_val;
 	u32			frac_reg;
 	u32			ctrl2_reg;
+	u32			ctrl2_val;
 	u32			ctrl3_reg;
-	u32			ctrl4_reg;
+	u32			ctrl3_val;
 	u32			lock_reg;
 	u32			lock_bit;
 	u32			divider;
 	u32			max_divider;
 	u32			extra_scaler;
+	struct pll_table	*table;
+	u32			table_size;
 	struct clk_ops		*ops;
 };
 
-struct pll_table_s {
-	u64	multiplier;
+struct pll_table {
+	u64	multiplier; /* pll_out / (ref_clk / pre_scaler) */
 
 	u32	intp;
 	u32	sdiv;
@@ -217,12 +222,24 @@ union frac_reg_u {
 extern struct clk_ops ambarella_rct_pll_ops;
 extern struct clk_ops ambarella_rct_scaler_ops;
 
+#ifdef CONFIG_AMBARELLA_CALC_PLL
+#define AMBARELLA_PLL_FRAC_TABLE_SIZE		(0)
+extern struct pll_table ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
+#define AMBARELLA_PLL_INT_TABLE_SIZE		(0)
+extern struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
+#else
 #define AMBARELLA_PLL_FRAC_TABLE_SIZE		(590)
-extern const struct pll_table_s ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
+extern struct pll_table ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
 #define AMBARELLA_PLL_INT_TABLE_SIZE		(93)
-extern const struct pll_table_s ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
+extern struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
+#define AMBARELLA_PLL_VOUT_TABLE_SIZE		(797)
+extern struct pll_table ambarella_pll_vout_table[AMBARELLA_PLL_VOUT_TABLE_SIZE];
+#define AMBARELLA_PLL_VOUT2_TABLE_SIZE		(793)
+extern struct pll_table ambarella_pll_vout2_table[AMBARELLA_PLL_VOUT2_TABLE_SIZE];
+#endif
+
 extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
-	u32 pre_scaler, const struct pll_table_s *p_table, u32 table_size);
+		u32 pre_scaler, const struct pll_table *table, u32 table_size);
 
 extern unsigned long ambarella_rct_clk_get_rate(struct clk *c);
 extern int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate);

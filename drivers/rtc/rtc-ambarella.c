@@ -51,6 +51,7 @@ struct ambarella_rtc {
 	 * 1. cannot detect power lost
 	 * 2. the msb 2bits are reserved. */
 	bool			is_limited;
+	int			irq;
 };
 
 
@@ -183,6 +184,21 @@ static int ambrtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	return ambrtc_set_alarm_or_time(ambrtc, AMBRTC_ALARM, alarm_sec);
 }
 
+static int ambrtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
+{
+	return 0;
+}
+
+static irqreturn_t ambrtc_alarm_irq(int irq, void *dev_id)
+{
+	struct ambarella_rtc *ambrtc = (struct ambarella_rtc *)dev_id;
+
+	if(ambrtc->rtc)
+		rtc_update_irq(ambrtc->rtc, 1, RTC_IRQF | RTC_AF);
+
+	return IRQ_HANDLED;
+}
+
 static int ambrtc_ioctl(struct device *dev, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -213,6 +229,7 @@ static const struct rtc_class_ops ambarella_rtc_ops = {
 	.set_mmss	= ambrtc_set_mmss,
 	.read_alarm	= ambrtc_read_alarm,
 	.set_alarm	= ambrtc_set_alarm,
+	.alarm_irq_enable = ambrtc_alarm_irq_enable,
 };
 
 static void ambrtc_check_power_lost(struct ambarella_rtc *ambrtc)
@@ -242,6 +259,7 @@ static int ambrtc_probe(struct platform_device *pdev)
 	struct ambarella_rtc *ambrtc;
 	struct resource *mem;
 	void __iomem *reg;
+	int ret;
         struct device_node *np = pdev->dev.of_node;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -262,13 +280,24 @@ static int ambrtc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	platform_set_drvdata(pdev, ambrtc);
+	ambrtc->irq = platform_get_irq(pdev, 0);
+	if (ambrtc->irq < 0) {
+		dev_warn(&pdev->dev, "Can't get RTC Alarm irq resource!\n");
+		ambrtc->irq = -1;
+	} else {
+		ret = devm_request_irq(&pdev->dev, ambrtc->irq, ambrtc_alarm_irq, IRQF_SHARED,
+					"rtc alarm", ambrtc);
+		if (ret) {
+			dev_err(&pdev->dev, "could not request irq %d for rtc alarm\n", ambrtc->irq);
+			return ret;
+		}
+	}
 
 	ambrtc->reg = reg;
 	ambrtc->dev = &pdev->dev;
 	ambrtc->is_limited = !!of_find_property(pdev->dev.of_node,
 				"amb,is-limited", NULL);
-
+	platform_set_drvdata(pdev, ambrtc);
 	ambrtc_check_power_lost(ambrtc);
 
         pdev->dev.power.can_wakeup = !!of_get_property(np, "rtc,wakeup", NULL);

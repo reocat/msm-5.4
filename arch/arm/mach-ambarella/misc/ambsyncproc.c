@@ -29,11 +29,10 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/export.h>
-
+#include <linux/io.h>
 #include <asm/uaccess.h>
 #include <asm/page.h>
 #include <asm/atomic.h>
-
 #include <plat/ambsyncproc.h>
 
 int ambsync_proc_hinit(struct ambsync_proc_hinfo *hinfo)
@@ -178,8 +177,9 @@ ssize_t ambsync_proc_read(struct file *file, char __user *buf,
 	while (1) {
 		wait_event_interruptible_timeout(hinfo->sync_proc_head,
 			(atomic_read(&hinfo->sync_proc_flag) & pinfo->mask), hinfo->tmo);
-		// fix me atomic_clear_mask(pinfo->mask,
-			//(unsigned long *)&hinfo->sync_proc_flag);
+
+		 atomic_clear_mask(pinfo->mask,
+			(unsigned long *)&hinfo->sync_proc_flag);
 
 		len = hinfo->sync_read_proc(start, hinfo->sync_read_data);
 		if (len < count) {

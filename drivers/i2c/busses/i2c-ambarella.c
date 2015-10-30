@@ -491,7 +491,7 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 		ambarella_i2c_start_current_msg(pinfo);
 		timeout = wait_event_timeout(pinfo->msg_wait,
-			pinfo->msg_num == 0, CONFIG_I2C_AMBARELLA_ACK_TIMEOUT);
+			pinfo->msg_num == 0, adap->timeout);
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
 		}
@@ -660,7 +660,7 @@ static int ambarella_i2c_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ambarella_i2c_suspend_noirq(struct device *dev)
+static int ambarella_i2c_suspend(struct device *dev)
 {
 	int				errorCode = 0;
 	struct platform_device		*pdev;
@@ -678,7 +678,7 @@ static int ambarella_i2c_suspend_noirq(struct device *dev)
 	return errorCode;
 }
 
-static int ambarella_i2c_resume_noirq(struct device *dev)
+static int ambarella_i2c_resume(struct device *dev)
 {
 	int				errorCode = 0;
 	struct platform_device		*pdev;
@@ -698,8 +698,10 @@ static int ambarella_i2c_resume_noirq(struct device *dev)
 }
 
 static const struct dev_pm_ops ambarella_i2c_dev_pm_ops = {
-	.suspend_noirq = ambarella_i2c_suspend_noirq,
-	.resume_noirq = ambarella_i2c_resume_noirq,
+	.suspend = ambarella_i2c_suspend,
+	.resume = ambarella_i2c_resume,
+	.freeze = ambarella_i2c_suspend,
+	.thaw = ambarella_i2c_resume,
 };
 #endif
 

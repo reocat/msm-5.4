@@ -311,9 +311,9 @@ static void ambarella_udc_fifo_flush(struct ambarella_udc *udc)
 
 static void ambarella_udc_reset(void __iomem *reset_reg, struct device_node *np)
 {
-	amba_rct_setbitsl(reset_reg, UDC_SOFT_RESET);
+	amba_rct_setbitsl(reset_reg, UDC_SOFT_RESET_MASK);
 	msleep(1);
-	amba_rct_clrbitsl(reset_reg, UDC_SOFT_RESET);
+	amba_rct_clrbitsl(reset_reg, UDC_SOFT_RESET_MASK);
 };
 
 static void ambarella_init_usb(struct ambarella_udc *udc)
@@ -1414,9 +1414,10 @@ static void ambarella_vbus_timer(unsigned long data)
 {
 	struct ambarella_udc *udc = (struct ambarella_udc *)data;
 	enum usb_device_state state;
-	u32 connected;
+	u32 raw_status, connected;
 
-	connected = !!(amba_readl(VIC_REG(VIC_RAW_STA_OFFSET)) & 0x1);
+	raw_status = amba_readl(VIC_REG(USBVBUS_IRQ, VIC_RAW_STA_OFFSET));
+	connected = !!(raw_status & (1 << (USBVBUS_IRQ % NR_VIC_IRQ_SIZE)));
 
 	if (udc->vbus_status != connected) {
 		state = connected ? USB_STATE_ATTACHED : USB_STATE_NOTATTACHED;
@@ -1517,9 +1518,11 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	if(ep->dir == USB_DIR_IN) {
 		/* NOTE: total IN fifo size must be less than 576 * 4B */
 		tmp = max_packet / 4;
+#if 0
 		if (IS_ISO_IN_EP(ep))
 			tmp *= max_packet > 1024 ? 1 : max_packet > 512 ? 2 : 3;
 		else
+#endif
 			tmp *= 2;
 		amba_writel(ep->ep_reg.buf_sz_reg, tmp);
 	}
@@ -1625,6 +1628,10 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 		pr_err("%s: _ep is NULL\n", __func__);
 		return -EINVAL;
 	}
+
+	/* enable Tx and Rx DMA */
+	amba_setbitsl(USB_DEV_CTRL_REG,
+		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
 
 	ep = to_ambarella_ep(_ep);
 	if (unlikely (!ep->ep.desc && !IS_EP0(ep))) {

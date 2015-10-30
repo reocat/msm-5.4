@@ -126,8 +126,8 @@ config USB_EHCI_HCD_PMC_MSP
 		If unsure, say N.
 
 config USB_EHCI_AMBARELLA
-	boolean "Ambarella EHCI support"
-	depends on ARCH_AMBARELLA
+	tristate "Ambarella EHCI support"
+	depends on USB_EHCI_HCD && ARCH_AMBARELLA
 	---help---
 	  This driver enables support for EHCI found in Ambarella SoCs.
 	  Root Hub has NO inbuilt TT.

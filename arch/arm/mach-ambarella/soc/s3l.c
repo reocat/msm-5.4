@@ -1,12 +1,9 @@
 /*
- * sound/soc/ambarella_i2s.h
+ * arch/arm/mach-ambarella/init-ixora.c
  *
- * History:
- *	2008/03/03 - [Eric Lee] created file
- *	2008/04/16 - [Eric Lee] Removed the compiling warning
- *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
+ * Author: Cao Rongrong <rrcao@ambarella.com>
  *
- * Copyright (C) 2004-2009, Ambarella, Inc.
+ * Copyright (C) 2012-2016, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,21 +21,26 @@
  *
  */
 
-#ifndef AMBARELLA_I2S_H_
-#define AMBARELLA_I2S_H_
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/of_platform.h>
+#include <linux/irqchip.h>
+#include <asm/mach/arch.h>
+#include <mach/init.h>
 
-struct amb_i2s_priv {
-	struct clk *mclk;
-	u32 default_mclk;
-	u32 clock_reg;
-	u32 bclk_reverse;
-	struct ambarella_i2s_interface amb_i2s_intf;
-
-	struct snd_dmaengine_dai_dma_data playback_dma_data;
-	struct snd_dmaengine_dai_dma_data capture_dma_data;
+static const char * const s3l_dt_board_compat[] = {
+	"ambarella,s3l",
+	NULL,
 };
 
-int ambarella_i2s_add_controls(struct snd_soc_codec *codec);
-
-#endif /*AMBARELLA_I2S_H_*/
+DT_MACHINE_START(S3L_DT, "Ambarella S3L (Flattened Device Tree)")
+	.restart_mode	= 's',
+	.map_io		= ambarella_map_io,
+	.init_early	= ambarella_init_early,
+	.init_irq	= irqchip_init,
+	.init_time	= ambarella_timer_init,
+	.init_machine	= ambarella_init_machine,
+	.restart	= ambarella_restart_machine,
+	.dt_compat	= s3l_dt_board_compat,
+MACHINE_END
 

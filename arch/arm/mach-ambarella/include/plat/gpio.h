@@ -37,9 +37,9 @@
 #elif (CHIP_REV == A8)
 #define GPIO_INSTANCES			1
 #define GPIO_MAX_LINES			16
-#elif (CHIP_REV == S2L)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3L)
 #define GPIO_INSTANCES			4
-#define GPIO_MAX_LINES			113
+#define GPIO_MAX_LINES			114
 #elif (CHIP_REV == S3)
 #define GPIO_INSTANCES			7
 #define GPIO_MAX_LINES			201
@@ -51,12 +51,12 @@
 #define GPIO0_OFFSET			0x9000
 #define GPIO1_OFFSET			0xA000
 #define GPIO2_OFFSET			0xE000
-#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define GPIO3_OFFSET			0x10000
+#if (CHIP_REV == A5S)
+#define GPIO3_OFFSET			0x1F000
 #elif (CHIP_REV == A7L)
 #define GPIO3_OFFSET			0x1E000
 #else
-#define GPIO3_OFFSET			0x1F000
+#define GPIO3_OFFSET			0x10000
 #endif
 #define GPIO4_OFFSET			0x11000
 #if (CHIP_REV == S3)
@@ -83,14 +83,16 @@
 #define GPIO6_REG(x)			(GPIO6_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
-#define GPIO_PAD_PULL_CTRL_SUPPORT		1
-#define GPIO_PAD_PULL_OFFSET			0xD000
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define GPIO_PAD_PULL_CTRL_SUPPORT		1
-#define GPIO_PAD_PULL_OFFSET			0x15000
-#else
+#if (CHIP_REV == A5S)
 #define GPIO_PAD_PULL_CTRL_SUPPORT		0
+#else
+#define GPIO_PAD_PULL_CTRL_SUPPORT		1
+#endif
+
+#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
+#define GPIO_PAD_PULL_OFFSET			0xD000
+#else
+#define GPIO_PAD_PULL_OFFSET			0x15000
 #endif
 
 #define GPIO_PAD_PULL_EN_0_OFFSET	0x80
@@ -108,6 +110,13 @@
 #define GPIO_PAD_PULL_DIR_4_OFFSET	0xA4
 #define GPIO_PAD_PULL_DIR_5_OFFSET	0x10C
 #define GPIO_PAD_PULL_DIR_6_OFFSET	0x110
+
+#define GPIO_PAD_PULL_EN_OFFSET(bank)	((bank) >= 5 ? \
+					(0x100 + (((bank) - 5) * 4)) : \
+					(0x80 + ((bank) * 4)))
+#define GPIO_PAD_PULL_DIR_OFFSET(bank)	((bank) >= 5 ? \
+					(0x10C + (((bank) - 5) * 4)) : \
+					(0x94 + ((bank) * 4)))
 
 #define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
 #define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
@@ -127,7 +136,7 @@
 #define GPIO_ENABLE_OFFSET		0x2c
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define	IOMUX_SUPPORT			1
 #else
 #define	IOMUX_SUPPORT			0
@@ -191,6 +200,7 @@ enum ambsvc_gpio_service_id {
 	AMBSVC_GPIO_OUTPUT,
 	AMBSVC_GPIO_INPUT,
 	AMBSVC_GPIO_FREE,
+	AMBSVC_GPIO_TO_IRQ,
 };
 
 struct ambsvc_gpio {
