@@ -44,11 +44,10 @@ static void __iomem *cs_ctrl_reg = NULL;
 static u32 cs_ctrl_offset = -1;
 
 #define AMBARELLA_TIMER_FREQ		clk_get_rate(clk_get(NULL, "gclk_apb"))
-#define AMBARELLA_TIMER_RATING		(300)
+#define AMBARELLA_TIMER_RATING		(350)
 
 static struct clock_event_device ambarella_clkevt;
 static struct clocksource ambarella_clksrc;
-static u64 ambarella_read_sched_clock(void);
 
 /* ==========================================================================*/
 struct amb_timer_pm_reg {
@@ -112,10 +111,13 @@ static void ambarella_timer_resume(u32 is_ce)
 
 	amb_timer_pm->clk_rate = clk_rate;
 
-	if (is_ce)
+	if (is_ce) {
 		clockevents_update_freq(clkevt, clk_rate);
-	else
+	} else {
+		clocksource_change_rating(clksrc, 0);
 		__clocksource_update_freq_hz(clksrc, clk_rate);
+		clocksource_change_rating(clksrc, AMBARELLA_TIMER_RATING);
+	}
 
 resume_exit:
 	amba_setbitsl(ctrl_reg, amb_timer_pm->ctrl_reg << ctrl_offset);
@@ -306,13 +308,11 @@ static int ambarella_timer_system_event(struct notifier_block *nb,
 
 	case AMBA_EVENT_POST_CPUFREQ:
 		local_irq_save(flags);
-		/* I try to update timer using clockevents_update_freq(&ambarella_clkevt, AMBARELLA_TIMER_FREQ)
-		 * and __clocksource_updatefreq_hz(&ambarella_clksrc, AMBARELLA_TIMER_FREQ), but they both can not work,
-		 * So I try the clocksource_unregister(), and then call clocksource_register_hz(), it seems like it is
-		 * ok for updating the timer.
-		 */
-		clocksource_unregister(&ambarella_clksrc);
-		clocksource_register_hz(&ambarella_clksrc, AMBARELLA_TIMER_FREQ);
+		clockevents_update_freq(&ambarella_clkevt, AMBARELLA_TIMER_FREQ);
+
+		clocksource_change_rating(&ambarella_clksrc, 0);
+		__clocksource_update_freq_hz(&ambarella_clksrc, AMBARELLA_TIMER_FREQ);
+		clocksource_change_rating(&ambarella_clksrc, AMBARELLA_TIMER_RATING);
 		local_irq_restore(flags);
 		up(&(amba_timer_notifier.system_event_sem));
 		break;
@@ -388,7 +388,6 @@ static void __init ambarella_clockevent_init(void)
 static void __init ambarella_clocksource_init(void)
 {
 	struct device_node *np;
-	struct clocksource *clksrc;
 	int rval;
 
 	np = of_find_matching_node(NULL, clock_source_match);
@@ -417,14 +416,9 @@ static void __init ambarella_clocksource_init(void)
 
 	of_node_put(np);
 
-	clksrc = &ambarella_clksrc;
-
 	ambarella_cs_timer_init();
 
-	clocksource_register_hz(clksrc, AMBARELLA_TIMER_FREQ);
-
-	pr_debug("%s: mult = %u, shift = %u\n",
-		clksrc->name, clksrc->mult, clksrc->shift);
+	clocksource_register_hz(&ambarella_clksrc, AMBARELLA_TIMER_FREQ);
 
 	sched_clock_register(ambarella_read_sched_clock, 32, AMBARELLA_TIMER_FREQ);
 

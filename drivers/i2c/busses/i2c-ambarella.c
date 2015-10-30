@@ -28,7 +28,6 @@
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
-//#include <linux/of_i2c.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/semaphore.h>
@@ -630,7 +629,6 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		return errorCode;
 	}
 
-	//of_i2c_register_devices(adap);
         i2c_add_adapter(adap);
 
 	pinfo->system_event.notifier_call = ambarella_i2c_system_event;

@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_RCT_H__
 #define __PLAT_AMBARELLA_RCT_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #define RCT_OFFSET			0x170000
 #if (CHIP_REV == A8) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
