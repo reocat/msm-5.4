@@ -385,36 +385,40 @@ static const struct pinmux_ops amb_pinmux_ops = {
 
 /* set the pin config settings for a specified pin */
 static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
-			unsigned long config)
+			unsigned long *configs, unsigned num_configs)
 {
 	struct amb_pinctrl_soc_data *soc;
-	u32 bank, offset, reg, val;
+	u32 i, bank, offset, reg, val;
+	unsigned long config;
 
 	soc = pinctrl_dev_get_drvdata(pctldev);
 	bank = PINID_TO_BANK(pin);
 	offset = PINID_TO_OFFSET(pin);
 
-	if (CFG_PULL_PRESENT(config)) {
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(bank));
-		amba_clrbitsl(reg, 1 << offset);
-		amba_setbitsl(reg, CONF_TO_PULL_VAL(config) << offset);
-
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(bank));
-		if (CONF_TO_PULL_CLR(config))
+	for (i = 0; i < num_configs; i++) {
+		config = configs[i];
+		if (CFG_PULL_PRESENT(config)) {
+			reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(bank));
 			amba_clrbitsl(reg, 1 << offset);
-		else
-			amba_setbitsl(reg, 1 << offset);
-	}
+			amba_setbitsl(reg, CONF_TO_PULL_VAL(config) << offset);
 
-	if (CFG_DS_PRESENT(config)) {
-		amba_clrbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), 1 << offset);
-		amba_clrbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), 1 << offset);
-		/* set bit1 of DS value to DS0 reg, and set bit0 of DS value to DS1 reg,
-		 * because bit[1:0] = 00 is 2mA, 10 is 4mA, 01 is 8mA, 11 is 12mA */
-		val = (CONF_TO_DS_VAL(config) >> 1) & 0x1;
-		amba_setbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), val << offset);
-		val = CONF_TO_DS_VAL(config) & 0x1;
-		amba_setbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), val << offset);
+			reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(bank));
+			if (CONF_TO_PULL_CLR(config))
+				amba_clrbitsl(reg, 1 << offset);
+			else
+				amba_setbitsl(reg, 1 << offset);
+		}
+
+		if (CFG_DS_PRESENT(config)) {
+			amba_clrbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), 1 << offset);
+			amba_clrbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), 1 << offset);
+			/* set bit1 of DS value to DS0 reg, and set bit0 of DS value to DS1 reg,
+			 * because bit[1:0] = 00 is 2mA, 10 is 4mA, 01 is 8mA, 11 is 12mA */
+			val = (CONF_TO_DS_VAL(config) >> 1) & 0x1;
+			amba_setbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), val << offset);
+			val = CONF_TO_DS_VAL(config) & 0x1;
+			amba_setbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), val << offset);
+		}
 	}
 
 	return 0;
