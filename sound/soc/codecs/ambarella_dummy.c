@@ -145,7 +145,6 @@ static struct platform_driver ambdummy_codec_driver = {
 	.remove		= ambdummy_codec_remove,
 	.driver		= {
 		.name	= "ambdummy-codec",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambdummy_of_match,
 	},
 };

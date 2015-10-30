@@ -421,7 +421,6 @@ MODULE_DEVICE_TABLE(of, amba_dt_ids);
 static struct platform_driver amba_soc_snd_driver = {
 	.driver = {
 		.name = "snd_soc_card_amba",
-		.owner = THIS_MODULE,
 		.pm = &snd_soc_pm_ops,
 		.of_match_table = amba_dt_ids,
 	},

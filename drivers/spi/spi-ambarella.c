@@ -852,7 +852,6 @@ static struct platform_driver ambarella_spi_driver = {
 	.remove		= ambarella_spi_remove,
 	.driver		= {
 		.name	= "ambarella-spi",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_spi_dt_ids,
 	},
 };

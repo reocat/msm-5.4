@@ -563,7 +563,6 @@ static struct platform_driver amb_gpio_driver = {
 	.probe	= amb_gpio_probe,
 	.driver	= {
 		.name	= "ambarella-gpio",
-		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(amb_gpio_dt_match),
 	},
 };

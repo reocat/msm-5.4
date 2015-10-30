@@ -1994,7 +1994,6 @@ static struct platform_driver amb_nand_driver = {
 #endif
 	.driver = {
 		.name	= "ambarella-nand",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_nand_of_match,
 	},
 };

@@ -2229,7 +2229,6 @@ static struct platform_driver ambarella_sd_driver = {
 #endif
 	.driver		= {
 		.name	= "ambarella-sd",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_mmc_dt_ids,
 	},
 };

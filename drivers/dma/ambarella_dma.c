@@ -290,10 +290,9 @@ static void ambdma_tasklet(unsigned long data)
 	if (list_empty(&amb_chan->active_list))
 		goto tasklet_out;
 
-	/* note: if the DMA channel is stopped by DMA_TERMINATE_ALL rather
-	 * than naturally end, then ambdma_first_active() will return the next
-	 * descriptor that need to be started, but not the descriptor that
-	 * invoke this tasklet (IRQ) */
+	/* note: if the DMA channel is stopped manually rather than naturally end,
+	 * then ambdma_first_active() will return the next descriptor that need
+	 * to be started, but not the descriptor that invoke this tasklet (IRQ) */
 	amb_desc = ambdma_first_active(amb_chan);
 
 	if (!amb_desc->is_cyclic && amb_chan->status != AMBDMA_STATUS_IDLE) {
@@ -314,7 +313,7 @@ static void ambdma_tasklet(unsigned long data)
 			ambdma_advance_work(amb_chan);
 		}
 	} else if (old_status == AMBDMA_STATUS_STOPPING) {
-		/* the DMA channel is stopped by DMA_TERMINATE_ALL.  */
+		/* the DMA channel is stopped manually.  */
 		ambdma_dostart(amb_chan, amb_desc);
 	}
 
@@ -1304,7 +1303,6 @@ static struct platform_driver ambarella_dma_driver = {
 
 	.driver		= {
 		.name	= "ambarella-dma",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_dma_dt_ids,
 	},
 };

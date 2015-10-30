@@ -268,7 +268,6 @@ static struct platform_driver ambarella_adckey_driver = {
 #endif
 	.driver		= {
 		.name	= "ambarella-adckey",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_adckey_dt_ids,
 	},
 };

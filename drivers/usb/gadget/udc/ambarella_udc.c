@@ -2345,7 +2345,6 @@ MODULE_DEVICE_TABLE(of, ambarella_udc_dt_ids);
 static struct platform_driver ambarella_udc_driver = {
 	.driver		= {
 		.name	= "ambarella-udc",
-		.owner	= THIS_MODULE,
 		.of_match_table	= ambarella_udc_dt_ids,
 	},
 	.remove		= ambarella_udc_remove,

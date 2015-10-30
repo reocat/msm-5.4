@@ -751,7 +751,6 @@ static struct platform_driver amb_pinctrl_driver = {
 	.probe	= amb_pinctrl_probe,
 	.driver	= {
 		.name	= "ambarella-pinctrl",
-		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(amb_pinctrl_dt_match),
 	},
 };

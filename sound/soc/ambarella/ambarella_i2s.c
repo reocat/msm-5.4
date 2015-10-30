@@ -663,7 +663,6 @@ static struct platform_driver ambarella_i2s_driver = {
 
 	.driver = {
 		.name = "ambarella-i2s",
-		.owner = THIS_MODULE,
 		.of_match_table = ambarella_i2s_dt_ids,
 	},
 };

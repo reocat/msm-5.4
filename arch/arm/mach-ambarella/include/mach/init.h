@@ -68,6 +68,8 @@
 #define AMBARELLA_BOARD_REV(v)			(((v) >> 0) & 0xFFF)
 
 /* ==========================================================================*/
+extern struct smp_operations ambarella_smp_ops;
+
 extern void ambarella_init_early(void);
 extern void ambarella_init_machine(void);
 extern void ambarella_map_io(void);

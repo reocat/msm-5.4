@@ -33,15 +33,11 @@
 #include <linux/irqchip/arm-gic.h>
 #include <asm/gpio.h>
 #include <asm/system_info.h>
-
 #include <mach/hardware.h>
 #include <mach/init.h>
-#include <mach/common.h>
-
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
-
 
 static const char * const s2_dt_board_compat[] = {
 	"ambarella,s2",

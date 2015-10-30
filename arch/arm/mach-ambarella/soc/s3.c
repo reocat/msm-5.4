@@ -27,7 +27,6 @@
 #include <linux/irqchip.h>
 #include <asm/mach/arch.h>
 #include <mach/init.h>
-#include <mach/common.h>
 
 static const char * const s3_dt_board_compat[] = {
 	"ambarella,s3",

@@ -716,7 +716,6 @@ static struct platform_driver ambarella_i2c_driver = {
 	.remove		= ambarella_i2c_remove,
 	.driver		= {
 		.name	= "ambarella-i2c",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_i2c_of_match,
 #ifdef CONFIG_PM
 		.pm	= &ambarella_i2c_dev_pm_ops,

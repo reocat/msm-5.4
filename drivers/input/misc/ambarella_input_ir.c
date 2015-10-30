@@ -491,7 +491,6 @@ static struct platform_driver ambarella_ir_driver = {
 #endif
 	.driver		= {
 		.name	= "ambarella-ir",
-		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_ir_dt_ids,
 	},
 };
