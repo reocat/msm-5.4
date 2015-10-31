@@ -306,13 +306,6 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	rval = snd_soc_of_parse_audio_routing(card,
-			"amb,audio-routing");
-	if(rval) {
-		dev_err(&pdev->dev, "amb,audio-routing is invalid\n");
-		return -EINVAL;
-	}
-
 	cpup_np = of_parse_phandle(np, "amb,i2s-controllers", 0);
 	codec_np = of_parse_phandle(np, "amb,audio-codec", 0);
 	dummy_codec_np = of_parse_phandle(np, "amb,dummy-codec", 0);
@@ -322,6 +315,12 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 	}
 
 	if(codec_np) {
+		rval = snd_soc_of_parse_audio_routing(card,
+		"amb,audio-routing");
+		if(rval) {
+			dev_err(&pdev->dev, "amb,audio-routing is invalid\n");
+			return -EINVAL;
+		}
 		/*alloc two amba_dai_link for audio codec and dummy codec*/
 		amba_dai_link = devm_kzalloc(&pdev->dev, 2 * sizeof(*amba_dai_link), GFP_KERNEL);
 		if (amba_dai_link == NULL) {
