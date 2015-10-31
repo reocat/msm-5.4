@@ -68,8 +68,8 @@ static int ambarella_adckey_callback(struct ambadc_client *client,
 	u32 i;
 
 	adckey = dev_get_drvdata(client->dev);
-        if(adckey == NULL)
-                return -EAGAIN;
+	if(adckey == NULL)
+		return -EAGAIN;
 
 	keymap = adckey->keymap;
 	input = adckey->input;

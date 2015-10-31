@@ -143,7 +143,7 @@ module_init(ksz80x1r_init);
 module_exit(ksz80x1r_exit);
 
 static struct mdio_device_id __maybe_unused ksz80x1r_tbl[] = {
-	{ PHY_ID_KSZ8081, 0x00fffff0 },
+	{ PHY_ID_KSZ8081, 0x0000fff0 },
 	{ }
 };
 MODULE_DEVICE_TABLE(mdio, ksz80x1r_tbl);
