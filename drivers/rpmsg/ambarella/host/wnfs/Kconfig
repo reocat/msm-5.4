@@ -1,6 +1,0 @@
-config RPMSG_WNFS
-	tristate "Write to NFS Server"
-	depends on RPMSG
-	depends on !RPMSG_AMBXC
-	help
-	  A sample of rpmsg program which implement an echo server

@@ -1,4 +1,0 @@
-config AMBARELLA_RSH
-	bool
-	default n
-	depends on RPDEV_RSH || RPMSG_RSH

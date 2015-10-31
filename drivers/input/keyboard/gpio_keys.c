@@ -763,6 +763,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			error);
 		goto err_remove_group;
 	}
+
 	device_init_wakeup(&pdev->dev, wakeup);
 
 	return 0;
@@ -845,7 +846,7 @@ static struct platform_driver gpio_keys_device_driver = {
 };
 
 static int __init gpio_keys_init(void)
-{printk("%s 1\r\n",__func__);
+{
 	return platform_driver_register(&gpio_keys_device_driver);
 }
 

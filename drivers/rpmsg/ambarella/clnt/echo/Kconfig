@@ -1,4 +1,0 @@
-config RPDEV_ECHO
-	tristate "Echo"
-	help
-	  A sample of rpmsg program which implement an "echo client".

@@ -281,11 +281,6 @@ static int wm831x_wdt_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, driver_data);
 
-	dev_notice(&pdev->dev,
-		"Wm831x PMIC Watch Dog Timer[%s].\n",
-		dev_name(&pdev->dev));
-
-
 	return 0;
 
 err:

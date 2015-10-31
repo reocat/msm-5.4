@@ -14,7 +14,7 @@
 extern u8 const byte_rev_table[256];
 static inline u8 __bitrev8(u8 byte)
 {
-	return byte_rev_table[in];
+	return byte_rev_table[byte];
 }
 
 static inline u16 __bitrev16(u16 x)
