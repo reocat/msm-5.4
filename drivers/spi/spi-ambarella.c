@@ -169,9 +169,6 @@ static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *sp
 
 static void ambarella_spi_stop(struct ambarella_spi *bus)
 {
-	gpio_set_value(bus->msg->spi->cs_gpio, 1);
-	bus->cs_active = 0;
-
 	amba_readl(bus->virt + SPI_ICR_OFFSET);
 	amba_readl(bus->virt + SPI_ISR_OFFSET);
 
@@ -179,7 +176,7 @@ static void ambarella_spi_stop(struct ambarella_spi *bus)
 	amba_writel(bus->virt + SPI_SER_OFFSET, 0);
 
 	if (bus->dma_used)
-		amba_writel(bus->virt + 0x4c, 0);
+		amba_writel(bus->virt + SPI_DMAC_OFFSET, 0);
 }
 
 static void ambarella_spi_prepare_transfer(struct ambarella_spi *bus)
@@ -228,7 +225,7 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *bus)
 		} else {
 			amba_writel(virt + SPI_RXFTLR_OFFSET, 4 - 1);
 		}
-		amba_writel(virt + 0x4c, 0x03);
+		amba_writel(virt + SPI_DMAC_OFFSET, 0x3);
 	} else {
 		disable_irq_nosync(bus->irq);
 		amba_writel(virt + SPI_IMR_OFFSET, SPI_TXEIS_MASK);
@@ -380,6 +377,9 @@ static void ambarella_spi_next_transfer(void *args)
 	}
 
 	if (bus->xfer_id >= bus->n_xfer) {
+		gpio_set_value(bus->msg->spi->cs_gpio, 1);
+		bus->cs_active = 0;
+
 		ambarella_spi_stop(bus);
 		spi_finalize_current_message(bus->msg->spi->master);
 	} else {
@@ -557,7 +557,7 @@ static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 
 	bus = spi_master_get_devdata(master);
 
-	amba_writel(bus->virt + 0x4c, 0);
+	amba_writel(bus->virt + SPI_DMAC_OFFSET, 0);
 	if (bus->dma_used) {
 		/* Enable DMA Channel 0/1 as SSI0 Tx and Rx */
 		val	 = amba_readl(AHB_SCRATCHPAD_REG(0x0c));
