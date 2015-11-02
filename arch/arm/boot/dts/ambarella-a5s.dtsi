@@ -469,5 +469,9 @@
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		dummycodec: codec@0 {
+			compatible = "ambarella,dummycodec";
+		};
 	};
 };
