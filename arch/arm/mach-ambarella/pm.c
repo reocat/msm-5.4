@@ -116,8 +116,6 @@ static int ambarella_pm_enter_standby(void)
 
 static int ambarella_pm_enter_mem(void)
 {
-	u32 l2_enabled;
-
 	ambarella_disconnect_dram_reset();
 
 	/* ensure the power for DRAM keeps on when power off PWC */
@@ -133,14 +131,11 @@ static int ambarella_pm_enter_mem(void)
 
 	ambarella_set_cpu_jump(0, ambarella_cpu_resume);
 
-	l2_enabled = outer_is_enabled();
-	if (l2_enabled)
-		outer_disable();
-
+	outer_flush_all();
+	outer_disable();
+	/* go zzz */
 	cpu_suspend(0, ambarella_finish_suspend);
-
-	if (l2_enabled)
-		outer_resume();
+	outer_resume();
 
 	/* ensure to power off all powers when power off PWC */
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);

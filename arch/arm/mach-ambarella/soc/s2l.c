@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/irqchip.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/cache-l2x0.h>
 #include <plat/chip.h>
 #include <mach/init.h>
 
@@ -35,6 +36,9 @@ static const char * const s2l_dt_board_compat[] = {
 };
 
 DT_MACHINE_START(S2L_DT, "Ambarella S2L (Flattened Device Tree)")
+	.l2c_aux_val    = L310_AUX_CTRL_DATA_PREFETCH |
+			  L310_AUX_CTRL_INSTR_PREFETCH,
+	.l2c_aux_mask   = ~0,
         .reboot_mode    = REBOOT_SOFT,
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,

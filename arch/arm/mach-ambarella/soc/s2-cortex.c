@@ -45,6 +45,8 @@ static const char * const s2_dt_board_compat[] = {
 };
 
 DT_MACHINE_START(S2_DT, "Ambarella S2 (Flattened Device Tree)")
+	.l2c_aux_val    = 0,
+	.l2c_aux_mask   = ~0,
 	.reboot_mode    = REBOOT_SOFT,
 	.smp		= smp_ops(ambarella_smp_ops),
 	.map_io		= ambarella_map_io,

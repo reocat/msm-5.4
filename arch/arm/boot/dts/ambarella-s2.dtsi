@@ -543,6 +543,13 @@
 			amb,data-swap;
 			amb,reg-64bit;
 		};
+
+		l2-cache@f0002000 {
+			compatible = "arm,pl310-cache";
+			reg = <0xf0002000 0x1000>;
+			cache-unified;
+			cache-level = <2>;
+		};
 	};
 
 	rct@70170000 {

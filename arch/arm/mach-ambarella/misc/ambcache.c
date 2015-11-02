@@ -51,11 +51,8 @@ void ambcache_clean_range(void *addr, unsigned int size)
 	pstart = ambarella_virt_to_phys(vstart);
 
 	local_irq_save(flags);
-
 	__cpuc_flush_dcache_area((void *)vstart, vend - vstart);
-
 	outer_clean_range(pstart, (pstart + size));
-
 	local_irq_restore(flags);
 }
 EXPORT_SYMBOL(ambcache_clean_range);
@@ -72,10 +69,8 @@ void ambcache_inv_range(void *addr, unsigned int size)
 	pstart = ambarella_virt_to_phys(vstart);
 
 	local_irq_save(flags);
-
-	__cpuc_flush_dcache_area((void *)vstart, vend - vstart);
 	outer_inv_range(pstart, (pstart + size));
-
+	__cpuc_flush_dcache_area((void *)vstart, vend - vstart);
 	local_irq_restore(flags);
 }
 EXPORT_SYMBOL(ambcache_inv_range);
@@ -92,10 +87,8 @@ void ambcache_flush_range(void *addr, unsigned int size)
 	pstart = ambarella_virt_to_phys(vstart);
 
 	local_irq_save(flags);
-
 	__cpuc_flush_dcache_area((void *)vstart, vend - vstart);
 	outer_flush_range(pstart, (pstart + size));
-
 	local_irq_restore(flags);
 }
 EXPORT_SYMBOL(ambcache_flush_range);
@@ -123,64 +116,3 @@ void ambcache_pli_range(void *addr, unsigned int size)
 }
 EXPORT_SYMBOL(ambcache_pli_range);
 
-unsigned int chip_l2_aux(void)
-{
-
-	u32 ctrl = 0;
-
-#ifdef CONFIG_CACHE_PL310_FULL_LINE_OF_ZERO
-	ctrl |= (0x1 << L310_AUX_CTRL_FULL_LINE_ZERO );
-#endif
-
-#if (CHIP_REV == A8)
-	ctrl |= (0x1 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
-	ctrl |= (0x1 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
-#elif (CHIP_REV == S2L)
-	ctrl |= (0x0 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
-	ctrl |= (0x1 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
-	ctrl |= L310_AUX_CTRL_DATA_PREFETCH;
-	ctrl |= L310_AUX_CTRL_INSTR_PREFETCH;
-#elif (CHIP_REV == S2E) || (CHIP_REV == S3)
-	ctrl |= (0x1 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
-	ctrl |= (0x3 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT);
-	ctrl |= (0x1 << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT);
-#else
-	ctrl |= (0x1 << L310_AUX_CTRL_ASSOCIATIVITY_16_SHIFT);
-	ctrl |= (0x2 << L2C_AUX_CTRL_WAY_SIZE_SHIFT);
-#endif
-	ctrl |= (0x1 << L2X0_AUX_CTRL_CR_POLICY_SHIFT);
-#ifdef CONFIG_CACHE_PL310_EARLY_BRESP
-	ctrl |= (0x1 << L2X0_AUX_CTRL_EARLY_BRESP_SHIFT);
-#endif
-
-	return ctrl;
-
-}
-
-void chip_l2_optimize(void)
-{
-}
-
-
-int __init ambcache_l2_init(void)
-{
-	unsigned int aux_val;
-
-	if (outer_is_enabled())
-		return 0;
-
-	aux_val = chip_l2_aux();
-
-	/* l2 latency setup in l2x0_init */
-
-	chip_l2_optimize();
-
-	l2x0_of_init(aux_val, L2X0_AUX_CTRL_MASK);
-
-	outer_enable();
-
-	return outer_is_enabled() ? 0 : -1;
-}

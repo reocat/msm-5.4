@@ -329,10 +329,6 @@ void __init ambarella_init_machine(void)
 	ret_val = ambarella_init_audio();
 	BUG_ON(ret_val != 0);
 
-#ifdef CONFIG_OUTER_CACHE
-	ambcache_l2_init();
-#endif
-
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 

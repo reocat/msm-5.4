@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/irqchip.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/cache-l2x0.h>
 #include <mach/init.h>
 
 static const char * const s3_dt_board_compat[] = {
@@ -34,6 +35,9 @@ static const char * const s3_dt_board_compat[] = {
 };
 
 DT_MACHINE_START(S3_DT, "Ambarella S3 (Flattened Device Tree)")
+	.l2c_aux_val    = L310_AUX_CTRL_DATA_PREFETCH |
+			  L310_AUX_CTRL_INSTR_PREFETCH,
+	.l2c_aux_mask   = ~0,
 	.restart_mode	= 's',
 	.smp		= smp_ops(ambarella_smp_ops),
 	.map_io		= ambarella_map_io,

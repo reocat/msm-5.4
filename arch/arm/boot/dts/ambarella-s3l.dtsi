@@ -667,6 +667,16 @@
 			amb,data-swap;
 			amb,reg-64bit;
 		};
+
+		l2-cache@f0002000 {
+			compatible = "arm,pl310-cache";
+			reg = <0xf0002000 0x1000>;
+			cache-unified;
+			cache-level = <2>;
+			/* l2 cache latency use default setting */
+			/* arm,tag_latency = <1 2 1>; */
+			/* arm,data_latency = <1 3 1>; */
+		};
 	};
 
 	rct@ec170000 {
