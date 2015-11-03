@@ -636,6 +636,16 @@ int ambarella_clk_add(struct clk *clk)
 }
 EXPORT_SYMBOL(ambarella_clk_add);
 
+int ambarella_clk_del(struct clk *clk)
+{
+	spin_lock(&ambarella_clock_lock);
+	list_del(&clk->list);
+	spin_unlock(&ambarella_clock_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_clk_del);
+
 /* ==========================================================================*/
 #if defined(CONFIG_AMBARELLA_PLL_PROC)
 static int ambarella_clock_proc_show(struct seq_file *m, void *v)

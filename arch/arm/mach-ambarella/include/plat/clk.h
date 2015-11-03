@@ -244,6 +244,7 @@ extern int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate);
 
 extern int ambarella_clk_init(void);
 extern int ambarella_clk_add(struct clk *clk);
+extern int ambarella_clk_del(struct clk *clk);
 extern unsigned int ambarella_clk_get_ref_freq(void);
 
 #endif /* __ASSEMBLER__ */
