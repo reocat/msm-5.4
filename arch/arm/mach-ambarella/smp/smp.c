@@ -21,22 +21,17 @@
  *
  */
 
-#include <linux/init.h>
-#include <linux/errno.h>
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/jiffies.h>
 #include <linux/smp.h>
 #include <linux/io.h>
 #include <linux/bootmem.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
-
 #include <asm/cacheflush.h>
 #include <asm/smp_plat.h>
 #include <asm/smp_scu.h>
 #include <mach/hardware.h>
-#include <mach/common.h>
 #include <mach/init.h>
 
 static void __iomem *scu_base = __io(AMBARELLA_VA_SCU_BASE);
