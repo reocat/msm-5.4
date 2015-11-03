@@ -552,7 +552,7 @@
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
-					 <0x000000e0 0x00000001 0x00001111>;
+					 <0x000000e0 0x00000003 0x00001111>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit>;
 
