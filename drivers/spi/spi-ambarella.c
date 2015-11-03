@@ -39,7 +39,6 @@
 #include <asm/io.h>
 #include <mach/io.h>
 #include <plat/spi.h>
-#include <plat/ambcache.h>
 #include <plat/dma.h>
 #include <plat/rct.h>
 
@@ -296,7 +295,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 	}
 
 	if (bus->dma_used) {
-		ambcache_clean_range(bus->txb, len);
 		tx_cfg.dst_addr			= bus->phys + SPI_DR_OFFSET;
 		if (spi->bits_per_word <= 8) {
 			tx_cfg.dst_addr_width	= DMA_SLAVE_BUSWIDTH_1_BYTE;
@@ -363,7 +361,7 @@ static void ambarella_spi_next_transfer(void *args)
 		switch (bus->rw) {
 		case SPI_WRITE_READ:
 		case SPI_READ_ONLY:
-			ambcache_inv_range(bus->rxb, xfer->len);
+			dma_sync_single_for_cpu(NULL, virt_to_phys(bus->rxb), xfer->len, DMA_FROM_DEVICE);
 			memcpy(xfer->rx_buf, bus->rxb, xfer->len);
 			break;
 		default:
