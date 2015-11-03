@@ -38,7 +38,6 @@ DT_MACHINE_START(S3L_DT, "Ambarella S3L (Flattened Device Tree)")
 	.l2c_aux_val    = L310_AUX_CTRL_DATA_PREFETCH |
 			  L310_AUX_CTRL_INSTR_PREFETCH,
 	.l2c_aux_mask   = ~0,
-	.restart_mode	= 's',
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
 	.init_irq	= irqchip_init,

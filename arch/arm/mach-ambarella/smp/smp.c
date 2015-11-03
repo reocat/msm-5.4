@@ -74,14 +74,16 @@ static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
 static int __cpuinit ambarella_smp_boot_secondary(unsigned int cpu,
 	struct task_struct *idle)
 {
-	unsigned long timeout;
+	unsigned long flags, timeout;
 	unsigned long phys_cpu = cpu_logical_map(cpu);
 
 	BUG_ON(cpux_jump_virt == NULL);
 
 	/* Set synchronisation state between this boot processor
 	 * and the secondary one */
-	spin_lock(&boot_lock);
+	spin_lock_irqsave(&boot_lock, flags);
+	/* l2 cache has to be disabled, orelse the second core cannot boot up */
+	outer_disable();
 
 	/* The secondary processor is waiting to be released from
 	 * the holding pen - release it, then wait for it to flag
@@ -107,7 +109,8 @@ static int __cpuinit ambarella_smp_boot_secondary(unsigned int cpu,
 		udelay(10);
 	}
 
-	spin_unlock(&boot_lock);
+	outer_resume();
+	spin_unlock_irqrestore(&boot_lock, flags);
 
 	return pen_release != -1 ? -ENOSYS : 0;
 }
@@ -154,6 +157,7 @@ static void __init ambarella_smp_prepare_cpus(unsigned int max_cpus)
 		set_cpu_present(i, true);
 
 	scu_enable(scu_base);
+	scu_power_mode(scu_base, SCU_PM_NORMAL);
 
 	for (i = 1; i < max_cpus; i++)
 		write_cpux_jump_addr(i, virt_to_phys(ambarella_secondary_startup));

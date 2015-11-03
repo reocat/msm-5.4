@@ -38,7 +38,6 @@ DT_MACHINE_START(S2E_DT, "Ambarella S2E (Flattened Device Tree)")
 	.l2c_aux_val    = L310_AUX_CTRL_DATA_PREFETCH |
 			  L310_AUX_CTRL_INSTR_PREFETCH,
 	.l2c_aux_mask   = ~0,
-	.restart_mode	= 's',
 	.smp		= smp_ops(ambarella_smp_ops),
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
