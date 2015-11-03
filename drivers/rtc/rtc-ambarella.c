@@ -282,7 +282,6 @@ static int ambrtc_probe(struct platform_device *pdev)
 
 	ambrtc->irq = platform_get_irq(pdev, 0);
 	if (ambrtc->irq < 0) {
-		dev_warn(&pdev->dev, "Can't get RTC Alarm irq resource!\n");
 		ambrtc->irq = -1;
 	} else {
 		ret = devm_request_irq(&pdev->dev, ambrtc->irq, ambrtc_alarm_irq, IRQF_SHARED,
