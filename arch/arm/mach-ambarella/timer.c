@@ -165,31 +165,6 @@ static inline void ambarella_ce_timer_set_oneshot
 	ambarella_ce_timer_misc(ctrl_reg, offs);
 }
 
-static void inline ambarella_ce_set_mode(
-		void __iomem *base_reg, void __iomem *ctrl_reg, u32 ctrl_offset,
-		enum clock_event_mode mode, struct clock_event_device *clkevt)
-{
-	switch (mode) {
-	case CLOCK_EVT_MODE_PERIODIC:
-		ambarella_ce_timer_disable(ctrl_reg, ctrl_offset);
-		ambarella_ce_timer_set_periodic(base_reg, ctrl_reg, ctrl_offset);
-		ambarella_ce_timer_enable(ctrl_reg, ctrl_offset);
-		break;
-	case CLOCK_EVT_MODE_ONESHOT:
-		ambarella_ce_timer_disable(ctrl_reg, ctrl_offset);
-		ambarella_ce_timer_set_oneshot(base_reg, ctrl_reg, ctrl_offset);
-		ambarella_ce_timer_enable(ctrl_reg, ctrl_offset);
-		break;
-	case CLOCK_EVT_MODE_UNUSED:
-	case CLOCK_EVT_MODE_SHUTDOWN:
-		ambarella_ce_timer_disable(ctrl_reg, ctrl_offset);
-		break;
-	case CLOCK_EVT_MODE_RESUME:
-		break;
-	}
-	pr_debug("%s:%d\n", __func__, mode);
-}
-
 static void inline ambarella_ce_set_next_event(void __iomem *base_reg,
 		unsigned long delta, struct clock_event_device *clkevt)
 {
@@ -198,10 +173,26 @@ static void inline ambarella_ce_set_next_event(void __iomem *base_reg,
 
 /* ==========================================================================*/
 
-static void ambarella_global_ce_set_mode(enum clock_event_mode mode,
-	struct clock_event_device *clkevt)
+static int ambarella_global_ce_set_state_shutdown(struct clock_event_device *clkevt)
 {
-	ambarella_ce_set_mode(ce_base, ce_ctrl_reg, ce_ctrl_offset, mode, clkevt);
+	ambarella_ce_timer_disable(ce_ctrl_reg, ce_ctrl_offset);
+	return 0;
+}
+
+static int ambarella_global_ce_set_state_periodic(struct clock_event_device *clkevt)
+{
+	ambarella_ce_timer_disable(ce_ctrl_reg, ce_ctrl_offset);
+	ambarella_ce_timer_set_periodic(ce_base, ce_ctrl_reg, ce_ctrl_offset);
+	ambarella_ce_timer_enable(ce_ctrl_reg, ce_ctrl_offset);
+	return 0;
+}
+
+static int ambarella_global_ce_set_state_oneshot(struct clock_event_device *clkevt)
+{
+	ambarella_ce_timer_disable(ce_ctrl_reg, ce_ctrl_offset);
+	ambarella_ce_timer_set_oneshot(ce_base, ce_ctrl_reg, ce_ctrl_offset);
+	ambarella_ce_timer_enable(ce_ctrl_reg, ce_ctrl_offset);
+	return 0;
 }
 
 static int ambarella_global_ce_set_next_event(unsigned long delta,
@@ -222,14 +213,15 @@ static void ambarella_global_ce_resume(struct clock_event_device *dev)
 }
 
 static struct clock_event_device ambarella_clkevt = {
-	.name		= "ambarella-clkevt",
-	.features	= CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
-	.rating		= AMBARELLA_TIMER_RATING,
-	.set_next_event	= ambarella_global_ce_set_next_event,
-	.set_mode	= ambarella_global_ce_set_mode,
-	.mode		= CLOCK_EVT_MODE_UNUSED,
-	.suspend	= ambarella_global_ce_suspend,
-	.resume		= ambarella_global_ce_resume,
+	.name			= "ambarella-clkevt",
+	.features		= CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
+	.rating			= AMBARELLA_TIMER_RATING,
+	.set_next_event		= ambarella_global_ce_set_next_event,
+	.set_state_periodic	= ambarella_global_ce_set_state_periodic,
+	.set_state_oneshot	= ambarella_global_ce_set_state_oneshot,
+	.set_state_shutdown	= ambarella_global_ce_set_state_shutdown,
+	.suspend		= ambarella_global_ce_suspend,
+	.resume			= ambarella_global_ce_resume,
 };
 
 static irqreturn_t ambarella_global_ce_interrupt(int irq, void *dev_id)
@@ -439,6 +431,8 @@ static void __init ambarella_smp_twd_init(void)
 }
 #endif
 
+/* ==========================================================================*/
+
 #ifdef CONFIG_PLAT_AMBARELLA_LOCAL_TIMERS
 
 struct ambarella_local_clkevt {
@@ -457,10 +451,21 @@ static int local_clkevt_irq[NR_CPUS];
 static u32 local_clkevt_ctrl_offset[NR_CPUS];
 static struct irqaction local_clkevt_irqaction[NR_CPUS];
 
-/* ==========================================================================*/
+static int ambarella_local_ce_set_state_shutdown(struct clock_event_device *clkevt)
+{
+	struct ambarella_local_clkevt *local_clkevt;
+	void __iomem *ctrl_reg;
+	u32 ctrl_offset;
 
-static void ambarella_local_ce_set_mode(enum clock_event_mode mode,
-	struct clock_event_device *clkevt)
+	local_clkevt = this_cpu_ptr(&percpu_clkevt);
+	ctrl_reg = local_clkevt->ctrl_reg;
+	ctrl_offset = local_clkevt->ctrl_offset;
+
+	ambarella_ce_timer_disable(ctrl_reg, ctrl_offset);
+	return 0;
+}
+
+static int ambarella_local_ce_set_state_periodic(struct clock_event_device *clkevt)
 {
 	struct ambarella_local_clkevt *local_clkevt;
 	void __iomem *base_reg;
@@ -472,9 +477,29 @@ static void ambarella_local_ce_set_mode(enum clock_event_mode mode,
 	ctrl_reg = local_clkevt->ctrl_reg;
 	ctrl_offset = local_clkevt->ctrl_offset;
 
-	ambarella_ce_set_mode(base_reg, ctrl_reg, ctrl_offset, mode, clkevt);
+	ambarella_ce_timer_disable(ctrl_reg, ctrl_offset);
+	ambarella_ce_timer_set_periodic(base_reg, ctrl_reg, ctrl_offset);
+	ambarella_ce_timer_enable(ctrl_reg, ctrl_offset);
+	return 0;
 }
 
+static int ambarella_local_ce_set_state_oneshot(struct clock_event_device *clkevt)
+{
+	struct ambarella_local_clkevt *local_clkevt;
+	void __iomem *base_reg;
+	void __iomem *ctrl_reg;
+	u32 ctrl_offset;
+
+	local_clkevt = this_cpu_ptr(&percpu_clkevt);
+	base_reg = local_clkevt->base;
+	ctrl_reg = local_clkevt->ctrl_reg;
+	ctrl_offset = local_clkevt->ctrl_offset;
+
+	ambarella_ce_timer_disable(ctrl_reg, ctrl_offset);
+	ambarella_ce_timer_set_oneshot(base_reg, ctrl_reg, ctrl_offset);
+	ambarella_ce_timer_enable(ctrl_reg, ctrl_offset);
+	return 0;
+}
 
 static int ambarella_local_ce_set_next_event(unsigned long delta,
 	struct clock_event_device *clkevt)
@@ -511,7 +536,9 @@ static int __cpuinit ambarella_local_timer_setup(struct clock_event_device *evt)
 	evt->name = local_clkevt->name;
 	evt->cpumask = cpumask_of(cpu);
 	evt->set_next_event = ambarella_local_ce_set_next_event;
-	evt->set_mode = ambarella_local_ce_set_mode;
+	evt->set_state_periodic = ambarella_local_ce_set_state_periodic;
+	evt->set_state_oneshot = ambarella_local_ce_set_state_oneshot;
+	evt->set_state_shutdown = ambarella_local_ce_set_state_shutdown;
 	evt->features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = AMBARELLA_TIMER_RATING + 30;
 

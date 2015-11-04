@@ -459,18 +459,17 @@ EXPORT_SYMBOL(ambarella_clk_add);
 #if defined(CONFIG_AMBARELLA_PLL_PROC)
 static int ambarella_clock_proc_show(struct seq_file *m, void *v)
 {
-	int retlen = 0;
 	struct clk *p;
 
-	retlen += seq_printf(m, "\nClock Information:\n");
+	seq_printf(m, "\nClock Information:\n");
 	spin_lock(&ambarella_clock_lock);
 	list_for_each_entry_reverse(p, &ambarella_all_clocks, list) {
-		retlen += seq_printf(m, "\t%s:\t%lu Hz\n",
+		seq_printf(m, "\t%s:\t%lu Hz\n",
 			p->name, p->ops->get_rate(p));
 	}
 	spin_unlock(&ambarella_clock_lock);
 
-	return retlen;
+	return 0;
 }
 
 static int ambarella_clock_proc_open(struct inode *inode, struct file *file)

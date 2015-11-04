@@ -42,13 +42,6 @@ static int ambdummy_mute(struct snd_soc_dai *dai, int mute)
 	return 0;
 }
 
-static int ambdummy_set_bias_level(struct snd_soc_codec *codec,
-				 enum snd_soc_bias_level level)
-{
-	codec->dapm.bias_level = level;
-	return 0;
-}
-
 #define AMBDUMMY_RATES SNDRV_PCM_RATE_8000_48000
 
 #define AMBDUMMY_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
@@ -74,31 +67,9 @@ static struct snd_soc_dai_driver ambdummy_dai = {
 	.ops = &ambdummy_dai_ops,
 };
 
-#if defined(CONFIG_PM)
-static int ambdummy_suspend(struct snd_soc_codec *codec)
-{
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-	return 0;
-}
-
-static int ambdummy_resume(struct snd_soc_codec *codec)
-{
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_ON);
-
-	return 0;
-}
-#else
-#define ambdummy_suspend NULL
-#define ambdummy_resume NULL
-#endif
 static int ambdummy_probe(struct snd_soc_codec *codec)
 {
 	printk(KERN_INFO "AMBARELLA SoC Audio DUMMY Codec\n");
-
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return 0;
 }
@@ -106,20 +77,15 @@ static int ambdummy_probe(struct snd_soc_codec *codec)
 /* power down chip */
 static int ambdummy_remove(struct snd_soc_codec *codec)
 {
-	ambdummy_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
 	return 0;
 }
 
 static struct snd_soc_codec_driver soc_codec_dev_ambdummy = {
 	.probe = 	ambdummy_probe,
 	.remove = 	ambdummy_remove,
-	.suspend = 	ambdummy_suspend,
-	.resume =	ambdummy_resume,
 	.reg_cache_size	= 0,
 	.read =		ambdummy_codec_read,
 	.write =	ambdummy_codec_write,
-	.set_bias_level =ambdummy_set_bias_level,
 };
 
 static int ambdummy_codec_probe(struct platform_device *pdev)

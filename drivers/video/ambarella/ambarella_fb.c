@@ -62,7 +62,6 @@
 #ifdef CONFIG_PROC_FS
 static int ambarella_fb_proc_show(struct seq_file *m, void *v)
 {
-	int len;
 	struct ambarella_platform_fb *ambfb_data;
 	struct fb_info *info;
 
@@ -74,13 +73,13 @@ static int ambarella_fb_proc_show(struct seq_file *m, void *v)
 	ambfb_data->proc_wait_flag = 0;
 	dev_dbg(info->device, "%s:%d %d.\n", __func__, __LINE__,
 		ambfb_data->proc_wait_flag);
-	len = seq_printf(m, "%04d %04d %04d %04d %04d %04d\n",
+	seq_printf(m, "%04d %04d %04d %04d %04d %04d\n",
 		info->var.xres, info->var.yres,
 		info->fix.line_length,
 		info->var.xoffset, info->var.yoffset,
 		ambfb_data->color_format);
 
-	return len;
+	return 0;
 }
 
 static int ambarella_fb_proc_open(struct inode *inode, struct file *file)

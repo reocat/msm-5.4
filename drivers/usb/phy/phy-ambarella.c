@@ -140,7 +140,6 @@ static int ambarella_phy_proc_show(struct seq_file *m, void *v)
 	struct ambarella_phy *amb_phy = m->private;
 	const char *port_status;
 	const char *phy_status;
-	int len = 0;
 
 	if (amb_phy->phy_route == PHY_TO_HOST_PORT)
 		port_status = "HOST";
@@ -152,12 +151,12 @@ static int ambarella_phy_proc_show(struct seq_file *m, void *v)
 	else
 		phy_status = "DEVICE";
 
-	len += seq_printf(m, "Possible parameter: host device\n");
-	len += seq_printf(m, "Current status:\n");
-	len += seq_printf(m, "\tport is %s: phy is %s\n\n",
+	seq_printf(m, "Possible parameter: host device\n");
+	seq_printf(m, "Current status:\n");
+	seq_printf(m, "\tport is %s: phy is %s\n\n",
 		port_status, phy_status);
 
-	return len;
+	return 0;
 }
 
 static int ambarella_phy_proc_write(struct file *file,

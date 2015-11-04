@@ -27,11 +27,10 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
+#include <linux/irqchip.h>
 #include <linux/interrupt.h>
 #include <linux/syscore_ops.h>
 #include <asm/exception.h>
-#include "irqchip.h"
-
 #include <plat/rct.h>
 
 #define HWIRQ_TO_BANK(hwirq)	((hwirq) >> 5)
@@ -488,7 +487,7 @@ static int ambvic_irq_domain_map(struct irq_domain *d,
 
 	irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
 	irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(hwirq)]);
-	set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+	irq_set_probe(irq);
 
 	return 0;
 }
@@ -603,7 +602,7 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 		irq = irq_create_mapping(ambvic_data.domain, i);
 		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
 		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);
-		set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+		irq_set_probe(irq);
 	}
 
 #ifdef CONFIG_SMP

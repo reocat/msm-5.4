@@ -487,8 +487,7 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 
 	if (val & FIO_STA_FI) {
 		amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0x0);
-
-		atomic_clear_mask(0x1, (unsigned long *)&nand_info->irq_flag);
+		atomic_and(~0x1, &nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
 		rval = IRQ_HANDLED;
@@ -523,7 +522,8 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 				amba_readl(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
 			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
 		}
-		atomic_clear_mask(0x2, (unsigned long *)&nand_info->irq_flag);
+
+		atomic_and(~0x2, &nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 	}
 
@@ -547,7 +547,7 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 		amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
 		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
 
-		atomic_clear_mask(0x4, (unsigned long *)&nand_info->irq_flag);
+		atomic_and(~0x4, &nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
 		rval = IRQ_HANDLED;

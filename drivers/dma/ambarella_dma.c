@@ -46,7 +46,7 @@ static int ambdma_proc_show(struct seq_file *m, void *v)
 	struct ambdma_chan *amb_chan;
 	const char *sw_status;
 	const char *hw_status;
-	int i, len = 0;
+	int i;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		amb_chan = &amb_dma->amb_chan[i];
@@ -71,15 +71,15 @@ static int ambdma_proc_show(struct seq_file *m, void *v)
 		else
 			hw_status = "stopped";
 
-		len += seq_printf(m, "channel %d:   %s, %d, %s, %s\n",
+		seq_printf(m, "channel %d:   %s, %d, %s, %s\n",
 			amb_chan->id, dma_chan_name(&amb_chan->chan),
 			amb_chan->chan.client_count, sw_status, hw_status);
 	}
 
-	len += seq_printf(m, "\nInput channel ID to stop specific dma channel:\n");
-	len += seq_printf(m, "    example: echo 3 > dma\n\n");
+	seq_printf(m, "\nInput channel ID to stop specific dma channel:\n");
+	seq_printf(m, "    example: echo 3 > dma\n\n");
 
-	return len;
+	return 0;
 }
 
 static int ambdma_proc_write(struct file *file,

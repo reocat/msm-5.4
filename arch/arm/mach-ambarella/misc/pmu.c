@@ -18,9 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
-
-#include <asm/pmu.h>
-
+#include <mach/hardware.h>
 #include <plat/irq.h>
 
 /* ==========================================================================*/

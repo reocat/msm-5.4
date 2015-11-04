@@ -28,7 +28,8 @@
 
 int highres_timer_start(struct hrtimer *timer, ktime_t tim, const enum hrtimer_mode mode)
 {
-	return hrtimer_start(timer, tim, mode);
+	hrtimer_start(timer, tim, mode);
+	return 0;
 }
 EXPORT_SYMBOL(highres_timer_start);
 

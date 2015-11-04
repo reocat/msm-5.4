@@ -59,7 +59,7 @@ static void write_cpux_jump_addr(unsigned int cpu, int addr)
 }
 
 /* running on CPU1 */
-static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
+static void ambarella_smp_secondary_init(unsigned int cpu)
 {
 	/* let the primary processor know we're out of the
 	 * pen, then head off into the C entry point */
@@ -71,7 +71,7 @@ static void __cpuinit ambarella_smp_secondary_init(unsigned int cpu)
 }
 
 /* running on CPU0 */
-static int __cpuinit ambarella_smp_boot_secondary(unsigned int cpu,
+static int ambarella_smp_boot_secondary(unsigned int cpu,
 	struct task_struct *idle)
 {
 	unsigned long flags, timeout;

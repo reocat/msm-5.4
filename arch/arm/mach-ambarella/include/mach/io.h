@@ -224,23 +224,6 @@ static inline u32 __amba_rct_readl(volatile void __iomem *address)
 #define amba_rct_setbitsl(v, mask)	amba_rct_writel((v),(amba_rct_readl(v) | (mask)))
 #define amba_rct_clrbitsl(v, mask)	amba_rct_writel((v),(amba_rct_readl(v) & ~(mask)))
 
-/* ==========================================================================*/
-
-static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
-{
-	unsigned long tmp, tmp2;
-
-	__asm__ __volatile__("@ atomic_clear_mask\n"
-"1:	ldrex	%0, [%3]\n"
-"	bic	%0, %0, %4\n"
-"	strex	%1, %0, [%3]\n"
-"	teq	%1, #0\n"
-"	bne	1b"
-	: "=&r" (tmp), "=&r" (tmp2), "+Qo" (*addr)
-	: "r" (addr), "Ir" (mask)
-	: "cc");
-}
-
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

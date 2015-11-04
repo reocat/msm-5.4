@@ -97,7 +97,6 @@ static const struct snd_dmaengine_pcm_config ambarella_dmaengine_pcm_config = {
 int ambarella_pcm_platform_register(struct device *dev)
 {
 	return snd_dmaengine_pcm_register(dev, &ambarella_dmaengine_pcm_config,
-			SND_DMAENGINE_PCM_FLAG_NO_RESIDUE |
 			SND_DMAENGINE_PCM_FLAG_NO_DT |
 			SND_DMAENGINE_PCM_FLAG_COMPAT);
 }

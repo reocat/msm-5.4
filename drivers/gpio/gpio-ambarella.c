@@ -370,7 +370,7 @@ static int amb_gpio_irqdomain_map(struct irq_domain *d,
 
 	irq_set_chip_and_handler(irq, &amb_gpio_irqchip, handle_level_irq);
 	irq_set_chip_data(irq, amb_gpio->regbase[PINID_TO_BANK(hwirq)]);
-	set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+	irq_set_noprobe(irq);
 
 	return 0;
 }
@@ -380,16 +380,17 @@ const struct irq_domain_ops amb_gpio_irq_domain_ops = {
 	.xlate = irq_domain_xlate_twocell,
 };
 
-static void amb_gpio_handle_irq(unsigned int irq, struct irq_desc *desc)
+static void amb_gpio_handle_irq(struct irq_desc *desc)
 {
 	struct irq_chip *irqchip;
 	struct amb_gpio_chip *amb_gpio;
-	u32 i, gpio_mis, gpio_hwirq, gpio_irq;
+	u32 i, irq, gpio_mis, gpio_hwirq, gpio_irq;
 
 	irqchip = irq_desc_get_chip(desc);
 	chained_irq_enter(irqchip, desc);
 
-	amb_gpio = irq_get_handler_data(irq);
+	amb_gpio = irq_desc_get_handler_data(desc);
+	irq = irq_desc_get_irq(desc);
 
 	/* find the GPIO bank generating this irq */
 	for (i = 0; i < GPIO_INSTANCES; i++) {

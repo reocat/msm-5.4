@@ -139,17 +139,16 @@ static void ambarella_uevent_work(struct work_struct *data)
 static int ambarella_udc_proc_show(struct seq_file *m, void *v)
 {
 	struct ambarella_udc *udc;
-	int len = 0;
 
 	udc = (struct ambarella_udc *)m->private;
 
-	len += seq_printf(m, "AMBUDC_STATUS=%s",
+	seq_printf(m, "AMBUDC_STATUS=%s",
 			usb_state_string(udc->gadget.state));
-	len += seq_printf(m, " (%s: %s)\n", (udc->driver ?
+	seq_printf(m, " (%s: %s)\n", (udc->driver ?
 			udc->driver->driver.name : "NULL"),
 			udc->vbus_status ? "Connected" : "Disconnected");
 
-	return len;
+	return 0;
 }
 
 static int ambarella_udc_proc_open(struct inode *inode, struct file *file)
