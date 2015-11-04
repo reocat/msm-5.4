@@ -240,6 +240,7 @@ config ARM_PATCH_PHYS_VIRT
 	default y
 	depends on !XIP_KERNEL && MMU
 	depends on !ARCH_REALVIEW || !SPARSEMEM
+	depends on !PLAT_AMBARELLA
 	help
 	  Patch phys-to-virt and virt-to-phys translation functions at
 	  boot and module load time according to the position of the
@@ -376,6 +377,19 @@ config ARCH_VERSATILE
 	select VERSATILE_FPGA_IRQ
 	help
 	  This enables support for ARM Ltd Versatile board.
+
+config ARCH_AMBARELLA
+        bool "Ambarella"
+        depends on MMU
+        select NEED_MACH_GPIO_H
+        select NEED_MACH_IO_H
+        select NEED_MACH_MEMORY_H
+        select PLAT_AMBARELLA
+        select USE_OF
+        select PINCTRL
+        select PINCTRL_AMB
+        help
+          Support for Ambarella Media Processor.
 
 config ARCH_CLPS711X
 	bool "Cirrus Logic CLPS711x/EP721x/EP731x-based"
@@ -829,6 +843,8 @@ config ARCH_VIRT
 # plat- suffix) or along side the corresponding mach-* source.
 #
 source "arch/arm/mach-mvebu/Kconfig"
+
+source "arch/arm/mach-ambarella/Kconfig"
 
 source "arch/arm/mach-alpine/Kconfig"
 

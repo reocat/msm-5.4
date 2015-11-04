@@ -47,6 +47,12 @@ config ARM_VIC_NR
 	  The maximum number of VICs available in the system, for
 	  power management.
 
+config AMBARELLA_VIC
+	bool
+	depends on PLAT_AMBARELLA
+	select IRQ_DOMAIN
+	select MULTI_IRQ_HANDLER
+
 config ATMEL_AIC_IRQ
 	bool
 	select GENERIC_IRQ_CHIP

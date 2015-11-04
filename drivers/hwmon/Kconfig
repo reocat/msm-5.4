@@ -1736,6 +1736,13 @@ config SENSORS_ULTRA45
 	  This driver provides support for the Ultra45 workstation environmental
 	  sensors.
 
+config SENSORS_AMBARELLA_ADC_TEMPER
+	tristate "AMBARELLA ADC temper"
+	help
+	  If you say yes here you get support for the hardware
+	  monitoring functionality of the Ambarella ADC temperature
+	  monitoring functionality.
+
 if ACPI
 
 comment "ACPI drivers"

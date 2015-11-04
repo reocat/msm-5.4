@@ -5,6 +5,7 @@ obj-$(CONFIG_VT)		  += console/
 obj-$(CONFIG_LOGO)		  += logo/
 obj-y				  += backlight/
 
+obj-$(CONFIG_FB_AMBARELLA)        += ambarella/
 obj-y				  += fbdev/
 
 obj-$(CONFIG_VIDEOMODE_HELPERS) += display_timing.o videomode.o

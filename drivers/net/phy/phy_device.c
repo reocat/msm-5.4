@@ -1145,6 +1145,9 @@ int genphy_config_init(struct phy_device *phydev)
 	int val;
 	u32 features;
 
+	/* Make sure PHY is ON */
+	genphy_resume(phydev);
+
 	features = (SUPPORTED_TP | SUPPORTED_MII
 			| SUPPORTED_AUI | SUPPORTED_FIBRE |
 			SUPPORTED_BNC);

@@ -40,6 +40,16 @@ config VIDEOMODE_HELPERS
 config HDMI
 	bool
 
+config FB_AMBARELLA
+	tristate "Ambarella Framebuffer support"
+	depends on FB && PLAT_AMBARELLA
+	select FB_SYS_FILLRECT
+	select FB_SYS_COPYAREA
+	select FB_SYS_IMAGEBLIT
+	select FB_SYS_FOPS
+	help
+          Frame buffer driver for Ambarella chips.
+
 if VT
 	source "drivers/video/console/Kconfig"
 endif

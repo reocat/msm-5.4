@@ -76,6 +76,47 @@
  */
 	.arm
 
+	.macro	invall_tlb_control, tmp0
+	mov		\tmp0, #0x00
+	mcr		p15, 0, \tmp0, c8, c7, 0		/* Invalidate entire unified TLB */
+	mcr		p15, 0, \tmp0, c8, c6, 0		/* Invalidate entire data TLB */
+	mcr		p15, 0, \tmp0, c8, c5, 0		/* Invalidate entire instruction TLB */
+	.endm
+
+	.macro	invall_cache, name, tmp0, tmp1, tmp2, tmp3, tmp4
+	mov		\tmp0, #0
+	mcr		p15, 0, \tmp0, c7, c5, 6		/* Invalidate entire branch prediction array */
+	mcr		p15, 0, \tmp0, c7, c5, 0		/* Invalidate entire icache */
+	mcr		p15, 2, \tmp0, c0, c0, 0		/* cache size selection register, select dcache */
+	mrc		p15, 1, \tmp0, c0, c0, 0		/* cache size id register */
+	mov		\tmp0, \tmp0, asr #13
+	movw		\tmp2, #0x0fff
+	and		\tmp0, \tmp0, \tmp2
+	cmp		\tmp0, #0x7f
+	moveq		\tmp0, #0x1000
+	beq		size_done_\name
+	cmp		\tmp0, #0xff
+	moveq		\tmp0, #0x2000
+	movne		\tmp0, #0x4000
+size_done_\name:
+	mov		\tmp1, #0
+	mov		\tmp2, #0x40000000
+	mov		\tmp3, #0x80000000
+	mov		\tmp4, #0xc0000000
+inv_dloop_\name:
+	mcr		p15, 0, \tmp1, c7, c6, 2		/* invalidate dcache by set / way */
+	mcr		p15, 0, \tmp2, c7, c6, 2		/* invalidate dcache by set / way */
+	mcr		p15, 0, \tmp3, c7, c6, 2		/* invalidate dcache by set / way */
+	mcr		p15, 0, \tmp4, c7, c6, 2		/* invalidate dcache by set / way */
+	add		\tmp1, \tmp1, #0x20
+	add		\tmp2, \tmp2, #0x20
+	add		\tmp3, \tmp3, #0x20
+	add		\tmp4, \tmp4, #0x20
+	cmp		\tmp1, \tmp0
+	bne		inv_dloop_\name
+	.endm
+
+
 	__HEAD
 ENTRY(stext)
  ARM_BE8(setend	be )			@ ensure we are in BE8 mode
@@ -84,6 +125,11 @@ ENTRY(stext)
  THUMB(	bx	r9		)	@ If this is a Thumb-2 kernel,
  THUMB(	.thumb			)	@ switch to Thumb now.
  THUMB(1:			)
+
+#if defined(CONFIG_AMBARELLA_RAW_BOOT)
+	invall_tlb_control	r3
+	invall_cache		bootstrap, r3, r4, r5, r6, r7
+#endif
 
 #ifdef CONFIG_ARM_VIRT_EXT
 	bl	__hyp_stub_install

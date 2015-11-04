@@ -353,6 +353,9 @@ static void option_instat_callback(struct urb *urb);
  */
 #define LONGCHEER_VENDOR_ID			0x1c9e
 
+/***Add for LONGSUNG LTE 4G MODEM U8300***/
+#define LONGSUNG_U8300_PRODUCT_ID	0x9b05
+
 /* 4G Systems products */
 /* This is the 4G XS Stick W14 a.k.a. Mobilcom Debitel Surf-Stick *
  * It seems to contain a Qualcomm QSC6240/6290 chipset            */
@@ -611,6 +614,9 @@ static const struct option_blacklist_info telit_le920_blacklist = {
 	.reserved = BIT(1) | BIT(5),
 };
 
+/*Add for LONGSUNG U8300*/
+static const struct option_blacklist_info longsung_u8300_blacklist = {
+	.reserved = BIT(4),
 static const struct option_blacklist_info sierra_mc73xx_blacklist = {
 	.sendsetup = BIT(0) | BIT(2),
 	.reserved = BIT(8) | BIT(10) | BIT(11),
@@ -1653,6 +1659,10 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE(LONGCHEER_VENDOR_ID, FOUR_G_SYSTEMS_PRODUCT_W14),
   	  .driver_info = (kernel_ulong_t)&four_g_w14_blacklist
   	},
+	/*LONGSUNG LTE U8300*/
+	{ USB_DEVICE(LONGCHEER_VENDOR_ID, LONGSUNG_U8300_PRODUCT_ID),
+	  .driver_info = (kernel_ulong_t)&longsung_u8300_blacklist
+	},
 	{ USB_DEVICE_INTERFACE_CLASS(LONGCHEER_VENDOR_ID, SPEEDUP_PRODUCT_SU9800, 0xff) },
 	{ USB_DEVICE(LONGCHEER_VENDOR_ID, ZOOM_PRODUCT_4597) },
 	{ USB_DEVICE(LONGCHEER_VENDOR_ID, IBALL_3_5G_CONNECT) },
