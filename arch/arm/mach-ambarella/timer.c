@@ -421,17 +421,6 @@ static void __init ambarella_clocksource_init(void)
 	ambarella_register_event_notifier(&amba_timer_notifier.system_event);
 }
 
-#ifdef CONFIG_HAVE_ARM_TWD
-static DEFINE_TWD_LOCAL_TIMER(twd_local_timer, AMBARELLA_VA_PT_WD_BASE, IRQ_LOCALTIMER);
-
-static void __init ambarella_smp_twd_init(void)
-{
-	int err = twd_local_timer_register(&twd_local_timer);
-	if (err)
-		pr_err("twd_local_timer_register failed %d\n", err);
-}
-#endif
-
 /* ==========================================================================*/
 
 #ifdef CONFIG_PLAT_AMBARELLA_LOCAL_TIMERS
@@ -633,10 +622,7 @@ void __init ambarella_timer_init(void)
 {
 	ambarella_clockevent_init();
 	ambarella_clocksource_init();
-
-#ifdef CONFIG_HAVE_ARM_TWD
-	ambarella_smp_twd_init();
-#endif
+	clocksource_of_init();
 #ifdef CONFIG_PLAT_AMBARELLA_LOCAL_TIMERS
 	ambarella_local_clockevent_init();
 #endif

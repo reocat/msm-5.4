@@ -386,6 +386,11 @@ config ARCH_AMBARELLA
         select NEED_MACH_MEMORY_H
         select PLAT_AMBARELLA
         select USE_OF
+        select GENERIC_GPIO
+        select ARCH_REQUIRE_GPIOLIB
+        select HAVE_CLK
+        select CLKSRC_OF
+        select GENERIC_CLOCKEVENTS
         select PINCTRL
         select PINCTRL_AMB
         help

@@ -22,13 +22,7 @@
 #
 
 config PLAT_AMBARELLA
-	bool
-	depends on ARCH_AMBARELLA
-	default y
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_CLOCKEVENTS
-	select HAVE_CLK
+	def_bool y
 	help
 	  Base platform code for any Ambarella device
 
