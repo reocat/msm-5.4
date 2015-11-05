@@ -44,7 +44,7 @@ static void __iomem *cs_ctrl_reg = NULL;
 static u32 cs_ctrl_offset = -1;
 
 #define AMBARELLA_TIMER_FREQ		clk_get_rate(clk_get(NULL, "gclk_apb"))
-#define AMBARELLA_TIMER_RATING		(350)
+#define AMBARELLA_TIMER_RATING		(300)
 
 static struct clock_event_device ambarella_clkevt;
 static struct clocksource ambarella_clksrc;
