@@ -220,6 +220,7 @@ static struct clock_event_device ambarella_clkevt = {
 	.set_state_periodic	= ambarella_global_ce_set_state_periodic,
 	.set_state_oneshot	= ambarella_global_ce_set_state_oneshot,
 	.set_state_shutdown	= ambarella_global_ce_set_state_shutdown,
+	.tick_resume		= ambarella_global_ce_set_state_shutdown,
 	.suspend		= ambarella_global_ce_suspend,
 	.resume			= ambarella_global_ce_resume,
 };
@@ -539,6 +540,7 @@ static int __cpuinit ambarella_local_timer_setup(struct clock_event_device *evt)
 	evt->set_state_periodic = ambarella_local_ce_set_state_periodic;
 	evt->set_state_oneshot = ambarella_local_ce_set_state_oneshot;
 	evt->set_state_shutdown = ambarella_local_ce_set_state_shutdown;
+	evt->tick_resume = ambarella_local_ce_set_state_shutdown;
 	evt->features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = AMBARELLA_TIMER_RATING + 30;
 
