@@ -368,7 +368,7 @@ u32 ambarella_phys_to_virt(u32 paddr)
 		}
 	}
 
-	return __amb_raw_phys_to_virt(paddr);
+	return __phys_to_virt(paddr);
 }
 EXPORT_SYMBOL(ambarella_phys_to_virt);
 
@@ -390,7 +390,7 @@ u32 ambarella_virt_to_phys(u32 vaddr)
 		}
 	}
 
-	return __amb_raw_virt_to_phys(vaddr);
+	return __virt_to_phys(vaddr);
 }
 EXPORT_SYMBOL(ambarella_virt_to_phys);
 
