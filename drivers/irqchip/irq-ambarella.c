@@ -264,9 +264,13 @@ static int ambvic_set_affinity(struct irq_data *data,
 		const struct cpumask *mask_val, bool force)
 {
 	void __iomem *reg_base = irq_data_get_irq_chip_data(data);
-	u32 cpu = cpumask_any_and(mask_val, cpu_online_mask);
 	u32 mask = 1 << HWIRQ_TO_OFFSET(data->hwirq);
-	u32 val0, val1;
+	u32 cpu, val0, val1;
+
+	if (!force)
+		cpu = cpumask_any_and(mask_val, cpu_online_mask);
+	else
+		cpu = cpumask_first(mask_val);
 
 	if (cpu >= nr_cpu_ids)
 		return -EINVAL;

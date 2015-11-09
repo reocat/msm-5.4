@@ -43,7 +43,6 @@ DT_MACHINE_START(S2L_DT, "Ambarella S2L (Flattened Device Tree)")
 	.map_io		= ambarella_map_io,
 	.init_early	= ambarella_init_early,
 	.init_irq	= irqchip_init,
-	.init_time	= ambarella_timer_init,
 	.init_machine	= ambarella_init_machine,
 	.restart	= ambarella_restart_machine,
 	.dt_compat	= s2l_dt_board_compat,

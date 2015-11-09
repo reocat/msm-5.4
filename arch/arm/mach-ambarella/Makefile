@@ -30,7 +30,6 @@ obj-y						+= clk_table.o
 endif
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= pm.o
 obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= sleep.o
-obj-y						+= timer.o
 obj-y						+= adc.o
 
 obj-y						+= soc/
