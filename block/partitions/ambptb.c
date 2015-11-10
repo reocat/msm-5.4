@@ -39,8 +39,8 @@ int ambptb_partition(struct parsed_partitions *state)
 	int result = 0;
 
 	sect_size = bdev_logical_block_size(state->bdev);
-	sect_address = (2048 + sizeof(flpart_table_t)) / sect_size;
-	sect_offset = sizeof(flpart_table_t) % sect_size;
+	sect_address = (2564 * sect_size + sizeof(ptb_header_t) + sizeof(flpart_table_t)) / sect_size;
+	sect_offset = (sizeof(ptb_header_t) + sizeof(flpart_table_t)) % sect_size;
 
 	data = read_part_sector(state, sect_address, &sect);
 	if (!data) {
@@ -54,7 +54,8 @@ int ambptb_partition(struct parsed_partitions *state)
 		for (i = 0; i < PART_MAX; i++) {
 			if (slot >= state->limit)
 				break;
-			if (((ptb_meta->part_dev[i] & PART_DEV_EMMC) ==
+
+			if (((ptb_meta->part_info[i].dev & PART_DEV_EMMC) ==
 				PART_DEV_EMMC) &&
 				(ptb_meta->part_info[i].nblk)) {
 				state->parts[slot].from =
@@ -64,7 +65,7 @@ int ambptb_partition(struct parsed_partitions *state)
 				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				pr_info("%s: %s [p%d]\n", __func__,
+				printk("%s: %s [p%d]\n", __func__,
 					ptb_meta->part_info[i].name, slot);
 				slot++;
 			}
@@ -76,7 +77,7 @@ int ambptb_partition(struct parsed_partitions *state)
 		for (i = 0; i < PART_MAX; i++) {
 			if (slot >= state->limit)
 				break;
-			if ((ptb_meta->part_dev[i] == BOOT_DEV_SM) &&
+			if ((ptb_meta->part_info[i].dev == BOOT_DEV_SM) &&
 				(ptb_meta->part_info[i].nblk)) {
 				state->parts[slot].from =
 					ptb_meta->part_info[i].sblk;
@@ -85,7 +86,7 @@ int ambptb_partition(struct parsed_partitions *state)
 				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				pr_info("%s: %s [p%d]\n", __func__,
+				printk("%s: %s [p%d]\n", __func__,
 					ptb_meta->part_info[i].name, slot);
 				slot++;
 			}
