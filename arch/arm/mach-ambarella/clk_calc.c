@@ -57,6 +57,18 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		return -1;
 	}
 
+	/* if rate < REF_CLK_FREQ, post_scaler register must be existed for
+	 * fractional mode, otherwise sdiv and sout will be overflow */
+	if(rate < REF_CLK_FREQ && c->frac_mode && c->post_reg == -1) {
+		pr_err("Error: post_reg is not existed, unable to set rate!\n");
+		return -1;
+	}
+
+	if (rate < REF_CLK_FREQ && c->frac_mode) {
+		rate *= 10;
+		post_scaler = 10;
+	}
+
 	if (rate < REF_CLK_FREQ) {
 		intp = 1;
 		pre_scaler = DIV_ROUND_CLOSEST(REF_CLK_FREQ, rate);
@@ -108,6 +120,8 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		c->frac_mode = 0;
 	}
 
+	BUG_ON(sdiv >= 16 || sout >= 16);
+
 	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 	ctrl_reg.s.intp = intp - 1;
 	ctrl_reg.s.sdiv = sdiv - 1;
@@ -124,14 +138,14 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	amba_rct_writel_en(c->ctrl_reg, ctrl_reg.w);
 
 	if (c->frac_mode) {
-		rate_int = ambarella_rct_clk_get_rate(c) * fix_divider;
+		rate_int = ambarella_rct_clk_get_rate(c) * fix_divider * post_scaler;
 		if (rate_int <= rate)
 			diff = rate - rate_int;
 		else
 			diff = rate_int - rate;
 
 		if (diff) {
-			dividend = diff * pre_scaler * sout * post_scaler;
+			dividend = diff * pre_scaler * sout;
 			dividend = dividend << 32;
 			divider = (u64)sdiv * REF_CLK_FREQ;
 			dividend = DIV_ROUND_CLOSEST_ULL(dividend, divider);
@@ -162,9 +176,9 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	c->rate = ambarella_rct_clk_get_rate(c);
 
 	/* check if result rate is precise or not */
-	if (abs(c->rate - rate / fix_divider) > 10) {
+	if (abs(c->rate - rate / fix_divider / post_scaler) > 10) {
 		pr_warn("%s: rate is not very precise: %lld, %ld\n",
-				c->name, c->rate, rate / fix_divider);
+			c->name, c->rate, rate / fix_divider / post_scaler);
 	}
 
 	return 0;
