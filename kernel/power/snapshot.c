@@ -1914,7 +1914,7 @@ static int init_header(struct swsusp_info *info)
 	info->pages = snapshot_get_image_size();
 	info->size = info->pages;
 	info->size <<= PAGE_SHIFT;
-#ifdef CONFIG_ARCH_AMBARELLA
+#if defined(CONFIG_ARCH_AMBARELLA) && defined(CONFIG_PM)
 	info->magic = 0x0badbeef;
 	info->addr  = virt_to_phys(ambarella_cpu_resume);
 #endif

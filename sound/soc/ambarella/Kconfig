@@ -1,6 +1,6 @@
 config SND_AMBARELLA_SOC
 	tristate "SoC Audio for the Ambarella chips"
-	depends on PLAT_AMBARELLA && SND_SOC
+	depends on ARCH_AMBARELLA && SND_SOC
 	select SND_SOC_GENERIC_DMAENGINE_PCM
 	help
 	  Say Y or M if you want to add support for codecs attached to

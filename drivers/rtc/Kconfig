@@ -1380,7 +1380,7 @@ config RTC_DRV_MV
 
 config RTC_DRV_AMBARELLA
 	tristate "Ambarella SoC RTC"
-	depends on PLAT_AMBARELLA
+	depends on ARCH_AMBARELLA
 	help
 	  RTC (Realtime Clock) driver for Ambarella SoC.
 config RTC_DRV_ARMADA38X

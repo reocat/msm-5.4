@@ -22,7 +22,7 @@
 
 obj-y						+= hwlock.o
 obj-y						+= audio.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_GDMA)	+= gdma.o
+obj-$(CONFIG_AMBARELLA_SUPPORT_GDMA)		+= gdma.o
 obj-y						+= ambasyncproc.o
 obj-y						+= ambcache.o
 obj-$(CONFIG_AMBARELLA_SUPPORT_AMBENCH)		+= ambench.o

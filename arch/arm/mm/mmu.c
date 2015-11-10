@@ -1120,7 +1120,15 @@ void __init sanity_check_meminfo(void)
 		phys_addr_t block_end = reg->base + reg->size;
 		phys_addr_t size_limit = reg->size;
 
+#if defined(CONFIG_ARCH_AMBARELLA) && (CONFIG_PHYS_OFFSET >= 0xC0000000)
+		/* On some ambarella SoC like A5S, the physical address of memory
+		 * start from 0xC0000000, then vmalloc_limit will be larger than
+		 * 0xffffffff, and will be wrap-around as result, so highmem will
+		 * be always 1. */
+		if (reg->base >= ULONG_MAX)
+#else
 		if (reg->base >= vmalloc_limit)
+#endif
 			highmem = 1;
 		else
 			size_limit = vmalloc_limit - reg->base;

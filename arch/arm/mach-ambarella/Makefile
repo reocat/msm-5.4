@@ -28,8 +28,7 @@ obj-y						+= clk_calc.o
 else
 obj-y						+= clk_table.o
 endif
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= pm.o
-obj-$(CONFIG_PLAT_AMBARELLA_SUPPORT_PM)		+= sleep.o
+obj-$(CONFIG_PM)				+= pm.o sleep.o
 obj-y						+= adc.o
 
 obj-y						+= soc/

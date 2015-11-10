@@ -612,7 +612,8 @@ static struct clk gclk_ddr = {
 };
 
 /* ==========================================================================*/
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L) || \
+		(CHIP_REV == S3) || (CHIP_REV == S3L)
 static struct clk gclk_cortex = {
 	.parent		= NULL,
 	.name		= "gclk_cortex",
@@ -1044,11 +1045,15 @@ static struct clk gclk_pwm = {
 
 void ambarella_init_early(void)
 {
+#if (CHIP_REV == S2)
+	amba_rct_writel(SCALER_ARM_ASYNC_REG, 0xF);
+#endif
 	ambarella_clk_add(&pll_out_core);
 #if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 	ambarella_clk_add(&pll_out_sd);
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L) || \
+		(CHIP_REV == S3) || (CHIP_REV == S3L)
 	ambarella_clk_add(&gclk_cortex);
 	ambarella_clk_add(&gclk_axi);
 #if defined(CONFIG_HAVE_ARM_TWD)

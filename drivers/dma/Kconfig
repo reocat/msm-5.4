@@ -58,7 +58,7 @@ config DMA_OF
 #devices
 config AMBARELLA_DMA
 	tristate "Ambarella DMA Engine System support"
-	depends on PLAT_AMBARELLA
+	depends on ARCH_AMBARELLA
 	select DMA_ENGINE
 	help
 	  Support the Ambarella DMA Engine. This engine is integrated into
@@ -331,7 +331,7 @@ config MOXART_DMA
 	select DMA_VIRTUAL_CHANNELS
 	help
 	  Enable support for the MOXA ART SoC DMA controller.
- 
+
 	  Say Y here if you enabled MMP ADMA, otherwise say N.
 
 config MPC512X_DMA

@@ -43,7 +43,7 @@ config MTD_SM_COMMON
 
 config MTD_NAND_AMBARELLA
 	tristate "Ambarella Media Soc NAND support"
-	depends on PLAT_AMBARELLA
+	depends on ARCH_AMBARELLA
 	help
 	  This enables the SLC NAND flash controller on the Ambarella
 	  Media SoC.

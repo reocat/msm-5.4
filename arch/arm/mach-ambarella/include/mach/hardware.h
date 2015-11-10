@@ -32,9 +32,7 @@
 #include <plat/irq.h>
 #include <plat/pm.h>
 #include <plat/hwlock.h>
-#if defined(CONFIG_PLAT_AMBARELLA_CORTEX)
 #include <plat/cortex.h>
-#endif
 
 /* ==========================================================================*/
 #define	AMBA_DEV_MAJOR			(248)

@@ -70,7 +70,7 @@ config SPI_ALTERA
 
 config SPI_AMBARELLA
         tristate "Ambarella SPI Controller"
-        depends on PLAT_AMBARELLA
+        depends on ARCH_AMBARELLA
         help
           This selects a driver for the Ambarella SPI Controller.
 
@@ -716,7 +716,7 @@ comment "SPI Slave Controller Drivers"
 
 config SPI_SLAVE_AMBARELLA
         tristate "Ambarella SPI Slave Controller"
-        depends on PLAT_AMBARELLA
+        depends on ARCH_AMBARELLA
         help
 	  This selects a driver for the Ambarella SPI Slave Controller.
 

@@ -218,7 +218,7 @@ config PINCTRL_COH901
 
 config PINCTRL_AMB
 	bool
-	depends on PLAT_AMBARELLA
+	depends on ARCH_AMBARELLA
 	select PINMUX
 	select PINCONF
 

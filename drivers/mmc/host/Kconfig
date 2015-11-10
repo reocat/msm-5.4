@@ -6,7 +6,7 @@ comment "MMC/SD/SDIO Host Controller Drivers"
 
 config MMC_AMBARELLA
 	tristate "Ambarella Media Processor SD/MMC Host Controller driver"
-	depends on PLAT_AMBARELLA
+	depends on ARCH_AMBARELLA
 	help
 	  This selects the Ambarella Media Processor Multimedia Card
 	  Interface support. If you have an Ambarella Media Processor

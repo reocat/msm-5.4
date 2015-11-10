@@ -51,19 +51,13 @@ enum {
 	AMBARELLA_IO_DESC_AHB_ID = 0,
 	AMBARELLA_IO_DESC_APB_ID,
 	AMBARELLA_IO_DESC_PPM_ID,
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
+#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_AXI)
 	AMBARELLA_IO_DESC_AXI_ID,
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
+#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_DRAMC)
 	AMBARELLA_IO_DESC_DRAMC_ID,
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-	AMBARELLA_IO_DESC_CRYPT_ID,
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
-	AMBARELLA_IO_DESC_AHB64_ID,
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
+#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 	AMBARELLA_IO_DESC_DBGBUS_ID,
 	AMBARELLA_IO_DESC_DBGFMEM_ID,
 #endif
@@ -83,11 +77,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual	= AHB_BASE,
 			.pfn		= __phys_to_pfn(AHB_PHYS_BASE),
 			.length		= AHB_SIZE,
-#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
-			.type		= MT_DEVICE_NONSHARED,
-#else
 			.type		= MT_DEVICE,
-#endif
 			},
 	},
 	[AMBARELLA_IO_DESC_APB_ID] = {
@@ -96,11 +86,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual	= APB_BASE,
 			.pfn		= __phys_to_pfn(APB_PHYS_BASE),
 			.length		= APB_SIZE,
-#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
-			.type		= MT_DEVICE_NONSHARED,
-#else
 			.type		= MT_DEVICE,
-#endif
 			},
 	},
 	[AMBARELLA_IO_DESC_PPM_ID] = {
@@ -116,7 +102,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 #endif
 			},
 	},
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AXI)
+#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_AXI)
 	[AMBARELLA_IO_DESC_AXI_ID] = {
 		.name		= "AXI",
 		.io_desc	= {
@@ -127,48 +113,18 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			},
 	},
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DRAMC)
+#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_DRAMC)
 	[AMBARELLA_IO_DESC_DRAMC_ID] = {
 		.name		= "DRAMC",
 		.io_desc	= {
 			.virtual= DRAMC_BASE,
 			.pfn	= __phys_to_pfn(DRAMC_PHYS_BASE),
 			.length	= DRAMC_SIZE,
-#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
-			.type	= MT_DEVICE_NONSHARED,
-#else
-			.type	= MT_DEVICE,
-#endif
-			},
-	},
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_CRYPT)
-	[AMBARELLA_IO_DESC_CRYPT_ID] = {
-		.name		= "CRYPT",
-		.io_desc	= {
-			.virtual= CRYPT_BASE,
-			.pfn	= __phys_to_pfn(CRYPT_PHYS_BASE),
-			.length	= CRYPT_SIZE,
-#if defined(CONFIG_PLAT_AMBARELLA_ADD_REGISTER_LOCK)
-			.type	= MT_DEVICE_NONSHARED,
-#else
-			.type	= MT_DEVICE,
-#endif
-			},
-	},
-#endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_AHB64)
-	[AMBARELLA_IO_DESC_AHB64_ID] = {
-		.name		= "AHB64",
-		.io_desc	= {
-			.virtual= AHB64_BASE,
-			.pfn	= __phys_to_pfn(AHB64_PHYS_BASE),
-			.length	= AHB64_SIZE,
 			.type	= MT_DEVICE,
 			},
 	},
 #endif
-#if defined(CONFIG_PLAT_AMBARELLA_SUPPORT_MMAP_DBGBUS)
+#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_DBGBUS)
 	[AMBARELLA_IO_DESC_DBGBUS_ID] = {
 		.name		= "DBGBUS",
 		.io_desc	= {
@@ -306,10 +262,6 @@ EXPORT_SYMBOL(get_ambarella_proc_dir);
 void __init ambarella_init_machine(void)
 {
 	int ret_val = 0;
-
-#if defined(CONFIG_PLAT_AMBARELLA_LOWER_ARM_PLL)
-	amba_rct_writel(SCALER_ARM_ASYNC_REG, 0xF);
-#endif
 
 	ret_val = ambarella_create_proc_dir();
 	BUG_ON(ret_val != 0);

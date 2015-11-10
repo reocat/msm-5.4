@@ -33,7 +33,7 @@ config MARVELL_PHY
 	tristate "Drivers for Marvell PHYs"
 	---help---
 	  Currently has a driver for the 88E1011S
-	
+
 config DAVICOM_PHY
 	tristate "Drivers for Davicom PHYs"
 	---help---
@@ -134,7 +134,7 @@ config DP83867_PHY
 
 config MICREL_PHY_KSZ80X1R
 	tristate "Driver for Micrel PHYs KSZ80X1R"
-	depends on PLAT_AMBARELLA=y
+	depends on ARCH_AMBARELLA
 	depends on MICREL_PHY=n
 	---help---
 	  Supports the KSZ80X1R PHYs.
