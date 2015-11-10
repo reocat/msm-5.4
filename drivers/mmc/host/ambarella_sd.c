@@ -933,11 +933,9 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	}
 
 	if (nis & SD_NIS_REMOVAL) {
-		printk("card is removed\n");
 		ambsd_dbg(pslotinfo, "SD_NIS_REMOVAL\n");
 		mmc_detect_change(pslotinfo->mmc, msecs_to_jiffies(1000));
 	} else if (nis & SD_NIS_INSERT) {
-		printk("card is inserted\n");
 		ambsd_dbg(pslotinfo, "SD_NIS_INSERT\n");
 		mmc_detect_change(pslotinfo->mmc, msecs_to_jiffies(1000));
 	}
@@ -1732,7 +1730,6 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 			dev_err(pinfo->dev, "Failed to request pwr-gpios!\n");
 			goto init_slot_err1;
 		}
-
 		gpio_direction_output(pslotinfo->pwr_gpio, !pslotinfo->pwr_gpio_active);
 		msleep(100);
 		gpio_direction_output(pslotinfo->pwr_gpio, pslotinfo->pwr_gpio_active);
@@ -1795,7 +1792,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 	dev_dbg(pinfo->dev, "SD max_blk_size: %u.\n", mmc->max_blk_size);
 
 	mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
-			MMC_CAP_ERASE | MMC_CAP_BUS_WIDTH_TEST;// | MMC_CAP_NONREMOVABLE;//| MMC_CAP_HW_RESET;
+			MMC_CAP_ERASE | MMC_CAP_BUS_WIDTH_TEST;
 
 	if (mmc->f_max > 25000000) {
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED;
@@ -2002,7 +1999,6 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 	psize /= sizeof(u32);
 	BUG_ON(psize % 3);
 	pinfo->phy_timing_num = psize / 3;
-	printk("sd: pinfo->phy_timing_num[%d]\n", pinfo->phy_timing_num);
 	pinfo->phy_timing = devm_kzalloc(pinfo->dev, psize, GFP_KERNEL);
 	if (pinfo->phy_timing == NULL) {
 		retval = -ENOMEM;
