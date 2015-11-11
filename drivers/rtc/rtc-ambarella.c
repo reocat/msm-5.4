@@ -320,47 +320,6 @@ static int ambrtc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static u32 time_val;
-static u32 alarm_val;
-static int ambrtc_suspend(struct device *dev)
-{
-	struct ambarella_rtc *ambrtc;
-
-	ambrtc = dev_get_drvdata(dev);
-
-	alarm_val = amba_readl(ambrtc->reg + RTC_ALAT_OFFSET);
-	time_val  = amba_readl(ambrtc->reg + RTC_CURT_OFFSET);
-
-	return 0;
-}
-
-static int ambrtc_resume(struct device *dev)
-{
-	struct ambarella_rtc *ambrtc;
-
-	ambrtc = dev_get_drvdata(dev);
-
-	amba_writel(ambrtc->reg + RTC_POS0_OFFSET, 0x80);
-	amba_writel(ambrtc->reg + RTC_POS1_OFFSET, 0x80);
-	amba_writel(ambrtc->reg + RTC_POS2_OFFSET, 0x80);
-
-	/* reset time and alarm to 0 first */
-	amba_writel(ambrtc->reg + RTC_PWC_ALAT_OFFSET, 0x0);
-	amba_writel(ambrtc->reg + RTC_PWC_CURT_OFFSET, 0x0);
-	ambrtc_reset_rtc(ambrtc);
-
-	/* now write the required value to time or alarm */
-	amba_writel(ambrtc->reg + RTC_PWC_CURT_OFFSET, time_val);
-	amba_writel(ambrtc->reg + RTC_PWC_ALAT_OFFSET, alarm_val);
-	ambrtc_reset_rtc(ambrtc);
-
-	return 0;
-}
-#endif
-
-static SIMPLE_DEV_PM_OPS(ambrtc_pm_ops, ambrtc_suspend, ambrtc_resume);
-
 static const struct of_device_id ambarella_rtc_dt_ids[] = {
 	{.compatible = "ambarella,rtc", },
 	{},
@@ -373,7 +332,6 @@ static struct platform_driver ambarella_rtc_driver = {
 	.driver		= {
 		.name	= "ambarella-rtc",
 		.owner	= THIS_MODULE,
-		.pm	= &ambrtc_pm_ops,
 		.of_match_table = ambarella_rtc_dt_ids,
 	},
 };
