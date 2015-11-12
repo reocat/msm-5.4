@@ -2096,14 +2096,6 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	retval = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_sd_irq,
-				IRQF_SHARED | IRQF_TRIGGER_HIGH,
-				dev_name(&pdev->dev), pinfo);
-	if (retval < 0) {
-		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", pinfo->irq);
-		goto ambarella_sd_probe_free_host;
-	}
-
 	pinfo->slot_num = 0;
 	for_each_child_of_node(pdev->dev.of_node, slot_np) {
 		if (!slot_np->name || of_node_cmp(slot_np->name, "slot"))
@@ -2121,6 +2113,15 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, pinfo);
+
+	retval = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_sd_irq,
+				IRQF_SHARED | IRQF_TRIGGER_HIGH,
+				dev_name(&pdev->dev), pinfo);
+	if (retval < 0) {
+		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", pinfo->irq);
+		goto ambarella_sd_probe_free_host;
+	}
+
 	dev_info(&pdev->dev, "%u slots @ %luHz\n",
 			pinfo->slot_num, clk_get_rate(pinfo->clk));
 

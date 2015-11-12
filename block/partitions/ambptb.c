@@ -24,24 +24,31 @@
 #include "check.h"
 #include "ambptb.h"
 #include <plat/ptb.h>
+#include <linux/of.h>
 
 int ambptb_partition(struct parsed_partitions *state)
 {
-	int i;
-	int slot = 1;
+	int i, val, slot = 1;
 	unsigned char *data;
 	Sector sect;
-	u32 sect_size;
-	u32 sect_address;
-	u32 sect_offset;
+	u32 sect_size, sect_offset, sect_address, ptb_address;
 	flpart_meta_t *ptb_meta;
 	char ptb_tmp[1 + BDEVNAME_SIZE + 1];
 	int result = 0;
+	struct device_node * np;
 
 	sect_size = bdev_logical_block_size(state->bdev);
-	sect_address = (2564 * sect_size + sizeof(ptb_header_t) + sizeof(flpart_table_t)) / sect_size;
 	sect_offset = (sizeof(ptb_header_t) + sizeof(flpart_table_t)) % sect_size;
 
+	np = of_find_node_with_property(NULL, "amb,ptb_address");
+	if(!np)
+		return -1;
+
+	val = of_property_read_u32(np, "amb,ptb_address", &ptb_address);
+	if(val < 0)
+		return -1;
+
+	sect_address = (ptb_address * sect_size + sizeof(ptb_header_t) + sizeof(flpart_table_t)) / sect_size;
 	data = read_part_sector(state, sect_address, &sect);
 	if (!data) {
 		result = -1;

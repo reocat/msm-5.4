@@ -17,6 +17,7 @@
 		serial0 = &uart0;
 		serial1 = &uart1;
 		nand = &nand0;
+		emmc = &sdmmc0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		spi0 = &spi0;
@@ -396,7 +397,7 @@
 			amb,usbphy = <&usbphy>;
 		};
 
-		sdmmc0@60002000 {
+		sdmmc0: sdmmc0@60002000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
