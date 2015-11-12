@@ -17,6 +17,7 @@
 		serial0 = &uart0;
 		serial1 = &uart1;
 		nand = &nand0;
+		emmc = &sdmmc0;
 		spinor = &spinor0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
@@ -538,7 +539,7 @@
 			amb,usbphy = <&usbphy>;
 		};
 
-		sdmmc0@e0002000 {
+		sdmmc0: sdmmc0@e0002000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -552,7 +553,7 @@
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
-					 <0x000000e0 0x00000001 0x00001111>;
+					 <0x000000e2 0x00000005 0x00001111>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit>;
 
@@ -562,11 +563,12 @@
 				max-frequency = <50000000>;
 				bus-width = <8>;
 				amb,caps-adma;
+				amb,caps-ddr;
 				cap-sdio-irq;
 			};
 		};
 
-		sdmmc1@e000c000 {
+		sdmmc1: sdmmc1@e000c000 {
 			compatible = "ambarella,sdmmc";
 			reg = <0xe000c000 0x1000>,
 			      <0xe0001000 0x80>; /* fio reg address */
@@ -591,7 +593,7 @@
 			};
 		};
 
-		sdmmc2@e001f000 {
+		sdmmc2: sdmmc2@e001f000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;

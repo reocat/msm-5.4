@@ -19,6 +19,7 @@
 		serial2 = &uart2;
 		serial3 = &uart3;
 		nand = &nand0;
+		emmc = &sdmmc0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -498,7 +499,7 @@
 			amb,usbphy = <&usbphy>;
 		};
 
-		sdmmc0@60002000 {
+		sdmmc0: sdmmc0@60002000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -523,12 +524,12 @@
 				max-frequency = <50000000>;
 				bus-width = <8>;
 				amb,caps-adma;
-				/*amb,caps-ddr;*///remove it for emmc boot
+				amb,caps-ddr;
 				cap-sdio-irq;
 			};
 		};
 
-		sdmmc1@6000c000 {
+		sdmmc1: sdmmc1@6000c000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
