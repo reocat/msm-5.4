@@ -34,11 +34,11 @@ linux: $(DOT_CONFIG)
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) defconfig_public_linux; \
 	fi
-	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) all
+	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) MAKEFLAGS=$(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) all
 	@if [ -n "$(KERNEL_INSTALL_PATH)" ]; then \
 		echo "Install Linux modules to $(KERNEL_INSTALL_PATH) ..."; \
 		mkdir -p $(KERNEL_INSTALL_PATH); \
-		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) \
+		$(MAKE) $(AMBA_MAKE_PARA) MAKEFLAGS=$(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) \
 			$(LINUX_INSTALL_FLAG) modules_install; \
 		find $(KERNEL_INSTALL_PATH)/lib/modules/ -name build | xargs -l1 rm -rf; \
 		find $(KERNEL_INSTALL_PATH)/lib/modules/ -name source | xargs -l1 rm -rf; \
@@ -55,7 +55,7 @@ $(call add-target-into-build, linux)
 
 menuconfig_public_linux: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR)
-	@$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) menuconfig
+	@$(MAKE) $(AMBA_MAKE_PARA) MAKEFLAGS=$(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) menuconfig
 
 ###
 
@@ -89,7 +89,7 @@ linux_2: $(DOT_CONFIG)
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) defconfig_public_linux_2; \
 	fi
-	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) all
+	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) MAKEFLAGS=$(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) all
 	@cp -dpRf $(LINUX_OUT_DIR_2)/arch/arm/boot/Image $(KERNEL_OUT_DIR)/Image_2
 	@echo "Build $@ Done."
 
@@ -101,7 +101,7 @@ $(call add-target-into-build, linux_2)
 
 menuconfig_public_linux_2: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR_2)
-	@$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) menuconfig
+	@$(MAKE) $(AMBA_MAKE_PARA) MAKEFLAGS=$(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) menuconfig
 
 ###
 
@@ -113,7 +113,7 @@ defconfig_public_linux_2: $(DOT_CONFIG)
 	@if [ -f $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_2NDCONFIG) ]; then \
 		cp -dpRf $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_2NDCONFIG) $(LINUX_OUT_DIR_2)/.config; \
 	else \
-		$(MAKE) $(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) $(KERNEL_2NDCONFIG); \
+		$(MAKE) $(AMBA_MAKE_PARA) MAKEFLAGS=$(AMBA_MAKE_PARA) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR_2) $(KERNEL_2NDCONFIG); \
 	fi
 
 endif
