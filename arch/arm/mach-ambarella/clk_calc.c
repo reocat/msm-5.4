@@ -47,6 +47,28 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 
 	rate *= fix_divider;
 
+	/* take use post_reg to reduce jitter */
+	if (c->post_reg != -1) {
+		if (rate < REF_CLK_FREQ * 3)
+			post_scaler = 16;
+		else if (rate < REF_CLK_FREQ * 4)
+			post_scaler = 11;
+		else if (rate < REF_CLK_FREQ * 5)
+			post_scaler = 9;
+		else if (rate < REF_CLK_FREQ * 6)
+			post_scaler = 8;
+		else if (rate < REF_CLK_FREQ * 8)
+			post_scaler = 6;
+		else if (rate < REF_CLK_FREQ * 9)
+			post_scaler = 5;
+		else if (rate < REF_CLK_FREQ * 10)
+			post_scaler = 4;
+		else if (rate < REF_CLK_FREQ * 16)
+			post_scaler = 3;
+	}
+
+	rate *= post_scaler;
+
 	/* if rate is less than 1.5Mhz, pre_scaler register will be overflow. */
 	BUG_ON(rate <= 1500000);
 	BUG_ON(c->ctrl_reg == -1 || c->ctrl2_reg == -1 || c->ctrl3_reg == -1);
@@ -62,11 +84,6 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 	if(rate < REF_CLK_FREQ && c->frac_mode && c->post_reg == -1) {
 		pr_err("Error: post_reg is not existed, unable to set rate!\n");
 		return -1;
-	}
-
-	if (rate < REF_CLK_FREQ && c->frac_mode) {
-		rate *= 10;
-		post_scaler = 10;
 	}
 
 	if (rate < REF_CLK_FREQ) {
@@ -102,8 +119,10 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 			amba_rct_writel(c->post_reg, post_scaler);
 	}
 
-	while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 300) {
+	while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 600) {
 		if (c->pres_reg != -1) {
+			if (sdiv >= 16 || sout >= 16)
+				break;
 			sdiv++;
 			sout++;
 		} else {
