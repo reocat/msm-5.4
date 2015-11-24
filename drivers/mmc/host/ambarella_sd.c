@@ -148,6 +148,13 @@ struct ambarella_sd_mmc_info {
 	struct semaphore		system_event_sem;
 
 	struct dentry			*debugfs;
+
+#ifdef CONFIG_PM
+	u32				sd_nisen;
+	u32				sd_eisen;
+	u32				sd_nixen;
+	u32				sd_eixen;
+#endif
 };
 
 struct ambarella_sd_controller_info {
@@ -2163,12 +2170,23 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
 	struct ambarella_sd_controller_info *pinfo;
+	struct ambarella_sd_mmc_info *pslotinfo;
+
 	int retval = 0, i;
 
 	pinfo = platform_get_drvdata(pdev);
 
 	for (i = 0; i < pinfo->slot_num; i++) {
-		retval = mmc_suspend_host(pinfo->pslotinfo[i]->mmc);
+		pslotinfo = pinfo->pslotinfo[i];
+		if(pslotinfo->mmc->pm_caps & MMC_PM_KEEP_POWER) {
+			ambarella_sd_disable_int(pslotinfo->mmc, SD_NISEN_CARD);
+			pslotinfo->sd_nisen = amba_readw(pinfo->regbase + SD_NISEN_OFFSET);
+			pslotinfo->sd_eisen = amba_readw(pinfo->regbase + SD_EISEN_OFFSET);
+			pslotinfo->sd_nixen = amba_readw(pinfo->regbase + SD_NIXEN_OFFSET);
+			pslotinfo->sd_eixen = amba_readw(pinfo->regbase + SD_EIXEN_OFFSET);
+		}
+
+		retval = mmc_suspend_host(pslotinfo->mmc);
 		if (retval) {
 			ambsd_err(pinfo->pslotinfo[i],
 				"mmc_suspend_host[%d] failed[%d]!\n", i, retval);
@@ -2176,11 +2194,11 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	}
 
 	disable_irq(pinfo->irq);
-
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n", __func__,
 				retval, state.event);
 
 	return retval;
+
 }
 
 static int ambarella_sd_resume(struct platform_device *pdev)
@@ -2196,9 +2214,24 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 		if (gpio_is_valid(pslotinfo->pwr_gpio)){
 			gpio_direction_output(pslotinfo->pwr_gpio, pslotinfo->pwr_gpio_active);
 		}
-		clk_set_rate(pinfo->clk, pslotinfo->mmc->f_max);
-		ambarella_sd_reset_all(pslotinfo->mmc);
+		if(pslotinfo->mmc->pm_caps & MMC_PM_KEEP_POWER) {
+		        amba_writew(pinfo->regbase + SD_NISEN_OFFSET, pslotinfo->sd_nisen);
+		        amba_writew(pinfo->regbase + SD_EISEN_OFFSET, pslotinfo->sd_eisen);
+		        amba_writew(pinfo->regbase + SD_NIXEN_OFFSET, pslotinfo->sd_nixen);
+		        amba_writew(pinfo->regbase + SD_EIXEN_OFFSET, pslotinfo->sd_eixen);
+			pslotinfo->mmc->caps |= MMC_CAP_NONREMOVABLE;
+		        mdelay(10);
+		        ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
+			ambarella_sd_set_bus(pslotinfo->mmc, &pinfo->controller_ios);
+		        mdelay(10);
+			ambarella_sd_enable_int(pslotinfo->mmc, SD_NISEN_CARD);
+		} else {
+			clk_set_rate(pinfo->clk, pslotinfo->mmc->f_max);
+			ambarella_sd_reset_all(pslotinfo->mmc);
+		}
+
 	}
+
 	enable_irq(pinfo->irq);
 
 	for (i = 0; i < pinfo->slot_num; i++) {
