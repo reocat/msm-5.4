@@ -38,78 +38,56 @@ struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
 
 int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 {
-	unsigned long rate_int, pre_scaler, post_scaler = 1;
+	unsigned long rate_int, pre_scaler = 1, post_scaler = 1;
 	unsigned long intp, sdiv = 1, sout = 1;
 	u32 ctrl2, ctrl3, fix_divider = c->divider ? c->divider : 1;
 	u64 dividend, divider, diff;
 	union ctrl_reg_u ctrl_reg;
 	union frac_reg_u frac_reg;
 
-	rate *= fix_divider;
-
-	/* take use post_reg to reduce jitter */
-	if (c->post_reg != -1) {
-		if (rate < REF_CLK_FREQ * 3)
-			post_scaler = 16;
-		else if (rate < REF_CLK_FREQ * 4)
-			post_scaler = 11;
-		else if (rate < REF_CLK_FREQ * 5)
-			post_scaler = 9;
-		else if (rate < REF_CLK_FREQ * 6)
-			post_scaler = 8;
-		else if (rate < REF_CLK_FREQ * 8)
-			post_scaler = 6;
-		else if (rate < REF_CLK_FREQ * 9)
-			post_scaler = 5;
-		else if (rate < REF_CLK_FREQ * 10)
-			post_scaler = 4;
-		else if (rate < REF_CLK_FREQ * 16)
-			post_scaler = 3;
-	}
-
-	rate *= post_scaler;
-
-	/* if rate is less than 1.5Mhz, pre_scaler register will be overflow. */
-	BUG_ON(rate <= 1500000);
 	BUG_ON(c->ctrl_reg == -1 || c->ctrl2_reg == -1 || c->ctrl3_reg == -1);
 
-	/* pre_scaler register must be existed for fractional mode */
-	if(c->frac_mode && c->pres_reg == -1) {
-		pr_err("Error: pre_scaler is not existed, unable to set rate!\n");
-		return -1;
-	}
+	rate *= fix_divider;
 
-	/* if rate < REF_CLK_FREQ, post_scaler register must be existed for
-	 * fractional mode, otherwise sdiv and sout will be overflow */
-	if(rate < REF_CLK_FREQ && c->frac_mode && c->post_reg == -1) {
-		pr_err("Error: post_reg is not existed, unable to set rate!\n");
-		return -1;
+	if (rate < REF_CLK_FREQ && c->post_reg != -1) {
+		rate *= 16;
+		post_scaler = 16;
 	}
 
 	if (rate < REF_CLK_FREQ) {
-		intp = 1;
-		pre_scaler = DIV_ROUND_CLOSEST(REF_CLK_FREQ, rate);
-	} else {
-		/* fvco should be less than 1.5GHz, so we use 63 [(1 << 6) - 1] as
-		 * max_numerator, although the actual bit width of pll_intp is 7 */
-		rational_best_approximation(rate, REF_CLK_FREQ,
-				(1 << 7) - 1, (1 << 4) - 1,
-				&intp, &pre_scaler);
-		//TODO: temporary solution for s3l 4Kp30 hdmi vout
-		if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
-			intp = 0x63;
-			pre_scaler = 4;
-		}
-		BUG_ON(intp == 0 || pre_scaler == 0);
+		pr_err("Error: target rate is too slow: %ld!\n", rate);
+		return -1;
 	}
+
+	/* fvco should be less than 1.5GHz, so we use 64 as max_numerator,
+	 * although the actual bit width of pll_intp is 7 */
+	rational_best_approximation(rate, REF_CLK_FREQ, 64, 16, &intp, &sout);
+
+	/* fvco should be faster than 700MHz, otherwise pll out is not stable */
+	while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 700) {
+		if (sout > 8 || intp > 64)
+			break;
+		intp *= 2;
+		sout *= 2;
+	}
+
+	//TODO: temporary solution for s3l 4Kp30 hdmi vout
+	if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
+		pre_scaler = 4;
+		intp = 0x63;
+		sdiv = 5;
+		sout = 1;
+		c->frac_mode = 0;
+	}
+
+	BUG_ON(pre_scaler > 16 || post_scaler > 16);
+	BUG_ON(intp > 64 || sdiv > 16 || sout > 16 || sdiv > 16);
 
 	if (c->pres_reg != -1) {
 		if (c->extra_scaler == 1)
 			amba_rct_writel_en(c->pres_reg, (pre_scaler - 1) << 4);
 		else
 			amba_rct_writel(c->pres_reg, pre_scaler);
-	} else {
-		swap(pre_scaler, sout);
 	}
 
 	if (c->post_reg != -1) {
@@ -118,28 +96,6 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		else
 			amba_rct_writel(c->post_reg, post_scaler);
 	}
-
-	while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 600) {
-		if (c->pres_reg != -1) {
-			if (sdiv >= 16 || sout >= 16)
-				break;
-			sdiv++;
-			sout++;
-		} else {
-			if (sout >= 8)
-				break;
-			sdiv *= 2;
-			sout *= 2;
-		}
-	}
-
-	if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
-		sdiv = 5;
-		sout = 1;
-		c->frac_mode = 0;
-	}
-
-	BUG_ON(sdiv >= 16 || sout >= 16);
 
 	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
 	ctrl_reg.s.intp = intp - 1;
