@@ -808,8 +808,12 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 		fs |= AK4951_FS_32KHZ;
 		break;
 	case 44100:
-		fs |= AK4951_FS_44_1KHZ;
-		break;
+		/* Because the sample rate as 44100 will
+		 * cause one channel no sound, so we don't
+		 * support the sample rate in codec driver.
+		 */
+//		fs |= AK4951_FS_44_1KHZ;
+//		break;
 	case 48000:
 		fs |= AK4951_FS_48KHZ;
 		break;
