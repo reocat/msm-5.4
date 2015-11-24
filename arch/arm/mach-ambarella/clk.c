@@ -20,17 +20,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/list.h>
-#include <linux/errno.h>
-#include <linux/err.h>
-#include <linux/platform_device.h>
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
-#include <linux/export.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/clk.h>
@@ -473,6 +467,38 @@ static int ambarella_clock_proc_show(struct seq_file *m, void *v)
 	return retlen;
 }
 
+static int ambarella_clock_proc_write(struct file *file,
+	const char __user *buffer, size_t count, loff_t *ppos)
+{
+	struct clk *gclk;
+	char *buf, clk_name[32];
+	int freq, rval = count;
+
+	buf = kmalloc(count, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	if (copy_from_user(buf, buffer, count)) {
+		rval = -EFAULT;
+		goto exit;
+	}
+
+	sscanf(buf, "%s %d", clk_name, &freq);
+
+	gclk = clk_get(NULL, clk_name);
+	if (IS_ERR(gclk)) {
+		pr_err("Invalid clk name\n");
+		rval = -EINVAL;
+		goto exit;
+	}
+
+	clk_set_rate(gclk, freq);
+
+exit:
+	kfree(buf);
+	return rval;
+}
+
 static int ambarella_clock_proc_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, ambarella_clock_proc_show, PDE_DATA(inode));
@@ -482,6 +508,7 @@ static const struct file_operations proc_clock_fops = {
 	.open = ambarella_clock_proc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
+	.write = ambarella_clock_proc_write,
 };
 #endif
 
