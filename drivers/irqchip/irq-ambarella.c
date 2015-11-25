@@ -601,8 +601,8 @@ int __init ambvic_of_init(struct device_node *np, struct device_node *parent)
 			NR_VIC_IRQS, &amb_irq_domain_ops, NULL);
 	BUG_ON(!ambvic_data.domain);
 
-	// WORKAROUND only, will be removed finally
-	for (i = 1; i < NR_VIC_IRQS; i++) {
+	/* create mapping to make hwirq == irq to make life easier */
+	for (i = NR_VIC_IRQS - 1; i >= 0; i--) {
 		irq = irq_create_mapping(ambvic_data.domain, i);
 		irq_set_chip_and_handler(irq, &ambvic_chip, handle_level_irq);
 		irq_set_chip_data(irq, ambvic_data.reg_base[HWIRQ_TO_BANK(i)]);
