@@ -121,6 +121,8 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_TFA9879 if I2C
 	select SND_SOC_TLV320AIC23_I2C if I2C
 	select SND_SOC_TLV320AIC23_SPI if SPI_MASTER
+	select SND_SOC_TLV320ADC3xxx if I2C
+	select SND_SOC_TLV320AIC23 if I2C
 	select SND_SOC_TLV320AIC26 if SPI_MASTER
 	select SND_SOC_TLV320AIC31XX if I2C
 	select SND_SOC_TLV320AIC32X4 if I2C
@@ -931,5 +933,8 @@ config SND_SOC_ML26124
 config SND_SOC_TPA6130A2
 	tristate "Texas Instruments TPA6130A2 headphone amplifier"
 	depends on I2C
+
+config SND_SOC_TLV320ADC3xxx
+	tristate
 
 endmenu

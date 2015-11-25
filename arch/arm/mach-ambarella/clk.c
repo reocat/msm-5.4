@@ -530,6 +530,38 @@ exit:
 	return rval;
 }
 
+static int ambarella_clock_proc_write(struct file *file,
+	const char __user *buffer, size_t count, loff_t *ppos)
+{
+	struct clk *gclk;
+	char *buf, clk_name[32];
+	int freq, rval = count;
+
+	buf = kmalloc(count, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	if (copy_from_user(buf, buffer, count)) {
+		rval = -EFAULT;
+		goto exit;
+	}
+
+	sscanf(buf, "%s %d", clk_name, &freq);
+
+	gclk = clk_get(NULL, clk_name);
+	if (IS_ERR(gclk)) {
+		pr_err("Invalid clk name\n");
+		rval = -EINVAL;
+		goto exit;
+	}
+
+	clk_set_rate(gclk, freq);
+
+exit:
+	kfree(buf);
+	return rval;
+}
+
 static int ambarella_clock_proc_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, ambarella_clock_proc_show, PDE_DATA(inode));
