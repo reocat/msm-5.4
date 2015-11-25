@@ -1730,6 +1730,9 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 			dev_err(pinfo->dev, "Failed to request pwr-gpios!\n");
 			goto init_slot_err1;
 		}
+		gpio_direction_output(pslotinfo->pwr_gpio, !pslotinfo->pwr_gpio_active);
+		msleep(100);
+		gpio_direction_output(pslotinfo->pwr_gpio, pslotinfo->pwr_gpio_active);
 	}
 
 	/* request gpio for 3.3v/1.8v switch */
@@ -1996,7 +1999,6 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 	psize /= sizeof(u32);
 	BUG_ON(psize % 3);
 	pinfo->phy_timing_num = psize / 3;
-
 	pinfo->phy_timing = devm_kzalloc(pinfo->dev, psize, GFP_KERNEL);
 	if (pinfo->phy_timing == NULL) {
 		retval = -ENOMEM;
@@ -2094,14 +2096,6 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	retval = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_sd_irq,
-				IRQF_SHARED | IRQF_TRIGGER_HIGH,
-				dev_name(&pdev->dev), pinfo);
-	if (retval < 0) {
-		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", pinfo->irq);
-		goto ambarella_sd_probe_free_host;
-	}
-
 	pinfo->slot_num = 0;
 	for_each_child_of_node(pdev->dev.of_node, slot_np) {
 		if (!slot_np->name || of_node_cmp(slot_np->name, "slot"))
@@ -2119,6 +2113,15 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, pinfo);
+
+	retval = devm_request_irq(&pdev->dev, pinfo->irq, ambarella_sd_irq,
+				IRQF_SHARED | IRQF_TRIGGER_HIGH,
+				dev_name(&pdev->dev), pinfo);
+	if (retval < 0) {
+		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", pinfo->irq);
+		goto ambarella_sd_probe_free_host;
+	}
+
 	dev_info(&pdev->dev, "%u slots @ %luHz\n",
 			pinfo->slot_num, clk_get_rate(pinfo->clk));
 

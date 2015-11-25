@@ -24,24 +24,31 @@
 #include "check.h"
 #include "ambptb.h"
 #include <plat/ptb.h>
+#include <linux/of.h>
 
 int ambptb_partition(struct parsed_partitions *state)
 {
-	int i;
-	int slot = 1;
+	int i, val, slot = 1;
 	unsigned char *data;
 	Sector sect;
-	u32 sect_size;
-	u32 sect_address;
-	u32 sect_offset;
+	u32 sect_size, sect_offset, sect_address, ptb_address;
 	flpart_meta_t *ptb_meta;
 	char ptb_tmp[1 + BDEVNAME_SIZE + 1];
 	int result = 0;
+	struct device_node * np;
 
 	sect_size = bdev_logical_block_size(state->bdev);
-	sect_address = (2048 + sizeof(flpart_table_t)) / sect_size;
-	sect_offset = sizeof(flpart_table_t) % sect_size;
+	sect_offset = (sizeof(ptb_header_t) + sizeof(flpart_table_t)) % sect_size;
 
+	np = of_find_node_with_property(NULL, "amb,ptb_address");
+	if(!np)
+		return -1;
+
+	val = of_property_read_u32(np, "amb,ptb_address", &ptb_address);
+	if(val < 0)
+		return -1;
+
+	sect_address = (ptb_address * sect_size + sizeof(ptb_header_t) + sizeof(flpart_table_t)) / sect_size;
 	data = read_part_sector(state, sect_address, &sect);
 	if (!data) {
 		result = -1;
@@ -54,7 +61,8 @@ int ambptb_partition(struct parsed_partitions *state)
 		for (i = 0; i < PART_MAX; i++) {
 			if (slot >= state->limit)
 				break;
-			if (((ptb_meta->part_dev[i] & PART_DEV_EMMC) ==
+
+			if (((ptb_meta->part_info[i].dev & PART_DEV_EMMC) ==
 				PART_DEV_EMMC) &&
 				(ptb_meta->part_info[i].nblk)) {
 				state->parts[slot].from =
@@ -64,7 +72,7 @@ int ambptb_partition(struct parsed_partitions *state)
 				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				pr_info("%s: %s [p%d]\n", __func__,
+				printk("%s: %s [p%d]\n", __func__,
 					ptb_meta->part_info[i].name, slot);
 				slot++;
 			}
@@ -76,7 +84,7 @@ int ambptb_partition(struct parsed_partitions *state)
 		for (i = 0; i < PART_MAX; i++) {
 			if (slot >= state->limit)
 				break;
-			if ((ptb_meta->part_dev[i] == BOOT_DEV_SM) &&
+			if ((ptb_meta->part_info[i].dev == BOOT_DEV_SM) &&
 				(ptb_meta->part_info[i].nblk)) {
 				state->parts[slot].from =
 					ptb_meta->part_info[i].sblk;
@@ -85,7 +93,7 @@ int ambptb_partition(struct parsed_partitions *state)
 				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				pr_info("%s: %s [p%d]\n", __func__,
+				printk("%s: %s [p%d]\n", __func__,
 					ptb_meta->part_info[i].name, slot);
 				slot++;
 			}

@@ -228,6 +228,10 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
 
+	/* make sure the pin is in gpio mode */
+	if (gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
+		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
+
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
 	amba_setbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
 }
@@ -239,6 +243,8 @@ static void amb_gpio_irq_disable(struct irq_data *data)
 
 	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+
+	gpio_free(data->hwirq);
 }
 
 static void amb_gpio_irq_ack(struct irq_data *data)
