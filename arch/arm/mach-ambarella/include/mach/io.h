@@ -210,9 +210,6 @@ static inline u32 __amba_rct_readl(volatile void __iomem *address)
 
 	AMBARELLA_REG_LOCK();
 	tmpval = __raw_readl(address);
-#if (CHIP_REV == A8)
-	tmpval = __raw_readl(address);
-#endif	/* CHIP_REV */
 	AMBARELLA_REG_UNLOCK();
 
 	return tmpval;

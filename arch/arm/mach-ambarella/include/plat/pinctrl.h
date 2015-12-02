@@ -26,9 +26,6 @@
 
 #ifndef __ASSEMBLER__
 
-#define PINID_TO_BANK(p)	((p) >> 5)
-#define PINID_TO_OFFSET(p)	((p) & 0x1f)
-
 /* pins alternate function */
 enum amb_pin_altfunc {
 	AMB_ALTFUNC_GPIO = 0,

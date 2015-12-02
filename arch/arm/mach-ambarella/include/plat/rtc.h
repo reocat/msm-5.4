@@ -38,10 +38,10 @@
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define RTC_OFFSET			0x15000
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define RTC_OFFSET			0xD000
+#else
+#define RTC_OFFSET			0x15000
 #endif
 #define RTC_BASE			(APB_BASE + RTC_OFFSET)
 #define RTC_REG(x)			(RTC_BASE + (x))

@@ -27,37 +27,40 @@
 #include <linux/spi/spi.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
+#if (CHIP_REV == A5S) || (CHIP_REV == S2E)
 #define SPI_INSTANCES				2
-#define SPI_AHB_INSTANCES			0
 #define SPI_SLAVE_INSTANCES			1
-#define SPI_AHB_SLAVE_INSTANCES			0
+#define	SPI_AHB_BUS				0
 #elif (CHIP_REV == S2)
 #define SPI_INSTANCES				1
-#define SPI_AHB_INSTANCES			0
 #define SPI_SLAVE_INSTANCES			1
-#define SPI_AHB_SLAVE_INSTANCES			0
-#elif (CHIP_REV == S2E)
-#define SPI_INSTANCES				2
-#define SPI_AHB_INSTANCES			0
-#define SPI_SLAVE_INSTANCES			1
-#define SPI_AHB_SLAVE_INSTANCES			0
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define SPI_INSTANCES				0
-#define SPI_AHB_INSTANCES			2
-#define SPI_SLAVE_INSTANCES			0
-#define SPI_AHB_SLAVE_INSTANCES			1
-#elif (CHIP_REV == A7L)
-#define SPI_INSTANCES				1
-#define SPI_AHB_INSTANCES			0
-#define SPI_SLAVE_INSTANCES			1
-#define SPI_AHB_SLAVE_INSTANCES			0
+#define	SPI_AHB_BUS				0
 #else
-#define SPI_INSTANCES				1
-#define SPI_AHB_INSTANCES			0
-#define SPI_SLAVE_INSTANCES			0
-#define SPI_AHB_SLAVE_INSTANCES			0
+#define SPI_AHB_INSTANCES			2
+#define SPI_AHB_SLAVE_INSTANCES			1
+#define	SPI_AHB_BUS				1
 #endif
+
+#if (SPI_AHB_BUS == 1)
+#define SPI_OFFSET			0x20000
+#define SPI_BASE			(AHB_BASE + SPI_OFFSET)
+#define SPI2_OFFSET			0x21000
+#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
+#define SPI_SLAVE_OFFSET		0x26000
+#define SPI_SLAVE_BASE			(AHB_BASE + SPI_SLAVE_OFFSET)
+#else
+#define SPI_OFFSET			0x2000
+#define SPI_BASE			(APB_BASE + SPI_OFFSET)
+#define SPI2_OFFSET			0xF000
+#define SPI2_BASE			(APB_BASE + SPI2_OFFSET)
+#define SPI_SLAVE_OFFSET		0x1E000
+#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
+#endif
+#define SPI_REG(x)			(SPI_BASE + (x))
+#define SPI2_REG(x)			(SPI2_BASE + (x))
+#define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
+
+/* ==========================================================================*/
 
 #if (CHIP_REV == A5S)
 #define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	0
@@ -69,70 +72,11 @@
 #define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1 // S2 and S2L is not explain this in PRM
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define SPI_TARGET_FRAME	1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SPI_TARGET_FRAME	0
-#endif
-
-/* ==========================================================================*/
-#if (SPI_INSTANCES >= 1)
-#define SPI_OFFSET			0x2000
-#define SPI_BASE			(APB_BASE + SPI_OFFSET)
-#define SPI_REG(x)			(SPI_BASE + (x))
-#endif
-
-#if (SPI_SLAVE_INSTANCES >= 1)
-#if (CHIP_REV == A7L)
-#define SPI_SLAVE_OFFSET		0x1000
 #else
-#define SPI_SLAVE_OFFSET		0x1E000
+#define SPI_TARGET_FRAME	1
 #endif
-#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
-#define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
-#endif
-
-#if (SPI_INSTANCES >= 2)
-#define SPI2_OFFSET			0xF000
-#define SPI2_BASE			(APB_BASE + SPI2_OFFSET)
-#define SPI2_REG(x)			(SPI2_BASE + (x))
-#endif
-
-#if (SPI_INSTANCES >= 3)
-#define SPI3_OFFSET			0x15000
-#define SPI3_BASE			(APB_BASE + SPI3_OFFSET)
-#define SPI3_REG(x)			(SPI3_BASE + (x))
-#endif
-
-#if (SPI_INSTANCES >= 4)
-#define SPI4_OFFSET			0x16000
-#define SPI4_BASE			(APB_BASE + SPI4_OFFSET)
-#define SPI4_REG(x)			(SPI4_BASE + (x))
-#endif
-
-#if (SPI_AHB_INSTANCES == 1)
-#define SSI_DMA_OFFSET			0xD000
-#define SSI_DMA_BASE			(AHB_BASE + SSI_DMA_OFFSET)
-#define SSI_DMA_REG(x)			(SSI_DMA_BASE + (x))
-#endif
-
-#if (SPI_AHB_INSTANCES == 2)
-#define SPI_OFFSET			0x20000
-#define SPI_BASE			(AHB_BASE + SPI_OFFSET)
-#define SPI_REG(x)			(SPI_BASE + (x))
-
-#define SPI2_OFFSET			0x21000
-#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
-#define SPI2_REG(x)			(SPI2_BASE + (x))
-#endif
-
-#if (SPI_AHB_SLAVE_INSTANCES >= 1)
-#define SPI_AHB_SLAVE_OFFSET		0x26000
-#define SPI_AHB_SLAVE_BASE		(AHB_BASE + SPI_AHB_SLAVE_OFFSET)
-#define SPI_AHB_SLAVE_REG(x)		(SPI_AHB_SLAVE_BASE + (x))
-#endif
-
-#define SPI_MASTER_INSTANCES		(SPI_INSTANCES + SPI_AHB_INSTANCES)
 
 
 /* ==========================================================================*/

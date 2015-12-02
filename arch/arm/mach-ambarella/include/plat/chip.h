@@ -26,13 +26,12 @@
 
 /* ==========================================================================*/
 #define A5S		(5100)
-#define A7L		(7500)
-#define A8		(8000)
 #define S2		(9000)
 #define S2E		(9100)
 #define S2L		(12000)
 #define S3		(11000)
 #define S3L		(13000)
+#define H2		(15000)
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
@@ -40,33 +39,27 @@
 
 #if defined(CONFIG_ARCH_AMBARELLA_A5S)
 #define CHIP_REV	A5S
-#elif defined(CONFIG_ARCH_AMBARELLA_A7L)
-#define CHIP_REV	A7L
 #elif defined(CONFIG_ARCH_AMBARELLA_S2)
 #define CHIP_REV	S2
 #elif defined(CONFIG_ARCH_AMBARELLA_S2E)
 #define CHIP_REV	S2E
-#elif defined(CONFIG_ARCH_AMBARELLA_A8)
-#define CHIP_REV	A8
 #elif defined(CONFIG_ARCH_AMBARELLA_S2L)
 #define CHIP_REV	S2L
 #elif defined(CONFIG_ARCH_AMBARELLA_S3)
 #define CHIP_REV	S3
 #elif defined(CONFIG_ARCH_AMBARELLA_S3L)
 #define CHIP_REV	S3L
+#elif defined(CONFIG_ARCH_AMBARELLA_H2)
+#define CHIP_REV	H2
 #else
 #error "Undefined CHIP_REV"
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == A8)
-#define REF_CLK_FREQ			27000000
-#else
 #define REF_CLK_FREQ			24000000
-#endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5S)
 #define	CHIP_BROKEN_UNALIGNED_ACCESS	1
 #endif
 

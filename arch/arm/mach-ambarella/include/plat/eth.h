@@ -25,38 +25,28 @@
 #define __PLAT_AMBARELLA_ETH_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L)
-#define ETH_INSTANCES	0
+#define ETH_INSTANCES			1
+
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define SUPPORT_GMII			1
 #else
-#define ETH_INSTANCES	1
+#define SUPPORT_GMII			0
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
-#define SUPPORT_GMII	1
+#if (CHIP_REV == S3) || (CHIP_REV == H2)
+#define ETH_ENHANCED			1
 #else
-#define SUPPORT_GMII	0
-#endif
-
-#if (CHIP_REV == S3)
-#define ETH_ENHANCED 1
-#else
-#define ETH_ENHANCED 0
+#define ETH_ENHANCED			0
 #endif
 /* ==========================================================================*/
 #define ETH_OFFSET			0xE000
 #define ETH_DMA_OFFSET			0xF000
-#define ETH2_OFFSET			0x18000
-#define ETH2_DMA_OFFSET			0x19000
 
 #define ETH_BASE			(AHB_BASE + ETH_OFFSET)
 #define ETH_DMA_BASE			(AHB_BASE + ETH_DMA_OFFSET)
-#define ETH2_BASE			(AHB_BASE + ETH2_OFFSET)
-#define ETH2_DMA_BASE			(AHB_BASE + ETH2_DMA_OFFSET)
 
 #define ETH_REG(x)			(ETH_BASE + (x))
 #define ETH_DMA_REG(x)			(ETH_DMA_BASE + (x))
-#define ETH2_REG(x)			(ETH2_BASE + (x))
-#define ETH2_DMA_REG(x)			(ETH2_DMA_BASE + (x))
 
 /* ==========================================================================*/
 #define ETH_MAC_CFG_OFFSET		0x0000
@@ -168,8 +158,8 @@
 #define ETH_MAC_FLOW_CTR_FCBBPA		0x00000001
 
 /* ETH_MAC_VERSION_REG */
-#define ETH_MAC_VERSION_USER(v)		(((x) & 0x0000ff00) >> 8)
-#define ETH_MAC_VERSION_SYN(v)		((x) & 0x000000ff)
+#define ETH_MAC_VERSION_USER(x)		(((x) & 0x0000ff00) >> 8)
+#define ETH_MAC_VERSION_SYN(x)		((x) & 0x000000ff)
 
 /* ETH_DMA_BUS_MODE_REG */
 #define ETH_DMA_BUS_MODE_FB		0x00010000
@@ -443,14 +433,13 @@
 #define AMBARELLA_ETH_FC_RX		(1 << 1)
 #define AMBARELLA_ETH_FC_TX		(1 << 2)
 
-#if (CHIP_REV == A8)
-#define SYS_CONFIG_ETH_ENABLE		0xffffffff
+
+#if (CHIP_REV == A5S)
+#define SYS_CONFIG_ETH_ENABLE		0x00000080
 #elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SYS_CONFIG_ETH_ENABLE		0x00800000
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define SYS_CONFIG_ETH_ENABLE		0x00000001
 #else
-#define SYS_CONFIG_ETH_ENABLE		0x00000080
+#define SYS_CONFIG_ETH_ENABLE		0x00000001
 #endif
 
 /* ==========================================================================*/

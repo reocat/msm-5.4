@@ -25,24 +25,21 @@
 #define __PLAT_AMBARELLA_GPIO_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L)
-#define GPIO_INSTANCES			4
-#define GPIO_MAX_LINES			128
-#elif (CHIP_REV == A5S)
+#if (CHIP_REV == A5S)
 #define GPIO_INSTANCES			3
 #define GPIO_MAX_LINES			96
 #elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			138
-#elif (CHIP_REV == A8)
-#define GPIO_INSTANCES			1
-#define GPIO_MAX_LINES			16
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3L)
 #define GPIO_INSTANCES			4
 #define GPIO_MAX_LINES			114
 #elif (CHIP_REV == S3)
 #define GPIO_INSTANCES			7
 #define GPIO_MAX_LINES			201
+#elif (CHIP_REV == H2)
+#define GPIO_INSTANCES			5
+#define GPIO_MAX_LINES			132
 #else
 #error "Not supported!"
 #endif
@@ -53,17 +50,11 @@
 #define GPIO2_OFFSET			0xE000
 #if (CHIP_REV == A5S)
 #define GPIO3_OFFSET			0x1F000
-#elif (CHIP_REV == A7L)
-#define GPIO3_OFFSET			0x1E000
 #else
 #define GPIO3_OFFSET			0x10000
 #endif
 #define GPIO4_OFFSET			0x11000
-#if (CHIP_REV == S3)
 #define GPIO5_OFFSET			0xD000
-#else
-#define GPIO5_OFFSET			0x12000
-#endif
 #define GPIO6_OFFSET			0x14000
 
 #define GPIO0_BASE			(APB_BASE + GPIO0_OFFSET)
@@ -84,15 +75,15 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
-#define GPIO_PAD_PULL_CTRL_SUPPORT		0
+#define GPIO_PAD_PULL_CTRL_SUPPORT	0
 #else
-#define GPIO_PAD_PULL_CTRL_SUPPORT		1
+#define GPIO_PAD_PULL_CTRL_SUPPORT	1
 #endif
 
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == A8)
-#define GPIO_PAD_PULL_OFFSET			0xD000
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define GPIO_PAD_PULL_OFFSET		0xD000
 #else
-#define GPIO_PAD_PULL_OFFSET			0x15000
+#define GPIO_PAD_PULL_OFFSET		0x15000
 #endif
 
 #define GPIO_PAD_PULL_EN_0_OFFSET	0x80
@@ -136,10 +127,10 @@
 #define GPIO_ENABLE_OFFSET		0x2c
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define	IOMUX_SUPPORT			1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define	IOMUX_SUPPORT			0
+#else
+#define	IOMUX_SUPPORT			1
 #endif
 
 #define IOMUX_REG0_0_OFFSET		0x00
@@ -192,6 +183,12 @@
 #define GPIO_FUNC_HW			2
 
 /* ==========================================================================*/
+
+#define PINID_TO_BANK(p)		((p) >> 5)
+#define PINID_TO_OFFSET(p)		((p) & 0x1f)
+
+/* ==========================================================================*/
+
 #ifndef __ASSEMBLER__
 
 /* gpio service for private operation */

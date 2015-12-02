@@ -28,12 +28,12 @@
 
 /* ==========================================================================*/
 #define RCT_OFFSET			0x170000
-#if (CHIP_REV == A8) || (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
-#define RCT_PHYS_BASE			(DBGBUS_PHYS_BASE + RCT_OFFSET)
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define RCT_BASE			(APB_BASE + RCT_OFFSET)
 #define RCT_PHYS_BASE			(APB_PHYS_BASE + RCT_OFFSET)
+#else
+#define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
+#define RCT_PHYS_BASE			(DBGBUS_PHYS_BASE + RCT_OFFSET)
 #endif
 #define RCT_REG(x)			(RCT_BASE + (x))
 
@@ -64,12 +64,17 @@
 #endif
 #define UDC_SOFT_RESET_REG		RCT_REG(UDC_SOFT_RESET_OFFSET)
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2E)
+#if (CHIP_REV == A5S)
+#define USB0_IS_HOST_MASK		0x00000000 /* not support usb host */
+#define USBP0_FORCE_TO_DEVICE		0
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define USB0_IS_HOST_MASK		0x00000020
+#define USBP0_FORCE_TO_DEVICE		0
 #else
 #define USBP0_SEL_OFFSET		0x2c0
 #define USBP0_SEL_REG			RCT_REG(USBP0_SEL_OFFSET)
 #define USB0_IS_HOST_MASK		0x00000002
+#define USBP0_FORCE_TO_DEVICE		1
 #endif
 
 /* ==========================================================================*/
@@ -149,7 +154,7 @@
 #define PLL_CORE_CTRL2_REG		RCT_REG(PLL_CORE_CTRL2_OFFSET)
 #define PLL_CORE_CTRL3_REG		RCT_REG(PLL_CORE_CTRL3_OFFSET)
 
-#if ((CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E))
+#if (CHIP_REV == A5S || CHIP_REV == S2 || CHIP_REV == S2E)
 #define SCALER_CORE_POST_OFFSET		0x118
 #define CORE_CLK_RATIO_1X_OFFSET	0x24C
 #define SCALER_CORE_POST_REG		RCT_REG(SCALER_CORE_POST_OFFSET)
@@ -274,16 +279,16 @@
 #define SCALER_ARM_ASYNC_REG		RCT_REG(SCALER_ARM_ASYNC_OFFSET)
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define PLL_CORTEX_CTRL_OFFSET		0x264
-#define PLL_CORTEX_FRAC_OFFSET		0x268
-#define PLL_CORTEX_CTRL2_OFFSET		0x26C
-#define PLL_CORTEX_CTRL3_OFFSET		0x270
-#else
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define PLL_CORTEX_CTRL_OFFSET		0x2B0
 #define PLL_CORTEX_FRAC_OFFSET		0x2B4
 #define PLL_CORTEX_CTRL2_OFFSET		0x2B8
 #define PLL_CORTEX_CTRL3_OFFSET		0x2BC
+#else
+#define PLL_CORTEX_CTRL_OFFSET		0x264
+#define PLL_CORTEX_FRAC_OFFSET		0x268
+#define PLL_CORTEX_CTRL2_OFFSET		0x26C
+#define PLL_CORTEX_CTRL3_OFFSET		0x270
 #endif
 
 #define PLL_CORTEX_CTRL_REG		RCT_REG(PLL_CORTEX_CTRL_OFFSET)
@@ -295,6 +300,8 @@
 
 #if (CHIP_REV == S3L)
 #define ENET_CLK_SRC_SEL_OFFSET		0x544
+#elif (CHIP_REV == H2)
+#define ENET_CLK_SRC_SEL_OFFSET		0x6B8
 #endif
 #define ENET_CLK_SRC_SEL_REG		RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
 
@@ -305,13 +312,11 @@
 #define SCALER_GTX_POST_REG		RCT_REG(SCALER_GTX_POST_OFFSET)
 #define ENET_GTXCLK_SRC_REG		RCT_REG(ENET_GTXCLK_SRC_OFFSET)
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define PLL_ENET_CTRL_OFFSET		0x520
 #define PLL_ENET_FRAC_OFFSET		0x524
 #define PLL_ENET_CTRL2_OFFSET		0x528
 #define PLL_ENET_CTRL3_OFFSET		0x52C
 #define SCALER_ENET_POST_OFFSET		0x534
-#endif
 #define PLL_ENET_CTRL_REG		RCT_REG(PLL_ENET_CTRL_OFFSET)
 #define PLL_ENET_FRAC_REG		RCT_REG(PLL_ENET_FRAC_OFFSET)
 #define PLL_ENET_CTRL2_REG		RCT_REG(PLL_ENET_CTRL2_OFFSET)
@@ -332,12 +337,7 @@
 #define SCALER_SDXC_OFFSET		0x434
 #define SCALER_SDXC_REG			RCT_REG(SCALER_SDXC_OFFSET)
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define PLL_SD_CTRL_OFFSET		0x4AC
-#define PLL_SD_FRAC_OFFSET		0x4B0
-#define PLL_SD_CTRL2_OFFSET		0x4B4
-#define PLL_SD_CTRL3_OFFSET		0x4B8
-#elif (CHIP_REV == S2E)
+#if (CHIP_REV == S2E)
 #define SDVCO_FOR_GTX_SOURCE            0x00000010
 #define FUNC_MISC_CTRL_OFFSET           0x328
 #define PLL_SD_CTRL_OFFSET		0x354
@@ -345,6 +345,11 @@
 #define PLL_SD_CTRL2_OFFSET		0x358
 #define PLL_SD_CTRL3_OFFSET		0x35C
 #define FUNC_MISC_CTRL_REG		RCT_REG(FUNC_MISC_CTRL_OFFSET)
+#else
+#define PLL_SD_CTRL_OFFSET		0x4AC
+#define PLL_SD_FRAC_OFFSET		0x4B0
+#define PLL_SD_CTRL2_OFFSET		0x4B4
+#define PLL_SD_CTRL3_OFFSET		0x4B8
 #endif
 #define PLL_SD_CTRL_REG			RCT_REG(PLL_SD_CTRL_OFFSET)
 #define PLL_SD_FRAC_REG			RCT_REG(PLL_SD_FRAC_OFFSET)
@@ -357,13 +362,22 @@
 #define SD_SOFT_PHY_SUPPORT		1
 #endif
 
-#if (SD_SOFT_PHY_SUPPORT == 1)
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
+	(CHIP_REV == S2L) || (CHIP_REV == S3)
+#define SDXC_SOFT_PHY_SUPPORT		0
+#else
+#define SDXC_SOFT_PHY_SUPPORT		1
+#endif
+
+#if (SD_SOFT_PHY_SUPPORT == 1) || (SDXC_SOFT_PHY_SUPPORT == 1)
 #define SD_PHY_CLKOUT_BYPASS		1 << 26
 #define SD_PHY_RESET			1 << 25
 #define SD_PHY_RX_CLK_POL		1 << 19
 #define SD_PHY_DATA_CMD_BYPASS		1 << 18
 #define SD_PHY_DLL_BYPASS		1 << 17
+#endif
 
+#if (SD_SOFT_PHY_SUPPORT == 1)
 #if (CHIP_REV == S2E)
 #define SD_PHY_CTRL_0_OFFSET		0x340
 #define SD_PHY_CTRL_1_OFFSET		0x344
@@ -376,8 +390,9 @@
 #define SD_PHY_CTRL_0_REG		RCT_REG(SD_PHY_CTRL_0_OFFSET)
 #define SD_PHY_CTRL_1_REG		RCT_REG(SD_PHY_CTRL_1_OFFSET)
 #define SD_PHY_OBSV_REG			RCT_REG(SD_PHY_OBSV_OFFSET)
+#endif
 
-#if (CHIP_REV == S3L)
+#if (SDXC_SOFT_PHY_SUPPORT == 1)
 #define SDXC_PHY_CTRL_0_OFFSET		0x4C8
 #define SDXC_PHY_CTRL_1_OFFSET		0x4CC
 #define SDXC_PHY_OBSV_OFFSET		0x4F0
@@ -386,14 +401,12 @@
 #define SDXC_PHY_OBSV_REG		RCT_REG(SDXC_PHY_OBSV_OFFSET)
 #endif
 
-#else
 #define MS_DELAY_CTRL_OFFSET		0x1D0
 #define MS_DELAY_CTRL_REG		RCT_REG(MS_DELAY_CTRL_OFFSET)
-#endif
 
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E)
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define ADC_SOFT_RESET			0x0
 #else
 #define ADC_SOFT_RESET			0x10000
@@ -405,8 +418,9 @@
 #define ADC16_CTRL_REG			RCT_REG(ADC16_CTRL_OFFSET)
 
 /* ==========================================================================*/
-#define AHB_MISC_EN_OFFSET		0x21C
-#define AHB_MISC_EN_REG			RCT_REG(AHB_MISC_EN_OFFSET)
+#define AHB_MISC_OFFSET			0x21c
+#define AHB_MISC_REG			RCT_REG(AHB_MISC_OFFSET)
+#define AHB_MISC_EN_REG			AHB_MISC_REG
 
 /* ==========================================================================*/
 #define IOCTRL_GPIO_OFFSET		0x1F8
@@ -516,18 +530,23 @@
 #define GPIO_DS1_6_REG			RCT_REG(GPIO_DS1_6_OFFSET)
 
 /* ==========================================================================*/
+#if (CHIP_REV == A5S)
+#define RCT_TIMER_INSTANCES		0
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define RCT_TIMER_INSTANCES		1
+#else
+#define RCT_TIMER_INSTANCES		2
+#endif
+
 #define RCT_TIMER_OFFSET		0x254
 #define RCT_TIMER_CTRL_OFFSET		0x258
-
 #define RCT_TIMER_REG			RCT_REG(RCT_TIMER_OFFSET)
 #define RCT_TIMER_CTRL_REG		RCT_REG(RCT_TIMER_CTRL_OFFSET)
 
-/* ==========================================================================*/
-
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define AHB_MISC_OFFSET			0x21c
-#endif
-#define AHB_MISC_REG			RCT_REG(AHB_MISC_OFFSET)
+#define RCT_TIMER2_OFFSET		0x494
+#define RCT_TIMER2_CTRL_OFFSET		0x498
+#define RCT_TIMER2_REG			RCT_REG(RCT_TIMER2_OFFSET)
+#define RCT_TIMER2_CTRL_REG		RCT_REG(RCT_TIMER2_CTRL_OFFSET)
 
 /* ==========================================================================*/
 
@@ -551,13 +570,13 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define DMA_SUPPORT_SELECT_CHANNEL	1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L)
 #define DMA_SUPPORT_SELECT_CHANNEL	0
+#else
+#define DMA_SUPPORT_SELECT_CHANNEL	1
 #endif
 
-#if (CHIP_REV == S3)
+#if (CHIP_REV == S3) || (CHIP_REV == H2)
 #define AHBSP_DMA_CHANNEL_SEL_OFFSET	0x30
 #elif (CHIP_REV == S3L)
 #define AHBSP_DMA_CHANNEL_SEL_OFFSET	0x2C
@@ -580,7 +599,7 @@
 #define SLIM_RX_DMA_REQ_IDX		13
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L)
+#if (CHIP_REV == A5S)
 #define	POC_BOOT_MAP_TYPE		0
 #define POC_BOOT_FROM_MASK		0x00010500
 #define POC_BOOT_FROM_USB		0x00000000
@@ -589,6 +608,7 @@
 #define POC_BOOT_FROM_EMMC		0xFFFFFFFF /* not supported */
 #define POC_BOOT_FROM_SPINOR		0xFFFFFFFF /* not supported */
 #define POC_BOOT_FROM_HIF		0xFFFFFFFF /* not supported */
+#define POC_BOOT_FROM_SPI		0xFFFFFFFF /* not supported */
 #elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define	POC_BOOT_MAP_TYPE		0
 #define POC_BOOT_FROM_MASK		0x00003140
@@ -598,6 +618,7 @@
 #define POC_BOOT_FROM_SPINOR		0x00001000 /* not supported on S2 */
 #define POC_BOOT_FROM_EMMC		0x00002000
 #define POC_BOOT_FROM_HIF		0xFFFFFFFF /* not supported */
+#define POC_BOOT_FROM_SPI		0xFFFFFFFF /* not supported */
 #elif (CHIP_REV == S3)
 #define	POC_BOOT_MAP_TYPE		1
 #define POC_BOOT_FROM_MASK		0x00000570
@@ -607,6 +628,7 @@
 #define POC_BOOT_FROM_NAND		0x00000010
 #define POC_BOOT_FROM_EMMC		0x00000020
 #define POC_BOOT_FROM_HIF		0x00000040
+#define POC_BOOT_FROM_SPI		0xFFFFFFFF /* not supported */
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3L)
 #define	POC_BOOT_MAP_TYPE		1
 #define POC_BOOT_FROM_MASK		0x00000530
@@ -616,6 +638,16 @@
 #define POC_BOOT_FROM_NAND		0x00000010
 #define POC_BOOT_FROM_EMMC		0x00000020
 #define POC_BOOT_FROM_HIF		0xFFFFFFFF /* not supported */
+#elif (CHIP_REV == H2)
+#define	POC_BOOT_MAP_TYPE		1
+#define POC_BOOT_FROM_MASK		0x00000570
+#define POC_BOOT_FROM_BYPASS		0x00000100
+#define POC_BOOT_FROM_USB		0x00000400
+#define POC_BOOT_FROM_SPINOR		0x00000000
+#define POC_BOOT_FROM_NAND		0x00000010
+#define POC_BOOT_FROM_EMMC		0x00000020
+#define POC_BOOT_FROM_SPI		0x00000030
+#define POC_BOOT_FROM_HIF		0x00000040
 #endif
 
 #define RCT_BOOT_FROM_BYPASS		0x80000000
@@ -627,16 +659,19 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
+#define SYS_CONFIG_NAND_4K_FIFO	0x00000000 /* not supported */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00000020
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000040
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000000
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000000
 #elif (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define SYS_CONFIG_NAND_4K_FIFO	0x00000000 /* not supported */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00000010
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000020
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00000400
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00000800
 #else
+#define SYS_CONFIG_NAND_4K_FIFO	0x00080000
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00020000
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
@@ -651,7 +686,12 @@
 #define RCT_BOOT_NAND_ECC_SPARE_2X	0x00000008
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2)
+#if (CHIP_REV == A5S)
+#define SYS_CONFIG_MMC_HS		0x00000000 /* not supported */
+#define SYS_CONFIG_MMC_DDR		0x00000000 /* not supported */
+#define SYS_CONFIG_MMC_4BIT		0x00000000 /* not supported */
+#define SYS_CONFIG_MMC_8BIT		0x00000000 /* not supported */
+#elif (CHIP_REV == S2)
 #define SYS_CONFIG_MMC_HS		0x00010000
 #define SYS_CONFIG_MMC_DDR		0x00020000
 #define SYS_CONFIG_MMC_4BIT		0x00040000
@@ -666,16 +706,11 @@
 #define SYS_CONFIG_MMC_DDR		0x00004000
 #define SYS_CONFIG_MMC_4BIT		0x00020000
 #define SYS_CONFIG_MMC_8BIT		0x00010000
-#elif (CHIP_REV == S3L)
-#define SYS_CONFIG_MMC_HS		0x00000000
-#define SYS_CONFIG_MMC_DDR		0x00000000
+#else
+#define SYS_CONFIG_MMC_HS		0x00000000 /* not supported */
+#define SYS_CONFIG_MMC_DDR		0x00000000 /* not supported */
 #define SYS_CONFIG_MMC_4BIT		0x00010000
 #define SYS_CONFIG_MMC_8BIT		0x00008000
-#else
-#define SYS_CONFIG_MMC_HS		0x00000000
-#define SYS_CONFIG_MMC_DDR		0x00000000
-#define SYS_CONFIG_MMC_4BIT		0x00000000
-#define SYS_CONFIG_MMC_8BIT		0x00000000
 #endif
 
 /* these definition are used by software */

@@ -44,10 +44,11 @@
 #endif
 
 /* For BCH mode */
-#if (CHIP_REV == S3L)
-#define FIO_SUPPORT_SKIP_BLANK_ECC	1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
+	(CHIP_REV == S2L)  || (CHIP_REV == S3)
 #define FIO_SUPPORT_SKIP_BLANK_ECC	0
+#else
+#define FIO_SUPPORT_SKIP_BLANK_ECC	1
 #endif
 
 /* ==========================================================================*/

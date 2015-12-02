@@ -26,10 +26,10 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S2E) || (CHIP_REV == S3L)
-#define NAND_ECC_RPT_NUM_SUPPORT	1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)
 #define NAND_ECC_RPT_NUM_SUPPORT	0
+#else
+#define NAND_ECC_RPT_NUM_SUPPORT	1
 #endif
 
 /* ==========================================================================*/

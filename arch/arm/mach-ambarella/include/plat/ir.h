@@ -46,6 +46,11 @@
 #define IR_CONTROL_FIFO_OV		0x00000008
 #define IR_CONTROL_INTENB		0x00000004
 
+#define IR_STATUS_COUNT(x)		((x) & 0x3f)
+#define IR_DATA_DATA(x)			((x) & 0xffff)
+
+/* ==========================================================================*/
+
 enum ambarella_ir_protocol {
 	AMBA_IR_PROTOCOL_NEC = 0,
 	AMBA_IR_PROTOCOL_PANASONIC = 1,

@@ -25,24 +25,24 @@
 #define __PLAT_AMBARELLA_SD_H__
 
 /* ==========================================================================*/
-#if (CHIP_REV == A7L) || (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L)
 #define SD_INSTANCES			2
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == H2)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			1
 #endif
 
-#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3)
-#define SD_SUPPORT_SDIO			1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S3L)
 #define SD_SUPPORT_SDIO			0
+#else
+#define SD_SUPPORT_SDIO			1
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
-#define SD_SUPPORT_SDXC			1
-#else
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SD_SUPPORT_SDXC			0
+#else
+#define SD_SUPPORT_SDXC			1
 #endif
 
 /* ==========================================================================*/
@@ -364,13 +364,11 @@
 #define AMBA_SD_MAX_SLOT_NUM		(1)
 #endif
 
-#if (CHIP_REV == S3L)
-#define sd_slot_is_valid(slot)		((slot) == 0 || (slot) == 2)
-#else
-#define sd_slot_is_valid(slot)		((slot) < SD_INSTANCES)
-#endif
+#define sd_slot_is_valid(slot)		((SD_SUPPORT_SDXC == 1) && ((slot) == 2) ? 1 : \
+					(SD_SUPPORT_SDIO == 1) && ((slot) == 1) ? 1 : \
+					((slot) == 0) ? 1 : 0)
 
-#if (CHIP_REV == A5S) || (CHIP_REV == A7L) || (CHIP_REV == S2)
+#if (CHIP_REV == A5S) || (CHIP_REV == S2)
 #define sd_addr_is_unlign(addr)		((addr) & 0x3)
 #else
 #define sd_addr_is_unlign(addr)		0
