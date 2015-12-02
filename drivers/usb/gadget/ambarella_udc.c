@@ -1621,23 +1621,35 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	struct ambarella_ep	*ep = NULL;
 	struct ambarella_udc	*udc;
 	unsigned long flags;
+	int i;
 
 	if (unlikely (!_ep)) {
 		pr_err("%s: _ep is NULL\n", __func__);
 		return -EINVAL;
 	}
 
-	/* enable Tx and Rx DMA */
-	amba_setbitsl(USB_DEV_CTRL_REG,
-		USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
-
 	ep = to_ambarella_ep(_ep);
+	udc = ep->udc;
+
+	for(i = 0; i < EP_NUM_MAX; i++) {
+		struct ambarella_ep *endp;    
+		endp = &udc->ep[i];
+
+		if (endp != NULL && endp->dma_going) //Check for any ongoing DMA
+			break;
+
+		//If no other onging DMA and the current req is for ISO, enable the DMA
+		if((i == EP_NUM_MAX - 1) && IS_ISO_IN_EP(ep)) {
+			amba_setbitsl(USB_DEV_CTRL_REG,
+				USB_DEV_RCV_DMA_EN | USB_DEV_TRN_DMA_EN);
+		}
+        }
+
 	if (unlikely (!ep->ep.desc && !IS_EP0(ep))) {
 		pr_err("%s: %s, invalid args\n", __func__, _ep->name);
 		return -EINVAL;
 	}
 
-	udc = ep->udc;
 	if( unlikely( !udc->driver || udc->gadget.speed == USB_SPEED_UNKNOWN)){
 		dprintk(DEBUG_NORMAL, "%s: %01d %01d\n", _ep->name,
 			!udc->driver, udc->gadget.speed==USB_SPEED_UNKNOWN);
