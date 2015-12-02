@@ -1737,9 +1737,6 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 			dev_err(pinfo->dev, "Failed to request pwr-gpios!\n");
 			goto init_slot_err1;
 		}
-		gpio_direction_output(pslotinfo->pwr_gpio, !pslotinfo->pwr_gpio_active);
-		msleep(100);
-		gpio_direction_output(pslotinfo->pwr_gpio, pslotinfo->pwr_gpio_active);
 	}
 
 	/* request gpio for 3.3v/1.8v switch */
