@@ -18,7 +18,11 @@
 
 ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"4.3")
 
+ifeq ($(CONFIG_CPU_CORTEXA53), y)
+ARCH := arm64
+else
 ARCH := arm
+endif
 export ARCH
 
 LOCAL_PATH:=$(call my-dir)
