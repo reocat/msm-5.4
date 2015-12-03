@@ -21,12 +21,6 @@
 #
 
 obj-y						+= init.o
-obj-y						+= clk.o
-ifeq ($(CONFIG_AMBARELLA_CALC_PLL),y)
-obj-y						+= clk_calc.o
-else
-obj-y						+= clk_table.o
-endif
 obj-$(CONFIG_PM)				+= pm.o sleep.o
 obj-y						+= adc.o
 
