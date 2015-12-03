@@ -192,6 +192,14 @@ static inline int nand_amb_is_sw_bch(struct ambarella_nand_info *nand_info)
 	return nand_info->soft_ecc && nand_info->ecc_bits > 1;
 }
 
+static inline void ambarella_fio_rct_reset(void)
+{
+	amba_rct_writel(FIO_RESET_REG, FIO_RESET_FIO_RST);
+	mdelay(1);
+	amba_rct_writel(FIO_RESET_REG, 0x0);
+	mdelay(1);
+}
+
 static void nand_amb_corrected_recovery(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_ctr_reg, fio_dmactr_reg;
@@ -675,8 +683,6 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 	nand_ctr_reg = nand_info->control_reg | NAND_CTR_WAS;
 
-	fio_select_lock(SELECT_FIO_FL);
-
 	if ((nand_info->nand_wp) &&
 		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
 		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS))
@@ -994,8 +1000,6 @@ nand_amb_request_done:
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
 		&& nand_amb_is_hw_bch(nand_info))
 		nand_amb_disable_bch(nand_info);
-
-	fio_unlock(SELECT_FIO_FL);
 
 nand_amb_request_exit:
 	return errorCode;

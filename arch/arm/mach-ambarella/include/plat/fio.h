@@ -155,27 +155,6 @@
 #define	FIO_ADDR_ER		(-3)	/* address unaligned error */
 
 /* ==========================================================================*/
-#ifndef __ASSEMBLER__
-
-/* ==========================================================================*/
-
-#if (FIO_INDEPENDENT_SD == 1)
-static inline void fio_select_lock(int module) { }
-static inline void fio_unlock(int module) { }
-static inline void fio_amb_sd0_set_int(u32 mask, u32 on){ }
-static inline void fio_amb_sdio0_set_int(u32 mask, u32 on){ }
-#else
-extern void fio_select_lock(int module);
-extern void fio_unlock(int module);
-extern void fio_amb_sd0_set_int(u32 mask, u32 on);
-extern void fio_amb_sdio0_set_int(u32 mask, u32 on);
-#endif
-
-extern int ambarella_init_fio(void);
-extern void ambarella_fio_rct_reset(void);
-
-#endif /* __ASSEMBLER__ */
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_COMMON_FIO_H__ */
 

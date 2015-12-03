@@ -20,7 +20,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y						+= fio.o
 obj-y						+= init.o
 obj-y						+= clk.o
 ifeq ($(CONFIG_AMBARELLA_CALC_PLL),y)

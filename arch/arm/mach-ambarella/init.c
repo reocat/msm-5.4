@@ -269,9 +269,6 @@ void __init ambarella_init_machine(void)
 	ret_val = ambarella_clk_init();
 	BUG_ON(ret_val != 0);
 
-	ret_val = ambarella_init_fio();
-	BUG_ON(ret_val != 0);
-
 	ret_val = ambarella_init_fb();
 	BUG_ON(ret_val != 0);
 
