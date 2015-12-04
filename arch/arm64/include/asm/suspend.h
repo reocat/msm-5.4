@@ -1,7 +1,7 @@
-#include <linux/suspend.h>
-
 #ifndef __ASM_SUSPEND_H
 #define __ASM_SUSPEND_H
+
+#include <linux/suspend.h>
 
 #define NR_CTX_REGS 10
 #define NR_CALLEE_SAVED_REGS 12
