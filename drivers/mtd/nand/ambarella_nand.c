@@ -339,7 +339,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	if (i == ARRAY_SIZE(nand_info->timing))
 		return;
 
-	clk = (clk_get_rate(clk_get(NULL, "gclk_core")) / 1000000);
+	clk = (clk_get_rate(clk_get(nand_info->dev, NULL)) / 1000000);
 	if (nand_info->pllx2)
 		clk <<= 1;
 

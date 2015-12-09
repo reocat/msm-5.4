@@ -34,6 +34,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/console.h>
 #include <linux/sysrq.h>
+#include <linux/slab.h>
 #include <linux/serial_reg.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
@@ -41,14 +42,12 @@
 #include <linux/serial_core.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/delay.h>
-#include <mach/hardware.h>
-#include <plat/clk.h>
-#include <plat/uart.h>
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
+#include <mach/hardware.h>
+#include <plat/uart.h>
 #include <plat/dma.h>
-#include <linux/slab.h>
 
 #define AMBA_UART_RX_DMA_BUFFER_SIZE 4096
 #define AMBA_UART_MIN_DMA			16
@@ -174,7 +173,7 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (!test_and_set_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags)) {
-		clk_set_rate(amb_port->uart_pll, ambarella_clk_get_ref_freq());
+		clk_set_rate(amb_port->uart_pll, 24000000);
 		port->uartclk = clk_get_rate(amb_port->uart_pll);
 		/* reset the whole UART only once */
 		amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
@@ -1192,11 +1191,16 @@ static int __init serial_ambarella_console_setup(struct console *co,
 		co->index = 0;
 
 	amb_port = &ambarella_port[co->index];
+
 	amb_port->uart_pll = clk_get(NULL, "gclk_uart");
+	if (IS_ERR(amb_port->uart_pll)) {
+		pr_err("No clock available for serial console\n");
+		return -ENODEV;
+	}
 
 	port = &ambarella_port[co->index].port;
 	if (!port->membase) {
-		pr_err("No device available for console\n");
+		pr_err("No device available for serial console\n");
 		return -ENODEV;
 	}
 

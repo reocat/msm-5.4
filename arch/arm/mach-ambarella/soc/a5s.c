@@ -45,7 +45,6 @@ static const char * const a5s_dt_board_compat[] = {
 
 DT_MACHINE_START(A5S_DT, "Ambarella A5S (Flattened Device Tree)")
 	.map_io		= ambarella_map_io,
-	.init_early	= ambarella_init_early,
 	.init_machine	= ambarella_init_machine,
 	.restart	= ambarella_restart_machine,
 	.dt_compat	= a5s_dt_board_compat,

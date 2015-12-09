@@ -245,11 +245,9 @@ static void twd_get_clock(struct device_node *np)
 {
 	int err;
 
-#ifndef CONFIG_ARCH_AMBARELLA
 	if (np)
 		twd_clk = of_clk_get(np, 0);
 	else
-#endif
 		twd_clk = clk_get_sys("smp_twd", NULL);
 
 	if (IS_ERR(twd_clk)) {

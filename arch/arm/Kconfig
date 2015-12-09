@@ -388,10 +388,12 @@ config ARCH_AMBARELLA
         select GENERIC_GPIO
         select ARCH_REQUIRE_GPIOLIB
         select HAVE_CLK
+        select COMMON_CLK
         select GENERIC_CLOCKEVENTS
         select AMBARELLA_TIMER
         select PINCTRL
         select PINCTRL_AMB
+        select RATIONAL
         help
           Support for Ambarella Media Processor.
 

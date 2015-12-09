@@ -140,7 +140,7 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	unsigned int				apb_clk;
 	__u32					idc_prescale;
 
-	apb_clk = clk_get_rate(clk_get(NULL, "gclk_apb"));
+	apb_clk = clk_get_rate(clk_get(pinfo->dev, NULL));
 
 	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
 

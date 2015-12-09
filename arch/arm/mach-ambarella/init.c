@@ -36,7 +36,7 @@
 #include <mach/hardware.h>
 #include <mach/init.h>
 #include <plat/debug.h>
-#include <plat/clk.h>
+#include <plat/rct.h>
 #include <plat/ambcache.h>
 
 /* ==========================================================================*/
@@ -264,9 +264,6 @@ void __init ambarella_init_machine(void)
 	int ret_val = 0;
 
 	ret_val = ambarella_create_proc_dir();
-	BUG_ON(ret_val != 0);
-
-	ret_val = ambarella_clk_init();
 	BUG_ON(ret_val != 0);
 
 	ret_val = ambarella_init_fb();

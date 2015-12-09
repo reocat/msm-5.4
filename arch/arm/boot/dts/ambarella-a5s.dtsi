@@ -96,6 +96,7 @@
 			interrupts = <19 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
+			clocks = <&gclk_apb>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
 			amb,bulk-num = <60>;
@@ -110,6 +111,7 @@
 			interrupts = <36 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
+			clocks = <&gclk_apb>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x08>;
 			amb,bulk-num = <60>;
@@ -375,6 +377,7 @@
 				     <33 0x4>;	/* fdma_irq */
 			pinctrl-names = "default";
 			pinctrl-0 = <&nand0_pins>;
+			clocks = <&gclk_core>;
 			amb,enable-wp;
 			amb,no-bch;
 			amb,use-2x-pll;
@@ -473,6 +476,217 @@
 
 		dummycodec: codec@0 {
 			compatible = "ambarella,dummycodec";
+		};
+	};
+
+	clocks {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * Fixed 24MHz oscillator inputs to SoC
+		 */
+		osc: oscillator {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+			clock-output-names = "osc";
+		};
+
+		pll_out_core: pll-out-core {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x70170000 4>,
+			      <0x70170004 4>,
+			      <0x70170100 4>,
+			      <0x70170104 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "pll_out_core";
+		};
+
+		gclk_ddr: gclk-ddr {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x701700dc 4>,
+			      <0x701700e0 4>,
+			      <0x70170110 4>,
+			      <0x70170114 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_ddr";
+			amb,fix-divider = <2>;
+		};
+
+		gclk_idsp: gclk-idsp {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x701700e4 4>,
+			      <0x701700e8 4>,
+			      <0x70170108 4>,
+			      <0x7017010c 4>,
+			      <0x00000000 0>,
+			      <0x701701f4 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_idsp";
+		};
+
+		gclk_so: gclk-so {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x70170024 4>,
+			      <0x70170028 4>,
+			      <0x7017011c 4>,
+			      <0x70170120 4>,
+			      <0x7017004c 4>,
+			      <0x70170030 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_so";
+			amb,frac-mode;
+		};
+
+		gclk_vo: gclk-vo { /* for tv */
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x70170164 4>,
+			      <0x70170168 4>,
+			      <0x70170150 4>,
+			      <0x70170154 4>,
+			      <0x70170170 4>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_vo";
+			amb,frac-mode;
+			amb,fix-divider = <10>;
+		};
+
+		gclk_vo2: gclk-vo2 { /* for lcd */
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x701700c0 4>,
+			      <0x701700c4 4>,
+			      <0x7017013c 4>,
+			      <0x70170140 4>,
+			      <0x701700c8 4>,
+			      <0x701700cc 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_vo2";
+			amb,frac-mode;
+		};
+
+		gclk_audio: gclk-audio {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0x70170054 4>,
+			      <0x70170058 4>,
+			      <0x70170124 4>,
+			      <0x7017012c 4>,
+			      <0x70170060 4>,
+			      <0x7017005c 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_audio";
+			amb,frac-mode;
+		};
+
+		gclk_core: gclk-core {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x70170118 4>;
+			clocks = <&pll_out_core>;
+			clock-output-names = "gclk_core";
+			amb,div-width = <4>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_ahb: gclk-ahb {
+			#clock-cells = <0>;
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_core>;
+			clock-output-names = "gclk_ahb";
+			clock-mult = <1>;
+			clock-div = <1>;
+		};
+
+		gclk_apb: gclk-apb {
+			#clock-cells = <0>;
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_ahb>;
+			clock-output-names = "gclk_apb";
+			clock-mult = <1>;
+			clock-div = <2>;
+		};
+
+		gclk_sd: gclk-sd {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x7017000c 4>;
+			clocks = <&pll_out_core>;
+			clock-output-names = "gclk_sd";
+			amb,div-width = <16>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_uart: gclk-uart {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x70170038 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_uart";
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_adc: gclk-adc {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x7017009c 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_adc";
+			amb,div-width = <16>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_ir: gclk-ir {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x70170044 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_ir";
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_pwm: gclk-pwm {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x70170084 4>;
+			clocks = <&gclk_apb>;
+			clock-output-names = "gclk_pwm";
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_ssi: gclk-ssi {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x7017003c 4>;
+			clocks = <&gclk_apb>;
+			clock-output-names = "gclk_ssi";
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_ssi2: gclk-ssi2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0x701700ec 4>;
+			clocks = <&gclk_apb>;
+			clock-output-names = "gclk_ssi2";
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
 		};
 	};
 };

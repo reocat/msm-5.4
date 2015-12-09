@@ -24,8 +24,6 @@
 #ifndef __PLAT_AMBARELLA_CLK_H__
 #define __PLAT_AMBARELLA_CLK_H__
 
-#include <plat/rct.h>
-
 /* ==========================================================================*/
 enum PLL_CLK_HZ {
 	PLL_CLK_10D1001MHZ	= 9990010,
@@ -132,126 +130,8 @@ enum PLL_CLK_HZ {
 	PLL_CLK_594MHZ		= 594000000,
 };
 
-struct clk;
-struct clk_ops {
-	int			(*enable)(struct clk *c);
-	int			(*disable)(struct clk *c);
-	unsigned long		(*get_rate)(struct clk *c);
-	unsigned long		(*round_rate)(struct clk *c, unsigned long rate);
-	int			(*set_rate)(struct clk *c, unsigned long rate);
-	int			(*set_parent)(struct clk *c, struct clk *parent);
-};
-
-struct clk {
-	struct list_head	list;
-	struct clk		*parent;
-	const char		*name;
-	u64			rate;
-	u32			frac_mode;
-	u32			ctrl_reg;
-	u32			pres_reg;
-	u32			pres_val;
-	u32			post_reg;
-	u32			post_val;
-	u32			frac_reg;
-	u32			ctrl2_reg;
-	u32			ctrl2_val;
-	u32			ctrl3_reg;
-	u32			ctrl3_val;
-	u32			lock_reg;
-	u32			lock_bit;
-	u32			divider;
-	u32			max_divider;
-	u32			extra_scaler;
-	struct pll_table	*table;
-	u32			table_size;
-	struct clk_ops		*ops;
-};
-
-struct pll_table {
-	u64	multiplier; /* pll_out / (ref_clk / pre_scaler) */
-
-	u32	intp;
-	u32	sdiv;
-	u32	sout;
-	u32	post;
-};
-
-union ctrl_reg_u {
-	struct {
-		u32	write_enable		: 1;	/* [0] */
-		u32	reserved1		: 1;	/* [1] */
-		u32	bypass			: 1;	/* [2] */
-		u32	frac_mode		: 1;	/* [3] */
-		u32	force_reset		: 1;	/* [4] */
-		u32	power_down		: 1;	/* [5] */
-		u32	halt_vco		: 1;	/* [6] */
-		u32	tristate		: 1;	/* [7] */
-		u32	tout_async		: 4;	/* [11:8] */
-		u32	sdiv			: 4;	/* [15:12] */
-		u32	sout			: 4;	/* [19:16] */
-		u32	force_lock		: 1;	/* [20] */
-		u32	force_bypass		: 1;	/* [21] */
-		u32	reserved2		: 2;	/* [23:22] */
-		u32	intp			: 7;	/* [30:24] */
-		u32	reserved3		: 1;	/* [31] */
-	} s;
-	u32	w;
-};
-
-union frac_reg_u {
-	struct {
-		u32	frac			: 31;	/* [30:0] */
-		u32	nega			: 1;	/* [31] */
-	} s;
-	u32	w;
-};
-
 /* ==========================================================================*/
 #ifndef __ASSEMBLER__
-
-#define AMBCLK_DO_DIV(divident, divider)	do {	\
-	do_div((divident), (divider));			\
-	} while (0)
-
-#define AMBCLK_DO_DIV_ROUND(divident, divider)	do {	\
-	(divident) += ((divider) >> 1);			\
-	do_div((divident), (divider));			\
-	} while (0)
-
-extern struct clk_ops ambarella_rct_pll_ops;
-extern struct clk_ops ambarella_rct_scaler_ops;
-
-#ifdef CONFIG_AMBARELLA_CALC_PLL
-#define AMBARELLA_PLL_FRAC_TABLE_SIZE		(0)
-extern struct pll_table ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
-#define AMBARELLA_PLL_INT_TABLE_SIZE		(0)
-extern struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
-#else
-#define AMBARELLA_PLL_FRAC_TABLE_SIZE		(590)
-extern struct pll_table ambarella_pll_frac_table[AMBARELLA_PLL_FRAC_TABLE_SIZE];
-#define AMBARELLA_PLL_INT_TABLE_SIZE		(93)
-extern struct pll_table ambarella_pll_int_table[AMBARELLA_PLL_INT_TABLE_SIZE];
-#define AMBARELLA_PLL_VOUT_TABLE_SIZE		(797)
-extern struct pll_table ambarella_pll_vout_table[AMBARELLA_PLL_VOUT_TABLE_SIZE];
-#define AMBARELLA_PLL_VOUT2_TABLE_SIZE		(793)
-extern struct pll_table ambarella_pll_vout2_table[AMBARELLA_PLL_VOUT2_TABLE_SIZE];
-#endif
-
-extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
-		u32 pre_scaler, const struct pll_table *table, u32 table_size);
-
-extern unsigned long ambarella_rct_clk_get_rate(struct clk *c);
-extern int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate);
-extern int ambarella_rct_clk_enable(struct clk *c);
-extern int ambarella_rct_clk_disable(struct clk *c);
-
-extern unsigned long ambarella_rct_scaler_get_rate(struct clk *c);
-extern int ambarella_rct_scaler_set_rate(struct clk *c, unsigned long rate);
-
-extern int ambarella_clk_init(void);
-extern int ambarella_clk_add(struct clk *clk);
-extern unsigned int ambarella_clk_get_ref_freq(void);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/

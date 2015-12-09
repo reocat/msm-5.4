@@ -70,7 +70,6 @@
 /* ==========================================================================*/
 extern struct smp_operations ambarella_smp_ops;
 
-extern void ambarella_init_early(void);
 extern void ambarella_init_machine(void);
 extern void ambarella_map_io(void);
 extern void ambarella_restart_machine(enum reboot_mode mode, const char *cmd);

@@ -39,6 +39,7 @@
 #include <mach/init.h>
 #include <plat/drctl.h>
 #include <plat/rtc.h>
+#include <plat/rct.h>
 #include <plat/ambcache.h>
 
 #define SREF_MAGIC_PATTERN		0x43525230
