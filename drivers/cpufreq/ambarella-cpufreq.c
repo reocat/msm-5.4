@@ -190,7 +190,7 @@ static int amba_cpufreq_driver_init(void)
 	cortex_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_cortex")) / 1000;
 
 	core_freqtbl[i].index = i;
-	core_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000;
+	core_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000 * 2;
 
 	i++;
 	cortex_freqtbl[i].index = i;
