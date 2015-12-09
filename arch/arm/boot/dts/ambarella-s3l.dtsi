@@ -558,8 +558,8 @@
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
 					<0x00000038 0x00000003 0x00001111>,/*for sdr12 24M, sdr25 50M, sdr50 100M*/
-					<0x00000040 0x00000001 0x00002222>,/*for sdr104 200M*/
-					<0x00000080 0x000C0001 0x00000000>;/*for ddr50 50M*/
+					<0x00000040 0x00000005 0x00002222>,/*for sdr104 200M*/
+					<0x00000080 0x000C0005 0x00000000>;/*for ddr50 50M*/
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit>;
 
@@ -588,7 +588,8 @@
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
 					<0x00000038 0x00000003 0x00001111>,
-					<0x00000080 0x000C0001 0x00000000>;
+					<0x00000040 0x00000005 0x00002222>,/*for sdr104 200M*/
+					<0x00000080 0x000C0005 0x00000000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc2_pins_8bit>;
 
