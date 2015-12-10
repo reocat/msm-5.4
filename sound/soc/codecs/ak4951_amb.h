@@ -149,7 +149,12 @@
 #define AK4951_FS_24KHZ			(9 << 0)
 #define AK4951_FS_32KHZ			(10 << 0)
 #define AK4951_FS_48KHZ			(11 << 0)
-#define AK4951_FS_44_1KHZ		(15 << 0)
+
+/*The fs for 44.1k is difference with the reference clk for PLL,
+ *when the reference clk is BCK, the fs should be 0x08, if the
+ *reference input clock for pll is MCK, fs shoud be 0x0f.*/
+#define AK4951_FS_44_1KHZ_MCK		(15 << 0)
+#define AK4951_FS_44_1KHZ_BCK		(8 << 0)
 
 #define AK4951_FS_CM0			(1 << 6)
 #define AK4951_FS_CM1			(1 << 7)
