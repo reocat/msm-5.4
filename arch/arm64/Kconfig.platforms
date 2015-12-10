@@ -1,5 +1,10 @@
 menu "Platform selection"
 
+config ARCH_AMBARELLA
+	bool "Ambarella ARMv8 SoC Family"
+	help
+	  This enables support for Ambarella ARMv8 SoC Family
+
 config ARCH_BCM_IPROC
 	bool "Broadcom iProc SoC Family"
 	help
