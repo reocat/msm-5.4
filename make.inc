@@ -30,7 +30,7 @@ LOCAL_PATH:=$(call my-dir)
 linux: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR)
 	@if [ -f $(LINUX_OUT_DIR)/.config ]; then \
-		echo "Build Linux with previous configuration ..."; \
+		echo "Build Linux-$(CONFIG_LINUX_KERNEL_VERSION) with previous configuration ..."; \
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) defconfig_public_linux; \
 	fi
@@ -62,7 +62,7 @@ menuconfig_public_linux: $(DOT_CONFIG)
 .PHONY: defconfig_public_linux
 
 defconfig_public_linux: $(DOT_CONFIG)
-	@echo "Build Linux with $(KERNEL_DEFCONFIG) ..."
+	@echo "Build Linux-$(CONFIG_LINUX_KERNEL_VERSION) with $(KERNEL_DEFCONFIG) ..."
 	@mkdir -p $(LINUX_OUT_DIR)
 	@if [ -f $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
 		cp -dpRf $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_DEFCONFIG) $(LINUX_OUT_DIR)/.config; \
