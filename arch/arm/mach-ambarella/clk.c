@@ -68,6 +68,16 @@ struct clk_ops ambarella_rct_pll_ops = {
 };
 EXPORT_SYMBOL(ambarella_rct_pll_ops);
 
+struct clk_ops ambarella_rct_adj_ops = {
+	.enable		= ambarella_rct_clk_enable,
+	.disable	= ambarella_rct_clk_disable,
+	.get_rate	= ambarella_rct_clk_get_rate,
+	.round_rate	= NULL,
+	.set_rate	= ambarella_rct_clk_adj_rate,
+	.set_parent	= NULL,
+};
+EXPORT_SYMBOL(ambarella_rct_adj_ops);
+
 /* ==========================================================================*/
 
 int ambarella_rct_clk_enable(struct clk *c)
@@ -262,6 +272,67 @@ unsigned long ambarella_rct_clk_get_rate(struct clk *c)
 	return c->rate;
 }
 EXPORT_SYMBOL(ambarella_rct_clk_get_rate);
+
+
+int ambarella_rct_clk_adj_rate(struct clk *c, unsigned long rate)
+{
+	union ctrl_reg_u ctrl_reg;
+	u32 curr_rate;
+	u32 IntStepPllOut24MHz;
+	u32 TargetIntp;
+
+	/* get current PLL control registers' values */
+	ctrl_reg.w = amba_rct_readl(c->ctrl_reg);
+
+	if (ctrl_reg.s.sdiv >= ctrl_reg.s.sout) {
+		while (ctrl_reg.s.sdiv > ctrl_reg.s.sout) {
+			ctrl_reg.s.sdiv--;
+			amba_rct_writel(c->ctrl_reg, ctrl_reg.w);
+		}
+		IntStepPllOut24MHz = 1;
+	} else {
+		IntStepPllOut24MHz = (ctrl_reg.s.sout + 1) / (ctrl_reg.s.sdiv + 1);
+	}
+
+	curr_rate = ambarella_rct_clk_get_rate(c);
+	TargetIntp = rate * (ctrl_reg.s.sout + 1) / ((ctrl_reg.s.sdiv + 1) * REF_CLK_FREQ) - 1;
+
+	if (curr_rate > rate) {
+		/* decrease the frequency */
+		while (curr_rate > rate && ctrl_reg.s.intp > 0) {
+			if (ctrl_reg.s.intp - TargetIntp >= IntStepPllOut24MHz)
+				ctrl_reg.s.intp -= IntStepPllOut24MHz;
+			else
+				ctrl_reg.s.intp--;
+
+			amba_rct_writel_en(c->ctrl_reg, ctrl_reg.w);
+			curr_rate = ambarella_rct_clk_get_rate(c);
+		}
+	} else {
+		/* increase the frequency */
+		if (TargetIntp > 123)
+			TargetIntp = 123;
+
+		while (curr_rate < rate && ctrl_reg.s.intp < 123) {
+			if (TargetIntp - ctrl_reg.s.intp >= IntStepPllOut24MHz)
+				ctrl_reg.s.intp += IntStepPllOut24MHz;
+			else
+				ctrl_reg.s.intp++;
+
+			amba_rct_writel_en(c->ctrl_reg, ctrl_reg.w);
+			curr_rate = ambarella_rct_clk_get_rate(c);
+		}
+
+		if (curr_rate > rate && ctrl_reg.s.intp > 6) {
+			/* decrease the frequency so that is it is just below expected */
+			ctrl_reg.s.intp--;
+			amba_rct_writel_en(c->ctrl_reg, ctrl_reg.w);
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_rct_clk_adj_rate);
 
 /* ==========================================================================*/
 struct clk *clk_get_sys(const char *dev_id, const char *con_id)
@@ -545,7 +616,7 @@ static struct clk pll_out_core = {
 	.extra_scaler	= 0,
 	.table		= ambarella_pll_int_table,
 	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_adj_ops,
 };
 
 static struct clk gclk_core = {
@@ -636,7 +707,7 @@ static struct clk gclk_ddr = {
 	.extra_scaler	= 0,
 	.table		= ambarella_pll_int_table,
 	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_adj_ops,
 };
 
 /* ==========================================================================*/
@@ -659,7 +730,7 @@ static struct clk gclk_cortex = {
 	.extra_scaler	= 0,
 	.table		= ambarella_pll_int_table,
 	.table_size	= ARRAY_SIZE(ambarella_pll_int_table),
-	.ops		= &ambarella_rct_pll_ops,
+	.ops		= &ambarella_rct_adj_ops,
 };
 static struct clk gclk_axi = {
 	.parent		= &gclk_cortex,
