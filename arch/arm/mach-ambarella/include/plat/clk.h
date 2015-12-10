@@ -243,6 +243,7 @@ extern u32 ambarella_rct_find_pll_table_index(unsigned long rate,
 
 extern unsigned long ambarella_rct_clk_get_rate(struct clk *c);
 extern int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate);
+extern int ambarella_rct_clk_adj_rate(struct clk *c, unsigned long rate);
 extern int ambarella_rct_clk_enable(struct clk *c);
 extern int ambarella_rct_clk_disable(struct clk *c);
 
