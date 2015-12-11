@@ -1,5 +1,4 @@
 /*
- * arch/arm/plat-ambarella/misc/service.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *

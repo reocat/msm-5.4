@@ -31,7 +31,6 @@
 #include <plat/gpio.h>
 #include <plat/irq.h>
 #include <plat/pm.h>
-#include <plat/hwlock.h>
 #include <plat/cortex.h>
 
 /* ==========================================================================*/
@@ -45,8 +44,6 @@
 /* ==========================================================================*/
 extern u64 ambarella_dmamask;
 
-/* ==========================================================================*/
-extern int ambarella_create_proc_dir(void);
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
 
 extern u32 ambarella_get_poc(void);

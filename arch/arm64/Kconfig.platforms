@@ -1,7 +1,11 @@
 menu "Platform selection"
 
+config ARCH_AMBARELLA_H2
+	bool
+
 config ARCH_AMBARELLA
 	bool "Ambarella ARMv8 SoC Family"
+	select ARCH_AMBARELLA_H2
 	help
 	  This enables support for Ambarella ARMv8 SoC Family
 

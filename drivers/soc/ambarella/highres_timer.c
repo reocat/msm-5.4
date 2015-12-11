@@ -1,5 +1,4 @@
 /*
- * arch/arm/plat-ambarella/misc/highres_timer.c
  *
  * Author: Louis Sun <lysun@ambarella.com>
  *

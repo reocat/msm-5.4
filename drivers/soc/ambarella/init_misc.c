@@ -1,9 +1,8 @@
 /*
- * arch/arm/plat-ambarella/generic/reglock.c
  *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
- * Copyright (C) 2004-2010, Ambarella, Inc.
+ * Copyright (C) 2012-2016, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,14 +21,26 @@
  */
 
 #include <linux/init.h>
-#include <linux/module.h>
-#include <linux/spinlock.h>
+#include <linux/kernel.h>
+#include <linux/proc_fs.h>
 
-/* ==========================================================================*/
-DEFINE_SPINLOCK(ambarella_global_hw_lock);
-unsigned long ambarella_global_hw_flags;
+static struct proc_dir_entry *ambarella_proc_dir = NULL;
 
-/* ==========================================================================*/
-EXPORT_SYMBOL(ambarella_global_hw_lock);
-EXPORT_SYMBOL(ambarella_global_hw_flags);
+struct proc_dir_entry *get_ambarella_proc_dir(void)
+{
+	return ambarella_proc_dir;
+}
+EXPORT_SYMBOL(get_ambarella_proc_dir);
+
+static int __init ambarella_init_root_proc(void)
+{
+	ambarella_proc_dir = proc_mkdir("ambarella", NULL);
+	if (!ambarella_proc_dir) {
+		pr_err("failed to create ambarella root proc dir\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+core_initcall(ambarella_init_root_proc);
 

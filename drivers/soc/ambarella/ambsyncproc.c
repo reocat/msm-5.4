@@ -1,6 +1,4 @@
 /*
- * arch/arm/plat-ambarella/misc/sync_proc.c
- *
  * Author: Anthony Ginger, <hfjiang@ambarella.com>
  *
  * Copyright (C) 2004-2010, Ambarella, Inc.

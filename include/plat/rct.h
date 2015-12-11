@@ -35,7 +35,7 @@
 #define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
 #define RCT_PHYS_BASE			(DBGBUS_PHYS_BASE + RCT_OFFSET)
 #endif
-#define RCT_REG(x)			(RCT_BASE + (x))
+#define RCT_REG(x)			IOMEM(RCT_BASE + (x))
 
 /* ==========================================================================*/
 #define PLL_LOCK_OFFSET			0x2C

@@ -237,46 +237,8 @@ void __init ambarella_map_io(void)
 	of_scan_flat_dt(ambarella_dt_scan_fbmem, NULL);
 }
 
-/* ==========================================================================*/
-static struct proc_dir_entry *ambarella_proc_dir = NULL;
-
-int __init ambarella_create_proc_dir(void)
-{
-	int ret_val = 0;
-
-	ambarella_proc_dir = proc_mkdir("ambarella", NULL);
-	if (!ambarella_proc_dir)
-		ret_val = -ENOMEM;
-
-	return ret_val;
-}
-
-struct proc_dir_entry *get_ambarella_proc_dir(void)
-{
-	return ambarella_proc_dir;
-}
-EXPORT_SYMBOL(get_ambarella_proc_dir);
-
 
 /* ==========================================================================*/
-void __init ambarella_init_machine(void)
-{
-	int ret_val = 0;
-
-	ret_val = ambarella_create_proc_dir();
-	BUG_ON(ret_val != 0);
-
-	ret_val = ambarella_init_fb();
-	BUG_ON(ret_val != 0);
-
-	ret_val = ambarella_init_pm();
-	BUG_ON(ret_val != 0);
-
-	ret_val = ambarella_init_audio();
-	BUG_ON(ret_val != 0);
-
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
-}
 
 void ambarella_restart_machine(enum reboot_mode mode, const char *cmd)
 {

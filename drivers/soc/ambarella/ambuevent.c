@@ -1,5 +1,4 @@
 /*
- * arch/arm/plat-ambarella/misc/ambevent.c
  *
  * Author: Zhenwu Xue, <zwxue@ambarella.com>
  *

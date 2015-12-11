@@ -66,6 +66,8 @@ struct amb_clk_pll {
 };
 
 #define to_amb_clk_pll(_hw) container_of(_hw, struct amb_clk_pll, hw)
+#define rct_writel_en(v, p)		\
+		do {writel(v, p); writel((v | 0x1), p); writel(v, p);} while (0)
 
 static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 		unsigned long parent_rate)
@@ -76,14 +78,14 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 
-	ctrl_val.w = amba_rct_readl(clk_pll->ctrl_reg);
+	ctrl_val.w = readl(clk_pll->ctrl_reg);
 	if ((ctrl_val.s.power_down == 1) || (ctrl_val.s.halt_vco == 1))
 		return 0;
 
-	frac_val.w = amba_rct_readl(clk_pll->frac_reg);
+	frac_val.w = readl(clk_pll->frac_reg);
 
 	if (clk_pll->pres_reg != NULL) {
-		pre_scaler = amba_rct_readl(clk_pll->pres_reg);
+		pre_scaler = readl(clk_pll->pres_reg);
 		if (clk_pll->extra_scaler) {
 			pre_scaler >>= 4;
 			pre_scaler++;
@@ -93,7 +95,7 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 	}
 
 	if (clk_pll->post_reg != NULL) {
-		post_scaler = amba_rct_readl(clk_pll->post_reg);
+		post_scaler = readl(clk_pll->post_reg);
 		if (clk_pll->extra_scaler) {
 			post_scaler >>= 4;
 			post_scaler++;
@@ -103,26 +105,26 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 	}
 
 	if (ctrl_val.s.bypass || ctrl_val.s.force_bypass)
-		return REF_CLK_FREQ / pre_scaler / post_scaler;
+		return parent_rate / pre_scaler / post_scaler;
 
 	intp = ctrl_val.s.intp + 1;
 	sdiv = ctrl_val.s.sdiv + 1;
 	sout = ctrl_val.s.sout + 1;
 
-	dividend = REF_CLK_FREQ;
+	dividend = parent_rate;
 	dividend *= (u64)intp;
 	dividend *= (u64)sdiv;
 	if (ctrl_val.s.frac_mode) {
 		if (frac_val.s.nega) {
 			/* Negative */
 			frac = 0x80000000 - frac_val.s.frac;
-			frac = REF_CLK_FREQ * frac * sdiv;
+			frac = parent_rate * frac * sdiv;
 			frac >>= 32;
 			dividend = dividend - frac;
 		} else {
 			/* Positive */
 			frac = frac_val.s.frac;
-			frac = REF_CLK_FREQ * frac * sdiv;
+			frac = parent_rate * frac * sdiv;
 			frac >>= 32;
 			dividend = dividend + frac;
 		}
@@ -137,7 +139,7 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 }
 
 static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
-				unsigned long *prate)
+				unsigned long *parent_rate)
 {
 	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
 	unsigned long rount_rate;
@@ -145,7 +147,7 @@ static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (clk_pll->frac_mode)
 		rount_rate = rate;
 	else
-		rount_rate = roundup(rate, REF_CLK_FREQ);
+		rount_rate = round_up(rate, *parent_rate);
 
 	return rount_rate;
 }
@@ -162,22 +164,22 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	rate *= clk_pll->fix_divider;
 
-	if (rate < REF_CLK_FREQ && clk_pll->post_reg != NULL) {
+	if (rate < parent_rate && clk_pll->post_reg != NULL) {
 		rate *= 16;
 		post_scaler = 16;
 	}
 
-	if (rate < REF_CLK_FREQ) {
+	if (rate < parent_rate) {
 		pr_err("Error: target rate is too slow: %ld!\n", rate);
 		return -EINVAL;
 	}
 
 	/* fvco should be less than 1.5GHz, so we use 64 as max_numerator,
 	 * although the actual bit width of pll_intp is 7 */
-	rational_best_approximation(rate, REF_CLK_FREQ, 64, 16, &intp, &sout);
+	rational_best_approximation(rate, parent_rate, 64, 16, &intp, &sout);
 
 	/* fvco should be faster than 700MHz, otherwise pll out is not stable */
-	while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 700) {
+	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < 700) {
 		if (sout > 8 || intp > 64)
 			break;
 		intp *= 2;
@@ -189,19 +191,19 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	if (clk_pll->pres_reg != NULL) {
 		if (clk_pll->extra_scaler == 1)
-			amba_rct_writel_en(clk_pll->pres_reg, (pre_scaler - 1) << 4);
+			rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
 		else
-			amba_rct_writel(clk_pll->pres_reg, pre_scaler);
+			writel(pre_scaler, clk_pll->pres_reg);
 	}
 
 	if (clk_pll->post_reg != NULL) {
 		if (clk_pll->extra_scaler == 1)
-			amba_rct_writel_en(clk_pll->post_reg, (post_scaler - 1) << 4);
+			rct_writel_en((post_scaler - 1) << 4, clk_pll->post_reg);
 		else
-			amba_rct_writel(clk_pll->post_reg, post_scaler);
+			writel(post_scaler, clk_pll->post_reg);
 	}
 
-	ctrl_val.w = amba_rct_readl(clk_pll->ctrl_reg);
+	ctrl_val.w = readl(clk_pll->ctrl_reg);
 	ctrl_val.s.intp = intp - 1;
 	ctrl_val.s.sdiv = sdiv - 1;
 	ctrl_val.s.sout = sout - 1;
@@ -214,7 +216,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	ctrl_val.s.force_lock = 1;
 	ctrl_val.s.force_bypass = 0;
 	ctrl_val.s.write_enable = 0;
-	amba_rct_writel_en(clk_pll->ctrl_reg, ctrl_val.w);
+	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 
 	if (clk_pll->frac_mode) {
 		rate_tmp = ambarella_pll_recalc_rate(hw, parent_rate);
@@ -227,7 +229,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		if (diff) {
 			dividend = diff * pre_scaler * sout;
 			dividend = dividend << 32;
-			divider = (u64)sdiv * REF_CLK_FREQ;
+			divider = (u64)sdiv * parent_rate;
 			dividend = DIV_ROUND_CLOSEST_ULL(dividend, divider);
 			if (rate_tmp <= rate) {
 				frac_val.s.nega	= 0;
@@ -236,19 +238,19 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 				frac_val.s.nega	= 1;
 				frac_val.s.frac	= 0x80000000 - dividend;
 			}
-			amba_rct_writel(clk_pll->frac_reg, frac_val.w);
+			writel(frac_val.w, clk_pll->frac_reg);
 
 			ctrl_val.s.frac_mode = 1;
 		}
 
-		amba_rct_writel_en(clk_pll->ctrl_reg, ctrl_val.w);
+		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 	}
 
-	amba_rct_writel(clk_pll->ctrl2_reg, clk_pll->ctrl2_val);
+	writel(clk_pll->ctrl2_val, clk_pll->ctrl2_reg);
 	if (ctrl_val.s.frac_mode)
-		amba_rct_writel(clk_pll->ctrl3_reg, clk_pll->ctrl3_val | (1 << 12));
+		writel(clk_pll->ctrl3_val | (1 << 12), clk_pll->ctrl3_reg);
 	else
-		amba_rct_writel(clk_pll->ctrl3_reg, clk_pll->ctrl3_val);
+		writel(clk_pll->ctrl3_val, clk_pll->ctrl3_reg);
 
 	/* check if result rate is precise or not */
 	rate_tmp = ambarella_pll_recalc_rate(hw, parent_rate);

@@ -70,12 +70,8 @@
 /* ==========================================================================*/
 extern struct smp_operations ambarella_smp_ops;
 
-extern void ambarella_init_machine(void);
 extern void ambarella_map_io(void);
 extern void ambarella_restart_machine(enum reboot_mode mode, const char *cmd);
-
-/* ==========================================================================*/
-extern int ambarella_init_fb(void);
 
 /* ==========================================================================*/
 extern u32 ambarella_phys_to_virt(u32 paddr);

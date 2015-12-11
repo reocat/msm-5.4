@@ -43,19 +43,18 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
-
 #include <asm/sizes.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
-
 #include <mach/init.h>
 #include <plat/fb.h>
 
 /* video=amb0fb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,
    <color_format>,<conversion_buffer>[,<prealloc_start>,<prealloc_length>] */
 
+#include "ambfb.c"
 #include "ambarella_fb_tbl.c"
 
 /* ========================================================================== */
@@ -707,6 +706,7 @@ static struct platform_device ambarella_fb1 = {
 
 static int __init ambavoutfb_init(void)
 {
+	ambarella_init_fb();
 	platform_device_register(&ambarella_fb0);
 	platform_device_register(&ambarella_fb1);
 	return platform_driver_register(&ambfb_driver);

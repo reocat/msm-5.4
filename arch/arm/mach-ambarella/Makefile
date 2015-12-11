@@ -26,5 +26,4 @@ obj-y						+= adc.o
 
 obj-y						+= soc/
 obj-y						+= smp/
-obj-y						+= misc/
 

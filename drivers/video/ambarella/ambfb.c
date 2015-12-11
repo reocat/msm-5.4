@@ -1,5 +1,4 @@
 /*
- * arch/arm/plat-ambarella/video/ambfb.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *
@@ -21,26 +20,6 @@
  *
  */
 
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/platform_device.h>
-#include <linux/bootmem.h>
-#include <linux/delay.h>
-#include <linux/irq.h>
-#include <linux/dma-mapping.h>
-
-#include <asm/page.h>
-#include <asm/io.h>
-#include <asm/setup.h>
-
-#include <asm/mach/map.h>
-
-#include <linux/fb.h>
-
-#include <mach/hardware.h>
-#include <plat/fb.h>
-
-/* ==========================================================================*/
 static struct ambarella_platform_fb ambarella_platform_fb0 = {
 	.screen_var		= {
 		.xres		= 720,
@@ -237,7 +216,7 @@ int ambarella_fb_update_info(u32 fb_id, int xres, int yres,
 	return 0;
 }
 
-int __init ambarella_init_fb(void)
+void __init ambarella_init_fb(void)
 {
 	struct ambarella_platform_fb *ambfb_data;
 	int i;
@@ -247,7 +226,5 @@ int __init ambarella_init_fb(void)
 		mutex_init(&ambfb_data->lock);
 		init_waitqueue_head(&ambfb_data->proc_wait);
 	}
-
-	return 0;
 }
 

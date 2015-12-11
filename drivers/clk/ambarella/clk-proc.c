@@ -56,7 +56,7 @@ static int ambarella_clock_proc_show(struct seq_file *m, void *v)
 	return 0;
 }
 
-static int ambarella_clock_proc_write(struct file *file,
+static ssize_t ambarella_clock_proc_write(struct file *file,
 	const char __user *buffer, size_t count, loff_t *ppos)
 {
 	struct clk *gclk;
@@ -102,14 +102,14 @@ static const struct file_operations proc_clock_fops = {
 
 static int __init ambarella_init_clk(void)
 {
-	amba_rct_writel(CLK_SI_INPUT_MODE_REG, 0x0);
+#if 0
+	writel(0x0, CLK_SI_INPUT_MODE_REG);
 #if (CHIP_REV == S2E)
 	amba_rct_setbitsl(HDMI_CLOCK_CTRL_REG, 0x1);
 #endif
 
-#if 0
 #if (CHIP_REV == S2E)
-	amba_rct_writel(UART_CLK_SRC_SEL_REG, UART_CLK_SRC_IDSP);
+	writel(UART_CLK_SRC_IDSP, UART_CLK_SRC_SEL_REG);
 #endif
 #endif
 

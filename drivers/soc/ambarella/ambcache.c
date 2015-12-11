@@ -1,5 +1,4 @@
 /*
- * arch/arm/plat-ambarella/misc/ambcache.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  *

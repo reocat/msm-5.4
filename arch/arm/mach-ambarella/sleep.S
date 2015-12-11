@@ -29,6 +29,8 @@
 #include <plat/rct.h>
 #include <plat/uart.h>
 
+#define REF_CLK_FREQ			24000000
+
 	.text
 
 ENTRY(ambarella_finish_suspend)
@@ -57,7 +59,7 @@ ENTRY(ambarella_finish_suspend)
 	beq	1b
 
 	/* now turn off PWC */
-	ldr	r0, =ANA_PWR_REG
+	ldr	r0, =(RCT_BASE + ANA_PWR_OFFSET)
 	mov	r1, #ANA_PWR_POWER_DOWN
 	str	r1, [r0]
 

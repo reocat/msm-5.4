@@ -272,10 +272,7 @@ enum DAI_INIT_CTL
 #define AMBARELLA_CLKDIV_LRCLK	0
 
 /* ==========================================================================*/
-extern int ambarella_init_audio(void);
 
-extern void ambarella_audio_notify_transition(
-	struct ambarella_i2s_interface *data, unsigned int type);
 extern int ambarella_audio_register_notifier(struct notifier_block *nb);
 extern int ambarella_audio_unregister_notifier(struct notifier_block *nb);
 

@@ -24,6 +24,10 @@
 #ifndef __PLAT_AMBARELLA_CHIP_H__
 #define __PLAT_AMBARELLA_CHIP_H__
 
+#ifndef IOMEM
+#define IOMEM(x)	((void __force __iomem *)(x))
+#endif
+
 /* ==========================================================================*/
 #define A5S		(5100)
 #define S2		(9000)
@@ -54,9 +58,6 @@
 #else
 #error "Undefined CHIP_REV"
 #endif
-
-/* ==========================================================================*/
-#define REF_CLK_FREQ			24000000
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)

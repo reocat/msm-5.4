@@ -206,7 +206,7 @@ static struct platform_suspend_ops ambarella_pm_suspend_ops = {
 	.enter		= ambarella_pm_suspend_enter,
 };
 
-int __init ambarella_init_pm(void)
+static int __init ambarella_init_pm(void)
 {
 	pm_power_off = ambarella_power_off;
 	pm_power_off_prepare = ambarella_power_off_prepare;
@@ -218,4 +218,6 @@ int __init ambarella_init_pm(void)
 
 	return 0;
 }
+
+arch_initcall(ambarella_init_pm);
 
