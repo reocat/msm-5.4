@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_NAND_H__
 #define __PLAT_AMBARELLA_NAND_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 
 #if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L) || (CHIP_REV == S3)

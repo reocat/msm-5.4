@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_TIMER_H__
 #define __PLAT_AMBARELLA_TIMER_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #define TIMER_OFFSET			0xB000
 #define TIMER_BASE			(APB_BASE + TIMER_OFFSET)

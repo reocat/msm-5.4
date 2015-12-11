@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_COMMON_FIO_H__
 #define __PLAT_AMBARELLA_COMMON_FIO_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
 #define	FIO_USE_2X_FREQ			1

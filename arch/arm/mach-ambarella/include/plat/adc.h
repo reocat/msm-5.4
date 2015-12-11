@@ -25,6 +25,7 @@
 #define __PLAT_AMBARELLA_ADC_H__
 
 #include <linux/workqueue.h>
+#include <plat/chip.h>
 
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)

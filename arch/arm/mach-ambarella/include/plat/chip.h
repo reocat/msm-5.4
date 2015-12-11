@@ -70,5 +70,14 @@
 
 /* ==========================================================================*/
 
+#ifndef __ASSEMBLER__
+
+extern struct proc_dir_entry *get_ambarella_proc_dir(void);
+extern u32 ambarella_get_poc(void);
+
+#endif
+
+/* ==========================================================================*/
+
 #endif /* __PLAT_AMBARELLA_CHIP_H__ */
 

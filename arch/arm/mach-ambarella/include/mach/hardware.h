@@ -44,10 +44,6 @@
 /* ==========================================================================*/
 extern u64 ambarella_dmamask;
 
-extern struct proc_dir_entry *get_ambarella_proc_dir(void);
-
-extern u32 ambarella_get_poc(void);
-
 #endif
 /* ==========================================================================*/
 

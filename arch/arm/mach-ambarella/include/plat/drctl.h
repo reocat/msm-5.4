@@ -19,6 +19,8 @@
 #ifndef __AMBHW__DRCTRL_H__
 #define __AMBHW__DRCTRL_H__
 
+#include <plat/chip.h>
+
 #if (CHIP_REV == A5S) || (CHIP_REV == S2)
 #define DRAM_DRAM_OFFSET 		0x4000
 #define DRAM_DDRC_OFFSET  		DRAM_DRAM_OFFSET

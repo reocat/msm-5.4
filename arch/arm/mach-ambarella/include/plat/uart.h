@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_UART_H__
 #define __PLAT_AMBARELLA_UART_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define	UART_INSTANCES			4

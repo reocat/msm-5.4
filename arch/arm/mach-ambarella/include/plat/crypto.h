@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_CRYPTO_H__
 #define __PLAT_AMBARELLA_CRYPTO_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
 #define CRYPT_UNIT_OFFSET		0x14000

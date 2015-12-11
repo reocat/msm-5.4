@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_ETH_H__
 #define __PLAT_AMBARELLA_ETH_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #define ETH_INSTANCES			1
 

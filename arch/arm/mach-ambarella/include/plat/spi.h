@@ -25,6 +25,7 @@
 #define __PLAT_AMBARELLA_SPI_H__
 
 #include <linux/spi/spi.h>
+#include <plat/chip.h>
 
 /* ==========================================================================*/
 #if (CHIP_REV == A5S) || (CHIP_REV == S2E)

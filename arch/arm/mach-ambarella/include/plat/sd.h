@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_SD_H__
 #define __PLAT_AMBARELLA_SD_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L)
 #define SD_INSTANCES			2

@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_GPIO_H__
 #define __PLAT_AMBARELLA_GPIO_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
 #define GPIO_INSTANCES			3

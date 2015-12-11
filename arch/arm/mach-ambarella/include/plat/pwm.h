@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_PWM_H__
 #define __PLAT_AMBARELLA_PWM_H__
 
+#include <plat/chip.h>
+
 #if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define PWM_INSTANCES			5
 #else

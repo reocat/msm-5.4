@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_IRQ_H__
 #define __PLAT_AMBARELLA_IRQ_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
 #define VIC_INSTANCES			(2)

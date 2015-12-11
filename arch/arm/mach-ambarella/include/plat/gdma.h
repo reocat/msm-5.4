@@ -25,6 +25,8 @@
 #ifndef __PLAT_AMBARELLA_GDMA_H__
 #define __PLAT_AMBARELLA_GDMA_H__
 
+#include <plat/chip.h>
+
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
