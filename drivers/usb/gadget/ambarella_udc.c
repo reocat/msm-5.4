@@ -1632,7 +1632,7 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 	udc = ep->udc;
 
 	for(i = 0; i < EP_NUM_MAX; i++) {
-		struct ambarella_ep *endp;    
+		struct ambarella_ep *endp;
 		endp = &udc->ep[i];
 
 		if (endp != NULL && endp->dma_going) //Check for any ongoing DMA
