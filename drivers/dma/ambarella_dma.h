@@ -74,6 +74,8 @@ struct ambdma_device {
 	struct dma_device		dma_memcpy;
 	struct ambdma_chan		amb_chan[NUM_DMA_CHANNELS];
 	struct dma_pool			*lli_pool;
+	void __iomem			*regbase;
+	void __iomem			*regsel;
 	int				dma_irq;
 	/* dummy_desc is used to stop DMA immediately. */
 	struct ambdma_lli		*dummy_lli;
@@ -114,6 +116,31 @@ static inline struct ambdma_chan *to_ambdma_chan(struct dma_chan *chan)
 	return container_of(chan, struct ambdma_chan, chan);
 }
 
+static inline void __iomem *dma_chan_ctr_reg(struct ambdma_chan *amb_chan)
+{
+	return amb_chan->amb_dma->regbase + 0x300 + (amb_chan->id << 4);
+}
+
+static inline void __iomem *dma_chan_src_reg(struct ambdma_chan *amb_chan)
+{
+	return amb_chan->amb_dma->regbase + 0x304 + (amb_chan->id << 4);
+}
+
+static inline void __iomem *dma_chan_dst_reg(struct ambdma_chan *amb_chan)
+{
+	return amb_chan->amb_dma->regbase + 0x308 + (amb_chan->id << 4);
+}
+
+static inline void __iomem *dma_chan_sta_reg(struct ambdma_chan *amb_chan)
+{
+	return amb_chan->amb_dma->regbase + 0x30c + (amb_chan->id << 4);
+}
+
+static inline void __iomem *dma_chan_da_reg(struct ambdma_chan *amb_chan)
+{
+	return amb_chan->amb_dma->regbase + 0x380 + (amb_chan->id << 2);
+}
+
 static inline int ambdma_desc_is_error(struct ambdma_desc *amb_desc)
 {
 	return (amb_desc->lli->rpt & (DMA_CHANX_STA_OE | DMA_CHANX_STA_ME |
@@ -128,7 +155,7 @@ static inline int ambdma_desc_transfer_count(struct ambdma_desc *amb_desc)
 
 static inline int ambdma_chan_is_enabled(struct ambdma_chan *amb_chan)
 {
-	return !!(amba_readl(DMA_CHAN_CTR_REG(amb_chan->id)) & DMA_CHANX_CTR_EN);
+	return !!(readl_relaxed(dma_chan_ctr_reg(amb_chan)) & DMA_CHANX_CTR_EN);
 }
 
 static dma_cookie_t ambdma_tx_submit(struct dma_async_tx_descriptor *tx);

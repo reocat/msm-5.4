@@ -25,52 +25,6 @@
 #ifndef __ASM_ARCH_MEMORY_H
 #define __ASM_ARCH_MEMORY_H
 
-/*
- * MAP Sample	Phisical		Virtual			Size
- * --------------------------------------------------------------------------
- * AHB(IO)	AHB_PHYS_BASE		AHB_BASE		AHB_SIZE
- * APB(IO)	APB_PHYS_BASE		APB_BASE		APB_BASE
- * MISC(IO)	MISC_PHYS_BASE		MISC_BASE		MISC_SIZE
- * PPM		DEFAULT_MEM_START	AHB_BASE - Size		CONFIG_AMBARELLA_PPM_SIZE
- * Linux MEM	PHYS_OFFSET		CONFIG_VMSPLIT_xG	Linux MEM Size
- */
-
-/* ==========================================================================*/
-#if defined(CONFIG_ARCH_AMBARELLA_MEM_START_LOW)
-#define DEFAULT_MEM_START		(0x00000000)
-#else
-#define DEFAULT_MEM_START		(0xc0000000)
-#endif
-
-/* ==========================================================================*/
-/* Physical Address and Size */
-#if defined(CONFIG_ARCH_AMBARELLA_AHB_APB_HIGH)
-#define AHB_PHYS_BASE			(0xe0000000)
-#define APB_PHYS_BASE			(0xe8000000)
-#else
-#define AHB_PHYS_BASE			(0x60000000)
-#define APB_PHYS_BASE			(0x70000000)
-#endif
-#define AHB_SIZE			(0x01000000)
-#define APB_SIZE			(0x01000000)
-
-#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_AXI)
-#define AXI_PHYS_BASE			(0xf0000000)
-#define AXI_SIZE			(0x00030000)
-#endif
-
-#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_DRAMC)
-#define DRAMC_PHYS_BASE			(0xdffe0000)
-#define DRAMC_SIZE			(0x00020000)
-#endif
-
-#if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_DBGBUS)
-#define DBGBUS_PHYS_BASE		(0xec000000)
-#define DBGBUS_SIZE			(0x00200000)
-#define DBGFMEM_PHYS_BASE		(0xee000000)
-#define DBGFMEM_SIZE			(0x01000000)
-#endif
-
 /* ==========================================================================*/
 
 /* Virtual Address */

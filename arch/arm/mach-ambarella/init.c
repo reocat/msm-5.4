@@ -37,7 +37,6 @@
 #include <mach/init.h>
 #include <plat/debug.h>
 #include <plat/rct.h>
-#include <plat/ambcache.h>
 
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
@@ -384,11 +383,5 @@ u32 get_ambarella_apb_size(void)
 	return ambarella_io_desc[AMBARELLA_IO_DESC_APB_ID].io_desc.length;
 }
 EXPORT_SYMBOL(get_ambarella_apb_size);
-
-u32 ambarella_get_poc(void)
-{
-	return amba_rct_readl(SYS_CONFIG_REG);
-}
-EXPORT_SYMBOL(ambarella_get_poc);
 
 

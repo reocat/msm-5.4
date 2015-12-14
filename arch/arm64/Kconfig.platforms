@@ -9,6 +9,7 @@ config ARCH_AMBARELLA
 	select ARCH_REQUIRE_GPIOLIB
 	select PINCTRL
 	select PINCTRL_AMB
+	select RATIONAL
 	help
 	  This enables support for Ambarella ARMv8 SoC Family
 

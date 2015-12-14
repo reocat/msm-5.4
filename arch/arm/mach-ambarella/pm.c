@@ -40,7 +40,6 @@
 #include <plat/drctl.h>
 #include <plat/rtc.h>
 #include <plat/rct.h>
-#include <plat/ambcache.h>
 
 #define SREF_MAGIC_PATTERN		0x43525230
 #define SREF_CPU_JUMP_ADDR		0x000f1000

@@ -26,21 +26,30 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/of.h>
+#include <linux/of_irq.h>
 #include <linux/slab.h>
 #include <linux/syscore_ops.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinmux.h>
 #include <linux/pinctrl/pinconf.h>
 #include <plat/rct.h>
-#include <plat/pinctrl.h>
+#include <plat/gpio.h>
 #include "core.h"
 
-#define PIN_NAME_LENGTH		8
-#define SUFFIX_LENGTH		4
+#define GPIO_MAX_BANK_NUM		8
+#define GPIO_MAX_PIN_NUM		(GPIO_MAX_BANK_NUM * 32)
+
+#define PIN_NAME_LENGTH			8
+#define SUFFIX_LENGTH			4
+
+#define GPIO_PAD_PULL_EN_OFFSET(b)	((b)<5 ? (b)*4 : 0x80 + ((b)-5)*4)
+#define GPIO_PAD_PULL_DIR_OFFSET(b)	((b)<5 ? 0x14 + (b)*4 : 0x8c + ((b)-5)*4)
+#define GPIO_DS_OFFSET(b)		((b)<4 ? (b)*8 : 0x124 + ((b)-4) * 8)
 
 #define MUXIDS_TO_PINID(m)	((m) & 0xfff)
 #define MUXIDS_TO_ALT(m)	(((m) >> 12) & 0xf)
 #define MUXIDS_TO_CONF(m)	(((m) >> 16) & 0xffff)
+
 
 /*
  * bit1~0: 00: pull down, 01: pull up, 1x: clear pull up/down
@@ -74,9 +83,12 @@ struct ambpin_function {
 struct amb_pinctrl_soc_data {
 	struct device			*dev;
 	struct pinctrl_dev		*pctl;
-	void __iomem			*regbase[GPIO_INSTANCES];
+	void __iomem			*regbase[GPIO_MAX_BANK_NUM];
 	void __iomem			*iomux_base;
-	unsigned long			used[BITS_TO_LONGS(AMBGPIO_SIZE)];
+	void __iomem			*pad_base;
+	void __iomem			*ds_base;
+	unsigned int			bank_num;
+	unsigned long			used[BITS_TO_LONGS(GPIO_MAX_PIN_NUM)];
 
 	struct ambpin_function		*functions;
 	unsigned int			nr_functions;
@@ -84,7 +96,7 @@ struct amb_pinctrl_soc_data {
 	unsigned int			nr_groups;
 };
 
-void __iomem *amb_iomux_base = NULL;
+struct amb_pinctrl_soc_data *amb_pinctrl_soc = NULL;
 
 /* check if the selector is a valid pin group selector */
 static int amb_get_group_count(struct pinctrl_dev *pctldev)
@@ -264,24 +276,28 @@ static void amb_pinmux_set_altfunc(struct amb_pinctrl_soc_data *soc,
 	u32 i, data;
 
 	if (altfunc == AMB_ALTFUNC_GPIO) {
-		amba_clrbitsl(regbase + GPIO_AFSEL_OFFSET, 0x1 << offset);
-		amba_clrbitsl(regbase + GPIO_DIR_OFFSET, 0x1 << offset);
+		data = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
+		writel_relaxed(data & ~(0x1 << offset), regbase + GPIO_AFSEL_OFFSET);
+		data = readl_relaxed(regbase + GPIO_DIR_OFFSET);
+		writel_relaxed(data & ~(0x1 << offset), regbase + GPIO_DIR_OFFSET);
 	} else {
-		amba_setbitsl(regbase + GPIO_AFSEL_OFFSET, 0x1 << offset);
-		amba_clrbitsl(regbase + GPIO_MASK_OFFSET, 0x1 << offset);
+		data = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
+		writel_relaxed(data | (0x1 << offset), regbase + GPIO_AFSEL_OFFSET);
+		data = readl_relaxed(regbase + GPIO_MASK_OFFSET);
+		writel_relaxed(data & ~(0x1 << offset), regbase + GPIO_MASK_OFFSET);
 	}
 
 	if (soc->iomux_base) {
 		for (i = 0; i < 3; i++) {
 			iomux_reg = soc->iomux_base + IOMUX_REG_OFFSET(bank, i);
-			data = amba_readl(iomux_reg);
+			data = readl_relaxed(iomux_reg);
 			data &= (~(0x1 << offset));
 			data |= (((altfunc >> i) & 0x1) << offset);
-			amba_writel(iomux_reg, data);
+			writel_relaxed(data, iomux_reg);
 		}
 		iomux_reg = soc->iomux_base + IOMUX_CTRL_SET_OFFSET;
-		amba_writel(iomux_reg, 0x1);
-		amba_writel(iomux_reg, 0x0);
+		writel_relaxed(0x1, iomux_reg);
+		writel_relaxed(0x0, iomux_reg);
 	}
 }
 
@@ -352,20 +368,22 @@ static int amb_pinmux_gpio_set_direction(struct pinctrl_dev *pctldev,
 {
 	struct amb_pinctrl_soc_data *soc;
 	void __iomem *regbase;
-	u32 bank, offset, mask;
+	u32 bank, offset, data;
 
 	soc = pinctrl_dev_get_drvdata(pctldev);
 
 	bank = PINID_TO_BANK(pin);
 	offset = PINID_TO_OFFSET(pin);
 	regbase = soc->regbase[bank];
-	mask = (0x1 << offset);
 
-	amba_clrbitsl(regbase + GPIO_AFSEL_OFFSET, mask);
+	data = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
+	writel_relaxed(data & ~(0x1 << offset), regbase + GPIO_AFSEL_OFFSET);
+
+	data = readl_relaxed(regbase + GPIO_DIR_OFFSET);
 	if (input)
-		amba_clrbitsl(regbase + GPIO_DIR_OFFSET, mask);
+		writel_relaxed(data & ~(0x1 << offset), regbase + GPIO_DIR_OFFSET);
 	else
-		amba_setbitsl(regbase + GPIO_DIR_OFFSET, mask);
+		writel_relaxed(data | (0x1 << offset), regbase + GPIO_DIR_OFFSET);
 
 	return 0;
 }
@@ -388,7 +406,8 @@ static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 			unsigned long *configs, unsigned num_configs)
 {
 	struct amb_pinctrl_soc_data *soc;
-	u32 i, bank, offset, reg, val;
+	void __iomem *reg;
+	u32 i, bank, offset, val;
 	unsigned long config;
 
 	soc = pinctrl_dev_get_drvdata(pctldev);
@@ -398,26 +417,40 @@ static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 	for (i = 0; i < num_configs; i++) {
 		config = configs[i];
 		if (CFG_PULL_PRESENT(config)) {
-			reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(bank));
-			amba_clrbitsl(reg, 1 << offset);
-			amba_setbitsl(reg, CONF_TO_PULL_VAL(config) << offset);
+			reg = soc->pad_base + GPIO_PAD_PULL_DIR_OFFSET(bank);
+			val = readl_relaxed(reg);
+			val &= ~(0x1 << offset);
+			val |= CONF_TO_PULL_VAL(config) << offset;
+			writel_relaxed(val, reg);
 
-			reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(bank));
+			reg = soc->pad_base + GPIO_PAD_PULL_EN_OFFSET(bank);
+			val = readl_relaxed(reg);
 			if (CONF_TO_PULL_CLR(config))
-				amba_clrbitsl(reg, 1 << offset);
+				writel_relaxed(val & ~(0x1 << offset), reg);
 			else
-				amba_setbitsl(reg, 1 << offset);
+				writel_relaxed(val | (0x1 << offset), reg);
 		}
 
 		if (CFG_DS_PRESENT(config)) {
-			amba_clrbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), 1 << offset);
-			amba_clrbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), 1 << offset);
+			reg = soc->ds_base + GPIO_DS_OFFSET(bank);
+			val = readl_relaxed(reg);
+			writel_relaxed(val & ~(0x1 << offset), reg);
+
+			reg = soc->ds_base + GPIO_DS_OFFSET(bank) + 4;
+			val = readl_relaxed(reg);
+			writel_relaxed(val & ~(0x1 << offset), reg);
+
 			/* set bit1 of DS value to DS0 reg, and set bit0 of DS value to DS1 reg,
 			 * because bit[1:0] = 00 is 2mA, 10 is 4mA, 01 is 8mA, 11 is 12mA */
-			val = (CONF_TO_DS_VAL(config) >> 1) & 0x1;
-			amba_setbitsl(RCT_REG(GPIO_DS0_OFFSET(bank)), val << offset);
-			val = CONF_TO_DS_VAL(config) & 0x1;
-			amba_setbitsl(RCT_REG(GPIO_DS1_OFFSET(bank)), val << offset);
+			reg = soc->ds_base + GPIO_DS_OFFSET(bank);
+			val = readl_relaxed(reg);
+			val |= ((CONF_TO_DS_VAL(config) >> 1) & 0x1) << offset;
+			writel_relaxed(val, reg);
+
+			reg = soc->ds_base + GPIO_DS_OFFSET(bank) + 4;
+			val = readl_relaxed(reg);
+			val |= (CONF_TO_DS_VAL(config) & 0x1) << offset;
+			writel_relaxed(val, reg);
 		}
 	}
 
@@ -582,24 +615,24 @@ static int amb_pinctrl_register(struct amb_pinctrl_soc_data *soc)
 {
 	struct pinctrl_pin_desc *pindesc;
 	char *pin_names;
-	int pin, rval;
+	int pin, pin_num, rval;
+
+	pin_num = soc->bank_num * 32;
 
 	/* dynamically populate the pin number and pin name for pindesc */
-	pindesc = devm_kzalloc(soc->dev,
-			sizeof(*pindesc) * AMBGPIO_SIZE, GFP_KERNEL);
+	pindesc = devm_kzalloc(soc->dev, sizeof(*pindesc) * pin_num, GFP_KERNEL);
 	if (!pindesc) {
 		dev_err(soc->dev, "No memory for pin desc\n");
 		return -ENOMEM;
 	}
 
-	pin_names = devm_kzalloc(soc->dev,
-			PIN_NAME_LENGTH * AMBGPIO_SIZE, GFP_KERNEL);
+	pin_names = devm_kzalloc(soc->dev, PIN_NAME_LENGTH * pin_num, GFP_KERNEL);
 	if (!pin_names) {
 		dev_err(soc->dev, "No memory for pin names\n");
 		return -ENOMEM;
 	}
 
-	for (pin = 0; pin < AMBGPIO_SIZE; pin++) {
+	for (pin = 0; pin < pin_num; pin++) {
 		pindesc[pin].number = pin;
 		sprintf(pin_names, "io%d", pin);
 		pindesc[pin].name = pin_names;
@@ -608,7 +641,7 @@ static int amb_pinctrl_register(struct amb_pinctrl_soc_data *soc)
 
 	amb_pinctrl_desc.name = dev_name(soc->dev);
 	amb_pinctrl_desc.pins = pindesc;
-	amb_pinctrl_desc.npins = AMBGPIO_SIZE;
+	amb_pinctrl_desc.npins = pin_num;
 
 	rval = amb_pinctrl_parse_dt(soc);
 	if (rval)
@@ -626,6 +659,7 @@ static int amb_pinctrl_register(struct amb_pinctrl_soc_data *soc)
 static int amb_pinctrl_probe(struct platform_device *pdev)
 {
 	struct amb_pinctrl_soc_data *soc;
+	struct device_node *child;
 	struct resource *res;
 	int i, rval;
 
@@ -636,7 +670,19 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 	}
 	soc->dev = &pdev->dev;
 
-	for (i = 0; i < GPIO_INSTANCES; i++) {
+	child = of_get_child_by_name(pdev->dev.of_node, "gpio");
+	if (!child) {
+		dev_err(&pdev->dev, "no gpio child node\n");
+		return -ENODEV;
+	}
+
+	soc->bank_num = of_irq_count(child);
+	if (soc->bank_num == 0 || soc->bank_num > GPIO_MAX_BANK_NUM) {
+		dev_err(&pdev->dev, "Invalid gpio bank(irq)\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < soc->bank_num; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		if (res == NULL) {
 			dev_err(&pdev->dev, "no mem resource for gpio[%d]!\n", i);
@@ -656,12 +702,34 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 		soc->iomux_base = devm_ioremap(&pdev->dev,
 						res->start, resource_size(res));
 		if (soc->iomux_base == 0) {
-			dev_err(&pdev->dev, "devm_ioremap() failed\n");
+			dev_err(&pdev->dev, "iomux devm_ioremap() failed\n");
 			return -ENOMEM;
 		}
-
-		amb_iomux_base = soc->iomux_base;
 	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "pad");
+	if (res != NULL) {
+		soc->pad_base = devm_ioremap(&pdev->dev,
+						res->start, resource_size(res));
+		if (soc->pad_base == 0) {
+			dev_err(&pdev->dev, "pad devm_ioremap() failed\n");
+			return -ENOMEM;
+		}
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ds");
+	if (res != NULL) {
+		soc->ds_base = devm_ioremap(&pdev->dev,
+						res->start, resource_size(res));
+		if (soc->ds_base == 0) {
+			dev_err(&pdev->dev, "ds devm_ioremap() failed\n");
+			return -ENOMEM;
+		}
+	}
+
+	/* not allowed to use for  non-existed pins */
+	for (i = soc->bank_num * 32; i < GPIO_MAX_BANK_NUM * 32; i++)
+		set_bit(i, soc->used);
 
 	rval = amb_pinctrl_register(soc);
 	if (rval)
@@ -675,33 +743,40 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_PM)
 
-static u32 amb_iomux_pm_reg[GPIO_INSTANCES][3];
-static u32 amb_pull_pm_reg[2][GPIO_INSTANCES];
-static u32 amb_ds_pm_reg[GPIO_INSTANCES][2];
+static u32 amb_iomux_pm_reg[GPIO_MAX_BANK_NUM][3];
+static u32 amb_pull_pm_reg[2][GPIO_MAX_BANK_NUM];
+static u32 amb_ds_pm_reg[GPIO_MAX_BANK_NUM][2];
 
 static int amb_pinctrl_suspend(void)
 {
-	u32 i, j, reg;
+	struct amb_pinctrl_soc_data *soc = amb_pinctrl_soc;
+	void __iomem *reg;
+	u32 i, j;
 
-	for (i = 0; i < GPIO_INSTANCES; i++) {
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(i));
-		amb_pull_pm_reg[0][i] = amba_readl(reg);
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(i));
-		amb_pull_pm_reg[1][i] = amba_readl(reg);
+	if (soc->pad_base) {
+		for (i = 0; i < soc->bank_num; i++) {
+			reg = soc->pad_base + GPIO_PAD_PULL_EN_OFFSET(i);
+			amb_pull_pm_reg[0][i] = readl_relaxed(reg);
+			reg = soc->pad_base + GPIO_PAD_PULL_DIR_OFFSET(i);
+			amb_pull_pm_reg[1][i] = readl_relaxed(reg);
+		}
 	}
 
-	for (i = 0; i < GPIO_INSTANCES; i++) {
-		amb_ds_pm_reg[i][0] = amba_readl(RCT_REG(GPIO_DS0_OFFSET(i)));
-		amb_ds_pm_reg[i][1] = amba_readl(RCT_REG(GPIO_DS1_OFFSET(i)));
+	if (soc->ds_base) {
+		for (i = 0; i < soc->bank_num; i++) {
+			reg = soc->ds_base + GPIO_DS_OFFSET(i);
+			amb_ds_pm_reg[i][0] = readl_relaxed(reg);
+			reg = soc->ds_base + GPIO_DS_OFFSET(i) + 4;
+			amb_ds_pm_reg[i][1] = readl_relaxed(reg);
+		}
 	}
 
-	if (amb_iomux_base == NULL)
-		return 0;
-
-	for (i = 0; i < GPIO_INSTANCES; i++) {
-		for (j = 0; j < 3; j++) {
-			reg = (u32)amb_iomux_base + IOMUX_REG_OFFSET(i, j);
-			amb_iomux_pm_reg[i][j] = amba_readl(reg);
+	if (soc->iomux_base) {
+		for (i = 0; i < soc->bank_num; i++) {
+			for (j = 0; j < 3; j++) {
+				reg = soc->iomux_base + IOMUX_REG_OFFSET(i, j);
+				amb_iomux_pm_reg[i][j] = readl_relaxed(reg);
+			}
 		}
 	}
 
@@ -710,32 +785,38 @@ static int amb_pinctrl_suspend(void)
 
 static void amb_pinctrl_resume(void)
 {
-	u32 i, j, reg;
+	struct amb_pinctrl_soc_data *soc = amb_pinctrl_soc;
+	void __iomem *reg;
+	u32 i, j;
 
-	for (i = 0; i < GPIO_INSTANCES; i++) {
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_EN_OFFSET(i));
-		amba_writel(reg, amb_pull_pm_reg[0][i]);
-		reg = GPIO_PAD_PULL_REG(GPIO_PAD_PULL_DIR_OFFSET(i));
-		amba_writel(reg, amb_pull_pm_reg[1][i]);
-	}
-
-	for (i = 0; i < GPIO_INSTANCES; i++) {
-		amba_writel(RCT_REG(GPIO_DS0_OFFSET(i)), amb_ds_pm_reg[i][0]);
-		amba_writel(RCT_REG(GPIO_DS1_OFFSET(i)), amb_ds_pm_reg[i][1]);
-	}
-
-	if (amb_iomux_base == NULL)
-		return;
-
-	for (i = 0; i < GPIO_INSTANCES; i++) {
-		for (j = 0; j < 3; j++) {
-			reg = (u32)amb_iomux_base + IOMUX_REG_OFFSET(i, j);
-			amba_writel(reg, amb_iomux_pm_reg[i][j]);
+	if (soc->pad_base) {
+		for (i = 0; i < soc->bank_num; i++) {
+			reg = soc->pad_base + GPIO_PAD_PULL_EN_OFFSET(i);
+			writel_relaxed(amb_pull_pm_reg[0][i], reg);
+			reg = soc->pad_base + GPIO_PAD_PULL_DIR_OFFSET(i);
+			writel_relaxed(amb_pull_pm_reg[1][i], reg);
 		}
 	}
 
-	amba_writel(amb_iomux_base + IOMUX_CTRL_SET_OFFSET, 0x1);
-	amba_writel(amb_iomux_base + IOMUX_CTRL_SET_OFFSET, 0x0);
+	if (soc->ds_base) {
+		for (i = 0; i < soc->bank_num; i++) {
+			reg = soc->ds_base + GPIO_DS_OFFSET(i);
+			writel_relaxed(amb_ds_pm_reg[i][0], reg);
+			reg = soc->ds_base + GPIO_DS_OFFSET(i) + 4;
+			writel_relaxed(amb_ds_pm_reg[i][1], reg);
+		}
+	}
+
+	if (soc->iomux_base) {
+		for (i = 0; i < soc->bank_num; i++) {
+			for (j = 0; j < 3; j++) {
+				reg = soc->iomux_base + IOMUX_REG_OFFSET(i, j);
+				writel_relaxed(amb_iomux_pm_reg[i][j], reg);
+			}
+		}
+		writel_relaxed(0x1, soc->iomux_base + IOMUX_CTRL_SET_OFFSET);
+		writel_relaxed(0x0, soc->iomux_base + IOMUX_CTRL_SET_OFFSET);
+	}
 }
 
 static struct syscore_ops amb_pinctrl_syscore_ops = {

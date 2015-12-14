@@ -49,7 +49,6 @@
 #include <plat/udc.h>
 #include <plat/ahci.h>
 #include <plat/wdt.h>
-#include <plat/pinctrl.h>
 #include <linux/reboot.h>
 
 /* ==========================================================================*/

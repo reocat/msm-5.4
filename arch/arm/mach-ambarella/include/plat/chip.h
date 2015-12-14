@@ -24,10 +24,6 @@
 #ifndef __PLAT_AMBARELLA_CHIP_H__
 #define __PLAT_AMBARELLA_CHIP_H__
 
-#ifndef IOMEM
-#define IOMEM(x)	((void __force __iomem *)(x))
-#endif
-
 /* ==========================================================================*/
 #define A5S		(5100)
 #define S2		(9000)
@@ -70,10 +66,44 @@
 
 /* ==========================================================================*/
 
+#ifndef IOMEM
+#define IOMEM(x)	((void __force __iomem *)(x))
+#endif
+
+#if (CHIP_REV == A5S)
+#define DEFAULT_MEM_START		(0xc0000000)
+#else
+#define DEFAULT_MEM_START		(0x00000000)
+#endif
+
+/* Physical Address and Size */
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define AHB_PHYS_BASE			(0x60000000)
+#define APB_PHYS_BASE			(0x70000000)
+#else
+#define AHB_PHYS_BASE			(0xe0000000)
+#define APB_PHYS_BASE			(0xe8000000)
+#endif
+#define AHB_SIZE			(0x01000000)
+#define APB_SIZE			(0x01000000)
+
+#define AXI_PHYS_BASE			(0xf0000000)
+#define AXI_SIZE			(0x00030000)
+
+#define DRAMC_PHYS_BASE			(0xdffe0000)
+#define DRAMC_SIZE			(0x00020000)
+
+#define DBGBUS_PHYS_BASE		(0xec000000)
+#define DBGBUS_SIZE			(0x00200000)
+
+#define DBGFMEM_PHYS_BASE		(0xee000000)
+#define DBGFMEM_SIZE			(0x01000000)
+
+/* ==========================================================================*/
+
 #ifndef __ASSEMBLER__
 
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
-extern u32 ambarella_get_poc(void);
 
 #endif
 

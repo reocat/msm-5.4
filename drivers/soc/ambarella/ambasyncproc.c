@@ -24,9 +24,8 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/proc_fs.h>
-
+#include <plat/chip.h>
 #include <plat/ambasyncproc.h>
-#include <mach/hardware.h>
 
 #define GET_PROC_DATA_FROM_FILEP(filp)	\
 	(struct amb_async_proc_info *)(PDE_DATA(filp->f_path.dentry->d_inode))

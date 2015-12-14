@@ -27,10 +27,7 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
-
-#include <mach/hardware.h>
 #include <mach/init.h>
-
 #include <plat/ambcache.h>
 #include <plat/gdma.h>
 

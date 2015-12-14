@@ -32,9 +32,10 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
-#include <plat/pinctrl.h>
 #include <plat/gpio.h>
 #include <plat/service.h>
+
+#define GPIO_MAX_BANK_NUM		8
 
 struct amb_gpio_bank {
 	void __iomem *regbase;
@@ -54,8 +55,8 @@ struct amb_gpio_bank {
 
 struct amb_gpio_chip {
 	void __iomem			*iomux_base;
-	struct amb_gpio_bank		*bank;
-	int				num_bank;
+	struct amb_gpio_bank		bank[GPIO_MAX_BANK_NUM];
+	int				bank_num;
 	struct gpio_chip		*gc;
 	struct irq_domain		*domain;
 	struct ambarella_service	gpio_service;
@@ -87,10 +88,10 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 	regbase = amb_gpio->bank[bank].regbase;
 	mask = (0x1 << offset);
 
-	amba_writel(regbase + GPIO_MASK_OFFSET, mask);
+	writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
 	if (value == GPIO_LOW)
 		mask = 0;
-	amba_writel(regbase + GPIO_DATA_OFFSET, mask);
+	writel_relaxed(mask, regbase + GPIO_DATA_OFFSET);
 }
 
 /* gpiolib gpio_get callback function */
@@ -105,8 +106,8 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 	regbase = amb_gpio->bank[bank].regbase;
 	mask = (0x1 << offset);
 
-	amba_writel(regbase + GPIO_MASK_OFFSET, mask);
-	data = amba_readl(regbase + GPIO_DATA_OFFSET);
+	writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
+	data = readl_relaxed(regbase + GPIO_DATA_OFFSET);
 	data = (data >> offset) & 0x1;
 
 	return (data ? GPIO_HIGH : GPIO_LOW);
@@ -156,25 +157,24 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 			bank = PINID_TO_BANK(i);
 			regbase = amb_gpio->bank[bank].regbase;
 
-			afsel = amba_readl(regbase + GPIO_AFSEL_OFFSET);
-			dir = amba_readl(regbase + GPIO_DIR_OFFSET);
-			mask = amba_readl(regbase + GPIO_MASK_OFFSET);
-			amba_writel(regbase + GPIO_MASK_OFFSET, ~afsel);
-			data = amba_readl(regbase + GPIO_DATA_OFFSET);
-			amba_writel(regbase + GPIO_MASK_OFFSET, mask);
+			afsel = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
+			dir = readl_relaxed(regbase + GPIO_DIR_OFFSET);
+			mask = readl_relaxed(regbase + GPIO_MASK_OFFSET);
+			writel_relaxed(~afsel, regbase + GPIO_MASK_OFFSET);
+			data = readl_relaxed(regbase + GPIO_DATA_OFFSET);
+			writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
 
 			seq_printf(s, "\nGPIO[%d]:\t[%d - %d]\n",
 				bank, i, i + GPIO_BANK_SIZE - 1);
-			seq_printf(s, "GPIO_BASE:\t0x%08X\n", (u32)regbase);
 			seq_printf(s, "GPIO_AFSEL:\t0x%08X\n", afsel);
 			seq_printf(s, "GPIO_DIR:\t0x%08X\n", dir);
 			seq_printf(s, "GPIO_MASK:\t0x%08X:0x%08X\n", mask, ~afsel);
 			seq_printf(s, "GPIO_DATA:\t0x%08X\n", data);
 
 			if (iomux_base != NULL) {
-				iomux0 = amba_readl(iomux_base + bank * 12);
-				iomux1 = amba_readl(iomux_base + bank * 12 + 4);
-				iomux2 = amba_readl(iomux_base + bank * 12 + 8);
+				iomux0 = readl_relaxed(iomux_base + bank * 12);
+				iomux1 = readl_relaxed(iomux_base + bank * 12 + 4);
+				iomux2 = readl_relaxed(iomux_base + bank * 12 + 8);
 				seq_printf(s, "IOMUX_REG%d_0:\t0x%08X\n", bank, iomux0);
 				seq_printf(s, "IOMUX_REG%d_1:\t0x%08X\n", bank, iomux1);
 				seq_printf(s, "IOMUX_REG%d_2:\t0x%08X\n", bank, iomux2);
@@ -212,7 +212,7 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 static struct gpio_chip amb_gc = {
 	.label			= "ambarella-gpio",
 	.base			= 0,
-	.ngpio			= AMBGPIO_SIZE,
+	.ngpio			= 0, /* assigned in probe */
 	.request		= amb_gpio_request,
 	.free			= amb_gpio_free,
 	.direction_input	= amb_gpio_direction_input,
@@ -228,22 +228,24 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
 	/* make sure the pin is in gpio mode */
 	if (gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
 		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
 
-	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
-	amba_setbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
+	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
+	writel_relaxed(ie | (0x1 << offset), regbase + GPIO_IE_OFFSET);
 }
 
 static void amb_gpio_irq_disable(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
-	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
-	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+	writel_relaxed(ie & ~(0x1 << offset), regbase + GPIO_IE_OFFSET);
+	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 
 	gpio_free(data->hwirq);
 }
@@ -253,32 +255,35 @@ static void amb_gpio_irq_ack(struct irq_data *data)
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
 
-	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 }
 
 static void amb_gpio_irq_mask(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
-	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
+	writel_relaxed(ie & ~(0x1 << offset), regbase + GPIO_IE_OFFSET);
 }
 
 static void amb_gpio_irq_mask_ack(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
-	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
-	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+	writel_relaxed(ie & ~(0x1 << offset), regbase + GPIO_IE_OFFSET);
+	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 }
 
 static void amb_gpio_irq_unmask(struct irq_data *data)
 {
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
+	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
-	amba_setbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
+	writel_relaxed(ie | (0x1 << offset), regbase + GPIO_IE_OFFSET);
 }
 
 static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
@@ -290,9 +295,9 @@ static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
 
 	mask = ~(0x1 << offset);
 	bit = (0x1 << offset);
-	sense = amba_readl(regbase + GPIO_IS_OFFSET);
-	bothedges = amba_readl(regbase + GPIO_IBE_OFFSET);
-	event = amba_readl(regbase + GPIO_IEV_OFFSET);
+	sense = readl_relaxed(regbase + GPIO_IS_OFFSET);
+	bothedges = readl_relaxed(regbase + GPIO_IBE_OFFSET);
+	event = readl_relaxed(regbase + GPIO_IEV_OFFSET);
 
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -331,11 +336,11 @@ static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
 		return -EINVAL;
 	}
 
-	amba_writel(regbase + GPIO_IS_OFFSET, sense);
-	amba_writel(regbase + GPIO_IBE_OFFSET, bothedges);
-	amba_writel(regbase + GPIO_IEV_OFFSET, event);
+	writel_relaxed(sense, regbase + GPIO_IS_OFFSET);
+	writel_relaxed(bothedges, regbase + GPIO_IBE_OFFSET);
+	writel_relaxed(event, regbase + GPIO_IEV_OFFSET);
 	/* clear obsolete irq */
-	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 
 	return 0;
 }
@@ -400,15 +405,15 @@ static void amb_gpio_handle_irq(struct irq_desc *desc)
 	irq = irq_desc_get_irq(desc);
 
 	/* find the GPIO bank generating this irq */
-	for (i = 0; i < amb_gpio->num_bank; i++) {
+	for (i = 0; i < amb_gpio->bank_num; i++) {
 		if (amb_gpio->bank[i].irq == irq)
 			break;
 	}
 
-	if (i == amb_gpio->num_bank)
+	if (i == amb_gpio->bank_num)
 		return;
 
-	gpio_mis = amba_readl(amb_gpio->bank[i].regbase + GPIO_MIS_OFFSET);
+	gpio_mis = readl_relaxed(amb_gpio->bank[i].regbase + GPIO_MIS_OFFSET);
 	if (gpio_mis) {
 		gpio_hwirq = i * GPIO_BANK_SIZE + ffs(gpio_mis) - 1;
 		gpio_irq = irq_find_mapping(amb_gpio->domain, gpio_hwirq);
@@ -432,22 +437,15 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	amb_gpio->num_bank = of_irq_count(np);
-	if (amb_gpio->num_bank == 0) {
+	amb_gpio->bank_num = of_irq_count(np);
+	if (amb_gpio->bank_num == 0) {
 		dev_err(&pdev->dev, "Invalid gpio bank num(irq)\n");
 		return -EINVAL;
 	}
 
-	amb_gpio->bank = devm_kzalloc(&pdev->dev,
-		amb_gpio->num_bank * sizeof(struct amb_gpio_bank), GFP_KERNEL);
-	if (!amb_gpio->bank) {
-		dev_err(&pdev->dev, "failed to allocate memory for bank\n");
-		return -ENOMEM;
-	}
-
 	parent = of_get_parent(np);
 
-	for (i = 0; i < amb_gpio->num_bank; i++) {
+	for (i = 0; i < amb_gpio->bank_num; i++) {
 		bank = &amb_gpio->bank[i];
 		bank->regbase = of_iomap(parent, i);
 		if (bank->regbase == NULL) {
@@ -455,13 +453,13 @@ static int amb_gpio_probe(struct platform_device *pdev)
 			return -ENOMEM;
 		}
 
-		amba_writel(bank->regbase + GPIO_ENABLE_OFFSET, 0xffffffff);
-
 		bank->irq = irq_of_parse_and_map(np, i);
 		if (bank->irq == 0) {
 			dev_err(&pdev->dev, "no irq for gpio[%d]!\n", i);
 			return -ENXIO;
 		}
+
+		writel_relaxed(0xffffffff, bank->regbase + GPIO_ENABLE_OFFSET);
 	}
 
 	/* iomux_base will get NULL if not existed */
@@ -471,6 +469,7 @@ static int amb_gpio_probe(struct platform_device *pdev)
 
 	amb_gpio->gc = &amb_gc;
 	amb_gpio->gc->dev = &pdev->dev;
+	amb_gpio->gc->ngpio = amb_gpio->bank_num * 32;
 	rval = gpiochip_add(amb_gpio->gc);
 	if (rval) {
 		dev_err(&pdev->dev,
@@ -486,7 +485,7 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		return -ENOSYS;
 	}
 
-	for (i = 0; i < amb_gpio->num_bank; i++) {
+	for (i = 0; i < amb_gpio->bank_num; i++) {
 		irq_set_irq_type(amb_gpio->bank[i].irq, IRQ_TYPE_LEVEL_HIGH);
 		irq_set_handler_data(amb_gpio->bank[i].irq, amb_gpio);
 		irq_set_chained_handler(amb_gpio->bank[i].irq, amb_gpio_handle_irq);
@@ -517,20 +516,20 @@ static int amb_gpio_irq_suspend(void)
 		return -ENODEV;
 	}
 
-	for (i = 0; i < amb_gpio->num_bank; i++) {
+	for (i = 0; i < amb_gpio->bank_num; i++) {
 		bank = &amb_gpio->bank[i];
-		bank->afsel = amba_readl(bank->regbase + GPIO_AFSEL_OFFSET);
-		bank->dir = amba_readl(bank->regbase + GPIO_DIR_OFFSET);
-		bank->is = amba_readl(bank->regbase + GPIO_IS_OFFSET);
-		bank->ibe = amba_readl(bank->regbase + GPIO_IBE_OFFSET);
-		bank->iev = amba_readl(bank->regbase + GPIO_IEV_OFFSET);
-		bank->ie = amba_readl(bank->regbase + GPIO_IE_OFFSET);
+		bank->afsel = readl_relaxed(bank->regbase + GPIO_AFSEL_OFFSET);
+		bank->dir = readl_relaxed(bank->regbase + GPIO_DIR_OFFSET);
+		bank->is = readl_relaxed(bank->regbase + GPIO_IS_OFFSET);
+		bank->ibe = readl_relaxed(bank->regbase + GPIO_IBE_OFFSET);
+		bank->iev = readl_relaxed(bank->regbase + GPIO_IEV_OFFSET);
+		bank->ie = readl_relaxed(bank->regbase + GPIO_IE_OFFSET);
 		bank->mask = ~bank->afsel;
-		amba_writel(bank->regbase + GPIO_MASK_OFFSET, bank->mask);
-		bank->data = amba_readl(bank->regbase + GPIO_DATA_OFFSET);
+		writel_relaxed(bank->mask, bank->regbase + GPIO_MASK_OFFSET);
+		bank->data = readl_relaxed(bank->regbase + GPIO_DATA_OFFSET);
 
 		if (bank->irq_wake_mask) {
-			amba_writel(bank->regbase + GPIO_IE_OFFSET, bank->irq_wake_mask);
+			writel_relaxed(bank->irq_wake_mask, bank->regbase + GPIO_IE_OFFSET);
 			pr_info("gpio_irq[%p]: irq_wake[0x%08X]\n",
 						bank->regbase, bank->irq_wake_mask);
 		}
@@ -551,17 +550,17 @@ static void amb_gpio_irq_resume(void)
 		return;
 	}
 
-	for (i = 0; i < amb_gpio->num_bank; i++) {
+	for (i = 0; i < amb_gpio->bank_num; i++) {
 		bank = &amb_gpio->bank[i];
-		amba_writel(bank->regbase + GPIO_AFSEL_OFFSET, bank->afsel);
-		amba_writel(bank->regbase + GPIO_DIR_OFFSET, bank->dir);
-		amba_writel(bank->regbase + GPIO_MASK_OFFSET, bank->mask);
-		amba_writel(bank->regbase + GPIO_DATA_OFFSET, bank->data);
-		amba_writel(bank->regbase + GPIO_IS_OFFSET, bank->is);
-		amba_writel(bank->regbase + GPIO_IBE_OFFSET, bank->ibe);
-		amba_writel(bank->regbase + GPIO_IEV_OFFSET, bank->iev);
-		amba_writel(bank->regbase + GPIO_IE_OFFSET, bank->ie);
-		amba_writel(bank->regbase + GPIO_ENABLE_OFFSET, 0xffffffff);
+		writel_relaxed(bank->afsel, bank->regbase + GPIO_AFSEL_OFFSET);
+		writel_relaxed(bank->dir, bank->regbase + GPIO_DIR_OFFSET);
+		writel_relaxed(bank->mask, bank->regbase + GPIO_MASK_OFFSET);
+		writel_relaxed(bank->data, bank->regbase + GPIO_DATA_OFFSET);
+		writel_relaxed(bank->is, bank->regbase + GPIO_IS_OFFSET);
+		writel_relaxed(bank->ibe, bank->regbase + GPIO_IBE_OFFSET);
+		writel_relaxed(bank->iev, bank->regbase + GPIO_IEV_OFFSET);
+		writel_relaxed(bank->ie, bank->regbase + GPIO_IE_OFFSET);
+		writel_relaxed(0xffffffff, bank->regbase + GPIO_ENABLE_OFFSET);
 	}
 }
 

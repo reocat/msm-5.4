@@ -104,16 +104,6 @@
 #define GPIO_PAD_PULL_DIR_5_OFFSET	0x10C
 #define GPIO_PAD_PULL_DIR_6_OFFSET	0x110
 
-#define GPIO_PAD_PULL_EN_OFFSET(bank)	((bank) >= 5 ? \
-					(0x100 + (((bank) - 5) * 4)) : \
-					(0x80 + ((bank) * 4)))
-#define GPIO_PAD_PULL_DIR_OFFSET(bank)	((bank) >= 5 ? \
-					(0x10C + (((bank) - 5) * 4)) : \
-					(0x94 + ((bank) * 4)))
-
-#define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
-#define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
-
 /* ==========================================================================*/
 #define GPIO_DATA_OFFSET		0x00
 #define GPIO_DIR_OFFSET			0x04
@@ -172,8 +162,6 @@
 #endif
 #define EXT_GPIO(x)			(AMBGPIO_SIZE + x)
 
-#define ARCH_NR_GPIOS			EXT_GPIO(CONFIG_AMBARELLA_EXT_GPIO_NUM)
-
 /* ==========================================================================*/
 #define GPIO(x)				(x)
 
@@ -192,6 +180,16 @@
 /* ==========================================================================*/
 
 #ifndef __ASSEMBLER__
+
+/* pins alternate function */
+enum amb_pin_altfunc {
+	AMB_ALTFUNC_GPIO = 0,
+	AMB_ALTFUNC_HW_1,
+	AMB_ALTFUNC_HW_2,
+	AMB_ALTFUNC_HW_3,
+	AMB_ALTFUNC_HW_4,
+	AMB_ALTFUNC_HW_5,
+};
 
 /* gpio service for private operation */
 enum ambsvc_gpio_service_id {

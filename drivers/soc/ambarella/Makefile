@@ -17,7 +17,7 @@
 #
 
 obj-y += init_misc.o event.o service.o highres_timer.o service.o
-obj-y += ambcache.o ambasyncproc.o ambsyncproc.o ambuevent.o
+obj-y += ambasyncproc.o ambsyncproc.o ambuevent.o
 
 obj-$(CONFIG_AMBARELLA_ENABLE_GDMA) += gdma.o
 

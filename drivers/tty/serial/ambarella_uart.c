@@ -45,7 +45,6 @@
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
-#include <mach/hardware.h>
 #include <plat/uart.h>
 #include <plat/dma.h>
 
@@ -94,17 +93,18 @@ static void __serial_ambarella_stop_tx(struct uart_port *port, u32 tx_fifo_fix)
 	u32 ier, iir;
 
 	if (tx_fifo_fix) {
-		ier = amba_readl(port->membase + UART_IE_OFFSET);
+		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
 		if ((ier & UART_IE_PTIME) != UART_IE_PTIME)
-			amba_writel(port->membase + UART_IE_OFFSET,
-					ier | (UART_IE_PTIME | UART_IE_ETBEI));
+			writel_relaxed(ier | UART_IE_PTIME | UART_IE_ETBEI,
+					port->membase + UART_IE_OFFSET);
 
-		iir = amba_readl(port->membase + UART_II_OFFSET);
-		amba_writel(port->membase + UART_IE_OFFSET,
-			ier & ~(UART_IE_PTIME | UART_IE_ETBEI));
+		iir = readl_relaxed(port->membase + UART_II_OFFSET);
+		writel_relaxed(ier & ~(UART_IE_PTIME | UART_IE_ETBEI),
+				port->membase + UART_IE_OFFSET);
 		(void)(iir);
 	} else {
-		amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+		writel_relaxed(ier & ~UART_IE_ETBEI, port->membase + UART_IE_OFFSET);
 	}
 }
 
@@ -113,16 +113,16 @@ static u32 __serial_ambarella_read_ms(struct uart_port *port, u32 tx_fifo_fix)
 	u32 ier, ms;
 
 	if (tx_fifo_fix) {
-		ier = amba_readl(port->membase + UART_IE_OFFSET);
+		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
 		if ((ier & UART_IE_EDSSI) != UART_IE_EDSSI)
-			amba_writel(port->membase + UART_IE_OFFSET,
-					ier | UART_IE_EDSSI);
+			writel_relaxed(ier | UART_IE_EDSSI,
+					port->membase + UART_IE_OFFSET);
 
-		ms = amba_readl(port->membase + UART_MS_OFFSET);
+		ms = readl_relaxed(port->membase + UART_MS_OFFSET);
 		if ((ier & UART_IE_EDSSI) != UART_IE_EDSSI)
-			amba_writel(port->membase + UART_IE_OFFSET, ier);
+			writel_relaxed(ier, port->membase + UART_IE_OFFSET);
 	} else {
-		ms = amba_readl(port->membase + UART_MS_OFFSET);
+		ms = readl_relaxed(port->membase + UART_MS_OFFSET);
 	}
 
 	return ms;
@@ -130,22 +130,24 @@ static u32 __serial_ambarella_read_ms(struct uart_port *port, u32 tx_fifo_fix)
 
 static void __serial_ambarella_enable_ms(struct uart_port *port)
 {
-	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
+	u32 ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+	writel_relaxed(ier | UART_IE_EDSSI, port->membase + UART_IE_OFFSET);
 }
 
 static void __serial_ambarella_disable_ms(struct uart_port *port)
 {
-	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_EDSSI);
+	u32 ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+	writel_relaxed(ier & ~UART_IE_EDSSI, port->membase + UART_IE_OFFSET);
 }
 
 static inline void wait_for_tx(struct uart_port *port)
 {
 	u32 ls;
 
-	ls = amba_readl(port->membase + UART_LS_OFFSET);
+	ls = readl_relaxed(port->membase + UART_LS_OFFSET);
 	while ((ls & UART_LS_TEMT) != UART_LS_TEMT) {
 		cpu_relax();
-		ls = amba_readl(port->membase + UART_LS_OFFSET);
+		ls = readl_relaxed(port->membase + UART_LS_OFFSET);
 	}
 }
 
@@ -153,16 +155,16 @@ static inline void wait_for_rx(struct uart_port *port)
 {
 	u32 ls;
 
-	ls = amba_readl(port->membase + UART_LS_OFFSET);
+	ls = readl_relaxed(port->membase + UART_LS_OFFSET);
 	while ((ls & UART_LS_DR) != UART_LS_DR) {
 		cpu_relax();
-		ls = amba_readl(port->membase + UART_LS_OFFSET);
+		ls = readl_relaxed(port->membase + UART_LS_OFFSET);
 	}
 }
 
 static inline int tx_fifo_is_full(struct uart_port *port)
 {
-	return !(amba_readl(port->membase + UART_US_OFFSET) & UART_US_TFNF);
+	return !(readl_relaxed(port->membase + UART_US_OFFSET) & UART_US_TFNF);
 }
 
 /* ==========================================================================*/
@@ -176,18 +178,16 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 		clk_set_rate(amb_port->uart_pll, 24000000);
 		port->uartclk = clk_get_rate(amb_port->uart_pll);
 		/* reset the whole UART only once */
-		amba_writel(port->membase + UART_SRR_OFFSET, 0x01);
+		writel_relaxed(0x01, port->membase + UART_SRR_OFFSET);
 		mdelay(1);
-		amba_writel(port->membase + UART_SRR_OFFSET, 0x00);
+		writel_relaxed(0x00, port->membase + UART_SRR_OFFSET);
 	}
 
-	amba_writel(port->membase + UART_IE_OFFSET,
-		DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME);
-	amba_writel(port->membase + UART_FC_OFFSET,
-		UART_FC_FIFOE | UART_FC_RX_2_TO_FULL |
-		UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR);
-	amba_writel(port->membase + UART_IE_OFFSET,
-		DEFAULT_AMBARELLA_UART_IER);
+	writel_relaxed(DEFAULT_AMBARELLA_UART_IER | UART_IE_PTIME,
+			port->membase + UART_IE_OFFSET);
+	writel_relaxed(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY |
+			UART_FC_XMITR | UART_FC_RCVRR, port->membase + UART_FC_OFFSET);
+	writel_relaxed(DEFAULT_AMBARELLA_UART_IER, port->membase + UART_IE_OFFSET);
 
 	if (amb_port->txdma_used || amb_port->rxdma_used) {
 		/* we must use 14bytes as trigger, because if we use 8bytes, FIFO may
@@ -196,12 +196,11 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 		* can't be trigged after, we don't have chance to push the data that dma has
 		* transfered any more.
 		*/
-		amba_writel(port->membase + UART_FC_OFFSET,
-			UART_FC_FIFOE | UART_FC_RX_2_TO_FULL |
-			UART_FC_TX_EMPTY | UART_FC_XMITR |
-			UART_FC_RCVRR |UART_FCR_DMA_SELECT);
-		amba_writel(port->membase + UART_DMAE_OFFSET,
-			(amb_port->txdma_used << 1) | amb_port->rxdma_used);
+		writel_relaxed(UART_FC_FIFOE | UART_FC_RX_2_TO_FULL |
+			UART_FC_TX_EMPTY | UART_FC_XMITR | UART_FC_RCVRR |
+			UART_FCR_DMA_SELECT, port->membase + UART_FC_OFFSET);
+		writel_relaxed((amb_port->txdma_used << 1) | amb_port->rxdma_used,
+			port->membase + UART_DMAE_OFFSET);
 	}
 }
 
@@ -211,7 +210,7 @@ static inline void serial_ambarella_receive_chars(struct uart_port *port,
 	u32 ch, flag, ls;
 	int max_count;
 
-	ls = amba_readl(port->membase + UART_LS_OFFSET);
+	ls = readl_relaxed(port->membase + UART_LS_OFFSET);
 	max_count = port->fifosize;
 
 	do {
@@ -249,7 +248,7 @@ static inline void serial_ambarella_receive_chars(struct uart_port *port,
 		}
 
 		if (likely(ls & UART_LS_DR)) {
-			ch = amba_readl(port->membase + UART_RB_OFFSET);
+			ch = readl_relaxed(port->membase + UART_RB_OFFSET);
 			port->icount.rx++;
 			tmo = 0;
 
@@ -259,13 +258,13 @@ static inline void serial_ambarella_receive_chars(struct uart_port *port,
 			uart_insert_char(port, ls, UART_LS_OE, ch, flag);
 		} else {
 			if (tmo) {
-				ch = amba_readl(port->membase + UART_RB_OFFSET);
+				ch = readl_relaxed(port->membase + UART_RB_OFFSET);
 				/* printk(KERN_DEBUG "False TMO get %d\n", ch); */
 			}
 		}
 
 ignore_char:
-		ls = amba_readl(port->membase + UART_LS_OFFSET);
+		ls = readl_relaxed(port->membase + UART_LS_OFFSET);
 	} while ((ls & UART_LS_DR) && (max_count-- > 0));
 
 	spin_unlock(&port->lock);
@@ -282,7 +281,7 @@ static void serial_ambarella_transmit_chars(struct uart_port *port)
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (port->x_char) {
-		amba_writel(port->membase + UART_TH_OFFSET, port->x_char);
+		writel_relaxed(port->x_char, port->membase + UART_TH_OFFSET);
 		port->icount.tx++;
 		port->x_char = 0;
 		return;
@@ -297,7 +296,7 @@ static void serial_ambarella_transmit_chars(struct uart_port *port)
 	while (count-- > 0) {
 		if (!amb_port->less_reg && tx_fifo_is_full(port))
 			break;
-		amba_writel(port->membase + UART_TH_OFFSET, xmit->buf[xmit->tail]);
+		writel_relaxed(xmit->buf[xmit->tail], port->membase + UART_TH_OFFSET);
 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
 		port->icount.tx++;
 		if (uart_circ_empty(xmit))
@@ -362,8 +361,8 @@ static char serial_ambarella_decode_rx_error(struct ambarella_uart_port *amb_por
 			amb_port->port.icount.brk++;
 			/* If FIFO read error without any data, reset Rx FIFO */
 			if (!(lsr & UART_LSR_DR) && (lsr & UART_LSR_FIFOE))
-				amba_writel(amb_port->port.membase + UART_SRR_OFFSET,
-					UART_FCR_CLEAR_RCVR);
+				writel_relaxed(UART_FCR_CLEAR_RCVR,
+					amb_port->port.membase + UART_SRR_OFFSET);
 		}
 	}
 	return flag;
@@ -377,12 +376,12 @@ static void serial_ambarella_handle_rx_pio(struct ambarella_uart_port *amb_port,
 		unsigned long lsr = 0;
 		unsigned char ch;
 
-		lsr = amba_readl(amb_port->port.membase + UART_LS_OFFSET);
+		lsr = readl_relaxed(amb_port->port.membase + UART_LS_OFFSET);
 		if (!(lsr & UART_LS_DR))
 			break;
 
 		flag = serial_ambarella_decode_rx_error(amb_port, lsr);
-		ch = (unsigned char) amba_readl(amb_port->port.membase + UART_RB_OFFSET);
+		ch = (unsigned char) readl_relaxed(amb_port->port.membase + UART_RB_OFFSET);
 		amb_port->port.icount.rx++;
 
 		if (!uart_handle_sysrq_char(&amb_port->port, ch) && tty)
@@ -438,7 +437,7 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 
 	spin_lock_irqsave(&port->lock, flags);
 
-	ii = amba_readl(port->membase + UART_II_OFFSET);
+	ii = readl_relaxed(port->membase + UART_II_OFFSET);
 	switch (ii & 0x0F) {
 	case UART_II_MODEM_STATUS_CHANGED:
 		serial_ambarella_check_modem_status(port);
@@ -560,11 +559,13 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 {
 	struct ambarella_uart_port *amb_port;
 	struct tty_struct *tty;
+	u32 ier;
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 	tty = tty_port_tty_get(&amb_port->port.state->port);
 
-	amba_setbitsl(port->membase + UART_IE_OFFSET, UART_IE_ETBEI);
+	ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+	writel_relaxed(ier | UART_IE_ETBEI, port->membase + UART_IE_OFFSET);
 
 	if (amb_port->txdma_used) {
 		if (tty->hw_stopped ||amb_port->tx_in_progress)
@@ -674,7 +675,8 @@ static void serial_ambarella_stop_tx(struct uart_port *port)
 
 static void serial_ambarella_stop_rx(struct uart_port *port)
 {
-	amba_clrbitsl(port->membase + UART_IE_OFFSET, UART_IE_ERBFI);
+	u32 ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+	writel_relaxed(ier & ~UART_IE_ERBFI, port->membase + UART_IE_OFFSET);
 }
 
 static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
@@ -683,7 +685,7 @@ static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
 	unsigned long flags;
 
 	spin_lock_irqsave(&port->lock, flags);
-	lsr = amba_readl(port->membase + UART_LS_OFFSET);
+	lsr = readl_relaxed(port->membase + UART_LS_OFFSET);
 	spin_unlock_irqrestore(&port->lock, flags);
 
 	return ((lsr & (UART_LS_TEMT | UART_LS_THRE)) ==
@@ -722,7 +724,7 @@ static void serial_ambarella_set_mctrl(struct uart_port *port,
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (amb_port->msr_used) {
-		mcr = amba_readl(port->membase + UART_MC_OFFSET);
+		mcr = readl_relaxed(port->membase + UART_MC_OFFSET);
 
 		if (mctrl & TIOCM_DTR)
 			mcr_new |= UART_MC_DTR;
@@ -739,23 +741,23 @@ static void serial_ambarella_set_mctrl(struct uart_port *port,
 		if (mcr_new != mcr) {
 			if ((mcr & UART_MC_AFCE) == UART_MC_AFCE) {
 				mcr &= ~UART_MC_AFCE;
-				amba_writel(port->membase + UART_MC_OFFSET,
-					mcr);
+				writel_relaxed(mcr, port->membase + UART_MC_OFFSET);
 			}
-			amba_writel(port->membase + UART_MC_OFFSET, mcr_new);
+			writel_relaxed(mcr_new, port->membase + UART_MC_OFFSET);
 		}
 	}
 }
 
 static void serial_ambarella_break_ctl(struct uart_port *port, int break_state)
 {
+	u32 lcr = readl_relaxed(port->membase + UART_LC_OFFSET);
 	unsigned long flags;
 
 	spin_lock_irqsave(&port->lock, flags);
 	if (break_state != 0)
-		amba_setbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
+		writel_relaxed(lcr | UART_LC_BRK, port->membase + UART_LC_OFFSET);
 	else
-		amba_clrbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
+		writel_relaxed(lcr & ~UART_LC_BRK, port->membase + UART_LC_OFFSET);
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
@@ -909,10 +911,10 @@ static void serial_ambarella_hw_deinit(struct ambarella_uart_port *amb_port)
 	struct uart_port *port = &amb_port->port;
 
 	/* Disable interrupts */
-	amba_writel(port->membase + UART_IE_OFFSET, 0);
+	writel_relaxed(0, port->membase + UART_IE_OFFSET);
 	/* Reset the Rx and Tx FIFOs */
-	amba_writel(port->membase + UART_SRR_OFFSET,
-		UART_FCR_CLEAR_XMIT| UART_FCR_CLEAR_RCVR);
+	writel_relaxed(UART_FCR_CLEAR_XMIT| UART_FCR_CLEAR_RCVR,
+			port->membase + UART_SRR_OFFSET);
 }
 
 static void serial_ambarella_dma_channel_free(struct ambarella_uart_port *amb_port,
@@ -946,6 +948,7 @@ static void serial_ambarella_dma_channel_free(struct ambarella_uart_port *amb_po
 static void serial_ambarella_shutdown(struct uart_port *port)
 {
 	struct ambarella_uart_port *amb_port;
+	u32 lcr;
 	unsigned long flags;
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
@@ -966,7 +969,8 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 	}
 
 	free_irq(port->irq, port);
-	amba_clrbitsl(port->membase + UART_LC_OFFSET, UART_LC_BRK);
+	lcr = readl_relaxed(port->membase + UART_LC_OFFSET);
+	writel_relaxed(lcr & ~UART_LC_BRK, port->membase + UART_LC_OFFSET);
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
@@ -1037,10 +1041,10 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 	else
 		amb_port->mcr |= UART_MC_AFCE;
 
-	amba_writel(port->membase + UART_LC_OFFSET, UART_LC_DLAB);
-	amba_writel(port->membase + UART_DLL_OFFSET, quot & 0xff);
-	amba_writel(port->membase + UART_DLH_OFFSET, (quot >> 8) & 0xff);
-	amba_writel(port->membase + UART_LC_OFFSET, lc);
+	writel_relaxed(UART_LC_DLAB, port->membase + UART_LC_OFFSET);
+	writel_relaxed(quot & 0xff, port->membase + UART_DLL_OFFSET);
+	writel_relaxed((quot >> 8) & 0xff, port->membase + UART_DLH_OFFSET);
+	writel_relaxed(lc, port->membase + UART_LC_OFFSET);
 	if (UART_ENABLE_MS(port, termios->c_cflag))
 		__serial_ambarella_enable_ms(port);
 	else
@@ -1097,7 +1101,7 @@ static void serial_ambarella_poll_put_char(struct uart_port *port,
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 	if (!port->suspended) {
 		wait_for_tx(port);
-		amba_writel(port->membase + UART_TH_OFFSET, chr);
+		writel_relaxed(chr, port->membase + UART_TH_OFFSET);
 	}
 }
 
@@ -1108,7 +1112,7 @@ static int serial_ambarella_poll_get_char(struct uart_port *port)
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 	if (!port->suspended) {
 		wait_for_rx(port);
-		return amba_readl(port->membase + UART_RB_OFFSET);
+		return readl_relaxed(port->membase + UART_RB_OFFSET);
 	}
 	return 0;
 }
@@ -1147,7 +1151,7 @@ static void ambarella_uart_of_enumerate(void);
 static void serial_ambarella_console_putchar(struct uart_port *port, int ch)
 {
 	wait_for_tx(port);
-	amba_writel(port->membase + UART_TH_OFFSET, ch);
+	writel_relaxed(ch, port->membase + UART_TH_OFFSET);
 }
 
 static void serial_ambarella_console_write(struct console *co,

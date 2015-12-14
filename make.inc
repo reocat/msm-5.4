@@ -47,8 +47,10 @@ linux: $(DOT_CONFIG)
 		find $(KERNEL_INSTALL_PATH)/lib/modules/ -name build | xargs -l1 rm -rf; \
 		find $(KERNEL_INSTALL_PATH)/lib/modules/ -name source | xargs -l1 rm -rf; \
 	fi
-	@cp -dpRf $(LINUX_OUT_DIR)/arch/arm/boot/Image $(KERNEL_OUT_DIR)/Image
-	@cp -dpRf $(LINUX_OUT_DIR)/arch/arm/boot/zImage $(KERNEL_OUT_DIR)/zImage
+	@cp -dpRf $(LINUX_OUT_DIR)/arch/$(ARCH)/boot/Image $(KERNEL_OUT_DIR)/Image
+	@if [ -f $(LINUX_OUT_DIR)/arch/$(ARCH)/boot/zImage ]; then \
+		cp -dpRf $(LINUX_OUT_DIR)/arch/$(ARCH)/boot/zImage $(KERNEL_OUT_DIR)/zImage; \
+	fi
 	@echo "Build $@ Done."
 
 $(call add-target-into-build, linux)

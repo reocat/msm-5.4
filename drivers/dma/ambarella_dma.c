@@ -20,6 +20,7 @@
 #include <linux/spinlock.h>
 #include <linux/device.h>
 #include <linux/slab.h>
+#include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
@@ -28,7 +29,6 @@
 #include <linux/of_dma.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
-#include <mach/hardware.h>
 #include <plat/dma.h>
 #include <plat/rct.h>
 #include "dmaengine.h"
@@ -82,7 +82,7 @@ static int ambdma_proc_show(struct seq_file *m, void *v)
 	return 0;
 }
 
-static int ambdma_proc_write(struct file *file,
+static ssize_t ambdma_proc_write(struct file *file,
 	const char __user *buffer, size_t count, loff_t *ppos)
 {
 	struct ambdma_device *amb_dma = PDE_DATA(file_inode(file));
@@ -324,22 +324,24 @@ tasklet_out:
 static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 {
 	struct ambdma_device *amb_dma = dev_data;
+	struct ambdma_chan *amb_chan;
 	u32 i, int_src;
 	irqreturn_t ret = IRQ_NONE;
 
-	int_src = amba_readl(DMA_REG(DMA_INT_OFFSET));
+	int_src = readl(amb_dma->regbase + DMA_INT_OFFSET);
 
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-		spin_lock(&amb_dma->amb_chan[i].lock);
+		amb_chan = &amb_dma->amb_chan[i];
+		spin_lock(&amb_chan->lock);
 		if (int_src & (1 << i)) {
-			amba_writel(DMA_CHAN_STA_REG(i), 0);
-			tasklet_schedule(&amb_dma->amb_chan[i].tasklet);
+			writel(0, dma_chan_sta_reg(amb_chan));
+			tasklet_schedule(&amb_chan->tasklet);
 			ret = IRQ_HANDLED;
 		}
-		spin_unlock(&amb_dma->amb_chan[i].lock);
+		spin_unlock(&amb_chan->lock);
 	}
 
 	return ret;
@@ -349,7 +351,6 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *first, *amb_desc;
-	int id = amb_chan->id;
 
 	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
 		if (amb_chan->force_stop == 0 || amb_dma->support_prs) {
@@ -368,20 +369,23 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 			 * initialized by next transfer */
 			list_move_tail(&first->desc_node, &amb_chan->stopping_list);
 
-			if (amb_dma->support_prs)
-				amba_setbitsl(DMA_REG(DMA_EARLY_END_OFFSET), 0x1 << id);
+			if (amb_dma->support_prs) {
+				u32 val = readl(amb_dma->regbase + DMA_EARLY_END_OFFSET);
+				val |= 0x1 << amb_chan->id;
+				writel(val, amb_dma->regbase + DMA_EARLY_END_OFFSET);
+			}
 		} else {
 			/* Disable DMA: this sequence is not mentioned at APM.*/
-			amba_writel(DMA_CHAN_STA_REG(id), DMA_CHANX_STA_OD);
-			amba_writel(DMA_CHAN_DA_REG(id), amb_dma->dummy_lli_phys);
-			amba_writel(DMA_CHAN_CTR_REG(id),
-				DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI);
+			writel(DMA_CHANX_STA_OD, dma_chan_sta_reg(amb_chan));
+			writel(amb_dma->dummy_lli_phys, dma_chan_da_reg(amb_chan));
+			writel(DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI,
+						dma_chan_ctr_reg(amb_chan));
 			udelay(1);
 			/* avoid to trigger dummy IRQ.*/
-			amba_writel(DMA_CHAN_STA_REG(id), 0x0);
+			writel(0x0, dma_chan_sta_reg(amb_chan));
 			if (ambdma_chan_is_enabled(amb_chan)) {
 				pr_err("%s: stop dma channel(%d) failed\n",
-					__func__, id);
+					__func__, amb_chan->id);
 				return -EIO;
 			}
 			amb_chan->status = AMBDMA_STATUS_IDLE;
@@ -394,11 +398,14 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 static int ambdma_pause_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
+	u32 val;
 
 	if (!amb_dma->support_prs)
 		return -ENXIO;
 
-	amba_setbitsl(DMA_REG(DMA_PAUSE_SET_OFFSET), 1 << amb_chan->id);
+	val = readl(amb_dma->regbase + DMA_PAUSE_SET_OFFSET);
+	val |= 0x1 << amb_chan->id;
+	writel(val, amb_dma->regbase + DMA_PAUSE_SET_OFFSET);
 
 	return 0;
 }
@@ -406,32 +413,32 @@ static int ambdma_pause_channel(struct ambdma_chan *amb_chan)
 static int ambdma_resume_channel(struct ambdma_chan *amb_chan)
 {
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
+	u32 val;
 
 	if (!amb_dma->support_prs)
 		return -ENXIO;
 
-	amba_setbitsl(DMA_REG(DMA_PAUSE_CLR_OFFSET), 1 << amb_chan->id);
+	val = readl(amb_dma->regbase + DMA_PAUSE_CLR_OFFSET);
+	writel(val | (1 << amb_chan->id), amb_dma->regbase + DMA_PAUSE_CLR_OFFSET);
 
 	return 0;
 }
 
 static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *first)
 {
-	int id = amb_chan->id;
-
 	/* if DMA channel is not idle right now, the DMA descriptor
 	 * will be started at ambdma_tasklet(). */
 	if (amb_chan->status > AMBDMA_STATUS_IDLE)
 		return;
 
 	if (ambdma_chan_is_enabled(amb_chan)) {
-		pr_err("%s: channel(%d) should be idle here\n", __func__, id);
+		pr_err("%s: channel(%d) should be idle\n", __func__, amb_chan->id);
 		return;
 	}
 
-	amba_writel(DMA_CHAN_STA_REG(id), 0x0);
-	amba_writel(DMA_CHAN_DA_REG(id), first->txd.phys);
-	amba_writel(DMA_CHAN_CTR_REG(id), DMA_CHANX_CTR_EN | DMA_CHANX_CTR_D);
+	writel(0x0, dma_chan_sta_reg(amb_chan));
+	writel(first->txd.phys, dma_chan_da_reg(amb_chan));
+	writel(DMA_CHANX_CTR_EN | DMA_CHANX_CTR_D, dma_chan_ctr_reg(amb_chan));
 	amb_chan->status = AMBDMA_STATUS_BUSY;
 }
 
@@ -549,7 +556,7 @@ static u32 ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 	 * desc from the dma channel status register, and get the count for
 	 * completed desc from the "rpt" field in desc. */
 	if (first) {
-		count = amba_readl(DMA_CHAN_STA_REG(amb_chan->id));
+		count = readl(dma_chan_sta_reg(amb_chan));
 		count &= AMBARELLA_DMA_MAX_LENGTH;
 
 		count += ambdma_desc_transfer_count(first);
@@ -760,8 +767,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 
 	if (!IS_ALIGNED(buf_addr, 1<<(amb_dma->copy_align)) ||
 		!IS_ALIGNED(period_len, 1<<(amb_dma->copy_align))) {
-		pr_err("%s: buf_addr/period_len is not %dbytes aligned! (%d,%d)\n",
-			__func__, 1<<(amb_dma->copy_align), buf_addr, period_len);
+		pr_err("%s: buf_addr/period_len is not %dbytes aligned!\n",
+			__func__, 1 << amb_dma->copy_align);
 		return NULL;
 	}
 
@@ -915,8 +922,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 
 	if (!IS_ALIGNED(dst, 1<<(amb_dma->copy_align)) ||
 		!IS_ALIGNED(src, 1<<(amb_dma->copy_align))) {
-		pr_err("%s: dst/src is not %dbytes aligned! (%d,%d)\n",
-			__func__, 1<<(amb_dma->copy_align), dst, src);
+		pr_err("%s: dst/src is not %dbytes aligned!\n",
+			__func__, 1 << amb_dma->copy_align);
 		return NULL;
 	}
 
@@ -1019,20 +1026,47 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	struct ambdma_device *amb_dma;
 	struct ambdma_chan *amb_chan;
 	struct device_node *np = pdev->dev.of_node;
+	struct resource *res;
 	const char *prop_name = "dma-trans-type";
 	int val, i, ret = 0;
 
 	/* alloc the amba dma engine struct */
-	amb_dma = kzalloc(sizeof(*amb_dma), GFP_KERNEL);
+	amb_dma = devm_kzalloc(&pdev->dev, sizeof(*amb_dma), GFP_KERNEL);
 	if (amb_dma == NULL) {
 		ret = -ENOMEM;
 		goto ambdma_dma_probe_exit;
 	}
 
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for dma!\n");
+		ret = -ENXIO;
+		goto ambdma_dma_probe_exit;
+	}
+
+	amb_dma->regbase =
+		devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!amb_dma->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		ret = -ENOMEM;
+		goto ambdma_dma_probe_exit;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (res != NULL) {
+		amb_dma->regsel =
+			devm_ioremap(&pdev->dev, res->start, resource_size(res));
+		if (!amb_dma->regsel) {
+			dev_err(&pdev->dev, "devm_ioremap() failed\n");
+			ret = -ENOMEM;
+			goto ambdma_dma_probe_exit;
+		}
+	}
+
 	amb_dma->dma_irq = platform_get_irq(pdev, 0);
 	if (amb_dma->dma_irq < 0) {
 		ret = -EINVAL;
-		goto ambdma_dma_probe_exit1;
+		goto ambdma_dma_probe_exit;
 	}
 
 	/* create a pool of consistent memory blocks for hardware descriptors */
@@ -1041,7 +1075,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	if (!amb_dma->lli_pool) {
 		dev_err(&pdev->dev, "No memory for descriptors dma pool\n");
 		ret = -ENOMEM;
-		goto ambdma_dma_probe_exit1;
+		goto ambdma_dma_probe_exit;
 	}
 
 	/* alloc dummy_lli and dummy_data for terminate usage. */
@@ -1049,14 +1083,14 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 			GFP_KERNEL, &amb_dma->dummy_lli_phys);
 	if (amb_dma->dummy_lli == NULL) {
 		ret = -ENOMEM;
-		goto ambdma_dma_probe_exit2;
+		goto ambdma_dma_probe_exit1;
 	}
 
 	amb_dma->dummy_data = dma_pool_alloc(amb_dma->lli_pool,
 			GFP_KERNEL, &amb_dma->dummy_data_phys);
 	if (amb_dma->dummy_data == NULL) {
 		ret = -ENOMEM;
-		goto ambdma_dma_probe_exit3;
+		goto ambdma_dma_probe_exit2;
 	}
 
 	amb_dma->dummy_lli->attr = DMA_DESC_EOC | DMA_DESC_WM |
@@ -1146,75 +1180,76 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		}
 	}
 
-#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
-	val = 0;
-	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-		switch(i) {
-		case NOR_SPI_TX_DMA_CHAN:
-			val |= NOR_SPI_TX_DMA_REQ_IDX << (i * 4);
-			break;
-		case NOR_SPI_RX_DMA_CHAN:
-			val |= NOR_SPI_RX_DMA_REQ_IDX << (i * 4);
-			break;
-		case SSI1_TX_DMA_CHAN:
-			val |= SSI1_TX_DMA_REQ_IDX << (i * 4);
-			break;
-		case SSI1_RX_DMA_CHAN:
-			val |= SSI1_RX_DMA_REQ_IDX << (i * 4);
-			break;
-		case UART_TX_DMA_CHAN:
-			val |= UART_TX_DMA_REQ_IDX << (i * 4);
-			break;
-		case UART_RX_DMA_CHAN:
-			val |= UART_RX_DMA_REQ_IDX << (i * 4);
-			break;
-		case I2S_RX_DMA_CHAN:
-			val |= I2S_RX_DMA_REQ_IDX << (i * 4);
-			break;
-		case I2S_TX_DMA_CHAN:
-			val |= I2S_TX_DMA_REQ_IDX << (i * 4);
-			break;
+	if (amb_dma->regsel != NULL) {
+		val = 0;
+		for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+			switch(i) {
+			case NOR_SPI_TX_DMA_CHAN:
+				val |= NOR_SPI_TX_DMA_REQ_IDX << (i * 4);
+				break;
+			case NOR_SPI_RX_DMA_CHAN:
+				val |= NOR_SPI_RX_DMA_REQ_IDX << (i * 4);
+				break;
+			case SSI1_TX_DMA_CHAN:
+				val |= SSI1_TX_DMA_REQ_IDX << (i * 4);
+				break;
+			case SSI1_RX_DMA_CHAN:
+				val |= SSI1_RX_DMA_REQ_IDX << (i * 4);
+				break;
+			case UART_TX_DMA_CHAN:
+				val |= UART_TX_DMA_REQ_IDX << (i * 4);
+				break;
+			case UART_RX_DMA_CHAN:
+				val |= UART_RX_DMA_REQ_IDX << (i * 4);
+				break;
+			case I2S_RX_DMA_CHAN:
+				val |= I2S_RX_DMA_REQ_IDX << (i * 4);
+				break;
+			case I2S_TX_DMA_CHAN:
+				val |= I2S_TX_DMA_REQ_IDX << (i * 4);
+				break;
+			}
 		}
+		writel(val, amb_dma->regsel);
 	}
-	amba_writel(AHBSP_DMA_CHANNEL_SEL_REG, val);
-#endif
 
 	/* although FIOS DMA has its own driver, we also init FIOS DMA
 	 * status here, orelse dummy FIOS DMA interrupts may occurred
 	 * without its driver installed. */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
 		/* I2S_RX_DMA_CHAN and I2S_TX_DMA_CHAN may be used
 		 * for fastboot in Amboot */
 		if ((i == I2S_RX_DMA_CHAN || i == I2S_TX_DMA_CHAN)
-			&& ambdma_chan_is_enabled(&amb_dma->amb_chan[i])) {
-			amb_dma->amb_chan[i].status = AMBDMA_STATUS_BUSY;
-			amb_dma->amb_chan[i].force_stop = 1;
+			&& ambdma_chan_is_enabled(amb_chan)) {
+			amb_chan->status = AMBDMA_STATUS_BUSY;
+			amb_chan->force_stop = 1;
 			continue;
 		}
 
-		amba_writel(DMA_CHAN_STA_REG(i), 0);
+		writel(0, dma_chan_sta_reg(amb_chan));
 		val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI;
-		amba_writel(DMA_CHAN_CTR_REG(i), val);
+		writel(val, dma_chan_ctr_reg(amb_chan));
 	}
 
 	ret = request_irq(amb_dma->dma_irq, ambdma_dma_irq_handler,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,
 			dev_name(&pdev->dev), amb_dma);
 	if (ret)
-		goto ambdma_dma_probe_exit4;
+		goto ambdma_dma_probe_exit3;
 
 	ret = dma_async_device_register(&amb_dma->dma_slave);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"failed to register slave DMA device: %d\n", ret);
-		goto ambdma_dma_probe_exit5;
+		goto ambdma_dma_probe_exit4;
 	}
 
 	ret = dma_async_device_register(&amb_dma->dma_memcpy);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"failed to register memcpy DMA device: %d\n", ret);
-		goto ambdma_dma_probe_exit6;
+		goto ambdma_dma_probe_exit5;
 	}
 
 	proc_create_data("dma", S_IRUGO|S_IWUSR,
@@ -1227,7 +1262,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev,
 				"failed to register controller\n");
-			goto ambdma_dma_probe_exit6;
+			goto ambdma_dma_probe_exit5;
 		}
 	}
 
@@ -1235,25 +1270,22 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 	return 0;
 
-ambdma_dma_probe_exit6:
+ambdma_dma_probe_exit5:
 	dma_async_device_unregister(&amb_dma->dma_slave);
 
-ambdma_dma_probe_exit5:
+ambdma_dma_probe_exit4:
 	free_irq(amb_dma->dma_irq, amb_dma);
 
-ambdma_dma_probe_exit4:
+ambdma_dma_probe_exit3:
 	dma_pool_free(amb_dma->lli_pool, amb_dma->dummy_data,
 			amb_dma->dummy_data_phys);
 
-ambdma_dma_probe_exit3:
+ambdma_dma_probe_exit2:
 	dma_pool_free(amb_dma->lli_pool, amb_dma->dummy_lli,
 			amb_dma->dummy_lli_phys);
 
-ambdma_dma_probe_exit2:
-	dma_pool_destroy(amb_dma->lli_pool);
-
 ambdma_dma_probe_exit1:
-	kfree(amb_dma);
+	dma_pool_destroy(amb_dma->lli_pool);
 
 ambdma_dma_probe_exit:
 	return ret;

@@ -60,8 +60,10 @@ struct ambarella_nand_info {
 	struct device			*dev;
 	wait_queue_head_t		wq;
 
-	unsigned char __iomem		*regbase;
-	unsigned char __iomem		*fdmaregbase;
+	void __iomem			*regbase;
+	void __iomem			*fdmaregbase;
+	void __iomem			*reg_fiorst;
+	void __iomem			*reg_poc;
 	u32				dmabase;
 	int				suspend;
 	/* dma irq for transferring data between Nand and FIFO */
@@ -192,11 +194,11 @@ static inline int nand_amb_is_sw_bch(struct ambarella_nand_info *nand_info)
 	return nand_info->soft_ecc && nand_info->ecc_bits > 1;
 }
 
-static inline void ambarella_fio_rct_reset(void)
+static inline void ambarella_fio_rct_reset(struct ambarella_nand_info *nand_info)
 {
-	amba_rct_writel(FIO_RESET_REG, FIO_RESET_FIO_RST);
+	writel_relaxed(FIO_RESET_FIO_RST, nand_info->reg_fiorst);
 	mdelay(1);
-	amba_rct_writel(FIO_RESET_REG, 0x0);
+	writel_relaxed(0x0, nand_info->reg_fiorst);
 	mdelay(1);
 }
 
@@ -206,17 +208,17 @@ static void nand_amb_corrected_recovery(struct ambarella_nand_info *nand_info)
 
 	/* FIO reset will just reset FIO registers, but will not affect
 	 * Nand controller. */
-	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
-	fio_dmactr_reg = amba_readl(nand_info->regbase + FIO_DMACTR_OFFSET);
-	ambarella_fio_rct_reset();
-	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
-	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, fio_dmactr_reg);
+	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
+	fio_dmactr_reg = readl_relaxed(nand_info->regbase + FIO_DMACTR_OFFSET);
+	ambarella_fio_rct_reset(nand_info);
+	writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
+	writel_relaxed(fio_dmactr_reg, nand_info->regbase + FIO_DMACTR_OFFSET);
 }
 
 static void nand_amb_enable_dsm(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_dsm_ctr = 0, fio_ctr_reg = 0, dma_dsm_ctr = 0;
-	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 
 	fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
 	dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
@@ -232,24 +234,23 @@ static void nand_amb_enable_dsm(struct ambarella_nand_info *nand_info)
 		fio_dsm_ctr |= FIO_DSM_SPJP_128B;
 		dma_dsm_ctr |= DMA_DSM_SPJP_128B;
 
-		nand_ext_ctr_reg = amba_readl(nand_info->regbase +
+		nand_ext_ctr_reg = readl_relaxed(nand_info->regbase +
 				FLASH_EX_CTR_OFFSET);
 		nand_ext_ctr_reg |= NAND_EXT_CTR_SP_2X;
-		amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
-					nand_ext_ctr_reg);
+		writel_relaxed(nand_ext_ctr_reg, nand_info->regbase + FLASH_EX_CTR_OFFSET);
 	}
 
-	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg | FIO_CTR_RR);
-	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, fio_dsm_ctr);
-	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
-	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, dma_dsm_ctr);
+	writel_relaxed(fio_ctr_reg | FIO_CTR_RR, nand_info->regbase + FIO_CTR_OFFSET);
+	writel_relaxed(fio_dsm_ctr, nand_info->regbase + FIO_DSM_CTR_OFFSET);
+	writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
+	writel_relaxed(dma_dsm_ctr, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 
 }
 
 static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_dsm_ctr = 0, fio_ctr_reg = 0, dma_dsm_ctr = 0;
-	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 
 	fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
 	dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
@@ -264,17 +265,16 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 		fio_dsm_ctr |= FIO_DSM_SPJP_128B;
 		dma_dsm_ctr |= DMA_DSM_SPJP_128B;
 		fio_ctr_reg |= FIO_CTR_ECC_8BIT;
-		nand_ext_ctr_reg = amba_readl(nand_info->regbase +
+		nand_ext_ctr_reg = readl_relaxed(nand_info->regbase +
 				FLASH_EX_CTR_OFFSET);
 		nand_ext_ctr_reg |= NAND_EXT_CTR_SP_2X;
-		amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
-					nand_ext_ctr_reg);
+		writel_relaxed(nand_ext_ctr_reg, nand_info->regbase + FLASH_EX_CTR_OFFSET);
 	}
 
-	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg | FIO_CTR_RR);
-	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, fio_dsm_ctr);
-	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
-	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, dma_dsm_ctr);
+	writel_relaxed(fio_ctr_reg | FIO_CTR_RR, nand_info->regbase + FIO_CTR_OFFSET);
+	writel_relaxed(fio_dsm_ctr, nand_info->regbase + FIO_DSM_CTR_OFFSET);
+	writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
+	writel_relaxed(dma_dsm_ctr, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 
 }
 
@@ -282,7 +282,7 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_ctr_reg = 0;
 
-	fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 	/* Setup FIO Dual Space Mode Control Register */
 	fio_ctr_reg |= FIO_CTR_RS;
 	fio_ctr_reg &= ~(FIO_CTR_CO |
@@ -291,16 +291,15 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 
 	if (nand_info->ecc_bits == 8) {
 		u32 nand_ext_ctr_reg = 0;
-		nand_ext_ctr_reg = amba_readl(nand_info->regbase +
+		nand_ext_ctr_reg = readl_relaxed(nand_info->regbase +
 					FLASH_EX_CTR_OFFSET);
 		nand_ext_ctr_reg &= ~NAND_EXT_CTR_SP_2X;
-		amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
-					nand_ext_ctr_reg);
+		writel_relaxed(nand_ext_ctr_reg, nand_info->regbase + FLASH_EX_CTR_OFFSET);
 	}
-	amba_writel(nand_info->regbase + FIO_CTR_OFFSET, fio_ctr_reg);
+	writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
 
-	amba_writel(nand_info->regbase + FIO_DSM_CTR_OFFSET, 0);
-	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, 0);
+	writel_relaxed(0, nand_info->regbase + FIO_DSM_CTR_OFFSET);
+	writel_relaxed(0, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 }
 
 static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
@@ -360,7 +359,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(tcs) |
 		NAND_TIMING_LSHIFT0BIT(tds);
 
-	amba_writel(nand_info->regbase + FLASH_TIM0_OFFSET, val);
+	writel_relaxed(val, nand_info->regbase + FLASH_TIM0_OFFSET);
 
 	/* timing 1 */
 	t = nand_info->timing[1];
@@ -379,7 +378,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(tch) |
 		NAND_TIMING_LSHIFT0BIT(tdh);
 
-	amba_writel(nand_info->regbase + FLASH_TIM1_OFFSET, val);
+	writel_relaxed(val, nand_info->regbase + FLASH_TIM1_OFFSET);
 
 	/* timing 2 */
 	t = nand_info->timing[2];
@@ -398,7 +397,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(twb) |
 		NAND_TIMING_LSHIFT0BIT(trr);
 
-	amba_writel(nand_info->regbase + FLASH_TIM2_OFFSET, val);
+	writel_relaxed(val, nand_info->regbase + FLASH_TIM2_OFFSET);
 
 	/* timing 3 */
 	t = nand_info->timing[3];
@@ -417,7 +416,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(trb) |
 		NAND_TIMING_LSHIFT0BIT(tceh);
 
-	amba_writel(nand_info->regbase + FLASH_TIM3_OFFSET, val);
+	writel_relaxed(val, nand_info->regbase + FLASH_TIM3_OFFSET);
 
 	/* timing 4 */
 	t = nand_info->timing[4];
@@ -436,7 +435,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(twhr) |
 		NAND_TIMING_LSHIFT0BIT(tir);
 
-	amba_writel(nand_info->regbase + FLASH_TIM4_OFFSET, val);
+	writel_relaxed(val, nand_info->regbase + FLASH_TIM4_OFFSET);
 
 	/* timing 5 */
 	t = nand_info->timing[5];
@@ -453,7 +452,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(trhz) |
 		NAND_TIMING_LSHIFT0BIT(tar);
 
-	amba_writel(nand_info->regbase + FLASH_TIM5_OFFSET, val);
+	writel_relaxed(val, nand_info->regbase + FLASH_TIM5_OFFSET);
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -491,10 +490,10 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
-	val = amba_readl(nand_info->regbase + FIO_STA_OFFSET);
+	val = readl_relaxed(nand_info->regbase + FIO_STA_OFFSET);
 
 	if (val & FIO_STA_FI) {
-		amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0x0);
+		writel_relaxed(0x0, nand_info->regbase + FLASH_INT_OFFSET);
 		atomic_and(~0x1, &nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
@@ -512,23 +511,23 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
-	val = amba_readl(nand_info->regbase + FIO_DMACTR_OFFSET);
+	val = readl_relaxed(nand_info->regbase + FIO_DMACTR_OFFSET);
 
 	if ((val & (FIO_DMACTR_SD | FIO_DMACTR_CF |
 		FIO_DMACTR_XD | FIO_DMACTR_FL)) ==  FIO_DMACTR_FL) {
-		fio_dma_sta = amba_readl(nand_info->regbase + FIO_DMASTA_OFFSET);
+		fio_dma_sta = readl_relaxed(nand_info->regbase + FIO_DMASTA_OFFSET);
 		/* dummy IRQ by S2 chip */
 		if (fio_dma_sta == 0x0)
 			return IRQ_HANDLED;
 
 		nand_info->fio_dma_sta = fio_dma_sta;
 
-		amba_writel(nand_info->regbase + FIO_DMASTA_OFFSET, 0x0);
+		writel_relaxed(0x0, nand_info->regbase + FIO_DMASTA_OFFSET);
 
 		if (nand_amb_is_hw_bch(nand_info)) {
 			nand_info->fio_ecc_sta =
-				amba_readl(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
-			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
+				readl_relaxed(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
+			writel_relaxed(0x0, nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
 		}
 
 		atomic_and(~0x2, &nand_info->irq_flag);
@@ -547,13 +546,13 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
-	int_src = amba_readl(nand_info->fdmaregbase + FDMA_INT_OFFSET);
+	int_src = readl_relaxed(nand_info->fdmaregbase + FDMA_INT_OFFSET);
 
 	if (int_src & (1 << FIO_DMA_CHAN)) {
 		nand_info->dma_status =
-			amba_readl(nand_info->fdmaregbase + FDMA_STA_OFFSET);
-		amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
+			readl_relaxed(nand_info->fdmaregbase + FDMA_STA_OFFSET);
+		writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
+		writel_relaxed(0, nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET);
 
 		atomic_and(~0x4, &nand_info->irq_flag);
 		wake_up(&nand_info->wq);
@@ -579,23 +578,23 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 	ctrl_val &= ~DMA_CHANX_CTR_D;
 
 	/* Setup main external DMA engine transfer */
-	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+	writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
 
-	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->dmabase);
-	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->buf_phys);
+	writel_relaxed(nand_info->dmabase, nand_info->fdmaregbase + FDMA_SRC_OFFSET);
+	writel_relaxed(nand_info->buf_phys, nand_info->fdmaregbase + FDMA_DST_OFFSET);
 
 	if (nand_info->ecc_bits > 1) {
 		/* Setup spare external DMA engine transfer */
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0x0);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET, nand_info->dmabase);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_DST_OFFSET, nand_info->spare_buf_phys);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_CNT_OFFSET, nand_info->slen);
+		writel_relaxed(0x0, nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET);
+		writel_relaxed(nand_info->dmabase, nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET);
+		writel_relaxed(nand_info->spare_buf_phys, nand_info->fdmaregbase + FDMA_SPR_DST_OFFSET);
+		writel_relaxed(nand_info->slen, nand_info->fdmaregbase + FDMA_SPR_CNT_OFFSET);
 	}
 
-	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET, ctrl_val);
+	writel_relaxed(ctrl_val, nand_info->fdmaregbase + FDMA_CTR_OFFSET);
 
 	/* init and enable fio-dma to transfer data between Nand and FIFO */
-	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
+	writel_relaxed(nand_info->addr, nand_info->regbase + FIO_DMAADR_OFFSET);
 
 	size = nand_info->len + nand_info->slen;
 	if (size > 16) {
@@ -609,7 +608,7 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 			FIO_SP_BURST_SIZE |
 			size;
 	}
-	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, ctrl_val);
+	writel(ctrl_val, nand_info->regbase + FIO_DMACTR_OFFSET);
 }
 
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
@@ -635,23 +634,26 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 	ctrl_val &= ~DMA_CHANX_CTR_D;
 
 	/* Setup main external DMA engine transfer */
-	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
+	writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
 
-	amba_writel(nand_info->fdmaregbase + FDMA_SRC_OFFSET, nand_info->buf_phys);
-	amba_writel(nand_info->fdmaregbase + FDMA_DST_OFFSET, nand_info->dmabase);
+	writel_relaxed(nand_info->buf_phys, nand_info->fdmaregbase + FDMA_SRC_OFFSET);
+	writel_relaxed(nand_info->dmabase, nand_info->fdmaregbase + FDMA_DST_OFFSET);
 
 	if (nand_info->ecc_bits > 1) {
 		/* Setup spare external DMA engine transfer */
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0x0);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET, nand_info->spare_buf_phys);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_DST_OFFSET, nand_info->dmabase);
-		amba_writel(nand_info->fdmaregbase + FDMA_SPR_CNT_OFFSET, nand_info->slen);
+		writel_relaxed(0x0, nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET);
+		writel_relaxed(nand_info->spare_buf_phys,
+				nand_info->fdmaregbase + FDMA_SPR_SRC_OFFSET);
+		writel_relaxed(nand_info->dmabase,
+				nand_info->fdmaregbase + FDMA_SPR_DST_OFFSET);
+		writel_relaxed(nand_info->slen,
+				nand_info->fdmaregbase + FDMA_SPR_CNT_OFFSET);
 	}
 
-	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET, ctrl_val);
+	writel_relaxed(ctrl_val, nand_info->fdmaregbase + FDMA_CTR_OFFSET);
 
 	/* init and enable fio-dma to transfer data between Nand and FIFO */
-	amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
+	writel_relaxed(nand_info->addr, nand_info->regbase + FIO_DMAADR_OFFSET);
 
 	size = nand_info->len + nand_info->slen;
 	if (size > 16) {
@@ -661,7 +663,7 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_SP_BURST_SIZE |
 			FIO_DMACTR_RM | size;
 	}
-	amba_writel(nand_info->regbase + FIO_DMACTR_OFFSET, ctrl_val);
+	writel(ctrl_val, nand_info->regbase + FIO_DMACTR_OFFSET);
 }
 
 static int nand_amb_request(struct ambarella_nand_info *nand_info)
@@ -691,8 +693,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	switch (cmd) {
 	case NAND_AMB_CMD_RESET:
 		nand_cmd_reg = NAND_AMB_CMD_RESET;
-		amba_writel(nand_info->regbase + FLASH_CMD_OFFSET,
-			nand_cmd_reg);
+		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
 		break;
 
 	case NAND_AMB_CMD_READID:
@@ -702,47 +703,37 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		if (nand_info->id_cycles_5) {
 			u32 nand_ext_ctr_reg = 0;
 
-			nand_ext_ctr_reg = amba_readl(nand_info->regbase + FLASH_EX_CTR_OFFSET);
+			nand_ext_ctr_reg = readl_relaxed(nand_info->regbase + FLASH_EX_CTR_OFFSET);
 			nand_ext_ctr_reg |= NAND_EXT_CTR_I5;
 			nand_ctr_reg &= ~(NAND_CTR_I4);
-			amba_writel(nand_info->regbase + FLASH_EX_CTR_OFFSET,
-				nand_ext_ctr_reg);
+			writel_relaxed(nand_ext_ctr_reg, nand_info->regbase + FLASH_EX_CTR_OFFSET);
 		}
 
-		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
-			nand_ctr_reg);
-		amba_writel(nand_info->regbase + FLASH_CMD_OFFSET,
-			nand_cmd_reg);
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
+		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
 		break;
 
 	case NAND_AMB_CMD_READSTATUS:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_READSTATUS;
-		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
-			nand_ctr_reg);
-		amba_writel(nand_info->regbase + FLASH_CMD_OFFSET,
-			nand_cmd_reg);
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
+		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
 		break;
 
 	case NAND_AMB_CMD_ERASE:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_ERASE;
-		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
-			nand_ctr_reg);
-		amba_writel(nand_info->regbase + FLASH_CMD_OFFSET,
-			nand_cmd_reg);
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
+		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
 		break;
 
 	case NAND_AMB_CMD_COPYBACK:
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_ctr_reg |= NAND_CTR_CE;
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_COPYBACK;
-		amba_writel(nand_info->regbase + FLASH_CFI_OFFSET,
-			nand_info->dst);
-		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
-			nand_ctr_reg);
-		amba_writel(nand_info->regbase + FLASH_CMD_OFFSET,
-			nand_cmd_reg);
+		writel_relaxed(nand_info->dst, nand_info->regbase + FLASH_CFI_OFFSET);
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
+		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
 		break;
 
 	case NAND_AMB_CMD_READ:
@@ -755,7 +746,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			nand_ctr_reg |= NAND_CTR_SE;
 
 			/* Clean Flash_IO_ecc_rpt_status Register */
-			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
+			writel_relaxed(0x0, nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
 		} else if (nand_amb_is_sw_bch(nand_info)) {
 			/* Setup FIO DMA Control Register */
 			nand_amb_enable_dsm(nand_info);
@@ -768,7 +759,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_info->area == SPARE_ECC)
 				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
-			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 			fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_RS);
 
 			if (nand_info->area == SPARE_ONLY ||
@@ -794,11 +785,10 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				break;
 			}
 
-			amba_writel(nand_info->regbase + FIO_CTR_OFFSET,
-						fio_ctr_reg);
+			writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
 		}
 
-		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET, nand_ctr_reg);
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 		nand_amb_setup_dma_devmem(nand_info);
 
 		break;
@@ -813,7 +803,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			nand_ctr_reg |= NAND_CTR_SE;
 
 			/* Clean Flash_IO_ecc_rpt_status Register */
-			amba_writel(nand_info->regbase + FIO_ECC_RPT_STA_OFFSET, 0x0);
+			writel_relaxed(0x0, nand_info->regbase + FIO_ECC_RPT_STA_OFFSET);
 		} else if (nand_amb_is_sw_bch(nand_info)) {
 			/* Setup FIO DMA Control Register */
 			nand_amb_enable_dsm(nand_info);
@@ -826,7 +816,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_info->area == SPARE_ECC)
 				nand_ctr_reg |= (NAND_CTR_SE | NAND_CTR_SA);
 
-			fio_ctr_reg = amba_readl(nand_info->regbase + FIO_CTR_OFFSET);
+			fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 			fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_RS);
 
 			if (nand_info->area == SPARE_ONLY ||
@@ -849,10 +839,9 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				break;
 			}
 
-			amba_writel(nand_info->regbase + FIO_CTR_OFFSET,
-				fio_ctr_reg);
+			writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
 		}
-		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET, nand_ctr_reg);
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 		nand_amb_setup_dma_memdev(nand_info);
 
 		break;
@@ -944,7 +933,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_info->addr_hi,
 				nand_info->addr,
 				nand_info->dst,
-				nand_info->buf_phys,
+				(u32)nand_info->buf_phys,
 				nand_info->len,
 				nand_info->area,
 				nand_info->ecc,
@@ -965,10 +954,10 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			dev_dbg(nand_info->dev, "%ld jiffies left.\n", timeout);
 
 			if (cmd == NAND_AMB_CMD_READID) {
-				u32 id = amba_readl(nand_info->regbase +
+				u32 id = readl_relaxed(nand_info->regbase +
 					FLASH_ID_OFFSET);
 				if (nand_info->id_cycles_5) {
-					u32 id_5 = amba_readl(nand_info->regbase +
+					u32 id_5 = readl_relaxed(nand_info->regbase +
 					FLASH_EX_ID_OFFSET);
 					nand_info->dmabuf[4] = (unsigned char) (id_5 & 0xFF);
 				}
@@ -977,7 +966,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 				nand_info->dmabuf[2] = (unsigned char) (id >> 8);
 				nand_info->dmabuf[3] = (unsigned char) id;
 			} else if (cmd == NAND_AMB_CMD_READSTATUS) {
-				*nand_info->dmabuf = amba_readl(nand_info->regbase +
+				*nand_info->dmabuf = readl_relaxed(nand_info->regbase +
 					FLASH_STA_OFFSET);
 			}
 		}
@@ -994,7 +983,7 @@ nand_amb_request_done:
 		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
 		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS)) {
 			nand_ctr_reg |= NAND_CTR_WP;
-			amba_writel(nand_info->regbase + FLASH_CTR_OFFSET, nand_ctr_reg);
+			writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 	}
 
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
@@ -1047,7 +1036,7 @@ int nand_amb_erase(struct ambarella_nand_info *nand_info, u32 page_addr)
 
 	/* Fix dual space mode bug */
 	if (nand_info->ecc_bits > 1)
-		amba_writel(nand_info->regbase + FIO_DMAADR_OFFSET, nand_info->addr);
+		writel_relaxed(nand_info->addr, nand_info->regbase + FIO_DMAADR_OFFSET);
 
 	errorCode = nand_amb_request(nand_info);
 
@@ -1529,17 +1518,21 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 
 static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 {
+	u32 val;
+
 	/* reset FIO by RCT */
-	ambarella_fio_rct_reset();
+	ambarella_fio_rct_reset(nand_info);
 
 	/* Exit random read mode */
-	amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET, FIO_CTR_RR);
+	val = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
+	val &= ~FIO_CTR_RR;
+	writel_relaxed(val, nand_info->regbase + FIO_CTR_OFFSET);
 
 	/* init fdma to avoid dummy irq */
-	amba_writel(nand_info->fdmaregbase + FDMA_STA_OFFSET, 0);
-	amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
-	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
-		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+	writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
+	writel_relaxed(0, nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET);
+	writel_relaxed(DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI,
+			nand_info->fdmaregbase + FDMA_CTR_OFFSET);
 
 	amb_nand_set_timing(nand_info);
 }
@@ -1598,7 +1591,7 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 		struct device_node *np)
 {
 	struct nand_chip *chip = &nand_info->chip;
-	u32 poc = ambarella_get_poc();
+	u32 poc = readl_relaxed(nand_info->reg_poc);
 
 	/* if ecc is generated by software, the ecc bits num will
 	 * be defined in FDT. */
@@ -1754,6 +1747,36 @@ static int ambarella_nand_get_resource(
 		goto nand_get_resource_err_exit;
 	}
 	nand_info->dmabase = res->start;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for fio reset reg!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+
+	nand_info->reg_fiorst =
+		devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!nand_info->reg_fiorst) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		errorCode = -ENOMEM;
+		goto nand_get_resource_err_exit;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 4);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for fio reset reg!\n");
+		errorCode = -ENXIO;
+		goto nand_get_resource_err_exit;
+	}
+
+	nand_info->reg_poc =
+		devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!nand_info->reg_poc) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		errorCode = -ENOMEM;
+		goto nand_get_resource_err_exit;
+	}
 
 	nand_info->cmd_irq = platform_get_irq(pdev, 0);
 	if (nand_info->cmd_irq < 0) {

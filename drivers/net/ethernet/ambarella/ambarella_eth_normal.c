@@ -2132,11 +2132,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	const char *macaddr;
 	int ret_val = 0;
 
-	if (!(ambarella_get_poc() & SYS_CONFIG_ETH_ENABLE)) {
-		dev_err(&pdev->dev, "Not enabled, check HW config!\n");
-		return -EPERM;
-	}
-
 	ndev = alloc_etherdev(sizeof(struct ambeth_info));
 	if (ndev == NULL) {
 		dev_err(&pdev->dev, "alloc_etherdev fail.\n");
