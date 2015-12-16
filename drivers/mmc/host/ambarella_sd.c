@@ -2247,6 +2247,35 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 }
 #endif
 
+#ifdef CONFIG_AMBARELLA_EMMC_BOOT
+void ambarella_sd_shutdown (struct platform_device *pdev)
+{
+	struct ambarella_sd_controller_info *pinfo;
+	struct ambarella_sd_mmc_info *pslotinfo;
+	struct mmc_command cmd = {0};
+	int i;
+
+	pinfo = platform_get_drvdata(pdev);
+
+	for (i = 0; i < pinfo->slot_num; i++) {
+		if((system_state == SYSTEM_RESTART) ||
+			(system_state == SYSTEM_HALT)) {
+			pslotinfo = pinfo->pslotinfo[i];
+			if (mmc_try_claim_host(pslotinfo->mmc)) {
+				cmd.opcode = 0;
+				cmd.arg = 0xf0f0f0f0;
+				cmd.flags = MMC_RSP_NONE;
+
+				mmc_wait_for_cmd(pslotinfo->mmc, &cmd, 0);
+			} else {
+				dev_err(&pdev->dev, "Unable to claim host!\n");
+			}
+		}
+	}
+
+}
+#endif
+
 static const struct of_device_id ambarella_mmc_dt_ids[] = {
 	{ .compatible = "ambarella,sdmmc", },
 	{ /* sentinel */ }
@@ -2259,6 +2288,10 @@ static struct platform_driver ambarella_sd_driver = {
 #ifdef CONFIG_PM
 	.suspend	= ambarella_sd_suspend,
 	.resume		= ambarella_sd_resume,
+#endif
+
+#ifdef CONFIG_AMBARELLA_EMMC_BOOT
+	.shutdown	= ambarella_sd_shutdown,
 #endif
 	.driver		= {
 		.name	= "ambarella-sd",
