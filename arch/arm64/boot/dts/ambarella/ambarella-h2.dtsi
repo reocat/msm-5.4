@@ -9,7 +9,7 @@
 
 / {
 	compatible = "ambarella,h2";
-	interrupt-parent = <&intc>;
+	interrupt-parent = <&gic>;
 	#address-cells = <1>;
 	#size-cells = <1>;
 
@@ -36,9 +36,11 @@
 
 	chosen {
 		linux,stdout-path = &uart0;
-		/* the gpio used to disconnect RESET signal to
-		 * dram, used for self-refresh, can be overwritten. */
-		ambarella,dram-reset-ctrl = <5>;
+	};
+
+	psci {
+		compatible = "arm,psci";
+		method = "smc";
 	};
 
 	cpus {
@@ -78,13 +80,34 @@
 		};
 	};
 
+	gic: interrupt-controller@f0040000 {
+		compatible = "arm,gic-400";
+		#interrupt-cells = <3>;
+		#address-cells = <0>;
+		interrupt-controller;
+		reg = <0xf0041000 0x1000>,	/* GIC Dist */
+		      <0xf0042000 0x2000>,	/* GIC CPU */
+		      /* following are not used if no virtulization
+		      <0xf0044000 0x2000>,	/* GIC VCPU Control */
+		      <0xf0046000 0x2000>;	/* GIC VCPU */
+		interrupts = <1 9 0xf04>;	/* GIC Maintenence IRQ */
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <1 13 0xf08>,	/* Secure Phys IRQ */
+			     <1 14 0xf08>,	/* Non-secure Phys IRQ */
+			     <1 11 0xf08>,	/* Virt IRQ */
+			     <1 10 0xf08>;	/* Hyp IRQ */
+	};
+
 	apb@e8000000 {	/* APB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xe8000000 0x01000000>;
 		ranges;
-
+#if 0
 		timer7: timer@e800b064 {
 			compatible = "ambarella,clock-source";
 			reg = <0xe800b064 0x10 0xe800b030 0x4>;
@@ -98,7 +121,7 @@
 			interrupts = <63 0x1>;
 			ctrl-offset = <28>; /* bit offset in timer-ctrl reg */
 		};
-
+#endif
 		uart0: uart@e8005000 {
 			compatible = "ambarella,uart";
 			reg = <0xe8005000 0x1000>;
