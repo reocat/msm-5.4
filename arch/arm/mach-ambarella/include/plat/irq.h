@@ -47,10 +47,6 @@
 #define VIC_INSTANCES			(4)
 #define VIC_SUPPORT_CPU_OFFLOAD		(2)
 #define VIC_SUPPORT_REPRIORITIZE	(1)
-#elif (CHIP_REV == H2)
-#define VIC_INSTANCES			(0)
-#define VIC_SUPPORT_CPU_OFFLOAD		(0)
-#define VIC_SUPPORT_REPRIORITIZE	(0)
 #else
 #error "Not supported!"
 #endif
@@ -741,9 +737,6 @@
 #define USB_CHARGE_IRQ			VIC2_INT_VEC(26)
 #define SD2CD_IRQ			VIC2_INT_VEC(27) /* SDXC rather than SDIO */
 #define SD0CD_IRQ			VIC2_INT_VEC(28)
-
-#elif (CHIP_REV == H2)
-/* no VIC */
 
 /* ==========================================================================*/
 #else

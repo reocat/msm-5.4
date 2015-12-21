@@ -283,13 +283,13 @@
 						  0x204e 0x204f 0x2050 0x2051>;
 			};
 
-			sdmmc2_pins_1bit: sdmmc1@0 {
+			sdmmc2_pins_1bit: sdmmc2@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2052 0x2053 0x2058 0x2059
 						  0x2054>;
 			};
 
-			sdmmc2_pins_4bit: sdmmc1@1 {
+			sdmmc2_pins_4bit: sdmmc2@1 {
 				reg = <1>;
 				amb,pinmux-ids = <0x2052 0x2053 0x2058 0x2059
 						  0x2054 0x2055 0x2056 0x2057>;
