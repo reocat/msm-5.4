@@ -47,7 +47,7 @@
 
 #include <mach/hardware.h>
 #include <plat/eth.h>
-
+#include <plat/rct.h>
 /* ==========================================================================*/
 #define AMBETH_NAPI_WEIGHT		32
 #define AMBETH_TX_WATCHDOG		(2 * HZ)
@@ -2117,14 +2117,9 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 /* ==========================================================================*/
 static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
+	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int gmii, ret_val;
-
-	lp->pwr_gpio = of_get_named_gpio_flags(np, "pwr-gpios", 0, &flags);
-	lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-	lp->rst_gpio = of_get_named_gpio_flags(np, "rst-gpios", 0, &flags);
-	lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	int gmii, ret_val, clk_sou;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2169,6 +2164,37 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx = !!of_find_property(np, "amb,dump-rx", NULL);
 	lp->dump_rx_free = !!of_find_property(np, "amb,dump-rx-free", NULL);
 	lp->dump_rx_all = !!of_find_property(np, "amb,dump-rx-all", NULL);
+
+	for_each_child_of_node(np, phy_np) {
+		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
+			continue;
+
+		lp->pwr_gpio = of_get_named_gpio_flags(phy_np, "pwr-gpios", 0, &flags);
+		lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
+		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		if(gmii) {
+			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_sou);
+			if (ret_val == 0 && clk_sou == 0) {
+				/*clk_sou == 0 represent the clk is external*/
+				amba_writel(ENET_GTXCLK_SRC_REG, 0x00);
+			} else if(ret_val == 0 && clk_sou == 1) {
+				/*clk_sou == 1 and default represent the clk is internal*/
+				amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
+			} else {
+				/*default value for clk source*/
+			}
+
+		}
+
+		ret_val = !!of_find_property(phy_np, "amb,clk_invert", NULL);
+		if(ret_val) {
+			/*invert the clk for ethernet*/
+			amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
+		}
+	}
 
 	return 0;
 }
