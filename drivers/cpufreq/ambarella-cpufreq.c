@@ -49,25 +49,22 @@ static unsigned int amba_cpufreq_get(unsigned int cpu)
 }
 
 static int amba_cpufreq_target(struct cpufreq_policy *policy,
-		unsigned int target_freq, unsigned int relation)
+		unsigned int index)
 {
 	struct cpufreq_freqs freqs;
 	unsigned long cortex_newfreq, core_newfreq;
-	int index, ret;
+	int ret;
 	unsigned int cur_freq;
-
-	if (cpufreq_frequency_table_target(policy, amba_cpufreq.cortex_clktbl,
-				target_freq, relation, &index))
-		return -EINVAL;
 
 	freqs.old = amba_cpufreq_get(0);
 	cortex_newfreq = amba_cpufreq.cortex_clktbl[index].frequency * 1000;
 	core_newfreq = amba_cpufreq.core_clktbl[index].frequency * 1000;
 	freqs.new = cortex_newfreq / 1000;
 
-	amba_cpufreq_prt(KERN_INFO "prepare to switch the frequency from %d KHz to %d KHz\n",freqs.old, freqs.new);
+	amba_cpufreq_prt(KERN_INFO "prepare to switch the frequency from %d KHz to %d KHz\n",
+		freqs.old, freqs.new);
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_freq_transition_begin(policy, &freqs);
 	ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL);
 
 	ret = clk_set_rate(amba_cpufreq.cortex_clk, cortex_newfreq);
@@ -83,38 +80,26 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
 	}
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_freq_transition_end(policy, &freqs, 0);
 	ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL);
 
 	cur_freq = clk_get_rate(amba_cpufreq.cortex_clk) / 1000;
 	amba_cpufreq_prt(KERN_INFO "current frequency of cortex clock is:%d KHz\n", cur_freq);
-
 
 	return ret;
 }
 
 static int amba_cpufreq_init(struct cpufreq_policy *policy)
 {
-	int ret;
-
-	ret = cpufreq_frequency_table_cpuinfo(policy, amba_cpufreq.cortex_clktbl);
-	if (ret) {
-		pr_err("cpufreq_frequency_table_cpuinfo() failed");
-		return ret;
-	}
-
-	cpufreq_frequency_table_get_attr(amba_cpufreq.cortex_clktbl, policy->cpu);
-	policy->cpuinfo.transition_latency = amba_cpufreq.transition_latency;
+	policy->clk = amba_cpufreq.cortex_clk;
 	policy->cur = amba_cpufreq_get(0);
 
-	cpumask_setall(policy->cpus);
-
-	return 0;
+ 	return cpufreq_generic_init(policy, amba_cpufreq.cortex_clktbl,
+			amba_cpufreq.transition_latency);
 }
 
 static int amba_cpufreq_exit(struct cpufreq_policy *policy)
 {
-	cpufreq_frequency_table_put_attr(policy->cpu);
 	return 0;
 }
 
@@ -125,9 +110,10 @@ static struct freq_attr *amba_cpufreq_attr[] = {
 
 static struct cpufreq_driver amba_cpufreq_driver = {
 	.name		= "amba-cpufreq",
-	.flags		= CPUFREQ_STICKY,
+	.flags		= CPUFREQ_STICKY | CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+				CPUFREQ_ASYNC_NOTIFICATION,
 	.verify		= amba_cpufreq_verify,
-	.target		= amba_cpufreq_target,
+	.target_index	= amba_cpufreq_target,
 	.get		= amba_cpufreq_get,
 	.init		= amba_cpufreq_init,
 	.exit		= amba_cpufreq_exit,
@@ -143,7 +129,6 @@ static int amba_cpufreq_driver_init(void)
 	const __be32 *val;
 	int cnt, i, ret;
 
-	printk("ambarella cpufreq driver init\n");
 	np = of_find_node_by_path("/cpus");
 	if (!np) {
 		pr_err("No cpu node found");
@@ -177,26 +162,17 @@ static int amba_cpufreq_driver_init(void)
 	}
 
 	for (i = 0; i < cnt; i++) {
-		core_freqtbl[i].index = i;
 		core_freqtbl[i].frequency = be32_to_cpup(val) * 2;
-
-		cortex_freqtbl[i].index = i;
+		core_freqtbl[i].flags = 0;
 		cortex_freqtbl[i].frequency = be32_to_cpup((val + 1));
+		cortex_freqtbl[i].flags = 0;
 		val = val + 2;
-
 	}
 
-	cortex_freqtbl[i].index = i;
 	cortex_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_cortex")) / 1000;
+	core_freqtbl[i++].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000 * 2;
 
-	core_freqtbl[i].index = i;
-	core_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000 * 2;
-
-	i++;
-	cortex_freqtbl[i].index = i;
 	cortex_freqtbl[i].frequency = CPUFREQ_TABLE_END;
-
-	core_freqtbl[i].index = i;
 	core_freqtbl[i].frequency = CPUFREQ_TABLE_END;
 
 	amba_cpufreq.cortex_clktbl = cortex_freqtbl;
