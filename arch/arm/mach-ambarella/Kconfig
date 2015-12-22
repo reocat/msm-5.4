@@ -140,6 +140,12 @@ endchoice
 
 menu "Generic Platform Configuration"
 
+config AMBARELLA_EMMC_BOOT
+        bool "EMMC boot mode"
+        default n
+        help
+          If you are not sure, say N here.
+
 config AMBARELLA_RAW_BOOT
 	bool "Raw boot mode"
 	default n
