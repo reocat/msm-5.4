@@ -34,6 +34,14 @@
 #include "dmaengine.h"
 #include "ambarella_dma.h"
 
+/* The set of bus widths supported by the DMA controller */
+#define AMBARELLA_DMA_BUSWIDTHS					\
+		BIT(DMA_SLAVE_BUSWIDTH_UNDEFINED)		| \
+		BIT(DMA_SLAVE_BUSWIDTH_1_BYTE)			| \
+		BIT(DMA_SLAVE_BUSWIDTH_2_BYTES)			| \
+		BIT(DMA_SLAVE_BUSWIDTH_4_BYTES)			| \
+		BIT(DMA_SLAVE_BUSWIDTH_8_BYTES)
+
 int ambarella_dma_channel_id(void *chan)
 {
 	return to_ambdma_chan((struct dma_chan *)chan)->id;
@@ -1139,6 +1147,11 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_slave.device_resume = ambdma_resume;
 	amb_dma->dma_slave.device_config = ambdma_config;
 	amb_dma->dma_slave.device_terminate_all = ambdma_terminate_all;
+	/* DMA capabilities */
+	amb_dma->dma_slave.src_addr_widths = AMBARELLA_DMA_BUSWIDTHS;
+	amb_dma->dma_slave.dst_addr_widths = AMBARELLA_DMA_BUSWIDTHS;
+	amb_dma->dma_slave.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
+	amb_dma->dma_slave.residue_granularity = DMA_RESIDUE_GRANULARITY_DESCRIPTOR;
 	amb_dma->dma_slave.dev = &pdev->dev;
 
 	dma_cap_zero(amb_dma->dma_memcpy.cap_mask);
