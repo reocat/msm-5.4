@@ -41,6 +41,8 @@ struct es8388_priv {
 	unsigned int sysclk;
 };
 
+struct snd_soc_codec *es8388_codec;
+
 /*
  * es8388 register
  */
@@ -104,7 +106,7 @@ static int spk_event(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
 	int i;
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = es8388_codec;
 	struct es8388_priv *es8388 = snd_soc_codec_get_drvdata(codec);
 	//printk("%s %d  *****\n", __FUNCTION__, __LINE__);
 
@@ -149,7 +151,7 @@ static int adc_event(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
 	unsigned int regv;
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = es8388_codec;
 	//printk("%s %d****************     *****\n", __FUNCTION__, __LINE__);
 
 	switch (event) {
@@ -206,14 +208,14 @@ static const struct soc_enum es8388_lline_enum =
 		ARRAY_SIZE(es8388_line_texts), es8388_line_texts,
 		es8388_line_values);
 static const struct snd_kcontrol_new es8388_left_line_controls =
-	SOC_DAPM_VALUE_ENUM("Route", es8388_lline_enum);
+	SOC_DAPM_ENUM("Route", es8388_lline_enum);
 
 static const struct soc_enum es8388_rline_enum =
 	SOC_VALUE_ENUM_SINGLE(ES8388_ADCCONTROL2, 4, 4,
 		ARRAY_SIZE(es8388_line_texts), es8388_line_texts,
 		es8388_line_values);
 static const struct snd_kcontrol_new es8388_right_line_controls =
-	SOC_DAPM_VALUE_ENUM("Route", es8388_rline_enum);
+	SOC_DAPM_ENUM("Route", es8388_rline_enum);
 
 
 /* Left Mixer */
@@ -248,7 +250,7 @@ static const struct soc_enum monomux =
 		ARRAY_SIZE(es8388_mono_mux), es8388_mono_mux,
 		es8388_monomux_values);
 static const struct snd_kcontrol_new es8388_monomux_controls =
-	SOC_DAPM_VALUE_ENUM("Route", monomux);
+	SOC_DAPM_ENUM("Route", monomux);
 
 static const struct snd_kcontrol_new adc_switch_ctl =
 SOC_DAPM_SINGLE("Switch",ES8388_ADCCONTROL7, 2, 1, 1);
@@ -499,7 +501,7 @@ static int es8388_set_bias_level(struct snd_soc_codec *codec,
 		break;
 
 	case SND_SOC_BIAS_PREPARE:
-		if(codec->dapm.bias_level != SND_SOC_BIAS_ON) {
+		if(snd_soc_codec_get_bias_level(codec) == SND_SOC_BIAS_ON) {
 			/* updated by David-everest,5-25
 			// Chip Power on
 			snd_soc_write(codec, ES8388_CHIPPOWER, 0xF3);
@@ -540,8 +542,6 @@ static int es8388_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_write(codec, ES8388_CHIPPOWER , 0xC3);
 		break;
 	}
-
-	codec->dapm.bias_level = level;
 
 	return 0;
 }
@@ -614,14 +614,7 @@ static int es8388_probe(struct snd_soc_codec *codec)
 	//int i = 0;
 
 	dev_info(codec->dev, "ES8388 Audio Codec %s", ES8388_VERSION);
-	codec->control_data = es8388->regmap;
-
-	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
-
+	es8388_codec = codec;
 	ret = devm_gpio_request(codec->dev, es8388->aud_rst_pin, "es8388 aud reset");
 	if (ret < 0){
 		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
@@ -687,17 +680,10 @@ static int es8388_probe(struct snd_soc_codec *codec)
 
 static int es8388s_probe(struct snd_soc_codec *codec)
 {
-	struct es8388_priv *es8388 = snd_soc_codec_get_drvdata(codec);
 	int ret = 0;
 
 	dev_info(codec->dev, "ES8388s Audio Codec %s", ES8388_VERSION);
-	codec->control_data = es8388->regmap;
-
-	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
+	es8388_codec = codec;
 
 	es8388_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 

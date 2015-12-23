@@ -332,7 +332,7 @@ int adc3xxx_write(struct snd_soc_codec *codec, unsigned int reg,
  *
  *----------------------------------------------------------------------------
  */
-static int adc3xxx_read(struct snd_soc_codec *codec, unsigned int reg)
+static unsigned int adc3xxx_read(struct snd_soc_codec *codec, unsigned int reg)
 {
 	struct adc3xxx_priv *adc3xxx = snd_soc_codec_get_drvdata(codec);
 	u8 value, page;
@@ -826,7 +826,7 @@ static int adc3xxx_set_bias_level(struct snd_soc_codec *codec,
 	u8 reg;
 
 	/* Check if  the New Bias level is equal to the existing one, if so return */
-	if (codec->dapm.bias_level  == level)
+	if (snd_soc_codec_get_bias_level(codec) == level)
 	return 0;
 
 	/* all power is driven by DAPM system */
@@ -931,7 +931,6 @@ static int adc3xxx_set_bias_level(struct snd_soc_codec *codec,
 		}
 		break;
 	}
-	codec->dapm.bias_level = level;
 
 	return 0;
 }
@@ -968,8 +967,6 @@ static int adc3xxx_init(struct snd_soc_codec *codec)
 {
 	int i, ret = 0;
 
-	codec->name = "tlv320adc3xxx";
-	codec->num_dai = 1;
 	codec->reg_cache =
 		kmemdup(adc3xxx_reg, sizeof(adc3xxx_reg), GFP_KERNEL);
 	if (codec->reg_cache == NULL)
@@ -1009,15 +1006,8 @@ static int adc3xxx_probe(struct snd_soc_codec *codec)
 	struct adc3xxx_priv *adc3xxx = NULL;
 	int ret = 0;
 
-	printk(KERN_INFO "ADC3xxx Audio Codec %s provided by Amba Dongge\n", ADC3xxx_VERSION);
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-	codec->write = adc3xxx_write;
-	codec->read = adc3xxx_read;
-#endif
-
 	adc3xxx = (struct adc3xxx_priv *)snd_soc_codec_get_drvdata(codec);
 	codec->control_data = adc3xxx->control_data;
-	mutex_init(&codec->mutex);
 
 	ret = devm_gpio_request(codec->dev, adc3xxx->rst_pin, "adc3xxx reset");
 	if (ret < 0){
@@ -1084,22 +1074,25 @@ static int adc3xxx_resume(struct snd_soc_codec *codec)
 }
 
 struct snd_soc_codec_driver soc_codec_dev_adc3xxx = {
-	.probe = adc3xxx_probe,
-	.remove = adc3xxx_remove,
-	.suspend =	adc3xxx_suspend,
-	.resume =	adc3xxx_resume,
-	.set_bias_level = adc3xxx_set_bias_level,
+	.probe			= adc3xxx_probe,
+	.remove			= adc3xxx_remove,
+	.suspend		= adc3xxx_suspend,
+	.resume			= adc3xxx_resume,
+	.write			= adc3xxx_write,
+	.read			= adc3xxx_read,
+	.set_bias_level		= adc3xxx_set_bias_level,
+
 	.reg_cache_default	= adc3xxx_reg,
 	.reg_cache_size		= ARRAY_SIZE(adc3xxx_reg),
 	.reg_word_size		= sizeof(u8),
 	.reg_cache_step		= 1,
 
-	.controls = adc3xxx_snd_controls,
-	.num_controls = ARRAY_SIZE(adc3xxx_snd_controls),
-	.dapm_widgets = adc3xxx_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(adc3xxx_dapm_widgets),
-	.dapm_routes = intercon,
-	.num_dapm_routes = ARRAY_SIZE(intercon),
+	.controls		= adc3xxx_snd_controls,
+	.num_controls		= ARRAY_SIZE(adc3xxx_snd_controls),
+	.dapm_widgets		= adc3xxx_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(adc3xxx_dapm_widgets),
+	.dapm_routes		= intercon,
+	.num_dapm_routes	= ARRAY_SIZE(intercon),
 };
 EXPORT_SYMBOL_GPL(soc_codec_dev_adc3xxx);
 

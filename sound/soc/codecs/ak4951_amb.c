@@ -49,7 +49,7 @@
 #define LINEIN1_MIC_BIAS_CONNECT
 #define LINEIN2_MIC_BIAS_CONNECT
 
-struct snd_soc_codec *ak1951_codec;
+struct snd_soc_codec *ak4951_codec;
 
 /* AK4951 Codec Private Data */
 struct ak4951_priv {
@@ -57,7 +57,6 @@ struct ak4951_priv {
 	unsigned int rst_active;
 	unsigned int sysclk;
 	unsigned int clkid;
-	struct regmap *regmap;
 	struct i2c_client* i2c_clt;
 	u8 reg_cache[AK4951_MAX_REGISTERS];
 	int onStereo;
@@ -567,7 +566,7 @@ static const struct snd_kcontrol_new ak4951_dacsl_mixer_controls[] = {
 static int ak4951_spklo_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = ak1951_codec;
+	struct snd_soc_codec *codec = ak4951_codec;
 	u32 reg, nLOSEL;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -1034,7 +1033,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int ret = 0;
 
-	ak1951_codec = codec;
+	ak4951_codec = codec;
 
 	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
 	if (ret < 0){
@@ -1082,7 +1081,6 @@ static int ak4951_remove(struct snd_soc_codec *codec)
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
 
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
 
 	return 0;
 }
