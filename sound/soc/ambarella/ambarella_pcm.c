@@ -76,10 +76,10 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 
 static bool ambarella_pcm_dma_filter(struct dma_chan *chan, void *param)
 {
-	struct snd_dmaengine_dai_dma_data *dma_params = param;
+	void *filter_data  = param;
 	bool ret = false;
 
-	if (ambarella_dma_channel_id(chan) == (int)dma_params->filter_data) {
+	if (ambarella_dma_channel_id(chan) == (int)filter_data) {
 		ret = true;
 		chan->private = &force_stop;
 	}

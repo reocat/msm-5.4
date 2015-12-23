@@ -7,6 +7,7 @@
  *
  * History:
  *	2014/03/27 - created
+ *	2015/12/23 - modified by XianqingZheng<xqzheng@ambarella.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -48,6 +49,8 @@
 #define LINEIN1_MIC_BIAS_CONNECT
 #define LINEIN2_MIC_BIAS_CONNECT
 
+struct snd_soc_codec *ak1951_codec;
+
 /* AK4951 Codec Private Data */
 struct ak4951_priv {
 	unsigned int rst_pin;
@@ -55,7 +58,6 @@ struct ak4951_priv {
 	unsigned int sysclk;
 	unsigned int clkid;
 	struct regmap *regmap;
-	struct snd_soc_codec codec;
 	struct i2c_client* i2c_clt;
 	u8 reg_cache[AK4951_MAX_REGISTERS];
 	int onStereo;
@@ -313,24 +315,18 @@ static const struct soc_enum ak4951_micswitch_enum[] = {
 };
 
 
-static int get_micstatus(
-struct snd_kcontrol       *kcontrol,
-struct snd_ctl_elem_value  *ucontrol)
+static int get_micstatus(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
-    ucontrol->value.enumerated.item[0] = ak4951->mic;
-
-    return 0;
-
+	ucontrol->value.enumerated.item[0] = ak4951->mic;
+	return 0;
 }
 
-static int set_micstatus(
-struct snd_kcontrol       *kcontrol,
-struct snd_ctl_elem_value  *ucontrol)
+static int set_micstatus(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
 	ak4951->mic = ucontrol->value.enumerated.item[0];
@@ -340,7 +336,8 @@ struct snd_ctl_elem_value  *ucontrol)
 	}else {
 		snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
 	}
-    return 0;
+
+	return 0;
 }
 
 
@@ -357,24 +354,18 @@ static const struct soc_enum ak4951_stereo_enum[] = {
 
 static int ak4951_writeMask(struct snd_soc_codec *, u16, u16, u16);
 
-static int get_onstereo(
-struct snd_kcontrol       *kcontrol,
-struct snd_ctl_elem_value  *ucontrol)
+static int get_onstereo(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
-    ucontrol->value.enumerated.item[0] = ak4951->onStereo;
-
-    return 0;
-
+	ucontrol->value.enumerated.item[0] = ak4951->onStereo;
+	return 0;
 }
 
-static int set_onstereo(
-struct snd_kcontrol       *kcontrol,
-struct snd_ctl_elem_value  *ucontrol)
+static int set_onstereo(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
 	ak4951->onStereo = ucontrol->value.enumerated.item[0];
@@ -386,7 +377,7 @@ struct snd_ctl_elem_value  *ucontrol)
 		ak4951_writeMask(codec, AK4951_1C_DIGITAL_FILTER_SELECT2, 0x30, 0x00);
 	}
 
-    return 0;
+	return 0;
 }
 
 #ifdef AK4951_DEBUG
@@ -456,9 +447,9 @@ static const struct snd_kcontrol_new ak4951_snd_controls[] = {
 	SOC_SINGLE_TLV("Digital Output Volume",
 			AK4951_13_LCH_DIGITAL_VOLUME_CONTROL, 0, 0xFF, 1, dvol_tlv),
 
-    SOC_SINGLE("High Path Filter 1", AK4951_1B_DIGITAL_FILTER_SELECT1, 1, 3, 0),
-    SOC_SINGLE("High Path Filter 2", AK4951_1C_DIGITAL_FILTER_SELECT2, 0, 1, 0),
-    SOC_SINGLE("Low Path Filter", 	 AK4951_1C_DIGITAL_FILTER_SELECT2, 1, 1, 0),
+	SOC_SINGLE("High Path Filter 1", AK4951_1B_DIGITAL_FILTER_SELECT1, 1, 3, 0),
+	SOC_SINGLE("High Path Filter 2", AK4951_1C_DIGITAL_FILTER_SELECT2, 0, 1, 0),
+	SOC_SINGLE("Low Path Filter", 	 AK4951_1C_DIGITAL_FILTER_SELECT2, 1, 1, 0),
 	SOC_SINGLE("5 Band Equalizer 1", AK4951_30_DIGITAL_FILTER_SELECT3, 0, 1, 0),
 	SOC_SINGLE("5 Band Equalizer 2", AK4951_30_DIGITAL_FILTER_SELECT3, 1, 1, 0),
 	SOC_SINGLE("5 Band Equalizer 3", AK4951_30_DIGITAL_FILTER_SELECT3, 2, 1, 0),
@@ -503,7 +494,7 @@ static const struct soc_enum ak4951_lin1_mux_enum =
 			ARRAY_SIZE(ak4951_lin1_select_texts), ak4951_lin1_select_texts);
 
 static const struct snd_kcontrol_new ak4951_lin1_mux_control =
-	SOC_DAPM_ENUM_VIRT("LIN1 Switch", ak4951_lin1_mux_enum);
+	SOC_DAPM_ENUM("LIN1 Switch", ak4951_lin1_mux_enum);
 ////////////////////////////////////////////
 
 static const char *ak4951_micbias_select_texts[] =
@@ -576,7 +567,7 @@ static const struct snd_kcontrol_new ak4951_dacsl_mixer_controls[] = {
 static int ak4951_spklo_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = ak1951_codec;
 	u32 reg, nLOSEL;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -665,7 +656,7 @@ static const struct snd_soc_dapm_widget ak4951_dapm_widgets[] = {
 
 // MIC Bias
 	SND_SOC_DAPM_MICBIAS("Mic Bias", AK4951_02_SIGNAL_SELECT1, 3, 0),
-	SND_SOC_DAPM_VIRT_MUX("LIN1 MUX", SND_SOC_NOPM, 0, 0, &ak4951_lin1_mux_control),
+	SND_SOC_DAPM_MUX("LIN1 MUX", SND_SOC_NOPM, 0, 0, &ak4951_lin1_mux_control),
 	SND_SOC_DAPM_MUX("Mic Bias MUX", SND_SOC_NOPM, 0, 0, &ak4951_micbias_mux_control),
 	SND_SOC_DAPM_MUX("SPKLO MUX", SND_SOC_NOPM, 0, 0, &ak4951_spklo_mux_control),
 
@@ -679,7 +670,7 @@ static const struct snd_soc_dapm_widget ak4951_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("DMICLIN"),
 	SND_SOC_DAPM_INPUT("DMICRIN"),
 
-	SND_SOC_DAPM_VIRT_MUX("MIC MUX", SND_SOC_NOPM, 0, 0, &ak4951_mic_mux_control),
+	SND_SOC_DAPM_MUX("MIC MUX", SND_SOC_NOPM, 0, 0, &ak4951_mic_mux_control),
 
 };
 
@@ -687,21 +678,21 @@ static const struct snd_soc_dapm_widget ak4951_dapm_widgets[] = {
 static const struct snd_soc_dapm_route ak4951_intercon[] = {
 
 #ifdef PLL_32BICK_MODE
-	{"ADC Left", "NULL", "PMPLL"},
-	{"ADC Right", "NULL", "PMPLL"},
-	{"DAC", "NULL", "PMPLL"},
+	{"ADC Left", NULL, "PMPLL"},
+	{"ADC Right", NULL, "PMPLL"},
+	{"DAC", NULL, "PMPLL"},
 #else
 #ifdef PLL_64BICK_MODE
-	{"ADC Left", "NULL", "PMPLL"},
-	{"ADC Right", "NULL", "PMPLL"},
-	{"DAC", "NULL", "PMPLL"},
+	{"ADC Left", NULL, "PMPLL"},
+	{"ADC Right", NULL, "PMPLL"},
+	{"DAC", NULL, "PMPLL"},
 #endif
 #endif
 
 	{"Mic Bias MUX", "LIN1", "LIN1"},
 	{"Mic Bias MUX", "LIN2", "LIN2"},
 
-	{"Mic Bias", "NULL", "Mic Bias MUX"},
+	{"Mic Bias", NULL, "Mic Bias MUX"},
 
 	{"LIN1 MUX", "LIN1", "LIN1"},
 	{"LIN1 MUX", "Mic Bias", "Mic Bias"},
@@ -712,11 +703,11 @@ static const struct snd_soc_dapm_route ak4951_intercon[] = {
 	{"RIN MUX", "RIN1", "RIN1"},
 	{"RIN MUX", "RIN2", "RIN2"},
 	{"RIN MUX", "RIN3", "RIN3"},
-	{"ADC Left", "NULL", "LIN MUX"},
-	{"ADC Right", "NULL", "RIN MUX"},
+	{"ADC Left", NULL, "LIN MUX"},
+	{"ADC Right", NULL, "RIN MUX"},
 
-	{"DMICL", "NULL", "DMICLIN"},
-	{"DMICR", "NULL", "DMICRIN"},
+	{"DMICL", NULL, "DMICLIN"},
+	{"DMICR", NULL, "DMICRIN"},
 
 	{"MIC MUX", "AMIC", "ADC Left"},
 	{"MIC MUX", "AMIC", "ADC Right"},
@@ -725,32 +716,32 @@ static const struct snd_soc_dapm_route ak4951_intercon[] = {
 
 	{"PFIL MUX", "SDTI", "SDTI"},
 	{"PFIL MUX", "ADC", "MIC MUX"},
-	{"PFIL", "NULL", "PFIL MUX"},
+	{"PFIL", NULL, "PFIL MUX"},
 
 	{"PFSDO MUX", "ADC", "MIC MUX"},
 	{"PFSDO MUX", "PFIL", "PFIL"},
 
-	{"SDTO", "NULL", "PFSDO MUX"},
+	{"SDTO", NULL, "PFSDO MUX"},
 
 	{"PFDAC MUX", "SDTI", "SDTI"},
 	{"PFDAC MUX", "PFIL", "PFIL"},
 
 //	{"DAC MUX", "PFDAC", "PFDAC MUX"},
-	{"DAC", "NULL", "PFDAC MUX"},
+	{"DAC", NULL, "PFDAC MUX"},
 
 //	{"DAC", "NULL", "DAC MUX"},
 
-	{"HPL Amp", "NULL", "DAC"},
-	{"HPR Amp", "NULL", "DAC"},
-	{"HPL", "NULL", "HPL Amp"},
-	{"HPR", "NULL", "HPR Amp"},
+	{"HPL Amp", NULL, "DAC"},
+	{"HPR Amp", NULL, "DAC"},
+	{"HPL", NULL, "HPL Amp"},
+	{"HPR", NULL, "HPR Amp"},
 
 	{"SPKLO Mixer", "DACSL", "DAC"},
-	{"SPK Amp", "NULL", "SPKLO Mixer"},
-	{"Line Amp", "NULL", "SPKLO Mixer"},
+	{"SPK Amp", NULL, "SPKLO Mixer"},
+	{"Line Amp", NULL, "SPKLO Mixer"},
 	{"SPKLO MUX", "Speaker", "SPK Amp"},
 	{"SPKLO MUX", "Line", "Line Amp"},
-	{"SPKLO", "NULL", "SPKLO MUX"},
+	{"SPKLO", NULL, "SPKLO MUX"},
 
 };
 
@@ -808,12 +799,11 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 		fs |= AK4951_FS_32KHZ;
 		break;
 	case 44100:
-		/* Because the sample rate as 44100 will
-		 * cause one channel no sound, so we don't
-		 * support the sample rate in codec driver.
-		 */
-//		fs |= AK4951_FS_44_1KHZ;
-//		break;
+		if(ak4951->clkid == AK4951_BCLK_IN)
+			fs |= AK4951_FS_44_1KHZ_BCK;
+		else
+			fs |= AK4951_FS_44_1KHZ_MCK;
+		break;
 	case 48000:
 		fs |= AK4951_FS_48KHZ;
 		break;
@@ -949,14 +939,11 @@ static int ak4951_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 /*
  * Write with Mask to  AK4951 register space
  */
-static int ak4951_writeMask(
-struct snd_soc_codec *codec,
-u16 reg,
-u16 mask,
-u16 value)
+static int ak4951_writeMask(struct snd_soc_codec *codec, u16 reg,
+			u16 mask, u16 value)
 {
-    u16 olddata;
-    u16 newdata;
+	u16 olddata;
+	u16 newdata;
 
 	if ( (mask == 0) || (mask == 0xFF) ) {
 		newdata = value;
@@ -967,20 +954,17 @@ u16 value)
 	}
 
 	snd_soc_write(codec, (unsigned int)reg, (unsigned int)newdata);
-
 	akdbgprt("\t[ak4951_writeMask] %s(%d): (addr,data)=(%x, %x)\n",__FUNCTION__,__LINE__, reg, newdata);
 
-    return(0);
+	return(0);
 }
 
 // * for AK4951
 static int ak4951_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *codec_dai)
 {
 	int 	ret = 0;
- //   struct snd_soc_codec *codec = codec_dai->codec;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
-
 	return ret;
 }
 
@@ -1005,7 +989,7 @@ static int ak4951_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_write(codec, AK4951_00_POWER_MANAGEMENT1, 0x00);	// * for AK4951
 		break;
 	}
-	codec->dapm.bias_level = level;
+
 	return 0;
 }
 
@@ -1050,15 +1034,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int ret = 0;
 
-	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
-	codec->control_data = ak4951->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
-
-	akdbgprt("\t[AK4951] %s(%d) ak4951=%x\n",__FUNCTION__,__LINE__, (int)ak4951);
+	ak1951_codec = codec;
 
 	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
 	if (ret < 0){
@@ -1077,7 +1053,6 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	ak4951->i2c_clt->flags &= ~I2C_M_IGNORE_NAK;
 
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	akdbgprt("\t[AK4951 bias] %s(%d)\n",__FUNCTION__,__LINE__);
 
 	ak4951->onStereo = 0;
 	ak4951->mic = 1;
@@ -1095,10 +1070,9 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec,AK4951_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_update_bits(codec,AK4951_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_write(codec, AK4951_0B_ALC_MODE_CONTROL1, 0x20);	//enable ALC
-
 	/*Enable LIN3*/
 	//snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
-    return ret;
+	 return ret;
 
 }
 
@@ -1130,31 +1104,28 @@ static int ak4951_resume(struct snd_soc_codec *codec)
 
 
 struct snd_soc_codec_driver soc_codec_dev_ak4951 = {
-	.probe = ak4951_probe,
-	.remove = ak4951_remove,
-	.suspend =	ak4951_suspend,
-	.resume =	ak4951_resume,
-
-	.set_bias_level = ak4951_set_bias_level,
-
-	.controls = ak4951_snd_controls,
-	.num_controls = ARRAY_SIZE(ak4951_snd_controls),
-	.dapm_widgets = ak4951_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(ak4951_dapm_widgets),
-	.dapm_routes = ak4951_intercon,
-	.num_dapm_routes = ARRAY_SIZE(ak4951_intercon),
+	.probe			= ak4951_probe,
+	.remove			= ak4951_remove,
+	.suspend		= ak4951_suspend,
+	.resume			= ak4951_resume,
+	.set_bias_level		= ak4951_set_bias_level,
+	.controls		= ak4951_snd_controls,
+	.num_controls		= ARRAY_SIZE(ak4951_snd_controls),
+	.dapm_widgets		= ak4951_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(ak4951_dapm_widgets),
+	.dapm_routes		= ak4951_intercon,
+	.num_dapm_routes	= ARRAY_SIZE(ak4951_intercon),
 };
 EXPORT_SYMBOL_GPL(soc_codec_dev_ak4951);
 
 static struct regmap_config ak4951_regmap = {
-	.reg_bits = 8,
-	.val_bits = 8,
-
-	.max_register = AK4951_MAX_REGISTERS,
-	.reg_defaults = ak4951_reg_defaults,
-	.num_reg_defaults = ARRAY_SIZE(ak4951_reg_defaults),
-	.volatile_reg = ak4951_volatile_register,
-	.cache_type = REGCACHE_RBTREE,
+	.reg_bits		= 8,
+	.val_bits		= 8,
+	.max_register		= AK4951_MAX_REGISTERS,
+	.reg_defaults		= ak4951_reg_defaults,
+	.num_reg_defaults	= ARRAY_SIZE(ak4951_reg_defaults),
+	.volatile_reg		= ak4951_volatile_register,
+	.cache_type		= REGCACHE_RBTREE,
 };
 
 static int ak4951_i2c_probe(struct i2c_client *i2c,
@@ -1162,9 +1133,9 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 {
 	struct device_node *np = i2c->dev.of_node;
 	struct ak4951_priv *ak4951;
+	struct regmap *regmap;
 	enum of_gpio_flags flags;
 	int rst_pin;
-	struct snd_soc_codec *codec;
 	int ret = 0;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -1180,12 +1151,11 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 	ak4951->i2c_clt = i2c;
 	ak4951->rst_pin = rst_pin;
 	ak4951->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-	codec = &ak4951->codec;
 	i2c_set_clientdata(i2c, ak4951);
-	ak4951->regmap = devm_regmap_init_i2c(i2c, &ak4951_regmap);
-	if (IS_ERR(ak4951->regmap)) {
-		ret = PTR_ERR(ak4951->regmap);
-		dev_err(&i2c->dev, "regmap_init() failed: %d\n", ret);
+	regmap = devm_regmap_init_i2c(i2c, &ak4951_regmap);
+	if (IS_ERR(regmap)) {
+		ret = PTR_ERR(regmap);
+		dev_err(&i2c->dev, "regmap_init() for ak1951 failed: %d\n", ret);
 		return ret;
 	}
 

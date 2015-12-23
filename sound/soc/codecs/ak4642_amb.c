@@ -48,15 +48,15 @@ struct ak4642_priv {
 /*
  * ak4642 register cache
  */
-static const u8 ak4642_reg[AK4642_CACHEREGNUM] = {
-	0x00, 0x00, 0x01, 0x00,
-	0x02, 0x00, 0x00, 0x00,
-	0xe1, 0xe1, 0x18, 0x00,
-	0xe1, 0x18, 0x11, 0x08,
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00,
+static const struct reg_default ak4642_reg[] = {
+	{  0, 0x00 }, {  1, 0x00 }, {  2, 0x01 }, {  3, 0x00 },
+	{  4, 0x02 }, {  5, 0x00 }, {  6, 0x00 }, {  7, 0x00 },
+	{  8, 0xe1 }, {  9, 0xe1 }, { 10, 0x18 }, { 11, 0x00 },
+	{ 12, 0xe1 }, { 13, 0x18 }, { 14, 0x11 }, { 15, 0x08 },
+	{ 16, 0x00 }, { 17, 0x00 }, { 18, 0x00 }, { 19, 0x00 },
+	{ 20, 0x00 }, { 21, 0x00 }, { 22, 0x00 }, { 23, 0x00 },
+	{ 24, 0x00 }, { 25, 0x00 }, { 26, 0x00 }, { 27, 0x00 },
+	{ 28, 0x00 }, { 29, 0x00 }, { 30, 0x00 }, { 31, 0x00 },
 };
 
 /****************   ALSA Controls and widgets   **************/
@@ -513,7 +513,7 @@ static int ak4642_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_update_bits(codec, AK4642_PM1, 0x40, 0);
 		break;
 	}
-	codec->dapm.bias_level = level;
+
 	return 0;
 }
 
@@ -566,12 +566,6 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 
 	dev_info(codec->dev, "AK4642 Audio Codec %s", AK4642_VERSION);
 
-	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_I2C);
-	if (ret < 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
-
 	ak4642 = snd_soc_codec_get_drvdata(codec);
 
 	ret = devm_gpio_request(codec->dev, ak4642->rst_pin, "ak4642 reset");
@@ -604,9 +598,6 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 	/* Mic-Amp 0db */
 	snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0x20);
 
-	snd_soc_add_codec_controls(codec, ak4642_snd_controls,
-				ARRAY_SIZE(ak4642_snd_controls));
-
 	return 0;
 }
 
@@ -622,14 +613,21 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4642 = {
 	.suspend		= ak4642_suspend,
 	.resume			= ak4642_resume,
 	.set_bias_level		= ak4642_set_bias_level,
-	.reg_cache_default	= ak4642_reg,
-	.reg_cache_size		= ARRAY_SIZE(ak4642_reg),
-	.reg_word_size		= sizeof(u8),
-	.reg_cache_step		= 1,
+	.controls		= ak4642_snd_controls,
+	.num_controls		= ARRAY_SIZE(ak4642_snd_controls),
 	.dapm_widgets		= ak4642_dapm_widgets,
 	.num_dapm_widgets	= ARRAY_SIZE(ak4642_dapm_widgets),
 	.dapm_routes		= ak4642_dapm_routes,
 	.num_dapm_routes	= ARRAY_SIZE(ak4642_dapm_routes),
+};
+
+static const struct regmap_config ak4642_regmap = {
+	.reg_bits		= 8,
+	.val_bits		= 8,
+	.max_register		= 0x1f,
+	.reg_defaults		= ak4642_reg,
+	.num_reg_defaults	=  ARRAY_SIZE(ak4642_reg),
+	.cache_type		= REGCACHE_RBTREE,
 };
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
@@ -638,6 +636,7 @@ static int ak4642_i2c_probe(struct i2c_client *i2c,
 {
 	struct device_node *np = i2c->dev.of_node;
 	struct ak4642_priv *ak4642;
+	struct regmap *regmap;
 	enum of_gpio_flags flags;
 	int rst_pin;
 
@@ -654,6 +653,12 @@ static int ak4642_i2c_probe(struct i2c_client *i2c,
 	ak4642->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
 	i2c_set_clientdata(i2c, ak4642);
+	regmap = devm_regmap_init_i2c(i2c, &ak4642_regmap);
+	if (IS_ERR(regmap)) {
+		dev_err(&i2c->dev, "regmap_init() for ak4642 failed\n");
+		return PTR_ERR(regmap);
+	}
+
 	return snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_ak4642, &ak4642_dai, 1);
 }
