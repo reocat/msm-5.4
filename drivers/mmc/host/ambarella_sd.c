@@ -2252,15 +2252,17 @@ void ambarella_sd_shutdown (struct platform_device *pdev)
 {
 	struct ambarella_sd_controller_info *pinfo;
 	struct ambarella_sd_mmc_info *pslotinfo;
+	struct mmc_host *host;
 	struct mmc_command cmd = {0};
 	int i;
 
 	pinfo = platform_get_drvdata(pdev);
 
 	for (i = 0; i < pinfo->slot_num; i++) {
-		if((system_state == SYSTEM_RESTART) ||
-			(system_state == SYSTEM_HALT)) {
-			pslotinfo = pinfo->pslotinfo[i];
+		pslotinfo = pinfo->pslotinfo[i];
+		host = pslotinfo->mmc;
+		if((host == G_mmc[0]) && ((system_state == SYSTEM_RESTART) ||
+			(system_state == SYSTEM_HALT))) {
 			if (mmc_try_claim_host(pslotinfo->mmc)) {
 				cmd.opcode = 0;
 				cmd.arg = 0xf0f0f0f0;
