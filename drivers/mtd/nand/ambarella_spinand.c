@@ -1377,6 +1377,18 @@ static void ambarella_spinand_shutdown(struct platform_device *pdev)
 	/* Wait until finished previous write command. */
 	ret = wait_execution_complete(flash, MAX_WAIT_JIFFIES);
 	if (ret) {
+		if (ret < 0) {
+			dev_err(flash->dev, "%s: Wait execution complete failed!\n",
+					__func__);
+			return;
+		} else
+			dev_err(flash->dev, "%s: Wait execution complete timedout!\n",
+					__func__);
+	}
+	/* Workaround for the spinand software reboot */
+	spinand_read_page_to_cache(flash, 0);
+	ret = wait_execution_complete(flash, MAX_WAIT_JIFFIES);
+	if (ret) {
 		if (ret < 0)
 			dev_err(flash->dev, "%s: Wait execution complete failed!\n",
 					__func__);
