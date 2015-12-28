@@ -291,4 +291,20 @@ extern int kernel_sock_shutdown(struct socket *sock,
 #define MODULE_ALIAS_NET_PF_PROTO_NAME(pf, proto, name) \
 	MODULE_ALIAS("net-pf-" __stringify(pf) "-proto-" __stringify(proto) \
 		     name)
+
+
+#define WLAN_UPDATE_SEQ 	0
+
+#if WLAN_UPDATE_SEQ
+#define SOCK_SEQ_UPDATE  	0xBADBEEF
+struct sock_sequence_update
+{
+	struct sock *sock;
+	unsigned short ident;
+	unsigned int seq;
+	unsigned int ack;
+	unsigned int seq_offset;
+	unsigned int ack_offset;
+};
+#endif
 #endif	/* _LINUX_NET_H */
