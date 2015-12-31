@@ -1090,7 +1090,7 @@ static void ambarella_sd_set_phy_timing(
 {
 	u32 i, val0, val1;
 
-	if (pinfo->timing_reg == NULL || pinfo->phy_timing_num == 0)
+	if ((pinfo->soft_phy && pinfo->timing_reg == NULL) || pinfo->phy_timing_num == 0)
 		return;
 
 	for (i = 0; i < pinfo->phy_timing_num; i++) {
@@ -1110,6 +1110,9 @@ static void ambarella_sd_set_phy_timing(
 		amba_writel(pinfo->timing_reg, val0 | 0x02000000);
 		amba_writel(pinfo->timing_reg, val0);
 		amba_writel(pinfo->regbase + SD_LAT_CTRL_OFFSET, val1);
+	} else if(pinfo->timing_reg == NULL) {
+		amba_writel(pinfo->regbase + SD_DELAY_SEL_L, val0);
+		amba_writel(pinfo->regbase + SD_DELAY_SEL_H, val1);
 	} else {
 		u32 ms_delay = amba_rct_readl(pinfo->timing_reg);
 		ms_delay &= val0;
@@ -1985,13 +1988,14 @@ static int ambarella_sd_of_parse(struct ambarella_sd_controller_info *pinfo)
 	if (retval < 0)
 		pinfo->max_blk_sz = 0x20000;
 
+	/*Adjust SD Timing base on SD Phy*/
+	pinfo->soft_phy = !!of_find_property(np, "amb,soft-phy", NULL);
+
 	/* below are properties for phy timing */
-	if (pinfo->timing_reg == NULL) {
+	if (pinfo->soft_phy && pinfo->timing_reg == NULL) {
 		retval = 0;
 		goto pasre_err;
 	}
-
-	pinfo->soft_phy = !!of_find_property(np, "amb,soft-phy", NULL);
 
 	/* amb,phy-timing must be provided when timing_reg is given */
 	prop = of_get_property(np, "amb,phy-timing", &psize);
