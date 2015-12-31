@@ -96,6 +96,8 @@
 #define SD_BOOT_CTR_OFFSET		0x070
 #define SD_BOOT_STA_OFFSET		0x074
 #define SD_VOL_SW_OFFSET		0x07C
+#define SD_DELAY_SEL_L			0x0D8
+#define SD_DELAY_SEL_H			0x0DC
 #define SD_LAT_CTRL_OFFSET		0x0F8
 #define SD_SIST_OFFSET			0x0FC	/* Half word */
 #define SD_VER_OFFSET			0x0FE	/* Half word */
