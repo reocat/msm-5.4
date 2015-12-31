@@ -503,15 +503,18 @@ Required properties:
 
 Optional properties:
 - amb,dma-addr-fix: should be specified only for S2.
-- amb,soft-phy: should be specified for SD controllers supporting soft phy.
+- amb,soft-phy: should be specified for SD controllers to adjust timing base on
+  SD phy.
 - amb,phy-timing: an integer array which is used to specify the SD phy timing,
   the size of the array is different according to corresponding phy register
   for each chips or SD controllers, and the values are gotten by SD shmoo in
   Amboot.
-  For the SD controller supporting soft SD phy, like S2E SD0, the array is
-  orgnized as: <mode phy_ctrl0_val latency_ctrl_val>
+  For the SD controller to ajust timing base on SD controller, like S3L and later
+  chip, the array is orgnized as: <mode SD_DELAY_SEL_L SD_DELAY_SEL_H>;
+  For the SD controller to ajust timing base on SD phy, like S2E SD0, S2L, S3L, the
+  array is orgnized as: <mode phy_ctrl0_val latency_ctrl_val>;
   For the SD controller only supporting ms delay mux, like S2E SD1, the array
-  is orgnized as: <mode ms_delay_ctrl_mask ms_delay_ctrl_val>
+  is orgnized as: <mode ms_delay_ctrl_mask ms_delay_ctrl_val>;
   Here mode is the ORed value of SD card working modes like sdr104, ddr50 and
   etc., and the later 2 items are values written to corresponding phy registers.
   Following is the definition of each bits for mode:
@@ -533,6 +536,39 @@ Optional properties:
     #define MMC_TIMING_UHS_DDR50	7
     #define MMC_TIMING_MMC_HS200	8
 
+Example for ajusting timing base sd controller on s3l platform:
+		sdmmc0: sdmmc0@e0002000 {
+			compatible = "ambarella,sdmmc";
+			reg = <0xe0002000 0x1000>,
+			      <0xe0001000 0x80>;/* fio reg address */
+			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,/*HS 50M and 25M*/
+					/*sdr25 50M,sdr50 100M,sdr104 120M*/
+					<0x00000078 0x10410400 0x00904104>,
+					<0x00000080 0x38E38E00 0x0238E38E>;/*DDR50 50M*/
+			slot@0 {
+
+			};
+		};
+
+
+Example for ajusting timing base sd phy on s3l platform:
+		sdmmc0: sdmmc0@e0002000 {
+			compatible = "ambarella,sdmmc";
+			reg = <0xe0002000 0x1000>,
+			      <0xe0001000 0x80>;/* fio reg address */
+			      <0xec1704c0 0x8>;/*should specify the phy register*/
+
+			amb,soft-phy;
+			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
+					/*sdr12 24M,sdr25 50M,sdr50 100M*/
+					<0x00000038 0x00000003 0x00001111>,
+					<0x00000040 0x00000005 0x00002222>,/*sdr104 200M*/
+					<0x00000080 0x000C0005 0x00000000>;/*ddr50 50M*/
+			slot@0 {
+
+			};
+		};
 
 iii) Subnode
 ------------
