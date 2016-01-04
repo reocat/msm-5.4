@@ -542,6 +542,7 @@ Example for ajusting timing base sd controller on s3l platform:
 			reg = <0xe0002000 0x1000>,
 			      <0xe0001000 0x80>;/* fio reg address */
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			amb,soft-phy;
 			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,/*HS 50M and 25M*/
 					/*sdr25 50M,sdr50 100M,sdr104 120M*/
 					<0x00000078 0x10410400 0x00904104>,

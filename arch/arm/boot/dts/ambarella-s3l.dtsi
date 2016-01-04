@@ -554,6 +554,7 @@
 			amb,wait-tmo = <10000>; /* in millisecond */
 			amb,switch-vol-tmo = <100>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			amb,soft-phy;
 			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,
 					/*sdr25 50M,sdr50 100M,sdr104 120M*/
 					<0x00000078 0x10410400 0x00904104>,
@@ -582,6 +583,7 @@
 			amb,wait-tmo = <10000>; /* in millisecond */
 			amb,switch-vol-tmo = <100>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
+			amb,soft-phy;
 			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,
 					/*sdr25 50M,sdr50 100M,sdr104 120M*/
 					<0x00000078 0x10410400 0x00904104>,
