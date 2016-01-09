@@ -92,11 +92,11 @@ static void ambarella_timer_suspend(struct ambarella_clkevt *amb_clkevt,
 	ctrl_offset = amb_clkevt ? amb_clkevt->ctrl_offset : amb_clksrc->ctrl_offset;
 
 	pm_reg->clk_rate = AMBARELLA_TIMER_FREQ;
-	pm_reg->ctrl_reg = (amba_readl(ctrl_reg) >> ctrl_offset) & 0xf;
-	pm_reg->status_reg = amba_readl(regbase + TIMER_STATUS_OFFSET);
-	pm_reg->reload_reg = amba_readl(regbase + TIMER_RELOAD_OFFSET);
-	pm_reg->match1_reg = amba_readl(regbase + TIMER_MATCH1_OFFSET);
-	pm_reg->match2_reg = amba_readl(regbase + TIMER_MATCH2_OFFSET);
+	pm_reg->ctrl_reg = (readl_relaxed(ctrl_reg) >> ctrl_offset) & 0xf;
+	pm_reg->status_reg = readl_relaxed(regbase + TIMER_STATUS_OFFSET);
+	pm_reg->reload_reg = readl_relaxed(regbase + TIMER_RELOAD_OFFSET);
+	pm_reg->match1_reg = readl_relaxed(regbase + TIMER_MATCH1_OFFSET);
+	pm_reg->match2_reg = readl_relaxed(regbase + TIMER_MATCH2_OFFSET);
 
 	atomic_io_modify(ctrl_reg, 0xf << ctrl_offset, 0);
 }
@@ -116,10 +116,10 @@ static void ambarella_timer_resume(struct ambarella_clkevt *amb_clkevt,
 
 	atomic_io_modify(ctrl_reg, 0xf << ctrl_offset, 0);
 
-	amba_writel(regbase + TIMER_STATUS_OFFSET, pm_reg->status_reg);
-	amba_writel(regbase + TIMER_RELOAD_OFFSET, pm_reg->reload_reg);
-	amba_writel(regbase + TIMER_MATCH1_OFFSET, pm_reg->match1_reg);
-	amba_writel(regbase + TIMER_MATCH2_OFFSET, pm_reg->match2_reg);
+	writel_relaxed(pm_reg->status_reg, regbase + TIMER_STATUS_OFFSET);
+	writel_relaxed(pm_reg->reload_reg, regbase + TIMER_RELOAD_OFFSET);
+	writel_relaxed(pm_reg->match1_reg, regbase + TIMER_MATCH1_OFFSET);
+	writel_relaxed(pm_reg->match2_reg, regbase + TIMER_MATCH2_OFFSET);
 
 	clk_rate = AMBARELLA_TIMER_FREQ;
 	if (pm_reg->clk_rate == clk_rate)
@@ -144,7 +144,7 @@ resume_exit:
 static cycle_t ambarella_clksrc_timer_read(struct clocksource *clksrc)
 {
 	struct ambarella_clksrc *amb_clksrc = to_ambarella_clksrc(clksrc);
-	return (-(u32)amba_readl(amb_clksrc->base_reg + TIMER_STATUS_OFFSET));
+	return (-(u32)readl_relaxed(amb_clksrc->base_reg + TIMER_STATUS_OFFSET));
 }
 
 static void ambarella_clksrc_timer_suspend(struct clocksource *clksrc)
@@ -161,7 +161,7 @@ static void ambarella_clksrc_timer_resume(struct clocksource *clksrc)
 
 static u64 notrace ambarella_read_sched_clock(void)
 {
-	return (-(u64)amba_readl(sched_base_reg + TIMER_STATUS_OFFSET));
+	return (-(u64)readl_relaxed(sched_base_reg + TIMER_STATUS_OFFSET));
 }
 
 static void __init ambarella_clocksource_init(struct device_node *np)
@@ -197,10 +197,10 @@ static void __init ambarella_clocksource_init(struct device_node *np)
 	of_node_put(np);
 
 	atomic_io_modify(amb_clksrc->ctrl_reg, 0xf << amb_clksrc->ctrl_offset, 0);
-	amba_writel(amb_clksrc->base_reg + TIMER_STATUS_OFFSET, 0xffffffff);
-	amba_writel(amb_clksrc->base_reg + TIMER_RELOAD_OFFSET, 0xffffffff);
-	amba_writel(amb_clksrc->base_reg + TIMER_MATCH1_OFFSET, 0x0);
-	amba_writel(amb_clksrc->base_reg + TIMER_MATCH2_OFFSET, 0x0);
+	writel_relaxed(0xffffffff, amb_clksrc->base_reg + TIMER_STATUS_OFFSET);
+	writel_relaxed(0xffffffff, amb_clksrc->base_reg + TIMER_RELOAD_OFFSET);
+	writel_relaxed(0x0, amb_clksrc->base_reg + TIMER_MATCH1_OFFSET);
+	writel_relaxed(0x0, amb_clksrc->base_reg + TIMER_MATCH2_OFFSET);
 	atomic_io_modify(amb_clksrc->ctrl_reg, 0xf << amb_clksrc->ctrl_offset,
 			TIMER_CTRL_EN << amb_clksrc->ctrl_offset);
 
@@ -235,10 +235,10 @@ static int ambarella_clkevt_set_state_periodic(struct clock_event_device *clkevt
 
 	atomic_io_modify(amb_clkevt->ctrl_reg, 0xf << amb_clkevt->ctrl_offset, 0);
 
-	amba_writel(amb_clkevt->base_reg + TIMER_STATUS_OFFSET, cnt);
-	amba_writel(amb_clkevt->base_reg + TIMER_RELOAD_OFFSET, cnt);
-	amba_writel(amb_clkevt->base_reg + TIMER_MATCH1_OFFSET, 0x0);
-	amba_writel(amb_clkevt->base_reg + TIMER_MATCH2_OFFSET, 0x0);
+	writel_relaxed(cnt, amb_clkevt->base_reg + TIMER_STATUS_OFFSET);
+	writel_relaxed(cnt, amb_clkevt->base_reg + TIMER_RELOAD_OFFSET);
+	writel_relaxed(0x0, amb_clkevt->base_reg + TIMER_MATCH1_OFFSET);
+	writel_relaxed(0x0, amb_clkevt->base_reg + TIMER_MATCH2_OFFSET);
 
 	atomic_io_modify(amb_clkevt->ctrl_reg, 0xf << amb_clkevt->ctrl_offset,
 		(TIMER_CTRL_OF | TIMER_CTRL_EN) << amb_clkevt->ctrl_offset);
@@ -252,10 +252,10 @@ static int ambarella_clkevt_set_state_oneshot(struct clock_event_device *clkevt)
 
 	atomic_io_modify(amb_clkevt->ctrl_reg, 0xf << amb_clkevt->ctrl_offset, 0);
 
-	amba_writel(amb_clkevt->base_reg + TIMER_STATUS_OFFSET, 0x0);
-	amba_writel(amb_clkevt->base_reg + TIMER_RELOAD_OFFSET, 0xffffffff);
-	amba_writel(amb_clkevt->base_reg + TIMER_MATCH1_OFFSET, 0x0);
-	amba_writel(amb_clkevt->base_reg + TIMER_MATCH2_OFFSET, 0x0);
+	writel_relaxed(0x0, amb_clkevt->base_reg + TIMER_STATUS_OFFSET);
+	writel_relaxed(0xffffffff, amb_clkevt->base_reg + TIMER_RELOAD_OFFSET);
+	writel_relaxed(0x0, amb_clkevt->base_reg + TIMER_MATCH1_OFFSET);
+	writel_relaxed(0x0, amb_clkevt->base_reg + TIMER_MATCH2_OFFSET);
 
 	atomic_io_modify(amb_clkevt->ctrl_reg, 0xf << amb_clkevt->ctrl_offset,
 		(TIMER_CTRL_OF | TIMER_CTRL_EN) << amb_clkevt->ctrl_offset);
@@ -267,7 +267,7 @@ static int ambarella_clkevt_set_next_event(unsigned long delta,
 	struct clock_event_device *clkevt)
 {
 	struct ambarella_clkevt *amb_clkevt = to_ambarella_clkevt(clkevt);
-	amba_writel(amb_clkevt->base_reg + TIMER_STATUS_OFFSET, delta);
+	writel_relaxed(delta, amb_clkevt->base_reg + TIMER_STATUS_OFFSET);
 	return 0;
 }
 
