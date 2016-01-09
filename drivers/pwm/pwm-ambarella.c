@@ -78,7 +78,7 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	struct ambarella_pwm_chip *ambpwm = to_ambarella_pwm_chip(chip);
 	void __iomem *base;
 	void __iomem *reg;
-	u32 tick_bits, clock, total, on, off, div;
+	u32 tick_bits, clock, total, on, off, div, val;
 
 	/* we arrange the id of the individual pwm to the last one */
 	if (ambpwm->base2 && pwm->hwpwm == PWM_INSTANCES - 1) {
@@ -90,18 +90,22 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	}
 
 	reg = base + ambpwm_enable_offset[pwm->hwpwm];
+	val = readl_relaxed(reg);
 	if (ambpwm_is_chief[pwm->hwpwm])
-		amba_setbitsl(reg, PWM_CLK_SRC_BIT);
+		val |= PWM_CLK_SRC_BIT;
 	else
-		amba_clrbitsl(reg, PWM_INV_EN_BIT);
+		val &= ~PWM_INV_EN_BIT;
+	writel_relaxed(val, reg);
 
 	clock = (clk_get_rate(clk_get(NULL, "gclk_pwm")) + 50000) / 100000;
 	total = (clock * period_ns + 5000) / 10000;
 	div = total >> tick_bits;
 	clock /= (div + 1);
 	reg = base + ambpwm_divider_offset[pwm->hwpwm];
-	amba_clrbitsl(reg, PWM_DIVIDER_MASK);
-	amba_setbitsl(reg, div << 1);
+	val = readl_relaxed(reg);
+	val &= ~PWM_DIVIDER_MASK;
+	val |= div << 1;
+	writel_relaxed(val, reg);
 
 	total = (clock * period_ns + 5000) / 10000;
 	on = (clock * duty_ns + 5000) / 10000;
@@ -113,9 +117,9 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	reg = base + ambpwm_data_offset[pwm->hwpwm];
 	if (ambpwm->polarity[pwm->hwpwm] == PWM_POLARITY_NORMAL)
-		amba_writel(reg, (on - 1) << tick_bits | (off - 1));
+		writel_relaxed((on - 1) << tick_bits | (off - 1), reg);
 	else
-		amba_writel(reg, (off - 1) << tick_bits | (on - 1));
+		writel_relaxed((off - 1) << tick_bits | (on - 1), reg);
 
 	return 0;
 }
@@ -124,6 +128,7 @@ static int ambarella_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct ambarella_pwm_chip *ambpwm = to_ambarella_pwm_chip(chip);
 	void __iomem *reg;
+	u32 val;
 
 	/* we arrange the id of the individual pwm to the last one */
 	if (ambpwm->base2 && pwm->hwpwm == PWM_INSTANCES - 1)
@@ -131,7 +136,9 @@ static int ambarella_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 	else
 		reg = ambpwm->base + ambpwm_enable_offset[pwm->hwpwm];
 
-	amba_setbitsl(reg, PWM_PWM_EN_BIT);
+	val = readl_relaxed(reg);
+	val |= PWM_PWM_EN_BIT;
+	writel_relaxed(val, reg);
 
 	return 0;
 }
@@ -140,6 +147,7 @@ static void ambarella_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct ambarella_pwm_chip *ambpwm = to_ambarella_pwm_chip(chip);
 	void __iomem *reg;
+	u32 val;
 
 	/* we arrange the id of the individual pwm to the last one */
 	if (ambpwm->base2 && pwm->hwpwm == PWM_INSTANCES - 1)
@@ -147,7 +155,9 @@ static void ambarella_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 	else
 		reg = ambpwm->base + ambpwm_enable_offset[pwm->hwpwm];
 
-	amba_clrbitsl(reg, PWM_PWM_EN_BIT);
+	val = readl_relaxed(reg);
+	val &= ~PWM_PWM_EN_BIT;
+	writel_relaxed(val, reg);
 }
 
 static int ambarella_pwm_set_polarity(struct pwm_chip *chip,

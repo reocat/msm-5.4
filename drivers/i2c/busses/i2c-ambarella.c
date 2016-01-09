@@ -35,8 +35,6 @@
 #include <linux/i2c.h>
 #include <linux/clk.h>
 #include <asm/dma.h>
-
-#include <mach/hardware.h>
 #include <plat/idc.h>
 #include <plat/event.h>
 
@@ -142,7 +140,7 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 
 	apb_clk = clk_get_rate(clk_get(pinfo->dev, NULL));
 
-	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_DISABLE);
+	writel_relaxed(IDC_ENR_REG_DISABLE, pinfo->regbase + IDC_ENR_OFFSET);
 
 	idc_prescale =( ((apb_clk / pinfo->clk_limit) - 2)/(4 + pinfo->duty_cycle)) - 1;
 
@@ -152,14 +150,12 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	dev_dbg(pinfo->dev, "clk[%dHz]\n",
 		(apb_clk / ((idc_prescale + 1) << 2)));
 
-	amba_writeb(pinfo->regbase + IDC_PSLL_OFFSET,
-		(idc_prescale & 0xff));
-	amba_writeb(pinfo->regbase + IDC_PSLH_OFFSET,
-		((idc_prescale & 0xff00) >> 8));
+	writeb_relaxed(idc_prescale, pinfo->regbase + IDC_PSLL_OFFSET);
+	writeb_relaxed(idc_prescale >> 8, pinfo->regbase + IDC_PSLH_OFFSET);
 
-	amba_writeb(pinfo->regbase + IDC_DUTYCYCLE_OFFSET, pinfo->duty_cycle);
+	writeb_relaxed(pinfo->duty_cycle, pinfo->regbase + IDC_DUTYCYCLE_OFFSET);
 
-	amba_writel(pinfo->regbase + IDC_ENR_OFFSET, IDC_ENR_REG_ENABLE);
+	writel_relaxed(IDC_ENR_REG_ENABLE, pinfo->regbase + IDC_ENR_OFFSET);
 }
 
 static int ambarella_i2c_system_event(struct notifier_block *nb,
@@ -205,15 +201,14 @@ static inline void ambarella_i2c_start_single_msg(
 {
 	if (pinfo->msgs->flags & I2C_M_TEN) {
 		pinfo->state = AMBA_I2C_STATE_START_TEN;
-		amba_writeb(pinfo->regbase + IDC_DATA_OFFSET,
-			(0xf0 | ((pinfo->msg_addr >> 8) & 0x07)));
+		writeb_relaxed((0xf0 | ((pinfo->msg_addr >> 8) & 0x07)),
+					pinfo->regbase + IDC_DATA_OFFSET);
 	} else {
 		pinfo->state = AMBA_I2C_STATE_START;
-		amba_writeb(pinfo->regbase + IDC_DATA_OFFSET,
-			(pinfo->msg_addr & 0xff));
+		writeb_relaxed(pinfo->msg_addr, pinfo->regbase + IDC_DATA_OFFSET);
 	}
 
-	amba_writel(pinfo->regbase + IDC_CTRL_OFFSET, IDC_CTRL_START);
+	writel_relaxed(IDC_CTRL_START, pinfo->regbase + IDC_CTRL_OFFSET);
 }
 
 static inline void ambarella_i2c_bulk_write(
@@ -221,20 +216,20 @@ static inline void ambarella_i2c_bulk_write(
 	__u32 fifosize)
 {
 	do {
-		amba_writeb(pinfo->regbase + IDC_FMDATA_OFFSET,
-			pinfo->msgs->buf[pinfo->msg_index]);
+		writeb_relaxed(pinfo->msgs->buf[pinfo->msg_index],
+				pinfo->regbase + IDC_FMDATA_OFFSET);
 		pinfo->msg_index++;
 		fifosize--;
 
 		if (pinfo->msg_index >= pinfo->msgs->len) {
-			amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET,
-				IDC_FMCTRL_IF | IDC_FMCTRL_STOP);
+			writel_relaxed(IDC_FMCTRL_IF | IDC_FMCTRL_STOP,
+					pinfo->regbase + IDC_FMCTRL_OFFSET);
 
 			return;
 		}
 	} while (fifosize > 1);
 
-	amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET, IDC_FMCTRL_IF);
+	writel_relaxed(IDC_FMCTRL_IF, pinfo->regbase + IDC_FMCTRL_OFFSET);
 }
 
 static inline void ambarella_i2c_start_bulk_msg_write(
@@ -244,15 +239,14 @@ static inline void ambarella_i2c_start_bulk_msg_write(
 
 	pinfo->state = AMBA_I2C_STATE_BULK_WRITE;
 
-	amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET, IDC_FMCTRL_START);
+	writel_relaxed(IDC_FMCTRL_START, pinfo->regbase + IDC_FMCTRL_OFFSET);
 
 	if (pinfo->msgs->flags & I2C_M_TEN) {
-		amba_writeb(pinfo->regbase + IDC_FMDATA_OFFSET,
-			(0xf0 | ((pinfo->msg_addr >> 8) & 0x07)));
+		writeb_relaxed((0xf0 | ((pinfo->msg_addr >> 8) & 0x07)),
+				pinfo->regbase + IDC_FMDATA_OFFSET);
 		fifosize--;
 	}
-	amba_writeb(pinfo->regbase + IDC_FMDATA_OFFSET,
-		(pinfo->msg_addr & 0xff));
+	writeb_relaxed(pinfo->msg_addr, pinfo->regbase + IDC_FMDATA_OFFSET);
 	fifosize -= 2;
 
 	ambarella_i2c_bulk_write(pinfo, fifosize);
@@ -319,8 +313,7 @@ ambarella_i2c_check_ack_enter:
 
 		if (retry_counter--) {
 			udelay(100);
-			*pack_control = amba_readl(pinfo->regbase
-				+ IDC_CTRL_OFFSET);
+			*pack_control = readl_relaxed(pinfo->regbase + IDC_CTRL_OFFSET);
 			goto ambarella_i2c_check_ack_enter;
 		}
 		retVal = 0;
@@ -342,8 +335,8 @@ static irqreturn_t ambarella_i2c_irq(int irqno, void *dev_id)
 
 	pinfo = (struct ambarella_i2c_dev_info *)dev_id;
 
-	status_reg = amba_readl(pinfo->regbase + IDC_STS_OFFSET);
-	control_reg = amba_readl(pinfo->regbase + IDC_CTRL_OFFSET);
+	status_reg = readl_relaxed(pinfo->regbase + IDC_STS_OFFSET);
+	control_reg = readl_relaxed(pinfo->regbase + IDC_CTRL_OFFSET);
 
 	dev_dbg(pinfo->dev, "state[0x%x]\n", pinfo->state);
 	dev_dbg(pinfo->dev, "status_reg[0x%x]\n", status_reg);
@@ -367,8 +360,7 @@ static irqreturn_t ambarella_i2c_irq(int irqno, void *dev_id)
 		break;
 	case AMBA_I2C_STATE_START_TEN:
 		pinfo->state = AMBA_I2C_STATE_START;
-		amba_writeb(pinfo->regbase + IDC_DATA_OFFSET,
-			(pinfo->msg_addr & 0xff));
+		writeb_relaxed(pinfo->msg_addr, pinfo->regbase + IDC_DATA_OFFSET);
 		break;
 	case AMBA_I2C_STATE_START_NEW:
 amba_i2c_irq_start_new:
@@ -377,14 +369,14 @@ amba_i2c_irq_start_new:
 		break;
 	case AMBA_I2C_STATE_READ_STOP:
 		pinfo->msgs->buf[pinfo->msg_index] =
-			amba_readb(pinfo->regbase + IDC_DATA_OFFSET);
+			readb_relaxed(pinfo->regbase + IDC_DATA_OFFSET);
 		pinfo->msg_index++;
 amba_i2c_irq_read_stop:
 		ambarella_i2c_stop(pinfo, AMBA_I2C_STATE_IDLE, &ack_control);
 		break;
 	case AMBA_I2C_STATE_READ:
 		pinfo->msgs->buf[pinfo->msg_index] =
-			amba_readb(pinfo->regbase + IDC_DATA_OFFSET);
+			readb_relaxed(pinfo->regbase + IDC_DATA_OFFSET);
 		pinfo->msg_index++;
 
 		if (pinfo->msg_index >= pinfo->msgs->len - 1) {
@@ -405,8 +397,8 @@ amba_i2c_irq_read_stop:
 	case AMBA_I2C_STATE_WRITE:
 amba_i2c_irq_write:
 		pinfo->state = AMBA_I2C_STATE_WRITE_WAIT_ACK;
-		amba_writeb(pinfo->regbase + IDC_DATA_OFFSET,
-			pinfo->msgs->buf[pinfo->msg_index]);
+		writeb_relaxed(pinfo->msgs->buf[pinfo->msg_index],
+				pinfo->regbase + IDC_DATA_OFFSET);
 		break;
 	case AMBA_I2C_STATE_WRITE_WAIT_ACK:
 		if (ambarella_i2c_check_ack(pinfo, &control_reg,
@@ -433,8 +425,7 @@ amba_i2c_irq_write:
 	case AMBA_I2C_STATE_BULK_WRITE:
 		if (ambarella_i2c_check_ack(pinfo, &control_reg,
 			CONFIG_I2C_AMBARELLA_BULK_RETRY_NUM) ==	IDC_CTRL_ACK) {
-			amba_writel(pinfo->regbase + IDC_CTRL_OFFSET,
-				IDC_CTRL_ACK);
+			writel_relaxed(IDC_CTRL_ACK, pinfo->regbase + IDC_CTRL_OFFSET);
 			if (pinfo->msg_index >= pinfo->msgs->len) {
 				if (pinfo->msg_num > 1) {
 					pinfo->msgs++;
@@ -463,7 +454,7 @@ amba_i2c_irq_write:
 		break;
 	}
 
-	amba_writel(pinfo->regbase + IDC_CTRL_OFFSET, ack_control);
+	writel_relaxed(ack_control, pinfo->regbase + IDC_CTRL_OFFSET);
 
 amba_i2c_irq_exit:
 	return IRQ_HANDLED;

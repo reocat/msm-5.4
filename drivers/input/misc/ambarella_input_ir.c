@@ -151,11 +151,11 @@ static inline int ambarella_ir_update_buffer(struct ambarella_ir_info *pirinfo)
 	int				count;
 	int				size;
 
-	count = amba_readl(pirinfo->regbase + IR_STATUS_OFFSET);
+	count = readl_relaxed(pirinfo->regbase + IR_STATUS_OFFSET);
 	dev_dbg(&pirinfo->input->dev, "size we got is [%d]\n", count);
 	for (; count > 0; count--) {
 		ambarella_ir_write_data(pirinfo,
-			amba_readl(pirinfo->regbase + IR_DATA_OFFSET));
+			readl_relaxed(pirinfo->regbase + IR_DATA_OFFSET));
 	}
 	size = ambarella_ir_get_tick_size(pirinfo);
 
@@ -173,13 +173,14 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 	BUG_ON(pirinfo->ir_pread < 0);
 	BUG_ON(pirinfo->ir_pread >= MAX_IR_BUFFER);
 
-	ctrl_val = amba_readl(pirinfo->regbase + IR_CONTROL_OFFSET);
+	ctrl_val = readl_relaxed(pirinfo->regbase + IR_CONTROL_OFFSET);
 	if (ctrl_val & IR_CONTROL_FIFO_OV) {
-		while (amba_readl(pirinfo->regbase + IR_STATUS_OFFSET) > 0)
-			amba_readl(pirinfo->regbase + IR_DATA_OFFSET);
+		while (readl_relaxed(pirinfo->regbase + IR_STATUS_OFFSET) > 0)
+			readl_relaxed(pirinfo->regbase + IR_DATA_OFFSET);
 
-		amba_setbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
-					IR_CONTROL_FIFO_OV);
+		ctrl_val = readl_relaxed(pirinfo->regbase + IR_CONTROL_OFFSET);
+		ctrl_val |= IR_CONTROL_FIFO_OV;
+		writel_relaxed(ctrl_val, pirinfo->regbase + IR_CONTROL_OFFSET);
 
 		dev_err(&pirinfo->input->dev,
 			"IR_CONTROL_FIFO_OV overflow\n");
@@ -215,22 +216,23 @@ static irqreturn_t ambarella_ir_irq(int irq, void *devid)
 
 	dev_dbg(&pirinfo->input->dev,
 		"line[%d],frame_data_to_received[%d]\n", __LINE__, edges);
-	amba_clrbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
-		IR_CONTROL_INTLEV(0x3F));
-	amba_setbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
-		IR_CONTROL_INTLEV(edges));
+
+	ctrl_val = readl_relaxed(pirinfo->regbase + IR_CONTROL_OFFSET);
+	ctrl_val &= ~(IR_CONTROL_INTLEV(0x3F));
+	ctrl_val |= IR_CONTROL_INTLEV(edges);
+	writel_relaxed(ctrl_val, pirinfo->regbase + IR_CONTROL_OFFSET);
 
 ambarella_ir_irq_exit:
-	amba_writel(pirinfo->regbase + IR_CONTROL_OFFSET,
-		(amba_readl(pirinfo->regbase + IR_CONTROL_OFFSET) |
-		IR_CONTROL_LEVINT));
+	ctrl_val = readl_relaxed(pirinfo->regbase + IR_CONTROL_OFFSET);
+	ctrl_val |= IR_CONTROL_LEVINT;
+	writel_relaxed(ctrl_val, pirinfo->regbase + IR_CONTROL_OFFSET);
 
 	return IRQ_HANDLED;
 }
 
 void ambarella_ir_enable(struct ambarella_ir_info *pirinfo)
 {
-	u32 edges;
+	u32 edges, ctrl_val;
 
 	pirinfo->frame_data_to_received = pirinfo->frame_info.frame_head_size
 		+ pirinfo->frame_info.frame_data_size;
@@ -244,9 +246,11 @@ void ambarella_ir_enable(struct ambarella_ir_info *pirinfo)
 		edges = pirinfo->frame_data_to_received;
 		pirinfo->frame_data_to_received = 0;
 	}
-	amba_writel(pirinfo->regbase + IR_CONTROL_OFFSET, IR_CONTROL_RESET);
-	amba_setbitsl(pirinfo->regbase + IR_CONTROL_OFFSET,
-		IR_CONTROL_ENB | IR_CONTROL_INTLEV(edges) | IR_CONTROL_INTENB);
+	writel_relaxed(IR_CONTROL_RESET, pirinfo->regbase + IR_CONTROL_OFFSET);
+
+	ctrl_val = readl_relaxed(pirinfo->regbase + IR_CONTROL_OFFSET);
+	ctrl_val |= IR_CONTROL_ENB | IR_CONTROL_INTLEV(edges) | IR_CONTROL_INTENB;
+	writel_relaxed(ctrl_val, pirinfo->regbase + IR_CONTROL_OFFSET);
 
 	enable_irq(pirinfo->irq);
 }
@@ -447,13 +451,17 @@ static int ambarella_ir_remove(struct platform_device *pdev)
 static int ambarella_ir_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
-	int					retval = 0;
-	struct ambarella_ir_info		*pirinfo;
+	struct ambarella_ir_info *pirinfo;
+	u32 ctrl_val;
+	int retval = 0;
 
 	pirinfo = platform_get_drvdata(pdev);
 
 	disable_irq(pirinfo->irq);
-	amba_clrbitsl(pirinfo->regbase + IR_CONTROL_OFFSET, IR_CONTROL_INTENB);
+
+	ctrl_val = readl_relaxed(pirinfo->regbase + IR_CONTROL_OFFSET);
+	ctrl_val &= ~IR_CONTROL_INTENB;
+	writel_relaxed(ctrl_val, pirinfo->regbase + IR_CONTROL_OFFSET);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, retval, state.event);
