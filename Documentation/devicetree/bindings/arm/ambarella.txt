@@ -314,7 +314,7 @@ ii) Example
 		compatible = "ambarella,dma";
 		reg = <0xe0005000 0x1000>;
 		interrupts = <15 0x4>;
-		#dma-cells = <2>;
+		#dma-cells = <3>;
 		dma-channels = <8>;
 		dma-requests = <12>;
 		dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
@@ -693,6 +693,7 @@ Required properties:
 			  channel number, but can contain any data that is
 			  required for configuring a channel.
 			- A flag for dma channel usage. 0 for memcpy, 1 for slave.
+			- A flag for dma channel force stop use. 1 for force stop.
 - dma-names: 		Contains one identifier string for each DMA specifier in
 			the dmas property. The specific strings that can be used
 			are defined in the binding of the DMA client device.
