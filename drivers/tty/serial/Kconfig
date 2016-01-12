@@ -18,6 +18,22 @@ source "drivers/tty/serial/8250/Kconfig"
 
 comment "Non-8250 serial port support"
 
+config SERIAL_AMBARELLA
+	tristate "Ambarella Media Soc serial port support"
+	depends on ARCH_AMBARELLA
+	select SERIAL_CORE
+	help
+	  If you have a machine based on an Ambarella Media SoC you
+	  can enable its onboard serial ports by enabling this option.
+
+config SERIAL_AMBARELLA_CONSOLE
+	bool "Console on Ambarella Media SoC serial port"
+	depends on SERIAL_AMBARELLA=y
+	select SERIAL_CORE_CONSOLE
+	help
+	  If you have enabled the serial port on the Ambarella Media SoC
+	  you can make it the console by answering Y to this option.
+
 config SERIAL_AMBA_PL010
 	tristate "ARM AMBA PL010 serial port support"
 	depends on ARM_AMBA
@@ -262,7 +278,7 @@ config SERIAL_SAMSUNG_UARTS
 	help
 	  Select the number of available UART ports for the Samsung S3C
 	  serial driver
-	
+
 config SERIAL_SAMSUNG_DEBUG
 	bool "Samsung SoC serial debug"
 	depends on SERIAL_SAMSUNG && DEBUG_LL
@@ -680,8 +696,8 @@ config PDC_CONSOLE
 	depends on PARISC && !SERIAL_MUX && VT
 	default n
 	help
-	  Saying Y here will enable the software based PDC console to be 
-	  used as the system console.  This is useful for machines in 
+	  Saying Y here will enable the software based PDC console to be
+	  used as the system console.  This is useful for machines in
 	  which the hardware based console has not been written yet.  The
 	  following steps must be completed to use the PDC console:
 
@@ -872,7 +888,7 @@ config SERIAL_CPM
 	depends on CPM2 || CPM1
 	select SERIAL_CORE
 	help
-	  This driver supports the SCC and SMC serial ports on Motorola 
+	  This driver supports the SCC and SMC serial ports on Motorola
 	  embedded PowerPC that contain a CPM1 (8xx) or CPM2 (8xxx)
 
 config SERIAL_CPM_CONSOLE

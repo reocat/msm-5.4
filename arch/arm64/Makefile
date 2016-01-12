@@ -39,6 +39,9 @@ AS		+= -EL
 LD		+= -EL
 endif
 
+# For mach-xxx/mach/{io.h|irqs.h}
+KBUILD_CPPFLAGS += -Iarch/arm/mach-ambarella/include
+
 CHECKFLAGS	+= -D__aarch64__
 
 ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)

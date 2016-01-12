@@ -48,6 +48,15 @@ config ARM_HIGHBANK_CPUFREQ
 
 	  If in doubt, say N.
 
+config ARM_AMBARALLA_CPUFREQ
+	bool "Ambarella CPUFreq Driver"
+	depends on ARCH_AMBARELLA
+	default y
+	help
+	  This adds the CPUFreq driver for Ambarella SoC.
+
+	  If in doubt, say N.
+
 config ARM_HISI_ACPU_CPUFREQ
 	tristate "Hisilicon ACPU CPUfreq driver"
 	depends on ARCH_HISI && CPUFREQ_DT

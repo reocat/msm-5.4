@@ -30,6 +30,9 @@ GZFLAGS		:=-9
 # Never generate .eh_frame
 KBUILD_CFLAGS	+= $(call cc-option,-fno-dwarf2-cfi-asm)
 
+# Never enable unaligned-access in kernel
+KBUILD_CFLAGS += $(call cc-option,-mno-unaligned-access)
+
 # Do not use arch/arm/defconfig - it's always outdated.
 # Select a platform tht is kept up-to-date
 KBUILD_DEFCONFIG := versatile_defconfig
@@ -152,8 +155,11 @@ textofs-$(CONFIG_ARCH_MSM8X60) := 0x00208000
 textofs-$(CONFIG_ARCH_MSM8960) := 0x00208000
 textofs-$(CONFIG_ARCH_AXXIA) := 0x00308000
 
+textofs-$(CONFIG_ARCH_AMBARELLA)	:= $(CONFIG_AMBARELLA_TEXTOFS)
+
 # Machine directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
+machine-$(CONFIG_ARCH_AMBARELLA)	+= ambarella
 machine-$(CONFIG_ARCH_ALPINE)		+= alpine
 machine-$(CONFIG_ARCH_AT91)		+= at91
 machine-$(CONFIG_ARCH_AXXIA)		+= axxia

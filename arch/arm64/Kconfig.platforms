@@ -1,5 +1,18 @@
 menu "Platform selection"
 
+config ARCH_AMBARELLA_H2
+	bool
+
+config ARCH_AMBARELLA
+	bool "Ambarella ARMv8 SoC Family"
+	select ARCH_AMBARELLA_H2
+	select ARCH_REQUIRE_GPIOLIB
+	select PINCTRL
+	select PINCTRL_AMB
+	select RATIONAL
+	help
+	  This enables support for Ambarella ARMv8 SoC Family
+
 config ARCH_BCM_IPROC
 	bool "Broadcom iProc SoC Family"
 	help
