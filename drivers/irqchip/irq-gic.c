@@ -168,6 +168,24 @@ static inline bool cascading_gic_irq(struct irq_data *d)
 /*
  * Routines to acknowledge, disable and enable interrupts
  */
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+static void gic_irq_set_target(struct irq_data *d)
+{
+        void __iomem *reg = gic_dist_base(d) + GIC_DIST_TARGET + (gic_irq(d) & ~3);
+	unsigned int shift = (gic_irq(d) % 4) * 8;
+	u32 val, mask, bit;
+        unsigned int target_cpu = (read_cpuid_mpidr() & MPIDR_HWID_BITMASK);
+        unsigned long flags;
+
+	raw_spin_lock_irqsave(&irq_controller_lock, flags);
+	mask = 0xff << shift;
+	bit = (1 << target_cpu) << shift;
+	val = readl_relaxed(reg) & ~mask;
+	writel_relaxed(val | bit, reg);
+	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
+}
+#endif
+
 static void gic_poke_irq(struct irq_data *d, u32 offset)
 {
 	u32 mask = 1 << (gic_irq(d) % 32);
@@ -202,6 +220,9 @@ static void gic_eoimode1_mask_irq(struct irq_data *d)
 
 static void gic_unmask_irq(struct irq_data *d)
 {
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        gic_irq_set_target(d);
+#endif
 	gic_poke_irq(d, GIC_DIST_ENABLE_SET);
 }
 
@@ -463,6 +484,8 @@ static void gic_cpu_if_up(struct gic_chip_data *gic)
 
 static void __init gic_dist_init(struct gic_chip_data *gic)
 {
+        /* Distributor already initialized by RTOS in AmbaLink. */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	unsigned int i;
 	u32 cpumask;
 	unsigned int gic_irqs = gic->gic_irqs;
@@ -482,6 +505,7 @@ static void __init gic_dist_init(struct gic_chip_data *gic)
 	gic_dist_config(base, gic_irqs, NULL);
 
 	writel_relaxed(GICD_ENABLE, base + GIC_DIST_CTRL);
+#endif
 }
 
 static void gic_cpu_init(struct gic_chip_data *gic)
@@ -515,7 +539,13 @@ static void gic_cpu_init(struct gic_chip_data *gic)
 
 	gic_cpu_config(dist_base, NULL);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        /* Binary point value = 7 (No preemption). Same as RTOS. */
+        writel_relaxed(0x7, base + GIC_CPU_BINPOINT);
+        writel_relaxed(0x7, base + GIC_CPU_ALIAS_BINPOINT);
+#endif
 	writel_relaxed(GICC_INT_PRI_THRESHOLD, base + GIC_CPU_PRIMASK);
+
 	gic_cpu_if_up(gic);
 }
 

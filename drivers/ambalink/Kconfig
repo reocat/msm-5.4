@@ -1,0 +1,21 @@
+
+menuconfig ARCH_AMBARELLA_AMBALINK
+	bool "AmbaLink Support"
+        depends on ARCH_AMBARELLA
+        select AMBALINK_LOCK
+        select RPMSG
+	help
+                This enables AmbaLink support for Ambarella ARMv8 SoC Family.
+
+if ARCH_AMBARELLA_AMBALINK
+
+config AMBALINK_SHMADDR
+	hex "AmbaLink Shared Memory Address"
+	default 0x00000000
+	help
+	  Specify the starting address for Ambalink shared memory
+
+source "drivers/ambalink/service/Kconfig"
+source "drivers/ambalink/rpc/Kconfig"
+
+endif

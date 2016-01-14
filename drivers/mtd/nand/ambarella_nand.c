@@ -167,6 +167,7 @@ static struct nand_ecclayout amb_oobinfo_2048_dsm_ecc8 = {
 #define NAND_TIMING_LSHIFT8BIT(x)	((x) << 8)
 #define NAND_TIMING_LSHIFT0BIT(x)	((x) << 0)
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static int nand_timing_calc(u32 clk, int minmax, int val)
 {
 	u32 x;
@@ -183,6 +184,7 @@ static int nand_timing_calc(u32 clk, int minmax, int val)
 		n--;
 	return n < 1 ? 1 : n;
 }
+#endif
 
 static inline int nand_amb_is_hw_bch(struct ambarella_nand_info *nand_info)
 {
@@ -277,7 +279,7 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 	writel_relaxed(dma_dsm_ctr, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 
 }
-
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_ctr_reg = 0;
@@ -301,6 +303,7 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 	writel_relaxed(0, nand_info->regbase + FIO_DSM_CTR_OFFSET);
 	writel_relaxed(0, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 }
+#endif
 
 static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 {
@@ -322,6 +325,7 @@ static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	u8 tcls, tals, tcs, tds;
 	u8 tclh, talh, tch, tdh;
 	u8 twp, twh, twb, trr;
@@ -453,6 +457,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT0BIT(tar);
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM5_OFFSET);
+#endif
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -680,6 +685,12 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		errorCode = -EPERM;
 		goto nand_amb_request_exit;
 	}
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        enable_irq(nand_info->dma_irq);
+        enable_irq(nand_info->cmd_irq);
+        enable_irq(nand_info->fdma_irq);
+#endif
 
 	cmd = nand_info->cmd;
 
@@ -986,9 +997,15 @@ nand_amb_request_done:
 			writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 	}
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(nand_info->dma_irq);
+        disable_irq(nand_info->cmd_irq);
+        disable_irq(nand_info->fdma_irq);
+#else
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
 		&& nand_amb_is_hw_bch(nand_info))
 		nand_amb_disable_bch(nand_info);
+#endif
 
 nand_amb_request_exit:
 	return errorCode;
@@ -1843,6 +1860,12 @@ static int ambarella_nand_get_resource(
 			nand_info->dma_irq);
 		goto nand_get_resource_free_fiodma_irq;
 	}
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(nand_info->cmd_irq);
+        disable_irq(nand_info->dma_irq);
+        disable_irq(nand_info->fdma_irq);
+#endif
 
 	return 0;
 

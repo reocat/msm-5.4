@@ -77,4 +77,13 @@ config DA8XX_REMOTEPROC
 	  It's safe to say n here if you're not interested in multimedia
 	  offloading.
 
+
+config AMBARELLA_RPROC
+	tristate "Ambarella Remoteproc Support"
+	depends on ARCH_AMBARELLA_AMBALINK
+	select REMOTEPROC
+	select RPMSG
+	help
+	  Say y here to support Ambarella AmbaLink remote processor on Ambarella SoCs.
+
 endmenu

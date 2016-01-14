@@ -5,6 +5,9 @@
 # Rewritten to use lists instead of if-statements.
 #
 
+# Ambarella AmbaLink related drivers.
+obj-y				+= ambalink/
+
 obj-y				+= irqchip/
 obj-y				+= bus/
 

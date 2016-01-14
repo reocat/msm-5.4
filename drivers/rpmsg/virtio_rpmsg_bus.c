@@ -33,6 +33,10 @@
 #include <linux/wait.h>
 #include <linux/rpmsg.h>
 #include <linux/mutex.h>
+#include <linux/remoteproc.h>
+
+#include <plat/remoteproc.h>
+#include <plat/remoteproc_cfg.h>
 
 /**
  * struct virtproc_info - virtual remote processor state
@@ -86,27 +90,6 @@ struct rpmsg_channel_info {
 
 #define to_rpmsg_channel(d) container_of(d, struct rpmsg_channel, dev)
 #define to_rpmsg_driver(d) container_of(d, struct rpmsg_driver, drv)
-
-/*
- * We're allocating buffers of 512 bytes each for communications. The
- * number of buffers will be computed from the number of buffers supported
- * by the vring, upto a maximum of 512 buffers (256 in each direction).
- *
- * Each buffer will have 16 bytes for the msg header and 496 bytes for
- * the payload.
- *
- * This will utilize a maximum total space of 256KB for the buffers.
- *
- * We might also want to add support for user-provided buffers in time.
- * This will allow bigger buffer size flexibility, and can also be used
- * to achieve zero-copy messaging.
- *
- * Note that these numbers are purely a decision of this driver - we
- * can change this without changing anything in the firmware of the remote
- * processor.
- */
-#define MAX_RPMSG_NUM_BUFS	(512)
-#define RPMSG_BUF_SIZE		(512)
 
 /*
  * Local addresses are dynamically allocated on-demand.
@@ -952,6 +935,8 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	int err = 0, i;
 	size_t total_buf_space;
 	bool notify;
+	struct rproc *rproc = vdev_to_rproc(vdev);
+	struct ambarella_rproc_pdata *pdata;
 
 	vrp = kzalloc(sizeof(*vrp), GFP_KERNEL);
 	if (!vrp)
@@ -984,10 +969,16 @@ static int rpmsg_probe(struct virtio_device *vdev)
 
 	total_buf_space = vrp->num_bufs * RPMSG_BUF_SIZE;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        /* Replace the va address if enable AmbaLink. */
+        pdata = rproc->priv;
+        bufs_va = (void *) phys_to_virt((unsigned long) pdata->buf_addr_pa);
+#else
 	/* allocate coherent memory for the buffers */
 	bufs_va = dma_alloc_coherent(vdev->dev.parent->parent,
 				     total_buf_space, &vrp->bufs_dma,
 				     GFP_KERNEL);
+#endif
 	if (!bufs_va) {
 		err = -ENOMEM;
 		goto vqs_del;

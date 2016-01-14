@@ -6,4 +6,6 @@ config RPMSG
 	select VIRTIO
 	select VIRTUALIZATION
 
+source "drivers/rpmsg/ambarella/Kconfig"
+
 endmenu

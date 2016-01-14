@@ -27,15 +27,13 @@
 		ethernet0 = &mac0;
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
-	memory {
-		device_type = "memory";
-		reg = <0x00200000 0x07e00000>; /* 126M */
-	};
+        memory {
+                device_type = "memory";
+                reg = <0x00200000 0x07e00000>; /* 126M */
+        };
 
 	chosen {
-		linux,stdout-path = &uart0;
+		linux,stdout-path = &uart1;
 	};
 
 	psci {
@@ -531,7 +529,7 @@
 			pinctrl-0 = <&nand0_pins>;
 			clocks = <&gclk_core>;
 			nand-on-flash-bbt;
-			amb,enable-wp;
+			/* amb,enable-wp; */
 			/* amb,soft-ecc = <1>; */
 		};
 
@@ -552,8 +550,8 @@
 			pinctrl-0 = <&uart1_pins_c &uart1_flow_pins_c>;
 			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
-			amb,txdma-used;
-			amb,rxdma-used;
+			/* amb,txdma-used; */
+			/* amb,rxdma-used; */
 			/* amb,tx-fifo-fix; */
 			/* need to select pinctrl setup in board dts */
 		};
@@ -719,17 +717,6 @@
 			pinctrl-0 = <&spi_slave_pins>;
 			status = "disabled";
 		};
-
-                /* Just put the rproc resource in ahb. */
-                rproc: rproc@00000000 {
-                        compatible = "ambarella,ambalink";
-                        #address-cells = <1>;
-                        #size-cells = <1>;
-                        interrupts = <0 32 0x4>,        /* rvq_rx_irq */
-                                     <0 33 0x4>,        /* svq_rx_irq */
-                                     <0 34 0x4>,        /* svq_tx_irq */
-                                     <0 35 0x4>;        /* rvq_tx_irq */
-                };
 	};
 
 	rct@ec170000 {
@@ -1053,4 +1040,23 @@
 			amb,div-shift = <0>;
 		};
 	};
+
+        ambalink {
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+                aipc_mutex: ambarella-ipc-mutex {
+        		compatible = "ambarella,ipc-mutex";
+                	interrupts = <0 37 0x4>;
+
+        	};
+
+                rproc: ambarella-rproc {
+                        compatible = "ambarella,rproc";
+                        interrupts = <0 32 0x4>,        /* rvq_rx_irq */
+                                     <0 33 0x4>,        /* svq_rx_irq */
+                                     <0 34 0x4>,        /* svq_tx_irq */
+                                     <0 35 0x4>;        /* rvq_tx_irq */
+                };
+        };
 };
