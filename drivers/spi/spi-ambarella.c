@@ -632,11 +632,6 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	master->transfer_one_message	= ambarella_spi_one_message;
 	platform_set_drvdata(pdev, master);
 
-	err = spi_register_master(master);
-	if (err) {
-		goto ambarella_spi_probe_exit;
-	}
-
 	/* check if hw only supports msb first tx/rx */
 	if (of_find_property(pdev->dev.of_node, "amb,msb-first-only", NULL)) {
 		bus->msb_first_only = 1;
@@ -687,6 +682,11 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 			goto ambarella_spi_probe_exit;
 
 		tasklet_init(&bus->tasklet, ambarella_spi_tasklet, (unsigned long)bus);
+	}
+
+	err = spi_register_master(master);
+	if (err) {
+		goto ambarella_spi_probe_exit;
 	}
 
 	dev_info(&pdev->dev, "Ambarella spi controller %d created.\r\n", master->bus_num);
