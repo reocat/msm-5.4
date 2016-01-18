@@ -636,7 +636,6 @@ Required properties:
 Optional properties:
 - pwr-gpios: specifies the GPIO to control PHY power.
 - rst-gpios: specifies the GPIO to reset PHY.
-- amb,support-gmii: should be specified if hardware supports GMII.
 - amb,tx-ring-size: specifies the Tx ring buffer size.
 - amb,rx-ring-size: specifies the Rx ring buffer size.
 - amb,fixed-speed: should be specified if connecting without PHY.

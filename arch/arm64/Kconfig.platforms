@@ -10,6 +10,7 @@ config ARCH_AMBARELLA
 	select PINCTRL
 	select PINCTRL_AMB
 	select RATIONAL
+	select NET_VENDOR_AMBARELLA_ENHANCED if NET_VENDOR_AMBARELLA
 	help
 	  This enables support for Ambarella ARMv8 SoC Family
 

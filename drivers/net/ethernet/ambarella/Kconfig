@@ -11,10 +11,17 @@ config NET_VENDOR_AMBARELLA
 	help
 	  This driver supports Ambarella 10/100/1000 GMAC Ethernet.
 
+config NET_VENDOR_AMBARELLA_ENHANCED
+	bool "Ambarella Enhanced Ethernet Controller"
+	depends on NET_VENDOR_AMBARELLA
+	default n
+	help
+	  Use Enhanced Ethernet Controller, it depends on Ambarella SoCs.
+
 config NET_VENDOR_AMBARELLA_INTEN_TUE
 	bool "Enable Transmit Buffer Unavailable Interrupt"
-	default n
 	depends on NET_VENDOR_AMBARELLA
+	default n
 	help
 	  Enable ETH_DMA_INTEN_TUE will downgrade the performance in most case,
 	  but you will get a quick response especially in GMII mode.

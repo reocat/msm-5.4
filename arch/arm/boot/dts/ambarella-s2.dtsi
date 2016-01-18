@@ -531,6 +531,7 @@
 			#size-cells = <0>;
 			reg = <0x6000e000 0x2000>;
 			interrupts = <0 27 0x4>;
+			amb,rct-regmap = <&rct_syscon>;
 			amb,support-gmii;
 			amb,tx-ring-size = <64>;
 			amb,rx-ring-size = <64>;
