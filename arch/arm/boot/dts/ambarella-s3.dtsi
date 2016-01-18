@@ -468,12 +468,11 @@
 			#size-cells = <1>;
 			reg = <0xe0001000 0x1000>,	/* fio reg address */
 			      <0xe0012000 0x1000>,	/* fdma reg address */
-			      <0xe0000000 0x4>,		/* fifo base */
-			      <0xec170074 0x4>,		/* fio reset reg */
-			      <0xec170034 0x4>;		/* poc reg */
+			      <0xe0000000 0x4>;		/* fifo base */
 			interrupts = <72 0x4>,		/* fio_cmd_irq */
 				     <73 0x4>,		/* fio_dma_irq */
 				     <70 0x4>;		/* fdma_irq */
+			amb,rct-regmap = <&rct_syscon>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&nand0_pins>;
 			clocks = <&gclk_core>;
@@ -692,6 +691,11 @@
 		#size-cells = <1>;
 		reg = <0xec170000 0x1000>;
 		ranges;
+
+		rct_syscon: rct_syscon@ec170000 {
+			compatible = "ambarella,rct", "syscon";
+			reg = <0xec170000 0x1000>;
+		};
 
 		usbphy: usbphy@ec170050 {
 			compatible = "ambarella,usbphy";
