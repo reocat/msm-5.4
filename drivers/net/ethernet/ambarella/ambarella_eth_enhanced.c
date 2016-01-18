@@ -2215,6 +2215,12 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			lp->phy_supported = PHY_GBIT_FEATURES;
 	}
 
+	if (lp->intf_type == PHY_INTERFACE_MODE_GMII ||
+			lp->intf_type == PHY_INTERFACE_MODE_RGMII)
+		lp->phy_supported = PHY_GBIT_FEATURES;
+	else
+		lp->phy_supported = PHY_BASIC_FEATURES;
+
 	/*enable flow control*/
 	lp->phy_supported |= SUPPORTED_Pause | SUPPORTED_Asym_Pause;
 
