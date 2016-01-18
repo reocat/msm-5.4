@@ -676,12 +676,16 @@
 			#size-cells = <0>;
 			reg = <0xe000e000 0x2000>;
 			interrupts = <0 65 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&eth_rgmii_pins>;
+			phy-mode = "rgmii";
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			amb,support-gmii;
 			amb,tx-ring-size = <32>;
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
-			pinctrl-names = "default";
-			pinctrl-0 = <&eth_rgmii_pins>;
 		};
 
 		spi0: spi@e0020000 {
@@ -719,16 +723,10 @@
 			status = "disabled";
 		};
 
-                /* Just put the rproc resource in ahb. */
-                rproc: rproc@00000000 {
-                        compatible = "ambarella,ambalink";
-                        #address-cells = <1>;
-                        #size-cells = <1>;
-                        interrupts = <0 32 0x4>,        /* rvq_rx_irq */
-                                     <0 33 0x4>,        /* svq_rx_irq */
-                                     <0 34 0x4>,        /* svq_tx_irq */
-                                     <0 35 0x4>;        /* rvq_tx_irq */
-                };
+		scratchpad_syscon: scratchpad_syscon@e001b000 {
+			compatible = "ambarella,scratchpad", "syscon";
+			reg = <0xe001b000 0x70>;
+		};
 	};
 
 	rct@ec170000 {

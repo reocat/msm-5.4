@@ -444,6 +444,7 @@
 			#size-cells = <0>;
 			reg = <0x6000e000 0x2000>;
 			interrupts = <27 0x4>;
+			amb,rct-regmap = <&rct_syscon>;
 			amb,tx-ring-size = <32>;
 			amb,rx-ring-size = <64>;
 		};

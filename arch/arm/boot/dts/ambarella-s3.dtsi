@@ -186,7 +186,7 @@
 			      <0xec170314 0x13c>;
 			reg-names = "gpio0", "gpio1", "gpio2", "gpio3",
 				    "gpio4", "gpio5", "gpio6",
-				    "iomux", "pad", "ds";;
+				    "iomux", "pad", "ds";
 			#gpio-range-cells = <3>;
 
 			gpio: gpio@0 {
@@ -614,12 +614,15 @@
 			#size-cells = <0>;
 			reg = <0xe000e000 0x2000>;
 			interrupts = <65 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&eth_rgmii_pins>;
+			phy-mode = "gmii";
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
 			amb,tx-ring-size = <32>;
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
-			pinctrl-names = "default";
-			pinctrl-0 = <&eth_gmii_pins>;
 		};
 
 		spi0: spi@e0020000 {
@@ -655,6 +658,11 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&spi_slave_pins>;
 			status = "disabled";
+		};
+
+		scratchpad_syscon: scratchpad_syscon@e001b000 {
+			compatible = "ambarella,scratchpad", "syscon";
+			reg = <0xe001b000 0x50>;
 		};
 	};
 
