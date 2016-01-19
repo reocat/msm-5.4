@@ -162,6 +162,10 @@ static int msg_level = -1;
 module_param (msg_level, int, 0);
 MODULE_PARM_DESC (msg_level, "Override default message level");
 
+static int clk_dbg = -1;
+module_param (clk_dbg, int, 0);
+MODULE_PARM_DESC (clk_dbg, "debug MHz");
+
 /* ==========================================================================*/
 static void ambhw_dump(struct ambeth_info *lp)
 {
@@ -2200,6 +2204,15 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->phy_supported = PHY_GBIT_FEATURES;
 	else
 		lp->phy_supported = PHY_BASIC_FEATURES;
+
+	if (clk_dbg > 0) {
+		if (clk_dbg == 10)
+			lp->phy_supported = (PHY_10BT_FEATURES | PHY_DEFAULT_FEATURES);
+		else if (clk_dbg == 100)
+			lp->phy_supported = PHY_BASIC_FEATURES;
+		else if (clk_dbg == 1000)
+			lp->phy_supported = PHY_GBIT_FEATURES;
+	}
 
 	/*enable flow control*/
 	lp->phy_supported |= SUPPORTED_Pause | SUPPORTED_Asym_Pause;
