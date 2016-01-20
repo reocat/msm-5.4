@@ -434,7 +434,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	twhr = NAND_TIMING_RSHIFT8BIT(t);
 	tir = NAND_TIMING_RSHIFT0BIT(t);
 
-	trdelay = nand_timing_calc(clk, 1, trdelay);
+	trdelay = trp + treh;
 	tclr = nand_timing_calc(clk, 0, tclr);
 	twhr = nand_timing_calc(clk, 0, twhr);
 	tir = nand_timing_calc(clk, 0, tir);
