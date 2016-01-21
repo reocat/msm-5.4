@@ -568,8 +568,10 @@
 
 		udc@e0006000 {
 			compatible = "ambarella,udc";
-			reg = <0xe0006000 0x2000 0xec1702cc 0x4>;
+			reg = <0xe0006000 0x2000>;
 			interrupts = <0 68 0x4>;
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
 			amb,usbphy = <&usbphy>;
 		};
 
@@ -744,7 +746,7 @@
 		usbphy: usbphy@ec170050 {
 			compatible = "ambarella,usbphy";
 			reg = <0xec170050 0x4 0xe001b00c 0x4 0xec1702c0 0x4>;
-			amb,host-phy-num = <1>;
+			amb,host-phy-num = <2>;
 			amb,owner-mask;
 			amb,owner-invert;
 		};

@@ -45,6 +45,9 @@ USB device controller on Ambarella processors
 
 #define VBUS_POLL_TIMEOUT	msecs_to_jiffies(500)
 
+#define setbitsl(a,v)   (writel_relaxed(((v) | readl_relaxed(a)), (a)))
+#define clrbitsl(a,v)   (writel_relaxed(((~(v)) & readl_relaxed(a)), (a)))
+
 //-------------------------------------
 // Structure definition
 //-------------------------------------
@@ -133,7 +136,8 @@ struct ambarella_udc {
 	spinlock_t			lock;
 	struct device			*dev;
 	void __iomem			*base_reg;
-	void __iomem			*reset_reg;
+	void __iomem			*rct_reg;
+	void __iomem			*scr_reg;
 	int				irq;
 	struct usb_phy			*phy;
 

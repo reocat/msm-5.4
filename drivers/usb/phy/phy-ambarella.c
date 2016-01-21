@@ -50,6 +50,9 @@
 #define PORT_TYPE_DEVICE	0 /* we should work as device */
 #define PORT_TYPE_OTG		1 /* we should work as host */
 
+#define setbitsl(a,v)   (writel_relaxed(((v) | readl_relaxed(a)), (a)))
+#define clrbitsl(a,v)   (writel_relaxed(((~(v)) & readl_relaxed(a)), (a)))
+
 struct ambarella_phy {
 	struct usb_phy phy;
 	void __iomem *pol_reg;
@@ -80,9 +83,9 @@ static inline bool ambarella_usb0_is_host(struct ambarella_phy *amb_phy)
 	bool is_host;
 
 	if (amb_phy->owner_invert)
-		is_host = !(amba_rct_readl(amb_phy->own_reg) & USB0_IS_HOST_MASK);
+		is_host = !(readl_relaxed(amb_phy->own_reg) & USB0_IS_HOST_MASK);
 	else
-		is_host = !!(amba_rct_readl(amb_phy->own_reg) & USB0_IS_HOST_MASK);
+		is_host = !!(readl_relaxed(amb_phy->own_reg) & USB0_IS_HOST_MASK);
 
 	return is_host;
 };
@@ -90,17 +93,17 @@ static inline bool ambarella_usb0_is_host(struct ambarella_phy *amb_phy)
 static inline void ambarella_switch_to_host(struct ambarella_phy *amb_phy)
 {
 	if (amb_phy->owner_invert)
-		amba_rct_clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
+		clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 	else
-		amba_rct_setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
+		setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 }
 
 static inline void ambarella_switch_to_device(struct ambarella_phy *amb_phy)
 {
 	if (amb_phy->owner_invert)
-		amba_rct_setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
+		setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 	else
-		amba_rct_clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
+		clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 }
 
 static inline void ambarella_check_otg(struct ambarella_phy *amb_phy)
@@ -159,7 +162,7 @@ static int ambarella_phy_proc_show(struct seq_file *m, void *v)
 	return 0;
 }
 
-static int ambarella_phy_proc_write(struct file *file,
+static ssize_t ambarella_phy_proc_write(struct file *file,
 	const char __user *buffer, size_t count, loff_t *ppos)
 {
 	struct ambarella_phy *amb_phy = PDE_DATA(file_inode(file));
@@ -321,13 +324,13 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 	/* see RCT Programming Guide for detailed info about ocp and owner */
 	rval = of_property_read_u32(np, "amb,ocp-polarity", &ocp);
 	if (rval == 0) {
-		amba_clrbitsl(amb_phy->pol_reg, 0x1 << 13);
-		amba_setbitsl(amb_phy->pol_reg, ocp << 13);
+		clrbitsl(amb_phy->pol_reg, 0x1 << 13);
+		setbitsl(amb_phy->pol_reg, ocp << 13);
 	}
 
 	amb_phy->owner_invert = !!of_find_property(np, "amb,owner-invert", NULL);
 	if (of_find_property(np, "amb,owner-mask", NULL))
-		amba_setbitsl(amb_phy->own_reg, 0x1);
+		setbitsl(amb_phy->own_reg, 0x1);
 
 	amb_phy->gpio_id = of_get_named_gpio_flags(np, "id-gpios", 0, &flags);
 	amb_phy->id_is_otg = !!(flags & OF_GPIO_ACTIVE_LOW);
@@ -351,8 +354,8 @@ static int ambarella_phy_init(struct usb_phy *phy)
 	/* If there are 2 PHYs, no matter which PHY need to be initialized,
 	 * we initialize all of them at the same time */
 
-	if (!(amba_readl(amb_phy->ana_reg) & ana_val)) {
-		amba_setbitsl(amb_phy->ana_reg, ana_val);
+	if (!(readl_relaxed(amb_phy->ana_reg) & ana_val)) {
+		setbitsl(amb_phy->ana_reg, ana_val);
 		mdelay(1);
 	}
 
@@ -431,8 +434,8 @@ static int ambarella_phy_suspend(struct platform_device *pdev,
 {
 	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
 
-	amb_phy->pol_val = amba_readl(amb_phy->pol_reg);
-	amb_phy->own_val = amba_readl(amb_phy->own_reg);
+	amb_phy->pol_val = readl_relaxed(amb_phy->pol_reg);
+	amb_phy->own_val = readl_relaxed(amb_phy->own_reg);
 
 	return 0;
 }
@@ -441,8 +444,8 @@ static int ambarella_phy_resume(struct platform_device *pdev)
 {
 	struct ambarella_phy *amb_phy = platform_get_drvdata(pdev);
 
-	amba_writel(amb_phy->pol_reg, amb_phy->pol_val);
-	amba_writel(amb_phy->own_reg, amb_phy->own_val);
+	writel_relaxed(amb_phy->pol_val, amb_phy->pol_reg);
+	writel_relaxed(amb_phy->own_val, amb_phy->own_reg);
 
 	return 0;
 }

@@ -50,8 +50,8 @@
 #define USB_TXFIFO_DEPTH_INTRIN		(512 / 4)	// 128 32-bit
 #define USB_TXFIFO_DEPTH_ISOIN		((512 * 2) / 4)	// 128 32-bit
 
-#define USB_TXFIFO_DEPTH		(64 / 4 + 4 * 512 / 4)	// 528 32-bit
-#define USB_RXFIFO_DEPTH		(256)			// 256 32-bit
+#define USB_TXFIFO_DEPTH			(64 / 4 + 4 * 512 / 4)	// 528 32-bit
+#define USB_RXFIFO_DEPTH			(256)			// 256 32-bit
 
 //-------------------------------------
 // USB memory map
@@ -66,31 +66,31 @@
 //-------------------------------------
 // USB register address
 //-------------------------------------
-#define	USB_EP_IN_CTRL_REG(n)		(USB_EP_IN_BASE + 0x0000 + 0x0020 * (n))
-#define	USB_EP_IN_STS_REG(n)		(USB_EP_IN_BASE + 0x0004 + 0x0020 * (n))
-#define	USB_EP_IN_BUF_SZ_REG(n)		(USB_EP_IN_BASE + 0x0008 + 0x0020 * (n))
-#define	USB_EP_IN_MAX_PKT_SZ_REG(n)	(USB_EP_IN_BASE + 0x000c + 0x0020 * (n))
-#define	USB_EP_IN_DAT_DESC_PTR_REG(n)	(USB_EP_IN_BASE + 0x0014 + 0x0020 * (n))
-#define USB_EP_IN_WR_CFM_REG		(USB_EP_IN_BASE + 0x001c + 0x0020 * (n))	// for slave-only mode
+#define	USB_EP_IN_CTRL_REG(n)			(0x0000 + 0x0020 * (n))
+#define	USB_EP_IN_STS_REG(n)			(0x0004 + 0x0020 * (n))
+#define	USB_EP_IN_BUF_SZ_REG(n)			(0x0008 + 0x0020 * (n))
+#define	USB_EP_IN_MAX_PKT_SZ_REG(n)		(0x000c + 0x0020 * (n))
+#define	USB_EP_IN_DAT_DESC_PTR_REG(n)	(0x0014 + 0x0020 * (n))
+#define USB_EP_IN_WR_CFM_REG			(0x001c + 0x0020 * (n))	// for slave-only mode
 
-#define	USB_EP_OUT_CTRL_REG(n)		(USB_EP_OUT_BASE + 0x0000 + 0x0020 * (n))
-#define	USB_EP_OUT_STS_REG(n)		(USB_EP_OUT_BASE + 0x0004 + 0x0020 * (n))
-#define	USB_EP_OUT_PKT_FRM_NUM_REG(n)	(USB_EP_OUT_BASE + 0x0008 + 0x0020 * (n))
-#define	USB_EP_OUT_MAX_PKT_SZ_REG(n) 	(USB_EP_OUT_BASE + 0x000c + 0x0020 * (n))
-#define	USB_EP_OUT_SETUP_BUF_PTR_REG(n) (USB_EP_OUT_BASE + 0x0010 + 0x0020 * (n))
-#define	USB_EP_OUT_DAT_DESC_PTR_REG(n)	(USB_EP_OUT_BASE + 0x0014 + 0x0020 * (n))
-#define USB_EP_OUT_RD_CFM_ZO_REG	(USB_EP_OUT_BASE + 0x001c + 0x0020 * (n))	// for slave-only mode
+#define	USB_EP_OUT_CTRL_REG(n)			(0x0200 + 0x0020 * (n))
+#define	USB_EP_OUT_STS_REG(n)			(0x0204 + 0x0020 * (n))
+#define	USB_EP_OUT_PKT_FRM_NUM_REG(n)	(0x0208 + 0x0020 * (n))
+#define	USB_EP_OUT_MAX_PKT_SZ_REG(n) 	(0x020c + 0x0020 * (n))
+#define	USB_EP_OUT_SETUP_BUF_PTR_REG(n) (0x0210 + 0x0020 * (n))
+#define	USB_EP_OUT_DAT_DESC_PTR_REG(n)	(0x0214 + 0x0020 * (n))
+#define USB_EP_OUT_RD_CFM_ZO_REG		(0x021c + 0x0020 * (n))	// for slave-only mode
 
-#define USB_DEV_CFG_REG			(USB_DEV_BASE + 0x0000)
-#define USB_DEV_CTRL_REG		(USB_DEV_BASE + 0x0004)
-#define USB_DEV_STS_REG			(USB_DEV_BASE + 0x0008)
-#define USB_DEV_INTR_REG		(USB_DEV_BASE + 0x000c)
-#define USB_DEV_INTR_MSK_REG		(USB_DEV_BASE + 0x0010)
-#define USB_DEV_EP_INTR_REG		(USB_DEV_BASE + 0x0014)
-#define USB_DEV_EP_INTR_MSK_REG		(USB_DEV_BASE + 0x0018)
-#define USB_DEV_TEST_MODE_REG		(USB_DEV_BASE + 0x001c)
+#define USB_DEV_CFG_REG				0x0400
+#define USB_DEV_CTRL_REG			0x0404
+#define USB_DEV_STS_REG				0x0408
+#define USB_DEV_INTR_REG			0x040c
+#define USB_DEV_INTR_MSK_REG		0x0410
+#define USB_DEV_EP_INTR_REG			0x0414
+#define USB_DEV_EP_INTR_MSK_REG		0x0418
+#define USB_DEV_TEST_MODE_REG		0x041c
 
-#define USB_UDC_REG(n)			(USB_UDC_BASE + 0x0004 * (n))	// EP0 is reserved for control endpoint
+#define USB_UDC_REG(n)				(0x0504 + 0x0004 * (n))	// EP0 is reserved for control endpoint
 
 //-------------------------------------
 // USB register fields
