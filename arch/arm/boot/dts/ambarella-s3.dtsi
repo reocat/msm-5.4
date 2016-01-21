@@ -515,8 +515,10 @@
 
 		udc@e0006000 {
 			compatible = "ambarella,udc";
-			reg = <0xe0006000 0x2000 0xec1702cc 0x4>;
+			reg = <0xe0006000 0x2000>;
 			interrupts = <68 0x4>;
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
 			amb,usbphy = <&usbphy>;
 		};
 
