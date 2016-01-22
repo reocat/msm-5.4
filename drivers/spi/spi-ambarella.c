@@ -635,7 +635,7 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	/* check if hw only supports msb first tx/rx */
 	if (of_find_property(pdev->dev.of_node, "amb,msb-first-only", NULL)) {
 		bus->msb_first_only = 1;
-		dev_info(&pdev->dev,"SPI[%d] only supports msb first tx-rx\n", master->bus_num);
+		dev_info(&pdev->dev,"Only supports msb first tx-rx\n");
 	} else {
 		bus->msb_first_only = 0;
 	}
@@ -643,9 +643,25 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	/* check if using dma */
 	if (of_find_property(pdev->dev.of_node, "amb,dma-used", NULL)) {
 		bus->dma_used = 1;
-		dev_info(&pdev->dev,"SPI[%d] uses DMA\n", master->bus_num);
+		dev_info(&pdev->dev,"DMA is used\n");
+
+		err = ambarella_spi_dma_channel_allocate(master);
+		if (err < 0)
+			goto ambarella_spi_probe_exit;
 	} else {
 		bus->dma_used = 0;
+		/* request IRQ */
+		err = devm_request_irq(&pdev->dev, irq, ambarella_spi_isr,
+				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), bus);
+		if (err)
+			goto ambarella_spi_probe_exit;
+
+		tasklet_init(&bus->tasklet, ambarella_spi_tasklet, (unsigned long)bus);
+	}
+
+	err = spi_register_master(master);
+	if (err) {
+		goto ambarella_spi_probe_exit;
 	}
 
 	for_each_available_child_of_node(master->dev.of_node, nc) {
@@ -668,25 +684,6 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 		} else {
 			bus->cs_pins[spi->chip_select] = -1;
 		}
-	}
-
-	if (bus->dma_used) {
-		err = ambarella_spi_dma_channel_allocate(master);
-		if (err < 0)
-			goto ambarella_spi_probe_exit;
-	} else {
-		/* request IRQ */
-		err = devm_request_irq(&pdev->dev, irq, ambarella_spi_isr,
-				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), bus);
-		if (err)
-			goto ambarella_spi_probe_exit;
-
-		tasklet_init(&bus->tasklet, ambarella_spi_tasklet, (unsigned long)bus);
-	}
-
-	err = spi_register_master(master);
-	if (err) {
-		goto ambarella_spi_probe_exit;
 	}
 
 	dev_info(&pdev->dev, "Ambarella spi controller %d created.\r\n", master->bus_num);
