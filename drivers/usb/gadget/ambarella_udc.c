@@ -35,7 +35,6 @@
 #include <linux/usb/gadget.h>
 #include <linux/usb/otg.h>
 #include <linux/proc_fs.h>
-#include <linux/seq_file.h>
 #include <linux/of.h>
 #include <mach/hardware.h>
 #include <plat/rct.h>
@@ -136,52 +135,23 @@ static void ambarella_uevent_work(struct work_struct *data)
 }
 
 /* ========================================================================== */
+#ifdef CONFIG_USB_GADGET_DEBUG_FILES
+#include <linux/seq_file.h>
+
+static const char proc_node_name[] = "driver/udc";
 static int ambarella_udc_proc_show(struct seq_file *m, void *v)
 {
 	struct ambarella_udc *udc;
-	int len = 0;
+	struct usb_ctrlrequest *crq;
 
+	unsigned long	flags;
 	udc = (struct ambarella_udc *)m->private;
+	crq = (struct usb_ctrlrequest *)&udc->setup[0];
 
-	len += seq_printf(m, "AMBUDC_STATUS=%s",
-			usb_state_string(udc->gadget.state));
-	len += seq_printf(m, " (%s: %s)\n", (udc->driver ?
-			udc->driver->driver.name : "NULL"),
-			udc->vbus_status ? "Connected" : "Disconnected");
-
-	return len;
-}
-
-static int ambarella_udc_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, ambarella_udc_proc_show, PDE_DATA(inode));
-}
-
-static const struct file_operations ambarella_udc_fops = {
-	.open = ambarella_udc_proc_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-};
-
-#ifdef CONFIG_USB_GADGET_DEBUG_FILES
-
-static const char proc_node_name[] = "driver/udc";
-
-static int ambarella_debugfs_udc_read(char *page, char **start,
-	off_t off, int count, int *eof, void *_dev)
-{
-	char *buf = page;
-	struct ambarella_udc *udc = _dev;
-	char *next = buf;
-	unsigned size = count;
-	int t;
-	struct usb_ctrlrequest *crq = (struct usb_ctrlrequest *)&udc->setup[0];
-
-	if (off != 0)
-		return 0;
+	spin_lock_irqsave(&udc->lock, flags);
 
 	/* basic device status */
-	t = scnprintf(next, size,
+	seq_printf(m,
 		DRIVER_DESC "\n"
 		"Name: %s\n"
 		"Version: %s\n"
@@ -194,35 +164,32 @@ static int ambarella_debugfs_udc_read(char *page, char **start,
 		udc->driver ? udc->driver->driver.name : "(none)",
 		udc->vbus_status ? (udc->gadget.speed == USB_SPEED_HIGH ?
 			"high speed" : "full speed") : "disconnected");
-	size -= t;
-	next += t;
 
-	t = scnprintf(next, size, "the last setup packet is: \n"
+	seq_printf(m, "AMBUDC_STATUS=%s",
+			usb_state_string(udc->gadget.state));
+
+	seq_printf(m,
+		"the last setup packet is: \n"
 		"bRequestType = 0x%02x, bRequest = 0x%02x,\n"
 		"wValue = 0x%04x, wIndex = 0x%04x, wLength = 0x%04x\n\n",
 		crq->bRequestType, crq->bRequest, crq->wValue, crq->wIndex,
 		crq->wLength);
-	size -= t;
-	next += t;
-
-/*
-	t = scnprintf(next, size, "max_cmd_num = %d\tmax_ep0_cmd_num = %d\n\n",
-		udc->max_cmd_num, udc->max_ep0_cmd_num);
-	size -= t;
-	next += t;
-*/
-	*eof = 1;
-	return count - size;
+	spin_unlock_irqrestore(&udc->lock, flags);
+	return 0;
+}
+static int ambarella_udc_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ambarella_udc_proc_show, PDE_DATA(inode));
 }
 
-#define create_debugfs_files() 	create_proc_read_entry(proc_node_name, 0, NULL, ambarella_debugfs_udc_read, udc)
+static const struct file_operations ambarella_udc_fops = {
+	.open = ambarella_udc_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 #define remove_debugfs_files() 	remove_proc_entry(proc_node_name, NULL)
-
-#else	/* !CONFIG_USB_GADGET_DEBUG_FILES */
-
-#define create_debugfs_files() do {} while (0)
-#define remove_debugfs_files() do {} while (0)
-
 #endif	/* CONFIG_USB_GADGET_DEBUG_FILES */
 
 /**************  PROC FILESYSTEM  END*****************/
@@ -2229,14 +2196,14 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 	udc->pre_state = USB_STATE_NOTATTACHED;
 	INIT_WORK(&udc->uevent_work, ambarella_uevent_work);
 
-	udc->proc_file = proc_create_data("udc", S_IRUGO,
-		get_ambarella_proc_dir(), &ambarella_udc_fops, udc);
+#ifdef CONFIG_USB_GADGET_DEBUG_FILES
+	udc->proc_file = proc_create_data(proc_node_name, 0,
+		NULL, &ambarella_udc_fops, udc);
 	if (udc->proc_file == NULL) {
 		retval = -ENOMEM;
 		goto err_out3;
 	}
-
-	create_debugfs_files();
+#endif
 
 	/* Register gadget driver */
 	retval = usb_add_gadget_udc_release(&pdev->dev, &udc->gadget,
@@ -2250,7 +2217,9 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 	return 0;
 
 err_out4:
+#ifdef CONFIG_USB_GADGET_DEBUG_FILES
 	remove_debugfs_files();
+#endif
 err_out3:
 	dma_pool_free(udc->desc_dma_pool, udc->dummy_desc, udc->dummy_desc_addr);
 err_out2:
@@ -2275,10 +2244,9 @@ static int ambarella_udc_remove(struct platform_device *pdev)
 		return -EBUSY;
 
 	del_timer_sync(&udc->vbus_timer);
-
-	remove_proc_entry("udc", get_ambarella_proc_dir());
+#ifdef CONFIG_USB_GADGET_DEBUG_FILES
 	remove_debugfs_files();
-
+#endif
 	dma_pool_free(udc->desc_dma_pool, udc->dummy_desc, udc->dummy_desc_addr);
 	dma_pool_free(udc->desc_dma_pool, udc->setup_buf, udc->setup_addr);
 	dma_pool_destroy(udc->desc_dma_pool);
