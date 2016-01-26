@@ -20,6 +20,8 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <plat/event.h>
+#include <linux/io.h>
+#include <plat/rct.h>
 
 //#define amba_cpufreq_debug	//used at debug mode
 
@@ -65,7 +67,8 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	core_newfreq = amba_cpufreq.core_clktbl[index].frequency * 1000;
 	freqs.new = cortex_newfreq / 1000;
 
-	amba_cpufreq_prt(KERN_INFO "prepare to switch the frequency from %d KHz to %d KHz\n",freqs.old, freqs.new);
+	amba_cpufreq_prt(KERN_INFO "prepare to switch the frequency from %d KHz to %d KHz\n"
+				,freqs.old, freqs.new);
 
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 	ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL);
@@ -83,11 +86,21 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
 	}
 
+#if (CHIP_REV == S2L) || (CHIP_REV == S3L)
+	if(amba_cpufreq.core_clktbl[index].frequency <= 96000) {
+		/*Disable IDSP/VDSP to Save Power*/
+		amba_writel(CKEN_CLUSTER_REG, 0x540);
+	} else {
+		/*Enable IDSP/VDSP to Save Power*/
+		amba_writel(CKEN_CLUSTER_REG, 0x3fff);
+	}
+#endif
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 	ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL);
 
 	cur_freq = clk_get_rate(amba_cpufreq.cortex_clk) / 1000;
-	amba_cpufreq_prt(KERN_INFO "current frequency of cortex clock is:%d KHz\n", cur_freq);
+	amba_cpufreq_prt(KERN_INFO "current frequency of cortex clock is:%d KHz\n",
+				 cur_freq);
 
 
 	return ret;
