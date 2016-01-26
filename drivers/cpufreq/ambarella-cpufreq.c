@@ -20,6 +20,8 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <plat/event.h>
+#include <linux/io.h>
+#include <plat/rct.h>
 
 //#define amba_cpufreq_debug	//used at debug mode
 
@@ -79,6 +81,16 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	if (ret) {
 		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
 	}
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3L)
+        if(amba_cpufreq.core_clktbl[index].frequency <= 96000) {
+                /*Disable IDSP/VDSP to Save Power*/
+                amba_writel(CKEN_CLUSTER_REG, 0x540);
+        } else {
+                /*Enable IDSP/VDSP to Save Power*/
+                amba_writel(CKEN_CLUSTER_REG, 0x3fff);
+        }
+#endif
 
 	cpufreq_freq_transition_end(policy, &freqs, 0);
 	ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL);
