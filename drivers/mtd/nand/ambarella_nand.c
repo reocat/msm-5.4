@@ -51,6 +51,10 @@
 #include <plat/fio.h>
 #include <plat/event.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/aipc/ipc_mutex.h>
+#endif
+
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 
 
@@ -686,6 +690,8 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	}
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+
         enable_irq(nand_info->dma_irq);
         enable_irq(nand_info->cmd_irq);
         enable_irq(nand_info->fdma_irq);
@@ -1000,6 +1006,8 @@ nand_amb_request_done:
         disable_irq(nand_info->dma_irq);
         disable_irq(nand_info->cmd_irq);
         disable_irq(nand_info->fdma_irq);
+
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
 #else
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
 		&& nand_amb_is_hw_bch(nand_info))
@@ -1843,12 +1851,6 @@ static int ambarella_nand_get_resource(
 		goto nand_get_resource_free_fiodma_irq;
 	}
 
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-        disable_irq(nand_info->cmd_irq);
-        disable_irq(nand_info->dma_irq);
-        disable_irq(nand_info->fdma_irq);
-#endif
-
 	return 0;
 
 nand_get_resource_free_fiodma_irq:
@@ -1899,9 +1901,20 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	}
 	BUG_ON(nand_info->dmaaddr & 0x7);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+#endif
 	errorCode = ambarella_nand_get_resource(nand_info, pdev);
 	if (errorCode < 0)
 		goto ambarella_nand_probe_free_dma;
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(nand_info->dma_irq);
+        disable_irq(nand_info->cmd_irq);
+        disable_irq(nand_info->fdma_irq);
+
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+#endif
 
 	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
 
@@ -2000,7 +2013,9 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = platform_get_drvdata(pdev);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	ambarella_nand_init_hw(nand_info);
+#endif
 	nand_info->suspend = 0;
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);

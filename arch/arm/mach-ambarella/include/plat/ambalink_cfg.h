@@ -11,7 +11,7 @@
  */
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 
-#ifdef CONFIG_AMBALINK_SHMADDR
+#ifdef CONFIG_AMBALINK_SHM_ADDR
 
 /*
  * User define
@@ -27,23 +27,47 @@
 #define VRING_SIZE                      ((((MAX_RPMSG_NUM_BUFS / 2) * 19 + (0x1000 - 1)) & ~(0x1000 - 1)) + \
                                         (((MAX_RPMSG_NUM_BUFS / 2) * 17 + (0x1000 - 1)) & ~(0x1000 - 1)))
 #define RPC_PROFILE_SIZE                0x1000
+#define MAX_RPC_RPMSG_PROFILE_SIZE      0x11000
+/* Alignment to 0x1000, the calculation details can be found in the document. */
 #define RPC_RPMSG_PROFILE_SIZE          (RPC_PROFILE_SIZE + ((17 * MAX_RPMSG_NUM_BUFS + (0x1000 - 1)) & ~(0x1000 -1)))
 
-#define VRING_C0_AND_C1_BUF             (CONFIG_AMBALINK_SHMADDR)
+#define VRING_C0_AND_C1_BUF             (CONFIG_AMBALINK_SHM_ADDR)
 #define VRING_C0_TO_C1                  (VRING_C0_AND_C1_BUF + RPMSG_TOTAL_BUF_SPACE)
 #define VRING_C1_TO_C0                  (VRING_C0_TO_C1 + VRING_SIZE)
 
-/* FIXME: */
-#if 1
-#define AHB_BASE			(0xe0000000)
-#define APB_BASE			(0xe8000000)
+/*
+ * for RPMSG suspend backup area
+ */
+#define RPMSG_SUSPEND_BACKUP_ADDR       (VRING_C1_TO_C0 + VRING_SIZE)
+#define RPMSG_SUSPEND_BACKUP_SIZE       0x20000
 
-/* Secure and Scratchpad */
-#define AHB_SCRATCHPAD_OFFSET		0x1B000
-#define AHB_SCRATCHPAD_BASE		(AHB_BASE + AHB_SCRATCHPAD_OFFSET)
-#define AHB_SCRATCHPAD_REG(x)		(AHB_SCRATCHPAD_BASE + (x))
-#endif
+/*
+ * for RPC and RPMSG profiling
+ */
+#define RPC_PROFILE_ADDR                (RPMSG_SUSPEND_BACKUP_ADDR + RPMSG_SUSPEND_BACKUP_SIZE)
+#define RPMSG_PROFILE_ADDR              (RPC_PROFILE_ADDR + RPC_PROFILE_SIZE)
 
+/*
+ * for spinlock module
+ */
+#define AIPC_SLOCK_ADDR                 (RPMSG_PROFILE_ADDR + MAX_RPC_RPMSG_PROFILE_SIZE)
+#define AIPC_SLOCK_SIZE                 (0x1000)
+
+/*
+ * for mutex module
+ */
+#define AIPC_MUTEX_ADDR                 (AIPC_SLOCK_ADDR + AIPC_SLOCK_SIZE)
+#define AIPC_MUTEX_SIZE                 0x1000
+
+/*
+ * general settings
+ */
+#define AMBALINK_CORE_LOCAL             0x2
+#define ERG_SIZE                        16
+
+/*
+ * for software interrupt
+ */
 #define AHB_SP_SWI_SET_OFFSET           0x10
 #define AHB_SP_SWI_CLEAR_OFFSET         0x14
 
@@ -58,34 +82,6 @@
 #define MUTEX_IRQ_LOCAL                 AXI_SOFT_IRQ1(5)
 #define AMBALINK_AMP_SUSPEND_KICK       AXI_SOFT_IRQ1(6)
 
-/*
- * for spinlock module
- */
-#define AIPC_SLOCK_ADDR                 (VRING_C1_TO_C0 + VRING_SIZE)
-#define AIPC_SLOCK_SIZE                 (0x1000)
-
-/*
- * for mutex module
- */
-#define AIPC_MUTEX_ADDR                 (AIPC_SLOCK_ADDR + AIPC_SLOCK_SIZE)
-#define AIPC_MUTEX_SIZE                 0x1000
-
-/*
- * for RPMSG suspend backup area
- */
-#define RPMSG_SUSPEND_BACKUP_SIZE       0x20000
-
-/*
- * for RPC and RPMSG profiling
- */
-#define RPC_PROFILE_ADDR                (AIPC_MUTEX_ADDR + AIPC_MUTEX_SIZE + RPMSG_SUSPEND_BACKUP_SIZE)
-#define RPMSG_PROFILE_ADDR              (RPC_PROFILE_ADDR + RPC_PROFILE_SIZE)
-
-/*
- * general settings
- */
-#define AMBALINK_CORE_LOCAL             0x2
-#define ERG_SIZE                        8
 
 #define ambalink_virt_to_phys(x)        virt_to_phys(x)
 #define ambalink_phys_to_virt(x)        phys_to_virt(x)

@@ -20,14 +20,16 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/delay.h>
+#include <linux/io.h>
+
 #include <asm/uaccess.h>
 
 #include <plat/ambalink_cfg.h>
 #include <linux/aipc/ipc_slock.h>
 
 typedef struct {
-	unsigned long lock;
-	char          padding[4];
+	unsigned int    lock;
+	char            padding[12];
 } aspinlock_t;
 
 typedef struct {
@@ -104,8 +106,10 @@ int aipc_spin_lock_setup(unsigned long addr)
 	if (lock_inited)
 		goto done;
 
-	lock_set.lock = (aspinlock_t *) addr;
+	lock_set.lock = (aspinlock_t *) phys_to_virt(addr);
 	lock_set.size = AIPC_SLOCK_SIZE / sizeof(aspinlock_t);
+
+        printk(KERN_NOTICE "%s: aipc_slock@0x%016lx\n", __func__, (unsigned long) lock_set.lock);
 
 	/* Reserve one spinlock space for BCH NAND controller workaround. */
 	lock_set.size -= 1;
@@ -135,69 +139,39 @@ static void aipc_spin_lock_exit(void)
 {
 }
 
-void __aipc_spin_lock(unsigned long *lock)
+void __aipc_spin_lock(aspinlock_t *lock)
 {
 	unsigned int tmp;
 
-#ifdef CONFIG_ARM64
-        asm volatile(
-        /* LL/SC */
-        "1:     ldaxr   %w0, %1\n"
-        "       cbnz    %w0, 1b\n"
-        "       stxr    %w0, %w2, %1\n"
-        "       cbnz    %w0, 1b\n"
-        "       nop"
-        : "=&r" (tmp), "+Q" (lock)
-        : "r" (1)
-        : "memory");
-#else
-	//spin to get the lock
-	__asm__ __volatile__(
-	    "1:	ldrex	%0, [%1]\n"
-	    "	teq	%0, #0\n"
-	    "	strexeq	%0, %2, [%1]\n"
-	    "	teqeq	%0, #0\n"
-	    "	bne	1b"
-	    : "=&r" (tmp)
-	    : "r" (lock), "r" (1)
-	    : "cc");
-
-	// set memory barrier here
-	dmb();
-#endif
+	asm volatile(
+	"1:	ldaxr	%w0, %1\n"
+	"	cbnz	%w0, 1b\n"
+	"	stxr	%w0, %w2, %1\n"
+	"	cbnz	%w0, 1b\n"
+	"	nop"
+	: "=&r" (tmp), "+Q" (*lock)
+	: "r" (0x1)
+	: "memory");
 }
 
-void __aipc_spin_unlock(unsigned long *lock)
+void __aipc_spin_unlock(aspinlock_t *lock)
 {
-#ifdef CONFIG_ARM64
-        asm volatile(
-        "       stlr    wzr, %0"
-        : "=Q" (lock)
-        :
-        : "memory");
-#else
-	dmb();
-
-	// release the lock
-	__asm__ __volatile__(
-	    "	str	%1, [%0]\n"
-	    :
-	    : "r" (lock), "r" (0)
-	    : "cc");
-#endif
+	asm volatile(
+	"	stlr	wzr, %0"
+	: "=Q" (*lock) :: "memory");
 }
 
-void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags)
+void __aipc_spin_lock_irqsave(void *lock, unsigned long *flags)
 {
 	local_irq_save(*flags);
 	preempt_disable();
 
-        __aipc_spin_lock(lock);
+        __aipc_spin_lock((aspinlock_t *) lock);
 }
 
-void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags)
+void __aipc_spin_unlock_irqrestore(void *lock, unsigned long flags)
 {
-        __aipc_spin_unlock(lock);
+        __aipc_spin_unlock((aspinlock_t *) lock);
 
 	preempt_enable();
 	local_irq_restore(flags);
@@ -212,7 +186,7 @@ void aipc_spin_lock(int id)
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
-	__aipc_spin_lock(&lock_set.lock[id].lock);
+	__aipc_spin_lock(&lock_set.lock[id]);
 }
 
 void aipc_spin_unlock(int id)
@@ -221,7 +195,7 @@ void aipc_spin_unlock(int id)
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
-	__aipc_spin_unlock(&lock_set.lock[id].lock);
+	__aipc_spin_unlock(&lock_set.lock[id]);
 }
 
 void aipc_spin_lock_irqsave(int id, unsigned long *flags)
@@ -233,7 +207,7 @@ void aipc_spin_lock_irqsave(int id, unsigned long *flags)
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
-	__aipc_spin_lock_irqsave(&lock_set.lock[id].lock, flags);
+	__aipc_spin_lock_irqsave((void *) &lock_set.lock[id], flags);
 }
 
 void aipc_spin_unlock_irqrestore(int id, unsigned long flags)
@@ -242,7 +216,7 @@ void aipc_spin_unlock_irqrestore(int id, unsigned long flags)
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
 		return;
 	}
-	__aipc_spin_unlock_irqrestore(&lock_set.lock[id].lock, flags);
+	__aipc_spin_unlock_irqrestore((void *) &lock_set.lock[id], flags);
 }
 
 subsys_initcall(aipc_spin_lock_init);

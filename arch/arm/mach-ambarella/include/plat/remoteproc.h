@@ -27,18 +27,19 @@
 #include <linux/remoteproc.h>
 
 struct ambarella_rproc_pdata {
-	const char *name;
-	struct rproc *rproc;
-	const char *firmware;
-	int svq_tx_irq;
-	int svq_rx_irq;
-	int rvq_tx_irq;
-	int rvq_rx_irq;
-	const struct rproc_ops *ops;
-	unsigned long buf_addr_pa;
-	struct work_struct svq_work;
-	struct work_struct rvq_work;
-	struct resource_table *(*gen_rsc_table)(int *tablesz);
+	const char              *name;
+	struct rproc            *rproc;
+	const char              *firmware;
+	unsigned int            svq_tx_irq;
+	unsigned int            svq_rx_irq;
+	unsigned int            rvq_tx_irq;
+	unsigned int            rvq_rx_irq;
+	const struct rproc_ops  *ops;
+	unsigned long           buf_addr_pa;
+	struct work_struct      svq_work;
+	struct work_struct      rvq_work;
+	struct resource_table   *(*gen_rsc_table)(int *tablesz);
+        struct regmap           *reg_ahb_scr;
 };
 
 /*

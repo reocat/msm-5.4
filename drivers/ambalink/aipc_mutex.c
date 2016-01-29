@@ -16,6 +16,7 @@
  * Copyright (C) 2013-2015, Ambarella Inc.
  */
 
+#include <linux/irq.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
@@ -23,15 +24,20 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
+#include <linux/io.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+#include <linux/irqdomain.h>
+
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
 #include <linux/aipc/ipc_mutex.h>
-#include <plat/rct.h>
 #include <plat/ambalink_cfg.h>
 
-extern void __aipc_spin_unlock_irqrestore(unsigned long *lock, unsigned long flags);
-extern void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags);
+extern void __aipc_spin_unlock_irqrestore(void *lock, unsigned long flags);
+extern void __aipc_spin_lock_irqsave(void *lock, unsigned long *flags);
+extern struct proc_dir_entry *get_ambarella_proc_dir(void);
 
 #define OWNER_IS_LOCAL(x)   ((x)->owner == AMBALINK_CORE_LOCAL)
 #define OWNER_IS_EMPTY(x)   ((x)->owner == 0)
@@ -39,10 +45,10 @@ extern void __aipc_spin_lock_irqsave(unsigned long *lock, unsigned long *flags);
 
 #define CORTEX_CORE
 typedef struct {
-	unsigned long slock;        // the bare-metal spinlock
-	unsigned char owner;        // entity that currently owns the mutex
-	unsigned char wait_list;    // entities that are waiting for the mutex
-	char          padding[2];
+	unsigned int    slock;
+	unsigned char   owner;        // entity that currently owns the mutex
+	unsigned char   wait_list;    // entities that are waiting for the mutex
+	char            padding[10];
 } amutex_share_t;
 
 typedef struct {
@@ -54,24 +60,22 @@ typedef struct {
 typedef struct {
 	amutex_local_t local[AMBA_IPC_NUM_MUTEX];
 	amutex_share_t *share;
+        struct regmap *reg_ahb_scr;
 } amutex_db;
 
 static amutex_db lock_set;
 static int ipc_mutex_inited = 0;
 
-#if 0
 static int procfs_mutex_show(struct seq_file *m, void *v)
 {
-	int len;
+	seq_printf(m,
+	           "\n"
+	           "usage: echo id [op] > /proc/ambarella/mutex\n"
+	           "    \"echo n +\" to lock mutex n\n"
+	           "    \"echo n -\" to unlock mutex n\n"
+	           "\n");
 
-	len = seq_printf(m,
-	                 "\n"
-	                 "usage: echo id [op] > /proc/ambarella/mutex\n"
-	                 "    \"echo n +\" to lock mutex n\n"
-	                 "    \"echo n -\" to unlock mutex n\n"
-	                 "\n");
-
-	return len;
+	return 0;
 }
 
 static ssize_t procfs_mutex_write(struct file *file,
@@ -126,17 +130,20 @@ static void init_procfs(void)
 	                            get_ambarella_proc_dir(),
 	                            &proc_ipc_mutex_fops, NULL);
 }
-#endif
 
 static irqreturn_t ipc_mutex_isr(int irq, void *dev_id)
 {
 	int i;
+        struct irq_data *irq_data;
 
-	//printk("isr %d", irq);
+        //printk("isr %d", irq);
+
+        irq_data = irq_get_irq_data(irq);
 
 	// clear the irq
-	writel_relaxed(0x1 << (irq - AXI_SOFT_IRQ1(0)),
-	                (void *) AHB_SCRATCHPAD_REG(AHB_SP_SWI_CLEAR_OFFSET));
+	regmap_write_bits(lock_set.reg_ahb_scr, AHB_SP_SWI_CLEAR_OFFSET,
+	                0x1 << (irq_data->hwirq - AXI_SOFT_IRQ1(0)),
+	                0x1 << (irq_data->hwirq - AXI_SOFT_IRQ1(0)));
 
 	// wake up
 	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++) {
@@ -167,11 +174,11 @@ void aipc_mutex_lock(int id)
 	local = &lock_set.local[id];
 
 	// check repeatedly until we become the owner
-	__aipc_spin_lock_irqsave(&share->slock, &flags);
+	__aipc_spin_lock_irqsave((void *) &share->slock, &flags);
 	{
 		while (OWNER_IS_REMOTE(share)) {
 			share->wait_list |= AMBALINK_CORE_LOCAL;
-			__aipc_spin_unlock_irqrestore(&share->slock, flags);
+			__aipc_spin_unlock_irqrestore((void *) &share->slock, flags);
 
 			// wait for remote owner to finish
 			/*
@@ -184,14 +191,14 @@ void aipc_mutex_lock(int id)
 			msleep(1);
 
 			// lock and check again
-			__aipc_spin_lock_irqsave(&share->slock, &flags);
+			__aipc_spin_lock_irqsave((void *) &share->slock, &flags);
 		}
 		// set ourself as owner (note that we might be owner already)
 		share->owner = AMBALINK_CORE_LOCAL;
 		share->wait_list &= ~AMBALINK_CORE_LOCAL;
 		local->count++;
 	}
-	__aipc_spin_unlock_irqrestore(&share->slock, flags);
+	__aipc_spin_unlock_irqrestore((void *) &share->slock, flags);
 
 	// lock the local mutex
 	mutex_lock(&local->mutex);
@@ -226,19 +233,20 @@ void aipc_mutex_unlock(int id)
 	// unlock local mutex
 	mutex_unlock(&local->mutex);
 
-	__aipc_spin_lock_irqsave(&share->slock, &flags);
+	__aipc_spin_lock_irqsave((void *) &share->slock, &flags);
 	if (--local->count == 0) {
 		// We are done with the mutex,
 		// now let other waiting core(s) to grab it
 		share->owner = 0;
 		if (share->wait_list) {
 			// notify remote waiting core(s)
-			writel_relaxed(0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ1(0)),
-			                (void *) AHB_SCRATCHPAD_REG(AHB_SP_SWI_SET_OFFSET));
+			regmap_write_bits(lock_set.reg_ahb_scr, AHB_SP_SWI_SET_OFFSET,
+			                0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ1(0)),
+			                0x1 << (MUTEX_IRQ_REMOTE - AXI_SOFT_IRQ1(0)));
 			//printk("wakeup tx\n");
 		}
 	}
-	__aipc_spin_unlock_irqrestore(&share->slock, flags);
+	__aipc_spin_unlock_irqrestore((void *) &share->slock, flags);
 }
 
 static const struct of_device_id ambarella_ipc_mutex_of_match[] __initconst = {
@@ -253,8 +261,11 @@ static void __init aipc_mutex_of_init(struct device_node *np)
 	unsigned int irq;
 
 	// init shared part of aipc mutex memory
-	lock_set.share = (amutex_share_t*) AIPC_MUTEX_ADDR;
+	// lock_set.share = (amutex_share_t*) ioremap_cache(AIPC_MUTEX_ADDR, AIPC_MUTEX_SIZE);
+        lock_set.share = (amutex_share_t*) phys_to_virt(AIPC_MUTEX_ADDR);
 	//memset(lock_set.share, 0, sizeof(amutex_share_t)*AMBA_IPC_NUM_MUTEX);
+
+        printk(KERN_NOTICE "%s: aipc_mutex@0x%016lx\n", __func__, (unsigned long) lock_set.share);
 
 	// init local part of aipc mutex memory
 	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++) {
@@ -275,16 +286,21 @@ static void __init aipc_mutex_of_init(struct device_node *np)
 		goto exit;
 	}
 
-#if 0
+        lock_set.reg_ahb_scr = syscon_regmap_lookup_by_phandle(np, "amb,scr-regmap");
+        if (IS_ERR(lock_set.reg_ahb_scr)) {
+                printk(KERN_ERR "no scr regmap!\n");
+                ret = PTR_ERR(lock_set.reg_ahb_scr);
+		goto exit;
+        }
+
         init_procfs();
-#endif
 
         ipc_mutex_inited = 1;
 
         printk("%s done\n", __func__);
 
 exit:
-        return ret;
+        return;
 }
 OF_DECLARE_1(ipc_mutex, ambarella_ipc_mutex, "ambarella,ipc-mutex", aipc_mutex_of_init);
 
@@ -293,12 +309,12 @@ extern struct of_device_id __ipc_mutex_of_table[];
 static const struct of_device_id __ipc_mutex_of_table_sentinel
 	__used __section(__ipc_mutex_of_table_end);
 
-void __init aipc_mutex_probe(void)
+static int __init aipc_mutex_probe(void)
 {
+	int ret = 0;
 	struct device_node *np;
 	const struct of_device_id *match;
 	of_init_fn_1 init_func;
-	unsigned clocksources = 0;
 
 	for_each_matching_node_and_match(np, __ipc_mutex_of_table, &match) {
 		if (!of_device_is_available(np))
@@ -307,6 +323,8 @@ void __init aipc_mutex_probe(void)
 		init_func = match->data;
 		init_func(np);
 	}
+
+        return ret;
 }
 subsys_initcall(aipc_mutex_probe);
 

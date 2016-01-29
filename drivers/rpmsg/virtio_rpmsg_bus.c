@@ -972,7 +972,7 @@ static int rpmsg_probe(struct virtio_device *vdev)
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
         /* Replace the va address if enable AmbaLink. */
         pdata = rproc->priv;
-        bufs_va = (void *) phys_to_virt((unsigned long) pdata->buf_addr_pa);
+        bufs_va = (void *) phys_to_virt(pdata->buf_addr_pa);
 #else
 	/* allocate coherent memory for the buffers */
 	bufs_va = dma_alloc_coherent(vdev->dev.parent->parent,

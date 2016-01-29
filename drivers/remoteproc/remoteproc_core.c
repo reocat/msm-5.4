@@ -44,6 +44,10 @@
 
 #include "remoteproc_internal.h"
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <plat/ambalink_cfg.h>
+#endif
+
 static DEFINE_MUTEX(rproc_list_mutex);
 static LIST_HEAD(rproc_list);
 
@@ -216,7 +220,7 @@ int rproc_alloc_vring(struct rproc_vdev *rvdev, int i)
 	 * this call will also configure the IOMMU for us
 	 */
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-        va = (void*) phys_to_virt(rvring->da);
+        va = (void *) phys_to_virt(rvring->da);
         dma = rvring->da;
 #else
 	va = dma_alloc_coherent(dev->parent, size, &dma, GFP_KERNEL);

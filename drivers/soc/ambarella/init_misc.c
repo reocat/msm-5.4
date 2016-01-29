@@ -24,6 +24,12 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/ioport.h>
+#include <linux/io.h>
+#include <plat/ambalink_cfg.h>
+#endif
+
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
 
 struct proc_dir_entry *get_ambarella_proc_dir(void)
@@ -42,5 +48,23 @@ static int __init ambarella_init_root_proc(void)
 
 	return 0;
 }
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+static int __init ambarella_init_misc(void)
+{
+	ambarella_init_root_proc();
+
+        create_pgd_mapping(&init_mm,
+                        CONFIG_AMBALINK_SHM_ADDR,
+                        (unsigned long) phys_to_virt(CONFIG_AMBALINK_SHM_ADDR),
+                        CONFIG_AMBALINK_SHM_SIZE,
+                        __pgprot(PROT_NORMAL_NC));
+
+	return 0;
+}
+
+core_initcall(ambarella_init_misc);
+#else
 core_initcall(ambarella_init_root_proc);
+#endif
 

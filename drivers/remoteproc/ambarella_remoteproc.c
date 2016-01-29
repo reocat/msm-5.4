@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/irq.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/err.h>
@@ -23,8 +24,10 @@
 #include <linux/delay.h>
 #include <linux/virtio_ids.h>
 #include <linux/rpmsg.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+#include <linux/irqdomain.h>
 
-#include <plat/rct.h>
 #include <plat/remoteproc.h>
 #include <plat/ambalink_cfg.h>
 
@@ -111,36 +114,49 @@ ambarella_rproc_dummy_find_rsc_table(struct rproc *rproc,
 	return pdata->gen_rsc_table(tablesz);
 }
 
+static struct resource_table *
+ambarella_rproc_dummy_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw)
+{
+        int tablesz;
+	struct ambarella_rproc_pdata *pdata = rproc->priv;
+
+	return pdata->gen_rsc_table(&tablesz);
+}
+
 const struct rproc_fw_ops rproc_dummy_fw_ops = {
 	.request_firmware		= ambarella_rproc_dummy_request_firmware,
 	.request_firmware_nowait	= ambarella_rproc_dummy_request_firmware_nowait,
 	.release_firmware		= ambarella_rproc_dummy_release_firmware,
 	.load				= ambarella_rproc_dummy_load_segments,
 	.find_rsc_table			= ambarella_rproc_dummy_find_rsc_table,
+	.find_loaded_rsc_table          = ambarella_rproc_dummy_find_loaded_rsc_table,
 	.sanity_check			= NULL,
 	.get_boot_addr			= NULL
 };
 
-static void rpmsg_send_irq(int irq)
+static void rpmsg_send_irq(struct regmap *reg_ahb_scr, unsigned long irq)
 {
-        writel_relaxed(0x1 << (irq - AXI_SOFT_IRQ1(0)),
-                        (void *) AHB_SCRATCHPAD_REG(AHB_SP_SWI_SET_OFFSET));
+        regmap_write_bits(reg_ahb_scr, AHB_SP_SWI_SET_OFFSET,
+                        0x1 << (irq - AXI_SOFT_IRQ1(0)),
+                        0x1 << (irq - AXI_SOFT_IRQ1(0)));
 }
 
-static void rpmsg_ack_irq(int irq)
+static void rpmsg_ack_irq(struct regmap *reg_ahb_scr, unsigned long irq)
 {
-        writel_relaxed(0x1 << (irq - AXI_SOFT_IRQ1(0)),
-                        (void *) AHB_SCRATCHPAD_REG(AHB_SP_SWI_CLEAR_OFFSET));
+        regmap_write_bits(reg_ahb_scr, AHB_SP_SWI_CLEAR_OFFSET,
+                        0x1 << (irq - AXI_SOFT_IRQ1(0)),
+                        0x1 << (irq - AXI_SOFT_IRQ1(0)));
 }
 
 static void ambarella_rproc_kick(struct rproc *rproc, int vqid)
 {
 	struct ambarella_rproc_pdata *pdata = rproc->priv;
 
-	if (vqid == 0)
-		rpmsg_send_irq(pdata->rvq_tx_irq);
-	else
-		rpmsg_send_irq(pdata->svq_tx_irq);
+	if (vqid == 0) {
+		rpmsg_send_irq(pdata->reg_ahb_scr, pdata->rvq_tx_irq);
+	} else {
+		rpmsg_send_irq(pdata->reg_ahb_scr, pdata->svq_tx_irq);
+	}
 }
 
 static void rproc_svq_worker(struct work_struct *work)
@@ -185,17 +201,21 @@ static irqreturn_t rproc_ambarella_isr(int irq, void *dev_id)
 {
 	struct ambarella_rproc_pdata *pdata = dev_id;
 	struct rproc_vring *rvring;
+        struct irq_data *idata = NULL;
 
 	if (irq == pdata->rvq_rx_irq) {
+                idata = irq_get_irq_data(pdata->rvq_rx_irq);
 		rvring = idr_find(&pdata->rproc->notifyids, 0);
 		virtqueue_disable_cb(rvring->vq);
 		schedule_work(&pdata->rvq_work);
-	}
-	else if (irq == pdata->svq_rx_irq) {
+	} else if (irq == pdata->svq_rx_irq) {
+	        idata = irq_get_irq_data(pdata->svq_rx_irq);
 		schedule_work(&pdata->svq_work);
+	} else {
+                BUG();
 	}
 
-	rpmsg_ack_irq(irq);
+	rpmsg_ack_irq(pdata->reg_ahb_scr, idata->hwirq);
 
 	return IRQ_HANDLED;
 }
@@ -221,17 +241,31 @@ static const struct of_device_id ambarella_rproc_of_match[] = {
 	{},
 };
 
+static struct ambarella_rproc_pdata pdata_cortex = {
+	.name           = "c0_and_c1",
+	.firmware       = "dummy",
+	.ops            = NULL,
+	.buf_addr_pa    = VRING_C0_AND_C1_BUF,
+	.gen_rsc_table  = gen_rsc_table_cortex,
+};
+
 static int ambarella_rproc_probe(struct platform_device *pdev)
 {
-	struct ambarella_rproc_pdata *pdata = pdev->dev.platform_data;
+	struct ambarella_rproc_pdata *pdata;
 	struct rproc *rproc;
 	int ret;
 
-	ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
+	ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(64));
 	if (ret) {
 		dev_err(pdev->dev.parent, "dma_set_coherent_mask: %d\n", ret);
 		return ret;
 	}
+
+        pdev->dev.platform_data = &pdata_cortex;
+        pdata = pdev->dev.platform_data;
+
+        pdata->svq_tx_irq = VRING_IRQ_C1_TO_C0_KICK;
+        pdata->rvq_tx_irq = VRING_IRQ_C1_TO_C0_ACK;
 
 	rproc = rproc_alloc(&pdev->dev, "ambalink_rproc", &ambarella_rproc_ops,
 			    pdata->firmware, sizeof(*rproc));
@@ -270,8 +304,12 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
-        pdata->buf_addr_pa = VRING_C0_AND_C1_BUF;
-        pdata->gen_rsc_table = gen_rsc_table_cortex;
+        pdata->reg_ahb_scr = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
+                                                        "amb,scr-regmap");
+        if (IS_ERR(pdata->reg_ahb_scr)) {
+                printk(KERN_ERR "no scr regmap!\n");
+                ret = PTR_ERR(pdata->reg_ahb_scr);
+        }
 
 	INIT_WORK(&pdata->svq_work, rproc_svq_worker);
 	INIT_WORK(&pdata->rvq_work, rproc_rvq_worker);

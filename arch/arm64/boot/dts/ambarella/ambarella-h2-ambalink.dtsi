@@ -519,12 +519,11 @@
 			#size-cells = <1>;
 			reg = <0xe0001000 0x1000>,	/* fio reg address */
 			      <0xe0012000 0x1000>,	/* fdma reg address */
-			      <0xe0000000 0x4>,		/* fifo base */
-			      <0xec170074 0x4>,		/* fio reset reg */
-			      <0xec170034 0x4>;		/* poc reg */
+			      <0xe0000000 0x4>;		/* fifo base */
 			interrupts = <0 72 0x4>,	/* fio_cmd_irq */
 				     <0 73 0x4>,	/* fio_dma_irq */
 				     <0 70 0x4>;	/* fdma_irq */
+			amb,rct-regmap = <&rct_syscon>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&nand0_pins>;
 			clocks = <&gclk_core>;
@@ -567,8 +566,10 @@
 
 		udc@e0006000 {
 			compatible = "ambarella,udc";
-			reg = <0xe0006000 0x2000 0xec1702cc 0x4>;
+			reg = <0xe0006000 0x2000>;
 			interrupts = <0 68 0x4>;
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
 			amb,usbphy = <&usbphy>;
 		};
 
@@ -675,12 +676,16 @@
 			#size-cells = <0>;
 			reg = <0xe000e000 0x2000>;
 			interrupts = <0 65 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&eth_rgmii_pins>;
+			phy-mode = "rgmii";
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			amb,support-gmii;
 			amb,tx-ring-size = <32>;
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
-			pinctrl-names = "default";
-			pinctrl-0 = <&eth_rgmii_pins>;
 		};
 
 		spi0: spi@e0020000 {
@@ -717,6 +722,11 @@
 			pinctrl-0 = <&spi_slave_pins>;
 			status = "disabled";
 		};
+
+		scratchpad_syscon: scratchpad_syscon@e001b000 {
+			compatible = "ambarella,scratchpad", "syscon";
+			reg = <0xe001b000 0x70>;
+		};
 	};
 
 	rct@ec170000 {
@@ -726,10 +736,15 @@
 		reg = <0xec170000 0x1000>;
 		ranges;
 
+		rct_syscon: rct_syscon@ec170000 {
+			compatible = "ambarella,rct", "syscon";
+			reg = <0xec170000 0x1000>;
+		};
+
 		usbphy: usbphy@ec170050 {
 			compatible = "ambarella,usbphy";
 			reg = <0xec170050 0x4 0xe001b00c 0x4 0xec1702c0 0x4>;
-			amb,host-phy-num = <1>;
+			amb,host-phy-num = <2>;
 			amb,owner-mask;
 			amb,owner-invert;
 		};
@@ -1042,21 +1057,21 @@
 	};
 
         ambalink {
+		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
                 aipc_mutex: ambarella-ipc-mutex {
         		compatible = "ambarella,ipc-mutex";
-                	interrupts = <0 37 0x4>;
-
+                        interrupts = <0 5 0x4>;
+			amb,scr-regmap = <&scratchpad_syscon>;
         	};
 
                 rproc: ambarella-rproc {
                         compatible = "ambarella,rproc";
-                        interrupts = <0 32 0x4>,        /* rvq_rx_irq */
-                                     <0 33 0x4>,        /* svq_rx_irq */
-                                     <0 34 0x4>,        /* svq_tx_irq */
-                                     <0 35 0x4>;        /* rvq_tx_irq */
+                        interrupts = <0 0 0x4>,        /* rvq_rx_irq */
+                                     <0 1 0x4>;        /* svq_rx_irq */
+			amb,scr-regmap = <&scratchpad_syscon>;
                 };
         };
 };
