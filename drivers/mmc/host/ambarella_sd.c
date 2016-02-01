@@ -42,7 +42,6 @@
 #include <linux/mmc/sd.h>
 #include <linux/debugfs.h>
 #include <asm/dma.h>
-#include <mach/hardware.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/event.h>
@@ -535,9 +534,15 @@ static void ambarella_sd_enable_int(struct mmc_host *mmc, u32 mask)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
+	u32 tmp;
 
-	amba_setbitsl(pinfo->regbase + SD_NISEN_OFFSET, mask);
-	amba_setbitsl(pinfo->regbase + SD_NIXEN_OFFSET, mask);
+	tmp = readl_relaxed(pinfo->regbase + SD_NISEN_OFFSET);
+	tmp |= mask;
+	writel_relaxed(tmp, pinfo->regbase + SD_NISEN_OFFSET);
+
+	tmp = readl_relaxed(pinfo->regbase + SD_NIXEN_OFFSET);
+	tmp |= mask;
+	writel_relaxed(tmp, pinfo->regbase + SD_NIXEN_OFFSET);
 
 }
 
@@ -545,9 +550,15 @@ static void ambarella_sd_disable_int(struct mmc_host *mmc, u32 mask)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
+	u32 tmp;
 
-	amba_clrbitsl(pinfo->regbase + SD_NISEN_OFFSET, mask);
-	amba_clrbitsl(pinfo->regbase + SD_NIXEN_OFFSET, mask);
+	tmp = readl_relaxed(pinfo->regbase + SD_NISEN_OFFSET);
+	tmp &= ~mask;
+	writel_relaxed(tmp, pinfo->regbase + SD_NISEN_OFFSET);
+
+	tmp = readl_relaxed(pinfo->regbase + SD_NIXEN_OFFSET);
+	tmp &= ~mask;
+	writel_relaxed(tmp, pinfo->regbase + SD_NIXEN_OFFSET);
 }
 
 static void ambarella_sd_set_iclk(struct mmc_host *mmc, u16 clk_div)
@@ -559,13 +570,13 @@ static void ambarella_sd_set_iclk(struct mmc_host *mmc, u16 clk_div)
 
 	clk_div <<= 8;
 	clk_div |= SD_CLK_ICLK_EN;
-	amba_writew(pinfo->regbase + SD_CLK_OFFSET, clk_div);
+	writew_relaxed(clk_div, pinfo->regbase + SD_CLK_OFFSET);
 	while (1) {
-		clkreg = amba_readw(pinfo->regbase + SD_CLK_OFFSET);
+		clkreg = readw_relaxed(pinfo->regbase + SD_CLK_OFFSET);
 		if (clkreg & SD_CLK_ICLK_STABLE)
 			break;
 		if ((clkreg & ~SD_CLK_ICLK_STABLE) != clk_div) {
-			amba_writew(pinfo->regbase + SD_CLK_OFFSET, clk_div);
+			writew_relaxed(clk_div, pinfo->regbase + SD_CLK_OFFSET);
 			udelay(1);
 		}
 		counter++;
@@ -586,10 +597,9 @@ static void ambarella_sd_clear_clken(struct mmc_host *mmc)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	while (1) {
-		clkreg = amba_readw(pinfo->regbase + SD_CLK_OFFSET);
+		clkreg = readw_relaxed(pinfo->regbase + SD_CLK_OFFSET);
 		if (clkreg & SD_CLK_EN) {
-			amba_writew(pinfo->regbase + SD_CLK_OFFSET,
-				(clkreg & ~SD_CLK_EN));
+			writew_relaxed(clkreg & ~SD_CLK_EN, pinfo->regbase + SD_CLK_OFFSET);
 			udelay(1);
 		} else {
 			break;
@@ -611,12 +621,11 @@ static void ambarella_sd_set_clken(struct mmc_host *mmc)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	while (1) {
-		clkreg = amba_readw(pinfo->regbase + SD_CLK_OFFSET);
+		clkreg = readw_relaxed(pinfo->regbase + SD_CLK_OFFSET);
 		if (clkreg & SD_CLK_EN) {
 			break;
 		} else {
-			amba_writew(pinfo->regbase + SD_CLK_OFFSET,
-				(clkreg | SD_CLK_EN));
+			writew_relaxed(clkreg | SD_CLK_EN, pinfo->regbase + SD_CLK_OFFSET);
 			udelay(1);
 		}
 		counter++;
@@ -641,10 +650,11 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 		__func__, pslotinfo->state);
 
 	ambarella_sd_disable_int(mmc, 0xFFFFFFFF);
-	amba_write2w(pinfo->regbase + SD_NIS_OFFSET, 0xFFFF, 0xFFFF);
-	amba_writeb(pinfo->regbase + SD_RESET_OFFSET, SD_RESET_ALL);
+	writew_relaxed(0xffff, pinfo->regbase + SD_NIS_OFFSET);
+	writew_relaxed(0xffff, pinfo->regbase + SD_EIS_OFFSET);
+	writeb_relaxed(SD_RESET_ALL, pinfo->regbase + SD_RESET_OFFSET);
 	while (1) {
-		reset_reg = amba_readb(pinfo->regbase + SD_RESET_OFFSET);
+		reset_reg = readb_relaxed(pinfo->regbase + SD_RESET_OFFSET);
 		if (!(reset_reg & SD_RESET_ALL))
 			break;
 		counter++;
@@ -655,8 +665,7 @@ static void ambarella_sd_reset_all(struct mmc_host *mmc)
 	}
 
 	ambarella_sd_set_iclk(mmc, 0x0000);
-	amba_writeb(pinfo->regbase + SD_TMO_OFFSET,
-		CONFIG_SD_AMBARELLA_TIMEOUT_VAL);
+	writeb_relaxed(CONFIG_SD_AMBARELLA_TIMEOUT_VAL, pinfo->regbase + SD_TMO_OFFSET);
 
 	nis_flag = SD_NISEN_REMOVAL	|
 		SD_NISEN_INSERT		|
@@ -697,9 +706,9 @@ static void ambarella_sd_reset_cmd_line(struct mmc_host *mmc)
 	ambsd_dbg(pslotinfo, "Enter %s with state %u\n",
 		__func__, pslotinfo->state);
 
-	amba_writeb(pinfo->regbase + SD_RESET_OFFSET, SD_RESET_CMD);
+	writeb_relaxed(SD_RESET_CMD, pinfo->regbase + SD_RESET_OFFSET);
 	while (1) {
-		reset_reg = amba_readb(pinfo->regbase + SD_RESET_OFFSET);
+		reset_reg = readb_relaxed(pinfo->regbase + SD_RESET_OFFSET);
 		if (!(reset_reg & SD_RESET_CMD))
 			break;
 		counter++;
@@ -723,9 +732,9 @@ static void ambarella_sd_reset_data_line(struct mmc_host *mmc)
 	ambsd_dbg(pslotinfo, "Enter %s with state %u\n",
 		__func__, pslotinfo->state);
 
-	amba_writeb(pinfo->regbase + SD_RESET_OFFSET, SD_RESET_DAT);
+	writeb_relaxed(SD_RESET_DAT, pinfo->regbase + SD_RESET_OFFSET);
 	while (1) {
-		reset_reg = amba_readb(pinfo->regbase + SD_RESET_OFFSET);
+		reset_reg = readb_relaxed(pinfo->regbase + SD_RESET_OFFSET);
 		if (!(reset_reg & SD_RESET_DAT))
 			break;
 		counter++;
@@ -821,7 +830,7 @@ static inline void ambarella_sd_cmd_done(
 		} else if (eis & SD_EIS_CMD_TMOUT_ERR) {
 			cmd->error = -ETIMEDOUT;
 		} else if (eis & SD_EIS_ACMD12_ERR) {
-			ac12es = amba_readl(pinfo->regbase + SD_AC12ES_OFFSET);
+			ac12es = readl_relaxed(pinfo->regbase + SD_AC12ES_OFFSET);
 			if (ac12es & SD_AC12ES_TMOUT_ERROR) {
 				cmd->error = -ETIMEDOUT;
 			} else if (eis & SD_AC12ES_CRC_ERROR) {
@@ -849,16 +858,16 @@ static inline void ambarella_sd_cmd_done(
 	}
 
 	if (cmd->flags & MMC_RSP_136) {
-		rsp0 = amba_readl(pinfo->regbase + SD_RSP0_OFFSET);
-		rsp1 = amba_readl(pinfo->regbase + SD_RSP1_OFFSET);
-		rsp2 = amba_readl(pinfo->regbase + SD_RSP2_OFFSET);
-		rsp3 = amba_readl(pinfo->regbase + SD_RSP3_OFFSET);
+		rsp0 = readl_relaxed(pinfo->regbase + SD_RSP0_OFFSET);
+		rsp1 = readl_relaxed(pinfo->regbase + SD_RSP1_OFFSET);
+		rsp2 = readl_relaxed(pinfo->regbase + SD_RSP2_OFFSET);
+		rsp3 = readl_relaxed(pinfo->regbase + SD_RSP3_OFFSET);
 		cmd->resp[0] = ((rsp3 << 8) | (rsp2 >> 24));
 		cmd->resp[1] = ((rsp2 << 8) | (rsp1 >> 24));
 		cmd->resp[2] = ((rsp1 << 8) | (rsp0 >> 24));
 		cmd->resp[3] = (rsp0 << 8);
 	} else {
-		cmd->resp[0] = amba_readl(pinfo->regbase + SD_RSP0_OFFSET);
+		cmd->resp[0] = readl_relaxed(pinfo->regbase + SD_RSP0_OFFSET);
 	}
 
 	if ((pslotinfo->state == AMBA_SD_STATE_CMD) &&
@@ -875,11 +884,14 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	u16 nis, eis, slot_id;
 
 	/* Read and clear the interrupt registers */
-	amba_read2w(pinfo->regbase + SD_NIS_OFFSET, &nis, &eis);
-	amba_write2w(pinfo->regbase + SD_NIS_OFFSET, nis, eis);
+	nis = readw_relaxed(pinfo->regbase + SD_NIS_OFFSET);
+	writew_relaxed(nis, pinfo->regbase + SD_NIS_OFFSET);
+
+	eis = readw_relaxed(pinfo->regbase + SD_EIS_OFFSET);
+	writew_relaxed(eis, pinfo->regbase + SD_EIS_OFFSET);
 
 	if (pinfo->slot_num > 1) {
-		u32 fio_ctrl = amba_readl(pinfo->fio_reg + FIO_CTR_OFFSET);
+		u32 fio_ctrl = readl_relaxed(pinfo->fio_reg + FIO_CTR_OFFSET);
 		slot_id = (fio_ctrl & FIO_CTR_XD) ? 1 : 0;
 	} else
 		slot_id = 0;
@@ -928,8 +940,8 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		}
 #if 0
 		if (nis & SD_NIS_DMA) {
-			amba_writel(pinfo->regbase + SD_DMA_ADDR_OFFSET,
-			amba_readl(pinfo->regbase + SD_DMA_ADDR_OFFSET));
+			writel_relaxed(readl_relaxed(pinfo->regbase + SD_DMA_ADDR_OFFSET),
+				pinfo->regbase + SD_DMA_ADDR_OFFSET);
 		}
 #endif
 	}
@@ -995,7 +1007,7 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if (ios->power_mode == MMC_POWER_OFF) {
 		ambarella_sd_reset_all(pslotinfo->mmc);
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET, SD_PWR_OFF);
+		writeb_relaxed(SD_PWR_OFF, pinfo->regbase + SD_PWR_OFFSET);
 
 		if (gpio_is_valid(pslotinfo->pwr_gpio)) {
 			gpio_set_value_cansleep(pslotinfo->pwr_gpio,
@@ -1021,8 +1033,7 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 			msleep(300);
 		}
 
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
-			(SD_PWR_ON | SD_PWR_3_3V));
+		writeb_relaxed(SD_PWR_ON | SD_PWR_3_3V, pinfo->regbase + SD_PWR_OFFSET);
 	} else if (ios->power_mode == MMC_POWER_ON) {
 		switch (1 << ios->vdd) {
 		case MMC_VDD_165_195:
@@ -1037,7 +1048,7 @@ static void ambarella_sd_set_pwr(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 	msleep(1);
 	ambsd_dbg(pslotinfo, "pwr = 0x%x.\n",
-		amba_readb(pinfo->regbase + SD_PWR_OFFSET));
+		readb_relaxed(pinfo->regbase + SD_PWR_OFFSET));
 }
 
 static void ambarella_sd_set_phy_timing(
@@ -1063,18 +1074,18 @@ static void ambarella_sd_set_phy_timing(
 
 	if (pinfo->soft_phy) {
 		if(pinfo->timing_reg != NULL) {
-			amba_writel(pinfo->timing_reg, val0 | 0x02000000);
-			amba_writel(pinfo->timing_reg, val0);
-			amba_writel(pinfo->regbase + SD_LAT_CTRL_OFFSET, val1);
+			writel_relaxed(val0 | 0x02000000, pinfo->timing_reg);
+			writel_relaxed(val0, pinfo->timing_reg);
+			writel_relaxed(val1, pinfo->regbase + SD_LAT_CTRL_OFFSET);
 		} else {
-			amba_writel(pinfo->regbase + SD_DELAY_SEL_L, val0);
-			amba_writel(pinfo->regbase + SD_DELAY_SEL_H, val1);
+			writel_relaxed(val0, pinfo->regbase + SD_DELAY_SEL_L);
+			writel_relaxed(val1, pinfo->regbase + SD_DELAY_SEL_H);
 		}
 	} else {
-		u32 ms_delay = amba_rct_readl(pinfo->timing_reg);
+		u32 ms_delay = readl_relaxed(pinfo->timing_reg);
 		ms_delay &= val0;
 		ms_delay |= val1;
-		amba_rct_writel(pinfo->timing_reg, ms_delay);
+		writel_relaxed(ms_delay, pinfo->timing_reg);
 	}
 }
 
@@ -1082,9 +1093,9 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
-	u8 hostr = 0;
+	u32 hostr = 0, tmp;
 
-	hostr = amba_readb(pinfo->regbase + SD_HOST_OFFSET);
+	hostr = readb_relaxed(pinfo->regbase + SD_HOST_OFFSET);
 	if (ios->bus_width == MMC_BUS_WIDTH_8) {
 		hostr |= SD_HOST_8BIT;
 		hostr &= ~(SD_HOST_4BIT);
@@ -1100,35 +1111,30 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 		hostr &= ~(SD_HOST_8BIT);
 		hostr &= ~(SD_HOST_4BIT);
 	}
-	hostr &= ~SD_HOST_HIGH_SPEED;
-	switch (ios->timing) {
-	case MMC_TIMING_LEGACY:
-	case MMC_TIMING_MMC_HS:
-	case MMC_TIMING_SD_HS:
-	case MMC_TIMING_UHS_SDR12:
-	case MMC_TIMING_UHS_SDR25:
-	case MMC_TIMING_UHS_SDR50:
-	case MMC_TIMING_UHS_SDR104:
-		amba_clrbitsl(pinfo->regbase + SD_XC_CTR_OFFSET,
-			SD_XC_CTR_DDR_EN);
-		amba_clrbitsw(pinfo->regbase + SD_HOST2_OFFSET, 0x0004);
-		break;
-	case MMC_TIMING_UHS_DDR50:
-		hostr |= SD_HOST_HIGH_SPEED;
-		amba_setbitsl(pinfo->regbase + SD_XC_CTR_OFFSET,
-			SD_XC_CTR_DDR_EN);
-		amba_setbitsw(pinfo->regbase + SD_HOST2_OFFSET, 0x0004);
-		break;
-	default:
-		amba_clrbitsl(pinfo->regbase + SD_XC_CTR_OFFSET,
-			SD_XC_CTR_DDR_EN);
-		amba_clrbitsw(pinfo->regbase + SD_HOST2_OFFSET, 0x0004);
-		ambsd_err(pslotinfo, "Unknown timing[%d], assume legacy.\n",
-			ios->timing);
-		break;
-	}
 
-	amba_writeb(pinfo->regbase + SD_HOST_OFFSET, hostr);
+	if (ios->timing == MMC_TIMING_UHS_DDR50) {
+		tmp = readl_relaxed(pinfo->regbase + SD_XC_CTR_OFFSET);
+		tmp |= SD_XC_CTR_DDR_EN;
+		writel_relaxed(tmp, pinfo->regbase + SD_XC_CTR_OFFSET);
+
+		tmp = readw_relaxed(pinfo->regbase + SD_HOST2_OFFSET);
+		tmp |= 0x0004;
+		writew_relaxed(tmp, pinfo->regbase + SD_HOST2_OFFSET);
+
+		hostr |= SD_HOST_HIGH_SPEED;
+		writeb_relaxed(hostr, pinfo->regbase + SD_HOST_OFFSET);
+	} else {
+		tmp = readl_relaxed(pinfo->regbase + SD_XC_CTR_OFFSET);
+		tmp &= ~SD_XC_CTR_DDR_EN;
+		writel_relaxed(tmp, pinfo->regbase + SD_XC_CTR_OFFSET);
+
+		tmp = readw_relaxed(pinfo->regbase + SD_HOST2_OFFSET);
+		tmp &= ~0x0004;
+		writew_relaxed(tmp, pinfo->regbase + SD_HOST2_OFFSET);
+
+		hostr &= ~SD_HOST_HIGH_SPEED;
+		writeb_relaxed(hostr, pinfo->regbase + SD_HOST_OFFSET);
+	}
 
 	ambsd_dbg(pslotinfo, "hostr = 0x%x.\n", hostr);
 
@@ -1178,7 +1184,7 @@ static u32 ambarella_sd_check_cd(struct mmc_host *mmc)
 	} else {
 		cdpin = mmc_gpio_get_cd(mmc);
 		if (cdpin < 0) {
-			cdpin = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			cdpin = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
 			cdpin &= SD_STA_CARD_INSERTED;
 		}
 	}
@@ -1297,7 +1303,7 @@ static inline void ambarella_sd_pre_cmd(struct ambarella_sd_mmc_info *pslotinfo)
 static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo)
 {
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
-	u32 valid_request, sta_reg, tmpreg, counter = 0;
+	u32 valid_request, sta_reg, cnt_reg, tmp, counter = 0;
 	long timeout;
 
 	valid_request = ambarella_sd_check_cd(pslotinfo->mmc);
@@ -1312,7 +1318,7 @@ static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo
 	ambarella_sd_ios(pslotinfo->mmc, &pslotinfo->mmc->ios);
 	if (pslotinfo->mrq->data) {
 		while (1) {
-			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			sta_reg = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
 			if ((sta_reg & SD_STA_CMD_INHIBIT_DAT) == 0) {
 				break;
 			}
@@ -1326,26 +1332,29 @@ static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo
 			}
 		}
 
-		amba_writeb(pinfo->regbase + SD_TMO_OFFSET, pslotinfo->tmo);
+		writeb_relaxed(pslotinfo->tmo, pinfo->regbase + SD_TMO_OFFSET);
+
 		if (pslotinfo->use_adma == 1) {
-			amba_setbitsb(pinfo->regbase + SD_HOST_OFFSET,
-				SD_HOST_ADMA);
-			amba_writel(pinfo->regbase + SD_ADMA_ADDR_OFFSET,
-				pslotinfo->dma_address);
+			tmp = readb_relaxed(pinfo->regbase + SD_HOST_OFFSET);
+			tmp |= SD_HOST_ADMA;
+			writeb_relaxed(tmp, pinfo->regbase + SD_HOST_OFFSET);
+			writel_relaxed(pslotinfo->dma_address,
+				pinfo->regbase + SD_ADMA_ADDR_OFFSET);
 		} else {
-			amba_clrbitsb(pinfo->regbase + SD_HOST_OFFSET,
-				SD_HOST_ADMA);
-			amba_writel(pinfo->regbase + SD_DMA_ADDR_OFFSET,
-				pslotinfo->dma_address);
+			tmp = readb_relaxed(pinfo->regbase + SD_HOST_OFFSET);
+			tmp &= ~SD_HOST_ADMA;
+			writeb_relaxed(tmp, pinfo->regbase + SD_HOST_OFFSET);
+			writel_relaxed(pslotinfo->dma_address,
+				pinfo->regbase + SD_DMA_ADDR_OFFSET);
 		}
-		amba_write2w(pinfo->regbase + SD_BLK_SZ_OFFSET,
-			pslotinfo->blk_sz, pslotinfo->blk_cnt);
-		amba_writel(pinfo->regbase + SD_ARG_OFFSET, pslotinfo->arg_reg);
-		amba_write2w(pinfo->regbase + SD_XFR_OFFSET,
-			pslotinfo->xfr_reg, pslotinfo->cmd_reg);
+		writew_relaxed(pslotinfo->blk_sz, pinfo->regbase + SD_BLK_SZ_OFFSET);
+		writew_relaxed(pslotinfo->blk_cnt, pinfo->regbase + SD_BLK_CNT_OFFSET);
+		writel_relaxed(pslotinfo->arg_reg, pinfo->regbase + SD_ARG_OFFSET);
+		writew_relaxed(pslotinfo->xfr_reg, pinfo->regbase + SD_XFR_OFFSET);
+		writew_relaxed(pslotinfo->cmd_reg, pinfo->regbase + SD_CMD_OFFSET);
 	} else {
 		while (1) {
-			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			sta_reg = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
 			if ((sta_reg & SD_STA_CMD_INHIBIT_CMD) == 0) {
 				break;
 			}
@@ -1359,9 +1368,9 @@ static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo
 			}
 		}
 
-		amba_writel(pinfo->regbase + SD_ARG_OFFSET, pslotinfo->arg_reg);
-		amba_write2w(pinfo->regbase + SD_XFR_OFFSET,
-			0x00, pslotinfo->cmd_reg);
+		writel_relaxed(pslotinfo->arg_reg, pinfo->regbase + SD_ARG_OFFSET);
+		writew_relaxed(0x0, pinfo->regbase + SD_XFR_OFFSET);
+		writew_relaxed(pslotinfo->cmd_reg, pinfo->regbase + SD_CMD_OFFSET);
 	}
 
 ambarella_sd_send_cmd_exit:
@@ -1374,7 +1383,7 @@ ambarella_sd_send_cmd_exit:
 				"cmd%u %u@[%ld:%u], sta=0x%04x\n",
 				pslotinfo->mrq->cmd->opcode,
 				pslotinfo->state, timeout, pslotinfo->wait_tmo,
-				amba_readl(pinfo->regbase + SD_STA_OFFSET));
+				readl_relaxed(pinfo->regbase + SD_STA_OFFSET));
 			pslotinfo->mrq->cmd->error = -ETIMEDOUT;
 		}
 	} else if (pslotinfo->state == AMBA_SD_STATE_DATA) {
@@ -1382,7 +1391,7 @@ ambarella_sd_send_cmd_exit:
 			timeout = wait_event_timeout(pslotinfo->wait,
 				(pslotinfo->state != AMBA_SD_STATE_DATA),
 				pslotinfo->wait_tmo);
-			sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			sta_reg = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
 			if ((pslotinfo->state == AMBA_SD_STATE_DATA) &&
 				(sta_reg & pslotinfo->sta_reg)) {
 				ambsd_rtdbg(pslotinfo, "data%u %u@"
@@ -1399,26 +1408,17 @@ ambarella_sd_send_cmd_exit:
 					pslotinfo->sg_len,
 					pslotinfo->dma_address,
 					pslotinfo->dma_size);
-				tmpreg = amba_readw(pinfo->regbase +
-					SD_BLK_CNT_OFFSET);
-				if (tmpreg) {
+				cnt_reg = readw_relaxed(pinfo->regbase + SD_BLK_CNT_OFFSET);
+				if (cnt_reg) {
+					tmp = readl_relaxed(pinfo->regbase + SD_DMA_ADDR_OFFSET);
 					ambsd_rtdbg(pslotinfo,
-						"SD_DMA_ADDR_OFFSET[0x%08X]\n",
-						amba_readl(pinfo->regbase +
-						SD_DMA_ADDR_OFFSET));
-					amba_writel((pinfo->regbase +
-						SD_DMA_ADDR_OFFSET),
-						amba_readl(pinfo->regbase +
-						SD_DMA_ADDR_OFFSET));
+						"SD_DMA_ADDR_OFFSET[0x%08X]\n", tmp);
+					writel_relaxed(tmp, pinfo->regbase + SD_DMA_ADDR_OFFSET);
 				} else {
-					ambsd_rtdbg(pslotinfo,
-						"SD_DATA_OFFSET[0x%08X]\n",
-						amba_readl(pinfo->regbase +
-						SD_DATA_OFFSET));
-					ambsd_rtdbg(pslotinfo,
-						"SD_STA_OFFSET[0x%08X]\n",
-						amba_readl(pinfo->regbase +
-						SD_STA_OFFSET));
+					tmp = readl_relaxed(pinfo->regbase + SD_DATA_OFFSET);
+					ambsd_rtdbg(pslotinfo, "SD_DATA_OFFSET[0x%08X]\n", tmp);
+					tmp = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
+					ambsd_rtdbg(pslotinfo, "SD_STA_OFFSET[0x%08X]\n", tmp);
 				}
 			} else {
 				break;
@@ -1454,7 +1454,7 @@ static inline void ambarella_sd_post_cmd(struct ambarella_sd_mmc_info *pslotinfo
 			pslotinfo->state);
 		for (counter = 0; counter < 0x100; counter += 4) {
 			ambsd_err(pslotinfo, "0x%04x: 0x%08x\n",
-			counter, amba_readl(pinfo->regbase + counter));
+			counter, readl_relaxed(pinfo->regbase + counter));
 		}
 		ambarella_sd_show_info(pslotinfo);
 #endif
@@ -1487,7 +1487,7 @@ static int ambarella_sd_get_ro(struct mmc_host *mmc)
 	} else {
 		wpspl = mmc_gpio_get_ro(mmc);
 		if (wpspl < 0) {
-			wpspl = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+			wpspl = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
 			wpspl &= SD_STA_WPS_PL;
 		}
 	}
@@ -1522,8 +1522,7 @@ static int ambarella_sd_ssvs(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
-			(SD_PWR_ON | SD_PWR_3_3V));
+		writeb_relaxed(SD_PWR_ON | SD_PWR_3_3V, pinfo->regbase + SD_PWR_OFFSET);
 
 		if (gpio_is_valid(pslotinfo->v18_gpio)) {
 			gpio_set_value_cansleep(pslotinfo->v18_gpio,
@@ -1533,8 +1532,7 @@ static int ambarella_sd_ssvs(struct mmc_host *mmc, struct mmc_ios *ios)
 	} else if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180) {
 		ambarella_sd_clear_clken(mmc);
 		msleep(CONFIG_SD_AMBARELLA_VSW_PRE_SPEC);
-		amba_writeb(pinfo->regbase + SD_PWR_OFFSET,
-			(SD_PWR_ON | SD_PWR_1_8V));
+		writeb_relaxed(SD_PWR_ON | SD_PWR_1_8V, pinfo->regbase + SD_PWR_OFFSET);
 
 		if (gpio_is_valid(pslotinfo->v18_gpio)) {
 			gpio_set_value_cansleep(pslotinfo->v18_gpio,
@@ -1554,7 +1552,7 @@ static int ambarella_sd_card_busy(struct mmc_host *mmc)
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 	u32 sta_reg;
 
-	sta_reg = amba_readl(pinfo->regbase + SD_STA_OFFSET);
+	sta_reg = readl_relaxed(pinfo->regbase + SD_STA_OFFSET);
 	ambsd_dbg(pslotinfo, "SD_STA_OFFSET = 0x%08X.\n", sta_reg);
 	retval = !(sta_reg & 0x1F00000);
 
@@ -1711,7 +1709,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 
 	ambarella_sd_reset_all(mmc);
 
-	hc_cap = amba_readl(pinfo->regbase + SD_CAP_OFFSET);
+	hc_cap = readl_relaxed(pinfo->regbase + SD_CAP_OFFSET);
 
 	dev_dbg(pinfo->dev,
 		"SD Clock: base[%uMHz], min[%uHz], max[%uHz].\n",
@@ -1813,7 +1811,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 
 	dev_notice(pinfo->dev, "Slot%u use bounce buffer[0x%p<->0x%08x]\n",
 		pslotinfo->slot_id, pslotinfo->buf_vaddress,
-		pslotinfo->buf_paddress);
+		(u32)pslotinfo->buf_paddress);
 
 	dev_notice(pinfo->dev, "Slot%u req_size=0x%08X, "
 		"segs=%u, seg_size=0x%08X\n",
@@ -2114,10 +2112,10 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 		pslotinfo = pinfo->pslotinfo[i];
 		if(pslotinfo->mmc->pm_caps & MMC_PM_KEEP_POWER) {
 			ambarella_sd_disable_int(pslotinfo->mmc, SD_NISEN_CARD);
-			pslotinfo->sd_nisen = amba_readw(pinfo->regbase + SD_NISEN_OFFSET);
-			pslotinfo->sd_eisen = amba_readw(pinfo->regbase + SD_EISEN_OFFSET);
-			pslotinfo->sd_nixen = amba_readw(pinfo->regbase + SD_NIXEN_OFFSET);
-			pslotinfo->sd_eixen = amba_readw(pinfo->regbase + SD_EIXEN_OFFSET);
+			pslotinfo->sd_nisen = readw_relaxed(pinfo->regbase + SD_NISEN_OFFSET);
+			pslotinfo->sd_eisen = readw_relaxed(pinfo->regbase + SD_EISEN_OFFSET);
+			pslotinfo->sd_nixen = readw_relaxed(pinfo->regbase + SD_NIXEN_OFFSET);
+			pslotinfo->sd_eixen = readw_relaxed(pinfo->regbase + SD_EIXEN_OFFSET);
 		}
 #if 0
 		retval = mmc_suspend_host(pslotinfo->mmc);
@@ -2150,10 +2148,10 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 			gpio_direction_output(pslotinfo->pwr_gpio, pslotinfo->pwr_gpio_active);
 		}
 		if(pslotinfo->mmc->pm_caps & MMC_PM_KEEP_POWER) {
-		        amba_writew(pinfo->regbase + SD_NISEN_OFFSET, pslotinfo->sd_nisen);
-		        amba_writew(pinfo->regbase + SD_EISEN_OFFSET, pslotinfo->sd_eisen);
-		        amba_writew(pinfo->regbase + SD_NIXEN_OFFSET, pslotinfo->sd_nixen);
-		        amba_writew(pinfo->regbase + SD_EIXEN_OFFSET, pslotinfo->sd_eixen);
+		        writew_relaxed(pslotinfo->sd_nisen, pinfo->regbase + SD_NISEN_OFFSET);
+		        writew_relaxed(pslotinfo->sd_eisen, pinfo->regbase + SD_EISEN_OFFSET);
+		        writew_relaxed(pslotinfo->sd_nixen, pinfo->regbase + SD_NIXEN_OFFSET);
+		        writew_relaxed(pslotinfo->sd_eixen, pinfo->regbase + SD_EIXEN_OFFSET);
 			pslotinfo->mmc->caps |= MMC_CAP_NONREMOVABLE;
 		        mdelay(10);
 		        ambarella_sd_set_clk(pslotinfo->mmc, &pinfo->controller_ios);
