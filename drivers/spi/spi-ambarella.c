@@ -97,23 +97,6 @@ static int ambarella_spi_of_parse(struct platform_device *pdev,
 	return 0;
 }
 
-static int of_dev_node_match(struct device *dev, void *data)
-{
-	return dev->of_node == data;
-}
-
-static struct spi_device *ambarella_spi_of_find_device(struct device_node *np)
-{
-	struct device *dev;
-
-	dev = bus_find_device(&spi_bus_type, NULL, np,
-					 of_dev_node_match);
-	if (!dev)
-		return NULL;
-
-	return to_spi_device(dev);
-}
-
 static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *spi)
 {
 	u32			virt;
@@ -605,7 +588,6 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	void __iomem				*reg;
 	struct ambarella_spi			*bus;
 	struct spi_master			*master;
-	struct device_node			*nc;
 	int					err = 0;
 	int					irq;
 
