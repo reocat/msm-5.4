@@ -579,6 +579,26 @@ static int ambarella_spi_dma_channel_allocate(struct spi_master *master)
 	return 0;
 }
 
+static int ambarella_spi_hw_setup(struct spi_device *spi)
+{
+	struct ambarella_spi *bus = spi_master_get_devdata(spi->master);
+	int err = 0;
+
+	if (gpio_is_valid(spi->cs_gpio)) {
+		err = gpio_request(spi->cs_gpio, dev_name(&spi->dev));
+		if (err < 0) {
+			dev_err(&spi->dev, "can't get CS: %d\n", err);
+			return -EINVAL;
+		}
+		gpio_direction_output(spi->cs_gpio, 1);
+		bus->cs_pins[spi->chip_select] = spi->cs_gpio;
+	} else {
+		bus->cs_pins[spi->chip_select] = -1;
+	}
+
+	return 0;
+}
+
 static int ambarella_spi_probe(struct platform_device *pdev)
 {
 	struct resource 			*res;
@@ -630,6 +650,7 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	master->dev.of_node		= pdev->dev.of_node;
 	master->mode_bits		= SPI_CPHA | SPI_CPOL;
 	master->transfer_one_message	= ambarella_spi_one_message;
+	master->setup = ambarella_spi_hw_setup;
 	platform_set_drvdata(pdev, master);
 
 	/* check if hw only supports msb first tx/rx */
@@ -660,31 +681,8 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	}
 
 	err = spi_register_master(master);
-	if (err) {
+	if (err)
 		goto ambarella_spi_probe_exit;
-	}
-
-	for_each_available_child_of_node(master->dev.of_node, nc) {
-		struct spi_device	*spi;
-
-		spi = ambarella_spi_of_find_device(nc);
-		if (!spi) {
-			continue;
-		}
-
-		if (gpio_is_valid(spi->cs_gpio)) {
-			err = devm_gpio_request(&pdev->dev,
-					spi->cs_gpio, dev_name(&spi->dev));
-			if (err < 0) {
-				dev_err(&pdev->dev, "can't get CS: %d\n", err);
-				goto ambarella_spi_probe_exit;
-			}
-			gpio_direction_output(spi->cs_gpio, 1);
-			bus->cs_pins[spi->chip_select] = spi->cs_gpio;
-		} else {
-			bus->cs_pins[spi->chip_select] = -1;
-		}
-	}
 
 	dev_info(&pdev->dev, "Ambarella spi controller %d created.\r\n", master->bus_num);
 
