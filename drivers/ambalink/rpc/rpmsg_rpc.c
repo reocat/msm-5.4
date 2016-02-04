@@ -11,7 +11,6 @@
 #include <linux/remoteproc.h>
 #include <linux/aipc_msg.h>
 
-#include <mach/init.h>
 #if RPC_DEBUG
 #include <asm/uaccess.h>
 #include <linux/proc_fs.h>
@@ -50,7 +49,7 @@ static unsigned int calc_timer_diff(unsigned int start, unsigned int end)
  */
 static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 {
-	return seq_printf(m, "%u", amba_readl(PROFILE_TIMER));
+	return seq_printf(m, "%u", readl_relaxed(PROFILE_TIMER));
 }
 
 /*
@@ -80,7 +79,7 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 
 	/* access to the statistics in shared memory*/
 	sscanf(buf, "%d %u %u", &cond, &addr, &result);
-	value = (unsigned int *) (addr + RPC_PROFILE_ADDR);
+	value = (unsigned int *) (addr + ambalink_shm_layout.rpc_profile_addr);
 	switch (cond) {
 	case 1: //add the result
 		*value += result;
@@ -97,8 +96,8 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 		break;
 	case 4: //calculate injection time
 		//value is LuLastInjectTime & sec_value is LuTotalInjectTime
-		sec_value = (unsigned int *) (result + RPC_PROFILE_ADDR);
-		cur_time = amba_readl(PROFILE_TIMER);
+		sec_value = (unsigned int *) (result + ambalink_shm_layout.rpc_profile_addr);
+		cur_time = readl_relaxed(PROFILE_TIMER);
 		if ( *value != 0) {
 			//calculate the duration from last to current injection.
 			diff = calc_timer_diff(*value, cur_time);
@@ -136,7 +135,7 @@ static void rpmsg_rpc_recv(struct rpmsg_channel *rpdev, void *data, int len,
 {
 #if RPC_DEBUG
 	struct aipc_pkt *pkt = (struct aipc_pkt *)data;
-	pkt->xprt.lk_to_lu_start = amba_readl(PROFILE_TIMER);
+	pkt->xprt.lk_to_lu_start = readl_relaxed(PROFILE_TIMER);
 #endif
 	DMSG("rpmsg_rpc recv %d bytes\n", len);
 	aipc_router_send((struct aipc_pkt*)data, len);
@@ -149,7 +148,7 @@ static void rpmsg_rpc_send_tx(struct aipc_pkt *pkt, int len, int port)
 {
 	if (chnl_tx) {
 #if RPC_DEBUG
-		pkt->xprt.lu_to_lk_end = amba_readl(PROFILE_TIMER);
+		pkt->xprt.lu_to_lk_end = readl_relaxed(PROFILE_TIMER);
 #endif
 		rpmsg_send(chnl_tx, pkt, len);
 	}

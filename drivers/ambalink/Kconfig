@@ -9,18 +9,6 @@ menuconfig ARCH_AMBARELLA_AMBALINK
 
 if ARCH_AMBARELLA_AMBALINK
 
-config AMBALINK_SHM_ADDR
-	hex "AmbaLink Shared Memory Address"
-	default 0x00000000
-	help
-	  Specify the starting address for Ambalink shared memory
-
-config AMBALINK_SHM_SIZE
-	hex "AmbaLink Shared Memory Size"
-	default 0x00000000
-	help
-	  Specify the size for Ambalink shared memory
-
 source "drivers/ambalink/service/Kconfig"
 source "drivers/ambalink/rpc/Kconfig"
 

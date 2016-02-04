@@ -11,7 +11,20 @@
  */
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 
-#ifdef CONFIG_AMBALINK_SHM_ADDR
+#include <plat/chip.h>
+
+struct ambalink_shared_memory_layout {
+        u64     vring_c0_and_c1_buf;
+        u64     vring_c0_to_c1;
+        u64     vring_c1_to_c0;
+        u64     rpmsg_suspend_backup_addr;
+        u64     rpc_profile_addr;
+        u64     rpmsg_profile_addr;
+        u64     aipc_slock_addr;
+        u64     aipc_mutex_addr;
+};
+
+extern struct ambalink_shared_memory_layout ambalink_shm_layout;
 
 /*
  * User define
@@ -31,37 +44,21 @@
 /* Alignment to 0x1000, the calculation details can be found in the document. */
 #define RPC_RPMSG_PROFILE_SIZE          (RPC_PROFILE_SIZE + ((17 * MAX_RPMSG_NUM_BUFS + (0x1000 - 1)) & ~(0x1000 -1)))
 
-#define VRING_C0_AND_C1_BUF             (CONFIG_AMBALINK_SHM_ADDR)
-#define VRING_C0_TO_C1                  (VRING_C0_AND_C1_BUF + RPMSG_TOTAL_BUF_SPACE)
-#define VRING_C1_TO_C0                  (VRING_C0_TO_C1 + VRING_SIZE)
-
-/*
- * for RPMSG suspend backup area
- */
-#define RPMSG_SUSPEND_BACKUP_ADDR       (VRING_C1_TO_C0 + VRING_SIZE)
+/* for RPMSG suspend backup area */
 #define RPMSG_SUSPEND_BACKUP_SIZE       0x20000
 
-/*
- * for RPC and RPMSG profiling
- */
-#define RPC_PROFILE_ADDR                (RPMSG_SUSPEND_BACKUP_ADDR + RPMSG_SUSPEND_BACKUP_SIZE)
-#define RPMSG_PROFILE_ADDR              (RPC_PROFILE_ADDR + RPC_PROFILE_SIZE)
+/* for RPC and RPMSG profiling */
+#if (CHIP_REV == H2)
+#define PROFILE_TIMER                   0x0
+#endif
 
-/*
- * for spinlock module
- */
-#define AIPC_SLOCK_ADDR                 (RPMSG_PROFILE_ADDR + MAX_RPC_RPMSG_PROFILE_SIZE)
+/* for spinlock module */
 #define AIPC_SLOCK_SIZE                 (0x1000)
 
-/*
- * for mutex module
- */
-#define AIPC_MUTEX_ADDR                 (AIPC_SLOCK_ADDR + AIPC_SLOCK_SIZE)
+/* for mutex module */
 #define AIPC_MUTEX_SIZE                 0x1000
 
-/*
- * general settings
- */
+/* general settings */
 #define AMBALINK_CORE_LOCAL             0x2
 #define ERG_SIZE                        16
 
@@ -90,10 +87,6 @@
 
 /* address translation in loadable kernel module */
 #define ambalink_lkm_virt_to_phys(x)	(__pfn_to_phys(vmalloc_to_pfn((void *) (x))) + ((u32)(x) & (~PAGE_MASK)) - DEFAULT_MEM_START)
-
-#else
-#error "CONFIG_AMBAKLINK_SHM_ADDR is not defined"
-#endif
 
 #else
 #error "include ambalink_cfg.h while PLAT_AMBARELLA_AMBALINK is not defined"

@@ -2,7 +2,7 @@
 config AMBALINK_RPC
         bool "AmbaLink RPC support"
         depends on RPMSG
-        depends on RPROC_SUPPORT
+        depends on AMBARELLA_RPROC
         default y
         help
           AmbaLink Remote Procedure Call

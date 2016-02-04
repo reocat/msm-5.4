@@ -126,7 +126,7 @@ EXPORT_SYMBOL(aipc_spin_lock_setup);
 
 static int aipc_spin_lock_init(void)
 {
-	aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+	aipc_spin_lock_setup(ambalink_shm_layout.aipc_slock_addr);
 
 #if 0
 	init_procfs();
@@ -180,7 +180,7 @@ void __aipc_spin_unlock_irqrestore(void *lock, unsigned long flags)
 void aipc_spin_lock(int id)
 {
 	if (!lock_inited)
-		aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+		aipc_spin_lock_setup(ambalink_shm_layout.aipc_slock_addr);
 
 	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);
@@ -201,7 +201,7 @@ void aipc_spin_unlock(int id)
 void aipc_spin_lock_irqsave(int id, unsigned long *flags)
 {
 	if (!lock_inited)
-		aipc_spin_lock_setup(AIPC_SLOCK_ADDR);
+		aipc_spin_lock_setup(ambalink_shm_layout.aipc_slock_addr);
 
 	if (id < 0 || id >= lock_set.size) {
 		printk(KERN_ERR "%s: invalid id %d\n", __FUNCTION__, id);

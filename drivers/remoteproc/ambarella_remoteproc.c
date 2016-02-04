@@ -61,13 +61,13 @@ static struct resource_table *gen_rsc_table_cortex(int *tablesz)
 	vdev->num_of_vrings     = 2;
 
 	vring                   = (void*)&vdev->vring[0];
-	vring->da               = VRING_C0_TO_C1;
+	vring->da               = ambalink_shm_layout.vring_c0_to_c1;
 	vring->align		= PAGE_SIZE;
 	vring->num              = MAX_RPMSG_NUM_BUFS >> 1;
 	vring->notifyid		= 111;
 
 	vring                   = (void*)&vdev->vring[1];
-	vring->da               = VRING_C1_TO_C0;
+	vring->da               = ambalink_shm_layout.vring_c1_to_c0;
 	vring->align            = PAGE_SIZE;
 	vring->num              = MAX_RPMSG_NUM_BUFS >> 1;
 	vring->notifyid		= 112;
@@ -245,7 +245,6 @@ static struct ambarella_rproc_pdata pdata_cortex = {
 	.name           = "c0_and_c1",
 	.firmware       = "dummy",
 	.ops            = NULL,
-	.buf_addr_pa    = VRING_C0_AND_C1_BUF,
 	.gen_rsc_table  = gen_rsc_table_cortex,
 };
 
@@ -264,8 +263,9 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
         pdev->dev.platform_data = &pdata_cortex;
         pdata = pdev->dev.platform_data;
 
-        pdata->svq_tx_irq = VRING_IRQ_C1_TO_C0_KICK;
-        pdata->rvq_tx_irq = VRING_IRQ_C1_TO_C0_ACK;
+        pdata->svq_tx_irq       = VRING_IRQ_C1_TO_C0_KICK;
+        pdata->rvq_tx_irq       = VRING_IRQ_C1_TO_C0_ACK;
+        pdata->buf_addr_pa      = ambalink_shm_layout.vring_c0_and_c1_buf;
 
 	rproc = rproc_alloc(&pdev->dev, "ambalink_rproc", &ambarella_rproc_ops,
 			    pdata->firmware, sizeof(*rproc));

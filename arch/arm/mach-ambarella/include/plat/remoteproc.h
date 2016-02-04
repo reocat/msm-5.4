@@ -26,6 +26,12 @@
 
 #include <linux/remoteproc.h>
 
+/*
+ * The rpmsg profiling related data structure use the same definition in dual-OSes.
+ * This data structure
+ */
+#define RPMSG_DEBUG             0
+
 struct ambarella_rproc_pdata {
 	const char              *name;
 	struct rproc            *rproc;
@@ -41,12 +47,6 @@ struct ambarella_rproc_pdata {
 	struct resource_table   *(*gen_rsc_table)(int *tablesz);
         struct regmap           *reg_ahb_scr;
 };
-
-/*
- * The rpmsg profiling related data structure use the same definition in dual-OSes.
- * This data structure
- */
-#define RPMSG_DEBUG			1
 
 #if RPMSG_DEBUG
 /******************************The defintion is shared between dual-OSes*******************************/

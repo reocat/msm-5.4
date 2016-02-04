@@ -261,8 +261,7 @@ static void __init aipc_mutex_of_init(struct device_node *np)
 	unsigned int irq;
 
 	// init shared part of aipc mutex memory
-	// lock_set.share = (amutex_share_t*) ioremap_cache(AIPC_MUTEX_ADDR, AIPC_MUTEX_SIZE);
-        lock_set.share = (amutex_share_t*) phys_to_virt(AIPC_MUTEX_ADDR);
+        lock_set.share = (amutex_share_t*) phys_to_virt(ambalink_shm_layout.aipc_mutex_addr);
 	//memset(lock_set.share, 0, sizeof(amutex_share_t)*AMBA_IPC_NUM_MUTEX);
 
         printk(KERN_NOTICE "%s: aipc_mutex@0x%016lx\n", __func__, (unsigned long) lock_set.share);

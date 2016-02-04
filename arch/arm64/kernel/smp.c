@@ -106,8 +106,12 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 		 * CPU was successfully started, wait for it to come online or
 		 * time out.
 		 */
-		wait_for_completion_timeout(&cpu_running,
-					    msecs_to_jiffies(1000));
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+		/* Don't need to wait so long because CPU is coming from RTOS. */
+		wait_for_completion_timeout(&cpu_running, msecs_to_jiffies(10));
+#else
+		wait_for_completion_timeout(&cpu_running, msecs_to_jiffies(1000));
+#endif
 
 		if (!cpu_online(cpu)) {
 			pr_crit("CPU%u: failed to come online\n", cpu);
