@@ -103,7 +103,7 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 		alarm_val = secs;
 		time_val = amba_readl(ambrtc->reg + RTC_CURT_OFFSET);
                 // only for wakeup ambarella internal PWC
-                amba_writel(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET, 0x8);
+                amba_writel(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET, 0x28);
 	}
 
 	if (ambrtc->is_limited) {
