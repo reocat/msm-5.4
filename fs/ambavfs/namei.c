@@ -1,19 +1,33 @@
+/*
+ *
+ * Copyright (C) 2012-2016, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/pagemap.h>
 #include <linux/writeback.h>
 #include <linux/spinlock.h>
 #include <asm/page.h>
-#include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
 #include "ambafs.h"
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-#include <mach/hardware.h>
-#include <mach/boss.h>
-#include <plat/rct.h>
-#endif
 
-int *qstat_buf;
+unsigned long *qstat_buf;
 
 /*
  * helper function to trigger/wait a remote command excution
@@ -238,7 +252,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
 
-        msg->parameter[0] = (u64) ambalink_virt_to_phys((void *) stat);
+        msg->parameter[0] = (u64) ambalink_virt_to_phys((unsigned long) stat);
 
 	AMBAFS_DMSG("%s: path = %s, quick_stat result phy address = 0x%x \r\n", __func__, path, msg->parameter[0]);
 
@@ -250,16 +264,6 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 			stat->magic = 0x0;
 			break;
 		}
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-		/* Send RIRQ to let RTOS do fstat quickly. */
-#if defined(CONFIG_ARM_GIC)
-		amba_writel(AHB_SCRATCHPAD_REG(AHBSP_SWI_SET_OFFSET),
-			    0x1 << (BOSS_VIRT_RIRQ_INT_VEC - AXI_SOFT_IRQ(0)));
-#else
-		amba_writel(AMBALINK_VIC_REG(VIC_SOFT_INT_INT_OFFSET),
-			    BOSS_VIRT_RIRQ_INT_VEC % 32);
-#endif
-#endif
 	}
 
 	if (i == 65536)
@@ -278,7 +282,7 @@ static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 		void *align_buf;
 		struct ambafs_qstat *astat;
 
-		align_buf = (void *)((((u32) qstat_buf) & (~0x1f)) + 0x20);
+		align_buf = (void *)((((unsigned long) qstat_buf) & (~0x1f)) + 0x20);
 		//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) align_buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) align_buf)));
 		astat = ambafs_get_qstat(NULL, dentry->d_inode, align_buf, QSTAT_BUFF_SIZE);
 		if (astat->type == AMBAFS_STAT_NULL) {

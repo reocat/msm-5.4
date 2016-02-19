@@ -44,10 +44,6 @@
 
 #include "remoteproc_internal.h"
 
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-#include <plat/ambalink_cfg.h>
-#endif
-
 static DEFINE_MUTEX(rproc_list_mutex);
 static LIST_HEAD(rproc_list);
 

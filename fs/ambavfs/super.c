@@ -13,6 +13,8 @@
 #include <linux/pagemap.h>
 #include <linux/slab.h>
 #include <linux/statfs.h>
+#include <linux/backing-dev.h>
+
 #include "ambafs.h"
 
 #define AMBAFS_MAGIC 0x414D4241
@@ -51,6 +53,7 @@ static struct super_operations ambafs_super_ops = {
 struct backing_dev_info ambafs_bdi = {
 	.name           = "ambafs_bdi",
 	.ra_pages       = 32,
+	.capabilities   = 0,
 };
 
 /*
@@ -66,7 +69,7 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 	sb->s_magic = AMBAFS_MAGIC;
 	sb->s_op = &ambafs_super_ops;
 	sb->s_d_op = &ambafs_dentry_ops;
-	/* sb->s_bdi = &ambafs_bdi; */
+	sb->s_bdi = &ambafs_bdi;
 
 	/* make root inode and dentry */
 	root = new_inode(sb);
@@ -74,7 +77,7 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 		goto out;
 	root->i_mode = S_IFDIR | 0755;
 	root->i_uid = GLOBAL_ROOT_UID;
-    root->i_gid = GLOBAL_ROOT_GID;
+	root->i_gid = GLOBAL_ROOT_GID;
 	root->i_blocks = 0;
 	root->i_atime = root->i_mtime = root->i_ctime = CURRENT_TIME;
 	root->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
@@ -90,9 +93,9 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 
 	return 0;
 
-  out_iput:
+out_iput:
 	iput(root);
-  out:
+out:
 	return -ENOMEM;
 }
 
@@ -157,12 +160,29 @@ static struct file_system_type ambafs_type = {
 
 static int __init ambafs_init(void)
 {
+	int err;
+
+	err = bdi_init(&ambafs_bdi);
+	if (!err)
+		err = bdi_register(&ambafs_bdi, NULL, "%s", ambafs_bdi.name);
+
+	if (err) {
+		bdi_destroy(&ambafs_bdi);
+
+		return err;
+	}
+
 	ambafs_rpmsg_init();
-	return register_filesystem(&ambafs_type);
+
+	err = register_filesystem(&ambafs_type);
+
+	return err;
 }
 
 static void __exit ambafs_exit(void)
 {
+	bdi_destroy(&ambafs_bdi);
+
 	ambafs_rpmsg_exit();
 	unregister_filesystem(&ambafs_type);
 }

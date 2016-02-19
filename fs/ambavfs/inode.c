@@ -1,10 +1,29 @@
+/*
+ *
+ * Copyright (C) 2012-2016, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 #include <linux/kernel.h>
 #include <linux/pagemap.h>
 #include <linux/writeback.h>
 #include <linux/delay.h>
 #include <asm/page.h>
 #include <plat/ambalink_cfg.h>
-#include <plat/ambcache.h>
 #include "ambafs.h"
 
 #define MAX_NR_PAGES 32
@@ -41,7 +60,7 @@ static void inline prepare_read_msg(struct ambafs_msg *msg, struct file *file)
 	struct ambafs_io  *io  = (struct ambafs_io*)  msg->parameter;
 
 	msg->cmd = AMBAFS_CMD_READ;
-	io->fp = file->private_data;
+	io->fp = (unsigned long) file->private_data;
 	io->total = 0;
 }
 
@@ -53,7 +72,7 @@ static int insert_page_info(struct ambafs_msg *msg, struct page *page)
 	struct ambafs_io  *io  = (struct ambafs_io*)  msg->parameter;
 	int idx = io->total++;
 
-	io->bh[idx].addr = (void*)ambalink_page_to_phys(page);
+	io->bh[idx].addr = (unsigned long) ambalink_page_to_phys(page);
 	io->bh[idx].len = 4096;
 	io->bh[idx].offset = page_offset(page);
 
@@ -84,7 +103,7 @@ static int ambafs_readpage(struct file *file, struct page *page)
 static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 			struct list_head *pages, unsigned nr_pages)
 {
-	int buf[192], io_pages = 0, err, msg_len = 0;
+	int buf[384], io_pages = 0, err, msg_len = 0;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	struct page *page;
 	loff_t offset = 0;
@@ -156,7 +175,7 @@ static void writepage_cb(void *priv, struct ambafs_msg *msg, int len)
 static void perform_writepages(struct address_space *mapping,
 				struct page **pages, int nr_pages, void *fp)
 {
-	int buf[192], page_idx, msg_len;
+	int buf[384], page_idx, msg_len;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	struct ambafs_io  *io  = (struct ambafs_io*)  msg->parameter;
 
@@ -172,7 +191,7 @@ static void perform_writepages(struct address_space *mapping,
 		clear_page_dirty_for_io(page);
 		set_page_writeback(page);
 
-		io->bh[page_idx].addr = (void*)ambalink_page_to_phys(page);
+		io->bh[page_idx].addr = (unsigned long) ambalink_page_to_phys(page);
 		io->bh[page_idx].offset = page_offset(page);
 		io->bh[page_idx].len = page->mapping->host->i_size - page_offset(page);
 		io->bh[page_idx].len = (io->bh[page_idx].len < 4096) ? (io->bh[page_idx].len) : 4096;
@@ -184,7 +203,7 @@ static void perform_writepages(struct address_space *mapping,
 	}
 
 	msg->cmd = AMBAFS_CMD_WRITE;
-	io->fp = fp;
+	io->fp = (unsigned long) fp;
 	io->total = nr_pages;
 	msg_len = sizeof(struct ambafs_io) + nr_pages * sizeof(struct ambafs_bh);
 	ambafs_rpmsg_send(msg, msg_len, writepage_cb, NULL);

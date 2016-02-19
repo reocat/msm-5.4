@@ -1,3 +1,23 @@
+/*
+ *
+ * Copyright (C) 2012-2016, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 #include "ambafs.h"
 #include <linux/aio.h>
 #include <linux/statfs.h>
@@ -82,7 +102,8 @@ void* ambafs_remote_open(struct dentry *dentry, int flags)
 
 	msg->cmd = AMBAFS_CMD_OPEN;
 	strncpy((char *)&msg->parameter[0], mode, 4);
-	ambafs_rpmsg_exec(msg, 4 + strlen(path) + 1);
+	/* the size of msg->parameter[0] becomes 64-bits */
+	ambafs_rpmsg_exec(msg, 8 + strlen(path) + 1);
 	AMBAFS_DMSG("%s %s %s 0x%x\n", __FUNCTION__, path, mode, msg->parameter[0]);
 	return (void*)msg->parameter[0];
 }
@@ -97,8 +118,8 @@ void ambafs_remote_close(void *fp)
 
 	AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
 	msg->cmd = AMBAFS_CMD_CLOSE;
-        msg->parameter[0] = (int)fp;
-	ambafs_rpmsg_exec(msg, 4);
+        msg->parameter[0] = (unsigned long) fp;
+	ambafs_rpmsg_exec(msg, 8);
 }
 
 static int ambafs_file_open(struct inode *inode, struct file *filp)
@@ -111,7 +132,7 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 		__func__, O_APPEND, O_TRUNC, O_CREAT, O_RDWR, O_WRONLY);
 
 	if (!fs_type) {
-		ret = check_remote_type(filp->f_dentry, &stat);
+		ret = check_remote_type(filp->f_path.dentry, &stat);
 		if (stat.f_type == REMOTE_EXFAT) {
 			inode->i_sb->s_maxbytes = MAX_FILE_SIZE_EXFAT;
 		}
@@ -134,7 +155,7 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 	if (filp->f_flags & (O_CREAT | O_TRUNC))
 		inode->i_opflags |= AMBAFS_IOP_CREATE_FOR_WRITE;
 
-	filp->private_data = ambafs_remote_open(filp->f_dentry, filp->f_flags);
+	filp->private_data = ambafs_remote_open(filp->f_path.dentry, filp->f_flags);
         if (filp->private_data == NULL) {
                 AMBAFS_DMSG("%s fail\n", __FUNCTION__);
                 return -EBUSY;
@@ -191,14 +212,12 @@ static int ambafs_file_fsync(struct file *file, loff_t start,  loff_t end,
 }
 
 const struct file_operations ambafs_file_ops = {
-	.open         = ambafs_file_open,
-	.release      = ambafs_file_release,
-	.fsync        = ambafs_file_fsync,
-	.llseek       = generic_file_llseek,
-	.read         = do_sync_read,
-        .write        = do_sync_write,
-	.aio_read     = generic_file_aio_read,
-	.aio_write    = generic_file_aio_write,
-	.mmap         = generic_file_mmap,
-	.splice_read  = generic_file_splice_read,
+	.open		= ambafs_file_open,
+	.release	= ambafs_file_release,
+	.fsync		= ambafs_file_fsync,
+	.llseek		= generic_file_llseek,
+	.read_iter	= generic_file_read_iter,
+        .write_iter	= generic_file_write_iter,
+	.mmap		= generic_file_mmap,
+	.splice_read	= generic_file_splice_read,
 };

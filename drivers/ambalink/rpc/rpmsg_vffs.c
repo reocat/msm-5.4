@@ -1,7 +1,21 @@
 /*
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ *
+ * Copyright (C) 2012-2016, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
  */
 
 #include <linux/fs.h>
@@ -186,7 +200,7 @@ static struct vffs_xfr *find_free_xfr(void)
 	for (i = 0; i < XFR_ARRAY_SIZE; i++) {
 		if (!xfr_slot[i].refcnt) {
 			xfr_slot[i].refcnt = 1;
-			INIT_COMPLETION(xfr_slot[i].comp);
+			reinit_completion(xfr_slot[i].comp);
 			spin_unlock_irqrestore(&xfr_lock, flags);
 			return &xfr_slot[i];
 		}

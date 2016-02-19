@@ -75,8 +75,18 @@
  * private definitions which should NOT be used outside memory.h
  * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
  */
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK) && !defined(__ASSEMBLY__)
+extern unsigned long ambarella_phys_to_virt(unsigned long paddr);
+extern unsigned long ambarella_virt_to_phys(unsigned long vaddr);
+#define __raw_virt_to_phys(x)	(((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET))
+#define __raw_phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET + PAGE_OFFSET))
+
+#define __virt_to_phys(x)	(ambarella_virt_to_phys((unsigned long) x))
+#define __phys_to_virt(x)	(ambarella_phys_to_virt((unsigned long) x))
+#else
 #define __virt_to_phys(x)	(((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET))
 #define __phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET + PAGE_OFFSET))
+#endif
 
 /*
  * Convert a page to/from a physical address

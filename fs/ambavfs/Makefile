@@ -2,7 +2,7 @@
 # Makefile for the linux filesystem routines.
 #
 
-obj-y += ambafs.o
+obj-$(CONFIG_AMBALINK_VFS) += ambavfs.o
 
-ambafs-objs := super.o dir.o file.o inode.o namei.o rpmsg.o
+ambavfs-y := super.o dir.o file.o inode.o namei.o rpmsg.o
 

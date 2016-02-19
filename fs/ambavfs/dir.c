@@ -1,13 +1,33 @@
+/*
+ *
+ * Copyright (C) 2012-2016, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 #include "ambafs.h"
 #include <linux/pagemap.h>
 #include <linux/pagemap.h>
 #include <linux/pagevec.h>
 
 struct readdir_db {
-	struct ambafs_stat *stat;
-	unsigned            nlink;
-	unsigned            offset;
-	struct ambafs_msg   msg;
+	struct ambafs_stat	*stat;
+	unsigned long		nlink;
+	unsigned long		offset;
+	struct ambafs_msg   	msg;
 };
 
 /*
@@ -88,7 +108,7 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 		return NULL;
 
 	inode->i_uid = GLOBAL_ROOT_UID;
-    inode->i_gid = GLOBAL_ROOT_GID;
+	inode->i_gid = GLOBAL_ROOT_GID;
 	inode->i_blocks = 0;
 	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
 	inode->i_mode = 0744;
@@ -100,7 +120,6 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 		inode->i_fop = &ambafs_file_ops;
 		inode->i_op = &ambafs_file_inode_ops;
 		inode->i_mapping->a_ops = &ambafs_aops;
-		inode->i_mapping->backing_dev_info = &ambafs_bdi;
 	} else {
 		inode->i_mode |= S_IFDIR;
 		inode->i_fop = &ambafs_dir_ops;
@@ -168,7 +187,7 @@ int ambafs_get_full_path(struct dentry *dir, char *buf, int len)
  *   time we got called.
  */
 static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
-			void *dirent, filldir_t filldir)
+			struct dir_context *ctx)
 {
 	struct inode *inode;
 	int stat_idx = 0, stat_len;
@@ -194,8 +213,7 @@ static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 		ambafs_update_inode(inode, stat);
 		inode->i_opflags |= AMBAFS_IOP_SKIP_GET_STAT;
 
-		if (filldir(dirent, stat->name, strlen(stat->name),
-			    dir_db->offset++,  inode->i_ino,
+		if (!dir_emit(ctx, stat->name, strlen(stat->name), inode->i_ino,
 			    stat->type == AMBAFS_STAT_FILE ? DT_REG : DT_DIR)) {
 
 			AMBAFS_DMSG("filldir paused at %s\n", stat->name);
@@ -207,6 +225,7 @@ static int fill_dir_from_msg(struct readdir_db *dir_db, struct dentry *dir,
 		}
 
 next_stat:
+		ctx->pos++;
 		stat_idx++;
 		stat_len = offsetof(struct ambafs_stat, name);
 		stat_len += strlen(stat->name) + 1;
@@ -223,18 +242,18 @@ next_stat:
  * Kick off a readdir operation
  *   We allocate a page to hold all info because filldir might fail.
  */
-static int start_readdir(struct file *file)
+static int start_readdir(struct file *file, struct dir_context *ctx)
 {
 	struct readdir_db  *dir_db;
 	struct ambafs_msg  *msg;
-	struct dentry      *dir = file->f_dentry;
+	struct dentry      *dir = file->f_path.dentry;
 	char *path;
 	int ret;
 
 	dir_db = (struct readdir_db*)get_zeroed_page(GFP_KERNEL);
 	if (!dir_db)
 		return -ENOMEM;
-	file->f_pos = (loff_t)((unsigned)dir_db);
+	file->f_pos = (loff_t)((unsigned long)dir_db);
 
 	msg = &dir_db->msg;
 	path = (char*)msg->parameter;
@@ -262,31 +281,29 @@ static int start_readdir(struct file *file)
  *    f_pos == LLONG_MAX: readdir is completely finished.
  *    otherwise, f_pos holds the page address
  */
-static int ambafs_dir_readdir(struct file *file, void *dirent, filldir_t filldir)
+static int ambafs_dir_readdir(struct file *file, struct dir_context *ctx)
 {
 	struct readdir_db  *dir_db;
 	struct ambafs_msg  *msg;
-	struct dentry      *dir = file->f_dentry;
+	struct dentry      *dir = file->f_path.dentry;
 	int ret;
-
-	if (file->f_pos == LLONG_MAX)
-		return 0;
 
 	AMBAFS_DMSG("%s \r\n", __func__);
 	if (file->f_pos == 0) {
-		if ((ret = start_readdir(file)) <= 0) {
+		if ((ret = start_readdir(file, ctx)) <= 0) {
 			if (ret < 0)
 				printk(KERN_ERR "start_readdir nodev\n");
 			goto ls_exit;
 		}
+	} else {
+		return 0;
 	}
 
-
-	dir_db = (struct readdir_db*)((unsigned)file->f_pos);
+	dir_db = (struct readdir_db*)((unsigned long)file->f_pos);
 	msg = &(dir_db->msg);
 
 	if (msg->flag)
-		fill_dir_from_msg(dir_db, dir, dirent, filldir);
+		fill_dir_from_msg(dir_db, dir, ctx);
 
         while (1) {
 		msg->flag = 16;
@@ -295,16 +312,16 @@ static int ambafs_dir_readdir(struct file *file, void *dirent, filldir_t filldir
 	        if (msg->flag == 0)
 			break;
 
-		if (fill_dir_from_msg(dir_db, dir, dirent, filldir))
+		if (fill_dir_from_msg(dir_db, dir, ctx))
 			return 1;
 	}
-	set_nlink(file->f_dentry->d_inode, dir_db->nlink);
+	set_nlink(file->f_path.dentry->d_inode, dir_db->nlink);
 
 ls_exit:
 	/* note that LS_EXIT doesn't expect a reply */
 	AMBAFS_DMSG("readdir end\n");
 
-	dir_db = (struct readdir_db*)((unsigned)file->f_pos);
+	dir_db = (struct readdir_db*)((unsigned long)file->f_pos);
 	msg = &(dir_db->msg);
 	msg->cmd = AMBAFS_CMD_LS_EXIT;
 	ambafs_rpmsg_send(msg, 4, NULL, 0);
@@ -315,6 +332,6 @@ ls_exit:
 
 const struct file_operations ambafs_dir_ops = {
 	.read    = generic_read_dir,
-	.readdir = ambafs_dir_readdir,
+	.iterate = ambafs_dir_readdir,
 };
 

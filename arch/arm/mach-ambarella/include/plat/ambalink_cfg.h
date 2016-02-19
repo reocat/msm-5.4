@@ -1,14 +1,23 @@
-/**
- * History:
- *    2013/10/29 - [Joey Li] created file
+/*
  *
- * Copyright (C) 2012-2014, Ambarella, Inc.
+ * Copyright (C) 2012-2016, Ambarella, Inc.
  *
- * All rights reserved. No Part of this file may be reproduced, stored
- * in a retrieval system, or transmitted, in any form, or by any means,
- * electronic, mechanical, photocopying, recording, or otherwise,
- * without the prior consent of Ambarella, Inc.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
  */
+
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 
 #include <plat/chip.h>
@@ -25,6 +34,10 @@ struct ambalink_shared_memory_layout {
 };
 
 extern struct ambalink_shared_memory_layout ambalink_shm_layout;
+
+void ambalink_init_mem(void);
+unsigned long ambarella_phys_to_virt(unsigned long paddr);
+unsigned long ambarella_virt_to_phys(unsigned long vaddr);
 
 /*
  * User define
@@ -80,10 +93,10 @@ extern struct ambalink_shared_memory_layout ambalink_shm_layout;
 #define AMBALINK_AMP_SUSPEND_KICK       AXI_SOFT_IRQ1(6)
 
 
-#define ambalink_virt_to_phys(x)        virt_to_phys(x)
-#define ambalink_phys_to_virt(x)        phys_to_virt(x)
-#define ambalink_page_to_phys(x)        (page_to_phys(x) -  DEFAULT_MEM_START)
-#define ambalink_phys_to_page(x)        phys_to_page((x) +  DEFAULT_MEM_START)
+#define ambalink_virt_to_phys(x)        ambarella_virt_to_phys(x)
+#define ambalink_phys_to_virt(x)        ambarella_phys_to_virt(x)
+#define ambalink_page_to_phys(x)        page_to_phys(x)
+#define ambalink_phys_to_page(x)        phys_to_page(x)
 
 /* address translation in loadable kernel module */
 #define ambalink_lkm_virt_to_phys(x)	(__pfn_to_phys(vmalloc_to_pfn((void *) (x))) + ((u32)(x) & (~PAGE_MASK)) - DEFAULT_MEM_START)

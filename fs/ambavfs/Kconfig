@@ -1,5 +1,5 @@
 config AMBALINK_VFS
-	tristate "AmbaLink Virutal File System"
+	tristate "Ambarella AmbaLink Virutal File System"
 	depends on RPMSG
 	default y
 	help
