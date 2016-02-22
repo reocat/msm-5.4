@@ -303,15 +303,7 @@ struct percpu_counter tcp_sockets_allocated;
 EXPORT_SYMBOL(tcp_sockets_allocated);
 
 #if WLAN_UPDATE_SEQ
-struct sock_sequence_update ipv4_update = {
-	.sock 		= NULL,
-	.ident 		= 0,
-	.seq		= 0,
-	.ack 		= 0,
-	.seq_offset = 0,
-	.ack_offset	= 0
-};
-
+struct sock_sequence_update ipv4_update = {0};
 EXPORT_SYMBOL(ipv4_update);
 #endif
 
