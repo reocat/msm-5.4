@@ -1090,12 +1090,12 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec,AK4951_08_DIGITL_MIC,0x01,0x00);//AMIC
 	snd_soc_update_bits(codec,AK4951_1D_DIGITAL_FILTER_MODE,0x02,0x02);//ADC output
 	snd_soc_update_bits(codec,AK4951_1D_DIGITAL_FILTER_MODE,0x01,0x01);//ALC output
-	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x03);//Mic Gain 0x10100110
+	snd_soc_update_bits(codec,AK4951_02_SIGNAL_SELECT1,0x47,0x00);//Mic Gain 0x10100110
 	snd_soc_update_bits(codec,AK4951_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_update_bits(codec,AK4951_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 	snd_soc_write(codec, AK4951_0B_ALC_MODE_CONTROL1, 0x20);	//enable ALC
 	snd_soc_write(codec, AK4951_1B_DIGITAL_FILTER_SELECT1, 0x07); //enable HPF1
-
+	snd_soc_write(codec, AK4951_0C_ALC_MODE_CONTROL2, 0xF1);
 	/*Enable LIN3*/
 	//snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
     return ret;
