@@ -154,7 +154,8 @@ struct ambeth_info {
 					dump_tx : 1,
 					dump_rx : 1,
 					dump_rx_free : 1,
-					dump_rx_all : 1;
+					dump_rx_all : 1,
+					clk_invert : 1;
 };
 
 /* ==========================================================================*/
@@ -2234,6 +2235,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx = !!of_find_property(np, "amb,dump-rx", NULL);
 	lp->dump_rx_free = !!of_find_property(np, "amb,dump-rx-free", NULL);
 	lp->dump_rx_all = !!of_find_property(np, "amb,dump-rx-all", NULL);
+	lp->clk_invert = !!of_find_property(np, "amb,clk_invert", NULL);
+	if(lp->clk_invert)
+		regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
@@ -2257,9 +2261,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		} else {
 			/*default value for clk source*/
 		}
-
-		if(of_find_property(phy_np, "amb,clk_invert", NULL))
-			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
 	}
 
 	return 0;
@@ -2503,6 +2504,9 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		msleep(10);
 		gpio_set_value_cansleep(lp->rst_gpio, !lp->rst_gpio_active);
 	}
+
+	if(lp->clk_invert)
+		regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
 
 	spin_lock_irqsave(&lp->lock, flags);
 	ret_val = ambhw_enable(lp);
