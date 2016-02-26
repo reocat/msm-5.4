@@ -475,7 +475,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x60002000 0x1000>,
-			      <0x60001000 0x80>, /* fio reg address */
 			      <0x701701d0 0x4>;
 			interrupts = <0 18 0x4>;
 			amb,clk-name = "gclk_sd";
@@ -502,7 +501,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x6000c000 0x1000>,
-			      <0x60001000 0x80>, /* fio reg address */
 			      <0x701701d0 0x4>;
 			interrupts = <0 52 0x4>;
 			amb,dma-addr-fix;

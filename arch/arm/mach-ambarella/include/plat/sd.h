@@ -362,6 +362,44 @@
 #define SMIO_45				GPIO(76)
 
 /* ==========================================================================*/
+
+#define SD_TIMING_SOFT_PHY		(1 << 0)
+#define SD_TIMING_MS_DELAY		(1 << 1)
+
+#if (CHIP_REV == A5S) || (CHIP_REV == S2)
+#define SD_TIMING_SUPPORT		0
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == H2)
+#define SD_TIMING_SUPPORT		SD_TIMING_SOFT_PHY
+#else
+#define SD_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L) || \
+	(CHIP_REV == S3L)
+#define SDIO_TIMING_SUPPORT		0
+#else
+#define SDIO_TIMING_SUPPORT		SD_TIMING_MS_DELAY
+#endif
+
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
+	(CHIP_REV == S2L)
+#define SDXC_TIMING_SUPPORT		0
+#elif (CHIP_REV == S3) || (CHIP_REV == H2)
+#define SDXC_TIMING_SUPPORT		SD_TIMING_SOFT_PHY
+#else
+#define SDXC_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)
+#endif
+
+
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L) || \
+	(CHIP_REV == S2E) || (CHIP_REV == S3L)
+#define SD_PHY_SBC_OFFSET		SD_PHY_CTRL_0_OFFSET
+#define SDXC_PHY_SBC_OFFSET		SDXC_PHY_CTRL_0_OFFSET
+#else
+#define SD_PHY_SBC_OFFSET		SDXC_PHY_CTRL_2_OFFSET
+#define SDXC_PHY_SBC_OFFSET		SDXC_PHY_CTRL_2_OFFSET
+#endif
+
 #if (CHIP_REV == A5S)
 #define AMBA_SD_MAX_SLOT_NUM		(2)
 #else
