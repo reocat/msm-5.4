@@ -44,6 +44,7 @@
 
 #define	AMBARELLA_SPI_MAX_LEN			4096
 #define	AMBARELLA_SPI_MAX_XFER_PER_MSG		32
+#define	AMBARELLA_SPI_MAX_CS_NUM		8
 
 struct ambarella_spi {
 	u8					txb[AMBARELLA_SPI_MAX_LEN];
@@ -54,7 +55,7 @@ struct ambarella_spi {
 
 	struct clk			*clk;
 	u32					clk_freq;
-	int					cs_pins[8];
+	int					cs_pins[AMBARELLA_SPI_MAX_CS_NUM];
 
 	struct dma_chan		*txc;
 	struct dma_chan		*rxc;
@@ -567,7 +568,8 @@ static int ambarella_spi_hw_setup(struct spi_device *spi)
 	struct ambarella_spi *bus = spi_master_get_devdata(spi->master);
 	int err = 0;
 
-	if (gpio_is_valid(spi->cs_gpio)) {
+	if (gpio_is_valid(spi->cs_gpio) &&
+		(bus->cs_pins[spi->chip_select] != spi->cs_gpio)) {
 		err = gpio_request(spi->cs_gpio, dev_name(&spi->dev));
 		if (err < 0) {
 			dev_err(&spi->dev, "can't get CS: %d\n", err);
@@ -575,8 +577,6 @@ static int ambarella_spi_hw_setup(struct spi_device *spi)
 		}
 		gpio_direction_output(spi->cs_gpio, 1);
 		bus->cs_pins[spi->chip_select] = spi->cs_gpio;
-	} else {
-		bus->cs_pins[spi->chip_select] = -1;
 	}
 
 	return 0;
@@ -588,6 +588,7 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	void __iomem				*reg;
 	struct ambarella_spi			*bus;
 	struct spi_master			*master;
+	int					i;
 	int					err = 0;
 	int					irq;
 
@@ -619,6 +620,9 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	bus->phys		= res->start;
 	bus->virt			= (u32)reg;
 	bus->irq			= irq;
+
+	for (i = 0; i < AMBARELLA_SPI_MAX_CS_NUM; i++)
+		bus->cs_pins[i] = -1;
 
 	err = ambarella_spi_of_parse(pdev, master);
 	if (err < 0) {
