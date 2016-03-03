@@ -65,7 +65,13 @@
 struct secondary_data secondary_data;
 
 enum ipi_msg_type {
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* In SMP RTOS system, RTOS also uses SGIs to do synchronization. */
+	/* Linux uses the last 8 SGIs and reserves the first 8 SGIs for RTOS. */
+	IPI_RESCHEDULE = 8,
+#else
 	IPI_RESCHEDULE,
+#endif
 	IPI_CALL_FUNC,
 	IPI_CPU_STOP,
 	IPI_TIMER,

@@ -20,7 +20,13 @@
 #include <linux/threads.h>
 #include <asm/irq.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+/* In SMP RTOS system, RTOS also uses SGIs to do synchronization. */
+/* Linux uses the last 8 SGIs and reserves the first 8 SGIs for RTOS. */
+#define NR_IPI	13
+#else
 #define NR_IPI	5
+#endif
 
 typedef struct {
 	unsigned int __softirq_pending;
