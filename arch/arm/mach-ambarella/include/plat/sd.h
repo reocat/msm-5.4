@@ -346,22 +346,6 @@
 #define SD_ADMA_TBL_ATTR_VALID		(0x0001)
 
 /* ==========================================================================*/
-#define SMIO_2				GPIO(64)
-#define SMIO_3				GPIO(65)
-#define SMIO_4				GPIO(66)
-#define SMIO_5				GPIO(67)
-#define SD1_CD				GPIO(67)
-#define SMIO_6				GPIO(68)
-#define SMIO_38				GPIO(69)
-#define SMIO_39				GPIO(70)
-#define SMIO_40				GPIO(71)
-#define SMIO_41				GPIO(72)
-#define SMIO_42				GPIO(73)
-#define SMIO_43				GPIO(74)
-#define SMIO_44				GPIO(75)
-#define SMIO_45				GPIO(76)
-
-/* ==========================================================================*/
 
 #define SD_TIMING_SOFT_PHY		(1 << 0)
 #define SD_TIMING_MS_DELAY		(1 << 1)
@@ -400,21 +384,9 @@
 #define SDXC_PHY_SBC_OFFSET		SDXC_PHY_CTRL_2_OFFSET
 #endif
 
-#if (CHIP_REV == A5S)
-#define AMBA_SD_MAX_SLOT_NUM		(2)
-#else
-#define AMBA_SD_MAX_SLOT_NUM		(1)
-#endif
-
 #define sd_slot_is_valid(slot)		((SD_SUPPORT_SDXC == 1) && ((slot) == 2) ? 1 : \
 					(SD_SUPPORT_SDIO == 1) && ((slot) == 1) ? 1 : \
 					((slot) == 0) ? 1 : 0)
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2)
-#define sd_addr_is_unlign(addr)		((addr) & 0x3)
-#else
-#define sd_addr_is_unlign(addr)		0
-#endif
 
 #endif
 

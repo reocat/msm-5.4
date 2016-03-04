@@ -494,129 +494,36 @@ Required properties:
 - #address-cells: should be 1.
 - #size-cells: should be 0.
 - interrupts: the interrupt for the SD controller.
-- amb,clk-name: specifies the PLL name of this SD controller, should be one
-  of these strings: "gclk_sd", "gclk_sdio", "gclk_sdxc".
-- amb,wait-tmo: specifies the timeout in millisecond to wait for CMD complete.
-- amb,switch-vol-tmo: specifies the timeout to enable clk after switch voltage
-  from 3.3v to 1.8v.
-- amb,max-blk-size: specifies the maximal block size, should be multiple of 4k.
-
-Optional properties:
-- amb,dma-addr-fix: should be specified only for S2.
-- amb,soft-phy: should be specified for SD controllers to adjust timing base on
-  SD phy.
-- amb,phy-timing: an integer array which is used to specify the SD phy timing,
-  the size of the array is different according to corresponding phy register
-  for each chips or SD controllers, and the values are gotten by SD shmoo in
-  Amboot.
-  For the SD controller to ajust timing base on SD controller, like S3L and later
-  chip, the array is orgnized as: <mode SD_DELAY_SEL_L SD_DELAY_SEL_H>;
-  For the SD controller to ajust timing base on SD phy, like S2E SD0, S2L, S3L, the
-  array is orgnized as: <mode phy_ctrl0_val latency_ctrl_val>;
-  For the SD controller only supporting ms delay mux, like S2E SD1, the array
-  is orgnized as: <mode ms_delay_ctrl_mask ms_delay_ctrl_val>;
-  Here mode is the ORed value of SD card working modes like sdr104, ddr50 and
-  etc., and the later 2 items are values written to corresponding phy registers.
-  Following is the definition of each bits for mode:
-  bit0: specify the default phy timing setting, so bit0 must be reserved as 1, and
-  followed by default phy timing setting. PS: it's a MUST to define the default phy
-  timing setting with bit0 set, and it MUST be placed in the first row.
-  bit1: MMC HS; bit2: SD HS;
-  bit3: SDR12; bit4: SDR25; bit5: SDR50; bit6: SDR104; bit7: DDR50
-  bit8: MMC HS200
-  In fact, the definition for each bit of mode comes from the following
-  definition which are defined in include/linux/mmc/host.h:
-    #define MMC_TIMING_LEGACY	0
-    #define MMC_TIMING_MMC_HS	1
-    #define MMC_TIMING_SD_HS	2
-    #define MMC_TIMING_UHS_SDR12	3
-    #define MMC_TIMING_UHS_SDR25	4
-    #define MMC_TIMING_UHS_SDR50	5
-    #define MMC_TIMING_UHS_SDR104	6
-    #define MMC_TIMING_UHS_DDR50	7
-    #define MMC_TIMING_MMC_HS200	8
-
-Example for ajusting timing base sd controller on s3l platform:
-		sdmmc0: sdmmc0@e0002000 {
-			compatible = "ambarella,sdmmc";
-			reg = <0xe0002000 0x1000>,
-			      <0xe0001000 0x80>;/* fio reg address */
-			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
-			amb,soft-phy;
-			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,/*HS 50M and 25M*/
-					/*sdr25 50M,sdr50 100M,sdr104 120M*/
-					<0x00000078 0x10410400 0x00904104>,
-					<0x00000080 0x38E38E00 0x0238E38E>;/*DDR50 50M*/
-			slot@0 {
-
-			};
-		};
-
-
-Example for ajusting timing base sd phy on s3l platform:
-		sdmmc0: sdmmc0@e0002000 {
-			compatible = "ambarella,sdmmc";
-			reg = <0xe0002000 0x1000>,
-			      <0xe0001000 0x80>;/* fio reg address */
-			      <0xec1704c0 0x8>;/*should specify the phy register*/
-
-			amb,soft-phy;
-			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
-					/*sdr12 24M,sdr25 50M,sdr50 100M*/
-					<0x00000038 0x00000003 0x00001111>,
-					<0x00000040 0x00000005 0x00002222>,/*sdr104 200M*/
-					<0x00000080 0x000C0005 0x00000000>;/*ddr50 50M*/
-			slot@0 {
-
-			};
-		};
-
-iii) Subnode
-------------
-The SD/MMC node should contain subnodes which represent the slot belong to
-this controller.
-
-The unit address of subnodes should be its index of the slot. And the subnode
-should contain the following properties.
-- reg: index of the slot, normally the same as the unit address.
-- global-id: specify the global id for each slot, it should be unique for all
-  of the slots.
-- amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
-always present
-- amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
-- amb,caps-adma: should be specified if hardware supports ADMA.
-- amb,caps-ddr: should be specified if hardware supports DDR.
-- no-1-8-v: should be specified if the slot don't have 1.8V circuit.
-- v18-gpios: specifies the GPIO to switch to the 1.8V power if existed.
-- pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
-- amb,force-gpio: force the SD/MMC pins to switch to GPIO mode when in idle,
-  should be specified only for A5S SDIO slot.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
+- clocks: specifies the PLL of this SD controller.
 - properties provided by Kernel, please see Reference above.
 
-iv) Example
+Optional properties:
+- amb,amb,switch-1v8-dly: specifies the delay when switch voltage, in
+  millisecond unit.
+- amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
+  always present
+- amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
+- v18-gpios: specifies the GPIO to switch to the 1.8V power if existed.
+- pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
+
+iii) Example
 -----------
-	sdmmc0@e0002000 {
+	sdmmc0: sdmmc0@e0002000 {
 		compatible = "ambarella,sdmmc";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0xe0002000 0x1000>,
-		      <0xe0001000 0x80>; /* fio reg address */
-		interrupts = <18 0x4>;
-		amb,clk-name = "gclk_sd";
-		amb,wait-tmo = <2500>; /* in millisecond */
-		amb,max-blk-size = <131072>; /* valid value: 4K<<n */
-
-		slot@0 {
-			reg = <0>;
-			max-frequency = <48000000>;
-			bus-width = <8>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&sdmmc1_pins_8bit>;
-			amb,caps-adma;
-			cap-sdio-irq;
-		};
+		      <0xec1704c0 0x8>;  /* phy timing */
+		interrupts = <75 0x4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdmmc0_pins_8bit>;
+		clocks = <&gclk_sd>;
+		amb,switch-vol-tmo = <100>; /* in millisecond */
+		max-frequency = <120000000>;
+		bus-width = <8>;
+		cap-sdio-irq;
 	};
 
 
