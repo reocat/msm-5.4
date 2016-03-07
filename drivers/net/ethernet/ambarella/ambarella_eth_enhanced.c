@@ -2120,7 +2120,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int gmii, ret_val, clk_sou;
+	int gmii, ret_val, clk_src;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2177,18 +2177,22 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
 		if(gmii) {
-			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_sou);
-			if (ret_val == 0 && clk_sou == 0) {
+			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
+			if (ret_val == 0 && clk_src == 0) {
 				/*clk_sou == 0 represent the clk is external*/
 				amba_writel(ENET_GTXCLK_SRC_REG, 0x00);
-			} else if(ret_val == 0 && clk_sou == 1) {
+			} else if(ret_val == 0 && clk_src == 1) {
 				/*clk_sou == 1 and default represent the clk is internal*/
 				amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
 			} else {
 				/*default value for clk source*/
 			}
 
+		} else {
+			/*default clk resource for 100M PHY is internel*/
+			amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
 		}
+
 
 		ret_val = !!of_find_property(phy_np, "amb,clk_invert", NULL);
 		if(ret_val) {
