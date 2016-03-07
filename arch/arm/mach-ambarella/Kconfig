@@ -152,12 +152,6 @@ config AMBARELLA_PMUSERENR_EN
 	help
 	  Enable userspcae access to PMU
 
-config AMBARELLA_SUPPORT_GDMA
-	bool "Enable gdma"
-	default n
-	help
-	  Enable gdma
-
 menu "Proc file system support"
 depends on PROC_FS
 
