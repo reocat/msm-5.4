@@ -32,7 +32,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/of.h>
-#include <linux/pinctrl/consumer.h>
+#include <linux/io.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -61,7 +61,6 @@ static u32 DAI_Clock_Divide_Table[MAX_OVERSAMPLE_IDX_NUM][2] = {
 	{ 23, 11 }, // 1536xfs
 	{ 35, 17 } // 2304xfs
 };
-
 
 /* ==========================================================================*/
 
@@ -95,50 +94,73 @@ static void ambarella_audio_notify_transition(int state, void *data)
 
 /* ==========================================================================*/
 
-static inline void dai_tx_enable(void)
+static inline void dai_tx_enable(struct amb_i2s_priv *priv_data)
 {
-	amba_setbitsl(I2S_INIT_REG, DAI_TX_EN);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val |= DAI_TX_EN;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
-static inline void dai_rx_enable(void)
+static inline void dai_rx_enable(struct amb_i2s_priv *priv_data)
 {
-	amba_setbitsl(I2S_INIT_REG, DAI_RX_EN);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val |= DAI_RX_EN;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
-static inline void dai_tx_disable(void)
+static inline void dai_tx_disable(struct amb_i2s_priv *priv_data)
 {
-	amba_clrbitsl(I2S_INIT_REG, DAI_TX_EN);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val &= DAI_TX_EN;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
-static inline void dai_rx_disable(void)
+static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
 {
-	amba_clrbitsl(I2S_INIT_REG, DAI_RX_EN);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val &= DAI_RX_EN;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
-static inline void dai_tx_fifo_rst(void)
+static inline void dai_tx_fifo_rst(struct amb_i2s_priv *priv_data)
 {
-	amba_setbitsl(I2S_INIT_REG, I2S_TX_FIFO_RESET_BIT);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val |= I2S_TX_FIFO_RESET_BIT;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
-static inline void dai_rx_fifo_rst(void)
+static inline void dai_rx_fifo_rst(struct amb_i2s_priv *priv_data)
 {
-	amba_setbitsl(I2S_INIT_REG, I2S_RX_FIFO_RESET_BIT);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val |= I2S_RX_FIFO_RESET_BIT;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
-static inline void dai_fifo_rst(void)
+static inline void dai_fifo_rst(struct amb_i2s_priv *priv_data)
 {
-	amba_setbitsl(I2S_INIT_REG, DAI_FIFO_RST);
+	u32 val;
+	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
+	val |= DAI_FIFO_RST;
+	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
 static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+
 	if(substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		dai_rx_disable();
-		dai_rx_fifo_rst();
+		dai_rx_disable(priv_data);
+		dai_rx_fifo_rst(priv_data);
 	} else {
-		dai_tx_disable();
-		dai_tx_fifo_rst();
+		dai_tx_disable(priv_data);
+		dai_tx_fifo_rst(priv_data);
 	}
 	return 0;
 }
@@ -179,20 +201,23 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	u32 clock_divider, clock_reg, channels, tx_ctrl = 0, multi24 = 0;
 
 	/* Disable tx/rx before initializing */
-	dai_tx_disable();
-	dai_rx_disable();
+	dai_tx_disable(priv_data);
+	dai_rx_disable(priv_data);
 
 	channels = params_channels(params);
 	/* Set channels */
 	switch (channels) {
 	case 2:
-		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_2CHANNELS_ENB);
+		writel_relaxed(I2S_2CHANNELS_ENB,
+				priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
 		break;
 	case 4:
-		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_4CHANNELS_ENB);
+		writel_relaxed(I2S_4CHANNELS_ENB,
+				priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
 		break;
 	case 6:
-		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_6CHANNELS_ENB);
+		writel_relaxed(I2S_6CHANNELS_ENB,
+				priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
 		break;
 	}
 	priv_data->i2s_intf.ch = channels;
@@ -241,21 +266,21 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (priv_data->i2s_intf.ms_mode != DAI_SLAVE)
 			tx_ctrl |= 0x20;
-		amba_writel(I2S_TX_CTRL_REG, tx_ctrl);
-		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
+		writel_relaxed(tx_ctrl, priv_data->regbase + I2S_TX_CTRL_OFFSET);
+		writel_relaxed(0x10, priv_data->regbase + I2S_TX_FIFO_LTH_OFFSET);
 	} else {
 		if (priv_data->i2s_intf.ms_mode == DAI_SLAVE)
-			amba_writel(I2S_RX_CTRL_REG, 0x00);
+			writel_relaxed(0x00, priv_data->regbase + I2S_RX_CTRL_OFFSET);
 		else
-			amba_writel(I2S_RX_CTRL_REG, 0x02);
-		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
+			writel_relaxed(0x02, priv_data->regbase + I2S_RX_CTRL_OFFSET);
+		writel_relaxed(0x20, priv_data->regbase + I2S_RX_FIFO_GTH_OFFSET);
 	}
 
-	amba_writel(I2S_MODE_REG, priv_data->i2s_intf.mode);
-	amba_writel(I2S_WLEN_REG, word_len);
-	amba_writel(I2S_WPOS_REG, word_pos);
-	amba_writel(I2S_SLOT_REG, slots);
-	amba_writel(I2S_24BITMUX_MODE_REG, multi24);
+	writel_relaxed(priv_data->i2s_intf.mode, priv_data->regbase + I2S_MODE_OFFSET);
+	writel_relaxed(word_len, priv_data->regbase + I2S_WLEN_OFFSET);
+	writel_relaxed(word_pos, priv_data->regbase + I2S_WPOS_OFFSET);
+	writel_relaxed(slots, priv_data->regbase + I2S_SLOT_OFFSET);
+	writel_relaxed(multi24, priv_data->regbase + I2S_24BITMUX_MODE_OFFSET);
 
 	switch (params_rate(params)) {
 	case 8000:
@@ -287,7 +312,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	clk_set_rate(priv_data->mclk, priv_data->i2s_intf.mclk);
 
 	mutex_lock(&clock_reg_mutex);
-	clock_reg = amba_readl(I2S_CLOCK_REG);
+	clock_reg = readl_relaxed(priv_data->regbase + I2S_CLOCK_OFFSET);
 	oversample = priv_data->i2s_intf.oversample;
 
 	/* In 16 bit mode, the channel width is 16 bits, and in 24 bit
@@ -313,11 +338,11 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	else
 		clock_reg |= (1<< 6);
 
-	amba_writel(I2S_CLOCK_REG, clock_reg);
+	writel_relaxed(clock_reg, priv_data->regbase + I2S_CLOCK_OFFSET);
 	mutex_unlock(&clock_reg_mutex);
 
-	dai_rx_enable();
-	dai_tx_enable();
+	dai_rx_enable(priv_data);
+	dai_tx_enable(priv_data);
 
 	msleep(1);
 
@@ -327,31 +352,33 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 
 hw_params_exit:
-	dai_rx_enable();
-	dai_tx_enable();
+	dai_rx_enable(priv_data);
+	dai_tx_enable(priv_data);
 	return -EINVAL;
 }
 
 static int ambarella_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		struct snd_soc_dai *cpu_dai)
 {
+	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-			dai_tx_enable();
+			dai_tx_enable(priv_data);
 		else
-			dai_rx_enable();
+			dai_rx_enable(priv_data);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
-			dai_tx_disable();
-			dai_tx_fifo_rst();
+			dai_tx_disable(priv_data);
+			dai_tx_fifo_rst(priv_data);
 		}else{
-			dai_rx_disable();
-			dai_rx_fifo_rst();
+			dai_rx_disable(priv_data);
+			dai_rx_fifo_rst(priv_data);
 		}
 		break;
 	default:
@@ -440,54 +467,6 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int external_i2s_get_status(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	mutex_lock(&clock_reg_mutex);
-	ucontrol->value.integer.value[0] = enable_ext_i2s;
-	mutex_unlock(&clock_reg_mutex);
-
-	return 0;
-}
-
-static int external_i2s_set_status(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	u32 clock_reg;
-
-	mutex_lock(&clock_reg_mutex);
-	clock_reg = amba_readl(I2S_CLOCK_REG);
-
-	enable_ext_i2s = ucontrol->value.integer.value[0];
-	if (enable_ext_i2s)
-		clock_reg |= (I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
-	else
-		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
-
-	amba_writel(I2S_CLOCK_REG, clock_reg);
-	mutex_unlock(&clock_reg_mutex);
-
-	return 1;
-}
-
-static const char *i2s_status_str[] = {"Off", "On"};
-
-static const struct soc_enum external_i2s_enum[] = {
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(i2s_status_str), i2s_status_str),
-};
-
-static const struct snd_kcontrol_new external_i2s_controls[] = {
-	SOC_ENUM_EXT("External I2S Switch", external_i2s_enum[0],
-			external_i2s_get_status, external_i2s_set_status),
-};
-
-int ambarella_i2s_add_controls(struct snd_soc_codec *codec)
-{
-	return snd_soc_add_codec_controls(codec, external_i2s_controls,
-			ARRAY_SIZE(external_i2s_controls));
-}
-EXPORT_SYMBOL_GPL(ambarella_i2s_add_controls);
-
 /* ==========================================================================*/
 
 
@@ -496,7 +475,7 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
-	priv_data->clock_reg = amba_readl(I2S_CLOCK_REG);
+	priv_data->clock_reg = readl_relaxed(priv_data->regbase + I2S_CLOCK_OFFSET);
 
 	return 0;
 }
@@ -505,7 +484,7 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
-	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
+	writel_relaxed(priv_data->clock_reg, priv_data->regbase + I2S_CLOCK_OFFSET);
 
 	return 0;
 }
@@ -516,8 +495,8 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
-	u32 sfreq, clock_divider;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+	u32 sfreq, clock_divider;
 
 	dai->capture_dma_data = &priv_data->capture_dma_data;
 	dai->playback_dma_data = &priv_data->playback_dma_data;
@@ -538,7 +517,8 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	 * Note: Just be configured, actually BCLK and LRCLK will not
 	 * output to outside at this time. */
 	clock_divider = DAI_Clock_Divide_Table[AudioCodec_256xfs][DAI_32slots >> 6];
-	amba_writel(I2S_CLOCK_REG, clock_divider | I2S_CLK_TX_PO_FALL);
+	writel_relaxed(clock_divider | I2S_CLK_TX_PO_FALL,
+			priv_data->regbase + I2S_CLOCK_OFFSET);
 
 	priv_data->i2s_intf.mode = DAI_I2S_Mode;
 	priv_data->i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
@@ -553,9 +533,9 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	priv_data->i2s_intf.ch = 2;
 
 	/* reset fifo */
-	dai_tx_enable();
-	dai_rx_enable();
-	dai_fifo_rst();
+	dai_tx_enable(priv_data);
+	dai_rx_enable(priv_data);
+	dai_fifo_rst(priv_data);
 
 	/* Notify HDMI that the audio interface is initialized */
 	ambarella_audio_notify_transition(AUDIO_NOTIFY_INIT, &priv_data->i2s_intf);
@@ -568,7 +548,7 @@ static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	/* Disable I2S clock output */
-	amba_writel(I2S_CLOCK_REG, 0x0);
+	writel_relaxed(0x0, priv_data->regbase + I2S_CLOCK_OFFSET);
 
 	/* Notify that the audio interface is removed */
 	ambarella_audio_notify_transition(AUDIO_NOTIFY_REMOVE, &priv_data->i2s_intf);
@@ -615,11 +595,24 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct amb_i2s_priv *priv_data;
+	struct resource *res;
 	int channels, rval;
 
 	priv_data = devm_kzalloc(&pdev->dev, sizeof(*priv_data), GFP_KERNEL);
 	if (priv_data == NULL)
 		return -ENOMEM;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource for i2s!\n");
+		return -ENXIO;
+	}
+
+	priv_data->regbase = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!priv_data->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
 
 	priv_data->playback_dma_data.addr = I2S_TX_LEFT_DATA_DMA_REG;
 	priv_data->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
