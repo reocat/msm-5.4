@@ -32,10 +32,12 @@
 #include <mach/hardware.h>
 #include <plat/sd.h>
 #include <plat/clk.h>
+#include <plat/service.h>
 
 /* ==========================================================================*/
 static LIST_HEAD(ambarella_all_clocks);
 DEFINE_SPINLOCK(ambarella_clock_lock);
+struct ambarella_service pll_service;
 
 /* ==========================================================================*/
 static unsigned int ambarella_clk_ref_freq = REF_CLK_FREQ;
@@ -1141,6 +1143,37 @@ static struct clk gclk_pwm = {
 	.ops		= &ambarella_rct_scaler_ops,
 };
 
+static int ambarella_pll_service(void *arg, void *result)
+{
+	struct ambsvc_pll *pll_svc = arg;
+	struct clk *clk;
+	int rval = 0;
+
+	BUG_ON(!pll_svc || !pll_svc->name);
+
+	clk = clk_get(NULL, pll_svc->name);
+	if (IS_ERR(clk)) {
+		pr_err("%s: ERR get %s\n", __func__, pll_svc->name);
+		return -EINVAL;
+	}
+
+	switch (pll_svc->svc_id) {
+	case AMBSVC_PLL_GET_RATE:
+		pll_svc->rate = clk_get_rate(clk);
+		break;
+	case AMBSVC_PLL_SET_RATE:
+		clk_set_rate(clk, pll_svc->rate);
+		break;
+
+	default:
+		pr_err("%s: Invalid pll service (%d)\n", __func__, pll_svc->svc_id);
+		rval = -EINVAL;
+		break;
+	}
+
+	return rval;
+}
+
 void ambarella_init_early(void)
 {
 	ambarella_clk_add(&pll_out_core);
@@ -1188,5 +1221,10 @@ void ambarella_init_early(void)
 	ambarella_clk_add(&gclk_ssi3);
 #endif
 	ambarella_clk_add(&gclk_pwm);
+
+	/* register ambarella clk service for private operation */
+	pll_service.service = AMBARELLA_SERVICE_PLL;
+	pll_service.func = ambarella_pll_service;
+	ambarella_register_service(&pll_service);
 }
 
