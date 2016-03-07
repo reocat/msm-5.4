@@ -29,6 +29,9 @@
 #include <linux/clk-provider.h>
 #include <asm/uaccess.h>
 #include <plat/rct.h>
+#include <plat/service.h>
+
+struct ambarella_service pll_service;
 
 static const char *gclk_names[] = {
 	"pll_out_core", "pll_out_sd", "gclk_cortex", "gclk_axi",
@@ -100,6 +103,37 @@ static const struct file_operations proc_clock_fops = {
 	.write = ambarella_clock_proc_write,
 };
 
+static int ambarella_pll_service(void *arg, void *result)
+{
+	struct ambsvc_pll *pll_svc = arg;
+	struct clk *clk;
+	int rval = 0;
+
+	BUG_ON(!pll_svc || !pll_svc->name);
+
+	clk = clk_get(NULL, pll_svc->name);
+	if (IS_ERR(clk)) {
+		pr_err("%s: ERR get %s\n", __func__, pll_svc->name);
+		return -EINVAL;
+	}
+
+	switch (pll_svc->svc_id) {
+	case AMBSVC_PLL_GET_RATE:
+		pll_svc->rate = clk_get_rate(clk);
+		break;
+	case AMBSVC_PLL_SET_RATE:
+		clk_set_rate(clk, pll_svc->rate);
+		break;
+
+	default:
+		pr_err("%s: Invalid pll service (%d)\n", __func__, pll_svc->svc_id);
+		rval = -EINVAL;
+		break;
+	}
+
+	return rval;
+}
+
 static int __init ambarella_init_clk(void)
 {
 #if 0
@@ -115,6 +149,11 @@ static int __init ambarella_init_clk(void)
 
 	proc_create_data("clock", S_IRUGO, get_ambarella_proc_dir(),
 		&proc_clock_fops, NULL);
+
+	/* register ambarella clk service for private operation */
+	pll_service.service = AMBARELLA_SERVICE_PLL;
+	pll_service.func = ambarella_pll_service;
+	ambarella_register_service(&pll_service);
 
 	return 0;
 }

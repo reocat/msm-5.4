@@ -26,8 +26,36 @@
 
 #ifndef __ASSEMBLER__
 
+/* gpio service for private operation */
+enum ambsvc_gpio_service_id {
+	AMBSVC_GPIO_REQUEST = 0,
+	AMBSVC_GPIO_OUTPUT,
+	AMBSVC_GPIO_INPUT,
+	AMBSVC_GPIO_FREE,
+	AMBSVC_GPIO_TO_IRQ,
+};
+
+struct ambsvc_gpio {
+	int svc_id;
+	int gpio;
+	int value;
+};
+
+/* pll service for private operation */
+enum ambsvc_pll_service_id {
+	AMBSVC_PLL_GET_RATE = 0,
+	AMBSVC_PLL_SET_RATE = 1,
+};
+
+struct ambsvc_pll {
+	int svc_id;
+	char *name;
+	int rate;
+};
+
 enum ambarella_service_id {
 	AMBARELLA_SERVICE_GPIO = 1,
+	AMBARELLA_SERVICE_PLL = 2,
 };
 
 typedef int (*ambarella_service_func)(void *arg, void *result);
@@ -39,6 +67,7 @@ struct ambarella_service {
 };
 
 extern int ambarella_register_service(struct ambarella_service *amb_svc);
+extern int ambarella_unregister_service(struct ambarella_service *amb_svc);
 extern int ambarella_request_service(int service, void *arg, void *result);
 
 #endif /* __ASSEMBLER__ */
