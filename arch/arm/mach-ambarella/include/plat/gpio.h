@@ -191,21 +191,6 @@ enum amb_pin_altfunc {
 	AMB_ALTFUNC_HW_5,
 };
 
-/* gpio service for private operation */
-enum ambsvc_gpio_service_id {
-	AMBSVC_GPIO_REQUEST = 0,
-	AMBSVC_GPIO_OUTPUT,
-	AMBSVC_GPIO_INPUT,
-	AMBSVC_GPIO_FREE,
-	AMBSVC_GPIO_TO_IRQ,
-};
-
-struct ambsvc_gpio {
-	int svc_id;
-	int gpio;
-	int value;
-};
-
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
 

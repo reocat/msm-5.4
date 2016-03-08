@@ -148,6 +148,7 @@ struct ambeth_info {
 					dump_rx : 1,
 					dump_rx_free : 1,
 					dump_rx_all : 1;
+	bool				clk_direction;
 };
 
 /* ==========================================================================*/
@@ -2069,7 +2070,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int gmii, ret_val, clk_sou;
+	int gmii, ret_val, clk_src;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2126,17 +2127,20 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
 		if(gmii) {
-			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_sou);
-			if (ret_val == 0 && clk_sou == 0) {
+			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
+			if (ret_val == 0 && clk_src == 0) {
 				/*clk_sou == 0 represent the clk is external*/
 				amba_writel(ENET_GTXCLK_SRC_REG, 0x00);
-			} else if(ret_val == 0 && clk_sou == 1) {
+			} else if(ret_val == 0 && clk_src == 1) {
 				/*clk_sou == 1 and default represent the clk is internal*/
 				amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
 			} else {
 				/*default value for clk source*/
 			}
 
+		} else {
+			/*default clk resource for 100M PHY is internel*/
+			amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
 		}
 
 		ret_val = !!of_find_property(phy_np, "amb,clk_invert", NULL);
@@ -2144,6 +2148,14 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			/*invert the clk for ethernet*/
 			amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
 		}
+
+		ret_val = !!of_find_property(phy_np, "amb,clk_direction", NULL);
+		if(ret_val) {
+			/*set ref clock pin as input from PHY*/
+			lp->clk_direction = true;
+			amba_writel(AHB_MISC_EN_REG, 0x20);
+		} else
+			lp->clk_direction = false;
 	}
 
 	return 0;
@@ -2362,6 +2374,13 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 
 	if (!netif_running(ndev))
 		goto ambeth_drv_resume_exit;
+
+	if(lp->clk_direction) {
+		/*set ref clock pin as input from PHY*/
+		ret_val = amba_readl(AHB_MISC_EN_REG);
+		ret_val |= (1 << 5);
+		amba_writel(AHB_MISC_EN_REG, 0x20);
+	}
 
 	if (gpio_is_valid(lp->pwr_gpio))
 		gpio_set_value_cansleep(lp->pwr_gpio, lp->pwr_gpio_active);

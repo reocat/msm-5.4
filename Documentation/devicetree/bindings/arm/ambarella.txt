@@ -505,6 +505,11 @@ Optional properties:
 - amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
   always present
 - amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
+- amb,no-cap-cmd23: specifies to not support CMD23
+- amb,no-cap-erase: specifies to not support ERASE
+- amb,no-auto-cmd12: specifies to not support auto CMD12, i.e., send
+  CMD12 manually instead.
+- amb,emmc-boot: specifies if the sd controller is used for emmc boot
 - v18-gpios: specifies the GPIO to switch to the 1.8V power if existed.
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
 
@@ -552,7 +557,10 @@ Optional properties:
 - amb,dump-rx: specifies to dump Rx buffer, for debug purpose.
 - amb,dump-rx-free: specifies to free buffer after dumped.
 - amb,dump-rx-all: specifies to dump all buffers without filter.
-
+- amb,amb,clk_source: specifies the clk source for gtx_clk, 0:external clk, 1:internal clk.
+- amb,clk_invert: specifies to invert the clk for ethernet.
+- amb,clk_direction: specifies the ref clk direction from PHY;If it is specified, it means
+  the ref clk pin is input from PHY.
 ii) Example
 -----------
 	mac0: ethernet@e000e000 {

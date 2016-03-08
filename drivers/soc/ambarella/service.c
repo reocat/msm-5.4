@@ -30,7 +30,7 @@ int ambarella_register_service(struct ambarella_service *amb_svc)
 {
 	struct ambarella_service *svc;
 
-	if (!amb_svc->func)
+	if (!amb_svc || !amb_svc->func)
 		return -EINVAL;
 
 	list_for_each_entry(svc, &ambarella_svc_list, node) {
@@ -47,11 +47,21 @@ int ambarella_register_service(struct ambarella_service *amb_svc)
 }
 EXPORT_SYMBOL(ambarella_register_service);
 
-int ambarella_unregister_service(int service)
+int ambarella_unregister_service(struct ambarella_service *amb_svc)
 {
-	int rval = 0;
+	struct ambarella_service *svc;
 
-	return rval;
+	if (!amb_svc)
+		return -EINVAL;
+
+	list_for_each_entry(svc, &ambarella_svc_list, node) {
+		if (svc->service == amb_svc->service) {
+			list_del(&svc->node);
+			break;
+		}
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(ambarella_unregister_service);
 

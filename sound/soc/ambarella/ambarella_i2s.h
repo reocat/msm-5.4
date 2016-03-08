@@ -28,6 +28,7 @@
 #define AMBARELLA_I2S_H_
 
 struct amb_i2s_priv {
+	void __iomem *regbase;
 	struct clk *mclk;
 	u32 default_mclk;
 	u32 clock_reg;
@@ -37,8 +38,6 @@ struct amb_i2s_priv {
 	struct snd_dmaengine_dai_dma_data playback_dma_data;
 	struct snd_dmaengine_dai_dma_data capture_dma_data;
 };
-
-int ambarella_i2s_add_controls(struct snd_soc_codec *codec);
 
 #endif /*AMBARELLA_I2S_H_*/
 
