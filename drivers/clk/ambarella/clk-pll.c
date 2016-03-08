@@ -63,6 +63,7 @@ struct amb_clk_pll {
 	u32 ctrl2_val;
 	u32 ctrl3_val;
 	u32 fix_divider;
+	u32 init_rate;
 };
 
 #define to_amb_clk_pll(_hw) container_of(_hw, struct amb_clk_pll, hw)
@@ -263,7 +264,18 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
+static void ambarella_pll_init_rate(struct clk_hw *hw)
+{
+	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
+
+	if (clk_pll->init_rate == -1)
+		return;
+
+	clk_set_rate(hw->clk, clk_pll->init_rate);
+}
+
 static const struct clk_ops pll_ops = {
+	.init = ambarella_pll_init_rate,
 	.recalc_rate = ambarella_pll_recalc_rate,
 	.round_rate = ambarella_pll_round_rate,
 	.set_rate = ambarella_pll_set_rate,
@@ -337,6 +349,9 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 
 	if (of_property_read_u32(np, "amb,fix-divider", &clk_pll->fix_divider))
 		clk_pll->fix_divider = 1;
+
+	if (of_property_read_u32(np, "amb,init-rate", &clk_pll->init_rate))
+		clk_pll->init_rate = -1;
 
 	init.name = name;
 	init.ops = &pll_ops;

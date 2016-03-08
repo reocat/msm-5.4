@@ -838,6 +838,7 @@
 			clock-output-names = "gclk_so";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
@@ -855,6 +856,7 @@
 			amb,frac-mode;
 			amb,fix-divider = <10>;
 			amb,ctrl2-val = <0x3f770b00>;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo2: gclk-vo2 { /* for lcd */
@@ -870,6 +872,7 @@
 			clock-output-names = "gclk_vo2";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_audio: gclk-audio {
@@ -885,6 +888,7 @@
 			clock-output-names = "gclk_audio";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <12288000>;
 		};
 
 		gclk_axi: gclk-axi {
