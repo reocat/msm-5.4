@@ -30,7 +30,7 @@
 #include <linux/dma-direction.h>
 #include <asm/cacheflush.h>
 
-static inline void __deprecated ambcache_clean_range(void *addr, unsigned int size)
+static inline void ambcache_clean_range(void *addr, unsigned int size)
 {
 #if defined(__aarch64__)
 	__dma_map_area(addr, size, DMA_TO_DEVICE);
@@ -39,7 +39,7 @@ static inline void __deprecated ambcache_clean_range(void *addr, unsigned int si
 #endif
 }
 
-static inline void __deprecated ambcache_inv_range(void *addr, unsigned int size)
+static inline void ambcache_inv_range(void *addr, unsigned int size)
 {
 #if defined(__aarch64__)
 	__dma_map_area(addr, size, DMA_FROM_DEVICE);
