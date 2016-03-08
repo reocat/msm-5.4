@@ -2239,10 +2239,10 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->clk_invert = !!of_find_property(np, "amb,clk_invert", NULL);
 	if(lp->clk_invert)
 		regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
-	lp->clk_direction = !!of_find_property(phy_np, "amb,clk_direction", NULL);
+	lp->clk_direction = !!of_find_property(np, "amb,clk_direction", NULL);
 	if(lp->clk_direction) {
-		/*set ref clock pin as input from PHY*/
-		amba_writel(AHB_MISC_EN_REG, 0x20);
+		/* set ref clock pin as input from PHY */
+		regmap_update_bits(lp->reg_scr, AHB_MISC_OFFSET, 0x20, 0x20);
 	}
 
 	for_each_child_of_node(np, phy_np) {
@@ -2255,21 +2255,17 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-		if(clk_dbg == 1000) {
-			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
-			if (ret_val == 0 && clk_src == 0) {
-				/*clk_sou == 0 represent the clk is external*/
-				amba_writel(ENET_GTXCLK_SRC_REG, 0x00);
-			} else if(ret_val == 0 && clk_src == 1) {
-				/*clk_sou == 1 and default represent the clk is internal*/
-				amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
-			} else {
-				/*default value for clk source*/
-			}
-
+		ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
+		if (ret_val == 0 && clk_src == 0) {
+			/* clk_src == 0 represent the clk is external */
+			regmap_update_bits(lp->reg_rct,
+				ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
+		} else if(ret_val == 0 && clk_src == 1) {
+			/* clk_src == 1 and default represent the clk is internal */
+			regmap_update_bits(lp->reg_rct,
+				ENET_GTXCLK_SRC_OFFSET, 0x1, 0x01);
 		} else {
-			/*default clk resource for 100M PHY is internel*/
-			amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
+			/* default value for clk source */
 		}
 	}
 
@@ -2509,9 +2505,7 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 
 	if(lp->clk_direction) {
 		/*set ref clock pin as input from PHY*/
-		ret_val = amba_readl(AHB_MISC_EN_REG);
-		ret_val |= (1 << 5);
-		amba_writel(AHB_MISC_EN_REG, 0x20);
+		regmap_update_bits(lp->reg_scr, AHB_MISC_OFFSET, 0x20, 0x20);
 	}
 
 	if (gpio_is_valid(lp->pwr_gpio))
