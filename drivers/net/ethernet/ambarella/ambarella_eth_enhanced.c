@@ -2250,30 +2250,34 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
 			if (ret_val == 0 && clk_src == 0) {
 				/*clk_sou == 0 represent the clk is external*/
-				amba_writel(ENET_GTXCLK_SRC_REG, 0x00);
+				regmap_update_bits(lp->reg_rct,
+					ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
 			} else if(ret_val == 0 && clk_src == 1) {
 				/*clk_sou == 1 and default represent the clk is internal*/
-				amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
+				regmap_update_bits(lp->reg_rct,
+					ENET_GTXCLK_SRC_OFFSET, 0x1, 0x01);
 			} else {
 				/*default value for clk source*/
 			}
 
 		} else {
 			/*default clk resource for 100M PHY is internel*/
-			amba_writel(ENET_GTXCLK_SRC_REG, 0x01);
+				regmap_update_bits(lp->reg_rct,
+					ENET_GTXCLK_SRC_OFFSET, 0x1, 0x01);
 		}
 
 		ret_val = !!of_find_property(phy_np, "amb,clk_invert", NULL);
 		if(ret_val) {
 			/*invert the clk for ethernet*/
-			amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
+			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
 		}
 
 		ret_val = !!of_find_property(phy_np, "amb,clk_direction", NULL);
 		if(ret_val) {
 			/*set ref clock pin as input from PHY*/
 			lp->clk_direction = true;
-			amba_writel(AHB_MISC_EN_REG, 0x20);
+			regmap_update_bits(lp->reg_rct,
+				AHB_MISC_OFFSET, 0x20, 0x20);
 		} else
 			lp->clk_direction = false;
 	}
@@ -2514,9 +2518,8 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 
 	if(lp->clk_direction) {
 		/*set ref clock pin as input from PHY*/
-		ret_val = amba_readl(AHB_MISC_EN_REG);
-		ret_val |= (1 << 5);
-		amba_writel(AHB_MISC_EN_REG, 0x20);
+		regmap_update_bits(lp->reg_rct,
+				AHB_MISC_OFFSET, 0x20, 0x20);
 	}
 
 	if (gpio_is_valid(lp->pwr_gpio))
