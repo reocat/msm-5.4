@@ -153,6 +153,7 @@
 		wdt@e800c000 {
 			compatible = "ambarella,wdt";
 			reg = <0xe800c000 0x1000>;
+			amb,rct-regmap = <&rct_syscon>;
 			/* interrupts = <21 0x4>; */
 			timeout-sec = <15>;
 		};

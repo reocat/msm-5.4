@@ -17,6 +17,8 @@
 #include <linux/clk.h>
 #include <linux/of.h>
 #include <linux/slab.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 #include <plat/wdt.h>
 #include <plat/rct.h>
 
@@ -34,6 +36,7 @@ MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
 
 struct ambarella_wdt {
 	void __iomem	 		*regbase;
+	struct regmap			*rct_reg;
 	struct clk			*clk;
 	int				irq;
 	struct watchdog_device		wdd;
@@ -52,7 +55,7 @@ static int ambarella_wdt_start(struct watchdog_device *wdd)
 	ctrl_val = ambwdt->irq > 0 ? WDOG_CTR_INT_EN : WDOG_CTR_RST_EN;
 	ctrl_val |= WDOG_CTR_EN;
 
-	amba_writel(ambwdt->regbase + WDOG_CONTROL_OFFSET, ctrl_val);
+	writel_relaxed(ctrl_val, ambwdt->regbase + WDOG_CONTROL_OFFSET);
 
 	return 0;
 }
@@ -64,7 +67,7 @@ static int ambarella_wdt_stop(struct watchdog_device *wdd)
 	ambwdt = watchdog_get_drvdata(wdd);
 	ambwdt->enabled = false;
 
-	amba_writel(ambwdt->regbase + WDOG_CONTROL_OFFSET, 0);
+	writel_relaxed(0, ambwdt->regbase + WDOG_CONTROL_OFFSET);
 
 	return 0;
 }
@@ -73,8 +76,8 @@ static int ambarella_wdt_keepalive(struct watchdog_device *wdd)
 {
 	struct ambarella_wdt *ambwdt = watchdog_get_drvdata(wdd);
 
-	amba_writel(ambwdt->regbase + WDOG_RELOAD_OFFSET, ambwdt->timeout);
-	amba_writel(ambwdt->regbase + WDOG_RESTART_OFFSET, WDT_RESTART_VAL);
+	writel_relaxed(ambwdt->timeout, ambwdt->regbase + WDOG_RELOAD_OFFSET);
+	writel_relaxed(WDT_RESTART_VAL, ambwdt->regbase + WDOG_RESTART_OFFSET);
 
 	return 0;
 }
@@ -88,7 +91,7 @@ static int ambarella_wdt_set_timeout(struct watchdog_device *wdd, u32 time)
 
 	freq = clk_get_rate(clk_get(NULL, "gclk_apb"));
 	ambwdt->timeout = time * freq;
-	amba_writel(ambwdt->regbase + WDOG_RELOAD_OFFSET, ambwdt->timeout);
+	writel_relaxed(ambwdt->timeout, ambwdt->regbase + WDOG_RELOAD_OFFSET);
 
 	return 0;
 }
@@ -97,7 +100,7 @@ static irqreturn_t ambarella_wdt_irq(int irq, void *devid)
 {
 	struct ambarella_wdt *ambwdt = devid;
 
-	amba_writel(ambwdt->regbase + WDOG_CLR_TMO_OFFSET, 0x01);
+	writel_relaxed(0x01, ambwdt->regbase + WDOG_CLR_TMO_OFFSET);
 
 	dev_info(ambwdt->wdd.dev, "Watchdog timer expired!\n");
 
@@ -122,20 +125,8 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_wdt *ambwdt;
 	struct resource *mem;
-	void __iomem *reg;
-	int max_timeout, rval = 0;
-
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (mem == NULL) {
-		dev_err(&pdev->dev, "Get WDT mem resource failed!\n");
-		return -ENXIO;
-	}
-
-	reg = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!reg) {
-		dev_err(&pdev->dev, "devm_ioremap() failed\n");
-		return -ENOMEM;
-	}
+	u32 bootstatus;
+	int rval = 0;
 
 	ambwdt = devm_kzalloc(&pdev->dev, sizeof(*ambwdt), GFP_KERNEL);
 	if (ambwdt == NULL) {
@@ -143,7 +134,23 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	ambwdt->regbase = reg;
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (mem == NULL) {
+		dev_err(&pdev->dev, "Get WDT mem resource failed!\n");
+		return -ENXIO;
+	}
+
+	ambwdt->regbase = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
+	if (!ambwdt->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
+
+	ambwdt->rct_reg = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
+	if (IS_ERR(ambwdt->rct_reg)) {
+		dev_err(&pdev->dev, "no rct regmap!\n");
+		return -ENODEV;
+	}
 
 	/* irq < 0 means to disable interrupt mode */
 	ambwdt->irq = platform_get_irq(pdev, 0);
@@ -163,20 +170,21 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	max_timeout = AMBARELLA_WDT_MAX_CYCLE / clk_get_rate(ambwdt->clk);
-
 	ambwdt->wdd.info = &ambwdt_info;
 	ambwdt->wdd.ops = &ambwdt_ops;
 	ambwdt->wdd.min_timeout = 0;
-	ambwdt->wdd.max_timeout = max_timeout;
-	ambwdt->wdd.bootstatus = amba_readl(WDT_RST_L_REG) ? 0 : WDIOF_CARDRESET;
+	ambwdt->wdd.max_timeout = AMBARELLA_WDT_MAX_CYCLE / clk_get_rate(ambwdt->clk);
+	regmap_read(ambwdt->rct_reg, WDT_RST_L_OFFSET, &bootstatus);
+	ambwdt->wdd.bootstatus = bootstatus ? 0 : WDIOF_CARDRESET;
 
 	if (!of_find_property(np, "amb,non-bootstatus", NULL)) {
 		/* WDT_RST_L_REG cannot be restored by "reboot" command,
 		 * so reset it manually */
-		amba_setbitsl(UNLOCK_WDT_RST_L_REG, UNLOCK_WDT_RST_L_VAL);
-		amba_writel(WDT_RST_L_REG, 0x1);
-		amba_clrbitsl(UNLOCK_WDT_RST_L_REG, UNLOCK_WDT_RST_L_VAL);
+		regmap_update_bits(ambwdt->rct_reg, UNLOCK_WDT_RST_L_OFFSET,
+			UNLOCK_WDT_RST_L_VAL, UNLOCK_WDT_RST_L_VAL);
+		regmap_update_bits(ambwdt->rct_reg, WDT_RST_L_OFFSET, 0x1, 0x1);
+		regmap_update_bits(ambwdt->rct_reg, UNLOCK_WDT_RST_L_OFFSET,
+			UNLOCK_WDT_RST_L_VAL, 0x0);
 	}
 
 	watchdog_init_timeout(&ambwdt->wdd, heartbeat, &pdev->dev);

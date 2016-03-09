@@ -36,7 +36,6 @@
 #include <linux/bcd.h>
 #include <linux/clk.h>
 #include <asm/uaccess.h>
-#include <mach/hardware.h>
 #include <plat/rtc.h>
 
 #define AMBRTC_TIME		0
@@ -59,9 +58,9 @@ static inline void ambrtc_reset_rtc(struct ambarella_rtc *ambrtc)
 {
 	u32 delay = ambrtc->is_limited ? 3 : 1;
 
-	amba_writel(ambrtc->reg + RTC_RESET_OFFSET, 0x01);
+	writel_relaxed(0x01, ambrtc->reg + RTC_RESET_OFFSET);
 	msleep(delay);
-	amba_writel(ambrtc->reg + RTC_RESET_OFFSET, 0x00);
+	writel_relaxed(0x00, ambrtc->reg + RTC_RESET_OFFSET);
 	msleep(delay);
 }
 
@@ -75,7 +74,7 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 	else
 		reg_offs = RTC_ALAT_OFFSET;
 
-	val_sec = amba_readl(ambrtc->reg + reg_offs);
+	val_sec = readl_relaxed(ambrtc->reg + reg_offs);
 	/* because old rtc cannot use the msb 2bits, we add 0x40000000
 	 * here, this is a pure software workaround. And the result is that
 	 * the time must be started at least from 2004.01.10 13:38:00 */
@@ -98,12 +97,12 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 
 	if (time_alarm == AMBRTC_TIME) {
 		time_val = secs;
-		alarm_val = amba_readl(ambrtc->reg + RTC_ALAT_OFFSET);
+		alarm_val = readl_relaxed(ambrtc->reg + RTC_ALAT_OFFSET);
 	} else {
 		alarm_val = secs;
-		time_val = amba_readl(ambrtc->reg + RTC_CURT_OFFSET);
+		time_val = readl_relaxed(ambrtc->reg + RTC_CURT_OFFSET);
                 // only for wakeup ambarella internal PWC
-                amba_writel(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET, 0x8);
+                writel_relaxed(0x8, ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
 	}
 
 	if (ambrtc->is_limited) {
@@ -111,18 +110,18 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 		alarm_val &= 0x3fffffff;
 	}
 
-	amba_writel(ambrtc->reg + RTC_POS0_OFFSET, 0x80);
-	amba_writel(ambrtc->reg + RTC_POS1_OFFSET, 0x80);
-	amba_writel(ambrtc->reg + RTC_POS2_OFFSET, 0x80);
+	writel_relaxed(0x80, ambrtc->reg + RTC_POS0_OFFSET);
+	writel_relaxed(0x80, ambrtc->reg + RTC_POS1_OFFSET);
+	writel_relaxed(0x80, ambrtc->reg + RTC_POS2_OFFSET);
 
 	/* reset time and alarm to 0 first */
-	amba_writel(ambrtc->reg + RTC_PWC_ALAT_OFFSET, 0x0);
-	amba_writel(ambrtc->reg + RTC_PWC_CURT_OFFSET, 0x0);
+	writel_relaxed(0x0, ambrtc->reg + RTC_PWC_ALAT_OFFSET);
+	writel_relaxed(0x0, ambrtc->reg + RTC_PWC_CURT_OFFSET);
 	ambrtc_reset_rtc(ambrtc);
 
 	/* now write the required value to time or alarm */
-	amba_writel(ambrtc->reg + RTC_PWC_CURT_OFFSET, time_val);
-	amba_writel(ambrtc->reg + RTC_PWC_ALAT_OFFSET, alarm_val);
+	writel_relaxed(time_val, ambrtc->reg + RTC_PWC_CURT_OFFSET);
+	writel_relaxed(alarm_val, ambrtc->reg + RTC_PWC_ALAT_OFFSET);
 	ambrtc_reset_rtc(ambrtc);
 
 	return 0;
@@ -166,7 +165,7 @@ static int ambrtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	time_sec = ambrtc_get_alarm_or_time(ambrtc, AMBRTC_TIME);
 	alrm->enabled = alarm_sec > time_sec;
 
-	rtc_status = amba_readl(ambrtc->reg + RTC_STATUS_OFFSET);
+	rtc_status = readl_relaxed(ambrtc->reg + RTC_STATUS_OFFSET);
 	alrm->pending = !!(rtc_status & RTC_STATUS_ALA_WK);
 
 	return 0;
@@ -212,7 +211,7 @@ static int ambrtc_ioctl(struct device *dev, unsigned int cmd,
 
 	switch (cmd) {
 	case RTC_VL_READ:
-		lbat = !!amba_readl(ambrtc->reg + RTC_PWC_LBAT_OFFSET);
+		lbat = !!readl_relaxed(ambrtc->reg + RTC_PWC_LBAT_OFFSET);
 		rval = put_user(lbat, (int __user *)arg);
 		break;
 	default:
@@ -237,13 +236,15 @@ static void ambrtc_check_power_lost(struct ambarella_rtc *ambrtc)
 	u32 status, need_rst, time_sec;
 
 	if (ambrtc->is_limited) {
-		status = amba_readl(ambrtc->reg + RTC_STATUS_OFFSET);
+		status = readl_relaxed(ambrtc->reg + RTC_STATUS_OFFSET);
 		need_rst = !(status & RTC_STATUS_PC_RST);
 	} else {
-		status = amba_readl(ambrtc->reg + RTC_PWC_REG_STA_OFFSET);
+		status = readl_relaxed(ambrtc->reg + RTC_PWC_REG_STA_OFFSET);
 		need_rst = !(status & RTC_PWC_LOSS_MASK);
-		amba_setbitsl(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET,
-							RTC_PWC_LOSS_MASK);
+
+		status = readl_relaxed(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
+		status |= RTC_PWC_LOSS_MASK;
+		writel_relaxed(status, ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
 	}
 
 	if (need_rst) {
