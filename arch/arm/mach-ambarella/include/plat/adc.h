@@ -30,7 +30,7 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define ADC_NUM_CHANNELS		12
-#elif (CHIP_REV == S3) || (CHIP_REV == H2)
+#elif (CHIP_REV == S3) || (CHIP_REV == S5)
 #define ADC_NUM_CHANNELS		5
 #else
 #define ADC_NUM_CHANNELS		4

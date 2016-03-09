@@ -1,11 +1,11 @@
 menu "Platform selection"
 
-config ARCH_AMBARELLA_H2
+config ARCH_AMBARELLA_S5
 	bool
 
 config ARCH_AMBARELLA
 	bool "Ambarella ARMv8 SoC Family"
-	select ARCH_AMBARELLA_H2
+	select ARCH_AMBARELLA_S5
 	select ARCH_REQUIRE_GPIOLIB
 	select PINCTRL
 	select PINCTRL_AMB

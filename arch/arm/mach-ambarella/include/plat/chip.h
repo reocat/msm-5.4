@@ -31,7 +31,7 @@
 #define S2L		(12000)
 #define S3		(11000)
 #define S3L		(13000)
-#define H2		(15000)
+#define S5		(15000)
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
@@ -49,8 +49,8 @@
 #define CHIP_REV	S3
 #elif defined(CONFIG_ARCH_AMBARELLA_S3L)
 #define CHIP_REV	S3L
-#elif defined(CONFIG_ARCH_AMBARELLA_H2)
-#define CHIP_REV	H2
+#elif defined(CONFIG_ARCH_AMBARELLA_S5)
+#define CHIP_REV	S5
 #else
 #error "Undefined CHIP_REV"
 #endif

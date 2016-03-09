@@ -38,7 +38,7 @@
 /* ==========================================================================*/
 #if (CHIP_REV == A5S)
 #define INTERVAL_TIMER_INSTANCES		3
-#elif (CHIP_REV == S3) || (CHIP_REV == H2)
+#elif (CHIP_REV == S3) || (CHIP_REV == S5)
 #define INTERVAL_TIMER_INSTANCES		20
 #else
 #define INTERVAL_TIMER_INSTANCES		8
