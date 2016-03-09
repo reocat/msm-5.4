@@ -2185,11 +2185,11 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		if (ret_val == 0 && clk_src == 0) {
 			/*clk_sou == 0 represent the clk is external*/
 			regmap_update_bits(lp->reg_rct,
-				ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
+				ENET_CLK_SRC_SEL_REG, 0x1, 0x0);
 		} else if(ret_val == 0 && clk_src == 1) {
 			/*clk_sou == 1 and default represent the clk is internal*/
 			regmap_update_bits(lp->reg_rct,
-				ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);
+				ENET_CLK_SRC_SEL_REG, 0x1, 0x1);
 		} else {
 			/*default value for clk source*/
 		}

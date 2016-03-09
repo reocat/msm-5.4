@@ -2246,24 +2246,17 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-		if(clk_dbg == 1000) {
-			ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
-			if (ret_val == 0 && clk_src == 0) {
-				/*clk_sou == 0 represent the clk is external*/
-				regmap_update_bits(lp->reg_rct,
-					ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
-			} else if(ret_val == 0 && clk_src == 1) {
-				/*clk_sou == 1 and default represent the clk is internal*/
-				regmap_update_bits(lp->reg_rct,
-					ENET_GTXCLK_SRC_OFFSET, 0x1, 0x01);
-			} else {
-				/*default value for clk source*/
-			}
-
+		ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
+		if (ret_val == 0 && clk_src == 0) {
+			/*clk_sou == 0 represent the clk is external*/
+			regmap_update_bits(lp->reg_rct,
+				ENET_CLK_SRC_SEL_REG, 0x1, 0x0);
+		} else if(ret_val == 0 && clk_src == 1) {
+			/*clk_sou == 1 and default represent the clk is internal*/
+			regmap_update_bits(lp->reg_rct,
+				ENET_CLK_SRC_SEL_REG, 0x1, 0x1);
 		} else {
-			/*default clk resource for 100M PHY is internel*/
-				regmap_update_bits(lp->reg_rct,
-					ENET_GTXCLK_SRC_OFFSET, 0x1, 0x01);
+			/*default value for clk source*/
 		}
 
 		ret_val = !!of_find_property(phy_np, "amb,clk_invert", NULL);
