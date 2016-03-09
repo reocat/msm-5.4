@@ -32,9 +32,22 @@
 #include <linux/interrupt.h>
 #include <linux/clk.h>
 #include <linux/of.h>
-#include <mach/hardware.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 #include <plat/adc.h>
 #include <plat/rct.h>
+
+struct ambadc_host {
+	void __iomem *regbase;
+	struct regmap *reg_rct;
+	struct device *dev;
+	u32 irq;
+	u32 clk;
+	bool polling_mode;
+	bool keep_start;
+        bool fifo_mode;
+	struct delayed_work work;
+};
 
 static DEFINE_MUTEX(client_mutex);
 static LIST_HEAD(client_list);
@@ -56,104 +69,89 @@ static ssize_t ambarella_adc_show(struct device *dev,
 }
 static DEVICE_ATTR(adcsys, 0444, ambarella_adc_show, NULL);
 
-static int ambarella_adc_fifo_ctrl(u32 fid, u16 fcid)
+static int ambarella_adc_fifo_ctrl(struct ambadc_host *ambadc, u32 fid, u16 fcid)
 {
-	u32 reg=0;
-	u32 reg_val=0;
+	u32 reg_offs, reg_val;
 
-	switch(fid) {
-	case 0:
-		reg = ADC_FIFO_CTRL_0_REG;
-		reg_val = ADC_FIFO_OVER_INT_EN
-                        | ADC_FIFO_UNDR_INT_EN
-                        | ADC_FIFO_TH
-			| (fcid << ADC_FIFO_ID_SHIFT)
-			| ADC_FIFO_DEPTH;
-		break;
-	case 1:
-		reg = ADC_FIFO_CTRL_1_REG;
-		reg_val = ADC_FIFO_OVER_INT_EN
-                        | ADC_FIFO_UNDR_INT_EN
-                        | ADC_FIFO_TH
-			| (fcid << ADC_FIFO_ID_SHIFT)
-			| ADC_FIFO_DEPTH;
-		break;
-	case 2:
-		reg = ADC_FIFO_CTRL_2_REG;
-		reg_val = ADC_FIFO_OVER_INT_EN
-                        | ADC_FIFO_UNDR_INT_EN
-                        | ADC_FIFO_TH
-			| (fcid << ADC_FIFO_ID_SHIFT)
-			| ADC_FIFO_DEPTH;
-		break;
-		break;
-	case 3:
-		reg = ADC_FIFO_CTRL_3_REG;
-		reg_val = ADC_FIFO_OVER_INT_EN
-                        | ADC_FIFO_UNDR_INT_EN
-                        | ADC_FIFO_TH
-			| (fcid << ADC_FIFO_ID_SHIFT)
-			| ADC_FIFO_DEPTH;
-		break;
-		break;
-	default:
-		pr_err("%s: invalid fifo NO = %d.\n",
-			__func__, fid);
+	if (fid > 3) {
+		dev_err(ambadc->dev, "invalid fifo NO = %d.\n", fid);
 		return -1;
 	}
 
-	amba_writel(reg, reg_val);
+	reg_offs = ADC_FIFO_CTRL_0_OFFSET + fid * 4;
+	reg_val = ADC_FIFO_OVER_INT_EN | ADC_FIFO_UNDR_INT_EN | ADC_FIFO_TH
+			| (fcid << ADC_FIFO_ID_SHIFT) | ADC_FIFO_DEPTH;
 
-	amba_writel(ADC_FIFO_CTRL_REG, ADC_FIFO_CONTROL_CLEAR);
+	writel_relaxed(reg_val, ambadc->regbase + reg_offs);
+	writel_relaxed(ADC_FIFO_CONTROL_CLEAR, ambadc->regbase + ADC_FIFO_CTRL_OFFSET);
+
 	return 0;
 }
 
-static void ambarella_adc_enable(void)
+static void ambarella_adc_enable(struct ambadc_host *ambadc)
 {
+	u32 tmp;
+
 	/* select adc scaler as clk_adc and power up adc */
-	amba_writel(ADC16_CTRL_REG, 0);
+	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET, 0);
 
 #if (ADC_SUPPORT_SLOT == 1)
 	/* soft reset adc controller, set slot, and then enable it */
-	amba_writel(ADC_CONTROL_REG, ADC_CONTROL_RESET);
-	amba_writel(ADC_SLOT_NUM_REG, 0x0);
-	amba_writel(ADC_SLOT_PERIOD_REG, 0xffff);
-	amba_writel(ADC_SLOT_CTRL_0_REG, 0x0fff);
+	writel_relaxed(ADC_CONTROL_RESET, ambadc->regbase + ADC_CONTROL_OFFSET);
+	writel_relaxed(0x0, ambadc->regbase + ADC_SLOT_NUM_OFFSET);
+	writel_relaxed(0xffff, ambadc->regbase + ADC_SLOT_PERIOD_OFFSET);
+	writel_relaxed(0x0fff, ambadc->regbase + ADC_SLOT_CTRL_0_OFFSET);
 #endif
         //test fifo read in fifo_0
-        if(ambarella_adc->fifo_mode){
-                ambarella_adc_fifo_ctrl(0,1);
-        }
-	amba_setbitsl(ADC_ENABLE_REG, ADC_CONTROL_ENABLE);
+        if(ambarella_adc->fifo_mode)
+                ambarella_adc_fifo_ctrl(ambadc, 0,1);
+
+	tmp = readl_relaxed(ambadc->regbase + ADC_ENABLE_OFFSET);
+	tmp |= ADC_CONTROL_ENABLE;
+	writel_relaxed(tmp, ambadc->regbase + ADC_ENABLE_OFFSET);
 }
 
-static void ambarella_adc_disable(void)
+static void ambarella_adc_disable(struct ambadc_host *ambadc)
 {
-	amba_clrbitsl(ADC_ENABLE_REG, ADC_CONTROL_ENABLE);
-	amba_writel(ADC16_CTRL_REG, ADC_CTRL_SCALER_POWERDOWN | ADC_CTRL_POWERDOWN);
+	u32 tmp;
+
+	tmp = readl_relaxed(ambadc->regbase + ADC_ENABLE_OFFSET);
+	tmp &= ~ADC_CONTROL_ENABLE;
+	writel_relaxed(tmp, ambadc->regbase + ADC_ENABLE_OFFSET);
+
+	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET,
+		ADC_CTRL_SCALER_POWERDOWN | ADC_CTRL_POWERDOWN);
 }
 
-static void ambarella_adc_start(void)
+static void ambarella_adc_start(struct ambadc_host *ambadc)
 {
-	amba_setbitsl(ADC_CONTROL_REG, ADC_CONTROL_MODE | ADC_CONTROL_START);
+	u32 tmp;
+
+	tmp = readl_relaxed(ambadc->regbase + ADC_CONTROL_OFFSET);
+	tmp |= ADC_CONTROL_MODE | ADC_CONTROL_START;
+	writel_relaxed(tmp, ambadc->regbase + ADC_CONTROL_OFFSET);
 }
 
-static void ambarella_adc_stop(void)
+static void ambarella_adc_stop(struct ambadc_host *ambadc)
 {
-	amba_clrbitsl(ADC_CONTROL_REG, ADC_CONTROL_MODE | ADC_CONTROL_START);
+	u32 tmp;
+
+	tmp = readl_relaxed(ambadc->regbase + ADC_CONTROL_OFFSET);
+	tmp &= ~(ADC_CONTROL_MODE | ADC_CONTROL_START);
+	writel_relaxed(tmp, ambadc->regbase + ADC_CONTROL_OFFSET);
 }
 
-static void ambarella_adc_reset(void)
+static void ambarella_adc_reset(struct ambadc_host *ambadc)
 {
-        ambarella_adc_disable();
-        ambarella_adc_enable();
-        ambarella_adc_start();
+        ambarella_adc_disable(ambadc);
+        ambarella_adc_enable(ambadc);
+        ambarella_adc_start(ambadc);
 }
 
 struct ambadc_client *ambarella_adc_register_client(struct device *dev,
 		u32 mode, ambadc_client_callback callback)
 {
-	struct ambadc_host *amb_adc = ambarella_adc;
+	struct ambadc_host *ambadc = ambarella_adc;
 	struct ambadc_client *client;
 
 	if (!dev || (mode == AMBADC_CONTINUOUS && !callback)) {
@@ -168,22 +166,22 @@ struct ambadc_client *ambarella_adc_register_client(struct device *dev,
 	}
 
 	client->dev = dev;
-	//client->dev->parent = amb_adc->dev;
+	client->dev->parent = ambadc->dev;
 	client->mode = mode;
 	client->callback = callback;
-	client->host = amb_adc;
+	client->host = ambadc;
 
 	mutex_lock(&client_mutex);
 	list_add_tail(&client->node, &client_list);
 	mutex_unlock(&client_mutex);
 
 	if (mode == AMBADC_CONTINUOUS) {
-		amb_adc->keep_start = true;
-		ambarella_adc_start();
+		ambadc->keep_start = true;
+		ambarella_adc_start(ambadc);
 
-		if (amb_adc->polling_mode) {
+		if (ambadc->polling_mode) {
 			queue_delayed_work(system_wq,
-				&amb_adc->work, msecs_to_jiffies(20));
+				&ambadc->work, msecs_to_jiffies(20));
 		}
 	}
 
@@ -193,7 +191,7 @@ EXPORT_SYMBOL(ambarella_adc_register_client);
 
 void ambarella_adc_unregister_client(struct ambadc_client *client)
 {
-	struct ambadc_host *amb_adc = client->host;
+	struct ambadc_host *ambadc = client->host;
 	struct ambadc_client *_client;
 	u32 keep_start = 0;
 
@@ -212,44 +210,44 @@ void ambarella_adc_unregister_client(struct ambadc_client *client)
 	mutex_unlock(&client_mutex);
 
 	if (keep_start == 0) {
-		amb_adc->keep_start = false;
-		ambarella_adc_stop();
+		ambadc->keep_start = false;
+		ambarella_adc_stop(ambadc);
 	}
 }
 EXPORT_SYMBOL(ambarella_adc_unregister_client);
 
 int ambarella_adc_read_level(u32 ch)
 {
-	struct ambadc_host *amb_adc = ambarella_adc;
+	struct ambadc_host *ambadc = ambarella_adc;
 	int data=0;
         u32 i,count;
 
 	if (ch >= ADC_NUM_CHANNELS)
 		return -EINVAL;
 
-	if (amb_adc == NULL)
+	if (ambadc == NULL)
 		return -ENODEV;
 
-	if (!amb_adc->keep_start)
-		ambarella_adc_start();
+	if (!ambadc->keep_start)
+		ambarella_adc_start(ambadc);
 
         if(!ambarella_adc->fifo_mode){
-                data = amba_readl(ADC_DATA_REG(ch));
+                data = readl_relaxed(ambadc->regbase + ADC_DATA_OFFSET(ch));
         } else {
-                count = 0x7ff & amba_readl(ADC_FIFO_STATUS_0_REG);
+                count = 0x7ff & readl_relaxed(ambadc->regbase + ADC_FIFO_STATUS_0_OFFSET);
                 if(count > 4)
 			count -= 4;
 
                 for(i=0;i<count;i++){
-                        data = amba_readl(ADC_FIFO_DATA0_REG + i*4);
+                        data = readl_relaxed(ambadc->regbase + ADC_FIFO_DATA0_OFFSET+ i*4);
                         // printk("call back [0x%x]=0x%x,count=0x%x,0x%x\n",
                         //  (ADC_FIFO_DATA0_REG + i*4),data,count,ch);
                 }
                 //data = data/count;
         }
 
-	if (!amb_adc->keep_start)
-		ambarella_adc_stop();
+	if (!ambadc->keep_start)
+		ambarella_adc_stop(ambadc);
 
 	return data;
 }
@@ -258,6 +256,7 @@ EXPORT_SYMBOL(ambarella_adc_read_level);
 int ambarella_adc_set_threshold(struct ambadc_client *client,
 		u32 ch, u32 low, u32 high)
 {
+	struct ambadc_host *ambadc = client->host;
 	struct ambadc_client *_client;
 	int value, rval = 0;
 
@@ -293,7 +292,7 @@ int ambarella_adc_set_threshold(struct ambadc_client *client,
 	}
 
         if(!ambarella_adc->fifo_mode)
-                amba_writel(ADC_CHAN_INTR_REG(ch), value);
+                writel_relaxed(value, ambadc->regbase + ADC_CHAN_INTR_OFFSET(ch));
 
 exit:
 	if (rval == 0)
@@ -320,50 +319,50 @@ static void ambarella_adc_client_callback(u32 ch)
 
 static void ambarella_adc_polling_work(struct work_struct *work)
 {
-	struct ambadc_host *amb_adc;
+	struct ambadc_host *ambadc;
 	u32 i;
 
-	amb_adc = container_of(work, struct ambadc_host, work.work);
+	ambadc = container_of(work, struct ambadc_host, work.work);
 
 	for (i = 0; i < ADC_NUM_CHANNELS; i++)
 		ambarella_adc_client_callback(i);
 
-	if (amb_adc->keep_start) {
+	if (ambadc->keep_start) {
 		queue_delayed_work(system_wq,
-				&amb_adc->work, msecs_to_jiffies(20));
+				&ambadc->work, msecs_to_jiffies(20));
 	}
 }
 
 static irqreturn_t ambarella_adc_irq(int irq, void *dev_id)
 {
-	u32 i, int_src,rval,chanNo;
-        struct ambadc_host *amb_adc = dev_id;
+        struct ambadc_host *ambadc = dev_id;
+	u32 i, int_src, rval;
 
-        chanNo = 0;
-        if(!amb_adc->fifo_mode){
-                int_src = amba_readl(ADC_DATA_INTR_TABLE_REG);
-                amba_writel(ADC_DATA_INTR_TABLE_REG, int_src);
-                chanNo = int_src;
-        }else{
-                rval = amba_readl(ADC_CTRL_INTR_TABLE_REG);
-                if(rval){
-                        ambarella_adc_reset();
+        if (!ambadc->fifo_mode) {
+                int_src = readl_relaxed(ambadc->regbase + ADC_DATA_INTR_TABLE_OFFSET);
+                writel_relaxed(int_src, ambadc->regbase + ADC_DATA_INTR_TABLE_OFFSET);
+        } else {
+        	int_src = 0;
+                rval = readl_relaxed(ambadc->regbase + ADC_CTRL_INTR_TABLE_OFFSET);
+                if (rval) {
+                        ambarella_adc_reset(ambadc);
                         return IRQ_HANDLED;
                 }
-                rval = amba_readl(ADC_FIFO_INTR_TABLE_REG);
-                amba_writel(ADC_FIFO_INTR_TABLE_REG, rval);
+                rval = readl_relaxed(ambadc->regbase + ADC_FIFO_INTR_TABLE_OFFSET);
+                writel_relaxed(rval, ambadc->regbase + ADC_FIFO_INTR_TABLE_OFFSET);
 
-                for(i=0;i<ADC_FIFO_NUMBER;i++){
+                for (i = 0; i < ADC_FIFO_NUMBER; i++) {
                         if((rval & (1 << i)) == 0)
                                 continue;
-                        rval = amba_readl(ADC_FIFO_CTRL_X_REG(i));
-                        rval = (rval & (0x0000f000)) >> 12;
-                        chanNo = 1 << rval;
+
+                        rval = readl_relaxed(ambadc->regbase + ADC_FIFO_CTRL_X_OFFSET(i));
+                        rval = (rval & 0x0000f000) >> 12;
+                        int_src = 1 << rval;
                 }
         }
 
         for (i = 0; i < ADC_NUM_CHANNELS; i++) {
-                if ((chanNo & (1 << i)) == 0)
+                if ((int_src & (1 << i)) == 0)
                         continue;
 
                 ambarella_adc_client_callback(i);
@@ -374,57 +373,75 @@ static irqreturn_t ambarella_adc_irq(int irq, void *dev_id)
 
 static int ambarella_adc_probe(struct platform_device *pdev)
 {
-	struct ambadc_host *amb_adc;
+	struct ambadc_host *ambadc;
 	struct device_node *np = pdev->dev.of_node;
+	struct resource *res;
 	int ret = 0;
 
-	amb_adc = devm_kzalloc(&pdev->dev,
-			sizeof(struct ambadc_host), GFP_KERNEL);
-	if (!amb_adc) {
+	ambadc = devm_kzalloc(&pdev->dev, sizeof(struct ambadc_host), GFP_KERNEL);
+	if (!ambadc) {
 		dev_err(&pdev->dev, "Failed to allocate memory!\n");
 		return -ENOMEM;
 	}
 
-	ret = of_property_read_u32(np, "clock-frequency", &amb_adc->clk);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource!\n");
+		return -ENXIO;
+	}
+
+	ambadc->regbase = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!ambadc->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
+
+	ambadc->reg_rct = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
+	if (IS_ERR(ambadc->reg_rct)) {
+		dev_err(&pdev->dev, "no rct regmap!\n");
+		return PTR_ERR(ambadc->reg_rct);
+	}
+
+	ret = of_property_read_u32(np, "clock-frequency", &ambadc->clk);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Get clock-frequency failed!\n");
 		return -ENODEV;
 	}
 
-        //amb_adc->fifo_mode=1;//test fifo mode
+        //ambadc->fifo_mode=1;//test fifo mode
 
-	amb_adc->polling_mode = !!of_find_property(np, "amb,polling-mode", NULL);
-	if (amb_adc->polling_mode) {
-		INIT_DELAYED_WORK(&amb_adc->work, ambarella_adc_polling_work);
+	ambadc->polling_mode = of_property_read_bool(np, "amb,polling-mode");
+	if (ambadc->polling_mode) {
+		INIT_DELAYED_WORK(&ambadc->work, ambarella_adc_polling_work);
 	} else {
-		amb_adc->irq = platform_get_irq(pdev, 0);
-		if (amb_adc->irq < 0) {
+		ambadc->irq = platform_get_irq(pdev, 0);
+		if (ambadc->irq < 0) {
 			dev_err(&pdev->dev, "Can not get irq !\n");
 			return -ENXIO;
 		}
 
-		ret = devm_request_irq(&pdev->dev, amb_adc->irq,
+		ret = devm_request_irq(&pdev->dev, ambadc->irq,
 				ambarella_adc_irq, IRQF_TRIGGER_HIGH,
-				dev_name(&pdev->dev), amb_adc);
+				dev_name(&pdev->dev), ambadc);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "Can not request irq %d!\n", amb_adc->irq);
+			dev_err(&pdev->dev, "Can not request irq %d!\n", ambadc->irq);
 			return -ENXIO;
 		}
 	}
 
 
-	ret = clk_set_rate(clk_get(NULL, "gclk_adc"), amb_adc->clk);
+	ret = clk_set_rate(clk_get(NULL, "gclk_adc"), ambadc->clk);
 	if (ret < 0)
 		return ret;
 
-	amb_adc->dev = &pdev->dev;
+	ambadc->dev = &pdev->dev;
 
-	ambarella_adc = amb_adc;
+	ambarella_adc = ambadc;
 
-	ambarella_adc_enable();
-        if(amb_adc->fifo_mode == 1){
-		amb_adc->keep_start = true;
-		ambarella_adc_start();
+	ambarella_adc_enable(ambadc);
+        if(ambadc->fifo_mode == 1){
+		ambadc->keep_start = true;
+		ambarella_adc_start(ambadc);
 	}
 
 	ret = device_create_file(&pdev->dev, &dev_attr_adcsys);
@@ -433,7 +450,7 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, amb_adc);
+	platform_set_drvdata(pdev, ambadc);
 
 	dev_info(&pdev->dev, "Ambarella ADC driver init\n");
 
@@ -442,8 +459,10 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 
 static int ambarella_adc_remove(struct platform_device *pdev)
 {
+	struct ambadc_host *ambadc = platform_get_drvdata(pdev);
+
 	device_remove_file(&pdev->dev, &dev_attr_adcsys);
-	ambarella_adc_disable();
+	ambarella_adc_disable(ambadc);
 	return 0;
 }
 
@@ -451,21 +470,22 @@ static int ambarella_adc_remove(struct platform_device *pdev)
 static int ambarella_adc_suspend(struct platform_device *pdev,
 				 pm_message_t state)
 {
-	ambarella_adc_disable();
+	struct ambadc_host *ambadc = platform_get_drvdata(pdev);
+	ambarella_adc_disable(ambadc);
 	return 0;
 }
 
 static int ambarella_adc_resume(struct platform_device *pdev)
 {
-	struct ambadc_host *amb_adc = platform_get_drvdata(pdev);
+	struct ambadc_host *ambadc = platform_get_drvdata(pdev);
 	struct ambadc_client *client;
 	u32 ch;
 
-	clk_set_rate(clk_get(NULL, "gclk_adc"), amb_adc->clk);
-	ambarella_adc_enable();
+	clk_set_rate(clk_get(NULL, "gclk_adc"), ambadc->clk);
+	ambarella_adc_enable(ambadc);
 
-	if (amb_adc->keep_start)
-		ambarella_adc_start();
+	if (ambadc->keep_start)
+		ambarella_adc_start(ambadc);
 
         if(ambarella_adc->fifo_mode)
 		goto exit;
@@ -474,7 +494,8 @@ static int ambarella_adc_resume(struct platform_device *pdev)
 		list_for_each_entry(client, &client_list, node) {
 			if (client->threshold[ch] == 0)
 				continue;
-			amba_writel(ADC_CHAN_INTR_REG(ch), client->threshold[ch]);
+			writel_relaxed(client->threshold[ch],
+				ambadc->regbase + ADC_CHAN_INTR_OFFSET(ch));
 		}
 	}
 

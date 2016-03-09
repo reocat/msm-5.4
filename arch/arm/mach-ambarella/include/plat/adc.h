@@ -291,16 +291,6 @@ enum {
 	AMBADC_CONTINUOUS,
 };
 
-struct ambadc_host {
-	struct device *dev;
-	u32 irq;
-	u32 clk;
-	bool polling_mode;
-	bool keep_start;
-        bool fifo_mode;
-	struct delayed_work work;
-};
-
 struct ambadc_client;
 typedef int (*ambadc_client_callback)(struct ambadc_client *client,
 			u32 ch, u32 level);
