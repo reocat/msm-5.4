@@ -2126,7 +2126,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-		ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
+		ret_val = of_property_read_u32(phy_np, "amb,clk-src", &clk_src);
 		if (ret_val == 0 && clk_src == 0) {
 			/*clk_src == 0 represent the clk is external*/
 			amba_writel(ENET_CLK_SRC_SEL_REG, 0x00);
@@ -2137,13 +2137,13 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			/*default value for clk source*/
 		}
 
-		ret_val = !!of_find_property(phy_np, "amb,clk_invert", NULL);
+		ret_val = !!of_find_property(phy_np, "amb,clk-invert", NULL);
 		if(ret_val) {
 			/*invert the clk for ethernet*/
 			amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
 		}
 
-		ret_val = !!of_find_property(phy_np, "amb,clk_direction", NULL);
+		ret_val = !!of_find_property(phy_np, "amb,clk-dir", NULL);
 		if(ret_val) {
 			/*set ref clock pin as input from PHY*/
 			lp->clk_direction = true;
