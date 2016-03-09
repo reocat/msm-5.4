@@ -300,18 +300,14 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S3L)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2)
+#define ENET_CLK_SRC_SEL_OFFSET		0x2CC
+#elif (CHIP_REV == S3L)
 #define ENET_CLK_SRC_SEL_OFFSET		0x544
-#define ENET_CLK_SRC_SEL_REG           RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
-#elif (CHIP_REV == S5)
-#define ENET_CLK_SRC_SEL_OFFSET		0x6B8
-#define ENET_CLK_SRC_SEL_REG           RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
-#elif (CHIP_REV == S2E || CHIP_REV == S2)
-#define ENET_CLK_SRC_SEL_OFFSET                0x2CC
-#define ENET_CLK_SRC_SEL_REG           RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
 #else
-#define ENET_CLK_SRC_SEL_REG           0
+#define ENET_CLK_SRC_SEL_OFFSET		0x6B8
 #endif
+#define ENET_CLK_SRC_SEL_REG		RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
 
 #define PLL_ENET_CTRL_OFFSET		0x520
 #define PLL_ENET_FRAC_OFFSET		0x524
