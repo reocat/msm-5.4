@@ -76,9 +76,6 @@ extern void ambarella_restart_machine(enum reboot_mode mode, const char *cmd);
 extern u32 ambarella_phys_to_virt(u32 paddr);
 extern u32 ambarella_virt_to_phys(u32 vaddr);
 
-extern u32 get_ambarella_iavmem_phys(void);
-extern u32 get_ambarella_iavmem_size(void);
-
 extern u32 get_ambarella_fbmem_phys(void);
 extern u32 get_ambarella_fbmem_size(void);
 

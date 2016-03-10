@@ -79,6 +79,11 @@ extern void ambcache_inv_range(void *addr, unsigned int size);
 
 /*===========================================================================*/
 
+unsigned long get_ambarella_iavmem_phys(void);
+unsigned int get_ambarella_iavmem_size(void);
+
+/*===========================================================================*/
+
 #endif /* __ASSEMBLER__ */
 
 #endif

@@ -314,19 +314,6 @@ u32 get_ambarella_fbmem_size(void)
 }
 EXPORT_SYMBOL(get_ambarella_fbmem_size);
 
-u32 get_ambarella_iavmem_phys(void)
-{
-	return __pfn_to_phys(
-		ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.pfn);
-}
-EXPORT_SYMBOL(get_ambarella_iavmem_phys);
-
-u32 get_ambarella_iavmem_size(void)
-{
-	return ambarella_io_desc[AMBARELLA_IO_DESC_DSP_ID].io_desc.length;
-}
-EXPORT_SYMBOL(get_ambarella_iavmem_size);
-
 u32 get_ambarella_ppm_phys(void)
 {
 	return __pfn_to_phys(
