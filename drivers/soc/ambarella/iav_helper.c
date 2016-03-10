@@ -1,8 +1,5 @@
 /*
- *
- * Author: Cao Rongrong <rrcao@ambarella.com>
- *
- * Copyright (C) 2012-2016, Ambarella, Inc.
+ * Copyright (C) 2004-2010, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +16,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/module.h>
-#include <plat/service.h>
+
+#include <linux/dma-direction.h>
+#include <asm/cacheflush.h>
+#include <plat/iav_helper.h>
+
+/*===========================================================================*/
 
 static LIST_HEAD(ambarella_svc_list);
 
@@ -86,4 +85,27 @@ int ambarella_request_service(int service, void *arg, void *result)
 }
 EXPORT_SYMBOL(ambarella_request_service);
 
+/*===========================================================================*/
+
+void ambcache_clean_range(void *addr, unsigned int size)
+{
+#if defined(__aarch64__)
+	__dma_map_area(addr, size, DMA_TO_DEVICE);
+#else
+	__sync_cache_range_w(addr, size);
+#endif
+}
+EXPORT_SYMBOL(ambcache_clean_range);
+
+void ambcache_inv_range(void *addr, unsigned int size)
+{
+#if defined(__aarch64__)
+	__dma_map_area(addr, size, DMA_FROM_DEVICE);
+#else
+	__sync_cache_range_r(addr, size);
+#endif
+}
+EXPORT_SYMBOL(ambcache_inv_range);
+
+/*===========================================================================*/
 

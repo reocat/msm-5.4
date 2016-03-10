@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-y += init_misc.o event.o service.o highres_timer.o
+obj-y += init_misc.o iav_helper.o event.o highres_timer.o
 obj-y += ambasyncproc.o ambsyncproc.o ambuevent.o
 obj-y += adc.o
 

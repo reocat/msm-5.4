@@ -32,8 +32,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
+#include <plat/iav_helper.h>
 #include <plat/gpio.h>
-#include <plat/service.h>
 
 #define GPIO_MAX_BANK_NUM		8
 

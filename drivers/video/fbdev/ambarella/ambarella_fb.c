@@ -34,6 +34,7 @@
 #include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/list.h>
+#include <linux/io.h>
 #include <linux/amba/bus.h>
 #include <linux/amba/clcd.h>
 #include <linux/clk.h>
@@ -44,11 +45,9 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <asm/sizes.h>
-#include <asm/io.h>
-#include <asm/uaccess.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
-#include <mach/init.h>
+#include <plat/chip.h>
 #include <plat/fb.h>
 
 /* video=amb0fb:<x_res>x<y_res>,<x_virtual>x<y_virtual>,
@@ -433,15 +432,8 @@ static int ambfb_probe(struct platform_device *pdev)
 		goto ambfb_probe_exit;
 	}
 
-       if(get_ambarella_fbmem_size()){
-              ambfb_data->use_prealloc =1;
-              ambfb_data->conversion_buf.available = 1;
-              ambfb_data->screen_fix.smem_start = get_ambarella_fbmem_phys();
-              ambfb_data->screen_fix.smem_len = get_ambarella_fbmem_size();
-       }else{
-              ambfb_data->use_prealloc =0;
-              ambfb_data->conversion_buf.available = 0;
-       }
+	ambfb_data->use_prealloc =0;
+	ambfb_data->conversion_buf.available = 0;
 
 	mutex_lock(&ambfb_data->lock);
 
