@@ -26,6 +26,8 @@
 
 #ifndef __ASSEMBLER__
 
+/*===========================================================================*/
+
 /* gpio service for private operation */
 enum ambsvc_gpio_service_id {
 	AMBSVC_GPIO_REQUEST = 0,
@@ -69,6 +71,13 @@ struct ambarella_service {
 extern int ambarella_register_service(struct ambarella_service *amb_svc);
 extern int ambarella_unregister_service(struct ambarella_service *amb_svc);
 extern int ambarella_request_service(int service, void *arg, void *result);
+
+/*===========================================================================*/
+
+extern void ambcache_clean_range(void *addr, unsigned int size);
+extern void ambcache_inv_range(void *addr, unsigned int size);
+
+/*===========================================================================*/
 
 #endif /* __ASSEMBLER__ */
 

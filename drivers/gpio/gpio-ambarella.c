@@ -32,8 +32,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
+#include <plat/iav_helper.h>
 #include <plat/pinctrl.h>
-#include <plat/service.h>
 
 #if defined(CONFIG_PM)
 struct amb_gpio_regs {

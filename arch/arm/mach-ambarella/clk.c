@@ -30,9 +30,9 @@
 #include <linux/clk.h>
 #include <asm/uaccess.h>
 #include <mach/hardware.h>
+#include <plat/iav_helper.h>
 #include <plat/sd.h>
 #include <plat/clk.h>
-#include <plat/service.h>
 
 /* ==========================================================================*/
 static LIST_HEAD(ambarella_all_clocks);

@@ -30,7 +30,7 @@ obj-y						+= ambevent.o
 obj-y						+= ambfb.o
 obj-y						+= ambsyncproc.o
 obj-y						+= event.o
-obj-y						+= service.o
+obj-y						+= iav_helper.o
 obj-$(CONFIG_AMBARELLA_TIMER_HIGHRES)		+= highres_timer.o
 obj-y						+= pmu.o
 
