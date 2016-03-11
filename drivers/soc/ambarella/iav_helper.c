@@ -17,7 +17,7 @@
  *
  */
 #include <linux/of.h>
-#include <linux/dma-direction.h>
+#include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 #include <plat/iav_helper.h>
 
