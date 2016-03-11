@@ -26,8 +26,10 @@
 #include <linux/rpmsg.h>
 #include <linux/err.h>
 #include <linux/kthread.h>
-
 #include <linux/remoteproc.h>
+#include <linux/suspend.h>
+#include <trace/events/power.h>
+
 #include <plat/ambalink_cfg.h>
 
 /*----------------------------------------------------------------------------*/
@@ -247,11 +249,11 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 }
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_get_mem_info);
 
-int rpmsg_linkctrl_cmd_hiber_prepare(u32 info)
+int rpmsg_linkctrl_cmd_suspend_prepare(u32 info)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
-	printk("%s: 0x%08x\n", __func__ , info);
+	//printk("%s: 0x%08x\n", __func__ , info);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_HIBER_PREPARE_FROM_LINUX;
@@ -259,19 +261,19 @@ int rpmsg_linkctrl_cmd_hiber_prepare(u32 info)
 
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 
-	wait_for_completion(&linkctrl_comp);
+	//wait_for_completion(&linkctrl_comp);
 
 	hibernation_start = 1;
 
 	return 0;
 }
-EXPORT_SYMBOL(rpmsg_linkctrl_cmd_hiber_prepare);
+EXPORT_SYMBOL(rpmsg_linkctrl_cmd_suspend_prepare);
 
-int rpmsg_linkctrl_cmd_hiber_enter(int flag)
+int rpmsg_linkctrl_cmd_suspend_enter(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
-	printk("%s\n", __func__);
+	//printk("%s\n", __func__);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_HIBER_ENTER_FROM_LINUX;
@@ -281,15 +283,11 @@ int rpmsg_linkctrl_cmd_hiber_enter(int flag)
 
 	return 0;
 }
-EXPORT_SYMBOL(rpmsg_linkctrl_cmd_hiber_enter);
+EXPORT_SYMBOL(rpmsg_linkctrl_cmd_suspend_enter);
 
-int rpmsg_linkctrl_cmd_hiber_exit(int flag)
+int rpmsg_linkctrl_cmd_suspend_exit(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
-
-	wait_for_completion(&linkctrl_comp);
-
-	printk("%s:\n", __func__);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_HIBER_EXIT_FROM_LINUX;
@@ -301,7 +299,7 @@ int rpmsg_linkctrl_cmd_hiber_exit(int flag)
 
 	return 0;
 }
-EXPORT_SYMBOL(rpmsg_linkctrl_cmd_hiber_exit);
+EXPORT_SYMBOL(rpmsg_linkctrl_cmd_suspend_exit);
 
 /*----------------------------------------------------------------------------*/
 typedef int (*PROC_FUNC)(void *data);
@@ -339,6 +337,34 @@ static void rpmsg_linkctrl_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	}
 }
 
+/*
+ * This synchronization is implemented by mutually excluding regular CPU
+ * hotplug and Suspend/Hibernate call paths by hooking onto the Suspend/
+ * Hibernate notifications.
+ */
+static int rpmsg_linkctrl_pm_callback(struct notifier_block *nb,
+			unsigned long action, void *ptr)
+{
+	switch (action) {
+	case PM_SUSPEND_PREPARE:
+		rpmsg_linkctrl_cmd_suspend_prepare(LINK_CTRL_CMD_SUSPEND_TO_DRAM);
+		break;
+	case PM_HIBERNATION_PREPARE:
+		rpmsg_linkctrl_cmd_suspend_prepare(LINK_CTRL_CMD_SUSPEND_TO_DISK);
+		break;
+	case PM_POST_SUSPEND:
+		rpmsg_linkctrl_cmd_suspend_exit(LINK_CTRL_CMD_SUSPEND_TO_DRAM);
+		break;
+	case PM_POST_HIBERNATION:
+		rpmsg_linkctrl_cmd_suspend_exit(LINK_CTRL_CMD_SUSPEND_TO_DISK);
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
 static int rpmsg_linkctrl_probe(struct rpmsg_channel *rpdev)
 {
 	int ret = 0;
@@ -351,6 +377,8 @@ static int rpmsg_linkctrl_probe(struct rpmsg_channel *rpdev)
 
 	rpmsg_send(rpdev, &nsm, sizeof(nsm));
 
+	pm_notifier(rpmsg_linkctrl_pm_callback, 0);
+
 	return ret;
 }
 
@@ -359,7 +387,7 @@ static void rpmsg_linkctrl_remove(struct rpmsg_channel *rpdev)
 }
 
 static struct rpmsg_device_id rpmsg_linkctrl_id_table[] = {
-	{ .name = "AmbaRpdev_LinkCtrl", },
+	{ .name = "link_ctrl", },
 	{ },
 };
 MODULE_DEVICE_TABLE(rpmsg, rpmsg_linkctrl_id_table);

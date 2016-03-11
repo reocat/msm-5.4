@@ -103,7 +103,7 @@ static int ambafs_readpage(struct file *file, struct page *page)
 static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 			struct list_head *pages, unsigned nr_pages)
 {
-	int buf[384], io_pages = 0, err, msg_len = 0;
+	int buf[256], io_pages = 0, err, msg_len = 0;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	struct page *page;
 	loff_t offset = 0;
@@ -175,7 +175,7 @@ static void writepage_cb(void *priv, struct ambafs_msg *msg, int len)
 static void perform_writepages(struct address_space *mapping,
 				struct page **pages, int nr_pages, void *fp)
 {
-	int buf[384], page_idx, msg_len;
+	int buf[256], page_idx, msg_len;
 	struct ambafs_msg *msg = (struct ambafs_msg*) buf;
 	struct ambafs_io  *io  = (struct ambafs_io*)  msg->parameter;
 

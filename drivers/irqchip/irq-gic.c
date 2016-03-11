@@ -414,9 +414,13 @@ static struct irq_chip gic_chip = {
 #endif
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	.flags			= IRQCHIP_SKIP_SET_WAKE,
+#else
 	.flags			= IRQCHIP_SET_TYPE_MASKED |
 				  IRQCHIP_SKIP_SET_WAKE |
 				  IRQCHIP_MASK_ON_SUSPEND,
+#endif
 };
 
 static struct irq_chip gic_eoimode1_chip = {
@@ -431,9 +435,13 @@ static struct irq_chip gic_eoimode1_chip = {
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
 	.irq_set_vcpu_affinity	= gic_irq_set_vcpu_affinity,
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	.flags			= IRQCHIP_SKIP_SET_WAKE,
+#else
 	.flags			= IRQCHIP_SET_TYPE_MASKED |
 				  IRQCHIP_SKIP_SET_WAKE |
 				  IRQCHIP_MASK_ON_SUSPEND,
+#endif
 };
 
 void __init gic_cascade_irq(unsigned int gic_nr, unsigned int irq)
@@ -566,6 +574,10 @@ int gic_cpu_if_down(unsigned int gic_nr)
 }
 
 #ifdef CONFIG_CPU_PM
+u32 saved_spi_pri[DIV_ROUND_UP(1020, 4)];
+u32 gic_dist_ctrl;
+
+
 /*
  * Saves the GIC distributor registers during suspend or idle.  Must be called
  * with interrupts disabled but before powering down the GIC.  After calling
@@ -602,6 +614,14 @@ static void gic_dist_save(unsigned int gic_nr)
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++)
 		gic_data[gic_nr].saved_spi_active[i] =
 			readl_relaxed(dist_base + GIC_DIST_ACTIVE_SET + i * 4);
+
+#if 1
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		saved_spi_pri[i] =
+			readl_relaxed(dist_base + GIC_DIST_PRI + i * 4);
+
+	gic_dist_ctrl = readl_relaxed(dist_base + GIC_DIST_CTRL);
+#endif
 }
 
 /*
@@ -632,9 +652,15 @@ static void gic_dist_restore(unsigned int gic_nr)
 		writel_relaxed(gic_data[gic_nr].saved_spi_conf[i],
 			dist_base + GIC_DIST_CONFIG + i * 4);
 
+#if 1
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		writel_relaxed(saved_spi_pri[i],
+			dist_base + GIC_DIST_PRI + i * 4);
+#else
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		writel_relaxed(GICD_INT_DEF_PRI_X4,
 			dist_base + GIC_DIST_PRI + i * 4);
+#endif
 
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		writel_relaxed(gic_data[gic_nr].saved_spi_target[i],
@@ -654,7 +680,11 @@ static void gic_dist_restore(unsigned int gic_nr)
 			dist_base + GIC_DIST_ACTIVE_SET + i * 4);
 	}
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	writel_relaxed(gic_dist_ctrl, dist_base + GIC_DIST_CTRL);
+#else
 	writel_relaxed(GICD_ENABLE, dist_base + GIC_DIST_CTRL);
+#endif
 }
 
 static void gic_cpu_save(unsigned int gic_nr)

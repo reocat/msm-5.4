@@ -663,7 +663,7 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 	struct resource *res;
 	int i, rval;
 
-	soc = devm_kzalloc(&pdev->dev, sizeof(*soc), GFP_KERNEL);
+	amb_pinctrl_soc = soc = devm_kzalloc(&pdev->dev, sizeof(*soc), GFP_KERNEL);
 	if (!soc) {
 		dev_err(&pdev->dev, "failed to allocate memory for private data\n");
 		return -ENOMEM;
