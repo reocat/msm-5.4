@@ -695,6 +695,47 @@
 		};
 	};
 
+	iav {
+		compatible = "ambarella,iav", "ambpriv-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* node for dsp controller */
+		dsp {
+			compatible = "ambarella,dsp";
+			interrupts = <45 0x1 46 0x1 47 0x1>;
+			interrupt-names = "vdsp", "vcap", "venc";
+		};
+
+		/* node for vin controller */
+		vinc0 {
+			compatible = "ambarella,vinc";
+			interrupts = <33 0x1 34 0x1 36 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vout0 controller */
+		voutc0 {
+			compatible = "ambarella,voutc";
+			interrupts = <55 0x1>;
+			interrupt-names = "vout0";
+		};
+
+		/* node for vout1 controller */
+		voutc1 {
+			compatible = "ambarella,voutc";
+			interrupts = <54 0x1>;
+			interrupt-names = "vout1";
+		};
+
+		/* node for hdmi controller */
+		hdmi {
+			compatible = "ambarella,hdmi";
+			interrupts = <58 0x4>;
+			interrupt-names = "hdmi";
+		};
+	};
+
 	bogus_bus {
 		compatible = "simple-bus";
 		#address-cells = <1>;
