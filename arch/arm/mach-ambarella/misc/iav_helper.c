@@ -106,26 +106,7 @@ void ambcache_clean_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
-#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
-	if (cache_check_start && (vstart != (u32)addr)) {
-		if (cache_check_fail_halt) {
-			panic("%s start:0x%08x vs 0x%08x\n",
-				__func__, vstart, (u32)addr);
-		} else {
-			pr_warn("%s start:0x%08x vs 0x%08x\n",
-				__func__, vstart, (u32)addr);
-		}
-	}
-	if (cache_check_end && (vend != ((u32)addr + size))) {
-		if (cache_check_fail_halt) {
-			panic("%s end:0x%08x vs 0x%08x\n",
-				__func__, vend, ((u32)addr + size));
-		} else {
-			pr_warn("%s end:0x%08x vs 0x%08x\n",
-				__func__, vend, ((u32)addr + size));
-		}
-	}
-#endif
+
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 #endif
@@ -153,26 +134,7 @@ void ambcache_inv_range(void *addr, unsigned int size)
 
 	vstart = (u32)addr & CACHE_LINE_MASK;
 	vend = ((u32)addr + size + CACHE_LINE_SIZE - 1) & CACHE_LINE_MASK;
-#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
-	if (cache_check_start && (vstart != (u32)addr)) {
-		if (cache_check_fail_halt) {
-			panic("%s start:0x%08x vs 0x%08x\n",
-				__func__, vstart, (u32)addr);
-		} else {
-			pr_warn("%s start:0x%08x vs 0x%08x\n",
-				__func__, vstart, (u32)addr);
-		}
-	}
-	if (cache_check_end && (vend != ((u32)addr + size))) {
-		if (cache_check_fail_halt) {
-			panic("%s end:0x%08x vs 0x%08x\n",
-				__func__, vend, ((u32)addr + size));
-		} else {
-			pr_warn("%s end:0x%08x vs 0x%08x\n",
-				__func__, vend, ((u32)addr + size));
-		}
-	}
-#endif
+
 #ifdef CONFIG_OUTER_CACHE
 	pstart = ambarella_virt_to_phys(vstart);
 	outer_inv_range(pstart, (pstart + size));

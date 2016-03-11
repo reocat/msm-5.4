@@ -52,15 +52,6 @@ static void __iomem *ambcache_l2_base = __io(AMBARELLA_VA_L2CC_BASE);
 #endif
 #endif
 
-#if defined(CONFIG_AMBARELLA_SYS_CACHE_CALL)
-static int cache_check_start = 1;
-module_param(cache_check_start, int, 0644);
-static int cache_check_end = 0;
-module_param(cache_check_end, int, 0644);
-static int cache_check_fail_halt = 0;
-module_param(cache_check_fail_halt, int, 0644);
-#endif
-
 /* ==========================================================================*/
 
 #ifdef CONFIG_OUTER_CACHE
