@@ -300,17 +300,14 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S3L)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2)
+#define ENET_CLK_SRC_SEL_OFFSET		0x2CC
+#elif (CHIP_REV == S3L)
 #define ENET_CLK_SRC_SEL_OFFSET		0x544
-#elif (CHIP_REV == H2)
+#else
 #define ENET_CLK_SRC_SEL_OFFSET		0x6B8
 #endif
 #define ENET_CLK_SRC_SEL_REG		RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
-
-#define SCALER_GTX_POST_OFFSET		0x2C8
-#define ENET_GTXCLK_SRC_OFFSET		0x2CC
-#define SCALER_GTX_POST_REG		RCT_REG(SCALER_GTX_POST_OFFSET)
-#define ENET_GTXCLK_SRC_REG		RCT_REG(ENET_GTXCLK_SRC_OFFSET)
 
 #define PLL_ENET_CTRL_OFFSET		0x520
 #define PLL_ENET_FRAC_OFFSET		0x524
@@ -563,7 +560,7 @@
 #define DMA_SUPPORT_SELECT_CHANNEL	1
 #endif
 
-#if (CHIP_REV == S3) || (CHIP_REV == H2)
+#if (CHIP_REV == S3) || (CHIP_REV == S5)
 #define AHBSP_DMA_CHANNEL_SEL_OFFSET	0x30
 #elif (CHIP_REV == S3L)
 #define AHBSP_DMA_CHANNEL_SEL_OFFSET	0x2C
@@ -625,7 +622,7 @@
 #define POC_BOOT_FROM_NAND		0x00000010
 #define POC_BOOT_FROM_EMMC		0x00000020
 #define POC_BOOT_FROM_HIF		0xFFFFFFFF /* not supported */
-#elif (CHIP_REV == H2)
+#elif (CHIP_REV == S5)
 #define	POC_BOOT_MAP_TYPE		1
 #define POC_BOOT_FROM_MASK		0x00000570
 #define POC_BOOT_FROM_BYPASS		0x00000100

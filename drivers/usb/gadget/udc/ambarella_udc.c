@@ -2171,20 +2171,6 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-#if 0
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (res == NULL) {
-		dev_err(&pdev->dev, "no mem resource for reset_reg!\n");
-		return -ENXIO;
-	}
-
-	udc->reset_reg = devm_ioremap(&pdev->dev, res->start, resource_size(res));
-	if (udc->reset_reg == NULL) {
-		dev_err(&pdev->dev, "devm_ioremap() failed\n");
-		return -ENOMEM;
-	}
-#endif
-
 	udc->rct_reg = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
 	if (IS_ERR(udc->rct_reg)) {
 		dev_err(&pdev->dev, "no rct regmap!\n");

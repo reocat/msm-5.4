@@ -28,8 +28,8 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <asm/uaccess.h>
+#include <plat/iav_helper.h>
 #include <plat/rct.h>
-#include <plat/service.h>
 
 struct ambarella_service pll_service;
 

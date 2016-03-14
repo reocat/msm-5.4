@@ -144,6 +144,7 @@
 			reg = <0xe801d000 0x1000>;
 			interrupts = <103 0x4>;
 			clock-frequency = <3000000>;
+			amb,rct-regmap = <&rct_syscon>;
 		};
 
 		ir@e8006000 {
@@ -157,6 +158,7 @@
 		wdt@e800c000 {
 			compatible = "ambarella,wdt";
 			reg = <0xe800c000 0x1000>;
+			amb,rct-regmap = <&rct_syscon>;
 			/* interrupts = <105 0x4>; */
 			timeout-sec = <15>;
 		};
@@ -796,6 +798,7 @@
 			clock-output-names = "gclk_so";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
@@ -812,6 +815,7 @@
 			amb,extra-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo2: gclk-vo2 { /* for lcd */
@@ -827,6 +831,7 @@
 			clock-output-names = "gclk_vo2";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_audio: gclk-audio {
@@ -842,6 +847,7 @@
 			clock-output-names = "gclk_audio";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <12288000>;
 		};
 
 		gclk_axi: gclk-axi {

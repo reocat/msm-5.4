@@ -2230,20 +2230,19 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->tx_irq_low = ((lp->tx_count * 1) / 4);
 	lp->tx_irq_high = ((lp->tx_count * 3) / 4);
 
-	lp->ipc_tx = !!of_find_property(np, "amb,ipc-tx", NULL);
-	lp->ipc_rx = !!of_find_property(np, "amb,ipc-rx", NULL);
-	lp->dump_tx = !!of_find_property(np, "amb,dump-tx", NULL);
-	lp->dump_rx = !!of_find_property(np, "amb,dump-rx", NULL);
-	lp->dump_rx_free = !!of_find_property(np, "amb,dump-rx-free", NULL);
-	lp->dump_rx_all = !!of_find_property(np, "amb,dump-rx-all", NULL);
-	lp->clk_invert = !!of_find_property(np, "amb,clk_invert", NULL);
+	lp->ipc_tx = of_property_read_bool(np, "amb,ipc-tx");
+	lp->ipc_rx = of_property_read_bool(np, "amb,ipc-rx");
+	lp->dump_tx = of_property_read_bool(np, "amb,dump-tx");
+	lp->dump_rx = of_property_read_bool(np, "amb,dump-rx");
+	lp->dump_rx_free = of_property_read_bool(np, "amb,dump-rx-free");
+	lp->dump_rx_all = of_property_read_bool(np, "amb,dump-rx-all");
+	lp->clk_invert = of_property_read_bool(np, "amb,clk-invert");
 	if(lp->clk_invert)
 		regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
-	lp->clk_direction = !!of_find_property(np, "amb,clk_direction", NULL);
+	lp->clk_direction = of_property_read_bool(np, "amb,clk-dir");
 	if(lp->clk_direction) {
 		/* set ref clock pin as input from PHY */
 		regmap_update_bits(lp->reg_scr, AHB_MISC_OFFSET, 0x20, 0x20);
-	}
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
@@ -2255,17 +2254,13 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-		ret_val = of_property_read_u32(phy_np, "amb,clk_source", &clk_src);
+		ret_val = of_property_read_u32(phy_np, "amb,clk-sre", &clk_src);
 		if (ret_val == 0 && clk_src == 0) {
-			/* clk_src == 0 represent the clk is external */
-			regmap_update_bits(lp->reg_rct,
-				ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
+			/*clk_src == 0 represent the clk is external*/
+			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
 		} else if(ret_val == 0 && clk_src == 1) {
-			/* clk_src == 1 and default represent the clk is internal */
-			regmap_update_bits(lp->reg_rct,
-				ENET_GTXCLK_SRC_OFFSET, 0x1, 0x01);
-		} else {
-			/* default value for clk source */
+			/*clk_src == 1 and default represent the clk is internal*/
+			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
 		}
 	}
 
@@ -2505,7 +2500,8 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 
 	if(lp->clk_direction) {
 		/*set ref clock pin as input from PHY*/
-		regmap_update_bits(lp->reg_scr, AHB_MISC_OFFSET, 0x20, 0x20);
+		regmap_update_bits(lp->reg_rct,
+				AHB_MISC_OFFSET, 0x20, 0x20);
 	}
 
 	if (gpio_is_valid(lp->pwr_gpio))

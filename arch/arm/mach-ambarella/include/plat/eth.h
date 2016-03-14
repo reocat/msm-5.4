@@ -35,7 +35,7 @@
 #define SUPPORT_GMII			0
 #endif
 
-#if (CHIP_REV == S3) || (CHIP_REV == H2)
+#if (CHIP_REV == S3) || (CHIP_REV == S5)
 #define ETH_ENHANCED			1
 #else
 #define ETH_ENHANCED			0

@@ -36,7 +36,6 @@
 #include <linux/usb/hcd.h>
 #include <linux/of.h>
 #include <linux/dma-mapping.h>
-#include <mach/hardware.h>
 #include <plat/rct.h>
 
 #include "ehci.h"

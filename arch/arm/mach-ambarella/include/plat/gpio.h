@@ -39,7 +39,7 @@
 #elif (CHIP_REV == S3)
 #define GPIO_INSTANCES			7
 #define GPIO_MAX_LINES			201
-#elif (CHIP_REV == H2)
+#elif (CHIP_REV == S5)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			132
 #else

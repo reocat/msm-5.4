@@ -557,9 +557,9 @@ Optional properties:
 - amb,dump-rx: specifies to dump Rx buffer, for debug purpose.
 - amb,dump-rx-free: specifies to free buffer after dumped.
 - amb,dump-rx-all: specifies to dump all buffers without filter.
-- amb,clk_source: specifies the clk source for gtx_clk, 0:external clk, 1:internal clk.
-- amb,clk_invert: specifies to invert the clk for ethernet.
-- amb,clk_direction: specifies the ref clk direction from PHY;If it is specified, it means
+- amb,amb,clk-src: specifies the clk source for gtx_clk, 0:external clk, 1:internal clk.
+- amb,clk-invert: specifies to invert the clk for ethernet.
+- amb,clk-dir: specifies the ref clk direction from PHY;If it is specified, it means
   the ref clk pin is input from PHY.
 ii) Example
 -----------

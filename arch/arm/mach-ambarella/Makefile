@@ -22,8 +22,6 @@
 
 obj-y						+= init.o
 obj-$(CONFIG_PM)				+= pm.o sleep.o
-obj-y						+= adc.o
-
 obj-y						+= soc/
 obj-y						+= smp/
 

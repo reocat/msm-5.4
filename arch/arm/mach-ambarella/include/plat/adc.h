@@ -30,7 +30,7 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define ADC_NUM_CHANNELS		12
-#elif (CHIP_REV == S3) || (CHIP_REV == H2)
+#elif (CHIP_REV == S3) || (CHIP_REV == S5)
 #define ADC_NUM_CHANNELS		5
 #else
 #define ADC_NUM_CHANNELS		4
@@ -289,16 +289,6 @@
 enum {
 	AMBADC_ONESHOT = 0,
 	AMBADC_CONTINUOUS,
-};
-
-struct ambadc_host {
-	struct device *dev;
-	u32 irq;
-	u32 clk;
-	bool polling_mode;
-	bool keep_start;
-        bool fifo_mode;
-	struct delayed_work work;
 };
 
 struct ambadc_client;

@@ -136,8 +136,8 @@ struct ambarella_udc {
 	spinlock_t			lock;
 	struct device			*dev;
 	void __iomem			*base_reg;
-	void __iomem			*rct_reg;
-	void __iomem			*scr_reg;
+	struct regmap			*rct_reg;
+	struct regmap			*scr_reg;
 	int				irq;
 	struct usb_phy			*phy;
 

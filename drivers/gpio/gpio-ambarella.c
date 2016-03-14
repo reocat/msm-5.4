@@ -32,8 +32,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
+#include <plat/iav_helper.h>
 #include <plat/gpio.h>
-#include <plat/service.h>
 
 #define GPIO_MAX_BANK_NUM		8
 
@@ -231,8 +231,7 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
 	/* make sure the pin is in gpio mode */
-	if (gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
-		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
+	gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq");
 
 	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 	writel_relaxed(ie | (0x1 << offset), regbase + GPIO_IE_OFFSET);

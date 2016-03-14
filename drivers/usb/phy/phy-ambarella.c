@@ -353,7 +353,6 @@ static int ambarella_phy_init(struct usb_phy *phy)
 
 	/* If there are 2 PHYs, no matter which PHY need to be initialized,
 	 * we initialize all of them at the same time */
-
 	if (!(readl_relaxed(amb_phy->ana_reg) & ana_val)) {
 		setbitsl(amb_phy->ana_reg, ana_val);
 		mdelay(1);

@@ -29,7 +29,7 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L)
 #define SD_INSTANCES			2
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == H2)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			1
@@ -352,7 +352,7 @@
 
 #if (CHIP_REV == A5S) || (CHIP_REV == S2)
 #define SD_TIMING_SUPPORT		0
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == H2)
+#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_TIMING_SUPPORT		SD_TIMING_SOFT_PHY
 #else
 #define SD_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)
@@ -368,7 +368,7 @@
 #if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
 	(CHIP_REV == S2L)
 #define SDXC_TIMING_SUPPORT		0
-#elif (CHIP_REV == S3) || (CHIP_REV == H2)
+#elif (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SDXC_TIMING_SUPPORT		SD_TIMING_SOFT_PHY
 #else
 #define SDXC_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)

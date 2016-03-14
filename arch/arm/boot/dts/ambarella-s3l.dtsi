@@ -139,6 +139,7 @@
 			reg = <0xe801d000 0x1000>;
 			interrupts = <57 0x4>;
 			clock-frequency = <3000000>;
+			amb,rct-regmap = <&rct_syscon>;
 		};
 
 		ir@e8006000 {
@@ -152,6 +153,7 @@
 		wdt@e800c000 {
 			compatible = "ambarella,wdt";
 			reg = <0xe800c000 0x1000>;
+			amb,rct-regmap = <&rct_syscon>;
 			/* interrupts = <59 0x4>; */
 			timeout-sec = <15>;
 		};
@@ -693,6 +695,47 @@
 		};
 	};
 
+	iav {
+		compatible = "ambarella,iav", "ambpriv-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* node for dsp controller */
+		dsp {
+			compatible = "ambarella,dsp";
+			interrupts = <45 0x1 46 0x1 47 0x1>;
+			interrupt-names = "vdsp", "vcap", "venc";
+		};
+
+		/* node for vin controller */
+		vinc0 {
+			compatible = "ambarella,vinc";
+			interrupts = <33 0x1 34 0x1 36 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vout0 controller */
+		voutc0 {
+			compatible = "ambarella,voutc";
+			interrupts = <55 0x1>;
+			interrupt-names = "vout0";
+		};
+
+		/* node for vout1 controller */
+		voutc1 {
+			compatible = "ambarella,voutc";
+			interrupts = <54 0x1>;
+			interrupt-names = "vout1";
+		};
+
+		/* node for hdmi controller */
+		hdmi {
+			compatible = "ambarella,hdmi";
+			interrupts = <58 0x4>;
+			interrupt-names = "hdmi";
+		};
+	};
+
 	bogus_bus {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -799,6 +842,7 @@
 			clock-output-names = "gclk_so";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
@@ -816,6 +860,7 @@
 			amb,frac-mode;
 			amb,fix-divider = <10>;
 			amb,ctrl2-val = <0x3f770b00>;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo2: gclk-vo2 { /* for lcd */
@@ -831,6 +876,7 @@
 			clock-output-names = "gclk_vo2";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <24000000>;
 		};
 
 		gclk_audio: gclk-audio {
@@ -846,6 +892,7 @@
 			clock-output-names = "gclk_audio";
 			amb,extra-scaler;
 			amb,frac-mode;
+			amb,init-rate = <12288000>;
 		};
 
 		gclk_axi: gclk-axi {
