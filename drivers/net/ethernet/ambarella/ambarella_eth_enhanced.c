@@ -2242,7 +2242,8 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->clk_direction = of_property_read_bool(np, "amb,clk-dir");
 	if(lp->clk_direction) {
 		/* set ref clock pin as input from PHY */
-		regmap_update_bits(lp->reg_scr, AHB_MISC_OFFSET, 0x20, 0x20);
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
+	}
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
