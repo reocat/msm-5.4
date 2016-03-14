@@ -141,20 +141,25 @@
 
 /* AK4954_06_MODE_CONTROL2 (0x06) Fields */
 #define AK4951_FS				0x0F
-#define AK4951_FS_8KHZ			(0 << 0)
-#define AK4951_FS_12KHZ			(1 << 0)
-#define AK4951_FS_16KHZ			(2 << 0)
-#define AK4951_FS_11_025KHZ		(5 << 0)
-#define AK4951_FS_22_05KHZ		(7 << 0)
-#define AK4951_FS_24KHZ			(9 << 0)
-#define AK4951_FS_32KHZ			(10 << 0)
-#define AK4951_FS_48KHZ			(11 << 0)
+#define AK4951_MCKI_FS_8KHZ			(0 << 0)
+#define AK4951_MCKI_FS_12KHZ			(1 << 0)
+#define AK4951_MCKI_FS_16KHZ			(2 << 0)
+#define AK4951_MCKI_FS_11_025KHZ		(5 << 0)
+#define AK4951_MCKI_FS_22_05KHZ			(7 << 0)
+#define AK4951_MCKI_FS_24KHZ			(9 << 0)
+#define AK4951_MCKI_FS_32KHZ			(10 << 0)
+#define AK4951_MCKI_FS_44_1KHZ			(15 << 0)
+#define AK4951_MCKI_FS_48KHZ			(11 << 0)
 
-/*The fs for 44.1k is difference with the reference clk for PLL,
- *when the reference clk is BCK, the fs should be 0x08, if the
- *reference input clock for pll is MCK, fs shoud be 0x0f.*/
-#define AK4951_FS_44_1KHZ_MCK		(15 << 0)
-#define AK4951_FS_44_1KHZ_BCK		(8 << 0)
+#define AK4951_BICK_FS_8KHZ			(0 << 0)
+#define AK4951_BICK_FS_12KHZ			(1 << 0)
+#define AK4951_BICK_FS_16KHZ			(5 << 0)
+#define AK4951_BICK_FS_11_025KHZ		(2 << 0)
+#define AK4951_BICK_FS_22_05KHZ			(7 << 0)
+#define AK4951_BICK_FS_24KHZ			(6 << 0)
+#define AK4951_BICK_FS_32KHZ			(10 << 0)
+#define AK4951_BICK_FS_44_1KHZ			(8 << 0)
+#define AK4951_BICK_FS_48KHZ			(11 << 0)
 
 #define AK4951_FS_CM0			(1 << 6)
 #define AK4951_FS_CM1			(1 << 7)
