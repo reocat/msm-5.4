@@ -145,6 +145,7 @@ static struct ambpriv_device *of_ambpriv_device_alloc(struct device_node *np,
 	dev->dev.parent = parent ? : &ambpriv_bus;
 	of_device_make_bus_id(&dev->dev);
 	dev->name = dev_name(&dev->dev);
+	of_dma_configure(&dev->dev, dev->dev.of_node);
 
 	return dev;
 }
