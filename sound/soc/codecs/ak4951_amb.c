@@ -775,41 +775,76 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 	default:
 		break;
 	}
-	switch (rate) {
-	case 8000:
-		fs |= AK4951_FS_8KHZ;
-		break;
-	case 11025:
-		fs |= AK4951_FS_11_025KHZ;
-		break;
-	case 12000:
-		fs |= AK4951_FS_12KHZ;
-		break;
-	case 16000:
-		fs |= AK4951_FS_16KHZ;
-		break;
-	case 22050:
-		fs |= AK4951_FS_22_05KHZ;
-		break;
-	case 24000:
-		fs |= AK4951_FS_24KHZ;
-		break;
-	case 32000:
-		fs |= AK4951_FS_32KHZ;
-		break;
-	case 44100:
-		if(ak4951->clkid == AK4951_BCLK_IN)
-			fs |= AK4951_FS_44_1KHZ_BCK;
-		else
-			fs |= AK4951_FS_44_1KHZ_MCK;
-		break;
-	case 48000:
-		fs |= AK4951_FS_48KHZ;
-		break;
 
-	default:
-		return -EINVAL;
+	if(ak4951->clkid == AK4951_BCLK_IN) {
+		switch (rate) {
+			case 8000:
+				fs |= AK4951_BICK_FS_8KHZ;
+				break;
+			case 11025:
+				fs |= AK4951_BICK_FS_11_025KHZ;
+				break;
+			case 12000:
+				fs |= AK4951_BICK_FS_12KHZ;
+				break;
+			case 16000:
+				fs |= AK4951_BICK_FS_16KHZ;
+				break;
+			case 22050:
+				fs |= AK4951_BICK_FS_22_05KHZ;
+				break;
+			case 24000:
+				fs |= AK4951_BICK_FS_24KHZ;
+				break;
+			case 32000:
+				fs |= AK4951_BICK_FS_32KHZ;
+				break;
+			case 44100:
+				fs |= AK4951_BICK_FS_44_1KHZ;
+				break;
+			case 48000:
+				fs |= AK4951_BICK_FS_48KHZ;
+				break;
+
+			default:
+				return -EINVAL;
+		}
+
+	} else {
+		switch (rate) {
+			case 8000:
+				fs |= AK4951_MCKI_FS_8KHZ;
+				break;
+			case 11025:
+				fs |= AK4951_MCKI_FS_11_025KHZ;
+				break;
+			case 12000:
+				fs |= AK4951_MCKI_FS_12KHZ;
+				break;
+			case 16000:
+				fs |= AK4951_MCKI_FS_16KHZ;
+				break;
+			case 22050:
+				fs |= AK4951_MCKI_FS_22_05KHZ;
+				break;
+			case 24000:
+				fs |= AK4951_MCKI_FS_24KHZ;
+				break;
+			case 32000:
+				fs |= AK4951_MCKI_FS_32KHZ;
+				break;
+			case 44100:
+				fs |= AK4951_MCKI_FS_44_1KHZ;
+				break;
+			case 48000:
+				fs |= AK4951_MCKI_FS_48KHZ;
+				break;
+
+			default:
+				return -EINVAL;
+		}
 	}
+
 	snd_soc_write(codec, AK4951_06_MODE_CONTROL2, fs);
 
 	return 0;
