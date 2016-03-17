@@ -637,6 +637,7 @@ static void __init build_mem_type_table(void)
 	}
 	kern_pgprot |= PTE_EXT_AF;
 	vecs_pgprot |= PTE_EXT_AF;
+	mem_types[MT_MEMORY_RW_NS].prot_pte |= PTE_EXT_AF | cp->pte;
 
 	/*
 	 * Set PXN for user mappings
@@ -662,6 +663,7 @@ static void __init build_mem_type_table(void)
 	mem_types[MT_MEMORY_RWX].prot_pte |= kern_pgprot;
 	mem_types[MT_MEMORY_RW].prot_sect |= ecc_mask | cp->pmd;
 	mem_types[MT_MEMORY_RW].prot_pte |= kern_pgprot;
+	mem_types[MT_MEMORY_RW_NS].prot_sect |= ecc_mask | cp->pmd;
 	mem_types[MT_MEMORY_RO].prot_sect |= ecc_mask | cp->pmd;
 	mem_types[MT_MEMORY_RO].prot_pte |= kern_pgprot;
 	mem_types[MT_MEMORY_DMA_READY].prot_pte |= kern_pgprot;
