@@ -423,12 +423,8 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	val = ETH_DMA_BUS_MODE_FB | ETH_DMA_BUS_MODE_PBL_32 |
 		ETH_DMA_BUS_MODE_DA_RX;
 
-	if(ETH_ENHANCED) {
-		printk("enhance driver for eth\n");
+	if(ETH_ENHANCED)
 		val |= ETH_DMA_BUS_MODE_ATDS;
-	} else {
-		printk("normal driver for eth\n");
-	}
 
 	amba_writel(lp->regbase + ETH_DMA_BUS_MODE_OFFSET, val);
 	amba_writel(lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET, 0);
