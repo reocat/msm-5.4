@@ -116,9 +116,26 @@ static inline int write_disable(struct amb_norflash *flash)
  */
 static inline int set_4byte(struct amb_norflash *flash, u32 jedec_id, int enable)
 {
-    flash->command[0] = OPCODE_BRWR;
-    ambspi_send_cmd(flash, flash->command[0], 0, (enable << 7), 1);
-    return 0;
+	int ret = 0;
+
+	switch (JEDEC_MFR(jedec_id)) {
+		case CFI_MFR_MACRONIX:
+		case 0xEF: /* winbond */
+		case 0xC8: /* GD */
+			flash->command[0] = enable ? OPCODE_EN4B : OPCODE_EX4B;
+			return ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
+		case CFI_MFR_ST: /*Micron*/
+			write_enable(flash);
+			flash->command[0] = enable ? OPCODE_EN4B : OPCODE_EX4B;
+			ret = ambspi_send_cmd(flash, flash->command[0], 0, 0, 0);
+			write_disable(flash);
+			return ret;
+		default:
+			/* Spansion style */
+			flash->command[0] = OPCODE_BRWR;
+			flash->command[1] = enable << 7;
+			return ambspi_send_cmd(flash, flash->command[0], 0, flash->command[1], 1);
+	}
 }
 
 /*
@@ -588,7 +605,7 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
         /* enable 4-byte addressing if the device exceeds 16MiB */
         if (flash->mtd.size > 0x1000000) {
             flash->addr_width = 4;
-            set_4byte(flash, info->jedec_id, 1);
+            //set_4byte(flash, info->jedec_id, 1);
         } else
             flash->addr_width = 3;
     }
@@ -676,6 +693,37 @@ static void amb_spi_nor_shutdown(struct platform_device *pdev)
 	}
 }
 
+#ifdef CONFIG_PM
+static int amb_spi_nor_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	int	errorCode = 0;
+	struct amb_norflash	*flash;
+
+	flash = platform_get_drvdata(pdev);
+
+	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
+		__func__, errorCode, state.event);
+
+	return errorCode;
+}
+
+static int amb_spi_nor_resume(struct platform_device *pdev)
+{
+	int	errorCode = 0;
+	struct amb_norflash	*flash;
+
+	flash = platform_get_drvdata(pdev);
+	ambspi_init(flash);
+	if (flash->addr_width == 4)
+		set_4byte(flash, flash->jedec_id, 1);
+
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
+
+	return errorCode;
+}
+#endif
+
 static const struct of_device_id ambarella_spi_nor_of_match[] = {
     {.compatible = "ambarella,spinor", },
     {},
@@ -691,7 +739,10 @@ static struct platform_driver amb_spi_nor_driver = {
 	.probe = amb_spi_nor_probe,
 	.remove = amb_spi_nor_remove,
 	.shutdown = amb_spi_nor_shutdown,
-
+#ifdef CONFIG_PM
+	.suspend	= amb_spi_nor_suspend,
+	.resume		= amb_spi_nor_resume,
+#endif
 	/* REVISIT: many of these chips have deep power-down modes, which
 	 * should clearly be entered on suspend() to minimize power use.
 	 * And also when they're otherwise idle...
