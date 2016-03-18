@@ -1,5 +1,5 @@
 /*
- * /drivers/net/ethernet/ambarella/ambarella_eth_enhanced.c
+ * /drivers/net/ethernet/ambarella/ambarella_eth_normal.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  * Copyright (C) 2004-2011, Ambarella, Inc.
@@ -39,15 +39,14 @@
 #include <linux/spinlock.h>
 #include <linux/crc32.h>
 #include <linux/time.h>
-#include <linux/regmap.h>
-#include <linux/mfd/syscon.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
 #include <linux/ethtool.h>
 #include <asm/dma.h>
-#include <plat/rct.h>
 #include <plat/eth.h>
-
+#include <plat/rct.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 /* ==========================================================================*/
 #define AMBETH_NAPI_WEIGHT		32
 #define AMBETH_TX_WATCHDOG		(2 * HZ)
@@ -155,7 +154,8 @@ struct ambeth_info {
 					dump_rx : 1,
 					dump_rx_free : 1,
 					dump_rx_all : 1;
-	bool				clk_direction;
+	bool			clk_direction;
+	bool 			enhance;
 };
 
 /* ==========================================================================*/
@@ -166,7 +166,6 @@ MODULE_PARM_DESC (msg_level, "Override default message level");
 static int clk_dbg = -1;
 module_param (clk_dbg, int, 0);
 MODULE_PARM_DESC (clk_dbg, "debug MHz");
-
 /* ==========================================================================*/
 static void ambhw_dump(struct ambeth_info *lp)
 {
@@ -214,7 +213,6 @@ static inline int ambhw_dma_reset(struct ambeth_info *lp)
 	val = readl_relaxed(lp->regbase + ETH_DMA_BUS_MODE_OFFSET);
 	val |= ETH_DMA_BUS_MODE_SWR;
 	writel_relaxed(val, lp->regbase + ETH_DMA_BUS_MODE_OFFSET);
-
 	do {
 		if (counter++ > 100) {
 			ret_val = -EIO;
@@ -262,7 +260,7 @@ static inline void ambhw_dma_rx_stop(struct ambeth_info *lp)
 		irq_status = readl_relaxed(lp->regbase + ETH_DMA_STATUS_OFFSET);
 	} while ((irq_status & ETH_DMA_STATUS_RS_MASK) && --i);
 
-	if ((i == 0) && netif_msg_drv(lp)) {
+	if ((i <= 0) && netif_msg_drv(lp)) {
 		dev_err(&lp->ndev->dev,
 			"DMA Error: Stop RX status=0x%x, opmode=0x%x.\n",
 			readl_relaxed(lp->regbase + ETH_DMA_STATUS_OFFSET),
@@ -291,7 +289,6 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 		udelay(1);
 		irq_status = readl_relaxed(lp->regbase + ETH_DMA_STATUS_OFFSET);
 	} while ((irq_status & ETH_DMA_STATUS_TS_MASK) && --i);
-
 	if ((i == 0) && netif_msg_drv(lp)) {
 		dev_err(&lp->ndev->dev,
 			"DMA Error: Stop TX status=0x%x, opmode=0x%x.\n",
@@ -306,10 +303,14 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 
 static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 {
-	lp->tx.desc_tx[entry].status = (ETH_ENHANCED_TDES0_OWN | \
-					ETH_ENHANCED_TDES0_IC);
+	if (lp->enhance) {
+		lp->tx.desc_tx[entry].status = ETH_ENHANCED_TDES0_OWN | ETH_ENHANCED_TDES0_IC ;
+	} else {
+		lp->tx.desc_tx[entry].length |= ETH_TDES1_IC;
+		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
+	}
 	writel_relaxed((u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)),
-			lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET);
+		lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET);
 	if (netif_msg_tx_err(lp)) {
 		dev_err(&lp->ndev->dev, "TX Error: restart %u.\n", entry);
 		ambhw_dump(lp);
@@ -339,7 +340,6 @@ static inline void ambhw_stop_tx_rx(struct ambeth_info *lp)
 		irq_status = readl_relaxed(lp->regbase + ETH_DMA_STATUS_OFFSET);
 	} while ((irq_status & (ETH_DMA_STATUS_TS_MASK |
 		ETH_DMA_STATUS_RS_MASK)) && --i);
-
 	if ((i == 0) && netif_msg_drv(lp)) {
 		dev_err(&lp->ndev->dev,
 			"DMA Error: Stop TX/RX status=0x%x, opmode=0x%x.\n",
@@ -430,16 +430,14 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	ambhw_set_hwaddr(lp, lp->ndev->dev_addr);
 
 	val = ETH_DMA_BUS_MODE_FB | ETH_DMA_BUS_MODE_PBL_32 |
-			ETH_DMA_BUS_MODE_ATDS | ETH_DMA_BUS_MODE_DA_RX;
+		ETH_DMA_BUS_MODE_DA_RX;
 	writel_relaxed(val, lp->regbase + ETH_DMA_BUS_MODE_OFFSET);
-
 	writel_relaxed(0, lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
 
 	val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
-			ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF;
+		ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF;
 	writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
-
-	writel_relaxed(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE, lp->regbase + ETH_MAC_CFG_OFFSET);
+	writel_relaxed((ETH_MAC_CFG_TE | ETH_MAC_CFG_RE), lp->regbase + ETH_MAC_CFG_OFFSET);
 
 	/*
 	 * (512 bits / N) * pause_time = actual pause time
@@ -668,7 +666,7 @@ static void ambeth_adjust_link(struct net_device *ndev)
 
 	if (need_update) {
 		ambhw_set_link_mode_speed(lp);
-		if (netif_msg_drv(lp)) {
+		if (netif_msg_link(lp)) {
 			if (phydev->link) {
 				dev_info(&lp->ndev->dev, "Link is up - Speed is %s\n",
 					phydev->speed == SPEED_1000 ? "1000M" :
@@ -677,6 +675,7 @@ static void ambeth_adjust_link(struct net_device *ndev)
 			} else {
 				dev_info(&lp->ndev->dev, "Link is Down\n");
 			}
+
 		}
 	}
 	spin_unlock_irqrestore(&lp->lock, flags);
@@ -694,6 +693,7 @@ static void ambeth_fc_config(struct ambeth_info *lp)
 	adv &= ~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
 
 	sup &= lp->phy_supported;
+
 	if (!(sup & (SUPPORTED_Pause | SUPPORTED_Asym_Pause)))
 		goto unsupported;
 
@@ -752,6 +752,7 @@ static void ambeth_fc_resolve(struct ambeth_info *lp)
 		goto force_setting;
 
 	fc = old_fc = readl_relaxed(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET);
+
 	dev_info(&lp->ndev->dev, "lp: sym: %d, asym: %d\n",
 		 lp->phydev->pause, lp->phydev->asym_pause);
 	/*
@@ -779,6 +780,7 @@ static void ambeth_fc_resolve(struct ambeth_info *lp)
 	return;
 
 force_setting:
+
 	if (flow_ctr & AMBARELLA_ETH_FC_TX) {
 		fc = readl_relaxed(lp->regbase + ETH_MAC_FLOW_CTR_OFFSET);
 		fc |= ETH_MAC_FLOW_CTR_TFE;
@@ -894,9 +896,16 @@ static inline void ambeth_rx_rngmng_init(struct ambeth_info *lp)
 	for (i = 0; i < lp->rx_count; i++) {
 		if (ambeth_rx_rngmng_check_skb(lp, i))
 			break;
-		lp->rx.desc_rx[i].status = ETH_ENHANCED_RDES0_OWN;
-		lp->rx.desc_rx[i].length = (ETH_ENHANCED_RDES1_RCH |
-			ETH_ENHANCED_RDES1_RBS1x(AMBETH_PACKET_MAXFRAME));
+
+		lp->rx.desc_rx[i].status = ETH_RDES0_OWN;
+		if (lp->enhance) {
+			lp->rx.desc_rx[i].length = (ETH_ENHANCED_RDES1_RCH |
+					ETH_ENHANCED_RDES1_RBS1x(AMBETH_PACKET_MAXFRAME));
+		} else {
+			lp->rx.desc_rx[i].length = (ETH_RDES1_RCH |
+					ETH_RDES1_RBS1x(AMBETH_PACKET_MAXFRAME));
+		}
+
 		lp->rx.desc_rx[i].buffer2 = (u32)lp->rx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
 	}
@@ -914,7 +923,8 @@ static inline void ambeth_rx_rngmng_refill(struct ambeth_info *lp)
 		entry = lp->rx.dirty_rx % lp->rx_count;
 		if (ambeth_rx_rngmng_check_skb(lp, entry))
 			break;
-		lp->rx.desc_rx[entry].status = ETH_ENHANCED_RDES0_OWN;
+
+		lp->rx.desc_rx[entry].status = ETH_RDES0_OWN;
 		lp->rx.dirty_rx++;
 	}
 }
@@ -933,8 +943,8 @@ static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
 			lp->rx.rng_rx[i].mapping = 0;
 			if (mapping) {
 				dma_unmap_single(lp->ndev->dev.parent, mapping,
-					AMBETH_PACKET_MAXFRAME,
-					DMA_FROM_DEVICE);
+						AMBETH_PACKET_MAXFRAME,
+						DMA_FROM_DEVICE);
 			}
 			if (skb) {
 				dev_kfree_skb(skb);
@@ -957,10 +967,15 @@ static inline void ambeth_tx_rngmng_init(struct ambeth_info *lp)
 	lp->tx.dirty_tx = 0;
 	for (i = 0; i < lp->tx_count; i++) {
 		lp->tx.rng_tx[i].mapping = 0 ;
-		lp->tx.desc_tx[i].status = (ETH_ENHANCED_TDES0_LS | \
-					ETH_ENHANCED_TDES0_FS | \
-					ETH_ENHANCED_TDES0_TCH);
-		lp->tx.desc_tx[i].length = 0;
+		if (lp->enhance){
+			lp->tx.desc_tx[i].status =
+				(ETH_ENHANCED_TDES0_LS | ETH_ENHANCED_TDES0_FS | ETH_ENHANCED_TDES0_TCH);
+			lp->tx.desc_tx[i].length = 0;
+		} else {
+			lp->tx.desc_tx[i].status = 0;
+			lp->tx.desc_tx[i].length = (ETH_TDES1_LS | ETH_TDES1_FS |
+					ETH_TDES1_TCH);
+		}
 		lp->tx.desc_tx[i].buffer1 = 0;
 		lp->tx.desc_tx[i].buffer2 = (u32)lp->tx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
@@ -1093,7 +1108,6 @@ static inline void ambeth_interrupt_rx(struct ambeth_info *lp, u32 irq_status)
 		napi_schedule(&lp->napi);
 	}
 }
-
 static inline void ambeth_interrupt_gmac(struct ambeth_info *lp, u32 irq_status)
 {
 	u32 tmp_reg;
@@ -1134,63 +1148,63 @@ static inline u32 ambeth_check_tdes0_status(struct ambeth_info *lp,
 {
 	u32 tx_retry = 0;
 
-	if (status & ETH_ENHANCED_TDES0_JT) {
+	if (status & ETH_TDES0_JT) {
 		lp->stats.tx_heartbeat_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "TX Error: Jabber Timeout.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_FF) {
+	if (status & ETH_TDES0_FF) {
 		lp->stats.tx_dropped++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "TX Error: Frame Flushed.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_IPE) {
+	if (status & ETH_TDES0_PCE) {
 		lp->stats.tx_fifo_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
-			"TX Error: IP Payload Error.\n");
+			"TX Error: Payload Checksum Error.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_LCA) {
+	if (status & ETH_TDES0_LCA) {
 		lp->stats.tx_carrier_errors++;
 		dev_err(&lp->ndev->dev, "TX Error: Loss of Carrier.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_NC) {
+	if (status & ETH_TDES0_NC) {
 		lp->stats.tx_carrier_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "TX Error: No Carrier.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_LCO) {
+	if (status & ETH_TDES0_LCO) {
 		lp->stats.tx_aborted_errors++;
 		lp->stats.collisions++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "TX Error: Late Collision.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_EC) {
+	if (status & ETH_TDES0_EC) {
 		lp->stats.tx_aborted_errors++;
-		lp->stats.collisions += ETH_ENHANCED_TDES0_CC(status);
+		lp->stats.collisions += ETH_TDES0_CC(status);
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"TX Error: Excessive Collision %u.\n",
-			ETH_ENHANCED_TDES0_CC(status));
+			ETH_TDES0_CC(status));
 	}
-	if (status & ETH_ENHANCED_TDES0_VF) {
+	if (status & ETH_TDES0_VF) {
 		if (netif_msg_drv(lp))
 			dev_info(&lp->ndev->dev, "TX Info: VLAN Frame.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_ED) {
+	if (status & ETH_TDES0_ED) {
 		lp->stats.tx_fifo_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"TX Error: Excessive Deferral.\n");
 	}
-	if (status & ETH_ENHANCED_TDES0_UF) {
+	if (status & ETH_TDES0_UF) {
 		tx_retry = 1;
 		if (netif_msg_tx_err(lp)) {
 			dev_err(&lp->ndev->dev, "TX Error: Underflow Error.\n");
 			ambhw_dump(lp);
 		}
 	}
-	if (status & ETH_ENHANCED_TDES0_DB) {
+	if (status & ETH_TDES0_DB) {
 		lp->stats.tx_fifo_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "TX Error: Deferred Bit.\n");
@@ -1214,12 +1228,17 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			entry = (lp->tx.dirty_tx % lp->tx_count);
 			status = lp->tx.desc_tx[entry].status;
 
-			if (status & ETH_ENHANCED_TDES0_OWN)
-				break;
+			if (lp->enhance) {
+				if (status & ETH_ENHANCED_TDES0_OWN)
+					break;
+			} else {
+				if (status & ETH_TDES0_OWN)
+					break;
+			}
 
-			if (unlikely(status & ETH_ENHANCED_TDES0_ES)) {
-				if ((status & ETH_ENHANCED_TDES0_ES_MASK) ==
-					ETH_ENHANCED_TDES0_ES) {
+			if (unlikely(status & ETH_TDES0_ES)) {
+				if ((status & ETH_TDES0_ES_MASK) ==
+					ETH_TDES0_ES) {
 					break;
 				}
 				if (ambeth_check_tdes0_status(lp, status)) {
@@ -1231,7 +1250,7 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 					lp->stats.tx_errors++;
 				}
 			} else {
-				if (unlikely(status & ETH_ENHANCED_TDES0_IHE)) {
+				if (unlikely(status & ETH_TDES0_IHE)) {
 					if (netif_msg_drv(lp))
 						dev_err(&lp->ndev->dev,
 						"TX Error: IP Header Error.\n");
@@ -1274,9 +1293,9 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 
 	spin_lock_irqsave(&lp->lock, flags);
 	irq_status = readl_relaxed(lp->regbase + ETH_DMA_STATUS_OFFSET);
-
 	ambeth_check_dma_error(lp, irq_status);
-	ambeth_interrupt_gmac(lp, irq_status);
+	if (lp->enhance)
+		ambeth_interrupt_gmac(lp, irq_status);
 	ambeth_interrupt_rx(lp, irq_status);
 	ambeth_interrupt_tx(lp, irq_status);
 	writel_relaxed(irq_status, lp->regbase + ETH_DMA_STATUS_OFFSET);
@@ -1308,7 +1327,7 @@ static int ambeth_start_hw(struct net_device *ndev)
 		goto ambeth_start_hw_exit;
 
 	lp->rx.rng_rx = kmalloc((sizeof(struct ambeth_rng_info) *
-				lp->rx_count), GFP_KERNEL);
+		lp->rx_count), GFP_KERNEL);
 	if (lp->rx.rng_rx == NULL) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "alloc rng_rx fail.\n");
@@ -1316,8 +1335,8 @@ static int ambeth_start_hw(struct net_device *ndev)
 		goto ambeth_start_hw_exit;
 	}
 	lp->rx.desc_rx = dma_alloc_coherent(lp->ndev->dev.parent,
-				(sizeof(struct ambeth_desc) * lp->rx_count),
-				&lp->rx_dma_desc, GFP_KERNEL);
+		(sizeof(struct ambeth_desc) * lp->rx_count),
+		&lp->rx_dma_desc, GFP_KERNEL);
 	if (lp->rx.desc_rx == NULL) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
@@ -1325,12 +1344,14 @@ static int ambeth_start_hw(struct net_device *ndev)
 		ret_val = -ENOMEM;
 		goto ambeth_start_hw_exit;
 	}
-	memset(lp->rx.rng_rx, 0, sizeof(struct ambeth_rng_info) * lp->rx_count);
-	memset(lp->rx.desc_rx, 0, sizeof(struct ambeth_desc) * lp->rx_count);
+	memset(lp->rx.rng_rx, 0,
+		(sizeof(struct ambeth_rng_info) * lp->rx_count));
+	memset(lp->rx.desc_rx, 0,
+		(sizeof(struct ambeth_desc) * lp->rx_count));
 	ambeth_rx_rngmng_init(lp);
 
 	lp->tx.rng_tx = kmalloc((sizeof(struct ambeth_rng_info) *
-				lp->tx_count), GFP_KERNEL);
+		lp->tx_count), GFP_KERNEL);
 	if (lp->tx.rng_tx == NULL) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "alloc rng_tx fail.\n");
@@ -1338,8 +1359,8 @@ static int ambeth_start_hw(struct net_device *ndev)
 		goto ambeth_start_hw_exit;
 	}
 	lp->tx.desc_tx = dma_alloc_coherent(lp->ndev->dev.parent,
-				(sizeof(struct ambeth_desc) * lp->tx_count),
-				&lp->tx_dma_desc, GFP_KERNEL);
+		(sizeof(struct ambeth_desc) * lp->tx_count),
+		&lp->tx_dma_desc, GFP_KERNEL);
 	if (lp->tx.desc_tx == NULL) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
@@ -1347,8 +1368,10 @@ static int ambeth_start_hw(struct net_device *ndev)
 		ret_val = -ENOMEM;
 		goto ambeth_start_hw_exit;
 	}
-	memset(lp->tx.rng_tx, 0, sizeof(struct ambeth_rng_info) * lp->tx_count);
-	memset(lp->tx.desc_tx, 0, sizeof(struct ambeth_desc) * lp->tx_count);
+	memset(lp->tx.rng_tx, 0,
+		(sizeof(struct ambeth_rng_info) * lp->tx_count));
+	memset(lp->tx.desc_tx, 0,
+		(sizeof(struct ambeth_desc) * lp->tx_count));
 	ambeth_tx_rngmng_init(lp);
 
 	spin_lock_irqsave(&lp->lock, flags);
@@ -1468,17 +1491,25 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	unsigned long flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	tx_flag = (ETH_ENHANCED_TDES0_LS | ETH_ENHANCED_TDES0_FS | \
-		ETH_ENHANCED_TDES0_TCH);
+	if (lp->enhance)
+		tx_flag = ETH_ENHANCED_TDES0_LS | ETH_ENHANCED_TDES0_FS | ETH_ENHANCED_TDES0_TCH;
+	else
+		tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
 
 	spin_lock_irqsave(&lp->lock, flags);
 	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
 	entry = (lp->tx.cur_tx % lp->tx_count);
 	if (dirty_diff == lp->tx_irq_high) {
-		tx_flag |= ETH_ENHANCED_TDES0_IC;
+		if (lp->enhance)
+			tx_flag |= ETH_TDES1_IC;
+		else
+			tx_flag |= ETH_ENHANCED_TDES0_IC;
 	} else if (dirty_diff == (lp->tx_count - 1)) {
 		netif_stop_queue(ndev);
-		tx_flag |= ETH_ENHANCED_TDES0_IC;
+		if (lp->enhance)
+			tx_flag |= ETH_TDES1_IC;
+		else
+			tx_flag |= ETH_ENHANCED_TDES0_IC;
 	} else if (dirty_diff >= lp->tx_count) {
 		netif_stop_queue(ndev);
 		ret_val = -ENOMEM;
@@ -1492,14 +1523,24 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	mapping = dma_map_single(lp->ndev->dev.parent,
 		skb->data, skb->len, DMA_TO_DEVICE);
-	if (lp->ipc_tx && (skb->ip_summed == CHECKSUM_PARTIAL))
-		tx_flag |= ETH_ENHANCED_TDES0_CIC_V2;
+	if (lp->ipc_tx && (skb->ip_summed == CHECKSUM_PARTIAL)) {
+		if (lp->enhance)
+			tx_flag |= ETH_ENHANCED_TDES0_CIC_V2;
+		else
+			tx_flag |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
+	}
 
 	lp->tx.rng_tx[entry].skb = skb;
 	lp->tx.rng_tx[entry].mapping = mapping;
 	lp->tx.desc_tx[entry].buffer1 = mapping;
-	lp->tx.desc_tx[entry].length = ETH_ENHANCED_TDES1_TBS1x(skb->len);
-	lp->tx.desc_tx[entry].status = ETH_ENHANCED_TDES0_OWN | tx_flag;
+	if (lp->enhance) {
+		lp->tx.desc_tx[entry].length = ETH_ENHANCED_TDES1_TBS1x(skb->len);
+		lp->tx.desc_tx[entry].status = ETH_ENHANCED_TDES0_OWN | tx_flag;
+	} else {
+		lp->tx.desc_tx[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
+		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
+	}
+
 	lp->tx.cur_tx++;
 	ambhw_dma_tx_poll(lp);
 	spin_unlock_irqrestore(&lp->lock, flags);
@@ -1546,7 +1587,8 @@ static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	struct sk_buff *skb;
 	dma_addr_t mapping;
 
-	pkt_len = ETH_ENHANCED_RDES0_FL(status) - 4;
+	pkt_len = ETH_RDES0_FL(status) - 4;
+
 	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
 		dev_warn(&lp->ndev->dev, "Bogus packet size %u.\n", pkt_len);
 		pkt_len = AMBETH_RX_COPYBREAK;
@@ -1568,57 +1610,57 @@ static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
 static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 	u32 status, u32 entry)
 {
-	if (status & ETH_ENHANCED_RDES0_DE) {
+	if (status & ETH_RDES0_DE) {
 		lp->stats.rx_frame_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"RX Error: Descriptor Error.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_SAF) {
+	if (status & ETH_RDES0_SAF) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"RX Error: Source Address Filter Fail.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_LE) {
+	if (status & ETH_RDES0_LE) {
 		lp->stats.rx_length_errors++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "RX Error: Length Error.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_OE) {
+	if (status & ETH_RDES0_OE) {
 		lp->stats.rx_over_errors++;
 		if (netif_msg_rx_err(lp))
 			dev_err(&lp->ndev->dev, "RX Error: Overflow Error.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_VLAN) {
+	if (status & ETH_RDES0_VLAN) {
 		if (netif_msg_drv(lp))
 			dev_info(&lp->ndev->dev, "RX Info: VLAN.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_IPC) {
+	if (status & ETH_RDES0_IPC) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"RX Error: IPC Checksum/Giant Frame.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_LC) {
+	if (status & ETH_RDES0_LC) {
 		lp->stats.collisions++;
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev, "RX Error: Late Collision.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_FT) {
+	if (status & ETH_RDES0_FT) {
 		if (netif_msg_rx_err(lp))
 			dev_info(&lp->ndev->dev,
 			"RX Info: Ethernet-type frame.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_RWT) {
+	if (status & ETH_RDES0_RWT) {
 		if (netif_msg_drv(lp))
 			dev_err(&lp->ndev->dev,
 			"RX Error: Watchdog Timeout.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_RE) {
+	if (status & ETH_RDES0_RE) {
 		lp->stats.rx_errors++;
 		if (netif_msg_rx_err(lp))
 			dev_err(&lp->ndev->dev, "RX Error: Receive.\n");
 	}
-	if (status & ETH_ENHANCED_RDES0_DBE) {
+	if (status & ETH_RDES0_DBE) {
 		u32 val = readl_relaxed(lp->regbase + ETH_MAC_CFG_OFFSET);
 		if (val & ETH_MAC_CFG_PS) {
 			lp->stats.rx_length_errors++;
@@ -1627,13 +1669,13 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 				"RX Error: Dribble Bit.\n");
 		}
 	}
-	if (status & ETH_ENHANCED_RDES0_CE) {
+	if (status & ETH_RDES0_CE) {
 		lp->stats.rx_crc_errors++;
 		if (netif_msg_rx_err(lp)) {
 			dev_err(&lp->ndev->dev, "RX Error: CRC.\n");
 		}
 	}
-	if (status & ETH_ENHANCED_RDES0_RX) {
+	if (status & ETH_RDES0_RX) {
 		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
 			"RX Error: Rx MAC Address/Payload Checksum.\n");
@@ -1649,7 +1691,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	struct sk_buff *skb;
 	dma_addr_t mapping;
 
-	pkt_len = ETH_ENHANCED_RDES0_FL(status) - 4;
+	pkt_len = ETH_RDES0_FL(status) - 4;
 
 	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
 		dev_warn(&lp->ndev->dev, "Bogus packet size %u.\n", pkt_len);
@@ -1666,8 +1708,8 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 		skb->protocol = eth_type_trans(skb, lp->ndev);
 #if 0
 		if (lp->ipc_rx) {
-			if ((status & ETH_ENHANCED_RDES0_COE_MASK) ==
-				ETH_ENHANCED_RDES0_COE_NOCHKERROR) {
+			if ((status & ETH_RDES0_COE_MASK) ==
+				ETH_RDES0_COE_NOCHKERROR) {
 				skb->ip_summed = CHECKSUM_UNNECESSARY;
 			} else {
 				skb->ip_summed = CHECKSUM_NONE;
@@ -1697,7 +1739,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 		if (netif_msg_drv(lp)) {
 			dev_err(&lp->ndev->dev,
 			"RX Error: %u skb[%p], map[0x%08X].\n",
-			entry, skb, (u32)mapping);
+			entry, skb, (unsigned int)mapping);
 		}
 	}
 }
@@ -1721,13 +1763,13 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 	while (rx_budget > 0) {
 		entry = lp->rx.cur_rx % lp->rx_count;
 		status = lp->rx.desc_rx[entry].status;
-		if (status & ETH_ENHANCED_RDES0_OWN)
+		if (status & ETH_RDES0_OWN)
 			break;
-		if (unlikely((status & (ETH_ENHANCED_RDES0_FS | ETH_ENHANCED_RDES0_LS)) !=
-			(ETH_ENHANCED_RDES0_FS | ETH_ENHANCED_RDES0_LS))) {
+		if (unlikely((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
+			(ETH_RDES0_FS | ETH_RDES0_LS))) {
 			break;
 		}
-		if (likely((status & ETH_ENHANCED_RDES0_ES) != ETH_ENHANCED_RDES0_ES)) {
+		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
 			ambeth_napi_rx(lp, status, entry);
 		} else {
 			ambhw_dma_rx_stop(lp);
@@ -1736,6 +1778,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 			lp->rx.cur_rx++;
 		}
 		rx_budget--;
+
 		dirty_diff = (lp->rx.cur_rx - lp->rx.dirty_rx);
 		if (dirty_diff > (lp->rx_count / 4)) {
 			ambeth_rx_rngmng_refill(lp);
@@ -1753,7 +1796,6 @@ ambeth_poll_complete:
 		val = readl_relaxed(lp->regbase + ETH_DMA_INTEN_OFFSET);
 		val |= AMBETH_RXDMA_INTEN;
 		writel_relaxed(val, lp->regbase + ETH_DMA_INTEN_OFFSET);
-
 		ambhw_dma_rx_start(lp);
 		spin_unlock_irqrestore(&lp->lock, flags);
 	}
@@ -2162,8 +2204,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	u32 hw_intf, clk_src;
-	int ret_val;
+	int ret_val, clk_src, hw_intf;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2180,19 +2221,19 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	hw_intf &= ETH_DMA_HWFEA_ACTPHYIF_MASK;
 
 	switch (lp->intf_type) {
-	case PHY_INTERFACE_MODE_GMII:
-	case PHY_INTERFACE_MODE_MII:
-		ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_GMII) ? 0 : -1;
-		break;
-	case PHY_INTERFACE_MODE_RGMII:
-		ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RGMII) ? 0 : -1;
-		break;
-	case PHY_INTERFACE_MODE_RMII:
-		ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RMII) ? 0 : -1;
-		break;
-	default:
-		ret_val = -1;
-		break;
+		case PHY_INTERFACE_MODE_GMII:
+		case PHY_INTERFACE_MODE_MII:
+			ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_GMII) ? 0 : -1;
+			break;
+		case PHY_INTERFACE_MODE_RGMII:
+			ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RGMII) ? 0 : -1;
+			break;
+		case PHY_INTERFACE_MODE_RMII:
+			ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RMII) ? 0 : -1;
+			break;
+		default:
+			ret_val = -1;
+			break;
 	}
 	if (ret_val < 0) {
 		dev_err(lp->ndev->dev.parent,
@@ -2236,6 +2277,11 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx_free = of_property_read_bool(np, "amb,dump-rx-free");
 	lp->dump_rx_all = of_property_read_bool(np, "amb,dump-rx-all");
 
+	if (of_property_read_bool(np, "amb,enhance"))
+		lp->enhance = true;
+	else
+		lp->enhance = false;
+
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
 			continue;
@@ -2246,7 +2292,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-		ret_val = of_property_read_u32(phy_np, "amb,clk-sre", &clk_src);
+		ret_val = of_property_read_u32(phy_np, "amb,clk-src", &clk_src);
 		if (ret_val == 0 && clk_src == 0) {
 			/*clk_src == 0 represent the clk is external*/
 			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
@@ -2264,8 +2310,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			/*set ref clock pin as input from PHY*/
 			lp->clk_direction = true;
 			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
-		} else
+		} else {
 			lp->clk_direction = false;
+		}
 	}
 
 	return 0;
@@ -2287,6 +2334,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	}
 	lp = netdev_priv(ndev);
 
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "No mem resource for fio_reg!\n");
@@ -2300,6 +2348,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		ret_val = -ENOMEM;
 		goto ambeth_drv_probe_free_netdev;
 	}
+
 
 	ndev->irq = platform_get_irq(pdev, 0);
 	if (ndev->irq < 0) {
@@ -2331,6 +2380,8 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	}
 
 	SET_NETDEV_DEV(ndev, &pdev->dev);
+	ndev->dev.dma_mask = pdev->dev.dma_mask;
+	ndev->dev.coherent_dma_mask = pdev->dev.coherent_dma_mask;
 
 	spin_lock_init(&lp->lock);
 	lp->ndev = ndev;
@@ -2395,8 +2446,8 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	}
 
 	if (netif_msg_drv(lp)) {
-		dev_info(&pdev->dev, "Ethernet PHY[%d]: 0x%08x!\n",
-				lp->phydev->addr, lp->phydev->phy_id);
+		dev_info(&pdev->dev, "%s Ethernet PHY[%d]: 0x%08x!\n",
+				lp->enhance ? "Enhance" : "Normal", lp->phydev->addr, lp->phydev->phy_id);
 	}
 
 	ether_setup(ndev);
@@ -2418,7 +2469,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	if (gpio_is_valid(lp->rst_gpio))
 		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 
-	ndev->ethtool_ops = &ambeth_ethtool_ops;
+        ndev->ethtool_ops = &ambeth_ethtool_ops;
 
 	ret_val = register_netdev(ndev);
 	if (ret_val) {
@@ -2427,7 +2478,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, ndev);
-	dev_notice(&pdev->dev, "Enhanced MAC Address[%pM].\n", ndev->dev_addr);
+	dev_notice(&pdev->dev, "MAC Address[%pM].\n", ndev->dev_addr);
 
 	return 0;
 
