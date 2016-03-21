@@ -302,8 +302,9 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 
 static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 {
-	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
+	lp->tx.desc_tx[entry].status = 0;
 	amba_set_eth_desc(&lp->tx.desc_tx[entry], ETH_TDES_IC);
+	lp->tx.desc_tx[entry].status |= ETH_TDES0_OWN;
 	amba_writel(lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET,
 		(u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)));
 	if (netif_msg_tx_err(lp)) {
@@ -948,6 +949,7 @@ static inline void ambeth_tx_rngmng_init(struct ambeth_info *lp)
 	lp->tx.dirty_tx = 0;
 	for (i = 0; i < lp->tx_count; i++) {
 		lp->tx.rng_tx[i].mapping = 0;
+		lp->tx.desc_tx[i].length = 0;
 		amba_set_eth_desc(&lp->tx.desc_tx[i], ETH_TDES_LS | ETH_TDES_FS
 			| ETH_TDES_TCH);
 		lp->tx.desc_tx[i].buffer1 = 0;
