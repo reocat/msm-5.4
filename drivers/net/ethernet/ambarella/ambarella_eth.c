@@ -151,28 +151,34 @@ MODULE_PARM_DESC (msg_level, "Override default message level");
 
 /* ==========================================================================*/
 static void amba_set_eth_desc(struct ambeth_desc *desc, int val) {
+	u32 status = 0, length = 0;
+
 	if(ETH_ENHANCED) {
 		if(val & ETH_TDES_IC)
-			desc->status |= ETH_ENHANCED_TDES0_IC;
+			status |= ETH_ENHANCED_TDES0_IC;
 		if(val & ETH_TDES_LS)
-			desc->status |= ETH_ENHANCED_TDES0_LS;
+			status |= ETH_ENHANCED_TDES0_LS;
 		if(val & ETH_TDES_FS)
-			desc->status |= ETH_ENHANCED_TDES0_FS;
+			status |= ETH_ENHANCED_TDES0_FS;
 		if(val & ETH_TDES_TCH)
-			desc->status |= ETH_ENHANCED_TDES0_TCH;
+			status |= ETH_ENHANCED_TDES0_TCH;
 		if(val & ETH_TDES_CIC)
-			desc->status |= ETH_ENHANCED_TDES0_CIC_V2;
+			status |= ETH_ENHANCED_TDES0_CIC_V2;
+
+		desc->status |= status;
 	} else {
 		if(val & ETH_TDES_IC)
-			desc->length |= ETH_TDES1_IC;
+			length |= ETH_TDES1_IC;
 		if(val & ETH_TDES_LS)
-			desc->length |= ETH_TDES1_LS;
+			length |= ETH_TDES1_LS;
 		if(val & ETH_TDES_FS)
-			desc->length |= ETH_TDES1_FS;
+			length |= ETH_TDES1_FS;
 		if(val & ETH_TDES_TCH)
-			desc->length |= ETH_TDES1_TCH;
+			length |= ETH_TDES1_TCH;
 		if(val & ETH_TDES_CIC)
-			desc->length |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
+			length |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
+
+		desc->length |= length;
 	}
 
 }
@@ -296,8 +302,9 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 
 static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 {
-	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
+	lp->tx.desc_tx[entry].status = 0;
 	amba_set_eth_desc(&lp->tx.desc_tx[entry], ETH_TDES_IC);
+	lp->tx.desc_tx[entry].status |= ETH_TDES0_OWN;
 	amba_writel(lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET,
 		(u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)));
 	if (netif_msg_tx_err(lp)) {
@@ -942,6 +949,7 @@ static inline void ambeth_tx_rngmng_init(struct ambeth_info *lp)
 	lp->tx.dirty_tx = 0;
 	for (i = 0; i < lp->tx_count; i++) {
 		lp->tx.rng_tx[i].mapping = 0;
+		lp->tx.desc_tx[i].length = 0;
 		amba_set_eth_desc(&lp->tx.desc_tx[i], ETH_TDES_LS | ETH_TDES_FS
 			| ETH_TDES_TCH);
 		lp->tx.desc_tx[i].buffer1 = 0;
@@ -1486,8 +1494,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	lp->tx.rng_tx[entry].mapping = mapping;
 	lp->tx.desc_tx[entry].buffer1 = mapping;
 	lp->tx.desc_tx[entry].length = ETH_TDES1_TBS1x(skb->len);
-	lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
+	lp->tx.desc_tx[entry].status = 0;
 	amba_set_eth_desc(&lp->tx.desc_tx[entry], tx_flag);
+	lp->tx.desc_tx[entry].status |= ETH_TDES0_OWN;
 
 	lp->tx.cur_tx++;
 	ambhw_dma_tx_poll(lp);
