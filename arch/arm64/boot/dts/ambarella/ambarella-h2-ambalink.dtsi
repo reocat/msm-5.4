@@ -1053,4 +1053,12 @@
 			amb,scr-regmap = <&scratchpad_syscon>;
                 };
         };
+
+        amba_heapmem: ambarella-amba_heapmem {
+            compatible = "ambarella,amba_heapmem";
+        };
+
+        amba_dspmem: ambarella-amba_dspmem {
+            compatible = "ambarella,amba_dspmem";
+        };
 };

@@ -33,6 +33,13 @@
 #include <plat/ambalink_cfg.h>
 
 /*----------------------------------------------------------------------------*/
+#if 1 // debug
+    #define dbg_trace(str, args...)     printk("@@@ %s[#%d]: " str, __func__, __LINE__, ## args)
+#else
+    #define dbg_trace(str, args...)
+#endif
+
+
 typedef u32 UINT32;
 typedef u64 UINT64;
 
@@ -47,9 +54,9 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
 	LINK_CTRL_CMD_SET_RTOS_MEM
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
-/*---------------------------------------------------------------------------*\
+/**
  * LinkCtrlSuspendLinux related data structure.
-\*---------------------------------------------------------------------------*/
+ */
 typedef enum _AMBA_RPDEV_LINK_CTRL_SUSPEND_TARGET_e_ {
     LINK_CTRL_CMD_SUSPEND_TO_DISK = 0,
     LINK_CTRL_CMD_SUSPEND_TO_DRAM
@@ -79,8 +86,8 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_MEMTYPE_e_ {
 } AMBA_RPDEV_LINK_CTRL_MEMTYPE_e;
 
 struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ {
-        void *base_addr;
-	void *phys_addr;
+    UINT64 base_addr;
+	UINT64 phys_addr;
 	UINT32 size;
 	UINT32 padding;
 	UINT32 padding1;
@@ -148,6 +155,8 @@ static int rpmsg_linkctrl_suspend(void *data)
 	                   "linkctrl_suspend");
 	if (IS_ERR(task))
 		return PTR_ERR(task);
+#else
+    dbg_trace("To Do feature !!!!!!!\n");
 #endif
 	return 0;
 }
@@ -215,6 +224,8 @@ static int rpmsg_linkctrl_set_rtos_mem(void *data)
 		printk("Ambarella RTOS non-cached heap memory resource %pR cannot be added\n",
 			&amba_heapmem[2]);
 	}
+#else
+    dbg_trace("To Do feature !!!!!!!\n");
 #endif
 	return 0;
 }
@@ -225,7 +236,7 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 	u64 phy_addr;
 
-	//printk("%s: type=%d\n", __func__, type);
+	dbg_trace("type=%d\n", type);
 
 	phy_addr = (u64) ambalink_virt_to_phys((unsigned long) &rpdev_meminfo);
 
@@ -242,8 +253,8 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 	*phys = rpdev_meminfo.phys_addr;
 	*size = rpdev_meminfo.size;
 
-	//printk("%s: type=%u, base=%p, phys=%p size=0x%08x\n", __func__ ,
-	//	type, rpdev_meminfo.base_addr, rpdev_meminfo.phys_addr, rpdev_meminfo.size);
+	dbg_trace("type= %u, base= x%llx, phys= x%llx, size= x%x\n",
+	    type, rpdev_meminfo.base_addr, rpdev_meminfo.phys_addr, rpdev_meminfo.size);
 
 	return 0;
 }
@@ -253,7 +264,7 @@ int rpmsg_linkctrl_cmd_suspend_prepare(u32 info)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
-	//printk("%s: 0x%08x\n", __func__ , info);
+	dbg_trace("0x%08x\n", info);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_HIBER_PREPARE_FROM_LINUX;
@@ -273,7 +284,7 @@ int rpmsg_linkctrl_cmd_suspend_enter(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
-	//printk("%s\n", __func__);
+	dbg_trace("\n");
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_HIBER_ENTER_FROM_LINUX;
@@ -315,9 +326,8 @@ static void rpmsg_linkctrl_cb(struct rpmsg_channel *rpdev, void *data, int len,
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s *msg = (AMBA_RPDEV_LINK_CTRL_CMD_s *) data;
 
-#if 0
-	printk("recv: cmd = [%d], data = [0x%08x]", msg->Cmd, msg->Param);
-#endif
+    dbg_trace("recv: cmd= %d, param1= x%llx, param2= x%llx\n",
+        msg->Cmd, msg->Param1, msg->Param2);
 
 	switch (msg->Cmd) {
 	case LINK_CTRL_CMD_HIBER_ACK:
