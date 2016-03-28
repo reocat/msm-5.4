@@ -167,21 +167,13 @@ static const struct file_operations ambarella_udc_fops = {
 
 static const char proc_node_name[] = "driver/udc";
 
-static int ambarella_debugfs_udc_read(char *page, char **start,
-	off_t off, int count, int *eof, void *_dev)
+static int ambarella_debugfs_udc_read(struct seq_file *m, void *v)
 {
-	char *buf = page;
-	struct ambarella_udc *udc = _dev;
-	char *next = buf;
-	unsigned size = count;
-	int t;
+	struct ambarella_udc *udc = (struct ambarella_udc *)m->private;
 	struct usb_ctrlrequest *crq = (struct usb_ctrlrequest *)&udc->setup[0];
 
-	if (off != 0)
-		return 0;
-
 	/* basic device status */
-	t = scnprintf(next, size,
+	seq_printf(m,
 		DRIVER_DESC "\n"
 		"Name: %s\n"
 		"Version: %s\n"
@@ -194,16 +186,12 @@ static int ambarella_debugfs_udc_read(char *page, char **start,
 		udc->driver ? udc->driver->driver.name : "(none)",
 		udc->vbus_status ? (udc->gadget.speed == USB_SPEED_HIGH ?
 			"high speed" : "full speed") : "disconnected");
-	size -= t;
-	next += t;
 
-	t = scnprintf(next, size, "the last setup packet is: \n"
+	seq_printf(m, "the last setup packet is: \n"
 		"bRequestType = 0x%02x, bRequest = 0x%02x,\n"
 		"wValue = 0x%04x, wIndex = 0x%04x, wLength = 0x%04x\n\n",
 		crq->bRequestType, crq->bRequest, crq->wValue, crq->wIndex,
 		crq->wLength);
-	size -= t;
-	next += t;
 
 /*
 	t = scnprintf(next, size, "max_cmd_num = %d\tmax_ep0_cmd_num = %d\n\n",
@@ -211,11 +199,26 @@ static int ambarella_debugfs_udc_read(char *page, char **start,
 	size -= t;
 	next += t;
 */
-	*eof = 1;
-	return count - size;
+	return 0;
 }
 
-#define create_debugfs_files() 	create_proc_read_entry(proc_node_name, 0, NULL, ambarella_debugfs_udc_read, udc)
+/*
+ * seq_file wrappers for procfile show routines.
+ */
+static int ambarella_debugfs_udc_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ambarella_debugfs_udc_read, PDE_DATA(inode));
+}
+
+static const struct file_operations ambarella_debugfs_udc_proc_fops = {
+	.open		= ambarella_debugfs_udc_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+#define create_debugfs_files() 	proc_create_data(proc_node_name, 0, NULL, \
+					&ambarella_debugfs_udc_proc_fops, udc);
 #define remove_debugfs_files() 	remove_proc_entry(proc_node_name, NULL)
 
 #else	/* !CONFIG_USB_GADGET_DEBUG_FILES */
