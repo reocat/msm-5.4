@@ -105,6 +105,10 @@ static struct static_key supports_deactivate = STATIC_KEY_INIT_TRUE;
 
 static struct gic_chip_data gic_data[MAX_GIC_NR] __read_mostly;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+u32 gic_resume_mask[DIV_ROUND_UP(1020, 32)];
+#endif
+
 #ifdef CONFIG_GIC_NON_BANKED
 static void __iomem *gic_get_percpu_base(union gic_base *base)
 {
@@ -221,6 +225,8 @@ static void gic_eoimode1_mask_irq(struct irq_data *d)
 static void gic_unmask_irq(struct irq_data *d)
 {
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	gic_resume_mask[gic_irq(d) >> 5] |= (1 << (gic_irq(d) % 32));
+
         gic_irq_set_target(d);
 #endif
 	gic_poke_irq(d, GIC_DIST_ENABLE_SET);
@@ -513,6 +519,8 @@ static void __init gic_dist_init(struct gic_chip_data *gic)
 	gic_dist_config(base, gic_irqs, NULL);
 
 	writel_relaxed(GICD_ENABLE, base + GIC_DIST_CTRL);
+#else
+	memset(gic_resume_mask, 0x0, sizeof(u32) * DIV_ROUND_UP(1020, 32));
 #endif
 }
 
@@ -575,8 +583,7 @@ int gic_cpu_if_down(unsigned int gic_nr)
 
 #ifdef CONFIG_CPU_PM
 u32 saved_spi_pri[DIV_ROUND_UP(1020, 4)];
-u32 gic_dist_ctrl;
-
+u32 saved_gicd_ctrl;
 
 /*
  * Saves the GIC distributor registers during suspend or idle.  Must be called
@@ -615,12 +622,12 @@ static void gic_dist_save(unsigned int gic_nr)
 		gic_data[gic_nr].saved_spi_active[i] =
 			readl_relaxed(dist_base + GIC_DIST_ACTIVE_SET + i * 4);
 
-#if 1
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		saved_spi_pri[i] =
 			readl_relaxed(dist_base + GIC_DIST_PRI + i * 4);
 
-	gic_dist_ctrl = readl_relaxed(dist_base + GIC_DIST_CTRL);
+	saved_gicd_ctrl = readl_relaxed(dist_base + GIC_DIST_CTRL);
 #endif
 }
 
@@ -636,6 +643,9 @@ static void gic_dist_restore(unsigned int gic_nr)
 	unsigned int gic_irqs;
 	unsigned int i;
 	void __iomem *dist_base;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	u32 regval, mask, resume_val, int_no, val;
+#endif
 
 	if (gic_nr >= MAX_GIC_NR)
 		BUG();
@@ -648,19 +658,47 @@ static void gic_dist_restore(unsigned int gic_nr)
 
 	writel_relaxed(GICD_DISABLE, dist_base + GIC_DIST_CTRL);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++) {
+		/* Translate the mask from 1-bit to 2-bit. */
+		mask = 0;
+                for (int_no = (i * 16); int_no < (i + 16); int_no++) {
+                        val = (((gic_resume_mask[i / 2] >> int_no) & 0x1) ? 0x3 : 0x0);
+                        mask |= val << ((int_no % 16) << 1);
+                }
+
+		/* Clear then OR the value. */
+                regval = (readl_relaxed(dist_base + GIC_DIST_CONFIG + i * 4) & ~mask);
+                resume_val = gic_data[gic_nr].saved_spi_conf[i] & mask;
+
+                writel_relaxed(regval | resume_val,
+				dist_base + GIC_DIST_CONFIG + i * 4);
+	}
+
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		writel_relaxed(saved_spi_pri[i],
+			dist_base + GIC_DIST_PRI + i * 4);
+
+#if 0
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		writel_relaxed(gic_data[gic_nr].saved_spi_target[i],
+			dist_base + GIC_DIST_TARGET + i * 4);
+#endif
+
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++) {
+                writel_relaxed((gic_data[gic_nr].saved_spi_enable[i] & gic_resume_mask[i]),
+                                dist_base + GIC_DIST_ENABLE_SET + i * 4);
+	}
+
+	writel_relaxed(saved_gicd_ctrl, dist_base + GIC_DIST_CTRL);
+#else
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++)
 		writel_relaxed(gic_data[gic_nr].saved_spi_conf[i],
 			dist_base + GIC_DIST_CONFIG + i * 4);
 
-#if 1
-	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
-		writel_relaxed(saved_spi_pri[i],
-			dist_base + GIC_DIST_PRI + i * 4);
-#else
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		writel_relaxed(GICD_INT_DEF_PRI_X4,
 			dist_base + GIC_DIST_PRI + i * 4);
-#endif
 
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
 		writel_relaxed(gic_data[gic_nr].saved_spi_target[i],
@@ -680,9 +718,6 @@ static void gic_dist_restore(unsigned int gic_nr)
 			dist_base + GIC_DIST_ACTIVE_SET + i * 4);
 	}
 
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-	writel_relaxed(gic_dist_ctrl, dist_base + GIC_DIST_CTRL);
-#else
 	writel_relaxed(GICD_ENABLE, dist_base + GIC_DIST_CTRL);
 #endif
 }
