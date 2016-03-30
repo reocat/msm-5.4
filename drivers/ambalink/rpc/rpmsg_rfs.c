@@ -70,8 +70,8 @@ struct aipc_rfs_msg {
 	unsigned char   msg_type;
 	unsigned char   xprt;
 	unsigned short  msg_len;
-	void*           reserved;
-	int             parameter[0];
+	u32		reserved;
+	u64		parameter[0];
 };
 
 struct aipc_rfs_open {
@@ -86,7 +86,7 @@ struct aipc_rfs_close {
 struct aipc_rfs_seek {
 	struct file*    filp;
 	int             origin;
-	int             offset;
+	loff_t		offset;
 };
 
 struct aipc_rfs_io {
@@ -115,13 +115,13 @@ struct aipc_rfs_stat {
 };
 
 struct pf_devinf {
-	unsigned long cls;	/* total number of clusters */
-	unsigned long ecl;	/* number of unused clusters */
-	unsigned long bps;	/* byte count per sector */
-	unsigned long spc;	/* sector count per cluster */
-	unsigned long cpg;	/* cluster count per cluster group */
-	unsigned long ecg;	/* number of unused cluster groups */
-	int fmt;		/* format type */
+	u32 cls;	/* total number of clusters */
+	u32 ecl;	/* number of unused clusters */
+	u32 bps;	/* byte count per sector */
+	u32 spc;	/* sector count per cluster */
+	u32 cpg;	/* cluster count per cluster group */
+	u32 ecg;	/* number of unused cluster groups */
+	int fmt;	/* format type */
 #define PF_FMT_FAT12	0
 #define PF_FMT_FAT16	1
 #define PF_FMT_FAT32	2
@@ -172,15 +172,15 @@ static void rfs_open(struct aipc_rfs_msg *msg)
 
 	if (mode != -1) {
 		filp = filp_open(param->name, mode, 0);
-		//DMSG("rfs_open %s %p\n", param->name, filp);
+		DMSG("rfs_open %s %p\n", param->name, filp);
 
 		if (!IS_ERR(filp) && filp != NULL) {
 			msg->msg_type = AIPC_RFS_REPLY_OK;
-			msg->parameter[0] = (int)filp;
+			msg->parameter[0] = (u64)filp;
 		}
 	}
 
-	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
+	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 }
 
 /*
@@ -191,7 +191,7 @@ static void rfs_read(struct aipc_rfs_msg *msg)
 	struct aipc_rfs_io *param = (struct aipc_rfs_io*)msg->parameter;
 	mm_segment_t oldfs = get_fs();
 	struct file* filp = param->filp;
-	void *data = (void *) ambalink_phys_to_virt((void *) param->data);
+	void *data = (void *) ambalink_phys_to_virt((unsigned long) param->data);
 	int ret = 0;
 
 	if (param->size) {
@@ -203,7 +203,7 @@ static void rfs_read(struct aipc_rfs_msg *msg)
 	}
 
 	msg->msg_type = AIPC_RFS_REPLY_OK;
-	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
+	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 	msg->parameter[0] = ret;
 }
 
@@ -215,7 +215,7 @@ static void rfs_write(struct aipc_rfs_msg *msg)
 	struct aipc_rfs_io *param = (struct aipc_rfs_io*)msg->parameter;
 	mm_segment_t oldfs = get_fs();
 	struct file* filp = param->filp;
-	void *data = (void *) ambalink_phys_to_virt((void *) param->data);
+	void *data = (void *) ambalink_phys_to_virt((unsigned long) param->data);
 	int ret = 0;
 
 	if (param->size) {
@@ -227,7 +227,7 @@ static void rfs_write(struct aipc_rfs_msg *msg)
 	}
 
 	msg->msg_type = AIPC_RFS_REPLY_OK;
-	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
+	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 	msg->parameter[0] = ret;
 }
 
@@ -252,7 +252,8 @@ static void rfs_close(struct aipc_rfs_msg *msg)
 static void rfs_tell(struct aipc_rfs_msg *msg)
 {
         struct aipc_rfs_seek *param = (struct aipc_rfs_seek*)msg->parameter;
-	*(long long*)msg->parameter = (long long)(param->filp->f_pos);
+	msg->parameter[0] = (long long)(param->filp->f_pos);
+	msg->msg_len  = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 }
 
 /*
@@ -280,7 +281,7 @@ static void rfs_seek(struct aipc_rfs_msg *msg)
 	offset = vfs_llseek(param->filp, offset, origin);
 	msg->msg_type = AIPC_RFS_REPLY_OK;
 	msg->msg_len  = sizeof(struct aipc_rfs_msg) + sizeof(long long);
-	*(long long*)msg->parameter = (long long)offset;
+	msg->parameter[0] = offset;
 }
 
 /*
@@ -296,7 +297,7 @@ static void rfs_remove(struct aipc_rfs_msg *msg)
 	set_fs(oldfs);
 
 	DMSG("rfs_remove %s %d\n", param->name, ret);
-	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
+	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 	msg->parameter[0] = ret;
 }
 
@@ -459,7 +460,7 @@ static void rfs_stat(struct aipc_rfs_msg *msg)
 	int ret;
 	mm_segment_t oldfs = get_fs();
 
-	stat = (struct kstat *) ambalink_phys_to_virt((void *) param->stat);
+	stat = (struct kstat *) ambalink_phys_to_virt((unsigned long) param->stat);
 	set_fs(KERNEL_DS);
 	ret = vfs_stat(param->name, stat);
 	set_fs(oldfs);
@@ -481,7 +482,7 @@ static void rfs_getdev(struct aipc_rfs_msg *msg)
 	int ret;
 	mm_segment_t oldfs = get_fs();
 
-	info = (struct pf_devinf *) ambalink_phys_to_virt((void *) param->devinf);
+	info = (struct pf_devinf *) ambalink_phys_to_virt((unsigned long) param->devinf);
 	memset(info, 0x0, sizeof(struct pf_devinf));
 	memset(&statfs, 0x0, sizeof(statfs));
 	set_fs(KERNEL_DS);
@@ -547,7 +548,7 @@ static void rfs_mkdir(struct aipc_rfs_msg *msg)
 	if(ret < 0) {
 		DMSG("rfs_mkdir error: %d\n", ret);
 	}
-	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
+	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 	msg->parameter[0] = ret;
 }
 
@@ -567,7 +568,7 @@ static void rfs_rmdir(struct aipc_rfs_msg *msg)
 	if(ret < 0) {
 		DMSG("rfs_rmdir %s %d\n", param->name, ret);
 	}
-	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(int);
+	msg->msg_len = sizeof(struct aipc_rfs_msg) + sizeof(u64);
 	msg->parameter[0] = ret;
 }
 
@@ -612,7 +613,7 @@ static void rfs_opendir(struct aipc_rfs_msg *msg)
 	ptr->buf_size = maxsize;
 	ptr->read_size = 0;
 	ptr->offset = 0;
-	msg->parameter[0] = (int)ptr;
+	msg->parameter[0] = (u64)ptr;
 
 }
 
