@@ -42,8 +42,8 @@
 #define SPI_SLAVE_INSTANCES			1
 #define SPI_AHB_SLAVE_INSTANCES			0
 #elif (CHIP_REV == S2E)
-#define SPI_INSTANCES				2
-#define SPI_AHB_INSTANCES			0
+#define SPI_INSTANCES				1
+#define SPI_AHB_INSTANCES			1
 #define SPI_SLAVE_INSTANCES			1
 #define SPI_AHB_SLAVE_INSTANCES			0
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
@@ -118,6 +118,12 @@
 #define SSI_DMA_OFFSET			0xD000
 #define SSI_DMA_BASE			(AHB_BASE + SSI_DMA_OFFSET)
 #define SSI_DMA_REG(x)			(SSI_DMA_BASE + (x))
+
+#if (SPI_INSTANCES == 1)
+#define SPI2_OFFSET			0x1F000
+#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
+#define SPI2_REG(x)			(SPI2_BASE + (x))
+#endif
 #endif
 
 #if (SPI_AHB_INSTANCES == 2)
