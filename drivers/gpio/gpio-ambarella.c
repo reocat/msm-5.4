@@ -128,7 +128,7 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 	writel_relaxed(mask, regbase + GPIO_DATA_OFFSET);
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-	writel_relaxed(regbase + GPIO_MASK_OFFSET, mask_bak);
+	writel_relaxed(mask_bak, regbase + GPIO_MASK_OFFSET);
 #endif
 	amb_gpio_raw_unlock(&flags);
 }
@@ -157,7 +157,7 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 	data = readl_relaxed(regbase + GPIO_DATA_OFFSET);
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-	writel_relaxed(regbase + GPIO_MASK_OFFSET, mask_bak);
+	writel_relaxed(mask_bak, regbase + GPIO_MASK_OFFSET);
 #endif
 	amb_gpio_raw_unlock(&flags);
 
@@ -226,7 +226,7 @@ static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 			writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-			writel_relaxed(regbase + GPIO_MASK_OFFSET, mask_bak);
+			writel_relaxed(mask_bak, regbase + GPIO_MASK_OFFSET);
 #endif
 			amb_gpio_raw_unlock(&flags);
 

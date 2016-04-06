@@ -1275,6 +1275,10 @@ copy_data_pages(struct memory_bitmap *copy_bm, struct memory_bitmap *orig_bm)
 {
 	struct zone *zone;
 	unsigned long pfn;
+	unsigned long dst_pfn;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	extern void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn);
+#endif
 
 	for_each_populated_zone(zone) {
 		unsigned long max_zone_pfn;
@@ -1291,7 +1295,11 @@ copy_data_pages(struct memory_bitmap *copy_bm, struct memory_bitmap *orig_bm)
 		pfn = memory_bm_next_pfn(orig_bm);
 		if (unlikely(pfn == BM_END_OF_MAP))
 			break;
-		copy_data_page(memory_bm_next_pfn(copy_bm), pfn);
+		dst_pfn = memory_bm_next_pfn(copy_bm);
+		copy_data_page(dst_pfn, pfn);
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+		arch_copy_data_page(dst_pfn, pfn);
+#endif
 	}
 }
 
@@ -1920,10 +1928,7 @@ static int init_header(struct swsusp_info *info)
 	info->pages = snapshot_get_image_size();
 	info->size = info->pages;
 	info->size <<= PAGE_SHIFT;
-#if defined(CONFIG_ARCH_AMBARELLA) && defined(CONFIG_PM)
-	info->magic = 0x0badbeef;
-	info->addr  = virt_to_phys(ambarella_cpu_resume);
-#endif
+
 	return init_header_complete(info);
 }
 
@@ -1942,9 +1947,6 @@ pack_pfns(unsigned long *buf, struct memory_bitmap *bm)
 		if (unlikely(buf[j] == BM_END_OF_MAP))
 			break;
 
-#ifdef CONFIG_ARCH_AMBARELLA
-		buf[j] = __pfn_to_phys(buf[j]);
-#endif
 		/* Save page key for data page (s390 only). */
 		page_key_read(buf + j);
 	}
@@ -2628,7 +2630,3 @@ int restore_highmem(void)
 }
 #endif /* CONFIG_HIGHMEM */
 
-
-#ifdef CONFIG_ARCH_AMBARELLA
-#include "../../arch/arm/mach-ambarella/hibernate.c"
-#endif

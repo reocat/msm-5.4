@@ -46,7 +46,7 @@ typedef u64 UINT64;
 typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
 	LINK_CTRL_CMD_SUSPEND_PREPARE = 0,
 	LINK_CTRL_CMD_SUSPEND_DONE,
-	LINK_CTRL_CMD_RESTORE,
+	LINK_CTRL_CMD_SUSPEND_EXIT,
 	LINK_CTRL_CMD_SUSPEND_ACK,
 	LINK_CTRL_CMD_SUSPEND,
 	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST,
@@ -254,19 +254,24 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 }
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_get_mem_info);
 
-int rpmsg_linkctrl_cmd_suspend_prepare(u32 info)
+extern void *ambalink_image_info;
+
+int rpmsg_linkctrl_cmd_suspend_prepare(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
-	dbg_trace("0x%08x\n", info);
+	dbg_trace("0x%016lx\n", info);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_SUSPEND_PREPARE;
-	ctrl_cmd.Param1 = info;
+	ctrl_cmd.Param1 = ambarella_virt_to_phys((unsigned long) &ambalink_image_info);
 
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 
 	wait_for_completion(&linkctrl_comp);
+
+	ambalink_image_info = (void *) ambarella_phys_to_virt(
+					(unsigned long) ambalink_image_info);
 
 	hibernation_start = 1;
 
@@ -299,7 +304,7 @@ int rpmsg_linkctrl_cmd_suspend_exit(int flag)
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
-	ctrl_cmd.Cmd = LINK_CTRL_CMD_RESTORE;
+	ctrl_cmd.Cmd = LINK_CTRL_CMD_SUSPEND_EXIT;
 	ctrl_cmd.Param1 = flag;
 
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
@@ -364,7 +369,7 @@ static int rpmsg_linkctrl_pm_callback(struct notifier_block *nb,
 		rpmsg_linkctrl_cmd_suspend_exit(LINK_CTRL_CMD_SUSPEND_TO_DRAM);
 		break;
 	case PM_POST_HIBERNATION:
-		rpmsg_linkctrl_cmd_suspend_done(LINK_CTRL_CMD_SUSPEND_TO_DISK);
+		rpmsg_linkctrl_cmd_suspend_exit(LINK_CTRL_CMD_SUSPEND_TO_DISK);
 		break;
 	case PM_POST_RESTORE:
 		rpmsg_linkctrl_cmd_suspend_exit(LINK_CTRL_CMD_SUSPEND_TO_DRAM);

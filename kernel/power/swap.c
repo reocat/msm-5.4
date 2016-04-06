@@ -893,6 +893,9 @@ int swsusp_write(unsigned int flags)
 	struct swsusp_info *header;
 	unsigned long pages;
 	int error;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	extern int arch_swsusp_write(void *header);
+#endif
 
 	pages = snapshot_get_image_size();
 	error = get_swap_writer(&handle);
@@ -916,6 +919,12 @@ int swsusp_write(unsigned int flags)
 		goto out_finish;
 	}
 	header = (struct swsusp_info *)data_of(snapshot);
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	error = arch_swsusp_write(header);
+
+out_finish:
+#else
 	error = swap_write_page(&handle, header, NULL);
 	if (!error) {
 		error = (flags & SF_NOCOMPRESS_MODE) ?
@@ -924,6 +933,7 @@ int swsusp_write(unsigned int flags)
 	}
 out_finish:
 	error = swap_writer_finish(&handle, flags, error);
+#endif
 	return error;
 }
 
