@@ -47,6 +47,7 @@ linux: $(DOT_CONFIG)
 	@cp -dpRf $(LINUX_OUT_DIR)/arch/arm/boot/zImage $(KERNEL_OUT_DIR)/zImage
 	@echo "Build $@ Done."
 
+$(call add-image-into-build, knl:$(KERNEL_OUT_DIR)/Image:LOAD)
 $(call add-target-into-build, linux)
 
 ###
