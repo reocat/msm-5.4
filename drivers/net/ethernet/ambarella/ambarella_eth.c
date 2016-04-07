@@ -2140,6 +2140,38 @@ done:
 	return ret_val;
 }
 
+static int ambeth_get_eee(struct net_device *ndev, struct ethtool_eee *e)
+{
+	struct ambeth_info *lp = netdev_priv(ndev);
+
+	/*now our chip don't support EEE*/
+	e->eee_enabled = false;
+	e->eee_active = false;
+	e->tx_lpi_enabled = false;
+	e->tx_lpi_timer = 0;
+
+	return phy_ethtool_get_eee(lp->phydev, e);
+}
+
+static int ambeth_set_eee(struct net_device *ndev, struct ethtool_eee *e)
+{
+	struct ambeth_info *lp = netdev_priv(ndev);
+	int ret = 0;
+
+	if(e->eee_enabled || e->tx_lpi_enabled) {
+		dev_err(&lp->ndev->dev, "eth don't support EEE.\n");
+		return -EOPNOTSUPP;
+	}
+
+	ret = phy_init_eee(lp->phydev, 0);
+	if (ret) {
+		dev_err(&lp->ndev->dev, "phy don't support EEE.\n");
+		return ret;
+	}
+
+	return phy_ethtool_set_eee(lp->phydev, e);
+}
+
 static const struct ethtool_ops ambeth_ethtool_ops = {
 	.get_settings		= ambeth_get_settings,
 	.set_settings		= ambeth_set_settings,
@@ -2151,6 +2183,8 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 	.set_msglevel		= ambeth_set_msglevel,
 	.get_pauseparam		= ambeth_get_pauseparam,
 	.set_pauseparam		= ambeth_set_pauseparam,
+	.get_eee		= ambeth_get_eee,
+	.set_eee		= ambeth_set_eee,
 };
 
 /* ==========================================================================*/
