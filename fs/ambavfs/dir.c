@@ -278,8 +278,8 @@ static int start_readdir(struct file *file, struct dir_context *ctx)
 /*
  * send LS_INIT/LS_NEXT/LS_EXIT rpmsg to get the directory info
  *    f_pos == 0: readdir is started
- *    f_pos == LLONG_MAX: readdir is completely finished.
- *    otherwise, f_pos holds the page address
+ *    private_data == LLONG_MAX: readdir is completely finished.
+ *    f_pos != 0 && private_data != LLONG_MAX: readdir need to be continued.
  */
 static int ambafs_dir_readdir(struct file *file, struct dir_context *ctx)
 {
@@ -290,11 +290,14 @@ static int ambafs_dir_readdir(struct file *file, struct dir_context *ctx)
 
 	AMBAFS_DMSG("%s \r\n", __func__);
 	if (file->f_pos == 0) {
+		file->private_data = 0;
 		if ((ret = start_readdir(file, ctx)) <= 0) {
 			if (ret < 0)
 				printk(KERN_ERR "start_readdir nodev\n");
 			goto ls_exit;
 		}
+	} else if (file->private_data != LLONG_MAX) {
+		file->f_pos = (loff_t) file->private_data;
 	} else {
 		return 0;
 	}
@@ -312,8 +315,10 @@ static int ambafs_dir_readdir(struct file *file, struct dir_context *ctx)
 	        if (msg->flag == 0)
 			break;
 
-		if (fill_dir_from_msg(dir_db, dir, ctx))
-			return 1;
+		if (fill_dir_from_msg(dir_db, dir, ctx)) {
+			file->private_data = (void *) file->f_pos;
+			return 0;
+		}
 	}
 	set_nlink(file->f_path.dentry->d_inode, dir_db->nlink);
 
@@ -326,7 +331,7 @@ ls_exit:
 	msg->cmd = AMBAFS_CMD_LS_EXIT;
 	ambafs_rpmsg_send(msg, 4, NULL, 0);
 	free_page((unsigned long)file->f_pos);
-	file->f_pos = LLONG_MAX;
+	file->private_data = LLONG_MAX;
 	return 0;
 }
 
