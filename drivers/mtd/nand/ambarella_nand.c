@@ -929,13 +929,14 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 						corrected = (nand_info->fio_ecc_sta >> 16) & 0x000F;
 						dev_info(nand_info->dev, "BCH correct [%d]bit in block[%d]\n",
 						corrected, (nand_info->fio_ecc_sta & 0x00007FFF));
+					} else {
+						/* once bitflip and data corrected happened, BCH will keep on
+						 * to report bitflip in following read operations, even though
+						 * there is no bitflip happened really. So this is a workaround
+						 * to get it back. */
+						nand_amb_corrected_recovery(nand_info);
 					}
 					nand_info->mtd.ecc_stats.corrected += corrected;
-					/* once bitflip and data corrected happened, BCH will keep on
-					 * to report bitflip in following read operations, even though
-					 * there is no bitflip happened really. So this is a workaround
-					 * to get it back. */
-					nand_amb_corrected_recovery(nand_info);
 				}
 			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
