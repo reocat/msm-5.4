@@ -1553,7 +1553,9 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_info *nand_info)
 static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 {
 	/* reset FIO by RCT */
+	fio_select_lock(SELECT_FIO_FL);
 	ambarella_fio_rct_reset();
+	fio_unlock(SELECT_FIO_FL);
 
 	/* Exit random read mode */
 	amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET, FIO_CTR_RR);
