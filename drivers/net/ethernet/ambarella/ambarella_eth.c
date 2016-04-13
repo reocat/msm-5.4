@@ -2221,19 +2221,19 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	hw_intf &= ETH_DMA_HWFEA_ACTPHYIF_MASK;
 
 	switch (lp->intf_type) {
-		case PHY_INTERFACE_MODE_GMII:
-		case PHY_INTERFACE_MODE_MII:
-			ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_GMII) ? 0 : -1;
-			break;
-		case PHY_INTERFACE_MODE_RGMII:
-			ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RGMII) ? 0 : -1;
-			break;
-		case PHY_INTERFACE_MODE_RMII:
-			ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RMII) ? 0 : -1;
-			break;
-		default:
-			ret_val = -1;
-			break;
+	case PHY_INTERFACE_MODE_GMII:
+	case PHY_INTERFACE_MODE_MII:
+		ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_GMII) ? 0 : -1;
+		break;
+	case PHY_INTERFACE_MODE_RGMII:
+		ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RGMII) ? 0 : -1;
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+		ret_val = (hw_intf == ETH_DMA_HWFEA_ACTPHYIF_RMII) ? 0 : -1;
+		break;
+	default:
+		ret_val = -1;
+		break;
 	}
 	if (ret_val < 0) {
 		dev_err(lp->ndev->dev.parent,
