@@ -104,8 +104,10 @@ static int wiphy_suspend(struct device *dev)
 
 	rtnl_lock();
 	if (rdev->wiphy.registered) {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 		if (!rdev->wiphy.wowlan_config)
 			cfg80211_leave_all(rdev);
+#endif
 		if (rdev->ops->suspend)
 			ret = rdev_suspend(rdev, rdev->wiphy.wowlan_config);
 		if (ret == 1) {
