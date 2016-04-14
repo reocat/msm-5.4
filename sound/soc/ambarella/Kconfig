@@ -59,6 +59,11 @@ config SND_SOC_AK7719_DSP
 	  SoC audio on Ambarella Board.
 	  and the AK7719_DSP should be modprobed before AK4954/AK4951.
 
+config SND_SOC_AK7755
+	tristate "AK7755 for Ambarella"
+	help
+		Support AK7755 for Ambarella S2E/S2L/S3L.
+
 config SND_SOC_TLV320ADC3xxx
 	tristate "TLV320ADC3xxx for Ambarella"
 	help
