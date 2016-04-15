@@ -896,8 +896,9 @@
 			amb,extra-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
-			amb,ctrl2-val = <0x3f770b00>;
+			amb,ctrl3-val = <0x00068306>;
 			amb,init-rate = <24000000>;
+			amb,min-vco = <2500>; /* in MHz */
 		};
 
 		gclk_vo2: gclk-vo2 { /* for lcd */

@@ -64,6 +64,7 @@ struct amb_clk_pll {
 	u32 ctrl3_val;
 	u32 fix_divider;
 	u32 init_rate;
+	u32 min_vco; /* in MHz */
 };
 
 #define to_amb_clk_pll(_hw) container_of(_hw, struct amb_clk_pll, hw)
@@ -175,20 +176,21 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		return -EINVAL;
 	}
 
-	/* fvco should be less than 1.5GHz, so we use 64 as max_numerator,
-	 * although the actual bit width of pll_intp is 7 */
+	/* non-HDMI fvco should be less than 1.5GHz and higher than 700MHz.
+	 * HDMI fvco should be less than 5.5GHz, and much higher than 700MHz,
+	 * probably higher than 2GHz, but not sure, need VLSI's confirmation */
+
 	rational_best_approximation(rate, parent_rate, 64, 16, &intp, &sout);
 
-	/* fvco should be faster than 700MHz, otherwise pll out is not stable */
-	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < 700) {
+	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < clk_pll->min_vco) {
 		if (sout > 8 || intp > 64)
 			break;
 		intp *= 2;
 		sout *= 2;
 	}
 
+	BUG_ON(intp > 128 || sout > 16 || sdiv > 16);
 	BUG_ON(pre_scaler > 16 || post_scaler > 16);
-	BUG_ON(intp > 64 || sdiv > 16 || sout > 16 || sdiv > 16);
 
 	if (clk_pll->pres_reg != NULL) {
 		if (clk_pll->extra_scaler == 1)
@@ -352,6 +354,9 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 
 	if (of_property_read_u32(np, "amb,init-rate", &clk_pll->init_rate))
 		clk_pll->init_rate = -1;
+
+	if (of_property_read_u32(np, "amb,min-vco", &clk_pll->min_vco))
+		clk_pll->min_vco = 700;
 
 	init.name = name;
 	init.ops = &pll_ops;
