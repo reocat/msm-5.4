@@ -156,6 +156,7 @@ struct ambeth_info {
 					dump_rx_all : 1;
 	bool			clk_direction;
 	bool 			enhance;
+	bool			clk_invert;
 };
 
 /* ==========================================================================*/
@@ -2302,8 +2303,11 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		}
 
 		if (of_property_read_bool(phy_np, "amb,clk-invert")) {
+			lp->clk_invert = true;
 			/*invert the clk for ethernet*/
 			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
+		} else {
+			lp->clk_invert = false;
 		}
 
 		if (of_property_read_bool(phy_np, "amb,clk-dir")) {
@@ -2557,6 +2561,11 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		/*set ref clock pin as input from PHY*/
 		regmap_update_bits(lp->reg_rct,
 				AHB_MISC_OFFSET, 0x20, 0x20);
+	}
+
+	if (lp->clk_invert) {
+		/*invert the clk for ethernet*/
+		regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
 	}
 
 	if (gpio_is_valid(lp->pwr_gpio))
