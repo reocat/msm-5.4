@@ -82,6 +82,11 @@
 		};
 	};
 
+	reboot {
+		compatible = "ambarella,reboot";
+		amb,rct-regmap = <&rct_syscon>;
+	};
+
 	gic: interrupt-controller@f0040000 {
 		compatible = "arm,gic-400";
 		#interrupt-cells = <3>;
