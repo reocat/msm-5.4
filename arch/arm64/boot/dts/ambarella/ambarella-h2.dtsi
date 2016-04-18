@@ -82,11 +82,6 @@
 		};
 	};
 
-	reboot {
-		compatible = "ambarella,reboot";
-		amb,rct-regmap = <&rct_syscon>;
-	};
-
 	gic: interrupt-controller@f0040000 {
 		compatible = "arm,gic-400";
 		#interrupt-cells = <3>;
@@ -720,6 +715,11 @@
 			amb,host-phy-num = <2>;
 			amb,owner-mask;
 			amb,owner-invert;
+		};
+
+		reboot {
+			compatible = "ambarella,reboot";
+			amb,rct-regmap = <&rct_syscon>;
 		};
 	};
 
