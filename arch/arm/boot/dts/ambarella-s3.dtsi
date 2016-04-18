@@ -601,6 +601,7 @@
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
+			amb,enhance;
 		};
 
 		spi0: spi@e0020000 {

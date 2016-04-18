@@ -28,7 +28,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == S2E)
+#if (CHIP_REV == A5S)
 #define SPI_INSTANCES				2
 #define SPI_SLAVE_INSTANCES			1
 #define	SPI_AHB_BUS				0
@@ -36,6 +36,11 @@
 #define SPI_INSTANCES				1
 #define SPI_SLAVE_INSTANCES			1
 #define	SPI_AHB_BUS				0
+#elif (CHIP_REV == S2E)
+#define SPI_INSTANCES				1
+#define SPI_AHB_INSTANCES			1
+#define SPI_SLAVE_INSTANCES			1
+#define	SPI_AHB_BUS				2
 #else
 #define SPI_AHB_INSTANCES			2
 #define SPI_AHB_SLAVE_INSTANCES			1
@@ -49,6 +54,13 @@
 #define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
 #define SPI_SLAVE_OFFSET		0x26000
 #define SPI_SLAVE_BASE			(AHB_BASE + SPI_SLAVE_OFFSET)
+#elif (SPI_AHB_BUS == 2)
+#define SPI_OFFSET			0x2000
+#define SPI_BASE			(APB_BASE + SPI_OFFSET)
+#define SPI2_OFFSET			0x1F000
+#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
+#define SPI_SLAVE_OFFSET		0x1E000
+#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
 #else
 #define SPI_OFFSET			0x2000
 #define SPI_BASE			(APB_BASE + SPI_OFFSET)

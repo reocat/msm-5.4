@@ -561,6 +561,7 @@ Optional properties:
 - amb,clk-invert: specifies to invert the clk for ethernet.
 - amb,clk-dir: specifies the ref clk direction from PHY;If it is specified, it means
   the ref clk pin is input from PHY.
+- amb,enhance: specifies to use the enhance ethernet, for S3, S5 platform.
 ii) Example
 -----------
 	mac0: ethernet@e000e000 {
@@ -573,6 +574,7 @@ ii) Example
 		amb,rx-ring-size = <64>;
 		amb,ipc-tx;
 		amb,ipc-rx;
+		amb,enhance;
 	};
 
 

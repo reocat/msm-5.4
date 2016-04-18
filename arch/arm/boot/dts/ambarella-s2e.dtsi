@@ -186,18 +186,6 @@
 			amb,msb-first-only;
 		};
 
-		spi1: spi@7000f000 {
-			compatible = "ambarella,spi";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0x7000f000 0x1000>;
-			interrupts = <53 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&spi1_pins>;
-			amb,clk-freq = <54000000>;
-			status = "disabled";
-		};
-
 		spi_slave@7001e000 {
 			compatible = "ambarella,spi-slave";
 			reg = <0x7001e000 0x1000>;
@@ -471,6 +459,18 @@
 			compatible = "ambarella,spinor";
 			reg = <0x6000d000 0x2ff>, /* spi nor controller */
 			      <0x60005300 0x20>;  /* dma reg */
+			status = "disabled";
+		};
+
+		spi1: spi@6001f000 {
+			compatible = "ambarella,spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x6001f000 0x1000>;
+			interrupts = <53 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pins>;
+			amb,clk-freq = <54000000>;
 			status = "disabled";
 		};
 
