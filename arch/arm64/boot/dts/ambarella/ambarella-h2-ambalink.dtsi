@@ -718,6 +718,11 @@
 			amb,owner-mask;
 			amb,owner-invert;
 		};
+
+		reboot {
+			compatible = "ambarella,reboot";
+			amb,rct-regmap = <&rct_syscon>;
+		};
 	};
 
 	bogus_bus {
