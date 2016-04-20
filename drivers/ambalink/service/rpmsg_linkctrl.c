@@ -307,6 +307,8 @@ int rpmsg_linkctrl_cmd_suspend_exit(int flag)
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_SUSPEND_EXIT;
 	ctrl_cmd.Param1 = flag;
 
+	wait_for_completion(&linkctrl_comp);
+
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 
 	hibernation_start = 0;
