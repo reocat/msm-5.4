@@ -34,10 +34,6 @@
                 reg = <0x00200000 0x07e00000>; /* 126M */
         };
 
-	chosen {
-		linux,stdout-path = &uart1;
-	};
-
 	psci {
 		compatible	= "arm,psci-1.0";
 		method		= "smc";
