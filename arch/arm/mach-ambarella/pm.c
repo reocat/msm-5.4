@@ -46,29 +46,18 @@
 #define SREF_CPU_JUMP_ADDR		0x000f1000
 
 static int dram_reset_ctrl = -1;
+static int gpio_notify_mcu = -1;
+
+u32 gpio_regbase[] = {GPIO0_BASE, GPIO1_BASE, GPIO2_BASE, GPIO3_BASE,
+	GPIO4_BASE, GPIO5_BASE, GPIO6_BASE};
 
 /* ==========================================================================*/
-void ambarella_power_off(void)
-{
-	amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
-}
-
-void ambarella_power_off_prepare(void)
-{
-}
-
-/* ==========================================================================*/
-static void ambarella_disconnect_dram_reset(void)
+void ambarella_pm_gpiomux(int gpio)
 {
 	u32 bank, offset;
-	u32 gpio_regbase[] = {GPIO0_BASE, GPIO1_BASE, GPIO2_BASE, GPIO3_BASE,
-				GPIO4_BASE, GPIO5_BASE, GPIO6_BASE};
 
-	if (dram_reset_ctrl == -1)
-		return;
-
-	bank = PINID_TO_BANK(dram_reset_ctrl);
-	offset = PINID_TO_OFFSET(dram_reset_ctrl);
+	bank = PINID_TO_BANK(gpio);
+	offset = PINID_TO_OFFSET(gpio);
 
 #if (IOMUX_SUPPORT > 0)
 	/* configure the pin as GPIO mode */
@@ -79,12 +68,76 @@ static void ambarella_disconnect_dram_reset(void)
 	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x0);
 #endif
 
-	/* pull low the gpio */
+}
+void ambarella_pm_gpio_output(int gpio, int value)
+{
+	u32 bank, offset;
+
+	bank = PINID_TO_BANK(gpio);
+	offset = PINID_TO_OFFSET(gpio);
+
 	amba_writel(gpio_regbase[bank] + GPIO_ENABLE_OFFSET, 0xffffffff);
 	amba_clrbitsl(gpio_regbase[bank] + GPIO_AFSEL_OFFSET, 0x1 << offset);
 	amba_setbitsl(gpio_regbase[bank] + GPIO_MASK_OFFSET, 0x1 << offset);
 	amba_setbitsl(gpio_regbase[bank] + GPIO_DIR_OFFSET, 0x1 << offset);
-	amba_clrbitsl(gpio_regbase[bank] + GPIO_DATA_OFFSET, 0x1 << offset);
+
+	if (!!value)
+		amba_setbitsl(gpio_regbase[bank] + GPIO_DATA_OFFSET, 0x1 << offset);
+	else
+		amba_clrbitsl(gpio_regbase[bank] + GPIO_DATA_OFFSET, 0x1 << offset);
+}
+
+void ambarella_pm_gpio_input(int gpio, int *value)
+{
+	u32 bank, offset;
+
+	bank = PINID_TO_BANK(gpio);
+	offset = PINID_TO_OFFSET(gpio);
+
+	amba_writel(gpio_regbase[bank] + GPIO_ENABLE_OFFSET, 0xffffffff);
+	amba_clrbitsl(gpio_regbase[bank] + GPIO_AFSEL_OFFSET, 0x1 << offset);
+	amba_setbitsl(gpio_regbase[bank] + GPIO_MASK_OFFSET, 0x1 << offset);
+	amba_clrbitsl(gpio_regbase[bank] + GPIO_DIR_OFFSET, 0x1 << offset);
+
+	*value = !!(amba_readl(gpio_regbase[bank] + GPIO_DATA_OFFSET) & 0x1 << offset);
+}
+
+/* ==========================================================================*/
+void ambarella_power_off(void)
+{
+	amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
+}
+
+void ambarella_power_off_prepare(void)
+{
+
+}
+
+/* ==========================================================================*/
+static void ambarella_disconnect_dram_reset(void)
+{
+
+	if (dram_reset_ctrl == -1)
+		return;
+
+	ambarella_pm_gpiomux(dram_reset_ctrl);
+
+	ambarella_pm_gpio_output(dram_reset_ctrl, 0);
+}
+
+static void ambarella_notify_to_mcu(void)
+{
+
+	if (gpio_notify_mcu == -1)
+		return;
+
+	ambarella_pm_gpiomux(gpio_notify_mcu);
+
+	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
+	mdelay(100);
+	ambarella_pm_gpio_output(gpio_notify_mcu, 0);
+	mdelay(100);
+	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
 }
 
 static void ambarella_set_cpu_jump(int cpu, void *jump_fn)
@@ -144,6 +197,9 @@ static int ambarella_pm_enter_mem(void)
 	l2_enabled = outer_is_enabled();
 	if (l2_enabled)
 		ambcache_l2_disable_raw();
+
+	/* XXX special design for S3L */
+	ambarella_notify_to_mcu();
 
 	cpu_suspend(0, ambarella_finish_suspend);
 
@@ -219,6 +275,7 @@ int __init ambarella_init_pm(void)
 	suspend_set_ops(&ambarella_pm_suspend_ops);
 
 	of_property_read_u32(of_chosen, "ambarella,dram-reset-ctrl", &dram_reset_ctrl);
+	of_property_read_u32(of_chosen, "ambarella,gpio-notify-mcu", &gpio_notify_mcu);
 	WARN(dram_reset_ctrl >= GPIO_MAX_LINES, "Invalid GPIO: %d\n", dram_reset_ctrl);
 
 	return 0;
