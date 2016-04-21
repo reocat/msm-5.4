@@ -90,8 +90,14 @@ void ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat)
 
 	ftime.tv_sec = stat->atime;
 	ftime.tv_nsec = 0;
+	inode->i_atime = ftime;
 
-	inode->i_atime = inode->i_mtime = inode->i_ctime = ftime;
+	ftime.tv_sec = stat->mtime;
+	inode->i_mtime = ftime;
+
+	ftime.tv_sec = stat->ctime;
+	inode->i_ctime = ftime;
+
 	inode->i_size = stat->size;
 }
 

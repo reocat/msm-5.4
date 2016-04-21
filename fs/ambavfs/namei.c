@@ -359,7 +359,70 @@ static int ambafs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	return simple_getattr(mnt, dentry, stat);
 }
 
+/*
+ * fill the timestamp info.
+ */
+static void fill_time_info(struct ambafs_timestmp *stamp, struct tm *time)
+{
+	stamp->year = time->tm_year;
+	stamp->month = time->tm_mon;
+	stamp->day = time->tm_mday;
+	stamp->hour = time->tm_hour;
+	stamp->min = time->tm_min;
+	stamp->sec = time->tm_sec;
+}
+/*
+ * set file attriubte, here we only implement timestamp change.
+ */
+#define AMBAFS_TIMES_SET_FLAGS (ATTR_MTIME | ATTR_ATIME | ATTR_CTIME)
+
+int ambafs_setattr(struct dentry *dentry, struct iattr *attr)
+{
+	int buf[128];
+	struct inode *inode = dentry->d_inode;
+	struct ambafs_msg *msg = (struct ambafs_msg *)buf;
+	struct ambafs_stat_timestmp *stat = (struct ambafs_stat_timestmp *)msg->parameter;
+	char *path = (char *)stat->name;
+	int error, len;
+	struct tm time;
+
+	error = inode_change_ok(inode, attr);
+	if (error) {
+		return error;
+	}
+
+	/* Currently, we don't support truncate in rtos side.
+	if (attr->ia_valid & ATTR_SIZE) {
+	}
+	*/
+
+	// Notify rtos to change the timestamp
+	if (attr->ia_valid & AMBAFS_TIMES_SET_FLAGS) {
+		len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
+
+		AMBAFS_DMSG("%s:  %s\r\n", __func__, path);
+
+		msg->cmd = AMBAFS_CMD_SET_TIME;
+		time_to_tm(attr->ia_atime.tv_sec, 0, &time);
+		fill_time_info(&stat->atime, &time);
+		time_to_tm(attr->ia_mtime.tv_sec, 0, &time);
+		fill_time_info(&stat->mtime, &time);
+		time_to_tm(attr->ia_ctime.tv_sec, 0, &time);
+		fill_time_info(&stat->ctime, &time);
+		ambafs_rpmsg_exec(msg, sizeof(struct ambafs_stat_timestmp) + len + 1);
+
+		if(msg->parameter[0]) {
+			return -EIO;
+		}
+	}
+
+	// Notice that we don't notify rtos to chmod the file.
+	// chmod will be invalid when inode flushing.
+	setattr_copy(inode, attr);
+	return 0;
+}
 
 const struct inode_operations ambafs_file_inode_ops = {
 	.getattr = ambafs_getattr,
+	.setattr = ambafs_setattr,
 };

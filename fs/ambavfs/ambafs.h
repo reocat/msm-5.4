@@ -44,6 +44,7 @@
 #define AMBAFS_CMD_RESERVED1     16
 #define AMBAFS_CMD_VOLSIZE       17
 #define AMBAFS_CMD_QUICK_STAT	 18
+#define AMBAFS_CMD_SET_TIME	 19
 
 #define AMBAFS_STAT_NULL         0
 #define AMBAFS_STAT_FILE         1
@@ -105,6 +106,22 @@ struct ambafs_qstat {
 	int             type;
 #define AMBAFS_QSTAT_MAGIC	0x99998888
 	u32		magic;
+};
+
+struct ambafs_timestmp {
+	int year;
+	int month;
+	int day;
+	int hour;
+	int min;
+	int sec;
+};
+
+struct ambafs_stat_timestmp {
+	struct ambafs_timestmp	atime;
+	struct ambafs_timestmp	mtime;
+	struct ambafs_timestmp	ctime;
+	char			name[0];
 };
 
 struct ambafs_bh {
