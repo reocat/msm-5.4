@@ -166,10 +166,6 @@ struct ambadc_client *ambarella_adc_register_client(struct device *dev,
 	}
 
 	client->dev = dev;
-#if 0 /* FIXME: This causes linux-4.4 falling in cpu idle mode,
-		 and can not access the shell. WHY! */
-	client->dev->parent = ambadc->dev;
-#endif
 	client->mode = mode;
 	client->callback = callback;
 	client->host = ambadc;
