@@ -97,6 +97,8 @@ struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ {
 } __attribute__((aligned(32), packed));
 typedef struct _AMBA_RPDEV_LINK_CTRL_MEMINFO_s_ AMBA_RPDEV_LINK_CTRL_MEMINFO_t;
 
+extern int suspend_status;
+
 DECLARE_COMPLETION(linkctrl_comp);
 struct rpmsg_channel *rpdev_linkctrl;
 int hibernation_start = 0;
@@ -243,8 +245,8 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 
 	wait_for_completion(&linkctrl_comp);
 
-	*base = rpdev_meminfo.base_addr;
-	*phys = rpdev_meminfo.phys_addr;
+	*base = (void *) rpdev_meminfo.base_addr;
+	*phys = (void *) rpdev_meminfo.phys_addr;
 	*size = rpdev_meminfo.size;
 
 	dbg_trace("type= %u, base= x%llx, phys= x%llx, size= x%x\n",
@@ -305,7 +307,11 @@ int rpmsg_linkctrl_cmd_suspend_exit(int flag)
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_SUSPEND_EXIT;
-	ctrl_cmd.Param1 = flag;
+
+	if (suspend_status == 0)
+		ctrl_cmd.Param1 = flag;
+	else
+		ctrl_cmd.Param1 = (UINT64) suspend_status;
 
 	wait_for_completion(&linkctrl_comp);
 

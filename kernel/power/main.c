@@ -24,6 +24,8 @@ DEFINE_MUTEX(pm_mutex);
 /* whether we are entering SR mode */
 int wowlan_resume_from_ram = 0;
 EXPORT_SYMBOL(wowlan_resume_from_ram);
+int suspend_status = 0;
+EXPORT_SYMBOL(suspend_status);
 #endif
 
 #ifdef CONFIG_PM_SLEEP
@@ -370,29 +372,27 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 int amba_state_store(void *suspend_to)
 {
-	int error;
-
-	error = pm_autosleep_lock();
-	if (error)
-		return error;
+	suspend_status = pm_autosleep_lock();
+	if (suspend_status)
+		return suspend_status;
 
 	if (pm_autosleep_state() > PM_SUSPEND_ON) {
-		error = -EBUSY;
+		suspend_status = -EBUSY;
 		goto out;
 	}
 
-	wowlan_resume_from_ram = (int) suspend_to;
+	wowlan_resume_from_ram = (int)(size_t) suspend_to;
 
 	if (wowlan_resume_from_ram == 1)
-		error = pm_suspend(PM_SUSPEND_MEM);
+		suspend_status = pm_suspend(PM_SUSPEND_MEM);
 	else if (wowlan_resume_from_ram == 0)
-		error = hibernate();
+		suspend_status = hibernate();
 	else
-		error = -EINVAL;
+		suspend_status = -EINVAL;
 
 out:
 	pm_autosleep_unlock();
-	return error;
+	return suspend_status;
 }
 #endif
 
