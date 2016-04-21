@@ -186,7 +186,7 @@
 			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
 			interrupts = <0 157 0x1>;
-			status = "disabled";
+			status = "ok";
 		};
 
 		pwm: pwm@e8008000 {
