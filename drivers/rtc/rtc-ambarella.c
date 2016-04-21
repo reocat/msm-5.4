@@ -74,7 +74,13 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 	else
 		reg_offs = RTC_ALAT_OFFSET;
 
+#ifdef CONFIG_PLAT_AMBARELLA_AMBALINK
+	/* Synchronize to ThreadX system time (TAI time spec).*/
+	val_sec = readl_relaxed(ambrtc->reg + reg_offs) + 10;
+#else
 	val_sec = readl_relaxed(ambrtc->reg + reg_offs);
+#endif
+
 	/* because old rtc cannot use the msb 2bits, we add 0x40000000
 	 * here, this is a pure software workaround. And the result is that
 	 * the time must be started at least from 2004.01.10 13:38:00 */
@@ -87,6 +93,7 @@ static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
 static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 		int time_alarm, unsigned long secs)
 {
+#ifndef CONFIG_PLAT_AMBARELLA_AMBALINK
 	u32 time_val, alarm_val;
 
 	if (ambrtc->is_limited && secs < 0x40000000) {
@@ -123,6 +130,9 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 	writel_relaxed(time_val, ambrtc->reg + RTC_PWC_CURT_OFFSET);
 	writel_relaxed(alarm_val, ambrtc->reg + RTC_PWC_ALAT_OFFSET);
 	ambrtc_reset_rtc(ambrtc);
+#else
+	dev_warn(ambrtc->dev, "%s is not supported in dual-OSes!\n", __func__);
+#endif
 
 	return 0;
 }
