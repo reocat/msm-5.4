@@ -1144,7 +1144,7 @@ static const struct snd_kcontrol_new ak7755_snd_controls[] = {
 static int ak7755_clkset_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 
 	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
 
@@ -1161,7 +1161,7 @@ static int ak7755_clkset_event(struct snd_soc_dapm_widget *w,
 static int ak7755_clock_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 
 	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
 

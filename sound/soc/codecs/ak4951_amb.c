@@ -564,7 +564,7 @@ static const struct snd_kcontrol_new ak4951_dacsl_mixer_controls[] = {
 static int ak4951_spklo_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	u32 reg, nLOSEL;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);

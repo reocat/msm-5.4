@@ -48,8 +48,6 @@
 #define LINEIN1_MIC_BIAS_CONNECT
 #define LINEIN2_MIC_BIAS_CONNECT
 
-static struct snd_soc_codec *ak4954_codec;
-
 /* AK4954 Codec Private Data */
 struct ak4954_priv {
 	unsigned int rst_pin;
@@ -615,7 +613,7 @@ static const struct snd_kcontrol_new ak4954_dacsl_mixer_controls[] = {
 static int ak4954_spklo_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = ak4954_codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	u32 reg, nLOSEL;
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -1095,7 +1093,6 @@ static int ak4954_probe(struct snd_soc_codec *codec)
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
 
-	ak4954_codec = codec;
 	snd_soc_write(codec, AK4954_00_POWER_MANAGEMENT1, 0x00);
 	snd_soc_write(codec, AK4954_00_POWER_MANAGEMENT1, 0x00);
 
