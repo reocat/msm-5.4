@@ -556,10 +556,10 @@
 			amb,switch-vol-tmo = <100>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			amb,soft-phy;
-			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,
-					/*sdr25 50M,sdr50 100M,sdr104 120M*/
-					<0x00000078 0x10410400 0x00904104>,
-					<0x00000080 0x38E38E00 0x0238E38E>;/*DDR50 50M*/
+			amb,phy-timing = <0x0000001f 0x00000000 0x00000000>,
+					/*sdr50 100M,sdr104 120M*/
+					<0x00000060 0x10410400 0x00D04104>,
+					<0x00000080 0x10410400  0x02504104>;/*DDR50 50M*/
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit>;
 
@@ -585,10 +585,10 @@
 			amb,switch-vol-tmo = <100>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			amb,soft-phy;
-			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,
-					/*sdr25 50M,sdr50 100M,sdr104 120M*/
-					<0x00000078 0x10410400 0x00904104>,
-					<0x00000080 0x38E38E00 0x0238E38E>;/*DDR50 50M*/
+			amb,phy-timing = <0x0000001f 0x00000000 0x00000000>,
+					/*sdr50 100M,sdr104 120M*/
+					<0x00000060 0x10410400 0x00D04104>,
+					<0x00000080 0x10410400  0x02504104>;/*DDR50 50M*/
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc2_pins_8bit>;
 
