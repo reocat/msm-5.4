@@ -86,6 +86,7 @@ struct ambdma_device {
 	u32				nr_channels;
 	u32				dma_requests;
 	u32				dma_channel_type[NUM_DMA_CHANNELS];
+	u32				dma_channel_sel[NUM_DMA_CHANNELS];
 };
 
 

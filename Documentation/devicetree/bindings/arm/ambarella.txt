@@ -307,6 +307,10 @@ Required properties:
 Optional properties:
 - amb,copy-align: specifies alignment requirement for previous chips.
 - amb,support-prs: should be specified for SoC that supports PAUSE/RESUME/STOP.
+- dma-channel-sel: should  be specified for Soc that support dma channel sel.
+				   different value is used for selecting the device.
+					for example: 0 for ssi0_tx, 1 for ssi0_rx,
+								 10 for i2s_tx, 11 for i2s_rx.
 
 ii) Example
 -----------
@@ -318,6 +322,7 @@ ii) Example
 		dma-channels = <8>;
 		dma-requests = <12>;
 		dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
+		dma-channel-sel = <4 5 0 0 8 9 11 10>;
 	};
 
 
