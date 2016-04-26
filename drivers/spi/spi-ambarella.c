@@ -527,7 +527,7 @@ static int ambarella_spi_dma_channel_allocate(struct ambarella_spi *bus,
 	u8 *dma_buf;
 	int ret = 0;
 
-	dma_chan = dma_request_slave_channel_reason(bus->dev,
+	dma_chan = dma_request_slave_channel(bus->dev,
 					dma_to_memory ? "rx" : "tx");
 	if (IS_ERR(dma_chan)) {
 		ret = PTR_ERR(dma_chan);
@@ -610,6 +610,7 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	void __iomem				*reg;
 	struct ambarella_spi			*bus;
 	struct spi_master			*master;
+	int					i;
 	int					err = 0;
 	int					irq;
 
@@ -643,6 +644,9 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	bus->virt = reg;
 	bus->irq = irq;
 	bus->dev = &pdev->dev;
+
+	for (i = 0; i < AMBARELLA_SPI_MAX_CS_NUM; i++)
+		bus->cs_pins[i] = -1;
 
 	err = ambarella_spi_of_parse(pdev, master);
 	if (err < 0) {
