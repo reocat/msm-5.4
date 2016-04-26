@@ -140,12 +140,9 @@ static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *sp
 	sckdv = (ssi_clk / spi->max_speed_hz + 1) & 0xfffe;
 	writel_relaxed(sckdv, bus->virt + SPI_BAUDR_OFFSET);
 
-	if (spi->cs_gpio) {
-		bus->cspol = (spi->mode & SPI_CS_HIGH) ? 1 : 0;
-
-		gpio_set_value(spi->cs_gpio, bus->cspol);
-		bus->cs_active = 1;
-	}
+	bus->cspol = (spi->mode & SPI_CS_HIGH) ? 1 : 0;
+	gpio_set_value(spi->cs_gpio, bus->cspol);
+	bus->cs_active = 1;
 }
 
 static void ambarella_spi_stop(struct ambarella_spi *bus)
@@ -459,6 +456,12 @@ static int ambarella_spi_one_message(struct spi_master *master, struct spi_messa
 
 	if (list_empty(&msg->transfers)) {
 		spi_finalize_current_message(master);
+		goto ambarella_spi_transfer_exit;
+	}
+
+	if (!gpio_is_valid(spi->cs_gpio)) {
+		dev_err(&master->dev, "cs %d is invalid!\n", spi->cs_gpio);
+		err = -EINVAL;
 		goto ambarella_spi_transfer_exit;
 	}
 
