@@ -29,9 +29,6 @@
 #include <linux/clockchips.h>
 #include <linux/cpufreq.h>
 
-#include <mach/init.h>
-
-#include <plat/ambcache.h>
 #include <plat/ambalink_cfg.h>
 #include <plat/timer.h>
 #include <plat/clk.h>
@@ -48,24 +45,6 @@ typedef struct clk_name_s {
 	int clk_idx;
 	char clk_name[64];
 } clk_name;
-
-typedef enum _AMBA_CLK_IDX_e_ {
-        AMBA_CLK_IDSP = 0,
-        AMBA_CLK_CORE,
-        AMBA_CLK_CORTEX,
-        AMBA_CLK_SDIO,
-        AMBA_CLK_SD48,
-        AMBA_CLK_UART,
-#if !defined(CONFIG_PLAT_AMBARELLA_S2E) || !defined(CONFIG_PLAT_AMBARELLA_S3)
-	/* The ARM API in RTOS is removed. */
-        AMBA_CLK_ARM,
-#endif
-        AMBA_CLK_AHB,
-        AMBA_CLK_APB,
-        AMBA_CLK_AXI,
-
-        AMBA_NUM_CLK                                /* Total number of CLKs */
-} AMBA_CLK_IDX_e;
 
 typedef enum _AMBA_RPDEV_CLK_CMD_e_ {
         CLK_SET = 0,
@@ -89,23 +68,6 @@ struct rpdev_clk_info {
 
 DECLARE_COMPLETION(clk_comp);
 struct rpmsg_channel *rpdev_clk;
-static u32 rpmsg_clk_inited = 0;
-
-static clk_name ambarella_clk[] = {
-	{AMBA_CLK_IDSP, "gclk_idsp"},
-	{AMBA_CLK_CORE, "gclk_core"},
-	{AMBA_CLK_CORTEX, "gclk_cortex"},
-	{AMBA_CLK_SDIO, "gclk_sdio"},
-	{AMBA_CLK_SD48, "gclk_sd"},
-	{AMBA_CLK_UART, "gclk_uart"},
-#if !defined(CONFIG_PLAT_AMBARELLA_S2E) || !defined(CONFIG_PLAT_AMBARELLA_S3)
-	/* The ARM API in RTOS is removed. */
-	{AMBA_CLK_ARM, "gclk_arm"},
-#endif
-	{AMBA_CLK_AHB, "gclk_ahb"},
-	{AMBA_CLK_APB, "gclk_apb"},
-	{AMBA_CLK_AXI, "gclk_axi"},
-};
 
 extern int hibernation_start;
 u32 oldfreq, newfreq;
@@ -126,90 +88,6 @@ static inline unsigned int ambarella_adjust_jiffies(unsigned long val,
 	return oldfreq;
 }
 
-/* -------------------------------------------------------------------------- */
-int rpmsg_clk_set(void *data, unsigned long rate)
-{
-	AMBA_RPDEV_CLK_MSG_s clk_ctrl_cmd;
-	struct rpdev_clk_info clk_pkg = {0};
-	struct clk *clk = (struct clk *) data;
-	int i;
-
-	if (!rpmsg_clk_inited || hibernation_start) {
-		//printk("%s: rpmsg is not ready (%s)!\n", __func__, clk->name);
-		return 0;
-	}
-
-	for (i = 0; i < AMBA_NUM_CLK; i++) {
-		if (strcmp(clk->name, (const char *) ambarella_clk[i].clk_name) == 0) {
-			clk_pkg.clk_idx = i;
-			clk_pkg.rate = rate;
-			break;
-		}
-	}
-
-	if (i == AMBA_NUM_CLK) {
-#if 0
-		if ((strcmp(clk->name, "pll_out_idsp") != 0) &&
-		    (strcmp(clk->name, "pll_out_core") != 0)) {
-			printk("%s %s clock is not supported!\n", __func__,
-			       clk->name);
-		}
-#endif
-		return 0;
-	}
-
-	clk_ctrl_cmd.Cmd = CLK_SET;
-	clk_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((void *) &clk_pkg);
-
-	rpmsg_send(rpdev_clk, &clk_ctrl_cmd, sizeof(clk_ctrl_cmd));
-
-	wait_for_completion(&clk_comp);
-
-	return 0;
-}
-EXPORT_SYMBOL(rpmsg_clk_set);
-
-int rpmsg_clk_get(void *data)
-{
-	AMBA_RPDEV_CLK_MSG_s clk_ctrl_cmd;
-	static volatile struct rpdev_clk_info clk_pkg = {0};
-	struct clk *clk = (struct clk *) data;
-	u32 i;
-
-	if (!rpmsg_clk_inited || hibernation_start) {
-		//printk("%s: rpmsg is not ready (%s)!\n", __func__, clk->name);
-		return 0;
-	}
-
-	for (i = 0; i < AMBA_NUM_CLK; i++) {
-		if (strcmp(clk->name, (const char *) ambarella_clk[i].clk_name) == 0) {
-			clk_pkg.clk_idx = i;
-			clk_pkg.rate = 0;
-			break;
-		}
-	}
-
-	if (i == AMBA_NUM_CLK) {
-#if 0
-		if ((strcmp(clk->name, "pll_out_idsp") != 0) &&
-		    (strcmp(clk->name, "pll_out_core") != 0)) {
-			printk("%s %s clock is not supported!\n", __func__,
-			       clk->name);
-		}
-#endif
-		return 0;
-	}
-
-	clk_ctrl_cmd.Cmd = CLK_GET;
-	clk_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((void *) &clk_pkg);
-
-	rpmsg_send(rpdev_clk, &clk_ctrl_cmd, sizeof(clk_ctrl_cmd));
-
-	wait_for_completion(&clk_comp);
-
-	return clk_pkg.rate;
-}
-EXPORT_SYMBOL(rpmsg_clk_get);
 /* -------------------------------------------------------------------------- */
 /* Received the ack from ThreadX. */
 static int rpmsg_clk_ack_linux(void *data)
@@ -233,41 +111,18 @@ static int rpmsg_clk_ack_threadx(void *data)
 static int rpmsg_clk_changed_pre_notify(void *data)
 {
 	int retval = 0;
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	unsigned long flags;
-#endif
-	extern void clockevents_suspend(void);
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL));
 	if (retval) {
 		pr_err("%s: AMBA_EVENT_PRE_CPUFREQ failed(%d)\n",
-		       __func__, retval);
+			__func__, retval);
 	}
 
-	/* Disable rpmsg_clk because some driver will get the clock again. */
-	rpmsg_clk_inited = 0;
-
-	oldfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
-
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	flags = arm_irq_save();
-#endif
-
-	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
-	clocksource_suspend();
-	clockevents_suspend();
+	/* No need to handle clock event and clock source. */
+	/* Since Cortex clock (CNTFRQ) will never be changed. */
 
 	rpmsg_clk_ack_threadx(data);
-
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	boss->state = BOSS_STATE_SUSPENDED;
-	*boss->gidle = 1;
-#endif
-
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	arm_irq_restore(flags);
-#endif
 
 	return 0;
 }
@@ -277,20 +132,8 @@ static int rpmsg_clk_changed_post_notify(void *data)
 {
 	int retval = 0;
 
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	local_irq_disable();
-#endif
-
-	clockevents_resume();
-	clocksource_resume();
-
-#if defined(CONFIG_PLAT_AMBARELLA_BOSS)
-	local_irq_enable();
-#endif
-
-	newfreq = (unsigned int)clk_get_rate(clk_get(NULL, "gclk_cortex"));
-
-	ambarella_adjust_jiffies(AMBA_EVENT_POST_CPUFREQ, oldfreq, newfreq);
+	/* No need to handle clock event and clock source. */
+	/* Since Cortex clock (CNTFRQ) will never be changed. */
 
 	retval = notifier_to_errno(
 	                 ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL));
@@ -298,11 +141,6 @@ static int rpmsg_clk_changed_post_notify(void *data)
 		pr_err("%s: AMBA_EVENT_POST_CPUFREQ failed(%d)\n",
 		       __func__, retval);
 	}
-
-	/* Enable rpmsg_clk here because some driver will get the clock. */
-	//rpmsg_clk_inited = 1;
-
-	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);
 
 	rpmsg_clk_ack_threadx(data);
 
@@ -321,10 +159,6 @@ static void rpmsg_clk_cb(struct rpmsg_channel *rpdev, void *data, int len,
                          void *priv, u32 src)
 {
 	AMBA_RPDEV_CLK_MSG_s *msg = (AMBA_RPDEV_CLK_MSG_s *) data;
-
-#if 0
-	printk("recv: cmd = [%d], data = [0x%08x]", msg->Cmd, msg->Param);
-#endif
 
 	switch (msg->Cmd) {
 	case CLK_RPMSG_ACK_LINUX:
@@ -354,8 +188,6 @@ static int rpmsg_clk_probe(struct rpmsg_channel *rpdev)
 	nsm.flags = 0;
 
 	rpmsg_send(rpdev, &nsm, sizeof(nsm));
-
-	//rpmsg_clk_inited = 1;
 
 	return ret;
 }

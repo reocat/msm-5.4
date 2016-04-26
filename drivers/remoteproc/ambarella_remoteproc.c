@@ -352,6 +352,19 @@ static struct platform_driver ambarella_rproc_driver = {
 	},
 };
 
-module_platform_driver(ambarella_rproc_driver);
+int __init ambarella_rproc_init(void)
+{
+	return platform_driver_register(&ambarella_rproc_driver);
+}
+
+void __exit ambarella_rproc_exit(void)
+{
+	platform_driver_unregister(&ambarella_rproc_driver);
+}
+
+subsys_initcall(ambarella_rproc_init);
+module_exit(ambarella_rproc_exit);
+
+//module_platform_driver(ambarella_rproc_driver);
 
 MODULE_DESCRIPTION("Ambarella Remote Processor control driver");

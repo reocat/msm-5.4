@@ -1665,6 +1665,7 @@ err:
 	return err;
 }
 
+#if !defined(CONFIG_AMBALINK_SD)
 static int mmc_can_sleep(struct mmc_card *card)
 {
 	return (card && card->ext_csd.rev >= 3);
@@ -1747,6 +1748,7 @@ static int mmc_poweroff_notify(struct mmc_card *card, unsigned int notify_type)
 
 	return err;
 }
+#endif
 
 /*
  * Host is being removed. Free up the current card.
@@ -1800,6 +1802,8 @@ static void mmc_detect(struct mmc_host *host)
 static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 {
 	int err = 0;
+
+#if !defined(CONFIG_AMBALINK_SD)
 	unsigned int notify_type = is_suspend ? EXT_CSD_POWER_OFF_SHORT :
 					EXT_CSD_POWER_OFF_LONG;
 
@@ -1835,6 +1839,8 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 	}
 out:
 	mmc_release_host(host);
+#endif
+
 	return err;
 }
 
@@ -1843,7 +1849,7 @@ out:
  */
 static int mmc_suspend(struct mmc_host *host)
 {
-	int err;
+	int err = 0;
 
 	err = _mmc_suspend(host, true);
 	if (!err) {
@@ -1886,6 +1892,7 @@ static int mmc_shutdown(struct mmc_host *host)
 {
 	int err = 0;
 
+#if !defined(CONFIG_AMBALINK_SD)
 	/*
 	 * In a specific case for poweroff notify, we need to resume the card
 	 * before we can shutdown it properly.
@@ -1893,6 +1900,7 @@ static int mmc_shutdown(struct mmc_host *host)
 	if (mmc_can_poweroff_notify(host->card) &&
 		!(host->caps2 & MMC_CAP2_FULL_PWR_CYCLE))
 		err = _mmc_resume(host);
+#endif
 
 	if (!err)
 		err = _mmc_suspend(host, false);
@@ -1981,7 +1989,11 @@ static int mmc_reset(struct mmc_host *host)
 	/* Set initial state and call mmc_set_ios */
 	mmc_set_initial_state(host);
 
+#if !defined(CONFIG_AMBALINK_SD)
 	return mmc_init_card(host, card->ocr, card);
+#else
+	return 0;
+#endif
 }
 
 static const struct mmc_bus_ops mmc_ops = {

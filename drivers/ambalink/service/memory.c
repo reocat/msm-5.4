@@ -124,7 +124,7 @@ void __init ambalink_init_mem(void)
 					size, __pgprot(PROT_NORMAL));
 
         pr_info("ambalink ppm2 memory : 0x%08lx - 0x%08lx (0x%016lx)\n",
-                        (unsigned long) base, (unsigned long) size,
+                        (unsigned long) base, (unsigned long) (base + size),
                         ambarella_io_desc[AMBARELLA_IO_DESC_PPM2_ID].virtual);
 
 
@@ -151,7 +151,7 @@ void __init ambalink_init_mem(void)
 					size, __pgprot(PROT_NORMAL));
 
         pr_info("ambalink shared memory : 0x%08lx - 0x%08lx (0x%016lx)\n",
-                        (unsigned long) base, (unsigned long) size,
+                        (unsigned long) base, (unsigned long) (base + size),
                         ambarella_io_desc[AMBARELLA_IO_DESC_PPM_ID].virtual);
 #if 0
         create_pgd_mapping(&init_mm, base, (unsigned long) phys_to_virt(base),

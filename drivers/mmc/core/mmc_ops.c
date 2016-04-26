@@ -116,6 +116,15 @@ int mmc_select_card(struct mmc_card *card)
 {
 	BUG_ON(!card);
 
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->is_init && sdinfo->from_rpmsg)
+		return 0;
+}
+#endif
+
 	return _mmc_select_card(card->host, card);
 }
 
@@ -167,7 +176,19 @@ int mmc_go_idle(struct mmc_host *host)
 	cmd.arg = 0;
 	cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_NONE | MMC_CMD_BC;
 
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+
+	if (sdinfo->from_rpmsg && !sdinfo->is_sdio) {
+		err = 0;
+	} else {
+		err = mmc_wait_for_cmd(host, &cmd, 0);
+	}
+}
+#else
 	err = mmc_wait_for_cmd(host, &cmd, 0);
+#endif
 
 	mmc_delay(1);
 
@@ -187,6 +208,18 @@ int mmc_send_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 	int i, err = 0;
 
 	BUG_ON(!host);
+
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+
+	if (sdinfo->from_rpmsg && sdinfo->is_mmc) {
+		if (rocr)
+			*rocr = sdinfo->ocr;
+		return 0;
+	}
+}
+#endif
 
 	cmd.opcode = MMC_SEND_OP_COND;
 	cmd.arg = mmc_host_is_spi(host) ? 0 : ocr;
@@ -233,7 +266,15 @@ int mmc_all_send_cid(struct mmc_host *host, u32 *cid)
 	cmd.arg = 0;
 	cmd.flags = MMC_RSP_R2 | MMC_CMD_BCR;
 
+#if defined(CONFIG_AMBALINK_SD)
+	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
+		err = cmd.error;
+	} else {
+		err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
+	}
+#else
 	err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
+#endif
 	if (err)
 		return err;
 
@@ -249,6 +290,18 @@ int mmc_set_relative_addr(struct mmc_card *card)
 
 	BUG_ON(!card);
 	BUG_ON(!card->host);
+
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->from_rpmsg && sdinfo->is_mmc) {
+		if (card->rca != sdinfo->rca)
+			card->rca = sdinfo->rca;
+		return 0;
+	}
+}
+#endif
 
 	cmd.opcode = MMC_SET_RELATIVE_ADDR;
 	cmd.arg = card->rca << 16;
@@ -274,7 +327,15 @@ mmc_send_cxd_native(struct mmc_host *host, u32 arg, u32 *cxd, int opcode)
 	cmd.arg = arg;
 	cmd.flags = MMC_RSP_R2 | MMC_CMD_AC;
 
+#if defined(CONFIG_AMBALINK_SD)
+	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
+		err = cmd.error;
+	} else {
+		err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
+	}
+#else
 	err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
+#endif
 	if (err)
 		return err;
 
@@ -327,7 +388,16 @@ mmc_send_cxd_data(struct mmc_card *card, struct mmc_host *host,
 	} else
 		mmc_set_data_timeout(&data, card);
 
+#if defined(CONFIG_AMBALINK_SD)
+	data.buf = buf;
+	cmd.data = &data;
+
+	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) != 0) {
+		mmc_wait_for_req(host, &mrq);
+	}
+#else
 	mmc_wait_for_req(host, &mrq);
+#endif
 
 	if (cmd.error)
 		return cmd.error;
@@ -502,6 +572,15 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		(timeout_ms > host->max_busy_timeout))
 		use_r1b_resp = false;
 
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->is_init)
+		return 0;
+}
+#endif
+
 	cmd.opcode = MMC_SWITCH;
 	cmd.arg = (MMC_SWITCH_MODE_WRITE_BYTE << 24) |
 		  (index << 16) |
@@ -671,6 +750,17 @@ mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,
 	static u8 testdata_8bit[8] = { 0x55, 0xaa, 0, 0, 0, 0, 0, 0 };
 	static u8 testdata_4bit[4] = { 0x5a, 0, 0, 0 };
 
+#if defined(CONFIG_AMBALINK_SD)
+	memset(&cmd, 0, sizeof(struct mmc_command));
+	cmd.opcode = opcode;
+	cmd.arg = len;
+
+	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
+		if (cmd.error)
+			return cmd.error;
+	}
+#endif
+
 	/* dma onto stack is unsafe/nonportable, but callers to this
 	 * routine normally provide temporary on-stack buffers ...
 	 */
@@ -737,6 +827,18 @@ mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,
 int mmc_bus_test(struct mmc_card *card, u8 bus_width)
 {
 	int err, width;
+
+#if defined(CONFIG_AMBALINK_SD)
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->is_init) {
+		width = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8 :
+			(sdinfo->bus_width == 4) ? MMC_BUS_WIDTH_4 :
+				MMC_BUS_WIDTH_1;
+
+		return (bus_width == width) ? 0 : -EINVAL;
+	}
+#endif
 
 	if (bus_width == MMC_BUS_WIDTH_8)
 		width = 8;

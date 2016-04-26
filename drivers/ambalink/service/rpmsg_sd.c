@@ -27,17 +27,13 @@
 #include <linux/remoteproc.h>
 
 #include <linux/aipc/rpmsg_sd.h>
-#include <plat/ambcache.h>
-#include <plat/ambalink_cfg.h>
 #include <plat/sd.h>
+#include <plat/ambalink_cfg.h>
 
-#ifndef UINT32
-typedef u32 UINT32;
-#endif
 
 typedef struct _AMBA_RPDEV_SD_MSG_s_ {
-	UINT32  Cmd;
-	UINT32  Param;
+	u64	Cmd;
+	u64	Param;
 } AMBA_RPDEV_SD_MSG_s;
 
 DECLARE_COMPLETION(sd0_comp);
@@ -117,7 +113,7 @@ int rpmsg_sdinfo_get(void *data)
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
-	if (sdinfo->slot_id == SD_HOST_0) {
+	if (sdinfo->host_id == SD_HOST_0) {
 		wait_for_completion(&sd0_comp);
 	} else {
 		wait_for_completion(&sd1_comp);
@@ -142,7 +138,7 @@ int rpmsg_sdresp_get(void *data)
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
-	if (sdresp->slot_id == SD_HOST_0) {
+	if (sdresp->host_id == SD_HOST_0) {
 		wait_for_completion(&sd0_comp);
 	} else {
 		wait_for_completion(&sd1_comp);
@@ -152,13 +148,13 @@ int rpmsg_sdresp_get(void *data)
 }
 EXPORT_SYMBOL(rpmsg_sdresp_get);
 
-int rpmsg_sd_detect_insert(u32 slot_id)
+int rpmsg_sd_detect_insert(u32 host_id)
 {
 	AMBA_RPDEV_SD_MSG_s sd_ctrl_cmd;
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_DETECT_INSERT;
-	sd_ctrl_cmd.Param = slot_id;
+	sd_ctrl_cmd.Param = host_id;
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
@@ -166,13 +162,13 @@ int rpmsg_sd_detect_insert(u32 slot_id)
 }
 EXPORT_SYMBOL(rpmsg_sd_detect_insert);
 
-int rpmsg_sd_detect_eject(u32 slot_id)
+int rpmsg_sd_detect_eject(u32 host_id)
 {
 	AMBA_RPDEV_SD_MSG_s sd_ctrl_cmd;
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_DETECT_EJECT;
-	sd_ctrl_cmd.Param = slot_id;
+	sd_ctrl_cmd.Param = host_id;
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
@@ -186,7 +182,7 @@ static int rpmsg_sdresp_detect_change(void *data)
 {
 #ifdef CONFIG_MMC_AMBARELLA
 	AMBA_RPDEV_SD_MSG_s *msg = (AMBA_RPDEV_SD_MSG_s *) data;
-	extern void ambarella_sd_rpmsg_cd(int slot_id);
+	extern void ambarella_sd_rpmsg_cd(int host_id);
 
 	ambarella_sd_rpmsg_cd((int) msg->Param);
 #endif

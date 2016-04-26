@@ -20,6 +20,9 @@
 #include <linux/mmc/core.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/pm.h>
+#if defined(CONFIG_AMBALINK_SD)
+#include <linux/aipc/rpmsg_sd.h>
+#endif
 
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
@@ -514,5 +517,12 @@ static inline void mmc_retune_recheck(struct mmc_host *host)
 	if (host->hold_retune <= 1)
 		host->retune_now = 1;
 }
+
+#if defined(CONFIG_AMBALINK_SD)
+extern struct rpdev_sdinfo *ambarella_sd_sdinfo_get(struct mmc_host *mmc);
+extern int ambarella_sd_rpmsg_cmd_send(struct mmc_host *mmc, struct mmc_command *cmd);
+extern int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc);
+extern void ambarella_sd_rpmsg_sdinfo_en(struct mmc_host *mmc, u8 enable);
+#endif
 
 #endif /* LINUX_MMC_HOST_H */

@@ -35,6 +35,15 @@
 #define SD_INSTANCES			1
 #endif
 
+/* The slot IDs */
+typedef enum _ambarella_slot_id {
+	SD_HOST_0 = 0,
+        SD_HOST_1,
+        SD_HOST_2,
+
+        SD_MAX_CARD      /* Total number of slot IDs */
+} ambarella_slot_id;
+
 #if (CHIP_REV == A5S) || (CHIP_REV == S3L)
 #define SD_SUPPORT_SDIO			0
 #else
@@ -59,8 +68,8 @@
 					 (id == 1) ? SD1_BASE : SD2_BASE)
 
 #define SD0_REG(x)			(SD0_BASE + (x))
-#define SD2_REG(x)			(SD1_BASE + (x))
-#define SD3_REG(x)			(SD2_BASE + (x))
+#define SD1_REG(x)			(SD1_BASE + (x))
+#define SD2_REG(x)			(SD2_BASE + (x))
 
 /* ==========================================================================*/
 #define SD_DMA_ADDR_OFFSET		0x000

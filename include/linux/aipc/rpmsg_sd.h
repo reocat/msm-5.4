@@ -31,31 +31,29 @@ typedef enum _AMBA_RPDEV_SD_CMD_e_ {
 } AMBA_RPDEV_SD_CMD_e;
 
 struct rpdev_sdinfo {
+	u32 host_id;	/**< from LK */
+	u32 from_rpmsg : 1,
+	    is_init : 1,
+	    is_sdmem : 1,
+	    is_mmc : 1,
+	    is_sdio : 1,
+	    rsv : 27;
 
-	u32 slot_id;	/**< from LK */
-	u8  from_rpmsg;	/**< from LK */
-	u8  padding[3];
-
-	u8  is_init;
-	u8  is_sdmem;
-	u8  is_mmc;
-	u8  is_sdio;
+	u16 bus_width;
+	u16 hcs;
 	u32 rca;
-	u32 hcs;
 	u32 ocr;
 	u32 clk;
-	u32 bus_width;
-} __attribute__((aligned(32), packed));
+} __attribute__((aligned(64), packed));
 
 struct rpdev_sdresp {
-
-	u32 slot_id;
+	u32 host_id;
 	u32 opcode;
 	int ret;
 	u32 padding;
 	u32 resp[4];
 	char buf[512];
-} __attribute__((aligned(32), packed));
+} __attribute__((aligned(64), packed));
 
 int rpmsg_sdinfo_get(void *data);
 int rpmsg_sdresp_get(void *data);

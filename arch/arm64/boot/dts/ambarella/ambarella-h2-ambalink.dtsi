@@ -18,6 +18,7 @@
 		serial1 = &uart1;
 		nand = &nand0;
 		spinor = &spinor0;
+		emmc = &sdmmc0;
 		sd0 = &sdmmc0;
 		sd1 = &sdmmc1;
 		sd2 = &sdmmc2;
@@ -587,7 +588,7 @@
 		sdmmc0: sdmmc0@e0002000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
-			#size-cells = <0>;
+			#size-cells = <1>;
 			reg = <0xe0002000 0x1000>,
 			      <0xec1704c0 0x8>,  /* phy timing */
 			      <0xec170664 0x4>;  /* sbc reg address */
@@ -605,7 +606,7 @@
 		sdmmc1: sdmmc1@e000c000 {
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
-			#size-cells = <0>;
+			#size-cells = <1>;
 			reg = <0xe000c000 0x1000>;
 			interrupts = <0 76 0x4>;
 			pinctrl-names = "default";
@@ -620,7 +621,7 @@
 		sdmmc2: sdmmc2@e001f000 { /* SDXC rather than SDIO */
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
-			#size-cells = <0>;
+			#size-cells = <1>;
 			reg = <0xe001f000 0x1000>,
 			      <0xec1704c8 0x8>,  /* phy timing */
 			      <0xec170668 0x4>;  /* sbc reg address */
