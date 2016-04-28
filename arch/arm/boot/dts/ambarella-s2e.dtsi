@@ -42,6 +42,7 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		amb,core-div = <1>;
 		clock-latency = <100000>;
 		/* the highest frequency is gotten in runtime */
 		cpufreq_tbl = < /*core_clk	cortex_clk*/

@@ -154,13 +154,19 @@ static int amba_cpufreq_driver_init(void)
 	struct cpufreq_frequency_table *cortex_freqtbl;
 	struct cpufreq_frequency_table *core_freqtbl;
 	const __be32 *val;
-	int cnt, i, ret;
+	int cnt, i, ret, clk_div;
 
 	printk("ambarella cpufreq driver init\n");
 	np = of_find_node_by_path("/cpus");
 	if (!np) {
 		pr_err("No cpu node found");
 		return -ENODEV;
+	}
+
+	ret = of_property_read_u32(np, "amb,core-div", &clk_div);
+	if (ret != 0 || !((clk_div == 1 || clk_div == 2))) {
+		/*Default is that the pll_out_core is twice gclk_core */
+		clk_div = 2;
 	}
 
 	if (of_property_read_u32(np, "clock-latency",
@@ -191,7 +197,8 @@ static int amba_cpufreq_driver_init(void)
 
 	for (i = 0; i < cnt; i++) {
 		core_freqtbl[i].index = i;
-		core_freqtbl[i].frequency = be32_to_cpup(val) * 2;
+		/*pll_out_core = clk_div * gclk_core;*/
+		core_freqtbl[i].frequency = be32_to_cpup(val) * clk_div;
 
 		cortex_freqtbl[i].index = i;
 		cortex_freqtbl[i].frequency = be32_to_cpup((val + 1));
@@ -203,7 +210,7 @@ static int amba_cpufreq_driver_init(void)
 	cortex_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_cortex")) / 1000;
 
 	core_freqtbl[i].index = i;
-	core_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000 * 2;
+	core_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000 * clk_div;
 
 	i++;
 	cortex_freqtbl[i].index = i;
