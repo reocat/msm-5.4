@@ -237,7 +237,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 {
 	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
 	struct dentry *dir;
-	struct ambafs_qstat *stat = (struct ambafs_qstat*)msg->parameter;
+	volatile struct ambafs_qstat *stat = (struct ambafs_qstat*)msg->parameter;
 	char *path = (char*)&(msg->parameter[1]);
 	int len, i;
 
@@ -257,7 +257,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	AMBAFS_DMSG("%s: path = %s, quick_stat result phy address = 0x%x \r\n", __func__, path, msg->parameter[0]);
 
 	msg->cmd = AMBAFS_CMD_QUICK_STAT;
-	ambafs_rpmsg_send(msg, len + 1 + 4, NULL, NULL);
+	ambafs_rpmsg_send(msg, len + 1 + 8, NULL, NULL);
 
 	for (i = 0; i < 65536; i++) {
 		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
@@ -266,8 +266,9 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 		}
 	}
 
-	if (i == 65536)
+	if (i == 65536) {
 		stat->type = AMBAFS_STAT_NULL;
+	}
 
 exit:
 	return stat;
@@ -282,7 +283,7 @@ static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 		void *align_buf;
 		struct ambafs_qstat *astat;
 
-		align_buf = (void *)((((unsigned long) qstat_buf) & (~0x1f)) + 0x20);
+		align_buf = (void *)((((unsigned long) qstat_buf) & (~0x3f)) + 0x40);
 		//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) align_buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) align_buf)));
 		astat = ambafs_get_qstat(NULL, dentry->d_inode, align_buf, QSTAT_BUFF_SIZE);
 		if (astat->type == AMBAFS_STAT_NULL) {

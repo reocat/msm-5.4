@@ -135,7 +135,7 @@ static int rpmsg_vfs_probe(struct rpmsg_channel *rpdev)
 	memcpy(nsm.name, rpdev->id.name, RPMSG_NAME_SIZE);
 	nsm.flags = 0;
 
-	qstat_buf = (unsigned long *) kmalloc(QSTAT_BUFF_SIZE + 0x20, GFP_KERNEL | GFP_DMA);
+	qstat_buf = (unsigned long *) kmalloc(QSTAT_BUFF_SIZE + 0x40, GFP_KERNEL | GFP_DMA);
 
 	rpmsg_send(rpdev, &nsm, sizeof(nsm));
 
