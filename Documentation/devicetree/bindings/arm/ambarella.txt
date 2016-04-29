@@ -171,7 +171,10 @@ i) Reference
 Please see Documentation/devicetree/bindings/arm/cpus.txt
 
 ii) Properties
-- cpufreq_tbl: Table of frequencies gclk_cortex and pll_out_core could be transitioned
+- amb,core-div: this prop should be 1 or 2, this specified the divide of gclk_core from pll_out_core,
+  for s2e and s5, this value should be 1; and for s2l, s3l, this should be 2. If you don't add this prop,
+  the divide for gclk_core is 2 as default.
+- cpufreq_tbl: Table of frequencies gclk_cortex and gclk_core could be transitioned
   into, in the unit of nanoseconds.
 - clock-latency: Specify the possible maximum transition latency for clock, in
   unit of nanoseconds.
