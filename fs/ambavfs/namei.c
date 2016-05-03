@@ -259,14 +259,14 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	msg->cmd = AMBAFS_CMD_QUICK_STAT;
 	ambafs_rpmsg_send(msg, len + 1 + 8, NULL, NULL);
 
-	for (i = 0; i < 65536; i++) {
+	for (i = 0; i < 1048576; i++) {
 		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
 			stat->magic = 0x0;
 			break;
 		}
 	}
 
-	if (i == 65536) {
+	if (i == 1048576) {
 		stat->type = AMBAFS_STAT_NULL;
 	}
 
