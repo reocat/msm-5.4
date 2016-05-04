@@ -304,7 +304,7 @@ static int get_micstatus(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
 
     ucontrol->value.enumerated.item[0] = ak4954->mic;
@@ -317,7 +317,7 @@ static int set_micstatus(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
 
 	ak4954->mic = ucontrol->value.enumerated.item[0];
@@ -347,7 +347,7 @@ static int get_ondrc(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
 
     ucontrol->value.enumerated.item[0] = ak4954->onDrc;
@@ -360,7 +360,7 @@ static int set_ondrc(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
 
 	ak4954->onDrc = ucontrol->value.enumerated.item[0];
@@ -381,7 +381,7 @@ static int get_onstereo(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
 
     ucontrol->value.enumerated.item[0] = ak4954->onStereo;
@@ -394,7 +394,7 @@ static int set_onstereo(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
 
 	ak4954->onStereo = ucontrol->value.enumerated.item[0];
@@ -440,7 +440,7 @@ static int set_test_reg(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
     u32    currMode = ucontrol->value.enumerated.item[0];
 	int    i, value;
 	int	   regs, rege;
