@@ -32,39 +32,36 @@
 	.text
 
 ENTRY(ambarella_finish_suspend)
-	/*
-	 * Execute DSB and ISB instruction to ensure that all of the
-	 * memory accesses have been completed.
-	 */
-	dsb
 	isb
-	nop
+	dsb
+	mov r0, #0
+	ldr	r1, =(DRAMC_BASE + DRAM_DDRC_OFFSET)
+	ldr	r2, =ANA_PWR_REG
 
-	/*
-	 * Following codes have to run from cache since
-	 * the DRAM is going to self refresh mode
-	 */
-	.align	L1_CACHE_SHIFT
-	ldr	r0, =(DRAMC_BASE + DRAM_DDRC_OFFSET)
-	ldr	r1, [r0, #DDRC_CTL_OFFSET]
-	bic	r1, r1, #0x1
-	str	r1, [r0, #DDRC_CTL_OFFSET]
-	mov	r1, #0x80000000
-	str	r1, [r0, #DDRC_SELF_REF_OFFSET]
-1:
-	ldr	r1, [r0, #DDRC_SELF_REF_OFFSET]
-	tst	r1, #0x10000000
-	beq	1b
-
-	/* now turn off PWC */
-	ldr	r0, =ANA_PWR_REG
-	mov	r1, #ANA_PWR_POWER_DOWN
-	str	r1, [r0]
-
-	/* never get here */
-2:	b	2b
+	teq	r0, r0
+	bl _ambarella_finish_suspend
+	teq	pc,	r0
+	bl _ambarella_finish_suspend
 
 ENDPROC(ambarella_finish_suspend)
+
+	/* _ambarella_finish_suspend will be called twice. first is to makesure the
+	 * instructions loading in the I-Cache, and the second is to disconnect cpu
+	 * with dram, enter self refresh, and power down PWC.
+	 */
+ENTRY(_ambarella_finish_suspend)
+	ldrne	r3, [r1, #DDRC_CTL_OFFSET]
+	bicne	r3, r3, #0x1
+	strne	r3, [r1, #DDRC_CTL_OFFSET]
+	movne	r3, #0x80000000
+	strne	r3, [r1, #DDRC_SELF_REF_OFFSET]
+
+	movne	r3, #ANA_PWR_POWER_DOWN
+	strne	r3, [r2]
+	moveq	pc, lr
+	b		.
+
+ENDPROC(_ambarella_finish_suspend)
 
 #if (CHIP_REV == S3)
 #define	IOMUX_UART0_PIN_CFG	0x00000030

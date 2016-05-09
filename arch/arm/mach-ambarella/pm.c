@@ -177,10 +177,10 @@ static int ambarella_pm_enter_mem(void)
 
 	/* ensure the power for DRAM keeps on when power off PWC */
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x1);
-	amba_writel(RTC_REG(RTC_POS0_OFFSET), 0xa);
-	amba_writel(RTC_REG(RTC_POS1_OFFSET), 0xa);
-	amba_writel(RTC_REG(RTC_POS2_OFFSET), 0xa);
-	amba_writel(RTC_REG(RTC_POS3_OFFSET), 0xa);
+	amba_writel(RTC_REG(RTC_POS0_OFFSET), 0x10);
+	amba_writel(RTC_REG(RTC_POS1_OFFSET), 0x10);
+	amba_writel(RTC_REG(RTC_POS2_OFFSET), 0x10);
+	amba_writel(RTC_REG(RTC_POS3_OFFSET), 0x10);
 	amba_setbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
 
 	alarm_val = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
