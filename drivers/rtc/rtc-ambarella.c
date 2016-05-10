@@ -260,7 +260,8 @@ static int ambrtc_probe(struct platform_device *pdev)
 	struct resource *mem;
 	void __iomem *reg;
 	int ret;
-        struct device_node *np = pdev->dev.of_node;
+	unsigned int wakeup_support;
+	struct device_node *np = pdev->dev.of_node;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
@@ -299,7 +300,9 @@ static int ambrtc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, ambrtc);
 	ambrtc_check_power_lost(ambrtc);
 
-        pdev->dev.power.can_wakeup = !!of_get_property(np, "rtc,wakeup", NULL);
+	wakeup_support = !!of_get_property(np, "rtc,wakeup", NULL);
+	if (wakeup_support)
+		device_set_wakeup_capable(&pdev->dev, 1);
 
 	ambrtc->rtc = devm_rtc_device_register(&pdev->dev, "rtc-ambarella",
 				     &ambarella_rtc_ops, THIS_MODULE);
@@ -326,6 +329,33 @@ static const struct of_device_id ambarella_rtc_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, ambarella_rtc_dt_ids);
 
+#ifdef CONFIG_PM_SLEEP
+static int ambarella_rtc_suspend(struct device *dev)
+{
+	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
+
+	if (device_may_wakeup(dev)){
+		if (ambrtc->irq != -1)
+			enable_irq_wake(ambrtc->irq);
+	}
+
+	return 0;
+}
+
+static int ambarella_rtc_resume(struct device *dev)
+{
+	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
+
+	if (device_may_wakeup(dev)) {
+		if (ambrtc->irq != -1)
+			disable_irq_wake(ambrtc->irq);
+	}
+	return 0;
+}
+#endif
+
+static SIMPLE_DEV_PM_OPS(ambarella_rtc_pm_ops, ambarella_rtc_suspend, ambarella_rtc_resume);
+
 static struct platform_driver ambarella_rtc_driver = {
 	.probe		= ambrtc_probe,
 	.remove		= ambrtc_remove,
@@ -333,6 +363,7 @@ static struct platform_driver ambarella_rtc_driver = {
 		.name	= "ambarella-rtc",
 		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_rtc_dt_ids,
+		.pm	= &ambarella_rtc_pm_ops,
 	},
 };
 
