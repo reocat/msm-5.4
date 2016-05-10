@@ -157,6 +157,7 @@
 			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
 			interrupts = <64 0x1>;
+			rtc,wakeup;
 		};
 
 		pwm: pwm@e8008000 {
