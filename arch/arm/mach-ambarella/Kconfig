@@ -466,6 +466,11 @@ config AMBARELLA_EXT_GPIO_NUM
 	help
 	  Depends on your HW design.
 
+config AMBARELLA_SREF_FIFO_EXEC
+	bool "Self refresh code executed in FIO fifo"
+	default n
+	depends on PLAT_AMBARELLA_SUPPORT_PM
+
 endmenu
 
 endif

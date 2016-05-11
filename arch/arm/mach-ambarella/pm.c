@@ -40,6 +40,7 @@
 #include <mach/init.h>
 #include <plat/drctl.h>
 #include <plat/rtc.h>
+#include <plat/fio.h>
 #include <plat/ambcache.h>
 
 #define SREF_MAGIC_PATTERN		0x43525230
@@ -172,6 +173,9 @@ static int ambarella_pm_enter_mem(void)
 	u32 l2_enabled;
 	u32 time_val;
 	u32 alarm_val;
+#ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
+	void *ambarella_suspend_exec = NULL;
+#endif
 
 	ambarella_disconnect_dram_reset();
 
@@ -194,6 +198,11 @@ static int ambarella_pm_enter_mem(void)
 
 	ambarella_set_cpu_jump(0, ambarella_cpu_resume);
 
+#ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
+	ambarella_suspend_exec = ambarella_fio_push(ambarella_optimize_suspend,
+			ambarella_optimize_suspend_sz);
+#endif
+
 	l2_enabled = outer_is_enabled();
 	if (l2_enabled)
 		ambcache_l2_disable_raw();
@@ -201,7 +210,11 @@ static int ambarella_pm_enter_mem(void)
 	/* XXX special design for S3L */
 	ambarella_notify_to_mcu();
 
+#ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
+	cpu_suspend(0, ambarella_suspend_exec);
+#else
 	cpu_suspend(0, ambarella_finish_suspend);
+#endif
 
 	if (l2_enabled)
 		ambcache_l2_enable_raw();
