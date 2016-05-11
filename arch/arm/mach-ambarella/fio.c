@@ -31,6 +31,7 @@
 #include <asm/io.h>
 #include <asm/setup.h>
 #include <mach/hardware.h>
+#include <asm/cacheflush.h>
 #include <plat/fio.h>
 #include <plat/sd.h>
 #include <plat/nand.h>
@@ -242,6 +243,24 @@ void fio_amb_sdio0_set_int(u32 mask, u32 on)
 }
 EXPORT_SYMBOL(fio_amb_sdio0_set_int);
 #endif
+
+void *ambarella_fio_push(void *func, u32 size)
+{
+	void *fio_4k_vaddr;
+
+	fio_4k_vaddr = __arm_ioremap_exec(FIO_4K_BASE, 0x1000, false);
+
+	BUG_ON(!fio_4k_vaddr || (size > 0x1000));
+
+	amba_writel(FIO_CTR_REG, (amba_readl(FIO_CTR_REG) | FIO_CTR_RR));
+	memcpy(fio_4k_vaddr, func, size);
+
+	flush_icache_range((unsigned long)(fio_4k_vaddr),
+			(unsigned long)(fio_4k_vaddr) + (size));
+
+	return fio_4k_vaddr;
+}
+EXPORT_SYMBOL(ambarella_fio_push);
 
 void ambarella_fio_rct_reset(void)
 {

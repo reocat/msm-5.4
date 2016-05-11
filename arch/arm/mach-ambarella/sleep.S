@@ -63,6 +63,44 @@ ENTRY(_ambarella_finish_suspend)
 
 ENDPROC(_ambarella_finish_suspend)
 
+ENTRY(ambarella_optimize_suspend)
+	dsb
+	isb
+
+	mov	r0,	#DBGBUS_BASE
+	orr r0, #RCT_OFFSET
+	orr	r0, #ANA_PWR_OFFSET
+
+	/* Generate the PD signal */
+	mov	r1, #ANA_PWR_POWER_DOWN
+	str	r1, [r0]
+
+	/* CPU use the delay interval between power-down signal PD
+	   and PWC_RSTOB to execute the following code */
+
+	mov	r0, #DRAMC_BASE
+	orr r0, r0, #DRAM_DDRC_OFFSET
+
+	ldr	r1, [r0, #DDRC_CTL_OFFSET]
+	bic	r1, r1, #0x1
+	str	r1, [r0, #DDRC_CTL_OFFSET]
+	mov	r1, #0x80000000
+	str	r1, [r0, #DDRC_SELF_REF_OFFSET]
+1:
+	ldr	r1, [r0, #DDRC_SELF_REF_OFFSET]
+	tst	r1, #0x10000000
+	beq	1b
+
+	/* Wait for PWC_RSTOB signal to power down cpu */
+	b	.
+
+	/* never get here */
+2:	b	2b
+ENDPROC(ambarella_optimize_suspend)
+
+ENTRY(ambarella_optimize_suspend_sz)
+	.word 	. - ambarella_optimize_suspend
+
 #if (CHIP_REV == S3)
 #define	IOMUX_UART0_PIN_CFG	0x00000030
 #else
