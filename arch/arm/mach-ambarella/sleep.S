@@ -63,6 +63,7 @@ ENTRY(_ambarella_finish_suspend)
 
 ENDPROC(_ambarella_finish_suspend)
 
+#ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
 ENTRY(ambarella_optimize_suspend)
 	dsb
 	isb
@@ -100,6 +101,7 @@ ENDPROC(ambarella_optimize_suspend)
 
 ENTRY(ambarella_optimize_suspend_sz)
 	.word 	. - ambarella_optimize_suspend
+#endif
 
 #if (CHIP_REV == S3)
 #define	IOMUX_UART0_PIN_CFG	0x00000030
