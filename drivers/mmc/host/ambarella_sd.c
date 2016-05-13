@@ -1260,6 +1260,8 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	if (rval < 0)
 		goto out1;
 
+	setup_timer(&host->timer, ambarella_sd_timer_timeout, (unsigned long)host);
+
 	rval = mmc_add_host(mmc);
 	if (rval < 0) {
 		dev_err(&pdev->dev, "Can't add mmc host!\n");
@@ -1273,8 +1275,6 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", host->irq);
 		goto out2;
 	}
-
-	setup_timer(&host->timer, ambarella_sd_timer_timeout, (unsigned long)host);
 
 	ambarella_sd_add_debugfs(host);
 
