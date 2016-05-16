@@ -64,7 +64,7 @@ static const struct reg_default ak4642_reg[] = {
 static int ak4642_get_mic_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned short val, val1, val2;
 
 	val1 = snd_soc_read(codec, AK4642_SIG1);
@@ -78,7 +78,7 @@ static int ak4642_get_mic_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_set_mic_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned short val, val1, val2;
 
 	val1 = snd_soc_read(codec, AK4642_SIG1);
@@ -102,7 +102,7 @@ static int ak4642_set_mic_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_get_alc_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned short val, val1, val2;
 
 	val1 = snd_soc_read(codec, AK4642_ALC1);
@@ -116,7 +116,7 @@ static int ak4642_get_alc_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_set_alc_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned short val, val1, val2;
 
 	val1 = snd_soc_read(codec, AK4642_ALC1);
@@ -140,7 +140,7 @@ static int ak4642_set_alc_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_get_input_mux(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned short val, val1, val2;
 
 	val1 = snd_soc_read(codec, AK4642_PM3);
@@ -160,7 +160,7 @@ static int ak4642_get_input_mux(struct snd_kcontrol *kcontrol,
 static int ak4642_set_input_mux(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	unsigned short val, val1, val2;
 
 	val1 = snd_soc_read(codec, AK4642_PM3);

@@ -49,8 +49,6 @@
 #define LINEIN1_MIC_BIAS_CONNECT
 #define LINEIN2_MIC_BIAS_CONNECT
 
-struct snd_soc_codec *ak4951_codec;
-
 /* AK4951 Codec Private Data */
 struct ak4951_priv {
 	unsigned int rst_pin;
@@ -316,7 +314,7 @@ static const struct soc_enum ak4951_micswitch_enum[] = {
 
 static int get_micstatus(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.enumerated.item[0] = ak4951->mic;
@@ -325,7 +323,7 @@ static int get_micstatus(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_valu
 
 static int set_micstatus(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
 	ak4951->mic = ucontrol->value.enumerated.item[0];
@@ -355,7 +353,7 @@ static int ak4951_writeMask(struct snd_soc_codec *, u16, u16, u16);
 
 static int get_onstereo(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.enumerated.item[0] = ak4951->onStereo;
@@ -364,7 +362,7 @@ static int get_onstereo(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value
 
 static int set_onstereo(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 
 	ak4951->onStereo = ucontrol->value.enumerated.item[0];
@@ -408,7 +406,7 @@ static int set_test_reg(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
     u32    currMode = ucontrol->value.enumerated.item[0];
 	int    i, value;
 	int	   regs, rege;
@@ -566,7 +564,7 @@ static const struct snd_kcontrol_new ak4951_dacsl_mixer_controls[] = {
 static int ak4951_spklo_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = ak4951_codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	u32 reg, nLOSEL;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -1067,8 +1065,6 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 {
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int ret = 0;
-
-	ak4951_codec = codec;
 
 	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
 	if (ret < 0){

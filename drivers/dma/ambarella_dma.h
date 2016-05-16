@@ -29,14 +29,14 @@ enum ambdma_status {
 
 /* lli == Linked List Item; aka DMA buffer descriptor, used by hardware */
 struct ambdma_lli {
-	dma_addr_t			src;
-	dma_addr_t			dst;
-	dma_addr_t			next_desc;
-	dma_addr_t			rpt_addr;
-	u32				xfr_count;
-	u32				attr;
-	u32				rsvd;
-	u32				rpt;
+	u32			src;
+	u32			dst;
+	u32			next_desc;
+	u32			rpt_addr;
+	u32			xfr_count;
+	u32			attr;
+	u32			rsvd;
+	u32			rpt;
 };
 
 struct ambdma_desc {

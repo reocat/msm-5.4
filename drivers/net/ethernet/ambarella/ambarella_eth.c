@@ -305,7 +305,7 @@ static inline void ambhw_dma_tx_stop(struct ambeth_info *lp)
 static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 {
 	if (lp->enhance) {
-		lp->tx.desc_tx[entry].status = ETH_ENHANCED_TDES0_OWN | ETH_ENHANCED_TDES0_IC ;
+		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN | ETH_ENHANCED_TDES0_IC;
 	} else {
 		lp->tx.desc_tx[entry].length |= ETH_TDES1_IC;
 		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
@@ -432,6 +432,10 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 
 	val = ETH_DMA_BUS_MODE_FB | ETH_DMA_BUS_MODE_PBL_32 |
 		ETH_DMA_BUS_MODE_DA_RX;
+
+	if(lp->enhance)
+		val |= ETH_DMA_BUS_MODE_ATDS;
+
 	writel_relaxed(val, lp->regbase + ETH_DMA_BUS_MODE_OFFSET);
 	writel_relaxed(0, lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
 
@@ -1229,13 +1233,8 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			entry = (lp->tx.dirty_tx % lp->tx_count);
 			status = lp->tx.desc_tx[entry].status;
 
-			if (lp->enhance) {
-				if (status & ETH_ENHANCED_TDES0_OWN)
-					break;
-			} else {
-				if (status & ETH_TDES0_OWN)
-					break;
-			}
+			if (status & ETH_TDES0_OWN)
+				break;
 
 			if (unlikely(status & ETH_TDES0_ES)) {
 				if ((status & ETH_TDES0_ES_MASK) ==
@@ -1502,15 +1501,15 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	entry = (lp->tx.cur_tx % lp->tx_count);
 	if (dirty_diff == lp->tx_irq_high) {
 		if (lp->enhance)
-			tx_flag |= ETH_TDES1_IC;
-		else
 			tx_flag |= ETH_ENHANCED_TDES0_IC;
+		else
+			tx_flag |= ETH_TDES1_IC;
 	} else if (dirty_diff == (lp->tx_count - 1)) {
 		netif_stop_queue(ndev);
 		if (lp->enhance)
-			tx_flag |= ETH_TDES1_IC;
-		else
 			tx_flag |= ETH_ENHANCED_TDES0_IC;
+		else
+			tx_flag |= ETH_TDES1_IC;
 	} else if (dirty_diff >= lp->tx_count) {
 		netif_stop_queue(ndev);
 		ret_val = -ENOMEM;
@@ -1536,7 +1535,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	lp->tx.desc_tx[entry].buffer1 = mapping;
 	if (lp->enhance) {
 		lp->tx.desc_tx[entry].length = ETH_ENHANCED_TDES1_TBS1x(skb->len);
-		lp->tx.desc_tx[entry].status = ETH_ENHANCED_TDES0_OWN | tx_flag;
+		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN | tx_flag;
 	} else {
 		lp->tx.desc_tx[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
 		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
