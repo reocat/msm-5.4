@@ -964,8 +964,12 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 	writel_relaxed(arg_reg, host->regbase + SD_ARG_OFFSET);
 	writew_relaxed(cmd_reg, host->regbase + SD_CMD_OFFSET);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* quick recovery from cmd53 timeout */
+	mod_timer(&host->timer, jiffies + HZ);
+#else
 	mod_timer(&host->timer, jiffies + 5 * HZ);
-
+#endif
 	return 0;
 }
 
@@ -973,7 +977,12 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	if (unlikely((host->mrq) != NULL))
+		printk(KERN_ERR "%s: last request not finished yet\n", __func__);
+#else
 	WARN_ON(host->mrq);
+#endif
 
 	ambarella_sd_request_bus(mmc);
 
