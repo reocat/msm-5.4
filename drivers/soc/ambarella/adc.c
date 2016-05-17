@@ -98,17 +98,22 @@ static void ambarella_adc_enable(struct ambadc_host *ambadc)
 #if (ADC_SUPPORT_SLOT == 1)
 	/* soft reset adc controller, set slot, and then enable it */
 	writel_relaxed(ADC_CONTROL_RESET, ambadc->regbase + ADC_CONTROL_OFFSET);
+#endif
+
+	tmp = readl_relaxed(ambadc->regbase + ADC_ENABLE_OFFSET);
+	tmp |= ADC_CONTROL_MODE | ADC_CONTROL_ENABLE;
+	writel_relaxed(tmp, ambadc->regbase + ADC_ENABLE_OFFSET);
+
+#if (ADC_SUPPORT_SLOT == 1)
 	writel_relaxed(0x0, ambadc->regbase + ADC_SLOT_NUM_OFFSET);
-	writel_relaxed(0xffff, ambadc->regbase + ADC_SLOT_PERIOD_OFFSET);
-	writel_relaxed(0x0fff, ambadc->regbase + ADC_SLOT_CTRL_0_OFFSET);
+	writel_relaxed((1 << ADC_NUM_CHANNELS) - 1,
+				ambadc->regbase + ADC_SLOT_CTRL_0_OFFSET);
+	writel_relaxed(ADC_NUM_CHANNELS * ADC_PERIOD_CYCLE -1,
+				ambadc->regbase + ADC_SLOT_PERIOD_OFFSET);
 #endif
         //test fifo read in fifo_0
         if(ambarella_adc->fifo_mode)
                 ambarella_adc_fifo_ctrl(ambadc, 0,1);
-
-	tmp = readl_relaxed(ambadc->regbase + ADC_ENABLE_OFFSET);
-	tmp |= ADC_CONTROL_ENABLE;
-	writel_relaxed(tmp, ambadc->regbase + ADC_ENABLE_OFFSET);
 }
 
 static void ambarella_adc_disable(struct ambadc_host *ambadc)
@@ -128,7 +133,7 @@ static void ambarella_adc_start(struct ambadc_host *ambadc)
 	u32 tmp;
 
 	tmp = readl_relaxed(ambadc->regbase + ADC_CONTROL_OFFSET);
-	tmp |= ADC_CONTROL_MODE | ADC_CONTROL_START;
+	tmp |= ADC_CONTROL_START;
 	writel_relaxed(tmp, ambadc->regbase + ADC_CONTROL_OFFSET);
 }
 
@@ -137,7 +142,7 @@ static void ambarella_adc_stop(struct ambadc_host *ambadc)
 	u32 tmp;
 
 	tmp = readl_relaxed(ambadc->regbase + ADC_CONTROL_OFFSET);
-	tmp &= ~(ADC_CONTROL_MODE | ADC_CONTROL_START);
+	tmp &= ~(ADC_CONTROL_START);
 	writel_relaxed(tmp, ambadc->regbase + ADC_CONTROL_OFFSET);
 }
 
@@ -407,7 +412,7 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-        //ambadc->fifo_mode=1;//test fifo mode
+	//ambadc->fifo_mode=1;//test fifo mode
 
 	ambadc->polling_mode = of_property_read_bool(np, "amb,polling-mode");
 	if (ambadc->polling_mode) {

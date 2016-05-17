@@ -42,6 +42,13 @@
 #define ADC_SUPPORT_SLOT		1
 #endif
 
+#if (CHIP_REV == S2E) || (CHIP_REV == S3L)
+#define ADC_PERIOD_CYCLE		6
+#elif (CHIP_REV == S5)
+#define ADC_PERIOD_CYCLE		20
+#else
+#define ADC_PERIOD_CYCLE		5
+#endif
 /* ==========================================================================*/
 #if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define ADC_OFFSET			0xD000
