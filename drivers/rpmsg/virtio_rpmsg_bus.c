@@ -130,6 +130,22 @@ rpmsg_show_attr(announce, announce ? "true" : "false", "%s\n");
  */
 static unsigned int rpmsg_dev_index;
 
+#ifdef RPMSG_DEBUG
+AMBA_RPMSG_PROFILE_s *svq_profile, *rvq_profile;
+AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
+extern struct ambalink_shared_memory_layout ambalink_shm_layout;
+#endif
+
+extern unsigned int read_aipc_timer(void);
+
+static inline void rpmsg_pkt_count(unsigned int msgs_received)
+{
+#ifdef RPMSG_DEBUG
+	rpmsg_stat->TxToLxCount += msgs_received;
+	rpmsg_stat->TxToLxWakeUpCount++;
+#endif
+}
+
 static ssize_t modalias_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
@@ -556,7 +572,7 @@ static int rpmsg_destroy_channel(struct virtproc_info *vrp,
 }
 
 /* super simple buffer "allocator" that is just enough for now */
-static void *get_a_tx_buf(struct virtproc_info *vrp)
+static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
 {
 	unsigned int len;
 	void *ret;
@@ -569,10 +585,13 @@ static void *get_a_tx_buf(struct virtproc_info *vrp)
 	 * (half of our buffers are used for sending messages)
 	 */
 	if (vrp->last_sbuf < vrp->num_bufs / 2)
+	{
+		*idx = vrp->last_sbuf;
 		ret = vrp->sbufs + RPMSG_BUF_SIZE * vrp->last_sbuf++;
+	}
 	/* or recycle a used one */
 	else
-		ret = virtqueue_get_buf(vrp->svq, &len);
+		ret = virtqueue_get_buf_index(vrp->svq, &len, idx);
 
 	mutex_unlock(&vrp->tx_lock);
 
@@ -635,6 +654,9 @@ static void rpmsg_downref_sleepers(struct virtproc_info *vrp)
 	mutex_unlock(&vrp->tx_lock);
 }
 
+extern unsigned int to_get_svq_buf_profile(void);
+extern void get_svq_buf_done_profile(unsigned int to_get_buf, int idx);
+
 /**
  * rpmsg_send_offchannel_raw() - send a message across to the remote processor
  * @rpdev: the rpmsg channel
@@ -676,8 +698,11 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	struct device *dev = &rpdev->dev;
 	struct scatterlist sg;
 	struct rpmsg_hdr *msg;
-	int err;
+	int err, idx;
+	unsigned int prev_time;
 
+
+	prev_time = to_get_svq_buf_profile();
 	/* bcasting isn't allowed */
 	if (src == RPMSG_ADDR_ANY || dst == RPMSG_ADDR_ANY) {
 		dev_err(dev, "invalid addr (src 0x%x, dst 0x%x)\n", src, dst);
@@ -699,7 +724,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 	}
 
 	/* grab a buffer */
-	msg = get_a_tx_buf(vrp);
+	msg = get_a_tx_buf(vrp, &idx);
 	if (!msg && !wait)
 		return -ENOMEM;
 
@@ -715,7 +740,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 		 * if later this happens to be required, it'd be easy to add.
 		 */
 		err = wait_event_interruptible_timeout(vrp->sendq,
-					(msg = get_a_tx_buf(vrp)),
+					(msg = get_a_tx_buf(vrp, &idx)),
 					msecs_to_jiffies(15000));
 
 		/* disable "tx-complete" interrupts if we're the last sleeper */
@@ -727,6 +752,7 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 			return -ERESTARTSYS;
 		}
 	}
+	get_svq_buf_done_profile(prev_time, idx);
 
 	msg->len = len;
 	msg->flags = 0;
@@ -759,8 +785,19 @@ int rpmsg_send_offchannel_raw(struct rpmsg_channel *rpdev, u32 src, u32 dst,
 		goto out;
 	}
 
+#ifdef RPMSG_DEBUG
+	svq_profile[idx].SvqToSendInterrupt = read_aipc_timer();
+//	printk("idx %d svq_send_interrupt %u, addr is %x\n", idx, svq_profile[idx].SvqToSendInterrupt, &svq_profile[idx].SvqToSendInterrupt);
+#endif
+
 	/* tell the remote processor it has a pending message to read */
 	virtqueue_kick(vrp->svq);
+
+#ifdef RPMSG_DEBUG
+	svq_profile[idx].SvqSendInterrupt = read_aipc_timer();
+//	printk("idx %d svq_send_interrupt %u, addr is %x\n", idx, svq_profile[idx].SvqSendInterrupt, &svq_profile[idx].SvqSendInterrupt);
+#endif
+
 out:
 	mutex_unlock(&vrp->tx_lock);
 	return err;
@@ -830,37 +867,49 @@ static int rpmsg_recv_single(struct virtproc_info *vrp, struct device *dev,
 
 	return 0;
 }
-
+extern void lnx_response_profile(unsigned int to_get_buf, int idx);
+extern unsigned int finish_rpmsg_profile(unsigned int to_get_buf, unsigned int to_recv_data,
+	int idx);
 /* called when an rx buffer is used, and it's time to digest a message */
 static void rpmsg_recv_done(struct virtqueue *rvq)
 {
 	struct virtproc_info *vrp = rvq->vdev->priv;
 	struct device *dev = &rvq->vdev->dev;
 	struct rpmsg_hdr *msg;
-	unsigned int len, msgs_received = 0;
+	unsigned int len, idx, msgs_received = 0;
 	int err;
+	unsigned int to_get_buf, to_recv_data;
 
-	msg = virtqueue_get_buf(rvq, &len);
+	to_get_buf = read_aipc_timer();
+	//calculate the response time.
+
+	msg = virtqueue_get_buf_index(rvq, &len, &idx);
 	if (!msg) {
 		dev_err(dev, "uhm, incoming signal, but no used buffer ?\n");
 		return;
 	}
+	lnx_response_profile(to_get_buf, idx);
 
 	while (msg) {
+		to_recv_data = read_aipc_timer();
+
 		err = rpmsg_recv_single(vrp, dev, msg, len);
 		if (err)
 			break;
 
-		msgs_received++;
+		to_get_buf = finish_rpmsg_profile(to_get_buf, to_recv_data, idx);
 
-		msg = virtqueue_get_buf(rvq, &len);
+		msgs_received++;
+		msg = virtqueue_get_buf_index(rvq, &len, &idx);
 	};
 
 	dev_dbg(dev, "Received %u messages\n", msgs_received);
 
 	/* tell the remote processor we added another available rx buffer */
-	if (msgs_received)
+	if (msgs_received) {
+		rpmsg_pkt_count(msgs_received);
 		virtqueue_kick(vrp->rvq);
+	}
 }
 
 /*
@@ -1117,6 +1166,17 @@ static struct virtio_driver virtio_ipc_driver = {
 static int __init rpmsg_init(void)
 {
 	int ret;
+
+#ifdef RPMSG_DEBUG
+	unsigned int profile_addr;
+	/* The starting addr for storing profiling data. */
+	rpmsg_stat = (AMBA_RPMSG_STATISTIC_s *) phys_to_virt(ambalink_shm_layout.rpmsg_profile_addr);
+	profile_addr = (ambalink_shm_layout.rpmsg_profile_addr + sizeof(AMBA_RPMSG_STATISTIC_s));
+	svq_profile = (AMBA_RPMSG_PROFILE_s *) phys_to_virt(profile_addr);
+	profile_addr = (ambalink_shm_layout.rpmsg_profile_addr + sizeof(AMBA_RPMSG_STATISTIC_s) + \
+					sizeof(AMBA_RPMSG_PROFILE_s)*(RPMSG_BUF_SIZE/2));
+	rvq_profile = (AMBA_RPMSG_PROFILE_s *) phys_to_virt(profile_addr);
+#endif
 
 	ret = bus_register(&rpmsg_bus);
 	if (ret) {

@@ -1,5 +1,5 @@
 
-# obj-y				+= aipc_profile.o
+obj-y				+= aipc_profile.o
 
 obj-y				+= memory.o
 

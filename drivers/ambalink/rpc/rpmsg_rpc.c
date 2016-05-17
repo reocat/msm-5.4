@@ -25,9 +25,10 @@
 #include <linux/remoteproc.h>
 #include <linux/aipc_msg.h>
 
-#if RPC_DEBUG
-#include <asm/uaccess.h>
+#ifdef RPC_DEBUG
 #include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+#include <linux/fs.h>
 #include <plat/ambalink_cfg.h>
 #endif
 #include "aipc_priv.h"
@@ -36,14 +37,17 @@
 
 static struct rpmsg_channel *chnl_tx;
 
-#if RPC_DEBUG
-#define RPMSG_RPC_TIMER_PROC
-#endif
-
-#ifdef RPMSG_RPC_TIMER_PROC
-static const char proc_name[] = "rpc_profiler";
+#ifdef RPC_DEBUG
+#define RPC_MACIG 0xD0
+#define READ_IOCTL _IOR(RPC_MACIG, 0, int)
+#define WRITE_IOCTL _IOW(RPC_MACIG, 1, int)
+static int rpc_major;
+static int rpc_debug = 0;
+static const char proc_name[] = "rpc_debug";
 static struct proc_dir_entry *rpc_file = NULL;
+char profile_buf[200];
 
+extern unsigned int read_aipc_timer(void);
 /*
  * calculate the time
  */
@@ -58,42 +62,23 @@ static unsigned int calc_timer_diff(unsigned int start, unsigned int end)
 	return diff;
 }
 
-/*
- * get time
- */
-static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
+static void read_timer(unsigned long arg)
 {
-	return seq_printf(m, "%u", readl_relaxed(PROFILE_TIMER));
+	unsigned long ret;
+	memset(profile_buf, 0x0, sizeof(profile_buf));
+	sprintf(profile_buf, "%u", read_aipc_timer());
+	ret = copy_to_user((char *)arg, profile_buf, strlen(profile_buf)+1);
 }
 
-/*
- * access the rpc statistics in shared memory
- */
- static ssize_t rpmsg_rpc_proc_write(struct file *file,
-                                const char __user *buffer, size_t count, loff_t *data)
+static void wrtie_profile(void)
 {
-	char buf[50];
 	unsigned int addr, result, cur_time, diff;
 	unsigned int* value, *sec_value;
-	int retval, cond;
-
-	if (count > sizeof(buf)) {
-		pr_err("%s: count %d out of size!\n", __func__, (u32)count);
-		retval = -ENOSPC;
-		goto rpmsg_rpc_write_exit;
-	}
-
-	memset(buf, 0x0, sizeof(buf));
-
-	if (copy_from_user(buf, buffer, count)) {
-		pr_err("%s: copy_from_user fail!\n", __func__);
-		retval = -EFAULT;
-		goto rpmsg_rpc_write_exit;
-	}
+	int cond;
 
 	/* access to the statistics in shared memory*/
-	sscanf(buf, "%d %u %u", &cond, &addr, &result);
-	value = (unsigned int *) (addr + ambalink_shm_layout.rpc_profile_addr);
+	sscanf(profile_buf, "%d %u %u", &cond, &addr, &result);
+	value = (unsigned int *) phys_to_virt(addr + ambalink_shm_layout.rpc_profile_addr);
 	switch (cond) {
 	case 1: //add the result
 		*value += result;
@@ -110,8 +95,8 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 		break;
 	case 4: //calculate injection time
 		//value is LuLastInjectTime & sec_value is LuTotalInjectTime
-		sec_value = (unsigned int *) (result + ambalink_shm_layout.rpc_profile_addr);
-		cur_time = readl_relaxed(PROFILE_TIMER);
+		sec_value = (unsigned int *) phys_to_virt(result + ambalink_shm_layout.rpc_profile_addr);
+		cur_time = read_aipc_timer();
 		if ( *value != 0) {
 			//calculate the duration from last to current injection.
 			diff = calc_timer_diff(*value, cur_time);
@@ -122,10 +107,65 @@ static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
 		*value = cur_time;
 		break;
 	}
+}
+/*
+ * access the rpc statistics through ioctl
+ */
+static long rpmsg_rpc_profile_ioctl(struct file *filep, unsigned int cmd,
+	unsigned long arg)
+{
+	long len = 200;
+	unsigned long ret;
+
+	switch(cmd) {
+		case READ_IOCTL:
+			read_timer(arg);
+			break;
+		case WRITE_IOCTL:
+			ret = copy_from_user(profile_buf, (char *)arg, len);
+			wrtie_profile();
+			break;
+		default:
+			return -ENOTTY;
+	}
+	return len;
+}
+
+static struct file_operations fops = {
+	.unlocked_ioctl = rpmsg_rpc_profile_ioctl,
+	.compat_ioctl = rpmsg_rpc_profile_ioctl,
+};
+
+static ssize_t rpmsg_rpc_proc_write(struct file *file,
+                                const char __user *buffer, size_t count, loff_t *data)
+{
+	char usr_input[10];
+	int retval;
+
+	if (count > sizeof(usr_input)) {
+		pr_err("%s: count %d out of size!\n", __func__, (u32)count);
+		retval = -ENOSPC;
+		goto rpmsg_rpc_write_exit;
+	}
+
+
+	if (copy_from_user(usr_input, buffer, count)) {
+		pr_err("%s: copy_from_user fail!\n", __func__);
+		retval = -EFAULT;
+		goto rpmsg_rpc_write_exit;
+	}
+
+	sscanf(usr_input,"%d", &rpc_debug);
 	retval = count;
 
 rpmsg_rpc_write_exit:
 	return retval;
+}
+
+static int rpmsg_rpc_proc_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%d", rpc_debug);
+	return 0;
 }
 
 static int rpmsg_rpc_proc_open(struct inode *inode, struct file *file)
@@ -147,9 +187,9 @@ static const struct file_operations proc_rpmsg_rpc_fops = {
 static void rpmsg_rpc_recv(struct rpmsg_channel *rpdev, void *data, int len,
                            void *priv, u32 src)
 {
-#if RPC_DEBUG
+#ifdef RPC_DEBUG
 	struct aipc_pkt *pkt = (struct aipc_pkt *)data;
-	pkt->xprt.lk_to_lu_start = readl_relaxed(PROFILE_TIMER);
+	pkt->xprt.lk_to_lu_start = read_aipc_timer();
 #endif
 	DMSG("rpmsg_rpc recv %d bytes\n", len);
 	aipc_router_send((struct aipc_pkt*)data, len);
@@ -161,8 +201,8 @@ static void rpmsg_rpc_recv(struct rpmsg_channel *rpdev, void *data, int len,
 static void rpmsg_rpc_send_tx(struct aipc_pkt *pkt, int len, int port)
 {
 	if (chnl_tx) {
-#if RPC_DEBUG
-		pkt->xprt.lu_to_lk_end = readl_relaxed(PROFILE_TIMER);
+#ifdef RPC_DEBUG
+		pkt->xprt.lu_to_lk_end = read_aipc_timer();
 #endif
 		rpmsg_send(chnl_tx, pkt, len);
 	}
@@ -172,10 +212,10 @@ static int rpmsg_rpc_probe(struct rpmsg_channel *rpdev)
 {
 	int ret = 0;
 	struct rpmsg_ns_msg nsm;
-#ifdef RPMSG_RPC_TIMER_PROC
-	rpc_file = proc_create(proc_name, S_IRUGO | S_IWUSR,
+#ifdef RPC_DEBUG
+	rpc_file = proc_create_data(proc_name, S_IRUGO | S_IWUSR,
 	                            get_ambarella_proc_dir(),
-	                            &proc_rpmsg_rpc_fops);
+	                            &proc_rpmsg_rpc_fops, NULL);
 	if (rpc_file == NULL) {
 		pr_err("%s: %s fail!\n", __func__, proc_name);
 		ret = -ENOMEM;
@@ -217,11 +257,23 @@ static int __init rpmsg_rpc_init(void)
 		.send = rpmsg_rpc_send_tx,
 	};
 	aipc_router_register_xprt(AIPC_HOST_THREADX, &ops_tx);
+
+#ifdef RPC_DEBUG
+	rpc_major = register_chrdev(0, "rpc_profile", &fops);
+	if (rpc_major < 0) {
+		printk ("Registering the rpc profile device failed with %d\n", rpc_major);
+	} else {
+		printk ("Registering the rpc profile device successfully with %d\n", rpc_major);
+	}
+#endif
 	return register_rpmsg_driver(&rpmsg_rpc_driver);
 }
 
 static void __exit rpmsg_rpc_fini(void)
 {
+#ifdef RPC_DEBUG
+	unregister_chrdev(rpc_major, "rpc_profile");
+#endif
 	unregister_rpmsg_driver(&rpmsg_rpc_driver);
 }
 

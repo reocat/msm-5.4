@@ -30,7 +30,7 @@
  * The rpmsg profiling related data structure use the same definition in dual-OSes.
  * This data structure
  */
-#define RPMSG_DEBUG             0
+#define RPMSG_DEBUG
 
 struct ambarella_rproc_pdata {
 	const char              *name;
@@ -48,7 +48,7 @@ struct ambarella_rproc_pdata {
         struct regmap           *reg_ahb_scr;
 };
 
-#if RPMSG_DEBUG
+#ifdef RPMSG_DEBUG
 /******************************The defintion is shared between dual-OSes*******************************/
 typedef struct {
 	unsigned int ToGetSvqBuffer;

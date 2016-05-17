@@ -33,6 +33,10 @@
 
 #include "remoteproc_internal.h"
 
+#ifdef RPMSG_DEBUG
+static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
+extern struct ambalink_shared_memory_layout ambalink_shm_layout;
+#endif
 
 static struct resource_table *gen_rsc_table_cortex(int *tablesz)
 {
@@ -204,6 +208,9 @@ static irqreturn_t rproc_ambarella_isr(int irq, void *dev_id)
         struct irq_data *idata = NULL;
 
 	if (irq == pdata->rvq_rx_irq) {
+#ifdef RPMSG_DEBUG
+		rpmsg_stat->LxRvqIsrCount++;
+#endif
                 idata = irq_get_irq_data(pdata->rvq_rx_irq);
 		rvring = idr_find(&pdata->rproc->notifyids, 0);
 		virtqueue_disable_cb(rvring->vq);
@@ -280,6 +287,10 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
                 ret = -ENODEV;
                 goto free_rproc;
         }
+#ifdef RPMSG_DEBUG
+	rpmsg_stat = (AMBA_RPMSG_STATISTIC_s *) \
+				phys_to_virt(ambalink_shm_layout.rpmsg_profile_addr);
+#endif
 
 	ret = request_irq(pdata->svq_rx_irq, rproc_ambarella_isr,
 			IRQF_SHARED | IRQF_TRIGGER_HIGH,

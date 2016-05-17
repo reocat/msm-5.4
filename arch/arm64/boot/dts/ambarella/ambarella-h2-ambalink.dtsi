@@ -94,6 +94,11 @@
 			     <1 10 0xf08>;	/* Hyp IRQ */
 	};
 
+	profile_timer {
+		compatible = "ambarella,timer19";
+		reg = <0xe800f088 0x4>;
+        };
+
 	apb@e8000000 {	/* APB */
 		compatible = "simple-bus";
 		#address-cells = <1>;

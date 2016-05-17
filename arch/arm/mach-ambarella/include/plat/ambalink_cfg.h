@@ -60,11 +60,6 @@ unsigned long ambarella_virt_to_phys(unsigned long vaddr);
 /* for RPMSG suspend backup area */
 #define RPMSG_SUSPEND_BACKUP_SIZE       0x20000
 
-/* for RPC and RPMSG profiling */
-#if (CHIP_REV == S5)
-#define PROFILE_TIMER                   0x0
-#endif
-
 /* for spinlock module */
 #define AIPC_SLOCK_SIZE                 (0x1000)
 

@@ -70,7 +70,7 @@ typedef enum _AMBA_IPC_MSG_e_ {
  * if RPC_DEBUG is on, please also enable RPMSG_DEBUG.
  * RPMSG_DEBUG is defined in plat/remoteproc.h
  */
-#define RPC_DEBUG                       0
+#define RPC_DEBUG
 
 struct aipc_msg_call {
 	int  prog;              /* program number   */
@@ -100,7 +100,7 @@ struct aipc_xprt {
 	unsigned int    server_port;      /* server port    */
 	unsigned int	mode;		  /* communication mode*/
 	unsigned long   private;
-#if RPC_DEBUG
+#ifdef RPC_DEBUG
 	/* RPC profiling in ThreadX side */
 	unsigned int	tx_rpc_send_start;
 	unsigned int	tx_rpc_send_end;
