@@ -73,7 +73,7 @@ extern int ambarella_unregister_service(struct ambarella_service *amb_svc);
 extern int ambarella_request_service(int service, void *arg, void *result);
 
 /*===========================================================================*/
-
+extern void ambcache_clean_all(void *addr, unsigned int size);
 extern void ambcache_clean_range(void *addr, unsigned int size);
 extern void ambcache_inv_range(void *addr, unsigned int size);
 
