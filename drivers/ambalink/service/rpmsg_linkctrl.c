@@ -29,6 +29,7 @@
 #include <linux/remoteproc.h>
 #include <linux/suspend.h>
 #include <trace/events/power.h>
+#include <asm/suspend.h>
 
 #include <plat/ambalink_cfg.h>
 
@@ -261,19 +262,19 @@ extern void *ambalink_image_info;
 int rpmsg_linkctrl_cmd_suspend_prepare(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
+	unsigned long addr = 0x0;
 
 	dbg_trace("0x%016lx\n", info);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_SUSPEND_PREPARE;
-	ctrl_cmd.Param1 = ambarella_virt_to_phys((unsigned long) &ambalink_image_info);
+	ctrl_cmd.Param1 = ambarella_virt_to_phys((unsigned long) &addr);
 
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 
 	wait_for_completion(&linkctrl_comp);
 
-	ambalink_image_info = (void *) ambarella_phys_to_virt(
-					(unsigned long) ambalink_image_info);
+	ambalink_image_info = (void *) ambarella_phys_to_virt(addr);
 
 	hibernation_start = 1;
 
@@ -294,6 +295,8 @@ int rpmsg_linkctrl_cmd_suspend_done(int flag)
 		ctrl_cmd.Param1 = LINK_CTRL_CMD_SUSPEND_TO_DRAM;
 	else
 		ctrl_cmd.Param1 = LINK_CTRL_CMD_SUSPEND_TO_DISK;
+
+	ctrl_cmd.Param2 = (u64) virt_to_phys(cpu_resume);
 
 	rpmsg_send(rpdev_linkctrl, &ctrl_cmd, sizeof(ctrl_cmd));
 

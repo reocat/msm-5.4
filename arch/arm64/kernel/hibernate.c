@@ -41,6 +41,11 @@
 #define pud_index(x)	0
 #endif
 
+/* defined as "__visible int in_suspend __nosavedata" in
+ * kernel/power/hibernate.c
+ */
+extern int in_suspend;
+
 /*
  * Start/end of the hibernate exit code, this must be copied to a 'safe'
  * location in memory, and executed from there.
@@ -139,7 +144,6 @@ out:
 	return rc;
 }
 
-
 int swsusp_arch_suspend(void)
 {
 	int ret = 0;
@@ -149,10 +153,17 @@ int swsusp_arch_suspend(void)
 
 	local_dbg_save(flags);
 
-	if (__cpu_suspend_enter(&state))
+	if (__cpu_suspend_enter(&state)) {
 		ret = swsusp_save();
-	else
+	} else {
+		/*
+		 * Tell the hibernation core that we've just restored
+		 * the memory
+		 */
+		 in_suspend = 0;
+
 		__cpu_suspend_exit(mm);
+	}
 
 	local_dbg_restore(flags);
 

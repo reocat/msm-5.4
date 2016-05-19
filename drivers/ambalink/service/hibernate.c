@@ -25,44 +25,51 @@
 
 #include <plat/ambalink_cfg.h>
 
+/* ==========================================================================*/
+/* Below data structures have to sync with RTOS side, AmbaIPC_Hiber.c. */
+#define AMBERNATION_AOSS_MAGIC 0x19531110
+
 typedef struct ambernation_page_info {
 	u64 src;
-        u64 dst;
-        u64 size;
+	u64 dst;
+	u64 size;
 } ambernation_page_info;
 
-typedef struct ambernation_image_info {
-        unsigned char	header[PAGE_SIZE];
-	unsigned int	curr_page;
-	unsigned int	avail_pages;
-        unsigned long	page_info_phy;
-} ambernation_image_info;
+typedef struct ambernation_aoss_info {
+        u_int fn_pri[252];
+        u_int magic;
+        u_int total_pages;
+        u_int copy_pages;
+        u_int page_info;
+} ambernation_aoss_info;
 
-void *ambalink_image_info;
+/* ==========================================================================*/
+extern int wowlan_resume_from_ram;
+
+void *ambalink_image_info = NULL;
 static u32 copied_pages = 0;
-
 
 static int increase_page_info(ambernation_page_info *src_page)
 {
 	int retval = 0;
 	ambernation_page_info *page_info;
 	unsigned long next_src, next_dst;
-	ambernation_image_info *image_info;
+	ambernation_aoss_info *aoss_info;
 	unsigned int *curr_page;
 
-	image_info = (ambernation_image_info *) ambalink_image_info;
+	aoss_info = (ambernation_aoss_info *) ambalink_image_info;
 
-	curr_page = &image_info->curr_page;
+	curr_page = &aoss_info->copy_pages;
 
-	if (copied_pages >= image_info->avail_pages) {
-		pr_debug("%s: copy_pages[%d] >= total_pages[%d].\n", __func__,
-			copied_pages, image_info->avail_pages);
+	if (*curr_page >= aoss_info->total_pages) {
+		pr_info("%s: copy_pages[%d] >= total_pages[%d].\n", __func__,
+			copied_pages, aoss_info->total_pages);
 		retval = -EPERM;
 		goto exit;
 	}
 
 	page_info = (struct ambernation_page_info *)
-			ambalink_phys_to_virt(image_info->page_info_phy);
+			ambalink_phys_to_virt(aoss_info->page_info);
 
 	pr_debug("%s: page_info %p offset %d, cur %p \n", __func__,
 			page_info, *curr_page, &page_info[*curr_page]);
@@ -77,7 +84,7 @@ static int increase_page_info(ambernation_page_info *src_page)
 		if ((src_page->src == next_src) && (src_page->dst == next_dst)) {
 			page_info[*curr_page].size	+= src_page->size;
 		} else {
-			*curr_page++;
+			(*curr_page)++;
 
 			page_info[*curr_page].src	= src_page->src;
 			page_info[*curr_page].dst	= src_page->dst;
@@ -85,10 +92,9 @@ static int increase_page_info(ambernation_page_info *src_page)
 		}
 	}
 
-
 	copied_pages++;
 
-	pr_debug("%s: copy [0x%08x] to [0x%08x], size [0x%08x] %d\n", __func__,
+	pr_debug("%s: copy [0x%012llx] to [0x%012llx], size [0x%012llx] %d\n", __func__,
 			page_info[*curr_page].src,
 			page_info[*curr_page].dst,
 			page_info[*curr_page].size,
@@ -111,17 +117,23 @@ void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
 	}
 }
 
-int arch_swsusp_write(void *header)
+int arch_swsusp_write(u32 flag)
 {
-	ambernation_image_info *image_info;
+	int retval = 0;
+
+	ambernation_aoss_info *aoss_info;
 	extern int rpmsg_linkctrl_cmd_suspend_done(int flag);
 
-	image_info = (ambernation_image_info *) ambalink_image_info;
+	aoss_info = (ambernation_aoss_info *) ambalink_image_info;
 
-	memcpy((void *) &image_info->header, header, PAGE_SIZE);
+	aoss_info->fn_pri[0] = wowlan_resume_from_ram;
 
-	__flush_dcache_area(&image_info, sizeof(image_info));
+	retval = rpmsg_linkctrl_cmd_suspend_done(PM_SUSPEND_MAX);
 
-	return rpmsg_linkctrl_cmd_suspend_done(PM_SUSPEND_MAX);
+	do {
+		wfe();
+	} while (1);
+
+	return retval;
 }
 

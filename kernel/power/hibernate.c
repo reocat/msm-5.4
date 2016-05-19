@@ -267,6 +267,9 @@ void swsusp_show_speed(ktime_t start, ktime_t stop,
 static int create_image(int platform_mode)
 {
 	int error;
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	extern int arch_swsusp_write(u32 flag);
+#endif
 
 	error = dpm_suspend_end(PMSG_FREEZE);
 	if (error) {
@@ -304,6 +307,14 @@ static int create_image(int platform_mode)
 		printk(KERN_ERR "PM: Error %d creating hibernation image\n",
 			error);
 	/* Restore control flow magically appears here */
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	if (in_suspend) {
+		error = arch_swsusp_write(0);
+		if (error)
+			printk(KERN_ERR "PM: Error %d writing "
+					"arch hibernation image\n", error);
+	}
+#endif
 	restore_processor_state();
 	if (!in_suspend)
 		events_check_enabled = false;

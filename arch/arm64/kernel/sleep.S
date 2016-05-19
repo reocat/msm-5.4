@@ -89,9 +89,9 @@ ENTRY(__cpu_suspend_enter)
 
 	str	x0, [x1]
 	add	x0, x0, #SLEEP_STACK_DATA_SYSTEM_REGS
-	push	x29, lr
+	stp	x29, lr, [sp, #-16]!
 	bl	cpu_do_suspend
-	pop	x29, lr
+	ldp	x29, lr, [sp], #16
 	mov	x0, #1
 	ret
 ENDPROC(__cpu_suspend_enter)
@@ -105,6 +105,7 @@ ENTRY(cpu_resume)
 	adrp	x25, idmap_pg_dir
 	adrp	x26, swapper_pg_dir
 	b	__cpu_setup
+ENDPROC(cpu_resume)
 
 ENTRY(_cpu_resume)
 	mrs	x1, mpidr_el1
@@ -123,9 +124,13 @@ ENTRY(_cpu_resume)
 	/* load sp from context */
 	ldr	x2, [x0, #CPU_CTX_SP]
 	mov	sp, x2
+	/* save thread_info */
+	and	x2, x2, #~(THREAD_SIZE - 1)
+	msr	sp_el0, x2
+	/*
+	 * cpu_do_resume expects x0 to contain context address pointer
+	 */
 	bl	cpu_do_resume
-	msr	sctlr_el1, x0
-	isb
 
 	ldp	x19, x20, [x29, #16]
 	ldp	x21, x22, [x29, #32]
@@ -135,4 +140,4 @@ ENTRY(_cpu_resume)
 	ldp	x29, lr, [x29]
 	mov	x0, #0
 	ret
-ENDPROC(cpu_resume)
+ENDPROC(_cpu_resume)
