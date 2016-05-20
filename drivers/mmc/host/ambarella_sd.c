@@ -299,9 +299,9 @@ static void ambarella_sd_timer_timeout(unsigned long param)
 			dma_unmap_sg(host->dev, mrq->data->sg, mrq->data->sg_len, dir);
 		}
 		mrq->cmd->error = -ETIMEDOUT;
-		mmc_request_done(host->mmc, mrq);
 		host->mrq = NULL;
 		host->cmd = NULL;
+		mmc_request_done(host->mmc, mrq);
 	}
 
 	ambarella_sd_reset_all(host);
@@ -611,10 +611,11 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 	rval = ambarella_sd_check_ready(host);
 	if (rval < 0) {
+		struct mmc_request *mrq = host->mrq;
 		cmd->error = rval;
-		mmc_request_done(host->mmc, host->mrq);
 		host->mrq = NULL;
 		host->cmd = NULL;
+		mmc_request_done(host->mmc, mrq);
 		return -EIO;
 	}
 
@@ -1007,9 +1008,10 @@ finish:
 		return;
 	}
 
-	mmc_request_done(host->mmc, host->mrq);
 	host->cmd = NULL;
 	host->mrq = NULL;
+
+	mmc_request_done(host->mmc, mrq);
 }
 
 static irqreturn_t ambarella_sd_irq(int irq, void *devid)
