@@ -229,7 +229,8 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
 
 	/* make sure the pin is in gpio mode */
-	if (gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
+	if (!gpiochip_is_requested(&amb_gc, data->hwirq) &&
+		gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
 		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
 
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
