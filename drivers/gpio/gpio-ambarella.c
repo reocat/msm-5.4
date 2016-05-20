@@ -231,7 +231,9 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 
 	/* make sure the pin is in gpio mode */
-	gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq");
+	if (!gpiochip_is_requested(&amb_gc, data->hwirq) &&
+		gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
+		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
 
 	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 	writel_relaxed(ie | (0x1 << offset), regbase + GPIO_IE_OFFSET);
