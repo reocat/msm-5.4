@@ -360,7 +360,11 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 
 	init.name = name;
 	init.ops = &pll_ops;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE;
+#else
 	init.flags = CLK_IS_BASIC;
+#endif
 	init.parent_names = &parent_name;
 	init.num_parents = num_parents;
 	clk_pll->hw.init = &init;
