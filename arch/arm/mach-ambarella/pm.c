@@ -126,19 +126,25 @@ static void ambarella_disconnect_dram_reset(void)
 	ambarella_pm_gpio_output(dram_reset_ctrl, 0);
 }
 
-static void ambarella_notify_to_mcu(void)
+static unsigned long ambarella_notify_mcu_prepare(void)
 {
+	unsigned long gpio_info;
+	u32 bank, offset;
 
 	if (gpio_notify_mcu == -1)
-		return;
+		return 0;
 
+	bank = PINID_TO_BANK(gpio_notify_mcu);
+	offset = PINID_TO_OFFSET(gpio_notify_mcu);
+
+	gpio_info = gpio_regbase[bank] | offset;
+
+	/* mux GPIO mode, set output, and pull high 100ms */
 	ambarella_pm_gpiomux(gpio_notify_mcu);
+	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
+	mdelay(100);
 
-	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
-	mdelay(100);
-	ambarella_pm_gpio_output(gpio_notify_mcu, 0);
-	mdelay(100);
-	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
+	return gpio_info;
 }
 
 static void ambarella_set_cpu_jump(int cpu, void *jump_fn)
@@ -173,6 +179,7 @@ static int ambarella_pm_enter_mem(void)
 	u32 l2_enabled;
 	u32 time_val;
 	u32 alarm_val;
+	unsigned long arg = 0;
 #ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
 	void *ambarella_suspend_exec = NULL;
 #endif
@@ -208,10 +215,10 @@ static int ambarella_pm_enter_mem(void)
 		ambcache_l2_disable_raw();
 
 	/* XXX special design for S3L */
-	ambarella_notify_to_mcu();
+	arg = ambarella_notify_mcu_prepare();
 
 #ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
-	cpu_suspend(0, ambarella_suspend_exec);
+	cpu_suspend(arg, ambarella_suspend_exec);
 #else
 	cpu_suspend(0, ambarella_finish_suspend);
 #endif
