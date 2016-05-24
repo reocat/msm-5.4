@@ -144,14 +144,14 @@ static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long *parent_rate)
 {
 	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
-	unsigned long rount_rate;
+	unsigned long round_rate;
 
 	if (clk_pll->frac_mode)
-		rount_rate = rate;
+		round_rate = rate;
 	else
-		rount_rate = round_up(rate, *parent_rate);
+		round_rate = roundup(rate, *parent_rate);
 
-	return rount_rate;
+	return round_rate;
 }
 
 static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -360,7 +360,7 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 
 	init.name = name;
 	init.ops = &pll_ops;
-	init.flags = CLK_IS_BASIC;
+	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE;
 	init.parent_names = &parent_name;
 	init.num_parents = num_parents;
 	clk_pll->hw.init = &init;
