@@ -391,15 +391,17 @@ int ambafs_setattr(struct dentry *dentry, struct iattr *attr)
 		return error;
 	}
 
+	len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
 	/* Currently, we don't support truncate in rtos side.
+	 * Truncate a file cannot apply to rtos side.
+	 */
 	if (attr->ia_valid & ATTR_SIZE) {
+		AMBAFS_DMSG("%s file %s set size %d\n", __func__, path, attr->ia_size);
+		truncate_setsize(inode, attr->ia_size);
 	}
-	*/
 
 	// Notify rtos to change the timestamp
 	if (attr->ia_valid & AMBAFS_TIMES_SET_FLAGS) {
-		len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
-
 		AMBAFS_DMSG("%s:  %s\r\n", __func__, path);
 
 		msg->cmd = AMBAFS_CMD_SET_TIME;
