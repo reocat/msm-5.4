@@ -68,6 +68,41 @@ ENTRY(ambarella_optimize_suspend)
 	dsb
 	isb
 
+#if (CHIP_REV == S3L)
+	mov		r1, #0
+	cmp		r0, r1
+	beq		suspend_with_pwc
+
+	mov		r1, r0
+	mov		r2, #0x1f
+	bic		r0, r2			/* r0 gpio bank base */
+	and		r1, r2			/* r1 gpio offset */
+
+	/* gpio pull down */
+	mov		r2, #0
+	str		r2, [r0, #0]
+
+	/* delay 100ms: 0x249F00 is about 0x250000 */
+	mov		r3, #0x250000
+
+	mov		r4, #DBGBUS_BASE
+	orr		r4, #RCT_OFFSET
+	orr		r4,	#RCT_TIMER_OFFSET
+	ldr		r5,	[r4]
+	add		r5, r5, r3
+rct_time_loop:
+	ldr		r6,	[r4]
+	cmp		r5, r6
+	bhi		rct_time_loop
+
+	/* gpio pull up */
+	mov		r2, #0x1
+	lsl		r2, r1
+	str		r2, [r0, #0]
+	b	self_refresh
+#endif
+
+suspend_with_pwc:
 	mov	r0,	#DBGBUS_BASE
 	orr r0, #RCT_OFFSET
 	orr	r0, #ANA_PWR_OFFSET
@@ -76,6 +111,7 @@ ENTRY(ambarella_optimize_suspend)
 	mov	r1, #ANA_PWR_POWER_DOWN
 	str	r1, [r0]
 
+self_refresh:
 	/* CPU use the delay interval between power-down signal PD
 	   and PWC_RSTOB to execute the following code */
 
@@ -95,8 +131,6 @@ ENTRY(ambarella_optimize_suspend)
 	/* Wait for PWC_RSTOB signal to power down cpu */
 	b	.
 
-	/* never get here */
-2:	b	2b
 ENDPROC(ambarella_optimize_suspend)
 
 ENTRY(ambarella_optimize_suspend_sz)
