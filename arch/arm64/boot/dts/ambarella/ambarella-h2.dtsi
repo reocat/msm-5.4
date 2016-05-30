@@ -45,6 +45,14 @@
 		method = "smc";
 	};
 
+	pmu {
+		compatible = "arm,cortex-a53-pmu";
+		interrupts = <0 15 0x4>,
+			     <0 31 0x4>,
+			     <0 114 0x4>,
+			     <0 115 0x4>;
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
