@@ -97,5 +97,5 @@ unsigned long ambarella_virt_to_phys(unsigned long vaddr);
 #define ambalink_lkm_virt_to_phys(x)	(__pfn_to_phys(vmalloc_to_pfn((void *) (x))) + ((u32)(x) & (~PAGE_MASK)) - DEFAULT_MEM_START)
 
 #else
-#error "include ambalink_cfg.h while PLAT_AMBARELLA_AMBALINK is not defined"
+#error "include ambalink_cfg.h while ARCH_AMBARELLA_AMBALINK is not defined"
 #endif

@@ -1,6 +1,6 @@
 
-obj-y 	+= aipc_slock.o
-obj-y 	+= aipc_mutex.o
+obj-$(CONFIG_ARCH_AMBARELLA_AMBALINK) 	+= aipc_slock.o
+obj-$(CONFIG_ARCH_AMBARELLA_AMBALINK) 	+= aipc_mutex.o
 
-obj-y 	+= rpc/
-obj-y 	+= service/
+obj-$(CONFIG_ARCH_AMBARELLA_AMBALINK)	+= rpc/
+obj-$(CONFIG_ARCH_AMBARELLA_AMBALINK) 	+= service/

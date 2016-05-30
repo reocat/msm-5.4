@@ -527,11 +527,11 @@ config VEXPRESS_SYSCFG
 
 config AMBARELLA_HEAPMEM
 	bool "Ambarella heap mem driver"
-	default y
+	default n
 
 config AMBARELLA_DSPMEM
 	bool "Ambarella DSP mem driver"
-	default y
+	default n
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

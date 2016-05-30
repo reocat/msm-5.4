@@ -27,10 +27,11 @@
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 #include <plat/ambalink_cfg.h>
+
+struct ambalink_shared_memory_layout ambalink_shm_layout;
 #endif
 
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
-struct ambalink_shared_memory_layout ambalink_shm_layout;
 
 struct proc_dir_entry *get_ambarella_proc_dir(void)
 {

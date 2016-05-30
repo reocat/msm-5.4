@@ -1,6 +1,6 @@
 config AMBALINK_VFS
 	tristate "Ambarella AmbaLink Virutal File System"
-	depends on RPMSG
+	depends on ARCH_AMBARELLA_AMBALINK && RPMSG
 	default y
 	help
 	  Enable Linux to read/write RTOS native FS
