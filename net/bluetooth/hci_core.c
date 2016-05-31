@@ -3603,6 +3603,10 @@ static void hci_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	int err;
 
+#ifdef CONFIG_BT_BLUESLEEP
+	/* Notify the registered devices about a new send */
+	hci_sock_dev_event(hdev, HCI_DEV_WRITE);
+#endif
 	BT_DBG("%s type %d len %d", hdev->name, bt_cb(skb)->pkt_type, skb->len);
 
 	/* Time stamp */

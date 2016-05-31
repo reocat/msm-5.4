@@ -47,6 +47,9 @@
 #include <linux/dmapool.h>
 #include <plat/uart.h>
 #include <plat/dma.h>
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/proc_fs.h>
+#endif
 
 #define AMBA_UART_RX_DMA_BUFFER_SIZE 4096
 #define AMBA_UART_MIN_DMA			16
@@ -679,7 +682,12 @@ static void serial_ambarella_stop_rx(struct uart_port *port)
 	writel_relaxed(ier & ~UART_IE_ERBFI, port->membase + UART_IE_OFFSET);
 }
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+/* modify for brcm bluesleep driver */
+unsigned int serial_ambarella_tx_empty(struct uart_port *port)
+#else
 static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
+#endif
 {
 	unsigned int lsr;
 	unsigned long flags;
@@ -974,6 +982,10 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#define B750000 0020001
+#endif
+
 static void serial_ambarella_set_termios(struct uart_port *port,
 	struct ktermios *termios, struct ktermios *old)
 {
@@ -1012,8 +1024,14 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 		else
 			lc |= (UART_LC_PEN | UART_LC_EVEN_PARITY);
 	}
-
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	if ((termios->c_cflag & (B750000 | CBAUD | CBAUDEX)) == B750000)
+		baud = 750000;
+	else
+		baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
+#else
 	baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
+#endif
 	quot = uart_get_divisor(port, baud);
 
 	disable_irq(port->irq);
@@ -1503,10 +1521,101 @@ static struct platform_driver serial_ambarella_driver = {
 	},
 };
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+static const char uart1_proc_name[] = "uart1_rcvr";
+static u32 fcr = (UART_FC_FIFOE | UART_FC_RX_2_TO_FULL | UART_FC_TX_EMPTY |
+                  UART_FC_XMITR | UART_FC_RCVRR);
+
+static int ambarella_uart1_proc_read(struct seq_file *m, void *v)
+{
+	int rcvr;
+
+	rcvr = (fcr & (0x03 << 6)) >> 6;
+	seq_printf(m, "UART1, Rx Trigger: %d, ", rcvr);
+	switch (rcvr) {
+	case 0x00:
+		seq_printf(m, "One character in the FIFO.\n");
+		break;
+	case 0x01:
+		seq_printf(m, "FIFO 1/4 full.\n");
+		break;
+	case 0x02:
+		seq_printf(m, "FIFO 1/2 full.\n");
+		break;
+	case 0x03:
+		seq_printf(m, "FIFO 2 less than full.\n");
+		break;
+	default:
+		seq_printf(m, "Unknown.\n");
+		break;
+	}
+
+	return 0;
+}
+
+static int ambarella_uart1_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ambarella_uart1_proc_read, NULL);
+}
+
+static ssize_t ambarella_uart1_proc_write(struct file *file,
+                                const char __user *buffer, size_t count, loff_t *data)
+{
+	unsigned char v;
+
+	if (count != 2) {
+		/* One character with null space. */
+		printk(KERN_ERR "Only valid value: 0-3\n");
+		return -EFAULT;
+	}
+
+	if (copy_from_user(&v, buffer, 1)) {
+		printk(KERN_ERR "%s: copy_from_user fail!\n", __func__);
+		return -EFAULT;
+	}
+	v = v - '0';
+	if (v < 4) {
+		fcr &= ~(0x03 << 6);
+		fcr |= (v << 6);
+
+		/* Apply new and reset FIFO. */
+		if (ambarella_port[1].txdma_used || ambarella_port[1].rxdma_used) {
+			writel_relaxed(fcr | UART_FC_XMITR | UART_FC_RCVRR | UART_FCR_DMA_SELECT,
+				ambarella_port[1].port.membase + UART_FC_OFFSET);
+		}
+		else {
+			writel_relaxed(fcr | UART_FC_XMITR | UART_FC_RCVRR,
+				ambarella_port[1].port.membase + UART_FC_OFFSET);
+		}
+	} else {
+		printk(KERN_ERR "Only valid value: 0-3\n");
+		return -EFAULT;
+	}
+
+	return count;
+}
+
+static const struct file_operations serial_ambarella_proc_fops = {
+	.open = ambarella_uart1_proc_open,
+	.read = seq_read,
+	.write = ambarella_uart1_proc_write,
+	.llseek	= seq_lseek,
+	.release = single_release,
+};
+
+static void serial_ambarella_proc_init(void)
+{
+	proc_create(uart1_proc_name, S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+		&serial_ambarella_proc_fops);
+}
+#endif
 int __init serial_ambarella_init(void)
 {
 	int rval;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	serial_ambarella_proc_init();
+#endif
 	ambarella_uart_of_enumerate();
 
 	rval = uart_register_driver(&serial_ambarella_reg);
