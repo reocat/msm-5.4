@@ -298,7 +298,9 @@ static void amb_gpio_irq_enable(struct irq_data *data)
 	unsigned long flags;
 
 	/* make sure the pin is in gpio mode */
-	gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq");
+	if (!gpiochip_is_requested(&amb_gc, data->hwirq) &&
+		gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
+		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
 
 	amb_gpio_raw_lock(&flags);
 
