@@ -20,6 +20,8 @@
 #include <linux/of_address.h>
 #include <linux/rational.h>
 
+#define REF_CLK_FREQ			24000000
+
 union ctrl_reg_u {
 	struct {
 		u32	write_enable		: 1;	/* [0] */
@@ -149,7 +151,7 @@ static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (clk_pll->frac_mode)
 		round_rate = rate;
 	else
-		round_rate = roundup(rate, *parent_rate);
+		round_rate = roundup(rate, REF_CLK_FREQ / 2);
 
 	return round_rate;
 }
