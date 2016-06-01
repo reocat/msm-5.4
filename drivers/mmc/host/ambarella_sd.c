@@ -46,6 +46,8 @@
 #include <plat/event.h>
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 #include <linux/aipc/ipc_mutex.h>
+#include <linux/proc_fs.h>
+#include <linux/uaccess.h>
 #endif
 #if defined(CONFIG_AMBALINK_SD)
 #include <linux/aipc/rpmsg_sd.h>
@@ -116,6 +118,172 @@ struct ambarella_mmc_host {
 	u32				insert;
 #endif
 };
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#define SDIO_GLOBAL_ID 1
+static int force_sdio_host_high_speed = -1;
+static int sdio_clk_ds = -1;
+static int sdio_data_ds = -1;
+static int sdio_cmd_ds = -1;
+static int sdio_host_odly = -1;
+static int sdio_host_ocly = -1;
+static int sdio_host_idly = -1;
+static int sdio_host_icly = -1;
+static int sdio_host_max_frequency = -1;
+
+extern int amba_sdio_delay_post_apply(const int odly, const int ocly,
+	const int idly, const int icly);
+extern int amba_sdio_ds_post_apply(const int clk_ds, const int data_ds,
+	const int cmd_ds, const int cdwp_ds);
+extern int ambarella_set_sdio_host_high_speed(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_clk_ds(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_data_ds(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_cmd_ds(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_host_odly(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_host_ocly(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_host_idly(const char *val, const struct kernel_param *kp);
+extern int ambarella_set_sdio_host_icly(const char *val, const struct kernel_param *kp);
+extern const struct file_operations proc_fops_sdio_info;
+int ambarella_set_sdio_host_max_frequency(const char *str, const struct kernel_param *kp);
+
+static struct kernel_param_ops param_ops_sdio_host_high_speed = {
+	.set = ambarella_set_sdio_host_high_speed,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_clk_ds = {
+	.set = ambarella_set_sdio_clk_ds,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_data_ds = {
+	.set = ambarella_set_sdio_data_ds,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_cmd_ds = {
+	.set = ambarella_set_sdio_cmd_ds,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_host_odly = {
+	.set = ambarella_set_sdio_host_odly,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_host_ocly = {
+	.set = ambarella_set_sdio_host_ocly,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_host_idly = {
+	.set = ambarella_set_sdio_host_idly,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_host_icly = {
+	.set = ambarella_set_sdio_host_icly,
+	.get = param_get_int,
+};
+static struct kernel_param_ops param_ops_sdio_host_max_frequency = {
+	.set = ambarella_set_sdio_host_max_frequency,
+	.get = param_get_int,
+};
+
+module_param_cb(force_sdio_host_high_speed, &param_ops_sdio_host_high_speed,
+	&(force_sdio_host_high_speed), 0644);
+module_param_cb(sdio_clk_ds, &param_ops_sdio_clk_ds,
+	&(sdio_clk_ds), 0644);
+module_param_cb(sdio_data_ds, &param_ops_sdio_data_ds,
+	&(sdio_data_ds), 0644);
+module_param_cb(sdio_cmd_ds, &param_ops_sdio_cmd_ds,
+	&(sdio_cmd_ds), 0644);
+module_param_cb(sdio_host_odly, &param_ops_sdio_host_odly,
+	&(sdio_host_odly), 0644);
+module_param_cb(sdio_host_ocly, &param_ops_sdio_host_ocly,
+	&(sdio_host_ocly), 0644);
+module_param_cb(sdio_host_idly, &param_ops_sdio_host_idly,
+	&(sdio_host_idly), 0644);
+module_param_cb(sdio_host_icly, &param_ops_sdio_host_icly,
+	&(sdio_host_icly), 0644);
+module_param_cb(sdio_host_max_frequency, &param_ops_sdio_host_max_frequency,
+	&(sdio_host_max_frequency), 0644);
+
+int ambarella_set_sdio_host_max_frequency(const char *str, const struct kernel_param *kp)
+{
+	int retval;
+	unsigned int value;
+	struct mmc_host *mmc = G_mmc[SDIO_GLOBAL_ID];
+
+	param_set_uint(str, kp);
+
+	retval = kstrtou32(str, 10, &value);
+
+	mmc->f_max = value;
+	pr_debug("mmc->f_max = %u\n", value);
+
+	return retval;
+}
+
+static int mmc_fixed_cd_proc_read(struct seq_file *m, void *v)
+{
+	int mmci;
+	struct mmc_host *mmc;
+	struct ambarella_mmc_host *host;
+
+	for(mmci = 0; mmci < SD_INSTANCES; mmci++) {
+		if (G_mmc[mmci]) {
+			mmc = G_mmc[mmci];
+			host = mmc_priv(mmc);
+			seq_printf(m, "mmc%d fixed_cd=%d\n", mmci,
+					host->fixed_cd);
+		}
+	}
+
+	return 0;
+}
+
+static int mmc_fixed_cd_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mmc_fixed_cd_proc_read, NULL);
+}
+
+static ssize_t mmc_fixed_cd_proc_write(struct file *file,
+                                const char __user *buffer, size_t count, loff_t *data)
+{
+	char input[4];
+	int mmci;
+	struct mmc_host *mmc;
+	struct ambarella_mmc_host *host;
+
+	if (count != 4) {
+		printk(KERN_ERR "0 0=remove mmc0; 0 1=insert mmc0; 0 2=mmc0 auto\n");
+		return -EFAULT;
+	}
+
+	if (copy_from_user(input, buffer, 3)) {
+		printk(KERN_ERR "%s: copy_from_user fail!\n", __func__);
+		return -EFAULT;
+	}
+
+	mmci = input[0] - '0';
+	mmc = G_mmc[mmci];
+	if (!mmc) {
+		printk(KERN_ERR "%s: err!\n", __func__);
+		return -EFAULT;
+	}
+
+	host = mmc_priv(mmc);
+
+	host->fixed_cd = input[2] - '0';
+	mmc_detect_change(mmc, 10);
+
+	return count;
+}
+
+static const struct file_operations proc_fops_mmc_fixed_cd = {
+	.open = mmc_fixed_cd_proc_open,
+	.read = seq_read,
+	.write = mmc_fixed_cd_proc_write,
+	.llseek	= seq_lseek,
+	.release = single_release,
+};
+
+
+#endif
 
 #if defined(CONFIG_AMBALINK_SD)
 void ambarella_sd_cd_detect(struct work_struct *work)
@@ -214,6 +382,16 @@ int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc)
 
 	G_mmc[host_id] = mmc;
 
+	if (host_id == SDIO_GLOBAL_ID) {
+		int init_sd_para(size_t regbase);
+
+		if (0 == init_sd_para((size_t)host->regbase)) {
+			proc_create("mmc_fixed_cd", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+				&proc_fops_mmc_fixed_cd);
+			proc_create("sdio_info", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+				&proc_fops_sdio_info);
+		}
+	}
 #if 0
 	printk("%s: sdinfo.host_id   = %d\n", __func__, sdinfo.host_id);
 	printk("%s: sdinfo.is_init   = %d\n", __func__, sdinfo.is_init);
@@ -662,11 +840,25 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 		tmp &= ~0x0004;
 		writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
 
-		hostr &= ~SD_HOST_HIGH_SPEED;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+		if (force_sdio_host_high_speed == 1)
+			hostr |= SD_HOST_HIGH_SPEED;
+		else
+			hostr &= ~SD_HOST_HIGH_SPEED;
+#else
+		hostr |= SD_HOST_HIGH_SPEED;
+#endif
 		writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
 		break;
 	}
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	if ((-1!=sdio_host_odly) || (-1!=sdio_host_ocly) || \
+		(-1!=sdio_host_idly) ||	(-1!=sdio_host_icly)) {
+		amba_sdio_delay_post_apply(sdio_host_odly,
+			sdio_host_ocly, sdio_host_idly, sdio_host_icly);
+	}
+#endif
 	host->bus_width = bus_width;
 	host->mode = mode;
 }

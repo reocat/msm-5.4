@@ -3,6 +3,7 @@
 #
 
 obj-$(CONFIG_MMC_AMBARELLA)	+= ambarella_sd.o
+obj-$(CONFIG_MMC_AMBARELLA)	+= ambarella_sd_para.o
 obj-$(CONFIG_MMC_ARMMMCI)	+= mmci.o
 obj-$(CONFIG_MMC_QCOM_DML)	+= mmci_qcom_dml.o
 obj-$(CONFIG_MMC_PXA)		+= pxamci.o
