@@ -72,7 +72,7 @@ int ambptb_partition(struct parsed_partitions *state)
 
 		part_label = (char *) of_get_property(pp, "label", &len);
 		if (!part_label)
-			part_label = of_get_property(pp, "name", &len);
+			part_label = (char *) of_get_property(pp, "name", &len);
 		strlcat(state->pp_buf, part_label, PAGE_SIZE);
 		strlcat(state->pp_buf, " ", PAGE_SIZE);
 

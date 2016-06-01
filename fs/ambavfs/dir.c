@@ -302,7 +302,7 @@ static int ambafs_dir_readdir(struct file *file, struct dir_context *ctx)
 				printk(KERN_ERR "start_readdir nodev\n");
 			goto ls_exit;
 		}
-	} else if (file->private_data != LLONG_MAX) {
+	} else if ((long long) file->private_data != LLONG_MAX) {
 		file->f_pos = (loff_t) file->private_data;
 	} else {
 		return 0;
@@ -337,7 +337,7 @@ ls_exit:
 	msg->cmd = AMBAFS_CMD_LS_EXIT;
 	ambafs_rpmsg_send(msg, 4, NULL, 0);
 	free_page((unsigned long)file->f_pos);
-	file->private_data = LLONG_MAX;
+	file->private_data = (void *) LLONG_MAX;
 	return 0;
 }
 

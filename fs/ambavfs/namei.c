@@ -271,7 +271,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	}
 
 exit:
-	return stat;
+	return (struct ambafs_qstat*) stat;
 }
 
 static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)

@@ -109,7 +109,7 @@ int rpmsg_sdinfo_get(void *data)
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_INFO_GET;
-	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((void *) data);
+	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((unsigned long) data);
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
@@ -134,7 +134,7 @@ int rpmsg_sdresp_get(void *data)
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_RESP_GET;
-	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((void *) data);
+	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((unsigned long) data);
 
 	rpmsg_send(rpdev_sd, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
@@ -226,7 +226,7 @@ static void rpmsg_sd_cb(struct rpmsg_channel *rpdev, void *data, int len,
 		proc_list[1](data);
 		break;
 	default:
-		printk("%s err: cmd = [%d], data = [0x%08x]",
+		printk("%s err: cmd = [0x%08llx], data = [0x%08llx]",
 		       __func__, msg->Cmd, msg->Param);
 		break;
 	}
