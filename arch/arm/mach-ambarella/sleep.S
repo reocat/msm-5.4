@@ -192,6 +192,13 @@ ENTRY(ambarella_cpu_resume)
 	ldr	r1, [r0, #GPIO_AFSEL_OFFSET]
 	orr	r1, #0x0000c000
 	str	r1, [r0, #GPIO_AFSEL_OFFSET]
+
+#if (CHIP_REV == S2E)
+	ldr	r0, =RCT_PHYS_BASE
+	mov r1, #UART_CLK_SRC_IDSP
+	str	r1, [r0, #UART_CLK_SRC_SEL_OFFSET]
+#endif
+
 #endif
 	/* jump to generic resume */
 	b	cpu_resume

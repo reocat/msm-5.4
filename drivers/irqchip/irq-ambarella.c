@@ -329,7 +329,7 @@ static void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	ambvic_sw_set(ambvic_data.ipi_reg_base, softirq);
 }
 
-static void ambvic_smp_softirq_init(void)
+void ambvic_smp_softirq_init(void)
 {
 	void __iomem *reg_base = ambvic_data.ipi_reg_base;
 	u32 val;
