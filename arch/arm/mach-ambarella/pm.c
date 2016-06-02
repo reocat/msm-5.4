@@ -144,6 +144,10 @@ static unsigned long ambarella_notify_mcu_prepare(void)
 	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
 	mdelay(100);
 
+#if(CHIP_REV == S2E)
+	ambarella_pm_gpio_output(gpio_notify_mcu, 0);
+#endif
+
 	return gpio_info;
 }
 
