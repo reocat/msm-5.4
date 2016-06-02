@@ -523,6 +523,12 @@
 			amb,support-prs;
 		};
 
+		gdma: gdma@e0005000 {
+			compatible = "ambarella,gdma";
+			reg = <0xe0015000 0x400>;
+			interrupts = <0 74 0x1>;
+		};
+
 		nand0: nand@e0001000 {
 			compatible = "ambarella,nand";
 			#address-cells = <1>;
