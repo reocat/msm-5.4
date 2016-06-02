@@ -43,7 +43,6 @@
 #include <linux/mfd/syscon.h>
 
 static struct regmap *reg_rct = NULL;
-static struct device_node *np =NULL;
 static size_t sdio_regbase = 0;
 
 /* fixme: hard code to H2 */
@@ -87,6 +86,8 @@ static size_t sdio_regbase = 0;
 /* fixme: hard sdio code to sd1 */
 int init_sd_para(size_t regbase)
 {
+	struct device_node *np =NULL;
+
 	if (sdio_regbase)
 		return -1;
 
@@ -116,7 +117,7 @@ int read_rct_reg(unsigned int offset)
 {
 	int val;
 
-	if ((!reg_rct) || (!np))
+	if (!reg_rct)
 		return -1;
 
 	regmap_read(reg_rct, offset, &val);
@@ -126,7 +127,7 @@ int read_rct_reg(unsigned int offset)
 
 int write_rct_reg(unsigned int offset, u32 value)
 {
-	if ((!reg_rct) || (!np))
+	if (!reg_rct)
 		return -1;
 
 	return regmap_update_bits(reg_rct, offset, 0xffffffff, value);

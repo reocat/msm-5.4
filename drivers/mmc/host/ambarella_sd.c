@@ -53,6 +53,9 @@
 #include <linux/aipc/rpmsg_sd.h>
 
 static struct rpdev_sdinfo G_rpdev_sdinfo[SD_INSTANCES];
+#endif
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 static struct mmc_host *G_mmc[SD_INSTANCES];
 #endif
 
@@ -285,6 +288,62 @@ static const struct file_operations proc_fops_mmc_fixed_cd = {
 
 #endif
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+/**
+ * Service initialization.
+ */
+int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc)
+{
+	u32 host_id;
+#if defined(CONFIG_AMBALINK_SD)
+	struct rpdev_sdinfo sdinfo;
+#endif
+	struct ambarella_mmc_host *host = mmc_priv(mmc);
+
+	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
+		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
+		  	SD_HOST_2;
+#if defined(CONFIG_AMBALINK_SD)
+	memset(&sdinfo, 0x0, sizeof(sdinfo));
+	sdinfo.host_id = host_id;
+	rpmsg_sdinfo_get((void *) &sdinfo);
+
+	G_rpdev_sdinfo[host_id].is_init		= sdinfo.is_init;
+	G_rpdev_sdinfo[host_id].is_sdmem	= sdinfo.is_sdmem;
+	G_rpdev_sdinfo[host_id].is_mmc		= sdinfo.is_mmc;
+	G_rpdev_sdinfo[host_id].is_sdio		= sdinfo.is_sdio;
+	G_rpdev_sdinfo[host_id].bus_width	= sdinfo.bus_width;
+	G_rpdev_sdinfo[host_id].clk		= sdinfo.clk;
+	G_rpdev_sdinfo[host_id].ocr		= sdinfo.ocr;
+	G_rpdev_sdinfo[host_id].hcs		= sdinfo.hcs;
+	G_rpdev_sdinfo[host_id].rca		= sdinfo.rca;
+#endif
+	G_mmc[host_id] = mmc;
+
+	if (host_id == SDIO_GLOBAL_ID) {
+		int init_sd_para(size_t regbase);
+
+		if (0 == init_sd_para((size_t)host->regbase)) {
+			proc_create("mmc_fixed_cd", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+				&proc_fops_mmc_fixed_cd);
+			proc_create("sdio_info", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
+				&proc_fops_sdio_info);
+		}
+	}
+#if 0
+	printk("%s: sdinfo.host_id   = %d\n", __func__, sdinfo.host_id);
+	printk("%s: sdinfo.is_init   = %d\n", __func__, sdinfo.is_init);
+	printk("%s: sdinfo.is_sdmem  = %d\n", __func__, sdinfo.is_sdmem);
+	printk("%s: sdinfo.is_mmc    = %d\n", __func__, sdinfo.is_mmc);
+	printk("%s: sdinfo.is_sdio   = %d\n", __func__, sdinfo.is_sdio);
+	printk("%s: sdinfo.bus_width = %d\n", __func__, sdinfo.bus_width);
+	printk("%s: sdinfo.clk       = %d\n", __func__, sdinfo.clk);
+#endif
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_sd_rpmsg_sdinfo_init);
+#endif
+
 #if defined(CONFIG_AMBALINK_SD)
 void ambarella_sd_cd_detect(struct work_struct *work)
 {
@@ -353,57 +412,6 @@ int ambarella_sd_rpmsg_cmd_send(struct mmc_host *mmc, struct mmc_command *cmd)
 }
 EXPORT_SYMBOL(ambarella_sd_rpmsg_cmd_send);
 
-/**
- * Service initialization.
- */
-int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc)
-{
-	u32 host_id;
-	struct rpdev_sdinfo sdinfo;
-	struct ambarella_mmc_host *host = mmc_priv(mmc);
-
-	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		  	SD_HOST_2;
-
-	memset(&sdinfo, 0x0, sizeof(sdinfo));
-	sdinfo.host_id = host_id;
-	rpmsg_sdinfo_get((void *) &sdinfo);
-
-	G_rpdev_sdinfo[host_id].is_init		= sdinfo.is_init;
-	G_rpdev_sdinfo[host_id].is_sdmem	= sdinfo.is_sdmem;
-	G_rpdev_sdinfo[host_id].is_mmc		= sdinfo.is_mmc;
-	G_rpdev_sdinfo[host_id].is_sdio		= sdinfo.is_sdio;
-	G_rpdev_sdinfo[host_id].bus_width	= sdinfo.bus_width;
-	G_rpdev_sdinfo[host_id].clk		= sdinfo.clk;
-	G_rpdev_sdinfo[host_id].ocr		= sdinfo.ocr;
-	G_rpdev_sdinfo[host_id].hcs		= sdinfo.hcs;
-	G_rpdev_sdinfo[host_id].rca		= sdinfo.rca;
-
-	G_mmc[host_id] = mmc;
-
-	if (host_id == SDIO_GLOBAL_ID) {
-		int init_sd_para(size_t regbase);
-
-		if (0 == init_sd_para((size_t)host->regbase)) {
-			proc_create("mmc_fixed_cd", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
-				&proc_fops_mmc_fixed_cd);
-			proc_create("sdio_info", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
-				&proc_fops_sdio_info);
-		}
-	}
-#if 0
-	printk("%s: sdinfo.host_id   = %d\n", __func__, sdinfo.host_id);
-	printk("%s: sdinfo.is_init   = %d\n", __func__, sdinfo.is_init);
-	printk("%s: sdinfo.is_sdmem  = %d\n", __func__, sdinfo.is_sdmem);
-	printk("%s: sdinfo.is_mmc    = %d\n", __func__, sdinfo.is_mmc);
-	printk("%s: sdinfo.is_sdio   = %d\n", __func__, sdinfo.is_sdio);
-	printk("%s: sdinfo.bus_width = %d\n", __func__, sdinfo.bus_width);
-	printk("%s: sdinfo.clk       = %d\n", __func__, sdinfo.clk);
-#endif
-	return 0;
-}
-EXPORT_SYMBOL(ambarella_sd_rpmsg_sdinfo_init);
 
 /**
  * Enable to use the rpmsg sdinfo.
@@ -1843,11 +1851,15 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 		goto out2;
 	}
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	ambarella_sd_rpmsg_sdinfo_init(mmc);
+#endif
+
 #if defined(CONFIG_AMBALINK_SD)
 {
 	struct rpdev_sdinfo *sdinfo;
 
-	ambarella_sd_rpmsg_sdinfo_init(mmc);
+	//ambarella_sd_rpmsg_sdinfo_init(mmc);
 	sdinfo = ambarella_sd_sdinfo_get(mmc);
 	ambarella_sd_rpmsg_sdinfo_en(mmc, sdinfo->is_init);
 
