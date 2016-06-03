@@ -587,13 +587,13 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to create irqdomain\n", np->full_name);
 		return -ENOSYS;
 	}
-
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	for (i = 0; i < amb_gpio->bank_num; i++) {
 		irq_set_irq_type(amb_gpio->bank[i].irq, IRQ_TYPE_LEVEL_HIGH);
 		irq_set_handler_data(amb_gpio->bank[i].irq, amb_gpio);
 		irq_set_chained_handler(amb_gpio->bank[i].irq, amb_gpio_handle_irq);
 	}
-
+#endif
 #if defined(CONFIG_PM) && defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	memset(ambalink_gpio_linux_only_mask, 0x0, sizeof(u32) * GPIO_MAX_BANK_NUM);
 #endif
