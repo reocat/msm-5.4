@@ -42,6 +42,15 @@
 #define ADC_SUPPORT_SLOT		1
 #endif
 
+#if (CHIP_REV == S5)
+#define ADC_SUPPORT_T2V		1
+#define ADC_T2V_CHANNEL		5
+#define T2V_BASE_LINE_DATA	0x6F0
+#define T2V_BASE_LINE		20
+#else
+#define ADC_SUPPORT_T2V		0
+#endif
+
 #if (CHIP_REV == S2E) || (CHIP_REV == S3L)
 #define ADC_PERIOD_CYCLE		6
 #elif (CHIP_REV == S5)

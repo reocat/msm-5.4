@@ -65,6 +65,16 @@ static ssize_t ambarella_adc_show(struct device *dev,
 		ret += sprintf(&buf[ret], "adc%d=0x%x\n", i, data);
 	}
 
+#if (ADC_SUPPORT_T2V == 1)
+	/* We use 0x6F0 as 20c with 0.07C/code */
+	data = ambarella_adc_read_level(ADC_T2V_CHANNEL - 1);
+	if (data > T2V_BASE_LINE_DATA)
+		data -= T2V_BASE_LINE_DATA;
+	else
+		data = 0;
+	data = T2V_BASE_LINE + data * 7 / 100;
+	ret += sprintf(&buf[ret], "T2V= %d\n", data);
+#endif
 	return ret;
 }
 static DEVICE_ATTR(adcsys, 0444, ambarella_adc_show, NULL);
@@ -94,6 +104,9 @@ static void ambarella_adc_enable(struct ambadc_host *ambadc)
 
 	/* select adc scaler as clk_adc and power up adc */
 	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET, 0);
+#if (ADC_SUPPORT_T2V == 1)
+	regmap_write(ambadc->reg_rct, T2V_CTRL_OFFSET, 0);
+#endif
 
 #if (ADC_SUPPORT_SLOT == 1)
 	/* soft reset adc controller, set slot, and then enable it */
@@ -126,6 +139,10 @@ static void ambarella_adc_disable(struct ambadc_host *ambadc)
 
 	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET,
 		ADC_CTRL_SCALER_POWERDOWN | ADC_CTRL_POWERDOWN);
+
+#if (ADC_SUPPORT_T2V == 1)
+	regmap_write(ambadc->reg_rct, T2V_CTRL_OFFSET, 1);
+#endif
 }
 
 static void ambarella_adc_start(struct ambadc_host *ambadc)
