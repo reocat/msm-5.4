@@ -156,6 +156,58 @@ static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	return round_rate;
 }
 
+//hardcode for S5 hdmi 4kp30 gclk_vo clock
+static void ambarella_pll_set_hdmi_rate(struct clk_hw *hw, unsigned long rate)
+{
+	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
+	unsigned long pre_scaler = 1, post_scaler = 1;
+	unsigned long intp, sdiv = 1, sout = 1;
+	union ctrl_reg_u ctrl_val;
+
+	rate *= clk_pll->fix_divider;
+
+        printk("%s enter\n",__func__);
+        pre_scaler = 4;
+        intp = 0x63;
+        sdiv = 5;
+        sout = 1;
+
+	if (clk_pll->pres_reg != NULL) {
+		if (clk_pll->extra_scaler == 1)
+			rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
+		else
+			writel(pre_scaler, clk_pll->pres_reg);
+	}
+
+	if (clk_pll->post_reg != NULL) {
+		if (clk_pll->extra_scaler == 1)
+			rct_writel_en((post_scaler - 1) << 4, clk_pll->post_reg);
+		else
+			writel(post_scaler, clk_pll->post_reg);
+	}
+
+	ctrl_val.w = readl(clk_pll->ctrl_reg);
+	ctrl_val.s.intp = intp - 1;
+	ctrl_val.s.sdiv = sdiv - 1;
+	ctrl_val.s.sout = sout - 1;
+	ctrl_val.s.bypass = 0;
+	ctrl_val.s.frac_mode = 0;
+	ctrl_val.s.force_reset = 0;
+	ctrl_val.s.power_down = 0;
+	ctrl_val.s.halt_vco = 0;
+	ctrl_val.s.tristate = 0;
+	ctrl_val.s.force_lock = 1;
+	ctrl_val.s.force_bypass = 0;
+	ctrl_val.s.write_enable = 0;
+	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+
+	writel(0x3f700900, clk_pll->ctrl2_reg);
+	if (ctrl_val.s.frac_mode)
+		writel(0x68306 | (1 << 12), clk_pll->ctrl3_reg);
+	else
+		writel(0x68306, clk_pll->ctrl3_reg);
+}
+
 static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			unsigned long parent_rate)
 {
@@ -177,6 +229,13 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		pr_err("Error: target rate is too slow: %ld!\n", rate);
 		return -EINVAL;
 	}
+
+        if(!strcmp(clk_hw_get_name(hw), "gclk_vo")){
+                if(rate == (297000000 * clk_pll->fix_divider)){
+                        ambarella_pll_set_hdmi_rate(hw,rate);
+                        return 0 ;
+                }
+        }
 
 	/* non-HDMI fvco should be less than 1.5GHz and higher than 700MHz.
 	 * HDMI fvco should be less than 5.5GHz, and much higher than 700MHz,
