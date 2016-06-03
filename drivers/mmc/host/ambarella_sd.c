@@ -689,7 +689,13 @@ static void ambarella_sd_timer_timeout(unsigned long param)
 	struct mmc_request *mrq = host->mrq;
 	u32 dir;
 
-	dev_err(host->dev, "pending mrq: %s[%u]\n",
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	//fixme: find root cause of cmd53 timeout
+	if (mrq && (mrq->data) && (53 == mrq->cmd->opcode))
+		pr_debug("pending mrq: data[53]\n");
+	else
+#endif
+		dev_err(host->dev, "pending mrq: %s[%u]\n",
 			mrq ? mrq->data ? "data" : "cmd" : "",
 			mrq ? mrq->cmd->opcode : 9999);
 
@@ -707,8 +713,9 @@ static void ambarella_sd_timer_timeout(unsigned long param)
 		host->cmd = NULL;
 		mmc_request_done(host->mmc, mrq);
 	}
-
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	ambarella_sd_reset_all(host);
+#endif
 }
 
 static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
@@ -1167,7 +1174,7 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	/* quick recovery from cmd53 timeout */
-	mod_timer(&host->timer, jiffies + HZ);
+	mod_timer(&host->timer, jiffies + HZ/5);
 #else
 	mod_timer(&host->timer, jiffies + 5 * HZ);
 #endif
