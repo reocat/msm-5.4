@@ -53,7 +53,13 @@
 /* ==========================================================================*/
 #define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
+#if (CHIP_REV == S2E)
+#define FIO_4K_OFFSET			0x1e000
+#else
 #define FIO_4K_OFFSET			0x30000
+#endif
+
+#define FIO_4K_PHYS_BASE		(AHB_PHYS_BASE + FIO_4K_OFFSET)
 
 #define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
