@@ -248,7 +248,7 @@ void *ambarella_fio_push(void *func, u32 size)
 {
 	void *fio_4k_vaddr;
 
-	fio_4k_vaddr = __arm_ioremap_exec(FIO_4K_BASE, 0x1000, false);
+	fio_4k_vaddr = __arm_ioremap_exec(FIO_4K_PHYS_BASE, 0x1000, false);
 
 	BUG_ON(!fio_4k_vaddr || (size > 0x1000));
 
