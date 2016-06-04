@@ -156,7 +156,6 @@ struct ambeth_info {
 					dump_rx_all : 1;
 	bool			clk_direction;
 	bool 			enhance;
-	struct tasklet_struct		tx_tasklet;
 };
 
 /* ==========================================================================*/
@@ -1218,71 +1217,67 @@ static inline u32 ambeth_check_tdes0_status(struct ambeth_info *lp,
 	return tx_retry;
 }
 
-static inline void ambeth_tx_rngmng_reclaim(struct ambeth_info *lp)
+static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 {
 	u32 i;
 	unsigned int dirty_diff;
 	u32 entry;
 	u32 status;
 
-	dev_vdbg(&lp->ndev->dev, "cur_tx[%u], dirty_tx[%u].\n",
-		lp->tx.cur_tx, lp->tx.dirty_tx);
-	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
-	for (i = 0; i < dirty_diff; i++) {
-		entry = (lp->tx.dirty_tx % lp->tx_count);
-		status = lp->tx.desc_tx[entry].status;
+	if (irq_status & AMBETH_TXDMA_STATUS) {
+		dev_vdbg(&lp->ndev->dev, "cur_tx[%u], dirty_tx[%u], 0x%x.\n",
+			lp->tx.cur_tx, lp->tx.dirty_tx, irq_status);
+		dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+		for (i = 0; i < dirty_diff; i++) {
+			entry = (lp->tx.dirty_tx % lp->tx_count);
+			status = lp->tx.desc_tx[entry].status;
 
-		if (status & ETH_TDES0_OWN)
-			break;
+			if (status & ETH_TDES0_OWN)
+				break;
 
-		if (unlikely(status & ETH_TDES0_ES)) {
-			if ((status & ETH_TDES0_ES_MASK) ==
-				ETH_TDES0_ES) {
-				break;
-			}
-			if (ambeth_check_tdes0_status(lp, status)) {
-				ambhw_dma_tx_stop(lp);
-				ambhw_dma_tx_restart(lp, entry);
-				ambhw_dma_tx_poll(lp);
-				break;
+			if (unlikely(status & ETH_TDES0_ES)) {
+				if ((status & ETH_TDES0_ES_MASK) ==
+					ETH_TDES0_ES) {
+					break;
+				}
+				if (ambeth_check_tdes0_status(lp, status)) {
+					ambhw_dma_tx_stop(lp);
+					ambhw_dma_tx_restart(lp, entry);
+					ambhw_dma_tx_poll(lp);
+					break;
+				} else {
+					lp->stats.tx_errors++;
+				}
 			} else {
-				lp->stats.tx_errors++;
+				if (unlikely(status & ETH_TDES0_IHE)) {
+					if (netif_msg_drv(lp))
+						dev_err(&lp->ndev->dev,
+						"TX Error: IP Header Error.\n");
+				}
+				lp->stats.tx_bytes +=
+					lp->tx.rng_tx[entry].skb->len;
+				lp->stats.tx_packets++;
 			}
-		} else {
-			if (unlikely(status & ETH_TDES0_IHE)) {
-				if (netif_msg_drv(lp))
-					dev_err(&lp->ndev->dev,
-					"TX Error: IP Header Error.\n");
-			}
-			lp->stats.tx_bytes +=
-				lp->tx.rng_tx[entry].skb->len;
-			lp->stats.tx_packets++;
+
+			dma_unmap_single(lp->ndev->dev.parent,
+				lp->tx.rng_tx[entry].mapping,
+				lp->tx.rng_tx[entry].skb->len,
+				DMA_TO_DEVICE);
+			dev_kfree_skb_irq(lp->tx.rng_tx[entry].skb);
+			lp->tx.rng_tx[entry].skb = NULL;
+			lp->tx.rng_tx[entry].mapping = 0;
+			lp->tx.dirty_tx++;
 		}
-
-		dma_unmap_single(lp->ndev->dev.parent,
-			lp->tx.rng_tx[entry].mapping,
-			lp->tx.rng_tx[entry].skb->len,
-			DMA_TO_DEVICE);
-		dev_kfree_skb_irq(lp->tx.rng_tx[entry].skb);
-		lp->tx.rng_tx[entry].skb = NULL;
-		lp->tx.rng_tx[entry].mapping = 0;
-		lp->tx.dirty_tx++;
+		dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
+		if (dirty_diff && (irq_status & ETH_DMA_STATUS_TU)) {
+			ambhw_dma_tx_poll(lp);
+		}
+		if (likely(dirty_diff < lp->tx_irq_low)) {
+			netif_wake_queue(lp->ndev);
+		}
+		dev_vdbg(&lp->ndev->dev, "cur_tx[%u], dirty_tx[%u], 0x%x.\n",
+			lp->tx.cur_tx, lp->tx.dirty_tx, irq_status);
 	}
-	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
-	if (dirty_diff) {
-		ambhw_dma_tx_poll(lp);
-	}
-	if (likely(dirty_diff < lp->tx_irq_low)) {
-		netif_wake_queue(lp->ndev);
-	}
-	dev_vdbg(&lp->ndev->dev, "cur_tx[%u], dirty_tx[%u].\n",
-		lp->tx.cur_tx, lp->tx.dirty_tx);
-}
-
-static void ambeth_tx_tasklet(unsigned long param) {
-	struct ambeth_info *lp = (struct ambeth_info *)param;
-
-	ambeth_tx_rngmng_reclaim(lp);
 }
 
 static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
@@ -1301,9 +1296,7 @@ static irqreturn_t ambeth_interrupt(int irq, void *dev_id)
 	if (lp->enhance)
 		ambeth_interrupt_gmac(lp, irq_status);
 	ambeth_interrupt_rx(lp, irq_status);
-
-	/*tx irq handle by tasklet*/
-	tasklet_schedule(&lp->tx_tasklet);
+	ambeth_interrupt_tx(lp, irq_status);
 	writel_relaxed(irq_status, lp->regbase + ETH_DMA_STATUS_OFFSET);
 	spin_unlock_irqrestore(&lp->lock, flags);
 
@@ -1497,12 +1490,12 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	unsigned long flags;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
-	spin_lock_irqsave(&lp->lock, flags);
 	if (lp->enhance)
 		tx_flag = ETH_ENHANCED_TDES0_LS | ETH_ENHANCED_TDES0_FS | ETH_ENHANCED_TDES0_TCH;
 	else
 		tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
 
+	spin_lock_irqsave(&lp->lock, flags);
 	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
 	entry = (lp->tx.cur_tx % lp->tx_count);
 	if (dirty_diff == lp->tx_irq_high) {
@@ -1549,7 +1542,6 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	lp->tx.cur_tx++;
 	ambhw_dma_tx_poll(lp);
-
 	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ndev->trans_start = jiffies;
@@ -1567,12 +1559,14 @@ static void ambeth_timeout(struct net_device *ndev)
 {
 	struct ambeth_info *lp;
 	unsigned long flags;
+	u32 irq_status;
 
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 
 	dev_info(&lp->ndev->dev, "OOM Info:...\n");
 	spin_lock_irqsave(&lp->lock, flags);
-	ambeth_tx_rngmng_reclaim(lp);
+	irq_status = readl_relaxed(lp->regbase + ETH_DMA_STATUS_OFFSET);
+	ambeth_interrupt_tx(lp, irq_status | AMBETH_TXDMA_STATUS);
 	ambhw_dump(lp);
 	spin_unlock_irqrestore(&lp->lock, flags);
 
@@ -2354,8 +2348,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		goto ambeth_drv_probe_free_netdev;
 	}
 
-	tasklet_init(&lp->tx_tasklet,
-		ambeth_tx_tasklet, (unsigned long)lp);
 
 	ndev->irq = platform_get_irq(pdev, 0);
 	if (ndev->irq < 0) {
