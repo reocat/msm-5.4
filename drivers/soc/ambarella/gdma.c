@@ -2,7 +2,10 @@
  *
  * Author: Louis Sun <lysun@ambarella.com>
  *
- * Copyright (C) 2004-2010, Ambarella, Inc.
+ * History:
+ *	2016/06/01 - [Ken He] Refactorisation
+ *
+ * Copyright (C) 2004-2018, Ambarella, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +24,22 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/io.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
-#include <mach/init.h>
-#include <plat/ambcache.h>
+#include <plat/iav_helper.h>
 #include <plat/gdma.h>
+
+struct ambagdma_device {
+	void __iomem *regbase;
+	struct device *dev;
+	u32 irq;
+};
+static struct ambagdma_device *ambarella_gdma;
 
 #define TRANSFER_2D_WIDTH		(1 << 12 )		/* 4096 */
 #define MAX_TRANSFER_2D_HEIGHT		(1 << 11 )		/* 2048 */
@@ -43,8 +53,7 @@
 #define MAX_OPS				8
 
 static struct completion	transfer_completion;
-static struct mutex		transfer_mutex;
-
+static DEFINE_MUTEX(transfer_mutex);
 
 /* handle 8MB at one time */
 static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
@@ -60,20 +69,20 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 
 	/* copy rows by 2D copy */
 	if (row_count > 0) {
-		amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
-		amba_writel(GDMA_SRC_1_PITCH_REG, TRANSFER_2D_WIDTH);
-		amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
-		amba_writel(GDMA_DST_PITCH_REG, TRANSFER_2D_WIDTH);
-		amba_writel(GDMA_WIDTH_REG, TRANSFER_2D_WIDTH - 1);
-		amba_writel(GDMA_HEIGHT_REG, row_count - 1);
+		writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+		writel_relaxed(TRANSFER_2D_WIDTH, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
+		writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+		writel_relaxed(TRANSFER_2D_WIDTH, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
+		writel_relaxed(TRANSFER_2D_WIDTH - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
+		writel_relaxed(row_count - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-		amba_writel(GDMA_PIXELFORMAT_REG, 0x800);
-		amba_writel(GDMA_ALPHA_REG, 0);
-		amba_writel(GDMA_CLUT_BASE_REG, 0);
+		writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
+		writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
+		writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
 #endif
 
 		/* start 2D copy */
-		amba_writel(GDMA_OPCODE_REG, 1);
+		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
 	}
 	return 0;
 
@@ -89,22 +98,20 @@ static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 	}
 
 	/* linear copy */
-	amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
-	amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
-	amba_writel(GDMA_WIDTH_REG, size - 1);
+	writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+	writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+	writel_relaxed(size - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-	amba_writel(GDMA_PIXELFORMAT_REG, 0x800);
-	amba_writel(GDMA_ALPHA_REG, 0);
-	amba_writel(GDMA_CLUT_BASE_REG, 0);
+	writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
+	writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
+	writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
 #endif
 
 	/* start linear copy */
-	amba_writel(GDMA_OPCODE_REG, 0);
+	writel_relaxed(0, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
 
 	return 0;
 }
-
-
 
 /* this is async function, just fill dma registers and let it run*/
 static inline int transfer_once(u8 *dest_addr, u8 *src_addr, u32 size)
@@ -170,7 +177,7 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 
 	mutex_lock(&transfer_mutex);
 
-	ambcache_clean_range((void *)ambarella_phys_to_virt((u32)src_addr), size);
+	ambcache_clean_range((void *)__phys_to_virt((u32)src_addr), size);
 
 	while (remain_size > 0)	{
 		if (remain_size > MAX_TRANSFER_SIZE_ONCE) {
@@ -187,7 +194,7 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 		transferred_size += current_transfer_size;
 	}
 
-	ambcache_inv_range((void *)ambarella_phys_to_virt((u32)dest_addr), size);
+	ambcache_inv_range((void *)__phys_to_virt((u32)dest_addr), size);
 
 	mutex_unlock(&transfer_mutex);
 
@@ -204,39 +211,39 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,u16 src_pitch,
 
 	/* copy rows by 2D copy */
 	while (height > MAX_TRANSFER_2D_HEIGHT) {
-		amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
-		amba_writel(GDMA_SRC_1_PITCH_REG, src_pitch);
-		amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
-		amba_writel(GDMA_DST_PITCH_REG, dest_pitch);
-		amba_writel(GDMA_WIDTH_REG, width - 1);
-		amba_writel(GDMA_HEIGHT_REG, MAX_TRANSFER_2D_HEIGHT - 1);
+		writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+		writel_relaxed(src_pitch, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
+		writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+		writel_relaxed(dest_pitch, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
+		writel_relaxed(width - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
+		writel_relaxed(MAX_TRANSFER_2D_HEIGHT - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-		amba_writel(GDMA_PIXELFORMAT_REG, 0x800);
-		amba_writel(GDMA_ALPHA_REG, 0);
-		amba_writel(GDMA_CLUT_BASE_REG, 0);
+		writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
+		writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
+		writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
 #endif
 
 		/* start 2D copy */
-		amba_writel(GDMA_OPCODE_REG, 1);
+		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
 		height = height - MAX_TRANSFER_2D_HEIGHT;
 		src_addr = src_addr + src_pitch * MAX_TRANSFER_2D_HEIGHT;
 		dest_addr = dest_addr + dest_pitch * MAX_TRANSFER_2D_HEIGHT;
 	}
 
-		amba_writel(GDMA_SRC_1_BASE_REG, (long)src_addr);
-		amba_writel(GDMA_SRC_1_PITCH_REG, src_pitch);
-		amba_writel(GDMA_DST_BASE_REG, (long)dest_addr);
-		amba_writel(GDMA_DST_PITCH_REG, dest_pitch);
-		amba_writel(GDMA_WIDTH_REG, width - 1);
-		amba_writel(GDMA_HEIGHT_REG, height - 1);
+		writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+		writel_relaxed(src_pitch, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
+		writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+		writel_relaxed(dest_pitch, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
+		writel_relaxed(width - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
+		writel_relaxed(height - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
-		amba_writel(GDMA_PIXELFORMAT_REG, 0x800);
-		amba_writel(GDMA_ALPHA_REG, 0);
-		amba_writel(GDMA_CLUT_BASE_REG, 0);
+		writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
+		writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
+		writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
 #endif
 
 		/* start 2D copy */
-		amba_writel(GDMA_OPCODE_REG, 1);
+		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
 
 	return 0;
 
@@ -279,10 +286,22 @@ int dma_pitch_memcpy(struct gdma_param *params)
 
 EXPORT_SYMBOL(dma_pitch_memcpy);
 
-static irqreturn_t gdma_interrupt(int irq, void *dev_id)
+/* wait till transmit completes */
+static void wait_transmit_complete(struct ambagdma_device *amba_gdma)
 {
 	int pending_ops;
-	pending_ops = amba_readl(GDMA_PENDING_OPS_REG);
+	pending_ops = readl_relaxed(amba_gdma->regbase + GDMA_PENDING_OPS_OFFSET);
+
+	while(pending_ops!= 0) {
+		mdelay(10);
+	}
+}
+
+static irqreturn_t ambarella_gdma_irq(int irq, void *dev_data)
+{
+	struct ambagdma_device *amba_gdma = dev_data;
+	int pending_ops;
+	pending_ops = readl_relaxed(amba_gdma->regbase + GDMA_PENDING_OPS_OFFSET);
 
 	if (pending_ops == 0) {
 		/* if no following transfer */
@@ -293,54 +312,76 @@ static irqreturn_t gdma_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int hw_init(void)
+static int ambarella_gdma_probe(struct platform_device *pdev)
 {
-	int	errorCode;
-	/* request irq, no device id, no irq sharing */
-	errorCode = request_irq(GDMA_IRQ, gdma_interrupt,
-	IRQF_TRIGGER_RISING, "gdma", 0);
+	struct ambagdma_device *ambagdma;
+	struct resource *res;
+	int ret = 0;
 
-	if (errorCode) {
-		printk("gdma irq request failed \n");
-		return -1;
+	ambagdma = devm_kzalloc(&pdev->dev, sizeof(struct ambagdma_device), GFP_KERNEL);
+	if (!ambagdma) {
+		dev_err(&pdev->dev, "Failed to allocate memory!\n");
+		return -ENOMEM;
 	}
 
-	return 0;
-}
-
-/* wait till transmit completes */
-static void wait_transmit_complete(void)
-{
-	int pending_ops;
-	pending_ops = amba_readl(GDMA_PENDING_OPS_REG);
-
-	while(pending_ops!= 0) {
-		mdelay(10);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No mem resource!\n");
+		return -ENXIO;
 	}
-}
 
-static int __init gdma_init(void)
-{
-	/* hardware and irq init */
-	if (hw_init() != 0)
-		return -1;
+	ambagdma->regbase = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!ambagdma->regbase) {
+		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		return -ENOMEM;
+	}
+
+	ambagdma->irq = platform_get_irq(pdev, 0);
+	if (ambagdma->irq < 0) {
+		dev_err(&pdev->dev, "Can not get irq !\n");
+		return -ENXIO;
+	}
+
+	ret = devm_request_irq(&pdev->dev, ambagdma->irq,
+			ambarella_gdma_irq, IRQF_TRIGGER_RISING,
+			dev_name(&pdev->dev), ambagdma);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Can not request irq %d!\n", ambagdma->irq);
+		return -ENXIO;
+	}
+	ambagdma->dev = &pdev->dev;
+	ambarella_gdma = ambagdma;
+	platform_set_drvdata(pdev, ambagdma);
+
 	/* init completion */
 	init_completion(&transfer_completion);
-	mutex_init(&transfer_mutex);
 
+	dev_info(&pdev->dev, "Ambarella GDMA driver init\n");
 	return 0;
 }
 
-static void __exit gdma_exit(void)
+static int ambarella_gdma_remove(struct platform_device *pdev)
 {
-	wait_transmit_complete();
+	struct ambagdma_device *amba_gdma = platform_get_drvdata(pdev);
+	wait_transmit_complete(amba_gdma);
 }
 
+static const struct of_device_id ambarella_gdma_dt_ids[] = {
+	{.compatible = "ambarella,gdma"},
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_gdma_dt_ids);
+
+static struct platform_driver ambarella_gdma_driver = {
+	.driver = {
+		.name = "ambarella-gdma",
+		.of_match_table = ambarella_gdma_dt_ids,
+	},
+	.probe = ambarella_gdma_probe,
+	.remove = ambarella_gdma_remove,
+};
+module_platform_driver(ambarella_gdma_driver);
+
 MODULE_AUTHOR("Louis Sun <lysun@ambarella.com>");
-MODULE_DESCRIPTION("GDMA driver on Ambarella A5S / S2");
-MODULE_LICENSE("GPL v2");
-MODULE_VERSION("1.0");
-
-module_init(gdma_init);
-module_exit(gdma_exit);
-
+MODULE_DESCRIPTION("GDMA driver on Ambarella S5");
+MODULE_LICENSE("GPL");

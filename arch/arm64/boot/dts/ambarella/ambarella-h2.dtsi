@@ -347,11 +347,6 @@
 						  0x4036 0x4037 0x4026 0x4030
 						  0x4028 0x4029 0x402a 0x402b
 						  0x402c 0x402d 0x402e 0x402f>;
-
-				/* Keep the maximum drive strength for TW EVK. */
-				/* amb,pinconf-ids = <0xa00035 0xa00037 0x900028 0x900029 */
-				/* 		   0x90002a 0x90002b 0x90002c 0x90002d	*/
-				/*		   0x90002e 0x90002f>;			*/
 			};
 
 			eth_rmii_pins: eth0@1 {
@@ -526,6 +521,12 @@
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
+		};
+
+		gdma: gdma@e0005000 {
+			compatible = "ambarella,gdma";
+			reg = <0xe0015000 0x400>;
+			interrupts = <0 74 0x1>;
 		};
 
 		nand0: nand@e0001000 {
@@ -914,6 +915,7 @@
 			amb,extra-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
+			amb,ctrl2-val = <0x3f700900>;
 			amb,ctrl3-val = <0x00068306>;
 			amb,init-rate = <24000000>;
 			amb,min-vco = <2500>; /* in MHz */

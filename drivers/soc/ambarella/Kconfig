@@ -2,7 +2,7 @@
 # Ambarella SoC drivers
 #
 
-config AMBARELLA_ENABLE_GDMA
+config AMBARELLA_SUPPORT_GDMA
 	bool "Ambarella Enable GDMA"
         depends on ARCH_AMBARELLA
 	default n
