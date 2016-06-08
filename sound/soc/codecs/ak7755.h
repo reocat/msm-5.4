@@ -36,7 +36,7 @@
 //#define DIGITAL_MIC
 //#define CLOCK_MODE_BICK
 //#define CLOCK_MODE_18_432
-#define AK7755_AUDIO_IF_MODE		AK7755_AIF_BICK64	//32fs, 48fs, 64fs, 256fs(TDM)
+#define AK7755_AUDIO_IF_MODE		AK7755_AIF_BICK32	//32fs, 48fs, 64fs, 256fs(TDM)
 #define AK7755_TDM_INPUT_SOURCE		AK7755_TDM_DSP		//Effective only in TDM mode
 #define AK7755_BCKP_BIT				(0 << 6)	//BICK Edge Setting
 #define AK7755_SOCFG_BIT  			(0 << 4)	//SO pin Hi-z Setting
