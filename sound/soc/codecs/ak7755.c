@@ -26,7 +26,7 @@
 #include <sound/soc-dapm.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
-
+#include <sound/pcm_params.h>
 #include <linux/ioctl.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
@@ -54,6 +54,9 @@
 #define akdbgprt(format, arg...) do {} while (0)
 #endif
 
+static int aec = 1;
+module_param(aec, uint, 0664);
+
 /* AK7755 Codec Private Data */
 struct ak7755_priv {
 	enum snd_soc_control_type control_type;
@@ -68,6 +71,11 @@ struct ak7755_priv {
 	int MIRNo;
 	int bickfs;         // '15/06/15  0:64fs, 1:48fs, 2:32fs, 3:256fs
 	int pdn_gpio;       // '15/06/15
+	unsigned int pdn_active;
+	int power_gpio;
+	unsigned int power_active;
+	int amp_gpio;
+	unsigned int amp_active;
 
 	u16  DSPPramMode;
 	u16  DSPCramMode;
@@ -77,12 +85,6 @@ struct ak7755_priv {
 	int  HPFfc[2];
 	int  LimRel;
 	int  LimVol;
-
-	/*for vir enum*/
-	u32	pmlo[2];
-	u32	dspinad_switch[2];
-	u32	sdoutad_selmix[2];
-	u32	dsp_selmix;
 };
 
 struct _ak7755_pd_handler {
@@ -314,146 +316,6 @@ static inline u32 ak7755_read_reg_cache(struct snd_soc_codec *, u16);
 static int ak7755_firmware_write_ram(u16 mode, u16 cmd);
 static int ak7755_set_status(enum ak7755_status status);
 static int ak7755_write_cram(int addr, int len, unsigned char *cram_data);
-
-int get_pmlo1(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->pmlo[0];
-
-	return 0;
-}
-
-static int set_pmlo1(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->pmlo[0] = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
-
-int get_pmlo2(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->pmlo[1];
-
-	return 0;
-}
-
-static int set_pmlo2(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->pmlo[1] = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
-
-int get_dspinad(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->dspinad_switch[0];
-
-	return 0;
-}
-
-static int set_dspinad(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->dspinad_switch[0] = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
-
-int get_dspinad2(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->dspinad_switch[1];
-
-	return 0;
-}
-
-static int set_dspinad2(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->dspinad_switch[1] = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
-
-int get_sdoutad_selmix(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->sdoutad_selmix[0];
-
-	return 0;
-}
-
-static int set_sdoutad_selmix(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->sdoutad_selmix[0] = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
-
-int get_sdoutad2_selmix(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->sdoutad_selmix[1];
-
-	return 0;
-}
-
-static int set_sdoutad2_selmix(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->sdoutad_selmix[1] = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
-
-int get_dsp_selmix(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.enumerated.item[0] = ak7755->dsp_selmix;
-
-	return 0;
-}
-
-static int set_dsp_selmix(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
-
-	ak7755->dsp_selmix = ucontrol->value.enumerated.item[0];
-
-	return 0;
-}
 
 static int get_linein(
 struct snd_kcontrol       *kcontrol,
@@ -1190,27 +1052,13 @@ static const struct snd_kcontrol_new ak7755_out2e_control =
 static const struct snd_kcontrol_new ak7755_out3e_control =
 	SOC_DAPM_SINGLE("Switch", AK7755_CA_CLK_SDOUT_SETTING, 2, 1, 0);
 
-/* LineOut1 Switch */
-static const char *ak7755_pmlo1_select_texts[] =
-		{"Off", "On"};
-
-static const struct soc_enum ak7755_pmlo1_mux_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_pmlo1_select_texts), ak7755_pmlo1_select_texts);
-
 static const struct snd_kcontrol_new ak7755_pmlo1_mux_control =
-	SOC_DAPM_ENUM_EXT("OUT1 SW", ak7755_pmlo1_mux_enum, get_pmlo1, set_pmlo1);
-
-/* LineOut2 Switch */
-static const char *ak7755_pmlo2_select_texts[] =
-		{"Off", "On"};
-
-static const struct soc_enum ak7755_pmlo2_mux_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_pmlo2_select_texts), ak7755_pmlo2_select_texts);
+	SOC_DAPM_SINGLE_VIRT("OUT1 Switch", 1);
+	//SOC_DAPM_ENUM_VIRT("OUT1 SW", ak7755_pmlo1_mux_enum);
 
 static const struct snd_kcontrol_new ak7755_pmlo2_mux_control =
-	SOC_DAPM_ENUM_EXT("OUT2 SW", ak7755_pmlo2_mux_enum, get_pmlo2, set_pmlo2);
+	SOC_DAPM_SINGLE_VIRT("OUT2 Switch", 1);
+//	SOC_DAPM_ENUM_VIRT("OUT2 SW", ak7755_pmlo2_mux_enum);
 
 /* LineOut3 Mixer */
 static const struct snd_kcontrol_new ak7755_lo3sw_mixer_controls[] = {
@@ -1222,22 +1070,11 @@ static const struct snd_kcontrol_new ak7755_lo3sw_mixer_controls[] = {
 };
 
 /* DSPIn Virt SWITCH */
-static const char *ak7755_dspinad_texts[] =
-		{"Off", "On"};
-
-static const struct soc_enum ak7755_dspinad_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_dspinad_texts), ak7755_dspinad_texts);
-
-static const struct soc_enum ak7755_dspinad2_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_dspinad_texts), ak7755_dspinad_texts);
-
 static const struct snd_kcontrol_new ak7755_dspinad_control =
-	SOC_DAPM_ENUM_EXT("DSPINAD Switch", ak7755_dspinad_enum, get_dspinad, set_dspinad);
+	SOC_DAPM_SINGLE_VIRT("DSPINAD Switch", 1);
 
 static const struct snd_kcontrol_new ak7755_dspinad2_control =
-	SOC_DAPM_ENUM_EXT("DSPINAD2 Switch", ak7755_dspinad2_enum, get_dspinad2, set_dspinad2);
+	SOC_DAPM_SINGLE_VIRT("DSPINAD2 Switch", 1);
 
 /* LIN MUX */
 static const char *ak7755_lin_select_texts[] =
@@ -1305,30 +1142,14 @@ static const struct soc_enum ak7755_seldo3_mux_enum =
 static const struct snd_kcontrol_new ak7755_seldo3_mux_control =
 	SOC_DAPM_ENUM("SELDO3 Select", ak7755_seldo3_mux_enum);
 
-/* SELMIX Virt SWITCH */
-static const char *ak7755_selmix_select_texts[] =
-		{"Off", "On"};
-
-static const struct soc_enum ak7755_sdoutad_selmix_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_selmix_select_texts), ak7755_selmix_select_texts);
-
-static const struct soc_enum ak7755_sdoutad2_selmix_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_selmix_select_texts), ak7755_selmix_select_texts);
-
-static const struct soc_enum ak7755_dsp_selmix_enum =
-	SOC_ENUM_SINGLE(0, 0,
-			ARRAY_SIZE(ak7755_selmix_select_texts), ak7755_selmix_select_texts);
-
 static const struct snd_kcontrol_new ak7755_sdoutad_selmix_control =
-	SOC_DAPM_ENUM_EXT("SELMIX Switch", ak7755_sdoutad_selmix_enum, get_sdoutad_selmix, set_sdoutad_selmix);
+	SOC_DAPM_SINGLE_VIRT("SELMIX Switch", 1);
 
 static const struct snd_kcontrol_new ak7755_sdoutad2_selmix_control =
-	SOC_DAPM_ENUM_EXT("SELMIX Switch", ak7755_sdoutad2_selmix_enum, get_sdoutad2_selmix, set_sdoutad2_selmix);
+	SOC_DAPM_SINGLE_VIRT("SELMIX Switch", 1);
 
 static const struct snd_kcontrol_new ak7755_dsp_selmix_control =
-	SOC_DAPM_ENUM_EXT("SELMIX Switch", ak7755_dsp_selmix_enum, get_dsp_selmix, set_dsp_selmix);
+	SOC_DAPM_SINGLE_VIRT("SELMIX Switch", 1);
 
 
 
@@ -1371,8 +1192,11 @@ static const struct snd_soc_dapm_widget ak7755_dapm_widgets[] = {
 
 	SND_SOC_DAPM_MIXER("LineOut Amp3 Mixer", AK7755_CE_POWER_MANAGEMENT, 4, 0,
 			&ak7755_lo3sw_mixer_controls[0], ARRAY_SIZE(ak7755_lo3sw_mixer_controls)),
-	SND_SOC_DAPM_MUX("LineOut Amp2", AK7755_CE_POWER_MANAGEMENT, 3, 0, &ak7755_pmlo2_mux_control),
-	SND_SOC_DAPM_MUX("LineOut Amp1", AK7755_CE_POWER_MANAGEMENT, 2, 0, &ak7755_pmlo1_mux_control),
+//	SND_SOC_DAPM_MUX("LineOut Amp2", AK7755_CE_POWER_MANAGEMENT, 3, 0, &ak7755_pmlo2_mux_control),
+//	SND_SOC_DAPM_MUX("LineOut Amp1", AK7755_CE_POWER_MANAGEMENT, 2, 0, &ak7755_pmlo1_mux_control),
+
+	SND_SOC_DAPM_SWITCH("LineOut Amp1", SND_SOC_NOPM, 0, 0,	&ak7755_pmlo1_mux_control),
+	SND_SOC_DAPM_SWITCH("LineOut Amp2", SND_SOC_NOPM, 0, 0,	&ak7755_pmlo2_mux_control),
 
 // Analog Input
 	SND_SOC_DAPM_INPUT("LIN"),
@@ -1386,8 +1210,8 @@ static const struct snd_soc_dapm_widget ak7755_dapm_widgets[] = {
 	SND_SOC_DAPM_PGA("LineIn Amp", AK7755_CF_RESET_POWER_SETTING, 5, 0, NULL, 0),
 	SND_SOC_DAPM_MUX("RIN MUX", SND_SOC_NOPM, 0, 0,	&ak7755_rin_mux_control),
 	SND_SOC_DAPM_MUX("LIN MUX", SND_SOC_NOPM, 0, 0,	&ak7755_lin_mux_control),
-	SND_SOC_DAPM_MUX("DSPIN SDOUTAD2", SND_SOC_NOPM, 0, 0, &ak7755_dspinad2_control),
-	SND_SOC_DAPM_MUX("DSPIN SDOUTAD", SND_SOC_NOPM, 0, 0, &ak7755_dspinad_control),
+	SND_SOC_DAPM_SWITCH("DSPIN SDOUTAD2", SND_SOC_NOPM, 0, 0, &ak7755_dspinad2_control),
+	SND_SOC_DAPM_SWITCH("DSPIN SDOUTAD", SND_SOC_NOPM, 0, 0, &ak7755_dspinad_control),
 
 // Digital Input/Output
 	SND_SOC_DAPM_AIF_IN("SDIN1", "Playback", 0, SND_SOC_NOPM, 0, 0),
@@ -1416,9 +1240,9 @@ static const struct snd_soc_dapm_widget ak7755_dapm_widgets[] = {
 	SND_SOC_DAPM_MUX("SDOUT2 MUX", SND_SOC_NOPM, 0, 0, &ak7755_seldo2_mux_control),
 	SND_SOC_DAPM_MUX("SDOUT1 MUX", SND_SOC_NOPM, 0, 0, &ak7755_seldo1_mux_control),
 	SND_SOC_DAPM_MUX("DAC MUX", SND_SOC_NOPM, 0, 0, &ak7755_seldai_mux_control),
-	SND_SOC_DAPM_MUX("SELMIX DSP", SND_SOC_NOPM, 0, 0, &ak7755_dsp_selmix_control),
-	SND_SOC_DAPM_MUX("SELMIX AD2", SND_SOC_NOPM, 0, 0, &ak7755_sdoutad2_selmix_control),
-	SND_SOC_DAPM_MUX("SELMIX AD", SND_SOC_NOPM, 0, 0, &ak7755_sdoutad_selmix_control),
+	SND_SOC_DAPM_SWITCH("SELMIX DSP", SND_SOC_NOPM, 0, 0, &ak7755_dsp_selmix_control),
+	SND_SOC_DAPM_SWITCH("SELMIX AD2", SND_SOC_NOPM, 0, 0, &ak7755_sdoutad2_selmix_control),
+	SND_SOC_DAPM_SWITCH("SELMIX AD", SND_SOC_NOPM, 0, 0, &ak7755_sdoutad_selmix_control),
 	SND_SOC_DAPM_PGA("SELMIX Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
 
 };
@@ -1563,7 +1387,7 @@ static int ak7755_hw_params_set(struct snd_soc_codec *codec, int nfs)
 	default:
 		return -EINVAL;
 	}
-	snd_soc_write(codec, AK7755_C0_CLOCK_SETTING1, 0x2a);
+	snd_soc_write(codec, AK7755_C0_CLOCK_SETTING1, fs);
 	ak7755_set_status(RUN);
 
 	return 0;
@@ -1574,6 +1398,20 @@ static int ak7755_hw_params(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_codec *codec = dai->codec;
+	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
+
+	switch (params_format(params)) {
+		case SNDRV_PCM_FORMAT_S16_LE:
+			ak7755->bickfs = (AK7755_AIF_BICK32 >> 4);
+			break;
+		case SNDRV_PCM_FORMAT_S24_LE:
+			ak7755->bickfs = (AK7755_AIF_BICK48 >> 4);
+			break;
+		default:
+			dev_err(codec->dev, "Can not support the format");
+			return -EINVAL;
+	}
+
 	ak7755_data->fs = params_rate(params);
 
 	ak7755_hw_params_set(codec, ak7755_data->fs);
@@ -1584,8 +1422,6 @@ static int ak7755_hw_params(struct snd_pcm_substream *substream,
 static int ak7755_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 		unsigned int freq, int dir)
 {
-//	struct snd_soc_codec *codec = dai->codec;
-
 	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
 
 	ak7755_data->rclk = freq;
@@ -1612,17 +1448,14 @@ static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 
     switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
         case SND_SOC_DAIFMT_CBS_CFS:
- 		akdbgprt("\t[AK7755] %s(Slave)\n",__FUNCTION__);
 	#ifdef CLOCK_MODE_BICK
 	    	mode |= AK7755_M_S_3;			//CKM mode = 3(Slave, BICK)
 	#else
-		akdbgprt("\t********[AK7755] %s(Slave)\n",__FUNCTION__);
 	    	mode |= AK7755_M_S_2;			//CKM mode = 2(Slave, XTI=12.288MHz)
 	#endif
-//          mode2 &= ~AK7755_BICK_LRCK;		//BICK = LRCK = 0
+          mode2 &= ~AK7755_BICK_LRCK;		//BICK = LRCK = 0
             break;
         case SND_SOC_DAIFMT_CBM_CFM:
-		akdbgprt("\t[AK7755] %s(Master)\n",__FUNCTION__);
 	#ifdef CLOCK_MODE_18_432
 	    	mode |= AK7755_M_S_1;		//CKM mode = 1(Master, XTI=18.432MHz)
 	#else
@@ -1637,30 +1470,24 @@ static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
            return -EINVAL;
 	}
 
-// '15/06/15
 	snd_soc_update_bits(codec, AK7755_C1_CLOCK_SETTING2, 0x30, (ak7755->bickfs << 4));
-	if ( ak7755->bickfs < 3 ) format &= 0x7F;
-	else {
+	if ( ak7755->bickfs < 3 ) {
+		format &= 0x7F;
+	} else {
 		format |= 0x80;
 		format &= 0xF3;
 		format |=  AK7755_TDM_INPUT_SOURCE;
 	}
-// *****
-
-	akdbgprt("\t[AK7755] %s(%d) fmt : 0x%0x\n",__FUNCTION__,__LINE__, fmt);
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
 		format |= AK7755_LRIF_I2S_MODE;
-// '15/06/15
 		snd_soc_update_bits(codec, AK7755_C3_DELAY_RAM_DSP_IO, 0xF0, 0xf0); 	// DIF2, DOF2
 		snd_soc_update_bits(codec, AK7755_C6_DAC_DEM_SETTING, 0x37, 0x33);		//DIF, DIFDA
 		snd_soc_update_bits(codec, AK7755_C7_DSP_OUT_SETTING, 0xFF, 0xf3); 	//DOF
-// *****
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		format |= AK7755_LRIF_MSB_MODE;
-// '15/06/15
 		if ( ak7755->bickfs == 2 ) {   // 32fs
 			snd_soc_update_bits(codec, AK7755_C3_DELAY_RAM_DSP_IO, 0xF0, 0xF0); 	// DIF2, DOF2
 			snd_soc_update_bits(codec, AK7755_C6_DAC_DEM_SETTING, 0x37, 0x33);	//DIF, DIFDA
@@ -1671,7 +1498,6 @@ static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 			snd_soc_update_bits(codec, AK7755_C6_DAC_DEM_SETTING, 0x37, 0x0);	//DIF, DIFDA
 			snd_soc_update_bits(codec, AK7755_C7_DSP_OUT_SETTING, 0xFF, 0x0); 	//DOF
 		}
-// *****
 		break;
 /*
 	case SND_SOC_DAIFMT_PCM_SHORT:
@@ -2096,8 +1922,7 @@ static int ak7755_firmware_write_ram(u16 mode, u16 cmd)
 				return( -EINVAL);
 		}
 		ret = ak7755_write_ram((int)mode, ram_basic, nRamSize);
-	}
-	else {
+	} else {
 		switch(mode) {
 			case RAMTYPE_PRAM:
 				sprintf(szFileName, "ak7755_pram_%s.bin", ak7755_firmware_pram[cmd]);
@@ -2431,13 +2256,33 @@ static struct miscdevice ak7755_misc = {
 
 #endif
 
-/*********************************/
-
-// * for AK7755
 static int ak7755_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *codec_dai)
 {
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
 	int 	ret = 0;
- //   struct snd_soc_codec *codec = codec_dai->codec;
+
+	if(ak7755->amp_gpio > 0) {
+		switch (cmd) {
+		case SNDRV_PCM_TRIGGER_START:
+		case SNDRV_PCM_TRIGGER_RESUME:
+		case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+				gpio_direction_output(ak7755->amp_gpio, ak7755->amp_active);
+			}
+			break;
+		case SNDRV_PCM_TRIGGER_STOP:
+		case SNDRV_PCM_TRIGGER_SUSPEND:
+		case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
+				gpio_direction_output(ak7755->amp_gpio, !ak7755->amp_active);
+			}
+			break;
+		default:
+			break;
+		}
+
+	}
 
 	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
 
@@ -2541,20 +2386,20 @@ static int ak7755_init_reg(struct snd_soc_codec *codec)
 
 	akdbgprt("\t[AK7755 bias] %s(%d)\n",__FUNCTION__,__LINE__);
 
-// '15/06/15
-	if ( ak7755->pdn_gpio > 0 ) {
-		gpio_set_value(ak7755->pdn_gpio, 0);
-		msleep(10);
-		gpio_set_value(ak7755->pdn_gpio, 1);
+	if ( ak7755->power_gpio > 0 ) {
+		gpio_direction_output(ak7755->power_gpio, ak7755->power_active);
 	}
-// ******
-	mdelay(10);
-	ak7755_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	akdbgprt("\t[AK7755 bias] %s(%d)\n",__FUNCTION__,__LINE__);
 
-#if 1
+	if ( ak7755->pdn_gpio > 0 ) {
+		gpio_direction_output(ak7755->pdn_gpio, ak7755->pdn_active);
+		msleep(10);
+		gpio_direction_output(ak7755->pdn_gpio, !ak7755->pdn_active);
+	}
+	ak7755_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
 	snd_soc_update_bits(codec, AK7755_D4_LO1_LO2_VOLUME_SETTING, 0xFF, 0xFF);			//LOVOL1,2=F(0dB)
 	snd_soc_update_bits(codec, AK7755_D3_LIN_LO3_VOLUME_SETTING, 0x0F, 0x0F);			//LOVOL3=F(0dB)
+	snd_soc_update_bits(codec, AK7755_D2_MIC_GAIN_SETTING, 0xFF, 0xCC);
 	snd_soc_update_bits(codec, AK7755_D0_FUNCTION_SETTING, 0x40, 0x40);				//CRCE=1(CRC Enable)
 	snd_soc_update_bits(codec, AK7755_C2_SERIAL_DATA_FORMAT, 0x40, AK7755_BCKP_BIT);	//BCKP bit
 	snd_soc_update_bits(codec, AK7755_D0_FUNCTION_SETTING, 0x10, AK7755_SOCFG_BIT);	//SOFG bit
@@ -2562,10 +2407,9 @@ static int ak7755_init_reg(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, AK7755_DE_DMIC_IF_SETTING, 0x90, 0x90);					//DMIC1=DMIC2=1(Digital MIC Use)
 	snd_soc_update_bits(codec, AK7755_DE_DMIC_IF_SETTING, 0x40, AK7755_DMCLKP1_BIT);	//DMCLKP1 bit
 	snd_soc_update_bits(codec, AK7755_DE_DMIC_IF_SETTING, 0x08, AK7755_DMCLKP2_BIT);	//DMCLKP2 bit
+	snd_soc_update_bits(codec, AK7755_C0_CLOCK_SETTING1, 0x08, 0x00);
 #else
 	snd_soc_update_bits(codec, AK7755_C0_CLOCK_SETTING1, 0x08, 0x08);		//AINE=1(Analog MIC Use)
-#endif
-
 #endif
 
 #if 0
@@ -2611,7 +2455,23 @@ static int ak7755_init_reg(struct snd_soc_codec *codec)
 	snd_soc_write(codec, 0xE6, 0x01);
 	snd_soc_write(codec, 0xEA, 0x80);
 
-	akdbgprt("\t**********[AK7755 ] %s(%d)\n",__FUNCTION__,__LINE__);
+	if(aec == 1) {
+		/*Select DAC MUX as DSP DOUT4*/
+		snd_soc_update_bits(codec, AK7755_C8_DAC_IN_SETTING, 0xC0, 0x00);
+		/*Lineout1 power on*/
+		snd_soc_update_bits(codec, AK7755_CE_POWER_MANAGEMENT, 0xC7, 0xC7);
+
+		/*Select SDOUT1 MUX as DOUT1 Of DSP*/
+		snd_soc_update_bits(codec, AK7755_CC_VOLUME_TRANSITION, 0x07, 0x00);
+	} else {
+		/*Select DAC MUX as SDIN1*/
+		snd_soc_update_bits(codec, AK7755_C8_DAC_IN_SETTING, 0xC0, 0xC0);
+		/*Lineout1 power on*/
+		snd_soc_update_bits(codec, AK7755_CE_POWER_MANAGEMENT, 0xC7, 0xC7);
+
+		/*Select SDOUT1 MUX as SDOUTAD*/
+		snd_soc_update_bits(codec, AK7755_CC_VOLUME_TRANSITION, 0x07, 0x03);
+	}
 
 	return 0;
 }
@@ -2621,6 +2481,7 @@ static int ak7755_parse_dt(struct ak7755_priv *ak7755)
 {
 	struct device *dev;
 	struct device_node *np;
+	enum of_gpio_flags flags;
 
 	if (ak7755->control_type == SND_SOC_SPI) {
 		dev = &(ak7755->spi->dev);
@@ -2636,15 +2497,25 @@ static int ak7755_parse_dt(struct ak7755_priv *ak7755)
 
 	printk("Read PDN pin from device tree\n");
 
-	ak7755->pdn_gpio = of_get_named_gpio(np, "ak7755,pdn-gpio", 0);
-	if (ak7755->pdn_gpio < 0) {
+	ak7755->pdn_gpio = of_get_named_gpio_flags(np, "ak7755,pdn-gpio", 0, &flags);
+	ak7755->pdn_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+	if(ak7755->pdn_gpio < 0 || !gpio_is_valid(ak7755->pdn_gpio)) {
+		printk(KERN_ERR "ak7755 pdn pin(%u) is invalid\n", ak7755->pdn_gpio);
 		ak7755->pdn_gpio = -1;
 		return -1;
 	}
 
-	if( !gpio_is_valid(ak7755->pdn_gpio) ) {
-		printk(KERN_ERR "ak7755 pdn pin(%u) is invalid\n", ak7755->pdn_gpio);
-		return -1;
+	ak7755->power_gpio = of_get_named_gpio_flags(np, "ak7755,pwr-gpio", 0, &flags);
+	ak7755->power_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	if (ak7755->power_gpio < 0 || !gpio_is_valid(ak7755->power_gpio)) {
+		ak7755->power_gpio = -1;
+	}
+
+	ak7755->amp_gpio = of_get_named_gpio_flags(np, "ak7755,amp-gpio", 0, &flags);
+	ak7755->amp_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	if (ak7755->amp_gpio < 0 || !gpio_is_valid(ak7755->amp_gpio)) {
+		ak7755->amp_gpio = -1;
 	}
 
 	return 0;
@@ -2692,28 +2563,41 @@ static int ak7755_probe(struct snd_soc_codec *codec)
 	akdbgprt("\t[AK7755] %s(%d) ak7755=%x\n",__FUNCTION__,__LINE__, (int)ak7755);
 	ak7755->codec = codec;
 
-// '16/01/13
 #ifdef CONFIG_OF
 	ret = ak7755_parse_dt(ak7755);
-	if ( ret < 0 ) ak7755->pdn_gpio = -1;
 #else
 	if ( pdata != NULL ) {
 		ak7755->pdn_gpio = pdata->pdn_gpio;
 	}
 #endif
-	if ( ak7755->pdn_gpio > 0 ) {
-		ret = gpio_request(ak7755->pdn_gpio, "ak7755 pdn");
-		gpio_direction_output(ak7755->pdn_gpio, 0);
+	if (gpio_is_valid(ak7755->pdn_gpio))
+		ret = devm_gpio_request(codec->dev, ak7755->pdn_gpio, "ak7755 pdn");
+
+	if (ret < 0){
+		dev_err(codec->dev, "Failed to request pdn pin for ak7755: %d\n", ret);
+		return ret;
 	}
-//  *****
+
+	if (gpio_is_valid(ak7755->power_gpio))
+		ret = devm_gpio_request(codec->dev, ak7755->power_gpio, "ak7755 power");
+
+	if (ret < 0){
+		dev_err(codec->dev, "Failed to request power pin for ak7755: %d\n", ret);
+		return ret;
+	}
+
+	if (gpio_is_valid(ak7755->amp_gpio))
+		ret = devm_gpio_request(codec->dev, ak7755->amp_gpio, "ak7755 amplifier");
+
+	if (ret < 0){
+		dev_err(codec->dev, "Failed to request amplifier pin for ak7755: %d\n", ret);
+		return ret;
+	}
 
 	ak7755_set_reg_table();
 	ak7755_init_reg(codec);
 
 	akdbgprt("\t[AK7755 Effect] %s(%d)\n",__FUNCTION__,__LINE__);
-
-//	snd_soc_add_controls(codec, ak7755_snd_controls,
-//	                    ARRAY_SIZE(ak7755_snd_controls));
 
 	ak7755->fs = 48000;
 	ak7755->rclk = 0;
@@ -2734,7 +2618,7 @@ static int ak7755_probe(struct snd_soc_codec *codec)
  	ak7755->LimRel = 2;
 	ak7755->LimVol = 0;
 
-	ak7755->bickfs = (AK7755_AUDIO_IF_MODE >> 4);   // '15/06/15
+	ak7755->bickfs = (AK7755_AUDIO_IF_MODE >> 4);
 
 	akdbgprt("\t[AK7755 init_ak7755_pd] %s(%d)\n",__FUNCTION__,__LINE__);
 
@@ -2747,46 +2631,41 @@ static int ak7755_probe(struct snd_soc_codec *codec)
 
 static int ak7755_remove(struct snd_soc_codec *codec)
 {
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);   // '15/06/15
+	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
 
 	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
 
 	ak7755_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
-// '15/06/15
 	if ( ak7755->pdn_gpio > 0 ) {
 		gpio_set_value(ak7755->pdn_gpio, 0);
 		gpio_free(ak7755->pdn_gpio);
 	}
-// *****
 
 	return 0;
 }
 
-static int ak7755_suspend(struct snd_soc_codec *codec)  // '16/01/13
+static int ak7755_suspend(struct snd_soc_codec *codec)
 {
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);   // '15/06/15
+	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
 
 	ak7755_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
-// '15/06/15
 	if ( ak7755->pdn_gpio > 0 ) {
 		gpio_set_value(ak7755->pdn_gpio, 0);
-		//snd_soc_cache_init(codec);
 	}
 	else {
 #ifdef AK7755_PD_SUSPEND
 		//snd_soc_cache_init(codec);
 #endif
 	}
-// *****
 
 	return 0;
 }
 
 static int ak7755_resume(struct snd_soc_codec *codec)
 {
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);   // '15/06/15
+	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
 
 	if ( ak7755->pdn_gpio > 0 ) {
 		gpio_set_value(ak7755->pdn_gpio, 0);
@@ -2814,7 +2693,7 @@ struct snd_soc_codec_driver soc_codec_dev_ak7755 = {
 	.suspend =	ak7755_suspend,
 	.resume =	ak7755_resume,
 
-	//.idle_bias_off = false,   // 16/01/13
+	//.idle_bias_off = false,
 	.set_bias_level = ak7755_set_bias_level,
 
 	.reg_cache_size = ARRAY_SIZE(ak7755_reg),
@@ -2823,8 +2702,8 @@ struct snd_soc_codec_driver soc_codec_dev_ak7755 = {
 //	.readable_register = ak7755_readable,
 //	.volatile_register = ak7755_volatile,
 
-	.controls = ak7755_snd_controls,  // 16/01/13
-	.num_controls = ARRAY_SIZE(ak7755_snd_controls),  // 16/01/13
+	.controls = ak7755_snd_controls,
+	.num_controls = ARRAY_SIZE(ak7755_snd_controls),
 	.dapm_widgets = ak7755_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(ak7755_dapm_widgets),
 	.dapm_routes = ak7755_intercon,
@@ -2832,7 +2711,7 @@ struct snd_soc_codec_driver soc_codec_dev_ak7755 = {
 };
 EXPORT_SYMBOL_GPL(soc_codec_dev_ak7755);
 
-#ifdef CONFIG_OF  // '16/01/13
+#ifdef CONFIG_OF
 static struct of_device_id ak7755_if_dt_ids[] = {
 	{ .compatible = "akm,ak7755"},
     { }
@@ -2881,7 +2760,7 @@ static int ak7755_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static int ak7755_i2c_remove(struct i2c_client *client)  // '16/01/13
+static int ak7755_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	kfree(i2c_get_clientdata(client));
@@ -2898,12 +2777,12 @@ static struct i2c_driver ak7755_i2c_driver = {
 	.driver = {
 		.name = "ak7755",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_OF  // '16/01/13
+#ifdef CONFIG_OF
 		.of_match_table = of_match_ptr(ak7755_if_dt_ids),
 #endif
 	},
 	.probe = ak7755_i2c_probe,
-	.remove = ak7755_i2c_remove,  // '16/01/13
+	.remove = ak7755_i2c_remove,
 	.id_table = ak7755_i2c_id,
 };
 
@@ -2914,7 +2793,7 @@ static const struct regmap_config ak7755_spi_regmap = {
 	.val_bits 	= 8,
 	.volatile_reg	= ak7755_volatile,
 };
-static int ak7755_spi_probe(struct spi_device *spi) // '16/01/13
+static int ak7755_spi_probe(struct spi_device *spi)
 {
 	struct ak7755_priv *ak7755;
 	struct regmap *regmap;
@@ -2955,7 +2834,7 @@ static int ak7755_spi_probe(struct spi_device *spi) // '16/01/13
 	return 0;
 }
 
-static int ak7755_spi_remove(struct spi_device *spi) // '16/01/13
+static int ak7755_spi_remove(struct spi_device *spi)
 {
 	kfree(spi_get_drvdata(spi));
 	return 0;
@@ -2965,7 +2844,7 @@ static struct spi_driver ak7755_spi_driver = {
 	.driver = {
 		.name = "ak7755",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_OF  // '16/01/13
+#ifdef CONFIG_OF
 		.of_match_table = of_match_ptr(ak7755_if_dt_ids),
 #endif
 	},
