@@ -976,10 +976,11 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 		}
 	}
 
-	free_irq(port->irq, port);
 	lcr = readl_relaxed(port->membase + UART_LC_OFFSET);
 	writel_relaxed(lcr & ~UART_LC_BRK, port->membase + UART_LC_OFFSET);
 	spin_unlock_irqrestore(&port->lock, flags);
+
+	free_irq(port->irq, port);
 }
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
