@@ -1195,33 +1195,16 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 
 	if (amb_dma->regsel != NULL) {
 		val = 0;
+		ret = of_property_read_u32_array(np, "dma-channel-sel",
+					amb_dma->dma_channel_sel, amb_dma->nr_channels);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to read dma-channel-sel\n");
+		}
 		for (i = 0; i < NUM_DMA_CHANNELS; i++) {
-			switch(i) {
-			case NOR_SPI_TX_DMA_CHAN:
-				val |= NOR_SPI_TX_DMA_REQ_IDX << (i * 4);
-				break;
-			case NOR_SPI_RX_DMA_CHAN:
-				val |= NOR_SPI_RX_DMA_REQ_IDX << (i * 4);
-				break;
-			case SSI1_TX_DMA_CHAN:
-				val |= SSI1_TX_DMA_REQ_IDX << (i * 4);
-				break;
-			case SSI1_RX_DMA_CHAN:
-				val |= SSI1_RX_DMA_REQ_IDX << (i * 4);
-				break;
-			case UART_TX_DMA_CHAN:
-				val |= UART_TX_DMA_REQ_IDX << (i * 4);
-				break;
-			case UART_RX_DMA_CHAN:
-				val |= UART_RX_DMA_REQ_IDX << (i * 4);
-				break;
-			case I2S_RX_DMA_CHAN:
-				val |= I2S_RX_DMA_REQ_IDX << (i * 4);
-				break;
-			case I2S_TX_DMA_CHAN:
-				val |= I2S_TX_DMA_REQ_IDX << (i * 4);
-				break;
-			}
+			if (ret)
+				val |= i << (i * 4);
+			else
+				val |= (amb_dma->dma_channel_sel[i]) << (i * 4);
 		}
 		writel(val, amb_dma->regsel);
 	}

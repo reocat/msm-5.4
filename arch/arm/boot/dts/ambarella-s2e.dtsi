@@ -482,6 +482,9 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+			dmas = <&dma 2 1>,
+				   <&dma 1 1>;
+			dma-names = "tx", "rx";
 		};
 
 		udc@60006000 {
