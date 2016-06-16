@@ -25,15 +25,6 @@
 #include <linux/platform_data/invensense_mpu6050.h>
 
 /**
- * struct iio_mount_matrix - iio mounting matrix
- * @rotation: 3 dimensional space rotation matrix defining sensor alignment with
- *            main hardware
- */
-struct iio_mount_matrix {
-	const char *rotation[9];
-};
-
-/**
  *  struct inv_mpu6050_reg_map - Notable registers.
  *  @sample_rate_div:	Divider applied to gyro output rate.
  *  @lpf:		Configures internal low pass filter.

@@ -893,6 +893,7 @@ int inv_mpu_core_remove(struct device  *dev)
 	iio_device_unregister(indio_dev);
 	inv_mpu6050_remove_trigger(iio_priv(indio_dev));
 	iio_triggered_buffer_cleanup(indio_dev);
+	iio_device_free(indio_dev);
 
 	return 0;
 }
