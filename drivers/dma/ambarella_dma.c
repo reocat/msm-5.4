@@ -989,7 +989,7 @@ struct amba_dma_filter_param {
 	struct device_node *of_node;
 	unsigned int chan_id;
 	unsigned int dma_type;
-	unsigned int force_stop;
+	//unsigned int force_stop;
 };
 
 static bool amba_dma_filter_fn(struct dma_chan *chan, void *fn_param)
@@ -1001,7 +1001,7 @@ static bool amba_dma_filter_fn(struct dma_chan *chan, void *fn_param)
 	if (chan->chan_id != param->chan_id)
 		return false;
 
-	chan->private = &param->force_stop;
+	//amb_chan->chan.private = &param->force_stop;
 	return true;
 }
 
@@ -1012,7 +1012,7 @@ static struct dma_chan *amb_dma_xlate(struct of_phandle_args *dma_spec,
 	dma_cap_mask_t mask;
 	struct amba_dma_filter_param param;
 
-	if (dma_spec->args_count != 3)
+	if (dma_spec->args_count != 2)
 		return NULL;
 	if (dma_spec->args[1] == 1)
 		mask = amb_dma->dma_slave.cap_mask;
@@ -1021,7 +1021,6 @@ static struct dma_chan *amb_dma_xlate(struct of_phandle_args *dma_spec,
 
 	param.of_node = ofdma->of_node;
 	param.chan_id = dma_spec->args[0];
-	param.force_stop = dma_spec->args[2];
 
 	if (param.chan_id >= amb_dma->nr_channels)
 		return NULL;
