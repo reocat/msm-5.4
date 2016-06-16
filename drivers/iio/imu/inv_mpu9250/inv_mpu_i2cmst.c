@@ -13,7 +13,7 @@
 
 #include <linux/module.h>
 #include <linux/delay.h>
-#include <linux/i2c.h>
+#include <linux/of_i2c.h>
 #include <linux/iio/iio.h>
 #include "inv_mpu_iio.h"
 
@@ -144,6 +144,7 @@ int inv_mpu_i2cmst_probe(struct iio_dev *indio_dev)
 {
 	struct inv_mpu6050_state *st = iio_priv(indio_dev);
 	struct i2c_adapter *adap;
+	int ret;
 
 	adap = devm_kzalloc(&indio_dev->dev, sizeof(*adap), GFP_KERNEL);
 	if (!adap)
@@ -159,7 +160,15 @@ int inv_mpu_i2cmst_probe(struct iio_dev *indio_dev)
 	i2c_set_adapdata(adap, st);
 	st->adap = adap;
 
-	return i2c_add_adapter(adap);
+	ret = i2c_add_adapter(adap);
+	if (ret < 0) {
+		dev_err(&indio_dev->dev, "failed to add I2C master: %d\n", ret);
+		return ret;
+	}
+
+	of_i2c_register_devices(adap);
+
+	return 0;
 }
 
 void inv_mpu_i2cmst_remove(struct iio_dev *indio_dev)
