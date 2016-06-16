@@ -440,7 +440,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	twhr = NAND_TIMING_RSHIFT8BIT(t);
 	tir = NAND_TIMING_RSHIFT0BIT(t);
 
-	trdelay = nand_timing_calc(clk, 1, trdelay);
+	trdelay = trp + treh;
 	tclr = nand_timing_calc(clk, 0, tclr);
 	twhr = nand_timing_calc(clk, 0, twhr);
 	tir = nand_timing_calc(clk, 0, tir);
@@ -917,17 +917,19 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 							nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
+					unsigned int corrected = 1;
 					if (NAND_ECC_RPT_NUM_SUPPORT) {
+						corrected = (nand_info->fio_ecc_sta >> 16) & 0x000F;
 						dev_info(nand_info->dev, "BCH correct [%d]bit in block[%d]\n",
-						((nand_info->fio_ecc_sta >> 16) & 0x000F),
-						(nand_info->fio_ecc_sta & 0x00007FFF));
+						corrected, (nand_info->fio_ecc_sta & 0x00007FFF));
+					} else {
+						/* once bitflip and data corrected happened, BCH will keep on
+						 * to report bitflip in following read operations, even though
+						 * there is no bitflip happened really. So this is a workaround
+						 * to get it back. */
+						nand_amb_corrected_recovery(nand_info);
 					}
-					nand_info->mtd.ecc_stats.corrected++;
-					/* once bitflip and data corrected happened, BCH will keep on
-					 * to report bitflip in following read operations, even though
-					 * there is no bitflip happened really. So this is a workaround
-					 * to get it back. */
-					nand_amb_corrected_recovery(nand_info);
+					nand_info->mtd.ecc_stats.corrected += corrected;
 				}
 			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {

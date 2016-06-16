@@ -1090,7 +1090,6 @@ static void amb_spinand_cmdfunc(struct mtd_info *mtd, unsigned int command,
 								flash->dmabuf);
 			break;
 		case NAND_CMD_READOOB:
-			printk("read oob page %x \n", page);
 			state->buf_ptr = 0;
 			spinand_read_page(flash, page, mtd->writesize, mtd->oobsize,
 								flash->dmabuf);

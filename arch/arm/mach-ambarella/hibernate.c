@@ -36,11 +36,10 @@ struct mtd_info *mtd_probe_dev(void)
 	struct mtd_info *info = NULL;
 	info = get_mtd_device_nm(HIBERNATE_MTD_NAME);
 
-	if(IS_ERR(info)){
+	if (IS_ERR(info)) {
 		printk("SWP: mtd dev no found!\n");
 		return NULL;
-	}else{
-
+	} else {
 		/* Makesure the swp partition has 32M at least */
 		if(info->size < 0x2000000){
 			printk("ERR: swp partition size is less than 32M\n");
