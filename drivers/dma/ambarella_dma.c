@@ -199,42 +199,11 @@ static void ambdma_put_desc(struct ambdma_chan *amb_chan,
 static void ambdma_return_desc(struct ambdma_chan *amb_chan,
 		struct ambdma_desc *amb_desc)
 {
-	struct dma_async_tx_descriptor	*txd = &amb_desc->txd;
-
 	/* move children to free_list */
 	list_splice_init(&amb_desc->tx_list, &amb_chan->free_list);
 	/* move myself to free_list */
 	list_move_tail(&amb_desc->desc_node, &amb_chan->free_list);
 
-	/* unmap dma addresses if required */
-	if (!amb_chan->chan.private) {
-		if (!(txd->flags & DMA_COMPL_SKIP_DEST_UNMAP)) {
-			struct device *dev = amb_chan->chan.device->dev;
-			if (txd->flags & DMA_COMPL_DEST_UNMAP_SINGLE)
-				dma_unmap_single(dev,
-						amb_desc->lli->dst,
-						amb_desc->len,
-						DMA_FROM_DEVICE);
-			else
-				dma_unmap_page(dev,
-						amb_desc->lli->dst,
-						amb_desc->len,
-						DMA_FROM_DEVICE);
-		}
-		if (!(txd->flags & DMA_COMPL_SKIP_SRC_UNMAP)) {
-			struct device *dev = amb_chan->chan.device->dev;
-			if (txd->flags & DMA_COMPL_SRC_UNMAP_SINGLE)
-				dma_unmap_single(dev,
-						amb_desc->lli->src,
-						amb_desc->len,
-						DMA_TO_DEVICE);
-			else
-				dma_unmap_page(dev,
-						amb_desc->lli->src,
-						amb_desc->len,
-						DMA_TO_DEVICE);
-		}
-	}
 }
 
 static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
