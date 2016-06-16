@@ -465,7 +465,7 @@
 			compatible = "ambarella,dma";
 			reg = <0xe0005000 0x1000>;
 			interrupts = <69 0x4>;
-			#dma-cells = <3>;
+			#dma-cells = <2>;
 			dma-channels = <8>;
 			dma-requests = <12>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
@@ -522,8 +522,6 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
-			dmas = <&dma 5 1 0>, <&dma 4 1 0>;
-			dma-names = "tx", "rx";
 		};
 
 		udc@e0006000 {
@@ -629,7 +627,7 @@
 			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma 0 1 0>, <&dma 1 1 0>;
+			dmas = <&dma 0 1>, <&dma 1 1>;
 			dma-names = "tx", "rx";
 		};
 
