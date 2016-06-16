@@ -59,18 +59,6 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		return -1;
 	}
 
-	/* fvco should be less than 1.5GHz, so we use 64 as max_numerator,
-	 * although the actual bit width of pll_intp is 7 */
-	rational_best_approximation(rate, REF_CLK_FREQ, 64, 16, &intp, &sout);
-
-	/* fvco should be faster than 700MHz, otherwise pll out is not stable */
-	while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 700) {
-		if (sout > 8 || intp > 64)
-			break;
-		intp *= 2;
-		sout *= 2;
-	}
-
 	//TODO: temporary solution for s3l 4Kp30 hdmi vout
 	if(rate == (PLL_CLK_296_703MHZ * fix_divider)){
 		pre_scaler = 4;
@@ -78,10 +66,22 @@ int ambarella_rct_clk_set_rate(struct clk *c, unsigned long rate)
 		sdiv = 5;
 		sout = 1;
 		c->frac_mode = 0;
-	}
+	}else{
+                /* fvco should be less than 1.5GHz, so we use 64 as max_numerator,
+                 * although the actual bit width of pll_intp is 7 */
+                rational_best_approximation(rate, REF_CLK_FREQ, 64, 16, &intp, &sout);
 
-	BUG_ON(pre_scaler > 16 || post_scaler > 16);
-	BUG_ON(intp > 64 || sdiv > 16 || sout > 16 || sdiv > 16);
+                /* fvco should be faster than 700MHz, otherwise pll out is not stable */
+                while (REF_CLK_FREQ / 1000000 * intp * sdiv / pre_scaler < 700) {
+                        if (sout > 8 || intp > 64)
+                                break;
+                        intp *= 2;
+                        sout *= 2;
+                }
+
+                BUG_ON(pre_scaler > 16 || post_scaler > 16);
+                BUG_ON(intp > 64 || sdiv > 16 || sout > 16 || sdiv > 16);
+        }
 
 	if (c->pres_reg != -1) {
 		if (c->extra_scaler == 1)
