@@ -518,7 +518,7 @@
 			amb,max-blk-size = <524288>; /* valid value: 4K<<n */
 			amb,soft-phy;
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
-					 <0x000000a2 0x00000005 0x00001111>,
+					 <0x000000a4 0x00000005 0x00001111>,
 					 <0x00000040 0x00000001 0x00001111>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins>;
@@ -621,6 +621,10 @@
 			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
 			amb,host-phy-num = <1>;
 		};
+	};
+
+	iav {
+		compatible = "ambarella,iav";
 	};
 
 	bogus_bus {

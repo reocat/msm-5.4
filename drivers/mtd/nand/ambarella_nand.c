@@ -358,6 +358,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(tcs) |
 		NAND_TIMING_LSHIFT0BIT(tds);
 
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
+
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM0_OFFSET);
 
 	/* timing 1 */
@@ -376,6 +380,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT16BIT(talh) |
 		NAND_TIMING_LSHIFT8BIT(tch) |
 		NAND_TIMING_LSHIFT0BIT(tdh);
+
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM1_OFFSET);
 
@@ -396,6 +404,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(twb) |
 		NAND_TIMING_LSHIFT0BIT(trr);
 
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20204020;
+
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM2_OFFSET);
 
 	/* timing 3 */
@@ -414,6 +426,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT16BIT(treh) |
 		NAND_TIMING_LSHIFT8BIT(trb) |
 		NAND_TIMING_LSHIFT0BIT(tceh);
+
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM3_OFFSET);
 
@@ -434,6 +450,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(twhr) |
 		NAND_TIMING_LSHIFT0BIT(tir);
 
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
+
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM4_OFFSET);
 
 	/* timing 5 */
@@ -450,6 +470,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	val = NAND_TIMING_LSHIFT16BIT(tww) |
 		NAND_TIMING_LSHIFT8BIT(trhz) |
 		NAND_TIMING_LSHIFT0BIT(tar);
+
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM5_OFFSET);
 }

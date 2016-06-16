@@ -584,6 +584,10 @@
 		};
 	};
 
+	iav {
+		compatible = "ambarella,iav";
+	};
+
 	bogus_bus {
 		compatible = "simple-bus";
 		#address-cells = <1>;

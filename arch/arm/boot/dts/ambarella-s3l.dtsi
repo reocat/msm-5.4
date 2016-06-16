@@ -162,6 +162,7 @@
 			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
 			interrupts = <64 0x1>;
+			rtc,wakeup;
 		};
 
 		pwm: pwm@e8008000 {
@@ -477,6 +478,7 @@
 			dma-channels = <8>;
 			dma-requests = <12>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
+			dma-channel-sel = <4 5 0 0 8 9 11 10>;
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;

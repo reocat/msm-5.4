@@ -332,7 +332,7 @@ static void ambvic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	ambvic_sw_set(ambvic_data.ipi_reg_base, softirq);
 }
 
-static void ambvic_smp_softirq_init(void)
+void ambvic_smp_softirq_init(void)
 {
 	void __iomem *reg_base = ambvic_data.ipi_reg_base;
 	u32 val;
@@ -384,8 +384,7 @@ static inline int ambvic_handle_ipi(struct pt_regs *regs,
 static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 	struct irq_domain *domain)
 {
-	u32 scratchpad;
-	u32 irq, hwirq;
+	u32 scratchpad, irq_sta, irq, hwirq;
 	int handled = 0;
 
 	if (smp_processor_id())
@@ -397,13 +396,18 @@ static int ambvic_handle_scratchpad_vic(struct pt_regs *regs,
 		hwirq = amba_readl(scratchpad);
 		if (hwirq == VIC_NULL_PRI_IRQ_VAL) {
 #if (VIC_NULL_PRI_IRQ_FIX == 1)
-			void __iomem *reg_base = ambvic_data.reg_base[2];
-			if ((amba_readl(reg_base + VIC_IRQ_STA_OFFSET) & 0x1) == 0)
+			irq_sta = amba_readl(ambvic_data.reg_base[2] + VIC_IRQ_STA_OFFSET);
+			if ((irq_sta & 0x1) == 0)
 				break;
 #else
 			break;
 #endif
+		} else if (hwirq == 0) {
+			irq_sta = amba_readl(ambvic_data.reg_base[0] + VIC_IRQ_STA_OFFSET);
+			if ((irq_sta & 0x1) == 0)
+				break;
 		}
+
 #if 0
 		printk("CPU%d_%s: %d_%d\n",
 			smp_processor_id(), __func__,
@@ -426,9 +430,7 @@ static int ambvic_handle_one(struct pt_regs *regs,
 	struct irq_domain *domain, u32 bank)
 {
 	void __iomem *reg_base = ambvic_data.reg_base[bank];
-	u32 irq;
-	u32 hwirq;
-	u32 irq_sta;
+	u32 hwirq, irq, irq_sta;
 	int handled = 0;
 
 	do {
@@ -436,7 +438,7 @@ static int ambvic_handle_one(struct pt_regs *regs,
 		hwirq = amba_readl(reg_base + VIC_INT_PENDING_OFFSET);
 		if (hwirq == 0) {
 			irq_sta = amba_readl(reg_base + VIC_IRQ_STA_OFFSET);
-			if ((irq_sta & 0x00000001) == 0) {
+			if ((irq_sta & 0x1) == 0) {
 				break;
 			}
 		}

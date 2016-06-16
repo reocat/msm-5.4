@@ -117,7 +117,8 @@ int ambpriv_i2c_update_addr(const char *name, int bus, int addr)
 			return -ENODEV;
 		}
 
-		if (!strcmp(client->name, AMBARELLA_I2C_VIN_FDT_NAME))
+		if (!strcmp(client->name, AMBARELLA_I2C_VIN_FDT_NAME) ||
+			!strcmp(client->name, name))
 			break;
 	}
 
