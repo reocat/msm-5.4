@@ -244,6 +244,8 @@ static void amb_gpio_irq_disable(struct irq_data *data)
 
 	amba_clrbitsl(regbase + GPIO_IE_OFFSET, 0x1 << offset);
 	amba_writel(regbase + GPIO_IC_OFFSET, 0x1 << offset);
+
+	gpio_free(data->hwirq);
 }
 
 static void amb_gpio_irq_ack(struct irq_data *data)
