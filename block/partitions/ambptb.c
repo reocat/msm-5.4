@@ -26,6 +26,14 @@
 #include <plat/ptb.h>
 #include <linux/of.h>
 
+//#define ambptb_prt
+
+#ifdef ambptb_prt
+#define ambptb_prt printk
+#else
+#define ambptb_prt(format, arg...) do {} while (0)
+#endif
+
 int ambptb_partition(struct parsed_partitions *state)
 {
 	int i, val, slot = 1;
@@ -56,7 +64,7 @@ int ambptb_partition(struct parsed_partitions *state)
 	}
 
 	ptb_meta = (flpart_meta_t *)(data + sect_offset);
-	pr_info("%s: magic[0x%08X]\n", __func__, ptb_meta->magic);
+	ambptb_prt("%s: magic[0x%08X]\n", __func__, ptb_meta->magic);
 	if (ptb_meta->magic == PTB_META_MAGIC3) {
 		for (i = 0; i < PART_MAX; i++) {
 			if (slot >= state->limit)
@@ -72,7 +80,7 @@ int ambptb_partition(struct parsed_partitions *state)
 				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				printk("%s: %s [p%d]\n", __func__,
+				ambptb_prt("%s: %s [p%d]\n", __func__,
 					ptb_meta->part_info[i].name, slot);
 				slot++;
 			}
@@ -93,7 +101,7 @@ int ambptb_partition(struct parsed_partitions *state)
 				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
 					ptb_meta->part_info[i].name);
 				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				printk("%s: %s [p%d]\n", __func__,
+				ambptb_prt("%s: %s [p%d]\n", __func__,
 					ptb_meta->part_info[i].name, slot);
 				slot++;
 			}

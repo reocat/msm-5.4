@@ -19,7 +19,8 @@
 		serial2 = &uart2;
 		serial3 = &uart3;
 		nand = &nand0;
-		emmc = &sdmmc0;
+		sd0 = &sdmmc0;
+		sd1 = &sdmmc1;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
