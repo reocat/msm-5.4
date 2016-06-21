@@ -461,6 +461,7 @@
 			dma-channels = <8>;
 			dma-requests = <14>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
+			dma-channel-sel = <0 1 0 0 8 9 11 10>;
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
@@ -515,6 +516,9 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+			dmas = <&dma 5 1>,
+				   <&dma 4 1>;
+			dma-names = "tx", "rx";
 		};
 
 		udc@e0006000 {
@@ -691,6 +695,10 @@
 			amb,owner-mask;
 			amb,owner-invert;
 		};
+	};
+
+	iav {
+		compatible = "ambarella,iav";
 	};
 
 	bogus_bus {

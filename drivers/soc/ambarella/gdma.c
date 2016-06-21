@@ -364,6 +364,8 @@ static int ambarella_gdma_remove(struct platform_device *pdev)
 {
 	struct ambagdma_device *amba_gdma = platform_get_drvdata(pdev);
 	wait_transmit_complete(amba_gdma);
+
+	return 0;
 }
 
 static const struct of_device_id ambarella_gdma_dt_ids[] = {

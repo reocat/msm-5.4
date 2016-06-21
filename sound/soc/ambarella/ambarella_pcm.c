@@ -39,9 +39,6 @@
 #include <sound/dmaengine_pcm.h>
 #include <plat/dma.h>
 
-unsigned int force_stop = 0;
-module_param(force_stop, uint, 0644);
-MODULE_PARM_DESC(force_stop, "Stop DMA immediately, only used by cyclic DMA");
 
 #define AMBA_MAX_DESC_NUM		128
 #define AMBA_MIN_DESC_NUM		2
@@ -74,30 +71,16 @@ static const struct snd_pcm_hardware ambarella_pcm_hardware = {
 	.buffer_bytes_max	= AMBA_BUFFER_BYTES_MAX,
 };
 
-static bool ambarella_pcm_dma_filter(struct dma_chan *chan, void *param)
-{
-	void *filter_data = param;
-	bool ret = false;
-
-	if (ambarella_dma_channel_id(chan) == (unsigned long)filter_data) {
-		ret = true;
-		chan->private = &force_stop;
-	}
-
-	return ret;
-}
 
 static const struct snd_dmaengine_pcm_config ambarella_dmaengine_pcm_config = {
 	.pcm_hardware = &ambarella_pcm_hardware,
 	.prepare_slave_config = snd_dmaengine_pcm_prepare_slave_config,
-	.compat_filter_fn = ambarella_pcm_dma_filter,
 	.prealloc_buffer_size = AMBA_BUFFER_BYTES_MAX,
 };
 
 int ambarella_pcm_platform_register(struct device *dev)
 {
 	return snd_dmaengine_pcm_register(dev, &ambarella_dmaengine_pcm_config,
-			SND_DMAENGINE_PCM_FLAG_NO_DT |
 			SND_DMAENGINE_PCM_FLAG_COMPAT);
 }
 EXPORT_SYMBOL_GPL(ambarella_pcm_platform_register);

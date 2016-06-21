@@ -445,6 +445,9 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+			dmas = <&dma 1 1>,
+				   <&dma 0 1>;
+			dma-names = "tx", "rx";
 		};
 
 		udc@60006000 {
@@ -582,6 +585,10 @@
 			reg = <0x70170050 0x4 0x6001b00c 0x4 0x70170088 0x4>;
 			amb,host-phy-num = <1>;
 		};
+	};
+
+	iav {
+		compatible = "ambarella,iav";
 	};
 
 	bogus_bus {

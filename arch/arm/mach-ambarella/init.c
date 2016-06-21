@@ -35,15 +35,11 @@
 #include <asm/mach/map.h>
 #include <mach/hardware.h>
 #include <mach/init.h>
-#include <plat/debug.h>
 #include <plat/rct.h>
 
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
 EXPORT_SYMBOL(ambarella_dmamask);
-
-u32 ambarella_debug_level = AMBA_DEBUG_NULL;
-EXPORT_SYMBOL(ambarella_debug_level);
 
 /* ==========================================================================*/
 enum {

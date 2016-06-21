@@ -35,7 +35,7 @@
 #define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
 #define RCT_PHYS_BASE			(DBGBUS_PHYS_BASE + RCT_OFFSET)
 #endif
-#define RCT_REG(x)			IOMEM(RCT_BASE + (x))
+#define RCT_REG(x)			(RCT_BASE + (x))
 
 /* ==========================================================================*/
 #define PLL_LOCK_OFFSET			0x2C
@@ -208,6 +208,7 @@
 #define SCALER_SENSOR_PRE_OFFSET	0x4C
 #define SCALER_SENSOR_POST_OFFSET	0x30
 #define CLK_SI_INPUT_MODE_OFFSET	0xBC
+#define SCALER_SENSOR_VIN_OFFSET	0x230
 
 #define PLL_SENSOR_CTRL_REG		RCT_REG(PLL_SENSOR_CTRL_OFFSET)
 #define PLL_SENSOR_FRAC_REG		RCT_REG(PLL_SENSOR_FRAC_OFFSET)
@@ -216,6 +217,7 @@
 #define SCALER_SENSOR_PRE_REG		RCT_REG(SCALER_SENSOR_PRE_OFFSET)
 #define SCALER_SENSOR_POST_REG		RCT_REG(SCALER_SENSOR_POST_OFFSET)
 #define CLK_SI_INPUT_MODE_REG		RCT_REG(CLK_SI_INPUT_MODE_OFFSET)
+#define SCALER_SENSOR_VIN_REG		RCT_REG(SCALER_SENSOR_VIN_OFFSET)
 
 /* ==========================================================================*/
 

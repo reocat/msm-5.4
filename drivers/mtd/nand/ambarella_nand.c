@@ -366,6 +366,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(tcs) |
 		NAND_TIMING_LSHIFT0BIT(tds);
 
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
+
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM0_OFFSET);
 
 	/* timing 1 */
@@ -384,6 +388,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT16BIT(talh) |
 		NAND_TIMING_LSHIFT8BIT(tch) |
 		NAND_TIMING_LSHIFT0BIT(tdh);
+
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM1_OFFSET);
 
@@ -404,6 +412,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(twb) |
 		NAND_TIMING_LSHIFT0BIT(trr);
 
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20204020;
+
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM2_OFFSET);
 
 	/* timing 3 */
@@ -422,6 +434,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT16BIT(treh) |
 		NAND_TIMING_LSHIFT8BIT(trb) |
 		NAND_TIMING_LSHIFT0BIT(tceh);
+
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM3_OFFSET);
 
@@ -442,6 +458,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		NAND_TIMING_LSHIFT8BIT(twhr) |
 		NAND_TIMING_LSHIFT0BIT(tir);
 
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
+
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM4_OFFSET);
 
 	/* timing 5 */
@@ -458,6 +478,10 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	val = NAND_TIMING_LSHIFT16BIT(tww) |
 		NAND_TIMING_LSHIFT8BIT(trhz) |
 		NAND_TIMING_LSHIFT0BIT(tar);
+
+	/* use default timing if gclk_core <= 96MHz */
+	if (clk <= 96)
+		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM5_OFFSET);
 #endif
@@ -910,17 +934,19 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 							nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
+					unsigned int corrected = 1;
 					if (NAND_ECC_RPT_NUM_SUPPORT) {
+						corrected = (nand_info->fio_ecc_sta >> 16) & 0x000F;
 						dev_info(nand_info->dev, "BCH correct [%d]bit in block[%d]\n",
-						((nand_info->fio_ecc_sta >> 16) & 0x000F),
-						(nand_info->fio_ecc_sta & 0x00007FFF));
+						corrected, (nand_info->fio_ecc_sta & 0x00007FFF));
+					} else {
+						/* once bitflip and data corrected happened, BCH will keep on
+						 * to report bitflip in following read operations, even though
+						 * there is no bitflip happened really. So this is a workaround
+						 * to get it back. */
+						nand_amb_corrected_recovery(nand_info);
 					}
-					nand_info->mtd.ecc_stats.corrected++;
-					/* once bitflip and data corrected happened, BCH will keep on
-					 * to report bitflip in following read operations, even though
-					 * there is no bitflip happened really. So this is a workaround
-					 * to get it back. */
-					nand_amb_corrected_recovery(nand_info);
+					nand_info->mtd.ecc_stats.corrected += corrected;
 				}
 			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {

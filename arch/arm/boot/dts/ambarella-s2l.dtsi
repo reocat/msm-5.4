@@ -20,6 +20,7 @@
 		sd0 = &sdmmc0;
 		sd1 = &sdmmc1;
 		spinor = &spinor0;
+		spinand = &spinand0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -162,6 +163,7 @@
 		rtc@e8015000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
+			rtc,wakeup;
 		};
 
 		pwm: pwm@e8008000 {
@@ -506,6 +508,15 @@
 			status = "disabled";
 		};
 
+		spinand0: spinand@e0031000 {
+			compatible = "ambarella,spinand";
+			reg = <0xe0031000 0x2ff>, /* spi nor controller */
+			      <0xe0005300 0x20>;  /* dma reg */
+			pinctrl-names = "default";
+			pinctrl-0 = <&spinor0_pins>;
+			status = "disabled";
+		};
+
 		uart1: uart@e0032000 {
 			compatible = "ambarella,uart";
 			reg = <0xe0032000 0x1000>;
@@ -527,6 +538,9 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+			dmas = <&dma 5 1>,
+				   <&dma 4 1>;
+			dma-names = "tx", "rx";
 		};
 
 		udc@e0006000 {
@@ -689,6 +703,10 @@
 			amb,owner-mask;
 			amb,owner-invert;
 		};
+	};
+
+	iav {
+		compatible = "ambarella,iav";
 	};
 
 	bogus_bus {

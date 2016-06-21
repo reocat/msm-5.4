@@ -1429,11 +1429,14 @@ static void ambarella_vbus_timer(unsigned long data)
 {
 	struct ambarella_udc *udc = (struct ambarella_udc *)data;
 	enum usb_device_state state;
-	u32 raw_status = 0;
-	u32 connected;
+	u32 raw_status, connected, suspended;
 
+	suspended = readl_relaxed(udc->base_reg + USB_DEV_STS_REG) & USB_DEV_SUSP_STS;
 	regmap_read(udc->scr_reg, 0x4, &raw_status);
 	connected = !!(raw_status & (1 << 26));
+
+	if (suspended)
+		usb_gadget_set_state(&udc->gadget, USB_STATE_SUSPENDED);
 
 	if (udc->vbus_status != connected) {
 		state = connected ? USB_STATE_ATTACHED : USB_STATE_NOTATTACHED;
