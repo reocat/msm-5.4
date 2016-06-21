@@ -712,6 +712,25 @@
 			compatible = "ambarella,scratchpad", "syscon";
 			reg = <0xe001b000 0x70>;
 		};
+
+		usb_dwc3: dwc3@e0200000 {
+			compatible	= "ambarella,dwc3";
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			#address-cells	= <1>;
+			#size-cells	= <1>;
+			ranges;
+
+			status = "ok";
+
+			dwc3: dwc3@e0200000 {
+				compatible	= "snps,dwc3";
+				reg		= <0xe0200000 0xcfff>;
+				interrupts	=  <0 61 0x4>;
+				dr_mode		= "peripheral";
+				usb-phy		= <&usbphy>, <&usbphy>;
+			};
+		};
 	};
 
 	rct@ec170000 {
