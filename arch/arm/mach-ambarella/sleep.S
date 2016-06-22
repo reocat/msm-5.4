@@ -94,6 +94,11 @@ rct_time_loop:
 	cmp	r5, r6
 	bhi	rct_time_loop
 
+	/* gpio pull up */
+	mov	r2, #0x1
+	lsl	r2, r1
+	str	r2, [r0, #0]
+
 	b	self_refresh
 
 suspend_with_pwc:
