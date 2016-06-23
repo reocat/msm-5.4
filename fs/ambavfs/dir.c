@@ -117,7 +117,7 @@ struct inode* ambafs_new_inode(struct super_block *sb, struct ambafs_stat* stat)
 	inode->i_gid = GLOBAL_ROOT_GID;
 	inode->i_blocks = 0;
 	inode->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
-	inode->i_mode = 0744;
+	inode->i_mode = 0755;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = (struct timespec) {0, 0};
 	inode->i_size = 0;
 
