@@ -133,6 +133,7 @@ static int sdio_host_ocly = -1;
 static int sdio_host_idly = -1;
 static int sdio_host_icly = -1;
 static int sdio_host_max_frequency = -1;
+static int sdio_timeout = HZ/5;
 
 extern int amba_sdio_delay_post_apply(const int odly, const int ocly,
 	const int idly, const int icly);
@@ -204,6 +205,7 @@ module_param_cb(sdio_host_icly, &param_ops_sdio_host_icly,
 	&(sdio_host_icly), 0644);
 module_param_cb(sdio_host_max_frequency, &param_ops_sdio_host_max_frequency,
 	&(sdio_host_max_frequency), 0644);
+module_param(sdio_timeout, int, 0644);
 
 int ambarella_set_sdio_host_max_frequency(const char *str, const struct kernel_param *kp)
 {
@@ -1174,7 +1176,7 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	/* quick recovery from cmd53 timeout */
-	mod_timer(&host->timer, jiffies + HZ/5);
+	mod_timer(&host->timer, jiffies + sdio_timeout);
 #else
 	mod_timer(&host->timer, jiffies + 5 * HZ);
 #endif
