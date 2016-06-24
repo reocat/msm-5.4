@@ -65,7 +65,7 @@
 #define JEDEC_MFR(_jedec_id)    ((_jedec_id) >> 16)
 
 #define PART_DEV_SPINOR		(0x08)
-
+static u16 spi_addr_mode = 3;
 
 /****************************************************************************/
 
@@ -137,7 +137,22 @@ static inline int set_4byte(struct amb_norflash *flash, u32 jedec_id, int enable
 			return ambspi_send_cmd(flash, flash->command[0], 0, flash->command[1], 1);
 	}
 }
-
+/*
+mode 1 - enter 4 byte spi addr mode
+	 0 - exit  4 byte spi addr mode
+*/
+static void check_set_spinor_addr_mode(struct amb_norflash *flash, int mode)
+{
+	if (flash->addr_width == 4) {
+		if (spi_addr_mode == 3 && mode){
+			set_4byte(flash, flash->jedec_id, 1);
+			spi_addr_mode = 4;
+		} else if (spi_addr_mode == 4 && mode == 0){
+			set_4byte(flash, flash->jedec_id, 0);
+			spi_addr_mode = 3;
+		}
+	}
+}
 /*
  * Service routine to read status register until ready, or timeout occurs.
  * Returns non-zero if error.
@@ -231,7 +246,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
     len = instr->len;
 
     mutex_lock(&flash->lock);
-
+	check_set_spinor_addr_mode(flash, 1);
     /* whole-chip erase? */
     if (len == flash->mtd.size) {
         if (erase_chip(flash)) {
@@ -250,15 +265,16 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         while (len) {
             if (erase_sector(flash, addr)) {
                 instr->state = MTD_ERASE_FAILED;
+				check_set_spinor_addr_mode(flash, 0);
                 mutex_unlock(&flash->lock);
-                return -EIO;
+				return -EIO;
             }
 
             addr += mtd->erasesize;
             len -= mtd->erasesize;
         }
     }
-
+	check_set_spinor_addr_mode(flash, 0);
     mutex_unlock(&flash->lock);
 
     instr->state = MTD_ERASE_DONE;
@@ -288,7 +304,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         mutex_unlock(&flash->lock);
         return 1;
     }
-
+	check_set_spinor_addr_mode(flash, 1);
     /* Set up the write data buffer. */
     opcode = flash->fast_read ? OPCODE_FAST_READ : OPCODE_NORM_READ;
     flash->command[0] = opcode;
@@ -301,7 +317,8 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
             if(ret) {
                 dev_err((const struct device *)&flash->dev,
                         "SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), AMBA_SPINOR_DMA_BUFF_SIZE);
-                return -1;
+                check_set_spinor_addr_mode(flash, 0);
+				return -1;
             }
             memcpy(buf+offset, flash->dmabuf, AMBA_SPINOR_DMA_BUFF_SIZE);
             offset += AMBA_SPINOR_DMA_BUFF_SIZE;
@@ -310,6 +327,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
             if(ret) {
                 dev_err((const struct device *)&flash->dev,
                     "SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), needread);
+				check_set_spinor_addr_mode(flash, 0);
                 return -1;
             }
             memcpy(buf+offset, flash->dmabuf, needread);
@@ -317,6 +335,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         }
     }
     *retlen = offset;
+	check_set_spinor_addr_mode(flash, 0);
     mutex_unlock(&flash->lock);
     return 0;
 }
@@ -338,7 +357,7 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
         mutex_unlock(&flash->lock);
         return 1;
     }
-
+	check_set_spinor_addr_mode(flash, 1);
     write_enable(flash);
 
     /* Set up the opcode in the write buffer. */
@@ -374,6 +393,7 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
                 }
                 /* write the next page to flash */
                 if (wait_till_ready(flash)) {
+					check_set_spinor_addr_mode(flash, 0);
                     mutex_unlock(&flash->lock);
                     return 1;
                 }
@@ -383,7 +403,7 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
             }
         }
     }
-
+	check_set_spinor_addr_mode(flash, 0);
     mutex_unlock(&flash->lock);
     return 0;
 }
@@ -606,9 +626,13 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
         /* enable 4-byte addressing if the device exceeds 16MiB */
         if (flash->mtd.size > 0x1000000) {
             flash->addr_width = 4;
+			/* We have set 4-bytes mode in bootloader */
             //set_4byte(flash, info->jedec_id, 1);
-        } else
-            flash->addr_width = 3;
+			spi_addr_mode = 4;
+        } else {
+			flash->addr_width = 3;
+			spi_addr_mode = 3;
+		}
     }
 
 	flash->jedec_id	= info->jedec_id;
