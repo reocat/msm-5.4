@@ -127,7 +127,7 @@ static int ambafs_readpages(struct file *filp, struct address_space *mapping,
 			// send the previous pages
 			if (io_pages) {
 				ambafs_rpmsg_send(msg, msg_len, readpage_cb, NULL);
-				AMBAFS_EMSG("Info: hole in ambafs_readpages\n");
+				AMBAFS_DMSG("Info: hole in ambafs_readpages\n");
 			}
 
 			// start a new message with current page
