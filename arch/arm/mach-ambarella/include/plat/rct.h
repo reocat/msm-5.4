@@ -400,13 +400,14 @@
 #define SCALER_ADC_OFFSET		0x09C
 #define SCALER_ADC_REG			RCT_REG(SCALER_ADC_OFFSET)
 
-#if (CHIP_REV == S5)
 #define T2V_CTRL_OFFSET			0x1A0
 #define T2V_CTRL_REG			RCT_REG(T2V_CTRL_OFFSET)
-#endif
 
 #define ADC16_CTRL_OFFSET		0x198
 #define ADC16_CTRL_REG			RCT_REG(ADC16_CTRL_OFFSET)
+
+#define ADC_POWER_DOWN			0x2
+
 /* ==========================================================================*/
 #define AHB_MISC_OFFSET			0x21c
 #define AHB_MISC_REG			RCT_REG(AHB_MISC_OFFSET)

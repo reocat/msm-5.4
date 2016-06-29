@@ -138,9 +138,10 @@
 		adc@e801d000 {
 			compatible = "ambarella,adc";
 			reg = <0xe801d000 0x1000>;
+			amb,rct-regmap = <&rct_syscon>;
 			interrupts = <57 0x4>;
 			clock-frequency = <3000000>;
-			amb,rct-regmap = <&rct_syscon>;
+			amb,scaler-1v8 = <0x01>;
 		};
 
 		ir@e8006000 {

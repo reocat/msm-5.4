@@ -15,7 +15,6 @@ obj-$(CONFIG_INPUT_ADXL34X_I2C)		+= adxl34x-i2c.o
 obj-$(CONFIG_INPUT_ADXL34X_SPI)		+= adxl34x-spi.o
 
 obj-$(CONFIG_INPUT_AMBARELLA_IR)	+= ambarella_input_ir.o
-obj-$(CONFIG_INPUT_AMBARELLA_ADC)	+= ambarella_input_adc.o
 
 obj-$(CONFIG_INPUT_APANEL)		+= apanel.o
 obj-$(CONFIG_INPUT_ARIZONA_HAPTICS)	+= arizona-haptics.o

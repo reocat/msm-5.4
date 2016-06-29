@@ -179,6 +179,8 @@
 			interrupts = <0 103 0x4>;
 			clock-frequency = <3000000>;
 			amb,rct-regmap = <&rct_syscon>;
+			amb,scaler-1v8 = <0x01>;
+			amb,t2v-channel = <4>;
 		};
 
 		ir@e8006000 {

@@ -99,11 +99,6 @@ config INPUT_AMBARELLA_IR
 	help
 	  Say Y here if your Ambarella Boards have Keys with IR.
 
-config INPUT_AMBARELLA_ADC
-	tristate "Support Ambarella Soc ADC"
-	default n
-	help
-	  Say Y here if your Ambarella Boards have Keys with ADC.
 config INPUT_E3X0_BUTTON
 	tristate "NI Ettus Research USRP E3xx Button support."
 	default n

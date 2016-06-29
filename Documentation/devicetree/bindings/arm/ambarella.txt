@@ -45,8 +45,7 @@ Table of Contents
   III - Misc Node definition
     1)  - BOGUS BUS node
     2)  - GPIO KEY node
-    3)  - ADC KEY node
-    4)  - PWM BACKLIGHT node
+    3)  - PWM BACKLIGHT node
 
 
 
@@ -1027,11 +1026,22 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for adc.
 - clock-frequency: desired ADC clock frequency in Hz.
-- amb,polling-mode: specified if ADC is working in polling mode, must be
-  specified for A5S.
+- amb,rct-regmap: RCT registers
 
 Optional properties:
-- amb,print-key: print Key code when key is pressed, for debug purpose.
+- amb,channels-used: specifies which channels are used, bit0 for ch0, bit1 for
+  ch1, bit2 for ch2 and etc.
+- amb,scaler-1v8: specifies if the range of corresponding adc channel is 1.8v,
+  bit0 for ch0, bit1 for ch1, bit2 for ch2 and etc.
+- amb,t2v-channel: specifies the adc channel for temperature. PS: not all chips
+  support T2V.
+- amb,t2v-coeff: specifies the coefficient of t2v, it's different from process
+  to process
+- amb,t2v-offset: specifies the offset of t2v, it's different from chip to chip
+- amb,keymap: should be specified if the ADC is used for Key button. It specifies
+  the key-code to be reported when the key is pressed. Each entry is organized as
+  <ADC Keycode>, where ADC is packed as:
+    channel << 28 | high_level << 16 | low_level
 
 ii) Example
 -----------
@@ -1040,6 +1050,23 @@ ii) Example
 		reg = <0xe801d000 0x1000>;
 		interrupts = <34 0x4>;
 		clock-frequency = <3000000>;
+		amb,channels-used = <0x0A>;
+
+		amb,keymap =
+			/* channel 1 */
+			<0x1fff0c1c 0>,   /* KEY_RESERVED */
+			<0x1c1c0a8c 373>, /* KEY_MODE */
+			<0x19600708 111>, /* KEY_DELETE */
+			<0x154603e8 167>, /* KEY_RECORD */
+			<0x1320012c 211>, /* KEY_HP */
+			<0x10c80000 212>, /* KEY_CAMERA */
+			/* channel 3 */
+			<0x3fff0c1c 0>,   /* KEY_RESERVED */
+			<0x3c1c0af0 139>, /* KEY_MENU */
+			<0x3af007d0 106>, /* KEY_RIGHT */
+			<0x37d003e8 105>, /* KEY_LEFT */
+			<0x33e80190 108>, /* KEY_DOWN */
+			<0x31900000 103>; /* KEY_UP */
 	};
 
 iii) Note
@@ -1288,44 +1315,7 @@ Please see Documentation/devicetree/bindings/gpio/gpio_keys.txt
 
 
 
-3)  - ADC KEY node
-====================
-
-
-i) Properties
--------------
-
-Required properties:
-- compatible: should be "ambarella,input_adckey".
-- amb,keymap: the key-code to be reported when the key is pressed. Each entry
-  is organized as <ADC Keycode>, where ADC is packed as:
-    channel << 28 | high_level << 16 | low_level
-  Note: the resolution of ADC is 12 bits. And please see the "Note" in "ADC node".
-
-ii) Example
------------
-	input_adckey {
-		compatible = "ambarella,input_adckey";
-		amb,keymap =
-			/* channel 1 */
-			<0x1fff0c1c 0>,   /* KEY_RESERVED */
-			<0x1c1c0a8c 373>, /* KEY_MODE */
-			<0x19600708 111>, /* KEY_DELETE */
-			<0x154603e8 167>, /* KEY_RECORD */
-			<0x1320012c 211>, /* KEY_HP */
-			<0x10c80000 212>, /* KEY_CAMERA */
-			/* channel 3 */
-			<0x3fff0c1c 0>,   /* KEY_RESERVED */
-			<0x3c1c0af0 139>, /* KEY_MENU */
-			<0x3af007d0 106>, /* KEY_RIGHT */
-			<0x37d003e8 105>, /* KEY_LEFT */
-			<0x33e80190 108>, /* KEY_DOWN */
-			<0x31900000 103>; /* KEY_UP */
-	};
-
-
-
-4)  - PWM BACKLIGHT node
+3)  - PWM BACKLIGHT node
 ========================
 
 i) Reference
