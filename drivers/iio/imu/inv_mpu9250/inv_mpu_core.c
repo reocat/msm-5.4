@@ -339,10 +339,22 @@ inv_mpu6050_read_raw(struct iio_dev *indio_dev,
 			}
 			break;
 		case IIO_TEMP:
+			if (!st->chip_config.enable) {
+				result = inv_mpu6050_switch_engine(st, true,
+                                                INV_MPU6050_BIT_PWR_TEMP_STBY);
+                                if (result)
+                                        goto error_read_raw;
+                        }
 			/* wait for stablization */
 			msleep(INV_MPU6050_SENSOR_UP_TIME);
 			ret = inv_mpu6050_sensor_show(st, st->reg->temperature,
 						IIO_MOD_X, val);
+			if (!st->chip_config.enable) {
+                                result = inv_mpu6050_switch_engine(st, false,
+                                                INV_MPU6050_BIT_PWR_TEMP_STBY);
+                                if (result)
+                                        goto error_read_raw;
+                        }
 			break;
 		default:
 			ret = -EINVAL;
