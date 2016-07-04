@@ -31,6 +31,7 @@
 #include <sound/soc.h>
 #include <plat/audio.h>
 #include <linux/slab.h>
+#include <sound/pcm_params.h>
 
 static unsigned int dai_fmt;
 module_param(dai_fmt, uint, 0644);
@@ -68,61 +69,32 @@ module_param(clk_fmt, uint, 0664);
 
 struct amb_clk {
 	int mclk;
-	int oversample;
+	int i2s_div;
 	int bclk;
 };
 
 static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
 {
-	switch (params_rate(params)) {
-	case 8000:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_1536xfs;
-		clk->bclk = 8000;
+	u32 channels, sample_bits, rate;
+
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S24_LE:
+		sample_bits = 32;
 		break;
-	case 11025:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_1152xfs;
-		clk->bclk = 11025;
-		break;
-	case 12000:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_1024xfs;
-		clk->bclk = 12000;
-		break;
-	case 16000:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_768xfs;
-		clk->bclk = 16000;
-		break;
-	case 22050:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_512xfs;
-		clk->bclk = 22050;
-		break;
-	case 24000:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_512xfs;
-		clk->bclk = 24000;
-		break;
-	case 32000:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_384xfs;
-		clk->bclk = 32000;
-		break;
-	case 44100:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_256xfs;
-		clk->bclk = 44100;
-		break;
-	case 48000:
-		clk->mclk = 12288000;
-		clk->oversample = AudioCodec_256xfs;
-		clk->bclk = 48000;
-		break;
+	case SNDRV_PCM_FORMAT_S16_LE:
 	default:
-		return -EINVAL;
+		sample_bits = 16;
+		break;
 	}
+
+	channels = params_channels(params);
+	rate = params_rate(params);
+
+	clk->mclk = 12288000;
+	clk->bclk = channels * rate * sample_bits;
+
+	clk->i2s_div = (clk->mclk / ( 2 * clk->bclk)) - 1;
+
 	return 0;
 }
 
@@ -207,7 +179,7 @@ static int amba_general_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
-	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.oversample);
+	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.i2s_div);
 	if (rval < 0) {
 		pr_err("can't set cpu MCLK/SF ratio\n");
 		goto hw_params_exit;
@@ -251,7 +223,7 @@ static int amba_dummy_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
-	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.oversample);
+	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.i2s_div);
 	if (rval < 0) {
 		printk(KERN_ERR "can't set cpu MCLK/SF ratio\n");
 		goto hw_params_exit;
