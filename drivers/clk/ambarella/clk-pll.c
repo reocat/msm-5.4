@@ -139,6 +139,10 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 
 	do_div(dividend, divider);
 
+        //hardcode for hdmi 4K clock
+        if((dividend == 297000000) && (readl(clk_pll->ctrl2_reg) == 0x3f701900))
+                dividend = 594000000;
+
 	return dividend;
 }
 
@@ -156,7 +160,7 @@ static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	return round_rate;
 }
 
-//hardcode for S5 hdmi 4kp30 gclk_vo clock
+//hardcode for S5 hdmi 4k gclk_vo clock
 static void ambarella_pll_set_hdmi_rate(struct clk_hw *hw, unsigned long rate)
 {
 	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
@@ -164,9 +168,6 @@ static void ambarella_pll_set_hdmi_rate(struct clk_hw *hw, unsigned long rate)
 	unsigned long intp, sdiv = 1, sout = 1;
 	union ctrl_reg_u ctrl_val;
 
-	rate *= clk_pll->fix_divider;
-
-        printk("%s enter\n",__func__);
         pre_scaler = 4;
         intp = 0x63;
         sdiv = 5;
@@ -201,7 +202,12 @@ static void ambarella_pll_set_hdmi_rate(struct clk_hw *hw, unsigned long rate)
 	ctrl_val.s.write_enable = 0;
 	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 
-	writel(0x3f700900, clk_pll->ctrl2_reg);
+        if(rate == (594000000)){
+                writel(0x3f701900, clk_pll->ctrl2_reg);
+        }else{
+	        writel(0x3f700900, clk_pll->ctrl2_reg);
+        }
+
 	if (ctrl_val.s.frac_mode)
 		writel(0x68306 | (1 << 12), clk_pll->ctrl3_reg);
 	else
@@ -218,6 +224,14 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 
+        //hardcode for hdmi 4kp30 and 4kp60
+        if(!strcmp(clk_hw_get_name(hw), "gclk_vo")){
+                if((rate == 297000000) || (rate == 594000000)){
+                        ambarella_pll_set_hdmi_rate(hw,rate);
+                        return 0 ;
+                }
+        }
+
 	rate *= clk_pll->fix_divider;
 
 	if (rate < parent_rate && clk_pll->post_reg != NULL) {
@@ -229,13 +243,6 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		pr_err("Error: target rate is too slow: %ld!\n", rate);
 		return -EINVAL;
 	}
-
-        if(!strcmp(clk_hw_get_name(hw), "gclk_vo")){
-                if(rate == (297000000 * clk_pll->fix_divider)){
-                        ambarella_pll_set_hdmi_rate(hw,rate);
-                        return 0 ;
-                }
-        }
 
 	/* non-HDMI fvco should be less than 1.5GHz and higher than 700MHz.
 	 * HDMI fvco should be less than 5.5GHz, and much higher than 700MHz,
