@@ -1254,6 +1254,44 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int ambarella_dma_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct ambdma_device *amb_dma = platform_get_drvdata(pdev);
+	struct ambdma_chan *amb_chan;
+	int i;
+
+	/* save dma channel register */
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
+		amb_chan->ch_ctl = amba_readl(DMA_CHAN_CTR_REG(i));
+		amb_chan->ch_da = amba_readl(DMA_CHAN_DA_REG(i));
+		amb_chan->ch_sta = amba_readl(DMA_CHAN_STA_REG(i));
+	}
+
+	return 0;
+
+}
+
+static int ambarella_dma_resume(struct platform_device *pdev)
+{
+	struct ambdma_device *amb_dma = platform_get_drvdata(pdev);
+	struct ambdma_chan *amb_chan;
+	int i;
+
+	/* restore dma channel register */
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
+		amba_writel(DMA_CHAN_STA_REG(i), amb_chan->ch_sta);
+		amba_writel(DMA_CHAN_DA_REG(i), amb_chan->ch_da);
+		amba_writel(DMA_CHAN_CTR_REG(i), amb_chan->ch_ctl);
+	}
+
+	return 0;
+}
+#endif
+
+
 static const struct of_device_id ambarella_dma_dt_ids[] = {
 	{.compatible = "ambarella,dma", },
 	{},
@@ -1263,7 +1301,10 @@ MODULE_DEVICE_TABLE(of, ambarella_dma_dt_ids);
 static struct platform_driver ambarella_dma_driver = {
 	.probe		= ambarella_dma_probe,
 	.remove		= ambarella_dma_remove,
-
+#ifdef CONFIG_PM
+	.suspend		= ambarella_dma_suspend,
+	.resume		= ambarella_dma_resume,
+#endif
 	.driver		= {
 		.name	= "ambarella-dma",
 		.owner	= THIS_MODULE,

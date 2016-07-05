@@ -453,6 +453,16 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	priv_data->clock_reg = amba_readl(I2S_CLOCK_REG);
+	priv_data->amb_i2s_intf.mode = amba_readl(I2S_MODE_REG);
+	priv_data->amb_i2s_intf.word_len = amba_readl(I2S_WLEN_REG);
+	priv_data->amb_i2s_intf.word_pos = amba_readl(I2S_WPOS_REG);
+	priv_data->amb_i2s_intf.slots = amba_readl(I2S_SLOT_REG);
+	priv_data->amb_i2s_intf.ch = amba_readl(I2S_REG(I2S_CHANNEL_SELECT_OFFSET));
+	priv_data->amb_i2s_intf.rx_ctrl = amba_readl(I2S_RX_CTRL_REG);
+	priv_data->amb_i2s_intf.tx_ctrl = amba_readl(I2S_TX_CTRL_REG);
+	priv_data->amb_i2s_intf.rx_fifo_len = amba_readl(I2S_RX_FIFO_GTH_REG);
+	priv_data->amb_i2s_intf.tx_fifo_len = amba_readl(I2S_TX_FIFO_LTH_REG);
+	priv_data->amb_i2s_intf.multi24 = amba_readl(I2S_24BITMUX_MODE_REG);
 
 	return 0;
 }
@@ -462,7 +472,16 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
-
+	amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
+	amba_writel(I2S_WLEN_REG, priv_data->amb_i2s_intf.word_len);
+	amba_writel(I2S_WPOS_REG, priv_data->amb_i2s_intf.word_pos);
+	amba_writel(I2S_SLOT_REG, priv_data->amb_i2s_intf.slots);
+	amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), priv_data->amb_i2s_intf.ch);
+	amba_writel(I2S_RX_CTRL_REG, priv_data->amb_i2s_intf.rx_ctrl);
+	amba_writel(I2S_TX_CTRL_REG, priv_data->amb_i2s_intf.tx_ctrl);
+	amba_writel(I2S_RX_FIFO_GTH_REG, priv_data->amb_i2s_intf.rx_fifo_len);
+	amba_writel(I2S_TX_FIFO_LTH_REG, priv_data->amb_i2s_intf.tx_fifo_len);
+	amba_writel(I2S_24BITMUX_MODE_REG,priv_data->amb_i2s_intf.multi24);
 	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
 
 	return 0;

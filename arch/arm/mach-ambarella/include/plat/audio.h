@@ -160,6 +160,11 @@ struct ambarella_i2s_interface {
 	u8 word_len;
 	u8 word_pos;
 	u8 slots;
+	u8 rx_ctrl;
+	u8 tx_ctrl;
+	u8 rx_fifo_len;
+	u8 tx_fifo_len;
+	u8 multi24;
 };
 
 #define MAX_OVERSAMPLE_IDX_NUM	9

@@ -66,6 +66,9 @@ struct ambdma_chan {
 	dma_addr_t			rt_addr;
 	u32				rt_attr;
 	u32				force_stop;
+	u32				ch_ctl;
+	u32				ch_sta;
+	u32				ch_da;
 	enum ambdma_status		status;
 };
 
