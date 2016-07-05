@@ -1,5 +1,5 @@
 Introduction
-------------
+============
 
 An analog-to-digital converter (abbreviated ADC) is a device that uses sampling to
 convert a continuous quantity to a discrete time representation in digital form.
@@ -35,7 +35,7 @@ voltage, R is the range, i.e., 1.8v or 3.3v.
 
 
 IIO
----
+===
 
 Please see:
    http://events.linuxfoundation.org/sites/events/files/slides/lceu15_baluta.pdf
@@ -44,7 +44,7 @@ Please see:
 
 
 Driver Configuration
---------------------
+====================
 
 Device Drivers  --->
          [M]  Industrial I/O support  --->
@@ -58,14 +58,14 @@ The module should be present in "drivers/iio/adc/ambarella_adc.ko".
 
 
 Device Tree
------------
+===========
 
 Please see Documentation/devicetree/bindings/arm/ambarella.txt - 25) - ADC node
 
 
 
 Usage
------
+=====
 
 On loading the module(ambarella_adc.ko) you can see the IIO device created in sysfs:
 
@@ -163,7 +163,7 @@ C) Event monitor:
 
 
 Application
------------
+===========
 
 A) Please refer to unit_test/linux/iio
 B) Please refer to https://wiki.analog.com/resources/tools-software/linux-software/libiio

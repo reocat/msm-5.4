@@ -150,6 +150,7 @@
 			interrupts = <22 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
+			clocks = <&gclk_ir>;
 		};
 
 		wdt@e800c000 {

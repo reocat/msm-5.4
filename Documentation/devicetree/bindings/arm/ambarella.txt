@@ -1085,16 +1085,10 @@ i) Properties
 - interrupts: the interrupt for ir.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
-- amb,keymap: the key-code to be reported when the key is pressed. Each entry
-  is organized as <IRcode Keycode>.
+- clocks: specifies the clock for this IR controller.
 
 Optional properties:
-- amb,protocol: ir protocol, use NEC protocol if not specified.
-  a) 0: NEC protocol
-  b) 1: PANASONIC protocol
-  c) 2: SONY protocol
-  d) 3: PHILIPS protocol
-- amb,print-key: print IR code when key is pressed, for debug purpose.
+- linux,rc-map-name: Remote control map name.
 
 ii) Example
 -----------
@@ -1104,11 +1098,8 @@ ii) Example
 		interrupts = <22 0x4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&ir_pins>;
-		amb,keymap =
-			<0x0100bcbd 116>, /* KEY_POWER */
-			<0x01000405 115>, /* KEY_VOLUMEUP */
-			<0x01008485 114>; /* KEY_VOLUMEDOWN */
-		/* amb,print-key; */
+		clocks = <&gclk_ir>;
+		linux,rc-map-name = "rc-rc6-mce";
 	};
 
 
