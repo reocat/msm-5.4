@@ -93,12 +93,6 @@ config INPUT_BMA150
 	  To compile this driver as a module, choose M here: the
 	  module will be called bma150.
 
-config INPUT_AMBARELLA_IR
-	tristate "Support Ambarella Soc IR"
-	default n
-	help
-	  Say Y here if your Ambarella Boards have Keys with IR.
-
 config INPUT_E3X0_BUTTON
 	tristate "NI Ettus Research USRP E3xx Button support."
 	default n
