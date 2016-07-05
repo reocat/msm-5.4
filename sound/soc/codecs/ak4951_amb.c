@@ -1127,8 +1127,8 @@ static int ak4951_suspend(struct snd_soc_codec *codec)
 
 static int ak4951_resume(struct snd_soc_codec *codec)
 {
-
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
 
 	return 0;
 }
