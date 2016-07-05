@@ -1255,6 +1255,9 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+static u32 ambdma_chan_sel_val = 0;
+#endif
 static int ambarella_dma_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct ambdma_device *amb_dma = platform_get_drvdata(pdev);
@@ -1268,7 +1271,9 @@ static int ambarella_dma_suspend(struct platform_device *pdev, pm_message_t stat
 		amb_chan->ch_da = amba_readl(DMA_CHAN_DA_REG(i));
 		amb_chan->ch_sta = amba_readl(DMA_CHAN_STA_REG(i));
 	}
-
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+	ambdma_chan_sel_val = amba_readl(AHBSP_DMA_CHANNEL_SEL_REG);
+#endif
 	return 0;
 
 }
@@ -1279,6 +1284,9 @@ static int ambarella_dma_resume(struct platform_device *pdev)
 	struct ambdma_chan *amb_chan;
 	int i;
 
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+	amba_writel(AHBSP_DMA_CHANNEL_SEL_REG, ambdma_chan_sel_val);
+#endif
 	/* restore dma channel register */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		amb_chan = &amb_dma->amb_chan[i];
