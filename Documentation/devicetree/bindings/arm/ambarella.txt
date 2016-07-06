@@ -129,6 +129,12 @@ ii) /chosen
 Please see http://devicetree.org/Device_Tree_Usage#chosen_Node
            Documentation/devicetree/booting-without-of.txt
 
+Optional properties:
+- ambarella,dram-reset-ctrl: specifies the gpio used to disconnect RESET signal
+  to DDR3 dram, only used for Self-Refresh with DDR3 dram.
+- ambarella,gpio-notify-mcu: specifies the gpio used to communicate between SoC
+  and external MCU, only used for Self-Refresh with external MCU.
+
 iii) /memory
 ------------
    Please see Documentation/devicetree/booting-without-of.txt
@@ -170,11 +176,10 @@ i) Reference
 Please see Documentation/devicetree/bindings/arm/cpus.txt
 
 ii) Properties
-- amb,core-div: this prop should be 1 or 2, this specified the divide of gclk_core from pll_out_core,
-  for s2e and s5, this value should be 1; and for s2l, s3l, this should be 2. If you don't add this prop,
-  the divide for gclk_core is 2 as default.
-- cpufreq_tbl: Table of frequencies gclk_cortex and gclk_core could be transitioned
-  into, in the unit of nanoseconds.
+- amb,core-div: should be 1 or 2, it specifies the divider of gclk_core from
+  pll_out_core, and determined by SoC.
+- cpufreq_tbl: Table of frequencies in Hz gclk_cortex and gclk_core could be
+  transitioned into.
 - clock-latency: Specify the possible maximum transition latency for clock, in
   unit of nanoseconds.
 
