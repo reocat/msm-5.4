@@ -275,6 +275,11 @@
 				amb,pinmux-ids = <0x107d 0x107e>;
 			};
 
+			can_pins: can@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x307d 0x307e>;
+			};
+
 			nand0_pins: nand0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2038 0x2039 0x203a 0x203f
@@ -570,6 +575,16 @@
 			amb,rxdma-used;
 			/* amb,tx-fifo-fix; */
 			/* need to select pinctrl setup in board dts */
+		};
+
+		can: can@e0027000 {
+			compatible = "ambarella,can";
+			reg = <0xe0027000 0xc00>;
+			interrupts = <0 64 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&can_pins>;
+			clocks = <&gclk_can>;
+			status = "disabled";
 		};
 
 		i2s0: i2s@e001a000 {
@@ -1028,6 +1043,16 @@
 			reg = <0xec170038 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_uart";
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_can: gclk-can {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0xec170570 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_can";
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
