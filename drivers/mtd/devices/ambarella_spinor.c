@@ -251,6 +251,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
     if (len == flash->mtd.size) {
         if (erase_chip(flash)) {
             instr->state = MTD_ERASE_FAILED;
+			check_set_spinor_addr_mode(flash, 0);
             mutex_unlock(&flash->lock);
             return -EIO;
         }
@@ -659,6 +660,7 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
 	if (errCode < 0)
 		goto amb_spi_nor_probe_free_command;
 
+	check_set_spinor_addr_mode(flash, 0);
     printk("SPI NOR Controller probed\r\n");
     return 0;
 
