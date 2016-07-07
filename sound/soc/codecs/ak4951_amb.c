@@ -55,12 +55,13 @@ struct ak4951_priv {
 	unsigned int sysclk;
 	unsigned int clkid;
 	struct regmap *regmap;
-	struct snd_soc_codec codec;
 	struct i2c_client* i2c_clt;
 	u8 reg_cache[AK4951_MAX_REGISTERS];
 	int onStereo;
 	int mic;
 };
+
+struct ak4951_priv *ak4951_data;
 
 /*
  * ak4951 register
@@ -1079,11 +1080,12 @@ struct snd_soc_dai_driver ak4951_dai[] = {
 
 static int ak4951_probe(struct snd_soc_codec *codec)
 {
-	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
+	struct ak4951_priv *ak4951 = ak4951_data;
 	int ret = 0;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
 	codec->control_data = ak4951->regmap;
+	snd_soc_codec_set_drvdata(codec, ak4951);
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
 	if (ret != 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
@@ -1146,6 +1148,13 @@ static int ak4951_remove(struct snd_soc_codec *codec)
 
 static int ak4951_suspend(struct snd_soc_codec *codec)
 {
+	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
+	int i;
+
+	for(i = 0; i < 7; i++) {
+		ak4951->reg_cache[i] = snd_soc_read(codec, i);
+	}
+
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;
@@ -1153,8 +1162,14 @@ static int ak4951_suspend(struct snd_soc_codec *codec)
 
 static int ak4951_resume(struct snd_soc_codec *codec)
 {
-	ak4951_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
+	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
+	int i;
+
+	for(i = 0; i < 7; i++) {
+		snd_soc_write(codec, i, ak4951->reg_cache[i]);
+	}
+
+	ak4951_set_bias_level(codec, codec->dapm.bias_level);
 
 	return 0;
 }
@@ -1195,7 +1210,6 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 	struct ak4951_priv *ak4951;
 	enum of_gpio_flags flags;
 	int rst_pin;
-	struct snd_soc_codec *codec;
 	int ret = 0;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -1211,7 +1225,6 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 	ak4951->i2c_clt = i2c;
 	ak4951->rst_pin = rst_pin;
 	ak4951->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-	codec = &ak4951->codec;
 	i2c_set_clientdata(i2c, ak4951);
 	ak4951->regmap = devm_regmap_init_i2c(i2c, &ak4951_regmap);
 	if (IS_ERR(ak4951->regmap)) {
@@ -1219,6 +1232,8 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 		dev_err(&i2c->dev, "regmap_init() failed: %d\n", ret);
 		return ret;
 	}
+
+	ak4951_data = ak4951;
 
 	ret = snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_ak4951, &ak4951_dai[0], ARRAY_SIZE(ak4951_dai));
