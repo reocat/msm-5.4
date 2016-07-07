@@ -61,6 +61,8 @@ struct ak4951_priv {
 	int mic;
 };
 
+struct ak4951_priv *ak4951_data;
+
 /*
  * ak4951 register
  */
@@ -1063,7 +1065,7 @@ struct snd_soc_dai_driver ak4951_dai[] = {
 
 static int ak4951_probe(struct snd_soc_codec *codec)
 {
-	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
+	struct ak4951_priv *ak4951 = ak4951_data;
 	int ret = 0;
 
 	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
@@ -1072,6 +1074,7 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 		return ret;
 	}
 
+	snd_soc_codec_set_drvdata(codec, ak4951);
 	/* Reset AK4951 codec */
 	gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
 	msleep(1);
@@ -1120,6 +1123,11 @@ static int ak4951_remove(struct snd_soc_codec *codec)
 
 static int ak4951_suspend(struct snd_soc_codec *codec)
 {
+	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
+	int i;
+	for(i = 0; i < 7; i++)
+		ak4951->reg_cache[i] = snd_soc_read(codec, i);
+
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;
@@ -1127,8 +1135,11 @@ static int ak4951_suspend(struct snd_soc_codec *codec)
 
 static int ak4951_resume(struct snd_soc_codec *codec)
 {
-	ak4951_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	snd_soc_update_bits(codec,AK4951_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
+	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
+	int i;
+
+	for(i = 0; i < 7; i++)
+		snd_soc_write(codec, i, ak4951->reg_cache[i]);
 
 	return 0;
 }
@@ -1189,6 +1200,8 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 		dev_err(&i2c->dev, "regmap_init() for ak1951 failed: %d\n", ret);
 		return ret;
 	}
+
+	ak4951_data = ak4951;
 
 	ret = snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_ak4951, &ak4951_dai[0], ARRAY_SIZE(ak4951_dai));
