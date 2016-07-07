@@ -547,6 +547,8 @@ static int ambarella_clock_proc_write(struct file *file,
 	char *buf, clk_name[32];
 	int freq, rval = count;
 
+	pr_warn("!!!DANGEROUS!!! You must know what you are doning!\n");
+
 	buf = kmalloc(count, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
