@@ -819,6 +819,17 @@
 		ranges;
 
 		/*
+		 * This is a dummy clock, to be used as placeholder on other
+		 * mux clocks when corresponding bits in register don't represent
+		 * real parent clock.
+		 */
+		gclk_dummy: gclk_dummy {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <0>;
+		};
+
+		/*
 		 * Fixed 24MHz oscillator inputs to SoC
 		 */
 		osc: oscillator {
@@ -1050,10 +1061,12 @@
 
 		gclk_uart: gclk-uart {
 			#clock-cells = <0>;
-			compatible = "ambarella,div-clock";
-			reg = <0xec170038 4>;
-			clocks = <&osc>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec170038 4>, <0xec1701c8 4>;
+			clocks = <&osc>, <&gclk_core>, <&gclk_dummy>, <&gclk_idsp>;
 			clock-output-names = "gclk_uart";
+			assigned-clocks = <&gclk_uart>;
+			assigned-clock-parents = <&osc>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
