@@ -143,6 +143,7 @@
 			compatible = "ambarella,adc";
 			reg = <0xe801d000 0x1000>;
 			interrupts = <103 0x4>;
+			clocks = <&gclk_adc>;
 			clock-frequency = <3000000>;
 			amb,rct-regmap = <&rct_syscon>;
 		};

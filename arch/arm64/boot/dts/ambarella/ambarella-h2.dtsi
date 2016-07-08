@@ -178,6 +178,7 @@
 			reg = <0xe801d000 0x1000>;
 			interrupts = <0 103 0x4>;
 			clock-frequency = <3000000>;
+			clocks = <&gclk_adc>;
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scaler-1v8 = <0x01>;
 			amb,t2v-channel = <4>;
