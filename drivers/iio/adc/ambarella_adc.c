@@ -73,8 +73,9 @@ struct ambarella_adc {
 	struct device *dev;
 	void __iomem *regbase;
 	struct regmap *reg_rct;
-	struct clk *clk;
 	int irq;
+	struct clk *clk;
+	u32 clk_rate;
 	struct mutex mtx;
 	struct iio_trigger *trig;
 	unsigned long channels_mask;
@@ -927,6 +928,7 @@ static int ambarella_adc_suspend(struct device *dev)
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct ambarella_adc *ambadc = iio_priv(indio_dev);
 
+	ambadc->clk_rate = clk_get_rate(ambadc->clk);
 	ambarella_adc_power_down(ambadc);
 
 	return 0;
@@ -936,6 +938,8 @@ static int ambarella_adc_resume(struct device *dev)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct ambarella_adc *ambadc = iio_priv(indio_dev);
+
+	clk_set_rate(ambadc->clk, ambadc->clk_rate);
 
 	ambarella_adc_power_up(ambadc);
 	ambarella_adc_start(ambadc);
