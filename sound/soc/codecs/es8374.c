@@ -5,7 +5,6 @@
  *
  * Authors:  XianqingZheng(xqzheng@ambarella.com)
  *
- *
  * Based on es8374.c by David Yang(yangxiaohua@everest-semi.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -582,7 +581,6 @@ static const struct snd_soc_dapm_widget es8374_dapm_widgets[] = {
 		SND_SOC_DAPM_MUX("EQUALIZER MUX", SND_SOC_NOPM, 0, 0,
 				&es8374_equalizer_src_mux_controls),
 
-
 		/* Output Lines */
 		SND_SOC_DAPM_OUTPUT("MOUT"),
 		SND_SOC_DAPM_OUTPUT("SPKOUT"),
@@ -611,7 +609,6 @@ static const struct snd_soc_dapm_route es8374_dapm_routes[] = {
 	{"DMIC MUX", "DMIC DISABLE2", "MONO ADC"},
 	{"DMIC MUX", "DMIC AT HIGH LEVEL", "DMIC"},
 	{"DMIC MUX", "DMIC AT LOW LEVEL", "DMIC"},
-
 
 	{"ALC MUX", "ALC OFF", "DMIC MUX"},
 	{"ALC MUX", "ALC ON", "DMIC MUX"},
@@ -925,12 +922,10 @@ static int es8374_set_dai_sysclk(struct snd_soc_dai *dai,
 	struct snd_soc_codec *codec = dai->codec;
 
 	if (clk_id == ES8374_CLKID_MCLK) {
-		snd_soc_write(codec,0x01,0x7F);	//IC clk on
-		snd_soc_write(codec,0x05,0x11);	//clk div set
-		snd_soc_write(codec,0x09,0x01);	//pll set:reset on ,set start
-		snd_soc_write(codec,0x0C,0x22);	//pll set:k
-		snd_soc_write(codec,0x0D,0x2E);	//pll set:k
-		snd_soc_write(codec,0x0E,0xC6);	//pll set:k
+		snd_soc_write(codec,0x09,0x80);	//pll set:reset on ,set start
+		snd_soc_write(codec,0x0C,0x00);	//pll set:k
+		snd_soc_write(codec,0x0D,0x00);	//pll set:k
+		snd_soc_write(codec,0x0E,0x00);	//pll set:k
 
 	}
 
@@ -1083,15 +1078,15 @@ static int es8374_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	if(es8374->dmic_enable){
 		printk("dmic is enabled\n");
-		snd_soc_write(codec, ES8374_ANA_PWR_CTL_REG15, 0xDC);  //C0 is pd adc
-		snd_soc_write(codec, ES8374_AIN_PWR_SRC_REG21, 0xC0);  //C0 is pd adc
 		snd_soc_write(codec, ES8374_ADC_CONTROL_REG24, 0x8A);  //6DB & DIMC=H
-		snd_soc_write(codec, ES8374_ADC_HPF_REG2C, 0x00);  //HPF SLOW SETTLING coeff:0
-		snd_soc_write(codec, ES8374_GPIO_INSERT_REG6D, 0x5C);  //set gpio1 to DMIC CLK
+		snd_soc_write(codec,0x12,0x40);
+		snd_soc_write(codec,0x13,0x40);
+		snd_soc_write(codec,0x22,0x00);
+		snd_soc_write(codec, 0x26, 0x50);
+		snd_soc_write(codec, 0x28, 0x80);
 
 	} else {
 		printk("dmic is not enabled\n");
-		snd_soc_write(codec, ES8374_AIN_PWR_SRC_REG21, 0x10);  //10 is pd adc
 		snd_soc_write(codec,0x24,0x08);	//adc set
 		snd_soc_write(codec, ES8374_GPIO_INSERT_REG6D, 0x1F);  //set gpio1 to GM SHORT
 	}
@@ -1274,22 +1269,12 @@ static int es8374_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec,0x00,0x03);	//IC Rst stop
 	snd_soc_write(codec,0x01,0x7F);	//IC clk on
 	snd_soc_write(codec,0x05,0x11);	//clk div set
-	snd_soc_write(codec,0x6F,0xA0);	//pll set:mode enable
-	snd_soc_write(codec,0x72,0x41);	//pll set:mode set
-	snd_soc_write(codec,0x09,0x01);	//pll set:reset on ,set start
-	snd_soc_write(codec,0x0C,0x22);	//pll set:k
-	snd_soc_write(codec,0x0D,0x2E);	//pll set:k
-	snd_soc_write(codec,0x0E,0xC6);	//pll set:k
-	snd_soc_write(codec,0x0A,0x3A);	//pll set:
-	snd_soc_write(codec,0x0B,0x07);	//pll set:n
-	snd_soc_write(codec,0x09,0x41);	//pll set:reset off ,set stop
-//	snd_soc_write(codec,0x24,0x08);	//adc set
 	snd_soc_write(codec,0x36,0x00);	//dac set
 	snd_soc_write(codec,0x12,0x30);	//timming set
 	snd_soc_write(codec,0x13,0x20);	//timming set
-//	snd_soc_write(codec,0x21,0x50);	//adc set:	SEL LIN1 CH+PGAGAIN=0DB
+	snd_soc_write(codec,0x21,0x50);	//adc set:	SEL LIN1 CH+PGAGAIN=0DB
 	snd_soc_write(codec,0x22,0xFF);	//adc set:	PGA GAIN=0DB
-//	snd_soc_write(codec,0x21,0x10);	//adc set:	SEL LIN1 CH+PGAGAIN=0DB
+	snd_soc_write(codec,0x21,0x10);	//adc set:	SEL LIN1 CH+PGAGAIN=0DB
 	snd_soc_write(codec,0x00,0x80);	// IC START
 	msleep(50);  					//DELAY_MS
 	snd_soc_write(codec,0x14,0x8A);	// IC START
@@ -1304,7 +1289,7 @@ static int es8374_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec,0x25,0x00);	// ADCVOLUME  on
 	snd_soc_write(codec,0x38,0x00);	// DACVOLUMEL on
 	snd_soc_write(codec,0x37,0x00);	// dac set
-	snd_soc_write(codec,0x6D,0x60);	//SEL:GPIO1=DMIC CLK OUT+SEL:GPIO2=PLL CLK OUT
+	snd_soc_write(codec,0x6D,0x40);	//SEL:GPIO1=DMIC CLK OUT+SEL:GPIO2=PLL CLK OUT
 
 	return ret;
 }
