@@ -174,7 +174,10 @@
 			reg = <0xe801d000 0x1000>;
 			interrupts = <0 103 0x4>;
 			clock-frequency = <3000000>;
+			clocks = <&gclk_adc>;
 			amb,rct-regmap = <&rct_syscon>;
+			amb,scaler-1v8 = <0x01>;
+			amb,t2v-channel = <4>;
 			status = "disabled";
 		};
 
@@ -184,6 +187,7 @@
 			interrupts = <0 86 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
+			clocks = <&gclk_ir>;
 			status = "disabled";
 		};
 
@@ -273,6 +277,11 @@
 			uart1_flow_pins_c: uart1_flow@2 {
 				reg = <2>;
 				amb,pinmux-ids = <0x107d 0x107e>;
+			};
+
+			can_pins: can@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x307d 0x307e>;
 			};
 
 			nand0_pins: nand0@0 {
@@ -518,6 +527,7 @@
 			dma-channels = <8>;
 			dma-requests = <12>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
+			dma-channel-sel = <4 5 0 0 8 9 11 10>;
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
@@ -566,6 +576,16 @@
 			/* need to select pinctrl setup in board dts */
 		};
 
+		can: can@e0027000 {
+			compatible = "ambarella,can";
+			reg = <0xe0027000 0xc00>;
+			interrupts = <0 64 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&can_pins>;
+			clocks = <&gclk_can>;
+			status = "disabled";
+		};
+
 		i2s0: i2s@e001a000 {
 			compatible = "ambarella,i2s";
 			reg = <0xe001a000 0x1000>;
@@ -573,6 +593,8 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
+			dmas = <&dma 5 1>, <&dma 4 1>;
+			dma-names = "tx", "rx";
 		};
 
 		udc@e0006000 {
@@ -707,6 +729,23 @@
 			compatible = "ambarella,scratchpad", "syscon";
 			reg = <0xe001b000 0x70>;
 		};
+
+		usb_dwc3: dwc3@e0200000 {
+			compatible = "ambarella,dwc3";
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
+
+			dwc3: dwc3@e0200000 {
+				compatible	= "snps,dwc3";
+				reg		= <0xe0200000 0xcfff>;
+				interrupts	= <0 61 0x4>;
+				dr_mode		= "peripheral";
+				usb-phy		= <&usbphy>, <&usbphy>;
+			};
+		};
 	};
 
 	rct@ec170000 {
@@ -749,6 +788,17 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
+
+		/*
+		 * This is a dummy clock, to be used as placeholder on other
+		 * mux clocks when corresponding bits in register don't represent
+		 * real parent clock.
+		 */
+		gclk_dummy: gclk_dummy {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <0>;
+		};
 
 		/*
 		 * Fixed 24MHz oscillator inputs to SoC
@@ -853,6 +903,8 @@
 			      <0xec170030 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_so";
+			assigned-clocks = <&gclk_so>;
+			/* assigned-clock-rates = <24000000>; */
 			amb,extra-scaler;
 			amb,frac-mode;
 		};
@@ -868,9 +920,12 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo";
+			assigned-clocks = <&gclk_vo>;
+			/* assigned-clock-rates = <24000000>; */
 			amb,extra-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
+			amb,ctrl2-val = <0x3f700900>;
 			amb,ctrl3-val = <0x00068306>;
 			amb,min-vco = <2500>; /* in MHz */
 		};
@@ -886,6 +941,8 @@
 			      <0xec1700cc 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo2";
+			assigned-clocks = <&gclk_vo2>;
+			/* assigned-clock-rates = <24000000>; */
 			amb,extra-scaler;
 			amb,frac-mode;
 		};
@@ -901,6 +958,8 @@
 			      <0xec17005c 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_audio";
+			assigned-clocks = <&gclk_so>;
+			/* assigned-clock-rates = <12288000>; */
 			amb,extra-scaler;
 			amb,frac-mode;
 		};
@@ -973,10 +1032,22 @@
 
 		gclk_uart: gclk-uart {
 			#clock-cells = <0>;
-			compatible = "ambarella,div-clock";
-			reg = <0xec170038 4>;
-			clocks = <&osc>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec170038 4>, <0xec1701c8 4>;
+			clocks = <&osc>, <&gclk_core>, <&gclk_dummy>, <&gclk_idsp>;
 			clock-output-names = "gclk_uart";
+			assigned-clocks = <&gclk_uart>;
+			assigned-clock-parents = <&osc>;
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_can: gclk-can {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0xec170570 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_can";
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
