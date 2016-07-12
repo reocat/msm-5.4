@@ -143,6 +143,7 @@
 			compatible = "ambarella,adc";
 			reg = <0xe801d000 0x1000>;
 			interrupts = <103 0x4>;
+			clocks = <&gclk_adc>;
 			clock-frequency = <3000000>;
 			amb,rct-regmap = <&rct_syscon>;
 		};
@@ -153,6 +154,7 @@
 			interrupts = <86 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
+			clocks = <&gclk_ir>;
 		};
 
 		wdt@e800c000 {
@@ -717,6 +719,17 @@
 		ranges;
 
 		/*
+		 * This is a dummy clock, to be used as placeholder on other
+		 * mux clocks when corresponding bits in register don't represent
+		 * real parent clock.
+		 */
+		gclk_dummy: gclk_dummy {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <0>;
+		};
+
+		/*
 		 * Fixed 24MHz oscillator inputs to SoC
 		 */
 		osc: oscillator {
@@ -805,9 +818,10 @@
 			      <0xec170030 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_so";
+			assigned-clocks = <&gclk_so>;
+			assigned-clock-rates = <24000000>;
 			amb,extra-scaler;
 			amb,frac-mode;
-			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
@@ -821,10 +835,11 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo";
+			assigned-clocks = <&gclk_vo>;
+			assigned-clock-rates = <24000000>;
 			amb,extra-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
-			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo2: gclk-vo2 { /* for lcd */
@@ -838,9 +853,10 @@
 			      <0xec1700cc 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo2";
+			assigned-clocks = <&gclk_vo2>;
+			assigned-clock-rates = <24000000>;
 			amb,extra-scaler;
 			amb,frac-mode;
-			amb,init-rate = <24000000>;
 		};
 
 		gclk_audio: gclk-audio {
@@ -854,9 +870,10 @@
 			      <0xec17005c 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_audio";
+			assigned-clocks = <&gclk_audio>;
+			assigned-clock-rates = <12288000>;
 			amb,extra-scaler;
 			amb,frac-mode;
-			amb,init-rate = <12288000>;
 		};
 
 		gclk_axi: gclk-axi {
@@ -927,10 +944,12 @@
 
 		gclk_uart: gclk-uart {
 			#clock-cells = <0>;
-			compatible = "ambarella,div-clock";
-			reg = <0xec170038 4>;
-			clocks = <&osc>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec170038 4>, <0xec1701c8 4>;
+			clocks = <&osc>, <&gclk_core>, <&gclk_dummy>, <&gclk_idsp>;
 			clock-output-names = "gclk_uart";
+			assigned-clocks = <&gclk_uart>;
+			assigned-clock-parents = <&osc>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};

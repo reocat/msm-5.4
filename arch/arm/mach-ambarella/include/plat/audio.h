@@ -157,6 +157,7 @@ struct ambarella_i2s_interface {
 	u32 mclk;
 	u8 ch;
 	u8 oversample;
+	u8 div;
 	u8 word_order;
 	u8 word_len;
 	u8 word_pos;

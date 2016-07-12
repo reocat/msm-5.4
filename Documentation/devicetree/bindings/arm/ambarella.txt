@@ -45,8 +45,7 @@ Table of Contents
   III - Misc Node definition
     1)  - BOGUS BUS node
     2)  - GPIO KEY node
-    3)  - ADC KEY node
-    4)  - PWM BACKLIGHT node
+    3)  - PWM BACKLIGHT node
 
 
 
@@ -130,6 +129,12 @@ ii) /chosen
 Please see http://devicetree.org/Device_Tree_Usage#chosen_Node
            Documentation/devicetree/booting-without-of.txt
 
+Optional properties:
+- ambarella,dram-reset-ctrl: specifies the gpio used to disconnect RESET signal
+  to DDR3 dram, only used for Self-Refresh with DDR3 dram.
+- ambarella,gpio-notify-mcu: specifies the gpio used to communicate between SoC
+  and external MCU, only used for Self-Refresh with external MCU.
+
 iii) /memory
 ------------
    Please see Documentation/devicetree/booting-without-of.txt
@@ -171,11 +176,10 @@ i) Reference
 Please see Documentation/devicetree/bindings/arm/cpus.txt
 
 ii) Properties
-- amb,core-div: this prop should be 1 or 2, this specified the divide of gclk_core from pll_out_core,
-  for s2e and s5, this value should be 1; and for s2l, s3l, this should be 2. If you don't add this prop,
-  the divide for gclk_core is 2 as default.
-- cpufreq_tbl: Table of frequencies gclk_cortex and gclk_core could be transitioned
-  into, in the unit of nanoseconds.
+- amb,core-div: should be 1 or 2, it specifies the divider of gclk_core from
+  pll_out_core, and determined by SoC.
+- cpufreq_tbl: Table of frequencies in Hz gclk_cortex and gclk_core could be
+  transitioned into.
 - clock-latency: Specify the possible maximum transition latency for clock, in
   unit of nanoseconds.
 
@@ -1027,11 +1031,22 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for adc.
 - clock-frequency: desired ADC clock frequency in Hz.
-- amb,polling-mode: specified if ADC is working in polling mode, must be
-  specified for A5S.
+- amb,rct-regmap: RCT registers
 
 Optional properties:
-- amb,print-key: print Key code when key is pressed, for debug purpose.
+- amb,channels-used: specifies which channels are used, bit0 for ch0, bit1 for
+  ch1, bit2 for ch2 and etc.
+- amb,scaler-1v8: specifies if the range of corresponding adc channel is 1.8v,
+  bit0 for ch0, bit1 for ch1, bit2 for ch2 and etc.
+- amb,t2v-channel: specifies the adc channel for temperature. PS: not all chips
+  support T2V.
+- amb,t2v-coeff: specifies the coefficient of t2v, it's different from process
+  to process
+- amb,t2v-offset: specifies the offset of t2v, it's different from chip to chip
+- amb,keymap: should be specified if the ADC is used for Key button. It specifies
+  the key-code to be reported when the key is pressed. Each entry is organized as
+  <ADC Keycode>, where ADC is packed as:
+    channel << 28 | high_level << 16 | low_level
 
 ii) Example
 -----------
@@ -1040,6 +1055,23 @@ ii) Example
 		reg = <0xe801d000 0x1000>;
 		interrupts = <34 0x4>;
 		clock-frequency = <3000000>;
+		amb,channels-used = <0x0A>;
+
+		amb,keymap =
+			/* channel 1 */
+			<0x1fff0c1c 0>,   /* KEY_RESERVED */
+			<0x1c1c0a8c 373>, /* KEY_MODE */
+			<0x19600708 111>, /* KEY_DELETE */
+			<0x154603e8 167>, /* KEY_RECORD */
+			<0x1320012c 211>, /* KEY_HP */
+			<0x10c80000 212>, /* KEY_CAMERA */
+			/* channel 3 */
+			<0x3fff0c1c 0>,   /* KEY_RESERVED */
+			<0x3c1c0af0 139>, /* KEY_MENU */
+			<0x3af007d0 106>, /* KEY_RIGHT */
+			<0x37d003e8 105>, /* KEY_LEFT */
+			<0x33e80190 108>, /* KEY_DOWN */
+			<0x31900000 103>; /* KEY_UP */
 	};
 
 iii) Note
@@ -1058,16 +1090,10 @@ i) Properties
 - interrupts: the interrupt for ir.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
-- amb,keymap: the key-code to be reported when the key is pressed. Each entry
-  is organized as <IRcode Keycode>.
+- clocks: specifies the clock for this IR controller.
 
 Optional properties:
-- amb,protocol: ir protocol, use NEC protocol if not specified.
-  a) 0: NEC protocol
-  b) 1: PANASONIC protocol
-  c) 2: SONY protocol
-  d) 3: PHILIPS protocol
-- amb,print-key: print IR code when key is pressed, for debug purpose.
+- linux,rc-map-name: Remote control map name.
 
 ii) Example
 -----------
@@ -1077,11 +1103,8 @@ ii) Example
 		interrupts = <22 0x4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&ir_pins>;
-		amb,keymap =
-			<0x0100bcbd 116>, /* KEY_POWER */
-			<0x01000405 115>, /* KEY_VOLUMEUP */
-			<0x01008485 114>; /* KEY_VOLUMEDOWN */
-		/* amb,print-key; */
+		clocks = <&gclk_ir>;
+		linux,rc-map-name = "rc-rc6-mce";
 	};
 
 
@@ -1288,44 +1311,7 @@ Please see Documentation/devicetree/bindings/gpio/gpio_keys.txt
 
 
 
-3)  - ADC KEY node
-====================
-
-
-i) Properties
--------------
-
-Required properties:
-- compatible: should be "ambarella,input_adckey".
-- amb,keymap: the key-code to be reported when the key is pressed. Each entry
-  is organized as <ADC Keycode>, where ADC is packed as:
-    channel << 28 | high_level << 16 | low_level
-  Note: the resolution of ADC is 12 bits. And please see the "Note" in "ADC node".
-
-ii) Example
------------
-	input_adckey {
-		compatible = "ambarella,input_adckey";
-		amb,keymap =
-			/* channel 1 */
-			<0x1fff0c1c 0>,   /* KEY_RESERVED */
-			<0x1c1c0a8c 373>, /* KEY_MODE */
-			<0x19600708 111>, /* KEY_DELETE */
-			<0x154603e8 167>, /* KEY_RECORD */
-			<0x1320012c 211>, /* KEY_HP */
-			<0x10c80000 212>, /* KEY_CAMERA */
-			/* channel 3 */
-			<0x3fff0c1c 0>,   /* KEY_RESERVED */
-			<0x3c1c0af0 139>, /* KEY_MENU */
-			<0x3af007d0 106>, /* KEY_RIGHT */
-			<0x37d003e8 105>, /* KEY_LEFT */
-			<0x33e80190 108>, /* KEY_DOWN */
-			<0x31900000 103>; /* KEY_UP */
-	};
-
-
-
-4)  - PWM BACKLIGHT node
+3)  - PWM BACKLIGHT node
 ========================
 
 i) Reference

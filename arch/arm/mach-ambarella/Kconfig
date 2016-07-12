@@ -39,36 +39,6 @@ config ARCH_AMBARELLA_SUPPORT_MMAP_DBGBUS
 choice
 	prompt "Chip REV"
 
-config ARCH_AMBARELLA_A5S
-	bool "A5S"
-	select CPU_V6
-	select CPU_32v6K
-	select AMBARELLA_VIC
-	help
-	  Say Y here if you are using Ambarella A5S.
-
-config ARCH_AMBARELLA_S2
-	bool "S2 Cortex"
-	select CPU_V7
-	select ARM_GIC
-	select HAVE_SMP
-	select HAVE_ARM_SCU if SMP
-	select HAVE_ARM_TWD if SMP
-	select ARM_ERRATA_754322
-	select ARM_ERRATA_764369 if SMP
-	select ARM_ERRATA_775420
-	select MIGHT_HAVE_CACHE_L2X0
-	select PL310_ERRATA_588369 if CACHE_PL310
-	select PL310_ERRATA_727915 if CACHE_PL310
-	select PL310_ERRATA_753970 if CACHE_PL310
-	select PL310_ERRATA_769419 if CACHE_PL310
-	select USB_ARCH_HAS_EHCI if USB_SUPPORT
-	select USB_ARCH_HAS_OHCI if USB_SUPPORT
-	select ARCH_AMBARELLA_SUPPORT_MMAP_AXI
-
-	help
-	  Say Y here if you are using Ambarella S2 Cortex.
-
 config ARCH_AMBARELLA_S2E
 	bool "S2E"
 	select CPU_V7

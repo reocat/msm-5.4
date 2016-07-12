@@ -20,9 +20,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-obj-$(CONFIG_ARCH_AMBARELLA_A5S)		+= a5s.o
-obj-$(CONFIG_ARCH_AMBARELLA_A7L)		+= a7l.o
-obj-$(CONFIG_ARCH_AMBARELLA_S2)			+= s2.o
 obj-$(CONFIG_ARCH_AMBARELLA_S2E)		+= s2e.o
 obj-$(CONFIG_ARCH_AMBARELLA_S2L)		+= s2l.o
 obj-$(CONFIG_ARCH_AMBARELLA_S3)			+= s3.o

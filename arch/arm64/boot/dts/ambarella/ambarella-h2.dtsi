@@ -178,7 +178,10 @@
 			reg = <0xe801d000 0x1000>;
 			interrupts = <0 103 0x4>;
 			clock-frequency = <3000000>;
+			clocks = <&gclk_adc>;
 			amb,rct-regmap = <&rct_syscon>;
+			amb,scaler-1v8 = <0x01>;
+			amb,t2v-channel = <4>;
 		};
 
 		ir@e8006000 {
@@ -187,6 +190,7 @@
 			interrupts = <0 86 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&ir_pins>;
+			clocks = <&gclk_ir>;
 		};
 
 		wdt@e800c000 {
@@ -727,6 +731,25 @@
 			compatible = "ambarella,scratchpad", "syscon";
 			reg = <0xe001b000 0x70>;
 		};
+
+		usb_dwc3: dwc3@e0200000 {
+			compatible	= "ambarella,dwc3";
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			#address-cells	= <1>;
+			#size-cells	= <1>;
+			ranges;
+
+			status = "ok";
+
+			dwc3: dwc3@e0200000 {
+				compatible	= "snps,dwc3";
+				reg		= <0xe0200000 0xcfff>;
+				interrupts	=  <0 61 0x4>;
+				dr_mode		= "peripheral";
+				usb-phy		= <&usbphy>, <&usbphy>;
+			};
+		};
 	};
 
 	rct@ec170000 {
@@ -810,6 +833,17 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
+
+		/*
+		 * This is a dummy clock, to be used as placeholder on other
+		 * mux clocks when corresponding bits in register don't represent
+		 * real parent clock.
+		 */
+		gclk_dummy: gclk_dummy {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <0>;
+		};
 
 		/*
 		 * Fixed 24MHz oscillator inputs to SoC
@@ -914,9 +948,10 @@
 			      <0xec170030 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_so";
+			assigned-clocks = <&gclk_so>;
+			assigned-clock-rates = <24000000>;
 			amb,extra-scaler;
 			amb,frac-mode;
-			amb,init-rate = <24000000>;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
@@ -930,12 +965,13 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo";
+			assigned-clocks = <&gclk_vo>;
+			assigned-clock-rates = <24000000>;
 			amb,extra-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
 			amb,ctrl2-val = <0x3f700900>;
 			amb,ctrl3-val = <0x00068306>;
-			amb,init-rate = <24000000>;
 			amb,min-vco = <2500>; /* in MHz */
 		};
 
@@ -950,9 +986,10 @@
 			      <0xec1700cc 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo2";
+			assigned-clocks = <&gclk_vo2>;
+			assigned-clock-rates = <24000000>;
 			amb,extra-scaler;
 			amb,frac-mode;
-			amb,init-rate = <24000000>;
 		};
 
 		gclk_audio: gclk-audio {
@@ -966,9 +1003,10 @@
 			      <0xec17005c 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_audio";
+			assigned-clocks = <&gclk_so>;
+			assigned-clock-rates = <12288000>;
 			amb,extra-scaler;
 			amb,frac-mode;
-			amb,init-rate = <12288000>;
 		};
 
 		gclk_axi: gclk-axi {
@@ -1039,10 +1077,12 @@
 
 		gclk_uart: gclk-uart {
 			#clock-cells = <0>;
-			compatible = "ambarella,div-clock";
-			reg = <0xec170038 4>;
-			clocks = <&osc>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec170038 4>, <0xec1701c8 4>;
+			clocks = <&osc>, <&gclk_core>, <&gclk_dummy>, <&gclk_idsp>;
 			clock-output-names = "gclk_uart";
+			assigned-clocks = <&gclk_uart>;
+			assigned-clock-parents = <&osc>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};

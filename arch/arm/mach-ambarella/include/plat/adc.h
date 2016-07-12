@@ -51,13 +51,17 @@
 #define ADC_SUPPORT_T2V		0
 #endif
 
-#if (CHIP_REV == S2E) || (CHIP_REV == S3L)
+#if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3L)
 #define ADC_PERIOD_CYCLE		6
 #elif (CHIP_REV == S5)
 #define ADC_PERIOD_CYCLE		20
 #else
 #define ADC_PERIOD_CYCLE		5
 #endif
+
+#define ADC_MAX_CLOCK			12000000
+#define ADC_MAX_FIFO_DEPTH		1024
+
 /* ==========================================================================*/
 #if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define ADC_OFFSET			0xD000
@@ -239,22 +243,32 @@
 #define ADC_FIFO_DATA2_REG		ADC_REG(ADC_FIFO_DATA2_OFFSET)
 #define ADC_FIFO_DATA3_REG		ADC_REG(ADC_FIFO_DATA3_OFFSET)
 
-#define ADC_DATA_OFFSET(ch)		(ADC_DATA0_OFFSET + (ch) * 4)
-#define ADC_DATA_REG(ch)		ADC_REG(ADC_DATA_OFFSET(ch))
-#define ADC_FIFO_CTRL_X_OFFSET(fifoNo)	(ADC_FIFO_CTRL_0_OFFSET + (fifoNo) * 4)
-#define ADC_FIFO_CTRL_X_REG(fifoNo)	ADC_REG(ADC_FIFO_CTRL_X_OFFSET(fifoNo))
-#define ADC_CHAN_INTR_OFFSET(ch)	(ADC_CHAN0_INTR_OFFSET + (ch) * 4)
-#define ADC_CHAN_INTR_REG(ch)		ADC_REG(ADC_CHAN_INTR_OFFSET(ch))
+#define ADC_SLOT_CTRL_X_OFFSET(n)	(ADC_SLOT_CTRL_0_OFFSET + (n) * 4)
+#define ADC_SLOT_CTRL_X_REG(n)		ADC_REG(ADC_SLOT_CTRL_X_OFFSET(n))
+
+#define ADC_INT_CTRL_X_OFFSET(n)	(ADC_CHAN0_INTR_OFFSET + (n) * 4)
+#define ADC_INT_CTRL_X_REG(n)		ADC_REG(ADC_INT_CTRL_X_OFFSET(n))
+
+#define ADC_DATA_X_OFFSET(n)		(ADC_DATA0_OFFSET + (n) * 4)
+#define ADC_DATA_X_REG(n)		ADC_REG(ADC_DATA_X_OFFSET(n))
+
+#define ADC_FIFO_CTRL_X_OFFSET(n)	(ADC_FIFO_CTRL_0_OFFSET + (n) * 4)
+#define ADC_FIFO_CTRL_X_REG(n)		ADC_REG(ADC_FIFO_CTRL_X_OFFSET(n))
+
+#define ADC_FIFO_STATUS_X_OFFSET(n)	(ADC_FIFO_STATUS_0_OFFSET + (n) * 4)
+#define ADC_FIFO_STATUS_X_REG(n)	ADC_REG(ADC_FIFO_STATUS_X_OFFSET(n))
+
+#define ADC_FIFO_DATA_X_OFFSET(n)	(ADC_FIFO_DATA0_OFFSET + (n) * 0x80)
+#define ADC_FIFO_DATA_X_REG(n)		ADC_REG(ADC_FIFO_DATA_X_OFFSET(n))
 
 /* if ADC_CONTROL_TYPE == 1 */
 #define ADC_CONTROL_RESET		0x01
 #define ADC_FIFO_OVER_INT_EN		(0x1 << 31)
 #define ADC_FIFO_UNDR_INT_EN		(0x1 << 30)
 #define ADC_FIFO_DEPTH			0x80
-#define ADC_FIFO_TH			(((ADC_FIFO_DEPTH >> 2)-1) << 16)
+#define ADC_FIFO_TH(n)			((n) << 16)
 #define ADC_FIFO_CLEAR			0x1
-#define ADC_FIFO_ID_SHIFT		12
-#define ADC_FIFO_CONTROL_CLEAR		0x01
+#define ADC_FIFO_ID(n)			((n) << 12)
 #define ADC_FIFO_NUMBER		        0x04
 
 #define ADC_CTRL_SCALER_POWERDOWN	0x100
@@ -281,6 +295,7 @@
 #define ADC_EN_LO(x)			((x) << 31)
 #endif
 
+#define ADC_INT_THRESHOLD_EN		(1 << 31)
 #define ADC_VAL_HI(x)			(((x) & 0xfff) << 16)
 #define ADC_VAL_LO(x)			((x) & 0xfff)
 /* ==========================================================================*/
@@ -301,33 +316,6 @@
 #define ADC_CH11			(1 << 11)
 
 /* ==========================================================================*/
-
-enum {
-	AMBADC_ONESHOT = 0,
-	AMBADC_CONTINUOUS,
-};
-
-struct ambadc_client;
-typedef int (*ambadc_client_callback)(struct ambadc_client *client,
-			u32 ch, u32 level);
-typedef int (*ambadc_read_level)(u32 ch);
-
-struct ambadc_client {
-	struct device *dev;
-	struct ambadc_host *host;
-	struct list_head node;
-	u32 threshold[ADC_NUM_CHANNELS];
-	u32 mode;
-	ambadc_client_callback callback;
-};
-
-extern struct ambadc_client *ambarella_adc_register_client(struct device *dev,
-			u32 mode, ambadc_client_callback callback);
-extern void ambarella_adc_unregister_client(struct ambadc_client *client);
-
-extern int ambarella_adc_set_threshold(struct ambadc_client *client,
-			u32 ch, u32 low, u32 high);
-extern int ambarella_adc_read_level(u32 ch);
 
 #endif /* __PLAT_AMBARELLA_ADC_H__ */
 

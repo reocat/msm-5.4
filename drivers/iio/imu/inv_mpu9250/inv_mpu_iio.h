@@ -195,6 +195,7 @@ struct inv_mpu6050_state {
 #define INV_MPU6050_REG_PWR_MGMT_2          0x6C
 #define INV_MPU6050_BIT_PWR_ACCL_STBY       0x38
 #define INV_MPU6050_BIT_PWR_GYRO_STBY       0x07
+#define INV_MPU6050_BIT_PWR_TEMP_STBY       0x01
 
 #define INV_MPU6050_REG_FIFO_COUNT_H        0x72
 #define INV_MPU6050_REG_FIFO_R_W            0x74
