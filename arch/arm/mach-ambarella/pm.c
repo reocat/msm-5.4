@@ -139,10 +139,9 @@ static unsigned long ambarella_notify_mcu_prepare(void)
 
 	gpio_info = gpio_regbase[bank] | offset;
 
-	/* mux GPIO mode, set output, and pull high 100ms */
+	/* Mux GPIO output mode and keep low */
+	ambarella_pm_gpio_output(gpio_notify_mcu, 0);
 	ambarella_pm_gpiomux(gpio_notify_mcu);
-	ambarella_pm_gpio_output(gpio_notify_mcu, 1);
-	mdelay(100);
 
 	return gpio_info;
 }
