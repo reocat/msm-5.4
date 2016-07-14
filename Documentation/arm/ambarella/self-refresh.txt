@@ -67,7 +67,8 @@ PS: for those SoCs without internal PWC, you have to use external MCU.
 
 If the board design is to use external MCU for power sequence control, the SoC
 needs to communicate with the MCU through a GPIO, and the protocol is:
-1) SoC keeps the GPIO low at least 100ms to notify MCU to enter self-refresh.
+1) SoC keeps the GPIO high 100ms to notify MCU to enter self-refresh. After
+100ms, SoC should keep the GPIO low.
 2) MCU notifies SoC the state after powered up:
 2.1) if cold boot, MCU keeps the GPIO high.
 2.2) if resume from SR, MCU keeps the GPIO low.
