@@ -734,6 +734,7 @@
 			compatible = "ambarella,dwc3";
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scr-regmap = <&scratchpad_syscon>;
+			amb,usbphy = <&usbphy>;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
