@@ -259,6 +259,8 @@ static int start_readdir(struct file *file, struct dir_context *ctx)
 	dir_db = (struct readdir_db*)get_zeroed_page(GFP_KERNEL);
 	if (!dir_db)
 		return -ENOMEM;
+	/* Set the initial value for i_nlink. */
+	dir_db->nlink = 1;
 	file->f_pos = (loff_t)((unsigned long)dir_db);
 
 	msg = &dir_db->msg;
