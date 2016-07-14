@@ -5,6 +5,7 @@
  *
  * History:
  *	2015/04/28 - [XianqingZheng] Created file
+ *	2016/07/12 - [XianqingZheng] rewrite the file
  *
  * Copyright (C) 2014-2018, Ambarella, Inc.
  *
@@ -33,9 +34,6 @@
 #include <linux/slab.h>
 #include <sound/pcm_params.h>
 
-static unsigned int dai_fmt;
-module_param(dai_fmt, uint, 0644);
-MODULE_PARM_DESC(dai_fmt, "DAI format.");
 /* clk_fmt :
 * 0 : mclk, bclk provided by cpu
 * 1 : bclk provide by cpu, mclk is not used
@@ -61,11 +59,13 @@ MODULE_PARM_DESC(dai_fmt, "DAI format.");
 * There are one connection we are not used, it is like clk_fmt=0,but power on the codec PLL.
 * It is a waster of power, so we do not use it.
 */
-static unsigned int dummy_dai_fmt;
-module_param(dummy_dai_fmt, uint, 0644);
+struct amb_snd_fmt {
+	u32	dai_fmt;
+	u32	clk_fmt;
+	bool	dmic;
+};
 
-static unsigned int clk_fmt;
-module_param(clk_fmt, uint, 0664);
+struct amb_snd_fmt *amb_fmt = NULL;
 
 struct amb_clk {
 	int mclk;
@@ -73,7 +73,7 @@ struct amb_clk {
 	int bclk;
 };
 
-static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk)
+static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk, bool dmic)
 {
 	u32 channels, sample_bits, rate;
 
@@ -90,7 +90,11 @@ static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk
 	channels = params_channels(params);
 	rate = params_rate(params);
 
-	clk->mclk = 12288000;
+	if(dmic)
+		clk->mclk = 1024 * rate;
+	else
+		clk->mclk = 12288000;
+
 	clk->bclk = channels * rate * sample_bits;
 
 	clk->i2s_div = (clk->mclk / ( 2 * clk->bclk)) - 1;
@@ -104,23 +108,24 @@ static int amba_general_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int rval = 0;
-	int i2s_mode;
+	struct snd_soc_dai_link *dai_link = rtd->dai_link;
 	struct amb_clk clk={0};
+	int i2s_mode, i = dai_link->be_id, rval = 0;
+	bool dmic = amb_fmt[i].dmic;
 
-	rval = amba_clk_config(params, &clk);
+	rval = amba_clk_config(params, &clk, dmic);
 	if (rval < 0) {
 		pr_err("amba can not support the sample rate\n");
 		goto hw_params_exit;
 	}
 
-	if (dai_fmt == 0)
+	if (amb_fmt[i].dai_fmt == 0)
 		i2s_mode = SND_SOC_DAIFMT_I2S;
 	else
 		i2s_mode = SND_SOC_DAIFMT_DSP_A;
 
 	/* set the I2S system data format*/
-	if (clk_fmt == 2) {
+	if (amb_fmt[i].clk_fmt == 2) {
 		rval = snd_soc_dai_set_fmt(codec_dai,
 			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM);
 		if (rval < 0) {
@@ -152,15 +157,15 @@ static int amba_general_board_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* set the I2S system clock*/
-	switch(clk_fmt) {
+	switch(amb_fmt[i].clk_fmt) {
 	case 0:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
+		rval = snd_soc_dai_set_sysclk(codec_dai, amb_fmt[i].clk_fmt, clk.mclk, 0);
 		break;
 	case 1:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.bclk, 0);
+		rval = snd_soc_dai_set_sysclk(codec_dai, amb_fmt[i].clk_fmt, clk.bclk, 0);
 		break;
 	case 2:
-		rval = snd_soc_dai_set_sysclk(codec_dai, clk_fmt, clk.mclk, 0);
+		rval = snd_soc_dai_set_sysclk(codec_dai, amb_fmt[i].clk_fmt, clk.mclk, 0);
 		break;
 	default:
 		pr_err("clk_fmt is wrong, just 0, 1, 2 is available!\n");
@@ -189,62 +194,15 @@ hw_params_exit:
 	return rval;
 }
 
-static int amba_dummy_board_hw_params(struct snd_pcm_substream *substream,
-	struct snd_pcm_hw_params *params)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int i2s_mode, rval = 0;
-	struct amb_clk clk={0};
-
-	rval = amba_clk_config(params, &clk);
-	if (rval < 0) {
-		pr_err("amba can not support the sample rate\n");
-		goto hw_params_exit;
-	}
-
-	if (dummy_dai_fmt == 0)
-		i2s_mode = SND_SOC_DAIFMT_I2S;
-	else
-		i2s_mode = SND_SOC_DAIFMT_DSP_A;
-
-	/* set the I2S system data format*/
-	rval = snd_soc_dai_set_fmt(cpu_dai,
-		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (rval < 0) {
-		printk(KERN_ERR "can't set cpu DAI configuration\n");
-		goto hw_params_exit;
-	}
-
-	/* set the I2S system clock*/
-	rval = snd_soc_dai_set_sysclk(cpu_dai, AMBARELLA_CLKSRC_ONCHIP, clk.mclk, 0);
-	if (rval < 0) {
-		printk(KERN_ERR "can't set cpu MCLK configuration\n");
-		goto hw_params_exit;
-	}
-
-	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.i2s_div);
-	if (rval < 0) {
-		printk(KERN_ERR "can't set cpu MCLK/SF ratio\n");
-		goto hw_params_exit;
-	}
-
-hw_params_exit:
-	return rval;
-}
-
 static struct snd_soc_ops amba_general_board_ops = {
 	.hw_params = amba_general_board_hw_params,
-};
-
-static struct snd_soc_ops amba_dummy_board_ops = {
-	.hw_params = amba_dummy_board_hw_params,
 };
 
 /* ambevk machine dapm widgets */
 static const struct snd_soc_dapm_widget amba_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic internal", NULL),
 	SND_SOC_DAPM_MIC("Mic external", NULL),
+	SND_SOC_DAPM_MIC("DMIC", NULL),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
 	SND_SOC_DAPM_HP("HP Jack", NULL),
@@ -266,10 +224,11 @@ static struct snd_soc_card snd_soc_card_amba = {
 static int amba_soc_snd_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct device_node *cpup_np, *codec_np, *dummy_codec_np;
+	struct device_node *cpup_np, *codec_np;
+	const __be32 *prop;
 	struct snd_soc_dai_link *amba_dai_link;
 	struct snd_soc_card *card = &snd_soc_card_amba;
-	int rval = 0;
+	int rval = 0, i, psize;
 
 	card->dev = &pdev->dev;
 
@@ -279,97 +238,102 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 	}
 
 	cpup_np = of_parse_phandle(np, "amb,i2s-controllers", 0);
-	codec_np = of_parse_phandle(np, "amb,audio-codec", 0);
-	dummy_codec_np = of_parse_phandle(np, "amb,dummy-codec", 0);
-	if (!cpup_np || !dummy_codec_np) {
-		dev_err(&pdev->dev, "phandle missing or invalid\n");
+	if (!cpup_np) {
+		dev_err(&pdev->dev, "phandle missing or invalid for amb,i2s-controllers\n");
 		return -EINVAL;
 	}
 
-	if(codec_np) {
+	prop = of_get_property(np, "amb,audio-codec", &psize);
+	if (!prop) {
+		dev_err(&pdev->dev, "phandle missing or invalid for amb,audio-codec\n");
+		return -EINVAL;
+	}
+
+	psize /= sizeof(u32);
+	amba_dai_link = devm_kzalloc(&pdev->dev, psize * sizeof(*amba_dai_link), GFP_KERNEL);
+	if (amba_dai_link == NULL) {
+		dev_err(&pdev->dev, "alloc memory for amba_dai_link fail!\n");
+		return -ENOMEM;
+	}
+
+	amb_fmt =  devm_kzalloc(&pdev->dev, psize * sizeof(struct amb_snd_fmt), GFP_KERNEL);
+	if (amb_fmt == NULL) {
+		dev_err(&pdev->dev, "alloc memory for amb_fmt fail!\n");
+		return -ENOMEM;
+	}
+
+	for(i = 0; i < psize; i++) {
+		codec_np = of_parse_phandle(np, "amb,audio-codec", i);
+		amba_dai_link[i].codec_of_node = codec_np;
+		amba_dai_link[i].cpu_of_node = cpup_np;
+		amba_dai_link[i].platform_of_node = cpup_np;
+		amba_dai_link[i].init = amba_codec_init;
+		amba_dai_link[i].ops = &amba_general_board_ops;
+		amba_dai_link[i].be_id = i;
+		card->dai_link = amba_dai_link;
+		card->num_links = psize;
+
+		/*Get fmt information from dts*/
+		rval = of_property_read_u32_index(np, "amb,dai_fmt", i,
+				&amb_fmt[i].dai_fmt);
+		if(rval < 0) {
+			dev_err(&pdev->dev, "get dai_fmt from dts for codec[%d] fail\n", i);
+			return -EINVAL;
+		}
+
+		rval = of_property_read_u32_index(np, "amb,clk_fmt", i,
+				&amb_fmt[i].clk_fmt);
+		if(rval < 0) {
+			dev_err(&pdev->dev, "get clk_fmt from dts for codec[%d] fail\n", i);
+			return -EINVAL;
+		}
+
+		/*Get codec information from dts*/
+		rval = of_property_read_string_index(np, "amb,codec-name", i,
+				&card->dai_link[i].name);
+		if(rval < 0) {
+			dev_err(&pdev->dev, "can not get codec-name from dts\n");
+			return -EINVAL;
+		}
+
+		rval = of_property_read_string_index(np, "amb,stream-name", i,
+				&card->dai_link[i].stream_name);
+		if(rval < 0) {
+			dev_err(&pdev->dev, "can not get stream-name from dts\n");
+			return -EINVAL;
+		}
+
+		rval = of_property_read_string_index(np, "amb,codec-dai-name", i,
+				&card->dai_link[i].codec_dai_name);
+		if(rval < 0) {
+			dev_err(&pdev->dev, "can not get codec-dai-name from dts\n");
+			return -EINVAL;
+		}
+
+		if(strcmp(card->dai_link[i].codec_dai_name, "dmic-hifi") == 0) {
+			amb_fmt[i].dmic = true;
+		} else {
+			amb_fmt[i].dmic = false;
+		}
+
+		of_node_put(codec_np);
+		codec_np = NULL;
+	}
+
+	of_node_put(cpup_np);
+	if(psize >= 2) {
 		rval = snd_soc_of_parse_audio_routing(card,
 		"amb,audio-routing");
 		if(rval) {
 			dev_err(&pdev->dev, "amb,audio-routing is invalid\n");
 			return -EINVAL;
 		}
-		/*alloc two amba_dai_link for audio codec and dummy codec*/
-		amba_dai_link = devm_kzalloc(&pdev->dev, 2 * sizeof(*amba_dai_link), GFP_KERNEL);
-		if (amba_dai_link == NULL) {
-			dev_err(&pdev->dev, "alloc memory for amba_dai_link fail!\n");
-			return -ENOMEM;
-		}
-
-		amba_dai_link[0].codec_of_node = codec_np;
-		amba_dai_link[0].cpu_of_node = cpup_np;
-		amba_dai_link[0].platform_of_node = cpup_np;
-		amba_dai_link[0].init = amba_codec_init;
-		amba_dai_link[0].ops = &amba_general_board_ops;
-
-		amba_dai_link[1].codec_of_node = dummy_codec_np;
-		amba_dai_link[1].cpu_of_node = cpup_np;
-		amba_dai_link[1].platform_of_node = cpup_np;
-		amba_dai_link[1].init = amba_codec_init;
-		amba_dai_link[1].ops = &amba_dummy_board_ops;
-
-		card->dai_link = amba_dai_link;
-		card->num_links = 2;
-
-		/*get parameter from code_np to fill struct snd_soc_dai_link*/
-		rval = of_property_read_string_index(np, "amb,codec-name", 0, &card->dai_link[0].name);
-		if(rval < 0) {
-			dev_err(&pdev->dev, "codec-name got from device tree is invalid\n");
-			return -EINVAL;
-		}
-
-		rval = of_property_read_string_index(np, "amb,stream-name", 0, &card->dai_link[0].stream_name);
-		if(rval < 0) {
-			dev_err(&pdev->dev, "stream-name got from device tree is invalid\n");
-			return -EINVAL;
-		}
-
-		rval = of_property_read_string_index(np, "amb,codec-dai-name", 0, &card->dai_link[0].codec_dai_name);
-		if(rval < 0) {
-			dev_err(&pdev->dev, "codec-dai-name got from device tree is invalid\n");
-			return -EINVAL;
-		}
-
-		card->dai_link[1].name = "AMB-DUMMY";
-		card->dai_link[1].stream_name = "AMB-DUMMY-STREAM";
-		card->dai_link[1].codec_dai_name = "AMBARELLA_DUMMY_CODEC";
-
-	} else {
-		/*alloc only one amba_dai_link for dummy codec*/
-		amba_dai_link = devm_kzalloc(&pdev->dev, sizeof(*amba_dai_link), GFP_KERNEL);
-		if (amba_dai_link == NULL) {
-			dev_err(&pdev->dev, "alloc memory for amba_dai_link fail!\n");
-			return -ENOMEM;
-		}
-
-		amba_dai_link[0].codec_of_node = dummy_codec_np;
-		amba_dai_link[0].cpu_of_node = cpup_np;
-		amba_dai_link[0].platform_of_node = cpup_np;
-		amba_dai_link[0].init = amba_codec_init;
-		amba_dai_link[0].ops = &amba_dummy_board_ops;
-		card->dai_link = amba_dai_link;
-		card->num_links = 1;
-		card->dai_link[0].name = "AMB-DUMMY";
-		card->dai_link[0].stream_name = "AMB-DUMMY-STREAM";
-		card->dai_link[0].codec_dai_name = "AMBARELLA_DUMMY_CODEC";
 	}
-
-	of_node_put(codec_np);
-	of_node_put(cpup_np);
-	of_node_put(dummy_codec_np);
-
-	/*get dai_fmt and clk_fmt from device tree*/
-	of_property_read_u32(np, "amb,dai_fmt", &dai_fmt);
-	of_property_read_u32(np, "amb,dummy_dai_fmt", &dummy_dai_fmt);
-	of_property_read_u32(np, "amb,clk_fmt", &clk_fmt);
 
 	rval = snd_soc_register_card(card);
 	if (rval)
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", rval);
+
 
 	return rval;
 }
