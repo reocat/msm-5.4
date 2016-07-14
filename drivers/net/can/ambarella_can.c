@@ -17,6 +17,7 @@
 #define CAN_TT_CTRL				0x004
 #define CAN_RESET				0x008
 #define CAN_TQ					0x010
+#define CAN_TQ_FD				0x014
 #define CAN_TT_TIMER_ENABLE			0x01C
 #define CAN_ERR_STATUS				0x020
 #define CAN_INT_CTRL				0x028
@@ -562,6 +563,20 @@ static void ambacan_set_bittiming(struct net_device *dev)
 	writel_relaxed(reg_tq, priv->regs + CAN_TQ);
 }
 
+static void ambacan_set_data_bittiming(struct net_device *dev)
+{
+	const struct ambacan_priv *priv = netdev_priv(dev);
+	const struct can_bittiming *bt = &priv->can.data_bittiming;
+	u32 reg_tq = 0;
+
+	reg_tq |= CAN_TQ_PRE(bt->brp - 1) |
+		CAN_TQ_TSEG1(bt->phase_seg1 - 1) |
+		CAN_TQ_TSEG2(bt->phase_seg2 - 1) |
+		CAN_TQ_SJW(bt->sjw - 1);
+
+	writel_relaxed(reg_tq, priv->regs + CAN_TQ_FD);
+}
+
 static int ambacan_chip_start(struct net_device *dev)
 {
 	u32 config, mask, int_ctrl;
@@ -608,6 +623,9 @@ static int ambacan_chip_start(struct net_device *dev)
 	writel_relaxed(int_ctrl, priv->regs + CAN_INT_CTRL);
 
 	ambacan_set_bittiming(dev);
+	/* set data bitrate only when FD is enabled. */
+	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
+		ambacan_set_data_bittiming(dev);
 
 	// Enable CAN
 	writel_relaxed(BIT(0), priv->regs + CAN_ENABLE);
