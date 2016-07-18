@@ -13,6 +13,7 @@
 #include <linux/err.h>
 #include <linux/pm_runtime.h>
 #include <linux/ambpriv_device.h>
+#include <linux/dma-mapping.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
@@ -145,6 +146,20 @@ static struct ambpriv_device *of_ambpriv_device_alloc(struct device_node *np,
 	dev->dev.parent = parent ? : &ambpriv_bus;
 	of_device_make_bus_id(&dev->dev);
 	dev->name = dev_name(&dev->dev);
+
+	/*
+	 * Set default coherent_dma_mask to 32 bit.  Drivers are expected to
+	 * setup the correct supported mask.
+	 */
+	if (!dev->dev.coherent_dma_mask)
+		dev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+
+	/*
+	 * Set it to coherent_dma_mask by default if the architecture
+	 * code has not set it.
+	 */
+	if (!dev->dev.dma_mask)
+		dev->dev.dma_mask = &dev->dev.coherent_dma_mask;
 
 	return dev;
 }
