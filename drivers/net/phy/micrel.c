@@ -544,6 +544,22 @@ static int ksz9031_read_status(struct phy_device *phydev)
 	return 0;
 }
 
+static int ksz9031_config_aneg(struct phy_device *phydev)
+{
+	u32 val;
+
+	genphy_config_aneg(phydev);
+
+	/* Set auto Master/Slave resolution process */
+	val = phy_read(phydev, MII_CTRL1000);
+	val |= 0x1000;
+	val &= ~(0x0800);
+	phy_write(phydev, MII_CTRL1000, val);
+
+	return 0;
+}
+
+
 static int ksz8873mll_config_aneg(struct phy_device *phydev)
 {
 	return 0;
@@ -801,7 +817,7 @@ static struct phy_driver ksphy_driver[] = {
 	.flags		= PHY_HAS_MAGICANEG | PHY_HAS_INTERRUPT,
 	.driver_data	= &ksz9021_type,
 	.config_init	= ksz9031_config_init,
-	.config_aneg	= genphy_config_aneg,
+	.config_aneg	= ksz9031_config_aneg,
 	.read_status	= ksz9031_read_status,
 	.ack_interrupt	= kszphy_ack_interrupt,
 	.config_intr	= kszphy_config_intr,
