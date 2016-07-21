@@ -209,8 +209,14 @@ static int amba_dummy_board_hw_params(struct snd_pcm_substream *substream,
 		i2s_mode = SND_SOC_DAIFMT_DSP_A;
 
 	/* set the I2S system data format*/
-	rval = snd_soc_dai_set_fmt(cpu_dai,
-		i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if(clk_fmt == 2) {
+		rval = snd_soc_dai_set_fmt(cpu_dai,
+			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM);
+	} else {
+		rval = snd_soc_dai_set_fmt(cpu_dai,
+			i2s_mode | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	}
+
 	if (rval < 0) {
 		printk(KERN_ERR "can't set cpu DAI configuration\n");
 		goto hw_params_exit;
