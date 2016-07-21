@@ -866,22 +866,22 @@ static int ak4951_set_pll(u8 *pll, int clk_id,int freq)
 	if (clk_id == AK4951_MCLK_IN_BCLK_OUT){
 		switch (freq) {
 		case 11289600:
-			*pll |= (2 << 4);
-			break;
-		case 12288000:
-			*pll |= (3 << 4);
-			break;
-		case 12000000:
 			*pll |= (4 << 4);
 			break;
-		case 24000000:
+		case 12288000:
 			*pll |= (5 << 4);
 			break;
-		case 13500000:
+		case 12000000:
 			*pll |= (6 << 4);
 			break;
-		case 27000000:
+		case 24000000:
 			*pll |= (7 << 4);
+			break;
+		case 13500000:
+			*pll |= (0xC << 4);
+			break;
+		case 27000000:
+			*pll |= (0xD << 4);
 			break;
 		default:
 			break;
@@ -952,7 +952,7 @@ static int ak4951_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
             break;
         case SND_SOC_DAIFMT_CBM_CFM:
 			akdbgprt("\t[AK4951] %s(Master)\n",__FUNCTION__);
-            mode |= (AK4951_M_S);
+            mode |= AK4951_M_S;
             //format |= (AK4951_BCKO);
             break;
         case SND_SOC_DAIFMT_CBS_CFM:
