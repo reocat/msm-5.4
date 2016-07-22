@@ -52,22 +52,22 @@ static int enable_ext_i2s = 1;
 
 static inline void dai_tx_enable(void)
 {
-	amba_setbitsl(I2S_INIT_REG, DAI_TX_EN);
+	amba_setbitsl(I2S_INIT_REG, I2S_TX_ENABLE_BIT);
 }
 
 static inline void dai_rx_enable(void)
 {
-	amba_setbitsl(I2S_INIT_REG, DAI_RX_EN);
+	amba_setbitsl(I2S_INIT_REG, I2S_RX_ENABLE_BIT);
 }
 
 static inline void dai_tx_disable(void)
 {
-	amba_clrbitsl(I2S_INIT_REG, DAI_TX_EN);
+	amba_clrbitsl(I2S_INIT_REG, I2S_TX_ENABLE_BIT);
 }
 
 static inline void dai_rx_disable(void)
 {
-	amba_clrbitsl(I2S_INIT_REG, DAI_RX_EN);
+	amba_clrbitsl(I2S_INIT_REG, I2S_RX_ENABLE_BIT);
 }
 
 static inline void dai_tx_fifo_rst(void)
@@ -82,7 +82,7 @@ static inline void dai_rx_fifo_rst(void)
 
 static inline void dai_fifo_rst(void)
 {
-	amba_setbitsl(I2S_INIT_REG, DAI_FIFO_RST);
+	amba_setbitsl(I2S_INIT_REG, I2S_FIFO_RESET_BIT);
 }
 
 static int ambarella_i2s_prepare(struct snd_pcm_substream *substream,
@@ -130,149 +130,99 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *cpu_dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
-	u8 slots, word_len, word_pos;
-	u32 clock_divider, clock_reg, channels, tx_ctrl = 0, multi24 = 0;
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->amb_i2s_intf;
+	u32 clock_reg;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable();
 	dai_rx_disable();
 
-	channels = params_channels(params);
-	/* Set channels */
-	switch (channels) {
-	case 2:
-		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_2CHANNELS_ENB);
-		break;
-	case 4:
-		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_4CHANNELS_ENB);
-		break;
-	case 6:
-		amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), I2S_6CHANNELS_ENB);
-		break;
-	}
-	priv_data->amb_i2s_intf.ch = channels;
+	i2s_intf->sfreq = params_rate(params);
+	i2s_intf->channels = params_channels(params);
+	amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), i2s_intf->channels / 2 - 1);
 
 	/* Set format */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-		priv_data->amb_i2s_intf.word_len = DAI_16bits;
-		word_len = 0x0f;
-		tx_ctrl |= 0x08; /* set unison bit (LR both in TX_LEFT_DATA) */
-		if (priv_data->amb_i2s_intf.mode == DAI_DSP_Mode) {
-			slots = channels - 1;
-			word_pos = 0x0f;
-			priv_data->amb_i2s_intf.slots = slots;
+		i2s_intf->multi24 = 0;
+		i2s_intf->tx_ctrl = I2S_TX_UNISON_BIT;
+		i2s_intf->word_len = 15;
+		if (i2s_intf->mode == I2S_DSP_MODE) {
+			i2s_intf->slots = i2s_intf->channels - 1;
+			i2s_intf->word_pos = 15;
 		} else {
-			slots = 0;
-			word_pos = 0;
-			priv_data->amb_i2s_intf.slots = DAI_32slots;
+			i2s_intf->slots = 0;
+			i2s_intf->word_pos = 0;
 		}
 		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
+
 	case SNDRV_PCM_FORMAT_S24_LE:
-		priv_data->amb_i2s_intf.word_len = DAI_24bits;
-		word_len = 0x17;
-		multi24 = 0x1; /* multi_24_en bit */
-		if (priv_data->amb_i2s_intf.mode == DAI_DSP_Mode) {
-			slots = channels - 1;
-			word_pos = 0x00; /* ignored, but set it to something */
-			priv_data->amb_i2s_intf.slots = slots;
+		i2s_intf->multi24 = I2S_24BITMUX_MODE_ENABLE;
+		i2s_intf->tx_ctrl = 0;
+		i2s_intf->word_len = 23;
+		if (i2s_intf->mode == I2S_DSP_MODE) {
+			i2s_intf->slots = i2s_intf->channels - 1;
+			i2s_intf->word_pos = 0; /* ignored */
 		} else {
-			slots = 0;
-			word_pos = 0; /* ignored, but set it to something */
-			priv_data->amb_i2s_intf.slots = DAI_32slots;
+			i2s_intf->slots = 0;
+			i2s_intf->word_pos = 0; /* ignored */
 		}
 		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		break;
+
 	default:
 		goto hw_params_exit;
 	}
 
-	priv_data->amb_i2s_intf.word_pos = word_pos;
-	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
+	if (priv_data->dai_master == true) {
+		i2s_intf->tx_ctrl |= I2S_TX_WS_MST_BIT;
+		i2s_intf->rx_ctrl |= I2S_RX_WS_MST_BIT;
+	} else {
+		i2s_intf->tx_ctrl &= ~I2S_TX_WS_MST_BIT;
+		i2s_intf->rx_ctrl &= ~I2S_RX_WS_MST_BIT;
+	}
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (priv_data->amb_i2s_intf.ms_mode != DAI_SLAVE)
-			tx_ctrl |= 0x20;
-		amba_writel(I2S_TX_CTRL_REG, tx_ctrl);
+		amba_writel(I2S_TX_CTRL_REG, i2s_intf->tx_ctrl);
 		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
 	} else {
-		if (priv_data->amb_i2s_intf.ms_mode == DAI_SLAVE)
-			amba_writel(I2S_RX_CTRL_REG, 0x00);
-		else
-			amba_writel(I2S_RX_CTRL_REG, 0x02);
+		amba_writel(I2S_RX_CTRL_REG, i2s_intf->rx_ctrl);
 		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
 	}
 
-	amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
-	amba_writel(I2S_WLEN_REG, word_len);
-	amba_writel(I2S_WPOS_REG, word_pos);
-	amba_writel(I2S_SLOT_REG, slots);
-	amba_writel(I2S_24BITMUX_MODE_REG, multi24);
-
-	switch (params_rate(params)) {
-	case 8000:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_8000;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_1536xfs;
-		break;
-	case 11025:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_11025;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_1152xfs;
-		break;
-	case 16000:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_16000;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_768xfs;
-		break;
-	case 22050:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_22050;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_512xfs;
-		break;
-	case 32000:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_32000;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_384xfs;
-		break;
-	case 44100:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_44100;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
-		break;
-	case 48000:
-		priv_data->amb_i2s_intf.sfreq = AUDIO_SF_48000;
-		priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
-		break;
-	default:
-		goto hw_params_exit;
-	}
+	amba_writel(I2S_MODE_REG, i2s_intf->mode);
+	amba_writel(I2S_WLEN_REG, i2s_intf->word_len);
+	amba_writel(I2S_WPOS_REG, i2s_intf->word_pos);
+	amba_writel(I2S_SLOT_REG, i2s_intf->slots);
+	amba_writel(I2S_24BITMUX_MODE_REG, i2s_intf->multi24);
 
 	/* Set clock */
-	clk_set_rate(priv_data->mclk, priv_data->amb_i2s_intf.mclk);
+	clk_set_rate(priv_data->mclk, i2s_intf->mclk);
 
 	mutex_lock(&clock_reg_mutex);
+
 	clock_reg = amba_readl(I2S_CLOCK_REG);
-
-	/* In 16 bit mode, the channel width is 16 bits, and in 24 bit
-	 * mode then channel width is 32 bits (see Ambarella S2L Hardware
-         * Programming Manual, Table 9-1); consequently we need to adjust
-	 * the clock divider accordingly, by referencing 'double_rate' here.
-	 */
-
-	clock_divider = priv_data->amb_i2s_intf.div;
-
 	clock_reg &= ~DAI_CLOCK_MASK;
-	clock_reg |= clock_divider;
-	if (priv_data->amb_i2s_intf.ms_mode == DAI_MASTER)
+	clock_reg |= i2s_intf->div;
+
+	if (priv_data->dai_master == true)
 		clock_reg |= I2S_CLK_MASTER_MODE;
 	else
-		clock_reg &= (~I2S_CLK_MASTER_MODE);
-	/* Disable output BCLK and LRCLK to disable external codec */
-	if (enable_ext_i2s == 0)
+		clock_reg &= ~I2S_CLK_MASTER_MODE;
+
+	if (enable_ext_i2s)
+		clock_reg |= I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN;
+	else
 		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
 
 	if (bclk_reverse)
-		clock_reg &= ~(1<< 6);
+		clock_reg &= ~I2S_CLK_TX_PO_FALL;
 	else
-		clock_reg |= (1<< 6);
+		clock_reg |= I2S_CLK_TX_PO_FALL;
 
 	amba_writel(I2S_CLOCK_REG, clock_reg);
+
 	mutex_unlock(&clock_reg_mutex);
 
 	dai_rx_enable();
@@ -329,16 +279,16 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_LEFT_J:
-		priv_data->amb_i2s_intf.mode = DAI_leftJustified_Mode;
+		priv_data->amb_i2s_intf.mode = I2S_LEFT_JUSTIFIED_MODE;
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
-		priv_data->amb_i2s_intf.mode = DAI_rightJustified_Mode;
+		priv_data->amb_i2s_intf.mode = I2S_RIGHT_JUSTIFIED_MODE;
 		break;
 	case SND_SOC_DAIFMT_I2S:
-		priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
+		priv_data->amb_i2s_intf.mode = I2S_I2S_MODE;
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
-		priv_data->amb_i2s_intf.mode = DAI_DSP_Mode;
+		priv_data->amb_i2s_intf.mode = I2S_DSP_MODE;
 		break;
 	default:
 		return -EINVAL;
@@ -346,14 +296,14 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
-		priv_data->amb_i2s_intf.ms_mode = DAI_MASTER;
+		priv_data->dai_master = true;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFM:
-		if (priv_data->amb_i2s_intf.mode != DAI_I2S_Mode) {
+		if (priv_data->amb_i2s_intf.mode != I2S_I2S_MODE) {
 			printk("DAI can't work in slave mode without standard I2S format!\n");
 			return -EINVAL;
 		}
-		priv_data->amb_i2s_intf.ms_mode = DAI_SLAVE;
+		priv_data->dai_master = false;
 		break;
 	default:
 		return -EINVAL;
@@ -451,18 +401,19 @@ EXPORT_SYMBOL_GPL(ambarella_i2s_add_controls);
 static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->amb_i2s_intf;
 
 	priv_data->clock_reg = amba_readl(I2S_CLOCK_REG);
-	priv_data->amb_i2s_intf.mode = amba_readl(I2S_MODE_REG);
-	priv_data->amb_i2s_intf.word_len = amba_readl(I2S_WLEN_REG);
-	priv_data->amb_i2s_intf.word_pos = amba_readl(I2S_WPOS_REG);
-	priv_data->amb_i2s_intf.slots = amba_readl(I2S_SLOT_REG);
-	priv_data->amb_i2s_intf.ch = amba_readl(I2S_REG(I2S_CHANNEL_SELECT_OFFSET));
-	priv_data->amb_i2s_intf.rx_ctrl = amba_readl(I2S_RX_CTRL_REG);
-	priv_data->amb_i2s_intf.tx_ctrl = amba_readl(I2S_TX_CTRL_REG);
-	priv_data->amb_i2s_intf.rx_fifo_len = amba_readl(I2S_RX_FIFO_GTH_REG);
-	priv_data->amb_i2s_intf.tx_fifo_len = amba_readl(I2S_TX_FIFO_LTH_REG);
-	priv_data->amb_i2s_intf.multi24 = amba_readl(I2S_24BITMUX_MODE_REG);
+	i2s_intf->mode = amba_readl(I2S_MODE_REG);
+	i2s_intf->word_len = amba_readl(I2S_WLEN_REG);
+	i2s_intf->word_pos = amba_readl(I2S_WPOS_REG);
+	i2s_intf->slots = amba_readl(I2S_SLOT_REG);
+	i2s_intf->channels = amba_readl(I2S_REG(I2S_CHANNEL_SELECT_OFFSET));
+	i2s_intf->rx_ctrl = amba_readl(I2S_RX_CTRL_REG);
+	i2s_intf->tx_ctrl = amba_readl(I2S_TX_CTRL_REG);
+	i2s_intf->rx_fifo_len = amba_readl(I2S_RX_FIFO_GTH_REG);
+	i2s_intf->tx_fifo_len = amba_readl(I2S_TX_FIFO_LTH_REG);
+	i2s_intf->multi24 = amba_readl(I2S_24BITMUX_MODE_REG);
 
 	return 0;
 }
@@ -472,16 +423,18 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
-	amba_writel(I2S_MODE_REG, priv_data->amb_i2s_intf.mode);
-	amba_writel(I2S_WLEN_REG, priv_data->amb_i2s_intf.word_len);
-	amba_writel(I2S_WPOS_REG, priv_data->amb_i2s_intf.word_pos);
-	amba_writel(I2S_SLOT_REG, priv_data->amb_i2s_intf.slots);
-	amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), priv_data->amb_i2s_intf.ch);
-	amba_writel(I2S_RX_CTRL_REG, priv_data->amb_i2s_intf.rx_ctrl);
-	amba_writel(I2S_TX_CTRL_REG, priv_data->amb_i2s_intf.tx_ctrl);
-	amba_writel(I2S_RX_FIFO_GTH_REG, priv_data->amb_i2s_intf.rx_fifo_len);
-	amba_writel(I2S_TX_FIFO_LTH_REG, priv_data->amb_i2s_intf.tx_fifo_len);
-	amba_writel(I2S_24BITMUX_MODE_REG,priv_data->amb_i2s_intf.multi24);
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->amb_i2s_intf;
+
+	amba_writel(I2S_MODE_REG, i2s_intf->mode);
+	amba_writel(I2S_WLEN_REG, i2s_intf->word_len);
+	amba_writel(I2S_WPOS_REG, i2s_intf->word_pos);
+	amba_writel(I2S_SLOT_REG, i2s_intf->slots);
+	amba_writel(I2S_REG(I2S_CHANNEL_SELECT_OFFSET), i2s_intf->channels);
+	amba_writel(I2S_RX_CTRL_REG, i2s_intf->rx_ctrl);
+	amba_writel(I2S_TX_CTRL_REG, i2s_intf->tx_ctrl);
+	amba_writel(I2S_RX_FIFO_GTH_REG, i2s_intf->rx_fifo_len);
+	amba_writel(I2S_TX_FIFO_LTH_REG, i2s_intf->tx_fifo_len);
+	amba_writel(I2S_24BITMUX_MODE_REG,i2s_intf->multi24);
 	amba_writel(I2S_CLOCK_REG, priv_data->clock_reg);
 
 	return 0;
@@ -495,42 +448,41 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
-	u32 sfreq, clock_divider;
+	u32 sfreq, clk_div = 3;
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->amb_i2s_intf;
 
 	dai->capture_dma_data = &priv_data->capture_dma_data;
 	dai->playback_dma_data = &priv_data->playback_dma_data;
 
 	if (priv_data->default_mclk == 12288000) {
-		sfreq = AUDIO_SF_48000;
+		sfreq = 48000;
 	} else if (priv_data->default_mclk == 11289600){
-		sfreq = AUDIO_SF_44100;
+		sfreq = 44100;
 	} else {
-		dev_warn(dai->dev, "Please sepcify the default mclk\n");
 		priv_data->default_mclk = 12288000;
-		sfreq = AUDIO_SF_48000;
+		sfreq = 48000;
 	}
 
 	clk_set_rate(priv_data->mclk, priv_data->default_mclk);
 
-	/* Dai default smapling rate, polarity configuration.
+	/*
+	 * Dai default smapling rate, polarity configuration.
 	 * Note: Just be configured, actually BCLK and LRCLK will not
-	 * output to outside at this time. */
-	clock_divider = 3;
-	amba_writel(I2S_CLOCK_REG, clock_divider | I2S_CLK_TX_PO_FALL);
+	 * output to outside at this time.
+	 */
+	amba_writel(I2S_CLOCK_REG, clk_div | I2S_CLK_TX_PO_FALL);
 
-	priv_data->amb_i2s_intf.mode = DAI_I2S_Mode;
-	priv_data->amb_i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
-	priv_data->amb_i2s_intf.ms_mode = DAI_MASTER;
-	priv_data->amb_i2s_intf.mclk = priv_data->default_mclk;
-	priv_data->amb_i2s_intf.div = clock_divider;
-	priv_data->amb_i2s_intf.oversample = AudioCodec_256xfs;
-	priv_data->amb_i2s_intf.word_order = DAI_MSB_FIRST;
-	priv_data->amb_i2s_intf.sfreq = sfreq;
-	priv_data->amb_i2s_intf.word_len = DAI_16bits;
-	priv_data->amb_i2s_intf.word_pos = 0;
-	priv_data->amb_i2s_intf.slots = DAI_32slots;
-	priv_data->amb_i2s_intf.ch = 2;
+	priv_data->dai_master = true;
+	i2s_intf->mode = I2S_I2S_MODE;
+	i2s_intf->clksrc = AMBARELLA_CLKSRC_ONCHIP;
+	i2s_intf->mclk = priv_data->default_mclk;
+	i2s_intf->div = clk_div;
+	i2s_intf->sfreq = sfreq;
+	i2s_intf->word_len = 15;
+	i2s_intf->word_pos = 0;
+	i2s_intf->slots = 0;
+	i2s_intf->channels = 2;
 
 	/* reset fifo */
 	dai_tx_enable();
