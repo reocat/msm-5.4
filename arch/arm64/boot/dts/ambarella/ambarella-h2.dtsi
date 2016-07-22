@@ -995,7 +995,7 @@
 			      <0xec17005c 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_audio";
-			assigned-clocks = <&gclk_so>;
+			assigned-clocks = <&gclk_audio>;
 			assigned-clock-rates = <12288000>;
 			amb,extra-scaler;
 			amb,frac-mode;
