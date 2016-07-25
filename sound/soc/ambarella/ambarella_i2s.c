@@ -48,7 +48,6 @@ module_param(bclk_reverse, uint, 0644);
 MODULE_PARM_DESC(bclk_reverse, "bclk_reverse.");
 
 static DEFINE_MUTEX(clock_reg_mutex);
-static int enable_ext_i2s = 1;
 
 /* ==========================================================================*/
 
@@ -265,11 +264,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		clock_reg |= I2S_CLK_MASTER_MODE;
 	else
 		clock_reg &= ~I2S_CLK_MASTER_MODE;
-
-	if (enable_ext_i2s)
-		clock_reg |= I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN;
-	else
-		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
 
 	if (bclk_reverse)
 		clock_reg &= ~I2S_CLK_TX_PO_FALL;
