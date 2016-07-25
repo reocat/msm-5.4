@@ -48,7 +48,6 @@ module_param(bclk_reverse, uint, 0644);
 MODULE_PARM_DESC(bclk_reverse, "bclk_reverse.");
 
 static DEFINE_MUTEX(clock_reg_mutex);
-static int enable_ext_i2s = 1;
 
 static inline void dai_tx_enable(void)
 {
@@ -211,11 +210,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	else
 		clock_reg &= ~I2S_CLK_MASTER_MODE;
 
-	if (enable_ext_i2s)
-		clock_reg |= I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN;
-	else
-		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
-
 	if (bclk_reverse)
 		clock_reg &= ~I2S_CLK_TX_PO_FALL;
 	else
@@ -348,55 +342,6 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int external_i2s_get_status(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	mutex_lock(&clock_reg_mutex);
-	ucontrol->value.integer.value[0] = enable_ext_i2s;
-	mutex_unlock(&clock_reg_mutex);
-
-	return 0;
-}
-
-static int external_i2s_set_status(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	u32 clock_reg;
-
-	mutex_lock(&clock_reg_mutex);
-	clock_reg = amba_readl(I2S_CLOCK_REG);
-
-	enable_ext_i2s = ucontrol->value.integer.value[0];
-	if (enable_ext_i2s)
-		clock_reg |= (I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
-	else
-		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
-
-	amba_writel(I2S_CLOCK_REG, clock_reg);
-	mutex_unlock(&clock_reg_mutex);
-
-	return 1;
-}
-
-static const char *i2s_status_str[] = {"Off", "On"};
-
-static const struct soc_enum external_i2s_enum[] = {
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(i2s_status_str), i2s_status_str),
-};
-
-static const struct snd_kcontrol_new external_i2s_controls[] = {
-	SOC_ENUM_EXT("External I2S Switch", external_i2s_enum[0],
-			external_i2s_get_status, external_i2s_set_status),
-};
-
-int ambarella_i2s_add_controls(struct snd_soc_codec *codec)
-{
-	return snd_soc_add_codec_controls(codec, external_i2s_controls,
-			ARRAY_SIZE(external_i2s_controls));
-}
-EXPORT_SYMBOL_GPL(ambarella_i2s_add_controls);
-
-
 #ifdef CONFIG_PM
 static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 {
@@ -417,8 +362,6 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 
 	return 0;
 }
-
-
 
 static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 {
@@ -443,8 +386,6 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 #define ambarella_i2s_dai_suspend	NULL
 #define ambarella_i2s_dai_resume	NULL
 #endif /* CONFIG_PM */
-
-
 
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
