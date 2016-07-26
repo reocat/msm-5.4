@@ -153,6 +153,7 @@ static int amba_heap_mmap(struct file *filp, struct vm_area_struct *vma)
     vma->vm_page_prot = amba_phys_mem_access_prot(filp, vma->vm_pgoff,
                                                   size, vma->vm_page_prot);
 
+    vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
     vma->vm_pgoff = (baseaddr) >> PAGE_SHIFT;
     if ((rval = remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
                                 size, vma->vm_page_prot)) < 0) {
