@@ -103,6 +103,7 @@ static const struct file_operations proc_clock_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambarella_clock_proc_write,
+	.release = single_release,
 };
 
 static int ambarella_pll_service(void *arg, void *result)

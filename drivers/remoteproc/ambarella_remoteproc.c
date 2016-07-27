@@ -38,18 +38,17 @@ static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
 extern struct ambalink_shared_memory_layout ambalink_shm_layout;
 #endif
 
+struct resource_table	*table;
+static int table_size;
+
 static struct resource_table *gen_rsc_table_cortex(int *tablesz)
 {
-	struct resource_table           *table;
 	struct fw_rsc_hdr	        *hdr;
 	struct fw_rsc_vdev	        *vdev;
 	struct fw_rsc_vdev_vring        *vring;
 
-	*tablesz                = sizeof(*table) + sizeof(u32) * 1
-				    + sizeof(*hdr) + sizeof(*vdev)
-				    + sizeof(*vring) * 2;
+	*tablesz 		= table_size;
 
-	table                   = kzalloc((*tablesz), GFP_KERNEL);
 	table->ver              = 1;
 	table->num              = 1;
 	table->offset[0]        = sizeof(*table) + sizeof(u32) * table->num;
@@ -261,6 +260,13 @@ static int ambarella_rproc_probe(struct platform_device *pdev)
 	struct rproc *rproc;
 	int ret;
 
+	/* generate a shared rsc table. */
+	table_size = sizeof(struct resource_table) + sizeof(u32) * 1
+		     + sizeof(struct fw_rsc_hdr) + sizeof(struct fw_rsc_vdev)
+		     + sizeof(struct fw_rsc_vdev_vring) * 2;
+
+	table = kzalloc(table_size, GFP_KERNEL);
+
 	ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(64));
 	if (ret) {
 		dev_err(pdev->dev.parent, "dma_set_coherent_mask: %d\n", ret);
@@ -351,6 +357,7 @@ static int ambarella_rproc_remove(struct platform_device *pdev)
 
 	rproc_del(rproc);
 	rproc_put(rproc);
+	kfree(table);
 	return 0;
 }
 
