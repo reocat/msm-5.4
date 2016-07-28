@@ -14,3 +14,8 @@ config AMBALINK_SD
         help
           AmbaLink SD controller RPMSG host driver.
 
+config AMBALINK_PPM
+        tristate "AmbaLink PPM device"
+	default n
+	help 
+	  create /dev/ppm to mmap physical memory 
