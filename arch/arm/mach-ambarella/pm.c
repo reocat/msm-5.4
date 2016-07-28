@@ -173,18 +173,19 @@ static int ambarella_pm_enter_standby(void)
 	return 0;
 }
 
-static int ambarella_pm_enter_mem(void)
+static void ambarella_pm_rtc_flush(void)
 {
-	u32 l2_enabled;
-	u32 time_val;
-	u32 alarm_val;
-	unsigned long arg = 0;
-#ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
-	void *ambarella_suspend_exec = NULL;
-#endif
+	unsigned int alarm;
+	unsigned int time;
 
-	ambarella_disconnect_dram_reset();
+	alarm = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
+	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), alarm);
+	time  = amba_readl(RTC_REG(RTC_CURT_OFFSET));
+	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), time);
+}
 
+static unsigned long ambarella_pm_pwc_trigger(void)
+{
 	/* ensure the power for DRAM keeps on when power off PWC */
 	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x1);
 	amba_writel(RTC_REG(RTC_POS0_OFFSET), 0x10);
@@ -193,14 +194,56 @@ static int ambarella_pm_enter_mem(void)
 	amba_writel(RTC_REG(RTC_POS3_OFFSET), 0x10);
 	amba_setbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
 
-	alarm_val = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), alarm_val);
-	time_val  = amba_readl(RTC_REG(RTC_CURT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), time_val);
+	ambarella_pm_rtc_flush();
 
 	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
 	mdelay(3);
 	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
+
+	return 0;
+}
+static void ambarella_pm_pwc_resume(void)
+{
+	/* ensure to power off all powers when power off PWC */
+	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);
+	amba_clrbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
+
+	ambarella_pm_rtc_flush();
+
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
+	while(amba_readl(RTC_REG(RTC_PWC_REG_STA_OFFSET)) & 0x04);
+	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
+
+}
+
+static unsigned long ambarella_pm_io_trigger(void)
+{
+	/* FIXME: flush internel rtc on chips, even though it is disabled. Because
+	 * it has no unexpected effect on system */
+	ambarella_pm_rtc_flush();
+
+	return ambarella_notify_mcu_prepare();
+}
+
+static void ambarella_pm_io_resume(void)
+{
+	ambarella_pm_rtc_flush();
+}
+
+static int ambarella_pm_enter_mem(void)
+{
+	u32 l2_enabled;
+	unsigned long arg = 0;
+#ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
+	void *ambarella_suspend_exec = NULL;
+#endif
+
+	ambarella_disconnect_dram_reset();
+
+	if (gpio_notify_mcu == -1)
+		arg = ambarella_pm_pwc_trigger();
+	else
+		arg = ambarella_pm_io_trigger();
 
 	ambarella_set_cpu_jump(0, ambarella_cpu_resume);
 
@@ -213,9 +256,6 @@ static int ambarella_pm_enter_mem(void)
 	if (l2_enabled)
 		ambcache_l2_disable_raw();
 
-	/* XXX special design for S3L */
-	arg = ambarella_notify_mcu_prepare();
-
 #ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
 	cpu_suspend(arg, ambarella_suspend_exec);
 #else
@@ -225,18 +265,10 @@ static int ambarella_pm_enter_mem(void)
 	if (l2_enabled)
 		ambcache_l2_enable_raw();
 
-	/* ensure to power off all powers when power off PWC */
-	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);
-	amba_clrbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
-
-	alarm_val = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), alarm_val);
-	time_val  = amba_readl(RTC_REG(RTC_CURT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), time_val);
-
-	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
-	while(amba_readl(RTC_REG(RTC_PWC_REG_STA_OFFSET)) & 0x04);
-	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
+	if (gpio_notify_mcu == -1)
+		ambarella_pm_pwc_resume();
+	else
+		ambarella_pm_io_resume();
 
 	return 0;
 }
@@ -295,7 +327,10 @@ int __init ambarella_init_pm(void)
 
 	of_property_read_u32(of_chosen, "ambarella,dram-reset-ctrl", &dram_reset_ctrl);
 	of_property_read_u32(of_chosen, "ambarella,gpio-notify-mcu", &gpio_notify_mcu);
-	WARN(dram_reset_ctrl >= GPIO_MAX_LINES, "Invalid GPIO: %d\n", dram_reset_ctrl);
+	WARN(dram_reset_ctrl >= GPIO_MAX_LINES, "Invalid DRAM RESET GPIO: %d\n", dram_reset_ctrl);
+	WARN(gpio_notify_mcu >= GPIO_MAX_LINES, "Invalid MCU NOTIFY GPIO: %d\n", gpio_notify_mcu);
+
+	pr_info("Ambarella power management: Fri Jul 29 2016\n");
 
 	return 0;
 }
