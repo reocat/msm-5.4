@@ -22,7 +22,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
-#include <mach/init.h>
 #include <asm/uaccess.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
@@ -30,7 +29,6 @@
 #include <linux/err.h>
 #include <linux/remoteproc.h>
 #include <plat/ambalink_cfg.h>
-#include <plat/ambcache.h>
 #include "aipc_priv.h"
 
 //#define ENABLE_DEBUG_MSG_VFFS
@@ -68,7 +66,7 @@ struct vffs_msg {
 	unsigned char   flag;
 	unsigned short  len;
 	void*           xfr;
-	int             parameter[0];
+	u64             parameter[0];
 };
 
 struct vffs_xfr {
@@ -84,7 +82,7 @@ struct vffs_fopen_arg {
 };
 
 struct vffs_io_arg {
-	char *buf;
+	u64 buf;
 	unsigned int size;
 	int fp;
 };
@@ -97,7 +95,7 @@ struct vffs_fseek_arg {
 
 struct vffs_fsfirst_arg {
 	u8	attr;
-	void	*res;
+	u64	res;
 	char	path[0];
 };
 
@@ -200,7 +198,7 @@ static struct vffs_xfr *find_free_xfr(void)
 	for (i = 0; i < XFR_ARRAY_SIZE; i++) {
 		if (!xfr_slot[i].refcnt) {
 			xfr_slot[i].refcnt = 1;
-			reinit_completion(xfr_slot[i].comp);
+			reinit_completion(&xfr_slot[i].comp);
 			spin_unlock_irqrestore(&xfr_lock, flags);
 			return &xfr_slot[i];
 		}
@@ -307,10 +305,10 @@ int vffs_rpmsg_fopen(const char *file, const char *mode, int *error)
 	memcpy(&arg->mode, mode, 4);
 	msg->cmd = VFFS_CMD_OPEN;
 
-	vffs_rpmsg_exec(msg, 4 + strlen(file) + 1);
+	vffs_rpmsg_exec(msg, 8 + strlen(file) + 1);
 	*error = msg->parameter[1];
 
-	return msg->parameter[0];
+	return (int)(msg->parameter[0] & 0x00000000FFFFFFFF);
 }
 
 int vffs_rpmsg_fclose(int fd)
@@ -321,7 +319,7 @@ int vffs_rpmsg_fclose(int fd)
 	msg->parameter[0] = fd;
 	msg->cmd = VFFS_CMD_CLOSE;
 
-	vffs_rpmsg_exec(msg, 4);
+	vffs_rpmsg_exec(msg, 8);
 
 	return msg->parameter[0];
 }
@@ -332,7 +330,7 @@ int vffs_rpmsg_fread(char *buf, unsigned int size, int fp)
 	struct vffs_msg *msg = (struct vffs_msg *)msg_buf;
 	struct vffs_io_arg *arg = (struct vffs_io_arg *)msg->parameter;
 
-	arg->buf = (char *) ambalink_virt_to_phys((void *) buf);
+	arg->buf = (u64) ambalink_virt_to_phys((unsigned long) buf);
 	arg->size = size;
 	arg->fp = fp;
 	msg->cmd = VFFS_CMD_READ;
@@ -348,7 +346,7 @@ int vffs_rpmsg_fwrite(const char *buf, unsigned int size, int fp)
 	struct vffs_msg *msg = (struct vffs_msg *)msg_buf;
 	struct vffs_io_arg *arg = (struct vffs_io_arg *)msg->parameter;
 
-	arg->buf = (char *) ambalink_virt_to_phys((void *) buf);
+	arg->buf = (u64) ambalink_virt_to_phys((unsigned long) buf);
 	arg->size = size;
 	arg->fp = fp;
 	msg->cmd = VFFS_CMD_WRITE;
@@ -363,11 +361,11 @@ int vffs_rpmsg_fstat(const char *path, struct vffs_stat *ffs_stat)
 	int msg_buf[128];
 	struct vffs_msg *msg = (struct vffs_msg *)msg_buf;
 
-	msg->parameter[0] = ambalink_virt_to_phys((void *) ffs_stat);
+	msg->parameter[0] = ambalink_virt_to_phys((unsigned long) ffs_stat);
 	strcpy((char *)&msg->parameter[1], path);
 	msg->cmd = VFFS_CMD_STAT;
 
-	vffs_rpmsg_exec(msg, 4 + strlen(path) + 1);
+	vffs_rpmsg_exec(msg, 8 + strlen(path) + 1);
 
 	return ffs_stat->rval;
 }
@@ -410,7 +408,7 @@ int vffs_rpmsg_fsfirst(const char *path, unsigned char attr,
 
 	strcpy(arg->path, path);
 	arg->attr = attr;
-	arg->res = (void *) ambalink_virt_to_phys((void *) fsfind);
+	arg->res = (u64) ambalink_virt_to_phys((unsigned long) fsfind);
 	msg->cmd = VFFS_CMD_FSFIRST;
 
 	vffs_rpmsg_exec(msg, sizeof(struct vffs_fsfirst_arg) + strlen(path) + 1);
@@ -424,10 +422,10 @@ int vffs_rpmsg_fsnext(struct vffs_fsfind *fsfind)
 	struct vffs_msg *msg = (struct vffs_msg *)msg_buf;
 
 	msg->parameter[0] = fsfind->dta;
-	msg->parameter[1] = ambalink_virt_to_phys((void *) fsfind);
+	msg->parameter[1] = ambalink_virt_to_phys((unsigned long) fsfind);
 	msg->cmd = VFFS_CMD_FSNEXT;
 
-	vffs_rpmsg_exec(msg, 8);
+	vffs_rpmsg_exec(msg, 16);
 
 	return 0;
 }
@@ -441,7 +439,7 @@ int vffs_rpmsg_chmod(const char *file, int attr)
 	strcpy((char *)&msg->parameter[1], file);
 	msg->cmd = VFFS_CMD_CHMOD;
 
-	vffs_rpmsg_exec(msg, 4 + strlen(file) + 1);
+	vffs_rpmsg_exec(msg, 8 + strlen(file) + 1);
 
 	return msg->parameter[0];
 }
@@ -451,11 +449,11 @@ int vffs_rpmsg_getdev(const char *path, struct vffs_getdev *ffs_getdev)
 	int msg_buf[128];
 	struct vffs_msg *msg = (struct vffs_msg *)msg_buf;
 
-	msg->parameter[0] = ambalink_virt_to_phys((void *) ffs_getdev);
+	msg->parameter[0] = ambalink_virt_to_phys((unsigned long) ffs_getdev);
 	strcpy((char *)&msg->parameter[1], path);
 	msg->cmd = VFFS_CMD_GETDEV;
 
-	vffs_rpmsg_exec(msg, 4 + strlen(path) + 1);
+	vffs_rpmsg_exec(msg, 8 + strlen(path) + 1);
 
 	return msg->parameter[0];
 }
@@ -508,16 +506,19 @@ int vffs_rpmsg_rmdir(const char *dname)
 /*
  * Mapped file read.
  */
-int vffs_proc_fs_actual_read(struct file *filp, char *buf, size_t count, loff_t *offp)
+ssize_t vffs_proc_fs_actual_read(struct file *filp, char __user *buf, size_t count, loff_t *offp)
 {
 	struct proc_ffs_list *pl = (struct proc_ffs_list *) PDE_DATA(file_inode(filp));
 	int rval;
 	int len = 0;
 	char *rbuf;
 
+	DEBUG_MSG("%s read file fp %p\n", __func__, pl->fp);
+
 	rbuf = kmalloc(count, GFP_KERNEL);
 	if (!rbuf) {
 		rval = -ENOMEM;
+		printk("%s kmalloc size %lu failed\n", __func__, count);
 		goto done;
 	}
 
@@ -537,6 +538,7 @@ int vffs_proc_fs_actual_read(struct file *filp, char *buf, size_t count, loff_t 
 	} else {
 		len = rval;
 		rval = copy_to_user(buf, rbuf, len);
+		DEBUG_MSG("%s read file %p len %d\n", __func__, pl->fp, len);
 	}
 
 done:
@@ -556,7 +558,7 @@ EXPORT_SYMBOL(vffs_proc_fs_actual_read);
 /*
  * Mapped file write.
  */
-static int vffs_proc_fs_actual_write(struct file *filp, const char *buf, size_t count,loff_t *offp)
+static ssize_t vffs_proc_fs_actual_write(struct file *filp, const char  __user *buf, size_t count,loff_t *offp)
 {
 	char* data = PDE_DATA(file_inode(filp));
 	struct proc_ffs_list *pl = (struct proc_ffs_list *) data;
@@ -721,7 +723,7 @@ static int vffs_proc_fs_bs_open(struct inode *inode, struct file *file)
 /*
  * /proc/aipc/ffs/bs write function.
  */
-static int vffs_proc_fs_bs_write(struct file *file,
+static ssize_t vffs_proc_fs_bs_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -758,7 +760,7 @@ static int vffs_proc_fs_unmap_open(struct inode *inode, struct file *file)
 /*
  * /proc/aipc/ffs/unmap write function.
  */
-static int vffs_proc_fs_unmap_write(struct file *file,
+static ssize_t vffs_proc_fs_unmap_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -827,7 +829,7 @@ done:
 	return count;
 }
 
-static int vffs_proc_fs_fstat_bin_read(struct file *filp, char *buf, size_t count, loff_t *offp)
+static ssize_t vffs_proc_fs_fstat_bin_read(struct file *filp, char *buf, size_t count, loff_t *offp)
 {
 	int ret, len;
 
@@ -845,7 +847,7 @@ static int vffs_proc_fs_fstat_bin_read(struct file *filp, char *buf, size_t coun
 /*
  * /proc/aipc/ffs/fstat write function.
  */
-static int vffs_proc_fs_fstat_write(struct file *file,
+static ssize_t vffs_proc_fs_fstat_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -867,6 +869,8 @@ static int vffs_proc_fs_fstat_write(struct file *file,
 			break;
 	}
 
+	DEBUG_MSG("%s fstat file %s\n", __func__, filename);
+
 	rval = vffs_rpmsg_fstat(filename, &last_ffs_stat);
 	if (rval) {
 		DEBUG_MSG("fstat_write: %s %d\n", filename, rval);
@@ -879,7 +883,7 @@ static int vffs_proc_fs_fstat_write(struct file *file,
 /*
  * /proc/aipc/ffs/remove write function.
  */
-static int vffs_proc_fs_remove_write(struct file *file,
+static ssize_t vffs_proc_fs_remove_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -913,7 +917,7 @@ static int vffs_proc_fs_remove_write(struct file *file,
 /*
  * /proc/aipc/ffs/fsfirst read function.
  */
-static int vffs_proc_fs_fsfirst_bin_read(struct file *filp, char *buf,
+static ssize_t vffs_proc_fs_fsfirst_bin_read(struct file *filp, char *buf,
 	size_t count, loff_t *offp)
 {
 	int len = 0;
@@ -934,7 +938,7 @@ static int vffs_proc_fs_fsfirst_bin_read(struct file *filp, char *buf,
  * /proc/aipc/ffs/fsfirst write function. ipc_ffs_fsfirst
  */
 #define ATTR_ALL                (0x007FuL)          /* for fsfirst function */
-static int vffs_proc_fs_fsfirst_write(struct file *file,
+static ssize_t vffs_proc_fs_fsfirst_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -956,6 +960,8 @@ static int vffs_proc_fs_fsfirst_write(struct file *file,
 			break;
 	}
 
+	DEBUG_MSG("%s fsfirst %s\n", __func__, pathname);
+
 	/* Try to obtain a file descriptor */
 	rval = vffs_rpmsg_fsfirst(pathname, ATTR_ALL, &last_fsfind);
 	if (rval) {
@@ -969,7 +975,7 @@ static int vffs_proc_fs_fsfirst_write(struct file *file,
 /*
  * /proc/aipc/ffs/fsnext read function.
  */
-static int vffs_proc_fs_fsnext_bin_read(struct file *filp, char *buf,
+static ssize_t vffs_proc_fs_fsnext_bin_read(struct file *filp, char *buf,
 	size_t count, loff_t *offp)
 {
 	int len = 0, rval;
@@ -994,7 +1000,7 @@ done:
 /*
  * /proc/aipc/ffs/chmod write function.
  */
-static int vffs_proc_fs_chmod_write(struct file *file,
+static ssize_t vffs_proc_fs_chmod_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -1042,7 +1048,7 @@ done:
 /*
  * /proc/aipc/ffs/getdev read function.
  */
-static int vffs_proc_fs_getdev_bin_read(struct file *filp, char *buf,
+static ssize_t vffs_proc_fs_getdev_bin_read(struct file *filp, char *buf,
 	size_t count, loff_t *offp)
 {
 	int ret;
@@ -1060,7 +1066,7 @@ static int vffs_proc_fs_getdev_bin_read(struct file *filp, char *buf,
 /*
  * /proc/aipc/ffs/getdev write function.
  */
-static int vffs_proc_fs_getdev_write(struct file *file,
+static ssize_t vffs_proc_fs_getdev_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -1083,7 +1089,7 @@ static int vffs_proc_fs_getdev_write(struct file *file,
 /*
  * /proc/aipc/ffs/rename write function.
  */
-static int vffs_proc_fs_rename_write(struct file *file,
+static ssize_t vffs_proc_fs_rename_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -1133,7 +1139,7 @@ done:
 /*
  * /proc/aipc/ffs/mkdir write function.
  */
-static int vffs_proc_fs_mkdir_write(struct file *file,
+static ssize_t vffs_proc_fs_mkdir_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -1168,7 +1174,7 @@ static int vffs_proc_fs_mkdir_write(struct file *file,
 /*
  * /proc/aipc/ffs/rmdir write function.
  */
-static int vffs_proc_fs_rmdir_write(struct file *file,
+static ssize_t vffs_proc_fs_rmdir_write(struct file *file,
 				     const char __user *buffer,
 				     size_t count, loff_t *data)
 {
@@ -1292,62 +1298,62 @@ static void vffs_procfs_init(void)
 
 	mutex_init(&g_mlock);
 
-	proc = proc_create("map", S_IRUGO | S_IWUSR, proc_ffs, &proc_map_fops);
+	proc = proc_create_data("map", S_IRUGO | S_IWUSR, proc_ffs, &proc_map_fops, NULL);
 	if (proc == NULL) {
 		printk("create map proc failed\n");
 	}
 
-	proc = proc_create("unmap", S_IRUGO | S_IWUSR, proc_ffs, &proc_unmap_fops);
+	proc = proc_create_data("unmap", S_IRUGO | S_IWUSR, proc_ffs, &proc_unmap_fops, NULL);
 	if (proc == NULL) {
 		printk("create unmap proc failed\n");
 	}
 
-	proc = proc_create("remove", S_IRUGO | S_IWUSR, proc_ffs, &proc_remove_fops);
+	proc = proc_create_data("remove", S_IRUGO | S_IWUSR, proc_ffs, &proc_remove_fops, NULL);
 	if (proc == NULL) {
 		printk("create remove proc failed\n");
 	}
 
-	proc = proc_create("fsfirst_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_fsfirst_bin_fops);
+	proc = proc_create_data("fsfirst_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_fsfirst_bin_fops, NULL);
 	if (proc == NULL) {
 		printk("create fsfirst_bin proc failed\n");
 	}
 
-	proc = proc_create("fsnext_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_fsnext_bin_fops);
+	proc = proc_create_data("fsnext_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_fsnext_bin_fops, NULL);
 	if (proc == NULL) {
 		printk("create fsnext_bin proc failed\n");
 	}
 
-	proc = proc_create("chmod", S_IRUGO | S_IWUSR, proc_ffs, &proc_chmod_fops);
+	proc = proc_create_data("chmod", S_IRUGO | S_IWUSR, proc_ffs, &proc_chmod_fops, NULL);
 	if (proc == NULL) {
 		printk("create chmod proc failed\n");
 	}
 
-	proc = proc_create("getdev_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_getdev_fops);
+	proc = proc_create_data("getdev_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_getdev_fops, NULL);
 	if (proc == NULL) {
 		printk("create getdev_bin proc failed\n");
 	}
 
-	proc = proc_create("rename", S_IRUGO | S_IWUSR, proc_ffs, &proc_rename_fops);
+	proc = proc_create_data("rename", S_IRUGO | S_IWUSR, proc_ffs, &proc_rename_fops, NULL);
 	if (proc == NULL) {
 		printk("create rename proc failed\n");
 	}
 
-	proc = proc_create("mkdir", S_IRUGO | S_IWUSR, proc_ffs, &proc_mkdir_fops);
+	proc = proc_create_data("mkdir", S_IRUGO | S_IWUSR, proc_ffs, &proc_mkdir_fops, NULL);
 	if (proc == NULL) {
 		printk("create mkdir proc failed\n");
 	}
 
-	proc = proc_create("rmdir", S_IRUGO | S_IWUSR, proc_ffs, &proc_rmdir_fops);
+	proc = proc_create_data("rmdir", S_IRUGO | S_IWUSR, proc_ffs, &proc_rmdir_fops, NULL);
 	if (proc == NULL) {
 		printk("create rmdir proc failed\n");
 	}
 
-	proc = proc_create("bs", S_IRUGO | S_IWUSR, proc_ffs, &proc_bs_fops);
+	proc = proc_create_data("bs", S_IRUGO | S_IWUSR, proc_ffs, &proc_bs_fops, NULL);
 	if (proc == NULL) {
 		printk("create bs proc failed\n");
 	}
 
-	proc = proc_create("fstat_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_fstat_bin_fops);
+	proc = proc_create_data("fstat_bin", S_IRUGO | S_IWUSR, proc_ffs, &proc_fstat_bin_fops, NULL);
 	if (proc == NULL) {
 		printk("create fstat_bin proc failed\n");
 	}
