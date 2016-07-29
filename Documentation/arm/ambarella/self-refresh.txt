@@ -132,7 +132,9 @@ Press the button directly
 3) Resume from SR by RTC
 root@/#echo enabled > /sys/class/rtc/rtc0/device/power/wakeup
 root@/#rtcwake -s 10 -m mem
-PS: this is available only when using internal PWC.
+PS: 
+  a) this is available only when using internal PWC.
+  b) rtc,wakeup has to be added into rtc node in DTS.
 
 
 
