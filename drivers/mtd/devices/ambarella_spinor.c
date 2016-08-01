@@ -22,6 +22,9 @@
  *
  */
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+#include <linux/aipc/ipc_mutex.h>
+#endif
 #include "spinor.h"
 
 /* Flash opcodes. */
@@ -30,6 +33,8 @@
 #define    OPCODE_WRSR        0x01    /* Write status register 1 byte */
 #define    OPCODE_NORM_READ   0x03    /* Read data bytes (low frequency) */
 #define    OPCODE_FAST_READ   0x0b    /* Read data bytes (high frequency) */
+#define    OPCODE_DIOR        0xbb    /* Dual I/O Read */
+#define    OPCODE_QIOR        0xeb    /* Quad I/O Read */
 #define    OPCODE_PP          0x02    /* Page program (up to 256 bytes) */
 #define    OPCODE_BE_4K       0x20    /* Erase 4KiB block */
 #define    OPCODE_BE_32K      0x52    /* Erase 32KiB block */
@@ -66,6 +71,10 @@
 
 #define PART_DEV_SPINOR		(0x08)
 
+/* Flag of flash info. */
+#define    SECT_4K	0x01        /* OPCODE_BE_4K works uniformly */
+#define    DIO_READ	0x02        /* Support dual IO read */
+#define    QIO_READ	0x04        /* Support quad IO read */
 
 /****************************************************************************/
 
@@ -76,11 +85,30 @@ static inline struct amb_norflash *mtd_to_amb(struct mtd_info *mtd)
 
 /****************************************************************************/
 
+static void spinor_global_request(struct amb_norflash *flash)
+{
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	aipc_mutex_lock(AMBA_IPC_MUTEX_SPINOR);
+
+	enable_irq(flash->nor_spi_irq);
+#endif
+}
+
+static void spinor_global_release(struct amb_norflash *flash)
+{
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	disable_irq(flash->nor_spi_irq);
+
+	aipc_mutex_unlock(AMBA_IPC_MUTEX_SPINOR);
+#endif
+}
+
 static int read_sr(struct amb_norflash *flash)
 {
     ssize_t retval = 0;
     u8 code = OPCODE_RDSR;
     u8 val;
+
     retval = ambspi_read_reg(flash, 1, code, &val);
 
     if (retval < 0) {
@@ -231,11 +259,13 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
     len = instr->len;
 
     mutex_lock(&flash->lock);
+    spinor_global_request(flash);
 
     /* whole-chip erase? */
     if (len == flash->mtd.size) {
         if (erase_chip(flash)) {
             instr->state = MTD_ERASE_FAILED;
+	    spinor_global_release(flash);
             mutex_unlock(&flash->lock);
             return -EIO;
         }
@@ -250,6 +280,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         while (len) {
             if (erase_sector(flash, addr)) {
                 instr->state = MTD_ERASE_FAILED;
+		spinor_global_release(flash);
                 mutex_unlock(&flash->lock);
                 return -EIO;
             }
@@ -259,6 +290,7 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         }
     }
 
+    spinor_global_release(flash);
     mutex_unlock(&flash->lock);
 
     instr->state = MTD_ERASE_DONE;
@@ -275,24 +307,25 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
     size_t *retlen, u_char *buf)
 {
     struct amb_norflash *flash = mtd_to_amb(mtd);
-    uint8_t opcode;
     int offset;
     int needread = 0;
     int ret=0;
 
     mutex_lock(&flash->lock);
+    spinor_global_request(flash);
 
     /* Wait till previous write/erase is done. */
     if (wait_till_ready(flash)) {
         /* REVISIT status return?? */
+	spinor_global_release(flash);
         mutex_unlock(&flash->lock);
         return 1;
     }
 
-    /* Set up the write data buffer. */
-    opcode = flash->fast_read ? OPCODE_FAST_READ : OPCODE_NORM_READ;
-    flash->command[0] = opcode;
-    flash->dummy = 0;
+    /* Using dual I/O read to improve the read throughput. */
+    flash->command[0] = flash->read_opcode;
+    /* The dummy cycles is quite depended on the opcode!! */
+    flash->dummy = 8;
 
     for (offset = 0; offset < len; ) {
         needread = len - offset;
@@ -301,6 +334,9 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
             if(ret) {
                 dev_err((const struct device *)&flash->dev,
                         "SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), AMBA_SPINOR_DMA_BUFF_SIZE);
+
+		spinor_global_release(flash);
+		mutex_unlock(&flash->lock);
                 return -1;
             }
             memcpy(buf+offset, flash->dmabuf, AMBA_SPINOR_DMA_BUFF_SIZE);
@@ -310,6 +346,9 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
             if(ret) {
                 dev_err((const struct device *)&flash->dev,
                     "SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), needread);
+
+		spinor_global_release(flash);
+		mutex_unlock(&flash->lock);
                 return -1;
             }
             memcpy(buf+offset, flash->dmabuf, needread);
@@ -317,7 +356,10 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         }
     }
     *retlen = offset;
+
+    spinor_global_release(flash);
     mutex_unlock(&flash->lock);
+
     return 0;
 }
 
@@ -331,10 +373,13 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
 {
     struct amb_norflash *flash = mtd_to_amb(mtd);
     u32 page_offset, needwrite, needcopy, page_write;
+
     mutex_lock(&flash->lock);
+    spinor_global_request(flash);
 
     /* Wait until finished previous write command. */
     if (wait_till_ready(flash)) {
+	spinor_global_release(flash);
         mutex_unlock(&flash->lock);
         return 1;
     }
@@ -374,6 +419,7 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
                 }
                 /* write the next page to flash */
                 if (wait_till_ready(flash)) {
+		    spinor_global_release(flash);
                     mutex_unlock(&flash->lock);
                     return 1;
                 }
@@ -384,7 +430,9 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
         }
     }
 
+    spinor_global_release(flash);
     mutex_unlock(&flash->lock);
+
     return 0;
 }
 
@@ -409,7 +457,6 @@ struct flash_info {
 
 	u32			max_clk_hz;
     u16        flags;
-#define    SECT_4K        0x01        /* OPCODE_BE_4K works uniformly */
 };
 
 
@@ -430,9 +477,11 @@ struct ambid_t {
 };
 
 static const struct ambid_t amb_ids[] = {
-    { "s70fl01gs", INFO(0x010220, 0x4d00, 256 * 1024, 256, 512, 50000000, 0) },
-	{ "n25q256a", INFO(0x20ba19, 0, 64 * 1024, 512, 256, 50000000, 0) },
+	{ "s25fl256s", INFO(0x010219, 0x4d00, 256 * 1024, 128, 512, 70000000, DIO_READ) },
+	{ "s70fl01gs", INFO(0x010220, 0x4d00, 256 * 1024, 256, 512, 50000000, 0) },
+	{ "n25q256a", INFO(0x20ba19, 0, 64 * 1024, 512, 256, 60000000, DIO_READ) },
 	{ "mx25l25645g", INFO(0xc22019, 0, 64 * 1024, 512, 256, 50000000, 0) },
+	{ "mx66l1g45g", INFO(0xc2201b, 0, 32 * 1024, 4096, 256, 60000000, DIO_READ) },
 	{ "mx66l51235f", INFO(0xc2201a, 0, 64 * 1024, 1024, 256, 50000000, 0) },
 	{ "w25q128", INFO(0xef4018, 0, 64 * 1024, 256, 256, 50000000, 0) },
 	{ "w25q256", INFO(0xef4019, 0, 64 * 1024, 512, 256, 50000000, 0) },
@@ -449,8 +498,8 @@ static const struct ambid_t *jedec_probe(struct amb_norflash *flash)
     u8	id[5];
     u32	jedec;
     u16	ext_jedec;
-    struct flash_info	*info;
-	int		tmp;
+    struct flash_info *info;
+    int tmp;
 
     /* JEDEC also defines an optional "extended device information"
      * string for after vendor-specific data, after the three bytes
@@ -482,6 +531,13 @@ static const struct ambid_t *jedec_probe(struct amb_norflash *flash)
     return ERR_PTR(-ENODEV);
 }
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+static irqreturn_t amb_nor_spi_irq_handler(int irq, void *dev_data)
+{
+	return IRQ_HANDLED;
+}
+#endif
+
 static int amb_get_resource(struct amb_norflash    *flash, struct platform_device *pdev)
 {
     struct resource *res;
@@ -494,6 +550,9 @@ static int amb_get_resource(struct amb_norflash    *flash, struct platform_devic
         goto spinor_get_resource_err_exit;
     }
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+    flash->reg_phy_base = res->start;
+#endif
     flash->regbase =
         devm_ioremap(&pdev->dev, res->start, resource_size(res));
     if (!flash->regbase) {
@@ -517,126 +576,169 @@ static int amb_get_resource(struct amb_norflash    *flash, struct platform_devic
         goto spinor_get_resource_err_exit;
     }
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+    flash->nor_spi_irq = platform_get_irq(pdev, 0);
+    if (flash->nor_spi_irq < 0) {
+	dev_err(&pdev->dev, "platform_get_irq() failed\n");
+	errorCode = -EINVAL;
+	goto spinor_get_resource_err_exit;
+    }
+#endif
+
     return 0;
 
 spinor_get_resource_err_exit:
     return errorCode;
 }
 
-
 static int    amb_spi_nor_probe(struct platform_device *pdev)
 {
-	struct mtd_part_parser_data	ppdata;
-	struct flash_platform_data    data;
-	struct amb_norflash            *flash;
-	struct flash_info        *info;
-	unsigned            i;
+	struct mtd_part_parser_data ppdata;
+	struct flash_platform_data data;
+	struct amb_norflash *flash;
+	struct flash_info *info;
+	unsigned int i;
 	int errCode = 0;
-	const struct ambid_t *ambid = NULL;;
+	const struct ambid_t *ambid = NULL;
 
-    flash = kzalloc(sizeof(struct amb_norflash), GFP_KERNEL);
-    if (!flash) {
-        errCode = -ENOMEM;
-        goto amb_spi_nor_probe_exit;
-    }
+	flash = kzalloc(sizeof(struct amb_norflash), GFP_KERNEL);
+	if (!flash) {
+		errCode = -ENOMEM;
+		goto amb_spi_nor_probe_exit;
+	}
 
-    mutex_init(&flash->lock);
-    platform_set_drvdata(pdev, flash);
-    flash->dev = &pdev->dev;
+	mutex_init(&flash->lock);
+	platform_set_drvdata(pdev, flash);
+	flash->dev = &pdev->dev;
 
 	/* set 50Mhz as default spi clock */
 	flash->clk = 50000000;
-    amb_get_resource(flash, pdev);
-    ambspi_init(flash);
+	amb_get_resource(flash, pdev);
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	errCode = request_irq(flash->nor_spi_irq, amb_nor_spi_irq_handler,
+			IRQF_SHARED | IRQF_TRIGGER_HIGH,
+			dev_name(&pdev->dev), flash);
+	if (errCode)
+		goto amb_spi_nor_probe_exit;
+
+	disable_irq(flash->nor_spi_irq);
+#endif
+
+	spinor_global_request(flash);
+
+	ambspi_init(flash);
 
 	ambid = jedec_probe(flash);
-	if (IS_ERR(ambid))
-			return PTR_ERR(ambid);
-	else {
+	if (IS_ERR(ambid)) {
+		return PTR_ERR(ambid);
+	} else {
 		info = (void *)&ambid->driver_data;
 	}
+
+	spinor_global_release(flash);
+
 	data.type = kzalloc(sizeof(32), GFP_KERNEL);
-    strcpy(data.type, ambid->name);
+	strcpy(data.type, ambid->name);
 
 	flash->mtd.name = "amba_spinor";
-    flash->mtd.type = MTD_NORFLASH;
-    flash->mtd.writesize = 1;
-    flash->mtd.flags = MTD_CAP_NORFLASH;
-    flash->mtd.size = info->sector_size * info->n_sectors;
-    flash->mtd._erase = amba_erase;
-    flash->mtd._read = amba_read;
-    flash->mtd._write = amba_write;
-    flash->write_enable = write_enable;
-    flash->wait_till_ready = wait_till_ready;
+	flash->mtd.type = MTD_NORFLASH;
+	flash->mtd.writesize = 1;
+	flash->mtd.flags = MTD_CAP_NORFLASH;
+	flash->mtd.size = info->sector_size * info->n_sectors;
+	flash->mtd._erase = amba_erase;
+	flash->mtd._read = amba_read;
+	flash->mtd._write = amba_write;
+	flash->write_enable = write_enable;
+	flash->wait_till_ready = wait_till_ready;
 
-    /* prefer "small sector" erase if possible */
-    if (info->flags & SECT_4K) {
-        flash->erase_opcode = OPCODE_BE_4K;
-        flash->mtd.erasesize = 4096;
-    } else {
-        flash->erase_opcode = OPCODE_SE;
-        flash->mtd.erasesize = info->sector_size;
-    }
+	/* prefer "small sector" erase if possible */
+	if (info->flags & SECT_4K) {
+		flash->erase_opcode = OPCODE_BE_4K;
+		flash->mtd.erasesize = 4096;
+	} else {
+		flash->erase_opcode = OPCODE_SE;
+		flash->mtd.erasesize = info->sector_size;
+	}
 
-    flash->mtd.flags |= MTD_NO_ERASE;
+	flash->mtd.flags |= MTD_NO_ERASE;
 
-    flash->page_size = info->page_size;
-    flash->mtd.writebufsize = flash->page_size;
+	flash->page_size = info->page_size;
+	flash->mtd.writebufsize = flash->page_size;
+	flash->fast_read = false;
+	flash->command = kzalloc(5, GFP_KERNEL);
+	if(!flash->command) {
+		dev_err((const struct device *)&flash->dev,
+			"SPI NOR driver malloc command error\r\n");
+		errCode = -ENOMEM;
+		goto amb_spi_nor_probe_free_flash;
+	}
 
-    flash->fast_read = false;
-    flash->command = kzalloc(5, GFP_KERNEL);
-    if(!flash->command) {
-        dev_err((const struct device *)&flash->dev,
-            "SPI NOR driver malloc command error\r\n");
-        errCode = -ENOMEM;
-        goto amb_spi_nor_probe_free_flash;
-    }
-    if (flash->page_size > AMBA_SPINOR_DMA_BUFF_SIZE) {
-        dev_err((const struct device *)&flash->dev,
-            "SPI NOR driver buff size should bigger than nor flash page size \r\n");
-        errCode = -EINVAL;
-        goto amb_spi_nor_probe_free_command;
-    }
+	if (flash->page_size > AMBA_SPINOR_DMA_BUFF_SIZE) {
+		dev_err((const struct device *)&flash->dev,
+			"SPI NOR driver buff size should bigger than nor flash page size \r\n");
+		errCode = -EINVAL;
+		goto amb_spi_nor_probe_free_command;
+	}
+
 	flash->clk = info->max_clk_hz;
-    ambspi_init(flash);
 
-    if (info->addr_width)
-        flash->addr_width = info->addr_width;
-    else {
-        /* enable 4-byte addressing if the device exceeds 16MiB */
-        if (flash->mtd.size > 0x1000000) {
-            flash->addr_width = 4;
-            //set_4byte(flash, info->jedec_id, 1);
-        } else
-            flash->addr_width = 3;
-    }
+	spinor_global_request(flash);
+	ambspi_init(flash);
+	spinor_global_release(flash);
+
+	if (info->addr_width)
+		flash->addr_width = info->addr_width;
+	else {
+		/* enable 4-byte addressing if the device exceeds 16MiB */
+		if (flash->mtd.size > 0x1000000) {
+			flash->addr_width = 4;
+			set_4byte(flash, info->jedec_id, 1);
+		} else
+			flash->addr_width = 3;
+	}
+
+	/* Select the best read command. */
+	if (info->flags & DIO_READ) {
+		flash->read_opcode = OPCODE_DIOR;
+	} else if (info->flags & QIO_READ) {
+		flash->read_opcode = OPCODE_QIOR;
+	} else {
+		if (flash->fast_read) {
+			flash->read_opcode = OPCODE_FAST_READ;
+		} else {
+			flash->read_opcode = OPCODE_NORM_READ;
+		}
+	}
 
 	flash->jedec_id	= info->jedec_id;
-    pr_debug("mtd .name = %s, .size = 0x%llx (%lldMiB) "
-            ".erasesize = 0x%.8x (%uKiB) .numeraseregions = %d\n",
-        flash->mtd.name,
-        (long long)flash->mtd.size, (long long)(flash->mtd.size >> 20),
-        flash->mtd.erasesize, flash->mtd.erasesize / 1024,
-        flash->mtd.numeraseregions);
 
-    if (flash->mtd.numeraseregions)
-        for (i = 0; i < flash->mtd.numeraseregions; i++)
-            pr_debug("mtd.eraseregions[%d] = { .offset = 0x%llx, "
-                ".erasesize = 0x%.8x (%uKiB), "
-                ".numblocks = %d }\n",
-                i, (long long)flash->mtd.eraseregions[i].offset,
-                flash->mtd.eraseregions[i].erasesize,
-                flash->mtd.eraseregions[i].erasesize / 1024,
-                flash->mtd.eraseregions[i].numblocks);
+	pr_debug("mtd .name = %s, .size = 0x%llx (%lldMiB) "
+		".erasesize = 0x%.8x (%uKiB) .numeraseregions = %d\n",
+		flash->mtd.name,
+		(long long)flash->mtd.size, (long long)(flash->mtd.size >> 20),
+		flash->mtd.erasesize, flash->mtd.erasesize / 1024,
+		flash->mtd.numeraseregions);
 
-    ambspi_dma_config(flash);
+	if (flash->mtd.numeraseregions)
+		for (i = 0; i < flash->mtd.numeraseregions; i++)
+			pr_debug("mtd.eraseregions[%d] = { .offset = 0x%llx, "
+			".erasesize = 0x%.8x (%uKiB), "
+			".numblocks = %d }\n",
+			i, (long long)flash->mtd.eraseregions[i].offset,
+			flash->mtd.eraseregions[i].erasesize,
+			flash->mtd.eraseregions[i].erasesize / 1024,
+			flash->mtd.eraseregions[i].numblocks);
+
+	ambspi_dma_config(flash);
 	ppdata.of_node = pdev->dev.of_node;
 	errCode = mtd_device_parse_register(&flash->mtd, NULL, &ppdata, NULL, 0);
 	if (errCode < 0)
 		goto amb_spi_nor_probe_free_command;
 
-    printk("SPI NOR Controller probed\r\n");
-    return 0;
+	printk("SPI NOR Controller probed\r\n");
+
+	return 0;
 
 amb_spi_nor_probe_free_command:
     kfree(flash->command);

@@ -527,7 +527,7 @@
 			dma-channels = <8>;
 			dma-requests = <12>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
-			dma-channel-sel = <4 5 0 0 8 9 11 10>;
+			dma-channel-sel = <10 11 5 4 8 9 0 0>;
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
@@ -555,8 +555,9 @@
 
 		spinor0: spinor@e0031000 {
 			compatible = "ambarella,spinor";
-			reg = <0xe0031000 0x2ff>, /* spi nor controller */
-			      <0xe0005300 0x20>;  /* dma reg */
+			reg = <0xe0031000 0x2ff>,	/* spi nor controller */
+			      <0xe0005320 0x20>;	/* dma reg */
+			interrupts = <0 78 0x4>;	/* nor_spi_irq */
 			pinctrl-names = "default";
 			pinctrl-0 = <&spinor0_pins>;
 			status = "disabled";

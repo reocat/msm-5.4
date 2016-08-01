@@ -41,6 +41,8 @@ typedef enum _AMBA_IPC_MUTEX_IDX_e_ {
 
 	AMBA_IPC_MUTEX_RCT,
 
+	AMBA_IPC_MUTEX_SPINOR,
+
 	AMBA_IPC_NUM_MUTEX      /* Total number of global mutex */
 } AMBA_IPC_MUTEX_IDX_e;
 
