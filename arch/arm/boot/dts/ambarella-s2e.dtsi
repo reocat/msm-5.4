@@ -219,6 +219,7 @@
 		rtc@7000d000 {
 			compatible = "ambarella,rtc";
 			reg = <0x7000d000 0x1000>;
+			rtc,wakeup;
 		};
 
 		pwm: pwm@70004000 {
