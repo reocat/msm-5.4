@@ -475,6 +475,12 @@ config AMBARELLA_SREF_FIFO_EXEC
 	help
 		Self refresh 2nd solution.
 
+config AMBARELLA_SREF_TRIGGER_HIGH
+	bool "Self refresh trigger by rising edge"
+	default n
+	depends on PLAT_AMBARELLA_SUPPORT_PM
+	help
+
 endmenu
 
 endif
