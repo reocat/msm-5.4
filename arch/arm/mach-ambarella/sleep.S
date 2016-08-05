@@ -77,10 +77,16 @@ ENTRY(ambarella_optimize_suspend)
 	bic	r0, r2			/* r0 gpio bank base */
 	and	r1, r2			/* r1 gpio offset */
 
+#ifdef CONFIG_AMBARELLA_SREF_TRIGGER_HIGH
 	/* gpio pull up */
 	mov	r2, #0x1
 	lsl	r2, r1
 	str	r2, [r0, #0]
+#else
+	/* gpio pull down */
+	mov	r2, #0
+	str	r2, [r0, #0]
+#endif
 
 	/* delay 100ms: 0x249F00 is about 0x250000 */
 	mov	r3, #0x250000
@@ -95,9 +101,17 @@ rct_time_loop:
 	cmp	r5, r6
 	bhi	rct_time_loop
 
+#ifdef CONFIG_AMBARELLA_SREF_TRIGGER_HIGH
 	/* gpio pull down */
 	mov	r2, #0
 	str	r2, [r0, #0]
+#else
+	/* gpio pull up */
+	mov	r2, #0x1
+	lsl	r2, r1
+	str	r2, [r0, #0]
+#endif
+
 
 	b	self_refresh
 
