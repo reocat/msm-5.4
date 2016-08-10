@@ -66,13 +66,17 @@ struct dwc3_ambarella {
 	struct regulator	*vbus_reg;
 };
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 #define USBP0_REF_USE_PAD		(1 << 24)
-static void dwc3_ambarella_set_refclk(struct dwc3_ambarella *dwc3_amba)
+static void dwc3_ambarella_set_refclk(struct dwc3_ambarella *dwc3_amba,
+				u32 ref_use_pad, u32 ref_clk_div2)
 {
-	regmap_update_bits(dwc3_amba->rct_reg, 0x634, USBP0_REF_USE_PAD, USBP0_REF_USE_PAD);
+	regmap_update_bits(dwc3_amba->rct_reg, 0x634, USBP0_REF_USE_PAD,
+				ref_use_pad << 24);
 	msleep(1);
-	regmap_update_bits(dwc3_amba->rct_reg, 0X2C4, 1 << 5, 1 << 5);
+	regmap_update_bits(dwc3_amba->rct_reg, 0X2C4, 1 << 5, ref_clk_div2 << 5);
 }
+#endif
 
 #define USB3_SOFT_RESET_MASK 0x4
 static void dwc3_ambarella_reset(struct dwc3_ambarella	*dwc3_amba)
@@ -90,6 +94,7 @@ static int dwc3_ambarella_probe(struct platform_device *pdev)
 	int			ret;
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	struct usb_phy		*phy;
+	u32			ref_use_pad, ref_clk_div2;
 #endif
 
 	if (!node) {
@@ -126,9 +131,15 @@ static int dwc3_ambarella_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	if (of_property_read_u32(dev->of_node, "amb,ref-use-pad", &ref_use_pad) < 0)
+		ref_use_pad = 1;
+
+	if (of_property_read_u32(dev->of_node, "amb,ref-clk-div2", &ref_clk_div2) < 0)
+		ref_clk_div2 = 1;
+
 	usb_phy_init(phy);
 
-	dwc3_ambarella_set_refclk(dwc3_amba);
+	dwc3_ambarella_set_refclk(dwc3_amba, ref_use_pad, ref_clk_div2);
 #endif
 
 	dwc3_ambarella_reset(dwc3_amba);
