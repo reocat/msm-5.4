@@ -48,7 +48,7 @@
 
 static int dram_reset_ctrl = -1;
 static int gpio_notify_mcu = -1;
-static int gpio_trigger_level = -1;
+extern int ambarella_suspend_trigger_signal[];
 
 u32 gpio_regbase[] = {GPIO0_BASE, GPIO1_BASE, GPIO2_BASE, GPIO3_BASE,
 	GPIO4_BASE, GPIO5_BASE, GPIO6_BASE};
@@ -141,7 +141,7 @@ static unsigned long ambarella_notify_mcu_prepare(void)
 	gpio_info = gpio_regbase[bank] | offset;
 
 	/* Mux GPIO output mode */
-	ambarella_pm_gpio_output(gpio_notify_mcu, !gpio_trigger_level);
+	ambarella_pm_gpio_output(gpio_notify_mcu, !ambarella_suspend_trigger_signal[0]);
 	ambarella_pm_gpiomux(gpio_notify_mcu);
 
 	return gpio_info;
@@ -328,16 +328,14 @@ int __init ambarella_init_pm(void)
 
 	of_property_read_u32(of_chosen, "ambarella,dram-reset-ctrl", &dram_reset_ctrl);
 	of_property_read_u32(of_chosen, "ambarella,gpio-notify-mcu", &gpio_notify_mcu);
+	ambarella_suspend_trigger_signal[0] = !!of_find_property(of_chosen,
+			"ambarella,gpio-trigger-high", NULL);
+
 	WARN(dram_reset_ctrl >= GPIO_MAX_LINES, "Invalid DRAM RESET GPIO: %d\n", dram_reset_ctrl);
 	WARN(gpio_notify_mcu >= GPIO_MAX_LINES, "Invalid MCU NOTIFY GPIO: %d\n", gpio_notify_mcu);
 
-#ifdef CONFIG_AMBARELLA_SREF_TRIGGER_HIGH
-	gpio_trigger_level = 1;
-#else
-	gpio_trigger_level = 0;
-#endif
-
-	pr_info("Ambarella power management: Fri Jul 29 2016\n");
+	pr_info("Ambarella power management: Wed Aug 10 2016 %s\n",
+			(gpio_notify_mcu == -1) ? "": ambarella_suspend_trigger_signal[0] ? "[positive edge]":"[negative edge]");
 
 	return 0;
 }
