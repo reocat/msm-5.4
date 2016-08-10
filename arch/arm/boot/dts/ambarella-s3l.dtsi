@@ -48,7 +48,7 @@
 		clock-latency = <100000>;
 		/* the highest frequency is gotten in runtime */
 		cpufreq_tbl = < /*core_clk	cortex_clk*/
-				24000		24000
+				24000		96000
 				108000		504000>;
 
 		cpu@0 {

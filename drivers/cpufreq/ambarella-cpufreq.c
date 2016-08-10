@@ -58,6 +58,11 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	int index, ret;
 	unsigned int cur_freq;
 
+	if(target_freq < 96000) {
+		printk("Target frequency is too low, cortex is not stable, it should be more than 96000\n");
+		return -EINVAL;
+	}
+
 	if (cpufreq_frequency_table_target(policy, amba_cpufreq.cortex_clktbl,
 				target_freq, relation, &index))
 		return -EINVAL;
