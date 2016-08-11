@@ -56,6 +56,12 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		amb,core-div = <1>;
+		clock-latency = <100000>;
+		/* the highest frequency is gotten in runtime */
+		cpufreq_tbl = < /*core_clk	cortex_clk*/
+				24000		96000
+				108000		504000>;
 
 		cpu@0 {
 			compatible = "arm,cortex-a53", "arm,armv8";

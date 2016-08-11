@@ -63,6 +63,11 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	core_newfreq = amba_cpufreq.core_clktbl[index].frequency * 1000;
 	freqs.new = cortex_newfreq / 1000;
 
+	if(cortex_newfreq < 96000000) {
+		printk("Target frequency is too low, cortex is not stable, it should be more than 96000\n");
+		return -EINVAL;
+	}
+
 	amba_cpufreq_prt(KERN_INFO "prepare to switch the frequency from %d KHz to %d KHz\n",
 		freqs.old, freqs.new);
 
@@ -72,15 +77,17 @@ static int amba_cpufreq_target(struct cpufreq_policy *policy,
 	ret = clk_set_rate(amba_cpufreq.cortex_clk, cortex_newfreq);
 	/* Get current rate after clk_set_rate, in case of failure */
 	if (ret) {
-		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
+		pr_err("CPU Freq: set cortex rate failed: %d\n", ret);
 		freqs.new = clk_get_rate(amba_cpufreq.cortex_clk) / 1000;
-	}
+	} else
+		amba_cpufreq_prt("CPU Freq: cortex freq adjust successfully\n");
 
 	ret = clk_set_rate(amba_cpufreq.core_clk, core_newfreq);
 	/* Get current rate after clk_set_rate, in case of failure */
 	if (ret) {
-		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
-	}
+		pr_err("CPU Freq: set core rate failed: %d\n", ret);
+	} else
+		amba_cpufreq_prt("CPU Freq: core freq adjust successfully\n");
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3L)
         if(amba_cpufreq.core_clktbl[index].frequency <= 96000) {
