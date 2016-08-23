@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/pm.h>
 #include <linux/i2c.h>
+#include <linux/spi/spi.h>
 #include <linux/slab.h>
 #include <linux/regmap.h>
 #include <linux/stddef.h>
@@ -27,7 +28,7 @@
 #include <sound/tlv.h>
 #include <sound/soc.h>
 #include <sound/initval.h>
-
+#include <linux/of_gpio.h>
 #include "es8374.h"
 
 //#define ES8374_SPI
@@ -175,19 +176,21 @@ struct sp_config {
 /* codec private data */
 
 struct	es8374_private {
-/*	enum snd_soc_control_type control_type;
-	struct snd_soc_codec *codec;
+	enum snd_soc_control_type control_type;
 	struct spi_device *spi;
 	struct i2c_client *i2c;
-*/
+
 	struct snd_soc_codec *codec;
 	struct regmap *regmap;
 	u32 clk_id;
 	u32 mclk;
 
 	/* platform dependant DVDD voltage configuration */
-	u8	dvdd_pwr_vol;
+/*	u8	dvdd_pwr_vol;
 	u8  pll_div;
+*/
+	int pwr_gpio;
+	unsigned int pwr_active;
   	bool dmic_enable;
 };
 
@@ -1251,6 +1254,44 @@ static int es8374_resume(struct snd_soc_codec *codec)
 	return 0;
 }
 
+static int es8374_parse_dts(struct es8374_private *es8374)
+{
+#ifdef CONFIG_OF
+	struct device *dev;
+	struct device_node *np;
+	enum of_gpio_flags flags;
+	int ret, dmic;
+
+	if (es8374->control_type == SND_SOC_I2C) {
+		dev = &(es8374->i2c->dev);
+	} else {
+		dev = &(es8374->spi->dev);
+	}
+
+	np = dev->of_node;
+
+	if (!np)
+		return -1;
+
+	ret = of_property_read_u32(np, "es8374,dmic", &dmic);
+	if(ret == 0 && dmic == 1) {
+		es8374->dmic_enable = 1;
+	} else {
+		es8374->dmic_enable = 0;
+	}
+
+	es8374->pwr_gpio = of_get_named_gpio_flags(np, "es8374,pwr-gpio", 0, &flags);
+	if (es8374->pwr_gpio < 0 || !gpio_is_valid(es8374->pwr_gpio)) {
+		es8374->pwr_gpio = -1;
+	} else {
+		es8374->pwr_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	}
+
+#endif
+
+	return 0;
+}
+
 static int es8374_probe(struct snd_soc_codec *codec)
 {
 	int ret = 0;
@@ -1263,6 +1304,13 @@ static int es8374_probe(struct snd_soc_codec *codec)
 
 	es8374->codec = codec;
 	snd_soc_codec_set_drvdata(codec, es8374);
+
+	es8374_parse_dts(es8374);
+	if (gpio_is_valid(es8374->pwr_gpio)) {
+		ret = devm_gpio_request(codec->dev, es8374->pwr_gpio, "es8374 power pin");
+		if(ret == 0)
+			gpio_direction_output(es8374->pwr_gpio, es8374->pwr_active);
+	}
 
 	snd_soc_write(codec,0x00,0x3F);	//IC Rst start
 	msleep(1);  					//DELAY_MS
@@ -1338,20 +1386,15 @@ static struct of_device_id es8374_if_dt_ids[] = {
 #if defined(ES8374_SPI)
 static int es8374_spi_probe(struct spi_device *spi)
 {
-	struct device_node *np = spi->dev.of_node;
 	struct es8374_private *es8374;
-	u32 dmic;
 	int ret;
 
 	es8374 = kzalloc(sizeof(struct es8374_private), GFP_KERNEL);
 	if (es8374 == NULL)
 		return -ENOMEM;
 
-	ret = of_property_read_u32(np, "es8374,dmic", &dmic);
-	if(ret == 0 && dmic == 1)
-		es8374->dmic_enable = 1;
-	else
-		es8374->dmic_enable = 0;
+	es8374->control_type = SND_SOC_SPI;
+	es8374->spi = spi;
 
 	spi_set_drvdata(spi, es8374);
 
@@ -1419,21 +1462,15 @@ static void es8374_i2c_shutdown(struct i2c_client *i2c)
 static int es8374_i2c_probe(struct i2c_client *i2c_client,
 		const struct i2c_device_id *id)
 {
-	struct device_node *np = i2c_client->dev.of_node;
 	struct es8374_private *es8374;
-	u32 dmic;
 	int ret = -1;
 
 	es8374 = kzalloc(sizeof(*es8374), GFP_KERNEL);
 	if (es8374 == NULL)
 		return -ENOMEM;
 
-	ret = of_property_read_u32(np, "es8374,dmic", &dmic);
-	if(ret == 0 && dmic == 1) {
-		es8374->dmic_enable = 1;
-	} else {
-		es8374->dmic_enable = 0;
-	}
+	es8374->control_type = SND_SOC_I2C;
+	es8374->i2c = i2c_client;
 
 	i2c_set_clientdata(i2c_client, es8374);
 	es8374->regmap = devm_regmap_init_i2c(i2c_client, &es8374_regmap);
