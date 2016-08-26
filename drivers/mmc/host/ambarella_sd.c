@@ -1036,7 +1036,8 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	if (host->irq_status & SD_NIS_CARD)
 		mmc_signal_sdio_irq(host->mmc);
 
-	if (host->irq_status & (SD_NIS_REMOVAL | SD_NIS_INSERT)) {
+	if ((host->fixed_cd == -1) &&
+		(host->irq_status & (SD_NIS_REMOVAL | SD_NIS_INSERT))) {
 		dev_dbg(host->dev, "0x%08x, card %s\n", host->irq_status,
 			(host->irq_status & SD_NIS_INSERT) ? "Insert" : "Removed");
 		mmc_detect_change(host->mmc, msecs_to_jiffies(500));
