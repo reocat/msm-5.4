@@ -939,12 +939,14 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		mmc_signal_sdio_irq(pslotinfo->mmc);
 	}
 
-	if (nis & SD_NIS_REMOVAL) {
-		ambsd_dbg(pslotinfo, "SD_NIS_REMOVAL\n");
-		mmc_detect_change(pslotinfo->mmc, msecs_to_jiffies(1000));
-	} else if (nis & SD_NIS_INSERT) {
-		ambsd_dbg(pslotinfo, "SD_NIS_INSERT\n");
-		mmc_detect_change(pslotinfo->mmc, msecs_to_jiffies(1000));
+	if(pslotinfo->fixed_cd == -1) {
+		if (nis & SD_NIS_REMOVAL) {
+			ambsd_dbg(pslotinfo, "SD_NIS_REMOVAL\n");
+			mmc_detect_change(pslotinfo->mmc, msecs_to_jiffies(1000));
+		} else if (nis & SD_NIS_INSERT) {
+			ambsd_dbg(pslotinfo, "SD_NIS_INSERT\n");
+			mmc_detect_change(pslotinfo->mmc, msecs_to_jiffies(1000));
+		}
 	}
 
 	if (eis) {

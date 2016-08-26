@@ -262,54 +262,79 @@
 						  0x3047>;
 			};
 
+			sdmmc0_cd_pin: sdmmc0_cd@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x203b>;
+			};
+
+			sdmmc0_wp_pin: sdmmc0_wp@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x203c>;
+			};
+
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
-						  0x2049>;
+				amb,pinmux-ids = <0x2039 0x203a 0x2049>;
 			};
 
 			sdmmc0_pins_4bit: sdmmc0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
-						  0x2049 0x204a 0x204b 0x204c>;
+				amb,pinmux-ids = <0x2039 0x203a 0x2049
+						  0x204a 0x204b 0x204c>;
 			};
 
 			sdmmc0_pins_8bit: sdmmc0@2 {
 				reg = <2>;
-				amb,pinmux-ids = <0x2039 0x203a 0x203b 0x203c
-						  0x2049 0x204a 0x204b 0x204c
-						  0x204d 0x204e 0x204f 0x2050>;
+				amb,pinmux-ids = <0x2039 0x203a 0x2049 0x204a 0x204b
+						  0x204c 0x204d 0x204e 0x204f 0x2050>;
+			};
+
+			sdmmc1_cd_pin: sdmmc1_cd@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2057>;
+			};
+
+			sdmmc1_wp_pin: sdmmc1_wp@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2058>;
 			};
 
 			sdmmc1_pins_1bit: sdmmc1@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2051 0x2052 0x2053 0x2057
-						  0x2058>;
+				amb,pinmux-ids = <0x2051 0x2052 0x2053>;
 			};
 
 			sdmmc1_pins_4bit: sdmmc1@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2051 0x2052 0x2053 0x2054
-						  0x2055 0x2056 0x2057 0x2058>;
+				amb,pinmux-ids = <0x2051 0x2052 0x2053
+						  0x2054 0x2055 0x2056>;
+			};
+
+			sdmmc2_cd_pin: sdmmc2_cd@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x5008>;
+			};
+
+			sdmmc2_wp_pin: sdmmc2_wp@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x5009>;
 			};
 
 			sdmmc2_pins_1bit: sdmmc2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x5007 0x5008 0x5009 0x500a
-						  0x5012>;
+				amb,pinmux-ids = <0x5007 0x500a 0x5012>;
 			};
 
 			sdmmc2_pins_4bit: sdmmc2@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x5007 0x5008 0x5009 0x500a
-						  0x500b 0x500c 0x500d 0x5012>;
+				amb,pinmux-ids = <0x5007 0x500a 0x500b
+						  0x500c 0x500d 0x5012>;
 			};
 
 			sdmmc2_pins_8bit: sdmmc2@2 {
 				reg = <2>;
-				amb,pinmux-ids = <0x5007 0x5008 0x5009 0x500a
-						  0x500b 0x500c 0x500d 0x500e
-						  0x500f 0x5010 0x5011 0x5012>;
+				amb,pinmux-ids = <0x5007 0x500a 0x500b 0x500c 0x500d
+						  0x500e 0x500f 0x5010 0x5011 0x5012>;
 			};
 
 			eth_pins: eth0@0 {
@@ -571,7 +596,7 @@
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
 					 <0x000000e4 0x00000005 0x00001111>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&sdmmc0_pins_8bit>;
+			pinctrl-0 = <&sdmmc0_pins_8bit &sdmmc0_cd_pin &sdmmc0_wp_pin>;
 
 			slot@0 {
 				reg = <0>;
@@ -596,7 +621,7 @@
 			amb,switch_vol_tmo = <20>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			pinctrl-names = "default";
-			pinctrl-0 = <&sdmmc1_pins_4bit>;
+			pinctrl-0 = <&sdmmc1_pins_4bit &sdmmc1_cd_pin &sdmmc1_wp_pin>;
 			status = "disabled";
 
 			slot@0 {
@@ -621,7 +646,7 @@
 			amb,switch_vol_tmo = <20>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
 			pinctrl-names = "default";
-			pinctrl-0 = <&sdmmc2_pins_8bit>;
+			pinctrl-0 = <&sdmmc2_pins_8bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
 			status = "disabled";
 
 			slot@0 {
