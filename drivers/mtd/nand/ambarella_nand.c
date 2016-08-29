@@ -326,6 +326,28 @@ static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
 	return -1;
 }
 
+static int nand_bch_check_blank_page(struct ambarella_nand_info *nand_info)
+{
+	int ret = 0;
+	u32 i;
+	u8 *data;
+
+	ret = nand_bch_spare_cmp(nand_info);
+	if (ret < 0)
+		return ret;
+
+	data = nand_info->dmabuf;
+	for (i = 0; i < nand_info->mtd.writesize; i++) {
+		if (data[i] != 0xff)
+			break;
+	}
+
+	if (i == nand_info->mtd.writesize)
+		return 0;
+
+	return -1;
+}
+
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
 #ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
@@ -925,7 +947,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 					if (FIO_SUPPORT_SKIP_BLANK_ECC)
 						ret = -1;
 					else
-						ret = nand_bch_spare_cmp(nand_info);
+						ret = nand_bch_check_blank_page(nand_info);
 
 					if (ret < 0) {
 						nand_info->mtd.ecc_stats.failed++;
@@ -1485,7 +1507,7 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *buf,
 					"corrected bitflip %u\n", errloc[i]);
 			}
 		} else if (count < 0) {
-			count = nand_bch_spare_cmp(nand_info);
+			count = nand_bch_check_blank_page(nand_info);
 			if (count < 0)
 				dev_err(nand_info->dev, "ecc unrecoverable error\n");
 		}

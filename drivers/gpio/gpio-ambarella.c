@@ -292,20 +292,43 @@ static struct gpio_chip amb_gc = {
 
 static void amb_gpio_irq_enable(struct irq_data *data)
 {
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(amb_gc.dev);
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
-	u32 offset = PINID_TO_OFFSET(data->hwirq);
-	u32 ie = readl_relaxed(regbase + GPIO_IE_OFFSET);
 	unsigned long flags;
+	void __iomem *iomux_base = amb_gpio->iomux_base;
+	u32 i, val, bank, offset;
+
+	bank = PINID_TO_BANK(data->hwirq);
+	offset = PINID_TO_OFFSET(data->hwirq);
 
 	/* make sure the pin is in gpio mode */
-	if (!gpiochip_is_requested(&amb_gc, data->hwirq) &&
-		gpio_request_one(data->hwirq, GPIOF_IN, "gpio_irq") < 0)
-		pr_warn("%s: cannot request gpio %ld\n", __func__, data->hwirq);
+	if (!gpiochip_is_requested(&amb_gc, data->hwirq)) {
+		val = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
+		val &= ~(0x1 << offset);
+		writel_relaxed(val, regbase + GPIO_AFSEL_OFFSET);
+
+		val = readl_relaxed(regbase + GPIO_DIR_OFFSET);
+		val &= ~(0x1 << offset);
+		writel_relaxed(val, regbase + GPIO_DIR_OFFSET);
+
+		if (iomux_base) {
+			for (i = 0; i < 3; i++) {
+				val = readl_relaxed(iomux_base + IOMUX_REG_OFFSET(bank, i));
+				val &= ~(0x1 << offset);
+				writel_relaxed(val, iomux_base + IOMUX_REG_OFFSET(bank, i));
+			}
+			writel_relaxed(0x1, iomux_base + IOMUX_CTRL_SET_OFFSET);
+			writel_relaxed(0x0, iomux_base + IOMUX_CTRL_SET_OFFSET);
+		}
+	}
 
 	amb_gpio_raw_lock(&flags);
 
 	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
-	writel_relaxed(ie | (0x1 << offset), regbase + GPIO_IE_OFFSET);
+
+	val = readl_relaxed(regbase + GPIO_IE_OFFSET);
+	val |= 0x1 << offset;
+	writel_relaxed(val, regbase + GPIO_IE_OFFSET);
 
 	amb_gpio_raw_unlock(&flags);
 }
@@ -323,8 +346,6 @@ static void amb_gpio_irq_disable(struct irq_data *data)
 	writel_relaxed(0x1 << offset, regbase + GPIO_IC_OFFSET);
 
 	amb_gpio_raw_unlock(&flags);
-
-	gpio_free(data->hwirq);
 }
 
 static void amb_gpio_irq_ack(struct irq_data *data)

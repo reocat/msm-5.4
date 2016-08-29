@@ -48,7 +48,6 @@ module_param(bclk_reverse, uint, 0644);
 MODULE_PARM_DESC(bclk_reverse, "bclk_reverse.");
 
 static DEFINE_MUTEX(clock_reg_mutex);
-static int enable_ext_i2s = 1;
 
 /* ==========================================================================*/
 
@@ -86,7 +85,7 @@ static inline void dai_tx_enable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val |= DAI_TX_EN;
+	val |= I2S_TX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
@@ -94,7 +93,7 @@ static inline void dai_rx_enable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val |= DAI_RX_EN;
+	val |= I2S_RX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
@@ -102,7 +101,7 @@ static inline void dai_tx_disable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val &= DAI_TX_EN;
+	val &= I2S_TX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
@@ -110,7 +109,7 @@ static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val &= DAI_RX_EN;
+	val &= I2S_RX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
@@ -134,7 +133,7 @@ static inline void dai_fifo_rst(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val |= DAI_FIFO_RST;
+	val |= I2S_FIFO_RESET_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
@@ -185,150 +184,91 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *cpu_dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
-	u8 slots, word_len, word_pos;
-	u32 clock_divider, clock_reg, channels, tx_ctrl = 0, multi24 = 0;
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
+	u32 clock_reg;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable(priv_data);
 	dai_rx_disable(priv_data);
 
-	channels = params_channels(params);
-	/* Set channels */
-	switch (channels) {
-	case 2:
-		writel_relaxed(I2S_2CHANNELS_ENB,
-				priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
-		break;
-	case 4:
-		writel_relaxed(I2S_4CHANNELS_ENB,
-				priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
-		break;
-	case 6:
-		writel_relaxed(I2S_6CHANNELS_ENB,
-				priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
-		break;
-	}
-	priv_data->i2s_intf.ch = channels;
+	i2s_intf->sfreq = params_rate(params);
+	i2s_intf->channels = params_channels(params);
+	writel_relaxed(i2s_intf->channels / 2 - 1,
+			priv_data->regbase + I2S_CHANNEL_SELECT_OFFSET);
 
 	/* Set format */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-		priv_data->i2s_intf.word_len = DAI_16bits;
-		word_len = 0x0f;
-		tx_ctrl |= 0x08; /* set unison bit (LR both in TX_LEFT_DATA) */
-		if (priv_data->i2s_intf.mode == DAI_DSP_Mode) {
-			slots = channels - 1;
-			word_pos = 0x0f;
-			priv_data->i2s_intf.slots = slots;
+		i2s_intf->multi24 = 0;
+		i2s_intf->tx_ctrl = I2S_TX_UNISON_BIT;
+		i2s_intf->word_len = 15;
+		if (i2s_intf->mode == I2S_DSP_MODE) {
+			i2s_intf->slots = i2s_intf->channels - 1;
+			i2s_intf->word_pos = 15;
 		} else {
-			slots = 0;
-			word_pos = 0;
-			priv_data->i2s_intf.slots = DAI_32slots;
+			i2s_intf->slots = 0;
+			i2s_intf->word_pos = 0;
 		}
 		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
+
 	case SNDRV_PCM_FORMAT_S24_LE:
-		priv_data->i2s_intf.word_len = DAI_24bits;
-		word_len = 0x17;
-		multi24 = 0x1; /* multi_24_en bit */
-		if (priv_data->i2s_intf.mode == DAI_DSP_Mode) {
-			slots = channels - 1;
-			word_pos = 0x00; /* ignored, but set it to something */
-			priv_data->i2s_intf.slots = slots;
+		i2s_intf->multi24 = I2S_24BITMUX_MODE_ENABLE;
+		i2s_intf->tx_ctrl = 0;
+		i2s_intf->word_len = 23;
+		if (i2s_intf->mode == I2S_DSP_MODE) {
+			i2s_intf->slots = i2s_intf->channels - 1;
+			i2s_intf->word_pos = 0; /* ignored */
 		} else {
-			slots = 0;
-			word_pos = 0; /* ignored, but set it to something */
-			priv_data->i2s_intf.slots = DAI_32slots;
+			i2s_intf->slots = 0;
+			i2s_intf->word_pos = 0; /* ignored */
 		}
 		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		break;
+
 	default:
 		goto hw_params_exit;
 	}
 
-	priv_data->i2s_intf.word_pos = word_pos;
-	priv_data->i2s_intf.word_order = DAI_MSB_FIRST;
+	if (priv_data->dai_master == true) {
+		i2s_intf->tx_ctrl |= I2S_TX_WS_MST_BIT;
+		i2s_intf->rx_ctrl |= I2S_RX_WS_MST_BIT;
+	} else {
+		i2s_intf->tx_ctrl &= ~I2S_TX_WS_MST_BIT;
+		i2s_intf->rx_ctrl &= ~I2S_RX_WS_MST_BIT;
+	}
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (priv_data->i2s_intf.ms_mode != DAI_SLAVE)
-			tx_ctrl |= 0x20;
-		writel_relaxed(tx_ctrl, priv_data->regbase + I2S_TX_CTRL_OFFSET);
+		writel_relaxed(i2s_intf->tx_ctrl, priv_data->regbase + I2S_TX_CTRL_OFFSET);
 		writel_relaxed(0x10, priv_data->regbase + I2S_TX_FIFO_LTH_OFFSET);
 	} else {
-		if (priv_data->i2s_intf.ms_mode == DAI_SLAVE)
-			writel_relaxed(0x00, priv_data->regbase + I2S_RX_CTRL_OFFSET);
-		else
-			writel_relaxed(0x02, priv_data->regbase + I2S_RX_CTRL_OFFSET);
+		writel_relaxed(i2s_intf->rx_ctrl, priv_data->regbase + I2S_RX_CTRL_OFFSET);
 		writel_relaxed(0x20, priv_data->regbase + I2S_RX_FIFO_GTH_OFFSET);
 	}
 
-	writel_relaxed(priv_data->i2s_intf.mode, priv_data->regbase + I2S_MODE_OFFSET);
-	writel_relaxed(word_len, priv_data->regbase + I2S_WLEN_OFFSET);
-	writel_relaxed(word_pos, priv_data->regbase + I2S_WPOS_OFFSET);
-	writel_relaxed(slots, priv_data->regbase + I2S_SLOT_OFFSET);
-	writel_relaxed(multi24, priv_data->regbase + I2S_24BITMUX_MODE_OFFSET);
-
-	switch (params_rate(params)) {
-	case 8000:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_8000;
-		priv_data->i2s_intf.oversample = AudioCodec_1536xfs;
-		break;
-	case 11025:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_11025;
-		priv_data->i2s_intf.oversample = AudioCodec_1152xfs;
-		break;
-	case 16000:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_16000;
-		priv_data->i2s_intf.oversample = AudioCodec_768xfs;
-		break;
-	case 22050:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_22050;
-		priv_data->i2s_intf.oversample = AudioCodec_512xfs;
-		break;
-	case 32000:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_32000;
-		priv_data->i2s_intf.oversample = AudioCodec_384xfs;
-		break;
-	case 44100:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_44100;
-		priv_data->i2s_intf.oversample = AudioCodec_256xfs;
-		break;
-	case 48000:
-		priv_data->i2s_intf.sfreq = AUDIO_SF_48000;
-		priv_data->i2s_intf.oversample = AudioCodec_256xfs;
-		break;
-	default:
-		goto hw_params_exit;
-	}
+	writel_relaxed(i2s_intf->mode, priv_data->regbase + I2S_MODE_OFFSET);
+	writel_relaxed(i2s_intf->word_len, priv_data->regbase + I2S_WLEN_OFFSET);
+	writel_relaxed(i2s_intf->word_pos, priv_data->regbase + I2S_WPOS_OFFSET);
+	writel_relaxed(i2s_intf->slots, priv_data->regbase + I2S_SLOT_OFFSET);
+	writel_relaxed(i2s_intf->multi24, priv_data->regbase + I2S_24BITMUX_MODE_OFFSET);
 
 	/* Set clock */
 	clk_set_rate(priv_data->mclk, priv_data->i2s_intf.mclk);
 
 	mutex_lock(&clock_reg_mutex);
 	clock_reg = readl_relaxed(priv_data->regbase + I2S_CLOCK_OFFSET);
-
-	/* In 16 bit mode, the channel width is 16 bits, and in 24 bit
-	 * mode then channel width is 32 bits (see Ambarella S2L Hardware
-         * Programming Manual, Table 9-1); consequently we need to adjust
-	 * the clock divider accordingly, by referencing 'double_rate' here.
-	 */
-
-	clock_divider = priv_data->i2s_intf.div;
-
 	clock_reg &= ~DAI_CLOCK_MASK;
-	clock_reg |= clock_divider;
-	if (priv_data->i2s_intf.ms_mode == DAI_MASTER)
+	clock_reg |= i2s_intf->div;
+
+	if (priv_data->dai_master == true)
 		clock_reg |= I2S_CLK_MASTER_MODE;
 	else
-		clock_reg &= (~I2S_CLK_MASTER_MODE);
-	/* Disable output BCLK and LRCLK to disable external codec */
-	if (enable_ext_i2s == 0)
-		clock_reg &= ~(I2S_CLK_WS_OUT_EN | I2S_CLK_BCLK_OUT_EN);
+		clock_reg &= ~I2S_CLK_MASTER_MODE;
 
 	if (bclk_reverse)
-		clock_reg &= ~(1<< 6);
+		clock_reg &= ~I2S_CLK_TX_PO_FALL;
 	else
-		clock_reg |= (1<< 6);
+		clock_reg |= I2S_CLK_TX_PO_FALL;
 
 	writel_relaxed(clock_reg, priv_data->regbase + I2S_CLOCK_OFFSET);
 	mutex_unlock(&clock_reg_mutex);
@@ -389,16 +329,16 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_LEFT_J:
-		priv_data->i2s_intf.mode = DAI_leftJustified_Mode;
+		priv_data->i2s_intf.mode = I2S_LEFT_JUSTIFIED_MODE;
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
-		priv_data->i2s_intf.mode = DAI_rightJustified_Mode;
+		priv_data->i2s_intf.mode = I2S_RIGHT_JUSTIFIED_MODE;
 		break;
 	case SND_SOC_DAIFMT_I2S:
-		priv_data->i2s_intf.mode = DAI_I2S_Mode;
+		priv_data->i2s_intf.mode = I2S_I2S_MODE;
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
-		priv_data->i2s_intf.mode = DAI_DSP_Mode;
+		priv_data->i2s_intf.mode = I2S_DSP_MODE;
 		break;
 	default:
 		return -EINVAL;
@@ -406,14 +346,14 @@ static int ambarella_i2s_set_fmt(struct snd_soc_dai *cpu_dai,
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
-		priv_data->i2s_intf.ms_mode = DAI_MASTER;
+		priv_data->dai_master = true;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFM:
-		if (priv_data->i2s_intf.mode != DAI_I2S_Mode) {
+		if (priv_data->i2s_intf.mode != I2S_I2S_MODE) {
 			printk("DAI can't work in slave mode without standard I2S format!\n");
 			return -EINVAL;
 		}
-		priv_data->i2s_intf.ms_mode = DAI_SLAVE;
+		priv_data->dai_master = false;
 		break;
 	default:
 		return -EINVAL;
@@ -465,8 +405,20 @@ static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
 static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
+	void __iomem *regbase = priv_data->regbase;
 
-	priv_data->clock_reg = readl_relaxed(priv_data->regbase + I2S_CLOCK_OFFSET);
+	priv_data->clock_reg = readl_relaxed(regbase + I2S_CLOCK_OFFSET);
+	i2s_intf->mode = readl_relaxed(regbase + I2S_MODE_OFFSET);
+	i2s_intf->word_len = readl_relaxed(regbase + I2S_WLEN_OFFSET);
+	i2s_intf->word_pos = readl_relaxed(regbase + I2S_WPOS_OFFSET);
+	i2s_intf->slots = readl_relaxed(regbase + I2S_SLOT_OFFSET);
+	i2s_intf->channels = readl_relaxed(regbase + I2S_CHANNEL_SELECT_OFFSET);
+	i2s_intf->rx_ctrl = readl_relaxed(regbase + I2S_RX_CTRL_OFFSET);
+	i2s_intf->tx_ctrl = readl_relaxed(regbase + I2S_TX_CTRL_OFFSET);
+	i2s_intf->rx_fifo_len = readl_relaxed(regbase + I2S_RX_FIFO_GTH_OFFSET);
+	i2s_intf->tx_fifo_len = readl_relaxed(regbase + I2S_TX_FIFO_LTH_OFFSET);
+	i2s_intf->multi24 = readl_relaxed(regbase + I2S_24BITMUX_MODE_OFFSET);
 
 	return 0;
 }
@@ -474,8 +426,20 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
+	void __iomem *regbase = priv_data->regbase;
 
-	writel_relaxed(priv_data->clock_reg, priv_data->regbase + I2S_CLOCK_OFFSET);
+	writel_relaxed(i2s_intf->mode, regbase + I2S_MODE_OFFSET);
+	writel_relaxed(i2s_intf->word_len, regbase + I2S_WLEN_OFFSET);
+	writel_relaxed(i2s_intf->word_pos, regbase + I2S_WPOS_OFFSET);
+	writel_relaxed(i2s_intf->slots, regbase + I2S_SLOT_OFFSET);
+	writel_relaxed(i2s_intf->channels, regbase + I2S_CHANNEL_SELECT_OFFSET);
+	writel_relaxed(i2s_intf->rx_ctrl, regbase + I2S_RX_CTRL_OFFSET);
+	writel_relaxed(i2s_intf->tx_ctrl, regbase + I2S_TX_CTRL_OFFSET);
+	writel_relaxed(i2s_intf->rx_fifo_len, regbase + I2S_RX_FIFO_GTH_OFFSET);
+	writel_relaxed(i2s_intf->tx_fifo_len, regbase + I2S_TX_FIFO_LTH_OFFSET);
+	writel_relaxed(i2s_intf->multi24, regbase + I2S_24BITMUX_MODE_OFFSET);
+	writel_relaxed(priv_data->clock_reg, regbase + I2S_CLOCK_OFFSET);
 
 	return 0;
 }
@@ -487,42 +451,40 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
-	u32 sfreq, clock_divider;
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
+	u32 sfreq, clk_div = 3;
 
 	dai->capture_dma_data = &priv_data->capture_dma_data;
 	dai->playback_dma_data = &priv_data->playback_dma_data;
 
 	if (priv_data->default_mclk == 12288000) {
-		sfreq = AUDIO_SF_48000;
+		sfreq = 48000;
 	} else if (priv_data->default_mclk == 11289600){
-		sfreq = AUDIO_SF_44100;
+		sfreq = 44100;
 	} else {
-		dev_warn(dai->dev, "Please sepcify the default mclk\n");
 		priv_data->default_mclk = 12288000;
-		sfreq = AUDIO_SF_48000;
+		sfreq = 48000;
 	}
 
 	clk_set_rate(priv_data->mclk, priv_data->default_mclk);
 
-	/* Dai default smapling rate, polarity configuration.
+	/*
+	 * Dai default smapling rate, polarity configuration.
 	 * Note: Just be configured, actually BCLK and LRCLK will not
-	 * output to outside at this time. */
-	clock_divider = 3;
-	writel_relaxed(clock_divider | I2S_CLK_TX_PO_FALL,
-			priv_data->regbase + I2S_CLOCK_OFFSET);
+	 * output to outside at this time.
+	 */
+	writel_relaxed(clk_div | I2S_CLK_TX_PO_FALL, priv_data->regbase + I2S_CLOCK_OFFSET);
 
-	priv_data->i2s_intf.mode = DAI_I2S_Mode;
-	priv_data->i2s_intf.clksrc = AMBARELLA_CLKSRC_ONCHIP;
-	priv_data->i2s_intf.ms_mode = DAI_MASTER;
-	priv_data->i2s_intf.mclk = priv_data->default_mclk;
-	priv_data->i2s_intf.oversample = AudioCodec_256xfs;
-	priv_data->i2s_intf.div = clock_divider;
-	priv_data->i2s_intf.word_order = DAI_MSB_FIRST;
-	priv_data->i2s_intf.sfreq = sfreq;
-	priv_data->i2s_intf.word_len = DAI_16bits;
-	priv_data->i2s_intf.word_pos = 0;
-	priv_data->i2s_intf.slots = DAI_32slots;
-	priv_data->i2s_intf.ch = 2;
+	priv_data->dai_master = true;
+	i2s_intf->mode = I2S_I2S_MODE;
+	i2s_intf->clksrc = AMBARELLA_CLKSRC_ONCHIP;
+	i2s_intf->mclk = priv_data->default_mclk;
+	i2s_intf->div = clk_div;
+	i2s_intf->sfreq = sfreq;
+	i2s_intf->word_len = 15;
+	i2s_intf->word_pos = 0;
+	i2s_intf->slots = 0;
+	i2s_intf->channels = 2;
 
 	/* reset fifo */
 	dai_tx_enable(priv_data);

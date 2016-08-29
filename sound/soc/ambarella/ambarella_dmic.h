@@ -2,9 +2,7 @@
  * sound/soc/ambarella_i2s.h
  *
  * History:
- *	2008/03/03 - [Eric Lee] created file
- *	2008/04/16 - [Eric Lee] Removed the compiling warning
- *	2009/01/22 - [Anthony Ginger] Port to 2.6.28
+ *	2016/07/13 - [XianqingZheng] created file
  *
  * Copyright (C) 2004-2009, Ambarella, Inc.
  *
@@ -24,20 +22,13 @@
  *
  */
 
-#ifndef AMBARELLA_I2S_H_
-#define AMBARELLA_I2S_H_
+#ifndef AMBARELLA_DMIC_H_
+#define AMBARELLA_DMIC_H_
 
-struct amb_i2s_priv {
-	void __iomem *regbase;
-	struct clk *mclk;
-	bool dai_master;
-	u32 default_mclk;
-	u32 clock_reg;
-	u32 bclk_reverse;
-	struct ambarella_i2s_interface i2s_intf;
-
-	struct snd_dmaengine_dai_dma_data playback_dma_data;
-	struct snd_dmaengine_dai_dma_data capture_dma_data;
+struct amb_dmic_priv {
+	void __iomem 		*regbase;
+	struct regmap		*reg_scr;
+	u32 			mclk;
 };
 
 #endif /*AMBARELLA_I2S_H_*/

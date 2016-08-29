@@ -187,6 +187,8 @@ static void ambarella_pll_set_hdmi_rate(struct clk_hw *hw, unsigned long rate)
 	}
 
 	ctrl_val.w = readl(clk_pll->ctrl_reg);
+	ctrl_val.s.force_reset = 1;
+	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 	ctrl_val.s.intp = intp - 1;
 	ctrl_val.s.sdiv = sdiv - 1;
 	ctrl_val.s.sout = sout - 1;
@@ -274,6 +276,11 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	ctrl_val.w = readl(clk_pll->ctrl_reg);
+	if(ctrl_val.s.frac_mode) {
+		ctrl_val.s.force_reset = 1;
+		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+	}
+
 	ctrl_val.s.intp = intp - 1;
 	ctrl_val.s.sdiv = sdiv - 1;
 	ctrl_val.s.sout = sout - 1;

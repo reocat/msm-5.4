@@ -67,7 +67,8 @@ PS: for those SoCs without internal PWC, you have to use external MCU.
 
 If the board design is to use external MCU for power sequence control, the SoC
 needs to communicate with the MCU through a GPIO, and the protocol is:
-1) SoC keeps the GPIO low at least 100ms to notify MCU to enter self-refresh.
+1) SoC keeps the GPIO high 100ms to notify MCU to enter self-refresh. After
+100ms, SoC should keep the GPIO low.
 2) MCU notifies SoC the state after powered up:
 2.1) if cold boot, MCU keeps the GPIO high.
 2.2) if resume from SR, MCU keeps the GPIO low.
@@ -131,7 +132,9 @@ Press the button directly
 3) Resume from SR by RTC
 root@/#echo enabled > /sys/class/rtc/rtc0/device/power/wakeup
 root@/#rtcwake -s 10 -m mem
-PS: this is available only when using internal PWC.
+PS: 
+  a) this is available only when using internal PWC.
+  b) rtc,wakeup has to be added into rtc node in DTS.
 
 
 

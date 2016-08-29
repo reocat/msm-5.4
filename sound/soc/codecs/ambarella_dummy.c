@@ -25,19 +25,31 @@
 #include <linux/of_gpio.h>
 #include "ambarella_dummy.h"
 
-static inline unsigned int ambdummy_codec_read(struct snd_soc_codec *codec,
+static inline unsigned int ambarella_dummy_codec_read(struct snd_soc_codec *codec,
 	unsigned int reg)
 {
 	return 0;
 }
 
-static inline int ambdummy_codec_write(struct snd_soc_codec *codec, unsigned int reg,
+static inline int ambarella_dummy_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
 {
 	return 0;
 }
 
-static int ambdummy_mute(struct snd_soc_dai *dai, int mute)
+static int ambarella_dummy_mute(struct snd_soc_dai *dai, int mute)
+{
+	return 0;
+}
+
+static int ambarella_dummy_set_fmt(struct snd_soc_dai *dai,
+		unsigned int fmt)
+{
+	return 0;
+}
+
+static int ambarella_dummy_set_sysclk(struct snd_soc_dai *dai,
+		int clk_id, unsigned int freq, int dir)
 {
 	return 0;
 }
@@ -47,11 +59,13 @@ static int ambdummy_mute(struct snd_soc_dai *dai, int mute)
 #define AMBDUMMY_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
 
 static struct snd_soc_dai_ops ambdummy_dai_ops = {
-	.digital_mute = ambdummy_mute,
+	.digital_mute = ambarella_dummy_mute,
+	.set_fmt = ambarella_dummy_set_fmt,
+	.set_sysclk = ambarella_dummy_set_sysclk,
 };
 
 static struct snd_soc_dai_driver ambdummy_dai = {
-	.name = "AMBARELLA_DUMMY_CODEC",
+	.name = "amba_dummy_codec",
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 2,
@@ -67,34 +81,32 @@ static struct snd_soc_dai_driver ambdummy_dai = {
 	.ops = &ambdummy_dai_ops,
 };
 
-static int ambdummy_probe(struct snd_soc_codec *codec)
+static int ambarella_dummy_probe(struct snd_soc_codec *codec)
 {
-	printk(KERN_INFO "AMBARELLA SoC Audio DUMMY Codec\n");
-
 	return 0;
 }
 
 /* power down chip */
-static int ambdummy_remove(struct snd_soc_codec *codec)
+static int ambarella_dummy_remove(struct snd_soc_codec *codec)
 {
 	return 0;
 }
 
 static struct snd_soc_codec_driver soc_codec_dev_ambdummy = {
-	.probe = 	ambdummy_probe,
-	.remove = 	ambdummy_remove,
+	.probe = 	ambarella_dummy_probe,
+	.remove = 	ambarella_dummy_remove,
 	.reg_cache_size	= 0,
-	.read =		ambdummy_codec_read,
-	.write =	ambdummy_codec_write,
+	.read =		ambarella_dummy_codec_read,
+	.write =	ambarella_dummy_codec_write,
 };
 
-static int ambdummy_codec_probe(struct platform_device *pdev)
+static int ambarella_dummy_codec_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_ambdummy, &ambdummy_dai, 1);
 }
 
-static int ambdummy_codec_remove(struct platform_device *pdev)
+static int ambarella_dummy_codec_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
@@ -107,8 +119,8 @@ static struct of_device_id ambdummy_of_match[] = {
 MODULE_DEVICE_TABLE(of, ambdummy_of_match);
 
 static struct platform_driver ambdummy_codec_driver = {
-	.probe		= ambdummy_codec_probe,
-	.remove		= ambdummy_codec_remove,
+	.probe		= ambarella_dummy_codec_probe,
+	.remove		= ambarella_dummy_codec_remove,
 	.driver		= {
 		.name	= "ambdummy-codec",
 		.of_match_table = ambdummy_of_match,

@@ -24,7 +24,7 @@ config AMBA_BOARD
 	select SND_AMBARELLA_SOC_I2S
 	select SND_SOC_AMBARELLA_DUMMY
 	help
-	  Say Y if you want to use ALSA driver on Ambarella General Board.
+	  Say Y or M if you want to use ALSA driver on Ambarella General Board.
 
 endif
 
@@ -39,17 +39,17 @@ if SND_AMBARELLA_CODEC
 config SND_SOC_AK4642_AMB
 	tristate "AK4642 for Ambarella"
 	help
-		Support AK4642 for A5S/S2_EVK/S2E_GINKGO/Hawthorn/s2lsmallbin.
+		Support AK4642 Audio Codec Driver for Ambarella Platform.
 
 config SND_SOC_AK4951_AMB
 	tristate "AK4951 for Ambarella"
 	help
-		Support AK4951 for Ambarella S2E_EVK/S2lm_kiwi/s2lm_ironman.
+		Support AK4951 Audio Codec for Ambarella Platform.
 
 config SND_SOC_AK4954_AMB
 	tristate "AK4954 for Ambarella"
 	help
-		Support AK4951 for Ambarella s2lm_kiwi/s2lm_ironman.
+		Support AK4954 Audio Codec for Ambarella Platform
 
 config SND_SOC_AK7719_DSP
 	tristate "AK7719_DSP for Ambarella"
@@ -72,22 +72,24 @@ config SND_SOC_TLV320ADC3xxx
 config SND_SOC_ES8388
 	tristate "ES8388 for Ambarella"
 	help
-		Support ES8388 for s2lm_iceman.
+		Support ES8388 Audio Codec.
 
 config SND_SOC_WM8974_AMB
 	tristate "WM8974 for Ambarella"
 	help
-		Support WM8974 for s2lm_elektra.
+		Support WM8974 Audio Codec for Ambarella Platform.
 
 config SND_SOC_WM8940_AMB
 	tristate "WM8940 for Ambarella"
 	help
-		Support WM8940 for strawnerry
+		Support WM8940 Audio Codec for Ambarella Platform
 
-config SND_SOC_AMBARELLA_DUMMY
-	tristate "Dummy Codec for Ambarella"
+config SND_AMBARELLA_SOC_DMIC
+	tristate "Ambarella DMIC"
+	depends on SND_AMBARELLA_SOC
+	depends on SND_AMBARELLA_SOC_I2S
 	help
-		Support Dummy Codec for Ambarella
+		Say Y or M to select the DMIC Interface of Ambarella
 
 endif
 
