@@ -137,7 +137,6 @@ struct amb_dev {
 	spinlock_t		lock;
 	wait_queue_head_t	wq;
 	struct mutex		mtx;
-	struct device		*pdev;
 
 	int 				config;
 	struct usb_gadget	*gadget;
@@ -1168,6 +1167,7 @@ static int __init amb_bind_config(struct usb_configuration *c)
 {
 	struct usb_gadget	*gadget = c->cdev->gadget;
 	struct amb_dev		*dev;
+	struct device		*pdev;
 	int status = -ENOMEM;
 
 	usb_ep_autoconfig_reset(gadget);
@@ -1200,10 +1200,10 @@ static int __init amb_bind_config(struct usb_configuration *c)
 	}
 
 	/* Setup the sysfs files for the gadget. */
-	dev->pdev = device_create(ag_class, NULL, ag_dev_id,
+	pdev = device_create(ag_class, NULL, ag_dev_id,
 				  NULL, "amb_gadget");
-	if (IS_ERR(dev->pdev)) {
-		status = PTR_ERR(dev->pdev);
+	if (IS_ERR(pdev)) {
+		status = PTR_ERR(pdev);
 		ERROR(dev, "Failed to create device: amb_gadget\n");
 		goto fail;
 	}
