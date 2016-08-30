@@ -295,44 +295,55 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET, 0);
 }
 
-static int nand_bch_spare_cmp(struct ambarella_nand_info *nand_info)
+static int count_zero_bits(u8 *buf, int size, int max_bits)
 {
-	u32 i;
-	u8 *bsp;
+	int i, zero_bits = 0;
 
-	bsp = nand_info->dmabuf + nand_info->mtd.writesize;
-
-	for (i = 0; i < nand_info->mtd.oobsize; i++) {
-		if (bsp[i] != 0xff)
+	for (i = 0; i < size; i++) {
+		zero_bits += hweight8(~buf[i]);
+		if (zero_bits > max_bits)
 			break;
 	}
-
-	if (i == nand_info->mtd.oobsize)
-		return 0;
-
-	return -1;
+	return zero_bits;
 }
 
 static int nand_bch_check_blank_page(struct ambarella_nand_info *nand_info)
 {
-	int ret = 0;
+	struct nand_chip *chip = &nand_info->chip;
+	int eccsteps = chip->ecc.steps;
+	int zeroflip = 0;
+	int oob_subset;
+	int zero_bits = 0;
 	u32 i;
-	u8 *data;
+	u8 *bufpos;
+	u8 *bsp;
 
-	ret = nand_bch_spare_cmp(nand_info);
-	if (ret < 0)
-		return ret;
+	bufpos = nand_info->dmabuf;
+	bsp = nand_info->dmabuf + nand_info->mtd.writesize;
+	oob_subset = nand_info->mtd.oobsize / eccsteps;
 
-	data = nand_info->dmabuf;
-	for (i = 0; i < nand_info->mtd.writesize; i++) {
-		if (data[i] != 0xff)
-			break;
+	for (i = 0; i < eccsteps; i++) {
+		zero_bits = count_zero_bits(bufpos, chip->ecc.size,
+								chip->ecc.strength);
+		if (zero_bits > chip->ecc.strength)
+			return -1;
+
+		if (zero_bits)
+			zeroflip = 1;
+
+		zero_bits += count_zero_bits(bsp, oob_subset,
+								chip->ecc.strength);
+		if (zero_bits > chip->ecc.strength)
+			return -1;
+
+		bufpos += chip->ecc.size;
+		bsp += oob_subset;
 	}
 
-	if (i == nand_info->mtd.writesize)
-		return 0;
+	if (zeroflip)
+		memset(nand_info->dmabuf, 0xff, nand_info->mtd.writesize);
 
-	return -1;
+	return 0;
 }
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
