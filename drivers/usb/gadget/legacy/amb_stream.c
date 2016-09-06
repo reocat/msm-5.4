@@ -1171,6 +1171,9 @@ autoconf_fail:
 	hs_bulk_in_desc.bEndpointAddress = fs_bulk_in_desc.bEndpointAddress;
 	hs_bulk_out_desc.bEndpointAddress = fs_bulk_out_desc.bEndpointAddress;
 	hs_intr_in_desc.bEndpointAddress = fs_intr_in_desc.bEndpointAddress;
+	ss_bulk_in_desc.bEndpointAddress = fs_bulk_in_desc.bEndpointAddress;
+	ss_bulk_out_desc.bEndpointAddress = fs_bulk_out_desc.bEndpointAddress;
+	ss_intr_in_desc.bEndpointAddress = fs_intr_in_desc.bEndpointAddress;
 
 	ret = usb_assign_descriptors(f, fs_amb_data_stream_function,
 				hs_amb_data_stream_function, ss_amb_data_stream_function);
