@@ -1060,6 +1060,10 @@ static int es8374_pcm_hw_params(struct snd_pcm_substream *substream,
 		}
 		/* set iface & srate */
 		snd_soc_write(codec, ES8374_DAC_FMT_REG11, iface);
+		/*set speak and mono for playback*/
+		snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0xA0);
+		snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x90);
+
 	} else {
 		iface = snd_soc_read(codec, ES8374_ADC_FMT_REG10) & 0xE3;
 		/* bit size */
@@ -1241,7 +1245,6 @@ static int es8374_resume(struct snd_soc_codec *codec)
 {
 	struct es8374_private *es8374 = snd_soc_codec_get_drvdata(codec);
 	int i;
-
 #if 0
 	snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x7f);
 	snd_soc_write(codec, ES8374_ANA_REF_REG14, 0x8a);
@@ -1256,6 +1259,7 @@ static int es8374_resume(struct snd_soc_codec *codec)
 	snd_soc_write(codec, ES8374_DAC_VOLUME_REG38, 0x00);
 	snd_soc_write(codec, ES8374_ADC_VOLUME_REG25, 0x00);
 #endif
+
 	for(i = 0; i <= 110; i++) {
 		snd_soc_write(codec, i, es8374->reg_cache[i]);
 	}
