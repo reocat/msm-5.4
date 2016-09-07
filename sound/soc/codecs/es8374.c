@@ -1080,7 +1080,6 @@ static int es8374_pcm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	if(es8374->dmic_enable){
-		printk("dmic is enabled\n");
 		snd_soc_write(codec, ES8374_ADC_CONTROL_REG24, 0x8A);  //6DB & DIMC=H
 		snd_soc_write(codec,0x12,0x40);
 		snd_soc_write(codec,0x13,0x40);
@@ -1089,7 +1088,6 @@ static int es8374_pcm_hw_params(struct snd_pcm_substream *substream,
 		snd_soc_write(codec, 0x28, 0x80);
 
 	} else {
-		printk("dmic is not enabled\n");
 		snd_soc_write(codec,0x24,0x08);	//adc set
 		snd_soc_write(codec, ES8374_GPIO_INSERT_REG6D, 0x1F);  //set gpio1 to GM SHORT
 	}
@@ -1103,6 +1101,7 @@ static int es8374_pcm_hw_params(struct snd_pcm_substream *substream,
 static int es8374_set_bias_level(struct snd_soc_codec *codec,
 			enum snd_soc_bias_level level)
 {
+
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 		snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x7f);
@@ -1126,15 +1125,8 @@ static int es8374_set_bias_level(struct snd_soc_codec *codec,
 
 	case SND_SOC_BIAS_STANDBY:
 		snd_soc_update_bits(codec, ES8374_AIN_PWR_SRC_REG21, 0xc0, 0xc0);
-		snd_soc_write(codec, ES8374_DAC_VOLUME_REG38, 0xc0);
-		snd_soc_write(codec, ES8374_ADC_VOLUME_REG25, 0xc0);
-		snd_soc_write(codec, ES8374_DAC_CONTROL_REG36, 0x20);
-		snd_soc_write(codec, ES8374_DAC_CONTROL_REG37, 0x21);
 		snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0x08);
 		snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x10);
-		snd_soc_write(codec, ES8374_SPK_MIX_GAIN_REG1D, 0x10);
-		snd_soc_write(codec, ES8374_SPK_OUT_GAIN_REG1E, 0x40);
-		snd_soc_write(codec, ES8374_AIN_PGA_REG22, 0x00);
 		break;
 
 	case SND_SOC_BIAS_OFF:
@@ -1238,7 +1230,6 @@ static int es8374_suspend(struct snd_soc_codec *codec)
 
 static int es8374_resume(struct snd_soc_codec *codec)
 {
-
 		snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x7f);
 		snd_soc_write(codec, ES8374_ANA_REF_REG14, 0x8a);
 		snd_soc_write(codec, ES8374_ANA_PWR_CTL_REG15, 0x40);
@@ -1338,6 +1329,8 @@ static int es8374_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec,0x38,0x00);	// DACVOLUMEL on
 	snd_soc_write(codec,0x37,0x00);	// dac set
 	snd_soc_write(codec,0x6D,0x40);	//SEL:GPIO1=DMIC CLK OUT+SEL:GPIO2=PLL CLK OUT
+
+	es8374_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return ret;
 }
