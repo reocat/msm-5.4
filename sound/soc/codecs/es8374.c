@@ -192,6 +192,7 @@ struct	es8374_private {
 	int pwr_gpio;
 	unsigned int pwr_active;
   	bool dmic_enable;
+	u8 reg_cache[110];
 };
 
 struct es8374_private *es8374_data;
@@ -1213,35 +1214,52 @@ static struct snd_soc_dai_driver es8374_dai[] = {
 
 static int es8374_suspend(struct snd_soc_codec *codec)
 {
-		snd_soc_write(codec, ES8374_DAC_VOLUME_REG38, 0xc0);
-		snd_soc_write(codec, ES8374_ADC_VOLUME_REG25, 0xc0);
-		snd_soc_write(codec, ES8374_DAC_CONTROL_REG36, 0x20);
-		snd_soc_write(codec, ES8374_DAC_CONTROL_REG37, 0x21);
-		snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0x08);
-		snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x10);
-		snd_soc_write(codec, ES8374_SPK_MIX_GAIN_REG1D, 0x10);
-		snd_soc_write(codec, ES8374_SPK_OUT_GAIN_REG1E, 0x40);
-		snd_soc_update_bits(codec, ES8374_AIN_PWR_SRC_REG21, 0xc0, 0x00);
-		snd_soc_write(codec, ES8374_ANA_PWR_CTL_REG15, 0xbf);
-		snd_soc_write(codec, ES8374_ANA_REF_REG14, 0x14);
-		snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x03);
+	struct es8374_private *es8374 = snd_soc_codec_get_drvdata(codec);
+	int i;
+
+	for(i = 0; i <= 110; i++) {
+		es8374->reg_cache[i] = snd_soc_read(codec, i);
+	}
+
+	snd_soc_write(codec, ES8374_DAC_VOLUME_REG38, 0xc0);
+	snd_soc_write(codec, ES8374_ADC_VOLUME_REG25, 0xc0);
+	snd_soc_write(codec, ES8374_DAC_CONTROL_REG36, 0x20);
+	snd_soc_write(codec, ES8374_DAC_CONTROL_REG37, 0x21);
+	snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0x08);
+	snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x10);
+	snd_soc_write(codec, ES8374_SPK_MIX_GAIN_REG1D, 0x10);
+	snd_soc_write(codec, ES8374_SPK_OUT_GAIN_REG1E, 0x40);
+	snd_soc_update_bits(codec, ES8374_AIN_PWR_SRC_REG21, 0xc0, 0x00);
+	snd_soc_write(codec, ES8374_ANA_PWR_CTL_REG15, 0xbf);
+	snd_soc_write(codec, ES8374_ANA_REF_REG14, 0x14);
+	snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x03);
+
 	return 0;
 }
 
 static int es8374_resume(struct snd_soc_codec *codec)
 {
-		snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x7f);
-		snd_soc_write(codec, ES8374_ANA_REF_REG14, 0x8a);
-		snd_soc_write(codec, ES8374_ANA_PWR_CTL_REG15, 0x40);
-		snd_soc_update_bits(codec, ES8374_AIN_PWR_SRC_REG21, 0xc0, 0xc0);
-		snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0xa0);
-		snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x90);
-		snd_soc_write(codec, ES8374_SPK_MIX_GAIN_REG1D, 0x02);
-		snd_soc_write(codec, ES8374_SPK_OUT_GAIN_REG1E, 0xa0);
-		snd_soc_write(codec, ES8374_DAC_CONTROL_REG36, 0x00);
-		snd_soc_write(codec, ES8374_DAC_CONTROL_REG37, 0x00);
-		snd_soc_write(codec, ES8374_DAC_VOLUME_REG38, 0x00);
-		snd_soc_write(codec, ES8374_ADC_VOLUME_REG25, 0x00);
+	struct es8374_private *es8374 = snd_soc_codec_get_drvdata(codec);
+	int i;
+
+#if 0
+	snd_soc_write(codec, ES8374_CLK_MANAGEMENT_REG01, 0x7f);
+	snd_soc_write(codec, ES8374_ANA_REF_REG14, 0x8a);
+	snd_soc_write(codec, ES8374_ANA_PWR_CTL_REG15, 0x40);
+	snd_soc_update_bits(codec, ES8374_AIN_PWR_SRC_REG21, 0xc0, 0x50);
+	snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0xa0);
+	snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x90);
+	snd_soc_write(codec, ES8374_SPK_MIX_GAIN_REG1D, 0x02);
+	snd_soc_write(codec, ES8374_SPK_OUT_GAIN_REG1E, 0xa0);
+	snd_soc_write(codec, ES8374_DAC_CONTROL_REG36, 0x00);
+	snd_soc_write(codec, ES8374_DAC_CONTROL_REG37, 0x00);
+	snd_soc_write(codec, ES8374_DAC_VOLUME_REG38, 0x00);
+	snd_soc_write(codec, ES8374_ADC_VOLUME_REG25, 0x00);
+#endif
+	for(i = 0; i <= 110; i++) {
+		snd_soc_write(codec, i, es8374->reg_cache[i]);
+	}
+
 	return 0;
 }
 
