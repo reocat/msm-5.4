@@ -1130,8 +1130,6 @@ static int es8374_set_bias_level(struct snd_soc_codec *codec,
 
 	case SND_SOC_BIAS_STANDBY:
 		snd_soc_update_bits(codec, ES8374_AIN_PWR_SRC_REG21, 0xc0, 0xc0);
-		snd_soc_write(codec, ES8374_MONO_MIX_REG1A, 0x08);
-		snd_soc_write(codec, ES8374_SPK_MIX_REG1C, 0x10);
 		break;
 
 	case SND_SOC_BIAS_OFF:
