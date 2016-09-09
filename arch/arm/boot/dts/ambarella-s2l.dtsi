@@ -592,7 +592,8 @@
 			amb,wait-tmo = <10000>; /* in millisecond */
 			amb,switch_vol_tmo = <20>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
-			amb,soft-phy;
+			amb,auto-tuning;
+			amb,phy-type = <0>;/*0:rct phy, 1: sd controller phy, 2: for s2e*/
 			amb,phy-timing = <0x00000001 0x04070000 0x00000000>,
 					 <0x000000e4 0x00000005 0x00001111>;
 			pinctrl-names = "default";

@@ -569,17 +569,19 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe0002000 0x1000>,
-			      <0xe0001000 0x80>;/* fio reg address */
+			      <0xe0001000 0x80>,/* fio reg address */
+			      <0xec1704c0 0x8>;  /* phy timing reg*/
 			interrupts = <75 0x4>;
 			amb,clk-name = "gclk_sd";
 			amb,wait-tmo = <10000>; /* in millisecond */
 			amb,switch-vol-tmo = <100>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
-			amb,soft-phy;
-			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,
-					/*sdr25 50M,sdr50 100M,sdr104 120M*/
-					<0x00000078 0x10410400 0x00904104>,
-					<0x00000080 0x38E38E00 0x0238E38E>;/*DDR50 50M*/
+			amb,auto-tuning;
+			amb,phy-type = <0>;/*0:rct phy, 1: sd controller phy, 2: for s2e*/
+			amb,phy-timing = <0x0000001f 0x04070000 0x00000000>,
+					/*sdr50 100M,sdr104 120M*/
+					<0x00000060 0x10410400 0x00D04104>,
+					<0x00000080 0x10410400  0x02504104>;/*DDR50 50M*/
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit &sdmmc0_cd_pin &sdmmc0_wp_pin>;
 
@@ -598,17 +600,19 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0xe001f000 0x1000>,
-			      <0xe0001000 0x80>;/* fio reg address */
+			      <0xe0001000 0x80>,/* fio reg address */
+			      <0xec1704c8 0x8>;  /* phy timing reg*/
 			interrupts = <74 0x4>;
 			amb,clk-name = "gclk_sdxc";
 			amb,wait-tmo = <10000>; /* in millisecond */
 			amb,switch-vol-tmo = <100>;
 			amb,max-blk-size = <131072>; /* valid value: 4K<<n */
-			amb,soft-phy;
-			amb,phy-timing = <0x00000007 0x00000000 0x00000000>,
-					/*sdr25 50M,sdr50 100M,sdr104 120M*/
-					<0x00000078 0x10410400 0x00904104>,
-					<0x00000080 0x38E38E00 0x0238E38E>;/*DDR50 50M*/
+			amb,auto-tuning;
+			amb,phy-type = <0>;
+			amb,phy-timing = <0x0000001f 0x04070000 0x00000000>,
+					/*sdr50 100M,sdr104 120M*/
+					<0x00000060 0x10410400 0x00D04104>,
+					<0x00000080 0x10410400  0x02504104>;/*DDR50 50M*/
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc2_pins_8bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
 
