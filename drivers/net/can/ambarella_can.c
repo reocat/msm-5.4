@@ -813,3 +813,5 @@ static struct platform_driver ambarella_can_driver = {
 };
 
 module_platform_driver(ambarella_can_driver);
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("CAN port driver for ambarella can based chip");

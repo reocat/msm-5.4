@@ -64,7 +64,7 @@ config CAN_LEDS
 	  LEDs and you want to use them as canbus activity indicators.
 
 config CAN_AMBARELLA
-	bool "Enable Ambarella CAN drivers"
+	tristate "Ambarella CAN controller"
 	---help---
 	  This is a driver for Ambarella CAN controller.
 

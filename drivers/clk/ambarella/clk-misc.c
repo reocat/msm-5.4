@@ -39,6 +39,7 @@ static const char *gclk_names[] = {
 	"gclk_idsp", "gclk_so", "gclk_vo2", "gclk_vo", "gclk_uart",
 	"gclk_audio", "gclk_sdxc", "gclk_sdio", "gclk_sd", "gclk_ir",
 	"gclk_adc", "gclk_ssi", "gclk_ssi2", "gclk_ssi3", "gclk_pwm",
+	"gclk_can"
 };
 
 static int ambarella_clock_proc_show(struct seq_file *m, void *v)
