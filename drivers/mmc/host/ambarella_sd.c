@@ -1163,7 +1163,6 @@ static void ambarella_sd_set_bus(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 
 	amba_writeb(pinfo->regbase + SD_HOST_OFFSET, hostr);
-
 	ambsd_dbg(pslotinfo, "hostr = 0x%x.\n", hostr);
 
 	if(!pinfo->auto_tuning || ios->timing == MMC_TIMING_LEGACY
@@ -1403,9 +1402,11 @@ static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo
 			}
 			counter++;
 			if (counter > CONFIG_SD_AMBARELLA_WAIT_COUNTER_LIMIT) {
-				ambsd_warn(pslotinfo,
-					"Wait SD_STA_CMD_INHIBIT_DAT...\n");
+				if(pslotinfo->mrq->cmd->opcode != MMC_SEND_TUNING_BLOCK)
+					ambsd_warn(pslotinfo,
+						"Wait SD_STA_CMD_INHIBIT_DAT...\n");
 				pslotinfo->state = AMBA_SD_STATE_ERR;
+				pslotinfo->mrq->data->error = -EILSEQ;
 				pinfo->reset_error = 1;
 				goto ambarella_sd_send_cmd_exit;
 			}
@@ -1439,6 +1440,7 @@ static inline void ambarella_sd_send_cmd(struct ambarella_sd_mmc_info *pslotinfo
 				ambsd_warn(pslotinfo,
 					"Wait SD_STA_CMD_INHIBIT_CMD...\n");
 				pslotinfo->state = AMBA_SD_STATE_ERR;
+				pslotinfo->mrq->cmd->error = -EILSEQ;
 				pinfo->reset_error = 1;
 				goto ambarella_sd_send_cmd_exit;
 			}
@@ -1733,11 +1735,25 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 	u32 tmp, misc, sel, lat, s = -1, e = 0, middle;
-	u32 best_misc = 0, best_s = -1, best_e = 0;
+	u32 best_misc = 0, best_s = -1, best_e = 0, doing_retune = 0;
 	int dly, longest_range = 0, range = 0;
+	u32 clock = pinfo->controller_ios.clock;
 
 	if(!pinfo->auto_tuning || !pinfo->timing_reg)
 		return 0;
+
+retry:
+	if (doing_retune) {
+		clock -= 10000000;
+		if (clock <= 50000000) {
+			ambsd_tuning_dbg(pslotinfo,
+				"tuning: can't find any valid timing\n");
+			return -ECANCELED;
+		}
+
+		pinfo->controller_ios.clock = clock;
+		ambarella_sd_set_clk(mmc, &pinfo->controller_ios);
+	}
 
 	if(pinfo->phy_type == 0)
 		goto phy_type_0;
@@ -1754,7 +1770,7 @@ phy_type_0:
 		tmp = readl_relaxed(pinfo->timing_reg);
 		tmp &= 0x0000ffff;
 		tmp |= ((misc >> 1) & 0x1) << 19;
-		writel_relaxed(tmp | SD_PHY_RESET, pinfo->timing_reg);
+		writel_relaxed(tmp | (1 << 25), pinfo->timing_reg);
 		msleep(1);      /* DLL reset time */
 		writel_relaxed(tmp, pinfo->timing_reg);
 		msleep(1);      /* DLL lock time */
@@ -1818,8 +1834,14 @@ phy_type_0:
 		e = range = 0;
 	}
 
-	if (longest_range == 0)
-			return -EIO;
+	if (longest_range == 0) {
+		if (clock > 50000000) {
+			doing_retune = 1;
+			goto retry;
+		}
+
+		return -EIO;
+	}
 
 	middle = (best_s + best_e) / 2;
 
@@ -1903,8 +1925,14 @@ phy_type_1:
 		e = range = 0;
 	}
 
-	if (longest_range == 0)
-			return -EIO;
+	if (longest_range == 0) {
+		if (clock > 50000000) {
+			doing_retune = 1;
+			goto retry;
+		}
+
+		return -EIO;
+	}
 
 	middle = (best_s + best_e) / 2;
 
@@ -1970,8 +1998,14 @@ phy_type_2:
 		e = range = 0;
 	}
 
-	if (longest_range == 0)
-			return -EIO;
+	if (longest_range == 0) {
+		if (clock > 50000000) {
+			doing_retune = 1;
+			goto retry;
+		}
+
+		return -EIO;
+	}
 
 	middle = (best_s + best_e) / 2;
 	tmp = lat | ((middle >> 3) << 30) | ((middle & 0x07) << 13) | (best_misc << 21);
