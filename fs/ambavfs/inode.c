@@ -164,8 +164,8 @@ static void writepage_cb(void *priv, struct ambafs_msg *msg, int len)
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page;
 		page = ambalink_phys_to_page((phys_addr_t)io->bh[page_idx].addr);
-		unlock_page(page);
 		end_page_writeback(page);
+		unlock_page(page);
 	}
 }
 
