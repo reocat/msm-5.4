@@ -141,7 +141,7 @@ struct ambeth_info {
 					dump_rx : 1,
 					dump_rx_free : 1,
 					dump_rx_all : 1;
-	bool				clk_direction;
+	int				clk_direction;
 };
 
 /* ==========================================================================*/
@@ -2192,7 +2192,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int gmii, ret_val, clk_src;
+	int gmii, ret_val, clk_src, clk_direction;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2265,15 +2265,21 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
 		}
 
-		ret_val = !!of_find_property(phy_np, "amb,clk-dir", NULL);
-		if(ret_val) {
-			/*set ref clock pin as input from PHY*/
-			lp->clk_direction = true;
+		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_direction);
+		if(ret_val == 0 && clk_direction == 1) {
+			/*set direction of xx_enet_clk_rx as output from ambarella chip*/
+			lp->clk_direction = 1;
 			ret_val = amba_readl(AHB_MISC_EN_REG);
 			ret_val |= (1 << 5);
 			amba_writel(AHB_MISC_EN_REG, ret_val);
+		} else if(ret_val == 0 && clk_direction == 0) {
+			/*set direction of xx_enet_clk_rx as output from external phy*/
+			lp->clk_direction = 0;
+			ret_val = amba_readl(AHB_MISC_EN_REG);
+			ret_val &= ~(1 << 5);
+			amba_writel(AHB_MISC_EN_REG, ret_val);
 		} else
-			lp->clk_direction = false;
+			lp->clk_direction = -1;
 	}
 
 	return 0;
@@ -2492,10 +2498,13 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	if (!netif_running(ndev))
 		goto ambeth_drv_resume_exit;
 
-	if(lp->clk_direction) {
-		/*set ref clock pin as input from PHY*/
+	if(lp->clk_direction == 1) {
 		ret_val = amba_readl(AHB_MISC_EN_REG);
 		ret_val |= (1 << 5);
+		amba_writel(AHB_MISC_EN_REG, ret_val);
+	} else if(lp->clk_direction == 0) {
+		ret_val = amba_readl(AHB_MISC_EN_REG);
+		ret_val &= ~(1 << 5);
 		amba_writel(AHB_MISC_EN_REG, ret_val);
 	}
 
