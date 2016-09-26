@@ -94,7 +94,7 @@ static int dwc3_ambarella_probe(struct platform_device *pdev)
 	int			ret;
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	struct usb_phy		*phy;
-	u32			ref_use_pad, ref_clk_div2;
+	u32			ref_use_pad, ref_clk_div2, poc;
 #endif
 
 	if (!node) {
@@ -136,6 +136,14 @@ static int dwc3_ambarella_probe(struct platform_device *pdev)
 
 	if (of_property_read_u32(dev->of_node, "amb,ref-clk-div2", &ref_clk_div2) < 0)
 		ref_clk_div2 = 1;
+
+	regmap_read(dwc3_amba->rct_reg, SYS_CONFIG_OFFSET, &poc);
+
+	if (poc & SYS_CONFIG_USB_PHY_48M) {
+		/* if using internal clock and clock is 48 MHz. */
+		ref_use_pad = 0;
+		ref_clk_div2 = 1;
+	}
 
 	usb_phy_init(phy);
 
