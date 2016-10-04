@@ -146,8 +146,7 @@ static void rpmsg_send_irq(struct regmap *reg_ahb_scr, unsigned long irq)
 
 static void rpmsg_ack_irq(struct regmap *reg_ahb_scr, unsigned long irq)
 {
-        regmap_write_bits(reg_ahb_scr, AHB_SP_SWI_CLEAR_OFFSET,
-                        0x1 << (irq - AXI_SOFT_IRQ1(0)),
+        regmap_write(reg_ahb_scr, AHB_SP_SWI_CLEAR_OFFSET,
                         0x1 << (irq - AXI_SOFT_IRQ1(0)));
 }
 

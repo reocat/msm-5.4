@@ -141,9 +141,8 @@ static irqreturn_t ipc_mutex_isr(int irq, void *dev_id)
         irq_data = irq_get_irq_data(irq);
 
 	// clear the irq
-	regmap_write_bits(lock_set.reg_ahb_scr, AHB_SP_SWI_CLEAR_OFFSET,
-	                0x1 << (irq_data->hwirq - AXI_SOFT_IRQ1(0)),
-	                0x1 << (irq_data->hwirq - AXI_SOFT_IRQ1(0)));
+	regmap_write(lock_set.reg_ahb_scr, AHB_SP_SWI_CLEAR_OFFSET,
+			0x1 << (irq_data->hwirq - AXI_SOFT_IRQ1(0)));
 
 	// wake up
 	for (i = 0; i < AMBA_IPC_NUM_MUTEX; i++) {
