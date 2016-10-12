@@ -1860,7 +1860,7 @@ phy_type_0:
 	tmp = readl_relaxed(pinfo->timing_reg);
 	tmp &= 0x0000ffff;
 	tmp |= ((best_misc >> 1) & 0x1) << 19;
-	writel_relaxed(tmp | SD_PHY_RESET, pinfo->timing_reg);
+	writel_relaxed(tmp | (1 << 25), pinfo->timing_reg);
 	msleep(1);		/* DLL reset time */
 	writel_relaxed(tmp, pinfo->timing_reg);
 	msleep(1);		/* DLL lock time */
@@ -1868,6 +1868,8 @@ phy_type_0:
 	lat = ((best_misc >> 0) & 0x1) + 1;
 	tmp = (lat << 12) | (lat << 8) | (lat << 4) | (lat << 0);
 	writel_relaxed(tmp, pinfo->regbase + SD_LAT_CTRL_OFFSET);
+
+	ambarella_sd_recovery(mmc);
 
 	return 0;
 
@@ -1942,6 +1944,8 @@ phy_type_1:
 		| (best_misc << 7) | (best_misc << 13) | (best_misc << 19);
 	amba_writel(pinfo->regbase + SD_DELAY_SEL_H, tmp);
 
+	ambarella_sd_recovery(mmc);
+
 	return 0;
 
 phy_type_2:
@@ -2010,6 +2014,8 @@ phy_type_2:
 	middle = (best_s + best_e) / 2;
 	tmp = lat | ((middle >> 3) << 30) | ((middle & 0x07) << 13) | (best_misc << 21);
 	amba_writel(pinfo->timing_reg, tmp);
+
+	ambarella_sd_recovery(mmc);
 
 	return 0;
 }
