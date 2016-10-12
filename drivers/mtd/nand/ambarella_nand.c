@@ -1586,6 +1586,12 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	ambarella_fio_rct_reset();
 	fio_unlock(SELECT_FIO_FL);
 
+	/* When suspend/resume mode, before exit random read mode,
+	 * we take time for make sure FIO reset well and
+	 * some dma req finished.
+	 */
+	if (nand_info->suspend == 1)
+		mdelay(2);
 	/* Exit random read mode */
 	amba_clrbitsl(nand_info->regbase + FIO_CTR_OFFSET, FIO_CTR_RR);
 
