@@ -2229,10 +2229,7 @@ static int ambarella_sd_init_slot(struct device_node *np, int id,
 		}
 	}
 
-	clk_set_rate(pinfo->clk, mmc->f_max);
-	mmc->f_max = clk_get_rate(pinfo->clk);
 	mmc->f_min = mmc->f_max >> 8;
-
 	mmc->ops = &ambarella_sd_host_ops;
 
 	init_waitqueue_head(&pslotinfo->wait);
