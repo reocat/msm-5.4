@@ -654,7 +654,7 @@ Optional properties:
 - amb,dump-rx-free: specifies to free buffer after dumped.
 - amb,dump-rx-all: specifies to dump all buffers without filter.
 - amb,clk-src: specifies the clk source for gtx_clk, 0:external clk, 1:internal clk.
-- amb,clk-invert: specifies to invert the clk for ethernet.
+- amb,clk-invert: specifies to invert the clk for ethernet, 0: no invert, 1: invert
 - amb,clk-dir: specifies the ref clk direction from PHY, 1: set direction of xx_enet_clk_rx as output from ambarella chip,
   0: set direction of xx_enet_clk_rx as output from external phy.
 ii) Example

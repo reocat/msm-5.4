@@ -2192,7 +2192,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int gmii, ret_val, clk_src, clk_direction;
+	int gmii, ret_val, clk_src, clk_direction, clk_pl;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2259,10 +2259,11 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			/*default value for clk source*/
 		}
 
-		ret_val = !!of_find_property(phy_np, "amb,clk-invert", NULL);
-		if(ret_val) {
-			/*invert the clk for ethernet*/
+		ret_val = of_property_read_u32(phy_np, "amb,clk-invert", &clk_pl);
+		if(ret_val == 0 && clk_pl == 1) {
 			amba_setbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
+		} else if(ret_val == 0 && clk_pl == 0) {
+			amba_clrbitsl(AHB_SCRATCHPAD_REG(0xc), 0x80000000);
 		}
 
 		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_direction);
