@@ -738,6 +738,7 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	soc->dev = &pdev->dev;
+	amb_pinctrl_soc = soc;
 
 	child = of_get_child_by_name(pdev->dev.of_node, "gpio");
 	if (!child) {
