@@ -1488,7 +1488,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	unsigned int dirty_diff;
 	u32 tx_flag;
 	unsigned long flags;
+	struct netdev_queue *txq;
 
+	txq = netdev_get_tx_queue(ndev, skb_get_queue_mapping(skb));
 	lp = (struct ambeth_info *)netdev_priv(ndev);
 	if (lp->enhance)
 		tx_flag = ETH_ENHANCED_TDES0_LS | ETH_ENHANCED_TDES0_FS | ETH_ENHANCED_TDES0_TCH;
@@ -1547,6 +1549,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 #if 0 /* linux-4.8 use netdev_queue->trans_start instead */
 	ndev->trans_start = jiffies;
 #endif
+	txq->trans_start = jiffies;
 	dev_vdbg(&lp->ndev->dev, "TX Info: cur_tx[%u], dirty_tx[%u], "
 		"entry[%u], len[%u], data_len[%u], ip_summed[%u], "
 		"csum_start[%u], csum_offset[%u].\n",
@@ -2046,9 +2049,10 @@ static int ambeth_get_dump_flag(struct net_device *ndev,
 static int ambeth_get_dump_data(struct net_device *ndev,
 	struct ethtool_dump *ed, void *pdata)
 {
-	struct ambeth_info *lp = netdev_priv(ndev);
 	int i;
 	u16 *regbuf;
+	struct ambeth_info *lp = netdev_priv(ndev);
+	struct phy_device	*phydev = lp->phydev;
 
 	pr_debug("%s: cmd[0x%08X], version[0x%08X], "
 		"flag[0x%08X], len[0x%08X]\n",
@@ -2060,8 +2064,8 @@ static int ambeth_get_dump_data(struct net_device *ndev,
 	}
 	regbuf = (u16 *)pdata;
 	for (i = 0; i < (ed->len / 2); i++) {
-		regbuf[i] = mdiobus_read(lp->phydev->mdio.bus,
-			lp->phydev->addr, i);
+		regbuf[i] = mdiobus_read(phydev->mdio.bus,
+				phydev->mdio.addr, i);
 	}
 
 	return 0;
@@ -2069,9 +2073,9 @@ static int ambeth_get_dump_data(struct net_device *ndev,
 
 static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 {
+	u16 dbg_address, dbg_value;
 	struct ambeth_info *lp = netdev_priv(ndev);
-	u16 dbg_address;
-	u16 dbg_value;
+	struct phy_device	*phydev = lp->phydev;
 
 	pr_debug("%s: cmd[0x%08X], version[0x%08X], "
 		"flag[0x%08X], len[0x%08X]\n",
@@ -2083,7 +2087,7 @@ static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 	}
 	dbg_address = ((ed->flag & 0xFFFF0000) >> 16);
 	dbg_value = (ed->flag & 0x0000FFFF);
-	mdiobus_write(lp->phydev->mdio.bus, lp->phydev->addr,
+	mdiobus_write(phydev->mdio.bus, phydev->mdio.addr,
 		dbg_address, dbg_value);
 
 	return 0;
@@ -2430,13 +2434,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	lp->new_bus.reset = &ambhw_mdio_reset,
 	snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%s", pdev->name);
 	lp->new_bus.priv = lp;
-	lp->new_bus.irq = kmalloc(sizeof(int)*PHY_MAX_ADDR, GFP_KERNEL);
-	if (lp->new_bus.irq == NULL) {
-		dev_err(&pdev->dev, "alloc new_bus.irq fail.\n");
-		ret_val = -ENOMEM;
-		goto ambeth_drv_probe_free_netdev;
-	}
-
 	lp->new_bus.parent = &pdev->dev;
 	lp->new_bus.state = MDIOBUS_ALLOCATED;
 
@@ -2455,7 +2452,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	if (netif_msg_drv(lp)) {
 		dev_info(&pdev->dev, "%s Ethernet PHY[%d]: 0x%08x!\n",
-				lp->enhance ? "Enhance" : "Normal", lp->phydev->addr, lp->phydev->phy_id);
+				lp->enhance ? "Enhance" : "Normal", lp->phydev->mdio.addr, lp->phydev->phy_id);
 	}
 
 	ether_setup(ndev);
@@ -2495,7 +2492,6 @@ ambeth_drv_probe_netif_napi_del:
 	mdiobus_unregister(&lp->new_bus);
 
 ambeth_drv_probe_kfree_mdiobus:
-	kfree(lp->new_bus.irq);
 
 ambeth_drv_probe_free_netdev:
 	free_netdev(ndev);

@@ -621,8 +621,6 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		return errorCode;
 	}
 
-        i2c_add_adapter(adap);
-
 	pinfo->system_event.notifier_call = ambarella_i2c_system_event;
 	ambarella_register_event_notifier(&pinfo->system_event);
 
