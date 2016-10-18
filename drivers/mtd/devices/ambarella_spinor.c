@@ -35,6 +35,7 @@
 #define    OPCODE_FAST_READ   0x0b    /* Read data bytes (high frequency) */
 #define    OPCODE_DIOR        0xbb    /* Dual I/O Read */
 #define    OPCODE_QIOR        0xeb    /* Quad I/O Read */
+#define    OPCODE_QR          0x6b    /* Quad I/O Read */
 #define    OPCODE_PP          0x02    /* Page program (up to 256 bytes) */
 #define    OPCODE_BE_4K       0x20    /* Erase 4KiB block */
 #define    OPCODE_BE_32K      0x52    /* Erase 32KiB block */
@@ -75,6 +76,13 @@
 #define    SECT_4K	0x01        /* OPCODE_BE_4K works uniformly */
 #define    DIO_READ	0x02        /* Support dual IO read */
 #define    QIO_READ	0x04        /* Support quad IO read */
+#define    Q_READ	0x08        /* Support quad IO read */
+
+#define    DUMMY_1	0x01        /* OPCODE_BE_4K works uniformly */
+#define    DUMMY_2	0x02        /* Support dual IO read */
+#define    DUMMY_4	0x04        /* Support quad IO read */
+#define    DUMMY_6	0x08        /* Support quad IO read */
+#define    DUMMY_8	0x010       /* Support quad IO read */
 
 /****************************************************************************/
 
@@ -324,8 +332,6 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
 
     /* Using dual I/O read to improve the read throughput. */
     flash->command[0] = flash->read_opcode;
-    /* The dummy cycles is quite depended on the opcode!! */
-    flash->dummy = 8;
 
     for (offset = 0; offset < len; ) {
         needread = len - offset;
@@ -388,7 +394,6 @@ static int amba_write(struct mtd_info *mtd, loff_t to, size_t len,
 
     /* Set up the opcode in the write buffer. */
     flash->command[0] = OPCODE_PP;
-    flash->dummy = 0;
     page_offset = to & (flash->page_size - 1);
     /* do all the bytes fit onto one page? */
     if (page_offset + len <= flash->page_size) {
@@ -456,7 +461,7 @@ struct flash_info {
     u16        addr_width;
 
 	u32			max_clk_hz;
-    u16        flags;
+    u32        flags;
 };
 
 
@@ -477,11 +482,12 @@ struct ambid_t {
 };
 
 static const struct ambid_t amb_ids[] = {
-	{ "s25fl256s", INFO(0x010219, 0x4d00, 256 * 1024, 128, 512, 70000000, DIO_READ) },
+	{ "s25fl256s", INFO(0x010219, 0x4d00, 256 * 1024, 128, 512, 70000000, (DUMMY_4 << 16) | DIO_READ) },
 	{ "s70fl01gs", INFO(0x010220, 0x4d00, 256 * 1024, 256, 512, 50000000, 0) },
-	{ "n25q256a", INFO(0x20ba19, 0, 64 * 1024, 512, 256, 60000000, DIO_READ) },
+	{ "n25q256a", INFO(0x20ba19, 0, 64 * 1024, 512, 256, 60000000, (DUMMY_8 << 16) | Q_READ) },
+	{ "mt25qu512abb", INFO(0x20bb20, 0, 64 * 1024, 1024, 256, 96000000, (DUMMY_8 << 16) | Q_READ) },
 	{ "mx25l25645g", INFO(0xc22019, 0, 64 * 1024, 512, 256, 50000000, 0) },
-	{ "mx66l1g45g", INFO(0xc2201b, 0, 32 * 1024, 4096, 256, 60000000, DIO_READ) },
+	{ "mx66l1g45g", INFO(0xc2201b, 0, 32 * 1024, 4096, 256, 60000000, (DUMMY_4 << 16) | DIO_READ) },
 	{ "mx66l51235f", INFO(0xc2201a, 0, 64 * 1024, 1024, 256, 50000000, 0) },
 	{ "w25q128", INFO(0xef4018, 0, 64 * 1024, 256, 256, 50000000, 0) },
 	{ "w25q256", INFO(0xef4019, 0, 64 * 1024, 512, 256, 50000000, 0) },
@@ -703,12 +709,30 @@ static int    amb_spi_nor_probe(struct platform_device *pdev)
 		flash->read_opcode = OPCODE_DIOR;
 	} else if (info->flags & QIO_READ) {
 		flash->read_opcode = OPCODE_QIOR;
+	} else if (info->flags & Q_READ) {
+		flash->read_opcode = OPCODE_QR;
 	} else {
 		if (flash->fast_read) {
 			flash->read_opcode = OPCODE_FAST_READ;
 		} else {
 			flash->read_opcode = OPCODE_NORM_READ;
 		}
+	}
+
+	/* Select the dummy cycles. */
+	/* The dummy cycles is quite depended on the opcode!! */
+	if ((info->flags >> 16) & DUMMY_1) {
+		flash->dummy = 1;
+	} else if ((info->flags >> 16) & DUMMY_2) {
+		flash->dummy = 2;
+	} else if ((info->flags >> 16) & DUMMY_4) {
+		flash->dummy = 4;
+	} else if ((info->flags >> 16) & DUMMY_6) {
+		flash->dummy = 6;
+	} else if ((info->flags >> 16) & DUMMY_8) {
+		flash->dummy = 8;
+	} else {
+		flash->dummy = 0;
 	}
 
 	flash->jedec_id	= info->jedec_id;

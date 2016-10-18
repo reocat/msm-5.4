@@ -61,7 +61,7 @@ int ambspi_send_cmd(struct amb_norflash *flash, u32 cmd, u32 dummy_len,
 	tmp = 0x0;
 	writel_relaxed(tmp, flash->regbase + REG30);
 
-	tmp = 0x20;
+	tmp = 0x7f;
 	writel_relaxed(tmp, flash->regbase + REG3C);
 
 	tmp = readl_relaxed(flash->regbase + REG50);
@@ -168,7 +168,7 @@ int ambspi_progdata_dma(struct amb_norflash *flash, u32 srcoffset,
 
 	tmp = readl_relaxed(flash->regbase + REG00);
 	REGPREP(tmp, REG00_DATALEN_MASK, REG00_DATALEN_SHIFT, len);
-	REGPREP(tmp, REG00_DUMMYLEN_MASK, REG00_DUMMYLEN_SHIFT, flash->dummy);
+	REGPREP(tmp, REG00_DUMMYLEN_MASK, REG00_DUMMYLEN_SHIFT, 0);
 	REGPREP(tmp, REG00_ADDRLEN_MASK, REG00_ADDRLEN_SHIFT, flash->addr_width);
 	REGPREP(tmp, REG00_CMDLEN_MASK, REG00_CMDLEN_SHIFT, 1);
 	writel_relaxed(tmp, flash->regbase + REG00);
@@ -207,7 +207,7 @@ int ambspi_progdata_dma(struct amb_norflash *flash, u32 srcoffset,
 		done = REGDUMP(tmp, REG2C_TXFIFOEMP_MASK, REG2C_TXFIFOEMP_SHIFT);
 	} while (done != 0x0);
 
-	tmp = 0x20;
+	tmp = 0x7f;
 	writel_relaxed(tmp, flash->regbase + REG3C);
 
 	tmp = readl_relaxed(flash->regbase + REG50);
@@ -250,7 +250,7 @@ int ambspi_prog_data(struct amb_norflash *flash, u32 srcoffset, u32 dst, u32 len
 
 		tmp = readl_relaxed(flash->regbase + REG00);
 		REGPREP(tmp, REG00_DATALEN_MASK, REG00_DATALEN_SHIFT, tail);
-		REGPREP(tmp, REG00_DUMMYLEN_MASK, REG00_DUMMYLEN_SHIFT, flash->dummy);
+		REGPREP(tmp, REG00_DUMMYLEN_MASK, REG00_DUMMYLEN_SHIFT, 0);
 		REGPREP(tmp, REG00_ADDRLEN_MASK, REG00_ADDRLEN_SHIFT, flash->addr_width);
 		REGPREP(tmp, REG00_CMDLEN_MASK, REG00_CMDLEN_SHIFT, 1);
 		writel_relaxed(tmp, flash->regbase + REG00);
@@ -289,7 +289,7 @@ int ambspi_prog_data(struct amb_norflash *flash, u32 srcoffset, u32 dst, u32 len
 				flash->regbase + REG100);
 		}
 
-		tmp = 0x20;
+		tmp = 0x7f;
 		writel_relaxed(tmp, flash->regbase + REG3C);
 
 		tmp = readl_relaxed(flash->regbase + REG50);
@@ -344,6 +344,10 @@ int ambspi_readdata_dma(struct amb_norflash *flash, u32 from,
 		REGPREP(tmp, REG04_DATALANE_MASK, REG04_DATALANE_SHIFT, 2);
 		REGPREP(tmp, REG04_ADDRLANE_MASK, REG04_ADDRLANE_SHIFT, 2);
 		REGPREP(tmp, REG04_RXLANE_MASK, REG04_RXLANE_SHIFT, 0);
+	} else if (flash->read_opcode == 0x6b) {
+		REGPREP(tmp, REG04_DATALANE_MASK, REG04_DATALANE_SHIFT, 2);
+		REGPREP(tmp, REG04_ADDRLANE_MASK, REG04_ADDRLANE_SHIFT, 0);
+		REGPREP(tmp, REG04_RXLANE_MASK, REG04_RXLANE_SHIFT, 0);
 	} else {
 		REGPREP(tmp, REG04_DATALANE_MASK, REG04_DATALANE_SHIFT, 1);
 		REGPREP(tmp, REG04_ADDRLANE_MASK, REG04_ADDRLANE_SHIFT, 0);
@@ -361,7 +365,7 @@ int ambspi_readdata_dma(struct amb_norflash *flash, u32 from,
 	tmp = from;
 	writel_relaxed(tmp, flash->regbase + REG14);
 
-	tmp = 0x20;
+	tmp = 0x7f;
 	writel_relaxed(tmp, flash->regbase + REG3C);
 
 	tmp = (32 - 1);		// must use word.can't use rxfifothlv
@@ -443,7 +447,7 @@ int ambspi_read_data(struct amb_norflash *flash, u32 from, u32 len)
 		tmp = from + bulk * 32;
 		writel_relaxed(tmp, flash->regbase + REG14);
 
-		tmp = 0x20;
+		tmp = 0x7f;
 		writel_relaxed(tmp, flash->regbase + REG3C);
 
 		tmp = 31;	// the reserved bits must set 0
