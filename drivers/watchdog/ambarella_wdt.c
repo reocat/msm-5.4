@@ -102,7 +102,7 @@ static irqreturn_t ambarella_wdt_irq(int irq, void *devid)
 
 	writel_relaxed(0x01, ambwdt->regbase + WDOG_CLR_TMO_OFFSET);
 
-	dev_info(ambwdt->wdd.dev, "Watchdog timer expired!\n");
+	dev_info(ambwdt->wdd.parent, "Watchdog timer expired!\n");
 
 	return IRQ_HANDLED;
 }

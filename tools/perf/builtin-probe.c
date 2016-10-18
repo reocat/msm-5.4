@@ -37,14 +37,14 @@
 #include "util/strfilter.h"
 #include "util/symbol.h"
 #include "util/debug.h"
-#include "util/parse-options.h"
+#include <subcmd/parse-options.h>
 #include "util/probe-finder.h"
 #include "util/probe-event.h"
 #include "util/probe-file.h"
 
 #define DEFAULT_VAR_FILTER "!__k???tab_* & !__crc_*"
 #define DEFAULT_FUNC_FILTER "!_*"
-#define DEFAULT_LIST_FILTER "*:*"
+#define DEFAULT_LIST_FILTER "*"
 
 /* Session management structure */
 static struct {
@@ -249,6 +249,9 @@ static int opt_show_vars(const struct option *opt,
 
 	return ret;
 }
+#else
+# define opt_show_lines NULL
+# define opt_show_vars NULL
 #endif
 static int opt_add_probe_event(const struct option *opt,
 			      const char *str, int unset __maybe_unused)
@@ -305,7 +308,7 @@ static void pr_err_with_code(const char *msg, int err)
 
 	pr_err("%s", msg);
 	pr_debug(" Reason: %s (Code: %d)",
-		 strerror_r(-err, sbuf, sizeof(sbuf)), err);
+		 str_error_r(-err, sbuf, sizeof(sbuf)), err);
 	pr_err("\n");
 }
 
@@ -360,6 +363,32 @@ out_cleanup:
 	return ret;
 }
 
+static int del_perf_probe_caches(struct strfilter *filter)
+{
+	struct probe_cache *cache;
+	struct strlist *bidlist;
+	struct str_node *nd;
+	int ret;
+
+	bidlist = build_id_cache__list_all(false);
+	if (!bidlist) {
+		ret = -errno;
+		pr_debug("Failed to get buildids: %d\n", ret);
+		return ret ?: -ENOMEM;
+	}
+
+	strlist__for_each_entry(nd, bidlist) {
+		cache = probe_cache__new(nd->s);
+		if (!cache)
+			continue;
+		if (probe_cache__filter_purge(cache, filter) < 0 ||
+		    probe_cache__commit(cache) < 0)
+			pr_warning("Failed to remove entries for %s\n", nd->s);
+		probe_cache__delete(cache);
+	}
+	return 0;
+}
+
 static int perf_del_probe_events(struct strfilter *filter)
 {
 	int ret, ret2, ufd = -1, kfd = -1;
@@ -371,6 +400,9 @@ static int perf_del_probe_events(struct strfilter *filter)
 		return -EINVAL;
 
 	pr_debug("Delete filter: \'%s\'\n", str);
+
+	if (probe_conf.cache)
+		return del_perf_probe_caches(filter);
 
 	/* Get current event names */
 	ret = probe_file__open_both(&kfd, &ufd, PF_FL_RW);
@@ -386,7 +418,7 @@ static int perf_del_probe_events(struct strfilter *filter)
 
 	ret = probe_file__get_events(kfd, filter, klist);
 	if (ret == 0) {
-		strlist__for_each(ent, klist)
+		strlist__for_each_entry(ent, klist)
 			pr_info("Removed event: %s\n", ent->s);
 
 		ret = probe_file__del_strlist(kfd, klist);
@@ -396,7 +428,7 @@ static int perf_del_probe_events(struct strfilter *filter)
 
 	ret2 = probe_file__get_events(ufd, filter, ulist);
 	if (ret2 == 0) {
-		strlist__for_each(ent, ulist)
+		strlist__for_each_entry(ent, ulist)
 			pr_info("Removed event: %s\n", ent->s);
 
 		ret2 = probe_file__del_strlist(ufd, ulist);
@@ -473,7 +505,6 @@ __cmd_probe(int argc, const char **argv, const char *prefix __maybe_unused)
 		opt_add_probe_event),
 	OPT_BOOLEAN('f', "force", &probe_conf.force_add, "forcibly add events"
 		    " with existing name"),
-#ifdef HAVE_DWARF_SUPPORT
 	OPT_CALLBACK('L', "line", NULL,
 		     "FUNC[:RLN[+NUM|-RLN2]]|SRC:ALN[+NUM|-ALN2]",
 		     "Show source code lines.", opt_show_lines),
@@ -490,7 +521,6 @@ __cmd_probe(int argc, const char **argv, const char *prefix __maybe_unused)
 		   "directory", "path to kernel source"),
 	OPT_BOOLEAN('\0', "no-inlines", &probe_conf.no_inlines,
 		"Don't search inlined functions"),
-#endif
 	OPT__DRY_RUN(&probe_event_dry_run),
 	OPT_INTEGER('\0', "max-probes", &probe_conf.max_probes,
 		 "Set how many probe points can be found for a probe."),
@@ -511,6 +541,7 @@ __cmd_probe(int argc, const char **argv, const char *prefix __maybe_unused)
 		    "Enable symbol demangling"),
 	OPT_BOOLEAN(0, "demangle-kernel", &symbol_conf.demangle_kernel,
 		    "Enable kernel symbol demangling"),
+	OPT_BOOLEAN(0, "cache", &probe_conf.cache, "Manipulate probe cache"),
 	OPT_END()
 	};
 	int ret;
@@ -521,6 +552,16 @@ __cmd_probe(int argc, const char **argv, const char *prefix __maybe_unused)
 #ifdef HAVE_DWARF_SUPPORT
 	set_option_flag(options, 'L', "line", PARSE_OPT_EXCLUSIVE);
 	set_option_flag(options, 'V', "vars", PARSE_OPT_EXCLUSIVE);
+#else
+# define set_nobuild(s, l, c) set_option_nobuild(options, s, l, "NO_DWARF=1", c)
+	set_nobuild('L', "line", false);
+	set_nobuild('V', "vars", false);
+	set_nobuild('\0', "externs", false);
+	set_nobuild('\0', "range", false);
+	set_nobuild('k', "vmlinux", true);
+	set_nobuild('s', "source", true);
+	set_nobuild('\0', "no-inlines", true);
+# undef set_nobuild
 #endif
 	set_option_flag(options, 'F', "funcs", PARSE_OPT_EXCLUSIVE);
 

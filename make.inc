@@ -16,7 +16,7 @@
 ## GNU General Public License for more details.
 ##
 
-ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"4.4")
+ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"4.8")
 
 LOCAL_PATH:=$(call my-dir)
 

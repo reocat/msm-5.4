@@ -110,7 +110,7 @@ static int amba_general_board_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_dai_link *dai_link = rtd->dai_link;
 	struct amb_clk clk={0};
-	int i2s_mode, i = dai_link->be_id, rval = 0;
+	int i2s_mode, i = dai_link->id, rval = 0;
 	bool dmic = amb_fmt[i].dmic;
 
 	rval = amba_clk_config(params, &clk, dmic);
@@ -269,7 +269,7 @@ static int amba_soc_snd_probe(struct platform_device *pdev)
 		amba_dai_link[i].platform_of_node = cpup_np;
 		amba_dai_link[i].init = amba_codec_init;
 		amba_dai_link[i].ops = &amba_general_board_ops;
-		amba_dai_link[i].be_id = i;
+		amba_dai_link[i].id = i;
 		card->dai_link = amba_dai_link;
 		card->num_links = psize;
 

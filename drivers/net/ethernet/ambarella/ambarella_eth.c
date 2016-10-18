@@ -1544,7 +1544,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	ambhw_dma_tx_poll(lp);
 	spin_unlock_irqrestore(&lp->lock, flags);
 
+#if 0 /* linux-4.8 use netdev_queue->trans_start instead */
 	ndev->trans_start = jiffies;
+#endif
 	dev_vdbg(&lp->ndev->dev, "TX Info: cur_tx[%u], dirty_tx[%u], "
 		"entry[%u], len[%u], data_len[%u], ip_summed[%u], "
 		"csum_start[%u], csum_offset[%u].\n",
@@ -2058,7 +2060,7 @@ static int ambeth_get_dump_data(struct net_device *ndev,
 	}
 	regbuf = (u16 *)pdata;
 	for (i = 0; i < (ed->len / 2); i++) {
-		regbuf[i] = mdiobus_read(lp->phydev->bus,
+		regbuf[i] = mdiobus_read(lp->phydev->mdio.bus,
 			lp->phydev->addr, i);
 	}
 
@@ -2081,7 +2083,7 @@ static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 	}
 	dbg_address = ((ed->flag & 0xFFFF0000) >> 16);
 	dbg_value = (ed->flag & 0x0000FFFF);
-	mdiobus_write(lp->phydev->bus, lp->phydev->addr,
+	mdiobus_write(lp->phydev->mdio.bus, lp->phydev->addr,
 		dbg_address, dbg_value);
 
 	return 0;

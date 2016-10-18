@@ -652,7 +652,6 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 		 * infinite transfer, but this is NOT supported by ADMA.
 		 * however, fortunately, it seems no one use MMC_DATA_STREAM
 		 * in mmc core. */
-		BUG_ON(cmd->data->flags & MMC_DATA_STREAM);
 
 		if (mmc_op_multi(cmd->opcode) || cmd->data->blocks > 1)
 			xfr_reg |= SD_XFR_MUL_SEL | SD_XFR_BLKCNT_EN;

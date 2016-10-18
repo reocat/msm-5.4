@@ -79,7 +79,7 @@ static void amb_gpio_free(struct gpio_chip *gc, unsigned pin)
 /* gpiolib gpio_free callback function */
 static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 {
-	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->parent);
 	void __iomem *regbase;
 	u32 bank, offset, mask;
 
@@ -97,7 +97,7 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 /* gpiolib gpio_get callback function */
 static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 {
-	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->parent);
 	void __iomem *regbase;
 	u32 bank, offset, mask, data;
 
@@ -137,14 +137,14 @@ static int amb_gpio_direction_output(struct gpio_chip *gc,
 /* gpiolib gpio_to_irq callback function */
 static int amb_gpio_to_irq(struct gpio_chip *gc, unsigned pin)
 {
-	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->parent);
 
 	return irq_create_mapping(amb_gpio->domain, pin);
 }
 
 static void amb_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 {
-	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->dev);
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->parent);
 	void __iomem *iomux_base = amb_gpio->iomux_base;
 	void __iomem *regbase;
 	u32 afsel = 0, data = 0, dir = 0, mask = 0;
@@ -226,7 +226,7 @@ static struct gpio_chip amb_gc = {
 
 static void amb_gpio_irq_enable(struct irq_data *data)
 {
-	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(amb_gc.dev);
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(amb_gc.parent);
 	void __iomem *regbase = irq_data_get_irq_chip_data(data);
 	void __iomem *iomux_base = amb_gpio->iomux_base;
 	u32 i, val, bank, offset;
@@ -370,7 +370,7 @@ static int amb_gpio_irq_set_type(struct irq_data *data, unsigned int type)
 static int amb_gpio_irq_set_wake(struct irq_data *data, unsigned int on)
 {
 #if defined(CONFIG_PM)
-	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(amb_gc.dev);
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(amb_gc.parent);
 	u32 bank = PINID_TO_BANK(data->hwirq);
 	u32 offset = PINID_TO_OFFSET(data->hwirq);
 
@@ -490,7 +490,7 @@ static int amb_gpio_probe(struct platform_device *pdev)
 	of_node_put(parent);
 
 	amb_gpio->gc = &amb_gc;
-	amb_gpio->gc->dev = &pdev->dev;
+	amb_gpio->gc->parent = &pdev->dev;
 	amb_gpio->gc->ngpio = amb_gpio->bank_num * 32;
 	rval = gpiochip_add(amb_gpio->gc);
 	if (rval) {
@@ -532,7 +532,7 @@ static int amb_gpio_irq_suspend(void)
 	struct amb_gpio_bank *bank;
 	int i;
 
-	amb_gpio = dev_get_drvdata(amb_gc.dev);
+	amb_gpio = dev_get_drvdata(amb_gc.parent);
 	if (amb_gpio == NULL) {
 		pr_err("No device for ambarella gpio irq\n");
 		return -ENODEV;
@@ -566,7 +566,7 @@ static void amb_gpio_irq_resume(void)
 	struct amb_gpio_bank *bank;
 	int i;
 
-	amb_gpio = dev_get_drvdata(amb_gc.dev);
+	amb_gpio = dev_get_drvdata(amb_gc.parent);
 	if (amb_gpio == NULL) {
 		pr_err("No device for ambarella gpio irq\n");
 		return;

@@ -109,7 +109,7 @@ static int ion_handle_test_kernel(struct dma_buf *dma_buf, void __user *ptr,
 	if (offset > dma_buf->size || size > dma_buf->size - offset)
 		return -EINVAL;
 
-	ret = dma_buf_begin_cpu_access(dma_buf, offset, size, dir);
+	ret = dma_buf_begin_cpu_access(dma_buf, dir);
 	if (ret)
 		return ret;
 
@@ -139,7 +139,7 @@ static int ion_handle_test_kernel(struct dma_buf *dma_buf, void __user *ptr,
 		copy_offset = 0;
 	}
 err:
-	dma_buf_end_cpu_access(dma_buf, offset, size, dir);
+	dma_buf_end_cpu_access(dma_buf, dir);
 	return ret;
 }
 
@@ -208,7 +208,7 @@ static int ion_test_open(struct inode *inode, struct file *file)
 	struct ion_test_data *data;
 	struct miscdevice *miscdev = file->private_data;
 
-	data = kzalloc(sizeof(struct ion_test_data), GFP_KERNEL);
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 

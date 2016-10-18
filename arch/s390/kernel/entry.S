@@ -163,6 +163,16 @@ _PIF_WORK	= (_PIF_PER_TRAP)
 	.endm
 
 	.section .kprobes.text, "ax"
+.Ldummy:
+	/*
+	 * This nop exists only in order to avoid that __switch_to starts at
+	 * the beginning of the kprobes text section. In that case we would
+	 * have several symbols at the same address. E.g. objdump would take
+	 * an arbitrary symbol name when disassembling this code.
+	 * With the added nop in between the __switch_to symbol is unique
+	 * again.
+	 */
+	nop	0
 
 /*
  * Scheduler resume function, called by switch_to
@@ -175,7 +185,6 @@ ENTRY(__switch_to)
 	stmg	%r6,%r15,__SF_GPRS(%r15)	# store gprs of prev task
 	lgr	%r1,%r2
 	aghi	%r1,__TASK_thread		# thread_struct of prev task
-	lg	%r4,__TASK_thread_info(%r2)	# get thread_info of prev
 	lg	%r5,__TASK_thread_info(%r3)	# get thread_info of next
 	stg	%r15,__THREAD_ksp(%r1)		# store kernel stack of prev
 	lgr	%r1,%r3
@@ -186,6 +195,7 @@ ENTRY(__switch_to)
 	stg	%r5,__LC_THREAD_INFO		# store thread info of next
 	stg	%r15,__LC_KERNEL_STACK		# store end of kernel stack
 	lg	%r15,__THREAD_ksp(%r1)		# load kernel stack of next
+	/* c4 is used in guest detection: arch/s390/kernel/perf_cpum_sf.c */
 	lctl	%c4,%c4,__TASK_pid(%r3)		# load pid to control reg. 4
 	mvc	__LC_CURRENT_PID(4,%r0),__TASK_pid(%r3) # store pid of next
 	lmg	%r6,%r15,__SF_GPRS(%r15)	# load gprs of next task
@@ -764,6 +774,7 @@ ENTRY(psw_idle)
 	.insn	rsy,0xeb0000000017,%r1,5,__SF_EMPTY+16(%r15)
 .Lpsw_idle_stcctm:
 #endif
+	oi	__LC_CPU_FLAGS+7,_CIF_ENABLED_WAIT
 	STCK	__CLOCK_IDLE_ENTER(%r2)
 	stpt	__TIMER_IDLE_ENTER(%r2)
 .Lpsw_idle_lpsw:
@@ -1146,6 +1157,7 @@ cleanup_critical:
 	.quad	.Lio_done - 4
 
 .Lcleanup_idle:
+	ni	__LC_CPU_FLAGS+7,255-_CIF_ENABLED_WAIT
 	# copy interrupt clock & cpu timer
 	mvc	__CLOCK_IDLE_EXIT(8,%r2),__LC_INT_CLOCK
 	mvc	__TIMER_IDLE_EXIT(8,%r2),__LC_ASYNC_ENTER_TIMER

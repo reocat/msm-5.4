@@ -36,7 +36,6 @@ config SND_SOC_SH4_SIU
 
 config SND_SOC_RCAR
 	tristate "R-Car series SRU/SCU/SSIU/SSI support"
-	depends on DMA_OF
 	depends on COMMON_CLK
 	select SND_SIMPLE_CARD
 	select REGMAP_MMIO
@@ -45,6 +44,7 @@ config SND_SOC_RCAR
 
 config SND_SOC_RSRC_CARD
 	tristate "Renesas Sampling Rate Convert Sound Card"
+	select SND_SIMPLE_CARD_UTILS
 	help
 	  This option enables simple sound if you need sampling rate convert
 

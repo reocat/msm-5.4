@@ -18,6 +18,7 @@
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
 
@@ -89,6 +90,7 @@ struct i2s_dai {
 	struct s3c_dma_params dma_playback;
 	struct s3c_dma_params dma_capture;
 	struct s3c_dma_params idma_playback;
+	dma_filter_fn filter;
 	u32	quirks;
 	u32	suspend_i2smod;
 	u32	suspend_i2scon;
@@ -1105,19 +1107,9 @@ static struct i2s_dai *i2s_alloc_dai(struct platform_device *pdev, bool sec)
 	return i2s;
 }
 
-static const struct of_device_id exynos_i2s_match[];
-
-static inline const struct samsung_i2s_dai_data *samsung_i2s_get_driver_data(
-						struct platform_device *pdev)
+static void i2s_free_sec_dai(struct i2s_dai *i2s)
 {
-	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node) {
-		const struct of_device_id *match;
-		match = of_match_node(exynos_i2s_match, pdev->dev.of_node);
-		return match ? match->data : NULL;
-	} else {
-		return (struct samsung_i2s_dai_data *)
-				platform_get_device_id(pdev)->driver_data;
-	}
+	platform_device_del(i2s->pdev);
 }
 
 #ifdef CONFIG_PM
@@ -1232,9 +1224,13 @@ static int samsung_i2s_probe(struct platform_device *pdev)
 	const struct samsung_i2s_dai_data *i2s_dai_data;
 	int ret;
 
-	/* Call during Seconday interface registration */
-	i2s_dai_data = samsung_i2s_get_driver_data(pdev);
+	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+		i2s_dai_data = of_device_get_match_data(&pdev->dev);
+	else
+		i2s_dai_data = (struct samsung_i2s_dai_data *)
+				platform_get_device_id(pdev)->driver_data;
 
+	/* Call during the secondary interface registration */
 	if (i2s_dai_data->dai_type == TYPE_SEC) {
 		sec_dai = dev_get_drvdata(&pdev->dev);
 		if (!sec_dai) {
@@ -1247,7 +1243,8 @@ static int samsung_i2s_probe(struct platform_device *pdev)
 		if (ret != 0)
 			return ret;
 
-		return samsung_asoc_dma_platform_register(&pdev->dev);
+		return samsung_asoc_dma_platform_register(&pdev->dev,
+					sec_dai->filter, "tx-sec", NULL);
 	}
 
 	pri_dai = i2s_alloc_dai(pdev, false);
@@ -1267,6 +1264,7 @@ static int samsung_i2s_probe(struct platform_device *pdev)
 
 		pri_dai->dma_playback.slave = i2s_pdata->dma_playback;
 		pri_dai->dma_capture.slave = i2s_pdata->dma_capture;
+		pri_dai->filter = i2s_pdata->dma_filter;
 
 		if (&i2s_pdata->type)
 			i2s_cfg = &i2s_pdata->type.i2s;
@@ -1328,8 +1326,10 @@ static int samsung_i2s_probe(struct platform_device *pdev)
 		sec_dai->dma_playback.dma_addr = regs_base + I2STXDS;
 		sec_dai->dma_playback.ch_name = "tx-sec";
 
-		if (!np)
+		if (!np) {
 			sec_dai->dma_playback.slave = i2s_pdata->dma_play_sec;
+			sec_dai->filter = i2s_pdata->dma_filter;
+		}
 
 		sec_dai->dma_playback.dma_size = 4;
 		sec_dai->addr = pri_dai->addr;
@@ -1345,17 +1345,28 @@ static int samsung_i2s_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	devm_snd_soc_register_component(&pri_dai->pdev->dev,
+	ret = devm_snd_soc_register_component(&pri_dai->pdev->dev,
 					&samsung_i2s_component,
 					&pri_dai->i2s_dai_drv, 1);
+	if (ret < 0)
+		goto err_free_dai;
+
+	ret = samsung_asoc_dma_platform_register(&pdev->dev, pri_dai->filter,
+						 NULL, NULL);
+	if (ret < 0)
+		goto err_free_dai;
 
 	pm_runtime_enable(&pdev->dev);
 
-	ret = samsung_asoc_dma_platform_register(&pdev->dev);
-	if (ret != 0)
-		return ret;
+	ret = i2s_register_clock_provider(pdev);
+	if (!ret)
+		return 0;
 
-	return i2s_register_clock_provider(pdev);
+	pm_runtime_disable(&pdev->dev);
+err_free_dai:
+	if (sec_dai)
+		i2s_free_sec_dai(sec_dai);
+	return ret;
 }
 
 static int samsung_i2s_remove(struct platform_device *pdev)
@@ -1472,10 +1483,6 @@ static const struct samsung_i2s_dai_data i2sv5_dai_type_i2s1 = {
 	.i2s_variant_regs = &i2sv5_i2s1_regs,
 };
 
-static const struct samsung_i2s_dai_data samsung_dai_type_pri = {
-	.dai_type = TYPE_PRI,
-};
-
 static const struct samsung_i2s_dai_data samsung_dai_type_sec = {
 	.dai_type = TYPE_SEC,
 };
@@ -1487,9 +1494,6 @@ static const struct platform_device_id samsung_i2s_driver_ids[] = {
 	}, {
 		.name           = "samsung-i2s-sec",
 		.driver_data    = (kernel_ulong_t)&samsung_dai_type_sec,
-	}, {
-		.name		= "samsung-i2sv4",
-		.driver_data	= (kernel_ulong_t)&i2sv5_dai_type,
 	},
 	{},
 };

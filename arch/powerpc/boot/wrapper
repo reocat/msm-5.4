@@ -154,7 +154,7 @@ if [ -z "$kernel" ]; then
     kernel=vmlinux
 fi
 
-elfformat="`${CROSS}objdump -p "$kernel" | grep 'file format' | awk '{print $4}'`"
+LANG=C elfformat="`${CROSS}objdump -p "$kernel" | grep 'file format' | awk '{print $4}'`"
 case "$elfformat" in
     elf64-powerpcle)	format=elf64lppc	;;
     elf64-powerpc)	format=elf32ppc	;;
@@ -300,6 +300,11 @@ epapr)
     ;;
 mvme5100)
     platformo="$object/fixed-head.o $object/mvme5100.o"
+    binary=y
+    ;;
+mvme7100)
+    platformo="$object/motload-head.o $object/mvme7100.o"
+    link_address='0x4000000'
     binary=y
     ;;
 esac

@@ -364,7 +364,7 @@ static irqreturn_t ambarella_adc_irq(int irq, void *dev_id)
 		iio_push_event(indio_dev,
 			IIO_UNMOD_EVENT_CODE(IIO_VOLTAGE, i,
 				IIO_EV_TYPE_THRESH, IIO_EV_DIR_EITHER),
-			iio_get_time_ns());
+			iio_get_time_ns(indio_dev));
 	}
 
 	/* clear intr source at last to avoid dummy irq */

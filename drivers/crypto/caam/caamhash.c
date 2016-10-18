@@ -803,6 +803,10 @@ static int ahash_update_ctx(struct ahash_request *req)
 	if (to_hash) {
 		src_nents = sg_nents_for_len(req->src,
 					     req->nbytes - (*next_buflen));
+		if (src_nents < 0) {
+			dev_err(jrdev, "Invalid number of src SG.\n");
+			return src_nents;
+		}
 		sec4_sg_src_index = 1 + (*buflen ? 1 : 0);
 		sec4_sg_bytes = (sec4_sg_src_index + src_nents) *
 				 sizeof(struct sec4_sg_entry);
@@ -843,7 +847,7 @@ static int ahash_update_ctx(struct ahash_request *req)
 							 *next_buflen, 0);
 		} else {
 			(edesc->sec4_sg + sec4_sg_src_index - 1)->len |=
-							SEC4_SG_LEN_FIN;
+				cpu_to_caam32(SEC4_SG_LEN_FIN);
 		}
 
 		state->current_buf = !state->current_buf;
@@ -945,7 +949,8 @@ static int ahash_final_ctx(struct ahash_request *req)
 	state->buf_dma = try_buf_map_to_sec4_sg(jrdev, edesc->sec4_sg + 1,
 						buf, state->buf_dma, buflen,
 						last_buflen);
-	(edesc->sec4_sg + sec4_sg_src_index - 1)->len |= SEC4_SG_LEN_FIN;
+	(edesc->sec4_sg + sec4_sg_src_index - 1)->len |=
+		cpu_to_caam32(SEC4_SG_LEN_FIN);
 
 	edesc->sec4_sg_dma = dma_map_single(jrdev, edesc->sec4_sg,
 					    sec4_sg_bytes, DMA_TO_DEVICE);
@@ -1002,6 +1007,10 @@ static int ahash_finup_ctx(struct ahash_request *req)
 	int sh_len;
 
 	src_nents = sg_nents_for_len(req->src, req->nbytes);
+	if (src_nents < 0) {
+		dev_err(jrdev, "Invalid number of src SG.\n");
+		return src_nents;
+	}
 	sec4_sg_src_index = 1 + (buflen ? 1 : 0);
 	sec4_sg_bytes = (sec4_sg_src_index + src_nents) *
 			 sizeof(struct sec4_sg_entry);
@@ -1086,6 +1095,10 @@ static int ahash_digest(struct ahash_request *req)
 	int sh_len;
 
 	src_nents = sg_count(req->src, req->nbytes);
+	if (src_nents < 0) {
+		dev_err(jrdev, "Invalid number of src SG.\n");
+		return src_nents;
+	}
 	dma_map_sg(jrdev, req->src, src_nents ? : 1, DMA_TO_DEVICE);
 	sec4_sg_bytes = src_nents * sizeof(struct sec4_sg_entry);
 
@@ -1234,6 +1247,10 @@ static int ahash_update_no_ctx(struct ahash_request *req)
 	if (to_hash) {
 		src_nents = sg_nents_for_len(req->src,
 					     req->nbytes - (*next_buflen));
+		if (src_nents < 0) {
+			dev_err(jrdev, "Invalid number of src SG.\n");
+			return src_nents;
+		}
 		sec4_sg_bytes = (1 + src_nents) *
 				sizeof(struct sec4_sg_entry);
 
@@ -1342,6 +1359,10 @@ static int ahash_finup_no_ctx(struct ahash_request *req)
 	int ret = 0;
 
 	src_nents = sg_nents_for_len(req->src, req->nbytes);
+	if (src_nents < 0) {
+		dev_err(jrdev, "Invalid number of src SG.\n");
+		return src_nents;
+	}
 	sec4_sg_src_index = 2;
 	sec4_sg_bytes = (sec4_sg_src_index + src_nents) *
 			 sizeof(struct sec4_sg_entry);
@@ -1430,6 +1451,10 @@ static int ahash_update_first(struct ahash_request *req)
 
 	if (to_hash) {
 		src_nents = sg_count(req->src, req->nbytes - (*next_buflen));
+		if (src_nents < 0) {
+			dev_err(jrdev, "Invalid number of src SG.\n");
+			return src_nents;
+		}
 		dma_map_sg(jrdev, req->src, src_nents ? : 1, DMA_TO_DEVICE);
 		sec4_sg_bytes = src_nents * sizeof(struct sec4_sg_entry);
 
@@ -1572,7 +1597,7 @@ static int ahash_export(struct ahash_request *req, void *out)
 		len = state->buflen_1;
 	} else {
 		buf = state->buf_0;
-		len = state->buflen_1;
+		len = state->buflen_0;
 	}
 
 	memcpy(export->buf, buf, len);
@@ -1873,6 +1898,7 @@ caam_hash_alloc(struct caam_hash_template *template,
 			 template->name);
 		snprintf(alg->cra_driver_name, CRYPTO_MAX_ALG_NAME, "%s",
 			 template->driver_name);
+		t_alg->ahash_alg.setkey = NULL;
 	}
 	alg->cra_module = THIS_MODULE;
 	alg->cra_init = caam_hash_cra_init;

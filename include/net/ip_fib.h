@@ -111,6 +111,7 @@ struct fib_info {
 	unsigned char		fib_scope;
 	unsigned char		fib_type;
 	__be32			fib_prefsrc;
+	u32			fib_tb_id;
 	u32			fib_priority;
 	u32			*fib_metrics;
 #define fib_mtu fib_metrics[RTAX_MTU-1]
@@ -319,14 +320,15 @@ void fib_flush_external(struct net *net);
 /* Exported by fib_semantics.c */
 int ip_fib_check_default(__be32 gw, struct net_device *dev);
 int fib_sync_down_dev(struct net_device *dev, unsigned long event, bool force);
-int fib_sync_down_addr(struct net *net, __be32 local);
+int fib_sync_down_addr(struct net_device *dev, __be32 local);
 int fib_sync_up(struct net_device *dev, unsigned int nh_flags);
 
 extern u32 fib_multipath_secret __read_mostly;
 
 static inline int fib_multipath_hash(__be32 saddr, __be32 daddr)
 {
-	return jhash_2words(saddr, daddr, fib_multipath_secret) >> 1;
+	return jhash_2words((__force u32)saddr, (__force u32)daddr,
+			    fib_multipath_secret) >> 1;
 }
 
 void fib_select_multipath(struct fib_result *res, int hash);
