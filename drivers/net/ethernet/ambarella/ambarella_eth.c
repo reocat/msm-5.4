@@ -2336,6 +2336,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	struct ambeth_info *lp;
 	struct resource *res;
+	struct mii_bus *bus;
 	const char *macaddr;
 	int poc, ret_val = 0;
 
@@ -2345,7 +2346,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	lp = netdev_priv(ndev);
-
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -2428,6 +2428,13 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
 	}
 
+	bus = devm_mdiobus_alloc_size(&pdev->dev, sizeof(struct ambeth_info));
+	if (!bus) {
+		ret_val = -ENOMEM;
+		goto ambeth_drv_probe_free_netdev;
+	}
+	memcpy(&lp->new_bus, bus, sizeof(struct mii_bus));
+
 	lp->new_bus.name = "Ambarella MDIO Bus",
 	lp->new_bus.read = &ambhw_mdio_read,
 	lp->new_bus.write = &ambhw_mdio_write,
@@ -2440,14 +2447,14 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	ret_val = of_mdiobus_register(&lp->new_bus, pdev->dev.of_node);
 	if (ret_val < 0) {
 		dev_err(&pdev->dev, "of_mdiobus_register fail%d.\n", ret_val);
-		goto ambeth_drv_probe_kfree_mdiobus;
+		goto ambeth_drv_probe_free_netdev;
 	}
 
 	lp->phydev = phy_find_first(&lp->new_bus);
 	if (lp->phydev == NULL) {
 		dev_err(&pdev->dev, "No PHY device.\n");
 		ret_val = -ENODEV;
-		goto ambeth_drv_probe_kfree_mdiobus;
+		goto ambeth_drv_probe_free_netdev;
 	}
 
 	if (netif_msg_drv(lp)) {
@@ -2490,8 +2497,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 ambeth_drv_probe_netif_napi_del:
 	netif_napi_del(&lp->napi);
 	mdiobus_unregister(&lp->new_bus);
-
-ambeth_drv_probe_kfree_mdiobus:
 
 ambeth_drv_probe_free_netdev:
 	free_netdev(ndev);
