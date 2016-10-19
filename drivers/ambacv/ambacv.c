@@ -10,7 +10,7 @@
 MODULE_AUTHOR("Joey Li");
 MODULE_LICENSE("GPL");
 
-#define DEVICE_NAME "ppm"
+#define DEVICE_NAME     "cvppm"
 
 static unsigned int     ppm_major;
 static struct class*    ppm_class;
@@ -28,7 +28,7 @@ static int ppm_mmap(struct file *filp, struct vm_area_struct *vma)
 		return rval;
 	}
         
-        printk("PPM: remap [%X---%X]\n", vma->vm_start, vma->vm_end);
+        printk("CVPPM: remap [%X---%X]\n", vma->vm_start, vma->vm_end);
 	return rval;
 }
 
@@ -37,7 +37,7 @@ static const struct file_operations ppm_fops = {
         .mmap = ppm_mmap,
 };
 
-static int  __init ppm_init(void)
+static int  __init amabcv_init(void)
 {
         ppm_major = register_chrdev(0, DEVICE_NAME, &ppm_fops);
         if (ppm_major < 0) {
@@ -65,7 +65,7 @@ static int  __init ppm_init(void)
         return 0;
 }
 
-static void __exit ppm_exit(void)
+static void __exit ambacv_exit(void)
 {
         device_destroy(ppm_class, MKDEV(ppm_major, 0));
         class_destroy(ppm_class);
@@ -74,5 +74,5 @@ static void __exit ppm_exit(void)
         return;
 }
 
-module_init(ppm_init);
-module_exit(ppm_exit);
+module_init(ambacv_init);
+module_exit(ambacv_exit);
