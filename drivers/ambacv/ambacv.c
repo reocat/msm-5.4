@@ -37,7 +37,7 @@ static const struct file_operations ppm_fops = {
         .mmap = ppm_mmap,
 };
 
-static int  __init amabcv_init(void)
+static int  __init ambacv_init(void)
 {
         ppm_major = register_chrdev(0, DEVICE_NAME, &ppm_fops);
         if (ppm_major < 0) {
