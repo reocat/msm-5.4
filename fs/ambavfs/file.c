@@ -23,9 +23,9 @@
 #include <linux/statfs.h>
 
 #define REMOTE_EXFAT	3
+#define MAX_FILE_SIZE_FAT               (0xFFFFFFFFuL)
 #define MAX_FILE_SIZE_EXFAT             (0x1fffffffc00uLL)
 
-static int fs_type = 0;
 /*
  * check inode stats again remote
  */
@@ -131,14 +131,15 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 	AMBAFS_DMSG("%s O_APPEND = 0x%x O_TRUNC = 0x%x O_CREAT = 0x%x  O_RDWR = 0x%x O_WRONLY=0x%x\r\n",
 		__func__, O_APPEND, O_TRUNC, O_CREAT, O_RDWR, O_WRONLY);
 
-	if (!fs_type) {
+	if (inode->i_sb->s_maxbytes == 0) {
 		ret = check_remote_type(filp->f_path.dentry, &stat);
-		if (stat.f_type == REMOTE_EXFAT) {
-			inode->i_sb->s_maxbytes = MAX_FILE_SIZE_EXFAT;
-		}
-
 		if (ret == 0) {
-			fs_type = 1;
+			if (stat.f_type == REMOTE_EXFAT) {
+				inode->i_sb->s_maxbytes = MAX_FILE_SIZE_EXFAT;
+			} else {
+				inode->i_sb->s_maxbytes = MAX_FILE_SIZE_FAT;
+			}
+
 		}
 	}
 
