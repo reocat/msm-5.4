@@ -184,7 +184,16 @@ static void gic_irq_set_target(struct irq_data *d)
 	raw_spin_lock_irqsave(&irq_controller_lock, flags);
 	mask = 0xff << shift;
 	bit = (1 << target_cpu) << shift;
-	val = readl_relaxed(reg) & ~mask;
+	if (gic_irq(d) == 101) {
+		/*
+		 * HACKING: dma irq (69 + 32) is shared between dual-OS,
+		 * sending the interrupt to both OSes and let the OS to
+		 * handle the shared logic.
+		 */
+		val = readl_relaxed(reg);
+	} else {
+		val = readl_relaxed(reg) & ~mask;
+	}
 	writel_relaxed(val | bit, reg);
 	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
 }
@@ -345,7 +354,20 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	raw_spin_lock_irqsave(&irq_controller_lock, flags);
 	mask = 0xff << shift;
 	bit = gic_cpu_map[cpu] << shift;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	if (gic_irq(d) == 101) {
+		/*
+		 * HACKING: dma irq (69 + 32) is shared between dual-OS,
+		 * sending the interrupt to both OSes and let the OS to
+		 * handle the shared logic.
+		 */
+		val = readl_relaxed(reg);
+	} else {
+		val = readl_relaxed(reg) & ~mask;
+	}
+#else
 	val = readl_relaxed(reg) & ~mask;
+#endif
 	writel_relaxed(val | bit, reg);
 	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
 

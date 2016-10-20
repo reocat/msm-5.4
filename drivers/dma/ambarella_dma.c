@@ -335,12 +335,35 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	struct ambdma_chan *amb_chan;
 	u32 i, int_src;
 	irqreturn_t ret = IRQ_NONE;
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	int chan_sel, cur_chan;
+#endif
 
 	int_src = readl(amb_dma->regbase + DMA_INT_OFFSET);
 
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	chan_sel = readl_relaxed(amb_dma->regsel);
+
+	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+		cur_chan = (chan_sel >> (i * 4)) & 0xf;
+		if ((cur_chan != UART_TX_DMA_REQ_IDX) &&
+			(cur_chan != UART_RX_DMA_REQ_IDX)) {
+			continue;
+		}
+
+		amb_chan = &amb_dma->amb_chan[i];
+		spin_lock(&amb_chan->lock);
+		if (int_src & (1 << i)) {
+			writel(0, dma_chan_sta_reg(amb_chan));
+			tasklet_schedule(&amb_chan->tasklet);
+			ret = IRQ_HANDLED;
+		}
+		spin_unlock(&amb_chan->lock);
+	}
+#else
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {
 		amb_chan = &amb_dma->amb_chan[i];
 		spin_lock(&amb_chan->lock);
@@ -351,6 +374,7 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 		}
 		spin_unlock(&amb_chan->lock);
 	}
+#endif
 
 	return ret;
 }
@@ -1192,7 +1216,32 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 					&amb_dma->dma_memcpy.channels);
 		}
 	}
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	if (amb_dma->regsel != NULL) {
+		int chan_sel, cur_chan;
+		val = 0;
+		ret = of_property_read_u32_array(np, "dma-channel-sel",
+					amb_dma->dma_channel_sel, amb_dma->nr_channels);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to read dma-channel-sel\n");
+		}
 
+		chan_sel = readl_relaxed(amb_dma->regsel);
+		for (i = 0; i < NUM_DMA_CHANNELS; i++) {
+			if (ret) {
+				val |= i << (i * 4);
+			} else {
+				cur_chan = (chan_sel >> (i * 4)) & 0xf;
+				if (cur_chan == 0xf) {
+					val |= (amb_dma->dma_channel_sel[i]) << (i * 4);
+				} else {
+					val |= cur_chan << (i * 4);
+				}
+			}
+		}
+		writel(val, amb_dma->regsel);
+	}
+#else
 	if (amb_dma->regsel != NULL) {
 		val = 0;
 		ret = of_property_read_u32_array(np, "dma-channel-sel",
@@ -1208,6 +1257,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		}
 		writel(val, amb_dma->regsel);
 	}
+#endif
 
 	/* although FIOS DMA has its own driver, we also init FIOS DMA
 	 * status here, orelse dummy FIOS DMA interrupts may occurred

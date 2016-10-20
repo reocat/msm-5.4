@@ -62,7 +62,7 @@
 #define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
 #define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
 
-#elif (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5)
+#elif (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define NOR_SPI_TX_DMA_CHAN		0
 #define NOR_SPI_RX_DMA_CHAN		1
 #define SSI1_TX_DMA_CHAN		2
@@ -71,6 +71,16 @@
 #define UART_RX_DMA_CHAN		5
 #define I2S_RX_DMA_CHAN			6
 #define I2S_TX_DMA_CHAN			7
+
+#elif (CHIP_REV == S5)
+#define I2S_TX_DMA_CHAN			0
+#define I2S_RX_DMA_CHAN			1
+#define NOR_SPI_RX_DMA_CHAN		2
+#define NOR_SPI_TX_DMA_CHAN		3
+#define UART_TX_DMA_CHAN		4
+#define UART_RX_DMA_CHAN		5
+#define SSI1_TX_DMA_CHAN		6
+#define SSI1_RX_DMA_CHAN		7
 
 #elif (CHIP_REV == S2E)
 #define NOR_SPI_TX_DMA_CHAN		0

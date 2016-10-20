@@ -527,7 +527,7 @@
 			dma-channels = <8>;
 			dma-requests = <12>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
-			dma-channel-sel = <10 11 5 4 8 9 0 0>;
+			dma-channel-sel = <10 11 5 4 8 9 15 15>;
 			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
