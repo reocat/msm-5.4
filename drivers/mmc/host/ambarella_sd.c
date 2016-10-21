@@ -40,7 +40,6 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
-#include <linux/mmc/sdio.h>
 #include <linux/debugfs.h>
 #include <plat/rct.h>
 #include <plat/sd.h>
@@ -624,20 +623,25 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 	cmd_reg = SD_CMD_IDX(cmd->opcode);
 
-	if (!(cmd->flags & MMC_RSP_PRESENT))
+	switch (mmc_resp_type(cmd)) {
+	case MMC_RSP_NONE:
 		cmd_reg |= SD_CMD_RSP_NONE;
-	else if (cmd->flags & MMC_RSP_136)
-		cmd_reg |= SD_CMD_RSP_136;
-	else if (cmd->flags & MMC_RSP_BUSY)
+		break;
+	case MMC_RSP_R1B:
 		cmd_reg |= SD_CMD_RSP_48BUSY;
-	else
+		break;
+	case MMC_RSP_R2:
+		cmd_reg |= SD_CMD_RSP_136;
+		break;
+	default:
 		cmd_reg |= SD_CMD_RSP_48;
+		break;
+	}
 
-
-	if (cmd->flags & MMC_RSP_CRC)
+	if (mmc_resp_type(cmd) & MMC_RSP_CRC)
 		cmd_reg |= SD_CMD_CHKCRC;
 
-	if (cmd->flags & MMC_RSP_OPCODE)
+	if (mmc_resp_type(cmd) & MMC_RSP_OPCODE)
 		cmd_reg |= SD_CMD_CHKIDX;
 
 	if (cmd->data) {
@@ -659,8 +663,7 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 		/* if CMD23 is used, we should not send CMD12, unless any
 		 * errors happened in read/write operation. So we disable
 		 * auto_cmd12, but send CMD12 manually when necessary. */
-		if (host->auto_cmd12 && !cmd->mrq->sbc && cmd->data->stop
-			&& (cmd->opcode != SD_IO_RW_EXTENDED))
+		if (host->auto_cmd12 && !cmd->mrq->sbc && cmd->data->stop)
 			xfr_reg |= SD_XFR_AC12_EN;
 
 		writel_relaxed(host->desc_phys, host->regbase + SD_ADMA_ADDR_OFFSET);
