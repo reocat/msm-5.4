@@ -274,12 +274,19 @@ int bluesleep_hci_event(struct notifier_block *this,
 	struct hci_dev *hdev = (struct hci_dev *) data;
 	struct hci_uart *hu;
 	struct uart_state *state;
+	struct module *mod;
 
 	if (!hdev)
 		return NOTIFY_DONE;
 
 	switch (event) {
 	case HCI_DEV_REG:
+		mod = find_module("bt8xxx");
+		if (mod) {
+			printk("%s skip marvell SDIO bt\n", __func__);
+			return NOTIFY_DONE;
+		}
+
 		if (!bluesleep_hdev) {
 			bluesleep_hdev = hdev;
 			//hu  = (struct hci_uart *) hdev->driver_data;
