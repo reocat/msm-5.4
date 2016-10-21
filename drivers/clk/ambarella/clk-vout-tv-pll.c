@@ -52,31 +52,50 @@ union frac_reg_u {
 	u32	w;
 };
 
-struct amb_clk_pll {
+struct amb_vout_tv_clk_pll {
 	struct clk_hw hw;
 	void __iomem *ctrl_reg;
 	void __iomem *frac_reg;
 	void __iomem *ctrl2_reg;
 	void __iomem *ctrl3_reg;
 	void __iomem *pres_reg;
-	void __iomem *post_reg;
+        void __iomem *hdmi_clock_ctrl_reg;
 	u32 extra_scaler : 1;
 	u32 frac_mode : 1;
 	u32 ctrl2_val;
 	u32 ctrl3_val;
 	u32 fix_divider;
+        u32 hdmi_clock_ctrl_val;
 	u32 min_vco; /* in MHz */
 };
 
-#define to_amb_clk_pll(_hw) container_of(_hw, struct amb_clk_pll, hw)
+struct vout_tv_pll {
+        u32     freq;
+        u32     intp;
+        u32     frac;
+        u32     sdiv;
+        u32     sout;
+        u32     pre_scaler;
+        u32     pll_ctrl2;
+        u32     pll_ctrl3;
+        u32     hdmi_clock_ctrl;
+};
+
+const static struct vout_tv_pll ambarella_vout_tv_pll_table[] = {
+        //rate          intp    frac    sdiv    sdout   pre     ctrl2           ctrl3           hdmi_clock_ctrl
+        {297000000,     0x63,   0,      5,      1,      4,      0x3f700900,     0x68306,        0x1d},
+        {594000000,     0x63,   0,      5,      1,      4,      0x3f701900,     0x68306,        0x11d},
+};
+
+#define to_amb_vout_tv_clk_pll(_hw) container_of(_hw, struct amb_vout_tv_clk_pll, hw)
 #define rct_writel_en(v, p)		\
 		do {writel(v, p); writel((v | 0x1), p); writel(v, p);} while (0)
 
-static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
+static unsigned long ambarella_vout_tv_pll_recalc_rate(struct clk_hw *hw,
 		unsigned long parent_rate)
 {
-	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
-	u32 pre_scaler, post_scaler, intp, sdiv, sout;
+	struct amb_vout_tv_clk_pll *clk_pll = to_amb_vout_tv_clk_pll(hw);
+	u32 pre_scaler, intp, sdiv, sout;
 	u64 dividend, divider, frac;
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
@@ -97,18 +116,8 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 		pre_scaler = 1;
 	}
 
-	if (clk_pll->post_reg != NULL) {
-		post_scaler = readl(clk_pll->post_reg);
-		if (clk_pll->extra_scaler) {
-			post_scaler >>= 4;
-			post_scaler++;
-		}
-	} else {
-		post_scaler = 1;
-	}
-
 	if (ctrl_val.s.bypass || ctrl_val.s.force_bypass)
-		return parent_rate / pre_scaler / post_scaler;
+		return parent_rate / pre_scaler;
 
 	intp = ctrl_val.s.intp + 1;
 	sdiv = ctrl_val.s.sdiv + 1;
@@ -133,18 +142,21 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 		}
 	}
 
-	divider = pre_scaler * sout * post_scaler * clk_pll->fix_divider;
+	divider = pre_scaler * sout * clk_pll->fix_divider;
 	BUG_ON(divider == 0);
 
 	do_div(dividend, divider);
 
+        if((dividend == 297000000) && (readl(clk_pll->ctrl2_reg) == 0x3f701900))
+                dividend = 594000000;
+
 	return dividend;
 }
 
-static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
+static long ambarella_vout_tv_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long *parent_rate)
 {
-	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
+	struct amb_vout_tv_clk_pll *clk_pll = to_amb_vout_tv_clk_pll(hw);
 	unsigned long round_rate;
 
 	if (clk_pll->frac_mode)
@@ -155,22 +167,65 @@ static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	return round_rate;
 }
 
-static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+static int ambarella_vout_tv_pll_set_rate_table(struct clk_hw *hw,
+                                                unsigned long rate,
+                                                int table_index)
+{
+	struct amb_vout_tv_clk_pll *clk_pll = to_amb_vout_tv_clk_pll(hw);
+	unsigned long pre_scaler = 1;
+	unsigned long intp, sdiv = 1, sout = 1;
+        unsigned long ctrl2_val, ctrl3_val, hdmi_clock_ctrl_val;
+	union ctrl_reg_u ctrl_val;
+
+        pre_scaler = ambarella_vout_tv_pll_table[table_index-1].pre_scaler;
+        intp = ambarella_vout_tv_pll_table[table_index-1].intp;
+        sdiv = ambarella_vout_tv_pll_table[table_index-1].sdiv;
+        sout = ambarella_vout_tv_pll_table[table_index-1].sout;
+        ctrl2_val = ambarella_vout_tv_pll_table[table_index-1].pll_ctrl2;
+        ctrl3_val = ambarella_vout_tv_pll_table[table_index-1].pll_ctrl3;
+        hdmi_clock_ctrl_val = ambarella_vout_tv_pll_table[table_index-1].hdmi_clock_ctrl;
+
+	if (clk_pll->extra_scaler == 1)
+		rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
+	else
+		writel(pre_scaler, clk_pll->pres_reg);
+
+
+	ctrl_val.w = readl(clk_pll->ctrl_reg);
+	ctrl_val.s.force_reset = 1;
+	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+	ctrl_val.s.intp = intp - 1;
+	ctrl_val.s.sdiv = sdiv - 1;
+	ctrl_val.s.sout = sout - 1;
+	ctrl_val.s.bypass = 0;
+	ctrl_val.s.frac_mode = 0;
+	ctrl_val.s.force_reset = 0;
+	ctrl_val.s.power_down = 0;
+	ctrl_val.s.halt_vco = 0;
+	ctrl_val.s.tristate = 0;
+	ctrl_val.s.force_lock = 1;
+	ctrl_val.s.force_bypass = 0;
+	ctrl_val.s.write_enable = 0;
+	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+
+        writel(ctrl2_val, clk_pll->ctrl2_reg);
+        writel(ctrl3_val, clk_pll->ctrl3_reg);
+        writel(hdmi_clock_ctrl_val, clk_pll->hdmi_clock_ctrl_reg);
+
+        return 0;
+}
+
+static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned long rate,
 			unsigned long parent_rate)
 {
-	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
-	unsigned long rate_tmp, pre_scaler = 1, post_scaler = 1;
+	struct amb_vout_tv_clk_pll *clk_pll = to_amb_vout_tv_clk_pll(hw);
+	unsigned long rate_tmp, pre_scaler = 1;
 	unsigned long intp, sdiv = 1, sout = 1;
 	u64 dividend, divider, diff;
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 
 	rate *= clk_pll->fix_divider;
-
-	if (rate < parent_rate && clk_pll->post_reg != NULL) {
-		rate *= 16;
-		post_scaler = 16;
-	}
 
 	if (rate < parent_rate) {
 		pr_err("Error: target rate is too slow: %ld!\n", rate);
@@ -191,20 +246,13 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	BUG_ON(intp > 128 || sout > 16 || sdiv > 16);
-	BUG_ON(pre_scaler > 16 || post_scaler > 16);
+	BUG_ON(pre_scaler > 16);
 
 	if (clk_pll->pres_reg != NULL) {
 		if (clk_pll->extra_scaler == 1)
 			rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
 		else
 			writel(pre_scaler, clk_pll->pres_reg);
-	}
-
-	if (clk_pll->post_reg != NULL) {
-		if (clk_pll->extra_scaler == 1)
-			rct_writel_en((post_scaler - 1) << 4, clk_pll->post_reg);
-		else
-			writel(post_scaler, clk_pll->post_reg);
 	}
 
 	ctrl_val.w = readl(clk_pll->ctrl_reg);
@@ -228,8 +276,8 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 
 	if (clk_pll->frac_mode) {
-		rate_tmp = ambarella_pll_recalc_rate(hw, parent_rate);
-		rate_tmp *= clk_pll->fix_divider * post_scaler;
+		rate_tmp = ambarella_vout_tv_pll_recalc_rate(hw, parent_rate);
+		rate_tmp *= clk_pll->fix_divider;
 		if (rate_tmp <= rate)
 			diff = rate - rate_tmp;
 		else
@@ -261,25 +309,55 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	else
 		writel(clk_pll->ctrl3_val, clk_pll->ctrl3_reg);
 
+        writel(clk_pll->hdmi_clock_ctrl_val, clk_pll->hdmi_clock_ctrl_reg);
+
 	/* check if result rate is precise or not */
-	rate_tmp = ambarella_pll_recalc_rate(hw, parent_rate);
-	if (abs(rate_tmp - rate / clk_pll->fix_divider / post_scaler) > 10) {
+	rate_tmp = ambarella_vout_tv_pll_recalc_rate(hw, parent_rate);
+	if (abs(rate_tmp - rate / clk_pll->fix_divider) > 10) {
 		pr_warn("%s: rate is not very precise: %ld, %ld\n",
 			clk_hw_get_name(hw), rate_tmp,
-			rate / clk_pll->fix_divider / post_scaler);
+			rate / clk_pll->fix_divider);
 	}
 
 	return 0;
 }
 
-static const struct clk_ops pll_ops = {
-	.recalc_rate = ambarella_pll_recalc_rate,
-	.round_rate = ambarella_pll_round_rate,
-	.set_rate = ambarella_pll_set_rate,
+static int ambarella_clock_in_table(u32 freq, const struct vout_tv_pll *table, u32 table_size){
+        int     i = 0;
+
+        for(i = 0; i < table_size; i++){
+                if(freq == table[i].freq)
+                        return (i+1);
+        }
+
+        return 0;
+}
+
+static int ambarella_vout_tv_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+			unsigned long parent_rate)
+{
+        int ret = 0;
+        int index = ambarella_clock_in_table(rate,
+                        ambarella_vout_tv_pll_table,
+                        ARRAY_SIZE(ambarella_vout_tv_pll_table));
+
+        if(index){
+                ret = ambarella_vout_tv_pll_set_rate_table(hw,rate,index);
+        }else{
+                ret = ambarella_vout_tv_pll_set_rate_calculate(hw,rate,parent_rate);
+        }
+
+        return ret;
+}
+
+static const struct clk_ops vout_tv_pll_ops = {
+	.recalc_rate = ambarella_vout_tv_pll_recalc_rate,
+	.round_rate = ambarella_vout_tv_pll_round_rate,
+	.set_rate = ambarella_vout_tv_pll_set_rate,
 };
 
 static inline void ambarella_pll_get_reg(struct device_node *np,
-		struct amb_clk_pll *clk_pll)
+		struct amb_vout_tv_clk_pll *clk_pll)
 {
 	clk_pll->ctrl_reg = of_iomap(np, 0);
 	if (!clk_pll->ctrl_reg) {
@@ -305,14 +383,19 @@ static inline void ambarella_pll_get_reg(struct device_node *np,
 		return;
 	}
 
-	/* pre and post scaler registers are allowed non-exist */
+	/* pre ,post scaler registers are allowed non-exist*/
 	clk_pll->pres_reg = of_iomap(np, 4);
-	clk_pll->post_reg = of_iomap(np, 5);
+
+	clk_pll->hdmi_clock_ctrl_reg = of_iomap(np, 5);
+	if (!clk_pll->hdmi_clock_ctrl_reg) {
+		pr_err("%s: failed to map hdmi_clock_ctrl_reg", np->name);
+		return;
+	}
 }
 
-static void __init ambarella_pll_clocks_init(struct device_node *np)
+static void __init ambarella_vout_TV_clocks_init(struct device_node *np)
 {
-	struct amb_clk_pll *clk_pll;
+	struct amb_vout_tv_clk_pll *clk_pll;
 	struct clk *clk;
 	struct clk_init_data init;
 	const char *name, *parent_name;
@@ -324,7 +407,7 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 		return;
 	}
 
-	clk_pll = kzalloc(sizeof(struct amb_clk_pll), GFP_KERNEL);
+	clk_pll = kzalloc(sizeof(struct amb_vout_tv_clk_pll), GFP_KERNEL);
 	if (!clk_pll)
 		return;
 
@@ -344,6 +427,10 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 	if (of_property_read_u32(np, "amb,ctrl3-val", &clk_pll->ctrl3_val))
 		clk_pll->ctrl3_val = 0x00068300;
 
+	if (of_property_read_u32(np, "amb,hdmi_clock_ctrl_val",
+                                &clk_pll->hdmi_clock_ctrl_val))
+		clk_pll->hdmi_clock_ctrl_val = 0x0000001d;
+
 	if (of_property_read_u32(np, "amb,fix-divider", &clk_pll->fix_divider))
 		clk_pll->fix_divider = 1;
 
@@ -351,7 +438,7 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 		clk_pll->min_vco = 700;
 
 	init.name = name;
-	init.ops = &pll_ops;
+	init.ops = &vout_tv_pll_ops;
 	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE;
 	init.parent_names = &parent_name;
 	init.num_parents = num_parents;
@@ -368,5 +455,5 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 	of_clk_add_provider(np, of_clk_src_simple_get, clk);
 	clk_register_clkdev(clk, name, NULL);
 }
-CLK_OF_DECLARE(ambarella_clk_pll, "ambarella,pll-clock", ambarella_pll_clocks_init);
+CLK_OF_DECLARE(ambarella_vout_tv_pll, "ambarella,vout-tv-clock", ambarella_vout_TV_clocks_init);
 

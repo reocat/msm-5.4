@@ -1015,13 +1015,13 @@
 
 		gclk_vo: gclk-vo { /* for tv */
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
+			compatible = "ambarella,vout-tv-clock";
 			reg = <0xec170164 4>,
 			      <0xec170168 4>,
 			      <0xec170150 4>,
 			      <0xec170154 4>,
 			      <0xec170170 4>,
-			      <0x00000000 0>;
+			      <0xec170008 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo";
 			assigned-clocks = <&gclk_vo>;

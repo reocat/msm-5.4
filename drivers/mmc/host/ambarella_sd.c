@@ -40,6 +40,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
+#include <linux/mmc/sdio.h>
 #include <linux/debugfs.h>
 #include <plat/rct.h>
 #include <plat/sd.h>
@@ -863,7 +864,7 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 		else
 			hostr &= ~SD_HOST_HIGH_SPEED;
 #else
-		hostr |= SD_HOST_HIGH_SPEED;
+		hostr &= ~SD_HOST_HIGH_SPEED;
 #endif
 		writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
 		break;
@@ -1121,25 +1122,20 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 	cmd_reg = SD_CMD_IDX(cmd->opcode);
 
-	switch (mmc_resp_type(cmd)) {
-	case MMC_RSP_NONE:
+	if (!(cmd->flags & MMC_RSP_PRESENT))
 		cmd_reg |= SD_CMD_RSP_NONE;
-		break;
-	case MMC_RSP_R1B:
-		cmd_reg |= SD_CMD_RSP_48BUSY;
-		break;
-	case MMC_RSP_R2:
+	else if (cmd->flags & MMC_RSP_136)
 		cmd_reg |= SD_CMD_RSP_136;
-		break;
-	default:
+	else if (cmd->flags & MMC_RSP_BUSY)
+		cmd_reg |= SD_CMD_RSP_48BUSY;
+	else
 		cmd_reg |= SD_CMD_RSP_48;
-		break;
-	}
 
-	if (mmc_resp_type(cmd) & MMC_RSP_CRC)
+
+	if (cmd->flags & MMC_RSP_CRC)
 		cmd_reg |= SD_CMD_CHKCRC;
 
-	if (mmc_resp_type(cmd) & MMC_RSP_OPCODE)
+	if (cmd->flags & MMC_RSP_OPCODE)
 		cmd_reg |= SD_CMD_CHKIDX;
 
 	if (cmd->data) {
@@ -1161,7 +1157,8 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 		/* if CMD23 is used, we should not send CMD12, unless any
 		 * errors happened in read/write operation. So we disable
 		 * auto_cmd12, but send CMD12 manually when necessary. */
-		if (host->auto_cmd12 && !cmd->mrq->sbc && cmd->data->stop)
+		if (host->auto_cmd12 && !cmd->mrq->sbc && cmd->data->stop
+			&& (cmd->opcode != SD_IO_RW_EXTENDED))
 			xfr_reg |= SD_XFR_AC12_EN;
 
 		writel_relaxed(host->desc_phys, host->regbase + SD_ADMA_ADDR_OFFSET);
@@ -1404,28 +1401,18 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.execute_tuning = ambarella_sd_execute_tuning,
 };
 
-/* ==========================================================================*/
-
-static void ambarella_sd_tasklet_finish(unsigned long param)
+static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 {
-	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
-	struct mmc_request *mrq = host->mrq;
 	struct mmc_command *cmd = host->cmd;
 	u32 resp0, resp1, resp2, resp3;
-	u16 nis, eis, ac12es, dir;
-	unsigned long flags;
+	u16 nis, eis, ac12es;
 
-	if (cmd == NULL || mrq == NULL) {
+	if (cmd == NULL)
 		return;
-	}
 
-	spin_lock_irqsave(&host->lock, flags);
 	nis = host->irq_status & 0xffff;
 	eis = host->irq_status >> 16;
-	host->irq_status = 0;
 	ac12es = host->ac12es;
-	host->ac12es = 0;
-	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (nis & SD_NIS_ERROR) {
 		if (eis & (SD_EIS_CMD_BIT_ERR | SD_EIS_CMD_CRC_ERR))
@@ -1470,7 +1457,6 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 				nis, eis, ac12es);
 		}
 
-		ambarella_sd_recovery(host);
 		goto finish;
 	}
 
@@ -1503,8 +1489,28 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	return;
 
 finish:
+	tasklet_schedule(&host->finish_tasklet);
+
+	return;
+
+}
+
+static void ambarella_sd_tasklet_finish(unsigned long param)
+{
+	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
+	struct mmc_request *mrq = host->mrq;
+	struct mmc_command *cmd = host->cmd;
+	u16 dir;
+
+	if (cmd == NULL || mrq == NULL)
+		return;
+
 	dev_dbg(host->dev, "End %s[%u], arg = %u\n",
 		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+
+	if(cmd->error || (cmd->data && (cmd->data->error ||
+		(cmd->data->stop && cmd->data->stop->error))))
+		ambarella_sd_recovery(host);
 
 	del_timer(&host->timer);
 
@@ -1540,6 +1546,7 @@ finish:
 
 	host->cmd = NULL;
 	host->mrq = NULL;
+
 	mmc_request_done(host->mmc, mrq);
 }
 
@@ -1577,9 +1584,7 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 #endif
 	}
 
-
-	if (host->cmd)
-		tasklet_schedule(&host->finish_tasklet);
+	ambarella_sd_handle_irq(host);
 
 	return IRQ_HANDLED;
 }

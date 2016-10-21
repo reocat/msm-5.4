@@ -154,7 +154,7 @@ struct ambeth_info {
 					dump_rx : 1,
 					dump_rx_free : 1,
 					dump_rx_all : 1;
-	bool			clk_direction;
+	int				clk_direction;
 	bool 			enhance;
 	bool			clk_invert;
 };
@@ -2204,7 +2204,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int ret_val, clk_src, hw_intf;
+	int ret_val, clk_src, clk_dir, hw_intf, clk_pl;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2301,21 +2301,27 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
 		}
 
-		if (of_property_read_bool(phy_np, "amb,clk-invert")) {
+		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_dir);
+		if (ret_val == 0 && clk_dir == 1) {
+			/*set direction of xx_enet_clk_rx as output from ambarella chip*/
+			lp->clk_direction = 1;
+			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
+		} else if(ret_val == 0 && clk_dir == 0){
+			/*set direction of xx_enet_clk_rx as output from external phy*/
+			lp->clk_direction = 0;
+			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
+		} else
+			lp->clk_direction = -1;
+
+		ret_val = of_property_read_u32(phy_np, "amb,clk-invert", &clk_pl);
+		if(ret_val == 0 && clk_pl == 1) {
 			lp->clk_invert = true;
-			/*invert the clk for ethernet*/
 			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
-		} else {
+		} else if(ret_val == 0 && clk_pl == 0) {
 			lp->clk_invert = false;
+			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x00000000);
 		}
 
-		if (of_property_read_bool(phy_np, "amb,clk-dir")) {
-			/*set ref clock pin as input from PHY*/
-			lp->clk_direction = true;
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
-		} else {
-			lp->clk_direction = false;
-		}
 	}
 
 	return 0;
@@ -2556,11 +2562,10 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	if (!netif_running(ndev))
 		goto ambeth_drv_resume_exit;
 
-	if(lp->clk_direction) {
-		/*set ref clock pin as input from PHY*/
-		regmap_update_bits(lp->reg_rct,
-				AHB_MISC_OFFSET, 0x20, 0x20);
-	}
+	if(lp->clk_direction == 1)
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
+	else if(lp->clk_direction == 0)
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x0);
 
 	if (lp->clk_invert) {
 		/*invert the clk for ethernet*/
