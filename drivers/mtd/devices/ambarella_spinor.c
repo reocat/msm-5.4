@@ -315,20 +315,22 @@ static int amba_erase(struct mtd_info *mtd, struct erase_info *instr)
         if (needread >= AMBA_SPINOR_DMA_BUFF_SIZE) {
             ret = ambspi_read_data(flash, from+offset, AMBA_SPINOR_DMA_BUFF_SIZE);
             if(ret) {
-                dev_err((const struct device *)&flash->dev,
-                        "SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), AMBA_SPINOR_DMA_BUFF_SIZE);
-                check_set_spinor_addr_mode(flash, 0);
+				dev_err((const struct device *)&flash->dev,
+						"SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), AMBA_SPINOR_DMA_BUFF_SIZE);
+				check_set_spinor_addr_mode(flash, 0);
+				mutex_unlock(&flash->lock);
 				return -1;
             }
-            memcpy(buf+offset, flash->dmabuf, AMBA_SPINOR_DMA_BUFF_SIZE);
-            offset += AMBA_SPINOR_DMA_BUFF_SIZE;
+			memcpy(buf+offset, flash->dmabuf, AMBA_SPINOR_DMA_BUFF_SIZE);
+			offset += AMBA_SPINOR_DMA_BUFF_SIZE;
         }else{
-            ret = ambspi_read_data(flash, from+offset, needread);
-            if(ret) {
-                dev_err((const struct device *)&flash->dev,
-                    "SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), needread);
+			ret = ambspi_read_data(flash, from+offset, needread);
+			if(ret) {
+				dev_err((const struct device *)&flash->dev,
+						"SPI NOR read error from=%x len=%d\r\n", (u32)(from+offset), needread);
 				check_set_spinor_addr_mode(flash, 0);
-                return -1;
+				mutex_unlock(&flash->lock);
+				return -1;
             }
             memcpy(buf+offset, flash->dmabuf, needread);
             offset += needread;
