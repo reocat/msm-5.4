@@ -2204,7 +2204,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int ret_val, clk_src, clk_dir, hw_intf, clk_pl;
+	int ret_val, clk_src, hw_intf;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2300,24 +2300,29 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			/*clk_src == 1 and default represent the clk is internal*/
 			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
 		}
-
+#if 0
 		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_dir);
 		if (ret_val == 0 && clk_dir == 1) {
+#else
+		if (of_property_read_bool(phy_np, "amb,clk-dir")) {
+#endif
 			/*set direction of xx_enet_clk_rx as output from ambarella chip*/
 			lp->clk_direction = 1;
 			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
-		} else if(ret_val == 0 && clk_dir == 0){
+		} else {
 			/*set direction of xx_enet_clk_rx as output from external phy*/
 			lp->clk_direction = 0;
 			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
-		} else
-			lp->clk_direction = -1;
-
+		}
+#if 0
 		ret_val = of_property_read_u32(phy_np, "amb,clk-invert", &clk_pl);
 		if(ret_val == 0 && clk_pl == 1) {
+#else
+		if (of_property_read_bool(phy_np, "amb,clk-invert")) {
+#endif
 			lp->clk_invert = true;
 			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
-		} else if(ret_val == 0 && clk_pl == 0) {
+		} else {
 			lp->clk_invert = false;
 			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x00000000);
 		}
