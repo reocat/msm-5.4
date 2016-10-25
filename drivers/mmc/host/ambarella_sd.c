@@ -692,13 +692,7 @@ static void ambarella_sd_timer_timeout(unsigned long param)
 	struct mmc_request *mrq = host->mrq;
 	u32 dir;
 
-#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
-	//fixme: find root cause of cmd53 timeout
-	if (mrq && (mrq->data) && (53 == mrq->cmd->opcode))
-		pr_debug("pending mrq: data[53]\n");
-	else
-#endif
-		dev_err(host->dev, "pending mrq: %s[%u]\n",
+	dev_err(host->dev, "pending mrq: %s[%u]\n",
 			mrq ? mrq->data ? "data" : "cmd" : "",
 			mrq ? mrq->cmd->opcode : 9999);
 
