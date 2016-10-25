@@ -45,9 +45,34 @@
 static struct regmap *reg_rct = NULL;
 static size_t sdio_regbase = 0;
 
+#define SDIO_GLOBAL_ID 1
+
 /* fixme: hard code to H2 */
+#if SDIO_GLOBAL_ID == 1	//SD1
 #define SDIO_DS0 GPIO_DS0_0_OFFSET
-#define SDIO_DS1 GPIO_DS0_1_OFFSET
+#define SDIO_DS1 GPIO_DS1_0_OFFSET
+
+//clock GPIO 0
+#define DS_CLK_MASK 0x00000001
+//data GPIO 4~7
+#define DS_DATA_MASK 0x000000f0
+//cmd GPIO 1
+#define DS_CMD_MASK 0x00000002
+//cdwp GPIO 2~3
+#define DS_CDWP_MASK 0x0000000C
+
+#elif  SDIO_GLOBAL_ID == 2	//SD2
+#define SDIO_DS0 GPIO_DS0_2_OFFSET
+#define SDIO_DS1 GPIO_DS1_2_OFFSET
+//clock GPIO 83
+#define DS_CLK_MASK 0x00080000
+//data GPIO 85~88
+#define DS_DATA_MASK 0x01E00000
+//cmd GPIO 84
+#define DS_CMD_MASK 0x00100000
+//cdwp GPIO 89~90
+#define DS_CDWP_MASK 0x06000000
+#endif
 
 #define SDIO_DELAY_SEL0 (sdio_regbase + 0xd8)
 #define SDIO_DELAY_SEL2 (sdio_regbase + 0xdc)
@@ -74,16 +99,7 @@ static size_t sdio_regbase = 0;
 #define SDIO_SEL0_ICMDLY 0
 //[24:22] clk_sdcard output delay control
 #define SDIO_SEL2_OCLY 22
-//clock GPIO 0
-#define DS_CLK_MASK 0x00000001
-//data GPIO 4~7
-#define DS_DATA_MASK 0x000000f0
-//cmd GPIO 1
-#define DS_CMD_MASK 0x00000002
-//cdwp GPIO 2~3
-#define DS_CDWP_MASK 0x0000000C
 
-/* fixme: hard sdio code to sd1 */
 int init_sd_para(size_t regbase)
 {
 	struct device_node *np =NULL;
@@ -92,7 +108,7 @@ int init_sd_para(size_t regbase)
 		return -1;
 
 	sdio_regbase = regbase;
-
+#if  SDIO_GLOBAL_ID == 1	//SD1
 	if (!sd_slot_is_valid(1)) {
 		printk(KERN_ERR "%s: sd1 invalid\n", __func__);
 		return -1;
@@ -103,6 +119,18 @@ int init_sd_para(size_t regbase)
 		printk(KERN_ERR "%s:sd1 err of_find_node_by_path\n", __func__);
 		return -1;
 	}
+#elif  SDIO_GLOBAL_ID == 2	//SD2
+	if (!sd_slot_is_valid(2)) {
+		printk(KERN_ERR "%s: sd2 invalid\n", __func__);
+		return -1;
+	}
+
+	np = of_find_node_by_path("sd2");
+	if (!np) {
+		printk(KERN_ERR "%s:sd2 err of_find_node_by_path\n", __func__);
+		return -1;
+	}
+#endif
 
 	reg_rct = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
 	if (IS_ERR(reg_rct)) {
