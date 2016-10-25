@@ -1723,13 +1723,13 @@ static int ambarella_udc_queue(struct usb_ep *_ep, struct usb_request *_req,
 
 	ambarella_map_dma_buffer(ep, req);
 
-	/* disable IRQ handler's bottom-half  */
-	spin_lock_irqsave(&udc->lock, flags);
-
 	_req->status = -EINPROGRESS;
 	_req->actual = 0;
 
 	ambarella_prepare_descriptor(ep, req, gfp_flags);
+
+	/* disable IRQ handler's bottom-half  */
+	spin_lock_irqsave(&udc->lock, flags);
 
 	/* kickstart this i/o queue? */
 	//if (list_empty(&ep->queue) && !ep->halted) {

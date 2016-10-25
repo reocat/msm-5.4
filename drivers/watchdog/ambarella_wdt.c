@@ -170,6 +170,7 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	ambwdt->wdd.parent = &pdev->dev;
 	ambwdt->wdd.info = &ambwdt_info;
 	ambwdt->wdd.ops = &ambwdt_ops;
 	ambwdt->wdd.min_timeout = 0;
