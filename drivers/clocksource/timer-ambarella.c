@@ -164,7 +164,7 @@ static u64 notrace ambarella_read_sched_clock(void)
 	return (-(u64)readl_relaxed(sched_base_reg + TIMER_STATUS_OFFSET));
 }
 
-static void __init ambarella_clocksource_init(struct device_node *np)
+static int __init ambarella_clocksource_init(struct device_node *np)
 {
 	struct ambarella_clksrc *amb_clksrc;
 	struct clocksource *clksrc;
@@ -173,25 +173,25 @@ static void __init ambarella_clocksource_init(struct device_node *np)
 	amb_clksrc = kzalloc(sizeof(struct ambarella_clksrc), GFP_KERNEL);
 	if (!amb_clksrc) {
 		pr_err("%s: No memory for ambarella_clksrc\n", __func__);
-		return;
+		return -ENOMEM;
 	}
 
 	amb_clksrc->base_reg = of_iomap(np, 0);
 	if (!amb_clksrc->base_reg) {
 		pr_err("%s: Failed to map source base\n", __func__);
-		return;
+		return -ENXIO;
 	}
 
 	amb_clksrc->ctrl_reg = of_iomap(np, 1);
 	if (!amb_clksrc->ctrl_reg) {
 		pr_err("%s: Failed to map timer-ctrl base\n", __func__);
-		return;
+		return -ENXIO;
 	}
 
 	rval = of_property_read_u32(np, "ctrl-offset", &amb_clksrc->ctrl_offset);
 	if (rval < 0) {
 		pr_err("%s: Can't get ctrl offset\n", __func__);
-		return;
+		return rval;
 	}
 
 	of_node_put(np);
@@ -217,6 +217,8 @@ static void __init ambarella_clocksource_init(struct device_node *np)
 
 	sched_base_reg = amb_clksrc->base_reg;
 	sched_clock_register(ambarella_read_sched_clock, 32, AMBARELLA_TIMER_FREQ);
+
+	return 0;
 }
 
 /* ==========================================================================*/
@@ -291,7 +293,7 @@ static irqreturn_t ambarella_clkevt_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void __init ambarella_clockevent_init(struct device_node *np)
+static int __init ambarella_clockevent_init(struct device_node *np)
 {
 	struct ambarella_clkevt *amb_clkevt;
 	struct clock_event_device *clkevt;
@@ -300,31 +302,31 @@ static void __init ambarella_clockevent_init(struct device_node *np)
 	amb_clkevt = kzalloc(sizeof(struct ambarella_clkevt), GFP_KERNEL);
 	if (!amb_clkevt) {
 		pr_err("%s: No memory for ambarella_clkevt\n", __func__);
-		return;
+		return -ENOMEM;
 	}
 
 	amb_clkevt->base_reg = of_iomap(np, 0);
 	if (!amb_clkevt->base_reg) {
 		pr_err("%s: Failed to map event base\n", __func__);
-		return;
+		return -ENXIO;
 	}
 
 	amb_clkevt->ctrl_reg = of_iomap(np, 1);
 	if (!amb_clkevt->ctrl_reg) {
 		pr_err("%s: Failed to map timer-ctrl base\n", __func__);
-		return;
+		return -ENXIO;
 	}
 
 	amb_clkevt->irq = irq_of_parse_and_map(np, 0);
 	if (amb_clkevt->irq <= 0) {
 		pr_err("%s: Can't get irq\n", __func__);
-		return;
+		return -EINVAL;
 	}
 
 	rval = of_property_read_u32(np, "ctrl-offset", &amb_clkevt->ctrl_offset);
 	if (rval < 0) {
 		pr_err("%s: Can't get ctrl offset\n", __func__);
-		return;
+		return rval;
 	}
 
 	sprintf(amb_clkevt->name, "ambarella-ce-timer");
@@ -350,11 +352,13 @@ static void __init ambarella_clockevent_init(struct device_node *np)
 			clkevt->name, clkevt);
 	if (rval < 0) {
 		pr_err("%s: request_irq failed\n", __func__);
-		return;
+		return rval;
 	}
 
 	clockevents_config_and_register(&amb_clkevt->clkevt,
 				AMBARELLA_TIMER_FREQ, 1, 0xffffffff);
+
+	return 0;
 }
 
 /* ==========================================================================*/
@@ -416,7 +420,7 @@ static struct notifier_block ambarella_local_clkevt_nb = {
 	.notifier_call = ambarella_local_clkevt_notify,
 };
 
-static void __init ambarella_local_clockevent_init(struct device_node *np)
+static int __init ambarella_local_clockevent_init(struct device_node *np)
 {
 	struct ambarella_clkevt *local_clkevt;
 	int cpu, rval;
@@ -427,26 +431,26 @@ static void __init ambarella_local_clockevent_init(struct device_node *np)
 		local_clkevt->base_reg = of_iomap(np, cpu * 2);
 		if (!local_clkevt->base_reg) {
 			pr_err("%s: Failed to map event base[%d]\n", __func__, cpu);
-			return;
+			return -ENXIO;
 		}
 
 		local_clkevt->ctrl_reg = of_iomap(np, cpu * 2 + 1);
 		if (!local_clkevt->ctrl_reg) {
 			pr_err("%s: Failed to map ctrl reg[%d]\n", __func__, cpu);
-			return;
+			return -ENXIO;
 		}
 
 		rval = of_property_read_u32_index(np, "ctrl-offset",
 					cpu, &local_clkevt->ctrl_offset);
 		if (rval < 0) {
 			pr_err("%s: Can't get local ctrl offset[%d]\n", __func__, cpu);
-			return;
+			return rval;
 		}
 
 		local_clkevt->irq = irq_of_parse_and_map(np, cpu);
 		if (local_clkevt->irq <= 0) {
 			pr_err("%s: Can't get irq[%d]\n", __func__, cpu);
-			return;
+			return -EINVAL;
 		}
 
 		sprintf(local_clkevt->name, "local_clkevt%d", cpu);
@@ -458,18 +462,20 @@ static void __init ambarella_local_clockevent_init(struct device_node *np)
 				local_clkevt->name, &local_clkevt->clkevt);
 		if (rval < 0) {
 			pr_err("%s: request_irq failed[%d]\n", __func__, cpu);
-			return;
+			return rval;
 		}
 	}
 
 	of_node_put(np);
 
 	rval = register_cpu_notifier(&ambarella_local_clkevt_nb);
-	if (rval)
-		return;
+	if (rval < 0)
+		return rval;
 
 	/* Immediately configure the timer on the boot CPU */
 	ambarella_local_timer_setup(this_cpu_ptr(&percpu_clkevt));
+
+	return 0;
 }
 
 CLOCKSOURCE_OF_DECLARE(ambarella_cs,
