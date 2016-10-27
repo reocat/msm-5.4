@@ -1683,7 +1683,14 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	val = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 	val |= FIO_CTR_RR;
 	writel_relaxed(val, nand_info->regbase + FIO_CTR_OFFSET);
-	msleep(1);
+	/* When suspend/resume mode, before exit random read mode,
+	 * we take time for make sure FIO reset well and
+	 * some dma req finished.
+	 */
+	if (nand_info->suspend == 1)
+		msleep(2);
+	else
+		msleep(1);
 	val &= ~FIO_CTR_RR;
 	writel_relaxed(val, nand_info->regbase + FIO_CTR_OFFSET);
 
