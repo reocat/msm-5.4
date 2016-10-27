@@ -752,6 +752,19 @@
 		dummycodec: codec@0 {
 			compatible = "ambarella,dummycodec";
 		};
+
+		framebuffer@1 {
+			compatible = "ambarella,fb";
+			amb,vout-id = <0>;
+			amb,format = "rgb565";
+			status = "disabled";
+		};
+
+		framebuffer@2 {
+			compatible = "ambarella,fb";
+			amb,vout-id = <1>;
+			amb,format = "rgb565";
+		};
 	};
 
 	clocks {
