@@ -125,12 +125,11 @@ static struct phy_driver ksz80x1r_driver = {
 	.read_status	= genphy_read_status,
 	.ack_interrupt	= ksz80x1r_ack_interrupt,
 	.config_intr	= ksz80x1r_config_intr,
-	.driver		= { .owner = THIS_MODULE,},
 };
 
 static int __init ksz80x1r_init(void)
 {
-	return phy_driver_register(&ksz80x1r_driver);
+	return phy_driver_register(&ksz80x1r_driver, THIS_MODULE);
 }
 
 static void __exit ksz80x1r_exit(void)
