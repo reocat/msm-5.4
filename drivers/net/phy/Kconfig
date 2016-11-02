@@ -29,6 +29,11 @@ config AMD_PHY
 	---help---
 	  Currently supports the am79c874
 
+config SUPERCAM_PHY
+	tristate "Drivers for the Supercam PHYs"
+	---help---
+	  Currently supports the VSC8531 
+
 config MARVELL_PHY
 	tristate "Drivers for Marvell PHYs"
 	---help---
