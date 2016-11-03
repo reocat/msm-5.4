@@ -654,8 +654,22 @@ static void ambarella_sd_switch_clk(struct ambarella_mmc_host *host, bool enable
 static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 {
 	u32 nis, eis;
+#if defined(CONFIG_AMBALINK_SD)
+	u32 latency, ctrl0_reg = 0, ctrl1_reg = 0, ctrl2_reg = 0;
+#endif
 
 	ambarella_sd_disable_irq(host, 0xffffffff);
+
+#if defined(CONFIG_AMBALINK_SD)
+	if (!strcmp(host->dev->of_node->name, "sdmmc0")) {
+		latency = readl_relaxed(host->regbase + SD_LAT_CTRL_OFFSET);
+		if (host->phy_ctrl0_reg) {
+			ctrl0_reg = readl_relaxed(host->phy_ctrl0_reg);
+			ctrl1_reg = readl_relaxed(host->phy_ctrl1_reg);
+			ctrl2_reg = readl_relaxed(host->phy_ctrl2_reg);
+		}
+	}
+#endif
 
 	/* reset sd phy timing if exist */
 	if (host->phy_ctrl0_reg) {
@@ -667,6 +681,20 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 	writeb_relaxed(SD_RESET_ALL, host->regbase + SD_RESET_OFFSET);
 	while (readb_relaxed(host->regbase + SD_RESET_OFFSET) & SD_RESET_ALL)
 		cpu_relax();
+
+#if defined(CONFIG_AMBALINK_SD)
+	if (!strcmp(host->dev->of_node->name, "sdmmc0")) {
+		writel_relaxed(latency, host->regbase + SD_LAT_CTRL_OFFSET);
+		if (host->phy_ctrl0_reg) {
+			writel_relaxed(ctrl2_reg, host->phy_ctrl2_reg);
+			writel_relaxed(ctrl1_reg, host->phy_ctrl1_reg);
+			writel_relaxed(ctrl0_reg | SD_PHY_RESET, host->phy_ctrl0_reg);
+			udelay(5); /* DLL reset time */
+			writel_relaxed(ctrl0_reg, host->phy_ctrl0_reg);
+			udelay(5); /* DLL lock time */
+		}
+	}
+#endif
 
 	/* enable sd internal clock */
 	writew_relaxed(SD_CLK_EN | SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
@@ -1261,6 +1289,13 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 	if (!host->phy_ctrl0_reg)
 		return 0;
+
+#if defined(CONFIG_AMBALINK_SD)
+	if (!strcmp(host->dev->of_node->name, "sdmmc0")) {
+		/* In eMMC boot, RTOS should already complete the tuning. */
+		return 0;
+	}
+#endif
 
 	ambarella_sd_request_bus(mmc);
 
