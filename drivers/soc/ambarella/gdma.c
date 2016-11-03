@@ -69,9 +69,9 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 
 	/* copy rows by 2D copy */
 	if (row_count > 0) {
-		writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+		writel_relaxed((u32)(uintptr_t)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
 		writel_relaxed(TRANSFER_2D_WIDTH, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
-		writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+		writel_relaxed((u32)(uintptr_t)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
 		writel_relaxed(TRANSFER_2D_WIDTH, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
 		writel_relaxed(TRANSFER_2D_WIDTH - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 		writel_relaxed(row_count - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
@@ -98,8 +98,8 @@ static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 	}
 
 	/* linear copy */
-	writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
-	writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+	writel_relaxed((u32)(uintptr_t)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+	writel_relaxed((u32)(uintptr_t)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
 	writel_relaxed(size - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 #if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 	writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
@@ -177,7 +177,7 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 
 	mutex_lock(&transfer_mutex);
 
-	ambcache_clean_range((void *)__phys_to_virt((u32)src_addr), size);
+	ambcache_clean_range((void *)__phys_to_virt((unsigned long)src_addr), size);
 
 	while (remain_size > 0)	{
 		if (remain_size > MAX_TRANSFER_SIZE_ONCE) {
@@ -194,7 +194,7 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 		transferred_size += current_transfer_size;
 	}
 
-	ambcache_inv_range((void *)__phys_to_virt((u32)dest_addr), size);
+	ambcache_inv_range((void *)__phys_to_virt((unsigned long)dest_addr), size);
 
 	mutex_unlock(&transfer_mutex);
 
@@ -202,7 +202,8 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 }
 EXPORT_SYMBOL(dma_memcpy);
 
-static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,u16 src_pitch, u16 dest_pitch, u16 width, u16 height)
+static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,
+					u16 src_pitch, u16 dest_pitch, u16 width, u16 height)
 {
 
 	if (height <= 0) {
@@ -211,9 +212,9 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,u16 src_pitch,
 
 	/* copy rows by 2D copy */
 	while (height > MAX_TRANSFER_2D_HEIGHT) {
-		writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+		writel_relaxed((u32)(uintptr_t)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
 		writel_relaxed(src_pitch, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
-		writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+		writel_relaxed((u32)(uintptr_t)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
 		writel_relaxed(dest_pitch, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
 		writel_relaxed(width - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 		writel_relaxed(MAX_TRANSFER_2D_HEIGHT - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
@@ -230,9 +231,9 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,u16 src_pitch,
 		dest_addr = dest_addr + dest_pitch * MAX_TRANSFER_2D_HEIGHT;
 	}
 
-		writel_relaxed((u32)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
+		writel_relaxed((u32)(uintptr_t)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
 		writel_relaxed(src_pitch, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
-		writel_relaxed((u32)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
+		writel_relaxed((u32)(uintptr_t)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
 		writel_relaxed(dest_pitch, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
 		writel_relaxed(width - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 		writel_relaxed(height - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
