@@ -42,10 +42,10 @@
 #endif
 
 struct gdma_param {
-	u32 dest_addr;
-	u32 dest_virt_addr;
-	u32 src_addr;
-	u32 src_virt_addr;
+	unsigned long dest_addr;
+	unsigned long dest_virt_addr;
+	unsigned long src_addr;
+	unsigned long src_virt_addr;
 	u8 dest_non_cached;
 	u8 src_non_cached;
 	u8 reserved[2];
