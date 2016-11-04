@@ -1,13 +1,16 @@
 /*
- * Driver for Supercam PHY
+ * Driver for AMD am79c PHYs
  *
- * Author: Jon <tdlin@ambarella.com>
+ * Author: Heiko Schocher <hs@denx.de>
  *
- * Copyright (c) 2016 Ambarella
+ * Copyright (c) 2011 DENX Software Engineering GmbH
  *
+ * This program is free software; you can redistribute  it and/or modify it
+ * under  the terms of  the GNU General  Public License as published by the
+ * Free Software Foundation;  either version 2 of the  License, or (at your
+ * option) any later version.
  *
  */
-
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -45,7 +48,7 @@ static struct phy_driver supercam_driver[] = { {
 	.phy_id		= PHY_ID_VSC8531,
 	.name		= "VSC8531",
 	.phy_id_mask	= 0xfffffff0,
-	.features	= PHY_BASIC_FEATURES,
+	.features	= (PHY_BASIC_FEATURES | SUPPORTED_1000baseT_Full),
 	.flags		= 0,
 	.config_init	= supercam_config_init,
 	.config_aneg	= genphy_config_aneg,
