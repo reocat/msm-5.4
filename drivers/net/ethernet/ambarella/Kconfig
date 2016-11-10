@@ -21,3 +21,12 @@ config NET_VENDOR_AMBARELLA_INTEN_TUE
 
 	  If you are not sure, say N here.
 
+config NET_VENDOR_AMBARELLA_JUMBO_FRAME
+	bool "Enable Jumbo Frame for Amabrella Platform"
+	depends on NET_VENDOR_AMBARELLA
+	default n
+	help
+	  Enable Jumbo Frame for Ambarella Platform, this can promote the perforence
+	  for Gigabit Ethernet.
+
+	  If you are not sure, say N here.

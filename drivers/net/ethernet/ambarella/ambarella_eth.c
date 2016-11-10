@@ -53,8 +53,14 @@
 #define AMBETH_MII_RETRY_CNT		200
 #define AMBETH_FC_PAUSE_TIME		1954
 
+#if defined(CONFIG_NET_VENDOR_AMBARELLA_JUMBO_FRAME)
+#define AMBETH_PACKET_MAXFRAME		(8064)
+#define AMBETH_RX_COPYBREAK		(8064)
+#else
 #define AMBETH_PACKET_MAXFRAME		(1536)
 #define AMBETH_RX_COPYBREAK		(1518)
+#endif
+
 #define AMBETH_RX_RNG_MIN		(8)
 #define AMBETH_TX_RNG_MIN		(4)
 #define AMBETH_PHY_REG_SIZE		(32)
@@ -440,11 +446,25 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	writel_relaxed(val, lp->regbase + ETH_DMA_BUS_MODE_OFFSET);
 	writel_relaxed(0, lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
 
-	val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
-		ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF;
-	writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
-	writel_relaxed((ETH_MAC_CFG_TE | ETH_MAC_CFG_RE), lp->regbase + ETH_MAC_CFG_OFFSET);
+	if(lp->ndev->mtu > 4000) {
+		val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
+			ETH_DMA_OPMODE_FUF;
+	} else {
+		val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
+			ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF | ETH_DMA_OPMODE_RSF;
+	}
 
+	writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
+
+	if(lp->ndev->mtu > ETH_DATA_LEN)
+		writel_relaxed((ETH_MAC_CFG_TE | ETH_MAC_CFG_RE | ETH_MAC_CFG_JE | ETH_MAC_CFG_JD),
+			lp->regbase + ETH_MAC_CFG_OFFSET);
+	else
+		writel_relaxed((ETH_MAC_CFG_TE | ETH_MAC_CFG_RE),
+			lp->regbase + ETH_MAC_CFG_OFFSET);
+
+	val = (0x3f << 1) | (0xff << 16);
+	writel_relaxed(val, lp->regbase + ETH_DMA_AXI_BUS_MODE_OFFSET);
 	/*
 	 * (512 bits / N) * pause_time = actual pause time
 	 * ex:
@@ -455,10 +475,6 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	writel_relaxed(val, lp->regbase + ETH_MAC_FLOW_CTR_OFFSET);
 
 	if (lp->ipc_rx) {
-		val = readl_relaxed(lp->regbase + ETH_DMA_OPMODE_OFFSET);
-		val |= ETH_DMA_OPMODE_RSF;
-		writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
-
 		val = readl_relaxed(lp->regbase + ETH_MAC_CFG_OFFSET);
 		val |= ETH_MAC_CFG_IPC;
 		writel_relaxed(val, lp->regbase + ETH_MAC_CFG_OFFSET);
@@ -1234,8 +1250,9 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			entry = (lp->tx.dirty_tx % lp->tx_count);
 			status = lp->tx.desc_tx[entry].status;
 
-			if (status & ETH_TDES0_OWN)
+			if (status & ETH_TDES0_OWN) {
 				break;
+			}
 
 			if (unlikely(status & ETH_TDES0_ES)) {
 				if ((status & ETH_TDES0_ES_MASK) ==
@@ -1260,11 +1277,11 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 					lp->tx.rng_tx[entry].skb->len;
 				lp->stats.tx_packets++;
 			}
-
 			dma_unmap_single(lp->ndev->dev.parent,
 				lp->tx.rng_tx[entry].mapping,
 				lp->tx.rng_tx[entry].skb->len,
 				DMA_TO_DEVICE);
+
 			dev_kfree_skb_irq(lp->tx.rng_tx[entry].skb);
 			lp->tx.rng_tx[entry].skb = NULL;
 			lp->tx.rng_tx[entry].mapping = 0;
@@ -1524,13 +1541,29 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (unlikely(lp->dump_tx))
 		ambhw_dump_buffer(__func__, skb->data, skb->len);
 
+	if (lp->ipc_tx && (skb->ip_summed == CHECKSUM_PARTIAL)) {
+		ret_val = readl_relaxed(lp->regbase + ETH_DMA_OPMODE_OFFSET);
+		if(ret_val & ETH_DMA_OPMODE_TSF) {
+			if (lp->enhance)
+				tx_flag |= ETH_ENHANCED_TDES0_CIC_V2;
+			else
+				tx_flag |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
+		} else {
+			skb_set_transport_header(skb, skb_checksum_start_offset(skb));
+			if(skb_checksum_help(skb))
+				goto drop;
+		}
+	}
+
 	mapping = dma_map_single(lp->ndev->dev.parent,
 		skb->data, skb->len, DMA_TO_DEVICE);
-	if (lp->ipc_tx && (skb->ip_summed == CHECKSUM_PARTIAL)) {
-		if (lp->enhance)
-			tx_flag |= ETH_ENHANCED_TDES0_CIC_V2;
-		else
-			tx_flag |= ETH_TDES1_CIC_TUI | ETH_TDES1_CIC_HDR;
+
+	ret_val = dma_mapping_error(lp->ndev->dev.parent, mapping);
+	if(ret_val) {
+		dev_err(&lp->ndev->dev, "Tx DMA map failed\n");
+		dev_kfree_skb(skb);
+		spin_unlock_irqrestore(&lp->lock, flags);
+		return ret_val;
 	}
 
 	lp->tx.rng_tx[entry].skb = skb;
@@ -1560,6 +1593,56 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 ambeth_hard_start_xmit_exit:
 	return ret_val;
+drop:
+	dev_kfree_skb_any(skb);
+	lp->stats.tx_errors++;
+	spin_unlock_irqrestore(&lp->lock, flags);
+	return 0;
+}
+
+static int ambeth_change_mtu(struct net_device *dev, int new_mtu)
+{
+#if defined(CONFIG_NET_VENDOR_AMBARELLA_JUMBO_FRAME)
+	struct ambeth_info *lp = netdev_priv(dev);
+	u32 val = 0;
+
+	if(new_mtu < 68 || new_mtu > AMBETH_RX_COPYBREAK ) {
+		return  -EINVAL;
+	} else if(new_mtu > ETH_DATA_LEN) {
+		napi_disable(&lp->napi);
+		val = readl_relaxed(lp->regbase + ETH_MAC_CFG_OFFSET);
+		val |= ETH_MAC_CFG_JE | ETH_MAC_CFG_JD;
+		writel_relaxed(val, lp->regbase + ETH_MAC_CFG_OFFSET);
+		if(new_mtu > 4000) {
+			val = readl_relaxed(lp->regbase + ETH_DMA_OPMODE_OFFSET);
+			val &= ~(ETH_DMA_OPMODE_RSF | ETH_DMA_OPMODE_TSF);
+			writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
+		} else {
+			val = readl_relaxed(lp->regbase + ETH_DMA_OPMODE_OFFSET);
+			val |= (ETH_DMA_OPMODE_RSF | ETH_DMA_OPMODE_TSF);
+			writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
+		}
+
+		napi_enable(&lp->napi);
+	} else {
+		napi_disable(&lp->napi);
+		val = readl_relaxed(lp->regbase + ETH_MAC_CFG_OFFSET);
+		val &= ~(ETH_MAC_CFG_JE | ETH_MAC_CFG_JD);
+		writel_relaxed(val, lp->regbase + ETH_MAC_CFG_OFFSET);
+
+		val = readl_relaxed(lp->regbase + ETH_DMA_OPMODE_OFFSET);
+		val |= ETH_DMA_OPMODE_RSF | ETH_DMA_OPMODE_TSF;
+		writel_relaxed(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
+		napi_enable(&lp->napi);
+	}
+	dev->mtu = new_mtu;
+	netdev_update_features(dev);
+#else
+	if (new_mtu < 68 || new_mtu > ETH_DATA_LEN)
+		return -EINVAL;
+	dev->mtu = new_mtu;
+#endif
+	return 0;
 }
 
 static void ambeth_timeout(struct net_device *ndev)
@@ -1953,7 +2036,7 @@ static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_set_mac_address 	= ambeth_set_mac_address,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_do_ioctl		= ambeth_ioctl,
-	.ndo_change_mtu		= eth_change_mtu,
+	.ndo_change_mtu		= ambeth_change_mtu,
 	.ndo_tx_timeout		= ambeth_timeout,
 	.ndo_get_stats		= ambeth_get_stats,
 #ifdef CONFIG_NET_POLL_CONTROLLER
