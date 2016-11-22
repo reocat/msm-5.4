@@ -77,6 +77,9 @@
 #define IDC_CTRL_ACK			(0x01)
 #define IDC_CTRL_CLS			(0x00)
 
+#define IDC_STS_FIFO_EMP		(0x04)
+#define IDC_STS_FIFO_FUL		(0x02)
+
 #define IDC_FIFO_BUF_SIZE		(63)
 
 #define IDC_FMCTRL_STOP			(0x08)

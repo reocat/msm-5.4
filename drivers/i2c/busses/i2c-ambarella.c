@@ -446,6 +446,15 @@ amba_i2c_irq_write:
 		}
 		break;
 	default:
+		if (status_reg & IDC_STS_FIFO_EMP) { /* for bulk write fifo mode */
+			if (pinfo->state == AMBA_I2C_STATE_IDLE) {
+				goto amba_i2c_irq_exit;
+			} else if (pinfo->state == AMBA_I2C_STATE_NO_ACK) {
+				ack_control = IDC_CTRL_STOP | IDC_CTRL_ACK;
+				writel_relaxed(ack_control, pinfo->regbase + IDC_CTRL_OFFSET);
+				goto amba_i2c_irq_exit;
+			}
+		}
 		dev_err(pinfo->dev, "ambarella_i2c_irq in wrong state[0x%x]\n",
 			pinfo->state);
 		dev_err(pinfo->dev, "status_reg[0x%x]\n", status_reg);
