@@ -192,6 +192,14 @@ static inline int nand_amb_is_sw_bch(struct ambarella_nand_info *nand_info)
 	return nand_info->soft_ecc && nand_info->ecc_bits > 1;
 }
 
+static void ambarella_fio_nand_rct_reset(void)
+{
+	amba_rct_writel(FIO_RESET_REG, FIO_RESET_FIO_RST | FIO_RESET_FLASH_RST);
+	mdelay(1);
+	amba_rct_writel(FIO_RESET_REG, 0x0);
+	mdelay(1);
+}
+
 static void nand_amb_corrected_recovery(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_ctr_reg, fio_dmactr_reg;
@@ -1583,7 +1591,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 {
 	/* reset FIO by RCT */
 	fio_select_lock(SELECT_FIO_FL);
-	ambarella_fio_rct_reset();
+	ambarella_fio_nand_rct_reset();
 	fio_unlock(SELECT_FIO_FL);
 
 	/* When suspend/resume mode, before exit random read mode,
@@ -1600,6 +1608,10 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	amba_writel(nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET, 0);
 	amba_writel(nand_info->fdmaregbase + FDMA_CTR_OFFSET,
 		DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI);
+
+	if (nand_info->suspend == 1)
+		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
+			nand_info->control_reg);
 
 	amb_nand_set_timing(nand_info);
 }
