@@ -33,15 +33,21 @@
 #elif (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			138
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3L)
+#elif (CHIP_REV == S2L)
 #define GPIO_INSTANCES			4
 #define GPIO_MAX_LINES			114
+#elif (CHIP_REV == S3L)
+#define GPIO_INSTANCES			4
+#define GPIO_MAX_LINES			121
 #elif (CHIP_REV == S3)
 #define GPIO_INSTANCES			7
 #define GPIO_MAX_LINES			201
 #elif (CHIP_REV == S5)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			132
+#elif (CHIP_REV == S5L)
+#define GPIO_INSTANCES			5
+#define GPIO_MAX_LINES			139
 #else
 #error "Not supported!"
 #endif
@@ -103,6 +109,9 @@
 #define GPIO_PAD_PULL_DIR_4_OFFSET	0xA4
 #define GPIO_PAD_PULL_DIR_5_OFFSET	0x10C
 #define GPIO_PAD_PULL_DIR_6_OFFSET	0x110
+
+#define GPIO_PAD_PULL_BASE		(APB_BASE + GPIO_PAD_PULL_OFFSET)
+#define GPIO_PAD_PULL_REG(x)		(GPIO_PAD_PULL_BASE + (x))
 
 /* ==========================================================================*/
 #define GPIO_DATA_OFFSET		0x00

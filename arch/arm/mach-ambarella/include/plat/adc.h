@@ -53,7 +53,7 @@
 
 #if (CHIP_REV == S2E) || (CHIP_REV == S2L) || (CHIP_REV == S3L)
 #define ADC_PERIOD_CYCLE		6
-#elif (CHIP_REV == S5)
+#elif (CHIP_REV == S5) || (CHIP_REV == S5L)
 #define ADC_PERIOD_CYCLE		20
 #else
 #define ADC_PERIOD_CYCLE		5

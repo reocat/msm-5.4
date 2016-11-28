@@ -60,7 +60,8 @@ struct amb_vout_tv_clk_pll {
 	void __iomem *ctrl3_reg;
 	void __iomem *pres_reg;
 	void __iomem *hdmi_clock_ctrl_reg;
-	u32 extra_scaler : 1;
+	u32 extra_pre_scaler : 1;
+	u32 extra_post_scaler : 1;
 	u32 frac_mode : 1;
 	u32 ctrl2_val;
 	u32 ctrl3_val;
@@ -107,7 +108,7 @@ static unsigned long ambarella_vout_tv_pll_recalc_rate(struct clk_hw *hw,
 
 	if (clk_pll->pres_reg != NULL) {
 		pre_scaler = readl(clk_pll->pres_reg);
-		if (clk_pll->extra_scaler) {
+		if (clk_pll->extra_pre_scaler) {
 			pre_scaler >>= 4;
 			pre_scaler++;
 		}
@@ -182,7 +183,7 @@ static int ambarella_vout_tv_pll_set_rate_table(struct clk_hw *hw,
 	ctrl3_val = ambarella_vout_tv_pll_table[table_index].pll_ctrl3;
 	hdmi_clock_ctrl_val = ambarella_vout_tv_pll_table[table_index].hdmi_clock_ctrl;
 
-	if (clk_pll->extra_scaler == 1)
+	if (clk_pll->extra_pre_scaler == 1)
 		rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
 	else
 		writel(pre_scaler, clk_pll->pres_reg);
@@ -247,7 +248,7 @@ static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned 
 	BUG_ON(pre_scaler > 16);
 
 	if (clk_pll->pres_reg != NULL) {
-		if (clk_pll->extra_scaler == 1)
+		if (clk_pll->extra_pre_scaler == 1)
 			rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
 		else
 			writel(pre_scaler, clk_pll->pres_reg);
@@ -417,7 +418,8 @@ static void __init ambarella_vout_tv_clocks_init(struct device_node *np)
 
 	parent_name = of_clk_get_parent_name(np, 0);
 
-	clk_pll->extra_scaler = !!of_find_property(np, "amb,extra-scaler", NULL);
+	clk_pll->extra_pre_scaler = !!of_find_property(np, "amb,extra-pre-scaler", NULL);
+	clk_pll->extra_post_scaler = !!of_find_property(np, "amb,extra-post-scaler", NULL);
 	clk_pll->frac_mode = !!of_find_property(np, "amb,frac-mode", NULL);
 
 	if (of_property_read_u32(np, "amb,ctrl2-val", &clk_pll->ctrl2_val))

@@ -29,6 +29,8 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define	UART_INSTANCES			4
+#elif (CHIP_REV == S5L)
+#define	UART_INSTANCES			3
 #else
 #define	UART_INSTANCES			2
 #endif
@@ -40,7 +42,11 @@
 #else
 #define UART1_OFFSET			0x32000
 #endif
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define UART2_OFFSET			0x14000
+#else
+#define UART2_OFFSET			0x33000
+#endif
 #define UART3_OFFSET			0x15000
 
 #define UART0_BASE			(APB_BASE + UART_OFFSET)
@@ -49,7 +55,11 @@
 #else
 #define UART1_BASE			(AHB_BASE + UART1_OFFSET)
 #endif
+#if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define UART2_BASE			(APB_BASE + UART2_OFFSET)
+#else
+#define UART2_BASE			(AHB_BASE + UART2_OFFSET)
+#endif
 #define UART3_BASE			(APB_BASE + UART3_OFFSET)
 
 #define UART0_REG(x)			(UART0_BASE + (x))

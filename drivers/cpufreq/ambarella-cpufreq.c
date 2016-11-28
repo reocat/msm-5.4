@@ -155,7 +155,7 @@ static int amba_cpufreq_driver_init(void)
 	}
 
 	ret = of_property_read_u32(np, "amb,core-div", &clk_div);
-	if (ret != 0 || !((clk_div == 1 || clk_div == 2))) {
+	if (ret != 0 || !(clk_div == 1 || clk_div == 2)) {
 		/*Default is that the pll_out_core is twice gclk_core */
 		clk_div = 2;
 	}

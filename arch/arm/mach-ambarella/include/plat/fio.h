@@ -151,18 +151,6 @@
 #define FIO_ECC_RPT_FAIL		0x40000000
 
 /* ==========================================================================*/
-#define SELECT_FIO_FREE		(0x00000000)
-#define SELECT_FIO_FL		(0x00000001)
-#define SELECT_FIO_XD		(0x00000002)
-#define SELECT_FIO_CF		(0x00000004)
-#define SELECT_FIO_SD		(0x00000008)
-#define SELECT_FIO_SDIO		(0x00000010)
-
-#define FIO_OP_NOT_DONE_ER	(-1)	/* operation(xfer) not done error */
-#define FIO_READ_ER		(-2)	/* uncorrected ECC error */
-#define	FIO_ADDR_ER		(-3)	/* address unaligned error */
-
-/* ==========================================================================*/
 
 #endif /* __PLAT_AMBARELLA_COMMON_FIO_H__ */
 

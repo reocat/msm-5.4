@@ -60,7 +60,8 @@ struct amb_clk_pll {
 	void __iomem *ctrl3_reg;
 	void __iomem *pres_reg;
 	void __iomem *post_reg;
-	u32 extra_scaler : 1;
+	u32 extra_pre_scaler : 1;
+	u32 extra_post_scaler : 1;
 	u32 frac_mode : 1;
 	u32 ctrl2_val;
 	u32 ctrl3_val;
@@ -89,7 +90,7 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 
 	if (clk_pll->pres_reg != NULL) {
 		pre_scaler = readl(clk_pll->pres_reg);
-		if (clk_pll->extra_scaler) {
+		if (clk_pll->extra_pre_scaler) {
 			pre_scaler >>= 4;
 			pre_scaler++;
 		}
@@ -99,7 +100,7 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 
 	if (clk_pll->post_reg != NULL) {
 		post_scaler = readl(clk_pll->post_reg);
-		if (clk_pll->extra_scaler) {
+		if (clk_pll->extra_post_scaler) {
 			post_scaler >>= 4;
 			post_scaler++;
 		}
@@ -194,14 +195,14 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	BUG_ON(pre_scaler > 16 || post_scaler > 16);
 
 	if (clk_pll->pres_reg != NULL) {
-		if (clk_pll->extra_scaler == 1)
+		if (clk_pll->extra_pre_scaler == 1)
 			rct_writel_en((pre_scaler - 1) << 4, clk_pll->pres_reg);
 		else
 			writel(pre_scaler, clk_pll->pres_reg);
 	}
 
 	if (clk_pll->post_reg != NULL) {
-		if (clk_pll->extra_scaler == 1)
+		if (clk_pll->extra_post_scaler == 1)
 			rct_writel_en((post_scaler - 1) << 4, clk_pll->post_reg);
 		else
 			writel(post_scaler, clk_pll->post_reg);
@@ -335,7 +336,8 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 
 	parent_name = of_clk_get_parent_name(np, 0);
 
-	clk_pll->extra_scaler = !!of_find_property(np, "amb,extra-scaler", NULL);
+	clk_pll->extra_pre_scaler = !!of_find_property(np, "amb,extra-pre-scaler", NULL);
+	clk_pll->extra_post_scaler = !!of_find_property(np, "amb,extra-post-scaler", NULL);
 	clk_pll->frac_mode = !!of_find_property(np, "amb,frac-mode", NULL);
 
 	if (of_property_read_u32(np, "amb,ctrl2-val", &clk_pll->ctrl2_val))

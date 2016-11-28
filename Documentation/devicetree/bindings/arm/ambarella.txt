@@ -305,11 +305,8 @@ Required properties:
 - #dma-cells: Must be at least 1. Used to provide DMA controller
 			specific information. See DMA client binding below for
 			more details.
-- dma-channels: 	Number of DMA channels supported by the controller.
-- dma-requests: 	Number of DMA requests signals supported by the
-			controller.
-- dma-trans-type:   specifies the dma channel use type.
-					0 for memcpy, 1 for slave.
+- dma-channels: Number of DMA channels supported by the controller.
+- dma-trans-type: specifies the dma channel use type. 0: memcpy, 1: slave.
 
 Optional properties:
 - amb,copy-align: specifies alignment requirement for previous chips.
@@ -568,10 +565,12 @@ Optional properties:
 - amb,dump-rx: specifies to dump Rx buffer, for debug purpose.
 - amb,dump-rx-free: specifies to free buffer after dumped.
 - amb,dump-rx-all: specifies to dump all buffers without filter.
-- amb,clk-src: specifies the clk source for gtx_clk, 0:external clk, 1:internal clk.
-- amb,clk-invert: specifies to invert the clk for ethernet.
-- amb,clk-dir: specifies the ref clk direction from PHY;If it is specified, it means
-  the ref clk pin is input from PHY.
+- amb,ext-gtx-clk125: should be specified if using external 125MHz gclk_gtx,
+  take effect for GMII/RGMII only.
+- amb,ext-ref-clk: should be specified if using external ref_clk,
+  take effect for RMII only.
+- amb,tx-clk-invert: should be specified if inverting the Tx clk,
+  take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
 ii) Example
 -----------

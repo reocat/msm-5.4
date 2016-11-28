@@ -147,15 +147,17 @@ struct ambeth_info {
 	struct regmap			*reg_scr;
 	u32				msg_enable;
 
-	u32				phy_enabled : 1,
+	u32				enhance: 1,
+					ext_ref_clk : 1, /* only for RMII */
+					ext_gtx_clk125 : 1, /* only for GMII/RGMII */
+					tx_clk_invert : 1,
+					phy_enabled : 1,
 					ipc_tx : 1,
 					ipc_rx : 1,
 					dump_tx : 1,
 					dump_rx : 1,
 					dump_rx_free : 1,
 					dump_rx_all : 1;
-	int				clk_direction;
-	bool 			enhance;
 };
 
 /* ==========================================================================*/
@@ -2209,7 +2211,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int ret_val, clk_src, clk_dir, hw_intf, clk_pl;
+	int ret_val, hw_intf;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2297,34 +2299,29 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-		ret_val = of_property_read_u32(phy_np, "amb,clk-src", &clk_src);
-		if (ret_val == 0 && clk_src == 0) {
-			/*clk_src == 0 represent the clk is external*/
+		/* check if using external ref_clk, it's valid for RMII only */
+		lp->ext_ref_clk = !!of_find_property(phy_np, "amb,ext-ref-clk", NULL);
+		if (lp->ext_ref_clk) {
 			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
-		} else if(ret_val == 0 && clk_src == 1) {
-			/*clk_src == 1 and default represent the clk is internal*/
+			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 0x00);
+		} else {
 			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
+			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 1<<5);
 		}
 
-		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_dir);
-		if (ret_val == 0 && clk_dir == 1) {
-			/*set direction of xx_enet_clk_rx as output from ambarella chip*/
-			lp->clk_direction = 1;
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
-		} else if(ret_val == 0 && clk_dir == 0){
-			/*set direction of xx_enet_clk_rx as output from external phy*/
-			lp->clk_direction = 0;
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
-		} else
-			lp->clk_direction = -1;
+		/* check if using external ref_clk, it's valid for RMII only */
+		lp->ext_gtx_clk125 = !!of_find_property(phy_np, "amb,ext-gtx-clk125", NULL);
+		if (lp->ext_gtx_clk125)
+			regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
+		else
+			regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);
 
-		ret_val = of_property_read_u32(phy_np, "amb,clk-invert", &clk_pl);
-		if(ret_val == 0 && clk_pl == 1) {
-			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
-		} else if(ret_val == 0 && clk_pl == 0) {
-			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x00000000);
-		}
 
+		lp->tx_clk_invert = !!of_find_property(phy_np, "amb,tx-clk-invert", NULL);
+		if (lp->tx_clk_invert)
+			regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 1<<31);
+		else
+			regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 0<<31);
 	}
 
 	return 0;
@@ -2562,10 +2559,23 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	if (!netif_running(ndev))
 		goto ambeth_drv_resume_exit;
 
-	if(lp->clk_direction == 1)
+	if (lp->ext_ref_clk) {
+		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
+	} else {
+		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
 		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
-	else if(lp->clk_direction == 0)
-		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x0);
+	}
+
+	if (lp->ext_gtx_clk125)
+		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
+	else
+		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);
+
+	if (lp->tx_clk_invert)
+		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 1<<31);
+	else
+		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 0<<31);
 
 	if (gpio_is_valid(lp->pwr_gpio))
 		gpio_set_value_cansleep(lp->pwr_gpio, lp->pwr_gpio_active);

@@ -41,6 +41,10 @@
 #define SPI_AHB_INSTANCES			1
 #define SPI_SLAVE_INSTANCES			1
 #define	SPI_AHB_BUS				2
+#elif (CHIP_REV == S5L)
+#define SPI_AHB_INSTANCES		3
+#define SPI_AHB_SLAVE_INSTANCES	1
+#define SPI_AHB_BUS				1
 #else
 #define SPI_AHB_INSTANCES			2
 #define SPI_AHB_SLAVE_INSTANCES			1
@@ -48,28 +52,31 @@
 #endif
 
 #if (SPI_AHB_BUS == 1)
-#define SPI_OFFSET			0x20000
-#define SPI_BASE			(AHB_BASE + SPI_OFFSET)
-#define SPI2_OFFSET			0x21000
+#define SPI0_OFFSET			0x20000
+#define SPI0_BASE			(AHB_BASE + SPI0_OFFSET)
+#define SPI1_OFFSET			0x21000
+#define SPI1_BASE			(AHB_BASE + SPI1_OFFSET)
+#define SPI2_OFFSET			0x22000
 #define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
 #define SPI_SLAVE_OFFSET		0x26000
 #define SPI_SLAVE_BASE			(AHB_BASE + SPI_SLAVE_OFFSET)
 #elif (SPI_AHB_BUS == 2)
-#define SPI_OFFSET			0x2000
-#define SPI_BASE			(APB_BASE + SPI_OFFSET)
-#define SPI2_OFFSET			0x1F000
-#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
+#define SPI0_OFFSET			0x2000
+#define SPI0_BASE			(APB_BASE + SPI0_OFFSET)
+#define SPI1_OFFSET			0x1F000
+#define SPI1_BASE			(AHB_BASE + SPI1_OFFSET)
 #define SPI_SLAVE_OFFSET		0x1E000
 #define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
 #else
-#define SPI_OFFSET			0x2000
-#define SPI_BASE			(APB_BASE + SPI_OFFSET)
-#define SPI2_OFFSET			0xF000
-#define SPI2_BASE			(APB_BASE + SPI2_OFFSET)
+#define SPI0_OFFSET			0x2000
+#define SPI0_BASE			(APB_BASE + SPI0_OFFSET)
+#define SPI1_OFFSET			0xF000
+#define SPI1_BASE			(APB_BASE + SPI1_OFFSET)
 #define SPI_SLAVE_OFFSET		0x1E000
 #define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
 #endif
-#define SPI_REG(x)			(SPI_BASE + (x))
+#define SPI0_REG(x)			(SPI0_BASE + (x))
+#define SPI1_REG(x)			(SPI1_BASE + (x))
 #define SPI2_REG(x)			(SPI2_BASE + (x))
 #define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
 

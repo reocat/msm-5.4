@@ -706,6 +706,7 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
+			amb,tx-clk-invert;
 		};
 
 		spi0: spi@e0020000 {
@@ -991,7 +992,7 @@
 			      <0xec1701f4 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_idsp";
-			amb,extra-scaler;
+			amb,extra-post-scaler;
 		};
 
 		gclk_so: gclk-so {
@@ -1007,7 +1008,8 @@
 			clock-output-names = "gclk_so";
 			assigned-clocks = <&gclk_so>;
 			assigned-clock-rates = <24000000>;
-			amb,extra-scaler;
+			amb,extra-pre-scaler;
+			amb,extra-post-scaler;
 			amb,frac-mode;
 		};
 
@@ -1024,7 +1026,7 @@
 			clock-output-names = "gclk_vo";
 			assigned-clocks = <&gclk_vo>;
 			assigned-clock-rates = <24000000>;
-			amb,extra-scaler;
+			amb,extra-pre-scaler;
 			amb,frac-mode;
 			amb,fix-divider = <10>;
 			amb,ctrl2-val = <0x3f700900>;
@@ -1045,7 +1047,8 @@
 			clock-output-names = "gclk_vo2";
 			assigned-clocks = <&gclk_vo2>;
 			assigned-clock-rates = <24000000>;
-			amb,extra-scaler;
+			amb,extra-pre-scaler;
+			amb,extra-post-scaler;
 			amb,frac-mode;
 		};
 
@@ -1062,7 +1065,8 @@
 			clock-output-names = "gclk_audio";
 			assigned-clocks = <&gclk_audio>;
 			assigned-clock-rates = <12288000>;
-			amb,extra-scaler;
+			amb,extra-pre-scaler;
+			amb,extra-post-scaler;
 			amb,frac-mode;
 		};
 

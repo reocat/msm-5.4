@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L)
+#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L) || (CHIP_REV == S5L)
 #define SD_INSTANCES			2
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_INSTANCES			3
@@ -35,7 +35,7 @@
 #define SD_INSTANCES			1
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == S3L)
+#if (CHIP_REV == A5S) || (CHIP_REV == S3L) || (CHIP_REV == S5L)
 #define SD_SUPPORT_SDIO			0
 #else
 #define SD_SUPPORT_SDIO			1
@@ -374,15 +374,6 @@
 #define SDXC_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)
 #endif
 
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L) || \
-	(CHIP_REV == S2E) || (CHIP_REV == S3L)
-#define SD_PHY_SBC_OFFSET		SD_PHY_CTRL_0_OFFSET
-#define SDXC_PHY_SBC_OFFSET		SDXC_PHY_CTRL_0_OFFSET
-#else
-#define SD_PHY_SBC_OFFSET		SDXC_PHY_CTRL_2_OFFSET
-#define SDXC_PHY_SBC_OFFSET		SDXC_PHY_CTRL_2_OFFSET
-#endif
 
 #define sd_slot_is_valid(slot)		((SD_SUPPORT_SDXC == 1) && ((slot) == 2) ? 1 : \
 					(SD_SUPPORT_SDIO == 1) && ((slot) == 1) ? 1 : \

@@ -47,30 +47,20 @@
 
 #define INVALID_DMA_CHAN		0xFF
 
-#if (CHIP_REV == S2L)
-#define NOR_SPI_TX_DMA_CHAN		0 /* share with SSI0 */
-#define NOR_SPI_RX_DMA_CHAN		1 /* share with SSI0 */
-#define SSI1_TX_DMA_CHAN		2
-#define SSI1_RX_DMA_CHAN		3
-#define UART_TX_DMA_CHAN		4 /* share with SSIS0 */
-#define UART_RX_DMA_CHAN		5 /* share with SSIS0 */
-#define I2S_RX_DMA_CHAN			6
-#define I2S_TX_DMA_CHAN			7
+#if (CHIP_REV == S2)
+#define I2S_RX_DMA_CHAN			1
+#define I2S_TX_DMA_CHAN			2
+#define MS_AHB_SSI_TX_DMA_CHAN		3
+#define SPDIF_AHB_SSI_DMA_CHAN		4
 /* non-existed dma channel */
-#define MS_AHB_SSI_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
-#define SPDIF_AHB_SSI_DMA_CHAN		(INVALID_DMA_CHAN - 1)
-#define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
-#define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
-
-#elif (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5)
-#define NOR_SPI_TX_DMA_CHAN		0
-#define NOR_SPI_RX_DMA_CHAN		1
-#define SSI1_TX_DMA_CHAN		2
-#define SSI1_RX_DMA_CHAN		3
-#define UART_TX_DMA_CHAN		4
-#define UART_RX_DMA_CHAN		5
-#define I2S_RX_DMA_CHAN			6
-#define I2S_TX_DMA_CHAN			7
+#define NOR_SPI_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
+#define NOR_SPI_RX_DMA_CHAN		(INVALID_DMA_CHAN - 1)
+#define SSI1_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
+#define SSI1_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
+#define UART_TX_DMA_CHAN		(INVALID_DMA_CHAN - 4)
+#define UART_RX_DMA_CHAN		(INVALID_DMA_CHAN - 5)
+#define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 6)
+#define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 7)
 
 #elif (CHIP_REV == S2E)
 #define NOR_SPI_TX_DMA_CHAN		0
@@ -85,20 +75,30 @@
 #define SSI1_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
 #define SSI1_RX_DMA_CHAN		(INVALID_DMA_CHAN - 1)
 
-#else
-#define I2S_RX_DMA_CHAN			1
-#define I2S_TX_DMA_CHAN			2
-#define MS_AHB_SSI_TX_DMA_CHAN		3
-#define SPDIF_AHB_SSI_DMA_CHAN		4
+#elif (CHIP_REV == S2L)
+#define NOR_SPI_TX_DMA_CHAN		0 /* share with SSI0 */
+#define NOR_SPI_RX_DMA_CHAN		1 /* share with SSI0 */
+#define SSI1_TX_DMA_CHAN		2
+#define SSI1_RX_DMA_CHAN		3
+#define UART_TX_DMA_CHAN		4 /* share with SSIS0 */
+#define UART_RX_DMA_CHAN		5 /* share with SSIS0 */
+#define I2S_RX_DMA_CHAN			6
+#define I2S_TX_DMA_CHAN			7
 /* non-existed dma channel */
-#define NOR_SPI_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
-#define NOR_SPI_RX_DMA_CHAN		(INVALID_DMA_CHAN - 1)
-#define SSI1_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
-#define SSI1_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
-#define UART_TX_DMA_CHAN		(INVALID_DMA_CHAN - 4)
-#define UART_RX_DMA_CHAN		(INVALID_DMA_CHAN - 5)
-#define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 6)
-#define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 7)
+#define MS_AHB_SSI_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
+#define SPDIF_AHB_SSI_DMA_CHAN		(INVALID_DMA_CHAN - 1)
+#define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
+#define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
+
+#else
+#define NOR_SPI_TX_DMA_CHAN		0
+#define NOR_SPI_RX_DMA_CHAN		1
+#define SSI1_TX_DMA_CHAN		2
+#define SSI1_RX_DMA_CHAN		3
+#define UART_TX_DMA_CHAN		4
+#define UART_RX_DMA_CHAN		5
+#define I2S_RX_DMA_CHAN			6
+#define I2S_TX_DMA_CHAN			7
 
 #endif
 

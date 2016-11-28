@@ -34,6 +34,13 @@
 #define NAND_ECC_RPT_NUM_SUPPORT	1
 #endif
 
+#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
+		(CHIP_REV == S2L) || (CHIP_REV == S3)
+#define NAND_CUSTOM_CMD_SUPPORT	0
+#else
+#define NAND_CUSTOM_CMD_SUPPORT	1
+#endif
+
 /* ==========================================================================*/
 #define FLASH_CTR_OFFSET		0x120
 #define FLASH_CMD_OFFSET		0x124
@@ -162,6 +169,17 @@
 #define NAND_AMB_CMD_READ		0xe
 #define NAND_AMB_CMD_PROGRAM		0xf
 
+/* NAND_CC_REG */
+#define NAND_CC_TERM_CE_HIGH	0x80000000
+#define NAND_CC_CMD1_VAL0		0x00004000
+#define NAND_CC_CMD1_VAL1		0x00008000
+#define NAND_CC_CMD2_VAL0		0x00000200
+#define NAND_CC_CMD2_VAL1		0x00000400
+#define NAND_CC_RW_WE			0x00000080
+#define NAND_CC_RW_RE			0x00000100
+#define NAND_CC_WAIT_RB			0x00000020
+#define NAND_CC_WAIT_TWHR		0x00000040
+
 /* NAND_TIM0_REG (NAND mode) */
 #define NAND_TIM0_TCLS(x)		((x) << 24)
 #define NAND_TIM0_TALS(x)		((x) << 16)
@@ -196,6 +214,11 @@
 #define NAND_TIM5_TWW(x)		((x) << 16)
 #define NAND_TIM5_TRHZ(x)		((x) << 8)
 #define NAND_TIM5_TAR(x)		(x)
+
+/* NAND_TIM6_REG (NAND mode) */
+#define NAND_TIM6_TRHW(x)		((x) << 16)
+#define NAND_TIM6_TADL(x)		((x) << 8)
+#define NAND_TIM6_TCRL(x)		(x)
 
 /* NAND_INT_REG (NAND mode) */
 #define NAND_INT_DI			0x1

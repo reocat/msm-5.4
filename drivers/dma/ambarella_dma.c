@@ -1119,13 +1119,9 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to read dma-channels\n");
 		return ret;
 	}
-	ret = of_property_read_u32(np, "dma-requests", &amb_dma->dma_requests);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to read dma-requests\n");
-		return ret;
-	}
 
-	ret = of_property_read_u32_array(np, prop_name, amb_dma->dma_channel_type, amb_dma->nr_channels);
+	ret = of_property_read_u32_array(np, prop_name,
+			amb_dma->dma_channel_type, amb_dma->nr_channels);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to read dma-trans-type\n");
 		return ret;
