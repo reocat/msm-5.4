@@ -149,7 +149,7 @@ struct ambeth_info {
 
 	u32				enhance: 1,
 					ext_ref_clk : 1, /* only for RMII */
-					ext_gtx_clk125 : 1, /* only for GMII/RGMII */
+					int_gtx_clk125 : 1, /* only for GMII/RGMII */
 					tx_clk_invert : 1,
 					phy_enabled : 1,
 					ipc_tx : 1,
@@ -2283,11 +2283,30 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx = of_property_read_bool(np, "amb,dump-rx");
 	lp->dump_rx_free = of_property_read_bool(np, "amb,dump-rx-free");
 	lp->dump_rx_all = of_property_read_bool(np, "amb,dump-rx-all");
+	lp->enhance = !!of_find_property(np, "amb,enhance", NULL);
 
-	if (of_property_read_bool(np, "amb,enhance"))
-		lp->enhance = true;
+	/* check if using external ref_clk, it's valid for RMII only */
+	lp->ext_ref_clk = !!of_find_property(np, "amb,ext-ref-clk", NULL);
+	if (lp->ext_ref_clk) {
+		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 0x00);
+	} else {
+		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 1<<5);
+	}
+
+	/* check if using internal 125MHz clock, it's valid for RGMII only */
+	lp->int_gtx_clk125 = !!of_find_property(np, "amb,int-gtx-clk125", NULL);
+	if (lp->int_gtx_clk125)
+		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);
 	else
-		lp->enhance = false;
+		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
+
+	lp->tx_clk_invert = !!of_find_property(np, "amb,tx-clk-invert", NULL);
+	if (lp->tx_clk_invert)
+		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 1<<31);
+	else
+		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 0<<31);
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
@@ -2298,30 +2317,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
 		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-		/* check if using external ref_clk, it's valid for RMII only */
-		lp->ext_ref_clk = !!of_find_property(phy_np, "amb,ext-ref-clk", NULL);
-		if (lp->ext_ref_clk) {
-			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 0x00);
-		} else {
-			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 1<<5);
-		}
-
-		/* check if using external ref_clk, it's valid for RMII only */
-		lp->ext_gtx_clk125 = !!of_find_property(phy_np, "amb,ext-gtx-clk125", NULL);
-		if (lp->ext_gtx_clk125)
-			regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
-		else
-			regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);
-
-
-		lp->tx_clk_invert = !!of_find_property(phy_np, "amb,tx-clk-invert", NULL);
-		if (lp->tx_clk_invert)
-			regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 1<<31);
-		else
-			regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 0<<31);
 	}
 
 	return 0;
@@ -2567,7 +2562,7 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
 	}
 
-	if (lp->ext_gtx_clk125)
+	if (lp->int_gtx_clk125)
 		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
 	else
 		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);

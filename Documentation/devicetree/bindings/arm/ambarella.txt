@@ -565,7 +565,7 @@ Optional properties:
 - amb,dump-rx: specifies to dump Rx buffer, for debug purpose.
 - amb,dump-rx-free: specifies to free buffer after dumped.
 - amb,dump-rx-all: specifies to dump all buffers without filter.
-- amb,ext-gtx-clk125: should be specified if using external 125MHz gclk_gtx,
+- amb,int-gtx-clk125: should be specified if using internal 125MHz gclk_gtx,
   take effect for GMII/RGMII only.
 - amb,ext-ref-clk: should be specified if using external ref_clk,
   take effect for RMII only.

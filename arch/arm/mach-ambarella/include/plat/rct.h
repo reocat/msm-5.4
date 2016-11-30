@@ -37,6 +37,8 @@
 #endif
 #define RCT_REG(x)			(RCT_BASE + (x))
 
+#define RCT_INVALID_OFFSET		0x14
+
 /* ==========================================================================*/
 #define PLL_LOCK_OFFSET			0x2C
 #define SOFT_OR_DLL_RESET_OFFSET	0x68
@@ -320,9 +322,12 @@
 #if (CHIP_REV == S2) || (CHIP_REV == S2E)
 #define SCALER_GTX_POST_OFFSET		0x2C8
 #define ENET_GTXCLK_SRC_OFFSET		0x2CC
-#else
+#elif (CHIP_REV == S5L)
 #define SCALER_GTX_POST_OFFSET		0x2A8
 #define ENET_GTXCLK_SRC_OFFSET		0x2B0
+#else
+#define SCALER_GTX_POST_OFFSET		RCT_INVALID_OFFSET
+#define ENET_GTXCLK_SRC_OFFSET		RCT_INVALID_OFFSET
 #endif
 #define SCALER_GTX_POST_REG		RCT_REG(SCALER_GTX_POST_OFFSET)
 #define ENET_GTXCLK_SRC_REG		RCT_REG(ENET_GTXCLK_SRC_OFFSET)
