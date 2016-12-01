@@ -508,7 +508,7 @@ Required properties:
 - properties provided by Kernel, please see Reference above.
 
 Optional properties:
-- amb,amb,switch-1v8-dly: specifies the delay when switch voltage, in
+- amb,switch-1v8-dly: specifies the delay when switch voltage, in
   millisecond unit.
 - amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
   always present
