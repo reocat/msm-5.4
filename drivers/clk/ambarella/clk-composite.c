@@ -88,7 +88,11 @@ static struct clk_divider * __init ambarella_div_clock_init(struct device_node *
 	if (of_property_read_u32(np, "amb,div-shift", &div_shift))
 		div_shift = 0;
 
-	div->flags = CLK_DIVIDER_ONE_BASED;
+	if(!!of_find_property(np, "amb,div-plus", NULL))
+		div->flags = 0;
+	else
+		div->flags = CLK_DIVIDER_ONE_BASED;
+
 	div->reg = div_reg;
 	div->shift = div_shift;
 	div->width = div_width;

@@ -154,13 +154,6 @@ config DP83867_PHY
 	---help---
 	  Currently supports the DP83867 PHY.
 
-config MICREL_PHY_KSZ80X1R
-	tristate "Driver for Micrel PHYs KSZ80X1R"
-	depends on ARCH_AMBARELLA
-	depends on MICREL_PHY=n
-	---help---
-	  Supports the KSZ80X1R PHYs.
-
 config MICROCHIP_PHY
 	tristate "Drivers for Microchip PHYs"
 	help
