@@ -79,6 +79,7 @@ static int amba_clk_config(struct snd_pcm_hw_params *params, struct amb_clk *clk
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S24_LE:
+	case SNDRV_PCM_FORMAT_S32_LE:
 		sample_bits = 32;
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
