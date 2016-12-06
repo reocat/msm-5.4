@@ -119,3 +119,4 @@ void task_work_run(void)
 		} while (work);
 	}
 }
+EXPORT_SYMBOL(task_work_run);
