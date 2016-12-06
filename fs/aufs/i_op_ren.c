@@ -789,7 +789,8 @@ static void au_ren_rev_dt(int err, struct au_ren_args *a)
 /* ---------------------------------------------------------------------- */
 
 int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
-		struct inode *_dst_dir, struct dentry *_dst_dentry)
+		struct inode *_dst_dir, struct dentry *_dst_dentry,
+		unsigned int rename2_flags)
 {
 	int err, flags;
 	/* reduce stack space */
@@ -798,6 +799,10 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 	AuDbg("%pd, %pd\n", _src_dentry, _dst_dentry);
 	IMustLock(_src_dir);
 	IMustLock(_dst_dir);
+
+	err = -EINVAL;
+	if (rename2_flags)
+		goto out;
 
 	err = -ENOMEM;
 	BUILD_BUG_ON(sizeof(*a) > PAGE_SIZE);
