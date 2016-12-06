@@ -146,6 +146,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s_intf->multi24 = 0;
 		i2s_intf->tx_ctrl = I2S_TX_UNISON_BIT;
 		i2s_intf->word_len = 15;
+		i2s_intf->shift = 0;
 		if (i2s_intf->mode == I2S_DSP_MODE) {
 			i2s_intf->slots = i2s_intf->channels - 1;
 			i2s_intf->word_pos = 15;
@@ -160,6 +161,22 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s_intf->multi24 = I2S_24BITMUX_MODE_ENABLE;
 		i2s_intf->tx_ctrl = 0;
 		i2s_intf->word_len = 23;
+		i2s_intf->shift = 1;
+		if (i2s_intf->mode == I2S_DSP_MODE) {
+			i2s_intf->slots = i2s_intf->channels - 1;
+			i2s_intf->word_pos = 0; /* ignored */
+		} else {
+			i2s_intf->slots = 0;
+			i2s_intf->word_pos = 0; /* ignored */
+		}
+		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		break;
+
+	case SNDRV_PCM_FORMAT_S32_LE:
+		i2s_intf->multi24 = I2S_24BITMUX_MODE_ENABLE;
+		i2s_intf->tx_ctrl = 0;
+		i2s_intf->word_len = 31;
+		i2s_intf->shift = 0;
 		if (i2s_intf->mode == I2S_DSP_MODE) {
 			i2s_intf->slots = i2s_intf->channels - 1;
 			i2s_intf->word_pos = 0; /* ignored */
@@ -185,9 +202,11 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		amba_writel(I2S_TX_CTRL_REG, i2s_intf->tx_ctrl);
 		amba_writel(I2S_TX_FIFO_LTH_REG, 0x10);
+		amba_writel(I2S_GATEOFF_REG, (i2s_intf->shift << 0));
 	} else {
 		amba_writel(I2S_RX_CTRL_REG, i2s_intf->rx_ctrl);
 		amba_writel(I2S_RX_FIFO_GTH_REG, 0x20);
+		amba_writel(I2S_GATEOFF_REG, (i2s_intf->shift << 1));
 	}
 
 	amba_writel(I2S_MODE_REG, i2s_intf->mode);
@@ -469,13 +488,13 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE),
+		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE),
 	},
 	.capture = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE),
+		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE),
 	},
 	.ops = &ambarella_i2s_dai_ops,
 	.symmetric_rates = 1,
@@ -525,8 +544,6 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(pinctrl))
 		return PTR_ERR(pinctrl);
-
-
 
 	rval = snd_soc_register_component(&pdev->dev,
 			&ambarella_i2s_component,  &ambarella_i2s_dai, 1);

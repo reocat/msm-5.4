@@ -59,6 +59,7 @@ struct ak4951_priv {
 	u8 reg_cache[AK4951_MAX_REGISTERS];
 	int onStereo;
 	int mic;
+	u8 fmt;
 };
 
 struct ak4951_priv *ak4951_data;
@@ -856,6 +857,20 @@ static int ak4951_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
+	switch (params_format(params)) {
+		case SNDRV_PCM_FORMAT_S16_LE:
+			ak4951->fmt = 2 << 4;
+			break;
+		case SNDRV_PCM_FORMAT_S24_LE:
+			ak4951->fmt = 3 << 4;
+			break;
+		case SNDRV_PCM_FORMAT_S32_LE:
+			ak4951->fmt = 3 << 4;
+			break;
+		default:
+			dev_err(codec->dev, "Can not support the format");
+			return -EINVAL;
+	}
 	snd_soc_write(codec, AK4951_06_MODE_CONTROL2, fs);
 
 	return 0;
@@ -886,9 +901,8 @@ static int ak4951_set_pll(u8 *pll, int clk_id,int freq)
 		default:
 			break;
 		}
-	}else if  (clk_id == AK4951_BCLK_IN) {
-		*pll |= (0 << 4);
 	}
+
 	return 0;
 }
 
@@ -915,7 +929,7 @@ static int ak4951_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 	}else if (clk_id == AK4951_BCLK_IN) {
 		pllpwr |= AK4951_PMPLL;
 		pllpwr &= (~AK4951_M_S);
-		ak4951_set_pll(&pll, clk_id, freq);
+		pll |= ak4951->fmt;
 	}else if (clk_id == AK4951_MCLK_IN_BCLK_OUT) {
 		pllpwr |= AK4951_PMPLL;
 		pllpwr |= AK4951_M_S;
@@ -1048,7 +1062,7 @@ static int ak4951_set_bias_level(struct snd_soc_codec *codec,
 				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200 |\
 				SNDRV_PCM_RATE_96000)
 
-#define AK4951_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
+#define AK4951_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
 static struct snd_soc_dai_ops ak4951_dai_ops = {
 	.hw_params	= ak4951_hw_params,
