@@ -101,7 +101,7 @@ static inline void dai_tx_disable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val &= I2S_TX_ENABLE_BIT;
+	val &= ~I2S_TX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
@@ -109,7 +109,7 @@ static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
-	val &= I2S_RX_ENABLE_BIT;
+	val &= ~I2S_RX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
 }
 
