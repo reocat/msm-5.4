@@ -76,6 +76,7 @@ struct ak7755_priv {
 	unsigned int power_active;
 	int amp_gpio;
 	unsigned int amp_active;
+	unsigned int fmt;
 
 
 	u16  DSPPramMode;
@@ -1447,6 +1448,10 @@ static int ak7755_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);
+	u8 format;
+
+	format = snd_soc_read(codec, AK7755_C2_SERIAL_DATA_FORMAT);
+	format &= ~AK7755_LRIF;
 
 	switch (params_format(params)) {
 		case SNDRV_PCM_FORMAT_S16_LE:
@@ -1455,68 +1460,16 @@ static int ak7755_hw_params(struct snd_pcm_substream *substream,
 		case SNDRV_PCM_FORMAT_S24_LE:
 			ak7755->bickfs = (AK7755_AIF_BICK48 >> 4);
 			break;
+		case SNDRV_PCM_FORMAT_S32_LE:
+			ak7755->bickfs = (AK7755_AIF_BICK64 >> 4);
+			break;
 		default:
 			dev_err(codec->dev, "Can not support the format");
 			return -EINVAL;
 	}
 
-	ak7755_data->fs = params_rate(params);
-
-	ak7755_hw_params_set(codec, ak7755_data->fs);
-
-	return 0;
-}
-
-static int ak7755_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
-		unsigned int freq, int dir)
-{
-	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
-
-	ak7755_data->rclk = freq;
-
-	return 0;
-}
-
-static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
-{
-
-	struct snd_soc_codec *codec = dai->codec;
-	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);  // '15/06/15
-	u8 mode, mode2;
-	u8 format;
-
-	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
-
-	/* set master/slave audio interface */
-	mode = snd_soc_read(codec, AK7755_C0_CLOCK_SETTING1);//CKM2-0(M/S)
-	mode &= ~AK7755_M_S;
-	mode2 = snd_soc_read(codec, AK7755_CA_CLK_SDOUT_SETTING);//BICKOE,LRCKOE
-	format = snd_soc_read(codec, AK7755_C2_SERIAL_DATA_FORMAT);
-	format &= ~AK7755_LRIF;
-
-	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
-        case SND_SOC_DAIFMT_CBS_CFS:
-	#ifdef CLOCK_MODE_BICK
-	    	mode |= AK7755_M_S_3;//CKM mode = 3(Slave, BICK)
-	#else
-	    	mode |= AK7755_M_S_2;//CKM mode = 2(Slave, XTI=12.288MHz)
-	#endif
-          	mode2 &= ~AK7755_BICK_LRCK;//BICK = LRCK = 0
-            break;
-        case SND_SOC_DAIFMT_CBM_CFM:
-	#ifdef CLOCK_MODE_18_432
-	    	mode |= AK7755_M_S_1;//CKM mode = 1(Master, XTI=18.432MHz)
-	#else
-	    	mode |= AK7755_M_S_0;//CKM mode = 0(Master, XTI=12.288MHz)
-	#endif
-		mode2 |= AK7755_BICK_LRCK;//BICK = LRCK = 1
-            break;
-        case SND_SOC_DAIFMT_CBS_CFM:
-        case SND_SOC_DAIFMT_CBM_CFS:
-        default:
-            dev_err(codec->dev, "Clock mode unsupported");
-           return -EINVAL;
-	}
+	ak7755->fs = params_rate(params);
+	ak7755_hw_params_set(codec, ak7755->fs);
 
 	snd_soc_update_bits(codec, AK7755_C1_CLOCK_SETTING2, 0x30, (ak7755->bickfs << 4));
 	if ( ak7755->bickfs < 3 ) {
@@ -1527,7 +1480,7 @@ static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 		format |=  AK7755_TDM_INPUT_SOURCE;
 	}
 
-	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	switch (ak7755->fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
 		format |= AK7755_LRIF_I2S_MODE;
 		snd_soc_update_bits(codec, AK7755_C3_DELAY_RAM_DSP_IO, 0xF0, 0xf0); 	// DIF2, DOF2
@@ -1563,12 +1516,63 @@ static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 		return -EINVAL;
 	}
 
-	akdbgprt("\t[AK7755] %s(%d) mode : 0x%0x, mode2: 0x%0x, format: 0x%0x\n",__FUNCTION__,__LINE__, mode, mode2, format);
+	snd_soc_write(codec, AK7755_C2_SERIAL_DATA_FORMAT, format);
 
-	/* set format */
+	return 0;
+}
+
+static int ak7755_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
+		unsigned int freq, int dir)
+{
+	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
+
+	ak7755_data->rclk = freq;
+
+	return 0;
+}
+
+static int ak7755_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
+{
+
+	struct snd_soc_codec *codec = dai->codec;
+	struct ak7755_priv *ak7755 = snd_soc_codec_get_drvdata(codec);  // '15/06/15
+	u8 mode, mode2;
+
+	akdbgprt("\t[AK7755] %s(%d)\n",__FUNCTION__,__LINE__);
+
+	/* set master/slave audio interface */
+	mode = snd_soc_read(codec, AK7755_C0_CLOCK_SETTING1);//CKM2-0(M/S)
+	mode &= ~AK7755_M_S;
+	mode2 = snd_soc_read(codec, AK7755_CA_CLK_SDOUT_SETTING);//BICKOE,LRCKOE
+
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+        case SND_SOC_DAIFMT_CBS_CFS:
+	#ifdef CLOCK_MODE_BICK
+	    	mode |= AK7755_M_S_3;//CKM mode = 3(Slave, BICK)
+	#else
+	    	mode |= AK7755_M_S_2;//CKM mode = 2(Slave, XTI=12.288MHz)
+	#endif
+          	mode2 &= ~AK7755_BICK_LRCK;//BICK = LRCK = 0
+            break;
+        case SND_SOC_DAIFMT_CBM_CFM:
+	#ifdef CLOCK_MODE_18_432
+	    	mode |= AK7755_M_S_1;//CKM mode = 1(Master, XTI=18.432MHz)
+	#else
+	    	mode |= AK7755_M_S_0;//CKM mode = 0(Master, XTI=12.288MHz)
+	#endif
+		mode2 |= AK7755_BICK_LRCK;//BICK = LRCK = 1
+            break;
+        case SND_SOC_DAIFMT_CBS_CFM:
+        case SND_SOC_DAIFMT_CBM_CFS:
+        default:
+            dev_err(codec->dev, "Clock mode unsupported");
+           return -EINVAL;
+	}
+
+	ak7755->fmt = fmt;
+	/* set mode */
 	snd_soc_write(codec, AK7755_C0_CLOCK_SETTING1, mode);
 	snd_soc_write(codec, AK7755_CA_CLK_SDOUT_SETTING, mode2);
-	snd_soc_write(codec, AK7755_C2_SERIAL_DATA_FORMAT, format);
 
 	return 0;
 }
@@ -2004,7 +2008,7 @@ static int ak7755_firmware_write_ram(u16 mode, u16 cmd)
 			return -EINVAL;
 		}
 
-		akdbgprt("[AK7755] %s name=%s size=%d\n",__FUNCTION__, szFileName, fw->size);
+		//printk("[AK7755] %s name=%s size=%d\n",__FUNCTION__, szFileName, fw->size);
 		if ( fw->size > nMaxLen ) {
 			akdbgprt("[AK7755] %s RAM Size Error : %d\n",__FUNCTION__, fw->size);
 			return -ENOMEM;
@@ -2019,6 +2023,7 @@ static int ak7755_firmware_write_ram(u16 mode, u16 cmd)
 		memcpy((void *)fwdn, fw->data, fw->size);
 
 		ret = ak7755_write_ram((int)mode, (u8 *)fwdn, (fw->size));
+		//printk("ak7755 download ram is ok, ret = %d\n", ret);
 
 		kfree(fwdn);
 	}
@@ -2401,7 +2406,7 @@ static int ak7755_set_dai_mute(struct snd_soc_dai *dai, int mute)
 				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_88200 |\
 			    SNDRV_PCM_RATE_96000)
 
-#define AK7755_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
+#define AK7755_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
 static struct snd_soc_dai_ops ak7755_dai_ops = {
 	.hw_params	= ak7755_hw_params,
