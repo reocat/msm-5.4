@@ -858,7 +858,7 @@
 		/* node for vin1 controller */
 		vinc1 {
 			compatible = "ambarella,vinc";
-			interrupts = <0 40 0x1 0 41 0x1 0 43 0x1>;
+			interrupts = <0 39 0x1 0 40 0x1 0 42 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
 		};
 
