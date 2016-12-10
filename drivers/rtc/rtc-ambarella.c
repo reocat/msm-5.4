@@ -50,18 +50,25 @@ struct ambarella_rtc {
 	 * 1. cannot detect power lost
 	 * 2. the msb 2bits are reserved. */
 	bool			is_limited;
-	int			irq;
+	bool			rtc_program_enable;
+	int				irq;
 };
-
 
 static inline void ambrtc_reset_rtc(struct ambarella_rtc *ambrtc)
 {
 	u32 delay = ambrtc->is_limited ? 3 : 1;
 
+	if (ambrtc->rtc_program_enable)
+		writel_relaxed(0x01, ambrtc->reg + PWC_BC);
+
+
 	writel_relaxed(0x01, ambrtc->reg + RTC_RESET_OFFSET);
 	msleep(delay);
 	writel_relaxed(0x00, ambrtc->reg + RTC_RESET_OFFSET);
 	msleep(delay);
+
+	if (ambrtc->rtc_program_enable)
+		writel_relaxed(0x00, ambrtc->reg + PWC_BC);
 }
 
 static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
@@ -101,8 +108,8 @@ static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
 	} else {
 		alarm_val = secs;
 		time_val = readl_relaxed(ambrtc->reg + RTC_CURT_OFFSET);
-                // only for wakeup ambarella internal PWC
-                writel_relaxed(0x28, ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
+		// only for wakeup ambarella internal PWC
+		writel_relaxed(0x28, ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
 	}
 
 	if (ambrtc->is_limited) {
@@ -298,6 +305,10 @@ static int ambrtc_probe(struct platform_device *pdev)
 	ambrtc->dev = &pdev->dev;
 	ambrtc->is_limited = !!of_find_property(pdev->dev.of_node,
 				"amb,is-limited", NULL);
+
+	ambrtc->rtc_program_enable = !!of_find_property(pdev->dev.of_node,
+				"amb,rtc-program-enable", NULL);
+
 	platform_set_drvdata(pdev, ambrtc);
 	ambrtc_check_power_lost(ambrtc);
 

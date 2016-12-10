@@ -81,6 +81,7 @@
 #define RTC_PWC_DISP1_OFFSET		0xF8
 #define RTC_PWC_DISP2_OFFSET		0xB8
 #define RTC_PWC_DISP3_OFFSET		0xBC
+#define PWC_BC                      0xFC
 
 /* ==========================================================================*/
 /* RTC_STATUS_OFFSET */
