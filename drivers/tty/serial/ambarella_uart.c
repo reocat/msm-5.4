@@ -761,41 +761,23 @@ static void serial_ambarella_break_ctl(struct uart_port *port, int break_state)
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
-static bool serial_ambarella_dma_filter(struct dma_chan *chan, void *fparam)
-{
-	int chan_id;
-	bool ret = false;
-
-	chan_id = *(int *)fparam;
-
-	if (ambarella_dma_channel_id(chan) == chan_id)
-		ret = true;
-
-	return ret;
-}
-
 static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb_port,
 			bool dma_to_memory)
 {
 	struct dma_chan *dma_chan;
 	struct dma_slave_config dma_sconfig;
 	dma_addr_t dma_phys;
-	dma_cap_mask_t mask;
 	unsigned char *dma_buf;
-	int ret, chan_id;
+	int ret;
 
-	if (dma_to_memory)
-		chan_id = UART_RX_DMA_CHAN;
-	else
-		chan_id = UART_TX_DMA_CHAN;
-
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-	dma_chan = dma_request_channel(mask, serial_ambarella_dma_filter, &chan_id);
+	dma_chan = dma_request_slave_channel(amb_port->port.dev,
+		dma_to_memory ? "rx" : "tx");
 	if (!dma_chan) {
-		dev_err(amb_port->port.dev,
-			"Dma channel is not available, will try later\n");
-		return -EPROBE_DEFER;
+		ret = PTR_ERR(dma_chan);
+		if (ret != -EPROBE_DEFER)
+			dev_err(amb_port->port.dev,
+				"Dma channel is not available: %d\n", ret);
+		return ret;
 	}
 
 	if (dma_to_memory) {
@@ -808,7 +790,6 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 			dma_release_channel(dma_chan);
 			return -ENOMEM;
 		}
-
 		amb_port->buf_virt_a = dma_buf;
 		amb_port->buf_phys_a = dma_phys;
 
@@ -821,7 +802,6 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 			dma_release_channel(dma_chan);
 			return -ENOMEM;
 		}
-
 		amb_port->buf_virt_b = dma_buf;
 		amb_port->buf_phys_b = dma_phys;
 
@@ -850,6 +830,7 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 			"Dma slave config failed, err = %d\n", ret);
 		goto scrub;
 	}
+
 
 	if (dma_to_memory) {
 		amb_port->rx_dma_chan = dma_chan;
