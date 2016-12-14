@@ -868,14 +868,14 @@
 		/* node for vout0 controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
-			interrupts = <0 55 0x1>;
+			interrupts = <0 54 0x1>;
 			interrupt-names = "vout0";
 		};
 
 		/* node for vout1 controller */
 		voutc1 {
 			compatible = "ambarella,voutc";
-			interrupts = <0 54 0x1>;
+			interrupts = <0 55 0x1>;
 			interrupt-names = "vout1";
 		};
 
@@ -901,7 +901,6 @@
 			compatible = "ambarella,fb";
 			amb,vout-id = <0>;
 			amb,format = "rgb565";
-			status = "disabled";
 		};
 
 		framebuffer@2 {
