@@ -639,6 +639,24 @@
 #endif
 
 /* ==========================================================================*/
+
+#if (CHIP_REV == A5S)
+#define	POC_ETH_IS_ENABLED		0x00000080
+#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
+#define	POC_ETH_IS_ENABLED		0x00800000
+#else
+#define	POC_ETH_IS_ENABLED		0x00000001
+#endif
+
+#if (CHIP_REV == S5)
+#define	POC_GCLK_CORE_DIV2_MASK		0x00800000
+#elif (CHIP_REV == S5L)
+#define	POC_GCLK_CORE_DIV2_MASK		0x00100000
+#else
+#define	POC_GCLK_CORE_DIV2_MASK		0x00000000
+#endif
+
+
 #if (CHIP_REV == A5S)
 #define	POC_BOOT_MAP_TYPE		0
 #define POC_BOOT_FROM_MASK		0x00010500
