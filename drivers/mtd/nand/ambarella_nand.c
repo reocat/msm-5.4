@@ -73,7 +73,6 @@ struct ambarella_nand_info {
 	u32				ecc_bits;
 	/* if or not support to read id in 5 cycles */
 	bool				id_cycles_5;
-	bool				pllx2;
 	bool				soft_ecc;
 	bool				nand_wp;
 
@@ -476,8 +475,6 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		return;
 
 	clk = (clk_get_rate(clk_get(nand_info->dev, NULL)) / 1000000);
-	if (nand_info->pllx2)
-		clk <<= 1;
 
 	/* timing 0 */
 	t = nand_info->timing[0];
@@ -1958,8 +1955,6 @@ static int ambarella_nand_get_resource(
 		dev_dbg(&pdev->dev, "No timing defined!\n");
 		memset(nand_info->timing, 0x0, sizeof(nand_info->timing));
 	}
-
-	nand_info->pllx2 = !!of_find_property(np, "amb,use-2x-pll", NULL);
 
 	nand_info->ecc_bits = 0;
 	of_property_read_u32(np, "amb,soft-ecc", &nand_info->ecc_bits);

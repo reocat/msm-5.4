@@ -350,7 +350,6 @@ Optional properties:
 - nand-on-flash-bbt: please see Reference.
 - amb,enable-wp: specifies to enable write protection
 - amb,no-bch: should be specified for SoC without BCH supported.
-- amb,use-2x-pll: should be specified only for A5S.
 - amb,soft-ecc: specifies to use software ECC instead of hardware ECC, the
   value should be as:
     1 = 1 bit software ECC
