@@ -1606,8 +1606,12 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		dev_dbg(host->dev, "0x%08x, card %s\n", host->irq_status,
 			(host->irq_status & SD_NIS_INSERT) ? "Insert" : "Removed");
 #if defined(CONFIG_AMBALINK_SD)
-		host->insert = (host->irq_status & SD_NIS_INSERT) ? 1 : 0;
-		schedule_delayed_work(&host->detect, msecs_to_jiffies(500));
+		/* eMMC should not have insert/eject event. */
+		/* Just ignore the events if driver got them. */
+		if (strcmp(host->dev->of_node->name, "sdmmc0")) {
+			host->insert = (host->irq_status & SD_NIS_INSERT) ? 1 : 0;
+			schedule_delayed_work(&host->detect, msecs_to_jiffies(500));
+		}
 #else
 		mmc_detect_change(host->mmc, msecs_to_jiffies(500));
 #endif
