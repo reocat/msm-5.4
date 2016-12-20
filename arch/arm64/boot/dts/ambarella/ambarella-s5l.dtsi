@@ -225,7 +225,6 @@
 			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
 			interrupts = <0 64 0x1>;
-			amb,rtc-program-enable;
 		};
 
 		pwm: pwm@e8008000 {

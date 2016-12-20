@@ -42,96 +42,44 @@
 #define AMBRTC_ALARM		1
 
 struct ambarella_rtc {
-	struct rtc_device 	*rtc;
-	void __iomem		*reg;
-	struct device		*dev;
-
-	/* limitation for old rtc:
-	 * 1. cannot detect power lost
-	 * 2. the msb 2bits are reserved. */
-	bool			is_limited;
-	bool			rtc_program_enable;
-	int				irq;
+	struct rtc_device	*rtc;
+	void __iomem	*base;
+	struct device	*dev;
+	int	lost_power;
+	int	irq;
 };
 
-static inline void ambrtc_reset_rtc(struct ambarella_rtc *ambrtc)
+static inline void ambrtc_strobe_set(struct ambarella_rtc *ambrtc)
 {
-	u32 delay = ambrtc->is_limited ? 3 : 1;
-
-	if (ambrtc->rtc_program_enable)
-		writel_relaxed(0x01, ambrtc->reg + PWC_BC);
-
-
-	writel_relaxed(0x01, ambrtc->reg + RTC_RESET_OFFSET);
-	msleep(delay);
-	writel_relaxed(0x00, ambrtc->reg + RTC_RESET_OFFSET);
-	msleep(delay);
-
-	if (ambrtc->rtc_program_enable)
-		writel_relaxed(0x00, ambrtc->reg + PWC_BC);
+	writel_relaxed(0x01, ambrtc->base + PWC_RESET_OFFSET);
+	msleep(3);
+	writel_relaxed(0x00, ambrtc->base + PWC_RESET_OFFSET);
 }
 
-static int ambrtc_get_alarm_or_time(struct ambarella_rtc *ambrtc,
-		int time_alarm)
+static void ambrtc_registers_fflush(struct ambarella_rtc *ambrtc)
 {
-	u32 reg_offs, val_sec;
+	unsigned int time, alarm, status;
 
-	if (time_alarm == AMBRTC_TIME)
-		reg_offs = RTC_CURT_OFFSET;
-	else
-		reg_offs = RTC_ALAT_OFFSET;
+	writel_relaxed(0x80, ambrtc->base + PWC_POS0_OFFSET);
+	writel_relaxed(0x80, ambrtc->base + PWC_POS1_OFFSET);
+	writel_relaxed(0x80, ambrtc->base + PWC_POS2_OFFSET);
 
-	val_sec = readl_relaxed(ambrtc->reg + reg_offs);
-	/* because old rtc cannot use the msb 2bits, we add 0x40000000
-	 * here, this is a pure software workaround. And the result is that
-	 * the time must be started at least from 2004.01.10 13:38:00 */
-	if (ambrtc->is_limited)
-		val_sec |= 0x40000000;
+	time = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET);
+	writel_relaxed(time, ambrtc->base + RTC_CURT_WRITE_OFFSET);
 
-	return val_sec;
-}
+	alarm = readl_relaxed(ambrtc->base + RTC_ALAT_READ_OFFSET);
+	writel_relaxed(alarm, ambrtc->base + RTC_ALAT_WRITE_OFFSET);
 
-static int ambrtc_set_alarm_or_time(struct ambarella_rtc *ambrtc,
-		int time_alarm, unsigned long secs)
-{
-	u32 time_val, alarm_val;
-
-	if (ambrtc->is_limited && secs < 0x40000000) {
-		dev_err(ambrtc->dev,
-			"Invalid date[0x%lx](2004.01.10 13:38:00 ~ )\n", secs);
-		return -EINVAL;
+	status = readl_relaxed(ambrtc->base + PWC_REG_STA_OFFSET);
+	if (ambrtc->lost_power) {
+		status |= PWC_STA_LOSS_MASK;
+		ambrtc->lost_power = 0;
 	}
 
-	if (time_alarm == AMBRTC_TIME) {
-		time_val = secs;
-		alarm_val = readl_relaxed(ambrtc->reg + RTC_ALAT_OFFSET);
-	} else {
-		alarm_val = secs;
-		time_val = readl_relaxed(ambrtc->reg + RTC_CURT_OFFSET);
-		// only for wakeup ambarella internal PWC
-		writel_relaxed(0x28, ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
-	}
+	status &= ~PWC_STA_SR_MASK;
+	status &= ~PWC_STA_ALARM_MASK;
+	writel_relaxed(status, ambrtc->base + PWC_SET_STATUS_OFFSET);
 
-	if (ambrtc->is_limited) {
-		time_val &= 0x3fffffff;
-		alarm_val &= 0x3fffffff;
-	}
-
-	writel_relaxed(0x80, ambrtc->reg + RTC_POS0_OFFSET);
-	writel_relaxed(0x80, ambrtc->reg + RTC_POS1_OFFSET);
-	writel_relaxed(0x80, ambrtc->reg + RTC_POS2_OFFSET);
-
-	/* reset time and alarm to 0 first */
-	writel_relaxed(0x0, ambrtc->reg + RTC_PWC_ALAT_OFFSET);
-	writel_relaxed(0x0, ambrtc->reg + RTC_PWC_CURT_OFFSET);
-	ambrtc_reset_rtc(ambrtc);
-
-	/* now write the required value to time or alarm */
-	writel_relaxed(time_val, ambrtc->reg + RTC_PWC_CURT_OFFSET);
-	writel_relaxed(alarm_val, ambrtc->reg + RTC_PWC_ALAT_OFFSET);
-	ambrtc_reset_rtc(ambrtc);
-
-	return 0;
 }
 
 static int ambrtc_read_time(struct device *dev, struct rtc_time *tm)
@@ -140,8 +88,7 @@ static int ambrtc_read_time(struct device *dev, struct rtc_time *tm)
 	u32 time_sec;
 
 	ambrtc = dev_get_drvdata(dev);
-
-	time_sec = ambrtc_get_alarm_or_time(ambrtc, AMBRTC_TIME);
+	time_sec = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET);
 
 	rtc_time_to_tm(time_sec, tm);
 
@@ -153,27 +100,33 @@ static int ambrtc_set_mmss(struct device *dev, unsigned long secs)
 	struct ambarella_rtc *ambrtc;
 
 	ambrtc = dev_get_drvdata(dev);
+	ambrtc_registers_fflush(ambrtc);
+	writel_relaxed(secs, ambrtc->base + RTC_CURT_WRITE_OFFSET);
 
-	return ambrtc_set_alarm_or_time(ambrtc, AMBRTC_TIME, secs);
+	writel_relaxed(0x01, ambrtc->base + PWC_BC_OFFSET);
+	ambrtc_strobe_set(ambrtc);
+	writel_relaxed(0x00, ambrtc->base + PWC_BC_OFFSET);
+
+	return 0;
 }
 
 
 static int ambrtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	struct ambarella_rtc *ambrtc;
-	u32 alarm_sec, time_sec;
-	u32 rtc_status;
+	u32 alarm_sec, time_sec, status;
 
 	ambrtc = dev_get_drvdata(dev);
 
-	alarm_sec = ambrtc_get_alarm_or_time(ambrtc, AMBRTC_ALARM);
+	alarm_sec = readl_relaxed(ambrtc->base + RTC_ALAT_READ_OFFSET);
 	rtc_time_to_tm(alarm_sec, &alrm->time);
+	time_sec = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET);
 
-	time_sec = ambrtc_get_alarm_or_time(ambrtc, AMBRTC_TIME);
+	/* assert alarm is enabled if alrm time is after current time */
 	alrm->enabled = alarm_sec > time_sec;
 
-	rtc_status = readl_relaxed(ambrtc->reg + RTC_STATUS_OFFSET);
-	alrm->pending = !!(rtc_status & RTC_STATUS_ALA_WK);
+	status = readl_relaxed(ambrtc->base + RTC_STATUS_OFFSET);
+	alrm->pending = !!(status & RTC_STATUS_ALA_WK);
 
 	return 0;
 }
@@ -182,12 +135,22 @@ static int ambrtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	struct ambarella_rtc *ambrtc;
 	unsigned long alarm_sec;
+	int status;
 
 	ambrtc = dev_get_drvdata(dev);
 
 	rtc_tm_to_time(&alrm->time, &alarm_sec);
 
-	return ambrtc_set_alarm_or_time(ambrtc, AMBRTC_ALARM, alarm_sec);
+	ambrtc_registers_fflush(ambrtc);
+
+	status = readl_relaxed(ambrtc->base + PWC_SET_STATUS_OFFSET);
+	status |= PWC_STA_ALARM_MASK;
+
+	writel_relaxed(alarm_sec, ambrtc->base + RTC_ALAT_WRITE_OFFSET);
+
+	ambrtc_strobe_set(ambrtc);
+
+	return 0;
 }
 
 static int ambrtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
@@ -213,12 +176,9 @@ static int ambrtc_ioctl(struct device *dev, unsigned int cmd,
 
 	ambrtc = dev_get_drvdata(dev);
 
-	if (ambrtc->is_limited)
-		return -ENOIOCTLCMD;
-
 	switch (cmd) {
 	case RTC_VL_READ:
-		lbat = !!readl_relaxed(ambrtc->reg + RTC_PWC_LBAT_OFFSET);
+		lbat = !!readl_relaxed(ambrtc->base + PWC_LBAT_OFFSET);
 		rval = put_user(lbat, (int __user *)arg);
 		break;
 	default:
@@ -238,89 +198,52 @@ static const struct rtc_class_ops ambarella_rtc_ops = {
 	.alarm_irq_enable = ambrtc_alarm_irq_enable,
 };
 
-static void ambrtc_check_power_lost(struct ambarella_rtc *ambrtc)
-{
-	u32 status, need_rst, time_sec;
-
-	if (ambrtc->is_limited) {
-		status = readl_relaxed(ambrtc->reg + RTC_STATUS_OFFSET);
-		need_rst = !(status & RTC_STATUS_PC_RST);
-	} else {
-		status = readl_relaxed(ambrtc->reg + RTC_PWC_REG_STA_OFFSET);
-		need_rst = !(status & RTC_PWC_LOSS_MASK);
-
-		status = readl_relaxed(ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
-		status |= RTC_PWC_LOSS_MASK;
-		writel_relaxed(status, ambrtc->reg + RTC_PWC_SET_STATUS_OFFSET);
-	}
-
-	if (need_rst) {
-		dev_warn(ambrtc->dev, "=====RTC ever lost power=====\n");
-		time_sec = ambrtc->is_limited ? 0x40000000 : 0;
-		ambrtc_set_alarm_or_time(ambrtc, AMBRTC_TIME, time_sec);
-	}
-}
-
-
 static int ambrtc_probe(struct platform_device *pdev)
 {
 	struct ambarella_rtc *ambrtc;
-	struct resource *mem;
-	void __iomem *reg;
-	int ret;
-	unsigned int wakeup_support;
+	struct resource *res;
 	struct device_node *np = pdev->dev.of_node;
-
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (mem == NULL) {
-		dev_err(&pdev->dev, "Get mem resource failed!\n");
-		return -ENXIO;
-	}
-
-	reg = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!reg) {
-		dev_err(&pdev->dev, "devm_ioremap() failed\n");
-		return -ENOMEM;
-	}
+	int ret;
 
 	ambrtc = devm_kzalloc(&pdev->dev, sizeof(*ambrtc), GFP_KERNEL);
-	if (mem == NULL) {
-		dev_err(&pdev->dev, "no memory!\n");
+	if (!ambrtc)
 		return -ENOMEM;
-	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	ambrtc->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(ambrtc->base))
+		return PTR_ERR(ambrtc->base);
 
 	ambrtc->irq = platform_get_irq(pdev, 0);
 	if (ambrtc->irq < 0) {
-		ambrtc->irq = -1;
+		ambrtc->irq = 0;
 	} else {
-		ret = devm_request_irq(&pdev->dev, ambrtc->irq, ambrtc_alarm_irq, IRQF_SHARED,
-					"rtc alarm", ambrtc);
+		ret = devm_request_irq(&pdev->dev, ambrtc->irq, ambrtc_alarm_irq,
+				IRQF_SHARED, pdev->name, ambrtc);
 		if (ret) {
-			dev_err(&pdev->dev, "could not request irq %d for rtc alarm\n", ambrtc->irq);
+			dev_err(&pdev->dev, "interrupt not available.\n");
 			return ret;
 		}
 	}
 
-	ambrtc->reg = reg;
 	ambrtc->dev = &pdev->dev;
-	ambrtc->is_limited = !!of_find_property(pdev->dev.of_node,
-				"amb,is-limited", NULL);
-
-	ambrtc->rtc_program_enable = !!of_find_property(pdev->dev.of_node,
-				"amb,rtc-program-enable", NULL);
-
 	platform_set_drvdata(pdev, ambrtc);
-	ambrtc_check_power_lost(ambrtc);
 
-	wakeup_support = !!of_get_property(np, "rtc,wakeup", NULL);
-	if (wakeup_support)
+	if(!!of_get_property(np, "rtc,wakeup", NULL))
 		device_set_wakeup_capable(&pdev->dev, 1);
 
-	ambrtc->rtc = devm_rtc_device_register(&pdev->dev, "rtc-ambarella",
+	ambrtc->rtc = devm_rtc_device_register(&pdev->dev, pdev->name,
 				     &ambarella_rtc_ops, THIS_MODULE);
 	if (IS_ERR(ambrtc->rtc)) {
 		dev_err(&pdev->dev, "devm_rtc_device_register fail.\n");
 		return PTR_ERR(ambrtc->rtc);
+	}
+	ambrtc->lost_power = 
+		!(readl_relaxed(ambrtc->base + PWC_REG_STA_OFFSET) & PWC_STA_LOSS_MASK);
+
+	if (ambrtc->lost_power) {
+		dev_warn(ambrtc->dev, "Warning: RTC lost power.....\n");
+		ambrtc_set_mmss(ambrtc->dev, 0);
 	}
 
 	ambrtc->rtc->uie_unsupported = 1;
@@ -346,10 +269,8 @@ static int ambarella_rtc_suspend(struct device *dev)
 {
 	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
 
-	if (device_may_wakeup(dev)){
-		if (ambrtc->irq != -1)
-			enable_irq_wake(ambrtc->irq);
-	}
+	if (ambrtc->irq & device_may_wakeup(dev))
+		enable_irq_wake(ambrtc->irq);
 
 	return 0;
 }
@@ -358,10 +279,9 @@ static int ambarella_rtc_resume(struct device *dev)
 {
 	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
 
-	if (device_may_wakeup(dev)) {
-		if (ambrtc->irq != -1)
-			disable_irq_wake(ambrtc->irq);
-	}
+	if (ambrtc->irq & device_may_wakeup(dev))
+		disable_irq_wake(ambrtc->irq);
+
 	return 0;
 }
 #endif
@@ -381,7 +301,7 @@ static struct platform_driver ambarella_rtc_driver = {
 
 module_platform_driver(ambarella_rtc_driver);
 
-MODULE_DESCRIPTION("Ambarella Onchip RTC Driver");
+MODULE_DESCRIPTION("Ambarella Onchip RTC Driver.v200");
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_LICENSE("GPL");
 

@@ -185,21 +185,21 @@ static int ambarella_pm_enter_mem(void)
 	ambarella_disconnect_dram_reset();
 
 	/* ensure the power for DRAM keeps on when power off PWC */
-	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x1);
-	amba_writel(RTC_REG(RTC_POS0_OFFSET), 0x10);
-	amba_writel(RTC_REG(RTC_POS1_OFFSET), 0x10);
-	amba_writel(RTC_REG(RTC_POS2_OFFSET), 0x10);
-	amba_writel(RTC_REG(RTC_POS3_OFFSET), 0x10);
-	amba_setbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
+	amba_writel(RTC_REG(PWC_ENP3_OFFSET), 0x1);
+	amba_writel(RTC_REG(PWC_POS0_OFFSET), 0x10);
+	amba_writel(RTC_REG(PWC_POS1_OFFSET), 0x10);
+	amba_writel(RTC_REG(PWC_POS2_OFFSET), 0x10);
+	amba_writel(RTC_REG(PWC_POS3_OFFSET), 0x10);
+	amba_setbitsl(RTC_REG(PWC_SET_STATUS_OFFSET), 0x04);
 
-	alarm_val = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), alarm_val);
-	time_val  = amba_readl(RTC_REG(RTC_CURT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), time_val);
+	alarm_val = amba_readl(RTC_REG(RTC_ALAT_READ_OFFSET));
+	amba_writel(RTC_REG(RTC_ALAT_WRITE_OFFSET), alarm_val);
+	time_val  = amba_readl(RTC_REG(RTC_CURT_READ_OFFSET));
+	amba_writel(RTC_REG(RTC_CURT_WRITE_OFFSET), time_val);
 
-	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
+	amba_writel(RTC_REG(PWC_RESET_OFFSET), 0x1);
 	mdelay(3);
-	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
+	amba_writel(RTC_REG(PWC_RESET_OFFSET), 0x0);
 
 	ambarella_set_cpu_jump(0, ambarella_cpu_resume);
 
@@ -223,22 +223,22 @@ static int ambarella_pm_enter_mem(void)
 	outer_resume();
 
 	/* ensure to power off all powers when power off PWC */
-	amba_writel(RTC_REG(RTC_PWC_ENP3_OFFSET), 0x0);
-	amba_clrbitsl(RTC_REG(RTC_PWC_SET_STATUS_OFFSET), 0x04);
+	amba_writel(RTC_REG(PWC_ENP3_OFFSET), 0x0);
+	amba_clrbitsl(RTC_REG(PWC_SET_STATUS_OFFSET), 0x04);
 
-	alarm_val = amba_readl(RTC_REG(RTC_ALAT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_ALAT_OFFSET), alarm_val);
-	time_val  = amba_readl(RTC_REG(RTC_CURT_OFFSET));
-	amba_writel(RTC_REG(RTC_PWC_CURT_OFFSET), time_val);
+	alarm_val = amba_readl(RTC_REG(RTC_ALAT_READ_OFFSET));
+	amba_writel(RTC_REG(RTC_ALAT_WRITE_OFFSET), alarm_val);
+	time_val  = amba_readl(RTC_REG(RTC_CURT_READ_OFFSET));
+	amba_writel(RTC_REG(RTC_CURT_WRITE_OFFSET), time_val);
 
-	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x1);
-	while(amba_readl(RTC_REG(RTC_PWC_REG_STA_OFFSET)) & 0x04);
-	amba_writel(RTC_REG(RTC_RESET_OFFSET), 0x0);
+	amba_writel(RTC_REG(PWC_RESET_OFFSET), 0x1);
+	while(amba_readl(RTC_REG(PWC_REG_STA_OFFSET)) & 0x04);
+	amba_writel(RTC_REG(PWC_RESET_OFFSET), 0x0);
 
 	return 0;
 }
 
-static __init int ambarella_pm_suspend_enter(suspend_state_t state)
+static int ambarella_pm_suspend_enter(suspend_state_t state)
 {
 	int rval = 0;
 

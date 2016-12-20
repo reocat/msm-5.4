@@ -49,39 +49,40 @@
 #define RTC_REG(x)			(RTC_BASE + (x))
 
 /* ==========================================================================*/
-#define RTC_POS0_OFFSET			0x20
-#define RTC_POS1_OFFSET			0x24
-#define RTC_POS2_OFFSET			0x28
-#define RTC_PWC_ALAT_OFFSET		0x2C
-#define RTC_PWC_CURT_OFFSET		0x30
-#define RTC_CURT_OFFSET			0x34
-#define RTC_ALAT_OFFSET			0x38
-#define RTC_STATUS_OFFSET		0x3C
-#define RTC_RESET_OFFSET		0x40
-#define RTC_WO_OFFSET			0x7C
+#define PWC_POS0_OFFSET			0x20
+#define PWC_POS1_OFFSET			0x24
+#define PWC_POS2_OFFSET			0x28
 
-#define RTC_PWC_DNALERT_OFFSET		0xA8
-#define RTC_PWC_LBAT_OFFSET		0xAC
-#define RTC_PWC_REG_WKUPC_OFFSET	0xB0
-#define RTC_PWC_REG_STA_OFFSET		0xB4
-#define RTC_PWC_SET_STATUS_OFFSET	0xC0
-#define RTC_PWC_CLR_REG_WKUPC_OFFSET	0xC4
-#define RTC_PWC_WKENC_OFFSET		0xC8
-#define RTC_POS3_OFFSET			0xD0
+#define RTC_ALAT_WRITE_OFFSET		0x2C
+#define RTC_CURT_WRITE_OFFSET		0x30
+#define RTC_CURT_READ_OFFSET		0x34
+#define RTC_ALAT_READ_OFFSET		0x38
+#define RTC_STATUS_OFFSET			0x3C
 
-#define RTC_PWC_ENP1C_OFFSET		0xD4
-#define RTC_PWC_ENP2C_OFFSET		0xD8
-#define RTC_PWC_ENP3C_OFFSET		0xDC
-#define RTC_PWC_ENP1_OFFSET		0xE0
-#define RTC_PWC_ENP2_OFFSET		0xE4
-#define RTC_PWC_ENP3_OFFSET		0xE8
-#define RTC_PWC_DISP1C_OFFSET		0xEC
-#define RTC_PWC_DISP2C_OFFSET		0xF0
-#define RTC_PWC_DISP3C_OFFSET		0xF4
-#define RTC_PWC_DISP1_OFFSET		0xF8
-#define RTC_PWC_DISP2_OFFSET		0xB8
-#define RTC_PWC_DISP3_OFFSET		0xBC
-#define PWC_BC                      0xFC
+#define PWC_RESET_OFFSET			0x40
+#define PWC_WO_OFFSET				0x7C
+#define PWC_DNALERT_OFFSET			0xA8
+#define PWC_LBAT_OFFSET				0xAC
+#define PWC_REG_WKUPC_OFFSET		0xB0
+#define PWC_REG_STA_OFFSET			0xB4
+#define PWC_SET_STATUS_OFFSET		0xC0
+#define PWC_CLR_REG_WKUPC_OFFSET	0xC4
+#define PWC_WKENC_OFFSET			0xC8
+#define PWC_POS3_OFFSET				0xD0
+
+#define PWC_ENP1C_OFFSET		0xD4
+#define PWC_ENP2C_OFFSET		0xD8
+#define PWC_ENP3C_OFFSET		0xDC
+#define PWC_ENP1_OFFSET			0xE0
+#define PWC_ENP2_OFFSET			0xE4
+#define PWC_ENP3_OFFSET			0xE8
+#define PWC_DISP1C_OFFSET		0xEC
+#define PWC_DISP2C_OFFSET		0xF0
+#define PWC_DISP3C_OFFSET		0xF4
+#define PWC_DISP1_OFFSET		0xF8
+#define PWC_DISP2_OFFSET		0xB8
+#define PWC_DISP3_OFFSET		0xBC
+#define PWC_BC_OFFSET			0xFC
 
 /* ==========================================================================*/
 /* RTC_STATUS_OFFSET */
@@ -91,9 +92,9 @@
 #define RTC_STATUS_RTC_CLK		0x1
 
 /* RTC_PWC_REG_STA_OFFSET */
-#define RTC_PWC_LOSS_MASK		0x20
-#define RTC_PWC_ALARM_MASK		0x8
-#define RTC_PWC_SR_MASK			0x4
+#define PWC_STA_LOSS_MASK		0x20
+#define PWC_STA_ALARM_MASK		0x8
+#define PWC_STA_SR_MASK			0x4
 
 /* ==========================================================================*/
 
