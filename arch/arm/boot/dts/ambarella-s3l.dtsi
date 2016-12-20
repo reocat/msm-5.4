@@ -611,6 +611,7 @@
 			amb,rx-ring-size = <64>;
 			amb,ipc-tx;
 			amb,ipc-rx;
+			amb,tx-clk-invert;
 		};
 
 		spi0: spi@e0020000 {
@@ -820,6 +821,20 @@
 			amb,frac-mode;
 		};
 
+		pll_out_enet: pll-out-enet {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xec170520 4>,
+			      <0xec170524 4>,
+			      <0xec170528 4>,
+			      <0xec17052c 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "pll_out_enet";
+			amb,frac-mode;
+		};
+
 		gclk_ddr: gclk-ddr {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
@@ -1000,6 +1015,24 @@
 			assigned-clock-parents = <&osc>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
+		};
+
+		rmii_osc: rmii_oscillator {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "rmii_osc";
+		};
+
+		gclk_enet_rmii: gclk_enet_rmii {
+			#clock-cells = <0>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec170534 4>, <0xec170544 4>;
+			clocks = <&rmii_osc>, <&pll_out_enet>;
+			amb,fix-divider = <2>;
+			amb,div-width = <4>;
+			amb,div-shift = <4>;
+			amb,div-plus;
 		};
 
 		gclk_adc: gclk-adc {

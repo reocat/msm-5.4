@@ -71,13 +71,12 @@ static void ambrtc_registers_fflush(struct ambarella_rtc *ambrtc)
 	writel_relaxed(alarm, ambrtc->base + RTC_ALAT_WRITE_OFFSET);
 
 	status = readl_relaxed(ambrtc->base + PWC_REG_STA_OFFSET);
-	if (ambrtc->lost_power) {
+	if (ambrtc->lost_power)
 		status |= PWC_STA_LOSS_MASK;
-		ambrtc->lost_power = 0;
-	}
 
 	status &= ~PWC_STA_SR_MASK;
 	status &= ~PWC_STA_ALARM_MASK;
+
 	writel_relaxed(status, ambrtc->base + PWC_SET_STATUS_OFFSET);
 
 }
@@ -244,6 +243,7 @@ static int ambrtc_probe(struct platform_device *pdev)
 	if (ambrtc->lost_power) {
 		dev_warn(ambrtc->dev, "Warning: RTC lost power.....\n");
 		ambrtc_set_mmss(ambrtc->dev, 0);
+		ambrtc->lost_power = 0;
 	}
 
 	ambrtc->rtc->uie_unsupported = 1;
