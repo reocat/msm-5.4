@@ -684,14 +684,18 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
+	unsigned long flags;
 
+	spin_lock_irqsave(&host->lock, flags);
 	WARN_ON(host->mrq);
+
 	host->mrq = mrq;
 
 	if (mrq->data)
 		ambarella_sd_setup_dma(host, mrq->data);
 
 	ambarella_sd_send_cmd(host, mrq->sbc ? mrq->sbc : mrq->cmd);
+	spin_unlock_irqrestore(&host->lock, flags);
 }
 
 static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
