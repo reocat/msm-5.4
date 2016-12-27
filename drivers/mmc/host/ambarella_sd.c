@@ -683,7 +683,9 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
+	unsigned long flags;
 
+	spin_lock_irqsave(&host->lock, flags);
 	WARN_ON(host->mrq);
 	host->mrq = mrq;
 
@@ -691,6 +693,7 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		ambarella_sd_setup_dma(host, mrq->data);
 
 	ambarella_sd_send_cmd(host, mrq->sbc ? mrq->sbc : mrq->cmd);
+	spin_unlock_irqrestore(&host->lock, flags);
 }
 
 static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
@@ -876,27 +879,18 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.execute_tuning = ambarella_sd_execute_tuning,
 };
 
-/* ==========================================================================*/
-
-static void ambarella_sd_tasklet_finish(unsigned long param)
+static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 {
-	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
-	struct mmc_request *mrq = host->mrq;
 	struct mmc_command *cmd = host->cmd;
 	u32 resp0, resp1, resp2, resp3;
-	u16 nis, eis, ac12es, dir;
-	unsigned long flags;
+	u16 nis, eis, ac12es;
 
-	if (cmd == NULL || mrq == NULL)
+	if (cmd == NULL)
 		return;
 
-	spin_lock_irqsave(&host->lock, flags);
 	nis = host->irq_status & 0xffff;
 	eis = host->irq_status >> 16;
-	host->irq_status = 0;
 	ac12es = host->ac12es;
-	host->ac12es = 0;
-	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (nis & SD_NIS_ERROR) {
 		if (eis & (SD_EIS_CMD_BIT_ERR | SD_EIS_CMD_CRC_ERR))
@@ -941,7 +935,6 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 				nis, eis, ac12es);
 		}
 
-		ambarella_sd_recovery(host);
 		goto finish;
 	}
 
@@ -974,8 +967,28 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	return;
 
 finish:
+	tasklet_schedule(&host->finish_tasklet);
+
+	return;
+
+}
+
+static void ambarella_sd_tasklet_finish(unsigned long param)
+{
+	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
+	struct mmc_request *mrq = host->mrq;
+	struct mmc_command *cmd = host->cmd;
+	u16 dir;
+
+	if (cmd == NULL || mrq == NULL)
+		return;
+
 	dev_dbg(host->dev, "End %s[%u], arg = %u\n",
 		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+
+	if(cmd->error || (cmd->data && (cmd->data->error ||
+		(cmd->data->stop && cmd->data->stop->error))))
+		ambarella_sd_recovery(host);
 
 	del_timer(&host->timer);
 
@@ -1042,8 +1055,7 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		mmc_detect_change(host->mmc, msecs_to_jiffies(500));
 	}
 
-	if (host->cmd)
-		tasklet_schedule(&host->finish_tasklet);
+	ambarella_sd_handle_irq(host);
 
 	return IRQ_HANDLED;
 }
