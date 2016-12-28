@@ -1215,7 +1215,7 @@ static void ambarella_sd_recovery(struct mmc_host *mmc)
 	struct ambarella_sd_mmc_info *pslotinfo = mmc_priv(mmc);
 	struct ambarella_sd_controller_info *pinfo = pslotinfo->pinfo;
 	u32 latency = 0, sbc_reg = 0, timing_reg0 = 0, timing_reg1 = 0;
-	u32 sd_delay_sel0 = 0, sd_delay_sel1 = 0;
+	u32 sd_delay_sel0 = 0, sd_delay_sel1 = 0, divisor = 0;
 
 	/*save the sd timing register*/
 	if(pinfo->phy_type == 0 && pinfo->timing_reg) {
@@ -1230,8 +1230,14 @@ static void ambarella_sd_recovery(struct mmc_host *mmc)
 		timing_reg0 = amba_readl(pinfo->timing_reg);
 	}
 
+	divisor = (amba_readw(pinfo->regbase + SD_CLK_OFFSET) & 0xff00) >> 8;
+
 	ambarella_sd_reset_all(mmc);
-	ambarella_sd_set_clk(mmc, &pinfo->controller_ios);
+
+	/*restore clk*/
+	ambarella_sd_clear_clken(mmc);
+	ambarella_sd_set_iclk(mmc, divisor);
+	ambarella_sd_set_clken(mmc);
 	ambarella_sd_set_bus(mmc, &pinfo->controller_ios);
 
 	/*restore the sd timing register*/
