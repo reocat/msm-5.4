@@ -597,20 +597,18 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 			if (byte_num > 0) {
 				dma_addr += word_num << 2;
 				desc++;
+				i++;
 			}
 		}
 
 		if (byte_num > 0) {
+			desc->attr = SD_ADMA_TBL_ATTR_TRAN | SD_ADMA_TBL_ATTR_VALID;
 			desc->len = byte_num % 0x10000; /* 0 means 65536 bytes */
 			desc->addr = dma_addr;
 		}
 	}
 
 	desc->attr |= SD_ADMA_TBL_ATTR_END;
-
-	dma_sync_single_for_device(host->dev, host->desc_phys,
-		(i * SD_ADMA_TBL_LINE_SIZE), DMA_TO_DEVICE);
-
 }
 
 static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_command *cmd)
@@ -1015,14 +1013,7 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	}
 
 	if (cmd->data) {
-		u32 dma_size;
-
-		dma_size = cmd->data->blksz * cmd->data->blocks;
 		dir = cmd->data->flags & MMC_DATA_WRITE ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
-
-		dma_sync_single_for_cpu(host->dev, host->desc_phys, dma_size,
-				DMA_FROM_DEVICE);
-
 		dma_unmap_sg(host->dev, cmd->data->sg, cmd->data->sg_len, dir);
 
 		/* send the STOP cmd manually if auto_cmd12 is disabled and
