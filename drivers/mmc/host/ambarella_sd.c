@@ -577,6 +577,7 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 	sg_cnt = dma_map_sg(host->dev, data->sg, data->sg_len, dir);
 	BUG_ON(sg_cnt != data->sg_len || sg_cnt == 0);
 
+	desc = host->desc_virt;
 	for_each_sg(data->sg, sgent, sg_cnt, i) {
 		dma_addr = sg_dma_address(sgent);
 		dma_len = sg_dma_len(sgent);
@@ -586,7 +587,6 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 		word_num = dma_len / 4;
 		byte_num = dma_len % 4;
 
-		desc = host->desc_virt + i;
 		desc->attr = SD_ADMA_TBL_ATTR_TRAN | SD_ADMA_TBL_ATTR_VALID;
 
 		if (word_num > 0) {
@@ -597,7 +597,6 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 			if (byte_num > 0) {
 				dma_addr += word_num << 2;
 				desc++;
-				i++;
 			}
 		}
 
@@ -606,9 +605,13 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 			desc->len = byte_num % 0x10000; /* 0 means 65536 bytes */
 			desc->addr = dma_addr;
 		}
+
+		if(unlikely(i == sg_cnt - 1))
+			desc->attr |= SD_ADMA_TBL_ATTR_END;
+		else
+			desc++;
 	}
 
-	desc->attr |= SD_ADMA_TBL_ATTR_END;
 }
 
 static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_command *cmd)
