@@ -345,6 +345,22 @@ int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc)
 	return 0;
 }
 EXPORT_SYMBOL(ambarella_sd_rpmsg_sdinfo_init);
+
+void ambarella_sd_rpmsg_sdinfo_deinit(struct mmc_host *mmc)
+{
+	u32 host_id;
+	struct ambarella_mmc_host *host = mmc_priv(mmc);
+
+	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
+		(!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
+		SD_HOST_2;
+
+	if (host_id == SDIO_GLOBAL_ID) {
+		remove_proc_entry("mmc_fixed_cd", get_ambarella_proc_dir());
+		remove_proc_entry("sdio_info", get_ambarella_proc_dir());
+	}
+}
+
 #endif
 
 #if defined(CONFIG_AMBALINK_SD)
@@ -1953,6 +1969,10 @@ out0:
 static int ambarella_sd_remove(struct platform_device *pdev)
 {
 	struct ambarella_mmc_host *host = platform_get_drvdata(pdev);
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	ambarella_sd_rpmsg_sdinfo_deinit(host->mmc);
+#endif
 
 	ambarella_sd_remove_debugfs(host);
 

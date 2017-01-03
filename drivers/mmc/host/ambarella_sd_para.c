@@ -104,9 +104,6 @@ int init_sd_para(size_t regbase)
 {
 	struct device_node *np =NULL;
 
-	if (sdio_regbase)
-		return -1;
-
 	sdio_regbase = regbase;
 #if  SDIO_GLOBAL_ID == 1	//SD1
 	if (!sd_slot_is_valid(1)) {
