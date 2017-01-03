@@ -140,6 +140,7 @@ int init_sd_para(size_t regbase)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(init_sd_para);
 
 int read_rct_reg(unsigned int offset)
 {
@@ -256,6 +257,7 @@ const struct file_operations proc_fops_sdio_info = {
 	.llseek	= seq_lseek,
 	.release = single_release,
 };
+EXPORT_SYMBOL_GPL(proc_fops_sdio_info);
 
 /*
  * return 0 if timing changed
@@ -370,6 +372,7 @@ int amba_sdio_delay_post_apply(const int odly, const int ocly,
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(amba_sdio_delay_post_apply);
 
 /*
  * return 0 if timing changed
@@ -482,6 +485,7 @@ int ambarella_set_sdio_host_high_speed(const char *str, const struct kernel_para
 	pr_debug("writeb 0x%zx 0x%x\n", SDIO_HOST_OFFSET, hostr);
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_host_high_speed);
 
 int ambarella_set_sdio_clk_ds(const char *str, const struct kernel_param *kp)
 {
@@ -494,6 +498,7 @@ int ambarella_set_sdio_clk_ds(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_clk_ds);
 
 int ambarella_set_sdio_data_ds(const char *str, const struct kernel_param *kp)
 {
@@ -506,6 +511,7 @@ int ambarella_set_sdio_data_ds(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_data_ds);
 
 int ambarella_set_sdio_cmd_ds(const char *str, const struct kernel_param *kp)
 {
@@ -518,6 +524,7 @@ int ambarella_set_sdio_cmd_ds(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_cmd_ds);
 
 int ambarella_set_sdio_host_odly(const char *str, const struct kernel_param *kp)
 {
@@ -530,6 +537,7 @@ int ambarella_set_sdio_host_odly(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_host_odly);
 
 int ambarella_set_sdio_host_ocly(const char *str, const struct kernel_param *kp)
 {
@@ -542,6 +550,7 @@ int ambarella_set_sdio_host_ocly(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_host_ocly);
 
 int ambarella_set_sdio_host_idly(const char *str, const struct kernel_param *kp)
 {
@@ -554,6 +563,7 @@ int ambarella_set_sdio_host_idly(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_host_idly);
 
 int ambarella_set_sdio_host_icly(const char *str, const struct kernel_param *kp)
 {
@@ -566,3 +576,8 @@ int ambarella_set_sdio_host_icly(const char *str, const struct kernel_param *kp)
 
 	return retval;
 }
+EXPORT_SYMBOL_GPL(ambarella_set_sdio_host_icly);
+
+MODULE_DESCRIPTION("Ambarella Media Processor SD/MMC Host Controller Parameters");
+MODULE_LICENSE("GPL");
+
