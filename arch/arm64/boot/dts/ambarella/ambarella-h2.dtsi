@@ -1191,4 +1191,12 @@
 			amb,div-shift = <0>;
 		};
 	};
+
+	amba_lens {
+		compatible = "ambarella,lens";
+		interrupts = <0 11 0x1>,	/* zoom_timer_irq */
+				     <0 8 0x1>,		/* focus_timer_irq */
+				     <0 9 0x1>;		/* iris_timer_irq */
+	};
+
 };
