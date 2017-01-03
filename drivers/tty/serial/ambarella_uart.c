@@ -699,6 +699,9 @@ static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
 	return ((lsr & (UART_LS_TEMT | UART_LS_THRE)) ==
 		(UART_LS_TEMT | UART_LS_THRE)) ? TIOCSER_TEMT : 0;
 }
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+EXPORT_SYMBOL_GPL(serial_ambarella_tx_empty);
+#endif
 
 static unsigned int serial_ambarella_get_mctrl(struct uart_port *port)
 {
