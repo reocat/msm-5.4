@@ -434,6 +434,7 @@
 				amb,pinmux-ids = <0x1038 0x1039 0x103a 0x103d
 						  0x103e 0x1041 0x1042 0x1043
 						  0x1044 0x1045 0x1046>;
+				amb,pinconf-ids = <0xb00038 0xb00039 0xb0003a>;
 			};
 
 			i2c0_pins: i2c0@0 {
@@ -756,7 +757,7 @@
 			amb,ipc-rx;
 			amb,enhance;
 			amb,ext-gtx-clk125;
-			amb,tx-clk-invert;
+			/*amb,tx-clk-invert;*/
 		};
 
 		spi0: spi@e0020000 {
