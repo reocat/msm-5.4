@@ -1224,6 +1224,11 @@ MODULE_LICENSE ("GPL");
 #define DAVINCI_PLATFORM_DRIVER	ohci_hcd_da8xx_driver
 #endif
 
+#ifdef CONFIG_USB_OHCI_AMBARELLA
+#include "ohci-ambarella.c"
+#define PLATFORM_DRIVER		ohci_hcd_ambarella_driver
+#endif
+
 #ifdef CONFIG_USB_OHCI_HCD_PPC_OF
 #include "ohci-ppc-of.c"
 #define OF_PLATFORM_DRIVER	ohci_hcd_ppc_of_driver
