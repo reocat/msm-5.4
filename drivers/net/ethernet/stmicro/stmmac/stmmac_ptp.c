@@ -158,7 +158,7 @@ static int stmmac_enable(struct ptp_clock_info *ptp,
 static struct ptp_clock_info stmmac_ptp_clock_ops = {
 	.owner = THIS_MODULE,
 	.name = "stmmac_ptp_clock",
-	.max_adj = 62500000,
+	.max_adj = 199999999,
 	.n_alarm = 0,
 	.n_ext_ts = 0,
 	.n_per_out = 0,
