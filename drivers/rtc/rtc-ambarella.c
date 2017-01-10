@@ -228,16 +228,13 @@ static int ambrtc_probe(struct platform_device *pdev)
 	ambrtc->dev = &pdev->dev;
 	platform_set_drvdata(pdev, ambrtc);
 
-	if(!!of_get_property(np, "rtc,wakeup", NULL))
-		device_set_wakeup_capable(&pdev->dev, 1);
-
 	ambrtc->rtc = devm_rtc_device_register(&pdev->dev, pdev->name,
 				     &ambarella_rtc_ops, THIS_MODULE);
 	if (IS_ERR(ambrtc->rtc)) {
 		dev_err(&pdev->dev, "devm_rtc_device_register fail.\n");
 		return PTR_ERR(ambrtc->rtc);
 	}
-	ambrtc->lost_power = 
+	ambrtc->lost_power =
 		!(readl_relaxed(ambrtc->base + PWC_REG_STA_OFFSET) & PWC_STA_LOSS_MASK);
 
 	if (ambrtc->lost_power) {
@@ -248,11 +245,14 @@ static int ambrtc_probe(struct platform_device *pdev)
 
 	ambrtc->rtc->uie_unsupported = 1;
 
+	device_init_wakeup(&pdev->dev, true);
+
 	return 0;
 }
 
 static int ambrtc_remove(struct platform_device *pdev)
 {
+	device_init_wakeup(&pdev->dev, false);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
