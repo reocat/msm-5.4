@@ -64,7 +64,6 @@ struct ambarella_nand_info {
 	void __iomem			*fdmaregbase;
 	struct regmap			*reg_rct;
 	u32				dmabase;
-	int				suspend;
 	/* dma irq for transferring data between Nand and FIFO */
 	int				dma_irq;
 	int				cmd_irq;
@@ -293,14 +292,6 @@ static inline int nand_amb_is_sw_bch(struct ambarella_nand_info *nand_info)
 static inline void ambarella_fio_rct_reset(struct ambarella_nand_info *nand_info)
 {
 	regmap_write(nand_info->reg_rct, FIO_RESET_OFFSET, FIO_RESET_FIO_RST);
-	msleep(1);
-	regmap_write(nand_info->reg_rct, FIO_RESET_OFFSET, 0);
-	msleep(1);
-}
-
-static inline void ambarella_fio_nand_rct_reset(struct ambarella_nand_info *nand_info)
-{
-	regmap_write(nand_info->reg_rct, FIO_RESET_OFFSET, FIO_RESET_FIO_RST | FIO_RESET_FLASH_RST);
 	msleep(1);
 	regmap_write(nand_info->reg_rct, FIO_RESET_OFFSET, 0);
 	msleep(1);
@@ -838,12 +829,6 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	u32					fio_ctr_reg = 0;
 	long					timeout;
 
-	if (unlikely(nand_info->suspend == 1)) {
-		dev_err(nand_info->dev, "%s: suspend!\n", __func__);
-		errorCode = -EPERM;
-		goto nand_amb_request_exit;
-	}
-
 	cmd = nand_info->cmd;
 
 	nand_ctr_reg = nand_info->control_reg | NAND_CTR_WAS;
@@ -1155,7 +1140,6 @@ nand_amb_request_done:
 		&& nand_amb_is_hw_bch(nand_info))
 		nand_amb_disable_bch(nand_info);
 
-nand_amb_request_exit:
 	return errorCode;
 }
 
@@ -1686,20 +1670,14 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	u32 val;
 
 	/* reset FIO by RCT */
-	ambarella_fio_nand_rct_reset(nand_info);
+	ambarella_fio_rct_reset(nand_info);
 
 	/* Reset FIO FIFO and then exit random read mode */
 	val = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 	val |= FIO_CTR_RR;
 	writel_relaxed(val, nand_info->regbase + FIO_CTR_OFFSET);
-	/* When suspend/resume mode, before exit random read mode,
-	 * we take time for make sure FIO reset well and
-	 * some dma req finished.
-	 */
-	if (nand_info->suspend == 1)
-		msleep(2);
-	else
-		msleep(1);
+	/* wait for some time to make sure FIO FIFO reset is done */
+	msleep(3);
 	val &= ~FIO_CTR_RR;
 	writel_relaxed(val, nand_info->regbase + FIO_CTR_OFFSET);
 
@@ -1709,8 +1687,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	writel_relaxed(DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI,
 			nand_info->fdmaregbase + FDMA_CTR_OFFSET);
 
-	if (nand_info->suspend == 1)
-		writel_relaxed(nand_info->control_reg, nand_info->regbase + FIO_CTR_OFFSET);
+	writel_relaxed(nand_info->control_reg, nand_info->regbase + FIO_CTR_OFFSET);
 
 	amb_nand_set_timing(nand_info);
 }
@@ -2133,7 +2110,6 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 	struct ambarella_nand_info		*nand_info;
 
 	nand_info = platform_get_drvdata(pdev);
-	nand_info->suspend = 1;
 	disable_irq(nand_info->dma_irq);
 	disable_irq(nand_info->cmd_irq);
 
@@ -2150,7 +2126,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	nand_info = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(nand_info);
-	nand_info->suspend = 0;
+
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
 
