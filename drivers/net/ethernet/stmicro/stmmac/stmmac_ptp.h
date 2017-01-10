@@ -25,6 +25,9 @@
 #ifndef __STMMAC_PTP_H__
 #define __STMMAC_PTP_H__
 
+#define AMBA_PTP_DESIRE_CLK 20000000ULL
+#define AMBA_PTP_REF_CLK    24000000
+
 /* IEEE 1588 PTP register offsets */
 #define PTP_TCR		0x0700	/* Timestamp Control Reg */
 #define PTP_SSIR	0x0704	/* Sub-Second Increment Reg */

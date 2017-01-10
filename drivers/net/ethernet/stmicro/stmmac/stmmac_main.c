@@ -54,6 +54,11 @@
 #include <linux/reset.h>
 #include <linux/of_mdio.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+#endif
+
 #define STMMAC_ALIGN(x)	L1_CACHE_ALIGN(x)
 
 /* Module parameters */
@@ -161,6 +166,7 @@ static void stmmac_verify_args(void)
  *	documentation). Viceversa the driver will try to set the MDC
  *	clock dynamically according to the actual clock input.
  */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static void stmmac_clk_csr_set(struct stmmac_priv *priv)
 {
 	u32 clk_rate;
@@ -189,6 +195,27 @@ static void stmmac_clk_csr_set(struct stmmac_priv *priv)
 			priv->clk_csr = STMMAC_CSR_250_300M;
 	}
 }
+#else
+static void amba_invert_gtx(void)
+{
+	struct regmap *reg_scr = NULL;
+	struct device_node *np =NULL;
+
+	np = of_find_node_by_path("ethernet0");
+	if (!np) {
+		printk(KERN_ERR "%s ethernet0 NOT found\n", __func__);
+		return;
+	}
+
+	reg_scr = syscon_regmap_lookup_by_phandle(np, "snps,scr-regmap");
+	if (IS_ERR(reg_scr)) {
+		printk("%s snps,scr-regmap NOT found\n", __func__);
+		return;
+	}
+
+	regmap_update_bits(reg_scr, 0xc, 0x80000000, 0x80000000);
+}
+#endif
 
 static void print_pkt(unsigned char *buf, int len)
 {
@@ -351,9 +378,12 @@ static void stmmac_get_tx_hwtstamp(struct stmmac_priv *priv,
 	if (!priv->hwts_tx_en)
 		return;
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* do not return else SW ptp4l will not work */
 	/* exit if skb doesn't support hw tstamp */
 	if (likely(!skb || !(skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS)))
 		return;
+#endif
 
 	if (priv->adv_ts)
 		desc = (priv->dma_etx + entry);
@@ -615,7 +645,11 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
 		 * 2^x * y == (y << x), hence
 		 * 2^32 * 50000000 ==> (50000000 << 32)
 		 */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 		temp = (u64) (50000000ULL << 32);
+#else
+		temp = (u64) (AMBA_PTP_DESIRE_CLK << 32);
+#endif
 		priv->default_addend = div_u64(temp, priv->clk_ptp_rate);
 		priv->hw->ptp->config_addend(priv->ioaddr,
 					     priv->default_addend);
@@ -645,6 +679,7 @@ static int stmmac_init_ptp(struct stmmac_priv *priv)
 		return -EOPNOTSUPP;
 
 	/* Fall-back to main clock in case of no PTP ref is passed */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	priv->clk_ptp_ref = devm_clk_get(priv->device, "clk_ptp_ref");
 	if (IS_ERR(priv->clk_ptp_ref)) {
 		priv->clk_ptp_rate = clk_get_rate(priv->stmmac_clk);
@@ -653,6 +688,10 @@ static int stmmac_init_ptp(struct stmmac_priv *priv)
 		clk_prepare_enable(priv->clk_ptp_ref);
 		priv->clk_ptp_rate = clk_get_rate(priv->clk_ptp_ref);
 	}
+#else
+	priv->clk_ptp_rate = AMBA_PTP_REF_CLK;
+	priv->clk_ptp_ref = NULL;
+#endif
 
 	priv->adv_ts = 0;
 	if (priv->dma_cap.atime_stamp && priv->extend_desc)
@@ -1500,6 +1539,9 @@ static void stmmac_mmc_setup(struct stmmac_priv *priv)
 		memset(&priv->mmc, 0, sizeof(struct stmmac_counters));
 	} else
 		pr_info(" No MAC Management Counters available\n");
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	amba_invert_gtx();
+#endif
 }
 
 /**
@@ -1832,7 +1874,11 @@ static int stmmac_open(struct net_device *dev)
 
 	/* Request the IRQ lines */
 	ret = request_irq(dev->irq, stmmac_interrupt,
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 			  IRQF_SHARED, dev->name, dev);
+#else
+			  IRQF_SHARED | IRQF_TRIGGER_HIGH, dev->name, dev);
+#endif
 	if (unlikely(ret < 0)) {
 		pr_err("%s: ERROR: allocating the IRQ %d (error: %d)\n",
 		       __func__, dev->irq, ret);
@@ -2865,6 +2911,7 @@ int stmmac_dvr_probe(struct device *device,
 	if ((phyaddr >= 0) && (phyaddr <= 31))
 		priv->plat->phy_addr = phyaddr;
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	priv->stmmac_clk = devm_clk_get(priv->device, STMMAC_RESOURCE_NAME);
 	if (IS_ERR(priv->stmmac_clk)) {
 		dev_warn(priv->device, "%s: warning: cannot get CSR clock\n",
@@ -2890,6 +2937,7 @@ int stmmac_dvr_probe(struct device *device,
 		priv->pclk = NULL;
 	}
 	clk_prepare_enable(priv->pclk);
+#endif
 
 	priv->stmmac_rst = devm_reset_control_get(priv->device,
 						  STMMAC_RESOURCE_NAME);
@@ -2951,10 +2999,12 @@ int stmmac_dvr_probe(struct device *device,
 	 * set the MDC clock dynamically according to the csr actual
 	 * clock input.
 	 */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	if (!priv->plat->clk_csr)
 		stmmac_clk_csr_set(priv);
 	else
 		priv->clk_csr = priv->plat->clk_csr;
+#endif
 
 	stmmac_check_pcs_mode(priv);
 
@@ -2976,10 +3026,12 @@ error_mdio_register:
 error_netdev_register:
 	netif_napi_del(&priv->napi);
 error_hw_init:
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	clk_disable_unprepare(priv->pclk);
 error_pclk_get:
 	clk_disable_unprepare(priv->stmmac_clk);
 error_clk_get:
+#endif
 	free_netdev(ndev);
 
 	return ret;
