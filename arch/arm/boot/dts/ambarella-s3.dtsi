@@ -464,7 +464,6 @@
 			dma-requests = <14>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 			dma-channel-sel = <0 1 0 0 8 9 11 10>;
-			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
 		};

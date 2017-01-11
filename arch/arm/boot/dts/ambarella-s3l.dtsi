@@ -483,7 +483,6 @@
 			dma-requests = <12>;
 			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
 			dma-channel-sel = <4 5 0 0 8 9 11 10>;
-			amb,copy-align = <0>;
 			/* support pause/resume/stop */
 			amb,support-prs;
 		};

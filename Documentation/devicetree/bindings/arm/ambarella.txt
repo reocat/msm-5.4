@@ -309,7 +309,6 @@ Required properties:
 - dma-trans-type: specifies the dma channel use type. 0: memcpy, 1: slave.
 
 Optional properties:
-- amb,copy-align: specifies alignment requirement for previous chips.
 - amb,support-prs: should be specified for SoC that supports PAUSE/RESUME/STOP.
 - dma-channel-sel: should be specified for Soc that support dma channel sel.
   different value is used for selecting the device.

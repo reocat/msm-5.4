@@ -764,19 +764,11 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		unsigned long flags)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
-	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *amb_desc, *first = NULL, *prev = NULL;
 	int left_len = buf_len;
 
 	if (buf_len == 0 || period_len == 0) {
 		pr_err("%s: buf/period length is zero!\n", __func__);
-		return NULL;
-	}
-
-	if (!IS_ALIGNED(buf_addr, 1<<(amb_dma->copy_align)) ||
-		!IS_ALIGNED(period_len, 1<<(amb_dma->copy_align))) {
-		pr_err("%s: buf_addr/period_len is not %dbytes aligned!\n",
-			__func__, 1 << amb_dma->copy_align);
 		return NULL;
 	}
 
@@ -919,19 +911,11 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 		size_t len, unsigned long flags)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
-	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	struct ambdma_desc *amb_desc = NULL, *first = NULL, *prev = NULL;
 	size_t left_len = len, xfer_count;
 
 	if (unlikely(!len)) {
 		pr_info("%s: length is zero!\n", __func__);
-		return NULL;
-	}
-
-	if (!IS_ALIGNED(dst, 1<<(amb_dma->copy_align)) ||
-		!IS_ALIGNED(src, 1<<(amb_dma->copy_align))) {
-		pr_err("%s: dst/src is not %dbytes aligned!\n",
-			__func__, 1 << amb_dma->copy_align);
 		return NULL;
 	}
 
@@ -1112,7 +1096,6 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dummy_lli->rpt_addr =
 		amb_dma->dummy_lli_phys + sizeof(struct ambdma_lli) - 4;
 
-	of_property_read_u32(np, "amb,copy-align", &amb_dma->copy_align);
 	amb_dma->support_prs = !!of_find_property(np, "amb,support-prs", NULL);
 	ret = of_property_read_u32(np, "dma-channels", &amb_dma->nr_channels);
 	if (ret) {
@@ -1133,6 +1116,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_SLAVE, amb_dma->dma_slave.cap_mask);
 	dma_cap_set(DMA_CYCLIC, amb_dma->dma_slave.cap_mask);
 	INIT_LIST_HEAD(&amb_dma->dma_slave.channels);
+	amb_dma->dma_slave.dev = &pdev->dev;
 	amb_dma->dma_slave.device_alloc_chan_resources = ambdma_alloc_chan_resources;
 	amb_dma->dma_slave.device_free_chan_resources = ambdma_free_chan_resources;
 	amb_dma->dma_slave.device_tx_status = ambdma_tx_status;
@@ -1148,18 +1132,16 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_slave.dst_addr_widths = AMBARELLA_DMA_BUSWIDTHS;
 	amb_dma->dma_slave.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
 	amb_dma->dma_slave.residue_granularity = DMA_RESIDUE_GRANULARITY_DESCRIPTOR;
-	amb_dma->dma_slave.dev = &pdev->dev;
 
 	dma_cap_zero(amb_dma->dma_memcpy.cap_mask);
 	dma_cap_set(DMA_MEMCPY, amb_dma->dma_memcpy.cap_mask);
 	INIT_LIST_HEAD(&amb_dma->dma_memcpy.channels);
+	amb_dma->dma_memcpy.dev = &pdev->dev;
 	amb_dma->dma_memcpy.device_alloc_chan_resources = ambdma_alloc_chan_resources;
 	amb_dma->dma_memcpy.device_free_chan_resources = ambdma_free_chan_resources;
 	amb_dma->dma_memcpy.device_tx_status = ambdma_tx_status;
 	amb_dma->dma_memcpy.device_issue_pending = ambdma_issue_pending;
 	amb_dma->dma_memcpy.device_prep_dma_memcpy = ambdma_prep_dma_memcpy;
-	amb_dma->dma_memcpy.dev = &pdev->dev;
-	amb_dma->dma_memcpy.copy_align = (u8)(amb_dma->copy_align);
 
 	/* init dma_chan struct */
 	for (i = 0; i < NUM_DMA_CHANNELS; i++) {

@@ -82,7 +82,6 @@ struct ambdma_device {
 	dma_addr_t			dummy_lli_phys;
 	u32				*dummy_data;
 	dma_addr_t			dummy_data_phys;
-	u32				copy_align;
 	/* support pause/resume/stop */
 	u32				support_prs : 1;
 	u32				nr_channels;
