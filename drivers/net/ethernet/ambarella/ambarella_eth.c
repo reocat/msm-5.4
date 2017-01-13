@@ -2320,6 +2320,8 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	if (ret_val < 0) {
 		dev_err(lp->ndev->dev.parent,
 			"PHY interface dismatch: %d, %d!\n", hw_intf, lp->intf_type);
+		dev_err(lp->ndev->dev.parent,
+			"Second Time Read PHY interface:0x%x\n", readl_relaxed(lp->regbase + ETH_DMA_HWFEA_OFFSET));
 		return -ENODEV;
 	}
 
