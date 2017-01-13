@@ -2287,6 +2287,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
 	int ret_val, clk_src, clk_dir, hw_intf, clk_pl;
+	u32 temp;
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2300,6 +2301,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 	/* sanity check */
 	hw_intf = readl_relaxed(lp->regbase + ETH_DMA_HWFEA_OFFSET);
+	temp = hw_intf;
 	hw_intf &= ETH_DMA_HWFEA_ACTPHYIF_MASK;
 
 	switch (lp->intf_type) {
@@ -2319,7 +2321,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	}
 	if (ret_val < 0) {
 		dev_err(lp->ndev->dev.parent,
-			"PHY interface dismatch: %d, %d!\n", hw_intf, lp->intf_type);
+			"PHY interface dismatch: %d, %d!\n", temp, lp->intf_type);
 		dev_err(lp->ndev->dev.parent,
 			"Second Time Read PHY interface:0x%x\n", readl_relaxed(lp->regbase + ETH_DMA_HWFEA_OFFSET));
 		return -ENODEV;
