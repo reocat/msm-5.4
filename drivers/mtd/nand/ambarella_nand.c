@@ -1613,6 +1613,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 		amba_writel(nand_info->regbase + FLASH_CTR_OFFSET,
 			nand_info->control_reg);
 
+	amba_writel(nand_info->regbase + FLASH_INT_OFFSET, 0);
 	amb_nand_set_timing(nand_info);
 }
 
