@@ -365,10 +365,10 @@ static int __init ambarella_clockevent_init(struct device_node *np)
 
 static DEFINE_PER_CPU(struct ambarella_clkevt, percpu_clkevt);
 
-static int ambarella_local_timer_setup(struct ambarella_clkevt *local_clkevt)
+static int ambarella_local_timer_starting_cpu(unsigned int cpu)
 {
+	struct ambarella_clkevt *local_clkevt = per_cpu_ptr(&percpu_clkevt, cpu);
 	struct clock_event_device *clkevt = &local_clkevt->clkevt;
-	u32 cpu = smp_processor_id();
 
 	clkevt->name = local_clkevt->name;
 	clkevt->irq = local_clkevt->irq;
@@ -391,34 +391,16 @@ static int ambarella_local_timer_setup(struct ambarella_clkevt *local_clkevt)
 	return 0;
 }
 
-static void ambarella_local_timer_stop(struct ambarella_clkevt *local_clkevt)
+static int ambarella_local_timer_dying_cpu(unsigned int cpu)
 {
+	struct ambarella_clkevt *local_clkevt = per_cpu_ptr(&percpu_clkevt, cpu);
 	struct clock_event_device *clkevt = &local_clkevt->clkevt;
 
 	clkevt->set_state_shutdown(clkevt);
 	disable_irq(clkevt->irq);
+
+	return 0;
 }
-
-static int ambarella_local_clkevt_notify(struct notifier_block *self,
-					   unsigned long action, void *hcpu)
-{
-	/* Grab cpu pointer in each case to avoid spurious
-	 * preemptible warnings */
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_STARTING:
-		ambarella_local_timer_setup(this_cpu_ptr(&percpu_clkevt));
-		break;
-	case CPU_DYING:
-		ambarella_local_timer_stop(this_cpu_ptr(&percpu_clkevt));
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block ambarella_local_clkevt_nb = {
-	.notifier_call = ambarella_local_clkevt_notify,
-};
 
 static int __init ambarella_local_clockevent_init(struct device_node *np)
 {
@@ -468,12 +450,13 @@ static int __init ambarella_local_clockevent_init(struct device_node *np)
 
 	of_node_put(np);
 
-	rval = register_cpu_notifier(&ambarella_local_clkevt_nb);
-	if (rval < 0)
+	/* Install hotplug callbacks which configure the timer on this CPU */
+	rval = cpuhp_setup_state(CPUHP_AP_DUMMY_TIMER_STARTING,
+				"AP_AMBARELLA_TIMER_STARTING",
+				ambarella_local_timer_starting_cpu,
+				ambarella_local_timer_dying_cpu);
+	if (rval)
 		return rval;
-
-	/* Immediately configure the timer on the boot CPU */
-	ambarella_local_timer_setup(this_cpu_ptr(&percpu_clkevt));
 
 	return 0;
 }

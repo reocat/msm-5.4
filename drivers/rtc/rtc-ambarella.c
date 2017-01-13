@@ -201,7 +201,6 @@ static int ambrtc_probe(struct platform_device *pdev)
 {
 	struct ambarella_rtc *ambrtc;
 	struct resource *res;
-	struct device_node *np = pdev->dev.of_node;
 	int ret;
 
 	ambrtc = devm_kzalloc(&pdev->dev, sizeof(*ambrtc), GFP_KERNEL);
