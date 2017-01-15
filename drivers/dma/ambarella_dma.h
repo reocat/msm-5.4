@@ -52,7 +52,6 @@ struct ambdma_desc {
 struct ambdma_chan {
 	struct dma_chan			chan;
 	struct ambdma_device		*amb_dma;
-	int				id;
 
 	struct tasklet_struct		tasklet;
 	spinlock_t			lock;
@@ -70,12 +69,11 @@ struct ambdma_chan {
 };
 
 struct ambdma_device {
-	struct dma_device		dma_slave;
-	struct dma_device		dma_memcpy;
+	struct dma_device		dma_dev;
 	struct ambdma_chan		amb_chan[NUM_DMA_CHANNELS];
 	struct dma_pool			*lli_pool;
 	void __iomem			*regbase;
-	void __iomem			*regsel;
+	struct regmap			*reg_scr;
 	int				dma_irq;
 	/* dummy_desc is used to stop DMA immediately. */
 	struct ambdma_lli		*dummy_lli;
@@ -85,9 +83,7 @@ struct ambdma_device {
 	/* support pause/resume/stop */
 	u32				support_prs : 1;
 	u32				nr_channels;
-	u32				dma_requests;
-	u32				dma_channel_type[NUM_DMA_CHANNELS];
-	u32				dma_channel_sel[NUM_DMA_CHANNELS];
+	u32				nr_requests;
 };
 
 
@@ -118,27 +114,27 @@ static inline struct ambdma_chan *to_ambdma_chan(struct dma_chan *chan)
 
 static inline void __iomem *dma_chan_ctr_reg(struct ambdma_chan *amb_chan)
 {
-	return amb_chan->amb_dma->regbase + 0x300 + (amb_chan->id << 4);
+	return amb_chan->amb_dma->regbase + 0x300 + (amb_chan->chan.chan_id << 4);
 }
 
 static inline void __iomem *dma_chan_src_reg(struct ambdma_chan *amb_chan)
 {
-	return amb_chan->amb_dma->regbase + 0x304 + (amb_chan->id << 4);
+	return amb_chan->amb_dma->regbase + 0x304 + (amb_chan->chan.chan_id << 4);
 }
 
 static inline void __iomem *dma_chan_dst_reg(struct ambdma_chan *amb_chan)
 {
-	return amb_chan->amb_dma->regbase + 0x308 + (amb_chan->id << 4);
+	return amb_chan->amb_dma->regbase + 0x308 + (amb_chan->chan.chan_id << 4);
 }
 
 static inline void __iomem *dma_chan_sta_reg(struct ambdma_chan *amb_chan)
 {
-	return amb_chan->amb_dma->regbase + 0x30c + (amb_chan->id << 4);
+	return amb_chan->amb_dma->regbase + 0x30c + (amb_chan->chan.chan_id << 4);
 }
 
 static inline void __iomem *dma_chan_da_reg(struct ambdma_chan *amb_chan)
 {
-	return amb_chan->amb_dma->regbase + 0x380 + (amb_chan->id << 2);
+	return amb_chan->amb_dma->regbase + 0x380 + (amb_chan->chan.chan_id << 2);
 }
 
 static inline int ambdma_desc_is_error(struct ambdma_desc *amb_desc)

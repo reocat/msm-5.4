@@ -599,12 +599,12 @@
 
 		dma: dma@e0005000 {
 			compatible = "ambarella,dma";
-			reg = <0xe0005000 0x1000 0xe001b02c 4>;
+			reg = <0xe0005000 0x1000>;
 			interrupts = <0 69 0x4>;
-			#dma-cells = <2>;
+			#dma-cells = <1>;
 			dma-channels = <8>;
-			dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
-			dma-channel-sel = <4 5 0 0 8 9 11 10>;
+			dma-requests = <16>;
+			amb,scr-regmap = <&scratchpad_syscon>;
 			/* support pause/resume/stop */
 			amb,support-prs;
 		};
@@ -653,7 +653,7 @@
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma 2 1>, <&dma 3 1>;
+			dmas = <&dma 8>, <&dma 9>;
 			dma-names = "tx", "rx";
 			/* need to select pinctrl setup in board dts */
 		};
@@ -678,7 +678,7 @@
 			pinctrl-0 = <&i2s0_pins>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
-			dmas = <&dma 5 1>, <&dma 4 1>;
+			dmas = <&dma 10>, <&dma 11>;
 			dma-names = "tx", "rx";
 		};
 
@@ -755,7 +755,6 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
-			amb,ext-gtx-clk125;
 			/*amb,tx-clk-invert;*/
 		};
 
@@ -769,7 +768,7 @@
 			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma 0 1>, <&dma 1 1>;
+			dmas = <&dma 0>, <&dma 1>;
 			dma-names = "tx", "rx";
 		};
 

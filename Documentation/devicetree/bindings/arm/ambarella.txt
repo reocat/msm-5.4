@@ -296,35 +296,58 @@ b) GIC:
 =============
 
 
-i) Properties
+i) Reference
+------------
+Please see Documentation/devicetree/bindings/dma/dma.txt
+
+ii) Description
+---------------
+Each DMA clients like I2S, UART and etc has to specify the dmas property
+in device tree if it needs DMA to transfer data.
+
+There are two types of DMA controller,
+- doesn't support dma channel selection:
+  the integer cell of dmas property is used to specify the DMA channel number.
+  please see DMA section of PRM.
+- supports dma channel selction:
+  the integer cell of dmas property is used to specify the DMA request number.
+  please see AHBSP_dma_channel_sel register description in Scratchpad section
+  of PRM.
+
+PS: latest SoCs should support dma channel selection.
+
+iii) Properties
 -------------
 Required properties:
 - compatible: should be "ambarella,dma".
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the DMA controller.
-- #dma-cells: Must be at least 1. Used to provide DMA controller
-			specific information. See DMA client binding below for
-			more details.
-- dma-channels: Number of DMA channels supported by the controller.
-- dma-trans-type: specifies the dma channel use type. 0: memcpy, 1: slave.
+- #dma-cells: should be 1.
+- dma-channels: number of DMA channels supported by the controller.
+- dma-reqeusts: number of DMA requestors supported by the controller.
+  For SoCs that don't support dma channel selection, dma-requests is equal
+  to dma-channels.
+  For SoCs that support dma channel selection, dma-requests is usually larger
+  than dma-channels, please see AHBSP_dma_channel_sel register description in
+  Scratchpad section of PRM.
 
 Optional properties:
+- amb,scr-regmap: phandle of Scratchpad registers, should be specified if the
+  SoC that support dma channel selection.
 - amb,support-prs: should be specified for SoC that supports PAUSE/RESUME/STOP.
-- dma-channel-sel: should be specified for Soc that support dma channel sel.
-  different value is used for selecting the device.
-  e.g., 0 for ssi0_tx, 1 for ssi0_rx, 10 for i2s_tx, 11 for i2s_rx.
 
-ii) Example
+iv) Example
 -----------
 	dma@e0005000 {
 		compatible = "ambarella,dma";
 		reg = <0xe0005000 0x1000>;
-		interrupts = <15 0x4>;
-		#dma-cells = <2>;
+		interrupts = <0 69 0x4>;
+		#dma-cells = <1>;
 		dma-channels = <8>;
-		dma-requests = <12>;
-		dma-trans-type = <1 1 0 0 1 1 1 1>; /* 0-memcpy ,1-slave*/
-		dma-channel-sel = <4 5 0 0 8 9 11 10>;
+		dma-requests = <16>;
+		amb,scr-regmap = <&scratchpad_syscon>;
+		/* support pause/resume/stop */
+		amb,support-prs;
 	};
 
 
@@ -344,6 +367,7 @@ Required properties:
 - #size-cells: should be 1.
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the NAND controller.
+- amb,rct-regmap: phandle of RCT registers.
 
 Optional properties:
 - nand-on-flash-bbt: please see Reference.
@@ -411,6 +435,8 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
+- dmas: please see Documentation/devicetree/bindings/dma/dma.txt
+- dma-names: please see Documentation/devicetree/bindings/dma/dma.txt.
 - amb,i2s-channels: should be one of these values: 2, 4, 6.
 - amb,default-mclk: specifies the initial mclk frequency in HZ.
 
@@ -437,6 +463,8 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the UDC controller.
 - amb,usbphy: specifies the phandle to USB PHY.
+- amb,rct-regmap: phandle of RCT registers.
+- amb,scr-regmap: phandle of Scratchpad registers.
 
 Optional properties:
 - amb,dma-addr-fix: should be specified only for S2.
@@ -550,6 +578,11 @@ Required properties:
 - #size-cells: should be 0.
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the ethernet controller.
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this controller.
+- amb,rct-regmap: phandle of RCT registers.
+- amb,scr-regmap: phandle of Scratchpad registers.
+- phy-mode: shuold be specified according to POC setting and PHY mode
 
 Optional properties:
 - pwr-gpios: specifies the GPIO to control PHY power.
@@ -570,6 +603,7 @@ Optional properties:
 - amb,tx-clk-invert: should be specified if inverting the Tx clk,
   take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
+
 ii) Example
 -----------
 	mac0: ethernet@e000e000 {
@@ -578,6 +612,9 @@ ii) Example
 		#size-cells = <0>;
 		reg = <0xe000e000 0x2000>;
 		interrupts = <27 0x4>;
+		phy-mode = "rmii";
+		amb,rct-regmap = <&rct_syscon>;
+		amb,scr-regmap = <&scratchpad_syscon>;
 		amb,tx-ring-size = <32>;
 		amb,rx-ring-size = <64>;
 		amb,ipc-tx;
@@ -603,6 +640,8 @@ Required properties:
 - #size-cells: should be 0.
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the SPI controller.
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this controller.
 - amb,clk-freq: specifies the PLL frequence in HZ.
 - amb,msb-first-only: HW only supports msb first tx/rx, for A5S/S2/S2E, please
   set this flag.
@@ -611,8 +650,8 @@ Required properties:
 Optional properties:
 - amb,dma-used: use dma for TX/RX, only can be specified if SPI channel
   supports dma mode.
-- dmas: specify dma channel
-- dma-names: specify dma channel name.
+- dmas: please see Documentation/devicetree/bindings/dma/dma.txt
+- dma-names: please see Documentation/devicetree/bindings/dma/dma.txt.
 
 iii) Subnode
 ------------
@@ -657,6 +696,8 @@ Required properties:
 - compatible: should be "ambarella,spi-slave".
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the slave spi controller.
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this controller.
 
 ii) Example
 -----------
@@ -715,8 +756,8 @@ the first function is GPIO.
 The PINCTRL node acts as a container for an arbitrary number of subnodes. And
 these subnodes will fall into two categories.
 One is for GPIO, please see the "GPIO node" section for detail, and another one
-is to set up a group of pins for a function, both pin configurations(TODO) and
-mux selection, and it's called group node in the binding document.
+is to set up a group of pins for a function, both pin configurations and mux
+selection, and it's called group node in the binding document.
 
 
 iii) Properties
@@ -889,6 +930,8 @@ Optional properties:
   supports dma mode.
 - amb,rxdma-used: use dma for receiving, should be specified if uart hardware
   supports dma mode.
+- dmas: please see Documentation/devicetree/bindings/dma/dma.txt
+- dma-names: please see Documentation/devicetree/bindings/dma/dma.txt.
 
 ii) Example
 -----------
@@ -1028,7 +1071,7 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for adc.
 - clock-frequency: desired ADC clock frequency in Hz.
-- amb,rct-regmap: RCT registers
+- amb,rct-regmap: phandle of RCT registers.
 
 Optional properties:
 - amb,channels-used: specifies which channels are used, bit0 for ch0, bit1 for
@@ -1052,6 +1095,7 @@ ii) Example
 		reg = <0xe801d000 0x1000>;
 		interrupts = <34 0x4>;
 		clock-frequency = <3000000>;
+		amb,rct-regmap = <&rct_syscon>;
 		amb,channels-used = <0x0A>;
 
 		amb,keymap =
@@ -1118,6 +1162,7 @@ Required properties:
 - timeout-sec: the watchdog timeout in seconds.
 - amb,non-bootstatus: don't support to report boot status, should be
   specified only for A5S.
+- amb,rct-regmap: phandle of RCT registers.
 
 ii) Example
 -----------

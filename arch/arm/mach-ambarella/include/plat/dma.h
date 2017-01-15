@@ -224,8 +224,6 @@
 
 #ifndef __ASSEMBLER__
 
-extern int ambarella_dma_channel_id(void *chan);
-
 #endif /* __ASSEMBLER__ */
 
 /* ==========================================================================*/
