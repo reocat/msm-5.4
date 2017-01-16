@@ -451,7 +451,7 @@ static int __init ambarella_local_clockevent_init(struct device_node *np)
 	of_node_put(np);
 
 	/* Install hotplug callbacks which configure the timer on this CPU */
-	rval = cpuhp_setup_state(CPUHP_AP_DUMMY_TIMER_STARTING,
+	rval = cpuhp_setup_state(CPUHP_AP_ARM_ARCH_TIMER_STARTING,
 				"AP_AMBARELLA_TIMER_STARTING",
 				ambarella_local_timer_starting_cpu,
 				ambarella_local_timer_dying_cpu);
