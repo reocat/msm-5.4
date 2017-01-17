@@ -2,6 +2,8 @@ config SND_AMBARELLA_SOC
 	tristate "SoC Audio for the Ambarella chips"
 	depends on ARCH_AMBARELLA && SND_SOC
 	select SND_SOC_GENERIC_DMAENGINE_PCM
+	select SND_AMBARELLA_SOC_I2S
+	select SND_SOC_AMBARELLA_DUMMY
 	help
 	  Say Y or M if you want to add support for codecs attached to
 	  the AMBARELLA I2S interface. You will also need
@@ -9,24 +11,6 @@ config SND_AMBARELLA_SOC
 
 config SND_AMBARELLA_SOC_I2S
 	tristate
-
-menuconfig SND_AMBARELLA_BOARD
-	tristate "Ambarella Board Type"
-	depends on SND_AMBARELLA_SOC
-	help
-	  Say Y or M to select specific ambarella board.
-
-if SND_AMBARELLA_BOARD
-
-config AMBA_BOARD
-	tristate "Ambarella General Board"
-	depends on SND_AMBARELLA_SOC
-	select SND_AMBARELLA_SOC_I2S
-	select SND_SOC_AMBARELLA_DUMMY
-	help
-	  Say Y or M if you want to use ALSA driver on Ambarella General Board.
-
-endif
 
 menuconfig SND_AMBARELLA_CODEC
 	tristate "Select Codec for Ambarella Platform"

@@ -135,8 +135,8 @@
 #define AK4951_PLL_13_5MHZ			(12 << 4)
 #define AK4951_PLL_27MHZ			(13 << 4)
 
-#define AK4951_MCLK_IN	0
-#define AK4951_BCLK_IN		1
+#define AK4951_BCLK_IN		0
+#define AK4951_MCLK_IN	1
 #define AK4951_MCLK_IN_BCLK_OUT 2
 
 /* AK4954_06_MODE_CONTROL2 (0x06) Fields */

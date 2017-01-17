@@ -185,7 +185,7 @@ static int amba_general_board_hw_params(struct snd_pcm_substream *substream,
 		goto hw_params_exit;
 	}
 
-	rval = snd_soc_dai_set_clkdiv(cpu_dai, AMBARELLA_CLKDIV_LRCLK, clk.i2s_div);
+	rval = snd_soc_dai_set_clkdiv(cpu_dai, 0, clk.i2s_div);
 	if (rval < 0) {
 		pr_err("can't set cpu MCLK/SF ratio\n");
 		goto hw_params_exit;

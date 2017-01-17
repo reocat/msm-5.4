@@ -185,7 +185,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
-	u32 clock_reg;
+	u32 clock_reg, clk_div;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable(priv_data);
@@ -272,12 +272,16 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	writel_relaxed(i2s_intf->multi24, priv_data->regbase + I2S_24BITMUX_MODE_OFFSET);
 
 	/* Set clock */
-	clk_set_rate(priv_data->mclk, priv_data->i2s_intf.mclk);
+	clk_set_rate(priv_data->mclk, i2s_intf->mclk);
 
 	mutex_lock(&clock_reg_mutex);
+	/* bclk = clk_au / (2 * (clk_div + 1)) */
+	clk_div = i2s_intf->channels * i2s_intf->sfreq * (i2s_intf->word_len + 1);
+	clk_div = i2s_intf->mclk / (2 * clk_div) - 1;
+
 	clock_reg = readl_relaxed(priv_data->regbase + I2S_CLOCK_OFFSET);
 	clock_reg &= ~DAI_CLOCK_MASK;
-	clock_reg |= i2s_intf->div;
+	clock_reg |= clk_div;
 
 	if (priv_data->dai_master == true)
 		clock_reg |= I2S_CLK_MASTER_MODE;
@@ -298,7 +302,7 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	msleep(1);
 
 	/* Notify HDMI that the audio interface is changed */
-	ambarella_audio_notify_transition(AUDIO_NOTIFY_SETHWPARAMS, &priv_data->i2s_intf);
+	ambarella_audio_notify_transition(AUDIO_NOTIFY_SETHWPARAMS, i2s_intf);
 
 	return 0;
 
@@ -386,33 +390,18 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 {
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 
-	switch (clk_id) {
-	case AMBARELLA_CLKSRC_ONCHIP:
-		priv_data->i2s_intf.clksrc = clk_id;
-		priv_data->i2s_intf.mclk = freq;
-		break;
-
-	case AMBARELLA_CLKSRC_EXTERNAL:
-	default:
-		printk("CLK SOURCE (%d) is not supported yet\n", clk_id);
+	if (clk_id != 0) { /* AMBARELLA_CLKSRC_ONCHIP */
+		printk("clk source (%d) is not supported yet\n", clk_id);
 		return -EINVAL;
 	}
 
-	return 0;
-}
-
-static int ambarella_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai,
-		int div_id, int div)
-{
-	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
-
-	switch (div_id) {
-	case AMBARELLA_CLKDIV_LRCLK:
-		priv_data->i2s_intf.div = div;
-		break;
-	default:
+	if (dir != SND_SOC_CLOCK_OUT) {
+		printk("clk dir (%d) is not supported yet\n", dir);
 		return -EINVAL;
 	}
+
+	priv_data->i2s_intf.clksrc = clk_id;
+	priv_data->i2s_intf.mclk = freq;
 
 	return 0;
 }
@@ -487,6 +476,9 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	clk_set_rate(priv_data->mclk, priv_data->default_mclk);
 
+	/* bclk = clk_au / (2 * (clk_div + 1)) */
+	clk_div = priv_data->default_mclk / (2 * 2 * 16 * sfreq) - 1;
+
 	/*
 	 * Dai default smapling rate, polarity configuration.
 	 * Note: Just be configured, actually BCLK and LRCLK will not
@@ -498,7 +490,6 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	i2s_intf->mode = I2S_I2S_MODE;
 	i2s_intf->clksrc = AMBARELLA_CLKSRC_ONCHIP;
 	i2s_intf->mclk = priv_data->default_mclk;
-	i2s_intf->div = clk_div;
 	i2s_intf->sfreq = sfreq;
 	i2s_intf->word_len = 15;
 	i2s_intf->word_pos = 0;
@@ -536,7 +527,6 @@ static const struct snd_soc_dai_ops ambarella_i2s_dai_ops = {
 	.trigger = ambarella_i2s_trigger,
 	.set_fmt = ambarella_i2s_set_fmt,
 	.set_sysclk = ambarella_i2s_set_sysclk,
-	.set_clkdiv = ambarella_i2s_set_clkdiv,
 };
 
 static struct snd_soc_dai_driver ambarella_i2s_dai = {

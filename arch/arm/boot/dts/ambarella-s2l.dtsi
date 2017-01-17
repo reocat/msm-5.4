@@ -533,6 +533,7 @@
 
 		i2s0: i2s@e001a000 {
 			compatible = "ambarella,i2s";
+			#sound-dai-cells = <0>;
 			reg = <0xe001a000 0x1000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2s0_pins>;

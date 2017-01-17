@@ -159,7 +159,6 @@ struct ambarella_i2s_interface {
 	u32 mode;
 	u32 clksrc;
 	u32 mclk;
-	u32 div;
 	u32 sfreq;
 	u32 channels;
 	u32 word_len;
@@ -186,8 +185,6 @@ enum Audio_Notify_Type
 #define AMBARELLA_CLKSRC_CLK_SI			0x2
 #define AMBARELLA_CLKSRC_EXTERNAL		0x3
 #define AMBARELLA_CLKSRC_LVDS_IDSP_SCLK		0x4
-
-#define AMBARELLA_CLKDIV_LRCLK			0
 
 /* ==========================================================================*/
 
