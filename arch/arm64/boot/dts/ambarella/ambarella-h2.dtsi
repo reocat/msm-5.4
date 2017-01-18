@@ -749,6 +749,7 @@
 			compatible = "ambarella,dmic";
 			reg = <0xe0028000 0x1000>;
 			amb,scr-regmap = <&scratchpad_syscon>;
+			#sound-dai-cells = <0>;
 		};
 
 		scratchpad_syscon: scratchpad_syscon@e001b000 {
@@ -872,6 +873,7 @@
 		dummycodec: codec@0 {
 			compatible = "ambarella,dummycodec";
 			reg = <0>;
+			#sound-dai-cells = <0>;
 		};
 
 		framebuffer@1 {
