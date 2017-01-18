@@ -16,6 +16,7 @@
 	aliases {
 		serial0 = &uart0;
 		serial1 = &uart1;
+		serial2 = &uart2;
 		nand = &nand0;
 		spinor = &spinor0;
 		sd0 = &sdmmc0;
@@ -130,6 +131,7 @@
 			interrupts = <0 61 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins>;
+			clocks = <&gclk_uart0>;
 			status = "ok";
 			/* amb,tx-fifo-fix; */
 		};
@@ -649,6 +651,7 @@
 			interrupts = <0 80 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
+			clocks = <&gclk_uart1>;
 			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
@@ -664,7 +667,8 @@
 			interrupts = <0 93 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart2_pins_b &uart2_flow_pins_b>;
-			status = "ok";
+			clocks = <&gclk_uart2>;
+			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,txdma-used; */
 			/* amb,rxdma-used; */
@@ -1147,13 +1151,37 @@
 			amb,div-shift = <0>;
 		};
 
-		gclk_uart: gclk-uart {
+		gclk_uart0: gclk-uart0 {
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
 			reg = <0xec170038 4>, <0xec1701c8 4>;
 			clocks = <&osc>, <&gclk_cortex>, <&gclk_dummy>, <&pll_out_enet>;
-			clock-output-names = "gclk_uart";
-			assigned-clocks = <&gclk_uart>;
+			clock-output-names = "gclk_uart0";
+			assigned-clocks = <&gclk_uart0>;
+			assigned-clock-parents = <&pll_out_enet>;
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_uart1: gclk-uart1 {
+			#clock-cells = <0>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec17075C 4>, <0xec170760 4>;
+			clocks = <&osc>, <&gclk_cortex>, <&gclk_dummy>, <&pll_out_enet>;
+			clock-output-names = "gclk_uart1";
+			assigned-clocks = <&gclk_uart1>;
+			assigned-clock-parents = <&osc>;
+			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_uart2: gclk-uart2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xec170764 4>, <0xec170768 4>;
+			clocks = <&osc>, <&gclk_cortex>, <&gclk_dummy>, <&pll_out_enet>;
+			clock-output-names = "gclk_uart2";
+			assigned-clocks = <&gclk_uart2>;
 			assigned-clock-parents = <&osc>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;

@@ -95,6 +95,7 @@
 			interrupts = <9 0x04>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins>;
+			clocks = <&gclk_uart>;
 			status = "ok";
 			/* amb,tx-fifo-fix; */
 		};
@@ -105,6 +106,7 @@
 			interrupts = <25 0x04>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins>;
+			clocks = <&gclk_uart>;
 			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
@@ -116,6 +118,7 @@
 			compatible = "ambarella,uart";
 			reg = <0x70014000 0x100>;
 			interrupts = <91 0x04>;
+			clocks = <&gclk_uart>;
 			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,tx-fifo-fix; */
@@ -125,6 +128,7 @@
 			compatible = "ambarella,uart";
 			reg = <0x70015000 0x100>;
 			interrupts = <92 0x04>;
+			clocks = <&gclk_uart>;
 			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,tx-fifo-fix; */

@@ -1169,20 +1169,11 @@ static void serial_ambarella_console_write(struct console *co,
 static int __init serial_ambarella_console_setup(struct console *co,
 	char *options)
 {
-	struct ambarella_uart_port *amb_port;
 	struct uart_port *port;
 	int baud = 115200, bits = 8, parity = 'n', flow = 'n';
 
 	if (co->index < 0 || co->index >= serial_ambarella_reg.nr)
 		co->index = 0;
-
-	amb_port = &ambarella_port[co->index];
-
-	amb_port->uart_pll = clk_get(NULL, "gclk_uart");
-	if (IS_ERR(amb_port->uart_pll)) {
-		pr_err("No clock available for serial console\n");
-		return -ENODEV;
-	}
 
 	port = &ambarella_port[co->index].port;
 	if (!port->membase) {
@@ -1274,6 +1265,12 @@ static int __init serial_ambarella_console_init(void)
 
 	ambarella_port[id].port.membase = of_iomap(np, 0);
 
+	ambarella_port[id].uart_pll = of_clk_get(np, 0);
+	if (IS_ERR(ambarella_port[id].uart_pll)) {
+		pr_err("No clock available for serial console\n");
+		return -ENODEV;
+	}
+
 	register_console(&serial_ambarella_console);
 
 #ifdef CONFIG_PM
@@ -1334,7 +1331,7 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 
 	amb_port = &ambarella_port[id];
 
-	amb_port->uart_pll = clk_get(NULL, "gclk_uart");
+	amb_port->uart_pll = of_clk_get(pdev->dev.of_node, 0);
 	if (IS_ERR(amb_port->uart_pll)) {
 		dev_err(&pdev->dev, "Get uart clk failed!\n");
 		return PTR_ERR(amb_port->uart_pll);

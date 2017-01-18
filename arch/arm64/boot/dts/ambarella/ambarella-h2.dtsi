@@ -130,6 +130,7 @@
 			interrupts = <0 108 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins>;
+			clocks = <&gclk_uart>;
 			status = "ok";
 			/* amb,tx-fifo-fix; */
 		};
@@ -597,6 +598,7 @@
 			interrupts = <0 82 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins_c &uart1_flow_pins_c>;
+			clocks = <&gclk_uart>;
 			status = "ok";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
