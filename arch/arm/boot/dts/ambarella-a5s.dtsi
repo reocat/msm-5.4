@@ -98,7 +98,6 @@
 			pinctrl-0 = <&i2c0_pins>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
-			amb,bulk-num = <60>;
 			status = "disabled";
 	        };
 
@@ -112,7 +111,6 @@
 			pinctrl-0 = <&i2c1_pins>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x08>;
-			amb,bulk-num = <60>;
 			status = "disabled";
 	        };
 

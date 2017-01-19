@@ -81,6 +81,7 @@ struct ambarella_i2c_dev_info {
 	u32					clk_limit;
 	u32					bulk_num;
 	u32					duty_cycle;
+	u32					turbo_mode;
 
 	struct i2c_msg				*msgs;
 	__u16					msg_num;
@@ -222,21 +223,16 @@ static inline void ambarella_i2c_bulk_write(
 	struct ambarella_i2c_dev_info *pinfo,
 	__u32 fifosize)
 {
-	do {
+	while (fifosize--) {
 		amba_writeb(pinfo->regbase + IDC_FMDATA_OFFSET,
-			pinfo->msgs->buf[pinfo->msg_index]);
-		pinfo->msg_index++;
-		fifosize--;
+			pinfo->msgs->buf[pinfo->msg_index++]);
+		if (pinfo->msg_index >= pinfo->msgs->len)
+			break;
+	};
 
-		if (pinfo->msg_index >= pinfo->msgs->len) {
-			amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET,
-				IDC_FMCTRL_IF | IDC_FMCTRL_STOP);
-
-			return;
-		}
-	} while (fifosize > 1);
-
-	amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET, IDC_FMCTRL_IF);
+	/* the last fifo data MUST be STOP+IF */
+	amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET,
+		IDC_FMCTRL_IF | IDC_FMCTRL_STOP);
 }
 
 static inline void ambarella_i2c_start_bulk_msg_write(
@@ -246,6 +242,7 @@ static inline void ambarella_i2c_start_bulk_msg_write(
 
 	pinfo->state = AMBA_I2C_STATE_BULK_WRITE;
 
+	amba_writel(pinfo->regbase + IDC_CTRL_OFFSET, 0);
 	amba_writel(pinfo->regbase + IDC_FMCTRL_OFFSET, IDC_FMCTRL_START);
 
 	if (pinfo->msgs->flags & I2C_M_TEN) {
@@ -274,7 +271,7 @@ static inline void ambarella_i2c_start_current_msg(
 
 	if (pinfo->msgs->flags & I2C_M_RD) {
 		ambarella_i2c_start_single_msg(pinfo);
-	} else if (pinfo->msgs->len > pinfo->bulk_num) {
+	} else if (pinfo->turbo_mode) {
 		ambarella_i2c_start_bulk_msg_write(pinfo);
 	} else {
 		ambarella_i2c_start_single_msg(pinfo);
@@ -433,38 +430,19 @@ amba_i2c_irq_write:
 		}
 		break;
 	case AMBA_I2C_STATE_BULK_WRITE:
-		if (ambarella_i2c_check_ack(pinfo, &control_reg,
-			CONFIG_I2C_AMBARELLA_BULK_RETRY_NUM) ==	IDC_CTRL_ACK) {
-			amba_writel(pinfo->regbase + IDC_CTRL_OFFSET,
-				IDC_CTRL_ACK);
-			if (pinfo->msg_index >= pinfo->msgs->len) {
-				if (pinfo->msg_num > 1) {
-					pinfo->msgs++;
-					pinfo->state = AMBA_I2C_STATE_START_NEW;
-					pinfo->msg_num--;
-					goto amba_i2c_irq_start_new;
-				}
-				ambarella_i2c_stop(pinfo,
-					AMBA_I2C_STATE_IDLE, &ack_control);
-			} else {
-				ambarella_i2c_bulk_write(pinfo,
-					IDC_FIFO_BUF_SIZE);
-			}
-			goto amba_i2c_irq_exit;
-		} else {
-			ack_control = IDC_CTRL_ACK;
+		while (((status_reg & 0xF0) != 0x50) && ((status_reg & 0xF0) != 0x00)) {
+			cpu_relax();
+			status_reg = amba_readl(pinfo->regbase + IDC_STS_OFFSET);
+		};
+		if (pinfo->msg_num > 1) {
+			pinfo->msgs++;
+			pinfo->state = AMBA_I2C_STATE_START_NEW;
+			pinfo->msg_num--;
+			goto amba_i2c_irq_start_new;
 		}
-		break;
+		ambarella_i2c_stop(pinfo, AMBA_I2C_STATE_IDLE, &ack_control);
+		goto amba_i2c_irq_exit;
 	default:
-		if (status_reg & IDC_STS_FIFO_EMP) { /* for bulk write fifo mode */
-			if (pinfo->state == AMBA_I2C_STATE_IDLE) {
-				goto amba_i2c_irq_exit;
-			} else if (pinfo->state == AMBA_I2C_STATE_NO_ACK) {
-				ack_control = IDC_CTRL_STOP | IDC_CTRL_ACK;
-				amba_writel(pinfo->regbase + IDC_CTRL_OFFSET, ack_control);
-				goto amba_i2c_irq_exit;
-			}
-		}
 		dev_err(pinfo->dev, "ambarella_i2c_irq in wrong state[0x%x]\n",
 			pinfo->state);
 		dev_err(pinfo->dev, "status_reg[0x%x]\n", status_reg);
@@ -487,8 +465,27 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	int				errorCode = -EPERM;
 	int				retryCount;
 	long				timeout;
+	int				i;
 
 	pinfo = (struct ambarella_i2c_dev_info *)i2c_get_adapdata(adap);
+
+	/* check data length for FIFO mode */
+	if (unlikely(pinfo->turbo_mode)) {
+		pinfo->msgs = msgs;
+		pinfo->msg_num = num;
+		for (i = 0 ; i < pinfo->msg_num; i++) {
+			if ((!(pinfo->msgs->flags & I2C_M_RD)) &&
+				(pinfo->msgs->len > IDC_FIFO_BUF_SIZE - 2)) {
+				dev_err(pinfo->dev,
+					"Turbo(FIFO) mode can only support <= "
+					"%d bytes writing, but message[%d]: %d bytes applied!\n",
+					IDC_FIFO_BUF_SIZE - 2, i, pinfo->msgs->len);
+
+				return -EPERM;
+			}
+			pinfo->msgs++;
+		}
+	}
 
 	down(&pinfo->system_event_sem);
 
@@ -594,12 +591,6 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	if (pinfo->clk_limit < 1000 || pinfo->clk_limit > 400000)
 		pinfo->clk_limit = 100000;
 
-	errorCode = of_property_read_u32(np, "amb,bulk-num", &pinfo->bulk_num);
-	if (errorCode < 0) {
-		dev_err(&pdev->dev, "Get bulk-num failed!\n");
-		return -ENODEV;
-	}
-
 	errorCode = of_property_read_u32(np, "amb,duty-cycle", &pinfo->duty_cycle);
 	if (errorCode < 0) {
 		dev_dbg(&pdev->dev, "Missing duty-cycle, assuming 1:1!\n");
@@ -608,6 +599,14 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 
 	if (pinfo->duty_cycle > 2)
 		pinfo->duty_cycle = 2;
+
+	/* check if using turbo mode */
+	if (of_find_property(pdev->dev.of_node, "amb,turbo-mode", NULL)) {
+		pinfo->turbo_mode = 1;
+		dev_info(&pdev->dev,"Turbo(FIFO) mode is used(ignore device ACK)!\n");
+	} else {
+		pinfo->turbo_mode = 0;
+	}
 
 	init_waitqueue_head(&pinfo->msg_wait);
 	sema_init(&pinfo->system_event_sem, 1);
