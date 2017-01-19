@@ -17,7 +17,7 @@
 #
 
 obj-y += init_misc.o iav_helper.o event.o highres_timer.o
-obj-y += ambasyncproc.o ambsyncproc.o ambuevent.o
+obj-y += ambsyncproc.o ambuevent.o
 
 obj-$(CONFIG_AMBARELLA_SUPPORT_GDMA) += gdma.o
 
