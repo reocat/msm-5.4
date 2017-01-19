@@ -965,8 +965,10 @@ Required properties:
 - amb,i2c-class:
   a) 0x81: normal I2C controller
   b) 0x08: I2C controller dedicated to HDMI
-- amb,bulk-num: the maximal number of data which can be transfered in a
-  single msg, recommended value is 60.
+- amb,turbo-mode: use turbo(FIFO) write mode, batched data will be write into
+FIFO directly, but there're 2 restriction for this mode:
+  1) FIFO mode will ignore device ACK.
+  2) FIFO mode can only write less than or equal to 61 data(FIFO depth) into FIFO at a time.
 - amb,duty-cycle: the duty cycle of clock, and the value can be:
     0 = duty cycle 1:1, this is the default setting.
     1 = duty cycle 2:3.
@@ -995,7 +997,7 @@ iii) Example
 		pinctrl-0 = <&i2c0_pins>;
 		clock-frequency = <100000>;
 		amb,i2c-class = <0x81>;
-		amb,bulk-num = <60>;
+		amb,turbo-mode;
 		amb,duty-cycle = <0>;
 		status = "ok";
 

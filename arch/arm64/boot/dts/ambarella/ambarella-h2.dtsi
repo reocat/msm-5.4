@@ -146,7 +146,6 @@
 			clocks = <&gclk_apb>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
-			amb,bulk-num = <60>;
 			status = "disabled";
 	        };
 
@@ -161,7 +160,6 @@
 			clocks = <&gclk_apb>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x08>;
-			amb,bulk-num = <60>;
 			status = "disabled";
 	        };
 
@@ -176,7 +174,6 @@
 			pinctrl-0 = <&i2c2_pins>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
-			amb,bulk-num = <60>;
 			status = "disabled";
 	        };
 
