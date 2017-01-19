@@ -2296,6 +2296,39 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	enum of_gpio_flags flags;
 	int ret_val, hw_intf;
 
+	for_each_child_of_node(np, phy_np) {
+		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
+			continue;
+
+		lp->pwr_gpio = of_get_named_gpio_flags(phy_np, "pwr-gpios", 0, &flags);
+		lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
+		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		/* request gpio for PHY power control */
+		if (gpio_is_valid(lp->pwr_gpio)) {
+			ret_val = devm_gpio_request(lp->ndev->dev.parent,
+				lp->pwr_gpio, "phy power");
+			if (ret_val < 0) {
+				dev_err(lp->ndev->dev.parent, "Failed to request pwr-gpios!\n");
+				return -EBUSY;
+			}
+			gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
+		}
+
+		/* request gpio for PHY reset control */
+		if (gpio_is_valid(lp->rst_gpio)) {
+			ret_val = devm_gpio_request(lp->ndev->dev.parent,
+				lp->rst_gpio, "phy reset");
+			if (ret_val < 0) {
+				dev_err(lp->ndev->dev.parent, "Failed to request rst-gpios!\n");
+				return -EBUSY;
+			}
+			gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
+		}
+	}
+
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
 		lp->fixed_speed = SPEED_UNKNOWN;
@@ -2391,17 +2424,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	else
 		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 0<<31);
 
-	for_each_child_of_node(np, phy_np) {
-		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
-			continue;
-
-		lp->pwr_gpio = of_get_named_gpio_flags(phy_np, "pwr-gpios", 0, &flags);
-		lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
-		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-	}
-
 	return 0;
 }
 
@@ -2480,28 +2502,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	if (lp->ipc_tx)
 		ndev->features |= NETIF_F_HW_CSUM;
-
-	/* request gpio for PHY power control */
-	if (gpio_is_valid(lp->pwr_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev,
-			lp->pwr_gpio, "phy power");
-		if (ret_val < 0) {
-			dev_err(&pdev->dev, "Failed to request pwr-gpios!\n");
-			goto ambeth_drv_probe_free_netdev;
-		}
-		gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
-	}
-
-	/* request gpio for PHY reset control */
-	if (gpio_is_valid(lp->rst_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev,
-			lp->rst_gpio, "phy reset");
-		if (ret_val < 0) {
-			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
-			goto ambeth_drv_probe_free_netdev;
-		}
-		gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
-	}
 
 	bus = devm_mdiobus_alloc_size(&pdev->dev, sizeof(struct ambeth_info));
 	if (!bus) {
