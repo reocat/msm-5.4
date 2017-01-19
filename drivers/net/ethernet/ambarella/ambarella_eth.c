@@ -2287,7 +2287,68 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
 	int ret_val, clk_src, clk_dir, hw_intf, clk_pl;
-	u32 temp;
+
+	for_each_child_of_node(np, phy_np) {
+		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
+			continue;
+
+		lp->pwr_gpio = of_get_named_gpio_flags(phy_np, "pwr-gpios", 0, &flags);
+		lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
+		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		/* request gpio for PHY power control */
+		if (gpio_is_valid(lp->pwr_gpio)) {
+			ret_val = devm_gpio_request(lp->ndev->dev.parent,
+				lp->pwr_gpio, "phy power");
+			if (ret_val < 0) {
+				dev_err(lp->ndev->dev.parent, "Failed to request pwr-gpios!\n");
+				return -EBUSY;
+			}
+			gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
+		}
+
+		/* request gpio for PHY reset control */
+		if (gpio_is_valid(lp->rst_gpio)) {
+			ret_val = devm_gpio_request(lp->ndev->dev.parent,
+				lp->rst_gpio, "phy reset");
+			if (ret_val < 0) {
+				dev_err(lp->ndev->dev.parent, "Failed to request rst-gpios!\n");
+				return -EBUSY;
+			}
+			gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
+		}
+
+		ret_val = of_property_read_u32(phy_np, "amb,clk-src", &clk_src);
+		if (ret_val == 0 && clk_src == 0) {
+			/*clk_src == 0 represent the clk is external*/
+			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
+		} else if(ret_val == 0 && clk_src == 1) {
+			/*clk_src == 1 and default represent the clk is internal*/
+			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
+		}
+
+		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_dir);
+		if (ret_val == 0 && clk_dir == 1) {
+			/*set direction of xx_enet_clk_rx as output from ambarella chip*/
+			lp->clk_direction = 1;
+			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
+		} else if(ret_val == 0 && clk_dir == 0){
+			/*set direction of xx_enet_clk_rx as output from external phy*/
+			lp->clk_direction = 0;
+			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
+		} else
+			lp->clk_direction = -1;
+
+		ret_val = of_property_read_u32(phy_np, "amb,clk-invert", &clk_pl);
+		if(ret_val == 0 && clk_pl == 1) {
+			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
+		} else if(ret_val == 0 && clk_pl == 0) {
+			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x00000000);
+		}
+
+	}
 
 	ret_val = of_property_read_u32(np, "amb,fixed-speed", &lp->fixed_speed);
 	if (ret_val < 0)
@@ -2301,7 +2362,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 	/* sanity check */
 	hw_intf = readl_relaxed(lp->regbase + ETH_DMA_HWFEA_OFFSET);
-	temp = hw_intf;
 	hw_intf &= ETH_DMA_HWFEA_ACTPHYIF_MASK;
 
 	switch (lp->intf_type) {
@@ -2321,9 +2381,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	}
 	if (ret_val < 0) {
 		dev_err(lp->ndev->dev.parent,
-			"PHY interface dismatch: %d, %d!\n", temp, lp->intf_type);
-		dev_err(lp->ndev->dev.parent,
-			"Second Time Read PHY interface:0x%x\n", readl_relaxed(lp->regbase + ETH_DMA_HWFEA_OFFSET));
+			"PHY interface dismatch: 0x%x, %d!\n", hw_intf, lp->intf_type);
 		return -ENODEV;
 	}
 
@@ -2367,46 +2425,6 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		lp->enhance = true;
 	else
 		lp->enhance = false;
-
-	for_each_child_of_node(np, phy_np) {
-		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
-			continue;
-
-		lp->pwr_gpio = of_get_named_gpio_flags(phy_np, "pwr-gpios", 0, &flags);
-		lp->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-		lp->rst_gpio = of_get_named_gpio_flags(phy_np, "rst-gpios", 0, &flags);
-		lp->rst_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-		ret_val = of_property_read_u32(phy_np, "amb,clk-src", &clk_src);
-		if (ret_val == 0 && clk_src == 0) {
-			/*clk_src == 0 represent the clk is external*/
-			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
-		} else if(ret_val == 0 && clk_src == 1) {
-			/*clk_src == 1 and default represent the clk is internal*/
-			regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
-		}
-
-		ret_val = of_property_read_u32(phy_np, "amb,clk-dir", &clk_dir);
-		if (ret_val == 0 && clk_dir == 1) {
-			/*set direction of xx_enet_clk_rx as output from ambarella chip*/
-			lp->clk_direction = 1;
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
-		} else if(ret_val == 0 && clk_dir == 0){
-			/*set direction of xx_enet_clk_rx as output from external phy*/
-			lp->clk_direction = 0;
-			regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
-		} else
-			lp->clk_direction = -1;
-
-		ret_val = of_property_read_u32(phy_np, "amb,clk-invert", &clk_pl);
-		if(ret_val == 0 && clk_pl == 1) {
-			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x80000000);
-		} else if(ret_val == 0 && clk_pl == 0) {
-			regmap_update_bits(lp->reg_scr, 0xc, 0x80000000, 0x00000000);
-		}
-
-	}
 
 	return 0;
 }
@@ -2486,28 +2504,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	if (lp->ipc_tx)
 		ndev->features |= NETIF_F_HW_CSUM;
-
-	/* request gpio for PHY power control */
-	if (gpio_is_valid(lp->pwr_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev,
-			lp->pwr_gpio, "phy power");
-		if (ret_val < 0) {
-			dev_err(&pdev->dev, "Failed to request pwr-gpios!\n");
-			goto ambeth_drv_probe_free_netdev;
-		}
-		gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
-	}
-
-	/* request gpio for PHY reset control */
-	if (gpio_is_valid(lp->rst_gpio)) {
-		ret_val = devm_gpio_request(&pdev->dev,
-			lp->rst_gpio, "phy reset");
-		if (ret_val < 0) {
-			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
-			goto ambeth_drv_probe_free_netdev;
-		}
-		gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
-	}
 
 	lp->new_bus.name = "Ambarella MDIO Bus",
 	lp->new_bus.read = &ambhw_mdio_read,
