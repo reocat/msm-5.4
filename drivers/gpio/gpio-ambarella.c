@@ -32,7 +32,6 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip/chained_irq.h>
-#include <plat/iav_helper.h>
 #include <plat/gpio.h>
 
 #define GPIO_MAX_BANK_NUM		8
@@ -59,10 +58,7 @@ struct amb_gpio_chip {
 	int				bank_num;
 	struct gpio_chip		*gc;
 	struct irq_domain		*domain;
-	struct ambarella_service	gpio_service;
 };
-
-static int ambarella_gpio_service(void *arg, void *result);
 
 /* gpiolib gpio_request callback function */
 static int amb_gpio_request(struct gpio_chip *gc, unsigned pin)
@@ -517,11 +513,6 @@ static int amb_gpio_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "Ambarella GPIO driver registered\n");
 
-	/* register ambarella gpio service for private operation */
-	amb_gpio->gpio_service.service = AMBARELLA_SERVICE_GPIO;
-	amb_gpio->gpio_service.func = ambarella_gpio_service;
-	ambarella_register_service(&amb_gpio->gpio_service);
-
 	return 0;
 }
 
@@ -620,45 +611,4 @@ postcore_initcall(amb_gpio_drv_register);
 MODULE_AUTHOR("Cao Rongrong <rrcao@ambarella.com>");
 MODULE_DESCRIPTION("Ambarella SoC GPIO driver");
 MODULE_LICENSE("GPL v2");
-
-static int ambarella_gpio_service(void *arg, void *result)
-{
-	struct ambsvc_gpio *gpio_svc = arg;
-	u32 *value = result;
-	int rval = 0;
-
-	BUG_ON(!gpio_svc);
-
-	switch (gpio_svc->svc_id) {
-	case AMBSVC_GPIO_REQUEST:
-	{
-		rval = gpio_request(gpio_svc->gpio, "gpio");
-		break;
-	}
-	case AMBSVC_GPIO_OUTPUT:
-		rval = gpio_direction_output(gpio_svc->gpio, gpio_svc->value);
-		break;
-
-	case AMBSVC_GPIO_INPUT:
-		rval = gpio_direction_input(gpio_svc->gpio);
-		if (rval >= 0 && value)
-			*value = gpio_get_value_cansleep(gpio_svc->gpio);
-		break;
-
-	case AMBSVC_GPIO_FREE:
-		gpio_free(gpio_svc->gpio);
-		break;
-
-	case AMBSVC_GPIO_TO_IRQ:
-		*value = gpio_to_irq(gpio_svc->gpio);
-		break;
-
-	default:
-		pr_err("%s: Invalid gpio service (%d)\n", __func__, gpio_svc->svc_id);
-		rval = -EINVAL;
-		break;
-	}
-
-	return rval;
-}
 
