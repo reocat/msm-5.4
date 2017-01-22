@@ -612,6 +612,9 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 			desc++;
 	}
 
+	dma_sync_single_for_device(host->dev, host->desc_phys,
+		(desc - host->desc_virt + SD_ADMA_TBL_LINE_SIZE), DMA_TO_DEVICE);
+
 }
 
 static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_command *cmd)
@@ -995,34 +998,45 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
 	struct mmc_request *mrq = host->mrq;
 	struct mmc_command *cmd = host->cmd;
+	unsigned long flags;
 	u16 dir;
 
 	if (cmd == NULL || mrq == NULL)
 		return;
 
+	spin_lock_irqsave(&host->lock, flags);
+
 	dev_dbg(host->dev, "End %s[%u], arg = %u\n",
 		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+
+	del_timer(&host->timer);
 
 	if(cmd->error || (cmd->data && (cmd->data->error ||
 		(cmd->data->stop && cmd->data->stop->error))))
 		ambarella_sd_recovery(host);
 
-	del_timer(&host->timer);
-
 	/* now we send READ/WRITE cmd if current cmd is CMD23 */
 	if (cmd == mrq->sbc) {
 		ambarella_sd_send_cmd(host, mrq->cmd);
+		spin_unlock_irqrestore(&host->lock, flags);
 		return;
 	}
 
 	if (cmd->data) {
+		u32 dma_size;
+
+		dma_size = cmd->data->blksz * cmd->data->blocks;
 		dir = cmd->data->flags & MMC_DATA_WRITE ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+		dma_sync_single_for_cpu(host->dev, host->desc_phys, dma_size,
+					 DMA_FROM_DEVICE);
 		dma_unmap_sg(host->dev, cmd->data->sg, cmd->data->sg_len, dir);
 
 		/* send the STOP cmd manually if auto_cmd12 is disabled and
 		 * there is no preceded CMD23 for multi-read/write cmd */
 		if (!host->auto_cmd12 && !mrq->sbc && cmd->data->stop) {
 			ambarella_sd_send_cmd(host, cmd->data->stop);
+			spin_unlock_irqrestore(&host->lock, flags);
 			return;
 		}
 	}
@@ -1034,12 +1048,14 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	if ((cmd == mrq->cmd) && mrq->sbc && mrq->data->error && mrq->stop) {
 		dev_warn(host->dev, "SBC|DATA cmd error, send STOP manually!\n");
 		ambarella_sd_send_cmd(host, mrq->stop);
+		spin_unlock_irqrestore(&host->lock, flags);
 		return;
 	}
 
 	host->cmd = NULL;
 	host->mrq = NULL;
 
+	spin_unlock_irqrestore(&host->lock, flags);
 	mmc_request_done(host->mmc, mrq);
 }
 
@@ -1054,7 +1070,6 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	host->ac12es = readl_relaxed(host->regbase + SD_AC12ES_OFFSET);
 	host->irq_status = readl_relaxed(host->regbase + SD_NIS_OFFSET);
 	writel_relaxed(host->irq_status, host->regbase + SD_NIS_OFFSET);
-	spin_unlock(&host->lock);
 
 	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
@@ -1073,6 +1088,7 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	}
 
 	ambarella_sd_handle_irq(host);
+	spin_unlock(&host->lock);
 
 	return IRQ_HANDLED;
 }
