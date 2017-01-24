@@ -672,6 +672,7 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev,"Only supports msb first tx-rx\n");
 	} else {
 		bus->msb_first_only = 0;
+		master->mode_bits |= SPI_LSB_FIRST;
 	}
 
 	/* check if using dma */

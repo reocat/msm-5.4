@@ -78,6 +78,39 @@ static int ambarella_dmic_clock(struct amb_dmic_priv *priv_data, u32 mclk, u32 r
 	return 0;
 }
 
+static int ambarella_dmic_init(struct amb_dmic_priv *priv_data)
+{
+	/*Droop Setting*/
+	writel_relaxed(0xFF85C000, priv_data->regbase + 0x200);
+	writel_relaxed(0xFF0C9000, priv_data->regbase + 0x204);
+	writel_relaxed(0x01CAB000, priv_data->regbase + 0x208);
+	writel_relaxed(0x04A9E000, priv_data->regbase + 0x20c);
+	writel_relaxed(0xF9A26000, priv_data->regbase + 0x210);
+	writel_relaxed(0xEF8AE000, priv_data->regbase + 0x214);
+	writel_relaxed(0x0F0B6000, priv_data->regbase + 0x218);
+	writel_relaxed(0x4381A000, priv_data->regbase + 0x21c);
+
+	/*HBF Setting*/
+	writel_relaxed(0xFFC87000, priv_data->regbase + 0x300);
+	writel_relaxed(0xFFFD2000, priv_data->regbase + 0x304);
+	writel_relaxed(0x00601000, priv_data->regbase + 0x308);
+	writel_relaxed(0x00056000, priv_data->regbase + 0x30c);
+	writel_relaxed(0xFF23F000, priv_data->regbase + 0x310);
+	writel_relaxed(0xFFF61000, priv_data->regbase + 0x314);
+	writel_relaxed(0x01CCF000, priv_data->regbase + 0x318);
+	writel_relaxed(0x000FC000, priv_data->regbase + 0x31c);
+	writel_relaxed(0xFC93E000, priv_data->regbase + 0x320);
+	writel_relaxed(0xFFEA3000, priv_data->regbase + 0x324);
+	writel_relaxed(0x06462000, priv_data->regbase + 0x328);
+	writel_relaxed(0x001B2000, priv_data->regbase + 0x32c);
+	writel_relaxed(0xF39CC000, priv_data->regbase + 0x330);
+	writel_relaxed(0xFFE14000, priv_data->regbase + 0x334);
+	writel_relaxed(0x28558000, priv_data->regbase + 0x338);
+	writel_relaxed(0x40200000, priv_data->regbase + 0x33c);
+
+	return 0;
+}
+
 static int ambarella_dmic_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
 				struct snd_soc_dai *dai)
@@ -93,6 +126,7 @@ static int ambarella_dmic_hw_params(struct snd_pcm_substream *substream,
 
 	rate = params_rate(params);
 	ambarella_dmic_clock(priv_data, priv_data->mclk, rate);
+	ambarella_dmic_init(priv_data);
 
 	return 0;
 }
