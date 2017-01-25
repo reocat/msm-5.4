@@ -523,6 +523,8 @@
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
+			dmas = <&dma 8>, <&dma 9>;
+			dma-names = "tx", "rx";
 			/* amb,tx-fifo-fix; */
 			/* need to select pinctrl setup in board dts */
 		};

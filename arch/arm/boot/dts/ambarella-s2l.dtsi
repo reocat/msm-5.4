@@ -526,6 +526,8 @@
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
+			dmas = <&dma 4>, <&dma 5>;
+			dma-names = "tx", "rx";
 			/* amb,tx-fifo-fix; */
 			/* need to select pinctrl setup in board dts */
 		};
@@ -623,7 +625,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&spi0_pins>;
 			amb,clk-freq = <54000000>;
-			amb,dma-used;
+			/* amb,dma-used; */
 			dmas = <&dma 0>, <&dma 1>;
 			dma-names = "tx", "rx";
 		};
