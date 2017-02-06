@@ -213,6 +213,11 @@ void pm_vlls_notify_m4(bool enter) {}
 #endif
 
 void v7_cpu_resume(void);
+#ifdef CONFIG_SOC_IMX7ULP
+void pm_shutdown_notify_m4(void);
+#else
+static inline void pm_shutdown_notify_m4(void) {}
+#endif
 
 void imx6_pm_ccm_init(const char *ccm_compat);
 void imx6q_pm_init(void);
