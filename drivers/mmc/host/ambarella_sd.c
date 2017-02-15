@@ -1194,9 +1194,12 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 			MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
 
 	if (gpio_is_valid(host->v18_gpio)) {
-		mmc->ocr_avail |= MMC_VDD_165_195 | MMC_CAP_1_8V_DDR;
+		mmc->ocr_avail |= MMC_VDD_165_195;
 
-		mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25;
+		mmc->caps |= MMC_CAP_UHS_SDR12;
+
+		if (mmc->f_max > 25000000)
+			mmc->caps |= MMC_CAP_UHS_SDR25;
 
 		if (mmc->f_max > 50000000)
 			mmc->caps |= MMC_CAP_UHS_SDR50;
