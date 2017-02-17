@@ -1244,7 +1244,6 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 
-	spin_lock_irqsave(&host->lock, flags);
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	if (unlikely((host->mrq) != NULL))
 		printk(KERN_ERR "%s: last request not finished yet\n", __func__);
@@ -1254,6 +1253,7 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	ambarella_sd_request_bus(mmc);
 
+	spin_lock_irqsave(&host->lock, flags);
 	host->mrq = mrq;
 
 	if (mrq->data)
