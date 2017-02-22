@@ -1893,16 +1893,14 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 		break;
 	case AMBA_EVENT_POST_CPUFREQ:
 		if (!sd_suspended) {
+			/* Note: SDs have independent clock. */
 			pr_debug("%s[0x%08x]: Post Change\n", __func__, (u32)(u64)host->regbase);
 			if ((!strcmp(host->dev->of_node->name, "sdmmc0")) && pre_notified[0]) {
 				pre_notified[0] = 0;
-				ambarella_sd_set_clk(host->mmc, host->clock);
 			} else if ((!strcmp(host->dev->of_node->name, "sdmmc1")) && pre_notified[1]) {
 				pre_notified[1] = 0;
-				ambarella_sd_set_clk(host->mmc, host->clock);
 			} else if (pre_notified[2]) {
 				pre_notified[2] = 0;
-				ambarella_sd_set_clk(host->mmc, host->clock);
 			}
 			up(&host->system_event_sem);
 		}
