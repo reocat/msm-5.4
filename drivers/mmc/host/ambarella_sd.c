@@ -619,7 +619,7 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 
 static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_command *cmd)
 {
-	u32 tmo_reg, cmd_reg, xfr_reg = 0, arg_reg = cmd->arg;
+	u32 tmo_reg, cmd_reg, xfr_reg = 0, arg_reg = cmd->arg, sd_host2 = 0;
 	int rval;
 
 	host->cmd = cmd;
@@ -683,6 +683,17 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 		 * auto_cmd12, but send CMD12 manually when necessary. */
 		if (host->auto_cmd12 && !cmd->mrq->sbc && cmd->data->stop)
 			xfr_reg |= SD_XFR_AC12_EN;
+
+		/*if cmd23 is used, amba host need enable cmd23 sequences*/
+		if(cmd->mrq->sbc) {
+			sd_host2 = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
+			sd_host2 |= (1 << 13);
+			writew_relaxed(sd_host2, host->regbase + SD_HOST2_OFFSET);
+		} else {
+			sd_host2 = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
+			sd_host2 &= ~(1 << 13);
+			writew_relaxed(sd_host2, host->regbase + SD_HOST2_OFFSET);
+		}
 
 		writel_relaxed(host->desc_phys, host->regbase + SD_ADMA_ADDR_OFFSET);
 		writew_relaxed(cmd->data->blksz, host->regbase + SD_BLK_SZ_OFFSET);
