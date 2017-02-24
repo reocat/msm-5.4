@@ -29,12 +29,26 @@
 
 #include <linux/of_gpio.h>
 #include <linux/of_mdio.h>
+#include <linux/delay.h>
 
 struct mdio_gpio_info {
 	struct mdiobb_ctrl ctrl;
-	int mdc, mdio, mdo;
-	int mdc_active_low, mdio_active_low, mdo_active_low;
+	int mdc, mdio, mdo, rst;
+	int mdc_active_low, mdio_active_low, mdo_active_low, rst_active_low;
 };
+
+static int mdio_gpio_reset(struct mii_bus *bus)
+{
+	struct mdiobb_ctrl *bb_ctrl = bus->priv;
+	struct mdio_gpio_info *mdio_info = container_of(bb_ctrl, struct mdio_gpio_info, ctrl);
+
+	gpio_direction_output(mdio_info->rst, mdio_info->rst_active_low);
+	msleep(50);
+	gpio_direction_output(mdio_info->rst, !mdio_info->rst_active_low);
+	msleep(50);
+
+	return 0;
+}
 
 static void *mdio_gpio_of_get_data(struct platform_device *pdev)
 {
@@ -64,6 +78,16 @@ static void *mdio_gpio_of_get_data(struct platform_device *pdev)
 	if (ret > 0) {
 		pdata->mdo = ret;
 		pdata->mdo_active_low = flags & OF_GPIO_ACTIVE_LOW;
+	}
+
+	pdata->rst = of_get_named_gpio_flags(np->child, "rst-gpios", 0, &flags);
+	if (gpio_is_valid(pdata->rst)) {
+		ret = devm_gpio_request(&pdev->dev,
+				pdata->rst, "phy reset");
+		if(ret < 0)
+			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
+		else
+			pdata->reset = mdio_gpio_reset;
 	}
 
 	return pdata;
@@ -150,6 +174,8 @@ static struct mii_bus *mdio_gpio_bus_init(struct device *dev,
 	bitbang->mdio_active_low = pdata->mdio_active_low;
 	bitbang->mdo = pdata->mdo;
 	bitbang->mdo_active_low = pdata->mdo_active_low;
+	bitbang->rst = pdata->rst;
+	bitbang->rst_active_low = pdata->rst_active_low;
 
 	new_bus = alloc_mdio_bitbang(&bitbang->ctrl);
 	if (!new_bus)
