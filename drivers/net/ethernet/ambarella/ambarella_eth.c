@@ -153,7 +153,8 @@ struct ambeth_info {
 	struct regmap			*reg_scr;
 	u32				msg_enable;
 
-	u32				enhance: 1,
+	u32				mdio_gpio: 1,
+					enhance: 1,
 					ext_ref_clk : 1, /* only for RMII */
 					int_gtx_clk125 : 1, /* only for GMII/RGMII */
 					tx_clk_invert : 1,
@@ -2400,6 +2401,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx_free = of_property_read_bool(np, "amb,dump-rx-free");
 	lp->dump_rx_all = of_property_read_bool(np, "amb,dump-rx-all");
 	lp->enhance = !!of_find_property(np, "amb,enhance", NULL);
+	lp->mdio_gpio = !!of_find_property(np, "amb,mdio-gpio", NULL);
 
 	/* check if using external ref_clk, it's valid for RMII only */
 	lp->ext_ref_clk = !!of_find_property(np, "amb,ext-ref-clk", NULL);
@@ -2429,11 +2431,10 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 static int ambeth_drv_probe(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
+	struct device_node *np = pdev->dev.of_node, *mdio_np = NULL;
 	struct net_device *ndev;
 	struct ambeth_info *lp;
 	struct resource *res;
-	struct mii_bus *bus;
 	const char *macaddr;
 	int poc, ret_val = 0;
 
@@ -2503,33 +2504,44 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	if (lp->ipc_tx)
 		ndev->features |= NETIF_F_HW_CSUM;
 
-	bus = devm_mdiobus_alloc_size(&pdev->dev, sizeof(struct ambeth_info));
-	if (!bus) {
-		ret_val = -ENOMEM;
-		goto ambeth_drv_probe_free_netdev;
-	}
-	memcpy(&lp->new_bus, bus, sizeof(struct mii_bus));
+	if(lp->mdio_gpio){
+		mdio_np = of_find_compatible_node(NULL, NULL, "virtual,mdio-gpio");
 
-	lp->new_bus.name = "Ambarella MDIO Bus",
-	lp->new_bus.read = &ambhw_mdio_read,
-	lp->new_bus.write = &ambhw_mdio_write,
-	lp->new_bus.reset = &ambhw_mdio_reset,
-	snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%s", pdev->name);
-	lp->new_bus.priv = lp;
-	lp->new_bus.parent = &pdev->dev;
-	lp->new_bus.state = MDIOBUS_ALLOCATED;
+		if(mdio_np == NULL) {
+			dev_err(&pdev->dev, "Failed to get mdio_gpio device node\n");
+			goto ambeth_drv_probe_free_netdev;
+		}
 
-	ret_val = of_mdiobus_register(&lp->new_bus, pdev->dev.of_node);
-	if (ret_val < 0) {
-		dev_err(&pdev->dev, "of_mdiobus_register fail%d.\n", ret_val);
-		goto ambeth_drv_probe_free_netdev;
-	}
+		lp->phydev = of_phy_find_device(mdio_np->child);
 
-	lp->phydev = phy_find_first(&lp->new_bus);
-	if (lp->phydev == NULL) {
-		dev_err(&pdev->dev, "No PHY device.\n");
-		ret_val = -ENODEV;
-		goto ambeth_drv_probe_free_netdev;
+		if(!lp->phydev) {
+			dev_err(&pdev->dev, "Failed to get phydev from mdio_gpio device node\n");
+			goto ambeth_drv_probe_free_netdev;
+		}
+
+		lp->new_bus = *lp->phydev->mdio.bus;
+	} else {
+		lp->new_bus.name = "Ambarella MDIO Bus",
+		lp->new_bus.read = &ambhw_mdio_read,
+		lp->new_bus.write = &ambhw_mdio_write,
+		lp->new_bus.reset = &ambhw_mdio_reset,
+		snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%s", pdev->name);
+		lp->new_bus.priv = lp;
+		lp->new_bus.parent = &pdev->dev;
+		lp->new_bus.state = MDIOBUS_ALLOCATED;
+
+		ret_val = of_mdiobus_register(&lp->new_bus, pdev->dev.of_node);
+		if (ret_val < 0) {
+			dev_err(&pdev->dev, "of_mdiobus_register fail%d.\n", ret_val);
+			goto ambeth_drv_probe_free_netdev;
+		}
+
+		lp->phydev = phy_find_first(&lp->new_bus);
+		if (lp->phydev == NULL) {
+			dev_err(&pdev->dev, "No PHY device.\n");
+			ret_val = -ENODEV;
+			goto ambeth_drv_probe_free_netdev;
+		}
 	}
 
 	if (netif_msg_drv(lp)) {

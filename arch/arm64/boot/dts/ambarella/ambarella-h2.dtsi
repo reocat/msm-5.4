@@ -27,6 +27,7 @@
 		spi0 = &spi0;
 		spi1 = &spi1;
 		ethernet0 = &mac0;
+		mdio-gpio0 = &mdio0;
 	};
 
 	/* the memory node will be overwritten in Amboot,
@@ -374,19 +375,29 @@
 						  0x2058 0x205b 0x205c 0x205d 0x205e>;
 			};
 
-			eth_rgmii_pins: eth0@0 {
+			rgmii_pins: eth0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x4032 0x4033 0x4034 0x4035
+				amb,pinmux-ids = <0x4034 0x4035
 						  0x4036 0x4037 0x4026 0x4030
 						  0x4028 0x4029 0x402a 0x402b
 						  0x402c 0x402d 0x402e 0x402f>;
 			};
 
-			eth_rmii_pins: eth0@1 {
+			rmii_pins: eth0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x3032 0x3033 0x3035 0x3034
-					0x3036 0x3037 0x3026 0x3030
-					0x3028 0x3029 0x302c 0x302d>;
+				amb,pinmux-ids = <0x3035 0x3034 0x3036
+						  0x3037 0x3026 0x3030
+						  0x3028 0x3029 0x302c 0x302d>;
+			};
+
+			rgmii_mdio_pins: mdio@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x4032 0x4033>;
+			};
+
+			rmii_mdio_pins: mdio@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3032 0x3033>;
 			};
 
 			i2c0_pins: i2c0@0 {
@@ -697,7 +708,7 @@
 			reg = <0xe000e000 0x2000>;
 			interrupts = <0 65 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&eth_rgmii_pins>;
+			pinctrl-0 = <&rgmii_pins &rgmii_mdio_pins>;
 			phy-mode = "rgmii";
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scr-regmap = <&scratchpad_syscon>;
@@ -886,6 +897,19 @@
 			compatible = "ambarella,fb";
 			amb,vout-id = <1>;
 			amb,format = "rgb565";
+		};
+	};
+
+	mdio0: mdio {
+		compatible = "virtual,mdio-gpio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gpios = <&gpio 50 0
+			 &gpio 51 0>;
+
+		phy@0{
+			reg = <0>;
+			rst-gpios = <&gpio 11 0x0>;
 		};
 	};
 
