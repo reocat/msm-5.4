@@ -86,8 +86,10 @@ static void *mdio_gpio_of_get_data(struct platform_device *pdev)
 				pdata->rst, "phy reset");
 		if(ret < 0)
 			dev_err(&pdev->dev, "Failed to request rst-gpios!\n");
-		else
+		else {
+			pdata->rst_active_low = flags & OF_GPIO_ACTIVE_LOW;
 			pdata->reset = mdio_gpio_reset;
+		}
 	}
 
 	return pdata;
