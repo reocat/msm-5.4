@@ -2433,6 +2433,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node, *mdio_np = NULL;
 	struct net_device *ndev;
+	struct mii_bus *bus;
 	struct ambeth_info *lp;
 	struct resource *res;
 	const char *macaddr;
@@ -2521,6 +2522,13 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 		lp->new_bus = *lp->phydev->mdio.bus;
 	} else {
+		bus = devm_mdiobus_alloc_size(&pdev->dev, sizeof(struct ambeth_info));
+		if (!bus) {
+			ret_val = -ENOMEM;
+			goto ambeth_drv_probe_free_netdev;
+		}
+		memcpy(&lp->new_bus, bus, sizeof(struct mii_bus));
+
 		lp->new_bus.name = "Ambarella MDIO Bus",
 		lp->new_bus.read = &ambhw_mdio_read,
 		lp->new_bus.write = &ambhw_mdio_write,

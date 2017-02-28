@@ -931,7 +931,7 @@
 
 		phy@0{
 			reg = <0>;
-			rst-gpios = <&gpio 17 0x0>;
+			//rst-gpios = <&gpio 17 0x0>;
 		};
 	};
 
