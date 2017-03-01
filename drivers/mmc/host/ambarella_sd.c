@@ -785,11 +785,14 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 
 	if (clock != 0) {
 #if defined(CONFIG_AMBALINK_SD)
-		struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(mmc);
+		/* sdmmc0 clk already set by RTOS */
+		if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
+			struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(mmc);
 
-		if (sdinfo->is_init && sdinfo->from_rpmsg) {
-			divisor = 0;
-			goto done;
+			if (sdinfo->is_init && sdinfo->from_rpmsg) {
+				divisor = 0;
+				goto done;
+			}
 		}
 #endif
 		clk_set_rate(host->clk, max_t(u32, clock, 24000000));
@@ -812,7 +815,8 @@ done:
 {
 		struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(mmc);
 
-		if (sdinfo->is_init && sdinfo->from_rpmsg) {
+		if (sdinfo->is_init && sdinfo->from_rpmsg &&
+			(0 == strcmp(host->dev->of_node->name, "sdmmc0"))) {
 			clk_reg = readw_relaxed(host->regbase + SD_CLK_OFFSET);
 		} else {
 			clk_reg = ((divisor << 7) & 0xff00) | SD_CLK_ICLK_EN;
@@ -1782,6 +1786,9 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 #if !defined(CONFIG_AMBALINK_SD)
 	clk_set_rate(host->clk, mmc->f_max);
+#else
+	if (0 != strcmp(host->dev->of_node->name, "sdmmc0"))
+		clk_set_rate(host->clk, mmc->f_max);
 #endif
 	mmc->f_max = clk_get_rate(host->clk);
 	mmc->f_min = 24000000 / 256;
@@ -1979,7 +1986,8 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	ambarella_sd_rpmsg_sdinfo_en(mmc, sdinfo->is_init);
 
 	/* Set clock back to RTOS desired. */
-	if (sdinfo->is_init) {
+	if ((sdinfo->is_init) &&
+		(0 == strcmp(host->dev->of_node->name, "sdmmc0"))) {
 		clk_set_rate(host->clk, sdinfo->clk);
 	}
 
