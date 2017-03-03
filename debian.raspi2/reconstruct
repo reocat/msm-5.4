@@ -1,4 +1,5 @@
 # Recreate any symlinks created since the orig.
+[ ! -L 'arch/arm64/boot/dts/overlays' ] && ln -sf '../../../arm/boot/dts/overlays' 'arch/arm64/boot/dts/overlays'
 [ ! -L 'spl/rpm/redhat/spl-dkms.spec.in' ] && ln -sf '../generic/spl-dkms.spec.in' 'spl/rpm/redhat/spl-dkms.spec.in'
 [ ! -L 'spl/rpm/redhat/spl.spec.in' ] && ln -sf '../generic/spl.spec.in' 'spl/rpm/redhat/spl.spec.in'
 [ ! -L 'ubuntu/vbox/vboxguest/include' ] && ln -sf '../include' 'ubuntu/vbox/vboxguest/include'
@@ -8,6 +9,7 @@
 [ ! -L 'ubuntu/vbox/vboxvideo/include' ] && ln -sf '../include' 'ubuntu/vbox/vboxvideo/include'
 [ ! -L 'ubuntu/vbox/vboxvideo/r0drv' ] && ln -sf '../r0drv' 'ubuntu/vbox/vboxvideo/r0drv'
 # Remove any files deleted from the orig.
+rm -f 'drivers/acpi/gsi.c'
 rm -f 'firmware/acenic/tg1.bin.ihex'
 rm -f 'firmware/acenic/tg2.bin.ihex'
 rm -f 'firmware/adaptec/starfire_rx.bin.ihex'
