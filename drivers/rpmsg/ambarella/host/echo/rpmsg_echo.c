@@ -24,6 +24,28 @@
 #include <linux/err.h>
 #include <linux/remoteproc.h>
 
+static struct rpmsg_channel *rpdev_example;
+static char *example_printk = "written Message will be printed on Remote Processor";
+
+static int rpmsg_example_printk(const char *val, const struct kernel_param *kp)
+{
+	char *data = strstrip((char *)val);
+
+	rpmsg_send(rpdev_example, data, strlen(data) + 1);
+
+	return param_set_charp(data, kp);
+}
+
+static struct kernel_param_ops param_ops_example_printk = {
+	/*.set = param_set_charp,*/
+	.set = rpmsg_example_printk,
+	.get = param_get_charp,
+	.free = param_free_charp,
+};
+
+module_param_cb(example_printk, &param_ops_example_printk,
+	&(example_printk), 0644);
+
 static void rpmsg_echo_cb(struct rpmsg_channel *rpdev, void *data, int len,
 			void *priv, u32 src)
 {
@@ -43,6 +65,7 @@ static int rpmsg_echo_probe(struct rpmsg_channel *rpdev)
 	memcpy(nsm.name, rpdev->id.name, RPMSG_NAME_SIZE);
 	nsm.flags = 0;
 
+	rpdev_example = rpdev;
 	rpmsg_send(rpdev, &nsm, sizeof(nsm));
 
 	return ret;
