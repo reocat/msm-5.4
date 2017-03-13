@@ -1627,7 +1627,8 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	writel_relaxed(DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI,
 			nand_info->fdmaregbase + FDMA_CTR_OFFSET);
 
-	writel_relaxed(nand_info->control_reg, nand_info->regbase + FLASH_CTR_OFFSET);
+	if (nand_info->suspend == 1)
+		writel_relaxed(nand_info->control_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 
 	amb_nand_set_timing(nand_info);
 }
