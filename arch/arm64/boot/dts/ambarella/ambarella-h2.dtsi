@@ -785,6 +785,15 @@
 				usb-phy		= <&usbphy>, <&usbphy>;
 			};
 		};
+
+		hdmi@0xe0013000 {
+			compatible = "ambarella,hdmi";
+			reg = <0xe0013000 0x1000>;
+			interrupts = <0 104 0x4>;
+			interrupt-names = "hdmi";
+			amb,hdmiphy = <0xec170010>;
+			amb,hdmi-version = <20>;
+		};
 	};
 
 	rct@ec170000 {
@@ -865,13 +874,6 @@
 			compatible = "ambarella,voutc";
 			interrupts = <0 55 0x1>;
 			interrupt-names = "vout1";
-		};
-
-		/* node for hdmi controller */
-		hdmi {
-			compatible = "ambarella,hdmi";
-			interrupts = <0 104 0x4>;
-			interrupt-names = "hdmi";
 		};
 	};
 
