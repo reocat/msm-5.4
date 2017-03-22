@@ -1202,6 +1202,8 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 			MMC_CAP_ERASE | MMC_CAP_BUS_WIDTH_TEST |
 			MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
 
+	mmc->caps2 |= MMC_CAP2_HS200 | MMC_CAP2_HS200_1_8V_SDR;
+
 	if (gpio_is_valid(host->v18_gpio)) {
 		mmc->ocr_avail |= MMC_VDD_165_195;
 
@@ -1338,7 +1340,6 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	ambarella_sd_add_debugfs(host);
 
 	platform_set_drvdata(pdev, host);
-
 	dev_info(&pdev->dev, "Max frequency is %uHz\n", mmc->f_max);
 
 	return 0;
