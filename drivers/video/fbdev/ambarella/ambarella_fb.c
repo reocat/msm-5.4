@@ -69,6 +69,7 @@ struct ambfb_par {
 };
 
 static struct ambfb_format ambfb_formats[] = {
+	{ "clut8bpp", 8, {0, 0}, {0, 0}, {0, 0}, {0, 0}, DRM_FORMAT_C8 },
 	{ "rgb565", 16, {11, 5}, {5, 6}, {0, 5}, {0, 0}, DRM_FORMAT_RGB565 },
 	{ "vyu565", 16, {11, 5}, {5, 6}, {0, 5}, {0, 0}, fourcc_code('v', 'y', '1', '6') },
 	{ "bgr565", 16, {0, 5}, {5, 6}, {11, 5}, {0, 0}, DRM_FORMAT_BGR565 },
@@ -219,6 +220,9 @@ static int ambfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info
 
 static int ambfb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 {
+        if(info->var.bits_per_pixel == 8){
+		ambfb_notifier_call_chain(info, AMBFB_EVENT_SET_CMAP, cmap);
+        }
 	return 0;
 }
 
