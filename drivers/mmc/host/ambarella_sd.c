@@ -276,6 +276,7 @@ static ssize_t mmc_fixed_cd_proc_write(struct file *file,
 
 	host = mmc_priv(mmc);
 
+	host->mmc->caps &= ~MMC_CAP_NONREMOVABLE;
 	host->fixed_cd = input[2] - '0';
 	mmc_detect_change(mmc, 10);
 
