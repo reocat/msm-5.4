@@ -1,3 +1,18 @@
+linux-raspi2 (4.10.0-1004.6) zesty; urgency=low
+
+  [ Tim Gardner ]
+
+  * Release Tracking Bug
+    - LP: #1680768
+
+  * Rebase against Ubuntu-4.10.0-19.21
+
+  * ADT regressions caused by "audit: fix auditd/kernel connection state
+    tracking" (LP: #1680532)
+    - SAUCE: Revert "audit: fix auditd/kernel connection state tracking"
+
+ -- Tim Gardner <tim.gardner@canonical.com>  Fri, 07 Apr 2017 10:12:01 +0100
+
 linux-raspi2 (4.10.0-1003.5) zesty; urgency=low
 
   [ Tim Gardner ]
