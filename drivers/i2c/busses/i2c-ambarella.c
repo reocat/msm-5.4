@@ -107,10 +107,8 @@ int ambpriv_i2c_update_addr(const char *name, int bus, int addr)
 	for (i = 0; i < AMBARELLA_I2C_VIN_MAX_NUM; i++) {
 		snprintf(buf, 32, "%s%d", AMBARELLA_I2C_VIN_FDT_NAME, i);
 		np = of_get_child_by_name(adap->dev.of_node, buf);
-		if (!np) {
-			pr_err("ambpriv i2c: No FDT node named [%s]\n", buf);
-			return -ENODEV;
-		}
+		if (!np)
+			continue;
 
 		client = of_find_i2c_device_by_node(np);
 		if (!client) {
@@ -124,7 +122,7 @@ int ambpriv_i2c_update_addr(const char *name, int bus, int addr)
 	}
 
 	if (i >= AMBARELLA_I2C_VIN_MAX_NUM) {
-		pr_err("fake vin sensor in device tree is not enough.\n");
+		pr_err("Can't find VIN FDT node on i2c bus %d!\n", bus);
 		return -ENODEV;
 	}
 
