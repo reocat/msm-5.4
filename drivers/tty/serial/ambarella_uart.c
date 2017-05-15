@@ -325,12 +325,8 @@ static inline void serial_ambarella_check_modem_status(struct uart_port *port)
 			port->icount.rng++;
 		if (ms & UART_MS_DSR)
 			port->icount.dsr++;
-
-		/* HW has alread supported CTS handling, so we remove it */
-		/*
 		if (ms & UART_MS_DCTS)
 			uart_handle_cts_change(port, (ms & UART_MS_CTS));
-		*/
 		if (ms & UART_MS_DDCD)
 			uart_handle_dcd_change(port, (ms & UART_MS_DCD));
 
