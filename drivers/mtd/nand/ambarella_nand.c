@@ -841,6 +841,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	switch (cmd) {
 	case NAND_AMB_CMD_RESET:
 		nand_cmd_reg = NAND_AMB_CMD_RESET;
+		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
 		break;
 
