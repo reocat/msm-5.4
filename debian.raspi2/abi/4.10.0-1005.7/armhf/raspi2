@@ -3546,7 +3546,6 @@ EXPORT_SYMBOL vmlinux 0x49ebacbd	_clear_bit
 EXPORT_SYMBOL vmlinux 0x49f71442	dev_close_many
 EXPORT_SYMBOL vmlinux 0x4a08401d	dev_alloc_name
 EXPORT_SYMBOL vmlinux 0x4a11aaa0	dma_alloc_from_coherent
-EXPORT_SYMBOL vmlinux 0x4a2c9049	arm_smccc_smc
 EXPORT_SYMBOL vmlinux 0x4a3a3af9	inet_csk_reset_keepalive_timer
 EXPORT_SYMBOL vmlinux 0x4a3b4745	block_is_partially_uptodate
 EXPORT_SYMBOL vmlinux 0x4a57b339	wait_for_completion_io_timeout
@@ -3661,6 +3660,7 @@ EXPORT_SYMBOL vmlinux 0x50836348	sock_recv_errqueue
 EXPORT_SYMBOL vmlinux 0x50bf81b3	neigh_event_ns
 EXPORT_SYMBOL vmlinux 0x50cb1d13	block_page_mkwrite
 EXPORT_SYMBOL vmlinux 0x50eca986	mipi_dsi_dcs_set_display_off
+EXPORT_SYMBOL vmlinux 0x50f85302	__arm_smccc_hvc
 EXPORT_SYMBOL vmlinux 0x511746c1	dump_fpu
 EXPORT_SYMBOL vmlinux 0x512ec33b	udp_proc_unregister
 EXPORT_SYMBOL vmlinux 0x513f3a0f	kern_path_mountpoint
@@ -5118,7 +5118,6 @@ EXPORT_SYMBOL vmlinux 0xac97a413	tcp_req_err
 EXPORT_SYMBOL vmlinux 0xac9b4efe	free_inode_nonrcu
 EXPORT_SYMBOL vmlinux 0xac9c2999	mmc_read_bkops_status
 EXPORT_SYMBOL vmlinux 0xaca4e1a3	get_mm_exe_file
-EXPORT_SYMBOL vmlinux 0xaca56bd8	arm_smccc_hvc
 EXPORT_SYMBOL vmlinux 0xacab29b7	seq_hlist_start_percpu
 EXPORT_SYMBOL vmlinux 0xacae1da5	tcf_em_unregister
 EXPORT_SYMBOL vmlinux 0xacc1c147	mipi_dsi_host_unregister
@@ -6336,6 +6335,7 @@ EXPORT_SYMBOL vmlinux 0xf8e559fa	dev_printk
 EXPORT_SYMBOL vmlinux 0xf9225b8f	dm_mq_kick_requeue_list
 EXPORT_SYMBOL vmlinux 0xf92e0041	bio_map_kern
 EXPORT_SYMBOL vmlinux 0xf9348cbc	xz_dec_run
+EXPORT_SYMBOL vmlinux 0xf93aae46	__arm_smccc_smc
 EXPORT_SYMBOL vmlinux 0xf952d03b	sock_common_recvmsg
 EXPORT_SYMBOL vmlinux 0xf9823299	mmc_wait_for_app_cmd
 EXPORT_SYMBOL vmlinux 0xf991ef73	vm_node_stat
