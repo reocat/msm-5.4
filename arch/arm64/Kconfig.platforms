@@ -6,10 +6,13 @@ config ARCH_AMBARELLA
 	select PINCTRL
 	select PINCTRL_AMB
 	select RATIONAL
-	select NET_VENDOR_AMBARELLA_ENHANCED if NET_VENDOR_AMBARELLA
 	select POWER_RESET_AMBARELLA
 	help
 	  This enables support for Ambarella ARMv8 SoC Family
+
+config ARCH_AMBARELLA_COMBO_NAND
+	depends on ARCH_AMBARELLA
+	def_bool n
 
 choice
 	prompt "Ambarella Chip REV"
@@ -18,12 +21,18 @@ choice
 config ARCH_AMBARELLA_S5
 	bool "S5"
 	help
-	  Say Y here if you are using Ambarella S3.
+	  Say Y here if you are using Ambarella S5.
 
 config ARCH_AMBARELLA_S5L
 	bool "S5L"
 	help
-	  Say Y here if you are using Ambarella S3L.
+	  Say Y here if you are using Ambarella S5L.
+
+config ARCH_AMBARELLA_CV1
+	bool "CV1"
+	select ARCH_AMBARELLA_COMBO_NAND
+	help
+	  Say Y here if you are using Ambarella CV1.
 
 endchoice
 

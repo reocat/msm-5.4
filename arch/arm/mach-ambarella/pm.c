@@ -40,7 +40,7 @@
 #include <plat/drctl.h>
 #include <plat/rtc.h>
 #include <plat/rct.h>
-#include <plat/fio.h>
+#include <plat/nand_legacy.h>
 
 #define SREF_MAGIC_PATTERN		0x43525230
 #define SREF_CPU_JUMP_ADDR		0x000f1000
@@ -54,20 +54,15 @@ u32 gpio_regbase[] = {GPIO0_BASE, GPIO1_BASE, GPIO2_BASE, GPIO3_BASE,
 /* ==========================================================================*/
 void ambarella_pm_gpiomux(int gpio)
 {
-	u32 bank, offset;
+	u32 bank = PINID_TO_BANK(gpio);
+	u32 offset = PINID_TO_OFFSET(gpio);
 
-	bank = PINID_TO_BANK(gpio);
-	offset = PINID_TO_OFFSET(gpio);
-
-#if (IOMUX_SUPPORT > 0)
 	/* configure the pin as GPIO mode */
 	amba_clrbitsl(IOMUX_REG(IOMUX_REG_OFFSET(bank, 0)), 0x1 << offset);
 	amba_clrbitsl(IOMUX_REG(IOMUX_REG_OFFSET(bank, 1)), 0x1 << offset);
 	amba_clrbitsl(IOMUX_REG(IOMUX_REG_OFFSET(bank, 2)), 0x1 << offset);
 	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x1);
 	amba_writel(IOMUX_REG(IOMUX_CTRL_SET_OFFSET), 0x0);
-#endif
-
 }
 void ambarella_pm_gpio_output(int gpio, int value)
 {

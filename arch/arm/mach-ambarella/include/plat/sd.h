@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2) || (CHIP_REV == S2E) || (CHIP_REV == S3L) || (CHIP_REV == S5L)
+#if (CHIP_REV == S3L) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
 #define SD_INSTANCES			2
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_INSTANCES			3
@@ -35,22 +35,28 @@
 #define SD_INSTANCES			1
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == S3L) || (CHIP_REV == S5L)
+#if (CHIP_REV == S3L) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
 #define SD_SUPPORT_SDIO			0
 #else
 #define SD_SUPPORT_SDIO			1
 #endif
 
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define SD_SUPPORT_SDXC			0
-#else
 #define SD_SUPPORT_SDXC			1
-#endif
 
 /* ==========================================================================*/
+#if (CHIP_REV == CV1)
+#define SD0_OFFSET			0x4000
+#else
 #define SD0_OFFSET			0x2000
+#endif
+
 #define SD1_OFFSET			0xC000
+
+#if (CHIP_REV == CV1)
+#define SD2_OFFSET			0x5000
+#else
 #define SD2_OFFSET			0x1F000
+#endif
 
 #define SD0_BASE			(AHB_BASE + SD0_OFFSET)
 #define SD1_BASE			(AHB_BASE + SD1_OFFSET)
@@ -160,17 +166,10 @@
 #define SD_HOST_4BIT			0x02
 #define SD_HOST_LED_ON			0x01
 
-/* SD_PWR_REG */
-#if (CHIP_REV == A5S)
-#define SD_PWR_3_3V			0x0e
-#define SD_PWR_3_0V			0x0c
-#define SD_PWR_1_8V			0x0a
-#else
 /* SD_PWR_REG only care about bit[3] */
 #define SD_PWR_3_3V			0x08
 #define SD_PWR_3_0V			0x08
 #define SD_PWR_1_8V			0x00
-#endif
 
 #define SD_PWR_ON			0x01
 #define SD_PWR_OFF			0x00
@@ -278,15 +277,9 @@
 #define SD_EIXEN_CMD_TMOUT_ERR		0x0001
 
 /* SD_AC12ES_REG */
-#if (CHIP_REV == A5S)
-#define SD_AC12ES_NOT_ISSUED		0x0040
-#define SD_AC12ES_INDEX			0x0020
-#define SD_AC12ES_END_BIT		0x0010
-#else
 #define SD_AC12ES_NOT_ISSUED		0x0080
 #define SD_AC12ES_INDEX			0x0010
 #define SD_AC12ES_END_BIT		0x0008
-#endif
 #define SD_AC12ES_CRC_ERROR		0x0004
 #define SD_AC12ES_TMOUT_ERROR		0x0002
 #define SD_AC12ES_NOT_EXECED		0x0001
@@ -346,34 +339,6 @@
 #define SD_ADMA_TBL_ATTR_VALID		(0x0001)
 
 /* ==========================================================================*/
-
-#define SD_TIMING_SOFT_PHY		(1 << 0)
-#define SD_TIMING_MS_DELAY		(1 << 1)
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2)
-#define SD_TIMING_SUPPORT		0
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
-#define SD_TIMING_SUPPORT		SD_TIMING_SOFT_PHY
-#else
-#define SD_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)
-#endif
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L) || \
-	(CHIP_REV == S3L)
-#define SDIO_TIMING_SUPPORT		0
-#else
-#define SDIO_TIMING_SUPPORT		SD_TIMING_MS_DELAY
-#endif
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E) || \
-	(CHIP_REV == S2L)
-#define SDXC_TIMING_SUPPORT		0
-#elif (CHIP_REV == S3) || (CHIP_REV == S5)
-#define SDXC_TIMING_SUPPORT		SD_TIMING_SOFT_PHY
-#else
-#define SDXC_TIMING_SUPPORT		(SD_TIMING_SOFT_PHY | SD_TIMING_MS_DELAY)
-#endif
-
 
 #define sd_slot_is_valid(slot)		((SD_SUPPORT_SDXC == 1) && ((slot) == 2) ? 1 : \
 					(SD_SUPPORT_SDIO == 1) && ((slot) == 1) ? 1 : \

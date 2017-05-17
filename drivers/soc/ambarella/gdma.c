@@ -75,11 +75,9 @@ static inline int transfer_big_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 		writel_relaxed(TRANSFER_2D_WIDTH, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
 		writel_relaxed(TRANSFER_2D_WIDTH - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 		writel_relaxed(row_count - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
-#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 		writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
 		writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
 		writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
-#endif
 
 		/* start 2D copy */
 		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
@@ -101,11 +99,9 @@ static inline int transfer_small_unit(u8 *dest_addr, u8 *src_addr, u32 size)
 	writel_relaxed((u32)(uintptr_t)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
 	writel_relaxed((u32)(uintptr_t)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
 	writel_relaxed(size - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
-#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 	writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
 	writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
 	writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
-#endif
 
 	/* start linear copy */
 	writel_relaxed(0, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
@@ -168,12 +164,10 @@ int dma_memcpy(u8 *dest_addr, u8 *src_addr, u32 size)
 		return -1;
 	}
 
-#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 	if (size & 0x1) {
 		printk("Size must be even !\n");
 		return -1;
 	}
-#endif
 
 	mutex_lock(&transfer_mutex);
 
@@ -218,11 +212,9 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,
 		writel_relaxed(dest_pitch, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
 		writel_relaxed(width - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 		writel_relaxed(MAX_TRANSFER_2D_HEIGHT - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
-#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 		writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
 		writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
 		writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
-#endif
 
 		/* start 2D copy */
 		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
@@ -237,11 +229,9 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,
 		writel_relaxed(dest_pitch, ambarella_gdma->regbase + GDMA_DST_PITCH_OFFSET);
 		writel_relaxed(width - 1, ambarella_gdma->regbase + GDMA_WIDTH_OFFSET);
 		writel_relaxed(height - 1, ambarella_gdma->regbase + GDMA_HIGHT_OFFSET);
-#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 		writel_relaxed(0x800, ambarella_gdma->regbase + GDMA_PIXELFORMAT_OFFSET);
 		writel_relaxed(0, ambarella_gdma->regbase + GDMA_ALPHA_OFFSET);
 		writel_relaxed(0, ambarella_gdma->regbase + GDMA_CLUT_BASE_OFFSET);
-#endif
 
 		/* start 2D copy */
 		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
@@ -261,12 +251,10 @@ int dma_pitch_memcpy(struct gdma_param *params)
 		return -1;
 	}
 
-#if (GDMA_SUPPORT_ALPHA_BLEND == 1)
 	if (size & 0x1) {
 		printk("Size must be even !\n");
 		return -1;
 	}
-#endif
 
 	mutex_lock(&transfer_mutex);
 	if (!params->src_non_cached) {

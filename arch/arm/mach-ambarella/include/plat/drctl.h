@@ -21,13 +21,10 @@
 
 #include <plat/chip.h>
 
-#if (CHIP_REV == A5S) || (CHIP_REV == S2)
-#define DRAM_DRAM_OFFSET 		0x4000
-#define DRAM_DDRC_OFFSET  		DRAM_DRAM_OFFSET
-#else
+/* ==========================================================================*/
+
 #define DRAM_DRAM_OFFSET 		0x0000
 #define DRAM_DDRC_OFFSET  		0x0800
-#endif
 
 #define DDRC_REG(x)			(DRAMC_BASE + DRAM_DDRC_OFFSET + (x))
 #define DRAM_REG(x)			(DRAMC_BASE + DRAM_DRAM_OFFSET + (x))

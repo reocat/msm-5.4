@@ -24,8 +24,14 @@
 #ifndef __PLAT_AMBARELLA_IR_H__
 #define __PLAT_AMBARELLA_IR_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
+#if (CHIP_REV == CV1)
+#define IR_OFFSET			0x1000
+#else
 #define IR_OFFSET			0x6000
+#endif
 #define IR_BASE				(APB_BASE + IR_OFFSET)
 #define IR_REG(x)			(IR_BASE + (x))
 

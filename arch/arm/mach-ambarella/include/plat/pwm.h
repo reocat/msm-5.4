@@ -26,18 +26,22 @@
 
 #include <plat/chip.h>
 
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define PWM_INSTANCES			5
-#else
-#define PWM_INSTANCES			4
-#endif
-
 /* ==========================================================================*/
-#define PWM_OFFSET			0x8000
-#define PWM_BASE			(APB_BASE + PWM_OFFSET)
-#define PWM_REG(x)			(PWM_BASE + (x))
+#define PWM_INSTANCES			4
 
+#if (CHIP_REV == CV1)
+#define PWM0_OFFSET			0x4000
+#else
+#define PWM0_OFFSET			0x8000
+#endif
+#define PWM1_OFFSET			0xC000
+#define PWM2_OFFSET			0xD000
+
+#if (CHIP_REV == CV1)
+#define STEPPER_OFFSET			0x2000
+#else
 #define STEPPER_OFFSET			0x4000
+#endif
 #define STEPPER_BASE			(APB_BASE + STEPPER_OFFSET)
 #define	PWM_ST_REG(x)			(STEPPER_BASE + (x))
 
@@ -47,16 +51,6 @@
 #define PWM_MODE_OFFSET			0x08
 #define PWM_CONTROL1_OFFSET		0x0c
 
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define PWM_B0_ENABLE_OFFSET		0x304
-#define PWM_B1_ENABLE_OFFSET		0x30c
-#define PWM_C0_ENABLE_OFFSET		0x314
-#define PWM_C1_ENABLE_OFFSET		0x31c
-#define PWM_B0_DATA1_OFFSET		0x320
-#define PWM_B1_DATA1_OFFSET		0x324
-#define PWM_C0_DATA1_OFFSET		0x328
-#define PWM_C1_DATA1_OFFSET		0x32c
-#else
 #define PWM_B0_ENABLE_OFFSET		0x04
 #define PWM_B1_ENABLE_OFFSET		0x0c
 #define PWM_C0_ENABLE_OFFSET		0x14
@@ -65,7 +59,6 @@
 #define PWM_B1_DATA1_OFFSET		0x24
 #define PWM_C0_DATA1_OFFSET		0x28
 #define PWM_C1_DATA1_OFFSET		0x2c
-#endif
 
 #define PWM_CLK_SRC_BIT			(0x1 << 31)
 #define PWM_INV_EN_BIT			(0x1 << 31)
@@ -73,11 +66,7 @@
 #define PWM_PWM_EN_BIT			(0x1)
 
 #define PWM_PWM_TICKS_MAX_BITS		16
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define PWM_ST_TICKS_MAX_BITS		10
-#else
 #define PWM_ST_TICKS_MAX_BITS		16
-#endif
 
 #endif /* __PLAT_AMBARELLA_PWM_H__ */
 

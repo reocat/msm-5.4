@@ -33,11 +33,9 @@
 #include <plat/dma.h>
 #include <plat/eth.h>
 #include <plat/event.h>
-#include <plat/fio.h>
 #include <plat/idc.h>
 #include <plat/ir.h>
 #include <plat/irq.h>
-#include <plat/nand.h>
 #include <plat/clk.h>
 #include <plat/pm.h>
 #include <plat/pwm.h>

@@ -28,76 +28,52 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
-#define SPI_INSTANCES				2
-#define SPI_SLAVE_INSTANCES			1
-#define	SPI_AHB_BUS				0
-#elif (CHIP_REV == S2)
-#define SPI_INSTANCES				1
-#define SPI_SLAVE_INSTANCES			1
-#define	SPI_AHB_BUS				0
-#elif (CHIP_REV == S2E)
-#define SPI_INSTANCES				1
-#define SPI_AHB_INSTANCES			1
-#define SPI_SLAVE_INSTANCES			1
-#define	SPI_AHB_BUS				2
-#elif (CHIP_REV == S5L)
-#define SPI_AHB_INSTANCES		3
-#define SPI_AHB_SLAVE_INSTANCES	1
-#define SPI_AHB_BUS				1
+#if (CHIP_REV == S5L)
+#define SPI_AHB_INSTANCES			3
+#define SPI_AHB_SLAVE_INSTANCES			1
+#elif (CHIP_REV == CV1)
+#define SPI_AHB_INSTANCES			6
+#define SPI_AHB_SLAVE_INSTANCES			1
 #else
 #define SPI_AHB_INSTANCES			2
 #define SPI_AHB_SLAVE_INSTANCES			1
-#define	SPI_AHB_BUS				1
 #endif
 
-#if (SPI_AHB_BUS == 1)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3L) || (CHIP_REV == S3) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define SPI0_OFFSET			0x20000
-#define SPI0_BASE			(AHB_BASE + SPI0_OFFSET)
 #define SPI1_OFFSET			0x21000
-#define SPI1_BASE			(AHB_BASE + SPI1_OFFSET)
 #define SPI2_OFFSET			0x22000
-#define SPI2_BASE			(AHB_BASE + SPI2_OFFSET)
 #define SPI_SLAVE_OFFSET		0x26000
-#define SPI_SLAVE_BASE			(AHB_BASE + SPI_SLAVE_OFFSET)
-#elif (SPI_AHB_BUS == 2)
-#define SPI0_OFFSET			0x2000
-#define SPI0_BASE			(APB_BASE + SPI0_OFFSET)
-#define SPI1_OFFSET			0x1F000
-#define SPI1_BASE			(AHB_BASE + SPI1_OFFSET)
-#define SPI_SLAVE_OFFSET		0x1E000
-#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
 #else
-#define SPI0_OFFSET			0x2000
-#define SPI0_BASE			(APB_BASE + SPI0_OFFSET)
-#define SPI1_OFFSET			0xF000
-#define SPI1_BASE			(APB_BASE + SPI1_OFFSET)
-#define SPI_SLAVE_OFFSET		0x1E000
-#define SPI_SLAVE_BASE			(APB_BASE + SPI_SLAVE_OFFSET)
+#define SPI0_OFFSET			0x11000
+#define SPI1_OFFSET			0x12000
+#define SPI2_OFFSET			0x13000
+#define SPI3_OFFSET			0x14000
+#define SPI4_OFFSET			0x15000
+#define SPI5_OFFSET			0x1C000
+#define SPI_SLAVE_OFFSET		0x10000
 #endif
+
+#define SPI0_BASE			(AHB_N_BASE + SPI0_OFFSET)
+#define SPI1_BASE			(AHB_N_BASE + SPI1_OFFSET)
+#define SPI2_BASE			(AHB_N_BASE + SPI2_OFFSET)
+#define SPI3_BASE			(AHB_N_BASE + SPI3_OFFSET)
+#define SPI4_BASE			(AHB_N_BASE + SPI4_OFFSET)
+#define SPI5_BASE			(AHB_N_BASE + SPI5_OFFSET)
+#define SPI_SLAVE_BASE			(AHB_N_BASE + SPI_SLAVE_OFFSET)
 #define SPI0_REG(x)			(SPI0_BASE + (x))
 #define SPI1_REG(x)			(SPI1_BASE + (x))
 #define SPI2_REG(x)			(SPI2_BASE + (x))
+#define SPI3_REG(x)			(SPI3_BASE + (x))
+#define SPI4_REG(x)			(SPI4_BASE + (x))
+#define SPI5_REG(x)			(SPI5_BASE + (x))
 #define SPI_SLAVE_REG(x)		(SPI_SLAVE_BASE + (x))
 
 /* ==========================================================================*/
-
-#if (CHIP_REV == A5S)
-#define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	0
-#define SPI_SUPPORT_MASTER_DELAY_START_TIME	0
-#define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	0
-#else
-#define SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY	1
-#define SPI_SUPPORT_MASTER_DELAY_START_TIME	1 // S2L only support ssi0, remember to fix it
-#define SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE	1 // S2 and S2L is not explain this in PRM
-#endif
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define SPI_TARGET_FRAME	0
-#else
-#define SPI_TARGET_FRAME	1
-#endif
-
+#define SPI_MASTER1			0
+#define SPI_MASTER2			1
+#define SPI_MASTER3			2
 
 /* ==========================================================================*/
 /* SPI_FIFO_SIZE */
@@ -134,22 +110,10 @@
 #define SPI_VERSION_ID_OFFSET		0x5c
 #define SPI_DR_OFFSET			0x60
 
-#if (SPI_SUPPORT_MASTER_CHANGE_ENA_POLARITY == 1)
 #define SPI_SSIENPOLR_OFFSET		0x260
-#endif
-#if (SPI_SUPPORT_MASTER_DELAY_START_TIME == 1)
 #define SPI_SCLK_OUT_DLY_OFFSET		0x264
-#endif
-#if (SPI_SUPPORT_NSM_SHAKE_START_BIT_CHSANGE == 1)
 #define SPI_START_BIT_OFFSET		0x268
-#endif
 
-#if (SPI_TARGET_FRAME == 1)
-#define SPI_TARGET_FRAME_COUNT	0x27c
-#define SPI_FRAME_COUNT			0x280
-#define SPI_FCRICR				0x284
-#define SPI_TX_FRAME_COUNT		0x288
-#endif
 /* ==========================================================================*/
 /* SPI rw mode */
 #define SPI_WRITE_READ		0
@@ -165,9 +129,9 @@
 /* SPI Parameters */
 #define SPI_DUMMY_DATA		0xffff
 #define MAX_QUERY_TIMES		10
+#define SPI_POLLING_MAX_WAIT_LOOP 5000000
 
 /* Default SPI settings */
-#define SPI_MODE		SPI_MODE_0
 #define SPI_SCPOL		0
 #define SPI_SCPH		0
 #define SPI_FRF			0

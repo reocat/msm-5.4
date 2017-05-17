@@ -27,8 +27,8 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define I2S_OFFSET			0xA000
+#if (CHIP_REV == CV1)
+#define I2S_OFFSET			0xD000
 #else
 #define I2S_OFFSET			0x1A000
 #endif

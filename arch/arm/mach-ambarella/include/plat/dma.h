@@ -27,70 +27,30 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
-#define NUM_DMA_CHANNELS 		4
-#elif (CHIP_REV == S2)
-#define NUM_DMA_CHANNELS 		5
+#if (CHIP_REV == CV1)
+#define DMA_INSTANCES			2
+#define NUM_DMA_CHANNELS 		16
 #else
+#define DMA_INSTANCES			1
 #define NUM_DMA_CHANNELS 		8
 #endif
 
-#define DMA_OFFSET			0x5000
-#define DMA_BASE			(AHB_BASE + DMA_OFFSET)
-#define DMA_REG(x)			(DMA_BASE + (x))
+#if (CHIP_REV == CV1)
+#define DMA0_OFFSET			0xA000
+#else
+#define DMA0_OFFSET			0x5000
+#endif
+#define DMA0_BASE			(AHB_N_BASE + DMA0_OFFSET)
+#define DMA0_REG(x)			(DMA0_BASE + (x))
 
-#define FDMA_OFFSET			0x12000
-#define FDMA_BASE			(AHB_BASE + FDMA_OFFSET)
-#define FDMA_REG(x)			(FDMA_BASE + (x))
+#define DMA1_OFFSET			0xB000
+#define DMA1_BASE			(AHB_N_BASE + DMA1_OFFSET)
+#define DMA1_REG(x)			(DMA1_BASE + (x))
 
 /* ==========================================================================*/
 
 #define INVALID_DMA_CHAN		0xFF
 
-#if (CHIP_REV == S2)
-#define I2S_RX_DMA_CHAN			1
-#define I2S_TX_DMA_CHAN			2
-#define MS_AHB_SSI_TX_DMA_CHAN		3
-#define SPDIF_AHB_SSI_DMA_CHAN		4
-/* non-existed dma channel */
-#define NOR_SPI_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
-#define NOR_SPI_RX_DMA_CHAN		(INVALID_DMA_CHAN - 1)
-#define SSI1_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
-#define SSI1_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
-#define UART_TX_DMA_CHAN		(INVALID_DMA_CHAN - 4)
-#define UART_RX_DMA_CHAN		(INVALID_DMA_CHAN - 5)
-#define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 6)
-#define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 7)
-
-#elif (CHIP_REV == S2E)
-#define NOR_SPI_TX_DMA_CHAN		0
-#define I2S_RX_DMA_CHAN			1
-#define I2S_TX_DMA_CHAN			2
-#define I2S1_RX_DMA_CHAN		3
-#define I2S1_TX_DMA_CHAN		4
-#define UART_RX_DMA_CHAN		5
-#define UART_TX_DMA_CHAN		6
-#define NOR_SPI_RX_DMA_CHAN		7
-/* non-existed dma channel */
-#define SSI1_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
-#define SSI1_RX_DMA_CHAN		(INVALID_DMA_CHAN - 1)
-
-#elif (CHIP_REV == S2L)
-#define NOR_SPI_TX_DMA_CHAN		0 /* share with SSI0 */
-#define NOR_SPI_RX_DMA_CHAN		1 /* share with SSI0 */
-#define SSI1_TX_DMA_CHAN		2
-#define SSI1_RX_DMA_CHAN		3
-#define UART_TX_DMA_CHAN		4 /* share with SSIS0 */
-#define UART_RX_DMA_CHAN		5 /* share with SSIS0 */
-#define I2S_RX_DMA_CHAN			6
-#define I2S_TX_DMA_CHAN			7
-/* non-existed dma channel */
-#define MS_AHB_SSI_TX_DMA_CHAN		(INVALID_DMA_CHAN - 0)
-#define SPDIF_AHB_SSI_DMA_CHAN		(INVALID_DMA_CHAN - 1)
-#define SLIM_TX_DMA_CHAN		(INVALID_DMA_CHAN - 2)
-#define SLIM_RX_DMA_CHAN		(INVALID_DMA_CHAN - 3)
-
-#else
 #define NOR_SPI_TX_DMA_CHAN		0
 #define NOR_SPI_RX_DMA_CHAN		1
 #define SSI1_TX_DMA_CHAN		2
@@ -100,29 +60,18 @@
 #define I2S_RX_DMA_CHAN			6
 #define I2S_TX_DMA_CHAN			7
 
-#endif
-
 /* ==========================================================================*/
-#define DMA_CHAN_CTR_REG(x)		DMA_REG((0x300 + ((x) << 4)))
-#define DMA_CHAN_SRC_REG(x)		DMA_REG((0x304 + ((x) << 4)))
-#define DMA_CHAN_DST_REG(x)		DMA_REG((0x308 + ((x) << 4)))
-#define DMA_CHAN_STA_REG(x)		DMA_REG((0x30c + ((x) << 4)))
-#define DMA_CHAN_DA_REG(x)		DMA_REG((0x380 + ((x) << 2)))
+#define DMA0_CHAN_CTR_REG(x)		DMA0_REG((0x300 + ((x) << 4)))
+#define DMA0_CHAN_SRC_REG(x)		DMA0_REG((0x304 + ((x) << 4)))
+#define DMA0_CHAN_DST_REG(x)		DMA0_REG((0x308 + ((x) << 4)))
+#define DMA0_CHAN_STA_REG(x)		DMA0_REG((0x30c + ((x) << 4)))
+#define DMA0_CHAN_DA_REG(x)		DMA0_REG((0x380 + ((x) << 2)))
 
-/* ==========================================================================*/
-
-#define FDMA_CHAN_CTR_REG(x)		FDMA_REG((0x300 + ((x) << 4)))
-#define FDMA_CHAN_SRC_REG(x)		FDMA_REG((0x304 + ((x) << 4)))
-#define FDMA_CHAN_DST_REG(x)		FDMA_REG((0x308 + ((x) << 4)))
-#define FDMA_CHAN_STA_REG(x)		FDMA_REG((0x30c + ((x) << 4)))
-#define FDMA_CHAN_DA_REG(x)		FDMA_REG((0x380 + ((x) << 2)))
-#define FDMA_CHAN_DSM_CTR_REG(x)	FDMA_REG((0x3a0 + ((x) << 4)))
-
-#define FDMA_CHAN_SPR_CNT_REG(x)	FDMA_REG((0x200 + ((x) << 4)))
-#define FDMA_CHAN_SPR_SRC_REG(x)	FDMA_REG((0x204 + ((x) << 4)))
-#define FDMA_CHAN_SPR_DST_REG(x)	FDMA_REG((0x208 + ((x) << 4)))
-#define FDMA_CHAN_SPR_STA_REG(x)	FDMA_REG((0x20c + ((x) << 4)))
-#define FDMA_CHAN_SPR_DA_REG(x)		FDMA_REG((0x280 + ((x) << 2)))
+#define DMA1_CHAN_CTR_REG(x)		DMA1_REG((0x300 + ((x) << 4)))
+#define DMA1_CHAN_SRC_REG(x)		DMA1_REG((0x304 + ((x) << 4)))
+#define DMA1_CHAN_DST_REG(x)		DMA1_REG((0x308 + ((x) << 4)))
+#define DMA1_CHAN_STA_REG(x)		DMA1_REG((0x30c + ((x) << 4)))
+#define DMA1_CHAN_DA_REG(x)		DMA1_REG((0x380 + ((x) << 2)))
 
 /* ==========================================================================*/
 
@@ -187,38 +136,6 @@
 
 /* DMA_INT_REG */
 #define DMA_INT_CHAN(x)			(0x1 << (x))
-
-#define DMA_INT_CHAN4			0x00000010
-#define DMA_INT_CHAN3			0x00000008
-#define DMA_INT_CHAN2			0x00000004
-#define DMA_INT_CHAN1			0x00000002
-#define DMA_INT_CHAN0			0x00000001
-
-/* DMA_DUAL_SPACE_MODE_REG */
-#define DMA_DSM_EN                      0x80000000
-#define DMA_DSM_MAJP_2KB                0x00000090
-#define DMA_DSM_SPJP_64B                0x00000004
-#define DMA_DSM_SPJP_128B               0x00000005
-
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2L)
-#define DMA_NODC_MN_BURST_SIZE	(DMA_CHANX_CTR_BLK_512B | DMA_CHANX_CTR_TS_4B)
-#define DMA_NODC_SP_BURST_SIZE	(DMA_CHANX_CTR_BLK_16B | DMA_CHANX_CTR_TS_4B)
-#define DMA_DESC_MN_BURST_SIZE	(DMA_DESC_BLK_512B | DMA_DESC_TS_4B)
-#define DMA_DESC_SP_BURST_SIZE	(DMA_DESC_BLK_16B | DMA_DESC_TS_4B)
-#define DMA_NODC_MN_BURST_SIZE8	(DMA_CHANX_CTR_BLK_512B | DMA_CHANX_CTR_TS_8B)
-#define FIO_MN_BURST_SIZE	(FIO_DMACTR_BLK_512B | FIO_DMACTR_TS4B)
-#define FIO_SP_BURST_SIZE	(FIO_DMACTR_BLK_16B | FIO_DMACTR_TS4B)
-#define FIO_MN_BURST_SIZE8	(FIO_DMACTR_BLK_512B | FIO_DMACTR_TS8B)
-#else
-#define DMA_NODC_MN_BURST_SIZE	(DMA_CHANX_CTR_BLK_512B | DMA_CHANX_CTR_TS_8B)
-#define DMA_NODC_SP_BURST_SIZE	(DMA_CHANX_CTR_BLK_16B | DMA_CHANX_CTR_TS_8B)
-#define DMA_DESC_MN_BURST_SIZE	(DMA_DESC_BLK_512B | DMA_DESC_TS_8B)
-#define DMA_DESC_SP_BURST_SIZE	(DMA_DESC_BLK_16B | DMA_DESC_TS_8B)
-#define DMA_NODC_MN_BURST_SIZE8	(DMA_CHANX_CTR_BLK_512B | DMA_CHANX_CTR_TS_8B)
-#define FIO_MN_BURST_SIZE	(FIO_DMACTR_BLK_512B | FIO_DMACTR_TS8B)
-#define FIO_SP_BURST_SIZE	(FIO_DMACTR_BLK_16B | FIO_DMACTR_TS8B)
-#define FIO_MN_BURST_SIZE8	(FIO_DMACTR_BLK_512B | FIO_DMACTR_TS8B)
-#endif
 
 /* ==========================================================================*/
 

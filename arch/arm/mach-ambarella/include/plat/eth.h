@@ -31,15 +31,12 @@
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3L)
 #define SUPPORT_GMII			0
+#define ETH_ENHANCED			0
 #else
 #define SUPPORT_GMII			1
+#define ETH_ENHANCED			1
 #endif
 
-#if (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == S5L)
-#define ETH_ENHANCED			1
-#else
-#define ETH_ENHANCED			0
-#endif
 /* ==========================================================================*/
 #define ETH_OFFSET			0xE000
 #define ETH_DMA_OFFSET			0xF000

@@ -27,8 +27,8 @@
 #include <mach/hardware.h>
 #include <plat/uart.h>
 
-#define AMBA_UART_BASE_P		(APB_PHYS_BASE + UART_OFFSET)
-#define AMBA_UART_BASE_V		(APB_BASE + UART_OFFSET)
+#define AMBA_UART_BASE_P		(APB_PHYS_BASE + UART0_OFFSET)
+#define AMBA_UART_BASE_V		(APB_BASE + UART0_OFFSET)
 
 #if defined(CONFIG_AMBARELLA_DEBUG_LL_UART0)
 	.macro	addruart, rp, rv, tmp

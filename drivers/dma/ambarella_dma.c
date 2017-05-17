@@ -988,7 +988,7 @@ static struct dma_chan *ambdma_of_xlate(struct of_phandle_args *dma_spec,
 		return NULL;
 	}
 
-	regmap_update_bits(amb_dma->reg_scr, AHBSP_DMA_CHANNEL_SEL_OFFSET,
+	regmap_update_bits(amb_dma->reg_scr, AHBSP_DMA0_SEL0_OFFSET,
 		0xf << (chan->chan_id * 4), request << (chan->chan_id * 4));
 
 	return chan;

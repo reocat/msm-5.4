@@ -25,23 +25,23 @@
 #define __PLAT_AMBARELLA_CHIP_H__
 
 /* ==========================================================================*/
-#define A5S		(5100)
-#define S2		(9000)
-#define S2E		(9100)
+#define A5S		(11000)
+#define S2		(11000)
+#define S2E		(11000)
+
+
 #define S2L		(12000)
 #define S3		(11000)
 #define S3L		(13000)
 #define S5		(15000)
-#define H2		(15000)
 #define S5L		(16000)
+#define CV1		(20000)
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
 #define CHIP_MINOR(x)	((x / 10) % 10)
 
-#if defined(CONFIG_ARCH_AMBARELLA_S2E)
-#define CHIP_REV	S2E
-#elif defined(CONFIG_ARCH_AMBARELLA_S2L)
+#if defined(CONFIG_ARCH_AMBARELLA_S2L)
 #define CHIP_REV	S2L
 #elif defined(CONFIG_ARCH_AMBARELLA_S3)
 #define CHIP_REV	S3
@@ -51,14 +51,13 @@
 #define CHIP_REV	S5
 #elif defined(CONFIG_ARCH_AMBARELLA_S5L)
 #define CHIP_REV	S5L
+#elif defined(CONFIG_ARCH_AMBARELLA_CV1)
+#define CHIP_REV	CV1
 #else
 #error "Undefined CHIP_REV"
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
-#define	CHIP_BROKEN_UNALIGNED_ACCESS	1
-#endif
 
 #if (CHIP_REV == S3)
 #define	CHIP_FIX_2NDCORTEX_BOOT	1
@@ -70,20 +69,9 @@
 #define IOMEM(x)	((void __force __iomem *)(x))
 #endif
 
-#if (CHIP_REV == A5S)
-#define DEFAULT_MEM_START		(0xc0000000)
-#else
-#define DEFAULT_MEM_START		(0x00000000)
-#endif
-
 /* Physical Address and Size */
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define AHB_PHYS_BASE			(0x60000000)
-#define APB_PHYS_BASE			(0x70000000)
-#else
 #define AHB_PHYS_BASE			(0xe0000000)
 #define APB_PHYS_BASE			(0xe8000000)
-#endif
 #define AHB_SIZE			(0x01000000)
 #define APB_SIZE			(0x01000000)
 

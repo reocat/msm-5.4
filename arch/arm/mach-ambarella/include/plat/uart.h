@@ -27,45 +27,58 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define	UART_INSTANCES			4
-#elif (CHIP_REV == S5L)
+#if (CHIP_REV == S5L)
 #define	UART_INSTANCES			3
+#elif (CHIP_REV == CV1)
+#define	UART_INSTANCES			7
 #else
 #define	UART_INSTANCES			2
 #endif
 
 /* ==========================================================================*/
-#define UART_OFFSET			0x5000
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define UART1_OFFSET			0x1F000
+#if (CHIP_REV == CV1)
+#define UART0_OFFSET			0x0000
+#else
+#define UART0_OFFSET			0x5000
+#endif
+
+#if (CHIP_REV == CV1)
+#define UART1_OFFSET			0x16000
 #else
 #define UART1_OFFSET			0x32000
 #endif
-#if (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define UART2_OFFSET			0x14000
+
+#if (CHIP_REV == CV1)
+#define UART2_OFFSET			0x17000
 #else
 #define UART2_OFFSET			0x33000
 #endif
-#define UART3_OFFSET			0x15000
 
-#define UART0_BASE			(APB_BASE + UART_OFFSET)
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define UART1_BASE			(APB_BASE + UART1_OFFSET)
+#if (CHIP_REV == CV1)
+#define UART3_OFFSET			0x18000
 #else
-#define UART1_BASE			(AHB_BASE + UART1_OFFSET)
+#define UART3_OFFSET			0x15000
 #endif
-#if (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define UART2_BASE			(APB_BASE + UART2_OFFSET)
-#else
-#define UART2_BASE			(AHB_BASE + UART2_OFFSET)
-#endif
-#define UART3_BASE			(APB_BASE + UART3_OFFSET)
+
+#define UART4_OFFSET			0x19000
+#define UART5_OFFSET			0x1A000
+#define UART6_OFFSET			0x1B000
+
+#define UART0_BASE			(APB_N_BASE + UART0_OFFSET)
+#define UART1_BASE			(AHB_N_BASE + UART1_OFFSET)
+#define UART2_BASE			(AHB_N_BASE + UART2_OFFSET)
+#define UART3_BASE			(AHB_N_BASE + UART3_OFFSET)
+#define UART4_BASE			(AHB_N_BASE + UART4_OFFSET)
+#define UART5_BASE			(AHB_N_BASE + UART5_OFFSET)
+#define UART6_BASE			(AHB_N_BASE + UART6_OFFSET)
 
 #define UART0_REG(x)			(UART0_BASE + (x))
 #define UART1_REG(x)			(UART1_BASE + (x))
 #define UART2_REG(x)			(UART2_BASE + (x))
 #define UART3_REG(x)			(UART3_BASE + (x))
+#define UART4_REG(x)			(UART4_BASE + (x))
+#define UART5_REG(x)			(UART5_BASE + (x))
+#define UART6_REG(x)			(UART6_BASE + (x))
 
 /* ==========================================================================*/
 #define UART_RB_OFFSET			0x00
@@ -173,11 +186,7 @@
 #define UART_FIFO_SIZE			(16)
 
 #define DEFAULT_AMBARELLA_UART_MCR	(0)
-#if (CHIP_REV == A5S)
-#define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI)
-#else
 #define DEFAULT_AMBARELLA_UART_IER	(UART_IE_ELSI | UART_IE_ERBFI | UART_IE_ETOI)
-#endif
 
 #endif /* __PLAT_AMBARELLA_UART_H__ */
 

@@ -144,11 +144,11 @@ ENTRY(ambarella_cpu_resume)
 	 * init UART(115200, 8N1) to avoid deadloop in printk.
 	 * MMU is not enabled yet, so we use physical address here.
 	 */
-	ldr	r0, =RCT_PHYS_BASE
+	ldr	r0, =DBGBUS_PHYS_BASE
 	mov	r1, #0x1
 	str	r1, [r0, #CG_UART_OFFSET]
 
-	ldr	r0, =(APB_PHYS_BASE + UART_OFFSET)
+	ldr	r0, =(APB_PHYS_BASE + UART0_OFFSET)
 	mov	r1, #0x1
 	str	r1, [r0, #UART_SRR_OFFSET]
 	mov	r1, #0x0
@@ -163,7 +163,7 @@ ENTRY(ambarella_cpu_resume)
 	str	r1, [r0, #UART_LC_OFFSET]
 
 	/* configure Tx/Rx pin as hw mode, it's chip specific. */
-#if (IOMUX_SUPPORT > 0)
+
 	/* gpio39/40 are used for UART0_rx/tx */
 	ldr	r0, =(APB_PHYS_BASE + IOMUX_OFFSET)
 	/* read-modify-write */
@@ -182,20 +182,7 @@ ENTRY(ambarella_cpu_resume)
 	str	r1, [r0, #IOMUX_CTRL_SET_OFFSET]
 	ldr	r1, =0x00000000
 	str	r1, [r0, #IOMUX_CTRL_SET_OFFSET]
-#else
-	/* gpio14/15 are used for UART0_tx/rx */
-	ldr	r0, =(APB_PHYS_BASE + GPIO0_OFFSET)
-	ldr	r1, [r0, #GPIO_AFSEL_OFFSET]
-	orr	r1, #0x0000c000
-	str	r1, [r0, #GPIO_AFSEL_OFFSET]
 
-#if (CHIP_REV == S2E)
-	ldr	r0, =RCT_PHYS_BASE
-	mov r1, #UART_CLK_SRC_IDSP
-	str	r1, [r0, #UART_CLK_SRC_SEL_OFFSET]
-#endif
-
-#endif
 	/* jump to generic resume */
 	b	cpu_resume
 ENDPROC(ambarella_cpu_resume)

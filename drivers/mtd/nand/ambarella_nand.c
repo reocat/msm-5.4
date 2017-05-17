@@ -45,9 +45,7 @@
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
 #include <plat/rct.h>
-#include <plat/dma.h>
-#include <plat/nand.h>
-#include <plat/fio.h>
+#include <plat/nand_legacy.h>
 #include <plat/event.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
@@ -71,7 +69,6 @@ struct ambarella_nand_info {
 	int				fdma_irq;
 	u32				ecc_bits;
 	/* if or not support to read id in 5 cycles */
-	bool				id_cycles_5;
 	bool				soft_ecc;
 	bool				nand_wp;
 
@@ -316,18 +313,18 @@ static void nand_amb_enable_dsm(struct ambarella_nand_info *nand_info)
 	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 
 	fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
-	dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
+	dma_dsm_ctr |= (FDMA_DSM_EN | FDMA_DSM_MAJP_2KB);
 	fio_ctr_reg |= FIO_CTR_RS;
 	fio_ctr_reg &= ~(FIO_CTR_CO | FIO_CTR_SE | FIO_CTR_ECC_6BIT
 					| FIO_CTR_ECC_8BIT);
 
 	if (nand_info->ecc_bits == 6) {
 		fio_dsm_ctr |= FIO_DSM_SPJP_64B;
-		dma_dsm_ctr |= DMA_DSM_SPJP_64B;
+		dma_dsm_ctr |= FDMA_DSM_SPJP_64B;
 	} else {
 		u32 nand_ext_ctr_reg = 0;
 		fio_dsm_ctr |= FIO_DSM_SPJP_128B;
-		dma_dsm_ctr |= DMA_DSM_SPJP_128B;
+		dma_dsm_ctr |= FDMA_DSM_SPJP_128B;
 
 		nand_ext_ctr_reg = readl_relaxed(nand_info->regbase +
 				FLASH_EX_CTR_OFFSET);
@@ -347,17 +344,17 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
 
 	fio_dsm_ctr |= (FIO_DSM_EN | FIO_DSM_MAJP_2KB);
-	dma_dsm_ctr |= (DMA_DSM_EN | DMA_DSM_MAJP_2KB);
+	dma_dsm_ctr |= (FDMA_DSM_EN | FDMA_DSM_MAJP_2KB);
 	fio_ctr_reg |= (FIO_CTR_RS | FIO_CTR_CO | FIO_CTR_SKIP_BLANK);
 
 	if (nand_info->ecc_bits == 6) {
 		fio_dsm_ctr |= FIO_DSM_SPJP_64B;
-		dma_dsm_ctr |= DMA_DSM_SPJP_64B;
+		dma_dsm_ctr |= FDMA_DSM_SPJP_64B;
 		fio_ctr_reg |= FIO_CTR_ECC_6BIT;
 	} else {
 		u32 nand_ext_ctr_reg = 0;
 		fio_dsm_ctr |= FIO_DSM_SPJP_128B;
-		dma_dsm_ctr |= DMA_DSM_SPJP_128B;
+		dma_dsm_ctr |= FDMA_DSM_SPJP_128B;
 		fio_ctr_reg |= FIO_CTR_ECC_8BIT;
 		nand_ext_ctr_reg = readl_relaxed(nand_info->regbase +
 				FLASH_EX_CTR_OFFSET);
@@ -701,7 +698,7 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 
 	int_src = readl_relaxed(nand_info->fdmaregbase + FDMA_INT_OFFSET);
 
-	if (int_src & (1 << FIO_DMA_CHAN)) {
+	if (int_src & 0x1) {
 		nand_info->dma_status =
 			readl_relaxed(nand_info->fdmaregbase + FDMA_STA_OFFSET);
 		writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
@@ -722,13 +719,8 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 	u32					size = 0;
 
 	/* init and enable fdma to transfer data betwee FIFO and Memory */
-	if (nand_info->len > 16)
-		ctrl_val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_NODC_MN_BURST_SIZE;
-	else
-		ctrl_val = DMA_CHANX_CTR_WM | DMA_CHANX_CTR_NI | DMA_NODC_SP_BURST_SIZE;
-
-	ctrl_val |= nand_info->len | DMA_CHANX_CTR_EN;
-	ctrl_val &= ~DMA_CHANX_CTR_D;
+	ctrl_val = nand_info->len > 16 ? FDMA_NODC_MN_BURST_SIZE : FDMA_NODC_SP_BURST_SIZE;
+	ctrl_val |= FDMA_CHAN_CTR_WM | FDMA_CHAN_CTR_NI | FDMA_CHAN_CTR_EN | nand_info->len;
 
 	/* Setup main external DMA engine transfer */
 	writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
@@ -753,12 +745,14 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 	if (size > 16) {
 		ctrl_val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
-			FIO_MN_BURST_SIZE |
+			FIO_DMACTR_BLK_512B |
+			FIO_DMACTR_TS8B |
 			size;
 	} else {
 		ctrl_val = FIO_DMACTR_EN |
 			FIO_DMACTR_FL |
-			FIO_SP_BURST_SIZE |
+			FIO_DMACTR_BLK_16B |
+			FIO_DMACTR_TS8B |
 			size;
 	}
 	writel(ctrl_val, nand_info->regbase + FIO_DMACTR_OFFSET);
@@ -766,25 +760,22 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 {
-	u32					ctrl_val, dma_burst_val, fio_burst_val;
+	u32					ctrl_val, dma_burst_val;
 	u32					size = 0;
 
 	if (nand_info->ecc_bits > 1) {
-		dma_burst_val = DMA_NODC_MN_BURST_SIZE8;
-		fio_burst_val = FIO_MN_BURST_SIZE8;
+		dma_burst_val = FDMA_CHAN_CTR_BLK_512B | FDMA_CHAN_CTR_TS_8B;
 	} else {
-		dma_burst_val = DMA_NODC_MN_BURST_SIZE;
-		fio_burst_val = FIO_MN_BURST_SIZE;
+		dma_burst_val = FDMA_NODC_MN_BURST_SIZE;
 	}
 
 	/* init and enable fdma to transfer data betwee FIFO and Memory */
 	if (nand_info->len > 16)
-		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | dma_burst_val;
+		ctrl_val = FDMA_CHAN_CTR_RM | FDMA_CHAN_CTR_NI | dma_burst_val;
 	else
-		ctrl_val = DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI | DMA_NODC_SP_BURST_SIZE;
+		ctrl_val = FDMA_CHAN_CTR_RM | FDMA_CHAN_CTR_NI | FDMA_NODC_SP_BURST_SIZE;
 
-	ctrl_val |= nand_info->len | DMA_CHANX_CTR_EN;
-	ctrl_val &= ~DMA_CHANX_CTR_D;
+	ctrl_val |= nand_info->len | FDMA_CHAN_CTR_EN;
 
 	/* Setup main external DMA engine transfer */
 	writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
@@ -809,13 +800,8 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 	writel_relaxed(nand_info->addr, nand_info->regbase + FIO_DMAADR_OFFSET);
 
 	size = nand_info->len + nand_info->slen;
-	if (size > 16) {
-		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | fio_burst_val |
-			FIO_DMACTR_RM | size;
-	} else {
-		ctrl_val = FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_SP_BURST_SIZE |
-			FIO_DMACTR_RM | size;
-	}
+	ctrl_val = (size > 16) ? FIO_DMACTR_BLK_512B : FIO_DMACTR_BLK_16B;
+	ctrl_val |= FIO_DMACTR_EN | FIO_DMACTR_FL | FIO_DMACTR_TS8B | FIO_DMACTR_RM | size;
 	writel(ctrl_val, nand_info->regbase + FIO_DMACTR_OFFSET);
 }
 
@@ -825,6 +811,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	int					errorCode = 0;
 	u32					cmd;
 	u32					nand_ctr_reg = 0;
+	u32					nand_ext_ctr_reg = 0;
 	u32					nand_cmd_reg = 0;
 	u32					fio_ctr_reg = 0;
 	long					timeout;
@@ -849,14 +836,10 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		nand_ctr_reg |= NAND_CTR_A(nand_info->addr_hi);
 		nand_cmd_reg = nand_info->addr | NAND_AMB_CMD_READID;
 
-		if (nand_info->id_cycles_5) {
-			u32 nand_ext_ctr_reg = 0;
-
-			nand_ext_ctr_reg = readl_relaxed(nand_info->regbase + FLASH_EX_CTR_OFFSET);
-			nand_ext_ctr_reg |= NAND_EXT_CTR_I5;
-			nand_ctr_reg &= ~(NAND_CTR_I4);
-			writel_relaxed(nand_ext_ctr_reg, nand_info->regbase + FLASH_EX_CTR_OFFSET);
-		}
+		nand_ext_ctr_reg = readl_relaxed(nand_info->regbase + FLASH_EX_CTR_OFFSET);
+		nand_ext_ctr_reg |= NAND_EXT_CTR_I5;
+		nand_ctr_reg &= ~(NAND_CTR_I4);
+		writel_relaxed(nand_ext_ctr_reg, nand_info->regbase + FLASH_EX_CTR_OFFSET);
 
 		writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 		writel_relaxed(nand_cmd_reg, nand_info->regbase + FLASH_CMD_OFFSET);
@@ -1014,9 +997,8 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 			dev_dbg(nand_info->dev, "%ld jiffies left.\n", timeout);
 		}
 
-		if (nand_info->dma_status & (DMA_CHANX_STA_OE | DMA_CHANX_STA_ME |
-			DMA_CHANX_STA_BE | DMA_CHANX_STA_RWE |
-			DMA_CHANX_STA_AE)) {
+		if (nand_info->dma_status & (FDMA_CHAN_STA_OE | FDMA_CHAN_STA_ME |
+			FDMA_CHAN_STA_BE | FDMA_CHAN_STA_RWE | FDMA_CHAN_STA_AE)) {
 			dev_err(nand_info->dev,
 				"%s: Errors happend in DMA transaction %d!\n",
 				__func__, nand_info->dma_status);
@@ -1106,12 +1088,10 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 			if (cmd == NAND_AMB_CMD_READID) {
 				u32 id = readl_relaxed(nand_info->regbase +
-					FLASH_ID_OFFSET);
-				if (nand_info->id_cycles_5) {
-					u32 id_5 = readl_relaxed(nand_info->regbase +
-					FLASH_EX_ID_OFFSET);
-					nand_info->dmabuf[4] = (unsigned char) (id_5 & 0xFF);
-				}
+						FLASH_ID_OFFSET);
+				u32 id_5 = readl_relaxed(nand_info->regbase +
+						FLASH_EX_ID_OFFSET);
+				nand_info->dmabuf[4] = (unsigned char) (id_5 & 0xFF);
 				nand_info->dmabuf[0] = (unsigned char) (id >> 24);
 				nand_info->dmabuf[1] = (unsigned char) (id >> 16);
 				nand_info->dmabuf[2] = (unsigned char) (id >> 8);
@@ -1685,7 +1665,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 	/* init fdma to avoid dummy irq */
 	writel_relaxed(0, nand_info->fdmaregbase + FDMA_STA_OFFSET);
 	writel_relaxed(0, nand_info->fdmaregbase + FDMA_SPR_STA_OFFSET);
-	writel_relaxed(DMA_CHANX_CTR_WM | DMA_CHANX_CTR_RM | DMA_CHANX_CTR_NI,
+	writel_relaxed(FDMA_CHAN_CTR_WM | FDMA_CHAN_CTR_RM | FDMA_CHAN_CTR_NI,
 			nand_info->fdmaregbase + FDMA_CTR_OFFSET);
 
 	writel_relaxed(nand_info->control_reg, nand_info->regbase + FLASH_CTR_OFFSET);
@@ -1754,9 +1734,7 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 	/* if ecc is generated by software, the ecc bits num will
 	 * be defined in FDT. */
 	if (!nand_info->soft_ecc) {
-		if (of_find_property(np, "amb,no-bch", NULL)) {
-			nand_info->ecc_bits = 1;
-		} else if (poc & SYS_CONFIG_NAND_ECC_BCH_EN) {
+		if (poc & SYS_CONFIG_NAND_ECC_BCH_EN) {
 			if (poc & SYS_CONFIG_NAND_ECC_SPARE_2X)
 				nand_info->ecc_bits = 8;
 			else
@@ -1778,7 +1756,6 @@ static int ambarella_nand_init_chip(struct ambarella_nand_info *nand_info,
 	  * Always use P3 and I4 to support all NAND,
 	  * but we will adjust them after read ID from NAND. */
 	nand_info->control_reg |= (NAND_CTR_P3 | NAND_CTR_I4 | NAND_CTR_IE);
-	nand_info->id_cycles_5 = NAND_READ_ID5;
 
 	if(nand_info->nand_wp)
 		nand_info->control_reg |= NAND_CTR_WP;

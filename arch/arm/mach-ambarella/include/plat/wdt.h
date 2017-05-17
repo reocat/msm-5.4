@@ -24,8 +24,14 @@
 #ifndef __PLAT_AMBARELLA_WDT_H__
 #define __PLAT_AMBARELLA_WDT_H__
 
+#include <plat/chip.h>
+
 /* ==========================================================================*/
+#if (CHIP_REV == CV1)
+#define WDOG_OFFSET			0x2000
+#else
 #define WDOG_OFFSET			0xC000
+#endif
 #define WDOG_BASE			(APB_BASE + WDOG_OFFSET)
 #define WDOG_REG(x)			(WDOG_BASE + (x))
 

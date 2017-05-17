@@ -275,7 +275,7 @@ static void ambarella_adc_set_fifo(struct ambarella_adc *ambadc)
 static void ambarella_adc_power_up(struct ambarella_adc *ambadc)
 {
 	/* soft reset adc, all registers except for scaler reg will be cleared */
-	writel_relaxed(ADC_CONTROL_RESET, ambadc->regbase + ADC_CONTROL_OFFSET);
+	writel_relaxed(ADC_CONTROL_CLEAR, ambadc->regbase + ADC_CONTROL_OFFSET);
 
 	/* power up adc and all needed scaler */
 	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET, ambadc->scalers_mask << 8);
@@ -289,7 +289,7 @@ static void ambarella_adc_power_down(struct ambarella_adc *ambadc)
 	u32 tmp;
 
 	/* soft reset adc, all registers except for scaler reg will be cleared */
-	writel_relaxed(ADC_CONTROL_RESET, ambadc->regbase + ADC_CONTROL_OFFSET);
+	writel_relaxed(ADC_CONTROL_CLEAR, ambadc->regbase + ADC_CONTROL_OFFSET);
 
 	if (ambadc->t2v_channel >= 0)
 		regmap_write(ambadc->reg_rct, T2V_CTRL_OFFSET, 0x1);
@@ -304,7 +304,7 @@ static void ambarella_adc_start(struct ambarella_adc *ambadc)
 	u32 tmp;
 
 	/* soft reset adc, all registers except for scaler reg will be cleared */
-	writel_relaxed(ADC_CONTROL_RESET, ambadc->regbase + ADC_CONTROL_OFFSET);
+	writel_relaxed(ADC_CONTROL_CLEAR, ambadc->regbase + ADC_CONTROL_OFFSET);
 
 	/* return directly if no channel need to be enabled */
 	if (bitmap_empty(&ambadc->channels_mask, ADC_NUM_CHANNELS))

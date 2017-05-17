@@ -9,6 +9,7 @@ obj-$(CONFIG_MTD_NAND_IDS)		+= nand_ids.o
 obj-$(CONFIG_MTD_SM_COMMON) 		+= sm_common.o
 
 obj-$(CONFIG_MTD_NAND_AMBARELLA)	+= ambarella_nand.o
+obj-$(CONFIG_MTD_COMBO_NAND_AMBARELLA)	+= ambarella_combo_nand.o
 obj-$(CONFIG_MTD_SPINAND_AMBARELLA)	+= ambarella_spinand.o
 
 obj-$(CONFIG_MTD_NAND_CAFE)		+= cafe_nand.o

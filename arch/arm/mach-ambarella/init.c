@@ -37,6 +37,8 @@
 #include <mach/init.h>
 #include <plat/rct.h>
 
+#define DEFAULT_MEM_START		(0x00000000)
+
 /* ==========================================================================*/
 u64 ambarella_dmamask = DMA_BIT_MASK(32);
 EXPORT_SYMBOL(ambarella_dmamask);

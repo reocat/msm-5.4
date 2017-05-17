@@ -27,21 +27,8 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == A5S)
-#define RTC_SUPPORT_30BITS_PASSED_SECONDS	1
-#else
-#define RTC_SUPPORT_30BITS_PASSED_SECONDS	0
-#endif
-
-#if (CHIP_REV == A5S)
-#define RTC_POWER_LOST_DETECT			0
-#else
-#define RTC_POWER_LOST_DETECT			1
-#endif
-
-/* ==========================================================================*/
-#if (CHIP_REV == A5S) || (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define RTC_OFFSET			0xD000
+#if (CHIP_REV == CV1)
+#define RTC_OFFSET			0x1000
 #else
 #define RTC_OFFSET			0x15000
 #endif
