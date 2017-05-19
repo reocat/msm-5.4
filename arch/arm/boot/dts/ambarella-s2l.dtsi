@@ -476,6 +476,8 @@
 			#dma-cells = <1>;
 			dma-channels = <8>;
 			dma-requests = <8>;
+			/* NOT support pause/resume/stop */
+			amb,non-support-prs;
 		};
 
 		nand0: nand@e0001000 {

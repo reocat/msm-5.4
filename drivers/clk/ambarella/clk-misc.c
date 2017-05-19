@@ -34,9 +34,10 @@ static const char *gclk_names[] = {
 	"pll_out_core", "pll_out_sd", "gclk_cortex", "gclk_axi",
 	"smp_twd", "gclk_ddr", "gclk_core", "gclk_ahb", "gclk_apb",
 	"gclk_idsp", "gclk_so", "gclk_vo2", "gclk_vo", "gclk_uart",
-	"gclk_uart0", "gclk_uart1", "gclk_uart2", "gclk_audio",
+	"gclk_uart0", "gclk_uart1", "gclk_uart2", "gclk_uart3",
+	"gclk_uart4", "gclk_uart5", "gclk_uart6", "gclk_audio",
 	"gclk_sdxc", "gclk_sdio", "gclk_sd", "gclk_ir", "gclk_adc",
-	"gclk_ssi", "gclk_ssi2", "gclk_ssi3", "gclk_pwm",
+	"gclk_ssi", "gclk_ssi2", "gclk_ssi3", "gclk_pwm", "gclk_nand",
 };
 
 static int ambarella_clock_proc_show(struct seq_file *m, void *v)

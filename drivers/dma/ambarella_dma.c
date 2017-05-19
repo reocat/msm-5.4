@@ -358,7 +358,7 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 	struct ambdma_desc *first, *amb_desc;
 
 	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
-		if (amb_chan->force_stop == 0 || amb_dma->support_prs) {
+		if (amb_chan->force_stop == 0 || !amb_dma->non_support_prs) {
 			/* if force_stop == 0, the DMA channel is still running
 			 * at this moment. And if the chip doesn't support early
 			 * end, normally there are still two IRQs will be triggered
@@ -374,7 +374,7 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 			 * initialized by next transfer */
 			list_move_tail(&first->desc_node, &amb_chan->stopping_list);
 
-			if (amb_dma->support_prs) {
+			if (!amb_dma->non_support_prs) {
 				u32 val = readl(amb_dma->regbase + DMA_EARLY_END_OFFSET);
 				val |= 0x1 << amb_chan->chan.chan_id;
 				writel(val, amb_dma->regbase + DMA_EARLY_END_OFFSET);
@@ -405,7 +405,7 @@ static int ambdma_pause_channel(struct ambdma_chan *amb_chan)
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	u32 val;
 
-	if (!amb_dma->support_prs)
+	if (amb_dma->non_support_prs)
 		return -ENXIO;
 
 	val = readl(amb_dma->regbase + DMA_PAUSE_SET_OFFSET);
@@ -420,7 +420,7 @@ static int ambdma_resume_channel(struct ambdma_chan *amb_chan)
 	struct ambdma_device *amb_dma = amb_chan->amb_dma;
 	u32 val;
 
-	if (!amb_dma->support_prs)
+	if (amb_dma->non_support_prs)
 		return -ENXIO;
 
 	val = readl(amb_dma->regbase + DMA_PAUSE_CLR_OFFSET);
@@ -1034,7 +1034,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		goto ambdma_dma_probe_exit;
 	}
 
-	amb_dma->support_prs = !!of_find_property(np, "amb,support-prs", NULL);
+	amb_dma->non_support_prs = !!of_find_property(np, "amb,non-support-prs", NULL);
 
 	ret = of_property_read_u32(np, "dma-channels", &amb_dma->nr_channels);
 	if (ret) {

@@ -480,8 +480,6 @@
 			dma-channels = <8>;
 			dma-requests = <14>;
 			amb,scr-regmap = <&scratchpad_syscon>;
-			/* support pause/resume/stop */
-			amb,support-prs;
 		};
 
 		nand0: nand@e0001000 {

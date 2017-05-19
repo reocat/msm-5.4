@@ -334,7 +334,8 @@ Required properties:
 Optional properties:
 - amb,scr-regmap: phandle of Scratchpad registers, should be specified if the
   SoC that support dma channel selection.
-- amb,support-prs: should be specified for SoC that supports PAUSE/RESUME/STOP.
+- amb,non-support-prs: should be specified for SoC that NOT supports
+  PAUSE/RESUME/STOP.
 
 iv) Example
 -----------
@@ -346,8 +347,8 @@ iv) Example
 		dma-channels = <8>;
 		dma-requests = <16>;
 		amb,scr-regmap = <&scratchpad_syscon>;
-		/* support pause/resume/stop */
-		amb,support-prs;
+		/* NOT support pause/resume/stop */
+		amb,non-support-prs;
 	};
 
 
@@ -602,6 +603,7 @@ Optional properties:
 - amb,tx-clk-invert: should be specified if inverting the Tx clk,
   take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
+- mdio-gpio: specifies to use GPIO to emulating MDIO bus.
 
 ii) Example
 -----------

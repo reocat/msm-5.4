@@ -228,7 +228,7 @@
 			      <0xe8010000 0x1000>,
 			      <0xe8011000 0x1000>,
 			      <0xe8016000 0x1000>,
-			      <0xe8015080 0x24>,
+			      <0xe8015080 0x28>,
 			      <0xec170314 0x20>;
 			reg-names = "gpio0", "gpio1", "gpio2", "gpio3", "gpio4",
 				    "iomux", "pad", "ds";
@@ -562,8 +562,6 @@
 			dma-channels = <8>;
 			dma-requests = <14>;
 			amb,scr-regmap = <&scratchpad_syscon>;
-			/* support pause/resume/stop */
-			amb,support-prs;
 		};
 
 		gdma: gdma@e0005000 {
@@ -1188,7 +1186,6 @@
 			compatible = "ambarella,composite-clock";
 			reg = <0xec170534 4>, <0xec1706b8 4>;
 			clocks = <&rmii_osc>, <&pll_out_enet>;
-			amb,fix-divider = <2>;
 			amb,div-width = <4>;
 			amb,div-shift = <4>;
 			amb,div-plus;
