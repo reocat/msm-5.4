@@ -1,262 +1,310 @@
 /*
- * drivers/cpufreq/ambarella-cpufreq.c
+ * Copyright (C) 2017 Ambarella Semiconductor, Inc.
  *
- * CPU Frequency Scaling for Ambarella platform
- *
- * Copyright (C) 2015 ST Ambarella Shanghai Co., Ltd.
- * XianqingZheng <xqzheng@ambarella.com>
- *
- * This file is licensed under the terms of the GNU General Public
- * License version 2. This program is licensed "as is" without any
- * warranty of any kind, whether express or implied.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
-#include <linux/clk.h>
-#include <linux/cpufreq.h>
-#include <linux/err.h>
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/slab.h>
+#define pr_fmt(fmt) "cpufreq: " fmt
+
+#include <linux/kernel.h>
 #include <linux/types.h>
+#include <linux/init.h>
+#include <linux/cpufreq.h>
+#include <linux/clk.h>
+#include <linux/err.h>
+#include <linux/regulator/consumer.h>
+#include <linux/module.h>
 #include <plat/event.h>
-#include <linux/io.h>
-#include <plat/rct.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
+#include <linux/pm_opp.h>
+#include <linux/slab.h>
+#include <linux/platform_device.h>
 
-//#define amba_cpufreq_debug	//used at debug mode
+struct ambarella_cpufreq_info {
+	unsigned int cpufreq_method;
+	struct clk *cortex;
+	struct clk *core;
+	struct cpufreq_frequency_table *cortex_table;
+	struct cpufreq_frequency_table *core_table;
+	struct device *dev;
+};
 
-#ifdef amba_cpufreq_debug
-#define amba_cpufreq_prt printk
-#else
-#define amba_cpufreq_prt(format, arg...) do {} while (0)
-#endif
+extern int ambarella_aarch64_cntfrq_update(void);
+static struct ambarella_cpufreq_info *cpufreq_info;
+static unsigned long regulator_latency = CPUFREQ_ETERNAL;
 
-/* Ambarella CPUFreq driver data structure */
-static struct {
-	struct clk *core_clk;
-	struct clk *cortex_clk;
-	unsigned int transition_latency;
-	struct cpufreq_frequency_table *cortex_clktbl;
-	struct cpufreq_frequency_table *core_clktbl;
-} amba_cpufreq;
-
-static int amba_cpufreq_verify(struct cpufreq_policy *policy)
+static struct cpufreq_frequency_table *ambarella_get_cpufreq_table(void)
 {
-	return cpufreq_frequency_table_verify(policy, amba_cpufreq.cortex_clktbl);
+	switch (cpufreq_info->cpufreq_method) {
+	case 0:
+	case 1:
+		return cpufreq_info->cortex_table;
+	case 2:
+		return cpufreq_info->core_table;
+	default:
+		pr_err("%s can't find the cpufreq method!\n", __func__);
+	}
+	return NULL;
 }
 
-static unsigned int amba_cpufreq_get(unsigned int cpu)
+static struct clk *ambarella_get_cpufreq_clk(void)
 {
-	return clk_get_rate(amba_cpufreq.cortex_clk) / 1000;
+	switch (cpufreq_info->cpufreq_method) {
+	case 0:
+	case 1:
+		return cpufreq_info->cortex;
+	case 2:
+		return cpufreq_info->core;
+	default:
+		pr_err("%s can't find the cpufreq target clk!\n", __func__);
+	}
+	return NULL;
 }
 
-static int amba_cpufreq_target(struct cpufreq_policy *policy,
-		unsigned int index)
+static int ambarella_cpufreq_set_relevance(unsigned int index)
 {
-	struct cpufreq_freqs freqs;
-	unsigned long cortex_newfreq, core_newfreq;
 	int ret;
-	unsigned int cur_freq;
+	unsigned int relevance_freq;
+	struct clk *relevance_clk;
+	struct cpufreq_frequency_table *relevance_table;
 
-	freqs.old = amba_cpufreq_get(0);
-	cortex_newfreq = amba_cpufreq.cortex_clktbl[index].frequency * 1000;
-	core_newfreq = amba_cpufreq.core_clktbl[index].frequency * 1000;
-	freqs.new = cortex_newfreq / 1000;
+	relevance_table = cpufreq_info->core_table;
+	relevance_freq = relevance_table[index].frequency;
+	relevance_clk = cpufreq_info->core;
 
-	if(cortex_newfreq < 96000000) {
-		printk("Target frequency is too low, cortex is not stable, it should be more than 96000\n");
-		return -EINVAL;
+	ret = clk_set_rate(relevance_clk, relevance_freq * 1000);
+	if (ret < 0) {
+		pr_err("%s Failed to set rate %dkHz: %d\n", __func__,  relevance_freq, ret);
+		return 0;
 	}
 
-	amba_cpufreq_prt(KERN_INFO "prepare to switch the frequency from %d KHz to %d KHz\n",
-		freqs.old, freqs.new);
+	pr_info("core -> %d KHZ(expected), %lu KHZ(actual) \n", relevance_freq / 2,
+			clk_get_rate(relevance_clk) / 1000 / 2);
+
+	return 0;
+}
+
+static int ambarella_cpufreq_set_target(struct cpufreq_policy *policy,
+		unsigned int index)
+{
+	unsigned int old_freq, new_freq;
+	struct cpufreq_frequency_table *target;
+	struct cpufreq_freqs freqs;
+	int ret = 0;
+
+	target = ambarella_get_cpufreq_table();
+	if (!target)
+		return -EINVAL;
+
+	old_freq = clk_get_rate(policy->clk) / 1000;
+	new_freq = target[index].frequency;
+
+	freqs.old = old_freq;
+	freqs.new = new_freq;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
 	ambarella_set_event(AMBA_EVENT_PRE_CPUFREQ, NULL);
 
-	ret = clk_set_rate(amba_cpufreq.cortex_clk, cortex_newfreq);
-	/* Get current rate after clk_set_rate, in case of failure */
-	if (ret) {
-		pr_err("CPU Freq: set cortex rate failed: %d\n", ret);
-		freqs.new = clk_get_rate(amba_cpufreq.cortex_clk) / 1000;
-	} else
-		amba_cpufreq_prt("CPU Freq: cortex freq adjust successfully\n");
+	ret = clk_set_rate(policy->clk, new_freq * 1000);
+	if (ret < 0) {
+		pr_err("Failed to set rate %dkHz: %d\n", new_freq, ret);
+		goto err_set_rate;
+	}
 
-	ret = clk_set_rate(amba_cpufreq.core_clk, core_newfreq);
-	/* Get current rate after clk_set_rate, in case of failure */
-	if (ret) {
-		pr_err("CPU Freq: set core rate failed: %d\n", ret);
-	} else
-		amba_cpufreq_prt("CPU Freq: core freq adjust successfully\n");
+	pr_info("cortex -> %d KHZ(expected), %lu KHZ (actual)\n", new_freq,
+			clk_get_rate(policy->clk) / 1000);
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3L)
-        if(amba_cpufreq.core_clktbl[index].frequency <= 96000) {
-                /*Disable IDSP/VDSP to Save Power*/
-                amba_writel(CKEN_CLUSTER_REG, 0x540);
-        } else {
-                /*Enable IDSP/VDSP to Save Power*/
-                amba_writel(CKEN_CLUSTER_REG, 0x3fff);
-        }
+	if (cpufreq_info->cpufreq_method == 1)
+		ambarella_cpufreq_set_relevance(index);
+
+#ifdef CONFIG_AMBARELLA_SCM
+	ambarella_aarch64_cntfrq_update();
 #endif
 
-	cpufreq_freq_transition_end(policy, &freqs, 0);
-	ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL);
+	pr_debug("Set actual frequency %lukHz\n", clk_get_rate(policy->clk) / 1000);
 
-	cur_freq = clk_get_rate(amba_cpufreq.cortex_clk) / 1000;
-	amba_cpufreq_prt(KERN_INFO "current frequency of cortex clock is:%d KHz\n", cur_freq);
+err_set_rate:
+	ambarella_set_event(AMBA_EVENT_POST_CPUFREQ, NULL);
+	cpufreq_freq_transition_end(policy, &freqs, 0);
+	return ret;
+}
+
+static int ambarella_cpufreq_driver_init(struct cpufreq_policy *policy)
+{
+	int ret;
+	struct cpufreq_frequency_table *target;
+
+	if (policy->cpu != 0)
+		return -EINVAL;
+
+	target = ambarella_get_cpufreq_table();
+	if (!target)
+		return -EINVAL;
+
+	policy->clk = ambarella_get_cpufreq_clk();
+	if (!policy->clk)
+		return -ENODEV;
+
+	ret = cpufreq_generic_init(policy, target, regulator_latency);
+	if (ret != 0) {
+		pr_err("Failed to configure frequency table: %d\n",	ret);
+	}
 
 	return ret;
 }
 
-static int amba_cpufreq_init(struct cpufreq_policy *policy)
-{
-	policy->clk = amba_cpufreq.cortex_clk;
-	policy->cur = amba_cpufreq_get(0);
+static struct freq_attr *ambarella_cpufreq_attr[] = {
+	&cpufreq_freq_attr_scaling_available_freqs,
+	NULL,
+};
 
- 	return cpufreq_generic_init(policy, amba_cpufreq.cortex_clktbl,
-			amba_cpufreq.transition_latency);
-}
+static struct cpufreq_driver ambarella_cpufreq_driver = {
+	.flags		= CPUFREQ_STICKY | CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+				CPUFREQ_ASYNC_NOTIFICATION,
+	.verify		= cpufreq_generic_frequency_table_verify,
+	.target_index	= ambarella_cpufreq_set_target,
+	.get		= cpufreq_generic_get,
+	.init		= ambarella_cpufreq_driver_init,
+	.attr		= ambarella_cpufreq_attr,
+	.name		= "ambarella",
+};
 
-static int amba_cpufreq_exit(struct cpufreq_policy *policy)
+static const struct of_device_id ambarella_cpufreq_match[] = {
+	{
+		.compatible = "ambarella,cpufreq",
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, ambarella_cpufreq_match);
+
+static int of_add_cpufreq_table(struct device *dev)
 {
+	struct cpufreq_frequency_table *target, *relevance;
+	const struct property *prop;
+	const __be32 *val;
+	int nr, i;
+
+	prop = of_find_property(dev->of_node, "cpufreq-table", NULL);
+	if (!prop)
+		return -ENODEV;
+	if (!prop->value)
+		return -ENODATA;
+
+	nr = prop->length / sizeof(u32);
+	if (nr % 2)
+		return -EINVAL;
+
+	target = kcalloc((nr / 2 + 1),
+			sizeof(struct cpufreq_frequency_table), GFP_KERNEL);
+
+	relevance = kcalloc((nr / 2 + 1),
+			sizeof(struct cpufreq_frequency_table), GFP_KERNEL);
+
+	if (!target || !relevance)
+		return -ENOMEM;
+
+	cpufreq_info->cortex_table = target;
+	cpufreq_info->core_table = relevance;
+
+	val = prop->value;
+
+	for (i = 0 ; i < nr / 2; i++) {
+		target[i].driver_data = i;
+		target[i].frequency = be32_to_cpup(val++);
+
+		relevance[i].driver_data = i;
+		relevance[i].frequency = be32_to_cpup(val++);
+	}
+
+	target[i].driver_data = i;
+	target[i].frequency = CPUFREQ_TABLE_END;
+
+	relevance[i].driver_data = i;
+	relevance[i].frequency = CPUFREQ_TABLE_END;
+
 	return 0;
 }
 
-static struct freq_attr *amba_cpufreq_attr[] = {
-	 &cpufreq_freq_attr_scaling_available_freqs,
-	 NULL,
-};
-
-static struct cpufreq_driver amba_cpufreq_driver = {
-	.name		= "amba-cpufreq",
-	.flags		= CPUFREQ_STICKY | CPUFREQ_NEED_INITIAL_FREQ_CHECK |
-				CPUFREQ_ASYNC_NOTIFICATION,
-	.verify		= amba_cpufreq_verify,
-	.target_index	= amba_cpufreq_target,
-	.get		= amba_cpufreq_get,
-	.init		= amba_cpufreq_init,
-	.exit		= amba_cpufreq_exit,
-	.attr		= amba_cpufreq_attr,
-};
-
-static int amba_cpufreq_driver_init(void)
+static int ambarella_cpufreq_probe(struct platform_device *pdev)
 {
+	int ret = 0;
+	const char *cpufreq_method_str;
 	struct device_node *np;
-	const struct property *prop;
-	struct cpufreq_frequency_table *cortex_freqtbl;
-	struct cpufreq_frequency_table *core_freqtbl;
-	const __be32 *val;
-	int cnt, i, ret, clk_div;
 
-	np = of_find_node_by_path("/cpus");
-	if (!np) {
-		pr_err("No cpu node found");
+	np = pdev->dev.of_node;
+	if (!np)
 		return -ENODEV;
+
+	cpufreq_info = devm_kzalloc(&pdev->dev, sizeof(*cpufreq_info), GFP_KERNEL);
+	if (!cpufreq_info) {
+		ret = -ENOMEM;
+		goto err_put_node;
 	}
 
-	ret = of_property_read_u32(np, "amb,core-div", &clk_div);
-	if (ret != 0 || !(clk_div == 1 || clk_div == 2)) {
-		/*Default is that the pll_out_core is twice gclk_core */
-		clk_div = 2;
-	}
-
-	if (of_property_read_u32(np, "clock-latency",
-				&amba_cpufreq.transition_latency))
-		amba_cpufreq.transition_latency = CPUFREQ_ETERNAL;
-
-	prop = of_find_property(np, "cpufreq_tbl", NULL);
-	if (!prop || !prop->value) {
-		pr_err("Invalid cpufreq_tbl");
+	ret = of_property_read_string(np, "cpufreq-method", &cpufreq_method_str);
+	if (ret < 0) {
 		ret = -ENODEV;
-		goto out_put_node;
+		goto err_put_node;
 	}
 
-	cnt = prop->length / sizeof(u32) / 2;
-	val = prop->value;
-
-	cortex_freqtbl = kmalloc(sizeof(*cortex_freqtbl) * (cnt + 2), GFP_KERNEL);
-	if (!cortex_freqtbl) {
-		ret = -ENOMEM;
-		goto out_put_node;
+	if (!strcasecmp(cpufreq_method_str, "cortex"))
+		cpufreq_info->cpufreq_method = 0;
+	else if (!strcasecmp(cpufreq_method_str, "relevance"))
+		cpufreq_info->cpufreq_method = 1;
+	else if (!strcasecmp(cpufreq_method_str, "core"))
+		cpufreq_info->cpufreq_method = 2;
+	else {
+		ret = -EINVAL;
+		goto err_put_node;
 	}
 
-	core_freqtbl = kmalloc(sizeof(*core_freqtbl) * (cnt + 2), GFP_KERNEL);
-	if (!core_freqtbl) {
-		ret = -ENOMEM;
-		goto out_put_node;
+	ret = of_add_cpufreq_table(&pdev->dev);
+	if (ret < 0)
+		goto err_put_node;
+
+	cpufreq_info->cortex = clk_get_sys(NULL, "gclk_cortex");
+	if (IS_ERR(cpufreq_info->cortex)) {
+		pr_err("Failed to get gclk_cortex: %ld\n", PTR_ERR(cpufreq_info->cortex));
+		ret = PTR_ERR(cpufreq_info->cortex);
+		goto err_put_node;
 	}
 
-	for (i = 0; i < cnt; i++) {
-		/*pll_out_core = clk_div * gclk_core;*/
-		core_freqtbl[i].frequency = be32_to_cpup(val) * clk_div;
-		core_freqtbl[i].flags = 0;
-		cortex_freqtbl[i].frequency = be32_to_cpup((val + 1));
-		cortex_freqtbl[i].flags = 0;
-		val = val + 2;
+	cpufreq_info->core = clk_get_sys(NULL, "pll_out_core");
+	if (IS_ERR(cpufreq_info->core)) {
+		pr_err("Failed to get pll_out_core: %ld\n", PTR_ERR(cpufreq_info->core));
+		ret = PTR_ERR(cpufreq_info->core);
+		goto err_put_node;
 	}
 
-	cortex_freqtbl[i].frequency = clk_get_rate(clk_get(NULL, "gclk_cortex")) / 1000;
-	core_freqtbl[i++].frequency = clk_get_rate(clk_get(NULL, "gclk_core")) / 1000 * clk_div;
-
-	cortex_freqtbl[i].frequency = CPUFREQ_TABLE_END;
-	core_freqtbl[i].frequency = CPUFREQ_TABLE_END;
-
-	amba_cpufreq.cortex_clktbl = cortex_freqtbl;
-	amba_cpufreq.core_clktbl = core_freqtbl;
-
+	cpufreq_register_driver(&ambarella_cpufreq_driver);
 	of_node_put(np);
+	return 0;
 
-	amba_cpufreq.core_clk = clk_get(NULL, "pll_out_core");
-	if (IS_ERR(amba_cpufreq.core_clk)) {
-		pr_err("Unable to get core clock\n");
-		ret = PTR_ERR(amba_cpufreq.core_clk);
-		goto out_put_mem;
-	}
-
-	amba_cpufreq.cortex_clk = clk_get(NULL, "gclk_cortex");
-	if (IS_ERR(amba_cpufreq.cortex_clk)) {
-		pr_err("Unable to get cotex clock\n");
-		ret = PTR_ERR(amba_cpufreq.cortex_clk);
-		goto out_put_mem;
-	}
-
-	ret = cpufreq_register_driver(&amba_cpufreq_driver);
-	if (!ret)
-		return 0;
-
-	pr_err("failed register driver: %d\n", ret);
-	clk_put(amba_cpufreq.core_clk);
-	clk_put(amba_cpufreq.cortex_clk);
-
-out_put_mem:
-	kfree(cortex_freqtbl);
-	kfree(core_freqtbl);
-	return ret;
-
-out_put_node:
+err_put_node:
 	of_node_put(np);
+	dev_err(&pdev->dev, "%s: failed initialization\n", __func__);
 	return ret;
 }
 
-module_init(amba_cpufreq_driver_init);
-
-static void __exit amba_cpufreq_driver_exit(void)
+static int ambarella_cpufreq_remove(struct platform_device *pdev)
 {
-	cpufreq_unregister_driver(&amba_cpufreq_driver);
-	if(amba_cpufreq.cortex_clktbl != NULL) {
-		kfree(amba_cpufreq.cortex_clktbl);
-		amba_cpufreq.cortex_clktbl = NULL;
-	}
-
-	if(amba_cpufreq.core_clktbl != NULL) {
-		kfree(amba_cpufreq.core_clktbl);
-		amba_cpufreq.core_clktbl = NULL;
-	}
-
+	cpufreq_unregister_driver(&ambarella_cpufreq_driver);
+	return 0;
 }
-module_exit(amba_cpufreq_driver_exit);
 
+static struct platform_driver ambarella_cpufreq_platdrv = {
+	.driver = {
+		.name	= "ambarella-cpufreq",
+		.of_match_table = ambarella_cpufreq_match,
+	},
+	.probe		= ambarella_cpufreq_probe,
+	.remove		= ambarella_cpufreq_remove,
+};
+module_platform_driver(ambarella_cpufreq_platdrv);
 
-MODULE_AUTHOR("XianqingZheng <xqzheng@ambarella.com>");
-MODULE_DESCRIPTION("Ambarella CPUFreq driver");
+MODULE_AUTHOR("Jorney <qtu@ambarella.com>");
+MODULE_DESCRIPTION("Ambarella cpufreq driver");
 MODULE_LICENSE("GPL");

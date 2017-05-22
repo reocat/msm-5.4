@@ -59,12 +59,6 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		clock-latency = <100000>;
-		/* the highest frequency is gotten in runtime */
-		cpufreq_tbl = < /*core_clk	cortex_clk*/
-				24000		96000
-				108000		504000>;
-
 		cpu@0 {
 			compatible = "arm,cortex-a53", "arm,armv8";
 			device_type = "cpu";
@@ -96,6 +90,17 @@
 			enable-method = "spin-table";
 			cpu-release-addr = <0 0x00000000>;
 		};
+	};
+
+	cpufreq@0 {
+		compatible = "ambarella,cpufreq";
+		/* cpufreq-method is valid for "cortex", "core", "relevance". */
+		cpufreq-method = "relevance";
+		cpufreq-table =
+			/* < cortex pll_out_core > , pll_out_core = 2 * core */
+			<1080000 1344000>,
+			<816000  1008000>,
+			<60000  672000>;
 	};
 
 	gic: interrupt-controller@f0040000 {
