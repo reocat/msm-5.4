@@ -332,8 +332,6 @@ Required properties:
   Scratchpad section of PRM.
 
 Optional properties:
-- amb,scr-regmap: phandle of Scratchpad registers, should be specified if the
-  SoC that support dma channel selection.
 - amb,non-support-prs: should be specified for SoC that NOT supports
   PAUSE/RESUME/STOP.
 

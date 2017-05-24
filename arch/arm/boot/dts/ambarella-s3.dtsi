@@ -455,12 +455,11 @@
 
 		dma: dma@e0005000 {
 			compatible = "ambarella,dma";
-			reg = <0xe0005000 0x1000>;
+			reg = <0xe0005000 0x1000>, <0xe001b030 0x4>;
 			interrupts = <69 0x4>;
 			#dma-cells = <1>;
 			dma-channels = <8>;
 			dma-requests = <14>;
-			amb,scr-regmap = <&scratchpad_syscon>;
 		};
 
 		nand0: nand@e0001000 {

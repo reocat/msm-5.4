@@ -47,6 +47,9 @@
 #define DMA1_BASE			(AHB_N_BASE + DMA1_OFFSET)
 #define DMA1_REG(x)			(DMA1_BASE + (x))
 
+#define DMA_SEL0_OFFSET			0x00
+#define DMA_SEL1_OFFSET			0x04
+
 /* ==========================================================================*/
 
 #define INVALID_DMA_CHAN		0xFF

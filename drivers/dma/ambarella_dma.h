@@ -73,7 +73,7 @@ struct ambdma_device {
 	struct ambdma_chan		amb_chan[NUM_DMA_CHANNELS];
 	struct dma_pool			*lli_pool;
 	void __iomem			*regbase;
-	struct regmap			*reg_scr;
+	void __iomem			*regscr;
 	int				dma_irq;
 	/* dummy_desc is used to stop DMA immediately. */
 	struct ambdma_lli		*dummy_lli;

@@ -974,12 +974,13 @@ static struct dma_chan *ambdma_of_xlate(struct of_phandle_args *dma_spec,
 {
 	struct ambdma_device *amb_dma = ofdma->of_dma_data;
 	unsigned int request = dma_spec->args[0];
+	unsigned int val, reg_offset, bit_shift, bit_mask;
 	struct dma_chan *chan;
 
 	if (request >= amb_dma->nr_requests)
 		return NULL;
 
-	if (amb_dma->reg_scr == NULL)
+	if (amb_dma->regscr == NULL)
 		return of_dma_xlate_by_chan_id(dma_spec, ofdma);
 
 	chan = dma_get_any_slave_channel(&amb_dma->dma_dev);
@@ -988,8 +989,20 @@ static struct dma_chan *ambdma_of_xlate(struct of_phandle_args *dma_spec,
 		return NULL;
 	}
 
-	regmap_update_bits(amb_dma->reg_scr, AHBSP_DMA0_SEL0_OFFSET,
-		0xf << (chan->chan_id * 4), request << (chan->chan_id * 4));
+	if (amb_dma->nr_requests > 16) {
+		reg_offset = chan->chan_id > 5 ? DMA_SEL1_OFFSET : DMA_SEL0_OFFSET;
+		bit_shift = 5;
+		bit_mask = 0x1f;
+	} else {
+		reg_offset = DMA_SEL0_OFFSET;
+		bit_shift = 4;
+		bit_mask = 0xf;
+	}
+
+	val = readl_relaxed(amb_dma->regscr + reg_offset);
+	val &= ~(bit_mask << (chan->chan_id * bit_shift));
+	val |= request << (chan->chan_id * bit_shift);
+	writel_relaxed(val, amb_dma->regscr + reg_offset);
 
 	return chan;
 }
@@ -1019,14 +1032,21 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->regbase =
 		devm_ioremap(&pdev->dev, res->start, resource_size(res));
 	if (!amb_dma->regbase) {
-		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		dev_err(&pdev->dev, "devm_ioremap() failed for regbase\n");
 		ret = -ENOMEM;
 		goto ambdma_dma_probe_exit;
 	}
 
-	amb_dma->reg_scr = syscon_regmap_lookup_by_phandle(np, "amb,scr-regmap");
-	if (IS_ERR(amb_dma->reg_scr))
-		amb_dma->reg_scr = NULL;
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (res != NULL) {
+		amb_dma->regscr =
+			devm_ioremap(&pdev->dev, res->start, resource_size(res));
+		if (!amb_dma->regscr) {
+			dev_err(&pdev->dev, "devm_ioremap() failed for regscr\n");
+			ret = -ENOMEM;
+			goto ambdma_dma_probe_exit;
+		}
+	}
 
 	amb_dma->dma_irq = platform_get_irq(pdev, 0);
 	if (amb_dma->dma_irq < 0) {

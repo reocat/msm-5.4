@@ -651,22 +651,20 @@
 
 		dma0: dma@e000a000 {
 			compatible = "ambarella,dma";
-			reg = <0xe000a000 0x1000>;
+			reg = <0xe000a000 0x1000>, <0xe8001030 0x8>;
 			interrupts = <0 83 0x4>;
 			#dma-cells = <1>;
 			dma-channels = <8>;
-			dma-requests = <14>;
-			amb,scr-regmap = <&scratchpad_syscon>;
+			dma-requests = <30>;
 		};
 
 		dma1: dma@e000b000 {
 			compatible = "ambarella,dma";
-			reg = <0xe000b000 0x1000>;
+			reg = <0xe000b000 0x1000>, <0xe8001038 0x8>;
 			interrupts = <0 84 0x4>;
 			#dma-cells = <1>;
 			dma-channels = <8>;
-			dma-requests = <14>;
-			amb,scr-regmap = <&scratchpad_syscon>;
+			dma-requests = <30>;
 		};
 
 		gdma: gdma@e000c000 {
