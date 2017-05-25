@@ -709,12 +709,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart2_pins &uart2_flow_pins>;
 			clocks = <&gclk_uart2>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma0 12>, <&dma0 13>;
+			dmas = <&dma1 12>, <&dma1 13>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart3: uart@e0018000 {
@@ -724,12 +724,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart3_pins &uart3_flow_pins>;
 			clocks = <&gclk_uart3>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma0 14>, <&dma0 15>;
+			dmas = <&dma1 14>, <&dma1 15>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart4: uart@e0019000 {
@@ -739,12 +739,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart4_pins &uart4_flow_pins>;
 			clocks = <&gclk_uart4>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma0 16>, <&dma0 17>;
+			dmas = <&dma1 16>, <&dma1 17>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart5: uart@e001a000 {
@@ -754,12 +754,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart5_pins &uart5_flow_pins>;
 			clocks = <&gclk_uart5>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma0 18>, <&dma0 19>;
+			dmas = <&dma1 18>, <&dma1 19>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart6: uart@e001b000 {
@@ -769,12 +769,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart6_pins &uart6_flow_pins>;
 			clocks = <&gclk_uart6>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma0 20>, <&dma0 21>;
+			dmas = <&dma1 20>, <&dma1 21>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		i2s0: i2s@e000d000 {
@@ -905,7 +905,7 @@
 			pinctrl-0 = <&spi2_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma0 22>, <&dma0 23>;
+			dmas = <&dma1 22>, <&dma1 23>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -920,7 +920,7 @@
 			pinctrl-0 = <&spi3_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma0 24>, <&dma0 25>;
+			dmas = <&dma1 24>, <&dma1 25>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -935,7 +935,7 @@
 			pinctrl-0 = <&spi4_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma0 26>, <&dma0 27>;
+			dmas = <&dma1 26>, <&dma1 27>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -950,7 +950,7 @@
 			pinctrl-0 = <&spi5_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma0 28>, <&dma0 29>;
+			dmas = <&dma1 28>, <&dma1 29>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
