@@ -378,6 +378,7 @@ Optional properties:
 - amb,timing: an integer array with size 6, the array is used to specify the
   NAND timing, like tcls/tals/tcs/..., which can be found in NAND datasheet.
   Please note that this property is provided by Amboot in runtime.
+- amb,enable-wp: specified if enable write-protect, i.e., nand is RO.
 
 iii) Subnode
 ------------

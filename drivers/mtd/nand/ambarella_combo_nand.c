@@ -61,6 +61,8 @@ struct ambarella_nand_host {
 	u32				ecc_bits;
 	/* if or not support to read id in 5 cycles */
 	bool				soft_ecc;
+	bool				page_4k;
+	bool				enable_wp;
 
 	/* used for software BCH */
 	struct bch_control		*bch;
@@ -468,7 +470,7 @@ static void ambarella_nand_setup_dma(struct ambarella_nand_host *host, u32 cmd)
 
 	fdma_ctrl = cmd == NAND_AMB_CMD_READ ? FDMA_CTRL_WRITE_MEM : FDMA_CTRL_READ_MEM;
 	fdma_ctrl |= FDMA_CTRL_ENABLE | FDMA_CTRL_BLK_SIZE_512B;
-	fdma_ctrl |= mtd->writesize + mtd->writesize;
+	fdma_ctrl |= mtd->writesize + mtd->oobsize;
 	writel_relaxed(fdma_ctrl, host->regbase + FDMA_MN_CTRL_OFFSET);
 }
 
@@ -485,7 +487,7 @@ static void ambarella_nand_setup_cc(struct ambarella_nand_host *host, u32 cmd)
 	val = NAND_CC_DATA_CYCLE(5) | NAND_CC_WAIT_RB | NAND_CC_RW_NODATA |
 		NAND_CC_CMD2(1) | NAND_CC_ADDR_CYCLE(3) | NAND_CC_CMD1(1) |
 		NAND_CC_ADDR_SRC(1) | NAND_CC_DATA_SRC_REGISTER | NAND_CC_TERMINATE_CE;
-	writel(val, host->regbase + NAND_CC_OFFSET);
+	writel_relaxed(val, host->regbase + NAND_CC_OFFSET);
 }
 
 static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
@@ -503,12 +505,7 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 	if (native_cmd == NAND_AMB_CMD_READ || native_cmd == NAND_AMB_CMD_PROGRAM)
 		ambarella_nand_setup_dma(host, native_cmd);
 
-	if (native_cmd == NAND_AMB_CMD_PROGRAM || native_cmd == NAND_AMB_CMD_ERASE)
-		nand_ctrl = host->control_reg & ~NAND_CTRL_WP;
-	else
-		nand_ctrl = host->control_reg | NAND_CTRL_WP;
-
-	nand_ctrl |= NAND_CTRL_A33_32((u32)(addr64 >> 32));
+	nand_ctrl = host->control_reg | NAND_CTRL_A33_32((u32)(addr64 >> 32));
 	nand_cmd = (u32)addr64 | NAND_CMD_CMD(native_cmd);
 	writel_relaxed(nand_ctrl, host->regbase + NAND_CTRL_OFFSET);
 	writel_relaxed(nand_cmd, host->regbase + NAND_CMD_OFFSET);
@@ -522,9 +519,6 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 		rval = -EBUSY;
 		dev_err(host->dev, "cmd=0x%x timeout\n", native_cmd);
 	}
-
-	/* in order to enable wp again */
-	writel_relaxed(host->control_reg, host->regbase + NAND_CTRL_OFFSET);
 
 	/* avoid to flush previous error info */
 	if (host->err_code == 0)
@@ -883,6 +877,10 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 	/* always use 5 cycles to read ID */
 	val = readl_relaxed(host->regbase + NAND_EXT_CTRL_OFFSET);
 	val |= NAND_EXT_CTRL_I5;
+	if (host->page_4k)
+		val |= NAND_EXT_CTRL_4K_PAGE;
+	else
+		val &= ~NAND_EXT_CTRL_4K_PAGE;
 	writel_relaxed(val, host->regbase + NAND_EXT_CTRL_OFFSET);
 
 	/* always enable dual-space mode */
@@ -894,7 +892,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 
 	/* disable BCH if using soft ecc */
 	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
-	val |= FIO_CTRL_RDERR_STOP;
+	val |= FIO_CTRL_RDERR_STOP | FIO_CTRL_SKIP_BLANK_ECC;
 	if (host->soft_ecc)
 		val &= ~FIO_CTRL_ECC_BCH_ENABLE;
 	else
@@ -980,6 +978,8 @@ static void ambarella_nand_init_chip(struct ambarella_nand_host *host,
 	if (!host->soft_ecc)
 		host->ecc_bits = (poc & SYS_CONFIG_NAND_ECC_SPARE_2X) ? 8 : 6;
 
+	host->page_4k = (poc & SYS_CONFIG_NAND_PAGE_SIZE) ? false : true;
+
 	dev_info(host->dev, "in %secc-[%d]bit mode\n",
 		host->soft_ecc ? "soft " : "", host->ecc_bits);
 
@@ -989,7 +989,8 @@ static void ambarella_nand_init_chip(struct ambarella_nand_host *host,
 	 * Always use P3 and I5 to support all NAND,
 	 * but we will adjust page cycles after read ID from NAND.
 	 */
-	host->control_reg = NAND_CTRL_P3 | NAND_CTRL_SIZE_8G | NAND_CTRL_WP;
+	host->control_reg = NAND_CTRL_P3 | NAND_CTRL_SIZE_8G;
+	host->control_reg |= host->enable_wp ? NAND_CTRL_WP : 0;
 
 	chip->chip_delay = 0;
 	chip->controller = &host->controller;
@@ -1081,6 +1082,8 @@ static int ambarella_nand_get_resource(
 		dev_err(&pdev->dev, "no rct regmap!\n");
 		return PTR_ERR(host->reg_rct);
 	}
+
+	host->enable_wp = !!of_find_property(np, "amb,enable-wp", NULL);
 
 	rval = of_property_read_u32_array(np, "amb,timing",
 			host->timing, 6);
