@@ -1186,7 +1186,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		goto ambdma_dma_probe_exit5;
 	}
 
-	proc_create_data("dma", S_IRUGO|S_IWUSR,
+	proc_create_data(dev_name(&pdev->dev), S_IRUGO|S_IWUSR,
 		get_ambarella_proc_dir(), &proc_ambdma_fops, amb_dma);
 
 	platform_set_drvdata(pdev, amb_dma);
