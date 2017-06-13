@@ -536,8 +536,9 @@ Optional properties:
 - amb,switch-1v8-dly: specifies the delay when switch voltage, in
   millisecond unit.
 - amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
-  always present
+  always present, -1: checking if sd card exist by cd pin.
 - amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
+  -1: checking if write-protect by wp pin.
 - amb,no-cap-cmd23: specifies to not support CMD23
 - amb,no-cap-erase: specifies to not support ERASE
 - amb,no-auto-cmd12: specifies to not support auto CMD12, i.e., send
