@@ -108,10 +108,12 @@ void ambarella_detect_sd_slot(int id, int fixed_cd)
 	struct device_node *np;
 	char tmp[4];
 
+#if 0 /* FIXME: remove checking slot id */
 	if (!sd_slot_is_valid(id)) {
 		pr_err("%s: Invalid slotid: %d\n", __func__, id);
 		return;
 	}
+#endif
 
 	snprintf(tmp, sizeof(tmp), "sd%d", id);
 
