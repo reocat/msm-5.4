@@ -1014,7 +1014,7 @@
 	};
 
 	iav {
-		compatible = "ambarella,iav", "ambpriv-bus";
+		compatible = "ambarella,iav";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
