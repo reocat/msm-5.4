@@ -424,9 +424,17 @@ static void __init ambarella_vout_tv_clocks_init(struct device_node *np)
 
 	if (of_property_read_u32(np, "amb,ctrl2-val", &clk_pll->ctrl2_val))
 		clk_pll->ctrl2_val = 0x3f770000;
+	else{
+		if(clk_pll->ctrl2_val != readl(clk_pll->ctrl2_reg))
+			writel(clk_pll->ctrl2_val, clk_pll->ctrl2_reg);
+	}
 
 	if (of_property_read_u32(np, "amb,ctrl3-val", &clk_pll->ctrl3_val))
 		clk_pll->ctrl3_val = 0x00068300;
+	else{
+		if(clk_pll->ctrl3_val != readl(clk_pll->ctrl3_reg))
+			writel(clk_pll->ctrl3_val, clk_pll->ctrl3_reg);
+	}
 
 	if (of_property_read_u32(np, "amb,hdmi_clock_ctrl_val",
 				 &clk_pll->hdmi_clock_ctrl_val))
