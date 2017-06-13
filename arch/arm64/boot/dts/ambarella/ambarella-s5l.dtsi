@@ -601,6 +601,25 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1028 0x1029 0x102a>;
 			};
+
+			vout0_pins: vout0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1076 0x1077 0x1078 0x1079
+								0x107a 0x107b 0x107c 0x107d
+								0x107e 0x107f 0x1080 0x1081
+								0x1082 0x1083 0x1084 0x1085
+								0x1086 0x1087 0x1088 0x1089>;
+				amb,pinconf-ids = <0xba0076 0xba0077 0xba0078 0xba0079
+								0xba007a 0xba007b 0xba007c 0xba007d
+								0xba007e 0xba007f 0xba0080 0xba0081
+								0xba0082 0xba0083 0xba0084 0xba0085
+								0xba0086 0xba0087 0xba0088 0xba0089>;
+			};
+			hdmi_pin: hdmi@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1071 0x1072>;
+				amb,pinconf-ids = <0xba0071 0xba0072>;
+			};
 		};
 	};
 
@@ -893,6 +912,8 @@
 			compatible = "ambarella,voutc";
 			interrupts = <0 54 0x1>;
 			interrupt-names = "vout0";
+			pinctrl-names = "default";
+			pinctrl-0 = <&vout0_pins>;
 		};
 
 		/* node for vout1 controller */
@@ -901,7 +922,6 @@
 			interrupts = <0 55 0x1>;
 			interrupt-names = "vout1";
 		};
-
 	};
 
 	bogus_bus {
