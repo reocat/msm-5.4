@@ -1021,8 +1021,8 @@
 		/* node for dsp controller */
 		dsp {
 			compatible = "ambarella,dsp";
-			interrupts = <0 140 0x1 0 141 0x1 0 142 0x1>;
-			interrupt-names = "vdsp", "vcap", "venc";
+			interrupts = <0 140 0x1 0 141 0x1 0 142 0x1  0 143 0x1>;
+			interrupt-names = "vdsp", "vcap", "venc", "vin_main";
 		};
 
 		/* node for vin0 controller */
