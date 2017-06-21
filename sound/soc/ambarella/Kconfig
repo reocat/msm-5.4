@@ -68,6 +68,10 @@ config SND_SOC_WM8940_AMB
 	help
 		Support WM8940 Audio Codec for Ambarella Platform
 
+config SND_SOC_ZL38063_AMB
+	tristate "ZL38063 for Ambarella"
+	help
+		Support ZL38063 Audio Codec for Ambarella Platform
 config SND_AMBARELLA_SOC_DMIC
 	tristate "Ambarella DMIC"
 	depends on SND_AMBARELLA_SOC

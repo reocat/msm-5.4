@@ -149,13 +149,27 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
 	struct simple_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct simple_dai_props *dai_props =
 		simple_priv_to_props(priv, rtd->num);
-	unsigned int mclk, mclk_fs = 0;
+	unsigned int mclk = 0, mclk_fs = 0;
 	int ret = 0;
 
 	if (priv->mclk_fs)
 		mclk_fs = priv->mclk_fs;
 	else if (dai_props->mclk_fs)
 		mclk_fs = dai_props->mclk_fs;
+
+	ret = snd_soc_dai_set_fmt(codec_dai,
+			 SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0) {
+		pr_err("can't set codec DAI configuration\n");
+		goto err;
+	}
+
+	ret = snd_soc_dai_set_fmt(cpu_dai,
+		 SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0) {
+		pr_err("can't set cpu DAI configuration\n");
+		goto err;
+	}
 
 	if (mclk_fs) {
 		mclk = params_rate(params) * mclk_fs;
@@ -512,7 +526,7 @@ static int asoc_simple_card_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id asoc_simple_of_match[] = {
-	{ .compatible = "simple-audio-card", },
+	{ .compatible = "ambarella,audio-board", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, asoc_simple_of_match);
