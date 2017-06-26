@@ -1961,9 +1961,9 @@ static int ak7755_firmware_write_ram(u16 mode, u16 cmd)
 			return -ENOMEM;
 		}
 
-		fwdn = kmalloc((unsigned long)fw->size, GFP_KERNEL);
+		fwdn = kmalloc(fw->size, GFP_KERNEL);
 		if (fwdn == NULL) {
-			printk(KERN_ERR "failed to buffer vmalloc: %d\n", fw->size);
+			printk(KERN_ERR "failed to buffer vmalloc: %d\n", (int)fw->size);
 			return -ENOMEM;
 		}
 
