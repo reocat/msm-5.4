@@ -11299,6 +11299,7 @@ EXPORT_SYMBOL_GPL vmlinux 0xdf12934a	rtc_irq_set_state
 EXPORT_SYMBOL_GPL vmlinux 0xdf370004	crypto_default_rng
 EXPORT_SYMBOL_GPL vmlinux 0xdf4d9df1	led_set_brightness_nopm
 EXPORT_SYMBOL_GPL vmlinux 0xdf68b11b	kernel_kobj
+EXPORT_SYMBOL_GPL vmlinux 0xdf6b979d	of_property_read_u64_index
 EXPORT_SYMBOL_GPL vmlinux 0xdfa0b9cb	svcauth_unix_set_client
 EXPORT_SYMBOL_GPL vmlinux 0xdfaa5517	bsg_register_queue
 EXPORT_SYMBOL_GPL vmlinux 0xdfc32d42	ip6_local_out
