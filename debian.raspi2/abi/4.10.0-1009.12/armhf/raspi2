@@ -11505,6 +11505,7 @@ EXPORT_SYMBOL_GPL vmlinux 0xd5dd79de	i2c_recover_bus
 EXPORT_SYMBOL_GPL vmlinux 0xd5ded799	dma_buf_vunmap
 EXPORT_SYMBOL_GPL vmlinux 0xd60c99b5	rcu_batches_completed_bh
 EXPORT_SYMBOL_GPL vmlinux 0xd632cda2	nfs_sb_deactive
+EXPORT_SYMBOL_GPL vmlinux 0xd6505659	of_property_read_u64_index
 EXPORT_SYMBOL_GPL vmlinux 0xd658ea9a	fwnode_property_read_u64_array
 EXPORT_SYMBOL_GPL vmlinux 0xd67364f7	eventfd_ctx_fdget
 EXPORT_SYMBOL_GPL vmlinux 0xd68f85e5	irq_domain_xlate_onetwocell
