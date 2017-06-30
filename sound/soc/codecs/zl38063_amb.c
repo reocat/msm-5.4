@@ -1814,7 +1814,7 @@ static int zl38063_reg_write(struct snd_soc_codec *codec,
 			unsigned int reg, unsigned int value)
 {
 	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	TW_DEBUG1("Read reg = 0x%04x ,val = 0x%04x \n",reg,value);
+	//TW_DEBUG1("Read reg = 0x%04x ,val = 0x%04x \n",reg,value);
 	if (zl38063_hbi_wr16(zl38063, reg, value) < 0) {
 		return -EIO;
 	}
@@ -2640,7 +2640,12 @@ static int zl38063_nl_get_version(struct nl_msg_audio *msg)
 	zl38063_hbi_rd16(zl38063_priv, ZL38063_FM_VERSION, &fwVr);
 	zl38063_hbi_rd16(zl38063_priv, ZL38063_FM_CUR, &fwID);
 
-	snprintf((char *)msg->data,30,"%s%d  %s%d  %s%d.%d.%d %s %u","hwID:",hwID,"PR:",prID,"FW-Rev:",fwVr>>12,fwVr>>8&0x000f,fwVr&0x00ff,"ID",fwID);
+	snprintf((char *)msg->data, sizeof(msg->data),
+		      "%5s%2d %3s%5d %3s%2d.%2d.%2d %3s %3d-%2d",
+		      "hwID:", (u8)(hwID&0x001f),
+		      "PR:", prID,
+		      "FW:", (u8)(fwVr>>12), (u8)((fwVr>>8)&0x000f), (u8)(fwVr&0x00ff),
+		      "ID:", (u8)((fwID>>8)&0x7f), (u8)(fwID&0x000f));
 	msg->status = NL_CMD_STATUS_SUCCESS;
 	return zl38063_nl_msg_unicast(msg);
 }
@@ -2665,7 +2670,7 @@ static int zl38063_nl_load_fw(struct nl_msg_audio *msg)
 	u16 ret = 0, fwID =0;
 
 	msg->status = NL_CMD_STATUS_SUCCESS;
-	zl38063_nl_send_string(msg,"start updating FW...");
+	zl38063_nl_send_string(msg, "start updating FW...");
 
 	zl38063_hbi_rd16(zl38063_priv, ZL38063_FM_CUR, &fwID);
 	printk("Currently working FWID is 0x%04x, CMD for FW operation is %d\n",fwID,msg->data[0]);
@@ -3006,11 +3011,11 @@ static int zl38063_remove(struct snd_soc_codec *codec)
 	TW_DEBUG1("Release GPIOs");
 	//kthread_stop(zl38063_priv->kthread);
 	if (zl38063->rst_pin > 0) {
-		gpio_set_value(zl38063->rst_pin, 0);
+		gpio_direction_output(zl38063->rst_pin, zl38063->pwr_active);
 		gpio_free(zl38063->rst_pin);
 	}
 	if (zl38063->pwr_pin > 0) {
-		gpio_set_value(zl38063->pwr_pin, 0);
+		gpio_direction_output(zl38063->pwr_pin, zl38063->pwr_active);
 		gpio_free(zl38063->pwr_pin);
 	}
 
@@ -3086,10 +3091,11 @@ static int zl38063_boot_mode(struct zl38063 *zl38063,enum FW_LABEL fw_label)
 	TW_DEBUG1("Enter  Load firmwre and config ...\n");
 
 
-	if (fw_path == NULL && cr_path == NULL)
+	if ( (fw_path == NULL && cr_path == NULL) || boot_to_BootMode==1)
 		zl38063_load_firmware(zl38063,NULL);
-	else
+	else{
 		status = zl38063_load_file(zl38063);
+		}
 
 	if (status <0){
 		TW_DEBUG1("zl38063_load_file error and change to Default firmwre and config ...\n");
