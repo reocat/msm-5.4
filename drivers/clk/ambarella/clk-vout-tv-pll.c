@@ -226,7 +226,8 @@ static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned 
 	rate *= clk_pll->fix_divider;
 
 	if (rate < parent_rate) {
-		pr_err("Error: target rate is too slow: %ld!\n", rate);
+		pr_err("%s: Error: target rate is too slow: %ld!\n",
+				clk_hw_get_name(hw), rate);
 		return -EINVAL;
 	}
 

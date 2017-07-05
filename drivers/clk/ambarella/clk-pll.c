@@ -174,7 +174,8 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	if (rate < parent_rate) {
-		pr_err("Error: target rate is too slow: %ld!\n", rate);
+		pr_err("%s: Error: target rate is too slow: %ld!\n",
+				clk_hw_get_name(hw), rate);
 		return -EINVAL;
 	}
 
