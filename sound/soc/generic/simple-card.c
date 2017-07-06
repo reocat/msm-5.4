@@ -157,22 +157,8 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
 	else if (dai_props->mclk_fs)
 		mclk_fs = dai_props->mclk_fs;
 
-	ret = snd_soc_dai_set_fmt(codec_dai,
-			 SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (ret < 0) {
-		pr_err("can't set codec DAI configuration\n");
-		goto err;
-	}
-
-	ret = snd_soc_dai_set_fmt(cpu_dai,
-		 SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-	if (ret < 0) {
-		pr_err("can't set cpu DAI configuration\n");
-		goto err;
-	}
-
+	mclk = (12.288 *1000 *1000);			//fix AU_CLK to 12.288M ,a must
 	if (mclk_fs) {
-		mclk = (12.288 *1000 *1000);			//fix AU_CLK to 12.288M ,a must
 		ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
 					     SND_SOC_CLOCK_IN);
 		if (ret && ret != -ENOTSUPP)
