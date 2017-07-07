@@ -1082,11 +1082,13 @@
 			reg = <0>;
 		};
 
-		framebuffer@1 {
-			compatible = "ambarella,fb";
-			amb,vout-id = <0>;
-			amb,format = "rgb565";
-		};
+		/*
+		*framebuffer@1 {
+		*	compatible = "ambarella,fb";
+		*	amb,vout-id = <0>;
+		*	amb,format = "rgb565";
+		*};
+		*/
 
 		framebuffer@2 {
 			compatible = "ambarella,fb";
