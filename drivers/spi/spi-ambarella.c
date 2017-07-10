@@ -762,6 +762,31 @@ static int ambarella_spi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int ambarella_spi_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	dev_dbg(&pdev->dev, "%s exit with 0 @ %d\n", __func__, state.event);
+
+	return 0;
+}
+
+static int ambarella_spi_resume(struct platform_device *pdev)
+{
+	struct spi_master		*master;
+	struct ambarella_spi		*bus;
+
+	master	= platform_get_drvdata(pdev);
+	bus	= spi_master_get_devdata(master);
+
+	clk_set_rate(bus->clk, bus->clk_freq);
+
+	dev_dbg(&pdev->dev, "%s exit with 0\n", __func__);
+
+	return 0;
+}
+#endif
+
 int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_w)
 {
 	int					err = 0;
@@ -900,6 +925,10 @@ MODULE_DEVICE_TABLE(of, ambarella_spi_dt_ids);
 static struct platform_driver ambarella_spi_driver = {
 	.probe		= ambarella_spi_probe,
 	.remove		= ambarella_spi_remove,
+#ifdef CONFIG_PM
+	.suspend	= ambarella_spi_suspend,
+	.resume		= ambarella_spi_resume,
+#endif
 	.driver		= {
 		.name	= "ambarella-spi",
 		.owner	= THIS_MODULE,
