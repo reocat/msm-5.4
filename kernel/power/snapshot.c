@@ -2039,7 +2039,9 @@ static int init_header(struct swsusp_info *info)
 	info->size <<= PAGE_SHIFT;
 #if defined(CONFIG_ARCH_AMBARELLA) && defined(CONFIG_PM)
 	info->magic = 0x0badbeef;
+#if 0
 	info->addr  = virt_to_phys(ambarella_cpu_resume);
+#endif
 #endif
 	return init_header_complete(info);
 }

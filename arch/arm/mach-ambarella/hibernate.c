@@ -21,7 +21,6 @@
 #include <linux/mm.h>
 #include <linux/suspend.h>
 #include <asm/system_misc.h>
-#include <asm/idmap.h>
 #include <asm/suspend.h>
 #include <asm/memory.h>
 #include <asm/sections.h>
@@ -81,7 +80,8 @@ int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
 int hibernate_write_page(struct mtd_info *mtd, void *buf)
 {
 
-	int ret, retlen;
+	int ret;
+	size_t retlen;
 	int offset = 0;
 
 	/* Default: The 1st 4k(one PAGE_SIZE) is empty in "swp" mtd partition */
