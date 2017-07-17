@@ -42,7 +42,7 @@ static void stmmac_config_sub_second_increment(void __iomem *ioaddr)
 	 * formula = (1/ptp_clock) * 1000000000
 	 * where, ptp_clock = 50MHz.
 	 */
-#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
+#if 0
 	data = (1000000000ULL / 50000000);
 #else
 	data = (1000000000ULL / AMBA_PTP_DESIRE_CLK);
