@@ -31,5 +31,12 @@ struct amb_dmic_priv {
 	u32 			mclk;
 };
 
+#if (CHIP_REV == S5)
+#define DMIC_I2S_SEL_MASK		(1 << 24)
+#elif (CHIP_REV == S5L)
+#define DMIC_I2S_SEL_MASK		(1 << 6)
+#else
+#error "Not supported!"
+#endif
 #endif /*AMBARELLA_I2S_H_*/
 

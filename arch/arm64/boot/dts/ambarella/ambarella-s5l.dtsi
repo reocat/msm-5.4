@@ -840,6 +840,13 @@
 			status = "disabled";
 		};
 
+		dmic: dmic@e0034000 {
+			compatible = "ambarella,dmic";
+			reg = <0xe0034000 0x1000>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			#sound-dai-cells = <0>;
+		};
+
 		scratchpad_syscon: scratchpad_syscon@e001b000 {
 			compatible = "ambarella,scratchpad", "syscon";
 			reg = <0xe001b000 0x50>;
