@@ -72,7 +72,8 @@ static int ambarella_cpufreq_set_relevance(unsigned int index)
 	struct cpufreq_frequency_table *relevance_table;
 
 	relevance_table = cpufreq_info->core_table;
-	relevance_freq = relevance_table[index].frequency;
+	/* pll_out_core = 2 * core */
+	relevance_freq = relevance_table[index].frequency * 2;
 	relevance_clk = cpufreq_info->core;
 
 	ret = clk_set_rate(relevance_clk, relevance_freq * 1000);
