@@ -553,9 +553,14 @@
 			max-frequency = <120000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
+			sd-uhs-sdr12;
+			sd-uhs-sdr25;
+			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 		};
 
 		sdmmc1: sdmmc1@e000c000 {
+			status = "disabled";
 			compatible = "ambarella,sdmmc";
 			reg = <0xe000c000 0x1000>;
 			#address-cells = <1>;
@@ -567,10 +572,14 @@
 			max-frequency = <50000000>;
 			bus-width = <4>;
 			cap-sdio-irq;
-			status = "disabled";
+			sd-uhs-sdr12;
+			sd-uhs-sdr25;
+			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 		};
 
 		sdmmc2: sdmmc2@e001f000 {
+			status = "disabled";
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -583,7 +592,10 @@
 			max-frequency = <100000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
-			status = "disabled";
+			sd-uhs-sdr12;
+			sd-uhs-sdr25;
+			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 		};
 
 		mac0: ethernet@e000e000 {

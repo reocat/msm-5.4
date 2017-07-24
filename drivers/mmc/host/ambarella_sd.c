@@ -320,7 +320,8 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 	host->clock = 0;
 
 	if (clock != 0) {
-		clk_set_rate(host->clk, max_t(u32, clock, 24000000));
+		clk_set_rate(host->clk, min_t(u32, max_t(u32, clock, 24000000),
+					mmc->f_max));
 
 		sd_clk = clk_get_rate(host->clk);
 
@@ -1207,20 +1208,8 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	mmc->caps2 |= MMC_CAP2_HS200 | MMC_CAP2_HS200_1_8V_SDR;
 
-	if (gpio_is_valid(host->v18_gpio)) {
+	if (gpio_is_valid(host->v18_gpio))
 		mmc->ocr_avail |= MMC_VDD_165_195;
-
-		mmc->caps |= MMC_CAP_UHS_SDR12;
-
-		if (mmc->f_max > 25000000)
-			mmc->caps |= MMC_CAP_UHS_SDR25;
-
-		if (mmc->f_max > 50000000)
-			mmc->caps |= MMC_CAP_UHS_SDR50;
-
-		if (mmc->f_max > 100000000)
-			mmc->caps |= MMC_CAP_UHS_SDR104;
-	}
 
 	return 0;
 }
