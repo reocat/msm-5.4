@@ -86,6 +86,7 @@ struct ambarella_mmc_host {
 	int				fixed_wp;
 	bool				emmc_boot;
 	bool				auto_cmd12;
+	bool				force_v18;
 
 	int				pwr_gpio;
 	u8				pwr_gpio_active;
@@ -1172,6 +1173,7 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	host->emmc_boot = of_property_read_bool(np, "amb,emmc-boot");
 	host->auto_cmd12 = !of_property_read_bool(np, "amb,no-auto-cmd12");
+	host->force_v18 = of_property_read_bool(np, "amb,sd-force-1_8v");
 
 	/* old style of sd device tree defines slot subnode, these codes are
 	 * just for compatibility. Note: we should remove this workaroud when
@@ -1184,9 +1186,11 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	host->pwr_gpio = of_get_named_gpio_flags(np, "pwr-gpios", 0, &flags);
 	host->pwr_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
 
-	/* gpio for 3.3v/1.8v switch */
-	host->v18_gpio = of_get_named_gpio_flags(np, "v18-gpios", 0, &flags);
-	host->v18_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	/* gpio for 3.3v/1.8v switch, except for force 1.8v enabled */
+	if (!host->force_v18) {
+		host->v18_gpio = of_get_named_gpio_flags(np, "v18-gpios", 0, &flags);
+		host->v18_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	}
 
 	mmc->ops = &ambarella_sd_host_ops;
 	mmc->max_blk_size = 1024; /* please check SD_CAP_OFFSET */
@@ -1208,7 +1212,7 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	mmc->caps2 |= MMC_CAP2_HS200 | MMC_CAP2_HS200_1_8V_SDR;
 
-	if (gpio_is_valid(host->v18_gpio))
+	if (gpio_is_valid(host->v18_gpio) || host->force_v18)
 		mmc->ocr_avail |= MMC_VDD_165_195;
 
 	return 0;

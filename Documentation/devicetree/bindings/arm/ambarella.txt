@@ -546,6 +546,8 @@ Optional properties:
 - amb,emmc-boot: specifies if the sd controller is used for emmc boot
 - v18-gpios: specifies the GPIO to switch to the 1.8V power if existed.
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
+- amb,sd-force-1_8v: specifies if the signal voltage is force setting as 1.8v
+  by hardware.
 
 iii) Example
 -----------
