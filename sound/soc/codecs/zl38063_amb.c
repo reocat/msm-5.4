@@ -133,10 +133,6 @@ static unsigned twHBImaxTransferSize =(MAX_TWOLF_ACCESS_SIZE_IN_BYTES);
 module_param(twHBImaxTransferSize, uint, S_IRUGO);
 MODULE_PARM_DESC(twHBImaxTransferSize, "total number of data bytes >= 264");
 
-static long spi_rate_t = (15*1000*1000);
-module_param(spi_rate_t, long, 0644);
-MODULE_PARM_DESC(spi_rate_t, "SPI bitrate");
-
 
 static unsigned boot_to_BootMode = 0;
 module_param(boot_to_BootMode, uint, 0644);
@@ -3201,13 +3197,10 @@ static int zl38063_spi_probe(struct spi_device *spi)
 	err = zl38063_sub_probe();
 	if (err < 0)
 		return err;
-	TW_DEBUG1("probing zl38063 spi device\n");
-
-	spi->master->bus_num = 1;
+	TW_DEBUG1("probing zl38063 spi[%d] device\n",spi->master->bus_num);
 	spi->mode = SPI_MODE_0;        //req by datasheet
-	spi->max_speed_hz = spi_rate_t;
-	spi->chip_select = SPIM_CHIP_SELECT;
-	spi->bits_per_word = 8;
+	TW_DEBUG1("spi mode[%d]  max_speed_hz[%d] chip_select[%d] bits_per_word[%d]\n",
+				spi->mode,spi->max_speed_hz,spi->chip_select,spi->bits_per_word);
 
 	err = spi_setup(spi);
 	if (err < 0) {
