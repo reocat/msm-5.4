@@ -45,10 +45,26 @@ int ambarella_aarch64_cntfrq_update(void)
 
 	arm_smccc_smc(cmd, 0, 0, 0, 0, 0, 0, 0, &res);
 
-
 	return 0;
 }
 EXPORT_SYMBOL(ambarella_aarch64_cntfrq_update);
+
+int ambarella_hibernate_gpio_pre(int gpio)
+{
+	u32 fn;
+	u32 cmd;
+	struct arm_smccc_res res;
+
+	fn = SVC_SCM_FN(AMBA_SCM_SVC_HIBERNATE, AMBA_SCM_HIBERNATE_GPIO_SETUP);
+	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
+			ARM_SMCCC_OWNER_SIP, fn);
+
+	arm_smccc_smc(cmd, gpio, 0, 0, 0, 0, 0, 0, &res);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_hibernate_gpio_pre);
+
 int __init ambarella_scm_init(void)
 {
 	/* FIXME: test */

@@ -25,6 +25,7 @@
 #include <asm/memory.h>
 #include <asm/sections.h>
 #include <linux/mtd/mtd.h>
+#include <linux/of.h>
 
 #define HIBERNATE_MTD_NAME  "swp"
 
@@ -54,7 +55,7 @@ struct mtd_info *mtd_probe_dev(void)
 }
 
 
-int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
+static int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
 {
 
 	int loff = ofs;
@@ -77,7 +78,7 @@ int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
 }
 
 
-int hibernate_write_page(struct mtd_info *mtd, void *buf)
+static int hibernate_write_page(struct mtd_info *mtd, void *buf)
 {
 
 	int ret;
@@ -106,7 +107,7 @@ int hibernate_write_page(struct mtd_info *mtd, void *buf)
 	return 0;
 }
 
-int hibernate_save_image(struct mtd_info *mtd, struct snapshot_handle *snapshot)
+static int hibernate_save_image(struct mtd_info *mtd, struct snapshot_handle *snapshot)
 {
 
 	int ret;
@@ -133,7 +134,7 @@ int hibernate_save_image(struct mtd_info *mtd, struct snapshot_handle *snapshot)
 	return ret;
 }
 
-int hibernate_mtd_write(struct mtd_info *mtd)
+static int hibernate_mtd_write(struct mtd_info *mtd)
 {
 
 	int error = 0;
@@ -168,6 +169,16 @@ out_finish:
 	return error;
 
 }
+extern int ambarella_hibernate_gpio_pre(int gpio);
+static void ambarella_hibernate_sip(void)
+{
+	int hibernate_gpio_notify_mcu = -1;
+
+	of_property_read_u32(of_chosen, "ambarella,hibernate-gpio-notify-mcu", &hibernate_gpio_notify_mcu);
+	if (hibernate_gpio_notify_mcu > 0) {
+		ambarella_hibernate_gpio_pre(hibernate_gpio_notify_mcu);
+	}
+}
 
 int swsusp_write_mtd(int flags)
 {
@@ -176,6 +187,7 @@ int swsusp_write_mtd(int flags)
 
 	mtd_page_offset = 0;
 
+	ambarella_hibernate_sip();
 	info = mtd_probe_dev();
 	if(!info)
 		return -EFAULT;
