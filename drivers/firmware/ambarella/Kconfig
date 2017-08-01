@@ -4,6 +4,5 @@
 config AMBARELLA_SCM
 	bool "Ambarella secure monitor driver"
 	depends on ARCH_AMBARELLA && ARM64
-	default y
 	help
 	  Say y here to enable the Ambarella secure monitor driver
