@@ -1241,8 +1241,6 @@ static int serial_ambarella_console_suspend(void)
 {
 	struct console *co = &serial_ambarella_console;
 	struct ambarella_uart_port *amb_port;
-	struct uart_port *port;
-	struct ktermios termios;
 
 	if (console_suspend_enabled)
 		return 0;
@@ -1253,6 +1251,8 @@ static int serial_ambarella_console_suspend(void)
 	amb_port = &ambarella_port[co->index];
 
 	clk_set_parent(amb_port->uart_pll, NULL);
+
+	return 0;
 }
 
 static struct syscore_ops ambarella_console_syscore_ops = {
