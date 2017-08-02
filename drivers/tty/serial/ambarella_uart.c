@@ -57,6 +57,7 @@
 struct ambarella_uart_port {
 	struct uart_port port;
 	struct clk *uart_pll;
+	struct clk *parent_pll;
 	unsigned long flags;
 	u32 msr_used : 1;
 	u32 tx_fifo_fix : 1;
@@ -1226,6 +1227,8 @@ static void serial_ambarella_console_resume(void)
 	if (!port->membase)
 		return;
 
+	clk_set_parent(amb_port->uart_pll, amb_port->parent_pll);
+
 	clear_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags);
 	serial_ambarella_hw_setup(port);
 
@@ -1234,8 +1237,27 @@ static void serial_ambarella_console_resume(void)
 	port->ops->set_termios(port, &termios, NULL);
 }
 
+static int serial_ambarella_console_suspend(void)
+{
+	struct console *co = &serial_ambarella_console;
+	struct ambarella_uart_port *amb_port;
+	struct uart_port *port;
+	struct ktermios termios;
+
+	if (console_suspend_enabled)
+		return 0;
+
+	if (co->index < 0 || co->index >= serial_ambarella_reg.nr)
+		return 0;
+
+	amb_port = &ambarella_port[co->index];
+
+	clk_set_parent(amb_port->uart_pll, NULL);
+}
+
 static struct syscore_ops ambarella_console_syscore_ops = {
 	.resume	 = serial_ambarella_console_resume,
+	.suspend = serial_ambarella_console_suspend,
 };
 #endif
 
@@ -1266,6 +1288,7 @@ static int __init serial_ambarella_console_init(void)
 		pr_err("No clock available for serial console\n");
 		return -ENODEV;
 	}
+	ambarella_port[id].parent_pll = clk_get_parent(ambarella_port[id].uart_pll);
 
 	register_console(&serial_ambarella_console);
 
@@ -1332,6 +1355,7 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Get uart clk failed!\n");
 		return PTR_ERR(amb_port->uart_pll);
 	}
+	amb_port->parent_pll = clk_get_parent(amb_port->uart_pll);
 
 	amb_port->mcr = DEFAULT_AMBARELLA_UART_MCR;
 	/* check if using modem status register,  available for non-uart0. */
@@ -1417,6 +1441,8 @@ static int serial_ambarella_suspend(struct platform_device *pdev,
 	amb_port = platform_get_drvdata(pdev);
 	rval = uart_suspend_port(&serial_ambarella_reg, &amb_port->port);
 
+	clk_set_parent(amb_port->uart_pll, NULL);
+
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
 		__func__, rval, state.event);
 
@@ -1429,6 +1455,8 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 	int rval = 0;
 
 	amb_port = platform_get_drvdata(pdev);
+
+	clk_set_parent(amb_port->uart_pll, amb_port->parent_pll);
 
 	clear_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags);
 	serial_ambarella_hw_setup(&amb_port->port);
