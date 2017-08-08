@@ -1618,7 +1618,7 @@ ambarella_udc_free_request(struct usb_ep *_ep, struct usb_request *_req)
 	struct ambarella_ep	*ep = to_ambarella_ep(_ep);
 	struct ambarella_request	*req = to_ambarella_req(_req);
 
-	if (!ep || !_req || (!ep->ep.desc && !IS_EP0(ep)))
+	if (!ep || !_req)
 		return;
 
 	if(req->desc_count > 0)
