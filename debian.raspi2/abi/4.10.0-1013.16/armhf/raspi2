@@ -4171,6 +4171,7 @@ EXPORT_SYMBOL vmlinux 0x0487f831	fb_find_best_display
 EXPORT_SYMBOL vmlinux 0x048d8be8	simple_transaction_release
 EXPORT_SYMBOL vmlinux 0x04994c6d	security_path_mknod
 EXPORT_SYMBOL vmlinux 0x04af0d6f	iw_handler_set_spy
+EXPORT_SYMBOL vmlinux 0x04afd4fb	release_dentry_name_snapshot
 EXPORT_SYMBOL vmlinux 0x04b9431a	serio_open
 EXPORT_SYMBOL vmlinux 0x04ca78e3	xfrm_unregister_type
 EXPORT_SYMBOL vmlinux 0x04cabed9	rfkill_register
@@ -4724,6 +4725,7 @@ EXPORT_SYMBOL vmlinux 0x25673a4a	param_ops_bint
 EXPORT_SYMBOL vmlinux 0x2570a138	reservation_seqcount_string
 EXPORT_SYMBOL vmlinux 0x2572353a	DWC_READ_REG32
 EXPORT_SYMBOL vmlinux 0x25820c64	fs_overflowuid
+EXPORT_SYMBOL vmlinux 0x2595ca36	take_dentry_name_snapshot
 EXPORT_SYMBOL vmlinux 0x259d20e2	gnet_stats_start_copy_compat
 EXPORT_SYMBOL vmlinux 0x25e9d4bd	resource_list_free
 EXPORT_SYMBOL vmlinux 0x25eacb99	scsi_add_host_with_dma
