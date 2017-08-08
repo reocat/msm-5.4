@@ -18,7 +18,7 @@
 #include <linux/arm-smccc.h>
 #include "ambarella_scm.h"
 
-static int ambarella_scm_call(void)
+static int ambarella_scm_query(void)
 {
 	u32 fn;
 	u32 cmd;
@@ -30,7 +30,7 @@ static int ambarella_scm_call(void)
 
 	arm_smccc_smc(cmd, 0, 0, 0, 0, 0, 0, 0, &res);
 
-	return 0;
+	return res.a0;
 }
 
 int ambarella_aarch64_cntfrq_update(void)
@@ -45,7 +45,7 @@ int ambarella_aarch64_cntfrq_update(void)
 
 	arm_smccc_smc(cmd, 0, 0, 0, 0, 0, 0, 0, &res);
 
-	return 0;
+	return res.a0;
 }
 EXPORT_SYMBOL(ambarella_aarch64_cntfrq_update);
 
@@ -61,14 +61,13 @@ int ambarella_hibernate_gpio_pre(int gpio)
 
 	arm_smccc_smc(cmd, gpio, 0, 0, 0, 0, 0, 0, &res);
 
-	return 0;
+	return res.a0;
 }
 EXPORT_SYMBOL(ambarella_hibernate_gpio_pre);
 
 int __init ambarella_scm_init(void)
 {
-	/* FIXME: test */
-	ambarella_scm_call();
+	BUG_ON(ambarella_scm_query() != ARM_SMCCC_SMC_64);
 	return 0;
 }
 arch_initcall(ambarella_scm_init);
