@@ -4189,6 +4189,7 @@ EXPORT_SYMBOL vmlinux 0x0789a891	of_platform_device_create
 EXPORT_SYMBOL vmlinux 0x07a3b42a	netdev_has_upper_dev_all_rcu
 EXPORT_SYMBOL vmlinux 0x07a4b576	flex_array_free
 EXPORT_SYMBOL vmlinux 0x07a890c8	fb_alloc_cmap
+EXPORT_SYMBOL vmlinux 0x07a9ef84	release_dentry_name_snapshot
 EXPORT_SYMBOL vmlinux 0x07c25eeb	down_killable
 EXPORT_SYMBOL vmlinux 0x07cc4a5d	printk_timed_ratelimit
 EXPORT_SYMBOL vmlinux 0x07cc8f2c	mmc_can_secure_erase_trim
@@ -4527,6 +4528,7 @@ EXPORT_SYMBOL vmlinux 0x1b9b9f3c	input_set_keycode
 EXPORT_SYMBOL vmlinux 0x1bb8308f	snd_pcm_lib_ioctl
 EXPORT_SYMBOL vmlinux 0x1bca2a90	prepare_to_wait
 EXPORT_SYMBOL vmlinux 0x1bee4872	f_setown
+EXPORT_SYMBOL vmlinux 0x1c01ab26	take_dentry_name_snapshot
 EXPORT_SYMBOL vmlinux 0x1c02d9aa	security_inode_getsecctx
 EXPORT_SYMBOL vmlinux 0x1c108102	xfrm_state_delete_tunnel
 EXPORT_SYMBOL vmlinux 0x1c213a1e	phy_stop_interrupts
