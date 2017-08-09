@@ -50,17 +50,11 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
-
-		cv_mem_region: cv_mem@40000000 {
-			reg = <0x40000000 0x20000000>;
-			no-map;
-		};
 	};
 
 	sub_scheduler: sub_scheduler0 {
-			compatible = "ambarella,sub-scheduler";
-			interrupts = <0 156 0x4>;
-			memory-region = <&cv_mem_region>;
+		compatible = "ambarella,sub-scheduler";
+		interrupts = <0 156 0x4>;
 	};
 
 	psci {
