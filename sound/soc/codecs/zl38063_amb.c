@@ -152,7 +152,6 @@ struct zl38063 {
 	int sysclk_rate;
 	struct mutex		lock;
 
-	u8 flag;
 	u8 init_done;
 	int pwr_pin;
 	unsigned int pwr_active;
@@ -229,7 +228,7 @@ zl38063_nbytes_wr(struct zl38063 *zl38063,
 	return 0;
 }
 
-/* zl38040_hbi_rd16()- Decode the 16-bit T-WOLF Regs Host address into
+/* ZL38063_hbi_rd16()- Decode the 16-bit T-WOLF Regs Host address into
  * page, offset and build the 16-bit command acordingly to the access type.
  * then read the 16-bit word data and store it in pdata
  *  \param[in]
@@ -307,8 +306,8 @@ static int zl38063_hbi_rd16(struct zl38063 *zl38063,
 	return 0;
 }
 
-/* zl38040_hbi_wr16()- this function is used for single word access by the
- * ioctl read. It decodes the 16-bit T-WOLF Regs Host address into
+/* ZL38063_hbi_wr16()- this function is used for single word access.
+ * It decodes the 16-bit T-WOLF Regs Host address into
  * page, offset and build the 16-bit command acordingly to the access type.
  * then write the command and data to the device
  *  \param[in]
@@ -382,11 +381,11 @@ static int zl38063_monitor_bit(struct zl38063 *zl38063, u16 addr, u8 bit, u16 ti
  *
  *
  * Input Argument: mode  - the supported reset modes:
- *         VPROC_ZL38040_RST_HARDWARE_ROM,
- *         VPROC_ZL38040_RST_HARDWARE_ROM,
- *         VPROC_ZL38040_RST_SOFT,
- *         VPROC_ZL38040_RST_AEC
- *         VPROC_ZL38040_RST_TO_BOOT
+ *         VPROC_ZL38063_RST_HARDWARE_ROM,
+ *         VPROC_ZL38063_RST_HARDWARE_ROM,
+ *         VPROC_ZL38063_RST_SOFT,
+ *         VPROC_ZL38063_RST_AEC
+ *         VPROC_ZL38063_RST_TO_BOOT
  * Return:  type error code (0 = success, else= fail)
  */
 static int zl38063_reset(struct zl38063 *zl38063,
@@ -398,22 +397,23 @@ static int zl38063_reset(struct zl38063 *zl38063,
 	int monitor_bit = -1; /*the bit (range 0 - 15) of that register to monitor*/
 
 	TW_DEBUG1("Reset type %d\n",mode);
+	//zl38063EnterCritical();
 	/*PLATFORM SPECIFIC code*/
-	if (mode  == ZL38040_RST_HARDWARE_RAM) {       /*hard reset*/
+	if (mode  == ZL38063_RST_HARDWARE_RAM) {       /*hard reset*/
 		/*hard reset*/
 		data = 0x0005;
-	} else if (mode == ZL38040_RST_HARDWARE_ROM) {  /*power on reset*/
+	} else if (mode == ZL38063_RST_HARDWARE_ROM) {  /*power on reset*/
 		/*hard reset*/
 		data = 0x0009;
-	} else if (mode == ZL38040_RST_AEC) { /*AEC method*/
+	} else if (mode == ZL38063_RST_AEC) { /*AEC method*/
 		addr = 0x0300;
 		data = 0x0001;
 		monitor_bit = 0;
-	} else if (mode == ZL38040_RST_SOFTWARE) { /*soft reset*/
+	} else if (mode == ZL38063_RST_SOFTWARE) { /*soft reset*/
 		addr = 0x0006;
 		data = 0x0002;
 		monitor_bit = 1;
-	} else if (mode == ZL38040_RST_TO_BOOT) { /*reset to bootrom mode*/
+	} else if (mode == ZL38063_RST_TO_BOOT) { /*reset to bootrom mode*/
 		data = 0x0001;
 	} else {
 		TW_DEBUG1("Invalid reset type\n");
@@ -427,6 +427,7 @@ static int zl38063_reset(struct zl38063 *zl38063,
 		if (zl38063_monitor_bit(zl38063, addr, monitor_bit, 1000) < 0)
 		   return -EFAULT;
 	}
+	//zl38063ExitCritical();
 
 	return 0;
 }
@@ -447,17 +448,17 @@ static int zl38063_mbox_acquire(struct zl38063 *zl38063)
 	u16 temp = 0x0BAD;
 
 	for (i = 0; i < TWOLF_MBCMDREG_SPINWAIT; i++) {
-		status = zl38063_hbi_rd16(zl38063, ZL38040_SW_FLAGS_REG, &temp);
+		status = zl38063_hbi_rd16(zl38063, ZL38063_SW_FLAGS_REG, &temp);
 		if ((status < 0)) {
 			TW_DEBUG1("ERROR %d: \n", status);
 			return status;
 		}
-		if (!(temp & ZL38040_SW_FLAGS_CMD)) {break;}
+		if (!(temp & ZL38063_SW_FLAGS_CMD)) {break;}
 		msleep(10); /*release*/
 		TW_DEBUG2("cmdbox =0x%04x timeout count = %d: \n", temp, i);
 	}
 	TW_DEBUG2("timeout count = %d: \n", i);
-	if ((i>= TWOLF_MBCMDREG_SPINWAIT) && (temp != ZL38040_SW_FLAGS_CMD)) {
+	if ((i>= TWOLF_MBCMDREG_SPINWAIT) && (temp != ZL38063_SW_FLAGS_CMD)) {
 		return -EBUSY;
 	}
 	/*read the Host Command register*/
@@ -478,17 +479,17 @@ static int zl38063_cmdreg_acquire(struct zl38063 *zl38063)
 	u16 temp = 0x0BAD;
 
 	for (i = 0; i < TWOLF_MBCMDREG_SPINWAIT; i++) {
-		status = zl38063_hbi_rd16(zl38063, ZL38040_CMD_REG, &temp);
+		status = zl38063_hbi_rd16(zl38063, ZL38063_CMD_REG, &temp);
 		if ((status < 0)) {
 			TW_DEBUG1("ERROR %d: \n", status);
 			return status;
 		}
-		if (temp == ZL38040_CMD_IDLE) {break;}
+		if (temp == ZL38063_CMD_IDLE) {break;}
 		msleep(10); /*wait*/
 		TW_DEBUG2("cmdReg =0x%04x timeout count = %d: \n", temp, i);
 	}
 	TW_DEBUG2("timeout count = %d: \n", i);
-	if ((i>= TWOLF_MBCMDREG_SPINWAIT) && (temp != ZL38040_CMD_IDLE)) {
+	if ((i>= TWOLF_MBCMDREG_SPINWAIT) && (temp != ZL38063_CMD_IDLE)) {
 		return -EBUSY;
 	}
 	/*read the Host Command register*/
@@ -514,20 +515,20 @@ static int zl38063_write_cmdreg(struct zl38063 *zl38063, u16 cmd)
 		return status;
 	}
 	/*write the command into the Host Command register*/
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_REG, buf);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_REG, buf);
 	if (status < 0) {
 		printk("ERROR %d: \n", status);
 		return status;
 	}
 
 	if ((cmd & 0x8000) >> 15)
-		buf = ZL38040_SW_FLAGS_CMD_NORST;
+		buf = ZL38063_SW_FLAGS_CMD_NORST;
 	else
-		buf = ZL38040_SW_FLAGS_CMD;
+		buf = ZL38063_SW_FLAGS_CMD;
 
 	/*Release the command reg*/
-	buf = ZL38040_SW_FLAGS_CMD;
-	status = zl38063_hbi_wr16(zl38063, ZL38040_SW_FLAGS_REG, buf);	//fix me
+	buf = ZL38063_SW_FLAGS_CMD;
+	status = zl38063_hbi_wr16(zl38063, ZL38063_SW_FLAGS_REG, buf);	//fix me
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -580,7 +581,7 @@ static int zl38063_cmdresult_check(struct zl38063 *zl38063)
 {
 	int status = 0;
 	u16 buf;
-	status = zl38063_hbi_rd16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, &buf);
+	status = zl38063_hbi_rd16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, &buf);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -603,7 +604,7 @@ static int zl38063_cmdresult_check(struct zl38063 *zl38063)
  */
 static int  zl38063_stop_fwr_to_bootmode(struct zl38063 *zl38063)
 {
-	return zl38063_write_cmdreg(zl38063, ZL38040_CMD_FWR_STOP);
+	return zl38063_write_cmdreg(zl38063, ZL38063_CMD_FWR_STOP);
 }
 
 /*start_fwr_from_ram - use this function to start/restart the firmware
@@ -615,7 +616,7 @@ static int  zl38063_stop_fwr_to_bootmode(struct zl38063 *zl38063)
  */
 static int  zl38063_start_fwr_from_ram(struct zl38063 *zl38063)
 {
-	if (zl38063_write_cmdreg(zl38063, ZL38040_CMD_FWR_GO) < 0) {
+	if (zl38063_write_cmdreg(zl38063, ZL38063_CMD_FWR_GO) < 0) {
 		return -EFAULT;
 	}
 	zl38063->init_done = 1; /*firmware is running in the device*/
@@ -625,7 +626,7 @@ static int  zl38063_start_fwr_from_ram(struct zl38063 *zl38063)
 	return 0;
 }
 
-#ifdef ZL38040_SAVE_FWR_TO_FLASH
+#ifdef ZL38063_SAVE_FWR_TO_FLASH
 /*tw_init_check_flash - use this function to check if there is a flash on board
  * and initialize it
  * \param[in] none
@@ -636,7 +637,7 @@ static int  zl38063_start_fwr_from_ram(struct zl38063 *zl38063)
 static int  zl38063_init_check_flash(struct zl38063 *zl38063)
 {
 	 /*if there is a flash on board initialize it*/
-	return zl38063_write_cmdreg(zl38063, ZL38040_CMD_HOST_FLASH_INIT);
+	return zl38063_write_cmdreg(zl38063, ZL38063_CMD_HOST_FLASH_INIT);
 }
 
 /*tw_erase_flash - use this function to erase all firmware image
@@ -659,7 +660,7 @@ static int  zl38063_erase_flash(struct zl38063 *zl38063)
 	}
 
 	/*erase all config/fwr*/
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, 0xAA55);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, 0xAA55);
 	if (status < 0) {
 		return status;
 	}
@@ -696,11 +697,11 @@ static int  zl38063_erase_fwrcfg_from_flash(struct zl38063 *zl38063,
 		return status;
 	}
 
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, image_number);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, image_number);
 	if (status < 0) {
 		return status;
 	}
-	status  = zl38063_write_cmdreg(zl38063, ZL38040_CMD_IMG_CFG_ERASE);
+	status  = zl38063_write_cmdreg(zl38063, ZL38063_CMD_IMG_CFG_ERASE);
 	if (status < 0) {
 		return status;
 	}
@@ -739,7 +740,7 @@ static int zl38063_save_image_to_flash(struct zl38063 *zl38063)
 	}
 #endif
 	/*save the image to flash*/
-	status = zl38063_write_cmdreg(zl38063, ZL38040_CMD_IMG_CFG_SAVE);
+	status = zl38063_write_cmdreg(zl38063, ZL38063_CMD_IMG_CFG_SAVE);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: zl38063_write_cmdreg\n", status);
 		return status;
@@ -778,12 +779,12 @@ static int  zl38063_load_fwr_from_flash(struct zl38063 *zl38063,
 		return status;
 	}
 	/*load the fwr to flash position image_number */
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, image_number);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, image_number);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
 	}
-	status = zl38063_write_cmdreg(zl38063, ZL38040_CMD_IMG_LOAD);
+	status = zl38063_write_cmdreg(zl38063, ZL38063_CMD_IMG_LOAD);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -821,12 +822,12 @@ static int  zl38063_load_fwrcfg_from_flash(struct zl38063 *zl38063,
 	}
 
 	/*save the config to flash position image_number */
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, image_number);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, image_number);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
 	}
-	status = zl38063_write_cmdreg(zl38063, ZL38040_CMD_IMG_CFG_LOAD);
+	status = zl38063_write_cmdreg(zl38063, ZL38063_CMD_IMG_CFG_LOAD);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -860,12 +861,12 @@ static int  zl38063_load_cfg_from_flash(struct zl38063 *zl38063,
 	}
 
 	/*load the config from flash position image_number */
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, image_number);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, image_number);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
 	}
-	return zl38063_write_cmdreg(zl38063, ZL38040_CMD_CFG_LOAD);
+	return zl38063_write_cmdreg(zl38063, ZL38063_CMD_CFG_LOAD);
 }
 
 /* save_cfg_to_flash(): use this function to
@@ -889,7 +890,7 @@ static int  zl38063_save_cfg_to_flash(struct zl38063 *zl38063, u16 image_number)
 		return status;
 	}
 	/*check if a firmware exists on the flash*/
-	status = zl38063_hbi_rd16(zl38063, ZL38040_FWR_COUNT_REG, &buf);
+	status = zl38063_hbi_rd16(zl38063, ZL38063_FWR_COUNT_REG, &buf);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -898,21 +899,21 @@ static int  zl38063_save_cfg_to_flash(struct zl38063 *zl38063, u16 image_number)
 		return -EBADSLT; /*There is no firmware on flash position image_number to save config for*/
 
 	/*save the config to flash position */
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_PARAM_RESULT_REG, image_number);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_PARAM_RESULT_REG, image_number);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
 	}
 
 	/*save the config to flash position */
-	status = zl38063_hbi_wr16(zl38063, ZL38040_CMD_REG, 0x8002);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_CMD_REG, 0x8002);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
 	}
 
 	/*save the config to flash position */
-	status = zl38063_hbi_wr16(zl38063, ZL38040_SW_FLAGS_REG, 0x0004);
+	status = zl38063_hbi_wr16(zl38063, ZL38063_SW_FLAGS_REG, 0x0004);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -986,7 +987,7 @@ static int zl38063_boot_prepare(struct zl38063 *zl38063)
 	}
 	msleep(50); /*required for the reset to cmplete*/
 	/*check whether the device has gone into boot mode as ordered*/
-	status = zl38063_hbi_rd16(zl38063, (u16)ZL38040_CMD_PARAM_RESULT_REG, &buf);
+	status = zl38063_hbi_rd16(zl38063, (u16)ZL38063_CMD_PARAM_RESULT_REG, &buf);
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -1004,7 +1005,7 @@ static int zl38063_boot_prepare(struct zl38063 *zl38063)
 static int zl38063_boot_conclude(struct zl38063 *zl38063)
 {
 	int status = 0;
-	status = zl38063_write_cmdreg(zl38063, ZL38040_CMD_HOST_LOAD_CMP); /*loading complete*/
+	status = zl38063_write_cmdreg(zl38063, ZL38063_CMD_HOST_LOAD_CMP); /*loading complete*/
 	if (status < 0) {
 		TW_DEBUG1("ERROR %d: \n", status);
 		return status;
@@ -1241,7 +1242,7 @@ static int zl38063_boot_Write(struct zl38063 *zl38063,
 		/* program the program's execution start register */
 		buf[3] = (u8)(address & 0xFF);
 		status = zl38063_hbi_access(zl38063,
-					   ZL38040_FWR_EXEC_REG, 4, buf, TWOLF_HBI_WRITE);
+					   ZL38063_FWR_EXEC_REG, 4, buf, TWOLF_HBI_WRITE);
 
 		if(status < 0) {
 			TW_DEBUG1("ERROR % d: unable to program page 1 execution address\n", status);
@@ -1377,13 +1378,13 @@ static int zl38063_load_file(struct zl38063 *zl38063)
 		  TW_DEBUG1("err %d, twfw->size = %d, tw boot conclude -firmware loading failed\n", status, (int)twfw->size);
 		  goto fwr_cleanup;
 	}
-#ifdef ZL38040_SAVE_FWR_TO_FLASH
+#ifdef ZL38063_SAVE_FWR_TO_FLASH
 	status = zl38063_save_image_to_flash(zl38063);
 	if (status < 0) {
 		  TW_DEBUG1("err %d, twfw->size = %d, saving firmware failed\n", status, twfw->size);
 		  goto fwr_cleanup;
 	}
-#endif  /*ZL38040_SAVE_FWR_TO_FLASH*/
+#endif  /*ZL38063_SAVE_FWR_TO_FLASH*/
 	status = zl38063_start_fwr_from_ram(zl38063);
 	if (status < 0) {
 		  TW_DEBUG1("err %d, twfw->size = %d, starting firmware failed\n", status,(int)twfw->size);
@@ -1434,8 +1435,8 @@ static int zl38063_load_file(struct zl38063 *zl38063)
 			}
 			j += 1;
 		} while (j < twfw->size);
-#ifdef ZL38040_SAVE_FWR_TO_FLASH
-		if (zl38063_hbi_rd16(zl38063, ZL38040_FWR_COUNT_REG, &val) < 0) {
+#ifdef ZL38063_SAVE_FWR_TO_FLASH
+		if (zl38063_hbi_rd16(zl38063, ZL38063_FWR_COUNT_REG, &val) < 0) {
 			return -EIO;
 		}
 		if (val == 0) {
@@ -1449,10 +1450,10 @@ static int zl38063_load_file(struct zl38063 *zl38063)
 		}
 		TW_DEBUG1("zl38063 image/cfg saved to flash position %d - success...\n", val);
 
-#endif   /*ZL38040_SAVE_FWR_TO_FLASH*/
+#endif   /*ZL38063_SAVE_FWR_TO_FLASH*/
 	}
 #endif  /*ZL380XX_TW_UPDATE_CONFIG*/
-	 /*status = zl38063_reset(zl38063, ZL38040_RST_SOFTWARE); */
+	 /*status = zl38063_reset(zl38063, ZL38063_RST_SOFTWARE); */
 	goto fwr_cleanup;
 
 fwr_cleanup:
@@ -1503,20 +1504,16 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 	zl38063EnterCritical();
 	status = zl38063_boot_prepare(zl38063);
 	if (status < 0) {
-		  TW_DEBUG1("err %d, tw boot prepare failed\n", status);
+		  TW_DEBUG1("err %d, boot prepare failed\n", status);
 		  zl38063ExitCritical();
-		  //return -1;
+		  return -1;
 	}
 
-
 	if (boot_to_BootMode == 1){
-		TW_DEBUG1("Enter boot mode and wait UART CMD\n");
+		TW_DEBUG1("Enter DEBUG mode successed \nJump to boot mode and wait UART CMD ...\n");
 		zl38063ExitCritical();
 		return 0;
 	}
-
-	zl38063->fw_label = ASR;
-//	zl38063->fw_label = AEC;
 
 	TW_DEBUG1("Using the firmware-config ID [%d]  c code loading ...\n",zl38063->fw_label);
 	if (ASR == zl38063->fw_label){
@@ -1530,8 +1527,6 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 		page255Offset = (u8)(asr_fwr[index].targetAddr & 0xFF);
 		/* write the data to the device */
 		if (asr_fwr[index].numWords != 0) {
-
-
 			status = zl38063_hbi_access(zl38063,
 					   PAGE_255_BASE_HI_REG, 4, buf, TWOLF_HBI_WRITE);
 			if (status < 0) {
@@ -1539,9 +1534,6 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 				zl38063ExitCritical();
 				return -EFAULT;
 			}
-
-
-
 			for (i = 0; i < asr_fwr[index].numWords; i++) {
 				buf[j] = (u8)((asr_fwr[index].buf[i] >> 8) & 0xFF);
 				buf[j+1] = (u8)((asr_fwr[index].buf[i]) & 0xFF);
@@ -1549,7 +1541,6 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 				//TW_DEBUG2("0x%02x, ", buf[i+4]);
 			}
 			/* write the data to the device */
-
 			status = zl38063_hbi_access(zl38063,((u16)(0xFF<<8) | (u16)page255Offset),
 							   (asr_fwr[index].numWords*2), buf, TWOLF_HBI_WRITE);
 			if(status < 0) {
@@ -1572,7 +1563,7 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 	buf[2] = (u8)((AsrFirmware.execAddr >> 8) & 0xFF);
 	buf[3] = (u8)(AsrFirmware.execAddr & 0xFF);
 	status = zl38063_hbi_access(zl38063,
-				   ZL38040_FWR_EXEC_REG, 4, buf, TWOLF_HBI_WRITE);
+				   ZL38063_FWR_EXEC_REG, 4, buf, TWOLF_HBI_WRITE);
 
 	if(status < 0) {
 		TW_DEBUG1("ERROR % d: unable to program page 1 execution address\n", status);
@@ -1595,7 +1586,6 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 		/* write the data to the device */
 		if (aec_fwr[index].numWords != 0) {
 
-
 			status = zl38063_hbi_access(zl38063,
 					   PAGE_255_BASE_HI_REG, 4, buf, TWOLF_HBI_WRITE);
 			if (status < 0) {
@@ -1603,8 +1593,6 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 				zl38063ExitCritical();
 				return -EFAULT;
 			}
-
-
 
 			for (i = 0; i < aec_fwr[index].numWords; i++) {
 				buf[j] = (u8)((aec_fwr[index].buf[i] >> 8) & 0xFF);
@@ -1624,8 +1612,6 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 		index++;
 	}
 
-
-
 	/*
 	 * convert the number of bytes to two 16 bit
 	 * values and write them to the requested page register
@@ -1638,7 +1624,7 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 	buf[2] = (u8)((AecFirmware.execAddr >> 8) & 0xFF);
 	buf[3] = (u8)(AecFirmware.execAddr & 0xFF);
 	status = zl38063_hbi_access(zl38063,
-				   ZL38040_FWR_EXEC_REG, 4, buf, TWOLF_HBI_WRITE);
+				   ZL38063_FWR_EXEC_REG, 4, buf, TWOLF_HBI_WRITE);
 
 	if(status < 0) {
 		TW_DEBUG1("ERROR % d: unable to program page 1 execution address\n", status);
@@ -1658,14 +1644,14 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 		  return -1;
 	}
 
-#ifdef ZL38040_SAVE_FWR_TO_FLASH
+#ifdef ZL38063_SAVE_FWR_TO_FLASH
 	status = zl38063_save_image_to_flash(zl38063);
 	if (status < 0) {
 		  TW_DEBUG1("err %d, saving firmware to flash failed\n", status);
 		  zl38063ExitCritical();
 		  return status;
 	}
-#endif  /*ZL38040_SAVE_FWR_TO_FLASH*/
+#endif  /*ZL38063_SAVE_FWR_TO_FLASH*/
 	status = zl38063_start_fwr_from_ram(zl38063);
 	if (status < 0) {
 		  TW_DEBUG1("err %d, starting firmware failed\n", status);
@@ -1682,10 +1668,10 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 		  zl38063ExitCritical();
 		  return status;
 	}
-#ifdef ZL38040_SAVE_FWR_TO_FLASH
+#ifdef ZL38063_SAVE_FWR_TO_FLASH
 	{
 		u16 val = 0;
-		if (zl38063_hbi_rd16(zl38063, ZL38040_FWR_COUNT_REG, &val) < 0) {
+		if (zl38063_hbi_rd16(zl38063, ZL38063_FWR_COUNT_REG, &val) < 0) {
 			return -EIO;
 		}
 		if (val == 0) {
@@ -1700,7 +1686,7 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 		}
 		TW_DEBUG1("zl38063 image/cfg saved to flash position %d - success...\n", val);
 	}
-#endif   /*ZL38040_SAVE_FWR_TO_FLASH*/
+#endif   /*ZL38063_SAVE_FWR_TO_FLASH*/
 #endif   /*ZL380XX_TW_UPDATE_CONFIG*/
 
 
@@ -1711,9 +1697,7 @@ static int zl38063_load_firmware(struct zl38063 *zl38063,struct nl_msg_audio *ms
 	return 0;
 }
 
-/*--------------------------------------------------------------------
- *    ALSA  SOC CODEC driver
- *--------------------------------------------------------------------*/
+
 
 #ifdef ZL380XX_TW_ENABLE_ALSA_CODEC_DRIVER
 
@@ -1750,44 +1734,6 @@ u8 reg_cache_default[CODEC_CONFIG_REG_NUM] ={0x0c, 0x05, 0x00, 0x10, 0x00, 0x00,
 #define zl38063_DAI_CHANNEL_MIN      1
 #define zl38063_DAI_CHANNEL_MAX      2
 
-static void zl38063_fill_codec_cache(struct snd_soc_codec *codec,
-			u8* pData, int numbytes)
-{
-	 int i = 0;
-	 u8* cache = codec->reg_cache;
-	 for (i=0; i< numbytes; i++) {
-		 cache[i] = pData[i];
-		 //dev_info(codec->dev, "pData[%d]=0x%02x, cache[%d]=0x%02x\n", i, pData[i], i, cache[i]);
-	}
-}
-
-static u16 zl38063_read_codec_cache(struct snd_soc_codec *codec, u16 reg)
-{
-	 u8 i = reg - ZL38040_CACHED_ADDR_LO;
-	 if (i < CODEC_CONFIG_REG_NUM) {
-		 u8* cache = codec->reg_cache;
-		 //dev_info(codec->dev, "cache: 0x%04x = 0x%04x\n", reg, (cache[i] << 8) | cache[i+1]);
-		 return (cache[i] << 8) | cache[i+1];
-	 }
-	return 0xFBAD;
-}
-
-static int zl38063_find_index_codec_cache(struct snd_soc_codec *codec, u8 val)
-{
-	 int i = 0;
-	 u8* cache = codec->reg_cache;
-	 /*start the search from reg 210h*/
-	 for (i=14; i< CODEC_CONFIG_REG_NUM; i++) {
-		 if (cache[i] == val) {
-			 //dev_info(codec->dev, "cache[%d]=0x%02x\n", i, cache[i]);
-			 if (i%2)
-			   --i;
-			 return i;
-		 }
-	}
-	return -1;
-}
-
 static unsigned int zl38063_reg_read(struct snd_soc_codec *codec,
 			unsigned int reg)
 {
@@ -1796,12 +1742,11 @@ static unsigned int zl38063_reg_read(struct snd_soc_codec *codec,
 	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
 	u16 buf;
 
-	TW_DEBUG1("[hh]\n");
 	if (zl38063_hbi_rd16(zl38063, reg, &buf) < 0) {
 		return -EIO;
 	}
 	value = buf;
-	TW_DEBUG1("[hh] reg = 0x%04x ,val = 0x%04x \n",reg,value);
+	TW_DEBUG1("reg = 0x%04x ,val = 0x%04x \n",reg,value);
 	return value;
 
 }
@@ -1810,280 +1755,169 @@ static int zl38063_reg_write(struct snd_soc_codec *codec,
 			unsigned int reg, unsigned int value)
 {
 	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	//TW_DEBUG1("Read reg = 0x%04x ,val = 0x%04x \n",reg,value);
+	int i=0;
 	if (zl38063_hbi_wr16(zl38063, reg, value) < 0) {
 		return -EIO;
 	}
-	return 0;
-}
-
-
-/*ALSA- soc codec I2C/SPI read control functions*/
-static int zl38063_control_read(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	unsigned int shift = mc->shift;
-	unsigned int mask = mc->max;
-	unsigned int invert = mc->invert;
-	u16 val;
-
-
-	zl38063EnterCritical();
-	if (zl38063_hbi_rd16(zl38063, reg, &val)) {
-		//zl38063ExitCritical();
-		return -EIO;
+	if (zl38063_priv->init_done == 1 && reg > ZL38063_GPIO_EVEN && reg <= ZL38063_SIN_MAX_RMS){
+	for (i=0;i< NEED_RESET_NUM; i++)
+		if (need_reset[i] == reg){
+			zl38063_reset(zl38063, ZL38063_RST_SOFTWARE);
+			i=0xfff;
+			break;
+		}
 	}
-	zl38063ExitCritical();
-
-	ucontrol->value.integer.value[0] = ((val >> shift) & mask);
-
-	if (invert)
-		ucontrol->value.integer.value[0] =
-			mask - ucontrol->value.integer.value[0];
-
-	return 0;
-}
-/*ALSA- soc codec I2C/SPI write control functions*/
-static int zl38063_control_write(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	unsigned int shift = mc->shift;
-	unsigned int mask = mc->max;
-	unsigned int invert = mc->invert;
-	unsigned int val = (ucontrol->value.integer.value[0] & mask);
-	u16 valt;
-
-	if (invert)
-		val = mask - val;
-
-	zl38063EnterCritical();
-	if (zl38063_hbi_rd16(zl38063, reg, &valt) < 0) {
-		zl38063ExitCritical();
-		return -EIO;
-	}
-	if (((valt >> shift) & mask) == val) {
-		zl38063ExitCritical();
-		return 0;
-	}
-	valt &= ~(mask << shift);
-	valt |= val << shift;
-
-	if (zl38063_reg_write(codec, reg, valt) < 0) {
-		zl38063ExitCritical();
-		return -EIO;
-	}
-	zl38063ExitCritical();
+	TW_DEBUG1("Write reg = 0x%04x ,val = 0x%04x need reset: %s\n",reg,value,i==0xfff?"Yes":"No");
 
 	return 0;
 }
 
 
-int zl38063_mute_r(struct snd_soc_codec *codec, int on)
-{
-
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	u16 val;
-
-	zl38063EnterCritical();
-
-	if (zl38063_hbi_rd16(zl38063, ZL38040_AEC_CTRL_REG0, &val) < 0){
-		zl38063ExitCritical();
-		return -EIO;
-	}
-	if (((val >> 7) & 1) == on){
-		zl38063ExitCritical();
-		return 0;
-	}
-	val &= ~(1 << 7);
-	val |= on << 7;
-
-	if (zl38063_reg_write(codec, ZL38040_AEC_CTRL_REG0, val) < 0){
-		zl38063ExitCritical();
-		return -EIO;
-	}
-
-	zl38063ExitCritical();
-	return 0;
-}
-
-int zl38063_mute_s(struct snd_soc_codec *codec, int on)
-{
-	u16 val;
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-
-	zl38063EnterCritical();
-
-	if (zl38063_hbi_rd16(zl38063, ZL38040_AEC_CTRL_REG0, &val)){
-		zl38063ExitCritical();
-		return -EIO;
-	}
-	if (((val >> 8) & 1) == on){
-		zl38063ExitCritical();
-		return 0;
-	}
-	val &= ~(1 << 8);
-	val |= on << 8;
-
-	if (zl38063_reg_write(codec, ZL38040_AEC_CTRL_REG0, val)){
-		zl38063ExitCritical();
-		return -EIO;
-	}
-
-	zl38063ExitCritical();
-	return 0;
-}
-
-/* configure_codec() - configure the cross-point to either pure 2-channel stereo
- * or for 4-port mode with Achoustic Echo Canceller
- * mode: 0 -> Stereo bypass
- *       1 -> 4-port mode AEC
- *       2 ->
+/*
+ * Cross Point Gains: (p.g. 103)
+ * Values less than -90 and greater than +6 are clipped to each respective limit.
+ *
+ * max : 0x06 : +6 dB
+ *       ( 1 dB step )
+ * min : 0xa6 : -90 dB
+ *
+ * from -90 to 6 dB in 1 dB steps
+ * Fixme current just -90 to -1
  */
-static int zl38063_configure_codec(struct snd_soc_codec *codec, u8 mode)
-{
+static DECLARE_TLV_DB_RANGE(cp_gain_tlv,
+	0xa6,0xff,TLV_DB_SCALE_ITEM(-9000, 100, 0),
+	0x00,0x06,TLV_DB_SCALE_ITEM(0, 100, 0),
+	0x07,0x7f,TLV_DB_SCALE_ITEM(600, 0, 0),
+	0x80,0xa5,TLV_DB_SCALE_ITEM(-9000, 0, 0)
+);
 
 
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	u8 *pData;
+/*
+ * User Rout Path Gain Pad: (p.g. 150)
+ *
+ * max : 0x78 : +21.0 dB
+ *       ( 0.375 dB step )
+ * min : 0x00 : -24.0 dB
+ *
+ * from -24.0 to 21 dB in 0.375 dB steps
+ */
+static DECLARE_TLV_DB_SCALE(ugain_tlv, -2400, 37, 0);
 
-	switch (mode) {
-		case ZL38040_CR2_DEFAULT: {
-			pData = codec->reg_cache;
-			return zl38063_hbi_access(zl38063, ZL38040_OUTPUT_PATH_EN_REG, CODEC_CONFIG_REG_NUM, pData, TWOLF_HBI_WRITE);
-		}
-		case ZL38040_CR2_STEREO_BYPASS: {
+/*
+ *Extended User Rout Gain Adjust: (p.g. 150)
+ *
+ * max : 0x05 : +30 dB
+ *       ( 6 dB step )
+ * min : 0x00 : 0 dB
+ *
+ * from 0 to 30 dB in 6 dB steps
+ */
+static DECLARE_TLV_DB_SCALE(ext_ugain_tlv, 0, 600, 0);
 
-			u16 rin_src = zl38063_read_codec_cache(codec, ZL38040_RIN_IN_PATH_REG);
-			u16 sin1_src = zl38063_read_codec_cache(codec, ZL38040_SIN_IN_PATH_REG);
+/*
+ * Sout Gain Pad: (p.g. 150)
+ *
+ * max : 0x0f : +21 dB
+ *       ( 3 dB step )
+ * min : 0x00 : -24 dB
+ *
+ * from -24 to 21 dB in 3 dB steps
+ */
+static DECLARE_TLV_DB_SCALE(sout_gain_tlv, -2400, 300, 0);
 
-			pData = reg_stereo;
-			if ((rin_src != 0) || (sin1_src != 0))
-				  zl38063_hbi_access(zl38063, ZL38040_DAC1_IN_PATH_REG, 28, pData, TWOLF_HBI_WRITE);
-			if (rin_src != 0) {
-				int rout_crp = zl38063_find_index_codec_cache(codec, ZL38040_ROUT_PATH);
-				/*find where ROUT is going*/
-				if (rout_crp >=0) {
-					 zl38063_hbi_wr16(zl38063, ZL38040_CACHED_ADDR_LO+rout_crp, (rin_src & 0xFF));
-					 //dev_info(codec->dev, "reg[rout]=0x%04x <-- rin_src = 0x%04x\n", ZL38040_CACHED_ADDR_LO+rout_crp, rin_src);
-				}
-			}
+/*
+ * Sin Gain Pad: (p.g. 150)
+ *
+ * max : 0x1f : +22.5 dB
+ *       ( 1.5 dB step )
+ * min : 0x00 : -24.0 dB
+ *
+ * from -24.0 to +22.5 dB in 1.5 dB steps
+ */
+static DECLARE_TLV_DB_SCALE(sin_gain_tlv, -2400, 150, 0);
 
-			if (sin1_src != 0) {
-				int sout_crp = zl38063_find_index_codec_cache(codec, ZL38040_SOUT_PATH);
-				/*find where ROUT is going*/
-				if (sout_crp >=0) {
-					zl38063_hbi_wr16(zl38063, ZL38040_CACHED_ADDR_LO+sout_crp, sin1_src);
-					//dev_info(codec->dev, "reg[sout]=0x%04x <-- sin1_src=0x%04x\n", ZL38040_CACHED_ADDR_LO+sout_crp, sin1_src);
-				}
-			}
+/*
+ * Digital Mic Gain: (p.g. 134)
+ *
+ * max : 0x7 : +42 dB
+ *       ( 6 dB step )
+ * min : 0x00 : 0 dB
+ *
+ * from 0 to +42 dB in 6 dB steps
+ */
+static DECLARE_TLV_DB_SCALE(mic_gain_tlv, 0, 600, 0);
 
-			return 0;
-		}
 
-		default: {
-			return -EINVAL;
-		}
-	}
-
-}
 /*The DACx, I2Sx, TDMx Gains can be used in both AEC mode or Stereo bypass mode
  * however the AEC Gains can only be used when AEC is active.
  * Each input source of the cross-points has two input sources A and B.
  * The Gain for each source can be controlled independantly.
  */
 static const struct snd_kcontrol_new zl38063_snd_controls[] = {
-		SOC_SINGLE_EXT("DAC1 GAIN INA", ZL38040_DAC1_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("DAC2 GAIN INA", ZL38040_DAC2_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S1L GAIN INA", ZL38040_I2S1L_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S1R GAIN INA", ZL38040_I2S1R_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S2L GAIN INA", ZL38040_I2S2L_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S2R GAIN INA", ZL38040_I2S2R_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMA3 GAIN INA", ZL38040_TDMA3_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMA4 GAIN INA", ZL38040_TDMA4_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMB3 GAIN INA", ZL38040_TDMB3_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMB4 GAIN INA", ZL38040_TDMB4_GAIN_REG, 0, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("DAC1 GAIN INB", ZL38040_DAC1_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("DAC2 GAIN INB", ZL38040_DAC2_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S1L GAIN INB", ZL38040_I2S1L_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S1R GAIN INB", ZL38040_I2S1R_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S2L GAIN INB", ZL38040_I2S2L_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("I2S2R GAIN INB", ZL38040_I2S2R_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMA3 GAIN INB", ZL38040_TDMA3_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMA4 GAIN INB", ZL38040_TDMA4_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMB3 GAIN INB", ZL38040_TDMB3_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("TDMB4 GAIN INB", ZL38040_TDMB4_GAIN_REG, 8, 0x6, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC ROUT GAIN", ZL38040_USRGAIN, 0, 0x78, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC ROUT GAIN EXT", ZL38040_USRGAIN, 7, 0x7, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC SOUT GAIN", ZL38040_SYSGAIN, 8, 0xf, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC SIN GAIN", ZL38040_SYSGAIN, 0, 0x1f, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC MIC GAIN", ZL38040_MICGAIN, 0, 0x7, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("MUTE SPEAKER ROUT", ZL38040_AEC_CTRL_REG0, 7, 1, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("MUTE MIC SOUT", ZL38040_AEC_CTRL_REG0, 8, 1, 0,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC Bypass", ZL38040_AEC_CTRL_REG0, 4, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC Audio enh bypass", ZL38040_AEC_CTRL_REG0, 5, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC Master Bypass", ZL38040_AEC_CTRL_REG0, 1, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("ALC GAIN", ZL38040_AEC_CTRL_REG1, 12, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("ALC Disable", ZL38040_AEC_CTRL_REG1, 10, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC Tail disable", ZL38040_AEC_CTRL_REG1, 12, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC Comfort Noise", ZL38040_AEC_CTRL_REG1, 6, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("NLAEC Disable", ZL38040_AEC_CTRL_REG1, 14, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("AEC Adaptation", ZL38040_AEC_CTRL_REG1, 1, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("NLP Disable", ZL38040_AEC_CTRL_REG1, 5, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("Noise Inject", ZL38040_AEC_CTRL_REG1, 6, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("LEC Disable", ZL38040_LEC_CTRL_REG, 4, 1, 1,
-				zl38063_control_read, zl38063_control_write),
-		SOC_SINGLE_EXT("LEC Adaptation", ZL38040_LEC_CTRL_REG, 1, 1, 1,
-				zl38063_control_read, zl38063_control_write),
+	SOC_SINGLE_TLV("DAC1 A Volume",
+		ZL38063_DAC1_GAIN_REG, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("DAC1 B Volume",
+		ZL38063_DAC1_GAIN_REG, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("DAC2 A Volume",
+		ZL38063_DAC2_GAIN_REG, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("DAC2 B Volume",
+		ZL38063_DAC2_GAIN_REG, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S1L A Volume",
+		ZL38063_I2S1L_GAIN_REG, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S1L B Volume",
+		ZL38063_I2S1L_GAIN_REG, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S1R A Volume",
+		ZL38063_I2S1R_GAIN_REG, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S1R B Volume",
+		ZL38063_I2S1R_GAIN_REG, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S2L A Volume",
+		ZL38063_I2S2L_GAIN_REG, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S2L B Volume",
+		ZL38063_I2S2L_GAIN_REG, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S2R A Volume",
+		ZL38063_I2S2R_GAIN_REG, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("I2S2R B Volume",
+		ZL38063_I2S2R_GAIN_REG, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("AEC SIN1 A Volume",
+		ZL38063_CRCP_GAIN_AECSIN, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("AEC SIN1 B Volume",
+		ZL38063_CRCP_GAIN_AECSIN, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("AEC RIN A Volume",
+		ZL38063_CRCP_GAIN_AECRSN, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("AEC RIN B Volume",
+		ZL38063_CRCP_GAIN_AECRSN, 8, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("AEC SIN2 A Volume",
+		ZL38063_CRCP_GAIN_AECSIN2, 0, 0xff, 0, cp_gain_tlv),
+	SOC_SINGLE_TLV("AEC SIN2 B Volume",
+		ZL38063_CRCP_GAIN_AECSIN2, 8, 0xff, 0, cp_gain_tlv),
+
+	SOC_SINGLE_TLV("AEC ROUT Volume",
+		ZL38063_ROUT_GAIN_CTL, 0, 0x78, 0,ugain_tlv),
+	SOC_SINGLE_TLV("AEC ROUT EXT Volume",
+		ZL38063_ROUT_GAIN_CTL, 7, 0x5, 0,ext_ugain_tlv),
+	SOC_SINGLE_TLV("AEC SOUT Volume",
+		ZL38063_USR_GAIN_CTL, 8, 0xf, 0,sout_gain_tlv),
+	SOC_SINGLE_TLV("AEC SIN Volume",
+		ZL38063_USR_GAIN_CTL, 0, 0x1f, 0,sin_gain_tlv),
+
+
+	SOC_SINGLE_TLV("AEC MIC Volume",
+		ZL38063_MIC_GAIN, 0, 0x7, 0,mic_gain_tlv),
+
+
+	SOC_SINGLE("MUTE SPEAKER ROUT Switch", ZL38063_AEC_CTL0, 7, 1, 0),
+	SOC_SINGLE("MUTE MIC SOUT Switch", ZL38063_AEC_CTL0, 8, 1, 0),
+	SOC_SINGLE("AEC Bypass Switch", ZL38063_AEC_CTL0, 4, 1, 1),
+	SOC_SINGLE("AEC Audio enh bypass Switch", ZL38063_AEC_CTL0, 5, 1, 1),
+	SOC_SINGLE("AEC Master Bypass Switch", ZL38063_AEC_CTL0, 1, 1, 1),
+	SOC_SINGLE("ALC GAIN Switch",ZL38063_AEC_CTL1, 12, 1, 1),
+	SOC_SINGLE("ALC Control Switch", ZL38063_AEC_CTL1, 10, 1, 1),
+	SOC_SINGLE("AEC Tail disable Switch", ZL38063_AEC_CTL1, 12, 1, 1),
+	SOC_SINGLE("AEC Comfort Noise Switch", ZL38063_AEC_CTL1, 6, 1, 1),
+	SOC_SINGLE("NLAEC Control Switch", ZL38063_AEC_CTL1, 14, 1, 1),
+	SOC_SINGLE("AEC Adaptation Switch", ZL38063_AEC_CTL1, 1, 1, 1),
+	SOC_SINGLE("NLP Control Switch", ZL38063_AEC_CTL1, 5, 1, 1),
+	SOC_SINGLE("Noise Inject Switch", ZL38063_AEC_CTL1, 6, 1, 1),
 
 };
 
@@ -2094,141 +1928,97 @@ int zl38063_add_controls(struct snd_soc_codec *codec)
 			ARRAY_SIZE(zl38063_snd_controls));
  }
 
+
+/* If the ZL38063 TDM is configured as a slace I2S/PCM,
+ * The rate settings are not necessary. The Zl38063 has the ability to
+ * auto-detect the master rate and configure itself accordingly
+ * If configured as master, the rate must be set acccordingly
+ */
 static int zl38063_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	zl38063EnterCritical();
-	TW_DEBUG1("zl38063_hw_params  \n");
+	u16 tmp, bits, slotnum, rate, mode=0;
 
-	//zl38063_reg_write(codec, ZL38040_TDMA_CLK_CFG_REG, 0x81f2);
-
-	//zl38063_reset(zl38063, ZL38040_RST_SOFTWARE);
-	zl38063ExitCritical();
-
-	return 0;
-#ifdef MICROSEMI_DEMO_PLATFORM
-
-	unsigned int buf2, buf3, buf4;
-
-	unsigned int buf0 = zl38063_reg_read(codec, ZL38040_TDMA_CLK_CFG_REG);
+	TW_DEBUG1("Set zl38063_hw_params\n");
 
 	zl38063EnterCritical();
-	buf2 = zl38063_reg_read(codec, ZL38040_TDMA_CH1_CFG_REG);
-	buf3 = zl38063_reg_read(codec, ZL38040_TDMA_CH2_CFG_REG);
-	buf4 = zl38063_reg_read(codec, ZL38040_AEC_CTRL_REG0);
 
-	TW_DEBUG1("ZL38040_TDMA_CLK_CFG_REG read is  0x%x,ZL38040_TDMA_CH1_CFG_REG read 0x%x \n",buf0,buf2);
-
-	TW_DEBUG1("ZL38040_TDMA_CH2_CFG_REG read is  0x%x,ZL38040_AEC_CTRL_REG0 read 0x%x \n",buf3,buf4);
-
-	if ((buf2 == 0x0BAD) || (buf3 == 0x0BAD)) {
-		zl38063ExitCritical();
-		return -1;
-	}
 	switch (params_format(params)) {
 		case SNDRV_PCM_FORMAT_S16_LE:
-			buf2 |= (ZL38040_TDMA_16BIT_LIN);
-			buf3 |= (ZL38040_TDMA_16BIT_LIN);
-			buf3 |= 2;  /*If PCM use 2 timeslots*/
+			mode = (ZL38063_TDMA_16BIT_LIN);
+			slotnum = 0;  /*If PCM use 0 timeslots*/
+			bits = 31;
 			break;
 		case SNDRV_PCM_FORMAT_MU_LAW:
-			buf2 |= (ZL38040_TDMA_8BIT_ULAW);
-			buf3 |= (ZL38040_TDMA_8BIT_ULAW);
-			buf3 |= 1;  /*If PCM use 1 timeslots*/
+			mode |= (ZL38063_TDMA_8BIT_ULAW);
+			slotnum |= 0;
+			bits = 15;
 			break;
 		case SNDRV_PCM_FORMAT_A_LAW:
-			buf2 |= (ZL38040_TDMA_8BIT_ALAW );
-			buf3 |= (ZL38040_TDMA_8BIT_ALAW);
-			buf3 |= 1;  /*If PCM use 1 timeslots*/
+			mode = (ZL38063_TDMA_8BIT_ALAW );
+			slotnum |= 0;
+			bits = 15;
 			break;
+
 		case SNDRV_PCM_FORMAT_S20_3LE:
-			break;
 		case SNDRV_PCM_FORMAT_S24_LE:
-			break;
 		case SNDRV_PCM_FORMAT_S32_LE:
-			break;
 		default: {
 			zl38063ExitCritical();
 			return -EINVAL;
 		}
 	}
-	zl38063_reg_write(codec, ZL38040_TDMA_CLK_CFG_REG, buf0);
+	snd_soc_update_bits(codec,ZL38063_TDMA_CONF_CH1,0x0700,mode);
+	snd_soc_update_bits(codec,ZL38063_TDMA_CONF_CH1,0x00ff,slotnum);
+	snd_soc_update_bits(codec,ZL38063_TDMA_CLK,0x7ff0,bits<<4);
 
-	zl38063_reg_write(codec, ZL38040_TDMA_CH1_CFG_REG, buf2);
-	zl38063_reg_write(codec, ZL38040_TDMA_CH2_CFG_REG, buf3);
-
-
-	TW_DEBUG1("ZL38040_TDMA_CLK_CFG_REG write is  0x%x,ZL38040_TDMA_CH1_CFG_REG write 0x%x \n",buf0,buf2);
-
-	TW_DEBUG1("ZL38040_TDMA_CH2_CFG_REG write is  0x%x,ZL38040_AEC_CTRL_REG0 write 0x%x \n",buf3,buf4);
-	zl38063ExitCritical();
-#endif
-	/* If the ZL38040 TDM is configured as a slace I2S/PCM,
-	 * The rate settings are not necessary. The Zl38040 has the ability to
-	 * auto-detect the master rate and configure itself accordingly
-	 * If configured as master, the rate must be set acccordingly
-	 */
-	zl38063EnterCritical();
-
-	//zl38063_reset(zl38063, ZL38040_RST_SOFTWARE);
-	zl38063ExitCritical();
-
-	//return 0;
-
-	//dev_info(codec->dev, "b4: init_done=%d, flag=%d\n", zl38063->init_done , zl38063->flag);
-	/*initialize codec cache to default config*/
-	if((zl38063->init_done) /*&& (codec->reg_cache==NULL)*/) {
-
-		u8* cache = codec->reg_cache;
-		if(zl38063_hbi_access(zl38063, ZL38040_OUTPUT_PATH_EN_REG, CODEC_CONFIG_REG_NUM, cache, TWOLF_HBI_READ) < 0)
-		{
-			  zl38063ExitCritical();
-			  return -EFAULT;
-		}
-		zl38063_fill_codec_cache(codec, zl38063->pData, CODEC_CONFIG_REG_NUM);
-		zl38063->init_done = 0;
-		zl38063->flag = 1;
-	}
-	//dev_info(codec->dev, "aft: init_done=%d, flag=%d\n", zl38063->init_done , zl38063->flag);
-	switch (params_rate(params)) {
-		case 8000:
-		case 16000:
-			if (zl38063->flag > 1) {
-				 if (zl38063_configure_codec(codec, ZL38040_CR2_DEFAULT) >=0)
-					 zl38063->flag = 1;
+	tmp = zl38063_reg_read(codec, ZL38063_TDMA_CLK);
+	if (tmp & ZL38063_TDM_I2S_CFG_VAL){			//work in master mode
+		rate = params_rate(params);
+		switch (rate) {
+			case 8000:
+				tmp = ZL38063_TDMA_FSRATE_8KHZ;
+				break;
+			case 16000:
+				tmp = ZL38063_TDMA_FSRATE_16KHZ;
+				break;
+			case 48000:
+				tmp = ZL38063_TDMA_FSRATE_48KHZ;
+				break;
+			default: {
+				zl38063ExitCritical();
+				return -EINVAL;
 			}
-			break;
-		/*case 44100:  */
-		case 48000:
-			if (zl38063->flag ==1) {
-				 zl38063_configure_codec(codec, ZL38040_CR2_STEREO_BYPASS);
-				 zl38063->flag = 2;
-			}
-			break;
-		default: {
-			zl38063ExitCritical();
-			return -EINVAL;
 		}
+		snd_soc_update_bits(codec,ZL38063_TDMA_CLK,0x0007,tmp);
+	}else{
+		TW_DEBUG1("ZL38063 work under slave mode, auto-detect the master rate\n");
+
 	}
-	zl38063_reset(zl38063, ZL38040_RST_SOFTWARE);
 	zl38063ExitCritical();
+
 
 	return 0;
 }
 
+
+/* When set, data on Rout audio path is muted. When cleared, the
+Rout audio path is not muted. <Playback> */
 static int zl38063_mute(struct snd_soc_dai *codec_dai, int mute)
 {
-	//struct snd_soc_codec *codec = codec_dai->codec;
-	/*zl38063_mute_s(codec, mute);*/
-		zl38063EnterCritical();
-	TW_DEBUG1(" -============= mute %d  \n",mute);
-	//return zl38063_mute_r(codec, mute);
+	struct snd_soc_codec *codec = codec_dai->codec;
+
+	zl38063EnterCritical();
+
+	TW_DEBUG1("Rout audio path mute: %d  \n",mute);
+	snd_soc_update_bits(codec,ZL38063_AEC_CTL0,1<<7,mute<<7);
+
 	zl38063ExitCritical();
-	return 0 ;
+	return 0;
+
 }
 
 static int zl38063_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *codec_dai)
@@ -2253,18 +2043,13 @@ static int zl38063_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	unsigned int buf, buf0;
+	u16 format, clock;
 
 	zl38063EnterCritical();
-	buf = zl38063_reg_read(codec, ZL38040_TDMA_CFG_REG);
-	buf0 = zl38063_reg_read(codec, ZL38040_TDMA_CLK_CFG_REG);
+	format = zl38063_reg_read(codec, ZL38063_TDMA_FMT);
+	clock = zl38063_reg_read(codec, ZL38063_TDMA_CLK);
 
-	TW_DEBUG1("ZL38040_TDMA_CFG_REG read is  0x%x,ZL38040_TDMA_CLK_CFG_REG read 0x%x \n",buf,buf0);
-	if ((buf == 0x0BAD) || (buf0 == 0x0BAD)) {
-		zl38063ExitCritical();
-		return -1;
-	}
+	TW_DEBUG1("ZL38063_TDMA_FMT read is  0x%x,ZL38063_TDMA_CLK read 0x%x \n",format,clock);
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 		case SND_SOC_DAIFMT_DSP_B:
@@ -2272,16 +2057,16 @@ static int zl38063_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		case SND_SOC_DAIFMT_DSP_A:
 			break;
 		case SND_SOC_DAIFMT_RIGHT_J:
-			if ((buf & ZL38040_TDMA_FSALIGN) )
-				buf &= (~ZL38040_TDMA_FSALIGN);
+			if ((format & ZL38063_TDMA_FSALIGN) )
+				format &= (~ZL38063_TDMA_FSALIGN);
 			break;
 		case SND_SOC_DAIFMT_LEFT_J:
-			if (!((buf & ZL38040_TDMA_FSALIGN) ))
-				buf |= (ZL38040_TDMA_FSALIGN);
+			if (!((format & ZL38063_TDMA_FSALIGN) ))
+				format |= (ZL38063_TDMA_FSALIGN);
 			break;
 		case SND_SOC_DAIFMT_I2S:
-			if (!((buf & ZL38040_TDM_I2S_CFG_VAL) )) {
-				buf |= (ZL38040_TDM_I2S_CFG_VAL );
+			if (!((format & ZL38063_TDM_I2S_CFG_VAL) )) {
+				format |= (ZL38063_TDM_I2S_CFG_VAL );
 			 }
 			break;
 		default: {
@@ -2293,11 +2078,11 @@ static int zl38063_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	/* set master/slave TDM interface */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 		case SND_SOC_DAIFMT_CBM_CFM:
-			buf0 |= ZL38040_TDM_TDM_MASTER_VAL;
+			clock |= ZL38063_TDM_TDM_MASTER_VAL;
 			break;
 		case SND_SOC_DAIFMT_CBS_CFS:
-			if (buf0 & ZL38040_TDM_TDM_MASTER_VAL)
-				buf0 &= (~ZL38040_TDM_TDM_MASTER_VAL);
+			if (clock & ZL38063_TDM_TDM_MASTER_VAL)
+				clock &= (~ZL38063_TDM_TDM_MASTER_VAL);
 			break;
 		default: {
 			zl38063ExitCritical();
@@ -2305,29 +2090,22 @@ static int zl38063_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		}
 	}
 
-	TW_DEBUG1("ZL38040_TDMA_CFG_REG write is  0x%x,ZL38040_TDMA_CLK_CFG_REG write 0x%x \n",buf,buf0);
+	TW_DEBUG1("ZL38063_TDMA_FMT write is  0x%x,ZL38063_TDMA_PCM_CONF write 0x%x \n",format,clock);
 
-	zl38063_reg_write(codec, ZL38040_TDMA_CFG_REG, buf);
-	zl38063_reg_write(codec, ZL38040_TDMA_CLK_CFG_REG, buf0);
-	zl38063_reset(zl38063, ZL38040_RST_SOFTWARE);
+	zl38063_reg_write(codec, ZL38063_TDMA_FMT, format);
+	zl38063_reg_write(codec, ZL38063_TDMA_CLK, clock);
 	zl38063ExitCritical();
 
 	return 0;
 }
 
+
+/* ZL38063 use a 12M external clock */
 static int zl38063_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
 		unsigned int freq, int dir)
 {
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
-	unsigned int buf0;
-	zl38063EnterCritical();
-	buf0 = zl38063_reg_read(codec, ZL38040_TDMA_CLK_CFG_REG);
-
-	zl38063->sysclk_rate = freq;
-	zl38063ExitCritical();
-	TW_DEBUG1("zl38063->sysclk_rate  is  %d  dir is %d  CLK_CFG %d\n",freq,dir,buf0);
-
+	zl38063_priv->sysclk_rate = freq;
+	TW_DEBUG1("zl38063->sysclk_rate is %d ,dir is %d \n",freq,dir);
 	return 0;
 }
 
@@ -2336,7 +2114,7 @@ static const struct snd_soc_dai_ops zl38063_dai_ops = {
 		.set_sysclk     = zl38063_set_dai_sysclk,
 		.hw_params   	= zl38063_hw_params,
 		.digital_mute   = zl38063_mute,
-		.trigger = zl38063_trigger,
+		.trigger	 	= zl38063_trigger,
 
 };
 
@@ -2381,7 +2159,7 @@ static int zl38063_set_bias_level(struct snd_soc_codec *codec,
 		break;
 	case SND_SOC_BIAS_OFF:
 		 /*Low power sleep mode*/
-		//zl38063_write_cmdreg(zl38063, ZL38040_CMD_APP_SLEEP);
+		//zl38063_write_cmdreg(zl38063, ZL38063_CMD_APP_SLEEP);
 
 		break;
 	}
@@ -2429,7 +2207,7 @@ static int locator_get(void *arg)
 		/*zl38063_hbi_rd16(zl38063_priv, ZL38063_SOUND_LOC_CTL, &buff);
 			if (!(buff&0x0100)){
 				zl38063_hbi_wr16(zl38063_priv, ZL38063_SOUND_LOC_CTL, buff|0x0100);
-				zl38063_reset(zl38063_priv, ZL38040_RST_SOFTWARE);
+				zl38063_reset(zl38063_priv, ZL38063_RST_SOFTWARE);
 			}*/
 		zl38063_hbi_rd16(zl38063_priv, ZL38063_SOUND_LOC_DIR, &zl38063_priv->degree);
 		TW_DEBUG1("raw angle data read back [%d]\n",buff);
@@ -2531,7 +2309,7 @@ static int zl38063_nl_get_dir (struct nl_msg_audio *msg)
 	zl38063_hbi_rd16(zl38063_priv, ZL38063_SOUND_LOC_CTL, &reg);
 	if (  reg ^ 0x0100 ){//check whether enable Sound Locator, if not ,enable it
 		zl38063_hbi_wr16(zl38063_priv, ZL38063_SOUND_LOC_CTL, reg|0x0100);
-		zl38063_reset(zl38063_priv, ZL38040_RST_SOFTWARE);
+		zl38063_reset(zl38063_priv, ZL38063_RST_SOFTWARE);
 		soundLocEn = 1;
 	}
 
@@ -2550,7 +2328,7 @@ static int zl38063_nl_get_dir (struct nl_msg_audio *msg)
 	}
 	if (1 == soundLocEn){
 		zl38063_hbi_wr16(zl38063_priv, ZL38063_SOUND_LOC_CTL, reg&0xfeff);
-		zl38063_reset(zl38063_priv, ZL38040_RST_SOFTWARE);
+		zl38063_reset(zl38063_priv, ZL38063_RST_SOFTWARE);
 		soundLocEn = 0;
 	}
 
@@ -2622,7 +2400,7 @@ static int zl38063_nl_handle_poll(struct nl_msg_audio *msg,enum NL_MSG_CMD cmd)
 		}
 	}
 	if (1 ==if_need_reset )
-		zl38063_reset(zl38063_priv, ZL38040_RST_SOFTWARE);
+		zl38063_reset(zl38063_priv, ZL38063_RST_SOFTWARE);
 	return 0;
 }
 
@@ -2968,9 +2746,7 @@ static int zl38063_probe(struct snd_soc_codec *codec)
 
 	zl38063_priv->nl_init = 0;
 	zl38063_priv->nl_port = NETLINK_TEST;
-
-		cfg = kzalloc(sizeof(struct netlink_kernel_cfg),GFP_KERNEL);
-
+	cfg = kzalloc(sizeof(struct netlink_kernel_cfg),GFP_KERNEL);
 	cfg->groups = 0;
 	cfg->input = nl_recv_msg_handler;
 
@@ -2991,13 +2767,9 @@ static int zl38063_probe(struct snd_soc_codec *codec)
 #ifdef ZL38063_DOA_ENABLE
 	zl38063_priv->kthread = kthread_run(locator_get,NULL,"locator_get");
 #endif
-	zl38063_reg_write(codec,ZL38063_GPIO_DIR,0x21dc);
-#ifdef ZL38063_SLAVE_DEVICE_SUPPORT
-	zl38063_reg_write(codec,REG_SLAVE_TRN(ZL38063_GPIO_DIR),0x03dc);
-#endif
 	dev_info(codec->dev, "Probing zl38063 SoC CODEC driver\n");
-	//return zl38063_add_controls(codec);
-	return 0;
+	return zl38063_add_controls(codec);
+	//return 0;
 }
 
 static int zl38063_remove(struct snd_soc_codec *codec)
@@ -3005,7 +2777,10 @@ static int zl38063_remove(struct snd_soc_codec *codec)
 	struct zl38063 *zl38063 = snd_soc_codec_get_drvdata(codec);
 
 	TW_DEBUG1("Release GPIOs");
-	//kthread_stop(zl38063_priv->kthread);
+#ifdef ZL38063_DOA_ENABLE
+	kthread_stop(zl38063_priv->kthread);
+#endif
+
 	if (zl38063->rst_pin > 0) {
 		gpio_direction_output(zl38063->rst_pin, zl38063->pwr_active);
 		gpio_free(zl38063->rst_pin);
@@ -3080,24 +2855,22 @@ static int zl38063_sub_probe(void)
 * 	else boot from built in
 */
 
-static int zl38063_boot_mode(struct zl38063 *zl38063,enum FW_LABEL fw_label)
+static int zl38063_boot_mode(struct zl38063 *zl38063)
 {
 	int status = 0;
-
 	TW_DEBUG1("Enter  Load firmwre and config ...\n");
 
-
-	if ( (fw_path == NULL && cr_path == NULL) || boot_to_BootMode==1)
+	if ( (fw_path == NULL && cr_path == NULL) || boot_to_BootMode == 1 )
 		zl38063_load_firmware(zl38063,NULL);
-	else{
+	else
 		status = zl38063_load_file(zl38063);
-		}
 
-	if (status <0){
+	if (status <0)
+	{
 		TW_DEBUG1("zl38063_load_file error and change to Default firmwre and config ...\n");
 		zl38063_load_firmware(zl38063,NULL);
-		}
-	zl38063_reset(zl38063_priv, ZL38040_RST_SOFTWARE);
+	}
+	zl38063_reset(zl38063_priv, ZL38063_RST_SOFTWARE);
 	msleep(50); /*required for the reset to cmplete*/
 
 	return 0;
@@ -3186,20 +2959,59 @@ static int zl38063_slaveMaster_unbind(void)
 * SPI driver registration
 *--------------------------------------------------------------------*/
 
+static int get_dts (struct spi_device *spi)
+{
+	int ret =0;
+	enum of_gpio_flags flags;
+
+	zl38063_priv->pwr_pin = of_get_named_gpio_flags(spi->dev.of_node, "zl38063,pwr-gpio", 0, &flags);
+	zl38063_priv->pwr_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	if(zl38063_priv->pwr_pin < 0 || !gpio_is_valid(zl38063_priv->pwr_pin)) {
+		printk(KERN_ERR "zl380 power pin is invalid,If no pwr gpio is needed, just remove this\n");
+		zl38063_priv->pwr_pin = -1;
+		return -1;
+	}
+	ret = devm_gpio_request(&spi->dev, zl38063_priv->pwr_pin, "zl38063 pwr");
+	if(ret < 0) {
+		dev_err(&spi->dev, "Failed to request pwr pin GPIO[%d] for zl38063: %d\n",  zl38063_priv->pwr_pin,ret);
+		return ret;
+	}
+	gpio_direction_output(zl38063_priv->pwr_pin, !zl38063_priv->pwr_active);
+
+
+	zl38063_priv->rst_pin = of_get_named_gpio_flags(spi->dev.of_node, "zl38063,rst-gpio", 0, &flags);
+	zl38063_priv->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	if(zl38063_priv->rst_pin < 0 || !gpio_is_valid(zl38063_priv->rst_pin)) {
+		printk(KERN_ERR "zl38063 reset pin is invalid,If no reset gpio is needed, just remove this\n");
+		zl38063_priv->rst_pin = -1;
+		return -1;
+	}
+	ret = devm_gpio_request(&spi->dev, zl38063_priv->rst_pin, "zl38063 reset");
+	devm_gpio_request(&spi->dev, zl38063_priv->rst_pin, "zl38063 slave reset");
+	if(ret < 0) {
+		dev_err(&spi->dev, "Failed to request reset pin GPIO[%d] for zl380xx: %d\n",zl38063_priv->rst_pin, ret);
+		return ret;
+	}
+	gpio_direction_output(zl38063_priv->rst_pin, zl38063_priv->rst_active);
+
+	return 0;
+
+}
+
 #ifdef ZL38063_SPI_IF
 static int zl38063_spi_probe(struct spi_device *spi)
 {
 
-	int err, ret;
-	enum of_gpio_flags flags;
+	int err;
 	u16 buff = 0;
 
 	err = zl38063_sub_probe();
 	if (err < 0)
 		return err;
-	TW_DEBUG1("probing zl38063 spi[%d] device\n",spi->master->bus_num);
 	spi->mode = SPI_MODE_0;        //req by datasheet
-	TW_DEBUG1("spi mode[%d]  max_speed_hz[%d] chip_select[%d] bits_per_word[%d]\n",
+
+	TW_DEBUG1("Probing zl38063 spi[%d] device\n",spi->master->bus_num);
+	TW_DEBUG1("Spi mode[%d]  max_speed_hz[%d] chip_select[%d] bits_per_word[%d]\n",
 				spi->mode,spi->max_speed_hz,spi->chip_select,spi->bits_per_word);
 
 	err = spi_setup(spi);
@@ -3208,61 +3020,27 @@ static int zl38063_spi_probe(struct spi_device *spi)
 		zl38063_sub_probe_clean();
 		return err;
 	}
-
 	/* Initialize the driver data */
 	spi_set_drvdata(spi, zl38063_priv);
 	zl38063_priv->spi = spi;
 
 	mutex_init(&zl38063_priv->lock);
 
-	zl38063_priv->pwr_pin = of_get_named_gpio_flags(spi->dev.of_node, "zl38063,pwr-gpio", 0, &flags);
-	zl38063_priv->pwr_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-	if(zl38063_priv->pwr_pin < 0 || !gpio_is_valid(zl38063_priv->pwr_pin)) {
-		printk(KERN_ERR "zl380 power pin is invalid\n");
-		zl38063_priv->pwr_pin = -1;
+	if (get_dts(spi) < 0)
 		return -1;
-	}
-	ret = devm_gpio_request(&spi->dev, zl38063_priv->pwr_pin, "zl38063 pwr");
-	if(ret < 0) {
-		dev_err(&spi->dev, "Failed to request pwr pin for zl38063: %d\n", ret);
-		return ret;
-	}
+	TW_DEBUG1( "zl380 power up\n");
 	gpio_direction_output(zl38063_priv->pwr_pin, !zl38063_priv->pwr_active);
-
-	zl38063_priv->rst_pin = of_get_named_gpio_flags(spi->dev.of_node, "zl38063,rst-gpio", 0, &flags);
-	zl38063_priv->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
-
-	if(zl38063_priv->rst_pin < 0 || !gpio_is_valid(zl38063_priv->rst_pin)) {
-		printk(KERN_ERR "zl38063 reset pin is invalid\n");
-		zl38063_priv->rst_pin = -1;
-		return -1;
-	}
-
-	ret = devm_gpio_request(&spi->dev, zl38063_priv->rst_pin, "zl38063 reset");
-	devm_gpio_request(&spi->dev, 130, "zl38063 slave reset");
-	if(ret < 0) {
-		dev_err(&spi->dev, "Failed to request reset pin for zl380xx: %d\n", ret);
-		return ret;
-	}
-	TW_DEBUG1( "zl380 power pin test222\n");
-	gpio_direction_output(zl38063_priv->rst_pin, zl38063_priv->rst_active);
-	gpio_direction_output(130, zl38063_priv->rst_active);
-	msleep(60);
+	msleep(80);
 	gpio_direction_output(zl38063_priv->rst_pin, !zl38063_priv->rst_active);
-	gpio_direction_output(130, !zl38063_priv->rst_active);
 
 
 	zl38063_hbi_wr16(zl38063_priv,0x34,0xd3d3);
-
-
 	zl38063_state_init(zl38063_priv, (HBI_CONFIG_VAL | HBI_CONFIG_WAKE));
-		msleep(10);
-		/*Clear the wake up bit*/
-		zl38063_state_init(zl38063_priv, HBI_CONFIG_VAL);
+	msleep(10);
+	/*Clear the wake up bit*/
+	zl38063_state_init(zl38063_priv, HBI_CONFIG_VAL);
 
-	zl38063_priv->flag = 0;
-
+	zl38063_priv->fw_label = ASR;			//use this flat to choose ASR or AEC cr
 
 	err = snd_soc_register_codec(&spi->dev, &soc_codec_dev_zl38063, &zl38063_dai, 1);
 	if(err < 0) {
@@ -3271,19 +3049,24 @@ static int zl38063_spi_probe(struct spi_device *spi)
 		return err;
 	}else{
 
-		zl38063_hbi_rd16(zl38063_priv, ZL38040_DEVICE_ID_REG, &buff);
-		TW_DEBUG1("ZL38040_DEVICE_ID_REG get is  0x%04x\n",buff);
+		zl38063_hbi_rd16(zl38063_priv, ZL38063_DEVICE_ID_REG, &buff);
+		TW_DEBUG1("ZL38063_DEVICE_ID_REG get is  0x%04x\n",buff);
 		if((buff > 38000)  && (buff < 38090)) {
 			zl38063_priv->init_done =1;
 			printk("SPI slave device ZL%d found at bus::cs = %d::%d\n", buff, spi->master->bus_num, spi->chip_select);
 		} else {
 			zl38063_priv->init_done =0;
-			err =zl38063_boot_mode(zl38063_priv,AEC);
+			err =zl38063_boot_mode(zl38063_priv);
 			if ( err< 0 )
 				return err;
 			zl38063_priv->init_done =1;
 		}
 
+		zl38063_hbi_wr16(zl38063_priv,ZL38063_GPIO_DIR,0x03dc0);		//config GPIO direction
+		zl38063_hbi_wr16(zl38063_priv,ZL38063_GPIO_DATA,0x21c0);		//config GPIO Level
+#ifdef ZL38063_SLAVE_DEVICE_SUPPORT
+		zl38063_hbi_wr16(zl38063_priv,REG_SLAVE_TRN(ZL38063_GPIO_DIR),0x03dc);
+#endif
 		zl38063_hbi_rd16(zl38063_priv, 0x20, &buff);
 		TW_DEBUG1("Hardware Revision Code is  0x%04x\n",buff);
 		return 0;
@@ -3339,9 +3122,9 @@ static int zl38063_i2c_probe(struct i2c_client *i2c,
 
 		u16 buf = 0;
 
-		zl38063_priv->flag = 0;
+		zl38063_priv->fw_label = AEC;
 
-		zl38063_hbi_rd16(zl38063_priv, ZL38040_DEVICE_ID_REG, &buf);
+		zl38063_hbi_rd16(zl38063_priv, ZL38063_DEVICE_ID_REG, &buf);
 		if((buf > 38000)  && (buf < 38090)) {
 			  zl38063_priv->init_done =1;
 			  printk(KERN_ERR "I2C slave device %d found at address = 0x%04x\n", buf, i2c->addr);

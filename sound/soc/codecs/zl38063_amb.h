@@ -23,6 +23,20 @@
 //#define ZL38063_DOA_ENABLE
 
 
+/**
+ * Default value for a register.  We use an array of structs rather
+ * than a simple array as many modern devices have very sparse
+ * register maps.
+ *
+ * @reg: Register address.
+ * @def: Register default value.
+ */
+struct reg_format {
+	u16 reg;
+	u16 val;
+};
+
+
 
 #define ZL38063_MAX_DATA_LENGTH	24
 #define ZL38063_DEF_ASR_FWID	0x8001			//(FIXED me) the special FWID of ASR
@@ -138,7 +152,7 @@ struct beamforming_conf {
 
 
 
-#undef ZL38040_SAVE_FWR_TO_FLASH  /*define if a slave flash is connected to the zl38063 and you want to save the loaded firmware/config to flash*/
+#undef ZL38063_SAVE_FWR_TO_FLASH  /*define if a slave flash is connected to the zl38063 and you want to save the loaded firmware/config to flash*/
 
 
 
@@ -175,11 +189,11 @@ struct beamforming_conf {
 #define MAX_TWOLF_FIRMWARE_SIZE_IN_BYTES 128 /*128 8-bit words*/
 
 /*The timberwolf device reset modes*/
-#define ZL38040_RST_HARDWARE_RAM 0
-#define ZL38040_RST_HARDWARE_ROM 1
-#define ZL38040_RST_SOFTWARE     2
-#define ZL38040_RST_AEC          3
-#define ZL38040_RST_TO_BOOT      4
+#define ZL38063_RST_HARDWARE_RAM 0
+#define ZL38063_RST_HARDWARE_ROM 1
+#define ZL38063_RST_SOFTWARE     2
+#define ZL38063_RST_AEC          3
+#define ZL38063_RST_TO_BOOT      4
 
 #ifdef ZL380XX_TW_ENABLE_CHAR_DEV_DRIVER
 
@@ -218,32 +232,32 @@ typedef struct {
 #endif
 /*------------------------------------------------------*/
 /*TWOLF REGisters*/
-#define ZL38040_CMD_REG             0x0032   /*Host Command register*/
-#define ZL38040_CMD_IDLE            0x0000  /*idle/ operation complete*/
-#define ZL38040_CMD_NO_OP           0x0001  /*no-op*/
-#define ZL38040_CMD_IMG_CFG_LOAD    0x0002  /*load firmware and CR from flash*/
-#define ZL38040_CMD_IMG_LOAD        0x0003  /*load firmware only from flash*/
-#define ZL38040_CMD_IMG_CFG_SAVE    0x0004  /*save a firmware and CR to flash*/
-#define ZL38040_CMD_IMG_CFG_ERASE   0x0005  /*erase a firmware and CR in flash*/
-#define ZL38040_CMD_CFG_LOAD        0x0006  /*Load CR from flash*/
-#define ZL38040_CMD_CFG_SAVE        0x0007  /*save CR to flash*/
-#define ZL38040_CMD_FWR_GO          0x0008  /*start/restart firmware (GO)*/
-#define ZL38040_CMD_HOST_LOAD_CMP   0x000D  /*Host Application Load Complete*/
-#define ZL38040_CMD_HOST_FLASH_INIT 0x000B  /*Host Application flash discovery*/
-#define ZL38040_CMD_FWR_STOP        0x8000  /*stop firmware */
-#define ZL38040_CMD_CMD_IN_PROGRESS 0xFFFF  /*wait command is in progress */
-#define ZL38040_CMD_APP_SLEEP		 0x8005  /*codec low power mode*/
+#define ZL38063_CMD_REG             0x0032   /*Host Command register*/
+#define ZL38063_CMD_IDLE            0x0000  /*idle/ operation complete*/
+#define ZL38063_CMD_NO_OP           0x0001  /*no-op*/
+#define ZL38063_CMD_IMG_CFG_LOAD    0x0002  /*load firmware and CR from flash*/
+#define ZL38063_CMD_IMG_LOAD        0x0003  /*load firmware only from flash*/
+#define ZL38063_CMD_IMG_CFG_SAVE    0x0004  /*save a firmware and CR to flash*/
+#define ZL38063_CMD_IMG_CFG_ERASE   0x0005  /*erase a firmware and CR in flash*/
+#define ZL38063_CMD_CFG_LOAD        0x0006  /*Load CR from flash*/
+#define ZL38063_CMD_CFG_SAVE        0x0007  /*save CR to flash*/
+#define ZL38063_CMD_FWR_GO          0x0008  /*start/restart firmware (GO)*/
+#define ZL38063_CMD_HOST_LOAD_CMP   0x000D  /*Host Application Load Complete*/
+#define ZL38063_CMD_HOST_FLASH_INIT 0x000B  /*Host Application flash discovery*/
+#define ZL38063_CMD_FWR_STOP        0x8000  /*stop firmware */
+#define ZL38063_CMD_CMD_IN_PROGRESS 0xFFFF  /*wait command is in progress */
+#define ZL38063_CMD_APP_SLEEP		 0x8005  /*codec low power mode*/
 
 #define PAGE_255_CHKSUM_LO_REG  0x000A
 #define PAGE_255_CHKSUM_HI_REG  0x0008
 #define CLK_STATUS_REG          0x0014   /*Clock status register*/
 #define PAGE_255_BASE_LO_REG  0x000E
 #define PAGE_255_BASE_HI_REG  0x000C
-#define ZL38040_SW_FLAGS_REG     0x0006
-#define ZL38040_SW_FLAGS_CMD     0x0001
-#define ZL38040_SW_FLAGS_CMD_NORST     0x0004
+#define ZL38063_SW_FLAGS_REG     0x0006
+#define ZL38063_SW_FLAGS_CMD     0x0001
+#define ZL38063_SW_FLAGS_CMD_NORST     0x0004
 
-#define ZL38040_DEVICE_ID_REG  0x0022
+#define ZL38063_DEVICE_ID_REG  0x0022
 
 #define TWOLF_CLK_STATUS_HBI_BOOT       0x0001
 
@@ -251,9 +265,9 @@ typedef struct {
 #define HBI_CONFIG_WAKE			1<<7
 #define HBI_CONFIG_VAL (HBI_CONFIG_INT_PIN_DRIVE_MODE<<1)
 
-#define ZL38040_CMD_PARAM_RESULT_REG   0x0034 /*Host Command Param/Result register*/
-#define ZL38040_FWR_COUNT_REG   0x0026 /*Fwr on flash count register*/
-#define ZL38040_FWR_EXEC_REG   0x012C  /*Fwr EXEC register*/
+#define ZL38063_CMD_PARAM_RESULT_REG   0x0034 /*Host Command Param/Result register*/
+#define ZL38063_FWR_COUNT_REG   0x0026 /*Fwr on flash count register*/
+#define ZL38063_FWR_EXEC_REG   0x012C  /*Fwr EXEC register*/
 
 #define TOTAL_FWR_DATA_WORD_PER_LINE 24
 #define TOTAL_FWR_DATA_BYTE_PER_LINE 128
@@ -265,158 +279,109 @@ typedef struct {
  *    ALSA
  *--------------------------------------------------------------------*/
  /*Macros to enable one of the pre-defined audio cross-points*/
-#define ZL38040_CR2_DEFAULT 0
-#define ZL38040_CR2_STEREO_BYPASS      1
-#define ZL38040_ADDA_LOOPBACK      2
+#define ZL38063_CR2_DEFAULT 0
+#define ZL38063_CR2_STEREO_BYPASS      1
+#define ZL38063_ADDA_LOOPBACK      2
 
 /*Cached register range*/
-#define ZL38040_CACHED_ADDR_LO  0x202
-#define ZL38040_CACHED_ADDR_HI  0x23E
-#define ZL38040_HBI_OFFSET_RANGE 128
-#define ZL38040_CACHE_INDEX_TO_ADDR(index) (ZL38040_CACHED_ADDR_LO+(2*index))
-#define ZL38040_ADDR_TO_CACHE_INDEX(addr) ((addr - ZL38040_CACHED_ADDR_LO)/2)
+#define ZL38063_CACHED_ADDR_LO  0x202
+#define ZL38063_CACHED_ADDR_HI  0x23E
+#define ZL38063_HBI_OFFSET_RANGE 128
+#define ZL38063_CACHE_INDEX_TO_ADDR(index) (ZL38063_CACHED_ADDR_LO+(2*index))
+#define ZL38063_ADDR_TO_CACHE_INDEX(addr) ((addr - ZL38063_CACHED_ADDR_LO)/2)
 
-
-/*Page 1 registers*/
-#define ZL38040_OUTPUT_PATH_EN_REG 	0x202
-#define ZL38040_DAC1_EN  	(1 << 0)
-#define ZL38040_DAC2_EN  	(1 << 1)
-#define ZL38040_TDMA1_EN 	(1 << 2)
-#define ZL38040_TDMA2_EN 	(1 << 3)
-#define ZL38040_TDMA3_EN 	(1 << 4)
-#define ZL38040_TDMA4_EN 	(1 << 5)
-#define ZL38040_TDMB1_EN 	(1 << 6)
-#define ZL38040_TDMB2_EN 	(1 << 7)
-#define ZL38040_TDMB3_EN 	(1 << 8)
-#define ZL38040_TDMB4_EN 	(1 << 9)
-#define ZL38040_MIC_SIN_EN 	(1 << 10)
-#define ZL38040_TDM_SOUT_EN (1 << 11)
-/*Cross-point Audio config registers*/
-#define ZL38040_DAC1_IN_PATH_REG 	0x210
-#define ZL38040_DAC2_IN_PATH_REG 	0x212
-#define ZL38040_TDM1L_IN_PATH_REG 	0x214
-#define ZL38040_TDM1R_IN_PATH_REG 	0x216
-#define ZL38040_TDMA3_IN_PATH_REG 	0x218
-#define ZL38040_TDMA4_IN_PATH_REG 	0x21A
-#define ZL38040_TDM2L_IN_PATH_REG 	0x21C
-#define ZL38040_TDM2R_IN_PATH_REG 	0x21E
-#define ZL38040_TDMB3_IN_PATH_REG 	0x220
-#define ZL38040_TDMB4_IN_PATH_REG 	0x222
-#define ZL38040_SIN_IN_PATH_REG 	0x224
-#define ZL38040_RIN_IN_PATH_REG 	0x226
-/*Cross-point Audio config values*/
-#define ZL38040_MIC1_PATH 	0x01
-#define ZL38040_MIC2_PATH 	0x02
-#define ZL38040_MIC3_PATH 	0x03
-#define ZL38040_MIC4_PATH 	0x04
-#define ZL38040_MIC_SELECT  ZL38040_MIC1_PATH  /*Change this accordingly*/
-#define ZL38040_TDMA1L_PATH 0x05
-#define ZL38040_TDMA1R_PATH 0x06
-#define ZL38040_TDMA3_PATH 	0x07
-#define ZL38040_TDMA4_PATH 	0x08
-#define ZL38040_TDMB2L_PATH 0x09
-#define ZL38040_TDMB2R_PATH 0x0A
-#define ZL38040_TDMB3_PATH 	0x0B
-#define ZL38040_TDMB4_PATH 	0x0C
-#define ZL38040_ROUT_PATH 	0x0D
-#define ZL38040_SOUT_PATH 	0x0E
-#define ZL38040_TGEN1_PATH 	0x0F
-#define ZL38040_TGEN2_PATH 	0x10
-
-#define ZL38040_TDMA_CFG_REG 		0x260
-#define ZL38040_TDM_I2S_CFG_VAL 0x8000
-#define ZL38040_TDM_PCM_CFG_VAL 0x0000
-#define ZL38040_TDM_CLK_POL_VAL 0x0004
-#define ZL38040_TDMA_FSALIGN 0x01     /*left justified*/
-#define ZL38040_TDMA_CLK_CFG_REG    	0x262
-#define ZL38040_TDM_TDM_MASTER_VAL (1<<15)
-#define ZL38040_TDMA_CH1_CFG_REG    	0x268
-#define ZL38040_TDMA_CH2_CFG_REG    	0x26A
+#define ZL38063_TDM_I2S_CFG_VAL 0x8000
+#define ZL38063_TDM_PCM_CFG_VAL 0x0000
+#define ZL38063_TDM_CLK_POL_VAL 0x0004
+#define ZL38063_TDMA_FSALIGN 0x01     /*left justified*/
+#define ZL38063_TDM_TDM_MASTER_VAL (1<<15)
+#define ZL38063_TDMA_CH1_CFG_REG    	0x268
+#define ZL38063_TDMA_CH2_CFG_REG    	0x26A
 /*TDM -  Channel configuration*/
-#define ZL38040_TDMA_16BIT_LIN (1<<8)
-#define ZL38040_TDMA_8BIT_ALAW (2<<8)
-#define ZL38040_TDMA_8BIT_ULAW (3<<8)
-#define ZL38040_TDMA_8BIT_G722 (4<<8)
-#define ZL38040_TDMA_16BIT_LINHFS (6<<8)
+#define ZL38063_TDMA_16BIT_LIN (1<<8)
+#define ZL38063_TDMA_8BIT_ALAW (2<<8)
+#define ZL38063_TDMA_8BIT_ULAW (3<<8)
+#define ZL38063_TDMA_8BIT_G722 (4<<8)
+#define ZL38063_TDMA_16BIT_LINHFS (6<<8)
 
-#define ZL38040_TDMA_FSRATE_8KHZ (1)
-#define ZL38040_TDMA_FSRATE_16KHZ (2)
-#define ZL38040_TDMA_FSRATE_24KHZ (3)
-#define ZL38040_TDMA_FSRATE_44_1KHZ (5)
-#define ZL38040_TDMA_FSRATE_48KHZ (6)
+#define ZL38063_TDMA_FSRATE_8KHZ (1)
+#define ZL38063_TDMA_FSRATE_16KHZ (2)
+#define ZL38063_TDMA_FSRATE_24KHZ (3)
+#define ZL38063_TDMA_FSRATE_44_1KHZ (5)
+#define ZL38063_TDMA_FSRATE_48KHZ (6)
 
-#define ZL38040_MIC_EN_REG 			0x2B0
-#define ZL38040_MIC1_EN		0x01
-#define ZL38040_MIC2_EN		0x02
-#define ZL38040_MIC3_EN		0x04
-#define ZL38040_MIC4_EN		0x08
+#define ZL38063_MIC_EN_REG 			0x2B0
+#define ZL38063_MIC1_EN		0x01
+#define ZL38063_MIC2_EN		0x02
+#define ZL38063_MIC3_EN		0x04
+#define ZL38063_MIC4_EN		0x08
 
-#define ZL38040_LOW_POWER_REG  0x0206
+#define ZL38063_LOW_POWER_REG  0x0206
 
-#define ZL38040_DAC1_EN_REG  0x02A0
-#define ZL38040_DAC2_EN_REG  0x02A2
-#define ZL38040_DACx_P_EN  (1<<15)
-#define ZL38040_DACx_M_EN  (1<<14)
+#define ZL38063_DAC1_EN_REG  0x02A0
+#define ZL38063_DAC2_EN_REG  0x02A2
+#define ZL38063_DACx_P_EN  (1<<15)
+#define ZL38063_DACx_M_EN  (1<<14)
 
 
 
 
 /*Page 2 registers*/
-#define ZL38040_USRGAIN		  0x30A
-#define ZL38040_SYSGAIN		  0x30C
-#define ZL38040_MICGAIN		  0x2B2 /*Range 0-7 step +/-1 = 6dB each*/
+#define ZL38063_USRGAIN		  0x30A
+#define ZL38063_SYSGAIN		  0x30C
+#define ZL38063_MICGAIN		  0x2B2 /*Range 0-7 step +/-1 = 6dB each*/
 
-#define ZL38040_DAC_CTRL_REG  0x030A   /*ROUT GAIN control*/
-#define ZL38040_DAC_VOL_MAX   0x78     /*Max volume control for Speaker +21dB*/
-#define ZL38040_DAC_VOL_MAX_EXT   0x82     /*Max volume control for Speaker +29dB*/
-#define ZL38040_DAC_VOL_MIN   0x00     /*Min volume control for Speaker -24dB*/
-#define ZL38040_DAC_VOL_STEP  0x01     /*volume step control for Speaker -/+0.375dB*/
+#define ZL38063_DAC_CTRL_REG  0x030A   /*ROUT GAIN control*/
+#define ZL38063_DAC_VOL_MAX   0x78     /*Max volume control for Speaker +21dB*/
+#define ZL38063_DAC_VOL_MAX_EXT   0x82     /*Max volume control for Speaker +29dB*/
+#define ZL38063_DAC_VOL_MIN   0x00     /*Min volume control for Speaker -24dB*/
+#define ZL38063_DAC_VOL_STEP  0x01     /*volume step control for Speaker -/+0.375dB*/
 
-#define ZL38040_MIC_VOL_CTRL_REG  0x030C    /*SIN GAIN control*/
-#define ZL38040_MIC_VOL_MAX   0x1F     /*Max volume control for Speaker +22.5dB*/
-#define ZL38040_MIC_VOL_MIN   0x00     /*Min volume control for Speaker -24dB*/
-#define ZL38040_MIC_VOL_STEP  0x01     /*volume step control for Speaker -/+1.5dB*/
-#define ZL38040_SOUT_VOL_CTRL_REG  0x030C    /*SOUT DIGITAL GAIN control*/
-#define ZL38040_SOUT_VOL_MAX   0x0F     /*Max volume control for Speaker +21dB*/
-#define ZL38040_SOUT_VOL_MIN   0x00     /*Min volume control for Speaker -24dB*/
-#define ZL38040_SOUT_VOL_STEP  0x01     /*volume step control for Speaker -/+3.0dB*/
+#define ZL38063_MIC_VOL_CTRL_REG  0x030C    /*SIN GAIN control*/
+#define ZL38063_MIC_VOL_MAX   0x1F     /*Max volume control for Speaker +22.5dB*/
+#define ZL38063_MIC_VOL_MIN   0x00     /*Min volume control for Speaker -24dB*/
+#define ZL38063_MIC_VOL_STEP  0x01     /*volume step control for Speaker -/+1.5dB*/
+#define ZL38063_SOUT_VOL_CTRL_REG  0x030C    /*SOUT DIGITAL GAIN control*/
+#define ZL38063_SOUT_VOL_MAX   0x0F     /*Max volume control for Speaker +21dB*/
+#define ZL38063_SOUT_VOL_MIN   0x00     /*Min volume control for Speaker -24dB*/
+#define ZL38063_SOUT_VOL_STEP  0x01     /*volume step control for Speaker -/+3.0dB*/
 
-#define ZL38040_DAC1_GAIN_REG  0x0238
-#define ZL38040_DAC2_GAIN_REG  0x023A
-#define ZL38040_I2S1L_GAIN_REG  0x023C
-#define ZL38040_I2S1R_GAIN_REG  0x023E
-#define ZL38040_I2S2L_GAIN_REG  0x0244
-#define ZL38040_I2S2R_GAIN_REG  0x0246
-#define ZL38040_TDMA3_GAIN_REG  0x0240
-#define ZL38040_TDMA4_GAIN_REG  0x0242
-#define ZL38040_TDMB3_GAIN_REG  0x0248
-#define ZL38040_TDMB4_GAIN_REG  0x024A
+#define ZL38063_DAC1_GAIN_REG  0x0238
+#define ZL38063_DAC2_GAIN_REG  0x023A
+#define ZL38063_I2S1L_GAIN_REG  0x023C
+#define ZL38063_I2S1R_GAIN_REG  0x023E
+#define ZL38063_I2S2L_GAIN_REG  0x0244
+#define ZL38063_I2S2R_GAIN_REG  0x0246
+#define ZL38063_TDMA3_GAIN_REG  0x0240
+#define ZL38063_TDMA4_GAIN_REG  0x0242
+#define ZL38063_TDMB3_GAIN_REG  0x0248
+#define ZL38063_TDMB4_GAIN_REG  0x024A
 
 
 
-#define ZL38040_AEC_CTRL_REG1  0x0302
-#define ZL38040_AEC_CTRL_REG0  0x0300
-#define ZL38040_EAC_RST_EN  (1 << 0)
-#define ZL38040_MASTER_BYPASS_EN  (1 << 1)
-#define ZL38040_EQ_RCV_DIS_EN  (1 << 2)
-#define ZL38040_AEC_BYPASS_EN  (1 << 4)
-#define ZL38040_AUD_ENH_BYPASS_EN  (1 << 5)
-#define ZL38040_SPKR_LIN_EN  (1 << 6)
-#define ZL38040_MUTE_ROUT_EN  (1 << 7)
-#define ZL38040_MUTE_SOUT_EN  (1 << 8)
-#define ZL38040_MUTE_ALL_EN   (ZL38040_MUTE_ROUT_EN | ZL38040_MUTE_SOUT_EN)
-#define ZL38040_RIN_HPF_DIS_EN  (1 << 9)
-#define ZL38040_SIN_HPF_DIS_EN  (1 << 10)
-#define ZL38040_HOWLING_DIS_EN  (1 << 11)
-#define ZL38040_AGC_DIS_EN  (1 << 12)
-#define ZL38040_NB_DIS_EN  (1 << 13)
-#define ZL38040_SATT_DIS_EN  (1 << 14)
-#define ZL38040_HOWLING_MB_DIS_EN  (1 << 15)
-#define ZL38040_HPF_DIS (ZL38040_RIN_HPF_DIS_EN | ZL38040_SIN_HPF_DIS_EN)
+#define ZL38063_AEC_CTRL_REG1  0x0302
+#define ZL38063_AEC_CTRL_REG0  0x0300
+#define ZL38063_EAC_RST_EN  (1 << 0)
+#define ZL38063_MASTER_BYPASS_EN  (1 << 1)
+#define ZL38063_EQ_RCV_DIS_EN  (1 << 2)
+#define ZL38063_AEC_BYPASS_EN  (1 << 4)
+#define ZL38063_AUD_ENH_BYPASS_EN  (1 << 5)
+#define ZL38063_SPKR_LIN_EN  (1 << 6)
+#define ZL38063_MUTE_ROUT_EN  (1 << 7)
+#define ZL38063_MUTE_SOUT_EN  (1 << 8)
+#define ZL38063_MUTE_ALL_EN   (ZL38063_MUTE_ROUT_EN | ZL38063_MUTE_SOUT_EN)
+#define ZL38063_RIN_HPF_DIS_EN  (1 << 9)
+#define ZL38063_SIN_HPF_DIS_EN  (1 << 10)
+#define ZL38063_HOWLING_DIS_EN  (1 << 11)
+#define ZL38063_AGC_DIS_EN  (1 << 12)
+#define ZL38063_NB_DIS_EN  (1 << 13)
+#define ZL38063_SATT_DIS_EN  (1 << 14)
+#define ZL38063_HOWLING_MB_DIS_EN  (1 << 15)
+#define ZL38063_HPF_DIS (ZL38063_RIN_HPF_DIS_EN | ZL38063_SIN_HPF_DIS_EN)
 
-#define ZL38040_LEC_CTRL_REG  0x037A
+#define ZL38063_LEC_CTRL_REG  0x037A
 
-#define ZL38040_AEC_HPF_NULL_REG  0x0310
+#define ZL38063_AEC_HPF_NULL_REG  0x0310
 
 
 /*****Boot ROM and Application Status Registers*****/
@@ -533,6 +498,7 @@ typedef struct {
 #define ZL38063_PATH_CPEN			0x0202
 #define ZL38063_SAMPLE_RATE_RO		0x0204
 #define ZL38063_SYS_CRL_GLAG		0x0206
+#define ZL38063_SIN_SELECT			0x0208
 /*	0x00 No Input Selected
 	0x01 MIC1
 	0x02 MIC2
@@ -609,7 +575,7 @@ typedef struct {
 #define ZL38063_TONE_FREQ_2B		0x02C4
 #define ZL38063_TONE_GAIN_2B		0x02C6
 
-#define ZL38063_GPIO_FIXED_FUN_EN	0x02DB
+#define ZL38063_GPIO_FIXED_FUN_EN	0x02D8
 #define ZL38063_GPIO_DATA			0x02DA
 #define ZL38063_GPIO_DIR			0x02DC
 #define ZL38063_GPIO_DS				0x02DE
@@ -648,8 +614,30 @@ typedef struct {
 #define ZL38063_DIV_DET_TH			0x033C
 #define ZL38063_DT_PRESISTENT		0x033E
 #define ZL38063_AEC_FILTC0_LEN		0x0342
+#define ZL38063_AEC_FLAT_DELAY		0x0344
+#define ZL38063_AEC_PROFILE_CTL		0x0346
+#define ZL38063_AEC_PROFILE7		0x0348
+#define ZL38063_AEC_PROFILE6		0x034A
+#define ZL38063_AEC_PROFILE5		0x034C
+#define ZL38063_AEC_PROFILE4		0x034E
+#define ZL38063_AEC_PROFILE3		0x0350
+#define ZL38063_AEC_PROFILE2		0x0352
+#define ZL38063_AEC_PROFILE1		0x0354
+#define ZL38063_AEC_PROFILE0		0x0356
 #define ZL38063_AEC_DT_FILTER		0x035C
+
+
+
+#define ZL38063_SWITCH_ATTEN_HANDOVER	0x0370
+#define ZL38063_SWITCH_ATTEN_STARTUP	0x0372
+#define ZL38063_AGNCL_CTL				0x0374
+
+
+
 #define ZL38063_SWITCH_ATTEN		0x0376
+
+#define ZL38063_LEC_FILTTER_LEN		0x0382
+
 #define ZL38063_NOISE_WIN_LEN		0x03A2
 #define ZL38063_NOISE_HINLP_TH		0x03A8
 #define ZL38063_ECHO_RESIDUAL		0x03B2
@@ -679,8 +667,10 @@ typedef struct {
 #define ZL38063_HD_RIN_ACT_TH		0x03F8
 #define ZL38063_HD_HOLD_TIME		0x03FA
 #define ZL38063_AEC_NLP_MOD			0x03FC
+#define ZL38063_AEC_DT_TH			0x03FE
 
-/*3 Tone Generators / GPIO*/
+
+/*3 Tone Generators */
 #define ZL38063_TONE_GEN_CTL		0x0400
 #define ZL38063_TONE_BURST_LEN		0x0402
 #define ZL38063_TONE_HL_GAIN		0x0404
@@ -846,6 +836,7 @@ typedef struct {
 
 
 /*****Configuration Record*****/
+#define ZL38063_MAX_REG			0x07FF
 
 
 /*****Slave Register Configuration*****/
@@ -866,7 +857,144 @@ configuration.
 /*****Slave Register Configuration*****/
 
 
-#define ZL38063_MAX_REG			0x0BFF
+/*
+static struct reg_format zl38063_def_reg[] = {
+		{ 0x00,0x00 },
 
+};
+*/
+
+u16 need_reset[] ={
+	ZL38063_PATH_CPEN,
+	ZL38063_SAMPLE_RATE_RO,
+	ZL38063_SYS_CRL_GLAG,
+	ZL38063_SIN_SELECT,
+	ZL38063_CRCP_SRC_DAC1,
+	ZL38063_CRCP_SRC_DAC2,
+	ZL38063_CRCP_SRC_TDMA1,
+	ZL38063_CRCP_SRC_TDMA2,
+	ZL38063_CRCP_SRC_TDMA3,
+	ZL38063_CRCP_SRC_TDMA4,
+	ZL38063_CRCP_SRC_TDMB1,
+	ZL38063_CRCP_SRC_TDMB2,
+	ZL38063_CRCP_SRC_TDMB3,
+	ZL38063_CRCP_SRC_TDMB4,
+	ZL38063_CRCP_SRC_AECSIN,
+	ZL38063_CRCP_SRC_AECRSN,
+	ZL38063_CRCP_SRC_AECSIN2,
+	ZL38063_CRCP_SRC_AECSIN3,
+	ZL38063_TDMA_FMT,
+	ZL38063_TDMA_CLK,
+	ZL38063_TDMA_PCM_CONF,
+	ZL38063_TDMA_CONF_CH1,
+	ZL38063_TDMA_CONF_CH2,
+	ZL38063_TDMA_CONF_CH3,
+	ZL38063_TDMA_CONF_CH4,
+	ZL38063_TDMB_FMT,
+	ZL38063_TDMB_CLK,
+	ZL38063_TDMB_PCM_CONF,
+	ZL38063_TDMB_CONF_CH1,
+	ZL38063_TDMB_CONF_CH2,
+	ZL38063_TDMB_CONF_CH3,
+	ZL38063_TDMB_CONF_CH4,
+	ZL38063_DAC1_CONF,
+	ZL38063_DAC2_CONF,
+	ZL38063_MIC_EN,
+	ZL38063_MIC_GAIN,
+	ZL38063_GPIO_FIXED_FUN_EN,
+	ZL38063_GPIO_EV_MASKP,
+	ZL38063_GPIO_EV_MASKN,
+	ZL38063_GPIO0_ADDR_P,
+	ZL38063_GPIO0_ANDMASK_P,
+	ZL38063_GPIO0_ORMASK_P,
+	ZL38063_GPIO0_ADDR_N,
+	ZL38063_GPIO0_ANDMASK_N,
+	ZL38063_GPIO0_ORMASK_N,
+	ZL38063_GPIO1_ADDR_P,
+	ZL38063_GPIO1_ANDMASK_P,
+	ZL38063_GPIO1_ORMASK_P,
+	ZL38063_GPIO1_ADDR_N,
+	ZL38063_GPIO1_ANDMASK_N,
+	ZL38063_GPIO1_ORMASK_N,
+	ZL38063_AEC_CNOISE,
+	ZL38063_DTLOW_LEVEL_ADSTEP,
+	ZL38063_DT_HANDOVER_TIME,
+	ZL38063_DIV_DET_TH,
+	ZL38063_AEC_FILTC0_LEN,
+	ZL38063_AEC_FLAT_DELAY,
+	ZL38063_AEC_PROFILE_CTL,
+	ZL38063_AEC_PROFILE7,
+	ZL38063_AEC_PROFILE6,
+	ZL38063_AEC_PROFILE5,
+	ZL38063_AEC_PROFILE4,
+	ZL38063_AEC_PROFILE3,
+	ZL38063_AEC_PROFILE2,
+	ZL38063_AEC_PROFILE1,
+	ZL38063_AEC_PROFILE0,
+	ZL38063_CNOISE_DET_TH,
+	ZL38063_LEC_FILTTER_LEN,
+	ZL38063_SWITCH_ATTEN_HANDOVER,
+	ZL38063_SWITCH_ATTEN_STARTUP,
+	ZL38063_AGNCL_CTL,
+	ZL38063_AEC_DT_FILTER,
+	ZL38063_AEC_NLP_MOD,
+	ZL38063_AEC_DT_TH,
+	ZL38063_SIN_EQ_ENABLE,
+	ZL38063_SIN_EQ_F1_TYPE,
+	ZL38063_SIN_EQ_F1_FRE,
+	ZL38063_SIN_EQ_F1_Q,
+	ZL38063_SIN_EQ_F1_GAIN,
+	ZL38063_SIN_EQ_F2_TYPE,
+	ZL38063_SIN_EQ_F2_FRE,
+	ZL38063_SIN_EQ_F2_Q,
+	ZL38063_SIN_EQ_F2_GAIN,
+	ZL38063_SIN_EQ_F3_TYPE,
+	ZL38063_SIN_EQ_F3_FRE,
+	ZL38063_SIN_EQ_F3_Q,
+	ZL38063_SIN_EQ_F3_GAIN,
+	ZL38063_SIN_EQ_F4_TYPE,
+	ZL38063_SIN_EQ_F4_FRE,
+	ZL38063_SIN_EQ_F4_Q,
+	ZL38063_SIN_EQ_F4_GAIN,
+	ZL38063_SIN_EQ_F5_TYPE,
+	ZL38063_SIN_EQ_F5_FRE,
+	ZL38063_SIN_EQ_F5_Q,
+	ZL38063_SIN_EQ_F5_GAIN,
+	ZL38063_SIN_EQ_F6_TYPE,
+	ZL38063_SIN_EQ_F6_FRE,
+	ZL38063_SIN_EQ_F6_Q,
+	ZL38063_SIN_EQ_F6_GAIN,
+	ZL38063_SIN_EQ_F7_TYPE,
+	ZL38063_SIN_EQ_F7_FRE,
+	ZL38063_SIN_EQ_F7_Q,
+	ZL38063_SIN_EQ_F7_GAIN,
+	ZL38063_SIN_EQ_F8_TYPE,
+	ZL38063_SIN_EQ_F8_FRE,
+	ZL38063_SIN_EQ_F8_Q,
+	ZL38063_SIN_EQ_F8_GAIN,
+	ZL38063_SOUT_CLE_CTL,
+	ZL38063_SOUT_CLE_MKUP,
+	ZL38063_SOUT_CLE_COMTH,
+	ZL38063_SOUT_CLE_CRATIO,
+	ZL38063_SOUT_CLE_CATTACK,
+	ZL38063_SOUT_CLE_CDECAY,
+	ZL38063_SOUT_CLE_EXPTH,
+	ZL38063_SOUT_CLE_EXRATIO,
+	ZL38063_SOUT_CLE_EXATTACK,
+	ZL38063_SOUT_CLE_EXDECAY,
+	ZL38063_SOUT_CLE_LMTH,
+	ZL38063_SOUT_CLE_LMRATIO,
+	ZL38063_SOUT_CLE_LMATTACK,
+	ZL38063_SOUT_CLE_LMDECAY,
+	ZL38063_SOUT_CLE_DUCK_TH,
+	ZL38063_SOUTSIM_REF_TH,
+	ZL38063_SOUTSIM_CTL,
+	ZL38063_SOUT_PEAK_EVTH,
+	ZL38063_SOUT_MAX_RMS,
+	ZL38063_SIN_PEAK_EVTH,
+	ZL38063_SIN_MAX_RMS
+};
+
+#define NEED_RESET_NUM 127
 
 #endif /* __MICROSEMI_SPIS_TW_H */
