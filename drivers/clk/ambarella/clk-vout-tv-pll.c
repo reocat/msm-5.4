@@ -60,6 +60,7 @@ struct amb_vout_tv_clk_pll {
 	void __iomem *ctrl3_reg;
 	void __iomem *pres_reg;
 	void __iomem *hdmi_clock_ctrl_reg;
+	void __iomem *hdmi2_ctrl_reg;
 	u32 extra_pre_scaler : 1;
 	u32 extra_post_scaler : 1;
 	u32 frac_mode : 1;
@@ -174,6 +175,7 @@ static int ambarella_vout_tv_pll_set_rate_table(struct clk_hw *hw,
 	unsigned long intp, sdiv = 1, sout = 1;
 	unsigned long ctrl2_val, ctrl3_val, hdmi_clock_ctrl_val;
 	union ctrl_reg_u ctrl_val;
+	union ctrl_reg_u hdmi2_ctrl_val;
 
 	pre_scaler = ambarella_vout_tv_pll_table[table_index].pre_scaler;
 	intp = ambarella_vout_tv_pll_table[table_index].intp;
@@ -210,6 +212,13 @@ static int ambarella_vout_tv_pll_set_rate_table(struct clk_hw *hw,
 	writel(ctrl3_val, clk_pll->ctrl3_reg);
 	writel(hdmi_clock_ctrl_val, clk_pll->hdmi_clock_ctrl_reg);
 
+	//power down hdmi2 pll as default
+	if(clk_pll->hdmi2_ctrl_reg != NULL){
+		hdmi2_ctrl_val.w = readl(clk_pll->hdmi2_ctrl_reg);
+		hdmi2_ctrl_val.s.power_down = 1;
+		rct_writel_en(hdmi2_ctrl_val.w, clk_pll->hdmi2_ctrl_reg);
+	}
+
 	return 0;
 }
 
@@ -222,6 +231,7 @@ static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned 
 	u64 dividend, divider, diff;
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
+	union ctrl_reg_u hdmi2_ctrl_val;
 
 	rate *= clk_pll->fix_divider;
 
@@ -319,6 +329,13 @@ static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned 
 			rate / clk_pll->fix_divider);
 	}
 
+	//power down hdmi2 pll as default
+	if(clk_pll->hdmi2_ctrl_reg != NULL){
+		hdmi2_ctrl_val.w = readl(clk_pll->hdmi2_ctrl_reg);
+		hdmi2_ctrl_val.s.power_down = 1;
+		rct_writel_en(hdmi2_ctrl_val.w, clk_pll->hdmi2_ctrl_reg);
+	}
+
 	return 0;
 }
 
@@ -392,6 +409,8 @@ static inline void ambarella_pll_get_reg(struct device_node *np,
 		pr_err("%s: failed to map hdmi_clock_ctrl_reg", np->name);
 		return;
 	}
+
+	clk_pll->hdmi2_ctrl_reg = of_iomap(np, 6);
 }
 
 static void __init ambarella_vout_tv_clocks_init(struct device_node *np)

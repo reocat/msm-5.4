@@ -1243,7 +1243,8 @@
 			      <0xed080150 4>,
 			      <0xed080154 4>,
 			      <0xed080170 4>,
-			      <0xed080008 0>;
+			      <0xed080008 4>,
+			      <0xed0806bc 4>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo";
 			assigned-clocks = <&gclk_vo>;
