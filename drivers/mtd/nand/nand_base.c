@@ -3790,13 +3790,13 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 
 	/* Select the device */
 	chip->select_chip(mtd, 0);
-
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	/*
 	 * Reset the chip, required by some chips (e.g. Micron MT29FxGxxxxx)
 	 * after power-up.
 	 */
 	chip->cmdfunc(mtd, NAND_CMD_RESET, -1, -1);
-
+#endif
 	/* Send the command for reading device ID */
 	chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
 
