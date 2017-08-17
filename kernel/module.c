@@ -2152,8 +2152,10 @@ static int simplify_symbols(struct module *mod, const struct load_info *info)
 			if (!ksym && ELF_ST_BIND(sym[i].st_info) == STB_WEAK)
 				break;
 
-			pr_warn("%s: Unknown symbol %s (err %li)\n",
-				mod->name, name, PTR_ERR(ksym));
+			/* hide modprobe fake err 0 */
+			if (PTR_ERR(ksym))
+				pr_warn("%s: Unknown symbol %s (err %li)\n",
+					mod->name, name, PTR_ERR(ksym));
 			ret = PTR_ERR(ksym) ?: -ENOENT;
 			break;
 
