@@ -935,6 +935,8 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 
 	if (amb_port->txdma_used || amb_port->rxdma_used) {
 		serial_ambarella_hw_deinit(amb_port);
+		spin_unlock_irqrestore(&port->lock, flags);
+
 		if (amb_port->txdma_used) {
 			dmaengine_terminate_all(amb_port->tx_dma_chan);
 			serial_ambarella_dma_channel_free(amb_port, false);
@@ -944,6 +946,8 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 			dmaengine_terminate_all(amb_port->rx_dma_chan);
 			serial_ambarella_dma_channel_free(amb_port, true);
 		}
+
+		spin_lock_irqsave(&port->lock, flags);
 	}
 
 	lcr = readl_relaxed(port->membase + UART_LC_OFFSET);
