@@ -950,6 +950,20 @@
 			clock-output-names = "osc";
 		};
 
+		/*
+		 * This is a dummy clock, to be used as input to gclk_adc.
+		 * gclk_adc has a fixed divider when output, so this is just
+		 * a workaround to make life easier.
+		 */
+		osc_div2: osc-div2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&osc>;
+			clock-output-names = "osc_div2";
+			clock-mult = <1>;
+			clock-div = <2>;
+		};
+
 		pll_out_core: pll-out-core {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
@@ -1206,7 +1220,7 @@
 			#clock-cells = <0>;
 			compatible = "ambarella,div-clock";
 			reg = <0xec17009c 4>;
-			clocks = <&osc>;
+			clocks = <&osc_div2>;
 			clock-output-names = "gclk_adc";
 			amb,div-width = <16>;
 			amb,div-shift = <0>;
