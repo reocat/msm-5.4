@@ -1380,7 +1380,7 @@ static int sel_make_bools(struct selinux_fs_info *fsi)
 		if (len >= PAGE_SIZE)
 			goto out;
 
-		isec = (struct inode_security_struct *)inode->i_security;
+		isec = inode_security(inode);
 		ret = security_genfs_sid(fsi->ns, "selinuxfs", page,
 					 SECCLASS_FILE, &sid);
 		if (ret) {
