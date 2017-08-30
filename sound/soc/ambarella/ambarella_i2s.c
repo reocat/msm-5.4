@@ -43,6 +43,10 @@
 #include "ambarella_pcm.h"
 #include "ambarella_i2s.h"
 
+static unsigned int capture_enabled = 1;
+module_param(capture_enabled, uint, 0644);
+MODULE_PARM_DESC(capture_enabled, "capture_enabled.");
+
 static unsigned int bclk_reverse = 0;
 module_param(bclk_reverse, uint, 0644);
 MODULE_PARM_DESC(bclk_reverse, "bclk_reverse.");
@@ -91,6 +95,9 @@ static inline void dai_tx_enable(struct amb_i2s_priv *priv_data)
 
 static inline void dai_rx_enable(struct amb_i2s_priv *priv_data)
 {
+	if(!capture_enabled)
+		return;
+
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_RX_ENABLE_BIT;
@@ -107,6 +114,9 @@ static inline void dai_tx_disable(struct amb_i2s_priv *priv_data)
 
 static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
 {
+	if(!capture_enabled)
+		return;
+
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val &= ~I2S_RX_ENABLE_BIT;
@@ -123,6 +133,9 @@ static inline void dai_tx_fifo_rst(struct amb_i2s_priv *priv_data)
 
 static inline void dai_rx_fifo_rst(struct amb_i2s_priv *priv_data)
 {
+	if(!capture_enabled)
+		return;
+
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_RX_FIFO_RESET_BIT;
@@ -131,6 +144,9 @@ static inline void dai_rx_fifo_rst(struct amb_i2s_priv *priv_data)
 
 static inline void dai_fifo_rst(struct amb_i2s_priv *priv_data)
 {
+	if(!capture_enabled)
+		return;
+
 	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_FIFO_RESET_BIT;
@@ -186,6 +202,9 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(cpu_dai);
 	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
 	u32 clock_reg, clk_div;
+
+	if(capture_enabled == 0)
+		return 0;
 
 	/* Disable tx/rx before initializing */
 	dai_tx_disable(priv_data);
@@ -484,7 +503,9 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	 * Note: Just be configured, actually BCLK and LRCLK will not
 	 * output to outside at this time.
 	 */
-	writel_relaxed(clk_div | I2S_CLK_TX_PO_FALL, priv_data->regbase + I2S_CLOCK_OFFSET);
+	if(capture_enabled)
+		writel_relaxed(clk_div | I2S_CLK_TX_PO_FALL,
+						priv_data->regbase + I2S_CLOCK_OFFSET);
 
 	priv_data->dai_master = true;
 	i2s_intf->mode = I2S_I2S_MODE;
@@ -501,6 +522,9 @@ static int ambarella_i2s_dai_probe(struct snd_soc_dai *dai)
 	dai_rx_enable(priv_data);
 	dai_fifo_rst(priv_data);
 
+	if(!capture_enabled)
+		dai_tx_fifo_rst(priv_data);
+
 	/* Notify HDMI that the audio interface is initialized */
 	ambarella_audio_notify_transition(AUDIO_NOTIFY_INIT, &priv_data->i2s_intf);
 
@@ -512,7 +536,8 @@ static int ambarella_i2s_dai_remove(struct snd_soc_dai *dai)
 	struct amb_i2s_priv *priv_data = snd_soc_dai_get_drvdata(dai);
 
 	/* Disable I2S clock output */
-	writel_relaxed(0x0, priv_data->regbase + I2S_CLOCK_OFFSET);
+	if(!capture_enabled)
+		writel_relaxed(0x0, priv_data->regbase + I2S_CLOCK_OFFSET);
 
 	/* Notify that the audio interface is removed */
 	ambarella_audio_notify_transition(AUDIO_NOTIFY_REMOVE, &priv_data->i2s_intf);
