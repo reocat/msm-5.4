@@ -15,3 +15,4 @@ config IMX8_PC
 
 source "drivers/gpu/imx/dpu/Kconfig"
 source "drivers/gpu/imx/lcdif/Kconfig"
+source "drivers/gpu/imx/dpu-blit/Kconfig"
