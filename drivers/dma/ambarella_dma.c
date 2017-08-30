@@ -1248,6 +1248,57 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+static u32 ambdma_chan_sel_val0 = 0;
+static u32 ambdma_chan_sel_val1 = 0;
+#endif
+static int ambarella_dma_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct ambdma_device *amb_dma = platform_get_drvdata(pdev);
+	struct ambdma_chan *amb_chan;
+	int i;
+
+	/* save dma channel register */
+	for (i = 0; i < amb_dma->nr_channels; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
+		amb_chan->ch_ctl = readl(dma_chan_ctr_reg(amb_chan));
+		amb_chan->ch_da = readl(dma_chan_da_reg(amb_chan));
+		amb_chan->ch_sta = readl(dma_chan_sta_reg(amb_chan));
+	}
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+	ambdma_chan_sel_val0 = readl_relaxed(amb_dma->regscr + DMA_SEL0_OFFSET);
+	if (amb_dma->nr_requests > 16)
+		ambdma_chan_sel_val1 = readl_relaxed(amb_dma->regscr + DMA_SEL1_OFFSET);
+#endif
+	return 0;
+
+}
+
+static int ambarella_dma_resume(struct platform_device *pdev)
+{
+	struct ambdma_device *amb_dma = platform_get_drvdata(pdev);
+	struct ambdma_chan *amb_chan;
+	int i;
+
+#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
+	writel(ambdma_chan_sel_val0, amb_dma->regscr + DMA_SEL0_OFFSET);
+	if (amb_dma->nr_requests > 16)
+		writel(ambdma_chan_sel_val1, amb_dma->regscr + DMA_SEL1_OFFSET);
+#endif
+	/* restore dma channel register */
+	for (i = 0; i < amb_dma->nr_channels; i++) {
+		amb_chan = &amb_dma->amb_chan[i];
+		writel(amb_chan->ch_sta, dma_chan_sta_reg(amb_chan));
+		writel(amb_chan->ch_da, dma_chan_da_reg(amb_chan));
+		writel(amb_chan->ch_ctl, dma_chan_ctr_reg(amb_chan));
+	}
+
+	return 0;
+}
+#endif
+
+
 static const struct of_device_id ambarella_dma_dt_ids[] = {
 	{.compatible = "ambarella,dma", },
 	{},
@@ -1257,7 +1308,10 @@ MODULE_DEVICE_TABLE(of, ambarella_dma_dt_ids);
 static struct platform_driver ambarella_dma_driver = {
 	.probe		= ambarella_dma_probe,
 	.remove		= ambarella_dma_remove,
-
+#ifdef CONFIG_PM
+	.suspend	= ambarella_dma_suspend,
+	.resume		= ambarella_dma_resume,
+#endif
 	.driver		= {
 		.name	= "ambarella-dma",
 		.of_match_table = ambarella_dma_dt_ids,
