@@ -95,10 +95,11 @@ static inline void dai_tx_enable(struct amb_i2s_priv *priv_data)
 
 static inline void dai_rx_enable(struct amb_i2s_priv *priv_data)
 {
+	u32 val;
+
 	if(!capture_enabled)
 		return;
 
-	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_RX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
@@ -114,10 +115,11 @@ static inline void dai_tx_disable(struct amb_i2s_priv *priv_data)
 
 static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
 {
+	u32 val;
+
 	if(!capture_enabled)
 		return;
 
-	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val &= ~I2S_RX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
@@ -133,10 +135,11 @@ static inline void dai_tx_fifo_rst(struct amb_i2s_priv *priv_data)
 
 static inline void dai_rx_fifo_rst(struct amb_i2s_priv *priv_data)
 {
+	u32 val;
+
 	if(!capture_enabled)
 		return;
 
-	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_RX_FIFO_RESET_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
@@ -144,10 +147,11 @@ static inline void dai_rx_fifo_rst(struct amb_i2s_priv *priv_data)
 
 static inline void dai_fifo_rst(struct amb_i2s_priv *priv_data)
 {
+	u32 val;
+
 	if(!capture_enabled)
 		return;
 
-	u32 val;
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_FIFO_RESET_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
