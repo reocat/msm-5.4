@@ -1130,6 +1130,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	/* init dma_chan struct */
 	for (i = 0; i < amb_dma->nr_channels; i++) {
 		amb_chan = &amb_dma->amb_chan[i];
+		amb_chan->chan.chan_id = i;
 
 		spin_lock_init(&amb_chan->lock);
 		amb_chan->amb_dma = amb_dma;
