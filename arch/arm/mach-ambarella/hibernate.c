@@ -156,7 +156,8 @@ static int hibernate_mtd_write(struct mtd_info *mtd)
 
 	/* TODO: SWP partition space size check */
 	if (header->pages * 0x1000 > mtd->size){
-		printk("ERR: swp partition[0x%llx] has not enough space for the kernel snapshot[0x%lx]\n", mtd->size, header->pages * 0x1000);
+		printk("ERR: swp partition[0x%llx] has not enough space for the \
+				kernel snapshot[0x%lx]\n", mtd->size, header->pages * 0x1000);
 			return -ENOMEM;
 	}
 
@@ -169,14 +170,19 @@ out_finish:
 	return error;
 
 }
-extern int ambarella_hibernate_gpio_pre(int gpio);
 static void ambarella_hibernate_sip(void)
 {
 	int hibernate_gpio_notify_mcu = -1;
 
-	of_property_read_u32(of_chosen, "ambarella,hibernate-gpio-notify-mcu", &hibernate_gpio_notify_mcu);
+	of_property_read_u32(of_chosen, "ambarella,hibernate-gpio-notify-mcu",
+			&hibernate_gpio_notify_mcu);
 	if (hibernate_gpio_notify_mcu > 0) {
+#if defined(CONFIG_AMBARELLA_SCM)
+		extern int ambarella_hibernate_gpio_pre(int gpio);
 		ambarella_hibernate_gpio_pre(hibernate_gpio_notify_mcu);
+#else
+		printk("Warning: CONFIG_AMBARELLA_SCM not built in !!!\n");
+#endif
 	}
 }
 
