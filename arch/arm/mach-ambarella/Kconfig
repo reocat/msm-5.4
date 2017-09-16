@@ -107,6 +107,22 @@ config ARCH_AMBARELLA_S3L
 	help
 	  Say Y here if you are using Ambarella S3L.
 
+config ARCH_AMBARELLA_S5L
+	bool "S5L AArch32"
+	select CPU_V7
+	select HAVE_SMP
+	select HAVE_ARM_ARCH_TIMER
+	select USB_ARCH_HAS_EHCI if USB_SUPPORT
+	select USB_ARCH_HAS_OHCI if USB_SUPPORT
+	select ARCH_AMBARELLA_SUPPORT_MMAP_AXI
+	select ARCH_AMBARELLA_SUPPORT_MMAP_DRAMC
+	select ARCH_AMBARELLA_SUPPORT_MMAP_DBGBUS
+	select ARM_GIC
+	select SPARSE_IRQ
+	select NET_VENDOR_AMBARELLA_ENHANCED if NET_VENDOR_AMBARELLA
+	help
+	  Say Y here if you are using Ambarella S5L in AArch32 mode.
+
 endchoice
 
 menu "Generic Platform Configuration"

@@ -24,6 +24,8 @@
 #ifndef __PLAT_AMBARELLA_IRQ_H__
 #define __PLAT_AMBARELLA_IRQ_H__
 
+#ifdef CONFIG_AMBARELLA_VIC
+
 #include <plat/chip.h>
 
 /* ==========================================================================*/
@@ -469,6 +471,7 @@ extern void ambvic_sw_clr(void __iomem *vic_base, unsigned int vic_irq);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
+#endif /* CONFIG_AMBARELLA_VIC */
 
 #endif
 
