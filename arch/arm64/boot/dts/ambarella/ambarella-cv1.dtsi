@@ -1058,6 +1058,27 @@
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
 		};
 
+		/* node for vin2 controller */
+		vinc2 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 121 0x1 0 123 0x1 0 124 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vin3 controller */
+		vinc3 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 116 0x1 0 118 0x1 0 119 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vin4 controller */
+		vinc4 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 132 0x1 0 134 0x1 0 135 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
 		/* node for vout0(tv) controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
