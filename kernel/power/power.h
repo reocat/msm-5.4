@@ -13,8 +13,10 @@ struct swsusp_info {
 	unsigned long		pages;
 	unsigned long		size;
 #ifdef CONFIG_ARCH_AMBARELLA
-	unsigned long       magic;
-	unsigned long       addr;
+	unsigned long		magic;
+	unsigned long		addr;
+	unsigned long		lzo_enable;
+	unsigned long		crc32;
 #endif
 } __aligned(PAGE_SIZE);
 
