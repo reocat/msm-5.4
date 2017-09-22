@@ -346,10 +346,14 @@ static int hibernate_mtd_write(struct mtd_info *mtd)
 {
 
 	int error = 0;
-	struct swsusp_info *header, copy;
+	struct swsusp_info *header, *copy;
 	struct snapshot_handle snapshot;
 
 	memset(&snapshot, 0, sizeof(struct snapshot_handle));
+
+	copy = vmalloc(sizeof(struct swsusp_info));
+	if (!copy)
+		return -ENOMEM;
 
 	if(nr_meta_pages <= 0)
 		return -EFAULT;
@@ -369,7 +373,7 @@ static int hibernate_mtd_write(struct mtd_info *mtd)
 			return -ENOMEM;
 	}
 
-	memcpy(&copy, header, sizeof(struct swsusp_info));
+	memcpy(copy, header, sizeof(struct swsusp_info));
 
 #ifdef LZO_DEBUG
 	printk("[LZO] pages:		%ld\n", header->pages);
@@ -391,10 +395,12 @@ static int hibernate_mtd_write(struct mtd_info *mtd)
 
 	if (hibernate_lzo_enable) {
 		hibernate_save_meta_pages(mtd, &snapshot, nr_meta_pages);
-		error = hibernate_save_image_lzo(&copy , mtd, &snapshot);
+		error = hibernate_save_image_lzo(copy , mtd, &snapshot);
 	} else {
-		error = hibernate_save_image(&copy, mtd, &snapshot);
+		error = hibernate_save_image(copy, mtd, &snapshot);
 	}
+
+	vfree(copy);
 
 out_finish:
 	return error;
