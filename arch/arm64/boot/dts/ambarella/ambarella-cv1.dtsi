@@ -996,6 +996,11 @@
 			reg = <0xe8001000 0x50>;
 		};
 
+		rng@e8001000 {
+			compatible = "ambarella,hw-rng";
+			reg = <0xe8001000 0x68>;
+		};
+
 		hdmi@e8007000 {
 			compatible = "ambarella,hdmi";
 			reg = <0xe8007000 0x1000>;
