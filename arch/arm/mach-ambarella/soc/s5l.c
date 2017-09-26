@@ -31,6 +31,7 @@
 
 static const char * const s5l_dt_board_compat[] = {
 	"ambarella,s5l",
+	"ambarella,s5lm",
 	NULL,
 };
 
