@@ -2619,6 +2619,23 @@ static int zl38063_nl_handle_reg(struct nl_msg_audio *msg,enum NL_MSG_CMD cmd)
 	return 0;
 }
 
+
+static int zl38063_nl_clt_LED(struct nl_msg_audio *msg)
+{
+	int ret = 0;
+	u16 led_st = 0;
+	led_st = (u16)( (msg->data[0] & LED_ALL_ON)<<4 )  ;
+
+	TW_DEBUG1("send date 0x%x\n",led_st);
+	ret = zl38063_hbi_wr16(zl38063_priv,ZL38063_GPIO_DATA,0x2000 |led_st);		//config GPIO Level
+	if (ret == 0 ){
+		msg->status = NL_CMD_STATUS_SUCCESS;
+		zl38063_nl_send_string(msg,"Successed control LED");
+	}
+	return 0;
+}
+
+
 /*----------------------------------------------------------------------*
  *   handle the CMD get from host
  *-------------------------nl_recv_msg_handler-----------------------------*/
@@ -2668,9 +2685,9 @@ static void nl_recv_msg_handler(struct sk_buff * __skb)
 					continue;
 				}
 				memcpy(msg, NLMSG_DATA(nlhdr), sizeof(*msg));
-				if (NETLINK_CB(skb).portid != msg->port) {
-					printk("NETLINK ERR: Unknown msg, port %u, app %u!\n",
-					msg->port, msg->port);
+				if (NETLINK_CB(skb).portid != nlhdr->nlmsg_pid) {
+					printk("NETLINK ERR: Unknown msg, port %u, skb portid %u!\n",
+					msg->port, NETLINK_CB(skb).portid);
 					continue;
 				}
 
@@ -2721,11 +2738,16 @@ static void nl_recv_msg_handler(struct sk_buff * __skb)
 							zl38063_nl_handle_reg(msg,NL_MSG_READ_REG);
 						zl38063ExitCritical();
 					break;
-				case NL_MSG_WRITE_REG:
-					zl38063EnterCritical();
-						zl38063_nl_handle_reg(msg,NL_MSG_WRITE_REG);
-					zl38063ExitCritical();
-				break;
+					case NL_MSG_WRITE_REG:
+						zl38063EnterCritical();
+							zl38063_nl_handle_reg(msg,NL_MSG_WRITE_REG);
+						zl38063ExitCritical();
+					break;
+					case NL_MSG_WAKEUP:
+						zl38063EnterCritical();
+							zl38063_nl_clt_LED(msg);
+						zl38063ExitCritical();
+					break;
 				   }
 			}else{
 				printk("NETLINK ERR: Unknown msg type[%d]\n",msg->type);

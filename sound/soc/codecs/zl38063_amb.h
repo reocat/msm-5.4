@@ -57,6 +57,13 @@ enum NL_MIC_DIR_TYPE {
 	MIC_ANTICLOCKWISE,
 };
 
+enum LED_STATUS {
+	LED1_ON =(0x40 >>4),
+	LED2_ON =(0x80>>4),
+	LED3_ON =(0x100>>4),
+	LED_ALL_ON =(0x1c0>>4),
+	LED_ALL_OFF =0x0,
+};
 
 enum FW_LABEL {
 	ASR = 1,
@@ -90,6 +97,7 @@ enum NL_MSG_CMD {
 	NL_MSG_SET_MIC_DIR,			// data[0] = e.g. 0 to adjust
 	NL_MSG_READ_REG,			//data[0]=addr data[1]=length ,data[..]=data read back
 	NL_MSG_WRITE_REG,			//data[0]=addr data[1]=length ,data[..]=data to be written
+	NL_MSG_WAKEUP,				//data[0]=action (LED_STATUS)
 };
 enum NL_MSG_STATUS {
 	NL_CMD_STATUS_SUCCESS = 0,
