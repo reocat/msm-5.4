@@ -126,11 +126,7 @@ int arch_hibernation_header_save(void *addr, unsigned int max_size)
 
 	arch_hdr_invariants(&hdr->invariants);
 	hdr->ttbr1_el1		= virt_to_phys(swapper_pg_dir);
-#ifdef CONFIG_ARCH_AMBARELLA
-	hdr->reenter_kernel     = (void *)virt_to_phys(cpu_resume);
-#else
 	hdr->reenter_kernel	= _cpu_resume;
-#endif
 
 	/* We can't use __hyp_get_vectors() because kvm may still be loaded */
 	if (el2_reset_needed())

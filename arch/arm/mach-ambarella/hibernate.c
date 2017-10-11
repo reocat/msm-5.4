@@ -36,7 +36,7 @@
 
 static int mtd_page_offset = 0;
 static int hibernate_lzo_enable = 0;
-static int hibernate_crc32_enable = 0;
+static int hibernate_crc32_enable = 1;
 
 static const unsigned int crc32_tab[] = {
         0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -425,8 +425,10 @@ static void hibernate_of_parse(void)
 {
 	hibernate_lzo_enable = !!of_property_read_bool(of_chosen,
 			"ambarella,hibernate-lzo-enable");
+#if 0 /* FIXME */
 	hibernate_crc32_enable = !!of_property_read_bool(of_chosen,
 			"ambarella,hibernate-crc32-enable");
+#endif
 }
 
 int swsusp_write_mtd(int flags)
