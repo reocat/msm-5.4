@@ -47,6 +47,7 @@
 
 static int dram_reset_ctrl = -1;
 static int gpio_notify_mcu = -1;
+static int hibernate_gpio_notify_mcu = -1;
 
 u32 gpio_regbase[] = {GPIO0_BASE, GPIO1_BASE, GPIO2_BASE, GPIO3_BASE,
 	GPIO4_BASE, GPIO5_BASE, GPIO6_BASE};
@@ -97,9 +98,36 @@ void ambarella_pm_gpio_input(int gpio, int *value)
 	*value = !!(amba_readl(gpio_regbase[bank] + GPIO_DATA_OFFSET) & 0x1 << offset);
 }
 
+static unsigned long ambarella_gpio_setup(int gpio)
+{
+	unsigned long gpio_info;
+	u32 bank, offset;
+
+	if (gpio == -1)
+		return 0;
+
+	bank = PINID_TO_BANK(gpio);
+	offset = PINID_TO_OFFSET(gpio);
+
+	gpio_info = gpio_regbase[bank] | offset;
+
+	/* Mux GPIO output mode */
+	ambarella_pm_gpio_output(gpio, 0);
+	ambarella_pm_gpiomux(gpio);
+
+	return gpio_info;
+}
+
 /* ==========================================================================*/
 void ambarella_power_off(void)
 {
+	if (!ambarella_gpio_setup(hibernate_gpio_notify_mcu))
+		return;
+
+	ambarella_pm_gpio_output(hibernate_gpio_notify_mcu, 1);
+	mdelay(100);
+	ambarella_pm_gpio_output(hibernate_gpio_notify_mcu, 0);
+
 	amba_rct_setbitsl(ANA_PWR_REG, ANA_PWR_POWER_DOWN);
 }
 
@@ -140,6 +168,7 @@ static unsigned long ambarella_notify_mcu_prepare(void)
 
 	return gpio_info;
 }
+
 
 static void ambarella_set_cpu_jump(int cpu, void *jump_fn)
 {
@@ -286,6 +315,7 @@ static int __init ambarella_init_pm(void)
 
 	of_property_read_u32(of_chosen, "ambarella,dram-reset-ctrl", &dram_reset_ctrl);
 	of_property_read_u32(of_chosen, "ambarella,gpio-notify-mcu", &gpio_notify_mcu);
+	of_property_read_u32(of_chosen, "ambarella,hibernate-gpio-notify-mcu", &hibernate_gpio_notify_mcu);
 	WARN(dram_reset_ctrl >= GPIO_MAX_LINES, "Invalid GPIO: %d\n", dram_reset_ctrl);
 
 	return 0;
