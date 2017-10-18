@@ -34,6 +34,10 @@
 #define LZO_UNC_PAGES		32
 #define LZO_UNC_SIZE		(LZO_UNC_PAGES * PAGE_SIZE)
 
+#define LZO_CMP_PAGES		DIV_ROUND_UP(lzo1x_worst_compress(LZO_UNC_SIZE) + \
+					LZO_HEADER, PAGE_SIZE)
+#define LZO_CMP_SIZE		(LZO_CMP_PAGES * PAGE_SIZE)
+
 static int mtd_page_offset = 0;
 static int hibernate_lzo_enable = 0;
 static int hibernate_crc32_enable = 1;
@@ -141,7 +145,8 @@ static int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
 			break;
 		}
 
-		printk("SWP: offset %d is a bad block\n" ,loff);
+		printk("SWP: offset %08x block %d is a bad block\n",
+				loff, loff / mtd->erasesize);
 
 		block = loff / mtd->erasesize;
 		loff = (block + 1) * mtd->erasesize;
@@ -272,7 +277,7 @@ static int hibernate_save_image_lzo(struct swsusp_info *header,
 #endif
 
 	in = vmalloc(LZO_UNC_SIZE);
-	out = vmalloc(LZO_UNC_SIZE);
+	out = vmalloc(LZO_CMP_SIZE);
 	work_area = vmalloc(LZO_UNC_SIZE);
 
 
