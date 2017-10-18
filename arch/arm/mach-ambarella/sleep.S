@@ -33,38 +33,6 @@
 
 	.text
 
-ENTRY(ambarella_finish_suspend)
-	isb
-	dsb
-	mov r0, #0
-	ldr	r1, =(DRAMC_BASE + DRAM_DDRC_OFFSET)
-	ldr	r2, =ANA_PWR_REG
-
-	teq	r0, r0
-	bl _ambarella_finish_suspend
-	teq	pc,	r0
-	bl _ambarella_finish_suspend
-
-ENDPROC(ambarella_finish_suspend)
-
-	/* _ambarella_finish_suspend will be called twice. first is to makesure the
-	 * instructions loading in the I-Cache, and the second is to disconnect cpu
-	 * with dram, enter self refresh, and power down PWC.
-	 */
-ENTRY(_ambarella_finish_suspend)
-	ldrne	r3, [r1, #DDRC_CTL_OFFSET]
-	bicne	r3, r3, #0x1
-	strne	r3, [r1, #DDRC_CTL_OFFSET]
-	movne	r3, #0x80000000
-	strne	r3, [r1, #DDRC_SELF_REF_OFFSET]
-
-	movne	r3, #ANA_PWR_POWER_DOWN
-	strne	r3, [r2]
-	moveq	pc, lr
-	b		.
-
-ENDPROC(_ambarella_finish_suspend)
-
 #ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
 ENTRY(ambarella_optimize_suspend)
 	dsb
@@ -184,6 +152,11 @@ ENTRY(ambarella_cpu_resume)
 	str	r1, [r0, #IOMUX_CTRL_SET_OFFSET]
 
 	/* jump to generic resume */
+#ifdef CONFIG_THUMB2_KERNEL
+	b	cpu_resume_arm
+#else
 	b	cpu_resume
+#endif
+
 ENDPROC(ambarella_cpu_resume)
 

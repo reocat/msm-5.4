@@ -2038,9 +2038,16 @@ static int init_header(struct swsusp_info *info)
 	info->size = info->pages;
 	info->size <<= PAGE_SHIFT;
 #if defined(CONFIG_ARCH_AMBARELLA) && defined(CONFIG_PM)
-extern void cpu_resume(void);
-	info->magic = 0x0badbeef;
-	info->addr  = virt_to_phys(cpu_resume);
+	{
+		void cpu_resume_arm(void);
+		void cpu_resume(void);
+		info->magic = 0x0badbeef;
+#ifdef CONFIG_THUMB2_KERNEL
+		info->addr  = virt_to_phys(cpu_resume_arm);
+#else
+		info->addr  = virt_to_phys(cpu_resume);
+#endif
+	}
 #endif
 	return init_header_complete(info);
 }

@@ -33,7 +33,6 @@
 
 /* ==========================================================================*/
 #ifdef CONFIG_PM
-extern int ambarella_finish_suspend(unsigned long);
 extern void ambarella_cpu_resume(void);
 
 #ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC

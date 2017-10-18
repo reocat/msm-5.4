@@ -240,8 +240,6 @@ static int ambarella_pm_enter_mem(void)
 
 #ifdef CONFIG_AMBARELLA_SREF_FIFO_EXEC
 	cpu_suspend(arg, ambarella_suspend_exec);
-#else
-	cpu_suspend(0, ambarella_finish_suspend);
 #endif
 
 	outer_resume();
