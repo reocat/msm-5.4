@@ -29,6 +29,8 @@
  * a "holding pen" into which all secondary cores are held until we're
  * ready for them to initialise.
  */
+.align 2
+.arm
 ENTRY(ambarella_secondary_startup)
 	mrc	p15, 0, r0, c0, c0, 5
 	and	r0, r0, #0x00ffffff
@@ -44,7 +46,11 @@ pen:	ldr	r7, [r6]
 	 * we've been released from the holding pen: secondary_stack
 	 * should now contain the SVC stack for this core
 	 */
+#ifdef CONFIG_THUMB2_KERNEL
+	b	secondary_startup_arm
+#else
 	b	secondary_startup
+#endif
 ENDPROC(ambarella_secondary_startup)
 
 	.align 2
