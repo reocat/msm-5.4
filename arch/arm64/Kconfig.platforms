@@ -14,6 +14,10 @@ config ARCH_AMBARELLA_COMBO_NAND
 	depends on ARCH_AMBARELLA
 	def_bool n
 
+config ARCH_AMBARELLA_HW_RANDOM
+	depends on ARCH_AMBARELLA
+	def_bool n
+
 choice
 	prompt "Ambarella Chip REV"
 	depends on ARCH_AMBARELLA
@@ -31,6 +35,7 @@ config ARCH_AMBARELLA_S5L
 config ARCH_AMBARELLA_CV1
 	bool "CV1"
 	select ARCH_AMBARELLA_COMBO_NAND
+	select ARCH_AMBARELLA_HW_RANDOM
 	help
 	  Say Y here if you are using Ambarella CV1.
 
