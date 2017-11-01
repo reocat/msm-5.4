@@ -3615,9 +3615,7 @@ fec_probe(struct platform_device *pdev)
 		fep->phy_interface = ret;
 	}
 
-#if !defined(CONFIG_ARM64)
 	request_bus_freq(BUS_FREQ_HIGH);
-#endif
 
 	fep->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(fep->clk_ipg)) {
@@ -3936,9 +3934,7 @@ static int __maybe_unused fec_runtime_suspend(struct device *dev)
 
 	clk_disable_unprepare(fep->clk_ahb);
 	clk_disable_unprepare(fep->clk_ipg);
-#if !defined(CONFIG_ARM64)
 	release_bus_freq(BUS_FREQ_HIGH);
-#endif
 
 	return 0;
 }
