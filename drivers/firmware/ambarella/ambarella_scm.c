@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/arm-smccc.h>
 #include "ambarella_scm.h"
+#include <linux/of.h>
 
 static int ambarella_scm_query(void)
 {
@@ -49,13 +50,13 @@ int ambarella_aarch64_cntfrq_update(void)
 }
 EXPORT_SYMBOL(ambarella_aarch64_cntfrq_update);
 
-int ambarella_hibernate_gpio_pre(int gpio)
+static int ambarella_pm_smc(int gpio)
 {
 	u32 fn;
 	u32 cmd;
 	struct arm_smccc_res res;
 
-	fn = SVC_SCM_FN(AMBA_SCM_SVC_HIBERNATE, AMBA_SCM_HIBERNATE_GPIO_SETUP);
+	fn = SVC_SCM_FN(AMBA_SCM_SVC_PM, AMBA_SCM_PM_GPIO_SETUP);
 	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
 			ARM_SMCCC_OWNER_SIP, fn);
 
@@ -63,11 +64,25 @@ int ambarella_hibernate_gpio_pre(int gpio)
 
 	return res.a0;
 }
-EXPORT_SYMBOL(ambarella_hibernate_gpio_pre);
+
+static void ambarella_pm_sip(void)
+{
+	int gpio_notify_mcu = -1;
+
+	of_property_read_u32(of_chosen, "ambarella,pm-gpio-notify-mcu",
+			&gpio_notify_mcu);
+	if (gpio_notify_mcu > 0) {
+		pr_info("SCM: PM notification GPIO %d\n", gpio_notify_mcu);
+		ambarella_pm_smc(gpio_notify_mcu);
+	}
+}
 
 int __init ambarella_scm_init(void)
 {
 	BUG_ON(ambarella_scm_query() != ARM_SMCCC_SMC_64);
+
+	ambarella_pm_sip();
+
 	return 0;
 }
 arch_initcall(ambarella_scm_init);

@@ -411,21 +411,6 @@ out_finish:
 	return error;
 
 }
-static void ambarella_hibernate_sip(void)
-{
-	int hibernate_gpio_notify_mcu = -1;
-
-	of_property_read_u32(of_chosen, "ambarella,hibernate-gpio-notify-mcu",
-			&hibernate_gpio_notify_mcu);
-	if (hibernate_gpio_notify_mcu > 0) {
-#if defined(CONFIG_AMBARELLA_SCM)
-		extern int ambarella_hibernate_gpio_pre(int gpio);
-		ambarella_hibernate_gpio_pre(hibernate_gpio_notify_mcu);
-#else
-		printk("Warning: CONFIG_AMBARELLA_SCM not built in !!!\n");
-#endif
-	}
-}
 static void hibernate_of_parse(void)
 {
 	hibernate_lzo_enable = !!of_property_read_bool(of_chosen,
@@ -443,7 +428,6 @@ int swsusp_write_mtd(int flags)
 
 	mtd_page_offset = 0;
 
-	ambarella_hibernate_sip();
 	hibernate_of_parse();
 	info = mtd_probe_dev();
 	if (!info)

@@ -5,8 +5,8 @@
 #define AMBA_SCM_SVC_FREQ			0x1
 #define AMBA_SCM_CNTFRQ_SETUP_CMD		0x1
 
-#define AMBA_SCM_SVC_HIBERNATE			0x2
-#define AMBA_SCM_HIBERNATE_GPIO_SETUP		0x1
+#define AMBA_SCM_SVC_PM				0x2
+#define AMBA_SCM_PM_GPIO_SETUP			0x1
 
 /* XXX svc ID 0xff */
 #define AMBA_SCM_SVC_QUERY			0xff
