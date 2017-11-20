@@ -34,6 +34,34 @@ static int ambarella_scm_query(void)
 	return res.a0;
 }
 
+u32 ambarella_smc_readl(void __iomem *addr)
+{
+	struct arm_smccc_res res;
+	u32 fn, cmd;
+
+	fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_READ);
+	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
+			ARM_SMCCC_OWNER_SIP, fn);
+
+	arm_smccc_smc(cmd, (unsigned long)addr, 0, 0, 0, 0, 0, 0, &res);
+
+	return res.a0;
+}
+EXPORT_SYMBOL(ambarella_smc_readl);
+
+void ambarella_smc_writel(u32 val, void __iomem *addr)
+{
+	struct arm_smccc_res res;
+	u32 fn, cmd;
+
+	fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_WRITE);
+	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
+			ARM_SMCCC_OWNER_SIP, fn);
+
+	arm_smccc_smc(cmd, (unsigned long)addr, val, 0, 0, 0, 0, 0, &res);
+}
+EXPORT_SYMBOL(ambarella_smc_writel);
+
 int ambarella_aarch64_cntfrq_update(void)
 {
 	u32 fn;
