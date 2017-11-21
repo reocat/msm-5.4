@@ -55,6 +55,42 @@ struct nand_flash_dev nand_flash_ids[] = {
 		  SZ_8K, SZ_8K, SZ_2M, NAND_NEED_SCRAMBLING, 6, 640,
 		  NAND_ECC_INFO(40, SZ_1K), 4 },
 
+	{"TC58NVG0S3H 1G 3.3V 8-bit",
+		{ .id = {0x98, 0xf1, 0x80, 0x15, 0x72} },
+		  SZ_2K, SZ_128, SZ_128K, 0, 5, 128},
+
+	{"TC58NVG1S3H 2G 3.3V 8-bit",
+		{ .id = {0x98, 0xda, 0x90, 0x15, 0x76} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
+
+	{"S34ML02G2 2G 3.3V 8-bit",
+		{ .id = {0x01, 0xda, 0x90, 0x95, 0x46} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
+
+	{"S34ML04G2 4G 3.3V 8-bit",
+		{ .id = {0x01, 0xdc, 0x90, 0x95, 0x56} },
+		  SZ_2K, SZ_512, SZ_128K, 0, 5, 128},
+
+	{"MT29F2G08ABAFA 2G 3.3V 8-bit",
+		{ .id = {0x2c, 0xda, 0x90, 0x95, 0x04} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
+
+	{"H27U2G8F2D 2G 3.3V 8-bit",
+		{ .id = {0xad, 0xda, 0x90, 0x95, 0x46} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
+
+	{"GD5F1GQ4UCY1G SPINAND 1Gb 3.3V 8-bit",
+		{ .id = {0xc8, 0xb1, 0x48} },
+		SZ_2K, SZ_128, SZ_128K, LP_OPTIONS, 3, 128},
+
+	{"GD5F2GQ4UCY1G SPINAND 2Gb 3.3V 8-bit",
+		{ .id = {0xc8, 0xb2, 0x48} },
+		SZ_2K, SZ_256, SZ_128K, LP_OPTIONS, 3, 128},
+
+	{"HYF1GQ4UBACAE SPINAND 1Gb 3.3V 8-bit",
+		{ .id = {0xc9, 0x59, 0x1b} },
+		SZ_2K, SZ_128, SZ_128K, LP_OPTIONS, 3, 128},
+
 	LEGACY_ID_NAND("NAND 4MiB 5V 8-bit",   0x6B, 4, SZ_8K, SP_OPTIONS),
 	LEGACY_ID_NAND("NAND 4MiB 3,3V 8-bit", 0xE3, 4, SZ_8K, SP_OPTIONS),
 	LEGACY_ID_NAND("NAND 4MiB 3,3V 8-bit", 0xE5, 4, SZ_8K, SP_OPTIONS),
@@ -185,6 +221,7 @@ static const struct nand_manufacturer nand_manufacturers[] = {
 	{NAND_MFR_INTEL, "Intel"},
 	{NAND_MFR_ATO, "ATO"},
 	{NAND_MFR_WINBOND, "Winbond"},
+	{NAND_MFR_GD,"GigdDevice"},
 };
 
 /**

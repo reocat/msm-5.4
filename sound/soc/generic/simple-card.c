@@ -152,8 +152,8 @@ static int asoc_simple_card_hw_params(struct snd_pcm_substream *substream,
 	else if (dai_props->mclk_fs)
 		mclk_fs = dai_props->mclk_fs;
 
+	mclk = (12.288 *1000 *1000);			//fix AU_CLK to 12.288M ,a must
 	if (mclk_fs) {
-		mclk = params_rate(params) * mclk_fs;
 		ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
 					     SND_SOC_CLOCK_IN);
 		if (ret && ret != -ENOTSUPP)
@@ -492,7 +492,7 @@ static int asoc_simple_card_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id asoc_simple_of_match[] = {
-	{ .compatible = "simple-audio-card", },
+	{ .compatible = "ambarella,audio-board", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, asoc_simple_of_match);

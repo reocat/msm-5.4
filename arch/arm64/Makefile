@@ -71,6 +71,9 @@ endif
 
 CHECKFLAGS	+= -D__aarch64__ -m64
 
+# For mach-xxx/mach/{io.h|irqs.h}
+KBUILD_CPPFLAGS += -Iarch/arm/mach-ambarella/include
+
 ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
 KBUILD_CFLAGS_MODULE	+= -mcmodel=large
 endif

@@ -309,7 +309,9 @@ int swsusp_arch_suspend(void)
 		 * Tell the hibernation core that we've just restored
 		 * the memory
 		 */
+#ifndef CONFIG_ARCH_AMBARELLA
 		in_suspend = 0;
+#endif
 
 		sleep_cpu = -EINVAL;
 		__cpu_suspend_exit();
