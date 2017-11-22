@@ -42,6 +42,7 @@
 #include "ak7755.h"
 #include "ak7755_dsp_code.h"
 #include <linux/types.h>
+#include <linux/miscdevice.h>
 
 //#define AK7755_PD_SUSPEND     // '15/06/15
 
