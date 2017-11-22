@@ -84,7 +84,6 @@ struct ambarella_mmc_host {
 	u32				switch_1v8_dly;
 	int				fixed_cd;
 	int				fixed_wp;
-	bool				emmc_boot;
 	bool				auto_cmd12;
 	bool				force_v18;
 
@@ -1171,7 +1170,6 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	if (of_property_read_u32(np, "amb,fixed-cd", &host->fixed_cd) < 0)
 		host->fixed_cd = -1;
 
-	host->emmc_boot = of_property_read_bool(np, "amb,emmc-boot");
 	host->auto_cmd12 = !of_property_read_bool(np, "amb,no-auto-cmd12");
 	host->force_v18 = of_property_read_bool(np, "amb,sd-force-1_8v");
 
@@ -1419,24 +1417,6 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 }
 #endif
 
-void ambarella_sd_shutdown (struct platform_device *pdev)
-{
-	struct ambarella_mmc_host *host = platform_get_drvdata(pdev);
-	struct mmc_command cmd = {0};
-
-	if (!host->emmc_boot)
-		return;
-
-	if((system_state == SYSTEM_RESTART) || (system_state == SYSTEM_HALT)) {
-		mmc_claim_host(host->mmc);
-		cmd.opcode = 0;
-		cmd.arg = 0xf0f0f0f0;
-		cmd.flags = MMC_RSP_NONE;
-		mmc_wait_for_cmd(host->mmc, &cmd, 0);
-	}
-
-}
-
 static const struct of_device_id ambarella_mmc_dt_ids[] = {
 	{ .compatible = "ambarella,sdmmc", },
 	{ /* sentinel */ }
@@ -1446,7 +1426,6 @@ MODULE_DEVICE_TABLE(of, ambarella_mmc_dt_ids);
 static struct platform_driver ambarella_sd_driver = {
 	.probe		= ambarella_sd_probe,
 	.remove		= ambarella_sd_remove,
-	.shutdown	= ambarella_sd_shutdown,
 #ifdef CONFIG_PM
 	.suspend	= ambarella_sd_suspend,
 	.resume		= ambarella_sd_resume,

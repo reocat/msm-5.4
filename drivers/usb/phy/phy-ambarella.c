@@ -35,7 +35,7 @@
 #include <linux/seq_file.h>
 #include <linux/io.h>
 #include <linux/of_gpio.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <plat/rct.h>
 
 #define DRIVER_NAME "ambarella_phy"

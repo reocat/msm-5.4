@@ -27,7 +27,7 @@
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <plat/rct.h>
 
 static const char *gclk_names[] = {

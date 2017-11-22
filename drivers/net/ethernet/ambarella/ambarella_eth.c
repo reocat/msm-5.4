@@ -1821,7 +1821,6 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 
 		lp->rx.rng_rx[entry].skb = NULL;
 		lp->rx.rng_rx[entry].mapping = 0;
-		lp->ndev->last_rx = jiffies;
 		lp->stats.rx_packets++;
 		lp->stats.rx_bytes += pkt_len;
 		lp->rx.cur_rx++;
@@ -2049,6 +2048,7 @@ static const struct net_device_ops ambeth_netdev_ops = {
 static int ambeth_get_settings(struct net_device *ndev,
 	struct ethtool_cmd *ecmd)
 {
+#if 0
 	struct ambeth_info *lp = netdev_priv(ndev);
 	int ret_val = 0;
 
@@ -2106,6 +2106,9 @@ static int ambeth_get_settings(struct net_device *ndev,
 	}
 
 	return ret_val;
+#else
+	return 0;
+#endif
 }
 
 static int ambeth_set_settings(struct net_device *ndev,

@@ -103,6 +103,33 @@ int ambpriv_get_irq_by_name(struct ambpriv_device *dev, const char *name)
 }
 EXPORT_SYMBOL(ambpriv_get_irq_by_name);
 
+static void of_ambpriv_device_make_bus_id(struct device *dev)
+{
+	struct device_node *node = dev->of_node;
+	const __be32 *reg;
+	u64 addr;
+
+	/* Construct the name, using parent nodes if necessary to ensure uniqueness */
+	while (node->parent) {
+		/*
+		 * If the address can be translated, then that is as much
+		 * uniqueness as we need. Make it the first component and return
+		 */
+		reg = of_get_property(node, "reg", NULL);
+		if (reg && (addr = of_translate_address(node, reg)) != OF_BAD_ADDR) {
+			dev_set_name(dev, dev_name(dev) ? "%llx.%s:%s" : "%llx.%s",
+				     (unsigned long long)addr, node->name,
+				     dev_name(dev));
+			return;
+		}
+
+		/* format arguments only used if dev_name() resolves to NULL */
+		dev_set_name(dev, dev_name(dev) ? "%s:%s" : "%s",
+			     kbasename(node->full_name), dev_name(dev));
+		node = node->parent;
+	}
+}
+
 static struct ambpriv_device *of_ambpriv_device_alloc(struct device_node *np,
 		struct device *parent)
 {
@@ -143,7 +170,7 @@ static struct ambpriv_device *of_ambpriv_device_alloc(struct device_node *np,
 
 	dev->dev.of_node = of_node_get(np);
 	dev->dev.parent = parent ? : &ambpriv_bus;
-	of_device_make_bus_id(&dev->dev);
+	of_ambpriv_device_make_bus_id(&dev->dev);
 	dev->name = dev_name(&dev->dev);
 	of_dma_configure(&dev->dev, dev->dev.of_node);
 

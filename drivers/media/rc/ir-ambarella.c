@@ -197,19 +197,19 @@ static int ambarella_ir_probe(struct platform_device *pdev)
 	spin_lock_init(&priv->lock);
 	setup_timer(&priv->timer, ambarella_ir_timer_timeout, (unsigned long)priv);
 
-	rdev = rc_allocate_device();
+	rdev = rc_allocate_device(RC_DRIVER_IR_RAW);
 	if (!rdev)
 		return -ENOMEM;
 
 	rdev->driver_type = RC_DRIVER_IR_RAW;
-	rdev->allowed_protocols = RC_BIT_ALL;
+	rdev->allowed_protocols = RC_PROTO_BIT_ALL;
 	rdev->priv = priv;
 	rdev->open = ambarella_ir_open;
 	rdev->close = ambarella_ir_close;
 	rdev->driver_name = IR_AMBARELLA_NAME;
 	map_name = of_get_property(node, "linux,rc-map-name", NULL);
 	rdev->map_name = map_name ?: RC_MAP_EMPTY;
-	rdev->input_name = IR_AMBARELLA_NAME;
+	rdev->device_name = IR_AMBARELLA_NAME;
 	rdev->input_phys = IR_AMBARELLA_NAME "/input0";
 	rdev->input_id.bustype = BUS_HOST;
 	rdev->input_id.vendor = 0x0001;

@@ -141,7 +141,7 @@ resume_exit:
 
 /* ==========================================================================*/
 
-static cycle_t ambarella_clksrc_timer_read(struct clocksource *clksrc)
+static u64 ambarella_clksrc_timer_read(struct clocksource *clksrc)
 {
 	struct ambarella_clksrc *amb_clksrc = to_ambarella_clksrc(clksrc);
 	return (-(u32)readl_relaxed(amb_clksrc->base_reg + TIMER_STATUS_OFFSET));
@@ -452,7 +452,7 @@ static int __init ambarella_local_clockevent_init(struct device_node *np)
 
 	/* Install hotplug callbacks which configure the timer on this CPU */
 	rval = cpuhp_setup_state(CPUHP_AP_ARM_ARCH_TIMER_STARTING,
-				"AP_AMBARELLA_TIMER_STARTING",
+				"clockevents/ambarella:starting",
 				ambarella_local_timer_starting_cpu,
 				ambarella_local_timer_dying_cpu);
 	if (rval)
@@ -461,10 +461,10 @@ static int __init ambarella_local_clockevent_init(struct device_node *np)
 	return 0;
 }
 
-CLOCKSOURCE_OF_DECLARE(ambarella_cs,
+TIMER_OF_DECLARE(ambarella_cs,
 		"ambarella,clock-source", ambarella_clocksource_init);
-CLOCKSOURCE_OF_DECLARE(ambarella_ce,
+TIMER_OF_DECLARE(ambarella_ce,
 		"ambarella,clock-event", ambarella_clockevent_init);
-CLOCKSOURCE_OF_DECLARE(ambarella_local_ce,
+TIMER_OF_DECLARE(ambarella_local_ce,
 		"ambarella,local-clock-event", ambarella_local_clockevent_init);
 

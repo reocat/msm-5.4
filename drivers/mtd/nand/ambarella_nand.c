@@ -41,7 +41,7 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mtd/mtd.h>
-#include <linux/mtd/nand.h>
+#include <linux/mtd/rawnand.h>
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
 #include <plat/rct.h>
@@ -408,13 +408,9 @@ static int nand_bch_check_blank_page(struct ambarella_nand_info *nand_info)
 {
 	struct nand_chip *chip = &nand_info->chip;
 	struct mtd_info	*mtd = nand_to_mtd(chip);
-	int eccsteps = chip->ecc.steps;
-	int zeroflip = 0;
-	int oob_subset;
-	int zero_bits = 0;
-	u32 i;
-	u8 *bufpos;
-	u8 *bsp;
+	int eccsteps = chip->ecc.steps, oob_subset;
+	int zeroflip = 0, zero_bits = 0, i;
+	u8 *bufpos, *bsp;
 
 	bufpos = nand_info->dmabuf;
 	bsp = nand_info->dmabuf + mtd->writesize;
@@ -446,12 +442,9 @@ static int nand_bch_check_blank_page(struct ambarella_nand_info *nand_info)
 
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
-	u8 tcls, tals, tcs, tds;
-	u8 tclh, talh, tch, tdh;
-	u8 twp, twh, twb, trr;
-	u8 trp, treh, trb, tceh;
-	u8 trdelay, tclr, twhr, tir;
-	u8 tww, trhz, tar;
+	u8 tcls, tals, tcs, tds, tclh, talh, tch, tdh;
+	u8 twp, twh, twb, trr, trp, treh, trb, tceh;
+	u8 trdelay, tclr, twhr, tir, tww, trhz, tar;
 	u32 i, poc, clk_div2, t, clk, val;
 
 	for (i = 0; i < ARRAY_SIZE(nand_info->timing); i++) {
@@ -608,8 +601,8 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 static int ambarella_nand_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
-	int					errorCode = NOTIFY_OK;
-	struct ambarella_nand_info		*nand_info;
+	struct ambarella_nand_info *nand_info;
+	int errorCode = NOTIFY_OK;
 
 	nand_info = container_of(nb, struct ambarella_nand_info, system_event);
 
@@ -634,9 +627,9 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 
 static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 {
-	irqreturn_t				rval = IRQ_NONE;
-	struct ambarella_nand_info		*nand_info;
-	u32					val;
+	irqreturn_t rval = IRQ_NONE;
+	struct ambarella_nand_info *nand_info;
+	u32 val;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
@@ -656,8 +649,8 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 /* this dma is used to transfer data between Nand and FIO FIFO. */
 static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 {
-	struct ambarella_nand_info		*nand_info;
-	u32					val, fio_dma_sta;
+	struct ambarella_nand_info *nand_info;
+	u32 val, fio_dma_sta;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
@@ -690,9 +683,9 @@ static irqreturn_t nand_fiodma_isr_handler(int irq, void *dev_id)
 /* this dma is used to transfer data between FIO FIFO and Memory. */
 static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 {
-	irqreturn_t				rval = IRQ_NONE;
-	struct ambarella_nand_info		*nand_info;
-	u32					int_src;
+	irqreturn_t rval = IRQ_NONE;
+	struct ambarella_nand_info *nand_info;
+	u32 int_src;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
@@ -715,8 +708,7 @@ static irqreturn_t ambarella_fdma_isr_handler(int irq, void *dev_id)
 
 static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 {
-	u32					ctrl_val;
-	u32					size = 0;
+	u32 ctrl_val, size = 0;
 
 	/* init and enable fdma to transfer data betwee FIFO and Memory */
 	ctrl_val = nand_info->len > 16 ? FDMA_NODC_MN_BURST_SIZE : FDMA_NODC_SP_BURST_SIZE;
@@ -760,8 +752,7 @@ static void nand_amb_setup_dma_devmem(struct ambarella_nand_info *nand_info)
 
 static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 {
-	u32					ctrl_val, dma_burst_val;
-	u32					size = 0;
+	u32 ctrl_val, dma_burst_val, size = 0;
 
 	if (nand_info->ecc_bits > 1) {
 		dma_burst_val = FDMA_CHAN_CTR_BLK_512B | FDMA_CHAN_CTR_TS_8B;
@@ -808,13 +799,9 @@ static void nand_amb_setup_dma_memdev(struct ambarella_nand_info *nand_info)
 static int nand_amb_request(struct ambarella_nand_info *nand_info)
 {
 	struct mtd_info	*mtd = nand_to_mtd(&nand_info->chip);
-	int					errorCode = 0;
-	u32					cmd;
-	u32					nand_ctr_reg = 0;
-	u32					nand_ext_ctr_reg = 0;
-	u32					nand_cmd_reg = 0;
-	u32					fio_ctr_reg = 0;
-	long					timeout;
+	u32 cmd, nand_ctr_reg, nand_ext_ctr_reg, nand_cmd_reg, fio_ctr_reg;
+	long timeout;
+	int errorCode = 0;
 
 	cmd = nand_info->cmd;
 
@@ -1152,10 +1139,9 @@ int nand_amb_read_status(struct ambarella_nand_info *nand_info)
 int nand_amb_erase(struct ambarella_nand_info *nand_info, u32 page_addr)
 {
 	struct mtd_info	*mtd = nand_to_mtd(&nand_info->chip);
-	int					errorCode = 0;
-	u32					addr_hi;
-	u32					addr;
-	u64					addr64;
+	u32 addr_hi, addr;
+	u64 addr64;
+	int errorCode = 0;
 
 	addr64 = (u64)(page_addr * mtd->writesize);
 	addr_hi = (u32)(addr64 >> 32);
@@ -1178,12 +1164,10 @@ int nand_amb_read_data(struct ambarella_nand_info *nand_info,
 	u32 page_addr, dma_addr_t buf_dma, u8 area)
 {
 	struct mtd_info	*mtd = nand_to_mtd(&nand_info->chip);
-	int					errorCode = 0;
-	u32					addr_hi;
-	u32					addr;
-	u32					len;
-	u64					addr64;
-	u8					ecc = 0;
+	u32 addr_hi, addr, len;
+	u64 addr64;
+	u8 ecc = 0;
+	int errorCode = 0;
 
 	addr64 = (u64)(page_addr * mtd->writesize);
 	addr_hi = (u32)(addr64 >> 32);
@@ -1240,12 +1224,10 @@ int nand_amb_write_data(struct ambarella_nand_info *nand_info,
 	u32 page_addr, dma_addr_t buf_dma, u8 area)
 {
 	struct mtd_info	*mtd = nand_to_mtd(&nand_info->chip);
-	int					errorCode = 0;
-	u32					addr_hi;
-	u32					addr;
-	u32					len;
-	u64					addr64;
-	u8					ecc;
+	u32 addr_hi, addr, len;
+	u64 addr64;
+	u8 ecc;
+	int errorCode = 0;
 
 	addr64 = (u64)(page_addr * mtd->writesize);
 	addr_hi = (u32)(addr64 >> 32);
@@ -1301,9 +1283,9 @@ nand_amb_write_page_exit:
 /* ==========================================================================*/
 static uint8_t amb_nand_read_byte(struct mtd_info *mtd)
 {
-	struct nand_chip	*chip = mtd_to_nand(mtd);
-	struct ambarella_nand_info	*nand_info = nand_get_controller_data(chip);
-	uint8_t					*data;
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct ambarella_nand_info *nand_info = nand_get_controller_data(chip);
+	uint8_t *data;
 
 	data = nand_info->dmabuf + nand_info->dma_bufpos;
 	nand_info->dma_bufpos++;
@@ -1313,9 +1295,9 @@ static uint8_t amb_nand_read_byte(struct mtd_info *mtd)
 
 static u16 amb_nand_read_word(struct mtd_info *mtd)
 {
-	struct nand_chip	*chip = mtd_to_nand(mtd);
-	struct ambarella_nand_info	*nand_info = nand_get_controller_data(chip);
-	u16					*data;
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct ambarella_nand_info *nand_info = nand_get_controller_data(chip);
+	u16 *data;
 
 	data = (u16 *)(nand_info->dmabuf + nand_info->dma_bufpos);
 	nand_info->dma_bufpos += 2;
@@ -1325,8 +1307,8 @@ static u16 amb_nand_read_word(struct mtd_info *mtd)
 
 static void amb_nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
 {
-	struct nand_chip	*chip = mtd_to_nand(mtd);
-	struct ambarella_nand_info	*nand_info = nand_get_controller_data(chip);
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct ambarella_nand_info *nand_info = nand_get_controller_data(chip);
 
 	BUG_ON((nand_info->dma_bufpos + len) > AMBARELLA_NAND_DMA_BUFFER_SIZE);
 
@@ -1337,8 +1319,8 @@ static void amb_nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
 static void amb_nand_write_buf(struct mtd_info *mtd,
 	const uint8_t *buf, int len)
 {
-	struct nand_chip	*chip = mtd_to_nand(mtd);
-	struct ambarella_nand_info	*nand_info = nand_get_controller_data(chip);
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct ambarella_nand_info *nand_info = nand_get_controller_data(chip);
 
 	BUG_ON((nand_info->dma_bufpos + len) > AMBARELLA_NAND_DMA_BUFFER_SIZE);
 
@@ -1364,7 +1346,7 @@ static void amb_nand_cmd_ctrl(struct mtd_info *mtd, int dat, unsigned int ctrl)
 
 static int amb_nand_dev_ready(struct mtd_info *mtd)
 {
-	struct nand_chip	*chip = mtd_to_nand(mtd);
+	struct nand_chip *chip = mtd_to_nand(mtd);
 
 	chip->cmdfunc(mtd, NAND_CMD_STATUS, -1, -1);
 
@@ -1373,8 +1355,8 @@ static int amb_nand_dev_ready(struct mtd_info *mtd)
 
 static int amb_nand_waitfunc(struct mtd_info *mtd, struct nand_chip *chip)
 {
-	int					status = 0;
-	struct ambarella_nand_info	*nand_info = nand_get_controller_data(chip);
+	struct ambarella_nand_info *nand_info = nand_get_controller_data(chip);
+	int status = 0;
 
 	/* ambarella nand controller has waited for the command completion,
 	  * but still need to check the nand chip's status
@@ -1573,9 +1555,8 @@ static int amb_nand_correct_data(struct mtd_info *mtd, u_char *buf,
 static int amb_nand_write_oob_std(struct mtd_info *mtd,
 	struct nand_chip *chip, int page)
 {
-	struct ambarella_nand_info	*nand_info = nand_get_controller_data(chip);
-	int					i, status;
-	int	eccsteps;
+	struct ambarella_nand_info *nand_info = nand_get_controller_data(chip);
+	int i, status, eccsteps;
 	uint8_t *ecc_calc = chip->buffers->ecccalc;
 
 	/* Our nand controller will write the generated ECC code into spare
@@ -1675,7 +1656,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_info *nand_info)
 
 static int ambarella_nand_config_flash(struct ambarella_nand_info *nand_info)
 {
-	int					errorCode = 0;
+	int errorCode = 0;
 
 	/* control_reg will be uesd when real operation to NAND is performed */
 
@@ -1969,10 +1950,10 @@ static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
 
 static int ambarella_nand_probe(struct platform_device *pdev)
 {
-	int					errorCode = 0;
-	struct ambarella_nand_info		*nand_info;
-	struct mtd_info				*mtd;
+	struct ambarella_nand_info *nand_info;
+	struct mtd_info *mtd;
 	struct nand_chip *chip;
+	int errorCode = 0;
 
 	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
 	if (nand_info == NULL) {
@@ -2058,8 +2039,8 @@ ambarella_nand_probe_exit:
 
 static int ambarella_nand_remove(struct platform_device *pdev)
 {
-	int					errorCode = 0;
-	struct ambarella_nand_info		*nand_info;
+	struct ambarella_nand_info *nand_info;
+	int errorCode = 0;
 
 	nand_info = (struct ambarella_nand_info *)platform_get_drvdata(pdev);
 
@@ -2084,8 +2065,8 @@ static int ambarella_nand_remove(struct platform_device *pdev)
 static int ambarella_nand_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
-	int					errorCode = 0;
-	struct ambarella_nand_info		*nand_info;
+	struct ambarella_nand_info *nand_info;
+	int errorCode = 0;
 
 	nand_info = platform_get_drvdata(pdev);
 	disable_irq(nand_info->dma_irq);
@@ -2099,8 +2080,8 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 
 static int ambarella_nand_resume(struct platform_device *pdev)
 {
-	int					errorCode = 0;
-	struct ambarella_nand_info		*nand_info;
+	struct ambarella_nand_info *nand_info;
+	int errorCode = 0;
 
 	nand_info = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(nand_info);

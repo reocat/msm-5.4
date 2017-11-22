@@ -28,7 +28,7 @@
 #include <linux/wait.h>
 #include <linux/export.h>
 #include <linux/io.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <asm/page.h>
 #include <asm/atomic.h>
 #include <plat/ambsyncproc.h>
