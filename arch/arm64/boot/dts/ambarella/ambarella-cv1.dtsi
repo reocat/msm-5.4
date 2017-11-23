@@ -1401,6 +1401,19 @@
 			clock-output-names = "gclk_stereo";
 		};
 
+		gclk_vision: gclk-vision {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed0806e4 4>,
+			      <0xed0806e8 4>,
+			      <0xed0806ec 4>,
+			      <0xed0806f0 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_vision";
+		};
+
 		gclk_uart0: gclk-uart0 {
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
