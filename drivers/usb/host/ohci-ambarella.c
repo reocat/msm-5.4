@@ -195,7 +195,6 @@ static int ohci_hcd_ambarella_drv_remove(struct platform_device *pdev)
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ohci_ambarella *amb_ohci = hcd_to_ohci_ambarella(hcd);
 
-	usb_put_phy(amb_ohci->phy);
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 
