@@ -166,7 +166,6 @@ static int ehci_ambarella_drv_remove(struct platform_device *pdev)
 
 	priv = (struct ehci_ambarella_priv *)hcd_to_ehci(hcd)->priv;
 
-	usb_put_phy(priv->phy);
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 
