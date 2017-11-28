@@ -2043,12 +2043,15 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 {
 	int					errorCode = 0;
 	struct ambarella_nand_info		*nand_info;
+	struct mtd_info				*mtd;
 
 	nand_info = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(nand_info);
 	nand_info->suspend = 0;
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
+	mtd = &nand_info->mtd;
+	errorCode = nand_scan_tail(mtd);
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
