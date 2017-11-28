@@ -485,6 +485,10 @@ static void ambarella_sd_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if ((host->bus_width != ios->bus_width) || (host->mode != ios->timing))
 		ambarella_sd_set_bus(host, ios->bus_width, ios->timing);
+
+	/* delay to wait for set bus stable, support MICRON EMMC. */
+	mdelay(10);
+
 }
 
 static int ambarella_sd_get_cd(struct mmc_host *mmc)
@@ -816,6 +820,7 @@ retry:
 			tmp |= (((dly >> 6) & 0x3) << 1);
 			writel_relaxed(tmp, host->phy_ctrl2_reg);
 
+			usleep_range(50, 100);
 			sel = dly % 64;
 			if (sel < 0x20)
 				sel = 63 - sel;
