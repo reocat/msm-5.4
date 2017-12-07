@@ -1125,7 +1125,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	amb_dma->dma_dev.src_addr_widths = AMBARELLA_DMA_BUSWIDTHS;
 	amb_dma->dma_dev.dst_addr_widths = AMBARELLA_DMA_BUSWIDTHS;
 	amb_dma->dma_dev.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
-	amb_dma->dma_dev.residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
+	amb_dma->dma_dev.residue_granularity = DMA_RESIDUE_GRANULARITY_DESCRIPTOR;
 
 	/* init dma_chan struct */
 	for (i = 0; i < amb_dma->nr_channels; i++) {
