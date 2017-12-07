@@ -259,6 +259,11 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		if (i2s_intf->mode == I2S_DSP_MODE) {
 			i2s_intf->slots = i2s_intf->channels - 1;
 			i2s_intf->word_pos = 0; /* ignored */
+		} else if (i2s_intf->mode == I2S_LEFT_JUSTIFIED_MODE) {
+			i2s_intf->slots = 0;
+			i2s_intf->word_pos = 0;
+			i2s_intf->tx_ctrl |= I2S_TX_WS_INV_BIT;
+			i2s_intf->rx_ctrl |= I2S_RX_WS_INV_BIT;
 		} else {
 			i2s_intf->slots = 0;
 			i2s_intf->word_pos = 0; /* ignored */
@@ -566,13 +571,13 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.playback = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
-		.rates = SNDRV_PCM_RATE_8000_48000,
+		.rates = SNDRV_PCM_RATE_8000_96000,
 		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE),
 	},
 	.capture = {
 		.channels_min = 2,
 		.channels_max = 0, // initialized in ambarella_i2s_probe function
-		.rates = SNDRV_PCM_RATE_8000_48000,
+		.rates = SNDRV_PCM_RATE_8000_96000,
 		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE),
 	},
 	.ops = &ambarella_i2s_dai_ops,
