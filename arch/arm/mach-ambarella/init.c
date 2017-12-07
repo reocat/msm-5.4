@@ -92,11 +92,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.virtual	= AHB_BASE - CONFIG_AMBARELLA_PPM_SIZE,
 			.pfn		= __phys_to_pfn(DEFAULT_MEM_START),
 			.length		= CONFIG_AMBARELLA_PPM_SIZE,
-#if defined(CONFIG_AMBARELLA_PPM_UNCACHED)
-			.type		= MT_DEVICE,
-#else
 			.type		= MT_MEMORY_RWX,
-#endif
 			},
 	},
 #if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_AXI)
