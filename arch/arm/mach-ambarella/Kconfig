@@ -120,6 +120,7 @@ config ARCH_AMBARELLA_S5L
 	select ARM_GIC
 	select SPARSE_IRQ
 	select NET_VENDOR_AMBARELLA_ENHANCED if NET_VENDOR_AMBARELLA
+	select ARM_PSCI
 	help
 	  Say Y here if you are using Ambarella S5L in AArch32 mode.
 
@@ -201,12 +202,6 @@ config AMBARELLA_INITRD_PHYS
 	default 0x00a00000
 	help
 	  Specify the physical address for initrd.
-
-config AMBARELLA_PPM_UNCACHED
-	bool "Map PPM as MT_DEVICE"
-	default n
-	help
-	  Default MT_MEMORY.
 
 endmenu
 

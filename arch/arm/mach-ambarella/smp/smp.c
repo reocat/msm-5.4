@@ -37,7 +37,7 @@
 static void __iomem *scu_base = __io(AMBARELLA_VA_SCU_BASE);
 static DEFINE_SPINLOCK(boot_lock);
 
-static u32 *cpux_jump_virt = NULL;
+static u32 *cpux_jump_virt[NR_CPUS];
 extern void ambarella_secondary_startup(void);
 extern void ambvic_smp_softirq_init(void);
 
@@ -54,12 +54,11 @@ static void write_pen_release(int val)
 
 static void write_cpux_jump_addr(unsigned int cpu, int addr)
 {
-	cpux_jump_virt[cpu] = addr;
+	*cpux_jump_virt[cpu] = addr;
 	smp_wmb();
-	__cpuc_clean_dcache_area(
-		&cpux_jump_virt[cpu], sizeof(cpux_jump_virt[cpu]));
-	outer_clean_range(ambarella_virt_to_phys((u32)&cpux_jump_virt[cpu]),
-			ambarella_virt_to_phys((u32)&cpux_jump_virt[cpu] + 1));
+	__cpuc_clean_dcache_area(cpux_jump_virt[cpu], sizeof(u32));
+	outer_clean_range(ambarella_virt_to_phys((u32)cpux_jump_virt[cpu]),
+			ambarella_virt_to_phys((u32)cpux_jump_virt[cpu] + 1));
 }
 
 /* running on CPU1 */
@@ -80,7 +79,7 @@ static int ambarella_smp_boot_secondary(unsigned int cpu,
 	unsigned long flags, timeout = 0;
 	unsigned long phys_cpu = cpu_logical_map(cpu);
 
-	BUG_ON(cpux_jump_virt == NULL);
+	BUG_ON(cpux_jump_virt[cpu] == NULL);
 
 	scu_enable(scu_base);
 
@@ -145,23 +144,33 @@ static void __init ambarella_smp_init_cpus(void)
 /* running on CPU0 */
 static void __init ambarella_smp_prepare_cpus(unsigned int max_cpus)
 {
-	u32 cpux_jump, start_limit, end_limit;
-	int i, rval;
-
-	rval = of_property_read_u32(of_chosen, "ambarella,cpux_jump", &cpux_jump);
-	if (rval < 0) {
-		pr_err("No jump address for secondary cpu!\n");
-		return;
-	}
+	struct device_node *cpu, *cpus;
+	u64 cpux_jump, start_limit, end_limit;
+	int i = 0, rval;
 
 	start_limit = get_ambarella_ppm_phys();
-	end_limit = get_ambarella_ppm_phys() + get_ambarella_ppm_size();
-	if (cpux_jump < start_limit || cpux_jump > end_limit) {
-		pr_err("Invalid secondary cpu jump address, 0x%08x!\n", cpux_jump);
-		return;
-	}
+	end_limit = start_limit + get_ambarella_ppm_size();
 
-	cpux_jump_virt = (u32 *)ambarella_phys_to_virt(cpux_jump);
+	cpus = of_find_node_by_path("/cpus");
+	BUG_ON(!cpus);
+
+	for_each_child_of_node(cpus, cpu) {
+		if (of_node_cmp(cpu->type, "cpu"))
+			continue;
+
+		rval = of_property_read_u64(cpu, "cpu-release-addr", &cpux_jump);
+		if (rval < 0) {
+			pr_err("No jump address for CPU[%d]!\n", i);
+			return;
+		}
+
+		if (cpux_jump < start_limit || cpux_jump > end_limit) {
+			pr_err("CPU[%d] Invalid jump address, 0x%08llx!\n", i, cpux_jump);
+			return;
+		}
+
+		cpux_jump_virt[i++] = (u32 *)ambarella_phys_to_virt(cpux_jump);
+	}
 
 	for (i = 0; i < max_cpus; i++)
 		set_cpu_present(i, true);
