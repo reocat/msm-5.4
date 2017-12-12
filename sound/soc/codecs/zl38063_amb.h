@@ -19,9 +19,10 @@
  *-------------------------------------------------------------*/
 #define ZL380XX_TW_ENABLE_ALSA_CODEC_DRIVER /*Define this macro to create a /sound/soc ALSA codec device driver*/
 #define ZL380XX_TW_ENABLE_CHAR_DEV_DRIVER   /*Define this macro to create a character device driver*/
-//#define ZL38063_SLAVE_DEVICE_SUPPORT
-//#define ZL38063_DOA_ENABLE
+#define ZL38063_SLAVE_DEVICE_SUPPORT
+//#define ZL38063_DOA_UPLOAD
 
+#define AMBA_ZATANNA_BOARD "Ambarella Zatanna Board"
 
 /**
  * Default value for a register.  We use an array of structs rather
@@ -36,11 +37,12 @@ struct reg_format {
 	u16 val;
 };
 
-
+static u16 last_doa = 0 ;
 
 #define ZL38063_MAX_DATA_LENGTH	24
 #define ZL38063_DEF_ASR_FWID	0x8001			//(FIXED me) the special FWID of ASR
 #define ZL38063_DEF_AEC_FWID	0x800C
+
 
 enum NL_MSG_TYPE {
 	NL_MSG_SILENCE = 0,						//silent or under noise level
@@ -58,16 +60,43 @@ enum NL_MIC_DIR_TYPE {
 };
 
 enum LED_STATUS {
-	LED1_ON =(0x40 >>4),
-	LED2_ON =(0x80>>4),
-	LED3_ON =(0x100>>4),
-	LED_ALL_ON =(0x1c0>>4),
-	LED_ALL_OFF =0x0,
+	LED1_ON = 0x0002,
+	LED2_ON = 0x0004,
+	LED3_ON = 0x0008,
+	LED4_ON = 0x0010,
+	LED5_ON = 0x0020,
+	LED6_ON = 0x0040,
+	LED7_ON = 0x0080,
+	LED8_ON = 0x0100,
+	LED9_ON = 0x0200,
+	LED10_ON = 0x0400,
+	LED11_ON = 0x0800,
+	LED12_ON = 0x1000,
+	LED_ALL_ON  = 0x8000,
+	LED_ALL_OFF = 0x0001,
+};
+
+enum MIC_DIR_REG {
+	MIC_0 = 0x2040,
+	MIC_30 = 0x2400,
+	MIC_60 = 0x2040,
+	MIC_90 = 0x2400,
+	MIC_120 = 0x2080,
+	MIC_150 = 0x2800,
+	MIC_180 = 0x2080,
+	MIC_210 = 0x2800,
+	MIC_240 = 0x2100,
+	MIC_270 = 0x3000,
+	MIC_300 = 0x2100,
+	MIC_330 = 0x3000,
+	MIC_ALL_ON = 0x3dc0,
+	MIC_ALL_OFF = 0x2000,
 };
 
 enum FW_LABEL {
 	ASR = 1,
 	AEC = 2,
+	DOA = 3,
 	UPDATE_PRAM =4,
 	UPDATE_CRAM =8,
 };
@@ -154,7 +183,6 @@ struct beamforming_conf {
 */
 #define  ZLS380630_TWOLF "ZLS38062.0_E1.1.0_App.s3" /*firmware for your zl380xx device 0*/
 
-#define ZL380XX_TW_UPDATE_CONFIG
 
 #define  ZLS380630_TWOLF_CRK "ZLS38062_20151223_AMBA.CR2" /*configuration record for your zl380xx device 0*/
 
@@ -712,6 +740,11 @@ typedef struct {
 #define ZL38063_BF_OOB_GAIN_MIX		0x04CA
 #define ZL38063_SOUND_LOC_CTL		0x04D0
 #define ZL38063_SOUND_LOC_THD		0x04D2
+
+#define	MIC_CONF_TRIANG				0x0010
+#define	MIC_CONF_LINEAR				0x0000
+#define	MIC_NUM_3					0x0003
+#define	MIC_NUM_2					0x0002
 
 
 /*4 Rout Parametric Equalizers*/
