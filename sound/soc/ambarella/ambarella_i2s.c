@@ -180,19 +180,17 @@ static int ambarella_i2s_startup(struct snd_pcm_substream *substream,
 
 	/* Add a rule to enforce the DMA buffer align. */
 	ret = snd_pcm_hw_constraint_step(runtime, 0,
-		SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 32);
+			SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 32);
 	if (ret)
 		goto ambarella_i2s_startup_exit;
 
 	ret = snd_pcm_hw_constraint_step(runtime, 0,
-		SNDRV_PCM_HW_PARAM_BUFFER_BYTES, 32);
+			SNDRV_PCM_HW_PARAM_BUFFER_BYTES, 32);
 	if (ret)
 		goto ambarella_i2s_startup_exit;
 
 	ret = snd_pcm_hw_constraint_integer(runtime,
-		SNDRV_PCM_HW_PARAM_PERIODS);
-	if (ret < 0)
-		goto ambarella_i2s_startup_exit;
+			SNDRV_PCM_HW_PARAM_PERIODS);
 
 ambarella_i2s_startup_exit:
 	return ret >= 0 ? 0 : ret;
