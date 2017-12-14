@@ -194,9 +194,8 @@ static int ambarella_i2s_startup(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		goto ambarella_i2s_startup_exit;
 
-	return 0;
 ambarella_i2s_startup_exit:
-	return ret;
+	return ret >= 0 ? 0 : ret;
 }
 
 static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
@@ -565,15 +564,19 @@ static struct snd_soc_dai_driver ambarella_i2s_dai = {
 	.resume = ambarella_i2s_dai_resume,
 	.playback = {
 		.channels_min = 2,
-		.channels_max = 0, // initialized in ambarella_i2s_probe function
+		.channels_max = 0, /* initialized in ambarella_i2s_probe function */
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE),
+		.formats = SNDRV_PCM_FMTBIT_S16_LE |
+			   SNDRV_PCM_FMTBIT_S24_LE |
+			   SNDRV_PCM_FMTBIT_S32_LE,
 	},
 	.capture = {
 		.channels_min = 2,
-		.channels_max = 0, // initialized in ambarella_i2s_probe function
+		.channels_max = 0, /* initialized in ambarella_i2s_probe function */
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE),
+		.formats = SNDRV_PCM_FMTBIT_S16_LE |
+			   SNDRV_PCM_FMTBIT_S24_LE |
+			   SNDRV_PCM_FMTBIT_S32_LE,
 	},
 	.ops = &ambarella_i2s_dai_ops,
 	.symmetric_rates = 1,
