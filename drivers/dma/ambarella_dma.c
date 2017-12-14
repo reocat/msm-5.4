@@ -36,6 +36,8 @@
 #include "dmaengine.h"
 #include "ambarella_dma.h"
 
+#define AMBARELLA_MAX_DESC_TRIALS		10
+
 /* The set of bus widths supported by the DMA controller */
 #define AMBARELLA_DMA_BUSWIDTHS					\
 		BIT(DMA_SLAVE_BUSWIDTH_UNDEFINED)		| \
@@ -97,7 +99,7 @@ static ssize_t ambdma_proc_write(struct file *file,
 		return ret;
 
 	if (id >= amb_dma->nr_channels) {
-		printk("Invalid channel id\n");
+		pr_err("Invalid channel id\n");
 		return -EINVAL;
 	}
 
@@ -212,15 +214,15 @@ static void ambdma_return_desc(struct ambdma_chan *amb_chan,
 static void ambdma_chain_complete(struct ambdma_chan *amb_chan,
 		struct ambdma_desc *amb_desc)
 {
-	struct dma_async_tx_descriptor	*txd = &amb_desc->txd;
+	struct dma_async_tx_descriptor *txd = &amb_desc->txd;
 
 	dma_cookie_complete(txd);
 
 	ambdma_return_desc(amb_chan, amb_desc);
 
 	spin_unlock(&amb_chan->lock);
-	if (txd->callback && (txd->flags & DMA_PREP_INTERRUPT))
-		txd->callback(txd->callback_param);
+	if (txd->flags & DMA_PREP_INTERRUPT)
+		dmaengine_desc_get_callback_invoke(txd, NULL);
 	spin_lock(&amb_chan->lock);
 
 	dma_run_dependencies(txd);
@@ -277,7 +279,7 @@ static void ambdma_handle_error(struct ambdma_chan *amb_chan,
 static void ambdma_tasklet(unsigned long data)
 {
 	struct ambdma_chan *amb_chan = (struct ambdma_chan *)data;
-	struct ambdma_desc *amb_desc = NULL;
+	struct ambdma_desc *first = NULL;
 	enum ambdma_status old_status;
 	unsigned long flags;
 
@@ -297,9 +299,9 @@ static void ambdma_tasklet(unsigned long data)
 	/* note: if the DMA channel is stopped manually rather than naturally end,
 	 * then ambdma_first_active() will return the next descriptor that need
 	 * to be started, but not the descriptor that invoke this tasklet (IRQ) */
-	amb_desc = ambdma_first_active(amb_chan);
+	first = ambdma_first_active(amb_chan);
 
-	if (!amb_desc->is_cyclic && amb_chan->status != AMBDMA_STATUS_IDLE) {
+	if (!first->is_cyclic && amb_chan->status != AMBDMA_STATUS_IDLE) {
 		pr_err("%s: channel(%d) invalid status\n",
 				__func__, amb_chan->chan.chan_id);
 		goto tasklet_out;
@@ -307,19 +309,19 @@ static void ambdma_tasklet(unsigned long data)
 
 	if (old_status == AMBDMA_STATUS_BUSY) {
 		/* the IRQ is triggered by DMA stopping naturally or by errors.*/
-		if (ambdma_desc_is_error(amb_desc)) {
-			ambdma_handle_error(amb_chan, amb_desc);
-		} else if (amb_desc->is_cyclic) {
+		if (ambdma_desc_is_error(first)) {
+			ambdma_handle_error(amb_chan, first);
+		} else if (first->is_cyclic) {
 			spin_unlock(&amb_chan->lock);
-			if (amb_desc->txd.callback)
-				amb_desc->txd.callback(amb_desc->txd.callback_param);
+			if (first->txd.flags & DMA_PREP_INTERRUPT)
+				dmaengine_desc_get_callback_invoke(&first->txd, NULL);
 			spin_lock(&amb_chan->lock);
 		} else {
 			ambdma_advance_work(amb_chan);
 		}
 	} else if (old_status == AMBDMA_STATUS_STOPPING) {
 		/* the DMA channel is stopped manually.  */
-		ambdma_dostart(amb_chan, amb_desc);
+		ambdma_dostart(amb_chan, first);
 	}
 
 tasklet_out:
@@ -334,7 +336,6 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	irqreturn_t ret = IRQ_NONE;
 
 	int_src = readl(amb_dma->regbase + DMA_INT_OFFSET);
-
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
@@ -543,12 +544,13 @@ static void ambdma_free_chan_resources(struct dma_chan *chan)
 
 /* If this function is called when the dma channel is transferring data,
  * you may get inaccuracy result. */
-static u32 ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
+static int ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
 	struct ambdma_desc *first = NULL, *amb_desc;
+	phys_addr_t desc_phys;
 	unsigned long flags;
-	u32 count = 0;
+	size_t count = 0, trials;
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 
@@ -563,15 +565,55 @@ static u32 ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 	 * desc from the dma channel status register, and get the count for
 	 * completed desc from the "rpt" field in desc. */
 	if (first) {
-		count = readl(dma_chan_sta_reg(amb_chan));
-		count &= AMBARELLA_DMA_MAX_LENGTH;
+		/*
+		 * the DA and STA registers cannot be read both atomically, hence
+		 * a race condition may occur: the first read register may refer
+		 * to one child descriptor whereas the second read may refer to
+		 * a later child descriptor in the list because of the DMA transfer
+		 * progression inbetween the two reads.
+		 *
+		 * One solution could have been to pause the DMA transfer, read
+		 * the DA and STA registers then resume the DMA transfer.
+		 * Nonetheless, this approach presents a drawback, that is, if the
+		 * DMA transfer is paused, RX overruns or TX underruns are more
+		 * likey to occur depending on the system latency.
+		 */
+		for (trials = 0; trials < AMBARELLA_MAX_DESC_TRIALS; trials++) {
+			desc_phys = readl(dma_chan_da_reg(amb_chan));
 
-		count += ambdma_desc_transfer_count(first);
-		if (!list_empty(&first->tx_list)) {
-			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
-				count += ambdma_desc_transfer_count(amb_desc);
+			rmb(); /* ensure Descriptor Address is read before Status */
+			count = readl(dma_chan_sta_reg(amb_chan));
+			count &= AMBARELLA_DMA_MAX_LENGTH;
+			rmb(); /* ensure Descriptor Address is read after Status */
+
+			if (likely(desc_phys == readl(dma_chan_da_reg(amb_chan))))
+				break;
+		}
+
+		if (unlikely(trials >= AMBARELLA_MAX_DESC_TRIALS))
+			return -ETIMEDOUT;
+
+		if (desc_phys != first->txd.phys) {
+			count += first->lli->xfr_count;
+
+			if (!list_empty(&first->tx_list)) {
+				list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
+					if (desc_phys == amb_desc->txd.phys)
+						break;
+
+					count += amb_desc->lli->xfr_count;
+				}
 			}
 		}
+
+		/*
+		 * Note: the descriptor in DA register is not the current
+		 * working descriptor, it's actually the descriptor next to
+		 * current working descriptor.
+		 */
+		count -= amb_desc->lli->xfr_count;
+		count += first->total_len;
+		count %= first->total_len;
 	} else if (!list_empty(&amb_chan->queue)) {
 		/* if it's in queue list, all of the desc have not been started,
 		 * so the transferred count is always 0.  */
@@ -586,19 +628,27 @@ static u32 ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
 
-	BUG_ON(!first);
+	if (!first)
+		return -EINVAL;
 
-	return first->len - count;
+	return first->total_len - count;
 }
 
 static enum dma_status ambdma_tx_status(struct dma_chan *chan,
 		dma_cookie_t cookie, struct dma_tx_state *txstate)
 {
 	enum dma_status ret;
+	int residue;
 
 	ret = dma_cookie_status(chan, cookie, txstate);
-	if (ret != DMA_COMPLETE)
-		dma_set_residue(txstate, ambdma_get_bytes_left(chan, cookie));
+	if (ret == DMA_COMPLETE || !txstate)
+		return ret;
+
+	residue = ambdma_get_bytes_left(chan, cookie);
+	if (unlikely(residue < 0))
+		return DMA_ERROR;
+
+	dma_set_residue(txstate, residue);
 
 	return ret;
 }
@@ -791,7 +841,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 			goto dma_cyclic_err;
 		}
 		/* trigger interrupt after each dma transaction ends. */
-		amb_desc->lli->attr = amb_chan->rt_attr | DMA_DESC_ID;
+		amb_desc->lli->attr = amb_chan->rt_attr;
+		amb_desc->lli->attr |= (flags & DMA_PREP_INTERRUPT) ? DMA_DESC_ID : 0;
 		amb_desc->lli->xfr_count = period_len;
 		/* rpt_addr points to amb_desc->lli->rpt */
 		amb_desc->lli->rpt_addr =
@@ -822,7 +873,8 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 
 	/* First descriptor of the chain embedds additional information */
 	first->txd.cookie = -EBUSY;
-	first->len = buf_len;
+	first->txd.flags = flags;
+	first->total_len = buf_len;
 
 	return &first->txd;
 
@@ -895,7 +947,7 @@ static struct dma_async_tx_descriptor *ambdma_prep_slave_sg(
 	/* First descriptor of the chain embedds additional information */
 	first->txd.cookie = -EBUSY;
 	first->txd.flags = flags; /* client is in control of this ack */
-	first->len = total_len;
+	first->total_len = total_len;
 
 	return &first->txd;
 
@@ -958,7 +1010,7 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_memcpy(
 	/* First descriptor of the chain embedds additional information */
 	first->txd.cookie = -EBUSY;
 	first->txd.flags = flags; /* client is in control of this ack */
-	first->len = len;
+	first->total_len = len;
 
 	return &first->txd;
 
