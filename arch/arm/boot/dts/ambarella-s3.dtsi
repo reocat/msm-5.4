@@ -195,6 +195,7 @@
 
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
+				reg = <0>;
 				/* gpio interrupts to vic */
 				interrupts = <124 0x4>, <123 0x4>, <122 0x4>,
 					     <121 0x4>, <120 0x4>, <119 0x4>,
@@ -718,15 +719,17 @@
 			compatible = "ambarella,dummycodec";
 		};
 
-		framebuffer@1 {
+		framebuffer0: framebuffer@0 {
 			compatible = "ambarella,fb";
+			reg = <0>;
 			amb,vout-id = <0>;
 			amb,format = "rgb565";
 			status = "disabled";
 		};
 
-		framebuffer@2 {
+		framebuffer1: framebuffer@1 {
 			compatible = "ambarella,fb";
+			reg = <1>;
 			amb,vout-id = <1>;
 			amb,format = "rgb565";
 		};

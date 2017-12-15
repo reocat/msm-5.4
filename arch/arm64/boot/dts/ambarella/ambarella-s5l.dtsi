@@ -88,7 +88,7 @@
 		};
 	};
 
-	cpufreq@0 {
+	cpufreq {
 		compatible = "ambarella,cpufreq";
 		/* cpufreq-method is valid for "cortex", "core", "relevance". */
 		cpufreq-method = "relevance";
@@ -251,6 +251,7 @@
 
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
+				reg = <0>;
 				/* gpio interrupts to gic */
 				interrupts = <0 52 0x4>,
 					     <0 51 0x4>,
@@ -635,7 +636,7 @@
 			dma-requests = <16>;
 		};
 
-		gdma: gdma@e0005000 {
+		gdma: gdma@e0015000 {
 			compatible = "ambarella,gdma";
 			reg = <0xe0015000 0x400>;
 			interrupts = <0 37 0x1>;
@@ -856,7 +857,7 @@
 			reg = <0xe001b000 0x50>;
 		};
 
-		hdmi@0xe0013000 {
+		hdmi@e0013000 {
 			compatible = "ambarella,hdmi";
 			reg = <0xe0013000 0x1000>;
 			interrupts = <0 58 0x4>;
@@ -945,14 +946,16 @@
 			reg = <0>;
 		};
 
-		framebuffer@1 {
+		framebuffer0: framebuffer@0 {
 			compatible = "ambarella,fb";
+			reg = <0>;
 			amb,vout-id = <0>;
 			amb,format = "rgb565";
 		};
 
-		framebuffer@2 {
+		framebuffer1: framebuffer@1 {
 			compatible = "ambarella,fb";
+			reg = <1>;
 			amb,vout-id = <1>;
 			amb,format = "rgb565";
 		};
