@@ -236,10 +236,12 @@ static void ambdma_complete_all(struct ambdma_chan *amb_chan)
 
 	list_splice_init(&amb_chan->active_list, &list);
 
-	/* submit queued descriptors ASAP, i.e. before we go through
-	 * the completed ones. */
-	if (!list_empty(&amb_chan->queue)) {
-		list_splice_init(&amb_chan->queue, &amb_chan->active_list);
+	/*
+	 * submit queued descriptors ASAP, i.e. before we go through the
+	 * completed ones.
+	 */
+	if (!list_empty(&amb_chan->queue_list)) {
+		list_splice_init(&amb_chan->queue_list, &amb_chan->active_list);
 		ambdma_dostart(amb_chan, ambdma_first_active(amb_chan));
 	}
 
@@ -253,8 +255,10 @@ static void ambdma_advance_work(struct ambdma_chan *amb_chan)
 		ambdma_complete_all(amb_chan);
 	} else {
 		ambdma_chain_complete(amb_chan, ambdma_first_active(amb_chan));
-		/* active_list has been updated by ambdma_chain_complete(),
-		 * so ambdma_first_active() will get another amb_desc. */
+		/*
+		 * active_list has been updated by ambdma_chain_complete(),
+		 * so ambdma_first_active() will get another amb_desc.
+		 */
 		ambdma_dostart(amb_chan, ambdma_first_active(amb_chan));
 	}
 }
@@ -265,7 +269,7 @@ static void ambdma_handle_error(struct ambdma_chan *amb_chan,
 	list_del_init(&bad_desc->desc_node);
 
 	/* try to submit queued descriptors to restart dma */
-	list_splice_init(&amb_chan->queue, amb_chan->active_list.prev);
+	list_splice_init(&amb_chan->queue_list, amb_chan->active_list.prev);
 	if (!list_empty(&amb_chan->active_list))
 		ambdma_dostart(amb_chan, ambdma_first_active(amb_chan));
 
@@ -296,9 +300,11 @@ static void ambdma_tasklet(unsigned long data)
 	if (list_empty(&amb_chan->active_list))
 		goto tasklet_out;
 
-	/* note: if the DMA channel is stopped manually rather than naturally end,
+	/*
+	 * Note: if the DMA channel is stopped manually rather than naturally end,
 	 * then ambdma_first_active() will return the next descriptor that need
-	 * to be started, but not the descriptor that invoke this tasklet (IRQ) */
+	 * to be started, but not the descriptor that invoke this tasklet (IRQ).
+	 */
 	first = ambdma_first_active(amb_chan);
 
 	if (!first->is_cyclic && amb_chan->status != AMBDMA_STATUS_IDLE) {
@@ -360,19 +366,23 @@ static int ambdma_stop_channel(struct ambdma_chan *amb_chan)
 
 	if (amb_chan->status == AMBDMA_STATUS_BUSY) {
 		if (amb_chan->force_stop == 0 || !amb_dma->non_support_prs) {
-			/* if force_stop == 0, the DMA channel is still running
+			/*
+			 * if force_stop == 0, the DMA channel is still running
 			 * at this moment. And if the chip doesn't support early
 			 * end, normally there are still two IRQs will be triggered
-			 * untill DMA channel stops. */
+			 * untill DMA channel stops.
+			 */
 			first = ambdma_first_active(amb_chan);
 			first->lli->attr |= DMA_DESC_EOC;
 			list_for_each_entry(amb_desc, &first->tx_list, desc_node) {
 				amb_desc->lli->attr |= DMA_DESC_EOC;
 			}
 			amb_chan->status = AMBDMA_STATUS_STOPPING;
-			/* active_list is still being used by DMA controller,
+			/*
+			 * active_list is still being used by DMA controller,
 			 * so move it to stopping_list to avoid being
-			 * initialized by next transfer */
+			 * initialized by next transfer.
+			 */
 			list_move_tail(&first->desc_node, &amb_chan->stopping_list);
 
 			if (!amb_dma->non_support_prs) {
@@ -433,8 +443,10 @@ static int ambdma_resume_channel(struct ambdma_chan *amb_chan)
 
 static void ambdma_dostart(struct ambdma_chan *amb_chan, struct ambdma_desc *first)
 {
-	/* if DMA channel is not idle right now, the DMA descriptor
-	 * will be started at ambdma_tasklet(). */
+	/*
+	 * if DMA channel is not idle right now, the DMA descriptor
+	 * will be started at ambdma_tasklet().
+	 */
 	if (amb_chan->status > AMBDMA_STATUS_IDLE)
 		return;
 
@@ -468,7 +480,7 @@ static dma_cookie_t ambdma_tx_submit(struct dma_async_tx_descriptor *tx)
 		list_add_tail(&amb_desc->desc_node, &amb_chan->active_list);
 		ambdma_dostart(amb_chan, amb_desc);
 	} else {
-		list_add_tail(&amb_desc->desc_node, &amb_chan->queue);
+		list_add_tail(&amb_desc->desc_node, &amb_chan->queue_list);
 	}
 
 	spin_unlock_irqrestore(&amb_chan->lock, flags);
@@ -531,7 +543,7 @@ static void ambdma_free_chan_resources(struct dma_chan *chan)
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 	BUG_ON(!list_empty(&amb_chan->active_list));
-	BUG_ON(!list_empty(&amb_chan->queue));
+	BUG_ON(!list_empty(&amb_chan->queue_list));
 	BUG_ON(amb_chan->status == AMBDMA_STATUS_BUSY);
 
 	list_splice_init(&amb_chan->free_list, &list);
@@ -542,8 +554,14 @@ static void ambdma_free_chan_resources(struct dma_chan *chan)
 		ambdma_free_desc(chan, amb_desc);
 }
 
-/* If this function is called when the dma channel is transferring data,
- * you may get inaccuracy result. */
+/*
+ * If this function is called when the dma channel is transferring data,
+ * you may get inaccuracy result.
+ * And, the data count is the count of data read from source, but not the
+ * count to destination. Some data may buffer in DMA engine before send out.
+ * So it is just a reference if dma is still working or pausing. The internal
+ * buffer is up to 40 bytes.
+ */
 static int ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 {
 	struct ambdma_chan *amb_chan = to_ambdma_chan(chan);
@@ -554,19 +572,25 @@ static int ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 
-	/* according to the cookie, find amb_desc in active_list. */
-	if (!list_empty(&amb_chan->active_list)) {
-		amb_desc = ambdma_first_active(amb_chan);
-		if (amb_desc->txd.cookie == cookie)
+	/* Find amb_desc in active_list or stopping_list by cookie. */
+	amb_desc = ambdma_first_active(amb_chan);
+	if (amb_desc && amb_desc->txd.cookie == cookie)
+		first = amb_desc;
+
+	if (!first) {
+		amb_desc = ambdma_first_stopping(amb_chan);
+		if (amb_desc && amb_desc->txd.cookie == cookie)
 			first = amb_desc;
 	}
 
-	/* if it's in active list, we should get the count for non-completed
+	/*
+	 * If it's in active list, we should get the count for non-completed
 	 * desc from the dma channel status register, and get the count for
-	 * completed desc from the "rpt" field in desc. */
-	if (first) {
+	 * completed desc from the "xfr_count" field in desc.
+	 */
+	if (likely(first)) {
 		/*
-		 * the DA and STA registers cannot be read both atomically, hence
+		 * The DA and STA registers cannot be read both atomically, hence
 		 * a race condition may occur: the first read register may refer
 		 * to one child descriptor whereas the second read may refer to
 		 * a later child descriptor in the list because of the DMA transfer
@@ -614,10 +638,12 @@ static int ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 		count -= amb_desc->lli->xfr_count;
 		count += first->total_len;
 		count %= first->total_len;
-	} else if (!list_empty(&amb_chan->queue)) {
-		/* if it's in queue list, all of the desc have not been started,
-		 * so the transferred count is always 0.  */
-		list_for_each_entry(amb_desc, &amb_chan->queue, desc_node) {
+	} else if (!list_empty(&amb_chan->queue_list)) {
+		/*
+		 * If it's in queue_list, all of the desc have not been started,
+		 * so the transferred count is always 0.
+		 */
+		list_for_each_entry(amb_desc, &amb_chan->queue_list, desc_node) {
 			if (amb_desc->txd.cookie == cookie) {
 				first = amb_desc;
 				count = 0;
@@ -660,7 +686,7 @@ static void ambdma_issue_pending(struct dma_chan *chan)
 
 	spin_lock_irqsave(&amb_chan->lock, flags);
 
-	/* if dma channel is not idle, will active queue list in tasklet. */
+	/* if dma channel is not idle, will active queue_list in tasklet. */
 	if (amb_chan->status == AMBDMA_STATUS_IDLE) {
 		if (!list_empty(&amb_chan->active_list))
 			pr_err("%s: active_list should be empty here\n", __func__);
@@ -791,7 +817,7 @@ static int ambdma_terminate_all(struct dma_chan *chan)
 	ambdma_stop_channel(amb_chan);
 
 	/* active_list entries will end up before queued entries */
-	list_splice_init(&amb_chan->queue, &list);
+	list_splice_init(&amb_chan->queue_list, &list);
 	list_splice_init(&amb_chan->active_list, &list);
 
 	/* Flush all pending and queued descriptors */
@@ -862,9 +888,11 @@ static struct dma_async_tx_descriptor *ambdma_prep_dma_cyclic(
 		left_len -= period_len;
 		buf_addr += period_len;
 
-		/* our dma controller can't transfer data larger than 4M Bytes,
+		/*
+		 * Our dma controller can't transfer data larger than 4M Bytes,
 		 * but it seems that no use case will transfer so large data,
-		 * so we just trigger a BUG here for reminder. */
+		 * so we just trigger a BUG here for reminder.
+		 */
 		BUG_ON(amb_desc->lli->xfr_count > AMBARELLA_DMA_MAX_LENGTH);
 	} while (left_len > 0);
 
@@ -935,9 +963,11 @@ static struct dma_async_tx_descriptor *ambdma_prep_slave_sg(
 		prev = amb_desc;
 		total_len += amb_desc->lli->xfr_count;
 
-		/* our dma controller can't transfer data larger than 4M Bytes,
+		/*
+		 * Our dma controller can't transfer data larger than 4M Bytes,
 		 * but it seems that no use case will transfer so large data,
-		 * so we just trigger a BUG here for reminder. */
+		 * so we just trigger a BUG here for reminder.
+		 */
 		BUG_ON(amb_desc->lli->xfr_count > AMBARELLA_DMA_MAX_LENGTH);
 	}
 
@@ -1189,7 +1219,7 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		amb_chan->status = AMBDMA_STATUS_IDLE;
 		amb_chan->chan.device = &amb_dma->dma_dev;
 		INIT_LIST_HEAD(&amb_chan->active_list);
-		INIT_LIST_HEAD(&amb_chan->queue);
+		INIT_LIST_HEAD(&amb_chan->queue_list);
 		INIT_LIST_HEAD(&amb_chan->free_list);
 		INIT_LIST_HEAD(&amb_chan->stopping_list);
 
