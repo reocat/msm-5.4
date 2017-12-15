@@ -58,7 +58,7 @@ struct ambdma_chan {
 
 	u32				descs_allocated;
 	struct list_head		active_list;
-	struct list_head		queue;
+	struct list_head		queue_list;
 	struct list_head		free_list;
 	struct list_head		stopping_list;
 
@@ -99,14 +99,14 @@ static inline struct ambdma_desc *to_ambdma_desc(
 static inline struct ambdma_desc *ambdma_first_active(
 	struct ambdma_chan *amb_chan)
 {
-	return list_first_entry(&amb_chan->active_list,
+	return list_first_entry_or_null(&amb_chan->active_list,
 			struct ambdma_desc, desc_node);
 }
 
 static inline struct ambdma_desc *ambdma_first_stopping(
 	struct ambdma_chan *amb_chan)
 {
-	return list_first_entry(&amb_chan->stopping_list,
+	return list_first_entry_or_null(&amb_chan->stopping_list,
 			struct ambdma_desc, desc_node);
 }
 
