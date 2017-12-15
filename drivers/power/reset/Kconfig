@@ -214,7 +214,8 @@ config POWER_RESET_ZX
 	  Reboot support for ZTE SoCs.
 
 config POWER_RESET_AMBARELLA
-	bool "ambarella aarch64 SoCs reset driver"
+	bool "Ambarella SoCs reset driver"
+	depends on ARCH_AMBARELLA
 	default n
 	help
 	  Reboot support for ambarella aarch64 SoCs.
