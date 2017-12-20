@@ -109,6 +109,7 @@ static int ambarella_smp_boot_secondary(unsigned int cpu,
 		smp_rmb();
 
 		arch_send_wakeup_ipi_mask(cpumask_of(cpu));
+		dsb_sev();
 
 		if (pen_release == -1)
 			break;
