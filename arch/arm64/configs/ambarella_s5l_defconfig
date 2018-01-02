@@ -2638,7 +2638,7 @@ CONFIG_ARM64_ERRATUM_858921=y
 #
 # SOC (System On Chip) specific Drivers
 #
-# CONFIG_AMBARELLA_SUPPORT_GDMA is not set
+CONFIG_AMBARELLA_SUPPORT_GDMA=y
 
 #
 # Amlogic SoC drivers

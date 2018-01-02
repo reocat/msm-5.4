@@ -42,6 +42,14 @@ static int ambarella_dummy_mute(struct snd_soc_dai *dai, int mute)
 	return 0;
 }
 
+static int set_tdm_slot (struct snd_soc_dai *dai,
+		unsigned int tx_mask, unsigned int rx_mask,
+		int slots, int slot_width)
+
+{
+	return 0;
+}
+
 static int ambarella_dummy_set_fmt(struct snd_soc_dai *dai,
 		unsigned int fmt)
 {
@@ -54,14 +62,15 @@ static int ambarella_dummy_set_sysclk(struct snd_soc_dai *dai,
 	return 0;
 }
 
-#define AMBDUMMY_RATES SNDRV_PCM_RATE_8000_48000
+#define AMBDUMMY_RATES SNDRV_PCM_RATE_8000_96000
 
-#define AMBDUMMY_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
+#define AMBDUMMY_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE| SNDRV_PCM_FMTBIT_S32_LE)
 
 static struct snd_soc_dai_ops ambdummy_dai_ops = {
 	.digital_mute = ambarella_dummy_mute,
 	.set_fmt = ambarella_dummy_set_fmt,
 	.set_sysclk = ambarella_dummy_set_sysclk,
+	.set_tdm_slot = set_tdm_slot,
 };
 
 static struct snd_soc_dai_driver ambdummy_dai = {

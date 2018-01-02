@@ -1232,6 +1232,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	ambarella_nand_init_hw(host);
 	enable_irq(host->irq);
+	rval = nand_scan_tail(nand_to_mtd(&host->chip));
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, rval);
 

@@ -111,6 +111,7 @@ static int ambarella_smp_boot_secondary(unsigned int cpu,
 		smp_rmb();
 
 		arch_send_wakeup_ipi_mask(cpumask_of(cpu));
+		dsb_sev();
 
 		if (pen_release == -1)
 			break;
@@ -177,9 +178,6 @@ static void __init ambarella_smp_prepare_cpus(unsigned int max_cpus)
 
 	scu_enable(scu_base);
 	scu_power_mode(scu_base, SCU_PM_NORMAL);
-
-	for (i = 0; i < max_cpus; i++)
-		write_cpux_jump_addr(i, virt_to_phys(ambarella_secondary_startup));
 }
 
 #ifdef CONFIG_HOTPLUG_CPU

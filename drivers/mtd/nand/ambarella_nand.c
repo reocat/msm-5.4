@@ -2088,6 +2088,7 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
+	errorCode = nand_scan_tail(nand_to_mtd(&nand_info->chip));
 
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, errorCode);
 
