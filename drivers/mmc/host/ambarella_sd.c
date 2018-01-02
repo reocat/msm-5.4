@@ -1211,8 +1211,7 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 
-	mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ |
-			MMC_CAP_ERASE | MMC_CAP_BUS_WIDTH_TEST |
+	mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_SDIO_IRQ | MMC_CAP_BUS_WIDTH_TEST |
 			MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
 
 	mmc->caps2 |= MMC_CAP2_HS200 | MMC_CAP2_HS200_1_8V_SDR;
