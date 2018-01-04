@@ -52,6 +52,11 @@ static int ambarella_wdt_start(struct watchdog_device *wdd)
 	ctrl_val = ambwdt->irq > 0 ? WDOG_CTR_INT_EN : WDOG_CTR_RST_EN;
 	ctrl_val |= WDOG_CTR_EN;
 
+	if (ambwdt->irq > 0)
+		amba_writel(ambwdt->regbase + WDOG_RST_WD_OFFSET, 0x00);
+	else
+		amba_writel(ambwdt->regbase + WDOG_RST_WD_OFFSET, 0xFF);
+
 	amba_writel(ambwdt->regbase + WDOG_CONTROL_OFFSET, ctrl_val);
 
 	return 0;
