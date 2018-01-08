@@ -199,8 +199,10 @@ static int hibernate_save_image(struct swsusp_info *header,
 			break;
 
 		ret = hibernate_write_page(mtd, data_of(*snapshot));
-		if (ret)
-			break;
+		if (ret) {
+			printk("Hibernation: write page error.\n");
+			return ret;
+		}
 
 		nr_pages ++;
 
