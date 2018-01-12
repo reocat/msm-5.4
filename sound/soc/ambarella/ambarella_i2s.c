@@ -222,7 +222,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s_intf->multi24 = 0;
 		i2s_intf->tx_ctrl = I2S_TX_UNISON_BIT;
 		i2s_intf->word_len = 15;
-		i2s_intf->shift = 0;
 		if (i2s_intf->mode == I2S_DSP_MODE) {
 			i2s_intf->slots = i2s_intf->channels - 1;
 			i2s_intf->word_pos = 15;
@@ -233,11 +232,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
 
-	case SNDRV_PCM_FORMAT_S24_LE:
+	case SNDRV_PCM_FORMAT_S24_LE:		/* 32bits, valid data in low 3 bytes */
 		i2s_intf->multi24 = I2S_24BITMUX_MODE_ENABLE;
 		i2s_intf->tx_ctrl = 0;
 		i2s_intf->word_len = 23;
-		i2s_intf->shift = 1;
 		if (i2s_intf->mode == I2S_DSP_MODE) {
 			i2s_intf->slots = i2s_intf->channels - 1;
 			i2s_intf->word_pos = 0; /* ignored */
@@ -252,7 +250,6 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s_intf->multi24 = I2S_24BITMUX_MODE_ENABLE;
 		i2s_intf->tx_ctrl = 0;
 		i2s_intf->word_len = 31;
-		i2s_intf->shift = 0;
 		if (i2s_intf->mode == I2S_DSP_MODE) {
 			i2s_intf->slots = i2s_intf->channels - 1;
 			i2s_intf->word_pos = 0; /* ignored */
@@ -283,11 +280,9 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		writel_relaxed(i2s_intf->tx_ctrl, priv_data->regbase + I2S_TX_CTRL_OFFSET);
 		writel_relaxed(0x10, priv_data->regbase + I2S_TX_FIFO_LTH_OFFSET);
-		writel_relaxed((i2s_intf->shift << 0), priv_data->regbase + I2S_GATEOFF_OFFSET);
 	} else {
 		writel_relaxed(i2s_intf->rx_ctrl, priv_data->regbase + I2S_RX_CTRL_OFFSET);
 		writel_relaxed(0x20, priv_data->regbase + I2S_RX_FIFO_GTH_OFFSET);
-		writel_relaxed((i2s_intf->shift << 1), priv_data->regbase + I2S_GATEOFF_OFFSET);
 	}
 
 	writel_relaxed(i2s_intf->mode, priv_data->regbase + I2S_MODE_OFFSET);
