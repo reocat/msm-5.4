@@ -169,7 +169,6 @@ struct ambarella_i2s_interface {
 	u32 rx_fifo_len;
 	u32 tx_fifo_len;
 	u32 multi24;
-	u32 shift;
 };
 
 enum Audio_Notify_Type
