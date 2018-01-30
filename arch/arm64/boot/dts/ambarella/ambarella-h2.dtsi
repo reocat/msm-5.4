@@ -104,7 +104,7 @@
 		interrupt-controller;
 		reg = <0xf0041000 0x1000>,	/* GIC Dist */
 		      <0xf0042000 0x2000>,	/* GIC CPU */
-		      /* following are not used if no virtulization
+		      /* following are not used if no virtulization */
 		      <0xf0044000 0x2000>,	/* GIC VCPU Control */
 		      <0xf0046000 0x2000>;	/* GIC VCPU */
 		interrupts = <1 9 0xf04>;	/* GIC Maintenence IRQ */
