@@ -693,10 +693,17 @@ static int ambarella_i2c_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops ambarella_i2c_dev_pm_ops = {
-	.suspend = ambarella_i2c_suspend,
-	.resume = ambarella_i2c_resume,
+
+	/* suspend to mem */
+	.suspend_late = ambarella_i2c_suspend,
+	.resume_early = ambarella_i2c_resume,
+
+	/* suspend to disk */
 	.freeze = ambarella_i2c_suspend,
 	.thaw = ambarella_i2c_resume,
+
+	/* restore from suspend to disk */
+	.restore = ambarella_i2c_resume,
 };
 #endif
 

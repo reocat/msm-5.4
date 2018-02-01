@@ -256,7 +256,7 @@ static int ambarella_ir_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 static int ambarella_ir_suspend(struct device *dev)
 {
 	struct ambarella_ir_priv *priv = dev_get_drvdata(dev);
@@ -277,10 +277,20 @@ static int ambarella_ir_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
-static SIMPLE_DEV_PM_OPS(ambarella_ir_pm_ops, ambarella_ir_suspend,
-			 ambarella_ir_resume);
+static struct dev_pm_ops ambarella_ir_pm_ops = {
+	/* suspend to memory */
+	.suspend	= ambarella_ir_suspend,
+	.resume		= ambarella_ir_resume,
+
+	/* suspend to disk */
+	.freeze		= ambarella_ir_suspend,
+	.thaw		= ambarella_ir_resume,
+
+	/* restore from suspend to disk */
+	.restore	= ambarella_ir_resume,
+};
+#endif
 
 static const struct of_device_id ambarella_ir_table[] = {
 	{ .compatible = "ambarella,ir", },
@@ -292,7 +302,9 @@ static struct platform_driver ambarella_ir_driver = {
 	.driver = {
 		.name = IR_AMBARELLA_NAME,
 		.of_match_table = ambarella_ir_table,
+#ifdef CONFIG_PM
 		.pm     = &ambarella_ir_pm_ops,
+#endif
 	},
 	.probe = ambarella_ir_probe,
 	.remove = ambarella_ir_remove,

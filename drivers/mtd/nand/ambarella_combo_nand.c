@@ -1211,12 +1211,13 @@ static int ambarella_nand_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ambarella_nand_suspend(struct platform_device *pdev,
-	pm_message_t state)
+static int ambarella_nand_suspend(struct device *dev)
 {
-	struct ambarella_nand_host *host = platform_get_drvdata(pdev);
+	struct ambarella_nand_host *host;
+	struct platform_device *pdev = to_platform_device(dev);
 	int rval = 0;
 
+	host = platform_get_drvdata(pdev);
 	disable_irq(host->irq);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
@@ -1225,11 +1226,13 @@ static int ambarella_nand_suspend(struct platform_device *pdev,
 	return rval;
 }
 
-static int ambarella_nand_resume(struct platform_device *pdev)
+static int ambarella_nand_resume(struct device *dev)
 {
-	struct ambarella_nand_host *host = platform_get_drvdata(pdev);
+	struct ambarella_nand_host *host;
+	struct platform_device *pdev = to_platform_device(dev);
 	int rval = 0;
 
+	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
 	enable_irq(host->irq);
 	rval = nand_scan_tail(nand_to_mtd(&host->chip));
@@ -1238,6 +1241,34 @@ static int ambarella_nand_resume(struct platform_device *pdev)
 
 	return rval;
 }
+
+static int ambarella_nand_restore(struct device *dev)
+{
+	struct ambarella_nand_host *host;
+	struct platform_device *pdev = to_platform_device(dev);
+	int rval = 0;
+
+	host = platform_get_drvdata(pdev);
+	ambarella_nand_init_hw(host);
+	enable_irq(host->irq);
+
+	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, rval);
+
+	return rval;
+}
+
+static const struct dev_pm_ops ambarella_nand_pm_ops = {
+	/* suspend to memory */
+	.suspend = ambarella_nand_suspend,
+	.resume = ambarella_nand_resume,
+
+	/* suspend to disk */
+	.freeze = ambarella_nand_suspend,
+	.thaw = ambarella_nand_resume,
+
+	/* restore from suspend to disk */
+	.restore = ambarella_nand_restore,
+};
 #endif
 
 static const struct of_device_id ambarella_nand_of_match[] = {
@@ -1249,13 +1280,12 @@ MODULE_DEVICE_TABLE(of, ambarella_nand_of_match);
 static struct platform_driver ambarella_nand_driver = {
 	.probe		= ambarella_nand_probe,
 	.remove		= ambarella_nand_remove,
-#ifdef CONFIG_PM
-	.suspend	= ambarella_nand_suspend,
-	.resume		= ambarella_nand_resume,
-#endif
 	.driver = {
 		.name	= "ambarella-nand",
 		.of_match_table = ambarella_nand_of_match,
+#ifdef CONFIG_PM
+		.pm	= &ambarella_nand_pm_ops,
+#endif
 	},
 };
 module_platform_driver(ambarella_nand_driver);
