@@ -263,7 +263,7 @@ static const struct of_device_id ambarella_rtc_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, ambarella_rtc_dt_ids);
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 static int ambarella_rtc_suspend(struct device *dev)
 {
 	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
@@ -283,9 +283,20 @@ static int ambarella_rtc_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
-static SIMPLE_DEV_PM_OPS(ambarella_rtc_pm_ops, ambarella_rtc_suspend, ambarella_rtc_resume);
+static struct dev_pm_ops ambarella_rtc_pm_ops = {
+	/* suspend to memory */
+	.suspend	= ambarella_rtc_suspend,
+	.resume		= ambarella_rtc_resume,
+
+	/* suspend to disk */
+	.freeze		= ambarella_rtc_suspend,
+	.thaw		= ambarella_rtc_resume,
+
+	/* restore from suspend to disk */
+	.restore	= ambarella_rtc_resume,
+};
+#endif
 
 static struct platform_driver ambarella_rtc_driver = {
 	.probe		= ambrtc_probe,
@@ -294,7 +305,9 @@ static struct platform_driver ambarella_rtc_driver = {
 		.name	= "ambarella-rtc",
 		.owner	= THIS_MODULE,
 		.of_match_table = ambarella_rtc_dt_ids,
+#ifdef CONFIG_PM
 		.pm	= &ambarella_rtc_pm_ops,
+#endif
 	},
 };
 

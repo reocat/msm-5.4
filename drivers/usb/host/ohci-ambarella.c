@@ -230,10 +230,16 @@ static int ohci_hcd_ambarella_drv_resume(struct device *dev)
 }
 
 static struct dev_pm_ops ambarella_ohci_pmops = {
+	/* suspend to memory */
 	.suspend	= ohci_hcd_ambarella_drv_suspend,
 	.resume		= ohci_hcd_ambarella_drv_resume,
+
+	/* suspend to disk */
 	.freeze		= ohci_hcd_ambarella_drv_suspend,
 	.thaw		= ohci_hcd_ambarella_drv_resume,
+
+	/* restore from suspend to disk */
+	.restore	= ohci_hcd_ambarella_drv_resume,
 };
 
 #define AMBARELLA_OHCI_PMOPS &ambarella_ohci_pmops

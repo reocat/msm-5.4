@@ -922,7 +922,7 @@ static int ambarella_adc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 static int ambarella_adc_suspend(struct device *dev)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
@@ -946,11 +946,20 @@ static int ambarella_adc_resume(struct device *dev)
 
 	return 0;
 }
-#endif
+static struct dev_pm_ops ambarella_adc_pm_ops = {
+	/* suspend to memory */
+	.suspend	= ambarella_adc_suspend,
+	.resume		= ambarella_adc_resume,
 
-static SIMPLE_DEV_PM_OPS(ambarella_adc_pm_ops,
-			 ambarella_adc_suspend,
-			 ambarella_adc_resume);
+	/* suspend to disk */
+	.freeze		= ambarella_adc_suspend,
+	.thaw		= ambarella_adc_resume,
+
+	/* restore from suspend to disk */
+	.restore	= ambarella_adc_resume,
+};
+
+#endif
 
 static const struct of_device_id ambarella_adc_match[] = {
 	{ .compatible = "ambarella,adc", },
@@ -964,7 +973,9 @@ static struct platform_driver ambarella_adc_driver = {
 	.driver		= {
 		.name	= "ambarella-adc",
 		.of_match_table = ambarella_adc_match,
+#ifdef CONFIG_PM
 		.pm	= &ambarella_adc_pm_ops,
+#endif
 	},
 };
 
