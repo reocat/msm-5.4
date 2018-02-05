@@ -88,6 +88,7 @@ struct ambarella_i2c_dev_info {
 
 	struct notifier_block			system_event;
 	struct semaphore			system_event_sem;
+	struct clk				*clk;
 };
 
 int ambpriv_i2c_update_addr(const char *name, int bus, int addr)
@@ -138,7 +139,7 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	unsigned int				apb_clk;
 	__u32					idc_prescale;
 
-	apb_clk = clk_get_rate(clk_get(pinfo->dev, NULL));
+	apb_clk = clk_get_rate(pinfo->clk);
 
 	writel_relaxed(IDC_ENR_REG_DISABLE, pinfo->regbase + IDC_ENR_OFFSET);
 
@@ -599,6 +600,8 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&pinfo->msg_wait);
 	sema_init(&pinfo->system_event_sem, 1);
+
+	pinfo->clk = clk_get(pinfo->dev, NULL);
 
 	ambarella_i2c_hw_init(pinfo);
 

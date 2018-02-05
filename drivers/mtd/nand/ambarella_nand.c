@@ -109,7 +109,7 @@ struct ambarella_nand_info {
 
 	struct notifier_block		system_event;
 	struct semaphore		system_event_sem;
-
+	struct clk			*clk;
 };
 
 /* ==========================================================================*/
@@ -465,7 +465,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 	regmap_read(nand_info->reg_rct, SYS_CONFIG_OFFSET, &poc);
 	clk_div2 = POC_GCLK_CORE_DIV2_MASK ? !(poc & POC_GCLK_CORE_DIV2_MASK) : 0;
 
-	clk = (clk_get_rate(clk_get(nand_info->dev, NULL)) / 1000000);
+	clk = (clk_get_rate(nand_info->clk) / 1000000);
 	clk >>= clk_div2;
 
 	/* timing 0 */
@@ -1987,6 +1987,8 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	init_waitqueue_head(&nand_info->wq);
 	sema_init(&nand_info->system_event_sem, 1);
 	atomic_set(&nand_info->irq_flag, 0x7);
+
+	nand_info->clk = clk_get(nand_info->dev, NULL);
 
 	nand_info->dmabuf = dma_alloc_coherent(nand_info->dev,
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,
