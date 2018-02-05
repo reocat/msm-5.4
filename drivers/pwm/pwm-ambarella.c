@@ -97,7 +97,7 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		val &= ~PWM_INV_EN_BIT;
 	writel_relaxed(val, reg);
 
-	clock = (clk_get_rate(clk_get(NULL, "gclk_pwm")) + 50000) / 100000;
+	clock = (clk_get_rate(ambpwm->clk) + 50000) / 100000;
 	total = (clock * period_ns + 5000) / 10000;
 	div = total >> tick_bits;
 	clock /= (div + 1);
@@ -248,7 +248,9 @@ static int ambarella_pwm_suspend(struct platform_device *pdev,
 
 static int ambarella_pwm_resume(struct platform_device *pdev)
 {
-	clk_set_rate(clk_get(NULL, "gclk_pwm"), PWM_DEFAULT_FREQUENCY);
+	struct ambarella_pwm_chip *ambpwm = platform_get_drvdata(pdev);
+
+	clk_set_rate(ambpwm->clk, PWM_DEFAULT_FREQUENCY);
 	return 0;
 }
 #endif
