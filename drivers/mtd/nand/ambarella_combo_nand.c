@@ -1215,31 +1215,11 @@ static int ambarella_nand_suspend(struct device *dev)
 {
 	struct ambarella_nand_host *host;
 	struct platform_device *pdev = to_platform_device(dev);
-	int rval = 0;
 
 	host = platform_get_drvdata(pdev);
 	disable_irq(host->irq);
 
-	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
-		__func__, rval, state.event);
-
-	return rval;
-}
-
-static int ambarella_nand_resume(struct device *dev)
-{
-	struct ambarella_nand_host *host;
-	struct platform_device *pdev = to_platform_device(dev);
-	int rval = 0;
-
-	host = platform_get_drvdata(pdev);
-	ambarella_nand_init_hw(host);
-	enable_irq(host->irq);
-	rval = nand_scan_tail(nand_to_mtd(&host->chip));
-
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, rval);
-
-	return rval;
+	return 0;
 }
 
 static int ambarella_nand_restore(struct device *dev)
@@ -1251,10 +1231,21 @@ static int ambarella_nand_restore(struct device *dev)
 	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
 	enable_irq(host->irq);
-
-	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, rval);
+	rval = nand_scan_tail(nand_to_mtd(&host->chip));
 
 	return rval;
+}
+
+static int ambarella_nand_resume(struct device *dev)
+{
+	struct ambarella_nand_host *host;
+	struct platform_device *pdev = to_platform_device(dev);
+
+	host = platform_get_drvdata(pdev);
+	ambarella_nand_init_hw(host);
+	enable_irq(host->irq);
+
+	return 0;
 }
 
 static const struct dev_pm_ops ambarella_nand_pm_ops = {
