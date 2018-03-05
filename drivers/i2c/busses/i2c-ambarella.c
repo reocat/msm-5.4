@@ -55,6 +55,8 @@
  * of corresponding i2c client will be overwritten when it's in used. */
 #define AMBARELLA_I2C_VIN_FDT_NAME		"ambvin"
 #define AMBARELLA_I2C_VIN_MAX_NUM		8
+#define AMBARELLA_I2C_STOP_WAIT_INTERVAL_US (10)
+#define AMBARELLA_I2C_STOP_WAIT_TIME_US (5 * AMBARELLA_I2C_STOP_WAIT_INTERVAL_US)
 
 enum ambarella_i2c_state {
 	AMBA_I2C_STATE_IDLE,
@@ -68,6 +70,17 @@ enum ambarella_i2c_state {
 	AMBA_I2C_STATE_BULK_WRITE,
 	AMBA_I2C_STATE_NO_ACK,
 	AMBA_I2C_STATE_ERROR
+};
+
+enum ambarella_i2c_hw_state {
+	AMBA_I2C_HW_STATE_IDLE,
+	AMBA_I2C_HW_STATE_START_COMMAND,
+	AMBA_I2C_HW_STATE_TX_DATA,
+	AMBA_I2C_HW_STATE_RX_ACK,
+	AMBA_I2C_HW_STATE_COMMAND_FINISH,
+	AMBA_I2C_HW_STATE_STOP_COMMAND,
+	AMBA_I2C_HW_STATE_RX_DATA,
+	AMBA_I2C_HW_STATE_TX_ACK
 };
 
 struct ambarella_i2c_dev_info {
@@ -137,6 +150,15 @@ int ambpriv_i2c_update_addr(const char *name, int bus, int addr)
 	return 0;
 }
 EXPORT_SYMBOL(ambpriv_i2c_update_addr);
+
+static enum ambarella_i2c_hw_state ambarella_i2c_get_hw_state(struct ambarella_i2c_dev_info *pinfo)
+{
+	__u32 status_reg;
+
+	status_reg = amba_readl(pinfo->regbase + IDC_STS_OFFSET);
+
+	return (status_reg >> 4) & 0xF;
+}
 
 static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 {
@@ -465,6 +487,8 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	int				errorCode = -EPERM;
 	int				retryCount;
 	long				timeout;
+	int				hw_state;
+	int				wait_stop_retry;
 	int				i;
 
 	pinfo = (struct ambarella_i2c_dev_info *)i2c_get_adapdata(adap);
@@ -499,6 +523,21 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		ambarella_i2c_start_current_msg(pinfo);
 		timeout = wait_event_timeout(pinfo->msg_wait,
 			pinfo->msg_num == 0, adap->timeout);
+
+		/* We need to check HW state to ensure the controller has already entered idle indeed, or if slave device
+		 * holds the SCL due to busy, i2c gpio muxer might turn off bus before the STOP is really sent out. */
+		wait_stop_retry = AMBARELLA_I2C_STOP_WAIT_TIME_US / AMBARELLA_I2C_STOP_WAIT_INTERVAL_US;
+		while (wait_stop_retry--) {
+			hw_state = ambarella_i2c_get_hw_state(pinfo);
+			if (hw_state == AMBA_I2C_HW_STATE_IDLE)
+				break;
+
+			udelay(AMBARELLA_I2C_STOP_WAIT_INTERVAL_US);
+		}
+
+		if (hw_state != AMBA_I2C_HW_STATE_IDLE)
+			dev_warn(pinfo->dev, "Xfer exits with non-idle hw state %d.\n", hw_state);
+
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
 		}
