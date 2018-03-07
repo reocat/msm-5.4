@@ -82,6 +82,7 @@ struct ambarella_mmc_host {
 	dma_addr_t			desc_phys;
 
 	u32				switch_1v8_dly;
+	u32				fixed_init_clk;
 	int				fixed_cd;
 	int				fixed_wp;
 	bool				emmc_boot;
@@ -321,8 +322,11 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 	host->clock = 0;
 
 	if (clock != 0) {
-		clk_set_rate(host->clk, min_t(u32, max_t(u32, clock, 24000000),
-					mmc->f_max));
+		if (clock <= 400000 && host->fixed_init_clk > 0)
+			clock = host->fixed_init_clk;
+
+		sd_clk = min_t(u32, max_t(u32, clock, 24000000), mmc->f_max);
+		clk_set_rate(host->clk, sd_clk);
 
 		sd_clk = clk_get_rate(host->clk);
 
@@ -1169,6 +1173,9 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	if (of_property_read_u32(np, "amb,switch-1v8-dly", &host->switch_1v8_dly) < 0)
 		host->switch_1v8_dly = 100;
+
+	if (of_property_read_u32(np, "amb,fixed-init-clk", &host->fixed_init_clk) < 0)
+		host->fixed_init_clk = 0;
 
 	if (of_property_read_u32(np, "amb,fixed-wp", &host->fixed_wp) < 0)
 		host->fixed_wp = -1;

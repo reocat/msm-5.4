@@ -26,9 +26,9 @@
 #include <plat/ptb.h>
 #include <linux/of.h>
 
-//#define ambptb_prt
+//#define ambptb_debug
 
-#ifdef ambptb_prt
+#ifdef ambptb_debug
 #define ambptb_prt printk
 #else
 #define ambptb_prt(format, arg...) do {} while (0)
