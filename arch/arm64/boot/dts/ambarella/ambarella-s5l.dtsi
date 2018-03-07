@@ -1108,7 +1108,7 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_so";
 			assigned-clocks = <&gclk_so>;
-			assigned-clock-rates = <24000000>;
+			assigned-clock-rates = <12000000>;
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
 			amb,frac-mode;
