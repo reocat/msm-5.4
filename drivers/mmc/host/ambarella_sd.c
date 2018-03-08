@@ -637,8 +637,12 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 	host->cmd = cmd;
 
-	dev_dbg(host->dev, "Start %s[%u], arg = %u\n",
-		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+
+	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
+			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
+		dev_dbg(host->dev, "Start %s[%u], arg = %u\n",
+			cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+	}
 
 	rval = ambarella_sd_check_ready(host);
 	if (rval < 0) {
@@ -800,7 +804,7 @@ retry:
 			return -ECANCELED;
 
 		ambarella_sd_set_clk(mmc, clock);
-		dev_dbg(host->dev, "doing return, clock = %d\n", host->clock);
+		dev_dbg(host->dev, "doing retune, clock = %d\n", host->clock);
 	}
 
 	for (misc = 0; misc < 4; misc++) {
@@ -1029,8 +1033,11 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	dev_dbg(host->dev, "End %s[%u], arg = %u\n",
-		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
+			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
+		dev_dbg(host->dev, "End %s[%u], arg = %u\n",
+			cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+	}
 
 	del_timer(&host->timer);
 
