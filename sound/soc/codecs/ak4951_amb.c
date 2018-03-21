@@ -1152,6 +1152,17 @@ static int ak4951_resume(struct snd_soc_codec *codec)
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int i;
 
+	/* Reset AK4951 codec */
+	gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
+	msleep(1);
+	gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
+	/*The 0x00 register no Ack for the dummy command:write 0x00 to 0x00*/
+	ak4951->i2c_clt->flags |= I2C_M_IGNORE_NAK;
+	i2c_smbus_write_byte_data(ak4951->i2c_clt, (u8)(AK4951_00_POWER_MANAGEMENT1 & 0xFF), 0x00);
+	ak4951->i2c_clt->flags &= ~I2C_M_IGNORE_NAK;
+
+	ak4951_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
 	for(i = 0; i < 7; i++)
 		snd_soc_write(codec, i, ak4951->reg_cache[i]);
 

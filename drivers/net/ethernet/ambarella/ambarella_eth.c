@@ -2670,9 +2670,9 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	}
 
 	if (lp->int_gtx_clk125)
-		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
-	else
 		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x1);
+	else
+		regmap_update_bits(lp->reg_rct, ENET_GTXCLK_SRC_OFFSET, 0x1, 0x0);
 
 	if (lp->tx_clk_invert)
 		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 1<<31);

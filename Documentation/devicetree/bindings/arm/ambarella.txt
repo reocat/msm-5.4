@@ -89,6 +89,7 @@ For Ambarella, the DTS for specific board is:
    $PROJECT/ambarella/boards/$BOARD/bsp/$BOARD.dts
 which will include the DTS for specific ambarella SoC chip:
    arch/arm/boot/dts/ambarella-$SoC.dtsi
+   arch/arm64/boot/dts/ambarella/ambarella-$SoC.dtsi
 Normally, it's NOT recommended to modify the DTS for ambarella SoC chip.
 
 
@@ -548,6 +549,9 @@ Optional properties:
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
 - amb,sd-force-1_8v: specifies if the signal voltage is force setting as 1.8v
   by hardware.
+- amb,fixed-init-clk: specifies to use low frequency clock for SD/eMMC
+  initializing. PS: some eMMC(e.g., one of SanDisk eMMC) cannot be initialized
+  correctly in 400KHz.
 
 iii) Example
 -----------

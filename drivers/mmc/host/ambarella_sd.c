@@ -82,6 +82,7 @@ struct ambarella_mmc_host {
 	dma_addr_t			desc_phys;
 
 	u32				switch_1v8_dly;
+	u32				fixed_init_clk;
 	int				fixed_cd;
 	int				fixed_wp;
 	bool				auto_cmd12;
@@ -320,8 +321,11 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 	host->clock = 0;
 
 	if (clock != 0) {
-		clk_set_rate(host->clk, min_t(u32, max_t(u32, clock, 24000000),
-					mmc->f_max));
+		if (clock <= 400000 && host->fixed_init_clk > 0)
+			clock = host->fixed_init_clk;
+
+		sd_clk = min_t(u32, max_t(u32, clock, 24000000), mmc->f_max);
+		clk_set_rate(host->clk, sd_clk);
 
 		sd_clk = clk_get_rate(host->clk);
 
@@ -632,8 +636,12 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 	host->cmd = cmd;
 
-	dev_dbg(host->dev, "Start %s[%u], arg = %u\n",
-		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+
+	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
+			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
+		dev_dbg(host->dev, "Start %s[%u], arg = %u\n",
+			cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+	}
 
 	rval = ambarella_sd_check_ready(host);
 	if (rval < 0) {
@@ -795,7 +803,7 @@ retry:
 			return -ECANCELED;
 
 		ambarella_sd_set_clk(mmc, clock);
-		dev_dbg(host->dev, "doing return, clock = %d\n", host->clock);
+		dev_dbg(host->dev, "doing retune, clock = %d\n", host->clock);
 	}
 
 	for (misc = 0; misc < 4; misc++) {
@@ -1024,8 +1032,11 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	dev_dbg(host->dev, "End %s[%u], arg = %u\n",
-		cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
+			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
+		dev_dbg(host->dev, "End %s[%u], arg = %u\n",
+			cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
+	}
 
 	del_timer(&host->timer);
 
@@ -1168,6 +1179,9 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	if (of_property_read_u32(np, "amb,switch-1v8-dly", &host->switch_1v8_dly) < 0)
 		host->switch_1v8_dly = 100;
+
+	if (of_property_read_u32(np, "amb,fixed-init-clk", &host->fixed_init_clk) < 0)
+		host->fixed_init_clk = 0;
 
 	if (of_property_read_u32(np, "amb,fixed-wp", &host->fixed_wp) < 0)
 		host->fixed_wp = -1;
