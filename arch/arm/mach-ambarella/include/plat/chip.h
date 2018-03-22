@@ -25,17 +25,13 @@
 #define __PLAT_AMBARELLA_CHIP_H__
 
 /* ==========================================================================*/
-#define A5S		(11000)
-#define S2		(11000)
-#define S2E		(11000)
-
-
 #define S2L		(12000)
 #define S3		(11000)
 #define S3L		(13000)
 #define S5		(15000)
 #define S5L		(16000)
 #define CV1		(20000)
+#define CV22		(22000)
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
@@ -53,6 +49,8 @@
 #define CHIP_REV	S5L
 #elif defined(CONFIG_ARCH_AMBARELLA_CV1)
 #define CHIP_REV	CV1
+#elif defined(CONFIG_ARCH_AMBARELLA_CV22)
+#define CHIP_REV	CV22
 #else
 #error "Undefined CHIP_REV"
 #endif

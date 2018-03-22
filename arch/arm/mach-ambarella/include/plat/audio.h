@@ -27,15 +27,19 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define I2S_OFFSET			0xD000
 #else
 #define I2S_OFFSET			0x1A000
 #endif
-#define I2S_BASE			(AHB_BASE + I2S_OFFSET)
+#define I2S_BASE			(AHB_N_BASE + I2S_OFFSET)
 #define I2S_BASE_PHYS 			(AHB_PHYS_BASE + I2S_OFFSET)
 #define I2S_REG(x)			(I2S_BASE + (x))
 #define I2S_REG_PHYS(x)  		(I2S_BASE_PHYS + (x))
+
+#define I2S1_OFFSET			0x1D000
+#define I2S1_BASE			(AHB_N_BASE + I2S1_OFFSET)
+#define I2S1_REG(x)			(I2S1_BASE + (x))
 
 /* ==========================================================================*/
 #define I2S_MODE_OFFSET				0x00

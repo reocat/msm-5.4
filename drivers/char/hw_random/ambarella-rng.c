@@ -18,28 +18,26 @@
 #include <linux/module.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
-#include <linux/pm_runtime.h>
+#include <linux/regmap.h>
 
-#define	AMBA_RNG_CONTROL			0x40
-#define	AMBA_RCT_CONTROL			0x1A4
-#define	AMBA_RCT_BASE_ADDRESS			0xED080000
-#define	AMBA_RNG_DATA				0x44
+#define	AMBA_RNG_CONTROL			0x00
+#define	AMBA_RNG_DATA				0x04
+
 #define AMBA_RNG_DELAY_MS			25
 
 struct ambarella_rng_private {
 	struct hwrng rng;
 	void __iomem *base;
+	struct regmap *rct_reg;
 };
 
 static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wait)
 {
-
-	struct ambarella_rng_private *priv =
-	    container_of(rng, struct ambarella_rng_private, rng);
-	u32	val;
+	struct ambarella_rng_private *priv;
+	u32 val, start_time, timeout, *data = buf;
 	size_t read = 0;
-	u32 *data = buf;
-	unsigned int start_time, timeout;
+
+	priv = container_of(rng, struct ambarella_rng_private, rng);
 
 	/* start rng */
 	val = readl_relaxed(priv->base + AMBA_RNG_CONTROL);
@@ -48,7 +46,8 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 	writel_relaxed(val, priv->base + AMBA_RNG_CONTROL);
 
 	start_time = jiffies_to_msecs(jiffies);
-	while ((readl_relaxed(priv->base + AMBA_RNG_CONTROL) & 0x2) && wait) {
+
+	while ((readl_relaxed(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
 		timeout = jiffies_to_msecs(jiffies) - start_time;
 		if (timeout < AMBA_RNG_DELAY_MS) {
 			cpu_relax();
@@ -59,29 +58,33 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 		}
 	}
 
-	while (read*8 < max) {
+	while (read * 8 < max) {
 		*data++ = readl_relaxed(priv->base + AMBA_RNG_DATA + read);
 		read += 4;
 	}
 
 out:
 	return read;
-
 }
 
 static int ambarella_rng_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_rng_private *priv;
 	struct resource *res;
-	u32	val;
-	void __iomem *rct_rng;
+	u32 val;
 
 	dev_info(&pdev->dev, "rng probed\r\n");
+
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct ambarella_rng_private), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (res == NULL) {
+		dev_err(&pdev->dev, "Get RNG mem resource failed!\n");
+		return -ENXIO;
+	}
 
 	priv->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(priv->base)) {
@@ -89,8 +92,13 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->base);
 	}
 
-	priv->rng.name = dev_driver_string(&pdev->dev);
+	priv->rct_reg = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
+	if (IS_ERR(priv->rct_reg)) {
+		dev_err(&pdev->dev, "no rct regmap!\n");
+		return -ENODEV;
+	}
 
+	priv->rng.name = dev_driver_string(&pdev->dev);
 	priv->rng.read = ambarella_rng_read;
 	priv->rng.priv = (unsigned long)&pdev->dev;
 
@@ -102,15 +110,8 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 	val &= ~BIT(5);
 	writel_relaxed(val, priv->base + AMBA_RNG_CONTROL);
 
-	/* rct control powerdown */
-	rct_rng = ioremap(AMBA_RCT_BASE_ADDRESS, 0x20);
-	if (rct_rng == NULL) {
-		dev_err(&pdev->dev, "ambarella rct_rng ioremap() failed\n");
-		return -ENOMEM;
-	}
-	val = readl_relaxed(rct_rng + AMBA_RCT_CONTROL);
-	val &= ~BIT(0);
-	writel_relaxed(val, rct_rng + AMBA_RCT_CONTROL);
+	/* power up rng */
+	regmap_update_bits(priv->rct_reg, RNG_CTRL_OFFSET, RNG_CTRL_PD, 0x0);
 
 	return devm_hwrng_register(&pdev->dev, &priv->rng);
 }

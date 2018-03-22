@@ -27,12 +27,18 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define RTC_OFFSET			0x1000
 #else
 #define RTC_OFFSET			0x15000
 #endif
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
 #define RTC_BASE			(APB_BASE + RTC_OFFSET)
+#else
+#define RTC_BASE			(AHB_SCRATCHPAD_BASE + RTC_OFFSET)
+#endif
 #define RTC_REG(x)			(RTC_BASE + (x))
 
 /* ==========================================================================*/
@@ -44,18 +50,21 @@
 #define RTC_CURT_WRITE_OFFSET		0x30
 #define RTC_CURT_READ_OFFSET		0x34
 #define RTC_ALAT_READ_OFFSET		0x38
-#define RTC_STATUS_OFFSET			0x3C
+#define RTC_STATUS_OFFSET		0x3C
 
-#define PWC_RESET_OFFSET			0x40
-#define PWC_WO_OFFSET				0x7C
-#define PWC_DNALERT_OFFSET			0xA8
-#define PWC_LBAT_OFFSET				0xAC
+#define PWC_RESET_OFFSET		0x40
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
+#define PWC_WO_OFFSET			0x7C
+#define PWC_DNALERT_OFFSET		0xA8
+#define PWC_LBAT_OFFSET			0xAC
 #define PWC_REG_WKUPC_OFFSET		0xB0
-#define PWC_REG_STA_OFFSET			0xB4
+#define PWC_REG_STA_OFFSET		0xB4
 #define PWC_SET_STATUS_OFFSET		0xC0
 #define PWC_CLR_REG_WKUPC_OFFSET	0xC4
-#define PWC_WKENC_OFFSET			0xC8
-#define PWC_POS3_OFFSET				0xD0
+#define PWC_WKENC_OFFSET		0xC8
+#define PWC_POS3_OFFSET			0xD0
 
 #define PWC_ENP1C_OFFSET		0xD4
 #define PWC_ENP2C_OFFSET		0xD8
@@ -70,6 +79,13 @@
 #define PWC_DISP2_OFFSET		0xB8
 #define PWC_DISP3_OFFSET		0xBC
 #define PWC_BC_OFFSET			0xFC
+#else
+#define PWC_BC_OFFSET			0x48
+#define PWC_WO_OFFSET			0x4C
+#define PWC_DNALERT_OFFSET		0x50
+#define PWC_REG_STA_OFFSET		0x54
+#define PWC_SET_STATUS_OFFSET		0x58
+#endif
 
 /* ==========================================================================*/
 /* RTC_STATUS_OFFSET */

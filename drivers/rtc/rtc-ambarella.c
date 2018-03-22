@@ -42,11 +42,11 @@
 #define AMBRTC_ALARM		1
 
 struct ambarella_rtc {
-	struct rtc_device	*rtc;
-	void __iomem	*base;
-	struct device	*dev;
-	int	lost_power;
-	int	irq;
+	struct rtc_device *rtc;
+	void __iomem *base;
+	struct device *dev;
+	int lost_power;
+	int irq;
 };
 
 static inline void ambrtc_strobe_set(struct ambarella_rtc *ambrtc)
@@ -167,29 +167,7 @@ static irqreturn_t ambrtc_alarm_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int ambrtc_ioctl(struct device *dev, unsigned int cmd,
-			     unsigned long arg)
-{
-	struct ambarella_rtc *ambrtc;
-	int lbat, rval = 0;
-
-	ambrtc = dev_get_drvdata(dev);
-
-	switch (cmd) {
-	case RTC_VL_READ:
-		lbat = !!readl_relaxed(ambrtc->base + PWC_LBAT_OFFSET);
-		rval = put_user(lbat, (int __user *)arg);
-		break;
-	default:
-		rval = -ENOIOCTLCMD;
-		break;
-	}
-
-	return rval;
-}
-
 static const struct rtc_class_ops ambarella_rtc_ops = {
-	.ioctl		= ambrtc_ioctl,
 	.read_time	= ambrtc_read_time,
 	.set_mmss	= ambrtc_set_mmss,
 	.read_alarm	= ambrtc_read_alarm,

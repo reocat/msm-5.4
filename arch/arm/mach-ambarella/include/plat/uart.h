@@ -31,12 +31,14 @@
 #define	UART_INSTANCES			3
 #elif (CHIP_REV == CV1)
 #define	UART_INSTANCES			7
+#elif (CHIP_REV == CV22)
+#define	UART_INSTANCES			5
 #else
 #define	UART_INSTANCES			2
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define UART0_OFFSET			0x0000
 #else
 #define UART0_OFFSET			0x5000
@@ -44,23 +46,34 @@
 
 #if (CHIP_REV == CV1)
 #define UART1_OFFSET			0x16000
+#elif (CHIP_REV == CV22)
+#define UART1_OFFSET			0x17000
 #else
 #define UART1_OFFSET			0x32000
 #endif
 
 #if (CHIP_REV == CV1)
 #define UART2_OFFSET			0x17000
+#elif (CHIP_REV == CV22)
+#define UART2_OFFSET			0x18000
 #else
 #define UART2_OFFSET			0x33000
 #endif
 
 #if (CHIP_REV == CV1)
 #define UART3_OFFSET			0x18000
+#elif (CHIP_REV == CV22)
+#define UART3_OFFSET			0x19000
 #else
 #define UART3_OFFSET			0x15000
 #endif
 
+#if (CHIP_REV == CV1)
 #define UART4_OFFSET			0x19000
+#else
+#define UART4_OFFSET			0x1A000
+#endif
+
 #define UART5_OFFSET			0x1A000
 #define UART6_OFFSET			0x1B000
 
@@ -79,6 +92,13 @@
 #define UART4_REG(x)			(UART4_BASE + (x))
 #define UART5_REG(x)			(UART5_BASE + (x))
 #define UART6_REG(x)			(UART6_BASE + (x))
+#define UART_REG(n, x)			((n) == 0 ? UART0_REG(x) : \
+					 (n) == 1 ? UART1_REG(x) : \
+					 (n) == 2 ? UART2_REG(x) : \
+					 (n) == 3 ? UART3_REG(x) : \
+					 (n) == 4 ? UART4_REG(x) : \
+					 (n) == 5 ? UART5_REG(x) : \
+						    UART6_REG(x))
 
 /* ==========================================================================*/
 #define UART_RB_OFFSET			0x00

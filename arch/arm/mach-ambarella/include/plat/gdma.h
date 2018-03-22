@@ -30,8 +30,12 @@
 /****************************************************/
 /* Capabilities based on chip revision              */
 /****************************************************/
-
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define GDMA_OFFSET			0x15000
+#else
+#define GDMA_OFFSET			0xC000
+#endif
 #define GDMA_BASE			(AHB_BASE + GDMA_OFFSET)
 #define GDMA_REG(x)			(GDMA_BASE + (x))
 

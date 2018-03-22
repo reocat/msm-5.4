@@ -34,6 +34,9 @@
 #elif (CHIP_REV == CV1)
 #define SPI_AHB_INSTANCES			6
 #define SPI_AHB_SLAVE_INSTANCES			1
+#elif (CHIP_REV == CV22)
+#define SPI_AHB_INSTANCES			4
+#define SPI_AHB_SLAVE_INSTANCES			1
 #else
 #define SPI_AHB_INSTANCES			2
 #define SPI_AHB_SLAVE_INSTANCES			1

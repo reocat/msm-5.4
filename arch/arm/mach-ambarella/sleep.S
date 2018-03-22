@@ -114,7 +114,7 @@ ENTRY(ambarella_cpu_resume)
 	 */
 	ldr	r0, =DBGBUS_PHYS_BASE
 	mov	r1, #0x1
-	str	r1, [r0, #CG_UART_OFFSET]
+	str	r1, [r0, #CG_UART0_OFFSET]
 
 	ldr	r0, =(APB_PHYS_BASE + UART0_OFFSET)
 	mov	r1, #0x1

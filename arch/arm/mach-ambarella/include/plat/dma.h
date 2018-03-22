@@ -27,28 +27,43 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
-#define DMA_INSTANCES			2
-#define NUM_DMA_CHANNELS 		16
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define DMA_INSTANCES			1
 #define NUM_DMA_CHANNELS 		8
+#else
+#define DMA_INSTANCES			2
+#define NUM_DMA_CHANNELS 		16
 #endif
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
+#define DMA0_OFFSET			0x5000
+#elif (CHIP_REV == CV1)
 #define DMA0_OFFSET			0xA000
 #else
-#define DMA0_OFFSET			0x5000
+#define DMA0_OFFSET			0x20000
 #endif
-#define DMA0_BASE			(AHB_N_BASE + DMA0_OFFSET)
+#define DMA0_BASE			(AHB_BASE + DMA0_OFFSET)
 #define DMA0_REG(x)			(DMA0_BASE + (x))
 
+#if (CHIP_REV == CV1)
 #define DMA1_OFFSET			0xB000
-#define DMA1_BASE			(AHB_N_BASE + DMA1_OFFSET)
+#else
+#define DMA1_OFFSET			0x21000
+#endif
+#define DMA1_BASE			(AHB_BASE + DMA1_OFFSET)
 #define DMA1_REG(x)			(DMA1_BASE + (x))
 
-#define DMA_SEL0_OFFSET			0x00
-#define DMA_SEL1_OFFSET			0x04
+/* ==========================================================================*/
+
+#if ((CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5) || (CHIP_REV == S5L))
+#define AHBSP_DMA_SEL_BIT_SHIFT		4
+#elif (CHIP_REV == CV1)
+#define AHBSP_DMA_SEL_BIT_SHIFT		5
+#else
+#define AHBSP_DMA_SEL_BIT_SHIFT		8
+#endif
 
 /* ==========================================================================*/
 

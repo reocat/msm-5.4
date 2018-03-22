@@ -1429,7 +1429,7 @@ static void ambarella_vbus_timer(unsigned long data)
 	u32 raw_status, connected, suspended;
 
 	suspended = readl_relaxed(udc->base_reg + USB_DEV_STS_REG) & USB_DEV_SUSP_STS;
-	regmap_read(udc->scr_reg, 0x4, &raw_status);
+	regmap_read(udc->scr_reg, AHBSP_USB_SIDEBAND_OFFSET, &raw_status);
 	connected = !!(raw_status & (1 << 26));
 
 	if (suspended)

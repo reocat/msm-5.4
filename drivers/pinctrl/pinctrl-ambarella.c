@@ -42,8 +42,6 @@
 #define PIN_NAME_LENGTH			8
 #define SUFFIX_LENGTH			4
 
-#define GPIO_PAD_PULL_EN_OFFSET(b)	((b)<5 ? (b)*4 : 0x80 + ((b)-5)*4)
-#define GPIO_PAD_PULL_DIR_OFFSET(b)	((b)<5 ? 0x14 + (b)*4 : 0x8c + ((b)-5)*4)
 #define GPIO_DS_OFFSET(b)		((b)<4 ? (b)*8 : 0x124 + ((b)-4) * 8)
 
 #define MUXIDS_TO_PINID(m)	((m) & 0xfff)

@@ -25,8 +25,10 @@
 
 #define DRAM_DRAM_OFFSET 		0x0000
 #define DRAM_DDRC_OFFSET  		0x0800
+#define DRAM_DDRC1_OFFSET  		0x0a00
 
 #define DDRC_REG(x)			(DRAMC_BASE + DRAM_DDRC_OFFSET + (x))
+#define DDRC1_REG(x)			(DRAMC_BASE + DRAM_DDRC1_OFFSET + (x))
 #define DRAM_REG(x)			(DRAMC_BASE + DRAM_DRAM_OFFSET + (x))
 
 /* ==========================================================================*/

@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define WDOG_OFFSET			0x2000
 #else
 #define WDOG_OFFSET			0xC000
@@ -56,10 +56,12 @@
 #define WDOG_CTR_RST_EN			0x00000002
 #define WDOG_CTR_EN			0x00000001
 
-/* WDOG_RESTART_REG only works with magic 0x4755.
+/*
+ * WDOG_RESTART_REG only works with magic 0x4755.
  * Set this value would transferred the value in
  * WDOG_RELOAD_REG into WDOG_STATUS_REG and would
- * not trigger the underflow event. */
+ * not trigger the underflow event.
+ */
 #define WDT_RESTART_VAL			0x4755
 
 /* ==========================================================================*/

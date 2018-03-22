@@ -27,24 +27,22 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S3L) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
-#define SD_INSTANCES			2
-#elif (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_INSTANCES			3
 #else
-#define SD_INSTANCES			1
+#define SD_INSTANCES			2
 #endif
 
-#if (CHIP_REV == S3L) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
-#define SD_SUPPORT_SDIO			0
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_SUPPORT_SDIO			1
+#else
+#define SD_SUPPORT_SDIO			0
 #endif
 
 #define SD_SUPPORT_SDXC			1
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define SD0_OFFSET			0x4000
 #else
 #define SD0_OFFSET			0x2000
@@ -52,7 +50,7 @@
 
 #define SD1_OFFSET			0xC000
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define SD2_OFFSET			0x5000
 #else
 #define SD2_OFFSET			0x1F000
@@ -65,8 +63,8 @@
 					 (id == 1) ? SD1_BASE : SD2_BASE)
 
 #define SD0_REG(x)			(SD0_BASE + (x))
-#define SD2_REG(x)			(SD1_BASE + (x))
-#define SD3_REG(x)			(SD2_BASE + (x))
+#define SD1_REG(x)			(SD1_BASE + (x))
+#define SD2_REG(x)			(SD2_BASE + (x))
 
 /* ==========================================================================*/
 #define SD_DMA_ADDR_OFFSET		0x000

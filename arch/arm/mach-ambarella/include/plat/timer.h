@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define TIMER_OFFSET			0x5000
 #else
 #define TIMER_OFFSET			0xB000
@@ -35,7 +35,7 @@
 #define TIMER_BASE			(APB_BASE + TIMER_OFFSET)
 #define TIMER_REG(x)			(TIMER_BASE + (x))
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define TIMER1_OFFSET			0x6000
 #else
 #define TIMER1_OFFSET			0xF000
@@ -44,10 +44,10 @@
 #define TIMER1_REG(x)			(TIMER1_BASE + (x))
 
 /* ==========================================================================*/
-#if (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == CV1)
-#define INTERVAL_TIMER_INSTANCES		20
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3L) || (CHIP_REV == S5L)
 #define INTERVAL_TIMER_INSTANCES		8
+#else
+#define INTERVAL_TIMER_INSTANCES		20
 #endif
 
 /* ==========================================================================*/

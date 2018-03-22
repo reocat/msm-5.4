@@ -30,7 +30,7 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S3) || (CHIP_REV == S5)
 #define ADC_NUM_CHANNELS		5
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define ADC_NUM_CHANNELS		3
 #else
 #define ADC_NUM_CHANNELS		4
@@ -43,21 +43,24 @@
 #define ADC_OFFSET			0x3000
 #endif
 
+#define ADC_BASE			(APB_BASE + ADC_OFFSET)
+#define ADC_REG(x)			(ADC_BASE + (x))
+
 /* ==========================================================================*/
 
-#if (CHIP_REV == S5)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5)
+#define ADC_SUPPORT_T2V		0
+#define ADC_T2V_CHANNEL		0
+#elif (CHIP_REV == S5)
 #define ADC_SUPPORT_T2V		1
 #define ADC_T2V_CHANNEL		4
-#define T2V_BASE_LINE_DATA	0x6F0
-#define T2V_BASE_LINE		20
-#elif (CHIP_REV == CV1)
+#else
 #define ADC_SUPPORT_T2V		1
 #define ADC_T2V_CHANNEL		2
+#endif
+
 #define T2V_BASE_LINE_DATA	0x6F0
 #define T2V_BASE_LINE		20
-#else
-#define ADC_SUPPORT_T2V		0
-#endif
 
 #if (CHIP_REV == S3)
 #define ADC_PERIOD_CYCLE		5
