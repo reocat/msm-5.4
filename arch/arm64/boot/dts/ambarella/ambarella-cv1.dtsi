@@ -1010,9 +1010,9 @@
 			reg = <0xe8001000 0x50>;
 		};
 
-		rng@e8001000 {
+		rng@e8001040 {
 			compatible = "ambarella,hw-rng";
-			reg = <0xe80010040 0x14>;
+			reg = <0xe8001040 0x14>;
 			amb,rct-regmap = <&rct_syscon>;
 		};
 
