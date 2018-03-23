@@ -65,10 +65,13 @@ struct ambdma_chan {
 	dma_addr_t			rt_addr;
 	u32				rt_attr;
 	u32				force_stop;
+	enum ambdma_status		status;
+
+#ifdef CONFIG_PM
 	u32				ch_ctl;
 	u32				ch_sta;
 	u32				ch_da;
-	enum ambdma_status		status;
+#endif
 };
 
 struct ambdma_device {
@@ -87,6 +90,11 @@ struct ambdma_device {
 	u32				non_support_prs : 1;
 	u32				nr_channels;
 	u32				nr_requests;
+
+#ifdef CONFIG_PM
+	u32				sel_val0;
+	u32				sel_val1;
+#endif
 };
 
 

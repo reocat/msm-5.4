@@ -447,15 +447,6 @@
 #define AMBARELLA_ETH_FC_RX		(1 << 1)
 #define AMBARELLA_ETH_FC_TX		(1 << 2)
 
-
-#if (CHIP_REV == A5S)
-#define SYS_CONFIG_ETH_ENABLE		0x00000080
-#elif (CHIP_REV == S2) || (CHIP_REV == S2E)
-#define SYS_CONFIG_ETH_ENABLE		0x00800000
-#else
-#define SYS_CONFIG_ETH_ENABLE		0x00000001
-#endif
-
 /* ==========================================================================*/
 
 #endif

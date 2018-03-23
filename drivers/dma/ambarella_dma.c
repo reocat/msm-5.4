@@ -1329,10 +1329,6 @@ static int ambarella_dma_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
-static u32 ambdma_chan_sel_val0 = 0;
-static u32 ambdma_chan_sel_val1 = 0;
-#endif
 static int ambarella_dma_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct ambdma_device *amb_dma = platform_get_drvdata(pdev);
@@ -1346,13 +1342,14 @@ static int ambarella_dma_suspend(struct platform_device *pdev, pm_message_t stat
 		amb_chan->ch_da = readl(dma_chan_da_reg(amb_chan));
 		amb_chan->ch_sta = readl(dma_chan_sta_reg(amb_chan));
 	}
-#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
-	ambdma_chan_sel_val0 = readl_relaxed(amb_dma->regscr + DMA_SEL0_OFFSET);
-	if (amb_dma->nr_requests > 16)
-		ambdma_chan_sel_val1 = readl_relaxed(amb_dma->regscr + DMA_SEL1_OFFSET);
-#endif
-	return 0;
 
+	if (amb_dma->regscr != NULL) {
+		amb_dma->sel_val0 = readl_relaxed(amb_dma->regscr + DMA_SEL0_OFFSET);
+		if (amb_dma->nr_requests > 16)
+			amb_dma->sel_val1 = readl_relaxed(amb_dma->regscr + DMA_SEL1_OFFSET);
+	}
+
+	return 0;
 }
 
 static int ambarella_dma_resume(struct platform_device *pdev)
@@ -1361,11 +1358,12 @@ static int ambarella_dma_resume(struct platform_device *pdev)
 	struct ambdma_chan *amb_chan;
 	int i;
 
-#if (DMA_SUPPORT_SELECT_CHANNEL == 1)
-	writel(ambdma_chan_sel_val0, amb_dma->regscr + DMA_SEL0_OFFSET);
-	if (amb_dma->nr_requests > 16)
-		writel(ambdma_chan_sel_val1, amb_dma->regscr + DMA_SEL1_OFFSET);
-#endif
+	if (amb_dma->regscr != NULL) {
+		writel(amb_dma->sel_val0, amb_dma->regscr + DMA_SEL0_OFFSET);
+		if (amb_dma->nr_requests > 16)
+			writel(amb_dma->sel_val1, amb_dma->regscr + DMA_SEL1_OFFSET);
+	}
+
 	/* restore dma channel register */
 	for (i = 0; i < amb_dma->nr_channels; i++) {
 		amb_chan = &amb_dma->amb_chan[i];

@@ -2488,7 +2488,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 	regmap_read(lp->reg_rct, SYS_CONFIG_OFFSET, &poc);
 
-	if (!(poc & SYS_CONFIG_ETH_ENABLE)) {
+	if (!(poc & POC_ETH_IS_ENABLED)) {
 		dev_err(&pdev->dev, "Not enabled, check HW config!\n");
 		ret_val = PTR_ERR(lp->reg_scr);
 		goto ambeth_drv_probe_free_netdev;

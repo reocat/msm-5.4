@@ -297,7 +297,7 @@
 					     <0 44 0x4>,
 					     <0 45 0x4>,
 					     <0 46 0x4>,
-					     <0 47 0x4>,;
+					     <0 47 0x4>;
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinctrl 0 0 160>;
@@ -455,8 +455,8 @@
 				amb,pinmux-ids = <0x3040 0x3041>;
 			};
 
-			ahb_mdio_pins: mdio@1 {
-				reg = <1>;
+			ahb_mdio_pins: mdio@2 {
+				reg = <2>;
 				amb,pinmux-ids = <0x5040 0x5041>;
 			};
 
@@ -495,7 +495,7 @@
 				amb,pinmux-ids = <0x102c 0x102d 0x102e 0x102f>;
 			};
 
-			i2s1_pins: i2s0@0 {
+			i2s1_pins: i2s1@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1030 0x1031 0x1032 0x1033
 						  0x1034 0x1035>;
@@ -514,11 +514,6 @@
 			usb_host0_pins_c: uhc0@2 { /* USB0: host/device configurable */
 				reg = <2>;
 				amb,pinmux-ids = <0x5069 0x506b>;
-			};
-
-			usb_host1_pins: uhc1@0 { /* USB1 */
-				reg = <0>;
-				amb,pinmux-ids = <0x506a 0x506c>;
 			};
 
 			pwm0_pins_a: pwm0@0 {
