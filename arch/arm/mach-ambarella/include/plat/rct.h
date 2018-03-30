@@ -683,6 +683,17 @@
 #define RCT_BOOT_EMMC_SDXC		0x00000010
 
 /* ==========================================================================*/
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#define MIPI_DSI_CTRL0_REG		0X00000670
+#define MIPI_DSI_CTRL1_REG		0X00000674
+#define MIPI_DSI_CTRL2_REG		0X00000678
+#define MIPI_DSI_CTRL3_REG		0X0000067C
+#define MIPI_DSI_CTRL4_REG		0X00000680
+#define MIPI_DSI_CTRL5_REG		0X00000684
+#define MIPI_DSI_AUX0_REG		0X0000068c
+#endif
+/* ==========================================================================*/
+
 #define RCT_DLL0_OFFSET			0x90
 #define RCT_DLL0_REG			RCT_REG(RCT_DLL0_OFFSET)
 #define RCT_DLL_NEG_PUSH_LIMIT_OFFSET          0x644

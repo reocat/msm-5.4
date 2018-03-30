@@ -1030,6 +1030,7 @@
 			compatible = "ambarella,voutc";
 			interrupts = <0 89 0x1>;
 			interrupt-names = "vout0";
+			rct-regmap = <&rct_syscon>;
 		};
 
 		/* node for vout1(lcd) controller */
@@ -1037,6 +1038,7 @@
 			compatible = "ambarella,voutc";
 			interrupts = <0 88 0x1>;
 			interrupt-names = "vout1";
+			rct-regmap = <&rct_syscon>;
 		};
 
 	};
@@ -1051,14 +1053,12 @@
 			reg = <0>;
 		};
 
-		/*
 		framebuffer0: framebuffer@0 {
 			compatible = "ambarella,fb";
 			reg = <0>;
 			amb,vout-id = <0>;
 			amb,format = "rgb565";
 		};
-		*/
 
 		framebuffer1: framebuffer@1 {
 			compatible = "ambarella,fb";
