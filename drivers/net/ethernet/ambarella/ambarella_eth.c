@@ -164,6 +164,8 @@ struct ambeth_info {
 					dump_tx : 1,
 					dump_rx : 1,
 					dump_rx_free : 1,
+					ahb_mdio_bus : 1,
+					ahb_mdio_clk_div: 4,
 					dump_rx_all : 1;
 };
 
@@ -519,6 +521,70 @@ static void ambhw_dump_buffer(const char *msg,
 }
 
 /* ==========================================================================*/
+
+static int ambahb_mdio_poll_status(struct mii_bus *bus, u32 tmo)
+{
+	struct ambeth_info *lp = bus->priv;
+	unsigned long orig_jiffies;
+	unsigned int value;
+	int rval = 0;
+
+	orig_jiffies = jiffies;
+	for (;;) {
+		regmap_read(lp->reg_scr, 0xa4, &value);
+		if (!(value & (1 << 0)))
+			break;
+
+		if (time_after(jiffies, orig_jiffies + tmo)) {
+			rval = -ETIMEDOUT;
+			break;
+		}
+	}
+	return rval;
+}
+
+static int ambahb_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
+{
+	int value;
+	struct ambeth_info *lp = bus->priv;
+
+	if (ambahb_mdio_poll_status(bus, 0x10))
+		return -EIO;
+
+	value = ETH_MAC_GMII_ADDR_PA(mii_id) | ETH_MAC_GMII_ADDR_GR(regnum);
+	value |= (lp->ahb_mdio_clk_div << 2);
+	value |= (0 << 1);			/* Read enable */
+	value |= (1 << 0);
+	regmap_write(lp->reg_scr, 0xa4, value);
+
+	if (ambahb_mdio_poll_status(bus, 0x20))
+		return -EIO;
+
+	regmap_read(lp->reg_scr, 0xa0, &value);
+
+	return value;
+}
+
+static int ambahb_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
+		u16 value)
+{
+	struct ambeth_info *lp = bus->priv;
+
+	if (ambahb_mdio_poll_status(bus, 0x10))
+		return -EIO;
+
+	value = ETH_MAC_GMII_ADDR_PA(mii_id) | ETH_MAC_GMII_ADDR_GR(regnum);
+	value |= (lp->ahb_mdio_clk_div << 2);
+	value |= (1 << 1);			/* Write enable */
+	value |= (1 << 0);
+	regmap_write(lp->reg_scr, 0xa4, value);
+
+	if (ambahb_mdio_poll_status(bus, 0x20))
+		return -EIO;
+
+	return 0;
+}
+
 static int ambhw_mdio_read(struct mii_bus *bus,
 	int mii_id, int regnum)
 {
@@ -2298,7 +2364,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int ret_val, hw_intf;
+	int ret_val, hw_intf, val;
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
@@ -2395,6 +2461,12 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	if (ret_val < 0 || lp->rx_count < AMBETH_RX_RNG_MIN)
 		lp->rx_count = AMBETH_RX_RNG_MIN;
 
+	ret_val = of_property_read_u32(np, "amb,ahb-12mhz-div", &val);
+	if (ret_val < 0 || val > 16)
+		lp->ahb_mdio_clk_div = 4;
+	else
+		lp->ahb_mdio_clk_div = val - 1;
+
 	lp->tx_irq_low = ((lp->tx_count * 1) / 4);
 	lp->tx_irq_high = ((lp->tx_count * 3) / 4);
 
@@ -2406,6 +2478,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	lp->dump_rx_all = of_property_read_bool(np, "amb,dump-rx-all");
 	lp->enhance = !!of_find_property(np, "amb,enhance", NULL);
 	lp->mdio_gpio = !!of_find_property(np, "amb,mdio-gpio", NULL);
+	lp->ahb_mdio_bus = !!of_find_property(np, "amb,ahb_mdio_bus", NULL);
 
 	/* check if using external ref_clk, it's valid for RMII only */
 	lp->ext_ref_clk = !!of_find_property(np, "amb,ext-ref-clk", NULL);
@@ -2533,14 +2606,20 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		}
 		memcpy(&lp->new_bus, bus, sizeof(struct mii_bus));
 
-		lp->new_bus.name = "Ambarella MDIO Bus",
-		lp->new_bus.read = &ambhw_mdio_read,
-		lp->new_bus.write = &ambhw_mdio_write,
-		lp->new_bus.reset = &ambhw_mdio_reset,
+		lp->new_bus.name = "Ambarella MDIO Bus";
+		lp->new_bus.read = &ambhw_mdio_read;
+		lp->new_bus.write = &ambhw_mdio_write;
+		lp->new_bus.reset = &ambhw_mdio_reset;
 		snprintf(lp->new_bus.id, MII_BUS_ID_SIZE, "%s", pdev->name);
 		lp->new_bus.priv = lp;
 		lp->new_bus.parent = &pdev->dev;
 		lp->new_bus.state = MDIOBUS_ALLOCATED;
+
+
+		if (lp->ahb_mdio_bus) {
+			lp->new_bus.read = &ambahb_mdio_read;
+			lp->new_bus.write = &ambahb_mdio_write;
+		}
 
 		ret_val = of_mdiobus_register(&lp->new_bus, pdev->dev.of_node);
 		if (ret_val < 0) {
