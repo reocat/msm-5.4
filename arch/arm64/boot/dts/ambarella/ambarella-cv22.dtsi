@@ -1019,6 +1019,12 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+		hwtimer {
+			compatible = "ambarella,hwtimer";
+			interrupts = <0 25 0x1>;
+			interrupt-names = "hwtimer";
+		};
+
 		/* node for dsp controller */
 		dsp {
 			compatible = "ambarella,dsp";
