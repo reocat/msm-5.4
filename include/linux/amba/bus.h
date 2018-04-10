@@ -62,6 +62,7 @@ enum amba_vendor {
 	AMBA_VENDOR_LINUX << 12 | ((part) & 0xfff))
 
 extern struct bus_type amba_bustype;
+extern struct bus_type ambpriv_bus_type;
 
 #define to_amba_device(d)	container_of(d, struct amba_device, dev)
 

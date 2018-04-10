@@ -104,6 +104,7 @@ int of_dma_configure(struct device *dev, struct device_node *np)
 		if (!dev_is_pci(dev) &&
 #ifdef CONFIG_ARM_AMBA
 		    dev->bus != &amba_bustype &&
+		    dev->bus != &ambpriv_bus_type &&
 #endif
 		    dev->bus != &platform_bus_type)
 			return ret == -ENODEV ? 0 : ret;
