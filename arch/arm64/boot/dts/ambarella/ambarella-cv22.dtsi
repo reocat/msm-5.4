@@ -55,6 +55,11 @@
 		interrupts = <0 153 0x4>;
 	};
 
+	vp_module: vp_module {
+	    	compatible = "ambarella,vp-module";
+	    	interrupts = <0 106 0x4>;
+	};
+
 	psci {
 		compatible = "arm,psci-0.2";
 		method = "smc";
