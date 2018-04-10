@@ -96,6 +96,7 @@ int of_dma_configure(struct device *dev, struct device_node *np)
 
 	ret = of_dma_get_range(np, &dma_addr, &paddr, &size);
 	if (ret < 0) {
+		extern struct bus_type ambpriv_bus_type;
 		/*
 		 * For legacy reasons, we have to assume some devices need
 		 * DMA configuration regardless of whether "dma-ranges" is
@@ -104,9 +105,9 @@ int of_dma_configure(struct device *dev, struct device_node *np)
 		if (!dev_is_pci(dev) &&
 #ifdef CONFIG_ARM_AMBA
 		    dev->bus != &amba_bustype &&
-		    dev->bus != &ambpriv_bus_type &&
 #endif
-		    dev->bus != &platform_bus_type)
+		    dev->bus != &platform_bus_type &&
+		    dev->bus != &ambpriv_bus_type)
 			return ret == -ENODEV ? 0 : ret;
 
 		dma_addr = offset = 0;
