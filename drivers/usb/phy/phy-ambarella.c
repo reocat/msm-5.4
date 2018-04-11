@@ -331,6 +331,8 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 	amb_phy->owner_invert = !!of_find_property(np, "amb,owner-invert", NULL);
 	if (of_find_property(np, "amb,owner-mask", NULL))
 		setbitsl(amb_phy->own_reg, 0x1);
+	else
+		clrbitsl(amb_phy->own_reg, 0x1);
 
 	amb_phy->gpio_id = of_get_named_gpio_flags(np, "id-gpios", 0, &flags);
 	amb_phy->id_is_otg = !!(flags & OF_GPIO_ACTIVE_LOW);
