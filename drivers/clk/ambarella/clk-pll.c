@@ -63,10 +63,7 @@ struct amb_clk_pll {
 	u32 extra_pre_scaler : 1;
 	u32 extra_post_scaler : 1;
 	u32 frac_mode : 1;
-	u32 ctrl2_val;
-	u32 ctrl3_val;
 	u32 fix_divider;
-	u32 min_vco; /* in MHz */
 };
 
 #define to_amb_clk_pll(_hw) container_of(_hw, struct amb_clk_pll, hw)
@@ -163,6 +160,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long rate_tmp, pre_scaler = 1, post_scaler = 1;
 	unsigned long intp, sdiv = 1, sout = 1;
 	u64 dividend, divider, diff;
+	u32 ctrl3_val;
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 
@@ -179,13 +177,21 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		return -EINVAL;
 	}
 
-	/* non-HDMI fvco should be less than 1.5GHz and higher than 700MHz.
+	/*
+	 * Non-HDMI fvco should be less than 1.5GHz and higher than 700MHz.
 	 * HDMI fvco should be less than 5.5GHz, and much higher than 700MHz,
-	 * probably higher than 2GHz, but not sure, need VLSI's confirmation */
-
+	 * probably higher than 2GHz, but not sure, need VLSI's confirmation.
+	 *
+	 * The pll_vco_range in CTRL3 register need to match the VCO frequency.
+	 * Here we don't change the default values of CTRL2 and CTRL3, because
+	 * it seems the default values are good enough.
+	 *
+	 * Note: If the VCO frequency is larger than 1.5GHz, please take a look
+	        at the CTRL2 and CTRL3 again(Especially the pll_vco_range field).
+	 */
 	rational_best_approximation(rate, parent_rate, 64, 16, &intp, &sout);
 
-	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < clk_pll->min_vco) {
+	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < 700) {
 		if (sout > 8 || intp > 64)
 			break;
 		intp *= 2;
@@ -257,11 +263,14 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 	}
 
-	writel(clk_pll->ctrl2_val, clk_pll->ctrl2_reg);
+	ctrl3_val = readl(clk_pll->ctrl3_reg);
+
 	if (ctrl_val.s.frac_mode)
-		writel(clk_pll->ctrl3_val | (1 << 12), clk_pll->ctrl3_reg);
+		ctrl3_val |= (1 << 12);
 	else
-		writel(clk_pll->ctrl3_val, clk_pll->ctrl3_reg);
+		ctrl3_val &= ~(1 << 12);
+
+	writel(ctrl3_val, clk_pll->ctrl3_reg);
 
 	/* check if result rate is precise or not */
 	rate_tmp = ambarella_pll_recalc_rate(hw, parent_rate);
@@ -341,17 +350,8 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 	clk_pll->extra_post_scaler = !!of_find_property(np, "amb,extra-post-scaler", NULL);
 	clk_pll->frac_mode = !!of_find_property(np, "amb,frac-mode", NULL);
 
-	if (of_property_read_u32(np, "amb,ctrl2-val", &clk_pll->ctrl2_val))
-		clk_pll->ctrl2_val = 0x3f770000;
-
-	if (of_property_read_u32(np, "amb,ctrl3-val", &clk_pll->ctrl3_val))
-		clk_pll->ctrl3_val = 0x00068300;
-
 	if (of_property_read_u32(np, "amb,fix-divider", &clk_pll->fix_divider))
 		clk_pll->fix_divider = 1;
-
-	if (of_property_read_u32(np, "amb,min-vco", &clk_pll->min_vco))
-		clk_pll->min_vco = 700;
 
 	init.name = name;
 	init.ops = &pll_ops;
