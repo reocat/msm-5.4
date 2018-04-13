@@ -607,11 +607,11 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	priv_data->playback_dma_data.addr = I2S_TX_LEFT_DATA_DMA_REG;
+	priv_data->playback_dma_data.addr = res->start + I2S_TX_LEFT_DATA_DMA_OFFSET;
 	priv_data->playback_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	priv_data->playback_dma_data.maxburst = 32;
 
-	priv_data->capture_dma_data.addr = I2S_RX_DATA_DMA_REG;
+	priv_data->capture_dma_data.addr = res->start + I2S_RX_DATA_DMA_OFFSET;
 	priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	priv_data->capture_dma_data.maxburst = 32;
 	priv_data->mclk = clk_get(&pdev->dev, "gclk_audio");
