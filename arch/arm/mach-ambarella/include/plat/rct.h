@@ -61,7 +61,12 @@
 
 #define USBP0_SEL_OFFSET		0x2c0
 #define USBP0_SEL_REG			RCT_REG(USBP0_SEL_OFFSET)
+
+#if (CHIP_REV == CV22)
+#define USB0_IS_HOST_MASK		0x00000001
+#else
 #define USB0_IS_HOST_MASK		0x00000002
+#endif
 #define USBP0_FORCE_TO_DEVICE		1
 
 /* ==========================================================================*/
