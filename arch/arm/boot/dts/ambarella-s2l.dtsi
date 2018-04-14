@@ -816,7 +816,6 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "pll_out_sd";
-			amb,frac-mode;
 		};
 
 		gclk_ddr: gclk-ddr {
@@ -876,6 +875,7 @@
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
@@ -893,6 +893,7 @@
 			assigned-clock-rates = <24000000>;
 			amb,extra-pre-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 			amb,fix-divider = <10>;
 		};
 
@@ -912,6 +913,7 @@
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 		};
 
 		gclk_audio: gclk-audio {
@@ -930,6 +932,7 @@
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 		};
 
 		gclk_axi: gclk-axi {

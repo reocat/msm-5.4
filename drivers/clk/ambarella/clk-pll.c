@@ -63,6 +63,7 @@ struct amb_clk_pll {
 	u32 extra_pre_scaler : 1;
 	u32 extra_post_scaler : 1;
 	u32 frac_mode : 1;
+	u32 frac_nega : 1;
 	u32 fix_divider;
 };
 
@@ -116,15 +117,22 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 	dividend *= (u64)intp;
 	dividend *= (u64)sdiv;
 	if (ctrl_val.s.frac_mode) {
-		if (frac_val.s.nega) {
-			/* Negative */
-			frac = 0x80000000 - frac_val.s.frac;
-			frac = parent_rate * frac * sdiv;
-			frac >>= 32;
-			dividend = dividend - frac;
+		if (clk_pll->frac_nega) {
+			if (frac_val.s.nega) {
+				/* Negative */
+				frac = 0x80000000 - frac_val.s.frac;
+				frac = parent_rate * frac * sdiv;
+				frac >>= 32;
+				dividend = dividend - frac;
+			} else {
+				/* Positive */
+				frac = frac_val.s.frac;
+				frac = parent_rate * frac * sdiv;
+				frac >>= 32;
+				dividend = dividend + frac;
+			}
 		} else {
-			/* Positive */
-			frac = frac_val.s.frac;
+			frac = frac_val.w;
 			frac = parent_rate * frac * sdiv;
 			frac >>= 32;
 			dividend = dividend + frac;
@@ -142,15 +150,10 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long *parent_rate)
 {
-	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
-	unsigned long round_rate;
-
-	if (clk_pll->frac_mode)
-		round_rate = rate;
+	if (to_amb_clk_pll(hw)->frac_mode)
+		return rate;
 	else
-		round_rate = roundup(rate, REF_CLK_FREQ / 2);
-
-	return round_rate;
+		return roundup(rate, REF_CLK_FREQ / 2);
 }
 
 static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -248,12 +251,16 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			dividend = dividend << 32;
 			divider = (u64)sdiv * parent_rate;
 			dividend = DIV_ROUND_CLOSEST_ULL(dividend, divider);
-			if (rate_tmp <= rate) {
-				frac_val.s.nega	= 0;
-				frac_val.s.frac	= dividend;
+			if (clk_pll->frac_nega) {
+				if (rate_tmp <= rate) {
+					frac_val.s.nega	= 0;
+					frac_val.s.frac	= dividend;
+				} else {
+					frac_val.s.nega	= 1;
+					frac_val.s.frac	= 0x80000000 - dividend;
+				}
 			} else {
-				frac_val.s.nega	= 1;
-				frac_val.s.frac	= 0x80000000 - dividend;
+				frac_val.w = dividend;
 			}
 			writel(frac_val.w, clk_pll->frac_reg);
 
@@ -349,6 +356,7 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 	clk_pll->extra_pre_scaler = !!of_find_property(np, "amb,extra-pre-scaler", NULL);
 	clk_pll->extra_post_scaler = !!of_find_property(np, "amb,extra-post-scaler", NULL);
 	clk_pll->frac_mode = !!of_find_property(np, "amb,frac-mode", NULL);
+	clk_pll->frac_nega = !!of_find_property(np, "amb,frac-nega", NULL);
 
 	if (of_property_read_u32(np, "amb,fix-divider", &clk_pll->fix_divider))
 		clk_pll->fix_divider = 1;
