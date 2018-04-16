@@ -191,8 +191,12 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 *
 	 * Note: If the VCO frequency is larger than 1.5GHz, please take a look
 	        at the CTRL2 and CTRL3 again(Especially the pll_vco_range field).
+	 *
+	 * In addition, for 10nm and later chips, the formula of PLL calculation
+	 * is changed, there is no negative frac any more.
 	 */
-	rational_best_approximation(rate, parent_rate, 64, 16, &intp, &sout);
+	rate_tmp = clk_pll->frac_nega ? rate : rounddown(rate, 1000000);
+	rational_best_approximation(rate_tmp, parent_rate, 64, 16, &intp, &sout);
 
 	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < 700) {
 		if (sout > 8 || intp > 64)
