@@ -1,0 +1,4 @@
+config RPDEV_RELAY_EXAMPLE
+	tristate "RelayExample"
+	help
+	  A rpmsg example program for "communication between muntiOS framework".

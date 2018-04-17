@@ -1,0 +1,5 @@
+config RPMSG_HOSTRELAY
+	tristate "relay"
+	depends on RPMSG
+	help
+	  A rpmsg relay program, extend communication between Linux2 <=> RTOS
