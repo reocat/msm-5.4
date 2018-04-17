@@ -122,6 +122,20 @@ int mmc_app_set_bus_width(struct mmc_card *card, int width)
 {
 	struct mmc_command cmd = {};
 
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->is_init) {
+		u32 bus = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8 :
+			  (sdinfo->bus_width == 4) ? MMC_BUS_WIDTH_4 :
+			  	MMC_BUS_WIDTH_1;
+
+		return (width == bus) ? 0 : -EINVAL;
+	}
+}
+#endif
+
 	cmd.opcode = SD_APP_SET_BUS_WIDTH;
 	cmd.flags = MMC_RSP_R1 | MMC_CMD_AC;
 
@@ -143,6 +157,18 @@ int mmc_send_app_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 {
 	struct mmc_command cmd = {};
 	int i, err = 0;
+
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+
+	if (sdinfo->from_rpmsg && sdinfo->is_sdmem) {
+		if (rocr)
+			*rocr = sdinfo->ocr;
+		return 0;
+	}
+}
+#endif
 
 	cmd.opcode = SD_APP_OP_COND;
 	if (mmc_host_is_spi(host))
@@ -190,6 +216,14 @@ int mmc_send_if_cond(struct mmc_host *host, u32 ocr)
 	static const u8 test_pattern = 0xAA;
 	u8 result_pattern;
 
+#if defined(CONFIG_AMBALINK_SD)
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+
+	if (sdinfo->from_rpmsg) {
+		return (sdinfo->hcs) ? 0 : -ETIMEDOUT;
+	}
+#endif
+
 	/*
 	 * To support SD 2.0 cards, we must always invoke SD_SEND_IF_COND
 	 * before SD_APP_OP_COND. This command will harmlessly fail for
@@ -219,6 +253,18 @@ int mmc_send_relative_addr(struct mmc_host *host, unsigned int *rca)
 	int err;
 	struct mmc_command cmd = {};
 
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+
+	if (sdinfo->from_rpmsg && sdinfo->is_sdmem) {
+		if (rca)
+			*rca = sdinfo->rca;
+		return 0;
+	}
+}
+#endif
+
 	cmd.opcode = SD_SEND_RELATIVE_ADDR;
 	cmd.arg = 0;
 	cmd.flags = MMC_RSP_R6 | MMC_CMD_BCR;
@@ -241,11 +287,33 @@ int mmc_app_send_scr(struct mmc_card *card)
 	struct scatterlist sg;
 	__be32 *scr;
 
+#if defined(CONFIG_AMBALINK_SD)
+	cmd.data	= &data;
+	cmd.opcode	= SD_APP_SEND_SCR;
+	cmd.flags	= MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_ADTC;
+
+	data.blksz	= 8;
+	data.buf	= scr;
+
+	if (ambarella_sd_rpmsg_cmd_send(card->host, &cmd) == 0) {
+		err = cmd.error;
+		if (err == 0) {
+			scr[0] = be32_to_cpu(scr[0]);
+			scr[1] = be32_to_cpu(scr[1]);
+			return 0;
+		}
+	} else {
+		err = mmc_app_cmd(card->host, card);
+		if (err)
+			return err;
+	}
+#else
 	/* NOTE: caller guarantees scr is heap-allocated */
 
 	err = mmc_app_cmd(card->host, card);
 	if (err)
 		return err;
+#endif
 
 	/* dma onto stack is unsafe/nonportable, but callers to this
 	 * routine normally provide temporary on-stack buffers ...
@@ -294,6 +362,15 @@ int mmc_sd_switch(struct mmc_card *card, int mode, int group,
 	struct mmc_data data = {};
 	struct scatterlist sg;
 
+#if defined(CONFIG_AMBALINK_SD)
+{
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->from_rpmsg && sdinfo->is_sdmem)
+		return 0;
+}
+#endif
+
 	/* NOTE: caller guarantees resp is heap-allocated */
 
 	mode = !!mode;
@@ -336,11 +413,28 @@ int mmc_app_sd_status(struct mmc_card *card, void *ssr)
 	struct mmc_data data = {};
 	struct scatterlist sg;
 
+#if defined(CONFIG_AMBALINK_SD)
+	cmd.data	= &data;
+	cmd.opcode	= SD_APP_SD_STATUS;
+	cmd.flags	= MMC_RSP_SPI_R2 | MMC_RSP_R1 | MMC_CMD_ADTC;
+
+	data.blksz	= 64;
+	data.buf	= ssr;
+
+	if (ambarella_sd_rpmsg_cmd_send(card->host, &cmd) == 0) {
+		return cmd.error;
+	} else {
+		err = mmc_app_cmd(card->host, card);
+		if (err)
+			return err;
+	}
+#else
 	/* NOTE: caller guarantees ssr is heap-allocated */
 
 	err = mmc_app_cmd(card->host, card);
 	if (err)
 		return err;
+#endif
 
 	mrq.cmd = &cmd;
 	mrq.data = &data;

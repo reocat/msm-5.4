@@ -48,6 +48,10 @@
 #include <plat/nand_legacy.h>
 #include <plat/event.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/aipc/ipc_mutex.h>
+#endif
+
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	4096
 
 
@@ -123,6 +127,7 @@ struct ambarella_nand_info {
 #define NAND_TIMING_LSHIFT8BIT(x)	((x) << 8)
 #define NAND_TIMING_LSHIFT0BIT(x)	((x) << 0)
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static int nand_timing_calc(u32 clk, int minmax, int val)
 {
 	u32 x;
@@ -139,6 +144,7 @@ static int nand_timing_calc(u32 clk, int minmax, int val)
 		n--;
 	return n < 1 ? 1 : n;
 }
+#endif
 
 static int amb_ecc1_ooblayout_ecc_sp(struct mtd_info *mtd, int section,
 				   struct mtd_oob_region *oobregion)
@@ -367,7 +373,7 @@ static void nand_amb_enable_bch(struct ambarella_nand_info *nand_info)
 	writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
 	writel_relaxed(dma_dsm_ctr, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 }
-
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_ctr_reg = 0;
@@ -391,6 +397,7 @@ static void nand_amb_disable_bch(struct ambarella_nand_info *nand_info)
 	writel_relaxed(0, nand_info->regbase + FIO_DSM_CTR_OFFSET);
 	writel_relaxed(0, nand_info->fdmaregbase + FDMA_DSM_CTR_OFFSET);
 }
+#endif
 
 static int count_zero_bits(u8 *buf, int size, int max_bits)
 {
@@ -442,6 +449,7 @@ static int nand_bch_check_blank_page(struct ambarella_nand_info *nand_info)
 
 static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	u8 tcls, tals, tcs, tds, tclh, talh, tch, tdh;
 	u8 twp, twh, twb, trr, trp, treh, trb, tceh;
 	u8 trdelay, tclr, twhr, tir, tww, trhz, tar;
@@ -596,6 +604,7 @@ static void amb_nand_set_timing(struct ambarella_nand_info *nand_info)
 		val = 0x20202020;
 
 	writel_relaxed(val, nand_info->regbase + FLASH_TIM5_OFFSET);
+#endif
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -802,6 +811,14 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 	u32 cmd, nand_ctr_reg, nand_ext_ctr_reg, nand_cmd_reg, fio_ctr_reg;
 	long timeout;
 	int errorCode = 0;
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+
+        enable_irq(nand_info->dma_irq);
+        enable_irq(nand_info->cmd_irq);
+        enable_irq(nand_info->fdma_irq);
+#endif
 
 	cmd = nand_info->cmd;
 
@@ -1104,9 +1121,17 @@ nand_amb_request_done:
 			writel_relaxed(nand_ctr_reg, nand_info->regbase + FLASH_CTR_OFFSET);
 	}
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(nand_info->dma_irq);
+        disable_irq(nand_info->cmd_irq);
+        disable_irq(nand_info->fdma_irq);
+
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+#else
 	if ((cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM)
 		&& nand_amb_is_hw_bch(nand_info))
 		nand_amb_disable_bch(nand_info);
+#endif
 
 	return errorCode;
 }
@@ -1981,9 +2006,20 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	}
 	BUG_ON(nand_info->dmaaddr & 0x7);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+#endif
 	errorCode = ambarella_nand_get_resource(nand_info, pdev);
 	if (errorCode < 0)
 		goto ambarella_nand_probe_free_dma;
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(nand_info->dma_irq);
+        disable_irq(nand_info->cmd_irq);
+        disable_irq(nand_info->fdma_irq);
+
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+#endif
 
 	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
 
@@ -2085,7 +2121,9 @@ static int ambarella_nand_resume(struct device *dev)
 
 	pdev = to_platform_device(dev);
 	nand_info = platform_get_drvdata(pdev);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	ambarella_nand_init_hw(nand_info);
+#endif
 
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
@@ -2101,11 +2139,15 @@ static int ambarella_nand_restore(struct device *dev)
 
 	pdev = to_platform_device(dev);
 	nand_info = platform_get_drvdata(pdev);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	ambarella_nand_init_hw(nand_info);
+#endif
 
 	enable_irq(nand_info->dma_irq);
 	enable_irq(nand_info->cmd_irq);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	rval = nand_scan_tail(nand_to_mtd(&nand_info->chip));
+#endif
 
 	return rval;
 }

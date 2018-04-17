@@ -86,6 +86,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type		= MT_DEVICE,
 			},
 	},
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	[AMBARELLA_IO_DESC_PPM_ID] = {
 		.name		= "PPM",	/*Private Physical Memory*/
 		.io_desc		= {
@@ -95,6 +96,7 @@ static struct ambarella_mem_map_desc ambarella_io_desc[] = {
 			.type		= MT_MEMORY_RWX,
 			},
 	},
+#endif
 #if defined(CONFIG_ARCH_AMBARELLA_SUPPORT_MMAP_AXI)
 	[AMBARELLA_IO_DESC_AXI_ID] = {
 		.name		= "AXI",

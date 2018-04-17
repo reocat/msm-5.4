@@ -318,6 +318,6 @@ static int __init ambarella_init_pm(void)
 
 	return 0;
 }
-
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 arch_initcall(ambarella_init_pm);
-
+#endif

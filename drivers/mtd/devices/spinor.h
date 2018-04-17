@@ -216,6 +216,7 @@ struct amb_norflash {
     struct mtd_info              mtd;
     u16                          page_size;
     u16                          addr_width;
+	u8			read_opcode;
     u8                           erase_opcode;
     u8                           *command;
     u8                           dummy;
@@ -223,6 +224,11 @@ struct amb_norflash {
 	u32							 clk;
     bool                         fast_read;
 	u32							 jedec_id;
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	resource_size_t		reg_phy_base;
+	u32			nor_spi_irq;
+#endif
 };
 //the buffer size must align to 32 and smaller than the max size of DMA
 #define AMBA_SPINOR_DMA_BUFF_SIZE    4096

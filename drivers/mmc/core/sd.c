@@ -282,6 +282,15 @@ static int mmc_read_switch(struct mmc_card *card)
 	int err;
 	u8 *status;
 
+#if defined(CONFIG_AMBALINK_SD)
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->from_rpmsg && sdinfo->is_init) {
+		card->sw_caps.hs_max_dtr = 50000000;
+		return 0;
+	}
+#endif
+
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1)
 		return 0;
 
@@ -341,6 +350,13 @@ int mmc_sd_switch_hs(struct mmc_card *card)
 {
 	int err;
 	u8 *status;
+
+#if defined(CONFIG_AMBALINK_SD)
+	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+
+	if (sdinfo->from_rpmsg)
+		return 0;
+#endif
 
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1)
 		return 0;

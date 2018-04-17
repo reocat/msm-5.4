@@ -36,6 +36,71 @@
 
 int ambptb_partition(struct parsed_partitions *state)
 {
+#if defined(CONFIG_AMBALINK_SD)
+	u32 sect_size;
+	char *part_label;
+	int i, result = 0;
+	struct device_node *ofpart_node;
+	struct device_node *pp;
+	u64 div_result;
+
+	if (strncmp(state->pp_buf, " mmcblk", 7)) {
+		result = -1;
+		goto ambptb_partition_exit;
+	}
+
+	sect_size = bdev_logical_block_size(state->bdev);
+
+	ofpart_node = of_get_parent(of_find_node_by_name(NULL, "partition"));
+	if(!ofpart_node) {
+		pr_err("device node partition is not found!");
+		return -1;
+	}
+
+	i = 0;
+	for_each_child_of_node(ofpart_node,  pp) {
+		const __be32 *reg;
+		int len;
+		int a_cells, s_cells;
+
+		reg = of_get_property(pp, "reg", &len);
+		if (!reg) {
+			continue;
+		}
+
+		a_cells = of_n_addr_cells(pp);
+		s_cells = of_n_size_cells(pp);
+		if (len / 4 != a_cells + s_cells) {
+			pr_debug("%s: partition %s error parsing reg property.\n",
+				 __func__, pp->full_name);
+			goto ambptb_partition_exit;
+		}
+
+		div_result = of_read_number(reg, a_cells);
+		do_div(div_result, sect_size);
+		state->parts[i].from = div_result;
+
+		div_result = of_read_number(reg + a_cells, s_cells);
+		do_div(div_result, sect_size);
+		state->parts[i].size = div_result;
+
+		part_label = (char *) of_get_property(pp, "label", &len);
+		if (!part_label)
+			part_label = (char *) of_get_property(pp, "name", &len);
+		strlcat(state->pp_buf, part_label, PAGE_SIZE);
+		strlcat(state->pp_buf, " ", PAGE_SIZE);
+
+		printk(KERN_NOTICE "0x%012llx-0x%012llx : \"[p%d] %s\"\n",
+			(unsigned long long)state->parts[i].from,
+			(unsigned long long)(state->parts[i].from + state->parts[i].size),
+			i, part_label);
+
+		i++;
+	}
+
+	strlcat(state->pp_buf, "\n", PAGE_SIZE);
+	result = 1;
+#else
 	int i, val, slot = 1;
 	unsigned char *data;
 	Sector sect;
@@ -116,6 +181,7 @@ int ambptb_partition(struct parsed_partitions *state)
 		result = 1;
 	}
 	put_dev_sector(sect);
+#endif
 
 ambptb_partition_exit:
 	return result;

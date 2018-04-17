@@ -56,11 +56,19 @@ void notrace restore_processor_state(void)
  *
  * When soft reboot completes, the hibernation snapshot is written out.
  */
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+extern int in_suspend;
+#endif
 static int notrace arch_save_image(unsigned long unused)
 {
 	int ret;
-
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	in_suspend = 0;
+#endif
 	ret = swsusp_save();
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	in_suspend = 1;
+#endif
 	if (ret == 0)
 		_soft_restart(virt_to_idmap(cpu_resume), false);
 	return ret;

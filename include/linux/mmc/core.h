@@ -144,6 +144,9 @@ struct mmc_data {
 	int			sg_count;	/* mapped sg entries */
 	struct scatterlist	*sg;		/* I/O scatter list */
 	s32			host_cookie;	/* host private data */
+#if defined(CONFIG_AMBALINK_SD)
+	void			*buf;
+#endif
 };
 
 struct mmc_host;

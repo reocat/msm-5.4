@@ -343,11 +343,45 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 	struct ambdma_chan *amb_chan;
 	u32 i, int_src;
 	irqreturn_t ret = IRQ_NONE;
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	int chan_sel, cur_chan;
+#endif
 
 	int_src = readl(amb_dma->regbase + DMA_INT_OFFSET);
 	if (int_src == 0)
 		return IRQ_HANDLED;
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	if (amb_dma->reg_scr)
+		regmap_read(amb_dma->reg_scr, AHBSP_DMA0_SEL0_OFFSET, &chan_sel);
+	else
+		chan_sel = 0;
+	for (i = amb_dma->nr_start; i < amb_dma->nr_channels; i++) {
+		/*
+		 * Only handle DMA that would be used by Linux,
+		 * e.g. UART used by BT.
+		 */
+		cur_chan = (chan_sel >> (i * 4)) & 0xf;
+		switch (cur_chan) {
+		case UART1_TX_DMA_REQ_IDX:
+		case UART1_RX_DMA_REQ_IDX:
+		case UART2_TX_DMA_REQ_IDX:
+		case UART2_RX_DMA_REQ_IDX:
+			break;
+		default:
+			continue;
+		}
+
+		amb_chan = &amb_dma->amb_chan[i];
+		spin_lock(&amb_chan->lock);
+		if (int_src & (1 << i)) {
+			writel(0, dma_chan_sta_reg(amb_chan));
+			tasklet_schedule(&amb_chan->tasklet);
+			ret = IRQ_HANDLED;
+		}
+		spin_unlock(&amb_chan->lock);
+	}
+#else
 	for (i = 0; i < amb_dma->nr_channels; i++) {
 		amb_chan = &amb_dma->amb_chan[i];
 		spin_lock(&amb_chan->lock);
@@ -358,6 +392,7 @@ static irqreturn_t ambdma_dma_irq_handler(int irq, void *dev_data)
 		}
 		spin_unlock(&amb_chan->lock);
 	}
+#endif
 
 	return ret;
 }
@@ -1148,6 +1183,13 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		goto ambdma_dma_probe_exit;
 	}
 
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	ret = of_property_read_u32(np, "amb,dma-startchannel", &amb_dma->nr_start);
+	if (ret) {
+		amb_dma->nr_start = 0;
+	}
+#endif /* CONFIG_ARCH_AMBARELLA_AMBALINK */
+
 	/* create a pool of consistent memory blocks for hardware descriptors */
 	amb_dma->lli_pool = dma_pool_create("ambdma_lli_pool",
 			&pdev->dev, sizeof(struct ambdma_lli), 16, 0);
@@ -1188,6 +1230,13 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_SLAVE, amb_dma->dma_dev.cap_mask);
 	dma_cap_set(DMA_CYCLIC, amb_dma->dma_dev.cap_mask);
 	dma_cap_set(DMA_MEMCPY, amb_dma->dma_dev.cap_mask);
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	/* Fix DMA_channel allocation fail
+	   cf. https://lkml.org/lkml/2014/1/20/5 */
+	dma_cap_set(DMA_PRIVATE, amb_dma->dma_dev.cap_mask);
+#endif
+
 	INIT_LIST_HEAD(&amb_dma->dma_dev.channels);
 	amb_dma->dma_dev.dev = &pdev->dev;
 	amb_dma->dma_dev.device_alloc_chan_resources = ambdma_alloc_chan_resources;
@@ -1224,6 +1273,14 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 		tasklet_init(&amb_chan->tasklet, ambdma_tasklet,
 				(unsigned long)amb_chan);
 		dma_cookie_init(&amb_chan->chan);
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+		if (i < amb_dma->nr_start) {
+			amb_chan->status = AMBDMA_STATUS_BUSY;
+			amb_chan->force_stop = 1;
+		}
+#endif /* CONFIG_ARCH_AMBARELLA_AMBALINK */
+
 		list_add_tail(&amb_chan->chan.device_node,
 				&amb_dma->dma_dev.channels);
 	}
@@ -1266,6 +1323,14 @@ static int ambarella_dma_probe(struct platform_device *pdev)
 			"failed to register controller\n");
 		goto ambdma_dma_probe_exit5;
 	}
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	/* of_dma_controller_register will set all as unused. */
+	for (i= 0; i < amb_dma->nr_start; i++) {
+		/* Skip channels used by RTOS */
+		amb_chan = &amb_dma->amb_chan[i];
+		amb_chan->chan.client_count++;
+	}
+#endif /* CONFIG_ARCH_AMBARELLA_AMBALINK */
 
 	proc_create_data(dev_name(&pdev->dev), S_IRUGO|S_IWUSR,
 		get_ambarella_proc_dir(), &proc_ambdma_fops, amb_dma);

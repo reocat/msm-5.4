@@ -676,7 +676,12 @@ static void serial_ambarella_stop_rx(struct uart_port *port)
 	writel_relaxed(ier & ~UART_IE_ERBFI, port->membase + UART_IE_OFFSET);
 }
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+/* modify for brcm bluesleep driver */
+unsigned int serial_ambarella_tx_empty(struct uart_port *port)
+#else
 static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
+#endif
 {
 	unsigned int lsr;
 	unsigned long flags;
@@ -688,6 +693,9 @@ static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
 	return ((lsr & (UART_LS_TEMT | UART_LS_THRE)) ==
 		(UART_LS_TEMT | UART_LS_THRE)) ? TIOCSER_TEMT : 0;
 }
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+EXPORT_SYMBOL_GPL(serial_ambarella_tx_empty);
+#endif
 
 static unsigned int serial_ambarella_get_mctrl(struct uart_port *port)
 {
@@ -957,6 +965,9 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 	free_irq(port->irq, port);
 }
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#define B750000 0020001
+#endif
 static void serial_ambarella_set_termios(struct uart_port *port,
 	struct ktermios *termios, struct ktermios *old)
 {
@@ -996,7 +1007,14 @@ static void serial_ambarella_set_termios(struct uart_port *port,
 			lc |= (UART_LC_PEN | UART_LC_EVEN_PARITY);
 	}
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	if ((termios->c_cflag & (B750000 | CBAUD | CBAUDEX)) == B750000)
+		baud = 750000;
+	else
+		baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
+#else
 	baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
+#endif
 	quot = uart_get_divisor(port, baud);
 
 	disable_irq(port->irq);

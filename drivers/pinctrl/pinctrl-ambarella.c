@@ -730,7 +730,12 @@ static int amb_pinctrl_probe(struct platform_device *pdev)
 	struct resource *res;
 	int i, rval;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* add suspend-to-ram support */
+	amb_pinctrl_soc = soc = devm_kzalloc(&pdev->dev, sizeof(*soc), GFP_KERNEL);
+#else
 	soc = devm_kzalloc(&pdev->dev, sizeof(*soc), GFP_KERNEL);
+#endif
 	if (!soc) {
 		dev_err(&pdev->dev, "failed to allocate memory for private data\n");
 		return -ENOMEM;

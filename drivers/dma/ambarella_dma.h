@@ -95,6 +95,11 @@ struct ambdma_device {
 	u32				sel_val0;
 	u32				sel_val1;
 #endif
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	/* DMA Channel start for Linux, (0~N)
+	   Skip first N Channels which used by RTOS */
+	u32				nr_start;
+#endif
 };
 
 

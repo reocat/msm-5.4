@@ -43,6 +43,9 @@
 #include <asm/byteorder.h>
 
 #include "remoteproc_internal.h"
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <plat/remoteproc_cfg.h>
+#endif
 
 static DEFINE_MUTEX(rproc_list_mutex);
 static LIST_HEAD(rproc_list);
@@ -217,7 +220,12 @@ int rproc_alloc_vring(struct rproc_vdev *rvdev, int i)
 	 * Allocate non-cacheable memory for the vring. In the future
 	 * this call will also configure the IOMMU for us
 	 */
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        va = (void *) ambalink_phys_to_virt(rvring->da);
+        dma = rvring->da;
+#else
 	va = dma_alloc_coherent(dev->parent, size, &dma, GFP_KERNEL);
+#endif
 	if (!va) {
 		dev_err(dev->parent, "dma_alloc_coherent failed\n");
 		return -EINVAL;
@@ -280,6 +288,9 @@ rproc_parse_vring(struct rproc_vdev *rvdev, struct fw_rsc_vdev *rsc, int i)
 	rvring->len = vring->num;
 	rvring->align = vring->align;
 	rvring->rvdev = rvdev;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        rvring->da = vring->da;
+#endif
 
 	return 0;
 }
@@ -993,7 +1004,11 @@ static void rproc_auto_boot_callback(const struct firmware *fw, void *context)
 
 	rproc_boot(rproc);
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	release_firmware(fw);
+#else
+	rproc_release_firmware(rproc, fw);
+#endif
 }
 
 static int rproc_trigger_auto_boot(struct rproc *rproc)
@@ -1004,9 +1019,13 @@ static int rproc_trigger_auto_boot(struct rproc *rproc)
 	 * We're initiating an asynchronous firmware loading, so we can
 	 * be built-in kernel code, without hanging the boot process.
 	 */
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	ret = rproc_request_firmware_nowait(rproc, rproc_auto_boot_callback);
+#else
 	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
 				      rproc->firmware, &rproc->dev, GFP_KERNEL,
 				      rproc, rproc_auto_boot_callback);
+#endif
 	if (ret < 0)
 		dev_err(&rproc->dev, "request_firmware_nowait err: %d\n", ret);
 
@@ -1080,7 +1099,11 @@ int rproc_trigger_recovery(struct rproc *rproc)
 	/* boot the remote processor up again */
 	ret = rproc_start(rproc, firmware_p);
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	release_firmware(firmware_p);
+#else
+	rproc_release_firmware(rproc, firmware_p);
+#endif
 
 unlock_mutex:
 	mutex_unlock(&rproc->lock);
@@ -1163,7 +1186,7 @@ int rproc_boot(struct rproc *rproc)
 	dev_info(dev, "powering up %s\n", rproc->name);
 
 	/* load firmware */
-	ret = request_firmware(&firmware_p, rproc->firmware, dev);
+	ret = rproc_request_firmware(rproc, &firmware_p);
 	if (ret < 0) {
 		dev_err(dev, "request_firmware failed: %d\n", ret);
 		goto downref_rproc;
@@ -1171,7 +1194,7 @@ int rproc_boot(struct rproc *rproc)
 
 	ret = rproc_fw_boot(rproc, firmware_p);
 
-	release_firmware(firmware_p);
+        rproc_release_firmware(rproc, firmware_p);
 
 downref_rproc:
 	if (ret)

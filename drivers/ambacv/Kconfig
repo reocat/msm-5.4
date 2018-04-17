@@ -1,0 +1,7 @@
+
+menuconfig ARCH_AMBARELLA_CV
+	tristate "Amba Cvtask Scheduler Support"
+	default n
+        depends on ARCH_AMBARELLA
+	help
+                This enables Ambarella cvtask scheduler module

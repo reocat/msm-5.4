@@ -26,6 +26,11 @@
 #include <linux/kmemleak.h>
 #include <linux/dma-mapping.h>
 #include <xen/xen.h>
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/types.h>
+#include <plat/ambalink_cfg.h>
+#endif
+
 
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
@@ -144,6 +149,9 @@ struct vring_virtqueue {
 
 static bool vring_use_dma_api(struct virtio_device *vdev)
 {
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	return false;
+#else
 	if (!virtio_has_iommu_quirk(vdev))
 		return true;
 
@@ -160,6 +168,7 @@ static bool vring_use_dma_api(struct virtio_device *vdev)
 		return true;
 
 	return false;
+#endif
 }
 
 /*
@@ -178,8 +187,11 @@ static dma_addr_t vring_map_one_sg(const struct vring_virtqueue *vq,
 				   enum dma_data_direction direction)
 {
 	if (!vring_use_dma_api(vq->vq.vdev))
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+		return (dma_addr_t)ambalink_virt_to_phys((uintptr_t)sg_virt(sg));
+#else
 		return (dma_addr_t)sg_phys(sg);
-
+#endif
 	/*
 	 * We can't use dma_map_sg, because we don't use scatterlists in
 	 * the way it expects (we don't guarantee that the scatterlist
@@ -195,8 +207,11 @@ static dma_addr_t vring_map_single(const struct vring_virtqueue *vq,
 				   enum dma_data_direction direction)
 {
 	if (!vring_use_dma_api(vq->vq.vdev))
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+		return (dma_addr_t)ambalink_virt_to_phys((uintptr_t)cpu_addr);
+#else
 		return (dma_addr_t)virt_to_phys(cpu_addr);
-
+#endif
 	return dma_map_single(vring_dma_dev(vq),
 			      cpu_addr, size, direction);
 }
@@ -760,6 +775,80 @@ void *virtqueue_get_buf(struct virtqueue *_vq, unsigned int *len)
 }
 EXPORT_SYMBOL_GPL(virtqueue_get_buf);
 /**
+ * virtqueue_get_buf_index - get the next used buffer
+ * @vq: the struct virtqueue we're talking about.
+ * @len: the length written into the buffer
+ *
+ * If the driver wrote data into the buffer, @len will be set to the
+ * amount written.  This means you don't need to clear the buffer
+ * beforehand to ensure there's no data leakage in the case of short
+ * writes.
+ *
+ * Caller must ensure we don't call this with other virtqueue
+ * operations at the same time (except where noted).
+ *
+ * Returns NULL if there are no used buffers, or the "data" token
+ * handed to virtqueue_add_*().
+ */
+void *virtqueue_get_buf_index(struct virtqueue *_vq, unsigned int *len, unsigned int *idx)
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	void *ret;
+	unsigned int i;
+	u16 last_used;
+
+	START_USE(vq);
+
+	if (unlikely(vq->broken)) {
+		END_USE(vq);
+		return NULL;
+	}
+
+	if (!more_used(vq)) {
+		pr_debug("No more buffers in queue\n");
+		END_USE(vq);
+		return NULL;
+	}
+
+	/* Only get used array entries after they have been exposed by host. */
+	virtio_rmb(vq->weak_barriers);
+
+	last_used = (vq->last_used_idx & (vq->vring.num - 1));
+	i = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].id);
+	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
+
+	if (unlikely(i >= vq->vring.num)) {
+		BAD_RING(vq, "id %u out of range\n", i);
+		return NULL;
+	}
+	if (unlikely(!vq->desc_state[i].data)) {
+		BAD_RING(vq, "id %u is not a head!\n", i);
+		return NULL;
+	}
+
+	/* detach_buf clears data, so grab it now. */
+	*idx = i;
+	ret = vq->desc_state[i].data;
+	detach_buf(vq, i, NULL);
+	vq->last_used_idx++;
+	/* If we expect an interrupt for the next entry, tell host
+	 * by writing event index and flush out the write before
+	 * the read in the next get_buf call. */
+	if (!(vq->avail_flags_shadow & VRING_AVAIL_F_NO_INTERRUPT)) {
+		vring_used_event(&vq->vring) = cpu_to_virtio16(_vq->vdev, vq->last_used_idx);
+		virtio_mb(vq->weak_barriers);
+	}
+
+#ifdef DEBUG
+	vq->last_add_time_valid = false;
+#endif
+
+	END_USE(vq);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(virtqueue_get_buf_index);
+
+/**
  * virtqueue_disable_cb - disable callbacks
  * @vq: the struct virtqueue we're talking about.
  *
@@ -1023,7 +1112,11 @@ static void *vring_alloc_queue(struct virtio_device *vdev, size_t size,
 	} else {
 		void *queue = alloc_pages_exact(PAGE_ALIGN(size), flag);
 		if (queue) {
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+			phys_addr_t phys_addr = ambalink_virt_to_phys((uintptr_t)queue);
+#else
 			phys_addr_t phys_addr = virt_to_phys(queue);
+#endif
 			*dma_handle = (dma_addr_t)phys_addr;
 
 			/*

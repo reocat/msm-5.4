@@ -127,6 +127,10 @@ static struct gic_chip_data gic_data[CONFIG_ARM_GIC_MAX_NR] __read_mostly;
 
 static struct gic_kvm_info gic_v2_kvm_info;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+u32 gic_resume_mask[DIV_ROUND_UP(1020, 32)];
+#endif
+
 #ifdef CONFIG_GIC_NON_BANKED
 static void __iomem *gic_get_percpu_base(union gic_base *base)
 {
@@ -190,6 +194,35 @@ static inline bool cascading_gic_irq(struct irq_data *d)
 /*
  * Routines to acknowledge, disable and enable interrupts
  */
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+static void gic_irq_set_target(struct irq_data *d)
+{
+        void __iomem *reg = gic_dist_base(d) + GIC_DIST_TARGET + (gic_irq(d) & ~3);
+	unsigned int shift = (gic_irq(d) % 4) * 8;
+	u32 val, mask, bit;
+        unsigned long mpidr = (read_cpuid_mpidr() & MPIDR_HWID_BITMASK);
+        unsigned int target_cpu;
+        unsigned long flags;
+
+	gic_lock_irqsave(flags);
+        target_cpu = (MPIDR_AFFINITY_LEVEL(mpidr, 1) * 4) + MPIDR_AFFINITY_LEVEL(mpidr, 0);
+	mask = 0xff << shift;
+	bit = (1 << target_cpu) << shift;
+	if (gic_irq(d) == 101) {
+		/*
+		 * HACKING: dma irq (69 + 32) is shared between dual-OS,
+		 * sending the interrupt to both OSes and let the OS to
+		 * handle the shared logic.
+		 */
+		val = readl_relaxed(reg);
+	} else {
+		val = readl_relaxed(reg) & ~mask;
+	}
+	writel_relaxed(val | bit, reg);
+	gic_unlock_irqrestore(flags);
+}
+#endif
+
 static void gic_poke_irq(struct irq_data *d, u32 offset)
 {
 	u32 mask = 1 << (gic_irq(d) % 32);
@@ -224,6 +257,11 @@ static void gic_eoimode1_mask_irq(struct irq_data *d)
 
 static void gic_unmask_irq(struct irq_data *d)
 {
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	gic_resume_mask[gic_irq(d) >> 5] |= (1 << (gic_irq(d) % 32));
+
+        gic_irq_set_target(d);
+#endif
 	gic_poke_irq(d, GIC_DIST_ENABLE_SET);
 }
 
@@ -340,7 +378,20 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	gic_lock_irqsave(flags);
 	mask = 0xff << shift;
 	bit = gic_cpu_map[cpu] << shift;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	if (gic_irq(d) == 101) {
+		/*
+		 * HACKING: dma irq (69 + 32) is shared between dual-OS,
+		 * sending the interrupt to both OSes and let the OS to
+		 * handle the shared logic.
+		 */
+		val = readl_relaxed(reg);
+	} else {
 	val = readl_relaxed(reg) & ~mask;
+	}
+#else
+	val = readl_relaxed(reg) & ~mask;
+#endif
 	writel_relaxed(val | bit, reg);
 	gic_unlock_irqrestore(flags);
 
@@ -422,9 +473,13 @@ static const struct irq_chip gic_chip = {
 	.irq_set_type		= gic_set_type,
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	.flags			= IRQCHIP_SKIP_SET_WAKE,
+#else
 	.flags			= IRQCHIP_SET_TYPE_MASKED |
 				  IRQCHIP_SKIP_SET_WAKE |
 				  IRQCHIP_MASK_ON_SUSPEND,
+#endif
 };
 
 void __init gic_cascade_irq(unsigned int gic_nr, unsigned int irq)
@@ -474,6 +529,8 @@ static void gic_cpu_if_up(struct gic_chip_data *gic)
 
 static void gic_dist_init(struct gic_chip_data *gic)
 {
+        /* Distributor already initialized by RTOS in AmbaLink. */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	unsigned int i;
 	u32 cpumask;
 	unsigned int gic_irqs = gic->gic_irqs;
@@ -493,6 +550,9 @@ static void gic_dist_init(struct gic_chip_data *gic)
 	gic_dist_config(base, gic_irqs, NULL);
 
 	writel_relaxed(GICD_ENABLE, base + GIC_DIST_CTRL);
+#else
+	memset(gic_resume_mask, 0x0, sizeof(u32) * DIV_ROUND_UP(1020, 32));
+#endif
 }
 
 static int gic_cpu_init(struct gic_chip_data *gic)
@@ -529,7 +589,13 @@ static int gic_cpu_init(struct gic_chip_data *gic)
 
 	gic_cpu_config(dist_base, NULL);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        /* Binary point value = 7 (No preemption). Same as RTOS. */
+        writel_relaxed(0x7, base + GIC_CPU_BINPOINT);
+        writel_relaxed(0x7, base + GIC_CPU_ALIAS_BINPOINT);
+#endif
 	writel_relaxed(GICC_INT_PRI_THRESHOLD, base + GIC_CPU_PRIMASK);
+
 	gic_cpu_if_up(gic);
 
 	return 0;
@@ -552,6 +618,10 @@ int gic_cpu_if_down(unsigned int gic_nr)
 }
 
 #if defined(CONFIG_CPU_PM) || defined(CONFIG_ARM_GIC_PM)
+u32 saved_spi_pri[DIV_ROUND_UP(1020, 4)];
+u32 gic_dist_ctrl;
+u32 saved_gicd_ctrl;
+
 /*
  * Saves the GIC distributor registers during suspend or idle.  Must be called
  * with interrupts disabled but before powering down the GIC.  After calling
@@ -588,6 +658,14 @@ void gic_dist_save(struct gic_chip_data *gic)
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++)
 		gic->saved_spi_active[i] =
 			readl_relaxed(dist_base + GIC_DIST_ACTIVE_SET + i * 4);
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		saved_spi_pri[i] =
+			readl_relaxed(dist_base + GIC_DIST_PRI + i * 4);
+
+	saved_gicd_ctrl = readl_relaxed(dist_base + GIC_DIST_CTRL);
+#endif
 }
 
 /*
@@ -602,6 +680,9 @@ void gic_dist_restore(struct gic_chip_data *gic)
 	unsigned int gic_irqs;
 	unsigned int i;
 	void __iomem *dist_base;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	u32 regval, mask, resume_val, int_no, val;
+#endif
 
 	if (WARN_ON(!gic))
 		return;
@@ -614,6 +695,40 @@ void gic_dist_restore(struct gic_chip_data *gic)
 
 	writel_relaxed(GICD_DISABLE, dist_base + GIC_DIST_CTRL);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++) {
+		/* Translate the mask from 1-bit to 2-bit. */
+		mask = 0;
+                for (int_no = (i * 16); int_no < (i + 16); int_no++) {
+                        val = (((gic_resume_mask[i / 2] >> int_no) & 0x1) ? 0x3 : 0x0);
+                        mask |= val << ((int_no % 16) << 1);
+                }
+
+		/* Clear then OR the value. */
+                regval = (readl_relaxed(dist_base + GIC_DIST_CONFIG + i * 4) & ~mask);
+                resume_val = gic->saved_spi_conf[i] & mask;
+
+                writel_relaxed(regval | resume_val,
+				dist_base + GIC_DIST_CONFIG + i * 4);
+	}
+
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		writel_relaxed(saved_spi_pri[i],
+			dist_base + GIC_DIST_PRI + i * 4);
+
+#if 0
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 4); i++)
+		writel_relaxed(gic->saved_spi_target[i],
+			dist_base + GIC_DIST_TARGET + i * 4);
+#endif
+
+	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 32); i++) {
+                writel_relaxed((gic->saved_spi_enable[i] & gic_resume_mask[i]),
+                                dist_base + GIC_DIST_ENABLE_SET + i * 4);
+	}
+
+	writel_relaxed(saved_gicd_ctrl, dist_base + GIC_DIST_CTRL);
+#else
 	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++)
 		writel_relaxed(gic->saved_spi_conf[i],
 			dist_base + GIC_DIST_CONFIG + i * 4);
@@ -641,6 +756,7 @@ void gic_dist_restore(struct gic_chip_data *gic)
 	}
 
 	writel_relaxed(GICD_ENABLE, dist_base + GIC_DIST_CTRL);
+#endif
 }
 
 void gic_cpu_save(struct gic_chip_data *gic)

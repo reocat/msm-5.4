@@ -6,6 +6,12 @@
 # Rewritten to use lists instead of if-statements.
 #
 
+# Ambarella AmbaLink related drivers.
+obj-y				+= ambalink/
+
+# Ambarella Amba CV related drivers.
+obj-$(CONFIG_ARCH_AMBARELLA_CV) += ambacv/
+
 obj-y				+= irqchip/
 obj-y				+= bus/
 

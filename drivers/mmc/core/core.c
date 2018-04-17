@@ -2443,6 +2443,24 @@ EXPORT_SYMBOL(mmc_hw_reset);
 
 static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 {
+#if defined(CONFIG_AMBALINK_SD)
+	struct rpdev_sdinfo *sdinfo;
+
+	ambarella_sd_rpmsg_sdinfo_init(host);
+	sdinfo = ambarella_sd_sdinfo_get(host);
+	ambarella_sd_rpmsg_sdinfo_en(host, sdinfo->is_init);
+
+	if (sdinfo->is_init) {
+		if (sdinfo->is_sdmem) {
+			return mmc_attach_sd(host);
+		} else if (sdinfo->is_mmc) {
+			return mmc_attach_mmc(host);
+		} else {
+			ambarella_sd_rpmsg_sdinfo_en(host, 0);
+		}
+	}
+#endif
+
 	host->f_init = freq;
 
 	pr_debug("%s: %s: trying to init card at %u Hz\n",

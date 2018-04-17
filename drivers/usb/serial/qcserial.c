@@ -184,7 +184,10 @@ static const struct usb_device_id id_table[] = {
 
 	/* Huawei devices */
 	{DEVICE_HWI(0x03f0, 0x581d)},	/* HP lt4112 LTE/HSPA+ Gobi 4G Modem (Huawei me906e) */
-
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0x0918, 0)}, /* WNC D16 0918-0 */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0x0918, 2)}, /* WNC D16 0918-2 */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0xd181, 0)}, /* WNC D16 d181-0 */
+	{USB_DEVICE_INTERFACE_NUMBER(0x1435, 0xd181, 2)}, /* WNC D16 d181-2 */
 	{ }				/* Terminating entry */
 };
 MODULE_DEVICE_TABLE(usb, id_table);
@@ -281,7 +284,8 @@ static int qcprobe(struct usb_serial *serial, const struct usb_device_id *id)
 		 */
 		if (nintf < 3 || nintf > 4) {
 			dev_err(dev, "unknown number of interfaces: %d\n", nintf);
-			altsetting = -1;
+			/* default enable /dev/ttyUSBx for WNC LTE module */
+			altsetting = 0;
 			goto done;
 		}
 
@@ -309,7 +313,8 @@ static int qcprobe(struct usb_serial *serial, const struct usb_device_id *id)
 		 */
 		if (nintf < 3 || nintf > 4) {
 			dev_err(dev, "unknown number of interfaces: %d\n", nintf);
-			altsetting = -1;
+			/* default enable /dev/ttyUSBx for WNC LTE module */
+			altsetting = 0;
 			goto done;
 		}
 

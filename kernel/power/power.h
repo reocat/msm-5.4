@@ -13,11 +13,13 @@ struct swsusp_info {
 	unsigned long		image_pages;
 	unsigned long		pages;
 	unsigned long		size;
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 #ifdef CONFIG_ARCH_AMBARELLA
 	unsigned long		magic;
 	unsigned long		addr;
 	unsigned long		lzo_enable;
 	unsigned long		crc32;
+#endif
 #endif
 } __aligned(PAGE_SIZE);
 

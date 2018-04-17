@@ -24,6 +24,14 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <plat/ambalink_cfg.h>
+
+struct ambalink_shared_memory_layout ambalink_shm_layout;
+struct aipc_shared_memory_info aipc_shm_info[AMBALINK_NUM];
+const char *rproc_names[AMBALINK_NUM] = {"ambarella", "c1_and_c2"};
+#endif
+
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
 
 struct proc_dir_entry *get_ambarella_proc_dir(void)
@@ -42,5 +50,19 @@ static int __init ambarella_init_root_proc(void)
 
 	return 0;
 }
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+static int __init ambarella_init_misc(void)
+{
+	ambarella_init_root_proc();
+
+	ambalink_init_mem();
+
+	return 0;
+}
+
+core_initcall(ambarella_init_misc);
+#else
 core_initcall(ambarella_init_root_proc);
+#endif
 

@@ -146,4 +146,19 @@ config ST_SLIM_REMOTEPROC
 
 endif # REMOTEPROC
 
+config AMBARELLA_RPROC
+	tristate "Ambarella Remoteproc Support"
+	depends on ARCH_AMBARELLA_AMBALINK
+	select REMOTEPROC
+	select RPMSG
+	help
+	  Say y here to support Ambarella AmbaLink remote processor on Ambarella SoCs.
+
+config RPCLNT_SUPPORT
+	tristate "Ambarella Remote Client Support"
+	depends on ARCH_AMBARELLA_AMBALINK
+	select RPMSG
+	help
+	  Say y here to support Ambarella AmbaLink remote client on Ambarella SoCs.
+
 endmenu

@@ -3881,12 +3881,13 @@ static int nand_detect(struct nand_chip *chip, struct nand_flash_dev *type)
 	u8 *id_data = chip->id.data;
 	u8 maf_id, dev_id;
 
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	/*
 	 * Reset the chip, required by some chips (e.g. Micron MT29FxGxxxxx)
 	 * after power-up.
 	 */
 	nand_reset(chip, 0);
-
+#endif
 	/* Select the device */
 	chip->select_chip(mtd, 0);
 

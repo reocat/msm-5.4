@@ -34,6 +34,7 @@
 #include <linux/of_platform.h>
 #include <linux/seq_file.h>
 #include <linux/usb.h>
+#include <linux/usb/phy.h>
 #include <plat/rct.h>
 
 //#include <linux/proc_fs.h>
@@ -65,13 +66,17 @@ struct dwc3_ambarella {
 	struct regulator	*vbus_reg;
 };
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 #define USBP0_REF_USE_PAD		(1 << 24)
-static void dwc3_ambarella_set_refclk(struct dwc3_ambarella	*dwc3_amba, int clk)
+static void dwc3_ambarella_set_refclk(struct dwc3_ambarella *dwc3_amba,
+				u32 ref_use_pad, u32 ref_clk_div2)
 {
-	regmap_update_bits(dwc3_amba->rct_reg, 0x634, USBP0_REF_USE_PAD, USBP0_REF_USE_PAD);
+	regmap_update_bits(dwc3_amba->rct_reg, 0x634, USBP0_REF_USE_PAD,
+				ref_use_pad << 24);
 	msleep(1);
-	regmap_update_bits(dwc3_amba->rct_reg, 0X2C4, 1 << 5, 1 << 5);
+	regmap_update_bits(dwc3_amba->rct_reg, 0X2C4, 1 << 5, ref_clk_div2 << 5);
 }
+#endif
 
 #define USB3_SOFT_RESET_MASK 0x4
 static void dwc3_ambarella_reset(struct dwc3_ambarella	*dwc3_amba)
@@ -87,6 +92,10 @@ static int dwc3_ambarella_probe(struct platform_device *pdev)
 	struct dwc3_ambarella	*dwc3_amba;
 	struct device		*dev = &pdev->dev;
 	int			ret;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	struct usb_phy		*phy;
+	u32			ref_use_pad, ref_clk_div2, poc;
+#endif
 
 	if (!node) {
 		dev_err(dev, "device node not found\n");
@@ -111,7 +120,36 @@ static int dwc3_ambarella_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	//dwc3_ambarella_set_refclk(dwc3_amba);
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* dwc3 regs are hidden before enabling PHY. */
+	/* Need to enable PHY before dwc3 driver runnuing. */
+	/* Because dwc3 driver read its regs before calling usb_init_phy. */
+	/* get the PHY device */
+	phy = devm_usb_get_phy_by_phandle(dev, "amb,usbphy", 0);
+	if (IS_ERR(phy)) {
+		dev_err(dev, "Can't get USB PHY %ld\n", PTR_ERR(phy));
+		return -ENXIO;
+	}
+
+	if (of_property_read_u32(dev->of_node, "amb,ref-use-pad", &ref_use_pad) < 0)
+		ref_use_pad = 1;
+
+	if (of_property_read_u32(dev->of_node, "amb,ref-clk-div2", &ref_clk_div2) < 0)
+		ref_clk_div2 = 1;
+
+	regmap_read(dwc3_amba->rct_reg, SYS_CONFIG_OFFSET, &poc);
+
+	if (poc & SYS_CONFIG_USB_PHY_48M) {
+		/* if using internal clock and clock is 48 MHz. */
+		ref_use_pad = 0;
+		ref_clk_div2 = 1;
+	}
+
+	usb_phy_init(phy);
+
+	dwc3_ambarella_set_refclk(dwc3_amba, ref_use_pad, ref_clk_div2);
+#endif
+
 	dwc3_ambarella_reset(dwc3_amba);
 	/* Select USB 3.0 */
 	regmap_update_bits(dwc3_amba->scr_reg, 0x4c, 0x01, 0x01);

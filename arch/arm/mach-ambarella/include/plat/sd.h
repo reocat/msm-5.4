@@ -27,10 +27,23 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+/* AMBALINK: enable or diable sd1 in devicetree, not HERE */
+#define SD_INSTANCES			3
+/* The slot IDs */
+typedef enum _ambarella_slot_id {
+	SD_HOST_0 = 0,
+        SD_HOST_1,
+        SD_HOST_2,
+
+        SD_MAX_CARD      /* Total number of slot IDs */
+} ambarella_slot_id;
+#else
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			2
+#endif
 #endif
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)

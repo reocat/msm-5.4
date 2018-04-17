@@ -56,6 +56,7 @@ static inline void ambrtc_strobe_set(struct ambarella_rtc *ambrtc)
 	writel_relaxed(0x00, ambrtc->base + PWC_RESET_OFFSET);
 }
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static void ambrtc_registers_fflush(struct ambarella_rtc *ambrtc)
 {
 	unsigned int time, alarm, status;
@@ -78,8 +79,8 @@ static void ambrtc_registers_fflush(struct ambarella_rtc *ambrtc)
 	status &= ~PWC_STA_ALARM_MASK;
 
 	writel_relaxed(status, ambrtc->base + PWC_SET_STATUS_OFFSET);
-
 }
+#endif
 
 static int ambrtc_read_time(struct device *dev, struct rtc_time *tm)
 {
@@ -87,7 +88,13 @@ static int ambrtc_read_time(struct device *dev, struct rtc_time *tm)
 	u32 time_sec;
 
 	ambrtc = dev_get_drvdata(dev);
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* Synchronize to ThreadX system time (TAI time spec).*/
+	time_sec = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET) + 10;
+#else
 	time_sec = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET);
+#endif
 
 	rtc_time_to_tm(time_sec, tm);
 
@@ -99,16 +106,20 @@ static int ambrtc_set_mmss(struct device *dev, unsigned long secs)
 	struct ambarella_rtc *ambrtc;
 
 	ambrtc = dev_get_drvdata(dev);
+
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	ambrtc_registers_fflush(ambrtc);
 	writel_relaxed(secs, ambrtc->base + RTC_CURT_WRITE_OFFSET);
 
 	writel_relaxed(0x01, ambrtc->base + PWC_BC_OFFSET);
 	ambrtc_strobe_set(ambrtc);
 	writel_relaxed(0x00, ambrtc->base + PWC_BC_OFFSET);
+#else
+	dev_warn(ambrtc->dev, "%s is not supported in dual-OSes!\n", __func__);
+#endif
 
 	return 0;
 }
-
 
 static int ambrtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
@@ -117,9 +128,20 @@ static int ambrtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 	ambrtc = dev_get_drvdata(dev);
 
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* Synchronize to ThreadX system time (TAI time spec).*/
+	alarm_sec = readl_relaxed(ambrtc->base + RTC_ALAT_READ_OFFSET) + 10;
+#else
 	alarm_sec = readl_relaxed(ambrtc->base + RTC_ALAT_READ_OFFSET);
+#endif
 	rtc_time_to_tm(alarm_sec, &alrm->time);
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	/* Synchronize to ThreadX system time (TAI time spec).*/
+	time_sec = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET) + 10;
+#else
 	time_sec = readl_relaxed(ambrtc->base + RTC_CURT_READ_OFFSET);
+#endif
 
 	/* assert alarm is enabled if alrm time is after current time */
 	alrm->enabled = alarm_sec > time_sec;
@@ -132,6 +154,7 @@ static int ambrtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 static int ambrtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	struct ambarella_rtc *ambrtc;
 	unsigned long alarm_sec;
 	int status;
@@ -148,6 +171,12 @@ static int ambrtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	writel_relaxed(alarm_sec, ambrtc->base + RTC_ALAT_WRITE_OFFSET);
 
 	ambrtc_strobe_set(ambrtc);
+#else
+	struct ambarella_rtc *ambrtc;
+
+	ambrtc = dev_get_drvdata(dev);
+	dev_warn(ambrtc->dev, "%s is not supported in dual-OSes!\n", __func__);
+#endif
 
 	return 0;
 }

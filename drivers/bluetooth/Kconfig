@@ -107,6 +107,22 @@ config BT_HCIUART_NOKIA
 
 	  Say Y here to compile support for Nokia's H4+ protocol.
 
+config BT_BLUESLEEP
+	tristate "Bluesleep driver support"
+	default n
+	help
+	  Bluetooth Bluesleep Driver. You must specify BT DEV wakeup GPIO pin number.
+	  This driver provides the dynamic active power saving mechanism for
+	  bluetooth radio devices.
+
+config BT_BLUESLEEP_DEV_WAKEUP
+	int "Pin number of device wakupe pin."
+	depends on BT_BLUESLEEP
+	help
+	  Pin number of device wakeup pin
+	  low: BT device wakeup
+	  high: BT device sleep
+
 config BT_HCIUART_BCSP
 	bool "BCSP protocol support"
 	depends on BT_HCIUART

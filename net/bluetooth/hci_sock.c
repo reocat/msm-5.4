@@ -721,6 +721,10 @@ static void hci_si_event(struct hci_dev *hdev, int type, int dlen, void *data)
 
 void hci_sock_dev_event(struct hci_dev *hdev, int event)
 {
+#ifdef CONFIG_BT_BLUESLEEP
+	int bluesleep_hci_event(struct notifier_block *this, unsigned long event, void *data);
+	bluesleep_hci_event(NULL, event, hdev);
+#endif
 	BT_DBG("hdev %s event %d", hdev->name, event);
 
 	if (atomic_read(&monitor_promisc)) {

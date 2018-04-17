@@ -103,6 +103,8 @@ static const struct file_operations proc_clock_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambarella_clock_proc_write,
+	/*add .release: fix memory leak issues from kmemleak*/
+	.release = single_release,
 };
 
 static int __init ambarella_init_clk(void)

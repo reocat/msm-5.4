@@ -45,7 +45,11 @@ static unsigned int resume_delay;
 static char resume_file[256] = CONFIG_PM_STD_PARTITION;
 dev_t swsusp_resume_device;
 sector_t swsusp_resume_block;
+#if defined(CONFIG_ARM) && defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+int in_suspend;
+#else
 __visible int in_suspend __nosavedata;
+#endif
 
 enum {
 	HIBERNATION_INVALID,
@@ -270,6 +274,9 @@ void swsusp_show_speed(ktime_t start, ktime_t stop,
 static int create_image(int platform_mode)
 {
 	int error;
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	extern int arch_swsusp_write(u32 flag);
+#endif
 
 	error = dpm_suspend_end(PMSG_FREEZE);
 	if (error) {
@@ -301,6 +308,14 @@ static int create_image(int platform_mode)
 	trace_suspend_resume(TPS("machine_suspend"), PM_EVENT_HIBERNATE, true);
 	error = swsusp_arch_suspend();
 	/* Restore control flow magically appears here */
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	if (in_suspend) {
+		error = arch_swsusp_write(0);
+		if (error)
+			printk(KERN_ERR "PM: Error %d writing "
+					"arch hibernation image\n", error);
+	}
+#endif
 	restore_processor_state();
 	trace_suspend_resume(TPS("machine_suspend"), PM_EVENT_HIBERNATE, false);
 	if (error)
@@ -729,11 +744,11 @@ int hibernate(void)
 		        flags |= SF_CRC32_MODE;
 
 		pm_pr_dbg("Writing image.\n");
-#ifdef CONFIG_ARCH_AMBARELLA
-		error = swsusp_write_mtd(flags);
-#else
+//#ifdef CONFIG_ARCH_AMBARELLA
+//		error = swsusp_write_mtd(flags);
+//#else
 		error = swsusp_write(flags);
-#endif
+//#endif
 		swsusp_free();
 		if (!error) {
 			if (hibernation_mode == HIBERNATION_TEST_RESUME)

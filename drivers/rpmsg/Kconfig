@@ -51,4 +51,5 @@ config RPMSG_VIRTIO
 	select RPMSG
 	select VIRTIO
 
+source "drivers/rpmsg/ambarella/Kconfig"
 endmenu

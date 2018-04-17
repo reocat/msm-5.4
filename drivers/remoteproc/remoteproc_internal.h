@@ -22,6 +22,7 @@
 
 #include <linux/irqreturn.h>
 #include <linux/firmware.h>
+#include <linux/module.h>
 
 struct rproc;
 
@@ -40,6 +41,12 @@ struct rproc_fw_ops {
 						 int *tablesz);
 	struct resource_table *(*find_loaded_rsc_table)(
 				struct rproc *rproc, const struct firmware *fw);
+	int (*request_firmware)(const struct firmware **firmware_p,
+				const char *name, struct device *device);
+	int (*request_firmware_nowait)(struct module *module, bool uevent,
+		   const char *name, struct device *device, gfp_t gfp, void *context,
+		   void (*cont)(const struct firmware *fw, void *context));
+	void (*release_firmware)(const struct firmware *fw);
 	int (*load)(struct rproc *rproc, const struct firmware *fw);
 	int (*sanity_check)(struct rproc *rproc, const struct firmware *fw);
 	u32 (*get_boot_addr)(struct rproc *rproc, const struct firmware *fw);
@@ -120,6 +127,38 @@ struct resource_table *rproc_find_loaded_rsc_table(struct rproc *rproc,
 		return rproc->fw_ops->find_loaded_rsc_table(rproc, fw);
 
 	return NULL;
+}
+
+static inline
+int rproc_request_firmware(struct rproc *rproc, const struct firmware **fw)
+{
+	if (rproc->fw_ops->request_firmware)
+		return rproc->fw_ops->request_firmware(fw,
+						       rproc->firmware,
+						       &rproc->dev);
+
+	return 0;
+}
+
+static inline
+int rproc_request_firmware_nowait(struct rproc *rproc,
+		     void (*cont)(const struct firmware *fw, void *context))
+{
+	if (rproc->fw_ops->request_firmware_nowait) {
+		return rproc->fw_ops->request_firmware_nowait(THIS_MODULE,
+					  FW_ACTION_HOTPLUG, rproc->firmware,
+					  &rproc->dev, GFP_KERNEL, rproc,
+					  cont);
+	}
+
+	return 0;
+}
+
+static inline
+void rproc_release_firmware(struct rproc *rproc, const struct firmware *fw)
+{
+	if (rproc->fw_ops->release_firmware)
+		rproc->fw_ops->release_firmware(fw);
 }
 
 extern const struct rproc_fw_ops rproc_elf_fw_ops;

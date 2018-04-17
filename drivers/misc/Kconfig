@@ -506,6 +506,14 @@ config PCI_ENDPOINT_TEST
            Enable this configuration option to enable the host side test driver
            for PCI Endpoint.
 
+config AMBARELLA_HEAPMEM
+    bool "Ambarella heap mem driver"
+    default n
+
+config AMBARELLA_DSPMEM
+    bool "Ambarella DSP mem driver"
+    default n
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

@@ -45,6 +45,10 @@
 #include <plat/nand_combo.h>
 #include <plat/event.h>
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/aipc/ipc_mutex.h>
+#endif
+
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	8192
 
 
@@ -103,6 +107,7 @@ struct ambarella_nand_host {
 #define NAND_TIMING_LSHIFT8BIT(x)	((x) << 8)
 #define NAND_TIMING_LSHIFT0BIT(x)	((x) << 0)
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static int nand_timing_calc(u32 clk, int minmax, int val)
 {
 	u32 x;
@@ -120,6 +125,7 @@ static int nand_timing_calc(u32 clk, int minmax, int val)
 
 	return n < 1 ? 1 : n;
 }
+#endif
 
 static int amb_ecc6_ooblayout_ecc_lp(struct mtd_info *mtd, int section,
 				   struct mtd_oob_region *oobregion)
@@ -220,6 +226,7 @@ static u32 to_native_cmd(struct ambarella_nand_host *host, u32 cmd)
 	return native_cmd;
 }
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 static inline void ambarella_fio_rct_reset(struct ambarella_nand_host *host)
 {
 	regmap_write(host->reg_rct, FIO_RESET_OFFSET, FIO_RESET_FIO_RST);
@@ -227,6 +234,7 @@ static inline void ambarella_fio_rct_reset(struct ambarella_nand_host *host)
 	regmap_write(host->reg_rct, FIO_RESET_OFFSET, 0);
 	msleep(1);
 }
+#endif
 
 static int count_zero_bits(u8 *buf, int size, int max_bits)
 {
@@ -277,6 +285,7 @@ static int nand_bch_check_blank_page(struct ambarella_nand_host *host)
 
 static void ambarella_nand_set_timing(struct ambarella_nand_host *host)
 {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	u8 tcls, tals, tcs, tds;
 	u8 tclh, talh, tch, tdh;
 	u8 twp, twh, twb, trr;
@@ -406,6 +415,7 @@ static void ambarella_nand_set_timing(struct ambarella_nand_host *host)
 		NAND_TIMING_LSHIFT0BIT(tar);
 
 	writel_relaxed(val, host->regbase + NAND_TIMING5_OFFSET);
+#endif
 }
 
 static int ambarella_nand_system_event(struct notifier_block *nb,
@@ -500,6 +510,10 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 	long timeout;
 	int rval = 0;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+        enable_irq(host->irq);
+#endif
 	host->int_sts = 0;
 
 	if (native_cmd == NAND_AMB_CMD_READ || native_cmd == NAND_AMB_CMD_PROGRAM)
@@ -524,6 +538,10 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 	if (host->err_code == 0)
 		host->err_code = rval;
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(host->irq);
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+#endif
 	return rval;
 }
 
@@ -863,6 +881,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 	u32 val;
 
 	/* reset FIO by RCT */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	ambarella_fio_rct_reset(host);
 
 	/* Reset FIO FIFO and then exit random read mode */
@@ -873,6 +892,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 	msleep(3);
 	val &= ~FIO_CTRL_RANDOM_READ;
 	writel_relaxed(val, host->regbase + FIO_CTRL_OFFSET);
+#endif
 
 	/* always use 5 cycles to read ID */
 	val = readl_relaxed(host->regbase + NAND_EXT_CTRL_OFFSET);
@@ -884,6 +904,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 	writel_relaxed(val, host->regbase + NAND_EXT_CTRL_OFFSET);
 
 	/* always enable dual-space mode */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	if (host->ecc_bits == 6)
 		val = FDMA_DSM_MAIN_JP_SIZE_512B | FDMA_DSM_SPARE_JP_SIZE_16B;
 	else
@@ -910,6 +931,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 	writel_relaxed(val, host->regbase + FIO_RAW_INT_STATUS_OFFSET);
 	val = FIO_INT_OPERATION_DONE | FIO_INT_ECC_RPT_UNCORR | FIO_INT_ECC_RPT_THRESH;
 	writel_relaxed(val, host->regbase + FIO_INT_ENABLE_OFFSET);
+#endif
 }
 
 static int ambarella_nand_config_flash(struct ambarella_nand_host *host)
@@ -1137,11 +1159,18 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	}
 	BUG_ON(host->dmaaddr & 0x7);
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        aipc_mutex_lock(AMBA_IPC_MUTEX_NAND);
+#endif
 	rval = ambarella_nand_get_resource(host, pdev);
 	if (rval < 0)
 		goto err_exit1;
 
 	ambarella_nand_init_chip(host, pdev->dev.of_node);
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(host->irq);
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+#endif
 
 	chip = &host->chip;
 	nand_set_controller_data(chip, host);
@@ -1187,6 +1216,10 @@ err_exit1:
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,
 		host->dmabuf, host->dmaaddr);
 err_exit0:
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+        disable_irq(host->irq);
+        aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
+#endif
 	return rval;
 }
 
@@ -1228,8 +1261,10 @@ static int ambarella_nand_restore(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	int rval = 0;
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
+#endif
 	enable_irq(host->irq);
 	rval = nand_scan_tail(nand_to_mtd(&host->chip));
 
@@ -1241,8 +1276,10 @@ static int ambarella_nand_resume(struct device *dev)
 	struct ambarella_nand_host *host;
 	struct platform_device *pdev = to_platform_device(dev);
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
+#endif
 	enable_irq(host->irq);
 
 	return 0;
