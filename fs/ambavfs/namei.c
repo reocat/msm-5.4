@@ -359,9 +359,10 @@ exit:
 /*
  * get file attriubte, for cache consistency
  */
-static int ambafs_getattr(struct vfsmount *mnt, struct dentry *dentry,
-		struct kstat *stat)
+static int ambafs_getattr(const struct path *path, struct kstat *stat,
+		   u32 request_mask, unsigned int query_flags)
 {
+	struct dentry *dentry = path->dentry;
 	AMBAFS_DMSG("%s:  \r\n", __func__);
 
 	if (dentry->d_inode && (dentry->d_inode->i_opflags & AMBAFS_IOP_SKIP_GET_STAT)) {
@@ -379,7 +380,8 @@ static int ambafs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 			ambafs_update_inode(dentry->d_inode, astat);
 		}
 	}
-	return simple_getattr(mnt, dentry, stat);
+
+	return simple_getattr(path, stat, request_mask, query_flags);
 }
 
 /*

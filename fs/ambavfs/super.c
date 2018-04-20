@@ -78,7 +78,7 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 	root->i_uid = GLOBAL_ROOT_UID;
 	root->i_gid = GLOBAL_ROOT_GID;
 	root->i_blocks = 0;
-	root->i_atime = root->i_mtime = root->i_ctime = CURRENT_TIME;
+	root->i_atime = root->i_mtime = root->i_ctime = current_time(root);;
 	root->i_ino = iunique(sb, AMBAFS_INO_MAX_RESERVED);
 	root->i_op = &ambafs_dir_inode_ops;
 	root->i_fop = &ambafs_dir_ops;
@@ -163,16 +163,6 @@ static int __init ambafs_init(void)
 	extern void qstat_init(void);
 
 	qstat_init();
-	err = bdi_init(&ambafs_bdi);
-	if (!err)
-		err = bdi_register(&ambafs_bdi, NULL, "%s", ambafs_bdi.name);
-
-	if (err) {
-		bdi_destroy(&ambafs_bdi);
-
-		return err;
-	}
-
 	ambafs_rpmsg_init();
 
 	err = register_filesystem(&ambafs_type);
@@ -182,8 +172,6 @@ static int __init ambafs_init(void)
 
 static void __exit ambafs_exit(void)
 {
-	bdi_destroy(&ambafs_bdi);
-
 	ambafs_rpmsg_exit();
 	unregister_filesystem(&ambafs_type);
 }
