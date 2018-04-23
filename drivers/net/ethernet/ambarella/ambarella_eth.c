@@ -2397,7 +2397,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			}
 
 			gpio_direction_output(lp->rst_gpio, lp->rst_gpio_active);
-			msleep(10)
+			msleep(10);
 			gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
 			msleep(50);
 		}
