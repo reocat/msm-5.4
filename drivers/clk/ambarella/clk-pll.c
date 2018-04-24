@@ -64,6 +64,8 @@ struct amb_clk_pll {
 	u32 extra_post_scaler : 1;
 	u32 frac_mode : 1;
 	u32 frac_nega : 1;
+	u32 ctrl2_val;
+	u32 ctrl3_val;
 	u32 fix_divider;
 };
 
@@ -274,7 +276,13 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 	}
 
-	ctrl3_val = readl(clk_pll->ctrl3_reg);
+	if (clk_pll->ctrl2_val != 0)
+		writel(clk_pll->ctrl2_val, clk_pll->ctrl2_reg);
+
+	if (clk_pll->ctrl3_val != 0)
+		ctrl3_val =clk_pll->ctrl3_val;
+	else
+		ctrl3_val = readl(clk_pll->ctrl3_reg);
 
 	if (ctrl_val.s.frac_mode)
 		ctrl3_val |= (1 << 12);
@@ -361,6 +369,12 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 	clk_pll->extra_post_scaler = !!of_find_property(np, "amb,extra-post-scaler", NULL);
 	clk_pll->frac_mode = !!of_find_property(np, "amb,frac-mode", NULL);
 	clk_pll->frac_nega = !!of_find_property(np, "amb,frac-nega", NULL);
+
+	if (of_property_read_u32(np, "amb,ctrl2-val", &clk_pll->ctrl2_val))
+		clk_pll->ctrl2_val = 0;
+
+	if (of_property_read_u32(np, "amb,ctrl3-val", &clk_pll->ctrl3_val))
+		clk_pll->ctrl3_val = 0;
 
 	if (of_property_read_u32(np, "amb,fix-divider", &clk_pll->fix_divider))
 		clk_pll->fix_divider = 1;
