@@ -512,7 +512,9 @@ void __exit ambarella_rproc_exit(void)
 	platform_driver_unregister(&ambarella_rproc_driver);
 }
 
-subsys_initcall(ambarella_rproc_init);
+/* fix kernel NULL pointer dereference ambarella_rproc_probe() */
+/*subsys_initcall(ambarella_rproc_init);*/
+late_initcall(ambarella_rproc_init);
 module_exit(ambarella_rproc_exit);
 
 //module_platform_driver(ambarella_rproc_driver);
