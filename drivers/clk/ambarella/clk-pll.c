@@ -162,7 +162,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			unsigned long parent_rate)
 {
 	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
-	unsigned long rate_tmp, pre_scaler = 1, post_scaler = 1;
+	unsigned long rate_tmp, rate_resolution, pre_scaler = 1, post_scaler = 1;
 	unsigned long intp, sdiv = 1, sout = 1;
 	u64 dividend, divider, diff;
 	u32 ctrl3_val;
@@ -197,8 +197,20 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * In addition, for 10nm and later chips, the formula of PLL calculation
 	 * is changed, there is no negative frac any more.
 	 */
-	rate_tmp = clk_pll->frac_nega ? rate : rounddown(rate, 1000000);
+	rate_tmp = rate;
 	rational_best_approximation(rate_tmp, parent_rate, 64, 16, &intp, &sout);
+
+	if (!clk_pll->frac_nega) {
+		rate_resolution = parent_rate / post_scaler / 16;
+		/*
+		 * 10nm chips don't have negative fraction mode, so the
+		 * calculated rate be less than the required rate.
+		 */
+		while (parent_rate * intp / sout > rate) {
+			rate_tmp -= rate_resolution;
+			rational_best_approximation(rate_tmp, parent_rate, 64, 16, &intp, &sout);
+		}
+	}
 
 	while (parent_rate / 1000000 * intp * sdiv / pre_scaler < 700) {
 		if (sout > 8 || intp > 64)
