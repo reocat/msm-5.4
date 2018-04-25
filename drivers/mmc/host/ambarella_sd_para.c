@@ -48,11 +48,9 @@ static size_t sdio_regbase = 0;
 #define SDIO_GLOBAL_ID 2
 #define SDIO_GLOBAL_NAME "sd2"
 
-/* fixme: hard code to H22 */
+#if defined(CONFIG_ARCH_AMBARELLA_S5L)
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
-
-#if defined(CONFIG_ARCH_AMBARELLA_S5L)
 //clock GPIO 99
 #define DS_CLK_MASK  0x00000008
 //cmd GPIO 100
@@ -60,12 +58,23 @@ static size_t sdio_regbase = 0;
 //data GPIO 101~104
 #define DS_DATA_MASK 0x000001e0
 #elif defined(CONFIG_ARCH_AMBARELLA_CV1)
+#define SDIO_DS0 GPIO_DS0_3_OFFSET
+#define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 113
 #define DS_CLK_MASK  0x00020000
 //cmd GPIO 114
 #define DS_CMD_MASK  0x00040000
 //data GPIO 115~118
 #define DS_DATA_MASK 0x00780000
+#elif defined(CONFIG_ARCH_AMBARELLA_CV2) ||  defined(CONFIG_ARCH_AMBARELLA_CV22)
+#define SDIO_DS0 GPIO_DS0_3_OFFSET
+#define SDIO_DS1 GPIO_DS1_3_OFFSET
+//clock GPIO 97
+#define DS_CLK_MASK  0x00000002
+//cmd GPIO 98
+#define DS_CMD_MASK  0x00000004
+//data GPIO 99~102
+#define DS_DATA_MASK 0x00000078
 #endif
 
 #define SDIO_DELAY_SEL0 (sdio_regbase + 0xd8)
