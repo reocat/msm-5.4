@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
 #define RCT_OFFSET			0x00080000
 #else
 #define RCT_OFFSET			0x00170000
@@ -572,8 +572,10 @@
 #define	POC_ETH_IS_ENABLED		0x00000001
 #define	POC_USB0_IS_DEVICE		0x20000000
 
-#if (CHIP_REV == S5) || (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == S5) || (CHIP_REV == CV1)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00800000
+#elif (CHIP_REV == CV2) || (CHIP_REV == CV22)
+#define	POC_GCLK_CORE_DIV2_MASK		0x00000200
 #elif (CHIP_REV == S5L)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00100000
 #else
@@ -625,7 +627,7 @@
 #define RCT_BOOT_FROM_HIF		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
 #define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000000 /* not used */

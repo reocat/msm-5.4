@@ -87,22 +87,28 @@ void ambalink_init_mem(void);
 /*
  * for software interrupt
  */
-#define AHB_SP_SWI_SET_OFFSET           0x10
-#define AHB_SP_SWI_CLEAR_OFFSET         0x14
-
-#define AHB_SP_SWI_SET_OFFSET1          0x44
-#define AHB_SP_SWI_CLEAR_OFFSET1        0x48
 
 #define AXI_SPI_BASE                    32
 
 #if (CHIP_REV == S5)
-/*#define AXI_SOFT_IRQ(x)                ((x) + 0) */  /* 0 <= x <= 6 */
 #define AXI_SOFT_IRQ(x)                ((x) + 0)  /* 0 <= x <= 6 */
 #define AXI_SOFT_IRQ2(x)               ((x) + 16)  /* 0 <= x <= 6 */
+#define AHB_SP_SWI_SET_OFFSET           0x10
+#define AHB_SP_SWI_CLEAR_OFFSET         0x14
+#define AHB_SP_SWI_SET_OFFSET1          0x44
+#define AHB_SP_SWI_CLEAR_OFFSET1        0x48
 #elif (CHIP_REV == S5L)
 #define AXI_SOFT_IRQ(x)                ((x + AXI_SPI_BASE) + 7)  /* 0 <= x <= 13 */
-#elif (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
+#define AHB_SP_SWI_SET_OFFSET           0x10
+#define AHB_SP_SWI_CLEAR_OFFSET         0x14
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV22)
 #define AXI_SOFT_IRQ(x)                ((x) + 91)  /* 0 <= x <= 13 */
+#define AHB_SP_SWI_SET_OFFSET           0x10
+#define AHB_SP_SWI_CLEAR_OFFSET         0x14
+#elif (CHIP_REV == CV2)
+#define AXI_SOFT_IRQ(x)                ((x) + 91)  /* 0 <= x <= 13 */
+#define AHB_SP_SWI_SET_OFFSET           0x64
+#define AHB_SP_SWI_CLEAR_OFFSET         0x68
 #else
 #error "unsupport chip!!"
 #endif
