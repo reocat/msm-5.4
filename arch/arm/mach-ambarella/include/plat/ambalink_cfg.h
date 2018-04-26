@@ -101,7 +101,7 @@ void ambalink_init_mem(void);
 #define AXI_SOFT_IRQ2(x)               ((x) + 16)  /* 0 <= x <= 6 */
 #elif (CHIP_REV == S5L)
 #define AXI_SOFT_IRQ(x)                ((x + AXI_SPI_BASE) + 7)  /* 0 <= x <= 13 */
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
 #define AXI_SOFT_IRQ(x)                ((x) + 91)  /* 0 <= x <= 13 */
 #else
 #error "unsupport chip!!"
@@ -133,7 +133,7 @@ void ambalink_init_mem(void);
 #define VRING_IRQ_C2_TO_C1_KICK         AXI_SOFT_IRQ2(2)
 #define VRING_IRQ_C2_TO_C1_ACK          AXI_SOFT_IRQ2(3)
 
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
 #define VRING_IRQ_C0_TO_C1_KICK         AXI_SOFT_IRQ(0)
 #define VRING_IRQ_C0_TO_C1_ACK          AXI_SOFT_IRQ(1)
 #define VRING_IRQ_C1_TO_C0_KICK         AXI_SOFT_IRQ(2)
