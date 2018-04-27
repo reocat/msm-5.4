@@ -673,6 +673,7 @@
 			interrupt-names = "hdmi";
 			amb,hdmiphy = <0xec170010>;
 			amb,hdmi-version = <14>;
+			amb,i2c-adapter = <1>;
 		};
 	};
 
