@@ -101,12 +101,12 @@ void ambalink_init_mem(void);
 #define AXI_SOFT_IRQ(x)                ((x + AXI_SPI_BASE) + 7)  /* 0 <= x <= 13 */
 #define AHB_SP_SWI_SET_OFFSET           0x10
 #define AHB_SP_SWI_CLEAR_OFFSET         0x14
-#elif (CHIP_REV == CV1) || (CHIP_REV == CV22)
-#define AXI_SOFT_IRQ(x)                ((x) + 91)  /* 0 <= x <= 13 */
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2)
+#define AXI_SOFT_IRQ(x)                ((x) + AXI_SPI_BASE + 91)  /* 0 <= x <= 13 */
 #define AHB_SP_SWI_SET_OFFSET           0x10
 #define AHB_SP_SWI_CLEAR_OFFSET         0x14
-#elif (CHIP_REV == CV2)
-#define AXI_SOFT_IRQ(x)                ((x) + 91)  /* 0 <= x <= 13 */
+#elif (CHIP_REV == CV22)
+#define AXI_SOFT_IRQ(x)                ((x) + AXI_SPI_BASE + 91)  /* 0 <= x <= 13 */
 #define AHB_SP_SWI_SET_OFFSET           0x64
 #define AHB_SP_SWI_CLEAR_OFFSET         0x68
 #else
