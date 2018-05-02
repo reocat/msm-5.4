@@ -198,8 +198,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * is changed, there is no negative frac any more.
 	 */
 	rate_tmp = rate;
-	rational_best_approximation(rate_tmp, parent_rate, 64, 16, &intp, &sout);
-
+	rational_best_approximation(rate_tmp, parent_rate, 128, 16, &intp, &sout);
 	if (!clk_pll->frac_nega) {
 		rate_resolution = parent_rate / post_scaler / 16;
 		/*
@@ -208,7 +207,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		 */
 		while (parent_rate * intp / sout > rate) {
 			rate_tmp -= rate_resolution;
-			rational_best_approximation(rate_tmp, parent_rate, 64, 16, &intp, &sout);
+			rational_best_approximation(rate_tmp, parent_rate, 128, 16, &intp, &sout);
 		}
 	}
 

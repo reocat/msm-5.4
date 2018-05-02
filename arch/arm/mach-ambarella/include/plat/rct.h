@@ -692,13 +692,16 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == CV1) || (CHIP_REV == CV22)
-#define MIPI_DSI_CTRL0_REG		0X00000670
-#define MIPI_DSI_CTRL1_REG		0X00000674
-#define MIPI_DSI_CTRL2_REG		0X00000678
-#define MIPI_DSI_CTRL3_REG		0X0000067C
-#define MIPI_DSI_CTRL4_REG		0X00000680
-#define MIPI_DSI_CTRL5_REG		0X00000684
-#define MIPI_DSI_AUX0_REG		0X0000068c
+#define MIPI_DSI_CTRL0_OFFSET		0x00000670
+#define MIPI_DSI_CTRL1_OFFSET		0x00000674
+#define MIPI_DSI_CTRL2_OFFSET		0x00000678
+#define MIPI_DSI_CTRL3_OFFSET		0x0000067C
+#define MIPI_DSI_CTRL4_OFFSET		0x00000680
+#define MIPI_DSI_CTRL5_OFFSET		0x00000684
+#define MIPI_DSI_AUX0_OFFSET		0x0000068c
+
+#define SCALER_CLK_VO_B_DIV_POST_OFF		0X000002ec
+
 #endif
 /* ==========================================================================*/
 

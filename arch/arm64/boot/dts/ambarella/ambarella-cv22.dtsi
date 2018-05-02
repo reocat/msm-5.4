@@ -1219,29 +1219,27 @@
 			amb,frac-mode;
 		};
 
-		gclk_vo: gclk-vo { /* for tv */
+		pll_out_hdmi: pll_out_hdmi {
 			#clock-cells = <0>;
-			compatible = "ambarella,vout-tv-clock";
+			compatible = "ambarella,pll-clock";
 			reg = <0xed080164 4>,
 			      <0xed080168 4>,
 			      <0xed080150 4>,
 			      <0xed080154 4>,
 			      <0xed080170 4>,
-			      <0xed080008 4>,
-			      <0xed0806bc 4>;
+			      <0x00000000 0>;
 			clocks = <&osc>;
-			clock-output-names = "gclk_vo";
-			assigned-clocks = <&gclk_vo>;
+			clock-output-names = "pll_out_hdmi";
+			assigned-clocks = <&pll_out_hdmi>;
 			assigned-clock-rates = <24000000>;
 			amb,extra-pre-scaler;
 			amb,frac-mode;
-			amb,fix-divider = <10>;
 			amb,ctrl2-val = <0x30520000>;
 			amb,ctrl3-val = <0x00088004>;
 			amb,min-vco = <2500>; /* in MHz */
 		};
 
-		gclk_vo2: gclk-vo2 { /* for lcd */
+		pll_out_vo2: pll_out_vo2 {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
 			reg = <0xed0800c0 4>,
@@ -1249,13 +1247,12 @@
 			      <0xed08013c 4>,
 			      <0xed080140 4>,
 			      <0xed0800c8 4>,
-			      <0xed0800cc 4>;
+			      <0x00000000 0>;
 			clocks = <&osc>;
-			clock-output-names = "gclk_vo2";
-			assigned-clocks = <&gclk_vo2>;
+			clock-output-names = "pll_out_vo2";
+			assigned-clocks = <&pll_out_vo2>;
 			assigned-clock-rates = <24000000>;
 			amb,extra-pre-scaler;
-			amb,extra-post-scaler;
 			amb,frac-mode;
 		};
 
