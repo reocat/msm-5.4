@@ -41,6 +41,16 @@
 		reg = <0x00200000 0x07e00000>; /* 126M */
 	};
 
+	sub_scheduler: sub_scheduler0 {
+		compatible = "ambarella,sub-scheduler";
+		interrupts = <0 153 0x4>;
+	};
+
+	vp_module: vp_module {
+		compatible = "ambarella,vp-module";
+		interrupts = <0 106 0x4>;
+	};
+
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
