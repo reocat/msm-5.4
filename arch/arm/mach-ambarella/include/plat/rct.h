@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define RCT_OFFSET			0x00080000
 #else
 #define RCT_OFFSET			0x00170000
@@ -62,7 +62,7 @@
 #define USBP0_SEL_OFFSET		0x2c0
 #define USBP0_SEL_REG			RCT_REG(USBP0_SEL_OFFSET)
 
-#if (CHIP_REV == CV22)
+#if (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define USB0_IS_HOST_MASK		0x00000001
 #else
 #define USB0_IS_HOST_MASK		0x00000002
@@ -580,8 +580,10 @@
 #define	POC_ETH_IS_ENABLED		0x00000001
 #define	POC_USB0_IS_DEVICE		0x20000000
 
-#if (CHIP_REV == S5) || (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == S5) || (CHIP_REV == CV1)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00800000
+#elif (CHIP_REV == CV22) || (CHIP_REV == CV2)
+#define	POC_GCLK_CORE_DIV2_MASK		0x00000200
 #elif (CHIP_REV == S5L)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00100000
 #else
@@ -614,7 +616,7 @@
 #define POC_BOOT_FROM_EMMC		0x00000020
 #define POC_BOOT_FROM_SPI		0x00000030
 #define POC_BOOT_FROM_HIF		0x00000040
-#elif (CHIP_REV == S5L) || (CHIP_REV == CV22)
+#elif (CHIP_REV == S5L) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define POC_BOOT_FROM_MASK		0x00000530
 #define POC_BOOT_FROM_BYPASS		0x00000100
 #define POC_BOOT_FROM_USB		0x00000400
@@ -633,7 +635,7 @@
 #define RCT_BOOT_FROM_HIF		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000000 /* not used */
@@ -691,7 +693,7 @@
 #define RCT_BOOT_EMMC_SDXC		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define MIPI_DSI_CTRL0_OFFSET		0x00000670
 #define MIPI_DSI_CTRL1_OFFSET		0x00000674
 #define MIPI_DSI_CTRL2_OFFSET		0x00000678

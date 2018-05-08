@@ -27,13 +27,13 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define IDC_INSTANCES			4
 #else
 #define IDC_INSTANCES			3
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define IDC0_OFFSET			0x8000
 #else
 #define IDC0_OFFSET			0x3000
@@ -41,7 +41,7 @@
 #define IDC0_BASE			(APB_BASE + IDC0_OFFSET)
 #define IDC0_REG(x)			(IDC0_BASE + (x))
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define IDC1_OFFSET			0x9000
 #else
 #define IDC1_OFFSET			0x1000
@@ -49,7 +49,7 @@
 #define IDC1_BASE			(APB_BASE + IDC1_OFFSET)
 #define IDC1_REG(x)			(IDC1_BASE + (x))
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define IDC2_OFFSET			0xA000
 #else
 #define IDC2_OFFSET			0x7000
@@ -57,7 +57,7 @@
 #define IDC2_BASE			(APB_BASE + IDC2_OFFSET)
 #define IDC2_REG(x)			(IDC2_BASE + (x))
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define IDC3_OFFSET			0xB000
 #else
 #define IDC3_OFFSET			0x13000

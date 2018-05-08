@@ -44,7 +44,7 @@
 #define UART0_OFFSET			0x5000
 #endif
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define UART1_OFFSET			0x16000
 #elif (CHIP_REV == CV22)
 #define UART1_OFFSET			0x17000
@@ -52,7 +52,7 @@
 #define UART1_OFFSET			0x32000
 #endif
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define UART2_OFFSET			0x17000
 #elif (CHIP_REV == CV22)
 #define UART2_OFFSET			0x18000
@@ -60,7 +60,7 @@
 #define UART2_OFFSET			0x33000
 #endif
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define UART3_OFFSET			0x18000
 #elif (CHIP_REV == CV22)
 #define UART3_OFFSET			0x19000
@@ -68,7 +68,7 @@
 #define UART3_OFFSET			0x15000
 #endif
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define UART4_OFFSET			0x19000
 #else
 #define UART4_OFFSET			0x1A000

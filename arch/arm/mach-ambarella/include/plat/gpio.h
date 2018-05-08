@@ -48,42 +48,45 @@
 #elif (CHIP_REV == CV22)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			160
+#elif (CHIP_REV == CV2)
+#define GPIO_INSTANCES			6
+#define GPIO_MAX_LINES			192
 #else
 #error "Not supported!"
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define GPIO0_OFFSET			0x3000
 #else
 #define GPIO0_OFFSET			0x9000
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define GPIO1_OFFSET			0x4000
 #else
 #define GPIO1_OFFSET			0xA000
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define GPIO2_OFFSET			0x5000
 #else
 #define GPIO2_OFFSET			0xE000
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define GPIO3_OFFSET			0x6000
 #else
 #define GPIO3_OFFSET			0x10000
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define GPIO4_OFFSET			0x7000
 #else
 #define GPIO4_OFFSET			0x11000
 #endif
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define GPIO5_OFFSET			0x8000
 #else
 #define GPIO5_OFFSET			0xD000
@@ -208,7 +211,7 @@
 #define IOMUX_CTRL_SET_OFFSET		0xf0
 #define IOMUX_REG_OFFSET(bank, n)	(((bank) * 0xc) + ((n) * 4))
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define IOMUX_OFFSET			0x0000
 #else
 #define IOMUX_OFFSET			0x16000

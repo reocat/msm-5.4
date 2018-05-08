@@ -32,6 +32,7 @@
 #define S5L		(16000)
 #define CV1		(20000)
 #define CV22		(22000)
+#define CV2		(23000)
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
@@ -51,6 +52,8 @@
 #define CHIP_REV	CV1
 #elif defined(CONFIG_ARCH_AMBARELLA_CV22)
 #define CHIP_REV	CV22
+#elif defined(CONFIG_ARCH_AMBARELLA_CV2)
+#define CHIP_REV	CV2
 #else
 #error "Undefined CHIP_REV"
 #endif
