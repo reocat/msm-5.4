@@ -1268,9 +1268,11 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_audio";
 			assigned-clocks = <&gclk_audio>;
-			#assigned-clock-rates = <12288000>;
+			assigned-clock-rates = <12288000>;
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
+			amb,ctrl2-val = <0x30520000>;
+			amb,ctrl3-val = <0x00088004>;
 			amb,frac-mode;
 		};
 

@@ -162,6 +162,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			unsigned long parent_rate)
 {
 	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
+	unsigned long max_numerator, max_denominator;
 	unsigned long rate_tmp, rate_resolution, pre_scaler = 1, post_scaler = 1;
 	unsigned long intp, sdiv = 1, sout = 1;
 	u64 dividend, divider, diff;
@@ -198,7 +199,17 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * is changed, there is no negative frac any more.
 	 */
 	rate_tmp = rate;
-	rational_best_approximation(rate_tmp, parent_rate, 128, 16, &intp, &sout);
+
+	if(!strcmp("pll_out_hdmi", clk_hw_get_name(hw))){
+		max_numerator = 128;
+		max_denominator = 16;
+	}else{
+		max_numerator = 64;
+		max_denominator = 16;
+	}
+
+	rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
+				&intp, &sout);
 	if (!clk_pll->frac_nega) {
 		rate_resolution = parent_rate / post_scaler / 16;
 		/*
@@ -207,7 +218,8 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		 */
 		while (parent_rate * intp / sout > rate) {
 			rate_tmp -= rate_resolution;
-			rational_best_approximation(rate_tmp, parent_rate, 128, 16, &intp, &sout);
+			rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
+						&intp, &sout);
 		}
 	}
 
