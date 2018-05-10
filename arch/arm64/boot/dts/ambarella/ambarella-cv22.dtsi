@@ -1221,7 +1221,7 @@
 
 		pll_out_hdmi: pll_out_hdmi {
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
+			compatible = "ambarella,pll-hdmi-clock";
 			reg = <0xed080164 4>,
 			      <0xed080168 4>,
 			      <0xed080150 4>,
@@ -1271,8 +1271,6 @@
 			assigned-clock-rates = <12288000>;
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
-			amb,ctrl2-val = <0x30520000>;
-			amb,ctrl3-val = <0x00088004>;
 			amb,frac-mode;
 		};
 
