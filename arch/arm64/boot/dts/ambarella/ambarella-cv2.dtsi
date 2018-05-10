@@ -74,10 +74,10 @@
 
 	pmu {
 		compatible = "arm,cortex-a53-pmu";
-		interrupts =	<0 4 0x4>,
-				<0 5 0x4>,
-				<0 6 0x4>,
-				<0 7 0x4>;
+		interrupts = <0 4 0x4>,
+			     <0 5 0x4>,
+			     <0 6 0x4>,
+			     <0 7 0x4>;
 	};
 
 	cpus {
@@ -128,23 +128,23 @@
 		#interrupt-cells = <3>;
 		#address-cells = <0>;
 		interrupt-controller;
-		reg =	<0xf3001000 0x1000>,	/* GIC Dist */
-			<0xf3002000 0x2000>,	/* GIC CPU */
-			/* following are not used if no virtulization */
-			<0xf3004000 0x2000>,	/* GIC VCPU Control */
-			<0xf3006000 0x2000>;	/* GIC VCPU */
+		reg = <0xf3001000 0x1000>,	/* GIC Dist */
+		      <0xf3002000 0x2000>,	/* GIC CPU */
+		      /* following are not used if no virtulization */
+		      <0xf3004000 0x2000>,	/* GIC VCPU Control */
+		      <0xf3006000 0x2000>;	/* GIC VCPU */
 		interrupts = <1 9 0xf04>;	/* GIC Maintenence IRQ */
 	};
 
 	timer {
 		compatible = "arm,armv8-timer";
-		interrupts =	<1 13 0xf08>,	/* Secure Phys IRQ */
-				<1 14 0xf08>,	/* Non-secure Phys IRQ */
-				<1 11 0xf08>,	/* Virt IRQ */
-				<1 10 0xf08>;	/* Hyp IRQ */
+		interrupts = <1 13 0xf08>,	/* Secure Phys IRQ */
+			     <1 14 0xf08>,	/* Non-secure Phys IRQ */
+			     <1 11 0xf08>,	/* Virt IRQ */
+			     <1 10 0xf08>;	/* Hyp IRQ */
 	};
 
-	n_apb@e4000000 { /* Non-Secure APB, but configurable */
+	n_apb@e4000000 { /* Non-Secure APB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -181,12 +181,6 @@
 			amb,scaler-1v8 = <0x01>;
 			amb,t2v-channel = <2>;
 			status = "disabled";
-		};
-
-		pwm0: pwm@e4004000 {
-			compatible = "ambarella,pwm";
-			reg = <0xe4004000 0x1000>;
-			#pwm-cells = <3>;
 		};
 
 		i2c0: i2c@e4008000 {
@@ -245,6 +239,12 @@
 			status = "disabled";
 		};
 
+		pwm0: pwm@e4004000 {
+			compatible = "ambarella,pwm";
+			reg = <0xe4004000 0x1000>;
+			#pwm-cells = <3>;
+		};
+
 		pwm1: pwm@e400c000 {
 			compatible = "ambarella,pwm";
 			reg = <0xe400c000 0x1000>;
@@ -258,14 +258,14 @@
 		};
 	};
 
-	s_apb@ec000000 { /* Secure APB, but configurable */
+	s_apb@ec000000 { /* Secure APB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xec000000 0x01000000>;
 		ranges;
 
-		rtc@e8001000 {
+		rtc@ec001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xec001000 0x1000>;
 			interrupts = <0 160 0x1>;
@@ -291,7 +291,7 @@
 			      <0xec007000 0x1000>,
 			      <0xec008000 0x1000>,
 			      <0xec000000 0x1000>,
-			      <0xec001080 0x28>,	/* FIXME: how about gpio5 ? */
+			      <0xec001080 0x100>,
 			      <0xed080314 0x13c>;
 			reg-names = "gpio0", "gpio1", "gpio2", "gpio3",
 				    "gpio4", "gpio5",
@@ -310,7 +310,7 @@
 					     <0 48 0x4>;
 				gpio-controller;
 				#gpio-cells = <2>;
-				gpio-ranges = <&pinctrl 0 0 192>;
+				gpio-ranges = <&pinctrl 0 0 166>;
 				interrupt-controller;
 				#interrupt-cells = <2>;
 			};
@@ -683,21 +683,12 @@
 		};
 	};
 
-	n_ahb@e0000000 { /* Non-Secure AHB, but configurable */
+	n_ahb@e0000000 { /* Non-Secure AHB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xe0000000 0x01000000>;
 		ranges;
-
-		spi_slave@e0010000 {
-			compatible = "ambarella,spi-slave";
-			reg = <0xe0001000 0x1000>;
-			interrupts = <0 73 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&spi_slave_pins>;
-			status = "disabled";
-		};
 
 		nand0: nand@e0002000 {
 			compatible = "ambarella,nand";
@@ -712,7 +703,6 @@
 			nand-on-flash-bbt;
 			/* amb,soft-ecc = <1>; */
 		};
-
 
 		sdmmc0: sdmmc0@e0004000 {
 			compatible = "ambarella,sdmmc";
@@ -821,6 +811,19 @@
 			dma-names = "tx", "rx";
 		};
 
+		i2s1: i2s@e001d000 {
+			compatible = "ambarella,i2s";
+			#sound-dai-cells = <0>;
+			reg = <0xe001d000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2s1_pins>;
+			amb,i2s-channels = <4>;
+			amb,default-mclk = <12288000>;
+			dmas = <&dma0 23>, <&dma0 24>;
+			dma-names = "tx", "rx";
+			status = "disabled";
+		};
+
 		mac0: ethernet@e000e000 {
 			compatible = "ambarella,eth";
 			#address-cells = <1>;
@@ -839,6 +842,15 @@
 			amb,enhance;
 			/* amb,mdio-gpio; */
 			/* amb,tx-clk-invert; */
+		};
+
+		spi_slave@e0010000 {
+			compatible = "ambarella,spi-slave";
+			reg = <0xe0010000 0x1000>;
+			interrupts = <0 80 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi_slave_pins>;
+			status = "disabled";
 		};
 
 		spi0: spi@e0011000 {
@@ -900,7 +912,6 @@
 			status = "disabled";
 		};
 
-
 		uart1: uart@e0016000 {
 			compatible = "ambarella,uart";
 			reg = <0xe0016000 0x1000>;
@@ -960,23 +971,9 @@
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
-
-		i2s1: i2s@e001d000 {
-			compatible = "ambarella,i2s";
-			#sound-dai-cells = <0>;
-			reg = <0xe001d000 0x1000>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&i2s1_pins>;
-			amb,i2s-channels = <4>;
-			amb,default-mclk = <12288000>;
-			dmas = <&dma0 23>, <&dma0 24>;
-			dma-names = "tx", "rx";
-			status = "disabled";
-		};
-
 	};
 
-	s_ahb@e8000000 { /* Secure AHB, but configurable */
+	s_ahb@e8000000 { /* Secure AHB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -997,7 +994,7 @@
 			amb,hdmi-version = <20>;
 		};
 
-		rng@e8001000 {
+		rng@e8001040 {
 			compatible = "ambarella,hw-rng";
 			reg = <0xe8001040 0x14>;
 			amb,rct-regmap = <&rct_syscon>;
@@ -1018,8 +1015,9 @@
 
 		usbphy: usbphy@ed080050 {
 			compatible = "ambarella,usbphy";
-			reg = <0xed080050 0x4 0xe0022060 0x4 0xed0802c0 0x4>;
+			reg = <0xed080050 0x4 0xe800100c 0x4 0xed0802c0 0x4>;
 			amb,host-phy-num = <1>;
+			amb,owner-mask;
 			amb,owner-invert;
 		};
 
@@ -1061,6 +1059,34 @@
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
 		};
 
+		/* node for vin2 controller */
+		vinc2 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 130 0x1 0 131 0x1 0 132 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vin3 controller */
+		vinc3 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 125 0x1 0 126 0x1 0 127 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vin4 controller */
+		vinc4 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 120 0x1 0 121 0x1 0 122 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
+		/* node for vin5 controller */
+		vinc5 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 115 0x1 0 116 0x1 0 117 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+		};
+
 		/* node for vout0(tv) controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
@@ -1094,14 +1120,14 @@
 		framebuffer0: framebuffer@0 {
 			compatible = "ambarella,fb";
 			reg = <0>;
-			amb,vout-id = <1>;
+			amb,vout-id = <0>;
 			amb,format = "rgb565";
 		};
 
 		framebuffer1: framebuffer@1 {
 			compatible = "ambarella,fb";
 			reg = <1>;
-			amb,vout-id = <0>;
+			amb,vout-id = <1>;
 			amb,format = "rgb565";
 		};
 	};
@@ -1366,7 +1392,7 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_vision";
 			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <792000000>;
+			assigned-clock-rates = <1008000000>;
 		};
 
 		gclk_fex: gclk-fex {
@@ -1389,7 +1415,7 @@
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
 			reg = <0xed080038 4>, <0xed0801c8 4>;
-			clocks = <&osc>, <&gclk_core>, <&gclk_dummy>, <&gclk_idsp>;
+			clocks = <&osc>, <&gclk_core>, <&pll_out_enet>, <&pll_out_sd>;
 			clock-output-names = "gclk_uart0";
 			assigned-clocks = <&gclk_uart0>;
 			assigned-clock-parents = <&osc>;

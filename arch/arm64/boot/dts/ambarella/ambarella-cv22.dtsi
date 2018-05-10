@@ -56,8 +56,8 @@
 	};
 
 	vp_module: vp_module {
-	    	compatible = "ambarella,vp-module";
-	    	interrupts = <0 106 0x4>;
+		compatible = "ambarella,vp-module";
+		interrupts = <0 106 0x4>;
 	};
 
 	psci {
@@ -161,6 +161,28 @@
 			status = "ok";
 		};
 
+		ir@e4001000 {
+			compatible = "ambarella,ir";
+			reg = <0xe4001000 0x1000>;
+			interrupts = <0 20 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&ir_pins>;
+			clocks = <&gclk_ir>;
+			status = "disabled";
+		};
+
+		adc@e4003000 {
+			compatible = "ambarella,adc";
+			reg = <0xe4003000 0x1000>;
+			interrupts = <0 13 0x4>;
+			clock-frequency = <3000000>;
+			clocks = <&gclk_adc>;
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scaler-1v8 = <0x01>;
+			amb,t2v-channel = <2>;
+			status = "disabled";
+		};
+
 		i2c0: i2c@e4008000 {
 			compatible = "ambarella,i2c";
 			#address-cells = <1>;
@@ -214,28 +236,6 @@
 			pinctrl-0 = <&i2c3_pins>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
-			status = "disabled";
-		};
-
-		ir@e4001000 {
-			compatible = "ambarella,ir";
-			reg = <0xe4001000 0x1000>;
-			interrupts = <0 20 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&ir_pins>;
-			clocks = <&gclk_ir>;
-			status = "disabled";
-		};
-
-		adc@e4003000 {
-			compatible = "ambarella,adc";
-			reg = <0xe4003000 0x1000>;
-			interrupts = <0 13 0x4>;
-			clock-frequency = <3000000>;
-			clocks = <&gclk_adc>;
-			amb,rct-regmap = <&rct_syscon>;
-			amb,scaler-1v8 = <0x01>;
-			amb,t2v-channel = <2>;
 			status = "disabled";
 		};
 
@@ -681,30 +681,6 @@
 			reg = <0xe0022000 0x100>;
 		};
 
-		dma0: dma@e0020000 {
-			compatible = "ambarella,dma";
-			reg = <0xe0020000 0x1000>, <0xe0022050 0x8>;
-			interrupts = <0 83 0x4>;
-			#dma-cells = <1>;
-			dma-channels = <8>;
-			dma-requests = <25>;		/* request0 is reserved */
-		};
-
-		dma1: dma@e0021000 {
-			compatible = "ambarella,dma";
-			reg = <0xe0021000 0x1000>, <0xe0022058 0x8>;
-			interrupts = <0 84 0x4>;
-			#dma-cells = <1>;
-			dma-channels = <8>;
-			dma-requests = <25>;		/* request0 is reserved */
-		};
-
-		gdma: gdma@e000c000 {
-			compatible = "ambarella,gdma";
-			reg = <0xe000c000 0x400>;
-			interrupts = <0 70 0x1>;
-		};
-
 		nand0: nand@e0002000 {
 			compatible = "ambarella,nand";
 			#address-cells = <1>;
@@ -717,114 +693,6 @@
 			clocks = <&gclk_nand>;
 			nand-on-flash-bbt;
 			/* amb,soft-ecc = <1>; */
-		};
-
-		uart1: uart@e0017000 {
-			compatible = "ambarella,uart";
-			reg = <0xe0017000 0x1000>;
-			interrupts = <0 59 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
-			clocks = <&gclk_uart1>;
-			status = "disabled";
-			amb,msr-used;	/* use Modem Status Register */
-			amb,txdma-used;
-			amb,rxdma-used;
-			dmas = <&dma0 9>, <&dma0 10>;
-			dma-names = "tx", "rx";
-		};
-
-		uart2: uart@e0018000 {
-			compatible = "ambarella,uart";
-			reg = <0xe0018000 0x1000>;
-			interrupts = <0 60 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&uart2_pins &uart2_flow_pins>;
-			clocks = <&gclk_uart2>;
-			amb,msr-used;	/* use Modem Status Register */
-			amb,txdma-used;
-			amb,rxdma-used;
-			dmas = <&dma1 13>, <&dma1 14>;
-			dma-names = "tx", "rx";
-			status = "disabled";
-		};
-
-		uart3: uart@e0019000 {
-			compatible = "ambarella,uart";
-			reg = <0xe0019000 0x1000>;
-			interrupts = <0 61 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&uart3_pins &uart3_flow_pins>;
-			clocks = <&gclk_uart3>;
-			amb,msr-used;	/* use Modem Status Register */
-			amb,txdma-used;
-			amb,rxdma-used;
-			dmas = <&dma1 15>, <&dma1 16>;
-			dma-names = "tx", "rx";
-			status = "disabled";
-		};
-
-		uart4: uart@e001a000 {
-			compatible = "ambarella,uart";
-			reg = <0xe001a000 0x1000>;
-			interrupts = <0 62 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&uart4_pins &uart4_flow_pins>;
-			clocks = <&gclk_uart4>;
-			amb,msr-used;	/* use Modem Status Register */
-			amb,txdma-used;
-			amb,rxdma-used;
-			dmas = <&dma1 17>, <&dma1 18>;
-			dma-names = "tx", "rx";
-			status = "disabled";
-		};
-
-		i2s0: i2s@e000d000 {
-			compatible = "ambarella,i2s";
-			#sound-dai-cells = <0>;
-			reg = <0xe000d000 0x1000>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&i2s0_pins>;
-			amb,i2s-channels = <2>;
-			amb,default-mclk = <12288000>;
-			dmas = <&dma0 11>, <&dma0 12>;
-			dma-names = "tx", "rx";
-		};
-
-		i2s1: i2s@e001d000 {
-			compatible = "ambarella,i2s";
-			#sound-dai-cells = <0>;
-			reg = <0xe001d000 0x1000>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&i2s1_pins>;
-			amb,i2s-channels = <4>;
-			amb,default-mclk = <12288000>;
-			dmas = <&dma0 23>, <&dma0 24>;
-			dma-names = "tx", "rx";
-			status = "disabled";
-		};
-
-		udc@e0006000 {
-			compatible = "ambarella,udc";
-			reg = <0xe0006000 0x2000>;
-			interrupts = <0 67 0x4>;
-			amb,rct-regmap = <&rct_syscon>;
-			amb,scr-regmap = <&scratchpad_syscon>;
-			amb,usbphy = <&usbphy>;
-		};
-
-		ohci@e001e000 {
-			compatible = "ambarella,ohci";
-			reg = <0xe001e000 0x1000>;
-			interrupts = <0 66 0x4>;
-			amb,usbphy = <&usbphy>;
-		};
-
-		ehci@e001f000 {
-			compatible = "ambarella,ehci";
-			reg = <0xe001f000 0x1000>;
-			interrupts = <0 65 0x4>;
-			amb,usbphy = <&usbphy>;
 		};
 
 		sdmmc0: sdmmc0@e0004000 {
@@ -875,6 +743,78 @@
 			sd-uhs-sdr104;
 		};
 
+		udc@e0006000 {
+			compatible = "ambarella,udc";
+			reg = <0xe0006000 0x2000>;
+			interrupts = <0 67 0x4>;
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			amb,usbphy = <&usbphy>;
+		};
+
+		ohci@e001e000 {
+			compatible = "ambarella,ohci";
+			reg = <0xe001e000 0x1000>;
+			interrupts = <0 66 0x4>;
+			amb,usbphy = <&usbphy>;
+		};
+
+		ehci@e001f000 {
+			compatible = "ambarella,ehci";
+			reg = <0xe001f000 0x1000>;
+			interrupts = <0 65 0x4>;
+			amb,usbphy = <&usbphy>;
+		};
+
+		dma0: dma@e0020000 {
+			compatible = "ambarella,dma";
+			reg = <0xe0020000 0x1000>, <0xe0022050 0x8>;
+			interrupts = <0 83 0x4>;
+			#dma-cells = <1>;
+			dma-channels = <8>;
+			dma-requests = <25>;		/* request0 is reserved */
+		};
+
+		dma1: dma@e0021000 {
+			compatible = "ambarella,dma";
+			reg = <0xe0021000 0x1000>, <0xe0022058 0x8>;
+			interrupts = <0 84 0x4>;
+			#dma-cells = <1>;
+			dma-channels = <8>;
+			dma-requests = <25>;		/* request0 is reserved */
+		};
+
+		gdma: gdma@e000c000 {
+			compatible = "ambarella,gdma";
+			reg = <0xe000c000 0x400>;
+			interrupts = <0 70 0x1>;
+		};
+
+		i2s0: i2s@e000d000 {
+			compatible = "ambarella,i2s";
+			#sound-dai-cells = <0>;
+			reg = <0xe000d000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2s0_pins>;
+			amb,i2s-channels = <2>;
+			amb,default-mclk = <12288000>;
+			dmas = <&dma0 11>, <&dma0 12>;
+			dma-names = "tx", "rx";
+		};
+
+		i2s1: i2s@e001d000 {
+			compatible = "ambarella,i2s";
+			#sound-dai-cells = <0>;
+			reg = <0xe001d000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2s1_pins>;
+			amb,i2s-channels = <4>;
+			amb,default-mclk = <12288000>;
+			dmas = <&dma0 23>, <&dma0 24>;
+			dma-names = "tx", "rx";
+			status = "disabled";
+		};
+
 		mac0: ethernet@e000e000 {
 			compatible = "ambarella,eth";
 			#address-cells = <1>;
@@ -893,6 +833,15 @@
 			amb,enhance;
 			/* amb,mdio-gpio; */
 			/* amb,tx-clk-invert; */
+		};
+
+		spi_slave@e0010000 {
+			compatible = "ambarella,spi-slave";
+			reg = <0xe0010000 0x1000>;
+			interrupts = <0 80 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi_slave_pins>;
+			status = "disabled";
 		};
 
 		spi0: spi@e0011000 {
@@ -954,12 +903,63 @@
 			status = "disabled";
 		};
 
-		spi_slave@e0010000 {
-			compatible = "ambarella,spi-slave";
-			reg = <0xe0010000 0x1000>;
-			interrupts = <0 80 0x4>;
+		uart1: uart@e0017000 {
+			compatible = "ambarella,uart";
+			reg = <0xe0017000 0x1000>;
+			interrupts = <0 59 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi_slave_pins>;
+			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
+			clocks = <&gclk_uart1>;
+			status = "disabled";
+			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
+			dmas = <&dma0 9>, <&dma0 10>;
+			dma-names = "tx", "rx";
+		};
+
+		uart2: uart@e0018000 {
+			compatible = "ambarella,uart";
+			reg = <0xe0018000 0x1000>;
+			interrupts = <0 60 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart2_pins &uart2_flow_pins>;
+			clocks = <&gclk_uart2>;
+			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
+			dmas = <&dma1 13>, <&dma1 14>;
+			dma-names = "tx", "rx";
+			status = "disabled";
+		};
+
+		uart3: uart@e0019000 {
+			compatible = "ambarella,uart";
+			reg = <0xe0019000 0x1000>;
+			interrupts = <0 61 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart3_pins &uart3_flow_pins>;
+			clocks = <&gclk_uart3>;
+			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
+			dmas = <&dma1 15>, <&dma1 16>;
+			dma-names = "tx", "rx";
+			status = "disabled";
+		};
+
+		uart4: uart@e001a000 {
+			compatible = "ambarella,uart";
+			reg = <0xe001a000 0x1000>;
+			interrupts = <0 62 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart4_pins &uart4_flow_pins>;
+			clocks = <&gclk_uart4>;
+			amb,msr-used;	/* use Modem Status Register */
+			amb,txdma-used;
+			amb,rxdma-used;
+			dmas = <&dma1 17>, <&dma1 18>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -1355,7 +1355,7 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_vision";
 			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <792000000>;
+			assigned-clock-rates = <1008000000>;
 		};
 
 		gclk_uart0: gclk-uart0 {

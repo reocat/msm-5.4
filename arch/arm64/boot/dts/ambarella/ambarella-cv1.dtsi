@@ -156,7 +156,28 @@
 			pinctrl-0 = <&uart0_pins>;
 			clocks = <&gclk_uart0>;
 			status = "ok";
-			/* amb,tx-fifo-fix; */
+		};
+
+		ir@e4001000 {
+			compatible = "ambarella,ir";
+			reg = <0xe4001000 0x1000>;
+			interrupts = <0 21 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&ir_pins>;
+			clocks = <&gclk_ir>;
+			status = "disabled";
+		};
+
+		adc@e4003000 {
+			compatible = "ambarella,adc";
+			reg = <0xe4003000 0x1000>;
+			interrupts = <0 14 0x4>;
+			clock-frequency = <3000000>;
+			clocks = <&gclk_adc>;
+			amb,rct-regmap = <&rct_syscon>;
+			amb,scaler-1v8 = <0x01>;
+			amb,t2v-channel = <2>;
+			status = "disabled";
 		};
 
 		i2c0: i2c@e4008000 {
@@ -212,28 +233,6 @@
 			pinctrl-0 = <&i2c3_pins_a>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
-			status = "disabled";
-		};
-
-		ir@e4001000 {
-			compatible = "ambarella,ir";
-			reg = <0xe4001000 0x1000>;
-			interrupts = <0 21 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&ir_pins>;
-			clocks = <&gclk_ir>;
-			status = "disabled";
-		};
-
-		adc@e4003000 {
-			compatible = "ambarella,adc";
-			reg = <0xe4003000 0x1000>;
-			interrupts = <0 14 0x4>;
-			clock-frequency = <3000000>;
-			clocks = <&gclk_adc>;
-			amb,rct-regmap = <&rct_syscon>;
-			amb,scaler-1v8 = <0x01>;
-			amb,t2v-channel = <2>;
 			status = "disabled";
 		};
 
@@ -895,6 +894,15 @@
 			/* amb,tx-clk-invert; */
 		};
 
+		spi_slave@e0010000 {
+			compatible = "ambarella,spi-slave";
+			reg = <0xe0010000 0x1000>;
+			interrupts = <0 80 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi_slave_pins>;
+			status = "disabled";
+		};
+
 		spi0: spi@e0011000 {
 			compatible = "ambarella,spi";
 			#address-cells = <1>;
@@ -983,15 +991,6 @@
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
-
-		spi_slave@e0010000 {
-			compatible = "ambarella,spi-slave";
-			reg = <0xe0010000 0x1000>;
-			interrupts = <0 80 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&spi_slave_pins>;
-			status = "disabled";
-		};
 	};
 
 	s_ahb@e8000000 { /* Secure AHB */
@@ -1003,7 +1002,7 @@
 
 		scratchpad_syscon: scratchpad_syscon@e8001000 {
 			compatible = "ambarella,scratchpad", "syscon";
-			reg = <0xe8001000 0x50>;
+			reg = <0xe8001000 0x100>;
 		};
 
 		rng@e8001040 {
@@ -1430,7 +1429,7 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_vision";
 			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <792000000>;
+			assigned-clock-rates = <1008000000>;
 		};
 
 		gclk_uart0: gclk-uart0 {
