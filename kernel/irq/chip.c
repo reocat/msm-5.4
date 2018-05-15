@@ -257,6 +257,9 @@ int irq_startup(struct irq_desc *desc, bool resend, bool force)
 	desc->depth = 0;
 
 	if (irqd_is_started(d)) {
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+		irq_setup_affinity(desc);
+#endif
 		irq_enable(desc);
 	} else {
 		switch (__irq_startup_managed(desc, aff, force)) {
