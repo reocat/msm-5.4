@@ -40,8 +40,10 @@
 
 #define DRIVER_NAME "ambarella_phy"
 
-/* PORT is termed as usb slot which is outside the chip, and
- * PHY is termed as usb interface which is inside the chip */
+/*
+ * PORT is termed as usb slot which is outside the chip, and
+ * PHY is termed as usb interface which is inside the chip
+ */
 
 #define PHY_TO_DEVICE_PORT	0 /* rotue D+/D- signal to device port */
 #define PHY_TO_HOST_PORT	1 /* rotue D+/D- signal to host port */
@@ -59,7 +61,6 @@ struct ambarella_phy {
 	void __iomem *ana_reg;
 	void __iomem *own_reg;
 	u8 host_phy_num;
-	bool owner_invert;
 
 	int gpio_id;
 	bool id_is_otg;
@@ -80,36 +81,25 @@ struct ambarella_phy {
 
 static inline bool ambarella_usb0_is_host(struct ambarella_phy *amb_phy)
 {
-	bool is_host;
-
-	if (amb_phy->owner_invert)
-		is_host = !(readl_relaxed(amb_phy->own_reg) & USB0_IS_HOST_MASK);
-	else
-		is_host = !!(readl_relaxed(amb_phy->own_reg) & USB0_IS_HOST_MASK);
-
-	return is_host;
+	return !(readl_relaxed(amb_phy->own_reg) & USB0_IS_HOST_MASK);
 };
 
 static inline void ambarella_switch_to_host(struct ambarella_phy *amb_phy)
 {
-	if (amb_phy->owner_invert)
-		clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
-	else
-		setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
+	clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 }
 
 static inline void ambarella_switch_to_device(struct ambarella_phy *amb_phy)
 {
-	if (amb_phy->owner_invert)
-		setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
-	else
-		clrbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
+	setbitsl(amb_phy->own_reg, USB0_IS_HOST_MASK);
 }
 
 static inline void ambarella_check_otg(struct ambarella_phy *amb_phy)
 {
-	/* if D+/D- is routed to device port which is working
-	 * as otg, we need to switch the phy to host mode. */
+	/*
+	 * if D+/D- is routed to device port which is working
+	 * as otg, we need to switch the phy to host mode.
+	 */
 	if (amb_phy->phy_route == PHY_TO_DEVICE_PORT) {
 		if (amb_phy->port_type == PORT_TYPE_OTG)
 			ambarella_switch_to_host(amb_phy);
@@ -284,8 +274,10 @@ static int ambarella_init_phy_switcher(struct ambarella_phy *amb_phy)
 			return rval;
 		}
 
-		/* if usb0 is configured as host, route D+/D- signal to
-		 * host port, otherwise route them to device port. */
+		/*
+		 * if usb0 is configured as host, route D+/D- signal to
+		 * host port, otherwise route them to device port.
+		 */
 		if (ambarella_usb0_is_host(amb_phy)) {
 			amb_phy->phy_route = PHY_TO_HOST_PORT;
 			gpio_direction_output(amb_phy->gpio_md,
@@ -328,11 +320,7 @@ static int ambarella_init_host_phy(struct platform_device *pdev,
 		setbitsl(amb_phy->pol_reg, ocp << 13);
 	}
 
-	amb_phy->owner_invert = !!of_find_property(np, "amb,owner-invert", NULL);
-	if (of_find_property(np, "amb,owner-mask", NULL))
-		setbitsl(amb_phy->own_reg, 0x1);
-	else
-		clrbitsl(amb_phy->own_reg, 0x1);
+	setbitsl(amb_phy->own_reg, USB0_IDDIG0_MASK);
 
 	amb_phy->gpio_id = of_get_named_gpio_flags(np, "id-gpios", 0, &flags);
 	amb_phy->id_is_otg = !!(flags & OF_GPIO_ACTIVE_LOW);
@@ -353,8 +341,10 @@ static int ambarella_phy_init(struct usb_phy *phy)
 	struct ambarella_phy *amb_phy = to_ambarella_phy(phy);
 	u32 ana_val = 0x3006;
 
-	/* If there are 2 PHYs, no matter which PHY need to be initialized,
-	 * we initialize all of them at the same time */
+	/*
+	 * If there are 2 PHYs, no matter which PHY need to be initialized,
+	 * we initialize all of them at the same time.
+	 */
 	if (!(readl_relaxed(amb_phy->ana_reg) & ana_val)) {
 		setbitsl(amb_phy->ana_reg, ana_val);
 		mdelay(1);
@@ -473,9 +463,11 @@ static struct platform_driver ambarella_phy_driver = {
 	 },
 };
 
-/* We have to call ambarella_phy_module_init() before the drives using USB PHY
+/*
+ * We have to call ambarella_phy_module_init() before the drives using USB PHY
  * like EHCI/OHCI/UDC, and after GPIO drivers including external GPIO chip, so
- * we use subsys_initcall_sync here. */
+ * we use subsys_initcall_sync here.
+ */
 static int __init ambarella_phy_module_init(void)
 {
 	return platform_driver_register(&ambarella_phy_driver);
