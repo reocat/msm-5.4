@@ -500,6 +500,26 @@
 				amb,pinmux-ids = <0x1015>;
 			};
 
+			wdt_pins_a: wdt0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x3004>;
+			};
+
+			wdt_pins_b: wdt0@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x2015>;
+			};
+
+			wdt_pins_c: wdt0@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x202b>;
+			};
+
+			wdt_pins_d: wdt0@3 {
+				reg = <3>;
+				amb,pinmux-ids = <0x2071>;
+			};
+
 			i2s0_pins: i2s0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x102c 0x102d 0x102e 0x102f>;

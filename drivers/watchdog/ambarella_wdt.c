@@ -14,6 +14,7 @@
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
+#include <linux/pinctrl/pinctrl.h>
 #include <linux/clk.h>
 #include <linux/of.h>
 #include <linux/slab.h>
@@ -40,7 +41,7 @@ struct ambarella_wdt {
 	struct clk			*clk;
 	int				irq;
 	struct watchdog_device		wdd;
-	bool				enabled;
+	bool				ext_pin;
 	u32				timeout; /* in cycle */
 };
 
@@ -50,9 +51,9 @@ static int ambarella_wdt_start(struct watchdog_device *wdd)
 	u32 ctrl_val;
 
 	ambwdt = watchdog_get_drvdata(wdd);
-	ambwdt->enabled = true;
 
 	ctrl_val = ambwdt->irq > 0 ? WDOG_CTR_INT_EN : WDOG_CTR_RST_EN;
+	ctrl_val |= ambwdt->ext_pin ? WDOG_CTR_EXT_EN : 0;
 	ctrl_val |= WDOG_CTR_EN;
 
 	if (ambwdt->irq > 0)
@@ -67,10 +68,7 @@ static int ambarella_wdt_start(struct watchdog_device *wdd)
 
 static int ambarella_wdt_stop(struct watchdog_device *wdd)
 {
-	struct ambarella_wdt *ambwdt;
-
-	ambwdt = watchdog_get_drvdata(wdd);
-	ambwdt->enabled = false;
+	struct ambarella_wdt *ambwdt = watchdog_get_drvdata(wdd);
 
 	writel_relaxed(0, ambwdt->regbase + WDOG_CONTROL_OFFSET);
 
@@ -192,6 +190,12 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 		regmap_update_bits(ambwdt->rct_reg, UNLOCK_WDT_RST_L_OFFSET,
 			UNLOCK_WDT_RST_L_VAL, 0x0);
 	}
+
+	/* make sure software reboot bit is low, otherwise WDT cannot reset the chip */
+	regmap_update_bits(ambwdt->rct_reg, SOFT_OR_DLL_RESET_OFFSET, 0x1, 0x0);
+
+	if (!IS_ERR_OR_NULL(devm_pinctrl_get(&pdev->dev)))
+		ambwdt->ext_pin = true;
 
 	watchdog_init_timeout(&ambwdt->wdd, heartbeat, &pdev->dev);
 	watchdog_set_nowayout(&ambwdt->wdd, nowayout);
