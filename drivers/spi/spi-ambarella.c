@@ -791,7 +791,7 @@ int ambarella_spi_write(amba_spi_cfg_t *spi_cfg, amba_spi_write_t *spi_w)
 
 	bus = spi_master_get_devdata(master);
 
-	spi.master		= master;
+	spi.master = spi.controller = master;
 	spi.bits_per_word	= spi_cfg->cfs_dfs;
 	spi.mode		= spi_cfg->spi_mode;
 	spi.max_speed_hz	= spi_cfg->baud_rate;
@@ -822,7 +822,7 @@ int ambarella_spi_read(amba_spi_cfg_t *spi_cfg, amba_spi_read_t *spi_r)
 
 	bus = spi_master_get_devdata(master);
 
-	spi.master		= master;
+	spi.master = spi.controller = master;
 	spi.bits_per_word	= spi_cfg->cfs_dfs;
 	spi.mode		= spi_cfg->spi_mode;
 	spi.max_speed_hz	= spi_cfg->baud_rate;
@@ -854,7 +854,7 @@ int ambarella_spi_write_then_read(amba_spi_cfg_t *spi_cfg,
 
 	bus = spi_master_get_devdata(master);
 
-	spi.master		= master;
+	spi.master = spi.controller = master;
 	spi.bits_per_word	= spi_cfg->cfs_dfs;
 	spi.mode		= spi_cfg->spi_mode;
 	spi.max_speed_hz	= spi_cfg->baud_rate;
@@ -890,7 +890,7 @@ int ambarella_spi_write_and_read(amba_spi_cfg_t *spi_cfg,
 
 	bus = spi_master_get_devdata(master);
 
-	spi.master		= master;
+	spi.master = spi.controller = master;
 	spi.bits_per_word	= spi_cfg->cfs_dfs;
 	spi.mode		= spi_cfg->spi_mode;
 	spi.max_speed_hz	= spi_cfg->baud_rate;

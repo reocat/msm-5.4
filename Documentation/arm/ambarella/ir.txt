@@ -39,8 +39,7 @@ Driver Configuration
 ====================
 
 Device Drivers  --->
-         [M]  Multimedia support  --->
-                  [*]   Remote Controller support
+         [M]  Remote Controller support  --->
                   <M>   Compile Remote Controller keymap modules
                   [*]   Remote controller decoders  --->
                            <M>  Enable IR raw decoder for the NEC protocol
@@ -121,13 +120,15 @@ events for key pressed that you do on your IR Remote Control.
 
 Note:
 
-1) if the key map is empty, evtest will only report key "Pressed" and key
+1) If the protocols doesn't match your RC, evtest may not output any message.
+   There is no such convient way to know the protocol used by your RC, but
+   maybe you can judge the protocol by the lead code. You can enable the debug
+   message by "echo N > /sys/module/rc_core/parameters/debug", N = 1 or 2.
+   You may need to type "dmesg" to get the debug message.
+
+2) If the key map is empty, evtest will only report key "Pressed" and key
    "Released", but NOT report key "Repeat". So if you want to see the "Repeat"
    Key, you have to setup the key map first.
-
-2) There is no such convient way to know the protocol used by your RC, but
-   maybe you can judge the protocol by the lead code. You can enable the debug
-   message by "echo N > /sys/module/rc_core/parameters/debug", N = 1 or 2
 
 
 

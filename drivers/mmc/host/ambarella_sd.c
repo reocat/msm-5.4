@@ -1468,8 +1468,8 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 #endif
 retry:
 	if (doing_retune) {
-		clock -= 10000000;
-		if (clock <= 50000000)
+		clock -= 12000000;
+		if (clock <= 48000000)
 			return -ECANCELED;
 
 		ambarella_sd_set_clk(mmc, clock);

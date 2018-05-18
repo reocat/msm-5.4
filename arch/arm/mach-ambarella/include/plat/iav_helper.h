@@ -38,6 +38,10 @@ unsigned int get_ambarella_iavmem_size(void);
 
 /*===========================================================================*/
 
+extern int ambpriv_i2c_update_addr(const char *name, int bus, int addr);
+
+/*===========================================================================*/
+
 #endif /* __ASSEMBLER__ */
 
 #endif

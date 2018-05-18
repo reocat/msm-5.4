@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define RCT_OFFSET			0x00080000
 #else
 #define RCT_OFFSET			0x00170000
@@ -61,7 +61,15 @@
 
 #define USBP0_SEL_OFFSET		0x2c0
 #define USBP0_SEL_REG			RCT_REG(USBP0_SEL_OFFSET)
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
+#define USB0_IDDIG0_MASK		0x00000001
 #define USB0_IS_HOST_MASK		0x00000002
+#else
+#define USB0_IDDIG0_MASK		0x00000000
+#define USB0_IS_HOST_MASK		0x00000001
+#endif
 #define USBP0_FORCE_TO_DEVICE		1
 
 /* ==========================================================================*/
@@ -550,8 +558,10 @@
 #define AHB_SCRATCHPAD_REG(x)		(AHB_SCRATCHPAD_BASE + (x))
 #define AHB_SECURE_REG(x)		(AHB_SECURE_BASE + (x))
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
-	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) ||  \
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1) || \
+	(CHIP_REV == CV2)
+
 #define AHBSP_CTL_OFFSET		0x0C
 #define AHBSP_USB_SIDEBAND_OFFSET	0x04
 #else
@@ -560,6 +570,14 @@
 #endif
 #define AHBSP_CTL_REG			AHB_SCRATCHPAD_REG(AHBSP_CTL_OFFSET)
 #define AHBSP_USB_SIDEBAND_REG		AHB_SCRATCHPAD_REG(AHBSP_USB_SIDEBAND_OFFSET)
+
+#if (CHIP_REV == CV22)
+#define AHBSP_GMII_DATA_OFFSET		0x6c
+#define AHBSP_GMII_ADDR_OFFSET		0x70
+#else
+#define AHBSP_GMII_DATA_OFFSET		0xA0
+#define AHBSP_GMII_ADDR_OFFSET		0xA4
+#endif
 
 #define AHB_SP0_RAM_OFFSET		0x20000
 #define AHB_SP0_RAM_BASE		(AHB_BASE + AHB_SP0_RAM_OFFSET)
@@ -574,7 +592,7 @@
 
 #if (CHIP_REV == S5) || (CHIP_REV == CV1)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00800000
-#elif (CHIP_REV == CV2) || (CHIP_REV == CV22)
+#elif (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00000200
 #elif (CHIP_REV == S5L)
 #define	POC_GCLK_CORE_DIV2_MASK		0x00100000
@@ -608,7 +626,7 @@
 #define POC_BOOT_FROM_EMMC		0x00000020
 #define POC_BOOT_FROM_SPI		0x00000030
 #define POC_BOOT_FROM_HIF		0x00000040
-#elif (CHIP_REV == S5L) || (CHIP_REV == CV22)
+#elif (CHIP_REV == S5L) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define POC_BOOT_FROM_MASK		0x00000530
 #define POC_BOOT_FROM_BYPASS		0x00000100
 #define POC_BOOT_FROM_USB		0x00000400
@@ -627,7 +645,7 @@
 #define RCT_BOOT_FROM_HIF		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00000000 /* not used */
@@ -685,14 +703,17 @@
 #define RCT_BOOT_EMMC_SDXC		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
-#define MIPI_DSI_CTRL0_REG		0X00000670
-#define MIPI_DSI_CTRL1_REG		0X00000674
-#define MIPI_DSI_CTRL2_REG		0X00000678
-#define MIPI_DSI_CTRL3_REG		0X0000067C
-#define MIPI_DSI_CTRL4_REG		0X00000680
-#define MIPI_DSI_CTRL5_REG		0X00000684
-#define MIPI_DSI_AUX0_REG		0X0000068c
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
+#define MIPI_DSI_CTRL0_OFFSET		0x00000670
+#define MIPI_DSI_CTRL1_OFFSET		0x00000674
+#define MIPI_DSI_CTRL2_OFFSET		0x00000678
+#define MIPI_DSI_CTRL3_OFFSET		0x0000067C
+#define MIPI_DSI_CTRL4_OFFSET		0x00000680
+#define MIPI_DSI_CTRL5_OFFSET		0x00000684
+#define MIPI_DSI_AUX0_OFFSET		0x0000068c
+
+#define SCALER_CLK_VO_B_DIV_POST_OFF		0X000002ec
+
 #endif
 /* ==========================================================================*/
 

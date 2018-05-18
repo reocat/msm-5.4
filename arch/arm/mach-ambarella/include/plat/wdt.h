@@ -27,7 +27,7 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define WDOG_OFFSET			0x2000
 #else
 #define WDOG_OFFSET			0xC000
@@ -52,6 +52,7 @@
 #define WDOG_CLR_TMO_REG		WDOG_REG(WDOG_CLR_TMO_OFFSET)
 #define WDOG_RST_WD_REG			WDOG_REG(WDOG_RST_WD_OFFSET)
 
+#define WDOG_CTR_EXT_EN			0x00000008
 #define WDOG_CTR_INT_EN			0x00000004
 #define WDOG_CTR_RST_EN			0x00000002
 #define WDOG_CTR_EN			0x00000001

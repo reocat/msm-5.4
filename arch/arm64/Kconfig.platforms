@@ -45,19 +45,19 @@ config ARCH_AMBARELLA_CV1
 	help
 	  Say Y here if you are using Ambarella CV1.
 
-config ARCH_AMBARELLA_CV2
-	bool "CV2"
-	select ARCH_AMBARELLA_COMBO_NAND
-	select ARCH_AMBARELLA_HW_RANDOM
-	help
-	  Say Y here if you are using Ambarella CV2.
-
 config ARCH_AMBARELLA_CV22
 	bool "CV22"
 	select ARCH_AMBARELLA_COMBO_NAND
 	select ARCH_AMBARELLA_HW_RANDOM
 	help
 	  Say Y here if you are using Ambarella CV22.
+
+config ARCH_AMBARELLA_CV2
+	bool "CV2"
+	select ARCH_AMBARELLA_COMBO_NAND
+	select ARCH_AMBARELLA_HW_RANDOM
+	help
+	  Say Y here if you are using Ambarella CV2.
 
 endchoice
 

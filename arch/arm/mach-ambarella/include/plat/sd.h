@@ -55,7 +55,7 @@ typedef enum _ambarella_slot_id {
 #define SD_SUPPORT_SDXC			1
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define SD0_OFFSET			0x4000
 #else
 #define SD0_OFFSET			0x2000
@@ -63,7 +63,7 @@ typedef enum _ambarella_slot_id {
 
 #define SD1_OFFSET			0xC000
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define SD2_OFFSET			0x5000
 #else
 #define SD2_OFFSET			0x1F000
