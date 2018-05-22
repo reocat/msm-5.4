@@ -1012,6 +1012,8 @@
 			interrupt-names = "hdmi";
 			amb,hdmiphy = <0xed080010>;
 			amb,hdmi-version = <20>;
+			amb,hdmi-phy-pib = <15>;
+			amb,hdmi-phy-pibib = <15>;
 		};
 
 		rng@e8001040 {
@@ -1278,7 +1280,7 @@
 
 		pll_out_hdmi: pll_out_hdmi {
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
+			compatible = "ambarella,pll-hdmi-clock";
 			reg = <0xed080164 4>,
 			      <0xed080168 4>,
 			      <0xed080150 4>,

@@ -403,6 +403,10 @@ static int ambarella_pll_hdmi_set_rate(struct clk_hw *hw, unsigned long rate,
 	ctrl_val.s.write_enable = 0;
 	rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 
+	ambarella_pll_hdmi_set_ctrl2(hw, rate_org);
+
+	ambarella_pll_hdmi_set_ctrl3(hw, pre_scaler, intp, sdiv, parent_rate, rate_org);
+
 	if (clk_pll->frac_mode) {
 		rate_tmp = ambarella_pll_hdmi_recalc_rate(hw, parent_rate);
 		rate_tmp *= clk_pll->fix_divider * post_scaler;
@@ -434,10 +438,6 @@ static int ambarella_pll_hdmi_set_rate(struct clk_hw *hw, unsigned long rate,
 
 		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
 	}
-
-	ambarella_pll_hdmi_set_ctrl2(hw, rate_org);
-
-	ambarella_pll_hdmi_set_ctrl3(hw, pre_scaler, intp, sdiv, parent_rate, rate_org);
 
 	/* check if result rate is precise or not */
 	rate_tmp = ambarella_pll_hdmi_recalc_rate(hw, parent_rate);
