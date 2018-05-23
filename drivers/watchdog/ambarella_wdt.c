@@ -1,5 +1,4 @@
 /*
- * linux/drivers/mmc/host/ambarella_sd.c
  *
  * Copyright (C) 2006-2007, Ambarella, Inc.
  *  Anthony Ginger, <hfjiang@ambarella.com>
@@ -52,11 +51,16 @@ static int ambarella_wdt_start(struct watchdog_device *wdd)
 
 	ambwdt = watchdog_get_drvdata(wdd);
 
-	ctrl_val = ambwdt->irq > 0 ? WDOG_CTR_INT_EN : WDOG_CTR_RST_EN;
-	ctrl_val |= ambwdt->ext_pin ? WDOG_CTR_EXT_EN : 0;
+	if (ambwdt->ext_pin)
+		ctrl_val = WDOG_CTR_EXT_EN;
+	else if (ambwdt->irq > 0)
+		ctrl_val = WDOG_CTR_INT_EN;
+	else
+		ctrl_val = WDOG_CTR_RST_EN;
+
 	ctrl_val |= WDOG_CTR_EN;
 
-	if (ambwdt->irq > 0)
+	if (ctrl_val & WDOG_CTR_INT_EN)
 		writel_relaxed(0x0, ambwdt->regbase + WDOG_RST_WD_OFFSET);
 	else
 		writel_relaxed(0xFF, ambwdt->regbase + WDOG_RST_WD_OFFSET);

@@ -1170,6 +1170,13 @@ Required properties:
   specified only for A5S.
 - amb,rct-regmap: phandle of RCT registers.
 
+Optional properties:
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this WDT controller. Latest chips
+  since CV22/CV2 can output RESET signal to external world through a pin belonged
+  to this WDT controller. Should be specified only when this RESET signal is
+  necessary.
+
 ii) Example
 -----------
 	wdt@e800c000 {
