@@ -49,12 +49,6 @@ static struct super_operations ambafs_super_ops = {
 	.drop_inode	= generic_delete_inode,
 };
 
-struct backing_dev_info ambafs_bdi = {
-	.name           = "ambafs_bdi",
-	.ra_pages       = 32,
-	.capabilities   = 0,
-};
-
 /*
  * fill a superblock for mounting
  */
@@ -62,13 +56,17 @@ static int ambafs_fill_super (struct super_block *sb, void *data, int silent)
 {
 	struct inode *root;
 	struct dentry *d_root;
+	int err;
 
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
 	sb->s_magic = AMBAFS_MAGIC;
 	sb->s_op = &ambafs_super_ops;
 	sb->s_d_op = &ambafs_dentry_ops;
-	sb->s_bdi = &ambafs_bdi;
+
+	err = super_setup_bdi_name(sb, "%u:%u%s", MAJOR(sb->s_dev),MINOR(sb->s_dev));
+	if (err)
+		return err;
 
 	/* make root inode and dentry */
 	root = new_inode(sb);
