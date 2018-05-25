@@ -609,7 +609,7 @@ Optional properties:
 - amb,tx-clk-invert: should be specified if inverting the Tx clk,
   take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
-- mdio-gpio: specifies to use GPIO to emulating MDIO bus.
+- amb,mdio-gpio: specifies to use GPIO to emulating MDIO bus.
 
 ii) Example
 -----------
