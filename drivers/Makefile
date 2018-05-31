@@ -10,7 +10,9 @@
 obj-y				+= ambalink/
 
 # Ambarella Amba CV related drivers.
+ifneq ($(wildcard $(srctree)/drivers/ambacv/Makefile),)
 obj-$(CONFIG_ARCH_AMBARELLA_CV) += ambacv/
+endif
 
 obj-y				+= irqchip/
 obj-y				+= bus/
