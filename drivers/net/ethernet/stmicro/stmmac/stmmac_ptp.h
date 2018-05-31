@@ -68,4 +68,10 @@
 #define	PTP_SSIR_SSINC_MASK		0xff
 #define	GMAC4_PTP_SSIR_SSINC_SHIFT	16
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+/* AMBA: clk_ptp_ref_i is 24MHz reference clock derived from the crystal
+         set desired clk to 20MHz, accuracy 50ns */
+#define AMBA_PTP_DESIRE_CLK 20000000ULL
+#define AMBA_PTP_REF_CLK    24000000
+#endif
 #endif	/* __STMMAC_PTP_H__ */

@@ -155,7 +155,14 @@ static int stmmac_enable(struct ptp_clock_info *ptp,
 static const struct ptp_clock_info stmmac_ptp_clock_ops = {
 	.owner = THIS_MODULE,
 	.name = "stmmac_ptp_clock",
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	.max_adj = 62500000,
+#else
+	/*AMBA: Documentation/devicetree/bindings/net/fsl-tsec-phy.txt
+	  max_adj= 1000000000 * (24/20 - 1.0) - 1
+	         = 199999999 */
+	.max_adj = 199999999,
+#endif
 	.n_alarm = 0,
 	.n_ext_ts = 0,
 	.n_per_out = 0,

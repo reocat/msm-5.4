@@ -51,6 +51,11 @@
 #include <linux/of_mdio.h>
 #include "dwmac1000.h"
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+#endif
+
 #define STMMAC_ALIGN(x)	L1_CACHE_ALIGN(x)
 #define	TSO_MAX_BUFF_SIZE	(SZ_16K - 1)
 
@@ -196,6 +201,7 @@ static void stmmac_start_all_queues(struct stmmac_priv *priv)
 		netif_tx_start_queue(netdev_get_tx_queue(priv->dev, queue));
 }
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 /**
  * stmmac_clk_csr_set - dynamically set the MDC clock
  * @priv: driver private structure
@@ -247,6 +253,7 @@ static void stmmac_clk_csr_set(struct stmmac_priv *priv)
 			priv->clk_csr = 0;
 	}
 }
+#endif
 
 static void print_pkt(unsigned char *buf, int len)
 {
@@ -458,7 +465,11 @@ static void stmmac_get_tx_hwtstamp(struct stmmac_priv *priv,
 		memset(&shhwtstamp, 0, sizeof(struct skb_shared_hwtstamps));
 		shhwtstamp.hwtstamp = ns_to_ktime(ns);
 
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 		netdev_dbg(priv->dev, "get valid TX hw timestamp %llu\n", ns);
+#else
+		pr_debug("get valid TX hw timestamp %llu\n", ns);
+#endif
 		/* pass tstamp to stack */
 		skb_tstamp_tx(skb, &shhwtstamp);
 	}
@@ -491,12 +502,20 @@ static void stmmac_get_rx_hwtstamp(struct stmmac_priv *priv, struct dma_desc *p,
 	/* Check if timestamp is available */
 	if (priv->hw->desc->get_rx_timestamp_status(p, np, priv->adv_ts)) {
 		ns = priv->hw->desc->get_timestamp(desc, priv->adv_ts);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 		netdev_dbg(priv->dev, "get valid RX hw timestamp %llu\n", ns);
+#else
+		pr_debug("get valid RX hw timestamp %llu\n", ns);
+#endif
 		shhwtstamp = skb_hwtstamps(skb);
 		memset(shhwtstamp, 0, sizeof(struct skb_shared_hwtstamps));
 		shhwtstamp->hwtstamp = ns_to_ktime(ns);
 	} else  {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 		netdev_dbg(priv->dev, "cannot get RX hw timestamp\n");
+#else
+		pr_debug("cannot get RX hw timestamp\n");
+#endif
 	}
 }
 
@@ -713,7 +732,11 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
 		 * addend = (2^32)/freq_div_ratio;
 		 * where, freq_div_ratio = 1e9ns/sec_inc
 		 */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 		temp = (u64)(temp << 32);
+#else
+		temp = (u64) (AMBA_PTP_DESIRE_CLK << 32);
+#endif
 		priv->default_addend = div_u64(temp, priv->plat->clk_ptp_rate);
 		priv->hw->ptp->config_addend(priv->ptpaddr,
 					     priv->default_addend);
@@ -2015,6 +2038,28 @@ static void stmmac_dma_interrupt(struct stmmac_priv *priv)
 	}
 }
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+static void amba_invert_gtx(void)
+{
+	struct regmap *reg_scr = NULL;
+	struct device_node *np =NULL;
+
+	np = of_find_node_by_path("ethernet0");
+	if (!np) {
+		printk(KERN_ERR "%s ethernet0 NOT found\n", __func__);
+		return;
+	}
+
+	reg_scr = syscon_regmap_lookup_by_phandle(np, "snps,scr-regmap");
+	if (IS_ERR(reg_scr)) {
+		printk("%s snps,scr-regmap NOT found\n", __func__);
+		return;
+	}
+
+	regmap_update_bits(reg_scr, 0xc, 0x80000000, 0x80000000);
+}
+#endif
+
 /**
  * stmmac_mmc_setup: setup the Mac Management Counters (MMC)
  * @priv: driver private structure
@@ -2040,6 +2085,9 @@ static void stmmac_mmc_setup(struct stmmac_priv *priv)
 		memset(&priv->mmc, 0, sizeof(struct stmmac_counters));
 	} else
 		netdev_info(priv->dev, "No MAC Management Counters available\n");
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	amba_invert_gtx();
+#endif
 }
 
 /**
@@ -2599,7 +2647,11 @@ static int stmmac_open(struct net_device *dev)
 
 	/* Request the IRQ lines */
 	ret = request_irq(dev->irq, stmmac_interrupt,
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 			  IRQF_SHARED, dev->name, dev);
+#else
+			  IRQF_SHARED | IRQF_TRIGGER_HIGH, dev->name, dev);
+#endif
 	if (unlikely(ret < 0)) {
 		netdev_err(priv->dev,
 			   "%s: ERROR: allocating the IRQ %d (error: %d)\n",
@@ -4211,10 +4263,12 @@ int stmmac_dvr_probe(struct device *device,
 	 * set the MDC clock dynamically according to the csr actual
 	 * clock input.
 	 */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	if (!priv->plat->clk_csr)
 		stmmac_clk_csr_set(priv);
 	else
 		priv->clk_csr = priv->plat->clk_csr;
+#endif
 
 	stmmac_check_pcs_mode(priv);
 

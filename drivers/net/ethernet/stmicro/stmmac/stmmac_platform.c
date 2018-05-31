@@ -29,6 +29,9 @@
 #include "stmmac.h"
 #include "stmmac_platform.h"
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#include "stmmac_ptp.h"
+#endif
 #ifdef CONFIG_OF
 
 /**
@@ -506,6 +509,7 @@ stmmac_probe_config_dt(struct platform_device *pdev, const char **mac)
 	stmmac_mtl_setup(pdev, plat);
 
 	/* clock setup */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	plat->stmmac_clk = devm_clk_get(&pdev->dev,
 					STMMAC_RESOURCE_NAME);
 	if (IS_ERR(plat->stmmac_clk)) {
@@ -522,8 +526,13 @@ stmmac_probe_config_dt(struct platform_device *pdev, const char **mac)
 		plat->pclk = NULL;
 	}
 	clk_prepare_enable(plat->pclk);
+#else
+	plat->stmmac_clk = NULL;
+	plat->pclk = NULL;
+#endif
 
 	/* Fall-back to main clock in case of no PTP ref is passed */
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	plat->clk_ptp_ref = devm_clk_get(&pdev->dev, "ptp_ref");
 	if (IS_ERR(plat->clk_ptp_ref)) {
 		plat->clk_ptp_rate = clk_get_rate(plat->stmmac_clk);
@@ -533,6 +542,10 @@ stmmac_probe_config_dt(struct platform_device *pdev, const char **mac)
 		plat->clk_ptp_rate = clk_get_rate(plat->clk_ptp_ref);
 		dev_dbg(&pdev->dev, "PTP rate %d\n", plat->clk_ptp_rate);
 	}
+#else
+	plat->clk_ptp_rate = AMBA_PTP_REF_CLK;
+	plat->clk_ptp_ref = NULL;
+#endif
 
 	plat->stmmac_rst = devm_reset_control_get(&pdev->dev,
 						  STMMAC_RESOURCE_NAME);
@@ -548,8 +561,10 @@ stmmac_probe_config_dt(struct platform_device *pdev, const char **mac)
 
 error_hw_init:
 	clk_disable_unprepare(plat->pclk);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 error_pclk_get:
 	clk_disable_unprepare(plat->stmmac_clk);
+#endif
 
 	return ERR_PTR(-EPROBE_DEFER);
 }
