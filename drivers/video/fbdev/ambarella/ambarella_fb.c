@@ -200,8 +200,8 @@ static int ambfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 static int ambfb_set_par(struct fb_info *info)
 {
 
-	info->fix.line_length = DIV_ROUND_UP(info->var.xres_virtual *
-						info->var.bits_per_pixel, 8);
+	info->fix.line_length = (info->var.xres_virtual *
+		(info->var.bits_per_pixel / 8) + 31) & 0xffffffe0;
 	ambfb_notifier_call_chain(info, AMBFB_EVENT_SET_PAR, NULL);
 
 	return 0;
@@ -342,7 +342,8 @@ static int ambfb_probe(struct platform_device *pdev)
 	fix->accel = FB_ACCEL_NONE;
 	fix->ypanstep = 1;
 	fix->ywrapstep = 1;
-	fix->line_length = DIV_ROUND_UP(var->xres_virtual * var->bits_per_pixel, 8);
+	fix->line_length = (var->xres_virtual *
+		(var->bits_per_pixel / 8) + 31) & 0xffffffe0;
 	fix->smem_len = fix->line_length * var->yres_virtual;
 	info->screen_base = dma_alloc_writecombine(info->device, fix->smem_len,
 				(dma_addr_t *)&fix->smem_start, GFP_KERNEL);
@@ -368,8 +369,8 @@ static int ambfb_probe(struct platform_device *pdev)
 		goto exit2;
 	}
 
-	dev_info(&pdev->dev, "%dx%d, %s, %d bits per pixel\n", par->max_width,
-		par->max_height, par->format->name, par->format->bits_per_pixel);
+	dev_info(&pdev->dev, "%dx%d, %s, %d bits per pixel, buf pitch = %d\n", par->max_width,
+		par->max_height, par->format->name, par->format->bits_per_pixel, fix->line_length);
 
 	return 0;
 
