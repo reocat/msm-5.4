@@ -1261,8 +1261,8 @@ static int ambarella_nand_restore(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	int rval = 0;
 
-#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	host = platform_get_drvdata(pdev);
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	ambarella_nand_init_hw(host);
 #endif
 	enable_irq(host->irq);

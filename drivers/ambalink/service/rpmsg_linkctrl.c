@@ -175,9 +175,11 @@ static int rpmsg_linkctrl_gpio_linux_only_list(void *data)
 	u8 *p;
 	int ret;
 	u32 gpio;
-        char *virt;
+	char *virt;
 
 	virt = (char *) ambalink_phys_to_virt(ctrl_cmd->Param1);
+	if(virt == NULL)
+		return 0;
 
     ambcache_inv_range((void *) virt, strlen((char*) virt));
 
@@ -306,23 +308,23 @@ int rpmsg_linkctrl_cmd_get_mem_info(u8 type, void **base, void **phys, u32 *size
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_get_mem_info);
 
 extern void *ambalink_image_info;
+static unsigned long ambalink_image_info_paddr;
 
 int rpmsg_linkctrl_cmd_suspend_prepare(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
-	unsigned long addr = 0x0;
 
 	//dbg_trace("0x%016lx\n", info);
 
 	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
 	ctrl_cmd.Cmd = LINK_CTRL_CMD_SUSPEND_PREPARE;
-	ctrl_cmd.Param1 = ambalink_virt_to_phys((uintptr_t)&addr);
+	ctrl_cmd.Param1 = ambalink_virt_to_phys((uintptr_t)&ambalink_image_info_paddr);
 
 	rpmsg_send(rpdev_linkctrl->ept, &ctrl_cmd, sizeof(ctrl_cmd));
 
 	wait_for_completion(&linkctrl_comp);
 
-	ambalink_image_info = (void *) ambalink_phys_to_virt(addr);
+	ambalink_image_info = (void *) ambalink_phys_to_virt(ambalink_image_info_paddr);
 
 	hibernation_start = 1;
 
