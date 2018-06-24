@@ -817,6 +817,9 @@ struct bus_type ambpriv_bus_type = {
 };
 EXPORT_SYMBOL(ambpriv_bus_type);
 
+struct class *ambpriv_class;
+EXPORT_SYMBOL(ambpriv_class);
+
 int __init ambpriv_bus_init(void)
 {
 	int error;
@@ -827,6 +830,12 @@ int __init ambpriv_bus_init(void)
 	error = bus_register(&ambpriv_bus_type);
 	if (error)
 		device_unregister(&ambpriv_bus);
+
+	ambpriv_class = class_create(THIS_MODULE, "ambpriv");
+	if (IS_ERR(ambpriv_class)) {
+		error = PTR_ERR(ambpriv_class);
+		pr_err("unable to create ambpriv class %d\n", error);
+	}
 	return error;
 }
 
