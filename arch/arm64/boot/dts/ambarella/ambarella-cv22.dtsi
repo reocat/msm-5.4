@@ -1239,6 +1239,22 @@
 			amb,frac-mode;
 		};
 
+		gclk_so2: gclk-so2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed08074c 4>,
+			      <0xed080758 4>,
+			      <0xed080750 4>,
+			      <0xed080754 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_so2";
+			assigned-clocks = <&gclk_so2>;
+			assigned-clock-rates = <24000000>;
+			amb,frac-mode;
+		};
+
 		pll_out_hdmi: pll_out_hdmi {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-hdmi-clock";

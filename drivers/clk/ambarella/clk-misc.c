@@ -33,7 +33,7 @@
 static const char *gclk_names[] = {
 	"pll_out_core", "pll_out_sd", "pll_out_hdmi", "pll_out_vo2", "gclk_cortex", "gclk_axi",
 	"smp_twd", "gclk_ddr", "gclk_core", "gclk_ahb", "gclk_apb",
-	"gclk_idsp", "gclk_so", "gclk_vo2", "gclk_vo", "gclk_uart",
+	"gclk_idsp", "gclk_so", "gclk_so2", "gclk_vo2", "gclk_vo", "gclk_uart",
 	"gclk_uart0", "gclk_uart1", "gclk_uart2", "gclk_uart3",
 	"gclk_uart4", "gclk_uart5", "gclk_uart6", "gclk_audio",
 	"gclk_sdxc", "gclk_sdio", "gclk_sd", "gclk_ir", "gclk_adc",
