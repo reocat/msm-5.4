@@ -1061,6 +1061,7 @@
 			compatible = "ambarella,vinc";
 			interrupts = <0 110 0x1 0 111 0x1 0 112 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+			clocks = <&gclk_so>;
 		};
 
 		/* node for vin1 controller */
@@ -1068,6 +1069,7 @@
 			compatible = "ambarella,vinc";
 			interrupts = <0 135 0x1 0 136 0x1 0 137 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+			clocks = <&gclk_so2>;
 		};
 
 		/* node for vout0(tv) controller */

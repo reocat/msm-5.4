@@ -916,6 +916,7 @@
 			compatible = "ambarella,vinc";
 			interrupts = <0 33 0x1 0 34 0x1 0 36 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+			clocks = <&gclk_so>;
 		};
 
 		/* node for vin1 controller */
@@ -923,6 +924,7 @@
 			compatible = "ambarella,vinc";
 			interrupts = <0 39 0x1 0 40 0x1 0 42 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+			clocks = <&gclk_so2>;
 		};
 
 		/* node for vout0 controller */
@@ -1119,6 +1121,22 @@
 			amb,extra-post-scaler;
 			amb,frac-mode;
 			amb,frac-nega;
+		};
+
+		gclk_so2: gclk-so2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xec170748 4>,
+			      <0xec17074c 4>,
+			      <0xec170750 4>,
+			      <0xec170754 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_so2";
+			assigned-clocks = <&gclk_so2>;
+			assigned-clock-rates = <24000000>;
+			amb,frac-mode;
 		};
 
 		gclk_vo: gclk-vo { /* for tv */
