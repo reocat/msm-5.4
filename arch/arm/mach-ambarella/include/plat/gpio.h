@@ -50,7 +50,7 @@
 #define GPIO_MAX_LINES			160
 #elif (CHIP_REV == CV2)
 #define GPIO_INSTANCES			6
-#define GPIO_MAX_LINES			192
+#define GPIO_MAX_LINES			166
 #else
 #error "Not supported!"
 #endif
@@ -118,14 +118,14 @@
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
 	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define GPIO_PAD_PULL_OFFSET		0x15000
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define GPIO_PAD_PULL_OFFSET		0x1000
 #else
 #define GPIO_PAD_PULL_OFFSET		0x22000
 #endif
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
-	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV2)
 
 #define GPIO_PAD_PULL_EN_0_OFFSET	0x80
 #define GPIO_PAD_PULL_EN_1_OFFSET	0x84

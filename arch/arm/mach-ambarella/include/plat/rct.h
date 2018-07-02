@@ -546,7 +546,7 @@
 	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define AHB_SCRATCHPAD_OFFSET		0x1B000
 #define AHB_SECURE_OFFSET		0x1D000
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define AHB_SCRATCHPAD_OFFSET		0x1000
 #define AHB_SECURE_OFFSET		RCT_INVALID_OFFSET
 #else
@@ -559,9 +559,7 @@
 #define AHB_SECURE_REG(x)		(AHB_SECURE_BASE + (x))
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) ||  \
-	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1) || \
-	(CHIP_REV == CV2)
-
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define AHBSP_CTL_OFFSET		0x0C
 #define AHBSP_USB_SIDEBAND_OFFSET	0x04
 #else

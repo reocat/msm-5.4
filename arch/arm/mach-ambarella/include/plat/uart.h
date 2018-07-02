@@ -31,14 +31,14 @@
 #define	UART_INSTANCES			3
 #elif (CHIP_REV == CV1)
 #define	UART_INSTANCES			7
-#elif (CHIP_REV == CV22)
+#elif (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define	UART_INSTANCES			5
 #else
 #define	UART_INSTANCES			2
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
 #define UART0_OFFSET			0x0000
 #else
 #define UART0_OFFSET			0x5000
