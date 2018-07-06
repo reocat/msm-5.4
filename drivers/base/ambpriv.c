@@ -17,6 +17,7 @@
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
 #include "base.h"
 
 #define to_ambpriv_driver(drv)	(container_of((drv), struct ambpriv_driver, driver))
@@ -174,6 +175,7 @@ static struct ambpriv_device *of_ambpriv_device_alloc(struct device_node *np,
 	of_ambpriv_device_make_bus_id(&dev->dev);
 	dev->name = dev_name(&dev->dev);
 	of_dma_configure(&dev->dev, dev->dev.of_node);
+	of_reserved_mem_device_init(&dev->dev);
 
 	return dev;
 }
