@@ -203,14 +203,53 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
  *   We can't return an error either, otherwise many user-space application
  *   will simply fail.
  */
-static int ambafs_file_fsync(struct file *file, loff_t start,  loff_t end,
-			int datasync)
+static int ambafs_file_fsync(struct file *file, loff_t start,  loff_t end, int datasync)
 {
+	struct inode *inode = file->f_mapping->host;
+	struct address_space *mapping = &inode->i_data;
+	void *fp = file->private_data;
+	int err;
 
 	AMBAFS_DMSG("%s: start=%d end=%d sync=%d\r\n", __func__, (int)start, (int)end, datasync);
 
-	//return generic_file_fsync(file, start, end, datasync);
-	return 0;
+	if (is_bad_inode(inode))
+		return -EIO;
+
+	inode_lock(inode);
+
+	if (fp)
+		mapping->private_data = fp;
+	else
+		mapping->private_data = ambafs_remote_open(
+			(struct dentry*)mapping->host->i_private, O_RDWR);
+	/*
+	* Start writeback against all dirty pages of the inode, then
+	* wait for all outstanding writes, before sending the FSYNC
+	* request.
+	*/
+	err = file_write_and_wait_range(file, start, end);
+	if (err)
+		goto out;
+
+	/*
+	* Due to implementation of fuse writeback
+	* file_write_and_wait_range() does not catch errors.
+	* We have to do this directly after fuse_sync_writes()
+	*/
+	err = file_check_and_advance_wb_err(file);
+	if (err)
+		goto out;
+
+	err = sync_inode_metadata(inode, 1);
+	if (err)
+		goto out;
+out:
+	if (fp != mapping->private_data)
+		ambafs_remote_close(fp);
+
+	inode_unlock(inode);
+	return err;
+
 }
 
 const struct file_operations ambafs_file_ops = {
