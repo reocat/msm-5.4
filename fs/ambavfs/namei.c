@@ -24,10 +24,12 @@
 #include <linux/writeback.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
+#include <linux/namei.h>
 #include <asm/page.h>
 #include <plat/ambalink_cfg.h>
 #include "ambafs.h"
 
+#define VALIDATE_TIME_NS 4000
 unsigned long *qstat_buf;
 DEFINE_MUTEX(qstat_mutex);
 
@@ -274,7 +276,7 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 
 	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
 
-        msg->parameter[0] = (u64) ambalink_virt_to_phys((uintptr_t)(void *) stat);
+	msg->parameter[0] = (u64) ambalink_virt_to_phys((uintptr_t)(void *) stat);
 
 	AMBAFS_DMSG("%s: path = %s, quick_stat result phy address = 0x%x \r\n", __func__, path, msg->parameter[0]);
 
@@ -291,7 +293,6 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	if (i == 65536) {
 		stat->type = AMBAFS_STAT_NULL;
 	}
-
 exit:
 	mutex_unlock(&qstat_mutex);
 	return (struct ambafs_qstat*) stat;
@@ -300,17 +301,25 @@ exit:
 static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
 	struct inode *inode = dentry->d_inode;
+	struct timespec64 ts;
 	int valid = 1;
 
 	if (inode && S_ISDIR(inode->i_mode)) {
-		void *align_buf;
-		struct ambafs_qstat *astat;
+		if(time_before64(dentry->d_time, get_jiffies_64()) || (flags & LOOKUP_REVAL)) {
+			void *align_buf;
+			struct ambafs_qstat *astat;
 
-		align_buf = (void *)((((unsigned long) qstat_buf) & (~0x3f)) + 0x40);
-		//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) align_buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) align_buf)));
-		astat = ambafs_get_qstat(NULL, dentry->d_inode, align_buf, QSTAT_BUFF_SIZE);
-		if (astat->type == AMBAFS_STAT_NULL) {
-			valid = 0;
+			align_buf = (void *)((((unsigned long) qstat_buf) & (~0x3f)) + 0x40);
+			//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) align_buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) align_buf)));
+			astat = ambafs_get_qstat(NULL, dentry->d_inode, align_buf, QSTAT_BUFF_SIZE);
+			AMBAFS_DMSG("%s: d_time = %u jiffies = %u\r\n", __func__, dentry->d_time, jiffies);
+			if (astat->type == AMBAFS_STAT_NULL) {
+				valid = 0;
+			} else {
+				ts.tv_sec = 0;
+				ts.tv_nsec = VALIDATE_TIME_NS;
+				dentry->d_time = jiffies + timespec64_to_jiffies(&ts);
+			}
 		}
 	}
 
