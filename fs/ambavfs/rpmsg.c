@@ -190,6 +190,33 @@ int ambafs_rpmsg_exec(struct ambafs_msg *msg, int len)
 }
 
 /*
+ * send msg and wait on reply
+ */
+int ambafs_rpmsg_exec_timeout(struct ambafs_msg *msg, int len, unsigned long timeout)
+{
+	struct ambafs_xfr *xfr = find_free_xfr();
+	unsigned long timeleft;
+	/* set up xfr for the msg */
+	xfr->cb = exec_cb;
+	xfr->priv = msg;
+	msg->xfr = xfr;
+	//printk("%s cmd = %d", __FUNCTION__, msg->cmd);
+	/*
+	 * Need lock xfr here, otherwise xfr could be freed in rpmsg_vfs_recv
+	 * before wait_for_completion starts to execute.
+	 */
+	xfr_get(xfr);
+	rpmsg_send(rpdev_vfs->ept, msg, len + sizeof(struct ambafs_msg));
+	timeleft = wait_for_completion_timeout(&xfr->comp, timeout);
+	xfr_put(xfr);
+
+	if(timeleft)
+		return 0;
+	else
+		return -1;
+}
+
+/*
  * send msg and return immediately
  */
 int ambafs_rpmsg_send(struct ambafs_msg *msg, int len,

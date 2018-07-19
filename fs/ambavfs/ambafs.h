@@ -154,6 +154,7 @@ struct ambafs_io {
 extern int  ambafs_rpmsg_init(void);
 extern void ambafs_rpmsg_exit(void);
 extern int  ambafs_rpmsg_exec(struct ambafs_msg *, int);
+extern int ambafs_rpmsg_exec_timeout(struct ambafs_msg *msg, int len, unsigned long timeout);
 extern int  ambafs_rpmsg_send(struct ambafs_msg *msg, int len,
 			void (*cb)(void*, struct ambafs_msg*, int), void*);
 

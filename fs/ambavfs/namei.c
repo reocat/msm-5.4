@@ -437,19 +437,30 @@ int ambafs_remote_set_timestamp(struct dentry *dentry, struct iattr *attr)
 	return 0;
 }
 
+static int SupportRemoteSize = 1;
+
 int ambafs_remote_set_size(struct dentry *dentry, u64 size)
 {
 	int buf[128];
 	struct ambafs_msg *msg = (struct ambafs_msg *)buf;
 	struct ambafs_stat_size *stat = (struct ambafs_stat_size *)msg->parameter;
 	char *path = (char *)stat->name;
-	int len;
+	int len, ret;
 
 	AMBAFS_DMSG("%s file %s set size %d\n", __func__, path, size);
+	if(SupportRemoteSize == 0) {
+		return 0;
+	}
 	len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
 	msg->cmd = AMBAFS_CMD_SET_SIZE;
 	stat->size = (u64)size;
-	ambafs_rpmsg_exec(msg, sizeof(struct ambafs_stat_size) + len + 1);
+	ret = ambafs_rpmsg_exec_timeout(msg, sizeof(struct ambafs_stat_size) + len + 1,250);
+
+	if(ret) {
+		SupportRemoteSize = 0;
+		AMBAFS_EMSG("%s not support remote size\n", __func__);
+		return 0;
+	}
 
 	if(msg->parameter[0]) {
 		return -EIO;
