@@ -45,6 +45,7 @@
 #define AMBAFS_CMD_VOLSIZE       17
 #define AMBAFS_CMD_QUICK_STAT	 18
 #define AMBAFS_CMD_SET_TIME	 19
+#define AMBAFS_CMD_SET_SIZE	 20
 
 #define AMBAFS_STAT_NULL         0
 #define AMBAFS_STAT_FILE         1
@@ -66,6 +67,13 @@
  * so we need a flag to skip clear_cache_contents().
  */
 #define AMBAFS_IOP_CREATE_FOR_WRITE      0x0200
+
+/*
+ * This is used in i_opflags to skip set timestamp when open file.
+ * Because RTOS FS can not update time when open, we move to release
+ *
+ */
+#define AMBAFS_IOP_SET_TIMESTAMP      	0x0400
 
 //#define ENABLE_AMBAFS_DEBUG_MSG		1
 #ifdef ENABLE_AMBAFS_DEBUG_MSG
@@ -124,6 +132,11 @@ struct ambafs_stat_timestmp {
 	char			name[0];
 };
 
+struct ambafs_stat_size {
+	u64		size;
+	char		name[0];
+};
+
 struct ambafs_bh {
 	int64_t      	offset;
 	u64             addr;
@@ -151,6 +164,8 @@ extern struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, struct inode *
 extern int   ambafs_get_full_path(struct dentry *dir, char *buf, int len);
 extern void* ambafs_remote_open(struct dentry *dentry, int flags);
 extern void  ambafs_remote_close(void *fp);
+extern int ambafs_remote_set_timestamp(struct dentry *dentry, struct iattr *attr);
+extern int ambafs_remote_set_size(struct dentry *dentry, u64 size);
 
 extern const struct file_operations  ambafs_dir_ops;
 extern const struct file_operations  ambafs_file_ops;

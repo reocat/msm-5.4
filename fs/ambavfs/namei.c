@@ -410,52 +410,83 @@ static void fill_time_info(struct ambafs_timestmp *stamp, struct tm *time)
  */
 #define AMBAFS_TIMES_SET_FLAGS (ATTR_MTIME | ATTR_ATIME | ATTR_CTIME)
 
-int ambafs_setattr(struct dentry *dentry, struct iattr *attr)
+int ambafs_remote_set_timestamp(struct dentry *dentry, struct iattr *attr)
 {
 	int buf[128];
-	struct inode *inode = dentry->d_inode;
 	struct ambafs_msg *msg = (struct ambafs_msg *)buf;
 	struct ambafs_stat_timestmp *stat = (struct ambafs_stat_timestmp *)msg->parameter;
 	char *path = (char *)stat->name;
-	int error, len;
+	int len;
 	struct tm time;
+
+	AMBAFS_DMSG("%s:  %s\r\n", __func__, path);
+	len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
+	msg->cmd = AMBAFS_CMD_SET_TIME;
+	time_to_tm(attr->ia_atime.tv_sec, 0, &time);
+	fill_time_info(&stat->atime, &time);
+	time_to_tm(attr->ia_mtime.tv_sec, 0, &time);
+	fill_time_info(&stat->mtime, &time);
+	time_to_tm(attr->ia_ctime.tv_sec, 0, &time);
+	fill_time_info(&stat->ctime, &time);
+	ambafs_rpmsg_exec(msg, sizeof(struct ambafs_stat_timestmp) + len + 1);
+
+	if(msg->parameter[0]) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int ambafs_remote_set_size(struct dentry *dentry, u64 size)
+{
+	int buf[128];
+	struct ambafs_msg *msg = (struct ambafs_msg *)buf;
+	struct ambafs_stat_size *stat = (struct ambafs_stat_size *)msg->parameter;
+	char *path = (char *)stat->name;
+	int len;
+
+	AMBAFS_DMSG("%s file %s set size %d\n", __func__, path, size);
+	len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
+	msg->cmd = AMBAFS_CMD_SET_SIZE;
+	stat->size = (u64)size;
+	ambafs_rpmsg_exec(msg, sizeof(struct ambafs_stat_size) + len + 1);
+
+	if(msg->parameter[0]) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int ambafs_setattr(struct dentry *dentry, struct iattr *attr)
+{
+	struct inode *inode = dentry->d_inode;
+	int error = 0;
 
 	error = setattr_prepare(dentry, attr);
 	if (error) {
 		return error;
 	}
-
-	len = ambafs_get_full_path(dentry, path, (char *)buf + sizeof(buf) - path);
-	/* Currently, we don't support truncate in rtos side.
-	 * Truncate a file cannot apply to rtos side.
-	 */
+	AMBAFS_DMSG("%s: \r\n", __func__);
+	// Notify rtos to change the size
 	if (attr->ia_valid & ATTR_SIZE) {
-		AMBAFS_DMSG("%s file %s set size %d\n", __func__, path, attr->ia_size);
 		truncate_setsize(inode, attr->ia_size);
+		error = ambafs_remote_set_size(dentry, (u64)attr->ia_size);
 	}
 
 	// Notify rtos to change the timestamp
 	if (attr->ia_valid & AMBAFS_TIMES_SET_FLAGS) {
-		AMBAFS_DMSG("%s:  %s\r\n", __func__, path);
-
-		msg->cmd = AMBAFS_CMD_SET_TIME;
-		time_to_tm(attr->ia_atime.tv_sec, 0, &time);
-		fill_time_info(&stat->atime, &time);
-		time_to_tm(attr->ia_mtime.tv_sec, 0, &time);
-		fill_time_info(&stat->mtime, &time);
-		time_to_tm(attr->ia_ctime.tv_sec, 0, &time);
-		fill_time_info(&stat->ctime, &time);
-		ambafs_rpmsg_exec(msg, sizeof(struct ambafs_stat_timestmp) + len + 1);
-
-		if(msg->parameter[0]) {
-			return -EIO;
+		if(inode->i_opflags & AMBAFS_IOP_CREATE_FOR_WRITE){
+			inode->i_opflags |= AMBAFS_IOP_SET_TIMESTAMP;
+		} else {
+			error = ambafs_remote_set_timestamp(dentry, attr);
 		}
 	}
 
 	// Notice that we don't notify rtos to chmod the file.
 	// chmod will be invalid when inode flushing.
 	setattr_copy(inode, attr);
-	return 0;
+	return error;
 }
 
 const struct inode_operations ambafs_file_inode_ops = {

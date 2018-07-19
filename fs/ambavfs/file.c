@@ -168,6 +168,7 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 static int ambafs_file_release(struct inode *inode, struct file *filp)
 {
 	struct address_space *mapping = &inode->i_data;
+	struct iattr attr;
 	void *fp = filp->private_data;
 
 	AMBAFS_DMSG("%s %p\n", __FUNCTION__, fp);
@@ -183,6 +184,15 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 
 	mapping->private_data = NULL;
 	ambafs_remote_close(fp);
+
+	if(inode->i_opflags & AMBAFS_IOP_SET_TIMESTAMP) {
+		attr.ia_atime = inode->i_atime;
+		attr.ia_mtime = inode->i_mtime;
+		attr.ia_ctime = inode->i_ctime;
+		ambafs_remote_set_timestamp(filp->f_path.dentry, &attr);
+		inode->i_opflags &= ~AMBAFS_IOP_SET_TIMESTAMP;
+	}
+
 	/* Another file pointer might be keeping writing, so the
 	file pointer with read-only permission cannot remove
 	AMBAFS_IOP_CREATE_FOR_WRITE */
