@@ -30,14 +30,13 @@
 /*
  * check inode stats again remote
  */
-static int check_stat(struct inode *inode)
+static int check_stat(struct dentry *dentry,struct inode *inode)
 {
 	int buf[128];
 	struct ambafs_stat *stat;
-	struct dentry *dentry = (struct dentry*)inode->i_private;
 
 	AMBAFS_DMSG("%s \r\n", __func__);
-	stat = ambafs_get_stat(dentry, NULL, buf, sizeof(buf));
+	stat = ambafs_get_stat(dentry, buf, sizeof(buf));
 	if (stat->type != AMBAFS_STAT_FILE) {
 		AMBAFS_DMSG("%s: ambafs_get_stat() failed\n", __func__);
 		return -ENOENT;
@@ -144,7 +143,7 @@ static int ambafs_file_open(struct inode *inode, struct file *filp)
 		}
 	}
 
-	ret = check_stat(inode);
+	ret = check_stat(filp->f_path.dentry,inode);
 	if ((ret < 0) && (filp->f_mode & FMODE_READ)) {
 		/*
 		 *  We are here for the case, RTOS delete the file without notify linux to drop inode.
@@ -199,7 +198,7 @@ static int ambafs_file_release(struct inode *inode, struct file *filp)
 	if(filp->f_mode & FMODE_WRITE) {
 		inode->i_opflags &= ~AMBAFS_IOP_CREATE_FOR_WRITE;
 	}
-	check_stat(inode);
+	check_stat(filp->f_path.dentry,inode);
 	return 0;
 }
 

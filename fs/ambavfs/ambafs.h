@@ -160,7 +160,7 @@ extern int  ambafs_rpmsg_send(struct ambafs_msg *msg, int len,
 
 extern struct inode* ambafs_new_inode(struct super_block *, struct ambafs_stat*);
 extern void   ambafs_update_inode(struct inode *inode, struct ambafs_stat *stat);
-extern struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, struct inode *inode, void *buf, int size);
+extern struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, void *buf, int size);
 
 extern int   ambafs_get_full_path(struct dentry *dir, char *buf, int len);
 extern void* ambafs_remote_open(struct dentry *dentry, int flags);

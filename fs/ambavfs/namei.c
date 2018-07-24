@@ -29,7 +29,7 @@
 #include <plat/ambalink_cfg.h>
 #include "ambafs.h"
 
-#define VALIDATE_TIME_NS 4000
+#define VALIDATE_TIME_NS 20000
 unsigned long *qstat_buf;
 DEFINE_MUTEX(qstat_mutex);
 
@@ -44,18 +44,17 @@ void qstat_init (void)
 /*
  * helper function to trigger/wait a remote command excution
  */
-static void exec_cmd(struct inode *inode, struct dentry *dentry,
+static void exec_cmd(struct dentry *dentry,
 		void *buf, int size, int cmd)
 {
 	struct ambafs_msg  *msg  = (struct ambafs_msg  *)buf;
-	struct dentry *dir = (struct dentry *)inode->i_private;
 	char *path = (char*)msg->parameter;
 	int len;
 
 	//dir = d_find_any_alias(inode);
-	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
-	path[len] = '/';
-	strcpy(path+len+1, dentry->d_name.name);
+	len = ambafs_get_full_path(dentry, path, (char*)buf + size - path);
+	//path[len] = '/';
+	//strcpy(path+len+1, dentry->d_name.name);
 	//dput(dir);
 
 	msg->cmd = cmd;
@@ -85,7 +84,7 @@ static struct dentry *ambafs_lookup(struct inode *inode,
 
 	AMBAFS_DMSG("%s:  %s \r\n", __func__, dentry->d_name.name);
 
-	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_STAT);
+	exec_cmd(dentry, msg, sizeof(buf), AMBAFS_CMD_STAT);
 	if (msg->flag) {
 		inode = ambafs_new_inode(dentry->d_sb, stat);
 		if (inode) {
@@ -111,7 +110,7 @@ static int ambafs_create(struct inode *inode, struct dentry *dentry, umode_t mod
 
 	AMBAFS_DMSG("%s:  %s \r\n", __func__, dentry->d_name.name);
 
-	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_CREATE);
+	exec_cmd(dentry, msg, sizeof(buf), AMBAFS_CMD_CREATE);
 	if (stat->type == AMBAFS_STAT_FILE) {
 		struct inode *child = ambafs_new_inode(dentry->d_sb, stat);
 		if (child) {
@@ -133,7 +132,7 @@ static int ambafs_unlink(struct inode *inode, struct dentry *dentry)
 	struct ambafs_msg  *msg  = (struct ambafs_msg *)buf;
 
 	AMBAFS_DMSG("%s:  %s \r\n", __func__, dentry->d_name.name);
-	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_DELETE);
+	exec_cmd(dentry, msg, sizeof(buf), AMBAFS_CMD_DELETE);
 	if (msg->flag == 0) {
 		drop_nlink(dentry->d_inode);
 		return 0;
@@ -153,7 +152,7 @@ static int ambafs_mkdir(struct inode *inode,
 
 	AMBAFS_DMSG("%s:  %s \r\n", __func__, dentry->d_name.name);
 
-	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_MKDIR);
+	exec_cmd(dentry, msg, sizeof(buf), AMBAFS_CMD_MKDIR);
 	if (stat->type == AMBAFS_STAT_DIR) {
 		struct inode *child = ambafs_new_inode(dentry->d_sb, stat);
 		if (child) {
@@ -178,7 +177,7 @@ static int ambafs_rmdir(struct inode *inode, struct dentry *dentry)
 
 	AMBAFS_DMSG("%s: %s\n", __func__, dentry->d_name.name);
 
-	exec_cmd(inode, dentry, msg, sizeof(buf), AMBAFS_CMD_RMDIR);
+	exec_cmd(dentry, msg, sizeof(buf), AMBAFS_CMD_RMDIR);
 	if (msg->flag == 0) {
 		clear_nlink(dentry->d_inode);
 		if (inode->i_nlink > 1) {
@@ -253,28 +252,23 @@ const struct inode_operations ambafs_dir_inode_ops = {
 /*
  * ambafs quick stat.
  */
-struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode, void *buf, int size)
+int ambafs_get_qstat(struct dentry *dentry, void *buf, int size)
 {
 	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
-	struct dentry *dir;
 	volatile struct ambafs_qstat *stat = (struct ambafs_qstat*)msg->parameter;
 	char *path = (char*)&(msg->parameter[1]);
-	int len, i;
+	int len, i, type = AMBAFS_STAT_NULL;
+
+	if (dentry == NULL) {
+		AMBAFS_EMSG("%s: dentry == NULL \r\n", __func__);
+		return AMBAFS_STAT_NULL;
+	}
 
 	if (0 == mutex_trylock(&qstat_mutex)) {
-		goto exit;
+		return AMBAFS_STAT_DIR;
 	}
 
-	if (dentry) {
-		dir = dentry;
-	} else if (inode && inode->i_private) {
-		dir = (struct dentry*) inode->i_private;
-	} else {
-		stat->type = AMBAFS_STAT_NULL;
-		goto exit;
-	}
-
-	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
+	len = ambafs_get_full_path(dentry, path, (char*)buf + size - path);
 
 	msg->parameter[0] = (u64) ambalink_virt_to_phys((uintptr_t)(void *) stat);
 
@@ -283,49 +277,67 @@ struct ambafs_qstat* ambafs_get_qstat(struct dentry *dentry, struct inode *inode
 	msg->cmd = AMBAFS_CMD_QUICK_STAT;
 	ambafs_rpmsg_send(msg, len + 1 + 8, NULL, NULL);
 
-	for (i = 0; i < 65536; i++) {
+	for (i = 0; i < (65536*5); i++) {
 		if (stat->magic == AMBAFS_QSTAT_MAGIC) {
 			stat->magic = 0x0;
-			break;
+			type = stat->type;
+			goto exit;
 		}
 	}
 
-	if (i == 65536) {
-		stat->type = AMBAFS_STAT_NULL;
-	}
 exit:
 	mutex_unlock(&qstat_mutex);
-	return (struct ambafs_qstat*) stat;
+	return type;
 }
 
 static int ambafs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode;
+	struct dentry *parent;
+	void *align_buf;
 	struct timespec64 ts;
-	int valid = 1;
+	int ret,type;
 
-	if (inode && S_ISDIR(inode->i_mode)) {
-		if(time_before64(dentry->d_time, get_jiffies_64()) || (flags & LOOKUP_REVAL)) {
-			void *align_buf;
-			struct ambafs_qstat *astat;
+	inode = d_inode_rcu(dentry);
+	if (inode && is_bad_inode(inode))
+		goto invalid;
+	else if (time_before64(dentry->d_time, get_jiffies_64()) ||
+		 (flags & LOOKUP_REVAL)) {
 
-			align_buf = (void *)((((unsigned long) qstat_buf) & (~0x3f)) + 0x40);
-			//AMBAFS_DMSG("%s: buf virt = 0x%x, buf phy = 0x%x\r\n", __func__, (int) align_buf, (int) __pfn_to_phys(vmalloc_to_pfn((void *) align_buf)));
-			astat = ambafs_get_qstat(NULL, dentry->d_inode, align_buf, QSTAT_BUFF_SIZE);
-			AMBAFS_DMSG("%s: d_time = %u jiffies = %u\r\n", __func__, dentry->d_time, jiffies);
-			if (astat->type == AMBAFS_STAT_NULL) {
-				valid = 0;
-			} else {
-				ts.tv_sec = 0;
-				ts.tv_nsec = VALIDATE_TIME_NS;
-				dentry->d_time = jiffies + timespec64_to_jiffies(&ts);
-			}
+		/* For negative dentries, always do a fresh lookup */
+		if (!inode)
+			goto invalid;
+
+		ret = -ECHILD;
+		if (flags & LOOKUP_RCU)
+			goto out;
+
+		ret = 1;
+		if(!S_ISDIR(inode->i_mode))
+			goto out;
+		align_buf = (void *)((((unsigned long) qstat_buf) & (~0x3f)) + 0x40);
+
+		parent = dget_parent(dentry);
+		type = ambafs_get_qstat(dentry, align_buf, QSTAT_BUFF_SIZE);
+		dput(parent);
+
+		if (type != AMBAFS_STAT_DIR) {
+			AMBAFS_DMSG("%s fail: dentry = %p name = %s type = %d \r\n", __func__,dentry,dentry->d_name.name, type);
+			goto out;
+		} else {
+			ts.tv_sec = 0;
+			ts.tv_nsec = VALIDATE_TIME_NS;
+			dentry->d_time = jiffies + timespec64_to_jiffies(&ts);
 		}
 	}
 
-	AMBAFS_DMSG("%s: flags = 0x%x, valid = %d\r\n", __func__, flags, valid);
+	ret = 1;
+out:
+	return ret;
 
-	return valid;
+invalid:
+	ret = 0;
+	goto out;
 }
 
 const struct dentry_operations ambafs_dentry_ops = {
@@ -335,24 +347,20 @@ const struct dentry_operations ambafs_dentry_ops = {
 /*
  * get inode stat
  */
-struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, struct inode *inode, void *buf, int size)
+struct ambafs_stat* ambafs_get_stat(struct dentry *dentry, void *buf, int size)
 {
 	struct ambafs_msg *msg = (struct ambafs_msg*)buf;
-	struct dentry *dir;
 	struct ambafs_stat *stat = (struct ambafs_stat*)msg->parameter;
 	char *path = (char*)msg->parameter;
 	int len;
 
-	if (dentry) {
-		dir = dentry;
-	} else if (inode && inode->i_private) {
-		dir = (struct dentry*) inode->i_private;
-	} else {
+	if (dentry == NULL) {
+		AMBAFS_EMSG("%s: dentry == NULL \r\n", __func__);
 		stat->type = AMBAFS_STAT_NULL;
 		goto exit;
 	}
 
-	len = ambafs_get_full_path(dir, path, (char*)buf + size - path);
+	len = ambafs_get_full_path(dentry, path, (char*)buf + size - path);
 
 	AMBAFS_DMSG("%s:  %s \r\n", __func__, path);
 
@@ -380,7 +388,7 @@ static int ambafs_getattr(const struct path *path, struct kstat *stat,
 		int buf[128];
 		struct ambafs_stat *astat;
 
-		astat = ambafs_get_stat(NULL, dentry->d_inode, buf, sizeof(buf));
+		astat = ambafs_get_stat(dentry, buf, sizeof(buf));
 		if (astat->type == AMBAFS_STAT_NULL) {
 			return -ENOENT;
 		}
