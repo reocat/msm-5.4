@@ -54,6 +54,7 @@ struct ambarella_nand_host {
 
 	struct device			*dev;
 	wait_queue_head_t		wq;
+	spinlock_t				lock;
 
 	void __iomem			*regbase;
 	struct regmap			*reg_rct;
@@ -438,11 +439,13 @@ static int ambarella_nand_system_event(struct notifier_block *nb,
 static irqreturn_t ambarella_nand_isr_handler(int irq, void *dev_id)
 {
 	struct ambarella_nand_host *host = dev_id;
+	unsigned long		flags;
 	u32 int_sts;
 
 	int_sts = readl_relaxed(host->regbase + FIO_INT_STATUS_OFFSET);
 	int_sts &= FIO_INT_OPERATION_DONE | FIO_INT_ECC_RPT_UNCORR | FIO_INT_ECC_RPT_THRESH;
 	if (int_sts) {
+		spin_lock_irqsave(&host->lock, flags);
 		writel_relaxed(int_sts, host->regbase + FIO_RAW_INT_STATUS_OFFSET);
 		host->int_sts = int_sts;
 		host->ecc_rpt_sts =
@@ -450,7 +453,7 @@ static irqreturn_t ambarella_nand_isr_handler(int irq, void *dev_id)
 		host->ecc_rpt_sts2 =
 			readl_relaxed(host->regbase + FIO_ECC_RPT_STATUS2_OFFSET);
 		wake_up(&host->wq);
-
+		spin_unlock_irqrestore(&host->lock, flags);
 		return IRQ_HANDLED;
 	}
 
@@ -502,6 +505,7 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 
 	host->int_sts = 0;
 
+	spin_lock_irq(&host->lock);
 	if (native_cmd == NAND_AMB_CMD_READ || native_cmd == NAND_AMB_CMD_PROGRAM)
 		ambarella_nand_setup_dma(host, native_cmd);
 
@@ -512,6 +516,8 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 
 	if (NAND_CMD_IS_CC(native_cmd))
 		ambarella_nand_setup_cc(host, native_cmd);
+
+	spin_unlock_irq(&host->lock);
 
 	/* now waiting for command completed */
 	timeout = wait_event_timeout(host->wq, host->int_sts, 1 * HZ);
@@ -1124,6 +1130,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	host->dev = &pdev->dev;
 	spin_lock_init(&host->controller.lock);
 	init_waitqueue_head(&host->controller.wq);
+	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
 	sema_init(&host->system_event_sem, 1);
 
