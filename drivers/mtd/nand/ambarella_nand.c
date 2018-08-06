@@ -1956,25 +1956,33 @@ static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
 
 static int ambarella_nand_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct device_node *dn = dev->of_node;
+	int		errorCode = 0;
 	struct ambarella_nand_info *nand_info;
 	struct mtd_info *mtd;
 	struct nand_chip *chip;
-	int errorCode = 0;
+
+	/* Only support device-tree instantiation */
+	if (!dn)
+		return -ENODEV;
 
 	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
 	if (nand_info == NULL) {
-		dev_err(&pdev->dev, "kzalloc for nand nand_info failed!\n");
+		dev_err(dev, "kzalloc for nand nand_info failed!\n");
 		errorCode = - ENOMEM;
 		goto ambarella_nand_probe_exit;
 	}
 
-	nand_info->dev = &pdev->dev;
-	spin_lock_init(&nand_info->controller.lock);
-	init_waitqueue_head(&nand_info->controller.wq);
+	dev_set_drvdata(dev, nand_info);
+	nand_info->dev = dev;
+
 	spin_lock_init(&nand_info->lock);
 	init_waitqueue_head(&nand_info->wq);
 	sema_init(&nand_info->system_event_sem, 1);
 	atomic_set(&nand_info->irq_flag, 0x7);
+
+	nand_hw_control_init(&nand_info->controller);
 
 	nand_info->clk = clk_get(nand_info->dev, NULL);
 
@@ -1982,7 +1990,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,
 		&nand_info->dmaaddr, GFP_KERNEL);
 	if (nand_info->dmabuf == NULL) {
-		dev_err(&pdev->dev, "dma_alloc_coherent failed!\n");
+		dev_err(dev, "dma_alloc_coherent failed!\n");
 		errorCode = -ENOMEM;
 		goto ambarella_nand_probe_free_info;
 	}
@@ -1992,7 +2000,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	if (errorCode < 0)
 		goto ambarella_nand_probe_free_dma;
 
-	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
+	ambarella_nand_init_chip(nand_info, dn);
 
 	chip = &nand_info->chip;
 	nand_set_controller_data(chip, nand_info);
@@ -2019,11 +2027,9 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
 	mtd->name = "amba_nand";
 
-	errorCode = mtd_device_parse_register(mtd, NULL, NULL, NULL, 0);
+	errorCode = mtd_device_register(mtd, NULL, 0);
 	if (errorCode < 0)
 		goto ambarella_nand_probe_mtd_error;
-
-	platform_set_drvdata(pdev, nand_info);
 
 	nand_info->system_event.notifier_call = ambarella_nand_system_event;
 	ambarella_register_event_notifier(&nand_info->system_event);

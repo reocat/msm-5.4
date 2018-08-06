@@ -1115,30 +1115,38 @@ static int ambarella_nand_get_resource(
 
 static int ambarella_nand_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct device_node *dn = dev->of_node;
 	struct ambarella_nand_host *host;
 	struct mtd_info *mtd;
 	struct nand_chip *chip;
 	int rval = 0;
 
-	host = devm_kzalloc(&pdev->dev,
+	/* Only support device-tree instantiation */
+	if (!dn)
+		return -ENODEV;
+
+	host = devm_kzalloc(dev,
 			sizeof(struct ambarella_nand_host), GFP_KERNEL);
 	if (host == NULL) {
-		dev_err(&pdev->dev, "kzalloc for nand host failed!\n");
+		dev_err(dev, "kzalloc for nand host failed!\n");
 		return -ENOMEM;
 	}
 
-	host->dev = &pdev->dev;
-	spin_lock_init(&host->controller.lock);
-	init_waitqueue_head(&host->controller.wq);
+	dev_set_drvdata(dev, host);
+	host->dev = dev;
+
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
 	sema_init(&host->system_event_sem, 1);
+
+	nand_hw_control_init(&host->controller);
 
 	host->dmabuf = dma_alloc_coherent(host->dev,
 					AMBARELLA_NAND_DMA_BUFFER_SIZE,
 					&host->dmaaddr, GFP_KERNEL);
 	if (host->dmabuf == NULL) {
-		dev_err(&pdev->dev, "dma_alloc_coherent failed!\n");
+		dev_err(dev, "dma_alloc_coherent failed!\n");
 		rval = -ENOMEM;
 		goto err_exit0;
 	}
@@ -1148,7 +1156,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	if (rval < 0)
 		goto err_exit1;
 
-	ambarella_nand_init_chip(host, pdev->dev.of_node);
+	ambarella_nand_init_chip(host, dn);
 
 	chip = &host->chip;
 	nand_set_controller_data(chip, host);
@@ -1176,11 +1184,9 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
 	mtd->name = "amba_nand";
 
-	rval = mtd_device_parse_register(mtd, NULL, NULL, NULL, 0);
+	rval = mtd_device_register(mtd, NULL, 0);
 	if (rval < 0)
 		goto err_exit2;
-
-	platform_set_drvdata(pdev, host);
 
 	host->system_event.notifier_call = ambarella_nand_system_event;
 	ambarella_register_event_notifier(&host->system_event);
