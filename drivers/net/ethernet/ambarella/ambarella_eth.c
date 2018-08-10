@@ -2597,7 +2597,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		}
 
 		lp->new_bus = *lp->phydev->mdio.bus;
-	} else {
+	} else if (!of_phy_is_fixed_link(np)) {
 		bus = devm_mdiobus_alloc_size(&pdev->dev, sizeof(struct ambeth_info));
 		if (!bus) {
 			ret_val = -ENOMEM;
@@ -2614,12 +2614,10 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		lp->new_bus.parent = &pdev->dev;
 		lp->new_bus.state = MDIOBUS_ALLOCATED;
 
-
 		if (lp->ahb_mdio_clk_div) {
 			lp->new_bus.read = &ambahb_mdio_read;
 			lp->new_bus.write = &ambahb_mdio_write;
 		}
-
 		ret_val = of_mdiobus_register(&lp->new_bus, pdev->dev.of_node);
 		if (ret_val < 0) {
 			dev_err(&pdev->dev, "of_mdiobus_register fail%d.\n", ret_val);
@@ -2632,11 +2630,39 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 			ret_val = -ENODEV;
 			goto ambeth_drv_probe_free_netdev;
 		}
-	}
+		if (netif_msg_drv(lp)) {
+			dev_info(&pdev->dev, "%s Ethernet PHY[%d]: 0x%08x!\n",
+			lp->enhance ? "Enhance" : "Normal", lp->phydev->mdio.addr, lp->phydev->phy_id);
+		}
+	} else {
+		//To adjust supercam5 switch delay
+		if (of_find_property(np, "amb,mac-to-mac-delay", NULL)) {
+			unsigned short phy_reg = 0;
+			lp->new_bus.priv = lp;
 
-	if (netif_msg_drv(lp)) {
-		dev_info(&pdev->dev, "%s Ethernet PHY[%d]: 0x%08x!\n",
-				lp->enhance ? "Enhance" : "Normal", lp->phydev->mdio.addr, lp->phydev->phy_id);
+			dev_info(&pdev->dev, "Switch delay adjustment...\n");
+
+			phy_reg = (u16) ambhw_mdio_read(&lp->new_bus, 0x12, 0x01);
+			phy_reg |= 0x4000;
+			ret_val = ambhw_mdio_write(&lp->new_bus, 0x12, 0x01, phy_reg);
+			if (ret_val < 0) {
+				dev_err(&pdev->dev, "Failed to adjust switch delay!\n");
+			}
+
+			phy_reg = (u16) ambhw_mdio_read(&lp->new_bus, 0x15, 0x01);
+			phy_reg |= 0x4000;
+			ret_val = ambhw_mdio_write(&lp->new_bus, 0x15, 0x01, phy_reg);
+			if (ret_val < 0) {
+				dev_err(&pdev->dev, "Failed to adjust switch delay!\n");
+			}
+
+			ret_val = of_phy_register_fixed_link(np);
+			if (ret_val < 0) {
+				dev_err(&pdev->dev, "failed to register fixed PHY\n");
+				ret_val = -ENODEV;
+				goto ambeth_drv_probe_free_netdev;
+			}
+		}
 	}
 
 	ether_setup(ndev);
@@ -2677,12 +2703,18 @@ ambeth_drv_probe_netif_napi_del:
 
 ambeth_drv_probe_free_netdev:
 	free_netdev(ndev);
+
+	if (of_phy_is_fixed_link(np)) {
+		of_phy_deregister_fixed_link(np);
+	}
+
 	return ret_val;
 }
 
 static int ambeth_drv_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
 	struct ambeth_info *lp = netdev_priv(ndev);
 
 	unregister_netdev(ndev);
@@ -2691,6 +2723,11 @@ static int ambeth_drv_remove(struct platform_device *pdev)
 	kfree(lp->new_bus.irq);
 	platform_set_drvdata(pdev, NULL);
 	free_netdev(ndev);
+
+	if (of_phy_is_fixed_link(np)) {
+		of_phy_deregister_fixed_link(np);
+	}
+
 	dev_notice(&pdev->dev, "Removed.\n");
 
 	return 0;
