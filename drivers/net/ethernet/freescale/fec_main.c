@@ -20,7 +20,7 @@
  *
  * Copyright (C) 2010-2014 Freescale Semiconductor, Inc.
  *
- * Copyright 2017 NXP
+ * Copyright 2017-2018 NXP
  */
 
 #include <linux/module.h>
@@ -1936,10 +1936,7 @@ static int fec_enet_clk_enable(struct net_device *ndev, bool enable)
 		ret = clk_prepare_enable(fep->clk_enet_out);
 		if (ret)
 			return ret;
-<<<<<<< HEAD
 
-=======
->>>>>>> 4b119dfdf042... MLK-14736 net: fec: move the ahb clock to runtime pm
 		if (fep->clk_ptp) {
 			mutex_lock(&fep->ptp_clk_mutex);
 			ret = clk_prepare_enable(fep->clk_ptp);
@@ -3634,8 +3631,6 @@ fec_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node, *phy_node;
 	int num_tx_qs;
 	int num_rx_qs;
-
-	of_dma_configure(&pdev->dev, np);
 
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
