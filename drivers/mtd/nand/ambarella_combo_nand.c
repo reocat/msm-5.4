@@ -474,7 +474,7 @@ static void ambarella_nand_setup_dma(struct ambarella_nand_host *host, u32 cmd)
 	fdma_ctrl = cmd == NAND_AMB_CMD_READ ? FDMA_CTRL_WRITE_MEM : FDMA_CTRL_READ_MEM;
 	fdma_ctrl |= FDMA_CTRL_ENABLE | FDMA_CTRL_BLK_SIZE_512B;
 	fdma_ctrl |= mtd->writesize + mtd->oobsize;
-	writel_relaxed(fdma_ctrl, host->regbase + FDMA_MN_CTRL_OFFSET);
+	writel(fdma_ctrl, host->regbase + FDMA_MN_CTRL_OFFSET);
 }
 
 static void ambarella_nand_setup_cc(struct ambarella_nand_host *host, u32 cmd)
