@@ -579,7 +579,6 @@ static void ambarella_nand_write_buf(struct mtd_info *mtd,
 	BUG_ON((host->dma_bufpos + len) > AMBARELLA_NAND_DMA_BUFFER_SIZE);
 
 	memcpy(host->dmabuf + host->dma_bufpos, buf, len);
-	wmb();
 	host->dma_bufpos += len;
 }
 
