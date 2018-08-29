@@ -50,6 +50,10 @@
 		ranges;
 	};
 
+	secure-world {
+		device = <>;
+	};
+
 	sub_scheduler: sub_scheduler0 {
 		compatible = "ambarella,sub-scheduler";
 		interrupts = <0 153 0x4>;
@@ -265,13 +269,12 @@
 		reg = <0xec000000 0x01000000>;
 		ranges;
 
-		wdt@ec002000 {
+		watchdog: wdt@ec002000 {
 			compatible = "ambarella,wdt";
 			reg = <0xec002000 0x1000>;
 			amb,rct-regmap = <&rct_syscon>;
 			/* interrupts = <0 42 0x4>; */
 			timeout-sec = <15>;
-			status = "disabled";
 		};
 
 		pinctrl: pinctrl@0xec003000 {

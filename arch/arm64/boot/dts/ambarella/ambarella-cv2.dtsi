@@ -50,6 +50,10 @@
 		ranges;
 	};
 
+	secure-world {
+		device = <&s_ahb &s_apb &rct_syscon>;
+	};
+
 	sub_scheduler: sub_scheduler0 {
 		compatible = "ambarella,sub-scheduler";
 		interrupts = <0 153 0x4>;
@@ -258,7 +262,7 @@
 		};
 	};
 
-	s_apb@ec000000 { /* Secure APB */
+	s_apb:s_apb@ec000000 { /* Secure APB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -993,7 +997,7 @@
 		};
 	};
 
-	s_ahb@e8000000 { /* Secure AHB */
+	s_ahb:s_ahb@e8000000 { /* Secure AHB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
