@@ -54,6 +54,8 @@ static int ambarella_clock_proc_show(struct seq_file *m, void *v)
 
 		seq_printf(m, "\t%s:\t%lu Hz\n",
 			__clk_get_name(gclk), clk_get_rate(gclk));
+
+		clk_put(gclk);
 	}
 
 	return 0;
@@ -89,6 +91,7 @@ static ssize_t ambarella_clock_proc_write(struct file *file,
 	clk_set_rate(gclk, freq);
 
 exit:
+	clk_put(gclk);
 	kfree(buf);
 	return rval;
 }
