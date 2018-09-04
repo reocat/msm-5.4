@@ -89,9 +89,8 @@ static ssize_t ambarella_clock_proc_write(struct file *file,
 	}
 
 	clk_set_rate(gclk, freq);
-
-exit:
 	clk_put(gclk);
+exit:
 	kfree(buf);
 	return rval;
 }
