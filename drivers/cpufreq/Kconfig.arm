@@ -72,7 +72,7 @@ config ARM_HIGHBANK_CPUFREQ
 	  If in doubt, say N.
 
 config ARM_AMBARALLA_CPUFREQ
-	bool "Ambarella CPUFreq Driver"
+	bool "Ambarella CPU Frequency Driver"
 	depends on ARCH_AMBARELLA
 	default y
 	help
