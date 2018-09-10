@@ -74,6 +74,7 @@ config ARM_HIGHBANK_CPUFREQ
 config ARM_AMBARALLA_CPUFREQ
 	bool "Ambarella CPU Frequency Driver"
 	depends on ARCH_AMBARELLA
+	select AMBARELLA_SCM
 	default y
 	help
 	  This adds the CPUFreq driver for Ambarella SoC.
