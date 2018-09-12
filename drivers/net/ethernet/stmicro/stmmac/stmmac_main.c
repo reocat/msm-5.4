@@ -2055,8 +2055,11 @@ static void amba_invert_gtx(void)
 		printk("%s snps,scr-regmap NOT found\n", __func__);
 		return;
 	}
-
+#ifdef CONFIG_ARCH_AMBARELLA_CV22
+	regmap_update_bits(reg_scr, 0x60, 0x80000000, 0x80000000);
+#else
 	regmap_update_bits(reg_scr, 0xc, 0x80000000, 0x80000000);
+#endif
 }
 #endif
 
