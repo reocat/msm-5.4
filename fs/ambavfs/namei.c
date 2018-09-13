@@ -180,7 +180,7 @@ static int ambafs_rmdir(struct inode *inode, struct dentry *dentry)
 	exec_cmd(dentry, msg, sizeof(buf), AMBAFS_CMD_RMDIR);
 	if (msg->flag == 0) {
 		clear_nlink(dentry->d_inode);
-		if (inode->i_nlink > 1) {
+		if (inode->i_nlink >= 1) {
 			// i_nlink of parent dir should > 1
 			// if dir in SD card is not updated, it'lll be 1
 			drop_nlink(inode);
