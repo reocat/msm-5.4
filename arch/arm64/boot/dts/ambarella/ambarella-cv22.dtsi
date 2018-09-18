@@ -743,10 +743,6 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			sd-uhs-sdr12;
-			sd-uhs-sdr25;
-			sd-uhs-sdr50;
-			sd-uhs-sdr104;
 		};
 
 		sdmmc2: sdmmc2@e0005000 { /* SDXC rather than SDIO */
@@ -767,10 +763,6 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			sd-uhs-sdr12;
-			sd-uhs-sdr25;
-			sd-uhs-sdr50;
-			sd-uhs-sdr104;
 		};
 
 		udc@e0006000 {
