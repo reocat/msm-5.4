@@ -342,6 +342,7 @@ invalid:
 
 const struct dentry_operations ambafs_dentry_ops = {
 	.d_revalidate	= ambafs_d_revalidate,
+	.d_delete = always_delete_dentry,
 };
 
 /*
