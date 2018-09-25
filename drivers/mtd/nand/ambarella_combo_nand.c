@@ -59,7 +59,8 @@ struct ambarella_nand_host {
 	struct regmap			*reg_rct;
 	int				irq;
 	u32				ecc_bits;
-	/* if or not support to read id in 5 cycles */
+	/* bch enabled or not by POC */
+	bool				bch_enabled;
 	bool				soft_ecc;
 	bool				page_4k;
 	bool				enable_wp;
@@ -121,69 +122,6 @@ static int nand_timing_calc(u32 clk, int minmax, int val)
 		n--;
 
 	return n < 1 ? 1 : n;
-}
-
-static int ambarella_nand_wait_cmd_done(struct ambarella_nand_host *host, u32 cmd)
-{
-	long timeout;
-	int rval = 0;
-
-	/* now waiting for command completed */
-	timeout = wait_event_timeout(host->wq, host->int_sts, 5 * HZ);
-	if (timeout <= 0) {
-		rval = -EBUSY;
-		dev_err(host->dev, "cmd=0x%x timeout\n", cmd);
-	}
-
-	/* avoid to flush previous error info */
-	if (host->err_code == 0)
-		host->err_code = rval;
-
-	return rval;
-}
-
-static void spinand_set_address(struct ambarella_nand_host *host,
-				int addr_src, u32 addrhi, u32 addrlow)
-{
-	if (addr_src == 0 || addr_src == 3) {
-		writel_relaxed(addrlow, host->regbase + NAND_COPY_ADDR_OFFSET);
-		writel_relaxed(addrhi, host->regbase + NAND_CP_ADDR_H_OFFSET);
-	} else {
-		writel_relaxed(NAND_CTRL_A33_32(addrhi) | host->control_reg, host->regbase + NAND_CTRL_OFFSET);
-		writel_relaxed(addrlow, host->regbase + NAND_CMD_OFFSET);
-	}
-}
-
-static int spinand_set_feature(struct ambarella_nand_host *host,
-					u8 feature_addr, u8 value)
-{
-	u32 val;
-	int rval;
-
-	spin_lock_irq(&host->lock);
-	spinand_set_address(host, 0, 0, feature_addr);
-
-	val = NAND_CC_WORD_CMD1VAL0(SPINAND_CMD_SET_FEATURE);
-	writel_relaxed(val, host->regbase + NAND_CC_WORD_OFFSET);
-
-	writel_relaxed(SPINAND_ERR_PATTERN, host->regbase + SPINAND_ERR_PATTERN_OFFSET);
-	writel_relaxed(SPINAND_DONE_PATTERN, host->regbase + SPINAND_DONE_PATTERN_OFFSET);
-
-	writel_relaxed(value, host->regbase + NAND_CC_DAT0_OFFSET);
-
-	writel_relaxed(0, host->regbase + SPINAND_CC2_OFFSET);
-
-	val = SPINAND_CC1_AUTO_WE | SPINAND_CC_AUTO_STSCHK |
-		SPINAND_CC_RW_WRITE | SPINAND_CC_ADDR_CYCLE(1);
-	writel_relaxed(val, host->regbase + SPINAND_CC1_OFFSET);
-
-	spin_unlock_irq(&host->lock);
-
-	rval = ambarella_nand_wait_cmd_done(host, SPINAND_CMD_SET_FEATURE);
-
-	mdelay(10);
-
-	return rval;
 }
 
 static int amb_ecc6_ooblayout_ecc_lp(struct mtd_info *mtd, int section,
@@ -265,6 +203,12 @@ static u32 to_native_cmd(struct ambarella_nand_host *host, u32 cmd)
 		break;
 	case NAND_CMD_STATUS:
 		native_cmd = is_spinand ? NAND_AMB_CC_READSTATUS : NAND_AMB_CMD_READSTATUS;
+		break;
+	case NAND_CMD_SET_FEATURES:
+		native_cmd = NAND_AMB_CC_SETFEATURE;
+		break;
+	case NAND_CMD_GET_FEATURES:
+		native_cmd = NAND_AMB_CC_GETFEATURE;
 		break;
 	case NAND_CMD_ERASE1:
 		native_cmd = NAND_AMB_CC_ERASE;
@@ -654,6 +598,29 @@ static void ambarella_nand_cc_readstatus(struct ambarella_nand_host *host)
 	writel_relaxed(val, host->regbase + SPINAND_CC1_OFFSET);
 }
 
+static void ambarella_nand_cc_setfeature(struct ambarella_nand_host *host,
+					u8 feature_addr, u8 value)
+{
+	u32 val;
+
+	writel_relaxed(feature_addr, host->regbase + NAND_COPY_ADDR_OFFSET);
+	writel_relaxed(0x0, host->regbase + NAND_CP_ADDR_H_OFFSET);
+
+	val = NAND_CC_WORD_CMD1VAL0(SPINAND_CMD_SET_FEATURE);
+	writel_relaxed(val, host->regbase + NAND_CC_WORD_OFFSET);
+
+	writel_relaxed(SPINAND_ERR_PATTERN, host->regbase + SPINAND_ERR_PATTERN_OFFSET);
+	writel_relaxed(SPINAND_DONE_PATTERN, host->regbase + SPINAND_DONE_PATTERN_OFFSET);
+
+	writel_relaxed(value, host->regbase + NAND_CC_DAT0_OFFSET);
+
+	writel_relaxed(0, host->regbase + SPINAND_CC2_OFFSET);
+
+	val = SPINAND_CC1_AUTO_WE | SPINAND_CC_AUTO_STSCHK |
+		SPINAND_CC_RW_WRITE | SPINAND_CC_ADDR_CYCLE(1);
+	writel_relaxed(val, host->regbase + SPINAND_CC1_OFFSET);
+}
+
 static void ambarella_nand_cc_erase(struct ambarella_nand_host *host, u32 page_addr)
 {
 	u32 val;
@@ -762,6 +729,11 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 		break;
 	case NAND_AMB_CC_READSTATUS:
 		ambarella_nand_cc_readstatus(host);
+		break;
+	case NAND_AMB_CC_SETFEATURE:
+		ambarella_nand_cc_setfeature(host, page_addr, 0x00);
+		break;
+	case NAND_AMB_CC_GETFEATURE:
 		break;
 	case NAND_AMB_CC_ERASE:
 		ambarella_nand_cc_erase(host, page_addr);
@@ -907,8 +879,8 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 	case NAND_CMD_RESET:
 		host->dma_bufpos = 0;
 		ambarella_nand_issue_cmd(host, cmd, 0);
-		if (host->is_spinand)
-			spinand_set_feature(host, 0xA0, 0x00); /* unlock all */
+		if (host->is_spinand) /* unlock all blocks */
+			ambarella_nand_issue_cmd(host, NAND_CMD_SET_FEATURES, 0xA0);
 		break;
 
 	case NAND_CMD_READOOB:
@@ -1143,9 +1115,11 @@ static int ambarella_nand_init_soft_bch(struct ambarella_nand_host *host)
 static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 {
 	u32 val;
-#if 0
+
 	/* reset FIO by RCT */
-	ambarella_fio_rct_reset(host);
+	if (!host->is_spinand)
+		ambarella_fio_rct_reset(host);
+
 
 	/* Reset FIO FIFO and then exit random read mode */
 	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
@@ -1155,7 +1129,7 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 	msleep(3);
 	val &= ~FIO_CTRL_RANDOM_READ;
 	writel_relaxed(val, host->regbase + FIO_CTRL_OFFSET);
-#endif
+
 	/* always use 5 cycles to read ID */
 	val = readl_relaxed(host->regbase + NAND_EXT_CTRL_OFFSET);
 	val |= NAND_EXT_CTRL_I5;
@@ -1165,17 +1139,27 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 		val &= ~NAND_EXT_CTRL_4K_PAGE;
 	writel_relaxed(val, host->regbase + NAND_EXT_CTRL_OFFSET);
 
-	/* always enable dual-space mode */
-	if (host->ecc_bits == 6)
-		val = FDMA_DSM_MAIN_JP_SIZE_512B | FDMA_DSM_SPARE_JP_SIZE_16B;
-	else
-		val = FDMA_DSM_MAIN_JP_SIZE_512B | FDMA_DSM_SPARE_JP_SIZE_32B;
+	/* always enable dual-space mode if BCH is enabled by POC */
+	if (host->bch_enabled) {
+		if (host->ecc_bits == 6)
+			val = FDMA_DSM_MAIN_JP_SIZE_512B | FDMA_DSM_SPARE_JP_SIZE_16B;
+		else
+			val = FDMA_DSM_MAIN_JP_SIZE_512B | FDMA_DSM_SPARE_JP_SIZE_32B;
+	} else {
+		if (host->page_4k)
+			val = FDMA_DSM_MAIN_JP_SIZE_4KB | FDMA_DSM_SPARE_JP_SIZE_128B;
+		else
+			val = FDMA_DSM_MAIN_JP_SIZE_2KB | FDMA_DSM_SPARE_JP_SIZE_64B;
+
+		if (host->ecc_bits == 8)
+			val += 0x1;
+	}
 	writel_relaxed(val, host->regbase + FDMA_DSM_CTRL_OFFSET);
 
 	/* disable BCH if using soft ecc */
 	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
 	val |= FIO_CTRL_RDERR_STOP | FIO_CTRL_SKIP_BLANK_ECC;
-	if (host->soft_ecc)
+	if (host->soft_ecc || !host->bch_enabled)
 		val &= ~FIO_CTRL_ECC_BCH_ENABLE;
 	else
 		val |= FIO_CTRL_ECC_BCH_ENABLE;
@@ -1187,9 +1171,11 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 		writel_relaxed(val, host->regbase + FIO_CTRL2_OFFSET);
 
 		val = readl_relaxed(host->regbase + SPINAND_CTRL_OFFSET);
-		val |= host->sck_mode3 ? SPINAND_CTRL_SCKMODE_3 : 0;
-		val &= ~SPINAND_CTRL_PS_SEL_MASK;
-		val |= SPINAND_CTRL_PS_SEL_6;
+		if (host->sck_mode3) {
+			val |= SPINAND_CTRL_SCKMODE_3;
+			val &= ~SPINAND_CTRL_PS_SEL_MASK;
+			val |= SPINAND_CTRL_PS_SEL_6;
+		}
 		writel_relaxed(val, host->regbase + SPINAND_CTRL_OFFSET);
 	}
 
@@ -1264,7 +1250,11 @@ static void ambarella_nand_init_chip(struct ambarella_nand_host *host,
 	u32 poc;
 
 	regmap_read(host->reg_rct, SYS_CONFIG_OFFSET, &poc);
-	BUG_ON(!(poc & SYS_CONFIG_NAND_ECC_BCH_EN));
+
+	host->page_4k = (poc & SYS_CONFIG_NAND_PAGE_SIZE) ? false : true;
+	host->is_spinand = (poc & SYS_CONFIG_NAND_SPINAND) ? true : false;
+	host->sck_mode3 = (poc & SYS_CONFIG_NAND_SCKMODE) ? true : false;
+	host->bch_enabled = (poc & SYS_CONFIG_NAND_ECC_BCH_EN) ? true : false;
 
 	/*
 	 * if ecc is generated by software, the ecc bits num will
@@ -1272,10 +1262,6 @@ static void ambarella_nand_init_chip(struct ambarella_nand_host *host,
 	 */
 	if (!host->soft_ecc)
 		host->ecc_bits = (poc & SYS_CONFIG_NAND_ECC_SPARE_2X) ? 8 : 6;
-
-	host->page_4k = (poc & SYS_CONFIG_NAND_PAGE_SIZE) ? false : true;
-	host->is_spinand = (poc & SYS_CONFIG_NAND_SPINAND) ? true : false;
-	host->sck_mode3 = (poc & SYS_CONFIG_NAND_SCKMODE) ? true : false;
 
 	dev_info(host->dev, "in %secc-[%d]bit mode\n",
 		host->soft_ecc ? "soft " : "", host->ecc_bits);
