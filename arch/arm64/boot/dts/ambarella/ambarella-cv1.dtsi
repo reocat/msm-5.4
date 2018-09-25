@@ -386,13 +386,18 @@
 				amb,pinmux-ids = <0x10cf 0x10d1>;
 			};
 
-
 			nand0_pins: nand0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2056 0x2057 0x2058 0x205d
 						  0x205e 0x205f 0x2060 0x2061
 						  0x2062 0x2063 0x2064 0x2065
 						  0x2066 0x2067 0x2068>;
+			};
+
+			snand0_pins: snand0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x405d 0x405e 0x4064 0x4065
+						  0x4066 0x4067>;
 			};
 
 			spinor0_pins: spinor0@0 {
@@ -703,6 +708,7 @@
 			amb,rct-regmap = <&rct_syscon>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&nand0_pins>;
+			pinctrl-1 = <&snand0_pins>;
 			clocks = <&gclk_nand>;
 			nand-on-flash-bbt;
 			/* amb,soft-ecc = <1>; */
