@@ -617,8 +617,10 @@ static int ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 				break;
 		}
 
-		if (unlikely(trials >= AMBARELLA_MAX_DESC_TRIALS))
+		if (unlikely(trials >= AMBARELLA_MAX_DESC_TRIALS)) {
+			spin_unlock_irqrestore(&amb_chan->lock, flags);
 			return -ETIMEDOUT;
+		}
 
 		if (desc_phys != first->txd.phys) {
 			count += first->lli->xfr_count;
@@ -630,15 +632,23 @@ static int ambdma_get_bytes_left(struct dma_chan *chan, dma_cookie_t cookie)
 
 					count += amb_desc->lli->xfr_count;
 				}
+
+				/*
+				 * Note:
+				 *
+				 * 1) sometimes it's failed to find desc_phys from the
+				 * descpritor list, in this case, amb_desc is invalid
+				 * pointer.
+				 *
+				 * 2) the descriptor in DA register is not the current
+				 * working descriptor, it's actually the descriptor next
+				 * to current working descriptor.
+				 */
+				if (desc_phys == amb_desc->txd.phys)
+					count -= amb_desc->lli->xfr_count;
 			}
 		}
 
-		/*
-		 * Note: the descriptor in DA register is not the current
-		 * working descriptor, it's actually the descriptor next to
-		 * current working descriptor.
-		 */
-		count -= amb_desc->lli->xfr_count;
 		count += first->total_len;
 		count %= first->total_len;
 	} else if (!list_empty(&amb_chan->queue_list)) {
