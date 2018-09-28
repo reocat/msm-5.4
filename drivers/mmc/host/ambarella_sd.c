@@ -1428,6 +1428,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	} else {
 		clk_set_rate(host->clk, host->mmc->f_max);
 		ambarella_sd_reset_all(host);
+		ambarella_sd_set_bus(host, host->bus_width, host->mode);
 	}
 
 	enable_irq(host->irq);
