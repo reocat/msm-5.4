@@ -238,7 +238,7 @@ static int ambarella_cpufreq_set_target(struct cpufreq_policy *policy,
 
 	if (cpufreq->effective_clk == 2)
 		ambarella_cpufreq_set_related(cpufreq->core_clk,
-				cpufreq->cortex_freq_table,
+				cpufreq->core_freq_table,
 				index);
 err_set_rate:
 
