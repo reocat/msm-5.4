@@ -138,14 +138,21 @@ void machine_power_off(void)
  */
 void machine_restart(char *cmd)
 {
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	extern int rpmsg_linkctrl_cmd_reboot(int flag);
+#endif
+
 	local_irq_disable();
 	smp_send_stop();
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	rpmsg_linkctrl_cmd_reboot(0);
+#else
 	if (arm_pm_restart)
 		arm_pm_restart(reboot_mode, cmd);
 	else
 		do_kernel_restart(cmd);
-
+#endif
 	/* Give a grace period for failure to restart of 1s */
 	mdelay(1000);
 

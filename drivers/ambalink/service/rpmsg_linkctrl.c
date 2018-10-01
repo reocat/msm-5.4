@@ -55,7 +55,8 @@ typedef enum _AMBA_RPDEV_LINK_CTRL_CMD_e_ {
 	LINK_CTRL_CMD_GPIO_LINUX_ONLY_LIST,
 	LINK_CTRL_CMD_GET_MEM_INFO,
 	LINK_CTRL_CMD_SET_RTOS_MEM,
-	LINK_CTRL_CMD_SET_WIFI_CONF
+	LINK_CTRL_CMD_SET_WIFI_CONF,
+	LINK_CTRL_CMD_REBOOT
 } AMBA_RPDEV_LINK_CTRL_CMD_e;
 
 /**
@@ -375,6 +376,22 @@ int rpmsg_linkctrl_cmd_suspend_exit(int flag)
 	return 0;
 }
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_suspend_exit);
+
+int rpmsg_linkctrl_cmd_reboot(int flag)
+{
+	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
+
+	dbg_trace("\n");
+
+	memset(&ctrl_cmd, 0x0, sizeof(ctrl_cmd));
+	ctrl_cmd.Cmd = LINK_CTRL_CMD_REBOOT;
+	ctrl_cmd.Param1 = flag;
+
+	rpmsg_send(rpdev_linkctrl->ept, &ctrl_cmd, sizeof(ctrl_cmd));
+
+	return 0;
+}
+EXPORT_SYMBOL(rpmsg_linkctrl_cmd_reboot);
 
 /*----------------------------------------------------------------------------*/
 typedef int (*PROC_FUNC)(void *data);
