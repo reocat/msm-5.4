@@ -75,6 +75,14 @@ struct nand_flash_dev nand_flash_ids[] = {
 		{ .id = {0x2c, 0xda, 0x90, 0x95, 0x04} },
 		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
 
+	{"MT29F2G08ABAGA 2G 3.3V 8-bit",
+		{ .id = {0x2c, 0xda, 0x90, 0x95, 0x06} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
+
+	{"MT29F2G08ABBGA 2G 1.8V 8-bit",
+		{ .id = {0x2c, 0xaa, 0x90, 0x15, 0x06} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
+
 	{"H27U2G8F2D 2G 3.3V 8-bit",
 		{ .id = {0xad, 0xda, 0x90, 0x95, 0x46} },
 		  SZ_2K, SZ_256, SZ_128K, 0, 5, 128},
