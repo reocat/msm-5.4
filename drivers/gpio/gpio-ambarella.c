@@ -58,6 +58,7 @@ struct amb_gpio_chip {
 	int				bank_num;
 	struct gpio_chip		*gc;
 	struct irq_domain		*domain;
+	struct mutex lock;
 };
 
 /* gpiolib gpio_request callback function */
@@ -79,6 +80,7 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 	void __iomem *regbase;
 	u32 bank, offset, mask;
 
+	mutex_lock(&amb_gpio->lock);
 	bank = PINID_TO_BANK(pin);
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->bank[bank].regbase;
@@ -88,6 +90,7 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 	if (value == GPIO_LOW)
 		mask = 0;
 	writel_relaxed(mask, regbase + GPIO_DATA_OFFSET);
+	mutex_unlock(&amb_gpio->lock);
 }
 
 /* gpiolib gpio_get callback function */
@@ -97,6 +100,7 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 	void __iomem *regbase;
 	u32 bank, offset, mask, data;
 
+	mutex_lock(&amb_gpio->lock);
 	bank = PINID_TO_BANK(pin);
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->bank[bank].regbase;
@@ -105,6 +109,7 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 	writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
 	data = readl_relaxed(regbase + GPIO_DATA_OFFSET);
 	data = (data >> offset) & 0x1;
+	mutex_unlock(&amb_gpio->lock);
 
 	return (data ? GPIO_HIGH : GPIO_LOW);
 }
@@ -495,6 +500,7 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		return rval;
 	}
 
+	mutex_init(&amb_gpio->lock);
 	/* Initialize GPIO irq */
 	amb_gpio->domain = irq_domain_add_linear(np, amb_gpio->gc->ngpio,
 					&amb_gpio_irq_domain_ops, amb_gpio);
