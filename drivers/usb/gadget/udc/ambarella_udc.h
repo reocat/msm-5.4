@@ -45,8 +45,8 @@ USB device controller on Ambarella processors
 
 #define VBUS_POLL_TIMEOUT	msecs_to_jiffies(500)
 
-#define setbitsl(a,v)   (writel_relaxed(((v) | readl_relaxed(a)), (a)))
-#define clrbitsl(a,v)   (writel_relaxed(((~(v)) & readl_relaxed(a)), (a)))
+#define setbitsl(a,v)   (writel(((v) | readl(a)), (a)))
+#define clrbitsl(a,v)   (writel(((~(v)) & readl(a)), (a)))
 
 //-------------------------------------
 // Structure definition
