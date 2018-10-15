@@ -324,6 +324,12 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 		if (clock <= 400000 && host->fixed_init_clk > 0)
 			clock = host->fixed_init_clk;
 
+		/* FIXME: When resume from self refresh, if `clock` is equal to `host->clk->rate`,
+		 * clk_set_rate() will return immediately without accessing the hardware register.
+		 * Calling clk_get_rate() before clk_set_rate() is order to set the `host->clk->rate`
+		 * as the actual value.*/
+		clk_get_rate(host->clk);
+
 		sd_clk = min_t(u32, max_t(u32, clock, 24000000), mmc->f_max);
 		clk_set_rate(host->clk, sd_clk);
 
