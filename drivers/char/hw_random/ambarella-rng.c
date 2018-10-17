@@ -19,6 +19,8 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+#include <plat/rct.h>
 
 #define	AMBA_RNG_CONTROL			0x00
 #define	AMBA_RNG_DATA				0x04
