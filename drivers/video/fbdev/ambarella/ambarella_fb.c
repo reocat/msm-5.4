@@ -44,10 +44,16 @@ static char *resolution = NULL;
 module_param(resolution, charp, 0444);
 MODULE_PARM_DESC(resolution, "Initial video resolution in characters.");
 
+static int buffernum = 2;
+module_param(buffernum, int, 0444);
+MODULE_PARM_DESC(buffernum, "Initial cycle buffer number.");
+
 #define MIN_XRES	16
 #define MIN_YRES	16
 #define MAX_XRES	2048
 #define MAX_YRES	2048
+
+#define	MAX_CYCLE_BUFFER_BUM	10
 
 struct ambfb_format {
 	const char *name;
@@ -148,7 +154,7 @@ static int ambfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	int rval;
 
 	var->xres_virtual = var->xres;
-	var->yres_virtual = var->yres * 2;
+	var->yres_virtual = var->yres * buffernum;
 
 	/* Basic geometry sanity checks. */
 	if (var->xres < MIN_XRES)
@@ -277,6 +283,11 @@ static int ambfb_parse_dt(struct ambfb_par *par)
 		}
 	}
 
+	if (buffernum > MAX_CYCLE_BUFFER_BUM) {
+		dev_err(par->dev, "Max cycle buffer number is %d!\n", MAX_CYCLE_BUFFER_BUM);
+		return -EINVAL;
+	}
+
 	rval = of_property_read_u32(np, "amb,vout-id", &par->vout_id);
 	if (rval < 0) {
 		dev_err(par->dev, "Can't parse vout-id property\n");
@@ -327,7 +338,7 @@ static int ambfb_probe(struct platform_device *pdev)
 	var->xres = par->max_width;
 	var->yres = par->max_height;
 	var->xres_virtual = par->max_width;
-	var->yres_virtual = par->max_height * 2;
+	var->yres_virtual = par->max_height * buffernum;
 	var->bits_per_pixel = par->format->bits_per_pixel;
 	var->red = par->format->red;
 	var->green = par->format->green;
