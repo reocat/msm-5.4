@@ -976,6 +976,8 @@ FIFO directly, but there're 2 restriction for this mode:
     0 = duty cycle 1:1, this is the default setting.
     1 = duty cycle 2:3.
     2 = duty cycle 1:2.
+- amb,stretch-scl: extend the SCL clock to tune START/STOP setup and hold timing,
+  the default value is 1 if this option is not specified.
 
 ii) Subnode
 -----------
@@ -1002,6 +1004,7 @@ iii) Example
 		amb,i2c-class = <0x81>;
 		amb,turbo-mode;
 		amb,duty-cycle = <0>;
+		amb,stretch-scl = <1>;
 		status = "ok";
 
 		ak4642: codec@12 {
