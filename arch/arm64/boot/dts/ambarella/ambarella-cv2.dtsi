@@ -501,6 +501,16 @@
 				amb,pinmux-ids = <0x1011 0x1012>;
 			};
 
+			can0_pins: can0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x109e 0x10a0>;
+			};
+
+			can1_pins: can1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x109f 0x10a1>;
+			};
+
 			ir_pins: ir0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x1015>;
@@ -1002,6 +1012,30 @@
 		scratchpad_syscon: scratchpad_syscon@e8001000 {
 			compatible = "ambarella,scratchpad", "syscon";
 			reg = <0xe8001000 0x100>;
+		};
+
+		can0: can@e8004000 {
+			compatible = "ambarella,can";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xe8004000 0x1000>;
+			interrupts = <0 86 0x4>;
+			interrupt-names = "canc0";
+			pinctrl-names = "default";
+			pinctrl-0 = <&can0_pins>;
+			clocks = <&gclk_can>;
+		};
+
+		can1: can@e8005000 {
+			compatible = "ambarella,can";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xe8005000 0x1000>;
+			interrupts = <0 87 0x4>;
+			interrupt-names = "canc1";
+			pinctrl-names = "default";
+			pinctrl-0 = <&can1_pins>;
+			clocks = <&gclk_can>;
 		};
 
 		hdmi@e8007000 {
@@ -1597,6 +1631,18 @@
 			clocks = <&pll_out_enet>, <&gclk_core>, <&gclk_ssi>, <&osc>;
 			clock-output-names = "gclk_ssi3";
 			amb,div-width = <24>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_can: gclk-can {
+			#clock-cells = <0>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xed080570 4>, <0xed08056c 4>;
+			clocks = <&osc>, <&pll_out_enet>, <&gclk_ahb>;
+			clock-output-names = "gclk_can";
+			assigned-clocks = <&gclk_can>;
+			assigned-clock-parents = <&osc>;
+			amb,div-width = <8>;
 			amb,div-shift = <0>;
 		};
 	};
