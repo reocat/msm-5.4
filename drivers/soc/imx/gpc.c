@@ -59,7 +59,7 @@
 #define PGC_DOMAIN_FLAG_NO_PD		BIT(0)
 
 static void __iomem *gpc_base;
-static struct clk *ipg;
+static struct clk *ipg_clk;
 
 static inline bool cpu_is_imx6sx(void)
 {
@@ -137,6 +137,7 @@ static void _imx6_pm_domain_power_on(struct generic_pm_domain *genpd)
 	struct imx_pm_domain *pd = to_imx_pm_domain(genpd);
 	int i, ret;
 	u32 val, req;
+	u32 ipg_rate = clk_get_rate(ipg_clk);
 
 	if (ipg_rate == 0) {
 		WARN_ON(1);
@@ -192,7 +193,7 @@ static int imx6_pm_dispmix_on(struct generic_pm_domain *genpd)
 {
 	struct imx_pm_domain *pd = to_imx_pm_domain(genpd);
 	u32 val = readl_relaxed(gpc_base + GPC_CNTR);
-	u32 ipg_rate = clk_get_rate(ipg);
+	u32 ipg_rate = clk_get_rate(ipg_clk);
 	int i;
 
 	if (ipg_rate == 0) {
@@ -518,7 +519,7 @@ static int imx_gpc_old_dt_init(struct device *dev, struct regmap *regmap,
 	}
 	pu_domain->num_clks = i;
 
-	ipg = of_clk_get(dev->of_node, pu_clks);
+	ipg_clk = of_clk_get(dev->of_node, pu_clks);
 
 	/* Get disp domain clks */
 	for (i = pu_clks + ipg_clks; i < pu_clks + ipg_clks + disp_clks;
@@ -667,7 +668,6 @@ static int imx_gpc_probe(struct platform_device *pdev)
 		struct imx_pm_domain *domain;
 		struct platform_device *pd_pdev;
 		struct device_node *np;
-		struct clk *ipg_clk;
 		unsigned int ipg_rate_mhz;
 		int domain_index;
 
