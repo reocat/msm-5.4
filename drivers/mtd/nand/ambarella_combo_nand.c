@@ -577,9 +577,9 @@ static void ambarella_nand_cc_readid(struct ambarella_nand_host *host)
 
 	writel_relaxed(0x0, host->regbase + SPINAND_CC2_OFFSET);
 
-	val = SPINAND_CC_DATA_CYCLE(2) | SPINAND_CC_RW_READ |
+	val = SPINAND_CC_DATA_CYCLE(4) | SPINAND_CC_RW_READ |
 		SPINAND_CC_DUMMY_DATA_NUM(1);
-	writel_relaxed(0x0, host->regbase + SPINAND_CC1_OFFSET);
+	writel_relaxed(val, host->regbase + SPINAND_CC1_OFFSET);
 }
 
 static void ambarella_nand_cc_readstatus(struct ambarella_nand_host *host)
