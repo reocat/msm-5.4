@@ -530,7 +530,7 @@ static int ambahb_mdio_poll_status(struct mii_bus *bus)
 
 	orig_jiffies = jiffies;
 	for (;;) {
-		regmap_read(lp->reg_scr, 0xa4, &value);
+		regmap_read(lp->reg_scr, AHBSP_GMII_ADDR_OFFSET, &value);
 		if (!(value & (1 << 0)))
 			break;
 
