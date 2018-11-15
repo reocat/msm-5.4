@@ -27,45 +27,45 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S5L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5)
+#define	UART_INSTANCES			2
+#elif (CHIP_REV == S5L)
 #define	UART_INSTANCES			3
 #elif (CHIP_REV == CV1)
 #define	UART_INSTANCES			7
-#elif (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define	UART_INSTANCES			5
 #else
-#define	UART_INSTANCES			2
+#define	UART_INSTANCES			5
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define UART0_OFFSET			0x0000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define UART0_OFFSET			0x5000
+#else
+#define UART0_OFFSET			0x0000
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
-#define UART1_OFFSET			0x16000
-#elif (CHIP_REV == CV22)
-#define UART1_OFFSET			0x17000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define UART1_OFFSET			0x32000
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2)
+#define UART1_OFFSET			0x16000
+#else
+#define UART1_OFFSET			0x17000
 #endif
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
-#define UART2_OFFSET			0x17000
-#elif (CHIP_REV == CV22)
-#define UART2_OFFSET			0x18000
-#else
+#if (CHIP_REV == S5L)
 #define UART2_OFFSET			0x33000
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2)
+#define UART2_OFFSET			0x17000
+#else
+#define UART2_OFFSET			0x18000
 #endif
 
 #if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define UART3_OFFSET			0x18000
-#elif (CHIP_REV == CV22)
-#define UART3_OFFSET			0x19000
 #else
-#define UART3_OFFSET			0x15000
+#define UART3_OFFSET			0x19000
 #endif
 
 #if (CHIP_REV == CV1) || (CHIP_REV == CV2)

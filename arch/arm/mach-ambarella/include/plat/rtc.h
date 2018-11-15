@@ -27,14 +27,15 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define RTC_OFFSET			0x1000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define RTC_OFFSET			0x15000
+#else
+#define RTC_OFFSET			0x1000
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
-	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV2)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5) || \
+	(CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define RTC_BASE			(APB_BASE + RTC_OFFSET)
 #else
 #define RTC_BASE			(AHB_SCRATCHPAD_BASE + RTC_OFFSET)
@@ -54,8 +55,8 @@
 
 #define PWC_RESET_OFFSET		0x40
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
-	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV2)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5) || \
+	(CHIP_REV == S5L) || (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define PWC_WO_OFFSET			0x7C
 #define PWC_DNALERT_OFFSET		0xA8
 #define PWC_LBAT_OFFSET			0xAC

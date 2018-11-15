@@ -51,51 +51,31 @@
 #elif (CHIP_REV == CV2)
 #define GPIO_INSTANCES			6
 #define GPIO_MAX_LINES			166
+#elif (CHIP_REV == CV25)
+#define GPIO_INSTANCES			4
+#define GPIO_MAX_LINES			108
 #else
 #error "Not supported!"
 #endif
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define GPIO0_OFFSET			0x3000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define GPIO0_OFFSET			0x9000
-#endif
-
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define GPIO1_OFFSET			0x4000
-#else
 #define GPIO1_OFFSET			0xA000
-#endif
-
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define GPIO2_OFFSET			0x5000
-#else
 #define GPIO2_OFFSET			0xE000
-#endif
-
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define GPIO3_OFFSET			0x6000
-#else
 #define GPIO3_OFFSET			0x10000
-#endif
-
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define GPIO4_OFFSET			0x7000
-#else
 #define GPIO4_OFFSET			0x11000
-#endif
-
-#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
-#define GPIO5_OFFSET			0x8000
-#else
 #define GPIO5_OFFSET			0xD000
-#endif
-
-#if (CHIP_REV == CV1)
-#define GPIO6_OFFSET			0x9000
-#else
 #define GPIO6_OFFSET			0x14000
+#else
+#define GPIO0_OFFSET			0x3000
+#define GPIO1_OFFSET			0x4000
+#define GPIO2_OFFSET			0x5000
+#define GPIO3_OFFSET			0x6000
+#define GPIO4_OFFSET			0x7000
+#define GPIO5_OFFSET			0x8000
+#define GPIO6_OFFSET			0x9000
 #endif
 
 #define GPIO0_BASE			(APB_BASE + GPIO0_OFFSET)
@@ -211,10 +191,11 @@
 #define IOMUX_CTRL_SET_OFFSET		0xf0
 #define IOMUX_REG_OFFSET(bank, n)	(((bank) * 0xc) + ((n) * 4))
 
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define IOMUX_OFFSET			0x0000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define IOMUX_OFFSET			0x16000
+#else
+#define IOMUX_OFFSET			0x0000
 #endif
 #define IOMUX_BASE			(APB_BASE + IOMUX_OFFSET)
 #define IOMUX_REG(x)			(IOMUX_BASE + (x))

@@ -16,10 +16,11 @@ an linear voltage scaler inside SoC to enlarge the range to 3.3v. So in summary,
 channel0's range is 1.8v, other channels' range can be 3.3v or 1.8v. Please see
 Programmer Manual for details.
 
-ADC used is 12 bit SAR ADC with a programmable sample rate. The ADC clock is
-gclk_adc which is derived from OSC. However, the maximum frequency of gclk_adc
-is 12MHz. Ambarella ADC uses N clock cycles to digitize the sampled input, here
-N is different from process to process, N = 6 for 28nm, N = 20 for 14nm.
+ADC is a 12 bit SAR ADC with a programmable sample rate. The parent clock of
+gclk_adc is OSC, or gclk_vision/gclk_nand on later chips than CV22(including).
+And the frequency of gclk_adc is half of OSC/gclk_vision/gclk_nand. Ambarella
+ADC uses N clock cycles to digitize the sampled input, here N is different from
+process to process, N = 6 for 28nm, N = 20 for 14nm.
 
 Ambarella ADC supports "one-shot" mode and "continous" mode, and can be configured
 to use more than one slot to have each channels using different sampling rate.
