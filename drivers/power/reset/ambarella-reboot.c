@@ -30,8 +30,10 @@ static int ambarella_restart_handler(struct notifier_block *this,
 
 	local_irq_disable();
 	local_fiq_disable();
-	regmap_write(reg_rct, SOFT_OR_DLL_RESET_OFFSET, 0x6);
-	regmap_write(reg_rct, SOFT_OR_DLL_RESET_OFFSET, 0x7);
+
+	regmap_update_bits(reg_rct, SOFT_OR_DLL_RESET_OFFSET, SOFT_RESET_MASK, 0x0);
+	regmap_update_bits(reg_rct, SOFT_OR_DLL_RESET_OFFSET, SOFT_RESET_MASK, SOFT_RESET_MASK);
+
 	return NOTIFY_DONE;
 }
 

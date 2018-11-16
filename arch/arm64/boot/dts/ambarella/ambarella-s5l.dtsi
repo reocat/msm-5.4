@@ -32,8 +32,10 @@
 		mdio-gpio0 = &mdio0;
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
+	/*
+	 * the memory node will be overwritten in Amboot,
+	 * here is just the default value.
+	 */
 	memory {
 		device_type = "memory";
 		reg = <0x00200000 0x07e00000>; /* 126M */
@@ -888,8 +890,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xec170050 0x4 0xe001b00c 0x4 0xec1702c0 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-mask;
-			amb,owner-invert;
 		};
 
 		reboot {

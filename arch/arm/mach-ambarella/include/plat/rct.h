@@ -45,6 +45,8 @@
 #define PLL_LOCK_REG			RCT_REG(PLL_LOCK_OFFSET)
 #define SOFT_OR_DLL_RESET_REG		RCT_REG(SOFT_OR_DLL_RESET_OFFSET)
 
+#define SOFT_RESET_MASK			0x1
+
 /* ==========================================================================*/
 #define FIO_RESET_OFFSET		0x74
 #define FIO_RESET_REG			RCT_REG(FIO_RESET_OFFSET)

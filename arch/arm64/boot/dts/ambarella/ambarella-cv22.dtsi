@@ -37,8 +37,10 @@
 		linux,stdout-path = &uart0;
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
+	/*
+	 * the memory node will be overwritten in Amboot,
+	 * here is just the default value.
+	 */
 	memory {
 		device_type = "memory";
 		reg = <0x00200000 0x07e00000>; /* 126M */
@@ -117,11 +119,11 @@
 		 * Config effective clocks. '%KHZ'
 		 *
 		 * 0 - cortex.
-		 * 1 - pll_out_core.
-		 * 2 - cortex and pll_out_core.
+		 * 1 - core.
+		 * 2 - cortex and core.
 		 */
 		cpufreq-effective-clock = <0>;			/* default 'cortex' */
-		clocks = <&gclk_cortex &pll_out_core>;
+		clocks = <&gclk_cortex &gclk_core>;
 		clock-names = "cortex_clk", "core_clk";
 		clocks-frequency-cortex-core =
 			<1080000  672000>,
@@ -448,7 +450,6 @@
 				amb,pinmux-ids = <0x3036 0x3037 0x3038 0x303b
 						  0x303c 0x303f 0x3042 0x3043
 						  0x3044 0x3045>;
-				amb,pinconf-ids = <0xb00038 0xb00039 0xb0003a>;
 			};
 
 			rgmii_mdio_pins: mdio@0 {
@@ -1027,7 +1028,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xed080050 0x4 0xe0022060 0x4 0xed0802c0 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-invert;
 		};
 
 		reboot {
@@ -1070,7 +1070,7 @@
 			clocks = <&gclk_so2>;
 		};
 
-		/* node for vout0(tv) controller */
+		/* node for vout0(lcd) controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
 			interrupts = <0 89 0x1>;
@@ -1080,7 +1080,7 @@
 			pinctrl-0 = <&vout0_pins>;
 		};
 
-		/* node for vout1(lcd) controller */
+		/* node for vout1(tv) controller */
 		voutc1 {
 			compatible = "ambarella,voutc";
 			interrupts = <0 88 0x1>;
@@ -1141,7 +1141,7 @@
 			clock-output-names = "osc";
 		};
 
-		pll_out_core: pll-out-core {
+		gclk_core: gclk-core {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
 			reg = <0xed080000 4>,
@@ -1151,33 +1151,25 @@
 			      <0x00000000 0>,
 			      <0x00000000 0>;
 			clocks = <&osc>;
-			clock-output-names = "pll_out_core";
+			clock-output-names = "gclk_core";
 		};
 
-		pll_out_sd: pll-out-sd {
+		gclk_ahb: gclk-ahb {
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
-			reg = <0xed0804ac 4>,
-			      <0xed0804b0 4>,
-			      <0xed0804b4 4>,
-			      <0xed0804b8 4>,
-			      <0x00000000 0>,
-			      <0x00000000 0>;
-			clocks = <&osc>;
-			clock-output-names = "pll_out_sd";
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_core>;
+			clock-output-names = "gclk_ahb";
+			clock-mult = <1>;
+			clock-div = <2>;
 		};
 
-		pll_out_enet: pll-out-enet {
+		gclk_apb: gclk-apb {
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
-			reg = <0xed080520 4>,
-			      <0xed080524 4>,
-			      <0xed080528 4>,
-			      <0xed08052c 4>,
-			      <0x00000000 0>,
-			      <0x00000000 0>;
-			clocks = <&osc>;
-			clock-output-names = "pll_out_enet";
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_core>;
+			clock-output-names = "gclk_apb";
+			clock-mult = <1>;
+			clock-div = <4>;
 		};
 
 		gclk_ddr: gclk-ddr {
@@ -1207,6 +1199,15 @@
 			clock-output-names = "gclk_cortex";
 		};
 
+		gclk_axi: gclk-axi {
+			#clock-cells = <0>;
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_cortex>;
+			clock-output-names = "gclk_axi";
+			clock-mult = <1>;
+			clock-div = <3>;
+		};
+
 		gclk_idsp: gclk-idsp {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
@@ -1219,6 +1220,21 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_idsp";
 			amb,extra-post-scaler;
+		};
+
+		gclk_vision: gclk-vision {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed0806e4 4>,
+			      <0xed0806e8 4>,
+			      <0xed0806ec 4>,
+			      <0xed0806f0 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_vision";
+			assigned-clocks = <&gclk_vision>;
+			assigned-clock-rates = <1008000000>;
 		};
 
 		gclk_so: gclk-so {
@@ -1310,40 +1326,17 @@
 			amb,frac-mode;
 		};
 
-		gclk_axi: gclk-axi {
+		pll_out_sd: pll-out-sd {
 			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&gclk_cortex>;
-			clock-output-names = "gclk_axi";
-			clock-mult = <1>;
-			clock-div = <3>;
-		};
-
-		gclk_core: gclk-core {
-			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&pll_out_core>;
-			clock-output-names = "gclk_core";
-			clock-mult = <1>;
-			clock-div = <1>;
-		};
-
-		gclk_ahb: gclk-ahb {
-			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&gclk_core>;
-			clock-output-names = "gclk_ahb";
-			clock-mult = <1>;
-			clock-div = <2>;
-		};
-
-		gclk_apb: gclk-apb {
-			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&gclk_ahb>;
-			clock-output-names = "gclk_apb";
-			clock-mult = <1>;
-			clock-div = <2>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed0804ac 4>,
+			      <0xed0804b0 4>,
+			      <0xed0804b4 4>,
+			      <0xed0804b8 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "pll_out_sd";
 		};
 
 		gclk_sd: gclk-sd {
@@ -1379,19 +1372,35 @@
 			clock-output-names = "gclk_nand";
 		};
 
-		gclk_vision: gclk-vision {
+		pll_out_enet: pll-out-enet {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
-			reg = <0xed0806e4 4>,
-			      <0xed0806e8 4>,
-			      <0xed0806ec 4>,
-			      <0xed0806f0 4>,
+			reg = <0xed080520 4>,
+			      <0xed080524 4>,
+			      <0xed080528 4>,
+			      <0xed08052c 4>,
 			      <0x00000000 0>,
 			      <0x00000000 0>;
 			clocks = <&osc>;
-			clock-output-names = "gclk_vision";
-			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <1008000000>;
+			clock-output-names = "pll_out_enet";
+		};
+
+		/* Fixed 25MHz external clock inputs to SoC */
+		rmii_osc: rmii-oscillator {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "rmii_osc";
+		};
+
+		gclk_enet_rmii: gclk-enet-rmii {
+			#clock-cells = <0>;
+			compatible = "ambarella,composite-clock";
+			reg = <0xed080534 4>, <0xed0806b8 4>;
+			clocks = <&rmii_osc>, <&pll_out_enet>;
+			amb,div-width = <4>;
+			amb,div-shift = <4>;
+			amb,div-plus;
 		};
 
 		gclk_uart0: gclk-uart0 {
@@ -1454,23 +1463,6 @@
 			amb,div-shift = <0>;
 		};
 
-		rmii_osc: rmii-oscillator {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <25000000>;
-			clock-output-names = "rmii_osc";
-		};
-
-		gclk_enet_rmii: gclk-enet-rmii {
-			#clock-cells = <0>;
-			compatible = "ambarella,composite-clock";
-			reg = <0xed080534 4>, <0xed0806b8 4>;
-			clocks = <&rmii_osc>, <&pll_out_enet>;
-			amb,div-width = <4>;
-			amb,div-shift = <4>;
-			amb,div-plus;
-		};
-
 		gclk_adc_parent: gclk-adc-parent {
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
@@ -1530,7 +1522,7 @@
 			amb,div-shift = <0>;
 		};
 
-		gclk_ssi3: gclk-ssi3 {
+		gclk_ssi3: gclk-ssi3 { /* for SPINOR */
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
 			reg = <0xed080518 4>, <0xed08051c 4>;

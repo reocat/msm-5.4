@@ -21,7 +21,8 @@
 		serial4 = &uart4;
 		nand = &nand0;
 		sd0 = &sdmmc0;
-		sd1 = &sdmmc2;
+		sd1 = &sdmmc1;
+		sd2 = &sdmmc2;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -37,8 +38,10 @@
 		linux,stdout-path = &uart0;
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
+	/*
+	 * the memory node will be overwritten in Amboot,
+	 * here is just the default value.
+	 */
 	memory {
 		device_type = "memory";
 		reg = <0x00200000 0x07e00000>; /* 126M */
@@ -117,11 +120,11 @@
 		 * Config effective clocks. '%KHZ'
 		 *
 		 * 0 - cortex.
-		 * 1 - pll_out_core.
-		 * 2 - cortex and pll_out_core.
+		 * 1 - core.
+		 * 2 - cortex and core.
 		 */
 		cpufreq-effective-clock = <0>;			/* default 'cortex' */
-		clocks = <&gclk_cortex &pll_out_core>;
+		clocks = <&gclk_cortex &gclk_core>;
 		clock-names = "cortex_clk", "core_clk";
 		clocks-frequency-cortex-core =
 			<1080000  672000>,
@@ -185,7 +188,6 @@
 			clocks = <&gclk_adc>;
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scaler-1v8 = <0x01>;
-			amb,t2v-channel = <2>;
 			status = "disabled";
 		};
 
@@ -210,7 +212,7 @@
 			reg = <0xe4009000 0x1000>;
 			interrupts = <0 16 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&i2c1_pins>;
+			pinctrl-0 = <&i2c1_pins_a>;
 			clocks = <&gclk_apb>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x08>;
@@ -225,7 +227,7 @@
 			interrupts = <0 17 0x4>;
 			clocks = <&gclk_apb>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&i2c2_pins>;
+			pinctrl-0 = <&i2c2_pins_a>;
 			clock-frequency = <100000>;
 			amb,i2c-class = <0x81>;
 			status = "disabled";
@@ -287,12 +289,11 @@
 			      <0xec004000 0x1000>,
 			      <0xec005000 0x1000>,
 			      <0xec006000 0x1000>,
-			      <0xec007000 0x1000>,
 			      <0xec000000 0x1000>,
 			      <0xe0022014 0x3c>,
 			      <0xed080314 0x13c>;
 			reg-names = "gpio0", "gpio1", "gpio2", "gpio3",
-				    "gpio4", "iomux", "pad", "ds";
+				    "iomux", "pad", "ds";
 			#gpio-range-cells = <3>;
 
 			gpio: gpio@0 {
@@ -302,393 +303,488 @@
 				interrupts = <0 43 0x4>,
 					     <0 44 0x4>,
 					     <0 45 0x4>,
-					     <0 46 0x4>,
-					     <0 47 0x4>;
+					     <0 46 0x4>;
 				gpio-controller;
 				#gpio-cells = <2>;
-				gpio-ranges = <&pinctrl 0 0 160>;
+				gpio-ranges = <&pinctrl 0 0 108>;
 				interrupt-controller;
 				#interrupt-cells = <2>;
 			};
 
 			uart0_pins: uart0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1027 0x1028>;
+				amb,pinmux-ids = <0x1011 0x1012>;
 			};
 
 			uart1_pins: uart1@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x108a 0x108b>;
+				amb,pinmux-ids = <0x1057 0x1058>;
 			};
 
 			uart1_flow_pins: uart1_flow@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x108c 0x108d>;
+				amb,pinmux-ids = <0x1059 0x105a>;
 			};
 
 			uart2_pins: uart2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x108e 0x108f>;
+				amb,pinmux-ids = <0x105b 0x105c>;
 			};
 
 			uart2_flow_pins: uart2_flow@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1090 0x1091>;
+				amb,pinmux-ids = <0x105d 0x105e>;
 			};
 
-			uart3_pins: uart3@0 {
+			uart3_pins_a: uart3@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1092 0x1093>;
+				amb,pinmux-ids = <0x1048 0x1049>;
 			};
 
-			uart3_flow_pins: uart3_flow@0 {
+			uart3_flow_pins_a: uart3_flow@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1094 0x1095>;
+				amb,pinmux-ids = <0x104a 0x104b>;
 			};
 
-			uart4_pins: uart4@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x1096 0x1097>;
+			uart3_pins_b: uart3@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x4061 0x4062>;
 			};
 
-			uart4_flow_pins: uart4_flow@0 {
+			uart3_flow_pins_b: uart3_flow@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x4063 0x4064>;
+			};
+
+			uart4_pins_a: uart4@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1098 0x1099>;
+				amb,pinmux-ids = <0x104c 0x104d>;
+			};
+
+			uart4_flow_pins_a: uart4_flow@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x104e 0x104f>;
+			};
+
+			uart4_pins_b: uart4@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x4065 0x4066>;
+			};
+
+			uart4_flow_pins_b: uart4_flow@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x4067 0x4068>;
 			};
 
 			nand0_pins: nand0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2046 0x2047 0x2048 0x204d
-						  0x204e 0x204f 0x2050 0x2051
-						  0x2052 0x2053 0x2054 0x2055
-						  0x2056 0x2057 0x2058>;
+				amb,pinmux-ids = <0x202d 0x202e 0x202f 0x2034
+						  0x2035 0x2036 0x2037 0x2038
+						  0x2039 0x203a 0x203b 0x203c
+						  0x203d 0x203e 0x203f>;
 			};
 
 			snand0_pins: snand0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x4047 0x4050 0x4054 0x4055
-						  0x4056 0x4057>;
+				amb,pinmux-ids = <0x402d 0x4037 0x403b 0x403c
+						  0x403d 0x403e>;
 			};
 
 			spinor0_pins: spinor0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3047 0x3048 0x304d 0x304e
-						  0x304f 0x3050 0x3051 0x3052
-						  0x3053 0x3054 0x3055 0x3056
-						  0x3057 0x305d 0x305e 0x305f
-						  0x3060>;
+				amb,pinmux-ids = <0x302d 0x302f 0x3034 0x3035
+						  0x3036 0x3037 0x3038 0x3039
+						  0x303a 0x303b 0x303c 0x303d
+						  0x303e>;
 			};
 
 			sdmmc0_cd_pin: sdmmc0_cd@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x204b>;
+				amb,pinmux-ids = <0x2032>;
 			};
 
 			sdmmc0_wp_pin: sdmmc0_wp@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x204c>;
+				amb,pinmux-ids = <0x2033>;
 			};
 
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2049 0x204a 0x2059>;
+				amb,pinmux-ids = <0x2030 0x2031 0x2040>;
 			};
 
 			sdmmc0_pins_4bit: sdmmc0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2049 0x204a 0x2059 0x205a
-						  0x205b 0x205c>;
+				amb,pinmux-ids = <0x2030 0x2031 0x2040 0x2041
+						  0x2042 0x2043>;
 			};
 
 			sdmmc0_pins_8bit: sdmmc0@2 {
 				reg = <2>;
-				amb,pinmux-ids = <0x2049 0x204a 0x2059 0x205a
-						  0x205b 0x205c 0x205d 0x205e
-						  0x205f 0x2060>;
+				amb,pinmux-ids = <0x2030 0x2031 0x2040 0x2041
+						  0x2042 0x2043 0x2044 0x2045
+						  0x2046 0x2047>;
+			};
+
+			sdmmc1_cd_pin: sdmmc1_cd@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1067>;
+			};
+
+			sdmmc1_wp_pin: sdmmc1_wp@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1068>;
+			};
+
+			sdmmc1_pins_1bit: sdmmc1@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1065 0x1066 0x1061>;
+			};
+
+			sdmmc1_pins_4bit: sdmmc1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x1065 0x1066 0x1061 0x1062
+						  0x1063 0x1064>;
 			};
 
 			sdmmc2_cd_pin: sdmmc2_cd@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2067>;
+				amb,pinmux-ids = <0x204e>;
 			};
 
 			sdmmc2_wp_pin: sdmmc2_wp@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2068>;
+				amb,pinmux-ids = <0x204f>;
 			};
 
 			sdmmc2_pins_1bit: sdmmc2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2061 0x2062 0x2063>;
+				amb,pinmux-ids = <0x2048 0x2049 0x204a>;
 			};
 
 			sdmmc2_pins_4bit: sdmmc2@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2061 0x2062 0x2063 0x2064
-						  0x2065 0x2066>;
-			};
-
-			sdmmc2_pins_8bit: sdmmc2@2 {
-				reg = <2>;
-				amb,pinmux-ids = <0x2061 0x2062 0x2063 0x2064
-						  0x2065 0x2066 0x2069 0x206a
-						  0x206b 0x206c>;
+				amb,pinmux-ids = <0x2048 0x2049 0x204a 0x204b
+						  0x204c 0x204d>;
 			};
 
 			rgmii_pins: eth0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x4036 0x4037 0x4038 0x4039
-						  0x403a 0x403b 0x403c 0x403d
-						  0x403e 0x403f 0x3042 0x4043
-						  0x4044 0x4045>;
+				amb,pinmux-ids = <0x401c 0x401d 0x401e 0x401f
+						  0x4020 0x4021 0x4022 0x4023
+						  0x4024 0x4025 0x3028 0x4029
+						  0x402a 0x402b 0x5026 0x5027>;
 			};
 
 			rmii_pins: eth0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x3036 0x3037 0x3038 0x303b
-						  0x303c 0x303f 0x3042 0x3043
-						  0x3044 0x3045>;
-				amb,pinconf-ids = <0xb00038 0xb00039 0xb0003a>;
+				amb,pinmux-ids = <0x301c 0x301d 0x301e 0x3021
+						  0x3022 0x3025 0x3028 0x3029
+						  0x302b 0x5026 0x5027>;
 			};
 
-			rgmii_mdio_pins: mdio@0 {
+			enet_2nd_ref_clk_pins_a: enet_2nd_ref_clk@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x4040 0x4041>;
+				amb,pinmux-ids = <0x202c>;
 			};
 
-			rmii_mdio_pins: mdio@1 {
+			enet_2nd_ref_clk_pins_b: enet_2nd_ref_clk@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x3040 0x3041>;
-			};
-
-			ahb_mdio_pins: mdio@2 {
-				reg = <2>;
-				amb,pinmux-ids = <0x5040 0x5041>;
+				amb,pinmux-ids = <0x202a>;
 			};
 
 			i2c0_pins_a: i2c0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x100b 0x100c>;
+				amb,pinmux-ids = <0x3001 0x3002>;
 			};
 
 			i2c0_pins_b: i2c0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2021 0x2022>;
+				amb,pinmux-ids = <0x300f 0x3010>;
 			};
 
-			i2c1_pins: i2c1@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x100d 0x100e>;
+			i2c0_pins_c: i2c0@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x304f 0x3050>;
 			};
 
-			i2c2_pins: i2c2@0 {
+			i2c0_pins_d: i2c0@3 {
+				reg = <3>;
+				amb,pinmux-ids = <0x205f 0x2060>;
+			};
+
+			i2c1_pins_a: i2c1@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x100f 0x1010>;
+				amb,pinmux-ids = <0x2006 0x2007>;
+			};
+
+			i2c1_pins_b: i2c1@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3065 0x3066>;
+			};
+
+			i2c2_pins_a: i2c2@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x2004 0x2008>;
+			};
+
+			i2c2_pins_b: i2c2@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3067 0x3068>;
 			};
 
 			i2c3_pins: i2c3@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1011 0x1012>;
+				amb,pinmux-ids = <0x200b 0x200c>;
 			};
 
 			ir_pins: ir0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1015>;
+				amb,pinmux-ids = <0x1003>;
 			};
 
 			wdt_pins_a: wdt0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3004>;
+				amb,pinmux-ids = <0x2003>;
 			};
 
 			wdt_pins_b: wdt0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2015>;
+				amb,pinmux-ids = <0x3008>;
 			};
 
 			wdt_pins_c: wdt0@2 {
 				reg = <2>;
-				amb,pinmux-ids = <0x202b>;
+				amb,pinmux-ids = <0x2015>;
 			};
 
 			wdt_pins_d: wdt0@3 {
 				reg = <3>;
-				amb,pinmux-ids = <0x2071>;
+				amb,pinmux-ids = <0x202c>;
+			};
+
+			wdt_pins_e: wdt0@4 {
+				reg = <4>;
+				amb,pinmux-ids = <0x2054>;
+			};
+
+			wdt_pins_f: wdt0@5 {
+				reg = <5>;
+				amb,pinmux-ids = <0x5066>;
 			};
 
 			i2s0_pins: i2s0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x102c 0x102d 0x102e 0x102f>;
+				amb,pinmux-ids = <0x1016 0x1017 0x1018 0x101b>;
 			};
 
-			i2s1_pins: i2s1@0 {
+			i2s0_ch2_pins: i2s0_ch2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1030 0x1031 0x1032 0x1033
-						  0x1034 0x1035>;
+				amb,pinmux-ids = <0x1019 0x101a>;
 			};
 
 			usb_host0_pins_a: uhc0@0 { /* USB0: host/device configurable */
 				reg = <0>;
-				amb,pinmux-ids = <0x3023 0x3025>;
+				amb,pinmux-ids = <0x3019 0x301a>;
 			};
 
 			usb_host0_pins_b: uhc0@1 { /* USB0: host/device configurable */
 				reg = <1>;
-				amb,pinmux-ids = <0x5020 0x5021>;
+				amb,pinmux-ids = <0x4011 0x4012>;
 			};
 
 			usb_host0_pins_c: uhc0@2 { /* USB0: host/device configurable */
 				reg = <2>;
-				amb,pinmux-ids = <0x5069 0x506b>;
+				amb,pinmux-ids = <0x3057 0x3059>;
+			};
+
+			usb_host0_pins_d: uhc0@3 { /* USB0: host/device configurable */
+				reg = <3>;
+				amb,pinmux-ids = <0x5061 0x5062>;
 			};
 
 			pwm0_pins_a: pwm0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1029>;
+				amb,pinmux-ids = <0x1013>;
 			};
 
 			pwm0_pins_b: pwm0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x1089>;
+				amb,pinmux-ids = <0x2020>;
+			};
+
+			pwm0_pins_c: pwm0@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x102c>;
 			};
 
 			pwm1_pins: pwm1@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x102a>;
+				amb,pinmux-ids = <0x1014>;
 			};
 
 			pwm2_pins: pwm2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x102b>;
+				amb,pinmux-ids = <0x1015>;
 			};
 
 			pwm3_pins_a: pwm3@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3000>;
+				amb,pinmux-ids = <0x3004>;
 			};
 
 			pwm3_pins_b: pwm3@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x200f>;
+				amb,pinmux-ids = <0x2024>;
 			};
 
 			pwm4_pins_a: pwm4@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3001>;
+				amb,pinmux-ids = <0x3005>;
 			};
 
 			pwm4_pins_b: pwm4@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2010>;
+				amb,pinmux-ids = <0x2025>;
 			};
 
 			pwm5_pins_a: pwm5@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3002>;
+				amb,pinmux-ids = <0x3006>;
 			};
 
 			pwm5_pins_b: pwm5@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x201d>;
+				amb,pinmux-ids = <0x2026>;
 			};
 
 			pwm6_pins_a: pwm6@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3003>;
+				amb,pinmux-ids = <0x3007>;
 			};
 
 			pwm6_pins_b: pwm6@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x201e>;
+				amb,pinmux-ids = <0x2027>;
 			};
 
 			pwm7_pins_a: pwm7@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3008>;
+				amb,pinmux-ids = <0x3000>;
 			};
 
 			pwm7_pins_b: pwm7@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x201f>;
+				amb,pinmux-ids = <0x2028>;
+			};
+
+			pwm7_pins_c: pwm7@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5063>;
 			};
 
 			pwm8_pins_a: pwm8@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3011>;
+				amb,pinmux-ids = <0x201c>;
 			};
 
 			pwm8_pins_b: pwm8@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2020>;
+				amb,pinmux-ids = <0x2029>;
+			};
+
+			pwm8_pins_c: pwm8@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5064>;
 			};
 
 			pwm9_pins_a: pwm9@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x3012>;
+				amb,pinmux-ids = <0x201d>;
 			};
 
 			pwm9_pins_b: pwm9@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2099>;
+				amb,pinmux-ids = <0x202a>;
+			};
+
+			pwm9_pins_c: pwm9@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x5065>;
 			};
 
 			pwm10_pins: pwm10@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2093>;
+				amb,pinmux-ids = <0x201e>;
 			};
 
 			pwm11_pins: pwm11@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2095>;
+				amb,pinmux-ids = <0x201f>;
 			};
 
-			spi_slave_pins: spi_slave@0 {
+			spi_slave_pins_a: spi_slave@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1023 0x1024 0x1025 0x1026>;
+				amb,pinmux-ids = <0x200d 0x200e 0x200f 0x2010>;
 			};
 
-			spi0_pins: spi0@0 {
+			spi_slave_pins_b: spi_slave@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3061 0x3062 0x3063 0x3064>;
+			};
+
+			spi0_pins_a: spi0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1016 0x1017 0x1018>;
+				amb,pinmux-ids = <0x1004 0x1005 0x1006>;
+			};
+
+			spi0_pins_b: spi0@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x2061 0x2062 0x2063>;
 			};
 
 			spi1_pins_a: spi1@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2000 0x2001 0x2002>;
+				amb,pinmux-ids = <0x2016 0x2017 0x2018>;
 			};
 
 			spi1_pins_b: spi1@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2023 0x2024 0x2025>;
+				amb,pinmux-ids = <0x3048 0x3049 0x304a>;
 			};
 
 			spi1_pins_c: spi1@2 {
 				reg = <2>;
-				amb,pinmux-ids = <0x208a 0x208b 0x208c>;
+				amb,pinmux-ids = <0x2057 0x2058 0x2059>;
+			};
+
+			spi1_pins_d: spi1@3 {
+				reg = <3>;
+				amb,pinmux-ids = <0x2065 0x2066 0x2067>;
 			};
 
 			spi2_pins: spi2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x101b 0x101c 0x101d>;
+				amb,pinmux-ids = <0x1009 0x100a 0x100b>;
 			};
 
 			spi3_pins: spi3@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x101f 0x1020 0x1021>;
+				amb,pinmux-ids = <0x100d 0x100e 0x100f>;
 			};
 
 			vout0_pins: vout0@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1075 0x1076 0x1077 0x1078 0x1079
-								0x107a 0x107b 0x107c 0x107d
-								0x107e 0x107f 0x1080 0x1081
-								0x1082 0x1083 0x1084 0x1085
-								0x1086 0x1087 0x1088>;
-				amb,pinconf-ids = <0xba0075 0xba0076 0xba0077 0xba0078 0xba0079
-								0xba007a 0xba007b 0xba007c 0xba007d
-								0xba007e 0xba007f 0xba0080 0xba0081
-								0xba0082 0xba0083 0xba0084 0xba0085
-								0xba0086 0xba0087 0xba0088>;
+				amb,pinmux-ids = <0x101c 0x101d 0x101e 0x101f
+						  0x1020 0x1021 0x1022 0x1023
+						  0x1024 0x1025 0x1026 0x1027
+						  0x1028 0x1029 0x102a 0x102b
+						  0x305b 0x305c 0x305d 0x305e>;
+				amb,pinconf-ids = <0xba001c 0xba001d 0xba001e 0xba001f
+						   0xba0020 0xba0021 0xba0022 0xba0023
+						   0xba0024 0xba0025 0xba0026 0xba0027
+						   0xba0028 0xba0029 0xba002a 0xba002b
+						   0xba005b 0xba005c 0xba005d 0xba005e>;
 			};
 
 		};
@@ -718,7 +814,7 @@
 			pinctrl-1 = <&snand0_pins>;
 			clocks = <&gclk_nand>;
 			nand-on-flash-bbt;
-			/* amb,soft-ecc = <1>; */
+			/* amb,soft-ecc = <6>; */
 		};
 
 		sdmmc0: sdmmc0@e0004000 {
@@ -741,7 +837,25 @@
 			mmc-hs200-1_8v;
 		};
 
-		sdmmc2: sdmmc2@e0005000 { /* SDXC rather than SDIO */
+		sdmmc1: sdmmc1@e0016000 { /* SDIO1 */
+			compatible = "ambarella,sdmmc";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xe0016000 0x1000>;
+			interrupts = <0 64 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&sdmmc1_pins_4bit &sdmmc1_cd_pin &sdmmc1_wp_pin>;
+			clocks = <&gclk_sdio>;
+			amb,switch-vol-tmo = <100>; /* in millisecond */
+			max-frequency = <96000000>;
+			bus-width = <4>;
+			cap-sdio-irq;
+			cap-sd-highspeed;
+			cap-mmc-highspeed;
+			mmc-hs200-1_8v;
+		};
+
+		sdmmc2: sdmmc2@e0005000 { /* SDIO0 */
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -750,11 +864,11 @@
 			      <0xed080668 0x4>;  /* sbc reg address */
 			interrupts = <0 71 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&sdmmc2_pins_8bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
+			pinctrl-0 = <&sdmmc2_pins_4bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
 			clocks = <&gclk_sdxc>;
 			amb,switch-vol-tmo = <100>; /* in millisecond */
 			max-frequency = <96000000>;
-			bus-width = <8>;
+			bus-width = <4>;
 			cap-sdio-irq;
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
@@ -808,29 +922,16 @@
 			interrupts = <0 70 0x1>;
 		};
 
-		i2s0: i2s@e000d000 {
-			compatible = "ambarella,i2s";
-			#sound-dai-cells = <0>;
-			reg = <0xe000d000 0x1000>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&i2s0_pins>;
-			amb,i2s-channels = <2>;
-			amb,default-mclk = <12288000>;
-			dmas = <&dma0 11>, <&dma0 12>;
-			dma-names = "tx", "rx";
-		};
-
-		i2s1: i2s@e001d000 {
+		i2s0: i2s@e001d000 {
 			compatible = "ambarella,i2s";
 			#sound-dai-cells = <0>;
 			reg = <0xe001d000 0x1000>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&i2s1_pins>;
-			amb,i2s-channels = <4>;
+			pinctrl-0 = <&i2s0_pins>;
+			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
-			dmas = <&dma0 23>, <&dma0 24>;
+			dmas = <&dma0 21>, <&dma0 22>;
 			dma-names = "tx", "rx";
-			status = "disabled";
 		};
 
 		mac0: ethernet@e000e000 {
@@ -840,7 +941,7 @@
 			reg = <0xe000e000 0x2000>;
 			interrupts = <0 58 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&rgmii_pins &rgmii_mdio_pins>;
+			pinctrl-0 = <&rgmii_pins>;
 			phy-mode = "rgmii";
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scr-regmap = <&scratchpad_syscon>;
@@ -849,6 +950,7 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
+			amb,ahb-12mhz-div = <5>;
 			/* amb,mdio-gpio; */
 			/* amb,tx-clk-invert; */
 		};
@@ -858,7 +960,7 @@
 			reg = <0xe0010000 0x1000>;
 			interrupts = <0 80 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi_slave_pins>;
+			pinctrl-0 = <&spi_slave_pins_a>;
 			status = "disabled";
 		};
 
@@ -869,7 +971,7 @@
 			reg = <0xe0011000 0x1000>;
 			interrupts = <0 74 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi0_pins>;
+			pinctrl-0 = <&spi0_pins_a>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
 			dmas = <&dma0 1>, <&dma0 2>;
@@ -883,7 +985,7 @@
 			reg = <0xe0012000 0x1000>;
 			interrupts = <0 75 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi1_pins_a>;
+			pinctrl-0 = <&spi1_pins_b>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
 			dmas = <&dma0 3>, <&dma0 4>;
@@ -901,7 +1003,7 @@
 			pinctrl-0 = <&spi2_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma1 19>, <&dma1 20>;
+			dmas = <&dma1 17>, <&dma1 18>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -916,7 +1018,7 @@
 			pinctrl-0 = <&spi3_pins>;
 			amb,clk-freq = <54000000>;
 			/* amb,dma-used; */
-			dmas = <&dma1 21>, <&dma1 22>;
+			dmas = <&dma1 19>, <&dma1 20>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -946,7 +1048,7 @@
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma1 13>, <&dma1 14>;
+			dmas = <&dma1 11>, <&dma1 12>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -956,12 +1058,12 @@
 			reg = <0xe0019000 0x1000>;
 			interrupts = <0 61 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&uart3_pins &uart3_flow_pins>;
+			pinctrl-0 = <&uart3_pins_b &uart3_flow_pins_b>;
 			clocks = <&gclk_uart3>;
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma1 15>, <&dma1 16>;
+			dmas = <&dma1 13>, <&dma1 14>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -971,12 +1073,12 @@
 			reg = <0xe001a000 0x1000>;
 			interrupts = <0 62 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&uart4_pins &uart4_flow_pins>;
+			pinctrl-0 = <&uart4_pins_a &uart4_flow_pins_a>;
 			clocks = <&gclk_uart4>;
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
-			dmas = <&dma1 17>, <&dma1 18>;
+			dmas = <&dma1 15>, <&dma1 16>;
 			dma-names = "tx", "rx";
 			status = "disabled";
 		};
@@ -1001,7 +1103,6 @@
 		rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
-			interrupts = <0 160 0x1>;
 		};
 
 		rng@e8001000 {
@@ -1027,7 +1128,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xed080050 0x4 0xe0022060 0x4 0xed0802c0 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-invert;
 		};
 
 		reboot {
@@ -1067,10 +1167,18 @@
 			compatible = "ambarella,vinc";
 			interrupts = <0 135 0x1 0 136 0x1 0 137 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
-			clocks = <&gclk_so2>;
+			clocks = <&gclk_so>;
 		};
 
-		/* node for vout0(tv) controller */
+		/* node for vin1 controller */
+		vinc2 {
+			compatible = "ambarella,vinc";
+			interrupts = <0 114 0x1 0 115 0x1 0 116 0x1>;
+			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
+			clocks = <&gclk_so>;
+		};
+
+		/* node for vout0(lcd) controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
 			interrupts = <0 89 0x1>;
@@ -1080,7 +1188,7 @@
 			pinctrl-0 = <&vout0_pins>;
 		};
 
-		/* node for vout1(lcd) controller */
+		/* node for vout1(tv) controller */
 		voutc1 {
 			compatible = "ambarella,voutc";
 			interrupts = <0 88 0x1>;
@@ -1141,7 +1249,7 @@
 			clock-output-names = "osc";
 		};
 
-		pll_out_core: pll-out-core {
+		gclk_core: gclk-core {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
 			reg = <0xed080000 4>,
@@ -1151,33 +1259,25 @@
 			      <0x00000000 0>,
 			      <0x00000000 0>;
 			clocks = <&osc>;
-			clock-output-names = "pll_out_core";
+			clock-output-names = "gclk_core";
 		};
 
-		pll_out_sd: pll-out-sd {
+		gclk_ahb: gclk-ahb {
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
-			reg = <0xed0804ac 4>,
-			      <0xed0804b0 4>,
-			      <0xed0804b4 4>,
-			      <0xed0804b8 4>,
-			      <0x00000000 0>,
-			      <0x00000000 0>;
-			clocks = <&osc>;
-			clock-output-names = "pll_out_sd";
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_core>;
+			clock-output-names = "gclk_ahb";
+			clock-mult = <1>;
+			clock-div = <2>;
 		};
 
-		pll_out_enet: pll-out-enet {
+		gclk_apb: gclk-apb {
 			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
-			reg = <0xed080520 4>,
-			      <0xed080524 4>,
-			      <0xed080528 4>,
-			      <0xed08052c 4>,
-			      <0x00000000 0>,
-			      <0x00000000 0>;
-			clocks = <&osc>;
-			clock-output-names = "pll_out_enet";
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_core>;
+			clock-output-names = "gclk_apb";
+			clock-mult = <1>;
+			clock-div = <4>;
 		};
 
 		gclk_ddr: gclk-ddr {
@@ -1207,6 +1307,15 @@
 			clock-output-names = "gclk_cortex";
 		};
 
+		gclk_axi: gclk-axi {
+			#clock-cells = <0>;
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&gclk_cortex>;
+			clock-output-names = "gclk_axi";
+			clock-mult = <1>;
+			clock-div = <3>;
+		};
+
 		gclk_idsp: gclk-idsp {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
@@ -1219,6 +1328,21 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_idsp";
 			amb,extra-post-scaler;
+		};
+
+		gclk_vision: gclk-vision {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed0806e4 4>,
+			      <0xed0806e8 4>,
+			      <0xed0806ec 4>,
+			      <0xed0806f0 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_vision";
+			assigned-clocks = <&gclk_vision>;
+			assigned-clock-rates = <1008000000>;
 		};
 
 		gclk_so: gclk-so {
@@ -1236,22 +1360,6 @@
 			assigned-clock-rates = <24000000>;
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
-			amb,frac-mode;
-		};
-
-		gclk_so2: gclk-so2 {
-			#clock-cells = <0>;
-			compatible = "ambarella,pll-clock";
-			reg = <0xed08074c 4>,
-			      <0xed080758 4>,
-			      <0xed080750 4>,
-			      <0xed080754 4>,
-			      <0x00000000 0>,
-			      <0x00000000 0>;
-			clocks = <&osc>;
-			clock-output-names = "gclk_so2";
-			assigned-clocks = <&gclk_so2>;
-			assigned-clock-rates = <24000000>;
 			amb,frac-mode;
 		};
 
@@ -1310,40 +1418,17 @@
 			amb,frac-mode;
 		};
 
-		gclk_axi: gclk-axi {
+		pll_out_sd: pll-out-sd {
 			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&gclk_cortex>;
-			clock-output-names = "gclk_axi";
-			clock-mult = <1>;
-			clock-div = <3>;
-		};
-
-		gclk_core: gclk-core {
-			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&pll_out_core>;
-			clock-output-names = "gclk_core";
-			clock-mult = <1>;
-			clock-div = <1>;
-		};
-
-		gclk_ahb: gclk-ahb {
-			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&gclk_core>;
-			clock-output-names = "gclk_ahb";
-			clock-mult = <1>;
-			clock-div = <2>;
-		};
-
-		gclk_apb: gclk-apb {
-			#clock-cells = <0>;
-			compatible = "ambarella,fixed-factor-clock";
-			clocks = <&gclk_ahb>;
-			clock-output-names = "gclk_apb";
-			clock-mult = <1>;
-			clock-div = <2>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed0804ac 4>,
+			      <0xed0804b0 4>,
+			      <0xed0804b4 4>,
+			      <0xed0804b8 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "pll_out_sd";
 		};
 
 		gclk_sd: gclk-sd {
@@ -1356,10 +1441,20 @@
 			amb,div-shift = <0>;
 		};
 
-		gclk_sdxc: gclk-sdxc {
+		gclk_sdio: gclk-sdio {
 			#clock-cells = <0>;
 			compatible = "ambarella,div-clock";
 			reg = <0xed080434 4>;
+			clocks = <&pll_out_sd>;
+			clock-output-names = "gclk_sdio";
+			amb,div-width = <16>;
+			amb,div-shift = <0>;
+		};
+
+		gclk_sdxc: gclk-sdxc {
+			#clock-cells = <0>;
+			compatible = "ambarella,div-clock";
+			reg = <0xed080430 4>;
 			clocks = <&pll_out_sd>;
 			clock-output-names = "gclk_sdxc";
 			amb,div-width = <16>;
@@ -1379,19 +1474,44 @@
 			clock-output-names = "gclk_nand";
 		};
 
-		gclk_vision: gclk-vision {
+		pll_out_enet: pll-out-enet {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
-			reg = <0xed0806e4 4>,
-			      <0xed0806e8 4>,
-			      <0xed0806ec 4>,
-			      <0xed0806f0 4>,
+			reg = <0xed080520 4>,
+			      <0xed080524 4>,
+			      <0xed080528 4>,
+			      <0xed08052c 4>,
 			      <0x00000000 0>,
 			      <0x00000000 0>;
 			clocks = <&osc>;
-			clock-output-names = "gclk_vision";
-			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <1008000000>;
+			clock-output-names = "pll_out_enet";
+		};
+
+		/* Fixed 25MHz external clock inputs to SoC */
+		rmii_ext: rmii-external {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "rmii_ext";
+		};
+
+		/*
+		 * Fixed 50MHz internal clock for rmii. PS: this clock
+		 * is actually changeable, but no need to change it.
+		 */
+		rmii_int: rmii-internal {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <50000000>;
+			clock-output-names = "rmii_int";
+		};
+
+		enet_2nd_ref_clk: enet-2nd-ref-clk {
+			#clock-cells = <0>;
+			compatible = "ambarella,mux-clock";
+			reg = <0xed0806b8 4>;
+			clocks = <&rmii_ext>, <&rmii_int>;
+			clock-output-names = "enet_2nd_ref_clk";
 		};
 
 		gclk_uart0: gclk-uart0 {
@@ -1454,23 +1574,6 @@
 			amb,div-shift = <0>;
 		};
 
-		rmii_osc: rmii-oscillator {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <25000000>;
-			clock-output-names = "rmii_osc";
-		};
-
-		gclk_enet_rmii: gclk-enet-rmii {
-			#clock-cells = <0>;
-			compatible = "ambarella,composite-clock";
-			reg = <0xed080534 4>, <0xed0806b8 4>;
-			clocks = <&rmii_osc>, <&pll_out_enet>;
-			amb,div-width = <4>;
-			amb,div-shift = <4>;
-			amb,div-plus;
-		};
-
 		gclk_adc_parent: gclk-adc-parent {
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
@@ -1530,7 +1633,7 @@
 			amb,div-shift = <0>;
 		};
 
-		gclk_ssi3: gclk-ssi3 {
+		gclk_ssi3: gclk-ssi3 { /* for SPINOR */
 			#clock-cells = <0>;
 			compatible = "ambarella,composite-clock";
 			reg = <0xed080518 4>, <0xed08051c 4>;

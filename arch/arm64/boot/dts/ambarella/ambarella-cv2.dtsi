@@ -37,8 +37,10 @@
 		linux,stdout-path = &uart0;
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
+	/*
+	 * the memory node will be overwritten in Amboot,
+	 * here is just the default value.
+	 */
 	memory {
 		device_type = "memory";
 		reg = <0x00200000 0x07e00000>; /* 126M */
@@ -458,7 +460,6 @@
 				amb,pinmux-ids = <0x3036 0x3037 0x3038 0x303b
 						  0x303c 0x303f 0x3042 0x3043
 						  0x3044 0x3045>;
-				amb,pinconf-ids = <0xb00038 0xb00039 0xb0003a>;
 			};
 
 			rgmii_mdio_pins: mdio@0 {
@@ -1072,8 +1073,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xed080050 0x4 0xe800100c 0x4 0xed0802c0 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-mask;
-			amb,owner-invert;
 		};
 
 		reboot {
