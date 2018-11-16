@@ -415,32 +415,16 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 		break;
 	}
 
-	switch (mode) {
-	case MMC_TIMING_UHS_DDR50:
-		tmp = readl_relaxed(host->regbase + SD_XC_CTR_OFFSET);
-		tmp |= SD_XC_CTR_DDR_EN;
-		writel_relaxed(tmp, host->regbase + SD_XC_CTR_OFFSET);
+	tmp = readl_relaxed(host->regbase + SD_XC_CTR_OFFSET);
+	tmp &= ~SD_XC_CTR_DDR_EN;
+	writel_relaxed(tmp, host->regbase + SD_XC_CTR_OFFSET);
 
-		tmp = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
-		tmp |= 0x0004;
-		writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
+	tmp = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
+	tmp &= ~0x0004;
+	writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
 
-		hostr |= SD_HOST_HIGH_SPEED;
-		writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
-		break;
-	default:
-		tmp = readl_relaxed(host->regbase + SD_XC_CTR_OFFSET);
-		tmp &= ~SD_XC_CTR_DDR_EN;
-		writel_relaxed(tmp, host->regbase + SD_XC_CTR_OFFSET);
-
-		tmp = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
-		tmp &= ~0x0004;
-		writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
-
-		hostr &= ~SD_HOST_HIGH_SPEED;
-		writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
-		break;
-	}
+	hostr &= ~SD_HOST_HIGH_SPEED;
+	writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
 
 	host->bus_width = bus_width;
 	host->mode = mode;
@@ -1234,8 +1218,7 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 		mmc->ocr_avail |= MMC_VDD_165_195;
 
 		mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
-			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
-			MMC_CAP_UHS_DDR50;
+			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104;
 	}
 
 	return 0;
