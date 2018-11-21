@@ -23,7 +23,6 @@
 		serial6 = &uart6;
 		nand = &nand0;
 		sd0 = &sdmmc0;
-		sd1 = &sdmmc2;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -438,28 +437,28 @@
 						  0x206f 0x2070>;
 			};
 
-			sdmmc2_cd_pin: sdmmc2_cd@0 {
+			sdmmc1_cd_pin: sdmmc1_cd@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2077>;
 			};
 
-			sdmmc2_wp_pin: sdmmc2_wp@0 {
+			sdmmc1_wp_pin: sdmmc1_wp@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2078>;
 			};
 
-			sdmmc2_pins_1bit: sdmmc2@0 {
+			sdmmc1_pins_1bit: sdmmc1@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2071 0x2072 0x2073>;
 			};
 
-			sdmmc2_pins_4bit: sdmmc2@1 {
+			sdmmc1_pins_4bit: sdmmc1@1 {
 				reg = <1>;
 				amb,pinmux-ids = <0x2071 0x2072 0x2073 0x2074
 						  0x2075 0x2076>;
 			};
 
-			sdmmc2_pins_8bit: sdmmc2@2 {
+			sdmmc1_pins_8bit: sdmmc1@2 {
 				reg = <2>;
 				amb,pinmux-ids = <0x2071 0x2072 0x2073 0x2074
 						  0x2075 0x2076 0x2079 0x207a
@@ -860,7 +859,7 @@
 			mmc-hs200-1_8v;
 		};
 
-		sdmmc2: sdmmc2@e0005000 { /* SDXC rather than SDIO */
+		sdmmc1: sdmmc1@e0005000 { /* SDXC rather than SDIO */
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -869,7 +868,7 @@
 			      <0xed080668 0x4>;  /* sbc reg address */
 			interrupts = <0 71 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&sdmmc2_pins_8bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
+			pinctrl-0 = <&sdmmc1_pins_8bit &sdmmc1_cd_pin &sdmmc1_wp_pin>;
 			clocks = <&gclk_sdxc>;
 			amb,switch-vol-tmo = <100>; /* in millisecond */
 			max-frequency = <96000000>;

@@ -21,8 +21,6 @@
 		serial4 = &uart4;
 		nand = &nand0;
 		sd0 = &sdmmc0;
-		sd1 = &sdmmc1;
-		sd2 = &sdmmc2;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -428,44 +426,44 @@
 
 			sdmmc1_cd_pin: sdmmc1_cd@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1067>;
+				amb,pinmux-ids = <0x204e>;
 			};
 
 			sdmmc1_wp_pin: sdmmc1_wp@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1068>;
+				amb,pinmux-ids = <0x204f>;
 			};
 
 			sdmmc1_pins_1bit: sdmmc1@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x1065 0x1066 0x1061>;
+				amb,pinmux-ids = <0x2048 0x2049 0x204a>;
 			};
 
 			sdmmc1_pins_4bit: sdmmc1@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x1065 0x1066 0x1061 0x1062
-						  0x1063 0x1064>;
+				amb,pinmux-ids = <0x2048 0x2049 0x204a 0x204b
+						  0x204c 0x204d>;
 			};
 
 			sdmmc2_cd_pin: sdmmc2_cd@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x204e>;
+				amb,pinmux-ids = <0x1067>;
 			};
 
 			sdmmc2_wp_pin: sdmmc2_wp@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x204f>;
+				amb,pinmux-ids = <0x1068>;
 			};
 
 			sdmmc2_pins_1bit: sdmmc2@0 {
 				reg = <0>;
-				amb,pinmux-ids = <0x2048 0x2049 0x204a>;
+				amb,pinmux-ids = <0x1065 0x1066 0x1061>;
 			};
 
 			sdmmc2_pins_4bit: sdmmc2@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x2048 0x2049 0x204a 0x204b
-						  0x204c 0x204d>;
+				amb,pinmux-ids = <0x1065 0x1066 0x1061 0x1062
+						  0x1063 0x1064>;
 			};
 
 			rgmii_pins: eth0@0 {
@@ -837,15 +835,17 @@
 			mmc-hs200-1_8v;
 		};
 
-		sdmmc1: sdmmc1@e0016000 { /* SDIO1 */
+		sdmmc1: sdmmc1@e0005000 { /* SDIO0 */
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0xe0016000 0x1000>;
-			interrupts = <0 64 0x4>;
+			reg = <0xe0005000 0x1000>,
+			      <0xed0804c8 0x8>,  /* phy timing */
+			      <0xed080668 0x4>;  /* sbc reg address */
+			interrupts = <0 71 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc1_pins_4bit &sdmmc1_cd_pin &sdmmc1_wp_pin>;
-			clocks = <&gclk_sdio>;
+			clocks = <&gclk_sdxc>;
 			amb,switch-vol-tmo = <100>; /* in millisecond */
 			max-frequency = <96000000>;
 			bus-width = <4>;
@@ -855,17 +855,15 @@
 			mmc-hs200-1_8v;
 		};
 
-		sdmmc2: sdmmc2@e0005000 { /* SDIO0 */
+		sdmmc2: sdmmc2@e0016000 { /* SDIO1 */
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0xe0005000 0x1000>,
-			      <0xed0804c8 0x8>,  /* phy timing */
-			      <0xed080668 0x4>;  /* sbc reg address */
-			interrupts = <0 71 0x4>;
+			reg = <0xe0016000 0x1000>;
+			interrupts = <0 64 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc2_pins_4bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
-			clocks = <&gclk_sdxc>;
+			clocks = <&gclk_sdio>;
 			amb,switch-vol-tmo = <100>; /* in millisecond */
 			max-frequency = <96000000>;
 			bus-width = <4>;
