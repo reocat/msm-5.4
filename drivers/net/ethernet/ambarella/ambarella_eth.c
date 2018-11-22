@@ -2245,6 +2245,29 @@ static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 	return 0;
 }
 
+static int ambeth_ethtools_get_regs_len(struct net_device *ndev)
+{
+	return sizeof(u32) * AMBETH_PHY_REG_SIZE;
+}
+
+static void ambeth_ethtools_get_regs(struct net_device *ndev,
+		struct ethtool_regs *regs, void *rdata)
+{
+	u32 *data = (u32 *) rdata;
+	size_t len = sizeof(u32) * AMBETH_PHY_REG_SIZE;
+	struct ambeth_info *lp = netdev_priv(ndev);
+	struct phy_device *phydev = lp->phydev;
+	int i;
+
+	regs->version = 0;
+	regs->len = len;
+
+	memset(data, 0, len);
+	for (i = 0;  i < AMBETH_PHY_REG_SIZE; i++)
+		data[i] = phy_read(phydev, i);
+
+}
+
 static u32 ambeth_get_msglevel(struct net_device *ndev)
 {
 	struct ambeth_info *lp;
@@ -2350,6 +2373,8 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 	.get_dump_flag		= ambeth_get_dump_flag,
 	.get_dump_data		= ambeth_get_dump_data,
 	.set_dump		= ambeth_set_dump,
+	.get_regs_len		= ambeth_ethtools_get_regs_len,
+	.get_regs		= ambeth_ethtools_get_regs,
 	.get_msglevel		= ambeth_get_msglevel,
 	.set_msglevel		= ambeth_set_msglevel,
 	.get_pauseparam		= ambeth_get_pauseparam,
