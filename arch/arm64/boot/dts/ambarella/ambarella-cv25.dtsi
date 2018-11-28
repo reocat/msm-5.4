@@ -1340,7 +1340,7 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_vision";
 			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <1008000000>;
+			assigned-clock-rates = <504000000>;
 		};
 
 		gclk_so: gclk-so {
