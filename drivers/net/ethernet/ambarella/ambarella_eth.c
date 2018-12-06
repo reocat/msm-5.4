@@ -2108,83 +2108,6 @@ static const struct net_device_ops ambeth_netdev_ops = {
 };
 
 /* ==========================================================================*/
-static int ambeth_get_settings(struct net_device *ndev,
-	struct ethtool_cmd *ecmd)
-{
-#if 0
-	struct ambeth_info *lp = netdev_priv(ndev);
-	int ret_val = 0;
-
-	if (!netif_running(ndev))
-		return -EINVAL;
-
-	if (lp->phy_enabled) {
-		ret_val = phy_ethtool_gset(lp->phydev, ecmd);
-	} else {
-		ret_val = -EINVAL;
-		if (lp->oldlink == PHY_RUNNING) {
-			ethtool_cmd_speed_set(ecmd, lp->oldspeed);
-			ecmd->duplex = lp->oldduplex;
-			ecmd->port = PORT_MII;
-			ecmd->phy_address = 0xFF;
-			ecmd->transceiver = XCVR_EXTERNAL;
-			ecmd->autoneg = AUTONEG_DISABLE;
-			ecmd->supported = SUPPORTED_MII;
-			switch (lp->oldspeed) {
-			case SPEED_1000:
-				if (lp->oldduplex == DUPLEX_FULL) {
-					ecmd->supported |=
-						SUPPORTED_1000baseT_Full;
-				} else {
-					ecmd->supported |=
-						SUPPORTED_1000baseT_Half;
-				}
-				ret_val = 0;
-				break;
-			case SPEED_100:
-				if (lp->oldduplex == DUPLEX_FULL) {
-					ecmd->supported |=
-						SUPPORTED_100baseT_Full;
-				} else {
-					ecmd->supported |=
-						SUPPORTED_100baseT_Half;
-				}
-				ret_val = 0;
-				break;
-			case SPEED_10:
-				if (lp->oldduplex == DUPLEX_FULL) {
-					ecmd->supported |=
-						SUPPORTED_10baseT_Full;
-				} else {
-					ecmd->supported |=
-						SUPPORTED_10baseT_Half;
-				}
-				ret_val = 0;
-				break;
-			default:
-				break;
-			}
-			ecmd->advertising = ecmd->supported;
-		}
-	}
-
-	return ret_val;
-#else
-	return 0;
-#endif
-}
-
-static int ambeth_set_settings(struct net_device *ndev,
-	struct ethtool_cmd *ecmd)
-{
-	struct ambeth_info *lp = netdev_priv(ndev);
-
-	if (!netif_running(ndev) || !lp->phy_enabled)
-		return -EINVAL;
-
-	return phy_ethtool_sset(lp->phydev, ecmd);
-}
-
 static int ambeth_get_dump_flag(struct net_device *ndev,
 	struct ethtool_dump *ed)
 {
@@ -2367,8 +2290,6 @@ done:
 }
 
 static const struct ethtool_ops ambeth_ethtool_ops = {
-	.get_settings		= ambeth_get_settings,
-	.set_settings		= ambeth_set_settings,
 	.get_link		= ethtool_op_get_link,
 	.get_dump_flag		= ambeth_get_dump_flag,
 	.get_dump_data		= ambeth_get_dump_data,
@@ -2379,6 +2300,8 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 	.set_msglevel		= ambeth_set_msglevel,
 	.get_pauseparam		= ambeth_get_pauseparam,
 	.set_pauseparam		= ambeth_set_pauseparam,
+	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
+	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
 };
 
 /* ==========================================================================*/
