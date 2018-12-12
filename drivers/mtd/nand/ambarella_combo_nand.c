@@ -575,10 +575,13 @@ static void ambarella_nand_cc_readid(struct ambarella_nand_host *host)
 	val = NAND_CC_WORD_CMD1VAL0(SPINAND_CMD_READ_ID);
 	writel_relaxed(val, host->regbase + NAND_CC_WORD_OFFSET);
 
+	writel_relaxed(0x0, host->regbase + NAND_COPY_ADDR_OFFSET);
+	writel_relaxed(0x0, host->regbase + NAND_CP_ADDR_H_OFFSET);
+
 	writel_relaxed(0x0, host->regbase + SPINAND_CC2_OFFSET);
 
 	val = SPINAND_CC_DATA_CYCLE(4) | SPINAND_CC_RW_READ |
-		SPINAND_CC_DUMMY_DATA_NUM(1);
+		SPINAND_CC_ADDR_CYCLE(1);
 	writel_relaxed(val, host->regbase + SPINAND_CC1_OFFSET);
 }
 
