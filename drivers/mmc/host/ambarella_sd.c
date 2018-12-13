@@ -43,6 +43,7 @@
 #include <linux/debugfs.h>
 #include <plat/rct.h>
 #include <plat/sd.h>
+
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 #include <plat/event.h>
 #include <linux/aipc/ipc_mutex.h>
@@ -51,7 +52,6 @@
 #endif
 #if defined(CONFIG_AMBALINK_SD)
 #include <linux/aipc/rpmsg_sd.h>
-
 static struct rpdev_sdinfo G_rpdev_sdinfo[SD_INSTANCES];
 #endif
 
@@ -59,6 +59,19 @@ static struct rpdev_sdinfo G_rpdev_sdinfo[SD_INSTANCES];
 static struct mmc_host *G_mmc[SD_INSTANCES];
 #endif
 
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#undef SD_INSTANCES
+/* AMBALINK: enable or diable sd1 in devicetree, not HERE */
+#define SD_INSTANCES			3
+/* The slot IDs */
+typedef enum _ambarella_slot_id {
+	SD_HOST_0 = 0,
+        SD_HOST_1,
+        SD_HOST_2,
+
+        SD_MAX_CARD      /* Total number of slot IDs */
+} ambarella_slot_id;
+#endif
 /* ==========================================================================*/
 struct ambarella_sd_dma_desc {
 	u16 attr;
@@ -834,6 +847,12 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 		if (clock <= 400000 && host->fixed_init_clk > 0)
 			clock = host->fixed_init_clk;
 
+		/* FIXME: When resume from self refresh, if `clock` is equal to `host->clk->rate`,
+		 * clk_set_rate() will return immediately without accessing the hardware register.
+		 * Calling clk_get_rate() before clk_set_rate() is order to set the `host->clk->rate`
+		 * as the actual value.*/
+		clk_get_rate(host->clk);
+
 		sd_clk = min_t(u32, max_t(u32, clock, 24000000), mmc->f_max);
 #if defined(CONFIG_AMBALINK_SD)
 		/* sdmmc0 clk already set by RTOS */
@@ -956,39 +975,22 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 		break;
 	}
 
-	switch (mode) {
-	case MMC_TIMING_UHS_DDR50:
-		tmp = readl_relaxed(host->regbase + SD_XC_CTR_OFFSET);
-		tmp |= SD_XC_CTR_DDR_EN;
-		writel_relaxed(tmp, host->regbase + SD_XC_CTR_OFFSET);
+	tmp = readl_relaxed(host->regbase + SD_XC_CTR_OFFSET);
+	tmp &= ~SD_XC_CTR_DDR_EN;
+	writel_relaxed(tmp, host->regbase + SD_XC_CTR_OFFSET);
 
-		tmp = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
-		tmp |= 0x0004;
-		writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
+	tmp = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
+	tmp &= ~0x0004;
+	writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
 
-		hostr |= SD_HOST_HIGH_SPEED;
-		writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
-		break;
-	default:
-		tmp = readl_relaxed(host->regbase + SD_XC_CTR_OFFSET);
-		tmp &= ~SD_XC_CTR_DDR_EN;
-		writel_relaxed(tmp, host->regbase + SD_XC_CTR_OFFSET);
-
-		tmp = readw_relaxed(host->regbase + SD_HOST2_OFFSET);
-		tmp &= ~0x0004;
-		writew_relaxed(tmp, host->regbase + SD_HOST2_OFFSET);
-
+	hostr &= ~SD_HOST_HIGH_SPEED;
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
-		if (force_sdio_host_high_speed == 1)
-			hostr |= SD_HOST_HIGH_SPEED;
-		else
-		hostr &= ~SD_HOST_HIGH_SPEED;
-#else
-		hostr &= ~SD_HOST_HIGH_SPEED;
+	if (force_sdio_host_high_speed == 1)
+		hostr |= SD_HOST_HIGH_SPEED;
 #endif
-		writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
-		break;
-	}
+
+	writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
+
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	if ((-1!=sdio_host_odly) || (-1!=sdio_host_ocly) || (-1!=sdio_host_idly)) {
 		amba_sdio_delay_post_apply(sdio_host_odly, sdio_host_ocly, sdio_host_idly);
@@ -1918,8 +1920,12 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 	mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST;
 
-	if (gpio_is_valid(host->v18_gpio) || host->force_v18)
+	if (gpio_is_valid(host->v18_gpio) || host->force_v18) {
 		mmc->ocr_avail |= MMC_VDD_165_195;
+
+		mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
+			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104;
+	}
 
 	return 0;
 }
@@ -2177,6 +2183,7 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	} else {
 		clk_set_rate(host->clk, host->mmc->f_max);
 		ambarella_sd_reset_all(host);
+		ambarella_sd_set_bus(host, host->bus_width, host->mode);
 	}
 
 	enable_irq(host->irq);

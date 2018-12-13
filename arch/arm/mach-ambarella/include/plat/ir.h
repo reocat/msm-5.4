@@ -27,10 +27,11 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define IR_OFFSET			0x1000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define IR_OFFSET			0x6000
+#else
+#define IR_OFFSET			0x1000
 #endif
 #define IR_BASE				(APB_BASE + IR_OFFSET)
 #define IR_REG(x)			(IR_BASE + (x))

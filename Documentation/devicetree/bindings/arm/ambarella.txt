@@ -609,7 +609,7 @@ Optional properties:
 - amb,tx-clk-invert: should be specified if inverting the Tx clk,
   take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
-- mdio-gpio: specifies to use GPIO to emulating MDIO bus.
+- amb,mdio-gpio: specifies to use GPIO to emulating MDIO bus.
 
 ii) Example
 -----------
@@ -976,6 +976,8 @@ FIFO directly, but there're 2 restriction for this mode:
     0 = duty cycle 1:1, this is the default setting.
     1 = duty cycle 2:3.
     2 = duty cycle 1:2.
+- amb,stretch-scl: extend the SCL clock to tune START/STOP setup and hold timing,
+  the default value is 1 if this option is not specified.
 
 ii) Subnode
 -----------
@@ -1002,6 +1004,7 @@ iii) Example
 		amb,i2c-class = <0x81>;
 		amb,turbo-mode;
 		amb,duty-cycle = <0>;
+		amb,stretch-scl = <1>;
 		status = "ok";
 
 		ak4642: codec@12 {
@@ -1169,6 +1172,13 @@ Required properties:
 - amb,non-bootstatus: don't support to report boot status, should be
   specified only for A5S.
 - amb,rct-regmap: phandle of RCT registers.
+
+Optional properties:
+- pinctrl-names: should contain only one value - "default".
+- pinctrl-0: pin control group to be used for this WDT controller. Latest chips
+  since CV22/CV2 can output RESET signal to external world through a pin belonged
+  to this WDT controller. Should be specified only when this RESET signal is
+  necessary.
 
 ii) Example
 -----------

@@ -29,15 +29,6 @@
 /* ==========================================================================*/
 #define ETH_INSTANCES			1
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3L)
-#define SUPPORT_GMII			0
-#define ETH_ENHANCED			0
-#else
-#define SUPPORT_GMII			1
-#define ETH_ENHANCED			1
-#endif
-
-/* ==========================================================================*/
 #define ETH_OFFSET			0xE000
 #define ETH_DMA_OFFSET			0xF000
 
@@ -46,6 +37,23 @@
 
 #define ETH_REG(x)			(ETH_BASE + (x))
 #define ETH_DMA_REG(x)			(ETH_DMA_BASE + (x))
+
+/* ==========================================================================*/
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3L)
+#define SUPPORT_GMII			0
+#define ETH_ENHANCED			0
+#else
+#define SUPPORT_GMII			1
+#define ETH_ENHANCED			1
+#endif
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L) || (CHIP_REV == CV1)
+#define	ETH_SUPPORT_AHB_MDIO		0
+#else
+#define	ETH_SUPPORT_AHB_MDIO		1
+#endif
 
 /* ==========================================================================*/
 #define ETH_MAC_CFG_OFFSET		0x0000

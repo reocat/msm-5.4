@@ -218,11 +218,14 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,
 
 		/* start 2D copy */
 		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
+		wait_for_completion(&transfer_completion);
+
 		height = height - MAX_TRANSFER_2D_HEIGHT;
 		src_addr = src_addr + src_pitch * MAX_TRANSFER_2D_HEIGHT;
 		dest_addr = dest_addr + dest_pitch * MAX_TRANSFER_2D_HEIGHT;
 	}
 
+	if (height) {
 		writel_relaxed((u32)(uintptr_t)src_addr, ambarella_gdma->regbase + GDMA_SRC_1_BASE_OFFSET);
 		writel_relaxed(src_pitch, ambarella_gdma->regbase + GDMA_SRC_1_PITCH_OFFSET);
 		writel_relaxed((u32)(uintptr_t)dest_addr, ambarella_gdma->regbase + GDMA_DST_BASE_OFFSET);
@@ -235,6 +238,8 @@ static inline int transfer_pitch_unit(u8 *dest_addr, u8 *src_addr,
 
 		/* start 2D copy */
 		writel_relaxed(1, ambarella_gdma->regbase + GDMA_OPCODE_OFFSET);
+		wait_for_completion(&transfer_completion);
+	}
 
 	return 0;
 
@@ -262,8 +267,6 @@ int dma_pitch_memcpy(struct gdma_param *params)
 	}
 	transfer_pitch_unit((u8 *)params->dest_addr, (u8 *)params->src_addr,
 		params->src_pitch, params->dest_pitch, params->width, params->height);
-
-	wait_for_completion(&transfer_completion);
 
 	if (!params->dest_non_cached) {
 		ambcache_inv_range((void *)params->dest_virt_addr, size);

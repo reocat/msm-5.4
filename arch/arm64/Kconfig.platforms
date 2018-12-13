@@ -59,6 +59,13 @@ config ARCH_AMBARELLA_CV2
 	help
 	  Say Y here if you are using Ambarella CV2.
 
+config ARCH_AMBARELLA_CV25
+	bool "CV25"
+	select ARCH_AMBARELLA_COMBO_NAND
+	select ARCH_AMBARELLA_HW_RANDOM
+	help
+	  Say Y here if you are using Ambarella CV25.
+
 endchoice
 
 config ARCH_SUNXI

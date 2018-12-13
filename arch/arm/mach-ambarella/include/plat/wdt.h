@@ -27,10 +27,11 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define WDOG_OFFSET			0x2000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define WDOG_OFFSET			0xC000
+#else
+#define WDOG_OFFSET			0x2000
 #endif
 #define WDOG_BASE			(APB_BASE + WDOG_OFFSET)
 #define WDOG_REG(x)			(WDOG_BASE + (x))

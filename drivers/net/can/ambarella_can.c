@@ -1,856 +1,842 @@
+/*
+ * ambarella_can.c - CAN network driver for Ambarella SoC CAN controller
+ *
+ * History:
+ *	2018/07/04 - [Ken He] created file
+ *
+ * Copyright (C) 2004-2009, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 #include <linux/clk.h>
+#include <linux/errno.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/netdevice.h>
-#include <linux/can.h>
+#include <linux/of.h>
+#include <linux/platform_device.h>
+#include <linux/skbuff.h>
+#include <linux/string.h>
+#include <linux/types.h>
 #include <linux/can/dev.h>
 #include <linux/can/error.h>
 #include <linux/can/led.h>
-#include <linux/platform_device.h>
-#include <linux/delay.h>
-#include <linux/interrupt.h>
-#include <linux/io.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/of_device.h>
+#include <linux/pm_runtime.h>
 
-#define DRV_NAME                                "ambacan"
-#define CAN_CTRL                                0x000
-#define CAN_TT_CTRL                             0x004
-#define CAN_RESET                               0x008
-#define CAN_TQ                                  0x010
-#define CAN_TQ_FD                               0x014
-#define CAN_TT_TIMER_ENABLE                     0x01C
-#define CAN_ERR_STATUS                          0x020
-#if 1
-#define CAN_RX_CNT                              0x028
-#else
-#define CAN_INT_CTRL                            0x028
-#endif
-#define CAN_INT_STATUS                          0x02C
-#define CAN_INT_RAW                             0x030
-#define CAN_INT_MASK                            0x034
-#define CAN_ENABLE                              0x038
-#define CAN_BUF_CFG_DONE                        0x080
-#define CAN_MSG_REQUEST                         0x084
-#define CAN_MSG_GRANT                           0x088
-#define CAN_TX_BUF_DONE                         0x08C
-#define CAN_RX_BUF_DONE                         0x090
-#define CAN_MSG_BUG_TYPE                        0x09C
-#define CAN_MSG_BUF                             0x200
-#define CAN_MSG_BUF_DATA                        0x800
+#include <plat/can.h>
+#include <plat/rct.h>
 
-#define CAN_CTRL_LOOPBACK                       0x01
-#define CAN_CTRL_LISTEN                         BIT(2)
-#define CAN_CTRL_AUTO_RESPONSE                  BIT(3)
-#define CAN_CTRL_FD                             BIT(31)
+#define DRIVER_NAME	"ambarella_can"
 
-#define CAN_STATUS_BUS_OFF                      BIT(0)
-#define CAN_STATUS_ERR_PASSIVE                  BIT(1)
-#define CAN_STATUS_ACK_ERR                      BIT(2)
-#define CAN_STATUS_FORM_ERR                     BIT(3)
-#define CAN_STATUS_CRC_ERR                      BIT(4)
-#define CAN_STATUS_STUFF_ERR                    BIT(5)
-#define CAN_STATUS_BIT_ERR                      BIT(6)
-#define CAN_STATUS_TIMEOUT                      BIT(7)
-#define CAN_STATUS_RX_OVERFLOW                  BIT(8)
-#if 1
-#define CAN_STATUS_RX_DONE                      BIT(9)
-#define CAN_STATUS_TX_DONE                      BIT(10)
-#define CAN_STATUS_TRX_DONE                     (CAN_STATUS_TX_DONE | CAN_STATUS_RX_DONE)
-#define CAN_STATUS_TIMER_WRAP                   BIT(11)
-#define CAN_STATUS_WAKE_UP                      BIT(12)
-#define CAN_STATUS_REPLAY_FAIL                  BIT(13)
-#define CAN_STATUS_RX_DONE_TIMEOUT              BIT(14)
-#define CAN_STATUS_TX_DONE_TIMEOUT              BIT(15)
-#define CAN_STATUS_RX_DMA_DESC_DONE             BIT(16)
-#define CAN_STATUS_RX_DMA_DONE                  BIT(17)
-#define CAN_STATUS_RX_DMA_TIMEOUT               BIT(18)
-#define CAN_STATUS_RX_DMA_GET_SPECIAL_ID        BIT(19)
-#define CAN_STATUS_RX_DMA_GET_RTR               BIT(20)
-#define CAN_STATUS_FD_STUFF_ERR                 BIT(21)
-#else
-#define CAN_STATUS_TRX_DONE                     BIT(9)
-#define CAN_STATUS_TIMER_WRAP                   BIT(10)
-#define CAN_STATUS_WAKE_UP                      BIT(11)
-#define CAN_STATUS_REPLAY_FAIL                  BIT(12)
-#endif
+/* We use the mbuf[0] for TX BUF */
+#define AMBA_CAN_TX_BUF_SIZE	(1)
+#define AMBA_CAN_RX_DMA_SIZE	(8)
+#define AMBA_CAN_MSG_BUF_NUM	(32)
+#define	AMBA_CAN_MSG_DSIZE	(64)
 
-#define CAN_BUS_ERR                             CAN_STATUS_ACK_ERR | CAN_STATUS_FORM_ERR | \
-                                                CAN_STATUS_CRC_ERR | CAN_STATUS_STUFF_ERR | \
-                                                CAN_STATUS_BIT_ERR
 
-#define CAN_ERR_STATUS_ERROR_STATE(x)           (((x) & 0x6000000) >> 25)
-#define CAN_ERR_STATUS_RX_ERR_CNT(x)            (((x) & 0x1FF0000) >> 16)
-#define CAN_ERR_STATUS_TX_ERR_CNT(x)            ((x) & 0x1ff)
+#define	AMBA_CAN_IRQ_DEFAULT	(CAN_INT_ENTER_BUS_OFF | CAN_INT_RX_DONE \
+				| CAN_INT_TX_DONE | CAN_INT_RP_FAIL)
 
-#define CAN_ERR_STATUS_IDLE                     0
-#define CAN_ERR_STATUS_ACTIVE                   1
-#define CAN_ERR_STATUS_PASSIVE                  2
-#define CAN_ERR_STATUS_BUF_OFF                  3
+#define	AMBA_CAN_IRQ_DMA	(CAN_INT_ENTER_BUS_OFF | CAN_INT_RX_DONE \
+				| CAN_INT_TX_DONE | CAN_INT_RP_FAIL \
+				| CAN_INT_RX_DSC_DONE | CAN_INT_RX_DMA_DONE)
 
-#define CAN_TQ_TSEG1(x)                         (((x) & 0x1f) << 4)
-#define CAN_TQ_TSEG2(x)                         ((x) & 0xf)
-#define CAN_TQ_SJW(x)                           (((x) & 0xf) << 9)
-#define CAN_TQ_PRE(x)                           (((x) & 0xff) << 13)
+#define AMBA_CAN_IRQ_BUS_ERR	(CAN_INT_ACK_ERR | CAN_INT_FORM_ERR \
+				| CAN_INT_CRC_ERR | CAN_INT_STUFF_ERR | CAN_INT_BIT_ERR)
 
-#define CAN_TQ_SYNC                             BIT(21)
-#define CAN_TQ_DEALY(x)                         (((x) & 0xff) << 22)
-#define CAN_TQ_3_SAMPLE                         BIT(30)
-
-#define CAN_INT_CTRL_SET_INT_THRESHOLD(x)       ((x & 0xf))
-#define CAN_INT_CTRL_SET_INT_TIMEOUT(x)         (((x) & 0xffffff) << 8)
-
-#define CAN_MSG_EXT                             BIT(29)
-#define CAN_MSG_RTR                             BIT(7)
-#define CAN_MSG_EDL                             BIT(6)
-#define CAN_MSG_BRS                             BIT(5)
-#define CAN_MSG_ESI                             BIT(4)
-#define CAN_MSG_LEN(x)                          ((x) & 0xf)
-
-#define CAN_BUF_ID(x)                           (CAN_MSG_BUF + x*16)
-#define CAN_BUF_CTRL(x)                         (CAN_MSG_BUF + x*16 + 0x4)
-#define CAN_BUF_DATA_FIELD(x, y)                (CAN_MSG_BUF_DATA + x*64 + y*4)
-
-#define TX_BUF_NUM                              1
-#define TOTAL_BUF_NUM                           16
-
-//#define ENABLE_AMBACAN_DEBUG_MSG              1
-#ifdef ENABLE_AMBACAN_DEBUG_MSG
-#define AMBACAN_DMSG(...)                       printk(__VA_ARGS__)
-#else
-#define AMBACAN_DMSG(...)
-#endif
-
-static DEFINE_SPINLOCK(can_lock);
-static int msg_buf_occupy[TX_BUF_NUM];
-
+static u32 mbuf_cfg_done;
+/**
+ * struct ambarella_can_priv - This definition define CAN driver instance
+ * @can:			CAN private data structure.
+ * @tx_head:			Tx CAN packets ready to send on the queue
+ * @tx_tail:			Tx CAN packets successfully sended on the queue
+ * @tx_max:			Maximum number packets the driver can send
+ * @napi:			NAPI structure
+ * @dev:			Network device data structure
+ * @reg_base:			Ioremapped address to registers
+ * @irq_flags:			For request_irq()
+ * @bus_clk:			Pointer to struct clk
+ * @can_clk:			Pointer to struct clk
+ */
 struct ambacan_priv {
-	struct can_priv can;	/* must be the first member */
+	struct can_priv can;
+	unsigned int tx_head;
+	unsigned int tx_tail;
+	unsigned int tx_max;
 	struct napi_struct napi;
-	struct net_device *dev;
-	struct device *device;
-	void __iomem *regs;
-	u32 irqstatus;
-	struct clk *clk;
+	struct device *dev;
+	void __iomem *reg_base;
+	unsigned long irq_flags;
+	struct clk *can_clk;
+	spinlock_t	lock;
 };
 
-static const struct can_bittiming_const ambacan_bittiming_const = {
-	.name = DRV_NAME,
+/* CAN Bittiming constants */
+static const struct can_bittiming_const ambarella_bittiming_const = {
+	.name = DRIVER_NAME,
 	.tseg1_min = 1,
 	.tseg1_max = 16,
 	.tseg2_min = 1,
 	.tseg2_max = 8,
 	.sjw_max = 4,
 	.brp_min = 1,
-	.brp_max = 1024,
+	.brp_max = 16,
 	.brp_inc = 1,
 };
 
-static const struct can_bittiming_const ambacan_data_bittiming_const = {
-	.name = KBUILD_MODNAME,
-	.tseg1_min = 2,		/* Time segment 1 = prop_seg + phase_seg1 */
-	.tseg1_max = 16,
-	.tseg2_min = 1,		/* Time segment 2 = phase_seg2 */
-	.tseg2_max = 8,
-	.sjw_max = 4,
-	.brp_min = 1,
-	.brp_max = 32,
-	.brp_inc = 1,
-};
-
-static int get_avail_buf(void)
+/**
+ * set_reset_mode - Resets the CAN device mode
+ * @ndev:	Pointer to net_device structure
+ *
+ * This is the driver reset mode routine.The driver
+ * enters into configuration mode.
+ *
+ * Return: 0 on success and failure value on error
+ */
+static int set_reset_mode(struct net_device *ndev)
 {
-	int i, found = 0;
-	unsigned long flags;
+	struct ambacan_priv *priv = netdev_priv(ndev);
 
-	spin_lock_irqsave(&can_lock, flags);
-	for (i=0; i<TX_BUF_NUM; i++) {
-		if (msg_buf_occupy[i] == 0) {
-			found = 1;
-			msg_buf_occupy[i] = 1;
-			break;
+	writel_relaxed((CAN_RST_CANC | CAN_RST_CANC_DMA), priv->reg_base + CAN_RST_OFFSET);
+	writel_relaxed(0, priv->reg_base + CAN_RST_OFFSET);
+
+	return 0;
+}
+
+static int ambarella_can_set_bittiming(struct net_device *ndev)
+{
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	struct can_bittiming *bt = &priv->can.bittiming;
+	u32 cfg_tq;
+
+	netdev_dbg(ndev, "set bit timing brp=[0x%x] sjw=[0x%x] prop_seg=[0x%x] seg1=[0x%x] seg2=[0x%x] \n",
+				bt->brp, bt->sjw, bt->prop_seg, bt->phase_seg1, bt->phase_seg2);
+	cfg_tq = (((bt->brp - 1) & 0xFF) << 13 )|
+			(((bt->sjw - 1) & 0xF) << 9) |
+			(((bt->prop_seg + bt->phase_seg1 - 1) & 0x1F) << 4) |
+			((bt->phase_seg2 - 1) & 0xF);
+
+	netdev_dbg(ndev, "setting BITTIMING=0x%08x\n", cfg_tq);
+
+	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
+		writel_relaxed(cfg_tq, priv->reg_base + CAN_TQ_FD_OFFSET);
+	else {
+		if (priv->can.ctrlmode & CAN_CTRLMODE_3_SAMPLES)
+			cfg_tq |= (1 << 30);
+		writel_relaxed(cfg_tq, priv->reg_base + CAN_TQ_OFFSET);
+	}
+
+	return 0;
+}
+
+static int ambarella_can_start(struct net_device *ndev)
+{
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	int err;
+	u32 val_ctrl;
+	u32 mbuf_tx;
+
+	/* Check if it is in reset mode */
+	err = set_reset_mode(ndev);
+	if (err < 0)
+		return err;
+
+	/* disable interrupts */
+	writel_relaxed(CAN_INT_ALL, priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+
+	/* disable chip */
+	writel_relaxed(0, priv->reg_base + CAN_CANC_EN_OFFSET);
+
+	err = ambarella_can_set_bittiming(ndev);
+	if (err < 0)
+		return err;
+
+	/* mbuf0 as tx */
+	mbuf_cfg_done = 0xFFFFFFFE;
+	mbuf_tx = (1 << CAN_TX_BUF_NUM);
+
+	/* Enable interrupts */
+	writel_relaxed((AMBA_CAN_IRQ_DEFAULT | CAN_INT_RX_DONE_TIMEOUT |
+			CAN_INT_ENTER_ERR_PSV | AMBA_CAN_IRQ_BUS_ERR),
+				priv->reg_base + CAN_GLOBAL_OP_ITR_MSK_OFFSET);
+
+	netdev_dbg(ndev, "priv ctrlmode is 0x%x \n", priv->can.ctrlmode);
+	/* enable chip */
+	val_ctrl = readl_relaxed(priv->reg_base + CAN_CTRL_OFFSET);
+	val_ctrl &= 0xFFFFFFF0;
+	/* Check whether it is loopback mode or normal mode  */
+	if (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY) {
+		val_ctrl |= CAN_LISTEN_MODE;
+		mbuf_cfg_done = 0xFFFFFFFF;
+		mbuf_tx = 0;
+	}
+
+	if (priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK)
+		val_ctrl |= CAN_LOOPBACK_MODE_OUT;
+
+	writel_relaxed(val_ctrl, priv->reg_base + CAN_CTRL_OFFSET);
+	writel_relaxed(mbuf_tx, priv->reg_base + CAN_MBUF_TX_OFFSET);
+	writel_relaxed(mbuf_cfg_done, priv->reg_base + CAN_MBUF_CFG_DONE_OFFSET);
+
+	//writel_relaxed(0, priv->reg_base + CAN_TX_DONE_TH_OFFSET);
+	//writel_relaxed(0, priv->reg_base + CAN_TX_DONE_TIMER_OFFSET);
+	writel_relaxed(1, priv->reg_base + CAN_RX_DONE_TH_OFFSET);
+	writel_relaxed(0, priv->reg_base + CAN_RX_DONE_TIMER_OFFSET);
+
+	writel_relaxed(1, priv->reg_base + CAN_CANC_EN_OFFSET);
+
+	priv->can.state = CAN_STATE_ERROR_ACTIVE;
+	return 0;
+}
+
+static int ambarella_can_do_set_mode(struct net_device *ndev, enum can_mode mode)
+{
+	int ret;
+
+	switch (mode) {
+	case CAN_MODE_START:
+		ret = ambarella_can_start(ndev);
+		if (ret < 0) {
+			netdev_err(ndev, "starting CAN failed!\n");
+			return ret;
 		}
+		netif_wake_queue(ndev);
+		break;
+	default:
+		ret = -EOPNOTSUPP;
+		break;
 	}
-	spin_unlock_irqrestore(&can_lock, flags);
 
-	/* can't find available buffer. */
-	if (found == 0) {
-		i = -1;
-	}
-
-	return i;
+	return ret;
 }
 
-static void set_avail_buf(int id)
+static int ambarella_can_request_msgbuf(struct net_device *ndev, u32 num)
 {
-	msg_buf_occupy[id] = 0;
-}
-
-static int ambacan_read_frame(struct net_device *dev, int buf_id)
-{
-	struct net_device_stats *stats = &dev->stats;
-	const struct ambacan_priv *priv = netdev_priv(dev);
-	/*
-	 * We support can 2.0 & fd, but we use struct canfd_frame to handel all the cases.
-	 */
-	struct canfd_frame *cf;
-	struct sk_buff *skb;
-	u32 reg_id, ctrl, data;
-	int data_size = 0, i, j = 0, ret;
-
-	ctrl = readl_relaxed(priv->regs + CAN_BUF_CTRL(buf_id));
-	if (ctrl & CAN_MSG_EDL) {
-		/* CAN FD frame */
-		skb = alloc_canfd_skb(dev, &cf);
-		cf->len = can_dlc2len(ctrl & 0xf);
-	} else {
-		/* CAN 2.0 frame */
-		skb = alloc_can_skb(dev, (struct can_frame **)&cf);
-		cf->len = get_can_dlc(ctrl & 0xf);
-	}
-
-	if (unlikely(!skb)) {
-		stats->rx_dropped++;
-		return 0;
-	}
-
-	reg_id = readl_relaxed(priv->regs + CAN_BUF_ID(buf_id));
-	if (reg_id & CAN_MSG_EXT) {
-		cf->can_id = ((reg_id >> 0) & CAN_EFF_MASK) | CAN_EFF_FLAG;
-	} else {
-		cf->can_id = (reg_id >> 18) & CAN_SFF_MASK;
-	}
-
-	if (ctrl & CAN_MSG_EDL) {
-		/* CAN FD frame */
-		if (ctrl & CAN_MSG_ESI) {
-			cf->flags |= CANFD_ESI;
-		}
-		if (ctrl & CAN_MSG_BRS) {
-			cf->flags |= CANFD_BRS;
-		}
-
-	} else {
-		/* CAN 2.0 frame */
-		if (ctrl & CAN_MSG_RTR) {
-			cf->can_id |= CAN_RTR_FLAG;
-		}
-	}
-
-	while (data_size < cf->len) {
-		data = readl_relaxed(priv->regs + CAN_BUF_DATA_FIELD(buf_id, j));
-		for (i=0; i<4; i++) {
-			if (data_size < cf->len) {
-				cf->data[data_size] = (u8) ((data >> (i*8)) & 0xff);
-				data_size++;
-			}
-		}
-		j++;
-	}
-	// recv buf done
-	writel_relaxed(BIT(buf_id), priv->regs + CAN_BUF_CFG_DONE);
-
-	stats->rx_packets++;
-	stats->rx_bytes += cf->len;
-	ret = netif_receive_skb(skb);
-	if (ret == NET_RX_DROP)
-		AMBACAN_DMSG("%s packet is dropped\n", __func__);
-	return 1;
-}
-
-static enum can_state ambacan_get_state(int cnt)
-{
-	enum can_state state;
-
-	if (cnt < 96) {
-		state = CAN_STATE_ERROR_ACTIVE;
-	} else if (cnt < 128) {
-		state = CAN_STATE_ERROR_WARNING;
-	} else if (cnt < 256) {
-		state = CAN_STATE_ERROR_PASSIVE;
-	} else if (cnt >= 256) {
-		state = CAN_STATE_BUS_OFF;
-	}
-	return state;
-}
-
-static void ambacan_get_bus_err(struct net_device *dev,
-		       struct can_frame *cf)
-{
-	struct ambacan_priv *priv = netdev_priv(dev);
-	int rx_errors = 0, tx_errors = 0;
-	u32 reg_esr;
-
-	reg_esr = priv->irqstatus;
-
-	cf->can_id |= CAN_ERR_PROT | CAN_ERR_BUSERROR;
-
-	/*
-	 * We don't divid bit errors into dominant bit and recessive bit.
-	 * We only have one kind of bit error.
-	 */
-	if (reg_esr & CAN_STATUS_BIT_ERR) {
-		netdev_dbg(dev, "BIT_ERR irq\n");
-		cf->data[2] |= CAN_ERR_PROT_BIT0 | CAN_ERR_PROT_BIT1;
-		tx_errors = 1;
-	}
-
-	if (reg_esr & CAN_STATUS_ACK_ERR) {
-		netdev_dbg(dev, "ACK_ERR irq\n");
-		cf->can_id |= CAN_ERR_ACK;
-		cf->data[3] = CAN_ERR_PROT_LOC_ACK;
-		tx_errors = 1;
-	}
-	if (reg_esr & CAN_STATUS_CRC_ERR) {
-		netdev_dbg(dev, "CRC_ERR irq\n");
-		cf->data[2] |= CAN_ERR_PROT_BIT;
-		cf->data[3] = CAN_ERR_PROT_LOC_CRC_SEQ;
-		rx_errors = 1;
-	}
-	if (reg_esr & CAN_STATUS_FORM_ERR) {
-		netdev_dbg(dev, "FRM_ERR irq\n");
-		cf->data[2] |= CAN_ERR_PROT_FORM;
-		rx_errors = 1;
-	}
-	if (reg_esr & CAN_STATUS_STUFF_ERR) {
-		netdev_dbg(dev, "STF_ERR irq\n");
-		cf->data[2] |= CAN_ERR_PROT_STUFF;
-		rx_errors = 1;
-	}
-
-	priv->can.can_stats.bus_error++;
-	if (rx_errors)
-		dev->stats.rx_errors++;
-	if (tx_errors)
-		dev->stats.tx_errors++;
-}
-
-static int ambacan_poll_bus_err(struct net_device *dev)
-{
-	struct sk_buff *skb;
-	struct can_frame *cf;
-
-	skb = alloc_can_err_skb(dev, &cf);
-	if (unlikely(!skb))
-		return 0;
-
-	ambacan_get_bus_err(dev, cf);
-
-	dev->stats.rx_packets++;
-	dev->stats.rx_bytes += cf->can_dlc;
-	netif_receive_skb(skb);
-
-	return 1;
-}
-
-static int ambacan_poll_state(struct net_device *dev)
-{
-	struct ambacan_priv *priv = netdev_priv(dev);
-	struct sk_buff *skb;
-	struct can_frame *cf;
-	enum can_state new_state = 0, rx_state = 0, tx_state = 0;
-	u32 err_status, tx_err_cnt, rx_err_cnt;
-
-	err_status = priv->irqstatus;
-	if (err_status & (CAN_BUS_ERR)) {
-		rx_err_cnt = CAN_ERR_STATUS_RX_ERR_CNT(readl_relaxed(priv->regs + CAN_ERR_STATUS));
-		tx_err_cnt = CAN_ERR_STATUS_TX_ERR_CNT(readl_relaxed(priv->regs + CAN_ERR_STATUS));
-
-		rx_state = ambacan_get_state(rx_err_cnt);
-		tx_state = ambacan_get_state(tx_err_cnt);
-		new_state = max(rx_state, tx_state);
-
-		if (new_state == priv->can.state)
-			return 0;
-
-		skb = alloc_can_err_skb(dev, &cf);
-		if (unlikely(!skb))
-			return 0;
-
-		can_change_state(dev, cf, tx_state, rx_state);
-
-		if (unlikely(new_state == CAN_STATE_BUS_OFF))
-			can_bus_off(dev);
-
-		dev->stats.rx_packets++;
-		dev->stats.rx_bytes += cf->can_dlc;
-		netif_receive_skb(skb);
-	}
-
-	return 1;
-
-}
-
-static inline int ambacan_has_and_handle_berr(const struct ambacan_priv *priv)
-{
-	return (priv->can.ctrlmode & CAN_CTRLMODE_BERR_REPORTING) &&
-		(priv->irqstatus & (CAN_BUS_ERR));
-}
-
-
-static int ambacan_poll(struct napi_struct *napi, int quota)
-{
-	struct net_device *dev = napi->dev;
-	const struct ambacan_priv *priv = netdev_priv(dev);
-	int work_done = 0, i;
-	u32 rx_status;
-
-	rx_status = readl_relaxed(priv->regs + CAN_RX_BUF_DONE);
-#if 0
-	rx_status = rx_status >> 16;
-#endif
-	work_done += ambacan_poll_state(dev);
-
-	for (i=0; i<TOTAL_BUF_NUM; i++) {
-		if (rx_status > 0) {
-			if (rx_status & 1) {
-				work_done += ambacan_read_frame(dev, i);
-			}
-			rx_status = rx_status >> 1;
-		}
-	}
-
-	/* report bus errors */
-	if (ambacan_has_and_handle_berr(priv) && work_done < quota)
-		work_done += ambacan_poll_bus_err(dev);
-
-
-	if (work_done < quota) {
-		napi_complete(napi);
-	} else{
-		AMBACAN_DMSG("%s recv pkt %d exceeds the quota\n", __func__, work_done);
-	}
-
-	return work_done;
-}
-
-static irqreturn_t ambacan_irq(int irq, void *dev_id)
-{
-	struct net_device *dev = dev_id;
-	struct net_device_stats *stats = &dev->stats;
-	struct ambacan_priv *priv = netdev_priv(dev);
-	u32 status, rx_status = 0, tx_status = 0;
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	u32 request;
+	u32 requestmask = 1 << num;
 	int i;
 
-	status = readl_relaxed(priv->regs + CAN_INT_STATUS);
-	priv->irqstatus = status;
-	if (status) {
-		/*
-		 * schedule NAPI for:
-		 * - receive pkt
-		 * - state change
-		 * - bus error IRQ and bus error reporting is enabled
-		 */
-		if (status & CAN_STATUS_TRX_DONE) {
-#if 1
-			rx_status = readl_relaxed(priv->regs + CAN_RX_BUF_DONE);
-			tx_status = readl_relaxed(priv->regs + CAN_TX_BUF_DONE);
-#else
-			status = readl_relaxed(priv->regs + CAN_RX_BUF_DONE);
-			rx_status = status >> 16;
-			tx_status = status & 0xFFFF;
-#endif
-		}
-
-		if ((rx_status > 0) || (priv->irqstatus & (CAN_BUS_ERR)))
-			napi_schedule(&priv->napi);
-
-		/* transmission complete interrupt */
-		if (tx_status > 0) {
-			for (i=0; i<TX_BUF_NUM; i++) {
-				if (tx_status & 1) {
-					set_avail_buf(i);
-					stats->tx_bytes += can_get_echo_skb(dev, i);
-					stats->tx_packets++;
-					netif_wake_queue(dev);
-				}
-				tx_status = tx_status >> 1;
-			}
+	request = readl_relaxed(priv->reg_base + CAN_MSG_REQ_REG1_OFFSET);
+	request |= requestmask;
+	writel_relaxed(request, priv->reg_base + CAN_MSG_REQ_REG1_OFFSET);
+	for (i= 0; i < 3; i++){
+		request = readl_relaxed(priv->reg_base + CAN_MSG_REQ_REG2_OFFSET);
+		if (request & requestmask) {
+			return 1;
 		}
 	}
 
-	/* FIFO overflow */
-	if (priv->irqstatus & CAN_STATUS_RX_OVERFLOW) {
-		dev->stats.rx_over_errors++;
-		dev->stats.rx_errors++;
-		AMBACAN_DMSG("%s overflow\n", __func__);
-	}
+	return 0;
 
-	// clear interrupt
-	writel_relaxed(priv->irqstatus, priv->regs + CAN_INT_RAW);
-	return IRQ_HANDLED;
 }
-
-static netdev_tx_t ambacan_start_xmit(struct sk_buff *skb, struct net_device *dev)
+static netdev_tx_t ambarella_can_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
-	const struct ambacan_priv *priv = netdev_priv(dev);
-	struct canfd_frame *cf = (struct canfd_frame *)skb->data;
-	int buf_id, ret, count = 0, i = 0;
-	u32 request, request_mask, status_mask;
-	u32 msg_id = 0, msg_ctrl = 0;
-	u32 data = 0;
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	struct net_device_stats *stats = &ndev->stats;
+	struct can_frame *cf = (struct can_frame *)skb->data;
+	u32 id, cfg_done, buf_ctrl = 0;
+	u32 i, lwords;
 
-	if (can_dropped_invalid_skb(dev, skb))
+	if (can_dropped_invalid_skb(ndev, skb))
 		return NETDEV_TX_OK;
 
-	// get the grant of the message buffer
-	buf_id = get_avail_buf();
-	if (buf_id == -1) {
-		netdev_err(dev, "can't get available tx buf\n");
-		return NETDEV_TX_BUSY;
-	}
-#if 1
-	request_mask = 1 << buf_id;
-#else
-	request_mask = 1 << (16 + buf_id);
-#endif
-	request = readl_relaxed(priv->regs + CAN_MSG_REQUEST);
-	request |= request_mask;
-	writel_relaxed(request, priv->regs + CAN_MSG_REQUEST);
-
-	// poll the message buffer request
-	request = readl_relaxed(priv->regs + CAN_MSG_REQUEST);
-	if ((request & request_mask) == 0) {
-#if 1
-		request = readl_relaxed(priv->regs + CAN_MSG_GRANT);
-#endif
-		status_mask = 1 << buf_id;
-		ret = request & status_mask;
-	} else {
-		netdev_err(dev, "request tx buf failed\n");
-		return NETDEV_TX_BUSY;
-	}
-
-	if (ret == 0) {
-		netdev_err(dev, "tx buf is busy\n");
-		return NETDEV_TX_BUSY;
-	}
-
-	netif_stop_queue(dev);
-	// configure the message buffer
-	// configure the id
+	/* Watch carefully on the bit sequence */
 	if (cf->can_id & CAN_EFF_FLAG) {
-		msg_id = cf->can_id & CAN_EFF_MASK;
-		msg_id |= CAN_MSG_EXT;
+		/* Extended CAN ID format */
+		id = cf->can_id & CAN_EFF_MASK;
+		id |= CAN_MSG_EFF_ID_MASK;
 	} else {
-		msg_id = (cf->can_id & CAN_SFF_MASK) << 18;
-	}
-	writel_relaxed(msg_id, priv->regs + CAN_BUF_ID(buf_id));
-
-	// configure the priority
-
-	// configure contrl settings
-	if (can_is_canfd_skb(skb)) {
-		/* CAN FD frames */
-		msg_ctrl |= CAN_MSG_LEN(can_len2dlc(cf->len));
-		// CAN_FD should set EDL bit.
-		msg_ctrl |= CAN_MSG_EDL;
-
-		if(cf->flags & CANFD_BRS)
-			msg_ctrl |= CAN_MSG_BRS;
-
-		if(cf->flags & CANFD_ESI)
-			msg_ctrl |= CAN_MSG_ESI;
-	} else {
-		/* CAN 2.0 frames */
-		msg_ctrl |= CAN_MSG_LEN(cf->len);
-		if (cf->can_id & CAN_RTR_FLAG)
-			msg_ctrl |= CAN_MSG_RTR;
+		/* Standard CAN ID format */
+		id = (cf->can_id & CAN_SFF_MASK) << CAN_BASEID_SHIFT;
 	}
 
-	writel_relaxed(msg_ctrl, priv->regs + CAN_BUF_CTRL(buf_id));
+	buf_ctrl = cf->can_dlc;		/* DLC */
+	/* frames remote TX request */
+	if (cf->can_id & CAN_RTR_FLAG)
+		buf_ctrl |= CAN_IDR_RTR_MASK;
 
-	// fill the payload
-	while (count < cf->len) {
-		data = 0;
-		for (i=0; i<4; i++) {
-			if (count < cf->len) {
-				data |= (cf->data[count] << (i*8));
-				count++;
-			} else {
-				break;
-			}
-		}
-		if (data) {
-			writel_relaxed(data, priv->regs +
-				CAN_BUF_DATA_FIELD(buf_id, (count - 1)/4));
-		}
+	/* Write the Frame to CAN TX FIFO MBUF0 */
+	writel_relaxed(id, priv->reg_base + CAN_MBUF0_ID_OFFSET);
+	/* If the CAN frame is RTR frame this write triggers tranmission */
+	writel_relaxed(buf_ctrl, priv->reg_base + CAN_MBUF0_CTL_OFFSET);
+
+	if (!(cf->can_id & CAN_RTR_FLAG)) {
+		if (ambarella_can_request_msgbuf(ndev, 0) > 0) {
+			lwords = DIV_ROUND_UP(cf->can_dlc, sizeof(u32));
+			for (i = 0; i < lwords; i++)
+				writel(*((u32 *)cf->data + i),
+					priv->reg_base + (CAN_MBUF0_DATA0_OFFSET + i * sizeof(u32)));
+
+			/* If the CAN frame is Standard/Extended frame this
+			 * write triggers tranmission
+			 */
+
+			stats->tx_bytes += cf->can_dlc;
+		} else
+			return NETDEV_TX_BUSY;
 	}
 
-	can_put_echo_skb(skb, dev, buf_id);
+	can_put_echo_skb(skb, ndev, priv->tx_head % priv->tx_max);
+	priv->tx_head++;
 
-	// write data done
-	writel_relaxed(BIT(buf_id), priv->regs + CAN_BUF_CFG_DONE);
+	cfg_done = readl_relaxed(priv->reg_base + CAN_MBUF_CFG_DONE_OFFSET);
+	cfg_done |= (1 << CAN_TX_BUF_NUM);
+	writel_relaxed(cfg_done, priv->reg_base + CAN_MBUF_CFG_DONE_OFFSET);
+
 	return NETDEV_TX_OK;
 }
 
-static void ambacan_set_bittiming(struct net_device *dev)
+static void ambarella_can_state(struct net_device *ndev, u32 itr)
 {
-	const struct ambacan_priv *priv = netdev_priv(dev);
-	const struct can_bittiming *bt = &priv->can.bittiming;
-	u32 reg_tq = 0;
+	struct ambacan_priv *priv = netdev_priv(ndev);
 
-
-	reg_tq |= CAN_TQ_PRE(bt->brp - 1) |
-		CAN_TQ_TSEG1(bt->phase_seg1 - 1) |
-		CAN_TQ_TSEG2(bt->phase_seg2 - 1) |
-		CAN_TQ_SJW(bt->sjw - 1)		 |
-		((priv->can.ctrlmode & CAN_CTRLMODE_3_SAMPLES) ? CAN_TQ_3_SAMPLE : 0) ;
-
-	writel_relaxed(reg_tq, priv->regs + CAN_TQ);
+	/* Check for Wake up interrupt if set put CAN device in Active state */
+	if (itr & CAN_INT_WAKE_UP)
+		priv->can.state = CAN_STATE_ERROR_ACTIVE;
 }
 
-static void ambacan_set_data_bittiming(struct net_device *dev)
+static int ambarella_can_err(struct net_device *ndev, u32 isr)
 {
-	const struct ambacan_priv *priv = netdev_priv(dev);
-	const struct can_bittiming *bt = &priv->can.data_bittiming;
-	u32 reg_tq = 0;
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	struct net_device_stats *stats = &ndev->stats;
+	struct can_frame *cf;
+	struct sk_buff *skb;
+	u32 rxerr, txerr, err;
+	u32 err_state;
 
-	reg_tq |= CAN_TQ_PRE(bt->brp - 1) |
-		CAN_TQ_TSEG1(bt->phase_seg1 - 1) |
-		CAN_TQ_TSEG2(bt->phase_seg2 - 1) |
-		CAN_TQ_SJW(bt->sjw - 1);
+	/* create zero'ed CAN frame buffer */
+	skb = alloc_can_err_skb(ndev, &cf);
+	if (unlikely(!skb))
+		return -ENOMEM;
 
-	writel_relaxed(reg_tq, priv->regs + CAN_TQ_FD);
-}
+	err = readl_relaxed(priv->reg_base + CAN_ERR_STATUS_OFFSET);
+	err_state = (err >> CAN_ERR_STA_SHIFT) & CAN_ECR_ERR_STA_MASK;
+	rxerr = (err >> CAN_ERR_REC_SHIFT) & CAN_ECR_TEC_MASK;
+	txerr = err & CAN_ECR_TEC_MASK;
 
-static int ambacan_chip_start(struct net_device *dev)
-{
-	u32 config, mask;
-	struct ambacan_priv *priv = netdev_priv(dev);
-#if 0
-	u32 int_ctrl;
-#endif
+	cf->data[6] = txerr;
+	cf->data[7] = rxerr;
 
-	/* Reset CAN */
-	writel_relaxed(1, priv->regs + CAN_RESET);
-	writel_relaxed(0, priv->regs + CAN_RESET);
+	/* Handle the err interrupt */
+	/* Check for bus-off */
+	if (isr & CAN_INT_ENTER_BUS_OFF) {
+		priv->can.state = CAN_STATE_BUS_OFF;
+		priv->can.can_stats.bus_off++;
+		writel_relaxed(CAN_INT_ENTER_BUS_OFF,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+		can_bus_off(ndev);
+		cf->can_id |= CAN_ERR_BUSOFF;
+		writel_relaxed(0, priv->reg_base + CAN_WAKEUP_OFFSET);
+	}
 
-	/* Configuration */
-	config = readl_relaxed(priv->regs + CAN_CTRL);
-	if (priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK)
-		config |= CAN_CTRL_LOOPBACK; // configure loopback mode
-	if (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY)
-		config |= CAN_CTRL_LISTEN; 	// configure listen mode
-	if (priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO)
-		config |= CAN_CTRL_FD;		// configure FD mode
+	if (isr & CAN_INT_ENTER_ERR_PSV) {
+		priv->can.state = CAN_STATE_ERROR_PASSIVE;
+		priv->can.can_stats.error_passive++;
+		writel_relaxed(CAN_INT_ENTER_ERR_PSV,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+		cf->can_id |= CAN_ERR_CRTL;
+		cf->data[1] = (rxerr > 127) ?
+					CAN_ERR_CRTL_RX_PASSIVE :
+					CAN_ERR_CRTL_TX_PASSIVE;
+	}
 
-	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
-		config |= CAN_CTRL_FD;		// configure FD mode
+	if (isr & CAN_INT_RBUF_OVERFLOW) {
+		writel_relaxed(CAN_INT_RBUF_OVERFLOW,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+		cf->can_id |= CAN_ERR_CRTL;
+		cf->data[1] = CAN_ERR_CRTL_RX_OVERFLOW;
+		stats->rx_over_errors++;
+		stats->rx_errors++;
+	}
 
-	writel_relaxed(config, priv->regs + CAN_CTRL);
+	if (isr & AMBA_CAN_IRQ_BUS_ERR) {
+		cf->can_id |= CAN_ERR_PROT | CAN_ERR_BUSERROR;
+		priv->can.can_stats.bus_error++;
+		writel_relaxed(AMBA_CAN_IRQ_BUS_ERR,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
 
-	/* Configure the number of tx buf */
-	writel_relaxed(BIT(0), priv->regs + CAN_MSG_BUG_TYPE);
-	writel_relaxed(BIT(0)^0xFFFF, priv->regs + CAN_BUF_CFG_DONE);
+		if (isr & CAN_INT_ACK_ERR) {
+			stats->tx_errors++;
+			cf->can_id |= CAN_ERR_ACK;
+			cf->data[3] = CAN_ERR_PROT_LOC_ACK;
+		}
 
+		if (isr & CAN_INT_FORM_ERR) {
+			stats->rx_errors++;
+			cf->can_id |= CAN_ERR_PROT;
+			cf->data[2] = CAN_ERR_PROT_FORM;
+		}
 
-	priv->can.state = CAN_STATE_ERROR_ACTIVE;
+		if (isr & CAN_INT_CRC_ERR) {
+			stats->rx_errors++;
+			cf->can_id |= CAN_ERR_PROT;
+			cf->data[3] = CAN_ERR_PROT_LOC_CRC_SEQ;
+		}
 
-	/* Configure interrupt settings */
-	mask = readl_relaxed(priv->regs + CAN_INT_MASK);
-	mask |= CAN_STATUS_BUS_OFF | CAN_STATUS_TRX_DONE | CAN_BUS_ERR | CAN_STATUS_RX_OVERFLOW | CAN_STATUS_REPLAY_FAIL;
-	writel_relaxed(mask, priv->regs + CAN_INT_MASK);
-#if 0
-	int_ctrl = readl_relaxed(priv->regs + CAN_INT_CTRL);
-	/* set bit 0~3 to 0 to assert interrupt pin every time an interrupt event occurs. */
-	/*
-	 * set bit 8~31 (itr_timer_th) to 0.
-	 * If the interrupt event counter is non-zero,
-	 * and interrupt timer > itr_timer_th, assert interrupt pin regardless of acc_itr_num_th
-	 */
-	int_ctrl = int_ctrl & CAN_INT_CTRL_SET_INT_THRESHOLD(0) & CAN_INT_CTRL_SET_INT_TIMEOUT(0);
-	writel_relaxed(int_ctrl, priv->regs + CAN_INT_CTRL);
-#endif
-	ambacan_set_bittiming(dev);
-	/* set data bitrate only when FD is enabled. */
-	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
-		ambacan_set_data_bittiming(dev);
+		if (isr & CAN_INT_STUFF_ERR) {
+			stats->rx_errors++;
+			cf->can_id |= CAN_ERR_PROT;
+			cf->data[2] = CAN_ERR_PROT_STUFF;
+		}
 
-	// Enable CAN
-	writel_relaxed(BIT(0), priv->regs + CAN_ENABLE);
-	// disable TT-CAN
-	writel_relaxed(0, priv->regs + CAN_TT_TIMER_ENABLE);
-	writel_relaxed(0, priv->regs + CAN_TT_CTRL);
+		if (isr & CAN_INT_BIT_ERR) {
+			stats->tx_errors++;
+			cf->can_id |= CAN_ERR_PROT;
+			cf->data[2] = CAN_ERR_PROT_BIT;
+		}
+	}
+	/* Handle the err interrupt end */
+
+	stats->rx_packets++;
+	stats->rx_bytes += cf->can_dlc;
+	netif_rx(skb);
 
 	return 0;
 }
 
-static int ambacan_open(struct net_device *dev)
+static void ambarella_can_tx(struct net_device *ndev, u32 isr)
 {
-	struct ambacan_priv *priv = netdev_priv(dev);
-	int err;
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	struct net_device_stats *stats = &ndev->stats;
+	u32 tx_done_sts, i = 0;
 
-	err = clk_prepare_enable(priv->clk);
-	if (err) {
-		netdev_err(dev, "failed to prepare clk err (%d)\n", err);
-		goto out_close;
+	tx_done_sts = readl_relaxed(priv->reg_base + CAN_TX_MBUF_DONE_OFFSET);
+
+	while ((priv->tx_head - priv->tx_tail > 0) && (i < AMBA_CAN_MSG_BUF_NUM)){
+			if (tx_done_sts & 1) {
+			can_get_echo_skb(ndev, priv->tx_tail %
+						priv->tx_max);
+			priv->tx_tail++;
+			stats->tx_packets++;
+		}
+		tx_done_sts >>= 1;
+		i++;
+	}
+	can_led_event(ndev, CAN_LED_EVENT_TX);
+	netif_wake_queue(ndev);
+}
+
+static void ambarella_can_rx(struct net_device *ndev, int num)
+{
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	struct net_device_stats *stats = &ndev->stats;
+	struct can_frame *cf;
+	struct sk_buff *skb;
+	u32 buf_id, buf_ctrl, cfg_done;
+	u32 dlc;
+	u32 i, lwords;
+
+	/* create zero'ed CAN frame buffer */
+	skb = alloc_can_skb(ndev, &cf);
+	if (unlikely(!skb)) {
+		stats->rx_dropped++;
+		return;
 	}
 
-	err = open_candev(dev);
-	if (err) {
-		netdev_err(dev, "failed to open can device err (%d)\n", err);
-		goto out_close;
+	buf_id = readl_relaxed(priv->reg_base + CAN_MBUF0_ID_OFFSET + num * 16);
+	buf_ctrl = readl_relaxed(priv->reg_base + CAN_MBUF0_CTL_OFFSET + num * 16);
+	dlc = buf_ctrl & CAN_MSG_DLC_MASK;
+
+	/* Change CAN data length format to socketCAN data format */
+	cf->can_dlc = get_can_dlc(dlc);
+
+	/* Change CAN ID format to socketCAN ID format */
+	if (buf_id & CAN_MSG_EFF_ID_MASK) {
+		/* The received frame is an Extended format frame */
+		cf->can_id = buf_id & CAN_EFF_MASK;
+		cf->can_id |= CAN_EFF_FLAG;
+	} else {
+		/* The received frame is a standard format frame */
+		cf->can_id = (buf_id & CAN_EFF_MASK) >>
+				CAN_BASEID_SHIFT;
 	}
 
-	err = request_irq(dev->irq, ambacan_irq, IRQF_SHARED | IRQF_TRIGGER_HIGH, dev->name, dev);
-	if (err) {
-		netdev_err(dev, "failed to request irq err (%d)\n", err);
-		goto out_close;
+	if (buf_ctrl & CAN_IDR_RTR_MASK)
+			cf->can_id |= CAN_RTR_FLAG;
+	else {
+		lwords = DIV_ROUND_UP(cf->can_dlc, sizeof(u32));
+		for (i = 0; i < lwords; i++)
+		*((u32 *)cf->data + i) =
+			readl(priv->reg_base + CAN_MBUF_DATA0_OFFSET(num) + (i * sizeof(u32)));
 	}
 
-	/* start chip and queuing */
-	err = ambacan_chip_start(dev);
-	if (err)
-		goto out_free_irq;
+	cfg_done = readl_relaxed(priv->reg_base + CAN_MBUF_CFG_DONE_OFFSET);
+	cfg_done |= (1 << num);
+	writel_relaxed(cfg_done, priv->reg_base + CAN_MBUF_CFG_DONE_OFFSET);
 
-	napi_enable(&priv->napi);
-	netif_start_queue(dev);
+	stats->rx_packets++;
+	stats->rx_bytes += cf->can_dlc;
+	netif_rx(skb);
+
+	can_led_event(ndev, CAN_LED_EVENT_RX);
+}
+
+static irqreturn_t ambarella_can_irq(int irq, void *dev_id)
+{
+	struct net_device *ndev = (struct net_device *)dev_id;
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	u32 int_src, int_msk, rx_done_sts;
+	int i;
+
+	/* Get the interrupt status from CAN */
+	int_src = readl_relaxed(priv->reg_base + CAN_GLOBAL_OP_ITR_OFFSET);
+	int_msk = readl_relaxed(priv->reg_base + CAN_GLOBAL_OP_ITR_MSK_OFFSET);
+
+	int_src &= int_msk;
+	if (!int_src)
+		return IRQ_NONE;
+
+	/* Check for rx timeout */
+	if (int_src & CAN_INT_RX_DONE_TIMEOUT) {
+		writel_relaxed(0, priv->reg_base + CAN_RX_DONE_TIMER_OFFSET);
+		writel_relaxed(CAN_INT_RX_DONE_TIMEOUT,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+	}
+
+	/* Check wakeup interrupt */
+	if (int_src & CAN_INT_WAKE_UP) {
+		writel_relaxed(CAN_INT_WAKE_UP,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+		ambarella_can_state(ndev, int_src);
+	}
+
+	/* Check for rfail */
+	if (int_src & CAN_INT_RP_FAIL) {
+		netdev_dbg(ndev, "%s: error status register:0x%x\n",
+			__func__, readl_relaxed(priv->reg_base +  CAN_GLOBAL_OP_ITR_OFFSET));
+	}
+
+	/* Check for Tx interrupt and Processing it */
+	if (int_src & CAN_INT_TX_DONE) {
+		ambarella_can_tx(ndev, int_src);
+		writel_relaxed(CAN_INT_TX_DONE,
+				priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+	}
+
+	/* Check for the type of receive interrupt and Processing it */
+	if (int_src & CAN_INT_RX_DONE) {
+		rx_done_sts = readl_relaxed(priv->reg_base + CAN_RX_MBUF_DONE_OFFSET);
+		for(i = 0; i < AMBA_CAN_MSG_BUF_NUM; i++) {
+			if (rx_done_sts & 1)
+				ambarella_can_rx(ndev, i);
+			rx_done_sts >>= 1;
+		}
+		writel_relaxed(CAN_INT_RX_DONE, priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+		writel_relaxed(mbuf_cfg_done, priv->reg_base + CAN_MBUF_CFG_DONE_OFFSET);
+	}
+
+	if (int_src & (AMBA_CAN_IRQ_BUS_ERR | CAN_INT_RBUF_OVERFLOW |
+			CAN_INT_ENTER_ERR_PSV | CAN_INT_ENTER_BUS_OFF)) {
+			/* error interrupt */
+			if (ambarella_can_err(ndev, int_src))
+				netdev_err(ndev, "can't allocate buffer\n");
+	}
+
+	return IRQ_HANDLED;
+}
+
+static void ambarella_can_stop(struct net_device *ndev)
+{
+	struct ambacan_priv *priv = netdev_priv(ndev);
+
+	/* Disable interrupts and leave the can in reset mode */
+	set_reset_mode(ndev);
+
+	/* disable all interrupts */
+	writel_relaxed(CAN_GLOBAL_OP_RITR_OFFSET,
+			priv->reg_base + CAN_GLOBAL_OP_RITR_OFFSET);
+	priv->can.state = CAN_STATE_STOPPED;
+}
+
+static int ambarella_can_open(struct net_device *ndev)
+{
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	int ret;
+
+	ret = pm_runtime_get_sync(priv->dev);
+	if (ret < 0) {
+		netdev_err(ndev, "%s: pm_runtime_get failed(%d)\n",
+				__func__, ret);
+		return ret;
+	}
+
+	ret = request_irq(ndev->irq, ambarella_can_irq, priv->irq_flags,
+			ndev->name, ndev);
+	if (ret < 0) {
+		netdev_err(ndev, "irq allocation for CAN failed\n");
+		goto err;
+	}
+
+	/* Set chip into reset mode */
+	ret = set_reset_mode(ndev);
+	if (ret < 0) {
+		netdev_err(ndev, "mode resetting failed!\n");
+		goto err_irq;
+	}
+
+	/* Common open */
+	ret = open_candev(ndev);
+	if (ret)
+		goto err_irq;
+
+	ret = ambarella_can_start(ndev);
+	if (ret < 0) {
+		netdev_err(ndev, "Ambarella can start failed!\n");
+		goto err_candev;
+	}
+
+	can_led_event(ndev, CAN_LED_EVENT_OPEN);
+
+	netif_start_queue(ndev);
 
 	return 0;
 
-out_free_irq:
-	free_irq(dev->irq, dev);
-out_close:
-	close_candev(dev);
+err_candev:
+	close_candev(ndev);
+err_irq:
+	free_irq(ndev->irq, ndev);
+err:
+	pm_runtime_put(priv->dev);
 
-	return err;
-
+	return ret;
 }
 
-static int ambacan_close(struct net_device *dev)
+static int ambarella_can_close(struct net_device *ndev)
 {
-	struct ambacan_priv *priv = netdev_priv(dev);
-	netif_stop_queue(dev);
-	napi_disable(&priv->napi);
+	struct ambacan_priv *priv = netdev_priv(ndev);
 
-	free_irq(dev->irq, dev);
-	close_candev(dev);
+	netif_stop_queue(ndev);
+	ambarella_can_stop(ndev);
+	free_irq(ndev->irq, ndev);
+	close_candev(ndev);
+
+	can_led_event(ndev, CAN_LED_EVENT_STOP);
+	pm_runtime_put(priv->dev);
 
 	return 0;
 }
 
-static int ambacan_set_mode(struct net_device *dev, enum can_mode mode)
+/**
+ * ambarella_can_get_berr_counter - error counter routine
+ * @ndev:	Pointer to net_device structure
+ * @bec:	Pointer to can_berr_counter structure
+ *
+ * This is the driver error counter routine.
+ * Return: 0 on success and failure value on error
+ */
+static int ambarella_can_get_berr_counter(const struct net_device *ndev,
+					struct can_berr_counter *bec)
 {
-	switch (mode) {
-	case CAN_MODE_START:
-		ambacan_chip_start(dev);
-		netif_wake_queue(dev);
-		break;
-	default:
-		return -EOPNOTSUPP;
+	struct ambacan_priv *priv = netdev_priv(ndev);
+	int ret;
+	u32 err;
+
+	ret = pm_runtime_get_sync(priv->dev);
+	if (ret < 0) {
+		netdev_err(ndev, "%s: pm_runtime_get failed(%d)\n",
+				__func__, ret);
+		return ret;
 	}
 
+	err = readl_relaxed(priv->reg_base + CAN_ERR_STATUS_OFFSET);
+	bec->rxerr = (err >> CAN_ERR_REC_SHIFT) & CAN_ECR_TEC_MASK;
+	bec->txerr = err & CAN_ECR_TEC_MASK;
+
+	pm_runtime_put(priv->dev);
+
 	return 0;
 }
 
-static const struct net_device_ops ambacan_netdev_ops = {
-	.ndo_open	= ambacan_open,
-	.ndo_stop	= ambacan_close,
-	.ndo_start_xmit	= ambacan_start_xmit,
-	.ndo_change_mtu = can_change_mtu,
+
+static const struct net_device_ops ambarella_can_netdev_ops = {
+	.ndo_open	= ambarella_can_open,
+	.ndo_stop	= ambarella_can_close,
+	.ndo_start_xmit	= ambarella_can_start_xmit,
+	.ndo_change_mtu	= can_change_mtu,
+};
+
+static int __maybe_unused ambarella_can_suspend(struct device *dev)
+{
+	if (!device_may_wakeup(dev))
+		return pm_runtime_force_suspend(dev);
+
+	return 0;
+}
+
+static int __maybe_unused ambarella_can_resume(struct device *dev)
+{
+	if (!device_may_wakeup(dev))
+		return pm_runtime_force_resume(dev);
+
+	return 0;
+
+}
+
+
+static const struct dev_pm_ops ambarella_can_dev_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ambarella_can_suspend, ambarella_can_resume)
 };
 
 static int ambarella_can_probe(struct platform_device *pdev)
 {
-	struct net_device *dev;
+	struct resource *res;
+	struct net_device *ndev;
 	struct ambacan_priv *priv;
-	struct resource *mem;
 	struct clk *clk;
-	void __iomem *regs;
-	int err, irq;
-	struct pinctrl *pinctrl;
+	void __iomem *addr;
+	int irq;
+	int ret, rx_max, tx_max;
 
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	irq = platform_get_irq(pdev, 0);
-	if (!mem || irq <= 0) {
-		dev_err(&pdev->dev, "get dev info failed\n");
-		return -ENODEV;
-	}
-
-	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (IS_ERR(regs)) {
-		dev_err(&pdev->dev, "get register address failed\n");
-		return PTR_ERR(regs);
-	}
-
-	clk = clk_get(&pdev->dev, "gclk_can");
+	/* 1. check can clk */
+	clk = devm_clk_get(&pdev->dev, "gclk_can");
 	if (IS_ERR(clk)) {
-		dev_err(&pdev->dev, "no clock defined\n");
-		return -ENODEV;
+		dev_err(&pdev->dev, "Device clock not found.\n");
+		ret = -ENODEV;
+		goto err;
 	}
 
-	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
-	if (IS_ERR(pinctrl)) {
-		dev_err(&pdev->dev, "failed to request pinctrl\n");
-		return PTR_ERR(pinctrl);
+	/* 2. Get IRQ for the device */
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(&pdev->dev, "could not get a valid irq \n");
+		ret = -ENODEV;
+		goto err;
 	}
 
-	dev = alloc_candev(sizeof(struct ambacan_priv), TX_BUF_NUM);
-	if (!dev) {
-		dev_err(&pdev->dev, "allocate can dev failed\n");
-		return -ENOMEM;
+	/* 3. Get the virtual base address for the device */
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		ret = -ENODEV;
+		goto err;
+	}
+	addr = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(addr)) {
+		ret = PTR_ERR(addr);
+		goto err;
+	}
+#if 0
+	ret = of_property_read_u32(pdev->dev.of_node, "tx-fifo-depth", &tx_max);
+	if (ret < 0)
+		goto err;
+
+	ret = of_property_read_u32(pdev->dev.of_node, "rx-fifo-depth", &rx_max);
+	if (ret < 0)
+		goto err;
+#endif
+	tx_max = 1; /* use 1 for tx_max as default */
+	rx_max = 31;
+	/* 4. Create a CAN device instance */
+	ndev = alloc_candev(sizeof(struct ambacan_priv), tx_max);
+	if (!ndev) {
+		dev_err(&pdev->dev, "could not allocate memory for CAN device\n");
+		ret = -ENOMEM;
+		goto err;
 	}
 
-	dev->netdev_ops = &ambacan_netdev_ops;
-	dev->irq = irq;
+	ndev->netdev_ops = &ambarella_can_netdev_ops;
+	ndev->irq = irq;
+	ndev->flags |= IFF_ECHO;	/* We support local echo */
 
-	priv = netdev_priv(dev);
+	priv = netdev_priv(ndev);
+	priv->dev = &pdev->dev;
 	priv->can.clock.freq = clk_get_rate(clk);
-	priv->regs = regs;
-	priv->device = &pdev->dev;
-	priv->can.bittiming_const = &ambacan_bittiming_const;
-	priv->can.data_bittiming_const = &ambacan_data_bittiming_const;
-	priv->can.do_set_mode = ambacan_set_mode;
-	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK | CAN_CTRLMODE_3_SAMPLES |
-		CAN_CTRLMODE_LISTENONLY | CAN_CTRLMODE_BERR_REPORTING |
-		CAN_CTRLMODE_FD_NON_ISO | CAN_CTRLMODE_FD;
-	priv->clk = clk;
+	priv->can.bittiming_const = &ambarella_bittiming_const;
+	priv->can.do_set_mode = ambarella_can_do_set_mode;
+	priv->can.do_get_berr_counter = ambarella_can_get_berr_counter;
+	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
+					CAN_CTRLMODE_LISTENONLY |
+					CAN_CTRLMODE_BERR_REPORTING;
+	priv->reg_base = addr;
+	priv->tx_max = tx_max;
+	priv->can_clk = clk;
 
-	netif_napi_add(dev, &priv->napi, ambacan_poll, TOTAL_BUF_NUM - TX_BUF_NUM);
+	spin_lock_init(&priv->lock);
 
-	platform_set_drvdata(pdev, dev);
-	SET_NETDEV_DEV(dev, &pdev->dev);
+	platform_set_drvdata(pdev, ndev);
+	SET_NETDEV_DEV(ndev, &pdev->dev);
 
-	err = register_candev(dev);
-	if (err) {
-		dev_err(&pdev->dev, "registering failed (err=%d)\n", err);
-		goto exit_candev_free;
+	pm_runtime_enable(&pdev->dev);
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0) {
+		netdev_err(ndev, "%s: pm_runtime_get failed(%d)\n",
+			__func__, ret);
+		goto err_pmdisable;
 	}
-	dev_info(&pdev->dev, "%s device registered\n", __func__);
+
+	ret = register_candev(ndev);
+	if (ret) {
+		dev_err(&pdev->dev, "fail to register failed (err=%d)\n", ret);
+		goto err_disableclks;
+	}
+
+	devm_can_led_init(ndev);
+
+	pm_runtime_put(&pdev->dev);
+
+	dev_info(&pdev->dev, "Ambarella can driver \n");
+
 	return 0;
 
-exit_candev_free:
-	free_candev(dev);
-	return err;
+err_disableclks:
+	pm_runtime_put(priv->dev);
+err_pmdisable:
+	pm_runtime_disable(&pdev->dev);
+
+	free_candev(ndev);
+err:
+	return ret;
 }
 
 static int ambarella_can_remove(struct platform_device *pdev)
 {
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct ambacan_priv *priv = netdev_priv(dev);
+	struct net_device *ndev = platform_get_drvdata(pdev);
 
-	unregister_candev(dev);
-	netif_napi_del(&priv->napi);
-	free_candev(dev);
+	unregister_candev(ndev);
+	pm_runtime_disable(&pdev->dev);
+
+	free_candev(ndev);
 
 	return 0;
 }
 
-static const struct of_device_id ambarella_can_dt_ids[] = {
-	{.compatible = "ambarella,can", },
-	{},
+/* Match table for OF platform binding */
+static const struct of_device_id ambarella_can_of_match[] = {
+	{ .compatible = "ambarella,can", },
+	{ /* end of list */ },
 };
-MODULE_DEVICE_TABLE(of, ambarella_can_dt_ids);
+MODULE_DEVICE_TABLE(of, ambarella_can_of_match);
 
 static struct platform_driver ambarella_can_driver = {
 	.probe = ambarella_can_probe,
-	.remove = ambarella_can_remove,
-	.driver = {
-		.name = KBUILD_MODNAME,
-		.of_match_table = of_match_ptr(ambarella_can_dt_ids),
+	.remove	= ambarella_can_remove,
+	.driver	= {
+		.name = DRIVER_NAME,
+		.pm = &ambarella_can_dev_pm_ops,
+		.of_match_table	= ambarella_can_of_match,
 	},
 };
 
 module_platform_driver(ambarella_can_driver);
-MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("CAN port driver for ambarella can based chip");
+
+MODULE_LICENSE("GPL V2");
+MODULE_AUTHOR("Ken He");
+MODULE_DESCRIPTION("Ambarella CAN netdevice driver");

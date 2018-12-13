@@ -68,6 +68,11 @@ config SND_SOC_WM8940_AMB
 	help
 		Support WM8940 Audio Codec for Ambarella Platform
 
+config SND_SOC_TLV320AIC3X_AMB
+	tristate "TLV320AIC3X for Ambarella"
+	help
+		Support TI TLV320AIC3X Audio Codec for Ambarella Platform
+
 config SND_SOC_ZL38063_AMB
 	tristate "ZL38063 for Ambarella"
 	help

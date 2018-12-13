@@ -39,7 +39,7 @@
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
 	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define DMA0_OFFSET			0x5000
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define DMA0_OFFSET			0xA000
 #else
 #define DMA0_OFFSET			0x20000
@@ -47,7 +47,7 @@
 #define DMA0_BASE			(AHB_BASE + DMA0_OFFSET)
 #define DMA0_REG(x)			(DMA0_BASE + (x))
 
-#if (CHIP_REV == CV1)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV2)
 #define DMA1_OFFSET			0xB000
 #else
 #define DMA1_OFFSET			0x21000

@@ -27,18 +27,21 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
+#define I2S_OFFSET			0x1A000
+#elif (CHIP_REV == CV1)
 #define I2S_OFFSET			0xD000
 #else
-#define I2S_OFFSET			0x1A000
+#define I2S_OFFSET			0x1D000
 #endif
-#define I2S_BASE			(AHB_N_BASE + I2S_OFFSET)
+#define I2S_BASE			(AHB_BASE + I2S_OFFSET)
 #define I2S_BASE_PHYS 			(AHB_PHYS_BASE + I2S_OFFSET)
 #define I2S_REG(x)			(I2S_BASE + (x))
 #define I2S_REG_PHYS(x)  		(I2S_BASE_PHYS + (x))
 
-#define I2S1_OFFSET			0x1D000
-#define I2S1_BASE			(AHB_N_BASE + I2S1_OFFSET)
+#define I2S1_OFFSET			0xD000
+#define I2S1_BASE			(AHB_BASE + I2S1_OFFSET)
 #define I2S1_REG(x)			(I2S1_BASE + (x))
 
 /* ==========================================================================*/

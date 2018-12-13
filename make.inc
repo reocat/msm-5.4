@@ -20,6 +20,10 @@ ifeq ($(CONFIG_LINUX_KERNEL_VERSION),"4.14")
 
 LOCAL_PATH:=$(call my-dir)
 
+AMBARELLA_BUILD_KERNEL := ARCH=$(CPU_ARCH) $(LINUX_INSTALL_FLAG)
+AMBARELLA_BUILD_KERNEL += -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR)
+AMBARELLA_BUILD_KERNEL += LOCALVERSION=
+
 #####
 
 .PHONY: linux
@@ -31,12 +35,11 @@ linux: $(DOT_CONFIG)
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) ARCH=$(CPU_ARCH) defconfig_public_linux; \
 	fi
-	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) ARCH=$(CPU_ARCH) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) all
+	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) $(AMBARELLA_BUILD_KERNEL) all
 	@if [ -n "$(KERNEL_INSTALL_PATH)" ]; then \
 		echo "Install Linux modules to $(KERNEL_INSTALL_PATH) ..."; \
 		mkdir -p $(KERNEL_INSTALL_PATH); \
-		$(MAKE) $(AMBA_MAKE_PARA) ARCH=$(CPU_ARCH) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) \
-			$(LINUX_INSTALL_FLAG) modules_install; \
+		$(MAKE) $(AMBA_MAKE_PARA) $(AMBARELLA_BUILD_KERNEL) modules_install; \
 		find $(KERNEL_INSTALL_PATH)/lib/modules/ -name build | xargs -l1 rm -rf; \
 		find $(KERNEL_INSTALL_PATH)/lib/modules/ -name source | xargs -l1 rm -rf; \
 	fi
@@ -54,7 +57,7 @@ $(call add-target-into-build, linux)
 
 menuconfig_public_linux: $(DOT_CONFIG)
 	@mkdir -p $(LINUX_OUT_DIR)
-	@$(MAKE) $(AMBA_MAKE_PARA) ARCH=$(CPU_ARCH) -C $(LINUX_SRC_DIR) O=$(LINUX_OUT_DIR) menuconfig
+	@$(MAKE) $(AMBA_MAKE_PARA) $(AMBARELLA_BUILD_KERNEL) menuconfig
 
 ###
 
@@ -66,8 +69,7 @@ defconfig_public_linux: $(DOT_CONFIG)
 	@if [ -f $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_DEFCONFIG) ]; then \
 		cp -dpRf $(AMB_BOARD_DIR)/config/kernel/$(KERNEL_DEFCONFIG) $(LINUX_OUT_DIR)/.config; \
 	else \
-		$(MAKE) $(AMBA_MAKE_PARA) ARCH=$(CPU_ARCH) -C $(LINUX_SRC_DIR) \
-					O=$(LINUX_OUT_DIR) $(KERNEL_DEFCONFIG); \
+		$(MAKE) $(AMBA_MAKE_PARA) $(AMBARELLA_BUILD_KERNEL) $(KERNEL_DEFCONFIG); \
 	fi
 
 #####

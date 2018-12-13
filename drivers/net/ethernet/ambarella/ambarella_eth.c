@@ -530,7 +530,7 @@ static int ambahb_mdio_poll_status(struct mii_bus *bus)
 
 	orig_jiffies = jiffies;
 	for (;;) {
-		regmap_read(lp->reg_scr, 0xa4, &value);
+		regmap_read(lp->reg_scr, AHBSP_GMII_ADDR_OFFSET, &value);
 		if (!(value & (1 << 0)))
 			break;
 
@@ -2108,83 +2108,6 @@ static const struct net_device_ops ambeth_netdev_ops = {
 };
 
 /* ==========================================================================*/
-static int ambeth_get_settings(struct net_device *ndev,
-	struct ethtool_cmd *ecmd)
-{
-#if 0
-	struct ambeth_info *lp = netdev_priv(ndev);
-	int ret_val = 0;
-
-	if (!netif_running(ndev))
-		return -EINVAL;
-
-	if (lp->phy_enabled) {
-		ret_val = phy_ethtool_gset(lp->phydev, ecmd);
-	} else {
-		ret_val = -EINVAL;
-		if (lp->oldlink == PHY_RUNNING) {
-			ethtool_cmd_speed_set(ecmd, lp->oldspeed);
-			ecmd->duplex = lp->oldduplex;
-			ecmd->port = PORT_MII;
-			ecmd->phy_address = 0xFF;
-			ecmd->transceiver = XCVR_EXTERNAL;
-			ecmd->autoneg = AUTONEG_DISABLE;
-			ecmd->supported = SUPPORTED_MII;
-			switch (lp->oldspeed) {
-			case SPEED_1000:
-				if (lp->oldduplex == DUPLEX_FULL) {
-					ecmd->supported |=
-						SUPPORTED_1000baseT_Full;
-				} else {
-					ecmd->supported |=
-						SUPPORTED_1000baseT_Half;
-				}
-				ret_val = 0;
-				break;
-			case SPEED_100:
-				if (lp->oldduplex == DUPLEX_FULL) {
-					ecmd->supported |=
-						SUPPORTED_100baseT_Full;
-				} else {
-					ecmd->supported |=
-						SUPPORTED_100baseT_Half;
-				}
-				ret_val = 0;
-				break;
-			case SPEED_10:
-				if (lp->oldduplex == DUPLEX_FULL) {
-					ecmd->supported |=
-						SUPPORTED_10baseT_Full;
-				} else {
-					ecmd->supported |=
-						SUPPORTED_10baseT_Half;
-				}
-				ret_val = 0;
-				break;
-			default:
-				break;
-			}
-			ecmd->advertising = ecmd->supported;
-		}
-	}
-
-	return ret_val;
-#else
-	return 0;
-#endif
-}
-
-static int ambeth_set_settings(struct net_device *ndev,
-	struct ethtool_cmd *ecmd)
-{
-	struct ambeth_info *lp = netdev_priv(ndev);
-
-	if (!netif_running(ndev) || !lp->phy_enabled)
-		return -EINVAL;
-
-	return phy_ethtool_sset(lp->phydev, ecmd);
-}
-
 static int ambeth_get_dump_flag(struct net_device *ndev,
 	struct ethtool_dump *ed)
 {
@@ -2243,6 +2166,29 @@ static int ambeth_set_dump(struct net_device *ndev, struct ethtool_dump *ed)
 		dbg_address, dbg_value);
 
 	return 0;
+}
+
+static int ambeth_ethtools_get_regs_len(struct net_device *ndev)
+{
+	return sizeof(u32) * AMBETH_PHY_REG_SIZE;
+}
+
+static void ambeth_ethtools_get_regs(struct net_device *ndev,
+		struct ethtool_regs *regs, void *rdata)
+{
+	u32 *data = (u32 *) rdata;
+	size_t len = sizeof(u32) * AMBETH_PHY_REG_SIZE;
+	struct ambeth_info *lp = netdev_priv(ndev);
+	struct phy_device *phydev = lp->phydev;
+	int i;
+
+	regs->version = 0;
+	regs->len = len;
+
+	memset(data, 0, len);
+	for (i = 0;  i < AMBETH_PHY_REG_SIZE; i++)
+		data[i] = phy_read(phydev, i);
+
 }
 
 static u32 ambeth_get_msglevel(struct net_device *ndev)
@@ -2344,16 +2290,18 @@ done:
 }
 
 static const struct ethtool_ops ambeth_ethtool_ops = {
-	.get_settings		= ambeth_get_settings,
-	.set_settings		= ambeth_set_settings,
 	.get_link		= ethtool_op_get_link,
 	.get_dump_flag		= ambeth_get_dump_flag,
 	.get_dump_data		= ambeth_get_dump_data,
 	.set_dump		= ambeth_set_dump,
+	.get_regs_len		= ambeth_ethtools_get_regs_len,
+	.get_regs		= ambeth_ethtools_get_regs,
 	.get_msglevel		= ambeth_get_msglevel,
 	.set_msglevel		= ambeth_set_msglevel,
 	.get_pauseparam		= ambeth_get_pauseparam,
 	.set_pauseparam		= ambeth_set_pauseparam,
+	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
+	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
 };
 
 /* ==========================================================================*/

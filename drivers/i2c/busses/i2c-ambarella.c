@@ -91,6 +91,7 @@ struct ambarella_i2c_dev_info {
 	u32					clk_limit;
 	u32					bulk_num;
 	u32					duty_cycle;
+	u32					stretch_scl;
 	u32					turbo_mode;
 
 	struct i2c_msg				*msgs;
@@ -177,6 +178,7 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	writeb_relaxed(idc_prescale >> 8, pinfo->regbase + IDC_PSLH_OFFSET);
 
 	writeb_relaxed(pinfo->duty_cycle, pinfo->regbase + IDC_DUTYCYCLE_OFFSET);
+	writeb_relaxed(pinfo->stretch_scl, pinfo->regbase + IDC_STRETCHSCL_OFFSET);
 
 	writel_relaxed(IDC_ENR_REG_ENABLE, pinfo->regbase + IDC_ENR_OFFSET);
 }
@@ -628,6 +630,12 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 
 	if (pinfo->duty_cycle > 2)
 		pinfo->duty_cycle = 2;
+
+	errorCode = of_property_read_u32(np, "amb,stretch-scl", &pinfo->stretch_scl);
+	if (errorCode < 0) {
+		dev_dbg(&pdev->dev, "Missing stretch-scl, assuming 1!\n");
+		pinfo->stretch_scl = 1;
+	}
 
 	/* check if using turbo mode */
 	if (of_find_property(pdev->dev.of_node, "amb,turbo-mode", NULL)) {

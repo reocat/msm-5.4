@@ -90,7 +90,6 @@ struct amb_clk_pll {
 #define rct_writel_en(v, p)		\
 		do {writel(v, p); writel((v | 0x1), p); writel(v, p);} while (0)
 
-// ambarella_pll_calc_vco only works on CV22 and CV2
 static int ambarella_pll_calc_vco(unsigned long pre_scaler, unsigned long intp,
 			unsigned long sdiv, unsigned long parent_rate)
 {

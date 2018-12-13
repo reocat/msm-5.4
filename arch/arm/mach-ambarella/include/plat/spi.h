@@ -28,17 +28,17 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S5L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3L) || (CHIP_REV == S3) || (CHIP_REV == S5)
+#define SPI_AHB_INSTANCES			2
+#define SPI_AHB_SLAVE_INSTANCES			1
+#elif (CHIP_REV == S5L)
 #define SPI_AHB_INSTANCES			3
 #define SPI_AHB_SLAVE_INSTANCES			1
 #elif (CHIP_REV == CV1)
 #define SPI_AHB_INSTANCES			6
 #define SPI_AHB_SLAVE_INSTANCES			1
-#elif (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define SPI_AHB_INSTANCES			4
-#define SPI_AHB_SLAVE_INSTANCES			1
 #else
-#define SPI_AHB_INSTANCES			2
+#define SPI_AHB_INSTANCES			4
 #define SPI_AHB_SLAVE_INSTANCES			1
 #endif
 

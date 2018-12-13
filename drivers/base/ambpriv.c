@@ -17,6 +17,7 @@
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
 #include "base.h"
 
 #define to_ambpriv_driver(drv)	(container_of((drv), struct ambpriv_driver, driver))
@@ -174,6 +175,7 @@ static struct ambpriv_device *of_ambpriv_device_alloc(struct device_node *np,
 	of_ambpriv_device_make_bus_id(&dev->dev);
 	dev->name = dev_name(&dev->dev);
 	of_dma_configure(&dev->dev, dev->dev.of_node);
+	of_reserved_mem_device_init(&dev->dev);
 
 	return dev;
 }
@@ -817,6 +819,9 @@ struct bus_type ambpriv_bus_type = {
 };
 EXPORT_SYMBOL(ambpriv_bus_type);
 
+struct class *ambpriv_class;
+EXPORT_SYMBOL(ambpriv_class);
+
 int __init ambpriv_bus_init(void)
 {
 	int error;
@@ -827,6 +832,12 @@ int __init ambpriv_bus_init(void)
 	error = bus_register(&ambpriv_bus_type);
 	if (error)
 		device_unregister(&ambpriv_bus);
+
+	ambpriv_class = class_create(THIS_MODULE, "ambpriv");
+	if (IS_ERR(ambpriv_class)) {
+		error = PTR_ERR(ambpriv_class);
+		pr_err("unable to create ambpriv class %d\n", error);
+	}
 	return error;
 }
 

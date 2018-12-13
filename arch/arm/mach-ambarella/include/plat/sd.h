@@ -27,26 +27,13 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-/* AMBALINK: enable or diable sd1 in devicetree, not HERE */
-#define SD_INSTANCES			3
-/* The slot IDs */
-typedef enum _ambarella_slot_id {
-	SD_HOST_0 = 0,
-        SD_HOST_1,
-        SD_HOST_2,
-
-        SD_MAX_CARD      /* Total number of slot IDs */
-} ambarella_slot_id;
-#else
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == CV25)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			2
 #endif
-#endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == CV25)
 #define SD_SUPPORT_SDIO			1
 #else
 #define SD_SUPPORT_SDIO			0
@@ -55,18 +42,15 @@ typedef enum _ambarella_slot_id {
 #define SD_SUPPORT_SDXC			1
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define SD0_OFFSET			0x4000
-#else
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
+	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define SD0_OFFSET			0x2000
-#endif
-
 #define SD1_OFFSET			0xC000
-
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2)
-#define SD2_OFFSET			0x5000
-#else
 #define SD2_OFFSET			0x1F000
+#else
+#define SD0_OFFSET			0x4000
+#define SD1_OFFSET			0x16000
+#define SD2_OFFSET			0x5000
 #endif
 
 #define SD0_BASE			(AHB_BASE + SD0_OFFSET)

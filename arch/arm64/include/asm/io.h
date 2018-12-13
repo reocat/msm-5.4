@@ -116,6 +116,9 @@ static inline u64 __raw_readq(const volatile void __iomem *addr)
  * ordering rules but do not guarantee any ordering relative to Normal memory
  * accesses.
  */
+#ifdef CONFIG_AMBARELLA_SMCCC_ACCESS_REG
+#include <mach/smccc_io.h>
+#else
 #define readb_relaxed(c)	({ u8  __r = __raw_readb(c); __r; })
 #define readw_relaxed(c)	({ u16 __r = le16_to_cpu((__force __le16)__raw_readw(c)); __r; })
 #define readl_relaxed(c)	({ u32 __r = le32_to_cpu((__force __le32)__raw_readl(c)); __r; })
@@ -125,6 +128,7 @@ static inline u64 __raw_readq(const volatile void __iomem *addr)
 #define writew_relaxed(v,c)	((void)__raw_writew((__force u16)cpu_to_le16(v),(c)))
 #define writel_relaxed(v,c)	((void)__raw_writel((__force u32)cpu_to_le32(v),(c)))
 #define writeq_relaxed(v,c)	((void)__raw_writeq((__force u64)cpu_to_le64(v),(c)))
+#endif
 
 /*
  * I/O memory access primitives. Reads are ordered relative to any
@@ -166,7 +170,9 @@ extern void __iomem *__ioremap(phys_addr_t phys_addr, size_t size, pgprot_t prot
 extern void __iounmap(volatile void __iomem *addr);
 extern void __iomem *ioremap_cache(phys_addr_t phys_addr, size_t size);
 
+#ifndef CONFIG_AMBARELLA_SMCCC_ACCESS_REG
 #define ioremap(addr, size)		__ioremap((addr), (size), __pgprot(PROT_DEVICE_nGnRE))
+#endif
 #define ioremap_nocache(addr, size)	__ioremap((addr), (size), __pgprot(PROT_DEVICE_nGnRE))
 #define ioremap_wc(addr, size)		__ioremap((addr), (size), __pgprot(PROT_NORMAL_NC))
 #define ioremap_wt(addr, size)		__ioremap((addr), (size), __pgprot(PROT_DEVICE_nGnRE))

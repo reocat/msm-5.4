@@ -183,6 +183,11 @@ static int ambrtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 static int ambrtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 {
+	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
+
+	if (ambrtc->irq < 0)
+		return -EINVAL;
+
 	return 0;
 }
 
@@ -220,9 +225,7 @@ static int ambrtc_probe(struct platform_device *pdev)
 		return PTR_ERR(ambrtc->base);
 
 	ambrtc->irq = platform_get_irq(pdev, 0);
-	if (ambrtc->irq < 0) {
-		ambrtc->irq = 0;
-	} else {
+	if (ambrtc->irq >= 0) {
 		ret = devm_request_irq(&pdev->dev, ambrtc->irq, ambrtc_alarm_irq,
 				IRQF_SHARED, pdev->name, ambrtc);
 		if (ret) {
@@ -275,7 +278,7 @@ static int ambarella_rtc_suspend(struct device *dev)
 {
 	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
 
-	if (ambrtc->irq & device_may_wakeup(dev))
+	if (ambrtc->irq >= 0 && device_may_wakeup(dev))
 		enable_irq_wake(ambrtc->irq);
 
 	return 0;
@@ -285,7 +288,7 @@ static int ambarella_rtc_resume(struct device *dev)
 {
 	struct ambarella_rtc *ambrtc = dev_get_drvdata(dev);
 
-	if (ambrtc->irq & device_may_wakeup(dev))
+	if (ambrtc->irq >= 0 && device_may_wakeup(dev))
 		disable_irq_wake(ambrtc->irq);
 
 	return 0;

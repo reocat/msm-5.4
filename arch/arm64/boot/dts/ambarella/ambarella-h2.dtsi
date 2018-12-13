@@ -30,8 +30,10 @@
 		mdio-gpio0 = &mdio0;
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
+	/*
+	 * the memory node will be overwritten in Amboot,
+	 * here is just the default value.
+	 */
 	memory {
 		device_type = "memory";
 		reg = <0x00200000 0x07e00000>; /* 126M */
@@ -88,13 +90,20 @@
 
 	cpufreq {
 		compatible = "ambarella,cpufreq";
-		/* cpufreq-method is valid for "cortex", "core", "relevance". */
-		cpufreq-method = "relevance";
-		cpufreq-table =
-			/* < cortex core > */
-			<1080000 672000>,
-			<816000  504000>,
-			<60000  336000>;
+		/*
+		 * Config effective clocks. '%KHZ'
+		 *
+		 * 0 - cortex.
+		 * 1 - pll_out_core.
+		 * 2 - cortex and pll_out_core.
+		 */
+		cpufreq-effective-clock = <0>;			/* default 'cortex' */
+		clocks = <&gclk_cortex &pll_out_core>;
+		clock-names = "cortex_clk", "core_clk";
+		clocks-frequency-cortex-core =
+			<1080000  672000>,
+			< 816000  504000>,
+			< 600000  336000>;
 	};
 
 	gic: interrupt-controller@f0040000 {
@@ -682,10 +691,6 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			sd-uhs-sdr12;
-			sd-uhs-sdr25;
-			sd-uhs-sdr50;
-			sd-uhs-sdr104;
 		};
 
 		sdmmc1: sdmmc1@e000c000 {
@@ -704,10 +709,6 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			sd-uhs-sdr12;
-			sd-uhs-sdr25;
-			sd-uhs-sdr50;
-			sd-uhs-sdr104;
 		};
 
 		sdmmc2: sdmmc2@e001f000 { /* SDXC rather than SDIO */
@@ -728,10 +729,6 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			sd-uhs-sdr12;
-			sd-uhs-sdr25;
-			sd-uhs-sdr50;
-			sd-uhs-sdr104;
 		};
 
 		mac0: ethernet@e000e000 {
@@ -845,8 +842,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xec170050 0x4 0xe001b00c 0x4 0xec1702c0 0x4>;
 			amb,host-phy-num = <2>;
-			amb,owner-mask;
-			amb,owner-invert;
 		};
 
 		reboot {

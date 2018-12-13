@@ -30,6 +30,7 @@ extern void ambpriv_device_unregister(struct ambpriv_device *);
 
 extern struct bus_type ambpriv_bus_type;
 extern struct device ambpriv_bus;
+extern struct class *ambpriv_class;
 
 extern int ambpriv_add_devices(struct ambpriv_device **, int);
 extern struct ambpriv_device *ambpriv_device_alloc(const char *name, int id);

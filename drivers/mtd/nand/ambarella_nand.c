@@ -61,6 +61,7 @@ struct ambarella_nand_info {
 
 	struct device			*dev;
 	wait_queue_head_t		wq;
+	spinlock_t				lock;
 
 	void __iomem			*regbase;
 	void __iomem			*fdmaregbase;
@@ -639,17 +640,20 @@ static irqreturn_t nand_fiocmd_isr_handler(int irq, void *dev_id)
 	irqreturn_t rval = IRQ_NONE;
 	struct ambarella_nand_info *nand_info;
 	u32 val;
+	unsigned long		flags;
 
 	nand_info = (struct ambarella_nand_info *)dev_id;
 
-	val = readl_relaxed(nand_info->regbase + FIO_STA_OFFSET);
+	val = readl_relaxed(nand_info->regbase + FLASH_INT_OFFSET);
 
-	if (val & FIO_STA_FI) {
+	if (val & NAND_INT_DI) {
+		spin_lock_irqsave(&nand_info->lock, flags);
 		writel_relaxed(0x0, nand_info->regbase + FLASH_INT_OFFSET);
 		atomic_and(~0x1, &nand_info->irq_flag);
 		wake_up(&nand_info->wq);
 
 		rval = IRQ_HANDLED;
+		spin_unlock_irqrestore(&nand_info->lock, flags);
 	}
 
 	return rval;
@@ -828,6 +832,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		(cmd == NAND_AMB_CMD_ERASE || cmd == NAND_AMB_CMD_COPYBACK ||
 		 cmd == NAND_AMB_CMD_PROGRAM || cmd == NAND_AMB_CMD_READSTATUS))
 			nand_ctr_reg &= ~NAND_CTR_WP;
+	spin_lock_irq(&nand_info->lock);
 
 	switch (cmd) {
 	case NAND_AMB_CMD_RESET:
@@ -989,6 +994,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 		goto nand_amb_request_done;
 		break;
 	}
+	spin_unlock_irq(&nand_info->lock);
 
 	if (cmd == NAND_AMB_CMD_READ || cmd == NAND_AMB_CMD_PROGRAM) {
 		timeout = wait_event_timeout(nand_info->wq,
@@ -1975,24 +1981,33 @@ static void ambarella_nand_put_resource(struct ambarella_nand_info *nand_info)
 
 static int ambarella_nand_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct device_node *dn = dev->of_node;
+	int		errorCode = 0;
 	struct ambarella_nand_info *nand_info;
 	struct mtd_info *mtd;
 	struct nand_chip *chip;
-	int errorCode = 0;
+
+	/* Only support device-tree instantiation */
+	if (!dn)
+		return -ENODEV;
 
 	nand_info = kzalloc(sizeof(struct ambarella_nand_info), GFP_KERNEL);
 	if (nand_info == NULL) {
-		dev_err(&pdev->dev, "kzalloc for nand nand_info failed!\n");
+		dev_err(dev, "kzalloc for nand nand_info failed!\n");
 		errorCode = - ENOMEM;
 		goto ambarella_nand_probe_exit;
 	}
 
-	nand_info->dev = &pdev->dev;
-	spin_lock_init(&nand_info->controller.lock);
-	init_waitqueue_head(&nand_info->controller.wq);
+	dev_set_drvdata(dev, nand_info);
+	nand_info->dev = dev;
+
+	spin_lock_init(&nand_info->lock);
 	init_waitqueue_head(&nand_info->wq);
 	sema_init(&nand_info->system_event_sem, 1);
 	atomic_set(&nand_info->irq_flag, 0x7);
+
+	nand_hw_control_init(&nand_info->controller);
 
 	nand_info->clk = clk_get(nand_info->dev, NULL);
 
@@ -2000,7 +2015,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 		AMBARELLA_NAND_DMA_BUFFER_SIZE,
 		&nand_info->dmaaddr, GFP_KERNEL);
 	if (nand_info->dmabuf == NULL) {
-		dev_err(&pdev->dev, "dma_alloc_coherent failed!\n");
+		dev_err(dev, "dma_alloc_coherent failed!\n");
 		errorCode = -ENOMEM;
 		goto ambarella_nand_probe_free_info;
 	}
@@ -2020,8 +2035,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
         aipc_mutex_unlock(AMBA_IPC_MUTEX_NAND);
 #endif
-
-	ambarella_nand_init_chip(nand_info, pdev->dev.of_node);
+	ambarella_nand_init_chip(nand_info, dn);
 
 	chip = &nand_info->chip;
 	nand_set_controller_data(chip, nand_info);
@@ -2048,11 +2062,9 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
 	mtd->name = "amba_nand";
 
-	errorCode = mtd_device_parse_register(mtd, NULL, NULL, NULL, 0);
+	errorCode = mtd_device_register(mtd, NULL, 0);
 	if (errorCode < 0)
 		goto ambarella_nand_probe_mtd_error;
-
-	platform_set_drvdata(pdev, nand_info);
 
 	nand_info->system_event.notifier_call = ambarella_nand_system_event;
 	ambarella_register_event_notifier(&nand_info->system_event);

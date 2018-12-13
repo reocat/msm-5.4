@@ -53,6 +53,8 @@
 struct ak4951_priv {
 	unsigned int rst_pin;
 	unsigned int rst_active;
+	unsigned int pwr_pin;
+	unsigned int pwr_active;
 	unsigned int sysclk;
 	unsigned int clkid;
 	struct i2c_client* i2c_clt;
@@ -1204,7 +1206,6 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 	struct ak4951_priv *ak4951;
 	struct regmap *regmap;
 	enum of_gpio_flags flags;
-	int rst_pin;
 	int ret = 0;
 
 	akdbgprt("\t[AK4951] %s(%d)\n",__FUNCTION__,__LINE__);
@@ -1213,13 +1214,26 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 	if (ak4951 == NULL)
 		return -ENOMEM;
 
-	rst_pin = of_get_gpio_flags(np, 0, &flags);
-	if (rst_pin < 0 || !gpio_is_valid(rst_pin))
+	ak4951->rst_pin = of_get_gpio_flags(np, 0, &flags);
+	if (ak4951->rst_pin < 0 || !gpio_is_valid(ak4951->rst_pin))
 		return -ENXIO;
 
-	ak4951->i2c_clt = i2c;
-	ak4951->rst_pin = rst_pin;
 	ak4951->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+	ak4951->pwr_pin = of_get_named_gpio_flags(np, "pwr-gpios", 0, &flags);
+	if (gpio_is_valid(ak4951->pwr_pin)) {
+		ak4951->pwr_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+
+		ret = devm_gpio_request(&i2c->dev, ak4951->pwr_pin, "ak4951 pwr");
+		if (ret < 0){
+			dev_err(&i2c->dev, "Failed to request pwr_pin: %d\n", ret);
+			return ret;
+		}
+
+		gpio_direction_output(ak4951->pwr_pin, ak4951->pwr_active);
+	}
+
+	ak4951->i2c_clt = i2c;
 	i2c_set_clientdata(i2c, ak4951);
 	regmap = devm_regmap_init_i2c(i2c, &ak4951_regmap);
 	if (IS_ERR(regmap)) {
