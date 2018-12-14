@@ -51,10 +51,10 @@
 
 /* AK4951 Codec Private Data */
 struct ak4951_priv {
-	unsigned int rst_pin;
-	unsigned int rst_active;
-	unsigned int pwr_pin;
-	unsigned int pwr_active;
+	int rst_pin;
+	int rst_active;
+	int pwr_pin;
+	int pwr_active;
 	unsigned int sysclk;
 	unsigned int clkid;
 	struct i2c_client* i2c_clt;
@@ -1084,17 +1084,21 @@ static int ak4951_probe(struct snd_soc_codec *codec)
 	struct ak4951_priv *ak4951 = ak4951_data;
 	int ret = 0;
 
-	ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
-	if (ret < 0){
-		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
-		return ret;
+	if (ak4951->rst_pin > 0 ) {
+		akdbgprt("\t[AK4951] %s(%d) reset gpio %d \n",__FUNCTION__,__LINE__,ak4951->rst_pin);
+		ret = devm_gpio_request(codec->dev, ak4951->rst_pin, "ak4951 reset");
+		if (ret < 0){
+			dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
+			return ret;
+		}
 	}
-
 	snd_soc_codec_set_drvdata(codec, ak4951);
 	/* Reset AK4951 codec */
-	gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
-	msleep(1);
-	gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
+	if ( ak4951->rst_pin > 0) {
+		gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
+		msleep(10);
+		gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
+	}
 
 	/*The 0x00 register no Ack for the dummy command:write 0x00 to 0x00*/
 	ak4951->i2c_clt->flags |= I2C_M_IGNORE_NAK;
@@ -1146,6 +1150,10 @@ static int ak4951_suspend(struct snd_soc_codec *codec)
 
 	ak4951_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
+	if(ak4951->pwr_pin > 0 ) {
+		gpio_direction_output(ak4951->pwr_pin, !ak4951->pwr_active);
+	}
+
 	return 0;
 }
 
@@ -1154,10 +1162,17 @@ static int ak4951_resume(struct snd_soc_codec *codec)
 	struct ak4951_priv *ak4951 = snd_soc_codec_get_drvdata(codec);
 	int i;
 
+	if(ak4951->pwr_pin > 0 ) {
+		gpio_direction_output(ak4951->pwr_pin, ak4951->pwr_active);
+		msleep(5);
+	}
+
 	/* Reset AK4951 codec */
-	gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
-	msleep(1);
-	gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
+	if (ak4951->rst_pin > 0) {
+		gpio_direction_output(ak4951->rst_pin, ak4951->rst_active);
+		msleep(1);
+		gpio_direction_output(ak4951->rst_pin, !ak4951->rst_active);
+	}
 	/*The 0x00 register no Ack for the dummy command:write 0x00 to 0x00*/
 	ak4951->i2c_clt->flags |= I2C_M_IGNORE_NAK;
 	i2c_smbus_write_byte_data(ak4951->i2c_clt, (u8)(AK4951_00_POWER_MANAGEMENT1 & 0xFF), 0x00);
@@ -1215,10 +1230,9 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 
 	ak4951->rst_pin = of_get_gpio_flags(np, 0, &flags);
-	if (ak4951->rst_pin < 0 || !gpio_is_valid(ak4951->rst_pin))
-		return -ENXIO;
-
-	ak4951->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	if (ak4951->rst_pin && gpio_is_valid(ak4951->rst_pin)){
+		ak4951->rst_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	}
 
 	ak4951->pwr_pin = of_get_named_gpio_flags(np, "pwr-gpios", 0, &flags);
 	if (gpio_is_valid(ak4951->pwr_pin)) {
@@ -1229,11 +1243,15 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 			dev_err(&i2c->dev, "Failed to request pwr_pin: %d\n", ret);
 			return ret;
 		}
-
 		gpio_direction_output(ak4951->pwr_pin, ak4951->pwr_active);
+	}else {
+		ak4951->pwr_pin = -1;
 	}
 
 	ak4951->i2c_clt = i2c;
+
+	ak4951_data = ak4951;
+
 	i2c_set_clientdata(i2c, ak4951);
 	regmap = devm_regmap_init_i2c(i2c, &ak4951_regmap);
 	if (IS_ERR(regmap)) {
@@ -1241,8 +1259,6 @@ static int ak4951_i2c_probe(struct i2c_client *i2c,
 		dev_err(&i2c->dev, "regmap_init() for ak1951 failed: %d\n", ret);
 		return ret;
 	}
-
-	ak4951_data = ak4951;
 
 	ret = snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_ak4951, &ak4951_dai[0], ARRAY_SIZE(ak4951_dai));
