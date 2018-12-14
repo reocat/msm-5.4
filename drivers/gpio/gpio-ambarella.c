@@ -650,7 +650,7 @@ static int amb_gpio_irq_suspend(void)
 
 	for (i = 0; i < amb_gpio->bank_num; i++) {
 		bank = &amb_gpio->bank[i];
-#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 		amb_gpio_raw_lock(&flags);
 #endif
 		bank->afsel = readl_relaxed(bank->regbase + GPIO_AFSEL_OFFSET);
@@ -671,7 +671,7 @@ static int amb_gpio_irq_suspend(void)
 			pr_info("gpio_irq[%p]: irq_wake[0x%08X]\n",
 						bank->regbase, bank->irq_wake_mask);
 		}
-#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 		amb_gpio_raw_unlock(&flags);
 #endif
 	}

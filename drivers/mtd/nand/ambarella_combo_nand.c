@@ -294,6 +294,7 @@ static int nand_bch_check_blank_page(struct ambarella_nand_host *host)
 
 static int ambarella_nand_set_spinand_timing(struct ambarella_nand_host *host)
 {
+#ifndef CONFIG_ARCH_AMBARELLA_AMBALINK
 	u8 tclh, tcll, tcs, tclqv;
 	u8 tchsl, tslch, tchsh, tshch;
 	u8 thhqx, twps, twph;
@@ -356,6 +357,7 @@ static int ambarella_nand_set_spinand_timing(struct ambarella_nand_host *host)
 	writel_relaxed(val, host->regbase + SPINAND_TIMING2_OFFSET);
 
 	return 0;
+#endif
 }
 
 static int ambarella_nand_set_timing(struct ambarella_nand_host *host)
