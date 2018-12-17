@@ -837,6 +837,6 @@ static struct platform_driver ambarella_can_driver = {
 
 module_platform_driver(ambarella_can_driver);
 
-MODULE_LICENSE("GPL V2");
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Ken He");
 MODULE_DESCRIPTION("Ambarella CAN netdevice driver");
