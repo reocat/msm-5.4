@@ -45,10 +45,9 @@
 static struct regmap *reg_rct = NULL;
 static size_t sdio_regbase = 0;
 
+#if defined(CONFIG_ARCH_AMBARELLA_S5L)
 #define SDIO_GLOBAL_ID 2
 #define SDIO_GLOBAL_NAME "sd2"
-
-#if defined(CONFIG_ARCH_AMBARELLA_S5L)
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 99
@@ -58,6 +57,8 @@ static size_t sdio_regbase = 0;
 //data GPIO 101~104
 #define DS_DATA_MASK 0x000001e0
 #elif defined(CONFIG_ARCH_AMBARELLA_CV1)
+#define SDIO_GLOBAL_ID 2
+#define SDIO_GLOBAL_NAME "sd2"
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 113
@@ -67,6 +68,8 @@ static size_t sdio_regbase = 0;
 //data GPIO 115~118
 #define DS_DATA_MASK 0x00780000
 #elif defined(CONFIG_ARCH_AMBARELLA_CV2) ||  defined(CONFIG_ARCH_AMBARELLA_CV22)
+#define SDIO_GLOBAL_ID 2
+#define SDIO_GLOBAL_NAME "sd2"
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 97
@@ -75,6 +78,17 @@ static size_t sdio_regbase = 0;
 #define DS_CMD_MASK  0x00000004
 //data GPIO 99~102
 #define DS_DATA_MASK 0x00000078
+#elif defined(CONFIG_ARCH_AMBARELLA_CV25)
+#define SDIO_GLOBAL_ID 1
+#define SDIO_GLOBAL_NAME "sd1"
+#define SDIO_DS0 GPIO_DS0_2_OFFSET
+#define SDIO_DS1 GPIO_DS1_2_OFFSET
+//clock GPIO 72
+#define DS_CLK_MASK  0x00000100
+//cmd GPIO 73
+#define DS_CMD_MASK  0x00000200
+//data GPIO 74~77
+#define DS_DATA_MASK 0x00003C00
 #endif
 
 #define SDIO_DELAY_SEL0 (sdio_regbase + 0xd8)
