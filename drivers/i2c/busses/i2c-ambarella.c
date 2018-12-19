@@ -42,12 +42,6 @@
 #define CONFIG_I2C_AMBARELLA_RETRIES		(3)
 #endif
 
-#ifndef CONFIG_I2C_AMBARELLA_ACK_TIMEOUT
-#define CONFIG_I2C_AMBARELLA_ACK_TIMEOUT	(3 * HZ)
-#endif
-
-#define CONFIG_I2C_AMBARELLA_BULK_RETRY_NUM	(4)
-
 /* must keep consistent with the name in device tree source, and the name
  * of corresponding i2c client will be overwritten when it's in used. */
 #define AMBARELLA_I2C_VIN_FDT_NAME		"ambvin"
@@ -312,7 +306,8 @@ static inline void ambarella_i2c_stop(
 
 	*pack_control |= IDC_CTRL_STOP;
 
-	if(pinfo->state == AMBA_I2C_STATE_IDLE)
+	if (pinfo->state == AMBA_I2C_STATE_IDLE ||
+		pinfo->state == AMBA_I2C_STATE_NO_ACK)
 		wake_up(&pinfo->msg_wait);
 }
 
@@ -505,7 +500,7 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	down(&pinfo->system_event_sem);
 
-	for (retryCount = 0; retryCount < adap->retries; retryCount++) {
+	for (retryCount = 0; retryCount <= adap->retries; retryCount++) {
 		errorCode = 0;
 		if (pinfo->state != AMBA_I2C_STATE_IDLE)
 			ambarella_i2c_hw_init(pinfo);
@@ -528,7 +523,7 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		}
 
 		if (hw_state != AMBA_I2C_HW_STATE_IDLE)
-			dev_warn(pinfo->dev, "Xfer exits with non-idle hw state %d.\n", hw_state);
+			dev_dbg(pinfo->dev, "Xfer exits with non-idle hw state %d.\n", hw_state);
 
 		if (timeout <= 0) {
 			pinfo->state = AMBA_I2C_STATE_NO_ACK;
