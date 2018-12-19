@@ -51,10 +51,6 @@
 		interrupts = <0 106 0x4>;
 	};
 
-	amba_memiomem: ambarella-amba_memiomem {
-		compatible = "ambarella,amba_memiomem";
-	};
-
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
