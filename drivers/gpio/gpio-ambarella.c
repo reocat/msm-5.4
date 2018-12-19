@@ -103,7 +103,6 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	u32 mask_bak;
 	amb_gpio_raw_lock(&flags);
-	mask_bak = readl_relaxed(regbase + GPIO_MASK_OFFSET);
 #else
 	spin_lock_irqsave(&amb_gpio->lock, flags);
 #endif
@@ -111,6 +110,10 @@ static void amb_gpio_set(struct gpio_chip *gc, unsigned pin, int value)
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->bank[bank].regbase;
 	mask = (0x1 << offset);
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	mask_bak = readl_relaxed(regbase + GPIO_MASK_OFFSET);
+#endif
 
 	writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
 	if (value == GPIO_LOW)
@@ -134,9 +137,7 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 
 #ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 	u32 mask_bak;
-
 	amb_gpio_raw_lock(&flags);
-	mask_bak = readl_relaxed(regbase + GPIO_MASK_OFFSET);
 #else
 	spin_lock_irqsave(&amb_gpio->lock, flags);
 #endif
@@ -144,6 +145,10 @@ static int amb_gpio_get(struct gpio_chip *gc, unsigned pin)
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->bank[bank].regbase;
 	mask = (0x1 << offset);
+
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	mask_bak = readl_relaxed(regbase + GPIO_MASK_OFFSET);
+#endif
 
 	writel_relaxed(mask, regbase + GPIO_MASK_OFFSET);
 	data = readl_relaxed(regbase + GPIO_DATA_OFFSET);
