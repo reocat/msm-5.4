@@ -49,17 +49,7 @@
 #include <linux/aipc/ipc_mutex.h>
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
-#endif
-#if defined(CONFIG_AMBALINK_SD)
-#include <linux/aipc/rpmsg_sd.h>
-static struct rpdev_sdinfo G_rpdev_sdinfo[SD_INSTANCES];
-#endif
 
-#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
-static struct mmc_host *G_mmc[SD_INSTANCES];
-#endif
-
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 #undef SD_INSTANCES
 /* AMBALINK: enable or diable sd1 in devicetree, not HERE */
 #define SD_INSTANCES			3
@@ -72,6 +62,15 @@ typedef enum _ambarella_slot_id {
         SD_MAX_CARD      /* Total number of slot IDs */
 } ambarella_slot_id;
 #endif
+#if defined(CONFIG_AMBALINK_SD)
+#include <linux/aipc/rpmsg_sd.h>
+static struct rpdev_sdinfo G_rpdev_sdinfo[SD_INSTANCES];
+#endif
+
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+static struct mmc_host *G_mmc[SD_INSTANCES];
+#endif
+
 /* ==========================================================================*/
 struct ambarella_sd_dma_desc {
 	u16 attr;

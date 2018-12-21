@@ -22,6 +22,7 @@
 		emmc = &sdmmc0;
 		sd0 = &sdmmc0;
 		sd2 = &sdmmc2;
+		/*sd1 = &sdmmc2;*/
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -30,18 +31,26 @@
 		spi1 = &spi1;
 		spi2 = &spi2;
 		ethernet0 = &mac0;
+		/*mdio-gpio0 = &mdio0;*/
 	};
 
-	/* the memory node will be overwritten in Amboot,
-	 * here is just the default value. */
+	/*
+	 * the memory node will be overwritten in Amboot,
+	 * here is just the default value.
+	 */
 	memory {
 		device_type = "memory";
 		reg = <0x00200000 0x07e00000>; /* 126M */
 	};
 
+	/*chosen {
+		linux,stdout-path = &uart0;
+	};*/
+
 	psci {
-		compatible	= "arm,psci-1.0";
-		method		= "smc";
+		/*compatible = "arm,psci-0.2";*/
+		compatible = "arm,psci-1.0";
+		method = "smc";
 	};
 
 	pmu {
@@ -55,12 +64,6 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		/* clock-latency = <100000>; */
-		/* the highest frequency is gotten in runtime */
-		/* cpufreq_tbl = < core_clk	cortex_clk
-				24000		96000
-				108000		504000>; */
-
 		cpu@0 {
 			compatible = "arm,cortex-a53", "arm,armv8";
 			device_type = "cpu";
@@ -90,6 +93,24 @@
 		};
 	};
 
+	/*cpufreq {
+	/*	compatible = "ambarella,cpufreq";        */
+		/*
+		 * Config effective clocks. '%KHZ'
+		 *
+		 * 0 - cortex.
+		 * 1 - pll_out_core.
+		 * 2 - cortex and pll_out_core.
+		 */
+	/*	cpufreq-effective-clock = <0>;		 */	/* default 'cortex' */
+	/*	clocks = <&gclk_cortex &pll_out_core>;   */
+	/*	clock-names = "cortex_clk", "core_clk";  */
+	/*	clocks-frequency-cortex-core =           */
+	/*		<1080000  672000>,               */
+	/*		< 816000  504000>,               */
+	/*		< 600000  336000>;               */
+	/*};                                             */
+
 	gic: interrupt-controller@f0040000 {
 		compatible = "arm,gic-400";
 		#interrupt-cells = <3>;
@@ -97,7 +118,7 @@
 		interrupt-controller;
 		reg = <0xf0041000 0x1000>,	/* GIC Dist */
 		      <0xf0042000 0x2000>,	/* GIC CPU */
-		      /* following are not used if no virtulization
+		      /* following are not used if no virtulization */
 		      <0xf0044000 0x2000>,	/* GIC VCPU Control */
 		      <0xf0046000 0x2000>;	/* GIC VCPU */
 		interrupts = <1 9 0xf04>;	/* GIC Maintenence IRQ */
@@ -219,7 +240,6 @@
 			compatible = "ambarella,rtc";
 			reg = <0xe8015000 0x1000>;
 			interrupts = <0 64 0x1>;
-			amb,rtc-program-enable;
 		};
 
 		pwm: pwm@e8008000 {
@@ -238,7 +258,7 @@
 			      <0xe8010000 0x1000>,
 			      <0xe8011000 0x1000>,
 			      <0xe8016000 0x1000>,
-			      <0xe8015080 0x24>,
+			      <0xe8015080 0x28>,
 			      <0xec170314 0x20>;
 			reg-names = "gpio0", "gpio1", "gpio2", "gpio3", "gpio4",
 				    "iomux", "pad", "ds";
@@ -246,6 +266,7 @@
 
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";
+				reg = <0>;
 				/* gpio interrupts to gic */
 				interrupts = <0 52 0x4>,
 					     <0 51 0x4>,
@@ -416,19 +437,30 @@
 						  0x206d 0x206e>;
 			};
 
-			eth_rgmii_pins: eth0@0 {
+			rgmii_pins: eth0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x3038 0x3039 0x303a 0x303b
 						  0x303c 0x303d 0x303e 0x303f
-						  0x3040 0x3041 0x3042 0x3043
-						  0x3044 0x3045 0x3046 0x3047>;
+						  0x3040 0x3041 0x3044 0x3045
+						  0x3046 0x3047>;
 			};
 
-			eth_rmii_pins: eth0@1 {
+			rmii_pins: eth0@1 {
 				reg = <1>;
-				amb,pinmux-ids = <0x1038 0x1039 0x403a 0x103d
-						  0x103e 0x1041 0x1042 0x1043
+				amb,pinmux-ids = <0x1038 0x1039 0x103a
+						  0x103d 0x103e 0x1041
 						  0x1044 0x1045 0x1046>;
+				amb,pinconf-ids = <0xb00038 0xb00039 0xb0003a>;
+			};
+
+			rgmii_mdio_pins: mdio@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x3042 0x3043>;
+			};
+
+			rmii_mdio_pins: mdio@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x1042 0x1043>;
 			};
 
 			i2c0_pins: i2c0@0 {
@@ -581,6 +613,25 @@
 				reg = <0>;
 				amb,pinmux-ids = <0x1028 0x1029 0x102a>;
 			};
+
+			/*vout0_pins: vout0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1076 0x1077 0x1078 0x1079
+								0x107a 0x107b 0x107c 0x107d
+								0x107e 0x107f 0x1080 0x1081
+								0x1082 0x1083 0x1084 0x1085
+								0x1086 0x1087 0x1088 0x1089>;
+				amb,pinconf-ids = <0xba0076 0xba0077 0xba0078 0xba0079
+								0xba007a 0xba007b 0xba007c 0xba007d
+								0xba007e 0xba007f 0xba0080 0xba0081
+								0xba0082 0xba0083 0xba0084 0xba0085
+								0xba0086 0xba0087 0xba0088 0xba0089>;
+			};*/
+			/*hdmi_pin: hdmi@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1071 0x1072>;
+				amb,pinconf-ids = <0xba0071 0xba0072>;
+			};*/
 		};
 	};
 
@@ -593,23 +644,18 @@
 
 		dma: dma@e0005000 {
 			compatible = "ambarella,dma";
-			reg = <0xe0005000 0x1000>;
+			reg = <0xe0005000 0x1000>, <0xe001b02c 0x4>;
 			interrupts = <0 69 0x4>;
 			#dma-cells = <1>;
 			dma-channels = <8>;
 			dma-requests = <16>;
-			amb,scr-regmap = <&scratchpad_syscon>;
-			/* support pause/resume/stop */
-			amb,support-prs;
-			status = "disabled";
-			/* amb,dma-startchannel = <2>; */ /* Prevent conflict between RTOS. */
 		};
 
-		gdma: gdma@e0005000 {
+		/*gdma: gdma@e0015000 {
 			compatible = "ambarella,gdma";
 			reg = <0xe0015000 0x400>;
 			interrupts = <0 37 0x1>;
-		};
+		};*/
 
 		nand0: nand@e0001000 {
 			compatible = "ambarella,nand";
@@ -626,7 +672,7 @@
 			pinctrl-0 = <&nand0_pins>;
 			clocks = <&gclk_core>;
 			nand-on-flash-bbt;
-			/* amb,enable-wp; */
+			amb,enable-wp;
 			/* amb,soft-ecc = <1>; */
 		};
 
@@ -666,8 +712,6 @@
 			amb,msr-used;	/* use Modem Status Register */
 			/* amb,txdma-used; */
 			/* amb,rxdma-used; */
-			/* dmas = <&dma 12>, <&dma 13>; */
-			/* dma-names = "tx", "rx"; */
 			/* need to select pinctrl setup in board dts */
 		};
 
@@ -721,6 +765,9 @@
 			max-frequency = <120000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
+			/*cap-sd-highspeed;*/
+			/*cap-mmc-highspeed;*/
+			/*mmc-hs200-1_8v;*/
 		};
 
 		sdmmc2: sdmmc2@e001f000 { /* SDXC rather than SDIO */
@@ -735,9 +782,12 @@
 			pinctrl-0 = <&sdmmc2_pins_8bit &sdmmc2_cd_pin &sdmmc2_wp_pin>;
 			clocks = <&gclk_sdxc>;
 			amb,switch-vol-tmo = <100>; /* in millisecond */
-			max-frequency = <100000000>;
+			max-frequency = <96000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
+			/*cap-sd-highspeed;*/
+			/*cap-mmc-highspeed;*/
+			/*mmc-hs200-1_8v;*/
 		};
 
 		mac0: ethernet@e000e000 {
@@ -747,7 +797,8 @@
 			reg = <0xe000e000 0x2000>;
 			interrupts = <0 65 0x4>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&eth_rgmii_pins>;
+			pinctrl-0 = <&rgmii_pins &rgmii_mdio_pins>;
+//			pinctrl-0 = <&rgmii_pins>;
 			phy-mode = "rgmii";
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scr-regmap = <&scratchpad_syscon>;
@@ -756,8 +807,8 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
-			amb,ext-gtx-clk125;
-			amb,tx-clk-invert;
+//			amb,mdio-gpio;
+			/*amb,tx-clk-invert;*/
 		};
 
 		spi0: spi@e0020000 {
@@ -772,7 +823,6 @@
 			/* amb,dma-used; */
 			dmas = <&dma 0>, <&dma 1>;
 			dma-names = "tx", "rx";
-			status = "disabled";
 		};
 
 		spi1: spi@e0021000 {
@@ -808,10 +858,26 @@
 			status = "disabled";
 		};
 
+		dmic: dmic@e0034000 {
+			compatible = "ambarella,dmic";
+			reg = <0xe0034000 0x1000>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			#sound-dai-cells = <0>;
+		};
+
 		scratchpad_syscon: scratchpad_syscon@e001b000 {
 			compatible = "ambarella,scratchpad", "syscon";
 			reg = <0xe001b000 0x50>;
 		};
+
+		/*hdmi@e0013000 {
+			compatible = "ambarella,hdmi";
+			reg = <0xe0013000 0x1000>;
+			interrupts = <0 58 0x4>;
+			interrupt-names = "hdmi";
+			amb,hdmiphy = <0xec170010>;
+			amb,hdmi-version = <14>;
+		};*/
 	};
 
 	rct@ec170000 {
@@ -830,8 +896,6 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xec170050 0x4 0xe001b00c 0x4 0xec1702c0 0x4>;
 			amb,host-phy-num = <1>;
-			amb,owner-mask;
-			amb,owner-invert;
 		};
 
 		reboot {
@@ -850,17 +914,31 @@
 			reg = <0>;
 		};
 
-		framebuffer@1 {
+		framebuffer0: framebuffer@0 {
 			compatible = "ambarella,fb";
+			reg = <0>;
 			amb,vout-id = <0>;
 			amb,format = "rgb565";
-			status = "disabled";
 		};
 
-		framebuffer@2 {
+		framebuffer1: framebuffer@1 {
 			compatible = "ambarella,fb";
+			reg = <1>;
 			amb,vout-id = <1>;
 			amb,format = "rgb565";
+		};
+	};
+
+	mdio0: mdio {
+		compatible = "virtual,mdio-gpio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gpios = <&gpio 66 0
+			 &gpio 67 0>;
+
+		phy@0{
+			reg = <0>;
+			//rst-gpios = <&gpio 17 0x0>;
 		};
 	};
 
@@ -890,6 +968,20 @@
 			clock-output-names = "osc";
 		};
 
+		/*
+		 * This is a dummy clock, to be used as input to gclk_adc.
+		 * gclk_adc has a fixed divider when output, so this is just
+		 * a workaround to make life easier.
+		 */
+		osc_div2: osc-div2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,fixed-factor-clock";
+			clocks = <&osc>;
+			clock-output-names = "osc_div2";
+			clock-mult = <1>;
+			clock-div = <2>;
+		};
+
 		pll_out_core: pll-out-core {
 			#clock-cells = <0>;
 			compatible = "ambarella,pll-clock";
@@ -914,7 +1006,6 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "pll_out_sd";
-			amb,frac-mode;
 		};
 
 		pll_out_enet: pll-out-enet {
@@ -929,6 +1020,7 @@
 			clocks = <&osc>;
 			clock-output-names = "pll_out_enet";
 			amb,frac-mode;
+			amb,frac-nega;
 		};
 
 		gclk_ddr: gclk-ddr {
@@ -984,9 +1076,26 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_so";
 			assigned-clocks = <&gclk_so>;
-			/* assigned-clock-rates = <24000000>; */
+			/*assigned-clock-rates = <12000000>;*/
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
+			amb,frac-mode;
+			amb,frac-nega;
+		};
+
+		gclk_so2: gclk-so2 {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xec170748 4>,
+			      <0xec17074c 4>,
+			      <0xec170750 4>,
+			      <0xec170754 4>,
+			      <0x00000000 0>,
+			      <0x00000000 0>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_so2";
+			assigned-clocks = <&gclk_so2>;
+			/*assigned-clock-rates = <24000000>;*/
 			amb,frac-mode;
 		};
 
@@ -1002,9 +1111,10 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo";
 			assigned-clocks = <&gclk_vo>;
-			/* assigned-clock-rates = <24000000>; */
+			/*assigned-clock-rates = <24000000>;*/
 			amb,extra-pre-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 			amb,fix-divider = <10>;
 			amb,ctrl2-val = <0x3f700900>;
 			amb,ctrl3-val = <0x00068306>;
@@ -1023,9 +1133,10 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_vo2";
 			assigned-clocks = <&gclk_vo2>;
-			/* assigned-clock-rates = <24000000>; */
+			/*assigned-clock-rates = <24000000>;*/
 			amb,extra-pre-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 		};
 
 		gclk_audio: gclk-audio {
@@ -1040,10 +1151,11 @@
 			clocks = <&osc>;
 			clock-output-names = "gclk_audio";
 			assigned-clocks = <&gclk_audio>;
-			/* assigned-clock-rates = <12288000>; */
+			/*assigned-clock-rates = <12288000>;*/
 			amb,extra-pre-scaler;
 			amb,extra-post-scaler;
 			amb,frac-mode;
+			amb,frac-nega;
 		};
 
 		gclk_axi: gclk-axi {
@@ -1150,7 +1262,6 @@
 			compatible = "ambarella,composite-clock";
 			reg = <0xec170534 4>, <0xec170544 4>;
 			clocks = <&rmii_osc>, <&pll_out_enet>;
-			amb,fix-divider = <2>;
 			amb,div-width = <4>;
 			amb,div-shift = <4>;
 			amb,div-plus;
@@ -1160,7 +1271,7 @@
 			#clock-cells = <0>;
 			compatible = "ambarella,div-clock";
 			reg = <0xec17009c 4>;
-			clocks = <&osc>;
+			clocks = <&osc_div2>;
 			clock-output-names = "gclk_adc";
 			amb,div-width = <16>;
 			amb,div-shift = <0>;
