@@ -265,6 +265,13 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 	while (readb_relaxed(host->regbase + SD_RESET_OFFSET) & SD_RESET_ALL)
 		cpu_relax();
 
+        /* need 3 SD clock cycles to let bit0 of SD 0x74 go low */
+	udelay(1);
+
+	/* check sd controller boot status register if ready to boot */
+	while ((readb_relaxed(host->regbase + SD_BOOT_STA_OFFSET) & 0x1) == 0x0)
+		cpu_relax();
+
 	/* enable sd internal clock */
 	writew_relaxed(SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
 	while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE))
