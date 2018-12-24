@@ -1,5 +1,5 @@
 /*
- * /drivers/net/ethernet/ambarella/ambarella_eth_normal.c
+ * /drivers/net/ethernet/ambarella/ambarella_main.c
  *
  * Author: Anthony Ginger <hfjiang@ambarella.com>
  * Copyright (C) 2004-2011, Ambarella, Inc.
@@ -47,128 +47,10 @@
 #include <plat/rct.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
-/* ==========================================================================*/
-#define AMBETH_NAPI_WEIGHT		32
-#define AMBETH_TX_WATCHDOG		(2 * HZ)
-#define AMBETH_MII_RETRY_CNT		200
-#define AMBETH_FC_PAUSE_TIME		1954
 
-#if defined(CONFIG_NET_VENDOR_AMBARELLA_JUMBO_FRAME)
-#define AMBETH_PACKET_MAXFRAME		(8064)
-#define AMBETH_RX_COPYBREAK		(8064)
-#else
-#define AMBETH_PACKET_MAXFRAME		(1536)
-#define AMBETH_RX_COPYBREAK		(1518)
-#endif
+#include "ambarella_eth.h"
 
-#define AMBETH_RX_RNG_MIN		(8)
-#define AMBETH_TX_RNG_MIN		(4)
-#define AMBETH_PHY_REG_SIZE		(32)
-
-#define AMBETH_RXDMA_STATUS	(ETH_DMA_STATUS_OVF | ETH_DMA_STATUS_RI | \
-				ETH_DMA_STATUS_RU | ETH_DMA_STATUS_RPS | \
-				ETH_DMA_STATUS_RWT)
-#define AMBETH_RXDMA_INTEN	(ETH_DMA_INTEN_OVE | ETH_DMA_INTEN_RIE | \
-				ETH_DMA_INTEN_RUE | ETH_DMA_INTEN_RSE | \
-				ETH_DMA_INTEN_RWE)
-#define AMBETH_TXDMA_STATUS	(ETH_DMA_STATUS_TI | ETH_DMA_STATUS_TPS | \
-				ETH_DMA_STATUS_TU | ETH_DMA_STATUS_TJT | \
-				ETH_DMA_STATUS_UNF)
-#if defined(CONFIG_NET_VENDOR_AMBARELLA_INTEN_TUE)
-#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TSE | \
-				ETH_DMA_INTEN_TUE | ETH_DMA_INTEN_TJE | \
-				ETH_DMA_INTEN_UNE)
-#else
-#define AMBETH_TXDMA_INTEN	(ETH_DMA_INTEN_TIE | ETH_DMA_INTEN_TSE | \
-				ETH_DMA_INTEN_TJE | ETH_DMA_INTEN_UNE)
-#endif
-#define AMBETH_DMA_INTEN	(ETH_DMA_INTEN_NIE | ETH_DMA_INTEN_AIE | \
-				ETH_DMA_INTEN_FBE | AMBETH_RXDMA_INTEN | \
-				AMBETH_TXDMA_INTEN)
-
-/* ==========================================================================*/
-struct ambeth_desc {
-	u32				status;
-	u32				length;
-	u32				buffer1;
-	u32				buffer2;
-	u32				des4;
-	u32				des5;
-	u32				des6;
-	u32				des7;
-} __attribute((packed));
-
-struct ambeth_rng_info {
-	struct sk_buff			*skb;
-	dma_addr_t			mapping;
-};
-
-struct ambeth_tx_rngmng {
-	unsigned int			cur_tx;
-	unsigned int			dirty_tx;
-	struct ambeth_rng_info		*rng_tx;
-	struct ambeth_desc		*desc_tx;
-};
-
-struct ambeth_rx_rngmng {
-	unsigned int			cur_rx;
-	unsigned int			dirty_rx;
-	struct ambeth_rng_info		*rng_rx;
-	struct ambeth_desc		*desc_rx;
-};
-
-struct ambeth_info {
-	unsigned int			rx_count;
-	struct ambeth_rx_rngmng		rx;
-	unsigned int			tx_count;
-	unsigned int			tx_irq_low;
-	unsigned int			tx_irq_high;
-	struct ambeth_tx_rngmng		tx;
-	dma_addr_t			rx_dma_desc;
-	dma_addr_t			tx_dma_desc;
-	spinlock_t			lock;
-	int				oldspeed;
-	int				oldduplex;
-	int				oldlink;
-	int				oldpause;
-	int				oldasym_pause;
-	u32				flow_ctr;
-
-	struct net_device_stats		stats;
-	struct napi_struct		napi;
-	struct net_device		*ndev;
-
-	struct mii_bus			new_bus;
-	struct phy_device		*phydev;
-	int				pwr_gpio;
-	u8				pwr_gpio_active;
-	int				rst_gpio;
-	u8				rst_gpio_active;
-	u32				intf_type;
-	u32				phy_supported;
-	u32				fixed_speed; /* only for phy-less */
-
-	unsigned char __iomem		*regbase;
-	struct regmap			*reg_rct;
-	struct regmap			*reg_scr;
-	u32				msg_enable;
-
-	u32				mdio_gpio: 1,
-					enhance: 1,
-					ext_ref_clk : 1, /* only for RMII */
-					int_gtx_clk125 : 1, /* only for GMII/RGMII */
-					tx_clk_invert : 1,
-					phy_enabled : 1,
-					ipc_tx : 1,
-					ipc_rx : 1,
-					dump_tx : 1,
-					dump_rx : 1,
-					dump_rx_free : 1,
-					ahb_mdio_clk_div: 4,
-					dump_rx_all : 1;
-};
-
-/* ==========================================================================*/
+/*--------------------------------------------------------------------------*/
 static int msg_level = -1;
 module_param (msg_level, int, 0);
 MODULE_PARM_DESC (msg_level, "Override default message level");
@@ -176,7 +58,8 @@ MODULE_PARM_DESC (msg_level, "Override default message level");
 static int clk_dbg = -1;
 module_param (clk_dbg, int, 0);
 MODULE_PARM_DESC (clk_dbg, "debug MHz");
-/* ==========================================================================*/
+/*--------------------------------------------------------------------------*/
+
 static void ambhw_dump(struct ambeth_info *lp)
 {
 	u32 i;
@@ -1341,6 +1224,10 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 					lp->tx.rng_tx[entry].skb->len;
 				lp->stats.tx_packets++;
 			}
+
+			ambeth_get_tx_hwtstamp(lp, lp->tx.rng_tx[entry].skb,
+					&lp->tx.desc_tx[entry]);
+
 			dma_unmap_single(lp->ndev->dev.parent,
 				lp->tx.rng_tx[entry].mapping,
 				lp->tx.rng_tx[entry].skb->len,
@@ -1579,6 +1466,9 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		tx_flag = ETH_ENHANCED_TDES0_LS | ETH_ENHANCED_TDES0_FS | ETH_ENHANCED_TDES0_TCH;
 	else
 		tx_flag = ETH_TDES1_LS | ETH_TDES1_FS | ETH_TDES1_TCH;
+
+	if (unlikely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)))
+		ambeth_tx_hwtstamp_enable(lp, &tx_flag);
 
 	spin_lock_irqsave(&lp->lock, flags);
 	dirty_diff = (lp->tx.cur_tx - lp->tx.dirty_tx);
@@ -1853,6 +1743,8 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	}
 
 	skb = lp->rx.rng_rx[entry].skb;
+	ambeth_get_rx_hwtstamp(lp, skb, &lp->rx.desc_rx[entry]);
+
 	mapping = lp->rx.rng_rx[entry].mapping;
 	if (likely(skb && mapping)) {
 		dma_unmap_single(lp->ndev->dev.parent, mapping,
@@ -2078,17 +1970,30 @@ static void ambeth_poll_controller(struct net_device *ndev)
 }
 #endif
 
-static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int ecmd)
+static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 {
+	int rval = 0;
 	struct ambeth_info *lp = netdev_priv(ndev);
 
 	if (!netif_running(ndev))
 		return -EINVAL;
 
-	if (!lp->phydev)
-		return -ENODEV;
+	switch(cmd) {
+	case SIOCGMIIPHY:
+	case SIOCGMIIREG:
+	case SIOCSMIIREG:
+		if (!lp->phydev)
+			return -ENODEV;
+		rval = phy_mii_ioctl(lp->phydev, ifr, cmd);
+		break;
+	case SIOCSHWTSTAMP:
+		rval = ambeth_set_hwtstamp(ndev, ifr);
+		break;
+	default:
+		rval = -EOPNOTSUPP;
+	}
 
-	return phy_mii_ioctl(lp->phydev, ifr, ecmd);
+	return rval;
 }
 
 static const struct net_device_ops ambeth_netdev_ops = {
@@ -2302,6 +2207,7 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 	.set_pauseparam		= ambeth_set_pauseparam,
 	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
 	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
+	.get_ts_info		= ambeth_get_ts_info,
 };
 
 /* ==========================================================================*/
@@ -2615,8 +2521,9 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, ndev);
-	dev_notice(&pdev->dev, "MAC Address[%pM].\n", ndev->dev_addr);
+	ambeth_ptp_init(pdev);
 
+	dev_notice(&pdev->dev, "MAC Address[%pM].\n", ndev->dev_addr);
 	return 0;
 
 ambeth_drv_probe_netif_napi_del:

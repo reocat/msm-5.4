@@ -849,6 +849,8 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
+			clock-names = "ptp_ref";
+			clocks= <&osc>;
 			/* amb,mdio-gpio; */
 			/* amb,tx-clk-invert; */
 		};
