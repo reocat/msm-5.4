@@ -245,7 +245,11 @@ static int ak7719_i2c_probe(struct i2c_client *i2c,
 	ak7719_write_reg(ak7719, 0xc1, 0x30);
 	ak7719_write_reg(ak7719, 0xc2, 0x64);
 	ak7719_write_reg(ak7719, 0xc3, 0xb2);
-	ak7719_write_reg(ak7719, 0xc4, 0xf0);
+	if (aec == 0 ){
+		ak7719_write_reg(ak7719, 0xc4, 0x00);
+	}else{
+		ak7719_write_reg(ak7719, 0xc4, 0xf0);
+	}
 	ak7719_write_reg(ak7719, 0xc5, 0x0);
 	ak7719_write_reg(ak7719, 0xc6, 0x0);
 	//ak7719_write_reg(ak7719, 0xc7, 0x0);
