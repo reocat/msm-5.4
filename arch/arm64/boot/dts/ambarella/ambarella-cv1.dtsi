@@ -23,6 +23,7 @@
 		serial6 = &uart6;
 		nand = &nand0;
 		sd0 = &sdmmc0;
+		spinor = &spinor0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -712,6 +713,15 @@
 			clocks = <&gclk_nand>;
 			nand-on-flash-bbt;
 			/* amb,soft-ecc = <1>; */
+		};
+
+		spinor0: spinor@e0031000 {
+			compatible = "ambarella,spinor";
+			reg = <0xe0031000 0x2ff>, /* spi nor controller */
+			      <0xe000a300 0x20>;  /* dma reg */
+			pinctrl-names = "default";
+			pinctrl-0 = <&spinor0_pins>;
+			status = "disabled";
 		};
 
 		uart1: uart@e0016000 {
