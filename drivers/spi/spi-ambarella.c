@@ -159,6 +159,7 @@ static void ambarella_spi_stop(struct ambarella_spi *bus)
 
 static void ambarella_spi_prepare_transfer(struct ambarella_spi *bus)
 {
+	struct spi_device *spi;
 	struct spi_message *msg;
 	struct spi_transfer *xfer;
 	const void *wbuf, *rbuf;
@@ -169,6 +170,7 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *bus)
 
 	msg = bus->msg;
 	xfer = bus->transfers[bus->xfer_id];
+	spi = bus->msg->spi;
 
 	wbuf = xfer->tx_buf;
 	rbuf = xfer->rx_buf;
@@ -207,6 +209,7 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *bus)
 		writel_relaxed(0, bus->virt + SPI_TXFTLR_OFFSET);
 		writel_relaxed(1, bus->virt + SPI_RXFTLR_OFFSET);
 	}
+	writel_relaxed(1 << spi->chip_select, bus->virt + SPI_SER_OFFSET);
 	writel_relaxed(1, bus->virt + SPI_SSIENR_OFFSET);
 }
 
@@ -318,8 +321,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 		bus->widx = widx;
 		enable_irq(bus->irq);
 	}
-
-	writel_relaxed(1 << spi->chip_select, bus->virt + SPI_SER_OFFSET);
 }
 
 static void ambarella_spi_next_transfer(void *args)
@@ -493,7 +494,9 @@ static int ambarella_spi_one_message(struct spi_master *master, struct spi_messa
 	bus->n_xfer	= 0;
 	bus->xfer_id	= 0;
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
-		if (xfer->len > AMBARELLA_SPI_BUF_MAX_LEN) {
+		if (bus->dma_used && xfer->len > bus->dma_buf_size) {
+			dev_err(&master->dev, "DMA: transfer len %d > buf size %d!\n",
+				xfer->len, bus->dma_buf_size);
 			err = -EINVAL;
 			goto ambarella_spi_transfer_exit;
 		}
