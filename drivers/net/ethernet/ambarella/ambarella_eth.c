@@ -944,7 +944,9 @@ static void ambeth_phy_stop(struct ambeth_info *lp)
 	lp->oldlink = PHY_DOWN;
 	spin_unlock_irqrestore(&lp->lock, flags);
 
-	phy_disconnect(lp->phydev);
+    if (lp->phydev) {
+        phy_disconnect(lp->phydev);
+    }
 }
 
 static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
