@@ -35,6 +35,16 @@
 
 #include "remoteproc_internal.h"
 
+#if defined(CONFIG_AMBALINK_SD) || defined(CONFIG_AMBALINK_SD_MODULE)
+#include <linux/aipc/rpmsg_sd.h>
+/* module memory not mapped, so put memory here to debug when CONFIG_AMBALINK_SD=m */
+struct rpdev_sdinfo G_rpdev_sdinfo[3];
+EXPORT_SYMBOL(G_rpdev_sdinfo);
+
+struct rpdev_sdresp G_rpdev_sdresp;
+EXPORT_SYMBOL(G_rpdev_sdresp);
+#endif
+
 #ifdef RPMSG_DEBUG
 static AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
 extern struct ambalink_shared_memory_layout ambalink_shm_layout;
@@ -512,11 +522,8 @@ void __exit ambarella_rproc_exit(void)
 	platform_driver_unregister(&ambarella_rproc_driver);
 }
 
-/* fix kernel NULL pointer dereference ambarella_rproc_probe() */
-/*subsys_initcall(ambarella_rproc_init);*/
-late_initcall(ambarella_rproc_init);
+device_initcall(ambarella_rproc_init);
 module_exit(ambarella_rproc_exit);
-
 //module_platform_driver(ambarella_rproc_driver);
 
 MODULE_DESCRIPTION("Ambarella Remote Processor control driver");

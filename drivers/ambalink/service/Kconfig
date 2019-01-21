@@ -8,7 +8,7 @@ config AMBALINK_LINKCTRL
           control purpose, such as suspend, resume.
 
 config AMBALINK_SD
-        bool "AmbaLink SD Card Control"
+        tristate "AmbaLink SD Card Control"
         depends on RPMSG
         default n
         help

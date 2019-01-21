@@ -50,25 +50,21 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 
-#undef SD_INSTANCES
-/* AMBALINK: enable or diable sd1 in devicetree, not HERE */
-#define SD_INSTANCES			3
-/* The slot IDs */
-typedef enum _ambarella_slot_id {
-	SD_HOST_0 = 0,
-        SD_HOST_1,
-        SD_HOST_2,
+#if defined(CONFIG_ARCH_AMBARELLA_CV25)
+#define SDIO_GLOBAL_ID 1
+#else
+/* use SDXC slot for WiFi */
+#define SDIO_GLOBAL_ID 2
+#endif
 
-        SD_MAX_CARD      /* Total number of slot IDs */
-} ambarella_slot_id;
+#ifdef CONFIG_AMBALINK_SD_MODULE
+#define CONFIG_AMBALINK_SD
 #endif
 #if defined(CONFIG_AMBALINK_SD)
-#include <linux/aipc/rpmsg_sd.h>
-static struct rpdev_sdinfo G_rpdev_sdinfo[SD_INSTANCES];
+extern struct rpdev_sdinfo G_rpdev_sdinfo[3];
 #endif
 
-#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
-static struct mmc_host *G_mmc[SD_INSTANCES];
+static struct mmc_host *G_mmc[3];
 #endif
 
 /* ==========================================================================*/
@@ -129,15 +125,10 @@ struct ambarella_mmc_host {
 	u32				sd_nixen;
 	u32				sd_eixen;
 #endif
-#if defined(CONFIG_AMBALINK_SD)
-	struct delayed_work		detect;
-	u32				insert;
-#endif
 };
 
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 /* --- /sys/module/ambarella_sd/parameters/ */
-#define SDIO_GLOBAL_ID 2
 static int force_sdio_host_high_speed = -1;
 static int sdio_host_max_frequency = -1;
 static int sdio_clk_ds = -1;
@@ -235,7 +226,7 @@ static int mmc_fixed_cd_proc_read(struct seq_file *m, void *v)
 	struct mmc_host *mmc;
 	struct ambarella_mmc_host *host;
 
-	for(mmci = 0; mmci < SD_INSTANCES; mmci++) {
+	for(mmci = 0; mmci < 3; mmci++) {
 		if (G_mmc[mmci]) {
 			mmc = G_mmc[mmci];
 			host = mmc_priv(mmc);
@@ -300,16 +291,25 @@ static int ambarella_sd_info_init(struct mmc_host *mmc)
 	u32 host_id;
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
-	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		(!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		SD_HOST_2;
+	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? 0 :
+		(!strcmp(host->dev->of_node->name, "sdmmc1")) ? 1 : 2;
 
 	G_mmc[host_id] = mmc;
 
 	if (host_id == SDIO_GLOBAL_ID) {
-		int init_sd_para(size_t regbase);
+		char sdx[4];
+		struct device_node *np =NULL;
+		extern int init_sd_para(size_t regbase, struct device_node *np);
 
-		init_sd_para((size_t)host->regbase);
+		sprintf(sdx, "sd%d", SDIO_GLOBAL_ID);
+		np = of_find_node_by_path(sdx);
+
+		if (!np) {
+			printk(KERN_ERR "%s:%s err of_find_node_by_path\n", __func__, sdx);
+			return -1;
+		}
+
+		init_sd_para((size_t)host->regbase, np);
 		proc_create("sdio_info", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
 			&proc_fops_sdio_info);
 		proc_create("mmc_fixed_cd", S_IRUGO | S_IWUSR, get_ambarella_proc_dir(),
@@ -325,9 +325,8 @@ static int ambarella_sd_info_deinit(struct mmc_host *mmc)
 	u32 host_id;
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
-	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		(!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		SD_HOST_2;
+	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? 0 :
+		(!strcmp(host->dev->of_node->name, "sdmmc1")) ? 1 : 2;
 
 	if (host_id == SDIO_GLOBAL_ID) {
 		remove_proc_entry("mmc_fixed_cd", get_ambarella_proc_dir());
@@ -389,111 +388,30 @@ static int ambarella_sd_system_event(struct notifier_block *nb,
 #endif
 
 #if defined(CONFIG_AMBALINK_SD)
-void ambarella_sd_cd_detect(struct work_struct *work)
-{
-	struct ambarella_mmc_host *host =
-		container_of(work, struct ambarella_mmc_host, detect.work);
-	u32 host_id;
-
-	host_id= (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		 (!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		 	SD_HOST_2;
-
-	if (host->insert == 0x1) {
-		rpmsg_sd_detect_insert(host_id);
-	} else {
-		rpmsg_sd_detect_eject(host_id);
-	}
-}
-
-/**
- * Get the sdinfo inited by rpmsg.
- */
-struct rpdev_sdinfo *ambarella_sd_sdinfo_get(struct mmc_host *mmc)
-{
-	u32 host_id;
-
-	struct ambarella_mmc_host *host = mmc_priv(mmc);
-
-	BUG_ON(!mmc);
-
-	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		  	SD_HOST_2;
-
-	return &G_rpdev_sdinfo[host_id];
-}
-EXPORT_SYMBOL(ambarella_sd_sdinfo_get);
-
-/**
- * Send SD command through rpmsg.
- */
-int ambarella_sd_rpmsg_cmd_send(struct mmc_host *mmc, struct mmc_command *cmd)
-{
-	struct rpdev_sdresp resp;
-	struct ambarella_mmc_host *host = mmc_priv(mmc);
-
-	resp.opcode = cmd->opcode;
-	resp.host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-			(!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-				SD_HOST_2;
-
-	if (G_rpdev_sdinfo[resp.host_id].from_rpmsg == 0)
-		return -1;
-
-	/* send IPC */
-	rpmsg_sdresp_get((void *) &resp);
-	if (resp.ret != 0)
-		return resp.ret;
-
-	memcpy(cmd->resp, resp.resp, sizeof(u32) * 4);
-
-	if (cmd->data != NULL) {
-		memcpy(cmd->data->buf, resp.buf, cmd->data->blksz);
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL(ambarella_sd_rpmsg_cmd_send);
-
 /**
  * Service initialization.
  */
 int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc)
 {
 	u32 host_id;
-	struct rpdev_sdinfo sdinfo;
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
-	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		  	SD_HOST_2;
+	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? 0 :
+		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? 1 : 2;
 
-	memset(&sdinfo, 0x0, sizeof(sdinfo));
-	sdinfo.host_id = host_id;
-	rpmsg_sdinfo_get((void *) &sdinfo);
-
-	G_rpdev_sdinfo[host_id].is_init		= sdinfo.is_init;
-	G_rpdev_sdinfo[host_id].is_sdmem	= sdinfo.is_sdmem;
-	G_rpdev_sdinfo[host_id].is_mmc		= sdinfo.is_mmc;
-	G_rpdev_sdinfo[host_id].is_sdio		= sdinfo.is_sdio;
-	G_rpdev_sdinfo[host_id].bus_width	= sdinfo.bus_width;
-	G_rpdev_sdinfo[host_id].clk		= sdinfo.clk;
-	G_rpdev_sdinfo[host_id].ocr		= sdinfo.ocr;
-	G_rpdev_sdinfo[host_id].hcs		= sdinfo.hcs;
-	G_rpdev_sdinfo[host_id].rca		= sdinfo.rca;
+	G_rpdev_sdinfo[host_id].host_id = host_id;
+	rpmsg_sdinfo_get((void *) &G_rpdev_sdinfo[host_id]);
 
 	G_mmc[host_id] = mmc;
 
-#if 0
-	printk("%s: sdinfo.host_id   = %d\n", __func__, sdinfo.host_id);
-	printk("%s: sdinfo.is_init   = %d\n", __func__, sdinfo.is_init);
-	printk("%s: sdinfo.is_sdmem  = %d\n", __func__, sdinfo.is_sdmem);
-	printk("%s: sdinfo.is_mmc    = %d\n", __func__, sdinfo.is_mmc);
-	printk("%s: sdinfo.is_sdio   = %d\n", __func__, sdinfo.is_sdio);
-	printk("%s: sdinfo.bus_width = %d\n", __func__, sdinfo.bus_width);
-	printk("%s: sdinfo.clk       = %d\n", __func__, sdinfo.clk);
-#endif
+	ambsd_prt("sd[%d] mmc index %d\n", host_id, mmc->index);
+	ambsd_prt("sd[%d] is_init   = %d\n", host_id, G_rpdev_sdinfo[host_id].is_init);
+	ambsd_prt("sd[%d] is_sdmem  = %d\n", host_id, G_rpdev_sdinfo[host_id].is_sdmem);
+	ambsd_prt("sd[%d] is_mmc    = %d\n", host_id, G_rpdev_sdinfo[host_id].is_mmc);
+	ambsd_prt("sd[%d] is_sdio   = %d\n", host_id, G_rpdev_sdinfo[host_id].is_sdio);
+	ambsd_prt("sd[%d] bus_width = %d\n", host_id, G_rpdev_sdinfo[host_id].bus_width);
+	ambsd_prt("sd[%d] clk       = %d\n", host_id, G_rpdev_sdinfo[host_id].clk);
+
 	return 0;
 }
 EXPORT_SYMBOL(ambarella_sd_rpmsg_sdinfo_init);
@@ -506,9 +424,8 @@ void ambarella_sd_rpmsg_sdinfo_en(struct mmc_host *mmc, u8 enable)
 	u32 host_id;
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
-	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? SD_HOST_0 :
-		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? SD_HOST_1 :
-		  	SD_HOST_2;
+	host_id = (!strcmp(host->dev->of_node->name, "sdmmc0")) ? 0 :
+		  (!strcmp(host->dev->of_node->name, "sdmmc1")) ? 1 : 2;
 
 	if (enable)
 		G_rpdev_sdinfo[host_id].from_rpmsg = enable;
@@ -745,7 +662,7 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 	ambarella_sd_disable_irq(host, 0xffffffff);
 
 #if defined(CONFIG_AMBALINK_SD)
-	if (!strcmp(host->dev->of_node->name, "sdmmc0")) {
+	if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
 		latency = readl_relaxed(host->regbase + SD_LAT_CTRL_OFFSET);
 		if (host->phy_ctrl0_reg) {
 			ctrl0_reg = readl_relaxed(host->phy_ctrl0_reg);
@@ -767,7 +684,7 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 		cpu_relax();
 
 #if defined(CONFIG_AMBALINK_SD)
-	if (!strcmp(host->dev->of_node->name, "sdmmc0")) {
+	if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
 		writel_relaxed(latency, host->regbase + SD_LAT_CTRL_OFFSET);
 		if (host->phy_ctrl0_reg) {
 			writel_relaxed(ctrl2_reg, host->phy_ctrl2_reg);
@@ -782,7 +699,13 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 
 	/* enable sd internal clock */
 #if defined(CONFIG_AMBALINK_SD)
-	writew_relaxed(SD_CLK_EN | SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
+	if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
+		writew_relaxed(SD_CLK_EN | SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
+	}
+	else
+	{
+	writew_relaxed(SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
+	}
 #else
 	writew_relaxed(SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
 #endif
@@ -854,13 +777,16 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 
 		sd_clk = min_t(u32, max_t(u32, clock, 24000000), mmc->f_max);
 #if defined(CONFIG_AMBALINK_SD)
-		/* sdmmc0 clk already set by RTOS */
-		if (0 != strcmp(host->dev->of_node->name, "sdmmc0")) {
-			clk_set_rate(host->clk, sd_clk);
+		if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
+			ambsd_prt("%s skip clk_set_rate()\n", __func__);
 		}
-#endif
+		else
+		{
 		clk_set_rate(host->clk, sd_clk);
-
+		}
+#else
+		clk_set_rate(host->clk, sd_clk);
+#endif
 		sd_clk = clk_get_rate(host->clk);
 
 		for (divisor = 1; divisor <= 256; divisor <<= 1) {
@@ -875,26 +801,23 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 		mmc->max_busy_timeout = (1 << 27) / (sd_clk / 1000);
 
 #if defined(CONFIG_AMBALINK_SD)
-{
-		struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(mmc);
-		u32 orig_clk_reg;
+		if (0 == mmc->index)
+		{
+			u32 orig_clk_reg = readw_relaxed(host->regbase + SD_CLK_OFFSET);
 
+			clk_reg = ((divisor << 7) & 0xff00) | SD_CLK_ICLK_EN;
+			if ((orig_clk_reg & 0xff00) != (clk_reg & 0xff00)) {
+				dev_info(host->dev,
+					"internal clock divisor is mismatched (RTOS = 0x%08x, Linux = 0x%08x)\n",
+					orig_clk_reg, clk_reg);
+				/* use RTOS setting */
+				clk_reg = orig_clk_reg;
+			}
+		}
+		else
+		{
 		clk_reg = ((divisor << 7) & 0xff00) | SD_CLK_ICLK_EN;
-
-		if (sdinfo->is_init && sdinfo->from_rpmsg) {
-			orig_clk_reg = readw_relaxed(host->regbase + SD_CLK_OFFSET);
-		} else {
-			orig_clk_reg = clk_reg = ((divisor << 7) & 0xff00) | SD_CLK_ICLK_EN;
 		}
-
-		if ((orig_clk_reg & 0xff00) != (clk_reg & 0xff00)) {
-			dev_info(host->dev,
-				"internal clock divisor is mismatched (RTOS = 0x%08x, Linux = 0x%08x)\n",
-				orig_clk_reg, clk_reg);
-			/* use RTOS setting */
-			clk_reg = orig_clk_reg;
-		}
-}
 #else
 		/* convert divisor to register setting: (divisor >> 1) << 8 */
 		clk_reg = ((divisor << 7) & 0xff00) | SD_CLK_ICLK_EN;
@@ -947,8 +870,8 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 {
 	u32 hostr = 0, tmp;
 #if defined(CONFIG_AMBALINK_SD)
-	/* skip eMMC cold boot settings , still needed in resume/recovery */
 	if (0 == strcmp(host->dev->of_node->name, "sdmmc0") && (0 == cold_booted)) {
+		ambsd_prt("%s force bus_width %d host->mode %d\n", __func__, bus_width, mode);
 		host->bus_width = bus_width;
 		host->mode = mode;
 		return;
@@ -987,7 +910,6 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 	if (force_sdio_host_high_speed == 1)
 		hostr |= SD_HOST_HIGH_SPEED;
 #endif
-
 	writeb_relaxed(hostr, host->regbase + SD_HOST_OFFSET);
 
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
@@ -995,7 +917,6 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 		amba_sdio_delay_post_apply(sdio_host_odly, sdio_host_ocly, sdio_host_idly);
 	}
 #endif
-
 	host->bus_width = bus_width;
 	host->mode = mode;
 }
@@ -1045,19 +966,24 @@ static void ambarella_sd_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
 #if defined(CONFIG_AMBALINK_SD)
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(mmc);
-	if (sdinfo->from_rpmsg && !sdinfo->is_sdio) {
-		ios->bus_width = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8 :
-				 (sdinfo->bus_width == 4) ? MMC_BUS_WIDTH_4 :
-				 	MMC_BUS_WIDTH_1;
-		ios->clock = sdinfo->clk;
-		/* skip eMMC cold boot settings , still needed in resume/recovery */
-		if (cold_booted == 0) {
-			host->power_mode = ios->power_mode;
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[mmc->index];
+
+	if (0 == mmc->index) {
+		if (sdinfo->from_rpmsg && !sdinfo->is_sdio) {
+			ios->bus_width = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8 :
+					 (sdinfo->bus_width == 4) ? MMC_BUS_WIDTH_4 :
+					 	MMC_BUS_WIDTH_1;
+			ios->clock = sdinfo->clk;
+
+			if ((cold_booted == 0) && (host->power_mode != ios->power_mode)) {
+				ambsd_prt("%s force power_mode %d\n", __func__, ios->power_mode);
+				host->power_mode = ios->power_mode;
+			}
+		} else {
+			dump_stack();
 		}
 	}
 #endif
-
 	if (host->power_mode != ios->power_mode)
 		ambarella_sd_set_pwr(host, ios->power_mode);
 
@@ -1070,7 +996,6 @@ static void ambarella_sd_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		host->clock = 0;
 	}
 #endif
-
 	if (host->clock != ios->clock)
 		ambarella_sd_set_clk(mmc, ios->clock);
 
@@ -1366,7 +1291,6 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	ambarella_sd_request_bus(mmc);
 #endif
-
 	spin_lock_irqsave(&host->lock, flags);
 	WARN_ON(host->mrq);
 	host->mrq = mrq;
@@ -1394,14 +1318,13 @@ static int ambarella_sd_switch_voltage(struct mmc_host *mmc, struct mmc_ios *ios
 
 #if defined(CONFIG_AMBALINK_SD)
 	if (0 == strcmp(host->dev->of_node->name, "sdmmc0") && (0 == cold_booted)) {
-		/* skip eMMC cold boot settings , still needed in resume/recovery */
+		ambsd_prt("%s skip\n", __func__);
 		return 0;
 	}
 #endif
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	ambarella_sd_request_bus(mmc);
 #endif
-
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
 		writeb_relaxed(SD_PWR_ON | SD_PWR_3_3V, host->regbase + SD_PWR_OFFSET);
 
@@ -1459,8 +1382,8 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		return 0;
 
 #if defined(CONFIG_AMBALINK_SD)
-	if (!strcmp(host->dev->of_node->name, "sdmmc0")) {
-		/* In eMMC boot, RTOS should already complete the tuning. */
+	if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
+		ambsd_prt("%s skip\n", __func__);
 		return 0;
 	}
 #endif
@@ -1792,8 +1715,13 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 		dev_dbg(host->dev, "0x%08x, card %s\n", host->irq_status,
 			(host->irq_status & SD_NIS_INSERT) ? "Insert" : "Removed");
 #if defined(CONFIG_AMBALINK_SD)
-		host->insert = (host->irq_status & SD_NIS_INSERT) ? 1 : 0;
-		schedule_delayed_work(&host->detect, msecs_to_jiffies(500));
+		if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
+			ambsd_prt("%s skip mmc_detect_change()\n", __func__);
+		}
+		else
+		{
+		mmc_detect_change(host->mmc, msecs_to_jiffies(500));
+		}
 #else
 		mmc_detect_change(host->mmc, msecs_to_jiffies(500));
 #endif
@@ -1839,9 +1767,13 @@ static int ambarella_sd_init_hw(struct ambarella_mmc_host *host)
 	}
 
 #if defined(CONFIG_AMBALINK_SD)
-	/* skip eMMC cold boot settings , still needed in resume/recovery */
-	if (0 != strcmp(host->dev->of_node->name, "sdmmc0") && (cold_booted != 0))
-		ambarella_sd_reset_all(host);
+	if (0 == strcmp(host->dev->of_node->name, "sdmmc0")) {
+		ambsd_prt("%s skip ambarella_sd_reset_all()\n", __func__);
+	}
+	else
+	{
+	ambarella_sd_reset_all(host);
+	}
 #else
 	ambarella_sd_reset_all(host);
 #endif
@@ -1906,9 +1838,12 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	mmc->max_seg_size = SD_ADMA_TBL_LINE_MAX_LEN;
 
 #if defined(CONFIG_AMBALINK_SD)
-	/* sdmmc0 clk already set by RTOS */
-	if (0 != strcmp(host->dev->of_node->name, "sdmmc0"))
-		clk_set_rate(host->clk, mmc->f_max);
+	if (0 == strcmp(host->dev->of_node->name, "sdmmc0"))
+		ambsd_prt("%s skip clk_set_rate()\n", __func__);
+	else
+	{
+	clk_set_rate(host->clk, mmc->f_max);
+	}
 #else
 	clk_set_rate(host->clk, mmc->f_max);
 #endif
@@ -2031,7 +1966,6 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	ambarella_sd_request_bus(mmc);
 #endif
-
 	rval = ambarella_sd_init_hw(host);
 	if (rval < 0)
 		goto out1;
@@ -2058,22 +1992,23 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 #endif
 
 #if defined(CONFIG_AMBALINK_SD)
-{
-	struct rpdev_sdinfo *sdinfo;
+	/* limitation: emmc MUST be sdmmc0 */
+	if (0 == mmc->index) {
+		struct rpdev_sdinfo *sdinfo;
 
-	ambarella_sd_rpmsg_sdinfo_init(mmc);
-	sdinfo = ambarella_sd_sdinfo_get(mmc);
-	ambarella_sd_rpmsg_sdinfo_en(mmc, sdinfo->is_init);
+		ambarella_sd_rpmsg_sdinfo_init(mmc);
+		sdinfo = &G_rpdev_sdinfo[mmc->index];
+		ambarella_sd_rpmsg_sdinfo_en(mmc, sdinfo->is_init);
+		/* Set clock back to RTOS desired. */
+		if (sdinfo->is_init) {
+			clk_set_rate(host->clk, sdinfo->clk);
+		} else {
+			dump_stack();
+		}
 
-	/* Set clock back to RTOS desired. */
-	if (sdinfo->is_init) {
-		clk_set_rate(host->clk, sdinfo->clk);
+		disable_irq(host->irq);
+		enable_irq(host->irq);
 	}
-
-	INIT_DELAYED_WORK(&host->detect, ambarella_sd_cd_detect);
-	disable_irq(host->irq);
-	enable_irq(host->irq);
-}
 #endif
 
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
@@ -2112,7 +2047,6 @@ static int ambarella_sd_remove(struct platform_device *pdev)
 #if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	ambarella_sd_info_deinit(host->mmc);
 #endif
-
 	ambarella_sd_remove_debugfs(host);
 
 	tasklet_kill(&host->finish_tasklet);
@@ -2141,7 +2075,6 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 	cold_booted = 1;
 	down(&host->system_event_sem);
 #endif
-
 	if(host->mmc->pm_caps & MMC_PM_KEEP_POWER) {
 		ambarella_sd_disable_irq(host, SD_NISEN_CARD);
 		host->sd_nisen = readw_relaxed(host->regbase + SD_NISEN_OFFSET);
@@ -2164,7 +2097,6 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	up(&host->system_event_sem);
 	ambarella_sd_request_bus(host->mmc);
 #endif
-
 	if (gpio_is_valid(host->pwr_gpio))
 		gpio_direction_output(host->pwr_gpio, host->pwr_gpio_active);
 
@@ -2191,7 +2123,6 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 	ambarella_sd_release_bus(host->mmc);
 	sd_suspended = 0;
 #endif
-
 	return 0;
 }
 #endif
@@ -2231,7 +2162,12 @@ static void __exit ambarella_sd_exit(void)
 	platform_driver_unregister(&ambarella_sd_driver);
 }
 
+#if defined(CONFIG_AMBALINK_SD)
+/* wait for rpmsg_sd_probe() */
+late_initcall(ambarella_sd_init);
+#else
 fs_initcall(ambarella_sd_init);
+#endif
 module_exit(ambarella_sd_exit);
 
 MODULE_DESCRIPTION("Ambarella Media Processor SD/MMC Host Controller");

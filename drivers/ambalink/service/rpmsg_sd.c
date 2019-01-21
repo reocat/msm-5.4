@@ -30,8 +30,6 @@
 #include <plat/sd.h>
 #include <plat/ambalink_cfg.h>
 
-static struct semaphore rpdev_sd_sema = __SEMAPHORE_INITIALIZER(rpdev_sd_sema, 0);
-
 typedef struct _AMBA_RPDEV_SD_MSG_s_ {
 	u64	Cmd;
 	u64	Param;
@@ -87,7 +85,7 @@ static int rpmsg_sd_proc_write(struct file *file,
 
 	count ++;
 
-	//printk("[%s]: sd_buf: %s, count = %d\n", __func__, sd_buf, (int) count);
+	ambsd_prt("[%s]: sd_buf: %s, count = %d\n", __func__, sd_buf, (int) count);
 
 	rpmsg_send(rpdev->ept, sd_buf, count);
 
@@ -105,11 +103,11 @@ int rpmsg_sdinfo_get(void *data)
 	struct rpdev_sdinfo *sdinfo;
 
 	if (!rpdev_sd) {
-		printk("%s: down_interruptible() start", __func__);
-		while (down_interruptible(&rpdev_sd_sema)) {
-			printk("%s: down_interruptible() is interrupted, retry", __func__);
-		}
-		printk("%s: down_interruptible() end", __func__);
+		/* for emmc boot: rpmsg_sd -> ambarella_rproc -> ambarella_sd
+		 *            (3) arch_initcall(rpmsg_sd_init);
+		 *            (6) device_initcall(ambarella_rproc_init);
+		 *            (7) late_initcall(ambarella_sd_init);
+		 */
 		BUG_ON(!rpdev_sd);
 	}
 
@@ -117,11 +115,12 @@ int rpmsg_sdinfo_get(void *data)
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_INFO_GET;
-	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys(data);
+	ambsd_prt("[tx] SD_INFO_GET\n");
+	sd_ctrl_cmd.Param = (u64)ambalink_virt_to_phys((uintptr_t)data);
 
 	rpmsg_send(rpdev_sd->ept, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
-	if (sdinfo->host_id == SD_HOST_0) {
+	if (sdinfo->host_id == 0) {
 		wait_for_completion(&sd0_comp);
 	} else {
 		wait_for_completion(&sd1_comp);
@@ -137,21 +136,22 @@ int rpmsg_sdresp_get(void *data)
 	struct rpdev_sdresp *sdresp;
 
 	BUG_ON(!rpdev_sd);
-
+	ambsd_prt("%s: in\n", __func__);
 	sdresp = (struct rpdev_sdresp *) data;
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_RESP_GET;
-	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys(data);
+	ambsd_prt("[tx] SD_RESP_GET\n");
+	sd_ctrl_cmd.Param = (u64) ambalink_virt_to_phys((uintptr_t)data);
 
 	rpmsg_send(rpdev_sd->ept, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
 
-	if (sdresp->host_id == SD_HOST_0) {
+	if (sdresp->host_id == 0) {
 		wait_for_completion(&sd0_comp);
 	} else {
 		wait_for_completion(&sd1_comp);
 	}
-
+	ambsd_prt("%s: out\n", __func__);
 	return 0;
 }
 EXPORT_SYMBOL(rpmsg_sdresp_get);
@@ -162,6 +162,7 @@ int rpmsg_sd_detect_insert(u32 host_id)
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_DETECT_INSERT;
+	ambsd_prt("[tx] SD_DETECT_INSERT\n");
 	sd_ctrl_cmd.Param = host_id;
 
 	rpmsg_send(rpdev_sd->ept, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
@@ -176,6 +177,7 @@ int rpmsg_sd_detect_eject(u32 host_id)
 
 	memset(&sd_ctrl_cmd, 0x0, sizeof(sd_ctrl_cmd));
 	sd_ctrl_cmd.Cmd = SD_DETECT_EJECT;
+	ambsd_prt("[tx] SD_DETECT_EJECT\n");
 	sd_ctrl_cmd.Param = host_id;
 
 	rpmsg_send(rpdev_sd->ept, &sd_ctrl_cmd, sizeof(sd_ctrl_cmd));
@@ -202,7 +204,7 @@ static int rpmsg_sd_ack(void *data)
 {
 	AMBA_RPDEV_SD_MSG_s *msg = (AMBA_RPDEV_SD_MSG_s *) data;
 
-	if (msg->Param == SD_HOST_0) {
+	if (msg->Param == 0) {
 		complete(&sd0_comp);
 	} else {
 		complete(&sd1_comp);
@@ -224,19 +226,19 @@ static int rpmsg_sd_cb(struct rpmsg_device *rpdev, void *data, int len,
 	int rval = 0;
 	AMBA_RPDEV_SD_MSG_s *msg = (AMBA_RPDEV_SD_MSG_s *) data;
 
-#if 0
-	printk("recv: cmd = [%d], data = [0x%08x]", msg->Cmd, msg->Param);
-#endif
+	ambsd_prt("recv: cmd = [%lld], data = [0x%08llx]", msg->Cmd, msg->Param);
 	switch (msg->Cmd) {
 	case SD_DETECT_CHANGE:
+		ambsd_prt("[rx] SD_DETECT_CHANGE\n");
 		rval = proc_list[0](data);
 		break;
 	case SD_RPMSG_ACK:
+		ambsd_prt("[rx] SD_RPMSG_ACK\n");
 		rval = proc_list[1](data);
 		break;
 	default:
 		rval = -1;
-		printk("%s err: cmd = [0x%08llx], data = [0x%08llx]",
+		ambsd_prt("%s err: cmd = [0x%08llx], data = [0x%08llx]",
 		       __func__, msg->Cmd, msg->Param);
 		break;
 	}
@@ -256,7 +258,7 @@ static int rpmsg_sd_probe(struct rpmsg_device *rpdev)
 	int ret = 0;
 	struct rpmsg_channel_info chinfo;
 
-	//printk("%s: probed\n", __func__);
+	ambsd_prt("%s: probed\n", __func__);
 
 #ifdef AMBARELLA_RPMSG_SD_PROC
 	rpmsg_proc_dir = proc_mkdir("rpmsg_sd", get_ambarella_proc_dir());
@@ -273,7 +275,6 @@ static int rpmsg_sd_probe(struct rpmsg_device *rpdev)
 #endif
 
 	rpdev_sd = rpdev;
-	up(&rpdev_sd_sema);
 
 	strncpy(chinfo.name, rpdev->id.name, sizeof(chinfo.name));
 	chinfo.src = RPMSG_ADDR_ANY;
@@ -305,7 +306,6 @@ static struct rpmsg_driver rpmsg_sd_driver = {
 
 static int __init rpmsg_sd_init(void)
 {
-	sema_init(&rpdev_sd_sema, 0);
 	return register_rpmsg_driver(&rpmsg_sd_driver);
 }
 
@@ -314,7 +314,8 @@ static void __exit rpmsg_sd_fini(void)
 	unregister_rpmsg_driver(&rpmsg_sd_driver);
 }
 
-fs_initcall(rpmsg_sd_init);
+arch_initcall(rpmsg_sd_init);
 module_exit(rpmsg_sd_fini);
 
 MODULE_DESCRIPTION("RPMSG SD Server");
+MODULE_LICENSE("GPL");

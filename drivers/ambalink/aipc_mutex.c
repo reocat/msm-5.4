@@ -216,6 +216,7 @@ void aipc_mutex_lock(int id)
 	// lock the local mutex
 	mutex_lock(&local->mutex);
 }
+EXPORT_SYMBOL(aipc_mutex_lock);
 
 void aipc_mutex_unlock(int id)
 {
@@ -279,6 +280,7 @@ void aipc_mutex_unlock(int id)
 	}
 	__aipc_spin_unlock_irqrestore((void *) &share->slock, flags);
 }
+EXPORT_SYMBOL(aipc_mutex_unlock);
 
 static const struct of_device_id ambarella_ipc_mutex_of_match[] __initconst = {
 	{.compatible = "ambarella,ipc-mutex", },

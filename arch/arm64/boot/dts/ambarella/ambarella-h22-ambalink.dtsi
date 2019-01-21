@@ -798,7 +798,6 @@
 			interrupts = <0 65 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&rgmii_pins &rgmii_mdio_pins>;
-//			pinctrl-0 = <&rgmii_pins>;
 			phy-mode = "rgmii";
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scr-regmap = <&scratchpad_syscon>;
@@ -807,9 +806,21 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
-//			amb,mdio-gpio;
-			/*amb,tx-clk-invert;*/
+			amb,tx-clk-invert;
 		};
+
+		/*mac0: ethernet@e000e000 {
+			device_type     = "network";
+			compatible      = "st,stih416-dwmac", "snps,dwmac", "snps,dwmac-3.710";
+			status          = "ok";
+			reg             = <0xe000e000 0x8000>;
+			reg-names       = "stmmaceth";
+			interrupts = <0 65 0x4>;
+			interrupt-names = "macirq";
+			snps,pbl        = <32>;
+			snps,mixed-burst;
+			snps,scr-regmap = <&scratchpad_syscon>;
+		};*/
 
 		spi0: spi@e0020000 {
 			compatible = "ambarella,spi";
@@ -1345,13 +1356,5 @@
                                      <0 8 0x4>;        /* svq_rx_irq */
 			amb,scr-regmap = <&scratchpad_syscon>;
                 };
-        };
-
-        amba_heapmem: ambarella-amba_heapmem {
-            compatible = "ambarella,amba_heapmem";
-        };
-
-        amba_dspmem: ambarella-amba_dspmem {
-            compatible = "ambarella,amba_dspmem";
         };
 };

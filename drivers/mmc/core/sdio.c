@@ -197,10 +197,10 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 		if (!card->sw_caps.sd3_bus_mode) {
 			if (speed & SDIO_SPEED_SHS) {
 				card->cccr.high_speed = 1;
-#if 0
-				card->sw_caps.hs_max_dtr = 50000000;
-#else
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 				card->sw_caps.hs_max_dtr = HS_MAX_DTR;
+#else
+				card->sw_caps.hs_max_dtr = 50000000;
 #endif
 			} else {
 				card->cccr.high_speed = 0;
@@ -386,10 +386,10 @@ static unsigned mmc_sdio_get_max_clock(struct mmc_card *card)
 		 * high-speed, but it seems that 50 MHz is
 		 * mandatory.
 		 */
-#if 0
-		max_dtr = 50000000;
-#else
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 		max_dtr = HS_MAX_DTR;
+#else
+		max_dtr = 50000000;
 #endif
 	} else {
 		max_dtr = card->cis.max_dtr;

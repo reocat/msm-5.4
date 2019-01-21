@@ -18,7 +18,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/pm.h>
 #include <linux/dma-direction.h>
-#if defined(CONFIG_AMBALINK_SD)
+#if defined(CONFIG_AMBALINK_SD) || defined(CONFIG_AMBALINK_SD_MODULE)
 #include <linux/aipc/rpmsg_sd.h>
 #endif
 
@@ -562,7 +562,7 @@ static inline enum dma_data_direction mmc_get_dma_dir(struct mmc_data *data)
 int mmc_send_tuning(struct mmc_host *host, u32 opcode, int *cmd_error);
 int mmc_abort_tuning(struct mmc_host *host, u32 opcode);
 
-#if defined(CONFIG_AMBALINK_SD)
+#if defined(CONFIG_AMBALINK_SD) || defined(CONFIG_AMBALINK_SD_MODULE)
 extern struct rpdev_sdinfo *ambarella_sd_sdinfo_get(struct mmc_host *mmc);
 extern int ambarella_sd_rpmsg_cmd_send(struct mmc_host *mmc, struct mmc_command *cmd);
 extern int ambarella_sd_rpmsg_sdinfo_init(struct mmc_host *mmc);

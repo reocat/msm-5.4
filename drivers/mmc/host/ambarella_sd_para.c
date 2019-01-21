@@ -46,8 +46,6 @@ static struct regmap *reg_rct = NULL;
 static size_t sdio_regbase = 0;
 
 #if defined(CONFIG_ARCH_AMBARELLA_S5L)
-#define SDIO_GLOBAL_ID 2
-#define SDIO_GLOBAL_NAME "sd2"
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 99
@@ -57,8 +55,6 @@ static size_t sdio_regbase = 0;
 //data GPIO 101~104
 #define DS_DATA_MASK 0x000001e0
 #elif defined(CONFIG_ARCH_AMBARELLA_CV1)
-#define SDIO_GLOBAL_ID 2
-#define SDIO_GLOBAL_NAME "sd2"
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 113
@@ -68,8 +64,6 @@ static size_t sdio_regbase = 0;
 //data GPIO 115~118
 #define DS_DATA_MASK 0x00780000
 #elif defined(CONFIG_ARCH_AMBARELLA_CV2) ||  defined(CONFIG_ARCH_AMBARELLA_CV22)
-#define SDIO_GLOBAL_ID 2
-#define SDIO_GLOBAL_NAME "sd2"
 #define SDIO_DS0 GPIO_DS0_3_OFFSET
 #define SDIO_DS1 GPIO_DS1_3_OFFSET
 //clock GPIO 97
@@ -79,8 +73,6 @@ static size_t sdio_regbase = 0;
 //data GPIO 99~102
 #define DS_DATA_MASK 0x00000078
 #elif defined(CONFIG_ARCH_AMBARELLA_CV25)
-#define SDIO_GLOBAL_ID 1
-#define SDIO_GLOBAL_NAME "sd1"
 #define SDIO_DS0 GPIO_DS0_2_OFFSET
 #define SDIO_DS1 GPIO_DS1_2_OFFSET
 //clock GPIO 72
@@ -118,22 +110,9 @@ static size_t sdio_regbase = 0;
 //[24:22] clk_sdcard output delay control
 #define SDIO_SEL2_OCLY 22
 
-int init_sd_para(size_t regbase)
+int init_sd_para(size_t regbase, struct device_node *np)
 {
-	struct device_node *np =NULL;
-
 	sdio_regbase = regbase;
-
-	if (!sd_slot_is_valid(SDIO_GLOBAL_ID)) {
-		printk(KERN_ERR "%s: %s invalid\n", __func__, SDIO_GLOBAL_NAME);
-		return -1;
-	}
-
-	np = of_find_node_by_path(SDIO_GLOBAL_NAME);
-	if (!np) {
-		printk(KERN_ERR "%s:%s err of_find_node_by_path\n", __func__, SDIO_GLOBAL_NAME);
-		return -1;
-	}
 
 	reg_rct = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
 	if (IS_ERR(reg_rct)) {

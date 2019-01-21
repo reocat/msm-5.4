@@ -21,6 +21,13 @@
 
 #ifdef __KERNEL__
 
+//#define ambsd_debug
+#ifdef ambsd_debug
+#define ambsd_prt printk
+#else
+#define ambsd_prt(format, arg...) do {} while (0)
+#endif
+
 typedef enum _AMBA_RPDEV_SD_CMD_e_ {
 	SD_INFO_GET = 0,
 	SD_RESP_GET,

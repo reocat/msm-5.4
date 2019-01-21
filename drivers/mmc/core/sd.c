@@ -28,7 +28,12 @@
 #include "mmc_ops.h"
 #include "sd.h"
 #include "sd_ops.h"
-
+#ifdef CONFIG_AMBALINK_SD_MODULE
+#define CONFIG_AMBALINK_SD
+#endif
+#if defined(CONFIG_AMBALINK_SD)
+extern struct rpdev_sdinfo G_rpdev_sdinfo[3];
+#endif
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -283,14 +288,17 @@ static int mmc_read_switch(struct mmc_card *card)
 	u8 *status;
 
 #if defined(CONFIG_AMBALINK_SD)
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[card->host->index];
 
 	if (sdinfo->from_rpmsg && sdinfo->is_init) {
-		card->sw_caps.hs_max_dtr = 50000000;
+		ambsd_prt("%s: set hs_max_dtr=%d\n", __func__, sdinfo->clk);
+		card->sw_caps.hs_max_dtr = sdinfo->clk;
 		return 0;
 	}
+	else if (0 == card->host->index) {
+		dump_stack();
+	}
 #endif
-
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1)
 		return 0;
 
@@ -352,12 +360,15 @@ int mmc_sd_switch_hs(struct mmc_card *card)
 	u8 *status;
 
 #if defined(CONFIG_AMBALINK_SD)
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[card->host->index];
 
-	if (sdinfo->from_rpmsg)
+	if (sdinfo->from_rpmsg) {
+		ambsd_prt("%s: skip\n", __func__);
 		return 0;
+	} else if (0 == card->host->index) {
+		dump_stack();
+	}
 #endif
-
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1)
 		return 0;
 

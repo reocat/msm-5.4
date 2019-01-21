@@ -50,6 +50,13 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
+#ifdef CONFIG_AMBALINK_SD_MODULE
+#define CONFIG_AMBALINK_SD
+#endif
+#if defined(CONFIG_AMBALINK_SD)
+extern struct rpdev_sdinfo G_rpdev_sdinfo[3];
+#endif
+
 /* If the device is not responding */
 #define MMC_CORE_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
 
@@ -269,12 +276,24 @@ static void __mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 static void mmc_mrq_pr_debug(struct mmc_host *host, struct mmc_request *mrq)
 {
 	if (mrq->sbc) {
+#if defined(CONFIG_AMBALINK_SD)
+		extern int G_ambptb_ready;
+		if ((0 == host->index) && (0 == G_ambptb_ready)) {
+			dump_stack();
+		}
+#endif
 		pr_debug("<%s: starting CMD%u arg %08x flags %08x>\n",
 			 mmc_hostname(host), mrq->sbc->opcode,
 			 mrq->sbc->arg, mrq->sbc->flags);
 	}
 
 	if (mrq->cmd) {
+#if defined(CONFIG_AMBALINK_SD)
+		extern int G_ambptb_ready;
+		if ((0 == host->index) && (0 == G_ambptb_ready)) {
+			dump_stack();
+		}
+#endif
 		pr_debug("%s: starting CMD%u arg %08x flags %08x\n",
 			 mmc_hostname(host), mrq->cmd->opcode, mrq->cmd->arg,
 			 mrq->cmd->flags);
@@ -2444,23 +2463,20 @@ EXPORT_SYMBOL(mmc_hw_reset);
 static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 {
 #if defined(CONFIG_AMBALINK_SD)
-	struct rpdev_sdinfo *sdinfo;
-
-	ambarella_sd_rpmsg_sdinfo_init(host);
-	sdinfo = ambarella_sd_sdinfo_get(host);
-	ambarella_sd_rpmsg_sdinfo_en(host, sdinfo->is_init);
-
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[host->index];
 	if (sdinfo->is_init) {
 		if (sdinfo->is_sdmem) {
+			ambsd_prt("%s: mmc_attach_sd()\n", __func__);
 			return mmc_attach_sd(host);
 		} else if (sdinfo->is_mmc) {
+			ambsd_prt("%s: mmc_attach_mmc()\n", __func__);
 			return mmc_attach_mmc(host);
-		} else {
-			ambarella_sd_rpmsg_sdinfo_en(host, 0);
 		}
 	}
+	else if (0 == host->index) {
+		dump_stack();
+	}
 #endif
-
 	host->f_init = freq;
 
 	pr_debug("%s: %s: trying to init card at %u Hz\n",

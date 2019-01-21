@@ -28,7 +28,9 @@
 #include "quirks.h"
 #include "sd_ops.h"
 #include "pwrseq.h"
-
+#ifdef CONFIG_AMBALINK_SD_MODULE
+#define CONFIG_AMBALINK_SD
+#endif
 #define DEFAULT_CMD6_TIMEOUT_MS	500
 
 static const unsigned int tran_exp[] = {
@@ -1272,7 +1274,18 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 	 * failed. If there really is a problem, we would expect tuning will
 	 * fail and the result ends up the same.
 	 */
+#if defined(CONFIG_AMBALINK_SD)
+	if (0 == host->index) {
+		ambsd_prt("%s skip __mmc_switch_status()\n", __func__);
+	}
+	else
+	{
 	err = __mmc_switch_status(card, false);
+	}
+#else
+	err = __mmc_switch_status(card, false);
+#endif
+
 	if (err)
 		goto out_err;
 
@@ -1442,7 +1455,17 @@ static int mmc_select_hs200(struct mmc_card *card)
 		 * switch failed. If there really is a problem, we would expect
 		 * tuning will fail and the result ends up the same.
 		 */
+#if defined(CONFIG_AMBALINK_SD)
+		if (0 == host->index) {
+			ambsd_prt("%s skip __mmc_switch_status()\n", __func__);
+		}
+		else
+		{
 		err = __mmc_switch_status(card, false);
+		}
+#else
+		err = __mmc_switch_status(card, false);
+#endif
 
 		/*
 		 * mmc_select_timing() assumes timing has not changed if
@@ -1804,7 +1827,6 @@ err:
 	return err;
 }
 
-#if !defined(CONFIG_AMBALINK_SD)
 static int mmc_can_sleep(struct mmc_card *card)
 {
 	return (card && card->ext_csd.rev >= 3);
@@ -1887,7 +1909,6 @@ static int mmc_poweroff_notify(struct mmc_card *card, unsigned int notify_type)
 
 	return err;
 }
-#endif
 
 /*
  * Host is being removed. Free up the current card.
@@ -1935,11 +1956,14 @@ static void mmc_detect(struct mmc_host *host)
 static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 {
 	int err = 0;
-
-#if !defined(CONFIG_AMBALINK_SD)
 	unsigned int notify_type = is_suspend ? EXT_CSD_POWER_OFF_SHORT :
 					EXT_CSD_POWER_OFF_LONG;
-
+#if defined(CONFIG_AMBALINK_SD)
+	if (0 == host->index) {
+		ambsd_prt("%s: skip\n", __func__);
+		return 0;
+	}
+#endif
 	mmc_claim_host(host);
 
 	if (mmc_card_suspended(host->card))
@@ -1969,8 +1993,6 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 	}
 out:
 	mmc_release_host(host);
-#endif
-
 	return err;
 }
 
@@ -1979,7 +2001,7 @@ out:
  */
 static int mmc_suspend(struct mmc_host *host)
 {
-	int err = 0;
+	int err;
 
 	err = _mmc_suspend(host, true);
 	if (!err) {
@@ -2018,8 +2040,12 @@ out:
 static int mmc_shutdown(struct mmc_host *host)
 {
 	int err = 0;
-
-#if !defined(CONFIG_AMBALINK_SD)
+#if defined(CONFIG_AMBALINK_SD)
+	if (0 == host->index) {
+		ambsd_prt("%s: skip\n", __func__);
+		return 0;
+	}
+#endif
 	/*
 	 * In a specific case for poweroff notify, we need to resume the card
 	 * before we can shutdown it properly.
@@ -2027,7 +2053,6 @@ static int mmc_shutdown(struct mmc_host *host)
 	if (mmc_can_poweroff_notify(host->card) &&
 		!(host->caps2 & MMC_CAP2_FULL_PWR_CYCLE))
 		err = _mmc_resume(host);
-#endif
 
 	if (!err)
 		err = _mmc_suspend(host, false);
@@ -2109,11 +2134,13 @@ static int mmc_reset(struct mmc_host *host)
 		mmc_power_cycle(host, card->ocr);
 		mmc_pwrseq_reset(host);
 	}
-#if !defined(CONFIG_AMBALINK_SD)
-	return mmc_init_card(host, card->ocr, card);
-#else
-	return 0;
+#if defined(CONFIG_AMBALINK_SD)
+	if (0 == host->index) {
+		ambsd_prt("%s: skip mmc_init_card()\n", __func__);
+		return 0;
+	}
 #endif
+	return mmc_init_card(host, card->ocr, card);
 }
 
 static const struct mmc_bus_ops mmc_ops = {

@@ -22,6 +22,12 @@
 #include "card.h"
 #include "host.h"
 #include "mmc_ops.h"
+#ifdef CONFIG_AMBALINK_SD_MODULE
+#define CONFIG_AMBALINK_SD
+#endif
+#if defined(CONFIG_AMBALINK_SD)
+extern struct rpdev_sdinfo G_rpdev_sdinfo[3];
+#endif
 
 #define MMC_OPS_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
 
@@ -107,13 +113,17 @@ int mmc_select_card(struct mmc_card *card)
 
 #if defined(CONFIG_AMBALINK_SD)
 {
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[card->host->index];
 
-	if (sdinfo->is_init && sdinfo->from_rpmsg)
+	if (sdinfo->is_init && sdinfo->from_rpmsg) {
+		ambsd_prt("%s skip\n", __func__);
 		return 0;
+	}
+	else if (0 == card->host->index) {
+		dump_stack();
+	}
 }
 #endif
-
 	return _mmc_select_card(card->host, card);
 }
 
@@ -166,15 +176,22 @@ int mmc_go_idle(struct mmc_host *host)
 	cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_NONE | MMC_CMD_BC;
 
 #if defined(CONFIG_AMBALINK_SD)
-{
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+	if (0 == host->index)
+	{
+		struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[host->index];
 
-	if (sdinfo->from_rpmsg && !sdinfo->is_sdio) {
 		err = 0;
-	} else {
-		err = mmc_wait_for_cmd(host, &cmd, 0);
+		if (sdinfo->from_rpmsg && !sdinfo->is_sdio) {
+ 			ambsd_prt("%s: skip mmc_wait_for_cmd()\n", __func__);
+		}
+		else {
+			dump_stack();
+		}
 	}
-}
+	else
+	{
+	err = mmc_wait_for_cmd(host, &cmd, 0);
+	}
 #else
 	err = mmc_wait_for_cmd(host, &cmd, 0);
 #endif
@@ -198,16 +215,20 @@ int mmc_send_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 
 #if defined(CONFIG_AMBALINK_SD)
 {
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[host->index];
 
 	if (sdinfo->from_rpmsg && sdinfo->is_mmc) {
-		if (rocr)
+		if (rocr) {
+			ambsd_prt("%s: ocr=0x%x\n", __func__, sdinfo->ocr);
 			*rocr = sdinfo->ocr;
+		}
 		return 0;
+	}
+	else if (0 == host->index) {
+		dump_stack();
 	}
 }
 #endif
-
 	cmd.opcode = MMC_SEND_OP_COND;
 	cmd.arg = mmc_host_is_spi(host) ? 0 : ocr;
 	cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_R3 | MMC_CMD_BCR;
@@ -247,22 +268,69 @@ int mmc_set_relative_addr(struct mmc_card *card)
 
 #if defined(CONFIG_AMBALINK_SD)
 {
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[card->host->index];
 
 	if (sdinfo->from_rpmsg && sdinfo->is_mmc) {
-		if (card->rca != sdinfo->rca)
+		if (card->rca != sdinfo->rca) {
+			ambsd_prt("%s: rca=0x%x\n", __func__, sdinfo->rca);
 			card->rca = sdinfo->rca;
+		}
 		return 0;
+	}
+	else if (0 == card->host->index) {
+		dump_stack();
 	}
 }
 #endif
-
 	cmd.opcode = MMC_SET_RELATIVE_ADDR;
 	cmd.arg = card->rca << 16;
 	cmd.flags = MMC_RSP_R1 | MMC_CMD_AC;
 
 	return mmc_wait_for_cmd(card->host, &cmd, MMC_CMD_RETRIES);
 }
+
+#if defined(CONFIG_AMBALINK_SD)
+/**
+ * Send SD command through rpmsg.
+ */
+int ambarella_sd_rpmsg_cmd_send(struct mmc_host *mmc, struct mmc_command *cmd)
+{
+	extern struct rpdev_sdresp G_rpdev_sdresp;
+	extern int G_ambptb_ready;
+
+	if (1 == G_ambptb_ready) {
+		/* should not happen */
+		printk("%s cmd->opcode=%d\n", __func__, cmd->opcode);
+	} else {
+		ambsd_prt("%s cmd->opcode=%d\n", __func__, cmd->opcode);
+	}
+
+	G_rpdev_sdresp.opcode = cmd->opcode;
+
+	if ((G_rpdev_sdinfo[mmc->index].from_rpmsg == 0) || (G_rpdev_sdresp.host_id != 0)) {
+		dump_stack();
+		return -1;
+	}
+
+	/* send IPC */
+	rpmsg_sdresp_get((void *) &G_rpdev_sdresp);
+	if (G_rpdev_sdresp.ret != 0) {
+		ambsd_prt("%s opcode=%d G_rpdev_sdresp.ret=%d\n", __func__, cmd->opcode, G_rpdev_sdresp.ret);
+		return G_rpdev_sdresp.ret;
+	}
+
+	memcpy(cmd->resp, G_rpdev_sdresp.resp, sizeof(u32) * 4);
+
+	if (cmd->data != NULL) {
+		memcpy(cmd->data->buf, G_rpdev_sdresp.buf, cmd->data->blksz);
+	}
+
+	ambsd_prt("%s opcode=%d cmd->error=%d\n", __func__, cmd->opcode, cmd->error);
+
+	return 0;
+}
+EXPORT_SYMBOL(ambarella_sd_rpmsg_cmd_send);
+#endif
 
 static int
 mmc_send_cxd_native(struct mmc_host *host, u32 arg, u32 *cxd, int opcode)
@@ -275,10 +343,20 @@ mmc_send_cxd_native(struct mmc_host *host, u32 arg, u32 *cxd, int opcode)
 	cmd.flags = MMC_RSP_R2 | MMC_CMD_AC;
 
 #if defined(CONFIG_AMBALINK_SD)
-	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
-		err = cmd.error;
-	} else {
-		err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
+	if (0 == host->index)
+	{
+		err = 0;
+		if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
+			err = cmd.error;
+			ambsd_prt("%s: cmd return %d\n", __func__, cmd.error);
+		}
+		else {
+			dump_stack();
+		}
+	}
+	else
+	{
+	err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
 	}
 #else
 	err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
@@ -335,7 +413,26 @@ mmc_send_cxd_data(struct mmc_card *card, struct mmc_host *host,
 	} else
 		mmc_set_data_timeout(&data, card);
 
+#if defined(CONFIG_AMBALINK_SD)
+	if (0 == host->index)
+	{
+		data.buf = buf;
+		cmd.data = &data;
+
+		if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
+			ambsd_prt("%s: cmd return %d\n", __func__, cmd.error);
+		}
+		else {
+			dump_stack();
+		}
+	}
+	else
+	{
 	mmc_wait_for_req(host, &mrq);
+	}
+#else
+	mmc_wait_for_req(host, &mrq);
+#endif
 
 	if (cmd.error)
 		return cmd.error;
@@ -597,13 +694,17 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 
 #if defined(CONFIG_AMBALINK_SD)
 {
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[host->index];
 
-	if (sdinfo->is_init)
+	if (sdinfo->is_init) {
+		ambsd_prt("%s: skip\n", __func__);
 		return 0;
+	}
+	else if (0 == host->index) {
+		dump_stack();
+	}
 }
 #endif
-
 	cmd.opcode = MMC_SWITCH;
 	cmd.arg = (MMC_SWITCH_MODE_WRITE_BYTE << 24) |
 		  (index << 16) |
@@ -625,10 +726,20 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		cmd.sanitize_busy = true;
 
 #if defined(CONFIG_AMBALINK_SD)
-	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
-		err = cmd.error;
-	} else {
-		err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
+	if (0 == host->index)
+	{
+		err = 0;
+		if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
+			err = cmd.error;
+			ambsd_prt("%s: cmd return %d\n", __func__, cmd.error);
+		}
+		else {
+			dump_stack();
+		}
+	}
+	else
+	{
+	err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
 	}
 #else
 	err = mmc_wait_for_cmd(host, &cmd, MMC_CMD_RETRIES);
@@ -719,16 +830,7 @@ int mmc_send_tuning(struct mmc_host *host, u32 opcode, int *cmd_error)
 	data.sg_len = 1;
 	sg_init_one(&sg, data_buf, size);
 
-#if defined(CONFIG_AMBALINK_SD)
-	data.buf = buf;
-	cmd.data = &data;
-
-	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) != 0) {
-		mmc_wait_for_req(host, &mrq);
-	}
-#else
 	mmc_wait_for_req(host, &mrq);
-#endif
 
 	if (cmd_error)
 		*cmd_error = cmd.error;
@@ -790,17 +892,6 @@ mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,
 	int i, err;
 	static u8 testdata_8bit[8] = { 0x55, 0xaa, 0, 0, 0, 0, 0, 0 };
 	static u8 testdata_4bit[4] = { 0x5a, 0, 0, 0 };
-
-#if defined(CONFIG_AMBALINK_SD)
-	memset(&cmd, 0, sizeof(struct mmc_command));
-	cmd.opcode = opcode;
-	cmd.arg = len;
-
-	if (ambarella_sd_rpmsg_cmd_send(host, &cmd) == 0) {
-		if (cmd.error)
-			return cmd.error;
-	}
-#endif
 
 	/* dma onto stack is unsafe/nonportable, but callers to this
 	 * routine normally provide temporary on-stack buffers ...
@@ -870,17 +961,19 @@ int mmc_bus_test(struct mmc_card *card, u8 bus_width)
 	int width;
 
 #if defined(CONFIG_AMBALINK_SD)
-	struct rpdev_sdinfo *sdinfo = ambarella_sd_sdinfo_get(card->host);
+	struct rpdev_sdinfo *sdinfo = &G_rpdev_sdinfo[card->host->index];
 
 	if (sdinfo->is_init) {
 		width = (sdinfo->bus_width == 8) ? MMC_BUS_WIDTH_8 :
 			(sdinfo->bus_width == 4) ? MMC_BUS_WIDTH_4 :
 				MMC_BUS_WIDTH_1;
-
+		ambsd_prt("%s: bus_width: %d\n", __func__, sdinfo->bus_width);
 		return (bus_width == width) ? 0 : -EINVAL;
 	}
+	else if (0 == card->host->index) {
+		dump_stack();
+	}
 #endif
-
 	if (bus_width == MMC_BUS_WIDTH_8)
 		width = 8;
 	else if (bus_width == MMC_BUS_WIDTH_4)

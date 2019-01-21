@@ -34,9 +34,14 @@
 #define ambptb_prt(format, arg...) do {} while (0)
 #endif
 
+#if defined(CONFIG_AMBALINK_SD) || defined(CONFIG_AMBALINK_SD_MODULE)
+int G_ambptb_ready = 0;
+EXPORT_SYMBOL(G_ambptb_ready);
+#endif
+
 int ambptb_partition(struct parsed_partitions *state)
 {
-#if defined(CONFIG_AMBALINK_SD)
+#if defined(CONFIG_AMBALINK_SD) || defined(CONFIG_AMBALINK_SD_MODULE)
 	u32 sect_size;
 	char *part_label;
 	int i, result = 0;
@@ -44,7 +49,8 @@ int ambptb_partition(struct parsed_partitions *state)
 	struct device_node *pp;
 	u64 div_result;
 
-	if (strncmp(state->pp_buf, " mmcblk", 7)) {
+	/* emmc MUST be mmcblk0 */
+	if (strncmp(state->pp_buf, " mmcblk0", strlen(" mmcblk0"))) {
 		result = -1;
 		goto ambptb_partition_exit;
 	}
@@ -97,6 +103,7 @@ int ambptb_partition(struct parsed_partitions *state)
 
 		i++;
 	}
+	G_ambptb_ready = 1;
 
 	strlcat(state->pp_buf, "\n", PAGE_SIZE);
 	result = 1;
