@@ -238,6 +238,14 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 
+	if (rate == 0) {
+		ctrl_val.w = readl(clk_pll->ctrl_reg);
+		ctrl_val.s.power_down = 1;
+		ctrl_val.s.halt_vco = 1;
+		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+		return 0;
+	}
+
 	rate *= clk_pll->fix_divider;
 
 	if (rate < parent_rate && clk_pll->post_reg != NULL) {
