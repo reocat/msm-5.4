@@ -9,3 +9,19 @@ source "drivers/mxc/gpu-viv/Kconfig"
 endmenu
 
 endif
+
+#if ARCH_MXC || ARCH_MXC_ARM64
+
+menu "MXC support drivers"
+
+# drivers common to MXC and MX8 go here:
+
+#if ARCH_MXC_ARM64
+source "drivers/mxc/vpu_malone/Kconfig"
+source "drivers/mxc/vpu_windsor/Kconfig"
+#endif
+
+
+endmenu
+
+#endif
