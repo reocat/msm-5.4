@@ -81,9 +81,6 @@ config DRM_IMX_HDMI
 	help
 	  Choose this if you want to use HDMI on i.MX6/i.MX8.
 
-source "drivers/gpu/drm/imx/dpu/Kconfig"
-source "drivers/gpu/drm/imx/lcdif/Kconfig"
-
 config DRM_IMX_SEC_DSIM
 	tristate "Support for Samsung MIPI DSIM displays"
 	depends on DRM_IMX
