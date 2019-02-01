@@ -30,6 +30,8 @@
 struct ambalink_shared_memory_layout ambalink_shm_layout;
 struct aipc_shared_memory_info aipc_shm_info[AMBALINK_NUM];
 const char *rproc_names[AMBALINK_NUM] = {"ambarella", "c1_and_c2"};
+EXPORT_SYMBOL(aipc_shm_info);
+EXPORT_SYMBOL(rproc_names);
 #endif
 
 static struct proc_dir_entry *ambarella_proc_dir = NULL;

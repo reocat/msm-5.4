@@ -146,7 +146,7 @@ void machine_power_off(void)
  */
 void machine_restart(char *cmd)
 {
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#ifdef CONFIG_AMBALINK_LINKCTRL
 	extern int rpmsg_linkctrl_cmd_reboot(int flag);
 #endif
 
@@ -162,7 +162,7 @@ void machine_restart(char *cmd)
 		efi_reboot(reboot_mode, NULL);
 
 	/* Now call the architecture specific reboot code. */
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#ifdef CONFIG_AMBALINK_LINKCTRL
 	rpmsg_linkctrl_cmd_reboot(0);
 #else
 	if (arm_pm_restart)

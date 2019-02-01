@@ -284,3 +284,4 @@ module_init(rpmsg_rpc_init);
 module_exit(rpmsg_rpc_fini);
 
 MODULE_DESCRIPTION("RPMSG RPC Server");
+MODULE_LICENSE("GPL");

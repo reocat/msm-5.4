@@ -229,3 +229,4 @@ fs_initcall(rpmsg_clk_init);
 module_exit(rpmsg_clk_fini);
 
 MODULE_DESCRIPTION("RPMSG CLK Server");
+MODULE_LICENSE("GPL");

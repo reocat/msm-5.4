@@ -443,7 +443,7 @@ static int psci_system_suspend(unsigned long unused)
 
 static int psci_system_suspend_enter(suspend_state_t state)
 {
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#ifdef CONFIG_AMBALINK_LINKCTRL
 	extern int rpmsg_linkctrl_cmd_suspend_done(int flag);
 
 	rpmsg_linkctrl_cmd_suspend_done((int) state);

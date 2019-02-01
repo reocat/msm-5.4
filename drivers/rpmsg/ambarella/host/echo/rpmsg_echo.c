@@ -105,3 +105,4 @@ module_init(rpmsg_echo_init);
 module_exit(rpmsg_echo_fini);
 
 MODULE_DESCRIPTION("RPMSG Echo Server");
+MODULE_LICENSE("GPL");

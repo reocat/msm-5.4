@@ -151,6 +151,7 @@ config AMBARELLA_RPROC
 	depends on ARCH_AMBARELLA_AMBALINK
 	select REMOTEPROC
 	select RPMSG
+	select RPMSG_VIRTIO
 	help
 	  Say y here to support Ambarella AmbaLink remote processor on Ambarella SoCs.
 

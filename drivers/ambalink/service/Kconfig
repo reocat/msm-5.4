@@ -1,6 +1,6 @@
 
 config AMBALINK_LINKCTRL
-        bool "AmbaLink System Control"
+        tristate "AmbaLink System Control"
         depends on RPMSG
         default y
         help
@@ -17,5 +17,5 @@ config AMBALINK_SD
 config AMBALINK_PPM
         tristate "AmbaLink PPM device"
 	default n
-	help 
-	  create /dev/ppm to mmap physical memory 
+	help
+	  create /dev/ppm to mmap physical memory

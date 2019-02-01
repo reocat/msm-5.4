@@ -262,8 +262,10 @@ static void ambarella_rproc_kick(struct rproc *rproc, int vqid)
 	struct ambarella_rproc_pdata *pdata = rproc->priv;
 
 	if (vqid == 0) {
+		pr_debug("\e[1;32m ack rvq %d\n \e[0m", pdata->rvq_tx_irq);
 		rpmsg_send_irq(pdata->reg_ahb_scr, pdata->rvq_tx_irq);
 	} else {
+		pr_debug("\e[1;32m kick svq %d\n \e[0m", pdata->svq_tx_irq);
 		rpmsg_send_irq(pdata->reg_ahb_scr, pdata->svq_tx_irq);
 	}
 }
@@ -313,6 +315,7 @@ static irqreturn_t rproc_ambarella_isr(int irq, void *dev_id)
         struct irq_data *idata = NULL;
 
 	if (irq == pdata->rvq_rx_irq) {
+		pr_debug("\e[1;32m enter rvq_rx_irq %d\n \e[0m", irq);
 #ifdef RPMSG_DEBUG
 		rpmsg_stat->LxRvqIsrCount++;
 #endif
@@ -321,6 +324,7 @@ static irqreturn_t rproc_ambarella_isr(int irq, void *dev_id)
 		virtqueue_disable_cb(rvring->vq);
 		schedule_work(&pdata->rvq_work);
 	} else if (irq == pdata->svq_rx_irq) {
+		pr_debug("\e[1;32m enter svq_rx_irq %d\n \e[0m", irq);
 	        idata = irq_get_irq_data(pdata->svq_rx_irq);
 		schedule_work(&pdata->svq_work);
 	} else {
@@ -527,3 +531,4 @@ module_exit(ambarella_rproc_exit);
 //module_platform_driver(ambarella_rproc_driver);
 
 MODULE_DESCRIPTION("Ambarella Remote Processor control driver");
+MODULE_LICENSE("GPL");

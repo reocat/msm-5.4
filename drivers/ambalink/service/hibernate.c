@@ -47,6 +47,7 @@ typedef struct ambernation_aoss_info {
 extern int wowlan_resume_from_ram;
 
 void *ambalink_image_info = NULL;
+EXPORT_SYMBOL(ambalink_image_info);
 static u32 copied_pages = 0;
 
 static int increase_page_info(ambernation_page_info *src_page)
@@ -120,7 +121,7 @@ void arch_copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
 int arch_swsusp_write(u32 flag)
 {
 	int retval = 0;
-
+#ifdef CONFIG_AMBALINK_LINKCTRL
 	ambernation_aoss_info *aoss_info;
 	extern int rpmsg_linkctrl_cmd_suspend_done(int flag);
 
@@ -133,7 +134,7 @@ int arch_swsusp_write(u32 flag)
 	do {
 		wfe();
 	} while (1);
-
+#endif
 	return retval;
 }
 

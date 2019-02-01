@@ -34,10 +34,11 @@
 #include <linux/rpmsg.h>
 #include <linux/mutex.h>
 #include <linux/of_device.h>
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
 #include <linux/remoteproc.h>
-
 #include <plat/remoteproc.h>
 #include <plat/remoteproc_cfg.h>
+#endif
 
 #include "rpmsg_internal.h"
 
@@ -204,17 +205,14 @@ static const struct rpmsg_endpoint_ops virtio_endpoint_ops = {
 AMBA_RPMSG_PROFILE_s *svq_profile, *rvq_profile;
 AMBA_RPMSG_STATISTIC_s *rpmsg_stat;
 extern struct ambalink_shared_memory_layout ambalink_shm_layout;
-#endif
-
 extern unsigned int read_aipc_timer(void);
 
 static inline void rpmsg_pkt_count(unsigned int msgs_received)
 {
-#ifdef RPMSG_DEBUG
 	rpmsg_stat->TxToLxCount += msgs_received;
 	rpmsg_stat->TxToLxWakeUpCount++;
-#endif
 }
+#endif
 
 /**
  * rpmsg_sg_init - initialize scatterlist according to cpu address location
@@ -480,21 +478,22 @@ static void *get_a_tx_buf(struct virtproc_info *vrp, int *idx)
 	 * either pick the next unused tx buffer
 	 * (half of our buffers are used for sending messages)
 	 */
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	if (vrp->last_sbuf < vrp->num_bufs / 2)
+		ret = vrp->sbufs + vrp->buf_size * vrp->last_sbuf++;
+#else
 	if (vrp->last_sbuf < vrp->num_bufs / 2)
 	{
 		*idx = vrp->last_sbuf;
  		ret = vrp->sbufs + vrp->buf_size * vrp->last_sbuf++;
 	}
-#else
-	ret = vrp->sbufs + vrp->buf_size * vrp->last_sbuf++;
 #endif
 	/* or recycle a used one */
 	else
-#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
-		ret = virtqueue_get_buf_index(vrp->svq, &len, idx);
-#else
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 		ret = virtqueue_get_buf(vrp->svq, &len);
+#else
+		ret = virtqueue_get_buf_index(vrp->svq, &len, idx);
 #endif
 
 	mutex_unlock(&vrp->tx_lock);
@@ -558,8 +557,10 @@ static void rpmsg_downref_sleepers(struct virtproc_info *vrp)
 	mutex_unlock(&vrp->tx_lock);
 }
 
+#ifdef RPMSG_DEBUG
 extern unsigned int to_get_svq_buf_profile(void);
 extern void get_svq_buf_done_profile(unsigned int to_get_buf, int idx);
+#endif
 
 /**
  * rpmsg_send_offchannel_raw() - send a message across to the remote processor
@@ -604,11 +605,14 @@ static int rpmsg_send_offchannel_raw(struct rpmsg_device *rpdev,
 	struct device *dev = &rpdev->dev;
 	struct scatterlist sg;
 	struct rpmsg_hdr *msg;
-	int err, idx;
+	int err;
+#ifdef CONFIG_ARCH_AMBARELLA_AMBALINK
+	int idx;
+#endif
+#ifdef RPMSG_DEBUG
 	unsigned int prev_time;
-
-
 	prev_time = to_get_svq_buf_profile();
+#endif
 	/* bcasting isn't allowed */
 	if (src == RPMSG_ADDR_ANY || dst == RPMSG_ADDR_ANY) {
 		dev_err(dev, "invalid addr (src 0x%x, dst 0x%x)\n", src, dst);
@@ -630,7 +634,11 @@ static int rpmsg_send_offchannel_raw(struct rpmsg_device *rpdev,
 	}
 
 	/* grab a buffer */
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	msg = get_a_tx_buf(vrp);
+#else
 	msg = get_a_tx_buf(vrp, &idx);
+#endif
 	if (!msg && !wait)
 		return -ENOMEM;
 
@@ -646,7 +654,11 @@ static int rpmsg_send_offchannel_raw(struct rpmsg_device *rpdev,
 		 * if later this happens to be required, it'd be easy to add.
 		 */
 		err = wait_event_interruptible_timeout(vrp->sendq,
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+					(msg = get_a_tx_buf(vrp)),
+#else
 					(msg = get_a_tx_buf(vrp, &idx)),
+#endif
 					msecs_to_jiffies(15000));
 
 		/* disable "tx-complete" interrupts if we're the last sleeper */
@@ -658,8 +670,9 @@ static int rpmsg_send_offchannel_raw(struct rpmsg_device *rpdev,
 			return -ERESTARTSYS;
 		}
 	}
+#ifdef RPMSG_DEBUG
 	get_svq_buf_done_profile(prev_time, idx);
-
+#endif
 	msg->len = len;
 	msg->flags = 0;
 	msg->src = src;
@@ -820,48 +833,68 @@ static int rpmsg_recv_single(struct virtproc_info *vrp, struct device *dev,
 
 	return 0;
 }
+#ifdef RPMSG_DEBUG
 extern void lnx_response_profile(unsigned int to_get_buf, int idx);
-extern unsigned int finish_rpmsg_profile(unsigned int to_get_buf, unsigned int to_recv_data,
-	int idx);
+extern unsigned int finish_rpmsg_profile(unsigned int to_get_buf, unsigned int to_recv_data, int idx);
+#endif
 /* called when an rx buffer is used, and it's time to digest a message */
 static void rpmsg_recv_done(struct virtqueue *rvq)
 {
 	struct virtproc_info *vrp = rvq->vdev->priv;
 	struct device *dev = &rvq->vdev->dev;
 	struct rpmsg_hdr *msg;
-	unsigned int len, idx, msgs_received = 0;
+	unsigned int len, msgs_received = 0;
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	int idx;
+#endif
 	int err;
+#ifdef RPMSG_DEBUG
 	unsigned int to_get_buf, to_recv_data;
 
 	to_get_buf = read_aipc_timer();
 	//calculate the response time.
+#endif
 
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	msg = virtqueue_get_buf(rvq, &len);
+#else
 	msg = virtqueue_get_buf_index(rvq, &len, &idx);
+#endif
 	if (!msg) {
 		dev_err(dev, "uhm, incoming signal, but no used buffer ?\n");
 		return;
 	}
+#ifdef RPMSG_DEBUG
 	lnx_response_profile(to_get_buf, idx);
+#endif
 
 	while (msg) {
+#ifdef RPMSG_DEBUG
 		to_recv_data = read_aipc_timer();
-
+#endif
 		err = rpmsg_recv_single(vrp, dev, msg, len);
 		if (err)
 			break;
-
+#ifdef RPMSG_DEBUG
 		to_get_buf = finish_rpmsg_profile(to_get_buf, to_recv_data, idx);
-
+#endif
 		msg = virtqueue_get_buf(rvq, &len);
 	}
 
 	dev_dbg(dev, "Received %u messages\n", msgs_received);
 
 	/* tell the remote processor we added another available rx buffer */
-	if (msgs_received) {
-		rpmsg_pkt_count(msgs_received);
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	if (msgs_received)
 		virtqueue_kick(vrp->rvq);
-}
+#else
+	if (msgs_received) {
+#ifdef RPMSG_DEBUG
+		rpmsg_pkt_count(msgs_received);
+#endif
+		virtqueue_kick(vrp->rvq);
+	}
+#endif
 }
 
 /*
@@ -947,9 +980,10 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	int err = 0, i;
 	size_t total_buf_space;
 	bool notify;
+#if defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
 	struct rproc *rproc = vdev_to_rproc(vdev);
 	struct ambarella_rproc_pdata *pdata;
-
+#endif
 	vrp = kzalloc(sizeof(*vrp), GFP_KERNEL);
 	if (!vrp)
 		return -ENOMEM;
@@ -979,7 +1013,11 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	else
 		vrp->num_bufs = MAX_RPMSG_NUM_BUFS;
 
+#if !defined(CONFIG_ARCH_AMBARELLA_AMBALINK)
+	vrp->buf_size = MAX_RPMSG_BUF_SIZE;
+#else
 	vrp->buf_size = RPMSG_BUF_SIZE;
+#endif
 
 	total_buf_space = vrp->num_bufs * vrp->buf_size;
 

@@ -333,6 +333,7 @@ int rpmsg_linkctrl_cmd_suspend_prepare(int flag)
 }
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_suspend_prepare);
 
+#if !defined(CONFIG_AMBALINK_LINKCTRL_MODULE)
 int rpmsg_linkctrl_cmd_suspend_done(int flag)
 {
 	AMBA_RPDEV_LINK_CTRL_CMD_s ctrl_cmd;
@@ -354,6 +355,7 @@ int rpmsg_linkctrl_cmd_suspend_done(int flag)
 	return 0;
 }
 EXPORT_SYMBOL(rpmsg_linkctrl_cmd_suspend_done);
+#endif
 
 int rpmsg_linkctrl_cmd_suspend_exit(int flag)
 {
@@ -518,3 +520,4 @@ module_init(rpmsg_linkctrl_init);
 module_exit(rpmsg_linkctrl_fini);
 
 MODULE_DESCRIPTION("RPMSG AmbaRpdev_LinkCtrl Server");
+MODULE_LICENSE("GPL");

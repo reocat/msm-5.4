@@ -522,6 +522,7 @@ out:
 	pm_autosleep_unlock();
 	return suspend_status;
 }
+EXPORT_SYMBOL(amba_state_store);
 #endif
 
 static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,

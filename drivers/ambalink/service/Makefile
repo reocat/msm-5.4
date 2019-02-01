@@ -3,7 +3,7 @@ obj-y				+= aipc_profile.o
 
 obj-y				+= memory.o
 
-obj-y				+= rpmsg_clk.o
+obj-$(CONFIG_RPMSG_VIRTIO)	+= rpmsg_clk.o
 
 obj-$(CONFIG_AMBALINK_LINKCTRL)	+= rpmsg_linkctrl.o
 
