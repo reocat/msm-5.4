@@ -1006,10 +1006,7 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 
 					/* Workaround for some chips which will
 					 * report ECC failed for blank page. */
-					if (FIO_SUPPORT_SKIP_BLANK_ECC)
-						ret = -1;
-					else
-						ret = nand_bch_check_blank_page(nand_info);
+					ret = nand_bch_check_blank_page(nand_info);
 
 					if (ret < 0) {
 						mtd->ecc_stats.failed++;

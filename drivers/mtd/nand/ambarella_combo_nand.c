@@ -940,10 +940,14 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 			break;
 
 		if (host->int_sts & FIO_INT_ECC_RPT_UNCORR) {
-			mtd->ecc_stats.failed++;
-			dev_err(host->dev,
-				"BCH corrected failed in block[%d]!\n",
-				FIO_ECC_RPT_UNCORR_BLK_ADDR(host->ecc_rpt_sts2));
+			int count = 0;
+			count = nand_bch_check_blank_page(host);
+			if (count < 0) {
+				mtd->ecc_stats.failed++;
+				dev_err(host->dev,
+					"BCH corrected failed in block[%d]!\n",
+					FIO_ECC_RPT_UNCORR_BLK_ADDR(host->ecc_rpt_sts2));
+			}
 		} else if (host->int_sts & FIO_INT_ECC_RPT_THRESH) {
 			val = FIO_ECC_RPT_MAX_ERR_NUM(host->ecc_rpt_sts);
 			mtd->ecc_stats.corrected += val;
