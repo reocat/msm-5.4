@@ -146,8 +146,9 @@ static int ambarella_phy_proc_show(struct seq_file *m, void *v)
 
 	seq_printf(m, "Possible parameter: host device\n");
 	seq_printf(m, "Current status:\n");
-	seq_printf(m, "\tport is %s: phy is %s\n\n",
-		port_status, phy_status);
+	if (gpio_is_valid(amb_phy->gpio_md))
+		seq_printf(m, "\tport is %s\n", port_status);
+	seq_printf(m, "\tphy is %s\n\n", phy_status);
 
 	return 0;
 }
