@@ -417,7 +417,7 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 
 	if (dir != SND_SOC_CLOCK_OUT) {
 		printk("clk dir (%d) is not supported yet\n", dir);
-		return -EINVAL;
+		return -ENOTSUPP;
 	}
 
 	priv_data->i2s_intf.clksrc = clk_id;
@@ -614,7 +614,7 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	priv_data->capture_dma_data.addr = res->start + I2S_RX_DATA_DMA_OFFSET;
 	priv_data->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	priv_data->capture_dma_data.maxburst = 32;
-	priv_data->mclk = clk_get(&pdev->dev, "gclk_audio");
+	priv_data->mclk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv_data->mclk)) {
 		dev_err(&pdev->dev, "Get audio clk failed!\n");
 		return PTR_ERR(priv_data->mclk);

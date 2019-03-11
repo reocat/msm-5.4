@@ -824,6 +824,7 @@
 			reg = <0xe000d000 0x1000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2s0_pins>;
+			clocks = <&gclk_audio_aux>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
 			dmas = <&dma0 11>, <&dma0 12>;
@@ -836,6 +837,7 @@
 			reg = <0xe001d000 0x1000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2s1_pins>;
+			clocks = <&gclk_audio>;
 			amb,i2s-channels = <4>;
 			amb,default-mclk = <12288000>;
 			dmas = <&dma0 23>, <&dma0 24>;
@@ -1316,6 +1318,24 @@
 			assigned-clocks = <&pll_out_vo2>;
 			assigned-clock-rates = <24000000>;
 			amb,extra-pre-scaler;
+			amb,frac-mode;
+		};
+
+		gclk_audio_aux: gclk-audio-aux {
+			#clock-cells = <0>;
+			compatible = "ambarella,pll-clock";
+			reg = <0xed080054 4>,
+			      <0xed080058 4>,
+			      <0xed080124 4>,
+			      <0xed08012c 4>,
+			      <0xed080060 4>,
+			      <0xed080064 4>;
+			clocks = <&osc>;
+			clock-output-names = "gclk_audio_aux";
+			assigned-clocks = <&gclk_audio_aux>;
+			assigned-clock-rates = <12288000>;
+			amb,extra-pre-scaler;
+			amb,extra-post-scaler;
 			amb,frac-mode;
 		};
 

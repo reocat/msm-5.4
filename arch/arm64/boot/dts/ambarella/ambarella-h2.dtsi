@@ -644,6 +644,7 @@
 			reg = <0xe001a000 0x1000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2s0_pins>;
+			clocks = <&gclk_audio>;
 			amb,i2s-channels = <2>;
 			amb,default-mclk = <12288000>;
 			dmas = <&dma 10>, <&dma 11>;
