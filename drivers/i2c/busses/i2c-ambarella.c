@@ -60,7 +60,8 @@ enum ambarella_i2c_state {
 	AMBA_I2C_STATE_WRITE_WAIT_ACK,
 	AMBA_I2C_STATE_BULK_WRITE,
 	AMBA_I2C_STATE_NO_ACK,
-	AMBA_I2C_STATE_ERROR
+	AMBA_I2C_STATE_ERROR,
+	AMBA_I2C_STATE_HS_MODE
 };
 
 enum ambarella_i2c_hw_state {
@@ -83,10 +84,14 @@ struct ambarella_i2c_dev_info {
 	enum ambarella_i2c_state		state;
 
 	u32					clk_limit;
+	u32					hs_clk_limit;
 	u32					bulk_num;
 	u32					duty_cycle;
 	u32					stretch_scl;
 	u32					turbo_mode;
+	u32					master_code;
+	bool					hs_mode;
+	bool					hsmode_enter;
 
 	struct i2c_msg				*msgs;
 	__u16					msg_num;
@@ -177,6 +182,25 @@ static inline void ambarella_i2c_set_clk(struct ambarella_i2c_dev_info *pinfo)
 	writel_relaxed(IDC_ENR_REG_ENABLE, pinfo->regbase + IDC_ENR_OFFSET);
 }
 
+static inline void ambarella_i2c_set_hs_clk(struct ambarella_i2c_dev_info *pinfo)
+{
+	unsigned int				apb_clk;
+	__u32					idc_prescale;
+
+	apb_clk = clk_get_rate(pinfo->clk);
+
+	writel_relaxed(IDC_ENR_REG_DISABLE, pinfo->regbase + IDC_ENR_OFFSET);
+
+	idc_prescale = (apb_clk / (6 * pinfo->hs_clk_limit)) - (4 / 3);
+
+	dev_dbg(pinfo->dev, "apb_clk[%dHz]\n", apb_clk);
+	dev_dbg(pinfo->dev, "idc_prescale[%d]\n", idc_prescale);
+
+	writeb_relaxed(idc_prescale, pinfo->regbase + IDC_PSHS_OFFSET);
+
+	writel_relaxed(IDC_ENR_REG_ENABLE, pinfo->regbase + IDC_ENR_OFFSET);
+}
+
 static int ambarella_i2c_system_event(struct notifier_block *nb,
 	unsigned long val, void *data)
 {
@@ -210,14 +234,26 @@ static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 {
 	ambarella_i2c_set_clk(pinfo);
 
+	if (pinfo->hs_mode)
+		ambarella_i2c_set_hs_clk(pinfo);
+
 	pinfo->msgs = NULL;
 	pinfo->msg_num = 0;
 	pinfo->state = AMBA_I2C_STATE_IDLE;
 }
 
+static inline void ambarella_i2c_send_master_code(
+	struct ambarella_i2c_dev_info *pinfo)
+{
+	writeb_relaxed(pinfo->master_code, pinfo->regbase + IDC_DATA_OFFSET);
+	writel_relaxed(IDC_CTRL_START, pinfo->regbase + IDC_CTRL_OFFSET);
+}
+
 static inline void ambarella_i2c_start_single_msg(
 	struct ambarella_i2c_dev_info *pinfo)
 {
+	__u32 hs_mode;
+
 	if (pinfo->msgs->flags & I2C_M_TEN) {
 		pinfo->state = AMBA_I2C_STATE_START_TEN;
 		writeb_relaxed((0xf0 | ((pinfo->msg_addr >> 8) & 0x07)),
@@ -227,7 +263,8 @@ static inline void ambarella_i2c_start_single_msg(
 		writeb_relaxed(pinfo->msg_addr, pinfo->regbase + IDC_DATA_OFFSET);
 	}
 
-	writel_relaxed(IDC_CTRL_START, pinfo->regbase + IDC_CTRL_OFFSET);
+	hs_mode = (pinfo->hs_mode) ? (IDC_CTRL_HSMODE) : (0U);
+	writel_relaxed(IDC_CTRL_START | hs_mode, pinfo->regbase + IDC_CTRL_OFFSET);
 }
 
 static inline void ambarella_i2c_bulk_write(
@@ -250,11 +287,14 @@ static inline void ambarella_i2c_start_bulk_msg_write(
 	struct ambarella_i2c_dev_info *pinfo)
 {
 	__u32				fifosize = IDC_FIFO_BUF_SIZE;
+	__u32				hs_mode;
 
 	pinfo->state = AMBA_I2C_STATE_BULK_WRITE;
 
 	writel_relaxed(0, pinfo->regbase + IDC_CTRL_OFFSET);
-	writel_relaxed(IDC_FMCTRL_START, pinfo->regbase + IDC_FMCTRL_OFFSET);
+
+	hs_mode = (pinfo->hs_mode) ? (IDC_FMCTRL_HSMODE) : (0U);
+	writel_relaxed(IDC_FMCTRL_START | hs_mode, pinfo->regbase + IDC_FMCTRL_OFFSET);
 
 	if (pinfo->msgs->flags & I2C_M_TEN) {
 		writeb_relaxed((0xf0 | ((pinfo->msg_addr >> 8) & 0x07)),
@@ -306,6 +346,9 @@ static inline void ambarella_i2c_stop(
 
 	*pack_control |= IDC_CTRL_STOP;
 
+	if (pinfo->hs_mode)
+		*pack_control &= ~IDC_CTRL_HSMODE;
+
 	if (pinfo->state == AMBA_I2C_STATE_IDLE ||
 		pinfo->state == AMBA_I2C_STATE_NO_ACK)
 		wake_up(&pinfo->msg_wait);
@@ -353,6 +396,9 @@ static irqreturn_t ambarella_i2c_irq(int irqno, void *dev_id)
 
 	status_reg = readl_relaxed(pinfo->regbase + IDC_STS_OFFSET);
 	control_reg = readl_relaxed(pinfo->regbase + IDC_CTRL_OFFSET);
+
+	if (pinfo->hs_mode)
+		ack_control |= IDC_CTRL_HSMODE;
 
 	dev_dbg(pinfo->dev, "state[0x%x]\n", pinfo->state);
 	dev_dbg(pinfo->dev, "status_reg[0x%x]\n", status_reg);
@@ -451,6 +497,10 @@ amba_i2c_irq_write:
 		}
 		ambarella_i2c_stop(pinfo, AMBA_I2C_STATE_IDLE, &ack_control);
 		goto amba_i2c_irq_exit;
+	case AMBA_I2C_STATE_HS_MODE:
+		pinfo->hsmode_enter = false;
+		wake_up(&pinfo->msg_wait);
+		goto amba_i2c_irq_exit;
 	default:
 		dev_err(pinfo->dev, "ambarella_i2c_irq in wrong state[0x%x]\n",
 			pinfo->state);
@@ -502,6 +552,22 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	for (retryCount = 0; retryCount <= adap->retries; retryCount++) {
 		errorCode = 0;
+
+		if (pinfo->hs_mode) {
+			pinfo->state = AMBA_I2C_STATE_HS_MODE;
+			pinfo->hsmode_enter = true;
+			ambarella_i2c_send_master_code(pinfo);
+
+			timeout = wait_event_timeout(pinfo->msg_wait,
+				pinfo->hsmode_enter == false, HZ * 1);
+			if (timeout <= 0) {
+				pinfo->state = AMBA_I2C_STATE_NO_ACK;
+			}
+			dev_dbg(pinfo->dev, "enter hs mode %ld jiffies left.\n", timeout);
+
+			pinfo->hsmode_enter = false;
+		}
+
 		if (pinfo->state != AMBA_I2C_STATE_IDLE)
 			ambarella_i2c_hw_init(pinfo);
 		pinfo->msgs = msgs;
@@ -614,7 +680,8 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	if (pinfo->clk_limit < 1000 || pinfo->clk_limit > 400000)
+	/* S/F/F+ mode */
+	if (pinfo->clk_limit < 1000 || pinfo->clk_limit > 1000000)
 		pinfo->clk_limit = 100000;
 
 	errorCode = of_property_read_u32(np, "amb,duty-cycle", &pinfo->duty_cycle);
@@ -635,9 +702,38 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	/* check if using turbo mode */
 	if (of_find_property(pdev->dev.of_node, "amb,turbo-mode", NULL)) {
 		pinfo->turbo_mode = 1;
-		dev_info(&pdev->dev,"Turbo(FIFO) mode is used(ignore device ACK)!\n");
+		dev_info(&pdev->dev, "Turbo(FIFO) mode is used(ignore device ACK)!\n");
 	} else {
 		pinfo->turbo_mode = 0;
+	}
+
+	/* check if using high-speed mode */
+	if (of_find_property(pdev->dev.of_node, "amb,hs-mode", NULL)) {
+		pinfo->hs_mode = true;
+
+		errorCode = of_property_read_u32(np, "hs-master-code", &pinfo->master_code);
+		if (errorCode < 0) {
+			dev_dbg(&pdev->dev, "Missing hs-master-code, assuming 0x0E!\n");
+			pinfo->master_code = 0x0E;
+		}
+
+		errorCode = of_property_read_u32(np, "hs-clock-frequency", &pinfo->hs_clk_limit);
+		if (errorCode < 0) {
+			dev_dbg(&pdev->dev, "Missing hs-clock-frequenc, assuming 1Mbps!\n");
+			pinfo->hs_clk_limit = 1000000;
+		}
+
+		/* high speed mode */
+		if (pinfo->hs_clk_limit < 1000 || pinfo->hs_clk_limit > 3400000)
+			pinfo->hs_clk_limit = 1000000;
+
+		/* for hs-mode, master code can only be sent by F/S mode */
+		if (pinfo->clk_limit > 400000)
+			pinfo->clk_limit = 400000;
+
+		dev_info(&pdev->dev, "High speed mode is used, hs-clock:%d!\n", pinfo->hs_clk_limit);
+	} else {
+		pinfo->hs_mode = false;
 	}
 
 	init_waitqueue_head(&pinfo->msg_wait);
@@ -676,7 +772,7 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	pinfo->system_event.notifier_call = ambarella_i2c_system_event;
 	ambarella_register_event_notifier(&pinfo->system_event);
 
-	dev_info(&pdev->dev, "Ambarella I2C adapter[%d] probed!\n", adap->nr);
+	dev_info(&pdev->dev, "Ambarella I2C adapter[%d] probed, clock:%d!\n", adap->nr, pinfo->clk_limit);
 
 	return 0;
 }

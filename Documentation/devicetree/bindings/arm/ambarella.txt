@@ -964,7 +964,7 @@ Required properties:
 - interrupts: the interrupt for this i2c.
 - pinctrl-names: should contain only one value - "default".
 - pinctrl-0: pin control group to be used for this controller.
-- clock-frequency: desired I2C bus clock frequency in Hz, [1000, 400000].
+- clock-frequency: desired I2C bus clock frequency in Hz, [1000, 1000000].
 - amb,i2c-class:
   a) 0x81: normal I2C controller
   b) 0x08: I2C controller dedicated to HDMI
@@ -978,6 +978,11 @@ FIFO directly, but there're 2 restriction for this mode:
     2 = duty cycle 1:2.
 - amb,stretch-scl: extend the SCL clock to tune START/STOP setup and hold timing,
   the default value is 1 if this option is not specified.
+- amb,hs-mode: high-speed mode, to achieve a bit transfer of up to 3.4Mbps.
+- hs-clock-frequency: desired I2C bus clock frequency in Hz for high speed mode,
+    [1000, 3400000]. The default value is 1MHz if this option is not specified..
+- hs-master-code: the 8-bit master code(0000 1XXX) for high-speed mode. The default value
+    is 0x0E if this option is not specified.
 
 ii) Subnode
 -----------
@@ -1005,6 +1010,9 @@ iii) Example
 		amb,turbo-mode;
 		amb,duty-cycle = <0>;
 		amb,stretch-scl = <1>;
+		amb,hs-mode;
+		hs-clock-frequency = <1000000>;
+		hs-master-code = <0x0E>;
 		status = "ok";
 
 		ak4642: codec@12 {
