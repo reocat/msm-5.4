@@ -137,6 +137,33 @@ static int amb_gpio_direction_output(struct gpio_chip *gc,
 	return 0;
 }
 
+static int amb_gpio_get_direction(struct gpio_chip *gc, unsigned pin)
+{
+	struct amb_gpio_chip *amb_gpio = dev_get_drvdata(gc->parent);
+	void __iomem *regbase;
+	u32 bank, offset, data;
+
+	bank = PINID_TO_BANK(pin);
+	offset = PINID_TO_OFFSET(pin);
+	regbase = amb_gpio->bank[bank].regbase;
+
+	data = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
+	data = (data >> offset) & 0x1;
+	if (data != 0) {
+		/*
+		 * Note that this should never be hit since pinctrl forces it
+		 * low on gpio request.
+		 */
+		dev_warn(gc->parent, "GPIO driver accessing pin in hardware mode");
+		return -EINVAL;
+	}
+
+	data = readl_relaxed(regbase + GPIO_DIR_OFFSET);
+	data = (data >> offset) & 0x1;
+
+	return (data ? GPIOF_DIR_OUT : GPIOF_DIR_IN);
+}
+
 /* gpiolib gpio_to_irq callback function */
 static int amb_gpio_to_irq(struct gpio_chip *gc, unsigned pin)
 {
@@ -220,6 +247,7 @@ static struct gpio_chip amb_gc = {
 	.free			= amb_gpio_free,
 	.direction_input	= amb_gpio_direction_input,
 	.direction_output	= amb_gpio_direction_output,
+	.get_direction		= amb_gpio_get_direction,
 	.get			= amb_gpio_get,
 	.set			= amb_gpio_set,
 	.to_irq			= amb_gpio_to_irq,
