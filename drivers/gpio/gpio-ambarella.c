@@ -147,21 +147,10 @@ static int amb_gpio_get_direction(struct gpio_chip *gc, unsigned pin)
 	offset = PINID_TO_OFFSET(pin);
 	regbase = amb_gpio->bank[bank].regbase;
 
-	data = readl_relaxed(regbase + GPIO_AFSEL_OFFSET);
-	data = (data >> offset) & 0x1;
-	if (data != 0) {
-		/*
-		 * Note that this should never be hit since pinctrl forces it
-		 * low on gpio request.
-		 */
-		dev_warn(gc->parent, "GPIO driver accessing pin in hardware mode");
-		return -EINVAL;
-	}
-
 	data = readl_relaxed(regbase + GPIO_DIR_OFFSET);
 	data = (data >> offset) & 0x1;
 
-	return (data ? GPIOF_DIR_OUT : GPIOF_DIR_IN);
+	return data ? GPIOF_DIR_OUT : GPIOF_DIR_IN;
 }
 
 /* gpiolib gpio_to_irq callback function */
@@ -518,6 +507,8 @@ static int amb_gpio_probe(struct platform_device *pdev)
 	/* iomux_base will get NULL if not existed */
 	amb_gpio->iomux_base = of_iomap(parent, i);
 
+	platform_set_drvdata(pdev, amb_gpio);
+
 	of_node_put(parent);
 
 	amb_gpio->gc = &amb_gc;
@@ -544,8 +535,6 @@ static int amb_gpio_probe(struct platform_device *pdev)
 		irq_set_handler_data(amb_gpio->bank[i].irq, amb_gpio);
 		irq_set_chained_handler(amb_gpio->bank[i].irq, amb_gpio_handle_irq);
 	}
-
-	platform_set_drvdata(pdev, amb_gpio);
 
 	dev_info(&pdev->dev, "Ambarella GPIO driver registered\n");
 
