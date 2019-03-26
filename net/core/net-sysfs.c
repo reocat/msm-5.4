@@ -1207,9 +1207,6 @@ static ssize_t xps_cpus_show(struct netdev_queue *queue,
 	cpumask_var_t mask;
 	unsigned long index;
 
-	if (!zalloc_cpumask_var(&mask, GFP_KERNEL))
-		return -ENOMEM;
-
 	index = get_netdev_queue_index(queue);
 
 	if (dev->num_tc) {
@@ -1218,6 +1215,9 @@ static ssize_t xps_cpus_show(struct netdev_queue *queue,
 		if (tc < 0)
 			return -EINVAL;
 	}
+
+	if (!zalloc_cpumask_var(&mask, GFP_KERNEL))
+		return -ENOMEM;
 
 	rcu_read_lock();
 	dev_maps = rcu_dereference(dev->xps_maps);
@@ -1402,6 +1402,9 @@ static int register_queue_kobjects(struct net_device *dev)
 error:
 	netdev_queue_update_kobjects(dev, txq, 0);
 	net_rx_queue_update_kobjects(dev, rxq, 0);
+#ifdef CONFIG_SYSFS
+	kset_unregister(dev->queues_kset);
+#endif
 	return error;
 }
 
