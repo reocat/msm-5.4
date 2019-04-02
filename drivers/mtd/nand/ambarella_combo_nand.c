@@ -1454,6 +1454,11 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	if (chip->bbt_options & NAND_BBT_USE_FLASH)
 		chip->bbt_options |= NAND_BBT_NO_OOB;
 
+	/* it must be SLC nand, because the spinand id parsing could */
+	/* be considered as MLC nand, we set it as SLC mandatory */
+	if (host->is_spinand)
+		chip->bits_per_cell = 1;
+
 	rval = ambarella_nand_init_chipecc(host);
 	if (rval)
 		goto err_exit2;
