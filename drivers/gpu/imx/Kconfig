@@ -1,4 +1,4 @@
-config IMX8_PC
+config IMX8_PRG
 	tristate
 	default y if IMX_DPU_CORE=y
 	default m if IMX_DPU_CORE=m
