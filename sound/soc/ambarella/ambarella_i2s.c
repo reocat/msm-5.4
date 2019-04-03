@@ -415,10 +415,8 @@ static int ambarella_i2s_set_sysclk(struct snd_soc_dai *cpu_dai,
 		return -EINVAL;
 	}
 
-	if (dir != SND_SOC_CLOCK_OUT) {
-		printk("clk dir (%d) is not supported yet\n", dir);
+	if (dir != SND_SOC_CLOCK_OUT)
 		return -ENOTSUPP;
-	}
 
 	priv_data->i2s_intf.clksrc = clk_id;
 	priv_data->i2s_intf.mclk = freq;
