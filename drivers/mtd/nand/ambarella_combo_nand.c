@@ -58,6 +58,8 @@ struct ambarella_nand_host {
 	void __iomem			*regbase;
 	struct regmap			*reg_rct;
 	int				irq;
+	struct pinctrl			*pins;
+	struct pinctrl_state		*pins_spinand;
 	u32				ecc_bits;
 	/* bch enabled or not by POC */
 	bool				bch_enabled;
@@ -1123,10 +1125,12 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 {
 	u32 val;
 
+	if (host->is_spinand && host->pins_spinand)
+		pinctrl_select_state(host->pins, host->pins_spinand);
+
 	/* reset FIO by RCT */
 	if (!host->is_spinand)
 		ambarella_fio_rct_reset(host);
-
 
 	/* Reset FIO FIFO and then exit random read mode */
 	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
@@ -1271,7 +1275,7 @@ static void ambarella_nand_init_chip(struct ambarella_nand_host *host,
 		host->ecc_bits = (poc & SYS_CONFIG_NAND_ECC_SPARE_2X) ? 8 : 6;
 
 	dev_info(host->dev, "in %secc-[%d]bit mode\n",
-		host->soft_ecc ? "soft " : "", host->ecc_bits);
+			host->soft_ecc ? "soft " : "", host->ecc_bits);
 
 	ambarella_nand_init_hw(host);
 
@@ -1372,6 +1376,17 @@ static int ambarella_nand_get_resource(
 		dev_err(&pdev->dev, "no rct regmap!\n");
 		return PTR_ERR(host->reg_rct);
 	}
+
+	host->pins = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(host->pins)) {
+		dev_err(&pdev->dev, "default pins not configured: %ld\n",
+			 PTR_ERR(host->pins));
+		return PTR_ERR(host->pins);
+	}
+
+	host->pins_spinand = pinctrl_lookup_state(host->pins, "spinand");
+	if (IS_ERR(host->pins_spinand))
+		host->pins_spinand = NULL;
 
 	host->enable_wp = !!of_find_property(np, "amb,enable-wp", NULL);
 

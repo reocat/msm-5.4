@@ -734,7 +734,7 @@
 			reg = <0xe0002000 0x1000>;
 			interrupts = <0 68 0x4>;	/* fio_irq */
 			amb,rct-regmap = <&rct_syscon>;
-			pinctrl-names = "default";
+			pinctrl-names = "default", "spinand";
 			pinctrl-0 = <&nand0_pins>;
 			pinctrl-1 = <&snand0_pins>;
 			clocks = <&gclk_nand>;
