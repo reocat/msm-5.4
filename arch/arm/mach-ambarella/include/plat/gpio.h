@@ -42,6 +42,9 @@
 #elif (CHIP_REV == S5L)
 #define GPIO_INSTANCES			5
 #define GPIO_MAX_LINES			139
+#elif (CHIP_REV == S6LM)
+#define GPIO_INSTANCES			3
+#define GPIO_MAX_LINES			86
 #elif (CHIP_REV == CV1)
 #define GPIO_INSTANCES			7
 #define GPIO_MAX_LINES			218

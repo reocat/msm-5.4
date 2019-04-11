@@ -247,6 +247,7 @@
 #define SD_EISEN_CMD_BIT_ERR		0x0004
 #define SD_EISEN_CMD_CRC_ERR		0x0002
 #define SD_EISEN_CMD_TMOUT_ERR		0x0001
+#define SD_EISEN_ALL_ERR		0x01FF
 
 /* SD_NIXEN_REG */
 #define SD_NIXEN_CARD			0x0100
@@ -335,9 +336,7 @@
 
 /* ==========================================================================*/
 
-#define sd_slot_is_valid(slot)		((SD_SUPPORT_SDXC == 1) && ((slot) == 2) ? 1 : \
-					(SD_SUPPORT_SDIO == 1) && ((slot) == 1) ? 1 : \
-					((slot) == 0) ? 1 : 0)
+#define sd_slot_is_valid(slot)		((slot) < SD_INSTANCES ? 1 : 0)
 
 #endif
 

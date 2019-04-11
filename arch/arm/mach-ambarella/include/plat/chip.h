@@ -30,6 +30,7 @@
 #define S3L		(13000)
 #define S5		(15000)
 #define S5L		(16000)
+#define S6LM		(17000)
 #define CV1		(20000)
 #define CV2		(21000)
 #define CV22		(22000)
@@ -49,6 +50,8 @@
 #define CHIP_REV	S5
 #elif defined(CONFIG_ARCH_AMBARELLA_S5L)
 #define CHIP_REV	S5L
+#elif defined(CONFIG_ARCH_AMBARELLA_S6LM)
+#define CHIP_REV	S6LM
 #elif defined(CONFIG_ARCH_AMBARELLA_CV1)
 #define CHIP_REV	CV1
 #elif defined(CONFIG_ARCH_AMBARELLA_CV2)

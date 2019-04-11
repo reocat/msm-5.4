@@ -38,6 +38,13 @@ config ARCH_AMBARELLA_S5L
 	help
 	  Say Y here if you are using Ambarella S5L.
 
+config ARCH_AMBARELLA_S6LM
+	bool "S6LM"
+	select ARCH_AMBARELLA_COMBO_NAND
+	select ARCH_AMBARELLA_HW_RANDOM
+	help
+	  Say Y here if you are using Ambarella S6LM.
+
 config ARCH_AMBARELLA_CV1
 	bool "CV1"
 	select ARCH_AMBARELLA_COMBO_NAND

@@ -64,10 +64,9 @@
 #else
 #define AHBSP_DMA_SEL_BIT_SHIFT		8
 #endif
+#define AHBSP_DMA_SEL_BIT_MASK		((1 << AHBSP_DMA_SEL_BIT_SHIFT) - 1)
 
 /* ==========================================================================*/
-
-#define INVALID_DMA_CHAN		0xFF
 
 #define NOR_SPI_TX_DMA_CHAN		0
 #define NOR_SPI_RX_DMA_CHAN		1
