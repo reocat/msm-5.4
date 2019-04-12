@@ -48,7 +48,7 @@
 #include <plat/uart.h>
 #include <plat/dma.h>
 
-#define AMBA_UART_RX_DMA_BUFFER_SIZE 4096
+#define AMBA_UART_RX_DMA_BUFFER_SIZE PAGE_SIZE
 #define AMBA_UART_MIN_DMA			16
 #define AMBA_UART_LSR_ANY			(UART_LSR_OE | UART_LSR_BI |UART_LSR_PE | UART_LSR_FE)
 
@@ -73,25 +73,27 @@ struct ambarella_uart_port {
 	unsigned char *tx_dma_buf_virt;
 	dma_addr_t rx_dma_buf_phys;
 	dma_addr_t tx_dma_buf_phys;
-	dma_addr_t buf_phys_a;
-	dma_addr_t buf_phys_b;
-	unsigned char *buf_virt_a;
-	unsigned char *buf_virt_b;
-	bool use_buf_b;
 	struct dma_async_tx_descriptor *tx_dma_desc;
 	struct dma_async_tx_descriptor *rx_dma_desc;
 	dma_cookie_t tx_cookie;
 	dma_cookie_t rx_cookie;
 	int tx_bytes_requested;
 	int rx_bytes_requested;
-	int tx_in_progress;
+	bool tx_in_progress;
+	bool rx_in_progress;
 };
 
 static struct ambarella_uart_port ambarella_port[UART_INSTANCES];
 
 static void __serial_ambarella_stop_tx(struct uart_port *port, u32 tx_fifo_fix)
 {
+	struct ambarella_uart_port *amb_port;
+	struct circ_buf *xmit = &port->state->xmit;
+	struct dma_tx_state state;
 	u32 ier, iir;
+	int count;
+
+	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (tx_fifo_fix) {
 		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
@@ -106,6 +108,14 @@ static void __serial_ambarella_stop_tx(struct uart_port *port, u32 tx_fifo_fix)
 	} else {
 		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
 		writel_relaxed(ier & ~UART_IE_ETBEI, port->membase + UART_IE_OFFSET);
+	}
+
+	if (amb_port->txdma_used && amb_port->tx_in_progress) {
+		dmaengine_tx_status(amb_port->tx_dma_chan, amb_port->tx_cookie, &state);
+		dmaengine_terminate_all(amb_port->tx_dma_chan);
+		count = amb_port->tx_bytes_requested - state.residue;
+		xmit->tail = (xmit->tail + count) & (UART_XMIT_SIZE - 1);
+		amb_port->tx_in_progress = false;
 	}
 }
 
@@ -202,6 +212,8 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 			UART_FCR_DMA_SELECT, port->membase + UART_FC_OFFSET);
 		writel_relaxed((amb_port->txdma_used << 1) | amb_port->rxdma_used,
 			port->membase + UART_DMAE_OFFSET);
+
+		writel_relaxed(UART_IE_ETOI, port->membase + UART_IE_OFFSET);
 	}
 }
 
@@ -343,18 +355,17 @@ static char serial_ambarella_decode_rx_error(struct ambarella_uart_port *amb_por
 			/* Overrrun error */
 			flag |= TTY_OVERRUN;
 			amb_port->port.icount.overrun++;
-			dev_err(amb_port->port.dev, "Got overrun errors\n");
-		} else if (lsr & UART_LSR_PE) {
+		}
+		if (lsr & UART_LSR_PE) {
 			/* Parity error */
 			flag |= TTY_PARITY;
 			amb_port->port.icount.parity++;
-			dev_err(amb_port->port.dev, "Got Parity errors\n");
-		} else if (lsr & UART_LSR_FE) {
+		}
+		if (lsr & UART_LSR_FE) {
 			flag |= TTY_FRAME;
 			amb_port->port.icount.frame++;
-			dev_err(amb_port->port.dev, "Got frame errors\n");
-		} else if (lsr & UART_LSR_BI) {
-			dev_err(amb_port->port.dev, "Got Break\n");
+		}
+		if (lsr & UART_LSR_BI) {
 			amb_port->port.icount.brk++;
 			/* If FIFO read error without any data, reset Rx FIFO */
 			if (!(lsr & UART_LSR_DR) && (lsr & UART_LSR_FIFOE))
@@ -400,36 +411,29 @@ static void serial_ambarella_dma_rx_irq(struct ambarella_uart_port *amb_port)
 	size_t pending;
 
 	dmaengine_tx_status(amb_port->rx_dma_chan, amb_port->rx_cookie, &state);
-	dmaengine_terminate_all(amb_port->rx_dma_chan);
 
 	pending = amb_port->rx_bytes_requested - state.residue;
 	BUG_ON(pending > AMBA_UART_RX_DMA_BUFFER_SIZE);
 
-	/* switch the rx buffer */
-	amb_port->use_buf_b = !amb_port->use_buf_b;
-
-	serial_ambarella_start_rx_dma(amb_port);
-
 	serial_ambarella_copy_rx_to_tty(amb_port, port, pending);
-
 	serial_ambarella_handle_rx_pio(amb_port, port);
 
 	if (tty) {
 		tty_flip_buffer_push(port);
 		tty_kref_put(tty);
 	}
-}
 
-static void serial_ambarella_start_tx(struct uart_port *port);
+	serial_ambarella_start_rx_dma(amb_port);
+}
 
 static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 {
 	struct uart_port *port = dev_id;
-	int rval = IRQ_HANDLED;
-	u32 ii;
-	unsigned long flags;
-
 	struct ambarella_uart_port *amb_port;
+	int rval = IRQ_HANDLED;
+	unsigned long flags;
+	u32 ii;
+
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	spin_lock_irqsave(&port->lock, flags);
@@ -441,10 +445,7 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 		break;
 
 	case UART_II_THR_EMPTY:
-		if (amb_port->txdma_used)
-			serial_ambarella_start_tx(port);
-		else
-			serial_ambarella_transmit_chars(port);
+		serial_ambarella_transmit_chars(port);
 		break;
 
 	case UART_II_RCV_STATUS:
@@ -452,13 +453,10 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 		serial_ambarella_receive_chars(port, 0);
 		break;
 	case UART_II_CHAR_TIMEOUT:
-		if (amb_port->rxdma_used){
-			struct ambarella_uart_port *amb_port;
-			amb_port = (struct ambarella_uart_port *)(port->private_data);
+		if (amb_port->rxdma_used)
 			serial_ambarella_dma_rx_irq(amb_port);
-		} else {
+		else
 			serial_ambarella_receive_chars(port, 1);
-		}
 		break;
 
 	case UART_II_NO_INT_PENDING:
@@ -493,7 +491,7 @@ static void serial_ambarella_tx_dma_complete(void *args)
 	count = amb_port->tx_bytes_requested - state.residue;
 	spin_lock_irqsave(&amb_port->port.lock, flags);
 	xmit->tail = (xmit->tail + count) & (UART_XMIT_SIZE - 1);
-	amb_port->tx_in_progress = 0;
+	amb_port->tx_in_progress = false;
 	amb_port->port.icount.tx += count;
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&amb_port->port);
@@ -515,8 +513,7 @@ static int serial_ambarella_start_tx_dma(struct ambarella_uart_port *amb_port,
 	tx_phys_addr = amb_port->tx_dma_buf_phys + xmit->tail;
 	amb_port->tx_dma_desc = dmaengine_prep_slave_single(amb_port->tx_dma_chan,
 				tx_phys_addr, tx_bytes, DMA_MEM_TO_DEV,
-				DMA_PREP_INTERRUPT |
-				DMA_CTRL_ACK);
+				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 	if (!amb_port->tx_dma_desc) {
 		dev_err(amb_port->port.dev, "Not able to get desc for Tx\n");
 		return -EIO;
@@ -525,7 +522,7 @@ static int serial_ambarella_start_tx_dma(struct ambarella_uart_port *amb_port,
 	amb_port->tx_dma_desc->callback = serial_ambarella_tx_dma_complete;
 	amb_port->tx_dma_desc->callback_param = amb_port;
 	amb_port->tx_bytes_requested = tx_bytes;
-	amb_port->tx_in_progress = 1;
+	amb_port->tx_in_progress = true;
 	amb_port->tx_cookie = dmaengine_submit(amb_port->tx_dma_desc);
 	dma_async_issue_pending(amb_port->tx_dma_chan);
 
@@ -545,11 +542,12 @@ static void serial_ambarella_start_next_tx(struct ambarella_uart_port *amb_port)
 	if (!count)
 		return;
 
-	wait_for_tx(port);
-	if (count < AMBA_UART_MIN_DMA)
+	if (count < AMBA_UART_MIN_DMA) {
+		wait_for_tx(port);
 		serial_ambarella_transmit_chars(port);
-	else
+	} else {
 		serial_ambarella_start_tx_dma(amb_port, count);
+	}
 }
 
 static void serial_ambarella_start_tx(struct uart_port *port)
@@ -561,14 +559,14 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 	tty = tty_port_tty_get(&amb_port->port.state->port);
 
-	ier = readl_relaxed(port->membase + UART_IE_OFFSET);
-	writel_relaxed(ier | UART_IE_ETBEI, port->membase + UART_IE_OFFSET);
-
 	if (amb_port->txdma_used) {
-		if (tty->hw_stopped ||amb_port->tx_in_progress)
+		if (uart_tx_stopped(port) ||amb_port->tx_in_progress)
 			return;
 		serial_ambarella_start_next_tx(amb_port);
 	} else {
+		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+		writel_relaxed(ier | UART_IE_ETBEI, port->membase + UART_IE_OFFSET);
+
 		/* if FIFO status register is not provided, we have no idea about
 	 	* the Tx FIFO is full or not, so we need to wait for the Tx Empty
 		 * Interrupt comming, then we can start to transfer data. */
@@ -582,8 +580,7 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 static void serial_ambarella_copy_rx_to_tty(struct ambarella_uart_port *amb_port,
 		struct tty_port *tty, int count)
 {
-	dma_addr_t old_buf_phys;
-	unsigned char *old_buf_virt;
+	int copied;
 
 	amb_port->port.icount.rx += count;
 	if (!tty) {
@@ -591,19 +588,14 @@ static void serial_ambarella_copy_rx_to_tty(struct ambarella_uart_port *amb_port
 		return;
 	}
 
-	/* use old buffer to copy data to tty, and use new buffer to receive */
-	if (amb_port->use_buf_b) {
-		old_buf_phys = amb_port->buf_phys_a;
-		old_buf_virt = amb_port->buf_virt_a;
-	} else {
-		old_buf_phys = amb_port->buf_phys_b;
-		old_buf_virt = amb_port->buf_virt_b;
-	}
-
-	dma_sync_single_for_cpu(amb_port->port.dev, old_buf_phys,
+	dma_sync_single_for_cpu(amb_port->port.dev, amb_port->rx_dma_buf_phys,
 		AMBA_UART_RX_DMA_BUFFER_SIZE, DMA_FROM_DEVICE);
 
-	tty_insert_flip_string(tty, old_buf_virt, count);
+	copied = tty_insert_flip_string(tty, amb_port->rx_dma_buf_virt, count);
+	if (copied != count) {
+		WARN_ON(1);
+		dev_warn(amb_port->port.dev, "RxData copy to tty layer failed\n");
+	}
 }
 
 static void serial_ambarella_rx_dma_complete(void *args)
@@ -615,10 +607,6 @@ static void serial_ambarella_rx_dma_complete(void *args)
 	int count = amb_port->rx_bytes_requested;
 	unsigned long flags;
 
-	/* switch the rx buffer */
-	amb_port->use_buf_b = !amb_port->use_buf_b;
-	serial_ambarella_start_rx_dma(amb_port);
-
 	serial_ambarella_copy_rx_to_tty(amb_port, port, count);
 
 	spin_lock_irqsave(&u->lock, flags);
@@ -627,19 +615,13 @@ static void serial_ambarella_rx_dma_complete(void *args)
 		tty_kref_put(tty);
 	}
 	spin_unlock_irqrestore(&u->lock, flags);
+
+	serial_ambarella_start_rx_dma(amb_port);
 }
 
 static int serial_ambarella_start_rx_dma(struct ambarella_uart_port *amb_port)
 {
 	unsigned int count = AMBA_UART_RX_DMA_BUFFER_SIZE;
-
-	if (amb_port->use_buf_b) {
-		amb_port->rx_dma_buf_virt = amb_port->buf_virt_b;
-		amb_port->rx_dma_buf_phys = amb_port->buf_phys_b;
-	} else {
-		amb_port->rx_dma_buf_virt = amb_port->buf_virt_a;
-		amb_port->rx_dma_buf_phys = amb_port->buf_phys_a;
-	}
 
 	amb_port->rx_dma_desc = dmaengine_prep_slave_single(amb_port->rx_dma_chan,
 				amb_port->rx_dma_buf_phys, count, DMA_DEV_TO_MEM,
@@ -666,14 +648,44 @@ static void serial_ambarella_stop_tx(struct uart_port *port)
 	struct ambarella_uart_port *amb_port;
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
-
 	__serial_ambarella_stop_tx(port, amb_port->tx_fifo_fix);
 }
 
 static void serial_ambarella_stop_rx(struct uart_port *port)
 {
-	u32 ier = readl_relaxed(port->membase + UART_IE_OFFSET);
-	writel_relaxed(ier & ~UART_IE_ERBFI, port->membase + UART_IE_OFFSET);
+	struct ambarella_uart_port *amb_port = (struct ambarella_uart_port *)(port->private_data);
+	struct tty_struct *tty = tty_port_tty_get(&amb_port->port.state->port);
+	struct tty_port *tty_port = &port->state->port;
+	struct dma_tx_state state;
+	size_t pending;
+	u32 ier;
+
+	if (amb_port->rxdma_used) {
+		if (!amb_port->rx_in_progress)
+			return;
+
+		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+		writel_relaxed(ier & ~UART_IE_ETOI, port->membase + UART_IE_OFFSET);
+
+		amb_port->rx_in_progress = false;
+		dmaengine_tx_status(amb_port->rx_dma_chan, amb_port->rx_cookie, &state);
+		dmaengine_terminate_all(amb_port->rx_dma_chan);
+
+		pending = amb_port->rx_bytes_requested - state.residue;
+		BUG_ON(pending > AMBA_UART_RX_DMA_BUFFER_SIZE);
+
+		serial_ambarella_copy_rx_to_tty(amb_port, tty_port, pending);
+		serial_ambarella_handle_rx_pio(amb_port, tty_port);
+
+		if (tty) {
+			tty_flip_buffer_push(tty_port);
+			tty_kref_put(tty);
+		}
+	} else {
+		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
+		writel_relaxed(ier & ~UART_IE_ERBFI, port->membase + UART_IE_OFFSET);
+	}
+
 }
 
 static unsigned int serial_ambarella_tx_empty(struct uart_port *port)
@@ -787,21 +799,6 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 			dma_release_channel(dma_chan);
 			return -ENOMEM;
 		}
-		amb_port->buf_virt_a = dma_buf;
-		amb_port->buf_phys_a = dma_phys;
-
-		/* buffer b */
-		dma_buf = kmalloc(AMBA_UART_RX_DMA_BUFFER_SIZE, GFP_KERNEL);
-		dma_phys = virt_to_phys(dma_buf);
-		if (!dma_buf) {
-			dev_err(amb_port->port.dev,
-				"Not able to allocate the dma buffer b\n");
-			dma_release_channel(dma_chan);
-			return -ENOMEM;
-		}
-		amb_port->buf_virt_b = dma_buf;
-		amb_port->buf_phys_b = dma_phys;
-
 	} else {
 		dma_phys = dma_map_single(amb_port->port.dev,
 			amb_port->port.state->xmit.buf, UART_XMIT_SIZE,
@@ -828,11 +825,10 @@ static int serial_ambarella_dma_channel_allocate(struct ambarella_uart_port *amb
 		goto scrub;
 	}
 
-
 	if (dma_to_memory) {
 		amb_port->rx_dma_chan = dma_chan;
-		amb_port->rx_dma_buf_virt = amb_port->buf_virt_a;
-		amb_port->rx_dma_buf_phys = amb_port->buf_phys_a;
+		amb_port->rx_dma_buf_virt = dma_buf;
+		amb_port->rx_dma_buf_phys = dma_phys;
 	} else {
 		amb_port->tx_dma_chan = dma_chan;
 		amb_port->tx_dma_buf_virt = dma_buf;
@@ -866,8 +862,6 @@ static int serial_ambarella_startup(struct uart_port *port)
 	}
 
 	if (amb_port->rxdma_used) {
-		amb_port->use_buf_b = false;
-
 		rval = serial_ambarella_dma_channel_allocate(amb_port, true);
 		if (rval < 0) {
 			dev_err(amb_port->port.dev, "Rx Dma allocation failed, err = %d\n", rval);
@@ -879,6 +873,7 @@ static int serial_ambarella_startup(struct uart_port *port)
 			dev_err(amb_port->port.dev, "Not able to start Rx DMA\n");
 			return rval;
 		}
+		amb_port->rx_in_progress = true;
 	}
 
 	return rval;
@@ -901,17 +896,12 @@ static void serial_ambarella_dma_channel_free(struct ambarella_uart_port *amb_po
 	struct dma_chan *dma_chan;
 
 	if (dma_to_memory) {
-		kfree(amb_port->buf_virt_a);
-		kfree(amb_port->buf_virt_b);
+		kfree(amb_port->rx_dma_buf_virt);
 
 		dma_chan = amb_port->rx_dma_chan;
 		amb_port->rx_dma_chan = NULL;
 		amb_port->rx_dma_buf_phys = 0;
 		amb_port->rx_dma_buf_virt = NULL;
-		amb_port->buf_phys_a = 0;
-		amb_port->buf_virt_a = NULL;
-		amb_port->buf_phys_b = 0;
-		amb_port->buf_virt_b = NULL;
 	} else {
 		dma_unmap_single(amb_port->port.dev, amb_port->tx_dma_buf_phys,
 			UART_XMIT_SIZE, DMA_TO_DEVICE);
@@ -940,11 +930,12 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 		if (amb_port->txdma_used) {
 			dmaengine_terminate_all(amb_port->tx_dma_chan);
 			serial_ambarella_dma_channel_free(amb_port, false);
-			amb_port->tx_in_progress = 0;
+			amb_port->tx_in_progress = false;
 		}
 		if (amb_port->rxdma_used) {
 			dmaengine_terminate_all(amb_port->rx_dma_chan);
 			serial_ambarella_dma_channel_free(amb_port, true);
+			amb_port->rx_in_progress = false;
 		}
 
 		spin_lock_irqsave(&port->lock, flags);
