@@ -402,6 +402,11 @@
 				amb,pinmux-ids = <0x2029>;
 			};
 
+			sdmmc0_reset_pin: sdmmc0_reset@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x203f>;
+			};
+
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2026 0x2027 0x202e>;
@@ -428,6 +433,11 @@
 			sdmmc1_wp_pin: sdmmc1_wp@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x203d>;
+			};
+
+			sdmmc1_reset_pin: sdmmc1_reset@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x203e>;
 			};
 
 			sdmmc1_pins_1bit: sdmmc1@0 {
@@ -797,6 +807,7 @@
 			pinctrl-0 = <&snand0_pins_a>;
 			clocks = <&pll_out_enet>;
 			nand-on-flash-bbt;
+			amb,spinand-only;
 			/* amb,soft-ecc = <6>; */
 		};
 
@@ -943,6 +954,7 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
+			amb,enable-required;
 			amb,ahb-12mhz-div = <5>;
 			clock-names = "ptp_ref";
 			clocks= <&osc>;
@@ -971,6 +983,7 @@
 			/* amb,dma-used; */
 			dmas = <&dma0 1>, <&dma0 2>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		spi1: spi@e0012000 {
@@ -1025,12 +1038,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
 			clocks = <&gclk_uart1>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
 			dmas = <&dma0 9>, <&dma0 10>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart2: uart@e0018000 {

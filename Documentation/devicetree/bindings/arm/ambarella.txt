@@ -368,6 +368,7 @@ Required properties:
 - reg: specifies base physical address and size of the registers.
 - interrupts: the interrupt for the NAND controller.
 - amb,rct-regmap: phandle of RCT registers.
+- amb,spinand-only: must be specified if the SoC support SPINAND only.
 
 Optional properties:
 - nand-on-flash-bbt: please see Reference.
@@ -609,6 +610,8 @@ Optional properties:
 - amb,tx-clk-invert: should be specified if inverting the Tx clk,
   take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
+- amb,enable-required: specifies if POC option is removed, which means ethernet
+  need to be enabled manually. It's determined by SoC.
 - amb,mdio-gpio: specifies to use GPIO to emulating MDIO bus.
 
 ii) Example

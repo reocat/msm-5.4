@@ -2219,9 +2219,10 @@ static const struct ethtool_ops ambeth_ethtool_ops = {
 /* ==========================================================================*/
 static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 {
+	struct device *dev = lp->ndev->dev.parent;
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int ret_val, hw_intf, val;
+	int ret_val, hw_intf, val = 0;
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
@@ -2235,10 +2236,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 		/* request gpio for PHY power control */
 		if (gpio_is_valid(lp->pwr_gpio)) {
-			ret_val = devm_gpio_request(lp->ndev->dev.parent,
-				lp->pwr_gpio, "phy power");
+			ret_val = devm_gpio_request(dev, lp->pwr_gpio, "phy power");
 			if (ret_val < 0) {
-				dev_err(lp->ndev->dev.parent, "Failed to request pwr-gpios!\n");
+				dev_err(dev, "Failed to request pwr-gpios!\n");
 				return -EBUSY;
 			}
 			gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
@@ -2246,10 +2246,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 		/* request gpio for PHY reset control */
 		if (gpio_is_valid(lp->rst_gpio)) {
-			ret_val = devm_gpio_request(lp->ndev->dev.parent,
-				lp->rst_gpio, "phy reset");
+			ret_val = devm_gpio_request(dev, lp->rst_gpio, "phy reset");
 			if (ret_val < 0) {
-				dev_err(lp->ndev->dev.parent, "Failed to request rst-gpios!\n");
+				dev_err(dev, "Failed to request rst-gpios!\n");
 				return -EBUSY;
 			}
 
@@ -2266,8 +2265,29 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 
 	lp->intf_type = of_get_phy_mode(np);
 	if (lp->intf_type < 0) {
-		dev_err(lp->ndev->dev.parent, "get phy interface type failed!\n");
+		dev_err(dev, "get phy interface type failed!\n");
 		return -ENODEV;
+	}
+
+	if (of_find_property(np, "amb,enable-required", NULL)) {
+		switch (lp->intf_type) {
+		case PHY_INTERFACE_MODE_RGMII:
+			val = ENET_SEL | ENET_PHY_INTF_SEL_RGMII;
+			break;
+		case PHY_INTERFACE_MODE_RMII:
+			val = ENET_SEL | ENET_PHY_INTF_SEL_RMII;
+			break;
+		default:
+			dev_err(dev, "Invalid PHY interface: %d!\n", lp->intf_type);
+			return -EINVAL;
+		}
+		regmap_write(lp->reg_rct, RCT_ENET_CTRL_OFFSET, val);
+	} else {
+		regmap_read(lp->reg_rct, SYS_CONFIG_OFFSET, &val);
+		if (!(val & POC_ETH_IS_ENABLED)) {
+			dev_err(dev, "Not enabled, check POC!\n");
+			return -ENODEV;
+		}
 	}
 
 	/* sanity check */
@@ -2290,8 +2310,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		break;
 	}
 	if (ret_val < 0) {
-		dev_err(lp->ndev->dev.parent,
-			"PHY interface dismatch: %d, %d!\n", hw_intf, lp->intf_type);
+		dev_err(dev, "PHY interface dismatch: %d(hw), %d(sw)!\n", hw_intf, lp->intf_type);
 		return -ENODEV;
 	}
 
@@ -2373,7 +2392,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	struct ambeth_info *lp;
 	struct resource *res;
 	const char *macaddr;
-	int poc, ret_val = 0;
+	int ret_val = 0;
 
 	ndev = alloc_etherdev(sizeof(struct ambeth_info));
 	if (ndev == NULL) {
@@ -2414,14 +2433,6 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	lp->reg_scr = syscon_regmap_lookup_by_phandle(np, "amb,scr-regmap");
 	if (IS_ERR(lp->reg_scr)) {
 		dev_err(&pdev->dev, "no scr regmap!\n");
-		ret_val = PTR_ERR(lp->reg_scr);
-		goto ambeth_drv_probe_free_netdev;
-	}
-
-	regmap_read(lp->reg_rct, SYS_CONFIG_OFFSET, &poc);
-
-	if (!(poc & POC_ETH_IS_ENABLED)) {
-		dev_err(&pdev->dev, "Not enabled, check HW config!\n");
 		ret_val = PTR_ERR(lp->reg_scr);
 		goto ambeth_drv_probe_free_netdev;
 	}

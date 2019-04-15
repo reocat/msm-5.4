@@ -420,6 +420,11 @@
 				amb,pinmux-ids = <0x205c>;
 			};
 
+			sdmmc0_reset_pin: sdmmc0_reset@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x207d>;
+			};
+
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2059 0x205a 0x2069>;
@@ -446,6 +451,11 @@
 			sdmmc1_wp_pin: sdmmc1_wp@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2078>;
+			};
+
+			sdmmc1_reset_pin: sdmmc1_reset@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x207e>;
 			};
 
 			sdmmc1_pins_1bit: sdmmc1@0 {

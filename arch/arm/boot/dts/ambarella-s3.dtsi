@@ -259,6 +259,11 @@
 						  0x308c>;
 			};
 
+			sdmmc0_reset_pin: sdmmc0_reset@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x209a>;
+			};
+
 			sdmmc0_pins_1bit: sdmmc0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2076 0x2077 0x2078 0x2079
@@ -290,6 +295,11 @@
 				reg = <1>;
 				amb,pinmux-ids = <0x5000 0x5001 0x5002 0x5003
 						  0x5004 0x5005 0x5006 0x5007>;
+			};
+
+			sdmmc2_reset_pin: sdmmc2_reset@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x209b>;
 			};
 
 			sdmmc2_pins_1bit: sdmmc2@0 {
