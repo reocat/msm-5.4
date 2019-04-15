@@ -275,17 +275,17 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * is changed, there is no negative frac any more.
 	 */
 	rate_tmp = rate;
-	max_numerator = 64;
-	max_denominator = 16;
+	max_numerator = 128 - 1;
+	max_denominator = 16 - 1;
 	rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
 				&intp, &sout);
 	if (!clk_pll->frac_nega) {
 		rate_resolution = parent_rate / post_scaler / 16;
 		/*
 		 * 10nm chips don't have negative fraction mode, so the
-		 * calculated rate be less than the required rate.
+		 * calculated rate must be less than the required rate.
 		 */
-		while (parent_rate * intp / sout > rate) {
+		while (parent_rate * intp * sdiv / sout > rate) {
 			rate_tmp -= rate_resolution;
 			rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
 						&intp, &sout);
