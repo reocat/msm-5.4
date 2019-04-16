@@ -449,7 +449,7 @@ static void ambarella_sd_recovery(struct ambarella_mmc_host *host)
 		ctrl2_reg = readl_relaxed(host->phy_ctrl2_reg);
 	}
 
-	divisor = readl_relaxed(host->regbase + SD_CLK_OFFSET) & 0xff00;
+	divisor = readw_relaxed(host->regbase + SD_CLK_OFFSET) & 0xff00;
 
 	ambarella_sd_reset_all(host);
 
@@ -554,11 +554,11 @@ static int ambarella_sd_check_ready(struct ambarella_mmc_host *host)
 	return 0;
 }
 
-static u32 ambarella_sd_calc_timeout(struct ambarella_mmc_host *host)
+static void ambarella_sd_set_timeout(struct ambarella_mmc_host *host)
 {
+	u32 cycle_ns = host->ns_in_one_cycle, clks, tmo, try_num = 0;
 	struct mmc_command *cmd = host->cmd;
 	struct mmc_data *data = cmd->data;
-	u32 clks, cycle_ns = host->ns_in_one_cycle;
 
 	if (data)
 		clks = data->timeout_clks + DIV_ROUND_UP(data->timeout_ns, cycle_ns);
@@ -568,7 +568,20 @@ static u32 ambarella_sd_calc_timeout(struct ambarella_mmc_host *host)
 	if (clks == 0)
 		clks = 1 << 27;
 
-	return clamp(order_base_2(clks), 13, 27) - 13;
+	tmo = clamp(order_base_2(clks), 13, 27) - 13;
+	writeb_relaxed(tmo, host->regbase + SD_TMO_OFFSET);
+
+	/*
+	 * change timeout setting may trigger unwanted "data timeout error"
+	 * interrupt immediately, so here we clear it manually.
+	 */
+	while (readw_relaxed(host->regbase + SD_EIS_OFFSET) & SD_EIS_DATA_TMOUT_ERR) {
+		writew_relaxed(SD_EIS_DATA_TMOUT_ERR, host->regbase + SD_EIS_OFFSET);
+		if (try_num++ > 100)
+			break;
+	}
+
+	BUG_ON(try_num > 100);
 }
 
 static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
@@ -628,11 +641,10 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 
 static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_command *cmd)
 {
-	u32 tmo_reg, cmd_reg, xfr_reg = 0, arg_reg = cmd->arg, sd_host2 = 0;
+	u32 cmd_reg, xfr_reg = 0, arg_reg = cmd->arg, sd_host2 = 0;
 	int rval;
 
 	host->cmd = cmd;
-
 
 	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
@@ -649,8 +661,6 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 		mmc_request_done(host->mmc, mrq);
 		return -EIO;
 	}
-
-	tmo_reg = ambarella_sd_calc_timeout(host);
 
 	cmd_reg = SD_CMD_IDX(cmd->opcode);
 
@@ -712,7 +722,8 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 		writew_relaxed(cmd->data->blocks, host->regbase + SD_BLK_CNT_OFFSET);
 	}
 
-	writeb_relaxed(tmo_reg, host->regbase + SD_TMO_OFFSET);
+	ambarella_sd_set_timeout(host);
+
 	writew_relaxed(xfr_reg, host->regbase + SD_XFR_OFFSET);
 	writel_relaxed(arg_reg, host->regbase + SD_ARG_OFFSET);
 	writew_relaxed(cmd_reg, host->regbase + SD_CMD_OFFSET);
@@ -1072,7 +1083,7 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	 * error happened in CMD18/CMD25 (read/write), we need to send
 	 * CMD12 manually. */
 	if ((cmd == mrq->cmd) && mrq->sbc && mrq->data->error && mrq->stop) {
-		dev_warn(host->dev, "SBC|DATA cmd error, send STOP manually!\n");
+		dev_warn(host->dev, "SBC|DATA data error, send STOP manually!\n");
 		ambarella_sd_send_cmd(host, mrq->stop);
 		spin_unlock_irqrestore(&host->lock, flags);
 		return;
