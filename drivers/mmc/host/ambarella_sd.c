@@ -597,7 +597,7 @@ static void ambarella_sd_setup_dma(struct ambarella_mmc_host *host,
 		dir = DMA_FROM_DEVICE;
 
 	sg_cnt = dma_map_sg(host->dev, data->sg, data->sg_len, dir);
-	BUG_ON(sg_cnt != data->sg_len || sg_cnt == 0);
+	BUG_ON(sg_cnt == 0);
 
 	desc = host->desc_virt;
 	for_each_sg(data->sg, sgent, sg_cnt, i) {
