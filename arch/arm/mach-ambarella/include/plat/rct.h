@@ -774,7 +774,7 @@
 #define RCT_BOOT_EMMC_SDXC		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2) || (CHIP_REV == CV25)
+#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2) || (CHIP_REV == CV25) || (CHIP_REV == S6LM)
 #define MIPI_DSI_CTRL0_OFFSET		0x00000670
 #define MIPI_DSI_CTRL1_OFFSET		0x00000674
 #define MIPI_DSI_CTRL2_OFFSET		0x00000678
