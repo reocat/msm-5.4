@@ -734,10 +734,13 @@
 
 		spinor0: spinor@e0001000 {
 			compatible = "ambarella,spinor";
-			reg = <0xe0001000 0x2ff>, /* spi nor controller */
-			      <0xe0020300 0x20>;  /* dma reg */
+			reg = <0xe0001000 0x2ff>; /* spi nor controller */
+			interrupts = <0 73 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&spinor0_pins>;
+			clocks = <&gclk_ssi3>;
+			dmas = <&dma0 5>, <&dma0 6>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 

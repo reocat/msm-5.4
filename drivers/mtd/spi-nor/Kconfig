@@ -129,4 +129,10 @@ config SPI_STM32_QUADSPI
 	  This enables support for the STM32 Quad SPI controller.
 	  We only connect the NOR to this controller.
 
+config SPI_AMBARELLA_QUADSPI
+	tristate "Ambarella Quad SPI NOR controller"
+	depends on ARCH_AMBARELLA || COMPILE_TEST
+	help
+	  This enables support for the Ambarella Quad SPI NOR controller.
+	  We only connect the NOR to this controller.
 endif # MTD_SPI_NOR
