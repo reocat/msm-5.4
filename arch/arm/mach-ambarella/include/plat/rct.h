@@ -389,12 +389,14 @@
 #define PLL_SD_CTRL2_REG		RCT_REG(PLL_SD_CTRL2_OFFSET)
 #define PLL_SD_CTRL3_REG		RCT_REG(PLL_SD_CTRL3_OFFSET)
 
-#define SD_PHY_CLKIN_POL		(1 << 27)
-#define SD_PHY_CLKOUT_BYPASS		(1 << 26)
-#define SD_PHY_RESET			(1 << 25)
-#define SD_PHY_RX_CLK_POL		(1 << 19)
-#define SD_PHY_DATA_CMD_BYPASS		(1 << 18)
-#define SD_PHY_DLL_BYPASS		(1 << 17)
+#define SD_PHY_DIN_CLK_POL		1 << (27 - 16)
+#define SD_PHY_CLKOUT_BYPASS		1 << (26 - 16)
+#define SD_PHY_RESET			1 << (25 - 16)
+#define SD_PHY_DLL_CLK_POL		1 << (19 - 16)
+#define SD_PHY_DATA_CMD_BYPASS		1 << (18 - 16)
+#define SD_PHY_DLL_BYPASS		1 << (17 - 16)
+
+#define SD_PHY_SBC_DEFAULT_VALUE	0xb881
 
 #define SD0_PHY_CTRL_0_OFFSET		0x4C0
 #define SD0_PHY_CTRL_1_OFFSET		0x4C4

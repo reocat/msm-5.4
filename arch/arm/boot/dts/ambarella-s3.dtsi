@@ -555,12 +555,14 @@
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0xe0002000 0x1000>,
-			      <0xec1704c0 0x8>;  /* phy timing */
+			reg = <0xe0002000 0x1000>;
 			interrupts = <77 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit>;
 			clocks = <&gclk_sd>;
+			amb,rct-regmap = <&rct_syscon 0x4c0 0x4c4 0x4c0 0x4f0 0>;
+			amb,tuning-tx-clk = <0>;
+			amb,tuning-rx-clk = <0>;
 			max-frequency = <120000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
@@ -600,13 +602,15 @@
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0xe001f000 0x1000>,
-			      <0xec1704c8 0x8>;  /* phy timing */
+			reg = <0xe001f000 0x1000>;
 			interrupts = <75 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc2_pins_8bit>;
 			clocks = <&gclk_sdxc>;
-			max-frequency = <96000000>;
+			amb,rct-regmap = <&rct_syscon 0x4c8 0x4cc 0x4c8 0x4f0 8>;
+			amb,tuning-tx-clk = <0>;
+			amb,tuning-rx-clk = <0>;
+			max-frequency = <120000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
 			cap-sd-highspeed;

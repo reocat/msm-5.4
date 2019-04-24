@@ -32,6 +32,8 @@
 #include <linux/clk.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 #include <linux/mmc/slot-gpio.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
@@ -53,12 +55,14 @@ struct ambarella_sd_dma_desc {
 
 struct ambarella_mmc_host {
 	unsigned char __iomem 		*regbase;
-	unsigned char __iomem 		*fio_reg;
-	unsigned char __iomem 		*phy_ctrl0_reg;
-	unsigned char __iomem 		*phy_ctrl1_reg;
-	unsigned char __iomem 		*phy_ctrl2_reg;
+	struct regmap			*reg_rct;
 	struct device			*dev;
 	unsigned int			irq;
+
+	struct regmap_field		*phy_ctrl;
+	struct regmap_field		*phy_sel;
+	struct regmap_field		*phy_sbc;
+	struct regmap_field		*phy_obsv;
 
 	struct mmc_host			*mmc;
 	struct mmc_request		*mrq;
@@ -85,6 +89,10 @@ struct ambarella_mmc_host {
 	u32				fixed_init_clk;
 	int				fixed_cd;
 	int				fixed_wp;
+	int				fixed_latency;
+	int				bypass_tx_clk;
+	int				invert_rx_clk;
+	int				invert_dll_clk;
 	bool				auto_cmd12;
 	bool				force_v18;
 
@@ -254,11 +262,13 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 
 	ambarella_sd_disable_irq(host, 0xffffffff);
 
+	writel_relaxed(0x0, host->regbase + SD_LAT_CTRL_OFFSET);
+
 	/* reset sd phy timing if exist */
-	if (host->phy_ctrl0_reg) {
-		writel_relaxed(0x0, host->phy_ctrl2_reg);
-		writel_relaxed(0x0, host->phy_ctrl1_reg);
-		writel_relaxed(0x04070000, host->phy_ctrl0_reg);
+	if (host->reg_rct) {
+		regmap_field_write(host->phy_sbc, 0x0);
+		regmap_field_write(host->phy_sel, 0x0);
+		regmap_field_write(host->phy_ctrl, 0x0407);
 	}
 
 	writeb_relaxed(SD_RESET_ALL, host->regbase + SD_RESET_OFFSET);
@@ -437,16 +447,41 @@ static void ambarella_sd_set_bus(struct ambarella_mmc_host *host, u8 bus_width, 
 	host->mode = mode;
 }
 
+static u32 ambarella_sd_set_dll(struct ambarella_mmc_host *host, u32 sbc)
+{
+	u32 vfine;
+
+	regmap_field_write(host->phy_sbc, sbc);
+
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_RESET, SD_PHY_RESET);
+	/* wait time for DLL reset */
+	if (in_interrupt())
+		udelay(5);
+	else
+		usleep_range(5, 10);
+
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_RESET, 0);
+	/* wait time for DLL lock */
+	if (in_interrupt())
+		udelay(5);
+	else
+		usleep_range(5, 10);
+
+	regmap_field_read(host->phy_obsv, &vfine);
+
+	return vfine;
+}
+
 static void ambarella_sd_recovery(struct ambarella_mmc_host *host)
 {
-	u32 latency, ctrl0_reg = 0, ctrl1_reg = 0, ctrl2_reg = 0;
+	u32 latency, ctrl_reg = 0, sel_reg = 0, sbc_reg = 0;
 	u32 divisor = 0;
 
 	latency = readl_relaxed(host->regbase + SD_LAT_CTRL_OFFSET);
-	if (host->phy_ctrl0_reg) {
-		ctrl0_reg = readl_relaxed(host->phy_ctrl0_reg);
-		ctrl1_reg = readl_relaxed(host->phy_ctrl1_reg);
-		ctrl2_reg = readl_relaxed(host->phy_ctrl2_reg);
+	if (host->reg_rct) {
+		regmap_field_read(host->phy_ctrl, &ctrl_reg);
+		regmap_field_read(host->phy_sel, &sel_reg);
+		regmap_field_read(host->phy_sbc, &sbc_reg);
 	}
 
 	divisor = readw_relaxed(host->regbase + SD_CLK_OFFSET) & 0xff00;
@@ -463,13 +498,10 @@ static void ambarella_sd_recovery(struct ambarella_mmc_host *host)
 	ambarella_sd_set_bus(host, host->bus_width, host->mode);
 
 	writel_relaxed(latency, host->regbase + SD_LAT_CTRL_OFFSET);
-	if (host->phy_ctrl0_reg) {
-		writel_relaxed(ctrl2_reg, host->phy_ctrl2_reg);
-		writel_relaxed(ctrl1_reg, host->phy_ctrl1_reg);
-		writel_relaxed(ctrl0_reg | SD_PHY_RESET, host->phy_ctrl0_reg);
-		udelay(5); /* DLL reset time */
-		writel_relaxed(ctrl0_reg, host->phy_ctrl0_reg);
-		udelay(5); /* DLL lock time */
+	if (host->reg_rct) {
+		regmap_field_write(host->phy_ctrl, ctrl_reg);
+		regmap_field_write(host->phy_sel, sel_reg);
+		ambarella_sd_set_dll(host, sbc_reg);
 	}
 }
 
@@ -791,14 +823,16 @@ static int ambarella_sd_card_busy(struct mmc_host *mmc)
 static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
-	u32 doing_retune = mmc->doing_retune;
-	u32 clock = host->clock;
-	u32 tmp, misc, sel, lat, s = -1, e = 0, middle;
-	u32 best_misc = 0, best_s = -1, best_e = 0;
-	int dly, longest_range = 0, range = 0;
+	u32 doing_retune = mmc->doing_retune, clock = host->clock;
+	u32 best_misc = 0, best_s = 0, best_e = 0, longest_range = 0;
+	u32 tmp, dly, sel, vfine, misc, s, e, range;
 
-	if (!host->phy_ctrl0_reg)
+	if (!host->reg_rct)
 		return 0;
+
+	tmp = readb_relaxed(host->regbase + SD_HOST_OFFSET);
+	tmp |= SD_HOST_HIGH_SPEED;
+	writeb_relaxed(tmp, host->regbase + SD_HOST_OFFSET);
 
 retry:
 	if (doing_retune) {
@@ -810,78 +844,129 @@ retry:
 		dev_dbg(host->dev, "doing retune, clock = %d\n", host->clock);
 	}
 
-	for (misc = 0; misc < 4; misc++) {
-		writel_relaxed(0x8001, host->phy_ctrl2_reg);
+	misc = 0;
+	regmap_field_write(host->phy_ctrl, 0x0000);
 
-		tmp = readl_relaxed(host->phy_ctrl0_reg);
-		tmp &= 0x0000ffff;
-		tmp |= ((misc >> 1) & 0x1) << 19;
-		writel_relaxed(tmp | SD_PHY_RESET, host->phy_ctrl0_reg);
-		usleep_range(5, 10);	/* DLL reset time */
-		writel_relaxed(tmp, host->phy_ctrl0_reg);
-		usleep_range(5, 10);	/* DLL lock time */
+retry_latency:
+	if (host->fixed_latency == 1)
+		misc |= BIT(0);
+	tmp = (misc & BIT(0)) + 1;
+	tmp = (tmp << 12) | (tmp << 8) | (tmp << 4) | (tmp << 0);
+	writel_relaxed(tmp, host->regbase + SD_LAT_CTRL_OFFSET);
+	misc &= ~BIT(1);
 
-		lat = ((misc >> 0) & 0x1) + 1;
-		tmp = (lat << 12) | (lat << 8) | (lat << 4) | (lat << 0);
-		writel_relaxed(tmp, host->regbase + SD_LAT_CTRL_OFFSET);
+retry_tx_clk:
+	if (host->bypass_tx_clk == 1)
+		misc |= BIT(1);
+	tmp = (misc & BIT(1)) ? SD_PHY_CLKOUT_BYPASS : 0;
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_CLKOUT_BYPASS, tmp);
+	misc &= ~BIT(2);
 
-		for (dly = 0; dly < 256; dly++) {
-			tmp = readl_relaxed(host->phy_ctrl2_reg);
-			tmp &= 0xfffffff9;
-			tmp |= (((dly >> 6) & 0x3) << 1);
-			writel_relaxed(tmp, host->phy_ctrl2_reg);
+retry_rx_clk:
+	if (host->invert_rx_clk == 1)
+		misc |= BIT(2);
+	tmp = (misc & BIT(2)) ? SD_PHY_DIN_CLK_POL : 0;
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_DIN_CLK_POL, tmp);
+	misc &= ~BIT(3);
 
-			usleep_range(50, 100);
-			sel = dly % 64;
-			if (sel < 0x20)
-				sel = 63 - sel;
-			else
-				sel = sel - 32;
+retry_dll_clk:
+	if (host->invert_dll_clk == 1)
+		misc |= BIT(3);
+	tmp = (misc & BIT(3)) ? SD_PHY_DLL_CLK_POL : 0;
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_DLL_CLK_POL, tmp);
 
-			tmp = (sel << 16) | (sel << 8) | (sel << 0);
-			writel_relaxed(tmp, host->phy_ctrl1_reg);
+	vfine = 0x1f;
+	s = -1;
+	e = range = 0;
 
-			if (mmc_send_tuning(mmc, opcode, NULL) == 0) {
-				/* Tuning is successful at this tuning point */
-				if (s == -1)
-					s = dly;
-				e = dly;
-				range++;
-			} else {
-				if (range > 0) {
-					dev_dbg(host->dev,
-						"tuning: misc[0x%x], count[%d](%d - %d)\n",
-						misc, e - s + 1, s, e);
-				}
-				if (range > longest_range) {
-					best_misc = misc;
-					best_s = s;
-					best_e = e;
-					longest_range = range;
-				}
-				s = -1;
-				e = range = 0;
-			}
+	for (dly = 0; dly < 128; dly++) {
+		sel = dly % 32;
+		if (sel == 0) {
+			/*
+			 * DLL has been saturated with last SC, so that
+			 * no need to try larger SC any more.
+			 */
+			if (vfine < 0x1f)
+				break;
+
+			/* update coarse delay, i.e., SC */
+			tmp = ((dly >> 5) << 1) | SD_PHY_SBC_DEFAULT_VALUE;
+			vfine = ambarella_sd_set_dll(host, tmp);
 		}
 
-		/* in case the last timings are all working */
-		if (range > longest_range) {
+		if (sel < vfine)
+			sel = (vfine - sel) | 0x20;
+		else
+			sel = sel - vfine;
+
+		tmp = (sel << 16) | (sel << 8) | (sel << 0);
+		regmap_field_write(host->phy_sel, tmp);
+
+		if (mmc_send_tuning(mmc, opcode, NULL) == 0) {
+			/* Tuning is successful at this tuning point */
+			if (s == -1)
+				s = dly;
+			e = dly;
+			range++;
+		} else {
 			if (range > 0) {
-				dev_dbg(host->dev,
-					"tuning last: misc[0x%x], count[%d](%d - %d)\n",
-					misc, e - s + 1, s, e);
+				dev_dbg(host->dev, "tuning: lat[%ld], %s, %s, %s, count[%d](%d-%d)\n",
+					(misc & BIT(0)) + 1,
+					(misc & BIT(1)) ? "tx_clk_bypass" : "tx_clk_delays",
+					(misc & BIT(2)) ? "rx_clk_invert" : "rx_clk_normal",
+					(misc & BIT(3)) ? "dll_clk_invert" : "dll_clk_normal",
+					e - s + 1, s, e);
 			}
-			best_misc = misc;
-			best_s = s;
-			best_e = e;
-			longest_range = range;
+			if (range > longest_range) {
+				best_misc = misc;
+				best_s = s;
+				best_e = e;
+				longest_range = range;
+			}
+			s = -1;
+			e = range = 0;
 		}
-
-		s = -1;
-		e = range = 0;
 	}
 
-	if (longest_range == 0) {
+	if (range > 0) {
+		dev_dbg(host->dev, "tuning: lat[%ld], %s, %s, %s, count[%d](%d-%d)\n",
+			(misc & BIT(0)) + 1,
+			(misc & BIT(1)) ? "tx_clk_bypass" : "tx_clk_delays",
+			(misc & BIT(2)) ? "rx_clk_invert" : "rx_clk_normal",
+			(misc & BIT(3)) ? "dll_clk_invert" : "dll_clk_normal",
+			e - s + 1, s, e);
+	}
+
+	/* in case the last timings are all working */
+	if (range > longest_range) {
+		best_misc = misc;
+		best_s = s;
+		best_e = e;
+		longest_range = range;
+	}
+
+	if (host->invert_dll_clk == -1 && (misc & BIT(3)) == 0) {
+		misc |= BIT(3);
+		goto retry_dll_clk;
+	}
+
+	if (host->invert_rx_clk == -1 && (misc & BIT(2)) == 0) {
+		misc |= BIT(2);
+		goto retry_rx_clk;
+	}
+
+	if (host->bypass_tx_clk == -1 && (misc & BIT(1)) == 0) {
+		misc |= BIT(1);
+		goto retry_tx_clk;
+	}
+
+	if (host->fixed_latency == -1 && (misc & BIT(0)) == 0) {
+		misc |= BIT(0);
+		goto retry_latency;
+	}
+
+	/* we set threshhold to 16 according to experiences */
+	if (longest_range < 16) {
 		if (clock > 50000000) {
 			doing_retune = 1;
 			goto retry;
@@ -889,31 +974,40 @@ retry:
 		return -EIO;
 	}
 
-	middle = (best_s + best_e) / 2;
+	tmp = (best_misc & BIT(0)) + 1;
+	tmp = (tmp << 12) | (tmp << 8) | (tmp << 4) | (tmp << 0);
+	writel_relaxed(tmp, host->regbase + SD_LAT_CTRL_OFFSET);
 
-	tmp = (((middle >> 6) & 0x3) << 1) | 0x8001;
-	writel_relaxed(tmp, host->phy_ctrl2_reg);
+	tmp = (best_misc & BIT(1)) ? SD_PHY_CLKOUT_BYPASS : 0;
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_CLKOUT_BYPASS, tmp);
 
-	sel = middle % 64;
-	if (sel < 0x20)
-		sel = 63 - sel;
+	tmp = (best_misc & BIT(2)) ? SD_PHY_DIN_CLK_POL : 0;
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_DIN_CLK_POL, tmp);
+
+	tmp = (best_misc & BIT(3)) ? SD_PHY_DLL_CLK_POL : 0;
+	regmap_field_update_bits(host->phy_ctrl, SD_PHY_DLL_CLK_POL, tmp);
+
+	tmp = ((((best_s + best_e) / 2) >> 5) << 1) | SD_PHY_SBC_DEFAULT_VALUE;
+	vfine = ambarella_sd_set_dll(host, tmp);
+
+	if (tmp * 32 > best_s)
+		best_s = 0;
 	else
-		sel = sel - 32;
+		best_s = best_s % 32;
+
+	if (tmp * 32 + 31 > best_e)
+		best_e = 31;
+	else
+		best_e = best_e % 32;
+
+	sel = (best_s + best_e) / 2;
+	if (sel < vfine)
+		sel = (vfine - sel) | 0x20;
+	else
+		sel = sel - vfine;
 
 	tmp = (sel << 16) | (sel << 8) | (sel << 0);
-	writel_relaxed(tmp, host->phy_ctrl1_reg);
-
-	tmp = readl_relaxed(host->phy_ctrl0_reg);
-	tmp &= 0x0000ffff;
-	tmp |= ((best_misc >> 1) & 0x1) << 19;
-	writel_relaxed(tmp | SD_PHY_RESET, host->phy_ctrl0_reg);
-	msleep(1);	/* DLL reset time */
-	writel_relaxed(tmp, host->phy_ctrl0_reg);
-	msleep(1);	/* DLL lock time */
-
-	lat = ((best_misc >> 0) & 0x1) + 1;
-	tmp = (lat << 12) | (lat << 8) | (lat << 4) | (lat << 0);
-	writel_relaxed(tmp, host->regbase + SD_LAT_CTRL_OFFSET);
+	regmap_field_write(host->phy_sel, tmp);
 
 	return 0;
 }
@@ -1191,6 +1285,18 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	if (of_property_read_u32(np, "amb,fixed-cd", &host->fixed_cd) < 0)
 		host->fixed_cd = -1;
 
+	if (of_property_read_u32(np, "amb,tuning-latency", &host->fixed_latency) < 0)
+		host->fixed_latency = -1;
+
+	if (of_property_read_u32(np, "amb,tuning-tx-clk", &host->bypass_tx_clk) < 0)
+		host->bypass_tx_clk = -1;
+
+	if (of_property_read_u32(np, "amb,tuning-rx-clk", &host->invert_rx_clk) < 0)
+		host->invert_rx_clk = -1;
+
+	if (of_property_read_u32(np, "amb,tuning-dll-clk", &host->invert_dll_clk) < 0)
+		host->invert_dll_clk = -1;
+
 	host->auto_cmd12 = !of_property_read_bool(np, "amb,no-auto-cmd12");
 	host->force_v18 = of_property_read_bool(np, "amb,sd-force-1_8v");
 
@@ -1239,50 +1345,28 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 static int ambarella_sd_get_resource(struct platform_device *pdev,
 			struct ambarella_mmc_host *host)
 {
+	struct device_node *np = host->dev->of_node;
+	struct device *dev = host->dev;
 	struct resource *mem;
+	struct reg_field field;
+	u32 regs[6];
+	int rval;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL) {
-		dev_err(&pdev->dev, "Get SD/MMC mem resource failed!\n");
+		dev_err(dev, "Get SD/MMC mem resource failed!\n");
 		return -ENXIO;
 	}
 
-	host->regbase = devm_ioremap(&pdev->dev,
-					mem->start, resource_size(mem));
+	host->regbase = devm_ioremap_resource(dev, mem);
 	if (host->regbase == NULL) {
-		dev_err(&pdev->dev, "devm_ioremap() failed\n");
+		dev_err(dev, "devm_ioremap() failed\n");
 		return -ENOMEM;
-	}
-
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (mem == NULL) {
-		host->phy_ctrl0_reg = NULL;
-	} else {
-		host->phy_ctrl0_reg = devm_ioremap(&pdev->dev,
-					mem->start, resource_size(mem));
-		if (host->phy_ctrl0_reg == NULL) {
-			dev_err(&pdev->dev, "devm_ioremap() failed for phy_ctrl0_reg\n");
-			return -ENOMEM;
-		}
-
-		host->phy_ctrl1_reg = host->phy_ctrl0_reg + 4;
-	}
-
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 2);
-	if (mem == NULL) {
-		host->phy_ctrl2_reg = host->phy_ctrl0_reg;
-	} else {
-		host->phy_ctrl2_reg = devm_ioremap(&pdev->dev,
-					mem->start, resource_size(mem));
-		if (host->phy_ctrl2_reg == NULL) {
-			dev_err(&pdev->dev, "devm_ioremap() failed for phy_ctrl2_reg\n");
-			return -ENOMEM;
-		}
 	}
 
 	host->irq = platform_get_irq(pdev, 0);
 	if (host->irq < 0) {
-		dev_err(&pdev->dev, "Get SD/MMC irq resource failed!\n");
+		dev_err(dev, "Get SD/MMC irq resource failed!\n");
 		return -ENXIO;
 	}
 
@@ -1290,6 +1374,54 @@ static int ambarella_sd_get_resource(struct platform_device *pdev,
 	if (IS_ERR(host->clk)) {
 		dev_err(host->dev, "Get PLL failed!\n");
 		return PTR_ERR(host->clk);
+	}
+
+	host->reg_rct = syscon_regmap_lookup_by_phandle(np, "amb,rct-regmap");
+	if (IS_ERR(host->reg_rct)) {
+		host->reg_rct = NULL;
+		return 0;
+	}
+
+	rval = of_property_read_u32_array(np, "amb,rct-regmap", regs, ARRAY_SIZE(regs));
+	if (rval < 0) {
+		dev_err(dev, "Can't get phy regs offset (%d)\n", rval);
+		return rval;
+	}
+
+	field.reg = regs[1];
+	field.lsb = 16;
+	field.msb = 31;
+	host->phy_ctrl = devm_regmap_field_alloc(dev, host->reg_rct, field);
+	if (IS_ERR(host->phy_ctrl)) {
+		dev_err(dev, "Can't alloc phy ctrl reg field.\n");
+		return PTR_ERR(host->phy_ctrl);
+	}
+
+	field.reg = regs[2];
+	field.lsb = 0;
+	field.msb = 24;
+	host->phy_sel = devm_regmap_field_alloc(dev, host->reg_rct, field);
+	if (IS_ERR(host->phy_sel)) {
+		dev_err(dev, "Can't alloc phy sel reg field.\n");
+		return PTR_ERR(host->phy_sel);
+	}
+
+	field.reg = regs[3];
+	field.lsb = 0;
+	field.msb = 15;
+	host->phy_sbc = devm_regmap_field_alloc(dev, host->reg_rct, field);
+	if (IS_ERR(host->phy_sbc)) {
+		dev_err(dev, "Can't alloc phy sbc reg field.\n");
+		return PTR_ERR(host->phy_sbc);
+	}
+
+	field.reg = regs[4];
+	field.lsb = regs[5];
+	field.msb = regs[5] + 5;
+	host->phy_obsv = devm_regmap_field_alloc(dev, host->reg_rct, field);
+	if (IS_ERR(host->phy_obsv)) {
+		dev_err(dev, "Can't alloc phy obsv reg field.\n");
+		return PTR_ERR(host->phy_obsv);
 	}
 
 	return 0;

@@ -535,8 +535,22 @@ Required properties:
 - properties provided by Kernel, please see Reference above.
 
 Optional properties:
-- amb,switch-1v8-dly: specifies the delay when switch voltage, in
-  millisecond unit.
+- amb,rct-regmap: phandle of RCT registers, required by UHS-I mode to tune timing.
+  PS: the offset for each registers must be specified, too. And the last item is
+      the bit position of vfine for SD DLL.
+- amb,tuning-latency: specifies the tuning option for read latency, 0: fix the value
+  of read latency to 0x1111, 1: fix the value of read latency to 0x2222, -1 or not
+  specified: try all possible values for read latency.
+- amb,tuning-tx-clk: specifies the tuning option for tx clk, 0: always delay the
+  tx clock, 1: always bypass the tx clk, -1 or not specified: try all possible
+  values for tx clk.
+- amb,tuning-rx-clk: specifies the tuning option for rx clk, 0: always not inverse
+  the polarity of rx clock, 1: always inverse the polarity of rx clk, -1 or not
+  specified: try all possible values for rx clk.
+- amb,tuning-dll-clk: specifies the tuning option for dll clk, 0: always not inverse
+  the polarity of dll clock, 1: always inverse the polarity of dll clk, -1 or not
+  specified: try all possible values for dll clk.
+- amb,switch-1v8-dly: specifies the delay when switch voltage, in millisecond unit.
 - amb,fixed-cd: should be specified if no cd pin, 0: no sd card, 1: sd card is
   always present, -1: checking if sd card exist by cd pin.
 - amb,fixed-wp: should be specified if no wp pin, 0: write-able, 1: read-only
@@ -566,7 +580,7 @@ iii) Example
 		pinctrl-names = "default";
 		pinctrl-0 = <&sdmmc0_pins_8bit>;
 		clocks = <&gclk_sd>;
-		amb,switch-vol-tmo = <100>; /* in millisecond */
+		amb,switch-1v8-dly = <100>; /* in millisecond */
 		max-frequency = <120000000>;
 		bus-width = <8>;
 		cap-sdio-irq;

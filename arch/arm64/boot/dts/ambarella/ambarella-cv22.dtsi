@@ -748,14 +748,13 @@
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0xe0004000 0x1000>,
-			      <0xed0804c0 0x8>,  /* phy timing */
-			      <0xed080664 0x4>;  /* sbc reg address */
+			reg = <0xe0004000 0x1000>;
 			interrupts = <0 72 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc0_pins_8bit &sdmmc0_cd_pin &sdmmc0_wp_pin>;
 			clocks = <&gclk_sd>;
-			amb,switch-vol-tmo = <100>; /* in millisecond */
+			amb,rct-regmap = <&rct_syscon 0x4c0 0x4c4 0x664 0x4f0 0>;
+			amb,tuning-tx-clk = <0>;
 			max-frequency = <120000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
@@ -768,15 +767,14 @@
 			compatible = "ambarella,sdmmc";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0xe0005000 0x1000>,
-			      <0xed0804c8 0x8>,  /* phy timing */
-			      <0xed080668 0x4>;  /* sbc reg address */
+			reg = <0xe0005000 0x1000>;
 			interrupts = <0 71 0x4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdmmc1_pins_8bit &sdmmc1_cd_pin &sdmmc1_wp_pin>;
 			clocks = <&gclk_sdxc>;
-			amb,switch-vol-tmo = <100>; /* in millisecond */
-			max-frequency = <96000000>;
+			amb,rct-regmap = <&rct_syscon 0x4c8 0x4cc 0x668 0x4f0 16>;
+			amb,tuning-tx-clk = <0>;
+			max-frequency = <120000000>;
 			bus-width = <8>;
 			cap-sdio-irq;
 			cap-sd-highspeed;
