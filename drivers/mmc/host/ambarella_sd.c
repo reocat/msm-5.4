@@ -823,7 +823,7 @@ static int ambarella_sd_card_busy(struct mmc_host *mmc)
 static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
-	u32 doing_retune = mmc->doing_retune, clock = host->clock;
+	u32 clock, doing_retune = mmc->doing_retune;
 	u32 best_misc = 0, best_s = 0, best_e = 0, longest_range = 0;
 	u32 tmp, dly, sel, vfine, misc, s, e, range;
 
@@ -836,7 +836,8 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 retry:
 	if (doing_retune) {
-		clock -= 12000000;
+		tmp = clk_get_rate(clk_get_parent(host->clk));
+		clock = tmp / (tmp / host->clock + 1);
 		if (clock <= 48000000)
 			return -ECANCELED;
 
@@ -875,7 +876,7 @@ retry_dll_clk:
 	tmp = (misc & BIT(3)) ? SD_PHY_DLL_CLK_POL : 0;
 	regmap_field_update_bits(host->phy_ctrl, SD_PHY_DLL_CLK_POL, tmp);
 
-	vfine = 0x1f;
+	vfine = SD_PHY_MAX_DLL_VFINE;
 	s = -1;
 	e = range = 0;
 
@@ -886,7 +887,7 @@ retry_dll_clk:
 			 * DLL has been saturated with last SC, so that
 			 * no need to try larger SC any more.
 			 */
-			if (vfine < 0x1f)
+			if (vfine < SD_PHY_MAX_DLL_VFINE)
 				break;
 
 			/* update coarse delay, i.e., SC */
@@ -967,11 +968,8 @@ retry_dll_clk:
 
 	/* we set threshhold to 16 according to experiences */
 	if (longest_range < 16) {
-		if (clock > 50000000) {
-			doing_retune = 1;
-			goto retry;
-		}
-		return -EIO;
+		doing_retune = 1;
+		goto retry;
 	}
 
 	tmp = (best_misc & BIT(0)) + 1;
@@ -1171,7 +1169,7 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 	 * error happened in CMD18/CMD25 (read/write), we need to send
 	 * CMD12 manually. */
 	if ((cmd == mrq->cmd) && mrq->sbc && mrq->data->error && mrq->stop) {
-		dev_warn(host->dev, "SBC|DATA data error, send STOP manually!\n");
+		dev_dbg(host->dev, "SBC|DATA data error, send STOP manually!\n");
 		ambarella_sd_send_cmd(host, mrq->stop);
 		spin_unlock_irqrestore(&host->lock, flags);
 		return;
