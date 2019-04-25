@@ -409,7 +409,7 @@ int ambeth_ptp_init(struct platform_device *pdev)
 
 	if (IS_ERR_OR_NULL(lp->ptp_clk)) {
 		lp->ptp_clk = NULL;
-		dev_err(&pdev->dev, "register ptp clock error.\n");
+		dev_warn(&pdev->dev, "CONFIG_PTP_1588_CLOCK is not set\n");
 		return -ENODEV;
 	}
 
