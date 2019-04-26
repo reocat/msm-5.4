@@ -809,8 +809,6 @@ static int ambeth_phy_start(struct ambeth_info *lp)
 	spin_unlock_irqrestore(&lp->lock, flags);
 
 	ambeth_fc_config(lp);
-	ret_val = phy_start_aneg(phydev);
-
 	ambeth_fc_resolve(lp);
 
 ambeth_init_phy_exit:
@@ -825,8 +823,6 @@ static void ambeth_phy_stop(struct ambeth_info *lp)
 	lp->phy_enabled = 0;
 	lp->oldlink = PHY_DOWN;
 	spin_unlock_irqrestore(&lp->lock, flags);
-
-	phy_disconnect(lp->phydev);
 }
 
 static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
@@ -1426,6 +1422,9 @@ static int ambeth_open(struct net_device *ndev)
 		free_irq(ndev->irq, ndev);
 	}
 
+	if (lp->phydev)
+		phy_start(lp->phydev);
+
 ambeth_open_exit:
 	if (ret_val) {
 		ambeth_stop_hw(ndev);
@@ -1438,6 +1437,11 @@ static int ambeth_stop(struct net_device *ndev)
 {
 	struct ambeth_info *lp = netdev_priv(ndev);
 	int ret_val = 0;
+
+	if (lp->phydev) {
+		phy_stop(lp->phydev);
+		phy_disconnect(lp->phydev);
+	}
 
 	netif_stop_queue(ndev);
 	napi_disable(&lp->napi);
@@ -2577,6 +2581,11 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 	int ret_val = 0;
 	unsigned long flags;
 
+	if (lp->phydev) {
+		phy_stop(lp->phydev);
+		phy_disconnect(lp->phydev);
+	}
+
 	if (!netif_running(ndev))
 		goto ambeth_drv_suspend_exit;
 
@@ -2659,6 +2668,10 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		netif_device_attach(ndev);
 		napi_enable(&lp->napi);
 	}
+
+	if (lp->phydev)
+		phy_start(lp->phydev);
+
 ambeth_drv_resume_exit:
 	dev_dbg(&pdev->dev, "%s exit with %d\n", __func__, ret_val);
 	return ret_val;
