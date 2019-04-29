@@ -260,7 +260,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	/*
-	 * Non-HDMI fvco should be less than 1.5GHz and higher than 700MHz.
+	 * Non-HDMI fvco should be less than 1.8GHz and higher than 700MHz.
 	 * HDMI fvco should be less than 5.5GHz, and much higher than 700MHz,
 	 * probably higher than 2GHz, but not sure, need VLSI's confirmation.
 	 *
@@ -268,15 +268,15 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * Here we don't change the default values of CTRL2 and CTRL3, because
 	 * it seems the default values are good enough.
 	 *
-	 * Note: If the VCO frequency is larger than 1.5GHz, please take a look
+	 * Note: If the VCO frequency is larger than 1.8GHz, please take a look
 	        at the CTRL2 and CTRL3 again(Especially the pll_vco_range field).
 	 *
 	 * In addition, for 10nm and later chips, the formula of PLL calculation
 	 * is changed, there is no negative frac any more.
 	 */
 	rate_tmp = rate;
-	max_numerator = 128 - 1;
-	max_denominator = 16 - 1;
+	max_numerator = 75;	/* the max VCO for non-HDMI should be less than 1800MHz */
+	max_denominator = 15;
 	rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
 				&intp, &sout);
 	if (!clk_pll->frac_nega) {
