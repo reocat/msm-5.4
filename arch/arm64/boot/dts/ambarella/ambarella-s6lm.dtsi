@@ -859,6 +859,7 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
+			status = "disabled";
 		};
 
 		sdmmc2: sdmmc2@e0016000 { /* SDIO1 */
@@ -876,6 +877,7 @@
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
+			status = "disabled";
 		};
 
 		udc@e0006000 {
