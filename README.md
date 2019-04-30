@@ -1,6 +1,9 @@
 ## Notes
 
-This branch is meant to contain 4.14.x-a.b.c TAGS from Freescale (regardless
-of what branch they come from).
+This kernel is based on mainline 4.14.113 and formed as:
 
-Don't forget to tag after importing
+- 4.14.y tag v.4.14.113 (LTS) +
+- rebased on Freescale patches from version 4.14.78_1.0.0_ga
+- proted all necessary from previous 4.9.141
+
+
