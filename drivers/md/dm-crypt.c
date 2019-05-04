@@ -37,6 +37,7 @@
 #include <keys/user-type.h>
 
 #include <linux/device-mapper.h>
+#include "../../include/linux/f1-mmc-key.h"
 
 #define DM_MSG_PREFIX "crypt"
 
@@ -2124,26 +2125,64 @@ static int crypt_set_key(struct crypt_config *cc, char *key)
 	int r = -EINVAL;
 	int key_string_len = strlen(key);
 
-	/* Hyphen (which gives a key_size of zero) means there is no key. */
-	if (!cc->key_size && strcmp(key, "-"))
-		goto out;
+	if ( *key == '@' ) {
+		int f1_keynum;
+		unsigned key_size;
+		unsigned returned_key_size;
 
-	/* ':' means the key is in kernel keyring, short-circuit normal key processing */
-	if (key[0] == ':') {
-		r = crypt_set_keyring_key(cc, key + 1);
-		goto out;
+		/* This is a special key specifier of the form
+		 *   @<key-number>:<size-bits>,
+		 * where the key comes from some other (custom)
+		 * source
+		 */
+		if (sscanf(key, "@%d:%u", &f1_keynum, &key_size) < 2)
+			goto out;
+
+		/* The key size may not be changed. */
+		if (key_size != cc->key_size)
+			goto out;
+
+		/* clear the flag since following operations may invalidate
+		 * previously valid key */
+		clear_bit(DM_CRYPT_KEY_VALID, &cc->flags);
+
+		/* Fetch key from special F1 MMC key store, derived from
+		 * super-secret CPU key
+		 */
+		printk(KERN_DEBUG "Getting F1 MMC key %d...\n", f1_keynum);
+		r = get_f1_mmc_key(f1_keynum, key_size, cc->key);
+		if (r) {
+			printk(KERN_ERR "get_f1_mmc_key() returned %d\n", r);
+			goto out;
+		}
+		printk(KERN_DEBUG "Using F1 MMC key %d for MMC encryption\n",
+		       f1_keynum);
+        } else {
+
+		/* Hyphen (which gives a key_size of zero) means there
+		 * is no key. */
+		if (!cc->key_size && strcmp(key, "-"))
+			goto out;
+
+		/* ':' means the key is in kernel keyring, short-circuit normal
+		 * key processing */
+		if (key[0] == ':') {
+			r = crypt_set_keyring_key(cc, key + 1);
+			goto out;
+		}
+
+		/* clear the flag since following operations may invalidate
+		 * previously valid key */
+		clear_bit(DM_CRYPT_KEY_VALID, &cc->flags);
+
+		/* wipe references to any kernel keyring key */
+		kzfree(cc->key_string);
+		cc->key_string = NULL;
+
+		/* Decode key from its hex representation. */
+		if (cc->key_size && hex2bin(cc->key, key, cc->key_size) < 0)
+			goto out;
 	}
-
-	/* clear the flag since following operations may invalidate previously valid key */
-	clear_bit(DM_CRYPT_KEY_VALID, &cc->flags);
-
-	/* wipe references to any kernel keyring key */
-	kzfree(cc->key_string);
-	cc->key_string = NULL;
-
-	/* Decode key from its hex representation. */
-	if (cc->key_size && hex2bin(cc->key, key, cc->key_size) < 0)
-		goto out;
 
 	r = crypt_setkey(cc);
 	if (!r)
@@ -2690,13 +2729,28 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	int ret;
 	size_t iv_size_padding, additional_req_size;
 	char dummy;
+	char *keytext = argv[1];
 
 	if (argc < 5) {
 		ti->error = "Not enough arguments";
 		return -EINVAL;
 	}
 
-	key_size = get_key_size(&argv[1]);
+	if (*keytext == '@') {
+		int f1_keynum;
+
+		/* This is a special key specifier of the form
+		 *   @<key-number>:<size-bits>,
+		 * where the key comes from some other (custom)
+		 * source
+		 */
+		if (sscanf(keytext, "@%d:%u", &f1_keynum, &key_size) < 2) {
+			ti->error = "Invalid F1 MMC key format";
+			return -EINVAL;
+		}
+	} else {
+		key_size = get_key_size(&argv[1]);
+	}
 	if (key_size < 0) {
 		ti->error = "Cannot parse key size";
 		return -EINVAL;
@@ -2729,7 +2783,7 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 			goto bad;
 	}
 
-	ret = crypt_ctr_cipher(ti, argv[0], argv[1]);
+	ret = crypt_ctr_cipher(ti, argv[0], keytext);
 	if (ret < 0)
 		goto bad;
 
