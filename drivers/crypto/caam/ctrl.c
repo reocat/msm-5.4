@@ -25,6 +25,8 @@ EXPORT_SYMBOL(caam_dpaa2);
 bool caam_imx;
 EXPORT_SYMBOL(caam_imx);
 
+struct device *g_caam_ctrldev;
+
 #ifdef CONFIG_CAAM_QI
 #include "qi.h"
 #endif
@@ -509,6 +511,12 @@ static int caam_probe(struct platform_device *pdev)
 		 caam_dpaa2 ? "yes" : "no");
 
 	init_debugfs(ctrlpriv);
+
+	/* Leave pointer to CAAM device for later use.  I can't figure out
+	 * how to use it legitimately any other way with the time I have
+	 * available.
+	 */
+	g_caam_ctrldev = dev;
 
 	return 0;
 

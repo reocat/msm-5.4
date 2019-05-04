@@ -228,7 +228,7 @@ static int blacken_key_jobdesc(u32 **desc, void *key, u16 keysz, bool auth)
  * be refactored using a scheme that allows both 32 and 64 bit addressing
  */
 
-static int blob_encap_jobdesc(u32 **desc, dma_addr_t keymod,
+int blob_encap_jobdesc(u32 **desc, dma_addr_t keymod,
 			      void *secretbuf, dma_addr_t outbuf,
 			      u16 secretsz, u8 keycolor, u8 blobtype, u8 auth)
 {
@@ -353,7 +353,7 @@ static int blob_encap_jobdesc(u32 **desc, dma_addr_t keymod,
  * be refactored using a scheme that allows both 32 and 64 bit addressing
  */
 
-static int blob_decap_jobdesc(u32 **desc, dma_addr_t keymod, dma_addr_t blobbuf,
+int blob_decap_jobdesc(u32 **desc, dma_addr_t keymod, dma_addr_t blobbuf,
 			      u8 *outbuf, u16 secretsz, u8 keycolor,
 			      u8 blobtype, u8 auth)
 {

@@ -99,6 +99,7 @@ struct caam_drv_private {
 	struct device *qidev;
 #endif
 	struct device *dev;
+	struct platform_device **jrpdev; /* Alloc'ed array per sub-device */
 	struct platform_device *pdev;
 	struct device *smdev;
 
@@ -162,6 +163,24 @@ struct caam_drv_private {
 
 void caam_jr_algapi_init(struct device *dev);
 void caam_jr_algapi_remove(struct device *dev);
+
+/* In ctrl.c */
+extern struct device *g_caam_ctrldev;
+
+/* In sm_store.c */
+
+/* Define treatment of secure memory vs. general memory blobs */
+#define SM_SECMEM 0
+#define SM_GENMEM 1
+
+int blob_encap_jobdesc(u32 **desc, dma_addr_t keymod,
+                              void *secretbuf, dma_addr_t outbuf,
+                              u16 secretsz, u8 keycolor, u8 blobtype, u8 auth);
+
+int blob_decap_jobdesc(u32 **desc, dma_addr_t keymod, dma_addr_t blobbuf,
+                              u8 *outbuf, u16 secretsz, u8 keycolor,
+				u8 blobtype, u8 auth);
+
 
 #ifdef CONFIG_DEBUG_FS
 static int caam_debugfs_u64_get(void *data, u64 *val)
