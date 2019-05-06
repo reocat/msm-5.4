@@ -62,8 +62,8 @@ config IMX_RPMSG_PINGPONG
 	depends on RPMSG && m
 
 config IMX_RPMSG_TTY
-	tristate "IMX RPMSG tty driver -- loadable modules only"
+	tristate "IMX RPMSG tty driver"
 	default m
-	depends on RPMSG && m
+	depends on RPMSG
 
 endmenu
