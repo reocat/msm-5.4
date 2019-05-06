@@ -759,6 +759,7 @@ static int pca953x_probe(struct i2c_client *client,
 	int ret;
 	u32 invert = 0;
 	struct regulator *reg;
+	char valtmp[2];
 
 	chip = devm_kzalloc(&client->dev,
 			sizeof(struct pca953x_chip), GFP_KERNEL);
@@ -890,6 +891,18 @@ static int pca953x_probe(struct i2c_client *client,
 		if (ret < 0)
 			dev_warn(&client->dev, "setup failed, %d\n", ret);
 	}
+
+	valtmp[0] = 0xfe;
+	valtmp[1] = 0xff;
+	pca953x_write_regs(chip, PCA953X_DIRECTION, valtmp);
+	pca953x_read_regs(chip, PCA953X_DIRECTION, valtmp);
+	printk("++++++dir = %02x %02x\n", valtmp[0], valtmp[1]);
+
+	valtmp[0] = 0x01;
+	valtmp[1] = 0x00;
+	pca953x_write_regs(chip, PCA953X_OUTPUT, valtmp);
+	pca953x_read_regs(chip, PCA953X_OUTPUT, valtmp);
+	printk("++++++val = %02x %02x\n", valtmp[0], valtmp[1]);
 
 	i2c_set_clientdata(client, chip);
 	return 0;

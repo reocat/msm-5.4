@@ -533,7 +533,23 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sxscm-1gb-evb-sai-ldo.dtb \
 	imx6sxscm-1gb-evb-btwifi-ldo.dtb \
 	imx6sxscm-epop-evb-ldo.dtb \
-	imx6sxscm-epop-evb-m4-ldo.dtb
+	imx6sxscm-epop-evb-m4-ldo.dtb \
+	imx6sx-sg-best.dtb \
+	imx6sx-sg-best_emmc.dtb \
+	imx6sx-sg-best_nand.dtb \
+	imx6sx-sg-best_sd_2Gb.dtb \
+	imx6sx-sg-best_sd_2Gb_common_port.dtb \
+	imx6sx-sg-best_sd_2Gb_audio_test.dtb \
+	imx6sx-sg-best_sd_4Gb.dtb \
+	imx6sx-sg-best_sd_8Gb.dtb \
+	imx6sx-sg-better.dtb \
+	imx6sx-sg-better_emmc.dtb \
+	imx6sx-sg-better_nand.dtb \
+	imx6sx-sg-better_sd_2Gb.dtb \
+	imx6sx-sg-better_sd_2Gb_common_port.dtb \
+	imx6sx-sg-better_sd_FCT.dtb \
+	imx6sx-sg-better_sd_4Gb.dtb \
+	imx6sx-ccm_emmc.dtb
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-14x14-evk-btwifi.dtb \
@@ -566,7 +582,13 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-9x9-evk-csi.dtb \
 	imx6ul-9x9-evk-btwifi.dtb \
 	imx6ul-9x9-evk-btwifi-oob.dtb \
-	imx6ul-9x9-evk-ldo.dtb
+	imx6ul-9x9-evk-ldo.dtb \
+	imx6ul-sg-good.dtb \
+	imx6ul-sg-good_sd_opt1.dtb \
+	imx6ul-sg-good_sd_opt2.dtb \
+	imx6ul-sg-good_qspi.dtb \
+	imx6ul-sg-good_emmc.dtb \
+	imx6ul-sg-good_nand.dtb
 dtb-$(CONFIG_SOC_IMX6ULL) += \
 	imx6ull-14x14-ddr3-arm2.dtb \
 	imx6ull-14x14-ddr3-arm2-adc.dtb \

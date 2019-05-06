@@ -1210,6 +1210,10 @@ config SND_SOC_NAU8810
 	tristate "Nuvoton Technology Corporation NAU88C10 CODEC"
 	depends on I2C
 
+config SND_SOC_NAU8822
+	tristate "Wolfson Microelectronics NAU8822 codec"
+	depends on I2C   
+
 config SND_SOC_NAU8824
 	tristate "Nuvoton Technology Corporation NAU88L24 CODEC"
 	depends on I2C
