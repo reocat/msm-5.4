@@ -406,7 +406,7 @@ static const struct file_operations f1_wdt_fops =
 
 static struct miscdevice f1_wdt_miscdev =
 {
-  .minor = WATCHDOG_MINOR,
+  .minor = MISC_DYNAMIC_MINOR,
   .name = "f1-wdt",
   .fops = &f1_wdt_fops,
 };
@@ -555,5 +555,4 @@ module_exit(f1_wdt_exit);
 MODULE_AUTHOR("Dean Matsen,Wolfram Sang");
 MODULE_DESCRIPTION("Watchdog driver for F1");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS_MISCDEV(WATCHDOG_MINOR);
 MODULE_ALIAS("platform:" DRIVER_NAME);
