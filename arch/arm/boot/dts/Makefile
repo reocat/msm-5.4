@@ -549,7 +549,8 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-sg-better_sd_2Gb_common_port.dtb \
 	imx6sx-sg-better_sd_FCT.dtb \
 	imx6sx-sg-better_sd_4Gb.dtb \
-	imx6sx-ccm_emmc.dtb
+	imx6sx-ccm_emmc.dtb \
+	iotgw.dtb
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-14x14-evk-btwifi.dtb \
