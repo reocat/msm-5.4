@@ -456,6 +456,11 @@ config RTC_DRV_PCF8583
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-pcf8583.
 
+config RTC_DRV_M41T11
+	bool "ST M41T11"
+	help
+	  M41T11
+
 config RTC_DRV_M41T80
 	tristate "ST M41T62/65/M41T80/81/82/83/84/85/87 and compatible"
 	help
