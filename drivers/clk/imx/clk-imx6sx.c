@@ -618,8 +618,8 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX6SX_CLK_ENET_PRE_SEL], clks[IMX6SX_CLK_PLL2_PFD2]);
 	imx_clk_set_parent(clks[IMX6SX_CLK_ENET_SEL], clks[IMX6SX_CLK_ENET_PODF]);
 	imx_clk_set_rate(clks[IMX6SX_CLK_ENET_PODF], 200000000);
-	imx_clk_set_rate(clks[IMX6SX_CLK_ENET_REF], 125000000);
-	imx_clk_set_rate(clks[IMX6SX_CLK_ENET2_REF], 125000000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_ENET_REF], 50000000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_ENET2_REF], 50000000);
 
 	/* Audio clocks */
 	imx_clk_set_rate(clks[IMX6SX_CLK_PLL4_AUDIO_DIV], 393216000);

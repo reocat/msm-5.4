@@ -64,6 +64,19 @@ static int ar8031_phy_fixup(struct phy_device *dev)
 	return 0;
 }
 
+static int ksz8081_phy_fixup(struct phy_device *dev)
+{
+	if (dev && dev->interface == PHY_INTERFACE_MODE_MII) {
+		phy_write(dev, 0x1f, 0x8110);
+		phy_write(dev, 0x16, 0x201);
+	} else if (dev && dev->interface == PHY_INTERFACE_MODE_RMII) {
+		phy_write(dev, 0x1f, 0x8190);
+		phy_write(dev, 0x16, 0x202);
+	}
+
+	return 0;
+}
+
 #define PHY_ID_AR8031   0x004dd074
 static void __init imx6sx_enet_phy_init(void)
 {
@@ -72,6 +85,9 @@ static void __init imx6sx_enet_phy_init(void)
 				ksz9031rn_phy_fixup);
 		phy_register_fixup_for_uid(PHY_ID_AR8031, 0xffffffff,
 					   ar8031_phy_fixup);
+		#define PHY_ID_KSZ8081_MNRN61	0x00221561
+		phy_register_fixup_for_uid(PHY_ID_KSZ8081_MNRN61, 0xffffffff,
+					   ksz8081_phy_fixup);
 	}
 }
 
@@ -83,8 +99,9 @@ static void __init imx6sx_enet_clk_sel(void)
 	if (!IS_ERR(gpr)) {
 		regmap_update_bits(gpr, IOMUXC_GPR1,
 				   IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_MASK, 0);
+		/* enable ENET_REF_CLK1 and ENET_REF_CLK2 both */
 		regmap_update_bits(gpr, IOMUXC_GPR1,
-				   IMX6SX_GPR1_FEC_CLOCK_PAD_DIR_MASK, 0);
+				   IMX6SX_GPR1_FEC_CLOCK_PAD_DIR_MASK, 3<<17);
 	} else {
 		pr_err("failed to find fsl,imx6sx-iomux-gpr regmap\n");
 	}
