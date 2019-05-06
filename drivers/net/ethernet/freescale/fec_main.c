@@ -2094,6 +2094,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	 * mdio interface in board design, and need to be configured by
 	 * fec0 mii_bus.
 	 */
+#ifndef CONFIG_FEC_PDK
 	if ((fep->quirks & FEC_QUIRK_SINGLE_MDIO) && fep->dev_id > 0) {
 		/* fec1 uses fec0 mii_bus */
 		if (mii_cnt && fec0_mii_bus) {
@@ -2104,7 +2105,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 		}
 		return -ENOENT;
 	}
-
+#endif
 	fep->mii_timeout = 0;
 
 	/*
