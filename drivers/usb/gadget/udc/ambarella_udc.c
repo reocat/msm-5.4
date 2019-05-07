@@ -1472,11 +1472,8 @@ static void ambarella_stop_activity(struct ambarella_udc *udc)
 		ep->halted = 1;
 		ambarella_ep_nuke(ep, -ESHUTDOWN);
 	}
-	if (driver) {
-		spin_unlock(&udc->lock);
-		driver->disconnect(&udc->gadget);
-		spin_lock(&udc->lock);
-	}
+
+	tasklet_schedule(&udc->disconnect_tasklet);
 
 	ambarella_udc_reinit(udc);
 }
@@ -2157,6 +2154,14 @@ static void ambarella_udc_reinit(struct ambarella_udc *udc)
 	}
 }
 
+static void ambarella_udc_disconnect_tasklet(unsigned long data)
+{
+	struct ambarella_udc *udc = (void *)data;
+
+	if (udc->driver && udc->driver->disconnect)
+		udc->driver->disconnect(&udc->gadget);
+}
+
 static int ambarella_udc_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -2252,6 +2257,9 @@ static int ambarella_udc_probe(struct platform_device *pdev)
 		goto err_out2;
 	}
 
+	tasklet_init(&udc->disconnect_tasklet, ambarella_udc_disconnect_tasklet,
+			(unsigned long)udc);
+
 	/* irq setup after old hardware state is cleaned up */
 	retval = devm_request_irq(&pdev->dev, udc->irq, ambarella_udc_irq,
 				IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), udc);
@@ -2316,6 +2324,8 @@ static int ambarella_udc_remove(struct platform_device *pdev)
 
 	remove_proc_entry("udc", get_ambarella_proc_dir());
 	remove_debugfs_files();
+
+	tasklet_kill(&udc->disconnect_tasklet);
 
 	dma_pool_free(udc->desc_dma_pool, udc->dummy_desc, udc->dummy_desc_addr);
 	dma_pool_free(udc->desc_dma_pool, udc->setup_buf, udc->setup_addr);

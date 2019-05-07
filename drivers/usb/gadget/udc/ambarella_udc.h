@@ -172,6 +172,7 @@ struct ambarella_udc {
 
 	/* dma_fix is only used for S2 chip, due to its DMA engine fault */
 	u32				dma_fix;
+	struct tasklet_struct		disconnect_tasklet;
 };
 
 /* Function Declaration  */
