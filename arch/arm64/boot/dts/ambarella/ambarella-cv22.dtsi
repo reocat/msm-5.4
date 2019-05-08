@@ -1323,7 +1323,7 @@
 			      <0xed08013c 4>,
 			      <0xed080140 4>,
 			      <0xed0800c8 4>,
-			      <0x00000000 0>;
+			      <0xed0800cc 4>;
 			clocks = <&osc>;
 			clock-output-names = "pll_out_vo2";
 			assigned-clocks = <&pll_out_vo2>;
