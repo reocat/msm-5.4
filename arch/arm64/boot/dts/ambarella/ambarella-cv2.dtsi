@@ -181,6 +181,7 @@
 
 		adc@e4003000 {
 			compatible = "ambarella,adc";
+			#io-channel-cells = <1>;
 			reg = <0xe4003000 0x1000>;
 			interrupts = <0 13 0x4>;
 			clock-frequency = <3000000>;
