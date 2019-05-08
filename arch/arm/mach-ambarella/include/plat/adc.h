@@ -32,8 +32,6 @@
 #define ADC_NUM_CHANNELS		5
 #elif (CHIP_REV == S2L) || (CHIP_REV == S3L) || (CHIP_REV == S5L)
 #define ADC_NUM_CHANNELS		4
-#elif (CHIP_REV == S6LM)
-#define ADC_NUM_CHANNELS		2
 #else
 #define ADC_NUM_CHANNELS		3
 #endif

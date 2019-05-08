@@ -1121,6 +1121,11 @@ Optional properties:
   the key-code to be reported when the key is pressed. Each entry is organized as
   <ADC Keycode>, where ADC is packed as:
     channel << 28 | high_level << 16 | low_level
+  Here high_level and low_level are ADC raw value, they don't stand for the real
+  voltage. You can get the ADC raw value by IIO subystem, e.g., press a ADC button,
+  then "cat /sys/bus/iio/devices/iio\:device0/in_voltage1_raw". It's suggested to
+  read the ADC raw value by several times, then use their average value. At last,
+  you need to add or substract some margine to get the high_level and low_level.
 
 ii) Example
 -----------

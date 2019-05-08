@@ -62,6 +62,8 @@
 /* Typical sensor slope coefficient at all temperatures */
 #define AMBARELLA_ADC_T2V_COEFF		70
 
+#define AMBARELLA_ADC_KEY_DEBOUNCE	100
+
 struct ambadc_keymap {
 	u32 key_code;
 	u32 channel : 4;
@@ -77,6 +79,7 @@ struct ambarella_adc {
 	struct clk *clk;
 	u32 clk_rate;
 	struct mutex mtx;
+	struct iio_dev *indio_dev;
 	struct iio_trigger *trig;
 	unsigned long channels_mask;
 	unsigned long scalers_mask; /* 1.8v if corresponding bit is set */
@@ -87,6 +90,9 @@ struct ambarella_adc {
 	u32 t2v_offset;
 	u32 t2v_coeff;
 
+	struct work_struct work;
+	u32 data_intr;
+
 	/* following are for adc key if existed */
 	struct input_dev *input;
 	struct ambadc_keymap *keymap;
@@ -94,24 +100,55 @@ struct ambarella_adc {
 	u32 key_pressed[ADC_NUM_CHANNELS]; /* save the key currently pressed */
 };
 
-static void ambarella_adc_set_threshold(struct ambarella_adc *ambadc);
 
-static void ambarella_adc_key_filter_out(struct ambarella_adc *ambadc,
-		struct ambadc_keymap *keymap)
+/*****************************************************************************/
+
+static void ambarella_adc_set_threshold(struct ambarella_adc *ambadc,
+		u32 ch, u32 high, u32 low)
 {
-	/* we expect the adc level which is out of current key's range. */
-	ambadc->vol_threshold[keymap->channel] = ADC_INT_THRESHOLD_EN;
-	ambadc->vol_threshold[keymap->channel] |= ADC_VAL_LO(keymap->low_level);
-	ambadc->vol_threshold[keymap->channel] |= ADC_VAL_HI(keymap->high_level);
-	ambarella_adc_set_threshold(ambadc);
+	ambadc->vol_threshold[ch] &= ~(ADC_VAL_HI(0xfff));
+	ambadc->vol_threshold[ch] &= ~(ADC_VAL_LO(0xfff));
+	ambadc->vol_threshold[ch] |= ADC_VAL_HI(high);
+	ambadc->vol_threshold[ch] |= ADC_VAL_LO(low);
+
+	writel_relaxed(ambadc->vol_threshold[ch],
+			ambadc->regbase + ADC_INT_CTRL_X_OFFSET(ch));
 }
 
-static int ambarella_adc_key_handler(struct ambarella_adc *ambadc,
-		u32 ch, u32 level)
+static void ambarella_adc_enable_threshold(struct ambarella_adc *ambadc, u32 ch)
+{
+	ambadc->vol_threshold[ch] |= ADC_INT_THRESHOLD_EN;
+	writel_relaxed(ambadc->vol_threshold[ch],
+			ambadc->regbase + ADC_INT_CTRL_X_OFFSET(ch));
+}
+
+static void ambarella_adc_disable_threshold(struct ambarella_adc *ambadc, u32 ch)
+{
+
+	ambadc->vol_threshold[ch] &= ~ADC_INT_THRESHOLD_EN;
+	writel_relaxed(ambadc->vol_threshold[ch],
+			ambadc->regbase + ADC_INT_CTRL_X_OFFSET(ch));
+}
+
+static int ambarella_adc_key_handler(struct ambarella_adc *ambadc, u32 ch)
 {
 	struct ambadc_keymap *keymap = ambadc->keymap;
 	struct input_dev *input = ambadc->input;
-	u32 i;
+	unsigned long expire_time;
+	u32 i, level, data;
+
+	level = readl_relaxed(ambadc->regbase + ADC_DATA_X_OFFSET(ch));
+
+	expire_time = jiffies + msecs_to_jiffies(AMBARELLA_ADC_KEY_DEBOUNCE);
+
+	while (time_before(jiffies, expire_time)) {
+		data = readl_relaxed(ambadc->regbase + ADC_DATA_X_OFFSET(ch));
+		usleep_range(10, 50);
+		if (ambadc->key_pressed[ch] == KEY_RESERVED)
+			level = min(level, data);
+		else
+			level = max(level, data);
+	}
 
 	for (i = 0; i < ambadc->key_num; i++, keymap++) {
 		if (ch != keymap->channel
@@ -124,8 +161,8 @@ static int ambarella_adc_key_handler(struct ambarella_adc *ambadc,
 			input_report_key(input, keymap->key_code, 1);
 			input_sync(input);
 			ambadc->key_pressed[ch] = keymap->key_code;
-			ambarella_adc_key_filter_out(ambadc, keymap);
-
+			ambarella_adc_set_threshold(ambadc,
+				ch, keymap->high_level, keymap->low_level);
 			dev_dbg(&input->dev, "key[%d:%d] pressed %d\n",
 				ch, keymap->key_code, level);
 			break;
@@ -134,8 +171,8 @@ static int ambarella_adc_key_handler(struct ambarella_adc *ambadc,
 			input_report_key(input, ambadc->key_pressed[ch], 0);
 			input_sync(input);
 			ambadc->key_pressed[ch] = KEY_RESERVED;
-			ambarella_adc_key_filter_out(ambadc, keymap);
-
+			ambarella_adc_set_threshold(ambadc,
+				ch, keymap->high_level, keymap->low_level);
 			dev_dbg(&input->dev, "key[%d:%d] released %d\n",
 				ch, keymap->key_code, level);
 			break;
@@ -183,16 +220,18 @@ static int ambarella_adc_key_of_parse(struct ambarella_adc *ambadc)
 
 		keymap->key_code = be32_to_cpup(prop + i * 2 + 1);
 
-		if (keymap->key_code == KEY_RESERVED)
-			ambarella_adc_key_filter_out(ambadc, keymap);
+		if (keymap->key_code == KEY_RESERVED) {
+			ambadc->key_pressed[keymap->channel] = KEY_RESERVED;
+			ambarella_adc_set_threshold(ambadc,
+				keymap->channel, keymap->high_level, keymap->low_level);
+			ambarella_adc_enable_threshold(ambadc, keymap->channel);
+		}
 
 		input_set_capability(ambadc->input, EV_KEY, keymap->key_code);
 
 		set_bit(keymap->channel, &ambadc->channels_mask);
-	}
 
-	for (i = 0; i < ADC_NUM_CHANNELS; i++)
-		ambadc->key_pressed[i] = KEY_RESERVED;
+	}
 
 	return 0;
 }
@@ -239,17 +278,6 @@ static int ambarella_adc_key_init(struct ambarella_adc *ambadc)
 
 /*****************************************************************************/
 
-
-static void ambarella_adc_set_threshold(struct ambarella_adc *ambadc)
-{
-	u32 i, tmp;
-
-	for (i = 0; i < ADC_NUM_CHANNELS; i++) {
-		tmp = ambadc->vol_threshold[i];
-		writel_relaxed(tmp, ambadc->regbase + ADC_INT_CTRL_X_OFFSET(i));
-	}
-}
-
 static void ambarella_adc_set_fifo(struct ambarella_adc *ambadc)
 {
 	u32 tmp, bit, chan_num, fifo_depth, fifo_threshold;
@@ -278,7 +306,8 @@ static void ambarella_adc_power_up(struct ambarella_adc *ambadc)
 	writel_relaxed(ADC_CONTROL_CLEAR, ambadc->regbase + ADC_CONTROL_OFFSET);
 
 	/* power up adc and all needed scaler */
-	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET, ambadc->scalers_mask << 8);
+	regmap_update_bits(ambadc->reg_rct, ADC16_CTRL_OFFSET,
+		ADC_POWER_DOWN | ADC_SCALER_POWER_DOWN, ambadc->scalers_mask << 8);
 
 	if (ambadc->t2v_channel >= 0)
 		regmap_write(ambadc->reg_rct, T2V_CTRL_OFFSET, 0x0);
@@ -296,12 +325,13 @@ static void ambarella_adc_power_down(struct ambarella_adc *ambadc)
 
 	/* power down adc and all scalers */
 	tmp = ((1 << ADC_NUM_CHANNELS) - 1) << 8;
-	regmap_write(ambadc->reg_rct, ADC16_CTRL_OFFSET, tmp | ADC_POWER_DOWN);
+	regmap_update_bits(ambadc->reg_rct, ADC16_CTRL_OFFSET,
+		ADC_POWER_DOWN | ADC_SCALER_POWER_DOWN, tmp | ADC_POWER_DOWN);
 }
 
 static void ambarella_adc_start(struct ambarella_adc *ambadc)
 {
-	u32 tmp;
+	u32 i, tmp;
 
 	/* soft reset adc, all registers except for scaler reg will be cleared */
 	writel_relaxed(ADC_CONTROL_CLEAR, ambadc->regbase + ADC_CONTROL_OFFSET);
@@ -326,7 +356,11 @@ static void ambarella_adc_start(struct ambarella_adc *ambadc)
 	tmp *= ADC_PERIOD_CYCLE;
 	writel_relaxed(tmp - 1, ambadc->regbase + ADC_SLOT_PERIOD_OFFSET);
 
-	ambarella_adc_set_threshold(ambadc);
+	/* setup threshold for each channels */
+	for (i = 0; i < ADC_NUM_CHANNELS; i++) {
+		tmp = ambadc->vol_threshold[i];
+		writel_relaxed(tmp, ambadc->regbase + ADC_INT_CTRL_X_OFFSET(i));
+	}
 
 	ambarella_adc_set_fifo(ambadc);
 
@@ -335,14 +369,47 @@ static void ambarella_adc_start(struct ambarella_adc *ambadc)
 	writel_relaxed(tmp, ambadc->regbase + ADC_CONTROL_OFFSET);
 }
 
+static void ambarella_adc_work(struct work_struct *data)
+{
+	struct ambarella_adc *ambadc;
+	struct iio_dev *indio_dev;
+	u32 ch, data_intr;
+
+	ambadc = container_of(data, struct ambarella_adc, work);
+	indio_dev = ambadc->indio_dev;
+
+	local_irq_disable();
+	data_intr = ambadc->data_intr;
+	ambadc->data_intr = 0;
+	local_irq_enable();
+
+	for_each_set_bit(ch, (unsigned long *)&data_intr, ADC_NUM_CHANNELS) {
+		if (ambadc->input) {
+			ambarella_adc_key_handler(ambadc, ch);
+		} else {
+			/*
+			 * we don't know whether it is a upper or lower threshold
+			 * event. Userspace will have to check the channel value
+			 * if it wants to know.
+			 */
+			iio_push_event(indio_dev,
+				IIO_UNMOD_EVENT_CODE(IIO_VOLTAGE, ch,
+					IIO_EV_TYPE_THRESH, IIO_EV_DIR_EITHER),
+				iio_get_time_ns(indio_dev));
+		}
+
+		ambarella_adc_enable_threshold(ambadc, ch);
+	}
+}
+
 static irqreturn_t ambarella_adc_irq(int irq, void *dev_id)
 {
 	struct iio_dev *indio_dev = dev_id;
 	struct ambarella_adc *ambadc = iio_priv(indio_dev);
-	u32 i, ctrl_int, data_int, data;
+	u32 ch, ctrl_intr, data_intr;
 
-	ctrl_int = readl_relaxed(ambadc->regbase + ADC_CTRL_INTR_TABLE_OFFSET);
-	data_int = readl_relaxed(ambadc->regbase + ADC_DATA_INTR_TABLE_OFFSET);
+	ctrl_intr = readl_relaxed(ambadc->regbase + ADC_CTRL_INTR_TABLE_OFFSET);
+	data_intr = readl_relaxed(ambadc->regbase + ADC_DATA_INTR_TABLE_OFFSET);
 
 	if (readl_relaxed(ambadc->regbase + ADC_FIFO_INTR_TABLE_OFFSET)) {
 		BUG_ON(!iio_buffer_enabled(indio_dev));
@@ -350,26 +417,18 @@ static irqreturn_t ambarella_adc_irq(int irq, void *dev_id)
 		iio_trigger_poll(indio_dev->trig);
 	}
 
-	for_each_set_bit(i, (unsigned long *)&data_int, ADC_NUM_CHANNELS) {
-		data = readl_relaxed(ambadc->regbase + ADC_DATA_X_OFFSET(i));
-
-		if (ambadc->input)
-			ambarella_adc_key_handler(ambadc, i, data);
-
-		/*
-		 * we don't know whether it is a upper or lower threshold
-		 * event. Userspace will have to check the channel value if
-		 * it wants to know.
-		 */
-		iio_push_event(indio_dev,
-			IIO_UNMOD_EVENT_CODE(IIO_VOLTAGE, i,
-				IIO_EV_TYPE_THRESH, IIO_EV_DIR_EITHER),
-			iio_get_time_ns(indio_dev));
+	for_each_set_bit(ch, (unsigned long *)&data_intr, ADC_NUM_CHANNELS) {
+		BUG_ON(!(ambadc->vol_threshold[ch] & ADC_INT_THRESHOLD_EN));
+		/* disable irq to avoid dummy irq, it will be enabled in WORK function */
+		ambarella_adc_disable_threshold(ambadc, ch);
 	}
 
-	/* clear intr source at last to avoid dummy irq */
-	writel_relaxed(ctrl_int, ambadc->regbase + ADC_CTRL_INTR_TABLE_OFFSET);
-	writel_relaxed(data_int, ambadc->regbase + ADC_DATA_INTR_TABLE_OFFSET);
+	ambadc->data_intr = data_intr;
+	schedule_work(&ambadc->work);
+
+	/* clear irq source */
+	writel_relaxed(ctrl_intr, ambadc->regbase + ADC_CTRL_INTR_TABLE_OFFSET);
+	writel_relaxed(data_intr, ambadc->regbase + ADC_DATA_INTR_TABLE_OFFSET);
 
 	return IRQ_HANDLED;
 }
@@ -817,6 +876,7 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 
 	ambadc = iio_priv(indio_dev);
 	ambadc->dev = &pdev->dev;
+	ambadc->indio_dev = indio_dev;
 	mutex_init(&ambadc->mtx);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -900,6 +960,8 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	INIT_WORK(&ambadc->work, ambarella_adc_work);
+
 	ambarella_adc_power_up(ambadc);
 	ambarella_adc_start(ambadc);
 
@@ -912,6 +974,8 @@ static int ambarella_adc_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	struct ambarella_adc *ambadc = iio_priv(indio_dev);
+
+	cancel_work_sync(&ambadc->work);
 
 	if (ambadc->input)
 		input_unregister_device(ambadc->input);

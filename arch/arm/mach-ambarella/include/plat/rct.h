@@ -498,6 +498,7 @@
 #define ADC16_CTRL_REG			RCT_REG(ADC16_CTRL_OFFSET)
 
 #define ADC_POWER_DOWN			0x2
+#define ADC_SCALER_POWER_DOWN		0xf00
 
 /* ==========================================================================*/
 #define RNG_CTRL_OFFSET			0x1A4
