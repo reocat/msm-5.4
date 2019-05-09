@@ -101,8 +101,7 @@
 		mux-ext-port = <6>;
 	};*/
 	sound {
-		compatible = "fsl,imx-audio-nau8822",
-			   "fsl,imx-audio-nau8822";
+		compatible = "fsl,imx-audio-nau8822-good";
 		model = "nau8822-audio";
 		cpu-dai = <&sai2>;
 		audio-codec = <&codec>;

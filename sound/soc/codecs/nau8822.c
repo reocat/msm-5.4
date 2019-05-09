@@ -1124,9 +1124,7 @@ static int nau8822_i2c_probe(struct i2c_client *i2c,
 {
 	struct nau8822_priv *nau8822;
 	int ret;
-	
-    printk("nau8822 probe\n");
-    
+
 	nau8822 = devm_kzalloc(&i2c->dev, sizeof(struct nau8822_priv),
 			      GFP_KERNEL);
 	if (nau8822 == NULL)
@@ -1157,9 +1155,7 @@ static int nau8822_i2c_probe(struct i2c_client *i2c,
 		dev_err(&i2c->dev, "Failed to register CODEC: %d\n", ret);
 		return ret;
 	}
-    
-    printk("nau8822 probe success\n");
-	
+
 	return 0;
 }
 
