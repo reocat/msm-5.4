@@ -284,8 +284,10 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 
 	/* enable sd internal clock */
 	writew_relaxed(SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
-	while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE))
+	while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE)) {
+		writew_relaxed(SD_CLK_ICLK_EN, host->regbase + SD_CLK_OFFSET);
 		cpu_relax();
+	}
 
 	nis = SD_NISEN_REMOVAL | SD_NISEN_INSERT |
 		SD_NISEN_DMA | 	SD_NISEN_BLOCK_GAP |
@@ -299,33 +301,6 @@ static void ambarella_sd_reset_all(struct ambarella_mmc_host *host)
 		SD_EISEN_CMD_CRC_ERR | 	SD_EISEN_CMD_TMOUT_ERR;
 
 	ambarella_sd_enable_irq(host, (eis << 16) | nis);
-}
-
-static void ambarella_sd_timer_timeout(unsigned long param)
-{
-	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
-	struct mmc_request *mrq = host->mrq;
-	u32 dir;
-
-	dev_err(host->dev, "pending mrq: %s[%u]\n",
-			mrq ? mrq->data ? "data" : "cmd" : "",
-			mrq ? mrq->cmd->opcode : 9999);
-
-	if (mrq) {
-		if (mrq->data) {
-			if (mrq->data->flags & MMC_DATA_WRITE)
-				dir = DMA_TO_DEVICE;
-			else
-				dir = DMA_FROM_DEVICE;
-			dma_unmap_sg(host->dev, mrq->data->sg, mrq->data->sg_len, dir);
-		}
-		mrq->cmd->error = -ETIMEDOUT;
-		host->mrq = NULL;
-		host->cmd = NULL;
-		mmc_request_done(host->mmc, mrq);
-	}
-
-	ambarella_sd_reset_all(host);
 }
 
 static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
@@ -366,9 +341,10 @@ static void ambarella_sd_set_clk(struct mmc_host *mmc, u32 clock)
 		/* convert divisor to register setting: (divisor >> 1) << 8 */
 		clk_reg = ((divisor << 7) & 0xff00) | SD_CLK_ICLK_EN;
 		writew_relaxed(clk_reg, host->regbase + SD_CLK_OFFSET);
-		while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE))
+		while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE)) {
+			writew_relaxed(clk_reg, host->regbase + SD_CLK_OFFSET);
 			cpu_relax();
-
+		}
 		ambarella_sd_switch_clk(host, true);
 	}
 }
@@ -491,8 +467,10 @@ static void ambarella_sd_recovery(struct ambarella_mmc_host *host)
 	/*restore the clock*/
 	ambarella_sd_switch_clk(host, false);
 	writew_relaxed((divisor | SD_CLK_ICLK_EN), host->regbase + SD_CLK_OFFSET);
-	while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE))
+	while (!(readw_relaxed(host->regbase + SD_CLK_OFFSET) & SD_CLK_ICLK_STABLE)) {
+		writew_relaxed((divisor | SD_CLK_ICLK_EN), host->regbase + SD_CLK_OFFSET);
 		cpu_relax();
+	}
 	ambarella_sd_switch_clk(host, true);
 
 	ambarella_sd_set_bus(host, host->bus_width, host->mode);
@@ -503,6 +481,33 @@ static void ambarella_sd_recovery(struct ambarella_mmc_host *host)
 		regmap_field_write(host->phy_sel, sel_reg);
 		ambarella_sd_set_dll(host, sbc_reg);
 	}
+}
+
+static void ambarella_sd_timer_timeout(unsigned long param)
+{
+	struct ambarella_mmc_host *host = (struct ambarella_mmc_host *)param;
+	struct mmc_request *mrq = host->mrq;
+	u32 dir;
+
+	dev_err(host->dev, "pending mrq: %s[%u]\n",
+			mrq ? mrq->data ? "data" : "cmd" : "",
+			mrq ? mrq->cmd->opcode : 9999);
+
+	if (mrq) {
+		if (mrq->data) {
+			if (mrq->data->flags & MMC_DATA_WRITE)
+				dir = DMA_TO_DEVICE;
+			else
+				dir = DMA_FROM_DEVICE;
+			dma_unmap_sg(host->dev, mrq->data->sg, mrq->data->sg_len, dir);
+		}
+		mrq->cmd->error = -ETIMEDOUT;
+		host->mrq = NULL;
+		host->cmd = NULL;
+		mmc_request_done(host->mmc, mrq);
+	}
+
+	ambarella_sd_recovery(host);
 }
 
 static void ambarella_sd_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
