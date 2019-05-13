@@ -10,7 +10,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
-#include "imx6sx-better.dtsi"
+#include "imx6sx.dtsi"
 
 / {
 	model = "Freescale i.MX6 SoloX SG base Board";
@@ -650,6 +650,7 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6SX_PAD_USB_H_DATA__GPIO7_IO_10	0x83030
+				MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8	0x83030
 			>;
 		};
 		

@@ -10,7 +10,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
-#include "imx6sx-better.dtsi"
+#include "imx6sx.dtsi"
 
 / {
 	model = "Freescale i.MX6 SoloX SG base Board";
@@ -694,7 +694,7 @@
 				MX6SX_PAD_RGMII2_TD1__ENET2_TX_DATA_1   0xb099
 				//MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8       0xb099
 				MX6SX_PAD_ENET1_MDC__GPIO2_IO_2       0xb099   
-                		MX6SX_PAD_ENET1_TX_CLK__ENET1_REF_CLK1  0x4000b099 
+                		MX6SX_PAD_ENET2_TX_CLK__ENET2_REF_CLK2  0x4000b099 
                 >;
 		};
 

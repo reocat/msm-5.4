@@ -10,7 +10,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
-#include "imx6sx-better.dtsi"
+#include "imx6sx.dtsi"
 
 / {
 	model = "Freescale i.MX6 SoloX SG base Board";
