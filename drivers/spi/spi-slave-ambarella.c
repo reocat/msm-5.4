@@ -334,7 +334,6 @@ static int slavespi_open(struct inode *inode, struct file *filp)
 	}
 
 	ambarella_slavespi_setup(priv);
-	dev_info(priv->device, "slavespi: open ok \n");
 	return 0;
 }
 
@@ -617,6 +616,7 @@ slavespi_poll(struct file *filp, struct poll_table_struct *wait)
 	poll_wait(filp, &priv->wq_poll, wait);
 
 	spin_lock_irqsave(&priv->r_buf_lock, flags);
+	slavespi_drain_rxfifo(priv);
 	if (kfifo_len(&priv->r_fifo) > 0) { /* allow read and can read some data */
 		mask |= POLLIN | POLLRDNORM;
 	}
