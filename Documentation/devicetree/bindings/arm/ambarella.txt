@@ -557,8 +557,8 @@ Optional properties:
   -1: checking if write-protect by wp pin.
 - amb,no-cap-cmd23: specifies to not support CMD23
 - amb,no-cap-erase: specifies to not support ERASE
-- amb,no-auto-cmd12: specifies to not support auto CMD12, i.e., send
-  CMD12 manually instead.
+- amb,auto-cmd12: specifies to support auto CMD12.
+  PS: may not work for some SD cards if specified.
 - amb,emmc-boot: specifies if the sd controller is used for emmc boot
 - v18-gpios: specifies the GPIO to switch to the 1.8V power if existed.
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.

@@ -1300,7 +1300,8 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	if (of_property_read_u32(np, "amb,tuning-dll-clk", &host->invert_dll_clk) < 0)
 		host->invert_dll_clk = -1;
 
-	host->auto_cmd12 = !of_property_read_bool(np, "amb,no-auto-cmd12");
+	host->emmc_boot = of_property_read_bool(np, "amb,emmc-boot");
+	host->auto_cmd12 = of_property_read_bool(np, "amb,auto-cmd12");
 	host->force_v18 = of_property_read_bool(np, "amb,sd-force-1_8v");
 
 	/* old style of sd device tree defines slot subnode, these codes are
