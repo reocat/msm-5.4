@@ -750,7 +750,7 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 			writew_relaxed(sd_host2, host->regbase + SD_HOST2_OFFSET);
 		}
 
-		writel_relaxed(host->desc_phys, host->regbase + SD_ADMA_ADDR_OFFSET);
+		writel(host->desc_phys, host->regbase + SD_ADMA_ADDR_OFFSET);
 		writew_relaxed(cmd->data->blksz, host->regbase + SD_BLK_SZ_OFFSET);
 		writew_relaxed(cmd->data->blocks, host->regbase + SD_BLK_CNT_OFFSET);
 	}
