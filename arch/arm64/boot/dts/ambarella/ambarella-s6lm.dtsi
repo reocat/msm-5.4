@@ -939,6 +939,7 @@
 			amb,default-mclk = <12288000>;
 			dmas = <&dma0 21>, <&dma0 22>;
 			dma-names = "tx", "rx";
+			amb,ws-set;
 		};
 
 		mac0: ethernet@e000e000 {

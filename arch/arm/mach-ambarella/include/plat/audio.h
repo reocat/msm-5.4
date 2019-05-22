@@ -68,6 +68,7 @@
 #define I2S_24BITMUX_MODE_OFFSET		0x50
 #define I2S_GATEOFF_OFFSET			0x54
 #define I2S_CHANNEL_SELECT_OFFSET		0x58
+#define I2S_WS_OFFSET				0x5c
 #define I2S_RX_DATA_DMA_OFFSET			0x80
 #define I2S_TX_LEFT_DATA_DMA_OFFSET		0xc0
 
@@ -94,6 +95,7 @@
 #define I2S_24BITMUX_MODE_REG			I2S_REG(0x50)
 #define I2S_GATEOFF_REG				I2S_REG(0x54)
 #define I2S_CHANNEL_SELECT_REG			I2S_REG(0x58)
+#define I2S_WS_REG					I2S_REG(0x5c)
 #define I2S_RX_DATA_DMA_REG			I2S_REG_PHYS(0x80)
 #define I2S_TX_LEFT_DATA_DMA_REG		I2S_REG_PHYS(0xc0)
 
@@ -133,6 +135,9 @@
 #define I2S_CLK_TX_PO_FALL			(1 << 6)
 #define I2S_CLK_RX_PO_FALL			(1 << 5)
 #define I2S_CLK_DIV_MASK			0xffffffe0
+
+#define I2S_WS_SET					(1 << 1)
+#define I2S_WS_EN					(1 << 0)
 
 #define I2S_RX_SHIFT_ENB			(1 << 1)
 #define I2S_TX_SHIFT_ENB			(1 << 0)
@@ -176,6 +181,7 @@ struct ambarella_i2s_interface {
 	u32 rx_fifo_len;
 	u32 tx_fifo_len;
 	u32 multi24;
+	u32 ws_set;
 };
 
 enum Audio_Notify_Type

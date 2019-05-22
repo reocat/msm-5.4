@@ -291,6 +291,9 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	writel_relaxed(i2s_intf->slots, priv_data->regbase + I2S_SLOT_OFFSET);
 	writel_relaxed(i2s_intf->multi24, priv_data->regbase + I2S_24BITMUX_MODE_OFFSET);
 
+	if ((i2s_intf->mode == I2S_I2S_MODE) && priv_data->ws_set_support)
+		writel_relaxed(I2S_WS_EN, priv_data->regbase + I2S_WS_OFFSET);
+
 	/* Set clock */
 	clk_set_rate(priv_data->mclk, i2s_intf->mclk);
 
@@ -445,6 +448,7 @@ static int ambarella_i2s_dai_suspend(struct snd_soc_dai *dai)
 	i2s_intf->rx_fifo_len = readl_relaxed(regbase + I2S_RX_FIFO_GTH_OFFSET);
 	i2s_intf->tx_fifo_len = readl_relaxed(regbase + I2S_TX_FIFO_LTH_OFFSET);
 	i2s_intf->multi24 = readl_relaxed(regbase + I2S_24BITMUX_MODE_OFFSET);
+	i2s_intf->ws_set= readl_relaxed(regbase + I2S_WS_OFFSET);
 
 	return 0;
 }
@@ -465,6 +469,7 @@ static int ambarella_i2s_dai_resume(struct snd_soc_dai *dai)
 	writel_relaxed(i2s_intf->rx_fifo_len, regbase + I2S_RX_FIFO_GTH_OFFSET);
 	writel_relaxed(i2s_intf->tx_fifo_len, regbase + I2S_TX_FIFO_LTH_OFFSET);
 	writel_relaxed(i2s_intf->multi24, regbase + I2S_24BITMUX_MODE_OFFSET);
+	writel_relaxed(i2s_intf->ws_set, regbase + I2S_WS_OFFSET);
 	writel_relaxed(priv_data->clock_reg, regbase + I2S_CLOCK_OFFSET);
 
 	return 0;
@@ -627,6 +632,8 @@ static int ambarella_i2s_probe(struct platform_device *pdev)
 	}
 
 	of_property_read_u32(np, "amb,default-mclk", &priv_data->default_mclk);
+
+	priv_data->ws_set_support = !!of_find_property(np, "amb,ws-set", NULL);
 
 	ambarella_i2s_dai.playback.channels_max = channels;
 	ambarella_i2s_dai.capture.channels_max = channels;
