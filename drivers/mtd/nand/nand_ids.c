@@ -127,7 +127,7 @@ struct nand_flash_dev nand_flash_ids[] = {
 		{ .id = {0xef, 0xaa, 0x21, 0x00, 0x00} },
 		SZ_2K, SZ_128, SZ_128K, 0, 3, 64},
 
-	{"MX35LF2GE4AB SPINAND 1Gb 3.3V 8-bit",
+	{"MX35LF1GE4AB SPINAND 1Gb 3.3V 8-bit",
 		{ .id = {0xc2, 0x12, 0x00, 0x00, 0x00} },
 		SZ_2K, SZ_128, SZ_128K, 0, 2, 64},
 
@@ -142,6 +142,10 @@ struct nand_flash_dev nand_flash_ids[] = {
 	{"MT29F4G01ABAFD SPINAND 4G 3.3V 8-bit",
 		{ .id = {0x2c, 0x34, 0x00, 0x00, 0x00} },
 		  SZ_4K, SZ_512, SZ_256K, 0, 2, 256},
+
+	{"XT26G02B SPINAND 2Gb 3.3V 8-bit",
+		{ .id = {0x0B, 0xF2, 0x00, 0x00, 0x00} },
+		SZ_2K, SZ_256, SZ_128K, 0, 2, 64},
 
 	LEGACY_ID_NAND("NAND 4MiB 5V 8-bit",   0x6B, 4, SZ_8K, SP_OPTIONS),
 	LEGACY_ID_NAND("NAND 4MiB 3,3V 8-bit", 0xE3, 4, SZ_8K, SP_OPTIONS),
