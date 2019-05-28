@@ -44,12 +44,11 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 	/* start rng */
 	val = readl_relaxed(priv->base + AMBA_RNG_CONTROL);
 	val |= BIT(1);
-	val &= ~BIT(0);
 	writel_relaxed(val, priv->base + AMBA_RNG_CONTROL);
 
 	start_time = jiffies_to_msecs(jiffies);
 
-	while ((readl_relaxed(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
+	while (!(readl_relaxed(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
 		timeout = jiffies_to_msecs(jiffies) - start_time;
 		if (timeout < AMBA_RNG_DELAY_MS) {
 			cpu_relax();
@@ -60,6 +59,8 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 		}
 	}
 
+	/* need to delay before read random data,why? */
+	mdelay(100);
 	while (read * 8 < max) {
 		*data++ = readl_relaxed(priv->base + AMBA_RNG_DATA + read);
 		read += 4;
