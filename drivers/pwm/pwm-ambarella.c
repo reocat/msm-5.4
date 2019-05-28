@@ -99,18 +99,25 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	writel_relaxed(val, reg);
 
 	clock = (clk_get_rate(ambpwm->clk) + 50000) / 100000;
-	total = (clock * period_ns + 5000) / 10000;
+
+	total = clock * period_ns + 5000;
+	do_div(total, 10000);
 	div = total >> tick_bits;
-	clock /= (div + 1);
+	do_div(clock, div + 1);
+
 	reg = base + ambpwm_divider_offset[pwm->hwpwm];
 	val = readl_relaxed(reg);
 	val &= ~PWM_DIVIDER_MASK;
 	val |= div << 1;
 	writel_relaxed(val, reg);
 
-	total = (clock * period_ns + 5000) / 10000;
-	on = (clock * duty_ns + 5000) / 10000;
+	total = clock * period_ns + 5000;
+	do_div(total, 10000);
+
+	on = clock * duty_ns + 5000;
+	do_div(on, 10000);
 	off = total - on;
+
 	if (on == 0)
 		on = 1;
 	if (off == 0)
