@@ -78,7 +78,8 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	struct ambarella_pwm_chip *ambpwm = to_ambarella_pwm_chip(chip);
 	void __iomem *base;
 	void __iomem *reg;
-	u32 tick_bits, clock, total, on, off, div, val;
+	u32 tick_bits, on, off, div, val;
+	u64 clock, total;
 
 	/* we arrange the id of the individual pwm to the last one */
 	if (ambpwm->base2 && pwm->hwpwm == PWM_INSTANCES - 1) {
