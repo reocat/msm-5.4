@@ -334,14 +334,14 @@
 				amb,pinmux-ids = <0x1036 0x1037>;
 			};
 
-			uart3_flow_pins_a: uart3_flow@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x1038 0x1039>;
-			};
-
 			uart3_pins_b: uart3@1 {
 				reg = <1>;
 				amb,pinmux-ids = <0x404b 0x404c>;
+			};
+
+			uart3_flow_pins_a: uart3_flow@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1038 0x1039>;
 			};
 
 			uart3_flow_pins_b: uart3_flow@1 {
@@ -354,14 +354,14 @@
 				amb,pinmux-ids = <0x103a 0x103b>;
 			};
 
-			uart4_flow_pins_a: uart4_flow@0 {
-				reg = <0>;
-				amb,pinmux-ids = <0x103c 0x103d>;
-			};
-
 			uart4_pins_b: uart4@1 {
 				reg = <1>;
 				amb,pinmux-ids = <0x404f 0x4050>;
+			};
+
+			uart4_flow_pins_a: uart4_flow@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x103c 0x103d>;
 			};
 
 			uart4_flow_pins_b: uart4_flow@1 {
