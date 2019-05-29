@@ -46,6 +46,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_AK5386
 	select SND_SOC_AK4951_AMB if I2C
 	select SND_SOC_AK4954_AMB if I2C
+	select SND_SOC_AK4957 if I2C
 	select SND_SOC_WM8940_AMB if I2C
 	select SND_SOC_WM8974_AMB if I2C
 	select SND_SOC_TLV320AIC3X_AMB if I2C
@@ -418,6 +419,9 @@ config SND_SOC_AK4951_AMB
 	tristate
 
 config SND_SOC_AK4954_AMB
+	tristate
+
+config SND_SOC_AK4957
 	tristate
 
 config SND_SOC_WM8940_AMB

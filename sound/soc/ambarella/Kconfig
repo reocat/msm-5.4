@@ -35,6 +35,11 @@ config SND_SOC_AK4954_AMB
 	help
 		Support AK4954 Audio Codec for Ambarella Platform
 
+config SND_SOC_AK4957
+	tristate "AK4957 for Ambarella"
+	help
+		Support AK4957 Audio Codec for Ambarella Platform
+
 config SND_SOC_AK7719_DSP
 	tristate "AK7719_DSP for Ambarella"
 	depends on SND_AMBARELLA_SOC && (SND_SOC_AK4954_AMB || SND_SOC_AK4951_AMB)
