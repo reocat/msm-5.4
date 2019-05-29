@@ -1332,7 +1332,10 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	mmc->f_min = 24000000 / 256;
 	mmc->max_busy_timeout = (1 << 27) / (mmc->f_max / 1000);
 
-	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
+	if (!host->force_v18) {
+		mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
+	}
+
 	mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_BUS_WIDTH_TEST;
 
 	if (gpio_is_valid(host->v18_gpio) || host->force_v18) {
@@ -1340,6 +1343,7 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 		mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
 			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104;
+		mmc->caps2 |= MMC_CAP2_HS200_1_8V_SDR;
 	}
 
 	return 0;

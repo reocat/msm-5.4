@@ -874,7 +874,6 @@
 			cap-sdio-irq;
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
-			mmc-hs200-1_8v;
 		};
 
 		sdmmc2: sdmmc2@e0016000 { /* SDIO1 */
@@ -891,7 +890,6 @@
 			cap-sdio-irq;
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
-			mmc-hs200-1_8v;
 		};
 
 		udc@e0006000 {

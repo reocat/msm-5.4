@@ -761,7 +761,6 @@
 			cap-sdio-irq;
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
-			mmc-hs200-1_8v;
 		};
 
 		sdmmc1: sdmmc1@e0005000 { /* SDXC rather than SDIO */
@@ -780,7 +779,6 @@
 			cap-sdio-irq;
 			cap-sd-highspeed;
 			cap-mmc-highspeed;
-			mmc-hs200-1_8v;
 		};
 
 		udc@e0006000 {
