@@ -54,21 +54,6 @@ config MTD_COMBO_NAND_AMBARELLA
 	  This enables the SLC NAND flash Combo controller on the Ambarella
 	  Media SoC.
 
-config MTD_SPINAND_AMBARELLA
-	tristate "Ambarella Media Soc SPI NAND support"
-	depends on ARCH_AMBARELLA
-	default n
-	help
-	  This enables the SPI NAND flash controller on the Ambarella
-	  Media SoC.
-
-config MTD_SPINAND_ONDIEECC
-	bool "Use SPINAND internal ECC"
-	depends on MTD_SPINAND_AMBARELLA
-	help
-	  Internel ECC.
-	  Enables Hardware ECC support for Ambarella SPI NAND device.
-
 config MTD_NAND_DENALI
 	tristate
 
