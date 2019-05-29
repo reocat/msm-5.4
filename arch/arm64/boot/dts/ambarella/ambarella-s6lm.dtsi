@@ -804,7 +804,7 @@
 			reg = <0xe0002000 0x1000>;
 			interrupts = <0 68 0x4>;	/* fio_irq */
 			amb,rct-regmap = <&rct_syscon>;
-			pinctrl-names = "default";
+			pinctrl-names = "spinand";
 			pinctrl-0 = <&snand0_pins_a>;
 			clocks = <&pll_out_enet>;
 			nand-on-flash-bbt;
