@@ -37,6 +37,7 @@ snd-soc-ak4671-objs := ak4671.o
 snd-soc-ak5386-objs := ak5386.o
 snd-soc-ak4951-amb-objs := ak4951_amb.o
 snd-soc-ak4954-amb-objs := ak4954_amb.o
+snd-soc-ak4957-objs := ak4957.o
 snd-soc-ak7719-objs := ak7719_amb.o
 snd-soc-ak7755-objs := ak7755.o
 snd-soc-wm8940-amb-objs := wm8940_amb.o
