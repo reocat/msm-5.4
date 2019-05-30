@@ -553,15 +553,13 @@ static void serial_ambarella_start_next_tx(struct ambarella_uart_port *amb_port)
 static void serial_ambarella_start_tx(struct uart_port *port)
 {
 	struct ambarella_uart_port *amb_port;
-	struct tty_struct *tty;
 	u32 ier;
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
-	tty = tty_port_tty_get(&amb_port->port.state->port);
 
 	if (amb_port->txdma_used) {
 		if (uart_tx_stopped(port) ||amb_port->tx_in_progress)
-			goto __tx_done;
+			return;
 		serial_ambarella_start_next_tx(amb_port);
 	} else {
 		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
@@ -571,12 +569,10 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 		 * the Tx FIFO is full or not, so we need to wait for the Tx Empty
 		 * Interrupt comming, then we can start to transfer data. */
 		if (amb_port->less_reg)
-			goto __tx_done;
+			return;
 
 		serial_ambarella_transmit_chars(port);
 	}
-__tx_done:
-	tty_kref_put(tty);
 }
 
 static void serial_ambarella_copy_rx_to_tty(struct ambarella_uart_port *amb_port,
