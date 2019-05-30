@@ -561,20 +561,22 @@ static void serial_ambarella_start_tx(struct uart_port *port)
 
 	if (amb_port->txdma_used) {
 		if (uart_tx_stopped(port) ||amb_port->tx_in_progress)
-			return;
+			goto __tx_done;
 		serial_ambarella_start_next_tx(amb_port);
 	} else {
 		ier = readl_relaxed(port->membase + UART_IE_OFFSET);
 		writel_relaxed(ier | UART_IE_ETBEI, port->membase + UART_IE_OFFSET);
 
 		/* if FIFO status register is not provided, we have no idea about
-	 	* the Tx FIFO is full or not, so we need to wait for the Tx Empty
+		 * the Tx FIFO is full or not, so we need to wait for the Tx Empty
 		 * Interrupt comming, then we can start to transfer data. */
 		if (amb_port->less_reg)
-			return;
+			goto __tx_done;
 
 		serial_ambarella_transmit_chars(port);
 	}
+__tx_done:
+	tty_kref_put(tty);
 }
 
 static void serial_ambarella_copy_rx_to_tty(struct ambarella_uart_port *amb_port,
@@ -850,9 +852,6 @@ static int serial_ambarella_startup(struct uart_port *port)
 
 	serial_ambarella_hw_setup(port);
 
-	rval = request_irq(port->irq, serial_ambarella_irq,
-		IRQF_TRIGGER_HIGH, dev_name(port->dev), port);
-
 	if (amb_port->txdma_used) {
 		rval = serial_ambarella_dma_channel_allocate(amb_port, false);
 		if (rval < 0) {
@@ -944,8 +943,6 @@ static void serial_ambarella_shutdown(struct uart_port *port)
 	lcr = readl_relaxed(port->membase + UART_LC_OFFSET);
 	writel_relaxed(lcr & ~UART_LC_BRK, port->membase + UART_LC_OFFSET);
 	spin_unlock_irqrestore(&port->lock, flags);
-
-	free_irq(port->irq, port);
 }
 
 static void serial_ambarella_set_termios(struct uart_port *port,
@@ -1405,6 +1402,9 @@ static int serial_ambarella_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to add port: %d, %d!\n", id, rval);
 	}
 
+	rval = request_irq(irq, serial_ambarella_irq, IRQF_TRIGGER_HIGH,
+			dev_name(amb_port->port.dev), &amb_port->port);
+
 	platform_set_drvdata(pdev, amb_port);
 
 	return rval;
@@ -1419,6 +1419,7 @@ static int serial_ambarella_remove(struct platform_device *pdev)
 	rval = uart_remove_one_port(&serial_ambarella_reg, &amb_port->port);
 	if (rval < 0)
 		dev_err(&pdev->dev, "uart_remove_one_port fail %d!\n",	rval);
+	free_irq(amb_port->port.irq, &amb_port->port);
 
 	dev_notice(&pdev->dev,
 		"Remove Ambarella Media Processor UART.\n");
