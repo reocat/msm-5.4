@@ -295,19 +295,6 @@ static inline void ambarella_fio_rct_reset(struct ambarella_nand_info *nand_info
 	msleep(1);
 }
 
-static void nand_amb_corrected_recovery(struct ambarella_nand_info *nand_info)
-{
-	u32 fio_ctr_reg, fio_dmactr_reg;
-
-	/* FIO reset will just reset FIO registers, but will not affect
-	 * Nand controller. */
-	fio_ctr_reg = readl_relaxed(nand_info->regbase + FIO_CTR_OFFSET);
-	fio_dmactr_reg = readl_relaxed(nand_info->regbase + FIO_DMACTR_OFFSET);
-	ambarella_fio_rct_reset(nand_info);
-	writel_relaxed(fio_ctr_reg, nand_info->regbase + FIO_CTR_OFFSET);
-	writel_relaxed(fio_dmactr_reg, nand_info->regbase + FIO_DMACTR_OFFSET);
-}
-
 static void nand_amb_enable_dsm(struct ambarella_nand_info *nand_info)
 {
 	u32 fio_dsm_ctr = 0, fio_ctr_reg = 0, dma_dsm_ctr = 0;
@@ -1015,19 +1002,13 @@ static int nand_amb_request(struct ambarella_nand_info *nand_info)
 							nand_info->fio_ecc_sta, nand_info->addr);
 					}
 				} else if (nand_info->fio_ecc_sta & FIO_ECC_RPT_ERR) {
-					unsigned int corrected = 1;
 					if (NAND_ECC_RPT_NUM_SUPPORT) {
+						unsigned int corrected;
 						corrected = (nand_info->fio_ecc_sta >> 16) & 0x000F;
 						dev_info(nand_info->dev, "BCH correct [%d]bit in block[%d]\n",
 						corrected, (nand_info->fio_ecc_sta & 0x00007FFF));
-					} else {
-						/* once bitflip and data corrected happened, BCH will keep on
-						 * to report bitflip in following read operations, even though
-						 * there is no bitflip happened really. So this is a workaround
-						 * to get it back. */
-						nand_amb_corrected_recovery(nand_info);
+						mtd->ecc_stats.corrected += corrected;
 					}
-					mtd->ecc_stats.corrected += corrected;
 				}
 			} else if (cmd == NAND_AMB_CMD_PROGRAM) {
 				if (nand_info->fio_ecc_sta & FIO_ECC_RPT_FAIL) {
