@@ -407,22 +407,21 @@ static void ambhw_dump_buffer(const char *msg,
 static int ambahb_mdio_poll_status(struct mii_bus *bus)
 {
 	struct ambeth_info *lp = bus->priv;
-	unsigned long orig_jiffies;
-	unsigned int value, tmo = 10;
-	int rval = 0;
+	unsigned int value;
+	int i;
 
-	orig_jiffies = jiffies;
-	for (;;) {
+	for (i = 0; i < 32; i++) {
+
 		regmap_read(lp->reg_scr, AHBSP_GMII_ADDR_OFFSET, &value);
 		if (!(value & (1 << 0)))
-			break;
+			return 0;
 
-		if (time_after(jiffies, orig_jiffies + tmo)) {
-			rval = -ETIMEDOUT;
-			break;
-		}
+		schedule_timeout(HZ / 10);
 	}
-	return rval;
+
+	pr_err("%s: timeout to wait for AHB MDIO ready.\n", bus->name);
+
+	return -ETIMEDOUT;
 }
 
 static int ambahb_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
