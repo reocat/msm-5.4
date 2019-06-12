@@ -354,7 +354,7 @@
 /* Override the watchdog driver type
  */
 &wdog1 {
-        compatible = "f1-mx6sx-wdt";
+        compatible = "fsl,imx21-wdt";
         status = "okay";
 };
 &iomuxc {
