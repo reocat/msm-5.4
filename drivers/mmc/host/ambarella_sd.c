@@ -797,6 +797,8 @@ static int ambarella_sd_switch_voltage(struct mmc_host *mmc, struct mmc_ios *ios
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
+		if (host->force_v18)
+			return -EINVAL;
 		writeb_relaxed(SD_PWR_ON | SD_PWR_3_3V, host->regbase + SD_PWR_OFFSET);
 
 		if (gpio_is_valid(host->v18_gpio)) {
