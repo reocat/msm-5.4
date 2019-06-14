@@ -1318,6 +1318,8 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	if (!host->force_v18) {
 		host->v18_gpio = of_get_named_gpio_flags(np, "v18-gpios", 0, &flags);
 		host->v18_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	} else {
+		host->v18_gpio = -1;
 	}
 
 	mmc->ops = &ambarella_sd_host_ops;
