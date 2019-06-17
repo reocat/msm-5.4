@@ -34,6 +34,11 @@
 #include <asm/irq.h>
 #include <linux/uaccess.h>
 
+#define	RGMII_RX_TIMING		(1 << 15)
+#define	RGMII_TX_TIMING		(1 << 14)
+
+#define MARVELL_PHY_CTRL_REG	0x1
+
 static int m88q5050_probe(struct phy_device *phydev)
 {
 	return 0;
@@ -41,6 +46,14 @@ static int m88q5050_probe(struct phy_device *phydev)
 
 static int m88q5050_config_init(struct phy_device *phydev)
 {
+	unsigned int value;
+
+	value = phy_read(phydev, MARVELL_PHY_CTRL_REG);
+	value |= RGMII_RX_TIMING;
+	value |= RGMII_TX_TIMING;
+
+	phy_write(phydev, MARVELL_PHY_CTRL_REG, value);
+
 	return 0;
 }
 
