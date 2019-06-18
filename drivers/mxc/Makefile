@@ -6,3 +6,5 @@ obj-$(CONFIG_MXC_HANTRO_845_H1) += hantro_845_h1/
 obj-$(CONFIG_MXC_VPU_MALONE) += vpu_malone/
 obj-$(CONFIG_MXC_VPU_WINDSOR) += vpu_windsor/
 obj-$(CONFIG_MXC_VPU) += vpu/
+obj-$(CONFIG_MXC_SIM) += sim/
+
