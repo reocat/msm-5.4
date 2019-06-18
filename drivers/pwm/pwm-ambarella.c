@@ -78,8 +78,8 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	struct ambarella_pwm_chip *ambpwm = to_ambarella_pwm_chip(chip);
 	void __iomem *base;
 	void __iomem *reg;
-	u32 tick_bits, off, div, val;
-	u64 total, clock, on;
+	u32 tick_bits, val, div;
+	u64 on, off, pwm_clock;
 
 	/* we arrange the id of the individual pwm to the last one */
 	if (ambpwm->base2 && pwm->hwpwm == PWM_INSTANCES - 1) {
@@ -98,26 +98,24 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		val &= ~PWM_INV_EN_BIT;
 	writel_relaxed(val, reg);
 
-	clock = (clk_get_rate(ambpwm->clk) + 50000);
-	do_div(clock, 100000);
+	pwm_clock = clk_get_rate(ambpwm->clk);
+	for (div = 1; div < (1 << 30); div++) {
+		off = pwm_clock * ((u64)period_ns - (u64)duty_ns);
+		do_div(off, div);
+		do_div(off, 1000000000);
 
-	total = clock * (u64)period_ns + 5000;
-	do_div(total, 1000000);
-	if ((total - 1) < 0) {
-		div = 0;
-	} else {
-		div = total - 1;
+		on = duty_ns * off;
+		do_div(on, (u64)(period_ns - duty_ns));
+
+		if ((on < (1 << 16)) && (off < (1 << 16)))
+			break;
 	}
 
 	reg = base + ambpwm_divider_offset[pwm->hwpwm];
 	val = readl_relaxed(reg);
 	val &= ~PWM_DIVIDER_MASK;
-	val |= div << 1;
+	val |= (div - 1) << 1;
 	writel_relaxed(val, reg);
-
-	on = 100 * (u64)duty_ns;
-	do_div(on, (u64)period_ns);
-	off = 100 - on;
 
 	if (on == 0)
 		on = 1;
