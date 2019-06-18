@@ -26,6 +26,14 @@ endif
 
 source "drivers/mxc/vpu/Kconfig"
 
+config MXC_SIM
+	tristate "MXC SIM support"
+	default n
+	help
+	Say Y to get MXC SIM support.
+
+source "drivers/mxc/sim/Kconfig"
+
 endmenu
 
 endif
