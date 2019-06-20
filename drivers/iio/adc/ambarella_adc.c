@@ -953,14 +953,13 @@ static int ambarella_adc_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	INIT_WORK(&ambadc->work, ambarella_adc_work);
 	rval = devm_request_irq(&pdev->dev, ambadc->irq, ambarella_adc_irq,
 				0, dev_name(&pdev->dev), indio_dev);
 	if (rval < 0) {
 		dev_err(&pdev->dev, "failed to request irq %d!\n", ambadc->irq);
 		return -ENXIO;
 	}
-
-	INIT_WORK(&ambadc->work, ambarella_adc_work);
 
 	ambarella_adc_power_up(ambadc);
 	ambarella_adc_start(ambadc);
