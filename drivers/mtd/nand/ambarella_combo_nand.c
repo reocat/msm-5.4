@@ -201,7 +201,7 @@ static u32 to_native_cmd(struct ambarella_nand_host *host, u32 cmd)
 		native_cmd = is_spinand ? NAND_AMB_CC_RESET : NAND_AMB_CMD_RESET;
 		break;
 	case NAND_CMD_READID:
-		native_cmd = is_spinand ? NAND_AMB_CC_READID : NAND_AMB_CMD_READID;
+		native_cmd = NAND_AMB_CC_READID;
 		break;
 	case NAND_CMD_STATUS:
 		native_cmd = is_spinand ? NAND_AMB_CC_READSTATUS : NAND_AMB_CMD_READSTATUS;
@@ -221,6 +221,9 @@ static u32 to_native_cmd(struct ambarella_nand_host *host, u32 cmd)
 		break;
 	case NAND_CMD_PAGEPROG:
 		native_cmd = is_spinand ? NAND_AMB_CC_PROGRAM : NAND_AMB_CMD_PROGRAM;
+		break;
+	case NAND_CMD_PARAM:
+		native_cmd = NAND_AMB_CC_READ_PARAM;
 		break;
 	default:
 		dev_err(host->dev, "Unknown command: %d\n", cmd);
@@ -559,6 +562,56 @@ static void ambarella_nand_setup_dma(struct ambarella_nand_host *host, u32 cmd)
 	writel(fdma_ctrl, host->regbase + FDMA_MN_CTRL_OFFSET);
 }
 
+static void ambarella_nand_readid(struct ambarella_nand_host *host, u32 page_addr)
+{
+	u32 val;
+
+	/* disable BCH if using soft ecc */
+	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
+	val &= ~FIO_CTRL_ECC_BCH_ENABLE;
+	writel_relaxed(val, host->regbase + FIO_CTRL_OFFSET);
+
+	val = NAND_CC_WORD_CMD1VAL0(NAND_CMD_READID);
+	writel_relaxed(val, host->regbase + NAND_CC_WORD_OFFSET);
+
+	writel_relaxed(page_addr, host->regbase + NAND_COPY_ADDR_OFFSET);
+	writel_relaxed(0x0, host->regbase + NAND_CP_ADDR_H_OFFSET);
+
+	val = NAND_CC_DATA_CYCLE(8) | NAND_CC_RW_READ | NAND_CC_WAIT_TWHR |
+			NAND_CC_ADDR_CYCLE(1) | NAND_CC_CMD1(1) |
+			NAND_CC_ADDR_SRC(0) | NAND_CC_TERMINATE_CE;
+	writel_relaxed(val, host->regbase + NAND_CC_OFFSET);
+}
+
+#define ONFI_PARAM_SIZE (256)
+static void ambarella_nand_cc_read_param(struct ambarella_nand_host *host, u32 page_addr)
+{
+	u32 dmaaddr, fdma_ctrl, val;
+
+	/* disable BCH if using soft ecc */
+	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
+	val &= ~FIO_CTRL_ECC_BCH_ENABLE;
+	writel_relaxed(val, host->regbase + FIO_CTRL_OFFSET);
+
+	/* Setup FDMA engine transfer */
+	dmaaddr = host->dmaaddr;
+	writel_relaxed(dmaaddr, host->regbase + FDMA_MN_MEM_ADDR_OFFSET);
+
+	fdma_ctrl = FDMA_CTRL_ENABLE | FDMA_CTRL_WRITE_MEM |
+			FDMA_CTRL_BLK_SIZE_256B | ONFI_PARAM_SIZE;
+	writel(fdma_ctrl, host->regbase + FDMA_MN_CTRL_OFFSET);
+
+	val = NAND_CC_WORD_CMD1VAL0(NAND_CMD_PARAM);
+	writel_relaxed(val, host->regbase + NAND_CC_WORD_OFFSET);
+
+	writel_relaxed(page_addr, host->regbase + NAND_COPY_ADDR_OFFSET);
+	writel_relaxed(0x0, host->regbase + NAND_CP_ADDR_H_OFFSET);
+
+	val = NAND_CC_RW_READ | NAND_CC_DATA_SRC_DMA | NAND_CC_WAIT_RB |
+			NAND_CC_ADDR_CYCLE(1) | NAND_CC_CMD1(1) | NAND_CC_ADDR_SRC(0);
+	writel_relaxed(val, host->regbase + NAND_CC_OFFSET);
+}
+
 static void ambarella_nand_cc_reset(struct ambarella_nand_host *host)
 {
 	u32 val;
@@ -730,7 +783,10 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 		ambarella_nand_cc_reset(host);
 		break;
 	case NAND_AMB_CC_READID:
-		ambarella_nand_cc_readid(host);
+		if (host->is_spinand)
+			ambarella_nand_cc_readid(host);
+		else
+			ambarella_nand_readid(host, page_addr);
 		break;
 	case NAND_AMB_CC_READSTATUS:
 		ambarella_nand_cc_readstatus(host);
@@ -748,6 +804,9 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 		break;
 	case NAND_AMB_CC_PROGRAM:
 		ambarella_nand_cc_write(host, page_addr);
+		break;
+	case NAND_AMB_CC_READ_PARAM:
+		ambarella_nand_cc_read_param(host, page_addr);
 		break;
 	}
 
@@ -862,7 +921,7 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 {
 	struct nand_chip *chip = mtd_to_nand(mtd);
 	struct ambarella_nand_host *host = nand_get_controller_data(chip);
-	u32 val, *id;
+	u32 val, *id, fio_ctr_bak = 0;
 
 	host->err_code = 0;
 
@@ -876,6 +935,17 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 		break;
 
 	case NAND_CMD_READID:
+		fio_ctr_bak = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
+		host->dma_bufpos = 0;
+		ambarella_nand_issue_cmd(host, cmd, column);
+		break;
+	case NAND_CMD_PARAM:
+		host->dma_bufpos = 0;
+		if(!host->is_spinand) {
+			fio_ctr_bak = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
+			ambarella_nand_issue_cmd(host, cmd, column);
+		}
+		break;
 	case NAND_CMD_STATUS:
 		host->dma_bufpos = 0;
 		ambarella_nand_issue_cmd(host, cmd, 0);
@@ -911,11 +981,13 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 	case NAND_CMD_READID:
 		id = (u32 *)host->dmabuf;
 
-		val = readl_relaxed(host->regbase + NAND_ID_OFFSET);
-		*id = be32_to_cpu(val);
+		val = readl_relaxed(host->regbase + NAND_CC_DAT0_OFFSET);
+		*id = val;
 
-		val = readl_relaxed(host->regbase + NAND_EXT_ID_OFFSET);
+		val = readl_relaxed(host->regbase + NAND_CC_DAT1_OFFSET);
 		host->dmabuf[4] = (unsigned char)(val & 0xff);
+
+		writel_relaxed(fio_ctr_bak, host->regbase + FIO_CTRL_OFFSET);
 		break;
 
 	case NAND_CMD_STATUS:
@@ -956,6 +1028,10 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 			dev_info(host->dev, "BCH correct [%d]bit in block[%d]\n",
 				val, FIO_ECC_RPT_BLK_ADDR(host->ecc_rpt_sts));
 		}
+		break;
+
+	case NAND_CMD_PARAM:
+		writel_relaxed(fio_ctr_bak, host->regbase + FIO_CTRL_OFFSET);
 		break;
 	}
 }
