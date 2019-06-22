@@ -37,7 +37,76 @@
 #define	RGMII_RX_TIMING		(1 << 15)
 #define	RGMII_TX_TIMING		(1 << 14)
 
-#define MARVELL_PHY_CTRL_REG	0x1
+#define MARVELL_PORT_STATUS_REG		0x0
+#define MARVELL_PHYSICAL_CTRL_REG	0x1
+
+#define MARVELL_RGMII_PORT	0x8
+#define MARVELL_GLB2_PORT	0x1C
+
+
+#define MARVELL_GLB2_SMI_CTRL	0x18
+#define MARVELL_GLB2_SMI_DATA	0x19
+
+#define SMI_CTRL_READ		((1 << 15) | (1 << 12) | (2 << 10))
+#define SMI_CTRL_WRITE		((1 << 15) | (1 << 12) | (1 << 10))
+
+static int m88q5050_glb2_smi_busy(struct phy_device *phydev)
+{
+	unsigned int value;
+	unsigned int timeout = 1000;
+
+	do {
+		value = mdiobus_read(phydev->mdio.bus, MARVELL_GLB2_PORT,
+				MARVELL_GLB2_SMI_CTRL);
+
+		if (!(value & (1 << 15)))
+			break;
+		usleep_range(1000, 2000);
+
+	} while(--timeout);
+
+	if (!timeout)
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
+static u16 m88q5050_glb2_smi_read(struct phy_device *phydev, unsigned int devaddr,
+		unsigned int reg)
+{
+	u16 ctrl = SMI_CTRL_READ;
+
+	ctrl |= ((devaddr & 0x1F) << 5);
+	ctrl |= (reg & 0x1F);
+
+	if (m88q5050_glb2_smi_busy(phydev))
+		return 0;
+
+	mdiobus_write(phydev->mdio.bus, MARVELL_GLB2_PORT, MARVELL_GLB2_SMI_CTRL, ctrl);
+
+	if (m88q5050_glb2_smi_busy(phydev))
+		return 0;
+
+	return mdiobus_read(phydev->mdio.bus, MARVELL_GLB2_PORT, MARVELL_GLB2_SMI_DATA);
+}
+
+static int m88q5050_glb2_smi_write(struct phy_device *phydev, unsigned int devaddr,
+		unsigned int reg, u16 data)
+{
+	u16 ctrl = SMI_CTRL_WRITE;
+
+	ctrl |= ((devaddr & 0x1F) << 5);
+	ctrl |= (reg & 0x1F);
+
+	if (m88q5050_glb2_smi_busy(phydev))
+		return 0;
+
+	mdiobus_write(phydev->mdio.bus, MARVELL_GLB2_PORT, MARVELL_GLB2_SMI_DATA, data);
+	mdiobus_write(phydev->mdio.bus, MARVELL_GLB2_PORT, MARVELL_GLB2_SMI_CTRL, ctrl);
+
+	return 0;
+
+}
 
 static int m88q5050_probe(struct phy_device *phydev)
 {
@@ -48,27 +117,65 @@ static int m88q5050_config_init(struct phy_device *phydev)
 {
 	unsigned int value;
 
-	value = phy_read(phydev, MARVELL_PHY_CTRL_REG);
-	value |= RGMII_RX_TIMING;
-	value |= RGMII_TX_TIMING;
+#if 0
+	/* adjust RGMII timing */
+	value = mdiobus_read(phydev->mdio.bus, MARVELL_RGMII_PORT, MARVELL_PHYSICAL_CTRL_REG);
+	//value |= RGMII_RX_TIMING;	// NG if enabled
+	value |= RGMII_TX_TIMING;	// That is OK.
+	mdiobus_write(phydev->mdio.bus, MARVELL_RGMII_PORT, MARVELL_PHYSICAL_CTRL_REG, value);
+	printk("PORT 8 RGMII_TX_TIMING %x\n", value);
+#endif
 
-	phy_write(phydev, MARVELL_PHY_CTRL_REG, value);
+#if 1
+	printk("[%d]Enable Faster Link up.\n", phydev->mdio.addr);
+	/* Faster Link up */
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x1D, 0x1B);
+
+	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x1E);
+	value |= (1 << 1);
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x1E, value);
+
+	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x1C);
+	value &= ~(1 << 7);
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x1C, value);
+
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x0E, 0x003c);
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x0D, 0x0007);
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x0D, 0x4007);
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x0E, 0x0000);
+
+	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x00);
+	value |= (1 << 15);
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x00, value);
+
+#endif
+
 
 	return 0;
 }
 
 static int m88q5050_config_aneg(struct phy_device *phydev)
 {
+	int ctrl;
+
+	ctrl = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x00);
+	ctrl |= BMCR_ANENABLE | BMCR_ANRESTART;
+	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x00, ctrl);
+
 	return 0;
 }
 
 static int m88q5050_read_status(struct phy_device *phydev)
 {
+	u16 value;
+
 	phydev->duplex = DUPLEX_FULL;
 	phydev->speed = SPEED_1000;
 	phydev->pause = 0;
 	phydev->asym_pause = 0;
-	phydev->link = 1;
+
+	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x01);
+	phydev->link = (value & (1 << 2));
 
 	return 0;
 }
@@ -88,7 +195,11 @@ static int m88q5050_did_interrupt(struct phy_device *phydev)
 
 static int m88q5050_aneg_done(struct phy_device *phydev)
 {
-	return 1;
+	unsigned int value;
+
+	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x01);
+
+	return value & (1 << 5);
 }
 static struct phy_driver marvell_88q5050_drivers[] = {
 	{
