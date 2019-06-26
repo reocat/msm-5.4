@@ -1374,6 +1374,8 @@ static void ambarella_nand_init_chip(struct ambarella_nand_host *host,
 	chip->dev_ready = ambarella_nand_dev_ready;
 	chip->waitfunc = ambarella_nand_waitfunc;
 	chip->cmdfunc = ambarella_nand_cmdfunc;
+	chip->onfi_set_features = nand_onfi_get_set_features_notsupp;
+	chip->onfi_get_features = nand_onfi_get_set_features_notsupp;
 	chip->options |= NAND_NO_SUBPAGE_WRITE;
 
 	nand_set_flash_node(chip, np);
