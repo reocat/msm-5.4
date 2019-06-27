@@ -533,7 +533,7 @@
 				amb,pinmux-ids = <0x2001 0x2005>;
 			};
 
-			i2c2_pins_c: i2c3@2 {
+			i2c2_pins_c: i2c2@2 {
 				reg = <2>;
 				amb,pinmux-ids = <0x3051 0x3052>;
 			};
