@@ -1071,6 +1071,7 @@ static struct dma_chan *ambdma_of_xlate(struct of_phandle_args *dma_spec,
 	struct ambdma_device *amb_dma = ofdma->of_dma_data;
 	unsigned int request = dma_spec->args[0];
 	unsigned int val, reg_offset, sel_channels, bit_shift, bit_mask;
+	int chan_id_index;
 	struct dma_chan *chan;
 
 	if (request >= amb_dma->nr_requests)
@@ -1089,10 +1090,14 @@ static struct dma_chan *ambdma_of_xlate(struct of_phandle_args *dma_spec,
 	bit_mask = (1 << AHBSP_DMA_SEL_BIT_SHIFT) - 1;
 	sel_channels = 32 / AHBSP_DMA_SEL_BIT_SHIFT;
 	reg_offset = chan->chan_id >= sel_channels ? DMA_SEL1_OFFSET : DMA_SEL0_OFFSET;
+	if (chan->chan_id >= sel_channels)
+		chan_id_index = chan->chan_id - sel_channels;
+	else
+		chan_id_index = chan->chan_id;
 
 	val = readl_relaxed(amb_dma->regscr + reg_offset);
-	val &= ~(bit_mask << (chan->chan_id * bit_shift));
-	val |= request << (chan->chan_id * bit_shift);
+	val &= ~(bit_mask << (chan_id_index * bit_shift));
+	val |= request << (chan_id_index * bit_shift);
 	writel_relaxed(val, amb_dma->regscr + reg_offset);
 
 	return chan;
