@@ -21,6 +21,8 @@
 		serial4 = &uart4;
 		nand = &nand0;
 		sd0 = &sdmmc0;
+		sd1 = &sdmmc1;
+		sd2 = &sdmmc2;
 		spinor = &spinor0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
