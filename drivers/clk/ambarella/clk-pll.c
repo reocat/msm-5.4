@@ -20,53 +20,62 @@
 #include <linux/of_address.h>
 #include <linux/rational.h>
 
-#define REF_CLK_FREQ			24000000
+/*
+ * The doc said max vco frequency is 1.8GHz, but there is no much
+ * margine left when vco frequency is 1.8GHz, so we limit max vco
+ * frequency to 1.6GHz.
+ */
+#define MAX_VCO_FREQ				1600000000ULL
+#define REF_CLK_FREQ				24000000ULL
 
 union ctrl_reg_u {
 	struct {
-		u32	write_enable		: 1;	/* [0] */
-		u32	reserved1		: 1;	/* [1] */
-		u32	bypass			: 1;	/* [2] */
-		u32	frac_mode		: 1;	/* [3] */
-		u32	force_reset		: 1;	/* [4] */
-		u32	power_down		: 1;	/* [5] */
-		u32	halt_vco		: 1;	/* [6] */
-		u32	tristate		: 1;	/* [7] */
-		u32	tout_async		: 4;	/* [11:8] */
-		u32	sdiv			: 4;	/* [15:12] */
-		u32	sout			: 4;	/* [19:16] */
-		u32	force_lock		: 1;	/* [20] */
-		u32	force_bypass		: 1;	/* [21] */
-		u32	reserved2		: 2;	/* [23:22] */
-		u32	intp			: 7;	/* [30:24] */
-		u32	reserved3		: 1;	/* [31] */
+		u32 write_enable		: 1;	/* [0] */
+		u32 reserved1			: 1;	/* [1] */
+		u32 bypass			: 1;	/* [2] */
+		u32 frac_mode			: 1;	/* [3] */
+		u32 force_reset			: 1;	/* [4] */
+		u32 power_down			: 1;	/* [5] */
+		u32 halt_vco			: 1;	/* [6] */
+		u32 tristate			: 1;	/* [7] */
+		u32 tout_async			: 4;	/* [11:8] */
+		u32 sdiv			: 4;	/* [15:12] */
+		u32 sout			: 4;	/* [19:16] */
+		u32 force_lock			: 1;	/* [20] */
+		u32 force_bypass		: 1;	/* [21] */
+		u32 reserved2			: 2;	/* [23:22] */
+		u32 intp			: 7;	/* [30:24] */
+		u32 reserved3			: 1;	/* [31] */
 	} s;
-	u32	w;
+
+	u32 w;
 };
 
 union frac_reg_u {
 	struct {
-		u32	frac			: 31;	/* [30:0] */
-		u32	nega			: 1;	/* [31] */
+		u32 frac			: 31;	/* [30:0] */
+		u32 nega			: 1;	/* [31] */
 	} s;
-	u32	w;
+
+	u32 w;
 };
 
 union ctrl3_reg_u {
 	struct {
-		u32	reserved1				: 1;	/* [0] */
-		u32	pll_vco_range			: 2;	/* [2:1] */
-		u32	pll_vco_clamp			: 2;	/* [4:3] */
-		u32	reserved2				: 2;	/* [6:5] */
-		u32	dsm_dither_gain			: 2;	/* [8:7] */
-		u32	reserved3				: 4;	/* [12:9] */
-		u32	ff_zero_resistor_sel	: 4;	/* [16:13] */
-		u32	bias_current_ctrl		: 3;	/* [19:17] */
-		u32	bypass_jdiv				: 1;	/* [20] */
-		u32	bypass_jout				: 1;	/* [21] */
-		u32 reserved4				: 10;	/* [31:22] */
+		u32 reserved1			: 1;	/* [0] */
+		u32 pll_vco_range		: 2;	/* [2:1] */
+		u32 pll_vco_clamp		: 2;	/* [4:3] */
+		u32 reserved2			: 2;	/* [6:5] */
+		u32 dsm_dither_gain		: 2;	/* [8:7] */
+		u32 reserved3			: 4;	/* [12:9] */
+		u32 ff_zero_resistor_sel	: 4;	/* [16:13] */
+		u32 bias_current_ctrl		: 3;	/* [19:17] */
+		u32 bypass_jdiv			: 1;	/* [20] */
+		u32 bypass_jout			: 1;	/* [21] */
+		u32 reserved4			: 10;	/* [31:22] */
 	} s;
-	u32	w;
+
+	u32 w;
 };
 
 struct amb_clk_pll {
@@ -90,56 +99,42 @@ struct amb_clk_pll {
 #define rct_writel_en(v, p)		\
 		do {writel(v, p); writel((v | 0x1), p); writel(v, p);} while (0)
 
-static int ambarella_pll_calc_vco(unsigned long pre_scaler, unsigned long intp,
-			unsigned long sdiv, unsigned long parent_rate)
-{
-	unsigned long pllvco;
-	unsigned long div2_mult;
-	u32 pll_vco_range = 1;
-
-	div2_mult = 1; //for pll expect hdmi, div2_mult always is 1
-	pllvco = (parent_rate / pre_scaler) * intp * sdiv * div2_mult;
-	pllvco = pllvco / 1000000;//MHz
-
-	if((pllvco > 530) && (pllvco < 1000)){
-		pll_vco_range = 1;
-	}else if((pllvco > 700) && (pllvco < 1320)){
-		pll_vco_range = 2;
-	}else if((pllvco > 980) && (pllvco < 1800)){
-		pll_vco_range = 3;
-	}
-
-	return pll_vco_range;
-}
-
-static int ambarella_pll_set_ctrl3(struct clk_hw *hw, unsigned long pre_scaler,
+static void ambarella_pll_set_ctrl3(struct clk_hw *hw, unsigned long pre_scaler,
 		unsigned long intp, unsigned long sdiv, unsigned long parent_rate)
 {
 	struct amb_clk_pll *clk_pll = to_amb_clk_pll(hw);
 	union ctrl3_reg_u ctrl3_val;
+	unsigned long pllvco;
 
-	if(clk_pll->frac_nega){
-		if (clk_pll->ctrl3_val != 0)
-			ctrl3_val.w =clk_pll->ctrl3_val;
-		else
-			ctrl3_val.w = readl(clk_pll->ctrl3_reg);
+	if (clk_pll->ctrl3_val != 0) {
+		ctrl3_val.w =clk_pll->ctrl3_val;
+		goto exit;
+	}
 
+	ctrl3_val.w = readl(clk_pll->ctrl3_reg);
+
+	if (clk_pll->frac_nega) {
 		if (clk_pll->frac_mode)
 			ctrl3_val.w |= (1 << 12);
 		else
 			ctrl3_val.w &= ~(1 << 12);
-	}else{
-		if (clk_pll->ctrl3_val != 0)
-			ctrl3_val.w =clk_pll->ctrl3_val;
-		else{
-			ctrl3_val.w = readl(clk_pll->ctrl3_reg);
-			ctrl3_val.s.pll_vco_range = ambarella_pll_calc_vco(pre_scaler, intp, sdiv, parent_rate);
-		}
+	} else {
+		pllvco = (parent_rate / pre_scaler) * intp * sdiv;
+
+		printk("vco = %ld, %ld, %ld, %ld, %ld\n", pllvco, parent_rate, pre_scaler,
+			intp, sdiv);
+
+		if (pllvco > 980000000ull)
+			ctrl3_val.s.pll_vco_range = 3;
+		else if (pllvco > 700000000ull)
+			ctrl3_val.s.pll_vco_range = 2;
+		else if (pllvco > 530000000ull)
+			ctrl3_val.s.pll_vco_range = 1;
+		else
+			ctrl3_val.s.pll_vco_range = 0;
 	}
-
+exit:
 	writel(ctrl3_val.w, clk_pll->ctrl3_reg);
-
-	return 0;
 }
 
 static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
@@ -203,8 +198,7 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 				dividend = dividend + frac;
 			}
 		} else {
-			frac = frac_val.w;
-			frac = parent_rate * frac * sdiv;
+			frac = parent_rate * frac_val.w * sdiv;
 			frac >>= 32;
 			dividend = dividend + frac;
 		}
@@ -275,8 +269,8 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * is changed, there is no negative frac any more.
 	 */
 	rate_tmp = rate;
-	max_numerator = 75;	/* the max VCO for non-HDMI should be less than 1800MHz */
-	max_denominator = 15;
+	max_numerator = MAX_VCO_FREQ / REF_CLK_FREQ;
+	max_denominator = 16;
 	rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
 				&intp, &sout);
 	if (!clk_pll->frac_nega) {
@@ -299,7 +293,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		sout *= 2;
 	}
 
-	BUG_ON(intp > 128 || sout > 16 || sdiv > 16);
+	BUG_ON(intp > max_numerator || sout > max_denominator || sdiv > 16);
 	BUG_ON(pre_scaler > 16 || post_scaler > 16);
 
 	if (clk_pll->pres_reg != NULL) {
@@ -376,9 +370,9 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	/* check if result rate is precise or not */
 	rate_tmp = ambarella_pll_recalc_rate(hw, parent_rate);
 	if (abs(rate_tmp - rate / clk_pll->fix_divider / post_scaler) > 10) {
-		pr_warn("%s: rate is not very precise: %ld, %ld\n",
-			clk_hw_get_name(hw), rate_tmp,
-			rate / clk_pll->fix_divider / post_scaler);
+		pr_warn("[Warning] %s: request %ld, but got %ld\n",
+			clk_hw_get_name(hw),
+			rate / clk_pll->fix_divider / post_scaler, rate_tmp);
 	}
 
 	return 0;
