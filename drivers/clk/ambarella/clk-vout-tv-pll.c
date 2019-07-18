@@ -161,7 +161,8 @@ static long ambarella_vout_tv_pll_round_rate(struct clk_hw *hw, unsigned long ra
 
 	return round_rate;
 }
-static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned long rate,
+
+static int ambarella_vout_tv_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		unsigned long parent_rate)
 {
 	struct amb_vout_tv_clk_pll *clk_pll = to_amb_vout_tv_clk_pll(hw);
@@ -171,6 +172,14 @@ static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned 
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 	union ctrl_reg_u hdmi2_ctrl_val;
+
+	if (rate == 0) {
+		ctrl_val.w = readl(clk_pll->ctrl_reg);
+		ctrl_val.s.power_down = 1;
+		ctrl_val.s.halt_vco = 1;
+		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+		return 0;
+	}
 
 	rate *= clk_pll->fix_divider;
 
@@ -276,16 +285,6 @@ static int ambarella_vout_tv_pll_set_rate_calculate(struct clk_hw *hw, unsigned 
 	}
 
 	return 0;
-}
-
-static int ambarella_vout_tv_pll_set_rate(struct clk_hw *hw, unsigned long rate,
-		unsigned long parent_rate)
-{
-	int rval;
-
-	rval = ambarella_vout_tv_pll_set_rate_calculate(hw, rate, parent_rate);
-
-	return rval;
 }
 
 static const struct clk_ops vout_tv_pll_ops = {

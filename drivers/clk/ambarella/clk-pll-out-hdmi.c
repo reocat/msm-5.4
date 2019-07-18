@@ -306,6 +306,14 @@ static int ambarella_pll_hdmi_set_rate(struct clk_hw *hw, unsigned long rate,
 	union ctrl_reg_u ctrl_val;
 	union frac_reg_u frac_val;
 
+	if (rate == 0) {
+		ctrl_val.w = readl(clk_pll->ctrl_reg);
+		ctrl_val.s.power_down = 1;
+		ctrl_val.s.halt_vco = 1;
+		rct_writel_en(ctrl_val.w, clk_pll->ctrl_reg);
+		return 0;
+	}
+
 	rate_org = rate;
 
 	if(rate == 5940000000)
