@@ -126,8 +126,12 @@ static int m88q5050_config_init(struct phy_device *phydev)
 	printk("PORT 8 RGMII_TX_TIMING %x\n", value);
 #endif
 
-#if 1
-	printk("[%d]Enable Faster Link up.\n", phydev->mdio.addr);
+	/* force 100Mbps FULL duplex */
+	mdiobus_write(phydev->mdio.bus, MARVELL_RGMII_PORT,
+			MARVELL_PHYSICAL_CTRL_REG, 0x203D);
+
+	printk("Marvell Faster Link up ...\n");
+
 	/* Faster Link up */
 	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x1D, 0x1B);
 
@@ -148,7 +152,6 @@ static int m88q5050_config_init(struct phy_device *phydev)
 	value |= (1 << 15);
 	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x00, value);
 
-#endif
 
 
 	return 0;
@@ -170,7 +173,7 @@ static int m88q5050_read_status(struct phy_device *phydev)
 	u16 value;
 
 	phydev->duplex = DUPLEX_FULL;
-	phydev->speed = SPEED_1000;
+	phydev->speed = SPEED_100;
 	phydev->pause = 0;
 	phydev->asym_pause = 0;
 
