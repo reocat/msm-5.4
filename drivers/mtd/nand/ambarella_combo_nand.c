@@ -123,7 +123,7 @@ static int nand_timing_calc(u32 clk, int minmax, int val)
 	if (minmax)
 		n--;
 
-	return n < 1 ? 1 : n;
+	return n < 1 ? 0 : (n-1);
 }
 
 static int amb_ecc6_ooblayout_ecc_lp(struct mtd_info *mtd, int section,
