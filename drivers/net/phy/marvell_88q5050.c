@@ -50,6 +50,10 @@
 #define SMI_CTRL_READ		((1 << 15) | (1 << 12) | (2 << 10))
 #define SMI_CTRL_WRITE		((1 << 15) | (1 << 12) | (1 << 10))
 
+MODULE_DESCRIPTION("Marvell 88Q5050 PHY driver");
+MODULE_AUTHOR("Jorney");
+MODULE_LICENSE("GPL");
+
 static int m88q5050_glb2_smi_busy(struct phy_device *phydev)
 {
 	unsigned int value;
