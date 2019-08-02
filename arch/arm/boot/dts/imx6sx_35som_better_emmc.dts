@@ -214,7 +214,7 @@
 	pinctrl-0 = <&pinctrl_enet2_1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy2>;  	
-	phy-reset-gpios = <&gpio2 8 1>; 
+	phy-reset-gpios = <&gpio2 2 1>; 
 	phy-reset-duration =<20>;
    	local-mac-address = [00 04 9F 01 1B 68];
 	status = "okay";
