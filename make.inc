@@ -40,6 +40,7 @@ linux: $(DOT_CONFIG)
 	else \
 		$(MAKE) $(AMBA_MAKE_PARA) ARCH=$(CPU_ARCH) defconfig_public_linux; \
 	fi
+	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) $(AMBARELLA_BUILD_KERNEL) olddefconfig
 	$(AMBA_MAKEFILE_V)$(MAKE) $(AMBA_MAKE_PARA) $(AMBARELLA_BUILD_KERNEL) all
 	@if [ -n "$(KERNEL_INSTALL_PATH)" ]; then \
 		echo "Install Linux modules to $(KERNEL_INSTALL_PATH) ..."; \
