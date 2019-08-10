@@ -567,6 +567,8 @@ Optional properties:
 - amb,fixed-init-clk: specifies to use low frequency clock for SD/eMMC
   initializing. PS: some eMMC(e.g., one of SanDisk eMMC) cannot be initialized
   correctly in 400KHz.
+- amb,pwr-up-dly: specify the delay when power up and down. If it is not declared,
+  the default value is 300ms. It's helpful for speeding up the system boot time.
 
 iii) Example
 -----------

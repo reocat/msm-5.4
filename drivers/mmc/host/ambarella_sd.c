@@ -86,6 +86,7 @@ struct ambarella_mmc_host {
 	dma_addr_t			desc_phys;
 
 	u32				switch_1v8_dly;
+	u32				pwr_up_dly;
 	u32				fixed_init_clk;
 	int				fixed_cd;
 	int				fixed_wp;
@@ -358,7 +359,7 @@ static void ambarella_sd_set_pwr(struct ambarella_mmc_host *host, u8 power_mode)
 		if (gpio_is_valid(host->pwr_gpio)) {
 			gpio_set_value_cansleep(host->pwr_gpio,
 						!host->pwr_gpio_active);
-			msleep(300);
+			msleep(host->pwr_up_dly);
 		}
 
 		if (gpio_is_valid(host->v18_gpio)) {
@@ -376,7 +377,7 @@ static void ambarella_sd_set_pwr(struct ambarella_mmc_host *host, u8 power_mode)
 		if (gpio_is_valid(host->pwr_gpio)) {
 			gpio_set_value_cansleep(host->pwr_gpio,
 						host->pwr_gpio_active);
-			msleep(300);
+			msleep(host->pwr_up_dly);
 		}
 
 		writeb_relaxed(SD_PWR_ON | SD_PWR_3_3V, host->regbase + SD_PWR_OFFSET);
@@ -1280,6 +1281,9 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	if (of_property_read_u32(np, "amb,switch-1v8-dly", &host->switch_1v8_dly) < 0)
 		host->switch_1v8_dly = 100;
+
+	if (of_property_read_u32(np, "amb,pwr-up-dly", &host->pwr_up_dly) < 0)
+		host->pwr_up_dly = 300;
 
 	if (of_property_read_u32(np, "amb,fixed-init-clk", &host->fixed_init_clk) < 0)
 		host->fixed_init_clk = 0;
