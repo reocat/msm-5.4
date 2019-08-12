@@ -308,7 +308,7 @@ static int ambarella_nand_set_spinand_timing(struct ambarella_nand_host *host)
 	tclh = nand_timing_calc(clk, 0, tclh);
 	tcll = nand_timing_calc(clk, 0, tcll);
 	tcs = nand_timing_calc(clk, 0, tcs);
-	tclqv = nand_timing_calc(clk, 0, tclqv);
+	tclqv = nand_timing_calc(clk, 1, tclqv);
 
 	val = NAND_TIMING_LSHIFT24BIT(tclh) |
 		NAND_TIMING_LSHIFT16BIT(tcll) |
@@ -991,19 +991,21 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 		break;
 
 	case NAND_CMD_STATUS:
-		val = readl_relaxed(host->regbase + NAND_STATUS_OFFSET);
 		if (host->is_spinand) {
 			/*
 			 * no matter the device is Write Enable or not, we can
 			 * always send the Write Enable Command automatically
 			 * prior to PROGRAM or ERASE command.
 			 */
+			val = readl_relaxed(host->regbase + NAND_CC_DAT0_OFFSET);
+			val &= 0x000000FF;
 			host->dmabuf[0] = NAND_STATUS_WP;
 			if (!(val & 0x1))
 				host->dmabuf[0] |= NAND_STATUS_READY;
 			if (val & 0x2c)
 				host->dmabuf[0] |= NAND_STATUS_FAIL;
 		} else {
+			val = readl_relaxed(host->regbase + NAND_STATUS_OFFSET);
 			host->dmabuf[0] = (unsigned char)val;
 		}
 		break;
