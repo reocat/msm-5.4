@@ -498,6 +498,11 @@
 				amb,pinmux-ids = <0x3023>;
 			};
 
+			enet_2nd_ref_clk_pins_c: enet_2nd_ref_clk@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x501f>;
+			};
+
 			i2c0_pins_a: i2c0@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x303d 0x303e>;
