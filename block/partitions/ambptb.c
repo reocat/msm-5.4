@@ -34,6 +34,68 @@
 #define ambptb_prt(format, arg...) do {} while (0)
 #endif
 
+int ambptb_emmc_partition(struct parsed_partitions *state)
+{
+	struct device_node *np = NULL, *pp;
+	struct device *dev;
+	int sector_size, index = 1, rval = -1;
+
+	dev = disk_to_dev(state->bdev->bd_disk);
+
+	while (dev) {
+		if (of_device_is_compatible(dev->of_node, "ambarella,sdmmc")) {
+			np = of_get_child_by_name(dev->of_node, "partitions");
+			break;
+		}
+
+		dev = dev->parent;
+	}
+
+	if (np == NULL)
+		return 0;
+
+	sector_size = bdev_logical_block_size(state->bdev);
+
+	for_each_child_of_node(np,  pp) {
+		char str_tmp[1 + BDEVNAME_SIZE + 10 + 1];
+		const char *partition_name;
+		const __be32 *reg;
+		int len, a_cells, s_cells;
+
+		reg = of_get_property(pp, "reg", &len);
+		if (!reg)
+			goto exit;
+
+		a_cells = of_n_addr_cells(pp);
+		s_cells = of_n_size_cells(pp);
+		if (len / 4 != a_cells + s_cells)
+			goto exit;
+
+		put_partition(state, index++,
+			of_read_number(reg, a_cells) / sector_size,
+			of_read_number(reg + a_cells, s_cells) / sector_size);
+
+		partition_name = of_get_property(pp, "label", &len);
+		if (!partition_name)
+			goto exit;
+
+		snprintf(str_tmp, sizeof(str_tmp), "(%s)", partition_name);
+		strlcat(state->pp_buf, str_tmp, PAGE_SIZE);
+
+		printk(KERN_INFO " %s: 0x%016llx, 0x%016llx\n", str_tmp,
+			of_read_number(reg, a_cells),
+			of_read_number(reg + a_cells, s_cells));
+	}
+
+	strlcat(state->pp_buf, "\n", PAGE_SIZE);
+	rval = 1;
+
+exit:
+	if (np)
+		of_node_put(np);
+	return rval;
+}
+
 int ambptb_partition(struct parsed_partitions *state)
 {
 	int i, val, slot = 1;
@@ -45,21 +107,19 @@ int ambptb_partition(struct parsed_partitions *state)
 	int result = 0;
 	struct device_node * np;
 
-	ambptb_prt("amb partition\n");
+	ambptb_prt("amb partition: %s\n", bdevname(state->bdev, ptb_tmp));
 
 	sect_size = bdev_logical_block_size(state->bdev);
 	sect_offset = (sizeof(ptb_header_t) + sizeof(flpart_table_t)) % sect_size;
 
 	np = of_find_node_with_property(NULL, "amb,ptb_address");
-	if(!np) {
-		ambptb_prt("can not find amb, ptb_address\n");
-		return -1;
-	}
+	if(!np)
+		return ambptb_emmc_partition(state);
 
 	val = of_property_read_u32(np, "amb,ptb_address", &ptb_address);
 	if(val < 0) {
-		ambptb_prt("read amb, ptb_address fail\n");
-		return -1;
+		result = -1;
+		goto ambptb_partition_exit;
 	}
 
 	sect_address = (ptb_address * sect_size + sizeof(ptb_header_t) + sizeof(flpart_table_t)) / sect_size;
