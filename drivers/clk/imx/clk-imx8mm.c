@@ -642,6 +642,9 @@ static int imx8mm_clocks_probe(struct platform_device *pdev)
 
 	imx_register_uart_clocks(uart_hws);
 
+	clk_hw_set_parent(hws[IMX8MM_CLK_PCIE1_CTRL], hws[IMX8MM_SYS_PLL2_250M]);
+	clk_hw_set_parent(hws[IMX8MM_CLK_PCIE1_PHY], hws[IMX8MM_SYS_PLL2_100M]);
+
 	return 0;
 
 unregister_hws:
