@@ -38,8 +38,6 @@
 #include <linux/dmaengine.h>
 #include <plat/dma.h>
 #include <plat/rct.h>
-
-#include <plat/ptb.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/delay.h>
@@ -205,24 +203,24 @@
 #endif
 
 struct amb_norflash {
-    struct device                *dev;
-    unsigned char __iomem        *regbase;
-    unsigned char __iomem        *dmaregbase;
-    dma_addr_t                   dmaaddr;
-    u8                           *dmabuf;
-    int (*write_enable)(struct amb_norflash *flash);
-    int (*wait_till_ready)(struct amb_norflash *flash);
-    struct mutex                 lock;
-    struct mtd_info              mtd;
-    u16                          page_size;
-    u16                          addr_width;
-    u8                           erase_opcode;
-    u8                           *command;
-    u8                           dummy;
-    u32                          addr;
-	u32							 clk;
-    bool                         fast_read;
-	u32							 jedec_id;
+	struct device                *dev;
+	unsigned char __iomem        *regbase;
+	unsigned char __iomem        *dmaregbase;
+	dma_addr_t                   dmaaddr;
+	u8                           *dmabuf;
+	int (*write_enable)(struct amb_norflash *flash);
+	int (*wait_till_ready)(struct amb_norflash *flash);
+	struct mutex                 lock;
+	struct mtd_info              mtd;
+	u16                          page_size;
+	u16                          addr_width;
+	u8                           erase_opcode;
+	u8                           *command;
+	u8                           dummy;
+	u32                          addr;
+	u32                          clk;
+	bool                         fast_read;
+	u32                          jedec_id;
 };
 //the buffer size must align to 32 and smaller than the max size of DMA
 #define AMBA_SPINOR_DMA_BUFF_SIZE    4096

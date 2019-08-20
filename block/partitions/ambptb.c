@@ -23,18 +23,15 @@
 
 #include "check.h"
 #include "ambptb.h"
-#include <plat/ptb.h>
 #include <linux/of.h>
 
-//#define ambptb_debug
-
-#ifdef ambptb_debug
+#if 0
 #define ambptb_prt printk
 #else
 #define ambptb_prt(format, arg...) do {} while (0)
 #endif
 
-int ambptb_emmc_partition(struct parsed_partitions *state)
+int ambptb_partition(struct parsed_partitions *state)
 {
 	struct device_node *np = NULL, *pp;
 	struct device *dev;
@@ -94,90 +91,5 @@ exit:
 	if (np)
 		of_node_put(np);
 	return rval;
-}
-
-int ambptb_partition(struct parsed_partitions *state)
-{
-	int i, val, slot = 1;
-	unsigned char *data;
-	Sector sect;
-	u32 sect_size, sect_offset, sect_address, ptb_address;
-	flpart_meta_t *ptb_meta;
-	char ptb_tmp[1 + BDEVNAME_SIZE + 1];
-	int result = 0;
-	struct device_node * np;
-
-	ambptb_prt("amb partition: %s\n", bdevname(state->bdev, ptb_tmp));
-
-	sect_size = bdev_logical_block_size(state->bdev);
-	sect_offset = (sizeof(ptb_header_t) + sizeof(flpart_table_t)) % sect_size;
-
-	np = of_find_node_with_property(NULL, "amb,ptb_address");
-	if(!np)
-		return ambptb_emmc_partition(state);
-
-	val = of_property_read_u32(np, "amb,ptb_address", &ptb_address);
-	if(val < 0) {
-		result = -1;
-		goto ambptb_partition_exit;
-	}
-
-	sect_address = (ptb_address * sect_size + sizeof(ptb_header_t) + sizeof(flpart_table_t)) / sect_size;
-	data = read_part_sector(state, sect_address, &sect);
-	if (!data) {
-		result = -1;
-		goto ambptb_partition_exit;
-	}
-
-	ptb_meta = (flpart_meta_t *)(data + sect_offset);
-	ambptb_prt("%s: magic[0x%08X]\n", __func__, ptb_meta->magic);
-	if (ptb_meta->magic == PTB_META_MAGIC3) {
-		for (i = 0; i < PART_MAX; i++) {
-			if (slot >= state->limit)
-				break;
-
-			if (((ptb_meta->part_info[i].dev & PART_DEV_EMMC) ==
-				PART_DEV_EMMC) &&
-				(ptb_meta->part_info[i].nblk)) {
-				state->parts[slot].from =
-					ptb_meta->part_info[i].sblk;
-				state->parts[slot].size =
-					ptb_meta->part_info[i].nblk;
-				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
-					ptb_meta->part_info[i].name);
-				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				ambptb_prt("%s: %s [p%d]\n", __func__,
-					ptb_meta->part_info[i].name, slot);
-				slot++;
-			}
-		}
-		strlcat(state->pp_buf, "\n", PAGE_SIZE);
-		result = 1;
-	} else if ((ptb_meta->magic == PTB_META_MAGIC) ||
-		(ptb_meta->magic == PTB_META_MAGIC2)) {
-		for (i = 0; i < PART_MAX; i++) {
-			if (slot >= state->limit)
-				break;
-			if ((ptb_meta->part_info[i].dev == BOOT_DEV_SM) &&
-				(ptb_meta->part_info[i].nblk)) {
-				state->parts[slot].from =
-					ptb_meta->part_info[i].sblk;
-				state->parts[slot].size =
-					ptb_meta->part_info[i].nblk;
-				snprintf(ptb_tmp, sizeof(ptb_tmp), " %s",
-					ptb_meta->part_info[i].name);
-				strlcat(state->pp_buf, ptb_tmp, PAGE_SIZE);
-				ambptb_prt("%s: %s [p%d]\n", __func__,
-					ptb_meta->part_info[i].name, slot);
-				slot++;
-			}
-		}
-		strlcat(state->pp_buf, "\n", PAGE_SIZE);
-		result = 1;
-	}
-	put_dev_sector(sect);
-
-ambptb_partition_exit:
-	return result;
 }
 
