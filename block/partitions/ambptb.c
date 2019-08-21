@@ -58,6 +58,7 @@ int ambptb_partition(struct parsed_partitions *state)
 		const char *partition_name;
 		const __be32 *reg;
 		int len, a_cells, s_cells;
+		u64 addr, size;
 
 		reg = of_get_property(pp, "reg", &len);
 		if (!reg)
@@ -68,9 +69,12 @@ int ambptb_partition(struct parsed_partitions *state)
 		if (len / 4 != a_cells + s_cells)
 			goto exit;
 
-		put_partition(state, index++,
-			of_read_number(reg, a_cells) / sector_size,
-			of_read_number(reg + a_cells, s_cells) / sector_size);
+		addr = of_read_number(reg, a_cells);
+		do_div(addr, sector_size);
+		size = of_read_number(reg + a_cells, s_cells);
+		do_div(size, sector_size);
+
+		put_partition(state, index++, addr, size);
 
 		partition_name = of_get_property(pp, "label", &len);
 		if (!partition_name)
