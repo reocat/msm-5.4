@@ -58,8 +58,8 @@ int ambeth_set_hwtstamp(struct net_device *dev, struct ifreq *ifr)
 	struct hwtstamp_config config;
 	struct ambeth_info *lp = netdev_priv(dev);
 	struct timespec64 now;
-	u32 ssinc, addend, ctrl_val = 0;
-	u64 tmp;
+	u64 ssinc, addend;
+	u32 ctrl_val = 0;
 
 	if (!lp->ptp_clk)
 		return -ENODEV;
@@ -187,20 +187,19 @@ int ambeth_set_hwtstamp(struct net_device *dev, struct ifreq *ifr)
 		writel(ctrl_val, lp->regbase + MAC_PTP_CTRL_OFFSET);
 
 		if (lp->clk_ptp_rate > 50000000) {
-			ssinc = 1000000000ULL / 50000000;
+			ssinc = 1000000000ULL / 50000000ULL;
 		} else {
-			ssinc = 1000000000ULL / 50000000;	/* (10e9 / 50HMZ)) x (60MHZ / R) */
-			tmp = ssinc * 60000000;
-			ssinc = tmp / lp->clk_ptp_rate;
+			ssinc = 1000000000ULL / 50000000ULL;	/* (10e9 / 50HMZ)) x (60MHZ / R) */
+			ssinc *= 60000000;
+			do_div(ssinc, lp->clk_ptp_rate);
 		}
 		writel(ssinc, lp->regbase + MAC_PTP_SSINC_OFFSET);
 
-		tmp = (1ULL << 32);
-		tmp *= 50000000;
+		addend = (1ULL << 32) * 50000000;
 		if (lp->clk_ptp_rate > 50000000)
-			addend = tmp / lp->clk_ptp_rate;
+			do_div(addend, lp->clk_ptp_rate);
 		else
-			addend = tmp / 60000000;
+			do_div(addend, 60000000);
 
 		writel(addend, lp->regbase + MAC_PTP_ADDEND_OFFSET);
 		ambeth_set_hwctrl(lp, PTP_CTRL_TSADDREG);
@@ -254,8 +253,8 @@ static int ambeth_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 {
 	struct ambeth_info *lp =
 		container_of(ptp, struct ambeth_info, ptp_clk_ops);
-	u32 diff, addend, neg_adj = 0;
-	u64 adj, tmp;
+	u32 diff, neg_adj = 0;
+	u64 adj, addend;
 	unsigned long flags;
 
 	spin_lock_irqsave(&lp->ptp_spinlock, flags);
@@ -265,12 +264,11 @@ static int ambeth_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 		neg_adj = 1;
 	}
 
-	tmp = (1ULL << 32);
-	tmp *= 50000000;
+	addend = (1ULL << 32) * 50000000;
 	if (lp->clk_ptp_rate > 50000000)
-		addend = tmp / lp->clk_ptp_rate;
+		do_div(addend, lp->clk_ptp_rate);
 	else
-		addend = tmp / 60000000;
+		do_div(addend, 60000000);
 
 	adj = addend;
 	adj *= ppb;
@@ -401,7 +399,7 @@ int ambeth_ptp_init(struct platform_device *pdev)
 		return -EINVAL;
 
 	tmp *= 1000000000ULL;
-	tmp /= 50000000;
+	do_div(tmp, 50000000);
 	tmp = tmp - 1000000000ULL - 1;
 	lp->ptp_clk_ops.max_adj = (u32)tmp;
 

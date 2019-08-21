@@ -316,8 +316,8 @@ static int ambarella_pll_hdmi_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	rate_org = rate;
 
-	if(rate == 5940000000)
-		rate = 2970000000;
+	if(rate == 5940000000ull)
+		rate = 2970000000ull;
 
 	rate *= clk_pll->fix_divider;
 

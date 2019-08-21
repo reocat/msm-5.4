@@ -215,10 +215,12 @@ static unsigned long ambarella_pll_recalc_rate(struct clk_hw *hw,
 static long ambarella_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long *parent_rate)
 {
+	unsigned int half_refclk = REF_CLK_FREQ / 2;
+
 	if (to_amb_clk_pll(hw)->frac_mode)
 		return rate;
 	else
-		return roundup(rate, REF_CLK_FREQ / 2);
+		return roundup(rate, half_refclk);
 }
 
 static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
