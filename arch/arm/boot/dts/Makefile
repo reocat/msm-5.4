@@ -537,6 +537,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-sg-best.dtb \
 	imx6sx_55som_best_emmc.dtb \
 	imx6sx_35som_better_emmc.dtb \
+	imx6sx_55som_better_emmc.dtb \
 	imx6sx-sg-best_nand.dtb \
 	imx6sx-sg-best_sd_2Gb.dtb \
 	imx6sx-sg-best_sd_2Gb_common_port.dtb \
