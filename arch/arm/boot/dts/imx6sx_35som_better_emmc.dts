@@ -823,9 +823,9 @@
 				MX6SX_PAD_RGMII2_TD2__GPIO5_IO_20 0x10b0
 				MX6SX_PAD_RGMII1_TX_CTL__GPIO5_IO_10 0x10b0  */
 
-				MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24    0x10b0
-				MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2   0x10b0
-				MX6SX_PAD_LCD1_DATA22__GPIO3_IO_23    0x10b0
+				//MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24    0x10b0
+				//MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2   0x10b0
+				//MX6SX_PAD_LCD1_DATA22__GPIO3_IO_23    0x10b0
                     
 			>;
 		};
@@ -833,7 +833,7 @@
 		pinctrl_pcie_reg: pciereggrp {
 			fsl,pins = <
 				/*MX6SX_PAD_RGMII2_TD2__GPIO5_IO_20	0x10b0*/
-				MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24    0x10b0
+				//MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24    0x10b0
 			>;
 		};
 
@@ -1044,9 +1044,9 @@
 	//reset-gpio = <&gpio3 21 0>;
 	//power-on-gpio = <&gpio5 20 0>;
 	//disable-gpio = <&gpio5 10 0>;
-	reset-gpio = <&gpio3 23 0>;
-	power-on-gpio = <&gpio3 24 0>;
-	disable-gpio = <&gpio4 2 0>;
+	//reset-gpio = <&gpio3 23 0>;
+	//power-on-gpio = <&gpio3 24 0>;
+	//disable-gpio = <&gpio4 2 0>;
 	//ext-gpio = <&gpio5 5 0>;
 	status = "okay";
 };
