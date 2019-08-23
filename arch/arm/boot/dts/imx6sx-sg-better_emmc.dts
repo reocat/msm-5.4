@@ -26,7 +26,7 @@
 	};
 
 	memory {
-		linux,usable-memory = <0x80000000 0x20000000>;
+		linux,usable-memory = <0x80000000 0x1FF00000>;
 	};
 	
 	lcd-control {
@@ -602,6 +602,7 @@
 	srp-disable;
 	hnp-disable;
 	adp-disable;
+    dr_mode = "host";
 	status = "okay";
 };
 
@@ -651,6 +652,12 @@
 	enable-sdio-wakeup;
 	status = "okay";
 };
+
+&wdog1 {
+        compatible = "fsl,imx21-wdt";
+        status = "okay";
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
