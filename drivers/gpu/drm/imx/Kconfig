@@ -61,3 +61,12 @@ config DRM_IMX_SEC_DSIM
 	help
 	  Choose this to enable the internal SEC MIPI DSIM controller
 	  found on i.MX platform.
+
+config DRM_IMX_CDNS_MHDP
+	tristate "NXP i.MX MX8 DRM HDMI/DP"
+	select DRM_CDNS_MHDP
+	select DRM_CDNS_DP
+	select DRM_CDNS_HDMI
+	depends on DRM_IMX
+	help
+	  Choose this if you want to use HDMI on i.MX8.
