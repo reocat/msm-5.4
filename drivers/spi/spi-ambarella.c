@@ -36,6 +36,7 @@
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
+#include <linux/delay.h>
 #include <plat/spi.h>
 #include <plat/dma.h>
 #include <plat/rct.h>
@@ -54,10 +55,10 @@ struct ambarella_spi {
 	struct tasklet_struct	tasklet;
 	void __iomem			*virt;
 
-	u8 					*tx_dma_buf;
-	u8 					*rx_dma_buf;
-	dma_addr_t 			tx_dma_phys;
-	dma_addr_t 			rx_dma_phys;
+	u8					*tx_dma_buf;
+	u8					*rx_dma_buf;
+	dma_addr_t			tx_dma_phys;
+	dma_addr_t			rx_dma_phys;
 
 	u32					dma_buf_size;
 	u32					phys;
@@ -342,18 +343,24 @@ static void ambarella_spi_next_transfer(void *args)
 		}
 	}
 
-	if (xfer->cs_change) {
-		gpio_set_value(bus->msg->spi->cs_gpio, bus->cspol^1);
-		bus->cs_active = 0;
-	}
+	if (xfer->delay_usecs)
+		udelay(xfer->delay_usecs);
 
 	if (bus->xfer_id >= bus->n_xfer) {
-		gpio_set_value(bus->msg->spi->cs_gpio, bus->cspol^1);
-		bus->cs_active = 0;
-
+		/* If cs_change=1, keep CS asserted between messages */
+		if (!xfer->cs_change) {
+			gpio_set_value(bus->msg->spi->cs_gpio, bus->cspol^1);
+			bus->cs_active = 0;
+		}
 		ambarella_spi_stop(bus);
 		spi_finalize_current_message(bus->msg->spi->master);
 	} else {
+		/* If cs_change=1, briefly toggle CS between transfers */
+		if (xfer->cs_change) {
+			gpio_set_value(bus->msg->spi->cs_gpio, bus->cspol^1);
+			bus->cs_active = 0;
+			udelay(10);
+		}
 		ambarella_spi_prepare_transfer(bus);
 		ambarella_spi_start_transfer(bus);
 	}
@@ -612,7 +619,7 @@ static int ambarella_spi_hw_setup(struct spi_device *spi)
 
 static int ambarella_spi_probe(struct platform_device *pdev)
 {
-	struct resource 			*res;
+	struct resource				*res;
 	void __iomem				*reg;
 	struct ambarella_spi			*bus;
 	struct spi_master			*master;
