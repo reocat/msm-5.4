@@ -163,26 +163,25 @@ static int m88q5050_config_init(struct phy_device *phydev)
 
 static int m88q5050_config_aneg(struct phy_device *phydev)
 {
+#if 0
 	int ctrl;
 
 	ctrl = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x00);
 	ctrl |= BMCR_ANENABLE | BMCR_ANRESTART;
 	m88q5050_glb2_smi_write(phydev, phydev->mdio.addr, 0x00, ctrl);
+#endif
 
 	return 0;
 }
 
 static int m88q5050_read_status(struct phy_device *phydev)
 {
-	u16 value;
-
 	phydev->duplex = DUPLEX_FULL;
 	phydev->speed = SPEED_100;
 	phydev->pause = 0;
 	phydev->asym_pause = 0;
 
-	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x01);
-	phydev->link = (value & (1 << 2));
+	phydev->link = 1;
 
 	return 0;
 }
