@@ -887,8 +887,8 @@
 			fsl,pins = <
 				MX6SX_PAD_GPIO1_IO06__UART2_TX		0x1b0b1
 				MX6SX_PAD_GPIO1_IO07__UART2_RX		0x1b0b1
-                MX6SX_PAD_SD1_DATA3__UART2_CTS_B    0x1b0b1
-                MX6SX_PAD_SD1_DATA2__UART2_CTS_B    0x1b0b1
+                MX6SX_PAD_GPIO1_IO08__UART2_RTS_B   0x1b0b1
+                MX6SX_PAD_GPIO1_IO09__UART2_CTS_B   0x1b0b1
 			>;
 		};
 
