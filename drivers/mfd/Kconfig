@@ -475,6 +475,12 @@ config MFD_MX25_TSADC
 	  i.MX25 processors. They consist of a conversion queue for general
 	  purpose ADC and a queue for Touchscreens.
 
+config MFD_IMX_AUDIOMIX
+	tristate "NXP i.MX8MP Audiomix Control Driver"
+	depends on OF || COMPILE_TEST
+	help
+	  Enable audiomix support
+
 config MFD_HI6421_PMIC
 	tristate "HiSilicon Hi6421 PMU/Codec IC"
 	depends on OF
