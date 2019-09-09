@@ -74,3 +74,5 @@ config DRM_IMX_CDNS_MHDP
 
 source "drivers/gpu/drm/imx/dcss/Kconfig"
 
+source "drivers/gpu/drm/imx/dcss/Kconfig"
+
