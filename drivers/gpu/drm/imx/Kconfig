@@ -71,3 +71,6 @@ config DRM_IMX_CDNS_MHDP
 	depends on DRM_IMX
 	help
 	  Choose this if you want to use HDMI on i.MX8.
+
+source "drivers/gpu/drm/imx/dcss/Kconfig"
+
