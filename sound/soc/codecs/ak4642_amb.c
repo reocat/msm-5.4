@@ -1,8 +1,6 @@
 /*
  * ak4642.c  --  AK4642 ALSA Soc Audio driver
  *
- * Copyright 2009 Ambarella Ltd.
- *
  * Author: Cao Rongrong <rrcao@ambarella.com>
  *
  * Based on ak4535.c by Richard Purdie
@@ -13,9 +11,22 @@
  *	2011/03/20 - [Cao Rongrong] Port to 2.6.38
  *	2013/01/14 - [Ken He] Port to 3.8
  *
+ * Copyright (C) 2012-2026, Ambarella, Inc.
+ *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
  */
 
 #include <linux/module.h>
