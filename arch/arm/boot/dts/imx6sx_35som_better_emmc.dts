@@ -303,21 +303,21 @@
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_i2c1>;
         status = "okay";
-	m41t11: m41t11@68 {  
-		compatible = "st,m41t11"; 
+	m41t82: m41t82@68 {
+		compatible = "st,m41t82";
 		reg = <0x68>;
             	status = "okay"; 
 	};
 
-	tca6416: tca6416@21 {
-		compatible = "ti,tca6416";
+	tca6408led: tca6408led@21 {
+		compatible = "ti,tca6408";
 		reg = <0x21>;
 		#gpio-cells = <2>;
 		gpio-controller;
 	};
 
-	tca6416siren: tca6416@20 {
-		compatible = "ti,tca6416";
+	tca6408: tca6408@20 {
+		compatible = "ti,tca6408";
 		reg = <0x20>;
 		#gpio-cells = <2>;
 		gpio-controller;
