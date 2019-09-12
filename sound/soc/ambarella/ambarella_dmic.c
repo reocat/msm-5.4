@@ -140,12 +140,12 @@ static int ambarella_dmic_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		regmap_update_bits(priv_data->reg_scr, 0xc, DMIC_I2S_SEL_MASK, DMIC_I2S_SEL_MASK);
+		regmap_update_bits(priv_data->reg_scr, DMIC_I2S_SEL_OFFSET, DMIC_I2S_SEL_MASK, DMIC_I2S_SEL_MASK);
 		ambarella_dmic_enable(priv_data);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		regmap_update_bits(priv_data->reg_scr, 0xc, DMIC_I2S_SEL_MASK, 0x00000000);
+		regmap_update_bits(priv_data->reg_scr, DMIC_I2S_SEL_OFFSET, DMIC_I2S_SEL_MASK, 0x00000000);
 		ambarella_dmic_disbale(priv_data);
 		break;
 	default:

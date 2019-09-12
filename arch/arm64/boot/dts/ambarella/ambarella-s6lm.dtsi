@@ -1040,6 +1040,13 @@
 			status = "disabled";
 		};
 
+		dmic: dmic@e0015000 {
+			compatible = "ambarella,dmic";
+			reg = <0xe0015000 0x1000>;
+			amb,scr-regmap = <&scratchpad_syscon>;
+			#sound-dai-cells = <0>;
+		};
+
 		uart1: uart@e0017000 {
 			compatible = "ambarella,uart";
 			reg = <0xe0017000 0x1000>;
