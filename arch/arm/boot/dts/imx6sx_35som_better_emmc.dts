@@ -209,6 +209,7 @@
 		ethphy1: ethernet-phy@1 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
+			micrel,led-mode = <0>;
 		};
 			
 	};
@@ -234,6 +235,7 @@
 		ethphy2: ethernet-phy@2 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <2>;
+			micrel,led-mode = <0>;
 		};
 
 		
@@ -380,6 +382,11 @@
 		reg = <0x20>;
 		#gpio-cells = <2>;
 		gpio-controller;
+	};
+	
+	ATECC608A: ATECC608A@60 {
+		compatible = "ATECC608A";
+		reg = <0x60>;
 	};
 
 	/*Hi253@20 {
