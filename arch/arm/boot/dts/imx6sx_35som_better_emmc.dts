@@ -157,7 +157,12 @@
 			"Mic Bias", "AMIC";
 		mux-int-port = <2>;
 		mux-ext-port = <3>;
-	};	
+	};
+	beeper {
+        compatible = "pwm-beeper";
+        pwms = <&pwm4 0 1000000>;
+        status = "okay";
+    };
 };
 
 &gpmi {
@@ -343,6 +348,8 @@
 
                 //cam18v-en-gpios = <&gpio3 3 0>;
                 //cam28v-en-gpios = <&gpio3 4 0>;
+				cam18v-en-gpios = <&tca6408 1 0>;
+                cam28v-en-gpios = <&tca6408 2 0>;
 
                 csi_id = <0>;
                 mclk = <24000000>;

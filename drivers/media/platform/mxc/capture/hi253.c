@@ -3783,31 +3783,31 @@ Hi253_probe1(struct i2c_client *client, const struct i2c_device_id *id)
 
 	/* request cam18v-en gpio pin */
 	cam18_gpio = of_get_named_gpio(dev->of_node, "cam18v-en-gpios", 0);
-	/*if (!gpio_is_valid(cam18_gpio)) {
+	if (!gpio_is_valid(cam18_gpio)) {
 		dev_err(dev, "no cam18-en-gpio pin available\n");
 		return -EINVAL;
 	}
 	retval = devm_gpio_request_one(dev, cam18_gpio, GPIOF_OUT_INIT_HIGH,
-					"cam18_en");*/
-
-	retval = devm_gpio_request_one(dev, 466, GPIOF_OUT_INIT_HIGH,
 					"cam18_en");
-	printk("retval-111111111=%d\r\n", retval);
-	/*if (retval < 0)
-		return retval;*/
+
+	/*retval = devm_gpio_request_one(dev, 466, GPIOF_OUT_INIT_HIGH,
+					"cam18_en");
+	printk("retval-111111111=%d\r\n", retval);*/
+	if (retval < 0)
+		return retval;
 
 	/* request cam28v-en gpio pin */
-	/*cam28_gpio = of_get_named_gpio(dev->of_node, "cam28v-en-gpios", 0);
+	cam28_gpio = of_get_named_gpio(dev->of_node, "cam28v-en-gpios", 0);
 	if (!gpio_is_valid(cam28_gpio)) {
 		dev_err(dev, "no cam28-en pin available\n");
 		return -EINVAL;
 	}
 	retval = devm_gpio_request_one(dev, cam28_gpio, GPIOF_OUT_INIT_HIGH,
-					"cam28_en");*/
-	retval = devm_gpio_request_one(dev, 467, GPIOF_OUT_INIT_HIGH,
 					"cam28_en");
-	/*if (retval < 0)
-		return retval;*/
+	/*retval = devm_gpio_request_one(dev, 467, GPIOF_OUT_INIT_HIGH,
+					"cam28_en");*/
+	if (retval < 0)
+		return retval;
 
 
 	/* Set initial values for the sensor struct. */
@@ -3906,7 +3906,7 @@ Hi253_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	/* request cam28v-en gpio pin */
-	/*cam28_gpio = of_get_named_gpio(dev->of_node, "cam28v-en-gpios", 0);
+	cam28_gpio = of_get_named_gpio(dev->of_node, "cam28v-en-gpios", 0);
 	if (!gpio_is_valid(cam28_gpio)) {
 		dev_err(dev, "no cam28-en pin available\n");
 		return -EINVAL;
@@ -3914,13 +3914,13 @@ Hi253_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	retval = devm_gpio_request_one(dev, cam28_gpio, GPIOF_OUT_INIT_HIGH,
 					"cam28_en");
 	if (retval < 0)
-		return retval;*/
-	retval = devm_gpio_request_one(dev, 467, GPIOF_OUT_INIT_HIGH,
-					"cam28_en");
+		return retval;
+	/*retval = devm_gpio_request_one(dev, 467, GPIOF_OUT_INIT_HIGH,
+					"cam28_en");*/
 
 
 	/* request cam18v-en gpio pin */
-	/*cam18_gpio = of_get_named_gpio(dev->of_node, "cam18v-en-gpios", 0);
+	cam18_gpio = of_get_named_gpio(dev->of_node, "cam18v-en-gpios", 0);
 	if (!gpio_is_valid(cam18_gpio)) {
 		dev_err(dev, "no cam18-en-gpio pin available\n");
 		return -EINVAL;
@@ -3928,9 +3928,9 @@ Hi253_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	retval = devm_gpio_request_one(dev, cam18_gpio, GPIOF_OUT_INIT_HIGH,
 					"cam18_en");
 	if (retval < 0)
-		return retval;*/
-	retval = devm_gpio_request_one(dev, 466, GPIOF_OUT_INIT_HIGH,
-					"cam18_en");
+		return retval;
+	/*retval = devm_gpio_request_one(dev, 466, GPIOF_OUT_INIT_HIGH,
+					"cam18_en");*/
 
 	/* Set initial values for the sensor struct. */
 	/* request power down pin */

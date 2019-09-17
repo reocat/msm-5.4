@@ -448,6 +448,8 @@
 
                 //cam18v-en-gpios = <&gpio3 3 0>;
                 //cam28v-en-gpios = <&gpio3 4 0>;
+				cam18v-en-gpios = <&tca6416power 2 0>;
+                cam28v-en-gpios = <&tca6416power 3 0>;
 
                 csi_id = <0>;
                 mclk = <24000000>;
