@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2004-2029, Ambarella, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
 #ifndef __SMCCC_IO_H__
 #define __SMCCC_IO_H__
 
@@ -11,6 +29,7 @@
 #define writel_relaxed(v,c)	((void)__smccc_writel((__force u32)cpu_to_le32(v),(c)))
 #define writeq_relaxed(v,c)	((void)__smccc_writeq((__force u64)cpu_to_le64(v),(c)))
 #define ioremap(addr, size)	__smccc_ioremap((addr), (size))
+#define iounmap(addr)		__smccc_iounmap((addr))
 
 #define SMCCC_WRITE(a,v,w)	{ if (!__smccc_write((a), (v), (w))) return;}
 #define SMCCC_READ(a,w)		{ u64 __val; if (!__smccc_read((a), &__val, (w))) return __val;}
@@ -19,8 +38,10 @@ extern int __smccc_write(volatile void __iomem *addr, u64 val, u8 width);
 extern int __smccc_read(const volatile void __iomem *addr, u64 *val, u8 width);
 extern void __smccc_virt_hacker(phys_addr_t phys_addr,
 		void __iomem *virt_addr, size_t length);
+extern void __smccc_virt_unhacker(volatile void __iomem *virt_addr);
 
 extern void __iomem *__ioremap(phys_addr_t phys_addr, size_t size, pgprot_t prot);
+extern void __iounmap(volatile void __iomem *io_addr);
 
 static inline u8 __smccc_readb(const volatile void __iomem *addr)
 {
@@ -77,5 +98,11 @@ static inline void __iomem *__smccc_ioremap(phys_addr_t phys_addr, size_t size)
 	__smccc_virt_hacker(phys_addr, virt, size);
 
 	return virt;
+}
+
+static inline void __smccc_iounmap(volatile void __iomem *virt)
+{
+	__iounmap(virt);
+	__smccc_virt_unhacker(virt);
 }
 #endif
