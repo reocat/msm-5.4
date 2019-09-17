@@ -411,6 +411,7 @@ static void serial_ambarella_dma_rx_irq(struct ambarella_uart_port *amb_port)
 	size_t pending;
 
 	dmaengine_tx_status(amb_port->rx_dma_chan, amb_port->rx_cookie, &state);
+	dmaengine_terminate_all(amb_port->rx_dma_chan);
 
 	pending = amb_port->rx_bytes_requested - state.residue;
 	BUG_ON(pending > AMBA_UART_RX_DMA_BUFFER_SIZE);
