@@ -198,10 +198,8 @@ int __init ambarella_scm_init(void)
 	struct device_node *node;
 
 	node = of_find_node_by_name(NULL, "psci");
-	if (node == NULL) {
-		pr_err("'psci' node is not found, please check your device tree.\n");
+	if (node == NULL)
 		return 0;
-	}
 
 	method = of_get_property(node, "method", &len);
 	if (method == NULL) {
