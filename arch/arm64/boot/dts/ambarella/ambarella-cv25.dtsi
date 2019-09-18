@@ -54,10 +54,6 @@
 		ranges;
 	};
 
-	secure-world {
-		device = <&scratchpad_rtc>;
-	};
-
 	vp_module: vp_module {
 		compatible = "ambarella,vp-module";
 		interrupts = <0 106 0x4>;
@@ -1139,7 +1135,7 @@
 		reg = <0xe8000000 0x01000000>;
 		ranges;
 
-		scratchpad_rtc:rtc@e8001000 {
+		rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
 		};

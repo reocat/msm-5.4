@@ -21,6 +21,7 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <plat/rct.h>
+#include <mach/io.h>
 
 #define	AMBA_RNG_CONTROL			0x00
 #define	AMBA_RNG_DATA				0x04
@@ -33,6 +34,9 @@ struct ambarella_rng_private {
 	struct regmap *rct_reg;
 };
 
+static u32 (*amb_readl)(volatile void __iomem *base);
+static void (*amb_writel)(u32 value, volatile void __iomem *base);
+
 static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wait)
 {
 	struct ambarella_rng_private *priv;
@@ -42,13 +46,13 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 	priv = container_of(rng, struct ambarella_rng_private, rng);
 
 	/* start rng */
-	val = readl_relaxed(priv->base + AMBA_RNG_CONTROL);
+	val = amb_readl(priv->base + AMBA_RNG_CONTROL);
 	val |= BIT(1);
-	writel_relaxed(val, priv->base + AMBA_RNG_CONTROL);
+	amb_writel(val, priv->base + AMBA_RNG_CONTROL);
 
 	start_time = jiffies_to_msecs(jiffies);
 
-	while (!(readl_relaxed(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
+	while (!(amb_readl(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
 		timeout = jiffies_to_msecs(jiffies) - start_time;
 		if (timeout < AMBA_RNG_DELAY_MS) {
 			cpu_relax();
@@ -62,7 +66,7 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 	/* need to delay before read random data,why? */
 	mdelay(100);
 	while (read * 8 < max) {
-		*data++ = readl_relaxed(priv->base + AMBA_RNG_DATA + read);
+		*data++ = amb_readl(priv->base + AMBA_RNG_DATA + read);
 		read += 4;
 	}
 
@@ -101,6 +105,9 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	ambarella_fixup_secure_world(of_property_read_bool(np, "amb,secure-device"),
+			&amb_readl, &amb_writel);
+
 	priv->rng.name = dev_driver_string(&pdev->dev);
 	priv->rng.read = ambarella_rng_read;
 	priv->rng.priv = (unsigned long)&pdev->dev;
@@ -108,10 +115,10 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, priv);
 
 	/* set sample rate */
-	val = readl_relaxed(priv->base + AMBA_RNG_CONTROL);
+	val = amb_readl(priv->base + AMBA_RNG_CONTROL);
 	val |= BIT(4);
 	val &= ~BIT(5);
-	writel_relaxed(val, priv->base + AMBA_RNG_CONTROL);
+	amb_writel(val, priv->base + AMBA_RNG_CONTROL);
 
 	/* power up rng */
 	regmap_update_bits(priv->rct_reg, RNG_CTRL_OFFSET, RNG_CTRL_PD, 0x0);

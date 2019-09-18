@@ -52,10 +52,6 @@
 		ranges;
 	};
 
-	secure-world {
-		device = <&scratchpad_rtc>;
-	};
-
 	psci {
 		compatible = "arm,psci-0.2";
 		method = "smc";
@@ -1124,7 +1120,7 @@
 		reg = <0xe8000000 0x01000000>;
 		ranges;
 
-		scratchpad_rtc:rtc@e8001000 {
+		rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
 		};

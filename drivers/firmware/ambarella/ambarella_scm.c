@@ -21,16 +21,6 @@
 #include <linux/of.h>
 #include "ambarella_scm.h"
 
-struct smc_dev_s {
-	u64 addr;
-	u32 length;
-	struct list_head list;
-};
-
-static LIST_HEAD(smc_virt_list);
-
-DEFINE_SPINLOCK(smc_virt_list_l);
-
 static int ambarella_scm_query(void)
 {
 	u32 fn;
@@ -118,93 +108,6 @@ static void ambarella_pm_sip(void)
 }
 
 /* ---------------------------------------------------------------------------- */
-static int of_dt_secure_world(phys_addr_t phys_addr)
-{
-	struct device_node *node, *np;
-	u32 val[2];
-	int index, rval;
-
-	node = of_find_node_by_name(NULL, "secure-world");
-	if (!node) {
-		pr_err("missing 'secure' DT node\n");
-		return 0;
-	}
-
-	for (index = 0; ;index ++) {
-
-		np = of_parse_phandle(node, "device", index);
-		if (!np)
-			break;
-
-		rval = of_property_read_u32_array(np, "reg", val, 2);
-		if (rval)
-			break;
-
-		if ((u32)phys_addr == clamp((u32)phys_addr, val[0], val[0] + val[1]))
-			return 1;
-	}
-
-	return 0;
-}
-
-void __smccc_virt_hacker(phys_addr_t phys_addr, void __iomem *virt_addr,
-		size_t length)
-{
-	struct smc_dev_s *new;
-	unsigned long flags;
-
-
-	if (of_dt_secure_world(phys_addr)) {
-
-		new = vmalloc(sizeof(struct smc_dev_s));
-		if (!new)
-			return;
-
-		new->addr = (u64)virt_addr;
-		new->length = length;
-
-		spin_lock_irqsave(&smc_virt_list_l, flags);
-		list_add_tail(&new->list, &smc_virt_list);
-		spin_unlock_irqrestore(&smc_virt_list_l, flags);
-	}
-}
-
-void __smccc_virt_unhacker(volatile void __iomem *virt_addr)
-{
-	struct smc_dev_s *smc_dev, *tmp;
-	unsigned long flags;
-
-	spin_lock_irqsave(&smc_virt_list_l, flags);
-
-	list_for_each_entry_safe(smc_dev, tmp, &smc_virt_list, list)
-		if ((u64)virt_addr == clamp((u64)virt_addr, smc_dev->addr,
-					smc_dev->addr + smc_dev->length)) {
-			list_del_init(&smc_dev->list);
-			vfree(smc_dev);
-		}
-
-	spin_unlock_irqrestore(&smc_virt_list_l, flags);
-}
-
-static int scan_virt_hacker_list(const volatile void __iomem *virt_addr)
-{
-
-	struct smc_dev_s *device;
-	u64 addr = (u64)virt_addr;
-	unsigned long flags;
-
-	spin_lock_irqsave(&smc_virt_list_l, flags);
-	list_for_each_entry(device, &smc_virt_list, list) {
-		if (addr == clamp(addr, device->addr, device->addr + device->length)) {
-			spin_unlock_irqrestore(&smc_virt_list_l, flags);
-			return 1;
-		}
-	}
-	spin_unlock_irqrestore(&smc_virt_list_l, flags);
-
-	return 0;
-
-}
 
 int __smccc_read(const volatile void __iomem *addr, u64 *val, u8 width)
 {
@@ -213,12 +116,11 @@ int __smccc_read(const volatile void __iomem *addr, u64 *val, u8 width)
 	u64 offset;
 	u32 fn, cmd;
 
-	if (!scan_virt_hacker_list(addr))
-		return -ENXIO;
-
 	vm = find_vm_area((const void *)addr);
-	if (!vm)
+	if (!vm) {
+		pr_err("SMCCC read: can't find vm info.\n");
 		return -ENXIO;
+	}
 
 	offset = (u64)addr & (vm->size - PAGE_SIZE - 1);
 	switch (width) {
@@ -256,12 +158,11 @@ int __smccc_write(volatile void __iomem *addr, u64 val, u8 width)
 	u32 fn, cmd;
 	u64 offset;
 
-	if (!scan_virt_hacker_list(addr))
-		return -ENXIO;
-
 	vm = find_vm_area((const void *)addr);
-	if (!vm)
+	if (!vm) {
+		pr_err("SMCCC write: can't find vm info.\n");
 		return -ENXIO;
+	}
 
 	offset = (u64)addr & (vm->size - PAGE_SIZE - 1);
 	switch (width) {
@@ -311,8 +212,6 @@ int __init ambarella_scm_init(void)
 	/* if psci method is set as spin table, return to not access smc */
 	if (strncmp(method, "smc", 3))
 		return 0;
-
-	spin_lock_init(&smc_virt_list_l);
 
 	BUG_ON(ambarella_scm_query() != ARM_SMCCC_SMC_64);
 	ambarella_pm_sip();
