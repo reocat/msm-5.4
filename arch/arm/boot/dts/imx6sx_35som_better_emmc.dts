@@ -584,7 +584,7 @@
 	status = "okay";
 };
 
-
+//Port P3: LTE EXPANSION
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
@@ -628,10 +628,10 @@
 	};
 };
 
-//PORT3(PORT7)
+//Port P3: LTE EXPANSION
 &ecspi5 {
 	fsl,spi-num-chipselects = <1>;
-	/*cs-gpios = <&gpio4 28 0>;*/
+	cs-gpios = <&gpio4 28 GPIO_ACTIVE_LOW>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi5>;
 	status = "okay";
@@ -655,6 +655,17 @@
     dr_mode = "host";
 	status = "okay";
 };
+
+//Port P3: LTE EXPANSION
+&usbotg2 {
+        pinctrl-names = "default";
+        srp-disable;
+        hnp-disable;
+        adp-disable;
+        dr_mode = "host";
+        status = "okay";
+};
+
 
 /*&usdhc1 {
 	pinctrl-names = "default";
@@ -910,6 +921,8 @@
 			fsl,pins = <
 				MX6SX_PAD_SD3_DATA5__UART3_TX		0x1b0b1
 				MX6SX_PAD_SD3_DATA4__UART3_RX		0x1b0b1
+				MX6SX_PAD_SD3_DATA6__UART3_RTS_B	0x1b0b1
+				MX6SX_PAD_SD3_DATA7__UART3_CTS_B	0x1b0b1
 			>;
 		};
 
@@ -958,12 +971,13 @@
 			>;
 		};
 		
+		//Port P3: LTE EXPANSION
 		pinctrl_ecspi5: ecspi5grp {
 			fsl,pins = <
 				MX6SX_PAD_QSPI1A_DQS__ECSPI5_MOSI	0x1b0b9     //0x1b089//QSPI1A_DQS
 				MX6SX_PAD_QSPI1A_SS1_B__ECSPI5_MISO	0x1b0b9     //QSPI1A_SS1_B
 				MX6SX_PAD_QSPI1B_SS1_B__ECSPI5_SCLK 0x1b0b9     //0x1b089//QSPI1B_SS1_B
-				MX6SX_PAD_QSPI1B_DQS__ECSPI5_SS0    0x0b0b9  	//0x0b089//QSPI1B_DQS
+				MX6SX_PAD_QSPI1B_DQS__GPIO4_IO_28	0x0b0b9	    //0x0b089//QSPI1B_DQS
 			>;
 		};
 		
