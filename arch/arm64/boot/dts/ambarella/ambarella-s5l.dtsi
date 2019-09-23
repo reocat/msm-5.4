@@ -689,6 +689,7 @@
 			clocks = <&gclk_ssi3>;
 			dmas = <&dma 4>, <&dma 5>;
 			dma-names = "tx", "rx";
+			max-frequency = <50000000>;
 			status = "disabled";
 		};
 
