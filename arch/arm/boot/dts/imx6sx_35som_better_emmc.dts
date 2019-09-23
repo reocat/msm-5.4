@@ -721,7 +721,11 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog_1>;
+	pinctrl-0 = <
+        &pinctrl_hog_1
+        &pinctrl_button
+        &pinctrl_digital_gpio
+    >;
 	imx6x-sg {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
@@ -729,6 +733,28 @@
 			>;
 		};
 		
+        pinctrl_button: hoggrp-2 {
+            fsl,pins = <
+                /* button pull up */
+                MX6SX_PAD_GPIO1_IO11__GPIO1_IO_11        0xF000
+                MX6SX_PAD_NAND_RE_B__GPIO4_IO_12         0xF000
+            >;
+        };
+
+        pinctrl_digital_gpio: hoggrp-3 {
+            fsl,pins = <
+                /* digital gpio pull up */
+                MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8       0xF000
+                MX6SX_PAD_NAND_DATA00__GPIO4_IO_4        0xF000
+
+                MX6SX_PAD_LCD1_DATA00__GPIO3_IO_1        0xF000
+                MX6SX_PAD_LCD1_DATA01__GPIO3_IO_2        0xF000
+                MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3        0xF000
+                MX6SX_PAD_LCD1_DATA03__GPIO3_IO_4        0xF000
+                MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24       0xF000
+           >;
+        };
+
 		pinctrl_enet1_1: enet1grp-1 {
 			fsl,pins = <
 				MX6SX_PAD_ENET2_COL__ENET1_MDC        	0xa089 
