@@ -601,6 +601,21 @@
 				amb,pinmux-ids = <0x1019 0x101a>;
 			};
 
+			dmic0_pins: dmic_pins@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x3014 0x3015>;
+			};
+
+			dmic1_pins: dmic_pins@1 {
+				reg = <1>;
+				amb,pinmux-ids = <0x3016 0x3017>;
+			};
+
+			dmic2_pins: dmic_pins@2 {
+				reg = <2>;
+				amb,pinmux-ids = <0x4019 0x401a>;
+			};
+
 			usb_host0_pins_a: uhc0@0 { /* USB0: host/device configurable */
 				reg = <0>;
 				amb,pinmux-ids = <0x3019 0x301a>;
