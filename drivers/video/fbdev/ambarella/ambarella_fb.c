@@ -49,7 +49,7 @@ module_param(buffernum, int, 0444);
 MODULE_PARM_DESC(buffernum, "Initial cycle buffer number.");
 
 #define MIN_XRES	16
-#define MIN_YRES	16
+#define MIN_YRES	1
 #define MAX_XRES	2048
 #define MAX_YRES	2048
 
@@ -153,14 +153,15 @@ static int ambfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	u32 smem_len, i, size = sizeof(struct fb_bitfield);
 	int rval;
 
-	var->xres_virtual = var->xres;
-	var->yres_virtual = var->yres * buffernum;
-
 	/* Basic geometry sanity checks. */
 	if (var->xres < MIN_XRES)
 		var->xres = MIN_XRES;
 	if (var->yres < MIN_YRES)
 		var->yres = MIN_YRES;
+
+	var->xres_virtual = var->xres;
+	var->yres_virtual = var->yres * buffernum;
+
 	if (var->xres > MAX_XRES)
 		return -EINVAL;
 	if (var->yres > MAX_YRES)
