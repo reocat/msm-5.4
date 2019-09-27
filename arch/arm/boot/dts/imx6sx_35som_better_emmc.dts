@@ -500,7 +500,18 @@
 };
 
 &qspi2 {
-	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_qspi2>;
+	status = "okay";
+	ddrsmp=<0>;	//or 2
+
+	flash0: w25q128@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "winbond,w25q128";
+		spi-max-frequency = <15625000>;
+		reg = <0>;
+	};
 };
 
 &qspi_m4 {
@@ -918,6 +929,17 @@
 				MX6SX_PAD_GPIO1_IO12__PWM3_OUT 0x1b0b1	//old: 0x110b0
 			>;
 		};	
+		
+		pinctrl_qspi2: qspi2grp {
+			fsl,pins = <
+				MX6SX_PAD_NAND_CLE__QSPI2_A_SCLK		0x70a1
+				MX6SX_PAD_NAND_CE1_B__QSPI2_A_DATA_3	0x70a1
+				MX6SX_PAD_NAND_CE0_B__QSPI2_A_DATA_2	0x70a1
+				MX6SX_PAD_NAND_READY_B__QSPI2_A_DATA_1	0x70a1
+				MX6SX_PAD_NAND_WP_B__QSPI2_A_DATA_0		0x70a1
+				MX6SX_PAD_NAND_ALE__QSPI2_A_SS0_B		0x70a1
+			>;
+		};
 
 		pinctrl_pwm4_0: pwm4grp-0 {
 			fsl,pins = <
