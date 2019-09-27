@@ -623,10 +623,10 @@
 	status = "okay";
 };
 
-//PORT5(PORT6)
+//PORT P1: Common module
 &ecspi1 {
 	fsl,spi-num-chipselects = <1>;
-	//cs-gpios = <&gpio2 16 1>; no need to configure here, we set SS as GPIO in pinctrl_ecspi1
+	cs-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
 	status = "okay";
@@ -637,6 +637,23 @@
 		dmas = <&sdma 3 7 1>, <&sdma 4 7 2>;
 		dma-names = "rx", "tx";
 	};
+};
+
+//Port P2: Common module
+&ecspi3 {
+    fsl,spi-num-chipselects = <1>;
+    cs-gpios = <&gpio4 30 GPIO_ACTIVE_LOW>;
+    
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_ecspi3>;
+    status = "okay";
+    spidev@0 {
+            compatible = "rohm,dh2228fv";
+            spi-max-frequency = <20000000>;
+            reg = <0>;
+            dmas = <&sdma 7 7 1>, <&sdma 8 7 2>;
+            dma-names = "rx", "tx";
+        };
 };
 
 //Port P3: LTE EXPANSION
@@ -1015,10 +1032,21 @@
 				MX6SX_PAD_QSPI1A_DATA0__ECSPI1_MOSI	0x1b0b9		//0x1b089
 				MX6SX_PAD_QSPI1A_DATA1__ECSPI1_MISO	0x1b0b9		//0x1b0b9
 				MX6SX_PAD_QSPI1A_SCLK__ECSPI1_SCLK	0x1b0b9		//0x1b0b9
-				MX6SX_PAD_QSPI1A_SS0_B__ECSPI1_SS0	0x0b0b9		//0x0b089
+				//MX6SX_PAD_QSPI1A_SS0_B__ECSPI1_SS0	0x0b0b9		//0x0b089
+				MX6SX_PAD_QSPI1A_SS0_B__GPIO4_IO_22     0x0b0b9
 			>;
 		};
 		
+        pinctrl_ecspi3: ecspi3grp {
+            fsl,pins = <
+                MX6SX_PAD_QSPI1B_DATA0__ECSPI3_MOSI 0x1b0b9
+                MX6SX_PAD_QSPI1B_DATA1__ECSPI3_MISO 0x1b0b9
+                MX6SX_PAD_QSPI1B_SCLK__ECSPI3_SCLK     0x1b0b9
+                //MX6SX_PAD_QSPI1B_SS0_B__ECSPI3_SS0      0x0b0b9
+                MX6SX_PAD_QSPI1B_SS0_B__GPIO4_IO_30       0x0b0b9
+            >;
+        };
+                        
 		//Port P3: LTE EXPANSION
 		pinctrl_ecspi5: ecspi5grp {
 			fsl,pins = <
