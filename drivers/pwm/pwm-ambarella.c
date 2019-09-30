@@ -80,6 +80,7 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	void __iomem *reg;
 	u32 tick_bits, val, div;
 	u64 on, off, pwm_clock;
+	u32 xon, xoff;
 
 	/* we arrange the id of the individual pwm to the last one */
 	if (ambpwm->base2 && pwm->hwpwm == PWM_INSTANCES - 1) {
@@ -99,17 +100,21 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	writel_relaxed(val, reg);
 
 	pwm_clock = clk_get_rate(ambpwm->clk);
-	for (div = 1; div < (1 << 30); div++) {
-		off = pwm_clock * ((u64)period_ns - (u64)duty_ns);
+	for (div = 1; div <= (1 << 30); div++) {
+		on = pwm_clock * (u64)duty_ns;
+		do_div(on, div);
+		do_div(on, 1000000000);
+
+		off = pwm_clock * (u64)(period_ns - duty_ns);
 		do_div(off, div);
 		do_div(off, 1000000000);
 
-		on = duty_ns * off;
-		do_div(on, (u64)(period_ns - duty_ns));
-
-		if ((on < (1 << 16)) && (off < (1 << 16)))
+		if ((on <= (1 << 16)) && (off <= (1 << 16)))
 			break;
 	}
+
+	if (div > (1 << 30))
+		return -EINVAL;
 
 	reg = base + ambpwm_divider_offset[pwm->hwpwm];
 	val = readl_relaxed(reg);
@@ -122,11 +127,13 @@ static int ambarella_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	if (off == 0)
 		off = 1;
 
+	xon = (u32)on - 1;
+	xoff = (u32)off -1;
 	reg = base + ambpwm_data_offset[pwm->hwpwm];
 	if (ambpwm->polarity[pwm->hwpwm] == PWM_POLARITY_NORMAL)
-		writel_relaxed((on - 1) << tick_bits | (off - 1), reg);
+		writel_relaxed(xon << tick_bits | xoff, reg);
 	else
-		writel_relaxed((off - 1) << tick_bits | (on - 1), reg);
+		writel_relaxed(xoff << tick_bits | xon, reg);
 
 	return 0;
 }
