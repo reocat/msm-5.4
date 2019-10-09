@@ -107,14 +107,14 @@
 			status = "okay";
 		};
 */
-		reg_backlight_pwr: regulator@4 {
+/*		reg_backlight_pwr: regulator@4 {
 			compatible = "regulator-fixed";
 			reg = <4>;
 			regulator-name = "backlight-pwr";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 		};
-		
+*/		
 		reg_psu_5v: regulator@3 {
 			compatible = "regulator-fixed";
 			reg = <3>;
