@@ -226,7 +226,7 @@ static int ambarella_pwm_probe(struct platform_device *pdev)
 	if (IS_ERR(ambpwm->clk))
 		return PTR_ERR(ambpwm->clk);
 
-	clk_set_rate(clk_get(NULL, "gclk_pwm"), PWM_DEFAULT_FREQUENCY);
+	clk_set_rate(ambpwm->clk, PWM_DEFAULT_FREQUENCY);
 
 	ambpwm->chip.dev = &pdev->dev;
 	ambpwm->chip.ops = &ambarella_pwm_ops;
@@ -249,8 +249,15 @@ static int ambarella_pwm_probe(struct platform_device *pdev)
 static int ambarella_pwm_remove(struct platform_device *pdev)
 {
 	struct ambarella_pwm_chip *ambpwm = platform_get_drvdata(pdev);
+	int rval;
 
-	return pwmchip_remove(&ambpwm->chip);
+	rval = pwmchip_remove(&ambpwm->chip);
+	if (rval < 0)
+		return rval;
+
+	clk_put(ambpwm->clk);
+
+	return 0;
 }
 
 #ifdef CONFIG_PM
