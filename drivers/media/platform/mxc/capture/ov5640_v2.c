@@ -121,6 +121,7 @@ struct ov5640 {
  */
 static struct ov5640 ov5640_data;
 static int pwn_gpio, rst_gpio;
+static int cam18_gpio, cam28_gpio;
 static int prev_sysclk;
 static int AE_Target = 52, night_mode;
 static int prev_HTS;
@@ -1750,7 +1751,31 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_err(dev, "setup pinctrl failed\n");
 		return PTR_ERR(pinctrl);
 	}
-
+	
+	/* request cam28v-en gpio pin */
+	cam28_gpio = of_get_named_gpio(dev->of_node, "cam28v-en-gpios", 0);
+	if (!gpio_is_valid(cam28_gpio)) {
+		dev_err(dev, "no cam28-en pin available\n");
+		return -EINVAL;
+	}
+	printk("cam28_gpio num0ber is %d", cam28_gpio);
+	retval = devm_gpio_request_one(dev, cam28_gpio, GPIOF_OUT_INIT_HIGH,
+					"cam28_en");
+	if (retval < 0)
+		return retval;
+	
+	/* request cam18v-en gpio pin */
+	cam18_gpio = of_get_named_gpio(dev->of_node, "cam18v-en-gpios", 0);
+	if (!gpio_is_valid(cam18_gpio)) {
+		dev_err(dev, "no cam18-en-gpio pin available\n");
+		return -EINVAL;
+	}
+	printk("cam18_gpio num0ber is %d", cam18_gpio);
+	retval = devm_gpio_request_one(dev, cam18_gpio, GPIOF_OUT_INIT_HIGH,
+					"cam18_en");
+	if (retval < 0)
+		return retval;
+	
 	/* request power down pin */
 	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
 	if (!gpio_is_valid(pwn_gpio)) {
