@@ -1385,7 +1385,7 @@ static int ambarella_sd_get_resource(struct platform_device *pdev,
 		return -ENXIO;
 	}
 
-	host->clk = clk_get(host->dev, NULL);
+	host->clk = devm_clk_get(host->dev, NULL);
 	if (IS_ERR(host->clk)) {
 		dev_err(host->dev, "Get PLL failed!\n");
 		return PTR_ERR(host->clk);
@@ -1620,7 +1620,7 @@ static void __exit ambarella_sd_exit(void)
 	platform_driver_unregister(&ambarella_sd_driver);
 }
 
-fs_initcall(ambarella_sd_init);
+module_init(ambarella_sd_init);
 module_exit(ambarella_sd_exit);
 
 MODULE_DESCRIPTION("Ambarella Media Processor SD/MMC Host Controller");
