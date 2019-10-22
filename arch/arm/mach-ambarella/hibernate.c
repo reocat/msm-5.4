@@ -374,9 +374,9 @@ static int hibernate_mtd_write(struct mtd_info *mtd)
 	header = (struct swsusp_info *)data_of(snapshot);
 
 	/* TODO: SWP partition space size check */
-	if (header->pages * 0x1000 > mtd->size){
-		printk("ERR: swp partition[0x%llx] has not enough space for the \
-				kernel snapshot[0x%lx]\n", mtd->size, header->pages * 0x1000);
+	if (!hibernate_lzo_enable && header->pages * 0x1000 > mtd->size) {
+		printk("ERR: swp partition[0x%llx] has not enough space for the "
+				"kernel snapshot[0x%lx]\n", mtd->size, header->pages * 0x1000);
 			return -ENOMEM;
 	}
 
