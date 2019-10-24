@@ -1,6 +1,6 @@
 /*
  * linux/drivers/spi/spi-slave-ambarella.c
- *
+ *	!!!!!!!! THIS SPISLAVE CAN only works in SPI_MODE_3 !!!!!!!
  * History:
  *	2012/02/21 - [Zhenwu Xue]  created file
  *
@@ -34,6 +34,7 @@
 #include <linux/ioctl.h>
 #include <linux/types.h>
 #include <linux/poll.h>
+#include <linux/pinctrl/consumer.h>
 
 #include <linux/kfifo.h>
 #include <linux/delay.h>
@@ -56,26 +57,19 @@
 #define SPI_SR_BUSY_MSK (0x1)
 #define SPI_SR_TXNF_MSK (0x2)
 #define SPI_SR_TXEPT_MSK (0x4)
+#define SPI_SR_TXE_MSK	(0x20)
 
 #define SPI_FIFO_DEPTH		(SPI_DATA_FIFO_SIZE_32)
 #define SPI_FIFO_DEPTH_MSK	(SPI_FIFO_DEPTH - 1)
-
 #define SLAVE_SPI_BUF_SIZE	PAGE_SIZE
 
+#define FIFO_DEPTH_MULTI	(4)
 
 /* export to user-space used by ioctl */
-struct slavespi_transfer {
-	void __user *tx_buf;
-	void __user *rx_buf;
-	unsigned int buf_len;
-
-	unsigned int txd_len;
-	unsigned int rxd_len;
-};
-
-#define SPI_SLAVE_MAGIC   (250)
-#define SPI_SLAVE_SET_TIMEOUT    _IOW(SPI_SLAVE_MAGIC, 0, int)
-#define SPI_SLAVE_IO_TRANSFER    _IOW(SPI_SLAVE_MAGIC, 1, struct slavespi_transfer)
+#define SPI_SLAVE_MAGIC			(250)
+#define SPI_IOC_RW_LSB_FIRST		_IOR(SPI_SLAVE_MAGIC, 0, __u8)
+#define SPI_IOC_RW_BITS_PER_WORD	_IOR(SPI_SLAVE_MAGIC, 1, __u8)
+#define SPI_IOC_WORK_MODE		_IOR(SPI_SLAVE_MAGIC, 2, __u8)
 
 /* slavespi controller */
 struct ambarella_slavespi {
@@ -91,7 +85,7 @@ struct ambarella_slavespi {
 
 	u32	mode;
 	u32	bpw;
-	u32 byte_wise;
+	u32	byte_wise;
 	u32	fifo_depth;
 
 	u32 buf_size;
@@ -102,19 +96,48 @@ struct ambarella_slavespi {
 	struct kfifo	w_fifo;
 	struct kfifo	r_fifo;
 
-	u32 want_read;
+	u32 want_cnt;
 	spinlock_t w_buf_lock;
 	spinlock_t r_buf_lock;
+	spinlock_t wakeup_lock;
 
 	atomic_t open_once;
-	spinlock_t hw_lock;  /* access hardware */
 	struct mutex um_mtx;
 
 	int timeout;
-	struct wait_queue_head wq_rhead;
-	struct wait_queue_head wq_whead;
-	struct wait_queue_head wq_poll;
+	u32 wakeup_mask;	/* bit0: read, bit1: write , bit2 poll */
+	wait_queue_head_t wq_rhead;
+	wait_queue_head_t wq_whead;
+	wait_queue_head_t wq_poll;
+	struct tasklet_struct wakeup_helper;
 };
+
+#define CAN_WAKEUP_BLOCK_R (0x1)
+#define CAN_WAKEUP_BLOCK_W (0x2)
+#define CAN_WAKEUP_POLL (0x4)
+static void wakeup_tasklet(unsigned long data)
+{
+	u32 mask = 0;
+	unsigned long flags;
+	struct ambarella_slavespi *priv	= (struct ambarella_slavespi *)data;
+
+	spin_lock_irqsave(&priv->wakeup_lock, flags);
+	mask = priv->wakeup_mask;
+	priv->wakeup_mask = 0;
+	spin_unlock_irqrestore(&priv->wakeup_lock, flags);
+
+	if (mask & CAN_WAKEUP_BLOCK_W) {
+		wake_up_interruptible(&priv->wq_whead);
+	}
+
+	if (mask & CAN_WAKEUP_BLOCK_R) {
+		wake_up_interruptible(&priv->wq_rhead);
+	}
+
+	if (mask & CAN_WAKEUP_POLL) {
+		wake_up_interruptible(&priv->wq_poll);
+	}
+}
 
 static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 {
@@ -129,11 +152,15 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 		return -EINVAL;
 	}
 
-	/* clear any fifo */
+	/* reset hardware fifo && disable slavespi */
 	writel_relaxed(1, priv->regbase + SPI_SSIENR_OFFSET);
 	udelay(1);
 	writel_relaxed(0, priv->regbase + SPI_SSIENR_OFFSET);
 	udelay(1);
+
+	/* reset r_fifo, w_fifo */
+	kfifo_reset(&priv->w_fifo);
+	kfifo_reset(&priv->r_fifo);
 
 	ctrl0_reg.w = 0;
 	ctrl0_reg.s.dfs = (priv->bpw - 1);
@@ -159,7 +186,10 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 		ctrl0_reg.s.rx_lsb = 0;
 	}
 
-	ctrl0_reg.s.byte_ws = 0;  /* PLEASE DO NOT USE BYTE_WISE FIFO */
+	if (priv->bpw > 8) {
+		ctrl0_reg.s.byte_ws = 0; /* bit-per-word >8 bits, no byte_wise */
+	}
+
 	ctrl0_reg.s.hold = 0;
 	ctrl0_reg.s.fc_en = 0;
 	ctrl0_reg.s.residue = 1;
@@ -169,15 +199,19 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 	kfifo_reset(&priv->w_fifo);
 	kfifo_reset(&priv->r_fifo);
 
-	/* TX_Threshold 8bytes, RX_Threadhold 1bytes */
-	writel_relaxed(7, priv->regbase + SPI_TXFTLR_OFFSET);
-	writel_relaxed(0, priv->regbase + SPI_RXFTLR_OFFSET);
+	/* TX_Threshold <=16bytes, >=RX_Threadhold 16bytes */
+	writel_relaxed(15, priv->regbase + SPI_TXFTLR_OFFSET);
+	writel_relaxed(15, priv->regbase + SPI_RXFTLR_OFFSET);
 
 	/* recvfifo interrupt */
 	writel_relaxed(SPI_RXFIS_MASK, priv->regbase + SPI_IMR_OFFSET);
 	writel_relaxed(0x0, priv->regbase + SPI_DMAC_OFFSET);
 
 	smp_wmb();
+	writel_relaxed(1, priv->regbase + SPI_SSIENR_OFFSET);
+	udelay(1);
+	writel_relaxed(0, priv->regbase + SPI_SSIENR_OFFSET);
+	udelay(1);
 	writel_relaxed(1, priv->regbase + SPI_SSIENR_OFFSET);
 
 	return 0;
@@ -189,167 +223,106 @@ static void slavespi_drain_rxfifo(struct ambarella_slavespi *priv)
 	u32 i = 0;
 	u32 len = 0;
 	u32 rxflr = 0;
-	u32 try_times = 2; /* try to read more data, but not too much */
 
-	do {
-		rxflr = readl_relaxed(priv->regbase + SPI_RXFLR_OFFSET);
-		if (!rxflr) {
-			break;
-		}
-
-		for (i = 0; i < rxflr; i++) {
-			if (!priv->byte_wise) {
-				((u16 *)priv->r_buf)[i] = readl_relaxed(priv->regbase + SPI_DR_OFFSET);
-			} else {
-				((u8 *)priv->r_buf)[i] = readl_relaxed(priv->regbase + SPI_DR_OFFSET);
-			}
-		}
-
-		if (!priv->byte_wise) {
-			rxflr <<= 1;
-		}
-		len = kfifo_in(&priv->r_fifo, priv->r_buf, rxflr);
-		if (len < rxflr) {
-			i = rxflr - len;
-			while (i--) { /* drop oldest */
-				kfifo_skip(&priv->r_fifo);
-			}
-
-			/* over write oldest */
-			len = kfifo_in(&priv->r_fifo, priv->r_buf + len, (rxflr - len));
-			if (len) {
-				pr_warn("spislave: recv drop %u bytes \n", len);
-			}
-		}
-
-		if (try_times) {
-			try_times--;
-		}
-	} while (rxflr && try_times);
-}
-
-static void ambarella_tx_isr_func(unsigned int spisr, void *dev_data)
-{
-	u32 i = 0;
-	u32 imr = 0;
-	u32 risr = 0;
-	u32 ept_fifo = 0;
-	u32 ept_bytes = 0;
-	u32 wfifo_len = 0;
-
-	struct ambarella_slavespi *priv	= dev_data;
-	risr = readl_relaxed(priv->regbase + SPI_RISR_OFFSET);
-
-	if ((!(spisr & SPI_TXEIS_MASK)) && (!(risr & SPI_TXEIS_MASK))) {
+	rxflr = readl_relaxed(priv->regbase + SPI_RXFLR_OFFSET);
+	if (0 == rxflr) {	/* data-fifo-entry = 0, no data avail */
 		return ;
 	}
 
-	spin_lock(&priv->w_buf_lock);
-
-	ept_fifo = priv->fifo_depth - readl_relaxed(priv->regbase + SPI_TXFLR_OFFSET);
-	if (kfifo_is_empty(&priv->w_fifo)) {
-		/* w_fifo is empty then disable txfifo empty interrupt */
-		imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
-		writel_relaxed(imr & ~SPI_TXEIS_MASK, priv->regbase + SPI_IMR_OFFSET);
-		spin_unlock(&priv->w_buf_lock);
-		goto out_tx_isr;
-	}
-
-	ept_bytes = ept_fifo;
-	if (!priv->byte_wise) {
-		ept_bytes <<= 1;
-	}
-	wfifo_len = kfifo_len(&priv->w_fifo);
-	ept_bytes = min_t(u32, ept_bytes, wfifo_len);
-
-	if (!priv->byte_wise) {
-		ept_bytes &= ~1;
-	}
-
-	ept_bytes = kfifo_out(&priv->w_fifo, priv->w_buf, ept_bytes);
-	if (!priv->byte_wise) {
-		ept_bytes >>= 1;
-	}
-
-	for (i = 0; i < ept_bytes; i++) {
-		if (!priv->byte_wise) {
-			writel_relaxed(((u16 *)priv->w_buf)[i], \
-				priv->regbase + SPI_DR_OFFSET);
+	for (i = 0; i < rxflr; i++) {
+		if (priv->bpw > 8) {
+			((u16 *)priv->r_buf)[i] = readl_relaxed(priv->regbase + SPI_DR_OFFSET);
 		} else {
-			writel_relaxed(((u8 *)priv->w_buf)[i], \
-				priv->regbase + SPI_DR_OFFSET);
+			((u8 *)priv->r_buf)[i] = readl_relaxed(priv->regbase + SPI_DR_OFFSET);
 		}
 	}
-	spin_unlock(&priv->w_buf_lock);
-
-	/* always enable TXEIS interrupt at here */
-	spin_lock(&priv->hw_lock);
-	imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
-	writel_relaxed((imr | SPI_TXEIS_MASK), priv->regbase + SPI_IMR_OFFSET);
-	spin_unlock(&priv->hw_lock);
-
-out_tx_isr:
-	if (!list_empty(&priv->wq_whead.head)) { /* for timeout write */
-		wake_up_interruptible(&priv->wq_whead);
+	if (priv->bpw > 8) {
+		rxflr <<= 1;
 	}
 
-	if (!list_empty(&priv->wq_poll.head)) { /* for poll write */
-		wake_up_interruptible(&priv->wq_poll);
-	}
-}
-
-static void ambarella_rx_isr_func(unsigned int spisr, void *dev_data)
-{
-	u32 risr = 0;
-	u32 can_wk_read = 0;
-	u32 can_wk_poll = 0;
-
-	struct ambarella_slavespi *priv = dev_data;
-	risr = readl_relaxed(priv->regbase + SPI_RISR_OFFSET);
-
-	if (!(spisr & SPI_RXFIS_MASK) && !(risr & SPI_RXFIS_MASK)) {
-		return ;
+	len = kfifo_in(&priv->r_fifo, priv->r_buf, rxflr);
+	if (rxflr > len) {
+		pr_warn("spislave: recv drop %u bytes \n", (rxflr - len));
 	}
 
-	spin_lock(&priv->r_buf_lock);
-
-	slavespi_drain_rxfifo(priv);
-
-	if (kfifo_len(&priv->r_fifo) >= priv->want_read) {
-		can_wk_read = 1;
-		can_wk_poll = 1;
-	} else {
-		if (!kfifo_is_empty(&priv->r_fifo)) {
-			can_wk_poll = 1;
-		}
-	}
-	spin_unlock(&priv->r_buf_lock);
-
-	if (can_wk_read) { /* for timeout read */
-		if (!list_empty(&priv->wq_rhead.head)) {
-			wake_up_interruptible(&priv->wq_rhead);
-		}
-	}
-
-	if (can_wk_poll) { /* for poll read */
-		if (!list_empty(&priv->wq_poll.head)) {
-			wake_up_interruptible(&priv->wq_poll);
-		}
-	}
+	return ;
 }
 
 static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 {
-	u32 status = 0;
+	int i = 0;
+	u32 isr = 0;
+	u32 imr = 0;
+	u32 risr = 0;
+	u32 data_len = 0;
+	u32 hw_free_len = 0;
+
 	struct ambarella_slavespi *priv	= dev_data;
 
-	status = readl_relaxed(priv->regbase + SPI_ISR_OFFSET);
+	isr = readl_relaxed(priv->regbase + SPI_ISR_OFFSET);
+	risr = readl_relaxed(priv->regbase + SPI_RISR_OFFSET);
 
-	ambarella_tx_isr_func(status, dev_data);
-	ambarella_rx_isr_func(status, dev_data);
+	if ((risr & SPI_RXOIS_MASK) || (risr & SPI_TXOIS_MASK)) {
+		pr_err("slavespi: speed too fast \n");
+		/* reset fifo to clear error */
+		writel_relaxed(0, priv->regbase + SPI_SSIENR_OFFSET);
+		udelay(1);
+		writel_relaxed(1, priv->regbase + SPI_SSIENR_OFFSET);
+	}
+
+	if ((risr & SPI_TXEIS_MASK) || (isr & SPI_TXEIS_MASK)) {
+		spin_lock(&priv->w_buf_lock);
+		if (kfifo_is_empty(&priv->w_fifo)) {
+			/* w_fifo is empty then disable txfifo empty interrupt */
+			imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
+			imr &= (~SPI_TXEIS_MASK);
+			writel_relaxed(imr, priv->regbase + SPI_IMR_OFFSET);
+			priv->wakeup_mask |= CAN_WAKEUP_BLOCK_W | CAN_WAKEUP_POLL;
+		} else {
+			hw_free_len = priv->fifo_depth - readl_relaxed(priv->regbase + SPI_TXFLR_OFFSET);
+			if (priv->bpw > 8) {
+				hw_free_len *= 2; /* must fill 2*n bytes */
+			}
+			data_len = kfifo_out(&priv->w_fifo, priv->w_buf, hw_free_len);
+			if (priv->bpw > 8) {
+				data_len = data_len >> 1;
+			}
+			for (i = 0; i < data_len; i++) {
+				if (priv->bpw > 8) {
+					writel_relaxed(((u16 *)priv->w_buf)[i], \
+						priv->regbase + SPI_DR_OFFSET);
+				} else {
+					writel_relaxed(((u8 *)priv->w_buf)[i], \
+						priv->regbase + SPI_DR_OFFSET);
+				}
+			}
+			priv->wakeup_mask |= CAN_WAKEUP_POLL;
+			if (kfifo_len(&priv->w_fifo) < (FIFO_DEPTH_MULTI * priv->fifo_depth)) {
+				priv->wakeup_mask |= CAN_WAKEUP_BLOCK_W;
+			}
+
+			imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
+			writel_relaxed(imr | SPI_TXEIS_MASK, priv->regbase + SPI_IMR_OFFSET);
+		}
+		spin_unlock(&priv->w_buf_lock);
+	}
+
+	if ((risr & SPI_RXFIS_MASK) || (isr & SPI_RXFIS_MASK)) {
+		spin_lock(&priv->r_buf_lock);
+		slavespi_drain_rxfifo(priv);
+		if (!kfifo_is_empty(&priv->r_fifo)) {
+			priv->wakeup_mask |= CAN_WAKEUP_POLL;		/* wakeup poll for read */
+		}
+		if (kfifo_len(&priv->r_fifo) >= priv->want_cnt) {
+			priv->wakeup_mask |= CAN_WAKEUP_BLOCK_R;	/* wakeup timeout block read */
+		}
+		spin_unlock(&priv->r_buf_lock);
+	}
 
 	writel_relaxed(0, priv->regbase + SPI_ISR_OFFSET);
 	writel_relaxed(0, priv->regbase + SPI_RISR_OFFSET);
+
+	tasklet_schedule(&priv->wakeup_helper);
 
 	return IRQ_HANDLED;
 }
@@ -360,7 +333,7 @@ static int slavespi_open(struct inode *inode, struct file *filp)
 
 	priv = container_of(inode->i_cdev, struct ambarella_slavespi, cdevx);
 	if (!priv) {
-		pr_info("slavespi: no such dev info \n");
+		dev_info(priv->device, "slavespi: no such device \n");
 		return -EINVAL;
 	}
 	filp->private_data = priv;
@@ -376,256 +349,173 @@ static int slavespi_open(struct inode *inode, struct file *filp)
 }
 
 static ssize_t
-slavespi_unlock_write(struct file *filp, const char __user *buf,
-	size_t count, loff_t *f_pos)
+slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
-	int err = 0;
-	int ok_wait = 0;
-	unsigned int sr = 0;
-	unsigned int imr = 0;
+	int i = 0, err = 0;
+	u32 imr =0, sr = 0;
+	u32 copied = 0;
+	u32 txfifo_free = 0;
+	u32 txfifo_len = 0;
 	unsigned long flags;
-
-	unsigned int txflr = 0;
-	unsigned int copied = 0;
-	unsigned int copied_saved = 0;
-
-	unsigned int try_times = 3;
 	struct ambarella_slavespi *priv = NULL;
 
 	priv = (struct ambarella_slavespi *)filp->private_data;
-	if (!priv->byte_wise) {
-		count &= ~1;
-	}
-
-	if (!buf) {
+	if (!buf || 0 == count) {
+		pr_err("slavespi: write invalid args \n");
 		return 0;
 	}
 
 	spin_lock_irqsave(&priv->w_buf_lock, flags);
-	if (!(filp->f_flags & O_NONBLOCK)) {
-		kfifo_reset_out(&priv->w_fifo); /* will block */
+	if (kfifo_is_full(&priv->w_fifo)) {
+		spin_unlock_irqrestore(&priv->w_buf_lock, flags);
+		pr_err("slavespi: wfifo is full drop all \n");
+		return 0;
+	} else {
+		err = kfifo_from_user(&priv->w_fifo, buf, count, &copied);
+		if (err) {
+			spin_unlock_irqrestore(&priv->w_buf_lock, flags);
+			pr_err("slavespi: get data from user failed \n");
+			return err;
+		}
 	}
-	err = kfifo_from_user(&priv->w_fifo, buf, count, &copied);
-	spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 
-	if (err || (copied != count)) {
-		pr_info("slavespi: block_write partitional copied \n");
+	sr = readl_relaxed(priv->regbase + SPI_SR_OFFSET);
+	if (sr & SPI_SR_TXE_MSK) {
+		/* reset fifo to solve txe error */
+		writel_relaxed(0, priv->regbase + SPI_SSIENR_OFFSET);
+		udelay(1);
+		writel_relaxed(1, priv->regbase + SPI_SSIENR_OFFSET);
 	}
 
-	spin_lock_irqsave(&priv->hw_lock, flags);
+	/* fill txfifo */
+	txfifo_free = priv->fifo_depth - readl_relaxed(priv->regbase + SPI_TXFLR_OFFSET);
+	if (priv->bpw > 8) {
+		txfifo_free *= 2;
+	}
+	txfifo_len = kfifo_out(&priv->w_fifo, priv->w_buf, txfifo_free);
+	if (priv->bpw > 8) {
+		txfifo_len >>= 1;
+	}
+	for (i = 0; i < txfifo_len; i++) {
+		if (priv->bpw > 8) {
+			writel_relaxed(((u16 *)priv->w_buf)[i], \
+				priv->regbase + SPI_DR_OFFSET);
+		} else {
+			writel_relaxed(((u8 *)priv->w_buf)[i], \
+				priv->regbase + SPI_DR_OFFSET);
+		}
+	}
+
 	imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
 	writel_relaxed((imr | SPI_TXEIS_MASK), priv->regbase + SPI_IMR_OFFSET);
-	spin_unlock_irqrestore(&priv->hw_lock, flags);
+	spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 
 	if (filp->f_flags & O_NONBLOCK) {
 		return copied;
 	}
-
-	/* flowing is block with timeout support */
-	if (priv->timeout > 0) {
-		ok_wait = wait_event_interruptible_timeout(priv->wq_whead, \
-				kfifo_is_empty(&priv->w_fifo), priv->timeout);
-		if (ok_wait > 0) {
-			return copied;
-		}
-	} else {
-		ok_wait = wait_event_interruptible(priv->wq_whead, \
-				kfifo_is_empty(&priv->w_fifo));
-		if (0 == ok_wait) {
-			return copied;
-		}
-	}
-
-retry:
-	/* wait until spi idle */
-	do {
-		sr = readl_relaxed(priv->regbase + SPI_SR_OFFSET);
-		if (sr & SPI_SR_BUSY_MSK) {
-			msleep_interruptible(2);
-		} else {
-			break;
-		}
-	} while (1);
-
-	/* drain rxfifo */
-	spin_lock_irqsave(&priv->r_buf_lock, flags);
-	slavespi_drain_rxfifo(priv);
-	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
-
-	/* caculate txd bytes */
-	spin_lock_irqsave(&priv->w_buf_lock, flags);
-	copied -= kfifo_len(&priv->w_fifo);
-	txflr = readl_relaxed(priv->regbase + SPI_TXFLR_OFFSET);
-	if (!priv->byte_wise) {
-		txflr <<= 1;
-	}
-	copied -= txflr;
-	spin_unlock_irqrestore(&priv->w_buf_lock, flags);
-
-	/* check spi is still idle or not */
-	sr = readl_relaxed(priv->regbase + SPI_SR_OFFSET);
-	if (sr & SPI_SR_BUSY_MSK) {
-		if (try_times) {
-			try_times--;
-			copied = copied_saved;
-			goto retry;
-		}
-	}
-
-	/* clean all w_fifo  && reset hardware txfifo/rxfifo */
-	kfifo_reset_out(&priv->w_fifo);
-	writel_relaxed(0, priv->regbase + SPI_SSIENR_OFFSET);
-	smp_wmb();
-	writel_relaxed(1, priv->regbase + SPI_SSIENR_OFFSET);
-
-	return copied;
-}
-
-static ssize_t
-slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
-{
-	u32 copied = 0;
-	struct ambarella_slavespi *priv = NULL;
-	priv = (struct ambarella_slavespi *)filp->private_data;
-
-	if (!buf) {
-		return 0;
-	}
-
-	mutex_lock(&priv->um_mtx);
-	copied = slavespi_unlock_write(filp, (const char __user *)buf, count, f_pos);
-	mutex_unlock(&priv->um_mtx);
-
-	return copied;
-}
-
-static ssize_t
-slavespi_unblk_read(struct ambarella_slavespi *priv, char __user *buf, size_t count)
-{
-	int err = 0;
-	u32 copied = 0;
-	unsigned long flags;
-
-	if (!priv->byte_wise) {
-		count &= ~1;
-	}
-
-	if (!buf) {
-		return 0;
-	}
-
-	spin_lock_irqsave(&priv->r_buf_lock, flags);
-	slavespi_drain_rxfifo(priv);
-	err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
-	if (err) {
-		pr_warn("<1> read partitional transfer \n");
-	}
-	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
-
-	return copied;
-}
-
-static ssize_t
-slavespi_unlock_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
-{
-	int err = 0;
-	u32 copied = 0;
-	unsigned long flags;
-	struct ambarella_slavespi *priv = NULL;
-
-	priv = (struct ambarella_slavespi *)filp->private_data;
-	if (!priv->byte_wise) {
-		count &= ~1;
-	}
-
-	if (filp->f_flags & O_NONBLOCK) {
-		return slavespi_unblk_read(priv, (char __user *)buf, count);
-	}
-
-	priv->want_read = count;
-	if (priv->timeout > 0) {
-		wait_event_interruptible_timeout(priv->wq_rhead, \
-			(kfifo_len(&priv->r_fifo) >= count), priv->timeout);
-	} else {
-		wait_event_interruptible(priv->wq_rhead, \
-			(kfifo_len(&priv->r_fifo) >= count));
-	}
-
-	spin_lock_irqsave(&priv->r_buf_lock, flags);
-	slavespi_drain_rxfifo(priv);
-	err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
-	if (err) {
-		pr_warn("<2> read partitional transfer \n");
-	}
-	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
-
+	wait_event_interruptible(priv->wq_whead, \
+			(kfifo_len(&priv->w_fifo) < (FIFO_DEPTH_MULTI * priv->fifo_depth)));
 	return copied;
 }
 
 static ssize_t
 slavespi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
-	u32 copied = 0;
+	int err = 0;
+	int copied = 0;
+	unsigned long flags;
 	struct ambarella_slavespi *priv = NULL;
-	priv = (struct ambarella_slavespi *)filp->private_data;
 
-	if (!buf) {
+	if (!buf || 0 == count) {
 		return 0;
 	}
 
-	mutex_lock(&priv->um_mtx);
-	copied = slavespi_unlock_read(filp, (char __user *)buf, count, f_pos);
-	mutex_unlock(&priv->um_mtx);
+	priv = (struct ambarella_slavespi *)filp->private_data;
 
-	return copied;
+	if (filp->f_flags & O_NONBLOCK) {
+		spin_lock_irqsave(&priv->r_buf_lock, flags);
+		slavespi_drain_rxfifo(priv);
+		err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
+		spin_unlock_irqrestore(&priv->r_buf_lock, flags);
+		if (err) {
+			return err;
+		} else {
+			return copied;
+		}
+	}
+
+	/* following is block read */
+	priv->want_cnt = count;
+	spin_lock_irqsave(&priv->r_buf_lock, flags);
+	slavespi_drain_rxfifo(priv);
+	if (kfifo_len(&priv->r_fifo) >= priv->want_cnt) {
+		err = kfifo_to_user(&priv->r_fifo, buf, priv->want_cnt, &copied);
+		spin_unlock_irqrestore(&priv->r_buf_lock, flags);
+		if (err) {
+			return err;
+		} else {
+			return copied;
+		}
+	}
+	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
+
+	wait_event_interruptible(priv->wq_rhead, \
+			(kfifo_len(&priv->r_fifo) >= priv->want_cnt));
+
+	spin_lock_irqsave(&priv->r_buf_lock, flags);
+	slavespi_drain_rxfifo(priv);
+	err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
+	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
+
+	if (err) {
+		return err;
+	} else {
+		return copied;
+	}
 }
 
 static long
-slavespi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+slavespi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	u32 left = 0;
-	int tmout = 0;
-	loff_t f_pos = 0;
-	struct slavespi_transfer trans;
+	int err = 0;
+	u32 tmpx = 0;
 	struct ambarella_slavespi *priv = NULL;
-
-	memset(&trans, 0, sizeof(trans));
-	priv = (struct ambarella_slavespi *)file->private_data;
-
+	priv = (struct ambarella_slavespi *)filp->private_data;
 
 	switch (cmd) {
-		case SPI_SLAVE_SET_TIMEOUT:
-			get_user(tmout, (__s32 *)arg);
-			pr_info("--timeout is %d \n", tmout);
-			priv->timeout = tmout * HZ;
-			return 0;
-
-		case SPI_SLAVE_IO_TRANSFER:
-			left = copy_from_user(&trans, (struct slavespi_transfer * __user)arg,
-				sizeof(trans));
-			if (left) {
-				return -EAGAIN;
+		case SPI_IOC_RW_LSB_FIRST:
+			err = __get_user(tmpx, (u8 __user *)arg);
+			if (0 == err) {
+				if (tmpx) {
+					priv->mode |= SPI_LSB_FIRST;
+				} else {
+					priv->mode &= (~SPI_LSB_FIRST);
+				}
+				ambarella_slavespi_setup(priv);
 			}
 			break;
-
+		case SPI_IOC_RW_BITS_PER_WORD:
+			err = __get_user(tmpx, (u8 __user *)arg);
+			if (0 == err) {
+				if (tmpx > 16) {
+					pr_err(" bit-per-word error \n");
+				}
+				priv->bpw = tmpx;
+				ambarella_slavespi_setup(priv);
+			}
+			break;
+		case SPI_IOC_WORK_MODE:
+			err = __get_user(tmpx, (u8 __user *)arg);
+			if (0 == err) {
+				priv->mode = tmpx;
+				ambarella_slavespi_setup(priv);
+			}
+			break;
 		default:
-			return 0;
-	}
+			break;
+	};
 
-	mutex_lock(&priv->um_mtx);
-
-	trans.txd_len = slavespi_unlock_write(file, trans.tx_buf, trans.buf_len, &f_pos);
-	/* always use unblk for read, read latest data */
-	trans.rxd_len = slavespi_unblk_read(priv, trans.rx_buf, trans.buf_len);
-
-	mutex_unlock(&priv->um_mtx);
-
-	left = copy_to_user((struct slavespi_transfer * __user)arg, &trans, sizeof(trans));
-	if (left) {
-		return -EAGAIN;
-	}
-
-	return 0;
+	return err;
 }
 
 static int slavespi_release(struct inode *inode, struct file *filp)
@@ -646,9 +536,10 @@ static int slavespi_release(struct inode *inode, struct file *filp)
 static unsigned int
 slavespi_poll(struct file *filp, struct poll_table_struct *wait)
 {
+	u32 mask = 0;
 	unsigned long flags;
-	unsigned int mask = 0;
 	struct ambarella_slavespi *priv = NULL;
+
 	priv = (struct ambarella_slavespi *)filp->private_data;
 
 	poll_wait(filp, &priv->wq_poll, wait);
@@ -661,7 +552,7 @@ slavespi_poll(struct file *filp, struct poll_table_struct *wait)
 	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 
 	spin_lock_irqsave(&priv->w_buf_lock, flags);
-	if (kfifo_avail(&priv->w_fifo) > 0) { /* allow write but may write nothing */
+	if (kfifo_len(&priv->w_fifo) < (FIFO_DEPTH_MULTI * priv->fifo_depth)) {
 		mask |= POLLOUT;
 	}
 	spin_unlock_irqrestore(&priv->w_buf_lock, flags);
@@ -682,6 +573,7 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 {
 	int err = 0;
 	int irq = 0;
+	struct pinctrl *pins = NULL;
 	void __iomem	*reg = NULL;
 	struct resource *res = NULL;
 	struct ambarella_slavespi *priv = NULL;
@@ -709,6 +601,12 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
+	pins = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pins)) {
+		dev_err(&pdev->dev, "Failed to request pinctrl\n");
+		goto err_out;
+	}
+
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		dev_err(&pdev->dev, "no memory\n");
@@ -716,14 +614,20 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
+	priv->wakeup_mask = 0;
 	priv->regbase = reg;
-	priv->mode = 0;
-	priv->bpw = 8;
+	priv->mode = SPI_CPHA | SPI_CPOL; /* Attention [only support mode 3!!!], force!!! */
+	priv->bpw = 8;		/* use dts to determinate ? */
 	priv->irq = irq;
-	priv->byte_wise = 1;
+	priv->byte_wise = 0;
 	priv->fifo_depth = SPI_FIFO_DEPTH;
 	priv->buf_size = SLAVE_SPI_BUF_SIZE;
-	priv->timeout = HZ;
+	priv->timeout = 0;	/* no timeout any more; use poll instead */
+
+	if (of_find_property(pdev->dev.of_node, "spi-lsb", NULL)) {
+		priv->mode |= SPI_LSB_FIRST;
+	}
+
 	atomic_set(&priv->open_once, 1);
 	init_waitqueue_head(&priv->wq_rhead);
 	init_waitqueue_head(&priv->wq_whead);
@@ -732,7 +636,9 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	mutex_init(&priv->um_mtx);
 	spin_lock_init(&priv->r_buf_lock);
 	spin_lock_init(&priv->w_buf_lock);
-	spin_lock_init(&priv->hw_lock);
+	spin_lock_init(&priv->wakeup_lock);
+
+	tasklet_init(&priv->wakeup_helper, wakeup_tasklet, (unsigned long)priv);
 
 	priv->dname = "slavespi";
 	err = alloc_chrdev_region(&priv->devno, 0, 1, priv->dname);
@@ -799,7 +705,7 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, priv);
 
-	dev_info(&pdev->dev, "--probe--ok-- \n");
+	dev_info(&pdev->dev, "spislave probe ok\n");
 
 	return 0;
 
@@ -839,6 +745,7 @@ ambarella_slavespi_probe_exit:
 	}
 
 err_out:
+	printk("spislave probe failed \n");
 	return err;
 }
 
