@@ -99,6 +99,7 @@
 #ifndef __ASSEMBLER__
 
 extern struct proc_dir_entry *get_ambarella_proc_dir(void);
+extern struct dentry *get_ambarella_debugfs_dir(void);
 
 #endif
 

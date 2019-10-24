@@ -23,8 +23,10 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
+#include <linux/debugfs.h>
 
 static struct proc_dir_entry *ambarella_proc_dir = NULL;
+static struct dentry *ambarella_debugfs_dir = NULL;
 
 struct proc_dir_entry *get_ambarella_proc_dir(void)
 {
@@ -32,15 +34,29 @@ struct proc_dir_entry *get_ambarella_proc_dir(void)
 }
 EXPORT_SYMBOL(get_ambarella_proc_dir);
 
-static int __init ambarella_init_root_proc(void)
+struct dentry *get_ambarella_debugfs_dir(void)
+{
+	return ambarella_debugfs_dir;
+}
+EXPORT_SYMBOL(get_ambarella_debugfs_dir);
+
+static int __init ambarella_init_root_dir(void)
 {
 	ambarella_proc_dir = proc_mkdir("ambarella", NULL);
-	if (!ambarella_proc_dir) {
+	if (IS_ERR_OR_NULL(ambarella_proc_dir)) {
 		pr_err("failed to create ambarella root proc dir\n");
 		return -ENOMEM;
 	}
 
+#if defined(CONFIG_DEBUG_FS)
+	ambarella_debugfs_dir = debugfs_create_dir("ambarella", NULL);
+	if (IS_ERR_OR_NULL(ambarella_debugfs_dir)) {
+		pr_err("failed to create ambarella root debugfs dir\n");
+		return -ENOMEM;
+	}
+#endif
+
 	return 0;
 }
-core_initcall(ambarella_init_root_proc);
+core_initcall(ambarella_init_root_dir);
 
