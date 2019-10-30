@@ -69,6 +69,11 @@
 #define SPI_DMA_TX	(0)
 #define SPI_DMA_RX	(1)
 
+#define SPI_TMOD_TXONLY		(1 << 8)
+#define SPI_TMOD_RXONLY		(2 << 8)
+#define SPI_TMODE_TXRX		(0 << 8)
+#define SPI_TMODE_MSK		(3 << 8)
+
 #define SPI_DMA_RX_EN		(1)
 #define SPI_DMA_TX_EN		(2)
 #define SPI_DMA_EN_NONE		(0)
@@ -84,7 +89,7 @@ struct slavespi_ioctl_args {
 
 /* slavespi controller */
 struct ambarella_slavespi {
-
+	atomic_t open_once;
 	int irq;
 	void __iomem	*regbase;
 
@@ -105,11 +110,11 @@ struct ambarella_slavespi {
 
 	u32	dma_used;
 	u32	phys;
-	struct	device *pltdev;
-	struct dma_chan	*tx_dma_chan;
-	struct dma_chan	*rx_dma_chan;
-	u8	*tx_dma_buf;
-	u8	*rx_dma_buf;
+	struct		device *pltdev;
+	struct		dma_chan *tx_dma_chan;
+	struct		dma_chan *rx_dma_chan;
+	u8		*tx_dma_buf;
+	u8		*rx_dma_buf;
 	dma_addr_t	tx_dma_phys;
 	dma_addr_t	rx_dma_phys;
 
@@ -127,12 +132,7 @@ struct ambarella_slavespi {
 	struct kfifo	r_fifo;
 
 	u32 want_cnt;
-	spinlock_t w_buf_lock;
-	spinlock_t r_buf_lock;
 	spinlock_t wakeup_lock;
-
-	atomic_t open_once;
-	struct mutex um_mtx;
 
 	int timeout;
 	u32 wakeup_mask;	/* bit0: read, bit1: write , bit2 poll */
@@ -225,18 +225,13 @@ static void ambarella_rx_dma_callback(void *dma_param)
 {
 	u32 copied = 0;
 	u32 avail_size = 0;
-	unsigned long flags;
-
 	struct dma_tx_state state;
 	enum dma_status status;
 	struct ambarella_slavespi *priv = (struct ambarella_slavespi *)dma_param;
 
-	spin_lock_irqsave(&priv->r_buf_lock, flags);
-
 	status = dmaengine_tx_status(priv->rx_dma_chan, priv->rx_cookie, &state);
 	if (status == DMA_IN_PROGRESS) {
 		pr_info("slavespi: RX DMA is in progress\n");
-		spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 		return ;
 	}
 
@@ -248,7 +243,6 @@ static void ambarella_rx_dma_callback(void *dma_param)
 		copied = kfifo_in(&priv->r_fifo, priv->rx_dma_buf, avail_size);
 		ambarella_slavespi_start_rx_dma(priv);		/* re-start rx-dma again */
 	}
-	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 
 	if (avail_size > copied) {
 		pr_err("slavespi: rx dma drop %u bytes \n", avail_size - copied);
@@ -301,8 +295,8 @@ static int ambarella_slavespi_start_rx_dma(struct ambarella_slavespi *priv)
 
 static void ambarella_dma_tx_callback(void *dma_param)
 {
+	u32 sr = 0;
 	u32 copied = 0;
-	unsigned long flags;
 	u32 w_fifo_size = 0;
 	u32 w_fifo_len = 0;
 
@@ -312,13 +306,14 @@ static void ambarella_dma_tx_callback(void *dma_param)
 
 	priv = (struct ambarella_slavespi *)dma_param;
 
-	spin_lock_irqsave(&priv->w_buf_lock, flags);
+	sr = readl_relaxed(priv->regbase + SPI_SR_OFFSET);
+	if (sr & SPI_SR_TXE_MSK) {
+		pr_err("slavespi: in spiwrite txe error (txfifo complete empty) \n");
+	}
 
 	status = dmaengine_tx_status(priv->tx_dma_chan, priv->tx_cookie, &state);
-
 	if (status == DMA_IN_PROGRESS) {
 		pr_info("slavespi: TX DMA is in progress\n");
-		spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 		return ;
 	}
 
@@ -327,7 +322,6 @@ static void ambarella_dma_tx_callback(void *dma_param)
 		if (priv->bpw > 8) {
 			w_fifo_len &= SPI_ALIGN_2_MASK;
 		}
-
 		if (w_fifo_len > 0) {
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
@@ -335,12 +329,12 @@ static void ambarella_dma_tx_callback(void *dma_param)
 				pr_err("spislave: wfifo output bytes mismatch \n");
 			}
 			priv->tx_dma_size = copied;
-			spin_unlock_irqrestore(&priv->w_buf_lock, flags);
-			ambarella_slavespi_start_tx_dma(priv);
 		} else {
-			priv->tx_dma_inprocess = 0;
-			spin_unlock_irqrestore(&priv->w_buf_lock, flags);
+			memset(priv->tx_dma_buf, 0xFF, 64);
+			priv->tx_dma_size = 64;
+			pr_err("spislave: tx-dma tranfer dummy data \n");
 		}
+		ambarella_slavespi_start_tx_dma(priv);
 	}
 
 	wake_up_interruptible(&priv->wq_poll);
@@ -543,7 +537,6 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 	}
 
 	if (isr & SPI_TXEIS_MASK) {
-		spin_lock(&priv->w_buf_lock);
 		if (kfifo_is_empty(&priv->w_fifo)) {
 			/* w_fifo is empty then disable txfifo empty interrupt */
 			imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
@@ -576,11 +569,9 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 			imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
 			writel_relaxed(imr | SPI_TXEIS_MASK, priv->regbase + SPI_IMR_OFFSET);
 		}
-		spin_unlock(&priv->w_buf_lock);
 	}
 
 	if ((!priv->dma_used) && (isr & SPI_RXFIS_MASK)) {
-		spin_lock(&priv->r_buf_lock);
 		slavespi_drain_rxfifo(priv);
 		if (!kfifo_is_empty(&priv->r_fifo)) {
 			priv->wakeup_mask |= CAN_WAKEUP_POLL;		/* wakeup poll for read */
@@ -588,14 +579,12 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 		if (kfifo_len(&priv->r_fifo) >= priv->want_cnt) {
 			priv->wakeup_mask |= CAN_WAKEUP_BLOCK_R;	/* wakeup timeout block read */
 		}
-		spin_unlock(&priv->r_buf_lock);
 	}
 
 	writel_relaxed(0, priv->regbase + SPI_ISR_OFFSET);
 	writel_relaxed(0, priv->regbase + SPI_RISR_OFFSET);
 
 	tasklet_schedule(&priv->wakeup_helper);
-
 	return IRQ_HANDLED;
 }
 
@@ -625,9 +614,10 @@ static ssize_t
 slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
 	int i = 0, err = 0;
-	u32 imr =0;
+	u32 imr = 0, sr = 0;
 
-	u32 copied = 0, dma_copied = 0;
+	u32 copied = 0;
+	u32 dma_copied = 0;
 
 	u32 txfifo_free = 0;
 	u32 txfifo_len = 0;
@@ -635,7 +625,6 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 	u32 w_fifo_size = 0;
 	u32 w_fifo_len = 0;
 
-	unsigned long flags;
 	struct ambarella_slavespi *priv = NULL;
 
 	priv = (struct ambarella_slavespi *)filp->private_data;
@@ -643,14 +632,16 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		return 0;
 	}
 
-	spin_lock_irqsave(&priv->w_buf_lock, flags);
+	sr = readl_relaxed(priv->regbase + SPI_SR_OFFSET);
+	if (sr & SPI_SR_TXE_MSK) {
+		pr_err("slavespi: in spiwrite txe error (txfifo complete empty) \n");
+	}
+
 	if (kfifo_is_full(&priv->w_fifo)) {
-		spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 		pr_err("slavespi: wfifo is full drop all \n");
-		return 0;
+		goto write_done;
 	} else {
 		err = kfifo_from_user(&priv->w_fifo, buf, count, &copied);
-		spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 		if (err) {
 			pr_err("slavespi: get data from user failed, err = %d \n", err);
 			return err;
@@ -658,14 +649,12 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 	}
 
 	if (priv->dma_used) {
-		spin_lock_irqsave(&priv->w_buf_lock, flags);
 		/* disable tx interrupt, using dma to transfer */
 		imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
 		imr &= ~SPI_TXEIS_MASK;
 		writel_relaxed(imr, priv->regbase + SPI_IMR_OFFSET);
 
 		if (priv->tx_dma_inprocess) {
-			spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 			goto write_done;
 		}
 
@@ -678,9 +667,8 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		if (dma_copied != w_fifo_size) {
 			pr_err("spislave: wfifo output bytes mismatch \n");
 		}
-		priv->tx_dma_inprocess = 1;
-		spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 
+		priv->tx_dma_inprocess = 1;
 		if (dma_copied > 0) {
 			priv->tx_dma_size = dma_copied;
 			ambarella_slavespi_start_tx_dma(priv);
@@ -690,7 +678,6 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 	}
 
 	/* no dma avail, using interrupt pio to transfer */
-	spin_lock_irqsave(&priv->w_buf_lock, flags);
 	txfifo_free = priv->fifo_depth - readl_relaxed(priv->regbase + SPI_TXFLR_OFFSET);
 	if (priv->bpw > 8) {
 		txfifo_free *= 2;
@@ -711,12 +698,10 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 
 	imr = readl_relaxed(priv->regbase + SPI_IMR_OFFSET);
 	writel_relaxed((imr | SPI_TXEIS_MASK), priv->regbase + SPI_IMR_OFFSET);
-	spin_unlock_irqrestore(&priv->w_buf_lock, flags);
+
+	wait_event_interruptible(priv->wq_whead, !kfifo_is_full(&priv->w_fifo));
 
 write_done:
-	wait_event_interruptible(priv->wq_whead, \
-			(kfifo_len(&priv->w_fifo) < (FIFO_DEPTH_MULTI * priv->fifo_depth)));
-
 	return copied;
 }
 
@@ -725,7 +710,6 @@ slavespi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
 	int err = 0;
 	int copied = 0;
-	unsigned long flags;
 	struct ambarella_slavespi *priv = NULL;
 
 	if (!buf || 0 == count) {
@@ -735,9 +719,7 @@ slavespi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 	priv = (struct ambarella_slavespi *)filp->private_data;
 	if (priv->dma_used) {
 		if (priv->rx_dma_inprocess) {
-			spin_lock_irqsave(&priv->r_buf_lock, flags);
 			err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
-			spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 			if (err) {
 				pr_err("spislave: copy to user failed \n");
 				return err;
@@ -756,10 +738,8 @@ slavespi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 	}
 
 	if (filp->f_flags & O_NONBLOCK) {
-		spin_lock_irqsave(&priv->r_buf_lock, flags);
 		slavespi_drain_rxfifo(priv);
 		err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
-		spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 		if (err) {
 			return err;
 		} else {
@@ -769,27 +749,20 @@ slavespi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 
 	/* following is block read */
 	priv->want_cnt = count;
-	spin_lock_irqsave(&priv->r_buf_lock, flags);
 	slavespi_drain_rxfifo(priv);
 	if (kfifo_len(&priv->r_fifo) >= priv->want_cnt) {
 		err = kfifo_to_user(&priv->r_fifo, buf, priv->want_cnt, &copied);
-		spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 		if (err) {
 			return err;
 		} else {
 			return copied;
 		}
 	}
-	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
-
 	wait_event_interruptible(priv->wq_rhead, \
 			(kfifo_len(&priv->r_fifo) >= priv->want_cnt));
 
-	spin_lock_irqsave(&priv->r_buf_lock, flags);
 	slavespi_drain_rxfifo(priv);
 	err = kfifo_to_user(&priv->r_fifo, buf, count, &copied);
-	spin_unlock_irqrestore(&priv->r_buf_lock, flags);
-
 	if (err) {
 		return err;
 	} else {
@@ -920,9 +893,6 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	init_waitqueue_head(&priv->wq_whead);
 	init_waitqueue_head(&priv->wq_poll);
 
-	mutex_init(&priv->um_mtx);
-	spin_lock_init(&priv->r_buf_lock);
-	spin_lock_init(&priv->w_buf_lock);
 	spin_lock_init(&priv->wakeup_lock);
 	tasklet_init(&priv->wakeup_helper, wakeup_tasklet, (unsigned long)priv);
 
@@ -962,8 +932,8 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		goto ambarella_slavespi_probe_exit;
 	}
 
-	if (!kfifo_initialized(&priv->w_fifo)) { /* wfifo = 2PAGE */
-		err = kfifo_alloc(&priv->w_fifo, priv->buf_size << 1, GFP_KERNEL);
+	if (!kfifo_initialized(&priv->w_fifo)) { /* wfifo = 256PAGE */
+		err = kfifo_alloc(&priv->w_fifo, priv->buf_size << 8, GFP_KERNEL);
 		if (err) {
 			err = -ENOMEM;
 			dev_err(&pdev->dev, "Alloc w_kfifo failed \n");
@@ -1006,6 +976,7 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, priv);
 	dev_info(&pdev->dev, "slavespi: probe ok using %s \n", priv->dma_used ? "dma-mode":"irq-mode");
+	dev_info(&pdev->dev, "slavespi: %s \n", "version_rx_tx");
 
 	return 0;
 
