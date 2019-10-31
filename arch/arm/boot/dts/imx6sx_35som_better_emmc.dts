@@ -439,6 +439,9 @@
 	status = "okay";
 };
 
+&snvs_rtc {
+    status = "disabled";
+};
 
 &ssi2 {
 	fsl,mode = "i2s-slave";
