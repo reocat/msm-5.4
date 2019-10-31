@@ -182,7 +182,7 @@ static int amba_spinor_dma_transfer(struct ambarella_spinor *amba_spinor,
 	reinit_completion(&amba_spinor->dma_complete);
 	dma_async_issue_pending(chan);
 
-	writel_relaxed(rxtx_enable, amba_spinor->regbase + SPINOR_DMACTRL_OFFSET);
+	writel(rxtx_enable, amba_spinor->regbase + SPINOR_DMACTRL_OFFSET);
 
 	return ret;
 }
@@ -306,7 +306,7 @@ static int amba_spinor_send_cmd(struct ambarella_spinor *amba_spinor,
 		writel_relaxed(val, amba_spinor->regbase + SPINOR_ADDRHI_OFFSET);
 	}
 	/* set dmactrl usage 0 as default */
-	writel_relaxed(0, amba_spinor->regbase + SPINOR_DMACTRL_OFFSET);
+	writel(0, amba_spinor->regbase + SPINOR_DMACTRL_OFFSET);
 
 	/* setup dma if data phase is existed and dma is required.
 	 * Note: for READ, dma will just transfer the length multiple of
@@ -493,13 +493,16 @@ static ssize_t amba_spinor_read(struct spi_nor *nor, loff_t from, size_t len,
 	struct spinor_ctrl dummy;
 	int ret;
 	int i;
-	u32 tail, bulk;
+	u32 tail, bulk, dma_blk;
 	u8 cmd_id, is_dma;
+	size_t offset = 0;
+	size_t remain;
+	loff_t trans_addr;
 
 	dev_dbg(amba_spinor->dev, "read(%#.2x): buf:%p from:%#.8x len:%#zx\n",
 			nor->read_opcode, buf, (u32)from, len);
 
-	tail = len % SPINOR_BLK_DMA_SIZE;
+	dma_blk = len / AMBARELLA_SPINOR_DMA_BUFFER_SIZE;
 	bulk = len / SPINOR_BLK_DMA_SIZE;
 
 	memset(&cmd, 0, sizeof(cmd));
@@ -520,29 +523,60 @@ static ssize_t amba_spinor_read(struct spi_nor *nor, loff_t from, size_t len,
 	is_dma = bulk ? 1 : 0;
 
 	data.buf = buf;
-	data.len = len;
 	data.lane = nor_get_read_proto(nor->read_proto);
 	data.is_dtr = 0;
 	data.is_read = 1;
-	data.is_io = 1;
+	data.is_io = (cmd_id == SPINOR_OP_RDSFDP) ? 0 : 1;
 	data.is_dma = is_dma;
 
 	dummy.len = nor->read_dummy;
 	dummy.is_dtr = 0;
 
-	ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, &dummy);
-	if (ret)
-		return ret;
-	if (bulk) {
-		memcpy(buf, amba_spinor->dmabuf, len-tail);
-	}
+	if (dma_blk) {
+		for (i = 0; i < dma_blk; i++) {
+			offset = i * AMBARELLA_SPINOR_DMA_BUFFER_SIZE;
+			trans_addr = from + offset;
+			addr.buf = (u8*)&trans_addr;
+			data.len = AMBARELLA_SPINOR_DMA_BUFFER_SIZE;
 
-	if (tail) {
-		for (i = 0; i < tail; i++){
-			*(buf+bulk*SPINOR_BLK_DMA_SIZE+i) = readb_relaxed(amba_spinor->regbase + SPINOR_RXDATA_OFFSET);
+			ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, &dummy);
+			if (ret)
+				return ret;
+
+			memcpy(buf + offset, amba_spinor->dmabuf, AMBARELLA_SPINOR_DMA_BUFFER_SIZE);
 		}
 	}
 
+	offset = dma_blk * AMBARELLA_SPINOR_DMA_BUFFER_SIZE;
+	remain = len - offset;
+
+	tail = remain % SPINOR_BLK_DMA_SIZE;
+	bulk = remain / SPINOR_BLK_DMA_SIZE;
+
+	if (remain)
+	{
+		trans_addr = from + offset;
+		addr.buf = (u8*)&trans_addr;
+		data.len = remain;
+		data.is_dma = bulk ? 1 : 0;
+
+		ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, &dummy);
+
+		if (ret)
+			return ret;
+
+		if (bulk) {
+			memcpy(buf + offset, amba_spinor->dmabuf, remain-tail);
+		}
+
+		offset += bulk * SPINOR_BLK_DMA_SIZE;
+
+		if (tail) {
+			for (i = 0; i < tail; i++){
+				*(buf+offset+i) = readb(amba_spinor->regbase + SPINOR_RXDATA_OFFSET);
+			}
+		}
+	}
 	return len;
 }
 
