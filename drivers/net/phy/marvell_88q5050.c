@@ -201,11 +201,15 @@ static int m88q5050_did_interrupt(struct phy_device *phydev)
 
 static int m88q5050_aneg_done(struct phy_device *phydev)
 {
+#if 0
 	unsigned int value;
 
 	value = m88q5050_glb2_smi_read(phydev, phydev->mdio.addr, 0x01);
 
 	return value & (1 << 5);
+#else
+	return 1;
+#endif
 }
 static struct phy_driver marvell_88q5050_drivers[] = {
 	{
