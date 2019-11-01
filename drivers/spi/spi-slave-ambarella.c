@@ -247,7 +247,7 @@ static void ambarella_rx_dma_callback(void *dma_param)
 
 	status = dmaengine_tx_status(priv->rx_dma_chan, priv->rx_cookie, &state);
 	if (status == DMA_IN_PROGRESS) {
-		pr_info("slavespi: RX DMA is in progress\n");
+		pr_err("slavespi: RX DMA is in progress\n");
 		spin_unlock_irqrestore(&priv->r_buf_lock, flags);
 		return ;
 	}
@@ -275,7 +275,7 @@ static int ambarella_slavespi_start_rx_dma(struct ambarella_slavespi *priv)
 	struct dma_slave_config rx_cfg;
 	memset(&rx_cfg, 0, sizeof(rx_cfg));
 
-	priv->rx_dma_size = priv->fifo_depth * FIFO_DEPTH_MULTI;
+	priv->rx_dma_size = (priv->buf_size >> 1);
 
 	rx_cfg.src_addr	 = priv->phys + SPI_DR_OFFSET;
 
@@ -327,7 +327,7 @@ static void ambarella_tx_dma_callback(void *dma_param)
 
 	sr = readl_relaxed(priv->regbase + SPI_SR_OFFSET);
 	if (sr & SPI_SR_TXE_MSK) {
-		//pr_err("slavespi: txe \n");
+		pr_err("slavespi: txe \n");
 	}
 
 	spin_lock_irqsave(&priv->w_buf_lock, flags);
@@ -439,6 +439,7 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 {
 	int err = 0;
 	struct clk *clk;
+	struct pinctrl *pins = NULL;
 	spi_ctrl0_reg_t ctrl0_reg;
 
 	writel_relaxed(0, priv->regbase + SPI_SSIENR_OFFSET);
@@ -528,6 +529,11 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 	}
 
 	/* pinctrl */
+	pins = devm_pinctrl_get_select_default(priv->pltdev);
+	if (IS_ERR(pins)) {
+		pr_err("Failed to request pinctrl \n");
+		err = PTR_ERR(pins);
+	}
 
 	return err;
 }
@@ -910,7 +916,6 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 {
 	int err = 0;
 	int irq = 0;
-	struct pinctrl *pins = NULL;
 	void __iomem	*reg = NULL;
 	struct resource *res = NULL;
 	struct ambarella_slavespi *priv = NULL;
@@ -937,12 +942,13 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		err = -ENOENT;
 		goto err_out;
 	}
-
+#if 0
 	pins = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(pins)) {
 		dev_err(&pdev->dev, "Failed to request pinctrl\n");
 		goto err_out;
 	}
+#endif
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
