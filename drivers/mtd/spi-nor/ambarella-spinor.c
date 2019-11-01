@@ -193,7 +193,6 @@ static int amba_spinor_send_cmd(struct ambarella_spinor *amba_spinor,
 {
 	u32 reg_length = 0, reg_ctrl = 0, val, i;
 	int ret = 0;
-	u32 length;
 
 	/* setup basic info */
 	if (cmd != NULL) {
@@ -313,15 +312,12 @@ static int amba_spinor_send_cmd(struct ambarella_spinor *amba_spinor,
 	 * 32Bytes, the residual data in FIFO need to be read manually. */
 	if (data != NULL && data->is_dma) {
 		if (data->is_read) {
-			length = data->len % SPINOR_BLK_DMA_SIZE;
-			length = data->len - length;
-
-			amba_spinor_dma_transfer(amba_spinor, length, DMA_FROM_DEVICE);
+			amba_spinor_dma_transfer(amba_spinor, data->len, DMA_FROM_DEVICE);
 		} else {
 			amba_spinor_dma_transfer(amba_spinor, data->len, DMA_TO_DEVICE);
 		}
 	} else if (data != NULL && !data->is_read) {
-		if (data->len >= 0x7f) {
+		if (data->len > 0x100) {
 			dev_err(amba_spinor->dev, "spinor: tx length exceeds fifo size.\n");
 			return -1;
 		}
@@ -461,26 +457,26 @@ static int amba_spinor_write_reg(struct spi_nor *nor, u8 opcode, u8 *buf, int le
 	return rval;
 }
 
-static u8 nor_get_read_proto(enum spi_nor_protocol proto)
+static u8 nor_get_proto(enum spi_nor_protocol proto)
 {
-	u8 read_lane;
+	u8 data_lane;
 
 	switch (proto) {
 	case SNOR_PROTO_1_1_2:
 	case SNOR_PROTO_1_2_2:
-		read_lane = 2;
+		data_lane = 2;
 		break;
 	case SNOR_PROTO_1_1_4:
 	case SNOR_PROTO_1_4_4:
-		read_lane = 4;
+		data_lane = 4;
 		break;
 	case SNOR_PROTO_1_1_1:
 	default:
-		read_lane = 2;
+		data_lane = 1;
 		break;
 	}
 
-	return read_lane;
+	return data_lane;
 }
 
 static ssize_t amba_spinor_read(struct spi_nor *nor, loff_t from, size_t len,
@@ -494,7 +490,7 @@ static ssize_t amba_spinor_read(struct spi_nor *nor, loff_t from, size_t len,
 	int ret;
 	int i;
 	u32 tail, bulk, dma_blk;
-	u8 cmd_id, is_dma;
+	u8 cmd_id, is_dma, data_lane;
 	size_t offset = 0;
 	size_t remain;
 	loff_t trans_addr;
@@ -523,10 +519,11 @@ static ssize_t amba_spinor_read(struct spi_nor *nor, loff_t from, size_t len,
 	is_dma = bulk ? 1 : 0;
 
 	data.buf = buf;
-	data.lane = nor_get_read_proto(nor->read_proto);
+	data_lane = nor_get_proto(nor->read_proto);
+	data.lane = max_t(u8, data_lane, 2);
 	data.is_dtr = 0;
 	data.is_read = 1;
-	data.is_io = (cmd_id == SPINOR_OP_RDSFDP) ? 0 : 1;
+	data.is_io = (data_lane == 1) ? 0 : 1;
 	data.is_dma = is_dma;
 
 	dummy.len = nor->read_dummy;
@@ -553,25 +550,35 @@ static ssize_t amba_spinor_read(struct spi_nor *nor, loff_t from, size_t len,
 	tail = remain % SPINOR_BLK_DMA_SIZE;
 	bulk = remain / SPINOR_BLK_DMA_SIZE;
 
-	if (remain)
-	{
-		trans_addr = from + offset;
-		addr.buf = (u8*)&trans_addr;
-		data.len = remain;
-		data.is_dma = bulk ? 1 : 0;
-
-		ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, &dummy);
-
-		if (ret)
-			return ret;
-
+	if (remain) {
 		if (bulk) {
-			memcpy(buf + offset, amba_spinor->dmabuf, remain-tail);
-		}
+			trans_addr = from + offset;
+			addr.buf = (u8*)&trans_addr;
+			data.len = remain - tail;
+			data.is_dma = 1;
 
+			ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, &dummy);
+
+			if (ret)
+				return ret;
+
+			if (bulk)
+				memcpy(buf + offset, amba_spinor->dmabuf, remain-tail);
+
+		}
 		offset += bulk * SPINOR_BLK_DMA_SIZE;
 
 		if (tail) {
+			trans_addr = from + offset;
+			addr.buf = (u8*)&trans_addr;
+			data.len = tail;
+			data.is_dma = 0;
+
+			ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, &dummy);
+
+			if (ret)
+				return ret;
+
 			for (i = 0; i < tail; i++){
 				*(buf+offset+i) = readb(amba_spinor->regbase + SPINOR_RXDATA_OFFSET);
 			}
@@ -591,10 +598,8 @@ static ssize_t amba_spinor_write(struct spi_nor *nor, loff_t to, size_t len,
 	struct spinor_ctrl addr;
 	struct spinor_ctrl data;
 
-	int ret;
-	int i;
-	u32 tail, bulk;
-	u32 address;
+	int ret, i;
+	u32 tail = 0;
 	u8 cmd_id;
 
 	dev_dbg(amba_spinor->dev, "write(%#.2x): buf:%p to:%#.8x len:%#zx\n",
@@ -606,66 +611,36 @@ static ssize_t amba_spinor_write(struct spi_nor *nor, loff_t to, size_t len,
 	BUG_ON((i + len) > nor->page_size);
 
 	tail = len % SPINOR_BLK_DMA_SIZE;
-	bulk = len / SPINOR_BLK_DMA_SIZE;
 
-	if (bulk) {
-		memcpy(amba_spinor->dmabuf, buf, len-tail);
+	memset(&cmd, 0, sizeof(cmd));
+	memset(&addr, 0, sizeof(addr));
+	memset(&data, 0, sizeof(data));
 
-		memset(&cmd, 0, sizeof(cmd));
-		memset(&addr, 0, sizeof(addr));
-		memset(&data, 0, sizeof(data));
+	cmd_id = nor->program_opcode;
+	cmd.buf = &cmd_id;
+	cmd.len = 1;
+	cmd.lane = 1;
 
-		cmd_id = nor->program_opcode;
-		cmd.buf = &cmd_id;
-		cmd.len = 1;
-		cmd.lane = 1;
+	addr.buf = (u8*)&to;
+	addr.len = nor->addr_width;
+	addr.lane = 1;
+	addr.is_dtr = 0;
 
-		addr.buf = (u8*)&to;
-		addr.len = nor->addr_width;
-		addr.lane = 1;
-		addr.is_dtr = 0;
+	data.buf = (void *)buf;
+	data.len = len;
+	data.lane = 1;
+	data.is_dtr = 0;
+	data.is_read = 0;
+	data.is_io = 0;
+	data.is_dma = tail ? 0 : 1;
 
-		data.buf = (void *)buf;
-		data.len = len - tail;
-		data.lane = 1;
-		data.is_dtr = 0;
-		data.is_read = 0;
-		data.is_io = 0;
-		data.is_dma = 1;
+	if (tail == 0)
+		memcpy(amba_spinor->dmabuf, buf, len);
 
-		ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, NULL);
-		if (ret)
-			return ret;
-	}
+	ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, NULL);
+	if (ret)
+		return ret;
 
-	if (tail) {
-		memset(&cmd, 0, sizeof(cmd));
-		memset(&addr, 0, sizeof(addr));
-		memset(&data, 0, sizeof(data));
-
-		cmd_id = nor->program_opcode;
-		cmd.buf = &cmd_id;
-		cmd.len = 1;
-		cmd.lane = 1;
-
-		address = to + bulk * SPINOR_BLK_DMA_SIZE;
-		addr.buf = (u8*)&address;
-		addr.len = nor->addr_width;
-		addr.lane = 1;
-		addr.is_dtr = 0;
-
-		data.buf = (void *)(buf + bulk * SPINOR_BLK_DMA_SIZE);
-		data.len = tail;
-		data.lane = 1;
-		data.is_dtr = 0;
-		data.is_read = 0;
-		data.is_io = 0;
-		data.is_dma = 0;
-
-		ret = amba_spinor_send_cmd(amba_spinor, &cmd, &addr, &data, NULL);
-		if (ret)
-			return ret;
-	}
 	return len;
 }
 
@@ -730,7 +705,7 @@ static int amba_spinor_setup_flash(struct ambarella_spinor *amba_spinor,
 		.mask = SNOR_HWCAPS_READ |
 			SNOR_HWCAPS_READ_FAST |
 			SNOR_HWCAPS_READ_1_1_2 |
-//			SNOR_HWCAPS_READ_1_1_4 |
+			SNOR_HWCAPS_READ_1_1_4 |
 			SNOR_HWCAPS_PP,
 	};
 
